@@ -13,8 +13,8 @@
 #include <sparse/token.h>
 
 #define WARN_UNHANDLED(what) \
-    fprintf(stderr, "--- %s: warning: '%s' not handled\n", \
-            __FUNCTION__, (what))
+    fprintf(stderr, "--- %s: %d: warning: '%s' not handled\n", \
+            __FUNCTION__, __LINE__, (what))
 
 #define WARN_UNHANDLED_SYM(sym) \
     WARN_UNHANDLED(show_ident(sym->ident))
@@ -174,6 +174,7 @@ static void handle_expr (struct expression *expr)
         CASE_UNHANDLED(EXPR_FVALUE)
         CASE_UNHANDLED(EXPR_SLICE)
         CASE_UNHANDLED(EXPR_OFFSETOF)
+
         case EXPR_CALL:
             handle_expr_call(expr);
             break;
@@ -273,8 +274,8 @@ static void handle_stmt_iterator(struct statement *stmt)
         print_nl_indent();
     }
 
-    // 'for/while' condition
     if (pre_condition)
+        // 'for/while' condition
         print_while(pre_condition);
     else
         printf("do");
@@ -372,11 +373,6 @@ static void handle_stmt(struct statement *stmt)
     }
 }
 
-static void handle_fnc_decl(struct symbol *sym)
-{
-    WARN_UNHANDLED_SYM(sym);
-}
-
 static void handle_sym_fn(struct symbol *sym)
 {
     struct symbol *base_type = sym->ctype.base_type;
@@ -390,8 +386,7 @@ static void handle_sym_fn(struct symbol *sym)
         return;
     }
 
-    // function declaration (?)
-    handle_fnc_decl(sym);
+    WARN_UNHANDLED_SYM(sym);
 }
 
 static void handle_top_level_sym(struct symbol *sym)
