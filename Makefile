@@ -37,7 +37,7 @@ build_gcc: $(GCC_SRC)
 				--prefix=$$TOP_LEVEL/$(GCC_INSTALL); \
 		fi
 	cd $(GCC_BUILD) && $(MAKE)
-	cd $(GCC_BUILD) && $(MAKE) install
+	cd $(GCC_BUILD) && $(MAKE) -j1 install
 
 update_gcc_src_only: $(GCC_SRC)
 	cd $(GCC_SRC) && $(SVN) up
