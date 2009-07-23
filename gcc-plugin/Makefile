@@ -11,9 +11,9 @@ LD = gcc
 CFLAGS += -O2 -fPIC -I$(GCC_PLUGIN_INC)
 LDFLAGS += -fPIC -shared
 
-.PHONY: all clean run
+.PHONY: all check clean run
 
-all: run
+all: check
 
 separate.so: separate.o
 	$(LD) -o $@ $(LDFLAGS) $<
@@ -24,3 +24,8 @@ clean:
 run: separate.so
 	$(GCC_INSTALL)/bin/gcc $(CFLAGS) -fplugin=./separate.so -c separate.c \
 		-o tmp.o && rm -f tmp.o
+
+check: separate.so
+	$(GCC_INSTALL)/bin/gcc $(CFLAGS) -fplugin=./separate.so -c separate.c
+	$(MAKE) separate.so
+	$(GCC_INSTALL)/bin/gcc $(CFLAGS) -fplugin=./separate.so -c separate.c
