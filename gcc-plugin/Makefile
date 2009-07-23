@@ -15,12 +15,12 @@ LDFLAGS += -fPIC -shared
 
 all: run
 
-plugin.so: plugin.o
+separate.so: separate.o
 	$(LD) -o $@ $(LDFLAGS) $<
 
 clean:
-	rm -f plugin.o plugin.so
+	rm -f separate.o separate.so
 
-run: plugin.so
-	$(GCC_INSTALL)/bin/gcc $(CFLAGS) -fplugin=./plugin.so -c plugin.c \
+run: separate.so
+	$(GCC_INSTALL)/bin/gcc $(CFLAGS) -fplugin=./separate.so -c separate.c \
 		-o tmp.o && rm -f tmp.o
