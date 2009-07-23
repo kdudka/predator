@@ -11,7 +11,9 @@ LD = gcc
 CFLAGS += -O2 -fPIC -I$(GCC_PLUGIN_INC)
 LDFLAGS += -fPIC -shared
 
-.PHONY: clean run
+.PHONY: all clean run
+
+all: run
 
 plugin.so: plugin.o
 	$(LD) -o $@ $(LDFLAGS) $<

@@ -1,8 +1,9 @@
-From 5fec60f99990ff610bf891b26363515b311d05d4 Mon Sep 17 00:00:00 2001
+From 984e2612d2174390a54a36a805051c3f66cf6250 Mon Sep 17 00:00:00 2001
 From: Kamil Dudka <kdudka@redhat.com>
 Date: Sat, 18 Jul 2009 23:16:53 +0200
 Subject: [PATCH] compile-i386: do not generate infinite loop
 
+Signed-off-by: Kamil Dudka <kdudka@redhat.com>
 ---
  compile-i386.c |    8 ++++----
  1 files changed, 4 insertions(+), 4 deletions(-)
