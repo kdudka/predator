@@ -8,7 +8,7 @@ GCC_PLUGIN_INC = \
 
 CC = gcc
 LD = gcc
-CFLAGS += -O2 -fPIC -I$(GCC_PLUGIN_INC)
+CFLAGS += -std=c99 -pedantic -Wall -W -g -O2 -fPIC -I$(GCC_PLUGIN_INC)
 LDFLAGS += -fPIC -shared
 
 .PHONY: all check clean run

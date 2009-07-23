@@ -46,18 +46,19 @@ unsigned int sep_pass_execute (void)
     return 0;
 }
 
-static void cb_pass_manager_setup (void *gcc_data, void *user_data)
-{
-    SEP_LOG_FNC;
-}
-
 static void cb_finish (void *gcc_data, void *user_data)
 {
+    (void) gcc_data;
+    (void) user_data;
+
     SEP_LOG_FNC;
 }
 
 static void cb_start_unit (void *gcc_data, void *user_data)
 {
+    (void) gcc_data;
+    (void) user_data;
+
     SEP_LOG ("processing '%s'", main_input_filename);
 }
 
