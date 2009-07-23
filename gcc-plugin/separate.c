@@ -1,8 +1,11 @@
 #include <gcc-plugin.h>
 
 // auxiliary gcc headers
-#include <input.h>
+#define IN_GCC
 #include <coretypes.h> // needed by tree-pass.h, gcc bug?
+#include <tm.h>
+#include <function.h>
+#include <input.h>
 #include <tree-pass.h>
 
 #define SEP_LOG(...) do { \
@@ -30,6 +33,8 @@ static struct opt_pass sep_pass = {
     .name = "separate",
     .gate = NULL,
     .execute = sep_pass_execute,
+
+    .properties_required = PROP_cfg,
     // TODO
 };
 
@@ -42,7 +47,10 @@ static struct plugin_pass sep_plugin_pass = {
 
 unsigned int sep_pass_execute (void)
 {
-    SEP_LOG_FNC;
+    fprintf (stderr, "--- %s:", plugin_name);
+    print_node_brief (stderr, "", cfun->decl, 0);
+    fprintf (stderr, "\n");
+
     return 0;
 }
 
