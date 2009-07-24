@@ -6,7 +6,10 @@
 #include <tm.h>
 #include <function.h>
 #include <input.h>
+#include <langhooks.h>
 #include <tree-pass.h>
+
+#include <signal.h>
 
 #define SEP_LOG(...) do { \
     fprintf (stderr, "--- %s: ", plugin_name); \
@@ -17,16 +20,62 @@
 #define SEP_LOG_FNC \
     SEP_LOG ("%s", __FUNCTION__)
 
+#define SEP_WARN_UNHANDLED(what) \
+    SEP_LOG ("%s () at %s:%d: warning: '%s' not handled", \
+             __FUNCTION__, __FILE__, __LINE__, (what))
+
 int plugin_is_GPL_compatible;
 
 static const char *plugin_name = "[uninitialized]";
 
 static struct plugin_info info = {
     .version = "gcc plug-in separate 0.1 experimental",
-    .help = "print output program direct to stdout; verbose output to stderr",
+    .help = "print output program directly to stdout; verbose output to stderr",
 };
 
-unsigned int sep_pass_execute (void);
+static void handle_single_block (tree block, int level)
+{
+    fprintf (stderr, "   ");
+    for (int i = 0; i < level; ++i)
+        fprintf (stderr, "    ");
+
+    print_node_brief (stderr, "", block, 0);
+    fprintf (stderr, "\n");
+}
+
+static void handle_block (tree block, int level)
+{
+    if (!block)
+        return;
+
+    handle_single_block (block, level);
+
+    tree subs = BLOCK_SUBBLOCKS (block);
+    handle_block (subs, level + 1);
+
+    if (!level)
+        fprintf (stderr, "\n");
+}
+
+static unsigned int sep_pass_execute (void)
+{
+    SEP_LOG ("processing function '%s'",
+             lang_hooks.decl_printable_name (current_function_decl, 2));
+
+    if (FUNCTION_DECL != TREE_CODE (current_function_decl)) {
+        SEP_WARN_UNHANDLED ("TREE_CODE (current_function_decl)");
+        return 0;
+    }
+
+    tree block = DECL_INITIAL (current_function_decl);
+    handle_block (block, 0);
+
+#if 0
+    raise (SIGTRAP);
+#endif
+
+    return 0;
+}
 
 static struct opt_pass sep_pass = {
     .type = GIMPLE_PASS,
@@ -45,15 +94,6 @@ static struct plugin_pass sep_plugin_pass = {
     .pos_op                   = PASS_POS_INSERT_AFTER,
 };
 
-unsigned int sep_pass_execute (void)
-{
-    fprintf (stderr, "--- %s:", plugin_name);
-    print_node_brief (stderr, "", cfun->decl, 0);
-    fprintf (stderr, "\n");
-
-    return 0;
-}
-
 static void cb_finish (void *gcc_data, void *user_data)
 {
     (void) gcc_data;
@@ -67,7 +107,7 @@ static void cb_start_unit (void *gcc_data, void *user_data)
     (void) gcc_data;
     (void) user_data;
 
-    SEP_LOG ("processing '%s'", main_input_filename);
+    SEP_LOG ("processing input file '%s'", main_input_filename);
 }
 
 static void sep_regcb (const char *name) {
