@@ -8,10 +8,12 @@ GCC_PLUGIN_INC = \
 
 CC = gcc
 LD = gcc
-CFLAGS += -std=c99 -pedantic -Wall -W -g -O2 -fPIC -I$(GCC_PLUGIN_INC)
+CFLAGS += -std=c99 -pedantic -Wall -W -g -O0 -fPIC -I$(GCC_PLUGIN_INC)
 LDFLAGS += -fPIC -shared
 
-.PHONY: all check clean run
+GDB ?= gdb
+
+.PHONY: all check clean debug run
 
 all: check
 
@@ -29,3 +31,6 @@ check: separate.so
 	$(GCC_INSTALL)/bin/gcc $(CFLAGS) -fplugin=./separate.so -c separate.c
 	$(MAKE) separate.so
 	$(GCC_INSTALL)/bin/gcc $(CFLAGS) -fplugin=./separate.so -c separate.c
+
+debug: separate.so
+	$(GDB) gdb -x separate.gdb
