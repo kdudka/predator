@@ -6,7 +6,7 @@
 #include <tm.h>
 #include <function.h>
 #include <input.h>
-#include <langhooks.h>
+// #include <langhooks.h>
 #include <tree-pass.h>
 
 #include <signal.h>
@@ -33,47 +33,46 @@ static struct plugin_info info = {
     .help = "print output program directly to stdout; verbose output to stderr",
 };
 
-static void handle_single_block (tree block, int level)
+static void handle_fnc_decl_arg (tree arg)
 {
-    fprintf (stderr, "   ");
-    for (int i = 0; i < level; ++i)
-        fprintf (stderr, "    ");
-
-    print_node_brief (stderr, "", block, 0);
-    fprintf (stderr, "\n");
+    tree ident = DECL_NAME (arg);
+    printf ("%s", IDENTIFIER_POINTER (ident));
 }
 
-static void handle_block (tree block, int level)
+static void handle_fnc_decl_arglist (tree args)
 {
-    if (!block)
-        return;
+    while (args) {
+        handle_fnc_decl_arg (args);
+        args = TREE_CHAIN (args);
+        if (args)
+            printf (", ");
+    }
+}
 
-    handle_single_block (block, level);
+static void handle_fnc_decl (tree decl)
+{
+    tree ident = DECL_NAME (decl);
+    printf ("%s (", IDENTIFIER_POINTER (ident));
 
-    tree subs = BLOCK_SUBBLOCKS (block);
-    handle_block (subs, level + 1);
+    tree args = DECL_ARGUMENTS (decl);
+    handle_fnc_decl_arglist (args);
 
-    if (!level)
-        fprintf (stderr, "\n");
+    printf (")\n");
 }
 
 static unsigned int sep_pass_execute (void)
 {
-    SEP_LOG ("processing function '%s'",
-             lang_hooks.decl_printable_name (current_function_decl, 2));
+    if (!current_function_decl) {
+        SEP_WARN_UNHANDLED ("NULL == current_function_decl");
+        return 0;
+    }
 
     if (FUNCTION_DECL != TREE_CODE (current_function_decl)) {
         SEP_WARN_UNHANDLED ("TREE_CODE (current_function_decl)");
         return 0;
     }
 
-    tree block = DECL_INITIAL (current_function_decl);
-    handle_block (block, 0);
-
-#if 0
-    raise (SIGTRAP);
-#endif
-
+    handle_fnc_decl (current_function_decl);
     return 0;
 }
 
@@ -121,6 +120,11 @@ int plugin_init (struct plugin_name_args *plugin_info,
                  struct plugin_gcc_version *version)
 {
     plugin_name = plugin_info->full_name;
+
+#if 1
+    setbuf(stdout, NULL);
+    setbuf(stderr, NULL);
+#endif
 
     SEP_LOG_FNC;
     SEP_LOG ("using gcc %s %s, built at %s", version->basever,

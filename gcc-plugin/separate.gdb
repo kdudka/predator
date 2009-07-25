@@ -3,6 +3,7 @@ set args -std=c99 -pedantic -Wall -W -g -O0 -fPIC -I../gcc-install/lib/gcc/x86_6
 set confirm 0
 set follow-fork-mode child
 set pagination 0
+set print pretty
 run
 echo \nbt:\n
 bt
