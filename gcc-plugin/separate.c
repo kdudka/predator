@@ -5,6 +5,7 @@
 #include <coretypes.h> // needed by tree-pass.h, gcc bug?
 #include <tm.h>
 #include <function.h>
+#include <gimple.h>
 #include <input.h>
 // #include <langhooks.h>
 #include <tree-pass.h>
@@ -49,15 +50,55 @@ static void handle_fnc_decl_arglist (tree args)
     }
 }
 
+static tree cb_walk_gimple_stmt (gimple_stmt_iterator *iter,
+                                 bool *subtree_done,
+                                 struct walk_stmt_info *info)
+{
+    (void) subtree_done;
+
+#if 0
+    raise (SIGTRAP);
+#endif
+    printf (".");
+
+    return NULL;
+}
+
+static void handle_fnc_gimple (gimple_seq body)
+{
+    struct walk_stmt_info info;
+    memset (&info, 0, sizeof(info));
+    // TODO: tweak members of INFO
+    walk_gimple_seq (body, cb_walk_gimple_stmt, NULL, &info);
+}
+
 static void handle_fnc_decl (tree decl)
 {
+    // print function name
     tree ident = DECL_NAME (decl);
     printf ("%s (", IDENTIFIER_POINTER (ident));
 
+    // print argument list
     tree args = DECL_ARGUMENTS (decl);
     handle_fnc_decl_arglist (args);
+    printf (") ");
 
-    printf (")\n");
+    // obtain fnc structure
+    struct function *fnc = DECL_STRUCT_FUNCTION (decl);
+    if (NULL == fnc) {
+        SEP_WARN_UNHANDLED ("NULL == fnc");
+        return;
+    }
+
+    // obtain gimple for fnc
+    gimple_seq body = fnc->gimple_body;
+    if (NULL == body) {
+        SEP_WARN_UNHANDLED ("gimple not found");
+        return;
+    }
+
+    handle_fnc_gimple (body);
+    printf ("\n");
 }
 
 static unsigned int sep_pass_execute (void)
@@ -82,7 +123,7 @@ static struct opt_pass sep_pass = {
     .gate = NULL,
     .execute = sep_pass_execute,
 
-    .properties_required = PROP_cfg,
+    .properties_required = PROP_gimple_any,
     // TODO
 };
 
@@ -90,7 +131,7 @@ static struct plugin_pass sep_plugin_pass = {
     .pass                     = &sep_pass,
     .reference_pass_name      = "cfg",
     .ref_pass_instance_number = 0,
-    .pos_op                   = PASS_POS_INSERT_AFTER,
+    .pos_op                   = PASS_POS_INSERT_BEFORE,
 };
 
 static void cb_finish (void *gcc_data, void *user_data)

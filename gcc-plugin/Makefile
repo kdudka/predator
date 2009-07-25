@@ -33,4 +33,4 @@ check: separate.so
 	$(GCC_INSTALL)/bin/gcc $(CFLAGS) -fplugin=./separate.so -c separate.c
 
 debug: separate.so
-	$(GDB) gdb -x separate.gdb
+	$(GDB) -x separate.gdb
