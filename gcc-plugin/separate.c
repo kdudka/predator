@@ -2,12 +2,12 @@
 
 // auxiliary gcc headers
 #define IN_GCC
-#include <coretypes.h> // needed by tree-pass.h, gcc bug?
+#include <coretypes.h>
+#include <diagnostic.h>
 #include <tm.h>
 #include <function.h>
 #include <gimple.h>
 #include <input.h>
-// #include <langhooks.h>
 #include <tree-pass.h>
 
 #include <signal.h>
@@ -54,12 +54,22 @@ static tree cb_walk_gimple_stmt (gimple_stmt_iterator *iter,
                                  bool *subtree_done,
                                  struct walk_stmt_info *info)
 {
+    gimple stmt = gsi_stmt (*iter);
+
     (void) subtree_done;
+    (void) info;
 
 #if 0
     raise (SIGTRAP);
 #endif
-    printf (".");
+
+    if (GIMPLE_LABEL != gimple_code(stmt))
+        // only basic indentation for now
+        printf("    ");
+
+    print_gimple_stmt(stdout, stmt,
+                      /* indentation */ 0,
+                      /* flags, e.g. TDF_LINENO */ 0);
 
     return NULL;
 }
@@ -68,7 +78,6 @@ static void handle_fnc_gimple (gimple_seq body)
 {
     struct walk_stmt_info info;
     memset (&info, 0, sizeof(info));
-    // TODO: tweak members of INFO
     walk_gimple_seq (body, cb_walk_gimple_stmt, NULL, &info);
 }
 
@@ -81,7 +90,7 @@ static void handle_fnc_decl (tree decl)
     // print argument list
     tree args = DECL_ARGUMENTS (decl);
     handle_fnc_decl_arglist (args);
-    printf (") ");
+    printf (")\n");
 
     // obtain fnc structure
     struct function *fnc = DECL_STRUCT_FUNCTION (decl);
@@ -97,8 +106,9 @@ static void handle_fnc_decl (tree decl)
         return;
     }
 
+    printf ("{\n");
     handle_fnc_gimple (body);
-    printf ("\n");
+    printf ("}\n\n");
 }
 
 static unsigned int sep_pass_execute (void)
@@ -122,9 +132,8 @@ static struct opt_pass sep_pass = {
     .name = "separate",
     .gate = NULL,
     .execute = sep_pass_execute,
-
     .properties_required = PROP_gimple_any,
-    // TODO
+    // ...
 };
 
 static struct plugin_pass sep_plugin_pass = {
