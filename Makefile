@@ -13,7 +13,7 @@ SVN ?= svn
 
 .PHONY: build_gcc fetch plugin unpack update_gcc update_gcc_src_only
 
-fetch: $(LIST) $(SPARSE_GIT) $(GCC_SVN)
+fetch: $(LIST) $(SPARSE_GIT)
 
 unpack: fetch
 	unzip -o $(INVADER)

@@ -38,7 +38,7 @@ int plugin_is_GPL_compatible;
 static const char *plugin_name = "[uninitialized]";
 
 // plug-in meta-data according to gcc plug-in API
-static struct plugin_info info = {
+static struct plugin_info sep_info = {
     .version = "gcc plug-in separate 0.1 experimental",
     .help = "print output program directly to stdout; verbose output to stderr",
 };
@@ -173,7 +173,7 @@ static void cb_finish (void *gcc_data, void *user_data)
     SEP_LOG_FNC;
 }
 
-// callback called on being of input file processing
+// callback called on start of input file processing
 static void cb_start_unit (void *gcc_data, void *user_data)
 {
     (void) gcc_data;
@@ -184,7 +184,7 @@ static void cb_start_unit (void *gcc_data, void *user_data)
 
 // register callbacks for plug-in NAME
 static void sep_regcb (const char *name) {
-    // passing NULL as CALLBACK arg stands for virtual callback
+    // passing NULL as CALLBACK to register_callback stands for virtual callback
 
     // register new pass provided by the plug-in
     register_callback (name, PLUGIN_PASS_MANAGER_SETUP,
@@ -197,7 +197,7 @@ static void sep_regcb (const char *name) {
 
     register_callback (name, PLUGIN_INFO,
                        /* callback */ NULL,
-                       &info);
+                       &sep_info);
 
     register_callback (name, PLUGIN_START_UNIT,
                        cb_start_unit,

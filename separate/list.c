@@ -1,7 +1,6 @@
 #include <stdlib.h>
 
 typedef void *TItem;
-typedef void (*TDisposeList) (TItem *);
 
 void dispose_list_using_while(TItem *list) {
     while (list) {
@@ -19,6 +18,8 @@ void dispose_list_recursively(TItem *list) {
 }
 
 #ifdef SELF_TEST
+typedef void (*TDisposeList) (TItem *);
+
 void test(TDisposeList dispose_list) {
     dispose_list(NULL);
 
