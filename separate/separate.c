@@ -7,10 +7,21 @@
 
 // sparse headers
 #include <sparse/expression.h>
-#include <sparse/lib.h>
+#include <sparse/flow.h>
+#include <sparse/linearize.h>
 #include <sparse/parse.h>
+#include <sparse/storage.h>
 #include <sparse/symbol.h>
 #include <sparse/token.h>
+
+// safe to remove (it's here for debugging purposes only)
+#include <signal.h>
+#define TRAP raise(SIGTRAP)
+
+#define DO_EXPAND_SYMBOL            1
+#define DO_PER_EP_UNSAA             1
+#define DO_PER_EP_SET_UP_STORAGE    1
+#define SHOW_ALL_INSNS              0
 
 #define WARN_UNHANDLED(what) \
     fprintf(stderr, "--- %s: %d: warning: '%s' not handled\n", \
@@ -22,6 +33,9 @@
 #define CASE_UNHANDLED(what) \
     case what: WARN_UNHANDLED(#what); break;
 
+static void handle_bb(struct basic_block *bb, unsigned long generation);
+
+#if 0
 // FIXME: global variable
 static int nest_level = 0;
 
@@ -41,32 +55,6 @@ static void print_nl_indent(void)
 {
     printf("\n");
     print_indent();
-}
-
-static void handle_fnc_def_begin(struct symbol *sym)
-{
-    struct symbol *base_type = sym->ctype.base_type;
-    struct symbol *arg;
-    int argc = 0;
-
-    // write function name
-    printf("%s(", show_ident(sym->ident));
-
-    // dump argument list
-    FOR_EACH_PTR(base_type->arguments, arg) {
-        if (argc)
-            printf(", ");
-        printf("%s", show_ident(arg->ident));
-        argc++;
-    } END_FOR_EACH_PTR(arg);
-
-    printf(")\n");
-}
-
-static void handle_fnc_def_end(struct symbol *sym)
-{
-    // function definition complete
-    printf("\n\n");
 }
 
 static void handle_expr_call (struct expression *expr)
@@ -372,6 +360,101 @@ static void handle_stmt(struct statement *stmt)
             break;
     }
 }
+#endif
+
+static void handle_bb_insn(struct instruction *insn)
+{
+    if (!insn)
+        return;
+
+#if !SHOW_ALL_INSNS
+    if (!insn->bb)
+        return;
+#endif
+
+    printf("\t\t%s\n", show_instruction(insn));
+}
+
+static void handle_bb_content(struct basic_block *bb)
+{
+    struct instruction *insn;
+
+    if (!bb)
+        return;
+
+    printf("\t.L%p:\n", bb);
+    FOR_EACH_PTR(bb->insns, insn) {
+        handle_bb_insn(insn);
+    } END_FOR_EACH_PTR(insn);
+    printf("\n");
+}
+
+static void handle_bb_list(struct basic_block_list *list, unsigned long generation)
+{
+    struct basic_block *bb;
+
+    FOR_EACH_PTR(list, bb) {
+        if (bb->generation == generation)
+            continue;
+        handle_bb(bb, generation);
+    } END_FOR_EACH_PTR(bb);
+}
+
+static void handle_bb(struct basic_block *bb, unsigned long generation)
+{
+    bb->generation = generation;
+
+    handle_bb_list(bb->parents, generation);
+    handle_bb_content(bb);
+    handle_bb_list(bb->children, generation);
+}
+
+static void handle_fnc_body(struct symbol *sym)
+{
+    struct entrypoint *ep = linearize_symbol(sym);
+    if (!ep)
+        TRAP;
+
+#if DO_PER_EP_UNSAA
+    unssa(ep);
+#endif
+
+#if DO_PER_EP_SET_UP_STORAGE
+    set_up_storage(ep);
+#endif
+
+    handle_bb(ep->entry->bb, ++bb_generation);
+
+#if DO_PER_EP_SET_UP_STORAGE
+    free_storage();
+#endif
+}
+
+static void handle_fnc_def_begin(struct symbol *sym)
+{
+    struct symbol *base_type = sym->ctype.base_type;
+    struct symbol *arg;
+    int argc = 0;
+
+    // write function name
+    printf("%s(", show_ident(sym->ident));
+
+    // dump argument list
+    FOR_EACH_PTR(base_type->arguments, arg) {
+        if (argc)
+            printf(", ");
+        printf("%s", show_ident(arg->ident));
+        argc++;
+    } END_FOR_EACH_PTR(arg);
+
+    printf(")\n\n");
+}
+
+static void handle_fnc_def_end(struct symbol *sym)
+{
+    // function definition complete
+    printf("\n");
+}
 
 static void handle_sym_fn(struct symbol *sym)
 {
@@ -381,7 +464,7 @@ static void handle_sym_fn(struct symbol *sym)
     if (stmt) {
         // function definition
         handle_fnc_def_begin(sym);
-        handle_stmt(stmt);
+        handle_fnc_body(sym);
         handle_fnc_def_end(sym);
         return;
     }
@@ -434,7 +517,7 @@ static void clean_up_symbols(struct symbol_list *list)
     struct symbol *sym;
 
     FOR_EACH_PTR(list, sym) {
-#if 1
+#if DO_EXPAND_SYMBOL
         expand_symbol(sym);
 #endif
         handle_top_level_sym(sym);

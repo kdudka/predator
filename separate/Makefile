@@ -1,7 +1,17 @@
-SPARSE_CFLAGS += `pkg-config sparse --cflags`
-SPARSE_LIBS ?= `pkg-config sparse --libs`
+# uncomment this to use SPARSE installed on your system
+#
+# SPARSE_CFLAGS += `pkg-config sparse --cflags`
+# SPARSE_LIBS ?= `pkg-config sparse --libs`
 
-.PHONY: check clean demo
+SPARSE_CFLAGS = -I..
+SPARSE_LIBS = ../sparse/libsparse.a
+
+CFLAGS += -g -O0 -Wall
+SFLAGS += -Wno-decl
+
+.PHONY: all check clean demo
+
+all: demo
 
 separate: separate.c
 	$(CC) $(CFLAGS) $(SPARSE_CFLAGS) -o $@ $< $(SPARSE_LIBS)
@@ -16,4 +26,4 @@ clean:
 	rm -f separate test-list
 
 demo: check list.c separate
-	./separate list.c
+	./separate $(SFLAGS) list.c
