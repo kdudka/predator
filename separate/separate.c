@@ -390,7 +390,7 @@ static bool print_pseudo(pseudo_t pseudo)
             struct expression *expr;
 
             if (sym->bb_target) {
-                printf("@%p", sym->bb_target);
+                printf("%p", sym->bb_target);
                 break;
             }
             if (sym->ident) {
@@ -454,12 +454,23 @@ static bool print_pseudo(pseudo_t pseudo)
 static void print_pseudo_symbol(struct instruction *insn)
 {
     const struct ident *id = insn->type->ident;
+    const char *id_string = show_ident(id);
 
     printf("[");
     print_pseudo(insn->symbol);
-    if (id)
-        printf(":%s", show_ident(id));
+    if (id
+            /* FIXME: deref? */
+            && 0 != strcmp("__ptr", id_string))
+    {
+        printf(":%s", id_string);
+    }
     printf("]");
+}
+
+static void print_assignment_lhs(struct instruction *insn)
+{
+    print_pseudo(insn->target);
+    printf(" := ");
 }
 
 static void print_insn_call(struct instruction *insn)
@@ -484,13 +495,13 @@ static void print_insn_call(struct instruction *insn)
 static void print_insn_br(struct instruction *insn)
 {
     if (!is_pseudo(insn->cond)) {
-        printf("goto @%p", insn->bb_true);
+        printf("goto %p", insn->bb_true);
         return;
     }
 
     printf("if (");
     print_pseudo(insn->cond);
-    printf(")\n\t\t\tgoto @%p\n\t\telse\n\t\t\tgoto @%p",
+    printf(")\n\t\t\tgoto %p\n\t\telse\n\t\t\tgoto %p",
            insn->bb_true,
            insn->bb_false);
 }
@@ -498,11 +509,11 @@ static void print_insn_br(struct instruction *insn)
 static void print_insn_ret(struct instruction *insn)
 {
     printf("ret");
-    if (!is_pseudo(insn->/*src*/symbol))
+    if (!is_pseudo(insn->src))
         return;
 
     printf(" ");
-    print_pseudo_symbol(insn);
+    print_pseudo(insn->src);
 }
 
 static void print_insn_store(struct instruction *insn)
@@ -514,15 +525,14 @@ static void print_insn_store(struct instruction *insn)
 
 static void print_insn_load(struct instruction *insn)
 {
-    print_pseudo(insn->target);
-    printf(" := ");
+    print_assignment_lhs(insn);
     print_pseudo_symbol(insn);
 }
 
 static void print_insn_copy(struct instruction *insn)
 {
-    // TODO: check direction (store/load)
-    print_insn_load(insn);
+    print_assignment_lhs(insn);
+    print_pseudo(insn->src);
 }
 
 static void print_insn_phisource(struct instruction *insn)
@@ -533,6 +543,24 @@ static void print_insn_phisource(struct instruction *insn)
     // TODO: check direction (store/load)
     print_insn_load(insn);
 #endif
+}
+
+static void print_insn_add(struct instruction *insn)
+{
+    print_assignment_lhs(insn);
+    print_pseudo(insn->src1);
+    printf(" + ");
+    print_pseudo(insn->src2);
+}
+
+static void print_insn_set_eq(struct instruction *insn)
+{
+    print_assignment_lhs(insn);
+    printf("(");
+    print_pseudo(insn->src1);
+    printf("==");
+    print_pseudo(insn->src2);
+    printf(")");
 }
 
 static void print_insn(struct instruction *insn)
@@ -560,7 +588,10 @@ static void print_insn(struct instruction *insn)
         CASE_UNHANDLED(OP_TERMINATOR_END /*= OP_UNWIND*/)
 
         /* Binary */
-        CASE_UNHANDLED(OP_ADD /*= OP_BINARY*/)
+        case OP_ADD /*= OP_BINARY*/:
+            print_insn_add(insn);
+            break;
+
         CASE_UNHANDLED(OP_SUB)
         CASE_UNHANDLED(OP_MULU)
         CASE_UNHANDLED(OP_MULS)
@@ -580,7 +611,10 @@ static void print_insn(struct instruction *insn)
         CASE_UNHANDLED(OP_BINARY_END /*= OP_OR_BOOL*/)
 
         /* Binary comparison */
-        CASE_UNHANDLED(OP_SET_EQ /*= OP_BINCMP*/)
+        case OP_SET_EQ /*= OP_BINCMP*/:
+            print_insn_set_eq(insn);
+            break;
+
         CASE_UNHANDLED(OP_SET_NE)
         CASE_UNHANDLED(OP_SET_LE)
         CASE_UNHANDLED(OP_SET_GE)
@@ -665,7 +699,7 @@ static bool is_insn_interesting(struct instruction *insn)
 {
     unsigned size = insn->size;
     if (size && KNOWN_PTR_SIZE != size) {
-        WARN_VA("ignored instruction with operand size %d", insn->size);
+        WARN_VA("ignored instruction with operand of size %d", insn->size);
         return false;
     }
 
@@ -705,7 +739,7 @@ static void handle_bb_content(struct basic_block *bb)
     if (!bb)
         return;
 
-    printf("\t@%p:\n", bb);
+    printf("\t%p:\n", bb);
     FOR_EACH_PTR(bb->insns, insn) {
         handle_bb_insn(insn);
     } END_FOR_EACH_PTR(insn);
@@ -766,7 +800,7 @@ static void handle_fnc_def_begin(struct symbol *sym)
     FOR_EACH_PTR(base_type->arguments, arg) {
         if (argc++)
             printf(", ");
-        printf("/* arg%d */ %s", argc, show_ident(arg->ident));
+        printf("%%arg%d: %s", argc, show_ident(arg->ident));
     } END_FOR_EACH_PTR(arg);
 
     printf("):\n");
