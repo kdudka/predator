@@ -21,7 +21,7 @@ static dll_item_t* create_item(const dll_data_t *data)
 {
     dll_item_t *item = DLL_NEW(dll_item_t);
     if (!item)
-        dll_die(__FUNCTION__);
+        DLL_DIE;
 
     item->data = *data;
     item->next = DLL_NULL;

@@ -30,8 +30,18 @@
 #define WARN_UNHANDLED_SYM(sym) \
     WARN_UNHANDLED(show_ident(sym->ident))
 
+#define WARN_VA(...) do {\
+    fprintf(stderr, "--- %s: %d: warning: ", \
+            __FUNCTION__, __LINE__); \
+    fprintf (stderr, __VA_ARGS__); \
+    fprintf (stderr, "\n"); \
+} while (0)
+
 #define CASE_UNHANDLED(what) \
     case what: WARN_UNHANDLED(#what); break;
+
+// FIXME: hard-coded for now
+static const unsigned KNOWN_PTR_SIZE = 32;
 
 static void handle_bb(struct basic_block *bb, unsigned long generation);
 
@@ -362,6 +372,268 @@ static void handle_stmt(struct statement *stmt)
 }
 #endif
 
+static bool is_pseudo(pseudo_t pseudo)
+{
+    return pseudo
+        && pseudo != VOID;
+}
+
+// TODO: simplify
+static bool print_pseudo(pseudo_t pseudo)
+{
+    if (!is_pseudo(pseudo))
+        return false;
+
+    switch(pseudo->type) {
+        case PSEUDO_SYM: {
+            struct symbol *sym = pseudo->sym;
+            struct expression *expr;
+
+            if (sym->bb_target) {
+                printf("@%p", sym->bb_target);
+                break;
+            }
+            if (sym->ident) {
+                printf("%s", show_ident(sym->ident));
+                break;
+            }
+            expr = sym->initializer;
+            if (expr) {
+                switch (expr->type) {
+#if 0
+                    case EXPR_VALUE:
+                        printf("<symbol value: %lld>", expr->value);
+                        break;
+#endif
+                    case EXPR_STRING:
+                        printf("%s", show_string(expr->string));
+                        break;
+
+                    default:
+                        TRAP;
+                        break;
+                }
+            }
+             break;
+        }
+
+        case PSEUDO_REG:
+            printf("r%d", pseudo->nr);
+            if (pseudo->ident)
+                printf("\t(%s)", show_ident(pseudo->ident));
+            break;
+
+        case PSEUDO_VAL: {
+            long long value = pseudo->value;
+            if (value > 1000 || value < -1000)
+                printf("%#llx", value);
+            else
+                printf("%lld", value);
+            break;
+        }
+
+        case PSEUDO_ARG:
+            printf("%%arg%d", pseudo->nr);
+            break;
+
+        case PSEUDO_PHI:
+            printf("%%phi%d", pseudo->nr);
+            if (pseudo->ident)
+                printf("\t(%s)", show_ident(pseudo->ident));
+            break;
+
+        default:
+            TRAP;
+    }
+
+    return true;
+}
+
+static void print_insn_call(struct instruction *insn)
+{
+    struct pseudo *arg;
+    int cnt = 0;
+
+    if (print_pseudo(insn->target))
+        printf(" := ");
+
+    printf("%s(", show_ident(insn->func->ident));
+
+    FOR_EACH_PTR(insn->arguments, arg) {
+        if (cnt++)
+            printf(", ");
+        print_pseudo(arg);
+    } END_FOR_EACH_PTR(arg);
+
+    printf(")");
+}
+
+static void print_insn_br(struct instruction *insn)
+{
+    if (!is_pseudo(insn->cond)) {
+        printf("goto @%p", insn->bb_true);
+        return;
+    }
+
+    printf("if (");
+    print_pseudo(insn->cond);
+    printf(")\n\t\t\tgoto @%p\n\t\telse\n\t\t\tgoto @%p",
+           insn->bb_true,
+           insn->bb_false);
+}
+
+static void print_insn_store(struct instruction *insn)
+{
+#if 0
+    printf("%s", show_instruction(insn));
+#else
+    // TODO: handle simple deref
+    printf("[");
+    print_pseudo(insn->symbol);
+    printf(" : %s] := ", show_ident(insn->type->ident));
+    print_pseudo(insn->target);
+#endif
+}
+
+static void print_insn_load(struct instruction *insn)
+{
+#if 0
+    printf("%s", show_instruction(insn));
+#else
+    // TODO: handle simple deref
+    print_pseudo(insn->target);
+    printf(" := [");
+    print_pseudo(insn->symbol);
+    printf(" : %s]", show_ident(insn->type->ident));
+#endif
+}
+
+static void print_insn(struct instruction *insn)
+{
+    switch (insn->opcode) {
+        CASE_UNHANDLED(OP_BADOP)
+
+        /* Entry */
+        case OP_ENTRY:
+            // ignore for now
+            break;
+
+        /* Terminator */
+        case OP_RET /*= OP_TERMINATOR*/:
+            printf("ret");
+            break;
+
+        case OP_BR:
+            print_insn_br(insn);
+            break;
+
+        CASE_UNHANDLED(OP_SWITCH)
+        CASE_UNHANDLED(OP_INVOKE)
+        CASE_UNHANDLED(OP_COMPUTEDGOTO)
+        CASE_UNHANDLED(OP_TERMINATOR_END /*= OP_UNWIND*/)
+
+        /* Binary */
+        CASE_UNHANDLED(OP_ADD /*= OP_BINARY*/)
+        CASE_UNHANDLED(OP_SUB)
+        CASE_UNHANDLED(OP_MULU)
+        CASE_UNHANDLED(OP_MULS)
+        CASE_UNHANDLED(OP_DIVU)
+        CASE_UNHANDLED(OP_DIVS)
+        CASE_UNHANDLED(OP_MODU)
+        CASE_UNHANDLED(OP_MODS)
+        CASE_UNHANDLED(OP_SHL)
+        CASE_UNHANDLED(OP_LSR)
+        CASE_UNHANDLED(OP_ASR)
+
+        /* Logical */
+        CASE_UNHANDLED(OP_AND)
+        CASE_UNHANDLED(OP_OR)
+        CASE_UNHANDLED(OP_XOR)
+        CASE_UNHANDLED(OP_AND_BOOL)
+        CASE_UNHANDLED(OP_BINARY_END /*= OP_OR_BOOL*/)
+
+        /* Binary comparison */
+        CASE_UNHANDLED(OP_SET_EQ /*= OP_BINCMP*/)
+        CASE_UNHANDLED(OP_SET_NE)
+        CASE_UNHANDLED(OP_SET_LE)
+        CASE_UNHANDLED(OP_SET_GE)
+        CASE_UNHANDLED(OP_SET_LT)
+        CASE_UNHANDLED(OP_SET_GT)
+        CASE_UNHANDLED(OP_SET_B)
+        CASE_UNHANDLED(OP_SET_A)
+        CASE_UNHANDLED(OP_SET_BE)
+        CASE_UNHANDLED(OP_BINCMP_END /*= OP_SET_AE*/)
+
+        /* Uni */
+        CASE_UNHANDLED(OP_NOT)
+        CASE_UNHANDLED(OP_NEG)
+
+        /* Select - three input values */
+        CASE_UNHANDLED(OP_SEL)
+
+        /* Memory */
+        CASE_UNHANDLED(OP_MALLOC)
+        CASE_UNHANDLED(OP_FREE)
+        CASE_UNHANDLED(OP_ALLOCA)
+        case OP_LOAD:
+            print_insn_load(insn);
+            break;
+
+        case OP_STORE:
+            print_insn_store(insn);
+            break;
+
+        CASE_UNHANDLED(OP_SETVAL)
+        CASE_UNHANDLED(OP_SYMADDR)
+        CASE_UNHANDLED(OP_GET_ELEMENT_PTR)
+
+        /* Other */
+        CASE_UNHANDLED(OP_PHI)
+        CASE_UNHANDLED(OP_PHISOURCE)
+        CASE_UNHANDLED(OP_CAST)
+        CASE_UNHANDLED(OP_SCAST)
+        CASE_UNHANDLED(OP_FPCAST)
+        CASE_UNHANDLED(OP_PTRCAST)
+        CASE_UNHANDLED(OP_INLINED_CALL)
+        case OP_CALL:
+            print_insn_call(insn);
+            break;
+
+        CASE_UNHANDLED(OP_VANEXT)
+        CASE_UNHANDLED(OP_VAARG)
+        CASE_UNHANDLED(OP_SLICE)
+        CASE_UNHANDLED(OP_SNOP)
+        CASE_UNHANDLED(OP_LNOP)
+        CASE_UNHANDLED(OP_NOP)
+        CASE_UNHANDLED(OP_DEATHNOTE)
+        CASE_UNHANDLED(OP_ASM)
+
+        /* Sparse tagging (line numbers, context, whatever) */
+        CASE_UNHANDLED(OP_CONTEXT)
+        CASE_UNHANDLED(OP_RANGE)
+
+        /* Needed to translate SSA back to normal form */
+        CASE_UNHANDLED(OP_COPY)
+    }
+}
+
+static bool is_insn_interesting(struct instruction *insn)
+{
+    unsigned size = insn->size;
+    if (size && KNOWN_PTR_SIZE != size) {
+        WARN_VA("ignored instruction with operand size %d", insn->size);
+        return false;
+    }
+
+    switch (insn->opcode) {
+        case OP_ENTRY:
+            return false;
+
+        default:
+            return true;
+    }
+}
+
 static void handle_bb_insn(struct instruction *insn)
 {
     if (!insn)
@@ -372,7 +644,12 @@ static void handle_bb_insn(struct instruction *insn)
         return;
 #endif
 
-    printf("\t\t%s\n", show_instruction(insn));
+    if (!is_insn_interesting(insn))
+        return;
+
+    printf("\t\t");
+    print_insn(insn);
+    printf("\n");
 }
 
 static void handle_bb_content(struct basic_block *bb)
@@ -382,7 +659,7 @@ static void handle_bb_content(struct basic_block *bb)
     if (!bb)
         return;
 
-    printf("\t.L%p:\n", bb);
+    printf("\t@%p:\n", bb);
     FOR_EACH_PTR(bb->insns, insn) {
         handle_bb_insn(insn);
     } END_FOR_EACH_PTR(insn);
@@ -447,7 +724,7 @@ static void handle_fnc_def_begin(struct symbol *sym)
         argc++;
     } END_FOR_EACH_PTR(arg);
 
-    printf(")\n\n");
+    printf("):\n");
 }
 
 static void handle_fnc_def_end(struct symbol *sym)
@@ -537,6 +814,7 @@ int main(int argc, char **argv)
     clean_up_symbols(sparse_initialize(argc, argv, &filelist));
 
     FOR_EACH_PTR_NOTAG(filelist, file) {
+        printf("%s: processing '%s'...\n", argv[0], file);
         clean_up_symbols(sparse(file));
     } END_FOR_EACH_PTR_NOTAG(file);
 
