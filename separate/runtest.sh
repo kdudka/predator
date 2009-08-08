@@ -26,7 +26,9 @@ VALGRIND_OPTS="--leak-check=full --error-exitcode=$VALGRIND_EC \
 set -x
 test -n "$1" || exit 1
 TEMP=`mktemp` || exit 1
-$VALGRIND $VALGRIND_OPTS --log-fd=3 "./test-$1" 3>"$TEMP"; EC=$?
+TEST="./test-$1"
+shift
+$VALGRIND $VALGRIND_OPTS --log-fd=3 $TEST "$@" 3>"$TEMP"; EC=$?
 if test $EC = 0; then
     grep LEAK "$TEMP" && EC=$VALGRIND_EC_LEAK
 fi

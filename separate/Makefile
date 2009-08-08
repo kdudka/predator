@@ -7,6 +7,7 @@ SPARSE_CFLAGS = -I..
 SPARSE_LIBS = ../sparse/libsparse.a
 
 CFLAGS += -g -O0 -Wall
+CXXFLAGS += -g -O0 -Wall
 SFLAGS += -Wno-decl
 
 .PHONY: all check clean demo
@@ -23,7 +24,7 @@ test-list: list.c
 	$(CC) $(CFLAGS) -DSELF_TEST -o $@ $<
 
 check: test-all
-	./runtest.sh all
+	./runtest.sh all --build_info=yes --log_level=test_suite
 
 clean:
 	rm -f separate test-list test-all test-all.o dll.o
