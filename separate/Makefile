@@ -16,14 +16,17 @@ all: demo
 separate: separate.c
 	$(CC) $(CFLAGS) $(SPARSE_CFLAGS) -o $@ $< $(SPARSE_LIBS)
 
+test-all: LDFLAGS += -lboost_unit_test_framework
+test-all: test-all.o dll.o
+
 test-list: list.c
 	$(CC) $(CFLAGS) -DSELF_TEST -o $@ $<
 
-check: test-list
-	./runtest.sh list
+check: test-all
+	./runtest.sh all
 
 clean:
-	rm -f separate test-list
+	rm -f separate test-list test-all test-all.o dll.o
 
-demo: check list.c separate
-	./separate $(SFLAGS) list.c
+demo: check dll.c separate
+	./separate $(SFLAGS) dll.c

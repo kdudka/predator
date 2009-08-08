@@ -1,0 +1,12 @@
+{
+   glibc/boost destruction nonsense
+   Memcheck:Param
+   sigaltstack(ss)
+   fun:sigaltstack
+   fun:_ZN5boost6detail14signal_handlerD1Ev
+   fun:_ZN5boost17execution_monitor13catch_signalsERKNS_9unit_test9callback0IiEE
+   fun:_ZN5boost17execution_monitor7executeERKNS_9unit_test9callback0IiEE
+   fun:_ZN5boost9unit_test9framework3runEmb
+   fun:_ZN5boost9unit_test14unit_test_mainEPFbvEiPPc
+   fun:main
+}

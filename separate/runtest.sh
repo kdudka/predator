@@ -20,7 +20,8 @@
 VALGRIND=valgrind
 VALGRIND_EC=3
 VALGRIND_EC_LEAK=4
-VALGRIND_OPTS="--leak-check=full --error-exitcode=$VALGRIND_EC"
+VALGRIND_OPTS="--leak-check=full --error-exitcode=$VALGRIND_EC \
+--suppressions=runtest.valgrind"
 
 set -x
 test -n "$1" || exit 1
