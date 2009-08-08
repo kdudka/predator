@@ -21,7 +21,7 @@
 #define DO_EXPAND_SYMBOL            1
 #define DO_PER_EP_UNSAA             1
 #define DO_PER_EP_SET_UP_STORAGE    1
-#define SHOW_ALL_INSNS              0
+#define SHOW_PSEUDO_INSNS           0
 
 #define WARN_UNHANDLED(what) \
     fprintf(stderr, "--- %s: %d: warning: '%s' not handled\n", \
@@ -418,9 +418,11 @@ static bool print_pseudo(pseudo_t pseudo)
         }
 
         case PSEUDO_REG:
-            printf("r%d", pseudo->nr);
+#if 0
             if (pseudo->ident)
-                printf("\t(%s)", show_ident(pseudo->ident));
+                printf("/* %s */ ", show_ident(pseudo->ident));
+#endif
+            printf("r%d", pseudo->nr);
             break;
 
         case PSEUDO_VAL: {
@@ -447,6 +449,17 @@ static bool print_pseudo(pseudo_t pseudo)
     }
 
     return true;
+}
+
+static void print_pseudo_symbol(struct instruction *insn)
+{
+    const struct ident *id = insn->type->ident;
+
+    printf("[");
+    print_pseudo(insn->symbol);
+    if (id)
+        printf(":%s", show_ident(id));
+    printf("]");
 }
 
 static void print_insn_call(struct instruction *insn)
@@ -482,29 +495,43 @@ static void print_insn_br(struct instruction *insn)
            insn->bb_false);
 }
 
+static void print_insn_ret(struct instruction *insn)
+{
+    printf("ret");
+    if (!is_pseudo(insn->/*src*/symbol))
+        return;
+
+    printf(" ");
+    print_pseudo_symbol(insn);
+}
+
 static void print_insn_store(struct instruction *insn)
 {
-#if 0
-    printf("%s", show_instruction(insn));
-#else
-    // TODO: handle simple deref
-    printf("[");
-    print_pseudo(insn->symbol);
-    printf(" : %s] := ", show_ident(insn->type->ident));
+    print_pseudo_symbol(insn);
+    printf(" := ");
     print_pseudo(insn->target);
-#endif
 }
 
 static void print_insn_load(struct instruction *insn)
 {
-#if 0
+    print_pseudo(insn->target);
+    printf(" := ");
+    print_pseudo_symbol(insn);
+}
+
+static void print_insn_copy(struct instruction *insn)
+{
+    // TODO: check direction (store/load)
+    print_insn_load(insn);
+}
+
+static void print_insn_phisource(struct instruction *insn)
+{
+#if 1
     printf("%s", show_instruction(insn));
 #else
-    // TODO: handle simple deref
-    print_pseudo(insn->target);
-    printf(" := [");
-    print_pseudo(insn->symbol);
-    printf(" : %s]", show_ident(insn->type->ident));
+    // TODO: check direction (store/load)
+    print_insn_load(insn);
 #endif
 }
 
@@ -520,7 +547,7 @@ static void print_insn(struct instruction *insn)
 
         /* Terminator */
         case OP_RET /*= OP_TERMINATOR*/:
-            printf("ret");
+            print_insn_ret(insn);
             break;
 
         case OP_BR:
@@ -589,11 +616,18 @@ static void print_insn(struct instruction *insn)
 
         /* Other */
         CASE_UNHANDLED(OP_PHI)
-        CASE_UNHANDLED(OP_PHISOURCE)
-        CASE_UNHANDLED(OP_CAST)
-        CASE_UNHANDLED(OP_SCAST)
-        CASE_UNHANDLED(OP_FPCAST)
-        CASE_UNHANDLED(OP_PTRCAST)
+        case OP_PHISOURCE:
+            print_insn_phisource(insn);
+            break;
+
+        case OP_CAST:
+        case OP_SCAST:
+        case OP_FPCAST:
+        case OP_PTRCAST:
+            // TODO: separate handler?
+            print_insn_copy(insn);
+            break;
+
         CASE_UNHANDLED(OP_INLINED_CALL)
         case OP_CALL:
             print_insn_call(insn);
@@ -602,8 +636,16 @@ static void print_insn(struct instruction *insn)
         CASE_UNHANDLED(OP_VANEXT)
         CASE_UNHANDLED(OP_VAARG)
         CASE_UNHANDLED(OP_SLICE)
-        CASE_UNHANDLED(OP_SNOP)
-        CASE_UNHANDLED(OP_LNOP)
+        case OP_SNOP:
+            //print_insn_store(insn);
+            printf("%s", show_instruction(insn));
+            break;
+
+        case OP_LNOP:
+            //print_insn_load(insn);
+            printf("%s", show_instruction(insn));
+            break;
+
         CASE_UNHANDLED(OP_NOP)
         CASE_UNHANDLED(OP_DEATHNOTE)
         CASE_UNHANDLED(OP_ASM)
@@ -613,7 +655,9 @@ static void print_insn(struct instruction *insn)
         CASE_UNHANDLED(OP_RANGE)
 
         /* Needed to translate SSA back to normal form */
-        CASE_UNHANDLED(OP_COPY)
+        case OP_COPY:
+            print_insn_copy(insn);
+            break;
     }
 }
 
@@ -639,10 +683,12 @@ static void handle_bb_insn(struct instruction *insn)
     if (!insn)
         return;
 
-#if !SHOW_ALL_INSNS
-    if (!insn->bb)
-        return;
+    if (!insn->bb) {
+#if SHOW_PSEUDO_INSNS
+        WARN_VA("ignoring pseudo: %s", show_instruction(insn));
 #endif
+        return;
+    }
 
     if (!is_insn_interesting(insn))
         return;
@@ -718,10 +764,9 @@ static void handle_fnc_def_begin(struct symbol *sym)
 
     // dump argument list
     FOR_EACH_PTR(base_type->arguments, arg) {
-        if (argc)
+        if (argc++)
             printf(", ");
-        printf("%s", show_ident(arg->ident));
-        argc++;
+        printf("/* arg%d */ %s", argc, show_ident(arg->ident));
     } END_FOR_EACH_PTR(arg);
 
     printf("):\n");
