@@ -1,0 +1,20 @@
+
+
+test:
+.L0x7f9fb2030010
+	<entry-point>
+	phisrc.32   %phi2(ptr) <- %arg1
+	br          .L0x7f9fb2030130
+
+.L0x7f9fb2030130
+	copy.32     %r1(ptr) <- %r5(ptr)
+	br          %r1(ptr), .L0x7f9fb2030058, .L0x7f9fb20300e8
+
+.L0x7f9fb2030058
+	load.32     %r3 <- 0[%r1(ptr)]
+	phisrc.32   %phi3(ptr) <- %r3
+	br          .L0x7f9fb2030130
+
+.L0x7f9fb20300e8
+	ret
+

@@ -1,0 +1,20 @@
+
+
+test:
+.L0x7f4a7f7f1010
+	<entry-point>
+	copy.32     %r5(ptr) <- %arg1
+	br          .L0x7f4a7f7f1130
+
+.L0x7f4a7f7f1130
+	copy.32     %r1(ptr) <- %r5(ptr)
+	br          %r1(ptr), .L0x7f4a7f7f1058, .L0x7f4a7f7f10e8
+
+.L0x7f4a7f7f1058
+	load.32     %r3 <- 0[%r1(ptr)]
+	copy.32     %r5(ptr) <- %r3
+	br          .L0x7f4a7f7f1130
+
+.L0x7f4a7f7f10e8
+	ret
+

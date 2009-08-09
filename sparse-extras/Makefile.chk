@@ -1,0 +1,29 @@
+# all SPARSE headers (except ident-list.h which is not an ordinary header)
+HEADERS ?= \
+	allocate.h \
+	bitmap.h \
+	compat.h \
+	compile.h \
+	dissect.h \
+	expression.h \
+	flow.h \
+	lib.h \
+	linearize.h \
+	parse.h \
+	ptrlist.h \
+	scope.h \
+	storage.h \
+	symbol.h \
+	target.h \
+	token.h \
+
+SINK ?= /dev/null
+
+CFLAGS += -Wall -Werror
+
+.PHONY: check $(HEADERS)
+
+# check whether each header is self-compilable
+check: $(HEADERS)
+$(HEADERS):
+	$(CC) $(CFLAGS) -o $(SINK) -c $@
