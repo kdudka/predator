@@ -16,8 +16,8 @@ SFLAGS += -Wno-decl
 
 all: demo
 
-separate: separate.c
-	$(CC) $(CFLAGS) $(SPARSE_CFLAGS) -o $@ $< $(SPARSE_LIBS)
+separate: separate.c $(SPARSE_LIBS)
+	$(CC) $(CFLAGS) $(SPARSE_CFLAGS) -o $@ separate.c $(SPARSE_LIBS)
 
 test-all: LDFLAGS += -lboost_unit_test_framework
 test-all: test-all.o dll.o
@@ -36,3 +36,6 @@ demo: check dll.c separate
 
 debug: dll.c separate separate.gdb
 	$(GDB) -x separate.gdb
+
+../sparse/libsparse.a: ../sparse/*.c ../sparse/*.h ../sparse/local.mk
+	$(MAKE) -C ../sparse

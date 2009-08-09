@@ -58,6 +58,10 @@ $(SPARSE):
 
 $(SPARSE_GIT):
 	$(GIT) clone git://git.kernel.org/pub/scm/devel/sparse/sparse.git $@
+	cd $@ && $(GIT) branch -a separate
+	cd $@ && $(GIT) checkout separate
+	cd $@ && $(GIT) am ../sparse-extras/*.patch
+	cd $@ && ln -s ../sparse-extras/local.mk
 
 $(GCC_SRC):
 	$(SVN) co svn://gcc.gnu.org/svn/gcc/trunk $@
