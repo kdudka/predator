@@ -1,0 +1,26 @@
+
+
+test:
+.L0x7fbd14330010
+	<entry-point>
+	phisrc.32   %phi1(i) <- %arg1
+	phisrc.32   %phi4(i) <- %arg1
+	br          .L0x7fbd14330130
+
+.L0x7fbd14330130
+	copy.32     %r1(i) <- %r5(i)
+	br          %r1(i), .L0x7fbd14330178, .L0x7fbd143300e8
+
+.L0x7fbd14330178
+	call        test, $0
+	br          .L0x7fbd143301c0
+
+.L0x7fbd143301c0
+	add.32      %r4 <- %r1(i), $1
+	phisrc.32   %phi2(i) <- %r4
+	phisrc.32   %phi5(i) <- %r4
+	br          .L0x7fbd14330130
+
+.L0x7fbd143300e8
+	ret
+

@@ -535,16 +535,6 @@ static void print_insn_copy(struct instruction *insn)
     print_pseudo(insn->src);
 }
 
-static void print_insn_phisource(struct instruction *insn)
-{
-#if 1
-    printf("%s", show_instruction(insn));
-#else
-    // TODO: check direction (store/load)
-    print_insn_load(insn);
-#endif
-}
-
 static void print_insn_add(struct instruction *insn)
 {
     print_assignment_lhs(insn);
@@ -649,9 +639,10 @@ static void print_insn(struct instruction *insn)
         CASE_UNHANDLED(OP_GET_ELEMENT_PTR)
 
         /* Other */
-        CASE_UNHANDLED(OP_PHI)
+        case OP_PHI:
         case OP_PHISOURCE:
-            print_insn_phisource(insn);
+            // FIXME: this might be a SPARSE bug if DO_PER_EP_UNSAA is set
+            printf("%s", show_instruction(insn));
             break;
 
         case OP_CAST:
@@ -893,7 +884,7 @@ int main(int argc, char **argv)
     clean_up_symbols(sparse_initialize(argc, argv, &filelist));
 
     FOR_EACH_PTR_NOTAG(filelist, file) {
-        printf("%s: processing '%s'...\n", argv[0], file);
+        printf("%s: about to process '%s'...\n", argv[0], file);
         clean_up_symbols(sparse(file));
     } END_FOR_EACH_PTR_NOTAG(file);
 
