@@ -1,6 +1,6 @@
-From 619088669e2333a8c5921d99befa8d72b322004d Mon Sep 17 00:00:00 2001
+From 93455c6fe7dc84e1519bec70a9fd8625a879d791 Mon Sep 17 00:00:00 2001
 From: Kamil Dudka <kdudka@redhat.com>
-Date: Sat, 8 Aug 2009 12:58:41 +0200
+Date: Tue, 11 Aug 2009 14:56:53 +0200
 Subject: [PATCH] make sparse headers self-compilable...
 
 ... and thus possible to include them in arbitrary order and without any
@@ -9,60 +9,68 @@ external dependencies.
 Signed-off-by: Kamil Dudka <kdudka@redhat.com>
 ---
  compile.h |    2 ++
- flow.h    |    2 ++
+ flow.h    |    5 +++++
  ptrlist.h |    2 ++
  scope.h   |    2 ++
  storage.h |    3 +++
- 5 files changed, 11 insertions(+), 0 deletions(-)
+ 5 files changed, 14 insertions(+), 0 deletions(-)
 
 diff --git a/compile.h b/compile.h
-index 0db8fdb..6c5260d 100644
+index 0db8fdb..177363a 100644
 --- a/compile.h
 +++ b/compile.h
 @@ -1,6 +1,8 @@
  #ifndef COMPILE_H
  #define COMPILE_H
  
-+#include "symbol.h"
++struct symbol;
 +
  extern void emit_one_symbol(struct symbol *);
  extern void emit_unit_begin(const char *);
  extern void emit_unit_end(void);
 diff --git a/flow.h b/flow.h
-index 9f2e165..241f081 100644
+index fbc9505..370aadd 100644
 --- a/flow.h
 +++ b/flow.h
-@@ -1,6 +1,8 @@
+@@ -1,11 +1,16 @@
  #ifndef FLOW_H
  #define FLOW_H
  
-+#include "symbol.h"
++#include "lib.h"
 +
  extern unsigned long bb_generation;
  
  #define REPEAT_CSE		1
+ #define REPEAT_SYMBOL_CLEANUP	2
+ 
++struct entrypoint;
++struct instruction;
++
+ extern int simplify_flow(struct entrypoint *ep);
+ 
+ extern void simplify_symbol_usage(struct entrypoint *ep);
 diff --git a/ptrlist.h b/ptrlist.h
-index dae0906..85b23fc 100644
+index dae0906..fbfc080 100644
 --- a/ptrlist.h
 +++ b/ptrlist.h
-@@ -7,6 +7,8 @@
-  * (C) Copyright Linus Torvalds 2003-2005
-  */
+@@ -1,6 +1,8 @@
+ #ifndef PTR_LIST_H
+ #define PTR_LIST_H
  
 +#include <stdlib.h>
 +
- #define container(ptr, type, member) \
- 	(type *)((void *)(ptr) - offsetof(type, member))
- 
+ /*
+  * Generic pointer list manipulation code. 
+  *
 diff --git a/scope.h b/scope.h
-index 5f1f232..aff7b6b 100644
+index 5f1f232..0fab286 100644
 --- a/scope.h
 +++ b/scope.h
 @@ -9,6 +9,8 @@
   *  Licensed under the Open Software License version 1.1
   */
  
-+#include "symbol.h"
++struct symbol;
 +
  struct scope {
  	struct token *token;		/* Scope start information */

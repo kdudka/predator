@@ -4,8 +4,10 @@ GCC_INSTALL = gcc-install
 
 INVADER = invader.zip
 SPARSE = sparse.tar.gz
-SPARSE_GIT = sparse
 LIST = $(INVADER) $(SPARSE)
+
+SPARSE_GIT = sparse
+CGT_GIT = cgt
 
 CURL ?= curl --location -v
 GIT ?= git
@@ -66,3 +68,5 @@ $(SPARSE_GIT):
 $(GCC_SRC):
 	$(SVN) co svn://gcc.gnu.org/svn/gcc/trunk $@
 
+$(CGT_GIT):
+	$(GIT) clone http://git.fedorahosted.org/git/cgt.git $@
