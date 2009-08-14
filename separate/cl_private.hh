@@ -15,59 +15,75 @@ class ICodeListener {
         virtual ~ICodeListener() { }
 
         virtual void file_open(
-            const char              *file_name) = 0;
+            const char              *file_name)
+            = 0;
 
-        virtual void file_close() = 0;
+        virtual void file_close()
+            = 0;
 
         virtual void fnc_open(
             const char              *fnc_name,
             int                     line,
-            enum cl_scope_e         scope) = 0;
+            enum cl_scope_e         scope)
+            = 0;
 
         virtual void fnc_arg_decl(
             int                     arg_pos,
-            const char              *arg_name) = 0;
+            const char              *arg_name)
+            = 0;
 
-        virtual void fnc_close() = 0;
+        virtual void fnc_close()
+            = 0;
 
         virtual void bb_open(
-            const char              *bb_name) = 0;
+            const char              *bb_name)
+            = 0;
 
         virtual void insn_jmp(
             int                     line,
-            const char              *label) = 0;
+            const char              *label)
+            = 0;
 
         virtual void insn_cond(
             int                     line,
             struct cl_operand       *src,
             const char              *label_true,
-            const char              *label_false) = 0;
+            const char              *label_false)
+            = 0;
 
         virtual void insn_ret(
             int                     line,
-            struct cl_operand       *src) = 0;
+            struct cl_operand       *src)
+            = 0;
 
         virtual void insn_unop(
             int                     line,
             enum cl_unop_e          type,
             struct cl_operand       *dst,
-            struct cl_operand       *src) = 0;
+            struct cl_operand       *src)
+            = 0;
 
         virtual void insn_binop(
             int                     line,
             enum cl_binop_e         type,
             struct cl_operand       *dst,
             struct cl_operand       *src1,
-            struct cl_operand       *src2) = 0;
+            struct cl_operand       *src2)
+            = 0;
 
-        virtual void insn_call(
+        virtual void insn_call_open(
             int                     line,
             struct cl_operand       *dst,
-            const char              *fnc_name) = 0;
+            const char              *fnc_name)
+            = 0;
 
         virtual void insn_call_arg(
             int                     pos,
-            struct cl_operand       *src) = 0;
+            struct cl_operand       *src)
+            = 0;
+
+        virtual void insn_call_close()
+            = 0;
 };
 
 /**

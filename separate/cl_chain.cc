@@ -61,7 +61,7 @@ class ClChain: public ICodeListener {
             struct cl_operand       *src1,
             struct cl_operand       *src2);
 
-        virtual void insn_call(
+        virtual void insn_call_open(
             int                     line,
             struct cl_operand       *dst,
             const char              *fnc_name);
@@ -69,6 +69,8 @@ class ClChain: public ICodeListener {
         virtual void insn_call_arg(
             int                     pos,
             struct cl_operand       *src);
+
+        virtual void insn_call_close();
 
     public:
         void append(cl_code_listener *);
@@ -178,12 +180,12 @@ void ClChain::insn_binop(
     CL_CHAIN_FOREACH_VA(insn_binop, line, type, dst, src1, src2);
 }
 
-void ClChain::insn_call(
+void ClChain::insn_call_open(
             int                     line,
             struct cl_operand       *dst,
             const char              *fnc_name)
 {
-    CL_CHAIN_FOREACH_VA(insn_call, line, dst, fnc_name);
+    CL_CHAIN_FOREACH_VA(insn_call_open, line, dst, fnc_name);
 }
 
 void ClChain::insn_call_arg(
@@ -191,6 +193,11 @@ void ClChain::insn_call_arg(
             struct cl_operand       *src)
 {
     CL_CHAIN_FOREACH_VA(insn_call_arg, pos, src);
+}
+
+void ClChain::insn_call_close()
+{
+    CL_CHAIN_FOREACH(insn_call_close);
 }
 
 // /////////////////////////////////////////////////////////////////////////////

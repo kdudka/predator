@@ -1,3 +1,4 @@
+cgt/
 gcc-build/
 gcc-install/
 gcc-src/
@@ -6,3 +7,4 @@ invader.zip
 sparse-0.4.1/
 sparse.tar.gz
 sparse/
+ssd/

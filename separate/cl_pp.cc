@@ -57,7 +57,7 @@ class ClPrettyPrint: public ICodeListener {
             struct cl_operand       *src1,
             struct cl_operand       *src2);
 
-        virtual void insn_call(
+        virtual void insn_call_open(
             int                     line,
             struct cl_operand       *dst,
             const char              *fnc_name);
@@ -65,6 +65,8 @@ class ClPrettyPrint: public ICodeListener {
         virtual void insn_call_arg(
             int                     pos,
             struct cl_operand       *src);
+
+        virtual void insn_call_close();
 
     private:
         boost::iostreams::file_descriptor_sink out_;
@@ -151,7 +153,7 @@ void ClPrettyPrint::insn_binop(
 {
 }
 
-void ClPrettyPrint::insn_call(
+void ClPrettyPrint::insn_call_open(
             int                     line,
             struct cl_operand       *dst,
             const char              *fnc_name)
@@ -161,6 +163,10 @@ void ClPrettyPrint::insn_call(
 void ClPrettyPrint::insn_call_arg(
             int                     pos,
             struct cl_operand       *src)
+{
+}
+
+void ClPrettyPrint::insn_call_close()
 {
 }
 

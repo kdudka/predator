@@ -229,13 +229,13 @@ static void cl_wrap_insn_binop(
     CL_WRAP_VA(insn_binop, line, type, dst, src1, src2);
 }
 
-static void cl_wrap_insn_call(
+static void cl_wrap_insn_call_open(
             struct cl_code_listener *self,
             int                     line,
             struct cl_operand       *dst,
             const char              *fnc_name)
 {
-    CL_WRAP_VA(insn_call, line, dst, fnc_name);
+    CL_WRAP_VA(insn_call_open, line, dst, fnc_name);
 }
 
 static void cl_wrap_insn_call_arg(
@@ -244,6 +244,12 @@ static void cl_wrap_insn_call_arg(
             struct cl_operand       *src)
 {
     CL_WRAP_VA(insn_call_arg, pos, src);
+}
+
+static void cl_wrap_insn_call_close(
+            struct cl_code_listener *self)
+{
+    CL_WRAP(insn_call_close);
 }
 
 static void cl_wrap_destroy(struct cl_code_listener *self)
@@ -266,21 +272,22 @@ struct cl_code_listener* cl_create_listener_wrap(ICodeListener *listener)
     data->close_fd_on_destroy   = false;
 
     struct cl_code_listener *wrap = new cl_code_listener;
-    wrap->data          = data;
-    wrap->file_open     = cl_wrap_file_open;
-    wrap->file_close    = cl_wrap_file_close;
-    wrap->fnc_open      = cl_wrap_fnc_open;
-    wrap->fnc_arg_decl  = cl_wrap_fnc_arg_decl;
-    wrap->fnc_close     = cl_wrap_fnc_close;
-    wrap->bb_open       = cl_wrap_bb_open;
-    wrap->insn_jmp      = cl_wrap_insn_jmp;
-    wrap->insn_cond     = cl_wrap_insn_cond;
-    wrap->insn_ret      = cl_wrap_insn_ret;
-    wrap->insn_unop     = cl_wrap_insn_unop;
-    wrap->insn_binop    = cl_wrap_insn_binop;
-    wrap->insn_call     = cl_wrap_insn_call;
-    wrap->insn_call_arg = cl_wrap_insn_call_arg;
-    wrap->destroy       = cl_wrap_destroy;
+    wrap->data              = data;
+    wrap->file_open         = cl_wrap_file_open;
+    wrap->file_close        = cl_wrap_file_close;
+    wrap->fnc_open          = cl_wrap_fnc_open;
+    wrap->fnc_arg_decl      = cl_wrap_fnc_arg_decl;
+    wrap->fnc_close         = cl_wrap_fnc_close;
+    wrap->bb_open           = cl_wrap_bb_open;
+    wrap->insn_jmp          = cl_wrap_insn_jmp;
+    wrap->insn_cond         = cl_wrap_insn_cond;
+    wrap->insn_ret          = cl_wrap_insn_ret;
+    wrap->insn_unop         = cl_wrap_insn_unop;
+    wrap->insn_binop        = cl_wrap_insn_binop;
+    wrap->insn_call_open    = cl_wrap_insn_call_open;
+    wrap->insn_call_arg     = cl_wrap_insn_call_arg;
+    wrap->insn_call_close   = cl_wrap_insn_call_close;
+    wrap->destroy           = cl_wrap_destroy;
 
     return wrap;
 }

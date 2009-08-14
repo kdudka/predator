@@ -120,7 +120,7 @@ struct cl_operand {
  *
  * FILE_CONTENT is defined by substitution to regex:
  *
- *     (fnc_open (fnc_arg_decl)* FNC_CONTENT fnc_close
+ *     fnc_open (fnc_arg_decl)* FNC_CONTENT fnc_close
  *
  *
  * FNC_CONTENT is defined by substitution to regex:
@@ -139,7 +139,7 @@ struct cl_operand {
  *
  * INSN_CALL is defined by regex:
  *
- *     insn_call (insn_call_arg)*
+ *     insn_call_open (insn_call_arg)* insn_call_close
  *
  * @todo avoid (re)formating in dox output
  */
@@ -206,7 +206,7 @@ struct cl_code_listener {
             struct cl_operand       *src1,
             struct cl_operand       *src2);
 
-    void (*insn_call)(
+    void (*insn_call_open)(
             struct cl_code_listener *self,
             int                     line,
             struct cl_operand       *dst,
@@ -216,6 +216,9 @@ struct cl_code_listener {
             struct cl_code_listener *self,
             int                     pos,
             struct cl_operand       *src);
+
+    void (*insn_call_close)(
+            struct cl_code_listener *self);
 
     void (*destroy)(
             struct cl_code_listener *self);
