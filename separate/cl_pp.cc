@@ -4,6 +4,8 @@
 
 #include <unistd.h>
 
+#include <boost/iostreams/device/file_descriptor.hpp>
+
 class ClPrettyPrint: public ICodeListener {
     public:
         ClPrettyPrint(int fd_out);
@@ -63,13 +65,18 @@ class ClPrettyPrint: public ICodeListener {
         virtual void insn_call_arg(
             int                     pos,
             struct cl_operand       *src);
+
+    private:
+        boost::iostreams::file_descriptor_sink out_;
 };
 
 using namespace ssd;
 
 // /////////////////////////////////////////////////////////////////////////////
 // ClPrettyPrint implementation
-ClPrettyPrint::ClPrettyPrint(int fd_out) {
+ClPrettyPrint::ClPrettyPrint(int fd_out):
+    out_(fd_out)
+{
     ColorConsole::enable(isatty(fd_out));
 }
 
