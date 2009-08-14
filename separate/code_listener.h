@@ -40,7 +40,7 @@ struct cl_init_data {
      * function to write an information message (which usually gives some extra
      * info related to previous warning/error message)
      */
-    cl_print_fnc_t info;
+    cl_print_fnc_t note;
 
     /**
      * function to display critical error and then terminate the application
