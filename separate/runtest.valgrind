@@ -10,3 +10,10 @@
    fun:_ZN5boost9unit_test14unit_test_mainEPFbvEiPPc
    fun:main
 }
+{
+   boost 1.39.0 (unit test) reads memory which has been already freed
+   Memcheck:Addr8
+   fun:_ZN5boost9unit_test14framework_implD1Ev
+   fun:exit
+   fun:(below main)
+}
