@@ -3,15 +3,15 @@
  * @attention not tested yet
  */
 
-#include "cl.h"
+#include "code_listener.h"
 #include "cl_private.hh"
 
 #include <boost/foreach.hpp>
 
 #include <vector>
 
-/// local IClListener implementation
-class ClChain: public IClListener {
+/// local ICodeListener implementation
+class ClChain: public ICodeListener {
     public:
         virtual ~ClChain();
 
@@ -210,10 +210,10 @@ void cl_chain_append(
         struct cl_code_listener      *item)
 {
     try {
-        IClListener *listener = cl_code_listener_from_wrap(self);
+        ICodeListener *listener = cl_obtain_from_wrap(self);
         ClChain *chain = dynamic_cast<ClChain *>(listener);
         if (!chain)
-            CL_DIE("failed to downcast IClListener to ClChain");
+            CL_DIE("failed to downcast ICodeListener to ClChain");
 
         chain->append(item);
     }

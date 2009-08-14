@@ -1,5 +1,5 @@
-#ifndef H_GUARD_CG_FACTORY_H
-#define H_GUARD_CG_FACTORY_H
+#ifndef H_GUARD_CL_FACTORY_H
+#define H_GUARD_CL_FACTORY_H
 
 #include "cl_private.hh"
 
@@ -25,4 +25,4 @@ class ClFactory {
         Private *d;
 };
 
-#endif /* H_GUARD_CG_FACTORY_H */
+#endif /* H_GUARD_CL_FACTORY_H */

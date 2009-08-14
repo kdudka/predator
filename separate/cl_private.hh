@@ -1,6 +1,8 @@
 #ifndef H_GUARD_CL_PRIVATE_H
 #define H_GUARD_CL_PRIVATE_H
 
+#include "code_listener.h"
+
 #include <cstdlib>
 
 /**
