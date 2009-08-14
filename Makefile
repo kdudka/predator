@@ -8,6 +8,7 @@ LIST = $(INVADER) $(SPARSE)
 
 SPARSE_GIT = sparse
 CGT_GIT = cgt
+SSD_GIT = ssd
 
 CURL ?= curl --location -v
 GIT ?= git
@@ -70,3 +71,6 @@ $(GCC_SRC):
 
 $(CGT_GIT):
 	$(GIT) clone http://git.fedorahosted.org/git/cgt.git $@
+
+$(SSD_GIT):
+	$(GIT) clone http://dudka.no-ip.org/git/ssd.git $@
