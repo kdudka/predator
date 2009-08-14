@@ -1,4 +1,5 @@
 #include "cl_factory.hh"
+#include "cl_pp.hh"
 
 #include <map>
 #include <sstream>
@@ -17,9 +18,7 @@ struct ClFactory::Private {
 ClFactory::ClFactory():
     d(new Private)
 {
-#if 0
-    d->map["cgt"] = &createCltFileWriter;
-#endif
+    d->map["pp"] = &createClPrettyPrint;
 }
 
 ClFactory::~ClFactory() {
