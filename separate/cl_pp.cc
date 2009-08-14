@@ -5,6 +5,7 @@
 #include <unistd.h>
 
 #include <boost/iostreams/device/file_descriptor.hpp>
+#include <boost/iostreams/stream.hpp>
 
 class ClPrettyPrint: public ICodeListener {
     public:
@@ -69,7 +70,15 @@ class ClPrettyPrint: public ICodeListener {
         virtual void insn_call_close();
 
     private:
-        boost::iostreams::file_descriptor_sink out_;
+        typedef boost::iostreams::file_descriptor_sink  TSink;
+        typedef boost::iostreams::stream<TSink>         TStream;
+
+        TSink       sink_;
+        TStream     out_;
+        bool        printingArgDecls_;
+
+    private:
+        void closeArgDeclsIfNeeded();
 };
 
 using namespace ssd;
@@ -77,7 +86,9 @@ using namespace ssd;
 // /////////////////////////////////////////////////////////////////////////////
 // ClPrettyPrint implementation
 ClPrettyPrint::ClPrettyPrint(int fd_out):
-    out_(fd_out)
+    sink_(fd_out),
+    out_(sink_),
+    printingArgDecls_(false)
 {
     ColorConsole::enable(isatty(fd_out));
 }
@@ -99,21 +110,40 @@ void ClPrettyPrint::fnc_open(
             int                     line,
             enum cl_scope_e         scope)
 {
+    SSD_COLORIZE(out_, C_LIGHT_BLUE) << fnc_name;
+    SSD_COLORIZE(out_, C_LIGHT_RED) << "(";
+    printingArgDecls_ = true;
 }
 
 void ClPrettyPrint::fnc_arg_decl(
             int                     arg_pos,
             const char              *arg_name)
 {
+    // TODO: reorder arguments if not already
+    if (1 < arg_pos)
+        out_ << ", ";
+    SSD_COLORIZE(out_, C_LIGHT_GREEN) << "%arg" << arg_pos;
+    SSD_COLORIZE(out_, C_LIGHT_RED) << ": " << arg_name;
+}
+
+void ClPrettyPrint::closeArgDeclsIfNeeded() {
+    if (printingArgDecls_) {
+        printingArgDecls_ = false;
+        out_ << SSD_INLINE_COLOR(C_LIGHT_RED, ")") << std::endl;
+    }
 }
 
 void ClPrettyPrint::fnc_close()
 {
+    this->closeArgDeclsIfNeeded();
+    // TODO
 }
 
 void ClPrettyPrint::bb_open(
             const char              *bb_name)
 {
+    this->closeArgDeclsIfNeeded();
+    // TODO
 }
 
 void ClPrettyPrint::insn_jmp(
@@ -161,7 +191,7 @@ void ClPrettyPrint::insn_call_open(
 }
 
 void ClPrettyPrint::insn_call_arg(
-            int                     pos,
+            int                     arg_pos,
             struct cl_operand       *src)
 {
 }
