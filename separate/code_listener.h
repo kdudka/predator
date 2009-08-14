@@ -2,7 +2,6 @@
 #define H_GUARD_CODE_LISTENER_H
 
 #include <stdbool.h>
-#include <stdio.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -222,11 +221,10 @@ struct cl_code_listener {
             struct cl_code_listener *self);
 };
 
-/* TODO: revisit parameters (copy-pasted from cgt) */
-struct cl_code_listener* code_writer_create(
+struct cl_code_listener* cl_code_listener_create(
         const char                  *fmt,
-        FILE                        *output,
-        bool                        close_file_on_destroy);
+        int                         fd_out,
+        bool                        close_fd_on_destroy);
 
 /**
  * @attention not tested yet

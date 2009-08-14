@@ -1,9 +1,12 @@
 #include "cl_pp.hh"
 #include "cl_private.hh"
+#include "ssd.hh"
+
+#include <unistd.h>
 
 class ClPrettyPrint: public ICodeListener {
     public:
-        ClPrettyPrint(FILE *output);
+        ClPrettyPrint(int fd_out);
         virtual ~ClPrettyPrint();
 
         virtual void file_open(
@@ -62,9 +65,12 @@ class ClPrettyPrint: public ICodeListener {
             struct cl_operand       *src);
 };
 
+using namespace ssd;
+
 // /////////////////////////////////////////////////////////////////////////////
 // ClPrettyPrint implementation
-ClPrettyPrint::ClPrettyPrint(FILE *output) {
+ClPrettyPrint::ClPrettyPrint(int fd_out) {
+    ColorConsole::enable(isatty(fd_out));
 }
 
 ClPrettyPrint::~ClPrettyPrint() {
@@ -153,6 +159,6 @@ void ClPrettyPrint::insn_call_arg(
 
 // /////////////////////////////////////////////////////////////////////////////
 // public interface, see cl_pp.h for more details
-ICodeListener* createClPrettyPrint(FILE *output) {
-    return new ClPrettyPrint(output);
+ICodeListener* createClPrettyPrint(int fd_out) {
+    return new ClPrettyPrint(fd_out);
 }

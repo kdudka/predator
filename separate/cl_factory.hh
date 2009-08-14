@@ -3,8 +3,6 @@
 
 #include "cl_private.hh"
 
-#include <cstdio>
-
 /**
  * factory responsible for creating ICodeListener for desired call graph format
  */
@@ -15,10 +13,9 @@ class ClFactory {
 
         /**
          * @param fmt format used to dump call graph data
-         * @param file to write output to (as declared in <cstdio>)
          * @return on heap allocated ICodeListener object
          */
-        ICodeListener* create(const char *fmt, FILE *output);
+        ICodeListener* create(const char *fmt, int fd_out);
 
     private:
         struct Private;

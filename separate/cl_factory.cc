@@ -10,7 +10,7 @@ using std::string;
 // /////////////////////////////////////////////////////////////////////////////
 // ClFactory implementation
 struct ClFactory::Private {
-    typedef ICodeListener* (*TCreateFnc)(FILE *);
+    typedef ICodeListener* (*TCreateFnc)(int);
     typedef std::map<string, TCreateFnc> TMap;
     TMap map;
 };
@@ -25,10 +25,10 @@ ClFactory::~ClFactory() {
     delete d;
 }
 
-ICodeListener* ClFactory::create(const char *fmt, FILE *output) {
+ICodeListener* ClFactory::create(const char *fmt, int fd_out) {
     Private::TMap::iterator i = d->map.find(fmt);
     if (i != d->map.end())
-        return (i->second)(output);
+        return (i->second)(fd_out);
 
     std::ostringstream str;
     str << __FUNCTION__ << ": file format not found: " << fmt;

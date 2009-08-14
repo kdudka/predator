@@ -2,7 +2,10 @@
 #include "cl_factory.hh"
 #include "cl_private.hh"
 
+#include <cstdio>
 #include <cstring>
+
+#include <unistd.h>
 
 static const char *app_name = "<cl uninitialized>";
 static bool app_name_allocated = false;
@@ -104,8 +107,8 @@ void cl_global_cleanup(void)
 
 struct ClWrapData {
     ICodeListener                   *listener;              ///< wrapped object
-    FILE                            *output;
-    bool                            close_file_on_destroy;
+    int                             fd_out;
+    bool                            close_fd_on_destroy;
 };
 
 ICodeListener* cl_obtain_from_wrap(struct cl_code_listener *wrap)
@@ -248,8 +251,8 @@ static void cl_wrap_destroy(struct cl_code_listener *self)
     ClWrapData *data = static_cast<ClWrapData *>(self->data);
     delete data->listener;
 
-    if (data->output && data->close_file_on_destroy)
-        fclose(data->output);
+    if (data->close_fd_on_destroy)
+        close(data->fd_out);
 
     delete data;
     delete self;
@@ -259,8 +262,8 @@ struct cl_code_listener* cl_create_listener_wrap(ICodeListener *listener)
 {
     ClWrapData *data = new ClWrapData;
     data->listener              = listener;
-    data->output                = NULL;
-    data->close_file_on_destroy = false;
+    data->fd_out                = -1;
+    data->close_fd_on_destroy   = false;
 
     struct cl_code_listener *wrap = new cl_code_listener;
     wrap->data          = data;
@@ -282,14 +285,14 @@ struct cl_code_listener* cl_create_listener_wrap(ICodeListener *listener)
     return wrap;
 }
 
-struct cl_code_listener* cl_writer_create(
+struct cl_code_listener* cl_code_listener_create(
         const char              *fmt,
-        FILE                    *output,
-        bool                    close_file_on_destroy)
+        int                     fd_out,
+        bool                    close_fd_on_destroy)
 {
     try {
         ClFactory factory;
-        ICodeListener *listener = factory.create(fmt, output);
+        ICodeListener *listener = factory.create(fmt, fd_out);
         if (!listener) {
             cl_error("failed to create cl_code_listener");
             return NULL;
@@ -297,8 +300,8 @@ struct cl_code_listener* cl_writer_create(
 
         struct cl_code_listener *wrap = cl_create_listener_wrap(listener);
         ClWrapData *data = static_cast<ClWrapData *>(wrap->data);
-        data->output                = output;
-        data->close_file_on_destroy = close_file_on_destroy;
+        data->fd_out                = fd_out;
+        data->close_fd_on_destroy   = close_fd_on_destroy;
 
         return wrap;
     }
