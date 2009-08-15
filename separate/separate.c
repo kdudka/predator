@@ -47,333 +47,6 @@
 // FIXME: hard-coded for now
 static const unsigned KNOWN_PTR_SIZE = 32;
 
-#if 0
-// FIXME: global variable
-static int nest_level = 0;
-
-static void handle_expr(struct expression *expr);
-static void handle_stmt(struct statement *stmt);
-
-// input: global variable nest_level
-static void print_indent(void)
-{
-    int i;
-    for (i = 0; i < nest_level; ++i)
-        printf("    ");
-}
-
-// input: global variable nest_level
-static void print_nl_indent(void)
-{
-    printf("\n");
-    print_indent();
-}
-
-static void handle_expr_call (struct expression *expr)
-{
-    struct expression *fn = expr->fn;
-    struct symbol *direct = NULL;
-    struct expression *arg;
-    int i = 0;
-
-    // dereference (look for function name)
-    if (fn->type == EXPR_PREOP
-            && fn->unop->type == EXPR_SYMBOL) {
-
-        struct symbol *sym = fn->unop->symbol;
-        if (sym->ctype.base_type->type == SYM_FN)
-            direct = sym;
-    }
-
-    // dereference failed
-    if (!direct) {
-        WARN_UNHANDLED_SYM(fn->ctype);
-        return;
-    }
-
-    // dump function call using usual C syntax
-    printf("%s(", show_ident(direct->ident));
-    FOR_EACH_PTR(expr->args, arg) {
-        if (i++)
-            printf(", ");
-        handle_expr(arg);
-    } END_FOR_EACH_PTR(arg);
-    printf(")");
-}
-
-static void handle_expr_assignment (struct expression *expr)
-{
-    handle_expr(expr->left);
-    printf(" := ");
-    handle_expr(expr->right);
-}
-
-static void handle_expr_preop (struct expression *expr)
-{
-    struct expression *unop = expr->unop;
-    bool last = (unop->type == EXPR_SYMBOL);
-
-    if (expr->op != '*') {
-        // operator handling not implemented yet
-
-        char *msg;
-        if (-1 == asprintf(&msg, "op = '%c'", expr->op))
-            die("asprintf failed");
-
-        WARN_UNHANDLED(msg);
-        free(msg);
-        return;
-    }
-
-    // use [E] notation for dereferencing E
-    if (!last)
-        printf("[");
-    handle_expr(unop);
-    if (!last)
-        printf("]");
-}
-
-static void handle_expr_symbol (struct expression *expr)
-{
-    // print symbol name
-    printf("%s", show_ident(expr->symbol->ident));
-}
-
-static void handle_expr_cast (struct expression *expr)
-{
-    // ignore cast
-    handle_expr(expr->cast_expression);
-}
-
-static void handle_expr (struct expression *expr)
-{
-    if (!expr)
-        return;
-
-    switch (expr->type) {
-        CASE_UNHANDLED(EXPR_VALUE)
-        CASE_UNHANDLED(EXPR_STRING)
-        CASE_UNHANDLED(EXPR_TYPE)
-        CASE_UNHANDLED(EXPR_BINOP)
-        CASE_UNHANDLED(EXPR_LOGICAL)
-        CASE_UNHANDLED(EXPR_DEREF)
-        CASE_UNHANDLED(EXPR_POSTOP)
-        CASE_UNHANDLED(EXPR_SIZEOF)
-        CASE_UNHANDLED(EXPR_ALIGNOF)
-        CASE_UNHANDLED(EXPR_PTRSIZEOF)
-        CASE_UNHANDLED(EXPR_CONDITIONAL)
-        CASE_UNHANDLED(EXPR_SELECT)
-        CASE_UNHANDLED(EXPR_STATEMENT)
-        CASE_UNHANDLED(EXPR_COMMA)
-        CASE_UNHANDLED(EXPR_COMPARE)
-        CASE_UNHANDLED(EXPR_LABEL)
-        CASE_UNHANDLED(EXPR_INITIALIZER)
-        CASE_UNHANDLED(EXPR_IDENTIFIER)
-        CASE_UNHANDLED(EXPR_INDEX)
-        CASE_UNHANDLED(EXPR_POS)
-        CASE_UNHANDLED(EXPR_FVALUE)
-        CASE_UNHANDLED(EXPR_SLICE)
-        CASE_UNHANDLED(EXPR_OFFSETOF)
-
-        case EXPR_CALL:
-            handle_expr_call(expr);
-            break;
-
-        case EXPR_ASSIGNMENT:
-            handle_expr_assignment(expr);
-            break;
-
-        case EXPR_PREOP:
-            handle_expr_preop(expr);
-            break;
-
-        case EXPR_SYMBOL:
-            handle_expr_symbol(expr);
-            break;
-
-        case EXPR_CAST:
-        case EXPR_FORCE_CAST:
-        case EXPR_IMPLIED_CAST:
-            handle_expr_cast(expr);
-            break;
-    }
-}
-
-static void handle_sym_decl(struct symbol *sym)
-{
-    struct expression *expr = sym->initializer;
-
-    printf("/* local variable */ %s", show_ident(sym->ident));
-    if (expr) {
-        // variable initialization
-        printf(" := ");
-        handle_expr(expr);
-    }
-}
-
-static void handle_sym_list_decl(struct symbol_list *syms)
-{
-    struct symbol *sym;
-    int i = 0;
-
-    // go through all declarations
-    FOR_EACH_PTR(syms, sym) {
-        if (i++)
-            printf(", ");
-        handle_sym_decl(sym);
-    } END_FOR_EACH_PTR(sym);
-}
-
-static void print_while(struct expression *expr)
-{
-    // print "while (E)"
-    printf("while (");
-    handle_expr(expr);
-    printf(")");
-}
-
-static void handle_stmt_compound(struct statement *stmt)
-{
-    struct statement *s;
-
-    // enter nested block
-    printf("{\n");
-    ++nest_level;
-
-    // handle all nested statements
-    FOR_EACH_PTR(stmt->stmts, s) {
-        print_indent();
-        handle_stmt(s);
-        printf("\n");
-    } END_FOR_EACH_PTR(s);
-
-    // leave nested block
-    --nest_level;
-    print_indent();
-    printf("}");
-}
-
-static void handle_stmt_iterator(struct statement *stmt)
-{
-    struct symbol_list *decls = stmt->iterator_syms;
-    struct statement *pre_statement = stmt->iterator_pre_statement;
-    struct expression *pre_condition = stmt->iterator_pre_condition;
-    struct statement *iterator_statement = stmt->iterator_statement;
-    struct statement *post_statement = stmt->iterator_post_statement;
-    struct expression *post_condition = stmt->iterator_post_condition;
-
-    if (decls) {
-        // 'for' local variables
-        handle_sym_list_decl(decls);
-        print_nl_indent();
-    }
-
-    if (pre_statement) {
-        // 'for' initialization
-        handle_stmt(pre_statement);
-        print_nl_indent();
-    }
-
-    if (pre_condition)
-        // 'for/while' condition
-        print_while(pre_condition);
-    else
-        printf("do");
-
-    // loop body
-    ++nest_level;
-    if (iterator_statement) {
-        print_nl_indent();
-        handle_stmt(iterator_statement);
-    }
-
-    // 'for' increment part
-    if (post_statement) {
-        handle_stmt(post_statement);
-        print_nl_indent();
-    }
-
-    --nest_level;
-    if (post_condition) {
-        // 'do-while' condition
-        printf(" ");
-        print_while(post_condition);
-    }
-}
-
-static void handle_stmt_if(struct statement *stmt)
-{
-    // if
-    printf("if (");
-    handle_expr(stmt->if_conditional);
-    printf(")\n");
-
-    // then
-    ++nest_level;
-    print_indent();
-    handle_stmt(stmt->if_true);
-    --nest_level;
-
-    // else
-    if (stmt->if_false) {
-        print_nl_indent();
-        printf("else\n");
-
-        ++nest_level;
-        handle_stmt(stmt->if_false);
-        --nest_level;
-    }
-}
-
-static void handle_stmt_declaration(struct statement *stmt)
-{
-    handle_sym_list_decl(stmt->declaration);
-}
-
-static void handle_stmt_expression(struct statement *stmt)
-{
-    handle_expr(stmt->expression);
-}
-
-static void handle_stmt(struct statement *stmt)
-{
-    if (!stmt)
-        return;
-
-    switch (stmt->type) {
-        CASE_UNHANDLED(STMT_NONE)
-        CASE_UNHANDLED(STMT_RETURN)
-        CASE_UNHANDLED(STMT_CASE)
-        CASE_UNHANDLED(STMT_SWITCH)
-        CASE_UNHANDLED(STMT_LABEL)
-        CASE_UNHANDLED(STMT_GOTO)
-        CASE_UNHANDLED(STMT_ASM)
-        CASE_UNHANDLED(STMT_CONTEXT)
-        CASE_UNHANDLED(STMT_RANGE)
-
-        case STMT_COMPOUND:
-            handle_stmt_compound(stmt);
-            break;
-
-        case STMT_ITERATOR:
-            handle_stmt_iterator(stmt);
-            break;
-
-        case STMT_IF:
-            handle_stmt_if(stmt);
-            break;
-
-        case STMT_DECLARATION:
-            handle_stmt_declaration(stmt);
-            break;
-
-        case STMT_EXPRESSION:
-            handle_stmt_expression(stmt);
-            break;
-    }
-}
-#endif
-
 static bool is_pseudo(pseudo_t pseudo)
 {
     return pseudo
@@ -408,7 +81,7 @@ static void pseudo_to_cl_operand(struct instruction *insn, pseudo_t pseudo,
     op->name = NULL;
     op->offset = NULL;
 
-    // FIXME: move elsewhere?
+    // may be overridden afterwards
     op->deref = false;
 
     if (!is_pseudo(pseudo)) {
@@ -492,101 +165,6 @@ static void pseudo_to_cl_operand(struct instruction *insn, pseudo_t pseudo,
     }
 }
 
-// TODO: simplify
-static bool print_pseudo(pseudo_t pseudo)
-{
-    if (!is_pseudo(pseudo))
-        return false;
-
-    switch(pseudo->type) {
-        case PSEUDO_SYM: {
-            struct symbol *sym = pseudo->sym;
-            struct expression *expr;
-
-            if (sym->bb_target) {
-                printf("%p", sym->bb_target);
-                break;
-            }
-            if (sym->ident) {
-                printf("%s", show_ident(sym->ident));
-                break;
-            }
-            expr = sym->initializer;
-            if (expr) {
-                switch (expr->type) {
-#if 0
-                    case EXPR_VALUE:
-                        printf("<symbol value: %lld>", expr->value);
-                        break;
-#endif
-                    case EXPR_STRING:
-                        printf("%s", show_string(expr->string));
-                        break;
-
-                    default:
-                        TRAP;
-                        break;
-                }
-            }
-             break;
-        }
-
-        case PSEUDO_REG:
-#if 0
-            if (pseudo->ident)
-                printf("/* %s */ ", show_ident(pseudo->ident));
-#endif
-            printf("r%d", pseudo->nr);
-            break;
-
-        case PSEUDO_VAL: {
-            long long value = pseudo->value;
-            if (value > 1000 || value < -1000)
-                printf("%#llx", value);
-            else
-                printf("%lld", value);
-            break;
-        }
-
-        case PSEUDO_ARG:
-            printf("%%arg%d", pseudo->nr);
-            break;
-
-        case PSEUDO_PHI:
-            printf("%%phi%d", pseudo->nr);
-            if (pseudo->ident)
-                printf("\t(%s)", show_ident(pseudo->ident));
-            break;
-
-        default:
-            TRAP;
-    }
-
-    return true;
-}
-
-static void print_pseudo_symbol(struct instruction *insn)
-{
-    const struct ident *id = insn->type->ident;
-    const char *id_string = show_ident(id);
-
-    printf("[");
-    print_pseudo(insn->symbol);
-    if (id
-            /* FIXME: deref? */
-            && 0 != strcmp("__ptr", id_string))
-    {
-        printf(":%s", id_string);
-    }
-    printf("]");
-}
-
-static void print_assignment_lhs(struct instruction *insn)
-{
-    print_pseudo(insn->target);
-    printf(" := ");
-}
-
 static void handle_insn_call(struct instruction *insn,
                              struct cl_code_listener *cl)
 {
@@ -650,44 +228,47 @@ static void handle_insn_ret(struct instruction *insn,
     free_cl_operand_data(&op);
 }
 
-// TODO: pull out common code from LOAD, STORE and COPY
+static void insn_assignment_base(struct instruction                 *insn,
+                                 struct cl_code_listener            *cl,
+                                 pseudo_t     lhs,        pseudo_t  rhs,
+                                 bool         lhs_deref,  bool      rhs_deref)
+{
+    struct cl_operand op_lhs;
+    struct cl_operand op_rhs;
+
+    pseudo_to_cl_operand(insn, lhs, &op_lhs);
+    pseudo_to_cl_operand(insn, rhs, &op_rhs);
+
+    op_lhs.deref = lhs_deref;
+    op_rhs.deref = rhs_deref;
+
+    cl->insn_unop(cl, insn->pos.line, CL_UNOP_ASSIGN, &op_lhs, &op_rhs);
+
+    free_cl_operand_data(&op_lhs);
+    free_cl_operand_data(&op_rhs);
+}
+
 static void handle_insn_store(struct instruction *insn,
                               struct cl_code_listener *cl)
+
 {
-    struct cl_operand dst, src;
-    pseudo_to_cl_operand(insn, insn->symbol, &dst);
-    pseudo_to_cl_operand(insn, insn->target, &src);
-
-    dst.deref = true;
-    cl->insn_unop(cl, insn->pos.line, CL_UNOP_ASSIGN, &dst, &src);
-
-    free_cl_operand_data(&dst);
-    free_cl_operand_data(&src);
+    insn_assignment_base(insn, cl,
+            insn->symbol, insn->target,
+            true        , false);
 }
 static void handle_insn_load(struct instruction *insn,
                              struct cl_code_listener *cl)
 {
-    struct cl_operand dst, src;
-    pseudo_to_cl_operand(insn, insn->target, &dst);
-    pseudo_to_cl_operand(insn, insn->symbol, &src);
-
-    src.deref = true;
-    cl->insn_unop(cl, insn->pos.line, CL_UNOP_ASSIGN, &dst, &src);
-
-    free_cl_operand_data(&dst);
-    free_cl_operand_data(&src);
+    insn_assignment_base(insn, cl,
+            insn->target, insn->symbol,
+            false       , true);
 }
 static void handle_insn_copy(struct instruction *insn,
                              struct cl_code_listener *cl)
 {
-    struct cl_operand dst, src;
-    pseudo_to_cl_operand(insn, insn->target, &dst);
-    pseudo_to_cl_operand(insn, insn->src, &src);
-
-    cl->insn_unop(cl, insn->pos.line, CL_UNOP_ASSIGN, &dst, &src);
-
-    free_cl_operand_data(&dst);
-    free_cl_operand_data(&src);
+    insn_assignment_base(insn, cl,
+            insn->target, insn->src,
+            false       , false);
 }
 
 static void handle_insn_add(struct instruction *insn,
@@ -800,7 +381,7 @@ static void handle_insn(struct instruction *insn, struct cl_code_listener *cl)
         case OP_PHI:
         case OP_PHISOURCE:
             // FIXME: this might be a SPARSE bug if DO_PER_EP_UNSAA is set
-            printf("%s", show_instruction(insn));
+            fprintf(stderr, "%s", show_instruction(insn));
             break;
 
         case OP_CAST:
@@ -821,12 +402,12 @@ static void handle_insn(struct instruction *insn, struct cl_code_listener *cl)
         CASE_UNHANDLED(OP_SLICE)
         case OP_SNOP:
             //handle_insn_store(insn);
-            printf("%s", show_instruction(insn));
+            fprintf(stderr, "%s", show_instruction(insn));
             break;
 
         case OP_LNOP:
             //handle_insn_load(insn);
-            printf("%s", show_instruction(insn));
+            fprintf(stderr, "%s", show_instruction(insn));
             break;
 
         CASE_UNHANDLED(OP_NOP)
@@ -946,8 +527,7 @@ static void handle_fnc_body(struct symbol *sym, struct cl_code_listener *cl)
 #endif
 }
 
-static void handle_fnc_def_begin(struct symbol *sym,
-                                 struct cl_code_listener *cl)
+static void handle_fnc_def(struct symbol *sym, struct cl_code_listener *cl)
 {
     struct symbol *base_type = sym->ctype.base_type;
     struct symbol *arg;
@@ -962,10 +542,9 @@ static void handle_fnc_def_begin(struct symbol *sym,
     FOR_EACH_PTR(base_type->arguments, arg) {
         cl->fnc_arg_decl(cl, ++argc, show_ident(arg->ident));
     } END_FOR_EACH_PTR(arg);
-}
 
-static void handle_fnc_def_end(struct symbol *sym, struct cl_code_listener *cl)
-{
+    // handle fnc body
+    handle_fnc_body(sym, cl);
     cl->fnc_close(cl);
 }
 
@@ -976,9 +555,7 @@ static void handle_sym_fn(struct symbol *sym, struct cl_code_listener *cl)
 
     if (stmt) {
         // function definition
-        handle_fnc_def_begin(sym, cl);
-        handle_fnc_body(sym, cl);
-        handle_fnc_def_end(sym, cl);
+        handle_fnc_def(sym, cl);
         return;
     }
 
@@ -1051,7 +628,7 @@ int main(int argc, char **argv)
 #endif
 
     cl_global_init_defaults(NULL, true);
-    cl = cl_code_listener_create("pp", STDERR_FILENO, false);
+    cl = cl_code_listener_create("pp", STDOUT_FILENO, false);
     if (!cl)
         // error message already emitted
         return EXIT_FAILURE;
@@ -1061,7 +638,7 @@ int main(int argc, char **argv)
     cl->file_close(cl);
 
     FOR_EACH_PTR_NOTAG(filelist, file) {
-        printf("%s: about to process '%s'...\n", argv[0], file);
+        fprintf(stderr, "%s: about to process '%s'...\n", argv[0], file);
 
         cl->file_open(cl, file);
         clean_up_symbols(sparse(file), cl);
