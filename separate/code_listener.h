@@ -58,7 +58,8 @@ void cl_global_init(
 
 /**
  * global initialization - it selects built-in functions for printing messages
- * @param app_name - name of the application which appears in all messages
+ * @param app_name - name of the application which appears in all messages. If
+ * NULL is given, no application name will be printed.
  * @param verbose - if true debug messages are printed as well
  * @note You should call cl_global_cleanup() to free resources before exit.
  */
@@ -158,9 +159,8 @@ struct cl_code_listener {
 
     void (*fnc_open)(
             struct cl_code_listener *self,
-            /* TODO: swap FNC_NAME and LINE */
-            const char              *fnc_name,
             int                     line,
+            const char              *fnc_name,
             enum cl_scope_e         scope);
 
     void (*fnc_arg_decl)(

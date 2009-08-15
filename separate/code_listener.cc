@@ -10,42 +10,30 @@
 static const char *app_name = "<cl uninitialized>";
 static bool app_name_allocated = false;
 
-static void no_debug(const char *)
+static void cl_no_msg(const char *)
 {
 }
 
-static void def_debug(const char *msg)
+static void cl_def_msg(const char *msg)
 {
-    fprintf(stderr, "%s: %s\n", app_name, msg);
+    if (app_name)
+        fprintf(stderr, "%s: %s\n", app_name, msg);
+    else
+        fprintf(stderr, "%s\n", msg);
 }
 
-static void def_warn(const char *msg)
+static void cl_def_die(const char *msg)
 {
-    fprintf(stderr, "%s: warning: %s\n", app_name, msg);
-}
-
-static void def_error(const char *msg)
-{
-    fprintf(stderr, "%s: error: %s\n", app_name, msg);
-}
-
-static void def_note(const char *msg)
-{
-    fprintf(stderr, "%s: note: %s\n", app_name, msg);
-}
-
-static void def_die(const char *msg)
-{
-    def_error(msg);
+    cl_def_msg(msg);
     exit(EXIT_FAILURE);
 }
 
 static struct cl_init_data init_data = {
-    def_debug,          // .debug
-    def_warn,           // .warn
-    def_error,          // .error
-    def_note,           // .error
-    def_die             // .die
+    cl_def_msg,            // .debug
+    cl_def_msg,            // .warn
+    cl_def_msg,            // .error
+    cl_def_msg,            // .error
+    cl_def_die             // .die
 };
 
 void cl_debug(const char *msg)
@@ -82,21 +70,30 @@ void cl_global_init(struct cl_init_data *data)
 
 void cl_global_init_defaults(const char *name, bool verbose)
 {
-    app_name = strdup(name);
-    if (app_name)
-        app_name_allocated = true;
-    else
-        cl_die("strdup failed");
+    if (app_name_allocated)
+        free((char *) app_name);
+
+    app_name_allocated = false;
+
+    if (name) {
+        app_name = strdup(name);
+        if (app_name)
+            app_name_allocated = true;
+        else
+            CL_DIE("strdup failed");
+    } else {
+        app_name = NULL;
+    }
 
     if (verbose)
-        init_data.debug = def_debug;
+        init_data.debug = cl_def_msg;
     else
-        init_data.debug = no_debug;
+        init_data.debug = cl_no_msg;
 
-    init_data.warn   = def_warn;
-    init_data.error  = def_error;
-    init_data.note   = def_note;
-    init_data.die    = def_die;
+    init_data.warn   = cl_def_msg;
+    init_data.error  = cl_def_msg;
+    init_data.note   = cl_def_msg;
+    init_data.die    = cl_def_die;
 }
 
 void cl_global_cleanup(void)
@@ -124,7 +121,7 @@ ICodeListener* cl_obtain_from_wrap(struct cl_code_listener *wrap)
         listener->fnc(); \
     } \
     catch (...) { \
-        cl_die("uncaught exception in CL_WRAP"); \
+        CL_DIE("uncaught exception in CL_WRAP"); \
     } \
 } while (0)
 
@@ -135,7 +132,7 @@ ICodeListener* cl_obtain_from_wrap(struct cl_code_listener *wrap)
         listener->fnc(__VA_ARGS__); \
     } \
     catch (...) { \
-        cl_die("uncaught exception in CL_WRAP"); \
+        CL_DIE("uncaught exception in CL_WRAP"); \
     } \
 } while (0)
 
@@ -154,11 +151,11 @@ static void cl_wrap_file_close(
 
 static void cl_wrap_fnc_open(
             struct cl_code_listener *self,
-            const char              *fnc_name,
             int                     line,
+            const char              *fnc_name,
             enum cl_scope_e         scope)
 {
-    CL_WRAP_VA(fnc_open, fnc_name, line, scope);
+    CL_WRAP_VA(fnc_open, line, fnc_name, scope);
 }
 
 static void cl_wrap_fnc_arg_decl(
@@ -301,7 +298,9 @@ struct cl_code_listener* cl_code_listener_create(
         ClFactory factory;
         ICodeListener *listener = factory.create(fmt, fd_out);
         if (!listener) {
-            cl_error("failed to create cl_code_listener");
+            CL_MSG_STREAM(cl_error, __FILE__ << ":" << __LINE__ << " error: "
+                    << "failed to create cl_code_listener");
+
             return NULL;
         }
 

@@ -789,7 +789,7 @@ static void handle_fnc_def_begin(struct symbol *sym,
     struct symbol *arg;
     int argc = 0;
 
-    cl->fnc_open(cl, show_ident(sym->ident), sym->pos.line,
+    cl->fnc_open(cl, sym->pos.line, show_ident(sym->ident),
             (sym->scope==file_scope)
             ? CL_SCOPE_GLOBAL
             : CL_SCOPE_STATIC);
@@ -886,6 +886,7 @@ int main(int argc, char **argv)
     setbuf(stderr, NULL);
 #endif
 
+    cl_global_init_defaults(NULL, true);
     cl = cl_code_listener_create("pp", STDERR_FILENO, false);
     if (!cl)
         // error message already emitted
@@ -904,6 +905,7 @@ int main(int argc, char **argv)
     } END_FOR_EACH_PTR_NOTAG(file);
 
     cl->destroy(cl);
+    cl_global_cleanup();
 
     return 0;
 }

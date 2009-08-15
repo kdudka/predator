@@ -2,7 +2,6 @@
 #include "cl_pp.hh"
 
 #include <map>
-#include <sstream>
 #include <string>
 
 using std::string;
@@ -30,9 +29,8 @@ ICodeListener* ClFactory::create(const char *fmt, int fd_out) {
     if (i != d->map.end())
         return (i->second)(fd_out);
 
-    std::ostringstream str;
-    str << __FUNCTION__ << ": file format not found: " << fmt;
-    cl_warn(str.str().c_str());
+    CL_MSG_STREAM(cl_warn, __FILE__ << ":" << __LINE__ << ": warning: "
+            << "file format '" << fmt << "' not found [internal location]");
 
     return 0;
 }

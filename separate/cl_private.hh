@@ -23,8 +23,8 @@ class ICodeListener {
             = 0;
 
         virtual void fnc_open(
-            const char              *fnc_name,
             int                     line,
+            const char              *fnc_name,
             enum cl_scope_e         scope)
             = 0;
 
@@ -105,7 +105,7 @@ void cl_die(const char *msg);
 
 // pull in __attribute__ ((__noreturn__))
 #define CL_DIE(msg) do { \
-    cl_die(msg); \
+    cl_die("fatal error: " msg); \
     abort(); \
 } while (0)
 

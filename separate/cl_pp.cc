@@ -16,8 +16,8 @@ class ClPrettyPrint: public ICodeListener {
         virtual void file_close();
 
         virtual void fnc_open(
-            const char              *fnc_name,
             int                     line,
+            const char              *fnc_name,
             enum cl_scope_e         scope);
 
         virtual void fnc_arg_decl(
@@ -110,8 +110,8 @@ void ClPrettyPrint::file_close()
 }
 
 void ClPrettyPrint::fnc_open(
-            const char              *fnc_name,
             int                     line,
+            const char              *fnc_name,
             enum cl_scope_e         scope)
 {
     fnc_ = fnc_name;
@@ -125,7 +125,7 @@ void ClPrettyPrint::fnc_arg_decl(
             int                     arg_pos,
             const char              *arg_name)
 {
-    // TODO: reorder arguments if not already
+    // TODO: sort arguments if not already
     if (1 < arg_pos)
         out_ << ", ";
     SSD_COLORIZE(out_, C_LIGHT_GREEN) << "%arg" << arg_pos;
@@ -145,7 +145,7 @@ void ClPrettyPrint::fnc_close()
 {
     if (this->closeArgDeclsIfNeeded())
         CL_MSG_STREAM(cl_warn, file_ << ":"
-                << line_ << ": "
+                << line_ << ": warning: "
                 << "function '" << fnc_
                 << "' has no basic blocks");
 
