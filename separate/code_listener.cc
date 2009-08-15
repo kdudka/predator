@@ -299,7 +299,7 @@ struct cl_code_listener* cl_code_listener_create(
         ICodeListener *listener = factory.create(fmt, fd_out);
         if (!listener) {
             CL_MSG_STREAM(cl_error, __FILE__ << ":" << __LINE__ << " error: "
-                    << "failed to create cl_code_listener");
+                    << "failed to create cl_code_listener [internal location]");
 
             return NULL;
         }

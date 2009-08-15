@@ -47,8 +47,6 @@
 // FIXME: hard-coded for now
 static const unsigned KNOWN_PTR_SIZE = 32;
 
-static void handle_bb(struct basic_block *bb, unsigned long generation);
-
 #if 0
 // FIXME: global variable
 static int nest_level = 0;
@@ -477,7 +475,7 @@ static void print_assignment_lhs(struct instruction *insn)
     printf(" := ");
 }
 
-static void print_insn_call(struct instruction *insn)
+static void handle_insn_call(struct instruction *insn)
 {
     struct pseudo *arg;
     int cnt = 0;
@@ -496,7 +494,7 @@ static void print_insn_call(struct instruction *insn)
     printf(")");
 }
 
-static void print_insn_br(struct instruction *insn)
+static void handle_insn_br(struct instruction *insn)
 {
     if (!is_pseudo(insn->cond)) {
         printf("goto %p", insn->bb_true);
@@ -510,7 +508,7 @@ static void print_insn_br(struct instruction *insn)
            insn->bb_false);
 }
 
-static void print_insn_ret(struct instruction *insn)
+static void handle_insn_ret(struct instruction *insn)
 {
     printf("ret");
     if (!is_pseudo(insn->src))
@@ -520,26 +518,26 @@ static void print_insn_ret(struct instruction *insn)
     print_pseudo(insn->src);
 }
 
-static void print_insn_store(struct instruction *insn)
+static void handle_insn_store(struct instruction *insn)
 {
     print_pseudo_symbol(insn);
     printf(" := ");
     print_pseudo(insn->target);
 }
 
-static void print_insn_load(struct instruction *insn)
+static void handle_insn_load(struct instruction *insn)
 {
     print_assignment_lhs(insn);
     print_pseudo_symbol(insn);
 }
 
-static void print_insn_copy(struct instruction *insn)
+static void handle_insn_copy(struct instruction *insn)
 {
     print_assignment_lhs(insn);
     print_pseudo(insn->src);
 }
 
-static void print_insn_add(struct instruction *insn)
+static void handle_insn_add(struct instruction *insn)
 {
     print_assignment_lhs(insn);
     print_pseudo(insn->src1);
@@ -547,7 +545,7 @@ static void print_insn_add(struct instruction *insn)
     print_pseudo(insn->src2);
 }
 
-static void print_insn_set_eq(struct instruction *insn)
+static void handle_insn_set_eq(struct instruction *insn)
 {
     print_assignment_lhs(insn);
     printf("(");
@@ -557,7 +555,7 @@ static void print_insn_set_eq(struct instruction *insn)
     printf(")");
 }
 
-static void print_insn(struct instruction *insn)
+static void handle_insn(struct instruction *insn, struct code_listener *cl)
 {
     switch (insn->opcode) {
         CASE_UNHANDLED(OP_BADOP)
@@ -569,11 +567,11 @@ static void print_insn(struct instruction *insn)
 
         /* Terminator */
         case OP_RET /*= OP_TERMINATOR*/:
-            print_insn_ret(insn);
+            handle_insn_ret(insn);
             break;
 
         case OP_BR:
-            print_insn_br(insn);
+            handle_insn_br(insn);
             break;
 
         CASE_UNHANDLED(OP_SWITCH)
@@ -583,7 +581,7 @@ static void print_insn(struct instruction *insn)
 
         /* Binary */
         case OP_ADD /*= OP_BINARY*/:
-            print_insn_add(insn);
+            handle_insn_add(insn);
             break;
 
         CASE_UNHANDLED(OP_SUB)
@@ -606,7 +604,7 @@ static void print_insn(struct instruction *insn)
 
         /* Binary comparison */
         case OP_SET_EQ /*= OP_BINCMP*/:
-            print_insn_set_eq(insn);
+            handle_insn_set_eq(insn);
             break;
 
         CASE_UNHANDLED(OP_SET_NE)
@@ -631,11 +629,11 @@ static void print_insn(struct instruction *insn)
         CASE_UNHANDLED(OP_FREE)
         CASE_UNHANDLED(OP_ALLOCA)
         case OP_LOAD:
-            print_insn_load(insn);
+            handle_insn_load(insn);
             break;
 
         case OP_STORE:
-            print_insn_store(insn);
+            handle_insn_store(insn);
             break;
 
         CASE_UNHANDLED(OP_SETVAL)
@@ -654,24 +652,24 @@ static void print_insn(struct instruction *insn)
         case OP_FPCAST:
         case OP_PTRCAST:
             // TODO: separate handler?
-            print_insn_copy(insn);
+            handle_insn_copy(insn);
             break;
 
         CASE_UNHANDLED(OP_INLINED_CALL)
         case OP_CALL:
-            print_insn_call(insn);
+            handle_insn_call(insn);
             break;
 
         CASE_UNHANDLED(OP_VANEXT)
         CASE_UNHANDLED(OP_VAARG)
         CASE_UNHANDLED(OP_SLICE)
         case OP_SNOP:
-            //print_insn_store(insn);
+            //handle_insn_store(insn);
             printf("%s", show_instruction(insn));
             break;
 
         case OP_LNOP:
-            //print_insn_load(insn);
+            //handle_insn_load(insn);
             printf("%s", show_instruction(insn));
             break;
 
@@ -685,7 +683,7 @@ static void print_insn(struct instruction *insn)
 
         /* Needed to translate SSA back to normal form */
         case OP_COPY:
-            print_insn_copy(insn);
+            handle_insn_copy(insn);
             break;
     }
 }
@@ -707,7 +705,7 @@ static bool is_insn_interesting(struct instruction *insn)
     }
 }
 
-static void handle_bb_insn(struct instruction *insn)
+static void handle_bb_insn(struct instruction *insn, struct code_listener *cl)
 {
     if (!insn)
         return;
@@ -722,43 +720,39 @@ static void handle_bb_insn(struct instruction *insn)
     if (!is_insn_interesting(insn))
         return;
 
-    printf("\t\t");
-    print_insn(insn);
-    printf("\n");
+    handle_insn(insn, cl);
 }
 
-static void handle_bb_content(struct basic_block *bb)
+static void handle_bb(struct basic_block *bb, struct cl_code_listener *cl)
 {
     struct instruction *insn;
+    const char *bb_name;
 
     if (!bb)
         return;
 
-    printf("\t%p:\n", bb);
+    if (asprintf(&bb_name, "%p", bb) < 0)
+        die("asprintf failed");
+
+    cl->bb_open(cl, bb_name);
+    free((char *) bb_name);
+
     FOR_EACH_PTR(bb->insns, insn) {
-        handle_bb_insn(insn);
+        handle_bb_insn(insn, cl);
     } END_FOR_EACH_PTR(insn);
-    printf("\n");
 }
 
-static void handle_bb_list(struct basic_block_list *list, unsigned long generation)
+static void handle_fnc_ep(struct entrypoint *ep, struct cl_code_listener *cl)
 {
     struct basic_block *bb;
-
-    FOR_EACH_PTR(list, bb) {
-        if (bb->generation == generation)
+    FOR_EACH_PTR(ep->bbs, bb) {
+        if (!bb)
             continue;
-        handle_bb(bb, generation);
+
+        if (bb->parents || bb->children || bb->insns || 1 < verbose)
+            handle_bb(bb, cl);
+
     } END_FOR_EACH_PTR(bb);
-}
-
-static void handle_bb(struct basic_block *bb, unsigned long generation)
-{
-    bb->generation = generation;
-
-    handle_bb_list(bb->parents, generation);
-    handle_bb_content(bb);
-    handle_bb_list(bb->children, generation);
 }
 
 static void handle_fnc_body(struct symbol *sym, struct cl_code_listener *cl)
@@ -775,7 +769,7 @@ static void handle_fnc_body(struct symbol *sym, struct cl_code_listener *cl)
     set_up_storage(ep);
 #endif
 
-    handle_bb(ep->entry->bb, ++bb_generation);
+    handle_fnc_ep(ep, cl);
 
 #if DO_PER_EP_SET_UP_STORAGE
     free_storage();
