@@ -64,11 +64,11 @@ class ClChain: public ICodeListener {
         virtual void insn_call_open(
             int                     line,
             struct cl_operand       *dst,
-            const char              *fnc_name);
+            struct cl_operand       *fnc);
 
         virtual void insn_call_arg(
-            int                     pos,
-            struct cl_operand       *src);
+            int                     arg_pos,
+            struct cl_operand       *arg_src);
 
         virtual void insn_call_close();
 
@@ -183,16 +183,16 @@ void ClChain::insn_binop(
 void ClChain::insn_call_open(
             int                     line,
             struct cl_operand       *dst,
-            const char              *fnc_name)
+            struct cl_operand       *fnc)
 {
-    CL_CHAIN_FOREACH_VA(insn_call_open, line, dst, fnc_name);
+    CL_CHAIN_FOREACH_VA(insn_call_open, line, dst, fnc);
 }
 
 void ClChain::insn_call_arg(
-            int                     pos,
-            struct cl_operand       *src)
+            int                     arg_pos,
+            struct cl_operand       *arg_src)
 {
-    CL_CHAIN_FOREACH_VA(insn_call_arg, pos, src);
+    CL_CHAIN_FOREACH_VA(insn_call_arg, arg_pos, arg_src);
 }
 
 void ClChain::insn_call_close()

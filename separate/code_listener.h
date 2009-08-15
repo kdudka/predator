@@ -210,12 +210,12 @@ struct cl_code_listener {
             struct cl_code_listener *self,
             int                     line,
             struct cl_operand       *dst,
-            const char              *fnc_name);
+            struct cl_operand       *fnc);
 
     void (*insn_call_arg)(
             struct cl_code_listener *self,
-            int                     pos,
-            struct cl_operand       *src);
+            int                     arg_pos,
+            struct cl_operand       *arg_src);
 
     void (*insn_call_close)(
             struct cl_code_listener *self);

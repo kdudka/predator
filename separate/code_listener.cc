@@ -233,17 +233,17 @@ static void cl_wrap_insn_call_open(
             struct cl_code_listener *self,
             int                     line,
             struct cl_operand       *dst,
-            const char              *fnc_name)
+            struct cl_operand       *fnc)
 {
-    CL_WRAP_VA(insn_call_open, line, dst, fnc_name);
+    CL_WRAP_VA(insn_call_open, line, dst, fnc);
 }
 
 static void cl_wrap_insn_call_arg(
             struct cl_code_listener *self,
-            int                     pos,
-            struct cl_operand       *src)
+            int                     arg_pos,
+            struct cl_operand       *arg_src)
 {
-    CL_WRAP_VA(insn_call_arg, pos, src);
+    CL_WRAP_VA(insn_call_arg, arg_pos, arg_src);
 }
 
 static void cl_wrap_insn_call_close(

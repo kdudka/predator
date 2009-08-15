@@ -2,8 +2,6 @@
 #include "cl_private.hh"
 #include "ssd.hh"
 
-#include <unistd.h>
-
 #include <boost/iostreams/device/file_descriptor.hpp>
 #include <boost/iostreams/stream.hpp>
 
@@ -61,11 +59,11 @@ class ClPrettyPrint: public ICodeListener {
         virtual void insn_call_open(
             int                     line,
             struct cl_operand       *dst,
-            const char              *fnc_name);
+            struct cl_operand       *fnc);
 
         virtual void insn_call_arg(
-            int                     pos,
-            struct cl_operand       *src);
+            int                     arg_pos,
+            struct cl_operand       *arg_src);
 
         virtual void insn_call_close();
 
@@ -73,12 +71,15 @@ class ClPrettyPrint: public ICodeListener {
         typedef boost::iostreams::file_descriptor_sink  TSink;
         typedef boost::iostreams::stream<TSink>         TStream;
 
-        TSink       sink_;
-        TStream     out_;
-        bool        printingArgDecls_;
+        TSink           sink_;
+        TStream         out_;
+        std::string     file_;
+        int             line_;
+        std::string     fnc_;
+        bool            printingArgDecls_;
 
     private:
-        void closeArgDeclsIfNeeded();
+        bool closeArgDeclsIfNeeded();
 };
 
 using namespace ssd;
@@ -90,7 +91,7 @@ ClPrettyPrint::ClPrettyPrint(int fd_out):
     out_(sink_),
     printingArgDecls_(false)
 {
-    ColorConsole::enable(isatty(fd_out));
+    ColorConsole::enableForTerm(fd_out);
 }
 
 ClPrettyPrint::~ClPrettyPrint() {
@@ -99,10 +100,12 @@ ClPrettyPrint::~ClPrettyPrint() {
 void ClPrettyPrint::file_open(
             const char              *file_name)
 {
+    file_ = file_name;
 }
 
 void ClPrettyPrint::file_close()
 {
+    out_ << std::endl;
 }
 
 void ClPrettyPrint::fnc_open(
@@ -110,6 +113,7 @@ void ClPrettyPrint::fnc_open(
             int                     line,
             enum cl_scope_e         scope)
 {
+    fnc_ = fnc_name;
     SSD_COLORIZE(out_, C_LIGHT_BLUE) << fnc_name;
     SSD_COLORIZE(out_, C_LIGHT_RED) << "(";
     printingArgDecls_ = true;
@@ -126,30 +130,42 @@ void ClPrettyPrint::fnc_arg_decl(
     SSD_COLORIZE(out_, C_LIGHT_RED) << ": " << arg_name;
 }
 
-void ClPrettyPrint::closeArgDeclsIfNeeded() {
+bool ClPrettyPrint::closeArgDeclsIfNeeded() {
     if (printingArgDecls_) {
         printingArgDecls_ = false;
         out_ << SSD_INLINE_COLOR(C_LIGHT_RED, ")") << std::endl;
+        return true;
     }
+    return false;
 }
 
 void ClPrettyPrint::fnc_close()
 {
-    this->closeArgDeclsIfNeeded();
-    // TODO
+    if (this->closeArgDeclsIfNeeded())
+        CL_MSG_STREAM(cl_warn, file_ << ":"
+                << line_ << ": "
+                << "function '" << fnc_
+                << "' has no basic blocks");
+
+    out_ << std::endl;
 }
 
 void ClPrettyPrint::bb_open(
             const char              *bb_name)
 {
     this->closeArgDeclsIfNeeded();
-    // TODO
+    out_ << "\t"
+        << SSD_INLINE_COLOR(C_LIGHT_PURPLE, bb_name)
+        << SSD_INLINE_COLOR(C_LIGHT_RED, ":") << std::endl;
 }
 
 void ClPrettyPrint::insn_jmp(
             int                     line,
             const char              *label)
 {
+    out_ << "\t\t"
+        << SSD_INLINE_COLOR(C_YELLOW, "goto") << " "
+        << SSD_INLINE_COLOR(C_LIGHT_PURPLE, label);
 }
 
 void ClPrettyPrint::insn_cond(
@@ -186,13 +202,13 @@ void ClPrettyPrint::insn_binop(
 void ClPrettyPrint::insn_call_open(
             int                     line,
             struct cl_operand       *dst,
-            const char              *fnc_name)
+            struct cl_operand       *fnc)
 {
 }
 
 void ClPrettyPrint::insn_call_arg(
             int                     arg_pos,
-            struct cl_operand       *src)
+            struct cl_operand       *arg_src)
 {
 }
 

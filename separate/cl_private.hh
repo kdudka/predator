@@ -4,6 +4,7 @@
 #include "code_listener.h"
 
 #include <cstdlib>
+#include <sstream>
 
 /**
  * C++ interface for listener objects. It can be wrapped to struct code_listener
@@ -74,12 +75,12 @@ class ICodeListener {
         virtual void insn_call_open(
             int                     line,
             struct cl_operand       *dst,
-            const char              *fnc_name)
+            struct cl_operand       *fnc)
             = 0;
 
         virtual void insn_call_arg(
-            int                     pos,
-            struct cl_operand       *src)
+            int                     arg_pos,
+            struct cl_operand       *arg_src)
             = 0;
 
         virtual void insn_call_close()
@@ -106,6 +107,12 @@ void cl_die(const char *msg);
 #define CL_DIE(msg) do { \
     cl_die(msg); \
     abort(); \
+} while (0)
+
+#define CL_MSG_STREAM(fnc, to_stream) do { \
+    std::ostringstream str; \
+    str << to_stream; \
+    fnc(str.str().c_str()); \
 } while (0)
 
 #endif /* H_GUARD_CL_PRIVATE_H */
