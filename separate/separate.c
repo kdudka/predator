@@ -383,11 +383,8 @@ static bool is_pseudo(pseudo_t pseudo)
 static void free_cl_operand_data(struct cl_operand *op)
 {
     free((char *) op->name);
+    free((char *) op->offset);
     switch (op->type) {
-        case CL_OPERAND_DEREF:
-            free((char *) op->value.offset);
-            break;
-
         case CL_OPERAND_STRING:
             free((char *) op->value.text);
             break;
@@ -409,6 +406,10 @@ static void pseudo_to_cl_operand(struct instruction *insn, pseudo_t pseudo,
 {
     // to not call free(3) on dangling pointer afterwards
     op->name = NULL;
+    op->offset = NULL;
+
+    // FIXME: move elsewhere?
+    op->deref = false;
 
     if (!is_pseudo(pseudo)) {
         op->type = CL_OPERAND_VOID;
@@ -426,11 +427,8 @@ static void pseudo_to_cl_operand(struct instruction *insn, pseudo_t pseudo,
                 return;
             }
             if (sym->ident) {
-                op->type            = CL_OPERAND_DEREF;
-                op->name            = show_ident(sym->ident);
-
-                // may be overriden afterwards
-                op->value.offset    = NULL;
+                op->type            = CL_OPERAND_VAR;
+                op->name            = strdup(show_ident(sym->ident));
                 break;
             }
             expr = sym->initializer;
@@ -456,13 +454,9 @@ static void pseudo_to_cl_operand(struct instruction *insn, pseudo_t pseudo,
         }
 
         case PSEUDO_REG:
-            op->type = CL_OPERAND_VAR;
-#if 0
-            if (pseudo->ident)
-                printf("/* %s */ ", show_ident(pseudo->ident));
-#endif
-            if (asprintf((char **) &op->name, "r%d", pseudo->nr) < 0)
-                die("asprintf failed");
+            op->type            = CL_OPERAND_REG;
+            op->name            = strdup(show_ident(pseudo->ident));
+            op->value.reg_id    = pseudo->nr;
             break;
 
         case PSEUDO_VAL: {
@@ -470,7 +464,7 @@ static void pseudo_to_cl_operand(struct instruction *insn, pseudo_t pseudo,
 
             op->type            = CL_OPERAND_INT;
             op->value.num_int   = value;
-            break;
+            return;
         }
 
         case PSEUDO_ARG:
@@ -493,7 +487,7 @@ static void pseudo_to_cl_operand(struct instruction *insn, pseudo_t pseudo,
                 /* FIXME: deref? */
                 && 0 != strcmp("__ptr", id_string))
         {
-            op->value.offset = strdup(id_string);
+            op->offset = strdup(id_string);
         }
     }
 }
@@ -593,23 +587,31 @@ static void print_assignment_lhs(struct instruction *insn)
     printf(" := ");
 }
 
-static void handle_insn_call(struct instruction *insn)
+static void handle_insn_call(struct instruction *insn,
+                             struct cl_code_listener *cl)
 {
+    struct cl_operand dst, fnc;
     struct pseudo *arg;
     int cnt = 0;
 
-    if (print_pseudo(insn->target))
-        printf(" := ");
+    // open call
+    pseudo_to_cl_operand(insn, insn->target, &dst);
+    pseudo_to_cl_operand(insn, insn->func, &fnc);
+    cl->insn_call_open(cl, insn->pos.line, &dst, &fnc);
+    free_cl_operand_data(&dst);
+    free_cl_operand_data(&fnc);
 
-    printf("%s(", show_ident(insn->func->ident));
-
+    // go through arguments
     FOR_EACH_PTR(insn->arguments, arg) {
-        if (cnt++)
-            printf(", ");
-        print_pseudo(arg);
+        struct cl_operand src;
+        pseudo_to_cl_operand(insn, arg, &src);
+
+        cl->insn_call_arg(cl, ++cnt, &src);
+        free_cl_operand_data(&src);
     } END_FOR_EACH_PTR(arg);
 
-    printf(")");
+    // close call
+    cl->insn_call_close(cl);
 }
 
 static void handle_insn_br(struct instruction *insn,
@@ -648,41 +650,65 @@ static void handle_insn_ret(struct instruction *insn,
     free_cl_operand_data(&op);
 }
 
-static void handle_insn_store(struct instruction *insn)
+// TODO: pull out common code from LOAD, STORE and COPY
+static void handle_insn_store(struct instruction *insn,
+                              struct cl_code_listener *cl)
 {
-    print_pseudo_symbol(insn);
-    printf(" := ");
-    print_pseudo(insn->target);
+    struct cl_operand dst, src;
+    pseudo_to_cl_operand(insn, insn->symbol, &dst);
+    pseudo_to_cl_operand(insn, insn->target, &src);
+
+    dst.deref = true;
+    cl->insn_unop(cl, insn->pos.line, CL_UNOP_ASSIGN, &dst, &src);
+
+    free_cl_operand_data(&dst);
+    free_cl_operand_data(&src);
+}
+static void handle_insn_load(struct instruction *insn,
+                             struct cl_code_listener *cl)
+{
+    struct cl_operand dst, src;
+    pseudo_to_cl_operand(insn, insn->target, &dst);
+    pseudo_to_cl_operand(insn, insn->symbol, &src);
+
+    src.deref = true;
+    cl->insn_unop(cl, insn->pos.line, CL_UNOP_ASSIGN, &dst, &src);
+
+    free_cl_operand_data(&dst);
+    free_cl_operand_data(&src);
+}
+static void handle_insn_copy(struct instruction *insn,
+                             struct cl_code_listener *cl)
+{
+    struct cl_operand dst, src;
+    pseudo_to_cl_operand(insn, insn->target, &dst);
+    pseudo_to_cl_operand(insn, insn->src, &src);
+
+    cl->insn_unop(cl, insn->pos.line, CL_UNOP_ASSIGN, &dst, &src);
+
+    free_cl_operand_data(&dst);
+    free_cl_operand_data(&src);
 }
 
-static void handle_insn_load(struct instruction *insn)
+static void handle_insn_add(struct instruction *insn,
+                            struct cl_code_listener *cl)
 {
-    print_assignment_lhs(insn);
-    print_pseudo_symbol(insn);
+    struct cl_operand dst, src1, src2;
+    pseudo_to_cl_operand(insn, insn->target, &dst);
+    pseudo_to_cl_operand(insn, insn->src1, &src1);
+    pseudo_to_cl_operand(insn, insn->src2, &src2);
+
+    cl->insn_binop(cl, insn->pos.line, CL_BINOP_ADD, &dst, &src1, &src2);
+
+    free_cl_operand_data(&dst);
+    free_cl_operand_data(&src1);
+    free_cl_operand_data(&src2);
 }
 
-static void handle_insn_copy(struct instruction *insn)
+static void handle_insn_set_eq(struct instruction *insn,
+                               struct cl_code_listener *cl)
 {
-    print_assignment_lhs(insn);
-    print_pseudo(insn->src);
-}
-
-static void handle_insn_add(struct instruction *insn)
-{
-    print_assignment_lhs(insn);
-    print_pseudo(insn->src1);
-    printf(" + ");
-    print_pseudo(insn->src2);
-}
-
-static void handle_insn_set_eq(struct instruction *insn)
-{
-    print_assignment_lhs(insn);
-    printf("(");
-    print_pseudo(insn->src1);
-    printf("==");
-    print_pseudo(insn->src2);
-    printf(")");
+    WARN_UNHANDLED("==");
 }
 
 static void handle_insn(struct instruction *insn, struct cl_code_listener *cl)
@@ -711,7 +737,7 @@ static void handle_insn(struct instruction *insn, struct cl_code_listener *cl)
 
         /* Binary */
         case OP_ADD /*= OP_BINARY*/:
-            handle_insn_add(insn);
+            handle_insn_add(insn, cl);
             break;
 
         CASE_UNHANDLED(OP_SUB)
@@ -734,7 +760,7 @@ static void handle_insn(struct instruction *insn, struct cl_code_listener *cl)
 
         /* Binary comparison */
         case OP_SET_EQ /*= OP_BINCMP*/:
-            handle_insn_set_eq(insn);
+            handle_insn_set_eq(insn, cl);
             break;
 
         CASE_UNHANDLED(OP_SET_NE)
@@ -759,11 +785,11 @@ static void handle_insn(struct instruction *insn, struct cl_code_listener *cl)
         CASE_UNHANDLED(OP_FREE)
         CASE_UNHANDLED(OP_ALLOCA)
         case OP_LOAD:
-            handle_insn_load(insn);
+            handle_insn_load(insn, cl);
             break;
 
         case OP_STORE:
-            handle_insn_store(insn);
+            handle_insn_store(insn, cl);
             break;
 
         CASE_UNHANDLED(OP_SETVAL)
@@ -782,12 +808,12 @@ static void handle_insn(struct instruction *insn, struct cl_code_listener *cl)
         case OP_FPCAST:
         case OP_PTRCAST:
             // TODO: separate handler?
-            handle_insn_copy(insn);
+            handle_insn_copy(insn, cl);
             break;
 
         CASE_UNHANDLED(OP_INLINED_CALL)
         case OP_CALL:
-            handle_insn_call(insn);
+            handle_insn_call(insn, cl);
             break;
 
         CASE_UNHANDLED(OP_VANEXT)
@@ -813,7 +839,7 @@ static void handle_insn(struct instruction *insn, struct cl_code_listener *cl)
 
         /* Needed to translate SSA back to normal form */
         case OP_COPY:
-            handle_insn_copy(insn);
+            handle_insn_copy(insn, cl);
             break;
     }
 }

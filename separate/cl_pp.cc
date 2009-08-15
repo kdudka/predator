@@ -81,6 +81,7 @@ class ClPrettyPrint: public ICodeListener {
     private:
         bool closeArgDeclsIfNeeded();
         void printOperand(struct cl_operand *);
+        void printAssignmentLhs(struct cl_operand *);
 };
 
 using namespace ssd;
@@ -182,31 +183,55 @@ void ClPrettyPrint::insn_jmp(
 }
 
 void ClPrettyPrint::printOperand(struct cl_operand *op) {
+    if (!op) {
+        CL_MSG_STREAM(cl_debug, __FILE__ << ":" << __LINE__ << ": debug: "
+                << "no operand given to " << __FUNCTION__
+                << " [internal location]");
+        return;
+    }
+
     switch (op->type) {
         case CL_OPERAND_VOID:
             SSD_COLORIZE(out_, C_LIGHT_BLUE) << "CL_OPERAND_VOID";
             break;
 
         case CL_OPERAND_ARG:
-            SSD_COLORIZE(out_, C_LIGHT_GREEN) << "%arg" << op->value.arg_pos;
-            break;
-
+        case CL_OPERAND_REG:
         case CL_OPERAND_VAR:
-            out_ << SSD_INLINE_COLOR(C_LIGHT_BLUE, op->name);
-            break;
+            if (op->deref)
+                out_ << SSD_INLINE_COLOR(C_LIGHT_RED, "[");
 
-        case CL_OPERAND_DEREF:
-            if (!op->name) {
-                CL_MSG_STREAM(cl_error, file_ << ":" << line_ << ": error: "
-                        << "anonymous variable");
-                break;
+            // TODO: get rid of the nested switch and/or move elsewhere
+            switch (op->type) {
+                case CL_OPERAND_VAR:
+                    if (!op->name) {
+                        CL_MSG_STREAM(cl_error, file_ << ":" << line_ << ": error: "
+                                << "anonymous variable");
+                        break;
+                    }
+                    out_ << SSD_INLINE_COLOR(C_LIGHT_BLUE, op->name);
+                    break;
+
+                case CL_OPERAND_REG:
+                    SSD_COLORIZE(out_, C_LIGHT_GREEN) << "%r" << op->value.reg_id;
+                    break;
+
+                case CL_OPERAND_ARG:
+                    SSD_COLORIZE(out_, C_LIGHT_GREEN) << "%arg" << op->value.arg_pos;
+                    break;
+
+                default:
+                    CL_MSG_STREAM(cl_debug, __FILE__ << ":" << __LINE__ << ": "
+                            << "internal error in " << __FUNCTION__
+                            << " [internal location]");
+                    break;
             }
-            out_ << SSD_INLINE_COLOR(C_LIGHT_RED, "[")
-                << SSD_INLINE_COLOR(C_LIGHT_BLUE, op->name);
 
-            if (op->value.offset)
-                out_ << SSD_INLINE_COLOR(C_LIGHT_RED, ":") << op->value.offset;
-            out_ << SSD_INLINE_COLOR(C_LIGHT_RED, "]");
+            if (op->deref) {
+                if (op->offset)
+                    out_ << SSD_INLINE_COLOR(C_LIGHT_RED, ":") << op->offset;
+                out_ << SSD_INLINE_COLOR(C_LIGHT_RED, "]");
+            }
             break;
 
         case CL_OPERAND_STRING:
@@ -275,12 +300,36 @@ void ClPrettyPrint::insn_ret(
     out_ << std::endl << std::endl;
 }
 
+void ClPrettyPrint::printAssignmentLhs(struct cl_operand *lhs) {
+    if (!lhs) {
+        CL_MSG_STREAM(cl_debug, __FILE__ << ":" << __LINE__ << ": debug: "
+                << "no lhs given to " << __FUNCTION__
+                << " [internal location]");
+        return;
+    }
+
+    this->printOperand(lhs);
+    out_ << " "
+        << SSD_INLINE_COLOR(C_YELLOW, ":=")
+        << " ";
+}
+
 void ClPrettyPrint::insn_unop(
             int                     line,
             enum cl_unop_e          type,
             struct cl_operand       *dst,
             struct cl_operand       *src)
 {
+    out_ << "\t\t";
+    this->printAssignmentLhs(dst);
+
+    switch (type) {
+        case CL_UNOP_ASSIGN:
+            this->printOperand(src);
+            break;
+    }
+
+    out_ << std::endl;
 }
 
 void ClPrettyPrint::insn_binop(
@@ -290,6 +339,20 @@ void ClPrettyPrint::insn_binop(
             struct cl_operand       *src1,
             struct cl_operand       *src2)
 {
+    out_ << "\t\t";
+    this->printAssignmentLhs(dst);
+
+    switch (type) {
+        case CL_BINOP_ADD:
+            this->printOperand(src1);
+            out_ << " "
+                << SSD_INLINE_COLOR(C_YELLOW, "+")
+                << " ";
+            this->printOperand(src2);
+            break;
+    }
+
+    out_ << std::endl;
 }
 
 void ClPrettyPrint::insn_call_open(

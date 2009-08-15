@@ -81,8 +81,8 @@ enum cl_scope_e {
 enum cl_operand_e {
     CL_OPERAND_VOID,
     CL_OPERAND_ARG,
+    CL_OPERAND_REG,
     CL_OPERAND_VAR,
-    CL_OPERAND_DEREF,
     CL_OPERAND_STRING,
     CL_OPERAND_INT
     /* TODO */
@@ -94,13 +94,13 @@ enum cl_unop_e {
 };
 
 enum cl_binop_e {
-    CL_UNOP_ADD
+    CL_BINOP_ADD
     /* TODO */
 };
 
 union cl_value {
     int                             arg_pos;        /* CL_OPERAND_ARG       */
-    const char                      *offset;        /* CL_OPERAND_DEREF     */
+    int                             reg_id;         /* CL_OPERAND_REG       */
     const char                      *text;          /* CL_OPERAND_STRING    */
     int                             num_int;        /* CL_OPERAND_INT       */
     /* TODO */
@@ -110,6 +110,8 @@ struct cl_operand {
     enum cl_operand_e               type;
     const char                      *name;
     union cl_value                  value;
+    bool                            deref;
+    const char                      *offset;
     /* TODO */
 };
 
