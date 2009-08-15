@@ -158,6 +158,7 @@ struct cl_code_listener {
 
     void (*fnc_open)(
             struct cl_code_listener *self,
+            /* TODO: swap FNC_NAME and LINE */
             const char              *fnc_name,
             int                     line,
             enum cl_scope_e         scope);

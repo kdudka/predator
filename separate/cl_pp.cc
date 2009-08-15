@@ -89,6 +89,7 @@ using namespace ssd;
 ClPrettyPrint::ClPrettyPrint(int fd_out):
     sink_(fd_out),
     out_(sink_),
+    line_(-1),
     printingArgDecls_(false)
 {
     ColorConsole::enableForTerm(fd_out);
@@ -114,6 +115,7 @@ void ClPrettyPrint::fnc_open(
             enum cl_scope_e         scope)
 {
     fnc_ = fnc_name;
+    line_ = line;
     SSD_COLORIZE(out_, C_LIGHT_BLUE) << fnc_name;
     SSD_COLORIZE(out_, C_LIGHT_RED) << "(";
     printingArgDecls_ = true;

@@ -1,15 +1,19 @@
+#include "code_listener.h"
+
 #define _GNU_SOURCE
 
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 // sparse headers
 #include <sparse/expression.h>
 #include <sparse/flow.h>
 #include <sparse/linearize.h>
 #include <sparse/parse.h>
+#include <sparse/scope.h>
 #include <sparse/storage.h>
 #include <sparse/symbol.h>
 #include <sparse/token.h>
@@ -757,7 +761,7 @@ static void handle_bb(struct basic_block *bb, unsigned long generation)
     handle_bb_list(bb->children, generation);
 }
 
-static void handle_fnc_body(struct symbol *sym)
+static void handle_fnc_body(struct symbol *sym, struct cl_code_listener *cl)
 {
     struct entrypoint *ep = linearize_symbol(sym);
     if (!ep)
@@ -778,48 +782,47 @@ static void handle_fnc_body(struct symbol *sym)
 #endif
 }
 
-static void handle_fnc_def_begin(struct symbol *sym)
+static void handle_fnc_def_begin(struct symbol *sym,
+                                 struct cl_code_listener *cl)
 {
     struct symbol *base_type = sym->ctype.base_type;
     struct symbol *arg;
     int argc = 0;
 
-    // write function name
-    printf("%s(", show_ident(sym->ident));
+    cl->fnc_open(cl, show_ident(sym->ident), sym->pos.line,
+            (sym->scope==file_scope)
+            ? CL_SCOPE_GLOBAL
+            : CL_SCOPE_STATIC);
 
     // dump argument list
     FOR_EACH_PTR(base_type->arguments, arg) {
-        if (argc++)
-            printf(", ");
-        printf("%%arg%d: %s", argc, show_ident(arg->ident));
+        cl->fnc_arg_decl(cl, ++argc, show_ident(arg->ident));
     } END_FOR_EACH_PTR(arg);
-
-    printf("):\n");
 }
 
-static void handle_fnc_def_end(struct symbol *sym)
+static void handle_fnc_def_end(struct symbol *sym, struct cl_code_listener *cl)
 {
-    // function definition complete
-    printf("\n");
+    cl->fnc_close(cl);
 }
 
-static void handle_sym_fn(struct symbol *sym)
+static void handle_sym_fn(struct symbol *sym, struct cl_code_listener *cl)
 {
     struct symbol *base_type = sym->ctype.base_type;
     struct statement *stmt = base_type->stmt;
 
     if (stmt) {
         // function definition
-        handle_fnc_def_begin(sym);
-        handle_fnc_body(sym);
-        handle_fnc_def_end(sym);
+        handle_fnc_def_begin(sym, cl);
+        handle_fnc_body(sym, cl);
+        handle_fnc_def_end(sym, cl);
         return;
     }
 
     WARN_UNHANDLED_SYM(sym);
 }
 
-static void handle_top_level_sym(struct symbol *sym)
+static void handle_top_level_sym(struct symbol *sym,
+                                 struct cl_code_listener *cl)
 {
     struct symbol *base_type;
 
@@ -851,7 +854,7 @@ static void handle_top_level_sym(struct symbol *sym)
         CASE_UNHANDLED(SYM_BAD)
 
         case SYM_FN:
-            handle_sym_fn(sym);
+            handle_sym_fn(sym, cl);
             break;
     }
 
@@ -859,7 +862,8 @@ static void handle_top_level_sym(struct symbol *sym)
         WARN_UNHANDLED("sym->initializer");
 }
 
-static void clean_up_symbols(struct symbol_list *list)
+static void clean_up_symbols(struct symbol_list *list,
+                             struct cl_code_listener *cl)
 {
     struct symbol *sym;
 
@@ -867,7 +871,7 @@ static void clean_up_symbols(struct symbol_list *list)
 #if DO_EXPAND_SYMBOL
         expand_symbol(sym);
 #endif
-        handle_top_level_sym(sym);
+        handle_top_level_sym(sym, cl);
     } END_FOR_EACH_PTR(sym);
 }
 
@@ -875,18 +879,31 @@ int main(int argc, char **argv)
 {
     char *file;
     struct string_list *filelist = NULL;
+    struct cl_code_listener *cl;
 
 #if 1
     setbuf(stdout, NULL);
     setbuf(stderr, NULL);
 #endif
 
-    clean_up_symbols(sparse_initialize(argc, argv, &filelist));
+    cl = cl_code_listener_create("pp", STDERR_FILENO, false);
+    if (!cl)
+        // error message already emitted
+        return EXIT_FAILURE;
+
+    cl->file_open(cl, "<built-in>");
+    clean_up_symbols(sparse_initialize(argc, argv, &filelist), cl);
+    cl->file_close(cl);
 
     FOR_EACH_PTR_NOTAG(filelist, file) {
         printf("%s: about to process '%s'...\n", argv[0], file);
-        clean_up_symbols(sparse(file));
+
+        cl->file_open(cl, file);
+        clean_up_symbols(sparse(file), cl);
+        cl->file_close(cl);
     } END_FOR_EACH_PTR_NOTAG(file);
+
+    cl->destroy(cl);
 
     return 0;
 }
