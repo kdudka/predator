@@ -1,9 +1,18 @@
+// TODO: move to config.h
+#define UNIFY_LABELS            1
+#define UNIFY_LABELS_SCOPE      CL_SCOPE_GLOBAL
+
 #include "cl_pp.hh"
 #include "cl_private.hh"
 #include "ssd.hh"
 
+#if UNIFY_LABELS
+#   include "cld_unilabel.hh"
+#endif
+
 #include <boost/iostreams/device/file_descriptor.hpp>
 #include <boost/iostreams/stream.hpp>
+
 
 class ClPrettyPrint: public ICodeListener {
     public:
@@ -402,7 +411,13 @@ void ClPrettyPrint::insn_call_close()
 }
 
 // /////////////////////////////////////////////////////////////////////////////
-// public interface, see cl_pp.h for more details
+// public interface, see cl_pp.hh for more details
 ICodeListener* createClPrettyPrint(int fd_out) {
-    return new ClPrettyPrint(fd_out);
+    ICodeListener *cl = new ClPrettyPrint(fd_out);
+
+#if UNIFY_LABELS
+    cl = createCldUniLabel(cl, UNIFY_LABELS_SCOPE);
+#endif
+
+    return cl;
 }

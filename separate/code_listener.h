@@ -74,8 +74,9 @@ void cl_global_cleanup(void);
 
 enum cl_scope_e {
     CL_SCOPE_GLOBAL,
-    CL_SCOPE_STATIC
-    /* TODO */
+    CL_SCOPE_STATIC,
+    CL_SCOPE_FUNCTION,
+    CL_SCOPE_BLOCK
 };
 
 enum cl_operand_e {
