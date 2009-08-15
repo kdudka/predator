@@ -2,6 +2,7 @@
 
 #define _GNU_SOURCE
 
+#include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -27,25 +28,39 @@
 #define DO_PER_EP_SET_UP_STORAGE    1
 #define SHOW_PSEUDO_INSNS           0
 
-#define WARN_UNHANDLED(what) \
-    fprintf(stderr, "--- %s: %d: warning: '%s' not handled\n", \
-            __FUNCTION__, __LINE__, (what))
-
-#define WARN_UNHANDLED_SYM(sym) \
-    WARN_UNHANDLED(show_ident(sym->ident))
-
-#define WARN_VA(...) do {\
-    fprintf(stderr, "--- %s: %d: warning: ", \
-            __FUNCTION__, __LINE__); \
-    fprintf (stderr, __VA_ARGS__); \
-    fprintf (stderr, "\n"); \
+#define WARN_UNHANDLED(pos, what) do { \
+    sep_warn(pos, "warning: '%s' not handled", what); \
+    fprintf(stderr, "%s:%d: note: raised from function '%s'\n", __FILE__, \
+            __LINE__, __FUNCTION__); \
 } while (0)
 
-#define CASE_UNHANDLED(what) \
-    case what: WARN_UNHANDLED(#what); break;
+#define WARN_UNHANDLED_SYM(sym) \
+    WARN_UNHANDLED((sym)->pos, show_ident((sym)->ident))
+
+#define WARN_VA(pos, ...) do {\
+    sep_warn(pos, __VA_ARGS__); \
+    fprintf(stderr, "%s:%d: note: raised from function '%s'\n", __FILE__, \
+            __LINE__, __FUNCTION__); \
+} while (0)
+
+#define WARN_CASE_UNHANDLED(pos, what) \
+    case what: WARN_UNHANDLED(pos, #what); break;
 
 // FIXME: hard-coded for now
 static const unsigned KNOWN_PTR_SIZE = 32;
+
+static void sep_warn(struct position pos, const char *fmt, ...)
+{
+    va_list ap;
+
+    fprintf(stderr, "%s:%d: ", stream_name(pos.stream), pos.line);
+
+    va_start(ap, fmt);
+    vfprintf(stderr, fmt, ap);
+    va_end(ap);
+
+    fprintf(stderr, "\n");
+}
 
 static bool is_pseudo(pseudo_t pseudo)
 {
@@ -68,10 +83,9 @@ static void free_cl_operand_data(struct cl_operand *op)
 }
 
 static char* strdup_if_not_null(const char *str) {
-    if (str)
-        return strdup(str);
-    else
-        return NULL;
+    return (str)
+        ? strdup(str)
+        : NULL;
 }
 
 static void pseudo_to_cl_operand(struct instruction *insn, pseudo_t pseudo,
@@ -95,7 +109,7 @@ static void pseudo_to_cl_operand(struct instruction *insn, pseudo_t pseudo,
             struct expression *expr;
 
             if (sym->bb_target) {
-                WARN_UNHANDLED("sym->bb_target");
+                WARN_UNHANDLED(insn->pos, "sym->bb_target");
                 op->type = CL_OPERAND_VOID;
                 return;
             }
@@ -146,7 +160,7 @@ static void pseudo_to_cl_operand(struct instruction *insn, pseudo_t pseudo,
             break;
 
         case PSEUDO_PHI:
-            WARN_UNHANDLED("PSEUDO_PHI");
+            WARN_UNHANDLED(insn->pos, "PSEUDO_PHI");
             break;
 
         default:
@@ -289,13 +303,13 @@ static void handle_insn_add(struct instruction *insn,
 static void handle_insn_set_eq(struct instruction *insn,
                                struct cl_code_listener *cl)
 {
-    WARN_UNHANDLED("==");
+    WARN_UNHANDLED(insn->pos, "==");
 }
 
 static void handle_insn(struct instruction *insn, struct cl_code_listener *cl)
 {
     switch (insn->opcode) {
-        CASE_UNHANDLED(OP_BADOP)
+        WARN_CASE_UNHANDLED(insn->pos, OP_BADOP)
 
         /* Entry */
         case OP_ENTRY:
@@ -311,60 +325,60 @@ static void handle_insn(struct instruction *insn, struct cl_code_listener *cl)
             handle_insn_br(insn, cl);
             break;
 
-        CASE_UNHANDLED(OP_SWITCH)
-        CASE_UNHANDLED(OP_INVOKE)
-        CASE_UNHANDLED(OP_COMPUTEDGOTO)
-        CASE_UNHANDLED(OP_TERMINATOR_END /*= OP_UNWIND*/)
+        WARN_CASE_UNHANDLED(insn->pos, OP_SWITCH)
+        WARN_CASE_UNHANDLED(insn->pos, OP_INVOKE)
+        WARN_CASE_UNHANDLED(insn->pos, OP_COMPUTEDGOTO)
+        WARN_CASE_UNHANDLED(insn->pos, OP_TERMINATOR_END /*= OP_UNWIND*/)
 
         /* Binary */
         case OP_ADD /*= OP_BINARY*/:
             handle_insn_add(insn, cl);
             break;
 
-        CASE_UNHANDLED(OP_SUB)
-        CASE_UNHANDLED(OP_MULU)
-        CASE_UNHANDLED(OP_MULS)
-        CASE_UNHANDLED(OP_DIVU)
-        CASE_UNHANDLED(OP_DIVS)
-        CASE_UNHANDLED(OP_MODU)
-        CASE_UNHANDLED(OP_MODS)
-        CASE_UNHANDLED(OP_SHL)
-        CASE_UNHANDLED(OP_LSR)
-        CASE_UNHANDLED(OP_ASR)
+        WARN_CASE_UNHANDLED(insn->pos, OP_SUB)
+        WARN_CASE_UNHANDLED(insn->pos, OP_MULU)
+        WARN_CASE_UNHANDLED(insn->pos, OP_MULS)
+        WARN_CASE_UNHANDLED(insn->pos, OP_DIVU)
+        WARN_CASE_UNHANDLED(insn->pos, OP_DIVS)
+        WARN_CASE_UNHANDLED(insn->pos, OP_MODU)
+        WARN_CASE_UNHANDLED(insn->pos, OP_MODS)
+        WARN_CASE_UNHANDLED(insn->pos, OP_SHL)
+        WARN_CASE_UNHANDLED(insn->pos, OP_LSR)
+        WARN_CASE_UNHANDLED(insn->pos, OP_ASR)
 
         /* Logical */
-        CASE_UNHANDLED(OP_AND)
-        CASE_UNHANDLED(OP_OR)
-        CASE_UNHANDLED(OP_XOR)
-        CASE_UNHANDLED(OP_AND_BOOL)
-        CASE_UNHANDLED(OP_BINARY_END /*= OP_OR_BOOL*/)
+        WARN_CASE_UNHANDLED(insn->pos, OP_AND)
+        WARN_CASE_UNHANDLED(insn->pos, OP_OR)
+        WARN_CASE_UNHANDLED(insn->pos, OP_XOR)
+        WARN_CASE_UNHANDLED(insn->pos, OP_AND_BOOL)
+        WARN_CASE_UNHANDLED(insn->pos, OP_BINARY_END /*= OP_OR_BOOL*/)
 
         /* Binary comparison */
         case OP_SET_EQ /*= OP_BINCMP*/:
             handle_insn_set_eq(insn, cl);
             break;
 
-        CASE_UNHANDLED(OP_SET_NE)
-        CASE_UNHANDLED(OP_SET_LE)
-        CASE_UNHANDLED(OP_SET_GE)
-        CASE_UNHANDLED(OP_SET_LT)
-        CASE_UNHANDLED(OP_SET_GT)
-        CASE_UNHANDLED(OP_SET_B)
-        CASE_UNHANDLED(OP_SET_A)
-        CASE_UNHANDLED(OP_SET_BE)
-        CASE_UNHANDLED(OP_BINCMP_END /*= OP_SET_AE*/)
+        WARN_CASE_UNHANDLED(insn->pos, OP_SET_NE)
+        WARN_CASE_UNHANDLED(insn->pos, OP_SET_LE)
+        WARN_CASE_UNHANDLED(insn->pos, OP_SET_GE)
+        WARN_CASE_UNHANDLED(insn->pos, OP_SET_LT)
+        WARN_CASE_UNHANDLED(insn->pos, OP_SET_GT)
+        WARN_CASE_UNHANDLED(insn->pos, OP_SET_B)
+        WARN_CASE_UNHANDLED(insn->pos, OP_SET_A)
+        WARN_CASE_UNHANDLED(insn->pos, OP_SET_BE)
+        WARN_CASE_UNHANDLED(insn->pos, OP_BINCMP_END /*= OP_SET_AE*/)
 
         /* Uni */
-        CASE_UNHANDLED(OP_NOT)
-        CASE_UNHANDLED(OP_NEG)
+        WARN_CASE_UNHANDLED(insn->pos, OP_NOT)
+        WARN_CASE_UNHANDLED(insn->pos, OP_NEG)
 
         /* Select - three input values */
-        CASE_UNHANDLED(OP_SEL)
+        WARN_CASE_UNHANDLED(insn->pos, OP_SEL)
 
         /* Memory */
-        CASE_UNHANDLED(OP_MALLOC)
-        CASE_UNHANDLED(OP_FREE)
-        CASE_UNHANDLED(OP_ALLOCA)
+        WARN_CASE_UNHANDLED(insn->pos, OP_MALLOC)
+        WARN_CASE_UNHANDLED(insn->pos, OP_FREE)
+        WARN_CASE_UNHANDLED(insn->pos, OP_ALLOCA)
         case OP_LOAD:
             handle_insn_load(insn, cl);
             break;
@@ -373,9 +387,9 @@ static void handle_insn(struct instruction *insn, struct cl_code_listener *cl)
             handle_insn_store(insn, cl);
             break;
 
-        CASE_UNHANDLED(OP_SETVAL)
-        CASE_UNHANDLED(OP_SYMADDR)
-        CASE_UNHANDLED(OP_GET_ELEMENT_PTR)
+        WARN_CASE_UNHANDLED(insn->pos, OP_SETVAL)
+        WARN_CASE_UNHANDLED(insn->pos, OP_SYMADDR)
+        WARN_CASE_UNHANDLED(insn->pos, OP_GET_ELEMENT_PTR)
 
         /* Other */
         case OP_PHI:
@@ -392,14 +406,14 @@ static void handle_insn(struct instruction *insn, struct cl_code_listener *cl)
             handle_insn_copy(insn, cl);
             break;
 
-        CASE_UNHANDLED(OP_INLINED_CALL)
+        WARN_CASE_UNHANDLED(insn->pos, OP_INLINED_CALL)
         case OP_CALL:
             handle_insn_call(insn, cl);
             break;
 
-        CASE_UNHANDLED(OP_VANEXT)
-        CASE_UNHANDLED(OP_VAARG)
-        CASE_UNHANDLED(OP_SLICE)
+        WARN_CASE_UNHANDLED(insn->pos, OP_VANEXT)
+        WARN_CASE_UNHANDLED(insn->pos, OP_VAARG)
+        WARN_CASE_UNHANDLED(insn->pos, OP_SLICE)
         case OP_SNOP:
             //handle_insn_store(insn);
             fprintf(stderr, "%s", show_instruction(insn));
@@ -410,13 +424,13 @@ static void handle_insn(struct instruction *insn, struct cl_code_listener *cl)
             fprintf(stderr, "%s", show_instruction(insn));
             break;
 
-        CASE_UNHANDLED(OP_NOP)
-        CASE_UNHANDLED(OP_DEATHNOTE)
-        CASE_UNHANDLED(OP_ASM)
+        WARN_CASE_UNHANDLED(insn->pos, OP_NOP)
+        WARN_CASE_UNHANDLED(insn->pos, OP_DEATHNOTE)
+        WARN_CASE_UNHANDLED(insn->pos, OP_ASM)
 
         /* Sparse tagging (line numbers, context, whatever) */
-        CASE_UNHANDLED(OP_CONTEXT)
-        CASE_UNHANDLED(OP_RANGE)
+        WARN_CASE_UNHANDLED(insn->pos, OP_CONTEXT)
+        WARN_CASE_UNHANDLED(insn->pos, OP_RANGE)
 
         /* Needed to translate SSA back to normal form */
         case OP_COPY:
@@ -429,7 +443,8 @@ static bool is_insn_interesting(struct instruction *insn)
 {
     unsigned size = insn->size;
     if (size && KNOWN_PTR_SIZE != size) {
-        WARN_VA("ignored instruction with operand of size %d", insn->size);
+        WARN_VA(insn->pos, "ignored instruction with operand of size %d",
+                insn->size);
         return false;
     }
 
@@ -450,7 +465,7 @@ static void handle_bb_insn(struct instruction *insn,
 
     if (!insn->bb) {
 #if SHOW_PSEUDO_INSNS
-        WARN_VA("ignoring pseudo: %s", show_instruction(insn));
+        WARN_VA(insn->pos, "ignoring pseudo: %s", show_instruction(insn));
 #endif
         return;
     }
@@ -575,24 +590,24 @@ static void handle_top_level_sym(struct symbol *sym,
         return;
 
     switch (base_type->type) {
-        CASE_UNHANDLED(SYM_UNINITIALIZED)
-        CASE_UNHANDLED(SYM_PREPROCESSOR)
-        CASE_UNHANDLED(SYM_BASETYPE)
-        CASE_UNHANDLED(SYM_NODE)
-        CASE_UNHANDLED(SYM_PTR)
-        CASE_UNHANDLED(SYM_ARRAY)
-        CASE_UNHANDLED(SYM_STRUCT)
-        CASE_UNHANDLED(SYM_UNION)
-        CASE_UNHANDLED(SYM_ENUM)
-        CASE_UNHANDLED(SYM_TYPEDEF)
-        CASE_UNHANDLED(SYM_TYPEOF)
-        CASE_UNHANDLED(SYM_MEMBER)
-        CASE_UNHANDLED(SYM_BITFIELD)
-        CASE_UNHANDLED(SYM_LABEL)
-        CASE_UNHANDLED(SYM_RESTRICT)
-        CASE_UNHANDLED(SYM_FOULED)
-        CASE_UNHANDLED(SYM_KEYWORD)
-        CASE_UNHANDLED(SYM_BAD)
+        WARN_CASE_UNHANDLED(sym->pos, SYM_UNINITIALIZED)
+        WARN_CASE_UNHANDLED(sym->pos, SYM_PREPROCESSOR)
+        WARN_CASE_UNHANDLED(sym->pos, SYM_BASETYPE)
+        WARN_CASE_UNHANDLED(sym->pos, SYM_NODE)
+        WARN_CASE_UNHANDLED(sym->pos, SYM_PTR)
+        WARN_CASE_UNHANDLED(sym->pos, SYM_ARRAY)
+        WARN_CASE_UNHANDLED(sym->pos, SYM_STRUCT)
+        WARN_CASE_UNHANDLED(sym->pos, SYM_UNION)
+        WARN_CASE_UNHANDLED(sym->pos, SYM_ENUM)
+        WARN_CASE_UNHANDLED(sym->pos, SYM_TYPEDEF)
+        WARN_CASE_UNHANDLED(sym->pos, SYM_TYPEOF)
+        WARN_CASE_UNHANDLED(sym->pos, SYM_MEMBER)
+        WARN_CASE_UNHANDLED(sym->pos, SYM_BITFIELD)
+        WARN_CASE_UNHANDLED(sym->pos, SYM_LABEL)
+        WARN_CASE_UNHANDLED(sym->pos, SYM_RESTRICT)
+        WARN_CASE_UNHANDLED(sym->pos, SYM_FOULED)
+        WARN_CASE_UNHANDLED(sym->pos, SYM_KEYWORD)
+        WARN_CASE_UNHANDLED(sym->pos, SYM_BAD)
 
         case SYM_FN:
             handle_sym_fn(sym, cl);
@@ -600,7 +615,7 @@ static void handle_top_level_sym(struct symbol *sym,
     }
 
     if (sym->initializer)
-        WARN_UNHANDLED("sym->initializer");
+        WARN_UNHANDLED(sym->pos, "sym->initializer");
 }
 
 static void clean_up_symbols(struct symbol_list *list,
