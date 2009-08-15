@@ -155,7 +155,7 @@ void ClPrettyPrint::fnc_arg_decl(
     if (1 < arg_pos)
         out_ << ", ";
     SSD_COLORIZE(out_, C_LIGHT_GREEN) << "%arg" << arg_pos;
-    SSD_COLORIZE(out_, C_LIGHT_RED) << ": " << arg_name;
+    SSD_COLORIZE(out_, C_LIGHT_BLUE) << ": " << arg_name;
 }
 
 bool ClPrettyPrint::closeArgDeclsIfNeeded() {
@@ -203,7 +203,7 @@ void ClPrettyPrint::insn_jmp(
     out_ << "\t\t"
         << SSD_INLINE_COLOR(C_YELLOW, "goto") << " "
         << SSD_INLINE_COLOR(C_LIGHT_CYAN, label)
-        << std::endl << std::endl;
+        << std::endl;
 }
 
 void ClPrettyPrint::printNestedVar(struct cl_operand *op) {
@@ -270,8 +270,8 @@ void ClPrettyPrint::printOperand(struct cl_operand *op) {
                             << "CL_OPERAND_STRING with no string");
                     break;
                 }
-                // TODO: quote/colorize special chars
-                SSD_COLORIZE(out_, C_LIGHT_PURPLE) << "\"" << text << "\"";
+                // FIXME: bad quting!!
+                SSD_COLORIZE(out_, C_LIGHT_PURPLE) << text;
             }
             break;
 
@@ -298,12 +298,11 @@ void ClPrettyPrint::insn_cond(
 {
     line_ = line;
     out_ << "\t\t"
-        << SSD_INLINE_COLOR(C_YELLOW, "if") << " "
-        << SSD_INLINE_COLOR(C_LIGHT_RED, "(");
+        << SSD_INLINE_COLOR(C_YELLOW, "if (");
 
     this->printOperand(src);
 
-    out_ << SSD_INLINE_COLOR(C_LIGHT_RED, ")")
+    out_ << SSD_INLINE_COLOR(C_YELLOW, ")")
         << std::endl
 
         << "\t\t\t"
@@ -318,7 +317,7 @@ void ClPrettyPrint::insn_cond(
         << "\t\t\t"
         << SSD_INLINE_COLOR(C_YELLOW, "goto") << " "
         << SSD_INLINE_COLOR(C_LIGHT_CYAN, label_false)
-        << std::endl << std::endl;
+        << std::endl;
 }
 
 void ClPrettyPrint::insn_ret(
@@ -334,7 +333,7 @@ void ClPrettyPrint::insn_ret(
         this->printOperand(src);
     }
 
-    out_ << std::endl << std::endl;
+    out_ << std::endl;
 }
 
 void ClPrettyPrint::printAssignmentLhs(struct cl_operand *lhs) {
@@ -404,7 +403,7 @@ void ClPrettyPrint::insn_call_open(
     if (dst && dst->type != CL_OPERAND_VOID)
         this->printAssignmentLhs(dst);
     this->printOperand(fnc);
-    out_ << SSD_INLINE_COLOR(C_LIGHT_RED, "(");
+    out_ << SSD_INLINE_COLOR(C_LIGHT_GREEN, "(");
 }
 
 void ClPrettyPrint::insn_call_arg(
@@ -419,7 +418,7 @@ void ClPrettyPrint::insn_call_arg(
 
 void ClPrettyPrint::insn_call_close()
 {
-    out_ << SSD_INLINE_COLOR(C_LIGHT_RED, ")")
+    out_ << SSD_INLINE_COLOR(C_LIGHT_GREEN, ")")
         << std::endl;
 }
 

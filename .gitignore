@@ -6,6 +6,7 @@ invader-1_1/
 invader.zip
 separate/*.o
 separate/separate
+separate/tags
 separate/test-all
 sparse-0.4.1/
 sparse.tar.gz
