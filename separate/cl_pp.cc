@@ -2,12 +2,19 @@
 #define UNIFY_LABELS            1
 #define UNIFY_LABELS_SCOPE      CL_SCOPE_GLOBAL
 
+// scope for UNIFY_REGS is always CL_SCOPE_FUNCTION
+#define UNIFY_REGS              1
+
 #include "cl_pp.hh"
 #include "cl_private.hh"
 #include "ssd.hh"
 
 #if UNIFY_LABELS
 #   include "cld_unilabel.hh"
+#endif
+
+#if UNIFY_REGS
+#   include "cld_uniregs.hh"
 #endif
 
 #include <boost/iostreams/device/file_descriptor.hpp>
@@ -205,7 +212,7 @@ void ClPrettyPrint::printNestedVar(struct cl_operand *op) {
             break;
 
         case CL_OPERAND_REG:
-            SSD_COLORIZE(out_, C_LIGHT_GREEN) << "%r" << op->value.reg_id;
+            SSD_COLORIZE(out_, C_LIGHT_BLUE) << "%r" << op->value.reg_id;
             break;
 
         case CL_OPERAND_ARG:
@@ -417,6 +424,10 @@ ICodeListener* createClPrettyPrint(int fd_out) {
 
 #if UNIFY_LABELS
     cl = createCldUniLabel(cl, UNIFY_LABELS_SCOPE);
+#endif
+
+#if UNIFY_REGS
+    cl = createCldUniRegs(cl);
 #endif
 
     return cl;

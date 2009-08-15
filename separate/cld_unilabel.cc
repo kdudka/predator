@@ -12,7 +12,7 @@ class CldUniLabel: public ClDecoratorBase {
         virtual void file_open(const char *file_name) {
             if (CL_SCOPE_STATIC == scope_)
                 this->reset();
-            slave_->file_open(file_name);
+            ClDecoratorBase::file_open(file_name);
         }
 
         virtual void fnc_open(
@@ -22,14 +22,14 @@ class CldUniLabel: public ClDecoratorBase {
         {
             if (CL_SCOPE_FUNCTION == scope_)
                 this->reset();
-            slave_->fnc_open(line, fnc_name, scope);
+            ClDecoratorBase::fnc_open(line, fnc_name, scope);
         }
 
         virtual void bb_open(
             const char              *bb_name)
         {
             std::string resolved(this->resolveLabel(bb_name));
-            slave_->bb_open(resolved.c_str());
+            ClDecoratorBase::bb_open(resolved.c_str());
         }
 
 
@@ -38,7 +38,7 @@ class CldUniLabel: public ClDecoratorBase {
             const char              *label)
         {
             std::string resolved(this->resolveLabel(label));
-            slave_->insn_jmp(line, resolved.c_str());
+            ClDecoratorBase::insn_jmp(line, resolved.c_str());
         }
 
         virtual void insn_cond(
@@ -49,13 +49,13 @@ class CldUniLabel: public ClDecoratorBase {
         {
             std::string resolved1(this->resolveLabel(label_true));
             std::string resolved2(this->resolveLabel(label_false));
-            slave_->insn_cond(line, src, resolved1.c_str(), resolved2.c_str());
+            ClDecoratorBase::insn_cond(line, src, resolved1.c_str(),
+                                   resolved2.c_str());
         }
 
     private:
         typedef std::map<std::string, int> TMap;
 
-        ICodeListener   *slave_;
         cl_scope_e      scope_;
         TMap            map_;
         int             last_;
@@ -68,7 +68,6 @@ class CldUniLabel: public ClDecoratorBase {
 
 CldUniLabel::CldUniLabel(ICodeListener *slave, cl_scope_e scope):
     ClDecoratorBase(slave),
-    slave_(slave),
     scope_(scope),
     last_(0)
 {
