@@ -15,6 +15,7 @@ SFLAGS += -Wno-decl
 
 CL_OBJS = cl_chain.o \
 	cl_factory.o \
+	cl_locator.o \
 	cl_pp.o \
 	code_listener.o \
 	ssd.o

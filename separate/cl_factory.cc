@@ -1,4 +1,5 @@
 #include "cl_factory.hh"
+#include "cl_locator.hh"
 #include "cl_pp.hh"
 
 #include <map>
@@ -17,7 +18,8 @@ struct ClFactory::Private {
 ClFactory::ClFactory():
     d(new Private)
 {
-    d->map["pp"] = &createClPrettyPrint;
+    d->map["pp"]        = &createClPrettyPrint;
+    d->map["locator"]   = &createClLocator;
 }
 
 ClFactory::~ClFactory() {

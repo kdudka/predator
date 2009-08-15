@@ -515,9 +515,11 @@ static void handle_fnc_ep(struct entrypoint *ep, struct cl_code_listener *cl)
         if (!bb)
             continue;
 
-        if (bb->parents || bb->children || bb->insns || 1 < verbose)
+        if (bb->parents || bb->children || bb->insns
+                || /* FIXME: is the following actually useful? */ 2 < verbose)
+        {
             handle_bb(bb, cl);
-
+        }
     } END_FOR_EACH_PTR(bb);
 }
 
@@ -631,25 +633,55 @@ static void clean_up_symbols(struct symbol_list *list,
     } END_FOR_EACH_PTR(sym);
 }
 
+static struct cl_code_listener* create_cl_chain()
+{
+    struct cl_code_listener *cl;
+    struct cl_code_listener *chain = cl_chain_create();
+    if (!chain)
+        // error message already emitted
+        return NULL;
+
+    if (1 < verbose) {
+        cl = cl_code_listener_create("locator", STDOUT_FILENO, false);
+        if (!cl) {
+            chain->destroy(chain);
+            return NULL;
+        }
+        cl_chain_append(chain, cl);
+    }
+
+    cl = cl_code_listener_create("pp", STDOUT_FILENO, false);
+    if (!cl) {
+        chain->destroy(chain);
+        return NULL;
+    }
+    cl_chain_append(chain, cl);
+
+    return chain;
+}
+
 int main(int argc, char **argv)
 {
     char *file;
     struct string_list *filelist = NULL;
     struct cl_code_listener *cl;
+    struct symbol_list *symlist;
 
 #if 1
     setbuf(stdout, NULL);
     setbuf(stderr, NULL);
 #endif
 
+    symlist = sparse_initialize(argc, argv, &filelist);
+
     cl_global_init_defaults(NULL, true);
-    cl = cl_code_listener_create("pp", STDOUT_FILENO, false);
+    cl = create_cl_chain();
     if (!cl)
         // error message already emitted
         return EXIT_FAILURE;
 
     cl->file_open(cl, "<built-in>");
-    clean_up_symbols(sparse_initialize(argc, argv, &filelist), cl);
+    clean_up_symbols(symlist, cl);
     cl->file_close(cl);
 
     FOR_EACH_PTR_NOTAG(filelist, file) {

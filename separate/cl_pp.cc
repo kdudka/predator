@@ -95,6 +95,7 @@ ClPrettyPrint::ClPrettyPrint(int fd_out):
     line_(-1),
     printingArgDecls_(false)
 {
+    // FIXME: static variable
     ColorConsole::enableForTerm(fd_out);
 }
 
@@ -326,6 +327,7 @@ void ClPrettyPrint::insn_unop(
             struct cl_operand       *dst,
             struct cl_operand       *src)
 {
+    line_ = line;
     out_ << "\t\t";
     this->printAssignmentLhs(dst);
 
@@ -345,6 +347,7 @@ void ClPrettyPrint::insn_binop(
             struct cl_operand       *src1,
             struct cl_operand       *src2)
 {
+    line_ = line;
     out_ << "\t\t";
     this->printAssignmentLhs(dst);
 
@@ -366,6 +369,7 @@ void ClPrettyPrint::insn_call_open(
             struct cl_operand       *dst,
             struct cl_operand       *fnc)
 {
+    line_ = line;
     out_ << "\t\t";
     if (dst && dst->type != CL_OPERAND_VOID)
         this->printAssignmentLhs(dst);
