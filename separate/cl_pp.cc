@@ -80,6 +80,7 @@ class ClPrettyPrint: public ICodeListener {
 
     private:
         bool closeArgDeclsIfNeeded();
+        void printNestedVar(struct cl_operand *);
         void printOperand(struct cl_operand *);
         void printAssignmentLhs(struct cl_operand *);
 };
@@ -182,6 +183,33 @@ void ClPrettyPrint::insn_jmp(
         << std::endl << std::endl;
 }
 
+void ClPrettyPrint::printNestedVar(struct cl_operand *op) {
+    switch (op->type) {
+        case CL_OPERAND_VAR:
+            if (!op->name) {
+                CL_MSG_STREAM(cl_error, file_ << ":" << line_ << ": error: "
+                        << "anonymous variable");
+                break;
+            }
+            out_ << SSD_INLINE_COLOR(C_LIGHT_BLUE, op->name);
+            break;
+
+        case CL_OPERAND_REG:
+            SSD_COLORIZE(out_, C_LIGHT_GREEN) << "%r" << op->value.reg_id;
+            break;
+
+        case CL_OPERAND_ARG:
+            SSD_COLORIZE(out_, C_LIGHT_GREEN) << "%arg" << op->value.arg_pos;
+            break;
+
+        default:
+            CL_MSG_STREAM(cl_debug, __FILE__ << ":" << __LINE__ << ": "
+                    << "internal error in " << __FUNCTION__
+                    << " [internal location]");
+            break;
+    }
+}
+
 void ClPrettyPrint::printOperand(struct cl_operand *op) {
     if (!op) {
         CL_MSG_STREAM(cl_debug, __FILE__ << ":" << __LINE__ << ": debug: "
@@ -201,35 +229,12 @@ void ClPrettyPrint::printOperand(struct cl_operand *op) {
             if (op->deref)
                 out_ << SSD_INLINE_COLOR(C_LIGHT_RED, "[");
 
-            // TODO: get rid of the nested switch and/or move elsewhere
-            switch (op->type) {
-                case CL_OPERAND_VAR:
-                    if (!op->name) {
-                        CL_MSG_STREAM(cl_error, file_ << ":" << line_ << ": error: "
-                                << "anonymous variable");
-                        break;
-                    }
-                    out_ << SSD_INLINE_COLOR(C_LIGHT_BLUE, op->name);
-                    break;
-
-                case CL_OPERAND_REG:
-                    SSD_COLORIZE(out_, C_LIGHT_GREEN) << "%r" << op->value.reg_id;
-                    break;
-
-                case CL_OPERAND_ARG:
-                    SSD_COLORIZE(out_, C_LIGHT_GREEN) << "%arg" << op->value.arg_pos;
-                    break;
-
-                default:
-                    CL_MSG_STREAM(cl_debug, __FILE__ << ":" << __LINE__ << ": "
-                            << "internal error in " << __FUNCTION__
-                            << " [internal location]");
-                    break;
-            }
+            this->printNestedVar(op);
 
             if (op->deref) {
                 if (op->offset)
                     out_ << SSD_INLINE_COLOR(C_LIGHT_RED, ":") << op->offset;
+
                 out_ << SSD_INLINE_COLOR(C_LIGHT_RED, "]");
             }
             break;
@@ -302,7 +307,7 @@ void ClPrettyPrint::insn_ret(
 }
 
 void ClPrettyPrint::printAssignmentLhs(struct cl_operand *lhs) {
-    if (!lhs) {
+    if (!lhs || lhs->type == CL_OPERAND_VOID) {
         CL_MSG_STREAM(cl_debug, __FILE__ << ":" << __LINE__ << ": debug: "
                 << "no lhs given to " << __FUNCTION__
                 << " [internal location]");
@@ -361,16 +366,27 @@ void ClPrettyPrint::insn_call_open(
             struct cl_operand       *dst,
             struct cl_operand       *fnc)
 {
+    out_ << "\t\t";
+    if (dst && dst->type != CL_OPERAND_VOID)
+        this->printAssignmentLhs(dst);
+    this->printOperand(fnc);
+    out_ << SSD_INLINE_COLOR(C_LIGHT_RED, "(");
 }
 
 void ClPrettyPrint::insn_call_arg(
             int                     arg_pos,
             struct cl_operand       *arg_src)
 {
+    // TODO: sort arguments if not already
+    if (1 < arg_pos)
+        out_ << ", ";
+    this->printOperand(arg_src);
 }
 
 void ClPrettyPrint::insn_call_close()
 {
+    out_ << SSD_INLINE_COLOR(C_LIGHT_RED, ")")
+        << std::endl;
 }
 
 // /////////////////////////////////////////////////////////////////////////////
