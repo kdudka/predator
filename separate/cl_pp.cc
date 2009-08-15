@@ -5,6 +5,8 @@
 // scope for UNIFY_REGS is always CL_SCOPE_FUNCTION
 #define UNIFY_REGS              1
 
+#define ARG_SUBST               1
+
 #include "cl_pp.hh"
 #include "cl_private.hh"
 #include "ssd.hh"
@@ -15,6 +17,10 @@
 
 #if UNIFY_REGS
 #   include "cld_uniregs.hh"
+#endif
+
+#if ARG_SUBST
+#   include "cld_argsub.hh"
 #endif
 
 #include <boost/iostreams/device/file_descriptor.hpp>
@@ -428,6 +434,10 @@ ICodeListener* createClPrettyPrint(int fd_out) {
 
 #if UNIFY_REGS
     cl = createCldUniRegs(cl);
+#endif
+
+#if ARG_SUBST
+    cl = createCldArgSubst(cl);
 #endif
 
     return cl;

@@ -17,6 +17,7 @@ CL_OBJS = cl_chain.o \
 	cl_factory.o \
 	cl_locator.o \
 	cl_pp.o \
+	cld_argsub.o \
 	cld_unilabel.o \
 	cld_uniregs.o \
 	code_listener.o \
