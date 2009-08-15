@@ -80,6 +80,7 @@ class ClPrettyPrint: public ICodeListener {
 
     private:
         bool closeArgDeclsIfNeeded();
+        void printOperand(struct cl_operand *);
 };
 
 using namespace ssd;
@@ -135,7 +136,8 @@ void ClPrettyPrint::fnc_arg_decl(
 bool ClPrettyPrint::closeArgDeclsIfNeeded() {
     if (printingArgDecls_) {
         printingArgDecls_ = false;
-        out_ << SSD_INLINE_COLOR(C_LIGHT_RED, ")") << std::endl;
+        out_ << SSD_INLINE_COLOR(C_LIGHT_RED, "):")
+            << std::endl;
         return true;
     }
     return false;
@@ -155,9 +157,15 @@ void ClPrettyPrint::fnc_close()
 void ClPrettyPrint::bb_open(
             const char              *bb_name)
 {
-    this->closeArgDeclsIfNeeded();
+    if (this->closeArgDeclsIfNeeded())
+        CL_MSG_STREAM(cl_warn, file_ << ":"
+                << line_ << ": warning: "
+                << "omitted jump to entry in function '" << fnc_
+                << "'");
+
+    out_ << std::endl;
     out_ << "\t"
-        << SSD_INLINE_COLOR(C_LIGHT_PURPLE, bb_name)
+        << SSD_INLINE_COLOR(C_LIGHT_CYAN, bb_name)
         << SSD_INLINE_COLOR(C_LIGHT_RED, ":") << std::endl;
 }
 
@@ -165,9 +173,59 @@ void ClPrettyPrint::insn_jmp(
             int                     line,
             const char              *label)
 {
+    line_ = line;
+    this->closeArgDeclsIfNeeded();
     out_ << "\t\t"
         << SSD_INLINE_COLOR(C_YELLOW, "goto") << " "
-        << SSD_INLINE_COLOR(C_LIGHT_PURPLE, label);
+        << SSD_INLINE_COLOR(C_LIGHT_CYAN, label)
+        << std::endl << std::endl;
+}
+
+void ClPrettyPrint::printOperand(struct cl_operand *op) {
+    switch (op->type) {
+        case CL_OPERAND_VOID:
+            SSD_COLORIZE(out_, C_LIGHT_BLUE) << "CL_OPERAND_VOID";
+            break;
+
+        case CL_OPERAND_ARG:
+            SSD_COLORIZE(out_, C_LIGHT_GREEN) << "%arg" << op->value.arg_pos;
+            break;
+
+        case CL_OPERAND_VAR:
+            out_ << SSD_INLINE_COLOR(C_LIGHT_BLUE, op->name);
+            break;
+
+        case CL_OPERAND_DEREF:
+            if (!op->name) {
+                CL_MSG_STREAM(cl_error, file_ << ":" << line_ << ": error: "
+                        << "anonymous variable");
+                break;
+            }
+            out_ << SSD_INLINE_COLOR(C_LIGHT_RED, "[")
+                << SSD_INLINE_COLOR(C_LIGHT_BLUE, op->name);
+
+            if (op->value.offset)
+                out_ << SSD_INLINE_COLOR(C_LIGHT_RED, ":") << op->value.offset;
+            out_ << SSD_INLINE_COLOR(C_LIGHT_RED, "]");
+            break;
+
+        case CL_OPERAND_STRING:
+            {
+                const char *text = op->value.text;
+                if (!text) {
+                    CL_MSG_STREAM(cl_error, file_ << ":" << line_ << ": error: "
+                            << "CL_OPERAND_STRING with no string");
+                    break;
+                }
+                // TODO: quote/colorize special chars
+                SSD_COLORIZE(out_, C_LIGHT_PURPLE) << "\"" << text << "\"";
+            }
+            break;
+
+        case CL_OPERAND_INT:
+            SSD_COLORIZE(out_, C_LIGHT_GRAY) << op->value.num_int;
+            break;
+    }
 }
 
 void ClPrettyPrint::insn_cond(
@@ -176,12 +234,45 @@ void ClPrettyPrint::insn_cond(
             const char              *label_true,
             const char              *label_false)
 {
+    line_ = line;
+    out_ << "\t\t"
+        << SSD_INLINE_COLOR(C_YELLOW, "if") << " "
+        << SSD_INLINE_COLOR(C_LIGHT_RED, "(");
+
+    this->printOperand(src);
+
+    out_ << SSD_INLINE_COLOR(C_LIGHT_RED, ")")
+        << std::endl
+
+        << "\t\t\t"
+        << SSD_INLINE_COLOR(C_YELLOW, "goto") << " "
+        << SSD_INLINE_COLOR(C_LIGHT_CYAN, label_true)
+        << std::endl
+
+        << "\t\t"
+        << SSD_INLINE_COLOR(C_YELLOW, "else")
+        << std::endl
+
+        << "\t\t\t"
+        << SSD_INLINE_COLOR(C_YELLOW, "goto") << " "
+        << SSD_INLINE_COLOR(C_LIGHT_CYAN, label_false)
+        << std::endl << std::endl;
 }
 
 void ClPrettyPrint::insn_ret(
             int                     line,
             struct cl_operand       *src)
 {
+    line_ = line;
+    out_ << "\t\t"
+        << SSD_INLINE_COLOR(C_LIGHT_GREEN, "ret");
+
+    if (src && src->type != CL_OPERAND_VOID) {
+        out_ << " ";
+        this->printOperand(src);
+    }
+
+    out_ << std::endl << std::endl;
 }
 
 void ClPrettyPrint::insn_unop(

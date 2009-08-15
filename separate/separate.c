@@ -380,6 +380,124 @@ static bool is_pseudo(pseudo_t pseudo)
         && pseudo != VOID;
 }
 
+static void free_cl_operand_data(struct cl_operand *op)
+{
+    free((char *) op->name);
+    switch (op->type) {
+        case CL_OPERAND_DEREF:
+            free((char *) op->value.offset);
+            break;
+
+        case CL_OPERAND_STRING:
+            free((char *) op->value.text);
+            break;
+
+        default:
+            break;
+    }
+}
+
+static char* strdup_if_not_null(const char *str) {
+    if (str)
+        return strdup(str);
+    else
+        return NULL;
+}
+
+static void pseudo_to_cl_operand(struct instruction *insn, pseudo_t pseudo,
+                                 struct cl_operand *op)
+{
+    // to not call free(3) on dangling pointer afterwards
+    op->name = NULL;
+
+    if (!is_pseudo(pseudo)) {
+        op->type = CL_OPERAND_VOID;
+        return;
+    }
+
+    switch(pseudo->type) {
+        case PSEUDO_SYM: {
+            struct symbol *sym = pseudo->sym;
+            struct expression *expr;
+
+            if (sym->bb_target) {
+                WARN_UNHANDLED("sym->bb_target");
+                op->type = CL_OPERAND_VOID;
+                return;
+            }
+            if (sym->ident) {
+                op->type            = CL_OPERAND_DEREF;
+                op->name            = show_ident(sym->ident);
+
+                // may be overriden afterwards
+                op->value.offset    = NULL;
+                break;
+            }
+            expr = sym->initializer;
+            if (expr) {
+                switch (expr->type) {
+#if 0
+                    case EXPR_VALUE:
+                        printf("<symbol value: %lld>", expr->value);
+                        break;
+#endif
+                    case EXPR_STRING:
+                        // FIXME: not dup'ed now (subtle)
+                        op->type = CL_OPERAND_STRING;
+                        op->value.text = strdup_if_not_null(
+                                show_string(expr->string));
+                        return;
+
+                    default:
+                        TRAP;
+                }
+            }
+            break;
+        }
+
+        case PSEUDO_REG:
+            op->type = CL_OPERAND_VAR;
+#if 0
+            if (pseudo->ident)
+                printf("/* %s */ ", show_ident(pseudo->ident));
+#endif
+            if (asprintf((char **) &op->name, "r%d", pseudo->nr) < 0)
+                die("asprintf failed");
+            break;
+
+        case PSEUDO_VAL: {
+            long long value = pseudo->value;
+
+            op->type            = CL_OPERAND_INT;
+            op->value.num_int   = value;
+            break;
+        }
+
+        case PSEUDO_ARG:
+            op->type            = CL_OPERAND_ARG;
+            op->value.arg_pos   = pseudo->nr;
+            break;
+
+        case PSEUDO_PHI:
+            WARN_UNHANDLED("PSEUDO_PHI");
+            break;
+
+        default:
+            TRAP;
+    }
+
+    if (insn->type) {
+        const struct ident *id = insn->type->ident;
+        const char *id_string = show_ident(id);
+        if (id
+                /* FIXME: deref? */
+                && 0 != strcmp("__ptr", id_string))
+        {
+            op->value.offset = strdup(id_string);
+        }
+    }
+}
+
 // TODO: simplify
 static bool print_pseudo(pseudo_t pseudo)
 {
@@ -494,28 +612,40 @@ static void handle_insn_call(struct instruction *insn)
     printf(")");
 }
 
-static void handle_insn_br(struct instruction *insn)
+static void handle_insn_br(struct instruction *insn,
+                           struct cl_code_listener *cl)
 {
+    char *bb_name_true = NULL;
+    char *bb_name_false = NULL;
+    struct cl_operand op;
+
+    if (asprintf(&bb_name_true, "%p", insn->bb_true) < 0)
+        die("asprintf failed");
+
     if (!is_pseudo(insn->cond)) {
-        printf("goto %p", insn->bb_true);
+        cl->insn_jmp(cl, insn->pos.line, bb_name_true);
+        free(bb_name_true);
         return;
     }
 
-    printf("if (");
-    print_pseudo(insn->cond);
-    printf(")\n\t\t\tgoto %p\n\t\telse\n\t\t\tgoto %p",
-           insn->bb_true,
-           insn->bb_false);
+    if (asprintf(&bb_name_false, "%p", insn->bb_false) < 0)
+        die("asprintf failed");
+
+    pseudo_to_cl_operand(insn, insn->cond, &op);
+    cl->insn_cond(cl, insn->pos.line, &op, bb_name_true, bb_name_false);
+    free_cl_operand_data(&op);
+
+    free(bb_name_true);
+    free(bb_name_false);
 }
 
-static void handle_insn_ret(struct instruction *insn)
+static void handle_insn_ret(struct instruction *insn,
+                            struct cl_code_listener *cl)
 {
-    printf("ret");
-    if (!is_pseudo(insn->src))
-        return;
-
-    printf(" ");
-    print_pseudo(insn->src);
+    struct cl_operand op;
+    pseudo_to_cl_operand(insn, insn->src, &op);
+    cl->insn_ret(cl, insn->pos.line, &op);
+    free_cl_operand_data(&op);
 }
 
 static void handle_insn_store(struct instruction *insn)
@@ -555,7 +685,7 @@ static void handle_insn_set_eq(struct instruction *insn)
     printf(")");
 }
 
-static void handle_insn(struct instruction *insn, struct code_listener *cl)
+static void handle_insn(struct instruction *insn, struct cl_code_listener *cl)
 {
     switch (insn->opcode) {
         CASE_UNHANDLED(OP_BADOP)
@@ -567,11 +697,11 @@ static void handle_insn(struct instruction *insn, struct code_listener *cl)
 
         /* Terminator */
         case OP_RET /*= OP_TERMINATOR*/:
-            handle_insn_ret(insn);
+            handle_insn_ret(insn, cl);
             break;
 
         case OP_BR:
-            handle_insn_br(insn);
+            handle_insn_br(insn, cl);
             break;
 
         CASE_UNHANDLED(OP_SWITCH)
@@ -705,7 +835,8 @@ static bool is_insn_interesting(struct instruction *insn)
     }
 }
 
-static void handle_bb_insn(struct instruction *insn, struct code_listener *cl)
+static void handle_bb_insn(struct instruction *insn,
+                           struct cl_code_listener *cl)
 {
     if (!insn)
         return;
@@ -726,7 +857,7 @@ static void handle_bb_insn(struct instruction *insn, struct code_listener *cl)
 static void handle_bb(struct basic_block *bb, struct cl_code_listener *cl)
 {
     struct instruction *insn;
-    const char *bb_name;
+    char *bb_name;
 
     if (!bb)
         return;
@@ -735,7 +866,7 @@ static void handle_bb(struct basic_block *bb, struct cl_code_listener *cl)
         die("asprintf failed");
 
     cl->bb_open(cl, bb_name);
-    free((char *) bb_name);
+    free(bb_name);
 
     FOR_EACH_PTR(bb->insns, insn) {
         handle_bb_insn(insn, cl);
@@ -744,7 +875,20 @@ static void handle_bb(struct basic_block *bb, struct cl_code_listener *cl)
 
 static void handle_fnc_ep(struct entrypoint *ep, struct cl_code_listener *cl)
 {
+    struct instruction *entry = ep->entry;
     struct basic_block *bb;
+    char *entry_name;
+
+    if (!bb)
+        return;
+
+    // jump to entry basic block
+    if (asprintf(&entry_name, "%p", entry->bb) < 0)
+        die("asprintf failed");
+    cl->insn_jmp(cl, entry->pos.line, entry_name);
+    free(entry_name);
+
+    // go through basic blocks
     FOR_EACH_PTR(ep->bbs, bb) {
         if (!bb)
             continue;

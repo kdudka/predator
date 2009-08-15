@@ -80,6 +80,7 @@ enum cl_scope_e {
 
 enum cl_operand_e {
     CL_OPERAND_VOID,
+    CL_OPERAND_ARG,
     CL_OPERAND_VAR,
     CL_OPERAND_DEREF,
     CL_OPERAND_STRING,
@@ -98,15 +99,16 @@ enum cl_binop_e {
 };
 
 union cl_value {
-    const char                      *text;          /* CL_OPERAND_STRING */
-    int                             num_int;        /* CL_OPERAND_INT */
+    int                             arg_pos;        /* CL_OPERAND_ARG       */
+    const char                      *offset;        /* CL_OPERAND_DEREF     */
+    const char                      *text;          /* CL_OPERAND_STRING    */
+    int                             num_int;        /* CL_OPERAND_INT       */
     /* TODO */
 };
 
 struct cl_operand {
     enum cl_operand_e               type;
     const char                      *name;
-    const char                      *offset;
     union cl_value                  value;
     /* TODO */
 };
@@ -121,12 +123,17 @@ struct cl_operand {
  *
  * FILE_CONTENT is defined by substitution to regex:
  *
- *     fnc_open (fnc_arg_decl)* FNC_CONTENT fnc_close
+ *     fnc_open (fnc_arg_decl)* FNC_BODY fnc_close
  *
  *
- * FNC_CONTENT is defined by substitution to regex:
+ * FNC_BODY is defined by substitution to regex:
  *
- *     bb_open (NONTERM_INSN)* TERM_INSN
+ *     FNC_ENTRY (bb_open (NONTERM_INSN)* TERM_INSN)*
+ *
+ *
+ * FNC_ENTRY is defined as:
+ *
+ *     insn_jmp
  *
  *
  * NON_TERM_INSN is defined as:
@@ -138,9 +145,11 @@ struct cl_operand {
  *
  *     insn_jmp | insn_cond | insn_ret
  *
+ *
  * INSN_CALL is defined by regex:
  *
  *     insn_call_open (insn_call_arg)* insn_call_close
+ *
  *
  * @todo avoid (re)formating in dox output
  */
