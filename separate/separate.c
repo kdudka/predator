@@ -395,7 +395,7 @@ static void handle_insn(struct instruction *insn, struct cl_code_listener *cl)
         case OP_PHI:
         case OP_PHISOURCE:
             // FIXME: this might be a SPARSE bug if DO_PER_EP_UNSAA is set
-            fprintf(stderr, "%s", show_instruction(insn));
+            WARN_UNHANDLED(insn->pos, show_instruction(insn));
             break;
 
         case OP_CAST:
@@ -416,12 +416,12 @@ static void handle_insn(struct instruction *insn, struct cl_code_listener *cl)
         WARN_CASE_UNHANDLED(insn->pos, OP_SLICE)
         case OP_SNOP:
             //handle_insn_store(insn);
-            fprintf(stderr, "%s", show_instruction(insn));
+            WARN_UNHANDLED(insn->pos, show_instruction(insn));
             break;
 
         case OP_LNOP:
             //handle_insn_load(insn);
-            fprintf(stderr, "%s", show_instruction(insn));
+            WARN_UNHANDLED(insn->pos, show_instruction(insn));
             break;
 
         WARN_CASE_UNHANDLED(insn->pos, OP_NOP)
@@ -685,7 +685,8 @@ int main(int argc, char **argv)
     cl->file_close(cl);
 
     FOR_EACH_PTR_NOTAG(filelist, file) {
-        fprintf(stderr, "%s: about to process '%s'...\n", argv[0], file);
+        if (0 < verbose)
+            fprintf(stderr, "%s: about to process '%s'...\n", argv[0], file);
 
         cl->file_open(cl, file);
         clean_up_symbols(sparse(file), cl);

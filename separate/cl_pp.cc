@@ -254,8 +254,16 @@ void ClPrettyPrint::printOperand(struct cl_operand *op) {
             break;
 
         case CL_OPERAND_INT:
-            // TODO: parenthesis around negative value?
-            SSD_COLORIZE(out_, C_LIGHT_GRAY) << op->value.num_int;
+            {
+                int num = op->value.num_int;
+                if (num < 0)
+                    out_ << SSD_INLINE_COLOR(C_LIGHT_RED, "(");
+
+                SSD_COLORIZE(out_, C_WHITE) << op->value.num_int;
+
+                if (num < 0)
+                    out_ << SSD_INLINE_COLOR(C_LIGHT_RED, ")");
+            }
             break;
     }
 }
