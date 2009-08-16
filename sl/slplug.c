@@ -55,7 +55,6 @@ static struct plugin_info sl_info = {
 
 static struct cl_code_listener *cl = NULL;
 
-#if 0
 // callback of walk_gimple_seq declared in <gimple.h>
 static tree cb_walk_gimple_stmt (gimple_stmt_iterator *iter,
                                  bool *subtree_done,
@@ -66,29 +65,23 @@ static tree cb_walk_gimple_stmt (gimple_stmt_iterator *iter,
     (void) subtree_done;
     (void) info;
 
-#if 0
-    raise (SIGTRAP);
-#endif
+    // TRAP;
 
-    if (GIMPLE_LABEL != gimple_code(stmt))
-        // only basic indentation for now
-        printf("    ");
-
+    printf("\t\t");
     print_gimple_stmt(stdout, stmt,
                       /* indentation */ 0,
-                      /* flags, e.g. TDF_LINENO */ 0);
+                      TDF_LINENO);
 
     return NULL;
 }
 
 // walk through gimple BODY using <gimple.h> API
-static void handle_fnc_gimple (gimple_seq body)
+static void handle_bb_gimple (gimple_seq body)
 {
     struct walk_stmt_info info;
     memset (&info, 0, sizeof(info));
     walk_gimple_seq (body, cb_walk_gimple_stmt, NULL, &info);
 }
-#endif
 
 static char* ptr_to_label (void *ptr) {
     char *label;
@@ -103,7 +96,13 @@ static void handle_fnc_bb (struct basic_block_def *bb)
     cl->bb_open(cl, label);
     free(label);
 
-    // TRAP;
+    struct gimple_bb_info *gimple = bb->il.gimple;
+    if (NULL == gimple) {
+        SL_WARN_UNHANDLED ("gimple not found");
+        TRAP;
+        return;
+    }
+    handle_bb_gimple(gimple->seq);
 }
 
 static void handle_fnc_cfg (struct control_flow_graph *cfg)
@@ -111,15 +110,19 @@ static void handle_fnc_cfg (struct control_flow_graph *cfg)
     struct basic_block_def *bb = cfg->x_entry_block_ptr;
     char *label;
 
+    // FIXME: off by one error (first and last bb are empty)
     gcc_assert(bb);
+    bb = bb->next_bb;
+    gcc_assert(bb);
+
     label = ptr_to_label(bb);
     cl->insn_jmp(cl, /* TODO */ 0, label);
     free(label);
 
-    do {
+    while (/* FIXME: off by one error */ bb->next_bb) {
         handle_fnc_bb(bb);
         bb = bb->next_bb;
-    } while (bb);
+    }
 }
 
 // go through argument list ARGS of fnc declaration
@@ -194,7 +197,7 @@ static struct opt_pass sl_pass = {
     .name                       = "slplug",
     .gate                       = NULL,
     .execute                    = sl_pass_execute,
-    .properties_required        = PROP_gimple_any,
+    .properties_required        = PROP_cfg | PROP_gimple_any,
     // ...
 };
 
