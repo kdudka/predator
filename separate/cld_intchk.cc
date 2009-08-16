@@ -1,6 +1,7 @@
 #include "cld_intchk.hh"
 #include "cl_decorator.hh"
 
+#include <map>
 #include <string>
 
 class CldCbSeqChk: public ClDecoratorBase {
@@ -155,6 +156,119 @@ class CldCbSeqChk: public ClDecoratorBase {
         void setCallClose();
 };
 
+// TODO: go through CFG and report all unused/initialized?
+class CldRegUsageChk: public ClDecoratorBase {
+    public:
+        CldRegUsageChk(ICodeListener *slave);
+
+        virtual void file_open(
+            const char              *file_name)
+        {
+            file_ = file_name;
+            ClDecoratorBase::file_open(file_name);
+        }
+
+        virtual void fnc_open(
+            int                     line,
+            const char              *fnc_name,
+            enum cl_scope_e         scope)
+        {
+            line_ = line;
+            this->reset();
+            ClDecoratorBase::fnc_open(line, fnc_name, scope);
+        }
+
+        virtual void fnc_close() {
+            this->emitWarnings();
+            ClDecoratorBase::fnc_close();
+        }
+
+        virtual void insn_cond(
+            int                     line,
+            struct cl_operand       *src,
+            const char              *label_true,
+            const char              *label_false)
+        {
+            line_ = line;
+            this->handleSrc(src);
+            ClDecoratorBase::insn_cond(line, src, label_true, label_false);
+        }
+
+        virtual void insn_ret(
+            int                     line,
+            struct cl_operand       *src)
+        {
+            line_ = line;
+            this->handleSrc(src);
+            ClDecoratorBase::insn_ret(line, src);
+        }
+
+        virtual void insn_unop(
+            int                     line,
+            enum cl_unop_e          type,
+            struct cl_operand       *dst,
+            struct cl_operand       *src)
+        {
+            line_ = line;
+            this->handleDst(dst);
+            this->handleSrc(src);
+            ClDecoratorBase::insn_unop(line, type, dst, src);
+        }
+
+        virtual void insn_binop(
+            int                     line,
+            enum cl_binop_e         type,
+            struct cl_operand       *dst,
+            struct cl_operand       *src1,
+            struct cl_operand       *src2)
+        {
+            line_ = line;
+            this->handleDst(dst);
+            this->handleSrc(src1);
+            this->handleSrc(src2);
+            ClDecoratorBase::insn_binop(line, type, dst, src1, src2);
+        }
+
+        virtual void insn_call_open(
+            int                     line,
+            struct cl_operand       *dst,
+            struct cl_operand       *fnc)
+        {
+            line_ = line;
+            this->handleDst(dst);
+            this->handleSrc(fnc);
+            ClDecoratorBase::insn_call_open(line, dst, fnc);
+        }
+
+        virtual void insn_call_arg(
+            int                     arg_pos,
+            struct cl_operand       *arg_src)
+        {
+            this->handleSrc(arg_src);
+            ClDecoratorBase::insn_call_arg(arg_pos, arg_src);
+        }
+
+    private:
+        struct Usage {
+            bool read;
+            bool written;
+
+            Usage(): read(false), written(false) { }
+        };
+
+        typedef std::map<int, Usage> TMap;
+
+        TMap                map_;
+        std::string         file_;
+        int                 line_;
+
+    private:
+        void reset();
+        void handleDst(struct cl_operand *);
+        void handleSrc(struct cl_operand *);
+        void emitWarnings();
+};
+
 // /////////////////////////////////////////////////////////////////////////////
 // CldCbSeqChk implementation
 CldCbSeqChk::CldCbSeqChk(ICodeListener *slave):
@@ -281,9 +395,55 @@ void CldCbSeqChk::setCallClose() {
     state_ = S_BLOCK_LEVEL;
 }
 
+// /////////////////////////////////////////////////////////////////////////////
+// CldRegUsageChk implementation
+CldRegUsageChk::CldRegUsageChk(ICodeListener *slave):
+    ClDecoratorBase(slave),
+    line_(-1)
+{
+}
+
+void CldRegUsageChk::reset() {
+    map_.clear();
+}
+
+void CldRegUsageChk::handleDst(struct cl_operand *op) {
+    if (CL_OPERAND_REG != op->type)
+        return;
+
+    map_[op->value.reg_id].written = true;
+}
+
+void CldRegUsageChk::handleSrc(struct cl_operand *op) {
+    if (CL_OPERAND_REG != op->type)
+        return;
+
+    map_[op->value.reg_id].read = true;
+}
+
+void CldRegUsageChk::emitWarnings() {
+    TMap::iterator i;
+    for (i = map_.begin(); i != map_.end(); ++i) {
+        int reg = i->first;
+        Usage &u = i->second;
+
+        if (!u.read) {
+            CL_MSG_STREAM(cl_error, file_ << ":" << line_ << ": error: "
+                    << "unused register %r" << reg);
+        }
+
+        if (!u.written) {
+            CL_MSG_STREAM(cl_error, file_ << ":" << line_ << ": error: "
+                    << "uninitialized register %r" << reg);
+        }
+    }
+}
+
 
 // /////////////////////////////////////////////////////////////////////////////
 // public interface, see cld_unilabel.hh for more details
 ICodeListener* createCldIntegrityChk(ICodeListener *slave) {
-    return new CldCbSeqChk(slave);
+    return
+        new CldRegUsageChk(
+        new CldCbSeqChk(slave));
 }
