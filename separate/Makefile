@@ -18,6 +18,7 @@ CL_OBJS = cl_chain.o \
 	cl_locator.o \
 	cl_pp.o \
 	cld_argsub.o \
+	cld_intchk.o \
 	cld_unilabel.o \
 	cld_uniregs.o \
 	code_listener.o \
@@ -27,6 +28,7 @@ CL_OBJS = cl_chain.o \
 
 all: demo
 
+#TODO: dependency scanning
 $(CL_OBJS): *.hh code_listener.h
 
 separate: separate.o $(CL_OBJS) $(SPARSE_LIBS)

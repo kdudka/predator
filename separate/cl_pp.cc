@@ -1,6 +1,6 @@
 // TODO: move to config.h
 #define UNIFY_LABELS            1
-#define UNIFY_LABELS_SCOPE      CL_SCOPE_GLOBAL
+#define UNIFY_LABELS_SCOPE      CL_SCOPE_FUNCTION
 
 // scope for UNIFY_REGS is always CL_SCOPE_FUNCTION
 #define UNIFY_REGS              1
@@ -9,6 +9,7 @@
 
 #include "cl_pp.hh"
 #include "cl_private.hh"
+#include "cld_intchk.hh"
 #include "ssd.hh"
 
 #if UNIFY_LABELS
@@ -426,17 +427,21 @@ void ClPrettyPrint::insn_call_close()
 // public interface, see cl_pp.hh for more details
 ICodeListener* createClPrettyPrint(int fd_out) {
     ICodeListener *cl = new ClPrettyPrint(fd_out);
+    cl = createCldIntegrityChk(cl);
 
 #if UNIFY_LABELS
     cl = createCldUniLabel(cl, UNIFY_LABELS_SCOPE);
+    cl = createCldIntegrityChk(cl);
 #endif
 
 #if UNIFY_REGS
     cl = createCldUniRegs(cl);
+    cl = createCldIntegrityChk(cl);
 #endif
 
 #if ARG_SUBST
     cl = createCldArgSubst(cl);
+    cl = createCldIntegrityChk(cl);
 #endif
 
     return cl;

@@ -37,8 +37,8 @@
 #define WARN_UNHANDLED_SYM(sym) \
     WARN_UNHANDLED((sym)->pos, show_ident((sym)->ident))
 
-#define WARN_VA(pos, ...) do {\
-    sep_warn(pos, __VA_ARGS__); \
+#define WARN_VA(pos, fmt, ...) do {\
+    sep_warn(pos, "warning: " fmt, __VA_ARGS__); \
     fprintf(stderr, "%s:%d: note: raised from function '%s'\n", __FILE__, \
             __LINE__, __FUNCTION__); \
 } while (0)
@@ -255,6 +255,16 @@ static void insn_assignment_base(struct instruction                 *insn,
 
     op_lhs.deref = lhs_deref;
     op_rhs.deref = rhs_deref;
+
+#if 0
+    if (op_lhs.deref && op_lhs.name && op_lhs.offset
+            && 0 == strcmp(op_lhs.name, op_lhs.offset))
+        TRAP;
+
+    if (op_rhs.deref && op_rhs.name && op_rhs.offset
+            && 0 == strcmp(op_rhs.name, op_rhs.offset))
+        TRAP;
+#endif
 
     cl->insn_unop(cl, insn->pos.line, CL_UNOP_ASSIGN, &op_lhs, &op_rhs);
 
