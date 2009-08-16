@@ -562,8 +562,8 @@ static void handle_fnc_def(struct symbol *sym, struct cl_code_listener *cl)
 
     cl->fnc_open(cl, sym->pos.line, show_ident(sym->ident),
             (sym->scope==file_scope)
-            ? CL_SCOPE_GLOBAL
-            : CL_SCOPE_STATIC);
+            ? CL_SCOPE_STATIC
+            : CL_SCOPE_GLOBAL);
 
     // dump argument list
     FOR_EACH_PTR(base_type->arguments, arg) {
