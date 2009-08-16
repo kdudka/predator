@@ -17,8 +17,15 @@ DBGFLAGS ?= -g -O0
 CFLAGS += $(DBGFLAGS)
 CXXFLAGS += $(DBGFLAGS)
 
-CC = gcc
-LD = gcc
+# fix for gcc plug-in broken linkage
+#
+# CXXFLAGS += -I../gcc-install/include/c++/4.5.0
+# CC = ../gcc-install/bin/gcc
+# CXX = ../gcc-install/bin/g++
+# LD = ../gcc-install/bin/g++
+
+LD = g++
+
 AR ?= ar
 RANLIB ?= ranlib
 GDB ?= gdb
@@ -50,11 +57,13 @@ $(CL_OBJS): code_listener.h *.hh
 $(CL_OBJS): CXXFLAGS += -fPIC -std=c++0x -pedantic -Wall -Werror
 ssd.o: CXXFLAGS += -I../ssd/src -DHAVE_ISATTY
 
+CL_LIBS = -lboost_iostreams
+
 slsparse.o: code_listener.h
 slsparse.o: CFLAGS += -fPIC -Wall $(SPARSE_CFLAGS)
 
 slsparse: slsparse.o libcl.a $(SPARSE_LIBS)
-	$(CC) $(CFLAGS) -o $@ slsparse.o -L. -lcl $(SPARSE_LIBS) -lboost_iostreams
+	$(CC) $(CFLAGS) -o $@ slsparse.o -L. -lcl $(SPARSE_LIBS) $(CL_LIBS)
 
 PLUG_CFLAGS = -fPIC -std=c99 -pedantic -Wall -W -Werror -pedantic \
 	-I$(GCC_PLUGIN_INC)
@@ -62,7 +71,7 @@ PLUG_CFLAGS = -fPIC -std=c99 -pedantic -Wall -W -Werror -pedantic \
 slplug.o: code_listener.h
 slplug.o: CFLAGS += $(PLUG_CFLAGS)
 
-slplug.so: LDFLAGS += -fPIC -shared
+slplug.so: LDFLAGS += -fPIC -shared $(CL_LIBS)
 slplug.so: slplug.o libcl.a
 	$(LD) -o $@ $(LDFLAGS) slplug.o -lcl -L.
 
