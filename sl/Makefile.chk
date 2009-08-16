@@ -1,0 +1,12 @@
+HEADERS ?= *.h *.hh
+
+SINK ?= /dev/null
+
+CXXFLAGS += -std=c++0x -pedantic -Wall -W -Werror
+
+.PHONY: check $(HEADERS)
+
+# check whether each header is self-compilable
+check: $(HEADERS)
+$(HEADERS):
+	$(CXX) $(CXXFLAGS) -o $(SINK) -c $@

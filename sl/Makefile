@@ -24,7 +24,7 @@ RANLIB ?= ranlib
 GDB ?= gdb
 
 .PHONY: all check clean debug \
-	chkplug chksparse chkunit \
+	chkplug chksparse chkunit chkhead \
 	dbgplug dbgsparse
 
 all: slsparse slplug.so
@@ -63,8 +63,8 @@ slplug.o: code_listener.h
 slplug.o: CFLAGS += $(PLUG_CFLAGS)
 
 slplug.so: LDFLAGS += -fPIC -shared
-slplug.so: slplug.o
-	$(LD) -o $@ $(LDFLAGS) $<
+slplug.so: slplug.o libcl.a
+	$(LD) -o $@ $(LDFLAGS) slplug.o -lcl -L.
 
 test-all: LDFLAGS += -lboost_unit_test_framework
 test-all: test-all.o dll.o
@@ -84,8 +84,10 @@ SFLAGS += -Wno-decl
 chksparse: dll.c slsparse
 	./slsparse $(SFLAGS) dll.c
 
-check: chkplug chksparse chkunit
-	# FIXME: make more generic
+check: chkplug chksparse chkunit chkhead
+
+chkhead:
+	$(MAKE) -f Makefile.chk
 	gcc -ansi -Wall -Werror -W -pedantic -c code_listener.h -o /dev/null
 
 clean:
