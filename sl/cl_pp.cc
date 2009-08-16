@@ -1,4 +1,6 @@
-// TODO: move to config.h
+// TODO: move all defines to config.h
+#define DEBUG_CLD               0
+
 #define UNIFY_LABELS            1
 #define UNIFY_LABELS_SCOPE      CL_SCOPE_FUNCTION
 
@@ -143,6 +145,18 @@ void ClPrettyPrint::fnc_open(
 {
     fnc_ = fnc_name;
     line_ = line;
+    switch (scope) {
+        case CL_SCOPE_GLOBAL:
+            break;
+
+        case CL_SCOPE_STATIC:
+            out_ << SSD_INLINE_COLOR(C_LIGHT_GREEN, "static") << " ";
+            break;
+
+        default:
+            CL_MSG_STREAM(cl_error, file_ << ":" << line << ": error: "
+                    << "invalid scope for function: " << scope);
+    }
     SSD_COLORIZE(out_, C_LIGHT_BLUE) << fnc_name;
     SSD_COLORIZE(out_, C_LIGHT_RED) << "(";
     printingArgDecls_ = true;
@@ -431,17 +445,23 @@ ICodeListener* createClPrettyPrint(int fd_out) {
 
 #if UNIFY_LABELS
     cl = createCldUniLabel(cl, UNIFY_LABELS_SCOPE);
+#   if DEBUG_CLD
     cl = createCldIntegrityChk(cl);
+#   endif
 #endif
 
 #if UNIFY_REGS
     cl = createCldUniRegs(cl);
+#   if DEBUG_CLD
     cl = createCldIntegrityChk(cl);
+#endif
 #endif
 
 #if ARG_SUBST
     cl = createCldArgSubst(cl);
+#   if DEBUG_CLD
     cl = createCldIntegrityChk(cl);
+#   endif
 #endif
 
     return cl;
