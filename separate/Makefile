@@ -31,8 +31,8 @@ all: demo
 #TODO: dependency scanning
 $(CL_OBJS): *.hh code_listener.h
 
-separate: separate.o $(CL_OBJS) $(SPARSE_LIBS)
-	$(CC) $(CFLAGS) $(SPARSE_CFLAGS) -o $@ separate.o $(CL_OBJS) \
+slsparse: slsparse.o $(CL_OBJS) $(SPARSE_LIBS)
+	$(CC) $(CFLAGS) $(SPARSE_CFLAGS) -o $@ slsparse.o $(CL_OBJS) \
 		$(SPARSE_LIBS) -lboost_iostreams
 
 test-all: LDFLAGS += -lboost_unit_test_framework
@@ -47,13 +47,13 @@ check: test-all
 	./runtest.sh all --build_info=yes --log_level=test_suite
 
 clean:
-	rm -f separate separate.o test-list test-all test-all.o dll.o $(CL_OBJS)
+	rm -f slsparse slsparse.o test-list test-all test-all.o dll.o $(CL_OBJS)
 
-demo: check dll.c separate
-	./separate $(SFLAGS) dll.c
+demo: check dll.c slsparse
+	./slsparse $(SFLAGS) dll.c
 
-debug: dll.c separate separate.gdb
-	$(GDB) -x separate.gdb
+debug: dll.c slsparse slsparse.gdb
+	$(GDB) -x slsparse.gdb
 
 ../sparse/libsparse.a: ../sparse/*.c ../sparse/*.h ../sparse/local.mk
 	$(MAKE) -C ../sparse

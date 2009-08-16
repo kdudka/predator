@@ -1,4 +1,4 @@
-file ./separate
+file ./slsparse
 set args -Wno-decl ./dll.c
 set confirm 0
 set pagination 0
