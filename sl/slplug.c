@@ -19,7 +19,7 @@
 
 // TODO: replace with gcc native debugging infrastructure
 #define SL_LOG(...) do { \
-    fprintf (stderr, "--- %s: ", plugin_name); \
+    fprintf (stderr, "%s:%d: %s: ", __FILE__, __LINE__, plugin_name); \
     fprintf (stderr, __VA_ARGS__); \
     fprintf (stderr, "\n"); \
 } while (0)
@@ -30,8 +30,8 @@
 
 // TODO: replace with gcc native debugging infrastructure
 #define SL_WARN_UNHANDLED(what) \
-    SL_LOG ("%s () at %s:%d: warning: '%s' not handled", \
-             __FUNCTION__, __FILE__, __LINE__, (what))
+    fprintf(stderr, "%s:%d: warning: '%s' not handled\n", \
+            __FILE__, __LINE__, (what))
 
 // required by gcc plug-in API
 int plugin_is_GPL_compatible;
@@ -41,7 +41,7 @@ static const char *plugin_name = "[uninitialized]";
 
 // plug-in meta-data according to gcc plug-in API
 static struct plugin_info sl_info = {
-    .version = "gcc plug-in slplug 0.1 [experimental]",
+    .version = "slplug 0.1 [experimental]",
     .help = "[not implemented]",
 };
 
@@ -107,10 +107,7 @@ static void handle_fnc_gimple (gimple_seq body)
 // handle FUNCTION_DECL tree node given as DECL
 static void handle_fnc_decl (tree decl)
 {
-    // print function name
     tree ident = DECL_NAME (decl);
-    //printf ("%s (", IDENTIFIER_POINTER (ident));
-
     cl->fnc_open(cl,
             /* TODO */ 0,
             /* TODO */ IDENTIFIER_POINTER(ident),
@@ -119,7 +116,10 @@ static void handle_fnc_decl (tree decl)
     // print argument list
     tree args = DECL_ARGUMENTS (decl);
     handle_fnc_decl_arglist (args);
-    //printf (")\n");
+
+    // TODO: remove next two lines
+    cl->insn_jmp(cl, 0, IDENTIFIER_POINTER(ident));
+    cl->bb_open(cl, IDENTIFIER_POINTER(ident));
 
     // obtain fnc structure
     struct function *fnc = DECL_STRUCT_FUNCTION (decl);
@@ -223,11 +223,11 @@ static void sl_regcb (const char *name) {
 
     register_callback (name, PLUGIN_FINISH_UNIT,
                        cb_finish_unit,
-                       /* data */ NULL);
+                       /* user_data */ NULL);
 
     register_callback (name, PLUGIN_FINISH,
                        cb_finish,
-                       /* data */ NULL);
+                       /* user_data */ NULL);
 
     register_callback (name, PLUGIN_INFO,
                        /* callback */ NULL,
@@ -235,7 +235,7 @@ static void sl_regcb (const char *name) {
 
     register_callback (name, PLUGIN_START_UNIT,
                        cb_start_unit,
-                       /* data */ NULL);
+                       /* user_data */ NULL);
 }
 
 // plug-in initialization according to gcc plug-in API
