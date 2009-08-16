@@ -17,20 +17,20 @@ GDB ?= gdb
 
 all: check
 
-separate.so: separate.o
+slplug.so: slplug.o
 	$(LD) -o $@ $(LDFLAGS) $<
 
 clean:
-	rm -f separate.o separate.so
+	rm -f slplug.o slplug.so
 
-run: separate.so
-	$(GCC_INSTALL)/bin/gcc $(CFLAGS) -fplugin=./separate.so -c separate.c \
+run: slplug.so
+	$(GCC_INSTALL)/bin/gcc $(CFLAGS) -fplugin=./slplug.so -c slplug.c \
 		-o tmp.o && rm -f tmp.o
 
-check: separate.so
-	$(GCC_INSTALL)/bin/gcc $(CFLAGS) -fplugin=./separate.so -c separate.c
-	$(MAKE) separate.so
-	$(GCC_INSTALL)/bin/gcc $(CFLAGS) -fplugin=./separate.so -c separate.c
+check: slplug.so
+	$(GCC_INSTALL)/bin/gcc $(CFLAGS) -fplugin=./slplug.so -c slplug.c
+	$(MAKE) slplug.so
+	$(GCC_INSTALL)/bin/gcc $(CFLAGS) -fplugin=./slplug.so -c slplug.c
 
-debug: separate.so
-	$(GDB) -x separate.gdb
+debug: slplug.so
+	$(GDB) -x slplug.gdb

@@ -1,6 +1,6 @@
 file ../gcc-install/bin/gcc
-set args -fplugin=./separate.so -std=c99 -pedantic -Wall -W -g -O0 -c \
-    ../separate/list.c
+set args -fplugin=./slplug.so -std=c99 -pedantic -Wall -W -g -O0 -c \
+    ../separate/dll.c
 set confirm 0
 set follow-fork-mode child
 set pagination 0
