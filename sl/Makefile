@@ -12,19 +12,22 @@ GCC_INSTALL = ../gcc-install
 GCC_PLUGIN_INC = \
 	$(GCC_INSTALL)/lib/gcc/x86_64-unknown-linux-gnu/4.5.0/plugin/include
 
+# debug flags
+DBGFLAGS ?= -g -O0
+CFLAGS += $(DBGFLAGS)
+CXXFLAGS += $(DBGFLAGS)
+
 CC = gcc
 LD = gcc
-#CFLAGS += -std=c99 -pedantic -Wall -W -g -O0 -fPIC -I$(GCC_PLUGIN_INC)
-CFLAGS += -fPIC -I$(GCC_PLUGIN_INC)
-CXXFLAGS += -fPIC
-LDFLAGS += -fPIC -shared
-
+AR ?= ar
+RANLIB ?= ranlib
 GDB ?= gdb
 
-CFLAGS += -g -O0 -Wall $(SPARSE_CFLAGS)
-CXXFLAGS += -g -O0 -Wall -Werror -pedantic -std=c++0x \
-			-I../ssd/src -DHAVE_ISATTY
-SFLAGS += -Wno-decl
+.PHONY: all check clean debug \
+	chkplug chksparse chkunit \
+	dbgplug dbgsparse
+
+all: slsparse slplug.so
 
 CL_OBJS = cl_chain.o \
 	cl_factory.o \
@@ -37,17 +40,29 @@ CL_OBJS = cl_chain.o \
 	code_listener.o \
 	ssd.o
 
-.PHONY: all check clean debug demo
-
-all: demo
+libcl.a: $(CL_OBJS)
+	$(AR) r $@ $(CL_OBJS)
+	$(RANLIB) $@
 
 #TODO: dependency scanning
-$(CL_OBJS): *.hh code_listener.h
+$(CL_OBJS): code_listener.h *.hh
 
-slsparse: slsparse.o $(CL_OBJS) $(SPARSE_LIBS)
-	$(CC) $(CFLAGS) $(SPARSE_CFLAGS) -o $@ slsparse.o $(CL_OBJS) \
-		$(SPARSE_LIBS) -lboost_iostreams
+$(CL_OBJS): CXXFLAGS += -fPIC -std=c++0x -pedantic -Wall -Werror
+ssd.o: CXXFLAGS += -I../ssd/src -DHAVE_ISATTY
 
+slsparse.o: code_listener.h
+slsparse.o: CFLAGS += -fPIC -Wall $(SPARSE_CFLAGS)
+
+slsparse: slsparse.o libcl.a $(SPARSE_LIBS)
+	$(CC) $(CFLAGS) -o $@ slsparse.o -L. -lcl $(SPARSE_LIBS) -lboost_iostreams
+
+PLUG_CFLAGS = -fPIC -std=c99 -pedantic -Wall -W -Werror -pedantic \
+	-I$(GCC_PLUGIN_INC)
+
+slplug.o: code_listener.h
+slplug.o: CFLAGS += $(PLUG_CFLAGS)
+
+slplug.so: LDFLAGS += -fPIC -shared
 slplug.so: slplug.o
 	$(LD) -o $@ $(LDFLAGS) $<
 
@@ -57,29 +72,30 @@ test-all: test-all.o dll.o
 test-list: list.c
 	$(CC) $(CFLAGS) -DSELF_TEST -o $@ $<
 
-check: test-all
-	# FIXME: make more generic
-	gcc -ansi -Wall -Werror -W -pedantic -c code_listener.h -o /dev/null
+chkunit: test-all
 	./runtest.sh all --build_info=yes --log_level=test_suite
 
-clean:
-	rm -f slplug.o slplug.so
-	rm -f slsparse slsparse.o test-list test-all test-all.o dll.o $(CL_OBJS)
+chkplug: slplug.so
+	$(GCC_INSTALL)/bin/gcc $(PLUG_CFLAGS) -fplugin=./slplug.so -c slplug.c
+	$(MAKE) slplug.so
+	$(GCC_INSTALL)/bin/gcc $(PLUG_CFLAGS) -fplugin=./slplug.so -c slplug.c
 
-run: slplug.so
-	$(GCC_INSTALL)/bin/gcc $(CFLAGS) -fplugin=./slplug.so -c slplug.c \
-		-o /dev/null
-
-demo: check dll.c slsparse
+SFLAGS += -Wno-decl
+chksparse: dll.c slsparse
 	./slsparse $(SFLAGS) dll.c
 
-debug: dll.c slsparse slsparse.gdb
-	$(GDB) -x slsparse.gdb
+check: chkplug chksparse chkunit
+	# FIXME: make more generic
+	gcc -ansi -Wall -Werror -W -pedantic -c code_listener.h -o /dev/null
 
-chkplug: slplug.so
-	$(GCC_INSTALL)/bin/gcc $(CFLAGS) -fplugin=./slplug.so -c slplug.c
-	$(MAKE) slplug.so
-	$(GCC_INSTALL)/bin/gcc $(CFLAGS) -fplugin=./slplug.so -c slplug.c
+clean:
+	rm -f libcl.a $(CL_OBJS)
+	rm -f test-list test-all test-all.o dll.o
+	rm -f slsparse slsparse.o
+	rm -f slplug.o slplug.so
+
+dbgsparse: slsparse
+	$(GDB) -x slsparse.gdb
 
 dbgplug: slplug.so
 	$(GDB) -x slplug.gdb
