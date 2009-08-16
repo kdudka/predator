@@ -156,6 +156,80 @@ class CldCbSeqChk: public ClDecoratorBase {
         void setCallClose();
 };
 
+class CldLabelChk: public ClDecoratorBase {
+    public:
+        CldLabelChk(ICodeListener *slave);
+
+        virtual void file_open(
+            const char              *file_name)
+        {
+            file_ = file_name;
+            ClDecoratorBase::file_open(file_name);
+        }
+
+        virtual void fnc_open(
+            int                     line,
+            const char              *fnc_name,
+            enum cl_scope_e         scope)
+        {
+            line_ = line;
+            this->reset();
+            ClDecoratorBase::fnc_open(line, fnc_name, scope);
+        }
+
+        virtual void fnc_close() {
+            this->emitWarnings();
+            ClDecoratorBase::fnc_close();
+        }
+
+        virtual void bb_open(
+            const char              *bb_name)
+        {
+            this->defineLabel(bb_name);
+            ClDecoratorBase::bb_open(bb_name);
+        }
+
+        virtual void insn_jmp(
+            int                     line,
+            const char              *label)
+        {
+            this->reqLabel(label);
+            ClDecoratorBase::insn_jmp(line, label);
+        }
+
+        virtual void insn_cond(
+            int                     line,
+            struct cl_operand       *src,
+            const char              *label_true,
+            const char              *label_false)
+        {
+            this->reqLabel(label_true);
+            this->reqLabel(label_false);
+            ClDecoratorBase::insn_cond(line, src, label_true, label_false);
+        }
+
+    private:
+        struct LabelState {
+            bool defined;
+            bool reachable;
+            int  line;
+
+            LabelState(): defined(false), reachable(false), line(-1) { }
+        };
+
+        typedef std::map<std::string, LabelState> TMap;
+
+        TMap                map_;
+        std::string         file_;
+        int                 line_;
+
+    private:
+        void reset();
+        void defineLabel(const char *);
+        void reqLabel(const char *);
+        void emitWarnings();
+};
+
 // TODO: go through CFG and report all unused/initialized?
 class CldRegUsageChk: public ClDecoratorBase {
     public:
@@ -252,8 +326,9 @@ class CldRegUsageChk: public ClDecoratorBase {
         struct Usage {
             bool read;
             bool written;
+            int  line;
 
-            Usage(): read(false), written(false) { }
+            Usage(): read(false), written(false), line(-1) { }
         };
 
         typedef std::map<int, Usage> TMap;
@@ -395,6 +470,52 @@ void CldCbSeqChk::setCallClose() {
     state_ = S_BLOCK_LEVEL;
 }
 
+
+// /////////////////////////////////////////////////////////////////////////////
+// CldLabelChk implementation
+CldLabelChk::CldLabelChk(ICodeListener *slave):
+    ClDecoratorBase(slave),
+    line_(-1)
+{
+}
+
+void CldLabelChk::reset() {
+    map_.clear();
+}
+
+void CldLabelChk::defineLabel(const char *label) {
+    LabelState &ls = map_[label];
+    ls.defined = true;
+    if (ls.line < 0)
+        ls.line = line_;
+}
+
+void CldLabelChk::reqLabel(const char *label) {
+    LabelState &ls = map_[label];
+    ls.reachable = true;
+    if (ls.line < 0)
+        ls.line = line_;
+}
+
+void CldLabelChk::emitWarnings() {
+    TMap::iterator i;
+    for (i = map_.begin(); i != map_.end(); ++i) {
+        const std::string label = i->first;
+        const LabelState &ls = i->second;
+
+        if (!ls.defined) {
+            CL_MSG_STREAM(cl_error, file_ << ":" << ls.line << ": error: "
+                    << "jump to undefined label '" << label << "'");
+        }
+
+        if (!ls.reachable) {
+            CL_MSG_STREAM(cl_warn, file_ << ":" << ls.line << ": warning: "
+                    << "unreachable label '" << label << "'");
+        }
+    }
+}
+
+
 // /////////////////////////////////////////////////////////////////////////////
 // CldRegUsageChk implementation
 CldRegUsageChk::CldRegUsageChk(ICodeListener *slave):
@@ -411,29 +532,35 @@ void CldRegUsageChk::handleDst(struct cl_operand *op) {
     if (CL_OPERAND_REG != op->type)
         return;
 
-    map_[op->value.reg_id].written = true;
+    Usage &u = map_[op->value.reg_id];
+    u.written = true;
+    if (u.line < 0)
+        u.line = line_;
 }
 
 void CldRegUsageChk::handleSrc(struct cl_operand *op) {
     if (CL_OPERAND_REG != op->type)
         return;
 
-    map_[op->value.reg_id].read = true;
+    Usage &u = map_[op->value.reg_id];
+    u.read = true;
+    if (u.line < 0)
+        u.line = line_;
 }
 
 void CldRegUsageChk::emitWarnings() {
     TMap::iterator i;
     for (i = map_.begin(); i != map_.end(); ++i) {
         int reg = i->first;
-        Usage &u = i->second;
+        const Usage &u = i->second;
 
         if (!u.read) {
-            CL_MSG_STREAM(cl_error, file_ << ":" << line_ << ": error: "
+            CL_MSG_STREAM(cl_warn, file_ << ":" << u.line << ": warning: "
                     << "unused register %r" << reg);
         }
 
         if (!u.written) {
-            CL_MSG_STREAM(cl_error, file_ << ":" << line_ << ": error: "
+            CL_MSG_STREAM(cl_error, file_ << ":" << u.line << ": error: "
                     << "uninitialized register %r" << reg);
         }
     }
@@ -445,5 +572,7 @@ void CldRegUsageChk::emitWarnings() {
 ICodeListener* createCldIntegrityChk(ICodeListener *slave) {
     return
         new CldRegUsageChk(
-        new CldCbSeqChk(slave));
+        new CldLabelChk(
+        new CldCbSeqChk(slave)
+        ));
 }
