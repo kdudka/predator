@@ -1,3 +1,6 @@
+// TODO: replace (almost) all occurrence of gcc_assert with SL_DIE
+// to die correctly in production version
+
 // this include has to be the first (according the gcc plug-in API)
 #include <gcc-plugin.h>
 
@@ -14,8 +17,13 @@
 #include <input.h>
 #include <tree-pass.h>
 
+#ifndef _GNU_SOURCE
+#   define _GNU_SOURCE
+#endif
+
 // safe to remove (it's here for debugging purposes only)
 #include <signal.h>
+#define TRAP raise(SIGTRAP)
 
 // TODO: replace with gcc native debugging infrastructure
 #define SL_LOG(...) do { \
@@ -47,30 +55,7 @@ static struct plugin_info sl_info = {
 
 static struct cl_code_listener *cl = NULL;
 
-// print name of function argument ARG to stdout
-static void handle_fnc_decl_arg (tree arg)
-{
-    tree ident = DECL_NAME (arg);
-    (void) ident;//printf ("%s", IDENTIFIER_POINTER (ident));
-}
-
-// go through argument list ARGS of fnc declaration
-static void handle_fnc_decl_arglist (tree args)
-{
-    int argc = 0;
-
-    while (args) {
-        handle_fnc_decl_arg (args);
-
-        cl->fnc_arg_decl(cl, ++argc, IDENTIFIER_POINTER(
-                    DECL_NAME(args)));
-
-        args = TREE_CHAIN (args);
-        /*if (args)
-            printf (", ");*/
-    }
-}
-
+#if 0
 // callback of walk_gimple_seq declared in <gimple.h>
 static tree cb_walk_gimple_stmt (gimple_stmt_iterator *iter,
                                  bool *subtree_done,
@@ -103,23 +88,67 @@ static void handle_fnc_gimple (gimple_seq body)
     memset (&info, 0, sizeof(info));
     walk_gimple_seq (body, cb_walk_gimple_stmt, NULL, &info);
 }
+#endif
+
+static char* ptr_to_label (void *ptr) {
+    char *label;
+    int rv = asprintf(&label, "%p", ptr);
+    gcc_assert(0 < rv);
+    return label;
+}
+
+static void handle_fnc_bb (struct basic_block_def *bb)
+{
+    char *label = ptr_to_label(bb);
+    cl->bb_open(cl, label);
+    free(label);
+
+    // TRAP;
+}
+
+static void handle_fnc_cfg (struct control_flow_graph *cfg)
+{
+    struct basic_block_def *bb = cfg->x_entry_block_ptr;
+    char *label;
+
+    gcc_assert(bb);
+    label = ptr_to_label(bb);
+    cl->insn_jmp(cl, /* TODO */ 0, label);
+    free(label);
+
+    do {
+        handle_fnc_bb(bb);
+        bb = bb->next_bb;
+    } while (bb);
+}
+
+// go through argument list ARGS of fnc declaration
+static void handle_fnc_decl_arglist (tree args)
+{
+    int argc = 0;
+
+    while (args) {
+        tree ident = DECL_NAME(args);
+        cl->fnc_arg_decl(cl, ++argc, IDENTIFIER_POINTER(ident));
+
+        args = TREE_CHAIN (args);
+    }
+}
 
 // handle FUNCTION_DECL tree node given as DECL
 static void handle_fnc_decl (tree decl)
 {
     tree ident = DECL_NAME (decl);
     cl->fnc_open(cl,
-            /* TODO */ 0,
-            /* TODO */ IDENTIFIER_POINTER(ident),
-            /* TODO */ CL_SCOPE_GLOBAL);
+            DECL_SOURCE_LINE(decl),
+            IDENTIFIER_POINTER(ident),
+            TREE_PUBLIC(decl)
+                ? CL_SCOPE_GLOBAL
+                : CL_SCOPE_STATIC);
 
     // print argument list
     tree args = DECL_ARGUMENTS (decl);
     handle_fnc_decl_arglist (args);
-
-    // TODO: remove next two lines
-    cl->insn_jmp(cl, 0, IDENTIFIER_POINTER(ident));
-    cl->bb_open(cl, IDENTIFIER_POINTER(ident));
 
     // obtain fnc structure
     struct function *fnc = DECL_STRUCT_FUNCTION (decl);
@@ -128,18 +157,17 @@ static void handle_fnc_decl (tree decl)
         return;
     }
 
-    // obtain gimple for fnc
-    gimple_seq body = fnc->gimple_body;
-    if (NULL == body) {
-        SL_WARN_UNHANDLED ("gimple not found");
+    // obtain CFG
+    struct control_flow_graph *cfg = fnc->cfg;
+    if (NULL == cfg) {
+        SL_WARN_UNHANDLED ("CFG not found");
         return;
     }
 
-    // dump gimple body
-    printf ("{\n");
-    handle_fnc_gimple (body);
-    printf ("}\n\n");
+    // go through CFG
+    handle_fnc_cfg(cfg);
 
+    // fnc traverse complete
     cl->fnc_close(cl);
 }
 
@@ -178,7 +206,7 @@ static struct plugin_pass sl_plugin_pass = {
     .reference_pass_name        = "cfg",
 
     .ref_pass_instance_number   = 0,
-    .pos_op                     = PASS_POS_INSERT_BEFORE,
+    .pos_op                     = PASS_POS_INSERT_AFTER,
 };
 
 // callback called as last (if the plug-in does not crash before)
@@ -256,13 +284,16 @@ int plugin_init (struct plugin_name_args *plugin_info,
     SL_LOG ("using gcc %s %s, built at %s", version->basever,
              version->devphase, version->datestamp);
 
-    cl = cl_code_listener_create("pp", STDOUT_FILENO, false);
+    // initialize code listener
+    cl_global_init_defaults(NULL, true);
+    cl = cl_code_listener_create("pp",
+                                 /* TODO: create a file */ STDOUT_FILENO,
+                                 false);
     gcc_assert(cl);
 
     // try to register callbacks (and virtual callbacks)
     sl_regcb (plugin_info->base_name);
     SL_LOG ("'%s' successfully initialized", plugin_info->version);
 
-    cl_global_init_defaults(NULL, true);
     return 0;
 }
