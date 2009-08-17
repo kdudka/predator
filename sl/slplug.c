@@ -55,6 +55,40 @@ static struct plugin_info sl_info = {
 
 static struct cl_code_listener *cl = NULL;
 
+static char* index_to_label (unsigned idx) {
+    char *label;
+    int rv = asprintf(&label, "%u", idx);
+    gcc_assert(0 < rv);
+    return label;
+}
+
+static void handle_stmt_cond(gimple stmt)
+{
+    char *label_true = NULL;
+    char *label_false = NULL;
+    struct basic_block_def *bb = stmt->gsbase.bb;
+
+    edge e;
+    edge_iterator ei;
+    FOR_EACH_EDGE(e, ei, bb->succs) {
+        if (e->flags & /* true */ 1024) {
+            struct basic_block_def *next = e->dest;
+            label_true = index_to_label(next->index);
+        }
+        if (e->flags & /* false */ 2048) {
+            struct basic_block_def *next = e->dest;
+            label_false = index_to_label(next->index);
+        }
+    }
+
+    if (!label_true && !label_false)
+        TRAP;
+
+    struct cl_operand op;
+    /* TODO */ op.type = CL_OPERAND_VOID;
+    cl->insn_cond(cl, /* TODO */ 0, &op, label_true, label_false);
+}
+
 // callback of walk_gimple_seq declared in <gimple.h>
 static tree cb_walk_gimple_stmt (gimple_stmt_iterator *iter,
                                  bool *subtree_done,
@@ -65,12 +99,15 @@ static tree cb_walk_gimple_stmt (gimple_stmt_iterator *iter,
     (void) subtree_done;
     (void) info;
 
-    // TRAP;
-
     printf("\t\t");
     print_gimple_stmt(stdout, stmt,
                       /* indentation */ 0,
                       TDF_LINENO);
+
+    if (stmt->gsbase.code == GIMPLE_COND) {
+        GIMPLE_CHECK(stmt, GIMPLE_COND);
+        handle_stmt_cond(stmt);
+    }
 
     return NULL;
 }
@@ -83,16 +120,22 @@ static void handle_bb_gimple (gimple_seq body)
     walk_gimple_seq (body, cb_walk_gimple_stmt, NULL, &info);
 }
 
-static char* ptr_to_label (void *ptr) {
-    char *label;
-    int rv = asprintf(&label, "%p", ptr);
-    gcc_assert(0 < rv);
-    return label;
-}
-
 static void handle_fnc_bb (struct basic_block_def *bb)
 {
-    char *label = ptr_to_label(bb);
+    if (bb == cfun->cfg->x_entry_block_ptr) {
+        edge e;
+        edge_iterator ei = ei_start(bb->succs);
+        if (ei_cond(ei, &e) && e->dest) {
+            struct basic_block_def *next = e->dest;
+            char *label = index_to_label(next->index);
+            cl->insn_jmp(cl, /* TODO */ 0, label);
+            free(label);
+            return;
+        }
+        TRAP;
+    }
+
+    char *label = index_to_label(bb->index);
     cl->bb_open(cl, label);
     free(label);
 
@@ -103,21 +146,21 @@ static void handle_fnc_bb (struct basic_block_def *bb)
         return;
     }
     handle_bb_gimple(gimple->seq);
+
+    edge e;
+    edge_iterator ei = ei_start(bb->succs);
+    if (ei_cond(ei, &e) && e->dest && (e->flags & /* fallthru */ 1)) {
+        struct basic_block_def *next = e->dest;
+        char *label = index_to_label(next->index);
+        cl->insn_jmp(cl, /* TODO */ 0, label);
+        free(label);
+        return;
+    }
 }
 
 static void handle_fnc_cfg (struct control_flow_graph *cfg)
 {
     struct basic_block_def *bb = cfg->x_entry_block_ptr;
-    char *label;
-
-    // FIXME: off by one error (first and last bb are empty)
-    gcc_assert(bb);
-    bb = bb->next_bb;
-    gcc_assert(bb);
-
-    label = ptr_to_label(bb);
-    cl->insn_jmp(cl, /* TODO */ 0, label);
-    free(label);
 
     while (/* FIXME: off by one error */ bb->next_bb) {
         handle_fnc_bb(bb);

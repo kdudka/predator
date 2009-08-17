@@ -1,7 +1,7 @@
 // TODO: move all defines to config.h
 #define DEBUG_CLD               0
 
-#define UNIFY_LABELS            1
+#define UNIFY_LABELS            0
 #define UNIFY_LABELS_SCOPE      CL_SCOPE_FUNCTION
 
 // scope for UNIFY_REGS is always CL_SCOPE_FUNCTION
