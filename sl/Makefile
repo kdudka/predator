@@ -85,7 +85,9 @@ chkunit: test-all
 	./runtest.sh all --build_info=yes --log_level=test_suite
 
 chkplug: slplug.so
-	$(GCC_INSTALL)/bin/gcc $(PLUG_CFLAGS) -fplugin=./slplug.so -c slplug.c
+	TMP=`mktemp` \
+		&& ($(GCC_INSTALL)/bin/gcc $(PLUG_CFLAGS) -fplugin=./slplug.so \
+		-c slplug.c >"$$TMP" 2>&1 || (cat "$$TMP"; exit 1))
 	$(MAKE) slplug.so
 	$(GCC_INSTALL)/bin/gcc $(PLUG_CFLAGS) -fplugin=./slplug.so -c slplug.c
 
