@@ -160,7 +160,12 @@ enum cl_unop_e {
 };
 
 enum cl_binop_e {
-    CL_BINOP_ADD
+    CL_BINOP_ADD,
+    CL_BINOP_EQ,
+    CL_BINOP_NE,
+    CL_BINOP_GT,
+    CL_BINOP_LE,
+    CL_BINOP_GE
     /* TODO */
 };
 

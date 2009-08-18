@@ -79,13 +79,24 @@ void ClLocator::file_close() {
 }
 
 void ClLocator::printLocation() {
-    out_ << file_ << ":" << loc_.line << ": linearized code:" << std::endl;
+    if (loc_.file)
+        out_ << loc_.file;
+    else
+        out_ << file_;
+
+    out_ << ":" << loc_.line;
+
+    if (0 < loc_.column)
+        out_ << ":" << loc_.column;
+
+    out_ << ": linearized code follows..." << std::endl;
 }
 
 void ClLocator::fnc_open(const struct cl_location *loc, const char *,
                          enum cl_scope_e)
 {
     loc_ = *loc;
+    this->printLocation();
 }
 
 void ClLocator::fnc_arg_decl(int, const char *) {

@@ -5,7 +5,7 @@
 #define UNIFY_LABELS_SCOPE      CL_SCOPE_FUNCTION
 
 // scope for UNIFY_REGS is always CL_SCOPE_FUNCTION
-#define UNIFY_REGS              1
+#define UNIFY_REGS              0
 
 #define ARG_SUBST               1
 
@@ -373,18 +373,39 @@ void ClPrettyPrint::printInsnBinop(const struct cl_insn *cli) {
 
     out_ << "\t\t";
     this->printAssignmentLhs(dst);
+    out_ << "(";
+    this->printOperand(src1);
+    out_ << " ";
 
     switch (type) {
         case CL_BINOP_ADD:
-            this->printOperand(src1);
-            out_ << " "
-                << SSD_INLINE_COLOR(C_YELLOW, "+")
-                << " ";
-            this->printOperand(src2);
+            SSD_COLORIZE(out_, C_YELLOW) << "+";
+            break;
+
+        case CL_BINOP_EQ:
+            SSD_COLORIZE(out_, C_YELLOW) << "==";
+            break;
+
+        case CL_BINOP_NE:
+            SSD_COLORIZE(out_, C_YELLOW) << "!=";
+            break;
+
+        case CL_BINOP_GT:
+            SSD_COLORIZE(out_, C_YELLOW) << ">";
+            break;
+
+        case CL_BINOP_LE:
+            SSD_COLORIZE(out_, C_YELLOW) << "<=";
+            break;
+
+        case CL_BINOP_GE:
+            SSD_COLORIZE(out_, C_YELLOW) << ">=";
             break;
     }
 
-    out_ << std::endl;
+    out_ << " ";
+    this->printOperand(src2);
+    out_ << ")" << std::endl;
 }
 
 void ClPrettyPrint::insn(
