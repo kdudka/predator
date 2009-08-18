@@ -97,11 +97,11 @@ enum cl_scope_e {
 
 enum cl_operand_e {
     CL_OPERAND_VOID,
+    CL_OPERAND_VAR,
     CL_OPERAND_ARG,
     CL_OPERAND_REG,
-    CL_OPERAND_VAR,
-    CL_OPERAND_STRING,
-    CL_OPERAND_INT
+    CL_OPERAND_INT,
+    CL_OPERAND_STRING
     /* TODO */
 };
 
@@ -118,8 +118,8 @@ enum cl_binop_e {
 union cl_value {
     int                             arg_pos;        /* CL_OPERAND_ARG       */
     int                             reg_id;         /* CL_OPERAND_REG       */
-    const char                      *text;          /* CL_OPERAND_STRING    */
     int                             num_int;        /* CL_OPERAND_INT       */
+    const char                      *text;          /* CL_OPERAND_STRING    */
     /* TODO */
 };
 
@@ -130,6 +130,57 @@ struct cl_operand {
     bool                            deref;
     const char                      *offset;
     /* TODO */
+};
+
+enum cl_insn_e {
+    CL_INSN_JMP,
+    CL_INSN_COND,
+    CL_INSN_RET,
+    CL_INSN_ABORT,
+    CL_INSN_UNOP,
+    CL_INSN_BINOP
+    /* TODO */
+};
+
+struct cl_insn {
+    enum cl_insn_e                  type;
+    struct cl_location              location;
+
+    /* instruction specific data */
+    union {
+        /* CL_INSN_JMP */
+        struct {
+            const char              *label;
+        } insn_jmp;
+
+        /* CL_INSN_COND */
+        struct {
+            struct cl_operand       *src;
+            const char              *then_label;
+            const char              *else_label;
+        } insn_cond;
+
+        /* CL_INSN_RET */
+        struct {
+            struct cl_operand       *src;
+        } insn_ret;
+
+        /* CL_INSN_UNOP */
+        struct {
+            enum cl_unop_e          type;
+            struct cl_operand       *dst;
+            struct cl_operand       *src;
+        } insn_unop;
+
+        /* CL_INSN_BINOP */
+        struct {
+            enum cl_binop_e         type;
+            struct cl_operand       *dst;
+            struct cl_operand       *src1;
+            struct cl_operand       *src2;
+        } insn_binop;
+
+    } data;
 };
 
 /**
@@ -152,17 +203,17 @@ struct cl_operand {
  *
  * FNC_ENTRY is defined as:
  *
- *     insn_jmp
+ *     insn{CL_INSN_JMP}
  *
  *
  * NON_TERM_INSN is defined as:
  *
- *     INSN_CALL | insn_unop | insn_binop
+ *     INSN_CALL | insn{CL_INSN_UNOP, CL_INSN_UNOP}
  *
  *
  * TERM_INSN is defined as:
  *
- *     insn_jmp | insn_cond | insn_ret
+ *     insn{CL_INSN_JMP, CL_INSN_COND, CL_INSN_RET, CL_INSN_ABORT}
  *
  *
  * INSN_CALL is defined by regex:
@@ -203,48 +254,20 @@ struct cl_code_listener {
             struct cl_code_listener *self,
             const char              *bb_name);
 
-    void (*insn_jmp)(
+    void (*insn)(
             struct cl_code_listener *self,
-            struct cl_location      *loc,
-            const char              *label);
-
-    void (*insn_cond)(
-            struct cl_code_listener *self,
-            struct cl_location      *loc,
-            struct cl_operand       *src,
-            const char              *label_true,
-            const char              *label_false);
-
-    void (*insn_ret)(
-            struct cl_code_listener *self,
-            struct cl_location      *loc,
-            struct cl_operand       *src);
-
-    void (*insn_unop)(
-            struct cl_code_listener *self,
-            struct cl_location      *loc,
-            enum cl_unop_e          type,
-            struct cl_operand       *dst,
-            struct cl_operand       *src);
-
-    void (*insn_binop)(
-            struct cl_code_listener *self,
-            struct cl_location      *loc,
-            enum cl_binop_e         type,
-            struct cl_operand       *dst,
-            struct cl_operand       *src1,
-            struct cl_operand       *src2);
+            const struct cl_insn    *insn);
 
     void (*insn_call_open)(
             struct cl_code_listener *self,
-            struct cl_location      *loc,
-            struct cl_operand       *dst,
-            struct cl_operand       *fnc);
+            const struct cl_location*loc,
+            const struct cl_operand *dst,
+            const struct cl_operand *fnc);
 
     void (*insn_call_arg)(
             struct cl_code_listener *self,
             int                     arg_pos,
-            struct cl_operand       *arg_src);
+            const struct cl_operand *arg_src);
 
     void (*insn_call_close)(
             struct cl_code_listener *self);
