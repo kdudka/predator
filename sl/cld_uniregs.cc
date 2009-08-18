@@ -8,7 +8,7 @@ class CldUniRegs: public ClDecoratorBase {
         CldUniRegs(ICodeListener *slave);
 
         virtual void fnc_open(
-            struct cl_location      *loc,
+            const struct cl_location*loc,
             const char              *fnc_name,
             enum cl_scope_e         scope)
         {
@@ -68,26 +68,32 @@ class CldUniRegs: public ClDecoratorBase {
                     break;
 
                 default:
+                    ClDecoratorBase::insn(cli);
                     break;
             }
         }
 
         virtual void insn_call_open(
-            struct cl_location      *loc,
-            struct cl_operand       *dst,
-            struct cl_operand       *fnc)
+            const struct cl_location*loc,
+            const struct cl_operand *dst,
+            const struct cl_operand *fnc)
         {
-            this->relocReg(dst);
-            this->relocReg(fnc);
-            ClDecoratorBase::insn_call_open(loc, dst, fnc);
+            struct cl_operand local_dst = *dst;
+            struct cl_operand local_fnc = *fnc;
+
+            this->relocReg(&local_dst);
+            this->relocReg(&local_fnc);
+
+            ClDecoratorBase::insn_call_open(loc, &local_dst, &local_fnc);
         }
 
         virtual void insn_call_arg(
             int                     arg_id,
-            struct cl_operand       *arg_src)
+            const struct cl_operand *arg_src)
         {
-            this->relocReg(arg_src);
-            ClDecoratorBase::insn_call_arg(arg_id, arg_src);
+            struct cl_operand local_src = *arg_src;
+            this->relocReg(&local_src);
+            ClDecoratorBase::insn_call_arg(arg_id, &local_src);
         }
 
     private:

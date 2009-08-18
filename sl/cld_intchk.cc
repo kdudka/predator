@@ -22,7 +22,7 @@ class CldCbSeqChk: public ClDecoratorBase {
         }
 
         virtual void fnc_open(
-            struct cl_location      *loc,
+            const struct cl_location*loc,
             const char              *fnc_name,
             enum cl_scope_e         scope)
         {
@@ -86,9 +86,9 @@ class CldCbSeqChk: public ClDecoratorBase {
         }
 
         virtual void insn_call_open(
-            struct cl_location      *loc,
-            struct cl_operand       *dst,
-            struct cl_operand       *fnc)
+            const struct cl_location*loc,
+            const struct cl_operand *dst,
+            const struct cl_operand *fnc)
         {
             loc_ = *loc;
             this->setState(S_INSN_CALL);
@@ -97,7 +97,7 @@ class CldCbSeqChk: public ClDecoratorBase {
 
         virtual void insn_call_arg(
             int                     arg_id,
-            struct cl_operand       *arg_src)
+            const struct cl_operand *arg_src)
         {
             this->chkInsnCallArg();
             ClDecoratorBase::insn_call_arg(arg_id, arg_src);
@@ -151,7 +151,7 @@ class CldLabelChk: public ClDecoratorBase {
         }
 
         virtual void fnc_open(
-            struct cl_location      *loc,
+            const struct cl_location*loc,
             const char              *fnc_name,
             enum cl_scope_e         scope)
         {
@@ -230,7 +230,7 @@ class CldRegUsageChk: public ClDecoratorBase {
         }
 
         virtual void fnc_open(
-            struct cl_location      *loc,
+            const struct cl_location*loc,
             const char              *fnc_name,
             enum cl_scope_e         scope)
         {
@@ -277,9 +277,9 @@ class CldRegUsageChk: public ClDecoratorBase {
         }
 
         virtual void insn_call_open(
-            struct cl_location      *loc,
-            struct cl_operand       *dst,
-            struct cl_operand       *fnc)
+            const struct cl_location*loc,
+            const struct cl_operand *dst,
+            const struct cl_operand *fnc)
         {
             loc_ = *loc;
             this->handleDst(dst);
@@ -289,7 +289,7 @@ class CldRegUsageChk: public ClDecoratorBase {
 
         virtual void insn_call_arg(
             int                     arg_id,
-            struct cl_operand       *arg_src)
+            const struct cl_operand *arg_src)
         {
             this->handleSrc(arg_src);
             ClDecoratorBase::insn_call_arg(arg_id, arg_src);
@@ -315,8 +315,8 @@ class CldRegUsageChk: public ClDecoratorBase {
 
     private:
         void reset();
-        void handleDst(struct cl_operand *);
-        void handleSrc(struct cl_operand *);
+        void handleDst(const struct cl_operand *);
+        void handleSrc(const struct cl_operand *);
         void emitWarnings();
 };
 
@@ -509,7 +509,7 @@ void CldRegUsageChk::reset() {
     map_.clear();
 }
 
-void CldRegUsageChk::handleDst(struct cl_operand *op) {
+void CldRegUsageChk::handleDst(const struct cl_operand *op) {
     if (CL_OPERAND_REG != op->type)
         return;
 
@@ -519,7 +519,7 @@ void CldRegUsageChk::handleDst(struct cl_operand *op) {
         u.loc = loc_;
 }
 
-void CldRegUsageChk::handleSrc(struct cl_operand *op) {
+void CldRegUsageChk::handleSrc(const struct cl_operand *op) {
     if (CL_OPERAND_REG != op->type)
         return;
 

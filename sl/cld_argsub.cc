@@ -38,10 +38,6 @@ class CldArgSubst: public ClDecoratorBase {
             struct cl_insn local_cli = *cli;
 
             switch (cli->type) {
-                case CL_INSN_JMP:
-                case CL_INSN_ABORT:
-                    break;
-
                 case CL_INSN_COND: {
                         struct cl_operand src = *(cli->data.insn_cond.src);
                         this->substArg(&src);
@@ -81,6 +77,11 @@ class CldArgSubst: public ClDecoratorBase {
                         local_cli.data.insn_binop.src2 = &src2;
                         ClDecoratorBase::insn(&local_cli);
                     }
+                    break;
+
+                case CL_INSN_JMP:
+                case CL_INSN_ABORT:
+                    ClDecoratorBase::insn(cli);
                     break;
             }
         }

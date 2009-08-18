@@ -16,7 +16,7 @@ class CldUniLabel: public ClDecoratorBase {
         }
 
         virtual void fnc_open(
-            struct cl_location      *loc,
+            const struct cl_location*loc,
             const char              *fnc_name,
             enum cl_scope_e         scope)
         {
@@ -60,6 +60,7 @@ class CldUniLabel: public ClDecoratorBase {
                     break;
 
                 default:
+                    ClDecoratorBase::insn(cli);
                     break;
             }
         }

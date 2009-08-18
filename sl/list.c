@@ -2,7 +2,7 @@
 
 typedef void *TItem;
 
-void dispose_list_using_while(TItem *list) {
+static void dispose_list_using_while(TItem *list) {
     while (list) {
         TItem *item = list;
         list = (TItem *) *list;
@@ -10,7 +10,7 @@ void dispose_list_using_while(TItem *list) {
     }
 }
 
-void dispose_list_recursively(TItem *list) {
+static void dispose_list_recursively(TItem *list) {
     if (list) {
         dispose_list_recursively((TItem *) *list);
         free(list);
