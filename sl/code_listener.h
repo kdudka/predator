@@ -80,6 +80,7 @@ struct cl_location {
     bool                            sysp;           /* in a system header?  */
 };
 
+/* TODO: avoid the inline function to compliance ANSI C? */
 inline void cl_set_location(struct cl_location *loc, int line)
 {
     loc->file   = (const char *) 0;
@@ -92,7 +93,7 @@ enum cl_scope_e {
     CL_SCOPE_GLOBAL,
     CL_SCOPE_STATIC,
     CL_SCOPE_FUNCTION,
-    CL_SCOPE_BLOCK
+    CL_SCOPE_BB
 };
 
 enum cl_operand_e {
@@ -102,6 +103,54 @@ enum cl_operand_e {
     CL_OPERAND_REG,
     CL_OPERAND_INT,
     CL_OPERAND_STRING
+    /* TODO */
+};
+
+struct cl_operand {
+    enum cl_operand_e               type;
+    /* TODO: location? */
+
+    bool                            deref;
+    const char                      *offset;
+
+    /* per operand type specific data */
+    union {
+
+        /* CL_OPERAND_VAR */
+        struct {
+            const char              *name;
+        } var;
+
+        /* CL_OPERAND_ARG */
+        struct {
+            int                     id;
+        } arg;
+
+        /* CL_OPERAND_REG */
+        struct {
+            int                     id;
+        } reg;
+
+        /* CL_OPERAND_INT */
+        struct {
+            int                     value;
+        } lit_int;
+
+        /* CL_OPERAND_STRING */
+        struct {
+            const char              *value;
+        } lit_string;
+
+    } data;
+};
+
+enum cl_insn_e {
+    CL_INSN_JMP,
+    CL_INSN_COND,
+    CL_INSN_RET,
+    CL_INSN_ABORT,
+    CL_INSN_UNOP,
+    CL_INSN_BINOP
     /* TODO */
 };
 
@@ -115,39 +164,13 @@ enum cl_binop_e {
     /* TODO */
 };
 
-union cl_value {
-    int                             arg_pos;        /* CL_OPERAND_ARG       */
-    int                             reg_id;         /* CL_OPERAND_REG       */
-    int                             num_int;        /* CL_OPERAND_INT       */
-    const char                      *text;          /* CL_OPERAND_STRING    */
-    /* TODO */
-};
-
-struct cl_operand {
-    enum cl_operand_e               type;
-    const char                      *name;
-    union cl_value                  value;
-    bool                            deref;
-    const char                      *offset;
-    /* TODO */
-};
-
-enum cl_insn_e {
-    CL_INSN_JMP,
-    CL_INSN_COND,
-    CL_INSN_RET,
-    CL_INSN_ABORT,
-    CL_INSN_UNOP,
-    CL_INSN_BINOP
-    /* TODO */
-};
-
 struct cl_insn {
     enum cl_insn_e                  type;
     struct cl_location              location;
 
     /* instruction specific data */
     union {
+
         /* CL_INSN_JMP */
         struct {
             const char              *label;
@@ -252,7 +275,7 @@ struct cl_code_listener {
 
     void (*bb_open)(
             struct cl_code_listener *self,
-            const char              *bb_name);
+            const char              *label);
 
     void (*insn)(
             struct cl_code_listener *self,
@@ -266,7 +289,7 @@ struct cl_code_listener {
 
     void (*insn_call_arg)(
             struct cl_code_listener *self,
-            int                     arg_pos,
+            int                     arg_id,
             const struct cl_operand *arg_src);
 
     void (*insn_call_close)(
@@ -282,12 +305,12 @@ struct cl_code_listener* cl_code_listener_create(
         bool                        close_fd_on_destroy);
 
 /**
- * @attention not tested yet
+ * @todo document
  */
 struct cl_code_listener* cl_chain_create(void);
 
 /**
- * @attention not tested yet
+ * @todo document
  */
 void cl_chain_append(
         struct cl_code_listener     *chain,
