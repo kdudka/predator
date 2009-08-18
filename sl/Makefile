@@ -87,7 +87,7 @@ chkunit: test-all
 chkplug: slplug.so
 	TMP=`mktemp` \
 		&& ($(GCC_INSTALL)/bin/gcc $(PLUG_CFLAGS) -fplugin=./slplug.so \
-		-c slplug.c >"$$TMP" 2>&1 || (cat "$$TMP"; exit 1))
+		-c slplug.c >"$$TMP" 2>&1 || (cat "$$TMP"; exit 1)) && rm -fv "$$TMP"
 	$(MAKE) slplug.so
 	$(GCC_INSTALL)/bin/gcc $(PLUG_CFLAGS) -fplugin=./slplug.so -c slplug.c
 
