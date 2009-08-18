@@ -16,46 +16,60 @@ class CldUniRegs: public ClDecoratorBase {
             ClDecoratorBase::fnc_open(loc, fnc_name, scope);
         }
 
-        virtual void insn_cond(
-            struct cl_location      *loc,
-            struct cl_operand       *src,
-            const char              *label_true,
-            const char              *label_false)
+        virtual void insn(
+            const struct cl_insn    *cli)
         {
-            this->relocReg(src);
-            ClDecoratorBase::insn_cond(loc, src, label_true, label_false);
-        }
+            struct cl_insn local_cli = *cli;
 
-        virtual void insn_ret(
-            struct cl_location      *loc,
-            struct cl_operand       *src)
-        {
-            this->relocReg(src);
-            ClDecoratorBase::insn_ret(loc, src);
-        }
+            switch (cli->type) {
+                case CL_INSN_COND: {
+                        struct cl_operand src = *(cli->data.insn_cond.src);
+                        this->relocReg(&src);
+                        local_cli.data.insn_cond.src = &src;
+                        ClDecoratorBase::insn(&local_cli);
+                    }
+                    break;
 
-        virtual void insn_unop(
-            struct cl_location      *loc,
-            enum cl_unop_e          type,
-            struct cl_operand       *dst,
-            struct cl_operand       *src)
-        {
-            this->relocReg(dst);
-            this->relocReg(src);
-            ClDecoratorBase::insn_unop(loc, type, dst, src);
-        }
+                case CL_INSN_RET: {
+                        struct cl_operand src = *(cli->data.insn_ret.src);
+                        this->relocReg(&src);
+                        local_cli.data.insn_ret.src = &src;
+                        ClDecoratorBase::insn(&local_cli);
+                    }
+                    break;
 
-        virtual void insn_binop(
-            struct cl_location      *loc,
-            enum cl_binop_e         type,
-            struct cl_operand       *dst,
-            struct cl_operand       *src1,
-            struct cl_operand       *src2)
-        {
-            this->relocReg(dst);
-            this->relocReg(src1);
-            this->relocReg(src2);
-            ClDecoratorBase::insn_binop(loc, type, dst, src1, src2);
+                case CL_INSN_UNOP: {
+                        struct cl_operand dst = *(cli->data.insn_unop.dst);
+                        struct cl_operand src = *(cli->data.insn_unop.src);
+
+                        this->relocReg(&dst);
+                        this->relocReg(&src);
+
+                        local_cli.data.insn_unop.dst = &dst;
+                        local_cli.data.insn_unop.src = &src;
+                        ClDecoratorBase::insn(&local_cli);
+                    }
+                    break;
+
+                case CL_INSN_BINOP: {
+                        struct cl_operand dst = *(cli->data.insn_binop.dst);
+                        struct cl_operand src1 = *(cli->data.insn_binop.src1);
+                        struct cl_operand src2 = *(cli->data.insn_binop.src2);
+
+                        this->relocReg(&dst);
+                        this->relocReg(&src1);
+                        this->relocReg(&src2);
+
+                        local_cli.data.insn_binop.dst = &dst;
+                        local_cli.data.insn_binop.src1 = &src1;
+                        local_cli.data.insn_binop.src2 = &src2;
+                        ClDecoratorBase::insn(&local_cli);
+                    }
+                    break;
+
+                default:
+                    break;
+            }
         }
 
         virtual void insn_call_open(
@@ -69,11 +83,11 @@ class CldUniRegs: public ClDecoratorBase {
         }
 
         virtual void insn_call_arg(
-            int                     arg_pos,
+            int                     arg_id,
             struct cl_operand       *arg_src)
         {
             this->relocReg(arg_src);
-            ClDecoratorBase::insn_call_arg(arg_pos, arg_src);
+            ClDecoratorBase::insn_call_arg(arg_id, arg_src);
         }
 
     private:
@@ -112,7 +126,7 @@ void CldUniRegs::relocReg(struct cl_operand *op) {
     if (CL_OPERAND_REG != op->type)
         return;
 
-    op->value.reg_id = this->regLookup(op->value.reg_id);
+    op->data.reg.id = this->regLookup(op->data.reg.id);
 }
 
 

@@ -5,9 +5,9 @@
 #define UNIFY_LABELS_SCOPE      CL_SCOPE_FUNCTION
 
 // scope for UNIFY_REGS is always CL_SCOPE_FUNCTION
-#define UNIFY_REGS              1
+#define UNIFY_REGS              0
 
-#define ARG_SUBST               1
+#define ARG_SUBST               0
 
 #include "cl_pp.hh"
 #include "cl_private.hh"
@@ -41,12 +41,12 @@ class ClPrettyPrint: public ICodeListener {
         virtual void file_close();
 
         virtual void fnc_open(
-            struct cl_location      *loc,
+            const struct cl_location*loc,
             const char              *fnc_name,
             enum cl_scope_e         scope);
 
         virtual void fnc_arg_decl(
-            int                     arg_pos,
+            int                     arg_id,
             const char              *arg_name);
 
         virtual void fnc_close();
@@ -54,41 +54,17 @@ class ClPrettyPrint: public ICodeListener {
         virtual void bb_open(
             const char              *bb_name);
 
-        virtual void insn_jmp(
-            struct cl_location      *loc,
-            const char              *label);
-
-        virtual void insn_cond(
-            struct cl_location      *loc,
-            struct cl_operand       *src,
-            const char              *label_true,
-            const char              *label_false);
-
-        virtual void insn_ret(
-            struct cl_location      *loc,
-            struct cl_operand       *src);
-
-        virtual void insn_unop(
-            struct cl_location      *loc,
-            enum cl_unop_e          type,
-            struct cl_operand       *dst,
-            struct cl_operand       *src);
-
-        virtual void insn_binop(
-            struct cl_location      *loc,
-            enum cl_binop_e         type,
-            struct cl_operand       *dst,
-            struct cl_operand       *src1,
-            struct cl_operand       *src2);
+        virtual void insn(
+            const struct cl_insn    *cli);
 
         virtual void insn_call_open(
-            struct cl_location      *loc,
-            struct cl_operand       *dst,
-            struct cl_operand       *fnc);
+            const struct cl_location*loc,
+            const struct cl_operand *dst,
+            const struct cl_operand *fnc);
 
         virtual void insn_call_arg(
-            int                     arg_pos,
-            struct cl_operand       *arg_src);
+            int                     arg_id,
+            const struct cl_operand *arg_src);
 
         virtual void insn_call_close();
 
@@ -105,9 +81,15 @@ class ClPrettyPrint: public ICodeListener {
 
     private:
         bool closeArgDeclsIfNeeded();
-        void printNestedVar(struct cl_operand *);
-        void printOperand(struct cl_operand *);
-        void printAssignmentLhs(struct cl_operand *);
+        void printNestedVar     (const struct cl_operand *);
+        void printOperand       (const struct cl_operand *);
+        void printAssignmentLhs (const struct cl_operand *);
+        void printInsnJmp       (const struct cl_insn *);
+        void printInsnCond      (const struct cl_insn *);
+        void printInsnRet       (const struct cl_insn *);
+        void printInsnAbort     (const struct cl_insn *);
+        void printInsnUnop      (const struct cl_insn *);
+        void printInsnBinop     (const struct cl_insn *);
 };
 
 using namespace ssd;
@@ -140,7 +122,7 @@ void ClPrettyPrint::file_close()
 }
 
 void ClPrettyPrint::fnc_open(
-            struct cl_location      *loc,
+            const struct cl_location*loc,
             const char              *fnc_name,
             enum cl_scope_e         scope)
 {
@@ -164,13 +146,13 @@ void ClPrettyPrint::fnc_open(
 }
 
 void ClPrettyPrint::fnc_arg_decl(
-            int                     arg_pos,
+            int                     arg_id,
             const char              *arg_name)
 {
     // TODO: sort arguments if not already
-    if (1 < arg_pos)
+    if (1 < arg_id)
         out_ << ", ";
-    SSD_COLORIZE(out_, C_LIGHT_GREEN) << "%arg" << arg_pos;
+    SSD_COLORIZE(out_, C_LIGHT_GREEN) << "%arg" << arg_id;
     SSD_COLORIZE(out_, C_LIGHT_BLUE) << ": " << arg_name;
 }
 
@@ -210,35 +192,23 @@ void ClPrettyPrint::bb_open(
         << SSD_INLINE_COLOR(C_LIGHT_RED, ":") << std::endl;
 }
 
-void ClPrettyPrint::insn_jmp(
-            struct cl_location      *loc,
-            const char              *label)
-{
-    loc_ = *loc;
-    this->closeArgDeclsIfNeeded();
-    out_ << "\t\t"
-        << SSD_INLINE_COLOR(C_YELLOW, "goto") << " "
-        << SSD_INLINE_COLOR(C_LIGHT_CYAN, label)
-        << std::endl;
-}
-
-void ClPrettyPrint::printNestedVar(struct cl_operand *op) {
+void ClPrettyPrint::printNestedVar(const struct cl_operand *op) {
     switch (op->type) {
         case CL_OPERAND_VAR:
-            if (!op->name) {
+            if (!op->data.var.name) {
                 CL_MSG_STREAM(cl_error, file_ << ":" << loc_.line << ": error: "
                         << "anonymous variable");
                 break;
             }
-            out_ << SSD_INLINE_COLOR(C_LIGHT_BLUE, op->name);
+            out_ << SSD_INLINE_COLOR(C_LIGHT_BLUE, op->data.var.name);
             break;
 
         case CL_OPERAND_REG:
-            SSD_COLORIZE(out_, C_LIGHT_BLUE) << "%r" << op->value.reg_id;
+            SSD_COLORIZE(out_, C_LIGHT_BLUE) << "%r" << op->data.reg.id;
             break;
 
         case CL_OPERAND_ARG:
-            SSD_COLORIZE(out_, C_LIGHT_GREEN) << "%arg" << op->value.arg_pos;
+            SSD_COLORIZE(out_, C_LIGHT_GREEN) << "%arg" << op->data.arg.id;
             break;
 
         default:
@@ -249,7 +219,7 @@ void ClPrettyPrint::printNestedVar(struct cl_operand *op) {
     }
 }
 
-void ClPrettyPrint::printOperand(struct cl_operand *op) {
+void ClPrettyPrint::printOperand(const struct cl_operand *op) {
     if (!op) {
         CL_MSG_STREAM(cl_debug, __FILE__ << ":" << __LINE__ << ": debug: "
                 << "no operand given to " << __FUNCTION__
@@ -280,25 +250,25 @@ void ClPrettyPrint::printOperand(struct cl_operand *op) {
 
         case CL_OPERAND_STRING:
             {
-                const char *text = op->value.text;
+                const char *text = op->data.lit_string.value;
                 if (!text) {
                     CL_MSG_STREAM(cl_error, file_ << ":" << loc_.line
                             << ": error: "
                             << "CL_OPERAND_STRING with no string");
                     break;
                 }
-                // FIXME: bad quting!!
+                // FIXME: bad quoting!!
                 SSD_COLORIZE(out_, C_LIGHT_PURPLE) << text;
             }
             break;
 
         case CL_OPERAND_INT:
             {
-                int num = op->value.num_int;
+                int num = op->data.lit_int.value;
                 if (num < 0)
                     out_ << SSD_INLINE_COLOR(C_LIGHT_RED, "(");
 
-                SSD_COLORIZE(out_, C_WHITE) << op->value.num_int;
+                SSD_COLORIZE(out_, C_WHITE) << op->data.lit_int.value;
 
                 if (num < 0)
                     out_ << SSD_INLINE_COLOR(C_LIGHT_RED, ")");
@@ -307,13 +277,34 @@ void ClPrettyPrint::printOperand(struct cl_operand *op) {
     }
 }
 
-void ClPrettyPrint::insn_cond(
-            struct cl_location      *loc,
-            struct cl_operand       *src,
-            const char              *label_true,
-            const char              *label_false)
-{
-    loc_ = *loc;
+void ClPrettyPrint::printAssignmentLhs(const struct cl_operand *lhs) {
+    if (!lhs || lhs->type == CL_OPERAND_VOID) {
+        CL_MSG_STREAM(cl_debug, __FILE__ << ":" << __LINE__ << ": debug: "
+                << "no lhs given to " << __FUNCTION__
+                << " [internal location]");
+        return;
+    }
+
+    this->printOperand(lhs);
+    out_ << " "
+        << SSD_INLINE_COLOR(C_YELLOW, ":=")
+        << " ";
+}
+
+void ClPrettyPrint::printInsnJmp(const struct cl_insn *cli) {
+    const char *label = cli->data.insn_jmp.label;
+    this->closeArgDeclsIfNeeded();
+    out_ << "\t\t"
+        << SSD_INLINE_COLOR(C_YELLOW, "goto") << " "
+        << SSD_INLINE_COLOR(C_LIGHT_CYAN, label)
+        << std::endl;
+}
+
+void ClPrettyPrint::printInsnCond(const struct cl_insn *cli) {
+    const struct cl_operand *src = cli->data.insn_cond.src;
+    const char *label_true  = cli->data.insn_cond.then_label;
+    const char *label_false = cli->data.insn_cond.else_label;
+
     out_ << "\t\t"
         << SSD_INLINE_COLOR(C_YELLOW, "if (");
 
@@ -337,11 +328,9 @@ void ClPrettyPrint::insn_cond(
         << std::endl;
 }
 
-void ClPrettyPrint::insn_ret(
-            struct cl_location      *loc,
-            struct cl_operand       *src)
-{
-    loc_ = *loc;
+void ClPrettyPrint::printInsnRet(const struct cl_insn *cli) {
+    const struct cl_operand *src = cli->data.insn_ret.src;
+
     out_ << "\t\t"
         << SSD_INLINE_COLOR(C_LIGHT_GREEN, "ret");
 
@@ -353,27 +342,17 @@ void ClPrettyPrint::insn_ret(
     out_ << std::endl;
 }
 
-void ClPrettyPrint::printAssignmentLhs(struct cl_operand *lhs) {
-    if (!lhs || lhs->type == CL_OPERAND_VOID) {
-        CL_MSG_STREAM(cl_debug, __FILE__ << ":" << __LINE__ << ": debug: "
-                << "no lhs given to " << __FUNCTION__
-                << " [internal location]");
-        return;
-    }
-
-    this->printOperand(lhs);
-    out_ << " "
-        << SSD_INLINE_COLOR(C_YELLOW, ":=")
-        << " ";
+void ClPrettyPrint::printInsnAbort(const struct cl_insn *cli) {
+    out_ << "\t\t"
+        << SSD_INLINE_COLOR(C_LIGHT_GREEN, "abort")
+        << std::endl;
 }
 
-void ClPrettyPrint::insn_unop(
-            struct cl_location      *loc,
-            enum cl_unop_e          type,
-            struct cl_operand       *dst,
-            struct cl_operand       *src)
-{
-    loc_ = *loc;
+void ClPrettyPrint::printInsnUnop(const struct cl_insn *cli) {
+    const enum cl_unop_e type       = cli->data.insn_unop.type;
+    const struct cl_operand *dst    = cli->data.insn_unop.dst;
+    const struct cl_operand *src    = cli->data.insn_unop.src;
+
     out_ << "\t\t";
     this->printAssignmentLhs(dst);
 
@@ -386,14 +365,12 @@ void ClPrettyPrint::insn_unop(
     out_ << std::endl;
 }
 
-void ClPrettyPrint::insn_binop(
-            struct cl_location      *loc,
-            enum cl_binop_e         type,
-            struct cl_operand       *dst,
-            struct cl_operand       *src1,
-            struct cl_operand       *src2)
-{
-    loc_ = *loc;
+void ClPrettyPrint::printInsnBinop(const struct cl_insn *cli) {
+    const enum cl_binop_e type      = cli->data.insn_binop.type;
+    const struct cl_operand *dst    = cli->data.insn_binop.dst;
+    const struct cl_operand *src1   = cli->data.insn_binop.src1;
+    const struct cl_operand *src2   = cli->data.insn_binop.src2;
+
     out_ << "\t\t";
     this->printAssignmentLhs(dst);
 
@@ -410,10 +387,41 @@ void ClPrettyPrint::insn_binop(
     out_ << std::endl;
 }
 
+void ClPrettyPrint::insn(
+            const struct cl_insn    *cli)
+{
+    loc_ = cli->loc;
+    switch (cli->type) {
+        case CL_INSN_JMP:
+            this->printInsnJmp(cli);
+            break;
+
+        case CL_INSN_COND:
+            this->printInsnCond(cli);
+            break;
+
+        case CL_INSN_RET:
+            this->printInsnRet(cli);
+            break;
+
+        case CL_INSN_ABORT:
+            this->printInsnAbort(cli);
+            break;
+
+        case CL_INSN_UNOP:
+            this->printInsnUnop(cli);
+            break;
+
+        case CL_INSN_BINOP:
+            this->printInsnBinop(cli);
+            break;
+    }
+}
+
 void ClPrettyPrint::insn_call_open(
-            struct cl_location      *loc,
-            struct cl_operand       *dst,
-            struct cl_operand       *fnc)
+            const struct cl_location*loc,
+            const struct cl_operand *dst,
+            const struct cl_operand *fnc)
 {
     loc_ = *loc;
     out_ << "\t\t";
@@ -424,11 +432,11 @@ void ClPrettyPrint::insn_call_open(
 }
 
 void ClPrettyPrint::insn_call_arg(
-            int                     arg_pos,
-            struct cl_operand       *arg_src)
+            int                     arg_id,
+            const struct cl_operand *arg_src)
 {
     // TODO: sort arguments if not already
-    if (1 < arg_pos)
+    if (1 < arg_id)
         out_ << ", ";
     this->printOperand(arg_src);
 }

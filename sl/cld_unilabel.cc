@@ -32,25 +32,36 @@ class CldUniLabel: public ClDecoratorBase {
             ClDecoratorBase::bb_open(resolved.c_str());
         }
 
-
-        virtual void insn_jmp(
-            struct cl_location      *loc,
-            const char              *label)
+        virtual void insn(
+            const struct cl_insn    *cli)
         {
-            std::string resolved(this->resolveLabel(label));
-            ClDecoratorBase::insn_jmp(loc, resolved.c_str());
-        }
+            struct cl_insn local_cli = *cli;
+            switch (cli->type) {
+                case CL_INSN_JMP: {
+                        std::string resolved(this->resolveLabel(
+                                    cli->data.insn_jmp.label));
 
-        virtual void insn_cond(
-            struct cl_location      *loc,
-            struct cl_operand       *src,
-            const char              *label_true,
-            const char              *label_false)
-        {
-            std::string resolved1(this->resolveLabel(label_true));
-            std::string resolved2(this->resolveLabel(label_false));
-            ClDecoratorBase::insn_cond(loc, src, resolved1.c_str(),
-                                   resolved2.c_str());
+                        local_cli.data.insn_jmp.label = resolved.c_str();
+                        ClDecoratorBase::insn(&local_cli);
+                    }
+                    break;
+
+                case CL_INSN_COND: {
+                        std::string resolved1(this->resolveLabel(
+                                    cli->data.insn_cond.then_label));
+
+                        std::string resolved2(this->resolveLabel(
+                                    cli->data.insn_cond.else_label));
+
+                        local_cli.data.insn_cond.then_label = resolved1.c_str();
+                        local_cli.data.insn_cond.else_label = resolved2.c_str();
+                        ClDecoratorBase::insn(&local_cli);
+                    }
+                    break;
+
+                default:
+                    break;
+            }
         }
 
     private:

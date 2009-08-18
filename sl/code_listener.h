@@ -166,7 +166,7 @@ enum cl_binop_e {
 
 struct cl_insn {
     enum cl_insn_e                  type;
-    struct cl_location              location;
+    struct cl_location              loc;
 
     /* instruction specific data */
     union {
@@ -261,13 +261,13 @@ struct cl_code_listener {
 
     void (*fnc_open)(
             struct cl_code_listener *self,
-            struct cl_location      *loc,
+            const struct cl_location*loc,
             const char              *fnc_name,
             enum cl_scope_e         scope);
 
     void (*fnc_arg_decl)(
             struct cl_code_listener *self,
-            int                     arg_pos,
+            int                     arg_id,
             const char              *arg_name);
 
     void (*fnc_close)(

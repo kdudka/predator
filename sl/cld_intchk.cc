@@ -32,11 +32,11 @@ class CldCbSeqChk: public ClDecoratorBase {
         }
 
         virtual void fnc_arg_decl(
-            int                     arg_pos,
+            int                     arg_id,
             const char              *arg_name)
         {
             this->chkArgDecl();
-            ClDecoratorBase::fnc_arg_decl(arg_pos, arg_name);
+            ClDecoratorBase::fnc_arg_decl(arg_id, arg_name);
         }
 
         virtual void fnc_close() {
@@ -51,56 +51,38 @@ class CldCbSeqChk: public ClDecoratorBase {
             ClDecoratorBase::bb_open(bb_name);
         }
 
-        virtual void insn_jmp(
-            struct cl_location      *loc,
-            const char              *label)
+        virtual void insn(
+            const struct cl_insn    *cli)
         {
-            loc_ = *loc;
-            this->chkInsnJmp();
-            ClDecoratorBase::insn_jmp(loc, label);
-        }
+            loc_ = cli->loc;
 
-        virtual void insn_cond(
-            struct cl_location      *loc,
-            struct cl_operand       *src,
-            const char              *label_true,
-            const char              *label_false)
-        {
-            loc_ = *loc;
-            this->chkInsnCond();
-            ClDecoratorBase::insn_cond(loc, src, label_true, label_false);
-        }
+            switch (cli->type) {
+                case CL_INSN_JMP:
+                    this->chkInsnJmp();
+                    break;
 
-        virtual void insn_ret(
-            struct cl_location      *loc,
-            struct cl_operand       *src)
-        {
-            loc_ = *loc;
-            this->chkInsnRet();
-            ClDecoratorBase::insn_ret(loc, src);
-        }
+                case CL_INSN_COND:
+                    this->chkInsnCond();
+                    break;
 
-        virtual void insn_unop(
-            struct cl_location      *loc,
-            enum cl_unop_e          type,
-            struct cl_operand       *dst,
-            struct cl_operand       *src)
-        {
-            loc_ = *loc;
-            this->chkInsnUnop();
-            ClDecoratorBase::insn_unop(loc, type, dst, src);
-        }
+                case CL_INSN_RET:
+                    this->chkInsnRet();
+                    break;
 
-        virtual void insn_binop(
-            struct cl_location      *loc,
-            enum cl_binop_e         type,
-            struct cl_operand       *dst,
-            struct cl_operand       *src1,
-            struct cl_operand       *src2)
-        {
-            loc_ = *loc;
-            this->chkInsnBinop();
-            ClDecoratorBase::insn_binop(loc, type, dst, src1, src2);
+                case CL_INSN_ABORT:
+                    this->chkInsnAbort();
+                    break;
+
+                case CL_INSN_UNOP:
+                    this->chkInsnUnop();
+                    break;
+
+                case CL_INSN_BINOP:
+                    this->chkInsnBinop();
+                    break;
+            }
+
+            ClDecoratorBase::insn(cli);
         }
 
         virtual void insn_call_open(
@@ -114,11 +96,11 @@ class CldCbSeqChk: public ClDecoratorBase {
         }
 
         virtual void insn_call_arg(
-            int                     arg_pos,
+            int                     arg_id,
             struct cl_operand       *arg_src)
         {
             this->chkInsnCallArg();
-            ClDecoratorBase::insn_call_arg(arg_pos, arg_src);
+            ClDecoratorBase::insn_call_arg(arg_id, arg_src);
         }
 
         virtual void insn_call_close() {
@@ -150,6 +132,7 @@ class CldCbSeqChk: public ClDecoratorBase {
         void chkInsnJmp();
         void chkInsnCond();
         void chkInsnRet();
+        void chkInsnAbort();
         void chkInsnUnop();
         void chkInsnBinop();
         void chkInsnCallArg();
@@ -189,23 +172,24 @@ class CldLabelChk: public ClDecoratorBase {
             ClDecoratorBase::bb_open(bb_name);
         }
 
-        virtual void insn_jmp(
-            struct cl_location      *loc,
-            const char              *label)
+        virtual void insn(
+            const struct cl_insn    *cli)
         {
-            this->reqLabel(label);
-            ClDecoratorBase::insn_jmp(loc, label);
-        }
+            switch (cli->type) {
+                case CL_INSN_JMP:
+                    this->reqLabel(cli->data.insn_jmp.label);
+                    break;
 
-        virtual void insn_cond(
-            struct cl_location      *loc,
-            struct cl_operand       *src,
-            const char              *label_true,
-            const char              *label_false)
-        {
-            this->reqLabel(label_true);
-            this->reqLabel(label_false);
-            ClDecoratorBase::insn_cond(loc, src, label_true, label_false);
+                case CL_INSN_COND:
+                    this->reqLabel(cli->data.insn_cond.then_label);
+                    this->reqLabel(cli->data.insn_cond.else_label);
+                    break;
+
+                default:
+                    break;
+            }
+
+            ClDecoratorBase::insn(cli);
         }
 
     private:
@@ -260,50 +244,36 @@ class CldRegUsageChk: public ClDecoratorBase {
             ClDecoratorBase::fnc_close();
         }
 
-        virtual void insn_cond(
-            struct cl_location      *loc,
-            struct cl_operand       *src,
-            const char              *label_true,
-            const char              *label_false)
+        virtual void insn(
+            const struct cl_insn    *cli)
         {
-            loc_ = *loc;
-            this->handleSrc(src);
-            ClDecoratorBase::insn_cond(loc, src, label_true, label_false);
-        }
+            loc_ = cli->loc;
 
-        virtual void insn_ret(
-            struct cl_location      *loc,
-            struct cl_operand       *src)
-        {
-            loc_ = *loc;
-            this->handleSrc(src);
-            ClDecoratorBase::insn_ret(loc, src);
-        }
+            switch (cli->type) {
+                case CL_INSN_COND:
+                    this->handleSrc(cli->data.insn_cond.src);
+                    break;
 
-        virtual void insn_unop(
-            struct cl_location      *loc,
-            enum cl_unop_e          type,
-            struct cl_operand       *dst,
-            struct cl_operand       *src)
-        {
-            loc_ = *loc;
-            this->handleDst(dst);
-            this->handleSrc(src);
-            ClDecoratorBase::insn_unop(loc, type, dst, src);
-        }
+                case CL_INSN_RET:
+                    this->handleSrc(cli->data.insn_ret.src);
+                    break;
 
-        virtual void insn_binop(
-            struct cl_location      *loc,
-            enum cl_binop_e         type,
-            struct cl_operand       *dst,
-            struct cl_operand       *src1,
-            struct cl_operand       *src2)
-        {
-            loc_ = *loc;
-            this->handleDst(dst);
-            this->handleSrc(src1);
-            this->handleSrc(src2);
-            ClDecoratorBase::insn_binop(loc, type, dst, src1, src2);
+                case CL_INSN_UNOP:
+                    this->handleDst(cli->data.insn_unop.dst);
+                    this->handleSrc(cli->data.insn_unop.src);
+                    break;
+
+                case CL_INSN_BINOP:
+                    this->handleDst(cli->data.insn_binop.dst);
+                    this->handleSrc(cli->data.insn_binop.src1);
+                    this->handleSrc(cli->data.insn_binop.src2);
+                    break;
+
+                default:
+                    break;
+            }
+
+            ClDecoratorBase::insn(cli);
         }
 
         virtual void insn_call_open(
@@ -318,11 +288,11 @@ class CldRegUsageChk: public ClDecoratorBase {
         }
 
         virtual void insn_call_arg(
-            int                     arg_pos,
+            int                     arg_id,
             struct cl_operand       *arg_src)
         {
             this->handleSrc(arg_src);
-            ClDecoratorBase::insn_call_arg(arg_pos, arg_src);
+            ClDecoratorBase::insn_call_arg(arg_id, arg_src);
         }
 
     private:
@@ -441,27 +411,32 @@ void CldCbSeqChk::chkInsnJmp() {
     }
 
     if (S_BLOCK_LEVEL != state_)
-        this->emitUnexpected("insn_jmp");
+        this->emitUnexpected("CL_INSN_JMP");
 }
 
 void CldCbSeqChk::chkInsnCond() {
     if (S_BLOCK_LEVEL != state_)
-        this->emitUnexpected("insn_cond");
+        this->emitUnexpected("CL_INSN_COND");
 }
 
 void CldCbSeqChk::chkInsnRet() {
     if (S_BLOCK_LEVEL != state_)
-        this->emitUnexpected("insn_ret");
+        this->emitUnexpected("CL_INSN_RET");
+}
+
+void CldCbSeqChk::chkInsnAbort() {
+    if (S_BLOCK_LEVEL != state_)
+        this->emitUnexpected("CL_INSN_ABORT");
 }
 
 void CldCbSeqChk::chkInsnUnop() {
     if (S_BLOCK_LEVEL != state_)
-        this->emitUnexpected("insn_unop");
+        this->emitUnexpected("CL_INSN_UNOP");
 }
 
 void CldCbSeqChk::chkInsnBinop() {
     if (S_BLOCK_LEVEL != state_)
-        this->emitUnexpected("insn_binop");
+        this->emitUnexpected("CL_INSN_BINOP");
 }
 
 void CldCbSeqChk::chkInsnCallArg() {
@@ -538,7 +513,7 @@ void CldRegUsageChk::handleDst(struct cl_operand *op) {
     if (CL_OPERAND_REG != op->type)
         return;
 
-    Usage &u = map_[op->value.reg_id];
+    Usage &u = map_[op->data.reg.id];
     u.written = true;
     if (u.loc.line < 0)
         u.loc = loc_;
@@ -548,7 +523,7 @@ void CldRegUsageChk::handleSrc(struct cl_operand *op) {
     if (CL_OPERAND_REG != op->type)
         return;
 
-    Usage &u = map_[op->value.reg_id];
+    Usage &u = map_[op->data.reg.id];
     u.read = true;
     if (u.loc.line < 0)
         u.loc = loc_;

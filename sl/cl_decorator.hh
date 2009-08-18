@@ -20,7 +20,7 @@ class ClDecoratorBase: public ICodeListener {
         }
 
         virtual void fnc_open(
-            struct cl_location      *loc,
+            const struct cl_location*loc,
             const char              *fnc_name,
             enum cl_scope_e         scope)
         {
@@ -28,10 +28,10 @@ class ClDecoratorBase: public ICodeListener {
         }
 
         virtual void fnc_arg_decl(
-            int                     arg_pos,
+            int                     arg_id,
             const char              *arg_name)
         {
-            slave_->fnc_arg_decl(arg_pos, arg_name);
+            slave_->fnc_arg_decl(arg_id, arg_name);
         }
 
         virtual void fnc_close() {
@@ -44,61 +44,25 @@ class ClDecoratorBase: public ICodeListener {
             slave_->bb_open(bb_name);
         }
 
-        virtual void insn_jmp(
-            struct cl_location      *loc,
-            const char              *label)
+        virtual void insn(
+            const struct cl_insn    *cli)
         {
-            slave_->insn_jmp(loc, label);
-        }
-
-        virtual void insn_cond(
-            struct cl_location      *loc,
-            struct cl_operand       *src,
-            const char              *label_true,
-            const char              *label_false)
-        {
-            slave_->insn_cond(loc, src, label_true, label_false);
-        }
-
-        virtual void insn_ret(
-            struct cl_location      *loc,
-            struct cl_operand       *src)
-        {
-            slave_->insn_ret(loc, src);
-        }
-
-        virtual void insn_unop(
-            struct cl_location      *loc,
-            enum cl_unop_e          type,
-            struct cl_operand       *dst,
-            struct cl_operand       *src)
-        {
-            slave_->insn_unop(loc, type, dst, src);
-        }
-
-        virtual void insn_binop(
-            struct cl_location      *loc,
-            enum cl_binop_e         type,
-            struct cl_operand       *dst,
-            struct cl_operand       *src1,
-            struct cl_operand       *src2)
-        {
-            slave_->insn_binop(loc, type, dst, src1, src2);
+            slave_->insn(cli);
         }
 
         virtual void insn_call_open(
-            struct cl_location      *loc,
-            struct cl_operand       *dst,
-            struct cl_operand       *fnc)
+            const struct cl_location*loc,
+            const struct cl_operand *dst,
+            const struct cl_operand *fnc)
         {
             slave_->insn_call_open(loc, dst, fnc);
         }
 
         virtual void insn_call_arg(
-            int                     arg_pos,
-            struct cl_operand       *arg_src)
+            int                     arg_id,
+            const struct cl_operand *arg_src)
         {
-            slave_->insn_call_arg(arg_pos, arg_src);
+            slave_->insn_call_arg(arg_id, arg_src);
         }
 
         virtual void insn_call_close() {

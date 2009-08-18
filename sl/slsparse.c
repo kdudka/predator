@@ -70,11 +70,14 @@ static bool is_pseudo(pseudo_t pseudo)
 
 static void free_cl_operand_data(struct cl_operand *op)
 {
-    free((char *) op->name);
     free((char *) op->offset);
     switch (op->type) {
+        case CL_OPERAND_VAR:
+            free((char *) op->data.var.name);
+            break;
+
         case CL_OPERAND_STRING:
-            free((char *) op->value.text);
+            free((char *) op->data.lit_string.value);
             break;
 
         default:
@@ -91,12 +94,9 @@ static char* strdup_if_not_null(const char *str) {
 static void pseudo_to_cl_operand(struct instruction *insn, pseudo_t pseudo,
                                  struct cl_operand *op)
 {
-    // to not call free(3) on dangling pointer afterwards
-    op->name = NULL;
-    op->offset = NULL;
-
-    // may be overridden afterwards
+    // may be overridden later
     op->deref = false;
+    op->offset = NULL;
 
     if (!is_pseudo(pseudo)) {
         op->type = CL_OPERAND_VOID;
@@ -115,7 +115,7 @@ static void pseudo_to_cl_operand(struct instruction *insn, pseudo_t pseudo,
             }
             if (sym->ident) {
                 op->type            = CL_OPERAND_VAR;
-                op->name            = strdup(show_ident(sym->ident));
+                op->data.var.name   = strdup(show_ident(sym->ident));
                 break;
             }
             expr = sym->initializer;
@@ -128,8 +128,8 @@ static void pseudo_to_cl_operand(struct instruction *insn, pseudo_t pseudo,
 #endif
                     case EXPR_STRING:
                         // FIXME: not dup'ed now (subtle)
-                        op->type = CL_OPERAND_STRING;
-                        op->value.text = strdup_if_not_null(
+                        op->type                    = CL_OPERAND_STRING;
+                        op->data.lit_string.value   = strdup_if_not_null(
                                 show_string(expr->string));
                         return;
 
@@ -141,22 +141,22 @@ static void pseudo_to_cl_operand(struct instruction *insn, pseudo_t pseudo,
         }
 
         case PSEUDO_REG:
-            op->type            = CL_OPERAND_REG;
-            op->name            = strdup(show_ident(pseudo->ident));
-            op->value.reg_id    = pseudo->nr;
+            op->type                = CL_OPERAND_REG;
+            // not used: op->name = strdup(show_ident(pseudo->ident));
+            op->data.reg.id         = pseudo->nr;
             break;
 
         case PSEUDO_VAL: {
             long long value = pseudo->value;
 
-            op->type            = CL_OPERAND_INT;
-            op->value.num_int   = value;
+            op->type                = CL_OPERAND_INT;
+            op->data.lit_int.value  = value;
             return;
         }
 
         case PSEUDO_ARG:
-            op->type            = CL_OPERAND_ARG;
-            op->value.arg_pos   = pseudo->nr;
+            op->type                = CL_OPERAND_ARG;
+            op->data.arg.id         = pseudo->nr;
             break;
 
         case PSEUDO_PHI:
@@ -215,15 +215,16 @@ static void handle_insn_br(struct instruction *insn,
     char *bb_name_true = NULL;
     char *bb_name_false = NULL;
     struct cl_operand op;
-    struct cl_location loc;
 
     if (asprintf(&bb_name_true, "%p", insn->bb_true) < 0)
         die("asprintf failed");
 
     if (!is_pseudo(insn->cond)) {
-        struct cl_location loc;
-        cl_set_location(&loc, insn->pos.line);
-        cl->insn_jmp(cl, &loc, bb_name_true);
+        struct cl_insn cli;
+        cli.type                    = CL_INSN_JMP;
+        cli.data.insn_jmp.label     = bb_name_true;
+        cl_set_location(&cli.loc, insn->pos.line);
+        cl->insn(cl, &cli);
         free(bb_name_true);
         return;
     }
@@ -232,10 +233,19 @@ static void handle_insn_br(struct instruction *insn,
         die("asprintf failed");
 
     pseudo_to_cl_operand(insn, insn->cond, &op);
-    cl_set_location(&loc, insn->pos.line);
-    cl->insn_cond(cl, &loc, &op, bb_name_true, bb_name_false);
-    free_cl_operand_data(&op);
 
+    // TODO: move to function?
+    {
+        struct cl_insn cli;
+        cli.type                        = CL_INSN_COND;
+        cli.data.insn_cond.src          = &op;
+        cli.data.insn_cond.then_label   = bb_name_true;
+        cli.data.insn_cond.else_label   = bb_name_false;
+        cl_set_location(&cli.loc, insn->pos.line);
+        cl->insn(cl, &cli);
+    }
+
+    free_cl_operand_data(&op);
     free(bb_name_true);
     free(bb_name_false);
 }
@@ -244,11 +254,13 @@ static void handle_insn_ret(struct instruction *insn,
                             struct cl_code_listener *cl)
 {
     struct cl_operand op;
-    struct cl_location loc;
+    struct cl_insn cli;
 
     pseudo_to_cl_operand(insn, insn->src, &op);
-    cl_set_location(&loc, insn->pos.line);
-    cl->insn_ret(cl, &loc, &op);
+    cli.type                = CL_INSN_RET;
+    cli.data.insn_ret.src   = &op;
+    cl_set_location(&cli.loc, insn->pos.line);
+    cl->insn(cl, &cli);
     free_cl_operand_data(&op);
 }
 
@@ -259,7 +271,6 @@ static void insn_assignment_base(struct instruction                 *insn,
 {
     struct cl_operand op_lhs;
     struct cl_operand op_rhs;
-    struct cl_location loc;
 
     pseudo_to_cl_operand(insn, lhs, &op_lhs);
     pseudo_to_cl_operand(insn, rhs, &op_rhs);
@@ -277,8 +288,16 @@ static void insn_assignment_base(struct instruction                 *insn,
         TRAP;
 #endif
 
-    cl_set_location(&loc, insn->pos.line);
-    cl->insn_unop(cl, &loc, CL_UNOP_ASSIGN, &op_lhs, &op_rhs);
+    // TODO: move to function?
+    {
+        struct cl_insn cli;
+        cli.type                    = CL_INSN_UNOP;
+        cli.data.insn_unop.type     = CL_UNOP_ASSIGN;
+        cli.data.insn_unop.dst      = &op_lhs;
+        cli.data.insn_unop.src      = &op_rhs;
+        cl_set_location(&cli.loc, insn->pos.line);
+        cl->insn(cl, &cli);
+    }
 
     free_cl_operand_data(&op_lhs);
     free_cl_operand_data(&op_rhs);
@@ -311,14 +330,22 @@ static void handle_insn_add(struct instruction *insn,
                             struct cl_code_listener *cl)
 {
     struct cl_operand dst, src1, src2;
-    struct cl_location loc;
 
     pseudo_to_cl_operand(insn, insn->target, &dst);
     pseudo_to_cl_operand(insn, insn->src1, &src1);
     pseudo_to_cl_operand(insn, insn->src2, &src2);
 
-    cl_set_location(&loc, insn->pos.line);
-    cl->insn_binop(cl, &loc, CL_BINOP_ADD, &dst, &src1, &src2);
+    // TODO: move to function?
+    {
+        struct cl_insn cli;
+        cli.type = CL_INSN_BINOP;
+        cli.data.insn_binop.type    = CL_BINOP_ADD;
+        cli.data.insn_binop.dst     = &dst;
+        cli.data.insn_binop.src1    = &src1;
+        cli.data.insn_binop.src2    = &src2;
+        cl_set_location(&cli.loc, insn->pos.line);
+        cl->insn(cl, &cli);
+    }
 
     free_cl_operand_data(&dst);
     free_cl_operand_data(&src1);
@@ -524,7 +551,6 @@ static void handle_fnc_ep(struct entrypoint *ep, struct cl_code_listener *cl)
 {
     struct instruction *entry = ep->entry;
     struct basic_block *bb;
-    struct cl_location loc;
     char *entry_name;
 
     if (!bb)
@@ -534,8 +560,14 @@ static void handle_fnc_ep(struct entrypoint *ep, struct cl_code_listener *cl)
     if (asprintf(&entry_name, "%p", entry->bb) < 0)
         die("asprintf failed");
 
-    cl_set_location(&loc, entry->pos.line);
-    cl->insn_jmp(cl, &loc, entry_name);
+    // TODO: move to function?
+    {
+        struct cl_insn cli;
+        cli.type                    = CL_INSN_JMP;
+        cli.data.insn_jmp.label     = entry_name;
+        cl_set_location(&cli.loc, entry->pos.line);
+        cl->insn(cl, &cli);
+    }
     free(entry_name);
 
     // go through basic blocks

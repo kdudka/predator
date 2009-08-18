@@ -23,13 +23,13 @@ class ICodeListener {
             = 0;
 
         virtual void fnc_open(
-            struct cl_location      *loc,
+            const struct cl_location*loc,
             const char              *fnc_name,
             enum cl_scope_e         scope)
             = 0;
 
         virtual void fnc_arg_decl(
-            int                     arg_pos,
+            int                     arg_id,
             const char              *arg_name)
             = 0;
 
@@ -40,47 +40,19 @@ class ICodeListener {
             const char              *bb_name)
             = 0;
 
-        virtual void insn_jmp(
-            struct cl_location      *loc,
-            const char              *label)
-            = 0;
-
-        virtual void insn_cond(
-            struct cl_location      *loc,
-            struct cl_operand       *src,
-            const char              *label_true,
-            const char              *label_false)
-            = 0;
-
-        virtual void insn_ret(
-            struct cl_location      *loc,
-            struct cl_operand       *src)
-            = 0;
-
-        virtual void insn_unop(
-            struct cl_location      *loc,
-            enum cl_unop_e          type,
-            struct cl_operand       *dst,
-            struct cl_operand       *src)
-            = 0;
-
-        virtual void insn_binop(
-            struct cl_location      *loc,
-            enum cl_binop_e         type,
-            struct cl_operand       *dst,
-            struct cl_operand       *src1,
-            struct cl_operand       *src2)
+        virtual void insn(
+            const struct cl_insn    *cli)
             = 0;
 
         virtual void insn_call_open(
-            struct cl_location      *loc,
-            struct cl_operand       *dst,
-            struct cl_operand       *fnc)
+            const struct cl_location*loc,
+            const struct cl_operand *dst,
+            const struct cl_operand *fnc)
             = 0;
 
         virtual void insn_call_arg(
-            int                     arg_pos,
-            struct cl_operand       *arg_src)
+            int                     arg_id,
+            const struct cl_operand *arg_src)
             = 0;
 
         virtual void insn_call_close()

@@ -151,7 +151,7 @@ static void cl_wrap_file_close(
 
 static void cl_wrap_fnc_open(
             struct cl_code_listener *self,
-            struct cl_location      *loc,
+            const struct cl_location*loc,
             const char              *fnc_name,
             enum cl_scope_e         scope)
 {
@@ -160,10 +160,10 @@ static void cl_wrap_fnc_open(
 
 static void cl_wrap_fnc_arg_decl(
             struct cl_code_listener *self,
-            int                     arg_pos,
+            int                     arg_id,
             const char              *arg_name)
 {
-    CL_WRAP_VA(fnc_arg_decl, arg_pos, arg_name);
+    CL_WRAP_VA(fnc_arg_decl, arg_id, arg_name);
 }
 
 static void cl_wrap_fnc_close(
@@ -179,68 +179,28 @@ static void cl_wrap_bb_open(
     CL_WRAP_VA(bb_open, bb_name);
 }
 
-static void cl_wrap_insn_jmp(
+static void cl_wrap_insn(
             struct cl_code_listener *self,
-            struct cl_location      *loc,
-            const char              *label)
+            const struct cl_insn    *cli)
 {
-    CL_WRAP_VA(insn_jmp, loc, label);
-}
-
-static void cl_wrap_insn_cond(
-            struct cl_code_listener *self,
-            struct cl_location      *loc,
-            struct cl_operand       *src,
-            const char              *label_true,
-            const char              *label_false)
-{
-    CL_WRAP_VA(insn_cond, loc, src, label_true, label_false);
-}
-
-static void cl_wrap_insn_ret(
-            struct cl_code_listener *self,
-            struct cl_location      *loc,
-            struct cl_operand       *src)
-{
-    CL_WRAP_VA(insn_ret, loc, src);
-}
-
-static void cl_wrap_insn_unop(
-            struct cl_code_listener *self,
-            struct cl_location      *loc,
-            enum cl_unop_e          type,
-            struct cl_operand       *dst,
-            struct cl_operand       *src)
-{
-    CL_WRAP_VA(insn_unop, loc, type, dst, src);
-}
-
-static void cl_wrap_insn_binop(
-            struct cl_code_listener *self,
-            struct cl_location      *loc,
-            enum cl_binop_e         type,
-            struct cl_operand       *dst,
-            struct cl_operand       *src1,
-            struct cl_operand       *src2)
-{
-    CL_WRAP_VA(insn_binop, loc, type, dst, src1, src2);
+    CL_WRAP_VA(insn, cli);
 }
 
 static void cl_wrap_insn_call_open(
             struct cl_code_listener *self,
-            struct cl_location      *loc,
-            struct cl_operand       *dst,
-            struct cl_operand       *fnc)
+            const struct cl_location*loc,
+            const struct cl_operand *dst,
+            const struct cl_operand *fnc)
 {
     CL_WRAP_VA(insn_call_open, loc, dst, fnc);
 }
 
 static void cl_wrap_insn_call_arg(
             struct cl_code_listener *self,
-            int                     arg_pos,
-            struct cl_operand       *arg_src)
+            int                     arg_id,
+            const struct cl_operand *arg_src)
 {
-    CL_WRAP_VA(insn_call_arg, arg_pos, arg_src);
+    CL_WRAP_VA(insn_call_arg, arg_id, arg_src);
 }
 
 static void cl_wrap_insn_call_close(
@@ -276,11 +236,7 @@ struct cl_code_listener* cl_create_listener_wrap(ICodeListener *listener)
     wrap->fnc_arg_decl      = cl_wrap_fnc_arg_decl;
     wrap->fnc_close         = cl_wrap_fnc_close;
     wrap->bb_open           = cl_wrap_bb_open;
-    wrap->insn_jmp          = cl_wrap_insn_jmp;
-    wrap->insn_cond         = cl_wrap_insn_cond;
-    wrap->insn_ret          = cl_wrap_insn_ret;
-    wrap->insn_unop         = cl_wrap_insn_unop;
-    wrap->insn_binop        = cl_wrap_insn_binop;
+    wrap->insn              = cl_wrap_insn;
     wrap->insn_call_open    = cl_wrap_insn_call_open;
     wrap->insn_call_arg     = cl_wrap_insn_call_arg;
     wrap->insn_call_close   = cl_wrap_insn_call_close;

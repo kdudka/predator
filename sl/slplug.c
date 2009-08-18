@@ -86,9 +86,13 @@ static void handle_stmt_cond(gimple stmt)
 
     struct cl_operand op;
     /* TODO */ op.type = CL_OPERAND_VOID;
-    struct cl_location loc;
-    /* TODO */ cl_set_location(&loc, -1);
-    cl->insn_cond(cl, &loc, &op, label_true, label_false);
+    struct cl_insn cli;
+    cli.type                        = CL_INSN_COND;
+    cli.data.insn_cond.src          = &op;
+    cli.data.insn_cond.then_label   = label_true;
+    cli.data.insn_cond.else_label   = label_false;
+    /* TODO */ cl_set_location(&cli.loc, -1);
+    cl->insn(cl, &cli);
 }
 
 // callback of walk_gimple_seq declared in <gimple.h>
@@ -130,9 +134,11 @@ static void handle_fnc_bb (struct basic_block_def *bb)
         if (ei_cond(ei, &e) && e->dest) {
             struct basic_block_def *next = e->dest;
             char *label = index_to_label(next->index);
-            struct cl_location loc;
-            /* TODO */ cl_set_location(&loc, -1);
-            cl->insn_jmp(cl, &loc, label);
+            struct cl_insn cli;
+            cli.type                = CL_INSN_JMP;
+            cli.data.insn_jmp.label = label;
+            /* TODO */ cl_set_location(&cli.loc, -1);
+            cl->insn(cl, &cli);
             free(label);
             return;
         }
@@ -156,9 +162,11 @@ static void handle_fnc_bb (struct basic_block_def *bb)
     if (ei_cond(ei, &e) && e->dest && (e->flags & /* fallthru */ 1)) {
         struct basic_block_def *next = e->dest;
         char *label = index_to_label(next->index);
-        struct cl_location loc;
-        /* TODO */ cl_set_location(&loc, -1);
-        cl->insn_jmp(cl, &loc, label);
+        struct cl_insn cli;
+        cli.type                = CL_INSN_JMP;
+        cli.data.insn_jmp.label = label;
+        /* TODO */ cl_set_location(&cli.loc, -1);
+        cl->insn(cl, &cli);
         free(label);
         return;
     }
