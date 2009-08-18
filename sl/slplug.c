@@ -79,10 +79,33 @@ static char* index_to_label (unsigned idx) {
 
 static void handle_operand(struct cl_operand *op, tree t)
 {
-    (void) t;
+    enum tree_code code = TREE_CODE(t);
+
     op->type = CL_OPERAND_VOID;
     op->deref = false;
     op->offset = NULL;
+
+    switch (code) {
+        case VAR_DECL:
+        case PARM_DECL:
+            if (DECL_NAME(t)) {
+                op->type            = CL_OPERAND_VAR;
+                op->data.var.name   = IDENTIFIER_POINTER(DECL_NAME(t));
+            } else {
+                op->type            = CL_OPERAND_REG;
+                op->data.reg.id     = DECL_UID(t);
+            }
+            break;
+
+        case INTEGER_CST:
+            op->type                = CL_OPERAND_INT;
+            op->data.lit_int.value  = TREE_INT_CST_LOW(t);
+            break;
+
+        default:
+            TRAP;
+            break;
+    }
 }
 
 static void handle_stmt_binop(gimple stmt, enum tree_code code,

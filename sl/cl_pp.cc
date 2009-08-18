@@ -373,7 +373,7 @@ void ClPrettyPrint::printInsnBinop(const struct cl_insn *cli) {
 
     out_ << "\t\t";
     this->printAssignmentLhs(dst);
-    out_ << "(";
+    out_ << SSD_INLINE_COLOR(C_LIGHT_RED, "(");
     this->printOperand(src1);
     out_ << " ";
 
@@ -405,7 +405,7 @@ void ClPrettyPrint::printInsnBinop(const struct cl_insn *cli) {
 
     out_ << " ";
     this->printOperand(src2);
-    out_ << ")" << std::endl;
+    out_ << SSD_INLINE_COLOR(C_LIGHT_RED, ")") << std::endl;
 }
 
 void ClPrettyPrint::insn(
