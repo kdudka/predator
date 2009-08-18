@@ -186,10 +186,13 @@ static void handle_insn_call(struct instruction *insn,
     struct pseudo *arg;
     int cnt = 0;
 
+    struct cl_location loc;
+    cl_set_location(&loc, insn->pos.line);
+
     // open call
     pseudo_to_cl_operand(insn, insn->target, &dst);
     pseudo_to_cl_operand(insn, insn->func, &fnc);
-    cl->insn_call_open(cl, insn->pos.line, &dst, &fnc);
+    cl->insn_call_open(cl, &loc, &dst, &fnc);
     free_cl_operand_data(&dst);
     free_cl_operand_data(&fnc);
 
@@ -212,12 +215,15 @@ static void handle_insn_br(struct instruction *insn,
     char *bb_name_true = NULL;
     char *bb_name_false = NULL;
     struct cl_operand op;
+    struct cl_location loc;
 
     if (asprintf(&bb_name_true, "%p", insn->bb_true) < 0)
         die("asprintf failed");
 
     if (!is_pseudo(insn->cond)) {
-        cl->insn_jmp(cl, insn->pos.line, bb_name_true);
+        struct cl_location loc;
+        cl_set_location(&loc, insn->pos.line);
+        cl->insn_jmp(cl, &loc, bb_name_true);
         free(bb_name_true);
         return;
     }
@@ -226,7 +232,8 @@ static void handle_insn_br(struct instruction *insn,
         die("asprintf failed");
 
     pseudo_to_cl_operand(insn, insn->cond, &op);
-    cl->insn_cond(cl, insn->pos.line, &op, bb_name_true, bb_name_false);
+    cl_set_location(&loc, insn->pos.line);
+    cl->insn_cond(cl, &loc, &op, bb_name_true, bb_name_false);
     free_cl_operand_data(&op);
 
     free(bb_name_true);
@@ -237,8 +244,11 @@ static void handle_insn_ret(struct instruction *insn,
                             struct cl_code_listener *cl)
 {
     struct cl_operand op;
+    struct cl_location loc;
+
     pseudo_to_cl_operand(insn, insn->src, &op);
-    cl->insn_ret(cl, insn->pos.line, &op);
+    cl_set_location(&loc, insn->pos.line);
+    cl->insn_ret(cl, &loc, &op);
     free_cl_operand_data(&op);
 }
 
@@ -249,6 +259,7 @@ static void insn_assignment_base(struct instruction                 *insn,
 {
     struct cl_operand op_lhs;
     struct cl_operand op_rhs;
+    struct cl_location loc;
 
     pseudo_to_cl_operand(insn, lhs, &op_lhs);
     pseudo_to_cl_operand(insn, rhs, &op_rhs);
@@ -266,7 +277,8 @@ static void insn_assignment_base(struct instruction                 *insn,
         TRAP;
 #endif
 
-    cl->insn_unop(cl, insn->pos.line, CL_UNOP_ASSIGN, &op_lhs, &op_rhs);
+    cl_set_location(&loc, insn->pos.line);
+    cl->insn_unop(cl, &loc, CL_UNOP_ASSIGN, &op_lhs, &op_rhs);
 
     free_cl_operand_data(&op_lhs);
     free_cl_operand_data(&op_rhs);
@@ -299,11 +311,14 @@ static void handle_insn_add(struct instruction *insn,
                             struct cl_code_listener *cl)
 {
     struct cl_operand dst, src1, src2;
+    struct cl_location loc;
+
     pseudo_to_cl_operand(insn, insn->target, &dst);
     pseudo_to_cl_operand(insn, insn->src1, &src1);
     pseudo_to_cl_operand(insn, insn->src2, &src2);
 
-    cl->insn_binop(cl, insn->pos.line, CL_BINOP_ADD, &dst, &src1, &src2);
+    cl_set_location(&loc, insn->pos.line);
+    cl->insn_binop(cl, &loc, CL_BINOP_ADD, &dst, &src1, &src2);
 
     free_cl_operand_data(&dst);
     free_cl_operand_data(&src1);
@@ -509,6 +524,7 @@ static void handle_fnc_ep(struct entrypoint *ep, struct cl_code_listener *cl)
 {
     struct instruction *entry = ep->entry;
     struct basic_block *bb;
+    struct cl_location loc;
     char *entry_name;
 
     if (!bb)
@@ -517,7 +533,9 @@ static void handle_fnc_ep(struct entrypoint *ep, struct cl_code_listener *cl)
     // jump to entry basic block
     if (asprintf(&entry_name, "%p", entry->bb) < 0)
         die("asprintf failed");
-    cl->insn_jmp(cl, entry->pos.line, entry_name);
+
+    cl_set_location(&loc, entry->pos.line);
+    cl->insn_jmp(cl, &loc, entry_name);
     free(entry_name);
 
     // go through basic blocks
@@ -558,9 +576,11 @@ static void handle_fnc_def(struct symbol *sym, struct cl_code_listener *cl)
 {
     struct symbol *base_type = sym->ctype.base_type;
     struct symbol *arg;
+    struct cl_location loc;
     int argc = 0;
 
-    cl->fnc_open(cl, sym->pos.line, show_ident(sym->ident),
+    cl_set_location(&loc, sym->pos.line);
+    cl->fnc_open(cl, &loc, show_ident(sym->ident),
             (sym->scope==file_scope)
             ? CL_SCOPE_STATIC
             : CL_SCOPE_GLOBAL);

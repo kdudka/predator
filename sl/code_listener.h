@@ -72,6 +72,22 @@ void cl_global_init_defaults(
  */
 void cl_global_cleanup(void);
 
+/* taken from gcc's expanded_location */
+struct cl_location {
+    const char                      *file;          /* NULL means current   */
+    int                             line;           /* 1 ... first line     */
+    int                             column;         /* -1 ... not used      */
+    bool                            sysp;           /* in a system header?  */
+};
+
+inline void cl_set_location(struct cl_location *loc, int line)
+{
+    loc->file   = (const char *) 0;
+    loc->line   = line;
+    loc->column = -1;
+    loc->sysp   = false;
+}
+
 enum cl_scope_e {
     CL_SCOPE_GLOBAL,
     CL_SCOPE_STATIC,
@@ -171,7 +187,7 @@ struct cl_code_listener {
 
     void (*fnc_open)(
             struct cl_code_listener *self,
-            int                     line,
+            struct cl_location      *loc,
             const char              *fnc_name,
             enum cl_scope_e         scope);
 
@@ -189,31 +205,31 @@ struct cl_code_listener {
 
     void (*insn_jmp)(
             struct cl_code_listener *self,
-            int                     line,
+            struct cl_location      *loc,
             const char              *label);
 
     void (*insn_cond)(
             struct cl_code_listener *self,
-            int                     line,
+            struct cl_location      *loc,
             struct cl_operand       *src,
             const char              *label_true,
             const char              *label_false);
 
     void (*insn_ret)(
             struct cl_code_listener *self,
-            int                     line,
+            struct cl_location      *loc,
             struct cl_operand       *src);
 
     void (*insn_unop)(
             struct cl_code_listener *self,
-            int                     line,
+            struct cl_location      *loc,
             enum cl_unop_e          type,
             struct cl_operand       *dst,
             struct cl_operand       *src);
 
     void (*insn_binop)(
             struct cl_code_listener *self,
-            int                     line,
+            struct cl_location      *loc,
             enum cl_binop_e         type,
             struct cl_operand       *dst,
             struct cl_operand       *src1,
@@ -221,7 +237,7 @@ struct cl_code_listener {
 
     void (*insn_call_open)(
             struct cl_code_listener *self,
-            int                     line,
+            struct cl_location      *loc,
             struct cl_operand       *dst,
             struct cl_operand       *fnc);
 

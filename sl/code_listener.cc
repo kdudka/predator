@@ -151,11 +151,11 @@ static void cl_wrap_file_close(
 
 static void cl_wrap_fnc_open(
             struct cl_code_listener *self,
-            int                     line,
+            struct cl_location      *loc,
             const char              *fnc_name,
             enum cl_scope_e         scope)
 {
-    CL_WRAP_VA(fnc_open, line, fnc_name, scope);
+    CL_WRAP_VA(fnc_open, loc, fnc_name, scope);
 }
 
 static void cl_wrap_fnc_arg_decl(
@@ -181,58 +181,58 @@ static void cl_wrap_bb_open(
 
 static void cl_wrap_insn_jmp(
             struct cl_code_listener *self,
-            int                     line,
+            struct cl_location      *loc,
             const char              *label)
 {
-    CL_WRAP_VA(insn_jmp, line, label);
+    CL_WRAP_VA(insn_jmp, loc, label);
 }
 
 static void cl_wrap_insn_cond(
             struct cl_code_listener *self,
-            int                     line,
+            struct cl_location      *loc,
             struct cl_operand       *src,
             const char              *label_true,
             const char              *label_false)
 {
-    CL_WRAP_VA(insn_cond, line, src, label_true, label_false);
+    CL_WRAP_VA(insn_cond, loc, src, label_true, label_false);
 }
 
 static void cl_wrap_insn_ret(
             struct cl_code_listener *self,
-            int                     line,
+            struct cl_location      *loc,
             struct cl_operand       *src)
 {
-    CL_WRAP_VA(insn_ret, line, src);
+    CL_WRAP_VA(insn_ret, loc, src);
 }
 
 static void cl_wrap_insn_unop(
             struct cl_code_listener *self,
-            int                     line,
+            struct cl_location      *loc,
             enum cl_unop_e          type,
             struct cl_operand       *dst,
             struct cl_operand       *src)
 {
-    CL_WRAP_VA(insn_unop, line, type, dst, src);
+    CL_WRAP_VA(insn_unop, loc, type, dst, src);
 }
 
 static void cl_wrap_insn_binop(
             struct cl_code_listener *self,
-            int                     line,
+            struct cl_location      *loc,
             enum cl_binop_e         type,
             struct cl_operand       *dst,
             struct cl_operand       *src1,
             struct cl_operand       *src2)
 {
-    CL_WRAP_VA(insn_binop, line, type, dst, src1, src2);
+    CL_WRAP_VA(insn_binop, loc, type, dst, src1, src2);
 }
 
 static void cl_wrap_insn_call_open(
             struct cl_code_listener *self,
-            int                     line,
+            struct cl_location      *loc,
             struct cl_operand       *dst,
             struct cl_operand       *fnc)
 {
-    CL_WRAP_VA(insn_call_open, line, dst, fnc);
+    CL_WRAP_VA(insn_call_open, loc, dst, fnc);
 }
 
 static void cl_wrap_insn_call_arg(

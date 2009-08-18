@@ -22,13 +22,13 @@ class CldCbSeqChk: public ClDecoratorBase {
         }
 
         virtual void fnc_open(
-            int                     line,
+            struct cl_location      *loc,
             const char              *fnc_name,
             enum cl_scope_e         scope)
         {
-            line_ = line;
+            loc_ = *loc;
             this->setState(S_FNC_DECL);
-            ClDecoratorBase::fnc_open(line, fnc_name, scope);
+            ClDecoratorBase::fnc_open(loc, fnc_name, scope);
         }
 
         virtual void fnc_arg_decl(
@@ -52,65 +52,65 @@ class CldCbSeqChk: public ClDecoratorBase {
         }
 
         virtual void insn_jmp(
-            int                     line,
+            struct cl_location      *loc,
             const char              *label)
         {
-            line_ = line;
+            loc_ = *loc;
             this->chkInsnJmp();
-            ClDecoratorBase::insn_jmp(line, label);
+            ClDecoratorBase::insn_jmp(loc, label);
         }
 
         virtual void insn_cond(
-            int                     line,
+            struct cl_location      *loc,
             struct cl_operand       *src,
             const char              *label_true,
             const char              *label_false)
         {
-            line_ = line;
+            loc_ = *loc;
             this->chkInsnCond();
-            ClDecoratorBase::insn_cond(line, src, label_true, label_false);
+            ClDecoratorBase::insn_cond(loc, src, label_true, label_false);
         }
 
         virtual void insn_ret(
-            int                     line,
+            struct cl_location      *loc,
             struct cl_operand       *src)
         {
-            line_ = line;
+            loc_ = *loc;
             this->chkInsnRet();
-            ClDecoratorBase::insn_ret(line, src);
+            ClDecoratorBase::insn_ret(loc, src);
         }
 
         virtual void insn_unop(
-            int                     line,
+            struct cl_location      *loc,
             enum cl_unop_e          type,
             struct cl_operand       *dst,
             struct cl_operand       *src)
         {
-            line_ = line;
+            loc_ = *loc;
             this->chkInsnUnop();
-            ClDecoratorBase::insn_unop(line, type, dst, src);
+            ClDecoratorBase::insn_unop(loc, type, dst, src);
         }
 
         virtual void insn_binop(
-            int                     line,
+            struct cl_location      *loc,
             enum cl_binop_e         type,
             struct cl_operand       *dst,
             struct cl_operand       *src1,
             struct cl_operand       *src2)
         {
-            line_ = line;
+            loc_ = *loc;
             this->chkInsnBinop();
-            ClDecoratorBase::insn_binop(line, type, dst, src1, src2);
+            ClDecoratorBase::insn_binop(loc, type, dst, src1, src2);
         }
 
         virtual void insn_call_open(
-            int                     line,
+            struct cl_location      *loc,
             struct cl_operand       *dst,
             struct cl_operand       *fnc)
         {
-            line_ = line;
+            loc_ = *loc;
             this->setState(S_INSN_CALL);
-            ClDecoratorBase::insn_call_open(line, dst, fnc);
+            ClDecoratorBase::insn_call_open(loc, dst, fnc);
         }
 
         virtual void insn_call_arg(
@@ -138,7 +138,7 @@ class CldCbSeqChk: public ClDecoratorBase {
 
         EState                      state_;
         std::string                 file_;
-        int                         line_;
+        struct cl_location          loc_;
 
 
     private:
@@ -168,13 +168,13 @@ class CldLabelChk: public ClDecoratorBase {
         }
 
         virtual void fnc_open(
-            int                     line,
+            struct cl_location      *loc,
             const char              *fnc_name,
             enum cl_scope_e         scope)
         {
-            line_ = line;
+            loc_ = *loc;
             this->reset();
-            ClDecoratorBase::fnc_open(line, fnc_name, scope);
+            ClDecoratorBase::fnc_open(loc, fnc_name, scope);
         }
 
         virtual void fnc_close() {
@@ -190,38 +190,41 @@ class CldLabelChk: public ClDecoratorBase {
         }
 
         virtual void insn_jmp(
-            int                     line,
+            struct cl_location      *loc,
             const char              *label)
         {
             this->reqLabel(label);
-            ClDecoratorBase::insn_jmp(line, label);
+            ClDecoratorBase::insn_jmp(loc, label);
         }
 
         virtual void insn_cond(
-            int                     line,
+            struct cl_location      *loc,
             struct cl_operand       *src,
             const char              *label_true,
             const char              *label_false)
         {
             this->reqLabel(label_true);
             this->reqLabel(label_false);
-            ClDecoratorBase::insn_cond(line, src, label_true, label_false);
+            ClDecoratorBase::insn_cond(loc, src, label_true, label_false);
         }
 
     private:
         struct LabelState {
-            bool defined;
-            bool reachable;
-            int  line;
+            bool                    defined;
+            bool                    reachable;
+            struct cl_location      loc;
 
-            LabelState(): defined(false), reachable(false), line(-1) { }
+            LabelState(): defined(false), reachable(false)
+            {
+                cl_set_location(&loc, -1);
+            }
         };
 
         typedef std::map<std::string, LabelState> TMap;
 
         TMap                map_;
         std::string         file_;
-        int                 line_;
+        struct cl_location  loc_;
 
     private:
         void reset();
@@ -243,13 +246,13 @@ class CldRegUsageChk: public ClDecoratorBase {
         }
 
         virtual void fnc_open(
-            int                     line,
+            struct cl_location      *loc,
             const char              *fnc_name,
             enum cl_scope_e         scope)
         {
-            line_ = line;
+            loc_ = *loc;
             this->reset();
-            ClDecoratorBase::fnc_open(line, fnc_name, scope);
+            ClDecoratorBase::fnc_open(loc, fnc_name, scope);
         }
 
         virtual void fnc_close() {
@@ -258,60 +261,60 @@ class CldRegUsageChk: public ClDecoratorBase {
         }
 
         virtual void insn_cond(
-            int                     line,
+            struct cl_location      *loc,
             struct cl_operand       *src,
             const char              *label_true,
             const char              *label_false)
         {
-            line_ = line;
+            loc_ = *loc;
             this->handleSrc(src);
-            ClDecoratorBase::insn_cond(line, src, label_true, label_false);
+            ClDecoratorBase::insn_cond(loc, src, label_true, label_false);
         }
 
         virtual void insn_ret(
-            int                     line,
+            struct cl_location      *loc,
             struct cl_operand       *src)
         {
-            line_ = line;
+            loc_ = *loc;
             this->handleSrc(src);
-            ClDecoratorBase::insn_ret(line, src);
+            ClDecoratorBase::insn_ret(loc, src);
         }
 
         virtual void insn_unop(
-            int                     line,
+            struct cl_location      *loc,
             enum cl_unop_e          type,
             struct cl_operand       *dst,
             struct cl_operand       *src)
         {
-            line_ = line;
+            loc_ = *loc;
             this->handleDst(dst);
             this->handleSrc(src);
-            ClDecoratorBase::insn_unop(line, type, dst, src);
+            ClDecoratorBase::insn_unop(loc, type, dst, src);
         }
 
         virtual void insn_binop(
-            int                     line,
+            struct cl_location      *loc,
             enum cl_binop_e         type,
             struct cl_operand       *dst,
             struct cl_operand       *src1,
             struct cl_operand       *src2)
         {
-            line_ = line;
+            loc_ = *loc;
             this->handleDst(dst);
             this->handleSrc(src1);
             this->handleSrc(src2);
-            ClDecoratorBase::insn_binop(line, type, dst, src1, src2);
+            ClDecoratorBase::insn_binop(loc, type, dst, src1, src2);
         }
 
         virtual void insn_call_open(
-            int                     line,
+            struct cl_location      *loc,
             struct cl_operand       *dst,
             struct cl_operand       *fnc)
         {
-            line_ = line;
+            loc_ = *loc;
             this->handleDst(dst);
             this->handleSrc(fnc);
-            ClDecoratorBase::insn_call_open(line, dst, fnc);
+            ClDecoratorBase::insn_call_open(loc, dst, fnc);
         }
 
         virtual void insn_call_arg(
@@ -324,18 +327,21 @@ class CldRegUsageChk: public ClDecoratorBase {
 
     private:
         struct Usage {
-            bool read;
-            bool written;
-            int  line;
+            bool                    read;
+            bool                    written;
+            struct cl_location      loc;
 
-            Usage(): read(false), written(false), line(-1) { }
+            Usage(): read(false), written(false)
+            {
+                cl_set_location(&loc, -1);
+            }
         };
 
         typedef std::map<int, Usage> TMap;
 
         TMap                map_;
         std::string         file_;
-        int                 line_;
+        struct cl_location  loc_;
 
     private:
         void reset();
@@ -348,9 +354,9 @@ class CldRegUsageChk: public ClDecoratorBase {
 // CldCbSeqChk implementation
 CldCbSeqChk::CldCbSeqChk(ICodeListener *slave):
     ClDecoratorBase(slave),
-    state_(S_INIT),
-    line_(-1)
+    state_(S_INIT)
 {
+    cl_set_location(&loc_, -1);
 }
 
 const char* CldCbSeqChk::toString(EState state) {
@@ -369,7 +375,7 @@ const char* CldCbSeqChk::toString(EState state) {
 }
 
 void CldCbSeqChk::emitUnexpected(const char *what) {
-    CL_MSG_STREAM(cl_error, file_ << ":" << line_ << ": error: "
+    CL_MSG_STREAM(cl_error, file_ << ":" << loc_.line << ": error: "
             << "unexpected callback in state "
             << toString(state_) << " (" << what << ")");
 }
@@ -474,9 +480,9 @@ void CldCbSeqChk::setCallClose() {
 // /////////////////////////////////////////////////////////////////////////////
 // CldLabelChk implementation
 CldLabelChk::CldLabelChk(ICodeListener *slave):
-    ClDecoratorBase(slave),
-    line_(-1)
+    ClDecoratorBase(slave)
 {
+    cl_set_location(&loc_, -1);
 }
 
 void CldLabelChk::reset() {
@@ -486,15 +492,15 @@ void CldLabelChk::reset() {
 void CldLabelChk::defineLabel(const char *label) {
     LabelState &ls = map_[label];
     ls.defined = true;
-    if (ls.line < 0)
-        ls.line = line_;
+    if (ls.loc.line < 0)
+        ls.loc = loc_;
 }
 
 void CldLabelChk::reqLabel(const char *label) {
     LabelState &ls = map_[label];
     ls.reachable = true;
-    if (ls.line < 0)
-        ls.line = line_;
+    if (ls.loc.line < 0)
+        ls.loc = loc_;
 }
 
 void CldLabelChk::emitWarnings() {
@@ -504,12 +510,12 @@ void CldLabelChk::emitWarnings() {
         const LabelState &ls = i->second;
 
         if (!ls.defined) {
-            CL_MSG_STREAM(cl_error, file_ << ":" << ls.line << ": error: "
+            CL_MSG_STREAM(cl_error, file_ << ":" << ls.loc.line << ": error: "
                     << "jump to undefined label '" << label << "'");
         }
 
         if (!ls.reachable) {
-            CL_MSG_STREAM(cl_warn, file_ << ":" << ls.line << ": warning: "
+            CL_MSG_STREAM(cl_warn, file_ << ":" << ls.loc.line << ": warning: "
                     << "unreachable label '" << label << "'");
         }
     }
@@ -519,9 +525,9 @@ void CldLabelChk::emitWarnings() {
 // /////////////////////////////////////////////////////////////////////////////
 // CldRegUsageChk implementation
 CldRegUsageChk::CldRegUsageChk(ICodeListener *slave):
-    ClDecoratorBase(slave),
-    line_(-1)
+    ClDecoratorBase(slave)
 {
+    cl_set_location(&loc_, -1);
 }
 
 void CldRegUsageChk::reset() {
@@ -534,8 +540,8 @@ void CldRegUsageChk::handleDst(struct cl_operand *op) {
 
     Usage &u = map_[op->value.reg_id];
     u.written = true;
-    if (u.line < 0)
-        u.line = line_;
+    if (u.loc.line < 0)
+        u.loc = loc_;
 }
 
 void CldRegUsageChk::handleSrc(struct cl_operand *op) {
@@ -544,8 +550,8 @@ void CldRegUsageChk::handleSrc(struct cl_operand *op) {
 
     Usage &u = map_[op->value.reg_id];
     u.read = true;
-    if (u.line < 0)
-        u.line = line_;
+    if (u.loc.line < 0)
+        u.loc = loc_;
 }
 
 void CldRegUsageChk::emitWarnings() {
@@ -555,12 +561,12 @@ void CldRegUsageChk::emitWarnings() {
         const Usage &u = i->second;
 
         if (!u.read) {
-            CL_MSG_STREAM(cl_warn, file_ << ":" << u.line << ": warning: "
+            CL_MSG_STREAM(cl_warn, file_ << ":" << u.loc.line << ": warning: "
                     << "unused register %r" << reg);
         }
 
         if (!u.written) {
-            CL_MSG_STREAM(cl_error, file_ << ":" << u.line << ": error: "
+            CL_MSG_STREAM(cl_error, file_ << ":" << u.loc.line << ": error: "
                     << "uninitialized register %r" << reg);
         }
     }

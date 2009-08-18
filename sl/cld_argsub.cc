@@ -14,14 +14,14 @@ class CldArgSubst: public ClDecoratorBase {
         }
 
         virtual void fnc_open(
-            int                     line,
+            struct cl_location      *loc,
             const char              *fnc_name,
             enum cl_scope_e         scope)
         {
-            line_ = line;
+            loc_ = *loc;
             fnc_ = fnc_name;
             this->reset();
-            ClDecoratorBase::fnc_open(line, fnc_name, scope);
+            ClDecoratorBase::fnc_open(loc, fnc_name, scope);
         }
 
         virtual void fnc_arg_decl(
@@ -33,28 +33,28 @@ class CldArgSubst: public ClDecoratorBase {
         }
 
         virtual void insn_cond(
-            int                     line,
+            struct cl_location      *loc,
             struct cl_operand       *src,
             const char              *label_true,
             const char              *label_false)
         {
             struct cl_operand local_src = *src;
             this->substArg(&local_src);
-            ClDecoratorBase::insn_cond(line, &local_src, label_true,
+            ClDecoratorBase::insn_cond(loc, &local_src, label_true,
                                        label_false);
         }
 
         virtual void insn_ret(
-            int                     line,
+            struct cl_location      *loc,
             struct cl_operand       *src)
         {
             struct cl_operand local_src = *src;
             this->substArg(&local_src);
-            ClDecoratorBase::insn_ret(line, &local_src);
+            ClDecoratorBase::insn_ret(loc, &local_src);
         }
 
         virtual void insn_unop(
-            int                     line,
+            struct cl_location      *loc,
             enum cl_unop_e          type,
             struct cl_operand       *dst,
             struct cl_operand       *src)
@@ -63,11 +63,11 @@ class CldArgSubst: public ClDecoratorBase {
             struct cl_operand local_src = *src;
             this->substArg(&local_dst);
             this->substArg(&local_src);
-            ClDecoratorBase::insn_unop(line, type, &local_dst, &local_src);
+            ClDecoratorBase::insn_unop(loc, type, &local_dst, &local_src);
         }
 
         virtual void insn_binop(
-            int                     line,
+            struct cl_location      *loc,
             enum cl_binop_e         type,
             struct cl_operand       *dst,
             struct cl_operand       *src1,
@@ -79,12 +79,12 @@ class CldArgSubst: public ClDecoratorBase {
             this->substArg(&local_dst);
             this->substArg(&local_src1);
             this->substArg(&local_src2);
-            ClDecoratorBase::insn_binop(line, type, &local_dst, &local_src1,
+            ClDecoratorBase::insn_binop(loc, type, &local_dst, &local_src1,
                                         &local_src2);
         }
 
         virtual void insn_call_open(
-            int                     line,
+            struct cl_location      *loc,
             struct cl_operand       *dst,
             struct cl_operand       *fnc)
         {
@@ -92,7 +92,7 @@ class CldArgSubst: public ClDecoratorBase {
             struct cl_operand local_fnc = *fnc;
             this->substArg(&local_dst);
             this->substArg(&local_fnc);
-            ClDecoratorBase::insn_call_open(line, &local_dst, &local_fnc);
+            ClDecoratorBase::insn_call_open(loc, &local_dst, &local_fnc);
         }
 
         virtual void insn_call_arg(
@@ -108,12 +108,12 @@ class CldArgSubst: public ClDecoratorBase {
         // we use map because some arg_pos positions may be omitted
         typedef std::map<int, std::string> TMap;
 
-        std::string     file_;
-        int             line_;
-        std::string     fnc_;
+        std::string             file_;
+        struct cl_location      loc_;
+        std::string             fnc_;
 
-        TMap            map_;
-        int             last_;
+        TMap                    map_;
+        int                     last_;
 
     private:
         void reset();
@@ -128,9 +128,9 @@ class CldArgSubst: public ClDecoratorBase {
 
 CldArgSubst::CldArgSubst(ICodeListener *slave):
     ClDecoratorBase(slave),
-    line_(-1),
     last_(0)
 {
+    cl_set_location(&loc_, -1);
 }
 
 void CldArgSubst::reset() {
@@ -141,7 +141,7 @@ void CldArgSubst::reset() {
 void CldArgSubst::regArg(int arg_pos, const char *arg_name) {
     TMap::iterator i = map_.find(arg_pos);
     if (map_.end() != i) {
-        CL_MSG_STREAM(cl_error, file_ << ":" << line_ << ": error: "
+        CL_MSG_STREAM(cl_error, file_ << ":" << loc_.line << ": error: "
                 << "argument #" << arg_pos
                 << " of function '" << fnc_ << "'"
                 << " is already declared as '"
@@ -155,7 +155,7 @@ void CldArgSubst::regArg(int arg_pos, const char *arg_name) {
 const char* CldArgSubst::argLookup(int arg) {
     TMap::iterator i = map_.find(arg);
     if (map_.end() == i) {
-        CL_MSG_STREAM(cl_error, file_ << ":" << line_ << ": error: "
+        CL_MSG_STREAM(cl_error, file_ << ":" << loc_.line << ": error: "
                 << "argument #" << arg
                 << " of function '" << fnc_ << "'"
                 << " was not declared");

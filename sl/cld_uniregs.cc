@@ -8,45 +8,45 @@ class CldUniRegs: public ClDecoratorBase {
         CldUniRegs(ICodeListener *slave);
 
         virtual void fnc_open(
-            int                     line,
+            struct cl_location      *loc,
             const char              *fnc_name,
             enum cl_scope_e         scope)
         {
             this->reset();
-            ClDecoratorBase::fnc_open(line, fnc_name, scope);
+            ClDecoratorBase::fnc_open(loc, fnc_name, scope);
         }
 
         virtual void insn_cond(
-            int                     line,
+            struct cl_location      *loc,
             struct cl_operand       *src,
             const char              *label_true,
             const char              *label_false)
         {
             this->relocReg(src);
-            ClDecoratorBase::insn_cond(line, src, label_true, label_false);
+            ClDecoratorBase::insn_cond(loc, src, label_true, label_false);
         }
 
         virtual void insn_ret(
-            int                     line,
+            struct cl_location      *loc,
             struct cl_operand       *src)
         {
             this->relocReg(src);
-            ClDecoratorBase::insn_ret(line, src);
+            ClDecoratorBase::insn_ret(loc, src);
         }
 
         virtual void insn_unop(
-            int                     line,
+            struct cl_location      *loc,
             enum cl_unop_e          type,
             struct cl_operand       *dst,
             struct cl_operand       *src)
         {
             this->relocReg(dst);
             this->relocReg(src);
-            ClDecoratorBase::insn_unop(line, type, dst, src);
+            ClDecoratorBase::insn_unop(loc, type, dst, src);
         }
 
         virtual void insn_binop(
-            int                     line,
+            struct cl_location      *loc,
             enum cl_binop_e         type,
             struct cl_operand       *dst,
             struct cl_operand       *src1,
@@ -55,17 +55,17 @@ class CldUniRegs: public ClDecoratorBase {
             this->relocReg(dst);
             this->relocReg(src1);
             this->relocReg(src2);
-            ClDecoratorBase::insn_binop(line, type, dst, src1, src2);
+            ClDecoratorBase::insn_binop(loc, type, dst, src1, src2);
         }
 
         virtual void insn_call_open(
-            int                     line,
+            struct cl_location      *loc,
             struct cl_operand       *dst,
             struct cl_operand       *fnc)
         {
             this->relocReg(dst);
             this->relocReg(fnc);
-            ClDecoratorBase::insn_call_open(line, dst, fnc);
+            ClDecoratorBase::insn_call_open(loc, dst, fnc);
         }
 
         virtual void insn_call_arg(

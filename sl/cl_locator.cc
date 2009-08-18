@@ -16,7 +16,7 @@ class ClLocator: public ICodeListener {
         virtual void file_close();
 
         virtual void fnc_open(
-            int                     line,
+            struct cl_location      *loc,
             const char              *fnc_name,
             enum cl_scope_e         scope);
 
@@ -30,34 +30,34 @@ class ClLocator: public ICodeListener {
             const char              *bb_name);
 
         virtual void insn_jmp(
-            int                     line,
+            struct cl_location      *loc,
             const char              *label);
 
         virtual void insn_cond(
-            int                     line,
+            struct cl_location      *loc,
             struct cl_operand       *src,
             const char              *label_true,
             const char              *label_false);
 
         virtual void insn_ret(
-            int                     line,
+            struct cl_location      *loc,
             struct cl_operand       *src);
 
         virtual void insn_unop(
-            int                     line,
+            struct cl_location      *loc,
             enum cl_unop_e          type,
             struct cl_operand       *dst,
             struct cl_operand       *src);
 
         virtual void insn_binop(
-            int                     line,
+            struct cl_location      *loc,
             enum cl_binop_e         type,
             struct cl_operand       *dst,
             struct cl_operand       *src1,
             struct cl_operand       *src2);
 
         virtual void insn_call_open(
-            int                     line,
+            struct cl_location      *loc,
             struct cl_operand       *dst,
             struct cl_operand       *fnc);
 
@@ -71,10 +71,10 @@ class ClLocator: public ICodeListener {
         typedef boost::iostreams::file_descriptor_sink  TSink;
         typedef boost::iostreams::stream<TSink>         TStream;
 
-        TSink           sink_;
-        TStream         out_;
-        std::string     file_;
-        int             line_;
+        TSink                   sink_;
+        TStream                 out_;
+        std::string             file_;
+        struct cl_location      loc_;
 
     private:
         void printLocation();
@@ -87,11 +87,9 @@ using namespace ssd;
 // TODO: remove idents of unused args
 ClLocator::ClLocator(int fd_out):
     sink_(fd_out),
-    out_(sink_),
-    line_(-1)
+    out_(sink_)
 {
-    // FIXME: static variable
-    ColorConsole::enableForTerm(fd_out);
+    cl_set_location(&loc_, -1);
 }
 
 ClLocator::~ClLocator() {
@@ -105,11 +103,13 @@ void ClLocator::file_close() {
 }
 
 void ClLocator::printLocation() {
-    out_ << file_ << ":" << line_ << ": linearized code:" << std::endl;
+    out_ << file_ << ":" << loc_.line << ": linearized code:" << std::endl;
 }
 
-void ClLocator::fnc_open(int line, const char *, enum cl_scope_e) {
-    line_ = line;
+void ClLocator::fnc_open(struct cl_location *loc, const char *,
+                         enum cl_scope_e)
+{
+    loc_ = *loc;
 }
 
 void ClLocator::fnc_arg_decl(int, const char *) {
@@ -121,41 +121,42 @@ void ClLocator::fnc_close() {
 void ClLocator::bb_open(const char *) {
 }
 
-void ClLocator::insn_jmp(int line, const char *) {
-    line_ = line;
+void ClLocator::insn_jmp(struct cl_location *loc, const char *) {
+    loc_ = *loc;
     // this->printLocation();
 }
 
-void ClLocator::insn_cond(int line, struct cl_operand *, const char *,
-                          const char *)
+void ClLocator::insn_cond(struct cl_location *loc, struct cl_operand *,
+                          const char *, const char *)
 {
-    line_ = line;
+    loc_ = *loc;
     this->printLocation();
 }
 
-void ClLocator::insn_ret(int line, struct cl_operand *) {
-    line_ = line;
+void ClLocator::insn_ret(struct cl_location *loc, struct cl_operand *) {
+    loc_ = *loc;
     this->printLocation();
 }
 
-void ClLocator::insn_unop(int line, enum cl_unop_e, struct cl_operand *,
-                          struct cl_operand *)
+void ClLocator::insn_unop(struct cl_location *loc, enum cl_unop_e,
+                          struct cl_operand *, struct cl_operand *)
 {
-    line_ = line;
+    loc_ = *loc;
     this->printLocation();
 }
 
-void ClLocator::insn_binop(int line, enum cl_binop_e, struct cl_operand *,
-                           struct cl_operand *, struct cl_operand *)
+void ClLocator::insn_binop(struct cl_location *loc, enum cl_binop_e,
+                           struct cl_operand *, struct cl_operand *,
+                           struct cl_operand *)
 {
-    line_ = line;
+    loc_ = *loc;
     this->printLocation();
 }
 
-void ClLocator::insn_call_open(int line, struct cl_operand *dst,
+void ClLocator::insn_call_open(struct cl_location *loc, struct cl_operand *dst,
                                struct cl_operand *fnc)
 {
-    line_ = line;
+    loc_ = *loc;
     this->printLocation();
 }
 

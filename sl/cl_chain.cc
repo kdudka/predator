@@ -21,7 +21,7 @@ class ClChain: public ICodeListener {
         virtual void file_close();
 
         virtual void fnc_open(
-            int                     line,
+            struct cl_location      *loc,
             const char              *fnc_name,
             enum cl_scope_e         scope);
 
@@ -35,34 +35,34 @@ class ClChain: public ICodeListener {
             const char              *bb_name);
 
         virtual void insn_jmp(
-            int                     line,
+            struct cl_location      *loc,
             const char              *label);
 
         virtual void insn_cond(
-            int                     line,
+            struct cl_location      *loc,
             struct cl_operand       *src,
             const char              *label_true,
             const char              *label_false);
 
         virtual void insn_ret(
-            int                     line,
+            struct cl_location      *loc,
             struct cl_operand       *src);
 
         virtual void insn_unop(
-            int                     line,
+            struct cl_location      *loc,
             enum cl_unop_e          type,
             struct cl_operand       *dst,
             struct cl_operand       *src);
 
         virtual void insn_binop(
-            int                     line,
+            struct cl_location      *loc,
             enum cl_binop_e         type,
             struct cl_operand       *dst,
             struct cl_operand       *src1,
             struct cl_operand       *src2);
 
         virtual void insn_call_open(
-            int                     line,
+            struct cl_location      *loc,
             struct cl_operand       *dst,
             struct cl_operand       *fnc);
 
@@ -113,11 +113,11 @@ void ClChain::file_close()
 }
 
 void ClChain::fnc_open(
-            int                     line,
+            struct cl_location      *loc,
             const char              *fnc_name,
             enum cl_scope_e         scope)
 {
-    CL_CHAIN_FOREACH_VA(fnc_open, line, fnc_name, scope);
+    CL_CHAIN_FOREACH_VA(fnc_open, loc, fnc_name, scope);
 }
 
 void ClChain::fnc_arg_decl(
@@ -139,53 +139,53 @@ void ClChain::bb_open(
 }
 
 void ClChain::insn_jmp(
-            int                     line,
+            struct cl_location      *loc,
             const char              *label)
 {
-    CL_CHAIN_FOREACH_VA(insn_jmp, line, label);
+    CL_CHAIN_FOREACH_VA(insn_jmp, loc, label);
 }
 
 void ClChain::insn_cond(
-            int                     line,
+            struct cl_location      *loc,
             struct cl_operand       *src,
             const char              *label_true,
             const char              *label_false)
 {
-    CL_CHAIN_FOREACH_VA(insn_cond, line, src, label_true, label_false);
+    CL_CHAIN_FOREACH_VA(insn_cond, loc, src, label_true, label_false);
 }
 
 void ClChain::insn_ret(
-            int                     line,
+            struct cl_location      *loc,
             struct cl_operand       *src)
 {
-    CL_CHAIN_FOREACH_VA(insn_ret, line, src);
+    CL_CHAIN_FOREACH_VA(insn_ret, loc, src);
 }
 
 void ClChain::insn_unop(
-            int                     line,
+            struct cl_location      *loc,
             enum cl_unop_e          type,
             struct cl_operand       *dst,
             struct cl_operand       *src)
 {
-    CL_CHAIN_FOREACH_VA(insn_unop, line, type, dst, src);
+    CL_CHAIN_FOREACH_VA(insn_unop, loc, type, dst, src);
 }
 
 void ClChain::insn_binop(
-            int                     line,
+            struct cl_location      *loc,
             enum cl_binop_e         type,
             struct cl_operand       *dst,
             struct cl_operand       *src1,
             struct cl_operand       *src2)
 {
-    CL_CHAIN_FOREACH_VA(insn_binop, line, type, dst, src1, src2);
+    CL_CHAIN_FOREACH_VA(insn_binop, loc, type, dst, src1, src2);
 }
 
 void ClChain::insn_call_open(
-            int                     line,
+            struct cl_location      *loc,
             struct cl_operand       *dst,
             struct cl_operand       *fnc)
 {
-    CL_CHAIN_FOREACH_VA(insn_call_open, line, dst, fnc);
+    CL_CHAIN_FOREACH_VA(insn_call_open, loc, dst, fnc);
 }
 
 void ClChain::insn_call_arg(

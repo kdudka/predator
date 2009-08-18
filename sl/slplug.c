@@ -86,7 +86,9 @@ static void handle_stmt_cond(gimple stmt)
 
     struct cl_operand op;
     /* TODO */ op.type = CL_OPERAND_VOID;
-    cl->insn_cond(cl, /* TODO */ 0, &op, label_true, label_false);
+    struct cl_location loc;
+    /* TODO */ cl_set_location(&loc, -1);
+    cl->insn_cond(cl, &loc, &op, label_true, label_false);
 }
 
 // callback of walk_gimple_seq declared in <gimple.h>
@@ -128,7 +130,9 @@ static void handle_fnc_bb (struct basic_block_def *bb)
         if (ei_cond(ei, &e) && e->dest) {
             struct basic_block_def *next = e->dest;
             char *label = index_to_label(next->index);
-            cl->insn_jmp(cl, /* TODO */ 0, label);
+            struct cl_location loc;
+            /* TODO */ cl_set_location(&loc, -1);
+            cl->insn_jmp(cl, &loc, label);
             free(label);
             return;
         }
@@ -152,7 +156,9 @@ static void handle_fnc_bb (struct basic_block_def *bb)
     if (ei_cond(ei, &e) && e->dest && (e->flags & /* fallthru */ 1)) {
         struct basic_block_def *next = e->dest;
         char *label = index_to_label(next->index);
-        cl->insn_jmp(cl, /* TODO */ 0, label);
+        struct cl_location loc;
+        /* TODO */ cl_set_location(&loc, -1);
+        cl->insn_jmp(cl, &loc, label);
         free(label);
         return;
     }
@@ -184,9 +190,13 @@ static void handle_fnc_decl_arglist (tree args)
 // handle FUNCTION_DECL tree node given as DECL
 static void handle_fnc_decl (tree decl)
 {
+    struct cl_location loc;
     tree ident = DECL_NAME (decl);
+
+    // TODO
+    cl_set_location(&loc, DECL_SOURCE_LINE(decl));
     cl->fnc_open(cl,
-            DECL_SOURCE_LINE(decl),
+            &loc,
             IDENTIFIER_POINTER(ident),
             TREE_PUBLIC(decl)
                 ? CL_SCOPE_GLOBAL

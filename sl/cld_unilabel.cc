@@ -16,13 +16,13 @@ class CldUniLabel: public ClDecoratorBase {
         }
 
         virtual void fnc_open(
-            int                     line,
+            struct cl_location      *loc,
             const char              *fnc_name,
             enum cl_scope_e         scope)
         {
             if (CL_SCOPE_FUNCTION == scope_)
                 this->reset();
-            ClDecoratorBase::fnc_open(line, fnc_name, scope);
+            ClDecoratorBase::fnc_open(loc, fnc_name, scope);
         }
 
         virtual void bb_open(
@@ -34,22 +34,22 @@ class CldUniLabel: public ClDecoratorBase {
 
 
         virtual void insn_jmp(
-            int                     line,
+            struct cl_location      *loc,
             const char              *label)
         {
             std::string resolved(this->resolveLabel(label));
-            ClDecoratorBase::insn_jmp(line, resolved.c_str());
+            ClDecoratorBase::insn_jmp(loc, resolved.c_str());
         }
 
         virtual void insn_cond(
-            int                     line,
+            struct cl_location      *loc,
             struct cl_operand       *src,
             const char              *label_true,
             const char              *label_false)
         {
             std::string resolved1(this->resolveLabel(label_true));
             std::string resolved2(this->resolveLabel(label_false));
-            ClDecoratorBase::insn_cond(line, src, resolved1.c_str(),
+            ClDecoratorBase::insn_cond(loc, src, resolved1.c_str(),
                                    resolved2.c_str());
         }
 
