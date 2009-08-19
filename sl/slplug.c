@@ -104,15 +104,18 @@ static void decl_to_cl_operand(struct cl_operand *op, tree t)
 
 static void handle_operand(struct cl_operand *op, tree t)
 {
-    enum tree_code code = TREE_CODE(t);
-
     op->type = CL_OPERAND_VOID;
     op->deref = false;
     op->offset = NULL;
 
+    if (!t)
+        return;
+
+    enum tree_code code = TREE_CODE(t);
     switch (code) {
         case VAR_DECL:
         case PARM_DECL:
+        case FUNCTION_DECL:
             decl_to_cl_operand(op, t);
             break;
 
@@ -298,20 +301,45 @@ static void handle_stmt_assign(gimple stmt)
     };
 }
 
+static void handle_stmt_call_args(gimple stmt)
+{
+    const int argc = gimple_call_num_args(stmt);
+    int i;
+    for (i = 0; i < argc; ++i) {
+        struct cl_operand src;
+        handle_operand(&src, gimple_call_arg(stmt, i));
+        cl->insn_call_arg(cl, i + 1, &src);
+    }
+}
+
 static void handle_stmt_call(gimple stmt)
 {
-    (void) stmt;
-    SL_WARN_UNHANDLED_GIMPLE(stmt, "GIMPLE_CALL");
+    tree op0 = gimple_call_fn(stmt);
+
+    if (ADDR_EXPR == TREE_CODE(op0))
+        op0 = TREE_OPERAND(op0, 0);
+
+    if (!op0)
+        TRAP;
+
+    struct cl_operand dst;
+    handle_operand(&dst, gimple_call_lhs(stmt));
+
+    struct cl_operand fnc;
+    handle_operand(&fnc, op0);
+
+    struct cl_location loc;
+    read_gimple_location(&loc, stmt);
+    cl->insn_call_open(cl, &loc, &dst, &fnc);
+
+    handle_stmt_call_args(stmt);
+    cl->insn_call_close(cl);
 }
 
 static void handle_stmt_return(gimple stmt)
 {
     struct cl_operand src;
-    tree retval = gimple_return_retval(stmt);
-    if (retval)
-        handle_operand(&src, retval);
-    else
-        src.type = CL_OPERAND_VOID;
+    handle_operand(&src, gimple_return_retval(stmt));
 
     struct cl_insn cli;
     cli.type                    = CL_INSN_RET;
