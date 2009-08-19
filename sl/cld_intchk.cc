@@ -376,14 +376,17 @@ void CldCbSeqChk::setState(EState newState) {
             break;
 
         case S_FNC_BODY:
-            if (S_BLOCK_LEVEL != newState)
-                this->emitUnexpected(newState);
+            switch (newState) {
+                case S_BLOCK_LEVEL:
+                case S_FILE_LEVEL:
+                    break;
+                default:
+                    this->emitUnexpected(newState);
+            }
             break;
 
         case S_BLOCK_LEVEL:
             switch (newState) {
-                case S_FILE_LEVEL:
-                case S_BLOCK_LEVEL:
                 case S_INSN_CALL:
                     break;
                 default:
@@ -405,28 +408,37 @@ void CldCbSeqChk::chkArgDecl() {
 }
 
 void CldCbSeqChk::chkInsnJmp() {
-    if (S_FNC_DECL == state_) {
-        state_ = S_FNC_BODY;
-        return;
+    switch (state_) {
+        case S_FNC_DECL:
+        case S_BLOCK_LEVEL:
+            break;
+
+        default:
+            this->emitUnexpected("CL_INSN_JMP");
     }
 
-    if (S_BLOCK_LEVEL != state_)
-        this->emitUnexpected("CL_INSN_JMP");
+    state_ = S_FNC_BODY;
 }
 
 void CldCbSeqChk::chkInsnCond() {
     if (S_BLOCK_LEVEL != state_)
         this->emitUnexpected("CL_INSN_COND");
+
+    state_ = S_FNC_BODY;
 }
 
 void CldCbSeqChk::chkInsnRet() {
     if (S_BLOCK_LEVEL != state_)
         this->emitUnexpected("CL_INSN_RET");
+
+    state_ = S_FNC_BODY;
 }
 
 void CldCbSeqChk::chkInsnAbort() {
     if (S_BLOCK_LEVEL != state_)
         this->emitUnexpected("CL_INSN_ABORT");
+
+    state_ = S_FNC_BODY;
 }
 
 void CldCbSeqChk::chkInsnUnop() {
