@@ -38,6 +38,24 @@
     fprintf(stderr, "%s:%d: warning: '%s' not handled\n", \
             __FILE__, __LINE__, (what))
 
+// TODO: replace with gcc native debugging infrastructure
+#define SL_WARN_UNHANDLED_GIMPLE(stmt, what) \
+    fprintf(stderr, "%s:%d:%d: warning: '%s' not handled\n" \
+            "%s:%d: note: raised from '%s'\n", \
+            expand_location((stmt)->gsbase.location).file, \
+            expand_location((stmt)->gsbase.location).line, \
+            expand_location((stmt)->gsbase.location).column, \
+            (what), __FILE__, __LINE__, __FUNCTION__)
+
+// TODO: replace with gcc native debugging infrastructure
+#define SL_WARN_UNHANDLED_EXPR(expr, what) \
+    fprintf(stderr, "%s:%d:%d: warning: '%s' not handled\n" \
+            "%s:%d: note: raised from '%s'\n", \
+            expand_location(EXPR_LOCATION(expr)).file, \
+            expand_location(EXPR_LOCATION(expr)).line, \
+            expand_location(EXPR_LOCATION(expr)).column, \
+            (what), __FILE__, __LINE__, __FUNCTION__)
+
 // this should be using gcc's fancy_abort(), but it was actually not tested
 #define SL_ASSERT(expr) \
     if (!(expr)) abort()
@@ -119,16 +137,17 @@ static void handle_operand(struct cl_operand *op, tree t)
                         TRAP;
                 }
 
-                tree op1 = TREE_OPERAND(t, 1);
-                if (!op1)
-                    TRAP;
-
                 if (COMPONENT_REF == TREE_CODE(op0)) {
-                    SL_WARN_UNHANDLED("access to sub-type");
+                    SL_WARN_UNHANDLED_EXPR(t, "access to sub-type");
                     return;
                 }
 
                 decl_to_cl_operand(op, op0);
+
+                tree op1 = TREE_OPERAND(t, 1);
+                if (!op1)
+                    TRAP;
+
                 op->deref           = true;
                 op->offset          = IDENTIFIER_POINTER(DECL_NAME(op1));
             }
@@ -140,19 +159,19 @@ static void handle_operand(struct cl_operand *op, tree t)
             break;
 
         case ARRAY_REF:
-            SL_WARN_UNHANDLED("ARRAY_REF");
+            SL_WARN_UNHANDLED_EXPR(t, "ARRAY_REF");
             return;
 
         case ADDR_EXPR:
-            SL_WARN_UNHANDLED("ADDR_EXPR");
+            SL_WARN_UNHANDLED_EXPR(t, "ADDR_EXPR");
             return;
 
         case BIT_FIELD_REF:
-            SL_WARN_UNHANDLED("BIT_FIELD_REF");
+            SL_WARN_UNHANDLED_EXPR(t, "BIT_FIELD_REF");
             return;
 
         case CONSTRUCTOR:
-            SL_WARN_UNHANDLED("CONSTRUCTOR");
+            SL_WARN_UNHANDLED_EXPR(t, "CONSTRUCTOR");
             return;
 
         default:
@@ -175,7 +194,7 @@ static void handle_stmt_unop(gimple stmt, enum tree_code code,
 
     switch (code) {
         case ADDR_EXPR:
-            SL_WARN_UNHANDLED("ADDR_EXPR");
+            SL_WARN_UNHANDLED_GIMPLE(stmt, "ADDR_EXPR");
             return;
 
         // TODO: grok various unary operators here
@@ -234,15 +253,15 @@ static void handle_stmt_binop(gimple stmt, enum tree_code code,
             break;
 
         case BIT_AND_EXPR:
-            SL_WARN_UNHANDLED("BIT_AND_EXPR");
+            SL_WARN_UNHANDLED_GIMPLE(stmt, "BIT_AND_EXPR");
             return;
 
         case MULT_EXPR:
-            SL_WARN_UNHANDLED("MULT_EXPR");
+            SL_WARN_UNHANDLED_GIMPLE(stmt, "MULT_EXPR");
             return;
 
         case POINTER_PLUS_EXPR:
-            SL_WARN_UNHANDLED("POINTER_PLUS_EXPR");
+            SL_WARN_UNHANDLED_GIMPLE(stmt, "POINTER_PLUS_EXPR");
             return;
 
         default:
@@ -277,6 +296,29 @@ static void handle_stmt_assign(gimple stmt)
             TRAP;
             break;
     };
+}
+
+static void handle_stmt_call(gimple stmt)
+{
+    (void) stmt;
+    SL_WARN_UNHANDLED_GIMPLE(stmt, "GIMPLE_CALL");
+}
+
+static void handle_stmt_return(gimple stmt)
+{
+    struct cl_operand src;
+    tree retval = gimple_return_retval(stmt);
+    if (retval)
+        handle_operand(&src, retval);
+    else
+        src.type = CL_OPERAND_VOID;
+
+    struct cl_insn cli;
+    cli.type                    = CL_INSN_RET;
+    cli.data.insn_ret.src       = &src;
+
+    read_gimple_location(&cli.loc, stmt);
+    cl->insn(cl, &cli);
 }
 
 static const struct cl_operand stmt_cond_fixed_reg = {
@@ -355,12 +397,16 @@ static tree cb_walk_gimple_stmt (gimple_stmt_iterator *iter,
     (void) subtree_done;
     (void) info;
 
+#if 0
     printf("\t\t");
     print_gimple_stmt(stdout, stmt,
                       /* indentation */ 0,
                       TDF_LINENO);
+#endif
 
-    switch (stmt->gsbase.code) {
+    enum gimple_code code = stmt->gsbase.code;
+
+    switch (code) {
         case GIMPLE_COND:
             handle_stmt_cond(stmt);
             break;
@@ -369,8 +415,24 @@ static tree cb_walk_gimple_stmt (gimple_stmt_iterator *iter,
             handle_stmt_assign(stmt);
             break;
 
+        case GIMPLE_CALL:
+            handle_stmt_call(stmt);
+            break;
+
+        case GIMPLE_RETURN:
+            handle_stmt_return(stmt);
+            break;
+
+        case GIMPLE_LABEL:
+            SL_WARN_UNHANDLED_GIMPLE(stmt, "GIMPLE_LABEL");
+            break;
+
+        case GIMPLE_SWITCH:
+            SL_WARN_UNHANDLED_GIMPLE(stmt, "GIMPLE_SWITCH");
+            break;
+
         default:
-            //TRAP;
+            TRAP;
             break;
     }
 
@@ -639,7 +701,7 @@ int plugin_init (struct plugin_name_args *plugin_info,
 
     // initialize code listener
     cl_global_init_defaults(NULL, true);
-    cl = create_cl_chain(/* SPARSE verbose level */ 2);
+    cl = create_cl_chain(/* SPARSE verbose level */ 0);
     SL_ASSERT(cl);
 
     // try to register callbacks (and virtual callbacks)
