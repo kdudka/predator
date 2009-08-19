@@ -112,12 +112,23 @@ static void read_gimple_location(struct cl_location *loc, const_gimple g)
     read_gcc_location(loc, g->gsbase.location);
 }
 
+static char* index_to_label (unsigned idx) {
+    char *label;
+    int rv = asprintf(&label, "%u", idx);
+    SL_ASSERT(0 < rv);
+    return label;
+}
+
 static void decl_to_cl_operand(struct cl_operand *op, tree t)
 {
+    // FIXME: this condition may be not sufficient in all cases
     if (DECL_NAME(t)) {
+        // maybe var
         op->type            = CL_OPERAND_VAR;
         op->data.var.name   = IDENTIFIER_POINTER(DECL_NAME(t));
+
     } else {
+        // maybe reg
         op->type            = CL_OPERAND_REG;
         op->data.reg.id     = DECL_UID(t);
     }
@@ -130,6 +141,7 @@ static void handle_operand_indirect_ref(struct cl_operand *op, tree t)
 {
     tree op0 = TREE_OPERAND(t, 0);
     if (!op0)
+        // Oops, nothing to dereference...
         TRAP;
 
     decl_to_cl_operand(op, op0);
@@ -142,6 +154,7 @@ static void handle_operand_component_ref(struct cl_operand *op, tree t)
     if (!op0)
         TRAP;
 
+    // FIXME: we should distinguish between '.' and '->'
     if (INDIRECT_REF == TREE_CODE(op0)) {
         op0 = TREE_OPERAND(op0, 0);
         if (!op0)
@@ -149,20 +162,26 @@ static void handle_operand_component_ref(struct cl_operand *op, tree t)
     }
 
     if (COMPONENT_REF == TREE_CODE(op0)) {
+        // TODO: implement?
+        // this should be analysed in regards to code_listener interface
         SL_WARN_UNHANDLED_EXPR(t, "access to sub-type");
         return;
     }
 
+    // attempt to read base (usually var/reg)
     decl_to_cl_operand(op, op0);
 
+    // attempt to read offset
     tree op1 = TREE_OPERAND(t, 1);
     if (!op1)
+        // Oops, offset not available...
         TRAP;
 
     op->deref           = true;
     op->offset          = IDENTIFIER_POINTER(DECL_NAME(op1));
 }
 
+// TODO: simplify, check rare cases; and probably split into more functions
 static void handle_operand(struct cl_operand *op, tree t)
 {
     op->type = CL_OPERAND_VOID;
@@ -272,6 +291,7 @@ static void handle_stmt_unop(gimple stmt, enum tree_code code,
 
         // TODO: grok various unary operators here
         default:
+            // FIXME: it silently ignores any special unary operator!!
             cli.data.insn_unop.type = CL_UNOP_ASSIGN;
             break;
     }
@@ -297,36 +317,20 @@ static void handle_stmt_binop(gimple stmt, enum tree_code code,
     read_gimple_location(&cli.loc, stmt);
 
     switch (code) {
-        case EQ_EXPR:
-            cli.data.insn_binop.type = CL_BINOP_EQ;
-            break;
-
-        case NE_EXPR:
-            cli.data.insn_binop.type = CL_BINOP_NE;
-            break;
-
-        case LT_EXPR:
-            cli.data.insn_binop.type = CL_BINOP_LT;
-            break;
-
-        case GT_EXPR:
-            cli.data.insn_binop.type = CL_BINOP_GT;
-            break;
-
-        case LE_EXPR:
-            cli.data.insn_binop.type = CL_BINOP_LE;
-            break;
-
-        case GE_EXPR:
-            cli.data.insn_binop.type = CL_BINOP_GE;
-            break;
-
-        case PLUS_EXPR:
-            cli.data.insn_binop.type = CL_BINOP_ADD;
-            break;
+        case EQ_EXPR:       cli.data.insn_binop.type = CL_BINOP_EQ;     break;
+        case NE_EXPR:       cli.data.insn_binop.type = CL_BINOP_NE;     break;
+        case LT_EXPR:       cli.data.insn_binop.type = CL_BINOP_LT;     break;
+        case GT_EXPR:       cli.data.insn_binop.type = CL_BINOP_GT;     break;
+        case LE_EXPR:       cli.data.insn_binop.type = CL_BINOP_LE;     break;
+        case GE_EXPR:       cli.data.insn_binop.type = CL_BINOP_GE;     break;
+        case PLUS_EXPR:     cli.data.insn_binop.type = CL_BINOP_ADD;    break;
 
         case BIT_AND_EXPR:
             SL_WARN_UNHANDLED_GIMPLE(stmt, "BIT_AND_EXPR");
+            return;
+
+        case BIT_IOR_EXPR:
+            SL_WARN_UNHANDLED_GIMPLE(stmt, "BIT_IOR_EXPR");
             return;
 
         case MULT_EXPR:
@@ -351,14 +355,14 @@ static void handle_stmt_assign(gimple stmt)
 
     switch (gimple_num_ops(stmt)) {
         case 2:
-            // unary operator
+            // unary operator (lhs + 1)
             handle_stmt_unop(stmt, gimple_assign_rhs_code(stmt),
                     &dst,
                     gimple_assign_rhs1(stmt));
             break;
 
         case 3:
-            // binary operator
+            // binary operator (lhs + 2)
             handle_stmt_binop(stmt, gimple_assign_rhs_code(stmt),
                     &dst,
                     gimple_assign_rhs1(stmt),
@@ -387,21 +391,26 @@ static void handle_stmt_call(gimple stmt)
     tree op0 = gimple_call_fn(stmt);
 
     if (ADDR_EXPR == TREE_CODE(op0))
+        // automagic dereference
         op0 = TREE_OPERAND(op0, 0);
 
     if (!op0)
         TRAP;
 
+    // lhs
     struct cl_operand dst;
     handle_operand(&dst, gimple_call_lhs(stmt));
 
+    // fnc is also operand (call through pointer, struct member, etc.)
     struct cl_operand fnc;
     handle_operand(&fnc, op0);
 
+    // emit CALL insn
     struct cl_location loc;
     read_gimple_location(&loc, stmt);
     cl->insn_call_open(cl, &loc, &dst, &fnc);
 
+    // emit args
     handle_stmt_call_args(stmt);
     cl->insn_call_close(cl);
 
@@ -442,13 +451,6 @@ static const struct cl_operand stmt_cond_fixed_reg = {
         }
     }
 };
-
-static char* index_to_label (unsigned idx) {
-    char *label;
-    int rv = asprintf(&label, "%u", idx);
-    SL_ASSERT(0 < rv);
-    return label;
-}
 
 static void handle_stmt_cond_br(gimple stmt, const char *then_label,
                                 const char *else_label)
@@ -615,7 +617,7 @@ static void handle_fnc_cfg (struct control_flow_graph *cfg)
     if (!bb)
         TRAP;
 
-    while (/* FIXME: off by one error */ bb->next_bb) {
+    while (/* skip EXIT block */ bb->next_bb) {
         handle_fnc_bb(bb);
         bb = bb->next_bb;
     }
@@ -637,28 +639,27 @@ static void handle_fnc_decl_arglist (tree args)
 // handle FUNCTION_DECL tree node given as DECL
 static void handle_fnc_decl (tree decl)
 {
-    tree ident = DECL_NAME (decl);
-
+    // obtain fnc location
     struct cl_location loc;
     read_gcc_location(&loc, DECL_SOURCE_LOCATION(decl));
 
+    // emit fnc declaration
+    tree ident = DECL_NAME (decl);
     cl->fnc_open(cl, &loc, IDENTIFIER_POINTER(ident),
             TREE_PUBLIC(decl)
                 ? CL_SCOPE_GLOBAL
                 : CL_SCOPE_STATIC);
 
-    // print argument list
+    // emit arg declartaions
     tree args = DECL_ARGUMENTS (decl);
     handle_fnc_decl_arglist (args);
 
-    // obtain fnc structure
+    // obtain CFG for current function
     struct function *fnc = DECL_STRUCT_FUNCTION (decl);
     if (NULL == fnc) {
         SL_WARN_UNHANDLED ("NULL == fnc");
         return;
     }
-
-    // obtain CFG
     struct control_flow_graph *cfg = fnc->cfg;
     if (NULL == cfg) {
         SL_WARN_UNHANDLED ("CFG not found");
