@@ -402,6 +402,16 @@ static void handle_stmt_call(gimple stmt)
 
     handle_stmt_call_args(stmt);
     cl->insn_call_close(cl);
+
+    if (ECF_NORETURN & gimple_call_flags(stmt)) {
+        // this call never returns --> end of BB!!
+
+        struct cl_insn cli;
+        cli.type    = CL_INSN_ABORT;
+        cli.loc     = loc;
+
+        cl->insn(cl, &cli);
+    }
 }
 
 static void handle_stmt_return(gimple stmt)
