@@ -183,29 +183,29 @@ struct cl_insn {
 
         /* CL_INSN_COND */
         struct {
-            struct cl_operand       *src;
+            const struct cl_operand *src;
             const char              *then_label;
             const char              *else_label;
         } insn_cond;
 
         /* CL_INSN_RET */
         struct {
-            struct cl_operand       *src;
+            const struct cl_operand *src;
         } insn_ret;
 
         /* CL_INSN_UNOP */
         struct {
             enum cl_unop_e          type;
-            struct cl_operand       *dst;
-            struct cl_operand       *src;
+            const struct cl_operand *dst;
+            const struct cl_operand *src;
         } insn_unop;
 
         /* CL_INSN_BINOP */
         struct {
             enum cl_binop_e         type;
-            struct cl_operand       *dst;
-            struct cl_operand       *src1;
-            struct cl_operand       *src2;
+            const struct cl_operand *dst;
+            const struct cl_operand *src1;
+            const struct cl_operand *src2;
         } insn_binop;
 
     } data;

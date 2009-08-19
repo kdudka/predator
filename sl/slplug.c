@@ -70,11 +70,18 @@ static void read_gimple_location(struct cl_location *loc, const_gimple g)
     read_gcc_location(loc, g->gsbase.location);
 }
 
-static char* index_to_label (unsigned idx) {
-    char *label;
-    int rv = asprintf(&label, "%u", idx);
-    SL_ASSERT(0 < rv);
-    return label;
+static void decl_to_cl_operand(struct cl_operand *op, tree t)
+{
+    if (DECL_NAME(t)) {
+        op->type            = CL_OPERAND_VAR;
+        op->data.var.name   = IDENTIFIER_POINTER(DECL_NAME(t));
+    } else {
+        op->type            = CL_OPERAND_REG;
+        op->data.reg.id     = DECL_UID(t);
+    }
+
+    op->deref = false;
+    op->offset = NULL;
 }
 
 static void handle_operand(struct cl_operand *op, tree t)
@@ -88,14 +95,7 @@ static void handle_operand(struct cl_operand *op, tree t)
     switch (code) {
         case VAR_DECL:
         case PARM_DECL:
-            // TODO: move to function
-            if (DECL_NAME(t)) {
-                op->type            = CL_OPERAND_VAR;
-                op->data.var.name   = IDENTIFIER_POINTER(DECL_NAME(t));
-            } else {
-                op->type            = CL_OPERAND_REG;
-                op->data.reg.id     = DECL_UID(t);
-            }
+            decl_to_cl_operand(op, t);
             break;
 
         case INDIRECT_REF:
@@ -108,15 +108,7 @@ static void handle_operand(struct cl_operand *op, tree t)
                     op0 = TREE_OPERAND(op0, 0);
 
                 SL_ASSERT(op0);
-
-                // TODO: move to function
-                if (DECL_NAME(op0)) {
-                    op->type            = CL_OPERAND_VAR;
-                    op->data.var.name   = IDENTIFIER_POINTER(DECL_NAME(op0));
-                } else {
-                    op->type            = CL_OPERAND_REG;
-                    op->data.reg.id     = DECL_UID(op0);
-                }
+                decl_to_cl_operand(op, op0);
                 op->deref           = true;
 
                 if (COMPONENT_REF == code) {
@@ -131,8 +123,8 @@ static void handle_operand(struct cl_operand *op, tree t)
             break;
 
         case INTEGER_CST:
-            op->type                = CL_OPERAND_INT;
-            op->data.lit_int.value  = TREE_INT_CST_LOW(t);
+            op->type                    = CL_OPERAND_INT;
+            op->data.lit_int.value      = TREE_INT_CST_LOW(t);
             break;
 
         default:
@@ -145,7 +137,6 @@ static void handle_stmt_unop(gimple stmt, enum tree_code code,
                               struct cl_operand *dst, tree src_tree)
 {
     struct cl_operand src;
-
     handle_operand(&src, src_tree);
 
     struct cl_insn cli;
@@ -155,6 +146,7 @@ static void handle_stmt_unop(gimple stmt, enum tree_code code,
     read_gimple_location(&cli.loc, stmt);
 
     switch (code) {
+        // TODO: revisit the fallthru
         case VAR_DECL:
         case PARM_DECL:
         case COMPONENT_REF:
@@ -169,7 +161,7 @@ static void handle_stmt_unop(gimple stmt, enum tree_code code,
 }
 
 static void handle_stmt_binop(gimple stmt, enum tree_code code,
-                              struct cl_operand *dst,
+                              const struct cl_operand *dst,
                               tree src1_tree, tree src2_tree)
 {
     struct cl_operand src1;
@@ -225,15 +217,15 @@ static void handle_stmt_assign(gimple stmt)
     switch (gimple_num_ops(stmt)) {
         case 2:
             // unary operator
-            handle_stmt_unop(stmt,
-                    gimple_assign_rhs_code(stmt), &dst,
+            handle_stmt_unop(stmt, gimple_assign_rhs_code(stmt),
+                    &dst,
                     gimple_assign_rhs1(stmt));
             break;
 
         case 3:
             // binary operator
-            handle_stmt_binop(stmt,
-                    gimple_assign_rhs_code(stmt), &dst,
+            handle_stmt_binop(stmt, gimple_assign_rhs_code(stmt),
+                    &dst,
                     gimple_assign_rhs1(stmt),
                     gimple_assign_rhs2(stmt));
             break;
@@ -244,23 +236,35 @@ static void handle_stmt_assign(gimple stmt)
     };
 }
 
-static void fill_operand_with_r0(struct cl_operand *op)
-{
-    op->type        = CL_OPERAND_REG;
-    op->deref       = false;
-    op->offset      = NULL;
-    op->data.reg.id = /* %r0 is always used for CL_INSN_COND */ 0;
+static const struct cl_operand stmt_cond_fixed_reg = {
+    .type           = CL_OPERAND_REG,
+    .deref          = false,
+    .offset         = NULL,
+    .data = {
+        .reg = {
+            .id     = 0
+        }
+    }
+};
+
+static char* index_to_label (unsigned idx) {
+    char *label;
+    int rv = asprintf(&label, "%u", idx);
+    SL_ASSERT(0 < rv);
+    return label;
 }
 
-static void handle_stmt_cond_expr(gimple stmt)
+static void handle_stmt_cond_br(gimple stmt, const char *then_label,
+                                const char *else_label)
 {
-    struct cl_operand dst;
-    fill_operand_with_r0(&dst);
+    struct cl_insn cli;
+    cli.type                        = CL_INSN_COND;
+    cli.data.insn_cond.src          = &stmt_cond_fixed_reg;
+    cli.data.insn_cond.then_label   = then_label;
+    cli.data.insn_cond.else_label   = else_label;
 
-    handle_stmt_binop(stmt,
-            gimple_cond_code(stmt), &dst,
-            gimple_cond_lhs(stmt),
-            gimple_cond_rhs(stmt));
+    read_gimple_location(&cli.loc, stmt);
+    cl->insn(cl, &cli);
 }
 
 static void handle_stmt_cond(gimple stmt)
@@ -269,10 +273,10 @@ static void handle_stmt_cond(gimple stmt)
 
     char *label_true = NULL;
     char *label_false = NULL;
-    struct basic_block_def *bb = stmt->gsbase.bb;
 
     edge e;
     edge_iterator ei;
+    struct basic_block_def *bb = stmt->gsbase.bb;
     FOR_EACH_EDGE(e, ei, bb->succs) {
         if (e->flags & /* true */ 1024) {
             struct basic_block_def *next = e->dest;
@@ -287,19 +291,15 @@ static void handle_stmt_cond(gimple stmt)
     if (!label_true && !label_false)
         TRAP;
 
-    handle_stmt_cond_expr(stmt);
+    handle_stmt_binop(stmt,
+            gimple_cond_code(stmt),
+            &stmt_cond_fixed_reg,
+            gimple_cond_lhs(stmt),
+            gimple_cond_rhs(stmt));
 
-    struct cl_operand op;
-    fill_operand_with_r0(&op);
-
-    struct cl_insn cli;
-    cli.type                        = CL_INSN_COND;
-    cli.data.insn_cond.src          = &op;
-    cli.data.insn_cond.then_label   = label_true;
-    cli.data.insn_cond.else_label   = label_false;
-
-    read_gimple_location(&cli.loc, stmt);
-    cl->insn(cl, &cli);
+    handle_stmt_cond_br(stmt, label_true, label_false);
+    free(label_true);
+    free(label_false);
 }
 
 // callback of walk_gimple_seq declared in <gimple.h>
@@ -359,16 +359,6 @@ static void handle_jmp_edge (edge e)
 
 static void handle_fnc_bb (struct basic_block_def *bb)
 {
-    if (bb == cfun->cfg->x_entry_block_ptr) {
-        edge e;
-        edge_iterator ei = ei_start(bb->succs);
-        if (ei_cond(ei, &e) && e->dest) {
-            // ENTRY block
-            handle_jmp_edge(e);
-            return;
-        }
-    }
-
     // declare bb
     char *label = index_to_label(bb->index);
     cl->bb_open(cl, label);
@@ -395,6 +385,16 @@ static void handle_fnc_bb (struct basic_block_def *bb)
 static void handle_fnc_cfg (struct control_flow_graph *cfg)
 {
     struct basic_block_def *bb = cfg->x_entry_block_ptr;
+    edge e;
+    edge_iterator ei = ei_start(bb->succs);
+    if (ei_cond(ei, &e) && e->dest) {
+        // ENTRY block
+        handle_jmp_edge(e);
+        bb = bb->next_bb;
+    }
+
+    if (!bb)
+        TRAP;
 
     while (/* FIXME: off by one error */ bb->next_bb) {
         handle_fnc_bb(bb);
