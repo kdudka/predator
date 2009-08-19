@@ -102,6 +102,43 @@ static void decl_to_cl_operand(struct cl_operand *op, tree t)
     op->offset = NULL;
 }
 
+static void handle_operand_indirect_ref(struct cl_operand *op, tree t)
+{
+    tree op0 = TREE_OPERAND(t, 0);
+    if (!op0)
+        TRAP;
+
+    decl_to_cl_operand(op, op0);
+    op->deref = true;
+}
+
+static void handle_operand_component_ref(struct cl_operand *op, tree t)
+{
+    tree op0 = TREE_OPERAND(t, 0);
+    if (!op0)
+        TRAP;
+
+    if (INDIRECT_REF == TREE_CODE(op0)) {
+        op0 = TREE_OPERAND(op0, 0);
+        if (!op0)
+            TRAP;
+    }
+
+    if (COMPONENT_REF == TREE_CODE(op0)) {
+        SL_WARN_UNHANDLED_EXPR(t, "access to sub-type");
+        return;
+    }
+
+    decl_to_cl_operand(op, op0);
+
+    tree op1 = TREE_OPERAND(t, 1);
+    if (!op1)
+        TRAP;
+
+    op->deref           = true;
+    op->offset          = IDENTIFIER_POINTER(DECL_NAME(op1));
+}
+
 static void handle_operand(struct cl_operand *op, tree t)
 {
     op->type = CL_OPERAND_VOID;
@@ -119,41 +156,12 @@ static void handle_operand(struct cl_operand *op, tree t)
             decl_to_cl_operand(op, t);
             break;
 
-        case INDIRECT_REF: {
-                tree op0 = TREE_OPERAND(t, 0);
-                if (!op0)
-                    TRAP;
-
-                decl_to_cl_operand(op, op0);
-                op->deref = true;
-            }
+        case INDIRECT_REF:
+            handle_operand_indirect_ref(op, t);
             break;
 
-        case COMPONENT_REF: {
-                tree op0 = TREE_OPERAND(t, 0);
-                if (!op0)
-                    TRAP;
-
-                if (INDIRECT_REF == TREE_CODE(op0)) {
-                    op0 = TREE_OPERAND(op0, 0);
-                    if (!op0)
-                        TRAP;
-                }
-
-                if (COMPONENT_REF == TREE_CODE(op0)) {
-                    SL_WARN_UNHANDLED_EXPR(t, "access to sub-type");
-                    return;
-                }
-
-                decl_to_cl_operand(op, op0);
-
-                tree op1 = TREE_OPERAND(t, 1);
-                if (!op1)
-                    TRAP;
-
-                op->deref           = true;
-                op->offset          = IDENTIFIER_POINTER(DECL_NAME(op1));
-            }
+        case COMPONENT_REF:
+            handle_operand_component_ref(op, t);
             break;
 
         case INTEGER_CST:
@@ -161,21 +169,57 @@ static void handle_operand(struct cl_operand *op, tree t)
             op->data.lit_int.value      = TREE_INT_CST_LOW(t);
             break;
 
-        case ARRAY_REF:
-            SL_WARN_UNHANDLED_EXPR(t, "ARRAY_REF");
-            return;
+        case STRING_CST:
+            op->type                    = CL_OPERAND_STRING;
+            op->data.lit_string.value   = TREE_STRING_POINTER(t);
+            break;
 
-        case ADDR_EXPR:
-            SL_WARN_UNHANDLED_EXPR(t, "ADDR_EXPR");
-            return;
+        case ARRAY_REF: {
+                tree op0 = TREE_OPERAND(t, 0);
+                if (!op0)
+                    TRAP;
+
+                switch (TREE_CODE(op0)) {
+                    case VAR_DECL:
+                        SL_WARN_UNHANDLED_EXPR(t, "ARRAY_REF / VAR_DECL");
+                        // go through!
+
+                    case STRING_CST:
+                        // Aiee, recursion!
+                        handle_operand(op, op0);
+                        break;
+
+                    default:
+                        SL_WARN_UNHANDLED_EXPR(t, "ARRAY_REF");
+                }
+            }
+            break;
+
+        case ADDR_EXPR: {
+                tree op0 = TREE_OPERAND(t, 0);
+                if (!op0)
+                    TRAP;
+
+                switch (TREE_CODE(op0)) {
+                    case ARRAY_REF:
+                    case STRING_CST:
+                        // Aiee, recursion!
+                        handle_operand(op, op0);
+                        break;
+
+                    default:
+                        SL_WARN_UNHANDLED_EXPR(t, "ADDR_EXPR");
+                }
+            }
+            break;
 
         case BIT_FIELD_REF:
             SL_WARN_UNHANDLED_EXPR(t, "BIT_FIELD_REF");
-            return;
+            break;
 
         case CONSTRUCTOR:
             SL_WARN_UNHANDLED_EXPR(t, "CONSTRUCTOR");
-            return;
+            break;
 
         default:
             TRAP;

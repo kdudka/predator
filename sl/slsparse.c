@@ -85,9 +85,10 @@ static void free_cl_operand_data(struct cl_operand *op)
     }
 }
 
-static char* strdup_if_not_null(const char *str) {
-    return (str)
-        ? strdup(str)
+static const char* strdup_sparse_string(const struct string *str)
+{
+    return (str->length)
+        ? strndup(str->data, str->length)
         : NULL;
 }
 
@@ -129,8 +130,8 @@ static void pseudo_to_cl_operand(struct instruction *insn, pseudo_t pseudo,
                     case EXPR_STRING:
                         // FIXME: not dup'ed now (subtle)
                         op->type                    = CL_OPERAND_STRING;
-                        op->data.lit_string.value   = strdup_if_not_null(
-                                show_string(expr->string));
+                        op->data.lit_string.value   =
+                            strdup_sparse_string(expr->string);
                         return;
 
                     default:

@@ -257,8 +257,7 @@ void ClPrettyPrint::printOperand(const struct cl_operand *op) {
                             << "CL_OPERAND_STRING with no string");
                     break;
                 }
-                // FIXME: bad quoting!!
-                SSD_COLORIZE(out_, C_LIGHT_PURPLE) << text;
+                SSD_COLORIZE(out_, C_LIGHT_PURPLE) << "\"" << text << "\"";
             }
             break;
 
