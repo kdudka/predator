@@ -205,7 +205,9 @@ static void handle_operand(struct cl_operand *op, tree t)
 
                 switch (TREE_CODE(op0)) {
                     case VAR_DECL:
+#if 0
                         SL_WARN_UNHANDLED_EXPR(t, "ARRAY_REF / VAR_DECL");
+#endif
                         // go through!
 
                     case STRING_CST:
@@ -423,6 +425,9 @@ static void handle_stmt_return(gimple stmt)
     cli.type                    = CL_INSN_RET;
     cli.data.insn_ret.src       = &src;
 
+    // FIXME: location info is valid only for IMPLICIT 'return' statement
+    // It's really strange because it does not work properly even
+    // with print_gimple_stmt()
     read_gimple_location(&cli.loc, stmt);
     cl->insn(cl, &cli);
 }

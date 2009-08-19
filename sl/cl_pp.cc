@@ -5,7 +5,7 @@
 #define UNIFY_LABELS_SCOPE      CL_SCOPE_FUNCTION
 
 // scope for UNIFY_REGS is always CL_SCOPE_FUNCTION
-#define UNIFY_REGS              0
+#define UNIFY_REGS              1
 
 #define ARG_SUBST               1
 

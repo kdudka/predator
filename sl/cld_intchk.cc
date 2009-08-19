@@ -259,12 +259,12 @@ class CldRegUsageChk: public ClDecoratorBase {
                     break;
 
                 case CL_INSN_UNOP:
-                    this->handleDst(cli->data.insn_unop.dst);
+                    this->handleDstSrc(cli->data.insn_unop.dst);
                     this->handleSrc(cli->data.insn_unop.src);
                     break;
 
                 case CL_INSN_BINOP:
-                    this->handleDst(cli->data.insn_binop.dst);
+                    this->handleDstSrc(cli->data.insn_binop.dst);
                     this->handleSrc(cli->data.insn_binop.src1);
                     this->handleSrc(cli->data.insn_binop.src2);
                     break;
@@ -317,6 +317,7 @@ class CldRegUsageChk: public ClDecoratorBase {
         void reset();
         void handleDst(const struct cl_operand *);
         void handleSrc(const struct cl_operand *);
+        void handleDstSrc(const struct cl_operand *);
         void emitWarnings();
 };
 
@@ -539,6 +540,16 @@ void CldRegUsageChk::handleSrc(const struct cl_operand *op) {
     u.read = true;
     if (u.loc.line < 0)
         u.loc = loc_;
+}
+
+void CldRegUsageChk::handleDstSrc(const struct cl_operand *op) {
+    if (CL_OPERAND_REG != op->type)
+        return;
+
+    if (op->deref)
+        this->handleSrc(op);
+    else
+        this->handleDst(op);
 }
 
 void CldRegUsageChk::emitWarnings() {
