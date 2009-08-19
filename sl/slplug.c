@@ -88,12 +88,45 @@ static void handle_operand(struct cl_operand *op, tree t)
     switch (code) {
         case VAR_DECL:
         case PARM_DECL:
+            // TODO: move to function
             if (DECL_NAME(t)) {
                 op->type            = CL_OPERAND_VAR;
                 op->data.var.name   = IDENTIFIER_POINTER(DECL_NAME(t));
             } else {
                 op->type            = CL_OPERAND_REG;
                 op->data.reg.id     = DECL_UID(t);
+            }
+            break;
+
+        case INDIRECT_REF:
+        case COMPONENT_REF:
+            if (TREE_OPERAND(t, 0)) {
+                tree op0 = TREE_OPERAND(t, 0);
+                SL_ASSERT(op0);
+
+                if (INDIRECT_REF == TREE_CODE(op0))
+                    op0 = TREE_OPERAND(op0, 0);
+
+                SL_ASSERT(op0);
+
+                // TODO: move to function
+                if (DECL_NAME(op0)) {
+                    op->type            = CL_OPERAND_VAR;
+                    op->data.var.name   = IDENTIFIER_POINTER(DECL_NAME(op0));
+                } else {
+                    op->type            = CL_OPERAND_REG;
+                    op->data.reg.id     = DECL_UID(op0);
+                }
+                op->deref           = true;
+
+                if (COMPONENT_REF == code) {
+                    tree op1 = TREE_OPERAND(t, 1);
+                    SL_ASSERT(op1);
+                    op->offset          = IDENTIFIER_POINTER(DECL_NAME(op1));
+                }
+
+            } else {
+                TRAP;
             }
             break;
 
@@ -106,6 +139,33 @@ static void handle_operand(struct cl_operand *op, tree t)
             TRAP;
             break;
     }
+}
+
+static void handle_stmt_unop(gimple stmt, enum tree_code code,
+                              struct cl_operand *dst, tree src_tree)
+{
+    struct cl_operand src;
+
+    handle_operand(&src, src_tree);
+
+    struct cl_insn cli;
+    cli.type                    = CL_INSN_UNOP;
+    cli.data.insn_unop.dst      = dst;
+    cli.data.insn_unop.src      = &src;
+    read_gimple_location(&cli.loc, stmt);
+
+    switch (code) {
+        case VAR_DECL:
+        case PARM_DECL:
+        case COMPONENT_REF:
+            cli.data.insn_unop.type = CL_UNOP_ASSIGN;
+            break;
+
+        default:
+            TRAP;
+    }
+
+    cl->insn(cl, &cli);
 }
 
 static void handle_stmt_binop(gimple stmt, enum tree_code code,
@@ -146,11 +206,42 @@ static void handle_stmt_binop(gimple stmt, enum tree_code code,
             cli.data.insn_binop.type = CL_BINOP_GE;
             break;
 
+        case PLUS_EXPR:
+            cli.data.insn_binop.type = CL_BINOP_ADD;
+            break;
+
         default:
             TRAP;
     }
 
     cl->insn(cl, &cli);
+}
+
+static void handle_stmt_assign(gimple stmt)
+{
+    struct cl_operand dst;
+    handle_operand(&dst, gimple_assign_lhs(stmt));
+
+    switch (gimple_num_ops(stmt)) {
+        case 2:
+            // unary operator
+            handle_stmt_unop(stmt,
+                    gimple_assign_rhs_code(stmt), &dst,
+                    gimple_assign_rhs1(stmt));
+            break;
+
+        case 3:
+            // binary operator
+            handle_stmt_binop(stmt,
+                    gimple_assign_rhs_code(stmt), &dst,
+                    gimple_assign_rhs1(stmt),
+                    gimple_assign_rhs2(stmt));
+            break;
+
+        default:
+            TRAP;
+            break;
+    };
 }
 
 static void fill_operand_with_r0(struct cl_operand *op)
@@ -221,16 +312,22 @@ static tree cb_walk_gimple_stmt (gimple_stmt_iterator *iter,
     (void) subtree_done;
     (void) info;
 
+    printf("\t\t");
+    print_gimple_stmt(stdout, stmt,
+                      /* indentation */ 0,
+                      TDF_LINENO);
+
     switch (stmt->gsbase.code) {
         case GIMPLE_COND:
             handle_stmt_cond(stmt);
             break;
 
+        case GIMPLE_ASSIGN:
+            handle_stmt_assign(stmt);
+            break;
+
         default:
-            printf("\t\t");
-            print_gimple_stmt(stdout, stmt,
-                              /* indentation */ 0,
-                              TDF_LINENO);
+            //TRAP;
             break;
     }
 
