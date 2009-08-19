@@ -22,11 +22,17 @@
 #include <signal.h>
 #define TRAP raise(SIGTRAP)
 
+#ifndef STREQ
+#   define STREQ(s1, s2) (0 == strcmp(s1, s2))
+#endif
+
 // TODO: replace with gcc native debugging infrastructure
 #define SL_LOG(...) do { \
-    fprintf (stderr, "%s:%d: %s: ", __FILE__, __LINE__, plugin_name); \
-    fprintf (stderr, __VA_ARGS__); \
-    fprintf (stderr, "\n"); \
+    if (SL_VERBOSE_PLUG & verbose) { \
+        fprintf (stderr, "%s:%d: %s: ", __FILE__, __LINE__, plugin_name); \
+        fprintf (stderr, __VA_ARGS__); \
+        fprintf (stderr, "\n"); \
+    } \
 } while (0)
 
 // TODO: replace with gcc native debugging infrastructure
@@ -66,10 +72,28 @@ int plugin_is_GPL_compatible;
 // name of the plug-in given by gcc during initialization
 static const char *plugin_name = "[uninitialized]";
 
+// verbose bitmask
+static int verbose = 0;
+#define SL_VERBOSE_PLUG             (1 << 0)
+#define SL_VERBOSE_LOCATION         (1 << 1)
+#define SL_VERBOSE_GIMPLE           (1 << 2)
+
 // plug-in meta-data according to gcc plug-in API
 static struct plugin_info sl_info = {
-    .version = "slplug 0.1 [experimental]",
-    .help = "[not implemented]",
+    .version = "\nslplug 0.1 [experimental]\n",
+    .help =    "\nslplug 0.1 [experimental]\n"
+        "\n"
+        "Usage: gcc -fplugin=slplug.so [OPTIONS] ...\n"
+        "\n"
+        "OPTIONS:\n"
+        "    -fplugin-arg-slplug-help\n"
+        "    -fplugin-arg-slplug-version\n"
+        "    -fplugin-arg-slplug-verbose=VERBOSE_BITMASK\n"
+        "\n"
+        "VERBOSE_BITMASK:\n"
+        "    1    debug gcc plug-in API\n"
+        "    2    print location info using \"locator\" code listener\n"
+        "    4    print each gimple statement before its processing\n"
 };
 
 static struct cl_code_listener *cl = NULL;
@@ -465,19 +489,19 @@ static tree cb_walk_gimple_stmt (gimple_stmt_iterator *iter,
                                  struct walk_stmt_info *info)
 {
     gimple stmt = gsi_stmt (*iter);
+    bool show_gimple = SL_VERBOSE_GIMPLE & verbose;
 
     (void) subtree_done;
     (void) info;
 
-#if 0
-    printf("\t\t");
-    print_gimple_stmt(stdout, stmt,
-                      /* indentation */ 0,
-                      TDF_LINENO);
-#endif
+    if (show_gimple) {
+        printf("\n\t\t");
+        print_gimple_stmt(stdout, stmt,
+                          /* indentation */ 0,
+                          TDF_LINENO);
+    }
 
     enum gimple_code code = stmt->gsbase.code;
-
     switch (code) {
         case GIMPLE_COND:
             handle_stmt_cond(stmt);
@@ -507,6 +531,9 @@ static tree cb_walk_gimple_stmt (gimple_stmt_iterator *iter,
             TRAP;
             break;
     }
+
+    if (show_gimple)
+        printf("\n");
 
     return NULL;
 }
@@ -725,8 +752,47 @@ static void sl_regcb (const char *name) {
                        /* user_data */ NULL);
 }
 
+static int slplug_init(const struct plugin_name_args *info)
+{
+    // initialize global plug-in name
+    plugin_name = info->full_name;
+
+    // go through parameter list
+    const int argc                      = info->argc;
+    const struct plugin_argument *argv  = info->argv;
+
+    int i;
+    for (i = 0; i < argc; ++i) {
+        const struct plugin_argument *arg = argv + i;
+        const char *key     = arg->key;
+        const char *value   = arg->value;
+
+        if (STREQ(key, "verbose")) {
+            verbose = (value)
+                ? atoi(value)
+                : ~0;
+
+        } else if (STREQ(key, "version")) {
+            // do not use info->version yet
+            puts(sl_info.version);
+            return EXIT_FAILURE;
+
+        } else if (STREQ(key, "help")) {
+            // do not use info->help yet
+            puts(sl_info.help);
+            return EXIT_FAILURE;
+
+        } else {
+            SL_WARN_UNHANDLED(key);
+            return EXIT_FAILURE;
+        }
+    }
+
+    return EXIT_SUCCESS;
+}
+
 // FIXME: copy-pasted from slsparse.c
-static struct cl_code_listener* create_cl_chain(int verbose)
+static struct cl_code_listener* create_cl_chain(void)
 {
     struct cl_code_listener *cl;
     struct cl_code_listener *chain = cl_chain_create();
@@ -734,7 +800,7 @@ static struct cl_code_listener* create_cl_chain(int verbose)
         // error message already emitted
         return NULL;
 
-    if (1 < verbose) {
+    if (SL_VERBOSE_LOCATION & verbose) {
         cl = cl_code_listener_create("locator", STDOUT_FILENO, false);
         if (!cl) {
             chain->destroy(chain);
@@ -757,14 +823,10 @@ static struct cl_code_listener* create_cl_chain(int verbose)
 int plugin_init (struct plugin_name_args *plugin_info,
                  struct plugin_gcc_version *version)
 {
-    // store plug-in name to global variable
-    plugin_name = plugin_info->full_name;
-
-#if 1
-    // for debugging purposes only
-    setbuf(stdout, NULL);
-    setbuf(stderr, NULL);
-#endif
+    // global initialization
+    int rv = slplug_init(plugin_info);
+    if (rv)
+        return rv;
 
     // print something like "hello world!"
     SL_LOG_FNC;
@@ -773,7 +835,7 @@ int plugin_init (struct plugin_name_args *plugin_info,
 
     // initialize code listener
     cl_global_init_defaults(NULL, true);
-    cl = create_cl_chain(/* SPARSE verbose level */ 0);
+    cl = create_cl_chain();
     SL_ASSERT(cl);
 
     // try to register callbacks (and virtual callbacks)
