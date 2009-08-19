@@ -98,27 +98,39 @@ static void handle_operand(struct cl_operand *op, tree t)
             decl_to_cl_operand(op, t);
             break;
 
-        case INDIRECT_REF:
-        case COMPONENT_REF:
-            if (TREE_OPERAND(t, 0)) {
+        case INDIRECT_REF: {
                 tree op0 = TREE_OPERAND(t, 0);
-                SL_ASSERT(op0);
+                if (!op0)
+                    TRAP;
 
-                if (INDIRECT_REF == TREE_CODE(op0))
-                    op0 = TREE_OPERAND(op0, 0);
-
-                SL_ASSERT(op0);
                 decl_to_cl_operand(op, op0);
-                op->deref           = true;
+                op->deref = true;
+            }
+            break;
 
-                if (COMPONENT_REF == code) {
-                    tree op1 = TREE_OPERAND(t, 1);
-                    SL_ASSERT(op1);
-                    op->offset          = IDENTIFIER_POINTER(DECL_NAME(op1));
+        case COMPONENT_REF: {
+                tree op0 = TREE_OPERAND(t, 0);
+                if (!op0)
+                    TRAP;
+
+                if (INDIRECT_REF == TREE_CODE(op0)) {
+                    op0 = TREE_OPERAND(op0, 0);
+                    if (!op0)
+                        TRAP;
                 }
 
-            } else {
-                TRAP;
+                tree op1 = TREE_OPERAND(t, 1);
+                if (!op1)
+                    TRAP;
+
+                if (COMPONENT_REF == TREE_CODE(op0)) {
+                    SL_WARN_UNHANDLED("access to sub-type");
+                    return;
+                }
+
+                decl_to_cl_operand(op, op0);
+                op->deref           = true;
+                op->offset          = IDENTIFIER_POINTER(DECL_NAME(op1));
             }
             break;
 
@@ -126,6 +138,22 @@ static void handle_operand(struct cl_operand *op, tree t)
             op->type                    = CL_OPERAND_INT;
             op->data.lit_int.value      = TREE_INT_CST_LOW(t);
             break;
+
+        case ARRAY_REF:
+            SL_WARN_UNHANDLED("ARRAY_REF");
+            return;
+
+        case ADDR_EXPR:
+            SL_WARN_UNHANDLED("ADDR_EXPR");
+            return;
+
+        case BIT_FIELD_REF:
+            SL_WARN_UNHANDLED("BIT_FIELD_REF");
+            return;
+
+        case CONSTRUCTOR:
+            SL_WARN_UNHANDLED("CONSTRUCTOR");
+            return;
 
         default:
             TRAP;
@@ -146,15 +174,14 @@ static void handle_stmt_unop(gimple stmt, enum tree_code code,
     read_gimple_location(&cli.loc, stmt);
 
     switch (code) {
-        // TODO: revisit the fallthru
-        case VAR_DECL:
-        case PARM_DECL:
-        case COMPONENT_REF:
+        case ADDR_EXPR:
+            SL_WARN_UNHANDLED("ADDR_EXPR");
+            return;
+
+        // TODO: grok various unary operators here
+        default:
             cli.data.insn_unop.type = CL_UNOP_ASSIGN;
             break;
-
-        default:
-            TRAP;
     }
 
     cl->insn(cl, &cli);
@@ -186,6 +213,10 @@ static void handle_stmt_binop(gimple stmt, enum tree_code code,
             cli.data.insn_binop.type = CL_BINOP_NE;
             break;
 
+        case LT_EXPR:
+            cli.data.insn_binop.type = CL_BINOP_LT;
+            break;
+
         case GT_EXPR:
             cli.data.insn_binop.type = CL_BINOP_GT;
             break;
@@ -201,6 +232,18 @@ static void handle_stmt_binop(gimple stmt, enum tree_code code,
         case PLUS_EXPR:
             cli.data.insn_binop.type = CL_BINOP_ADD;
             break;
+
+        case BIT_AND_EXPR:
+            SL_WARN_UNHANDLED("BIT_AND_EXPR");
+            return;
+
+        case MULT_EXPR:
+            SL_WARN_UNHANDLED("MULT_EXPR");
+            return;
+
+        case POINTER_PLUS_EXPR:
+            SL_WARN_UNHANDLED("POINTER_PLUS_EXPR");
+            return;
 
         default:
             TRAP;
