@@ -95,10 +95,9 @@ static const char* strdup_sparse_string(const struct string *str)
 }
 
 static void pseudo_to_cl_operand(struct instruction *insn, pseudo_t pseudo,
-                                 struct cl_operand *op)
+                                 struct cl_operand *op, bool deref)
 {
-    // may be overridden later
-    op->deref = false;
+    op->deref = deref;
     op->offset = NULL;
 
     if (!is_pseudo(pseudo)) {
@@ -170,7 +169,7 @@ static void pseudo_to_cl_operand(struct instruction *insn, pseudo_t pseudo,
             TRAP;
     }
 
-    if (insn->type) {
+    if (deref && insn->type) {
         const struct ident *id = insn->type->ident;
         const char *id_string = show_ident(id);
         if (id
@@ -193,8 +192,8 @@ static void handle_insn_call(struct instruction *insn,
     cl_set_location(&loc, insn->pos.line);
 
     // open call
-    pseudo_to_cl_operand(insn, insn->target, &dst);
-    pseudo_to_cl_operand(insn, insn->func, &fnc);
+    pseudo_to_cl_operand(insn, insn->target , &dst  , false);
+    pseudo_to_cl_operand(insn, insn->func   , &fnc  , false);
     cl->insn_call_open(cl, &loc, &dst, &fnc);
     free_cl_operand_data(&dst);
     free_cl_operand_data(&fnc);
@@ -202,7 +201,7 @@ static void handle_insn_call(struct instruction *insn,
     // go through arguments
     FOR_EACH_PTR(insn->arguments, arg) {
         struct cl_operand src;
-        pseudo_to_cl_operand(insn, arg, &src);
+        pseudo_to_cl_operand(insn, arg, &src, false);
 
         cl->insn_call_arg(cl, ++cnt, &src);
         free_cl_operand_data(&src);
@@ -235,7 +234,7 @@ static void handle_insn_br(struct instruction *insn,
     if (asprintf(&bb_name_false, "%p", insn->bb_false) < 0)
         die("asprintf failed");
 
-    pseudo_to_cl_operand(insn, insn->cond, &op);
+    pseudo_to_cl_operand(insn, insn->cond, &op, false);
 
     // TODO: move to function?
     {
@@ -259,7 +258,7 @@ static void handle_insn_ret(struct instruction *insn,
     struct cl_operand op;
     struct cl_insn cli;
 
-    pseudo_to_cl_operand(insn, insn->src, &op);
+    pseudo_to_cl_operand(insn, insn->src, &op, false);
     cli.type                = CL_INSN_RET;
     cli.data.insn_ret.src   = &op;
     cl_set_location(&cli.loc, insn->pos.line);
@@ -275,11 +274,8 @@ static void insn_assignment_base(struct instruction                 *insn,
     struct cl_operand op_lhs;
     struct cl_operand op_rhs;
 
-    pseudo_to_cl_operand(insn, lhs, &op_lhs);
-    pseudo_to_cl_operand(insn, rhs, &op_rhs);
-
-    op_lhs.deref = lhs_deref;
-    op_rhs.deref = rhs_deref;
+    pseudo_to_cl_operand(insn, lhs, &op_lhs, lhs_deref);
+    pseudo_to_cl_operand(insn, rhs, &op_rhs, rhs_deref);
 
 #if 0
     if (op_lhs.deref && op_lhs.name && op_lhs.offset
@@ -334,9 +330,9 @@ static void handle_insn_add(struct instruction *insn,
 {
     struct cl_operand dst, src1, src2;
 
-    pseudo_to_cl_operand(insn, insn->target, &dst);
-    pseudo_to_cl_operand(insn, insn->src1, &src1);
-    pseudo_to_cl_operand(insn, insn->src2, &src2);
+    pseudo_to_cl_operand(insn, insn->target , &dst  , false);
+    pseudo_to_cl_operand(insn, insn->src1   , &src1 , false);
+    pseudo_to_cl_operand(insn, insn->src2   , &src2 , false);
 
     // TODO: move to function?
     {
