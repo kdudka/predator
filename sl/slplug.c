@@ -143,48 +143,75 @@ static void decl_to_cl_operand(struct cl_operand *op, tree t)
     op->offset = NULL;
 }
 
-static void handle_operand_indirect_ref(struct cl_operand *op, tree t)
+static void deref_indirect_op(tree *op)
 {
-    tree op0 = TREE_OPERAND(t, 0);
-    if (!op0)
-        // Oops, nothing to dereference...
+    if (!op || !*op)
         TRAP;
 
-    decl_to_cl_operand(op, op0);
+    if (INDIRECT_REF != TREE_CODE(*op))
+        TRAP;
+
+    *op = TREE_OPERAND(*op, 0);
+    if (!*op)
+        TRAP;
+}
+
+static void handle_operand_indirect_ref(struct cl_operand *op, tree t)
+{
+    deref_indirect_op(&t);
+    decl_to_cl_operand(op, t);
     op->deref = true;
+}
+
+static void concat_offset_string(char **offset_string, tree decl_name)
+{
+    const char *offset = *offset_string;
+    const char *ident = IDENTIFIER_POINTER(decl_name);
+    if (!ident)
+        TRAP;
+
+    // concatenate with previous offset string if any
+    char *tmp;
+    int rv = (offset)
+        ? asprintf(&tmp, "%s.%s", ident, offset)
+        : /* FIXME: strdup is poisoned :-( */ asprintf(&tmp, "%s", ident);
+    SL_ASSERT(0 < rv);
+
+    // free previous offset string (if any) and replace it
+    free((char *) offset);
+    *offset_string = tmp;
 }
 
 static void handle_operand_component_ref(struct cl_operand *op, tree t)
 {
-    tree op0 = TREE_OPERAND(t, 0);
-    if (!op0)
-        TRAP;
+    char *offset = NULL;
 
-    // FIXME: we should distinguish between '.' and '->'
-    if (INDIRECT_REF == TREE_CODE(op0)) {
-        op0 = TREE_OPERAND(op0, 0);
-        if (!op0)
+    // go through component_ref chain
+    while (COMPONENT_REF == TREE_CODE(t)) {
+        tree op0 = TREE_OPERAND(t, 0);
+        tree op1 = TREE_OPERAND(t, 1);
+        if (!op0 || !op1)
             TRAP;
+
+        // nest to subtree
+        concat_offset_string(&offset, DECL_NAME(op1));
+        t = op0;
     }
 
-    if (COMPONENT_REF == TREE_CODE(op0)) {
-        // TODO: implement?
-        // this should be analysed in regards to code_listener interface
-        SL_WARN_UNHANDLED_EXPR(t, "access to sub-type");
-        return;
-    }
+    // true means '->', false means '.'
+    bool is_ref_indirect = (INDIRECT_REF == TREE_CODE(t));
+    if (is_ref_indirect)
+        deref_indirect_op(&t);
 
-    // attempt to read base (usually var/reg)
-    decl_to_cl_operand(op, op0);
+    // read base (usually var/reg)
+    decl_to_cl_operand(op, t);
+    op->deref   = is_ref_indirect;
+    op->offset  = offset;
+}
 
-    // attempt to read offset
-    tree op1 = TREE_OPERAND(t, 1);
-    if (!op1)
-        // Oops, offset not available...
-        TRAP;
-
-    op->deref           = true;
-    op->offset          = IDENTIFIER_POINTER(DECL_NAME(op1));
+static void free_cl_operand_data(struct cl_operand *op)
+{
+    free((char *) op->offset);
 }
 
 // TODO: simplify, check rare cases; and probably split into more functions
@@ -303,6 +330,7 @@ static void handle_stmt_unop(gimple stmt, enum tree_code code,
     }
 
     cl->insn(cl, &cli);
+    free_cl_operand_data(&src);
 }
 
 static void handle_stmt_binop(gimple stmt, enum tree_code code,
@@ -333,18 +361,22 @@ static void handle_stmt_binop(gimple stmt, enum tree_code code,
 
         case BIT_AND_EXPR:
             SL_WARN_UNHANDLED_GIMPLE(stmt, "BIT_AND_EXPR");
+            // FIXME: free_cl_operand_data is not called
             return;
 
         case BIT_IOR_EXPR:
             SL_WARN_UNHANDLED_GIMPLE(stmt, "BIT_IOR_EXPR");
+            // FIXME: free_cl_operand_data is not called
             return;
 
         case MULT_EXPR:
             SL_WARN_UNHANDLED_GIMPLE(stmt, "MULT_EXPR");
+            // FIXME: free_cl_operand_data is not called
             return;
 
         case POINTER_PLUS_EXPR:
             SL_WARN_UNHANDLED_GIMPLE(stmt, "POINTER_PLUS_EXPR");
+            // FIXME: free_cl_operand_data is not called
             return;
 
         default:
@@ -352,6 +384,8 @@ static void handle_stmt_binop(gimple stmt, enum tree_code code,
     }
 
     cl->insn(cl, &cli);
+    free_cl_operand_data(&src1);
+    free_cl_operand_data(&src2);
 }
 
 static void handle_stmt_assign(gimple stmt)
@@ -378,6 +412,7 @@ static void handle_stmt_assign(gimple stmt)
         default:
             TRAP;
     };
+    free_cl_operand_data(&dst);
 }
 
 static void handle_stmt_call_args(gimple stmt)
@@ -388,6 +423,7 @@ static void handle_stmt_call_args(gimple stmt)
         struct cl_operand src;
         handle_operand(&src, gimple_call_arg(stmt, i));
         cl->insn_call_arg(cl, i + 1, &src);
+        free_cl_operand_data(&src);
     }
 }
 
@@ -414,6 +450,8 @@ static void handle_stmt_call(gimple stmt)
     struct cl_location loc;
     read_gimple_location(&loc, stmt);
     cl->insn_call_open(cl, &loc, &dst, &fnc);
+    free_cl_operand_data(&dst);
+    free_cl_operand_data(&fnc);
 
     // emit args
     handle_stmt_call_args(stmt);
@@ -444,6 +482,7 @@ static void handle_stmt_return(gimple stmt)
     // even with print_gimple_stmt()
     read_gimple_location(&cli.loc, stmt);
     cl->insn(cl, &cli);
+    free_cl_operand_data(&src);
 }
 
 static const struct cl_operand stmt_cond_fixed_reg = {

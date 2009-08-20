@@ -240,12 +240,18 @@ void ClPrettyPrint::printOperand(const struct cl_operand *op) {
 
             this->printNestedVar(op);
 
-            if (op->deref) {
-                if (op->offset)
-                    out_ << SSD_INLINE_COLOR(C_LIGHT_RED, ":") << op->offset;
+            if (op->offset) {
+                if (op->deref)
+                    out_ << SSD_INLINE_COLOR(C_LIGHT_RED, ":");
+                else
+                    out_ << ".";
 
-                out_ << SSD_INLINE_COLOR(C_LIGHT_RED, "]");
+                out_ << op->offset;
             }
+
+            if (op->deref)
+                out_ << SSD_INLINE_COLOR(C_LIGHT_RED, "]");
+
             break;
 
         case CL_OPERAND_STRING:
