@@ -1,18 +1,18 @@
 // this include has to be the first (according the gcc plug-in API)
-#include <gcc-plugin.h>
+#include <gcc/gcc-plugin.h>
 
 #include "code_listener.h"
 
-#include <coretypes.h>
-#include <diagnostic.h>
+#include <gcc/coretypes.h>
+#include <gcc/diagnostic.h>
 
 // this include has to be before <function.h>; otherwise it will NOT compile
-#include <tm.h>
+#include <gcc/tm.h>
 
-#include <function.h>
-#include <gimple.h>
-#include <input.h>
-#include <tree-pass.h>
+#include <gcc/function.h>
+#include <gcc/gimple.h>
+#include <gcc/input.h>
+#include <gcc/tree-pass.h>
 
 #ifndef _GNU_SOURCE
 #   define _GNU_SOURCE
@@ -25,6 +25,10 @@
 #ifndef STREQ
 #   define STREQ(s1, s2) (0 == strcmp(s1, s2))
 #endif
+
+// this should be using gcc's fancy_abort(), but it was actually not tested
+#define SL_ASSERT(expr) \
+    if (!(expr)) abort()
 
 // TODO: replace with gcc native debugging infrastructure
 #define SL_LOG(...) do { \
@@ -41,30 +45,26 @@
 
 // TODO: replace with gcc native debugging infrastructure
 #define SL_WARN_UNHANDLED(what) \
-    fprintf(stderr, "%s:%d: warning: '%s' not handled\n", \
+    fprintf(stderr, "%s:%d: warning: '%s' not handled [internal location]\n", \
             __FILE__, __LINE__, (what))
 
 // TODO: replace with gcc native debugging infrastructure
-#define SL_WARN_UNHANDLED_GIMPLE(stmt, what) \
+#define SL_WARN_UNHANDLED_WITH_LOC(loc, what) \
     fprintf(stderr, "%s:%d:%d: warning: '%s' not handled\n" \
-            "%s:%d: note: raised from '%s'\n", \
-            expand_location((stmt)->gsbase.location).file, \
-            expand_location((stmt)->gsbase.location).line, \
-            expand_location((stmt)->gsbase.location).column, \
-            (what), __FILE__, __LINE__, __FUNCTION__)
+            "%s:%d: note: raised from '%s' [internal location]\n", \
+            expand_location(loc).file, \
+            expand_location(loc).line, \
+            expand_location(loc).column, \
+            (what), \
+            __FILE__, __LINE__, __FUNCTION__)
+
+// TODO: replace with gcc native debugging infrastructure
+#define SL_WARN_UNHANDLED_GIMPLE(stmt, what) \
+    SL_WARN_UNHANDLED_WITH_LOC((stmt)->gsbase.location, what)
 
 // TODO: replace with gcc native debugging infrastructure
 #define SL_WARN_UNHANDLED_EXPR(expr, what) \
-    fprintf(stderr, "%s:%d:%d: warning: '%s' not handled\n" \
-            "%s:%d: note: raised from '%s'\n", \
-            expand_location(EXPR_LOCATION(expr)).file, \
-            expand_location(EXPR_LOCATION(expr)).line, \
-            expand_location(EXPR_LOCATION(expr)).column, \
-            (what), __FILE__, __LINE__, __FUNCTION__)
-
-// this should be using gcc's fancy_abort(), but it was actually not tested
-#define SL_ASSERT(expr) \
-    if (!(expr)) abort()
+    SL_WARN_UNHANDLED_WITH_LOC(EXPR_LOCATION(expr), what)
 
 // required by gcc plug-in API
 int plugin_is_GPL_compatible;
@@ -184,9 +184,9 @@ static void handle_operand_component_ref(struct cl_operand *op, tree t)
 // TODO: simplify, check rare cases; and probably split into more functions
 static void handle_operand(struct cl_operand *op, tree t)
 {
-    op->type = CL_OPERAND_VOID;
-    op->deref = false;
-    op->offset = NULL;
+    op->type            = CL_OPERAND_VOID;
+    op->deref           = false;
+    op->offset          = NULL;
 
     if (!t)
         return;
@@ -230,7 +230,7 @@ static void handle_operand(struct cl_operand *op, tree t)
                         // go through!
 
                     case STRING_CST:
-                        // Aiee, recursion!
+                        // Aiee, unguarded recursion!
                         handle_operand(op, op0);
                         break;
 
@@ -248,7 +248,7 @@ static void handle_operand(struct cl_operand *op, tree t)
                 switch (TREE_CODE(op0)) {
                     case ARRAY_REF:
                     case STRING_CST:
-                        // Aiee, recursion!
+                        // Aiee, unguarded recursion!
                         handle_operand(op, op0);
                         break;
 
@@ -371,7 +371,6 @@ static void handle_stmt_assign(gimple stmt)
 
         default:
             TRAP;
-            break;
     };
 }
 
@@ -434,9 +433,9 @@ static void handle_stmt_return(gimple stmt)
     cli.type                    = CL_INSN_RET;
     cli.data.insn_ret.src       = &src;
 
-    // FIXME: location info is valid only for IMPLICIT 'return' statement
-    // It's really strange because it does not work properly even
-    // with print_gimple_stmt()
+    // FIXME: location info seems to be  valid only for IMPLICIT 'return'
+    // statement. It's really strange because it does not work properly
+    // even with print_gimple_stmt()
     read_gimple_location(&cli.loc, stmt);
     cl->insn(cl, &cli);
 }
@@ -486,7 +485,7 @@ static void handle_stmt_cond(gimple stmt)
         }
     }
 
-    if (!label_true && !label_false)
+    if (!label_true || !label_false)
         TRAP;
 
     handle_stmt_binop(stmt,
@@ -571,7 +570,7 @@ static void handle_jmp_edge (edge e)
     cli.type                = CL_INSN_JMP;
     cli.data.insn_jmp.label = index_to_label(next->index);
 
-    // no location for CL_INSN_JMP
+    // no location for CL_INSN_JMP for now
     cl_set_location(&cli.loc, -1);
 
     cl->insn(cl, &cli);
@@ -650,7 +649,7 @@ static void handle_fnc_decl (tree decl)
                 ? CL_SCOPE_GLOBAL
                 : CL_SCOPE_STATIC);
 
-    // emit arg declartaions
+    // emit arg declarations
     tree args = DECL_ARGUMENTS (decl);
     handle_fnc_decl_arglist (args);
 
@@ -748,24 +747,24 @@ static void sl_regcb (const char *name) {
 
     // register new pass provided by the plug-in
     register_callback (name, PLUGIN_PASS_MANAGER_SETUP,
-                       /* callback */ NULL,
+                       /* callback */   NULL,
                        &sl_plugin_pass);
 
     register_callback (name, PLUGIN_FINISH_UNIT,
                        cb_finish_unit,
-                       /* user_data */ NULL);
+                       /* user_data */  NULL);
 
     register_callback (name, PLUGIN_FINISH,
                        cb_finish,
-                       /* user_data */ NULL);
+                       /* user_data */  NULL);
 
     register_callback (name, PLUGIN_INFO,
-                       /* callback */ NULL,
+                       /* callback */   NULL,
                        &sl_info);
 
     register_callback (name, PLUGIN_START_UNIT,
                        cb_start_unit,
-                       /* user_data */ NULL);
+                       /* user_data */  NULL);
 }
 
 static int slplug_init(const struct plugin_name_args *info)
@@ -773,10 +772,11 @@ static int slplug_init(const struct plugin_name_args *info)
     // initialize global plug-in name
     plugin_name = info->full_name;
 
-    // go through parameter list
+    // obtain arg list
     const int argc                      = info->argc;
     const struct plugin_argument *argv  = info->argv;
 
+    // handle plug-in args
     int i;
     for (i = 0; i < argc; ++i) {
         const struct plugin_argument *arg = argv + i;
@@ -848,6 +848,8 @@ int plugin_init (struct plugin_name_args *plugin_info,
     SL_LOG_FNC;
     SL_LOG ("using gcc %s %s, built at %s", version->basever,
              version->devphase, version->datestamp);
+
+    // TODO: check for compatibility with particular gcc version here
 
     // initialize code listener
     cl_global_init_defaults(NULL, true);

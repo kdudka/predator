@@ -8,10 +8,6 @@ GCC_SRC = ../gcc-src
 GCC_BUILD = ../gcc-build
 GCC_INSTALL = ../gcc-install
 
-# FIXME: hard-coded for now
-GCC_PLUGIN_INC = \
-	$(GCC_INSTALL)/lib/gcc/x86_64-unknown-linux-gnu/4.5.0/plugin/include
-
 # debug flags
 DBGFLAGS ?= -g -O0
 CFLAGS += $(DBGFLAGS)
@@ -65,8 +61,7 @@ slsparse.o: CFLAGS += -fPIC -Wall $(SPARSE_CFLAGS)
 slsparse: slsparse.o libcl.a $(SPARSE_LIBS)
 	$(CC) $(CFLAGS) -o $@ slsparse.o -L. -lcl $(SPARSE_LIBS) $(CL_LIBS)
 
-PLUG_CFLAGS = -fPIC -std=c99 -pedantic -Wall -W -Werror -pedantic \
-	-I$(GCC_PLUGIN_INC)
+PLUG_CFLAGS = -fPIC -std=c99 -pedantic -Wall -W -Werror -pedantic -I.. -I../gcc
 
 slplug.o: code_listener.h
 slplug.o: CFLAGS += $(PLUG_CFLAGS)

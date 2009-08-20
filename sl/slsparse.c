@@ -30,8 +30,9 @@
 
 #define WARN_UNHANDLED(pos, what) do { \
     sep_warn(pos, "warning: '%s' not handled", what); \
-    fprintf(stderr, "%s:%d: note: raised from function '%s'\n", __FILE__, \
-            __LINE__, __FUNCTION__); \
+    fprintf(stderr, \
+            "%s:%d: note: raised from function '%s' [internal location]\n", \
+            __FILE__, __LINE__, __FUNCTION__); \
 } while (0)
 
 #define WARN_UNHANDLED_SYM(sym) \
@@ -39,8 +40,9 @@
 
 #define WARN_VA(pos, fmt, ...) do {\
     sep_warn(pos, "warning: " fmt, __VA_ARGS__); \
-    fprintf(stderr, "%s:%d: note: raised from function '%s'\n", __FILE__, \
-            __LINE__, __FUNCTION__); \
+    fprintf(stderr, \
+            "%s:%d: note: raised from function '%s' [internal location]\n", \
+            __FILE__, __LINE__, __FUNCTION__); \
 } while (0)
 
 #define WARN_CASE_UNHANDLED(pos, what) \

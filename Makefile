@@ -14,7 +14,7 @@ CURL ?= curl --location -v
 GIT ?= git
 SVN ?= svn
 
-.PHONY: build_gcc fetch plugin unpack update_gcc update_gcc_src_only
+.PHONY: build_gcc fetch sl unpack update_gcc update_gcc_src_only
 
 fetch: $(LIST) $(SPARSE_GIT)
 
@@ -48,9 +48,9 @@ update_gcc_src_only: $(GCC_SRC)
 update_gcc: update_gcc_src_only
 	$(MAKE) build_gcc
 
-plugin:
+sl: $(SPARSE_GIT)
 	test -d $(GCC_INSTALL) || $(MAKE) build_gcc
-	$(MAKE) run -C gcc-plugin
+	$(MAKE) check -C sl
 
 $(INVADER):
 	$(CURL) -o $@ 'http://www.eastlondonmassive.org/invader-1_1.zip'
