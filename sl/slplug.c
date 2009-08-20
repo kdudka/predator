@@ -281,6 +281,7 @@ static void handle_operand(struct cl_operand *op, tree t)
                 switch (TREE_CODE(op0)) {
                     case ARRAY_REF:
                     case STRING_CST:
+                    case FUNCTION_DECL:
                         // Aiee, unguarded recursion!
                         handle_operand(op, op0);
                         break;
@@ -301,7 +302,6 @@ static void handle_operand(struct cl_operand *op, tree t)
 
         default:
             TRAP;
-            break;
     }
 }
 
