@@ -45,8 +45,9 @@
 
 // TODO: replace with gcc native debugging infrastructure
 #define SL_WARN_UNHANDLED(what) \
-    fprintf(stderr, "%s:%d: warning: '%s' not handled [internal location]\n", \
-            __FILE__, __LINE__, (what))
+    fprintf(stderr, \
+            "%s:%d: warning: '%s' not handled in '%s' [internal location]\n", \
+            __FILE__, __LINE__, (what), __FUNCTION__)
 
 // TODO: replace with gcc native debugging infrastructure
 #define SL_WARN_UNHANDLED_WITH_LOC(loc, what) \
@@ -63,8 +64,11 @@
     SL_WARN_UNHANDLED_WITH_LOC((stmt)->gsbase.location, what)
 
 // TODO: replace with gcc native debugging infrastructure
-#define SL_WARN_UNHANDLED_EXPR(expr, what) \
-    SL_WARN_UNHANDLED_WITH_LOC(EXPR_LOCATION(expr), what)
+#define SL_WARN_UNHANDLED_EXPR(expr, what) do { \
+    SL_WARN_UNHANDLED_WITH_LOC(EXPR_LOCATION(expr), what); \
+    if (SL_VERBOSE_UNHANDLED_EXPR & verbose) \
+        debug_tree(expr); \
+} while (0)
 
 // required by gcc plug-in API
 int plugin_is_GPL_compatible;
@@ -77,6 +81,7 @@ static int verbose = 0;
 #define SL_VERBOSE_PLUG             (1 << 0)
 #define SL_VERBOSE_LOCATION         (1 << 1)
 #define SL_VERBOSE_GIMPLE           (1 << 2)
+#define SL_VERBOSE_UNHANDLED_EXPR   (1 << 3)
 
 // plug-in meta-data according to gcc plug-in API
 static struct plugin_info sl_info = {
@@ -94,6 +99,7 @@ static struct plugin_info sl_info = {
         "    1    debug gcc plug-in API\n"
         "    2    print location info using \"locator\" code listener\n"
         "    4    print each gimple statement before its processing\n"
+        "    8    dump gcc tree of unhandled expressions\n"
 };
 
 static struct cl_code_listener *cl = NULL;
@@ -433,7 +439,7 @@ static void handle_stmt_return(gimple stmt)
     cli.type                    = CL_INSN_RET;
     cli.data.insn_ret.src       = &src;
 
-    // FIXME: location info seems to be  valid only for IMPLICIT 'return'
+    // FIXME: location info seems to be valid only for IMPLICIT 'return'
     // statement. It's really strange because it does not work properly
     // even with print_gimple_stmt()
     read_gimple_location(&cli.loc, stmt);
@@ -536,7 +542,8 @@ static tree cb_walk_gimple_stmt (gimple_stmt_iterator *iter,
             break;
 
         case GIMPLE_LABEL:
-            SL_WARN_UNHANDLED_GIMPLE(stmt, "GIMPLE_LABEL");
+            // FIXME: no location info?
+            SL_WARN_UNHANDLED("GIMPLE_LABEL");
             break;
 
         case GIMPLE_SWITCH:
