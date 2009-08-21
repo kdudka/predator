@@ -520,11 +520,11 @@ static void handle_stmt_cond(gimple stmt)
     edge_iterator ei;
     struct basic_block_def *bb = stmt->gsbase.bb;
     FOR_EACH_EDGE(e, ei, bb->succs) {
-        if (e->flags & /* true */ 1024) {
+        if (e->flags & EDGE_TRUE_VALUE) {
             struct basic_block_def *next = e->dest;
             label_true = index_to_label(next->index);
         }
-        if (e->flags & /* false */ 2048) {
+        if (e->flags & EDGE_FALSE_VALUE) {
             struct basic_block_def *next = e->dest;
             label_false = index_to_label(next->index);
         }
@@ -542,6 +542,97 @@ static void handle_stmt_cond(gimple stmt)
     handle_stmt_cond_br(stmt, label_true, label_false);
     free(label_true);
     free(label_false);
+}
+
+static unsigned find_case_label_target(gimple stmt, int label_decl_uid)
+{
+    GIMPLE_CHECK(stmt, GIMPLE_SWITCH);
+
+    edge e;
+    edge_iterator ei;
+    struct basic_block_def *switch_bb = stmt->gsbase.bb;
+    FOR_EACH_EDGE(e, ei, switch_bb->succs) {
+        // FIXME: treat e->flags somehow?
+
+        struct basic_block_def *bb = e->dest;
+        if (!bb)
+            // edge with no target
+            TRAP;
+
+        // obtain gimple
+        struct gimple_bb_info *bb_info = bb->il.gimple;
+        if (!bb_info || ! bb_info->seq || !bb_info->seq->first)
+            TRAP;
+
+        // check whether first statement in BB is GIMPLE_LABEL
+        gimple bb_stmt = bb_info->seq->first->stmt;
+        if (!bb_stmt || GIMPLE_LABEL != bb_stmt->gsbase.code)
+            continue;
+
+        // get label declaration
+        tree label = gimple_label_label(bb_stmt);
+        if (!label)
+            TRAP;
+
+        if (label_decl_uid == LABEL_DECL_UID(label))
+            // match
+            return bb->index;
+    }
+
+    TRAP;
+    // no matching GIMPLE_LABEL was found in BB successors
+    // this should never happen
+    return (unsigned) -1;
+}
+
+static void handle_stmt_switch(gimple stmt)
+{
+    struct cl_operand src;
+    handle_operand(&src, gimple_switch_index(stmt));
+
+    struct cl_insn cli;
+    cli.type                    = CL_INSN_RET;
+    cli.data.insn_ret.src       = &src;
+
+    read_gimple_location(&cli.loc, stmt);
+    SL_WARN_UNHANDLED_GIMPLE(stmt, "GIMPLE_SWITCH");
+
+    unsigned i;
+    for (i = 0; i < gimple_switch_num_labels(stmt); ++i) {
+        tree case_decl = gimple_switch_label(stmt, i);
+        if (!case_decl)
+            TRAP;
+
+        // lowest case value with same label
+        tree case_low = CASE_LOW(case_decl);
+        if (!case_low) {
+            SL_WARN_UNHANDLED_EXPR(case_decl, "switch/default");
+            continue;
+        }
+
+        // highest case value with same lable
+        tree case_high = CASE_HIGH(case_decl);
+        if (!case_high)
+            // there is no range, only one value
+            case_high = case_low;
+
+        SL_WARN_UNHANDLED_EXPR(case_decl, "switch/case");
+
+        // figure out where to jump in that case
+        tree case_label = CASE_LABEL(case_decl);
+        if (!case_label || LABEL_DECL != TREE_CODE(case_label))
+            TRAP;
+
+        // look for corresponding GIMPLE_LABEL in successor BBs
+        int case_label_uid = LABEL_DECL_UID(case_label);
+        unsigned label_uid = find_case_label_target(stmt, case_label_uid);
+        const char *label = index_to_label(label_uid);
+
+        SL_WARN_UNHANDLED(label);
+        free((char *) label);
+    }
+
+    free_cl_operand_data(&src);
 }
 
 // callback of walk_gimple_seq declared in <gimple.h>
@@ -580,18 +671,20 @@ static tree cb_walk_gimple_stmt (gimple_stmt_iterator *iter,
             handle_stmt_return(stmt);
             break;
 
-        case GIMPLE_LABEL:
-            // FIXME: no location info?
-            SL_WARN_UNHANDLED("GIMPLE_LABEL");
+        case GIMPLE_SWITCH:
+            handle_stmt_switch(stmt);
             break;
 
-        case GIMPLE_SWITCH:
-            SL_WARN_UNHANDLED_GIMPLE(stmt, "GIMPLE_SWITCH");
+        case GIMPLE_LABEL:
+            // should be already handled by handle_stmt_switch
+            break;
+
+        case GIMPLE_PREDICT:
+            SL_WARN_UNHANDLED_GIMPLE(stmt, "GIMPLE_PREDICT");
             break;
 
         default:
             TRAP;
-            break;
     }
 
     if (show_gimple)
@@ -642,7 +735,7 @@ static void handle_fnc_bb (struct basic_block_def *bb)
     // check for a fallthru successor
     edge e;
     edge_iterator ei = ei_start(bb->succs);
-    if (ei_cond(ei, &e) && e->dest && (e->flags & /* fallthru */ 1)) {
+    if (ei_cond(ei, &e) && e->dest && (e->flags & EDGE_FALLTHRU)) {
         handle_jmp_edge(e);
         return;
     }
