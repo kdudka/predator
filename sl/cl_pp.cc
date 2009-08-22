@@ -514,10 +514,7 @@ void ClPrettyPrint::insn_switch_case(
             && CL_OPERAND_VOID == val_hi->type)
     {
         out_ << "\t\t\t"
-            << SSD_INLINE_COLOR(C_YELLOW, "default") << ": "
-            << SSD_INLINE_COLOR(C_YELLOW, "goto") << " "
-            << SSD_INLINE_COLOR(C_LIGHT_CYAN, label)
-            << std::endl;
+            << SSD_INLINE_COLOR(C_YELLOW, "default") << ":";
     } else if (CL_OPERAND_INT == val_lo->type
             && CL_OPERAND_INT == val_hi->type)
     {
@@ -526,16 +523,19 @@ void ClPrettyPrint::insn_switch_case(
         for (int i = lo; i <= hi; ++i) {
             out_ << "\t\t\t"
                 << SSD_INLINE_COLOR(C_YELLOW, "case")
-                << " " << i << ": "
-                << SSD_INLINE_COLOR(C_YELLOW, "goto") << " "
-                << SSD_INLINE_COLOR(C_LIGHT_CYAN, label)
-                << std::endl;
+                << " " << i << ":";
+            if (i != hi)
+                out_ << " /* fall through */" << std::endl;
         }
     } else {
         CL_MSG_STREAM(cl_error, file_ << ":" << loc_.line << ": error: "
                 "invalid case");
         return;
     }
+    out_ << " "
+        << SSD_INLINE_COLOR(C_YELLOW, "goto") << " "
+        << SSD_INLINE_COLOR(C_LIGHT_CYAN, label)
+        << std::endl;
 }
 
 void ClPrettyPrint::insn_switch_close()
