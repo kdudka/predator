@@ -242,12 +242,17 @@ struct cl_insn {
  *
  * TERM_INSN is defined as:
  *
- *     insn{CL_INSN_JMP, CL_INSN_COND, CL_INSN_RET, CL_INSN_ABORT}
+ *     insn{CL_INSN_JMP, CL_INSN_COND, CL_INSN_RET, CL_INSN_ABORT} | INSN_SWITCH
  *
  *
  * INSN_CALL is defined by regex:
  *
  *     insn_call_open (insn_call_arg)* insn_call_close
+ *
+ *
+ * INSN_SWITCH is defined by regex:
+ *
+ *     insn_switch_open (insn_switch_case)* insn_switch_close
  *
  *
  * @todo avoid (re)formating in dox output
@@ -299,6 +304,21 @@ struct cl_code_listener {
             const struct cl_operand *arg_src);
 
     void (*insn_call_close)(
+            struct cl_code_listener *self);
+
+    void (*insn_switch_open)(
+            struct cl_code_listener *self,
+            const struct cl_location*loc,
+            const struct cl_operand *src);
+
+    void (*insn_switch_case)(
+            struct cl_code_listener *self,
+            const struct cl_location*loc,
+            const struct cl_operand *val_lo,
+            const struct cl_operand *val_hi,
+            const char              *label);
+
+    void (*insn_switch_close)(
             struct cl_code_listener *self);
 
     void (*destroy)(

@@ -48,6 +48,18 @@ class ClChain: public ICodeListener {
 
         virtual void insn_call_close();
 
+        virtual void insn_switch_open(
+            const struct cl_location*loc,
+            const struct cl_operand *src);
+
+        virtual void insn_switch_case(
+            const struct cl_location*loc,
+            const struct cl_operand *val_lo,
+            const struct cl_operand *val_hi,
+            const char              *label);
+
+        virtual void insn_switch_close();
+
     public:
         void append(cl_code_listener *);
 
@@ -138,6 +150,27 @@ void ClChain::insn_call_arg(
 void ClChain::insn_call_close()
 {
     CL_CHAIN_FOREACH(insn_call_close);
+}
+
+void ClChain::insn_switch_open(
+            const struct cl_location*loc,
+            const struct cl_operand *src)
+{
+    CL_CHAIN_FOREACH_VA(insn_switch_open, loc, src);
+}
+
+void ClChain::insn_switch_case(
+            const struct cl_location*loc,
+            const struct cl_operand *val_lo,
+            const struct cl_operand *val_hi,
+            const char              *label)
+{
+    CL_CHAIN_FOREACH_VA(insn_switch_case, loc, val_lo, val_hi, label);
+}
+
+void ClChain::insn_switch_close()
+{
+    CL_CHAIN_FOREACH(insn_switch_close);
 }
 
 // /////////////////////////////////////////////////////////////////////////////

@@ -43,6 +43,18 @@ class ClLocator: public ICodeListener {
 
         virtual void insn_call_close();
 
+        virtual void insn_switch_open(
+            const struct cl_location*loc,
+            const struct cl_operand *src);
+
+        virtual void insn_switch_case(
+            const struct cl_location*loc,
+            const struct cl_operand *val_lo,
+            const struct cl_operand *val_hi,
+            const char              *label);
+
+        virtual void insn_switch_close();
+
     private:
         typedef boost::iostreams::file_descriptor_sink  TSink;
         typedef boost::iostreams::stream<TSink>         TStream;
@@ -126,6 +138,28 @@ void ClLocator::insn_call_arg(int, const struct cl_operand *) {
 }
 
 void ClLocator::insn_call_close() {
+}
+
+void ClLocator::insn_switch_open(
+            const struct cl_location*loc,
+            const struct cl_operand *)
+{
+    loc_ = *loc;
+    this->printLocation();
+}
+
+void ClLocator::insn_switch_case(
+            const struct cl_location*loc,
+            const struct cl_operand *,
+            const struct cl_operand *,
+            const char              *)
+{
+    loc_ = *loc;
+    this->printLocation();
+}
+
+void ClLocator::insn_switch_close()
+{
 }
 
 // /////////////////////////////////////////////////////////////////////////////

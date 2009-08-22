@@ -68,6 +68,18 @@ class ClPrettyPrint: public ICodeListener {
 
         virtual void insn_call_close();
 
+        virtual void insn_switch_open(
+            const struct cl_location*loc,
+            const struct cl_operand *src);
+
+        virtual void insn_switch_case(
+            const struct cl_location*loc,
+            const struct cl_operand *val_lo,
+            const struct cl_operand *val_hi,
+            const char              *label);
+
+        virtual void insn_switch_close();
+
     private:
         typedef boost::iostreams::file_descriptor_sink  TSink;
         typedef boost::iostreams::stream<TSink>         TStream;
@@ -475,6 +487,58 @@ void ClPrettyPrint::insn_call_close()
 {
     out_ << SSD_INLINE_COLOR(C_LIGHT_GREEN, ")")
         << std::endl;
+}
+
+void ClPrettyPrint::insn_switch_open(
+            const struct cl_location*loc,
+            const struct cl_operand *src)
+{
+    loc_ = *loc;
+    out_ << "\t\t"
+        << SSD_INLINE_COLOR(C_YELLOW, "switch (");
+
+    this->printOperand(src);
+
+    out_ << SSD_INLINE_COLOR(C_YELLOW, ")") << " {"
+        << std::endl;
+}
+
+void ClPrettyPrint::insn_switch_case(
+            const struct cl_location*loc,
+            const struct cl_operand *val_lo,
+            const struct cl_operand *val_hi,
+            const char              *label)
+{
+    loc_ = *loc;
+    if (CL_OPERAND_VOID == val_lo->type
+            && CL_OPERAND_VOID == val_hi->type)
+    {
+        out_ << "\t\t\t"
+            << SSD_INLINE_COLOR(C_YELLOW, "default") << ":";
+    } else if (CL_OPERAND_INT == val_lo->type
+            && CL_OPERAND_INT == val_hi->type)
+    {
+        const int lo = val_lo->data.lit_int.value;
+        const int hi = val_hi->data.lit_int.value;
+        for (int i = lo; i <= hi; ++i) {
+            out_ << "\t\t\t"
+                << SSD_INLINE_COLOR(C_YELLOW, "case")
+                << " " << i << ":";
+        }
+    } else {
+        CL_MSG_STREAM(cl_error, file_ << ":" << loc_.line << ": error: "
+                "invalid case");
+        return;
+    }
+    out_ << " "
+        << SSD_INLINE_COLOR(C_YELLOW, "goto") << " "
+        << SSD_INLINE_COLOR(C_LIGHT_CYAN, label)
+        << std::endl;
+}
+
+void ClPrettyPrint::insn_switch_close()
+{
+    out_ << "\t\t}" << std::endl;
 }
 
 // /////////////////////////////////////////////////////////////////////////////

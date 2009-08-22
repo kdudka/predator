@@ -590,12 +590,11 @@ static void handle_stmt_switch(gimple stmt)
     struct cl_operand src;
     handle_operand(&src, gimple_switch_index(stmt));
 
-    struct cl_insn cli;
-    cli.type                    = CL_INSN_RET;
-    cli.data.insn_ret.src       = &src;
-
-    read_gimple_location(&cli.loc, stmt);
-    SL_WARN_UNHANDLED_GIMPLE(stmt, "GIMPLE_SWITCH");
+    // emit insn_switch_open
+    struct cl_location loc;
+    read_gimple_location(&loc, stmt);
+    cl->insn_switch_open(cl, &loc, &src);
+    free_cl_operand_data(&src);
 
     unsigned i;
     for (i = 0; i < gimple_switch_num_labels(stmt); ++i) {
@@ -604,19 +603,17 @@ static void handle_stmt_switch(gimple stmt)
             TRAP;
 
         // lowest case value with same label
+        struct cl_operand val_lo;
         tree case_low = CASE_LOW(case_decl);
-        if (!case_low) {
-            SL_WARN_UNHANDLED_EXPR(case_decl, "switch/default");
-            continue;
-        }
+        handle_operand(&val_lo, case_low);
 
         // highest case value with same lable
+        struct cl_operand val_hi;
         tree case_high = CASE_HIGH(case_decl);
         if (!case_high)
             // there is no range, only one value
             case_high = case_low;
-
-        SL_WARN_UNHANDLED_EXPR(case_decl, "switch/case");
+        handle_operand(&val_hi, case_high);
 
         // figure out where to jump in that case
         tree case_label = CASE_LABEL(case_decl);
@@ -628,11 +625,17 @@ static void handle_stmt_switch(gimple stmt)
         unsigned label_uid = find_case_label_target(stmt, case_label_uid);
         const char *label = index_to_label(label_uid);
 
-        SL_WARN_UNHANDLED(label);
+        // emit insn_switch_case
+        read_gcc_location(&loc, EXPR_LOCATION(case_decl));
+        cl->insn_switch_case(cl, &loc, &val_lo, &val_hi, label);
+
+        free_cl_operand_data(&val_lo);
+        free_cl_operand_data(&val_hi);
         free((char *) label);
     }
 
-    free_cl_operand_data(&src);
+    // emit insn_switch_close
+    cl->insn_switch_close(cl);
 }
 
 // callback of walk_gimple_seq declared in <gimple.h>

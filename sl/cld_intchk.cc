@@ -108,6 +108,32 @@ class CldCbSeqChk: public ClDecoratorBase {
             ClDecoratorBase::insn_call_close();
         }
 
+        virtual void insn_switch_open(
+            const struct cl_location*loc,
+            const struct cl_operand *src)
+        {
+            loc_ = *loc;
+            this->setState(S_INSN_SWITCH);
+            ClDecoratorBase::insn_switch_open(loc, src);
+        }
+
+        virtual void insn_switch_case(
+            const struct cl_location*loc,
+            const struct cl_operand *val_lo,
+            const struct cl_operand *val_hi,
+            const char              *label)
+        {
+            loc_ = *loc;
+            this->chkInsnSwitchCase();
+            ClDecoratorBase::insn_switch_case(loc, val_lo, val_hi, label);
+        }
+
+        virtual void insn_switch_close()
+        {
+            this->setSwitchClose();
+            ClDecoratorBase::insn_switch_close();
+        }
+
     private:
         enum EState {
             S_INIT,
@@ -115,7 +141,8 @@ class CldCbSeqChk: public ClDecoratorBase {
             S_FNC_DECL,
             S_FNC_BODY,
             S_BLOCK_LEVEL,
-            S_INSN_CALL
+            S_INSN_CALL,
+            S_INSN_SWITCH
         };
 
         EState                      state_;
@@ -137,6 +164,8 @@ class CldCbSeqChk: public ClDecoratorBase {
         void chkInsnBinop();
         void chkInsnCallArg();
         void setCallClose();
+        void chkInsnSwitchCase();
+        void setSwitchClose();
 };
 
 class CldLabelChk: public ClDecoratorBase {
@@ -190,6 +219,16 @@ class CldLabelChk: public ClDecoratorBase {
             }
 
             ClDecoratorBase::insn(cli);
+        }
+
+        virtual void insn_switch_case(
+            const struct cl_location*loc,
+            const struct cl_operand *val_lo,
+            const struct cl_operand *val_hi,
+            const char              *label)
+        {
+            this->reqLabel(label);
+            ClDecoratorBase::insn_switch_case(loc, val_lo, val_hi, label);
         }
 
     private:
@@ -295,6 +334,14 @@ class CldRegUsageChk: public ClDecoratorBase {
             ClDecoratorBase::insn_call_arg(arg_id, arg_src);
         }
 
+        virtual void insn_switch_open(
+            const struct cl_location*loc,
+            const struct cl_operand *src)
+        {
+            this->handleSrc(src);
+            ClDecoratorBase::insn_switch_open(loc, src);
+        }
+
     private:
         struct Usage {
             bool                    read;
@@ -339,6 +386,7 @@ const char* CldCbSeqChk::toString(EState state) {
         CASE_TO_STRING(S_FNC_BODY)
         CASE_TO_STRING(S_BLOCK_LEVEL)
         CASE_TO_STRING(S_INSN_CALL)
+        CASE_TO_STRING(S_INSN_SWITCH)
         default:
             CL_DIE("CldCbSeqChk::toString");
             return NULL;
@@ -389,6 +437,7 @@ void CldCbSeqChk::setState(EState newState) {
         case S_BLOCK_LEVEL:
             switch (newState) {
                 case S_INSN_CALL:
+                case S_INSN_SWITCH:
                     break;
                 default:
                     this->emitUnexpected(newState);
@@ -396,6 +445,7 @@ void CldCbSeqChk::setState(EState newState) {
             break;
 
         case S_INSN_CALL:
+        case S_INSN_SWITCH:
             this->emitUnexpected(newState);
             break;
     }
@@ -462,6 +512,18 @@ void CldCbSeqChk::setCallClose() {
         this->emitUnexpected("insn_call_close");
 
     state_ = S_BLOCK_LEVEL;
+}
+
+void CldCbSeqChk::chkInsnSwitchCase() {
+    if (S_INSN_SWITCH != state_)
+        this->emitUnexpected("insn_switch_case");
+}
+
+void CldCbSeqChk::setSwitchClose() {
+    if (S_INSN_SWITCH != state_)
+        this->emitUnexpected("insn_switch_close");
+
+    state_ = S_FNC_BODY;
 }
 
 

@@ -107,6 +107,15 @@ class CldArgSubst: public ClDecoratorBase {
             ClDecoratorBase::insn_call_arg(arg_id, &local_arg_src);
         }
 
+        virtual void insn_switch_open(
+            const struct cl_location*loc,
+            const struct cl_operand *src)
+        {
+            struct cl_operand local_src = *src;
+            this->substArg(&local_src);
+            ClDecoratorBase::insn_switch_open(loc, &local_src);
+        }
+
     private:
         // we use map because some arg_id positions may be omitted
         typedef std::map<int, std::string> TMap;

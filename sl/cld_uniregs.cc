@@ -96,6 +96,15 @@ class CldUniRegs: public ClDecoratorBase {
             ClDecoratorBase::insn_call_arg(arg_id, &local_src);
         }
 
+        virtual void insn_switch_open(
+            const struct cl_location*loc,
+            const struct cl_operand *src)
+        {
+            struct cl_operand local_src = *src;
+            this->relocReg(&local_src);
+            ClDecoratorBase::insn_switch_open(loc, &local_src);
+        }
+
     private:
         typedef std::map<int, int> TMap;
 

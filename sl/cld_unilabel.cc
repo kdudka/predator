@@ -65,6 +65,18 @@ class CldUniLabel: public ClDecoratorBase {
             }
         }
 
+        virtual void insn_switch_case(
+            const struct cl_location*loc,
+            const struct cl_operand *val_lo,
+            const struct cl_operand *val_hi,
+            const char              *label)
+        {
+            std::string resolved(this->resolveLabel(label));
+            ClDecoratorBase::insn_switch_case(loc, val_lo, val_hi,
+                    resolved.c_str());
+        }
+
+
     private:
         typedef std::map<std::string, int> TMap;
 

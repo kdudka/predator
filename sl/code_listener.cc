@@ -209,6 +209,30 @@ static void cl_wrap_insn_call_close(
     CL_WRAP(insn_call_close);
 }
 
+static void cl_wrap_insn_switch_open(
+            struct cl_code_listener *self,
+            const struct cl_location*loc,
+            const struct cl_operand *src)
+{
+    CL_WRAP_VA(insn_switch_open, loc, src);
+}
+
+static void cl_wrap_insn_switch_case(
+            struct cl_code_listener *self,
+            const struct cl_location*loc,
+            const struct cl_operand *val_lo,
+            const struct cl_operand *val_hi,
+            const char              *label)
+{
+    CL_WRAP_VA(insn_switch_case, loc, val_lo, val_hi, label);
+}
+
+static void cl_wrap_insn_switch_close(
+            struct cl_code_listener *self)
+{
+    CL_WRAP(insn_switch_close);
+}
+
 static void cl_wrap_destroy(struct cl_code_listener *self)
 {
     ClWrapData *data = static_cast<ClWrapData *>(self->data);
@@ -240,6 +264,9 @@ struct cl_code_listener* cl_create_listener_wrap(ICodeListener *listener)
     wrap->insn_call_open    = cl_wrap_insn_call_open;
     wrap->insn_call_arg     = cl_wrap_insn_call_arg;
     wrap->insn_call_close   = cl_wrap_insn_call_close;
+    wrap->insn_switch_open  = cl_wrap_insn_switch_open;
+    wrap->insn_switch_case  = cl_wrap_insn_switch_case;
+    wrap->insn_switch_close = cl_wrap_insn_switch_close;
     wrap->destroy           = cl_wrap_destroy;
 
     return wrap;
