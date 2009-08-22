@@ -252,6 +252,51 @@ static void handle_insn_br(struct instruction *insn,
     free(bb_name_false);
 }
 
+static void handle_insn_switch(struct instruction *insn,
+                               struct cl_code_listener *cl)
+{
+    struct cl_operand op;
+    struct cl_location loc;
+    struct multijmp *jmp;
+
+    // emit insn_switch_open
+    pseudo_to_cl_operand(insn, insn->target, &op, false);
+    cl_set_location(&loc, insn->pos.line);
+    cl->insn_switch_open(cl, &loc, &op);
+    free_cl_operand_data(&op);
+
+    // go through cases
+    FOR_EACH_PTR(insn->multijmp_list, jmp) {
+        struct cl_operand val_lo = { CL_OPERAND_VOID };
+        struct cl_operand val_hi = { CL_OPERAND_VOID };
+        char *label = NULL;
+
+        // if true, it's case; default otherwise
+        if (jmp->begin <= jmp->end) {
+            val_lo.type = CL_OPERAND_INT;
+            val_hi.type = CL_OPERAND_INT;
+
+            val_lo.data.lit_int.value = jmp->begin;
+            val_hi.data.lit_int.value = jmp->end;
+        }
+
+        if (asprintf(&label, "%p", jmp->target) < 0)
+            die("asprintf failed");
+
+        // emit insn_switch_case
+        // FIXME: not enough accurate location info from SPARSE for switch/case
+        cl->insn_switch_case(cl, &loc, &val_lo, &val_hi, label);
+
+        free_cl_operand_data(&val_lo);
+        free_cl_operand_data(&val_hi);
+        free(label);
+
+    } END_FOR_EACH_PTR(jmp);
+
+    // emit insn_switch_close
+    cl->insn_switch_close(cl);
+}
+
 static void handle_insn_ret(struct instruction *insn,
                             struct cl_code_listener *cl)
 {
@@ -376,7 +421,10 @@ static void handle_insn(struct instruction *insn, struct cl_code_listener *cl)
             handle_insn_br(insn, cl);
             break;
 
-        WARN_CASE_UNHANDLED(insn->pos, OP_SWITCH)
+        case OP_SWITCH:
+            handle_insn_switch(insn, cl);
+            break;
+
         WARN_CASE_UNHANDLED(insn->pos, OP_INVOKE)
         WARN_CASE_UNHANDLED(insn->pos, OP_COMPUTEDGOTO)
         WARN_CASE_UNHANDLED(insn->pos, OP_TERMINATOR_END /*= OP_UNWIND*/)
