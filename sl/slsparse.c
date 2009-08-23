@@ -378,7 +378,7 @@ static void handle_insn_copy(struct instruction *insn,
             false       , false);
 }
 
-static void handle_insn_add(struct instruction *insn,
+static void handle_insn_binop(struct instruction *insn, enum cl_operand_e type,
                             struct cl_code_listener *cl)
 {
     struct cl_operand dst, src1, src2;
@@ -391,7 +391,7 @@ static void handle_insn_add(struct instruction *insn,
     {
         struct cl_insn cli;
         cli.type = CL_INSN_BINOP;
-        cli.data.insn_binop.type    = CL_BINOP_ADD;
+        cli.data.insn_binop.type    = type;
         cli.data.insn_binop.dst     = &dst;
         cli.data.insn_binop.src1    = &src1;
         cli.data.insn_binop.src2    = &src2;
@@ -402,12 +402,6 @@ static void handle_insn_add(struct instruction *insn,
     free_cl_operand_data(&dst);
     free_cl_operand_data(&src1);
     free_cl_operand_data(&src2);
-}
-
-static void handle_insn_set_eq(struct instruction *insn,
-                               struct cl_code_listener *cl)
-{
-    WARN_UNHANDLED(insn->pos, "==");
 }
 
 static void handle_insn(struct instruction *insn, struct cl_code_listener *cl)
@@ -439,7 +433,7 @@ static void handle_insn(struct instruction *insn, struct cl_code_listener *cl)
 
         /* Binary */
         case OP_ADD /*= OP_BINARY*/:
-            handle_insn_add(insn, cl);
+            handle_insn_binop(insn, CL_BINOP_ADD, cl);
             break;
 
         WARN_CASE_UNHANDLED(insn->pos, OP_SUB)
@@ -462,14 +456,29 @@ static void handle_insn(struct instruction *insn, struct cl_code_listener *cl)
 
         /* Binary comparison */
         case OP_SET_EQ /*= OP_BINCMP*/:
-            handle_insn_set_eq(insn, cl);
+            handle_insn_binop(insn, CL_BINOP_EQ, cl);
             break;
 
-        WARN_CASE_UNHANDLED(insn->pos, OP_SET_NE)
-        WARN_CASE_UNHANDLED(insn->pos, OP_SET_LE)
-        WARN_CASE_UNHANDLED(insn->pos, OP_SET_GE)
-        WARN_CASE_UNHANDLED(insn->pos, OP_SET_LT)
-        WARN_CASE_UNHANDLED(insn->pos, OP_SET_GT)
+        case OP_SET_NE:
+            handle_insn_binop(insn, CL_BINOP_NE, cl);
+            break;
+
+        case OP_SET_LE:
+            handle_insn_binop(insn, CL_BINOP_LE, cl);
+            break;
+
+        case OP_SET_GE:
+            handle_insn_binop(insn, CL_BINOP_GE, cl);
+            break;
+
+        case OP_SET_LT:
+            handle_insn_binop(insn, CL_BINOP_LT, cl);
+            break;
+
+        case OP_SET_GT:
+            handle_insn_binop(insn, CL_BINOP_GT, cl);
+            break;
+
         WARN_CASE_UNHANDLED(insn->pos, OP_SET_B)
         WARN_CASE_UNHANDLED(insn->pos, OP_SET_A)
         WARN_CASE_UNHANDLED(insn->pos, OP_SET_BE)
