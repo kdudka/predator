@@ -193,12 +193,6 @@ static void handle_operand_component_ref(struct cl_operand *op, tree t)
         if (!op0 || !op1)
             TRAP;
 
-        if (FIELD_DECL == TREE_CODE(op1)) {
-            SL_WARN_UNHANDLED_EXPR(t, "FIELD_DECL");
-            op->type = CL_OPERAND_VOID;
-            return;
-        }
-
         // nest to subtree
         concat_offset_string(&offset, DECL_NAME(op1));
         t = op0;
