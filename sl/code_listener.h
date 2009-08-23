@@ -49,87 +49,183 @@ struct cl_init_data {
 };
 
 /**
- * global initialization - it sets call-backs for printing messages
+ * global initialization - it sets message printing call-backs
  * @param init_data - collection of call-backs to set (none of them can be NULL)
  * @note You should call cl_global_cleanup() to free resources before exit.
  */
-void cl_global_init(
-        struct cl_init_data         *init_data);
+void cl_global_init(struct cl_init_data *init_data);
 
 /**
- * global initialization - it selects built-in functions for printing messages
+ * global initialization - it sets built-in functions to print messages
  * @param app_name - name of the application which appears in all messages. If
  * NULL is given, no application name will be printed.
  * @param verbose - if true debug messages are printed as well
  * @note You should call cl_global_cleanup() to free resources before exit.
  */
 void cl_global_init_defaults(
-        const char                  *app_name,
-        bool                        verbose);
+        const char                      *app_name,
+        bool                            verbose);
 
 /**
  * free resources allocated by cl_global_init() or cl_global_init_defaults()
  */
 void cl_global_cleanup(void);
 
-/* taken from gcc's expanded_location */
+/**
+ * generic location info.
+ * @note taken from gcc's expanded_location defined in <gcc/input.h>
+ */
 struct cl_location {
-    const char                      *file;          /* NULL means current   */
-    int                             line;           /* 1 ... first line     */
-    int                             column;         /* -1 ... not used      */
-    bool                            sysp;           /* in a system header?  */
+    /**
+     * input file as zero-terminated string. If NULL, the file currently being
+     * processed is taken as the input file.
+     */
+    const char                          *file;
+
+    /**
+     * line number in the input file (starting at 1). If the value is negative,
+     * data in this structure are not considered valid at all.
+     */
+    int                                 line;
+
+    /**
+     * column number in the input file (starting at 1). If such information is
+     * not available for the token, set the value to -1.
+     */
+    int                                 column;
+
+    /**
+     * true, if the token is located in a system header.
+     * @note not used for now
+     */
+    bool                                sysp;
 };
 
+/**
+ * symbol scope enumeration (linearly ordered)
+ */
 enum cl_scope_e {
+    /**
+     * scope is unlimited
+     */
     CL_SCOPE_GLOBAL,
+
+    /**
+     * scope is limited to current source file
+     */
     CL_SCOPE_STATIC,
+
+    /**
+     * scope is limited to currently processed function
+     */
     CL_SCOPE_FUNCTION,
+
+    /**
+     * scope is limited to currently processed basic block
+     */
     CL_SCOPE_BB
 };
 
+/**
+ * generic operand type enumeration
+ */
 enum cl_operand_e {
+    /**
+     * there is NO operand
+     */
     CL_OPERAND_VOID,
+
+    /**
+     * variable. We actually do not distinguish between local/global variables,
+     * temporal variables and (substituted) function arguments.
+     */
     CL_OPERAND_VAR,
+
+    /**
+     * function argument. Addressed by argument ID. Currently used only by
+     * slsparse, but it's atranslated by "arg_subst" cl decorator to
+     * CL_OPERAND_VAR afterwards.
+     */
     CL_OPERAND_ARG,
+
+    /**
+     * register. Addressed by register ID. Usually managed by compiler only.
+     * @todo We should stop ignoring register's size at some point.
+     * @note slsparse now ignores all operands with different size than 32bit
+     */
     CL_OPERAND_REG,
+
+    /**
+     * integer literal
+     */
     CL_OPERAND_INT,
+
+    /**
+     * string literal
+     */
     CL_OPERAND_STRING
+
     /* TODO */
 };
 
+/**
+ * generic operand. There is in fact no operand if type==CL_OPERAND_VOID. Each
+ * type of operand (with extra data) has it's own member in the union data.
+ * Members deref and offset are valid for *most* of operand types.
+ */
 struct cl_operand {
-    enum cl_operand_e               type;
-    /* TODO: location? */
+    /**
+     * type of operand. See enum cl_operand_e for documentation.
+     */
+    enum cl_operand_e                   type;
+    /* TODO: location?  */
+    /* TODO: scope?     */
 
-    bool                            deref;
-    const char                      *offset;
+    /**
+     * true, if operand is dereferenced.
+     */
+    bool                                deref;
 
-    /* per operand type specific data */
+    /**
+     * offset within a type, now maintained only as string. If there is no
+     * (named) offset (e.g. *ptr), the value will be NULL. The semantic
+     * depends also on value of deref. If deref is true, the semantic is
+     * op->offset; otherwise the semantic is op.offset.
+     *
+     * There is currently very simple support for nested types. For example if
+     * one wants to express op->data.var.name, the offset string will be
+     * "data.var.name" and deref true.
+     */
+    const char                          *offset;
+
+    /**
+     * per operand type specific data
+     */
     union {
 
         /* CL_OPERAND_VAR */
         struct {
-            const char              *name;
+            const char                  *name;
         } var;
 
         /* CL_OPERAND_ARG */
         struct {
-            int                     id;
+            int                         id;
         } arg;
 
         /* CL_OPERAND_REG */
         struct {
-            int                     id;
+            int                         id;
         } reg;
 
         /* CL_OPERAND_INT */
         struct {
-            int                     value;
+            int                         value;
         } lit_int;
 
         /* CL_OPERAND_STRING */
         struct {
-            const char              *value;
+            const char                  *value;
         } lit_string;
 
     } data;
@@ -162,42 +258,42 @@ enum cl_binop_e {
 };
 
 struct cl_insn {
-    enum cl_insn_e                  type;
-    struct cl_location              loc;
+    enum cl_insn_e                      type;
+    struct cl_location                  loc;
 
     /* instruction specific data */
     union {
 
         /* CL_INSN_JMP */
         struct {
-            const char              *label;
+            const char                  *label;
         } insn_jmp;
 
         /* CL_INSN_COND */
         struct {
-            const struct cl_operand *src;
-            const char              *then_label;
-            const char              *else_label;
+            const struct cl_operand     *src;
+            const char                  *then_label;
+            const char                  *else_label;
         } insn_cond;
 
         /* CL_INSN_RET */
         struct {
-            const struct cl_operand *src;
+            const struct cl_operand     *src;
         } insn_ret;
 
         /* CL_INSN_UNOP */
         struct {
-            enum cl_unop_e          type;
-            const struct cl_operand *dst;
-            const struct cl_operand *src;
+            enum cl_unop_e              type;
+            const struct cl_operand     *dst;
+            const struct cl_operand     *src;
         } insn_unop;
 
         /* CL_INSN_BINOP */
         struct {
-            enum cl_binop_e         type;
-            const struct cl_operand *dst;
-            const struct cl_operand *src1;
-            const struct cl_operand *src2;
+            enum cl_binop_e             type;
+            const struct cl_operand     *dst;
+            const struct cl_operand     *src1;
+            const struct cl_operand     *src2;
         } insn_binop;
 
     } data;
@@ -255,69 +351,68 @@ struct cl_code_listener {
     void *data;
 
     void (*file_open)(
-            struct cl_code_listener *self,
-            const char              *file_name);
+            struct cl_code_listener     *self,
+            const char                  *file_name);
 
     void (*file_close)(
-            struct cl_code_listener *self);
+            struct cl_code_listener     *self);
 
     void (*fnc_open)(
-            struct cl_code_listener *self,
-            const struct cl_location*loc,
-            const char              *fnc_name,
-            enum cl_scope_e         scope);
+            struct cl_code_listener     *self,
+            const struct cl_location    *loc,
+            const char                  *fnc_name,
+            enum cl_scope_e             scope);
 
     void (*fnc_arg_decl)(
-            struct cl_code_listener *self,
-            int                     arg_id,
-            const char              *arg_name);
+            struct cl_code_listener     *self,
+            int                         arg_id,
+            const char                  *arg_name);
 
     void (*fnc_close)(
-            struct cl_code_listener *self);
+            struct cl_code_listener     *self);
 
     void (*bb_open)(
-            struct cl_code_listener *self,
-            const char              *label);
+            struct cl_code_listener     *self,
+            const char                  *label);
 
     void (*insn)(
-            struct cl_code_listener *self,
-            const struct cl_insn    *insn);
+            struct cl_code_listener     *self,
+            const struct cl_insn        *insn);
 
     void (*insn_call_open)(
-            struct cl_code_listener *self,
-            const struct cl_location*loc,
-            const struct cl_operand *dst,
-            const struct cl_operand *fnc);
+            struct cl_code_listener     *self,
+            const struct cl_location    *loc,
+            const struct cl_operand     *dst,
+            const struct cl_operand     *fnc);
 
     void (*insn_call_arg)(
-            struct cl_code_listener *self,
-            int                     arg_id,
-            const struct cl_operand *arg_src);
+            struct cl_code_listener     *self,
+            int                         arg_id,
+            const struct cl_operand     *arg_src);
 
     void (*insn_call_close)(
-            struct cl_code_listener *self);
+            struct cl_code_listener     *self);
 
     void (*insn_switch_open)(
-            struct cl_code_listener *self,
-            const struct cl_location*loc,
-            const struct cl_operand *src);
+            struct cl_code_listener     *self,
+            const struct cl_location    *loc,
+            const struct cl_operand     *src);
 
     void (*insn_switch_case)(
-            struct cl_code_listener *self,
-            const struct cl_location*loc,
-            const struct cl_operand *val_lo,
-            const struct cl_operand *val_hi,
-            const char              *label);
+            struct cl_code_listener     *self,
+            const struct cl_location    *loc,
+            const struct cl_operand     *val_lo,
+            const struct cl_operand     *val_hi,
+            const char                  *label);
 
     void (*insn_switch_close)(
-            struct cl_code_listener *self);
+            struct cl_code_listener     *self);
 
     void (*destroy)(
-            struct cl_code_listener *self);
+            struct cl_code_listener     *self);
 };
 
-struct cl_code_listener* cl_code_listener_create(
-        const char                  *config_string);
+struct cl_code_listener* cl_code_listener_create(const char *config_string);
 
 /**
  * @todo document
@@ -328,8 +423,8 @@ struct cl_code_listener* cl_chain_create(void);
  * @todo document
  */
 void cl_chain_append(
-        struct cl_code_listener     *chain,
-        struct cl_code_listener     *listener);
+        struct cl_code_listener         *chain,
+        struct cl_code_listener         *listener);
 
 #ifdef __cplusplus
 }
