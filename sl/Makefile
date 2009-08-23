@@ -94,7 +94,7 @@ check: chkplug chksparse chkunit chkhead
 
 chkhead:
 	$(MAKE) -f Makefile.chk
-	gcc -std=gnu89 -Wall -Werror -W -pedantic -c code_listener.h -o /dev/null
+	gcc -ansi -Wall -Werror -W -pedantic -c code_listener.h -o /dev/null
 
 clean:
 	rm -f libcl.a $(CL_OBJS)

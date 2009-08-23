@@ -4,7 +4,9 @@
 #include "code_listener.h"
 
 #include <cstdlib>
+#include <iostream>
 #include <sstream>
+#include <string>
 
 /**
  * C++ interface for listener objects. It can be wrapped to struct code_listener
@@ -101,5 +103,68 @@ void cl_die(const char *msg);
     str << to_stream; \
     fnc(str.str().c_str()); \
 } while (0)
+
+struct Location {
+    std::string currentFile;
+    std::string locFile;
+    int         locLine;
+    int         locColumn;
+
+    Location():
+        locLine(-1),
+        locColumn(-1)
+    {
+    }
+
+    Location(const Location *loc):
+        locLine(-1),
+        locColumn(-1)
+    {
+        if (loc) {
+            currentFile     = loc->currentFile;
+            locFile         = loc->locFile;
+            locLine         = loc->locLine;
+            locColumn       = loc->locColumn;
+        }
+    }
+
+    Location(const struct cl_location *loc):
+        locLine(-1),
+        locColumn(-1)
+    {
+        if (loc)
+            this->operator=(loc);
+    }
+
+    Location& operator=(const struct cl_location *loc) {
+        if (loc->file)
+            locFile = loc->file;
+        else
+            locFile.clear();
+
+        locLine = loc->line;
+        locColumn = loc->column;
+
+        return *this;
+    }
+};
+
+struct LocationWriter {
+    Location                        loc;
+    Location                        last;
+
+    LocationWriter(const Location &loc_, const Location *last_ = 0):
+        loc(loc_),
+        last(last_)
+    {
+    }
+
+    LocationWriter(const struct cl_location *loc_, const Location *last_ = 0):
+        loc(loc_),
+        last(last_)
+    {
+    }
+};
+std::ostream& operator<<(std::ostream &, const LocationWriter &);
 
 #endif /* H_GUARD_CL_PRIVATE_H */

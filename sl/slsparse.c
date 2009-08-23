@@ -64,6 +64,14 @@ static void sep_warn(struct position pos, const char *fmt, ...)
     fprintf(stderr, "\n");
 }
 
+static void read_sparse_location(struct cl_location *loc, struct position pos)
+{
+    loc->file   = stream_name(pos.stream);
+    loc->line   = pos.line;
+    loc->column = pos.pos;
+    loc->sysp   = /* not used by SPARSE */ false;
+}
+
 static bool is_pseudo(pseudo_t pseudo)
 {
     return pseudo
@@ -189,7 +197,7 @@ static void handle_insn_call(struct instruction *insn,
     int cnt = 0;
 
     struct cl_location loc;
-    cl_set_location(&loc, insn->pos.line);
+    read_sparse_location(&loc, insn->pos);
 
     // open call
     pseudo_to_cl_operand(insn, insn->target , &dst  , false);
@@ -225,7 +233,7 @@ static void handle_insn_br(struct instruction *insn,
         struct cl_insn cli;
         cli.type                    = CL_INSN_JMP;
         cli.data.insn_jmp.label     = bb_name_true;
-        cl_set_location(&cli.loc, insn->pos.line);
+        read_sparse_location(&cli.loc, insn->pos);
         cl->insn(cl, &cli);
         free(bb_name_true);
         return;
@@ -243,7 +251,7 @@ static void handle_insn_br(struct instruction *insn,
         cli.data.insn_cond.src          = &op;
         cli.data.insn_cond.then_label   = bb_name_true;
         cli.data.insn_cond.else_label   = bb_name_false;
-        cl_set_location(&cli.loc, insn->pos.line);
+        read_sparse_location(&cli.loc, insn->pos);
         cl->insn(cl, &cli);
     }
 
@@ -261,7 +269,7 @@ static void handle_insn_switch(struct instruction *insn,
 
     // emit insn_switch_open
     pseudo_to_cl_operand(insn, insn->target, &op, false);
-    cl_set_location(&loc, insn->pos.line);
+    read_sparse_location(&loc, insn->pos);
     cl->insn_switch_open(cl, &loc, &op);
     free_cl_operand_data(&op);
 
@@ -306,7 +314,7 @@ static void handle_insn_ret(struct instruction *insn,
     pseudo_to_cl_operand(insn, insn->src, &op, false);
     cli.type                = CL_INSN_RET;
     cli.data.insn_ret.src   = &op;
-    cl_set_location(&cli.loc, insn->pos.line);
+    read_sparse_location(&cli.loc, insn->pos);
     cl->insn(cl, &cli);
     free_cl_operand_data(&op);
 }
@@ -339,7 +347,7 @@ static void insn_assignment_base(struct instruction                 *insn,
         cli.data.insn_unop.type     = CL_UNOP_ASSIGN;
         cli.data.insn_unop.dst      = &op_lhs;
         cli.data.insn_unop.src      = &op_rhs;
-        cl_set_location(&cli.loc, insn->pos.line);
+        read_sparse_location(&cli.loc, insn->pos);
         cl->insn(cl, &cli);
     }
 
@@ -387,7 +395,7 @@ static void handle_insn_add(struct instruction *insn,
         cli.data.insn_binop.dst     = &dst;
         cli.data.insn_binop.src1    = &src1;
         cli.data.insn_binop.src2    = &src2;
-        cl_set_location(&cli.loc, insn->pos.line);
+        read_sparse_location(&cli.loc, insn->pos);
         cl->insn(cl, &cli);
     }
 
@@ -612,7 +620,7 @@ static void handle_fnc_ep(struct entrypoint *ep, struct cl_code_listener *cl)
         struct cl_insn cli;
         cli.type                    = CL_INSN_JMP;
         cli.data.insn_jmp.label     = entry_name;
-        cl_set_location(&cli.loc, entry->pos.line);
+        read_sparse_location(&cli.loc, entry->pos);
         cl->insn(cl, &cli);
     }
     free(entry_name);
@@ -658,7 +666,7 @@ static void handle_fnc_def(struct symbol *sym, struct cl_code_listener *cl)
     struct cl_location loc;
     int argc = 0;
 
-    cl_set_location(&loc, sym->pos.line);
+    read_sparse_location(&loc, sym->pos);
     cl->fnc_open(cl, &loc, show_ident(sym->ident),
             (sym->scope==file_scope)
             ? CL_SCOPE_STATIC

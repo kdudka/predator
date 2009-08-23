@@ -194,7 +194,7 @@ static void handle_operand_component_ref(struct cl_operand *op, tree t)
             TRAP;
 
         if (FIELD_DECL == TREE_CODE(op1)) {
-            SL_WARN_UNHANDLED_EXPR(op1, "FIELD_DECL");
+            SL_WARN_UNHANDLED_EXPR(t, "FIELD_DECL");
             op->type = CL_OPERAND_VOID;
             return;
         }
@@ -719,7 +719,8 @@ static void handle_jmp_edge (edge e)
     cli.data.insn_jmp.label = index_to_label(next->index);
 
     // no location for CL_INSN_JMP for now
-    cl_set_location(&cli.loc, -1);
+    cli.loc.file = NULL;
+    cli.loc.line = -1;
 
     cl->insn(cl, &cli);
     free((char *) cli.data.insn_jmp.label);

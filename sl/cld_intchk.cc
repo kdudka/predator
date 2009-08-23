@@ -11,7 +11,7 @@ class CldCbSeqChk: public ClDecoratorBase {
         virtual void file_open(
             const char              *file_name)
         {
-            file_ = file_name;
+            loc_.currentFile = file_name;
             this->setState(S_FILE_LEVEL);
             ClDecoratorBase::file_open(file_name);
         }
@@ -26,7 +26,7 @@ class CldCbSeqChk: public ClDecoratorBase {
             const char              *fnc_name,
             enum cl_scope_e         scope)
         {
-            loc_ = *loc;
+            loc_ = loc;
             this->setState(S_FNC_DECL);
             ClDecoratorBase::fnc_open(loc, fnc_name, scope);
         }
@@ -54,7 +54,7 @@ class CldCbSeqChk: public ClDecoratorBase {
         virtual void insn(
             const struct cl_insn    *cli)
         {
-            loc_ = cli->loc;
+            loc_ = &cli->loc;
 
             switch (cli->type) {
                 case CL_INSN_JMP:
@@ -90,7 +90,7 @@ class CldCbSeqChk: public ClDecoratorBase {
             const struct cl_operand *dst,
             const struct cl_operand *fnc)
         {
-            loc_ = *loc;
+            loc_ = loc;
             this->setState(S_INSN_CALL);
             ClDecoratorBase::insn_call_open(loc, dst, fnc);
         }
@@ -112,7 +112,7 @@ class CldCbSeqChk: public ClDecoratorBase {
             const struct cl_location*loc,
             const struct cl_operand *src)
         {
-            loc_ = *loc;
+            loc_ = loc;
             this->setState(S_INSN_SWITCH);
             ClDecoratorBase::insn_switch_open(loc, src);
         }
@@ -123,7 +123,7 @@ class CldCbSeqChk: public ClDecoratorBase {
             const struct cl_operand *val_hi,
             const char              *label)
         {
-            loc_ = *loc;
+            loc_ = loc;
             this->chkInsnSwitchCase();
             ClDecoratorBase::insn_switch_case(loc, val_lo, val_hi, label);
         }
@@ -146,8 +146,7 @@ class CldCbSeqChk: public ClDecoratorBase {
         };
 
         EState                      state_;
-        std::string                 file_;
-        struct cl_location          loc_;
+        Location                    loc_;
 
 
     private:
@@ -175,7 +174,7 @@ class CldLabelChk: public ClDecoratorBase {
         virtual void file_open(
             const char              *file_name)
         {
-            file_ = file_name;
+            loc_.currentFile = file_name;
             ClDecoratorBase::file_open(file_name);
         }
 
@@ -184,7 +183,7 @@ class CldLabelChk: public ClDecoratorBase {
             const char              *fnc_name,
             enum cl_scope_e         scope)
         {
-            loc_ = *loc;
+            loc_ = loc;
             this->reset();
             ClDecoratorBase::fnc_open(loc, fnc_name, scope);
         }
@@ -204,6 +203,8 @@ class CldLabelChk: public ClDecoratorBase {
         virtual void insn(
             const struct cl_insn    *cli)
         {
+            loc_ = &cli->loc;
+
             switch (cli->type) {
                 case CL_INSN_JMP:
                     this->reqLabel(cli->data.insn_jmp.label);
@@ -227,6 +228,7 @@ class CldLabelChk: public ClDecoratorBase {
             const struct cl_operand *val_hi,
             const char              *label)
         {
+            loc_ = loc;
             this->reqLabel(label);
             ClDecoratorBase::insn_switch_case(loc, val_lo, val_hi, label);
         }
@@ -235,19 +237,15 @@ class CldLabelChk: public ClDecoratorBase {
         struct LabelState {
             bool                    defined;
             bool                    reachable;
-            struct cl_location      loc;
+            Location                loc;
 
-            LabelState(): defined(false), reachable(false)
-            {
-                cl_set_location(&loc, -1);
-            }
+            LabelState(): defined(false), reachable(false) { }
         };
 
         typedef std::map<std::string, LabelState> TMap;
 
         TMap                map_;
-        std::string         file_;
-        struct cl_location  loc_;
+        Location            loc_;
 
     private:
         void reset();
@@ -264,7 +262,7 @@ class CldRegUsageChk: public ClDecoratorBase {
         virtual void file_open(
             const char              *file_name)
         {
-            file_ = file_name;
+            loc_.currentFile = file_name;
             ClDecoratorBase::file_open(file_name);
         }
 
@@ -273,7 +271,7 @@ class CldRegUsageChk: public ClDecoratorBase {
             const char              *fnc_name,
             enum cl_scope_e         scope)
         {
-            loc_ = *loc;
+            loc_ = loc;
             this->reset();
             ClDecoratorBase::fnc_open(loc, fnc_name, scope);
         }
@@ -286,7 +284,7 @@ class CldRegUsageChk: public ClDecoratorBase {
         virtual void insn(
             const struct cl_insn    *cli)
         {
-            loc_ = cli->loc;
+            loc_ = &cli->loc;
 
             switch (cli->type) {
                 case CL_INSN_COND:
@@ -320,7 +318,7 @@ class CldRegUsageChk: public ClDecoratorBase {
             const struct cl_operand *dst,
             const struct cl_operand *fnc)
         {
-            loc_ = *loc;
+            loc_ = loc;
             this->handleDst(dst);
             this->handleSrc(fnc);
             ClDecoratorBase::insn_call_open(loc, dst, fnc);
@@ -338,6 +336,7 @@ class CldRegUsageChk: public ClDecoratorBase {
             const struct cl_location*loc,
             const struct cl_operand *src)
         {
+            loc_ = loc;
             this->handleSrc(src);
             ClDecoratorBase::insn_switch_open(loc, src);
         }
@@ -346,19 +345,15 @@ class CldRegUsageChk: public ClDecoratorBase {
         struct Usage {
             bool                    read;
             bool                    written;
-            struct cl_location      loc;
+            Location                loc;
 
-            Usage(): read(false), written(false)
-            {
-                cl_set_location(&loc, -1);
-            }
+            Usage(): read(false), written(false) { }
         };
 
         typedef std::map<int, Usage> TMap;
 
         TMap                map_;
-        std::string         file_;
-        struct cl_location  loc_;
+        Location            loc_;
 
     private:
         void reset();
@@ -374,7 +369,6 @@ CldCbSeqChk::CldCbSeqChk(ICodeListener *slave):
     ClDecoratorBase(slave),
     state_(S_INIT)
 {
-    cl_set_location(&loc_, -1);
 }
 
 const char* CldCbSeqChk::toString(EState state) {
@@ -394,7 +388,7 @@ const char* CldCbSeqChk::toString(EState state) {
 }
 
 void CldCbSeqChk::emitUnexpected(const char *what) {
-    CL_MSG_STREAM(cl_error, file_ << ":" << loc_.line << ": error: "
+    CL_MSG_STREAM(cl_error, LocationWriter(0, &loc_) << "error: "
             << "unexpected callback in state "
             << toString(state_) << " (" << what << ")");
 }
@@ -532,7 +526,6 @@ void CldCbSeqChk::setSwitchClose() {
 CldLabelChk::CldLabelChk(ICodeListener *slave):
     ClDecoratorBase(slave)
 {
-    cl_set_location(&loc_, -1);
 }
 
 void CldLabelChk::reset() {
@@ -542,14 +535,14 @@ void CldLabelChk::reset() {
 void CldLabelChk::defineLabel(const char *label) {
     LabelState &ls = map_[label];
     ls.defined = true;
-    if (ls.loc.line < 0)
+    if (ls.loc.locLine < 0)
         ls.loc = loc_;
 }
 
 void CldLabelChk::reqLabel(const char *label) {
     LabelState &ls = map_[label];
     ls.reachable = true;
-    if (ls.loc.line < 0)
+    if (ls.loc.locLine < 0)
         ls.loc = loc_;
 }
 
@@ -560,12 +553,12 @@ void CldLabelChk::emitWarnings() {
         const LabelState &ls = i->second;
 
         if (!ls.defined) {
-            CL_MSG_STREAM(cl_error, file_ << ":" << ls.loc.line << ": error: "
+            CL_MSG_STREAM(cl_error, LocationWriter(ls.loc, &loc_) << "error: "
                     << "jump to undefined label '" << label << "'");
         }
 
         if (!ls.reachable) {
-            CL_MSG_STREAM(cl_warn, file_ << ":" << ls.loc.line << ": warning: "
+            CL_MSG_STREAM(cl_warn, LocationWriter(ls.loc, &loc_) << "warning: "
                     << "unreachable label '" << label << "'");
         }
     }
@@ -577,7 +570,6 @@ void CldLabelChk::emitWarnings() {
 CldRegUsageChk::CldRegUsageChk(ICodeListener *slave):
     ClDecoratorBase(slave)
 {
-    cl_set_location(&loc_, -1);
 }
 
 void CldRegUsageChk::reset() {
@@ -590,7 +582,7 @@ void CldRegUsageChk::handleDst(const struct cl_operand *op) {
 
     Usage &u = map_[op->data.reg.id];
     u.written = true;
-    if (u.loc.line < 0)
+    if (u.loc.locLine < 0)
         u.loc = loc_;
 }
 
@@ -600,7 +592,7 @@ void CldRegUsageChk::handleSrc(const struct cl_operand *op) {
 
     Usage &u = map_[op->data.reg.id];
     u.read = true;
-    if (u.loc.line < 0)
+    if (u.loc.locLine < 0)
         u.loc = loc_;
 }
 
@@ -621,12 +613,12 @@ void CldRegUsageChk::emitWarnings() {
         const Usage &u = i->second;
 
         if (!u.read) {
-            CL_MSG_STREAM(cl_warn, file_ << ":" << u.loc.line << ": warning: "
+            CL_MSG_STREAM(cl_warn, LocationWriter(u.loc, &loc_) << "warning: "
                     << "unused register %r" << reg);
         }
 
         if (!u.written) {
-            CL_MSG_STREAM(cl_error, file_ << ":" << u.loc.line << ": error: "
+            CL_MSG_STREAM(cl_error, LocationWriter(u.loc, &loc_) << "error: "
                     << "uninitialized register %r" << reg);
         }
     }

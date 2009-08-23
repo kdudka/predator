@@ -80,15 +80,6 @@ struct cl_location {
     bool                            sysp;           /* in a system header?  */
 };
 
-/* TODO: avoid the inline function to compliance ANSI C? */
-inline void cl_set_location(struct cl_location *loc, int line)
-{
-    loc->file   = (const char *) 0;
-    loc->line   = line;
-    loc->column = -1;
-    loc->sysp   = false;
-}
-
 enum cl_scope_e {
     CL_SCOPE_GLOBAL,
     CL_SCOPE_STATIC,

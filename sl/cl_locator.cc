@@ -8,52 +8,59 @@
 class ClLocator: public ICodeListener {
     public:
         ClLocator(int fd_out);
-        virtual ~ClLocator();
 
-        virtual void file_open(
-            const char              *file_name);
+        virtual void file_open(const char *file_name) {
+            lastLoc_.currentFile = file_name;
+        }
 
-        virtual void file_close();
+        virtual void file_close() {
+            lastLoc_.currentFile.clear();
+        }
 
-        virtual void fnc_open(
-            const struct cl_location*loc,
-            const char              *fnc_name,
-            enum cl_scope_e         scope);
+        virtual void fnc_open(const struct cl_location *loc, const char *,
+                              enum cl_scope_e)
+        {
+            this->printLocation(loc);
+            lastLoc_ = loc;
+        }
 
-        virtual void fnc_arg_decl(
-            int                     arg_id,
-            const char              *arg_name);
+        virtual void fnc_arg_decl(int, const char *) { }
+        virtual void fnc_close() { }
+        virtual void bb_open(const char *) { }
 
-        virtual void fnc_close();
+        virtual void insn(const struct cl_insn *cli) {
+            if (CL_INSN_JMP != cli->type)
+                this->printLocation(&cli->loc);
+            lastLoc_ = &cli->loc;
+        }
 
-        virtual void bb_open(
-            const char              *bb_name);
+        virtual void insn_call_open(const struct cl_location *loc,
+                                    const struct cl_operand *,
+                                    const struct cl_operand *)
+        {
+            this->printLocation(loc);
+            lastLoc_ = loc;
+        }
 
-        virtual void insn(
-            const struct cl_insn    *cli);
+        virtual void insn_call_arg(int arg_id, const struct cl_operand *) { }
+        virtual void insn_call_close() { }
 
-        virtual void insn_call_open(
-            const struct cl_location*loc,
-            const struct cl_operand *dst,
-            const struct cl_operand *fnc);
+        virtual void insn_switch_open(const struct cl_location *loc,
+                                      const struct cl_operand *)
+        {
+            this->printLocation(loc);
+            lastLoc_ = loc;
+        }
 
-        virtual void insn_call_arg(
-            int                     arg_id,
-            const struct cl_operand *arg_src);
+        virtual void insn_switch_case(const struct cl_location *loc,
+                                      const struct cl_operand *,
+                                      const struct cl_operand *, const char *)
+        {
+            this->printLocation(loc);
+            lastLoc_ = loc;
+        }
 
-        virtual void insn_call_close();
-
-        virtual void insn_switch_open(
-            const struct cl_location*loc,
-            const struct cl_operand *src);
-
-        virtual void insn_switch_case(
-            const struct cl_location*loc,
-            const struct cl_operand *val_lo,
-            const struct cl_operand *val_hi,
-            const char              *label);
-
-        virtual void insn_switch_close();
+        virtual void insn_switch_close() { }
 
     private:
         typedef boost::iostreams::file_descriptor_sink  TSink;
@@ -61,11 +68,10 @@ class ClLocator: public ICodeListener {
 
         TSink                   sink_;
         TStream                 out_;
-        std::string             file_;
-        struct cl_location      loc_;
+        Location                lastLoc_;
 
     private:
-        void printLocation();
+        void printLocation(const struct cl_location *);
 };
 
 using namespace ssd;
@@ -77,89 +83,12 @@ ClLocator::ClLocator(int fd_out):
     sink_(fd_out),
     out_(sink_)
 {
-    cl_set_location(&loc_, -1);
 }
 
-ClLocator::~ClLocator() {
-}
-
-void ClLocator::file_open(const char *file_name) {
-    file_ = file_name;
-}
-
-void ClLocator::file_close() {
-}
-
-void ClLocator::printLocation() {
-    if (loc_.file)
-        out_ << loc_.file;
-    else
-        out_ << file_;
-
-    out_ << ":" << loc_.line;
-
-    if (0 < loc_.column)
-        out_ << ":" << loc_.column;
-
-    out_ << ": linearized code follows..." << std::endl;
-}
-
-void ClLocator::fnc_open(const struct cl_location *loc, const char *,
-                         enum cl_scope_e)
-{
-    loc_ = *loc;
-    this->printLocation();
-}
-
-void ClLocator::fnc_arg_decl(int, const char *) {
-}
-
-void ClLocator::fnc_close() {
-}
-
-void ClLocator::bb_open(const char *) {
-}
-
-void ClLocator::insn(const struct cl_insn *cli) {
-    loc_ = cli->loc;
-    if (CL_INSN_JMP != cli->type)
-        this->printLocation();
-}
-
-void ClLocator::insn_call_open(const struct cl_location *loc,
-                               const struct cl_operand *dst,
-                               const struct cl_operand *fnc)
-{
-    loc_ = *loc;
-    this->printLocation();
-}
-
-void ClLocator::insn_call_arg(int, const struct cl_operand *) {
-}
-
-void ClLocator::insn_call_close() {
-}
-
-void ClLocator::insn_switch_open(
-            const struct cl_location*loc,
-            const struct cl_operand *)
-{
-    loc_ = *loc;
-    this->printLocation();
-}
-
-void ClLocator::insn_switch_case(
-            const struct cl_location*loc,
-            const struct cl_operand *,
-            const struct cl_operand *,
-            const char              *)
-{
-    loc_ = *loc;
-    this->printLocation();
-}
-
-void ClLocator::insn_switch_close()
-{
+void ClLocator::printLocation(const struct cl_location *loc) {
+    out_ << LocationWriter(loc, &lastLoc_)
+        << "linearized code follows..."
+        << std::endl;
 }
 
 // /////////////////////////////////////////////////////////////////////////////
