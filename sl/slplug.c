@@ -163,19 +163,25 @@ static void handle_operand_indirect_ref(struct cl_operand *op, tree t)
     op->deref = true;
 }
 
-static void concat_offset_string(char **offset_string, tree decl_name)
+static void concat_offset_string(char **offset_string, tree decl)
 {
     const char *offset = *offset_string;
-    const char *ident = IDENTIFIER_POINTER(decl_name);
-    if (!ident)
-        TRAP;
+
+    char *ident;
+    int rv = (DECL_NAME(decl))
+        ? /* strdup is poisoned :- (*/ asprintf(&ident, "%s",
+                IDENTIFIER_POINTER(DECL_NAME(decl)))
+        : /* no decl - headfile omitted? */ asprintf(&ident, "%%r%d",
+                DECL_UID(decl));
+    SL_ASSERT(0 < rv);
 
     // concatenate with previous offset string if any
     char *tmp;
-    int rv = (offset)
+    rv = (offset)
         ? asprintf(&tmp, "%s.%s", ident, offset)
-        : /* FIXME: strdup is poisoned :-( */ asprintf(&tmp, "%s", ident);
+        : /* strdup is poisoned :-( */ asprintf(&tmp, "%s", ident);
     SL_ASSERT(0 < rv);
+    free(ident);
 
     // free previous offset string (if any) and replace it
     free((char *) offset);
@@ -194,7 +200,7 @@ static void handle_operand_component_ref(struct cl_operand *op, tree t)
             TRAP;
 
         // nest to subtree
-        concat_offset_string(&offset, DECL_NAME(op1));
+        concat_offset_string(&offset, op1);
         t = op0;
     }
 
