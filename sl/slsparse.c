@@ -768,7 +768,7 @@ static struct cl_code_listener* create_cl_chain()
         return NULL;
 
     if (1 < verbose) {
-        cl = cl_code_listener_create("locator", STDOUT_FILENO, false);
+        cl = cl_code_listener_create("listener=\"locator\"");
         if (!cl) {
             chain->destroy(chain);
             return NULL;
@@ -776,7 +776,8 @@ static struct cl_code_listener* create_cl_chain()
         cl_chain_append(chain, cl);
     }
 
-    cl = cl_code_listener_create("pp", STDOUT_FILENO, false);
+    cl = cl_code_listener_create("listener=\"pp\" "
+            "cld=\"arg_subst,unify_labels_fnc,unify_regs\"");
     if (!cl) {
         chain->destroy(chain);
         return NULL;
@@ -800,7 +801,7 @@ int main(int argc, char **argv)
 
     symlist = sparse_initialize(argc, argv, &filelist);
 
-    cl_global_init_defaults(NULL, true);
+    cl_global_init_defaults(NULL, verbose);
     cl = create_cl_chain();
     if (!cl)
         // error message already emitted

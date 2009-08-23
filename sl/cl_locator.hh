@@ -4,9 +4,8 @@
 struct ICodeListener;
 
 /**
- * create ICgListener implementation (TODO: document)
- * @return on heap allocated instance of ICgListener object
+ * @todo document
  */
-ICodeListener* createClLocator(int fd_out);
+ICodeListener* createClLocator();
 
 #endif /* H_GUARD_CL_LOCATOR_H */

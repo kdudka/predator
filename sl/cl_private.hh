@@ -8,6 +8,9 @@
 #include <sstream>
 #include <string>
 
+#include <signal.h>
+#define TRAP raise(SIGTRAP)
+
 /**
  * C++ interface for listener objects. It can be wrapped to struct code_listener
  * object when exposing to pure C world. See code_listener for details about
@@ -102,6 +105,16 @@ void cl_die(const char *msg);
     std::ostringstream str; \
     str << to_stream; \
     fnc(str.str().c_str()); \
+} while (0)
+
+#define CL_INTERNAL_ERROR(to_stream) do { \
+    CL_MSG_STREAM(cl_error, __FILE__ << ":" << __LINE__ \
+            << ": internal error: " << to_stream << " [internal location]"); \
+} while (0)
+
+#define CL_DEBUG(to_stream) do { \
+    CL_MSG_STREAM(cl_debug, __FILE__ << ":" << __LINE__ \
+            << ": debug: " << to_stream << " [internal location]"); \
 } while (0)
 
 struct Location {

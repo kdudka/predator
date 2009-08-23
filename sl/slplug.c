@@ -966,7 +966,7 @@ static struct cl_code_listener* create_cl_chain(void)
         return NULL;
 
     if (SL_VERBOSE_LOCATION & verbose) {
-        cl = cl_code_listener_create("locator", STDOUT_FILENO, false);
+        cl = cl_code_listener_create("listener=\"locator\"");
         if (!cl) {
             chain->destroy(chain);
             return NULL;
@@ -974,7 +974,8 @@ static struct cl_code_listener* create_cl_chain(void)
         cl_chain_append(chain, cl);
     }
 
-    cl = cl_code_listener_create("pp", STDOUT_FILENO, false);
+    cl = cl_code_listener_create("listener=\"pp\" "
+            "cld=\"unify_labels_fnc,unify_regs\"");
     if (!cl) {
         chain->destroy(chain);
         return NULL;

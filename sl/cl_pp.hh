@@ -4,9 +4,8 @@
 struct ICodeListener;
 
 /**
- * create ICgListener implementation (TODO: document)
- * @return on heap allocated instance of ICgListener object
+ * @todo document
  */
-ICodeListener* createClPrettyPrint(int fd_out);
+ICodeListener* createClPrettyPrint();
 
 #endif /* H_GUARD_CL_PP_H */

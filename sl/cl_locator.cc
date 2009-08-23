@@ -93,6 +93,6 @@ void ClLocator::printLocation(const struct cl_location *loc) {
 
 // /////////////////////////////////////////////////////////////////////////////
 // public interface, see cl_pp.h for more details
-ICodeListener* createClLocator(int fd_out) {
-    return new ClLocator(fd_out);
+ICodeListener* createClLocator() {
+    return new ClLocator(STDOUT_FILENO);
 }

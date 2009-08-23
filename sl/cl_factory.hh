@@ -12,10 +12,9 @@ class ClFactory {
         ~ClFactory();
 
         /**
-         * @param fmt format used to dump call graph data
-         * @return on heap allocated ICodeListener object
+         * @todo document
          */
-        ICodeListener* create(const char *fmt, int fd_out);
+        ICodeListener* create(const char *config_string);
 
     private:
         struct Private;

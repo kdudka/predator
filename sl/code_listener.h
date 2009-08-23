@@ -317,9 +317,7 @@ struct cl_code_listener {
 };
 
 struct cl_code_listener* cl_code_listener_create(
-        const char                  *fmt,
-        int                         fd_out,
-        bool                        close_fd_on_destroy);
+        const char                  *config_string);
 
 /**
  * @todo document

@@ -102,16 +102,9 @@ void cl_global_cleanup(void)
         free((char *)app_name);
 }
 
-struct ClWrapData {
-    ICodeListener                   *listener;              ///< wrapped object
-    int                             fd_out;
-    bool                            close_fd_on_destroy;
-};
-
 ICodeListener* cl_obtain_from_wrap(struct cl_code_listener *wrap)
 {
-    ClWrapData *data = static_cast<ClWrapData *>(wrap->data);
-    return data->listener;
+    return static_cast<ICodeListener *>(wrap->data);
 }
 
 // do not throw an exception through the pure C interface
@@ -235,25 +228,14 @@ static void cl_wrap_insn_switch_close(
 
 static void cl_wrap_destroy(struct cl_code_listener *self)
 {
-    ClWrapData *data = static_cast<ClWrapData *>(self->data);
-    delete data->listener;
-
-    if (data->close_fd_on_destroy)
-        close(data->fd_out);
-
-    delete data;
+    delete static_cast<ICodeListener *>(self->data);
     delete self;
 }
 
 struct cl_code_listener* cl_create_listener_wrap(ICodeListener *listener)
 {
-    ClWrapData *data = new ClWrapData;
-    data->listener              = listener;
-    data->fd_out                = -1;
-    data->close_fd_on_destroy   = false;
-
     struct cl_code_listener *wrap = new cl_code_listener;
-    wrap->data              = data;
+    wrap->data              = listener;
     wrap->file_open         = cl_wrap_file_open;
     wrap->file_close        = cl_wrap_file_close;
     wrap->fnc_open          = cl_wrap_fnc_open;
@@ -272,14 +254,11 @@ struct cl_code_listener* cl_create_listener_wrap(ICodeListener *listener)
     return wrap;
 }
 
-struct cl_code_listener* cl_code_listener_create(
-        const char              *fmt,
-        int                     fd_out,
-        bool                    close_fd_on_destroy)
+struct cl_code_listener* cl_code_listener_create(const char *config_string)
 {
     try {
         ClFactory factory;
-        ICodeListener *listener = factory.create(fmt, fd_out);
+        ICodeListener *listener = factory.create(config_string);
         if (!listener) {
             CL_MSG_STREAM(cl_error, __FILE__ << ":" << __LINE__ << " error: "
                     << "failed to create cl_code_listener [internal location]");
@@ -287,12 +266,7 @@ struct cl_code_listener* cl_code_listener_create(
             return NULL;
         }
 
-        struct cl_code_listener *wrap = cl_create_listener_wrap(listener);
-        ClWrapData *data = static_cast<ClWrapData *>(wrap->data);
-        data->fd_out                = fd_out;
-        data->close_fd_on_destroy   = close_fd_on_destroy;
-
-        return wrap;
+        return cl_create_listener_wrap(listener);
     }
     catch (...) {
         CL_DIE("uncaught exception in cl_writer_create");

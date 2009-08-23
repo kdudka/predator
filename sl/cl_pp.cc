@@ -1,30 +1,7 @@
-// TODO: move all defines to config.h
-#define DEBUG_CLD               0
-
-#define UNIFY_LABELS            1
-#define UNIFY_LABELS_SCOPE      CL_SCOPE_FUNCTION
-
-// scope for UNIFY_REGS is always CL_SCOPE_FUNCTION
-#define UNIFY_REGS              1
-
-#define ARG_SUBST               1
-
 #include "cl_pp.hh"
 #include "cl_private.hh"
 #include "cld_intchk.hh"
 #include "ssd.hh"
-
-#if UNIFY_LABELS
-#   include "cld_unilabel.hh"
-#endif
-
-#if UNIFY_REGS
-#   include "cld_uniregs.hh"
-#endif
-
-#if ARG_SUBST
-#   include "cld_argsub.hh"
-#endif
 
 #include <boost/iostreams/device/file_descriptor.hpp>
 #include <boost/iostreams/stream.hpp>
@@ -538,30 +515,6 @@ void ClPrettyPrint::insn_switch_close()
 
 // /////////////////////////////////////////////////////////////////////////////
 // public interface, see cl_pp.hh for more details
-ICodeListener* createClPrettyPrint(int fd_out) {
-    ICodeListener *cl = new ClPrettyPrint(fd_out);
-    cl = createCldIntegrityChk(cl);
-
-#if UNIFY_LABELS
-    cl = createCldUniLabel(cl, UNIFY_LABELS_SCOPE);
-#   if DEBUG_CLD
-    cl = createCldIntegrityChk(cl);
-#   endif
-#endif
-
-#if UNIFY_REGS
-    cl = createCldUniRegs(cl);
-#   if DEBUG_CLD
-    cl = createCldIntegrityChk(cl);
-#endif
-#endif
-
-#if ARG_SUBST
-    cl = createCldArgSubst(cl);
-#   if DEBUG_CLD
-    cl = createCldIntegrityChk(cl);
-#   endif
-#endif
-
-    return cl;
+ICodeListener* createClPrettyPrint() {
+    return new ClPrettyPrint(STDOUT_FILENO);
 }
