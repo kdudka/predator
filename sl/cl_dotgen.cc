@@ -79,6 +79,9 @@ class ClDotGenerator: public ICodeListener {
 #define QUOTE_NODE(what) \
     "\"" << what << "\""
 
+#define QUOTE_BB(what) \
+    QUOTE_NODE(fnc_ << "." << what)
+
         Location                loc_;
         std::string             fnc_;
         std::string             bb_;
@@ -148,8 +151,8 @@ void ClDotGenerator::gobbleEdge(std::string dst, EdgeType edgeType) {
 }
 
 void ClDotGenerator::emitEdge(std::string dst, EdgeType edgeType) {
-    FILE_FNC_STREAM(QUOTE_NODE(bb_)
-            << " -> " << QUOTE_NODE(dst)
+    FILE_FNC_STREAM("\t" << QUOTE_BB(bb_)
+            << " -> " << QUOTE_BB(dst)
             << " [color=");
     switch (edgeType) {
         case ET_JMP:            FILE_FNC_STREAM("black");   break;
@@ -162,14 +165,14 @@ void ClDotGenerator::emitEdge(std::string dst, EdgeType edgeType) {
 
 void ClDotGenerator::emitBb() {
     // colorize current BB node
-    FILE_FNC_STREAM(QUOTE_NODE(bb_) << " [color=");
+    FILE_FNC_STREAM("\t" << QUOTE_BB(bb_) << " [color=");
     switch (nodeType_) {
         case NT_PLAIN:          FILE_FNC_STREAM("black");   break;
         case NT_ENTRY:
         case NT_RET:            FILE_FNC_STREAM("blue");    break;
         case NT_ABORT:          FILE_FNC_STREAM("red");     break;
     }
-    FILE_FNC_STREAM("];" << std::endl);
+    FILE_FNC_STREAM(", label=" << QUOTE_NODE(bb_) << "];" << std::endl);
 
     // emit all BB edges
     TEdgeMap::iterator i;
@@ -203,6 +206,7 @@ void ClDotGenerator::fnc_open(
             const char              *fnc_name,
             enum cl_scope_e         scope)
 {
+    loc_ = loc;
     fnc_ = fnc_name;
     this->createDotFile(perFncOut_, string(loc_.currentFile) + "-" + fnc_name);
     perFncOut_ << "digraph per_fnc {" << std::endl;
@@ -220,7 +224,7 @@ void ClDotGenerator::fnc_close()
         // emit previous bb
         this->emitBb();
 
-    perFncOut_ << "}" << std::endl;
+    FILE_FNC_STREAM("}" << std::endl);
     if (!perFncOut_)
         CL_MSG_STREAM_INTERNAL(cl_warning, "warning: "
                 "error detected while closing a file");
@@ -232,9 +236,17 @@ void ClDotGenerator::fnc_close()
 void ClDotGenerator::bb_open(
             const char              *bb_name)
 {
+    // FIXME: the condition is not going to work well in general
     if (bb_.empty()) {
-        // FIXME: this is not going to work well in general
         nodeType_ = NT_ENTRY;
+
+        perFileOut_ << "subgraph \"cluster" << fnc_
+            << "." << bb_name << "\" {" << std::endl
+            << "\tcolor=blue;" << std::endl
+            << "\tlabel=" << QUOTE_NODE(fnc_ << "() at "
+                    << loc_.locFile << ":" << loc_.locLine)
+            << std::endl;
+
     } else {
         // emit last BB
         this->emitBb();
