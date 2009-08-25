@@ -33,6 +33,7 @@ GDB ?= gdb
 all: slsparse slplug.so
 
 CL_OBJS = cl_chain.o \
+	cl_dotgen.o \
 	cl_factory.o \
 	cl_locator.o \
 	cl_pp.o \

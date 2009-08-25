@@ -1,5 +1,6 @@
 #include "config.h"
 
+#include "cl_dotgen.hh"
 #include "cl_factory.hh"
 #include "cl_locator.hh"
 #include "cl_pp.hh"
@@ -255,8 +256,9 @@ struct ClFactory::Private {
 ClFactory::ClFactory():
     d(new Private)
 {
-    d->map["pp"]        = &createClPrettyPrint;
+    d->map["dotgen"]    = &createClDotGenerator;
     d->map["locator"]   = &createClLocator;
+    d->map["pp"]        = &createClPrettyPrint;
 }
 
 ClFactory::~ClFactory() {

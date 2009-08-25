@@ -107,15 +107,15 @@ void cl_die(const char *msg);
     fnc(str.str().c_str()); \
 } while (0)
 
-#define CL_INTERNAL_ERROR(to_stream) do { \
+#define CL_MSG_STREAM_INTERNAL(fnc, to_stream) \
     CL_MSG_STREAM(cl_error, __FILE__ << ":" << __LINE__ \
-            << ": internal error: " << to_stream << " [internal location]"); \
-} while (0)
+            << ": " << to_stream << " [internal location]")
 
-#define CL_DEBUG(to_stream) do { \
-    CL_MSG_STREAM(cl_debug, __FILE__ << ":" << __LINE__ \
-            << ": debug: " << to_stream << " [internal location]"); \
-} while (0)
+#define CL_INTERNAL_ERROR(to_stream) \
+    CL_MSG_STREAM_INTERNAL(cl_error, "internal error: " << to_stream)
+
+#define CL_DEBUG(to_stream) \
+    CL_MSG_STREAM_INTERNAL(cl_debug, "debug: " << to_stream)
 
 struct Location {
     std::string currentFile;
