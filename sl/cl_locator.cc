@@ -93,6 +93,7 @@ void ClLocator::printLocation(const struct cl_location *loc) {
 
 // /////////////////////////////////////////////////////////////////////////////
 // public interface, see cl_pp.h for more details
-ICodeListener* createClLocator() {
+ICodeListener* createClLocator(const char *args) {
+    // TODO: open a file with open(2) if a file name is given in ARGS
     return new ClLocator(STDOUT_FILENO);
 }

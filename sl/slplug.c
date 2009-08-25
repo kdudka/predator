@@ -6,7 +6,7 @@
 #include <gcc/coretypes.h>
 #include <gcc/diagnostic.h>
 
-// this include has to be before <function.h>; otherwise it will NOT compile
+// this include has to be before <gcc/function.h>; otherwise it will NOT compile
 #include <gcc/tm.h>
 
 #include <gcc/function.h>
@@ -169,7 +169,7 @@ static void concat_offset_string(char **offset_string, tree decl)
 
     char *ident;
     int rv = (DECL_NAME(decl))
-        ? /* strdup is poisoned :- (*/ asprintf(&ident, "%s",
+        ? /* strdup is poisoned :-( */ asprintf(&ident, "%s",
                 IDENTIFIER_POINTER(DECL_NAME(decl)))
         : /* no decl - headfile omitted? */ asprintf(&ident, "%%r%d",
                 DECL_UID(decl));

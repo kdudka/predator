@@ -6,6 +6,6 @@ struct ICodeListener;
 /**
  * @todo document
  */
-ICodeListener* createClPrettyPrint();
+ICodeListener* createClPrettyPrint(const char *);
 
 #endif /* H_GUARD_CL_PP_H */

@@ -6,6 +6,6 @@ struct ICodeListener;
 /**
  * @todo document
  */
-ICodeListener* createClLocator();
+ICodeListener* createClLocator(const char *);
 
 #endif /* H_GUARD_CL_LOCATOR_H */

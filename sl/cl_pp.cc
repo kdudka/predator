@@ -515,6 +515,7 @@ void ClPrettyPrint::insn_switch_close()
 
 // /////////////////////////////////////////////////////////////////////////////
 // public interface, see cl_pp.hh for more details
-ICodeListener* createClPrettyPrint() {
+ICodeListener* createClPrettyPrint(const char *args) {
+    // TODO: open a file with open(2) if a file name is given in ARGS
     return new ClPrettyPrint(STDOUT_FILENO);
 }

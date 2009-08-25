@@ -160,7 +160,7 @@ namespace {
     }
 
     template <typename TMap>
-    bool hasKey(const TMap &map, const typename TMap::mapped_type &key) {
+    bool hasKey(const TMap &map, const typename TMap::key_type &key) {
         return map.end() != map.find(key);
     }
 }
@@ -245,8 +245,7 @@ ICodeListener* CldChainFactory::create(const std::string &cldString,
 // /////////////////////////////////////////////////////////////////////////////
 // ClFactory implementation
 struct ClFactory::Private {
-    typedef ICodeListener* (*TCreateFnc)
-        (/* TODO: pass args to listener's factory */);
+    typedef ICodeListener* (*TCreateFnc)(const char *);
     typedef std::map<string, TCreateFnc>                TMap;
 
     TMap                            map;
@@ -277,7 +276,7 @@ ICodeListener* ClFactory::create(const char *config_string) {
         return 0;
     }
 
-    string name = args["listener"];
+    const string &name = args["listener"];
     CL_DEBUG("ClFactory: looking for listener: " << name);
 
     Private::TMap::iterator i = d->map.find(name);
@@ -286,11 +285,13 @@ ICodeListener* ClFactory::create(const char *config_string) {
         return 0;
     }
 
-    ICodeListener *cl = (i->second)
-        (/* TODO: pass args to listener's constructor */);
+    const string &listenerArgs = args["listener_args"];
+    CL_DEBUG("ClFactory: creating listener '" << name << "' "
+             "with args '" << listenerArgs << "'");
+
+    ICodeListener *cl = (i->second)(listenerArgs.c_str());
     if (!cl)
         return 0;
-    CL_DEBUG("ClFactory: listener '" << name << "' successfully created");
 
     if (hasKey(args, "cld")) {
         cl = d->cldFactory.create(args["cld"], cl);
