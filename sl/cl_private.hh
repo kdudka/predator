@@ -180,4 +180,10 @@ struct LocationWriter {
 };
 std::ostream& operator<<(std::ostream &, const LocationWriter &);
 
+
+template <typename TCont>
+bool hasKey(const TCont &cont, const typename TCont::key_type &key) {
+    return cont.end() != cont.find(key);
+}
+
 #endif /* H_GUARD_CL_PRIVATE_H */

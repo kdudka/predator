@@ -7,6 +7,7 @@
 
 #include <fstream>
 #include <map>
+#include <set>
 #include <sstream>
 
 #include <boost/iostreams/device/file_descriptor.hpp>
@@ -100,10 +101,16 @@ class ClDotGenerator: public ICodeListener {
             ET_COND_THEN,
             ET_COND_ELSE,
             ET_SWITCH_CASE,
-            ET_CALL
+            ET_CALL,
+            ET_GL_CALL
         };
 
+        typedef std::set<std::string>                   TCallSet;
+        typedef std::map<std::string, TCallSet>         TCallMap;
+        typedef std::map<std::string, bool>             TExternMap;
         typedef std::map<std::string, EdgeType>         TEdgeMap;
+        TCallMap                glCallMap_;
+        TExternMap              externMap_;
         TEdgeMap                edgeMap_;
         NodeType                nodeType_;
 
@@ -145,11 +152,22 @@ void ClDotGenerator::createDotFile(std::ofstream &str, std::string fileName) {
 }
 
 void ClDotGenerator::gobbleEdge(std::string dst, EdgeType edgeType) {
-    if (bb_.empty() && (ET_JMP == edgeType))
-        // skip jmp to ENTRY
-        return;
+    switch (edgeType) {
+        case ET_GL_CALL:
+            glCallMap_[/* FIXME: do not ignore scope */ fnc_].insert(dst);
+            if (!hasKey(externMap_, dst))
+                externMap_[dst] = true;
+            break;
 
-    edgeMap_[dst] = edgeType;
+        case ET_JMP:
+            if (bb_.empty())
+                // skip jmp to ENTRY
+                break;
+
+            // fall through!!
+        default:
+            edgeMap_[dst] = edgeType;
+    }
 }
 
 void ClDotGenerator::emitEdge(std::string dst, EdgeType edgeType) {
@@ -160,6 +178,8 @@ void ClDotGenerator::emitEdge(std::string dst, EdgeType edgeType) {
         perFncOut_ << "\t" << QUOTE_BB(bb_)
                 << " -> " << QUOTE_NODE(dst)
                 << " [color=blue];" << std::endl;
+
+        this->gobbleEdge(dst, ET_GL_CALL);
         return;
     }
 
@@ -174,6 +194,8 @@ void ClDotGenerator::emitEdge(std::string dst, EdgeType edgeType) {
 
         // just to make compiler happy
         case ET_CALL:
+        case ET_GL_CALL:
+            CL_INTERNAL_ERROR("unexpected edge type");
             break;
     }
     FILE_FNC_STREAM("];" << std::endl);
@@ -208,10 +230,39 @@ void ClDotGenerator::file_open(
         << "\tlabel=<<FONT POINT-SIZE=\"36\">"
         << file_name << "</FONT>>;" << std::endl
         << "\tlabelloc=t;" << std::endl;
+
+    glOut_ << "subgraph \"cluster" << file_name << "\" {" << std::endl
+        << "\tcolor=red;" << std::endl
+        << "\tlabel=" << QUOTE_NODE(file_name) << ";"
+        << std::endl;
 }
 
 void ClDotGenerator::file_close()
 {
+    for (int k = 0; k < 2; ++k) {
+        TCallMap::iterator i;
+        for (i = glCallMap_.begin(); i != glCallMap_.end(); ++i) {
+            TCallSet &cs = i->second;
+            TCallSet::iterator j;
+            for (j = cs.begin(); j != cs.end(); ++j) {
+                if (externMap_[*j] != static_cast<bool>(k))
+                    continue;
+
+                glOut_ << "\t" << QUOTE_NODE(i->first)
+                        << " [label=" << QUOTE_NODE(i->first)
+                        << ", color=blue];" << std::endl;
+
+                glOut_ << "\t" << QUOTE_NODE(i->first)
+                        << " -> " << QUOTE_NODE(*j)
+                        << " [color=blue];" << std::endl;
+            }
+        }
+        if (!k)
+            glOut_ << "}" << std::endl;
+    }
+    glCallMap_.clear();
+    externMap_.clear();
+
     perFileOut_ << "}" << std::endl;
     if (!perFileOut_)
         CL_MSG_STREAM_INTERNAL(cl_warning, "warning: "
@@ -234,6 +285,11 @@ void ClDotGenerator::fnc_open(
         << "\tlabel=<<FONT POINT-SIZE=\"36\">"
         << label.str() << "</FONT>>;" << std::endl
         << "\tlabelloc=t;" << std::endl;
+
+    externMap_[/* FIXME: do not ignore scope */ fnc_name] = false;
+    glOut_ << "\t" << QUOTE_NODE(fnc_name)
+            << " [label=" << QUOTE_NODE(fnc_name)
+            << ", color=blue];" << std::endl;
 }
 
 void ClDotGenerator::fnc_arg_decl(
@@ -318,6 +374,7 @@ void ClDotGenerator::insn_call_open(
         return;
     }
 
+    // TODO: handle decl location?
     this->gobbleEdge(fnc->data.var.name, ET_CALL);
 }
 

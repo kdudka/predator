@@ -159,11 +159,6 @@ namespace {
         }
         return (key.empty() && value.empty());
     }
-
-    template <typename TMap>
-    bool hasKey(const TMap &map, const typename TMap::key_type &key) {
-        return map.end() != map.find(key);
-    }
 }
 
 class CldChainFactory {
