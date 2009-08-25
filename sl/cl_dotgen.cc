@@ -7,6 +7,7 @@
 
 #include <fstream>
 #include <map>
+#include <sstream>
 
 #include <boost/iostreams/device/file_descriptor.hpp>
 #include <boost/iostreams/stream.hpp>
@@ -98,7 +99,8 @@ class ClDotGenerator: public ICodeListener {
             ET_JMP,
             ET_COND_THEN,
             ET_COND_ELSE,
-            ET_SWITCH_CASE
+            ET_SWITCH_CASE,
+            ET_CALL
         };
 
         typedef std::map<std::string, EdgeType>         TEdgeMap;
@@ -151,6 +153,16 @@ void ClDotGenerator::gobbleEdge(std::string dst, EdgeType edgeType) {
 }
 
 void ClDotGenerator::emitEdge(std::string dst, EdgeType edgeType) {
+    if (ET_CALL == edgeType) {
+        perFncOut_ << "\t" << QUOTE_NODE(dst)
+                << " [label=" << QUOTE_NODE(dst)
+                << ", color=blue];" << std::endl;
+        perFncOut_ << "\t" << QUOTE_BB(bb_)
+                << " -> " << QUOTE_NODE(dst)
+                << " [color=blue];" << std::endl;
+        return;
+    }
+
     FILE_FNC_STREAM("\t" << QUOTE_BB(bb_)
             << " -> " << QUOTE_BB(dst)
             << " [color=");
@@ -159,6 +171,10 @@ void ClDotGenerator::emitEdge(std::string dst, EdgeType edgeType) {
         case ET_COND_THEN:
         case ET_COND_ELSE:      FILE_FNC_STREAM("green");   break;
         case ET_SWITCH_CASE:    FILE_FNC_STREAM("yellow");  break;
+
+        // just to make compiler happy
+        case ET_CALL:
+            break;
     }
     FILE_FNC_STREAM("];" << std::endl);
 }
@@ -188,7 +204,10 @@ void ClDotGenerator::file_open(
 {
     loc_.currentFile = file_name;
     this->createDotFile(perFileOut_, file_name);
-    perFileOut_ << "digraph per_file {" << std::endl;
+    perFileOut_ << "digraph " << QUOTE_NODE(file_name) << " {" << std::endl
+        << "\tlabel=<<FONT POINT-SIZE=\"36\">"
+        << file_name << "</FONT>>;" << std::endl
+        << "\tlabelloc=t;" << std::endl;
 }
 
 void ClDotGenerator::file_close()
@@ -209,7 +228,12 @@ void ClDotGenerator::fnc_open(
     loc_ = loc;
     fnc_ = fnc_name;
     this->createDotFile(perFncOut_, string(loc_.currentFile) + "-" + fnc_name);
-    perFncOut_ << "digraph per_fnc {" << std::endl;
+    std::ostringstream label;
+    label << fnc_name << "() at " << loc_.locFile << ":" << loc_.locLine;
+    perFncOut_ << "digraph " << QUOTE_NODE(label.str()) << " {" << std::endl
+        << "\tlabel=<<FONT POINT-SIZE=\"36\">"
+        << label.str() << "</FONT>>;" << std::endl
+        << "\tlabelloc=t;" << std::endl;
 }
 
 void ClDotGenerator::fnc_arg_decl(
@@ -294,7 +318,7 @@ void ClDotGenerator::insn_call_open(
         return;
     }
 
-    // TODO
+    this->gobbleEdge(fnc->data.var.name, ET_CALL);
 }
 
 void ClDotGenerator::insn_call_arg(
