@@ -120,7 +120,7 @@ static void read_gimple_location(struct cl_location *loc, const_gimple g)
 
 static char* index_to_label (unsigned idx) {
     char *label;
-    int rv = asprintf(&label, "%u", idx);
+    int rv = asprintf(&label, "%u:%u", DECL_UID(current_function_decl), idx);
     SL_ASSERT(0 < rv);
     return label;
 }
