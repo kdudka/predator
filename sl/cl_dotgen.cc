@@ -1,3 +1,5 @@
+#include "config.h"
+
 #include "cl_dotgen.hh"
 #include "cl_private.hh"
 
@@ -84,7 +86,9 @@ class ClDotGenerator: public ICodeListener {
             ET_COND_ELSE,
             ET_SWITCH_CASE,
             ET_LC_CALL,
-            ET_GL_CALL
+            ET_LC_CALL_INDIR,
+            ET_GL_CALL,
+            ET_GL_CALL_INDIR
         };
 
         typedef std::set<std::string>                   TCallSet;
@@ -193,15 +197,22 @@ void ClDotGenerator::gobbleEdge(std::string dst, EdgeType edgeType) {
 void ClDotGenerator::emitEdge(std::string dst, EdgeType edgeType) {
     switch (edgeType) {
         case ET_LC_CALL:
+        case ET_LC_CALL_INDIR:
             if (!hasKey(perFncCalls_, dst)) {
                 perFncCalls_[dst] = bb_;
                 glOut_ << "\t" << SL_QUOTE(fnc_)
                         << " -> " << SL_QUOTE(dst)
-                        << " [color=blue];" << std::endl;
+                        << " [color=";
+                if (ET_LC_CALL_INDIR == edgeType)
+                    glOut_ << "red";
+                else
+                    glOut_ << "blue";
+                glOut_ << "];" << std::endl;
             }
             return;
 
         case ET_GL_CALL:
+        case ET_GL_CALL_INDIR:
             perFncCalls_[dst] = bb_;
             return;
 
@@ -216,10 +227,13 @@ void ClDotGenerator::emitEdge(std::string dst, EdgeType edgeType) {
         case ET_COND_THEN:
         case ET_COND_ELSE:      perFileOut_<<"green";       break;
         case ET_SWITCH_CASE:    perFileOut_<<"yellow";      break;
-        case ET_GL_CALL:        perFileOut_<<"red";         break;
+
 
         // just to make compiler happy
         case ET_LC_CALL:
+        case ET_LC_CALL_INDIR:
+        case ET_GL_CALL:
+        case ET_GL_CALL_INDIR:
             CL_INTERNAL_ERROR("unexpected edge type");
             break;
     }
@@ -304,24 +318,49 @@ void ClDotGenerator::fnc_close()
     TCallMap::iterator i;
     for (i = perFncCalls_.begin(); i != perFncCalls_.end(); ++i) {
         const string &dst = i->first;
-            FILE_FNC_STREAM("\t" << SL_QUOTE_BB(dst)
-                << " [label=" << SL_QUOTE(dst));
+        const EdgeType type = perFncEdgeMap_[dst];
 
-            if (ET_LC_CALL == perFncEdgeMap_[dst])
-                FILE_FNC_STREAM(", color=blue, URL=" << SL_QUOTE_URL(i->first));
+        FILE_FNC_STREAM("\t" << SL_QUOTE_BB(dst)
+            << " [label=" << SL_QUOTE(dst));
 
-            FILE_FNC_STREAM("];" << std::endl);
+        switch (type) {
+            case ET_LC_CALL:
+            case ET_LC_CALL_INDIR:
+                FILE_FNC_STREAM(", color=blue, fontcolor=blue,"
+                        << " URL=" << SL_QUOTE_URL(i->first));
+            default:
+                break;
+        }
 
-            perFileOut_ << "\t" << SL_QUOTE_BB(i->second)
-                << " -> " << SL_QUOTE_BB(dst) << " [color=blue];" << std::endl;
+        FILE_FNC_STREAM("];" << std::endl);
 
-            TCallSet &cs = perBbCalls_[dst];
-            TCallSet::iterator j;
-            for (j = cs.begin(); j != cs.end(); ++j) {
-                perFncOut_ << "\t" << SL_QUOTE_BB(*j)
-                    << " -> " << SL_QUOTE_BB(dst) << " [color=blue];"
-                    << std::endl;
+        perFileOut_ << "\t" << SL_QUOTE_BB(i->second)
+            << " -> " << SL_QUOTE_BB(dst) << " [color=";
+        switch (type) {
+            case ET_LC_CALL_INDIR:
+            case ET_GL_CALL_INDIR:
+                perFileOut_ << "red";
+                break;
+            default:
+                perFileOut_ << "blue";
+        }
+        perFileOut_ << "];" << std::endl;
+
+        TCallSet &cs = perBbCalls_[dst];
+        TCallSet::iterator j;
+        for (j = cs.begin(); j != cs.end(); ++j) {
+            perFncOut_ << "\t" << SL_QUOTE_BB(*j)
+                << " -> " << SL_QUOTE_BB(dst) << " [color=";
+            switch (type) {
+                case ET_LC_CALL_INDIR:
+                case ET_GL_CALL_INDIR:
+                    perFncOut_ << "red";
+                    break;
+                default:
+                    perFncOut_ << "blue";
             }
+            perFncOut_ << "];" << std::endl;
+        }
     }
 
     perFncOut_ << "}" << std::endl;
@@ -416,6 +455,7 @@ void ClDotGenerator::insn(
 
         case CL_INSN_UNOP:
         case CL_INSN_BINOP:
+#ifndef CL_DOTGEN_IGNORE_UNOP_BINOP
             perFncOut_ << "\t" << SL_QUOTE_BB(bb_ << SL_BB_POS_SUFFIX)
                     << " [shape=box, color=black, fontcolor=gray, style=dotted,"
                     << " label=";
@@ -430,6 +470,7 @@ void ClDotGenerator::insn(
             perFncOut_ << SL_QUOTE_BB(bb_ << SL_BB_POS_SUFFIX)
                     << " [color=gray, style=dotted, arrowhead=open];"
                     << std::endl;
+#endif
             break;
     }
 }
@@ -472,6 +513,24 @@ void ClDotGenerator::insn_call_arg(
             int                     arg_id,
             const struct cl_operand *arg_src)
 {
+    if (CL_OPERAND_FNC != arg_src->type)
+        return;
+    //TRAP;
+
+    const struct cl_operand *fnc = arg_src;
+    this->gobbleEdge(fnc->data.fnc.name, (fnc->data.fnc.is_extern)
+            ? ET_GL_CALL_INDIR
+            : ET_LC_CALL_INDIR);
+
+    {
+        // TODO: move elsewhere
+        std::ostringstream str;
+        // FIXME: nonsense
+        -- bbPos_;
+        str << bb_ << SL_BB_POS_SUFFIX;
+        ++ bbPos_;
+        perBbCalls_[fnc->data.fnc.name].insert(str.str());
+    }
 }
 
 void ClDotGenerator::insn_call_close()
