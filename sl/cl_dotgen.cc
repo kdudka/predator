@@ -85,11 +85,11 @@ class ClDotGenerator: public ICodeListener {
             ET_GL_CALL
         };
 
-        typedef std::set<std::string>                   TCallSet;
-        typedef std::map<std::string, TCallSet>         TCallMap;
-        typedef std::map<std::string, bool>             TExternMap;
+        typedef std::map<std::string, std::string>      TCallMap;
         typedef std::map<std::string, EdgeType>         TEdgeMap;
-        TEdgeMap                edgeMap_;
+        TCallMap                perFncCalls_;
+        TEdgeMap                perFncEdgeMap_;
+        TEdgeMap                perBbEdgeMap_;
         NodeType                nodeType_;
 
     private:
@@ -175,26 +175,28 @@ void ClDotGenerator::gobbleEdge(std::string dst, EdgeType edgeType) {
 
             // fall through!!
         default:
-            edgeMap_[dst] = edgeType;
+            perBbEdgeMap_[dst] = edgeType;
+            perFncEdgeMap_[dst] = edgeType;
     }
 }
 
 void ClDotGenerator::emitEdge(std::string dst, EdgeType edgeType) {
-    if (ET_LC_CALL == edgeType) {
-        FILE_FNC_STREAM("\t" << SL_QUOTE_BB(dst)
-                << " [label=" << SL_QUOTE(dst)
-                << ", color=blue, URL=" << SL_QUOTE_URL(dst) << "];"
-                << std::endl);
+    switch (edgeType) {
+        case ET_LC_CALL:
+            if (!hasKey(perFncCalls_, dst)) {
+                perFncCalls_[dst] = bb_;
+                glOut_ << "\t" << SL_QUOTE(fnc_)
+                        << " -> " << SL_QUOTE(dst)
+                        << " [color=blue];" << std::endl;
+            }
+            return;
 
-        FILE_FNC_STREAM("\t" << SL_QUOTE_BB(bb_) << " -> " << SL_QUOTE_BB(dst)
-                << " [color=blue];"
-                << std::endl);
+        case ET_GL_CALL:
+            perFncCalls_[dst] = bb_;
+            return;
 
-        glOut_ << "\t" << SL_QUOTE(fnc_)
-                << " -> " << SL_QUOTE(dst)
-                << " [color=blue];" << std::endl;
-
-        return;
+        default:
+            break;
     }
 
     FILE_FNC_STREAM("\t" << SL_QUOTE_BB(bb_) << " -> " << SL_QUOTE_BB(dst)
@@ -227,11 +229,11 @@ void ClDotGenerator::emitBb() {
 
     // emit all BB edges
     TEdgeMap::iterator i;
-    for (i = edgeMap_.begin(); i != edgeMap_.end(); ++i)
+    for (i = perBbEdgeMap_.begin(); i != perBbEdgeMap_.end(); ++i)
         this->emitEdge(i->first, i->second);
 
     // clear emitted edges
-    edgeMap_.clear();
+    perBbEdgeMap_.clear();
 }
 
 void ClDotGenerator::file_open(
@@ -242,7 +244,7 @@ void ClDotGenerator::file_open(
     perFileOut_ << SL_GRAPH(file_name);
 
     glOut_ << SL_SUBGRAPH(file_name, file_name) << "\tcolor=red;" << std::endl
-        << "\tlabel " << SL_QUOTE(basename((char *) loc_.currentFile.c_str())
+        << "\tURL=" << SL_QUOTE(basename((char *) loc_.currentFile.c_str())
         << SL_DOT_SUFFIX) << std::endl;
 }
 
@@ -288,6 +290,27 @@ void ClDotGenerator::fnc_close()
         this->emitBb();
 
     FILE_FNC_STREAM("}" << std::endl);
+
+    TCallMap::iterator i;
+    for (i = perFncCalls_.begin(); i != perFncCalls_.end(); ++i) {
+        const string &dst = i->first;
+            FILE_FNC_STREAM("\t" << SL_QUOTE_BB(dst)
+                << " [label=" << SL_QUOTE(dst));
+
+            if (ET_LC_CALL == perFncEdgeMap_[dst])
+                FILE_FNC_STREAM(", color=blue, URL=" << SL_QUOTE_URL(i->first));
+
+            FILE_FNC_STREAM("];" << std::endl
+                << "\t" << SL_QUOTE_BB(i->second)
+                << " -> " << SL_QUOTE_BB(dst)
+                << " [color=blue];"
+                << std::endl);
+    }
+
+    perFncOut_ << "}" << std::endl;
+    perFncCalls_.clear();
+    perFncEdgeMap_.clear();
+
     if (!perFncOut_)
         CL_MSG_STREAM_INTERNAL(cl_warning, "warning: "
                 "error detected while closing a file");
@@ -303,11 +326,11 @@ void ClDotGenerator::bb_open(
     if (bb_.empty()) {
         nodeType_ = NT_ENTRY;
 
-        perFileOut_ << SL_SUBGRAPH(
+        FILE_FNC_STREAM(SL_SUBGRAPH(
                 fnc_ << "." << bb_name,
                 fnc_  << "() at " << loc_.locFile << ":" << loc_.locLine)
             << "\tcolor=blue;" << std::endl
-            << "\tURL=" << SL_QUOTE_URL(fnc_) << ";" << std::endl;
+            << "\tURL=" << SL_QUOTE_URL(fnc_) << ";" << std::endl);
 
     } else {
         // emit last BB
