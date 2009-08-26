@@ -988,7 +988,7 @@ static struct cl_code_listener* create_cl_chain(void)
     }
 
     cl = cl_code_listener_create("listener=\"dotgen\" "
-            "listener_args=\"./all\" "
+            "listener_args=\"data/all.dot\" "
             "cld=\"unify_labels_fnc,unify_regs\"");
     if (!cl) {
         chain->destroy(chain);

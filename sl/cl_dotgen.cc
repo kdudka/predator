@@ -1,21 +1,16 @@
 #include "cl_dotgen.hh"
 #include "cl_private.hh"
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
+#include <libgen.h>
 
 #include <fstream>
 #include <map>
 #include <set>
-#include <sstream>
-
-#include <boost/iostreams/device/file_descriptor.hpp>
-#include <boost/iostreams/stream.hpp>
 
 class ClDotGenerator: public ICodeListener {
     public:
-        ClDotGenerator(int fd_out, bool close_on_exit);
+        ClDotGenerator();
+        ClDotGenerator(const char *glDotFile);
         virtual ~ClDotGenerator();
 
         virtual void file_open(
@@ -64,25 +59,10 @@ class ClDotGenerator: public ICodeListener {
         virtual void insn_switch_close();
 
     private:
-        typedef boost::iostreams::file_descriptor_sink  TSink;
-        typedef boost::iostreams::stream<TSink>         TStream;
-
-        TSink                   glSink_;
-        TStream                 glOut_;
+        bool                    hasGlDotFile_;
+        std::ofstream           glOut_;
         std::ofstream           perFileOut_;
         std::ofstream           perFncOut_;
-
-// TODO: chain streams using boost::iostreams instead of the ugly macro
-#define FILE_FNC_STREAM(what) do { \
-    perFileOut_ << what; \
-    perFncOut_ << what; \
-} while (0)
-
-#define QUOTE_NODE(what) \
-    "\"" << what << "\""
-
-#define QUOTE_BB(what) \
-    QUOTE_NODE(fnc_ << "." << what)
 
         Location                loc_;
         std::string             fnc_;
@@ -101,7 +81,7 @@ class ClDotGenerator: public ICodeListener {
             ET_COND_THEN,
             ET_COND_ELSE,
             ET_SWITCH_CASE,
-            ET_CALL,
+            ET_LC_CALL,
             ET_GL_CALL
         };
 
@@ -109,8 +89,6 @@ class ClDotGenerator: public ICodeListener {
         typedef std::map<std::string, TCallSet>         TCallMap;
         typedef std::map<std::string, bool>             TExternMap;
         typedef std::map<std::string, EdgeType>         TEdgeMap;
-        TCallMap                glCallMap_;
-        TExternMap              externMap_;
         TEdgeMap                edgeMap_;
         NodeType                nodeType_;
 
@@ -121,24 +99,43 @@ class ClDotGenerator: public ICodeListener {
         void emitBb();
 };
 
+// TODO: chain streams using boost::iostreams instead of the ugly macro
+#define FILE_FNC_STREAM(what) do { \
+    perFileOut_ << what; \
+    perFncOut_ << what; \
+} while (0)
+
+#define SL_QUOTE(what) \
+    "\"" << what << "\""
+
+// TODO: get rid of
+#define SL_QUOTE_BB(bb) \
+    SL_QUOTE(fnc_ << "." << bb)
+
+#define SL_DOT_SUFFIX ".svg"
+
+#define SL_QUOTE_URL(fnc) \
+    SL_QUOTE(basename((char *) loc_.currentFile.c_str()) \
+    << "-" << fnc << SL_DOT_SUFFIX)
+
+#define SL_GRAPH(name) \
+    "digraph " << SL_QUOTE(name) << " {" << std::endl \
+    << "\tlabel=<<FONT POINT-SIZE=\"36\">" << name << "</FONT>>;" << std::endl \
+    << "\tlabelloc=t;" << std::endl
+
+#define SL_SUBGRAPH(name, label) \
+    "subgraph \"cluster" << name << "\" {" << std::endl \
+    << "\tlabel=" << SL_QUOTE(label) << ";" << std::endl
+
 using std::ios;
 using std::string;
 
 // /////////////////////////////////////////////////////////////////////////////
 // ClDotGenerator implementation
-ClDotGenerator::ClDotGenerator(int fd_out, bool close_on_exit):
-    glSink_(fd_out, close_on_exit),
-    glOut_(glSink_),
+ClDotGenerator::ClDotGenerator():
+    hasGlDotFile_(false),
     nodeType_(NT_PLAIN)
 {
-    glOut_ << "digraph gl {" << std::endl;
-    if (!glOut_)
-        CL_MSG_STREAM_INTERNAL(cl_error, "error: "
-                               "global dot file not ready for writing");
-}
-
-ClDotGenerator::~ClDotGenerator() {
-    glOut_ << "}" << std::endl;
 }
 
 void ClDotGenerator::createDotFile(std::ofstream &str, std::string fileName) {
@@ -151,14 +148,26 @@ void ClDotGenerator::createDotFile(std::ofstream &str, std::string fileName) {
                            "unable to create file '" << fileName << "'");
 }
 
+ClDotGenerator::ClDotGenerator(const char *glDotFile):
+    hasGlDotFile_(true),
+    nodeType_(NT_PLAIN)
+{
+    glOut_.open(glDotFile, ios::out);
+    if (!glOut_) {
+        CL_MSG_STREAM_INTERNAL(cl_error, "error: "
+                               "unable to create file '" << glDotFile << "'");
+        return;
+    }
+
+    glOut_ << SL_GRAPH(glDotFile);
+}
+
+ClDotGenerator::~ClDotGenerator() {
+    glOut_ << "}" << std::endl;
+}
+
 void ClDotGenerator::gobbleEdge(std::string dst, EdgeType edgeType) {
     switch (edgeType) {
-        case ET_GL_CALL:
-            glCallMap_[/* FIXME: do not ignore scope */ fnc_].insert(dst);
-            if (!hasKey(externMap_, dst))
-                externMap_[dst] = true;
-            break;
-
         case ET_JMP:
             if (bb_.empty())
                 // skip jmp to ENTRY
@@ -171,30 +180,34 @@ void ClDotGenerator::gobbleEdge(std::string dst, EdgeType edgeType) {
 }
 
 void ClDotGenerator::emitEdge(std::string dst, EdgeType edgeType) {
-    if (ET_CALL == edgeType) {
-        perFncOut_ << "\t" << QUOTE_NODE(dst)
-                << " [label=" << QUOTE_NODE(dst)
-                << ", color=blue];" << std::endl;
-        perFncOut_ << "\t" << QUOTE_BB(bb_)
-                << " -> " << QUOTE_NODE(dst)
+    if (ET_LC_CALL == edgeType) {
+        FILE_FNC_STREAM("\t" << SL_QUOTE_BB(dst)
+                << " [label=" << SL_QUOTE(dst)
+                << ", color=blue, URL=" << SL_QUOTE_URL(dst) << "];"
+                << std::endl);
+
+        FILE_FNC_STREAM("\t" << SL_QUOTE_BB(bb_) << " -> " << SL_QUOTE_BB(dst)
+                << " [color=blue];"
+                << std::endl);
+
+        glOut_ << "\t" << SL_QUOTE(fnc_)
+                << " -> " << SL_QUOTE(dst)
                 << " [color=blue];" << std::endl;
 
-        this->gobbleEdge(dst, ET_GL_CALL);
         return;
     }
 
-    FILE_FNC_STREAM("\t" << QUOTE_BB(bb_)
-            << " -> " << QUOTE_BB(dst)
+    FILE_FNC_STREAM("\t" << SL_QUOTE_BB(bb_) << " -> " << SL_QUOTE_BB(dst)
             << " [color=");
     switch (edgeType) {
         case ET_JMP:            FILE_FNC_STREAM("black");   break;
         case ET_COND_THEN:
         case ET_COND_ELSE:      FILE_FNC_STREAM("green");   break;
         case ET_SWITCH_CASE:    FILE_FNC_STREAM("yellow");  break;
+        case ET_GL_CALL:        FILE_FNC_STREAM("red");     break;
 
         // just to make compiler happy
-        case ET_CALL:
-        case ET_GL_CALL:
+        case ET_LC_CALL:
             CL_INTERNAL_ERROR("unexpected edge type");
             break;
     }
@@ -203,14 +216,14 @@ void ClDotGenerator::emitEdge(std::string dst, EdgeType edgeType) {
 
 void ClDotGenerator::emitBb() {
     // colorize current BB node
-    FILE_FNC_STREAM("\t" << QUOTE_BB(bb_) << " [color=");
+    FILE_FNC_STREAM("\t" << SL_QUOTE_BB(bb_) << " [color=");
     switch (nodeType_) {
         case NT_PLAIN:          FILE_FNC_STREAM("black");   break;
         case NT_ENTRY:
         case NT_RET:            FILE_FNC_STREAM("blue");    break;
         case NT_ABORT:          FILE_FNC_STREAM("red");     break;
     }
-    FILE_FNC_STREAM(", label=" << QUOTE_NODE(bb_) << "];" << std::endl);
+    FILE_FNC_STREAM(", label=" << SL_QUOTE(bb_) << "];" << std::endl);
 
     // emit all BB edges
     TEdgeMap::iterator i;
@@ -226,42 +239,16 @@ void ClDotGenerator::file_open(
 {
     loc_.currentFile = file_name;
     this->createDotFile(perFileOut_, file_name);
-    perFileOut_ << "digraph " << QUOTE_NODE(file_name) << " {" << std::endl
-        << "\tlabel=<<FONT POINT-SIZE=\"36\">"
-        << file_name << "</FONT>>;" << std::endl
-        << "\tlabelloc=t;" << std::endl;
+    perFileOut_ << SL_GRAPH(file_name);
 
-    glOut_ << "subgraph \"cluster" << file_name << "\" {" << std::endl
-        << "\tcolor=red;" << std::endl
-        << "\tlabel=" << QUOTE_NODE(file_name) << ";"
-        << std::endl;
+    glOut_ << SL_SUBGRAPH(file_name, file_name) << "\tcolor=red;" << std::endl
+        << "\tlabel " << SL_QUOTE(basename((char *) loc_.currentFile.c_str())
+        << SL_DOT_SUFFIX) << std::endl;
 }
 
 void ClDotGenerator::file_close()
 {
-    for (int k = 0; k < 2; ++k) {
-        TCallMap::iterator i;
-        for (i = glCallMap_.begin(); i != glCallMap_.end(); ++i) {
-            TCallSet &cs = i->second;
-            TCallSet::iterator j;
-            for (j = cs.begin(); j != cs.end(); ++j) {
-                if (externMap_[*j] != static_cast<bool>(k))
-                    continue;
-
-                glOut_ << "\t" << QUOTE_NODE(i->first)
-                        << " [label=" << QUOTE_NODE(i->first)
-                        << ", color=blue];" << std::endl;
-
-                glOut_ << "\t" << QUOTE_NODE(i->first)
-                        << " -> " << QUOTE_NODE(*j)
-                        << " [color=blue];" << std::endl;
-            }
-        }
-        if (!k)
-            glOut_ << "}" << std::endl;
-    }
-    glCallMap_.clear();
-    externMap_.clear();
+    glOut_ << "}" << std::endl;
 
     perFileOut_ << "}" << std::endl;
     if (!perFileOut_)
@@ -279,17 +266,13 @@ void ClDotGenerator::fnc_open(
     loc_ = loc;
     fnc_ = fnc_name;
     this->createDotFile(perFncOut_, string(loc_.currentFile) + "-" + fnc_name);
-    std::ostringstream label;
-    label << fnc_name << "() at " << loc_.locFile << ":" << loc_.locLine;
-    perFncOut_ << "digraph " << QUOTE_NODE(label.str()) << " {" << std::endl
-        << "\tlabel=<<FONT POINT-SIZE=\"36\">"
-        << label.str() << "</FONT>>;" << std::endl
-        << "\tlabelloc=t;" << std::endl;
+    perFncOut_ << SL_GRAPH(fnc_name << "() at "
+            << loc_.locFile << ":" << loc_.locLine);
 
-    externMap_[/* FIXME: do not ignore scope */ fnc_name] = false;
-    glOut_ << "\t" << QUOTE_NODE(fnc_name)
-            << " [label=" << QUOTE_NODE(fnc_name)
-            << ", color=blue];" << std::endl;
+    glOut_ << "\t" << SL_QUOTE(fnc_name)
+            << " [label=" << SL_QUOTE(fnc_name)
+            << ", color=blue, URL=" << SL_QUOTE_URL(fnc_name) << "];"
+            << std::endl;
 }
 
 void ClDotGenerator::fnc_arg_decl(
@@ -320,12 +303,11 @@ void ClDotGenerator::bb_open(
     if (bb_.empty()) {
         nodeType_ = NT_ENTRY;
 
-        perFileOut_ << "subgraph \"cluster" << fnc_
-            << "." << bb_name << "\" {" << std::endl
+        perFileOut_ << SL_SUBGRAPH(
+                fnc_ << "." << bb_name,
+                fnc_  << "() at " << loc_.locFile << ":" << loc_.locLine)
             << "\tcolor=blue;" << std::endl
-            << "\tlabel=" << QUOTE_NODE(fnc_ << "() at "
-                    << loc_.locFile << ":" << loc_.locLine)
-            << std::endl;
+            << "\tURL=" << SL_QUOTE_URL(fnc_) << ";" << std::endl;
 
     } else {
         // emit last BB
@@ -368,14 +350,16 @@ void ClDotGenerator::insn_call_open(
             const struct cl_operand *dst,
             const struct cl_operand *fnc)
 {
-    if (fnc->type != CL_OPERAND_VAR || fnc->deref || fnc->offset) {
+    if (fnc->type != CL_OPERAND_FNC || fnc->deref || fnc->offset) {
         CL_MSG_STREAM(cl_warn, LocationWriter(loc, &loc_) << "warning: "
                       "ClDotGenerator: unhandled call");
         return;
     }
 
     // TODO: handle decl location?
-    this->gobbleEdge(fnc->data.var.name, ET_CALL);
+    this->gobbleEdge(fnc->data.fnc.name, (fnc->data.fnc.is_extern)
+            ? ET_GL_CALL
+            : ET_LC_CALL);
 }
 
 void ClDotGenerator::insn_call_arg(
@@ -410,17 +394,7 @@ void ClDotGenerator::insn_switch_close()
 // /////////////////////////////////////////////////////////////////////////////
 // public interface, see cl_dotgen.hh for more details
 ICodeListener* createClDotGenerator(const char *args) {
-    // write to stdout by default
-    int fd = STDOUT_FILENO;
-
-    // check whether a file name is given
-    bool openFile = args && *args;
-    if (openFile)
-        // write to file requested
-        fd = open(/* file name is the only arg for now */ args,
-                  O_WRONLY | O_CREAT);
-
-    // TODO: error msg
-    return (fd < 0) ? 0
-        : new ClDotGenerator(fd, openFile);
+    return (args && *args)
+        ? new ClDotGenerator(args)
+        : new ClDotGenerator();
 }
