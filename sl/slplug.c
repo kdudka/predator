@@ -130,12 +130,14 @@ static void decl_to_cl_operand(struct cl_operand *op, tree t)
     // FIXME: this condition may be not sufficient in all cases
     if (DECL_NAME(t)) {
         if (FUNCTION_DECL == TREE_CODE(t)) {
-            op->type            = CL_OPERAND_FNC;
-            op->data.fnc.name   = IDENTIFIER_POINTER(DECL_NAME(t));
+            op->type                = CL_OPERAND_FNC;
+            op->data.fnc.name       = IDENTIFIER_POINTER(DECL_NAME(t));
+            op->data.fnc.is_extern  = DECL_EXTERNAL(t);
         } else {
             // maybe var
-            op->type            = CL_OPERAND_VAR;
-            op->data.var.name   = IDENTIFIER_POINTER(DECL_NAME(t));
+            op->type                = CL_OPERAND_VAR;
+            op->data.var.name       = IDENTIFIER_POINTER(DECL_NAME(t));
+            // TODO: save value of DECL_EXTERNAL?
         }
     } else {
         // maybe reg
@@ -985,7 +987,8 @@ static struct cl_code_listener* create_cl_chain(void)
         cl_chain_append(chain, cl);
     }
 
-    cl = cl_code_listener_create("listener=\"pp\" "
+    cl = cl_code_listener_create("listener=\"dotgen\" "
+            "listener_args=\"./all\" "
             "cld=\"unify_labels_fnc,unify_regs\"");
     if (!cl) {
         chain->destroy(chain);

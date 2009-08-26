@@ -210,6 +210,7 @@ struct cl_operand {
         /* CL_OPERAND_VAR */
         struct {
             const char                  *name;
+            /* TODO: is_extern? */
         } var;
 
         /* CL_OPERAND_ARG */
@@ -225,6 +226,7 @@ struct cl_operand {
         /* CL_OPERAND_FNC */
         struct {
             const char                  *name;
+            bool                        is_extern;
         } fnc;
 
         /* CL_OPERAND_INT */

@@ -2,13 +2,17 @@
 #include "cl_private.hh"
 #include "ssd.hh"
 
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+
 #include <boost/iostreams/device/file_descriptor.hpp>
 #include <boost/iostreams/stream.hpp>
 
 
 class ClPrettyPrint: public ICodeListener {
     public:
-        ClPrettyPrint(int fd_out);
+        ClPrettyPrint(int fd_out, bool close_on_exit);
         virtual ~ClPrettyPrint();
 
         virtual void file_open(
@@ -83,8 +87,8 @@ using namespace ssd;
 
 // /////////////////////////////////////////////////////////////////////////////
 // ClPrettyPrint implementation
-ClPrettyPrint::ClPrettyPrint(int fd_out):
-    sink_(fd_out),
+ClPrettyPrint::ClPrettyPrint(int fd_out, bool close_on_exit):
+    sink_(fd_out, close_on_exit),
     out_(sink_),
     printingArgDecls_(false)
 {
@@ -525,6 +529,17 @@ void ClPrettyPrint::insn_switch_close()
 // /////////////////////////////////////////////////////////////////////////////
 // public interface, see cl_pp.hh for more details
 ICodeListener* createClPrettyPrint(const char *args) {
-    // TODO: open a file with open(2) if a file name is given in ARGS
-    return new ClPrettyPrint(STDOUT_FILENO);
+    // write to stdout by default
+    int fd = STDOUT_FILENO;
+
+    // check whether a file name is given
+    bool openFile = args && *args;
+    if (openFile)
+        // write to file requested
+        fd = open(/* file name is the only arg for now */ args,
+                  O_WRONLY | O_CREAT);
+
+    // TODO: error msg
+    return (fd < 0) ? 0
+        : new ClPrettyPrint(fd, openFile);
 }

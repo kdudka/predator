@@ -122,7 +122,6 @@ static void pseudo_to_cl_operand(struct instruction *insn, pseudo_t pseudo,
 
             // read symbol location
             read_sparse_location(&op->loc, sym->pos);
-            op->loc.sysp = MOD_EXTERN & sym->ctype.modifiers;
 
             if (sym->bb_target) {
                 WARN_UNHANDLED(insn->pos, "sym->bb_target");
@@ -132,11 +131,12 @@ static void pseudo_to_cl_operand(struct instruction *insn, pseudo_t pseudo,
             if (sym->ident) {
                 struct symbol *base = sym->ctype.base_type;
                 if (base && base->type == SYM_FN) {
-                    op->type            = CL_OPERAND_FNC;
-                    op->data.fnc.name   = strdup(show_ident(sym->ident));
+                    op->type                = CL_OPERAND_FNC;
+                    op->data.fnc.name       = strdup(show_ident(sym->ident));
+                    op->data.fnc.is_extern  = MOD_EXTERN & sym->ctype.modifiers;
                 } else {
-                    op->type            = CL_OPERAND_VAR;
-                    op->data.var.name   = strdup(show_ident(sym->ident));
+                    op->type                = CL_OPERAND_VAR;
+                    op->data.var.name       = strdup(show_ident(sym->ident));
                 }
                 break;
             }
@@ -788,7 +788,7 @@ static struct cl_code_listener* create_cl_chain()
         cl_chain_append(chain, cl);
     }
 
-    cl = cl_code_listener_create("listener=\"pp\" "
+    cl = cl_code_listener_create("listener=\"dotgen\" listener_args=\"all\" "
             "cld=\"arg_subst,unify_labels_fnc,unify_regs\"");
     if (!cl) {
         chain->destroy(chain);
