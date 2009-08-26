@@ -155,6 +155,9 @@ enum cl_operand_e {
      */
     CL_OPERAND_REG,
 
+    /* TODO: document */
+    CL_OPERAND_FNC,
+
     /**
      * integer literal
      */
@@ -178,7 +181,8 @@ struct cl_operand {
      * type of operand. See enum cl_operand_e for documentation.
      */
     enum cl_operand_e                   type;
-    /* TODO: location?  */
+
+    struct cl_location                  loc;
     /* TODO: scope?     */
 
     /**
@@ -217,6 +221,11 @@ struct cl_operand {
         struct {
             int                         id;
         } reg;
+
+        /* CL_OPERAND_FNC */
+        struct {
+            const char                  *name;
+        } fnc;
 
         /* CL_OPERAND_INT */
         struct {

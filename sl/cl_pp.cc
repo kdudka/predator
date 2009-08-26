@@ -186,6 +186,15 @@ void ClPrettyPrint::printNestedVar(const struct cl_operand *op) {
             out_ << SSD_INLINE_COLOR(C_LIGHT_BLUE, op->data.var.name);
             break;
 
+        case CL_OPERAND_FNC:
+            if (!op->data.fnc.name) {
+                CL_MSG_STREAM(cl_error, LocationWriter(loc_) << "error: "
+                        << "anonymous function");
+                break;
+            }
+            out_ << SSD_INLINE_COLOR(C_LIGHT_GREEN, op->data.fnc.name);
+            break;
+
         case CL_OPERAND_REG:
             SSD_COLORIZE(out_, C_LIGHT_BLUE) << "%r" << op->data.reg.id;
             break;
@@ -218,6 +227,7 @@ void ClPrettyPrint::printOperand(const struct cl_operand *op) {
         case CL_OPERAND_ARG:
         case CL_OPERAND_REG:
         case CL_OPERAND_VAR:
+        case CL_OPERAND_FNC:
             if (op->deref)
                 out_ << SSD_INLINE_COLOR(C_LIGHT_RED, "[");
 
@@ -319,7 +329,7 @@ void ClPrettyPrint::printInsnRet(const struct cl_insn *cli) {
     const struct cl_operand *src = cli->data.insn_ret.src;
 
     out_ << "\t\t"
-        << SSD_INLINE_COLOR(C_LIGHT_GREEN, "ret");
+        << SSD_INLINE_COLOR(C_LIGHT_RED, "ret");
 
     if (src && src->type != CL_OPERAND_VOID) {
         out_ << " ";
@@ -331,7 +341,7 @@ void ClPrettyPrint::printInsnRet(const struct cl_insn *cli) {
 
 void ClPrettyPrint::printInsnAbort(const struct cl_insn *cli) {
     out_ << "\t\t"
-        << SSD_INLINE_COLOR(C_LIGHT_GREEN, "abort")
+        << SSD_INLINE_COLOR(C_LIGHT_RED, "abort")
         << std::endl;
 }
 

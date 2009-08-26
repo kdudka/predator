@@ -129,10 +129,14 @@ static void decl_to_cl_operand(struct cl_operand *op, tree t)
 {
     // FIXME: this condition may be not sufficient in all cases
     if (DECL_NAME(t)) {
-        // maybe var
-        op->type            = CL_OPERAND_VAR;
-        op->data.var.name   = IDENTIFIER_POINTER(DECL_NAME(t));
-
+        if (FUNCTION_DECL == TREE_CODE(t)) {
+            op->type            = CL_OPERAND_FNC;
+            op->data.fnc.name   = IDENTIFIER_POINTER(DECL_NAME(t));
+        } else {
+            // maybe var
+            op->type            = CL_OPERAND_VAR;
+            op->data.var.name   = IDENTIFIER_POINTER(DECL_NAME(t));
+        }
     } else {
         // maybe reg
         op->type            = CL_OPERAND_REG;
@@ -141,6 +145,7 @@ static void decl_to_cl_operand(struct cl_operand *op, tree t)
 
     op->deref = false;
     op->offset = NULL;
+    read_gcc_location(&op->loc, DECL_SOURCE_LOCATION(t));
 }
 
 static void deref_indirect_op(tree *op)
@@ -224,6 +229,8 @@ static void free_cl_operand_data(struct cl_operand *op)
 static void handle_operand(struct cl_operand *op, tree t)
 {
     op->type            = CL_OPERAND_VOID;
+    op->loc.file        = NULL;
+    op->loc.line        = -1;
     op->deref           = false;
     op->offset          = NULL;
 
@@ -493,6 +500,10 @@ static void handle_stmt_return(gimple stmt)
 
 static const struct cl_operand stmt_cond_fixed_reg = {
     .type           = CL_OPERAND_REG,
+    .loc = {
+        .file       = NULL,
+        .line       = -1
+    },
     .deref          = false,
     .offset         = NULL,
     .data = {

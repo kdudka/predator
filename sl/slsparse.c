@@ -105,8 +105,10 @@ static const char* strdup_sparse_string(const struct string *str)
 static void pseudo_to_cl_operand(struct instruction *insn, pseudo_t pseudo,
                                  struct cl_operand *op, bool deref)
 {
-    op->deref = deref;
-    op->offset = NULL;
+    op->deref       = deref;
+    op->offset      = NULL;
+    op->loc.file    = NULL;
+    op->loc.line    = -1;
 
     if (!is_pseudo(pseudo)) {
         op->type = CL_OPERAND_VOID;
@@ -118,14 +120,24 @@ static void pseudo_to_cl_operand(struct instruction *insn, pseudo_t pseudo,
             struct symbol *sym = pseudo->sym;
             struct expression *expr;
 
+            // read symbol location
+            read_sparse_location(&op->loc, sym->pos);
+            op->loc.sysp = MOD_EXTERN & sym->ctype.modifiers;
+
             if (sym->bb_target) {
                 WARN_UNHANDLED(insn->pos, "sym->bb_target");
                 op->type = CL_OPERAND_VOID;
                 return;
             }
             if (sym->ident) {
-                op->type            = CL_OPERAND_VAR;
-                op->data.var.name   = strdup(show_ident(sym->ident));
+                struct symbol *base = sym->ctype.base_type;
+                if (base && base->type == SYM_FN) {
+                    op->type            = CL_OPERAND_FNC;
+                    op->data.fnc.name   = strdup(show_ident(sym->ident));
+                } else {
+                    op->type            = CL_OPERAND_VAR;
+                    op->data.var.name   = strdup(show_ident(sym->ident));
+                }
                 break;
             }
             expr = sym->initializer;
