@@ -211,14 +211,21 @@ static void handle_operand_component_ref(struct cl_operand *op, tree t)
             TRAP;
 
         // nest to subtree
-        concat_offset_string(&offset, op1);
         t = op0;
+        concat_offset_string(&offset, op1);
     }
 
     // true means '->', false means '.'
     bool is_ref_indirect = (INDIRECT_REF == TREE_CODE(t));
     if (is_ref_indirect)
         deref_indirect_op(&t);
+
+    if (ARRAY_REF == TREE_CODE(t)) {
+        SL_WARN_UNHANDLED_EXPR(t, "COMPONENT_REF / ARRAY_REF");
+        op->type = CL_OPERAND_VOID;
+        free(offset);
+        return;
+    }
 
     // read base (usually var/reg)
     decl_to_cl_operand(op, t);
@@ -311,6 +318,10 @@ static void handle_operand(struct cl_operand *op, tree t)
             }
             break;
 
+        case REAL_CST:
+            SL_WARN_UNHANDLED_EXPR(t, "REAL_CST");
+            break;
+
         case BIT_FIELD_REF:
             SL_WARN_UNHANDLED_EXPR(t, "BIT_FIELD_REF");
             break;
@@ -369,34 +380,39 @@ static void handle_stmt_binop(gimple stmt, enum tree_code code,
     cli.data.insn_binop.src2    = &src2;
     read_gimple_location(&cli.loc, stmt);
 
+    enum cl_binop_e *ptype = &cli.data.insn_binop.type;
+
     switch (code) {
-        case EQ_EXPR:       cli.data.insn_binop.type = CL_BINOP_EQ;     break;
-        case NE_EXPR:       cli.data.insn_binop.type = CL_BINOP_NE;     break;
-        case LT_EXPR:       cli.data.insn_binop.type = CL_BINOP_LT;     break;
-        case GT_EXPR:       cli.data.insn_binop.type = CL_BINOP_GT;     break;
-        case LE_EXPR:       cli.data.insn_binop.type = CL_BINOP_LE;     break;
-        case GE_EXPR:       cli.data.insn_binop.type = CL_BINOP_GE;     break;
-        case PLUS_EXPR:     cli.data.insn_binop.type = CL_BINOP_ADD;    break;
+        case EQ_EXPR:               *ptype = CL_BINOP_EQ;               break;
+        case NE_EXPR:               *ptype = CL_BINOP_NE;               break;
+        case LT_EXPR:               *ptype = CL_BINOP_LT;               break;
+        case GT_EXPR:               *ptype = CL_BINOP_GT;               break;
+        case LE_EXPR:               *ptype = CL_BINOP_LE;               break;
+        case GE_EXPR:               *ptype = CL_BINOP_GE;               break;
+        case PLUS_EXPR:             *ptype = CL_BINOP_PLUS;             break;
+        case MINUS_EXPR:            *ptype = CL_BINOP_MINUS;            break;
+        case TRUNC_DIV_EXPR:        *ptype = CL_BINOP_TRUNC_DIV;        break;
+        case TRUNC_MOD_EXPR:        *ptype = CL_BINOP_TRUNC_MOD;        break;
+        case RDIV_EXPR:             *ptype = CL_BINOP_RDIV;             break;
+        case MIN_EXPR:              *ptype = CL_BINOP_MIN;              break;
+        case MAX_EXPR:              *ptype = CL_BINOP_MAX;              break;
+        case TRUTH_AND_EXPR:        *ptype = CL_BINOP_TRUTH_AND;        break;
+        case TRUTH_OR_EXPR:         *ptype = CL_BINOP_TRUTH_OR;         break;
+        case TRUTH_XOR_EXPR:        *ptype = CL_BINOP_TRUTH_XOR;        break;
 
-        case BIT_AND_EXPR:
-            SL_WARN_UNHANDLED_GIMPLE(stmt, "BIT_AND_EXPR");
-            // FIXME: free_cl_operand_data is not called
-            return;
+// FIXME: free_cl_operand_data is not called
+#define SL_BINOP_UNHANDLED(what) \
+    case what: SL_WARN_UNHANDLED_GIMPLE(stmt, #what); return;
 
-        case BIT_IOR_EXPR:
-            SL_WARN_UNHANDLED_GIMPLE(stmt, "BIT_IOR_EXPR");
-            // FIXME: free_cl_operand_data is not called
-            return;
-
-        case MULT_EXPR:
-            SL_WARN_UNHANDLED_GIMPLE(stmt, "MULT_EXPR");
-            // FIXME: free_cl_operand_data is not called
-            return;
-
-        case POINTER_PLUS_EXPR:
-            SL_WARN_UNHANDLED_GIMPLE(stmt, "POINTER_PLUS_EXPR");
-            // FIXME: free_cl_operand_data is not called
-            return;
+        SL_BINOP_UNHANDLED(BIT_AND_EXPR)
+        SL_BINOP_UNHANDLED(BIT_IOR_EXPR)
+        SL_BINOP_UNHANDLED(BIT_XOR_EXPR)
+        SL_BINOP_UNHANDLED(LSHIFT_EXPR)
+        SL_BINOP_UNHANDLED(RSHIFT_EXPR)
+        SL_BINOP_UNHANDLED(LROTATE_EXPR)
+        SL_BINOP_UNHANDLED(RROTATE_EXPR)
+        SL_BINOP_UNHANDLED(MULT_EXPR)
+        SL_BINOP_UNHANDLED(POINTER_PLUS_EXPR)
 
         default:
             TRAP;
@@ -703,6 +719,10 @@ static tree cb_walk_gimple_stmt (gimple_stmt_iterator *iter,
 
         case GIMPLE_LABEL:
             // should be already handled by handle_stmt_switch
+            break;
+
+        case GIMPLE_ASM:
+            SL_WARN_UNHANDLED_GIMPLE(stmt, "GIMPLE_ASM");
             break;
 
         case GIMPLE_PREDICT:

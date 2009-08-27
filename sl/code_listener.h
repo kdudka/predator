@@ -258,13 +258,27 @@ enum cl_unop_e {
 };
 
 enum cl_binop_e {
-    CL_BINOP_ADD,
+    /* comparison */
     CL_BINOP_EQ,
     CL_BINOP_NE,
     CL_BINOP_LT,
     CL_BINOP_GT,
     CL_BINOP_LE,
-    CL_BINOP_GE
+    CL_BINOP_GE,
+
+    /* logical */
+    CL_BINOP_TRUTH_AND,
+    CL_BINOP_TRUTH_OR,
+    CL_BINOP_TRUTH_XOR,
+
+    /* arithmetic */
+    CL_BINOP_PLUS,
+    CL_BINOP_MINUS,
+    CL_BINOP_TRUNC_DIV,
+    CL_BINOP_TRUNC_MOD,
+    CL_BINOP_RDIV,
+    CL_BINOP_MIN,
+    CL_BINOP_MAX
     /* TODO */
 };
 

@@ -445,7 +445,7 @@ static void handle_insn(struct instruction *insn, struct cl_code_listener *cl)
 
         /* Binary */
         case OP_ADD /*= OP_BINARY*/:
-            handle_insn_binop(insn, CL_BINOP_ADD, cl);
+            handle_insn_binop(insn, CL_BINOP_PLUS, cl);
             break;
 
         WARN_CASE_UNHANDLED(insn->pos, OP_SUB)

@@ -192,7 +192,9 @@ void ClDotGenerator::createDotFile(std::ofstream &str, std::string fileName,
         fileName += ".dot";
 
     str.open(fileName.c_str(), ios::out);
-    if (!str) {
+    if (str) {
+        CL_DEBUG("ClDotGenerator: created dot file '" << fileName << "'");
+    } else {
         CL_MSG_STREAM_INTERNAL(cl_error, "error: "
                                "unable to create file '" << fileName << "'");
     }
