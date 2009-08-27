@@ -108,7 +108,7 @@ void cl_die(const char *msg);
 } while (0)
 
 #define CL_MSG_STREAM_INTERNAL(fnc, to_stream) \
-    CL_MSG_STREAM(cl_error, __FILE__ << ":" << __LINE__ \
+    CL_MSG_STREAM(fnc, __FILE__ << ":" << __LINE__ \
             << ": " << to_stream << " [internal location]")
 
 #define CL_INTERNAL_ERROR(to_stream) \

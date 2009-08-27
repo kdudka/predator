@@ -205,7 +205,7 @@ void ClDotGenerator::closeSub(std::ofstream &str) {
 void ClDotGenerator::closeDot(std::ofstream &str) {
     ClDotGenerator::closeSub(str);
     if (!str) {
-        CL_MSG_STREAM_INTERNAL(cl_warning, "warning: "
+        CL_MSG_STREAM_INTERNAL(cl_warn, "warning: "
                 "error detected while closing a file");
     }
     str.close();

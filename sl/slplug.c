@@ -18,6 +18,8 @@
 #   define _GNU_SOURCE
 #endif
 
+#include <stdarg.h>
+
 // safe to remove (it's here for debugging purposes only)
 #include <signal.h>
 #define TRAP raise(SIGTRAP)
@@ -85,21 +87,23 @@ static int verbose = 0;
 
 // plug-in meta-data according to gcc plug-in API
 static struct plugin_info sl_info = {
-    .version = "\nslplug 0.1 [experimental]\n",
-    .help =    "\nslplug 0.1 [experimental]\n"
-        "\n"
-        "Usage: gcc -fplugin=slplug.so [OPTIONS] ...\n"
-        "\n"
-        "OPTIONS:\n"
-        "    -fplugin-arg-slplug-help\n"
-        "    -fplugin-arg-slplug-version\n"
-        "    -fplugin-arg-slplug-verbose=VERBOSE_BITMASK\n"
-        "\n"
-        "VERBOSE_BITMASK:\n"
-        "    1    debug gcc plug-in API\n"
-        "    2    print location info using \"locator\" code listener\n"
-        "    4    print each gimple statement before its processing\n"
-        "    8    dump gcc tree of unhandled expressions\n"
+    .version = "slplug 0.1 [experimental]",
+    .help =    "slplug 0.1 [experimental]\n"
+"\n"
+"Usage: gcc -fplugin=slplug.so [OPTIONS] ...\n"
+"\n"
+"OPTIONS:\n"
+"    -fplugin-arg-slplug-help\n"
+"    -fplugin-arg-slplug-version\n"
+"    -fplugin-arg-slplug-dump-pp[=OUTPUT_FILE]          dump linearized code\n"
+"    -fplugin-arg-slplug-gen-dot[=GLOBAL_CG_FILE]       generate CFGs\n"
+"    -fplugin-arg-slplug-verbose[=VERBOSE_BITMASK]      turn on verbose mode\n"
+"\n"
+"VERBOSE_BITMASK:\n"
+"    1    debug gcc plug-in API and code_listener\n"
+"    2    print location info using \"locator\" code listener\n"
+"    4    print each gimple statement before its processing\n"
+"    8    dump gcc tree of unhandled expressions\n"
 };
 
 static struct cl_code_listener *cl = NULL;
@@ -929,8 +933,18 @@ static void sl_regcb (const char *name) {
                        /* user_data */  NULL);
 }
 
-static int slplug_init(const struct plugin_name_args *info)
+struct sl_plug_options {
+    bool                    use_dotgen;
+    bool                    use_pp;
+    const char              *gl_dot_file;
+    const char              *pp_out_file;
+};
+
+static int slplug_init(const struct plugin_name_args *info,
+                       struct sl_plug_options *opt)
 {
+    memset (opt, 0, sizeof(*opt));
+
     // initialize global plug-in name
     plugin_name = info->full_name;
 
@@ -952,13 +966,21 @@ static int slplug_init(const struct plugin_name_args *info)
 
         } else if (STREQ(key, "version")) {
             // do not use info->version yet
-            puts(sl_info.version);
+            printf("\n%s\n", sl_info.version);
             return EXIT_FAILURE;
 
         } else if (STREQ(key, "help")) {
             // do not use info->help yet
-            puts(sl_info.help);
+            printf ("\n%s\n", sl_info.help);
             return EXIT_FAILURE;
+
+        } else if (STREQ(key, "dump-pp")) {
+            opt->use_pp         = true;
+            opt->pp_out_file    = value;
+
+        } else if (STREQ(key, "gen-dot")) {
+            opt->use_dotgen     = true;
+            opt->gl_dot_file    = value;
 
         } else {
             SL_WARN_UNHANDLED(key);
@@ -969,32 +991,70 @@ static int slplug_init(const struct plugin_name_args *info)
     return EXIT_SUCCESS;
 }
 
-// FIXME: copy-pasted from slsparse.c
-static struct cl_code_listener* create_cl_chain(void)
+static bool sl_append_listener(struct cl_code_listener *chain,
+                               const char *fmt, ...)
 {
-    struct cl_code_listener *cl;
+    va_list ap;
+    va_start(ap, fmt);
+
+    char *config_string;
+    int rv = vasprintf(&config_string, fmt, ap);
+    SL_ASSERT(0 < rv);
+    va_end(ap);
+
+    struct cl_code_listener *cl = cl_code_listener_create(config_string);
+    free(config_string);
+
+    if (!cl) {
+        // FIXME: deserves a big comment (subtle)
+        chain->destroy(chain);
+        return false;
+    }
+
+    cl_chain_append(chain, cl);
+    return true;
+}
+
+static struct cl_code_listener*
+create_cl_chain(const struct sl_plug_options *opt)
+{
     struct cl_code_listener *chain = cl_chain_create();
     if (!chain)
         // error message already emitted
         return NULL;
 
     if (SL_VERBOSE_LOCATION & verbose) {
-        cl = cl_code_listener_create("listener=\"locator\"");
-        if (!cl) {
-            chain->destroy(chain);
+        if (!sl_append_listener(chain, "listener=\"locator\""))
             return NULL;
-        }
-        cl_chain_append(chain, cl);
     }
 
-    cl = cl_code_listener_create("listener=\"dotgen\" "
-            "listener_args=\"data/all.dot\" "
-            "cld=\"unify_labels_fnc,unify_regs\"");
-    if (!cl) {
-        chain->destroy(chain);
-        return NULL;
+    if (opt->use_pp) {
+        const char *out = (opt->pp_out_file)
+            ? opt->pp_out_file
+            : "";
+        if (!sl_append_listener(chain,
+                                "listener=\"pp\" "
+                                "listener_args=\"%s\" "
+                                "cld=\""
+                                    "unify_labels_fnc,"
+                                    "unify_regs\"",
+                                out))
+            return NULL;
     }
-    cl_chain_append(chain, cl);
+
+    if (opt->use_dotgen) {
+        const char *gl_dot = (opt->gl_dot_file)
+            ? opt->gl_dot_file
+            : "";
+        if (!sl_append_listener(chain,
+                                "listener=\"dotgen\" "
+                                "listener_args=\"%s\" "
+                                "cld=\""
+                                    "unify_labels_fnc,"
+                                    "unify_regs\"",
+                                gl_dot))
+            return NULL;
+    }
 
     return chain;
 }
@@ -1003,8 +1063,10 @@ static struct cl_code_listener* create_cl_chain(void)
 int plugin_init (struct plugin_name_args *plugin_info,
                  struct plugin_gcc_version *version)
 {
+    struct sl_plug_options opt;
+
     // global initialization
-    int rv = slplug_init(plugin_info);
+    int rv = slplug_init(plugin_info, &opt);
     if (rv)
         return rv;
 
@@ -1016,8 +1078,8 @@ int plugin_init (struct plugin_name_args *plugin_info,
     // TODO: check for compatibility with particular gcc version here
 
     // initialize code listener
-    cl_global_init_defaults(NULL, true);
-    cl = create_cl_chain();
+    cl_global_init_defaults(NULL, verbose & SL_VERBOSE_PLUG);
+    cl = create_cl_chain(&opt);
     SL_ASSERT(cl);
 
     // try to register callbacks (and virtual callbacks)

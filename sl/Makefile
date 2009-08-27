@@ -54,7 +54,7 @@ $(CL_OBJS): code_listener.h *.hh
 $(CL_OBJS): CXXFLAGS += -fPIC -std=c++0x -pedantic -Wall -Werror
 ssd.o: CXXFLAGS += -I../ssd/src -DHAVE_ISATTY
 
-CL_LIBS = -lboost_iostreams
+CL_LIBS = -lboost_iostreams -lboost_system
 
 slsparse.o: code_listener.h
 slsparse.o: CFLAGS += -fPIC -Wall $(SPARSE_CFLAGS)
@@ -102,6 +102,7 @@ clean:
 	rm -f test-list test-all test-all.o dll.o
 	rm -f slsparse slsparse.o
 	rm -f slplug.o slplug.so
+	$(MAKE) distclean -C data
 
 dbgsparse: slsparse
 	$(GDB) -x slsparse.gdb

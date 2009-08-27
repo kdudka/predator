@@ -2,13 +2,14 @@
 #include "cl_private.hh"
 #include "ssd.hh"
 
+#include <errno.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 
 #include <boost/iostreams/device/file_descriptor.hpp>
 #include <boost/iostreams/stream.hpp>
-
+#include <boost/system/system_error.hpp>
 
 class ClPrettyPrint: public ICodeListener {
     public:
@@ -533,13 +534,23 @@ ICodeListener* createClPrettyPrint(const char *args) {
     int fd = STDOUT_FILENO;
 
     // check whether a file name is given
-    bool openFile = args && *args;
-    if (openFile)
+    const bool openFile = args && *args;
+    if (openFile) {
         // write to file requested
         fd = open(/* file name is the only arg for now */ args,
-                  O_WRONLY | O_CREAT);
+                  O_WRONLY | O_CREAT,
+                  /* mode */ 0644);
+        if (fd < 0) {
+            using namespace boost::system;
+            CL_MSG_STREAM_INTERNAL(cl_error, "error: "
+                    "unable to create file '" << args << "'");
+            errc::errc_t ec = static_cast<errc::errc_t>(errno);
+            system_error err(errc::make_error_code(ec));
+            CL_MSG_STREAM_INTERNAL(cl_note, "note: "
+                    "got system error '" << err.what() << "'");
+            return 0;
+        }
+    }
 
-    // TODO: error msg
-    return (fd < 0) ? 0
-        : new ClPrettyPrint(fd, openFile);
+    return new ClPrettyPrint(fd, openFile);
 }
