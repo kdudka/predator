@@ -89,10 +89,11 @@ class ClDotGenerator: public ICodeListener {
             ET_LC_CALL,
             ET_LC_CALL_INDIR,
             ET_GL_CALL,
-            ET_GL_CALL_INDIR
+            ET_GL_CALL_INDIR,
+            ET_PTR_CALL
         };
         enum {
-            CNT_ET = ET_GL_CALL_INDIR + 1
+            CNT_ET = ET_PTR_CALL + 1
         };
         static const char       *EtColors[];
 
@@ -178,7 +179,8 @@ const char *ClDotGenerator::EtColors[ClDotGenerator::CNT_ET] = {
     "blue",                         // ET_LC_CALL
     "red",                          // ET_LC_CALL_INDIR
     "blue",                         // ET_GL_CALL
-    "red"                           // ET_GL_CALL_INDIR
+    "red",                          // ET_GL_CALL_INDIR
+    "green"                         // ET_PTR_CALL
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -231,6 +233,7 @@ void ClDotGenerator::gobbleEdge(std::string dst, EdgeType type) {
 
 void ClDotGenerator::emitEdge(std::string dst, EdgeType type) {
     switch (type) {
+        case ET_PTR_CALL:
         case ET_GL_CALL:
         case ET_GL_CALL_INDIR:
             perFncCalls_[dst] = bb_;
@@ -280,8 +283,10 @@ void ClDotGenerator::emitPendingCalls() {
         switch (type) {
             case ET_LC_CALL:
             case ET_LC_CALL_INDIR:
-                FILE_FNC_STREAM(", URL=" << SL_QUOTE_URL(i->first)
-                    << ", color=" << EtColors[type]
+                FILE_FNC_STREAM(", URL=" << SL_QUOTE_URL(i->first));
+                // fall through!!
+            case ET_PTR_CALL:
+                FILE_FNC_STREAM(", color=" << EtColors[type]
                     << ", fontcolor=" << EtColors[type]);
             default:
                 break;
@@ -526,22 +531,46 @@ void ClDotGenerator::insn_call_open(const struct cl_location *loc,
                                     const struct cl_operand *,
                                     const struct cl_operand *fnc)
 {
-    if (fnc->type != CL_OPERAND_FNC || fnc->deref || fnc->offset) {
-        CL_MSG_STREAM(cl_warn, LocationWriter(loc, &loc_) << "warning: "
-                      "ClDotGenerator: unhandled call");
-        return;
-    }
+    EdgeType callType;
+    std::ostringstream name;
+    switch (fnc->type) {
+        case CL_OPERAND_FNC:
+            callType = (fnc->data.fnc.is_extern)
+                ? ET_GL_CALL
+                : ET_LC_CALL;
+            name << fnc->data.fnc.name;
+            break;
 
-    string name(fnc->data.fnc.name);
+        case CL_OPERAND_VAR:
+        case CL_OPERAND_REG:
+            callType = ET_PTR_CALL;
+            if (fnc->deref)
+                name << "[";
+
+            if (CL_OPERAND_VAR == fnc->type)
+                name << fnc->data.var.name;
+            else
+                name << "%r" << fnc->data.reg.id;
+
+            if (fnc->offset)
+                name << ":" << fnc->offset;
+
+            if (fnc->deref)
+                name << "]";
+            break;
+
+        default:
+            CL_MSG_STREAM(cl_warn, LocationWriter(loc, &loc_) << "warning: "
+                          "ClDotGenerator: unhandled call");
+            return;
+    }
 
     std::ostringstream str;
     str << bb_ << SL_BB_POS_SUFFIX;
-    perBbCalls_[name].insert(str.str());
+    perBbCalls_[name.str()].insert(str.str());
 
     this->emitInsnCall();
-    this->gobbleEdge(name, (fnc->data.fnc.is_extern)
-            ? ET_GL_CALL
-            : ET_LC_CALL);
+    this->gobbleEdge(name.str(), callType);
 
     lastInsn_ =
         /* FIXME: we have no CL_INSN_CALL in enum cl_insn_e */
