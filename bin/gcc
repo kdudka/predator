@@ -1,0 +1,7 @@
+#!/bin/sh
+PATH="$GCC_PATH" \
+    gdb -x "$GDB_SLPLUG" --args gcc \
+    -fplugin=slplug.so \
+    -fplugin-arg-slplug-verbose=1 \
+    -fplugin-arg-slplug-gen-dot \
+    "$@"
