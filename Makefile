@@ -48,7 +48,7 @@ update_gcc_src_only: $(GCC_SRC)
 update_gcc: update_gcc_src_only
 	$(MAKE) build_gcc
 
-sl: $(SPARSE_GIT)
+sl: $(SPARSE_GIT) $(SSD_GIT)
 	test -d $(GCC_INSTALL) || $(MAKE) build_gcc
 	$(MAKE) check -C sl
 

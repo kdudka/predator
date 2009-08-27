@@ -330,6 +330,10 @@ static void handle_operand(struct cl_operand *op, tree t)
             SL_WARN_UNHANDLED_EXPR(t, "CONSTRUCTOR");
             break;
 
+        case RESULT_DECL:
+            SL_WARN_UNHANDLED_EXPR(t, "RESULT_DECL");
+            break;
+
         default:
             TRAP;
     }
@@ -404,6 +408,7 @@ static void handle_stmt_binop(gimple stmt, enum tree_code code,
 #define SL_BINOP_UNHANDLED(what) \
     case what: SL_WARN_UNHANDLED_GIMPLE(stmt, #what); return;
 
+        SL_BINOP_UNHANDLED(EXACT_DIV_EXPR)
         SL_BINOP_UNHANDLED(BIT_AND_EXPR)
         SL_BINOP_UNHANDLED(BIT_IOR_EXPR)
         SL_BINOP_UNHANDLED(BIT_XOR_EXPR)
