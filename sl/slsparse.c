@@ -788,8 +788,15 @@ static struct cl_code_listener* create_cl_chain()
         cl_chain_append(chain, cl);
     }
 
+    cl = cl_code_listener_create("listener=\"pp\" "
+            "cld=\"arg_subst,unify_labels_fnc,unify_regs\"");
+    if (!cl) {
+        chain->destroy(chain);
+        return NULL;
+    }
+    cl_chain_append(chain, cl);
+
     cl = cl_code_listener_create("listener=\"dotgen\" "
-            "listener_args=\"data/all.dot\" "
             "cld=\"arg_subst,unify_labels_fnc,unify_regs\"");
     if (!cl) {
         chain->destroy(chain);
