@@ -1,9 +1,7 @@
-#include "config.h"
-
 #include "cl_dotgen.hh"
 #include "cl_private.hh"
 
-#include <libgen.h>
+#include <libgen.h>         // for basename(3)
 
 #include <fstream>
 #include <map>
@@ -12,7 +10,6 @@
 
 class ClDotGenerator: public ICodeListener {
     public:
-        ClDotGenerator();
         ClDotGenerator(const char *glDotFile);
         virtual ~ClDotGenerator();
 
@@ -103,6 +100,7 @@ class ClDotGenerator: public ICodeListener {
         typedef std::map<std::string, std::string>      TCallMap;
         typedef std::map<std::string, TCallSet>         TCallMultiMap;
         typedef std::map<std::string, EdgeType>         TEdgeMap;
+
         TCallMap                perFncCalls_;
         TCallMultiMap           perBbCalls_;
         TEdgeMap                perFncEdgeMap_;
@@ -136,7 +134,6 @@ class ClDotGenerator: public ICodeListener {
 #define SL_QUOTE(what) \
     "\"" << what << "\""
 
-// TODO: get rid of
 #define SL_QUOTE_BB(bb) \
     SL_QUOTE(fnc_ << "." << bb)
 
@@ -212,22 +209,19 @@ void ClDotGenerator::closeDot(std::ofstream &str) {
     str.close();
 }
 
-ClDotGenerator::ClDotGenerator():
-    hasGlDotFile_(false),
-    nodeType_(NT_PLAIN)
-{
-}
-
 ClDotGenerator::ClDotGenerator(const char *glDotFile):
-    hasGlDotFile_(true),
+    hasGlDotFile_(glDotFile && *glDotFile),
     nodeType_(NT_PLAIN)
 {
-    ClDotGenerator::createDotFile(glOut_, glDotFile, false);
-    glOut_ << SL_GRAPH(glDotFile);
+    if (hasGlDotFile_) {
+        ClDotGenerator::createDotFile(glOut_, glDotFile, false);
+        glOut_ << SL_GRAPH(glDotFile);
+    }
 }
 
 ClDotGenerator::~ClDotGenerator() {
-    this->closeDot(glOut_);
+    if (hasGlDotFile_)
+        this->closeDot(glOut_);
 }
 
 void ClDotGenerator::gobbleEdge(std::string dst, EdgeType type) {
@@ -422,10 +416,8 @@ void ClDotGenerator::file_close()
     ClDotGenerator::closeSub(glOut_);
 }
 
-void ClDotGenerator::fnc_open(
-            const struct cl_location*loc,
-            const char              *fnc_name,
-            enum cl_scope_e         scope)
+void ClDotGenerator::fnc_open(const struct cl_location *loc,
+                              const char *fnc_name, enum cl_scope_e)
 {
     loc_ = loc;
     fnc_ = fnc_name;
@@ -459,9 +451,7 @@ void ClDotGenerator::fnc_close()
     bb_.clear();
 }
 
-void ClDotGenerator::bb_open(
-            const char              *bb_name)
-{
+void ClDotGenerator::bb_open(const char *bb_name) {
     if (!bb_.empty())
         // emit last BB
         this->emitBb();
@@ -477,9 +467,7 @@ void ClDotGenerator::bb_open(
         << "\tURL=\"\";" << std::endl;
 }
 
-void ClDotGenerator::insn(
-            const struct cl_insn    *cli)
-{
+void ClDotGenerator::insn(const struct cl_insn *cli) {
     switch (cli->type) {
         case CL_INSN_JMP: {
                 const char *label = cli->data.insn_jmp.label;
@@ -493,12 +481,14 @@ void ClDotGenerator::insn(
             }
             break;
 
-        case CL_INSN_COND:
-            this->emitInsnCond(cli->data.insn_cond.then_label,
-                               cli->data.insn_cond.else_label);
-            this->gobbleEdge(cli->data.insn_cond.then_label, ET_COND_THEN);
-            this->gobbleEdge(cli->data.insn_cond.else_label, ET_COND_ELSE);
-            this->checkForFncRef(cli->data.insn_cond.src);
+        case CL_INSN_COND: {
+                const char *then_label = cli->data.insn_cond.then_label;
+                const char *else_label = cli->data.insn_cond.else_label;
+                this->emitInsnCond(then_label, else_label);
+                this->gobbleEdge(then_label, ET_COND_THEN);
+                this->gobbleEdge(else_label, ET_COND_ELSE);
+                this->checkForFncRef(cli->data.insn_cond.src);
+            }
             break;
 
         case CL_INSN_RET:
@@ -532,10 +522,9 @@ void ClDotGenerator::insn(
     lastInsn_ = cli->type;
 }
 
-void ClDotGenerator::insn_call_open(
-            const struct cl_location*loc,
-            const struct cl_operand *dst,
-            const struct cl_operand *fnc)
+void ClDotGenerator::insn_call_open(const struct cl_location *loc,
+                                    const struct cl_operand *,
+                                    const struct cl_operand *fnc)
 {
     if (fnc->type != CL_OPERAND_FNC || fnc->deref || fnc->offset) {
         CL_MSG_STREAM(cl_warn, LocationWriter(loc, &loc_) << "warning: "
@@ -567,9 +556,8 @@ void ClDotGenerator::insn_call_close()
 {
 }
 
-void ClDotGenerator::insn_switch_open(
-            const struct cl_location*loc,
-            const struct cl_operand *src)
+void ClDotGenerator::insn_switch_open(const struct cl_location *,
+                                      const struct cl_operand *src)
 {
     perFncOut_ << "\t" << SL_QUOTE_BB(bb_ << SL_BB_POS_SUFFIX)
             << " [shape=box, color=yellow, fontcolor=yellow, style=bold,"
@@ -578,11 +566,10 @@ void ClDotGenerator::insn_switch_open(
     this->checkForFncRef(src);
 }
 
-void ClDotGenerator::insn_switch_case(
-            const struct cl_location*loc,
-            const struct cl_operand *val_lo,
-            const struct cl_operand *val_hi,
-            const char              *label)
+void ClDotGenerator::insn_switch_case(const struct cl_location *,
+                                      const struct cl_operand *,
+                                      const struct cl_operand *,
+                                      const char              *label)
 {
     this->gobbleEdge(label, ET_SWITCH_CASE);
     perFncOut_ << "\t" << SL_QUOTE_BB(bb_ << SL_BB_POS_SUFFIX) << " -> "
@@ -599,7 +586,5 @@ void ClDotGenerator::insn_switch_close() {
 // /////////////////////////////////////////////////////////////////////////////
 // public interface, see cl_dotgen.hh for more details
 ICodeListener* createClDotGenerator(const char *args) {
-    return (args && *args)
-        ? new ClDotGenerator(args)
-        : new ClDotGenerator();
+    return new ClDotGenerator(args);
 }
