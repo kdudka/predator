@@ -1,0 +1,53 @@
+From 892f19915cbcbe26b3a7ad2c3baf1a1420f3c954 Mon Sep 17 00:00:00 2001
+From: Kamil Dudka <kdudka@redhat.com>
+Date: Fri, 28 Aug 2009 21:49:16 +0200
+Subject: [PATCH] do not ignore attribute 'noreturn'...
+
+... and thus make it possible to optimize walk through CFG.
+
+Signed-off-by: Kamil Dudka <kdudka@redhat.com>
+---
+ parse.c  |    4 ++--
+ symbol.h |    4 +++-
+ 2 files changed, 5 insertions(+), 3 deletions(-)
+
+diff --git a/parse.c b/parse.c
+index e5ad867..215c4da 100644
+--- a/parse.c
++++ b/parse.c
+@@ -480,8 +480,8 @@ static struct init_keyword {
+ 	{ "const",	NS_KEYWORD,	.op = &ignore_attr_op },
+ 	{ "__const",	NS_KEYWORD,	.op = &ignore_attr_op },
+ 	{ "__const__",	NS_KEYWORD,	.op = &ignore_attr_op },
+-	{ "noreturn",	NS_KEYWORD,	.op = &ignore_attr_op },
+-	{ "__noreturn__",	NS_KEYWORD,	.op = &ignore_attr_op },
++	{ "noreturn",	NS_KEYWORD,	MOD_NORETURN,	.op = &attr_mod_op },
++	{ "__noreturn__",	NS_KEYWORD,	MOD_NORETURN,	.op = &attr_mod_op },
+ 	{ "no_instrument_function",	NS_KEYWORD,	.op = &ignore_attr_op },
+ 	{ "__no_instrument_function__",	NS_KEYWORD,	.op = &ignore_attr_op },
+ 	{ "sentinel",	NS_KEYWORD,	.op = &ignore_attr_op },
+diff --git a/symbol.h b/symbol.h
+index 42d69d6..d8d1793 100644
+--- a/symbol.h
++++ b/symbol.h
+@@ -216,6 +216,8 @@ struct symbol {
+ #define MOD_EXPLICITLY_SIGNED	0x40000000
+ #define MOD_BITWISE	0x80000000
+ 
++#define MOD_NORETURN	0x100000000
++
+ #define MOD_NONLOCAL	(MOD_EXTERN | MOD_TOPLEVEL)
+ #define MOD_STORAGE	(MOD_AUTO | MOD_REGISTER | MOD_STATIC | MOD_EXTERN | MOD_INLINE | MOD_TOPLEVEL)
+ #define MOD_SIGNEDNESS	(MOD_SIGNED | MOD_UNSIGNED | MOD_EXPLICITLY_SIGNED)
+@@ -223,7 +225,7 @@ struct symbol {
+ #define MOD_SIZE	(MOD_CHAR | MOD_SHORT | MOD_LONG | MOD_LONGLONG)
+ #define MOD_IGNORE (MOD_TOPLEVEL | MOD_STORAGE | MOD_ADDRESSABLE |	\
+ 	MOD_ASSIGNED | MOD_USERTYPE | MOD_ACCESSED | MOD_EXPLICITLY_SIGNED)
+-#define MOD_PTRINHERIT (MOD_VOLATILE | MOD_CONST | MOD_NODEREF | MOD_STORAGE)
++#define MOD_PTRINHERIT (MOD_VOLATILE | MOD_CONST | MOD_NODEREF | MOD_STORAGE | MOD_NORETURN)
+ 
+ 
+ /* Current parsing/evaluation function */
+-- 
+1.6.4.1
+

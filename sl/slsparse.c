@@ -201,7 +201,7 @@ static void pseudo_to_cl_operand(struct instruction *insn, pseudo_t pseudo,
     }
 }
 
-static void handle_insn_call(struct instruction *insn,
+static bool handle_insn_call(struct instruction *insn,
                              struct cl_code_listener *cl)
 {
     struct cl_operand dst, fnc;
@@ -229,6 +229,18 @@ static void handle_insn_call(struct instruction *insn,
 
     // close call
     cl->insn_call_close(cl);
+    if (insn->func->sym->ctype.modifiers & MOD_NORETURN) {
+        // this call never returns --> end of BB!!
+
+        struct cl_insn cli;
+        cli.type    = CL_INSN_ABORT;
+        cli.loc     = loc;
+
+        cl->insn(cl, &cli);
+        return false;
+    }
+
+    return true;
 }
 
 static void handle_insn_br(struct instruction *insn,
@@ -416,7 +428,7 @@ static void handle_insn_binop(struct instruction *insn, enum cl_operand_e type,
     free_cl_operand_data(&src2);
 }
 
-static void handle_insn(struct instruction *insn, struct cl_code_listener *cl)
+static bool handle_insn(struct instruction *insn, struct cl_code_listener *cl)
 {
     switch (insn->opcode) {
         WARN_CASE_UNHANDLED(insn->pos, OP_BADOP)
@@ -536,8 +548,7 @@ static void handle_insn(struct instruction *insn, struct cl_code_listener *cl)
 
         WARN_CASE_UNHANDLED(insn->pos, OP_INLINED_CALL)
         case OP_CALL:
-            handle_insn_call(insn, cl);
-            break;
+            return handle_insn_call(insn, cl);
 
         WARN_CASE_UNHANDLED(insn->pos, OP_VANEXT)
         WARN_CASE_UNHANDLED(insn->pos, OP_VAARG)
@@ -565,6 +576,7 @@ static void handle_insn(struct instruction *insn, struct cl_code_listener *cl)
             handle_insn_copy(insn, cl);
             break;
     }
+    return true;
 }
 
 static bool is_insn_interesting(struct instruction *insn)
@@ -585,23 +597,23 @@ static bool is_insn_interesting(struct instruction *insn)
     }
 }
 
-static void handle_bb_insn(struct instruction *insn,
+static bool handle_bb_insn(struct instruction *insn,
                            struct cl_code_listener *cl)
 {
     if (!insn)
-        return;
+        return true;
 
     if (!insn->bb) {
 #if SHOW_PSEUDO_INSNS
         WARN_VA(insn->pos, "ignoring pseudo: %s", show_instruction(insn));
 #endif
-        return;
+        return true;
     }
 
     if (!is_insn_interesting(insn))
-        return;
+        return true;
 
-    handle_insn(insn, cl);
+    return handle_insn(insn, cl);
 }
 
 static void handle_bb(struct basic_block *bb, struct cl_code_listener *cl)
@@ -619,8 +631,12 @@ static void handle_bb(struct basic_block *bb, struct cl_code_listener *cl)
     free(bb_name);
 
     FOR_EACH_PTR(bb->insns, insn) {
-        handle_bb_insn(insn, cl);
+        if (!handle_bb_insn(insn, cl))
+            // subtle: 'break' stmt here does not work as one would expected to
+            goto done;
     } END_FOR_EACH_PTR(insn);
+done:
+    return;
 }
 
 static void handle_fnc_ep(struct entrypoint *ep, struct cl_code_listener *cl)

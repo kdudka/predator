@@ -28,7 +28,8 @@ GDB ?= gdb
 
 .PHONY: all check clean debug \
 	chkplug chksparse chkunit chkhead \
-	dbgplug dbgsparse
+	dbgplug dbgsparse \
+	dotplug dotsparse
 
 all: slsparse slplug.so
 
@@ -62,7 +63,7 @@ slsparse.o: CFLAGS += -fPIC -Wall $(SPARSE_CFLAGS)
 slsparse: slsparse.o libcl.a $(SPARSE_LIBS)
 	$(CC) $(CFLAGS) -o $@ slsparse.o -L. -lcl $(SPARSE_LIBS) $(CL_LIBS)
 
-PLUG_CFLAGS = -fPIC -std=c99 -pedantic -Wall -W -Werror -pedantic -I.. -I../gcc
+PLUG_CFLAGS = -fPIC -std=c99 -pedantic -Wall -W -Werror -I.. -I../gcc -iquote.
 
 slplug.o: code_listener.h
 slplug.o: CFLAGS += $(PLUG_CFLAGS)
@@ -85,11 +86,16 @@ chkplug: slplug.so
 		&& ($(GCC_INSTALL)/bin/gcc $(PLUG_CFLAGS) -fplugin=./slplug.so \
 		-c slplug.c >"$$TMP" 2>&1 || (cat "$$TMP"; exit 1)) && rm -fv "$$TMP"
 	$(MAKE) slplug.so
-	$(GCC_INSTALL)/bin/gcc $(PLUG_CFLAGS) -fplugin=./slplug.so -c slplug.c
+	$(GCC_INSTALL)/bin/gcc $(PLUG_CFLAGS) \
+		-fplugin=./slplug.so \
+		-fplugin-arg-slplug-verbose=1 \
+		-fplugin-arg-slplug-dump-pp \
+		-fplugin-arg-slplug-gen-dot=data/all.dot \
+		-c data/slplug.c
 
 SFLAGS += -Wno-decl
-chksparse: dll.c slsparse
-	./slsparse $(SFLAGS) dll.c
+chksparse: slsparse
+	./slsparse $(SFLAGS) $(PLUG_CFLAGS) -I. data/slplug.c
 
 check: chkplug chksparse chkunit chkhead
 
@@ -109,6 +115,16 @@ dbgsparse: slsparse
 
 dbgplug: slplug.so
 	$(GDB) -x slplug.gdb
+
+dotsparse:
+	$(MAKE) -C data distclean
+	$(MAKE) chksparse
+	$(MAKE) -C data
+
+dotplug:
+	$(MAKE) -C data distclean
+	$(MAKE) chkplug
+	$(MAKE) -C data
 
 ../sparse/libsparse.a: ../sparse/*.c ../sparse/*.h ../sparse/local.mk
 	$(MAKE) -C ../sparse
