@@ -57,6 +57,10 @@ class CldCbSeqChk: public ClDecoratorBase {
             loc_ = &cli->loc;
 
             switch (cli->type) {
+                case CL_INSN_NOP:
+                    this->chkInsnNop();
+                    break;
+
                 case CL_INSN_JMP:
                     this->chkInsnJmp();
                     break;
@@ -155,6 +159,7 @@ class CldCbSeqChk: public ClDecoratorBase {
         void emitUnexpected(EState);
         void setState(EState);
         void chkArgDecl();
+        void chkInsnNop();
         void chkInsnJmp();
         void chkInsnCond();
         void chkInsnRet();
@@ -450,6 +455,11 @@ void CldCbSeqChk::setState(EState newState) {
 void CldCbSeqChk::chkArgDecl() {
     if (S_FNC_DECL != state_)
         this->emitUnexpected("fnc_arg_decl");
+}
+
+void CldCbSeqChk::chkInsnNop() {
+    if (S_BLOCK_LEVEL != state_)
+        this->emitUnexpected("CL_INSN_NOP");
 }
 
 void CldCbSeqChk::chkInsnJmp() {

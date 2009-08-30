@@ -476,6 +476,10 @@ void ClDotGenerator::bb_open(const char *bb_name) {
 
 void ClDotGenerator::insn(const struct cl_insn *cli) {
     switch (cli->type) {
+        case CL_INSN_NOP:
+            // ignore
+            return;
+
         case CL_INSN_JMP: {
                 const char *label = cli->data.insn_jmp.label;
                 if (bb_.empty()) {

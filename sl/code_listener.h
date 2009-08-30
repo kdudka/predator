@@ -243,6 +243,7 @@ struct cl_operand {
 };
 
 enum cl_insn_e {
+    CL_INSN_NOP,
     CL_INSN_JMP,
     CL_INSN_COND,
     CL_INSN_RET,

@@ -404,9 +404,10 @@ static void handle_stmt_binop(gimple stmt, enum tree_code code,
         case TRUTH_OR_EXPR:         *ptype = CL_BINOP_TRUTH_OR;         break;
         case TRUTH_XOR_EXPR:        *ptype = CL_BINOP_TRUTH_XOR;        break;
 
-// FIXME: free_cl_operand_data is not called
 #define SL_BINOP_UNHANDLED(what) \
-    case what: SL_WARN_UNHANDLED_GIMPLE(stmt, #what); return;
+    case what: SL_WARN_UNHANDLED_GIMPLE(stmt, #what); \
+               cli.type = CL_INSN_NOP; \
+               break;
 
         SL_BINOP_UNHANDLED(EXACT_DIV_EXPR)
         SL_BINOP_UNHANDLED(BIT_AND_EXPR)
@@ -423,7 +424,8 @@ static void handle_stmt_binop(gimple stmt, enum tree_code code,
             TRAP;
     }
 
-    cl->insn(cl, &cli);
+    if (CL_INSN_NOP != cli.type)
+        cl->insn(cl, &cli);
     free_cl_operand_data(&src1);
     free_cl_operand_data(&src2);
 }

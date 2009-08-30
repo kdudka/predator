@@ -76,6 +76,7 @@ class ClPrettyPrint: public ICodeListener {
         void printNestedVar     (const struct cl_operand *);
         void printOperand       (const struct cl_operand *);
         void printAssignmentLhs (const struct cl_operand *);
+        void printInsnNop       (const struct cl_insn *);
         void printInsnJmp       (const struct cl_insn *);
         void printInsnCond      (const struct cl_insn *);
         void printInsnRet       (const struct cl_insn *);
@@ -293,6 +294,12 @@ void ClPrettyPrint::printAssignmentLhs(const struct cl_operand *lhs) {
         << " ";
 }
 
+void ClPrettyPrint::printInsnNop(const struct cl_insn *) {
+    out_ << "\t\t"
+        << SSD_INLINE_COLOR(C_LIGHT_RED, "nop")
+        << std::endl;
+}
+
 void ClPrettyPrint::printInsnJmp(const struct cl_insn *cli) {
     const char *label = cli->data.insn_jmp.label;
     this->closeArgDeclsIfNeeded();
@@ -452,6 +459,10 @@ void ClPrettyPrint::insn(
 {
     loc_ = &cli->loc;
     switch (cli->type) {
+        case CL_INSN_NOP:
+            this->printInsnNop(cli);
+            break;
+
         case CL_INSN_JMP:
             this->printInsnJmp(cli);
             break;

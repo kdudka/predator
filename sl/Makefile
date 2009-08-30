@@ -106,7 +106,7 @@ chkhead:
 clean:
 	rm -f libcl.a $(CL_OBJS)
 	rm -f test-list test-all test-all.o dll.o
-	rm -f slsparse slsparse.o
+	rm -f slsparse slsparse.o sparse-internal-symbols.dot
 	rm -f slplug.o slplug.so
 	$(MAKE) distclean -C data
 

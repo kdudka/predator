@@ -81,6 +81,7 @@ class CldArgSubst: public ClDecoratorBase {
                     }
                     break;
 
+                case CL_INSN_NOP:
                 case CL_INSN_JMP:
                 case CL_INSN_ABORT:
                     ClDecoratorBase::insn(cli);

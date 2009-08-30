@@ -843,7 +843,7 @@ int main(int argc, char **argv)
         // error message already emitted
         return EXIT_FAILURE;
 
-    cl->file_open(cl, "<built-in>");
+    cl->file_open(cl, "sparse-internal-symbols");
     clean_up_symbols(symlist, cl);
     cl->file_close(cl);
 
