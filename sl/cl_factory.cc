@@ -220,6 +220,11 @@ ICodeListener* CldChainFactory::create(const std::string &cldString,
             return 0;
         }
 
+        chain = (i->second)(chain);
+        if (chain)
+            CL_DEBUG("CldChainFactory: decorator '" << cld
+                    << "' created successfully");
+
 #if CL_DEBUG_CLD
         chain = createCldIntegrityChk(chain);
         if (chain)
@@ -228,11 +233,6 @@ ICodeListener* CldChainFactory::create(const std::string &cldString,
         else
             return 0;
 #endif
-
-        chain = (i->second)(chain);
-        if (chain)
-            CL_DEBUG("CldChainFactory: decorator '" << cld
-                    << "' created successfully");
     }
 
     return chain;
@@ -290,15 +290,14 @@ ICodeListener* ClFactory::create(const char *config_string) {
     if (!cl)
         return 0;
 
-    if (hasKey(args, "cld")) {
-        cl = d->cldFactory.create(args["cld"], cl);
-        if (!cl)
-            return 0;
-    }
-
     cl = createCldIntegrityChk(cl);
     if (cl)
         CL_DEBUG("ClFactory: createCldIntegrityChk() completed successfully");
+    else
+        return 0;
+
+    if (hasKey(args, "cld"))
+        cl = d->cldFactory.create(args["cld"], cl);
 
     return cl;
 }
