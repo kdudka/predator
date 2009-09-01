@@ -61,8 +61,7 @@ $(SPARSE):
 
 $(SPARSE_GIT):
 	$(GIT) clone git://git.kernel.org/pub/scm/devel/sparse/sparse.git $@
-	cd $@ && $(GIT) branch -a separate
-	cd $@ && $(GIT) checkout separate
+	cd $@ && $(GIT) checkout -b sl
 	cd $@ && $(GIT) am ../sparse-extras/*.patch
 	cd $@ && ln -s ../sparse-extras/local.mk
 
