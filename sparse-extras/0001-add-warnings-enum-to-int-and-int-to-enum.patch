@@ -1,39 +1,43 @@
-From a5095bbdb9694effa4a771295a87b80bf84d3230 Mon Sep 17 00:00:00 2001
+From 381f635e581c3d346ae47672dc7be1423b681924 Mon Sep 17 00:00:00 2001
 From: Kamil Dudka <kdudka@redhat.com>
-Date: Tue, 1 Sep 2009 23:51:29 +0200
-Subject: [PATCH] add warnings enum-to-int and int-to-enum
+Date: Wed, 2 Sep 2009 13:17:57 +0200
+Subject: [PATCH] add warnings enum-to-int and int-to-enum...
 
+... and improve detection of the enum-mismatch warning
 
 Signed-off-by: Kamil Dudka <kdudka@redhat.com>
 ---
- evaluate.c   |   65 ++++++++++++++++++++++++++++++++++++++++++++++++++++++---
+ evaluate.c   |   98 ++++++++++++++++++++++++++++++++++++++++++++++++++--------
  expression.h |    1 +
- lib.c        |    4 +++
+ lib.c        |    4 ++
  lib.h        |    2 +
  parse.c      |    1 +
- sparse.1     |   12 ++++++++++
- 6 files changed, 81 insertions(+), 4 deletions(-)
+ sparse.1     |   13 ++++++++
+ 6 files changed, 106 insertions(+), 13 deletions(-)
 
 diff --git a/evaluate.c b/evaluate.c
-index 805ae90..47e50fb 100644
+index 805ae90..dfb7a0d 100644
 --- a/evaluate.c
 +++ b/evaluate.c
-@@ -235,16 +235,23 @@ static int is_same_type(struct expression *expr, struct symbol *new)
+@@ -235,27 +235,94 @@ static int is_same_type(struct expression *expr, struct symbol *new)
  }
  
  static void
+-warn_for_different_enum_types (struct position pos,
+-			       struct symbol *typea,
+-			       struct symbol *typeb)
 +resolve_sym_node (struct symbol **psym)
-+{
+ {
 +	struct symbol *sym = *psym;
 +	if (sym->type == SYM_NODE)
 +		*psym = sym->ctype.base_type;
 +}
 +
 +static void
- warn_for_different_enum_types (struct position pos,
- 			       struct symbol *typea,
- 			       struct symbol *typeb)
- {
++warn_for_different_enum_types (struct position pos, struct symbol *typea,
++			       struct symbol *typeb, struct symbol *enum_type)
++{
++	enum type ttypea;
  	if (!Wenum_mismatch)
  		return;
 -	if (typea->type == SYM_NODE)
@@ -46,15 +50,39 @@ index 805ae90..47e50fb 100644
  
  	if (typea == typeb)
  		return;
-@@ -256,6 +263,54 @@ warn_for_different_enum_types (struct position pos,
++	if (typeb->type != SYM_ENUM)
++		return;
+ 
+-	if (typea->type == SYM_ENUM && typeb->type == SYM_ENUM) {
++	ttypea = typea->type;
++	if (ttypea == SYM_ENUM || (ttypea == SYM_BASETYPE
++					&& enum_type && enum_type != typeb))
++	{
+ 		warning(pos, "mixing different enum types");
+-		info(pos, "    %s versus", show_typename(typea));
++		info(pos, "    %s versus", show_typename((ttypea == SYM_ENUM)
++					? typea
++					: enum_type));
+ 		info(pos, "    %s", show_typename(typeb));
  	}
  }
  
++static void
++issue_conversion_warning(struct position pos,
++			 struct symbol *typea,
++			 struct symbol *typeb)
++{
++	warning(pos, "conversion of");
++	info(pos, "    %s to", show_typename(typea));
++	info(pos, "    %s", show_typename(typeb));
++}
++
 +static void
 +warn_for_enum_to_int_cast (struct expression *expr, struct symbol *typeb)
 +{
 +	struct position pos = expr->pos;
 +	struct symbol *typea = expr->ctype;
++	struct symbol *enum_type = expr->enum_type;
 +
 +	if (!Wenum_to_int)
 +		return;
@@ -62,15 +90,14 @@ index 805ae90..47e50fb 100644
 +	resolve_sym_node(&typea);
 +	resolve_sym_node(&typeb);
 +
-+	if (typea->type != SYM_ENUM || typeb->type != SYM_BASETYPE)
++	if (typeb->type != SYM_BASETYPE)
 +		return;
 +
-+	if (typea->ident) {
-+		warning(pos, "cast from");
-+		info(pos, "    %s to", show_typename(typea));
-+		info(pos, "    %s", show_typename(typeb));
-+		return;
-+	}
++	if (typea->type == SYM_ENUM && typea->ident)
++		issue_conversion_warning(pos, typea, typeb);
++
++	if (typea->type == SYM_BASETYPE && enum_type && enum_type->ident)
++		issue_conversion_warning(pos, enum_type, typeb);
 +}
 +
 +static void
@@ -89,27 +116,54 @@ index 805ae90..47e50fb 100644
 +	if (typea->type != SYM_BASETYPE || typeb->type != SYM_ENUM)
 +		return;
 +
-+	if (!enum_type || (enum_type != typeb)) {
-+		warning(pos, "cast from");
-+		info(pos, "    %s to", show_typename((enum_type)
-+					? enum_type
-+					: typea));
-+		info(pos, "    %s", show_typename(typeb));
-+	}
++	if (!enum_type)
++		issue_conversion_warning(pos, typea, typeb);
 +}
 +
  /*
   * This gets called for implicit casts in assignments and
   * integer promotion. We often want to try to move the
-@@ -268,6 +323,8 @@ static struct expression * cast_to(struct expression *old, struct symbol *type)
+@@ -267,7 +334,10 @@ static struct expression * cast_to(struct expression *old, struct symbol *type)
+ {
  	struct expression *expr;
  
- 	warn_for_different_enum_types (old->pos, old->ctype, type);
+-	warn_for_different_enum_types (old->pos, old->ctype, type);
++	warn_for_different_enum_types (old->pos, old->ctype, type,
++				       old->enum_type);
 +	warn_for_enum_to_int_cast (old, type);
 +	warn_for_int_to_enum_cast (old, type);
  
  	if (old->ctype != &null_ctype && is_same_type(old, type))
  		return old;
+@@ -287,7 +357,7 @@ static struct expression * cast_to(struct expression *old, struct symbol *type)
+ 		break;
+ 
+ 	case EXPR_IMPLIED_CAST:
+-		warn_for_different_enum_types(old->pos, old->ctype, type);
++		warn_for_different_enum_types(old->pos, old->ctype, type, NULL);
+ 
+ 		if (old->ctype->bit_size >= type->bit_size) {
+ 			struct expression *orig = old->cast_expression;
+@@ -498,7 +568,8 @@ static struct symbol *usual_conversions(int op,
+ {
+ 	struct symbol *ctype;
+ 
+-	warn_for_different_enum_types(right->pos, left->ctype, right->ctype);
++	warn_for_different_enum_types(right->pos, left->ctype, right->ctype,
++				      NULL);
+ 
+ 	if ((lclass | rclass) & TYPE_RESTRICT)
+ 		goto Restr;
+@@ -3241,7 +3312,8 @@ static void check_case_type(struct expression *switch_expr,
+ 		goto Bad;
+ 	if (enumcase) {
+ 		if (*enumcase)
+-			warn_for_different_enum_types(case_expr->pos, case_type, (*enumcase)->ctype);
++			warn_for_different_enum_types(case_expr->pos, case_type,
++						      (*enumcase)->ctype, NULL);
+ 		else if (is_enum_type(case_type))
+ 			*enumcase = case_expr;
+ 	}
 diff --git a/expression.h b/expression.h
 index 631224f..81f70ad 100644
 --- a/expression.h
@@ -170,20 +224,21 @@ index 5e75242..76d4c58 100644
  			continue;
  		cast_value(expr, base_type, expr, ctype);
 diff --git a/sparse.1 b/sparse.1
-index d7fe444..7eb0cda 100644
+index d7fe444..288b3a8 100644
 --- a/sparse.1
 +++ b/sparse.1
-@@ -149,6 +149,18 @@ Sparse issues these warnings by default.  To turn them off, use
+@@ -149,6 +149,19 @@ Sparse issues these warnings by default.  To turn them off, use
  \fB\-Wno\-enum\-mismatch\fR.
  .
  .TP
 +.B \-Wenum\-to\-int
-+Warn about casting of an \fBenum\fR type to int and thus possible lost of
-+information about the type.
++Warn about converting an \fBenum\fR type to int. An explicit cast to int will
++suppress this warning.
 +.
 +.TP
 +.B \-Wint\-to\-enum
-+Warn about casting of int (or incompatible enumeration constant) to \fBenum\fR.
++Warn about converting int to \fBenum\fR type. An explicit cast to the right
++\fBenum\fR type will suppress this warning.
 +
 +Sparse issues these warnings by default.  To turn them off, use
 +\fB\-Wno\-int\-to\-enum\fR.
@@ -193,5 +248,5 @@ index d7fe444..7eb0cda 100644
  Warn about the use of 0 as a NULL pointer.
  
 -- 
-1.6.4.1
+1.6.2.5
 
