@@ -52,7 +52,8 @@ libcl.a: $(CL_OBJS)
 #TODO: dependency scanning
 $(CL_OBJS): code_listener.h *.hh
 
-$(CL_OBJS): CXXFLAGS += -fPIC -std=c++0x -pedantic -Wall -Werror
+#$(CL_OBJS): CXXFLAGS += -fPIC -std=c++0x -pedantic -Wall -Werror
+$(CL_OBJS): CXXFLAGS += -fPIC -std=c++0x -pedantic -Wall
 ssd.o: CXXFLAGS += -I../ssd/src -DHAVE_ISATTY
 
 CL_LIBS = -lboost_iostreams -lboost_system
@@ -61,7 +62,8 @@ slsparse.o: code_listener.h
 slsparse.o: CFLAGS += -fPIC -Wall $(SPARSE_CFLAGS)
 
 slsparse: slsparse.o libcl.a $(SPARSE_LIBS)
-	$(CC) $(CFLAGS) -o $@ slsparse.o -L. -lcl $(SPARSE_LIBS) $(CL_LIBS)
+	$(CC) $(CFLAGS) -o $@ slsparse.o -L. -lcl $(SPARSE_LIBS) $(CL_LIBS) \
+		$(LDFLAGS)
 
 PLUG_CFLAGS = -fPIC -std=c99 -pedantic -Wall -W -Werror -I.. -I../gcc -iquote.
 
@@ -83,10 +85,13 @@ chkunit: test-all
 
 chkplug: slplug.so
 	TMP=`mktemp` \
-		&& ($(GCC_INSTALL)/bin/gcc $(PLUG_CFLAGS) -fplugin=./slplug.so \
-		-c slplug.c >"$$TMP" 2>&1 || (cat "$$TMP"; exit 1)) && rm -fv "$$TMP"
+		&& ($(GCC_INSTALL)/bin/gcc $(CFLAGS) $(PLUG_CFLAGS) \
+		-fplugin=./slplug.so \
+		-c slplug.c >"$$TMP" 2>&1 \
+		|| (cat "$$TMP"; exit 1)) \
+		&& rm -fv "$$TMP"
 	$(MAKE) slplug.so
-	$(GCC_INSTALL)/bin/gcc $(PLUG_CFLAGS) \
+	$(GCC_INSTALL)/bin/gcc $(CFLAGS) $(PLUG_CFLAGS) \
 		-fplugin=./slplug.so \
 		-fplugin-arg-slplug-verbose=1 \
 		-fplugin-arg-slplug-dump-pp \
@@ -95,7 +100,7 @@ chkplug: slplug.so
 
 SFLAGS += -Wno-decl
 chksparse: slsparse
-	./slsparse $(SFLAGS) $(PLUG_CFLAGS) -I. data/slplug.c
+	./slsparse $(CFLAGS) $(SFLAGS) $(PLUG_CFLAGS) -I. data/slplug.c
 
 check: chkplug chksparse chkunit chkhead
 

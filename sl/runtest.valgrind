@@ -17,3 +17,10 @@
    fun:exit
    fun:(below main)
 }
+{
+   boost 1.39.0 (unit test) reads memory which has been already freed (32bit)
+   Memcheck:Addr4
+   fun:_ZN5boost9unit_test14framework_implD1Ev
+   fun:exit
+   fun:(below main)
+}

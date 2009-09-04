@@ -1,6 +1,7 @@
 GCC_SRC = gcc-src
 GCC_BUILD = gcc-build
 GCC_INSTALL = gcc-install
+GCC_LIBS_PREFIX ?= /usr
 
 INVADER = invader.zip
 SPARSE = sparse.tar.gz
@@ -37,10 +38,13 @@ build_gcc: $(GCC_SRC)
 			&& $$TOP_LEVEL/$(GCC_SRC)/configure \
 				--enable-languages=c++,c \
 				--disable-multilib \
-				--prefix=$$TOP_LEVEL/$(GCC_INSTALL); \
+				--prefix=$$TOP_LEVEL/$(GCC_INSTALL) \
+				--with-gmp=$(GCC_LIBS_PREFIX) \
+				--with-mpfr=$(GCC_LIBS_PREFIX); \
 		fi
 	cd $(GCC_BUILD) && $(MAKE)
 	cd $(GCC_BUILD) && $(MAKE) -j1 install
+	ln -svT gcc-install/lib/gcc/`ls gcc-install/lib/gcc/`/4.5.0/plugin/include gcc
 
 update_gcc_src_only: $(GCC_SRC)
 	cd $(GCC_SRC) && $(SVN) up
