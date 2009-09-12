@@ -39,7 +39,7 @@ class CldArgSubst: public ClDecoratorBase {
             struct cl_insn local_cli = *cli;
             loc_ = &cli->loc;
 
-            switch (cli->type) {
+            switch (cli->code) {
                 case CL_INSN_COND: {
                         struct cl_operand src = *(cli->data.insn_cond.src);
                         this->substArg(&src);
@@ -189,10 +189,10 @@ const char* CldArgSubst::argLookup(int arg) {
 }
 
 void CldArgSubst::substArg(struct cl_operand *op) {
-    if (CL_OPERAND_ARG != op->type)
+    if (CL_OPERAND_ARG != op->code)
         return;
 
-    op->type = CL_OPERAND_VAR;
+    op->code = CL_OPERAND_VAR;
     op->data.var.name = this->argLookup(op->data.arg.id);
 }
 

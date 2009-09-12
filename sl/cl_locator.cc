@@ -5,7 +5,7 @@
 #include <boost/iostreams/device/file_descriptor.hpp>
 #include <boost/iostreams/stream.hpp>
 
-class ClLocator: public ICodeListener {
+class ClLocator: public AbstractCodeListener {
     public:
         ClLocator(int fd_out);
 
@@ -29,7 +29,7 @@ class ClLocator: public ICodeListener {
         virtual void bb_open(const char *) { }
 
         virtual void insn(const struct cl_insn *cli) {
-            if (CL_INSN_JMP != cli->type)
+            if (CL_INSN_JMP != cli->code)
                 this->printLocation(&cli->loc);
             lastLoc_ = &cli->loc;
         }

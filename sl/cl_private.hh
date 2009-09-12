@@ -11,6 +11,34 @@
 #include <signal.h>
 #define TRAP raise(SIGTRAP)
 
+// pull in __attribute__ ((__noreturn__))
+#define CL_DIE(msg) do { \
+    cl_die("fatal error: " msg); \
+    abort(); \
+} while (0)
+
+#define CL_MSG_STREAM(fnc, to_stream) do { \
+    std::ostringstream str; \
+    str << to_stream; \
+    fnc(str.str().c_str()); \
+} while (0)
+
+#define CL_MSG_STREAM_INTERNAL(fnc, to_stream) \
+    CL_MSG_STREAM(fnc, __FILE__ << ":" << __LINE__ \
+            << ": " << to_stream << " [internal location]")
+
+#define CL_INTERNAL_ERROR(to_stream) \
+    CL_MSG_STREAM_INTERNAL(cl_error, "internal error: " << to_stream)
+
+#define CL_DEBUG(to_stream) \
+    CL_MSG_STREAM_INTERNAL(cl_debug, "debug: " << to_stream)
+
+void cl_debug(const char *msg);
+void cl_warn(const char *msg);
+void cl_error(const char *msg);
+void cl_note(const char *msg);
+void cl_die(const char *msg);
+
 /**
  * C++ interface for listener objects. It can be wrapped to struct code_listener
  * object when exposing to pure C world. See code_listener for details about
@@ -19,6 +47,11 @@
 class ICodeListener {
     public:
         virtual ~ICodeListener() { }
+
+        virtual void reg_type_db(
+            cl_get_type_fnc_t       fnc,
+            void                    *user_data)
+            = 0;
 
         virtual void file_open(
             const char              *file_name)
@@ -79,6 +112,34 @@ class ICodeListener {
             = 0;
 };
 
+class AbstractCodeListener: public ICodeListener {
+    public:
+        AbstractCodeListener():
+            getTypeFnc_(0)
+        {
+        }
+
+        virtual void reg_type_db(
+            cl_get_type_fnc_t       fnc,
+            void                    *user_data)
+        {
+            getTypeFnc_             = fnc;
+            getTypeFncData_         = user_data;
+        }
+
+    protected:
+        struct cl_type* getType(cl_type_uid_t uid) {
+            if (!getTypeFnc_)
+                CL_DIE("call of uninitialized AbstractCodeListener::getType()");
+
+            return getTypeFnc_(uid, getTypeFncData_);
+        }
+
+    private:
+        cl_get_type_fnc_t           getTypeFnc_;
+        void                        *getTypeFncData_;
+};
+
 /**
  * wrap ICodeListener object so that it can be exposed to pure C world
  */
@@ -88,34 +149,6 @@ struct cl_code_listener* cl_create_listener_wrap(ICodeListener *);
  * retrieve wrapped ICodeListener object
  */
 ICodeListener* cl_obtain_from_wrap(struct cl_code_listener *);
-
-void cl_debug(const char *msg);
-void cl_warn(const char *msg);
-void cl_error(const char *msg);
-void cl_note(const char *msg);
-void cl_die(const char *msg);
-
-// pull in __attribute__ ((__noreturn__))
-#define CL_DIE(msg) do { \
-    cl_die("fatal error: " msg); \
-    abort(); \
-} while (0)
-
-#define CL_MSG_STREAM(fnc, to_stream) do { \
-    std::ostringstream str; \
-    str << to_stream; \
-    fnc(str.str().c_str()); \
-} while (0)
-
-#define CL_MSG_STREAM_INTERNAL(fnc, to_stream) \
-    CL_MSG_STREAM(fnc, __FILE__ << ":" << __LINE__ \
-            << ": " << to_stream << " [internal location]")
-
-#define CL_INTERNAL_ERROR(to_stream) \
-    CL_MSG_STREAM_INTERNAL(cl_error, "internal error: " << to_stream)
-
-#define CL_DEBUG(to_stream) \
-    CL_MSG_STREAM_INTERNAL(cl_debug, "debug: " << to_stream)
 
 struct Location {
     std::string currentFile;

@@ -56,7 +56,7 @@ class CldCbSeqChk: public ClDecoratorBase {
         {
             loc_ = &cli->loc;
 
-            switch (cli->type) {
+            switch (cli->code) {
                 case CL_INSN_NOP:
                     this->chkInsnNop();
                     break;
@@ -210,7 +210,7 @@ class CldLabelChk: public ClDecoratorBase {
         {
             loc_ = &cli->loc;
 
-            switch (cli->type) {
+            switch (cli->code) {
                 case CL_INSN_JMP:
                     this->reqLabel(cli->data.insn_jmp.label);
                     break;
@@ -291,7 +291,7 @@ class CldRegUsageChk: public ClDecoratorBase {
         {
             loc_ = &cli->loc;
 
-            switch (cli->type) {
+            switch (cli->code) {
                 case CL_INSN_COND:
                     this->handleSrc(cli->data.insn_cond.src);
                     break;
@@ -587,7 +587,7 @@ void CldRegUsageChk::reset() {
 }
 
 void CldRegUsageChk::handleDst(const struct cl_operand *op) {
-    if (CL_OPERAND_REG != op->type)
+    if (CL_OPERAND_REG != op->code)
         return;
 
     Usage &u = map_[op->data.reg.id];
@@ -597,7 +597,7 @@ void CldRegUsageChk::handleDst(const struct cl_operand *op) {
 }
 
 void CldRegUsageChk::handleSrc(const struct cl_operand *op) {
-    if (CL_OPERAND_REG != op->type)
+    if (CL_OPERAND_REG != op->code)
         return;
 
     Usage &u = map_[op->data.reg.id];
@@ -607,10 +607,10 @@ void CldRegUsageChk::handleSrc(const struct cl_operand *op) {
 }
 
 void CldRegUsageChk::handleDstSrc(const struct cl_operand *op) {
-    if (CL_OPERAND_REG != op->type)
+    if (CL_OPERAND_REG != op->code)
         return;
 
-    if (op->deref)
+    if (op->accessor && op->accessor->code == CL_ACCESSOR_DEREF)
         this->handleSrc(op);
     else
         this->handleDst(op);

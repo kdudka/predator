@@ -11,7 +11,7 @@
 #include <boost/iostreams/stream.hpp>
 #include <boost/system/system_error.hpp>
 
-class ClPrettyPrint: public ICodeListener {
+class ClPrettyPrint: public AbstractCodeListener {
     public:
         ClPrettyPrint(int fd_out, bool close_on_exit);
         virtual ~ClPrettyPrint();
@@ -72,8 +72,11 @@ class ClPrettyPrint: public ICodeListener {
         bool                    printingArgDecls_;
 
     private:
-        bool closeArgDeclsIfNeeded();
+        void printCst           (const struct cl_operand *);
         void printNestedVar     (const struct cl_operand *);
+        const char* getItemName (const struct cl_accessor *);
+        void printRecordAcessor (const struct cl_accessor **);
+        void printOperandVar    (const struct cl_operand *);
         void printOperand       (const struct cl_operand *);
         void printAssignmentLhs (const struct cl_operand *);
         void printInsnNop       (const struct cl_insn *);
@@ -147,42 +150,77 @@ void ClPrettyPrint::fnc_arg_decl(
     SSD_COLORIZE(out_, C_LIGHT_BLUE) << ": " << arg_name;
 }
 
-bool ClPrettyPrint::closeArgDeclsIfNeeded() {
-    if (printingArgDecls_) {
-        printingArgDecls_ = false;
-        out_ << SSD_INLINE_COLOR(C_LIGHT_RED, "):")
-            << std::endl;
-        return true;
-    }
-    return false;
-}
-
 void ClPrettyPrint::fnc_close()
 {
-    if (this->closeArgDeclsIfNeeded())
-        CL_MSG_STREAM(cl_warn, LocationWriter(loc_) << "warning: "
-                << "function '" << fnc_
-                << "' has no basic blocks");
-
     out_ << std::endl;
 }
 
 void ClPrettyPrint::bb_open(
             const char              *bb_name)
 {
-    if (this->closeArgDeclsIfNeeded())
-        CL_MSG_STREAM(cl_warn, LocationWriter(loc_) << "warning: "
-                << "omitted jump to entry in function '" << fnc_
-                << "'");
-
     out_ << std::endl;
     out_ << "\t"
         << SSD_INLINE_COLOR(C_LIGHT_CYAN, bb_name)
         << SSD_INLINE_COLOR(C_LIGHT_RED, ":") << std::endl;
 }
 
+void ClPrettyPrint::printCst(const struct cl_operand *op) {
+    const struct cl_type *type = op->type;
+    enum cl_type_e code = type->code;
+    switch (code) {
+        case CL_TYPE_PTR:
+            if (op->data.cst_int.value)
+                TRAP;
+
+            SSD_COLORIZE(out_, C_WHITE) << "NULL";
+            break;
+
+        case CL_TYPE_ENUM:
+        case CL_TYPE_INT: {
+                int num = op->data.cst_int.value;
+                if (num < 0)
+                    out_ << SSD_INLINE_COLOR(C_LIGHT_RED, "(");
+
+                SSD_COLORIZE(out_, C_WHITE) << op->data.cst_int.value;
+                if (num < 0)
+                    out_ << SSD_INLINE_COLOR(C_LIGHT_RED, ")");
+            }
+            break;
+
+        case CL_TYPE_FNC:
+            if (!op->data.cst_fnc.name) {
+                CL_MSG_STREAM(cl_error, LocationWriter(loc_) << "error: "
+                        << "anonymous function");
+                break;
+            }
+            out_ << SSD_INLINE_COLOR(C_LIGHT_GREEN, op->data.cst_fnc.name);
+            break;
+
+        case CL_TYPE_BOOL:
+            if (op->data.cst_int.value)
+                SSD_COLORIZE(out_, C_WHITE) << "true";
+            else
+                SSD_COLORIZE(out_, C_WHITE) << "false";
+            break;
+
+        case CL_TYPE_STRING: {
+                const char *text = op->data.cst_string.value;
+                if (!text) {
+                    CL_MSG_STREAM(cl_error, LocationWriter(loc_) << "error: "
+                            << "CL_TYPE_STRING with no string");
+                    break;
+                }
+                SSD_COLORIZE(out_, C_LIGHT_PURPLE) << "\"" << text << "\"";
+            }
+            break;
+
+        default:
+            TRAP;
+    }
+}
+
 void ClPrettyPrint::printNestedVar(const struct cl_operand *op) {
-    switch (op->type) {
+    switch (op->code) {
         case CL_OPERAND_VAR:
             if (!op->data.var.name) {
                 CL_MSG_STREAM(cl_error, LocationWriter(loc_) << "error: "
@@ -190,15 +228,6 @@ void ClPrettyPrint::printNestedVar(const struct cl_operand *op) {
                 break;
             }
             out_ << SSD_INLINE_COLOR(C_LIGHT_BLUE, op->data.var.name);
-            break;
-
-        case CL_OPERAND_FNC:
-            if (!op->data.fnc.name) {
-                CL_MSG_STREAM(cl_error, LocationWriter(loc_) << "error: "
-                        << "anonymous function");
-                break;
-            }
-            out_ << SSD_INLINE_COLOR(C_LIGHT_GREEN, op->data.fnc.name);
             break;
 
         case CL_OPERAND_REG:
@@ -217,6 +246,81 @@ void ClPrettyPrint::printNestedVar(const struct cl_operand *op) {
     }
 }
 
+const char* ClPrettyPrint::getItemName(const struct cl_accessor *ac) {
+    const struct cl_type_item *items = ac->type->items;
+    const char *name = items[ac->item].name;
+    return (name)
+        ? name
+        : "<anon_item>";
+}
+
+void ClPrettyPrint::printRecordAcessor(const struct cl_accessor **ac) {
+    std::string tag(this->getItemName(*ac));
+
+    while ((*ac)->next && (*ac)->next->code == CL_ACCESSOR_ITEM) {
+        *ac = (*ac)->next;
+        // FIXME: check concatenation direction
+        tag += ".";
+        tag += this->getItemName(*ac);
+    }
+
+    out_ << tag;
+}
+
+void ClPrettyPrint::printOperandVar(const struct cl_operand *op) {
+    const struct cl_accessor *ac = op->accessor;
+
+    // check whether the operand is referenced
+    const struct cl_accessor *is_ref = ac;
+    while (is_ref && (is_ref->next || is_ref->code != CL_ACCESSOR_REF))
+        is_ref = is_ref->next;
+    if (is_ref)
+        SSD_COLORIZE(out_, C_LIGHT_RED) << "&";
+
+    if (ac && ac->code == CL_ACCESSOR_DEREF &&
+            (!ac->next || ac->next->code != CL_ACCESSOR_ITEM))
+    {
+        SSD_COLORIZE(out_, C_LIGHT_RED) << "*";
+        ac = ac->next;
+    }
+
+    // print reg/var/arg
+    this->printNestedVar(op);
+
+    if (ac && ac->code == CL_ACCESSOR_DEREF &&
+            ac->next && ac->next->code == CL_ACCESSOR_ITEM)
+    {
+        SSD_COLORIZE(out_, C_LIGHT_RED) << "->";
+        ac = ac->next;
+
+    } else if (ac && ac->code == CL_ACCESSOR_ITEM) {
+        SSD_COLORIZE(out_, C_LIGHT_RED) << ".";
+    }
+
+    for (; ac; ac = ac->next) {
+        enum cl_accessor_e code = ac->code;
+        switch (code) {
+            case CL_ACCESSOR_DEREF_ARRAY:
+                out_ << SSD_INLINE_COLOR(C_LIGHT_RED, "[")
+                    << SSD_INLINE_COLOR(C_WHITE, ac->item)
+                    << SSD_INLINE_COLOR(C_LIGHT_RED, "]");
+                break;
+
+            case CL_ACCESSOR_ITEM:
+                this->printRecordAcessor(&ac);
+                break;
+
+            case CL_ACCESSOR_REF:
+                if (!ac->next)
+                    // already handled
+                    break;
+
+            default:
+                TRAP;
+        }
+    }
+}
+
 void ClPrettyPrint::printOperand(const struct cl_operand *op) {
     if (!op) {
         CL_MSG_STREAM(cl_debug, LocationWriter(loc_) << "debug: "
@@ -225,63 +329,27 @@ void ClPrettyPrint::printOperand(const struct cl_operand *op) {
         return;
     }
 
-    switch (op->type) {
+    switch (op->code) {
         case CL_OPERAND_VOID:
             SSD_COLORIZE(out_, C_LIGHT_BLUE) << "CL_OPERAND_VOID";
+            break;
+
+        case CL_OPERAND_CST:
+            if (op->accessor)
+                CL_DEBUG("CL_OPERAND_CST with op->accessor");
+            this->printCst(op);
             break;
 
         case CL_OPERAND_ARG:
         case CL_OPERAND_REG:
         case CL_OPERAND_VAR:
-        case CL_OPERAND_FNC:
-            if (op->deref)
-                out_ << SSD_INLINE_COLOR(C_LIGHT_RED, "[");
-
-            this->printNestedVar(op);
-
-            if (op->offset) {
-                if (op->deref)
-                    out_ << SSD_INLINE_COLOR(C_LIGHT_RED, ":");
-                else
-                    out_ << ".";
-
-                out_ << op->offset;
-            }
-
-            if (op->deref)
-                out_ << SSD_INLINE_COLOR(C_LIGHT_RED, "]");
-
-            break;
-
-        case CL_OPERAND_STRING:
-            {
-                const char *text = op->data.lit_string.value;
-                if (!text) {
-                    CL_MSG_STREAM(cl_error, LocationWriter(loc_) << "error: "
-                            << "CL_OPERAND_STRING with no string");
-                    break;
-                }
-                SSD_COLORIZE(out_, C_LIGHT_PURPLE) << "\"" << text << "\"";
-            }
-            break;
-
-        case CL_OPERAND_INT:
-            {
-                int num = op->data.lit_int.value;
-                if (num < 0)
-                    out_ << SSD_INLINE_COLOR(C_LIGHT_RED, "(");
-
-                SSD_COLORIZE(out_, C_WHITE) << op->data.lit_int.value;
-
-                if (num < 0)
-                    out_ << SSD_INLINE_COLOR(C_LIGHT_RED, ")");
-            }
+            this->printOperandVar(op);
             break;
     }
 }
 
 void ClPrettyPrint::printAssignmentLhs(const struct cl_operand *lhs) {
-    if (!lhs || lhs->type == CL_OPERAND_VOID) {
+    if (!lhs || lhs->code == CL_OPERAND_VOID) {
         CL_MSG_STREAM(cl_debug, Location(loc_) << "debug: "
                 << "no lhs given to " << __FUNCTION__
                 << " [internal location]");
@@ -301,8 +369,13 @@ void ClPrettyPrint::printInsnNop(const struct cl_insn *) {
 }
 
 void ClPrettyPrint::printInsnJmp(const struct cl_insn *cli) {
+    if (printingArgDecls_) {
+        printingArgDecls_ = false;
+        out_ << SSD_INLINE_COLOR(C_LIGHT_RED, "):")
+            << std::endl;
+    }
+
     const char *label = cli->data.insn_jmp.label;
-    this->closeArgDeclsIfNeeded();
     out_ << "\t\t"
         << SSD_INLINE_COLOR(C_YELLOW, "goto") << " "
         << SSD_INLINE_COLOR(C_LIGHT_CYAN, label)
@@ -343,7 +416,7 @@ void ClPrettyPrint::printInsnRet(const struct cl_insn *cli) {
     out_ << "\t\t"
         << SSD_INLINE_COLOR(C_LIGHT_RED, "ret");
 
-    if (src && src->type != CL_OPERAND_VOID) {
+    if (src && src->code != CL_OPERAND_VOID) {
         out_ << " ";
         this->printOperand(src);
     }
@@ -358,14 +431,14 @@ void ClPrettyPrint::printInsnAbort(const struct cl_insn *cli) {
 }
 
 void ClPrettyPrint::printInsnUnop(const struct cl_insn *cli) {
-    const enum cl_unop_e type       = cli->data.insn_unop.type;
+    const enum cl_unop_e code       = cli->data.insn_unop.code;
     const struct cl_operand *dst    = cli->data.insn_unop.dst;
     const struct cl_operand *src    = cli->data.insn_unop.src;
 
     out_ << "\t\t";
     this->printAssignmentLhs(dst);
 
-    switch (type) {
+    switch (code) {
         case CL_UNOP_ASSIGN:
             this->printOperand(src);
             break;
@@ -375,7 +448,7 @@ void ClPrettyPrint::printInsnUnop(const struct cl_insn *cli) {
 }
 
 void ClPrettyPrint::printInsnBinop(const struct cl_insn *cli) {
-    const enum cl_binop_e type      = cli->data.insn_binop.type;
+    const enum cl_binop_e code      = cli->data.insn_binop.code;
     const struct cl_operand *dst    = cli->data.insn_binop.dst;
     const struct cl_operand *src1   = cli->data.insn_binop.src1;
     const struct cl_operand *src2   = cli->data.insn_binop.src2;
@@ -386,7 +459,7 @@ void ClPrettyPrint::printInsnBinop(const struct cl_insn *cli) {
     this->printOperand(src1);
     out_ << " ";
 
-    switch (type) {
+    switch (code) {
         case CL_BINOP_EQ:
             SSD_COLORIZE(out_, C_YELLOW) << "==";
             break;
@@ -458,7 +531,7 @@ void ClPrettyPrint::insn(
             const struct cl_insn    *cli)
 {
     loc_ = &cli->loc;
-    switch (cli->type) {
+    switch (cli->code) {
         case CL_INSN_NOP:
             this->printInsnNop(cli);
             break;
@@ -496,7 +569,7 @@ void ClPrettyPrint::insn_call_open(
 {
     loc_ = loc;
     out_ << "\t\t";
-    if (dst && dst->type != CL_OPERAND_VOID)
+    if (dst && dst->code != CL_OPERAND_VOID)
         this->printAssignmentLhs(dst);
     this->printOperand(fnc);
     out_ << SSD_INLINE_COLOR(C_LIGHT_GREEN, "(");
@@ -532,6 +605,7 @@ void ClPrettyPrint::insn_switch_open(
         << std::endl;
 }
 
+// TODO: simplify
 void ClPrettyPrint::insn_switch_case(
             const struct cl_location*loc,
             const struct cl_operand *val_lo,
@@ -539,16 +613,20 @@ void ClPrettyPrint::insn_switch_case(
             const char              *label)
 {
     loc_ = loc;
-    if (CL_OPERAND_VOID == val_lo->type
-            && CL_OPERAND_VOID == val_hi->type)
+    if (CL_OPERAND_VOID == val_lo->code
+            && CL_OPERAND_VOID == val_hi->code)
     {
         out_ << "\t\t\t"
             << SSD_INLINE_COLOR(C_YELLOW, "default") << ":";
-    } else if (CL_OPERAND_INT == val_lo->type
-            && CL_OPERAND_INT == val_hi->type)
+    } else if (CL_OPERAND_CST == val_lo->code
+            && CL_OPERAND_CST == val_hi->code
+            && (CL_TYPE_INT == val_lo->type->code
+                || CL_TYPE_ENUM == val_lo->type->code)
+            && (CL_TYPE_INT == val_hi->type->code
+                || CL_TYPE_ENUM == val_hi->type->code))
     {
-        const int lo = val_lo->data.lit_int.value;
-        const int hi = val_hi->data.lit_int.value;
+        const int lo = val_lo->data.cst_int.value;
+        const int hi = val_hi->data.cst_int.value;
         for (int i = lo; i <= hi; ++i) {
             out_ << "\t\t\t"
                 << SSD_INLINE_COLOR(C_YELLOW, "case")

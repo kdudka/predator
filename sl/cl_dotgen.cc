@@ -8,7 +8,7 @@
 #include <set>
 #include <sstream>
 
-class ClDotGenerator: public ICodeListener {
+class ClDotGenerator: public AbstractCodeListener {
     public:
         ClDotGenerator(const char *glDotFile);
         virtual ~ClDotGenerator();
@@ -394,11 +394,11 @@ void ClDotGenerator::emitInsnCall() {
 }
 
 void ClDotGenerator::checkForFncRef(const struct cl_operand *op) {
-    if (CL_OPERAND_FNC != op->type)
+    if (CL_OPERAND_CST != op->code || CL_TYPE_FNC != op->type->code)
         return;
 
-    string name(op->data.fnc.name);
-    this->gobbleEdge(name, (op->data.fnc.is_extern)
+    string name(op->data.cst_fnc.name);
+    this->gobbleEdge(name, (op->data.cst_fnc.is_extern)
             ? ET_GL_CALL_INDIR
             : ET_LC_CALL_INDIR);
 
@@ -475,7 +475,7 @@ void ClDotGenerator::bb_open(const char *bb_name) {
 }
 
 void ClDotGenerator::insn(const struct cl_insn *cli) {
-    switch (cli->type) {
+    switch (cli->code) {
         case CL_INSN_NOP:
             // ignore
             return;
@@ -530,7 +530,7 @@ void ClDotGenerator::insn(const struct cl_insn *cli) {
             this->checkForFncRef(cli->data.insn_binop.src2);
             break;
     }
-    lastInsn_ = cli->type;
+    lastInsn_ = cli->code;
 }
 
 void ClDotGenerator::insn_call_open(const struct cl_location *loc,
@@ -539,31 +539,28 @@ void ClDotGenerator::insn_call_open(const struct cl_location *loc,
 {
     EdgeType callType;
     std::ostringstream name;
-    switch (fnc->type) {
-        case CL_OPERAND_FNC:
-            callType = (fnc->data.fnc.is_extern)
-                ? ET_GL_CALL
-                : ET_LC_CALL;
-            name << fnc->data.fnc.name;
-            break;
-
+    switch (fnc->code) {
         case CL_OPERAND_VAR:
         case CL_OPERAND_REG:
             callType = ET_PTR_CALL;
-            if (fnc->deref)
-                name << "[";
 
-            if (CL_OPERAND_VAR == fnc->type)
+            if (CL_OPERAND_VAR == fnc->code)
                 name << fnc->data.var.name;
             else
                 name << "%r" << fnc->data.reg.id;
 
-            if (fnc->offset)
-                name << ":" << fnc->offset;
-
-            if (fnc->deref)
-                name << "]";
+            // TODO: handle accessor somehow
             break;
+
+        case CL_OPERAND_CST:
+            if (CL_TYPE_FNC == fnc->type->code) {
+                callType = (fnc->data.cst_fnc.is_extern)
+                    ? ET_GL_CALL
+                    : ET_LC_CALL;
+                name << fnc->data.cst_fnc.name;
+                break;
+            }
+            // fall through!!
 
         default:
             CL_MSG_STREAM(cl_warn, LocationWriter(loc, &loc_) << "warning: "

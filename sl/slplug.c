@@ -5,6 +5,8 @@
 
 #include <gcc/coretypes.h>
 #include <gcc/diagnostic.h>
+#include <gcc/ggc.h>
+#include <gcc/hashtab.h>
 
 // this include has to be before <gcc/function.h>; otherwise it will NOT compile
 #include <gcc/tm.h>
@@ -106,7 +108,69 @@ static struct plugin_info sl_info = {
 "    8    dump gcc tree of unhandled expressions\n"
 };
 
+typedef htab_t type_db_t;
+
 static struct cl_code_listener *cl = NULL;
+static type_db_t type_db = NULL;
+
+static hashval_t type_db_hash (const void *p)
+{
+    const struct cl_type *type = (const struct cl_type *) p;
+    return type->uid;
+}
+
+static int type_db_eq (const void *p1, const void *p2)
+{
+    const struct cl_type *type1 = (const struct cl_type *) p1;
+    const struct cl_type *type2 = (const struct cl_type *) p2;
+    return type1->uid == type2->uid;
+}
+
+static void type_db_free (void *p)
+{
+    // TODO
+    (void) p;
+}
+
+static type_db_t type_db_create()
+{
+    type_db_t db = htab_create_alloc(/* FIXME: hardcoded for now */ 0x100,
+                                     type_db_hash, type_db_eq, type_db_free,
+                                     xcalloc, free);
+    SL_ASSERT(db);
+    return db;
+}
+
+static void type_db_destroy(type_db_t db)
+{
+    htab_delete(db);
+}
+
+static struct cl_type* type_db_lookup(type_db_t db, cl_type_uid_t uid)
+{
+    struct cl_type type;
+    type.uid = uid;
+
+    return htab_find(db, &type);
+}
+
+static void type_db_insert(type_db_t db, struct cl_type *type)
+{
+    void **slot = htab_find_slot(db, type, INSERT);
+    SL_ASSERT(slot);
+    *slot = type;
+}
+
+static struct cl_type* cb_type_db_lookup(cl_type_uid_t uid, void *user_data)
+{
+    type_db_t db = (type_db_t) user_data;
+    return type_db_lookup(db, uid);
+}
+
+static void register_type_db(struct cl_code_listener *cl, type_db_t db)
+{
+    cl->reg_type_db(cl, cb_type_db_lookup, db);
+}
 
 static void read_gcc_location(struct cl_location *loc, location_t gcc_loc)
 {
@@ -129,214 +193,394 @@ static char* index_to_label (unsigned idx) {
     return label;
 }
 
-static void decl_to_cl_operand(struct cl_operand *op, tree t)
+static int get_type_sizeof(tree t)
 {
+    tree size = TYPE_SIZE_UNIT(t);
+    if (NULL_TREE == size)
+        return 0;
+
+    if (TREE_INT_CST_HIGH(size))
+        TRAP;
+
+    return TREE_INT_CST_LOW(size);
+}
+
+static void read_base_type(struct cl_type *clt, tree type)
+{
+    // store sizeof
+    clt->size = get_type_sizeof(type);
+
+    tree name = TYPE_NAME(type);
+    if (NULL_TREE == name)
+        return;
+
+    // TODO: scope
+    if (IDENTIFIER_NODE == TREE_CODE(name)) {
+        clt->name = IDENTIFIER_POINTER(name);
+        // read_gcc_location(&clt->loc, DECL_SOURCE_LOCATION(type));
+    } else {
+        read_gcc_location(&clt->loc, DECL_SOURCE_LOCATION(name));
+        name = DECL_NAME(name);
+        if (name)
+            clt->name = IDENTIFIER_POINTER(name);
+    }
+}
+
+static int get_fixed_array_size(tree t)
+{
+    if (NULL_TREE == t)
+        return 0;
+
+    tree type = TREE_TYPE(t);
+    if (NULL_TREE == type)
+        return 0;
+
+    int item_size = get_type_sizeof(type);
+    if (!item_size)
+        // avoid division by zero
+        return 0;
+
+    // FIXME: this simply ignores any alignment
+    return get_type_sizeof(t) / item_size;
+}
+
+static cl_type_uid_t add_type_if_needed(tree t);
+
+static void dig_record_type(struct cl_type *clt, tree t)
+{
+    for (t = TYPE_FIELDS(t); t; t = TREE_CHAIN(t)) {
+        // TODO: chunk allocation ?
+        (void) clt;
+        clt->items = GGC_RESIZEVEC(struct cl_type_item, clt->items,
+                                   clt->item_cnt + 1);
+
+        struct cl_type_item *item = &clt->items[clt->item_cnt ++];
+        item->type = /* recursion */ add_type_if_needed(t);
+        item->name = /* possibly anonymous member */ NULL;
+
+        tree name = DECL_NAME(t);
+        if (name)
+            item->name = IDENTIFIER_POINTER(name);
+    }
+}
+
+static void read_specific_type(struct cl_type *clt, tree type)
+{
+    enum tree_code code = TREE_CODE(type);
+    switch (code) {
+        case VOID_TYPE:
+            clt->code = CL_TYPE_VOID;
+            break;
+
+        case POINTER_TYPE:
+            clt->code = CL_TYPE_PTR;
+            clt->item_cnt = 1;
+            clt->items = GGC_CNEW(struct cl_type_item);
+            clt->items[0].type = /* recursion */ add_type_if_needed(type);
+            break;
+
+        case RECORD_TYPE:
+            clt->code = CL_TYPE_STRUCT;
+            dig_record_type(clt, type);
+            break;
+
+        case UNION_TYPE:
+            clt->code = CL_TYPE_UNION;
+            dig_record_type(clt, type);
+            break;
+
+        case ARRAY_TYPE:
+            clt->code = CL_TYPE_ARRAY;
+            clt->item_cnt = get_fixed_array_size(type);
+            clt->items = GGC_CNEW(struct cl_type_item);
+            clt->items[0].type = /* recursion */ add_type_if_needed(type);
+            break;
+
+        case FUNCTION_TYPE:
+            clt->code = CL_TYPE_FNC;
+            // TODO: handle function prototype
+            break;
+
+        case INTEGER_TYPE:
+            clt->code = CL_TYPE_INT;
+            break;
+
+        case BOOLEAN_TYPE:
+            clt->code = CL_TYPE_BOOL;
+            break;
+
+        case ENUMERAL_TYPE:
+            clt->code = CL_TYPE_ENUM;
+            break;
+
+        default:
+            TRAP;
+    };
+}
+
+static cl_type_uid_t add_type_if_needed(tree t)
+{
+    if (NULL_TREE == t)
+        return CL_UID_INVALID;
+
+    tree type = TREE_TYPE(t);
+    if (NULL_TREE == type)
+        return CL_UID_INVALID;
+
+    // hashtab lookup
+    cl_type_uid_t uid = TYPE_UID(type);
+    struct cl_type *clt = type_db_lookup(type_db, uid);
+    if (clt)
+        // type already hashed
+        return uid;
+
+    // insert new type into hashtab
+    clt = GGC_CNEW(struct cl_type);
+    clt->uid = uid;
+    type_db_insert(type_db, clt);
+
+    // read type (recursively if needed)
+    read_base_type(clt, type);
+    read_specific_type(clt, type);
+
+    // extra hooks follow
+    if (clt->code == CL_TYPE_INT && clt->name && STREQ("char", clt->name))
+        clt->code = CL_TYPE_CHAR;
+
+    return uid;
+}
+
+static /* const */ struct cl_type builtin_fnc_type = {
+    .uid            = CL_UID_INVALID,
+    .code           = CL_TYPE_FNC,
+    .loc = {
+        .file       = NULL,
+        .line       = -1
+    },
+    .scope          = CL_SCOPE_GLOBAL,
+    .name           = "<builtin_fnc_type>",
+    .size           = /* FIXME */ sizeof(cl_get_type_fnc_t)
+};
+
+static void read_operand_decl(struct cl_operand *op, tree t)
+{
+    read_gcc_location(&op->loc, DECL_SOURCE_LOCATION(t));
+
     // FIXME: this condition may be not sufficient in all cases
     if (DECL_NAME(t)) {
         if (FUNCTION_DECL == TREE_CODE(t)) {
-            op->type                = CL_OPERAND_FNC;
-            op->data.fnc.name       = IDENTIFIER_POINTER(DECL_NAME(t));
-            op->data.fnc.is_extern  = DECL_EXTERNAL(t);
+            op->code                    = CL_OPERAND_CST;
+            op->type                    = &builtin_fnc_type;
+            op->data.cst_fnc.name       = IDENTIFIER_POINTER(DECL_NAME(t));
+            op->data.cst_fnc.is_extern  = DECL_EXTERNAL(t);
         } else {
             // maybe var
-            op->type                = CL_OPERAND_VAR;
-            op->data.var.name       = IDENTIFIER_POINTER(DECL_NAME(t));
+            op->code                    = CL_OPERAND_VAR;
+            op->data.var.name           = IDENTIFIER_POINTER(DECL_NAME(t));
             // TODO: save value of DECL_EXTERNAL?
         }
     } else {
         // maybe reg
-        op->type            = CL_OPERAND_REG;
+        op->code            = CL_OPERAND_REG;
         op->data.reg.id     = DECL_UID(t);
     }
-
-    op->deref = false;
-    op->offset = NULL;
-    read_gcc_location(&op->loc, DECL_SOURCE_LOCATION(t));
 }
 
-static void deref_indirect_op(tree *op)
+static /* const */ struct cl_type builtin_string_type = {
+    .uid            = CL_UID_INVALID,
+    .code           = CL_TYPE_STRING,
+    .loc = {
+        .file       = NULL,
+        .line       = -1
+    },
+    .scope          = CL_SCOPE_GLOBAL,
+    .name           = "<builtin_string_type>",
+    .size           = /* FIXME */ sizeof(cl_get_type_fnc_t)
+};
+
+static void read_raw_operand(struct cl_operand *op, tree t)
 {
-    if (!op || !*op)
-        TRAP;
-
-    if (INDIRECT_REF != TREE_CODE(*op))
-        TRAP;
-
-    *op = TREE_OPERAND(*op, 0);
-    if (!*op)
-        TRAP;
-}
-
-static void handle_operand_indirect_ref(struct cl_operand *op, tree t)
-{
-    deref_indirect_op(&t);
-    decl_to_cl_operand(op, t);
-    op->deref = true;
-}
-
-static void concat_offset_string(char **offset_string, tree decl)
-{
-    const char *offset = *offset_string;
-
-    char *ident;
-    int rv = (DECL_NAME(decl))
-        ? /* strdup is poisoned :-( */ asprintf(&ident, "%s",
-                IDENTIFIER_POINTER(DECL_NAME(decl)))
-        : /* no decl - headfile omitted? */ asprintf(&ident, "%%r%d",
-                DECL_UID(decl));
-    SL_ASSERT(0 < rv);
-
-    // concatenate with previous offset string if any
-    char *tmp;
-    rv = (offset)
-        ? asprintf(&tmp, "%s.%s", ident, offset)
-        : /* strdup is poisoned :-( */ asprintf(&tmp, "%s", ident);
-    SL_ASSERT(0 < rv);
-    free(ident);
-
-    // free previous offset string (if any) and replace it
-    free((char *) offset);
-    *offset_string = tmp;
-}
-
-static void handle_operand_component_ref(struct cl_operand *op, tree t)
-{
-    char *offset = NULL;
-
-    // go through component_ref chain
-    while (COMPONENT_REF == TREE_CODE(t)) {
-        tree op0 = TREE_OPERAND(t, 0);
-        tree op1 = TREE_OPERAND(t, 1);
-        if (!op0 || !op1)
-            TRAP;
-
-        // nest to subtree
-        t = op0;
-        concat_offset_string(&offset, op1);
-    }
-
-    // true means '->', false means '.'
-    bool is_ref_indirect = (INDIRECT_REF == TREE_CODE(t));
-    if (is_ref_indirect)
-        deref_indirect_op(&t);
-
-    if (ARRAY_REF == TREE_CODE(t)) {
-        SL_WARN_UNHANDLED_EXPR(t, "COMPONENT_REF / ARRAY_REF");
-        op->type = CL_OPERAND_VOID;
-        free(offset);
-        return;
-    }
-
-    // read base (usually var/reg)
-    decl_to_cl_operand(op, t);
-    op->deref   = is_ref_indirect;
-    op->offset  = offset;
-}
-
-static void free_cl_operand_data(struct cl_operand *op)
-{
-    free((char *) op->offset);
-}
-
-// TODO: simplify, check rare cases; and probably split into more functions
-static void handle_operand(struct cl_operand *op, tree t)
-{
-    op->type            = CL_OPERAND_VOID;
-    op->loc.file        = NULL;
-    op->loc.line        = -1;
-    op->deref           = false;
-    op->offset          = NULL;
-
-    if (!t)
-        return;
-
     enum tree_code code = TREE_CODE(t);
     switch (code) {
         case VAR_DECL:
         case PARM_DECL:
         case FUNCTION_DECL:
-            decl_to_cl_operand(op, t);
-            break;
-
-        case INDIRECT_REF:
-            handle_operand_indirect_ref(op, t);
-            break;
-
-        case COMPONENT_REF:
-            handle_operand_component_ref(op, t);
+            read_operand_decl(op, t);
             break;
 
         case INTEGER_CST:
-            op->type                    = CL_OPERAND_INT;
-            op->data.lit_int.value      = TREE_INT_CST_LOW(t);
+            op->code                    = CL_OPERAND_CST;
+
+            // FIXME: this is not going to work well...
+            op->data.cst_int.value      = TREE_INT_CST_HIGH(t)
+                ? (int) TREE_INT_CST_HIGH(t)
+                : (int) TREE_INT_CST_LOW(t);
             break;
 
         case STRING_CST:
-            op->type                    = CL_OPERAND_STRING;
-            op->data.lit_string.value   = TREE_STRING_POINTER(t);
-            break;
-
-        case ARRAY_REF: {
-                tree op0 = TREE_OPERAND(t, 0);
-                if (!op0)
-                    TRAP;
-
-                switch (TREE_CODE(op0)) {
-                    case VAR_DECL:
-#if 0
-                        SL_WARN_UNHANDLED_EXPR(t, "ARRAY_REF / VAR_DECL");
-#endif
-                        // go through!
-
-                    case STRING_CST:
-                        // Aiee, unguarded recursion!
-                        handle_operand(op, op0);
-                        break;
-
-                    default:
-                        SL_WARN_UNHANDLED_EXPR(t, "ARRAY_REF");
-                }
-            }
-            break;
-
-        case ADDR_EXPR: {
-                tree op0 = TREE_OPERAND(t, 0);
-                if (!op0)
-                    TRAP;
-
-                switch (TREE_CODE(op0)) {
-                    case ARRAY_REF:
-                    case STRING_CST:
-                    case FUNCTION_DECL:
-                        // Aiee, unguarded recursion!
-                        handle_operand(op, op0);
-                        break;
-
-                    default:
-                        SL_WARN_UNHANDLED_EXPR(t, "ADDR_EXPR");
-                }
-            }
+            op->code                    = CL_OPERAND_CST;
+            op->type                    = &builtin_string_type;
+            op->data.cst_string.value   = TREE_STRING_POINTER(t);
             break;
 
         case REAL_CST:
             SL_WARN_UNHANDLED_EXPR(t, "REAL_CST");
             break;
 
-        case BIT_FIELD_REF:
-            SL_WARN_UNHANDLED_EXPR(t, "BIT_FIELD_REF");
-            break;
-
         case CONSTRUCTOR:
             SL_WARN_UNHANDLED_EXPR(t, "CONSTRUCTOR");
-            break;
-
-        case RESULT_DECL:
-            SL_WARN_UNHANDLED_EXPR(t, "RESULT_DECL");
             break;
 
         default:
             TRAP;
     }
+}
+
+// FIXME: check direction
+static void chain_accessor(struct cl_accessor **ac, enum cl_type_e code)
+{
+    // create and initialize new item
+    struct cl_accessor *ac_new = GGC_CNEW(struct cl_accessor);
+    SL_ASSERT(ac_new);
+    ac_new->code = code;
+
+    // append new item to chain
+    ac_new->next = *ac;
+    *ac = ac_new;
+}
+
+static int accessor_item_lookup(const struct cl_type *type, tree t)
+{
+    tree name = DECL_NAME(t);
+    if (NULL_TREE == name)
+        // decl omitted?
+        TRAP;
+
+    const char *ident = IDENTIFIER_POINTER(name);
+    const struct cl_type_item *items = type->items;
+
+    int i;
+    for (i = 0; i < type->item_cnt; ++i)
+        if (STREQ(ident, items[i].name))
+            return i;
+
+    // not found
+    TRAP;
+    return -1;
+}
+
+static struct cl_type* operand_type_lookup(tree t)
+{
+    if (NULL_TREE == t)
+        TRAP;
+
+    tree op0 = TREE_OPERAND(t, 0);
+    if (NULL_TREE == op0)
+        TRAP;
+
+    return type_db_lookup(type_db, add_type_if_needed(op0));
+}
+
+static void handle_accessor_array_ref(struct cl_accessor **ac, tree t)
+{
+    chain_accessor(ac, CL_ACCESSOR_DEREF_ARRAY);
+    (*ac)->type = operand_type_lookup(t);
+
+    tree op1 = TREE_OPERAND(t, 1);
+    if (!op1)
+        TRAP;
+
+    enum tree_code code = TREE_CODE(op1);
+    if (INTEGER_CST != code) {
+        SL_WARN_UNHANDLED_EXPR(t, "non-constant array accessor");
+        (*ac)->item = -1;
+        return;
+    }
+
+    if (TREE_INT_CST_HIGH(op1))
+        TRAP;
+    (*ac)->item = TREE_INT_CST_LOW(op1);
+}
+
+static void handle_accessor_indirect_ref(struct cl_accessor **ac, tree t)
+{
+    chain_accessor(ac, CL_ACCESSOR_DEREF);
+    (*ac)->type = operand_type_lookup(t);
+}
+
+static void handle_accessor_component_ref(struct cl_accessor **ac, tree t)
+{
+    chain_accessor(ac, CL_ACCESSOR_ITEM);
+
+    struct cl_type *type = operand_type_lookup(t);
+    (*ac)->type = type;
+    (*ac)->item = accessor_item_lookup(type, TREE_OPERAND(t, 1));
+}
+
+static bool handle_accessor(struct cl_accessor **ac, tree *pt)
+{
+    tree t = *pt;
+    if (NULL_TREE == t)
+        TRAP;
+
+    enum tree_code code = TREE_CODE(t);
+    switch (code) {
+        case ADDR_EXPR:
+            if (STRING_CST != TREE_CODE(TREE_OPERAND(t, 0)))
+                chain_accessor(ac, CL_ACCESSOR_REF);
+            break;
+
+        case ARRAY_REF:
+            if (STRING_CST != TREE_CODE(TREE_OPERAND(t, 0)))
+                handle_accessor_array_ref(ac, t);
+            break;
+
+        case INDIRECT_REF:
+            handle_accessor_indirect_ref(ac, t);
+            break;
+
+        case COMPONENT_REF:
+            handle_accessor_component_ref(ac, t);
+            break;
+
+        case BIT_FIELD_REF:
+            SL_WARN_UNHANDLED_EXPR(t, "BIT_FIELD_REF");
+            break;
+
+        default:
+            return false;
+    }
+
+    *pt = TREE_OPERAND(t, 0);
+    return true;
+}
+
+static void free_cl_operand_data(struct cl_operand *op)
+{
+    // TODO
+    (void) op;
+}
+
+static void handle_operand(struct cl_operand *op, tree t)
+{
+    op->code            = CL_OPERAND_VOID;
+    op->loc.file        = NULL;
+    op->loc.line        = -1;
+
+    if (!t)
+        return;
+
+    // read type
+    cl_type_uid_t type = add_type_if_needed(t);
+    op->type = type_db_lookup(type_db, type);
+
+    // read accessor
+    op->accessor = NULL;
+    while (handle_accessor(&op->accessor, &t));
+
+    if (NULL_TREE == t)
+        TRAP;
+    read_raw_operand(op, t);
 }
 
 static void handle_stmt_unop(gimple stmt, enum tree_code code,
@@ -346,7 +590,7 @@ static void handle_stmt_unop(gimple stmt, enum tree_code code,
     handle_operand(&src, src_tree);
 
     struct cl_insn cli;
-    cli.type                    = CL_INSN_UNOP;
+    cli.code                    = CL_INSN_UNOP;
     cli.data.insn_unop.dst      = dst;
     cli.data.insn_unop.src      = &src;
     read_gimple_location(&cli.loc, stmt);
@@ -359,7 +603,7 @@ static void handle_stmt_unop(gimple stmt, enum tree_code code,
         // TODO: grok various unary operators here
         default:
             // FIXME: it silently ignores any special unary operator!!
-            cli.data.insn_unop.type = CL_UNOP_ASSIGN;
+            cli.data.insn_unop.code = CL_UNOP_ASSIGN;
             break;
     }
 
@@ -378,13 +622,13 @@ static void handle_stmt_binop(gimple stmt, enum tree_code code,
     handle_operand(&src2, src2_tree);
 
     struct cl_insn cli;
-    cli.type                    = CL_INSN_BINOP;
+    cli.code                    = CL_INSN_BINOP;
     cli.data.insn_binop.dst     = dst;
     cli.data.insn_binop.src1    = &src1;
     cli.data.insn_binop.src2    = &src2;
     read_gimple_location(&cli.loc, stmt);
 
-    enum cl_binop_e *ptype = &cli.data.insn_binop.type;
+    enum cl_binop_e *ptype = &cli.data.insn_binop.code;
 
     switch (code) {
         case EQ_EXPR:               *ptype = CL_BINOP_EQ;               break;
@@ -406,7 +650,7 @@ static void handle_stmt_binop(gimple stmt, enum tree_code code,
 
 #define SL_BINOP_UNHANDLED(what) \
     case what: SL_WARN_UNHANDLED_GIMPLE(stmt, #what); \
-               cli.type = CL_INSN_NOP; \
+               cli.code = CL_INSN_NOP; \
                break;
 
         SL_BINOP_UNHANDLED(EXACT_DIV_EXPR)
@@ -424,7 +668,7 @@ static void handle_stmt_binop(gimple stmt, enum tree_code code,
             TRAP;
     }
 
-    if (CL_INSN_NOP != cli.type)
+    if (CL_INSN_NOP != cli.code)
         cl->insn(cl, &cli);
     free_cl_operand_data(&src1);
     free_cl_operand_data(&src2);
@@ -503,7 +747,7 @@ static void handle_stmt_call(gimple stmt)
         // this call never returns --> end of BB!!
 
         struct cl_insn cli;
-        cli.type    = CL_INSN_ABORT;
+        cli.code    = CL_INSN_ABORT;
         cli.loc     = loc;
 
         cl->insn(cl, &cli);
@@ -516,7 +760,7 @@ static void handle_stmt_return(gimple stmt)
     handle_operand(&src, gimple_return_retval(stmt));
 
     struct cl_insn cli;
-    cli.type                    = CL_INSN_RET;
+    cli.code                    = CL_INSN_RET;
     cli.data.insn_ret.src       = &src;
 
     // FIXME: location info seems to be valid only for IMPLICIT 'return'
@@ -527,14 +771,25 @@ static void handle_stmt_return(gimple stmt)
     free_cl_operand_data(&src);
 }
 
-static const struct cl_operand stmt_cond_fixed_reg = {
-    .type           = CL_OPERAND_REG,
+static /* const */ struct cl_type builtin_bool_type = {
+    .uid            = CL_UID_INVALID,
+    .code           = CL_TYPE_BOOL,
     .loc = {
         .file       = NULL,
         .line       = -1
     },
-    .deref          = false,
-    .offset         = NULL,
+    .scope          = CL_SCOPE_GLOBAL,
+    .name           = "<builtin_bool>",
+    .size           = /* FIXME */ sizeof(bool)
+};
+
+static const struct cl_operand stmt_cond_fixed_reg = {
+    .code           = CL_OPERAND_REG,
+    .loc = {
+        .file       = NULL,
+        .line       = -1
+    },
+    .type           = &builtin_bool_type,
     .data = {
         .reg = {
             .id     = 0
@@ -546,7 +801,7 @@ static void handle_stmt_cond_br(gimple stmt, const char *then_label,
                                 const char *else_label)
 {
     struct cl_insn cli;
-    cli.type                        = CL_INSN_COND;
+    cli.code                        = CL_INSN_COND;
     cli.data.insn_cond.src          = &stmt_cond_fixed_reg;
     cli.data.insn_cond.then_label   = then_label;
     cli.data.insn_cond.else_label   = else_label;
@@ -759,7 +1014,7 @@ static void handle_jmp_edge (edge e)
     struct basic_block_def *next = e->dest;
 
     struct cl_insn cli;
-    cli.type                = CL_INSN_JMP;
+    cli.code                = CL_INSN_JMP;
     cli.data.insn_jmp.label = index_to_label(next->index);
 
     // no location for CL_INSN_JMP for now
@@ -911,6 +1166,7 @@ static void cb_finish (void *gcc_data, void *user_data)
 
     SL_LOG_FNC;
 
+    type_db_destroy(type_db);
     cl->destroy(cl);
     cl_global_cleanup();
 }
@@ -1108,6 +1364,11 @@ int plugin_init (struct plugin_name_args *plugin_info,
     cl_global_init_defaults(NULL, verbose & SL_VERBOSE_PLUG);
     cl = create_cl_chain(&opt);
     SL_ASSERT(cl);
+
+    // initialize type database
+    type_db = type_db_create();
+    SL_ASSERT(type_db);
+    register_type_db(cl, type_db);
 
     // try to register callbacks (and virtual callbacks)
     sl_regcb (plugin_info->base_name);

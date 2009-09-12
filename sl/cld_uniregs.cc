@@ -21,7 +21,7 @@ class CldUniRegs: public ClDecoratorBase {
         {
             struct cl_insn local_cli = *cli;
 
-            switch (cli->type) {
+            switch (cli->code) {
                 case CL_INSN_COND: {
                         struct cl_operand src = *(cli->data.insn_cond.src);
                         this->relocReg(&src);
@@ -138,7 +138,7 @@ int CldUniRegs::regLookup(int reg) {
 }
 
 void CldUniRegs::relocReg(struct cl_operand *op) {
-    if (CL_OPERAND_REG != op->type)
+    if (CL_OPERAND_REG != op->code)
         return;
 
     op->data.reg.id = this->regLookup(op->data.reg.id);

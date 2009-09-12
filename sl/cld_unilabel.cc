@@ -36,7 +36,7 @@ class CldUniLabel: public ClDecoratorBase {
             const struct cl_insn    *cli)
         {
             struct cl_insn local_cli = *cli;
-            switch (cli->type) {
+            switch (cli->code) {
                 case CL_INSN_JMP: {
                         std::string resolved(this->resolveLabel(
                                     cli->data.insn_jmp.label));

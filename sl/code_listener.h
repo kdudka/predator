@@ -126,6 +126,57 @@ enum cl_scope_e {
     CL_SCOPE_BB
 };
 
+typedef int cl_type_uid_t;
+enum {
+    CL_UID_INVALID = -1
+};
+
+enum cl_type_e {
+    CL_TYPE_VOID,
+    CL_TYPE_PTR,
+    CL_TYPE_STRUCT,
+    CL_TYPE_UNION,
+    CL_TYPE_ARRAY,
+    CL_TYPE_FNC,
+    CL_TYPE_INT,
+    CL_TYPE_CHAR,
+    CL_TYPE_BOOL,
+    CL_TYPE_ENUM,
+
+    /* cst only */
+    CL_TYPE_STRING
+};
+
+struct cl_type_item {
+    cl_type_uid_t                       type;
+    const char                          *name;
+};
+
+struct cl_type {
+    cl_type_uid_t                       uid;
+    enum cl_type_e                      code;
+    struct cl_location                  loc;
+    enum cl_scope_e                     scope;
+    const char                          *name;
+    int                                 size;
+    int                                 item_cnt;
+    struct cl_type_item                 *items;
+};
+
+enum cl_accessor_e {
+    CL_ACCESSOR_REF,
+    CL_ACCESSOR_DEREF,
+    CL_ACCESSOR_DEREF_ARRAY,
+    CL_ACCESSOR_ITEM
+};
+
+struct cl_accessor {
+    enum cl_accessor_e                  code;
+    struct cl_type                      *type;
+    int                                 item;
+    struct cl_accessor                  *next;
+};
+
 /**
  * generic operand type enumeration
  */
@@ -134,6 +185,8 @@ enum cl_operand_e {
      * there is NO operand
      */
     CL_OPERAND_VOID,
+
+    CL_OPERAND_CST,
 
     /**
      * variable. We actually do not distinguish between local/global variables,
@@ -153,22 +206,7 @@ enum cl_operand_e {
      * @todo We should stop ignoring register's size at some point.
      * @note slsparse now ignores all operands with different size than 32bit
      */
-    CL_OPERAND_REG,
-
-    /* TODO: document */
-    CL_OPERAND_FNC,
-
-    /**
-     * integer literal
-     */
-    CL_OPERAND_INT,
-
-    /**
-     * string literal
-     */
-    CL_OPERAND_STRING
-
-    /* TODO */
+    CL_OPERAND_REG
 };
 
 /**
@@ -180,27 +218,12 @@ struct cl_operand {
     /**
      * type of operand. See enum cl_operand_e for documentation.
      */
-    enum cl_operand_e                   type;
-
+    enum cl_operand_e                   code;
     struct cl_location                  loc;
-    /* TODO: scope?     */
+    enum cl_scope_e                     scope;
 
-    /**
-     * true, if operand is dereferenced.
-     */
-    bool                                deref;
-
-    /**
-     * offset within a type, now maintained only as string. If there is no
-     * (named) offset (e.g. *ptr), the value will be NULL. The semantic
-     * depends also on value of deref. If deref is true, the semantic is
-     * op->offset; otherwise the semantic is op.offset.
-     *
-     * There is currently very simple support for nested types. For example if
-     * one wants to express op->data.var.name, the offset string will be
-     * "data.var.name" and deref true.
-     */
-    const char                          *offset;
+    struct cl_type                      *type;
+    struct cl_accessor                  *accessor;
 
     /**
      * per operand type specific data
@@ -223,22 +246,21 @@ struct cl_operand {
             int                         id;
         } reg;
 
-        /* CL_OPERAND_FNC */
+        /* CL_OPERAND_CST / CL_TYPE_FNC */
         struct {
             const char                  *name;
             bool                        is_extern;
-        } fnc;
+        } cst_fnc;
 
-        /* CL_OPERAND_INT */
+        /* CL_OPERAND_CST / CL_TYPE_INT */
         struct {
             int                         value;
-        } lit_int;
+        } cst_int;
 
-        /* CL_OPERAND_STRING */
+        /* CL_OPERAND_CST / CL_TYPE_STRING */
         struct {
             const char                  *value;
-        } lit_string;
-
+        } cst_string;
     } data;
 };
 
@@ -284,7 +306,7 @@ enum cl_binop_e {
 };
 
 struct cl_insn {
-    enum cl_insn_e                      type;
+    enum cl_insn_e                      code;
     struct cl_location                  loc;
 
     /* instruction specific data */
@@ -309,14 +331,14 @@ struct cl_insn {
 
         /* CL_INSN_UNOP */
         struct {
-            enum cl_unop_e              type;
+            enum cl_unop_e              code;
             const struct cl_operand     *dst;
             const struct cl_operand     *src;
         } insn_unop;
 
         /* CL_INSN_BINOP */
         struct {
-            enum cl_binop_e             type;
+            enum cl_binop_e             code;
             const struct cl_operand     *dst;
             const struct cl_operand     *src1;
             const struct cl_operand     *src2;
@@ -324,6 +346,8 @@ struct cl_insn {
 
     } data;
 };
+
+typedef struct cl_type* (*cl_get_type_fnc_t)(cl_type_uid_t, void *);
 
 /**
  * listener object - the core part of this interface
@@ -335,12 +359,12 @@ struct cl_insn {
  *
  * FILE_CONTENT is defined by substitution to regex:
  *
- *     fnc_open (fnc_arg_decl)* FNC_BODY fnc_close
+ *     fnc_open (decl_type | fnc_arg_decl)* FNC_BODY fnc_close
  *
  *
  * FNC_BODY is defined by substitution to regex:
  *
- *     FNC_ENTRY (bb_open (NONTERM_INSN)* TERM_INSN)*
+ *     FNC_ENTRY (bb_open (decl_type | NONTERM_INSN)* TERM_INSN)*
  *
  *
  * FNC_ENTRY is defined as:
@@ -376,6 +400,11 @@ struct cl_code_listener {
      */
     void *data;
 
+    void (*reg_type_db)(
+            struct cl_code_listener     *self,
+            cl_get_type_fnc_t           fnc,
+            void                        *user_data);
+
     void (*file_open)(
             struct cl_code_listener     *self,
             const char                  *file_name);
@@ -392,6 +421,7 @@ struct cl_code_listener {
     void (*fnc_arg_decl)(
             struct cl_code_listener     *self,
             int                         arg_id,
+            /* TODO: use cl_operand instead to pull-in the type */
             const char                  *arg_name);
 
     void (*fnc_close)(
