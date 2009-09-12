@@ -566,6 +566,9 @@ static void handle_operand(struct cl_operand *op, tree t)
     op->code            = CL_OPERAND_VOID;
     op->loc.file        = NULL;
     op->loc.line        = -1;
+    op->scope           = CL_SCOPE_GLOBAL;
+    op->type            = NULL;
+    op->accessor        = NULL;
 
     if (!t)
         return;

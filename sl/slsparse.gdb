@@ -1,8 +1,9 @@
 file ./slsparse
-set args -Wno-decl ./dll.c
+set args -Wno-decl data/dll.c
 set confirm 0
 set pagination 0
 set print pretty
+set unwindonsignal
 run
 echo \nbt:\n
 bt

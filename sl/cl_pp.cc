@@ -73,6 +73,7 @@ class ClPrettyPrint: public AbstractCodeListener {
 
     private:
         void printCst           (const struct cl_operand *);
+        void printVarType       (const struct cl_operand *);
         void printNestedVar     (const struct cl_operand *);
         const char* getItemName (const struct cl_accessor *);
         void printRecordAcessor (const struct cl_accessor **);
@@ -89,6 +90,7 @@ class ClPrettyPrint: public AbstractCodeListener {
 };
 
 using namespace ssd;
+using std::string;
 
 // /////////////////////////////////////////////////////////////////////////////
 // ClPrettyPrint implementation
@@ -177,6 +179,9 @@ void ClPrettyPrint::printCst(const struct cl_operand *op) {
             break;
 
         case CL_TYPE_ENUM:
+            this->printVarType(op);
+            // fall through!
+
         case CL_TYPE_INT: {
                 int num = op->data.cst_int.value;
                 if (num < 0)
@@ -218,6 +223,77 @@ void ClPrettyPrint::printCst(const struct cl_operand *op) {
         default:
             TRAP;
     }
+}
+
+namespace {
+    const char* typeName(const struct cl_type *clt) {
+        if (!clt)
+            TRAP;
+
+        const char *name = clt->name;
+        return (name)
+            ? name
+            : "<anon_type>";
+    }
+}
+
+void ClPrettyPrint::printVarType(const struct cl_operand *op) {
+    if (op->code == CL_OPERAND_VOID)
+        TRAP;
+
+    SSD_COLORIZE(out_, C_DARK_GRAY) << "[";
+    struct cl_type *clt = op->type;
+
+    string str;
+    while (clt->code == CL_TYPE_PTR) {
+        str = string("*") + str;
+        clt = AbstractCodeListener::getType(clt->items[0].type);
+    }
+
+    enum cl_type_e code = clt->code;
+    switch (code) {
+        case CL_TYPE_VOID:
+            out_ << SSD_INLINE_COLOR(C_LIGHT_GREEN, "void");
+            break;
+
+        case CL_TYPE_STRUCT:
+            out_ << SSD_INLINE_COLOR(C_LIGHT_GREEN, "struct") << " "
+                << SSD_INLINE_COLOR(C_DARK_GRAY, typeName(clt));
+            break;
+
+        case CL_TYPE_UNION:
+            out_ << SSD_INLINE_COLOR(C_LIGHT_GREEN, "union") << " "
+                << SSD_INLINE_COLOR(C_DARK_GRAY, typeName(clt));
+            break;
+
+        case CL_TYPE_FNC:
+            out_ << SSD_INLINE_COLOR(C_LIGHT_GREEN, "fnc");
+            break;
+
+        case CL_TYPE_INT:
+            out_ << SSD_INLINE_COLOR(C_LIGHT_GREEN, "int");
+            break;
+
+        case CL_TYPE_CHAR:
+            out_ << SSD_INLINE_COLOR(C_LIGHT_GREEN, "char");
+            break;
+
+        case CL_TYPE_BOOL:
+            out_ << SSD_INLINE_COLOR(C_LIGHT_GREEN, "bool");
+            break;
+
+        case CL_TYPE_ENUM:
+            out_ << SSD_INLINE_COLOR(C_LIGHT_GREEN, "enum") << " "
+                << SSD_INLINE_COLOR(C_DARK_GRAY, typeName(clt));
+            break;
+
+        default:
+            TRAP;
+    }
+
+    if (!str.empty())
+        str = string(" ") + str;
+    SSD_COLORIZE(out_, C_DARK_GRAY) << str << "]";
 }
 
 void ClPrettyPrint::printNestedVar(const struct cl_operand *op) {
@@ -270,6 +346,7 @@ void ClPrettyPrint::printRecordAcessor(const struct cl_accessor **ac) {
 
 void ClPrettyPrint::printOperandVar(const struct cl_operand *op) {
     const struct cl_accessor *ac = op->accessor;
+    this->printVarType(op);
 
     // check whether the operand is referenced
     const struct cl_accessor *is_ref = ac;
