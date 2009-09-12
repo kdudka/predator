@@ -33,10 +33,10 @@ class CldCbSeqChk: public ClDecoratorBase {
 
         virtual void fnc_arg_decl(
             int                     arg_id,
-            const char              *arg_name)
+            const struct cl_operand *arg_src)
         {
             this->chkArgDecl();
-            ClDecoratorBase::fnc_arg_decl(arg_id, arg_name);
+            ClDecoratorBase::fnc_arg_decl(arg_id, arg_src);
         }
 
         virtual void fnc_close() {

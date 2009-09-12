@@ -31,7 +31,7 @@ class ClChain: public ICodeListener {
 
         virtual void fnc_arg_decl(
             int                     arg_id,
-            const char              *arg_name);
+            const struct cl_operand *arg_src);
 
         virtual void fnc_close();
 
@@ -121,9 +121,9 @@ void ClChain::fnc_open(
 
 void ClChain::fnc_arg_decl(
             int                     arg_id,
-            const char              *arg_name)
+            const struct cl_operand *arg_src)
 {
-    CL_CHAIN_FOREACH_VA(fnc_arg_decl, arg_id, arg_name);
+    CL_CHAIN_FOREACH_VA(fnc_arg_decl, arg_id, arg_src);
 }
 
 void ClChain::fnc_close()

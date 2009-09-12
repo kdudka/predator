@@ -28,7 +28,7 @@ class ClPrettyPrint: public AbstractCodeListener {
 
         virtual void fnc_arg_decl(
             int                     arg_id,
-            const char              *arg_name);
+            const struct cl_operand *arg_src);
 
         virtual void fnc_close();
 
@@ -141,13 +141,14 @@ void ClPrettyPrint::fnc_open(
 
 void ClPrettyPrint::fnc_arg_decl(
             int                     arg_id,
-            const char              *arg_name)
+            const struct cl_operand *arg_src)
 {
     // TODO: sort arguments if not already
     if (1 < arg_id)
         out_ << ", ";
     SSD_COLORIZE(out_, C_LIGHT_GREEN) << "%arg" << arg_id;
-    SSD_COLORIZE(out_, C_LIGHT_BLUE) << ": " << arg_name;
+    SSD_COLORIZE(out_, C_LIGHT_BLUE) << ": ";
+    this->printOperandVar(arg_src);
 }
 
 void ClPrettyPrint::fnc_close()

@@ -36,9 +36,9 @@ class ClDecoratorBase: public ICodeListener {
 
         virtual void fnc_arg_decl(
             int                     arg_id,
-            const char              *arg_name)
+            const struct cl_operand *arg_src)
         {
-            slave_->fnc_arg_decl(arg_id, arg_name);
+            slave_->fnc_arg_decl(arg_id, arg_src);
         }
 
         virtual void fnc_close() {

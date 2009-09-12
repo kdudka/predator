@@ -25,7 +25,7 @@ class ClDotGenerator: public AbstractCodeListener {
 
         virtual void fnc_arg_decl(
             int                     arg_id,
-            const char              *arg_name);
+            const struct cl_operand *arg_src);
 
         virtual void fnc_close();
 
@@ -442,7 +442,8 @@ void ClDotGenerator::fnc_open(const struct cl_location *loc,
             << std::endl;
 }
 
-void ClDotGenerator::fnc_arg_decl(int, const char *) { }
+void ClDotGenerator::fnc_arg_decl(int, const struct cl_operand *) {
+}
 
 void ClDotGenerator::fnc_close()
 {

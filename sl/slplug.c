@@ -1076,8 +1076,11 @@ static void handle_fnc_decl_arglist (tree args)
     int argc = 0;
 
     while (args) {
-        tree ident = DECL_NAME(args);
-        cl->fnc_arg_decl(cl, ++argc, IDENTIFIER_POINTER(ident));
+        struct cl_operand arg_src;
+        handle_operand(&arg_src, args);
+        arg_src.scope = CL_SCOPE_FUNCTION;
+
+        cl->fnc_arg_decl(cl, ++argc, &arg_src);
 
         args = TREE_CHAIN (args);
     }

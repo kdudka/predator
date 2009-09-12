@@ -24,7 +24,7 @@ class ClLocator: public AbstractCodeListener {
             lastLoc_ = loc;
         }
 
-        virtual void fnc_arg_decl(int, const char *) { }
+        virtual void fnc_arg_decl(int, const struct cl_operand *) { }
         virtual void fnc_close() { }
         virtual void bb_open(const char *) { }
 

@@ -162,9 +162,9 @@ static void cl_wrap_fnc_open(
 static void cl_wrap_fnc_arg_decl(
             struct cl_code_listener *self,
             int                     arg_id,
-            const char              *arg_name)
+            const struct cl_operand *arg_src)
 {
-    CL_WRAP_VA(fnc_arg_decl, arg_id, arg_name);
+    CL_WRAP_VA(fnc_arg_decl, arg_id, arg_src);
 }
 
 static void cl_wrap_fnc_close(

@@ -421,8 +421,7 @@ struct cl_code_listener {
     void (*fnc_arg_decl)(
             struct cl_code_listener     *self,
             int                         arg_id,
-            /* TODO: use cl_operand instead to pull-in the type */
-            const char                  *arg_name);
+            const struct cl_operand     *arg_src);
 
     void (*fnc_close)(
             struct cl_code_listener     *self);

@@ -27,10 +27,10 @@ class CldArgSubst: public ClDecoratorBase {
 
         virtual void fnc_arg_decl(
             int                     arg_id,
-            const char              *arg_name)
+            const struct cl_operand *arg_src)
         {
-            this->regArg(arg_id, arg_name);
-            ClDecoratorBase::fnc_arg_decl(arg_id, arg_name);
+            this->regArg(arg_id, arg_src);
+            ClDecoratorBase::fnc_arg_decl(arg_id, arg_src);
         }
 
         virtual void insn(
@@ -138,7 +138,7 @@ class CldArgSubst: public ClDecoratorBase {
 
     private:
         void reset();
-        void regArg(int arg_id, const char *arg_name);
+        void regArg(int arg_id, const struct cl_operand *arg_src);
 
         // we do not return reference to string because we return NULL
         // when arg position is not found
@@ -158,7 +158,7 @@ void CldArgSubst::reset() {
     last_ = 0;
 }
 
-void CldArgSubst::regArg(int arg_id, const char *arg_name) {
+void CldArgSubst::regArg(int arg_id, const struct cl_operand *arg_src) {
     TMap::iterator i = map_.find(arg_id);
     if (map_.end() != i) {
         CL_MSG_STREAM(cl_error, LocationWriter(0, &fncLoc_) << "error: "
@@ -169,7 +169,10 @@ void CldArgSubst::regArg(int arg_id, const char *arg_name) {
         return;
     }
 
-    map_[arg_id] = arg_name;
+    if (arg_src->code != CL_OPERAND_VAR)
+        TRAP;
+
+    map_[arg_id] = arg_src->data.var.name;
 }
 
 const char* CldArgSubst::argLookup(int arg) {

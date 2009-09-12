@@ -68,7 +68,7 @@ class ICodeListener {
 
         virtual void fnc_arg_decl(
             int                     arg_id,
-            const char              *arg_name)
+            const struct cl_operand *arg_src)
             = 0;
 
         virtual void fnc_close()
