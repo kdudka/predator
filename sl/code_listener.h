@@ -276,7 +276,8 @@ enum cl_insn_e {
 };
 
 enum cl_unop_e {
-    CL_UNOP_ASSIGN
+    CL_UNOP_ASSIGN,
+    CL_UNOP_TRUTH_NOT
     /* TODO */
 };
 

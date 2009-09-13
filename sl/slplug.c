@@ -594,20 +594,25 @@ static void handle_stmt_unop(gimple stmt, enum tree_code code,
 
     struct cl_insn cli;
     cli.code                    = CL_INSN_UNOP;
+    cli.data.insn_unop.code     = CL_UNOP_ASSIGN;
     cli.data.insn_unop.dst      = dst;
     cli.data.insn_unop.src      = &src;
     read_gimple_location(&cli.loc, stmt);
 
-    switch (code) {
-        case ADDR_EXPR:
-            SL_WARN_UNHANDLED_GIMPLE(stmt, "ADDR_EXPR");
-            return;
+    if (code != TREE_CODE(src_tree)) {
+        switch (code) {
+            case CONVERT_EXPR:
+            case NOP_EXPR:
+            case VAR_DECL:
+                break;
 
-        // TODO: grok various unary operators here
-        default:
-            // FIXME: it silently ignores any special unary operator!!
-            cli.data.insn_unop.code = CL_UNOP_ASSIGN;
-            break;
+            case TRUTH_NOT_EXPR:
+                cli.data.insn_unop.code = CL_UNOP_TRUTH_NOT;
+                break;
+
+            default:
+                TRAP;
+        }
     }
 
     cl->insn(cl, &cli);

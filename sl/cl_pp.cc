@@ -245,10 +245,22 @@ void ClPrettyPrint::printVarType(const struct cl_operand *op) {
     struct cl_type *clt = op->type;
 
     string str;
-    while (clt->code == CL_TYPE_PTR) {
-        str = string("*") + str;
-        clt = AbstractCodeListener::getType(clt->items[0].type);
+    for (; clt; clt = this->getType(clt->items[0].type)) {
+        enum cl_type_e code = clt->code;
+        switch (code) {
+            case CL_TYPE_PTR:
+                str = string("*") + str;
+                break;
+
+            case CL_TYPE_ARRAY:
+                str = string("[]") + str;
+                break;
+
+            default:
+                goto deref_done;
+        }
     }
+deref_done:
 
     enum cl_type_e code = clt->code;
     switch (code) {
@@ -517,6 +529,10 @@ void ClPrettyPrint::printInsnUnop(const struct cl_insn *cli) {
     this->printAssignmentLhs(dst);
 
     switch (code) {
+        case CL_UNOP_TRUTH_NOT:
+            out_ << SSD_INLINE_COLOR(C_YELLOW, "!") << " ";
+            // fall through!
+
         case CL_UNOP_ASSIGN:
             this->printOperand(src);
             break;
