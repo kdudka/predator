@@ -80,6 +80,8 @@ static bool is_pseudo(pseudo_t pseudo)
 
 static void free_cl_operand_data(struct cl_operand *op)
 {
+    // TODO
+#if 0
     free((char *) op->offset);
     switch (op->type) {
         case CL_OPERAND_VAR:
@@ -93,6 +95,7 @@ static void free_cl_operand_data(struct cl_operand *op)
         default:
             break;
     }
+#endif
 }
 
 static const char* strdup_sparse_string(const struct string *str)
@@ -102,18 +105,54 @@ static const char* strdup_sparse_string(const struct string *str)
         : NULL;
 }
 
+static /* const */ struct cl_type builtin_fnc_type = {
+    .uid            = CL_UID_INVALID,
+    .code           = CL_TYPE_FNC,
+    .loc = {
+        .file       = NULL,
+        .line       = -1
+    },
+    .scope          = CL_SCOPE_GLOBAL,
+    .name           = "<builtin_fnc_type>",
+    .size           = /* FIXME */ sizeof(cl_get_type_fnc_t)
+};
+
+static /* const */ struct cl_type builtin_string_type = {
+    .uid            = CL_UID_INVALID,
+    .code           = CL_TYPE_STRING,
+    .loc = {
+        .file       = NULL,
+        .line       = -1
+    },
+    .scope          = CL_SCOPE_GLOBAL,
+    .name           = "<builtin_string_type>",
+    .size           = /* FIXME */ sizeof(cl_get_type_fnc_t)
+};
+
+static /* const */ struct cl_type builtin_int_type = {
+    .uid            = CL_UID_INVALID,
+    .code           = CL_TYPE_INT,
+    .loc = {
+        .file       = NULL,
+        .line       = -1
+    },
+    .scope          = CL_SCOPE_GLOBAL,
+    .name           = "<builtin_int>",
+    .size           = /* FIXME */ sizeof(int)
+};
+
 static void pseudo_to_cl_operand(struct instruction *insn, pseudo_t pseudo,
                                  struct cl_operand *op, bool deref)
 {
-    op->deref       = deref;
-    op->offset      = NULL;
+    // TODO: op->deref       = deref;
+    // TODO: op->offset      = NULL;
+    op->code        = CL_OPERAND_VOID;
     op->loc.file    = NULL;
     op->loc.line    = -1;
+    op->accessor    = NULL;
 
-    if (!is_pseudo(pseudo)) {
-        op->type = CL_OPERAND_VOID;
+    if (!is_pseudo(pseudo))
         return;
-    }
 
     switch(pseudo->type) {
         case PSEUDO_SYM: {
@@ -131,12 +170,14 @@ static void pseudo_to_cl_operand(struct instruction *insn, pseudo_t pseudo,
             if (sym->ident) {
                 struct symbol *base = sym->ctype.base_type;
                 if (base && base->type == SYM_FN) {
-                    op->type                = CL_OPERAND_FNC;
-                    op->data.fnc.name       = strdup(show_ident(sym->ident));
-                    op->data.fnc.is_extern  = MOD_EXTERN & sym->ctype.modifiers;
+                    op->code                    = CL_OPERAND_CST;
+                    op->type                    = &builtin_fnc_type;
+                    op->data.cst_fnc.name       = strdup(show_ident(sym->ident));
+                    op->data.cst_fnc.is_extern  = MOD_EXTERN & sym->ctype.modifiers;
                 } else {
-                    op->type                = CL_OPERAND_VAR;
-                    op->data.var.name       = strdup(show_ident(sym->ident));
+                    op->code                    = CL_OPERAND_VAR;
+                    op->type                    = /* TODO */ &builtin_fnc_type;
+                    op->data.var.name           = strdup(show_ident(sym->ident));
                 }
                 break;
             }
@@ -149,9 +190,9 @@ static void pseudo_to_cl_operand(struct instruction *insn, pseudo_t pseudo,
                         break;
 #endif
                     case EXPR_STRING:
-                        // FIXME: not dup'ed now (subtle)
-                        op->type                    = CL_OPERAND_STRING;
-                        op->data.lit_string.value   =
+                        op->code                    = CL_OPERAND_CST;
+                        op->type                    = &builtin_string_type;
+                        op->data.cst_string.value   =
                             strdup_sparse_string(expr->string);
                         return;
 
@@ -163,7 +204,8 @@ static void pseudo_to_cl_operand(struct instruction *insn, pseudo_t pseudo,
         }
 
         case PSEUDO_REG:
-            op->type                = CL_OPERAND_REG;
+            op->code                = CL_OPERAND_REG;
+            op->type                = /* TODO */ &builtin_fnc_type;
             // not used: op->name = strdup(show_ident(pseudo->ident));
             op->data.reg.id         = pseudo->nr;
             break;
@@ -171,13 +213,15 @@ static void pseudo_to_cl_operand(struct instruction *insn, pseudo_t pseudo,
         case PSEUDO_VAL: {
             long long value = pseudo->value;
 
-            op->type                = CL_OPERAND_INT;
-            op->data.lit_int.value  = value;
+            op->code                = CL_OPERAND_CST;
+            op->type                = /* TODO: CL_OPERAND_INT */ &builtin_int_type;
+            op->data.cst_int.value  = value;
             return;
         }
 
         case PSEUDO_ARG:
-            op->type                = CL_OPERAND_ARG;
+            op->code                = CL_OPERAND_ARG;
+            op->type                = /* TODO */ &builtin_fnc_type;
             op->data.arg.id         = pseudo->nr;
             break;
 
@@ -196,7 +240,7 @@ static void pseudo_to_cl_operand(struct instruction *insn, pseudo_t pseudo,
                 /* FIXME: deref? */
                 && 0 != strcmp("__ptr", id_string))
         {
-            op->offset = strdup(id_string);
+            // TODO: op->offset = strdup(id_string);
         }
     }
 }
@@ -233,7 +277,7 @@ static bool handle_insn_call(struct instruction *insn,
         // this call never returns --> end of BB!!
 
         struct cl_insn cli;
-        cli.type    = CL_INSN_ABORT;
+        cli.code    = CL_INSN_ABORT;
         cli.loc     = loc;
 
         cl->insn(cl, &cli);
@@ -255,7 +299,7 @@ static void handle_insn_br(struct instruction *insn,
 
     if (!is_pseudo(insn->cond)) {
         struct cl_insn cli;
-        cli.type                    = CL_INSN_JMP;
+        cli.code                    = CL_INSN_JMP;
         cli.data.insn_jmp.label     = bb_name_true;
         read_sparse_location(&cli.loc, insn->pos);
         cl->insn(cl, &cli);
@@ -271,7 +315,7 @@ static void handle_insn_br(struct instruction *insn,
     // TODO: move to function?
     {
         struct cl_insn cli;
-        cli.type                        = CL_INSN_COND;
+        cli.code                        = CL_INSN_COND;
         cli.data.insn_cond.src          = &op;
         cli.data.insn_cond.then_label   = bb_name_true;
         cli.data.insn_cond.else_label   = bb_name_false;
@@ -305,11 +349,15 @@ static void handle_insn_switch(struct instruction *insn,
 
         // if true, it's case; default otherwise
         if (jmp->begin <= jmp->end) {
-            val_lo.type = CL_OPERAND_INT;
-            val_hi.type = CL_OPERAND_INT;
+            val_lo.code = CL_OPERAND_CST;
+            val_hi.code = CL_OPERAND_CST;
 
-            val_lo.data.lit_int.value = jmp->begin;
-            val_hi.data.lit_int.value = jmp->end;
+            // TODO: read types
+            val_lo.type = &builtin_int_type;
+            val_hi.type = &builtin_int_type;
+
+            val_lo.data.cst_int.value = jmp->begin;
+            val_hi.data.cst_int.value = jmp->end;
         }
 
         if (asprintf(&label, "%p", jmp->target) < 0)
@@ -336,7 +384,7 @@ static void handle_insn_ret(struct instruction *insn,
     struct cl_insn cli;
 
     pseudo_to_cl_operand(insn, insn->src, &op, false);
-    cli.type                = CL_INSN_RET;
+    cli.code                = CL_INSN_RET;
     cli.data.insn_ret.src   = &op;
     read_sparse_location(&cli.loc, insn->pos);
     cl->insn(cl, &cli);
@@ -367,8 +415,8 @@ static void insn_assignment_base(struct instruction                 *insn,
     // TODO: move to function?
     {
         struct cl_insn cli;
-        cli.type                    = CL_INSN_UNOP;
-        cli.data.insn_unop.type     = CL_UNOP_ASSIGN;
+        cli.code                    = CL_INSN_UNOP;
+        cli.data.insn_unop.code     = CL_UNOP_ASSIGN;
         cli.data.insn_unop.dst      = &op_lhs;
         cli.data.insn_unop.src      = &op_rhs;
         read_sparse_location(&cli.loc, insn->pos);
@@ -414,8 +462,8 @@ static void handle_insn_binop(struct instruction *insn, enum cl_operand_e type,
     // TODO: move to function?
     {
         struct cl_insn cli;
-        cli.type = CL_INSN_BINOP;
-        cli.data.insn_binop.type    = type;
+        cli.code = CL_INSN_BINOP;
+        cli.data.insn_binop.code    = type;
         cli.data.insn_binop.dst     = &dst;
         cli.data.insn_binop.src1    = &src1;
         cli.data.insn_binop.src2    = &src2;
@@ -581,12 +629,14 @@ static bool handle_insn(struct instruction *insn, struct cl_code_listener *cl)
 
 static bool is_insn_interesting(struct instruction *insn)
 {
+#if 0
     unsigned size = insn->size;
     if (size && KNOWN_PTR_SIZE != size) {
         WARN_VA(insn->pos, "ignored instruction with operand of size %d",
                 insn->size);
         return false;
     }
+#endif
 
     switch (insn->opcode) {
         case OP_ENTRY:
@@ -655,7 +705,7 @@ static void handle_fnc_ep(struct entrypoint *ep, struct cl_code_listener *cl)
     // TODO: move to function?
     {
         struct cl_insn cli;
-        cli.type                    = CL_INSN_JMP;
+        cli.code                    = CL_INSN_JMP;
         cli.data.insn_jmp.label     = entry_name;
         read_sparse_location(&cli.loc, entry->pos);
         cl->insn(cl, &cli);
@@ -711,7 +761,15 @@ static void handle_fnc_def(struct symbol *sym, struct cl_code_listener *cl)
 
     // dump argument list
     FOR_EACH_PTR(base_type->arguments, arg) {
-        cl->fnc_arg_decl(cl, ++argc, show_ident(arg->ident));
+        // TODO: cl->fnc_arg_decl(cl, ++argc, show_ident(arg->ident));
+        struct cl_operand op;
+        op.loc.file                 = NULL;
+        op.loc.line                 = -1;
+        op.code                     = CL_OPERAND_VAR;
+        op.type                     = /* TODO */ &builtin_fnc_type;
+        op.accessor                 = NULL;
+        op.data.var.name            = strdup(show_ident(arg->ident));
+        cl->fnc_arg_decl(cl, ++argc, &op);
     } END_FOR_EACH_PTR(arg);
 
     // handle fnc body

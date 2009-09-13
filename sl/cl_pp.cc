@@ -530,7 +530,7 @@ void ClPrettyPrint::printInsnUnop(const struct cl_insn *cli) {
 
     switch (code) {
         case CL_UNOP_TRUTH_NOT:
-            out_ << SSD_INLINE_COLOR(C_YELLOW, "!") << " ";
+            out_ << SSD_INLINE_COLOR(C_YELLOW, "!");
             // fall through!
 
         case CL_UNOP_ASSIGN:
