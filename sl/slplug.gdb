@@ -1,5 +1,8 @@
 file ../gcc-install/bin/gcc
-set args -fplugin=./slplug.so -std=c99 -pedantic -Wall -W -g -O0 -c data/dll.c
+set args -fplugin=./slplug.so -std=c99 -pedantic -Wall -W -g -O0 -fPIC -c \
+    -I.. -I../gcc -iquote. data/slplug.c \
+    -fplugin-arg-slplug-verbose=5 \
+    -fplugin-arg-slplug-dump-pp
 set confirm 0
 set follow-fork-mode child
 set pagination 0
