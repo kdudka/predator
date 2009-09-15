@@ -1,5 +1,5 @@
-#ifndef H_GUARD_CL_DOTGET_H
-#define H_GUARD_CL_DOTGET_H
+#ifndef H_GUARD_CL_DOTGEN_H
+#define H_GUARD_CL_DOTGEN_H
 
 struct ICodeListener;
 
@@ -8,4 +8,4 @@ struct ICodeListener;
  */
 ICodeListener* createClDotGenerator(const char *);
 
-#endif /* H_GUARD_CL_DOTGET_H */
+#endif /* H_GUARD_CL_DOTGEN_H */

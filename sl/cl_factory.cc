@@ -4,6 +4,7 @@
 #include "cl_factory.hh"
 #include "cl_locator.hh"
 #include "cl_pp.hh"
+#include "cl_typedot.hh"
 
 #include "cld_argsub.hh"
 #include "cld_intchk.hh"
@@ -254,6 +255,7 @@ ClFactory::ClFactory():
     d->map["dotgen"]    = &createClDotGenerator;
     d->map["locator"]   = &createClLocator;
     d->map["pp"]        = &createClPrettyPrint;
+    d->map["typedot"]   = &createClTypeDotGenerator;
 }
 
 ClFactory::~ClFactory() {
