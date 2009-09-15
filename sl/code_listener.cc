@@ -244,6 +244,8 @@ struct cl_code_listener* cl_create_listener_wrap(ICodeListener *listener)
 {
     struct cl_code_listener *wrap = new cl_code_listener;
     wrap->data              = listener;
+
+    // pure C callback to C++ object wrappers
     wrap->reg_type_db       = cl_wrap_reg_type_db;
     wrap->file_open         = cl_wrap_file_open;
     wrap->file_close        = cl_wrap_file_close;
@@ -282,6 +284,7 @@ struct cl_code_listener* cl_code_listener_create(const char *config_string)
     }
 }
 
+// TODO: review
 std::ostream& operator<<(std::ostream &str, const LocationWriter &lw) {
     const Location &loc     = lw.loc;
     const Location &last    = lw.last;
