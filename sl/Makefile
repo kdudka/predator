@@ -97,6 +97,7 @@ chkplug: slplug.so
 		-fplugin-arg-slplug-verbose=1 \
 		-fplugin-arg-slplug-dump-pp \
 		-fplugin-arg-slplug-gen-dot=data/all.dot \
+		-fplugin-arg-slplug-type-dot=data/types.dot \
 		-c data/slplug.c
 
 SFLAGS += -Wno-decl

@@ -2,9 +2,9 @@
 #include "cl_private.hh"
 
 #include <fstream>
-#include <map>
 #include <set>
-#include <sstream>
+#include <stack>
+#include <vector>
 
 class ClTypeDotGenerator: public AbstractCodeListener {
     public:
@@ -107,11 +107,42 @@ class ClTypeDotGenerator: public AbstractCodeListener {
         virtual void insn_switch_close() { }
 
     private:
+        typedef std::stack<cl_type_uid_t>               TStack;
+
         std::ofstream           glOut_;
         Location                loc_;
         std::string             fnc_;
 
+        std::set<cl_type_uid_t> typeSet_;
+
     private:
+        struct Edge {
+            cl_type_uid_t   src;
+            cl_type_uid_t   dst;
+            enum cl_type_e  code;
+            std::string     label;
+
+            Edge(cl_type_uid_t src_, cl_type_uid_t dst_, enum cl_type_e code_,
+                    const std::string &label_):
+                src(src_),
+                dst(dst_),
+                code(code_),
+                label(label_)
+            {
+            }
+        };
+        typedef std::vector<Edge>                       TEdgeList;
+
+        TEdgeList               pendingEdges_;
+        static const char       *CltColors[];
+
+    private:
+        void printType(const struct cl_type *clt);
+        void gobbleEdge(cl_type_uid_t src, cl_type_uid_t dst,
+                        enum cl_type_e code, const char *label);
+        void emitPendingEdges();
+        void digOneType(const struct cl_type *, TStack &);
+        void handleType(cl_type_uid_t uid);
         void handleOperand(const struct cl_operand *operand);
 };
 
@@ -123,52 +154,25 @@ class ClTypeDotGenerator: public AbstractCodeListener {
     << "\tlabel=<<FONT POINT-SIZE=\"18\">" << name << "</FONT>>;" << std::endl \
     << "\tlabelloc=t;" << std::endl
 
-#if 0
-#define SL_QUOTE_BB(bb) \
-    SL_QUOTE(fnc_ << "." << bb)
-
-#define SL_BB_POS_SUFFIX \
-    "." << bbPos_
-
-#define SL_BB_ENTRY_SUFFIX ".0"
-
-#define SL_DOT_SUFFIX ".svg"
-
-#define SL_QUOTE_PER_FILE_URL \
-    SL_QUOTE(basename((char *) loc_.currentFile.c_str()) << SL_DOT_SUFFIX)
-
-#define SL_QUOTE_URL(fnc) \
-    SL_QUOTE(basename((char *) loc_.currentFile.c_str()) \
-    << "-" << fnc << SL_DOT_SUFFIX)
-
-#define SL_SUBGRAPH(name, label) \
-    "subgraph \"cluster" << name << "\" {" << std::endl \
-    << "\tlabel=" << SL_QUOTE(label) << ";" << std::endl
-#endif
-
 using std::ios;
 using std::string;
 
-#if 0
-const char *ClTypeDotGenerator::NtColors[ClTypeDotGenerator::CNT_NT] = {
-    "black",                        // NT_PLAIN
-    "blue",                         // NT_ENTRY
-    "blue",                         // NT_RET
-    "red"                           // NT_ABORT
+enum {
+    CNT_CL_TYPES = /* FIXME */ CL_TYPE_STRING + 1
 };
-
-const char *ClTypeDotGenerator::EtColors[ClTypeDotGenerator::CNT_ET] = {
-    "black",                        // ET_JMP
-    "green",                        // ET_COND_THEN
-    "green",                        // ET_COND_ELSE,
-    "yellow",                       // ET_SWITCH_CASE
-    "blue",                         // ET_LC_CALL
-    "red",                          // ET_LC_CALL_INDIR
-    "blue",                         // ET_GL_CALL
-    "red",                          // ET_GL_CALL_INDIR
-    "green"                         // ET_PTR_CALL
+const char *ClTypeDotGenerator::CltColors[CNT_CL_TYPES] = {
+    "green",                        // CL_TYPE_VOID
+    "red",                          // CL_TYPE_PTR
+    "blue",                         // CL_TYPE_STRUCT
+    "cyan",                         // CL_TYPE_UNION
+    "yellow",                       // CL_TYPE_ARRAY
+    "black",                        // CL_TYPE_FNC
+    "green",                        // CL_TYPE_INT
+    "green",                        // CL_TYPE_CHAR
+    "green",                        // CL_TYPE_BOOL
+    "green",                        // CL_TYPE_ENUM
+    "purple",                       // CL_TYPE_STRING
 };
-#endif
 
 // /////////////////////////////////////////////////////////////////////////////
 // ClTypeDotGenerator implementation
@@ -193,93 +197,176 @@ ClTypeDotGenerator::~ClTypeDotGenerator() {
     glOut_.close();
 }
 
-#if 0
-    glOut_ << "\t" << SL_QUOTE(fnc_) << " -> " << SL_QUOTE(dst)
-        << " [color=" << EtColors[type] << "];" << std::endl;
+namespace {
+    // FIXME: copy pasted from cl_pp.cc
+    const char* typeName(const struct cl_type *clt) {
+        if (!clt)
+            TRAP;
 
-    perFileOut_ << "\t" << SL_QUOTE_BB(bb_) << " -> " << SL_QUOTE_BB(dst)
-            << " [color=" << EtColors[type] << "];" << std::endl;
+        const char *name = clt->name;
+        return (name)
+            ? name
+            : "<anon_type>";
+    }
+}
 
-    // colorize current BB node
-    perFileOut_ << "\t" << SL_QUOTE_BB(bb_)
-        << " [color=" << NtColors[nodeType_]
-        << ", label=" << SL_QUOTE(bb_) << "];"
-        << std::endl;
+// FIXME: copy pasted from ClPrettyPrint::printVarType
+void ClTypeDotGenerator::printType(const struct cl_type *clt) {
+    string str;
+    for (; clt; clt = this->getType(clt->items[0].type)) {
+        enum cl_type_e code = clt->code;
+        switch (code) {
+            case CL_TYPE_PTR:
+                str = string("*") + str;
+                break;
 
-    perFileOut_ << "\t" << SL_QUOTE_BB(i->second)
-        << " -> " << SL_QUOTE_BB(dst)
-        << " [color=" << EtColors[type] << "];"
-        << std::endl;
+            case CL_TYPE_ARRAY:
+                str = string("[]") + str;
+                break;
 
-    FILE_FNC_STREAM(SL_SUBGRAPH(fnc_ << "." << label, fnc_
-                << "() at " << loc_.locFile << ":" << loc_.locLine)
-            << "\tcolor=blue;" << std::endl
-            << "\tbgcolor=gray99;" << std::endl);
+            default:
+                goto deref_done;
+        }
+    }
+deref_done:
 
-    perFncOut_ << "\tURL=" << SL_QUOTE_PER_FILE_URL << ";" << std::endl
-        << "\t" << SL_QUOTE_BB(bb_ << SL_BB_POS_SUFFIX)
-            << " [shape=box, color=blue, fontcolor=blue, style=bold,"
-            << " label=ENTRY];" << std::endl
-        << "\t" << SL_QUOTE_BB(bb_ << SL_BB_POS_SUFFIX) << " -> "
-        << SL_QUOTE_BB(label << SL_BB_ENTRY_SUFFIX)
-            << " [color=black];" << std::endl;
+    enum cl_type_e code = clt->code;
+    switch (code) {
+        case CL_TYPE_VOID:
+            glOut_ << "void";
+            break;
 
-    perFileOut_ << "\tURL=" << SL_QUOTE_URL(fnc_) << ";" << std::endl;
+        case CL_TYPE_STRUCT:
+            glOut_ << "struct" << " " << typeName(clt);
+            break;
 
-    perFncOut_ << "\t" << SL_QUOTE_BB(bb_ << SL_BB_POS_SUFFIX)
-        << " [shape=box, color=black, fontcolor=black,"
-        << " style=bold, label=goto];" << std::endl;
+        case CL_TYPE_UNION:
+            glOut_ << "union" << " " << typeName(clt);
+            break;
 
-    perFncOut_ << "\t" << SL_QUOTE_BB(bb_ << SL_BB_POS_SUFFIX)
-        << " [shape=box, color=green, fontcolor=green, style=bold,"
-        << " label=if];" << std::endl;
+        case CL_TYPE_FNC:
+            glOut_ << "fnc";
+            break;
 
-    perFncOut_ << "\t" << SL_QUOTE_BB(bb_ << SL_BB_POS_SUFFIX) << " -> "
-            << SL_QUOTE_BB(then_label << SL_BB_ENTRY_SUFFIX)
-            << " [color=green];" << std::endl
-        << "\t" << SL_QUOTE_BB(bb_ << SL_BB_POS_SUFFIX) << " -> "
-            << SL_QUOTE_BB(else_label << SL_BB_ENTRY_SUFFIX)
-            << " [color=green];" << std::endl;
+        case CL_TYPE_INT:
+            glOut_ << "int";
+            break;
 
-    perFncOut_ << "\t" << SL_QUOTE_BB(bb_ << SL_BB_POS_SUFFIX)
-            << " [shape=box, color=black, fontcolor=gray, style=dotted,"
-            << " label=\"...\"];" << std::endl
-            << "\t" << SL_QUOTE_BB(bb_ << SL_BB_POS_SUFFIX) << " -> ";
+        case CL_TYPE_CHAR:
+            glOut_ << "char";
+            break;
 
-    perFncOut_ << SL_QUOTE_BB(bb_ << SL_BB_POS_SUFFIX)
-            << " [color=gray, style=dotted, arrowhead=open];"
-            << std::endl;
+        case CL_TYPE_BOOL:
+            glOut_ << "bool";
+            break;
 
-    perFncOut_ << "\t" << SL_QUOTE_BB(bb_ << SL_BB_POS_SUFFIX)
-            << " [shape=box, color=blue, fontcolor=blue, style=dashed,"
-            << " label=call];" << std::endl;
+        case CL_TYPE_ENUM:
+            glOut_ << "enum" << " " << typeName(clt);
+            break;
 
-    perFncOut_ << SL_QUOTE_BB(bb_ << SL_BB_POS_SUFFIX)
-            << " [color=gray, style=dotted, arrowhead=open];"
-            << std::endl;
+        default:
+            TRAP;
+    }
 
-    glOut_ << SL_SUBGRAPH(file_name, file_name)
-        << "\tcolor=red;" << std::endl
-        << "\tURL=" << SL_QUOTE_PER_FILE_URL << ";" << std::endl;
+    if (!str.empty())
+        str = string(" ") + str;
+    glOut_ << str;
+}
 
-    perFncOut_ << SL_SUBGRAPH(fnc_ << "::" << bb_, bb_)
-        << "\tcolor=black;" << std::endl
-        << "\tbgcolor=white;" << std::endl
-        << "\tstyle=dashed;" << std::endl
-        << "\tURL=\"\";" << std::endl;
+void ClTypeDotGenerator::gobbleEdge(cl_type_uid_t src, cl_type_uid_t dst,
+                                    enum cl_type_e code, const char *label)
+{
+    string strLabel;
+    if (label)
+        strLabel = label;
 
-            perFncOut_ << "\t" << SL_QUOTE_BB(bb_ << SL_BB_POS_SUFFIX)
-                << " [shape=box, color=blue, fontcolor=blue, style=bold,"
-                << " label=ret];" << std::endl;
+    pendingEdges_.push_back(Edge(src, dst, code, strLabel));
+}
 
-            perFncOut_ << "\t" << SL_QUOTE_BB(bb_ << SL_BB_POS_SUFFIX)
-                << " [shape=box, color=red, fontcolor=red, style=bold,"
-                << " label=abort];" << std::endl;
-            ClTypeDotGenerator::closeSub(perFncOut_);
-#endif
+void ClTypeDotGenerator::emitPendingEdges() {
+    TEdgeList::iterator i;
+    for (i = pendingEdges_.begin(); i != pendingEdges_.end(); ++i) {
+        const Edge &e = *i;
+        glOut_ << e.src << " -> " << e.dst
+            << "[color=" << CltColors[e.code];
+        if (!e.label.empty())
+            glOut_ << ", label=\"" << e.label << "\"";
+        glOut_ << "];" << std::endl;
+    }
+    pendingEdges_.clear();
+}
 
-void ClTypeDotGenerator::handleOperand(const struct cl_operand *operand) {
-    // TODO
+void ClTypeDotGenerator::digOneType(const struct cl_type *type, TStack &st)
+{
+    if (!type)
+        // TRAP;
+        return;
+
+    cl_type_uid_t uid = type->uid;
+    enum cl_type_e code = type->code;
+
+    glOut_ << uid << " [label=\"#" << uid << ": ";
+    this->printType(type);
+    glOut_ << "\", color=" << CltColors[code] << "];" << std::endl;
+
+    switch (code) {
+        case CL_TYPE_VOID:
+            break;
+
+        case CL_TYPE_PTR:
+        case CL_TYPE_ARRAY:
+        case CL_TYPE_STRUCT:
+        case CL_TYPE_UNION: {
+                int cnt = type->item_cnt;
+                if (CL_TYPE_ARRAY == code)
+                    cnt = 1;
+
+                for (int i = 0; i < cnt; ++i) {
+                    struct cl_type_item &item = type->items[i];
+                    cl_type_uid_t dst = item.type;
+                    st.push(dst);
+                    this->gobbleEdge(uid, dst, code, item.name);
+                }
+            }
+            break;
+
+        case CL_TYPE_FNC:
+        case CL_TYPE_INT:
+        case CL_TYPE_CHAR:
+        case CL_TYPE_BOOL:
+        case CL_TYPE_ENUM:
+        case CL_TYPE_STRING:
+            break;
+    }
+}
+
+void ClTypeDotGenerator::handleType(cl_type_uid_t uid) {
+    TStack st;
+    st.push(uid);
+
+    while (!st.empty()) {
+        cl_type_uid_t curr = st.top();
+        st.pop();
+
+        if (hasKey(typeSet_, curr))
+            continue;
+
+        typeSet_.insert(curr);
+        this->digOneType(AbstractCodeListener::getType(curr), st);
+    }
+
+    this->emitPendingEdges();
+}
+
+void ClTypeDotGenerator::handleOperand(const struct cl_operand *op) {
+    if (!op || op->code == CL_OPERAND_VOID)
+        return;
+
+    const struct cl_type *type = op->type;
+    if (!type)
+        return;
+
+    this->handleType(type->uid);
 }
 
 // /////////////////////////////////////////////////////////////////////////////
