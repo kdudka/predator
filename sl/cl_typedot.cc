@@ -146,14 +146,6 @@ class ClTypeDotGenerator: public AbstractCodeListener {
         void handleOperand(const struct cl_operand *operand);
 };
 
-#define SL_QUOTE(what) \
-    "\"" << what << "\""
-
-#define SL_GRAPH(name) \
-    "digraph " << SL_QUOTE(name) << " {" << std::endl \
-    << "\tlabel=<<FONT POINT-SIZE=\"18\">" << name << "</FONT>>;" << std::endl \
-    << "\tlabelloc=t;" << std::endl
-
 using std::ios;
 using std::string;
 
@@ -185,7 +177,10 @@ ClTypeDotGenerator::ClTypeDotGenerator(const char *glDotFile)
         CL_MSG_STREAM_INTERNAL(cl_error, "error: "
                                "unable to create file '" << glDotFile << "'");
     }
-    glOut_ << SL_GRAPH("data type graph");
+    glOut_ << "digraph types" << " {" << std::endl
+        << "\tlabel=<<FONT POINT-SIZE=\"18\">"
+        << "\"data type graph\"" << "</FONT>>;" << std::endl
+        << "\tlabelloc=t;" << std::endl;
 }
 
 ClTypeDotGenerator::~ClTypeDotGenerator() {
@@ -370,7 +365,7 @@ void ClTypeDotGenerator::handleOperand(const struct cl_operand *op) {
 }
 
 // /////////////////////////////////////////////////////////////////////////////
-// public interface, see cl_dotgen.hh for more details
+// public interface, see cl_typedot.hh for more details
 ICodeListener* createClTypeDotGenerator(const char *args) {
     return new ClTypeDotGenerator(args);
 }
