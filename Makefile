@@ -4,6 +4,8 @@ GCC_INSTALL = gcc-install
 GCC_LIBS_PREFIX ?= /usr
 
 INVADER = invader.zip
+INVADER_DIR = invader-1_1
+INVADER_CIL = $(INVADER_DIR)/sources/cil
 LIST = $(INVADER)
 
 SPARSE = sparse
@@ -16,10 +18,16 @@ SVN ?= svn
 
 .PHONY: build_gcc fetch sl unpack update_gcc update_gcc_src_only
 
-fetch: $(LIST) $(SPARSE)
+fetch: $(LIST) $(SPARSE) $(SSD_GIT)
+unpack: $(INVADER_DIR)
 
-unpack: fetch
+$(INVADER_DIR): $(INVADER)
 	unzip -o $(INVADER)
+
+build_inv: $(INVADER_DIR)
+	cd $(INVADER_CIL) && ./configure # TODO: --prefix=...
+	$(MAKE) -C $(INVADER_CIL) -j1 # oops, we don't support parallel build?
+	# TODO: make install
 
 build_gcc: $(GCC_SRC)
 	@if test -d $(GCC_BUILD); then \
