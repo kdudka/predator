@@ -3,10 +3,14 @@ GCC_BUILD = gcc-build
 GCC_INSTALL = gcc-install
 GCC_LIBS_PREFIX ?= /usr
 
+ABDUCT = abduction.tgz
+ABDUCT_DIR = abductor_prover
+ABDUCT_CIL = $(ABDUCT_DIR)/cil
 INVADER = invader.zip
 INVADER_DIR = invader-1_1
-INVADER_CIL = $(INVADER_DIR)/sources/cil
-LIST = $(INVADER)
+INVADER_SRC = $(INVADER_DIR)/sources
+INVADER_CIL = $(INVADER_SRC)/cil
+DNL_LIST = $(ABDUCT) $(INVADER)
 
 SPARSE = sparse
 CGT_GIT = cgt
@@ -16,17 +20,38 @@ CURL ?= curl --location -v
 GIT ?= git
 SVN ?= svn
 
-.PHONY: build_gcc fetch sl unpack update_gcc update_gcc_src_only
+.PHONY: fetch unpack \
+	build_abd build_inv \
+	build_gcc update_gcc update_gcc_src_only \
+	sl
 
-fetch: $(LIST) $(SPARSE) $(SSD_GIT)
-unpack: $(INVADER_DIR)
+fetch: $(DNL_LIST) $(SPARSE) $(SSD_GIT)
+unpack: $(ABDUCT_DIR) $(INVADER_DIR)
+
+$(ABDUCT_DIR): $(ABDUCT) $(INVADER)
+	if test -e $(ABDUCT_DIR); then \
+			echo; \
+			echo "--- not implemented yet"; \
+			echo "--- please run 'rm -rf $(ABDUCT_DIR)' to force unpack..."; \
+			echo "--- ... or 'touch $(ABDUCT_DIR)' to skip unpack phase"; \
+			echo; \
+			exit 1; \
+	fi
+	unzip -d $(ABDUCT_DIR) -o $(INVADER)
+	cd $(ABDUCT_DIR) && mv -v $(INVADER_SRC)/* . && rm -rf $(INVADER_DIR)
+	tar xf $(ABDUCT)
 
 $(INVADER_DIR): $(INVADER)
 	unzip -o $(INVADER)
 
+build_abd: $(ABDUCT_DIR)
+	cd $(ABDUCT_CIL) && ./configure
+	$(MAKE) -C $(ABDUCT_CIL) -j1
+
 build_inv: $(INVADER_DIR)
 	cd $(INVADER_CIL) && ./configure # TODO: --prefix=...
 	$(MAKE) -C $(INVADER_CIL) -j1 # oops, we don't support parallel build?
+	# TODO: make check ... challenge? :-)
 	# TODO: make install
 
 build_gcc: $(GCC_SRC)
@@ -61,6 +86,9 @@ update_gcc: update_gcc_src_only
 sl: $(SPARSE) $(SSD_GIT)
 	test -d $(GCC_INSTALL) || $(MAKE) build_gcc
 	$(MAKE) check -C sl
+
+$(ABDUCT):
+	$(CURL) -o $@ 'http://www.eastlondonmassive.org/abduction.tgz'
 
 $(INVADER):
 	$(CURL) -o $@ 'http://www.eastlondonmassive.org/invader-1_1.zip'

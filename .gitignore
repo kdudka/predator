@@ -1,4 +1,4 @@
-cgt/
+abduction.tgz
 gcc-build/
 gcc-install/
 gcc-src/
@@ -8,8 +8,6 @@ separate/*.o
 separate/separate
 separate/tags
 separate/test-all
-sparse-0.4.1/
-sparse.tar.gz
 sparse/
 ssd/
 gcc
