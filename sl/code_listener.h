@@ -173,8 +173,18 @@ enum cl_accessor_e {
 struct cl_accessor {
     enum cl_accessor_e                  code;
     struct cl_type                      *type;
-    int                                 item;
     struct cl_accessor                  *next;
+    union {
+        /* CL_ACCESSOR_DEREF_ARRAY */
+        struct {
+            struct cl_operand           *index;
+        } array;
+
+        /* CL_ACCESSOR_ITEM */
+        struct {
+            int                         id;
+        } item;
+    } data;
 };
 
 /**

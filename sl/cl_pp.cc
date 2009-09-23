@@ -337,7 +337,7 @@ void ClPrettyPrint::printNestedVar(const struct cl_operand *op) {
 
 const char* ClPrettyPrint::getItemName(const struct cl_accessor *ac) {
     const struct cl_type_item *items = ac->type->items;
-    const char *name = items[ac->item].name;
+    const char *name = items[ac->data.item.id].name;
     return (name)
         ? name
         : "<anon_item>";
@@ -391,9 +391,12 @@ void ClPrettyPrint::printOperandVar(const struct cl_operand *op) {
         enum cl_accessor_e code = ac->code;
         switch (code) {
             case CL_ACCESSOR_DEREF_ARRAY:
-                out_ << SSD_INLINE_COLOR(C_LIGHT_RED, "[")
-                    << SSD_INLINE_COLOR(C_WHITE, ac->item)
-                    << SSD_INLINE_COLOR(C_LIGHT_RED, "]");
+                out_ << SSD_INLINE_COLOR(C_LIGHT_RED, "[");
+
+                // FIXME: possible recursion (not intentional)
+                this->printOperand(ac->data.array.index);
+
+                out_ << SSD_INLINE_COLOR(C_LIGHT_RED, "]");
                 break;
 
             case CL_ACCESSOR_ITEM:

@@ -482,6 +482,8 @@ static struct cl_type* operand_type_lookup(tree t)
     return type_db_lookup(type_db, add_type_if_needed(op0));
 }
 
+static void handle_operand(struct cl_operand *op, tree t);
+
 static void handle_accessor_array_ref(struct cl_accessor **ac, tree t)
 {
     chain_accessor(ac, CL_ACCESSOR_DEREF_ARRAY);
@@ -491,16 +493,12 @@ static void handle_accessor_array_ref(struct cl_accessor **ac, tree t)
     if (!op1)
         TRAP;
 
-    enum tree_code code = TREE_CODE(op1);
-    if (INTEGER_CST != code) {
-        SL_WARN_UNHANDLED_EXPR(t, "non-constant array accessor");
-        (*ac)->item = -1;
-        return;
-    }
+    struct cl_operand *index = GGC_CNEW(struct cl_operand);
+    SL_ASSERT(index);
 
-    if (TREE_INT_CST_HIGH(op1))
-        TRAP;
-    (*ac)->item = TREE_INT_CST_LOW(op1);
+    // FIXME: unguarded recursion
+    handle_operand(index, op1);
+    (*ac)->data.array.index = index;
 }
 
 static void handle_accessor_indirect_ref(struct cl_accessor **ac, tree t)
@@ -514,8 +512,8 @@ static void handle_accessor_component_ref(struct cl_accessor **ac, tree t)
     chain_accessor(ac, CL_ACCESSOR_ITEM);
 
     struct cl_type *type = operand_type_lookup(t);
-    (*ac)->type = type;
-    (*ac)->item = accessor_item_lookup(type, TREE_OPERAND(t, 1));
+    (*ac)->type         = type;
+    (*ac)->data.item.id = accessor_item_lookup(type, TREE_OPERAND(t, 1));
 }
 
 static bool handle_accessor(struct cl_accessor **ac, tree *pt)
