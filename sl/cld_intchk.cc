@@ -362,6 +362,7 @@ class CldRegUsageChk: public ClDecoratorBase {
 
     private:
         void reset();
+        void handleArrayIdx(const struct cl_operand *);
         void handleDst(const struct cl_operand *);
         void handleSrc(const struct cl_operand *);
         void handleDstSrc(const struct cl_operand *);
@@ -586,7 +587,24 @@ void CldRegUsageChk::reset() {
     map_.clear();
 }
 
+void CldRegUsageChk::handleArrayIdx(const struct cl_operand *op) {
+    if (CL_OPERAND_VOID == op->code)
+        return;
+
+    struct cl_accessor *ac = op->accessor;
+    for (; ac; ac = ac->next) {
+        if (ac->code != CL_ACCESSOR_DEREF_ARRAY)
+            continue;
+
+        struct cl_operand *idx = ac->data.array.index;
+        if (CL_OPERAND_REG == idx->code)
+            // FIXME: unguarded recursion
+            this->handleSrc(idx);
+    }
+}
+
 void CldRegUsageChk::handleDst(const struct cl_operand *op) {
+    this->handleArrayIdx(op);
     if (CL_OPERAND_REG != op->code)
         return;
 
@@ -597,6 +615,7 @@ void CldRegUsageChk::handleDst(const struct cl_operand *op) {
 }
 
 void CldRegUsageChk::handleSrc(const struct cl_operand *op) {
+    this->handleArrayIdx(op);
     if (CL_OPERAND_REG != op->code)
         return;
 

@@ -138,6 +138,20 @@ int CldUniRegs::regLookup(int reg) {
 }
 
 void CldUniRegs::relocReg(struct cl_operand *op) {
+    if (CL_OPERAND_VOID == op->code)
+        return;
+
+    struct cl_accessor *ac = op->accessor;
+    for (; ac; ac = ac->next) {
+        if (ac->code != CL_ACCESSOR_DEREF_ARRAY)
+            continue;
+
+        if (CL_OPERAND_REG == ac->data.array.index->code)
+            CL_MSG_STREAM_INTERNAL(cl_warn, "warning: "
+                                   "CL_ACCESSOR_DEREF_ARRAY not handled "
+                                   "by CldUniRegs::relocReg()");
+    }
+
     if (CL_OPERAND_REG != op->code)
         return;
 
