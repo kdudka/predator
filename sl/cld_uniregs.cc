@@ -24,17 +24,25 @@ class CldUniRegs: public ClDecoratorBase {
             switch (cli->code) {
                 case CL_INSN_COND: {
                         struct cl_operand src = *(cli->data.insn_cond.src);
+                        CldUniRegs::cloneAccessor(&src);
+
                         this->relocReg(&src);
                         local_cli.data.insn_cond.src = &src;
+
                         ClDecoratorBase::insn(&local_cli);
+                        CldUniRegs::freeClonedAccessor(&src);
                     }
                     break;
 
                 case CL_INSN_RET: {
                         struct cl_operand src = *(cli->data.insn_ret.src);
+                        CldUniRegs::cloneAccessor(&src);
+
                         this->relocReg(&src);
                         local_cli.data.insn_ret.src = &src;
+
                         ClDecoratorBase::insn(&local_cli);
+                        CldUniRegs::freeClonedAccessor(&src);
                     }
                     break;
 
@@ -42,12 +50,18 @@ class CldUniRegs: public ClDecoratorBase {
                         struct cl_operand dst = *(cli->data.insn_unop.dst);
                         struct cl_operand src = *(cli->data.insn_unop.src);
 
+                        CldUniRegs::cloneAccessor(&dst);
+                        CldUniRegs::cloneAccessor(&src);
+
                         this->relocReg(&dst);
                         this->relocReg(&src);
 
                         local_cli.data.insn_unop.dst = &dst;
                         local_cli.data.insn_unop.src = &src;
                         ClDecoratorBase::insn(&local_cli);
+
+                        CldUniRegs::freeClonedAccessor(&dst);
+                        CldUniRegs::freeClonedAccessor(&src);
                     }
                     break;
 
@@ -55,6 +69,10 @@ class CldUniRegs: public ClDecoratorBase {
                         struct cl_operand dst = *(cli->data.insn_binop.dst);
                         struct cl_operand src1 = *(cli->data.insn_binop.src1);
                         struct cl_operand src2 = *(cli->data.insn_binop.src2);
+
+                        CldUniRegs::cloneAccessor(&dst);
+                        CldUniRegs::cloneAccessor(&src1);
+                        CldUniRegs::cloneAccessor(&src2);
 
                         this->relocReg(&dst);
                         this->relocReg(&src1);
@@ -64,6 +82,10 @@ class CldUniRegs: public ClDecoratorBase {
                         local_cli.data.insn_binop.src1 = &src1;
                         local_cli.data.insn_binop.src2 = &src2;
                         ClDecoratorBase::insn(&local_cli);
+
+                        CldUniRegs::freeClonedAccessor(&dst);
+                        CldUniRegs::freeClonedAccessor(&src1);
+                        CldUniRegs::freeClonedAccessor(&src2);
                     }
                     break;
 
@@ -81,10 +103,16 @@ class CldUniRegs: public ClDecoratorBase {
             struct cl_operand local_dst = *dst;
             struct cl_operand local_fnc = *fnc;
 
+            CldUniRegs::cloneAccessor(&local_dst);
+            CldUniRegs::cloneAccessor(&local_fnc);
+
             this->relocReg(&local_dst);
             this->relocReg(&local_fnc);
 
             ClDecoratorBase::insn_call_open(loc, &local_dst, &local_fnc);
+
+            CldUniRegs::freeClonedAccessor(&local_dst);
+            CldUniRegs::freeClonedAccessor(&local_fnc);
         }
 
         virtual void insn_call_arg(
@@ -92,8 +120,12 @@ class CldUniRegs: public ClDecoratorBase {
             const struct cl_operand *arg_src)
         {
             struct cl_operand local_src = *arg_src;
+            CldUniRegs::cloneAccessor(&local_src);
+
             this->relocReg(&local_src);
+
             ClDecoratorBase::insn_call_arg(arg_id, &local_src);
+            CldUniRegs::freeClonedAccessor(&local_src);
         }
 
         virtual void insn_switch_open(
@@ -101,8 +133,12 @@ class CldUniRegs: public ClDecoratorBase {
             const struct cl_operand *src)
         {
             struct cl_operand local_src = *src;
+            CldUniRegs::cloneAccessor(&local_src);
+
             this->relocReg(&local_src);
+
             ClDecoratorBase::insn_switch_open(loc, &local_src);
+            CldUniRegs::freeClonedAccessor(&local_src);
         }
 
     private:
@@ -112,10 +148,49 @@ class CldUniRegs: public ClDecoratorBase {
         int             last_;
 
     private:
+        static void cloneAccessor(struct cl_operand *);
+        static void freeClonedAccessor(struct cl_operand *);
+
+    private:
         void reset();
         int regLookup(int);
         void relocReg(struct cl_operand *op);
 };
+
+void CldUniRegs::cloneAccessor(struct cl_operand *op) {
+    if (!op)
+        TRAP;
+
+    // Traverse cl_accessor chain recursively and make a deep copy of it.
+    // For each CL_ACCESSOR_DEREF_ARRAY clone its index operand as well.
+    struct cl_accessor **ac = &op->accessor;
+    for (; *ac; ac = &((*ac)->next)) {
+        *ac = new struct cl_accessor(**ac);
+        if ((*ac)->code == CL_ACCESSOR_DEREF_ARRAY)
+            (*ac)->data.array.index =
+                new struct cl_operand(*(*ac)->data.array.index);
+    }
+}
+
+// free all memory allocated by CldUniRegs::cloneAccessor
+// it is not inverse operation to cloneAccessor() since the cl_accessor chain is
+// deleted completely without any chance to restore it afterwards
+void CldUniRegs::freeClonedAccessor(struct cl_operand *op) {
+    if (!op)
+        TRAP;
+
+    struct cl_accessor *ac = op->accessor;
+    while (ac) {
+        struct cl_accessor *next = ac->next;
+        if (ac->code == CL_ACCESSOR_DEREF_ARRAY)
+            delete ac->data.array.index;
+
+        delete ac;
+        ac = next;
+    }
+
+    op->accessor = 0;
+}
 
 CldUniRegs::CldUniRegs(ICodeListener *slave):
     ClDecoratorBase(slave),
@@ -143,13 +218,9 @@ void CldUniRegs::relocReg(struct cl_operand *op) {
 
     struct cl_accessor *ac = op->accessor;
     for (; ac; ac = ac->next) {
-        if (ac->code != CL_ACCESSOR_DEREF_ARRAY)
-            continue;
-
-        if (CL_OPERAND_REG == ac->data.array.index->code)
-            CL_MSG_STREAM_INTERNAL(cl_warn, "warning: "
-                                   "CL_ACCESSOR_DEREF_ARRAY not handled "
-                                   "by CldUniRegs::relocReg()");
+        if (ac->code == CL_ACCESSOR_DEREF_ARRAY)
+            // FIXME: unguarded recursion
+            this->relocReg(ac->data.array.index);
     }
 
     if (CL_OPERAND_REG != op->code)
