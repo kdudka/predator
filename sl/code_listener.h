@@ -308,11 +308,18 @@ enum cl_binop_e {
     /* arithmetic */
     CL_BINOP_PLUS,
     CL_BINOP_MINUS,
+    CL_BINOP_MULT,
     CL_BINOP_TRUNC_DIV,
     CL_BINOP_TRUNC_MOD,
     CL_BINOP_RDIV,
     CL_BINOP_MIN,
-    CL_BINOP_MAX
+    CL_BINOP_MAX,
+
+    /* bitwise */
+    CL_BINOP_BIT_AND,
+    CL_BINOP_BIT_IOR,
+    CL_BINOP_BIT_XOR
+
     /* TODO */
 };
 

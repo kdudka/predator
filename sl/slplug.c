@@ -646,6 +646,7 @@ static void handle_stmt_binop(gimple stmt, enum tree_code code,
         case GE_EXPR:               *ptype = CL_BINOP_GE;               break;
         case PLUS_EXPR:             *ptype = CL_BINOP_PLUS;             break;
         case MINUS_EXPR:            *ptype = CL_BINOP_MINUS;            break;
+        case MULT_EXPR:             *ptype = CL_BINOP_MULT;             break;
         case TRUNC_DIV_EXPR:        *ptype = CL_BINOP_TRUNC_DIV;        break;
         case TRUNC_MOD_EXPR:        *ptype = CL_BINOP_TRUNC_MOD;        break;
         case RDIV_EXPR:             *ptype = CL_BINOP_RDIV;             break;
@@ -654,6 +655,9 @@ static void handle_stmt_binop(gimple stmt, enum tree_code code,
         case TRUTH_AND_EXPR:        *ptype = CL_BINOP_TRUTH_AND;        break;
         case TRUTH_OR_EXPR:         *ptype = CL_BINOP_TRUTH_OR;         break;
         case TRUTH_XOR_EXPR:        *ptype = CL_BINOP_TRUTH_XOR;        break;
+        case BIT_AND_EXPR:          *ptype = CL_BINOP_BIT_AND;          break;
+        case BIT_IOR_EXPR:          *ptype = CL_BINOP_BIT_IOR;          break;
+        case BIT_XOR_EXPR:          *ptype = CL_BINOP_BIT_XOR;          break;
 
 #define SL_BINOP_UNHANDLED(what) \
     case what: SL_WARN_UNHANDLED_GIMPLE(stmt, #what); \
@@ -661,14 +665,10 @@ static void handle_stmt_binop(gimple stmt, enum tree_code code,
                break;
 
         SL_BINOP_UNHANDLED(EXACT_DIV_EXPR)
-        SL_BINOP_UNHANDLED(BIT_AND_EXPR)
-        SL_BINOP_UNHANDLED(BIT_IOR_EXPR)
-        SL_BINOP_UNHANDLED(BIT_XOR_EXPR)
         SL_BINOP_UNHANDLED(LSHIFT_EXPR)
         SL_BINOP_UNHANDLED(RSHIFT_EXPR)
         SL_BINOP_UNHANDLED(LROTATE_EXPR)
         SL_BINOP_UNHANDLED(RROTATE_EXPR)
-        SL_BINOP_UNHANDLED(MULT_EXPR)
         SL_BINOP_UNHANDLED(POINTER_PLUS_EXPR)
 
         default:

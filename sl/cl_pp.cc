@@ -601,6 +601,10 @@ void ClPrettyPrint::printInsnBinop(const struct cl_insn *cli) {
             SSD_COLORIZE(out_, C_YELLOW) << "-";
             break;
 
+        case CL_BINOP_MULT:
+            SSD_COLORIZE(out_, C_YELLOW) << "*";
+            break;
+
         case CL_BINOP_TRUNC_DIV:
         case CL_BINOP_RDIV:
             SSD_COLORIZE(out_, C_YELLOW) << "/";
@@ -616,6 +620,18 @@ void ClPrettyPrint::printInsnBinop(const struct cl_insn *cli) {
 
         case CL_BINOP_MAX:
             SSD_COLORIZE(out_, C_YELLOW) << "max";
+            break;
+
+        case CL_BINOP_BIT_AND:
+            SSD_COLORIZE(out_, C_YELLOW) << "&";
+            break;
+
+        case CL_BINOP_BIT_IOR:
+            SSD_COLORIZE(out_, C_YELLOW) << "|";
+            break;
+
+        case CL_BINOP_BIT_XOR:
+            SSD_COLORIZE(out_, C_YELLOW) << "^";
             break;
     }
 
