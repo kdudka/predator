@@ -545,6 +545,12 @@ void CldLabelChk::reset() {
 
 void CldLabelChk::defineLabel(const char *label) {
     LabelState &ls = map_[label];
+    if (ls.defined) {
+        CL_MSG_STREAM(cl_error, LocationWriter(loc_) << "error: "
+                << "redefinition of label '" << label << "'");
+        CL_MSG_STREAM(cl_note, LocationWriter(ls.loc) << "note: "
+                << "originally defined here");
+    }
     ls.defined = true;
     if (ls.loc.locLine < 0)
         ls.loc = loc_;
