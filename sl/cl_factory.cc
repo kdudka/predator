@@ -10,6 +10,7 @@
 #include "cld_intchk.hh"
 #include "cld_unilabel.hh"
 #include "cld_uniregs.hh"
+#include "cld_unswitch.hh"
 
 #include <ctype.h>
 #include <map>
@@ -196,6 +197,7 @@ CldChainFactory::CldChainFactory() {
     map_["unify_labels_static"]     = createCldUniLabelStatic;
     map_["unify_labels_fnc"]        = createCldUniLabelFnc;
     map_["unify_regs"]              = createCldUniRegs;
+    map_["unfold_switch"]           = createCldUnfoldSwitch;
     map_["arg_subst"]               = createCldArgSubst;
 }
 

@@ -100,6 +100,7 @@ static struct plugin_info sl_info = {
 "    -fplugin-arg-slplug-dump-pp[=OUTPUT_FILE]          dump linearized code\n"
 "    -fplugin-arg-slplug-gen-dot[=GLOBAL_CG_FILE]       generate CFGs\n"
 "    -fplugin-arg-slplug-type-dot=TYPE_GRAPH_FILE       generate type graphs\n"
+"    -fplugin-arg-slplug-unswitch                       unfold switch stmt\n"
 "    -fplugin-arg-slplug-verbose[=VERBOSE_BITMASK]      turn on verbose mode\n"
 "\n"
 "VERBOSE_BITMASK:\n"
@@ -1230,6 +1231,7 @@ struct sl_plug_options {
     bool                    use_dotgen;
     bool                    use_pp;
     bool                    use_typedot;
+    bool                    use_unswitch;
     const char              *gl_dot_file;
     const char              *pp_out_file;
     const char              *type_dot_file;
@@ -1288,6 +1290,10 @@ static int slplug_init(const struct plugin_name_args *info,
                 return EXIT_FAILURE;
             }
 
+        } else if (STREQ(key, "unswitch")) {
+            opt->use_unswitch   = true;
+            // TODO: warn about ignoring extra value?
+
         } else {
             SL_WARN_UNHANDLED(key);
             return EXIT_FAILURE;
@@ -1322,12 +1328,13 @@ static bool sl_append_listener(struct cl_code_listener *chain,
 }
 
 static bool sl_append_def_listener(struct cl_code_listener *chain,
-                                   const char *listener, const char *args)
+                                   const char *listener, const char *args,
+                                   bool use_unswitch)
 {
     return sl_append_listener(chain,
             "listener=\"%s\" listener_args=\"%s\" "
-            "cld=\"" "unify_labels_fnc," "unify_regs\"",
-            listener, args);
+            "cld=\"unify_labels_fnc,unify_regs%s\"",
+            listener, args, (use_unswitch) ? ",unfold_switch" : "");
 }
 
 static struct cl_code_listener*
@@ -1347,7 +1354,7 @@ create_cl_chain(const struct sl_plug_options *opt)
         const char *out = (opt->pp_out_file)
             ? opt->pp_out_file
             : "";
-        if (!sl_append_def_listener(chain, "pp", out))
+        if (!sl_append_def_listener(chain, "pp", out, opt->use_unswitch))
             return NULL;
     }
 
@@ -1355,12 +1362,13 @@ create_cl_chain(const struct sl_plug_options *opt)
         const char *gl_dot = (opt->gl_dot_file)
             ? opt->gl_dot_file
             : "";
-        if (!sl_append_def_listener(chain, "dotgen", gl_dot))
+        if (!sl_append_def_listener(chain, "dotgen", gl_dot, opt->use_unswitch))
             return NULL;
     }
 
     if (opt->use_typedot) {
-        if (!sl_append_def_listener(chain, "typedot", opt->type_dot_file))
+        if (!sl_append_def_listener(chain, "typedot", opt->type_dot_file,
+                    opt->use_unswitch))
             return NULL;
     }
 
