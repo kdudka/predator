@@ -148,8 +148,7 @@ void ClPrettyPrint::fnc_arg_decl(
     // TODO: sort arguments if not already
     if (1 < arg_id)
         out_ << ", ";
-    SSD_COLORIZE(out_, C_LIGHT_GREEN) << "%arg" << arg_id;
-    SSD_COLORIZE(out_, C_LIGHT_BLUE) << ": ";
+    out_ << SSD_INLINE_COLOR(C_LIGHT_GREEN, "%arg" << arg_id) << ": ";
     this->printOperandVar(arg_src);
 }
 

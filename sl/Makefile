@@ -137,7 +137,6 @@ dotplug:
 	$(MAKE) -C data
 
 pphtml: slplug.so ../ssd/util/faketty.so
-	$(MAKE) slplug.so
 	for i in data/dll.c data/slplug.c; do \
 		LD_PRELOAD=../ssd/util/faketty.so FAKE_TTY=1,2 \
 			$(GCC_INSTALL)/bin/gcc $(CFLAGS) $(PLUG_CFLAGS) \
