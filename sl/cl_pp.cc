@@ -265,37 +265,37 @@ deref_done:
     enum cl_type_e code = clt->code;
     switch (code) {
         case CL_TYPE_VOID:
-            out_ << SSD_INLINE_COLOR(C_LIGHT_GREEN, "void");
+            out_ << SSD_INLINE_COLOR(C_GREEN, "void");
             break;
 
         case CL_TYPE_STRUCT:
-            out_ << SSD_INLINE_COLOR(C_LIGHT_GREEN, "struct") << " "
+            out_ << SSD_INLINE_COLOR(C_GREEN, "struct") << " "
                 << SSD_INLINE_COLOR(C_DARK_GRAY, typeName(clt));
             break;
 
         case CL_TYPE_UNION:
-            out_ << SSD_INLINE_COLOR(C_LIGHT_GREEN, "union") << " "
+            out_ << SSD_INLINE_COLOR(C_GREEN, "union") << " "
                 << SSD_INLINE_COLOR(C_DARK_GRAY, typeName(clt));
             break;
 
         case CL_TYPE_FNC:
-            out_ << SSD_INLINE_COLOR(C_LIGHT_GREEN, "fnc");
+            out_ << SSD_INLINE_COLOR(C_GREEN, "fnc");
             break;
 
         case CL_TYPE_INT:
-            out_ << SSD_INLINE_COLOR(C_LIGHT_GREEN, "int");
+            out_ << SSD_INLINE_COLOR(C_GREEN, "int");
             break;
 
         case CL_TYPE_CHAR:
-            out_ << SSD_INLINE_COLOR(C_LIGHT_GREEN, "char");
+            out_ << SSD_INLINE_COLOR(C_GREEN, "char");
             break;
 
         case CL_TYPE_BOOL:
-            out_ << SSD_INLINE_COLOR(C_LIGHT_GREEN, "bool");
+            out_ << SSD_INLINE_COLOR(C_GREEN, "bool");
             break;
 
         case CL_TYPE_ENUM:
-            out_ << SSD_INLINE_COLOR(C_LIGHT_GREEN, "enum") << " "
+            out_ << SSD_INLINE_COLOR(C_GREEN, "enum") << " "
                 << SSD_INLINE_COLOR(C_DARK_GRAY, typeName(clt));
             break;
 
@@ -464,7 +464,7 @@ void ClPrettyPrint::printInsnNop(const struct cl_insn *) {
 void ClPrettyPrint::printInsnJmp(const struct cl_insn *cli) {
     if (printingArgDecls_) {
         printingArgDecls_ = false;
-        out_ << SSD_INLINE_COLOR(C_LIGHT_RED, "):")
+        out_ << SSD_INLINE_COLOR(C_LIGHT_RED, ")") << ":"
             << std::endl;
     }
 
