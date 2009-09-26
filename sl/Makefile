@@ -93,13 +93,15 @@ chkplug: slplug.so
 		|| (cat "$$TMP"; exit 1)) \
 		&& rm -fv "$$TMP"
 	$(MAKE) slplug.so
-	$(GCC_INSTALL)/bin/gcc $(CFLAGS) $(PLUG_CFLAGS) \
-		-fplugin=./slplug.so \
-		-fplugin-arg-slplug-verbose=1 \
-		-fplugin-arg-slplug-dump-pp \
-		-fplugin-arg-slplug-gen-dot=data/all.dot \
-		-fplugin-arg-slplug-type-dot=data/types.dot \
-		-c data/slplug.c
+	for i in data/dll.c data/slplug.c; do \
+		$(GCC_INSTALL)/bin/gcc $(CFLAGS) $(PLUG_CFLAGS) \
+			-fplugin=./slplug.so \
+			-fplugin-arg-slplug-verbose=1 \
+			-fplugin-arg-slplug-dump-pp \
+			-fplugin-arg-slplug-gen-dot=$$i-cg.dot \
+			-fplugin-arg-slplug-type-dot=$$i-types.dot \
+			-Wno-error -c $$i; \
+	done
 
 SFLAGS += -Wno-decl
 chksparse: slsparse
@@ -134,5 +136,22 @@ dotplug:
 	$(MAKE) chkplug
 	$(MAKE) -C data
 
+pphtml: slplug.so ../ssd/util/faketty.so
+	$(MAKE) slplug.so
+	for i in data/dll.c data/slplug.c; do \
+		LD_PRELOAD=../ssd/util/faketty.so FAKE_TTY=1,2 \
+			$(GCC_INSTALL)/bin/gcc $(CFLAGS) $(PLUG_CFLAGS) \
+				-fplugin=./slplug.so \
+				-fplugin-arg-slplug-dump-pp \
+				-Wno-error -c $$i \
+				2>&1 \
+			| ../ssd/util/eschtml \
+			| ../ssd/util/tty2html \
+			> $$i.pp.html; \
+	done
+
 ../sparse/libsparse.a: ../sparse/*.c ../sparse/*.h ../sparse/local.mk
 	$(MAKE) -C ../sparse
+
+../ssd/util/faketty.so: ../ssd/util/faketty.c
+	$(MAKE) -C ../ssd/util

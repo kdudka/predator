@@ -17,4 +17,4 @@ clean:
 	rm -fv *.$(FORMAT)
 
 distclean: clean
-	rm -fv *.dot
+	rm -fv *.dot *.pp.html
