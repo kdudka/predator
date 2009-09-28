@@ -43,7 +43,7 @@ struct cl_init_data {
 
     /**
      * function to display critical error and then terminate the application
-     * @attention This function should never return.
+     * @attention This function should never return (TODO: attribute?).
      */
     cl_print_fnc_t die;
 };
@@ -126,11 +126,20 @@ enum cl_scope_e {
     CL_SCOPE_BB
 };
 
+/**
+ * type's unique ID
+ */
 typedef int cl_type_uid_t;
 enum {
+    /**
+     * invalid ID, currently used for cl_type_uid_t only
+     */
     CL_UID_INVALID = -1
 };
 
+/**
+ * basic type enumeration
+ */
 enum cl_type_e {
     CL_TYPE_VOID,
     CL_TYPE_PTR,
@@ -147,41 +156,137 @@ enum cl_type_e {
     CL_TYPE_STRING
 };
 
+/**
+ * used for nesting types into another (composite) type
+ */
 struct cl_type_item {
+    /**
+     * nested type's unique ID
+     */
     cl_type_uid_t                       type;
+
+    /**
+     * name of the nested item, mainly used by struct/union
+     */
     const char                          *name;
 };
 
+/**
+ * type definition available for each operand.  It can be also returned
+ * by cl_get_type_fnc_t function (useful to traverse type definition
+ * recursively).
+ */
 struct cl_type {
+    /**
+     * type's unique ID
+     */
     cl_type_uid_t                       uid;
+
+    /**
+     * type of type (enumeration)
+     */
     enum cl_type_e                      code;
+
+    /**
+     * location of type's declaration (may or may not be valid)
+     */
     struct cl_location                  loc;
+
+    /**
+     * scope of type's declaration
+     */
     enum cl_scope_e                     scope;
+
+    /**
+     * type's name, or NULL for anonymous type
+     */
     const char                          *name;
+
+    /**
+     * type's sizeof
+     */
     int                                 size;
+
+    /**
+     * count of nested types
+     *
+     * 0 for elementary types
+     * 1 for e.g. CL_TYPE_PTR and CL_TYPE_ARRAY
+     * n for e.g. CL_TYPE_STRUCT and CL_TYPE_UNION
+     */
     int                                 item_cnt;
+
+    /**
+     * array of nested types. Its size is exactly item_cnt.
+     */
     struct cl_type_item                 *items;
 };
 
+/**
+ * basic accessor enumeration
+ */
 enum cl_accessor_e {
+    /**
+     * reference, in the C language: &
+     */
     CL_ACCESSOR_REF,
+
+    /**
+     * dereference, in the C language: *
+     * @note operator -> is decomposed as (*ptr).item
+     * (CL_ACCESSOR_DEREF followed by CL_ACCESSOR_ITEM)
+     */
     CL_ACCESSOR_DEREF,
+
+    /**
+     * array accessor, in the C language: []
+     */
     CL_ACCESSOR_DEREF_ARRAY,
+
+    /**
+     * record accessor, in the C language: .
+     */
     CL_ACCESSOR_ITEM
 };
 
+/**
+ * accessor definition, available for @b some operands.  Accessors can be
+ * chained as needed.
+ */
 struct cl_accessor {
+    /**
+     * type of accessor (enumeration)
+     */
     enum cl_accessor_e                  code;
+
+    /**
+     * reference to type which the accessor is used for
+     */
     struct cl_type                      *type;
+
+    /**
+     * next accessor, or NULL if this is the last one (singly-linked list)
+     */
     struct cl_accessor                  *next;
+
+    /**
+     * some accessor have extra data
+     */
     union {
         /* CL_ACCESSOR_DEREF_ARRAY */
         struct {
+            /**
+             * operand used as index to access array's item,
+             * in the C language: array[index]
+             */
             struct cl_operand           *index;
         } array;
 
         /* CL_ACCESSOR_ITEM */
         struct {
+            /**
+             * record's item ought to be accessed, enumeration starts with zero
+             */
             int                         id;
         } item;
     } data;
@@ -196,6 +301,10 @@ enum cl_operand_e {
      */
     CL_OPERAND_VOID,
 
+    /**
+     * constant operand, in the C language: literal
+     * @note this has nothing to do with the C/C++ keyword 'const'
+     */
     CL_OPERAND_CST,
 
     /**
@@ -206,33 +315,46 @@ enum cl_operand_e {
 
     /**
      * function argument. Addressed by argument ID. Currently used only by
-     * slsparse, but it's atranslated by "arg_subst" cl decorator to
+     * slsparse, but it's translated by "arg_subst" cl decorator to
      * CL_OPERAND_VAR afterwards.
      */
     CL_OPERAND_ARG,
 
     /**
      * register. Addressed by register ID. Usually managed by compiler only.
-     * @todo We should stop ignoring register's size at some point.
-     * @note slsparse now ignores all operands with different size than 32bit
      */
     CL_OPERAND_REG
 };
 
 /**
- * generic operand. There is in fact no operand if type==CL_OPERAND_VOID. Each
- * type of operand (with extra data) has it's own member in the union data.
- * Members deref and offset are valid for *most* of operand types.
+ * generic operand. There is in fact no operand if code==CL_OPERAND_VOID. Each
+ * operand with extra data has it's own member in the union data.
  */
 struct cl_operand {
     /**
-     * type of operand. See enum cl_operand_e for documentation.
+     * type of operand (enumeration)
      */
     enum cl_operand_e                   code;
+
+    /**
+     * location of the operand's occurrence
+     */
     struct cl_location                  loc;
+
+    /**
+     * scope of the operand's validity
+     * @attention @b not implemented for now
+     */
     enum cl_scope_e                     scope;
 
+    /**
+     * type of operand, use type->uid to get its UID
+     */
     struct cl_type                      *type;
+
+    /**
+     * chain of accessors, or NULL if there are no accessors
+     */
     struct cl_accessor                  *accessor;
 
     /**
@@ -258,7 +380,14 @@ struct cl_operand {
 
         /* CL_OPERAND_CST / CL_TYPE_FNC */
         struct {
+            /**
+             * name of the function
+             */
             const char                  *name;
+
+            /**
+             * true if the function is external for the analysed module
+             */
             bool                        is_extern;
         } cst_fnc;
 
@@ -274,23 +403,70 @@ struct cl_operand {
     } data;
 };
 
+/**
+ * basic instruction enumeration
+ */
 enum cl_insn_e {
+    /**
+     * no instruction, used only internally for now
+     */
     CL_INSN_NOP,
+
+    /**
+     * 'goto' instruction
+     */
     CL_INSN_JMP,
+
+    /**
+     * if(...) instruction
+     */
     CL_INSN_COND,
+
+    /**
+     * 'return' instruction
+     */
     CL_INSN_RET,
+
+    /**
+     * this follows each call of a function declared with attribute 'noreturn'
+     */
     CL_INSN_ABORT,
+
+    /**
+     * unary (lhs + 1) operation
+     */
     CL_INSN_UNOP,
+
+    /**
+     * binary (lhs + 2) operation
+     */
     CL_INSN_BINOP
+
+    /* TODO: CL_INSN_CALL? */
+    /* TODO: CL_INSN_SWITCH? */
     /* TODO */
 };
 
+/**
+ * unary operation's enumeration
+ */
 enum cl_unop_e {
+    /**
+     * simple assignment
+     */
     CL_UNOP_ASSIGN,
+
+    /**
+     * truth not, in the C language: !
+     */
     CL_UNOP_TRUTH_NOT
+
     /* TODO */
 };
 
+/**
+ * binary operation's enumeration
+ */
 enum cl_binop_e {
     /* comparison */
     CL_BINOP_EQ,
@@ -323,8 +499,18 @@ enum cl_binop_e {
     /* TODO */
 };
 
+/**
+ * single instruction definition
+ */
 struct cl_insn {
+    /**
+     * type of instruction (enumeration)
+     */
     enum cl_insn_e                      code;
+
+    /**
+     * location of the instruction's occurrence
+     */
     struct cl_location                  loc;
 
     /* instruction specific data */
@@ -365,24 +551,30 @@ struct cl_insn {
     } data;
 };
 
-typedef struct cl_type* (*cl_get_type_fnc_t)(cl_type_uid_t, void *);
+/**
+ * function used to access type database
+ * @param uid Unique ID of requested type.
+ * @param data User data, previously given by reg_type_db call.
+ * @return Returns a pointer to requested type's definition.
+ */
+typedef struct cl_type* (*cl_get_type_fnc_t)(cl_type_uid_t uid, void *data);
 
 /**
  * listener object - the core part of this interface
  *
  * It accepts a context-free language defined by substitution to regex:
  *
- *     (file_open FILE_CONTENT file_close)* destroy
+ *     reg_type_db (file_open FILE_CONTENT file_close)* destroy
  *
  *
  * FILE_CONTENT is defined by substitution to regex:
  *
- *     fnc_open (decl_type | fnc_arg_decl)* FNC_BODY fnc_close
+ *     fnc_open (fnc_arg_decl)* FNC_BODY fnc_close
  *
  *
  * FNC_BODY is defined by substitution to regex:
  *
- *     FNC_ENTRY (bb_open (decl_type | NONTERM_INSN)* TERM_INSN)*
+ *     FNC_ENTRY (bb_open (NONTERM_INSN)* TERM_INSN)*
  *
  *
  * FNC_ENTRY is defined as:
@@ -392,7 +584,7 @@ typedef struct cl_type* (*cl_get_type_fnc_t)(cl_type_uid_t, void *);
  *
  * NON_TERM_INSN is defined as:
  *
- *     INSN_CALL | insn{CL_INSN_UNOP, CL_INSN_UNOP}
+ *     INSN_CALL | insn{CL_INSN_UNOP, CL_INSN_BINOP}
  *
  *
  * TERM_INSN is defined as:
@@ -418,59 +610,121 @@ struct cl_code_listener {
      */
     void *data;
 
+    /**
+     * register type database
+     * @param self Pointer to cl_code_listener object.
+     * @param fnc Function used to access type database.
+     * @param user_data User data later given as arg to the registered function.
+     */
     void (*reg_type_db)(
             struct cl_code_listener     *self,
             cl_get_type_fnc_t           fnc,
             void                        *user_data);
 
+    /**
+     * @param self Pointer to cl_code_listener object.
+     * @param file_name Zero-terminated string with file name being opened.
+     */
     void (*file_open)(
             struct cl_code_listener     *self,
             const char                  *file_name);
 
+    /**
+     * @param self Pointer to cl_code_listener object.
+     */
     void (*file_close)(
             struct cl_code_listener     *self);
 
+    /**
+     * @todo implement function type definition
+     * @param self Pointer to cl_code_listener object.
+     * @param loc location of the function definition
+     * @param fnc_name Zero-terminated string with fnc name being processed.
+     * @param scope Scope of function name validity.
+     */
     void (*fnc_open)(
             struct cl_code_listener     *self,
             const struct cl_location    *loc,
             const char                  *fnc_name,
             enum cl_scope_e             scope);
 
+    /**
+     * @param self Pointer to cl_code_listener object.
+     * @param arg_id Position of the argument being specified.
+     * @param arg_src Function argument given as operand.
+     */
     void (*fnc_arg_decl)(
             struct cl_code_listener     *self,
             int                         arg_id,
             const struct cl_operand     *arg_src);
 
+    /**
+     * @param self Pointer to cl_code_listener object.
+     */
     void (*fnc_close)(
             struct cl_code_listener     *self);
 
+    /**
+     * @param self Pointer to cl_code_listener object.
+     * @param label Zero-terminated string containing label (and thus BB) name
+     */
     void (*bb_open)(
             struct cl_code_listener     *self,
             const char                  *label);
 
+    /**
+     * @param self Pointer to cl_code_listener object.
+     * @param insn Instruction definition.
+     */
     void (*insn)(
             struct cl_code_listener     *self,
             const struct cl_insn        *insn);
 
+    /**
+     * @param self Pointer to cl_code_listener object.
+     * @param loc location of the function definition
+     * @param dst An operand taking fnc's return value, may be CL_OPERAND_VOID
+     * @param fnc An operand used as function to call (not necessarily constant)
+     */
     void (*insn_call_open)(
             struct cl_code_listener     *self,
             const struct cl_location    *loc,
             const struct cl_operand     *dst,
             const struct cl_operand     *fnc);
 
+    /**
+     * @param self Pointer to cl_code_listener object.
+     * @param arg_id Position of the argument being specified.
+     * @param arg_src Call argument given as operand.
+     */
     void (*insn_call_arg)(
             struct cl_code_listener     *self,
             int                         arg_id,
             const struct cl_operand     *arg_src);
 
+    /**
+     * @param self Pointer to cl_code_listener object.
+     */
     void (*insn_call_close)(
             struct cl_code_listener     *self);
 
+    /**
+     * @param self Pointer to cl_code_listener object.
+     * @param loc location of the function definition
+     * @param src An operand used as switch source.
+     */
     void (*insn_switch_open)(
             struct cl_code_listener     *self,
             const struct cl_location    *loc,
             const struct cl_operand     *src);
 
+    /**
+     * @param self Pointer to cl_code_listener object.
+     * @param loc location of the function definition
+     * @param val_lo Begin of the range for given case.
+     * @param val_hi End of the range for given case.
+     * @param label Zero-terminated string containing label name
+     */
     void (*insn_switch_case)(
             struct cl_code_listener     *self,
             const struct cl_location    *loc,
@@ -478,22 +732,38 @@ struct cl_code_listener {
             const struct cl_operand     *val_hi,
             const char                  *label);
 
+    /**
+     * @param self Pointer to cl_code_listener object.
+     */
     void (*insn_switch_close)(
             struct cl_code_listener     *self);
 
+    /**
+     * @param self Pointer to cl_code_listener object.
+     */
     void (*destroy)(
             struct cl_code_listener     *self);
 };
 
+/**
+ * create cl_code_listener object
+ * @param config_string determines the type and attributes of the listener.
+ * @note config_string is currently undocumented. You can look to slplug.c for
+ * examples or turn on verbose output to see how it is parsed.
+ */
 struct cl_code_listener* cl_code_listener_create(const char *config_string);
 
 /**
- * @todo document
+ * create cl_code_listener object for grouping another cl_code_listener objects
+ * @return Returns on heap allocated cl_code_listener object which does nothing.
  */
 struct cl_code_listener* cl_chain_create(void);
 
 /**
- * @todo document
+ * append cl_code_listener object to chain
+ * @param chain Object returned by cl_chain_create() function.
+ * @param listener Object ought to be added to the chain.
+ * @note Listener objects are notified in the same order as they are added.
  */
 void cl_chain_append(
         struct cl_code_listener         *chain,
