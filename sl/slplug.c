@@ -1159,7 +1159,7 @@ static struct opt_pass sl_pass = {
 };
 
 // definition of a new pass provided by the plug-in
-static struct plugin_pass sl_plugin_pass = {
+static struct register_pass_info sl_plugin_pass = {
     .pass                       = &sl_pass,
 
     // cfg ... control_flow_graph
