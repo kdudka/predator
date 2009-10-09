@@ -270,7 +270,7 @@ struct cl_accessor {
     struct cl_accessor                  *next;
 
     /**
-     * some accessor have extra data
+     * some accessors have extra data
      */
     union {
         /* CL_ACCESSOR_DEREF_ARRAY */
