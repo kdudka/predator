@@ -48,10 +48,9 @@ int main()
     /* destroy list in reverse order - complexity (n^2 / 2) */
     while (list.head) {
         sll_item_t **tmp = &list.head;
-        while ((*tmp)->next) {
-            sll_item_t **next = &(*tmp)->next;
-            tmp = next;
-        }
+        while ((*tmp)->next)
+            tmp = &(*tmp)->next;
+
         free(*tmp);
         *tmp = NULL;
     }
