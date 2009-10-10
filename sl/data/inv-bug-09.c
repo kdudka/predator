@@ -32,9 +32,17 @@ int main()
     dll_t list = create_item();
     list->next = create_item();
     list->next->prev = list;
+
 #if TRIGGER_INV_BUG
+    /* oops, Invader seems to have problem with two ->next per one line */
     list->next->next = create_item();
     list->next->next->prev = list->next;
+#else
+    {
+        dll_t tmp = list->next;
+        tmp->next = create_item();
+        tmp->next->prev = list->next;
+    }
 #endif
 
     /* destroy dll */
