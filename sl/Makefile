@@ -1,3 +1,5 @@
+DATASET = data/dll.c data/slplug.c data/inv-*.c
+
 # SPARSE_CFLAGS += `pkg-config sparse --cflags`
 # SPARSE_LIBS ?= `pkg-config sparse --libs`
 
@@ -26,7 +28,7 @@ AR ?= ar
 RANLIB ?= ranlib
 GDB ?= gdb
 
-.PHONY: all check clean debug \
+.PHONY: all check clean distclean \
 	chkplug chksparse chkunit chkhead \
 	dbgplug dbgsparse \
 	dotplug dotsparse
@@ -93,7 +95,7 @@ chkplug: slplug.so
 		|| (cat "$$TMP"; exit 1)) \
 		&& rm -fv "$$TMP"
 	$(MAKE) slplug.so
-	for i in data/dll.c data/slplug.c; do \
+	for i in $(DATASET); do \
 		$(GCC_INSTALL)/bin/gcc $(CFLAGS) $(PLUG_CFLAGS) \
 			-fplugin=./slplug.so \
 			-fplugin-arg-slplug-verbose=1 \
@@ -120,6 +122,9 @@ clean:
 	rm -f slplug.o slplug.so
 	$(MAKE) distclean -C data
 
+distclean: clean
+	rm -f *.o
+
 dbgsparse: slsparse
 	$(GDB) -x slsparse.gdb
 
@@ -137,7 +142,7 @@ dotplug:
 	$(MAKE) -C data
 
 pphtml: slplug.so ../ssd/util/faketty.so
-	for i in data/dll.c data/slplug.c; do \
+	for i in $(DATASET); do \
 		LD_PRELOAD=../ssd/util/faketty.so FAKE_TTY=1,2 \
 			$(GCC_INSTALL)/bin/gcc $(CFLAGS) $(PLUG_CFLAGS) \
 				-fplugin=./slplug.so \
