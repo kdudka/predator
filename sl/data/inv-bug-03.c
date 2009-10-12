@@ -24,6 +24,8 @@ void dll_die(const char *msg)
 {
 #if VERBOSE
     fprintf(stderr, "!!! %s\n", msg);
+#else
+    (void) msg;
 #endif
     abort();
 }
