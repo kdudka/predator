@@ -143,6 +143,7 @@ dotplug:
 
 pphtml: slplug.so ../ssd/util/faketty.so
 	for i in $(DATASET); do \
+		LC_ALL=C \
 		LD_PRELOAD=../ssd/util/faketty.so FAKE_TTY=1,2 \
 			$(GCC_INSTALL)/bin/gcc $(CFLAGS) $(PLUG_CFLAGS) \
 				-fplugin=./slplug.so \
