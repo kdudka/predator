@@ -208,7 +208,6 @@ namespace {
     ICodeListener* createCldUniLabelFnc(ICodeListener *slave) {
         return createCldUniLabel(slave, CL_SCOPE_FUNCTION);
     }
-
 }
 
 CldChainFactory::CldChainFactory() {
@@ -262,6 +261,16 @@ ICodeListener* CldChainFactory::create(const std::string &cldString,
 
 // /////////////////////////////////////////////////////////////////////////////
 // ClFactory implementation
+namespace {
+    ICodeListener* createClPrettyPrintDef(const char *str) {
+        return createClPrettyPrint(str, false);
+    }
+
+    ICodeListener* createClPrettyPrintWithTypes(const char *str) {
+        return createClPrettyPrint(str, true);
+    }
+}
+
 struct ClFactory::Private {
     typedef ICodeListener* (*TCreateFnc)(const char *);
     typedef std::map<string, TCreateFnc>                TMap;
@@ -273,10 +282,11 @@ struct ClFactory::Private {
 ClFactory::ClFactory():
     d(new Private)
 {
-    d->map["dotgen"]    = &createClDotGenerator;
-    d->map["locator"]   = &createClLocator;
-    d->map["pp"]        = &createClPrettyPrint;
-    d->map["typedot"]   = &createClTypeDotGenerator;
+    d->map["dotgen"]        = &createClDotGenerator;
+    d->map["locator"]       = &createClLocator;
+    d->map["pp"]            = &createClPrettyPrintDef;
+    d->map["pp_with_types"] = &createClPrettyPrintWithTypes;
+    d->map["typedot"]       = &createClTypeDotGenerator;
 }
 
 ClFactory::~ClFactory() {

@@ -32,7 +32,7 @@
 
 class ClPrettyPrint: public AbstractCodeListener {
     public:
-        ClPrettyPrint(int fd_out, bool close_on_exit);
+        ClPrettyPrint(int fd_out, bool close_on_exit, bool showTypes);
         virtual ~ClPrettyPrint();
 
         virtual void file_open(
@@ -88,6 +88,7 @@ class ClPrettyPrint: public AbstractCodeListener {
         TStream                 out_;
         Location                loc_;
         std::string             fnc_;
+        bool                    showTypes_;
         bool                    printingArgDecls_;
 
     private:
@@ -113,9 +114,10 @@ using std::string;
 
 // /////////////////////////////////////////////////////////////////////////////
 // ClPrettyPrint implementation
-ClPrettyPrint::ClPrettyPrint(int fd_out, bool close_on_exit):
+ClPrettyPrint::ClPrettyPrint(int fd_out, bool close_on_exit, bool showTypes):
     sink_(fd_out, close_on_exit),
     out_(sink_),
+    showTypes_(showTypes),
     printingArgDecls_(false)
 {
     // FIXME: static variable
@@ -258,6 +260,9 @@ namespace {
 void ClPrettyPrint::printVarType(const struct cl_operand *op) {
     if (op->code == CL_OPERAND_VOID)
         TRAP;
+
+    if (!showTypes_)
+        return;
 
     SSD_COLORIZE(out_, C_DARK_GRAY) << "[";
     struct cl_type *clt = op->type;
@@ -782,7 +787,7 @@ void ClPrettyPrint::insn_switch_close()
 
 // /////////////////////////////////////////////////////////////////////////////
 // public interface, see cl_pp.hh for more details
-ICodeListener* createClPrettyPrint(const char *args) {
+ICodeListener* createClPrettyPrint(const char *args, bool showTypes) {
     // write to stdout by default
     int fd = STDOUT_FILENO;
 
@@ -805,5 +810,5 @@ ICodeListener* createClPrettyPrint(const char *args) {
         }
     }
 
-    return new ClPrettyPrint(fd, openFile);
+    return new ClPrettyPrint(fd, openFile, showTypes);
 }

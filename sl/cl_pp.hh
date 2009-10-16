@@ -25,6 +25,6 @@ struct ICodeListener;
 /**
  * @todo document
  */
-ICodeListener* createClPrettyPrint(const char *);
+ICodeListener* createClPrettyPrint(const char *, bool showTypes);
 
 #endif /* H_GUARD_CL_PP_H */

@@ -127,6 +127,8 @@ chksparse: slsparse
 	./slsparse $(CFLAGS) $(SFLAGS) $(PLUG_CFLAGS) -I. data/slplug.c
 
 check: chkplug chksparse chkunit chkhead
+	$(MAKE) dotplug
+	$(MAKE) pphtml
 
 chkhead:
 	$(MAKE) -f Makefile.chk
@@ -165,6 +167,7 @@ pphtml: slplug.so ../ssd/util/faketty.so
 			$(GCC_INSTALL)/bin/gcc $(CFLAGS) $(PLUG_CFLAGS) \
 				-fplugin=./slplug.so \
 				-fplugin-arg-slplug-dump-pp \
+				-fplugin-arg-slplug-dump-types \
 				-Wno-error -c $$i \
 				2>&1 \
 			| ../ssd/util/eschtml \

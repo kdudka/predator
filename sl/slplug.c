@@ -117,6 +117,7 @@ static struct plugin_info sl_info = {
 "    -fplugin-arg-slplug-help\n"
 "    -fplugin-arg-slplug-version\n"
 "    -fplugin-arg-slplug-dump-pp[=OUTPUT_FILE]          dump linearized code\n"
+"    -fplugin-arg-slplug-dump-types                     dump also type info\n"
 "    -fplugin-arg-slplug-gen-dot[=GLOBAL_CG_FILE]       generate CFGs\n"
 "    -fplugin-arg-slplug-type-dot=TYPE_GRAPH_FILE       generate type graphs\n"
 "    -fplugin-arg-slplug-unswitch                       unfold switch stmt\n"
@@ -1247,6 +1248,7 @@ static void sl_regcb (const char *name) {
 }
 
 struct sl_plug_options {
+    bool                    dump_types;
     bool                    use_dotgen;
     bool                    use_pp;
     bool                    use_typedot;
@@ -1293,6 +1295,10 @@ static int slplug_init(const struct plugin_name_args *info,
         } else if (STREQ(key, "dump-pp")) {
             opt->use_pp         = true;
             opt->pp_out_file    = value;
+
+        } else if (STREQ(key, "dump-types")) {
+            opt->dump_types     = true;
+            // TODO: warn about ignoring extra value?
 
         } else if (STREQ(key, "gen-dot")) {
             opt->use_dotgen     = true;
@@ -1370,10 +1376,15 @@ create_cl_chain(const struct sl_plug_options *opt)
     }
 
     if (opt->use_pp) {
+        const char *use_listener = (opt->dump_types)
+            ? "pp_with_types"
+            : "pp";
+
         const char *out = (opt->pp_out_file)
             ? opt->pp_out_file
             : "";
-        if (!sl_append_def_listener(chain, "pp", out, opt->use_unswitch))
+
+        if (!sl_append_def_listener(chain, use_listener, out, opt->use_unswitch))
             return NULL;
     }
 
