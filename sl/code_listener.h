@@ -383,6 +383,7 @@ struct cl_operand {
 
         /* CL_OPERAND_VAR */
         struct {
+            int                         id;
             const char                  *name;
             /* TODO: is_extern? */
         } var;

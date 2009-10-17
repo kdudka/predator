@@ -339,7 +339,8 @@ void ClPrettyPrint::printNestedVar(const struct cl_operand *op) {
                         << "anonymous variable");
                 break;
             }
-            out_ << SSD_INLINE_COLOR(C_LIGHT_BLUE, op->data.var.name);
+            out_ << "%m" << op->data.var.id << ":"
+                << SSD_INLINE_COLOR(C_LIGHT_BLUE, op->data.var.name);
             break;
 
         case CL_OPERAND_REG:
