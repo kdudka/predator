@@ -117,11 +117,10 @@ class ClDotGenerator: public AbstractCodeListener {
         static const char       *EtColors[];
 
         typedef std::set<std::string>                   TCallSet;
-        typedef std::map<std::string, std::string>      TCallMap;
         typedef std::map<std::string, TCallSet>         TCallMultiMap;
         typedef std::map<std::string, EdgeType>         TEdgeMap;
 
-        TCallMap                perFncCalls_;
+        TCallMultiMap           perFncCalls_;
         TCallMultiMap           perBbCalls_;
         TEdgeMap                perFncEdgeMap_;
         TEdgeMap                perBbEdgeMap_;
@@ -136,6 +135,7 @@ class ClDotGenerator: public AbstractCodeListener {
         void gobbleEdge(std::string dst, EdgeType type);
         void emitEdge(std::string dst, EdgeType type);
         void emitBb();
+        void emitCallSet(std::ofstream &, TCallSet &cs, const std::string &dst);
         void emitPendingCalls();
         void emitFncEntry(const char *label);
         void emitInsnJmp(const char *label);
@@ -254,19 +254,18 @@ void ClDotGenerator::gobbleEdge(std::string dst, EdgeType type) {
 
 void ClDotGenerator::emitEdge(std::string dst, EdgeType type) {
     switch (type) {
-        case ET_PTR_CALL:
-        case ET_GL_CALL:
-        case ET_GL_CALL_INDIR:
-            perFncCalls_[dst] = bb_;
-            return;
-
         case ET_LC_CALL:
         case ET_LC_CALL_INDIR:
             if (!hasKey(perFncCalls_, dst)) {
-                perFncCalls_[dst] = bb_;
                 glOut_ << "\t" << SL_QUOTE(fnc_) << " -> " << SL_QUOTE(dst)
                     << " [color=" << EtColors[type] << "];" << std::endl;
             }
+            // fall through!
+
+        case ET_PTR_CALL:
+        case ET_GL_CALL:
+        case ET_GL_CALL_INDIR:
+            perFncCalls_[dst].insert(bb_);
             return;
 
         default:
@@ -293,8 +292,22 @@ void ClDotGenerator::emitBb() {
     perBbEdgeMap_.clear();
 }
 
+void ClDotGenerator::emitCallSet(std::ofstream &str, TCallSet &cs,
+                                 const std::string &dst)
+{
+    const EdgeType type = perFncEdgeMap_[dst];
+
+    TCallSet::iterator j;
+    for (j = cs.begin(); j != cs.end(); ++j) {
+    str << "\t" << SL_QUOTE_BB(*j)
+        << " -> " << SL_QUOTE_BB(dst)
+        << " [color=" << EtColors[type] << "];"
+        << std::endl;
+    }
+}
+
 void ClDotGenerator::emitPendingCalls() {
-    TCallMap::iterator i;
+    TCallMultiMap::iterator i;
     for (i = perFncCalls_.begin(); i != perFncCalls_.end(); ++i) {
         const string &dst = i->first;
         const EdgeType type = perFncEdgeMap_[dst];
@@ -314,19 +327,8 @@ void ClDotGenerator::emitPendingCalls() {
         }
         FILE_FNC_STREAM("];" << std::endl);
 
-        perFileOut_ << "\t" << SL_QUOTE_BB(i->second)
-            << " -> " << SL_QUOTE_BB(dst)
-            << " [color=" << EtColors[type] << "];"
-            << std::endl;
-
-        TCallSet &cs = perBbCalls_[dst];
-        TCallSet::iterator j;
-        for (j = cs.begin(); j != cs.end(); ++j) {
-            perFncOut_ << "\t" << SL_QUOTE_BB(*j)
-                << " -> " << SL_QUOTE_BB(dst)
-                << " [color=" << EtColors[type] << "];"
-                << std::endl;
-        }
+        this->emitCallSet(perFncOut_, perBbCalls_[dst], dst);
+        this->emitCallSet(perFileOut_, perFncCalls_[dst], dst);
     }
 
     perBbCalls_.clear();
