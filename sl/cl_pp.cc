@@ -331,6 +331,17 @@ deref_done:
     SSD_COLORIZE(out_, C_DARK_GRAY) << str << "]";
 }
 
+namespace {
+    char scopeFlag(enum cl_scope_e scope) {
+        switch (scope) {
+            case CL_SCOPE_GLOBAL:       return 'G';
+            case CL_SCOPE_STATIC:       return 'S';
+            case CL_SCOPE_FUNCTION:     return 'F';
+            case CL_SCOPE_BB:           return 'B';
+        }
+    }
+}
+
 void ClPrettyPrint::printNestedVar(const struct cl_operand *op) {
     switch (op->code) {
         case CL_OPERAND_VAR:
@@ -339,7 +350,8 @@ void ClPrettyPrint::printNestedVar(const struct cl_operand *op) {
                         << "anonymous variable");
                 break;
             }
-            out_ << "%m" << op->data.var.id << ":"
+            out_ << "%m" << scopeFlag(op->scope)
+                << op->data.var.id << ":"
                 << SSD_INLINE_COLOR(C_LIGHT_BLUE, op->data.var.name);
             break;
 

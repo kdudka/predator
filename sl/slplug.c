@@ -384,13 +384,35 @@ static /* const */ struct cl_type builtin_fnc_type = {
     .size           = /* FIXME */ sizeof(cl_get_type_fnc_t)
 };
 
+static enum cl_scope_e get_decl_scope(tree t)
+{
+    tree ctx = DECL_CONTEXT(t);
+    if (ctx) {
+        enum tree_code code = TREE_CODE(ctx);
+        switch (code) {
+            case FUNCTION_DECL:
+                return CL_SCOPE_FUNCTION;
+
+            case TRANSLATION_UNIT_DECL:
+            default:
+                TRAP;
+        }
+    }
+
+    // FIXME: this assumption is pretty broken, but we don't need to distinguish
+    // between CL_SCOPE_GLOBAL and CL_SCOPE_STATIC yet
+    return (DECL_EXTERNAL(t))
+        ? CL_SCOPE_GLOBAL
+        : CL_SCOPE_STATIC;
+}
+
 static void read_operand_decl(struct cl_operand *op, tree t)
 {
     enum tree_code code = TREE_CODE(t);
     read_gcc_location(&op->loc, DECL_SOURCE_LOCATION(t));
 
-    if (!DECL_NAME(t)) {
-        // FIXME: a register is assumed here (though not guaranteed to be given)
+    if (DECL_ARTIFICIAL(t)) {
+        // emit as a register
         op->code            = CL_OPERAND_REG;
         op->data.reg.id     = DECL_UID(t);
         op->scope           = /* make it possible to use unify_regs decorator */
@@ -398,32 +420,27 @@ static void read_operand_decl(struct cl_operand *op, tree t)
         return;
     }
 
+    if (!DECL_NAME(t))
+        // anonymous operand ... something went wrong
+        TRAP;
+
+    // read operand's name and scope
+    const char *name = IDENTIFIER_POINTER(DECL_NAME(t));
+    op->scope = get_decl_scope(t);
+
     switch (code) {
         case FUNCTION_DECL:
             op->code                    = CL_OPERAND_CST;
-            op->scope                   = /* FIXME */ (TREE_STATIC(t))
-                                            ? CL_SCOPE_STATIC
-                                            : CL_SCOPE_GLOBAL;
-
             op->type                    = &builtin_fnc_type;
-            op->data.cst_fnc.name       = IDENTIFIER_POINTER(DECL_NAME(t));
+            op->data.cst_fnc.name       = name;
             op->data.cst_fnc.is_extern  = DECL_EXTERNAL(t);
             break;
 
         case PARM_DECL:
-            op->code                    = CL_OPERAND_VAR;
-            op->scope                   = CL_SCOPE_FUNCTION;
-            op->data.var.id             = DECL_UID(t);
-            op->data.var.name           = IDENTIFIER_POINTER(DECL_NAME(t));
-            break;
-
         case VAR_DECL:
             op->code                    = CL_OPERAND_VAR;
-            // TODO: op->scope ... TREE_STATIC, DECL_FILE_SCOPE_P
             op->data.var.id             = DECL_UID(t);
-            op->data.var.name           = IDENTIFIER_POINTER(DECL_NAME(t));
-            // TODO: save value of DECL_EXTERNAL?
-            // TODO: DECL_NONLOCAL, DECL_ARTIFICIAL, TREE_LANG_FLAG_*
+            op->data.var.name           = name;
             break;
 
         default:
