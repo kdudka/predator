@@ -166,6 +166,7 @@ static void pseudo_to_cl_operand(struct instruction *insn, pseudo_t pseudo,
     // TODO: op->deref       = deref;
     // TODO: op->offset      = NULL;
     op->code        = CL_OPERAND_VOID;
+    op->scope       = /* TODO */ CL_SCOPE_GLOBAL;
     op->loc.file    = NULL;
     op->loc.line    = -1;
     op->accessor    = NULL;
@@ -785,6 +786,7 @@ static void handle_fnc_def(struct symbol *sym, struct cl_code_listener *cl)
         op.loc.file                 = NULL;
         op.loc.line                 = -1;
         op.code                     = CL_OPERAND_VAR;
+        op.scope                    = /* TODO */ CL_SCOPE_GLOBAL;
         op.type                     = /* TODO */ &builtin_fnc_type;
         op.accessor                 = NULL;
         op.data.var.name            = strdup(show_ident(arg->ident));

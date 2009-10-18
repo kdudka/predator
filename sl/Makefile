@@ -60,6 +60,7 @@ CL_OBJS = cl_chain.o \
 	cl_typedot.o \
 	cld_argsub.o \
 	cld_intchk.o \
+	cld_optrans.o \
 	cld_unilabel.o \
 	cld_uniregs.o \
 	cld_unswitch.o \
