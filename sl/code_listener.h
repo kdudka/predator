@@ -511,6 +511,9 @@ enum cl_binop_e {
     CL_BINOP_MIN,
     CL_BINOP_MAX,
 
+    /* pointer arithmetic */
+    CL_BINOP_POINTER_PLUS,
+
     /* bitwise */
     CL_BINOP_BIT_AND,
     CL_BINOP_BIT_IOR,

@@ -719,6 +719,7 @@ static void handle_stmt_binop(gimple stmt, enum tree_code code,
         case BIT_AND_EXPR:          *ptype = CL_BINOP_BIT_AND;          break;
         case BIT_IOR_EXPR:          *ptype = CL_BINOP_BIT_IOR;          break;
         case BIT_XOR_EXPR:          *ptype = CL_BINOP_BIT_XOR;          break;
+        case POINTER_PLUS_EXPR:     *ptype = CL_BINOP_POINTER_PLUS;     break;
 
 #define SL_BINOP_UNHANDLED(what) \
     case what: SL_WARN_UNHANDLED_GIMPLE(stmt, #what); \
@@ -730,7 +731,6 @@ static void handle_stmt_binop(gimple stmt, enum tree_code code,
         SL_BINOP_UNHANDLED(RSHIFT_EXPR)
         SL_BINOP_UNHANDLED(LROTATE_EXPR)
         SL_BINOP_UNHANDLED(RROTATE_EXPR)
-        SL_BINOP_UNHANDLED(POINTER_PLUS_EXPR)
 
         default:
             TRAP;
