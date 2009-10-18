@@ -1398,7 +1398,7 @@ static bool sl_append_def_listener(struct cl_code_listener *chain,
 {
     return sl_append_listener(chain,
             "listener=\"%s\" listener_args=\"%s\" "
-            "cld=\"%sunify_labels_fnc,unify_regs\"",
+            "cld=\"%sunify_labels_fnc,unify_regs,unify_vars\"",
             listener, args, (use_unswitch) ? "unfold_switch," : "");
 }
 

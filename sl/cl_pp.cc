@@ -353,9 +353,16 @@ void ClPrettyPrint::printNestedVar(const struct cl_operand *op) {
                         << "anonymous variable");
                 break;
             }
-            out_ << "%m" << scopeFlag(op->scope)
-                << op->data.var.id << ":"
-                << SSD_INLINE_COLOR(C_LIGHT_BLUE, op->data.var.name);
+            out_ << SSD_INLINE_COLOR(C_LIGHT_BLUE, "%m") << scopeFlag(op->scope)
+                << op->data.var.id << ":";
+            switch (op->scope) {
+                case CL_SCOPE_GLOBAL:
+                case CL_SCOPE_STATIC:
+                    out_ << SSD_INLINE_COLOR(C_LIGHT_RED, op->data.var.name);
+                    break;
+                default:
+                    out_ << SSD_INLINE_COLOR(C_LIGHT_BLUE, op->data.var.name);
+            }
             break;
 
         case CL_OPERAND_REG:

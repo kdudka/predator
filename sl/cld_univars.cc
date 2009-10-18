@@ -21,42 +21,56 @@
 #include "cld_optrans.hh"
 #include "relocator.hh"
 
-class CldUniRegs: public CldOpTransBase {
+class CldUniVars: public CldOpTransBase {
     public:
-        CldUniRegs(ICodeListener *slave);
+        CldUniVars(ICodeListener *slave);
 
         virtual void fnc_open(
             const struct cl_location*loc,
             const char              *fnc_name,
             enum cl_scope_e         scope)
         {
-            reloc_.reset();
+            lcReloc_.reset();
             ClDecoratorBase::fnc_open(loc, fnc_name, scope);
         }
 
     private:
-        Relocator<int, int> reloc_;
+        Relocator<int, int> glReloc_;
+        Relocator<int, int> lcReloc_;
 
     protected:
         virtual void modifyOperand(struct cl_operand *);
 };
 
-CldUniRegs::CldUniRegs(ICodeListener *slave):
+CldUniVars::CldUniVars(ICodeListener *slave):
     CldOpTransBase(slave),
-    reloc_(1)
+    glReloc_(1),
+    lcReloc_(1)
 {
 }
 
-void CldUniRegs::modifyOperand(struct cl_operand *op) {
-    if (CL_OPERAND_REG != op->code)
+void CldUniVars::modifyOperand(struct cl_operand *op) {
+    if (CL_OPERAND_VAR != op->code)
         return;
 
-    op->data.reg.id = reloc_.lookup(op->data.reg.id);
-}
+    int &id = op->data.var.id;
 
+    enum cl_scope_e scope = op->scope;
+    switch (scope) {
+        case CL_SCOPE_GLOBAL:
+        case CL_SCOPE_STATIC:
+            id = glReloc_.lookup(id);
+            break;
+
+        case CL_SCOPE_FUNCTION:
+        case CL_SCOPE_BB:
+            id = lcReloc_.lookup(id);
+            break;
+    }
+}
 
 // /////////////////////////////////////////////////////////////////////////////
 // public interface, see cld_unilabel.hh for more details
-ICodeListener* createCldUniRegs(ICodeListener *slave) {
-    return new CldUniRegs(slave);
+ICodeListener* createCldUniVars(ICodeListener *slave) {
+    return new CldUniVars(slave);
 }

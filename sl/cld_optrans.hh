@@ -30,6 +30,19 @@ class CldOpTransBase: public ClDecoratorBase {
         virtual void modifyOperand(struct cl_operand *) = 0;
 
     public:
+        virtual void fnc_arg_decl(
+            int                     arg_id,
+            const struct cl_operand *arg_src)
+        {
+            struct cl_operand local_src = *arg_src;
+            CldOpTransBase::cloneAccessor(&local_src);
+
+            this->traverseOperand(&local_src);
+
+            ClDecoratorBase::fnc_arg_decl(arg_id, &local_src);
+            CldOpTransBase::freeClonedAccessor(&local_src);
+        }
+
         virtual void insn(
             const struct cl_insn    *cli)
         {

@@ -63,6 +63,7 @@ CL_OBJS = cl_chain.o \
 	cld_optrans.o \
 	cld_unilabel.o \
 	cld_uniregs.o \
+	cld_univars.o \
 	cld_unswitch.o \
 	code_listener.o \
 	ssd.o
