@@ -24,10 +24,12 @@ int main() {
                        (struct list_a *) b;
 
     /* grab an uninitialized value and compare with b */
-    struct list_b *d = c->next;
-    if (b != d)
+    void *d = c->next;
+    if (a != d) {
+        free(a);
         /* *** glibc detected *** ./a.out: double free or corruption */
-        free(&a);
+        free(a);
+    }
 
     return 0;
 }
