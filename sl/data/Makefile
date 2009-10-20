@@ -16,7 +16,7 @@ all: *.dot
 
 chkinv: *.c
 inv-bug-??.c: $(CILLY)
-	gcc -std=c99 -pedantic -Wall -Wextra -Werror -o test-`$(BASENAME) $@ .c` $@
+	gcc -std=c99 -g -pedantic -Wall -Wextra -Werror -o test-`$(BASENAME) $@ .c` $@
 	./runtest.sh `$(BASENAME) $@ .c`
 	$(CILLY) > /dev/null
 	if $(CILLY) $@; then \
@@ -24,7 +24,7 @@ inv-bug-??.c: $(CILLY)
 		exit 0; fi
 
 inv-ign-??.c: $(CILLY)
-	gcc -std=c99 -pedantic -Wall -Wextra -Werror -o test-`$(BASENAME) $@ .c` $@
+	gcc -std=c99 -g -pedantic -Wall -Wextra -Werror -o test-`$(BASENAME) $@ .c` $@
 	$(CILLY) > /dev/null
 	if ./runtest.sh `$(BASENAME) $@ .c`; then \
 		exit 1; else \
