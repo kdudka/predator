@@ -23,7 +23,7 @@ int main() {
     struct list_a *c = /* the following cast causes analyzer to be confused */
                        (struct list_a *) b;
 
-    /* grab an uninitialized value and compare with b */
+    /* grab an uninitialized value and compare with a */
     void *d = c->next;
     if (a != d) {
         free(a);
