@@ -18,19 +18,19 @@
  */
 
 #include "cld_argsub.hh"
-#include "cl_decorator.hh"
+#include "cld_optrans.hh"
 
 #include <map>
 #include <string>
 
-class CldArgSubst: public ClDecoratorBase {
+class CldArgSubst: public CldOpTransBase {
     public:
         CldArgSubst(ICodeListener *slave);
 
         virtual void file_open(const char *file_name) {
             loc_.currentFile    = file_name;
             fncLoc_.currentFile = file_name;
-            ClDecoratorBase::file_open(file_name);
+            CldOpTransBase::file_open(file_name);
         }
 
         virtual void fnc_open(
@@ -40,8 +40,8 @@ class CldArgSubst: public ClDecoratorBase {
         {
             fnc_    = fnc_name;
             fncLoc_ = loc;
-            this->reset();
-            ClDecoratorBase::fnc_open(loc, fnc_name, scope);
+            map_.clear();
+            CldOpTransBase::fnc_open(loc, fnc_name, scope);
         }
 
         virtual void fnc_arg_decl(
@@ -49,99 +49,7 @@ class CldArgSubst: public ClDecoratorBase {
             const struct cl_operand *arg_src)
         {
             this->regArg(arg_id, arg_src);
-            ClDecoratorBase::fnc_arg_decl(arg_id, arg_src);
-        }
-
-        virtual void insn(
-            const struct cl_insn    *cli)
-        {
-            struct cl_insn local_cli = *cli;
-            loc_ = &cli->loc;
-
-            switch (cli->code) {
-                case CL_INSN_COND: {
-                        struct cl_operand src = *(cli->data.insn_cond.src);
-                        this->substArg(&src);
-                        local_cli.data.insn_cond.src = &src;
-                        ClDecoratorBase::insn(&local_cli);
-                    }
-                    break;
-
-                case CL_INSN_RET: {
-                        struct cl_operand src = *(cli->data.insn_ret.src);
-                        this->substArg(&src);
-                        local_cli.data.insn_ret.src = &src;
-                        ClDecoratorBase::insn(&local_cli);
-                    }
-                    break;
-
-                case CL_INSN_UNOP: {
-                        struct cl_operand dst = *(cli->data.insn_unop.dst);
-                        struct cl_operand src = *(cli->data.insn_unop.src);
-                        this->substArg(&dst);
-                        this->substArg(&src);
-                        local_cli.data.insn_unop.dst = &dst;
-                        local_cli.data.insn_unop.src = &src;
-                        ClDecoratorBase::insn(&local_cli);
-                    }
-                    break;
-
-                case CL_INSN_BINOP: {
-                        struct cl_operand dst = *(cli->data.insn_binop.dst);
-                        struct cl_operand src1 = *(cli->data.insn_binop.src1);
-                        struct cl_operand src2 = *(cli->data.insn_binop.src2);
-                        this->substArg(&dst);
-                        this->substArg(&src1);
-                        this->substArg(&src2);
-                        local_cli.data.insn_binop.dst = &dst;
-                        local_cli.data.insn_binop.src1 = &src1;
-                        local_cli.data.insn_binop.src2 = &src2;
-                        ClDecoratorBase::insn(&local_cli);
-                    }
-                    break;
-
-                case CL_INSN_NOP:
-                case CL_INSN_JMP:
-                case CL_INSN_ABORT:
-                    ClDecoratorBase::insn(cli);
-                    break;
-            }
-        }
-
-        virtual void insn_call_open(
-            const struct cl_location*loc,
-            const struct cl_operand *dst,
-            const struct cl_operand *fnc)
-        {
-            struct cl_operand local_dst = *dst;
-            struct cl_operand local_fnc = *fnc;
-            loc_ = loc;
-
-            this->substArg(&local_dst);
-            this->substArg(&local_fnc);
-
-            ClDecoratorBase::insn_call_open(loc, &local_dst, &local_fnc);
-        }
-
-        virtual void insn_call_arg(
-            int                     arg_id,
-            const struct cl_operand *arg_src)
-        {
-            struct cl_operand local_arg_src = *arg_src;
-            this->substArg(&local_arg_src);
-            ClDecoratorBase::insn_call_arg(arg_id, &local_arg_src);
-        }
-
-        virtual void insn_switch_open(
-            const struct cl_location*loc,
-            const struct cl_operand *src)
-        {
-            struct cl_operand local_src = *src;
-            loc_ = loc;
-
-            this->substArg(&local_src);
-
-            ClDecoratorBase::insn_switch_open(loc, &local_src);
+            CldOpTransBase::fnc_arg_decl(arg_id, arg_src);
         }
 
     private:
@@ -153,28 +61,21 @@ class CldArgSubst: public ClDecoratorBase {
         Location                loc_;
 
         TMap                    map_;
-        int                     last_;
 
     private:
-        void reset();
         void regArg(int arg_id, const struct cl_operand *arg_src);
 
         // we do not return reference to string because we return NULL
         // when arg position is not found
         const char* argLookup(int);
 
-        void substArg(struct cl_operand *op);
+    protected:
+        virtual void modifyOperand(struct cl_operand *);
 };
 
 CldArgSubst::CldArgSubst(ICodeListener *slave):
-    ClDecoratorBase(slave),
-    last_(0)
+    CldOpTransBase(slave)
 {
-}
-
-void CldArgSubst::reset() {
-    map_.clear();
-    last_ = 0;
 }
 
 void CldArgSubst::regArg(int arg_id, const struct cl_operand *arg_src) {
@@ -210,14 +111,13 @@ const char* CldArgSubst::argLookup(int arg) {
     return i->second.c_str();
 }
 
-void CldArgSubst::substArg(struct cl_operand *op) {
+void CldArgSubst::modifyOperand(struct cl_operand *op) {
     if (CL_OPERAND_ARG != op->code)
         return;
 
     op->code = CL_OPERAND_VAR;
     op->data.var.name = this->argLookup(op->data.arg.id);
 }
-
 
 // /////////////////////////////////////////////////////////////////////////////
 // public interface, see cld_unilabel.hh for more details

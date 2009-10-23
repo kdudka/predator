@@ -48,7 +48,7 @@
 #define SHOW_PSEUDO_INSNS           0
 
 #define WARN_UNHANDLED(pos, what) do { \
-    sep_warn(pos, "warning: '%s' not handled", what); \
+    sl_warn(pos, "warning: '%s' not handled", what); \
     fprintf(stderr, \
             "%s:%d: note: raised from function '%s' [internal location]\n", \
             __FILE__, __LINE__, __FUNCTION__); \
@@ -58,7 +58,7 @@
     WARN_UNHANDLED((sym)->pos, show_ident((sym)->ident))
 
 #define WARN_VA(pos, fmt, ...) do {\
-    sep_warn(pos, "warning: " fmt, __VA_ARGS__); \
+    sl_warn(pos, "warning: " fmt, __VA_ARGS__); \
     fprintf(stderr, \
             "%s:%d: note: raised from function '%s' [internal location]\n", \
             __FILE__, __LINE__, __FUNCTION__); \
@@ -67,10 +67,7 @@
 #define WARN_CASE_UNHANDLED(pos, what) \
     case what: WARN_UNHANDLED(pos, #what); break;
 
-// FIXME: hard-coded for now
-static const unsigned KNOWN_PTR_SIZE = 32;
-
-static void sep_warn(struct position pos, const char *fmt, ...)
+static void sl_warn(struct position pos, const char *fmt, ...)
 {
     va_list ap;
 
@@ -884,7 +881,7 @@ static struct cl_code_listener* create_cl_chain()
     }
 
     cl = cl_code_listener_create("listener=\"pp\" "
-            "cld=\"arg_subst,unify_labels_fnc,unify_regs\"");
+            "cld=\"arg_subst,unify_labels_fnc,unify_regs,unify_vars\"");
     if (!cl) {
         chain->destroy(chain);
         return NULL;
@@ -892,7 +889,7 @@ static struct cl_code_listener* create_cl_chain()
     cl_chain_append(chain, cl);
 
     cl = cl_code_listener_create("listener=\"dotgen\" "
-            "cld=\"arg_subst,unify_labels_fnc,unify_regs\"");
+            "cld=\"arg_subst,unify_labels_fnc,unify_regs,unify_vars\"");
     if (!cl) {
         chain->destroy(chain);
         return NULL;

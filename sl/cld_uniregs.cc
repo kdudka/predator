@@ -31,7 +31,7 @@ class CldUniRegs: public CldOpTransBase {
             enum cl_scope_e         scope)
         {
             reloc_.reset();
-            ClDecoratorBase::fnc_open(loc, fnc_name, scope);
+            CldOpTransBase::fnc_open(loc, fnc_name, scope);
         }
 
     private:
