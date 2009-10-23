@@ -18,7 +18,9 @@
  */
 
 #include "cld_intchk.hh"
+
 #include "cl_decorator.hh"
+#include "cld_opchk.hh"
 
 #include <map>
 #include <string>
@@ -279,90 +281,22 @@ class CldLabelChk: public ClDecoratorBase {
 };
 
 // TODO: go through CFG and report all unused/initialized?
-class CldRegUsageChk: public ClDecoratorBase {
+class CldRegUsageChk: public CldOpCheckerBase {
     public:
         CldRegUsageChk(ICodeListener *slave);
-
-        virtual void file_open(
-            const char              *file_name)
-        {
-            loc_.currentFile = file_name;
-            ClDecoratorBase::file_open(file_name);
-        }
 
         virtual void fnc_open(
             const struct cl_location*loc,
             const char              *fnc_name,
             enum cl_scope_e         scope)
         {
-            loc_ = loc;
             this->reset();
-            ClDecoratorBase::fnc_open(loc, fnc_name, scope);
+            CldOpCheckerBase::fnc_open(loc, fnc_name, scope);
         }
 
         virtual void fnc_close() {
             this->emitWarnings();
-            ClDecoratorBase::fnc_close();
-        }
-
-        virtual void insn(
-            const struct cl_insn    *cli)
-        {
-            loc_ = &cli->loc;
-
-            switch (cli->code) {
-                case CL_INSN_COND:
-                    this->handleSrc(cli->data.insn_cond.src);
-                    break;
-
-                case CL_INSN_RET:
-                    this->handleSrc(cli->data.insn_ret.src);
-                    break;
-
-                case CL_INSN_UNOP:
-                    this->handleDstSrc(cli->data.insn_unop.dst);
-                    this->handleSrc(cli->data.insn_unop.src);
-                    break;
-
-                case CL_INSN_BINOP:
-                    this->handleDstSrc(cli->data.insn_binop.dst);
-                    this->handleSrc(cli->data.insn_binop.src1);
-                    this->handleSrc(cli->data.insn_binop.src2);
-                    break;
-
-                default:
-                    break;
-            }
-
-            ClDecoratorBase::insn(cli);
-        }
-
-        virtual void insn_call_open(
-            const struct cl_location*loc,
-            const struct cl_operand *dst,
-            const struct cl_operand *fnc)
-        {
-            loc_ = loc;
-            this->handleDst(dst);
-            this->handleSrc(fnc);
-            ClDecoratorBase::insn_call_open(loc, dst, fnc);
-        }
-
-        virtual void insn_call_arg(
-            int                     arg_id,
-            const struct cl_operand *arg_src)
-        {
-            this->handleSrc(arg_src);
-            ClDecoratorBase::insn_call_arg(arg_id, arg_src);
-        }
-
-        virtual void insn_switch_open(
-            const struct cl_location*loc,
-            const struct cl_operand *src)
-        {
-            loc_ = loc;
-            this->handleSrc(src);
-            ClDecoratorBase::insn_switch_open(loc, src);
+            CldOpCheckerBase::fnc_close();
         }
 
     private:
@@ -377,14 +311,12 @@ class CldRegUsageChk: public ClDecoratorBase {
         typedef std::map<int, Usage> TMap;
 
         TMap                map_;
-        Location            loc_;
 
     private:
         void reset();
         void handleArrayIdx(const struct cl_operand *);
-        void handleDst(const struct cl_operand *);
-        void handleSrc(const struct cl_operand *);
-        void handleDstSrc(const struct cl_operand *);
+        void checkDstOperand(const struct cl_operand *);
+        void checkSrcOperand(const struct cl_operand *);
         void emitWarnings();
 };
 
@@ -604,7 +536,7 @@ void CldLabelChk::emitWarnings() {
 // /////////////////////////////////////////////////////////////////////////////
 // CldRegUsageChk implementation
 CldRegUsageChk::CldRegUsageChk(ICodeListener *slave):
-    ClDecoratorBase(slave)
+    CldOpCheckerBase(slave)
 {
 }
 
@@ -612,52 +544,24 @@ void CldRegUsageChk::reset() {
     map_.clear();
 }
 
-void CldRegUsageChk::handleArrayIdx(const struct cl_operand *op) {
-    if (CL_OPERAND_VOID == op->code)
-        return;
-
-    struct cl_accessor *ac = op->accessor;
-    for (; ac; ac = ac->next) {
-        if (ac->code != CL_ACCESSOR_DEREF_ARRAY)
-            continue;
-
-        struct cl_operand *idx = ac->data.array.index;
-        if (CL_OPERAND_REG == idx->code)
-            // FIXME: unguarded recursion
-            this->handleSrc(idx);
-    }
-}
-
-void CldRegUsageChk::handleDst(const struct cl_operand *op) {
-    this->handleArrayIdx(op);
+void CldRegUsageChk::checkDstOperand(const struct cl_operand *op) {
     if (CL_OPERAND_REG != op->code)
         return;
 
     Usage &u = map_[op->data.reg.id];
     u.written = true;
     if (u.loc.locLine < 0)
-        u.loc = loc_;
+        u.loc = CldOpCheckerBase::lastLocation();
 }
 
-void CldRegUsageChk::handleSrc(const struct cl_operand *op) {
-    this->handleArrayIdx(op);
+void CldRegUsageChk::checkSrcOperand(const struct cl_operand *op) {
     if (CL_OPERAND_REG != op->code)
         return;
 
     Usage &u = map_[op->data.reg.id];
     u.read = true;
     if (u.loc.locLine < 0)
-        u.loc = loc_;
-}
-
-void CldRegUsageChk::handleDstSrc(const struct cl_operand *op) {
-    if (CL_OPERAND_REG != op->code)
-        return;
-
-    if (op->accessor && op->accessor->code == CL_ACCESSOR_DEREF)
-        this->handleSrc(op);
-    else
-        this->handleDst(op);
+        u.loc = CldOpCheckerBase::lastLocation();
 }
 
 void CldRegUsageChk::emitWarnings() {
@@ -667,13 +571,15 @@ void CldRegUsageChk::emitWarnings() {
         const Usage &u = i->second;
 
         if (!u.read) {
-            CL_MSG_STREAM(cl_warn, LocationWriter(u.loc, &loc_) << "warning: "
-                    << "unused register %r" << reg);
+            CL_MSG_STREAM(cl_warn,
+                    LocationWriter(u.loc, &CldOpCheckerBase::lastLocation())
+                    << "warning: unused register %r" << reg);
         }
 
         if (!u.written) {
-            CL_MSG_STREAM(cl_error, LocationWriter(u.loc, &loc_) << "error: "
-                    << "uninitialized register %r" << reg);
+            CL_MSG_STREAM(cl_error,
+                    LocationWriter(u.loc, &CldOpCheckerBase::lastLocation())
+                    << "error: uninitialized register %r" << reg);
         }
     }
 }
