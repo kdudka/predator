@@ -283,28 +283,37 @@ class CldLabelChk: public ClDecoratorBase {
 
 class CldRegUsageChk: public CldOpCheckerBase {
     public:
-        CldRegUsageChk(ICodeListener *slave);
-
-        virtual void fnc_open(
-            const struct cl_location*loc,
-            const char              *fnc_name,
-            enum cl_scope_e         scope)
+        CldRegUsageChk(ICodeListener *slave):
+            CldOpCheckerBase(slave),
+            usageChecker_("register %r")
         {
-            usageChecker_.reset();
-            CldOpCheckerBase::fnc_open(loc, fnc_name, scope);
         }
 
         virtual void fnc_close() {
             usageChecker_.emitPendingMessages(CldOpCheckerBase::lastLocation());
+            usageChecker_.reset();
             CldOpCheckerBase::fnc_close();
+        }
+
+    protected:
+        virtual void checkDstOperand(const struct cl_operand *op) {
+            if (CL_OPERAND_REG != op->code)
+                return;
+
+            int id = op->data.reg.id;
+            usageChecker_.write(id, id, CldOpCheckerBase::lastLocation());
+        }
+
+        virtual void checkSrcOperand(const struct cl_operand *op) {
+            if (CL_OPERAND_REG != op->code)
+                return;
+
+            int id = op->data.reg.id;
+            usageChecker_.read(id, id, CldOpCheckerBase::lastLocation());
         }
 
     private:
         UsageChecker<int, int> usageChecker_;
-
-    protected:
-        virtual void checkDstOperand(const struct cl_operand *);
-        virtual void checkSrcOperand(const struct cl_operand *);
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -519,30 +528,6 @@ void CldLabelChk::emitWarnings() {
     }
 }
 
-
-// /////////////////////////////////////////////////////////////////////////////
-// CldRegUsageChk implementation
-CldRegUsageChk::CldRegUsageChk(ICodeListener *slave):
-    CldOpCheckerBase(slave),
-    usageChecker_("register %r")
-{
-}
-
-void CldRegUsageChk::checkDstOperand(const struct cl_operand *op) {
-    if (CL_OPERAND_REG != op->code)
-        return;
-
-    int id = op->data.reg.id;
-    usageChecker_.write(id, id, CldOpCheckerBase::lastLocation());
-}
-
-void CldRegUsageChk::checkSrcOperand(const struct cl_operand *op) {
-    if (CL_OPERAND_REG != op->code)
-        return;
-
-    int id = op->data.reg.id;
-    usageChecker_.read(id, id, CldOpCheckerBase::lastLocation());
-}
 
 // /////////////////////////////////////////////////////////////////////////////
 // public interface, see cld_unilabel.hh for more details
