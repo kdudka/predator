@@ -302,39 +302,3 @@ struct cl_code_listener* cl_code_listener_create(const char *config_string)
         CL_DIE("uncaught exception in cl_writer_create");
     }
 }
-
-// TODO: review
-std::ostream& operator<<(std::ostream &str, const LocationWriter &lw) {
-    const Location &loc     = lw.loc;
-    const Location &last    = lw.last;
-
-    if ((0 < loc.locLine) && !loc.locFile.empty())
-        str << loc.locFile;
-    else if ((0 < last.locLine) && !last.locFile.empty())
-        str << last.locFile;
-    else if (!loc.currentFile.empty())
-        str << loc.currentFile;
-    else if (!last.currentFile.empty())
-        str << last.currentFile;
-    else
-        str << "<unknown file>";
-
-    str << ":";
-
-    if (0 < loc.locLine)
-        str << loc.locLine;
-    else if (0 < last.locLine)
-        str << last.locLine;
-    else
-        str << "<unknown line>";
-
-    str << ":";
-
-    if ((0 < loc.locLine) && (0 < loc.locColumn))
-        str << loc.locColumn << ":";
-    else if ((0 < last.locLine) && (0 < last.locColumn))
-        str << last.locColumn << ":";
-
-    str << " " << std::flush;
-    return str;
-}

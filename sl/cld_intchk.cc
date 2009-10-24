@@ -280,7 +280,6 @@ class CldLabelChk: public ClDecoratorBase {
         void emitWarnings();
 };
 
-// TODO: go through CFG and report all unused/initialized?
 class CldRegUsageChk: public CldOpCheckerBase {
     public:
         CldRegUsageChk(ICodeListener *slave);
@@ -314,10 +313,11 @@ class CldRegUsageChk: public CldOpCheckerBase {
 
     private:
         void reset();
-        void handleArrayIdx(const struct cl_operand *);
-        void checkDstOperand(const struct cl_operand *);
-        void checkSrcOperand(const struct cl_operand *);
         void emitWarnings();
+
+    protected:
+        virtual void checkDstOperand(const struct cl_operand *);
+        virtual void checkSrcOperand(const struct cl_operand *);
 };
 
 // /////////////////////////////////////////////////////////////////////////////
