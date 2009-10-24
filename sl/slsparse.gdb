@@ -1,5 +1,5 @@
 file ./slsparse
-set args -Wno-decl data/dll.c
+set args -g -O0 -Wno-decl -fPIC -std=c99 -pedantic -Wall -W -Werror -I.. -I../gcc -iquote. -I. data/slplug.c
 set confirm 0
 set pagination 0
 set print pretty

@@ -88,6 +88,22 @@ static void read_sparse_location(struct cl_location *loc, struct position pos)
     loc->sysp   = /* not used by SPARSE */ false;
 }
 
+static void read_sparse_scope(enum cl_scope_e *ps, struct symbol *sym)
+{
+    struct scope *ss = sym->scope;
+    if (!ss || ss == global_scope)
+        *ps = CL_SCOPE_GLOBAL;
+    else if (ss == file_scope)
+        *ps = CL_SCOPE_STATIC;
+    else if (ss == function_scope)
+        TRAP;
+    else if (ss == block_scope)
+        TRAP;
+    else
+        // FIXME
+        *ps = CL_SCOPE_FUNCTION;
+}
+
 static bool is_pseudo(pseudo_t pseudo)
 {
     return pseudo
@@ -162,7 +178,7 @@ static void pseudo_to_cl_operand(struct instruction *insn, pseudo_t pseudo,
     // TODO: op->deref       = deref;
     // TODO: op->offset      = NULL;
     op->code        = CL_OPERAND_VOID;
-    op->scope       = /* TODO */ CL_SCOPE_GLOBAL;
+    op->scope       = CL_SCOPE_GLOBAL;
     op->loc.file    = NULL;
     op->loc.line    = -1;
     op->accessor    = NULL;
@@ -175,8 +191,9 @@ static void pseudo_to_cl_operand(struct instruction *insn, pseudo_t pseudo,
             struct symbol *sym = pseudo->sym;
             struct expression *expr;
 
-            // read symbol location
+            // read symbol location and scope
             read_sparse_location(&op->loc, sym->pos);
+            read_sparse_scope(&op->scope, sym);
 
             if (sym->bb_target) {
                 WARN_UNHANDLED(insn->pos, "sym->bb_target");
@@ -193,6 +210,7 @@ static void pseudo_to_cl_operand(struct instruction *insn, pseudo_t pseudo,
                 } else {
                     op->code                    = CL_OPERAND_VAR;
                     op->type                    = /* TODO */ &builtin_fnc_type;
+                    op->data.var.id             = /* TODO */ (int)(long) sym;
                     op->data.var.name           = strdup(show_ident(sym->ident));
                 }
                 break;
@@ -767,13 +785,12 @@ static void handle_fnc_def(struct symbol *sym, struct cl_code_listener *cl)
     struct symbol *base_type = sym->ctype.base_type;
     struct symbol *arg;
     struct cl_location loc;
+    enum cl_scope_e scope;
     int argc = 0;
 
     read_sparse_location(&loc, sym->pos);
-    cl->fnc_open(cl, &loc, show_ident(sym->ident),
-            (sym->scope==file_scope)
-            ? CL_SCOPE_STATIC
-            : CL_SCOPE_GLOBAL);
+    read_sparse_scope(&scope, sym);
+    cl->fnc_open(cl, &loc, show_ident(sym->ident), scope);
 
     // dump argument list
     FOR_EACH_PTR(base_type->arguments, arg) {
