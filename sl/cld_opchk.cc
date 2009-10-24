@@ -42,6 +42,20 @@ void CldOpCheckerBase::handleArrayIdx(const struct cl_operand *op) {
 }
 
 void CldOpCheckerBase::handleSrc(const struct cl_operand *op) {
+    if (CL_OPERAND_VOID == op->code)
+        return;
+
+    // look for &
+    const struct cl_accessor *is_ref = op->accessor;
+    while (is_ref && (is_ref->next || is_ref->code != CL_ACCESSOR_REF))
+        is_ref = is_ref->next;
+
+    if (is_ref)
+        // FIXME: raw approximation
+        // FIXME: this also hides incorrectly associated register
+        //        to unrecognized built-in
+        this->checkDstOperand(op);
+
     this->checkSrcOperand(op);
     this->handleArrayIdx(op);
 }
