@@ -21,6 +21,7 @@
 
 #include "cl_decorator.hh"
 #include "cld_opchk.hh"
+#include "usagechk.hh"
 
 #include <map>
 #include <string>
@@ -289,31 +290,17 @@ class CldRegUsageChk: public CldOpCheckerBase {
             const char              *fnc_name,
             enum cl_scope_e         scope)
         {
-            this->reset();
+            usageChecker_.reset();
             CldOpCheckerBase::fnc_open(loc, fnc_name, scope);
         }
 
         virtual void fnc_close() {
-            this->emitWarnings();
+            usageChecker_.emitPendingMessages(CldOpCheckerBase::lastLocation());
             CldOpCheckerBase::fnc_close();
         }
 
     private:
-        struct Usage {
-            bool                    read;
-            bool                    written;
-            Location                loc;
-
-            Usage(): read(false), written(false) { }
-        };
-
-        typedef std::map<int, Usage> TMap;
-
-        TMap                map_;
-
-    private:
-        void reset();
-        void emitWarnings();
+        UsageChecker<int, int> usageChecker_;
 
     protected:
         virtual void checkDstOperand(const struct cl_operand *);
@@ -536,54 +523,26 @@ void CldLabelChk::emitWarnings() {
 // /////////////////////////////////////////////////////////////////////////////
 // CldRegUsageChk implementation
 CldRegUsageChk::CldRegUsageChk(ICodeListener *slave):
-    CldOpCheckerBase(slave)
+    CldOpCheckerBase(slave),
+    usageChecker_("register %r")
 {
-}
-
-void CldRegUsageChk::reset() {
-    map_.clear();
 }
 
 void CldRegUsageChk::checkDstOperand(const struct cl_operand *op) {
     if (CL_OPERAND_REG != op->code)
         return;
 
-    Usage &u = map_[op->data.reg.id];
-    u.written = true;
-    if (u.loc.locLine < 0)
-        u.loc = CldOpCheckerBase::lastLocation();
+    int id = op->data.reg.id;
+    usageChecker_.write(id, id, CldOpCheckerBase::lastLocation());
 }
 
 void CldRegUsageChk::checkSrcOperand(const struct cl_operand *op) {
     if (CL_OPERAND_REG != op->code)
         return;
 
-    Usage &u = map_[op->data.reg.id];
-    u.read = true;
-    if (u.loc.locLine < 0)
-        u.loc = CldOpCheckerBase::lastLocation();
+    int id = op->data.reg.id;
+    usageChecker_.read(id, id, CldOpCheckerBase::lastLocation());
 }
-
-void CldRegUsageChk::emitWarnings() {
-    TMap::iterator i;
-    for (i = map_.begin(); i != map_.end(); ++i) {
-        int reg = i->first;
-        const Usage &u = i->second;
-
-        if (!u.read) {
-            CL_MSG_STREAM(cl_warn,
-                    LocationWriter(u.loc, &CldOpCheckerBase::lastLocation())
-                    << "warning: unused register %r" << reg);
-        }
-
-        if (!u.written) {
-            CL_MSG_STREAM(cl_error,
-                    LocationWriter(u.loc, &CldOpCheckerBase::lastLocation())
-                    << "error: uninitialized register %r" << reg);
-        }
-    }
-}
-
 
 // /////////////////////////////////////////////////////////////////////////////
 // public interface, see cld_unilabel.hh for more details
