@@ -53,8 +53,13 @@ class CldArgSubst: public CldOpTransBase {
         }
 
     private:
+        struct ArgDecl {
+            int             varId;
+            std::string     varName;
+        };
+
         // we use map because some arg_id positions may be omitted
-        typedef std::map<int, std::string> TMap;
+        typedef std::map<int, ArgDecl> TMap;
 
         std::string             fnc_;
         Location                fncLoc_;
@@ -64,10 +69,6 @@ class CldArgSubst: public CldOpTransBase {
 
     private:
         void regArg(int arg_id, const struct cl_operand *arg_src);
-
-        // we do not return reference to string because we return NULL
-        // when arg position is not found
-        const char* argLookup(int);
 
     protected:
         virtual void modifyOperand(struct cl_operand *);
@@ -85,17 +86,23 @@ void CldArgSubst::regArg(int arg_id, const struct cl_operand *arg_src) {
                 << "argument #" << arg_id
                 << " of function '" << fnc_ << "'"
                 << " is already declared as '"
-                << i->second << "'");
+                << i->second.varName << "'");
         return;
     }
 
     if (arg_src->code != CL_OPERAND_VAR)
         TRAP;
 
-    map_[arg_id] = arg_src->data.var.name;
+    ArgDecl &ad = map_[arg_id];
+    ad.varId    = arg_src->data.var.id;
+    ad.varName  = arg_src->data.var.name;
 }
 
-const char* CldArgSubst::argLookup(int arg) {
+void CldArgSubst::modifyOperand(struct cl_operand *op) {
+    if (CL_OPERAND_ARG != op->code)
+        return;
+
+    int arg = op->data.arg.id;
     TMap::iterator i = map_.find(arg);
     if (map_.end() == i) {
         CL_MSG_STREAM(cl_error, LocationWriter(0, &loc_) << "error: "
@@ -105,18 +112,15 @@ const char* CldArgSubst::argLookup(int arg) {
         CL_MSG_STREAM(cl_note, LocationWriter(0, &fncLoc_) << "note: "
                 << "function '" << fnc_ << "'"
                 << " was declarede here");
-        return NULL;
+        return;
     }
 
-    return i->second.c_str();
-}
+    const ArgDecl &ad = i->second;
+    op->data.var.id     = ad.varId;
+    op->data.var.name   = ad.varName.c_str();
 
-void CldArgSubst::modifyOperand(struct cl_operand *op) {
-    if (CL_OPERAND_ARG != op->code)
-        return;
-
-    op->code = CL_OPERAND_VAR;
-    op->data.var.name = this->argLookup(op->data.arg.id);
+    op->code            = CL_OPERAND_VAR;
+    op->scope           = CL_SCOPE_FUNCTION;
 }
 
 // /////////////////////////////////////////////////////////////////////////////

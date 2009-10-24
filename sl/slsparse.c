@@ -96,22 +96,21 @@ static bool is_pseudo(pseudo_t pseudo)
 
 static void free_cl_operand_data(struct cl_operand *op)
 {
-    // TODO
-#if 0
-    free((char *) op->offset);
-    switch (op->type) {
+    switch (op->code) {
         case CL_OPERAND_VAR:
             free((char *) op->data.var.name);
             break;
 
+    // TODO
+#if 0
         case CL_OPERAND_STRING:
             free((char *) op->data.lit_string.value);
             break;
+#endif
 
         default:
             break;
     }
-#endif
 }
 
 static const char* strdup_sparse_string(const struct string *str)
@@ -778,15 +777,15 @@ static void handle_fnc_def(struct symbol *sym, struct cl_code_listener *cl)
 
     // dump argument list
     FOR_EACH_PTR(base_type->arguments, arg) {
-        // TODO: cl->fnc_arg_decl(cl, ++argc, show_ident(arg->ident));
         struct cl_operand op;
-        op.loc.file                 = NULL;
-        op.loc.line                 = -1;
         op.code                     = CL_OPERAND_VAR;
-        op.scope                    = /* TODO */ CL_SCOPE_GLOBAL;
+        op.scope                    = CL_SCOPE_FUNCTION;
         op.type                     = /* TODO */ &builtin_fnc_type;
         op.accessor                 = NULL;
+        op.data.var.id              = /* TODO */ (int)(long) arg;
         op.data.var.name            = strdup(show_ident(arg->ident));
+
+        read_sparse_location(&op.loc, arg->pos);
         cl->fnc_arg_decl(cl, ++argc, &op);
     } END_FOR_EACH_PTR(arg);
 
