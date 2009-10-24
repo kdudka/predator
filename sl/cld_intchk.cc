@@ -316,6 +316,43 @@ class CldRegUsageChk: public CldOpCheckerBase {
         UsageChecker<int, int> usageChecker_;
 };
 
+class CldLcVarUsageChk: public CldOpCheckerBase {
+    public:
+        CldLcVarUsageChk(ICodeListener *slave):
+            CldOpCheckerBase(slave),
+            usageChecker_("local variable ")
+        {
+        }
+
+        virtual void fnc_close() {
+            usageChecker_.emitPendingMessages(CldOpCheckerBase::lastLocation());
+            usageChecker_.reset();
+            CldOpCheckerBase::fnc_close();
+        }
+
+    protected:
+        virtual void checkDstOperand(const struct cl_operand *op) {
+            if (CL_OPERAND_VAR != op->code || CL_SCOPE_FUNCTION != op->scope)
+                return;
+
+            usageChecker_.write(op->data.var.id,
+                                std::string("'") + op->data.var.name +"'",
+                                CldOpCheckerBase::lastLocation());
+        }
+
+        virtual void checkSrcOperand(const struct cl_operand *op) {
+            if (CL_OPERAND_VAR != op->code || CL_SCOPE_FUNCTION != op->scope)
+                return;
+
+            usageChecker_.read(op->data.var.id,
+                               std::string("'") + op->data.var.name +"'",
+                               CldOpCheckerBase::lastLocation());
+        }
+
+    private:
+        UsageChecker<int, std::string> usageChecker_;
+};
+
 // /////////////////////////////////////////////////////////////////////////////
 // CldCbSeqChk implementation
 CldCbSeqChk::CldCbSeqChk(ICodeListener *slave):
@@ -533,8 +570,9 @@ void CldLabelChk::emitWarnings() {
 // public interface, see cld_unilabel.hh for more details
 ICodeListener* createCldIntegrityChk(ICodeListener *slave) {
     return
+        new CldLcVarUsageChk(
         new CldRegUsageChk(
         new CldLabelChk(
         new CldCbSeqChk(slave)
-        ));
+        )));
 }
