@@ -89,6 +89,7 @@ slsparse.o: CFLAGS += -fPIC -Wall $(SPARSE_CFLAGS)
 slsparse: slsparse.o libcl.a $(SPARSE_LIBS)
 	$(CC) $(CFLAGS) -o $@ slsparse.o -L. -lcl $(SPARSE_LIBS) $(CL_LIBS) \
 		$(LDFLAGS)
+	../sparse/sparse -I.. slsparse.c
 
 PLUG_CFLAGS = -fPIC -std=c99 -pedantic -Wall -W -Werror -I.. -I../gcc -iquote.
 

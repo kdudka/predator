@@ -247,7 +247,7 @@ static void read_pseudo_sym(struct cl_operand *op, struct symbol *sym)
 
     if (sym->bb_target) {
         WARN_UNHANDLED(sym->pos, "sym->bb_target");
-        op->type = CL_OPERAND_VOID;
+        op->code = CL_OPERAND_VOID;
         return;
     }
 
@@ -556,7 +556,7 @@ static void handle_insn_copy(struct instruction *insn,
             false       , false);
 }
 
-static void handle_insn_binop(struct instruction *insn, enum cl_operand_e code,
+static void handle_insn_binop(struct instruction *insn, enum cl_binop_e code,
                             struct cl_code_listener *cl)
 {
     struct cl_operand dst, src1, src2;
@@ -952,7 +952,7 @@ static void clean_up_symbols(struct symbol_list *list,
     } END_FOR_EACH_PTR(sym);
 }
 
-static struct cl_code_listener* create_cl_chain()
+static struct cl_code_listener* create_cl_chain(void)
 {
     struct cl_code_listener *cl;
     struct cl_code_listener *chain = cl_chain_create();
