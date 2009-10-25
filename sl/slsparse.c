@@ -67,6 +67,9 @@
 #define WARN_CASE_UNHANDLED(pos, what) \
     case what: WARN_UNHANDLED(pos, #what); break;
 
+#define SL_NEW(type) \
+    (type *) malloc(sizeof(type))
+
 static void sl_warn(struct position pos, const char *fmt, ...)
 {
     va_list ap;
@@ -110,6 +113,26 @@ static bool is_pseudo(pseudo_t pseudo)
         && pseudo != VOID;
 }
 
+static void free_cl_cst_data(struct cl_operand *op)
+{
+    if (!op->type)
+        TRAP;
+
+    switch (op->type->code) {
+        case CL_TYPE_FNC:
+            free((char *) op->data.cst_fnc.name);
+            break;
+
+        case CL_TYPE_STRING:
+            free((char *) op->data.cst_string.value);
+            break;
+
+        // TODO
+        default:
+            break;
+    }
+}
+
 static void free_cl_operand_data(struct cl_operand *op)
 {
     switch (op->code) {
@@ -117,16 +140,17 @@ static void free_cl_operand_data(struct cl_operand *op)
             free((char *) op->data.var.name);
             break;
 
-    // TODO
-#if 0
-        case CL_OPERAND_STRING:
-            free((char *) op->data.lit_string.value);
+        case CL_OPERAND_CST:
+            free_cl_cst_data(op);
             break;
-#endif
 
+        // TODO
         default:
             break;
     }
+
+    // TODO
+    free(op->accessor);
 }
 
 static const char* strdup_sparse_string(const struct string *str)
@@ -172,70 +196,63 @@ static /* const */ struct cl_type builtin_int_type = {
     .size           = /* FIXME */ sizeof(int)
 };
 
-static void pseudo_to_cl_operand(struct instruction *insn, pseudo_t pseudo,
-                                 struct cl_operand *op, bool deref)
+static void read_sym_initializer(struct cl_operand *op, struct expression *expr)
 {
-    // TODO: op->deref       = deref;
-    // TODO: op->offset      = NULL;
-    op->code        = CL_OPERAND_VOID;
-    op->scope       = CL_SCOPE_GLOBAL;
-    op->loc.file    = NULL;
-    op->loc.line    = -1;
-    op->accessor    = NULL;
-
-    if (!is_pseudo(pseudo))
+    if (!expr)
         return;
 
+    switch (expr->type) {
+        case EXPR_STRING:
+            op->code                    = CL_OPERAND_CST;
+            op->type                    = &builtin_string_type;
+            op->data.cst_string.value   =
+                strdup_sparse_string(expr->string);
+            return;
+
+        default:
+            TRAP;
+    }
+}
+
+static void read_pseudo_sym(struct cl_operand *op, struct symbol *sym)
+{
+    struct symbol *base;
+
+    // read symbol location and scope
+    read_sparse_location(&op->loc, sym->pos);
+    read_sparse_scope(&op->scope, sym);
+
+    if (sym->bb_target) {
+        WARN_UNHANDLED(sym->pos, "sym->bb_target");
+        op->type = CL_OPERAND_VOID;
+        return;
+    }
+
+    if (!sym->ident) {
+        read_sym_initializer(op, sym->initializer);
+        return;
+    }
+
+    base = sym->ctype.base_type;
+    if (base && base->type == SYM_FN) {
+        op->code                    = CL_OPERAND_CST;
+        op->type                    = &builtin_fnc_type;
+        op->data.cst_fnc.name       = strdup(show_ident(sym->ident));
+        op->data.cst_fnc.is_extern  = MOD_EXTERN & sym->ctype.modifiers;
+    } else {
+        op->code                    = CL_OPERAND_VAR;
+        op->type                    = /* TODO */ &builtin_fnc_type;
+        op->data.var.id             = /* TODO */ (int)(long) sym;
+        op->data.var.name           = strdup(show_ident(sym->ident));
+    }
+}
+
+static void read_pseudo(struct cl_operand *op, pseudo_t pseudo)
+{
     switch(pseudo->type) {
-        case PSEUDO_SYM: {
-            struct symbol *sym = pseudo->sym;
-            struct expression *expr;
-
-            // read symbol location and scope
-            read_sparse_location(&op->loc, sym->pos);
-            read_sparse_scope(&op->scope, sym);
-
-            if (sym->bb_target) {
-                WARN_UNHANDLED(insn->pos, "sym->bb_target");
-                op->type = CL_OPERAND_VOID;
-                return;
-            }
-            if (sym->ident) {
-                struct symbol *base = sym->ctype.base_type;
-                if (base && base->type == SYM_FN) {
-                    op->code                    = CL_OPERAND_CST;
-                    op->type                    = &builtin_fnc_type;
-                    op->data.cst_fnc.name       = strdup(show_ident(sym->ident));
-                    op->data.cst_fnc.is_extern  = MOD_EXTERN & sym->ctype.modifiers;
-                } else {
-                    op->code                    = CL_OPERAND_VAR;
-                    op->type                    = /* TODO */ &builtin_fnc_type;
-                    op->data.var.id             = /* TODO */ (int)(long) sym;
-                    op->data.var.name           = strdup(show_ident(sym->ident));
-                }
-                break;
-            }
-            expr = sym->initializer;
-            if (expr) {
-                switch (expr->type) {
-#if 0
-                    case EXPR_VALUE:
-                        printf("<symbol value: %lld>", expr->value);
-                        break;
-#endif
-                    case EXPR_STRING:
-                        op->code                    = CL_OPERAND_CST;
-                        op->type                    = &builtin_string_type;
-                        op->data.cst_string.value   =
-                            strdup_sparse_string(expr->string);
-                        return;
-
-                    default:
-                        TRAP;
-                }
-            }
+        case PSEUDO_SYM:
+            read_pseudo_sym(op, pseudo->sym);
             break;
-        }
 
         case PSEUDO_REG:
             op->code                = CL_OPERAND_REG;
@@ -248,7 +265,7 @@ static void pseudo_to_cl_operand(struct instruction *insn, pseudo_t pseudo,
             long long value = pseudo->value;
 
             op->code                = CL_OPERAND_CST;
-            op->type                = /* TODO: CL_OPERAND_INT */ &builtin_int_type;
+            op->type                = /* TODO */ &builtin_int_type;
             op->data.cst_int.value  = value;
             return;
         }
@@ -259,24 +276,55 @@ static void pseudo_to_cl_operand(struct instruction *insn, pseudo_t pseudo,
             op->data.arg.id         = pseudo->nr;
             break;
 
+#if 0
         case PSEUDO_PHI:
             WARN_UNHANDLED(insn->pos, "PSEUDO_PHI");
             break;
+#endif
 
         default:
             TRAP;
     }
+}
 
-    if (deref && insn->type) {
-        const struct ident *id = insn->type->ident;
-        const char *id_string = show_ident(id);
-        if (id
-                /* FIXME: deref? */
-                && 0 != strcmp("__ptr", id_string))
-        {
-            // TODO: op->offset = strdup(id_string);
-        }
+static void read_insn_op_deref(struct cl_operand *op, struct instruction *insn)
+{
+    struct cl_accessor *ac;
+    if (insn->type
+            && insn->type->ident
+            && 0 != strcmp("__ptr", show_ident(insn->type->ident)))
+    {
+        WARN_UNHANDLED(insn->pos, "CL_ACCESSOR_ITEM");
+        return;
     }
+
+    // simple deref?
+    ac = SL_NEW(struct cl_accessor);
+    if (!ac)
+        die("SL_NEW failed");
+
+    ac->code = CL_ACCESSOR_DEREF;
+    ac->type = /* TODO */ &builtin_fnc_type;
+    ac->next = NULL;
+
+    op->accessor = ac;
+}
+
+static void pseudo_to_cl_operand(struct instruction *insn, pseudo_t pseudo,
+                                 struct cl_operand *op, bool deref)
+{
+    op->code        = CL_OPERAND_VOID;
+    op->scope       = CL_SCOPE_GLOBAL;
+    op->loc.file    = NULL;
+    op->loc.line    = -1;
+    op->accessor    = NULL;
+
+    if (!is_pseudo(pseudo))
+        return;
+
+    read_pseudo(op, pseudo);
+    if (deref)
+        read_insn_op_deref(op, insn);
 }
 
 static bool handle_insn_call(struct instruction *insn,
@@ -904,6 +952,7 @@ static struct cl_code_listener* create_cl_chain()
     }
     cl_chain_append(chain, cl);
 
+#if 0
     cl = cl_code_listener_create("listener=\"dotgen\" "
             "cld=\"arg_subst,unify_labels_fnc,unify_regs,unify_vars\"");
     if (!cl) {
@@ -911,6 +960,7 @@ static struct cl_code_listener* create_cl_chain()
         return NULL;
     }
     cl_chain_append(chain, cl);
+#endif
 
     return chain;
 }
