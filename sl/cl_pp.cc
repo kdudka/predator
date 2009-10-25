@@ -191,6 +191,10 @@ void ClPrettyPrint::printCst(const struct cl_operand *op) {
     const struct cl_type *type = op->type;
     enum cl_type_e code = type->code;
     switch (code) {
+        case CL_TYPE_UNKNOWN:
+            this->printVarType(op);
+            break;
+
         case CL_TYPE_PTR:
             if (op->data.cst_int.value)
                 TRAP;
@@ -289,6 +293,10 @@ deref_done:
     switch (code) {
         case CL_TYPE_VOID:
             out_ << SSD_INLINE_COLOR(C_GREEN, "void");
+            break;
+
+        case CL_TYPE_UNKNOWN:
+            out_ << SSD_INLINE_COLOR(C_LIGHT_CYAN, typeName(clt));
             break;
 
         case CL_TYPE_STRUCT:

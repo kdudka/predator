@@ -161,6 +161,7 @@ enum {
  */
 enum cl_type_e {
     CL_TYPE_VOID,
+    CL_TYPE_UNKNOWN,
     CL_TYPE_PTR,
     CL_TYPE_STRUCT,
     CL_TYPE_UNION,

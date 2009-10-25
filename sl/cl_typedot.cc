@@ -325,6 +325,7 @@ void ClTypeDotGenerator::digOneType(const struct cl_type *type, TStack &st)
 
     switch (code) {
         case CL_TYPE_VOID:
+        case CL_TYPE_UNKNOWN:
             break;
 
         case CL_TYPE_PTR:

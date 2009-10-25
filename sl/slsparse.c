@@ -107,6 +107,25 @@ static void read_sparse_scope(enum cl_scope_e *ps, struct symbol *sym)
         *ps = CL_SCOPE_FUNCTION;
 }
 
+static struct cl_type* read_sparse_type(struct symbol *sym)
+{
+    struct cl_type *clt = SL_NEW(struct cl_type);
+    if (!clt)
+        die("SL_NEW failed");
+
+    // TODO
+    clt->uid        = -1;
+    clt->code       = CL_TYPE_UNKNOWN;
+    clt->name       = strdup(show_typename(sym));
+    clt->size       = /* TODO */ 0;
+    clt->item_cnt   = /* TODO */ 0;
+    clt->items      = /* TODO */ NULL;
+
+    read_sparse_location(&clt->loc, sym->pos);
+    read_sparse_scope(&clt->scope, sym);
+    return clt;
+}
+
 static bool is_pseudo(pseudo_t pseudo)
 {
     return pseudo
@@ -150,6 +169,10 @@ static void free_cl_operand_data(struct cl_operand *op)
     }
 
     // TODO
+    if (op->type && op->type->code == CL_TYPE_UNKNOWN) {
+        free((char *) op->type->name);
+        free(op->type);
+    }
     free(op->accessor);
 }
 
@@ -236,12 +259,12 @@ static void read_pseudo_sym(struct cl_operand *op, struct symbol *sym)
     base = sym->ctype.base_type;
     if (base && base->type == SYM_FN) {
         op->code                    = CL_OPERAND_CST;
-        op->type                    = &builtin_fnc_type;
+        op->type                    = read_sparse_type(sym);
         op->data.cst_fnc.name       = strdup(show_ident(sym->ident));
         op->data.cst_fnc.is_extern  = MOD_EXTERN & sym->ctype.modifiers;
     } else {
         op->code                    = CL_OPERAND_VAR;
-        op->type                    = /* TODO */ &builtin_fnc_type;
+        op->type                    = read_sparse_type(sym);
         op->data.var.id             = /* TODO */ (int)(long) sym;
         op->data.var.name           = strdup(show_ident(sym->ident));
     }
@@ -317,6 +340,7 @@ static void pseudo_to_cl_operand(struct instruction *insn, pseudo_t pseudo,
     op->scope       = CL_SCOPE_GLOBAL;
     op->loc.file    = NULL;
     op->loc.line    = -1;
+    op->type        = NULL;
     op->accessor    = NULL;
 
     if (!is_pseudo(pseudo))
@@ -532,7 +556,7 @@ static void handle_insn_copy(struct instruction *insn,
             false       , false);
 }
 
-static void handle_insn_binop(struct instruction *insn, enum cl_operand_e type,
+static void handle_insn_binop(struct instruction *insn, enum cl_operand_e code,
                             struct cl_code_listener *cl)
 {
     struct cl_operand dst, src1, src2;
@@ -545,7 +569,7 @@ static void handle_insn_binop(struct instruction *insn, enum cl_operand_e type,
     {
         struct cl_insn cli;
         cli.code = CL_INSN_BINOP;
-        cli.data.insn_binop.code    = type;
+        cli.data.insn_binop.code    = code;
         cli.data.insn_binop.dst     = &dst;
         cli.data.insn_binop.src1    = &src1;
         cli.data.insn_binop.src2    = &src2;
@@ -845,13 +869,14 @@ static void handle_fnc_def(struct symbol *sym, struct cl_code_listener *cl)
         struct cl_operand op;
         op.code                     = CL_OPERAND_VAR;
         op.scope                    = CL_SCOPE_FUNCTION;
-        op.type                     = /* TODO */ &builtin_fnc_type;
+        op.type                     = read_sparse_type(arg);
         op.accessor                 = NULL;
         op.data.var.id              = /* TODO */ (int)(long) arg;
         op.data.var.name            = strdup(show_ident(arg->ident));
 
         read_sparse_location(&op.loc, arg->pos);
         cl->fnc_arg_decl(cl, ++argc, &op);
+        free_cl_operand_data(&op);
     } END_FOR_EACH_PTR(arg);
 
     // handle fnc body
@@ -944,7 +969,7 @@ static struct cl_code_listener* create_cl_chain()
         cl_chain_append(chain, cl);
     }
 
-    cl = cl_code_listener_create("listener=\"pp\" "
+    cl = cl_code_listener_create("listener=\"pp_with_types\" "
             "cld=\"arg_subst,unify_labels_fnc,unify_regs,unify_vars\"");
     if (!cl) {
         chain->destroy(chain);
