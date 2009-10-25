@@ -94,7 +94,7 @@ $(INVADER):
 	$(CURL) -o $@ 'http://www.eastlondonmassive.org/invader-1_1.zip'
 
 $(SPARSE):
-	$(GIT) clone git://git.kernel.org/pub/scm/devel/sparse/sparse.git $@
+	$(GIT) clone git://git.kernel.org/pub/scm/devel/sparse/chrisl/sparse.git $@
 	cd $@ && $(GIT) checkout -b sl
 	cd $@ && $(GIT) am ../sparse-extras/*.patch
 	cd $@ && ln -s ../sparse-extras/local.mk

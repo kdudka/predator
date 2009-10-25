@@ -1,6 +1,6 @@
-From 050663577b8832ee40f4f365bee61e2ed1bf9613 Mon Sep 17 00:00:00 2001
+From bcce30d4e97c94a0461b48e2fabcf6f52cb0702b Mon Sep 17 00:00:00 2001
 From: Kamil Dudka <kdudka@redhat.com>
-Date: Wed, 2 Sep 2009 23:49:09 +0200
+Date: Sun, 25 Oct 2009 21:45:40 +0100
 Subject: [PATCH] add warnings enum-to-int and int-to-enum...
 
 ... and improve detection of the enum-mismatch warning. Add test case
@@ -9,24 +9,16 @@ just look to the corresponding test case.
 
 Signed-off-by: Kamil Dudka <kdudka@redhat.com>
 ---
- evaluate.c                 |  122 ++++++++++++++++++++++++++++++++++----------
- expression.h               |    1 +
- lib.c                      |    4 ++
- lib.h                      |    2 +
- parse.c                    |    1 +
- sparse.1                   |   13 +++++
- validation/enum-common.c   |  112 ++++++++++++++++++++++++++++++++++++++++
- validation/enum-from-int.c |   36 +++++++++++++
- validation/enum-mismatch.c |   48 +++++++++++++++++
- validation/enum-to-int.c   |   27 ++++++++++
- 10 files changed, 339 insertions(+), 27 deletions(-)
- create mode 100644 validation/enum-common.c
- create mode 100644 validation/enum-from-int.c
- create mode 100644 validation/enum-mismatch.c
- create mode 100644 validation/enum-to-int.c
+ evaluate.c   |  122 +++++++++++++++++++++++++++++++++++++++++++++-------------
+ expression.h |    1 +
+ lib.c        |    4 ++
+ lib.h        |    2 +
+ parse.c      |    1 +
+ sparse.1     |   13 ++++++
+ 6 files changed, 116 insertions(+), 27 deletions(-)
 
 diff --git a/evaluate.c b/evaluate.c
-index 805ae90..0d5e93b 100644
+index 28bfd7c..d3d5e6f 100644
 --- a/evaluate.c
 +++ b/evaluate.c
 @@ -235,27 +235,105 @@ static int is_same_type(struct expression *expr, struct symbol *new)
@@ -172,7 +164,7 @@ index 805ae90..0d5e93b 100644
  
  	if ((lclass | rclass) & TYPE_RESTRICT)
  		goto Restr;
-@@ -3225,8 +3302,7 @@ static void evaluate_case_statement(struct statement *stmt)
+@@ -3235,8 +3312,7 @@ static void evaluate_case_statement(struct statement *stmt)
  }
  
  static void check_case_type(struct expression *switch_expr,
@@ -182,7 +174,7 @@ index 805ae90..0d5e93b 100644
  {
  	struct symbol *switch_type, *case_type;
  	int sclass, cclass;
-@@ -3239,12 +3315,8 @@ static void check_case_type(struct expression *switch_expr,
+@@ -3249,12 +3325,8 @@ static void check_case_type(struct expression *switch_expr,
  
  	if (!switch_type || !case_type)
  		goto Bad;
@@ -197,7 +189,7 @@ index 805ae90..0d5e93b 100644
  
  	sclass = classify_type(switch_type, &switch_type);
  	cclass = classify_type(case_type, &case_type);
-@@ -3275,21 +3347,17 @@ Bad:
+@@ -3285,21 +3357,17 @@ Bad:
  static void evaluate_switch_statement(struct statement *stmt)
  {
  	struct symbol *sym;
@@ -234,11 +226,11 @@ index 631224f..81f70ad 100644
  
  		// EXPR_FVALUE
 diff --git a/lib.c b/lib.c
-index 600939b..2f78bd5 100644
+index a218bfc..fc84c44 100644
 --- a/lib.c
 +++ b/lib.c
-@@ -199,6 +199,8 @@ int Wdecl = 1;
- int Wdefault_bitfield_sign = 0;
+@@ -200,6 +200,8 @@ int Wdefault_bitfield_sign = 0;
+ int Wdesignated_init = 1;
  int Wdo_while = 0;
  int Wenum_mismatch = 1;
 +int Wenum_to_int = 0;
@@ -246,8 +238,8 @@ index 600939b..2f78bd5 100644
  int Wnon_pointer_null = 1;
  int Wold_initializer = 1;
  int Wone_bit_signed_bitfield = 1;
-@@ -380,6 +382,8 @@ static const struct warning {
- 	{ "default-bitfield-sign", &Wdefault_bitfield_sign },
+@@ -382,6 +384,8 @@ static const struct warning {
+ 	{ "designated-init", &Wdesignated_init },
  	{ "do-while", &Wdo_while },
  	{ "enum-mismatch", &Wenum_mismatch },
 +	{ "enum-to-int", &Wenum_to_int },
@@ -256,11 +248,11 @@ index 600939b..2f78bd5 100644
  	{ "old-initializer", &Wold_initializer },
  	{ "one-bit-signed-bitfield", &Wone_bit_signed_bitfield },
 diff --git a/lib.h b/lib.h
-index b22fa93..962d49d 100644
+index 2cea252..2680d71 100644
 --- a/lib.h
 +++ b/lib.h
-@@ -96,6 +96,8 @@ extern int Wdecl;
- extern int Wdefault_bitfield_sign;
+@@ -104,6 +104,8 @@ extern int Wdefault_bitfield_sign;
+ extern int Wdesignated_init;
  extern int Wdo_while;
  extern int Wenum_mismatch;
 +extern int Wenum_to_int;
@@ -269,10 +261,10 @@ index b22fa93..962d49d 100644
  extern int Wold_initializer;
  extern int Wone_bit_signed_bitfield;
 diff --git a/parse.c b/parse.c
-index 5e75242..76d4c58 100644
+index c956265..9d1bea9 100644
 --- a/parse.c
 +++ b/parse.c
-@@ -791,6 +791,7 @@ static void cast_enum_list(struct symbol_list *list, struct symbol *base_type)
+@@ -815,6 +815,7 @@ static void cast_enum_list(struct symbol_list *list, struct symbol *base_type)
  		if (expr->type != EXPR_VALUE)
  			continue;
  		ctype = expr->ctype;
@@ -281,10 +273,10 @@ index 5e75242..76d4c58 100644
  			continue;
  		cast_value(expr, base_type, expr, ctype);
 diff --git a/sparse.1 b/sparse.1
-index d7fe444..288b3a8 100644
+index bde6b6d..5576b51 100644
 --- a/sparse.1
 +++ b/sparse.1
-@@ -149,6 +149,19 @@ Sparse issues these warnings by default.  To turn them off, use
+@@ -177,6 +177,19 @@ Sparse issues these warnings by default.  To turn them off, use
  \fB\-Wno\-enum\-mismatch\fR.
  .
  .TP
@@ -304,253 +296,6 @@ index d7fe444..288b3a8 100644
  .B \-Wnon\-pointer\-null
  Warn about the use of 0 as a NULL pointer.
  
-diff --git a/validation/enum-common.c b/validation/enum-common.c
-new file mode 100644
-index 0000000..f940fef
---- /dev/null
-+++ b/validation/enum-common.c
-@@ -0,0 +1,112 @@
-+static enum ENUM_TYPE_A { VALUE_A } var_a;
-+static enum ENUM_TYPE_B { VALUE_B } var_b;
-+static enum /* anon. */ { VALUE_C } anon_enum_var;
-+static int i;
-+
-+static void take_enum_of_type_a(enum ENUM_TYPE_A arg_enum)
-+{
-+	(void) arg_enum;
-+}
-+
-+static void take_int(int arg_int)
-+{
-+	(void) arg_int;
-+}
-+
-+static void always_ok(void)
-+{
-+	var_a ++;
-+	var_a = VALUE_A;
-+	var_a = (enum ENUM_TYPE_A) VALUE_B;
-+	var_b = (enum ENUM_TYPE_B) i;
-+	i = (int) VALUE_A;
-+	anon_enum_var = VALUE_C;
-+	i = VALUE_C;
-+	i = anon_enum_var;
-+	i = 7;
-+	var_a = (enum ENUM_TYPE_A) 0;
-+	anon_enum_var = (__typeof__(anon_enum_var)) 0;
-+	anon_enum_var = (__typeof__(anon_enum_var)) VALUE_A;
-+
-+	switch (var_a) {
-+		case VALUE_A:
-+		default:
-+			take_enum_of_type_a(var_a);
-+			take_enum_of_type_a(VALUE_A);
-+	}
-+
-+	switch (anon_enum_var) {
-+		case VALUE_C:
-+		default:
-+			take_int(anon_enum_var);
-+	}
-+
-+	switch (i) {
-+		case VALUE_C:
-+		default:
-+			take_int(VALUE_C);
-+	}
-+}
-+
-+static void trigger_enum_mismatch(void)
-+{
-+	switch (var_a) {
-+		case VALUE_B:
-+		case VALUE_C:
-+		default:
-+			take_enum_of_type_a(var_b);
-+			take_enum_of_type_a(VALUE_B);
-+	}
-+
-+	switch (anon_enum_var) {
-+		case VALUE_A:
-+		default:
-+			take_enum_of_type_a(anon_enum_var);
-+			take_enum_of_type_a(VALUE_C);
-+	}
-+
-+	// this has been already working in sparse 0.4.1
-+	var_a = var_b;
-+	var_b = anon_enum_var;
-+	anon_enum_var = var_a;
-+
-+	// implemented after sparse 0.4.1
-+	var_a = VALUE_B;
-+	var_b = VALUE_C;
-+	anon_enum_var = VALUE_A;
-+}
-+
-+static void trigger_int_to_enum_conversion(void)
-+{
-+	switch (var_a) {
-+		case 0:
-+		default:
-+			take_enum_of_type_a(i);
-+			take_enum_of_type_a(7);
-+	}
-+	var_a = 0;
-+	var_b = i;
-+	anon_enum_var = 0;
-+	anon_enum_var = i;
-+	var_a = (int) VALUE_A;
-+	var_a = (int) VALUE_B;
-+}
-+
-+static void trigger_enum_to_int_conversion(void)
-+{
-+	i = var_a;
-+	i = VALUE_B;
-+	switch (i) {
-+		case VALUE_A:
-+		case VALUE_B:
-+		default:
-+			take_int(var_a);
-+			take_int(VALUE_B);
-+	}
-+}
-+
-+/*
-+ * check-name: enum-common
-+ * check-description: common part of the test for -Wenum-mismatch, -Wenum-to-int and -Wint-to-enum
-+ * check-command: sparse -Wno-enum-mismatch -Wno-int-to-enum $file
-+ */
-diff --git a/validation/enum-from-int.c b/validation/enum-from-int.c
-new file mode 100644
-index 0000000..15b1e4d
---- /dev/null
-+++ b/validation/enum-from-int.c
-@@ -0,0 +1,36 @@
-+#include "enum-common.c"
-+
-+/*
-+ * check-name: -Wint-to-enum
-+ * check-command: sparse -Wno-enum-mismatch $file
-+ *
-+ * check-error-start
-+enum-common.c:84:45: warning: conversion of
-+enum-common.c:84:45:     int to
-+enum-common.c:84:45:     int enum ENUM_TYPE_A 
-+enum-common.c:85:45: warning: conversion of
-+enum-common.c:85:45:     int to
-+enum-common.c:85:45:     int enum ENUM_TYPE_A 
-+enum-common.c:82:22: warning: conversion of
-+enum-common.c:82:22:     int to
-+enum-common.c:82:22:     int enum ENUM_TYPE_A 
-+enum-common.c:87:17: warning: conversion of
-+enum-common.c:87:17:     int to
-+enum-common.c:87:17:     int enum ENUM_TYPE_A 
-+enum-common.c:88:17: warning: conversion of
-+enum-common.c:88:17:     int to
-+enum-common.c:88:17:     int enum ENUM_TYPE_B 
-+enum-common.c:89:25: warning: conversion of
-+enum-common.c:89:25:     int to
-+enum-common.c:89:25:     int enum <noident> 
-+enum-common.c:90:25: warning: conversion of
-+enum-common.c:90:25:     int to
-+enum-common.c:90:25:     int enum <noident> 
-+enum-common.c:91:18: warning: conversion of
-+enum-common.c:91:18:     int to
-+enum-common.c:91:18:     int enum ENUM_TYPE_A 
-+enum-common.c:92:18: warning: conversion of
-+enum-common.c:92:18:     int to
-+enum-common.c:92:18:     int enum ENUM_TYPE_A 
-+ * check-error-end
-+ */
-diff --git a/validation/enum-mismatch.c b/validation/enum-mismatch.c
-new file mode 100644
-index 0000000..6db016f
---- /dev/null
-+++ b/validation/enum-mismatch.c
-@@ -0,0 +1,48 @@
-+#include "enum-common.c"
-+
-+/*
-+ * check-name: -Wenum-mismatch
-+ * check-command: sparse -Wenum-mismatch -Wno-int-to-enum $file
-+ *
-+ * check-error-start
-+enum-common.c:57:45: warning: mixing different enum types
-+enum-common.c:57:45:     int enum ENUM_TYPE_B  versus
-+enum-common.c:57:45:     int enum ENUM_TYPE_A 
-+enum-common.c:58:45: warning: mixing different enum types
-+enum-common.c:58:45:     int enum ENUM_TYPE_B  versus
-+enum-common.c:58:45:     int enum ENUM_TYPE_A 
-+enum-common.c:54:22: warning: mixing different enum types
-+enum-common.c:54:22:     int enum ENUM_TYPE_B  versus
-+enum-common.c:54:22:     int enum ENUM_TYPE_A 
-+enum-common.c:55:22: warning: mixing different enum types
-+enum-common.c:55:22:     int enum <noident>  versus
-+enum-common.c:55:22:     int enum ENUM_TYPE_A 
-+enum-common.c:64:45: warning: mixing different enum types
-+enum-common.c:64:45:     int enum <noident>  versus
-+enum-common.c:64:45:     int enum ENUM_TYPE_A 
-+enum-common.c:65:45: warning: mixing different enum types
-+enum-common.c:65:45:     int enum <noident>  versus
-+enum-common.c:65:45:     int enum ENUM_TYPE_A 
-+enum-common.c:62:22: warning: mixing different enum types
-+enum-common.c:62:22:     int enum ENUM_TYPE_A  versus
-+enum-common.c:62:22:     int enum <noident> 
-+enum-common.c:69:17: warning: mixing different enum types
-+enum-common.c:69:17:     int enum ENUM_TYPE_B  versus
-+enum-common.c:69:17:     int enum ENUM_TYPE_A 
-+enum-common.c:70:17: warning: mixing different enum types
-+enum-common.c:70:17:     int enum <noident>  versus
-+enum-common.c:70:17:     int enum ENUM_TYPE_B 
-+enum-common.c:71:25: warning: mixing different enum types
-+enum-common.c:71:25:     int enum ENUM_TYPE_A  versus
-+enum-common.c:71:25:     int enum <noident> 
-+enum-common.c:74:17: warning: mixing different enum types
-+enum-common.c:74:17:     int enum ENUM_TYPE_B  versus
-+enum-common.c:74:17:     int enum ENUM_TYPE_A 
-+enum-common.c:75:17: warning: mixing different enum types
-+enum-common.c:75:17:     int enum <noident>  versus
-+enum-common.c:75:17:     int enum ENUM_TYPE_B 
-+enum-common.c:76:25: warning: mixing different enum types
-+enum-common.c:76:25:     int enum ENUM_TYPE_A  versus
-+enum-common.c:76:25:     int enum <noident> 
-+ * check-error-end
-+ */
-diff --git a/validation/enum-to-int.c b/validation/enum-to-int.c
-new file mode 100644
-index 0000000..a981ce5
---- /dev/null
-+++ b/validation/enum-to-int.c
-@@ -0,0 +1,27 @@
-+#include "enum-common.c"
-+
-+/*
-+ * check-name: -Wenum-to-int
-+ * check-command: sparse -Wenum-to-int -Wno-enum-mismatch -Wno-int-to-enum $file
-+ *
-+ * check-error-start
-+enum-common.c:97:13: warning: conversion of
-+enum-common.c:97:13:     int enum ENUM_TYPE_A  to
-+enum-common.c:97:13:     int
-+enum-common.c:98:13: warning: conversion of
-+enum-common.c:98:13:     int enum ENUM_TYPE_B  to
-+enum-common.c:98:13:     int
-+enum-common.c:103:34: warning: conversion of
-+enum-common.c:103:34:     int enum ENUM_TYPE_A  to
-+enum-common.c:103:34:     int
-+enum-common.c:104:34: warning: conversion of
-+enum-common.c:104:34:     int enum ENUM_TYPE_B  to
-+enum-common.c:104:34:     int
-+enum-common.c:100:22: warning: conversion of
-+enum-common.c:100:22:     int enum ENUM_TYPE_A  to
-+enum-common.c:100:22:     int
-+enum-common.c:101:22: warning: conversion of
-+enum-common.c:101:22:     int enum ENUM_TYPE_B  to
-+enum-common.c:101:22:     int
-+ * check-error-end
-+ */
 -- 
-1.6.4.1
+1.6.5.rc1
 
