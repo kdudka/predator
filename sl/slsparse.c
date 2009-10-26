@@ -91,20 +91,19 @@ static void read_sparse_location(struct cl_location *loc, struct position pos)
     loc->sysp   = /* not used by SPARSE */ false;
 }
 
-static void read_sparse_scope(enum cl_scope_e *ps, struct symbol *sym)
+static void read_sparse_scope(enum cl_scope_e *p, struct scope *scope)
 {
-    struct scope *ss = sym->scope;
-    if (!ss || ss == global_scope)
-        *ps = CL_SCOPE_GLOBAL;
-    else if (ss == file_scope)
-        *ps = CL_SCOPE_STATIC;
-    else if (ss == function_scope)
+    if (!scope || scope == global_scope)
+        *p = CL_SCOPE_GLOBAL;
+    else if (scope == file_scope)
+        *p = CL_SCOPE_STATIC;
+    else if (scope == function_scope)
         TRAP;
-    else if (ss == block_scope)
+    else if (scope == block_scope)
         TRAP;
     else
         // FIXME
-        *ps = CL_SCOPE_FUNCTION;
+        *p = CL_SCOPE_FUNCTION;
 }
 
 static struct cl_type* read_sparse_type(struct symbol *sym)
@@ -121,8 +120,17 @@ static struct cl_type* read_sparse_type(struct symbol *sym)
     clt->item_cnt   = /* TODO */ 0;
     clt->items      = /* TODO */ NULL;
 
-    read_sparse_location(&clt->loc, sym->pos);
-    read_sparse_scope(&clt->scope, sym);
+    clt->scope      = CL_SCOPE_GLOBAL;
+    clt->loc.file   = NULL;
+    clt->loc.line   = -1;
+
+    if (sym && sym->ctype.base_type) {
+        // FIXME: not tested
+        struct symbol *type = sym->ctype.base_type;
+        read_sparse_location(&clt->loc, type->pos);
+        read_sparse_scope(&clt->scope, type->scope);
+    }
+
     return clt;
 }
 
@@ -243,7 +251,7 @@ static void read_pseudo_sym(struct cl_operand *op, struct symbol *sym)
 
     // read symbol location and scope
     read_sparse_location(&op->loc, sym->pos);
-    read_sparse_scope(&op->scope, sym);
+    read_sparse_scope(&op->scope, sym->scope);
 
     if (sym->bb_target) {
         WARN_UNHANDLED(sym->pos, "sym->bb_target");
@@ -259,7 +267,7 @@ static void read_pseudo_sym(struct cl_operand *op, struct symbol *sym)
     base = sym->ctype.base_type;
     if (base && base->type == SYM_FN) {
         op->code                    = CL_OPERAND_CST;
-        op->type                    = read_sparse_type(sym);
+        op->type                    = &builtin_fnc_type;
         op->data.cst_fnc.name       = strdup(show_ident(sym->ident));
         op->data.cst_fnc.is_extern  = MOD_EXTERN & sym->ctype.modifiers;
     } else {
@@ -279,7 +287,7 @@ static void read_pseudo(struct cl_operand *op, pseudo_t pseudo)
 
         case PSEUDO_REG:
             op->code                = CL_OPERAND_REG;
-            op->type                = /* TODO */ &builtin_fnc_type;
+            // op->type                = /* TODO */ &builtin_fnc_type;
             // not used: op->name = strdup(show_ident(pseudo->ident));
             op->data.reg.id         = pseudo->nr;
             break;
@@ -295,7 +303,7 @@ static void read_pseudo(struct cl_operand *op, pseudo_t pseudo)
 
         case PSEUDO_ARG:
             op->code                = CL_OPERAND_ARG;
-            op->type                = /* TODO */ &builtin_fnc_type;
+            //op->type                = /* TODO */ &builtin_fnc_type;
             op->data.arg.id         = pseudo->nr;
             break;
 
@@ -327,7 +335,7 @@ static void read_insn_op_deref(struct cl_operand *op, struct instruction *insn)
         die("SL_NEW failed");
 
     ac->code = CL_ACCESSOR_DEREF;
-    ac->type = /* TODO */ &builtin_fnc_type;
+    ac->type = /* TODO */ op->type;
     ac->next = NULL;
 
     op->accessor = ac;
@@ -349,6 +357,9 @@ static void pseudo_to_cl_operand(struct instruction *insn, pseudo_t pseudo,
     read_pseudo(op, pseudo);
     if (deref)
         read_insn_op_deref(op, insn);
+
+    if (!op->type)
+        op->type = read_sparse_type(insn->type);
 }
 
 static bool handle_insn_call(struct instruction *insn,
@@ -861,7 +872,7 @@ static void handle_fnc_def(struct symbol *sym, struct cl_code_listener *cl)
     int argc = 0;
 
     read_sparse_location(&loc, sym->pos);
-    read_sparse_scope(&scope, sym);
+    read_sparse_scope(&scope, sym->scope);
     cl->fnc_open(cl, &loc, show_ident(sym->ident), scope);
 
     // dump argument list
