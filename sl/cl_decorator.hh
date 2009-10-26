@@ -46,11 +46,9 @@ class ClDecoratorBase: public ICodeListener {
         }
 
         virtual void fnc_open(
-            const struct cl_location*loc,
-            const char              *fnc_name,
-            enum cl_scope_e         scope)
+            const struct cl_operand *fnc)
         {
-            slave_->fnc_open(loc, fnc_name, scope);
+            slave_->fnc_open(fnc);
         }
 
         virtual void fnc_arg_decl(

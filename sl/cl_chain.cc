@@ -44,9 +44,7 @@ class ClChain: public ICodeListener {
         virtual void file_close();
 
         virtual void fnc_open(
-            const struct cl_location*loc,
-            const char              *fnc_name,
-            enum cl_scope_e         scope);
+            const struct cl_operand *fnc);
 
         virtual void fnc_arg_decl(
             int                     arg_id,
@@ -131,11 +129,9 @@ void ClChain::file_close()
 }
 
 void ClChain::fnc_open(
-            const struct cl_location*loc,
-            const char              *fnc_name,
-            enum cl_scope_e         scope)
+            const struct cl_operand *fnc)
 {
-    CL_CHAIN_FOREACH_VA(fnc_open, loc, fnc_name, scope);
+    CL_CHAIN_FOREACH_VA(fnc_open, fnc);
 }
 
 void ClChain::fnc_arg_decl(

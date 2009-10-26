@@ -48,12 +48,10 @@ class CldOpCheckerBase: public ClDecoratorBase {
         }
 
         virtual void fnc_open(
-            const struct cl_location*loc,
-            const char              *fnc_name,
-            enum cl_scope_e         scope)
+            const struct cl_operand *fnc)
         {
-            loc_ = loc;
-            ClDecoratorBase::fnc_open(loc, fnc_name, scope);
+            loc_ = &fnc->loc;
+            ClDecoratorBase::fnc_open(fnc);
         }
 
         virtual void fnc_arg_decl(

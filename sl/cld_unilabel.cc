@@ -35,13 +35,11 @@ class CldUniLabel: public ClDecoratorBase {
         }
 
         virtual void fnc_open(
-            const struct cl_location*loc,
-            const char              *fnc_name,
-            enum cl_scope_e         scope)
+            const struct cl_operand *fnc)
         {
             if (CL_SCOPE_FUNCTION == scope_)
                 this->reset();
-            ClDecoratorBase::fnc_open(loc, fnc_name, scope);
+            ClDecoratorBase::fnc_open(fnc);
         }
 
         virtual void bb_open(

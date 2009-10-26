@@ -26,12 +26,10 @@ class CldUniVars: public CldOpTransBase {
         CldUniVars(ICodeListener *slave);
 
         virtual void fnc_open(
-            const struct cl_location*loc,
-            const char              *fnc_name,
-            enum cl_scope_e         scope)
+            const struct cl_operand *fnc)
         {
             lcReloc_.reset();
-            CldOpTransBase::fnc_open(loc, fnc_name, scope);
+            CldOpTransBase::fnc_open(fnc);
         }
 
     private:

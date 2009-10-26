@@ -171,11 +171,9 @@ static void cl_wrap_file_close(
 
 static void cl_wrap_fnc_open(
             struct cl_code_listener *self,
-            const struct cl_location*loc,
-            const char              *fnc_name,
-            enum cl_scope_e         scope)
+            const struct cl_operand *fnc)
 {
-    CL_WRAP_VA(fnc_open, loc, fnc_name, scope);
+    CL_WRAP_VA(fnc_open, fnc);
 }
 
 static void cl_wrap_fnc_arg_decl(

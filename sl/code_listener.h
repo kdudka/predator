@@ -363,7 +363,6 @@ struct cl_operand {
 
     /**
      * scope of the operand's validity
-     * @attention @b not implemented for now
      */
     enum cl_scope_e                     scope;
 
@@ -662,15 +661,11 @@ struct cl_code_listener {
     /**
      * @todo implement function type definition
      * @param self Pointer to cl_code_listener object.
-     * @param loc location of the function definition
-     * @param fnc_name Zero-terminated string with fnc name being processed.
-     * @param scope Scope of function name validity.
+     * @param fnc An operand used as function declaration (without args).
      */
     void (*fnc_open)(
             struct cl_code_listener     *self,
-            const struct cl_location    *loc,
-            const char                  *fnc_name,
-            enum cl_scope_e             scope);
+            const struct cl_operand     *fcn);
 
     /**
      * @param self Pointer to cl_code_listener object.

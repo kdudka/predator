@@ -36,11 +36,9 @@ class ClLocator: public AbstractCodeListener {
             lastLoc_.currentFile.clear();
         }
 
-        virtual void fnc_open(const struct cl_location *loc, const char *,
-                              enum cl_scope_e)
-        {
-            this->printLocation(loc);
-            lastLoc_ = loc;
+        virtual void fnc_open(const struct cl_operand *fnc) {
+            this->printLocation(&fnc->loc);
+            lastLoc_ = &fnc->loc;
         }
 
         virtual void fnc_arg_decl(int, const struct cl_operand *) { }

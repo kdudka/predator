@@ -81,9 +81,7 @@ class ICodeListener {
             = 0;
 
         virtual void fnc_open(
-            const struct cl_location*loc,
-            const char              *fnc_name,
-            enum cl_scope_e         scope)
+            const struct cl_operand *fnc)
             = 0;
 
         virtual void fnc_arg_decl(

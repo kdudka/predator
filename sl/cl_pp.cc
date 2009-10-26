@@ -41,9 +41,7 @@ class ClPrettyPrint: public AbstractCodeListener {
         virtual void file_close();
 
         virtual void fnc_open(
-            const struct cl_location*loc,
-            const char              *fnc_name,
-            enum cl_scope_e         scope);
+            const struct cl_operand *fnc);
 
         virtual void fnc_arg_decl(
             int                     arg_id,
@@ -139,13 +137,11 @@ void ClPrettyPrint::file_close()
 }
 
 void ClPrettyPrint::fnc_open(
-            const struct cl_location*loc,
-            const char              *fnc_name,
-            enum cl_scope_e         scope)
+            const struct cl_operand *fnc)
 {
-    fnc_ = fnc_name;
-    loc_ = loc;
-    switch (scope) {
+    fnc_ = fnc->data.cst_fnc.name;
+    loc_ = &fnc->loc;
+    switch (fnc->scope) {
         case CL_SCOPE_GLOBAL:
             break;
 
@@ -154,10 +150,10 @@ void ClPrettyPrint::fnc_open(
             break;
 
         default:
-            CL_MSG_STREAM(cl_error, LocationWriter(loc) << "error: "
-                    << "invalid scope for function: " << scope);
+            CL_MSG_STREAM(cl_error, LocationWriter(&fnc->loc) << "error: "
+                    << "invalid scope for function: " << fnc->scope);
     }
-    SSD_COLORIZE(out_, C_LIGHT_BLUE) << fnc_name;
+    SSD_COLORIZE(out_, C_LIGHT_BLUE) << fnc_;
     SSD_COLORIZE(out_, C_LIGHT_RED) << "(";
     printingArgDecls_ = true;
 }

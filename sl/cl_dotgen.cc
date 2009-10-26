@@ -38,9 +38,7 @@ class ClDotGenerator: public AbstractCodeListener {
         virtual void file_close();
 
         virtual void fnc_open(
-            const struct cl_location*loc,
-            const char              *fnc_name,
-            enum cl_scope_e         scope);
+            const struct cl_operand *fnc);
 
         virtual void fnc_arg_decl(
             int                     arg_id,
@@ -444,22 +442,21 @@ void ClDotGenerator::file_close()
     ClDotGenerator::closeSub(glOut_);
 }
 
-void ClDotGenerator::fnc_open(const struct cl_location *loc,
-                              const char *fnc_name, enum cl_scope_e)
+void ClDotGenerator::fnc_open(const struct cl_operand *fnc)
 {
-    loc_ = loc;
-    fnc_ = fnc_name;
+    loc_ = &fnc->loc;
+    fnc_ = fnc->data.cst_fnc.name;
 
     ClDotGenerator::createDotFile(perFncOut_,
-                                  string(loc_.currentFile) + "-" + fnc_name,
+                                  string(loc_.currentFile) + "-" + fnc_,
                                   true);
-    perFncOut_ << SL_GRAPH(fnc_name << "()"
+    perFncOut_ << SL_GRAPH(fnc_ << "()"
             << " at " << loc_.locFile << ":" << loc_.locLine);
 
-    glOut_ << "\t" << SL_QUOTE(fnc_name)
-            << " [label=" << SL_QUOTE(fnc_name)
+    glOut_ << "\t" << SL_QUOTE(fnc_)
+            << " [label=" << SL_QUOTE(fnc_)
             << ", color=" << EtColors[ET_LC_CALL]
-            << ", URL=" << SL_QUOTE_URL(fnc_name) << "];"
+            << ", URL=" << SL_QUOTE_URL(fnc_) << "];"
             << std::endl;
 }
 

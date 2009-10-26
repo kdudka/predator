@@ -1157,35 +1157,36 @@ static void handle_fnc_decl_arglist (tree args)
 // handle FUNCTION_DECL tree node given as DECL
 static void handle_fnc_decl (tree decl)
 {
-    // obtain fnc location
-    struct cl_location loc;
-    read_gcc_location(&loc, DECL_SOURCE_LOCATION(decl));
+    tree ident = DECL_NAME (decl);
+    if (!ident)
+        TRAP;
 
     // emit fnc declaration
-    tree ident = DECL_NAME (decl);
-    cl->fnc_open(cl, &loc, IDENTIFIER_POINTER(ident),
-            TREE_PUBLIC(decl)
-                ? CL_SCOPE_GLOBAL
-                : CL_SCOPE_STATIC);
+    struct cl_operand fnc;
+    fnc.code                        = CL_OPERAND_CST;
+    fnc.type                        = &builtin_fnc_type;
+    fnc.accessor                    = NULL;
+    fnc.scope                       = TREE_PUBLIC(decl)
+                                        ? CL_SCOPE_GLOBAL
+                                        : CL_SCOPE_STATIC;
+    fnc.data.cst_fnc.name           = IDENTIFIER_POINTER(ident);
+    fnc.data.cst_fnc.is_extern      = false;
+    read_gcc_location(&fnc.loc, DECL_SOURCE_LOCATION(decl));
+    cl->fnc_open(cl, &fnc);
 
     // emit arg declarations
     tree args = DECL_ARGUMENTS (decl);
     handle_fnc_decl_arglist (args);
 
     // obtain CFG for current function
-    struct function *fnc = DECL_STRUCT_FUNCTION (decl);
-    if (NULL == fnc) {
-        SL_WARN_UNHANDLED ("NULL == fnc");
-        return;
-    }
-    struct control_flow_graph *cfg = fnc->cfg;
-    if (NULL == cfg) {
+    struct function *def = DECL_STRUCT_FUNCTION (decl);
+    if (!def || !def->cfg) {
         SL_WARN_UNHANDLED ("CFG not found");
         return;
     }
 
     // go through CFG
-    handle_fnc_cfg(cfg);
+    handle_fnc_cfg(def->cfg);
 
     // fnc traverse complete
     cl->fnc_close(cl);

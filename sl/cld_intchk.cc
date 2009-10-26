@@ -44,13 +44,11 @@ class CldCbSeqChk: public ClDecoratorBase {
         }
 
         virtual void fnc_open(
-            const struct cl_location*loc,
-            const char              *fnc_name,
-            enum cl_scope_e         scope)
+            const struct cl_operand *fnc)
         {
-            loc_ = loc;
+            loc_ = &fnc->loc;
             this->setState(S_FNC_DECL);
-            ClDecoratorBase::fnc_open(loc, fnc_name, scope);
+            ClDecoratorBase::fnc_open(fnc);
         }
 
         virtual void fnc_arg_decl(
@@ -206,13 +204,11 @@ class CldLabelChk: public ClDecoratorBase {
         }
 
         virtual void fnc_open(
-            const struct cl_location*loc,
-            const char              *fnc_name,
-            enum cl_scope_e         scope)
+            const struct cl_operand *fnc)
         {
-            loc_ = loc;
+            loc_ = &fnc->loc;
             this->reset();
-            ClDecoratorBase::fnc_open(loc, fnc_name, scope);
+            ClDecoratorBase::fnc_open(fnc);
         }
 
         virtual void fnc_close() {

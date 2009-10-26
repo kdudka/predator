@@ -106,7 +106,8 @@ static void read_sparse_scope(enum cl_scope_e *p, struct scope *scope)
         *p = CL_SCOPE_FUNCTION;
 }
 
-static struct cl_type* read_sparse_type(struct symbol *sym)
+static __attribute__ ((__warn_unused_result__))
+struct cl_type* read_sparse_type(struct symbol *sym)
 {
     struct cl_type *clt = SL_NEW(struct cl_type);
     if (!clt)
@@ -863,20 +864,12 @@ static void handle_fnc_body(struct symbol *sym, struct cl_code_listener *cl)
 #endif
 }
 
-static void handle_fnc_def(struct symbol *sym, struct cl_code_listener *cl)
+static void handle_fnc_arg_list(struct symbol_list *arg_list,
+                                struct cl_code_listener *cl)
 {
-    struct symbol *base_type = sym->ctype.base_type;
     struct symbol *arg;
-    struct cl_location loc;
-    enum cl_scope_e scope;
     int argc = 0;
-
-    read_sparse_location(&loc, sym->pos);
-    read_sparse_scope(&scope, sym->scope);
-    cl->fnc_open(cl, &loc, show_ident(sym->ident), scope);
-
-    // dump argument list
-    FOR_EACH_PTR(base_type->arguments, arg) {
+    FOR_EACH_PTR(arg_list, arg) {
         struct cl_operand op;
         op.code                     = CL_OPERAND_VAR;
         op.scope                    = CL_SCOPE_FUNCTION;
@@ -889,6 +882,25 @@ static void handle_fnc_def(struct symbol *sym, struct cl_code_listener *cl)
         cl->fnc_arg_decl(cl, ++argc, &op);
         free_cl_operand_data(&op);
     } END_FOR_EACH_PTR(arg);
+}
+
+static void handle_fnc_def(struct symbol *sym, struct cl_code_listener *cl)
+{
+    struct cl_operand fnc;
+    read_sparse_location(&fnc.loc, sym->pos);
+    read_sparse_scope(&fnc.scope, sym->scope);
+
+    fnc.code                    = CL_OPERAND_CST;
+    fnc.type                    = &builtin_fnc_type;
+    fnc.accessor                = NULL;
+    fnc.data.cst_fnc.name       = show_ident(sym->ident);
+    fnc.data.cst_fnc.is_extern  = false;
+
+    cl->fnc_open(cl, &fnc);
+    /* no need to call free_cl_operand_data() */
+
+    // dump argument list
+    handle_fnc_arg_list(sym->ctype.base_type->arguments, cl);
 
     // handle fnc body
     handle_fnc_body(sym, cl);
