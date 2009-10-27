@@ -104,7 +104,7 @@ void* ht_lookup(struct ht_hash_table *ht, void *item);
  * @param item Item to look for and then eventually insert into hash table.
  * @param Returns the found item if it was already hashed. If not, it tries to
  * insert the item into the hash table and return the new item. It may also
- * return NULL, if the memory is exhausted.
+ * return NULL, if memory is exhausted.
  */
 void* ht_insert_if_needed(struct ht_hash_table *ht, void *item);
 

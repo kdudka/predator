@@ -18,6 +18,7 @@
  */
 
 #include "code_listener.h"
+#include "hash_table.h"
 
 #define _GNU_SOURCE
 
@@ -69,6 +70,8 @@
 
 #define SL_NEW(type) \
     (type *) malloc(sizeof(type))
+
+static struct cl_code_listener *cl = NULL;
 
 static void sl_warn(struct position pos, const char *fmt, ...)
 {
@@ -363,8 +366,7 @@ static void pseudo_to_cl_operand(struct instruction *insn, pseudo_t pseudo,
         op->type = read_sparse_type(insn->type);
 }
 
-static bool handle_insn_call(struct instruction *insn,
-                             struct cl_code_listener *cl)
+static bool handle_insn_call(struct instruction *insn)
 {
     struct cl_operand dst, fnc;
     struct pseudo *arg;
@@ -405,8 +407,7 @@ static bool handle_insn_call(struct instruction *insn,
     return true;
 }
 
-static void handle_insn_br(struct instruction *insn,
-                           struct cl_code_listener *cl)
+static void handle_insn_br(struct instruction *insn)
 {
     char *bb_name_true = NULL;
     char *bb_name_false = NULL;
@@ -446,8 +447,7 @@ static void handle_insn_br(struct instruction *insn,
     free(bb_name_false);
 }
 
-static void handle_insn_switch(struct instruction *insn,
-                               struct cl_code_listener *cl)
+static void handle_insn_switch(struct instruction *insn)
 {
     struct cl_operand op;
     struct cl_location loc;
@@ -495,8 +495,7 @@ static void handle_insn_switch(struct instruction *insn,
     cl->insn_switch_close(cl);
 }
 
-static void handle_insn_ret(struct instruction *insn,
-                            struct cl_code_listener *cl)
+static void handle_insn_ret(struct instruction *insn)
 {
     struct cl_operand op;
     struct cl_insn cli;
@@ -510,7 +509,6 @@ static void handle_insn_ret(struct instruction *insn,
 }
 
 static void insn_assignment_base(struct instruction                 *insn,
-                                 struct cl_code_listener            *cl,
                                  pseudo_t     lhs,        pseudo_t  rhs,
                                  bool         lhs_deref,  bool      rhs_deref)
 {
@@ -545,31 +543,27 @@ static void insn_assignment_base(struct instruction                 *insn,
     free_cl_operand_data(&op_rhs);
 }
 
-static void handle_insn_store(struct instruction *insn,
-                              struct cl_code_listener *cl)
+static void handle_insn_store(struct instruction *insn)
 
 {
-    insn_assignment_base(insn, cl,
+    insn_assignment_base(insn,
             insn->symbol, insn->target,
             true        , false);
 }
-static void handle_insn_load(struct instruction *insn,
-                             struct cl_code_listener *cl)
+static void handle_insn_load(struct instruction *insn)
 {
-    insn_assignment_base(insn, cl,
+    insn_assignment_base(insn,
             insn->target, insn->symbol,
             false       , true);
 }
-static void handle_insn_copy(struct instruction *insn,
-                             struct cl_code_listener *cl)
+static void handle_insn_copy(struct instruction *insn)
 {
-    insn_assignment_base(insn, cl,
+    insn_assignment_base(insn,
             insn->target, insn->src,
             false       , false);
 }
 
-static void handle_insn_binop(struct instruction *insn, enum cl_binop_e code,
-                            struct cl_code_listener *cl)
+static void handle_insn_binop(struct instruction *insn, enum cl_binop_e code)
 {
     struct cl_operand dst, src1, src2;
 
@@ -594,7 +588,7 @@ static void handle_insn_binop(struct instruction *insn, enum cl_binop_e code,
     free_cl_operand_data(&src2);
 }
 
-static bool handle_insn(struct instruction *insn, struct cl_code_listener *cl)
+static bool handle_insn(struct instruction *insn)
 {
     switch (insn->opcode) {
         WARN_CASE_UNHANDLED(insn->pos, OP_BADOP)
@@ -606,15 +600,15 @@ static bool handle_insn(struct instruction *insn, struct cl_code_listener *cl)
 
         /* Terminator */
         case OP_RET /*= OP_TERMINATOR*/:
-            handle_insn_ret(insn, cl);
+            handle_insn_ret(insn);
             break;
 
         case OP_BR:
-            handle_insn_br(insn, cl);
+            handle_insn_br(insn);
             break;
 
         case OP_SWITCH:
-            handle_insn_switch(insn, cl);
+            handle_insn_switch(insn);
             break;
 
         WARN_CASE_UNHANDLED(insn->pos, OP_INVOKE)
@@ -623,7 +617,7 @@ static bool handle_insn(struct instruction *insn, struct cl_code_listener *cl)
 
         /* Binary */
         case OP_ADD /*= OP_BINARY*/:
-            handle_insn_binop(insn, CL_BINOP_PLUS, cl);
+            handle_insn_binop(insn, CL_BINOP_PLUS);
             break;
 
         WARN_CASE_UNHANDLED(insn->pos, OP_SUB)
@@ -646,27 +640,27 @@ static bool handle_insn(struct instruction *insn, struct cl_code_listener *cl)
 
         /* Binary comparison */
         case OP_SET_EQ /*= OP_BINCMP*/:
-            handle_insn_binop(insn, CL_BINOP_EQ, cl);
+            handle_insn_binop(insn, CL_BINOP_EQ);
             break;
 
         case OP_SET_NE:
-            handle_insn_binop(insn, CL_BINOP_NE, cl);
+            handle_insn_binop(insn, CL_BINOP_NE);
             break;
 
         case OP_SET_LE:
-            handle_insn_binop(insn, CL_BINOP_LE, cl);
+            handle_insn_binop(insn, CL_BINOP_LE);
             break;
 
         case OP_SET_GE:
-            handle_insn_binop(insn, CL_BINOP_GE, cl);
+            handle_insn_binop(insn, CL_BINOP_GE);
             break;
 
         case OP_SET_LT:
-            handle_insn_binop(insn, CL_BINOP_LT, cl);
+            handle_insn_binop(insn, CL_BINOP_LT);
             break;
 
         case OP_SET_GT:
-            handle_insn_binop(insn, CL_BINOP_GT, cl);
+            handle_insn_binop(insn, CL_BINOP_GT);
             break;
 
         WARN_CASE_UNHANDLED(insn->pos, OP_SET_B)
@@ -686,11 +680,11 @@ static bool handle_insn(struct instruction *insn, struct cl_code_listener *cl)
         WARN_CASE_UNHANDLED(insn->pos, OP_FREE)
         WARN_CASE_UNHANDLED(insn->pos, OP_ALLOCA)
         case OP_LOAD:
-            handle_insn_load(insn, cl);
+            handle_insn_load(insn);
             break;
 
         case OP_STORE:
-            handle_insn_store(insn, cl);
+            handle_insn_store(insn);
             break;
 
         WARN_CASE_UNHANDLED(insn->pos, OP_SETVAL)
@@ -709,12 +703,12 @@ static bool handle_insn(struct instruction *insn, struct cl_code_listener *cl)
         case OP_FPCAST:
         case OP_PTRCAST:
             // TODO: separate handler?
-            handle_insn_copy(insn, cl);
+            handle_insn_copy(insn);
             break;
 
         WARN_CASE_UNHANDLED(insn->pos, OP_INLINED_CALL)
         case OP_CALL:
-            return handle_insn_call(insn, cl);
+            return handle_insn_call(insn);
 
         WARN_CASE_UNHANDLED(insn->pos, OP_VANEXT)
         WARN_CASE_UNHANDLED(insn->pos, OP_VAARG)
@@ -739,7 +733,7 @@ static bool handle_insn(struct instruction *insn, struct cl_code_listener *cl)
 
         /* Needed to translate SSA back to normal form */
         case OP_COPY:
-            handle_insn_copy(insn, cl);
+            handle_insn_copy(insn);
             break;
     }
     return true;
@@ -765,8 +759,7 @@ static bool is_insn_interesting(struct instruction *insn)
     }
 }
 
-static bool handle_bb_insn(struct instruction *insn,
-                           struct cl_code_listener *cl)
+static bool handle_bb_insn(struct instruction *insn)
 {
     if (!insn)
         return true;
@@ -781,10 +774,10 @@ static bool handle_bb_insn(struct instruction *insn,
     if (!is_insn_interesting(insn))
         return true;
 
-    return handle_insn(insn, cl);
+    return handle_insn(insn);
 }
 
-static void handle_bb(struct basic_block *bb, struct cl_code_listener *cl)
+static void handle_bb(struct basic_block *bb)
 {
     struct instruction *insn;
     char *bb_name;
@@ -799,7 +792,7 @@ static void handle_bb(struct basic_block *bb, struct cl_code_listener *cl)
     free(bb_name);
 
     FOR_EACH_PTR(bb->insns, insn) {
-        if (!handle_bb_insn(insn, cl))
+        if (!handle_bb_insn(insn))
             // subtle: 'break' stmt here does not work as one would expected to
             goto done;
     } END_FOR_EACH_PTR(insn);
@@ -807,7 +800,7 @@ done:
     return;
 }
 
-static void handle_fnc_ep(struct entrypoint *ep, struct cl_code_listener *cl)
+static void handle_fnc_ep(struct entrypoint *ep)
 {
     struct instruction *entry = ep->entry;
     struct basic_block *bb;
@@ -838,12 +831,12 @@ static void handle_fnc_ep(struct entrypoint *ep, struct cl_code_listener *cl)
         if (bb->parents || bb->children || bb->insns
                 || /* FIXME: is the following actually useful? */ 2 < verbose)
         {
-            handle_bb(bb, cl);
+            handle_bb(bb);
         }
     } END_FOR_EACH_PTR(bb);
 }
 
-static void handle_fnc_body(struct symbol *sym, struct cl_code_listener *cl)
+static void handle_fnc_body(struct symbol *sym)
 {
     struct entrypoint *ep = linearize_symbol(sym);
     if (!ep)
@@ -857,15 +850,14 @@ static void handle_fnc_body(struct symbol *sym, struct cl_code_listener *cl)
     set_up_storage(ep);
 #endif
 
-    handle_fnc_ep(ep, cl);
+    handle_fnc_ep(ep);
 
 #if DO_PER_EP_SET_UP_STORAGE
     free_storage();
 #endif
 }
 
-static void handle_fnc_arg_list(struct symbol_list *arg_list,
-                                struct cl_code_listener *cl)
+static void handle_fnc_arg_list(struct symbol_list *arg_list)
 {
     struct symbol *arg;
     int argc = 0;
@@ -884,7 +876,7 @@ static void handle_fnc_arg_list(struct symbol_list *arg_list,
     } END_FOR_EACH_PTR(arg);
 }
 
-static void handle_fnc_def(struct symbol *sym, struct cl_code_listener *cl)
+static void handle_fnc_def(struct symbol *sym)
 {
     struct cl_operand fnc;
     read_sparse_location(&fnc.loc, sym->pos);
@@ -900,29 +892,28 @@ static void handle_fnc_def(struct symbol *sym, struct cl_code_listener *cl)
     /* no need to call free_cl_operand_data() */
 
     // dump argument list
-    handle_fnc_arg_list(sym->ctype.base_type->arguments, cl);
+    handle_fnc_arg_list(sym->ctype.base_type->arguments);
 
     // handle fnc body
-    handle_fnc_body(sym, cl);
+    handle_fnc_body(sym);
     cl->fnc_close(cl);
 }
 
-static void handle_sym_fn(struct symbol *sym, struct cl_code_listener *cl)
+static void handle_sym_fn(struct symbol *sym)
 {
     struct symbol *base_type = sym->ctype.base_type;
     struct statement *stmt = base_type->stmt;
 
     if (stmt) {
         // function definition
-        handle_fnc_def(sym, cl);
+        handle_fnc_def(sym);
         return;
     }
 
     WARN_UNHANDLED_SYM(sym);
 }
 
-static void handle_top_level_sym(struct symbol *sym,
-                                 struct cl_code_listener *cl)
+static void handle_top_level_sym(struct symbol *sym)
 {
     struct symbol *base_type;
 
@@ -954,7 +945,7 @@ static void handle_top_level_sym(struct symbol *sym,
         WARN_CASE_UNHANDLED(sym->pos, SYM_BAD)
 
         case SYM_FN:
-            handle_sym_fn(sym, cl);
+            handle_sym_fn(sym);
             break;
     }
 
@@ -971,43 +962,43 @@ static void clean_up_symbols(struct symbol_list *list,
 #if DO_EXPAND_SYMBOL
         expand_symbol(sym);
 #endif
-        handle_top_level_sym(sym, cl);
+        handle_top_level_sym(sym);
     } END_FOR_EACH_PTR(sym);
 }
 
 static struct cl_code_listener* create_cl_chain(void)
 {
-    struct cl_code_listener *cl;
+    struct cl_code_listener *listener;
     struct cl_code_listener *chain = cl_chain_create();
     if (!chain)
         // error message already emitted
         return NULL;
 
     if (1 < verbose) {
-        cl = cl_code_listener_create("listener=\"locator\"");
-        if (!cl) {
+        listener = cl_code_listener_create("listener=\"locator\"");
+        if (!listener) {
             chain->destroy(chain);
             return NULL;
         }
-        cl_chain_append(chain, cl);
+        cl_chain_append(chain, listener);
     }
 
-    cl = cl_code_listener_create("listener=\"pp_with_types\" "
+    listener = cl_code_listener_create("listener=\"pp_with_types\" "
             "cld=\"arg_subst,unify_labels_fnc,unify_regs,unify_vars\"");
-    if (!cl) {
+    if (!listener) {
         chain->destroy(chain);
         return NULL;
     }
-    cl_chain_append(chain, cl);
+    cl_chain_append(chain, listener);
 
 #if 0
-    cl = cl_code_listener_create("listener=\"dotgen\" "
+    listener = cl_code_listener_create("listener=\"dotgen\" "
             "cld=\"arg_subst,unify_labels_fnc,unify_regs,unify_vars\"");
-    if (!cl) {
+    if (!listener) {
         chain->destroy(chain);
         return NULL;
     }
-    cl_chain_append(chain, cl);
+    cl_chain_append(chain, listener);
 #endif
 
     return chain;
@@ -1017,7 +1008,6 @@ int main(int argc, char **argv)
 {
     char *file;
     struct string_list *filelist = NULL;
-    struct cl_code_listener *cl;
     struct symbol_list *symlist;
 
 #if 1
