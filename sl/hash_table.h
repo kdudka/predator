@@ -37,7 +37,7 @@ typedef unsigned ht_hash_t;
 /**
  * type of function evaluating hash value for a given (hashable) item
  */
-typedef ht_hash_t (*ht_hash_fnc_t)(void *item);
+typedef ht_hash_t (*ht_hash_fnc_t)(const void *item);
 
 /**
  * type of function comparing two (hashable) items for equality
@@ -46,7 +46,7 @@ typedef ht_hash_t (*ht_hash_fnc_t)(void *item);
  * @param i2 The second item for comparison.
  * @return Return true if the given items are equal, false otherwise.
  */
-typedef bool (*ht_eq_fnc_t)(void *i1, void *i2);
+typedef bool (*ht_eq_fnc_t)(const void *i1, const void *i2);
 
 /**
  * type of function used to free a hashed item
@@ -95,7 +95,7 @@ void ht_destroy(struct ht_hash_table *ht);
  * @param item An item (or its template) to look for.
  * @return Returns the found item if any, NULL otherwise.
  */
-void* ht_lookup(struct ht_hash_table *ht, void *item);
+void* ht_lookup(struct ht_hash_table *ht, const void *item);
 
 /**
  * insert an item into the hash table if the item is not there already

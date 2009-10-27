@@ -106,7 +106,8 @@ void ht_destroy(struct ht_hash_table *ht)
     free(ht);
 }
 
-static struct ht_hash_slot* ht_get_slot(struct ht_hash_table *ht, void *what)
+static struct ht_hash_slot* ht_get_slot(struct ht_hash_table *ht,
+                                        const void *what)
 {
     ht_hash_t hash = ht->hash_fnc(what);
     unsigned idx = hash % ht->size;
@@ -114,7 +115,8 @@ static struct ht_hash_slot* ht_get_slot(struct ht_hash_table *ht, void *what)
 }
 
 static struct ht_hash_item* ht_seek_item(struct ht_hash_table *ht,
-                                         struct ht_hash_item *head, void *what)
+                                         struct ht_hash_item *head,
+                                         const void *what)
 {
     struct ht_hash_item *item = head;
     for(; item; item = item->next)
@@ -125,7 +127,7 @@ static struct ht_hash_item* ht_seek_item(struct ht_hash_table *ht,
     return NULL;
 }
 
-void* ht_lookup(struct ht_hash_table *ht, void *what)
+void* ht_lookup(struct ht_hash_table *ht, const void *what)
 {
     struct ht_hash_slot *slot = ht_get_slot(ht, what);
     struct ht_hash_item *item = ht_seek_item(ht, slot->head, what);
