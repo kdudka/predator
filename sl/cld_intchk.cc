@@ -563,7 +563,7 @@ void CldLabelChk::emitWarnings() {
 
 
 // /////////////////////////////////////////////////////////////////////////////
-// public interface, see cld_unilabel.hh for more details
+// public interface, see cld_intchk.hh for more details
 ICodeListener* createCldIntegrityChk(ICodeListener *slave) {
     return
         new CldLcVarUsageChk(

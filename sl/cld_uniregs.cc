@@ -54,7 +54,7 @@ void CldUniRegs::modifyOperand(struct cl_operand *op) {
 
 
 // /////////////////////////////////////////////////////////////////////////////
-// public interface, see cld_unilabel.hh for more details
+// public interface, see cld_uniregs.hh for more details
 ICodeListener* createCldUniRegs(ICodeListener *slave) {
     return new CldUniRegs(slave);
 }

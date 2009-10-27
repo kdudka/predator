@@ -68,7 +68,7 @@ void CldUniVars::modifyOperand(struct cl_operand *op) {
 }
 
 // /////////////////////////////////////////////////////////////////////////////
-// public interface, see cld_unilabel.hh for more details
+// public interface, see cld_univars.hh for more details
 ICodeListener* createCldUniVars(ICodeListener *slave) {
     return new CldUniVars(slave);
 }

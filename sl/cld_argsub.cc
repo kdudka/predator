@@ -122,7 +122,7 @@ void CldArgSubst::modifyOperand(struct cl_operand *op) {
 }
 
 // /////////////////////////////////////////////////////////////////////////////
-// public interface, see cld_unilabel.hh for more details
+// public interface, see cld_argsub.hh for more details
 ICodeListener* createCldArgSubst(ICodeListener *slave) {
     return new CldArgSubst(slave);
 }
