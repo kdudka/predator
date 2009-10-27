@@ -154,7 +154,7 @@ static void type_db_free (void *p)
     (void) p;
 }
 
-static type_db_t type_db_create()
+static type_db_t type_db_create(void)
 {
     type_db_t db = htab_create_alloc(/* FIXME: hardcoded for now */ 0x100,
                                      type_db_hash, type_db_eq, type_db_free,

@@ -71,7 +71,66 @@
 #define SL_NEW(type) \
     (type *) malloc(sizeof(type))
 
+typedef struct ht_hash_table *type_db_t;
+
 static struct cl_code_listener *cl = NULL;
+static type_db_t type_db = NULL;
+
+static ht_hash_t type_db_hash (const void *p)
+{
+    const struct cl_type *type = (const struct cl_type *) p;
+    return type->uid;
+}
+
+static bool type_db_eq (const void *p1, const void *p2)
+{
+    const struct cl_type *type1 = (const struct cl_type *) p1;
+    const struct cl_type *type2 = (const struct cl_type *) p2;
+    return type1->uid == type2->uid;
+}
+
+static type_db_t type_db_create(void )
+{
+    type_db_t db = ht_create(/* FIXME: hardcoded for now */ 0x100,
+                             type_db_hash, type_db_eq,
+                             /* TODO: type_db_free */ NULL);
+
+    if (!db)
+        die("ht_create() failed");
+
+    // guaranteed to NOT return NULL
+    return db;
+}
+
+static void type_db_destroy(type_db_t db)
+{
+    ht_destroy(db);
+}
+
+static struct cl_type* type_db_lookup(type_db_t db, cl_type_uid_t uid)
+{
+    struct cl_type type;
+    type.uid = uid;
+
+    return ht_lookup(db, &type);
+}
+
+static void type_db_insert(type_db_t db, struct cl_type *type)
+{
+    if (NULL == ht_insert_if_needed(db, type))
+        die("ht_insert_if_needed() failed");
+}
+
+static struct cl_type* cb_type_db_lookup(cl_type_uid_t uid, void *user_data)
+{
+    type_db_t db = (type_db_t) user_data;
+    return type_db_lookup(db, uid);
+}
+
+static void register_type_db(struct cl_code_listener *cl, type_db_t db)
+{
+    cl->reg_type_db(cl, cb_type_db_lookup, db);
+}
 
 static void sl_warn(struct position pos, const char *fmt, ...)
 {
@@ -1017,11 +1076,16 @@ int main(int argc, char **argv)
 
     symlist = sparse_initialize(argc, argv, &filelist);
 
+    // initialize code listener
     cl_global_init_defaults(NULL, verbose);
     cl = create_cl_chain();
     if (!cl)
         // error message already emitted
         return EXIT_FAILURE;
+
+    // initialize type database
+    type_db = type_db_create();
+    register_type_db(cl, type_db);
 
     cl->file_open(cl, "sparse-internal-symbols");
     clean_up_symbols(symlist, cl);
@@ -1036,6 +1100,7 @@ int main(int argc, char **argv)
         cl->file_close(cl);
     } END_FOR_EACH_PTR_NOTAG(file);
 
+    type_db_destroy(type_db);
     cl->destroy(cl);
     cl_global_cleanup();
 

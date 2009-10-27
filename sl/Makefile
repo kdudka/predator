@@ -90,9 +90,9 @@ hash_table.o: hash_table.h
 hash_table.o: CFLAGS += -std=c99 -pedantic -fPIC -Wall -Wextra -Werror
 
 slsparse: hash_table.o slsparse.o libcl.a $(SPARSE_LIBS)
-	$(CC) $(CFLAGS) -o $@ slsparse.o -L. -lcl $(SPARSE_LIBS) $(CL_LIBS) \
-		$(LDFLAGS)
-	../sparse/sparse -I.. slsparse.c
+	$(CC) $(CFLAGS) -o $@ slsparse.o hash_table.o \
+		-L. -lcl $(SPARSE_LIBS) $(CL_LIBS) $(LDFLAGS)
+	../sparse/sparse -I.. slsparse.c hash_table.c
 
 PLUG_CFLAGS = -fPIC -std=c99 -pedantic -Wall -W -Werror -I.. -I../gcc -iquote.
 
