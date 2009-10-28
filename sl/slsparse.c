@@ -80,9 +80,26 @@ typedef struct typen_data *type_db_t;
 static struct cl_code_listener *cl = NULL;
 static type_db_t type_db = NULL;
 
+static void cb_free_clt(struct cl_type *clt)
+{
+    enum cl_type_e code = clt->code;
+    switch (code) {
+        case CL_TYPE_PTR:
+            free(clt->items);
+            break;
+
+        // TODO
+        default:
+            break;
+    }
+
+    free((char *) clt->name);
+    free(clt);
+}
+
 static type_db_t type_db_create(void )
 {
-    type_db_t db = typen_create(/* TODO: free_fnc */ NULL);
+    type_db_t db = typen_create(cb_free_clt);
     if (!db)
         die("ht_create() failed");
 
@@ -280,7 +297,7 @@ static struct cl_type* add_type_if_needed(struct symbol *type)
 
     // make sure all members will be initialized
     clt->code       = CL_TYPE_UNKNOWN;
-    clt->name       = "<sparse type not available>";
+    clt->name       = NULL;
     clt->size       = 0;
     clt->item_cnt   = 0;
     clt->items      = NULL;
@@ -294,6 +311,9 @@ static struct cl_type* add_type_if_needed(struct symbol *type)
         read_sparse_location(&clt->loc, type->pos);
         read_sparse_scope(&clt->scope, type->scope);
     }
+    
+    if (clt->code == CL_TYPE_UNKNOWN && !clt->name)
+        clt->name = strdup("<sparse type not available>");
 
     // hash the just read type for next wheel
     return type_db_insert(type_db, clt, type);
