@@ -90,6 +90,7 @@ class ClPrettyPrint: public AbstractCodeListener {
         bool                    printingArgDecls_;
 
     private:
+        void printIntegralCst   (const struct cl_operand *);
         void printCst           (const struct cl_operand *);
         void printVarType       (const struct cl_operand *);
         void printNestedVar     (const struct cl_operand *);
@@ -153,6 +154,7 @@ void ClPrettyPrint::fnc_open(
             CL_MSG_STREAM(cl_error, LocationWriter(&fnc->loc) << "error: "
                     << "invalid scope for function: " << fnc->scope);
     }
+    this->printVarType(fnc);
     SSD_COLORIZE(out_, C_LIGHT_BLUE) << fnc_;
     SSD_COLORIZE(out_, C_LIGHT_RED) << "(";
     printingArgDecls_ = true;
@@ -183,21 +185,19 @@ void ClPrettyPrint::bb_open(
         << SSD_INLINE_COLOR(C_LIGHT_RED, ":") << std::endl;
 }
 
-void ClPrettyPrint::printCst(const struct cl_operand *op) {
+void ClPrettyPrint::printIntegralCst(const struct cl_operand *op) {
     const struct cl_type *type = op->type;
     enum cl_type_e code = type->code;
     switch (code) {
-        case CL_TYPE_UNKNOWN:
-            this->printVarType(op);
-            break;
-
         case CL_TYPE_PTR:
             if (op->data.cst.data.cst_int.value)
+                // TODO: implement generic pointer printing
                 TRAP;
 
             SSD_COLORIZE(out_, C_WHITE) << "NULL";
             break;
 
+        case CL_TYPE_UNKNOWN:
         case CL_TYPE_ENUM:
             this->printVarType(op);
             // fall through!
@@ -213,20 +213,33 @@ void ClPrettyPrint::printCst(const struct cl_operand *op) {
             }
             break;
 
+        case CL_TYPE_BOOL:
+            if (op->data.cst.data.cst_int.value)
+                SSD_COLORIZE(out_, C_WHITE) << "true";
+            else
+                SSD_COLORIZE(out_, C_WHITE) << "false";
+            break;
+
+        default:
+            TRAP;
+    }
+}
+
+void ClPrettyPrint::printCst(const struct cl_operand *op) {
+    enum cl_type_e code = op->data.cst.code;
+    switch (code) {
+        case CL_TYPE_INT:
+            this->printIntegralCst(op);
+            break;
+
         case CL_TYPE_FNC:
+            this->printVarType(op);
             if (!op->data.cst.data.cst_fnc.name) {
                 CL_MSG_STREAM(cl_error, LocationWriter(loc_) << "error: "
                         << "anonymous function");
                 break;
             }
             out_ << SSD_INLINE_COLOR(C_LIGHT_GREEN, op->data.cst.data.cst_fnc.name);
-            break;
-
-        case CL_TYPE_BOOL:
-            if (op->data.cst.data.cst_int.value)
-                SSD_COLORIZE(out_, C_WHITE) << "true";
-            else
-                SSD_COLORIZE(out_, C_WHITE) << "false";
             break;
 
         case CL_TYPE_STRING: {
