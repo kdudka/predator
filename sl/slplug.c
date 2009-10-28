@@ -372,18 +372,6 @@ static cl_type_uid_t add_type_if_needed(tree t)
     return uid;
 }
 
-static /* const */ struct cl_type builtin_fnc_type = {
-    .uid            = CL_UID_INVALID,
-    .code           = CL_TYPE_FNC,
-    .loc = {
-        .file       = NULL,
-        .line       = -1
-    },
-    .scope          = CL_SCOPE_GLOBAL,
-    .name           = "<builtin_fnc_type>",
-    .size           = /* FIXME */ sizeof(cl_get_type_fnc_t)
-};
-
 static enum cl_scope_e get_decl_scope(tree t)
 {
     tree ctx = DECL_CONTEXT(t);
@@ -430,17 +418,17 @@ static void read_operand_decl(struct cl_operand *op, tree t)
 
     switch (code) {
         case FUNCTION_DECL:
-            op->code                    = CL_OPERAND_CST;
-            op->type                    = &builtin_fnc_type;
-            op->data.cst.data.cst_fnc.name       = name;
-            op->data.cst.data.cst_fnc.is_extern  = DECL_EXTERNAL(t);
+            op->code                            = CL_OPERAND_CST;
+            op->data.cst.code                   = CL_TYPE_FNC;
+            op->data.cst.data.cst_fnc.name      = name;
+            op->data.cst.data.cst_fnc.is_extern = DECL_EXTERNAL(t);
             break;
 
         case PARM_DECL:
         case VAR_DECL:
-            op->code                    = CL_OPERAND_VAR;
-            op->data.var.id             = DECL_UID(t);
-            op->data.var.name           = name;
+            op->code                            = CL_OPERAND_VAR;
+            op->data.var.id                     = DECL_UID(t);
+            op->data.var.name                   = name;
             break;
 
         default:
@@ -471,18 +459,20 @@ static void read_raw_operand(struct cl_operand *op, tree t)
             break;
 
         case INTEGER_CST:
-            op->code                    = CL_OPERAND_CST;
+            op->code                            = CL_OPERAND_CST;
+            op->data.cst.code                   = CL_TYPE_INT;
 
             // FIXME: this is not going to work well...
-            op->data.cst.data.cst_int.value      = TREE_INT_CST_HIGH(t)
+            op->data.cst.data.cst_int.value     = TREE_INT_CST_HIGH(t)
                 ? (int) TREE_INT_CST_HIGH(t)
                 : (int) TREE_INT_CST_LOW(t);
             break;
 
         case STRING_CST:
-            op->code                    = CL_OPERAND_CST;
-            op->type                    = &builtin_string_type;
-            op->data.cst.data.cst_string.value   = TREE_STRING_POINTER(t);
+            op->code                            = CL_OPERAND_CST;
+            op->type                            = /* FIXME */ &builtin_string_type;
+            op->data.cst.code                   = CL_TYPE_STRING;
+            op->data.cst.data.cst_string.value  = TREE_STRING_POINTER(t);
             break;
 
         case REAL_CST:
@@ -531,6 +521,12 @@ static int accessor_item_lookup(const struct cl_type *type, tree t)
     return -1;
 }
 
+static struct cl_type* clt_from_decl(tree t)
+{
+    cl_type_uid_t uid = add_type_if_needed(t);
+    return type_db_lookup(type_db, uid);
+}
+
 static struct cl_type* operand_type_lookup(tree t)
 {
     if (NULL_TREE == t)
@@ -540,7 +536,7 @@ static struct cl_type* operand_type_lookup(tree t)
     if (NULL_TREE == op0)
         TRAP;
 
-    return type_db_lookup(type_db, add_type_if_needed(op0));
+    return clt_from_decl(op0);
 }
 
 static void handle_operand(struct cl_operand *op, tree t);
@@ -634,8 +630,7 @@ static void handle_operand(struct cl_operand *op, tree t)
         return;
 
     // read type
-    cl_type_uid_t type = add_type_if_needed(t);
-    op->type = type_db_lookup(type_db, type);
+    op->type = clt_from_decl(t);
 
     // read accessor
     op->accessor = NULL;
@@ -1163,14 +1158,15 @@ static void handle_fnc_decl (tree decl)
 
     // emit fnc declaration
     struct cl_operand fnc;
-    fnc.code                        = CL_OPERAND_CST;
-    fnc.type                        = &builtin_fnc_type;
-    fnc.accessor                    = NULL;
-    fnc.scope                       = TREE_PUBLIC(decl)
-                                        ? CL_SCOPE_GLOBAL
-                                        : CL_SCOPE_STATIC;
-    fnc.data.cst.data.cst_fnc.name           = IDENTIFIER_POINTER(ident);
-    fnc.data.cst.data.cst_fnc.is_extern      = false;
+    fnc.code                            = CL_OPERAND_CST;
+    fnc.type                            = clt_from_decl(decl);
+    fnc.accessor                        = NULL;
+    fnc.scope                           = TREE_PUBLIC(decl)
+                                            ? CL_SCOPE_GLOBAL
+                                            : CL_SCOPE_STATIC;
+    fnc.data.cst.code                   = CL_TYPE_FNC;
+    fnc.data.cst.data.cst_fnc.name      = IDENTIFIER_POINTER(ident);
+    fnc.data.cst.data.cst_fnc.is_extern = false;
     read_gcc_location(&fnc.loc, DECL_SOURCE_LOCATION(decl));
     cl->fnc_open(cl, &fnc);
 
