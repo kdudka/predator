@@ -17,11 +17,16 @@
  * along with sl.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "config.h"
 #include "cld_argsub.hh"
 #include "cld_optrans.hh"
 
 #include <map>
 #include <string>
+
+#ifndef CLD_ARG_SUBST_KEEP_TYPE_REF
+#   define CLD_ARG_SUBST_KEEP_TYPE_REF 0
+#endif
 
 class CldArgSubst: public CldOpTransBase {
     public:
@@ -54,6 +59,9 @@ class CldArgSubst: public CldOpTransBase {
         struct ArgDecl {
             int             varId;
             std::string     varName;
+#if CLD_ARG_SUBST_KEEP_TYPE_REF
+            struct cl_type  *type;
+#endif
         };
 
         // we use map because some arg_id positions may be omitted
@@ -94,6 +102,9 @@ void CldArgSubst::regArg(int arg_id, const struct cl_operand *arg_src) {
     ArgDecl &ad = map_[arg_id];
     ad.varId    = arg_src->data.var.id;
     ad.varName  = arg_src->data.var.name;
+#if CLD_ARG_SUBST_KEEP_TYPE_REF
+    ad.type     = arg_src->type;
+#endif
 }
 
 void CldArgSubst::modifyOperand(struct cl_operand *op) {
@@ -119,6 +130,9 @@ void CldArgSubst::modifyOperand(struct cl_operand *op) {
 
     op->code            = CL_OPERAND_VAR;
     op->scope           = CL_SCOPE_FUNCTION;
+#if CLD_ARG_SUBST_KEEP_TYPE_REF
+    op->type            = ad.type;
+#endif
 }
 
 // /////////////////////////////////////////////////////////////////////////////
