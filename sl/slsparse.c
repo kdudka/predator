@@ -18,7 +18,7 @@
  */
 
 #include "code_listener.h"
-#include "hash_table.h"
+#include "type_enumerator.h"
 
 #define _GNU_SOURCE
 
@@ -71,30 +71,14 @@
 #define SL_NEW(type) \
     (type *) malloc(sizeof(type))
 
-typedef struct ht_hash_table *type_db_t;
+typedef struct typen_data *type_db_t;
 
 static struct cl_code_listener *cl = NULL;
 static type_db_t type_db = NULL;
 
-static ht_hash_t type_db_hash (const void *p)
-{
-    const struct cl_type *type = (const struct cl_type *) p;
-    return type->uid;
-}
-
-static bool type_db_eq (const void *p1, const void *p2)
-{
-    const struct cl_type *type1 = (const struct cl_type *) p1;
-    const struct cl_type *type2 = (const struct cl_type *) p2;
-    return type1->uid == type2->uid;
-}
-
 static type_db_t type_db_create(void )
 {
-    type_db_t db = ht_create(/* FIXME: hardcoded for now */ 0x100,
-                             type_db_hash, type_db_eq,
-                             /* TODO: type_db_free */ NULL);
-
+    type_db_t db = typen_create(/* TODO: free_fnc */ NULL);
     if (!db)
         die("ht_create() failed");
 
@@ -104,27 +88,13 @@ static type_db_t type_db_create(void )
 
 static void type_db_destroy(type_db_t db)
 {
-    ht_destroy(db);
-}
-
-static struct cl_type* type_db_lookup(type_db_t db, cl_type_uid_t uid)
-{
-    struct cl_type type;
-    type.uid = uid;
-
-    return ht_lookup(db, &type);
-}
-
-static void type_db_insert(type_db_t db, struct cl_type *type)
-{
-    if (NULL == ht_insert_if_needed(db, type))
-        die("ht_insert_if_needed() failed");
+    typen_destroy(db);
 }
 
 static struct cl_type* cb_type_db_lookup(cl_type_uid_t uid, void *user_data)
 {
     type_db_t db = (type_db_t) user_data;
-    return type_db_lookup(db, uid);
+    return typen_get_by_uid(db, uid);
 }
 
 static void register_type_db(struct cl_code_listener *cl, type_db_t db)

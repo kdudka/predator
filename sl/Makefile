@@ -83,16 +83,17 @@ ssd.o: CXXFLAGS += -I../ssd/src -DHAVE_ISATTY
 
 CL_LIBS = -lboost_iostreams -lboost_system
 
-slsparse.o: code_listener.h hash_table.h
+slsparse.o: code_listener.h type_enumerator.h
 slsparse.o: CFLAGS += -fPIC -Wall $(SPARSE_CFLAGS)
 
 hash_table.o: hash_table.h
-hash_table.o: CFLAGS += -std=c99 -pedantic -fPIC -Wall -Wextra -Werror
+type_enumerator.o: type_enumerator.h
+hash_table.o type_enumerator.o: CFLAGS += -std=c99 -pedantic -fPIC -Wall -Wextra -Werror
 
-slsparse: hash_table.o slsparse.o libcl.a $(SPARSE_LIBS)
-	$(CC) $(CFLAGS) -o $@ slsparse.o hash_table.o \
+slsparse: hash_table.o slsparse.o type_enumerator.o libcl.a $(SPARSE_LIBS)
+	$(CC) $(CFLAGS) -o $@ slsparse.o hash_table.o type_enumerator.o \
 		-L. -lcl $(SPARSE_LIBS) $(CL_LIBS) $(LDFLAGS)
-	../sparse/sparse -I.. slsparse.c hash_table.c
+	../sparse/sparse -I.. slsparse.c hash_table.c type_enumerator.c
 
 PLUG_CFLAGS = -fPIC -std=c99 -pedantic -Wall -W -Werror -I.. -I../gcc -iquote.
 
@@ -146,7 +147,8 @@ chkhead:
 clean:
 	rm -f libcl.a $(CL_OBJS)
 	rm -f test-list test-all test-all.o data/dll.o
-	rm -f slsparse slsparse.o sparse-internal-symbols.dot hash_table.o
+	rm -f slsparse slsparse.o sparse-internal-symbols.dot
+	rm -f hash_table.o type_enumerator.o
 	rm -f slplug.o slplug.so
 	$(MAKE) distclean -C data
 
