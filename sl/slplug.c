@@ -266,13 +266,24 @@ static int get_fixed_array_size(tree t)
     return get_type_sizeof(t) / item_size;
 }
 
-static cl_type_uid_t add_type_if_needed(tree t);
+static cl_type_uid_t add_bare_type_if_needed(tree t);
+static cl_type_uid_t add_type_if_needed(tree t)
+{
+    if (NULL_TREE == t)
+        TRAP;
+
+    tree type = TREE_TYPE(t);
+    if (NULL_TREE == type)
+        TRAP;
+
+    return add_bare_type_if_needed(type);
+}
+
 
 static void dig_record_type(struct cl_type *clt, tree t)
 {
     for (t = TYPE_FIELDS(t); t; t = TREE_CHAIN(t)) {
         // TODO: chunk allocation ?
-        (void) clt;
         clt->items = GGC_RESIZEVEC(struct cl_type_item, clt->items,
                                    clt->item_cnt + 1);
 
@@ -283,6 +294,31 @@ static void dig_record_type(struct cl_type *clt, tree t)
         tree name = DECL_NAME(t);
         if (name)
             item->name = IDENTIFIER_POINTER(name);
+    }
+}
+
+static void dig_fnc_type(struct cl_type *clt, tree t)
+{
+    // dig return type
+    clt->item_cnt = 1;
+    clt->items = GGC_RESIZEVEC(struct cl_type_item, 0, 1);
+    struct cl_type_item *item = clt->items;
+    item->type = add_type_if_needed(t);
+    item->name = NULL;
+
+    // dig arg types
+    for (t = TYPE_ARG_TYPES(t); t; t = TREE_CHAIN(t)) {
+        tree val = TREE_VALUE(t);
+        if (!val)
+            TRAP;
+
+        // TODO: chunk allocation ?
+        clt->items = GGC_RESIZEVEC(struct cl_type_item, clt->items,
+                                   clt->item_cnt + 1);
+
+        struct cl_type_item *item = &clt->items[clt->item_cnt ++];
+        item->type = /* recursion */ add_bare_type_if_needed(val);
+        item->name = NULL;
     }
 }
 
@@ -320,7 +356,7 @@ static void read_specific_type(struct cl_type *clt, tree type)
 
         case FUNCTION_TYPE:
             clt->code = CL_TYPE_FNC;
-            // TODO: handle function prototype
+            dig_fnc_type(clt, type);
             break;
 
         case INTEGER_TYPE:
@@ -340,15 +376,8 @@ static void read_specific_type(struct cl_type *clt, tree type)
     };
 }
 
-static cl_type_uid_t add_type_if_needed(tree t)
+static cl_type_uid_t add_bare_type_if_needed(tree type)
 {
-    if (NULL_TREE == t)
-        return CL_UID_INVALID;
-
-    tree type = TREE_TYPE(t);
-    if (NULL_TREE == type)
-        return CL_UID_INVALID;
-
     // hashtab lookup
     cl_type_uid_t uid = TYPE_UID(type);
     struct cl_type *clt = type_db_lookup(type_db, uid);

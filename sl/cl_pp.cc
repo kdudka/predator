@@ -92,6 +92,7 @@ class ClPrettyPrint: public AbstractCodeListener {
     private:
         void printIntegralCst   (const struct cl_operand *);
         void printCst           (const struct cl_operand *);
+        void printBareType      (const struct cl_type *, bool expandFnc);
         void printVarType       (const struct cl_operand *);
         void printNestedVar     (const struct cl_operand *);
         const char* getItemName (const struct cl_accessor *);
@@ -270,16 +271,7 @@ namespace {
     }
 }
 
-void ClPrettyPrint::printVarType(const struct cl_operand *op) {
-    if (op->code == CL_OPERAND_VOID)
-        TRAP;
-
-    if (!showTypes_)
-        return;
-
-    SSD_COLORIZE(out_, C_DARK_GRAY) << "[";
-    struct cl_type *clt = op->type;
-
+void ClPrettyPrint::printBareType(const struct cl_type *clt, bool expandFnc) {
     string str;
     for (; clt; clt = this->getType(clt->items[0].type)) {
         enum cl_type_e code = clt->code;
@@ -319,7 +311,13 @@ deref_done:
             break;
 
         case CL_TYPE_FNC:
-            out_ << SSD_INLINE_COLOR(C_GREEN, "fnc");
+            if (expandFnc) {
+                // recursion limited to depth 1
+                this->printBareType(this->getType(clt->items[0].type), false);
+                str = string("(") + str + string(")");
+            } else {
+                out_ << SSD_INLINE_COLOR(C_LIGHT_RED, "fnc");
+            }
             break;
 
         case CL_TYPE_INT:
@@ -345,7 +343,33 @@ deref_done:
 
     if (!str.empty())
         str = string(" ") + str;
-    SSD_COLORIZE(out_, C_DARK_GRAY) << str << "]";
+    SSD_COLORIZE(out_, C_DARK_GRAY) << str;
+
+    if (expandFnc && CL_TYPE_FNC == code) {
+        SSD_COLORIZE(out_, C_DARK_GRAY) << "(";
+        int max = clt->item_cnt;
+        if (2 < max)
+            --max;
+        for (int i = 1; i < max; ++i) {
+            if (1 < i)
+                SSD_COLORIZE(out_, C_DARK_GRAY) << ", ";
+
+            this->printBareType(this->getType(clt->items[i].type), false);
+        }
+        SSD_COLORIZE(out_, C_DARK_GRAY) << ")";
+    }
+}
+
+void ClPrettyPrint::printVarType(const struct cl_operand *op) {
+    if (op->code == CL_OPERAND_VOID)
+        TRAP;
+
+    if (!showTypes_)
+        return;
+
+    SSD_COLORIZE(out_, C_DARK_GRAY) << "[";
+    this->printBareType(op->type, true);
+    SSD_COLORIZE(out_, C_DARK_GRAY) << "]";
 }
 
 namespace {
