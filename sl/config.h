@@ -18,4 +18,7 @@
  */
 
 /* if 1, check each code_listener decorator by the integrity checker */
-#define CL_DEBUG_CLD 0
+#define CL_DEBUG_CLD            0
+
+/* type enumerator debug level; set 0 to disable debugging */
+#define DEBUG_TYPE_ENUMERATOR   1

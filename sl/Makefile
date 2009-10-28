@@ -87,7 +87,7 @@ slsparse.o: code_listener.h type_enumerator.h
 slsparse.o: CFLAGS += -fPIC -Wall $(SPARSE_CFLAGS)
 
 hash_table.o: hash_table.h
-type_enumerator.o: type_enumerator.h
+type_enumerator.o: type_enumerator.h config.h
 hash_table.o type_enumerator.o: CFLAGS += -std=c99 -pedantic -fPIC -Wall -Wextra -Werror
 
 slsparse: hash_table.o slsparse.o type_enumerator.o libcl.a $(SPARSE_LIBS)

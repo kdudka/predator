@@ -91,6 +91,16 @@ static void type_db_destroy(type_db_t db)
     typen_destroy(db);
 }
 
+static struct cl_type* type_db_insert(type_db_t db, struct cl_type *clt,
+                                      void *key)
+{
+    struct cl_type *rv = typen_insert_as_new(db, clt, key);
+    if (!rv)
+        die("typen_insert_as_new() failed");
+
+    return rv;
+}
+
 static struct cl_type* cb_type_db_lookup(cl_type_uid_t uid, void *user_data)
 {
     type_db_t db = (type_db_t) user_data;
@@ -138,33 +148,51 @@ static void read_sparse_scope(enum cl_scope_e *p, struct scope *scope)
         *p = CL_SCOPE_FUNCTION;
 }
 
-static __attribute__ ((__warn_unused_result__))
-struct cl_type* read_sparse_type(struct symbol *sym)
+static void read_sparse_type(struct cl_type *clt, struct symbol *type)
 {
-    struct cl_type *clt = SL_NEW(struct cl_type);
+    clt->code       = CL_TYPE_UNKNOWN;
+    clt->name       = strdup(show_typename(type));
+    clt->size       = 0;
+    clt->item_cnt   = 0;
+    clt->items      = NULL;
+}
+
+static struct cl_type* add_type_if_needed(struct symbol *type)
+{
+    struct cl_type *clt = typen_get_by_key(type_db, type);
+    if (clt)
+        // type already hashed
+        return clt;
+    
+    // allocate new clt
+    clt = SL_NEW(struct cl_type);
     if (!clt)
         die("SL_NEW failed");
 
-    // TODO
-    clt->uid        = -1;
-    clt->code       = CL_TYPE_UNKNOWN;
-    clt->name       = strdup(show_typename(sym));
-    clt->size       = /* TODO */ 0;
-    clt->item_cnt   = /* TODO */ 0;
-    clt->items      = /* TODO */ NULL;
-
-    clt->scope      = CL_SCOPE_GLOBAL;
-    clt->loc.file   = NULL;
-    clt->loc.line   = -1;
-
-    if (sym && sym->ctype.base_type) {
-        // FIXME: not tested
-        struct symbol *type = sym->ctype.base_type;
+    if (type) {
+        read_sparse_type(clt, type);
         read_sparse_location(&clt->loc, type->pos);
         read_sparse_scope(&clt->scope, type->scope);
+    } else {
+        clt->code       = CL_TYPE_UNKNOWN;
+        clt->name       = "<sparse type not available>";
+        clt->size       = 0;
+        clt->item_cnt   = 0;
+        clt->items      = NULL;
+        clt->scope      = CL_SCOPE_GLOBAL;
+        clt->loc.file   = NULL;
+        clt->loc.line   = -1;
     }
 
-    return clt;
+    return type_db_insert(type_db, clt, type);
+}
+
+static struct cl_type* clt_from_sym(struct symbol *sym)
+{
+    if (!sym || !sym->ctype.base_type)
+        TRAP;
+
+    return add_type_if_needed(sym->ctype.base_type);
 }
 
 static bool is_pseudo(pseudo_t pseudo)
@@ -210,10 +238,6 @@ static void free_cl_operand_data(struct cl_operand *op)
     }
 
     // TODO
-    if (op->type && op->type->code == CL_TYPE_UNKNOWN) {
-        free((char *) op->type->name);
-        free(op->type);
-    }
     free(op->accessor);
 }
 
@@ -305,7 +329,7 @@ static void read_pseudo_sym(struct cl_operand *op, struct symbol *sym)
         op->data.cst_fnc.is_extern  = MOD_EXTERN & sym->ctype.modifiers;
     } else {
         op->code                    = CL_OPERAND_VAR;
-        op->type                    = read_sparse_type(sym);
+        op->type                    = clt_from_sym(sym);
         op->data.var.id             = /* TODO */ (int)(long) sym;
         op->data.var.name           = strdup(show_ident(sym->ident));
     }
@@ -392,7 +416,7 @@ static void pseudo_to_cl_operand(struct instruction *insn, pseudo_t pseudo,
         read_insn_op_deref(op, insn);
 
     if (!op->type)
-        op->type = read_sparse_type(insn->type);
+        op->type = add_type_if_needed(insn->type);
 }
 
 static bool handle_insn_call(struct instruction *insn)
@@ -894,7 +918,7 @@ static void handle_fnc_arg_list(struct symbol_list *arg_list)
         struct cl_operand op;
         op.code                     = CL_OPERAND_VAR;
         op.scope                    = CL_SCOPE_FUNCTION;
-        op.type                     = read_sparse_type(arg);
+        op.type                     = clt_from_sym(arg);
         op.accessor                 = NULL;
         op.data.var.id              = /* TODO */ (int)(long) arg;
         op.data.var.name            = strdup(show_ident(arg->ident));
