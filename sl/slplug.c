@@ -432,8 +432,8 @@ static void read_operand_decl(struct cl_operand *op, tree t)
         case FUNCTION_DECL:
             op->code                    = CL_OPERAND_CST;
             op->type                    = &builtin_fnc_type;
-            op->data.cst_fnc.name       = name;
-            op->data.cst_fnc.is_extern  = DECL_EXTERNAL(t);
+            op->data.cst.data.cst_fnc.name       = name;
+            op->data.cst.data.cst_fnc.is_extern  = DECL_EXTERNAL(t);
             break;
 
         case PARM_DECL:
@@ -474,7 +474,7 @@ static void read_raw_operand(struct cl_operand *op, tree t)
             op->code                    = CL_OPERAND_CST;
 
             // FIXME: this is not going to work well...
-            op->data.cst_int.value      = TREE_INT_CST_HIGH(t)
+            op->data.cst.data.cst_int.value      = TREE_INT_CST_HIGH(t)
                 ? (int) TREE_INT_CST_HIGH(t)
                 : (int) TREE_INT_CST_LOW(t);
             break;
@@ -482,7 +482,7 @@ static void read_raw_operand(struct cl_operand *op, tree t)
         case STRING_CST:
             op->code                    = CL_OPERAND_CST;
             op->type                    = &builtin_string_type;
-            op->data.cst_string.value   = TREE_STRING_POINTER(t);
+            op->data.cst.data.cst_string.value   = TREE_STRING_POINTER(t);
             break;
 
         case REAL_CST:
@@ -1169,8 +1169,8 @@ static void handle_fnc_decl (tree decl)
     fnc.scope                       = TREE_PUBLIC(decl)
                                         ? CL_SCOPE_GLOBAL
                                         : CL_SCOPE_STATIC;
-    fnc.data.cst_fnc.name           = IDENTIFIER_POINTER(ident);
-    fnc.data.cst_fnc.is_extern      = false;
+    fnc.data.cst.data.cst_fnc.name           = IDENTIFIER_POINTER(ident);
+    fnc.data.cst.data.cst_fnc.is_extern      = false;
     read_gcc_location(&fnc.loc, DECL_SOURCE_LOCATION(decl));
     cl->fnc_open(cl, &fnc);
 

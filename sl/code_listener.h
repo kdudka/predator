@@ -233,6 +233,7 @@ struct cl_type {
      * 0 for elementary types
      * 1 for e.g. CL_TYPE_PTR and CL_TYPE_ARRAY
      * n for e.g. CL_TYPE_STRUCT and CL_TYPE_UNION
+     * 0 < n for CL_TYPE_FNC
      */
     int                                 item_cnt;
 
@@ -309,6 +310,34 @@ struct cl_accessor {
              */
             int                         id;
         } item;
+    } data;
+};
+
+struct cl_cst {
+    enum cl_type_e code;
+    union {
+        /* CL_TYPE_FNC */
+        struct {
+            /**
+             * name of the function
+             */
+            const char                  *name;
+
+            /**
+             * true if the function is external for the analysed module
+             */
+            bool                        is_extern;
+        } cst_fnc;
+
+        /* CL_TYPE_INT */
+        struct {
+            int                         value;
+        } cst_int;
+
+        /* CL_TYPE_STRING */
+        struct {
+            const char                  *value;
+        } cst_string;
     } data;
 };
 
@@ -398,28 +427,8 @@ struct cl_operand {
             int                         id;
         } reg;
 
-        /* CL_OPERAND_CST / CL_TYPE_FNC */
-        struct {
-            /**
-             * name of the function
-             */
-            const char                  *name;
-
-            /**
-             * true if the function is external for the analysed module
-             */
-            bool                        is_extern;
-        } cst_fnc;
-
-        /* CL_OPERAND_CST / CL_TYPE_INT */
-        struct {
-            int                         value;
-        } cst_int;
-
-        /* CL_OPERAND_CST / CL_TYPE_STRING */
-        struct {
-            const char                  *value;
-        } cst_string;
+        /* CL_OPERAND_CST */
+        struct cl_cst                   cst;
     } data;
 };
 

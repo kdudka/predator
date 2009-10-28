@@ -340,11 +340,11 @@ static void free_cl_cst_data(struct cl_operand *op)
 
     switch (op->type->code) {
         case CL_TYPE_FNC:
-            free((char *) op->data.cst_fnc.name);
+            free((char *) op->data.cst.data.cst_fnc.name);
             break;
 
         case CL_TYPE_STRING:
-            free((char *) op->data.cst_string.value);
+            free((char *) op->data.cst.data.cst_string.value);
             break;
 
         // TODO
@@ -425,7 +425,7 @@ static void read_sym_initializer(struct cl_operand *op, struct expression *expr)
         case EXPR_STRING:
             op->code                    = CL_OPERAND_CST;
             op->type                    = &builtin_string_type;
-            op->data.cst_string.value   =
+            op->data.cst.data.cst_string.value   =
                 strdup_sparse_string(expr->string);
             return;
 
@@ -455,15 +455,15 @@ static void read_pseudo_sym(struct cl_operand *op, struct symbol *sym)
 
     base = sym->ctype.base_type;
     if (base && base->type == SYM_FN) {
-        op->code                    = CL_OPERAND_CST;
-        op->type                    = &builtin_fnc_type;
-        op->data.cst_fnc.name       = strdup(show_ident(sym->ident));
-        op->data.cst_fnc.is_extern  = MOD_EXTERN & sym->ctype.modifiers;
+        op->code                            = CL_OPERAND_CST;
+        op->type                            = &builtin_fnc_type;
+        op->data.cst.data.cst_fnc.name      = strdup(show_ident(sym->ident));
+        op->data.cst.data.cst_fnc.is_extern = MOD_EXTERN & sym->ctype.modifiers;
     } else {
-        op->code                    = CL_OPERAND_VAR;
-        op->type                    = clt_from_sym(sym);
-        op->data.var.id             = /* TODO */ (int)(long) sym;
-        op->data.var.name           = strdup(show_ident(sym->ident));
+        op->code                            = CL_OPERAND_VAR;
+        op->type                            = clt_from_sym(sym);
+        op->data.var.id                     = /* TODO */ (int)(long) sym;
+        op->data.var.name                   = strdup(show_ident(sym->ident));
     }
 }
 
@@ -486,7 +486,7 @@ static void read_pseudo(struct cl_operand *op, pseudo_t pseudo)
 
             op->code                = CL_OPERAND_CST;
             op->type                = /* TODO */ &builtin_int_type;
-            op->data.cst_int.value  = value;
+            op->data.cst.data.cst_int.value  = value;
             return;
         }
 
@@ -659,8 +659,8 @@ static void handle_insn_switch(struct instruction *insn)
             val_lo.type = &builtin_int_type;
             val_hi.type = &builtin_int_type;
 
-            val_lo.data.cst_int.value = jmp->begin;
-            val_hi.data.cst_int.value = jmp->end;
+            val_lo.data.cst.data.cst_int.value = jmp->begin;
+            val_hi.data.cst.data.cst_int.value = jmp->end;
         }
 
         if (asprintf(&label, "%p", jmp->target) < 0)
@@ -1067,11 +1067,11 @@ static void handle_fnc_def(struct symbol *sym)
     read_sparse_location(&fnc.loc, sym->pos);
     read_sparse_scope(&fnc.scope, sym->scope);
 
-    fnc.code                    = CL_OPERAND_CST;
-    fnc.type                    = &builtin_fnc_type;
-    fnc.accessor                = NULL;
-    fnc.data.cst_fnc.name       = show_ident(sym->ident);
-    fnc.data.cst_fnc.is_extern  = false;
+    fnc.code                            = CL_OPERAND_CST;
+    fnc.type                            = &builtin_fnc_type;
+    fnc.accessor                        = NULL;
+    fnc.data.cst.data.cst_fnc.name      = show_ident(sym->ident);
+    fnc.data.cst.data.cst_fnc.is_extern = false;
 
     cl->fnc_open(cl, &fnc);
     /* no need to call free_cl_operand_data() */

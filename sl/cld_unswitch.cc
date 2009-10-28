@@ -103,7 +103,7 @@ int CldUnfoldSwitch::getCaseVal(const struct cl_operand *op) {
             TRAP;
     }
 
-    return op->data.cst_int.value;
+    return op->data.cst.data.cst_int.value;
 }
 
 // FIXME: duplicated code from cld_uniregs.cc
@@ -165,7 +165,7 @@ void CldUnfoldSwitch::emitCase(int cst, struct cl_type *type, const char *label)
     val.scope                       = CL_SCOPE_BB;
     val.type                        = type;
     val.accessor                    = 0;
-    val.data.cst_int.value          = cst;
+    val.data.cst.data.cst_int.value = cst;
 
     struct cl_insn cli;
     cli.code                        = CL_INSN_BINOP;

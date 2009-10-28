@@ -139,7 +139,7 @@ void ClPrettyPrint::file_close()
 void ClPrettyPrint::fnc_open(
             const struct cl_operand *fnc)
 {
-    fnc_ = fnc->data.cst_fnc.name;
+    fnc_ = fnc->data.cst.data.cst_fnc.name;
     loc_ = &fnc->loc;
     switch (fnc->scope) {
         case CL_SCOPE_GLOBAL:
@@ -192,7 +192,7 @@ void ClPrettyPrint::printCst(const struct cl_operand *op) {
             break;
 
         case CL_TYPE_PTR:
-            if (op->data.cst_int.value)
+            if (op->data.cst.data.cst_int.value)
                 TRAP;
 
             SSD_COLORIZE(out_, C_WHITE) << "NULL";
@@ -203,34 +203,34 @@ void ClPrettyPrint::printCst(const struct cl_operand *op) {
             // fall through!
 
         case CL_TYPE_INT: {
-                int num = op->data.cst_int.value;
+                int num = op->data.cst.data.cst_int.value;
                 if (num < 0)
                     out_ << SSD_INLINE_COLOR(C_LIGHT_RED, "(");
 
-                SSD_COLORIZE(out_, C_WHITE) << op->data.cst_int.value;
+                SSD_COLORIZE(out_, C_WHITE) << op->data.cst.data.cst_int.value;
                 if (num < 0)
                     out_ << SSD_INLINE_COLOR(C_LIGHT_RED, ")");
             }
             break;
 
         case CL_TYPE_FNC:
-            if (!op->data.cst_fnc.name) {
+            if (!op->data.cst.data.cst_fnc.name) {
                 CL_MSG_STREAM(cl_error, LocationWriter(loc_) << "error: "
                         << "anonymous function");
                 break;
             }
-            out_ << SSD_INLINE_COLOR(C_LIGHT_GREEN, op->data.cst_fnc.name);
+            out_ << SSD_INLINE_COLOR(C_LIGHT_GREEN, op->data.cst.data.cst_fnc.name);
             break;
 
         case CL_TYPE_BOOL:
-            if (op->data.cst_int.value)
+            if (op->data.cst.data.cst_int.value)
                 SSD_COLORIZE(out_, C_WHITE) << "true";
             else
                 SSD_COLORIZE(out_, C_WHITE) << "false";
             break;
 
         case CL_TYPE_STRING: {
-                const char *text = op->data.cst_string.value;
+                const char *text = op->data.cst.data.cst_string.value;
                 if (!text) {
                     CL_MSG_STREAM(cl_error, LocationWriter(loc_) << "error: "
                             << "CL_TYPE_STRING with no string");
@@ -792,8 +792,8 @@ void ClPrettyPrint::insn_switch_case(
             && (CL_TYPE_INT == val_hi->type->code
                 || CL_TYPE_ENUM == val_hi->type->code))
     {
-        const int lo = val_lo->data.cst_int.value;
-        const int hi = val_hi->data.cst_int.value;
+        const int lo = val_lo->data.cst.data.cst_int.value;
+        const int hi = val_hi->data.cst.data.cst_int.value;
         for (int i = lo; i <= hi; ++i) {
             out_ << "\t\t\t"
                 << SSD_INLINE_COLOR(C_YELLOW, "case")

@@ -41,7 +41,7 @@ class CldArgSubst: public CldOpTransBase {
         virtual void fnc_open(
             const struct cl_operand *fnc)
         {
-            fnc_    = fnc->data.cst_fnc.name;
+            fnc_    = fnc->data.cst.data.cst_fnc.name;
             fncLoc_ = &fnc->loc;
             map_.clear();
             CldOpTransBase::fnc_open(fnc);

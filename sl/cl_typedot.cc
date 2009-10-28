@@ -41,7 +41,7 @@ class ClTypeDotGenerator: public AbstractCodeListener {
         virtual void fnc_open(
             const struct cl_operand *fnc)
         {
-            fnc_ = fnc->data.cst_fnc.name;
+            fnc_ = fnc->data.cst.data.cst_fnc.name;
         }
 
         virtual void fnc_arg_decl(

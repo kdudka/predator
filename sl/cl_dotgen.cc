@@ -416,8 +416,8 @@ void ClDotGenerator::checkForFncRef(const struct cl_operand *op) {
     if (CL_OPERAND_CST != op->code || CL_TYPE_FNC != op->type->code)
         return;
 
-    string name(op->data.cst_fnc.name);
-    this->gobbleEdge(name, (op->data.cst_fnc.is_extern)
+    string name(op->data.cst.data.cst_fnc.name);
+    this->gobbleEdge(name, (op->data.cst.data.cst_fnc.is_extern)
             ? ET_GL_CALL_INDIR
             : ET_LC_CALL_INDIR);
 
@@ -445,7 +445,7 @@ void ClDotGenerator::file_close()
 void ClDotGenerator::fnc_open(const struct cl_operand *fnc)
 {
     loc_ = &fnc->loc;
-    fnc_ = fnc->data.cst_fnc.name;
+    fnc_ = fnc->data.cst.data.cst_fnc.name;
 
     ClDotGenerator::createDotFile(perFncOut_,
                                   string(loc_.currentFile) + "-" + fnc_,
@@ -573,10 +573,10 @@ void ClDotGenerator::insn_call_open(const struct cl_location *loc,
 
         case CL_OPERAND_CST:
             if (CL_TYPE_FNC == fnc->type->code) {
-                callType = (fnc->data.cst_fnc.is_extern)
+                callType = (fnc->data.cst.data.cst_fnc.is_extern)
                     ? ET_GL_CALL
                     : ET_LC_CALL;
-                name << fnc->data.cst_fnc.name;
+                name << fnc->data.cst.data.cst_fnc.name;
                 break;
             }
             // fall through!!
