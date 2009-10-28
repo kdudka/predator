@@ -71,6 +71,10 @@
 #define SL_NEW(type) \
     (type *) malloc(sizeof(type))
 
+#ifndef STREQ
+#   define STREQ(s1, s2) (0 == strcmp(s1, s2))
+#endif
+
 typedef struct typen_data *type_db_t;
 
 static struct cl_code_listener *cl = NULL;
@@ -98,6 +102,7 @@ static struct cl_type* type_db_insert(type_db_t db, struct cl_type *clt,
     if (!rv)
         die("typen_insert_as_new() failed");
 
+    // guaranteed to NOT return NULL
     return rv;
 }
 
@@ -148,18 +153,122 @@ static void read_sparse_scope(enum cl_scope_e *p, struct scope *scope)
         *p = CL_SCOPE_FUNCTION;
 }
 
+static struct cl_type* add_type_if_needed(struct symbol *type);
+
+static struct cl_type_item* create_ptr_type_item(struct symbol *type)
+{
+    struct cl_type_item *item = SL_NEW(struct cl_type_item);
+    if (!item)
+        die("SL_NEW failed");
+
+    item->type = /* FIXME: unguarded recursion */
+                 add_type_if_needed(type->ctype.base_type)->uid;
+    item->name = NULL;
+
+    // guaranteed to NOT return NULL
+    return item;
+}
+
+static enum cl_type_e clt_code_from_string(const char *name)
+{
+    if (STREQ(name, "void"))
+        return CL_TYPE_VOID;
+
+    if (STREQ(name, "int") || /* FIXME */ STREQ(name, "unsigned int"))
+        return CL_TYPE_INT;
+
+    if (STREQ(name, "char") || /* FIXME */ STREQ(name, "unsigned char"))
+        return CL_TYPE_CHAR;
+
+    if (STREQ(name, "bool"))
+        return CL_TYPE_BOOL;
+
+    // unknown base type
+    return CL_TYPE_UNKNOWN;
+}
+
 static void read_sparse_type(struct cl_type *clt, struct symbol *type)
 {
-    clt->code       = CL_TYPE_UNKNOWN;
-    clt->name       = strdup(show_typename(type));
-    clt->size       = 0;
-    clt->item_cnt   = 0;
-    clt->items      = NULL;
+    enum type code = type->type;
+
+    const char *typename = builtin_typename(type);
+    if (typename) {
+        clt->code       = clt_code_from_string(typename);
+        clt->size       = /* TODO */ 0;
+        clt->item_cnt   = 0;
+        clt->items      = NULL;
+        if (clt->code != CL_TYPE_UNKNOWN)
+            return;
+    }
+
+    switch (code) {
+        case SYM_PTR:
+            clt->code       = CL_TYPE_PTR;
+            clt->size       = /* TODO */ 0;
+            clt->item_cnt   = 1;
+            clt->items      = create_ptr_type_item(type);
+            break;
+
+        case SYM_STRUCT:
+            clt->code       = CL_TYPE_STRUCT;
+            clt->name       = strdup(show_ident(type->ident));
+            clt->size       = /* TODO */ 0;
+            clt->item_cnt   = /* TODO */ 0;
+            clt->items      = /* TODO */ NULL;
+            break;
+
+        case SYM_UNION:
+            clt->code       = CL_TYPE_UNION;
+            clt->name       = strdup(show_ident(type->ident));
+            clt->size       = /* TODO */ 0;
+            clt->item_cnt   = /* TODO */ 0;
+            clt->items      = /* TODO */ NULL;
+            break;
+
+        case SYM_FN:
+            clt->code       = CL_TYPE_FNC;
+            break;
+
+        case SYM_ENUM:
+            clt->code       = CL_TYPE_ENUM;
+            clt->name       = strdup(show_ident(type->ident));
+            break;
+
+        default:
+            // TRAP;
+            clt->code       = CL_TYPE_UNKNOWN;
+            clt->name       = strdup(show_typename(type));
+    }
+}
+
+static void skip_sparse_accessors(struct symbol **ptype)
+{
+    while (*ptype) {
+        struct symbol *type = *ptype;
+        switch (type->type) {
+            case SYM_NODE:
+            case SYM_ARRAY:
+            case SYM_BITFIELD:
+                // skip accessor
+                break;
+
+            default:
+                return;
+        }
+        *ptype = type->ctype.base_type;
+    }
 }
 
 static struct cl_type* add_type_if_needed(struct symbol *type)
 {
-    struct cl_type *clt = typen_get_by_key(type_db, type);
+    struct cl_type *clt;
+    
+    // FIXME: this approach is completely wrong since we get type info for the
+    // operand's base however we need to get type info in regards to the given
+    // accessor
+    skip_sparse_accessors(&type);
+
+    clt = typen_get_by_key(type_db, type);
     if (clt)
         // type already hashed
         return clt;
@@ -169,21 +278,24 @@ static struct cl_type* add_type_if_needed(struct symbol *type)
     if (!clt)
         die("SL_NEW failed");
 
+    // make sure all members will be initialized
+    clt->code       = CL_TYPE_UNKNOWN;
+    clt->name       = "<sparse type not available>";
+    clt->size       = 0;
+    clt->item_cnt   = 0;
+    clt->items      = NULL;
+    clt->scope      = CL_SCOPE_GLOBAL;
+    clt->loc.file   = NULL;
+    clt->loc.line   = -1;
+
+    // read type info if available
     if (type) {
         read_sparse_type(clt, type);
         read_sparse_location(&clt->loc, type->pos);
         read_sparse_scope(&clt->scope, type->scope);
-    } else {
-        clt->code       = CL_TYPE_UNKNOWN;
-        clt->name       = "<sparse type not available>";
-        clt->size       = 0;
-        clt->item_cnt   = 0;
-        clt->items      = NULL;
-        clt->scope      = CL_SCOPE_GLOBAL;
-        clt->loc.file   = NULL;
-        clt->loc.line   = -1;
     }
 
+    // hash the just read type for next wheel
     return type_db_insert(type_db, clt, type);
 }
 
