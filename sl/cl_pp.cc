@@ -95,7 +95,6 @@ class ClPrettyPrint: public AbstractCodeListener {
         void printBareType      (const struct cl_type *, bool expandFnc);
         void printVarType       (const struct cl_operand *);
         void printNestedVar     (const struct cl_operand *);
-        const char* getItemName (const struct cl_accessor *);
         void printRecordAcessor (const struct cl_accessor **);
         void printOperandVar    (const struct cl_operand *);
         void printOperand       (const struct cl_operand *);
@@ -219,6 +218,14 @@ void ClPrettyPrint::printIntegralCst(const struct cl_operand *op) {
                 SSD_COLORIZE(out_, C_WHITE) << "true";
             else
                 SSD_COLORIZE(out_, C_WHITE) << "false";
+            break;
+
+        case CL_TYPE_CHAR:
+            // TODO: quote special chars?
+            SSD_COLORIZE(out_, C_WHITE)
+                << '\''
+                << static_cast<char>(op->data.cst.data.cst_int.value)
+                << '\'';
             break;
 
         default:
@@ -425,25 +432,34 @@ void ClPrettyPrint::printNestedVar(const struct cl_operand *op) {
     }
 }
 
-const char* ClPrettyPrint::getItemName(const struct cl_accessor *ac) {
-    const struct cl_type_item *items = ac->type->items;
-    const char *name = items[ac->data.item.id].name;
-    return (name)
-        ? name
-        : "<anon_item>";
+namespace {
+    void readItemAccessInfo(const struct cl_accessor *ac, std::string *pName,
+                            int *pOffset)
+    {
+        int id = ac->data.item.id;
+        const struct cl_type_item *item = ac->type->items + id;
+        if (item->name)
+            *pName += item->name;
+        else
+            *pName += "<anon_item>";
+
+        *pOffset += item->offset;
+    }
 }
 
 void ClPrettyPrint::printRecordAcessor(const struct cl_accessor **ac) {
-    std::string tag(this->getItemName(*ac));
+    std::string tag;
+    int offset = 0;
+    readItemAccessInfo(*ac, &tag, &offset);
 
     while ((*ac)->next && (*ac)->next->code == CL_ACCESSOR_ITEM) {
         *ac = (*ac)->next;
-        // FIXME: check concatenation direction
         tag += ".";
-        tag += this->getItemName(*ac);
+        //out_ << SSD_INLINE_COLOR(C_CYAN, "[+" << offset << "]");
+        readItemAccessInfo(*ac, &tag, &offset);
     }
 
-    out_ << tag;
+    out_ << SSD_INLINE_COLOR(C_CYAN, "[+" << offset << "]") << tag;
 }
 
 void ClPrettyPrint::printOperandVar(const struct cl_operand *op) {
