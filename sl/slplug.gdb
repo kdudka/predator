@@ -17,3 +17,4 @@ f 1
 echo \ncode:\n
 list
 echo \n\n
+target record
