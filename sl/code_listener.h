@@ -189,6 +189,11 @@ struct cl_type_item {
      * name of the nested item, mainly used by struct/union
      */
     const char                          *name;
+
+    /**
+     * offset of the nested item [in bytes], valid only for struct/union
+     */
+    int                                 offset;
 };
 
 /**

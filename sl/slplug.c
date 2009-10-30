@@ -280,6 +280,25 @@ static cl_type_uid_t add_type_if_needed(tree t)
 }
 
 
+static int dig_field_offset(tree t)
+{
+    tree node = DECL_FIELD_OFFSET(t);
+    if (!node || INTEGER_CST != TREE_CODE(node) || TREE_INT_CST_HIGH(node))
+        TRAP;
+
+    int offset = TREE_INT_CST_LOW(node);
+    if (offset)
+        return offset;
+
+    // FIXME: nasty workaround
+    node = DECL_FIELD_BIT_OFFSET(t);
+    if (!node  || INTEGER_CST != TREE_CODE(node) || TREE_INT_CST_HIGH(node))
+        TRAP;
+
+    offset = TREE_INT_CST_LOW(node) >> 3;
+    return offset;
+}
+
 static void dig_record_type(struct cl_type *clt, tree t)
 {
     for (t = TYPE_FIELDS(t); t; t = TREE_CHAIN(t)) {
@@ -290,7 +309,9 @@ static void dig_record_type(struct cl_type *clt, tree t)
         struct cl_type_item *item = &clt->items[clt->item_cnt ++];
         item->type = /* recursion */ add_type_if_needed(t);
         item->name = /* possibly anonymous member */ NULL;
+        item->offset = dig_field_offset(t);
 
+        // read item's name (if any)
         tree name = DECL_NAME(t);
         if (name)
             item->name = IDENTIFIER_POINTER(name);
