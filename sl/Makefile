@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with sl.  If not, see <http://www.gnu.org/licenses/>.
 
-DATASET ?= data/dll.c data/slplug.c data/inv-*.c
+DATASET ?= data/dll.c data/slplug.c data/inv-*.c data/off.c data/hash_table.c
 
 # SPARSE_CFLAGS += `pkg-config sparse --cflags`
 # SPARSE_LIBS ?= `pkg-config sparse --libs`

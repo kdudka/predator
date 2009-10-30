@@ -282,20 +282,19 @@ static cl_type_uid_t add_type_if_needed(tree t)
 
 static int dig_field_offset(tree t)
 {
-    tree node = DECL_FIELD_OFFSET(t);
-    if (!node || INTEGER_CST != TREE_CODE(node) || TREE_INT_CST_HIGH(node))
-        TRAP;
-
-    int offset = TREE_INT_CST_LOW(node);
-    if (offset)
-        return offset;
-
-    // FIXME: nasty workaround
-    node = DECL_FIELD_BIT_OFFSET(t);
+    // read bit offset
+    tree node = DECL_FIELD_BIT_OFFSET(t);
     if (!node  || INTEGER_CST != TREE_CODE(node) || TREE_INT_CST_HIGH(node))
         TRAP;
+    int offset = TREE_INT_CST_LOW(node) >> 3;
 
-    offset = TREE_INT_CST_LOW(node) >> 3;
+    // read byte offset
+    node = DECL_FIELD_OFFSET(t);
+    if (!node || INTEGER_CST != TREE_CODE(node) || TREE_INT_CST_HIGH(node))
+        TRAP;
+    offset += TREE_INT_CST_LOW(node);
+
+    // return total offset [in bytes]
     return offset;
 }
 
