@@ -43,6 +43,7 @@ $(ABDUCT_DIR): $(ABDUCT) $(INVADER)
 
 $(INVADER_DIR): $(INVADER)
 	unzip -o $(INVADER)
+	cd $(INVADER_DIR) && patch -p1 < ../invader-1.1-ocd_without_emacs.patch
 
 build_abd: $(ABDUCT_DIR)
 	cd $(ABDUCT_CIL) && ./configure

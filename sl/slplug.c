@@ -279,12 +279,11 @@ static cl_type_uid_t add_type_if_needed(tree t)
     return add_bare_type_if_needed(type);
 }
 
-
 static int dig_field_offset(tree t)
 {
     // read bit offset
     tree node = DECL_FIELD_BIT_OFFSET(t);
-    if (!node  || INTEGER_CST != TREE_CODE(node) || TREE_INT_CST_HIGH(node))
+    if (!node || INTEGER_CST != TREE_CODE(node) || TREE_INT_CST_HIGH(node))
         TRAP;
     int offset = TREE_INT_CST_LOW(node) >> 3;
 

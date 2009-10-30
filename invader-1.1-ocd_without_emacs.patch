@@ -1,0 +1,12 @@
+diff -rup invader-1_1.orig/sources/cil/bin/cilly invader-1_1/sources/cil/bin/cilly
+--- invader-1_1.orig/sources/cil/bin/cilly	2008-09-15 12:51:04.000000000 +0200
++++ invader-1_1/sources/cil/bin/cilly	2009-10-30 16:05:37.520981085 +0100
+@@ -124,7 +124,7 @@ sub CillyCommand {
+                      "ocamlutil", 
+                      "obj/$::archos");
+ 	my @iflags = map { ('-I', "$::cilhome/$_") } @idirs;
+-        unshift @cmd, 'ocamldebug', '-emacs', @iflags;
++        unshift @cmd, 'ocamldebug', @iflags;
+     }
+     if($::docxx) {
+         push @cmd, '--cxx';
