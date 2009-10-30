@@ -367,8 +367,11 @@ void ClPrettyPrint::printVarType(const struct cl_operand *op) {
     if (!showTypes_)
         return;
 
+    const cl_type *clt = op->type;
+
     SSD_COLORIZE(out_, C_DARK_GRAY) << "[";
-    this->printBareType(op->type, true);
+    this->printBareType(clt, true);
+    SSD_COLORIZE(out_, C_CYAN) << ":" << clt->size;
     SSD_COLORIZE(out_, C_DARK_GRAY) << "]";
 }
 

@@ -356,6 +356,7 @@ static void read_specific_type(struct cl_type *clt, tree type)
 
         case FUNCTION_TYPE:
             clt->code = CL_TYPE_FNC;
+            clt->size = 0;
             dig_fnc_type(clt, type);
             break;
 
