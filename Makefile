@@ -47,9 +47,9 @@ $(INVADER_DIR): $(INVADER)
 		&& $(GIT) init \
 		&& $(GIT) add * \
 		&& $(GIT) commit -m "initial import of $(INVADER)" \
-		&& $(GIT) checkout -b tools \
+		&& $(GIT) branch -a orig \
 		&& $(GIT) am ../invader-extras/00*.patch \
-		&& $(GIT) checkout -b sl
+		&& $(GIT) checkout -b next
 	cd $(INVADER_SRC) && ../../ocaml/mltags
 
 build_abd: $(ABDUCT_DIR)
