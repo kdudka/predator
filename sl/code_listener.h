@@ -591,7 +591,7 @@ struct cl_insn {
 /**
  * function used to access type database
  * @param uid Unique ID of requested type.
- * @param data User data, previously given by reg_type_db call.
+ * @param data User data, previously given to reg_type_db callback.
  * @return Returns a pointer to requested type's definition.
  */
 typedef struct cl_type* (*cl_get_type_fnc_t)(cl_type_uid_t uid, void *data);
@@ -599,6 +599,7 @@ typedef struct cl_type* (*cl_get_type_fnc_t)(cl_type_uid_t uid, void *data);
 /**
  * listener object - the core part of this interface
  *
+ * @verbatim
  * It accepts a context-free language defined by substitution to regex:
  *
  *     reg_type_db (file_open FILE_CONTENT file_close)* destroy
@@ -638,8 +639,7 @@ typedef struct cl_type* (*cl_get_type_fnc_t)(cl_type_uid_t uid, void *data);
  *
  *     insn_switch_open (insn_switch_case)* insn_switch_close
  *
- *
- * @todo avoid (re)formating in dox output
+ * @endverbatim
  */
 struct cl_code_listener {
     /**
@@ -673,7 +673,6 @@ struct cl_code_listener {
             struct cl_code_listener     *self);
 
     /**
-     * @todo implement function type definition
      * @param self Pointer to cl_code_listener object.
      * @param fnc An operand used as function declaration (without args).
      */

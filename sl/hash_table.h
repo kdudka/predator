@@ -102,7 +102,7 @@ void* ht_lookup(struct ht_hash_table *ht, const void *item);
  *
  * @param ht Pointer to hash table internal data.
  * @param item Item to look for and then eventually insert into hash table.
- * @param Returns the found item if it was already hashed. If not, it tries to
+ * @return Returns the found item if it was already hashed. If not, it tries to
  * insert the item into the hash table and return the new item. It may also
  * return NULL, if memory is exhausted.
  */

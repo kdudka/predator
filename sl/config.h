@@ -17,11 +17,17 @@
  * along with sl.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* if 1, check each code_listener decorator by the integrity checker */
+/**
+ * if 1, check each code_listener decorator by the integrity checker
+ */
 #define CL_DEBUG_CLD                    0
 
-/* if 1, use ugly temporary workaround for missing type info of sparse args */
+/**
+ * if 1, use ugly temporary workaround for missing type info of sparse args
+ */
 #define CLD_ARG_SUBST_KEEP_TYPE_REF     1
 
-/* type enumerator debug level; set to 0 to disable debugging */
+/**
+ * type enumerator debug level; set to 0 to disable debugging
+ */
 #define DEBUG_TYPE_ENUMERATOR           0
