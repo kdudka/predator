@@ -1,0 +1,14 @@
+diff -rup invader-1_1.orig/sources/ident.ml invader-1_1/sources/ident.ml
+--- invader-1_1.orig/sources/ident.ml	2008-12-18 16:29:54.000000000 +0100
++++ invader-1_1/sources/ident.ml	2009-11-01 00:59:12.692576791 +0100
+@@ -137,9 +137,7 @@ let string_to_name (s:string) = 
+ let name_to_string (name:name) =
+   try
+     NameHash.find string_name_map.name_to_string name
+-  with Not_found ->
+-    E.err "@.@.ERROR cannot find name %d@.@." name;
+-    assert false
++  with Not_found -> "\x1B[1;31manon\x1B[0m"
+ 
+ (** {2 Functions and Hash Tables for Managing Stamps} *)
+ 

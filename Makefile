@@ -45,7 +45,9 @@ $(INVADER_DIR): $(INVADER)
 	unzip -o $(INVADER)
 	cd $(INVADER_DIR) && patch -p1 < ../invader-1.1-ocd_without_emacs.patch
 	cd $(INVADER_DIR) && patch -p1 < ../invader-1.1-bypass_broken_linkage.patch
+	cd $(INVADER_DIR) && patch -p1 < ../invader-1.1-pp_name_missing.patch
 	cd $(INVADER_DIR) && ln -sv sources/*.ml .
+	cd $(INVADER_SRC) && ln -sv ../../inv.ocd
 
 build_abd: $(ABDUCT_DIR)
 	cd $(ABDUCT_CIL) && ./configure
