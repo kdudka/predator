@@ -15,7 +15,9 @@
 # You should have received a copy of the GNU General Public License
 # along with sl.  If not, see <http://www.gnu.org/licenses/>.
 
+CILLY   ?= ../invader-1_1/sources/cil/bin/cilly
 DATASET ?= data/dll.c data/slplug.c data/inv-*.c data/off.c data/hash_table.c
+TIMEOUT ?= timeout 300
 
 # SPARSE_CFLAGS += `pkg-config sparse --cflags`
 # SPARSE_LIBS ?= `pkg-config sparse --libs`
@@ -48,7 +50,8 @@ GDB ?= gdb
 .PHONY: all check clean distclean \
 	chkplug chksparse chkunit chkhead \
 	dbgplug dbgsparse \
-	dotplug dotsparse
+	dotplug dotsparse \
+	pphtml invpphtml
 
 all: slsparse slplug.so
 
@@ -186,8 +189,21 @@ pphtml: slplug.so ../ssd/util/faketty.so
 			> $$i.pp.html; \
 	done
 
+invpphtml: ../ssd/util/eschtml ../ssd/util/tty2html $(CILLY)
+	for i in $(DATASET); do \
+		echo "--- $$i"; \
+		$(TIMEOUT) \
+			$(CILLY) "$$i" 2>&1 \
+			| ../ssd/util/eschtml \
+			| ../ssd/util/tty2html \
+			> $$i-inv.pp.html; \
+	done
+
 ../sparse/libsparse.a: ../sparse/*.c ../sparse/*.h ../sparse/local.mk
 	$(MAKE) -C ../sparse
 
 ../ssd/util/faketty.so: ../ssd/util/faketty.c
 	$(MAKE) -C ../ssd/util
+
+$(CILLY):
+	$(MAKE) -C .. build_inv
