@@ -50,6 +50,7 @@ $(INVADER_DIR): $(INVADER)
 		&& $(GIT) checkout -b tools \
 		&& $(GIT) am ../invader-extras/00*.patch \
 		&& $(GIT) checkout -b sl
+	cd $(INVADER_SRC) && ../../ocaml/mltags
 
 build_abd: $(ABDUCT_DIR)
 	cd $(ABDUCT_CIL) && ./configure
