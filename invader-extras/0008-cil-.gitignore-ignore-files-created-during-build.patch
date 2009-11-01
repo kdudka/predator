@@ -1,0 +1,30 @@
+From 98190dc48eb06b7d86c9e2e529f77274ea76c6bf Mon Sep 17 00:00:00 2001
+From: Kamil Dudka <kdudka@redhat.com>
+Date: Sun, 1 Nov 2009 12:12:12 +0100
+Subject: [PATCH 2/2] cil/.gitignore: ignore files created during build
+
+---
+ sources/cil/.gitignore |   11 +++++++++++
+ 1 files changed, 11 insertions(+), 0 deletions(-)
+ create mode 100644 sources/cil/.gitignore
+
+diff --git a/sources/cil/.gitignore b/sources/cil/.gitignore
+new file mode 100644
+index 0000000..e1d0679
+--- /dev/null
++++ b/sources/cil/.gitignore
+@@ -0,0 +1,11 @@
++obj
++Makefile
++bin/CilConfig.pm
++bin/cilly.bat
++bin/patcher.bat
++config.h
++config.log
++config.status
++ocamlutil/perfcount.c
++src/formatparse.output
++src/frontc/cparser.output
+-- 
+1.6.5.rc1
+

@@ -1,6 +1,16 @@
-diff -rup invader-1_1.orig/sources/cil/ocamlutil/stats.ml invader-1_1/sources/cil/ocamlutil/stats.ml
---- invader-1_1.orig/sources/cil/ocamlutil/stats.ml	2008-09-15 12:51:04.000000000 +0200
-+++ invader-1_1/sources/cil/ocamlutil/stats.ml	2009-10-31 23:25:48.464573584 +0100
+From c0342af3a97b8e39b6db934a99fa4ad8d163bd71 Mon Sep 17 00:00:00 2001
+From: Kamil Dudka <kdudka@redhat.com>
+Date: Sun, 1 Nov 2009 11:54:39 +0100
+Subject: [PATCH 2/6] ocamlutil: bypass broken linkage of cil.cma
+
+---
+ sources/cil/ocamlutil/stats.ml |    8 ++++----
+ 1 files changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/sources/cil/ocamlutil/stats.ml b/sources/cil/ocamlutil/stats.ml
+index 8bbb7d0..663b8b1 100644
+--- a/sources/cil/ocamlutil/stats.ml
++++ b/sources/cil/ocamlutil/stats.ml
 @@ -1,16 +1,16 @@
  (* The following functions are implemented in perfcount.c *) 
  
@@ -22,3 +32,6 @@ diff -rup invader-1_1.orig/sources/cil/ocamlutil/stats.ml invader-1_1/sources/ci
  
  
  (* Whether to use the performance counters (on Pentium only) *)
+-- 
+1.6.5.rc1
+

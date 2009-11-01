@@ -1,0 +1,117 @@
+From bf4f4ced08994a8f7c8bd0f67d8e587adbbb0f7a Mon Sep 17 00:00:00 2001
+From: Kamil Dudka <kdudka@redhat.com>
+Date: Sun, 1 Nov 2009 12:00:58 +0100
+Subject: [PATCH 6/6] inv.ocd: script useful for debugging Invader
+
+---
+ sources/inv.ocd |   98 +++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 files changed, 98 insertions(+), 0 deletions(-)
+ create mode 100644 sources/inv.ocd
+
+diff --git a/sources/inv.ocd b/sources/inv.ocd
+new file mode 100644
+index 0000000..3a5bbe6
+--- /dev/null
++++ b/sources/inv.ocd
+@@ -0,0 +1,98 @@
++load bigarray.cma
++load dbm.cma
++load dynlink.cma
++load nums.cma
++load stdlib.cma
++load str.cma
++load toplevellib.cma
++load unix.cma
++
++load cil.cma
++
++load pretty.cmo
++load cilutil.cmo
++load clist.cmo
++load errormsg.cmo
++load alpha.cmo
++load escape.cmo
++load growArray.cmo
++load inthash.cmo
++load stats.cmo
++load trace.cmo
++load util.cmo
++load cabs.cmo
++load cabsvisit.cmo
++load cprint.cmo
++load lexerhack.cmo
++load cparser.cmo
++load machdep.cmo
++load cilversion.cmo
++load clexer.cmo
++load cil.cmo
++load cillower.cmo
++load formatparse.cmo
++load formatlex.cmo
++load formatcil.cmo
++load cabs2cil.cmo
++load check.cmo
++load patch.cmo
++load frontc.cmo
++load bitmap.cmo
++load ciltools.cmo
++load dataflow.cmo
++load dominators.cmo
++load logcalls.cmo
++load logwrites.cmo
++load mergecil.cmo
++load ssa.cmo
++load usedef.cmo
++load callgraph.cmo
++load heapify.cmo
++load rmtmps.cmo
++load epicenter.cmo
++load setp.cmo
++load uref.cmo
++load olf.cmo
++load canonicalize.cmo
++load dataslicing.cmo
++load heap.cmo
++load oneret.cmo
++load partial.cmo
++load ptranal.cmo
++load simplemem.cmo
++load simplify.cmo
++load availexps.cmo
++load cfg.cmo
++load liveness.cmo
++load reachingdefs.cmo
++load deadcodeelim.cmo
++load sfi.cmo
++load ciloptions.cmo
++load config.cmo
++load error.cmo
++load feature_config.cmo
++load ident.cmo
++load sil.cmo
++load testcil.cmo
++load prop.cmo
++load match.cmo
++load prover.cmo
++load dotty.cmo
++load propset.cmo
++load trans.cmo
++load locality.cmo
++load dom.cmo
++load fork.cmo
++load cfg_new.cmo
++load tabulation.cmo
++load abs.cmo
++load symExec.cmo
++load global.cmo
++load preanal.cmo
++load interproc.cmo
++load footprint.cmo
++
++inst Prop.pp_prop
++inst Sil.pp_exp
++inst Sil.pp_typ_full
++inst Sil.pp_hpred
+-- 
+1.6.5.rc1
+

@@ -1,0 +1,25 @@
+From 5cffb21585211ca2c3856b0686892fb524370bf7 Mon Sep 17 00:00:00 2001
+From: Kamil Dudka <kdudka@redhat.com>
+Date: Sun, 1 Nov 2009 11:53:11 +0100
+Subject: [PATCH 1/6] cilly: do not run ocd with -emacs by default
+
+---
+ sources/cil/bin/cilly |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/sources/cil/bin/cilly b/sources/cil/bin/cilly
+index e4bf737..b6a8621 100755
+--- a/sources/cil/bin/cilly
++++ b/sources/cil/bin/cilly
+@@ -124,7 +124,7 @@ sub CillyCommand {
+                      "ocamlutil", 
+                      "obj/$::archos");
+ 	my @iflags = map { ('-I', "$::cilhome/$_") } @idirs;
+-        unshift @cmd, 'ocamldebug', '-emacs', @iflags;
++        unshift @cmd, 'ocamldebug', @iflags;
+     }
+     if($::docxx) {
+         push @cmd, '--cxx';
+-- 
+1.6.5.rc1
+

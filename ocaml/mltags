@@ -18,9 +18,7 @@ test -z $dir && dir=.
 
 # solution taken from
 # http://osdir.com/ml/lang.caml.inria/2001-07/msg00113.html
-find $dir -name "*.ml" \
-    | sort -r \
-    | xargs $ETAGS \
+find $dir -name "*.ml" | xargs $ETAGS \
     "--regex=/let[ \t]+\([^ \t]+\)/\1/" \
     "--regex=/let[ \t]+rec[ \t]+\([^ \t]+\)/\1/" \
     "--regex=/and[ \t]+\([^ \t]+\)/\1/" \

@@ -44,12 +44,12 @@ $(ABDUCT_DIR): $(ABDUCT) $(INVADER)
 $(INVADER_DIR): $(INVADER)
 	unzip -o $(INVADER)
 	cd $(INVADER_DIR) \
-		&& patch -p1 < ../invader-1.1-ocd_without_emacs.patch \
-		&& patch -p1 < ../invader-1.1-bypass_broken_linkage.patch
-		&& patch -p1 < ../invader-1.1-pp_name_missing.patch \
-		&& patch -p1 < ../invader-1.1-force_verbose_mode.patch
-	cd $(INVADER_DIR) && ln -sv sources/*.ml .
-	cd $(INVADER_SRC) && ln -sv ../../inv.ocd
+		&& $(GIT) init \
+		&& $(GIT) add * \
+		&& $(GIT) commit -m "initial import of $(INVADER)" \
+		&& $(GIT) checkout -b tools \
+		&& $(GIT) am ../invader-extras/00*.patch \
+		&& $(GIT) checkout -b sl
 
 build_abd: $(ABDUCT_DIR)
 	cd $(ABDUCT_CIL) && ./configure
