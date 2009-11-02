@@ -149,12 +149,6 @@ enum cl_scope_e {
  * type's unique ID
  */
 typedef int cl_type_uid_t;
-enum {
-    /**
-     * invalid ID, currently used for cl_type_uid_t only
-     */
-    CL_UID_INVALID = -1
-};
 
 /**
  * basic type enumeration

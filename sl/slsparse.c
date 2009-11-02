@@ -380,7 +380,7 @@ static const char* strdup_sparse_string(const struct string *str)
 }
 
 static /* const */ struct cl_type builtin_int_type = {
-    .uid            = CL_UID_INVALID,
+    .uid            = /* FIXME */ -1,
     .code           = CL_TYPE_INT,
     .loc = {
         .file       = NULL,

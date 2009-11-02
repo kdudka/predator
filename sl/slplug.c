@@ -486,7 +486,7 @@ static void read_operand_decl(struct cl_operand *op, tree t)
 }
 
 static /* const */ struct cl_type builtin_string_type = {
-    .uid            = CL_UID_INVALID,
+    .uid            = /* FIXME */ -1,
     .code           = CL_TYPE_STRING,
     .loc = {
         .file       = NULL,
@@ -878,7 +878,7 @@ static void handle_stmt_return(gimple stmt)
 }
 
 static /* const */ struct cl_type builtin_bool_type = {
-    .uid            = CL_UID_INVALID,
+    .uid            = /* FIXME */ -1,
     .code           = CL_TYPE_BOOL,
     .loc = {
         .file       = NULL,

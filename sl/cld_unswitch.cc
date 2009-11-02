@@ -142,7 +142,7 @@ void CldUnfoldSwitch::freeClonedSwitchSrc() {
 void CldUnfoldSwitch::emitCase(int cst, struct cl_type *type, const char *label)
 {
     struct cl_type btype;
-    btype.uid                       = CL_UID_INVALID;
+    btype.uid                       = /* FIXME */ -1;
     btype.code                      = CL_TYPE_BOOL;
     btype.loc.file                  = 0;
     btype.loc.line                  = -1;
