@@ -548,6 +548,10 @@ void ClDotGenerator::insn(const struct cl_insn *cli) {
             this->checkForFncRef(cli->data.insn_binop.src1);
             this->checkForFncRef(cli->data.insn_binop.src2);
             break;
+
+        case CL_INSN_CALL:
+        case CL_INSN_SWITCH:
+            TRAP;
     }
     lastInsn_ = cli->code;
 }

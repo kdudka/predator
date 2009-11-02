@@ -166,7 +166,9 @@ enum cl_type_e {
     CL_TYPE_BOOL,
     CL_TYPE_ENUM,
 
-    /* cst only */
+    /**
+     * used only be cl_cst
+     */
     CL_TYPE_STRING
 };
 
@@ -312,8 +314,18 @@ struct cl_accessor {
     } data;
 };
 
+/**
+ * constant, in the C language terminology: literal
+ */
 struct cl_cst {
+    /**
+     * type of constant (enumeration)
+     */
     enum cl_type_e code;
+
+    /**
+     * per constant type specific data
+     */
     union {
         /* CL_TYPE_FNC */
         struct {
@@ -326,6 +338,8 @@ struct cl_cst {
              * true if the function is external for the analysed module
              */
             bool                        is_extern;
+
+            /* TODO: decl uid? */
         } cst_fnc;
 
         /* CL_TYPE_INT */
@@ -356,8 +370,8 @@ enum cl_operand_e {
     CL_OPERAND_CST,
 
     /**
-     * variable. We actually do not distinguish between local/global variables,
-     * temporal variables and (substituted) function arguments.
+     * variable can represent a local/global program variable, or a function
+     * argument
      */
     CL_OPERAND_VAR,
 
@@ -468,11 +482,17 @@ enum cl_insn_e {
     /**
      * binary (lhs + 2) operation
      */
-    CL_INSN_BINOP
+    CL_INSN_BINOP,
 
-    /* TODO: CL_INSN_CALL? */
-    /* TODO: CL_INSN_SWITCH? */
-    /* TODO */
+    /**
+     * @note this code is never emitted by cl_insn callback
+     */
+    CL_INSN_CALL,
+
+    /**
+     * @note this code is never emitted by cl_insn callback
+     */
+    CL_INSN_SWITCH
 };
 
 /**

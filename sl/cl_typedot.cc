@@ -84,6 +84,10 @@ class ClTypeDotGenerator: public ICodeListener {
                     this->handleOperand(cli->data.insn_binop.src1);
                     this->handleOperand(cli->data.insn_binop.src2);
                     break;
+
+                case CL_INSN_CALL:
+                case CL_INSN_SWITCH:
+                    TRAP;
             }
         }
 

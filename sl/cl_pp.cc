@@ -782,6 +782,10 @@ void ClPrettyPrint::insn(
         case CL_INSN_BINOP:
             this->printInsnBinop(cli);
             break;
+
+        case CL_INSN_CALL:
+        case CL_INSN_SWITCH:
+            TRAP;
     }
 }
 

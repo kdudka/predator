@@ -104,6 +104,10 @@ class CldCbSeqChk: public ClDecoratorBase {
                 case CL_INSN_BINOP:
                     this->chkInsnBinop();
                     break;
+
+                case CL_INSN_CALL:
+                case CL_INSN_SWITCH:
+                    TRAP;
             }
 
             ClDecoratorBase::insn(cli);
