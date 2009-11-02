@@ -25,7 +25,8 @@
 #include <stack>
 #include <vector>
 
-class ClTypeDotGenerator: public AbstractCodeListener {
+/// @todo rewrite to share code using the template method design pattern
+class ClTypeDotGenerator: public ICodeListener {
     public:
         ClTypeDotGenerator(const char *glDotFile);
         virtual ~ClTypeDotGenerator();
@@ -124,7 +125,7 @@ class ClTypeDotGenerator: public AbstractCodeListener {
         virtual void insn_switch_close() { }
 
     private:
-        typedef std::stack<cl_type_uid_t>               TStack;
+        typedef std::stack<const struct cl_type *> TStack;
 
         std::ofstream           glOut_;
         Location                loc_;
@@ -159,7 +160,7 @@ class ClTypeDotGenerator: public AbstractCodeListener {
                         enum cl_type_e code, const char *label);
         void emitPendingEdges();
         void digOneType(const struct cl_type *, TStack &);
-        void handleType(cl_type_uid_t uid);
+        void handleType(const struct cl_type *);
         void handleOperand(const struct cl_operand *operand);
 };
 
@@ -336,8 +337,9 @@ void ClTypeDotGenerator::digOneType(const struct cl_type *type, TStack &st)
 
                 for (int i = 0; i < cnt; ++i) {
                     struct cl_type_item &item = type->items[i];
-                    cl_type_uid_t dst = item.type->uid;
-                    st.push(dst);
+                    const struct cl_type *clt = item.type;
+                    cl_type_uid_t dst = clt->uid;
+                    st.push(clt);
                     this->gobbleEdge(uid, dst, code, item.name);
                 }
             }
@@ -353,19 +355,20 @@ void ClTypeDotGenerator::digOneType(const struct cl_type *type, TStack &st)
     }
 }
 
-void ClTypeDotGenerator::handleType(cl_type_uid_t uid) {
+void ClTypeDotGenerator::handleType(const struct cl_type *clt) {
     TStack st;
-    st.push(uid);
+    st.push(clt);
 
     while (!st.empty()) {
-        cl_type_uid_t curr = st.top();
+        clt = st.top();
         st.pop();
 
-        if (hasKey(typeSet_, curr))
+        cl_type_uid_t uid = clt->uid;
+        if (hasKey(typeSet_, uid))
             continue;
 
-        typeSet_.insert(curr);
-        this->digOneType(AbstractCodeListener::getType(curr), st);
+        typeSet_.insert(uid);
+        this->digOneType(clt, st);
     }
 
     this->emitPendingEdges();
@@ -379,7 +382,7 @@ void ClTypeDotGenerator::handleOperand(const struct cl_operand *op) {
     if (!type)
         return;
 
-    this->handleType(type->uid);
+    this->handleType(type);
 }
 
 // /////////////////////////////////////////////////////////////////////////////

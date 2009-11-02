@@ -24,7 +24,7 @@
 #include <boost/iostreams/device/file_descriptor.hpp>
 #include <boost/iostreams/stream.hpp>
 
-class ClLocator: public AbstractCodeListener {
+class ClLocator: public ICodeListener {
     public:
         ClLocator(int fd_out);
 

@@ -583,20 +583,12 @@ struct cl_insn {
 };
 
 /**
- * function used to access type database
- * @param uid Unique ID of requested type.
- * @param data User data, previously given to reg_type_db callback.
- * @return Returns a pointer to requested type's definition.
- */
-typedef struct cl_type* (*cl_get_type_fnc_t)(cl_type_uid_t uid, void *data);
-
-/**
  * listener object - the core part of this interface
  *
  * @verbatim
  * It accepts a context-free language defined by substitution to regex:
  *
- *     reg_type_db (file_open FILE_CONTENT file_close)* destroy
+ *     (file_open FILE_CONTENT file_close)* destroy
  *
  *
  * FILE_CONTENT is defined by substitution to regex:
@@ -640,17 +632,6 @@ struct cl_code_listener {
      * listener's internal data. Do not use this member.
      */
     void *data;
-
-    /**
-     * register type database
-     * @param self Pointer to cl_code_listener object.
-     * @param fnc Function used to access type database.
-     * @param user_data User data later given as arg to the registered function.
-     */
-    void (*reg_type_db)(
-            struct cl_code_listener     *self,
-            cl_get_type_fnc_t           fnc,
-            void                        *user_data);
 
     /**
      * @param self Pointer to cl_code_listener object.

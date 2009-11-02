@@ -34,10 +34,6 @@ class ClChain: public ICodeListener {
     public:
         virtual ~ClChain();
 
-        virtual void reg_type_db(
-            cl_get_type_fnc_t       fnc,
-            void                    *user_data);
-
         virtual void file_open(
             const char              *file_name);
 
@@ -108,13 +104,6 @@ ClChain::~ClChain() {
 
 void ClChain::append(cl_code_listener *item) {
     list_.push_back(item);
-}
-
-void ClChain::reg_type_db(
-            cl_get_type_fnc_t       fnc,
-            void                    *user_data)
-{
-    CL_CHAIN_FOREACH_VA(reg_type_db, fnc, user_data);
 }
 
 void ClChain::file_open(

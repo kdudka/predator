@@ -30,7 +30,7 @@
 #include <boost/iostreams/stream.hpp>
 #include <boost/system/system_error.hpp>
 
-class ClPrettyPrint: public AbstractCodeListener {
+class ClPrettyPrint: public ICodeListener {
     public:
         ClPrettyPrint(int fd_out, bool close_on_exit, bool showTypes);
         virtual ~ClPrettyPrint();

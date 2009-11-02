@@ -68,11 +68,6 @@ class ICodeListener {
     public:
         virtual ~ICodeListener() { }
 
-        virtual void reg_type_db(
-            cl_get_type_fnc_t       fnc,
-            void                    *user_data)
-            = 0;
-
         virtual void file_open(
             const char              *file_name)
             = 0;
@@ -128,34 +123,6 @@ class ICodeListener {
 
         virtual void insn_switch_close()
             = 0;
-};
-
-class AbstractCodeListener: public ICodeListener {
-    public:
-        AbstractCodeListener():
-            getTypeFnc_(0)
-        {
-        }
-
-        virtual void reg_type_db(
-            cl_get_type_fnc_t       fnc,
-            void                    *user_data)
-        {
-            getTypeFnc_             = fnc;
-            getTypeFncData_         = user_data;
-        }
-
-    protected:
-        struct cl_type* getType(cl_type_uid_t uid) {
-            if (!getTypeFnc_)
-                CL_DIE("call of uninitialized AbstractCodeListener::getType()");
-
-            return getTypeFnc_(uid, getTypeFncData_);
-        }
-
-    private:
-        cl_get_type_fnc_t           getTypeFnc_;
-        void                        *getTypeFncData_;
 };
 
 /**

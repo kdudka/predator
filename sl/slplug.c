@@ -183,17 +183,6 @@ static void type_db_insert(type_db_t db, struct cl_type *type)
     *slot = type;
 }
 
-static struct cl_type* cb_type_db_lookup(cl_type_uid_t uid, void *user_data)
-{
-    type_db_t db = (type_db_t) user_data;
-    return type_db_lookup(db, uid);
-}
-
-static void register_type_db(struct cl_code_listener *cl, type_db_t db)
-{
-    cl->reg_type_db(cl, cb_type_db_lookup, db);
-}
-
 static void read_gcc_location(struct cl_location *loc, location_t gcc_loc)
 {
     expanded_location exp_loc = expand_location(gcc_loc);
@@ -485,6 +474,7 @@ static void read_operand_decl(struct cl_operand *op, tree t)
     }
 }
 
+// FIXME: remove the following nonsense
 static /* const */ struct cl_type builtin_string_type = {
     .uid            = /* FIXME */ -1,
     .code           = CL_TYPE_STRING,
@@ -494,7 +484,7 @@ static /* const */ struct cl_type builtin_string_type = {
     },
     .scope          = CL_SCOPE_GLOBAL,
     .name           = "<builtin_string_type>",
-    .size           = /* FIXME */ sizeof(cl_get_type_fnc_t)
+    .size           = /* FIXME */ 0
 };
 
 static void read_raw_operand(struct cl_operand *op, tree t)
@@ -1511,7 +1501,6 @@ int plugin_init (struct plugin_name_args *plugin_info,
     // initialize type database
     type_db = type_db_create();
     SL_ASSERT(type_db);
-    register_type_db(cl, type_db);
 
     // try to register callbacks (and virtual callbacks)
     sl_regcb (plugin_info->base_name);

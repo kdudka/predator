@@ -148,14 +148,6 @@ ICodeListener* cl_obtain_from_wrap(struct cl_code_listener *wrap)
     } \
 } while (0)
 
-static void cl_wrap_reg_type_db(
-            struct cl_code_listener *self,
-            cl_get_type_fnc_t       fnc,
-            void                    *user_data)
-{
-    CL_WRAP_VA(reg_type_db, fnc, user_data);
-}
-
 static void cl_wrap_file_open(
             struct cl_code_listener *self,
             const char              *file_name)
@@ -263,7 +255,6 @@ struct cl_code_listener* cl_create_listener_wrap(ICodeListener *listener)
     wrap->data              = listener;
 
     // pure C callback to C++ object wrappers
-    wrap->reg_type_db       = cl_wrap_reg_type_db;
     wrap->file_open         = cl_wrap_file_open;
     wrap->file_close        = cl_wrap_file_close;
     wrap->fnc_open          = cl_wrap_fnc_open;

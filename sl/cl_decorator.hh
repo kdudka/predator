@@ -28,13 +28,6 @@ class ClDecoratorBase: public ICodeListener {
             delete slave_;
         }
 
-        virtual void reg_type_db(
-            cl_get_type_fnc_t       fnc,
-            void                    *user_data)
-        {
-            slave_->reg_type_db(fnc, user_data);
-        }
-
         virtual void file_open(
             const char              *file_name)
         {

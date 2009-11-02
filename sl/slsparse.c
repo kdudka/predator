@@ -123,17 +123,6 @@ static struct cl_type* type_db_insert(type_db_t db, struct cl_type *clt,
     return rv;
 }
 
-static struct cl_type* cb_type_db_lookup(cl_type_uid_t uid, void *user_data)
-{
-    type_db_t db = (type_db_t) user_data;
-    return typen_get_by_uid(db, uid);
-}
-
-static void register_type_db(struct cl_code_listener *cl, type_db_t db)
-{
-    cl->reg_type_db(cl, cb_type_db_lookup, db);
-}
-
 static void sl_warn(struct position pos, const char *fmt, ...)
 {
     va_list ap;
@@ -1191,7 +1180,6 @@ int main(int argc, char **argv)
 
     // initialize type database
     type_db = type_db_create();
-    register_type_db(cl, type_db);
 
     cl->file_open(cl, "sparse-internal-symbols");
     clean_up_symbols(symlist, cl);

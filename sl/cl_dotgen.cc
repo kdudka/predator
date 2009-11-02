@@ -27,7 +27,7 @@
 #include <set>
 #include <sstream>
 
-class ClDotGenerator: public AbstractCodeListener {
+class ClDotGenerator: public ICodeListener {
     public:
         ClDotGenerator(const char *glDotFile);
         virtual ~ClDotGenerator();
