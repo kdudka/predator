@@ -474,19 +474,6 @@ static void read_operand_decl(struct cl_operand *op, tree t)
     }
 }
 
-// FIXME: remove the following nonsense
-static /* const */ struct cl_type builtin_string_type = {
-    .uid            = /* FIXME */ -1,
-    .code           = CL_TYPE_STRING,
-    .loc = {
-        .file       = NULL,
-        .line       = -1
-    },
-    .scope          = CL_SCOPE_GLOBAL,
-    .name           = "<builtin_string_type>",
-    .size           = /* FIXME */ 0
-};
-
 static void read_raw_operand(struct cl_operand *op, tree t)
 {
     enum tree_code code = TREE_CODE(t);
@@ -509,7 +496,6 @@ static void read_raw_operand(struct cl_operand *op, tree t)
 
         case STRING_CST:
             op->code                            = CL_OPERAND_CST;
-            op->type                            = /* FIXME */ &builtin_string_type;
             op->data.cst.code                   = CL_TYPE_STRING;
             op->data.cst.data.cst_string.value  = TREE_STRING_POINTER(t);
             break;
