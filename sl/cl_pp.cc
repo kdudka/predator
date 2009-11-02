@@ -280,7 +280,7 @@ namespace {
 
 void ClPrettyPrint::printBareType(const struct cl_type *clt, bool expandFnc) {
     string str;
-    for (; clt; clt = this->getType(clt->items[0].type)) {
+    for (; clt; clt = clt->items[0].type) {
         enum cl_type_e code = clt->code;
         switch (code) {
             case CL_TYPE_PTR:
@@ -320,7 +320,7 @@ deref_done:
         case CL_TYPE_FNC:
             if (expandFnc) {
                 // recursion limited to depth 1
-                this->printBareType(this->getType(clt->items[0].type), false);
+                this->printBareType(clt->items[0].type, false);
                 str = string("(") + str + string(")");
             } else {
                 out_ << SSD_INLINE_COLOR(C_LIGHT_RED, "fnc");
@@ -361,7 +361,7 @@ deref_done:
             if (1 < i)
                 SSD_COLORIZE(out_, C_DARK_GRAY) << ", ";
 
-            this->printBareType(this->getType(clt->items[i].type), false);
+            this->printBareType(clt->items[i].type, false);
         }
         SSD_COLORIZE(out_, C_DARK_GRAY) << ")";
     }

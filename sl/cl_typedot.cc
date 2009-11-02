@@ -225,7 +225,7 @@ namespace {
 // FIXME: copy pasted from ClPrettyPrint::printVarType
 void ClTypeDotGenerator::printType(const struct cl_type *clt) {
     string str;
-    for (; clt; clt = this->getType(clt->items[0].type)) {
+    for (; clt; clt = clt->items[0].type) {
         enum cl_type_e code = clt->code;
         switch (code) {
             case CL_TYPE_PTR:
@@ -336,7 +336,7 @@ void ClTypeDotGenerator::digOneType(const struct cl_type *type, TStack &st)
 
                 for (int i = 0; i < cnt; ++i) {
                     struct cl_type_item &item = type->items[i];
-                    cl_type_uid_t dst = item.type;
+                    cl_type_uid_t dst = item.type->uid;
                     st.push(dst);
                     this->gobbleEdge(uid, dst, code, item.name);
                 }

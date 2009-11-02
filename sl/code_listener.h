@@ -181,9 +181,9 @@ enum cl_type_e {
  */
 struct cl_type_item {
     /**
-     * nested type's unique ID
+     * nested type
      */
-    cl_type_uid_t                       type;
+    const struct cl_type                *type;
 
     /**
      * name of the nested item, mainly used by struct/union

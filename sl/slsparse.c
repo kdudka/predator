@@ -179,7 +179,7 @@ static struct cl_type_item* create_ptr_type_item(struct symbol *type)
         die("SL_NEW failed");
 
     item->type = /* FIXME: unguarded recursion */
-                 add_type_if_needed(type->ctype.base_type)->uid;
+                 add_type_if_needed(type->ctype.base_type);
     item->name = NULL;
 
     // guaranteed to NOT return NULL

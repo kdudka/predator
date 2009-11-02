@@ -266,8 +266,8 @@ static int get_fixed_array_size(tree t)
     return get_type_sizeof(t) / item_size;
 }
 
-static cl_type_uid_t add_bare_type_if_needed(tree t);
-static cl_type_uid_t add_type_if_needed(tree t)
+static struct cl_type* add_bare_type_if_needed(tree t);
+static struct cl_type* add_type_if_needed(tree t)
 {
     if (NULL_TREE == t)
         TRAP;
@@ -396,14 +396,14 @@ static void read_specific_type(struct cl_type *clt, tree type)
     };
 }
 
-static cl_type_uid_t add_bare_type_if_needed(tree type)
+static struct cl_type* add_bare_type_if_needed(tree type)
 {
     // hashtab lookup
     cl_type_uid_t uid = TYPE_UID(type);
     struct cl_type *clt = type_db_lookup(type_db, uid);
     if (clt)
         // type already hashed
-        return uid;
+        return clt;
 
     // insert new type into hashtab
     clt = GGC_CNEW(struct cl_type);
@@ -418,7 +418,7 @@ static cl_type_uid_t add_bare_type_if_needed(tree type)
     if (clt->code == CL_TYPE_INT && clt->name && STREQ("char", clt->name))
         clt->code = CL_TYPE_CHAR;
 
-    return uid;
+    return clt;
 }
 
 static enum cl_scope_e get_decl_scope(tree t)
@@ -570,12 +570,6 @@ static int accessor_item_lookup(const struct cl_type *type, tree t)
     return -1;
 }
 
-static struct cl_type* clt_from_decl(tree t)
-{
-    cl_type_uid_t uid = add_type_if_needed(t);
-    return type_db_lookup(type_db, uid);
-}
-
 static struct cl_type* operand_type_lookup(tree t)
 {
     if (NULL_TREE == t)
@@ -585,7 +579,7 @@ static struct cl_type* operand_type_lookup(tree t)
     if (NULL_TREE == op0)
         TRAP;
 
-    return clt_from_decl(op0);
+    return add_type_if_needed(op0);
 }
 
 static void handle_operand(struct cl_operand *op, tree t);
@@ -679,7 +673,7 @@ static void handle_operand(struct cl_operand *op, tree t)
         return;
 
     // read type
-    op->type = clt_from_decl(t);
+    op->type = add_type_if_needed(t);
 
     // read accessor
     op->accessor = NULL;
@@ -1208,7 +1202,7 @@ static void handle_fnc_decl (tree decl)
     // emit fnc declaration
     struct cl_operand fnc;
     fnc.code                            = CL_OPERAND_CST;
-    fnc.type                            = clt_from_decl(decl);
+    fnc.type                            = add_type_if_needed(decl);
     fnc.accessor                        = NULL;
     fnc.scope                           = TREE_PUBLIC(decl)
                                             ? CL_SCOPE_GLOBAL
