@@ -17,8 +17,8 @@
  * along with sl.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef H_GUARD_CL_STORAGE_H
-#define H_GUARD_CL_STORAGE_H
+#ifndef H_GUARD_STORAGE_H
+#define H_GUARD_STORAGE_H
 
 #include "code_listener.h"
 #include "cl_private.hh"
@@ -186,12 +186,14 @@ struct Storage {
     TypeDb                      types;
     VarDb                       glVars;
     TFileList                   files;
+    TFncList                    orphans;
 };
 
+// TODO: move to separate module
 class StorageBuilder: public ICodeListener {
     // TODO
 };
 
 } // namespace Storage
 
-#endif /* H_GUARD_CL_STORAGE_H */
+#endif /* H_GUARD_STORAGE_H */
