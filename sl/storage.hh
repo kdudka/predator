@@ -79,7 +79,7 @@ typedef std::vector<const Block *> TTargetList;
 
 struct Insn {
     enum cl_insn_e              code;
-    int                         subCode;
+    int                         /* FIXME: type info lost */ subCode;
     struct cl_location          loc;
     TOperandList                operands;
     TTargetList                 targets;
@@ -167,12 +167,35 @@ struct Fnc {
     ControlFlow                 cfg;
 };
 
-typedef std::vector<Fnc> TFncList;
+class FncMap {
+    private:
+        typedef std::vector<Insn> TList;
+
+    public:
+        typedef TList::const_iterator const_iterator;
+
+    public:
+        FncMap();
+        ~FncMap();
+
+        Fnc& operator[](int uid);
+        const Fnc& operator[](int uid) const;
+
+        // read-only access to internal vector
+        const_iterator begin()               const { return fncs_.begin();  }
+        const_iterator end()                 const { return fncs_.end();    }
+        size_t size()                        const { return fncs_.size();   }
+
+    private:
+        TList fncs_;
+        struct Private;
+        Private *d;
+};
 
 struct File {
     const std::string           name;
     VarDb                       vars;
-    TFncList                    fncs;
+    FncMap                      fncs;
 
     File(const char *name_):
         name(name_)
@@ -180,13 +203,36 @@ struct File {
     }
 };
 
-typedef std::vector<File> TFileList;
+class FileMap {
+    private:
+        typedef std::vector<Insn> TList;
+
+    public:
+        typedef TList::const_iterator const_iterator;
+
+    public:
+        FileMap();
+        ~FileMap();
+
+        File& operator[](const char *name);
+        const File& operator[](const char *name) const;
+
+        // read-only access to internal vector
+        const_iterator begin()               const { return files_.begin();  }
+        const_iterator end()                 const { return files_.end();    }
+        size_t size()                        const { return files_.size();   }
+
+    private:
+        TList files_;
+        struct Private;
+        Private *d;
+};
 
 struct Storage {
     TypeDb                      types;
     VarDb                       glVars;
-    TFileList                   files;
-    TFncList                    orphans;
+    FileMap                     files;
+    FncMap                      orphans;
 };
 
 // TODO: move to separate module
