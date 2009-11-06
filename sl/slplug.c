@@ -460,6 +460,7 @@ static void read_operand_decl(struct cl_operand *op, tree t)
             op->data.cst.code                   = CL_TYPE_FNC;
             op->data.cst.data.cst_fnc.name      = name;
             op->data.cst.data.cst_fnc.is_extern = DECL_EXTERNAL(t);
+            op->data.cst.data.cst_fnc.uid       = DECL_UID(t);
             break;
 
         case PARM_DECL:

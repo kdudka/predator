@@ -339,7 +339,10 @@ struct cl_cst {
              */
             bool                        is_extern;
 
-            /* TODO: decl uid? */
+            /**
+             * unique ID of function's declaration
+             */
+            int                         uid;
         } cst_fnc;
 
         /* CL_TYPE_INT */

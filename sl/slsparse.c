@@ -425,6 +425,7 @@ static void read_pseudo_sym(struct cl_operand *op, struct symbol *sym)
         op->data.cst.code                   = CL_TYPE_FNC;
         op->data.cst.data.cst_fnc.name      = strdup(show_ident(sym->ident));
         op->data.cst.data.cst_fnc.is_extern = MOD_EXTERN & sym->ctype.modifiers;
+        op->data.cst.data.cst_fnc.uid       = /* TODO */ (int)(long) sym;
     } else {
         op->code                            = CL_OPERAND_VAR;
         op->type                            = clt_from_sym(sym);
