@@ -138,6 +138,9 @@ class ControlFlow {
         typedef TList::const_iterator const_iterator;
 
     public:
+        ControlFlow();
+        ~ControlFlow();
+
         const Block &entry() const {
             const Block *entry = bbs_[0];
             return *entry;

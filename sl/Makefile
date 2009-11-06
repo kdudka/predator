@@ -71,7 +71,8 @@ CL_OBJS = cl_chain.o \
 	cld_unswitch.o \
 	code_listener.o \
 	location.o \
-	ssd.o
+	ssd.o \
+	storage.o
 
 libcl.a: $(CL_OBJS)
 	$(AR) r $@ $(CL_OBJS)

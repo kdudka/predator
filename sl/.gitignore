@@ -64,3 +64,4 @@ location.o
 off.o
 slplug.o
 ssd.o
+storage.o
