@@ -123,6 +123,9 @@ class ICodeListener {
 
         virtual void insn_switch_close()
             = 0;
+
+        virtual void finalize()
+            = 0;
 };
 
 /**

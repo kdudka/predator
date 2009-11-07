@@ -77,6 +77,8 @@ class ClChain: public ICodeListener {
 
         virtual void insn_switch_close();
 
+        virtual void finalize();
+
     public:
         void append(cl_code_listener *);
 
@@ -186,6 +188,11 @@ void ClChain::insn_switch_case(
 void ClChain::insn_switch_close()
 {
     CL_CHAIN_FOREACH(insn_switch_close);
+}
+
+void ClChain::finalize()
+{
+    // do nothing for C-world listener
 }
 
 // /////////////////////////////////////////////////////////////////////////////

@@ -128,6 +128,8 @@ class ClTypeDotGenerator: public ICodeListener {
 
         virtual void insn_switch_close() { }
 
+        virtual void finalize();
+
     private:
         typedef std::stack<const struct cl_type *> TStack;
 
@@ -206,6 +208,10 @@ ClTypeDotGenerator::ClTypeDotGenerator(const char *glDotFile)
 }
 
 ClTypeDotGenerator::~ClTypeDotGenerator() {
+    // do cleanup in finalize()
+}
+
+void ClTypeDotGenerator::finalize() {
     glOut_ << "}" << std::endl;
     if (!glOut_) {
         CL_MSG_STREAM_INTERNAL(cl_warn, "warning: "

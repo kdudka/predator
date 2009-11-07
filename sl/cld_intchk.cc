@@ -162,6 +162,12 @@ class CldCbSeqChk: public ClDecoratorBase {
             ClDecoratorBase::insn_switch_close();
         }
 
+        virtual void finalize()
+        {
+            this->setState(S_DONE);
+            ClDecoratorBase::finalize();
+        }
+
     private:
         enum EState {
             S_INIT,
@@ -170,7 +176,8 @@ class CldCbSeqChk: public ClDecoratorBase {
             S_FNC_BODY,
             S_BLOCK_LEVEL,
             S_INSN_CALL,
-            S_INSN_SWITCH
+            S_INSN_SWITCH,
+            S_DONE
         };
 
         EState                      state_;
@@ -430,6 +437,10 @@ void CldCbSeqChk::setState(EState newState) {
 
         case S_INSN_CALL:
         case S_INSN_SWITCH:
+            this->emitUnexpected(newState);
+            break;
+
+        case S_DONE:
             this->emitUnexpected(newState);
             break;
     }

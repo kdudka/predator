@@ -23,7 +23,8 @@
 using namespace Storage;
 
 struct ClStorageBuilder::Private {
-    // TODO
+    // FIXME: Oops, the identifiers are awkward, thus we need the 'struct' here
+    struct Storage stor;
 };
 
 ClStorageBuilder::ClStorageBuilder():
@@ -32,8 +33,11 @@ ClStorageBuilder::ClStorageBuilder():
 }
 
 ClStorageBuilder::~ClStorageBuilder() {
-    // TODO: this->run(...)
     delete d;
+}
+
+void ClStorageBuilder::finalize() {
+    this->run(d->stor);
 }
 
 void ClStorageBuilder::file_open(const char *file_name) {

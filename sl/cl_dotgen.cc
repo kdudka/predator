@@ -75,6 +75,8 @@ class ClDotGenerator: public ICodeListener {
 
         virtual void insn_switch_close();
 
+        virtual void finalize();
+
     private:
         bool                    hasGlDotFile_;
         std::ofstream           glOut_;
@@ -241,6 +243,10 @@ ClDotGenerator::ClDotGenerator(const char *glDotFile):
 }
 
 ClDotGenerator::~ClDotGenerator() {
+    // do cleanup in finalize()
+}
+
+void ClDotGenerator::finalize() {
     if (hasGlDotFile_)
         this->closeDot(glOut_);
 }

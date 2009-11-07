@@ -23,6 +23,8 @@
 #include "cl_storage.hh"
 #include "storage.hh"
 
+#include <iostream>
+
 class ClSepLog: public ClStorageBuilder {
     public:
         ClSepLog(const char *configString);
@@ -42,6 +44,7 @@ ClSepLog::~ClSepLog() {
 
 void ClSepLog::run(Storage::Storage &stor) {
     // TODO
+    std::cout << "Hello world!" << std::endl;
 }
 
 // /////////////////////////////////////////////////////////////////////////////

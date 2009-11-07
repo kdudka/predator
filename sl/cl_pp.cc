@@ -78,6 +78,8 @@ class ClPrettyPrint: public ICodeListener {
 
         virtual void insn_switch_close();
 
+        virtual void finalize() { }
+
     private:
         typedef boost::iostreams::file_descriptor_sink  TSink;
         typedef boost::iostreams::stream<TSink>         TStream;

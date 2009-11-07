@@ -245,7 +245,9 @@ static void cl_wrap_insn_switch_close(
 
 static void cl_wrap_destroy(struct cl_code_listener *self)
 {
-    delete static_cast<ICodeListener *>(self->data);
+    ICodeListener *cl = static_cast<ICodeListener *>(self->data);
+    cl->finalize();
+    delete cl;
     delete self;
 }
 
