@@ -197,14 +197,25 @@ const struct cl_type* TypeDb::operator[](int uid) const {
 // /////////////////////////////////////////////////////////////////////////////
 // Insn implementation
 namespace {
+    /**
+     * @param str dst/src to call strdup(3) for
+     */
     void dupString(const char *&str) {
         str = strdup(str);
     }
 
+    /**
+     * @param str Legacy string to be freed, usually formerly given by dupString
+     */
     void freeString(const char *str) {
         free(const_cast<char *>(str));
     }
 
+    /**
+     * @param fnc An arbitrary function we should call on any (valid) string
+     * inside struct cl_cst object.
+     * @param cst An instance of struct cl_cst being processed.
+     */
     template <typename TFnc>
     void handleCstStrings(TFnc fnc, struct cl_cst &cst) {
         enum cl_type_e code = cst.code;
@@ -222,6 +233,11 @@ namespace {
         }
     }
 
+    /**
+     * @param fnc An arbitrary function we should call on any (valid) string
+     * inside struct cl_operand object.
+     * @param op An instance of struct cl_operand being processed.
+     */
     template <typename TFnc>
     void handleOperandStrings(TFnc fnc, struct cl_operand *op) {
         enum cl_operand_e code = op->code;
@@ -239,6 +255,13 @@ namespace {
         }
     }
 
+    /**
+     * clone a chain of cl_accessor objects and eventually push all array
+     * indexes to given stack
+     * @param dst Where to store just cloned cl_accessor chain.
+     * @param src The chain of cl_accessor objects being cloned.
+     * @param opStack Stack to push all array indexes to.
+     */
     template <class TStack>
     void cloneAccessor(struct cl_accessor **dst, const struct cl_accessor *src,
                        TStack &opStack)
@@ -263,7 +286,10 @@ namespace {
         }
     }
 
-    // FIXME: I guess this will need a debugger first :-)
+    /**
+     * deep copy of a cl_operand object
+     * @note FIXME: I guess this will need a debugger first :-)
+     */
     void storeOperand(struct cl_operand &dst, const struct cl_operand *src) {
         // shallow copy
         dst = *src;
@@ -288,6 +314,9 @@ namespace {
         }
     }
 
+    /**
+     * free all data allocated previously by storeOperand()
+     */
     void releaseOperand(struct cl_operand &ref) {
         // use std::stack to avoid recursion
         std::stack<struct cl_operand *> opStack;
