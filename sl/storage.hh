@@ -63,9 +63,9 @@ class VarDb {
         const Var& operator[](int uid) const;
 
         // read-only access to internal vector
-        const_iterator begin()               const { return vars_.begin();  }
-        const_iterator end()                 const { return vars_.end();    }
-        size_t size()                        const { return vars_.size();   }
+        const_iterator begin() const { return vars_.begin(); }
+        const_iterator end()   const { return vars_.end();   }
+        size_t size()          const { return vars_.size();  }
 
     private:
         TList vars_;
@@ -110,7 +110,6 @@ struct Insn {
 };
 
 /// @todo reverse links to precedent blocks?
-/// @todo consider using a value type instead
 class Block {
     private:
         typedef std::vector<Insn> TList;
@@ -145,6 +144,9 @@ class Block {
 
         const TTargetList& targets() const {
             if (insns_.empty())
+                // Oops, we are asked for targets without no insns inside. We
+                // can still return a reference to an empty vector in such
+                // cases, but is it actually useful?
                 TRAP;
 
             const Insn &last = insns_[insns_.size() - 1];
@@ -152,10 +154,10 @@ class Block {
         }
 
         // read-only access to internal vector
-        const_iterator begin()               const { return insns_.begin();  }
-        const_iterator end()                 const { return insns_.end();    }
-        size_t size()                        const { return insns_.size();   }
-        const Insn& operator[](unsigned idx) const { return insns_[idx];     }
+        const_iterator begin()               const { return insns_.begin(); }
+        const_iterator end()                 const { return insns_.end();   }
+        size_t size()                        const { return insns_.size();  }
+        const Insn& operator[](unsigned idx) const { return insns_[idx];    }
 
     private:
         TList insns_;
@@ -185,10 +187,10 @@ class ControlFlow {
         const Block& operator[](const char *name) const;
 
         // read-only access to internal vector
-        const_iterator begin()                const { return bbs_.begin();  }
-        const_iterator end()                  const { return bbs_.end();    }
-        size_t size()                         const { return bbs_.size();   }
-        const Block& operator[](unsigned idx) const { return bbs_[idx];     }
+        const_iterator begin()                const { return bbs_.begin(); }
+        const_iterator end()                  const { return bbs_.end();   }
+        size_t size()                         const { return bbs_.size();  }
+        const Block& operator[](unsigned idx) const { return bbs_[idx];    }
 
     private:
         TList bbs_;
@@ -219,9 +221,9 @@ class FncMap {
         const Fnc& operator[](int uid) const;
 
         // read-only access to internal vector
-        const_iterator begin()               const { return fncs_.begin();  }
-        const_iterator end()                 const { return fncs_.end();    }
-        size_t size()                        const { return fncs_.size();   }
+        const_iterator begin() const { return fncs_.begin(); }
+        const_iterator end()   const { return fncs_.end();   }
+        size_t size()          const { return fncs_.size();  }
 
     private:
         TList fncs_;
@@ -255,9 +257,9 @@ class FileMap {
         const File& operator[](const char *name) const;
 
         // read-only access to internal vector
-        const_iterator begin()               const { return files_.begin();  }
-        const_iterator end()                 const { return files_.end();    }
-        size_t size()                        const { return files_.size();   }
+        const_iterator begin() const { return files_.begin(); }
+        const_iterator end()   const { return files_.end();   }
+        size_t size()          const { return files_.size();  }
 
     private:
         TList files_;
