@@ -20,9 +20,11 @@
 #include "storage.hh"
 
 #include <map>
+#include <stack>
 
 #include <boost/filesystem/path.hpp>
 #include <boost/foreach.hpp>
+#include <boost/tuple/tuple.hpp>
 
 namespace Storage {
 
@@ -45,7 +47,7 @@ namespace {
             // key found
             return idxTab[iter->second];
 
-        // allocate new item
+        // allocate a new item
         unsigned idx = idxTab.size();
         db[key] = idx;
         idxTab.push_back(tpl);
@@ -194,16 +196,72 @@ const struct cl_type* TypeDb::operator[](int uid) const {
 // /////////////////////////////////////////////////////////////////////////////
 // Insn implementation
 namespace {
-    void storeOperand(struct cl_operand &dst, const struct cl_operand *op) {
-        // TODO
+    // FIXME: I guess this will need a debugger first :-)
+    void storeOperand(struct cl_operand &dst, const struct cl_operand *src) {
+        // shallow copy
+        dst = *src;
+
+        // copy cl_accessor objects recursively using std::stack
+        typedef std::pair<struct cl_operand *, const struct cl_operand *> TPair;
+        typedef std::stack<TPair> TStack;
+        TStack opStack;
+        opStack.push(&dst, src);
+        while (!opStack.empty()) {
+            struct cl_operand *cDst;
+            struct cl_operand const *cSrc;
+            boost::tie(cDst, cSrc) = opStack.top();
+            opStack.pop();
+
+            // clone list of cl_accessor objects
+            struct cl_accessor      **acDst = &cDst->accessor;
+            struct cl_accessor const *acSrc =  cSrc->accessor;
+            while (acSrc) {
+                // clone current cl_accessor object
+                *acDst = new struct cl_accessor(*acSrc);
+
+                if (CL_ACCESSOR_DEREF_ARRAY == acSrc->code) {
+                    // clone array index
+                    struct cl_operand const *idxSrc = acSrc->data.array.index;
+                    struct cl_operand *idxDst = new struct cl_operand(*idxSrc);
+                    (*acDst)->data.array.index = idxDst;
+
+                    // schedule array index for the next wheel
+                    opStack.push(idxDst, idxSrc);
+                }
+
+                // move to next cl_accessor object (if any)
+                acSrc = acSrc->next;
+                acDst = &(*acDst)->next;
+            }
+        }
     }
 
-    void releaseOperand(struct cl_operand &op) {
-        // TODO
-    }
+    void releaseOperand(struct cl_operand &ref) {
+        // use std::stack to avoid recursion
+        std::stack<struct cl_operand *> opStack;
+        opStack.push(&ref);
+        while (!opStack.empty()) {
+            struct cl_operand *op = opStack.top();
+            opStack.pop();
 
-    Block* bbAllocIfNeeded(ControlFlow &cfg, const char *name) {
-        // TODO
+            // destroy cl_accessor objects recursively
+            struct cl_accessor *ac = op->accessor;
+            while (ac) {
+                struct cl_accessor *next = ac->next;
+                if (CL_ACCESSOR_DEREF_ARRAY == ac->code)
+                    opStack.push(ac->data.array.index);
+
+                delete ac;
+                ac = next;
+            }
+
+            if (op != &ref)
+                // free cloned array index
+                delete op;
+        }
+
+        // all accessors freed
+        ref.accessor = 0;
     }
 }
 
@@ -232,7 +290,7 @@ Insn::Insn(const struct cl_insn *cli, ControlFlow &cfg):
             break;
 
         case CL_INSN_JMP:
-            targets.push_back(bbAllocIfNeeded(cfg, cli->data.insn_jmp.label));
+            targets.push_back(&cfg[cli->data.insn_jmp.label]);
             break;
 
         case CL_INSN_COND:
@@ -240,8 +298,8 @@ Insn::Insn(const struct cl_insn *cli, ControlFlow &cfg):
             storeOperand(operands[0], cli->data.insn_cond.src);
 
             targets.resize(2);
-            targets[0] = bbAllocIfNeeded(cfg, cli->data.insn_cond.then_label);
-            targets[1] = bbAllocIfNeeded(cfg, cli->data.insn_cond.else_label);
+            targets[0] = &cfg[cli->data.insn_cond.then_label];
+            targets[1] = &cfg[cli->data.insn_cond.else_label];
             break;
 
         case CL_INSN_RET:
