@@ -19,6 +19,7 @@
 
 #include "storage.hh"
 
+#include <cstring>
 #include <map>
 #include <stack>
 
@@ -196,12 +197,78 @@ const struct cl_type* TypeDb::operator[](int uid) const {
 // /////////////////////////////////////////////////////////////////////////////
 // Insn implementation
 namespace {
+    void dupString(const char *&str) {
+        str = strdup(str);
+    }
+
+    void freeString(const char *str) {
+        free(const_cast<char *>(str));
+    }
+
+    template <typename TFnc>
+    void handleCstStrings(TFnc fnc, struct cl_cst &cst) {
+        enum cl_type_e code = cst.code;
+        switch (code) {
+            case CL_TYPE_FNC:
+                fnc(cst.data.cst_fnc.name);
+                break;
+
+            case CL_TYPE_STRING:
+                fnc(cst.data.cst_string.value);
+                break;
+
+            default:
+                break;
+        }
+    }
+
+    template <typename TFnc>
+    void handleOperandStrings(TFnc fnc, struct cl_operand *op) {
+        enum cl_operand_e code = op->code;
+        switch (code) {
+            case CL_OPERAND_VAR:
+                fnc(op->data.var.name);
+                break;
+
+            case CL_OPERAND_CST:
+                handleCstStrings(fnc, op->data.cst);
+                break;
+
+            default:
+                break;
+        }
+    }
+
+    template <class TStack>
+    void cloneAccessor(struct cl_accessor **dst, const struct cl_accessor *src,
+                       TStack &opStack)
+    {
+        while (src) {
+            // clone current cl_accessor object
+            *dst = new struct cl_accessor(*src);
+
+            if (CL_ACCESSOR_DEREF_ARRAY == src->code) {
+                // clone array index
+                struct cl_operand const *idxSrc = src->data.array.index;
+                struct cl_operand *idxDst = new struct cl_operand(*idxSrc);
+                (*dst)->data.array.index = idxDst;
+
+                // schedule array index as an operand for the next wheel
+                opStack.push(idxDst, idxSrc);
+            }
+
+            // move to next cl_accessor object (if any)
+            src = src->next;
+            dst = &(*dst)->next;
+        }
+    }
+
     // FIXME: I guess this will need a debugger first :-)
     void storeOperand(struct cl_operand &dst, const struct cl_operand *src) {
         // shallow copy
         dst = *src;
 
-        // copy cl_accessor objects recursively using std::stack
+        // clone objects recursively using std::stack
         typedef std::pair<struct cl_operand *, const struct cl_operand *> TPair;
         typedef std::stack<TPair> TStack;
         TStack opStack;
@@ -213,26 +280,11 @@ namespace {
             opStack.pop();
 
             // clone list of cl_accessor objects
-            struct cl_accessor      **acDst = &cDst->accessor;
-            struct cl_accessor const *acSrc =  cSrc->accessor;
-            while (acSrc) {
-                // clone current cl_accessor object
-                *acDst = new struct cl_accessor(*acSrc);
+            // and schedule all array indexes for the next wheel eventually
+            cloneAccessor(&cDst->accessor, cSrc->accessor, opStack);
 
-                if (CL_ACCESSOR_DEREF_ARRAY == acSrc->code) {
-                    // clone array index
-                    struct cl_operand const *idxSrc = acSrc->data.array.index;
-                    struct cl_operand *idxDst = new struct cl_operand(*idxSrc);
-                    (*acDst)->data.array.index = idxDst;
-
-                    // schedule array index for the next wheel
-                    opStack.push(idxDst, idxSrc);
-                }
-
-                // move to next cl_accessor object (if any)
-                acSrc = acSrc->next;
-                acDst = &(*acDst)->next;
-            }
+            // duplicate all strings
+            handleOperandStrings(dupString, cDst);
         }
     }
 
@@ -243,6 +295,9 @@ namespace {
         while (!opStack.empty()) {
             struct cl_operand *op = opStack.top();
             opStack.pop();
+
+            // remove all duplicated strings
+            handleOperandStrings(freeString, op);
 
             // destroy cl_accessor objects recursively
             struct cl_accessor *ac = op->accessor;
