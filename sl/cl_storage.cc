@@ -36,35 +36,37 @@ ClStorageBuilder::~ClStorageBuilder() {
     delete d;
 }
 
-void file_open(const char *file_name) {
+void ClStorageBuilder::file_open(const char *file_name) {
     // TODO
 }
 
-void file_close() {
+void ClStorageBuilder::file_close() {
     // TODO
 }
 
-void fnc_open(const struct cl_operand *fnc) {
+void ClStorageBuilder::fnc_open(const struct cl_operand *fnc) {
     // TODO
 }
 
-void fnc_arg_decl(int arg_id, const struct cl_operand *arg_src) {
+void ClStorageBuilder::fnc_arg_decl(int arg_id,
+                                    const struct cl_operand *arg_src)
+{
     // TODO
 }
 
-void fnc_close() {
+void ClStorageBuilder::fnc_close() {
     // TODO
 }
 
-void bb_open(const char *bb_name) {
+void ClStorageBuilder::bb_open(const char *bb_name) {
     // TODO
 }
 
-void insn(const struct cl_insn *cli) {
+void ClStorageBuilder::insn(const struct cl_insn *cli) {
     // TODO
 }
 
-void insn_call_open(
+void ClStorageBuilder::insn_call_open(
     const struct cl_location*loc,
     const struct cl_operand *dst,
     const struct cl_operand *fnc)
@@ -72,22 +74,24 @@ void insn_call_open(
     // TODO
 }
 
-void insn_call_arg(int arg_id, const struct cl_operand *arg_src) {
+void ClStorageBuilder::insn_call_arg(int arg_id,
+                                     const struct cl_operand *arg_src)
+{
     // TODO
 }
 
-void insn_call_close() {
+void ClStorageBuilder::insn_call_close() {
     // TODO
 }
 
-void insn_switch_open(
+void ClStorageBuilder::insn_switch_open(
     const struct cl_location*loc,
     const struct cl_operand *src)
 {
     // TODO
 }
 
-void insn_switch_case(
+void ClStorageBuilder::insn_switch_case(
     const struct cl_location*loc,
     const struct cl_operand *val_lo,
     const struct cl_operand *val_hi,
@@ -96,6 +100,6 @@ void insn_switch_case(
     // TODO
 }
 
-void insn_switch_close() {
+void ClStorageBuilder::insn_switch_close() {
     // TODO
 }

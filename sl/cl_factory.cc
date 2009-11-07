@@ -23,6 +23,7 @@
 #include "cl_factory.hh"
 #include "cl_locator.hh"
 #include "cl_pp.hh"
+#include "cl_seplog.hh"
 #include "cl_typedot.hh"
 
 #include "cld_argsub.hh"
@@ -288,6 +289,7 @@ ClFactory::ClFactory():
     d->map["locator"]       = &createClLocator;
     d->map["pp"]            = &createClPrettyPrintDef;
     d->map["pp_with_types"] = &createClPrettyPrintWithTypes;
+    d->map["seplog"]        = &createClSepLog;
     d->map["typedot"]       = &createClTypeDotGenerator;
 }
 

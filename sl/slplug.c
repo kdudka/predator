@@ -1459,6 +1459,12 @@ create_cl_chain(const struct sl_plug_options *opt)
             return NULL;
     }
 
+    if (/* TODO */ true) {
+        if (!sl_append_def_listener(chain, "seplog", /* TODO */ "",
+                    opt->use_unswitch))
+            return NULL;
+    }
+
     return chain;
 }
 

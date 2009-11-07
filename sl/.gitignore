@@ -69,3 +69,4 @@ cl_storage.o
 inv-ok-01.o
 test-all
 test-all.o
+cl_seplog.o
