@@ -60,6 +60,7 @@ CL_OBJS = cl_chain.o \
 	cl_factory.o \
 	cl_locator.o \
 	cl_pp.o \
+	cl_storage.o \
 	cl_typedot.o \
 	cld_argsub.o \
 	cld_intchk.o \

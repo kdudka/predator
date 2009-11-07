@@ -65,3 +65,7 @@ off.o
 slplug.o
 ssd.o
 storage.o
+cl_storage.o
+inv-ok-01.o
+test-all
+test-all.o
