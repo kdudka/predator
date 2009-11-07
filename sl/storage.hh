@@ -41,21 +41,34 @@ struct Var {
     const struct cl_type        *clt;
     int                         uid;
 
-    Var(EVar, const struct cl_operand *);
+    Var();
     ~Var();
+
+    // NOTE: default assignment operator should be sufficient for a value type
+    Var(EVar, const struct cl_operand *);
 };
 
 class VarDb {
+    private:
+        typedef std::vector<Var> TList;
+
+    public:
+        typedef TList::const_iterator const_iterator;
+
     public:
         VarDb();
         ~VarDb();
 
-        void insert(const struct cl_operand *);
-        const Var& operator[](int) const;
+        Var& operator[](int uid);
+        const Var& operator[](int uid) const;
 
-        // TODO: iterator?
+        // read-only access to internal vector
+        const_iterator begin()               const { return vars_.begin();  }
+        const_iterator end()                 const { return vars_.end();    }
+        size_t size()                        const { return vars_.size();   }
 
     private:
+        TList vars_;
         struct Private;
         Private *d;
 };
@@ -74,6 +87,8 @@ class TypeDb {
 };
 
 class Block;
+class ControlFlow;
+
 typedef std::vector<struct cl_operand> TOperandList;
 typedef std::vector<const Block *> TTargetList;
 
@@ -84,10 +99,13 @@ struct Insn {
     TOperandList                operands;
     TTargetList                 targets;
 
-    /// deep copy
-    Insn(const struct cl_insn *);
+    /// used only for CL_INSN_CALL and CL_INSN_SWITCH
+    Insn(enum cl_insn_e, const struct cl_location &);
 
-    /// free all resources allocated by the constructor
+    /// deep copy
+    Insn(const struct cl_insn *, /* FIXME: deserves a comment */ ControlFlow &);
+
+    /// free all (except created BBs) resources allocated by the constructor
     ~Insn();
 };
 
@@ -101,7 +119,18 @@ class Block {
         typedef TList::const_iterator const_iterator;
 
     public:
-        Block(const char *name):
+        /**
+         * constructor useful to place objects into std::vector, but do NOT try
+         * to call Block::append() on objects constructed this way. It would
+         * crash on a NULL pointer dereference.
+         */
+        Block():
+            cfg_(0)
+        {
+        }
+
+        Block(/* TODO: comment at */ ControlFlow *cfg, const char *name):
+            cfg_(cfg),
             name_(name)
         {
         }
@@ -111,10 +140,13 @@ class Block {
         }
 
         void append(const struct cl_insn *cli) {
-            insns_.push_back(/* Insn object construction here */ cli);
+            insns_.push_back(/* Insn object construction here */ cli, *cfg_);
         }
 
         const TTargetList& targets() const {
+            if (insns_.empty())
+                TRAP;
+
             const Insn &last = insns_[insns_.size() - 1];
             return last.targets;
         }
@@ -127,12 +159,13 @@ class Block {
 
     private:
         TList insns_;
+        ControlFlow *cfg_;
         std::string name_;
 };
 
 class ControlFlow {
     private:
-        typedef std::vector<const Block *> TList;
+        typedef std::vector<Block> TList;
 
     public:
         typedef TList::const_iterator const_iterator;
@@ -142,24 +175,25 @@ class ControlFlow {
         ~ControlFlow();
 
         const Block &entry() const {
-            const Block *entry = bbs_[0];
-            return *entry;
+            return bbs_[0];
         }
 
         // TODO: list of exits?
         // TODO: list of aborts?
 
-        /// ControlFlow class takes ownership of given objects
-        void insert(Block *);
+        Block& operator[](const char *name);
+        const Block& operator[](const char *name) const;
 
         // read-only access to internal vector
         const_iterator begin()                const { return bbs_.begin();  }
         const_iterator end()                  const { return bbs_.end();    }
         size_t size()                         const { return bbs_.size();   }
-        const Block& operator[](unsigned idx) const { return *(bbs_[idx]);  }
+        const Block& operator[](unsigned idx) const { return bbs_[idx];     }
 
     private:
         TList bbs_;
+        struct Private;
+        Private *d;
 };
 
 struct File;
@@ -172,7 +206,7 @@ struct Fnc {
 
 class FncMap {
     private:
-        typedef std::vector<Insn> TList;
+        typedef std::vector<Fnc> TList;
 
     public:
         typedef TList::const_iterator const_iterator;
@@ -196,11 +230,11 @@ class FncMap {
 };
 
 struct File {
-    const std::string           name;
+    /* const */ std::string     name;
     VarDb                       vars;
     FncMap                      fncs;
 
-    File(const char *name_):
+    File(const std::string &name_):
         name(name_)
     {
     }
@@ -208,7 +242,7 @@ struct File {
 
 class FileMap {
     private:
-        typedef std::vector<Insn> TList;
+        typedef std::vector<File> TList;
 
     public:
         typedef TList::const_iterator const_iterator;
