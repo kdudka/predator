@@ -168,8 +168,6 @@ class CldOpTransBase: public ClDecoratorBase {
             CldOpTransBase::freeClonedAccessor(&local_src);
         }
 
-        virtual void finalize() { }
-
     private:
         static void cloneAccessor(struct cl_operand *);
         static void freeClonedAccessor(struct cl_operand *);

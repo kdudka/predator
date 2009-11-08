@@ -81,7 +81,7 @@ libcl.a: $(CL_OBJS)
 	$(RANLIB) $@
 
 #TODO: dependency scanning
-$(CL_OBJS): code_listener.h *.hh
+$(CL_OBJS): code_listener.h config.h *.hh
 
 #$(CL_OBJS): CXXFLAGS += -fPIC -std=c++0x -pedantic -Wall -Werror
 $(CL_OBJS): CXXFLAGS += -fPIC -std=c++0x -pedantic -Wall

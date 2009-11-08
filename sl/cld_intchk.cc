@@ -29,6 +29,9 @@
 class CldCbSeqChk: public ClDecoratorBase {
     public:
         CldCbSeqChk(ICodeListener *slave);
+        virtual ~CldCbSeqChk() {
+            this->setState(S_DESTROYED);
+        }
 
         virtual void file_open(
             const char              *file_name)
@@ -177,7 +180,8 @@ class CldCbSeqChk: public ClDecoratorBase {
             S_BLOCK_LEVEL,
             S_INSN_CALL,
             S_INSN_SWITCH,
-            S_DONE
+            S_DONE,
+            S_DESTROYED
         };
 
         EState                      state_;
@@ -378,6 +382,8 @@ const char* CldCbSeqChk::toString(EState state) {
         CASE_TO_STRING(S_BLOCK_LEVEL)
         CASE_TO_STRING(S_INSN_CALL)
         CASE_TO_STRING(S_INSN_SWITCH)
+        CASE_TO_STRING(S_DONE)
+        CASE_TO_STRING(S_DESTROYED)
         default:
             CL_DIE("CldCbSeqChk::toString");
             return NULL;
@@ -397,8 +403,13 @@ void CldCbSeqChk::emitUnexpected(EState state) {
 void CldCbSeqChk::setState(EState newState) {
     switch (state_) {
         case S_INIT:
-            if (S_FILE_LEVEL != newState)
-                this->emitUnexpected(newState);
+            switch (newState) {
+                case S_FILE_LEVEL:
+                case S_DONE:
+                    break;
+                default:
+                    this->emitUnexpected(newState);
+            }
             break;
 
         case S_FILE_LEVEL:
@@ -441,8 +452,14 @@ void CldCbSeqChk::setState(EState newState) {
             break;
 
         case S_DONE:
-            this->emitUnexpected(newState);
+            if (S_DESTROYED != newState)
+                this->emitUnexpected(newState);
             break;
+
+        case S_DESTROYED:
+            // this should never happen
+            this->emitUnexpected(newState);
+            TRAP;
     }
 
     state_ = newState;
