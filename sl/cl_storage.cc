@@ -20,11 +20,10 @@
 #include "cl_storage.hh"
 #include "storage.hh"
 
-using namespace Storage;
+using namespace CodeStorage;
 
 struct ClStorageBuilder::Private {
-    // FIXME: Oops, the identifiers are awkward, thus we need the 'struct' here
-    struct Storage stor;
+    Storage stor;
 };
 
 ClStorageBuilder::ClStorageBuilder():

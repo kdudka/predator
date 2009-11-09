@@ -22,7 +22,7 @@
 
 #include "cl_private.hh"
 
-namespace Storage {
+namespace CodeStorage {
     struct Storage;
 }
 
@@ -34,7 +34,7 @@ class ClStorageBuilder: public ICodeListener {
          * once the Storage model is built this @b template @b method is called
          * to process its content, run some analysis, etc.
          */
-        virtual void run(Storage::Storage &) = 0;
+        virtual void run(CodeStorage::Storage &) = 0;
 
     public:
         virtual ~ClStorageBuilder();

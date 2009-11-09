@@ -26,7 +26,7 @@
 #include <string>
 #include <vector>
 
-namespace Storage {
+namespace CodeStorage {
 
 enum EVar {
     VAR_VOID,
@@ -279,6 +279,6 @@ class StorageBuilder: public ICodeListener {
     // TODO
 };
 
-} // namespace Storage
+} // namespace CodeStorage
 
 #endif /* H_GUARD_STORAGE_H */

@@ -27,7 +27,7 @@
 #include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
 
-namespace Storage {
+namespace CodeStorage {
 
 namespace {
     /**
@@ -503,4 +503,4 @@ const File& FileMap::operator[](const char *name) const {
 }
 
 
-} // namespace Storage
+} // namespace CodeStorage

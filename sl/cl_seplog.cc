@@ -31,7 +31,7 @@ class ClSepLog: public ClStorageBuilder {
         virtual ~ClSepLog();
 
     protected:
-        virtual void run(Storage::Storage &);
+        virtual void run(CodeStorage::Storage &);
 };
 
 ClSepLog::ClSepLog(const char *) {
@@ -42,7 +42,7 @@ ClSepLog::~ClSepLog() {
     // TODO
 }
 
-void ClSepLog::run(Storage::Storage &stor) {
+void ClSepLog::run(CodeStorage::Storage &stor) {
     // TODO
     std::cout << "Hello world!" << std::endl;
 }
