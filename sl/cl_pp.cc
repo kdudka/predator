@@ -121,6 +121,9 @@ ClPrettyPrint::ClPrettyPrint(int fd_out, bool close_on_exit, bool showTypes):
     showTypes_(showTypes),
     printingArgDecls_(false)
 {
+    // FIXME: double check this
+    out_.set_auto_close(close_on_exit);
+
     // FIXME: static variable
     ColorConsole::enableForTerm(fd_out);
 }
