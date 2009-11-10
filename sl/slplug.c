@@ -1178,16 +1178,7 @@ static void handle_fnc_decl (tree decl)
 
     // emit fnc declaration
     struct cl_operand fnc;
-    fnc.code                            = CL_OPERAND_CST;
-    fnc.type                            = add_type_if_needed(decl);
-    fnc.accessor                        = NULL;
-    fnc.scope                           = TREE_PUBLIC(decl)
-                                            ? CL_SCOPE_GLOBAL
-                                            : CL_SCOPE_STATIC;
-    fnc.data.cst.code                   = CL_TYPE_FNC;
-    fnc.data.cst.data.cst_fnc.name      = IDENTIFIER_POINTER(ident);
-    fnc.data.cst.data.cst_fnc.is_extern = false;
-    read_gcc_location(&fnc.loc, DECL_SOURCE_LOCATION(decl));
+    handle_operand(&fnc, decl);
     cl->fnc_open(cl, &fnc);
 
     // emit arg declarations
