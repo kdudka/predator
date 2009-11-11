@@ -58,6 +58,8 @@ class VarDb {
     public:
         VarDb();
         ~VarDb();
+        VarDb(const VarDb &);
+        VarDb& operator=(const VarDb &);
 
         Var& operator[](int uid);
         const Var& operator[](int uid) const;
@@ -82,6 +84,9 @@ class TypeDb {
         const struct cl_type* operator[](int) const;
 
     private:
+        // disable copy constructor and assignment
+        TypeDb(const TypeDb &);
+        TypeDb& operator=(const TypeDb &);
         struct Private;
         Private *d;
 };
@@ -98,15 +103,6 @@ struct Insn {
     struct cl_location          loc;
     TOperandList                operands;
     TTargetList                 targets;
-
-    /// used only for CL_INSN_CALL and CL_INSN_SWITCH
-    Insn(enum cl_insn_e, const struct cl_location &);
-
-    /// deep copy
-    Insn(const struct cl_insn *, /* FIXME: deserves a comment */ ControlFlow &);
-
-    /// free all (except created BBs) resources allocated by the constructor
-    ~Insn();
 };
 
 /// @todo reverse links to precedent blocks?
@@ -138,8 +134,10 @@ class Block {
             return name_;
         }
 
-        void append(const struct cl_insn *cli) {
-            insns_.push_back(/* Insn object construction here */ cli, *cfg_);
+        Insn& append() {
+            unsigned idx = insns_.size();
+            insns_.push_back();
+            return insns_[idx];
         }
 
         const TTargetList& targets() const {
@@ -175,6 +173,8 @@ class ControlFlow {
     public:
         ControlFlow();
         ~ControlFlow();
+        ControlFlow(const ControlFlow &);
+        ControlFlow& operator=(const ControlFlow &);
 
         const Block &entry() const {
             return bbs_[0];
@@ -204,6 +204,10 @@ struct Fnc {
     struct cl_operand           def;
     VarDb                       vars;
     ControlFlow                 cfg;
+
+    Fnc() {
+        def.code = CL_OPERAND_VOID;
+    }
 };
 
 class FncMap {
@@ -216,6 +220,8 @@ class FncMap {
     public:
         FncMap();
         ~FncMap();
+        FncMap(const FncMap &);
+        FncMap& operator=(const FncMap &);
 
         Fnc& operator[](int uid);
         const Fnc& operator[](int uid) const;
@@ -252,6 +258,8 @@ class FileMap {
     public:
         FileMap();
         ~FileMap();
+        FileMap(const FileMap &);
+        FileMap& operator=(const FileMap &);
 
         File& operator[](const char *name);
         const File& operator[](const char *name) const;
@@ -272,11 +280,6 @@ struct Storage {
     VarDb                       glVars;
     FileMap                     files;
     FncMap                      orphans;
-};
-
-// TODO: move to separate module
-class StorageBuilder: public ICodeListener {
-    // TODO
 };
 
 } // namespace CodeStorage

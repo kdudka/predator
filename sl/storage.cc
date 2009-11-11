@@ -19,13 +19,9 @@
 
 #include "storage.hh"
 
-#include <cstring>
 #include <map>
-#include <stack>
 
 #include <boost/filesystem/path.hpp>
-#include <boost/foreach.hpp>
-#include <boost/tuple/tuple.hpp>
 
 namespace CodeStorage {
 
@@ -126,8 +122,19 @@ VarDb::VarDb():
 {
 }
 
+VarDb::VarDb(const VarDb &ref):
+    d(new Private(*ref.d))
+{
+}
+
 VarDb::~VarDb() {
     delete d;
+}
+
+VarDb& VarDb::operator=(const VarDb &ref) {
+    delete d;
+    d = new Private(*ref.d);
+    return *this;
 }
 
 Var& VarDb::operator[](int uid) {
@@ -195,235 +202,6 @@ const struct cl_type* TypeDb::operator[](int uid) const {
 
 
 // /////////////////////////////////////////////////////////////////////////////
-// Insn implementation
-namespace {
-    /**
-     * @param str dst/src to call strdup(3) for
-     */
-    void dupString(const char *&str) {
-        str = strdup(str);
-    }
-
-    /**
-     * @param str Legacy string to be freed, usually formerly given by dupString
-     */
-    void freeString(const char *str) {
-        free(const_cast<char *>(str));
-    }
-
-    /**
-     * @param fnc An arbitrary function we should call on any (valid) string
-     * inside struct cl_cst object.
-     * @param cst An instance of struct cl_cst being processed.
-     */
-    template <typename TFnc>
-    void handleCstStrings(TFnc fnc, struct cl_cst &cst) {
-        enum cl_type_e code = cst.code;
-        switch (code) {
-            case CL_TYPE_FNC:
-                fnc(cst.data.cst_fnc.name);
-                break;
-
-            case CL_TYPE_STRING:
-                fnc(cst.data.cst_string.value);
-                break;
-
-            default:
-                break;
-        }
-    }
-
-    /**
-     * @param fnc An arbitrary function we should call on any (valid) string
-     * inside struct cl_operand object.
-     * @param op An instance of struct cl_operand being processed.
-     */
-    template <typename TFnc>
-    void handleOperandStrings(TFnc fnc, struct cl_operand *op) {
-        enum cl_operand_e code = op->code;
-        switch (code) {
-            case CL_OPERAND_VAR:
-                fnc(op->data.var.name);
-                break;
-
-            case CL_OPERAND_CST:
-                handleCstStrings(fnc, op->data.cst);
-                break;
-
-            default:
-                break;
-        }
-    }
-
-    /**
-     * clone a chain of cl_accessor objects and eventually push all array
-     * indexes to given stack
-     * @param dst Where to store just cloned cl_accessor chain.
-     * @param src The chain of cl_accessor objects being cloned.
-     * @param opStack Stack to push all array indexes to.
-     */
-    template <class TStack>
-    void cloneAccessor(struct cl_accessor **dst, const struct cl_accessor *src,
-                       TStack &opStack)
-    {
-        while (src) {
-            // clone current cl_accessor object
-            *dst = new struct cl_accessor(*src);
-
-            if (CL_ACCESSOR_DEREF_ARRAY == src->code) {
-                // clone array index
-                struct cl_operand const *idxSrc = src->data.array.index;
-                struct cl_operand *idxDst = new struct cl_operand(*idxSrc);
-                (*dst)->data.array.index = idxDst;
-
-                // schedule array index as an operand for the next wheel
-                opStack.push(idxDst, idxSrc);
-            }
-
-            // move to next cl_accessor object (if any)
-            src = src->next;
-            dst = &(*dst)->next;
-        }
-    }
-
-    /**
-     * deep copy of a cl_operand object
-     * @note FIXME: I guess this will need a debugger first :-)
-     */
-    void storeOperand(struct cl_operand &dst, const struct cl_operand *src) {
-        // shallow copy
-        dst = *src;
-
-        // clone objects recursively using std::stack
-        typedef std::pair<struct cl_operand *, const struct cl_operand *> TPair;
-        typedef std::stack<TPair> TStack;
-        TStack opStack;
-        opStack.push(&dst, src);
-        while (!opStack.empty()) {
-            struct cl_operand *cDst;
-            struct cl_operand const *cSrc;
-            boost::tie(cDst, cSrc) = opStack.top();
-            opStack.pop();
-
-            // clone list of cl_accessor objects
-            // and schedule all array indexes for the next wheel eventually
-            cloneAccessor(&cDst->accessor, cSrc->accessor, opStack);
-
-            // duplicate all strings
-            handleOperandStrings(dupString, cDst);
-        }
-    }
-
-    /**
-     * free all data allocated previously by storeOperand()
-     */
-    void releaseOperand(struct cl_operand &ref) {
-        // use std::stack to avoid recursion
-        std::stack<struct cl_operand *> opStack;
-        opStack.push(&ref);
-        while (!opStack.empty()) {
-            struct cl_operand *op = opStack.top();
-            opStack.pop();
-
-            // remove all duplicated strings
-            handleOperandStrings(freeString, op);
-
-            // destroy cl_accessor objects recursively
-            struct cl_accessor *ac = op->accessor;
-            while (ac) {
-                struct cl_accessor *next = ac->next;
-                if (CL_ACCESSOR_DEREF_ARRAY == ac->code)
-                    opStack.push(ac->data.array.index);
-
-                delete ac;
-                ac = next;
-            }
-
-            if (op != &ref)
-                // free cloned array index
-                delete op;
-        }
-
-        // all accessors freed
-        ref.accessor = 0;
-    }
-}
-
-Insn::Insn(enum cl_insn_e code_, const struct cl_location &loc_):
-    code(code_),
-    loc(loc_)
-{
-    switch (code) {
-        case CL_INSN_CALL:
-        case CL_INSN_SWITCH:
-            break;
-
-        default:
-            // wrong constructor used
-            TRAP;
-    }
-}
-
-Insn::Insn(const struct cl_insn *cli, ControlFlow &cfg):
-    code(cli->code),
-    loc(cli->loc)
-{
-    switch (code) {
-        case CL_INSN_NOP:
-            TRAP;
-            break;
-
-        case CL_INSN_JMP:
-            targets.push_back(&cfg[cli->data.insn_jmp.label]);
-            break;
-
-        case CL_INSN_COND:
-            operands.resize(1);
-            storeOperand(operands[0], cli->data.insn_cond.src);
-
-            targets.resize(2);
-            targets[0] = &cfg[cli->data.insn_cond.then_label];
-            targets[1] = &cfg[cli->data.insn_cond.else_label];
-            break;
-
-        case CL_INSN_RET:
-            operands.resize(1);
-            storeOperand(operands[0], cli->data.insn_ret.src);
-            // fall through!
-
-        case CL_INSN_ABORT:
-            break;
-
-        case CL_INSN_UNOP:
-            this->subCode = static_cast<int> (cli->data.insn_unop.code);
-            operands.resize(2);
-            storeOperand(operands[0], cli->data.insn_unop.dst);
-            storeOperand(operands[1], cli->data.insn_unop.src);
-            break;
-
-        case CL_INSN_BINOP:
-            this->subCode = static_cast<int> (cli->data.insn_binop.code);
-            operands.resize(3);
-            storeOperand(operands[0], cli->data.insn_binop.dst);
-            storeOperand(operands[1], cli->data.insn_binop.src1);
-            storeOperand(operands[2], cli->data.insn_binop.src2);
-            break;
-
-        case CL_INSN_CALL:
-        case CL_INSN_SWITCH:
-            // wrong constructor used
-            TRAP;
-    }
-}
-
-Insn::~Insn() {
-    BOOST_FOREACH(struct cl_operand &op, operands) {
-        releaseOperand(op);
-    }
-}
-
-
-// /////////////////////////////////////////////////////////////////////////////
 // ControlFlow implementation
 struct ControlFlow::Private {
     typedef std::map<std::string, unsigned> TMap;
@@ -435,8 +213,19 @@ ControlFlow::ControlFlow():
 {
 }
 
+ControlFlow::ControlFlow(const ControlFlow &ref):
+    d(new Private(*ref.d))
+{
+}
+
 ControlFlow::~ControlFlow() {
     delete d;
+}
+
+ControlFlow& ControlFlow::operator=(const ControlFlow &ref) {
+    delete d;
+    d = new Private(*ref.d);
+    return *this;
 }
 
 Block& ControlFlow::operator[](const char *name) {
@@ -460,8 +249,19 @@ FncMap::FncMap():
 {
 }
 
+FncMap::FncMap(const FncMap &ref):
+    d(new Private(*ref.d))
+{
+}
+
 FncMap::~FncMap() {
     delete d;
+}
+
+FncMap& FncMap::operator=(const FncMap &ref) {
+    delete d;
+    d = new Private(*ref.d);
+    return *this;
 }
 
 Fnc& FncMap::operator[](int uid) {
@@ -485,8 +285,19 @@ FileMap::FileMap():
 {
 }
 
+FileMap::FileMap(const FileMap &ref):
+    d(new Private(*ref.d))
+{
+}
+
 FileMap::~FileMap() {
     delete d;
+}
+
+FileMap& FileMap::operator=(const FileMap &ref) {
+    delete d;
+    d = new Private(*ref.d);
+    return *this;
 }
 
 File& FileMap::operator[](const char *name) {

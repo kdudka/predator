@@ -4,6 +4,7 @@ set args -fplugin=./slplug.so -std=c99 -pedantic -Wall -W -g -O0 -fPIC -c \
     -fplugin-arg-slplug-verbose=5 \
     -fplugin-arg-slplug-dump-pp \
     -fplugin-arg-slplug-dump-types
+set backtrace limit 25
 set confirm 0
 set follow-fork-mode child
 set pagination 0
@@ -17,4 +18,3 @@ f 1
 echo \ncode:\n
 list
 echo \n\n
-target record
