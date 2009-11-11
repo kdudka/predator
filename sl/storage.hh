@@ -54,6 +54,7 @@ class VarDb {
 
     public:
         typedef TList::const_iterator const_iterator;
+        typedef const_iterator iterator;
 
     public:
         VarDb();
@@ -112,6 +113,7 @@ class Block {
 
     public:
         typedef TList::const_iterator const_iterator;
+        typedef const_iterator iterator;
 
     public:
         /**
@@ -169,6 +171,7 @@ class ControlFlow {
 
     public:
         typedef TList::const_iterator const_iterator;
+        typedef const_iterator iterator;
 
     public:
         ControlFlow();
@@ -216,6 +219,7 @@ class FncMap {
 
     public:
         typedef TList::const_iterator const_iterator;
+        typedef const_iterator iterator;
 
     public:
         FncMap();
@@ -254,6 +258,7 @@ class FileMap {
 
     public:
         typedef TList::const_iterator const_iterator;
+        typedef const_iterator iterator;
 
     public:
         FileMap();

@@ -247,8 +247,23 @@ namespace {
         }
     }
 
+    void releaseFnc(Fnc &fnc) {
+        releaseOperand(fnc.def);
+        // TODO
+    }
+
+    void releaseFncMap(FncMap &fncMap) {
+        BOOST_FOREACH(const Fnc &fnc, fncMap) {
+            releaseFnc(const_cast<Fnc &>(fnc));
+        }
+    }
+
     void releaseStorage(Storage &stor) {
-        // TODO: release all operands, insns, fncs, ...
+        BOOST_FOREACH(const File &file, stor.files) {
+            releaseFncMap(const_cast<File &>(file).fncs);
+            // TODO
+        }
+        releaseFncMap(stor.orphans);
     }
 }
 
@@ -256,6 +271,7 @@ struct ClStorageBuilder::Private {
     Storage     stor;
     File        *file;
     Fnc         *fnc;
+    Block       *bb;
 
     Private():
         file(0),
@@ -295,6 +311,10 @@ void ClStorageBuilder::fnc_open(const struct cl_operand *op) {
     if (CL_TYPE_FNC != cst.code)
         TRAP;
 
+    if (!op->loc.file)
+        // orphans not implemented yet
+        TRAP;
+
     // store file for fnc
     FileMap &fmap = d->stor.files;
     File &file = fmap[op->loc.file];
@@ -319,7 +339,8 @@ void ClStorageBuilder::fnc_close() {
 }
 
 void ClStorageBuilder::bb_open(const char *bb_name) {
-    // TODO
+    ControlFlow &cfg = d->fnc->cfg;
+    d->bb = &cfg[bb_name];
 }
 
 void ClStorageBuilder::insn(const struct cl_insn *cli) {
