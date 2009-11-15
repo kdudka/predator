@@ -287,11 +287,13 @@ struct ClStorageBuilder::Private {
     File        *file;
     Fnc         *fnc;
     Block       *bb;
+    Insn        *insn;
 
     Private():
         file(0),
         fnc(0),
-        bb(0)
+        bb(0),
+        insn(0)
     {
     }
 };
@@ -375,24 +377,49 @@ void ClStorageBuilder::insn_call_open(
     const struct cl_operand *dst,
     const struct cl_operand *fnc)
 {
-    // TODO
+    Insn *insn = new Insn;
+    insn->code = CL_INSN_CALL;
+    insn->loc = *loc;
+
+    TOperandList &operands = insn->operands;
+    operands.resize(2);
+    storeOperand(operands[0], dst);
+    storeOperand(operands[1], fnc);
+
+    d->bb->append(insn);
+    d->insn = insn;
 }
 
-void ClStorageBuilder::insn_call_arg(int arg_id,
-                                     const struct cl_operand *arg_src)
+void ClStorageBuilder::insn_call_arg(int, const struct cl_operand *arg_src)
 {
-    // TODO
+    TOperandList &operands = d->insn->operands;
+    unsigned idx = operands.size();
+    operands.resize(idx + 1);
+    storeOperand(operands[idx], arg_src);
 }
 
 void ClStorageBuilder::insn_call_close() {
-    // TODO
+    d->insn = 0;
 }
 
 void ClStorageBuilder::insn_switch_open(
     const struct cl_location*loc,
     const struct cl_operand *src)
 {
-    // TODO
+    Insn *insn = new Insn;
+    insn->code = CL_INSN_SWITCH;
+    insn->loc = *loc;
+
+    // store src operand
+    TOperandList &operands = insn->operands;
+    operands.resize(1);
+    storeOperand(operands[0], src);
+
+    // reserve for default
+    insn->targets.push_back(static_cast<Block *>(0));
+
+    d->bb->append(insn);
+    d->insn = insn;
 }
 
 void ClStorageBuilder::insn_switch_case(
@@ -401,9 +428,49 @@ void ClStorageBuilder::insn_switch_case(
     const struct cl_operand *val_hi,
     const char              *label)
 {
-    // TODO
+    ControlFlow &cfg = d->fnc->cfg;
+    Insn &insn = *d->insn;
+    TTargetList &targets = insn.targets;
+
+    if (CL_OPERAND_VOID == val_lo->code && CL_OPERAND_VOID == val_hi->code) {
+        // default
+        const Block* &defTarget = targets[0];
+        if (defTarget)
+            TRAP;
+
+        targets[0] = cfg[label];
+        return;
+    }
+
+    if (CL_OPERAND_CST != val_lo->code || CL_OPERAND_CST != val_hi->code)
+        TRAP;
+
+    const struct cl_cst &cst_lo = val_lo->data.cst;
+    const struct cl_cst &cst_hi = val_hi->data.cst;
+    if (CL_TYPE_INT != cst_lo.code || CL_TYPE_INT != cst_hi.code)
+        TRAP;
+
+    const int lo = cst_lo.data.cst_int.value;
+    const int hi = cst_hi.data.cst_int.value;
+    if (lo != hi)
+        // case range not supported for now
+        TRAP;
+
+    unsigned idx = targets.size();
+    TOperandList &operands = d->insn->operands;
+    if (operands.size() != idx)
+        // something went wrong, offset detected
+        TRAP;
+
+    // store case value
+    operands.resize(idx + 1);
+    storeOperand(operands[idx], val_lo);
+
+    // store case target
+    targets.resize(idx + 1);
+    targets[idx] = cfg[label];
 }
 
 void ClStorageBuilder::insn_switch_close() {
-    // TODO
+    d->insn = 0;
 }
