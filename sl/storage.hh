@@ -88,6 +88,8 @@ class TypeDb {
         // disable copy constructor and assignment
         TypeDb(const TypeDb &);
         TypeDb& operator=(const TypeDb &);
+
+    private:
         struct Private;
         Private *d;
 };
@@ -109,7 +111,7 @@ struct Insn {
 /// @todo reverse links to precedent blocks?
 class Block {
     private:
-        typedef std::vector<Insn> TList;
+        typedef std::vector<const Insn *> TList;
 
     public:
         typedef TList::const_iterator const_iterator;
@@ -131,15 +133,15 @@ class Block {
             name_(name)
         {
         }
+        
+        // NOTE: there is no destructor ... given objects are NOT destroyed
 
         const std::string& name() const {
             return name_;
         }
 
-        Insn& append() {
-            unsigned idx = insns_.size();
-            insns_.push_back();
-            return insns_[idx];
+        void append(const Insn *insn) {
+            insns_.push_back(insn);
         }
 
         const TTargetList& targets() const {
@@ -149,15 +151,15 @@ class Block {
                 // cases, but is it actually useful?
                 TRAP;
 
-            const Insn &last = insns_[insns_.size() - 1];
-            return last.targets;
+            const Insn *last = insns_[insns_.size() - 1];
+            return last->targets;
         }
 
         // read-only access to internal vector
         const_iterator begin()               const { return insns_.begin(); }
         const_iterator end()                 const { return insns_.end();   }
         size_t size()                        const { return insns_.size();  }
-        const Insn& operator[](unsigned idx) const { return insns_[idx];    }
+        const Insn* operator[](unsigned idx) const { return insns_[idx];    }
 
     private:
         TList insns_;
@@ -167,7 +169,7 @@ class Block {
 
 class ControlFlow {
     private:
-        typedef std::vector<Block> TList;
+        typedef std::vector<Block *> TList;
 
     public:
         typedef TList::const_iterator const_iterator;
@@ -179,21 +181,23 @@ class ControlFlow {
         ControlFlow(const ControlFlow &);
         ControlFlow& operator=(const ControlFlow &);
 
-        const Block &entry() const {
+        const Block *entry() const {
+            // FIXME: this simply ignores jump to entry instruction
             return bbs_[0];
         }
 
         // TODO: list of exits?
         // TODO: list of aborts?
 
-        Block& operator[](const char *name);
-        const Block& operator[](const char *name) const;
+        /// @attention a new Block may be created, but will NOT be destroyed
+        Block*& operator[](const char *name);
+        const Block* operator[](const char *name) const;
 
         // read-only access to internal vector
         const_iterator begin()                const { return bbs_.begin(); }
         const_iterator end()                  const { return bbs_.end();   }
         size_t size()                         const { return bbs_.size();  }
-        const Block& operator[](unsigned idx) const { return bbs_[idx];    }
+        const Block* operator[](unsigned idx) const { return bbs_[idx];    }
 
     private:
         TList bbs_;

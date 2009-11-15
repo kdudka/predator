@@ -185,13 +185,15 @@ namespace {
         ref.accessor = 0;
     }
 
-    void storeInsn(Insn &insn, const struct cl_insn *cli, ControlFlow &cfg) {
+    Insn* createInsn(const struct cl_insn *cli, ControlFlow &cfg) {
         enum cl_insn_e code = cli->code;
-        insn.code = cli->code;
-        insn.loc = cli->loc;
 
-        TOperandList &operands = insn.operands;
-        TTargetList &targets = insn.targets;
+        Insn *insn = new Insn;
+        insn->code = cli->code;
+        insn->loc = cli->loc;
+
+        TOperandList &operands = insn->operands;
+        TTargetList &targets = insn->targets;
 
         switch (code) {
             case CL_INSN_NOP:
@@ -199,7 +201,7 @@ namespace {
                 break;
 
             case CL_INSN_JMP:
-                targets.push_back(&cfg[cli->data.insn_jmp.label]);
+                targets.push_back(cfg[cli->data.insn_jmp.label]);
                 break;
 
             case CL_INSN_COND:
@@ -207,8 +209,8 @@ namespace {
                 storeOperand(operands[0], cli->data.insn_cond.src);
 
                 targets.resize(2);
-                targets[0] = &cfg[cli->data.insn_cond.then_label];
-                targets[1] = &cfg[cli->data.insn_cond.else_label];
+                targets[0] = cfg[cli->data.insn_cond.then_label];
+                targets[1] = cfg[cli->data.insn_cond.else_label];
                 break;
 
             case CL_INSN_RET:
@@ -220,14 +222,14 @@ namespace {
                 break;
 
             case CL_INSN_UNOP:
-                insn.subCode = static_cast<int> (cli->data.insn_unop.code);
+                insn->subCode = static_cast<int> (cli->data.insn_unop.code);
                 operands.resize(2);
                 storeOperand(operands[0], cli->data.insn_unop.dst);
                 storeOperand(operands[1], cli->data.insn_unop.src);
                 break;
 
             case CL_INSN_BINOP:
-                insn.subCode = static_cast<int> (cli->data.insn_binop.code);
+                insn->subCode = static_cast<int> (cli->data.insn_binop.code);
                 operands.resize(3);
                 storeOperand(operands[0], cli->data.insn_binop.dst);
                 storeOperand(operands[1], cli->data.insn_binop.src1);
@@ -239,16 +241,29 @@ namespace {
                 // wrong constructor used
                 TRAP;
         }
+
+        return insn;
     }
 
-    void releaseInsn(Insn &insn) {
-        BOOST_FOREACH(struct cl_operand &op, insn.operands) {
+    void destroyInsn(Insn *insn) {
+        BOOST_FOREACH(struct cl_operand &op, insn->operands) {
             releaseOperand(op);
         }
+        delete insn;
+    }
+
+    void destroyBlock(Block *bb) {
+        BOOST_FOREACH(const Insn *insn, *bb) {
+            destroyInsn(const_cast<Insn *>(insn));
+        }
+        delete bb;
     }
 
     void releaseFnc(Fnc &fnc) {
         releaseOperand(fnc.def);
+        BOOST_FOREACH(const Block *bb, fnc.cfg) {
+            destroyBlock(const_cast<Block *>(bb));
+        }
         // TODO
     }
 
@@ -275,7 +290,8 @@ struct ClStorageBuilder::Private {
 
     Private():
         file(0),
-        fnc(0)
+        fnc(0),
+        bb(0)
     {
     }
 };
@@ -324,6 +340,7 @@ void ClStorageBuilder::fnc_open(const struct cl_operand *op) {
     Fnc &fnc = file.fncs[cst.data.cst_fnc.uid];
     storeOperand(fnc.def, op);
     d->fnc = &fnc;
+    d->bb = 0;
 }
 
 void ClStorageBuilder::fnc_arg_decl(int, const struct cl_operand *op) {
@@ -340,11 +357,17 @@ void ClStorageBuilder::fnc_close() {
 
 void ClStorageBuilder::bb_open(const char *bb_name) {
     ControlFlow &cfg = d->fnc->cfg;
-    d->bb = &cfg[bb_name];
+    d->bb = cfg[bb_name];
 }
 
 void ClStorageBuilder::insn(const struct cl_insn *cli) {
-    // TODO
+    if (!d->bb)
+        // FIXME: this simply ignores jump to entry instruction
+        return;
+
+    // TODO: store var and type
+    Insn *insn = createInsn(cli, d->fnc->cfg);
+    d->bb->append(insn);
 }
 
 void ClStorageBuilder::insn_call_open(

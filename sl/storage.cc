@@ -228,11 +228,16 @@ ControlFlow& ControlFlow::operator=(const ControlFlow &ref) {
     return *this;
 }
 
-Block& ControlFlow::operator[](const char *name) {
-    return dbLookup(d->db, bbs_, name, Block(this, name));
+Block*& ControlFlow::operator[](const char *name) {
+    Block* &ref = dbLookup(d->db, bbs_, name, 0);
+    if (!ref)
+        // XXX: the object will be NOT destroyed by ControlFlow
+        ref = new Block(this, name);
+
+    return ref;
 }
 
-const Block& ControlFlow::operator[](const char *name) const {
+const Block* ControlFlow::operator[](const char *name) const {
     return dbConstLookup(d->db, bbs_, name);
 }
 
