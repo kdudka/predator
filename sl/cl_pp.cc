@@ -845,31 +845,31 @@ void ClPrettyPrint::insn_switch_case(
             const char              *label)
 {
     loc_ = loc;
-    if (CL_OPERAND_VOID == val_lo->code
-            && CL_OPERAND_VOID == val_hi->code)
-    {
+    if (CL_OPERAND_VOID == val_lo->code && CL_OPERAND_VOID == val_hi->code) {
         out_ << "\t\t\t"
             << SSD_INLINE_COLOR(C_YELLOW, "default") << ":";
-    } else if (CL_OPERAND_CST == val_lo->code
-            && CL_OPERAND_CST == val_hi->code
-            && (CL_TYPE_INT == val_lo->type->code
-                || CL_TYPE_ENUM == val_lo->type->code)
-            && (CL_TYPE_INT == val_hi->type->code
-                || CL_TYPE_ENUM == val_hi->type->code))
-    {
-        const int lo = val_lo->data.cst.data.cst_int.value;
-        const int hi = val_hi->data.cst.data.cst_int.value;
-        for (int i = lo; i <= hi; ++i) {
-            out_ << "\t\t\t"
-                << SSD_INLINE_COLOR(C_YELLOW, "case")
-                << " " << i << ":";
-            if (i != hi)
-                out_ << " /* fall through */" << std::endl;
-        }
-    } else {
-        CL_MSG_STREAM(cl_error, Location(loc_) << "error: invalid case");
+
         return;
     }
+
+    if (CL_OPERAND_CST != val_lo->code || CL_OPERAND_CST != val_hi->code)
+        TRAP;
+
+    const struct cl_cst &cst_lo = val_lo->data.cst;
+    const struct cl_cst &cst_hi = val_hi->data.cst;
+    if (CL_TYPE_INT != cst_lo.code || CL_TYPE_INT != cst_hi.code)
+        TRAP;
+
+    const int lo = cst_lo.data.cst_int.value;
+    const int hi = cst_hi.data.cst_int.value;
+    for (int i = lo; i <= hi; ++i) {
+        out_ << "\t\t\t"
+            << SSD_INLINE_COLOR(C_YELLOW, "case")
+            << " " << i << ":";
+        if (i != hi)
+            out_ << " /* fall through */" << std::endl;
+    }
+
     out_ << " "
         << SSD_INLINE_COLOR(C_YELLOW, "goto") << " "
         << SSD_INLINE_COLOR(C_LIGHT_CYAN, label)
