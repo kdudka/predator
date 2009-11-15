@@ -81,7 +81,7 @@ class TypeDb {
         TypeDb();
         ~TypeDb();
 
-        void insert(const struct cl_type *);
+        bool insert(const struct cl_type *);
         const struct cl_type* operator[](int) const;
 
     private:
@@ -93,6 +93,8 @@ class TypeDb {
         struct Private;
         Private *d;
 };
+
+void readTypeTree(TypeDb &, const struct cl_type *);
 
 class Block;
 class ControlFlow;
@@ -219,7 +221,7 @@ struct Fnc {
 
 class FncMap {
     private:
-        typedef std::vector<Fnc> TList;
+        typedef std::vector<Fnc *> TList;
 
     public:
         typedef TList::const_iterator const_iterator;
@@ -231,8 +233,9 @@ class FncMap {
         FncMap(const FncMap &);
         FncMap& operator=(const FncMap &);
 
-        Fnc& operator[](int uid);
-        const Fnc& operator[](int uid) const;
+        /// @attention a new Fnc may be created, but will NOT be destroyed
+        Fnc*& operator[](int uid);
+        const Fnc* operator[](int uid) const;
 
         // read-only access to internal vector
         const_iterator begin() const { return fncs_.begin(); }
@@ -258,7 +261,7 @@ struct File {
 
 class FileMap {
     private:
-        typedef std::vector<File> TList;
+        typedef std::vector<File *> TList;
 
     public:
         typedef TList::const_iterator const_iterator;
@@ -270,8 +273,9 @@ class FileMap {
         FileMap(const FileMap &);
         FileMap& operator=(const FileMap &);
 
-        File& operator[](const char *name);
-        const File& operator[](const char *name) const;
+        /// @attention a new File may be created, but will NOT be destroyed
+        File*& operator[](const char *name);
+        const File* operator[](const char *name) const;
 
         // read-only access to internal vector
         const_iterator begin() const { return files_.begin(); }

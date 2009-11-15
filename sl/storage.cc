@@ -20,6 +20,7 @@
 #include "storage.hh"
 
 #include <map>
+#include <stack>
 
 #include <boost/filesystem/path.hpp>
 
@@ -162,25 +163,49 @@ TypeDb::~TypeDb() {
     delete d;
 }
 
-void TypeDb::insert(const struct cl_type *clt) {
+bool TypeDb::insert(const struct cl_type *clt) {
     if (!clt) {
         CL_DEBUG("TypeDb::insert() got a NULL pointer");
-        return;
+        return false;
     }
     cl_type_uid_t uid = clt->uid;
 
     typedef Private::TMap TDb;
     TDb &db = d->db;
     TDb::iterator iter = db.find(uid);
-    if (db.end() == iter) {
-        // insert type into db
-        db[uid] = clt;
+    if (db.end() != iter)
+        return false;
+
+    // insert type into db
+    db[uid] = clt;
+    return true;
+}
+
+void readTypeTree(TypeDb &db, const struct cl_type *clt) {
+    if (!clt) {
+        CL_DEBUG("readTypeTree() got a NULL pointer");
         return;
     }
 
-    if (uid != iter->second->uid) {
-        CL_DEBUG("TypeDb::insert() has detected attempt to redefine cl_type");
-        TRAP;
+    // DFS through the type graph
+    std::stack<const struct cl_type *> typeStack;
+    typeStack.push(clt);
+    while (!typeStack.empty()) {
+        clt = typeStack.top();
+#if 0
+        std::cout << "--- " << clt->uid
+            << "(code = " << clt->code
+            << ", item_cnt = " << clt->item_cnt
+            << ")\n";
+#endif
+        typeStack.pop();
+        if (db.insert(clt)) {
+            const int max = (CL_TYPE_ARRAY == clt->code) ? 1
+                : clt->item_cnt;
+            const struct cl_type_item *items = clt->items;
+            for (int i = 0; i < max; ++i)
+                typeStack.push(items[i].type);
+        }
     }
 }
 
@@ -269,11 +294,16 @@ FncMap& FncMap::operator=(const FncMap &ref) {
     return *this;
 }
 
-Fnc& FncMap::operator[](int uid) {
-    return dbLookup(d->db, fncs_, uid);
+Fnc*& FncMap::operator[](int uid) {
+    Fnc* &ref = dbLookup(d->db, fncs_, uid, 0);
+    if (!ref)
+        // XXX: the object will be NOT destroyed by FncMap
+        ref = new Fnc;
+
+    return ref;
 }
 
-const Fnc& FncMap::operator[](int uid) const {
+const Fnc* FncMap::operator[](int uid) const {
     return dbConstLookup(d->db, fncs_, uid);
 }
 
@@ -305,14 +335,20 @@ FileMap& FileMap::operator=(const FileMap &ref) {
     return *this;
 }
 
-File& FileMap::operator[](const char *name) {
+File*& FileMap::operator[](const char *name) {
     boost::filesystem::path filePath(name);
     filePath.normalize();
     const std::string &canonName = filePath.string();
-    return dbLookup(d->db, files_, canonName, File(canonName));
+
+    File* &ref = dbLookup(d->db, files_, canonName, 0);
+    if (!ref)
+        // XXX: the object will be NOT destroyed by File
+        ref = new File(canonName);
+
+    return ref;
 }
 
-const File& FileMap::operator[](const char *name) const {
+const File* FileMap::operator[](const char *name) const {
     boost::filesystem::path filePath(name);
     filePath.normalize();
     return dbConstLookup(d->db, files_, filePath.string());

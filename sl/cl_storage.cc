@@ -259,24 +259,24 @@ namespace {
         delete bb;
     }
 
-    void releaseFnc(Fnc &fnc) {
-        releaseOperand(fnc.def);
-        BOOST_FOREACH(const Block *bb, fnc.cfg) {
+    void destroyFnc(Fnc *fnc) {
+        releaseOperand(fnc->def);
+        BOOST_FOREACH(const Block *bb, fnc->cfg) {
             destroyBlock(const_cast<Block *>(bb));
         }
-        // TODO
+        delete fnc;
     }
 
     void releaseFncMap(FncMap &fncMap) {
-        BOOST_FOREACH(const Fnc &fnc, fncMap) {
-            releaseFnc(const_cast<Fnc &>(fnc));
+        BOOST_FOREACH(const Fnc *fnc, fncMap) {
+            destroyFnc(const_cast<Fnc *>(fnc));
         }
     }
 
     void releaseStorage(Storage &stor) {
-        BOOST_FOREACH(const File &file, stor.files) {
-            releaseFncMap(const_cast<File &>(file).fncs);
-            // TODO
+        BOOST_FOREACH(const File *file, stor.files) {
+            releaseFncMap(const_cast<File *>(file)->fncs);
+            delete file;
         }
         releaseFncMap(stor.orphans);
     }
@@ -296,6 +296,10 @@ struct ClStorageBuilder::Private {
         insn(0)
     {
     }
+
+    void digOperand(const struct cl_operand *);
+    void openInsn(Insn *);
+    void closeInsn();
 };
 
 ClStorageBuilder::ClStorageBuilder():
@@ -312,12 +316,77 @@ void ClStorageBuilder::finalize() {
     this->run(d->stor);
 }
 
+void ClStorageBuilder::Private::digOperand(const struct cl_operand *op) {
+    if (!op || CL_OPERAND_VOID == op->code)
+        return;
+
+    // read base type
+    TypeDb &typeDb = stor.types;
+    readTypeTree(typeDb, op->type);
+
+    // read type of each array index in the chain
+    const struct cl_accessor *ac = op->accessor;
+    for (; ac; ac = ac->next)
+        if (ac->code == CL_ACCESSOR_DEREF_ARRAY)
+            readTypeTree(typeDb, ac->data.array.index->type);
+
+    // now we are interested only in CL_OPERAND_VAR
+    if (CL_OPERAND_VAR != op->code)
+        return;
+
+    // store variable's metadata
+    int id = op->data.var.id;
+    enum cl_scope_e scope = op->scope;
+    switch (scope) {
+        case CL_SCOPE_GLOBAL:
+            stor.glVars[id] = Var(VAR_GL, op);
+            break;
+
+        case CL_SCOPE_STATIC:
+            file->vars[id] = Var(VAR_GL, op);
+            break;
+
+        case CL_SCOPE_FUNCTION:
+            fnc->vars[id] = Var(VAR_LC, op);
+            break;
+
+        case CL_SCOPE_BB:
+            TRAP;
+    }
+}
+
+void ClStorageBuilder::Private::openInsn(Insn *newInsn) {
+    if (insn)
+        // Aiee, insn already opened
+        TRAP;
+
+    if (!bb)
+        // we have actually no basic block to append the insn to
+        TRAP;
+
+    bb->append(newInsn);
+    insn = newInsn;
+}
+
+void ClStorageBuilder::Private::closeInsn() {
+    TOperandList &operands = insn->operands;
+    BOOST_FOREACH(const struct cl_operand &op, operands) {
+        this->digOperand(&op);
+    }
+
+    // let it honestly crash if callback sequence is incorrect since this should
+    // be already caught by CldCbSeqChk cl decorator
+    insn = 0;
+}
+
 void ClStorageBuilder::file_open(const char *fileName) {
     FileMap &fmap = d->stor.files;
-    d->file = &fmap[fileName];
+    d->file = fmap[fileName];
 }
 
 void ClStorageBuilder::file_close() {
+    // let it honestly crash if callback sequence is incorrect since this should
+    // be already caught by CldCbSeqChk cl decorator
     d->file = 0;
 }
 
@@ -335,13 +404,15 @@ void ClStorageBuilder::fnc_open(const struct cl_operand *op) {
 
     // store file for fnc
     FileMap &fmap = d->stor.files;
-    File &file = fmap[op->loc.file];
-    d->file = &file;
+    d->file = fmap[op->loc.file];
 
     // store fnc definition
-    Fnc &fnc = file.fncs[cst.data.cst_fnc.uid];
-    storeOperand(fnc.def, op);
-    d->fnc = &fnc;
+    int uid = cst.data.cst_fnc.uid;
+    d->fnc = d->file->fncs[uid];
+    storeOperand(d->fnc->def, op);
+
+    // let it honestly crash if callback sequence is incorrect since this should
+    // be already caught by CldCbSeqChk cl decorator
     d->bb = 0;
 }
 
@@ -354,6 +425,8 @@ void ClStorageBuilder::fnc_arg_decl(int, const struct cl_operand *op) {
 }
 
 void ClStorageBuilder::fnc_close() {
+    // let it honestly crash if callback sequence is incorrect since this should
+    // be already caught by CldCbSeqChk cl decorator
     d->fnc = 0;
 }
 
@@ -367,9 +440,12 @@ void ClStorageBuilder::insn(const struct cl_insn *cli) {
         // FIXME: this simply ignores jump to entry instruction
         return;
 
-    // TODO: store var and type
+    // serialize given insn
     Insn *insn = createInsn(cli, d->fnc->cfg);
-    d->bb->append(insn);
+    d->openInsn(insn);
+
+    // current insn actually already complete
+    d->closeInsn();
 }
 
 void ClStorageBuilder::insn_call_open(
@@ -386,8 +462,7 @@ void ClStorageBuilder::insn_call_open(
     storeOperand(operands[0], dst);
     storeOperand(operands[1], fnc);
 
-    d->bb->append(insn);
-    d->insn = insn;
+    d->openInsn(insn);
 }
 
 void ClStorageBuilder::insn_call_arg(int, const struct cl_operand *arg_src)
@@ -399,7 +474,7 @@ void ClStorageBuilder::insn_call_arg(int, const struct cl_operand *arg_src)
 }
 
 void ClStorageBuilder::insn_call_close() {
-    d->insn = 0;
+    d->closeInsn();
 }
 
 void ClStorageBuilder::insn_switch_open(
@@ -418,8 +493,7 @@ void ClStorageBuilder::insn_switch_open(
     // reserve for default
     insn->targets.push_back(static_cast<Block *>(0));
 
-    d->bb->append(insn);
-    d->insn = insn;
+    d->openInsn(insn);
 }
 
 void ClStorageBuilder::insn_switch_case(
@@ -472,5 +546,5 @@ void ClStorageBuilder::insn_switch_case(
 }
 
 void ClStorageBuilder::insn_switch_close() {
-    d->insn = 0;
+    d->closeInsn();
 }
