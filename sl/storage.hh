@@ -23,6 +23,7 @@
 #include "code_listener.h"
 #include "cl_private.hh"
 
+#include <map>
 #include <string>
 #include <vector>
 
@@ -248,10 +249,12 @@ class FncMap {
         Private *d;
 };
 
+typedef std::map<std::string, Fnc *> TFncNames;
 struct File {
     /* const */ std::string     name;
     VarDb                       vars;
     FncMap                      fncs;
+    TFncNames                   fncByName;
 
     File(const std::string &name_):
         name(name_)
@@ -291,6 +294,7 @@ class FileMap {
 struct Storage {
     TypeDb                      types;
     VarDb                       glVars;
+    TFncNames                   glFncByName;
     FileMap                     files;
     FncMap                      orphans;
 };

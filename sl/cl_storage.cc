@@ -297,6 +297,8 @@ struct ClStorageBuilder::Private {
     {
     }
 
+    void digOperandVar(const struct cl_operand *);
+    void digOperandCst(const struct cl_operand *);
     void digOperand(const struct cl_operand *);
     void openInsn(Insn *);
     void closeInsn();
@@ -316,6 +318,81 @@ void ClStorageBuilder::finalize() {
     this->run(d->stor);
 }
 
+void ClStorageBuilder::Private::digOperandVar(const struct cl_operand *op) {
+    int id = op->data.var.id;
+    enum cl_scope_e scope = op->scope;
+    switch (scope) {
+        case CL_SCOPE_GLOBAL:
+            stor.glVars[id] = Var(VAR_GL, op);
+            break;
+
+        case CL_SCOPE_STATIC:
+            file->vars[id] = Var(VAR_GL, op);
+            break;
+
+        case CL_SCOPE_FUNCTION: {
+            Var &var = fnc->vars[id];
+            EVar code = var.code;
+            switch (code) {
+                case VAR_VOID:
+                    var = Var(VAR_LC, op);
+                case VAR_FNC_ARG:
+                    break;
+                case VAR_LC:
+                    if (id == var.uid)
+                        break;
+                case VAR_GL:
+                    TRAP;
+            }
+            break;
+        }
+
+        case CL_SCOPE_BB:
+            TRAP;
+    }
+}
+
+void ClStorageBuilder::Private::digOperandCst(const struct cl_operand *op) {
+    const struct cl_cst &cst = op->data.cst;
+    if (CL_TYPE_FNC != cst.code)
+        // we are interested only in fncs for now
+        return;
+
+    // look for File where the fnc is defined/declared
+    const char *fileName = op->loc.file;
+    File *file = stor.files[fileName];
+
+    // check scope
+    enum cl_scope_e scope = op->scope;
+    switch (scope) {
+        case CL_SCOPE_GLOBAL:
+        case CL_SCOPE_STATIC:
+            break;
+        default:
+            // unexpected scope for fnc
+            TRAP;
+    }
+
+    // select appropriate index by scope
+    TFncNames &fncMap = (CL_SCOPE_GLOBAL == scope)
+        ? stor.glFncByName
+        : file->fncByName;
+
+    // look for precedent fnc name
+    const char *fncName = cst.data.cst_fnc.name;
+    Fnc* &ref = fncMap[fncName];
+
+    // look for fnc by UID
+    const int uid = cst.data.cst_fnc.uid;
+    Fnc *fnc = file->fncs[uid];
+    if (ref && ref != fnc)
+        // fnc redefinition
+        TRAP;
+
+    // index fnc name
+    ref = fnc;
+}
+
 void ClStorageBuilder::Private::digOperand(const struct cl_operand *op) {
     if (!op || CL_OPERAND_VOID == op->code)
         return;
@@ -330,27 +407,22 @@ void ClStorageBuilder::Private::digOperand(const struct cl_operand *op) {
         if (ac->code == CL_ACCESSOR_DEREF_ARRAY)
             readTypeTree(typeDb, ac->data.array.index->type);
 
-    // now we are interested only in CL_OPERAND_VAR
-    if (CL_OPERAND_VAR != op->code)
-        return;
-
-    // store variable's metadata
-    int id = op->data.var.id;
-    enum cl_scope_e scope = op->scope;
-    switch (scope) {
-        case CL_SCOPE_GLOBAL:
-            stor.glVars[id] = Var(VAR_GL, op);
+    enum cl_operand_e code = op->code;
+    switch (code) {
+        case CL_OPERAND_VAR:
+            // store variable's metadata
+            this->digOperandVar(op);
             break;
 
-        case CL_SCOPE_STATIC:
-            file->vars[id] = Var(VAR_GL, op);
+        case CL_OPERAND_CST:
+            this->digOperandCst(op);
             break;
 
-        case CL_SCOPE_FUNCTION:
-            fnc->vars[id] = Var(VAR_LC, op);
+        case CL_OPERAND_REG:
             break;
 
-        case CL_SCOPE_BB:
+        case CL_OPERAND_VOID:
+        case CL_OPERAND_ARG:
             TRAP;
     }
 }
@@ -406,10 +478,15 @@ void ClStorageBuilder::fnc_open(const struct cl_operand *op) {
     FileMap &fmap = d->stor.files;
     d->file = fmap[op->loc.file];
 
-    // store fnc definition
+    // set current fnc
     int uid = cst.data.cst_fnc.uid;
-    d->fnc = d->file->fncs[uid];
-    storeOperand(d->fnc->def, op);
+    Fnc *fnc = d->file->fncs[uid];
+    d->fnc = fnc;
+
+    // store fnc definition
+    struct cl_operand &def = fnc->def;
+    storeOperand(def, op);
+    d->digOperand(&def);
 
     // let it honestly crash if callback sequence is incorrect since this should
     // be already caught by CldCbSeqChk cl decorator
@@ -437,14 +514,15 @@ void ClStorageBuilder::bb_open(const char *bb_name) {
 
 void ClStorageBuilder::insn(const struct cl_insn *cli) {
     if (!d->bb)
-        // FIXME: this simply ignores jump to entry instruction
+        // FIXME: this simply ignores 'jump to entry' insn
         return;
 
     // serialize given insn
     Insn *insn = createInsn(cli, d->fnc->cfg);
     d->openInsn(insn);
 
-    // current insn actually already complete
+    // current insn is actually already complete
+    // in case of one-shot insn
     d->closeInsn();
 }
 
@@ -465,8 +543,7 @@ void ClStorageBuilder::insn_call_open(
     d->openInsn(insn);
 }
 
-void ClStorageBuilder::insn_call_arg(int, const struct cl_operand *arg_src)
-{
+void ClStorageBuilder::insn_call_arg(int, const struct cl_operand *arg_src) {
     TOperandList &operands = d->insn->operands;
     unsigned idx = operands.size();
     operands.resize(idx + 1);
@@ -497,7 +574,7 @@ void ClStorageBuilder::insn_switch_open(
 }
 
 void ClStorageBuilder::insn_switch_case(
-    const struct cl_location*loc,
+    const struct cl_location*,
     const struct cl_operand *val_lo,
     const struct cl_operand *val_hi,
     const char              *label)
@@ -507,11 +584,12 @@ void ClStorageBuilder::insn_switch_case(
     TTargetList &targets = insn.targets;
 
     if (CL_OPERAND_VOID == val_lo->code && CL_OPERAND_VOID == val_hi->code) {
-        // default
         const Block* &defTarget = targets[0];
         if (defTarget)
+            // attempt to redefine default label
             TRAP;
 
+        // store target for default
         targets[0] = cfg[label];
         return;
     }
