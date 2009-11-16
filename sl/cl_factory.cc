@@ -102,6 +102,7 @@ namespace {
 
         return true;
     }
+
     bool parseConfigString(TStringMap &dst, const char *config_string) {
         enum {
             S_INIT,

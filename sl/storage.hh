@@ -21,6 +21,8 @@
 #define H_GUARD_STORAGE_H
 
 #include "code_listener.h"
+
+// FIXME: do not include a private header to sort of public public interface
 #include "cl_private.hh"
 
 #include <map>

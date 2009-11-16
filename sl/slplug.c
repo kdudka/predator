@@ -425,9 +425,7 @@ static enum cl_scope_e get_decl_scope(tree t)
         }
     }
 
-    // FIXME: this assumption is pretty broken, but we don't need to distinguish
-    // between CL_SCOPE_GLOBAL and CL_SCOPE_STATIC yet
-    return (DECL_EXTERNAL(t))
+    return (TREE_PUBLIC(t))
         ? CL_SCOPE_GLOBAL
         : CL_SCOPE_STATIC;
 }
