@@ -38,6 +38,11 @@ struct LocationWriter {
     Location                        loc;
     Location                        last;
 
+    LocationWriter() {
+        loc.locLine = -1;
+        last.locLine = -1;
+    }
+
     LocationWriter(const Location &loc_, const Location *last_ = 0):
         loc(loc_),
         last(last_)

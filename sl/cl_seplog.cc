@@ -25,6 +25,28 @@
 
 #include <iostream>
 
+#include <boost/foreach.hpp>
+
+class SymExec {
+    public:
+        SymExec(CodeStorage::Storage &stor):
+            stor_(stor)
+        {
+        }
+
+        void exec(const CodeStorage::Fnc &);
+
+    protected:
+        void exec(const CodeStorage::Insn &);
+        void exec(const CodeStorage::Block &);
+
+    private:
+        CodeStorage::Storage        &stor_;
+        const CodeStorage::Fnc      *fnc_;
+        const CodeStorage::Block    *bb_;
+        LocationWriter              lw_;
+};
+
 class ClSepLog: public ClStorageBuilder {
     public:
         ClSepLog(const char *configString);
@@ -34,6 +56,48 @@ class ClSepLog: public ClStorageBuilder {
         virtual void run(CodeStorage::Storage &);
 };
 
+// /////////////////////////////////////////////////////////////////////////////
+// SymExec implementation
+void SymExec::exec(const CodeStorage::Insn &insn) {
+    using namespace CodeStorage;
+    lw_ = &insn.loc;
+
+    CL_MSG_STREAM(cl_debug, lw_ << "debug: executing insn...");
+}
+
+void SymExec::exec(const CodeStorage::Block &bb) {
+    using namespace CodeStorage;
+    bb_ = &bb;
+
+    CL_MSG_STREAM(cl_debug, lw_ << "debug: entering " << bb.name() << "...");
+    BOOST_FOREACH(const Insn *insn, bb) {
+        this->exec(*insn);
+    }
+}
+
+void SymExec::exec(const CodeStorage::Fnc &fnc) {
+    using namespace CodeStorage;
+    fnc_ = &fnc;
+    lw_ = &fnc.def.loc;
+
+    CL_MSG_STREAM(cl_debug, lw_ << "debug: entering "
+            << nameOf(fnc) << "()...");
+
+    CL_DEBUG("looking for entry block...");
+    const ControlFlow &cfg = fnc.cfg;
+    const Block *entry = cfg.entry();
+    if (!entry) {
+        CL_MSG_STREAM(cl_error, lw_ << "error: "
+                << nameOf(fnc) << ": "
+                << "entry block not found");
+        return;
+    }
+    this->exec(*entry);
+}
+
+
+// /////////////////////////////////////////////////////////////////////////////
+// ClSepLog implementation
 ClSepLog::ClSepLog(const char *) {
     // TODO
 }
@@ -43,9 +107,18 @@ ClSepLog::~ClSepLog() {
 }
 
 void ClSepLog::run(CodeStorage::Storage &stor) {
-    // TODO
-    std::cout << "Hello world!" << std::endl;
+    CL_DEBUG("looking for 'main()' at gl scope...");
+    CodeStorage::Fnc *main = stor.glFncByName["main"];
+    if (!main) {
+        CL_MSG_STREAM_INTERNAL(cl_error,
+                "error: main() not declared at global scope");
+        return;
+    }
+
+    SymExec se(stor);
+    se.exec(*main);
 }
+
 
 // /////////////////////////////////////////////////////////////////////////////
 // public interface, see cl_seplog.hh for more details

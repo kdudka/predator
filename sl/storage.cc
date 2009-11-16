@@ -268,6 +268,21 @@ const Block* ControlFlow::operator[](const char *name) const {
 
 
 // /////////////////////////////////////////////////////////////////////////////
+// Fnc implementation
+const char* nameOf(const Fnc &fnc) {
+    const struct cl_operand &op = fnc.def;
+    if (CL_OPERAND_CST != op.code)
+        TRAP;
+
+    const struct cl_cst &cst = op.data.cst;
+    if (CL_TYPE_FNC != cst.code)
+        TRAP;
+
+    return cst.data.cst_fnc.name;
+}
+
+
+// /////////////////////////////////////////////////////////////////////////////
 // FncMap implementation
 struct FncMap::Private {
     typedef std::map<int, unsigned> TMap;

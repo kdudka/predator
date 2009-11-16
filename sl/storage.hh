@@ -221,6 +221,7 @@ struct Fnc {
         def.code = CL_OPERAND_VOID;
     }
 };
+const char* nameOf(const Fnc &);
 
 class FncMap {
     private:
