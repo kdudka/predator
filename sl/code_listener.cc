@@ -246,7 +246,12 @@ static void cl_wrap_insn_switch_close(
 static void cl_wrap_destroy(struct cl_code_listener *self)
 {
     ICodeListener *cl = static_cast<ICodeListener *>(self->data);
-    cl->finalize();
+    try {
+        cl->finalize();
+    }
+    catch (...) {
+        CL_DIE("uncaught exception in ICodeListener::finalize()");
+    }
     delete cl;
     delete self;
 }
