@@ -36,12 +36,12 @@ class symbolic_state; // forward declaration of main class
 // object_id used as abstract address
 //  0 == none/empty/garbage,
 //  1 == nil,
-enum object_id { undefined_object=0, nil=1, MAX_OBJECT_ID=4000000000L }; // TODO UINT_MAX
+enum object_id { undefined_object=0, nil=1, MAX_OBJECT_ID=4000000000UL }; // TODO UINT_MAX
 
 // VALUES integer identification of all values
 // the same values are shared (should be for pointers)
 // TODO: more "undefined" values ? (if back-references needed)
-enum value_id  { undefined_value=0, nil_value=1, MAX_VALUE_ID=4000000000L };
+enum value_id  { undefined_value=0, nil_value=1, MAX_VALUE_ID=4000000000UL };
 
 // TYPES identification by index to global type description table
 // TODO: rename, use GCC/sparse enums

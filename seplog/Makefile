@@ -1,6 +1,7 @@
 CXXFLAGS = -g -Wall -std=c++98
 PROG     = symbolic-heap
 
+GITDIR=git/tools/seplog
 all: $(PROG)
 
 symbolic-heap: symbolic-heap.cc
@@ -16,5 +17,11 @@ pack: clean
 
 git-get:
 	cd git; git clone perchta:/home/git/tools
+
+git-push: ## git-get
+	cp Makefile symbolic-heap.cc TODO.txt $(GITDIR)
+	cd $(GITDIR); sed -i 's/  *$//' *.cc; git commit *; git push
+
 clean:
 	rm -f $(PROG) *.o
+
