@@ -45,16 +45,16 @@ enum value_id  { undefined_value=0, nil_value=1, MAX_VALUE_ID=4000000000L };
 
 // TYPES identification by index to global type description table
 // TODO: rename, use GCC/sparse enums
-enum type_id  { 
-    unknown_type=0, 
+enum type_id  {
+    unknown_type=0,
     // general types:
     STRUCT, ARRAY, FUNCTION, PTR,
     // all basic types:
     BASIC_TYPES, // next are basic types
     // void
-    VOID=BASIC_TYPES, 
+    VOID=BASIC_TYPES,
     // integer types
-    BOOL, CHAR, SHORT, INT, LONG, 
+    BOOL, CHAR, SHORT, INT, LONG,
     // floating point:
     FLOAT, DOUBLE,
     // void pointer for nil ?
@@ -62,7 +62,7 @@ enum type_id  {
     MAX_BASIC_TYPE_ID,          // this should be at the end of basic types
     // the space for user-defined types
     MAX_TYPE_ID=1000000L        // <<-- this should be last
-}; 
+};
 
 // FIELDS (members) of structure numerical identification
 // range: 0 .. number of fields in struct
@@ -200,7 +200,7 @@ struct type_table {
 //      return id;
 //  }
   Type & operator[] (type_id i) {
-      if(size_t(i)>=type.size()) 
+      if(size_t(i)>=type.size())
           throw "bad type_id";
       return type[i];
   }
@@ -494,16 +494,16 @@ class value_struct : public value {
     // TODO check, add const
     value_id get_field_value(field_id i) const {
 //        std::cout << "get_field_value(" << i << ") = " << ( (m.count(i)!=0)?m.at(i):0 ) << "\n";
-        if(i>nfields()) 
+        if(i>nfields())
             throw "value_struct::get_item_value:  bad field id";
         if(m.count(i)!=0)  return m.at(i);
         else               return undefined_value;
     }
     void update_field(field_id i, value_id id) {
 //        std::cout << "update_field(" << i << ", " << id << ")\n";
-        if(!_writable()) 
+        if(!_writable())
             throw "value_struct::update_item: shared val modified !!!";
-        if(i>nfields()) 
+        if(i>nfields())
             throw "value_struct::update_item:  bad field id";
         m[i] = id;
     }
@@ -1056,20 +1056,20 @@ class symbolic_state { // SH = (equations,predicates)
         p->cloned_from = num;   // dependency
         p->done = false;        // not executed yet
 #ifdef DEBUG_CLONE
-        std::cout << "@@symbolic_state"<< p->cloned_from << "::clone() ==> "<< p->num <<"\n"; 
+        std::cout << "@@symbolic_state"<< p->cloned_from << "::clone() ==> "<< p->num <<"\n";
 #endif
         return p;
     }
     // clone only selected set of objects [and all values used]
     symbolic_state * clone_partial(const std::list<object_id> &what) const {
 #ifdef DEBUG_CLONE
-        std::cout << "@@symbolic_state::clone_partial(set)\n"; 
+        std::cout << "@@symbolic_state::clone_partial(set)\n";
 #endif
         throw "clone_partial(): todo";
     }
     // create initial state
     static symbolic_state *create() {
-        std::cout << "@@symbolic_state::create()\n"; 
+        std::cout << "@@symbolic_state::create()\n";
         return new symbolic_state();
     }
     // TODO: add "derived from symbolic_state" link -- WARNING: merge problem = use set?
@@ -1467,7 +1467,7 @@ class symbolic_state { // SH = (equations,predicates)
     value_id val_find_unique_outer_struct_value(value_id f) {
         value_id out = f;
         value_id outer = undefined_value;
-        do { 
+        do {
             if (val(out)->used_by_values.size()!=1)   // not unique == shared
                 return undefined_value;
             outer = out;
@@ -1484,7 +1484,7 @@ class symbolic_state { // SH = (equations,predicates)
         if(pointers.size()!=1) // not single pointer only
             return undefined_object;
 
-        value_id svalue = var_get_value(o); 
+        value_id svalue = var_get_value(o);
         value_id fvalue = val_struct_field(svalue,next);
         if(val(fvalue)->refcount() != 1)        // not unique next pointer value
             return undefined_object;
@@ -1587,7 +1587,7 @@ class symbolic_state { // SH = (equations,predicates)
         } // for
         return r;
     }
-    
+
     // TODO: change interface
     // abstract sequences of structures of type st using nextfield f
     void sls_abstract(type_id stype, field_id f) {
@@ -1710,9 +1710,9 @@ class symbolic_state { // SH = (equations,predicates)
           }
       } else if (v->is_struct()) {
           const value_struct *s = val_s(x);
-          // for each field 
+          // for each field
           for(int i = 0; i<s->nfields(); ++i) {
-              value_id fv = s->get_field_value(static_cast<field_id>(i)); 
+              value_id fv = s->get_field_value(static_cast<field_id>(i));
               if(fv==undefined_value)
                   continue;
               val_COW(fv);
@@ -1772,7 +1772,7 @@ class symbolic_state { // SH = (equations,predicates)
             st = val_clone_new(st);
         }
 
-        // TODO: should be the same as old id 
+        // TODO: should be the same as old id
         id = val_get_field_value(st,field);
 
         // check if field value is defined or not
@@ -1782,8 +1782,8 @@ class symbolic_state { // SH = (equations,predicates)
         // update field
         value_struct *s = val_s(st);
         s->update_field(field,newval); // create if not defined already
-        
-//std::cout << "XXXstruct"<<newst <<" field:" << s->get_field_value(field) << " == " << newval << " XXX\n"; 
+
+//std::cout << "XXXstruct"<<newst <<" field:" << s->get_field_value(field) << " == " << newval << " XXX\n";
 
         val_refcount_up(newval,st);
         return st;
