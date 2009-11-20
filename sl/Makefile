@@ -53,7 +53,7 @@ GDB ?= gdb
 	dotplug dotsparse \
 	pphtml invpphtml
 
-all: slsparse slplug.so
+all: slplug.so
 
 CL_OBJS = cl_chain.o \
 	cl_dotgen.o \

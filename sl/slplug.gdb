@@ -1,6 +1,6 @@
 file ../gcc-install/bin/gcc
 set args -fplugin=./slplug.so -std=c99 -pedantic -Wall -W -g -O0 -fPIC -c \
-    -I.. -I../gcc -iquote. data/slplug.c \
+    -I.. -I../gcc -iquote. data/inv-ok-01.c \
     -fplugin-arg-slplug-verbose=5 \
     -fplugin-arg-slplug-dump-pp \
     -fplugin-arg-slplug-dump-types
