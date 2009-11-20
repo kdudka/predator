@@ -488,6 +488,7 @@ void ClStorageBuilder::fnc_open(const struct cl_operand *op) {
     d->fnc = fnc;
 
     // store fnc definition
+    fnc->file = d->file;
     struct cl_operand &def = fnc->def;
     storeOperand(def, op);
     d->digOperand(&def);

@@ -218,7 +218,9 @@ struct Fnc {
     VarDb                       vars;
     ControlFlow                 cfg;
 
-    Fnc() {
+    Fnc():
+        file(0)
+    {
         def.code = CL_OPERAND_VOID;
     }
 };
