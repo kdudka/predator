@@ -319,7 +319,9 @@ void ClStorageBuilder::finalize() {
 }
 
 void ClStorageBuilder::Private::digOperandVar(const struct cl_operand *op) {
-    int id = op->data.var.id;
+    int id = (CL_OPERAND_REG == op->code)
+        ? op->data.reg.id
+        : op->data.var.id;
     enum cl_scope_e scope = op->scope;
     switch (scope) {
         case CL_SCOPE_GLOBAL:
@@ -335,10 +337,14 @@ void ClStorageBuilder::Private::digOperandVar(const struct cl_operand *op) {
             EVar code = var.code;
             switch (code) {
                 case VAR_VOID:
-                    var = Var(VAR_LC, op);
+                    var = Var((CL_OPERAND_REG == op->code)
+                                  ? VAR_REG
+                                  : VAR_LC,
+                              op);
                 case VAR_FNC_ARG:
                     break;
                 case VAR_LC:
+                case VAR_REG:
                     if (id == var.uid)
                         break;
                 case VAR_GL:
@@ -409,6 +415,7 @@ void ClStorageBuilder::Private::digOperand(const struct cl_operand *op) {
 
     enum cl_operand_e code = op->code;
     switch (code) {
+        case CL_OPERAND_REG:
         case CL_OPERAND_VAR:
             // store variable's metadata
             this->digOperandVar(op);
@@ -416,9 +423,6 @@ void ClStorageBuilder::Private::digOperand(const struct cl_operand *op) {
 
         case CL_OPERAND_CST:
             this->digOperandCst(op);
-            break;
-
-        case CL_OPERAND_REG:
             break;
 
         case CL_OPERAND_VOID:

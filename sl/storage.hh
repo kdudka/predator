@@ -35,7 +35,8 @@ enum EVar {
     VAR_VOID,
     VAR_GL,
     VAR_LC,
-    VAR_FNC_ARG
+    VAR_FNC_ARG,
+    VAR_REG
 };
 
 struct Var {

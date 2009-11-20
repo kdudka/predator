@@ -88,8 +88,15 @@ Var::Var(EVar code_, const struct cl_operand *op):
     clt(op->type),
     uid(op->data.var.id)
 {
-    if (CL_OPERAND_VAR != op->code)
-        TRAP;
+    switch (op->code) {
+        case CL_OPERAND_VAR:
+        case CL_OPERAND_REG:
+            break;
+
+        default:
+            // unexpected operand type
+            TRAP;
+    }
 
     // check for eventual scope mismatch
     switch (code) {
@@ -101,6 +108,7 @@ Var::Var(EVar code_, const struct cl_operand *op):
 
         case VAR_LC:
         case VAR_FNC_ARG:
+        case VAR_REG:
             if (CL_SCOPE_FUNCTION == op->scope)
                 break;
             // fall through!
