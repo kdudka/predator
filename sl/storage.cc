@@ -291,74 +291,74 @@ const char* nameOf(const Fnc &fnc) {
 
 
 // /////////////////////////////////////////////////////////////////////////////
-// FncMap implementation
-struct FncMap::Private {
+// FncDb implementation
+struct FncDb::Private {
     typedef std::map<int, unsigned> TMap;
     TMap db;
 };
 
-FncMap::FncMap():
+FncDb::FncDb():
     d(new Private)
 {
 }
 
-FncMap::FncMap(const FncMap &ref):
+FncDb::FncDb(const FncDb &ref):
     d(new Private(*ref.d))
 {
 }
 
-FncMap::~FncMap() {
+FncDb::~FncDb() {
     delete d;
 }
 
-FncMap& FncMap::operator=(const FncMap &ref) {
+FncDb& FncDb::operator=(const FncDb &ref) {
     delete d;
     d = new Private(*ref.d);
     return *this;
 }
 
-Fnc*& FncMap::operator[](int uid) {
+Fnc*& FncDb::operator[](int uid) {
     Fnc* &ref = dbLookup(d->db, fncs_, uid, 0);
     if (!ref)
-        // XXX: the object will be NOT destroyed by FncMap
+        // XXX: the object will be NOT destroyed by FncDb
         ref = new Fnc;
 
     return ref;
 }
 
-const Fnc* FncMap::operator[](int uid) const {
+const Fnc* FncDb::operator[](int uid) const {
     return dbConstLookup(d->db, fncs_, uid);
 }
 
 
 // /////////////////////////////////////////////////////////////////////////////
-// FileMap implementation
-struct FileMap::Private {
+// FileDb implementation
+struct FileDb::Private {
     typedef std::map<std::string, unsigned> TMap;
     TMap db;
 };
 
-FileMap::FileMap():
+FileDb::FileDb():
     d(new Private)
 {
 }
 
-FileMap::FileMap(const FileMap &ref):
+FileDb::FileDb(const FileDb &ref):
     d(new Private(*ref.d))
 {
 }
 
-FileMap::~FileMap() {
+FileDb::~FileDb() {
     delete d;
 }
 
-FileMap& FileMap::operator=(const FileMap &ref) {
+FileDb& FileDb::operator=(const FileDb &ref) {
     delete d;
     d = new Private(*ref.d);
     return *this;
 }
 
-File*& FileMap::operator[](const char *name) {
+File*& FileDb::operator[](const char *name) {
     boost::filesystem::path filePath(name);
     filePath.normalize();
     const std::string &canonName = filePath.string();
@@ -371,7 +371,7 @@ File*& FileMap::operator[](const char *name) {
     return ref;
 }
 
-const File* FileMap::operator[](const char *name) const {
+const File* FileDb::operator[](const char *name) const {
     boost::filesystem::path filePath(name);
     filePath.normalize();
     return dbConstLookup(d->db, files_, filePath.string());

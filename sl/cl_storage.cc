@@ -267,7 +267,7 @@ namespace {
         delete fnc;
     }
 
-    void releaseFncMap(FncMap &fncMap) {
+    void releaseFncDb(FncDb &fncMap) {
         BOOST_FOREACH(const Fnc *fnc, fncMap) {
             destroyFnc(const_cast<Fnc *>(fnc));
         }
@@ -275,10 +275,10 @@ namespace {
 
     void releaseStorage(Storage &stor) {
         BOOST_FOREACH(const File *file, stor.files) {
-            releaseFncMap(const_cast<File *>(file)->fncs);
+            releaseFncDb(const_cast<File *>(file)->fncs);
             delete file;
         }
-        releaseFncMap(stor.orphans);
+        releaseFncDb(stor.orphans);
     }
 }
 
@@ -456,7 +456,7 @@ void ClStorageBuilder::Private::closeInsn() {
 }
 
 void ClStorageBuilder::file_open(const char *fileName) {
-    FileMap &fmap = d->stor.files;
+    FileDb &fmap = d->stor.files;
     d->file = fmap[fileName];
 }
 
@@ -479,7 +479,7 @@ void ClStorageBuilder::fnc_open(const struct cl_operand *op) {
         TRAP;
 
     // store file for fnc
-    FileMap &fmap = d->stor.files;
+    FileDb &fmap = d->stor.files;
     d->file = fmap[op->loc.file];
 
     // set current fnc
