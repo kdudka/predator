@@ -367,7 +367,7 @@ enum cl_operand_e {
     CL_OPERAND_VOID,
 
     /**
-     * constant operand, in the C language: literal
+     * constant operand, in the C language: @b literal
      * @note this has nothing to do with the C/C++ keyword 'const'
      */
     CL_OPERAND_CST,
@@ -386,7 +386,8 @@ enum cl_operand_e {
     CL_OPERAND_ARG,
 
     /**
-     * register. Addressed by register ID. Usually managed by compiler only.
+     * intermediate code register. Addressed by register ID. Usually managed by
+     * compiler only.
      */
     CL_OPERAND_REG
 };
@@ -458,42 +459,42 @@ enum cl_insn_e {
     CL_INSN_NOP,
 
     /**
-     * 'goto' instruction
+     * @b goto instruction
      */
     CL_INSN_JMP,
 
     /**
-     * if(...) instruction
+     * @b if (EXPR) instruction
      */
     CL_INSN_COND,
 
     /**
-     * 'return' instruction
+     * @b return instruction
      */
     CL_INSN_RET,
 
     /**
-     * this follows each call of a function declared with attribute 'noreturn'
+     * this follows each call of a function declared with attribute @b noreturn
      */
     CL_INSN_ABORT,
 
     /**
-     * unary (lhs + 1) operation
+     * @b unary (lhs + 1) operation
      */
     CL_INSN_UNOP,
 
     /**
-     * binary (lhs + 2) operation
+     * @b binary (lhs + 2) operation
      */
     CL_INSN_BINOP,
 
     /**
-     * @note this code is never emitted by cl_insn callback
+     * this code is never emitted by cl_insn callback
      */
     CL_INSN_CALL,
 
     /**
-     * @note this code is never emitted by cl_insn callback
+     * this code is never emitted by cl_insn callback
      */
     CL_INSN_SWITCH
 };
@@ -657,6 +658,7 @@ struct cl_code_listener {
     void *data;
 
     /**
+     * file open callback
      * @param self Pointer to cl_code_listener object.
      * @param file_name Zero-terminated string with file name being opened.
      */
@@ -665,12 +667,14 @@ struct cl_code_listener {
             const char                  *file_name);
 
     /**
+     * file close callback
      * @param self Pointer to cl_code_listener object.
      */
     void (*file_close)(
             struct cl_code_listener     *self);
 
     /**
+     * function definition initiation callback
      * @param self Pointer to cl_code_listener object.
      * @param fnc An operand used as function declaration (without args).
      */
@@ -679,6 +683,7 @@ struct cl_code_listener {
             const struct cl_operand     *fcn);
 
     /**
+     * function argument declaration callback
      * @param self Pointer to cl_code_listener object.
      * @param arg_id Position of the argument being specified.
      * @param arg_src Function argument given as operand.
@@ -689,12 +694,14 @@ struct cl_code_listener {
             const struct cl_operand     *arg_src);
 
     /**
+     * function definition complete callback
      * @param self Pointer to cl_code_listener object.
      */
     void (*fnc_close)(
             struct cl_code_listener     *self);
 
     /**
+     * basic block initiation callback
      * @param self Pointer to cl_code_listener object.
      * @param label Zero-terminated string containing label (and thus BB) name
      */
@@ -703,6 +710,7 @@ struct cl_code_listener {
             const char                  *label);
 
     /**
+     * one-shot instruction callback
      * @param self Pointer to cl_code_listener object.
      * @param insn Instruction definition.
      */
@@ -711,6 +719,7 @@ struct cl_code_listener {
             const struct cl_insn        *insn);
 
     /**
+     * CL_INSN_CALL initiation callback
      * @param self Pointer to cl_code_listener object.
      * @param loc location of the function definition
      * @param dst An operand taking fnc's return value, may be CL_OPERAND_VOID
@@ -723,6 +732,7 @@ struct cl_code_listener {
             const struct cl_operand     *fnc);
 
     /**
+     * CL_INSN_CALL per argument callback
      * @param self Pointer to cl_code_listener object.
      * @param arg_id Position of the argument being specified.
      * @param arg_src Call argument given as operand.
@@ -733,12 +743,14 @@ struct cl_code_listener {
             const struct cl_operand     *arg_src);
 
     /**
+     * CL_INSN_CALL complete callback
      * @param self Pointer to cl_code_listener object.
      */
     void (*insn_call_close)(
             struct cl_code_listener     *self);
 
     /**
+     * CL_INSN_SWITCH initiation callback
      * @param self Pointer to cl_code_listener object.
      * @param loc location of the function definition
      * @param src An operand used as switch source.
@@ -749,6 +761,7 @@ struct cl_code_listener {
             const struct cl_operand     *src);
 
     /**
+     * CL_INSN_SWITCH per case callback
      * @param self Pointer to cl_code_listener object.
      * @param loc location of the function definition
      * @param val_lo Begin of the range for given case.
@@ -763,12 +776,14 @@ struct cl_code_listener {
             const char                  *label);
 
     /**
+     * CL_INSN_SWITCH complete callback
      * @param self Pointer to cl_code_listener object.
      */
     void (*insn_switch_close)(
             struct cl_code_listener     *self);
 
     /**
+     * destroy code listener object
      * @param self Pointer to cl_code_listener object.
      */
     void (*destroy)(

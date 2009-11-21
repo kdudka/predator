@@ -202,7 +202,7 @@ typedef STD_VECTOR(const Block *) TTargetList;
  */
 struct Insn {
     /**
-     * type of instruction, see cl_insn_e documentation
+     * type of instruction, see #cl_insn_e documentation
      * @note now there can be also CL_INSN_CALL and CL_INSN_SWITCH
      */
     enum cl_insn_e              code;
@@ -211,7 +211,7 @@ struct Insn {
      * some extra instructions partitioning, for now used by CL_INSN_UNOP and
      * CL_INSN_BINOP
      * @note this suffers from a little type info lost since it represent both
-     * enumeral types cl_unop_e and cl_binop_e by an integer.
+     * enumeral types #cl_unop_e and #cl_binop_e by an integer.
      */
     int                         subCode;
 
