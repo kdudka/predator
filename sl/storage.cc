@@ -19,6 +19,8 @@
 
 #include "storage.hh"
 
+#include "cl_private.hh"
+
 #include <map>
 #include <stack>
 
@@ -73,6 +75,21 @@ namespace {
 
 // /////////////////////////////////////////////////////////////////////////////
 // Var implementation
+namespace {
+    // TODO: double check this
+    const struct cl_type* digVarType(const struct cl_operand *op) {
+        const struct cl_type *clt = op->type;
+
+        const struct cl_accessor *ac = op->accessor;
+        while (ac) {
+            clt = ac->type;
+            ac = ac->next;
+        }
+
+        return clt;
+    }
+}
+
 Var::Var():
     code(VAR_VOID)
 {
@@ -85,11 +102,14 @@ Var::~Var() {
 Var::Var(EVar code_, const struct cl_operand *op):
     code(code_),
     loc(op->loc),
-    clt(op->type),
     uid(op->data.var.id)
 {
     switch (op->code) {
         case CL_OPERAND_VAR:
+            if (op->data.var.name)
+                name = op->data.var.name;
+            // fall through!
+
         case CL_OPERAND_REG:
             break;
 
@@ -97,6 +117,11 @@ Var::Var(EVar code_, const struct cl_operand *op):
             // unexpected operand type
             TRAP;
     }
+
+    // dig type of variable
+    clt = digVarType(op);
+    if (!clt)
+        TRAP;
 
     // check for eventual scope mismatch
     switch (code) {
@@ -235,6 +260,57 @@ const struct cl_type* TypeDb::operator[](int uid) const {
 
 
 // /////////////////////////////////////////////////////////////////////////////
+// Block implementation
+namespace {
+    // TODO: move the implementation to code_listener.h
+    bool isTermInsn(enum cl_insn_e code) {
+        switch (code) {
+            case CL_INSN_JMP:
+            case CL_INSN_COND:
+            case CL_INSN_RET:
+            case CL_INSN_ABORT:
+            case CL_INSN_SWITCH:
+                return true;
+
+            case CL_INSN_NOP:
+            case CL_INSN_UNOP:
+            case CL_INSN_BINOP:
+            case CL_INSN_CALL:
+            default:
+                return false;
+
+        }
+    }
+}
+
+void Block::append(const Insn *insn) {
+    if (!insns_.empty()) {
+        // check insn sequence
+        const Insn *last = insns_[insns_.size() - 1];
+        if (isTermInsn(last->code))
+            // invalid insn sequence
+            TRAP;
+    }
+
+    insns_.push_back(insn);
+}
+
+const TTargetList& Block::targets() const {
+    if (insns_.empty())
+        // Oops, we are asked for targets without any insn inside. We
+        // can still return a reference to an empty vector in such
+        // cases, but is it actually useful?
+        TRAP;
+
+    const Insn *last = insns_[insns_.size() - 1];
+    if (!isTermInsn(last->code))
+        // no chance to get targets without any terminal insn
+        TRAP;
+
+    return last->targets;
+}
+
+// /////////////////////////////////////////////////////////////////////////////
 // ControlFlow implementation
 struct ControlFlow::Private {
     typedef std::map<std::string, unsigned> TMap;
@@ -259,6 +335,13 @@ ControlFlow& ControlFlow::operator=(const ControlFlow &ref) {
     delete d;
     d = new Private(*ref.d);
     return *this;
+}
+
+const Block* ControlFlow::entry() const {
+    if (bbs_.empty())
+        TRAP;
+
+    return bbs_[0];
 }
 
 Block*& ControlFlow::operator[](const char *name) {

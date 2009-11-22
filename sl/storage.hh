@@ -22,9 +22,6 @@
 
 #include "code_listener.h"
 
-// FIXME: do not include a private header to sort of public public interface
-#include "cl_private.hh"
-
 #include <map>
 #include <string>
 #include <vector>
@@ -53,8 +50,6 @@ enum EVar {
 
 /**
  * high-level variable representation
- * @todo Oops, we forgot to store name of the variable!!!
- * @todo Read the real type of variable, not type of operand!!!
  */
 struct Var {
     EVar                        code;   ///< high-level type of variable
@@ -66,6 +61,11 @@ struct Var {
      * @attention not guaranteed to be unique beyond the scope of variable
      */
     int                         uid;
+
+    /**
+     * name of the variable, empty string for anonymous variables, e.g. VAR_REG
+     */
+    std::string                 name;
 
     /**
      * dummy constructor
@@ -327,28 +327,13 @@ class Block {
          * append a given instruction to and of the block
          * @param insn Instruction to append.
          * @note Given objects are not cloned nor destroyed!
-         * @todo Carve out the implementation from a public header.
-         * @todo Check basic block consistency (term vs. non-term instruction)
-         * on each append.
          */
-        void append(const Insn *insn) {
-            insns_.push_back(insn);
-        }
+        void append(const Insn *insn);
 
         /**
          * return list of all directly successor basic blocks
-         * @todo Carve out the implementation from a public header.
          */
-        const TTargetList& targets() const {
-            if (insns_.empty())
-                // Oops, we are asked for targets without no insns inside. We
-                // can still return a reference to an empty vector in such
-                // cases, but is it actually useful?
-                TRAP;
-
-            const Insn *last = insns_[insns_.size() - 1];
-            return last->targets;
-        }
+        const TTargetList& targets() const;
 
         /**
          * return STL-like iterator to go through all the instructions inside
@@ -401,11 +386,8 @@ class ControlFlow {
 
         /**
          * return entry basic block
-         * @todo Carve out the implementation from a public header.
          */
-        const Block *entry() const {
-            return bbs_[0];
-        }
+        const Block *entry() const;
 
         /**
          * look for a basic block by name, create one if not found
