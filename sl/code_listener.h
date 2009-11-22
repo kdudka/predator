@@ -27,6 +27,11 @@ extern "C" {
 #endif
 
 /**
+ * @file code_listener.h
+ * @b code @b listener interface - useful to write compiler plug-ins, etc.
+ */
+
+/**
  * type of function writing a message
  * @param msg zero-terminated string to write
  */

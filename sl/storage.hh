@@ -33,7 +33,12 @@
 #endif
 
 /**
- * An easy to use model of storage for serialised code_listener objects.
+ * @file storage.hh
+ * an easy to use model of storage for serialised code_listener objects
+ */
+
+/**
+ * an easy to use model of storage for serialised code_listener objects
  */
 namespace CodeStorage {
 
@@ -54,6 +59,11 @@ enum EVar {
 struct Var {
     EVar                        code;   ///< high-level type of variable
     struct cl_location          loc;    ///< location of its declaration
+
+    /**
+     * type of the variable
+     * @note This often differs from type of the operand given to constructor!
+     */
     const struct cl_type        *clt;   ///< type of variable
 
     /**
@@ -63,7 +73,7 @@ struct Var {
     int                         uid;
 
     /**
-     * name of the variable, empty string for anonymous variables, e.g. VAR_REG
+     * name of the variable, empty string for anonymous variables, e.g.\ VAR_REG
      */
     std::string                 name;
 

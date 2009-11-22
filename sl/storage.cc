@@ -278,7 +278,6 @@ namespace {
             case CL_INSN_CALL:
             default:
                 return false;
-
         }
     }
 }
@@ -459,6 +458,5 @@ const File* FileDb::operator[](const char *name) const {
     filePath.normalize();
     return dbConstLookup(d->db, files_, filePath.string());
 }
-
 
 } // namespace CodeStorage

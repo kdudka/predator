@@ -28,6 +28,11 @@ extern "C" {
 #endif
 
 /**
+ * @file hash_table.h
+ * generic hash table implementation written in pure C
+ */
+
+/**
  * type used for hash value
  *
  * It is guaranteed to be an integral (signed or unsigned) type.
