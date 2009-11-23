@@ -76,17 +76,11 @@ namespace {
 // /////////////////////////////////////////////////////////////////////////////
 // Var implementation
 namespace {
-    // TODO: double check this
     const struct cl_type* digVarType(const struct cl_operand *op) {
-        const struct cl_type *clt = op->type;
-
         const struct cl_accessor *ac = op->accessor;
-        while (ac) {
-            clt = ac->type;
-            ac = ac->next;
-        }
-
-        return clt;
+        return (ac)
+            ? ac->type
+            : op->type;
     }
 }
 

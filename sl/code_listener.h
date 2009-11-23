@@ -307,7 +307,7 @@ struct cl_accessor {
              * in the C language: array[index]
              */
             struct cl_operand           *index;
-        } array;
+        } array; /**< valid only for @b CL_ACCESSOR_DEREF_ARRAY */
 
         /* CL_ACCESSOR_ITEM */
         struct {
@@ -315,7 +315,7 @@ struct cl_accessor {
              * record's item ought to be accessed, enumeration starts with zero
              */
             int                         id;
-        } item;
+        } item; /**< valid only for @b CL_ACCESSOR_ITEM */
     } data;
 };
 
@@ -348,17 +348,17 @@ struct cl_cst {
              * unique ID of function's declaration
              */
             int                         uid;
-        } cst_fnc;
+        } cst_fnc; /**< valid only for @b CL_TYPE_FNC */
 
         /* CL_TYPE_INT */
         struct {
             int                         value;
-        } cst_int;
+        } cst_int; /**< valid only for @b CL_TYPE_INT */
 
         /* CL_TYPE_STRING */
         struct {
             const char                  *value;
-        } cst_string;
+        } cst_string; /**< valid only for @b CL_TYPE_STRING */
     } data;
 };
 
@@ -437,20 +437,21 @@ struct cl_operand {
             int                         id;
             const char                  *name;
             /* TODO: is_extern? */
-        } var;
+        } var; /**< valid only for @b CL_OPERAND_VAR */
 
         /* CL_OPERAND_ARG */
         struct {
             int                         id;
-        } arg;
+        } arg; /**< valid only for @b CL_OPERAND_ARG */
 
         /* CL_OPERAND_REG */
         struct {
             int                         id;
-        } reg;
+        } reg; /**< valid only for @b CL_OPERAND_REG */
 
         /* CL_OPERAND_CST */
         struct cl_cst                   cst;
+        /**< valid only for @b CL_OPERAND_CST */
     } data;
 };
 
@@ -579,26 +580,26 @@ struct cl_insn {
         /* CL_INSN_JMP */
         struct {
             const char                  *label;
-        } insn_jmp;
+        } insn_jmp; /**< valid only for @b CL_INSN_JMP */
 
         /* CL_INSN_COND */
         struct {
             const struct cl_operand     *src;
             const char                  *then_label;
             const char                  *else_label;
-        } insn_cond;
+        } insn_cond; /**< valid only for @b CL_INSN_COND */
 
         /* CL_INSN_RET */
         struct {
             const struct cl_operand     *src;
-        } insn_ret;
+        } insn_ret; /**< valid only for @b CL_INSN_RET */
 
         /* CL_INSN_UNOP */
         struct {
             enum cl_unop_e              code;
             const struct cl_operand     *dst;
             const struct cl_operand     *src;
-        } insn_unop;
+        } insn_unop; /**< valid only for @b CL_INSN_UNOP */
 
         /* CL_INSN_BINOP */
         struct {
@@ -606,7 +607,7 @@ struct cl_insn {
             const struct cl_operand     *dst;
             const struct cl_operand     *src1;
             const struct cl_operand     *src2;
-        } insn_binop;
+        } insn_binop; /**< valid only for @b CL_INSN_BINOP */
 
     } data;
 };
