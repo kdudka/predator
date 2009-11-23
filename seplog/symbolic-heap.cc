@@ -19,12 +19,13 @@
 #include <iostream> // cout
 #include <iomanip>  // setw()
 #include <sstream>  // format
-#include <cassert>  // assert
 #include <algorithm>  // find
-#define ASSERT(c) assert(c)
 
+#include <cassert>  // assert
+#define ASSERT(c) assert(c)  // macro
 
 //#define DEBUG_CLONE
+#define DEBUG_ASSIGN
 
 /// separation logic test namespace
 namespace SepLog {
@@ -37,11 +38,31 @@ class symbolic_state; // forward declaration of main class
 //  0 == none/empty/garbage,
 //  1 == nil,
 enum object_id { undefined_object=0, nil=1, MAX_OBJECT_ID=4000000000UL }; // TODO UINT_MAX
+std::ostream &operator<< (std::ostream &s, object_id o) {
+    if(o==undefined_object)
+        s << "*undefined*";
+    else if(o==nil)
+        s << "nil";
+    else
+        s << "obj#" << static_cast<unsigned>(o);
+    return s;
+}
+
 
 // VALUES integer identification of all values
 // the same values are shared (should be for pointers)
 // TODO: more "undefined" values ? (if back-references needed)
 enum value_id  { undefined_value=0, nil_value=1, MAX_VALUE_ID=4000000000UL };
+// output operator
+std::ostream &operator<< (std::ostream &s, value_id v) {
+    if(v==undefined_value)
+        s << "*UNDEFINED*";
+    else if(v==nil_value)
+        s << "NIL";
+    else
+        s << "VAL#" << static_cast<unsigned>(v);
+    return s;
+}
 
 // TYPES identification by index to global type description table
 // TODO: rename, use GCC/sparse enums
@@ -52,13 +73,13 @@ enum type_id  {
     // all basic types:
     BASIC_TYPES, // next are basic types
     // void
-    VOID=BASIC_TYPES,
+    VOID_T=BASIC_TYPES,
     // integer types
-    BOOL, CHAR, SHORT, INT, LONG,
+    BOOL_T, CHAR_T, SHORT_T, INT_T, LONG_T,
     // floating point:
-    FLOAT, DOUBLE,
+    FLOAT_T, DOUBLE_T,
     // void pointer for nil ?
-    TYPE_VOID_PTR,
+    VOID_PTR_T,
     MAX_BASIC_TYPE_ID,          // this should be at the end of basic types
     // the space for user-defined types
     MAX_TYPE_ID=1000000L        // <<-- this should be last
@@ -170,14 +191,14 @@ struct type_table {
   // constructor initializes basic types
   type_table(): type(MAX_BASIC_TYPE_ID) {
     // initialize basic types
-    type[VOID]   = Type(VOID,"void");
-    type[CHAR]   = Type(CHAR,"char");
-    type[SHORT]  = Type(SHORT,"short");
-    type[INT]    = Type(INT,"int");
-    type[LONG]   = Type(LONG,"long");
-    type[FLOAT]  = Type(FLOAT,"float");
-    type[DOUBLE] = Type(DOUBLE,"double");
-    type[TYPE_VOID_PTR] = Type(VOID);
+    type[VOID_T]   = Type(VOID_T,"void");
+    type[CHAR_T]   = Type(CHAR_T,"char");
+    type[SHORT_T]  = Type(SHORT_T,"short");
+    type[INT_T]    = Type(INT_T,"int");
+    type[LONG_T]   = Type(LONG_T,"long");
+    type[FLOAT_T]  = Type(FLOAT_T,"float");
+    type[DOUBLE_T] = Type(DOUBLE_T,"double");
+    type[VOID_PTR_T] = Type(VOID_T);
   }
   // add pointer
   type_id add_pointer_to(type_id t) {
@@ -256,6 +277,11 @@ template<typename Tid, typename T>
 class so_container {
     // private abstract pointer, used only in so_container template
     class a_ptr {
+        // our friends:
+        template<typename _Ti, typename _Tx> friend class so_container;
+        template<typename _Ti, typename _Tx> friend class std::pair;
+        template<typename _Ti, typename _Tx> friend class std::map;
+
         T *p;   // pointer to linked target object
         a_ptr();                                // delete this operation
         a_ptr &operator= (const a_ptr &o);      // delete this operation
@@ -279,12 +305,7 @@ class so_container {
       public:
         operator T *()                  { return p; }
         operator const T *() const      { return p; }
-
-        // our friends:
-        template<typename _Ti, typename _Tx> friend class so_container;
-        template<typename _Ti, typename _Tx> friend class std::pair;
-        template<typename _Ti, typename _Tx> friend class std::map;
-    };
+    }; // a_ptr
     typedef Tid id_t;  // identification type
   private:
     typedef std::map< id_t, a_ptr > container_t;
@@ -301,9 +322,9 @@ class so_container {
     const_iterator      end() const     { return m.end(); }
 
     // default-ctr: create empty container
-    so_container()      { std::cout << "so_container()\n"; }
+    so_container()      { /*std::cout << "so_container()\n";*/ }
     // destructor: delete all links
-    ~so_container()     { std::cout << "~so_container()\n"; }
+    ~so_container()     { /*std::cout << "~so_container()\n";*/ }
 
     // access
     T *operator[] (id_t i)  {
@@ -316,6 +337,9 @@ class so_container {
         //std::cout << "so_container::operator[](" << i << ") const\n";
         return m.at(i); // throws if not found
     }
+
+    // exist
+    bool exist(id_t i) const { return m.count(i)!=0; }
 
     // add new object, externel id allocation policy
     void create(id_t id, T *p) {
@@ -350,8 +374,6 @@ class so_container {
 
     // number of
     size_t size() const { return m.size(); }
-    // exist
-    bool exist(id_t i) const { return m.count(i)!=0; }
 }; // so_container
 
 
@@ -375,9 +397,10 @@ class so_container {
 //
 /// class value = base of value hierarchy
 class value {
-    _Refcount _refcount;
+    //friend class symbolic_state;
     template<typename _Tid, typename _T> friend class so_container;
 
+    _Refcount _refcount;
     // cloning implementation
     virtual value *_clone() const = 0;  // exact copy
     // cloning interface (used for COW in container)
@@ -389,6 +412,7 @@ class value {
         // done by _Refcount copy ctr:  new_copy->_refcount.reset();
         return new_copy;
     }
+  public:
     value *clone(value_id id) const {
 #ifdef DEBUG_CLONE
         std::cout << "@clone_value" << this_value << "->" << id << "\n";
@@ -404,9 +428,11 @@ class value {
     // not exact type of PTR value (problem with aliasing)
     // target of PTR is defined by VARIABLE type not address (VALUE)
     // TODO: add more abstract values
-    enum value_type { UNKNOWN, PTR, STRUCT, ARRAY, INT, DBL, INTEXPR, DBLEXPR } _type;
-    private:
-    // two-level refcounting:
+    enum value_kind { UNKNOWN, PTR, STRUCT, ARRAY, SCALAR, EXPRESSION } _kind;
+    type_id val_type; // type of value
+
+  public:
+    // two sets:
     //  a) which variables/segments have the value
     typedef std::set<object_id>                         object_id_container_t;
     typedef object_id_container_t::iterator             used_by_objects_iterator;
@@ -417,26 +443,31 @@ class value {
     typedef std::set<value_id>                          value_id_container_t;
     typedef object_id_container_t::iterator             used_by_values_iterator;
     typedef object_id_container_t::const_iterator       used_by_values_const_iterator;
-    //  b) how many structured values use the value
+    //  b) which structured values use the value as a part
     value_id_container_t used_by_values;       // references to enclosing structured values
     // each _defined_ value has handle, undefined parts of struct/array do not exist
 
   protected:
-    value(value_id h, value_type t=UNKNOWN): this_value(h), _type(t) {}
-    virtual ~value() {
-        // TODO: check if clean
-        ASSERT(used_by_objects.empty());
-        ASSERT(used_by_values.empty());
-        if(refcount()!=0) std::cerr << "refcount problem\n"; // can not throw in destructor
+    value(value_id h, value_kind t, type_id tid): 
+        this_value(h), 
+        _kind(t),
+        val_type(tid)
+    {
     }
 
-  private:
-    friend class symbolic_state;
-    // creation
-    static value *create_ptr(value_id h);
-    static value *create_struct(value_id h, type_id t); // TODO change 2nd param
-    static value *create_int(value_id h,long v);
-    // TODO: double, bool?, array
+
+  public:
+    //TODO: should be used only in: void symbolic_state::val_delete(value_id x);
+    //friend void symbolic_state::val_delete(value_id h);
+    // then remove ASSERTS
+    virtual ~value() {
+        ASSERT(used_by_objects.empty());
+        ASSERT(used_by_values.empty());
+        if(refcount()!=0) 
+            std::cerr << "refcount problem\n"; // can not throw in destructor
+    }
+
+  public:
 
     // reverse link to var
     void link_object(object_id v)       { ASSERT(_writable()); used_by_objects.insert(v); }
@@ -445,23 +476,30 @@ class value {
     void link_value(value_id h)         { ASSERT(_writable()); used_by_values.insert(h); }
     void unlink_value(value_id h)       { ASSERT(_writable()); used_by_values.erase(h); }
 
-  public:
     virtual void print() const = 0;
-    bool is_pointer() const     { return _type==PTR; }
-    bool is_struct() const      { return _type==STRUCT; }
-    bool is_array() const       { return _type==ARRAY; }
-    bool is_scalar() const      { return !(is_struct()||is_array()); }
-//    value_type get_type() const   { return _type; }
 
-    size_t refcount() const { return used_by_objects.size()+used_by_values.size(); }
-    bool unused() const { return refcount()==0; }
+    bool is_pointer()   const   { return _kind==PTR; }
+    bool is_struct()    const   { return _kind==STRUCT; }
+    bool is_array()     const   { return _kind==ARRAY; }
+    bool is_scalar()    const   { return !(is_struct()||is_array()); }
 
-    // inter symbolic_state sharing
-// TODO: better names
-    unsigned _symbolic_state_refcount() const { return _refcount.get(); }
-    bool _is_shared() const { return _refcount.get() > 1; }
-    bool _writable() const { return !_is_shared(); }
+    type_id get_type()  const   { return val_type; }
 
+private:
+    size_t refcount()   const   { return used_by_objects.size()+used_by_values.size(); }
+public:
+    bool is_used()      const   { return refcount()!=0; }
+    bool is_unique()    const   { return refcount()==1; }
+    bool is_shared()    const   { return refcount()>=2; }
+
+    // inter symbolic_state sharing // TODO: better names
+private:
+public:
+    unsigned _symbolic_state_refcount() const   { return _refcount.get(); }
+    bool _is_used()                     const   { return _refcount.get() != 0; }
+    bool _is_unique()                   const   { return _refcount.get() == 1; }
+    bool _is_shared()                   const   { return _refcount.get() >= 2; }
+    bool _writable()                    const   { return !_is_shared(); }
 }; // class value
 
 /////////////////////////////////////////////////////////////////////////////
@@ -469,46 +507,48 @@ class value {
 // contains value_id references to fields with known value
 // TODO: add iterators over fields
 class value_struct : public value {
-    type_id type;
     typedef std::map<field_id,value_id> field_container_t;
     field_container_t m; // maps to member values   TODO: use vector?
     unsigned number_of_fields;
+    value *_clone() const { return new value_struct(*this); } // use default copy-ctr
   public:
-    field_id nfields() const { return static_cast<field_id>(number_of_fields); }
-    typedef field_container_t::iterator iterator;
-    typedef field_container_t::const_iterator const_iterator;
-  private:
-    friend class value;
     value_struct(value_id h, type_id t):
-         value(h,STRUCT),
-         type(t),
-         number_of_fields(types[t].struct_number_of_fields())
+         value(h,STRUCT,t),
+         number_of_fields(types[t].struct_number_of_fields()) // TODO
     { }
     ~value_struct() {
         // TODO: check if unregistered OR unregister all members?
+        //  NOT: it will need clone right before delete
+        // TODO: do it only in debug version ?
     }
-    // use default copy-ctr
-    value *_clone() const { return new value_struct(*this); }
-  public:
-    // TODO: add iterator for fields
-    // TODO check, add const
+
+    // get number of fields  TODO:from type
+    field_id nfields() const { return static_cast<field_id>(number_of_fields); }
+
+    // iterator for fields
+    typedef field_container_t::iterator iterator;
+    typedef field_container_t::const_iterator const_iterator;
+
+    // field access
     value_id get_field_value(field_id i) const {
 //        std::cout << "get_field_value(" << i << ") = " << ( (m.count(i)!=0)?m.at(i):0 ) << "\n";
         if(i>nfields())
-            throw "value_struct::get_item_value:  bad field id";
+            throw "value_struct::get_field_value:  bad field id";
         if(m.count(i)!=0)  return m.at(i);
         else               return undefined_value;
     }
+
     void update_field(field_id i, value_id id) {
 //        std::cout << "update_field(" << i << ", " << id << ")\n";
         if(!_writable())
-            throw "value_struct::update_item: shared val modified !!!";
-        if(i>nfields())
-            throw "value_struct::update_item:  bad field id";
+            throw "value_struct::update_field: shared val modified !!!";
+        if(i>=nfields())
+            throw "value_struct::update_field:  bad field id";
         m[i] = id;
     }
 
     // return all fields containing given value
+    // TODO: needs update - backlink from nested values is single for 1..N fields
     std::vector<field_id> search_fields(value_id id) const {
         std::vector<field_id> r;
         for(field_container_t::const_iterator i=m.begin(); i != m.end(); ++i) {
@@ -522,19 +562,18 @@ class value_struct : public value {
 
     // print value of struct
     void print() const {
-        std::cout << "val#" << this_value << ": ";
-        std::cout << "struct{ " << number_of_fields << " fields: " ;
+        std::cout << this_value;
+        std::cout << "=struct{";
+        std::cout << " type=" << get_type();
+        std::cout << ", " << number_of_fields << " fields: " ;
         for(unsigned i=0; i<number_of_fields; ++i) {
             std::cout << "[" << i << "]=";
             value_id id = get_field_value(static_cast<field_id>(i));
-            if(id==undefined_value)
-                std::cout << "*undefined* ";
-            else
-                std::cout << "val#" << id << " ";
+            std::cout << id << " ";
         }
         std::cout << "}";
     } // print
-};
+}; // value_struct
 
 /////////////////////////////////////////////////////////////////////////////
 // value of the pointer == address
@@ -542,25 +581,28 @@ class value_struct : public value {
 // no type of target stored -- allows reinterpret_cast (needs CHECK)
 class value_address : public value {
     object_id addr;       // points to variable or any segment
-  private:  // only friends can create values
-    friend class value;
-    value_address(value_id h): value(h,PTR), addr(undefined_object) { }
-    ~value_address() {
-        // TODO: check if unregistered OR unregister here?
-    }
     // use default copy-ctr, which does refcount reset
     value *_clone() const { return new value_address(*this); }
   public:
-    object_id points_to() const  { return addr; }
-    void set_target(object_id o) { addr=o; }
-    void print() const {
-        std::cout << "val#" << this_value << ": ";
-        if(this_value == 1)
-            std::cout << "nil";
-        else
-            std::cout << "pointer_to_obj#" << addr ;
+    value_address(value_id h): value(h,PTR,unknown_type), addr(undefined_object) { }
+    ~value_address() {
+        // TODO: check if unregistered OR unregister here?
+        //  NOT: it will need clone right before delete
+        // TODO: do it only in debug version ?
     }
-};
+    object_id points_to() const  { return addr; }
+    void set_target(object_id o) { 
+        if(!_writable())
+            throw "value_address::set_target(o): shared val modified !!!";
+        addr=o; 
+    }
+
+    void print() const {
+        std::cout << this_value;
+        if(this_value > nil_value)
+            std::cout << "->" << addr ;
+    }
+}; // value_address
 
 /////////////////////////////////////////////////////////////////////////////
 // integer value
@@ -569,28 +611,23 @@ class value_address : public value {
 //   b) what to do if EQ(a,b) and interval values
 // TODO: use intervals AND predicates
 class value_int : public value {
-    long v;
-  private:  // only friends can create values
     friend class value;
-    value_int(value_id h, long va): value(h,INT), v(va) { }
-    ~value_int() {
-        // TODO: check if unregistered OR unregister here?
-    }
-    // use default copy-ctr
+    friend class symbolic_state;
+
+    const long v;
     value *_clone() const { return new value_int(*this); }
-  public:
+  public: 
+    // constant, set by ctr
+    value_int(value_id h, long va): value(h,SCALAR,INT_T), v(va) { }
+    ~value_int() { }
+    // use default copy-ctr
     int val() const { return v; }
     void print() const {
-        std::cout << "val#" << this_value << ": ";
-        std::cout << "int(" << v << ")" ;
+        std::cout << this_value;
+        if(this_value > nil_value)
+            std::cout << "=int(" << v << ")" ;
     }
-};
-
-// static create_* methods of value
-value *value::create_ptr(value_id h)                    { return new value_address(h); }
-value *value::create_struct(value_id h, type_id t)      { return new value_struct(h,t); }
-value *value::create_int(value_id h,long v)             { return new value_int(h,v); }
-
+}; // vlaue_int
 
 
 // =============================================================
@@ -601,20 +638,15 @@ value *value::create_int(value_id h,long v)             { return new value_int(h
 // Properties:
 //  - this_object: abstract address == position in abstract memory
 //  - target_of:   it is target of pointers with the same value
-//  - _type:       variable, list segment, tree segment etc...
+//  - _kind:       variable, list segment, tree segment etc...
+//  - value_type   important for unions, pointers, conversions
 class object {
-    _Refcount _refcount;
+    friend class symbolic_state;
     template<typename _Tid, typename _T> friend class so_container;
-    // cloning implementation
-    virtual object *_clone() const = 0;
 
   protected:
-    object_id this_object;    /// abstract logical address
-
     // size_t refcount() const { LOGICAL: pointed_by + num_of_values }
-
     // cloning interface (used for COW)
-    friend class symbolic_state;
     // clone
     object *clone() const {
 #ifdef DEBUG_CLONE
@@ -638,49 +670,74 @@ class object {
     // TODO: try to use type_info?
     enum object_type { UNKNOWN, VARIABLE=1, SLS, DLS };
   private:
-
-    // TODO: name: pointed_by|target_of|other?
-    value_id target_of;     // id of value pointing here [PROBLEM: type* SOLVED: type in variable, not value]
-                            // ====> we can identify all variables pointing at the same location
+    virtual object *_clone() const = 0; // cloning interface
 
     // default constructor not allowed (no objects without unique ID)
     object(); // delete
 
-  public:
+  protected:
     // TODO: maybe pass the size of allocation and do the ID inside ctr ?
-    object(object_id id, object_type t): this_object(id), target_of(undefined_value), _type(t) {}
+    object(object_id id, object_type t): 
+        this_object(id), 
+        _target_of(undefined_value), 
+        _value(undefined_value),        // special UNDEFINED value (type-independent)
+        _type(t) {}
     virtual ~object() {
         // TODO: check
         if(is_pointed())
             std::cerr << "~object: target of pointer deleted\n"; // can not throw in destructor
     }
 
+  protected:
     // sharing TODO: better names
     unsigned _symbolic_state_refcount() const { return _refcount.get(); }
-    bool _is_shared() const { return _refcount.get() > 1; }
-    bool _writable()  const { return !_is_shared(); }
+    bool _is_used()     const   { return _refcount.get()!=0; }
+    bool _is_unique()   const   { return _refcount.get()==1; }
+    bool _is_shared()   const   { return _refcount.get()>=2; }
+    bool _writable()    const   { return !_is_shared(); }
 
+  protected:
     // basic types
-//    object_type get_type() const { return type; }
     bool is_sls()          const { return _type==SLS; }
     bool is_variable()     const { return _type==VARIABLE; }
     bool is_abstract()     const { return !(is_variable()); }
 
     virtual void print() const = 0;
 
-    virtual value_id get_value() const = 0;
-    virtual void set_value(value_id v) = 0;
-    // target of some pointer?
-    bool      is_pointed() const { return target_of!=0; }
-    value_id  pointed_by() const { return target_of; }
-    void set_pointed_by(value_id ptrval) {
+    // each object has value
+    // is value defined?
+    bool                has_value() const       { return _value!=undefined_value; }
+    // get/set (lowlevel interface)
+    virtual value_id    get_value() const       { return _value; }
+    virtual void        set_value(value_id v)   { 
         ASSERT(_writable());
-        target_of = ptrval; // should be pointer value
+        _value = v; 
     }
 
+    // is target of some pointer?
+    bool      is_pointed() const { return _target_of!=0; }
+    value_id  pointed_by() const { return _target_of; }
+    void set_pointed_by(value_id ptrval) {
+        ASSERT(_writable());
+        _target_of = ptrval; // should be pointer value
+    }
+
+    virtual bool dynamic() { return true; }
+
+  protected:
+    object_id   this_object;    /// abstract logical address (can not be const, see clone(position))
   private:
-    object_type _type;  // for basic type check
-};
+    value_id    _target_of;     /// id of value pointing here [PROBLEM: type* SOLVED: type in variable, not value]
+                                // ====> we can identify all variables pointing at the same location
+    value_id    _value;         /// id of the VALUE
+                                // same value means contents (type independent)
+                                // TODO: possible problems: {ptr2int, int++, int2ptr}
+    object_type _type;          /// for basic type check (ls,var,...)
+
+    _Refcount _refcount;        // internal
+  private:  
+    object & operator= (const object &v); // delete
+}; // class object
 
 // module variables.cc
 /////////////////////////////////////////////////////////////////////////////
@@ -689,6 +746,7 @@ class object {
 /// identification by number
 // TODO: variable description can be part of more heaps?
 class variable : public object {
+    friend class symbolic_state;
 
     // use bits for various boolean flags (TODO: consider bitfields?)
     enum flags_enum { VAR_PROGRAM=1, VAR_LOCAL=2, VAR_ALLOCATED=4, VAR_POINTER=8 };
@@ -698,8 +756,8 @@ class variable : public object {
 
     const type_id type; // TYPE OF VARIABLE (can not be changed)
 
-  public:
-    // nesting of variables
+  protected:
+    // NESTING of variables
     // only part of items can be concretized
     // TODO: if part of structure/array, we use offset [[[this_id-offset==enclosing_var]]]
     // needs correct allocation (PROBLEM: realy big arrays)
@@ -712,27 +770,23 @@ class variable : public object {
     parts_container_t parts;            // fields
     typedef parts_container_t::iterator         parts_iterator;
     typedef parts_container_t::const_iterator   parts_const_iterator;
-  private:
 
+  private:
     //TODO: link to stackframe == special variable
 
     // abstract sizeof -- TODO: is part of TYPE
     int size;           // number of locations, >1 for array/struct,  0==UNKNOWN
 
     // program variable name ("::var128", "func::s.next"), constant
-    // TODO: use GCC interface and use pointer?
+    // TODO: use GCC interface and pointer?
     int name_id;        // if named: name table index (var->string)
-
-    value_id val;           // id of the VALUE of the variable
-                            // same value means equal variables (type independent)
-                            // TODO: possible problems: {ptr2int, int++, int2ptr}
 
     // TODO
 //    eq_t ne;                // NEQ: not equal set (v1 != v2) v1.ne={v2} and v2.ne={v1}
     // TODO use external BOOST::bimap<object_id,object_id> for this
 
     variable *_clone() const { return new variable(*this); }
-  public:
+  private:
 
     // create NEW VARIABLE of type t at position v
     // v should be freshly allocated
@@ -742,40 +796,23 @@ class variable : public object {
         flags(0),
         type(t),
         part_of(undefined_object), //offset(0),
-        name_id(0),
-        val(undefined_value)            // special UNDEFINED value (type-independent)
+        name_id(0)
         {}
 
     ~variable() {
         // TODO: check if unregistered
     }
 
-    // is value defined?
-    bool     has_value() const          { return val!=0; }
-    // get/set (lowlevel interface)
-    value_id get_value() const          { return val; }
-    void     set_value(value_id v)      {
-        ASSERT(_writable());
-        val=v;
-    }
-
-
-    // TODO: consistency
-    // is equal to other variable?
-    bool is_equal(variable *v2) const {
-        if(v2==this)
-            throw "bad test: a=a";
-        return val==v2->val; // the same value_id
-    }
-
     // check variable type
-    bool is_struct()  const   { return types[type].is_struct(); }
-    bool is_array()   const   { return types[type].is_array(); }
-    bool is_pointer() const   { return types[type].is_pointer(); }
-    type_id get_type() const { return type; }
+    bool is_struct()  const     { return types[type].is_struct(); }
+    bool is_array()   const     { return types[type].is_array(); }
+    bool is_pointer() const     { return types[type].is_pointer(); }
+    type_id get_type() const    { return type; }
+
+    virtual bool dynamic() { return !has_name(); }
 
     /// after assigning the name can not be changed
-    // no need to check if is writable
+    // TODO: no need to check if is writable ?
     void set_name(const std::string & name) {
         name_id = variable_name.add(name);
     }
@@ -786,39 +823,30 @@ class variable : public object {
 
     // print variable id, name, value
     void print() const {
-        std::cout << "var" << this_object;
+        std::cout << this_object;
         if(has_name())
-            std::cout << "_" << name();
-        // TODO move to ...
-        std::cout << " = ";
-        if(val==0)
-            std::cout << "undefined";
-        else if(val==nil_value)
-            std::cout << "nil";
-        else
-            std::cout << "value#" << val;
-        std::cout << " ";
+            std::cout << " \"" << name() << "\"";
+        value_id v = get_value();
+        std::cout << " = " << v << " ";
+        value_id p = pointed_by();
+        if(p!=undefined_value)
+            std::cout << "<-pointed_by:" << p << " ";
     }
 
- protected:
-    // default variable & operator= (const variable &v) { }
-    // CLONE: // use default variable(const variable &v);
+ private:
+    variable & operator= (const variable &v); // delete
+    // default variable(const variable &v);
 }; // class variable
-
 
 
 // module list_segments.cc
 // implementation of all list-segments: double/single linked, 1, 0+, 1+, ...
-//
 
 /////////////////////////////////////////////////////////////////////////////
 // list_segment is base class for all list segments (singly/double-linked)
 class list_segment : public object {
-    //void register_ls(value*ptr)   { ptr->register_ls(this); }
-    //void unregister_ls(value*ptr) { ptr->unregister_ls(this); }
   public:
     list_segment(object_id id, object_type t): object(id, t) {}
-
 };
 
 /////////////////////////////////////////////////////////////////////////////
@@ -846,8 +874,7 @@ class list_segment : public object {
 class slist_segment : public list_segment {
     list_segment_length t;
 
-    // value of the type: pointer to structure
-    value_id next_val;  // refcounted (it is pointed to by this)
+    // value of the object: pointer to structure of stype
 
     // Lambda
     type_id stype;      // type of structure           (like variable type)
@@ -855,27 +882,22 @@ class slist_segment : public list_segment {
     value_id struct_value_id; // prototype item value, if SVALs (seplog)
     // TODO: add additional info: constraints, etc
 
-    ////slist_segment(const slist_segment&) default;
-    // disable op=
-    slist_segment&operator=(slist_segment&);
-
-  private:
+    // slist_segment(const slist_segment&) default;
+    slist_segment&operator=(slist_segment&); // delete
+  public:
     // constructors:
     slist_segment(object_id id,
                   list_segment_length type,
-                  value_id b,
                   type_id st, field_id item):
         list_segment(id,SLS),
         t(type),
-        next_val(b),
         stype(st),       // type of structure
         nextid(item),    // item number in structure   TODO-check
         struct_value_id(undefined_value)  // if(!=0) contains stored values shared by each listitem (headptr,...)
     {
-        // TODO: register value b
-        //current_context->val(b)->link(this_object);
+        // undefined value (nextptr)
+        // not pointed by default
     }
-  public:
     ~slist_segment() {
         // TODO: unregister from values
         //current_context->val(b)->unlink(this_object);
@@ -885,15 +907,8 @@ class slist_segment : public list_segment {
     value_id    head()          const { return pointed_by(); }
 
     // next pointer value at the end of ls
-    value_id next() const { return next_val; }
-    value_id get_value() const { return next_val; }
-    void set_value(value_id n) {
-        ASSERT(_writable());
-        next_val = n;
-    }
-    void set_next(value_id n) {
-        set_value(n);
-    }
+    value_id    next()          const { return get_value(); }
+    void set_next(value_id n)   { set_value(n); }
 
     // next-field-id
     field_id    get_nextfield()     const { return nextid; }
@@ -907,35 +922,25 @@ class slist_segment : public list_segment {
 
     // list item structure
     type_id     target_struct_type() const { return stype; }
-    value_id    target_struct()      const { return struct_value_id; }
+    value_id    shared_value()      const { return struct_value_id; }
 
     // clone list segment
     slist_segment *_clone() const { return new slist_segment(*this); }
 
-    // create new ls
-    static slist_segment * create(object_id id,
-                  list_segment_length type,
-                  value_id nextptr,
-                  type_id st, field_id item) {
-        return new slist_segment(id, type, nextptr, st, item);
-    }
-
     void print() const {
-        std::cout << "slist_SEGMENT" << this_object;
-        std::cout << "(";
+        std::cout << this_object;
+        std::cout << " = SLS(";
         if(t==LS0P)
             std::cout << "type=ls0+";
         else if(t==LS1P)
             std::cout << "type=ls1+";
         else
             std::cout << "type=" << t;
-        std::cout << ", headval=" << head();
-        if(next()==nil_value)
-            std::cout << ", nextval=NULL";
-        else
-            std::cout << ", nextval=" << next();
-        std::cout << ", lambda=" << stype << "," << nextid << ")" ;
-        std::cout << ")";
+        std::cout << ", head=" << head();  // ==pointed_by
+        std::cout << ", next=" << next();  // ==value
+        std::cout << ", lambda=(" << stype << "," << nextid << ")" ; // == type
+        std::cout << ", sval=" << shared_value(); // == value in each struct
+        std::cout << ") ";
     }
 }; // slist_segment
 
@@ -1009,18 +1014,18 @@ class symbolic_state { // SH = (equations,predicates)
         // TODO: check overflow
         return id;
     }
-/// abstract memory
-// location==object_id (PROBLEM: TODO: aliasing struct vs first item? -- solve by typechecking)
-// -- set of variables and abstract objects (list and other segments)
-// -- object_id is equal to abstract memory address
-// -- unknown/garbage and nil are special
+    /// abstract memory
+    // location==object_id (PROBLEM: TODO: aliasing struct vs first item? -- solve by typechecking)
+    // -- set of variables and abstract objects (list and other segments)
+    // -- object_id is equal to abstract memory address
+    // -- unknown/garbage and nil are special
     so_container<object_id, object> objects;  // container of objects/locations
-// -- set of object values
+    // -- set of object values
     so_container<value_id, value> values; // values of variables and abstract_segments
-// -- stack
+    // -- stack
     std::stack<line_id> stack;  // stack of lines to return from CALL
 
-// iterators over containers:
+    // iterators over containers:
     typedef so_container<value_id,value>::const_iterator        value_const_iterator;
     typedef so_container<value_id,value>::iterator              value_iterator;
     typedef so_container<object_id,object>::const_iterator      object_const_iterator;
@@ -1085,7 +1090,7 @@ class symbolic_state { // SH = (equations,predicates)
             throw "symbolic_state() creation problem";
 
         //var_new(TYPE_UNKNOWN,"garbage"); // object_id==0 is not allocated
-        var_new(TYPE_VOID_PTR,"nil");
+        var_new(VOID_PTR_T,"nil");
         var_assign_pointer_at(nil, nil); // variable_nil, value_ptr_to_nil
         if(objects.size()!=1 || values.size()!=1)
             throw "bad initial symbolic_state construction";
@@ -1098,86 +1103,110 @@ class symbolic_state { // SH = (equations,predicates)
     void obj_link_val(object_id o, value_id v) { // create association object<->value
         ASSERT(obj(o)->_writable());
         ASSERT(val(v)->_writable());
-        obj(o)->set_value(v);
-        val_refcount_up(v,o);   // add to container
+        val_refcount_up(v,o);           // add to container
+        obj(o)->set_value(v);           // link value
     }
-    void obj_unlink_val(object_id o) {  // remove association
-        value_id v = obj(o)->get_value();
-        if(v==undefined_value)          // already unlinked
-            return;
+    void obj_unlink_val(object_id o) {  // remove association, do not delete
+        value_id v = obj_get_value(o);
+        ASSERT(v!=undefined_value);     // is not already unlinked
         ASSERT(obj(o)->_writable());
         ASSERT(val(v)->_writable());
-        val_refcount_down(v,o);       // remove from container
-        obj(o)->set_value(undefined_value);
+        val_refcount_down(v,o);         // remove from container
+        obj(o)->set_value(undefined_value); // unlink value
     }
-    void obj_unlink_val_partial_del(object_id o) {  // remove backlink only
-        // will not write to object
-        value_id v = obj(o)->get_value();
+
+    void obj_unlink_val_del(object_id o) {  // remove association, delete unused
+        value_id v = obj_get_value(o);
         if(v==undefined_value)          // already unlinked
             return;
-        ASSERT(val(v)->_writable());
-        val_refcount_down(v,o);       // remove from container
-        // delete
-        if(val(v)->unused())
+        obj_COW(o);
+        val_COW(v);
+        obj_unlink_val(o);
+        if(!val(v)->is_used()) {          // delete value if unused
             val_delete(v);
+        }
     }
-    // TODO: replace?
-    void obj_unlink_val_del(object_id o) {  // remove association
-        value_id v = obj(o)->get_value();
+
+    // TODO: obj_unlink_val_del_partial2 symmetric OR automatic detection if will value be deleted
+
+    void obj_unlink_val_del_partial(object_id o) {  // remove backlink only, object unchanged
+        // will not write to object o
+        value_id v = obj_get_value(o);
         if(v==undefined_value)          // already unlinked
             return;
-        ASSERT(obj(o)->_writable());
-        ASSERT(val(v)->_writable());
-        val_refcount_down(v,o);       // remove from container
-        obj(o)->set_value(undefined_value);
-        // delete
-        if(val(v)->unused())
+        ASSERT(val_is_writable(v));
+        val_refcount_down(v,o);         // remove from container
+        if(!val(v)->is_used())          // delete value if unused
             val_delete(v);
     }
 
     // 1:1 unique pointer value points to given single object
-    void val_link_obj(value_id v, object_id o) { // create association object<->value
-        if(!val(v)->is_pointer())
-            throw "val_link_obj(p): only pointer can link memory object";
+    void val_ptr_link_obj(value_id v, object_id o) { // create association object<->value
+        if(!val_is_pointer(v))
+            throw "val_ptr_link_obj(p): only pointer can link memory object";
         ASSERT(obj(o)->_writable());
         ASSERT(val(v)->_writable());
-        obj(o)->set_pointed_by(v);
+        obj_set_pointed_by(o,v);
         val_ptr(v)->set_target(o);
     }
-    void val_unlink_obj(value_id v) { // remove association
-        if(!val(v)->is_pointer())
-            throw "val_unlink_obj(p): only pointer can link memory object";
+    void val_ptr_unlink_obj(value_id v) { // remove association
+        if(!val_is_pointer(v))
+            throw "val_ptr_unlink_obj(p): only pointer can link memory object";
         object_id o = val_ptr(v)->points_to();
         if(o==undefined_object)          // already unlinked
             return;
-        ASSERT(obj(o)->_writable());
-        ASSERT(val(v)->_writable());
-        obj(o)->set_pointed_by(undefined_value);
+        obj_COW(o); // ASSERT(obj(o)->_writable());
+        val_COW(v); // ASSERT(val(v)->_writable());
+        obj_set_pointed_by(o,undefined_value);
         val_ptr(v)->set_target(undefined_object);
     }
 
-  private:
+  private: // accessors for internal use
     // access object
     object              *obj(object_id i)       { return objects[i]; }
     const object        *obj(object_id i) const { return objects[i]; }
+
     // access variable:
     variable            *var(object_id i)       { return dynamic_cast<variable*>(objects[i]); }
     const variable      *var(object_id i) const { return dynamic_cast<const variable*>(objects[i]); }
+
     // access single list segment
     slist_segment       *sls(object_id i)       { return dynamic_cast<slist_segment*>(objects[i]); }
     const slist_segment *sls(object_id i) const { return dynamic_cast<const slist_segment*>(objects[i]); }
 
     // access value
-    value               *val(value_id i)        { return dynamic_cast<value*>(values[i]); }
-    const value         *val(value_id i) const  { return dynamic_cast<const value*>(values[i]); }
-    // access struct value
-    value_struct        *val_s(value_id i)       { return dynamic_cast<value_struct*>(values[i]); }
-    const value_struct  *val_s(value_id i) const { return dynamic_cast<const value_struct*>(values[i]); }
-    // access pointer value
-    value_address        *val_ptr(value_id i)       { return dynamic_cast<value_address*>(values[i]); }
-    const value_address  *val_ptr(value_id i) const { return dynamic_cast<const value_address*>(values[i]); }
+    value               *val(value_id i)        { return values[i]; }
+    const value         *val(value_id i) const  { return values[i]; }
 
-    // TODO val_struct, val_array
+    // access struct value
+    value_struct        *val_s(value_id i)       { 
+        value_struct * v = dynamic_cast<value_struct*>(values[i]); 
+        if(v==0)
+            throw "val_s: value is not of struct type or undefined";
+        return v;
+    }
+    const value_struct  *val_s(value_id i) const { 
+        const value_struct * v = dynamic_cast<const value_struct*>(values[i]); 
+        if(v==0)
+            throw "val_s: value is not of struct type or undefined";
+        return v;
+    }
+
+    // access pointer value
+    value_address        *val_ptr(value_id i)       { 
+        value_address *v = dynamic_cast<value_address*>(values[i]); 
+        if(v==0)
+            throw "val_ptr: value is not of pointer type or undefined";
+        return v; 
+    }
+    const value_address  *val_ptr(value_id i) const { 
+        const value_address *v = dynamic_cast<const value_address*>(values[i]); 
+        if(v==0)
+            throw "val_ptr: value is not of pointer type or undefined";
+        return v; 
+    }
+
+    // TODO val_array
 
   public:
     // get state serial number (for identification)
@@ -1196,9 +1225,37 @@ class symbolic_state { // SH = (equations,predicates)
     void obj_delete(object_id x1);
 
     //////////////////////////////////////////////////////////////////
-    // VALUES
     // low-level operations
-    value_id var_get_value(object_id x1) const { return var(x1)->get_value(); }
+
+    // test if object is {variable,sls,...}
+    bool obj_is_sls(object_id x) const { return obj(x)->is_sls(); }
+    bool obj_is_var(object_id x) const { return obj(x)->is_variable(); }
+
+    // test if variable is of {pointer,struct,array} type
+    bool var_is_pointer(object_id x) const { return var(x)->is_pointer(); }
+    bool var_is_struct(object_id o)  const { return var(o)->is_struct(); }
+
+    // test if value is of {pointer,struct,array} type
+    bool val_is_pointer(value_id v) const { return val(v)->is_pointer(); }
+    bool val_is_struct(value_id h) const  { return val(h)->is_struct(); }
+    bool val_is_array(value_id h) const   { return val(h)->is_array(); }
+
+    // used_by links
+    bool val_is_shared(value_id h) const   { return val(h)->is_shared(); }
+
+    // check if cloned
+    bool val_is_writable(value_id h) const  { return val(h)->_writable(); }
+    bool obj_is_writable(object_id o) const { return obj(o)->_writable(); }
+
+
+    // get objects value
+    value_id obj_get_value(object_id o) const { return obj(o)->get_value(); }
+    value_id var_get_value(object_id x) const { 
+        ASSERT(obj(x)->is_variable());
+        return obj_get_value(x); 
+    }
+
+    // set objects value
     void obj_set_value(object_id x1, value_id h) {
         obj_COW(x1);
         obj(x1)->set_value(h);
@@ -1207,32 +1264,33 @@ class symbolic_state { // SH = (equations,predicates)
         ASSERT(obj(x1)->is_variable());
         obj_set_value(x1,h);
     }
-    bool var_has_value(object_id x1) const;
-    value_id val_new_ptr(object_id x);
-    value_id val_new_struct(type_id t);
-    bool val_is_struct(value_id h) const    { return val(h)->is_struct(); }
-    bool val_is_array(value_id h) const     { return val(h)->is_array(); }
-    bool val_is_writable(value_id h) const  { return val(h)->_writable(); }
 
-  // TODO: refcount operations
+    // is value defined?
+    bool obj_has_value(object_id o) const { return obj(o)->has_value(); }
+    bool var_has_value(object_id x) const {
+        ASSERT(obj(x)->is_variable());
+        return obj_has_value(x);
+    }
+
+    // create new values
+    value_id val_new_ptr(object_id x);          // ptr to x
+    value_id val_new_struct(type_id t);         // struct of type t
+
+
+    // structure fields (un)linking
     void val_struct_unlink_field(value_id val, field_id f);
     void val_struct_link_field(value_id val, field_id f, value_id newfieldval);
 
 
     // EQUALITIES (\Pi)
-    //void add_eq(object_id x1, object_id x2);    // add    x1 == x2
-    //void remove_eq(object_id x1, object_id x2); // remove x1 == x2
-    //void remove_eq(object_id x1);           // remove any equality x1 == any_x
 
-    // test x1 == x2
-    // WARNING: expects the same value sharing
+    // test x1 == x2     WARNING: expects the same-value sharing
     bool var_is_equal(object_id x1, object_id x2) const;
-    // test any x1 == any_x
-    // WARNING this refcount includes enclosing structured values
+    // test any x1 == any_x,   includes enclosing structured values
     bool var_is_equal_any(object_id v) const;
 
 #ifdef xTODOx
-// removed
+// removed, not sure if it is needed
     // NONEQUALITIES (\Pi)
     void add_ne(object_id x1, object_id x2);    // add     x1 != x2
     void remove_ne(object_id x1, object_id x2); // remove  x1 != x2
@@ -1245,41 +1303,33 @@ class symbolic_state { // SH = (equations,predicates)
     //////////////////////////////////////////////////////////////////
     // POINTER   ***** WARNING: this is not points_to [Berdine&spol]
 
-    // test if ( x1 == &x2 ) holds
-    bool var_points_to(object_id x1, object_id x2) const {
-#if 0
-        const variable *v2 = var(x2);
-        const value *h = val(v2->pointed_by());
-        return h->variables.count(x1)>0;
-#else
-        value_id x1val = var_get_value(x1);
-        value_id x2pointed_by = obj_pointed_by(x2);
-        return x1val == x2pointed_by;
-#endif
-    }
-    // test if ( x1 == &anyobject ) holds
-    bool var_is_pointer(object_id x1)   const { return var(x1)->is_pointer(); }
-    // test if value points to anyobject
-    bool val_is_pointer(value_id v)     const { return val(v)->is_pointer(); }
-
-    // return target of pointer
-    object_id var_points_to(object_id x1) const {
-        value_id h = var(x1)->get_value();
-        return val_points_to(h);
-    }
-
     // return target of pointer value
     object_id val_points_to(value_id v) const {
+        if(!val_is_pointer(v))
+            throw "val_points_to: nonpointer value";
         const value_address *p = val_ptr(v);
-        if(p==0)
-            throw "val_points_to: not a pointer value";
         return p->points_to();
     }
 
-    // return value pointing at variable x
-    // 0 means "not pointed"
+    // return target of pointer variable
+    object_id var_points_to(object_id x) const {
+        value_id h = var(x)->get_value();
+        return val_points_to(h);
+    }
+
+    // return value pointing at variable x (0 means "not pointed")
     value_id obj_pointed_by(object_id x) const {
-        return obj(x)->pointed_by();
+        value_id v = obj(x)->pointed_by();
+        //std::cout << "---obj_pointed_by(" << x << ") = " << v << "\n";
+        return v;
+    }
+
+    bool obj_is_pointed(object_id x) const {
+        return obj(x)->is_pointed();
+    }
+
+    void obj_set_pointed_by(object_id x, value_id v) {
+        obj(x)->set_pointed_by(v);
     }
 
     //////////////////////////////////////////////////////////////////
@@ -1299,9 +1349,17 @@ class symbolic_state { // SH = (equations,predicates)
         value_id h = sls(ls)->next();
         return h;
     }
+
     // set next pointer value
     void sls_set_next(object_id ls, value_id next) {
         sls(ls)->set_next(next);
+    }
+
+    // return sls (next) target
+    object_id sls_target(object_id ls) const {
+        value_id next = sls_get_next(ls);
+        object_id lstarget = val_points_to(next);
+        return lstarget;
     }
 
     // change the state to eliminate empty listsegment
@@ -1323,7 +1381,7 @@ class symbolic_state { // SH = (equations,predicates)
             object_id v = (*i);
             obj_COW(v);
             obj_set_value(v,undefined_value);   // do not touch container!
-            var_assign_value(v,next);           // make backlink, too
+            obj_assign_value(v,next);           // make backlink, too
         }
         h->used_by_objects.clear(); // remove all links to objects
 
@@ -1337,7 +1395,7 @@ class symbolic_state { // SH = (equations,predicates)
         h->used_by_values.clear(); // remove all links to structured values
 
         // unlink pointer<->target
-        val_unlink_obj(headptr);
+        val_ptr_unlink_obj(headptr);
         // remove headptr value (now unused)
         val_delete(headptr);
         // unlink ls0<->nextval
@@ -1355,21 +1413,16 @@ class symbolic_state { // SH = (equations,predicates)
         object_id target = var_points_to(x); // target
         return obj_is_sls(target);
     }
-    // test if x is slist segment
-    bool obj_is_sls(object_id x) {
-        return obj(x)->is_sls();
-    }
-    // test if x is slist segment
-    bool obj_is_var(object_id x) {
-        return obj(x)->is_variable();
-    }
+
     // return LS0P, LS1P
     list_segment_length sls_length(object_id o) const { return sls(o)->get_length(); }
+    // set sls length
     void sls_set_length(object_id o, list_segment_length l) {
         obj_COW(o);
         sls(o)->set_length(l);
     }
 
+    /// check if object is nonempty (value, lsNE, ...)
     bool obj_is_nonempty(object_id x) const {
         if(obj(x)->is_sls()) {
             if(sls_length(x)==LS0P) return false;
@@ -1380,6 +1433,9 @@ class symbolic_state { // SH = (equations,predicates)
 
     type_id var_type(object_id o) {
         return var(o)->get_type();
+    }
+    type_id val_type(value_id v) {
+        return val(v)->get_type();
     }
     type_id sls_type(object_id o) {
         return sls(o)->target_struct_type();
@@ -1407,6 +1463,16 @@ class symbolic_state { // SH = (equations,predicates)
     }
 
 
+    std::vector<object_id> find_all_sls() {
+        std::vector<object_id> r;
+        for(so_container<object_id,object>::const_iterator i=objects.begin(); i!=objects.end(); ++i) {
+            object_id o = i->first;
+            if(obj(o)->is_sls()) 
+                r.push_back(o);
+        }
+        return r;
+    }
+
 
     // find all pointer values
     // TODO: filter by target type? Problem: type-converted pointer values
@@ -1425,16 +1491,16 @@ class symbolic_state { // SH = (equations,predicates)
     // all pointer targets are concretized, all such structure parts are available
     // TODO: check if covers all possibilities
     std::vector<value_id> find_all_pointers_to_struct(object_id target) {
+        std::cout << "find_all_pointers_to_struct(" << target << ")\n";
         ASSERT(var_is_struct(target));
         variable * s = var(target);
         ASSERT(s->part_of == undefined_object); // TODO: does not work for partial structs
 
         std::vector<value_id> r;
-
         value_id pv = obj_pointed_by(target);
         if(pv!=undefined_value) // there is pointer to whole struct
             r.push_back(pv);
-        // search for pointers at (concretized) struct parts
+        // search for pointers inside structure at (concretized) struct parts
         for(variable::parts_const_iterator i=s->parts.begin(); i != s->parts.end(); ++i) {
             pv = obj_pointed_by(*i);
             if(pv!=undefined_value) // there is pointer to nested variable
@@ -1479,14 +1545,15 @@ class symbolic_state { // SH = (equations,predicates)
 
     // TODO: change
     object_id struct_get_next_if_unique(object_id o, field_id next) {
+        std::cout << "struct_get_next_if_unique(" << o << ", " << next << ")\n";
         // check for pointers inside struct
         std::vector<value_id> pointers = find_all_pointers_to_struct(o);
         if(pointers.size()!=1) // not single pointer only
             return undefined_object;
 
         value_id svalue = var_get_value(o);
-        value_id fvalue = val_struct_field(svalue,next);
-        if(val(fvalue)->refcount() != 1)        // not unique next pointer value
+        value_id fvalue = val_get_field_value(svalue,next);
+        if(val(fvalue)->is_shared())    // not unique next pointer value
             return undefined_object;
         // target object pointed from single place
         object_id nexto = val_points_to(fvalue);    // checks for pointer type
@@ -1503,44 +1570,55 @@ class symbolic_state { // SH = (equations,predicates)
 
     // go back in structure sequence linked by pointer in next field  (sls candidate)
     // structvar -> structval -> { fieldvalues, next, fieldvalues }
+    // TODO: check
     object_id struct_get_prev_if_unique(object_id o, field_id next) {
+        std::cout << "struct_get_prev_if_unique(" << o << ", " << next << ")\n";
         // check for pointers inside struct
         std::vector<value_id> pointers = find_all_pointers_to_struct(o);
         if(pointers.size()!=1) // not single pointer only
             return undefined_object;
 
         value_id pvalue = obj_pointed_by(o);    // previous next-field value
-        if(val(pvalue)->refcount() != 1)        // not unique == shared
+        if(!val(pvalue)->is_unique())        // not unique == shared or not used
             return undefined_object;
 
-        // TODO: check ALL values in structval if pointed
-        value_id svalue = val_find_unique_outer_struct_value(pvalue);  // go from next to struct value
-        if(svalue==undefined_value)             // not found
+        // TODO: check ALL values in structval if pointed=used
+        value_id svalue = val_find_unique_outer_struct_value(pvalue);  // go from next-field to struct value
+        if(svalue==undefined_value)     // not found
             return undefined_object;
-        if(val(svalue)->refcount() != 1)        // not unique
+        if(val(svalue)->is_shared())    // not unique and used
             return undefined_object;
+        if(!val(svalue)->is_used())     // not used     TODO: not possible?
+            throw "struct_get_prev_if_unique(o,f): previous struct not used?";
+
+        // check if pvalue is next field in svalue
+        if(val_s(svalue)->get_field_value(next)!=pvalue)
+            return undefined_object;
+
         // object pointed from single place
         object_id prevo = *(val(svalue)->used_by_objects.begin());      // used by single var
         // check previous struct type
         if(obj_is_var(prevo) && var_is_struct(prevo)) {
             // check for pointers inside struct
             std::vector<value_id> pointers = find_all_pointers_to_struct(prevo);
-            if(pointers.size()!=1) // not single pointer only
+            if(pointers.size()!=1) // not single pointer only, can not abstract
                 return undefined_object;
             return prevo;
         }
         return undefined_object;        // for listsegments etc
-    }
+    } // struct_get_prev_if_unique()
 
     // find all struct sequences linked through nextptr field
     // TODO: check correctness
     typedef std::vector< std::pair<object_id, object_id> > vec_pairs_t;
     vec_pairs_t find_all_struct_sequences(type_id st, field_id next) {
+        std::cout << "find_all_struct_sequences(" << st << ", " << next << ")\n";
         vec_pairs_t r;
         std::vector<object_id> structs = find_all_struct_variables(st);
-        std::set<object_id> done;
+        std::set<object_id> done; // empty set
         for(unsigned i=0; i<structs.size(); ++i) {
             object_id s = structs[i];
+            std::cout << "###struct: " << s << "\n";
             if(done.count(s)!=0) // already checked
                 continue;
             done.insert(s);
@@ -1569,6 +1647,7 @@ class symbolic_state { // SH = (equations,predicates)
                 firsto=o;
             }
             ASSERT(o==undefined_object);
+            std::cout << "###struct-sequence-found: " << firsto << ", " << lasto << "\n";
             r.push_back(std::pair<object_id,object_id>(firsto,lasto));
         } // for
         return r;
@@ -1591,6 +1670,8 @@ class symbolic_state { // SH = (equations,predicates)
     // TODO: change interface
     // abstract sequences of structures of type st using nextfield f
     void sls_abstract(type_id stype, field_id f) {
+        std::cout << "sls_abstract(" << stype << ", " << f << ")\n";
+
         // search for struct sequences
         //typedef std::vector< std::pair<object_id, object_id> > vec_pairs_t;
         vec_pairs_t seqs = find_all_struct_sequences(stype,f);
@@ -1598,57 +1679,90 @@ class symbolic_state { // SH = (equations,predicates)
             // search for tail struct
             object_id  begin = seqs[i].first;
             object_id  end   = seqs[i].second;
-            value_id ptr1 = obj(begin)->pointed_by(); // TODO: check pointers inside
+            if(begin==end) // do not abstract single struct
+                continue;
+#if 0
+            std::cout << "===================PRE============================\n";
+            print();
+            std::cout << "==================================================\n";
+#endif
+            // at least two structs: will be removed and substituted by ls1p
+            value_id ptr1 = obj(begin)->pointed_by(); // TODO: check pointers inside (linuxlists)
             value_id ptr2 = var_get_field_value(end,f);
+            obj_COW(begin);
+            obj_set_pointed_by(begin,undefined_value);  // partial unlink  ptr1 <- begin
 
-            // discard sequence, create sls
+            // discard sequence of at least 2 structs, create sls
             object_id nexto;
             for(object_id o=begin; o!=end; o=nexto) {
                 value_id next = var_get_field_value(o,f);
                 nexto = val_ptr(next)->points_to();
+                // will write:
+                obj_COW(o);                // struct
+                obj_COW(nexto);            // next struct
+                val_COW(obj_get_value(o)); // struct value
+                val_COW(next);             // next field of struct value
                 // unlink
-                val_unlink_obj(next);   // unlink nextval <-> nexto
+                val_ptr_unlink_obj(next);   // unlink nextval <-> nexto
                 obj_unlink_val_del(o);  // unlink o <-> structvalue and delete structvalue if possible
-                value_id p = obj_pointed_by(o);
-                if(p!=undefined_value)
-                    val_unlink_obj(p);  // unlink prev <-> o
+                value_id p = obj_pointed_by(o); // should be already unlinked
+                if(p!=undefined_value)  // pre-begin pointer value
+                    throw "impossible-1";
                 // remove o
                 obj_delete(o);
             } // for all structs in sequence
 
-            // create sls
+            // create sls at position begin  --- should be there, because of possible ptr2 deletion
             sls1p_create_at(begin,ptr2,stype,f);
             // link ptr1->sls
-            val_link_obj(ptr1,begin);
+            obj_set_pointed_by(begin,ptr1);  // partial link  prev <- begin
+
+            // delete last one
+            obj_unlink_val_del(end);  // unlink end <-> structvalue and delete structvalue if possible
+            obj_delete(end);
+            // sequence is destroyed
+
+#if 0
+            std::cout << "#################POST#############################\n";
+            print();
+            std::cout << "##################################################\n";
+#endif
 
         } // for all sequences
+
         // search for sls
-        // join
-    }
+        std::vector<object_id> slss = find_all_sls(stype,f);
+        std::set<object_id> done;
+        for(size_t i = 0; i<slss.size(); ++i) {
+            object_id o = slss[i];
+            if(done.count(o)!=0) // already used
+                continue;
+            value_id next = sls(o)->next();
+            if(next==nil_value) 
+                continue;
+            if(val_is_shared(next))  // used not only by o
+                continue;
+            // check next
+            object_id n = val_points_to(next);
+            if(obj_is_sls(n) && sls_type(n)==stype && sls_next_id(n)==f) {
+                // join consecutive sls
+                if(done.count(n)!=0)  // already used 
+                    continue; // not possible TODO: throw
+                done.insert(n); // mark
+                obj_unlink_val_del(o);
+                list_segment_length l1 = sls_length(o);
+                list_segment_length l2 = sls_length(n);
+                obj_assign_value(o, sls(n)->next());
+                obj_delete(n);
+                if(l1==LS1P || l2==LS1P)
+                    sls_set_length(o,LS1P);
+            }
+        }
+    } // sls_abstract
 
     //////////////////////////////////////////////////////////////////
     /// VARIABLE OPERATIONS
 
-    // check
-    bool var_is_struct(object_id o) const {
-        const variable *v = var(o);
-        return v->is_struct();
-    }
-
-    value_id val_struct_field(value_id s, field_id f) const {
-        // check
-        if(s==undefined_value||s==nil_value)
-            throw "val_struct_field: unknown or nil used";
-
-        const value *v = val(s);
-        // check if structure
-        if(!v->is_struct())
-            throw "val_struct_field: not structure";
-
-        value_id field_value = val_s(s)->get_field_value(f);
-        std::cout << "val_struct_field(s="<< s <<", f=" << f << ")\n";
-        return field_value;
-    }
 
     // COW -- clone object
     void obj_COW(object_id o) {
@@ -1659,14 +1773,21 @@ class symbolic_state { // SH = (equations,predicates)
 
     // set value of variable
     // TODO: type-check, h should be correct
-    void var_assign_value(object_id o, value_id h) {
-        std::cerr << "=var_assign_value(" << o << ", val=" << h << ")\n";
-        std::cout << "=var_assign_value(" << o << ", val=" << h << ")\n";
-        //TODO: type-check
-        if(!(var_is_struct(o) && val_is_struct(h)) &&
-           !(var_is_pointer(o) && val_is_pointer(h))
-           // TODO int int
-          ) throw "var_assign_value: typecheck failed";
+    void obj_assign_value(object_id o, value_id h) {
+#ifdef DEBUG_ASSIGN
+        std::cerr << "=obj_assign_value(" << o << ", " << h << ")\n";
+        std::cout << "=obj_assign_value(" << o << ", " << h << ")\n";
+#endif
+        //TODO: add all cases of type-check
+        if( obj_is_var(o) ) {
+            if( var_is_struct(o) && !val_is_struct(h)) 
+                throw "obj_assign_value: struct var = nonstruct val -- typecheck failed";
+            if( var_is_pointer(o) && !val_is_pointer(h))
+                throw "obj_assign_value: pointer var = nonpointer val -- typecheck failed";
+           // TODO int=int, int=ptr, ptr=int
+        }
+        if(obj_is_sls(o) && !val_is_pointer(h))
+            throw "obj_assign_value: sls=nonpointer -- typecheck failed";
 
         obj_COW(o); // make writable copy, will write
         val_COW(h); // new value
@@ -1679,56 +1800,60 @@ class symbolic_state { // SH = (equations,predicates)
 
     // set value of pointer to point at x      [[[o = &x]]]
     void var_assign_pointer_at(object_id o, object_id x) {
+#ifdef DEBUG_ASSIGN
         std::cout << "=var_assign_pointer_at(" << o << ", target=" << x << ")\n";
+#endif
         // TODO: type-check o,x
         // prepare value:
         value_id h = obj_pointed_by(x);      // use existing pointer-to-x value ...
         if(h==0) // if nothing points to x
             h = val_new_ptr(x);               // ... or create new pointer-to-x value
         // set value with reverse-link
-        var_assign_value(o, h);
+        obj_assign_value(o, h);
     }
 
     //////////////////////////////////////////////////////////////////
     /// VALUE OPERATIONS
 
-    void val_delete(value_id x) {
-      std::cout << "symbolic_state::val_delete(" << x << ") \n";
-      value *v = val(x);
-      // check if not used
-      if(!v->unused())  // value used by object or struct-value
-          throw "symbolic_state::val_delete: deleted target of link(s)";
+    void val_delete(value_id h) {
+      std::cout << "symbolic_state::val_delete(" << h << ") \n";
+      const value *v = val(h);
 
-      if(v->is_pointer()) {
-          const value_address *p = val_ptr(x);
+      // value should not be used
+      if(v->is_used())  // value used by object or struct-value
+          throw "val_delete: deleted target of some link(s)";
 
-          // TODO: function "val_ptr_unlink_target"
-          object_id t = p->points_to();
-          if(t!=undefined_object) { // ptr-value points to object
-              obj_COW(t);
-              obj(t)->set_pointed_by(undefined_value); // unlink from this value
-          }
-      } else if (v->is_struct()) {
-          const value_struct *s = val_s(x);
-          // for each field
-          for(int i = 0; i<s->nfields(); ++i) {
+      if(v->is_pointer()) { // POINTER
+            object_id o = val_ptr(h)->points_to();
+            if(o!=undefined_object) {   // value points to object
+                // remove association // do not write to ptr value -- will be destroyed
+                obj_COW(o); // will write to target object
+                obj_set_pointed_by(o,undefined_value); // remove link o->ptrval
+            } // if linked
+      } else if (v->is_struct()) { // STRUCT
+          const value_struct *s = val_s(h);
+
+          // TODO: iterate
+          for(int i = 0; i<s->nfields(); ++i) { // for each field
               value_id fv = s->get_field_value(static_cast<field_id>(i));
-              if(fv==undefined_value)
+              if(fv==undefined_value)  // not defined field
                   continue;
+
+              // unlink field value
               val_COW(fv);
-              val_refcount_down(fv,x); // remove field from part-of x relation
-              if(val(fv)->unused())    // was last usage
+              val_refcount_down(fv,h); // remove field fv from "used-by h" relation
+              if(!val(fv)->is_used())  // not used (was last usage)
                   val_delete(fv);      // recurse
              // do not write to struct - will be destroyed
           }
       } else if (v->is_array()) {
-          throw "todo val_delete array";
+          throw "TODO val_delete array";
       }
 
-      // val_COW(x); not needed, because we remove this value without write
-      values.erase(x);  // unlink from container, manipulate refcounts
+      // val_COW(h); not needed, because we remove this value without write
+      values.erase(h);  // unlink from container, manipulate refcounts
 
-      // if not used by any state, delete
+      // if value not used by any other state, delete
       if(v->_symbolic_state_refcount()==0)      // last pointer (refcount==0)
           delete v;                             // free object
     } // val_delete
@@ -1744,13 +1869,19 @@ class symbolic_state { // SH = (equations,predicates)
         value_id v = var(st)->get_value();
         return val_get_field_value(v,field);
     }
+
     // return handle of structure field value
     value_id val_get_field_value(value_id st, field_id field) const {
-        if(!val(st)->is_struct())
-            throw "val_field_id: nonstruct->member used";
+        // check
+        if(st==undefined_value||st==nil_value)
+            throw "val_get_field_value: unknown or nil value used";
+        // check if structure
+        if(!val_is_struct(st))
+            throw "val_get_field_value: nonstruct->member used";
         const value_struct *s = val_s(st);
-        // check if field value is defined
-        return s->get_field_value(field);
+        value_id field_value = s->get_field_value(field);
+        std::cout << "val_get_field_value(s=" << st << ", f=" << field << ")\n";
+        return field_value;
     }
 
     // update field in structure value == change struct value
@@ -1766,8 +1897,7 @@ class symbolic_state { // SH = (equations,predicates)
         val_COW(st);    // structure will be changed in this state only
         // now we can change struct value links etc
 
-        // if unused, we do not need clone
-        if(val(st)->refcount()>0) {
+        if(val(st)->is_used()) { // if used, we need clone to write
             // clone new struct value (all items shared)
             st = val_clone_new(st);
         }
@@ -1819,7 +1949,7 @@ class symbolic_state { // SH = (equations,predicates)
 
         // assign only new struct value
         if(newval!=oldval)
-            var_assign_value(s,newval); // unlink old, assign, link new
+            obj_assign_value(s,newval); // unlink old, assign, link new
 
         // done
         // WARNING:is there a problem if field is concretized in variable?
@@ -1967,20 +2097,21 @@ object_id symbolic_state::var_new(type_id t, const std::string &name) {
     return i;
 }
 
-// TODO: BETTER NAME   delete variable, mark it, check
-// delete single variable // TODO:delete array/struct???
+// TODO: delete object, check for double delete
 void symbolic_state::obj_delete(object_id x) {
     std::cout << "symbolic_state::obj_delete(" << x << ") \n";
     // currently only simple implementation
     // TODO check if x exists
-    object *v = obj(x);
-    if(v->is_pointed())        // used as target of single pointer value
-        throw "symbolic_state::obj_delete: deleted target of pointer(s)";
+    if(!objects.exist(x))
+        throw "object already deleted";
+    if(obj_is_pointed(x))        // used as target of single pointer value
+        throw "obj_delete: deleted target of pointer(s)";
 
-    if(obj(x)->_writable())
+    object *v = obj(x);
+    if(obj_is_writable(x))
         obj_unlink_val_del(x);          // unlink old value, delete if unused
     else
-        obj_unlink_val_partial_del(x);  // unlink old value backlink only [[[COW optimization]]]
+        obj_unlink_val_del_partial(x);  // unlink old value backlink only [[[COW optimization]]]
 
     // assertion: eliminated from equations and predicates
     objects.erase(x);           // unlink from container, manipulate refcounts
@@ -1996,7 +2127,7 @@ void symbolic_state::obj_delete(object_id x) {
 // create new struct value with all fields undefined
 value_id symbolic_state::val_new_struct(type_id t) {
     value_id i = allocate_value();
-    value *v = value::create_struct(i,t);
+    value_struct *v = new value_struct(i,t);
     values.create(i,v); // add to container
     return i;
 }
@@ -2005,13 +2136,13 @@ value_id symbolic_state::val_new_struct(type_id t) {
 /// create new pointer-to-x value   [[ &x ]]
 value_id symbolic_state::val_new_ptr(object_id x) {
     // TODO: assert
-    if(obj(x)->is_pointed())
+    if(obj_is_pointed(x))
         throw "symbolic_state::val_new_ptr: can not create another value of pointer to x";
     value_id i = allocate_value();       // fresh value id allocation
-    value *v = value::create_ptr(i);     // new pointer value - undefined
+    value_address *v = new value_address(i);     // new pointer value - undefined
     values.create(i,v);                  // add to container
     obj_COW(x);         // will write
-    val_link_obj(i,x);  // create link val<->obj
+    val_ptr_link_obj(i,x);  // create link val<->obj
     return i;
 }
 
@@ -2023,9 +2154,9 @@ bool symbolic_state::var_is_equal(object_id x1, object_id x2) const
 {
     value_id v1 = var_get_value(x1);
     value_id v2 = var_get_value(x2);
-    if (v1==0||v2==0)   // no value
+    if (v1==undefined_value || v2==undefined_value)   // no value
         return false;
-    return x1==x2;      // reference to the same value   WARNING (pointers only?)
+    return v1==v2;      // reference to the same value   WARNING (pointers only?)
 }
 
 // test any x1 == any_x
@@ -2034,15 +2165,9 @@ bool symbolic_state::var_is_equal_any(object_id x1) const
 {
     if(!var_has_value(x1))             // no value
         return false;
-    return val(var_get_value(x1))->refcount() > 1;
+    return val(var_get_value(x1))->is_shared(); // value is shared
 }
 
-bool symbolic_state::var_has_value(object_id x1) const
-{
-    const variable *v1 = var(x1);
-    //CHECK-VAR
-    return v1->has_value();
-}
 
 
 #if 0
@@ -2089,11 +2214,10 @@ object_id symbolic_state::sls_create(list_segment_length t, value_id next, type_
     if(!val_is_pointer(next))
         throw "symbolic_state::create_sls: next value is not a pointer";
     // TODO: check target type
-
     object_id i = allocate_object(); // allocate space
-    slist_segment * p = slist_segment::create(i, t, next, st, nextfield); // TODO: add type
+    slist_segment * p = new slist_segment(i, t, st, nextfield);
     objects.create(i,p); // add to container
-
+    obj_assign_value(i,next);
     return i;
 }
 
@@ -2101,27 +2225,28 @@ object_id symbolic_state::sls_create(list_segment_length t, value_id next, type_
 object_id symbolic_state::sls1p_create_at(object_id i, value_id next, type_id st, field_id nextfield)
 {
     if(objects.exist(i))
-        throw "symbolic_state::sls1p_create_at: object position already used";
+        throw "sls1p_create_at: object position already used";
     if(!val_is_pointer(next))
-        throw "symbolic_state::sls1p_create_at: next value is not a pointer";
+        throw "sls1p_create_at: next value is not a pointer";
     // TODO: check target type
-    slist_segment * p = slist_segment::create(i, LS1P, next, st, nextfield); // TODO: add type
+    slist_segment * p = new slist_segment(i, LS1P, st, nextfield);
     objects.create(i,p); // add to container
+    obj_assign_value(i,next);
     return i;
 }
 
-// erase
+// delete sls
 void symbolic_state::sls_delete(object_id ls)
 {
-    std::cout << "symbolic_state::sls_delete(" << ls << ") \n";
+    std::cout << "sls_delete(" << ls << ") \n";
     // TODO: check if unlinked, _writable, ...
     if(!obj_is_sls(ls))
         throw "symbolic_state::remove_sls: not slist segment";
-    if(obj_pointed_by(ls)!=0)
-        throw "symbolic_state::remove_sls: used slist segment removed";
-    object * p = obj(ls);
-    // remove pointer from container, update refcount
-    objects.erase(ls);
+    if(obj_is_pointed(ls))
+        throw "symbolic_state::remove_sls: target of some pointer removed";
+    obj_unlink_val_del_partial(ls); // unlink value (delete if unused), do not write to ls
+    const object * p = obj(ls);
+    objects.erase(ls); // remove pointer from container, update refcount
     if(p->_symbolic_state_refcount()==0)      // last pointer (refcount==0)
         delete p;                             // free object
 }
@@ -2158,7 +2283,7 @@ void symbolic_state::assign_v_v(object_id x1, object_id x2) {
     //    if(is_neq(x1,x2))        // there is   x1 != x2
     //        remove_ne(x1,x2);
 
-    var_assign_value(x1,var_get_value(x2));
+    obj_assign_value(x1,var_get_value(x2));
 }
 
 // LOOKUP:    x := E->f
@@ -2185,7 +2310,7 @@ void symbolic_state::assign_v_m(object_id x1, object_id m, field_id f)          
     if(obj_is_sls(m))
         throw "assign_v_m: should be concretized";
     value_id h = val_get_field_value(mval,f);  // m.f
-    var_assign_value(x1,h);
+    obj_assign_value(x1,h);
 }
 
 // MUTATE
@@ -2212,7 +2337,7 @@ void symbolic_state::assign_m_v(object_id m, field_id f, object_id x2)      //  
     // prepare new struct value
     value_id h = val_update_field(mval,f,x2val);
     // assign
-    var_assign_value(m,h);
+    obj_assign_value(m,h);
 }
 
 // concretize slist segment -- create structure on beginning
@@ -2224,18 +2349,21 @@ void symbolic_state::sls_concretize(object_id ls) {
     ASSERT(sls_length(ls)==LS1P);
 
     obj_COW(ls); // make writable copy of list segment
+
+    value_id ptrval = obj_pointed_by(ls);  // value pointing to ls ===
+    // partial val_ptr_unlink_obj, pointer value unchanged --> not COW
+    obj_set_pointed_by(ls,undefined_value); // moved object is not a target: remove ptrval <- ls
+
+    slist_segment *p = sls(ls);         // pointer to moved object
+    p->set_length(LS0P);                // LS1P->LS0P
+
     // move listsegment
-    slist_segment *p = sls(ls);
     // free old position, update target refcount (to zero)
     objects.erase(ls);
     object_id i = allocate_object();    // allocate space
     p->this_object = i;                 // = change position/identity
     objects.create(i,p);                // add to container, update refcount
-    p->set_length(LS0P);                // LS1P->LS0P
-
-    // partial val_unlink_obj, pointer value unchanged
-    p->set_pointed_by(undefined_value); // moved object is not a target
-    /// we have moved listsegment
+    // we have moved listsegment
 
     type_id stype = p->target_struct_type();
     field_id field = p->get_nextfield();
@@ -2243,26 +2371,34 @@ void symbolic_state::sls_concretize(object_id ls) {
     // relink nextptr
     value_id nextptrval = p->next();
     val_COW(nextptrval); // will write to value
-    val_refcount_down(nextptrval,ls);   // remove backlink from old ls value
+    val_refcount_down(nextptrval,ls);   // remove backlink from old ls value   o <- val
     val_refcount_up(nextptrval,i);      // add backlink from new ls value
 
     /// create new struct variable
     var_new_at(ls,stype); // create variable of struct type at old position of ls
+    obj_set_pointed_by(ls,ptrval);       // link to value pointing at struct ===
 
     /// create new struct value
     value_id sval = val_new_struct(stype); // UNDEFINED fields for now
-
     // create new next-pointer value
     value_id link = val_new_ptr(i);      // address of shortened listsegment
     sval=val_update_field(sval, field, link); // set nextptr in structure value
 
     /// link variable<->value
-    var_assign_value(ls,sval);
+    obj_assign_value(ls,sval);
 
-//    val(sval)->print();
+#if 1
+    obj(ls)->print();
+    std::cout << "\n  ";
+    val(sval)->print();
+    std::cout << "\n";
+    obj(i)->print();
+    std::cout << "\n";
+    std::cout << "\n";
+#endif
 
     // END: ptr->slsX+  ===> ptr->struct->sls0+
-    std::cout << "symbolic_state::sls_concretize END\n";
+    std::cout << "symbolic_state::sls_concretize END: newls=" << i << "\n";
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -2270,20 +2406,28 @@ void symbolic_state::sls_concretize(object_id ls) {
 
 void symbolic_state::print() const {
     std::cout << "[symbolic_state#" << num << ", cloned from #" << cloned_from << "]";
-    if(done)
+    if(done) {
         std::cout << " DONE" << std::endl;
+        return;
+    }
     std::cout << std::endl;
     std::cout << "Objects:\n";
-//    std::cout << "  var0: *undefined*\n"; // not stored
+//    std::cout << "  *undefined*\n"; // not stored
     for(so_container<object_id,object>::const_iterator i=objects.begin(); i!=objects.end(); ++i) {
         const object *p = i->second;
         std::cout << "  ";
         p->print();
+
+        std::cout << "    ";
+        value_id v = p->get_value();
+        if(values.exist(v) && (val_is_struct(v)||val_is_pointer(v))) 
+            val(v)->print();
+
         std::cout << std::endl;
     }
 
     std::cout << "Values:\n";
-//    std::cout << "  val#0: *undefined*\n"; // not stored
+//    std::cout << "  *undefined*\n"; // not stored
     for(so_container<value_id,value>::const_iterator i=values.begin(); i!=values.end(); ++i) {
         const value *p = i->second;
         std::cout << "  ";
@@ -2295,7 +2439,10 @@ void symbolic_state::print() const {
     //    std::cout << "\n";
 }
 
-// module conditions.cc
+
+
+
+// module precondition.cc
 /////////////////////////////////////////////////////////////////////////////
 /// Precondition is the list of symbolic heaps
 class Precondition {
@@ -2347,7 +2494,7 @@ class Precondition {
         }
         std::cout << "======================================================\n";
     }
-};
+}; // Precondition
 
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -2391,14 +2538,52 @@ class AbstractProgramState {
     iterator end(line_id line) {
         return m[line].end();
     }
-};
+}; // AbstractProgramState
 
 // TODO:
-// abstract source code description
-// command(args) ===  a=x, a=[x], [a] = x; new a, delete a;  if, while, goto?
 // algorithm: start, for each line, loops, ...
 
+
+
+#ifdef TODO___
+// TODO: better name
+// compare two states for equality (graph isomorphism?)
+bool ss_compare_eq(const symbolic_state *s1, const symbolic_state *s2) {
+
+    std::set<object_id> checked1, checked2;  // mark already checked nodes
+
+    for(so_container<object_id,object>::const_iterator i=s1->objects.begin(); i!=s1->objects.end(); ++i) {
+        object_id o = i->first;
+        if(s1->obj_is_var(o) && s1->var_is_progvar(o)) {
+            if(! (s2->obj_is_var(o) && s2->var_is_progvar(o)) )
+                return false;
+            if(s1->var(o)->name() != s2->var(o)->name())
+                return false;
+            const object *o1 = s1->obj(o);
+            const object *o2 = s2->obj(o);
+            for(;;) {
+                value_id v1id = o1->get_value();
+                value_id v2id = o2->get_value();
+                if(v1id==undefined_value && v2id==undefined_value)
+
+                const value *v1 = o1->get_value()
+            }
+        }
+
+    }
+} // compare two states
+
+#endif
+
+
+
+
 } // namespace SepLog
+
+
+
+
+
 
 
 
@@ -2440,7 +2625,6 @@ enum Operation {
     // SWITCH,
     CALL, RETURN,
     EXIT,
-    DEFVAR,
     MAX_OP
 };
 const char *OperationName[MAX_OP] = {
@@ -2450,7 +2634,6 @@ const char *OperationName[MAX_OP] = {
     "goto",
     "call", "return",
     "EXIT",
-    "DEFVAR",
 };
 
 typedef std::pair<line_id, symbolic_state*> execution_continuation_t;
@@ -2523,8 +2706,8 @@ class Command {
         std::cout << "COMMAND(" << op << "=" ;
         std::cout << std::setw(10) << OperationName[op];
         if(op!=EXIT) {
-        std::cout << ", " << std::setw(4) << var1;
-        std::cout << ", " << std::setw(4) << var2;
+        std::cout << ", " << std::setw(6) << var1;
+        std::cout << ", " << std::setw(6) << var2;
         if(op==ASSIGN_V_M || op==ASSIGN_M_V)
             std::cout << ", f" << std::setfill('0') << std::setw(3) << f_id << std::setfill(' ');
         else
@@ -2600,7 +2783,7 @@ class Code {
         }
         std::cout << std::endl;
     }
-};
+}; // Code
 
 // simple program form for standalone debugging
 // TODO: code = set of modules, module = vector of lines, line_id=number (1..N=module1,N+1..M=module2,...+module_map)
@@ -2679,12 +2862,6 @@ execution_result_t Command::execute(const symbolic_state *pre) const {
 
     switch(get_op()) {
         case EXIT: return result;
-        case DEFVAR:
-        {
-            throw "todo: exec defvar";
-            //symbolic_state *s = pre->clone(); // new symbolic state, sharing all
-            //s->new_var(get_type(),get_name());
-        } break;
         case ASSIGN_V_V:    // a = b;
         {
             symbolic_state *s = pre->clone(); // new symbolic state, sharing all
@@ -2762,10 +2939,14 @@ execution_result_t Command::execute(const symbolic_state *pre) const {
             }
             result.push_back(execution_continuation_t(get_next(),s));
         } break;
+
         case IFEQ:          // if(a==b)
         {
-            // TODO: add check for loop fixed point???????????????????
-            //eval_condition(); // for now only var=var (and pointers)
+            // TODO: add check for loop fixed point here ?
+
+            // TODO: add other than var=var conditions ? (preprocessor dependent)
+            //       we have nil constant as special variable
+
             if(pre->var_is_equal(v1,v2)) { // same value ==> condition always true
                 std::cout << "if(true) // v1==v2\n";
                 // known exactly, go only single way
@@ -2776,91 +2957,119 @@ execution_result_t Command::execute(const symbolic_state *pre) const {
             else // values are not the same ==> maybe nondeterministic:
             {    // condition false or true - we don't know
                 std::cout << "if(v1!=v2)\n";
-                if(pre->var_is_pointer(v1) && pre->var_is_pointer(v2)) {
+
+                if(pre->var_is_pointer(v1) && pre->var_is_pointer(v2)) { // ========== pointers
                     std::cout << "if(ptr1 ?=? ptr2)\n";
                     // both pointers
                     object_id target1 = pre->var_points_to(v1);
                     object_id target2 = pre->var_points_to(v2);
+
                     if(pre->obj_is_nonempty(target1) && pre->obj_is_nonempty(target2)) {
+                        // both targets nonempty and therefore not equal
                         std::cout << "if(ptr1!=ptr2) deterministic\n";
-                        // values different
-                        // v1!=v2
+                        // values are different:  v1!=v2
                         symbolic_state *s = pre->clone(); // new symbolic state, sharing all
-                        // add NEQ(v1,v2) ?    is for speed only?
+                        // go to false direction only
                         result.push_back(execution_continuation_t(get_next(),s)); // if false
+
                     } else if (pre->obj_is_nonempty(target1) && !pre->obj_is_nonempty(target2)) {
+                        // nonempty!=possibly_empty 
+                        // we need to check both possibilities
                         std::cout << "if(ptr!=ptr2pe) nondet\n";
                         //TODO: wrap to function
+                        // TODO: there is more cases: t2->NE->..., t2->t3->NE..., t2->t3->t4->NE...
+                        //       we need to check all cases!    =====BUG=====
+                        //       (can be slow -- not often)
+
                         // target2 is abstract: possibly empty segment
-                        value_id t2next = pre->sls_get_next(target2); // this value should be shared
-                        if(pre->val_points_to(t2next) == target1) { // if possibly empty next is equal
+                        // a) empty variant
+                        //value_id t2next = pre->sls_get_next(target2); // this value should be shared
+                        object_id lstarget = pre->sls_target(target2);
+                        if(lstarget == target1) { // if possibly empty and next is equal
                             std::cout << " -- nondet A == empty listsegment\n";
                             symbolic_state *s = pre->clone(); // new symbolic state, sharing all
                             // ensure pe => empty
                             s->sls_eliminate_empty(target2); // remove LS0P
                             result.push_back(execution_continuation_t(get_next(2),s));  // if true
+                        } else if(!pre->obj_is_nonempty(lstarget)) {
+                            throw "if(...) TODO: t2->pe->pe...";
                         }
+
+                        // b) nonempty variant v1!=v2
                         std::cout << " -- nondet B == nonempty listsegment\n";
-                        // and possibly non-true // v1!=v2
                         symbolic_state *s = pre->clone(); // new symbolic state, sharing all
-                        // add NEQ(v1,v2) ?
                         s->sls_set_length(target2,LS1P);
                         result.push_back(execution_continuation_t(get_next(),s)); // if false
+
                     } else if (!pre->obj_is_nonempty(target1) && pre->obj_is_nonempty(target2)) {
                         std::cout << "if(ptr2pe!=ptr)  nondet\n";
                         //TODO: wrap to function
                         // target1 is possibly empty segment
+
                         // a) empty variant
-                        value_id t1next = pre->sls_get_next(target1); // this value should be shared
-                        if(pre->val_points_to(t1next) == target2) { // if possibly empty next is equal
+                        //value_id t1next = pre->sls_get_next(target1); // this value should be shared
+                        object_id lstarget = pre->sls_target(target1);
+                        if(lstarget == target2) { // if possibly empty next is equal
                             std::cout << " -- nondet A == empty listsegment\n";
                             symbolic_state *s = pre->clone(); // new symbolic state, sharing all
                             // ensure pe => empty
                             s->sls_eliminate_empty(target1); // remove LS0P
                             result.push_back(execution_continuation_t(get_next(2),s));  // if true
+                        } else if(!pre->obj_is_nonempty(lstarget)) {
+                            throw "if(...) TODO: t1->pe->pe...";
                         }
+
+                        // b) nonempty variant v1!=v2
                         std::cout << " -- nondet B == nonempty listsegment\n";
-                        // b) nonempty variant
-                        // v1!=v2
                         symbolic_state *s = pre->clone(); // new symbolic state, sharing all
-                        // add NEQ(v1,v2) ?    is for speed only?
                         s->sls_set_length(target1,LS1P);
                         result.push_back(execution_continuation_t(get_next(),s)); // if false
+
                     } else if (!pre->obj_is_nonempty(target1) && !pre->obj_is_nonempty(target2)) {
                         std::cout << "if(ptr2pe!=ptr2pe)\n";
                         // both targets possibly empty
                         throw "EXEC: TODO: pe == pe ";
                     }
-                } else {
+                } else { // ========== non-pointers
                     std::cout << "if(nonptr!=nonptr)\n";
                     throw "EXEC:  TODO: non-pointers";
                 }
-            }
+            } // if-else equal value
 
         } break;
         case CALL:          // TODO: arguments->parameters, new stackframe
         {
-            symbolic_state *s = pre->clone(); // new symbolic state, sharing all
-                            s->stack_push(get_next()); // return address
-                            result.push_back(execution_continuation_t(get_next(2),s));
-                            break;
+            symbolic_state *s = pre->clone();   // new symbolic state, sharing all from caller
+            s->stack_push(get_next());          // return address
+
+            // TODO: create stack-frame
+            // create arguments on-stack
+            throw "exec CALL TODO";
+
+            // continue at function start
+            result.push_back(execution_continuation_t(get_next(2),s));
+            break;
 
         } break;
         case RETURN:        // TODO: return value, delete stackframe
         {
             symbolic_state *s = pre->clone(); // new symbolic state, sharing all
 
-                            result.push_back(execution_continuation_t(s->stack_top(),s)); // go to return address
-                            s->stack_pop(); // remove return address
-                            break;
+            // TODO
+            throw "exec RETURN TODO";
+
+
+            result.push_back(execution_continuation_t(s->stack_top(),s)); // go to return address
+            s->stack_pop(); // remove return address
+            break;
 
         } break;
         default: // internal error
         {
-                            std::string s;
-                            std::ostringstream os(s);
-                            os << "*** Bad command code: " << __FILE__ << ":" << __LINE__;
-                            throw s.c_str();
+            std::string s;
+            std::ostringstream os(s);
+            os << "*** Bad command code: " << __FILE__ << ":" << __LINE__;
+            throw s.c_str();
         } break;
     } // switch
     std::cout << "- comamnd executed\n";
@@ -2868,6 +3077,14 @@ execution_result_t Command::execute(const symbolic_state *pre) const {
     // 3) check/simplify
     // TODO: part of entailment -- special cases only
 
+    for(execution_result_t::iterator i=result.begin(); i!=result.end();++i) {
+        
+        // experimental:
+        type_id t =  static_cast<type_id>(14);          /// <<<<<<<< WARNING --- BUG ---
+        field_id f = static_cast<field_id>(1);
+
+        i->second->sls_abstract(t,f);
+    }
 
 
     return result; // return all possible continuations
@@ -2974,9 +3191,11 @@ int main() try {
 // TODO: move to Code abstraction?
     // fill type table
     type_id stype = types.add_structure("structX",2);
+    std::cout << "struct type_id: " << stype << "\n";
     type_id ptype = types.add_pointer_to(stype);
                       types.add_structure_field(stype,"data",ptype);
     field_id nextid = types.add_structure_field(stype,"next",ptype);
+    std::cout << "struct next field_id: " << nextid << "\n";
     if(nextid!=1) throw "err";
 
     // TODO: wrap to function
