@@ -1449,8 +1449,8 @@ create_cl_chain(const struct sl_plug_options *opt)
     }
 
     if (/* TODO */ true) {
-        if (!sl_append_def_listener(chain, "seplog", /* TODO */ "",
-                    opt->use_unswitch))
+        if (!sl_append_listener(chain, "listener=\"seplog\" "
+                    "cld=\"unfold_switch,unify_labels_gl\""))
             return NULL;
     }
 

@@ -82,6 +82,7 @@ libcl.a: $(CL_OBJS)
 
 #TODO: dependency scanning
 $(CL_OBJS): code_listener.h config.h *.hh
+cl_seplog.o: ../seplog/symbolic-heap.cc
 
 #$(CL_OBJS): CXXFLAGS += -fPIC -std=c++0x -pedantic -Wall -Werror
 $(CL_OBJS): CXXFLAGS += -fPIC -std=c++0x -pedantic -Wall
