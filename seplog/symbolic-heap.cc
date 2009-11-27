@@ -1,13 +1,46 @@
 // SepLog --- Experimental implementation of separation logic based symbolic heap
-//
+/////////////////////////////////////////////////////////////////////////////
 // vim:autoindent:tw=120
 //
 // (c) Pert Peringer, FIT TU Brno, CZ
-// (c) ........., FIT TU Brno, CZ
+// (c) FIT TU Brno, CZ
 //
 // License: GPL (GNU General Public Licence), TODO: version3?, afero?
 //
-// This is research prototype. Needs cleaning.
+// This is research prototype. Always incomplete. Needs cleaning.
+/////////////////////////////////////////////////////////////////////////////
+
+// TODO:
+//  - test of symbolic_state equivalence (isomorphism)
+//  - add NEQ(x,y)
+//  - add generic \lambda
+
+/////////////////////////////////////////////////////////////////////////////
+// basic data structures overview:
+//
+//    obj ---hasvalue--> val
+//     ^                  |
+//     |partof            |contains
+//     |                  v
+//    obj <--pointsto--- val
+//
+//    relation                   reverse
+//    ----------------------------------------
+//    has_value(obj,val)  N:1    used_by_obj
+//    points_to(val,obj)  1:1    pointed_by
+//    contains(val,val)   M:N    used_by_val
+//    part_of(var,var)    N:1    parts
+//
+// objects are identified by object_id (== abstract address)
+// values are identified by value_id
+// values are unique (pointers,...)  and imutable
+//
+// object kinds = { variables, segments={sls,dls,...} }
+// value kinds = { scalars={pointers,int,...}, structs, arrays }
+// variable types from preprocessor
+//
+// ...
+/////////////////////////////////////////////////////////////////////////////
 
 #include <string>
 #include <vector>
@@ -21,6 +54,8 @@
 #include <sstream>  // format
 #include <algorithm>  // find
 
+#include <climits>  // UINT_MAX
+
 #include <cassert>  // assert
 #define ASSERT(c) assert(c)  // macro
 
@@ -33,11 +68,12 @@ namespace SepLog {
 class symbolic_state; // forward declaration of main class
 
 // basic types:
-// VARIABLES and SEGMENTS == objects are identified by number (enum for type safety)
+// VARIABLES and SEGMENTS objects are identified by number (enum for type safety)
 // object_id used as abstract address
 //  0 == none/empty/garbage,
-//  1 == nil,
-enum object_id { undefined_object=0, nil=1, MAX_OBJECT_ID=4000000000UL }; // TODO UINT_MAX
+//  1 == nil (pseudo-variable)
+enum object_id { undefined_object=0, nil=1, MAX_OBJECT_ID=UINT_MAX };
+// output operator for object_id
 std::ostream &operator<< (std::ostream &s, object_id o) {
     if(o==undefined_object)
         s << "*undefined*";
@@ -49,11 +85,11 @@ std::ostream &operator<< (std::ostream &s, object_id o) {
 }
 
 
-// VALUES integer identification of all values
+// VALUES are identified by number (enum for type-safety)
 // the same values are shared (should be for pointers)
 // TODO: more "undefined" values ? (if back-references needed)
-enum value_id  { undefined_value=0, nil_value=1, MAX_VALUE_ID=4000000000UL };
-// output operator
+enum value_id  { undefined_value=0, nil_value=1, MAX_VALUE_ID=UINT_MAX };
+// output operator for value_id
 std::ostream &operator<< (std::ostream &s, value_id v) {
     if(v==undefined_value)
         s << "*UNDEFINED*";
@@ -63,6 +99,7 @@ std::ostream &operator<< (std::ostream &s, value_id v) {
         s << "VAL#" << static_cast<unsigned>(v);
     return s;
 }
+
 
 // TYPES identification by index to global type description table
 // TODO: rename, use GCC/sparse enums
@@ -82,19 +119,19 @@ enum type_id  {
     VOID_PTR_T,
     MAX_BASIC_TYPE_ID,          // this should be at the end of basic types
     // the space for user-defined types
-    MAX_TYPE_ID=1000000L        // <<-- this should be last
+    MAX_TYPE_ID=UINT_MAX        // <<-- this should be last
 };
 
 // FIELDS (members) of structure numerical identification
 // range: 0 .. number of fields in struct
-enum field_id { MIN_FIELD_ID=0, MAX_FIELD_ID=100000 };
+enum field_id { MIN_FIELD_ID=0, MAX_FIELD_ID=10000U };
 
 
 // CODE:
 // command or line identification type (enum used for type safety)
-enum line_id { MIN_LINE_ID=0, MAX_LINE_ID=100000000L};
+enum line_id { MIN_LINE_ID=0, MAX_LINE_ID=UINT_MAX };
 
-// type of listsegments:
+// length-type of listsegments:
 enum list_segment_length {
     _LS1_=1, // single item (== points_to in Berdine&spol) NOT USED here (==struct)
     LS0P,  // possibly empty
@@ -448,8 +485,8 @@ class value {
     // each _defined_ value has handle, undefined parts of struct/array do not exist
 
   protected:
-    value(value_id h, value_kind t, type_id tid): 
-        this_value(h), 
+    value(value_id h, value_kind t, type_id tid):
+        this_value(h),
         _kind(t),
         val_type(tid)
     {
@@ -463,7 +500,7 @@ class value {
     virtual ~value() {
         ASSERT(used_by_objects.empty());
         ASSERT(used_by_values.empty());
-        if(refcount()!=0) 
+        if(refcount()!=0)
             std::cerr << "refcount problem\n"; // can not throw in destructor
     }
 
@@ -591,10 +628,10 @@ class value_address : public value {
         // TODO: do it only in debug version ?
     }
     object_id points_to() const  { return addr; }
-    void set_target(object_id o) { 
+    void set_target(object_id o) {
         if(!_writable())
             throw "value_address::set_target(o): shared val modified !!!";
-        addr=o; 
+        addr=o;
     }
 
     void print() const {
@@ -616,7 +653,7 @@ class value_int : public value {
 
     const long v;
     value *_clone() const { return new value_int(*this); }
-  public: 
+  public:
     // constant, set by ctr
     value_int(value_id h, long va): value(h,SCALAR,INT_T), v(va) { }
     ~value_int() { }
@@ -677,9 +714,9 @@ class object {
 
   protected:
     // TODO: maybe pass the size of allocation and do the ID inside ctr ?
-    object(object_id id, object_type t): 
-        this_object(id), 
-        _target_of(undefined_value), 
+    object(object_id id, object_type t):
+        this_object(id),
+        _target_of(undefined_value),
         _value(undefined_value),        // special UNDEFINED value (type-independent)
         _type(t) {}
     virtual ~object() {
@@ -709,9 +746,9 @@ class object {
     bool                has_value() const       { return _value!=undefined_value; }
     // get/set (lowlevel interface)
     virtual value_id    get_value() const       { return _value; }
-    virtual void        set_value(value_id v)   { 
+    virtual void        set_value(value_id v)   {
         ASSERT(_writable());
-        _value = v; 
+        _value = v;
     }
 
     // is target of some pointer?
@@ -735,7 +772,7 @@ class object {
     object_type _type;          /// for basic type check (ls,var,...)
 
     _Refcount _refcount;        // internal
-  private:  
+  private:
     object & operator= (const object &v); // delete
 }; // class object
 
@@ -1179,31 +1216,31 @@ class symbolic_state { // SH = (equations,predicates)
     const value         *val(value_id i) const  { return values[i]; }
 
     // access struct value
-    value_struct        *val_s(value_id i)       { 
-        value_struct * v = dynamic_cast<value_struct*>(values[i]); 
+    value_struct        *val_s(value_id i)       {
+        value_struct * v = dynamic_cast<value_struct*>(values[i]);
         if(v==0)
             throw "val_s: value is not of struct type or undefined";
         return v;
     }
-    const value_struct  *val_s(value_id i) const { 
-        const value_struct * v = dynamic_cast<const value_struct*>(values[i]); 
+    const value_struct  *val_s(value_id i) const {
+        const value_struct * v = dynamic_cast<const value_struct*>(values[i]);
         if(v==0)
             throw "val_s: value is not of struct type or undefined";
         return v;
     }
 
     // access pointer value
-    value_address        *val_ptr(value_id i)       { 
-        value_address *v = dynamic_cast<value_address*>(values[i]); 
+    value_address        *val_ptr(value_id i)       {
+        value_address *v = dynamic_cast<value_address*>(values[i]);
         if(v==0)
             throw "val_ptr: value is not of pointer type or undefined";
-        return v; 
+        return v;
     }
-    const value_address  *val_ptr(value_id i) const { 
-        const value_address *v = dynamic_cast<const value_address*>(values[i]); 
+    const value_address  *val_ptr(value_id i) const {
+        const value_address *v = dynamic_cast<const value_address*>(values[i]);
         if(v==0)
             throw "val_ptr: value is not of pointer type or undefined";
-        return v; 
+        return v;
     }
 
     // TODO val_array
@@ -1250,9 +1287,9 @@ class symbolic_state { // SH = (equations,predicates)
 
     // get objects value
     value_id obj_get_value(object_id o) const { return obj(o)->get_value(); }
-    value_id var_get_value(object_id x) const { 
+    value_id var_get_value(object_id x) const {
         ASSERT(obj(x)->is_variable());
-        return obj_get_value(x); 
+        return obj_get_value(x);
     }
 
     // set objects value
@@ -1467,7 +1504,7 @@ class symbolic_state { // SH = (equations,predicates)
         std::vector<object_id> r;
         for(so_container<object_id,object>::const_iterator i=objects.begin(); i!=objects.end(); ++i) {
             object_id o = i->first;
-            if(obj(o)->is_sls()) 
+            if(obj(o)->is_sls())
                 r.push_back(o);
         }
         return r;
@@ -1738,7 +1775,7 @@ class symbolic_state { // SH = (equations,predicates)
             if(done.count(o)!=0) // already used
                 continue;
             value_id next = sls(o)->next();
-            if(next==nil_value) 
+            if(next==nil_value)
                 continue;
             if(val_is_shared(next))  // used not only by o
                 continue;
@@ -1746,7 +1783,7 @@ class symbolic_state { // SH = (equations,predicates)
             object_id n = val_points_to(next);
             if(obj_is_sls(n) && sls_type(n)==stype && sls_next_id(n)==f) {
                 // join consecutive sls
-                if(done.count(n)!=0)  // already used 
+                if(done.count(n)!=0)  // already used
                     continue; // not possible TODO: throw
                 done.insert(n); // mark
                 obj_unlink_val_del(o);
@@ -1780,7 +1817,7 @@ class symbolic_state { // SH = (equations,predicates)
 #endif
         //TODO: add all cases of type-check
         if( obj_is_var(o) ) {
-            if( var_is_struct(o) && !val_is_struct(h)) 
+            if( var_is_struct(o) && !val_is_struct(h))
                 throw "obj_assign_value: struct var = nonstruct val -- typecheck failed";
             if( var_is_pointer(o) && !val_is_pointer(h))
                 throw "obj_assign_value: pointer var = nonpointer val -- typecheck failed";
@@ -2420,7 +2457,7 @@ void symbolic_state::print() const {
 
         std::cout << "    ";
         value_id v = p->get_value();
-        if(values.exist(v) && (val_is_struct(v)||val_is_pointer(v))) 
+        if(values.exist(v) && (val_is_struct(v)||val_is_pointer(v)))
             val(v)->print();
 
         std::cout << std::endl;
@@ -2545,7 +2582,7 @@ class AbstractProgramState {
 
 
 
-#ifdef TODO___
+#if 0
 // TODO: better name
 // compare two states for equality (graph isomorphism?)
 bool ss_compare_eq(const symbolic_state *s1, const symbolic_state *s2) {
@@ -2568,9 +2605,9 @@ bool ss_compare_eq(const symbolic_state *s1, const symbolic_state *s2) {
 
                 const value *v1 = o1->get_value()
             }
-        }
+        } // if
 
-    }
+    } // for
 } // compare two states
 
 #endif
@@ -2973,7 +3010,7 @@ execution_result_t Command::execute(const symbolic_state *pre) const {
                         result.push_back(execution_continuation_t(get_next(),s)); // if false
 
                     } else if (pre->obj_is_nonempty(target1) && !pre->obj_is_nonempty(target2)) {
-                        // nonempty!=possibly_empty 
+                        // nonempty!=possibly_empty
                         // we need to check both possibilities
                         std::cout << "if(ptr!=ptr2pe) nondet\n";
                         //TODO: wrap to function
@@ -3078,7 +3115,7 @@ execution_result_t Command::execute(const symbolic_state *pre) const {
     // TODO: part of entailment -- special cases only
 
     for(execution_result_t::iterator i=result.begin(); i!=result.end();++i) {
-        
+
         // experimental:
         type_id t =  static_cast<type_id>(14);          /// <<<<<<<< WARNING --- BUG ---
         field_id f = static_cast<field_id>(1);
