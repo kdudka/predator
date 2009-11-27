@@ -3,7 +3,7 @@ TODO+inspirace pro  separation-logic
 
 2-level refcounts
 
-BINARY: abstract code, tables, call graph, dependencies, 
+BINARY: abstract code, tables, call graph, dependencies,
         library functions + annotations
 
 NONDETERMINISM: copy on write?
@@ -24,7 +24,7 @@ input: program+annotations
 algorithm:
 start with precondition?
 repeat
-for each line 
+for each line
     evaluate, try all possible ways next
     reduce
 until fixpoint
@@ -46,5 +46,5 @@ code data:
 
   if
   while
-  
+
 =============================================================
