@@ -419,11 +419,15 @@ void ClDotGenerator::emitInsnCall() {
 }
 
 void ClDotGenerator::checkForFncRef(const struct cl_operand *op) {
-    if (CL_OPERAND_CST != op->code || CL_TYPE_FNC != op->type->code)
+    if (CL_OPERAND_CST != op->code)
         return;
 
-    string name(op->data.cst.data.cst_fnc.name);
-    this->gobbleEdge(name, (op->data.cst.data.cst_fnc.is_extern)
+    const struct cl_cst &cst = op->data.cst;
+    if (CL_TYPE_FNC != cst.code)
+        return;
+
+    string name(cst.data.cst_fnc.name);
+    this->gobbleEdge(name, (cst.data.cst_fnc.is_extern)
             ? ET_GL_CALL_INDIR
             : ET_LC_CALL_INDIR);
 
