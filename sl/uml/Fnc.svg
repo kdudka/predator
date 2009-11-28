@@ -1,0 +1,121 @@
+<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 20001102//EN" "http://www.w3.org/TR/2000/CR-SVG-20001102/DTD/svg-20001102.dtd">
+<svg xmlns="http://www.w3.org/2000/svg" width="969" x="0" y="0" height="549" id="/home/xdudka00/git/phd/tools/sl/uml/Fnc" >
+ <rect width="969" x="17" y="29" height="549" transform="translate(-17,-29)" style="stroke:rgb(0,0,0);stroke-width:0;fill:rgb(255,255,255);" />
+ <line transform="translate(-17,-29)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="342" y2="342" x1="413" x2="308" />
+ <line transform="translate(-17,-29)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="156" y2="156" x1="308" x2="257" />
+ <line transform="translate(-17,-29)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="342" y2="156" x1="308" x2="308" />
+ <line transform="translate(-17,-29)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="216" y2="308" x1="495" x2="495" />
+ <line transform="translate(-17,-29)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="359" y2="359" x1="578" x2="655" />
+ <line transform="translate(-17,-29)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="190" y2="283" x1="146" x2="146" />
+ <line transform="translate(-17,-29)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="376" y2="376" x1="413" x2="276" />
+ <line transform="translate(-17,-29)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="122" y2="122" x1="257" x2="364" />
+ <line transform="translate(-17,-29)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="410" y2="451" x1="495" x2="495" />
+ <polygon points="413 342 403 338 391 342 403 346" transform="translate(-17,-29)" style="stroke:rgb(0,0,0);stroke-width:0;fill:rgb(255,255,255);" />
+ <polygon points="578 359 588 363 600 359 588 355" transform="translate(-17,-29)" style="stroke:rgb(0,0,0);stroke-width:0;fill:rgb(255,0,0);" />
+ <polygon points="146 190 142 200 146 212 150 200" transform="translate(-17,-29)" style="stroke:rgb(0,0,0);stroke-width:0;fill:rgb(255,0,0);" />
+ <polygon points="413 376 403 372 391 376 403 380" transform="translate(-17,-29)" style="stroke:rgb(0,0,0);stroke-width:0;fill:rgb(255,0,0);" />
+ <polygon points="257 122 267 126 279 122 267 118" transform="translate(-17,-29)" style="stroke:rgb(0,0,0);stroke-width:0;fill:rgb(255,0,0);" />
+ <polygon points="495 410 491 420 495 432 499 420" transform="translate(-17,-29)" style="stroke:rgb(0,0,0);stroke-width:0;fill:rgb(255,0,0);" />
+ <line transform="translate(-17,-29)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="342" y2="338" x1="413" x2="403" />
+ <line transform="translate(-17,-29)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="338" y2="342" x1="403" x2="391" />
+ <line transform="translate(-17,-29)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="342" y2="346" x1="391" x2="403" />
+ <line transform="translate(-17,-29)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="346" y2="342" x1="403" x2="413" />
+ <line transform="translate(-17,-29)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="359" y2="363" x1="578" x2="588" />
+ <line transform="translate(-17,-29)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="363" y2="359" x1="588" x2="600" />
+ <line transform="translate(-17,-29)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="359" y2="355" x1="600" x2="588" />
+ <line transform="translate(-17,-29)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="355" y2="359" x1="588" x2="578" />
+ <line transform="translate(-17,-29)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="190" y2="200" x1="146" x2="142" />
+ <line transform="translate(-17,-29)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="200" y2="212" x1="142" x2="146" />
+ <line transform="translate(-17,-29)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="212" y2="200" x1="146" x2="150" />
+ <line transform="translate(-17,-29)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="200" y2="190" x1="150" x2="146" />
+ <line transform="translate(-17,-29)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="376" y2="372" x1="413" x2="403" />
+ <line transform="translate(-17,-29)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="372" y2="376" x1="403" x2="391" />
+ <line transform="translate(-17,-29)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="376" y2="380" x1="391" x2="403" />
+ <line transform="translate(-17,-29)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="380" y2="376" x1="403" x2="413" />
+ <line transform="translate(-17,-29)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="122" y2="126" x1="257" x2="267" />
+ <line transform="translate(-17,-29)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="126" y2="122" x1="267" x2="279" />
+ <line transform="translate(-17,-29)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="122" y2="118" x1="279" x2="267" />
+ <line transform="translate(-17,-29)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="118" y2="122" x1="267" x2="257" />
+ <line transform="translate(-17,-29)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="410" y2="420" x1="495" x2="491" />
+ <line transform="translate(-17,-29)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="420" y2="432" x1="491" x2="495" />
+ <line transform="translate(-17,-29)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="432" y2="420" x1="495" x2="499" />
+ <line transform="translate(-17,-29)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="420" y2="410" x1="499" x2="495" />
+ <rect width="221" x="36" y="88" height="102" transform="translate(-17,-29)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:rgb(255,255,192);" />
+ <text x="146" y="103" transform="translate(-17,-29)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:700;font-family:Arial;" text-anchor="middle" >File</text>
+ <line transform="translate(-17,-29)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:rgb(255,255,192);" y1="105" y2="105" x1="36" x2="256" />
+ <text x="41" y="120" transform="translate(-17,-29)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ name : string</text>
+ <text x="41" y="137" transform="translate(-17,-29)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ vars : VarDb</text>
+ <text x="41" y="154" transform="translate(-17,-29)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ fncs : FncDb</text>
+ <text x="41" y="171" transform="translate(-17,-29)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ fncByName : TFncNames</text>
+ <line transform="translate(-17,-29)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:rgb(255,255,192);" y1="173" y2="173" x1="36" x2="256" />
+ <text x="41" y="188" transform="translate(-17,-29)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ File(name_ : const std::string&amp;)</text>
+ <rect width="263" x="364" y="29" height="187" transform="translate(-17,-29)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:rgb(255,255,192);" />
+ <text x="495" y="44" transform="translate(-17,-29)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:700;font-family:Arial;" text-anchor="middle" >FncDb</text>
+ <line transform="translate(-17,-29)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:rgb(255,255,192);" y1="46" y2="46" x1="364" x2="626" />
+ <text x="369" y="61" transform="translate(-17,-29)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >- fncs_ : TList</text>
+ <text x="369" y="78" transform="translate(-17,-29)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >- d : Private*</text>
+ <line transform="translate(-17,-29)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:rgb(255,255,192);" y1="80" y2="80" x1="364" x2="626" />
+ <text x="369" y="95" transform="translate(-17,-29)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ FncDb()</text>
+ <text x="369" y="112" transform="translate(-17,-29)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ ~ FncDb()</text>
+ <text x="369" y="129" transform="translate(-17,-29)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ FncDb( : const FncDb&amp;)</text>
+ <text x="369" y="146" transform="translate(-17,-29)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ operator =( : const FncDb&amp;) : FncDb&amp;</text>
+ <text x="369" y="163" transform="translate(-17,-29)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ operator [ ](uid : int) : Fnc*&amp;</text>
+ <text x="369" y="180" transform="translate(-17,-29)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ begin() : const_iterator</text>
+ <text x="369" y="197" transform="translate(-17,-29)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ end() : const_iterator</text>
+ <text x="369" y="214" transform="translate(-17,-29)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ size() : undef</text>
+ <rect width="165" x="413" y="308" height="102" transform="translate(-17,-29)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:rgb(255,255,192);" />
+ <text x="495" y="323" transform="translate(-17,-29)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:700;font-family:Arial;" text-anchor="middle" >Fnc</text>
+ <line transform="translate(-17,-29)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:rgb(255,255,192);" y1="325" y2="325" x1="413" x2="577" />
+ <text x="418" y="340" transform="translate(-17,-29)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ file : File*</text>
+ <text x="418" y="357" transform="translate(-17,-29)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ def : struct cl_operand</text>
+ <text x="418" y="374" transform="translate(-17,-29)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ vars : VarDb</text>
+ <text x="418" y="391" transform="translate(-17,-29)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ cfg : ControlFlow</text>
+ <line transform="translate(-17,-29)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:rgb(255,255,192);" y1="393" y2="393" x1="413" x2="577" />
+ <text x="418" y="408" transform="translate(-17,-29)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ Fnc()</text>
+ <rect width="331" x="655" y="257" height="204" transform="translate(-17,-29)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:rgb(255,255,192);" />
+ <text x="820" y="272" transform="translate(-17,-29)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:700;font-family:Arial;" text-anchor="middle" >ControlFlow</text>
+ <line transform="translate(-17,-29)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:rgb(255,255,192);" y1="274" y2="274" x1="655" x2="985" />
+ <text x="660" y="289" transform="translate(-17,-29)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >- bbs_ : TList</text>
+ <text x="660" y="306" transform="translate(-17,-29)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >- d : Private*</text>
+ <line transform="translate(-17,-29)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:rgb(255,255,192);" y1="308" y2="308" x1="655" x2="985" />
+ <text x="660" y="323" transform="translate(-17,-29)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ ControlFlow()</text>
+ <text x="660" y="340" transform="translate(-17,-29)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ ~ ControlFlow()</text>
+ <text x="660" y="357" transform="translate(-17,-29)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ ControlFlow( : const ControlFlow&amp;)</text>
+ <text x="660" y="374" transform="translate(-17,-29)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ operator =( : const ControlFlow&amp;) : ControlFlow&amp;</text>
+ <text x="660" y="391" transform="translate(-17,-29)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ entry() : const Block*</text>
+ <text x="660" y="408" transform="translate(-17,-29)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ operator [ ](name : const char*) : Block*&amp;</text>
+ <text x="660" y="425" transform="translate(-17,-29)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ begin() : const_iterator</text>
+ <text x="660" y="442" transform="translate(-17,-29)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ end() : const_iterator</text>
+ <text x="660" y="459" transform="translate(-17,-29)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ size() : undef</text>
+ <rect width="259" x="17" y="283" height="187" transform="translate(-17,-29)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:rgb(255,255,192);" />
+ <text x="146" y="298" transform="translate(-17,-29)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:700;font-family:Arial;" text-anchor="middle" >VarDb</text>
+ <line transform="translate(-17,-29)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:rgb(255,255,192);" y1="300" y2="300" x1="17" x2="275" />
+ <text x="22" y="315" transform="translate(-17,-29)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >- vars_ : TList</text>
+ <text x="22" y="332" transform="translate(-17,-29)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >- d : Private*</text>
+ <line transform="translate(-17,-29)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:rgb(255,255,192);" y1="334" y2="334" x1="17" x2="275" />
+ <text x="22" y="349" transform="translate(-17,-29)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ VarDb()</text>
+ <text x="22" y="366" transform="translate(-17,-29)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ ~ VarDb()</text>
+ <text x="22" y="383" transform="translate(-17,-29)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ VarDb( : const VarDb&amp;)</text>
+ <text x="22" y="400" transform="translate(-17,-29)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ operator =( : const VarDb&amp;) : VarDb&amp;</text>
+ <text x="22" y="417" transform="translate(-17,-29)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ operator [ ](uid : int) : Var&amp;</text>
+ <text x="22" y="434" transform="translate(-17,-29)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ begin() : const_iterator</text>
+ <text x="22" y="451" transform="translate(-17,-29)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ end() : const_iterator</text>
+ <text x="22" y="468" transform="translate(-17,-29)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ size() : undef</text>
+ <rect width="211" x="390" y="451" height="127" transform="translate(-17,-29)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:rgb(255,255,192);" />
+ <text x="495" y="466" transform="translate(-17,-29)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:700;font-family:Arial;" text-anchor="middle" >cl_operand</text>
+ <line transform="translate(-17,-29)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:rgb(255,255,192);" y1="468" y2="468" x1="390" x2="600" />
+ <text x="395" y="483" transform="translate(-17,-29)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ code : enum cl_operand_e</text>
+ <text x="395" y="500" transform="translate(-17,-29)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ loc : struct cl_location</text>
+ <text x="395" y="517" transform="translate(-17,-29)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ scope : enum cl_scope_e</text>
+ <text x="395" y="534" transform="translate(-17,-29)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ type : struct cl_type*</text>
+ <text x="395" y="551" transform="translate(-17,-29)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ accessor : struct cl_accessor*</text>
+ <text x="395" y="568" transform="translate(-17,-29)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ data : undef</text>
+ <line transform="translate(-17,-29)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:rgb(255,255,192);" y1="570" y2="570" x1="390" x2="600" />
+ <text x="275" y="150" transform="translate(-17,-29)" style="fill:rgb(50,50,50);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" text-anchor="middle" >0..1</text>
+ <text x="276" y="175" transform="translate(-17,-29)" style="fill:rgb(50,50,50);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" text-anchor="middle" >+file</text>
+ <text x="635" y="378" transform="translate(-17,-29)" style="fill:rgb(50,50,50);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" text-anchor="middle" >+cfg</text>
+ <text x="122" y="277" transform="translate(-17,-29)" style="fill:rgb(50,50,50);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" text-anchor="middle" >+vars</text>
+ <text x="299" y="395" transform="translate(-17,-29)" style="fill:rgb(50,50,50);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" text-anchor="middle" >+vars</text>
+ <text x="341" y="141" transform="translate(-17,-29)" style="fill:rgb(50,50,50);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" text-anchor="middle" >+fncs</text>
+</svg>

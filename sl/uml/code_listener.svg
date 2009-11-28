@@ -1,0 +1,120 @@
+<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 20001102//EN" "http://www.w3.org/TR/2000/CR-SVG-20001102/DTD/svg-20001102.dtd">
+<svg xmlns="http://www.w3.org/2000/svg" width="958" x="0" y="0" height="608" id="/home/xdudka00/git/phd/tools/sl/uml/code_listener" >
+ <rect width="958" x="14" y="23" height="608" transform="translate(-14,-23)" style="stroke:rgb(0,0,0);stroke-width:0;fill:rgb(255,255,255);" />
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="593" y2="593" x1="145" x2="55" />
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="593" y2="197" x1="55" x2="55" />
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="555" y2="495" x1="228" x2="228" />
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="431" y2="431" x1="158" x2="96" />
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="431" y2="197" x1="96" x2="96" />
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="368" y2="304" x1="263" x2="263" />
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="410" y2="410" x1="369" x2="497" />
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="410" y2="231" x1="497" x2="497" />
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="150" y2="150" x1="401" x2="138" />
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="123" y2="123" x1="594" x2="710" />
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="123" y2="123" x1="899" x2="971" />
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="123" y2="23" x1="971" x2="971" />
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="23" y2="23" x1="971" x2="497" />
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="23" y2="70" x1="497" x2="497" />
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="437" y2="437" x1="904" x2="970" />
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="437" y2="177" x1="970" x2="970" />
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="177" y2="177" x1="970" x2="594" />
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="499" y2="534" x1="772" x2="772" />
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="534" y2="534" x1="772" x2="298" />
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="534" y2="495" x1="298" x2="298" />
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="468" y2="468" x1="904" x2="969" />
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="468" y2="534" x1="969" x2="969" />
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="534" y2="534" x1="969" x2="838" />
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="534" y2="499" x1="838" x2="838" />
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="452" y2="452" x1="369" x2="707" />
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="197" y2="208" x1="55" x2="48" />
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="197" y2="208" x1="55" x2="62" />
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="495" y2="506" x1="228" x2="221" />
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="495" y2="506" x1="228" x2="235" />
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="197" y2="208" x1="96" x2="89" />
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="197" y2="208" x1="96" x2="103" />
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="304" y2="315" x1="263" x2="256" />
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="304" y2="315" x1="263" x2="270" />
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="231" y2="242" x1="497" x2="490" />
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="231" y2="242" x1="497" x2="504" />
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="150" y2="157" x1="138" x2="149" />
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="150" y2="143" x1="138" x2="149" />
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="123" y2="116" x1="710" x2="699" />
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="123" y2="130" x1="710" x2="699" />
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="70" y2="59" x1="497" x2="504" />
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="70" y2="59" x1="497" x2="490" />
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="177" y2="184" x1="594" x2="605" />
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="177" y2="170" x1="594" x2="605" />
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="495" y2="506" x1="298" x2="291" />
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="495" y2="506" x1="298" x2="305" />
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="499" y2="510" x1="838" x2="831" />
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="499" y2="510" x1="838" x2="845" />
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="452" y2="445" x1="707" x2="696" />
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:none;" y1="452" y2="459" x1="707" x2="696" />
+ <rect width="166" x="145" y="555" height="76" transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:rgb(255,255,192);" />
+ <text x="228" y="570" transform="translate(-14,-23)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:700;font-family:Arial;" text-anchor="middle" >cl_insn</text>
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:rgb(255,255,192);" y1="572" y2="572" x1="145" x2="310" />
+ <text x="150" y="587" transform="translate(-14,-23)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ code : enum cl_insn_e</text>
+ <text x="150" y="604" transform="translate(-14,-23)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ loc : struct cl_location</text>
+ <text x="150" y="621" transform="translate(-14,-23)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ data : undef</text>
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:rgb(255,255,192);" y1="623" y2="623" x1="145" x2="310" />
+ <rect width="211" x="158" y="368" height="127" transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:rgb(255,255,192);" />
+ <text x="263" y="383" transform="translate(-14,-23)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:700;font-family:Arial;" text-anchor="middle" >cl_operand</text>
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:rgb(255,255,192);" y1="385" y2="385" x1="158" x2="368" />
+ <text x="163" y="400" transform="translate(-14,-23)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ code : enum cl_operand_e</text>
+ <text x="163" y="417" transform="translate(-14,-23)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ loc : struct cl_location</text>
+ <text x="163" y="434" transform="translate(-14,-23)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ scope : enum cl_scope_e</text>
+ <text x="163" y="451" transform="translate(-14,-23)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ type : struct cl_type*</text>
+ <text x="163" y="468" transform="translate(-14,-23)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ accessor : struct cl_accessor*</text>
+ <text x="163" y="485" transform="translate(-14,-23)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ data : undef</text>
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:rgb(255,255,192);" y1="487" y2="487" x1="158" x2="368" />
+ <rect width="193" x="401" y="70" height="161" transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:rgb(255,255,192);" />
+ <text x="497" y="85" transform="translate(-14,-23)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:700;font-family:Arial;" text-anchor="middle" >cl_type</text>
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:rgb(255,255,192);" y1="87" y2="87" x1="401" x2="593" />
+ <text x="406" y="102" transform="translate(-14,-23)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ uid : cl_type_uid_t</text>
+ <text x="406" y="119" transform="translate(-14,-23)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ code : enum cl_type_e</text>
+ <text x="406" y="136" transform="translate(-14,-23)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ loc : struct cl_location</text>
+ <text x="406" y="153" transform="translate(-14,-23)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ scope : enum cl_scope_e</text>
+ <text x="406" y="170" transform="translate(-14,-23)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ name : const char*</text>
+ <text x="406" y="187" transform="translate(-14,-23)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ size : int</text>
+ <text x="406" y="204" transform="translate(-14,-23)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ item_cnt : int</text>
+ <text x="406" y="221" transform="translate(-14,-23)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ items : struct cl_type_item*</text>
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:rgb(255,255,192);" y1="223" y2="223" x1="401" x2="593" />
+ <rect width="189" x="710" y="85" height="76" transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:rgb(255,255,192);" />
+ <text x="804" y="100" transform="translate(-14,-23)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:700;font-family:Arial;" text-anchor="middle" >cl_type_item</text>
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:rgb(255,255,192);" y1="102" y2="102" x1="710" x2="898" />
+ <text x="715" y="117" transform="translate(-14,-23)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ type : struct const cl_type*</text>
+ <text x="715" y="134" transform="translate(-14,-23)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ name : const char*</text>
+ <text x="715" y="151" transform="translate(-14,-23)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ offset : int</text>
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:rgb(255,255,192);" y1="153" y2="153" x1="710" x2="898" />
+ <rect width="197" x="707" y="406" height="93" transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:rgb(255,255,192);" />
+ <text x="805" y="421" transform="translate(-14,-23)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:700;font-family:Arial;" text-anchor="middle" >cl_accessor</text>
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:rgb(255,255,192);" y1="423" y2="423" x1="707" x2="903" />
+ <text x="712" y="438" transform="translate(-14,-23)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ code : enum cl_accessor_e</text>
+ <text x="712" y="455" transform="translate(-14,-23)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ type : struct cl_type*</text>
+ <text x="712" y="472" transform="translate(-14,-23)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ next : struct cl_accessor*</text>
+ <text x="712" y="489" transform="translate(-14,-23)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ data : undef</text>
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:rgb(255,255,192);" y1="491" y2="491" x1="707" x2="903" />
+ <rect width="167" x="180" y="245" height="59" transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:rgb(255,255,192);" />
+ <text x="263" y="260" transform="translate(-14,-23)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:700;font-family:Arial;" text-anchor="middle" >cl_cst</text>
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:rgb(255,255,192);" y1="262" y2="262" x1="180" x2="346" />
+ <text x="185" y="277" transform="translate(-14,-23)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ code : enum cl_type_e</text>
+ <text x="185" y="294" transform="translate(-14,-23)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ data : undef</text>
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:rgb(255,255,192);" y1="296" y2="296" x1="180" x2="346" />
+ <rect width="124" x="14" y="104" height="93" transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:rgb(255,255,192);" />
+ <text x="76" y="119" transform="translate(-14,-23)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:700;font-family:Arial;" text-anchor="middle" >cl_location</text>
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:rgb(255,255,192);" y1="121" y2="121" x1="14" x2="137" />
+ <text x="19" y="136" transform="translate(-14,-23)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ file : const char*</text>
+ <text x="19" y="153" transform="translate(-14,-23)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ line : int</text>
+ <text x="19" y="170" transform="translate(-14,-23)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ column : int</text>
+ <text x="19" y="187" transform="translate(-14,-23)" style="fill:rgb(0,0,0);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" >+ sysp : bool</text>
+ <line transform="translate(-14,-23)" style="stroke:rgb(255,0,0);stroke-width:0.9;fill:rgb(255,255,192);" y1="189" y2="189" x1="14" x2="137" />
+ <text x="244" y="363" transform="translate(-14,-23)" style="fill:rgb(50,50,50);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" text-anchor="middle" >+cst</text>
+ <text x="392" y="429" transform="translate(-14,-23)" style="fill:rgb(50,50,50);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" text-anchor="middle" >+type</text>
+ <text x="621" y="142" transform="translate(-14,-23)" style="fill:rgb(50,50,50);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" text-anchor="middle" >+items</text>
+ <text x="922" y="142" transform="translate(-14,-23)" style="fill:rgb(50,50,50);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" text-anchor="middle" >+type</text>
+ <text x="928" y="430" transform="translate(-14,-23)" style="fill:rgb(50,50,50);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" text-anchor="middle" >+type</text>
+ <text x="725" y="525" transform="translate(-14,-23)" style="fill:rgb(50,50,50);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" text-anchor="middle" >+array index</text>
+ <text x="927" y="487" transform="translate(-14,-23)" style="fill:rgb(50,50,50);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" text-anchor="middle" >+next</text>
+ <text x="386" y="471" transform="translate(-14,-23)" style="fill:rgb(50,50,50);stroke-width:0;font-size:10;font-style:normal;font-weight:400;font-family:Arial;" text-anchor="middle" >+ac</text>
+</svg>
