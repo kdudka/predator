@@ -254,9 +254,10 @@ struct Insn {
      *      - [@b 1] - source 1
      *      - [@b 2] - source 2
      *
-     * - (@b 1+ operands) @b CL_INSN_CALL:
+     * - (@b 2+ operands) @b CL_INSN_CALL:
      *      - [@b 0] - destination
-     *      - [@b 1..@b n] - call arguments
+     *      - [@b 1] - what are we going to call (mostly a fnc)
+     *      - [@b 2..@b n] - call arguments
      *
      * - (@b 1+ operands) @b CL_INSN_SWITCH:
      *      - [@b 0] - value to switch by

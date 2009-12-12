@@ -40,6 +40,8 @@ class SymHeapProcessor {
 
     private:
         void execUnary(const CodeStorage::Insn &insn);
+        void execMalloc(const CodeStorage::TOperandList &opList);
+        void execCall(const CodeStorage::Insn &insn);
         int /* val */ heapValFromCst(const struct cl_operand &op);
         int /* var */ heapVarFromOperand(const struct cl_operand &op);
         int /* val */ heapValFromOperand(const struct cl_operand &op);
@@ -119,6 +121,10 @@ int /* var */ SymHeapProcessor::heapVarFromOperand(const struct cl_operand &op)
             return SymbolicHeap::OBJ_INVALID;
     }
 
+    if (CL_TYPE_PTR != op.type->code)
+        // not implemented yet
+        TRAP;
+
     const cl_accessor *ac = op.accessor;
     if (ac)
         // not implemented yet
@@ -149,6 +155,86 @@ int /* val */ SymHeapProcessor::heapValFromOperand(const struct cl_operand &op)
             TRAP;
             return OBJ_INVALID;
     }
+}
+
+void SymHeapProcessor::execMalloc(const CodeStorage::TOperandList &opList) {
+    using namespace SymbolicHeap;
+    if (/* dst + fnc + size */ 3 != opList.size())
+        TRAP;
+
+    const struct cl_operand &dst = opList[0];
+    int varLhs = heapVarFromOperand(dst);
+    if (OBJ_INVALID == varLhs)
+        // could not resolve lhs
+        TRAP;
+
+    const struct cl_operand &amount = opList[2];
+    if (CL_OPERAND_CST != amount.code)
+        // amount of allocated memory not constant
+        TRAP;
+
+    const struct cl_cst &cst = amount.data.cst;
+    if (CL_TYPE_INT != cst.code)
+        // amount of allocated memory not a number
+        TRAP;
+
+    // FIXME: we simply ignore the ammount of allocated memory
+    const int cbAmount = cst.data.cst_int.value;
+    CL_DEBUG("executing malloc(" << cbAmount << ")");
+
+    // FIXME: we can't use dst.type as type of the created obj in most cases :-(
+    const int obj = heap_.varCreate(dst.type, /* heap obj */ -1);
+    if (OBJ_INVALID == obj)
+        // unable to create dynamic variable
+        TRAP;
+
+    // TODO: delayed var creation?
+    const int val = heap_.placedAt(obj);
+    switch (val) {
+        case VAL_NULL:
+        case VAL_INVALID:
+        case VAL_UNINITIALIZED:
+        case VAL_UNKNOWN:
+            TRAP;
+
+        default:
+            break;
+    }
+
+    // store the result of malloc
+    heap_.objSetValue(obj, val);
+}
+
+void SymHeapProcessor::execCall(const CodeStorage::Insn &insn) {
+    using namespace SymbolicHeap;
+
+    const CodeStorage::TOperandList &opList = insn.operands;
+    const struct cl_operand &fnc = opList[1];
+    if (CL_OPERAND_CST != fnc.code)
+        // indirect call not implemented yet
+        TRAP;
+
+    const struct cl_cst &cst = fnc.data.cst;
+    if (CL_TYPE_FNC != cst.code)
+        // incorrect cst used as fnc in call
+        TRAP;
+
+    const char *fncName = cst.data.cst_fnc.name;
+    if (!fncName)
+        // Aieee, anonymous fnc is going to be called
+        TRAP;
+
+    if (CL_SCOPE_GLOBAL != fnc.scope || !cst.data.cst_fnc.is_extern)
+        // generic function call not implemented yet
+        TRAP;
+
+    if (STREQ(fncName, "malloc")) {
+        this->execMalloc(opList);
+        return;
+    }
+
+    // TODO: handle generic function call
+    TRAP;
 }
 
 void SymHeapProcessor::execUnary(const CodeStorage::Insn &insn) {
@@ -184,6 +270,10 @@ void SymHeapProcessor::exec(const CodeStorage::Insn &insn) {
             this->execUnary(insn);
             break;
 
+        case CL_INSN_CALL:
+            this->execCall(insn);
+            break;
+
         default:
             TRAP;
     }
@@ -211,6 +301,8 @@ struct SymExec::Private {
     {
     }
 
+    void updateState(const CodeStorage::Block *ofBlock,
+                     const SymbolicHeap::SymHeap &heap);
     void execTermInsn(const CodeStorage::Insn &insn,
                       const SymbolicHeap::SymHeap &heap);
     void execBb();
@@ -227,11 +319,34 @@ SymExec::~SymExec() {
     delete d;
 }
 
+void SymExec::Private::updateState(const CodeStorage::Block *ofBlock,
+                                   const SymbolicHeap::SymHeap &heap)
+{
+    SymHeapUnion &huni = this->state[ofBlock];
+    const size_t last = huni.size();
+    huni.insert(heap);
+
+    if (huni.size() != last)
+        todo.insert(ofBlock);
+}
+        
 void SymExec::Private::execTermInsn(const CodeStorage::Insn &insn,
                                     const SymbolicHeap::SymHeap &heap)
 {
-    // TODO
-    TRAP;
+    const CodeStorage::TTargetList &tlist = insn.targets;
+
+    const enum cl_insn_e code = insn.code;
+    switch (code) {
+        case CL_INSN_JMP:
+            if (1 == tlist.size()) {
+                this->updateState(tlist[0], heap);
+                break;
+            }
+            // go through!
+
+        default:
+            TRAP;
+    }
 }
 
 void SymExec::Private::execBb() {
@@ -254,10 +369,10 @@ void SymExec::Private::execBb() {
         SymHeapProcessor proc(workingHeap);
 
         // go through all BB insns
-        int insnCnt = 0;
         BOOST_FOREACH(const Insn *insn, *bb) {
-            // update location info
-            this->lw = &insn->loc;
+            if (0 < insn->loc.line)
+                // update location info
+                this->lw = &insn->loc;
 
             if (cl_is_term_insn(insn->code))
                 // terminal insn

@@ -31,6 +31,10 @@
 #include <signal.h>
 #define TRAP raise(SIGTRAP)
 
+#ifndef STREQ
+#   define STREQ(s1, s2) (0 == strcmp(s1, s2))
+#endif
+
 // pull in __attribute__ ((__noreturn__))
 #define CL_DIE(msg) do { \
     cl_die("fatal error: " msg); \

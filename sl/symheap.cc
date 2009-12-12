@@ -27,29 +27,42 @@ namespace SymbolicHeap {
 struct Var {
     const struct cl_type    *clt;
     int /* CodeStorage */   cVarUid;
+    int /* val */           placedAt;
     int /* val */           value;
 
     // the following line helps to recognize an uninitialized instance
     Var(): clt(0) { }
 };
 
+struct Value {
+    const struct cl_type    *clt;
+    int /* obj */           pointsTo;
+
+    // the following line helps to recognize an uninitialized instance
+    Value(): clt(0) { }
+};
+
 typedef std::map<int, int> TIdMap;
 typedef std::map<int, Var> TVarMap;
+typedef std::map<int, Value> TValueMap;
 
 // /////////////////////////////////////////////////////////////////////////////
 // SymHeap implementation
 struct SymHeap::Private {
-    TVarMap varMap;
-    TIdMap cVarIdMap;
+    TIdMap                  cVarIdMap;
+    TVarMap                 varMap;
+    TValueMap               valueMap;
 
-    int lastObj;
-    int lastVal;
+    int                     lastObj;
+    int                     lastVal;
 
     Private():
         lastObj(0),
         lastVal(0)
     {
     }
+
+    int /* val */ createValue(const struct cl_type *clt, int obj);
 };
 
 SymHeap::SymHeap():
@@ -72,22 +85,42 @@ SymHeap& SymHeap::operator=(const SymHeap &ref) {
     return *this;
 }
 
+int /* val */ SymHeap::Private::createValue(const struct cl_type *clt, int obj)
+{
+    const int valId = ++lastVal;
+
+    Value &val = valueMap[valId];
+    val.clt             = clt;
+    val.pointsTo        = obj;
+
+    return valId;
+}
+
 int /* val */ SymHeap::valueOf(int obj) {
-    // TODO
-    TRAP;
-    return VAL_INVALID;
+    TVarMap::iterator iter = d->varMap.find(obj);
+    if (d->varMap.end() == iter)
+        return OBJ_INVALID;
+
+    Var &var = iter->second;
+    return var.value;
 }
 
 int /* val */ SymHeap::placedAt(int obj) {
-    // TODO
-    TRAP;
-    return VAL_INVALID;
+    TVarMap::iterator iter = d->varMap.find(obj);
+    if (d->varMap.end() == iter)
+        return OBJ_INVALID;
+
+    Var &var = iter->second;
+    return var.placedAt;
 }
 
 int /* obj */ SymHeap::pointsTo(int val) {
-    // TODO
-    TRAP;
-    return OBJ_INVALID;
+    TValueMap::iterator iter = d->valueMap.find(val);
+    if (d->valueMap.end() == iter)
+        return VAL_INVALID;
+
+    Value &value = iter->second;
+    return value.pointsTo;
 }
 
 const SymHeap::TCont& /* obj[] */ SymHeap::haveValue(int val) {
@@ -168,12 +201,15 @@ int /* var */ SymHeap::varCreate(const struct cl_type *clt,
         TRAP;
 
     int objId = ++(d->lastObj);
-    d->cVarIdMap[uid] = objId;
     Var &var = d->varMap[objId];
 
     var.clt         = clt;
     var.cVarUid     = uid;
+    var.placedAt    = d->createValue(clt, objId);
     var.value       = VAL_UNINITIALIZED;
+
+    if (/* heap object */ -1 != uid)
+        d->cVarIdMap[uid] = objId;
 
     return objId;
 }
