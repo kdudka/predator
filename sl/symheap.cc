@@ -57,8 +57,19 @@ SymHeap::SymHeap():
 {
 }
 
+SymHeap::SymHeap(const SymHeap &ref):
+    d(new Private(*ref.d))
+{
+}
+
 SymHeap::~SymHeap() {
     delete d;
+}
+
+SymHeap& SymHeap::operator=(const SymHeap &ref) {
+    delete d;
+    d = new Private(*ref.d);
+    return *this;
 }
 
 int /* val */ SymHeap::valueOf(int obj) {

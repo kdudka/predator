@@ -44,6 +44,8 @@ class SymHeap {
     public:
         SymHeap();
         ~SymHeap();
+        SymHeap(const SymHeap &);               ///< shallow copy
+        SymHeap& operator=(const SymHeap &);    ///< shallow copy
 
     public:
         typedef std::vector<int> TCont;

@@ -24,9 +24,29 @@
 #include "storage.hh"
 #include "symheap.hh"
 
-#include <iostream>
+#include <map>
+#include <set>
 
 #include <boost/foreach.hpp>
+
+class SymHeapProcessor {
+    public:
+        SymHeapProcessor(SymbolicHeap::SymHeap &heap):
+            heap_(heap)
+        {
+        }
+
+        void exec(const CodeStorage::Insn &insn);
+
+    private:
+        void execUnary(const CodeStorage::Insn &insn);
+        int /* val */ heapValFromCst(const struct cl_operand &op);
+        int /* var */ heapVarFromOperand(const struct cl_operand &op);
+        int /* val */ heapValFromOperand(const struct cl_operand &op);
+
+    private:
+        SymbolicHeap::SymHeap &heap_;
+};
 
 class SymHeapUnion {
     private:
@@ -58,41 +78,12 @@ class SymHeapUnion {
         TList heaps_;
 };
 
-typedef std::pair<int /* Fnc uid */, int /* BB uid */> TStateId;
-
-// FIXME: the following setup is not ready to deal with recursion
-typedef std::map<TStateId, SymHeapUnion> TStateMap;
+typedef std::set<const CodeStorage::Block *>                TBlockSet;
+typedef std::map<const CodeStorage::Block *, SymHeapUnion>  TStateMap;
 
 // /////////////////////////////////////////////////////////////////////////////
-// SymExec implementation
-struct SymExec::Private {
-    CodeStorage::Storage        &stor;
-    const CodeStorage::Fnc      *fnc;
-    const CodeStorage::Block    *bb;
-    LocationWriter              lw;
-    SymbolicHeap::SymHeap       heap;
-
-    Private(CodeStorage::Storage &stor_):
-        stor(stor_)
-    {
-    }
-
-    void execUnary(const CodeStorage::Insn &insn);
-    int /* val */ heapValFromCst(const struct cl_operand &op);
-    int /* var */ heapVarFromOperand(const struct cl_operand &op);
-    int /* val */ heapValFromOperand(const struct cl_operand &op);
-};
-
-SymExec::SymExec(CodeStorage::Storage &stor):
-    d(new Private(stor))
-{
-}
-
-SymExec::~SymExec() {
-    delete d;
-}
-
-int /* val */ SymExec::Private::heapValFromCst(const struct cl_operand &op) {
+// SymHeapProcessor implementation
+int /* val */ SymHeapProcessor::heapValFromCst(const struct cl_operand &op) {
     if (CL_TYPE_PTR != op.type->code)
         // not implemented yet
         TRAP;
@@ -110,7 +101,7 @@ int /* val */ SymExec::Private::heapValFromCst(const struct cl_operand &op) {
     }
 }
 
-int /* var */ SymExec::Private::heapVarFromOperand(const struct cl_operand &op)
+int /* var */ SymHeapProcessor::heapVarFromOperand(const struct cl_operand &op)
 {
     const enum cl_operand_e code = op.code;
     int uid;
@@ -133,10 +124,10 @@ int /* var */ SymExec::Private::heapVarFromOperand(const struct cl_operand &op)
         // not implemented yet
         TRAP;
 
-    return heap.varByCVar(uid);
+    return heap_.varByCVar(uid);
 }
 
-int /* val */ SymExec::Private::heapValFromOperand(const struct cl_operand &op)
+int /* val */ SymHeapProcessor::heapValFromOperand(const struct cl_operand &op)
 {
     using namespace SymbolicHeap;
 
@@ -148,7 +139,7 @@ int /* val */ SymExec::Private::heapValFromOperand(const struct cl_operand &op)
             if (OBJ_INVALID == var)
                 TRAP;
 
-            return heap.valueOf(var);
+            return heap_.valueOf(var);
         }
 
         case CL_OPERAND_CST:
@@ -160,7 +151,7 @@ int /* val */ SymExec::Private::heapValFromOperand(const struct cl_operand &op)
     }
 }
 
-void SymExec::Private::execUnary(const CodeStorage::Insn &insn) {
+void SymHeapProcessor::execUnary(const CodeStorage::Insn &insn) {
     using namespace SymbolicHeap;
 
     enum cl_unop_e code = static_cast<enum cl_unop_e> (insn.subCode);
@@ -178,18 +169,19 @@ void SymExec::Private::execUnary(const CodeStorage::Insn &insn) {
         // could not resolve rhs
         TRAP;
 
-    heap.objSetValue(varLhs, valRhs);
+    heap_.objSetValue(varLhs, valRhs);
 }
 
-void SymExec::exec(const CodeStorage::Insn &insn) {
+void SymHeapProcessor::exec(const CodeStorage::Insn &insn) {
     using namespace CodeStorage;
-    d->lw = &insn.loc;
 
-    CL_MSG_STREAM(cl_debug, d->lw << "debug: executing insn...");
+    LocationWriter lw(&insn.loc);
+    CL_MSG_STREAM(cl_debug, lw << "debug: executing insn...");
+
     const enum cl_insn_e code = insn.code;
     switch (code) {
         case CL_INSN_UNOP:
-            d->execUnary(insn);
+            this->execUnary(insn);
             break;
 
         default:
@@ -197,39 +189,147 @@ void SymExec::exec(const CodeStorage::Insn &insn) {
     }
 }
 
-void SymExec::exec(const CodeStorage::Block &bb) {
-    using namespace CodeStorage;
-    d->bb = &bb;
+// /////////////////////////////////////////////////////////////////////////////
+// SymHeapUnion implementation
+void SymHeapUnion::insert(const SymbolicHeap::SymHeap &heap) {
+    // TODO: check for identity and/or entailment
+    heaps_.push_back(heap);
+}
 
-    CL_MSG_STREAM(cl_debug, d->lw << "debug: entering " << bb.name() << "...");
-    BOOST_FOREACH(const Insn *insn, bb) {
-        this->exec(*insn);
+// /////////////////////////////////////////////////////////////////////////////
+// SymExec implementation
+struct SymExec::Private {
+    CodeStorage::Storage        &stor;
+    const CodeStorage::Fnc      *fnc;
+    const CodeStorage::Block    *bb;
+    LocationWriter              lw;
+    TStateMap                   state;
+    TBlockSet                   todo;
+
+    Private(CodeStorage::Storage &stor_):
+        stor(stor_)
+    {
     }
+
+    void execTermInsn(const CodeStorage::Insn &insn,
+                      const SymbolicHeap::SymHeap &heap);
+    void execBb();
+    void execFncBody();
+    void execFnc();
+};
+
+SymExec::SymExec(CodeStorage::Storage &stor):
+    d(new Private(stor))
+{
+}
+
+SymExec::~SymExec() {
+    delete d;
+}
+
+void SymExec::Private::execTermInsn(const CodeStorage::Insn &insn,
+                                    const SymbolicHeap::SymHeap &heap)
+{
+    // TODO
+    TRAP;
+}
+
+void SymExec::Private::execBb() {
+    using namespace CodeStorage;
+    using SymbolicHeap::SymHeap;
+
+    // some debugging stuff
+    int bbCnt = 0;
+    const std::string &name = bb->name();
+    CL_MSG_STREAM(cl_debug, lw << "debug: >>> entering " << name << "...");
+
+    // go through all symbolic heaps corresponding to entry of this BB
+    SymHeapUnion &huni = this->state[this->bb];
+    BOOST_FOREACH(const SymHeap &heap, huni) {
+        CL_MSG_STREAM(cl_debug, this->lw << "debug: *** processing heap #"
+                << (++bbCnt) << " of BB " << name << "...");
+
+        // TODO: cow semantic
+        SymHeap workingHeap(heap);
+        SymHeapProcessor proc(workingHeap);
+
+        // go through all BB insns
+        int insnCnt = 0;
+        BOOST_FOREACH(const Insn *insn, *bb) {
+            // update location info
+            this->lw = &insn->loc;
+
+            if (cl_is_term_insn(insn->code))
+                // terminal insn
+                this->execTermInsn(*insn, workingHeap);
+            else
+                // non-terminal insn
+                proc.exec(*insn);
+        }
+    }
+}
+
+void SymExec::Private::execFncBody() {
+    if (!todo.empty())
+        // not implemented yet
+        TRAP;
+
+    // start with Fnc entry
+    this->todo.insert(this->bb);
+
+    // main loop
+    while (!todo.empty()) {
+        // FIXME: take BBs in some reasonable order instead
+        TBlockSet::iterator i = this->todo.begin();
+        this->bb = *i;
+        this->todo.erase(i);
+
+        this->execBb();
+    }
+
+    CL_DEBUG("execFncBody(): main loop terminated correctly...");
+}
+
+void SymExec::Private::execFnc() {
+    using namespace CodeStorage;
+    using SymbolicHeap::SymHeap;
+
+    // create initial state for called function
+    // TODO: handle fnc args somehow
+    SymHeap init;
+    BOOST_FOREACH(const Var &var, fnc->vars) {
+        CL_DEBUG("--- creating stack variable: #" << var.uid
+                << " (" << var.name << ")" );
+        init.varCreate(var.clt, var.uid);
+    }
+
+    // insert initial state to the corresponding union
+    SymHeapUnion &huni = this->state[this->bb];
+    huni.insert(init);
+
+    this->execFncBody();
 }
 
 void SymExec::exec(const CodeStorage::Fnc &fnc) {
     using namespace CodeStorage;
+    using SymbolicHeap::SymHeap;
+
     d->fnc = &fnc;
     d->lw = &fnc.def.loc;
 
-    CL_MSG_STREAM(cl_debug, d->lw << "debug: entering "
+    CL_MSG_STREAM(cl_debug, d->lw << "debug: >>> entering "
             << nameOf(fnc) << "()...");
-
-    using namespace CodeStorage;
-    BOOST_FOREACH(const Var &var, fnc.vars) {
-        CL_DEBUG("--- creating stack variable: #" << var.uid
-                << " (" << var.name << ")" );
-        d->heap.varCreate(var.clt, var.uid);
-    }
 
     CL_DEBUG("looking for entry block...");
     const ControlFlow &cfg = fnc.cfg;
-    const Block *entry = cfg.entry();
-    if (!entry) {
-        CL_MSG_STREAM(cl_error, d->lw << "error: "
-                << nameOf(fnc) << ": "
-                << "entry block not found");
+    d->bb = cfg.entry();
+    if (d->bb) {
+        // we are indeed ready to execute the function
+        d->execFnc();
         return;
     }
-    this->exec(*entry);
+
+    CL_MSG_STREAM(cl_error, d->lw << "error: "
+            << nameOf(fnc) << ": "
+            << "entry block not found");
 }

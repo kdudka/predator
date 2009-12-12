@@ -29,10 +29,6 @@ class SymExec {
 
         void exec(const CodeStorage::Fnc &);
 
-    protected:
-        void exec(const CodeStorage::Insn &);
-        void exec(const CodeStorage::Block &);
-
     private:
         struct Private;
         Private *d;

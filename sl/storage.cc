@@ -332,16 +332,28 @@ const Block* ControlFlow::operator[](const char *name) const {
 
 // /////////////////////////////////////////////////////////////////////////////
 // Fnc implementation
+namespace {
+    const struct cl_cst& cstFromFnc(const Fnc &fnc) {
+        const struct cl_operand &op = fnc.def;
+        if (CL_OPERAND_CST != op.code)
+            TRAP;
+
+        const struct cl_cst &cst = op.data.cst;
+        if (CL_TYPE_FNC != cst.code)
+            TRAP;
+
+        return cst;
+    }
+}
+
 const char* nameOf(const Fnc &fnc) {
-    const struct cl_operand &op = fnc.def;
-    if (CL_OPERAND_CST != op.code)
-        TRAP;
-
-    const struct cl_cst &cst = op.data.cst;
-    if (CL_TYPE_FNC != cst.code)
-        TRAP;
-
+    const struct cl_cst &cst = cstFromFnc(fnc);
     return cst.data.cst_fnc.name;
+}
+
+int uidOf(const Fnc &fnc) {
+    const struct cl_cst &cst = cstFromFnc(fnc);
+    return cst.data.cst_fnc.uid;
 }
 
 
