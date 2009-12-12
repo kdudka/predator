@@ -97,9 +97,21 @@ int /* val */ SymHeap::Private::createValue(const struct cl_type *clt, int obj)
 }
 
 int /* val */ SymHeap::valueOf(int obj) {
+    switch (obj) {
+        case OBJ_INVALID:
+            return VAL_INVALID;
+
+        case OBJ_DELETED:
+        case OBJ_UNKNOWN:
+            return VAL_UNKNOWN;
+
+        default:
+            break;
+    }
+
     TVarMap::iterator iter = d->varMap.find(obj);
     if (d->varMap.end() == iter)
-        return OBJ_INVALID;
+        return VAL_INVALID;
 
     Var &var = iter->second;
     return var.value;
@@ -196,9 +208,18 @@ int /* val */ SymHeap::valParent(int val) {
 int /* var */ SymHeap::varCreate(const struct cl_type *clt,
                                  int /* CodeStorage var */ uid)
 {
-    if (CL_TYPE_PTR != clt->code)
-        // not implemented yet
-        TRAP;
+    const enum cl_type_e code = clt->code;
+    switch (code) {
+        case CL_TYPE_INT:
+            CL_DEBUG("CL_TYPE_INT treated as pointer");
+            // go through!
+
+        case CL_TYPE_PTR:
+            break;
+
+        default:
+            TRAP;
+    }
 
     int objId = ++(d->lastObj);
     Var &var = d->varMap[objId];

@@ -48,7 +48,8 @@ class SymHeapProcessor {
         void execCall(const CodeStorage::Insn &insn);
 
     private:
-        SymbolicHeap::SymHeap &heap_;
+        SymbolicHeap::SymHeap       &heap_;
+        LocationWriter              lw_;
 };
 
 class SymHeapUnion {
@@ -87,12 +88,21 @@ typedef std::map<const CodeStorage::Block *, SymHeapUnion>  TStateMap;
 // /////////////////////////////////////////////////////////////////////////////
 // SymHeapProcessor implementation
 int /* val */ SymHeapProcessor::heapValFromCst(const struct cl_operand &op) {
-    if (CL_TYPE_PTR != op.type->code)
-        // not implemented yet
-        TRAP;
+    enum cl_type_e code = op.type->code;
+    switch (code) {
+        case CL_TYPE_INT:
+            CL_DEBUG("CL_TYPE_INT treated as pointer");
+            // go through!
+
+        case CL_TYPE_PTR:
+            break;
+
+        default:
+            TRAP;
+    }
 
     const struct cl_cst &cst = op.data.cst;
-    const enum cl_type_e code = cst.code;
+    code = cst.code;
     switch (code) {
         case CL_TYPE_INT:
             if (0 == cst.data.cst_int.value)
@@ -117,9 +127,16 @@ void SymHeapProcessor::heapVarHandleAccessor(int *pObj,
     const int val = heap_.valueOf(*pObj);
     switch (val) {
         case VAL_NULL:
-        case VAL_INVALID:
+            CL_MSG_STREAM(cl_error, lw_ << "error: dereference of NULL value");
+            goto unknown_obj;
+
         case VAL_UNINITIALIZED:
+            CL_MSG_STREAM(cl_error, lw_ << "error: dereference of uninitialized value");
+            goto unknown_obj;
+
+        // TODO
         case VAL_UNKNOWN:
+        case VAL_INVALID:
             TRAP;
 
         default:
@@ -129,19 +146,25 @@ void SymHeapProcessor::heapVarHandleAccessor(int *pObj,
     // value lookup
     *pObj = heap_.pointsTo(val);
     switch (*pObj) {
-        case OBJ_INVALID:
+        // TODO
         case OBJ_DELETED:
+        case OBJ_INVALID:
             TRAP;
 
         default:
             break;
     }
+
+unknown_obj:
+    *pObj = OBJ_UNKNOWN;
 }
 
 int /* var */ SymHeapProcessor::heapVarFromOperand(const struct cl_operand &op)
 {
-    const enum cl_operand_e code = op.code;
+    using SymbolicHeap::OBJ_INVALID;
     int uid;
+
+    const enum cl_operand_e code = op.code;
     switch (code) {
         case CL_OPERAND_VAR:
             uid = op.data.var.id;
@@ -153,14 +176,14 @@ int /* var */ SymHeapProcessor::heapVarFromOperand(const struct cl_operand &op)
 
         default:
             TRAP;
-            return SymbolicHeap::OBJ_INVALID;
+            return OBJ_INVALID;
     }
 
-    if (CL_TYPE_PTR != op.type->code)
-        // not implemented yet
+    int var = heap_.varByCVar(uid);
+    if (OBJ_INVALID == var)
+        // unable to resolve static variable
         TRAP;
 
-    int var = heap_.varByCVar(uid);
     const struct cl_accessor *ac = op.accessor;
     while (ac) {
         this->heapVarHandleAccessor(&var, ac);
@@ -298,8 +321,8 @@ void SymHeapProcessor::execUnary(const CodeStorage::Insn &insn) {
 void SymHeapProcessor::exec(const CodeStorage::Insn &insn) {
     using namespace CodeStorage;
 
-    LocationWriter lw(&insn.loc);
-    CL_MSG_STREAM(cl_debug, lw << "debug: executing non-terminal insn...");
+    lw_ = &insn.loc;
+    CL_MSG_STREAM(cl_debug, lw_ << "debug: executing non-terminal insn...");
 
     const enum cl_insn_e code = insn.code;
     switch (code) {
@@ -359,11 +382,13 @@ SymExec::~SymExec() {
 void SymExec::Private::updateState(const CodeStorage::Block *ofBlock,
                                    const SymbolicHeap::SymHeap &heap)
 {
+    // update *target* state
     SymHeapUnion &huni = this->state[ofBlock];
     const size_t last = huni.size();
     huni.insert(heap);
 
     if (huni.size() != last)
+        // schedule for next wheel if anything has changed
         todo.insert(ofBlock);
 }
         
@@ -374,6 +399,11 @@ void SymExec::Private::execTermInsn(const CodeStorage::Insn &insn,
 
     const enum cl_insn_e code = insn.code;
     switch (code) {
+        case CL_INSN_RET:
+            CL_MSG_STREAM(cl_warn, LocationWriter(&insn.loc)
+                    << "warning: return statement ignored [not implemented]");
+            break;
+
         case CL_INSN_JMP:
             if (1 == tlist.size()) {
                 this->updateState(tlist[0], heap);
@@ -404,7 +434,7 @@ void SymExec::Private::execBb() {
         CL_MSG_STREAM(cl_debug, this->lw << "debug: *** processing heap #"
                 << (++bbCnt) << " of BB " << name << "...");
 
-        // TODO: cow semantic
+        // TODO: COW semantic
         SymHeap workingHeap(heap);
         SymHeapProcessor proc(workingHeap);
 
