@@ -19,32 +19,8 @@
 
 #include "cl_seplog.hh"
 
-#include "cl_private.hh"
 #include "cl_storage.hh"
-#include "storage.hh"
-#include "symheap.hh"
-
-#include <iostream>
-
-#include <boost/foreach.hpp>
-
-class SymExec {
-    public:
-        SymExec(CodeStorage::Storage &stor);
-
-        void exec(const CodeStorage::Fnc &);
-
-    protected:
-        void exec(const CodeStorage::Insn &);
-        void exec(const CodeStorage::Block &);
-
-    private:
-        CodeStorage::Storage        &stor_;
-        const CodeStorage::Fnc      *fnc_;
-        const CodeStorage::Block    *bb_;
-        LocationWriter              lw_;
-        SymbolicHeap::SymHeap       heap_;
-};
+#include "symexec.hh"
 
 class ClSepLog: public ClStorageBuilder {
     public:
@@ -54,58 +30,6 @@ class ClSepLog: public ClStorageBuilder {
     protected:
         virtual void run(CodeStorage::Storage &);
 };
-
-// /////////////////////////////////////////////////////////////////////////////
-// SymExec implementation
-SymExec::SymExec(CodeStorage::Storage &stor):
-    stor_(stor)
-{
-}
-
-void SymExec::exec(const CodeStorage::Insn &insn) {
-    using namespace CodeStorage;
-    lw_ = &insn.loc;
-
-    CL_MSG_STREAM(cl_debug, lw_ << "debug: executing insn...");
-}
-
-void SymExec::exec(const CodeStorage::Block &bb) {
-    using namespace CodeStorage;
-    bb_ = &bb;
-
-    CL_MSG_STREAM(cl_debug, lw_ << "debug: entering " << bb.name() << "...");
-    BOOST_FOREACH(const Insn *insn, bb) {
-        this->exec(*insn);
-    }
-}
-
-void SymExec::exec(const CodeStorage::Fnc &fnc) {
-    using namespace CodeStorage;
-    fnc_ = &fnc;
-    lw_ = &fnc.def.loc;
-
-    CL_MSG_STREAM(cl_debug, lw_ << "debug: entering "
-            << nameOf(fnc) << "()...");
-
-    using namespace CodeStorage;
-    BOOST_FOREACH(const Var &var, fnc.vars) {
-        CL_DEBUG("--- creating stack variable: " << var.uid
-                << " (" << var.name << ")" );
-        heap_.varCreate(var.clt, var.uid);
-    }
-
-    CL_DEBUG("looking for entry block...");
-    const ControlFlow &cfg = fnc.cfg;
-    const Block *entry = cfg.entry();
-    if (!entry) {
-        CL_MSG_STREAM(cl_error, lw_ << "error: "
-                << nameOf(fnc) << ": "
-                << "entry block not found");
-        return;
-    }
-    this->exec(*entry);
-}
-
 
 // /////////////////////////////////////////////////////////////////////////////
 // ClSepLog implementation

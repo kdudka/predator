@@ -10,10 +10,5 @@ run data/test.c \
     -fplugin=./slplug.so \
     -fplugin-arg-slplug-verbose=1 \
     -fplugin-arg-slplug-dump-pp
-echo \nbt:\n
 bt
-echo \nframe:\n
 f 1
-echo \ncode:\n
-list
-echo \n\n
