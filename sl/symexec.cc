@@ -39,12 +39,13 @@ class SymHeapProcessor {
         void exec(const CodeStorage::Insn &insn);
 
     private:
+        int /* val */ heapValFromCst(const struct cl_operand &op);
+        void heapVarHandleAccessor(int *pVar, const struct cl_accessor *ac);
+        int /* var */ heapVarFromOperand(const struct cl_operand &op);
+        int /* val */ heapValFromOperand(const struct cl_operand &op);
         void execUnary(const CodeStorage::Insn &insn);
         void execMalloc(const CodeStorage::TOperandList &opList);
         void execCall(const CodeStorage::Insn &insn);
-        int /* val */ heapValFromCst(const struct cl_operand &op);
-        int /* var */ heapVarFromOperand(const struct cl_operand &op);
-        int /* val */ heapValFromOperand(const struct cl_operand &op);
 
     private:
         SymbolicHeap::SymHeap &heap_;
@@ -96,10 +97,44 @@ int /* val */ SymHeapProcessor::heapValFromCst(const struct cl_operand &op) {
         case CL_TYPE_INT:
             if (0 == cst.data.cst_int.value)
                 return SymbolicHeap::VAL_NULL;
+            // go through!
 
         default:
             TRAP;
             return SymbolicHeap::VAL_INVALID;
+    }
+}
+
+void SymHeapProcessor::heapVarHandleAccessor(int *pObj,
+                                             const struct cl_accessor *ac)
+{
+    using namespace SymbolicHeap;
+    if (CL_ACCESSOR_DEREF != ac->code)
+        // not implemented yet
+        TRAP;
+
+    // attempt to dereference
+    const int val = heap_.valueOf(*pObj);
+    switch (val) {
+        case VAL_NULL:
+        case VAL_INVALID:
+        case VAL_UNINITIALIZED:
+        case VAL_UNKNOWN:
+            TRAP;
+
+        default:
+            break;
+    }
+
+    // value lookup
+    *pObj = heap_.pointsTo(val);
+    switch (*pObj) {
+        case OBJ_INVALID:
+        case OBJ_DELETED:
+            TRAP;
+
+        default:
+            break;
     }
 }
 
@@ -125,12 +160,14 @@ int /* var */ SymHeapProcessor::heapVarFromOperand(const struct cl_operand &op)
         // not implemented yet
         TRAP;
 
-    const cl_accessor *ac = op.accessor;
-    if (ac)
-        // not implemented yet
-        TRAP;
+    int var = heap_.varByCVar(uid);
+    const struct cl_accessor *ac = op.accessor;
+    while (ac) {
+        this->heapVarHandleAccessor(&var, ac);
+        ac = ac->next;
+    }
 
-    return heap_.varByCVar(uid);
+    return var;
 }
 
 int /* val */ SymHeapProcessor::heapValFromOperand(const struct cl_operand &op)
@@ -202,7 +239,7 @@ void SymHeapProcessor::execMalloc(const CodeStorage::TOperandList &opList) {
     }
 
     // store the result of malloc
-    heap_.objSetValue(obj, val);
+    heap_.objSetValue(varLhs, val);
 }
 
 void SymHeapProcessor::execCall(const CodeStorage::Insn &insn) {
@@ -262,7 +299,7 @@ void SymHeapProcessor::exec(const CodeStorage::Insn &insn) {
     using namespace CodeStorage;
 
     LocationWriter lw(&insn.loc);
-    CL_MSG_STREAM(cl_debug, lw << "debug: executing insn...");
+    CL_MSG_STREAM(cl_debug, lw << "debug: executing non-terminal insn...");
 
     const enum cl_insn_e code = insn.code;
     switch (code) {
@@ -358,8 +395,11 @@ void SymExec::Private::execBb() {
     const std::string &name = bb->name();
     CL_MSG_STREAM(cl_debug, lw << "debug: >>> entering " << name << "...");
 
+    // FIXME: we simply copy whole container to avoid its damage by inserting
+    // during traversal ... that's really awkward due to performance
+    SymHeapUnion huni(this->state[this->bb]);
+
     // go through all symbolic heaps corresponding to entry of this BB
-    SymHeapUnion &huni = this->state[this->bb];
     BOOST_FOREACH(const SymHeap &heap, huni) {
         CL_MSG_STREAM(cl_debug, this->lw << "debug: *** processing heap #"
                 << (++bbCnt) << " of BB " << name << "...");

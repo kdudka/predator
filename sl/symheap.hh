@@ -28,7 +28,8 @@ namespace SymbolicHeap {
 
 // special OBJs
 enum {
-    OBJ_INVALID       = -1
+    OBJ_INVALID       = -1,
+    OBJ_DELETED       = -2
 };
 
 // special VALs
