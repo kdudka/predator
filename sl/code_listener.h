@@ -505,6 +505,8 @@ enum cl_insn_e {
     CL_INSN_SWITCH
 };
 
+bool cl_is_term_insn(enum cl_insn_e code);
+
 /**
  * unary operation's enumeration
  */

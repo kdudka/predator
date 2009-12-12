@@ -121,6 +121,24 @@ void cl_global_cleanup(void)
         free((char *)app_name);
 }
 
+bool cl_is_term_insn(enum cl_insn_e code) {
+    switch (code) {
+        case CL_INSN_JMP:
+        case CL_INSN_COND:
+        case CL_INSN_RET:
+        case CL_INSN_ABORT:
+        case CL_INSN_SWITCH:
+            return true;
+
+        case CL_INSN_NOP:
+        case CL_INSN_UNOP:
+        case CL_INSN_BINOP:
+        case CL_INSN_CALL:
+        default:
+            return false;
+    }
+}
+
 ICodeListener* cl_obtain_from_wrap(struct cl_code_listener *wrap)
 {
     return static_cast<ICodeListener *>(wrap->data);

@@ -28,6 +28,41 @@
 
 #include <boost/foreach.hpp>
 
+class SymHeapUnion {
+    private:
+        typedef std::vector<SymbolicHeap::SymHeap> TList;
+
+    public:
+        typedef TList::const_iterator const_iterator;
+        typedef const_iterator iterator;
+
+    public:
+        void insert(const SymbolicHeap::SymHeap &heap);
+
+        /**
+         * return STL-like iterator to go through the container
+         */
+        const_iterator begin() const { return heaps_.begin(); }
+
+        /**
+         * return STL-like iterator to go through the container
+         */
+        const_iterator end()   const { return heaps_.end();   }
+
+        /**
+         * return count of object stored in the container
+         */
+        size_t size()          const { return heaps_.size();  }
+
+    private:
+        TList heaps_;
+};
+
+typedef std::pair<int /* Fnc uid */, int /* BB uid */> TStateId;
+
+// FIXME: the following setup is not ready to deal with recursion
+typedef std::map<TStateId, SymHeapUnion> TStateMap;
+
 // /////////////////////////////////////////////////////////////////////////////
 // SymExec implementation
 struct SymExec::Private {
@@ -118,11 +153,10 @@ int /* val */ SymExec::Private::heapValFromOperand(const struct cl_operand &op)
 
         case CL_OPERAND_CST:
             return heapValFromCst(op);
-            break;
 
         default:
             TRAP;
-            return SymbolicHeap::OBJ_INVALID;
+            return OBJ_INVALID;
     }
 }
 
@@ -183,7 +217,7 @@ void SymExec::exec(const CodeStorage::Fnc &fnc) {
 
     using namespace CodeStorage;
     BOOST_FOREACH(const Var &var, fnc.vars) {
-        CL_DEBUG("--- creating stack variable: " << var.uid
+        CL_DEBUG("--- creating stack variable: #" << var.uid
                 << " (" << var.name << ")" );
         d->heap.varCreate(var.clt, var.uid);
     }
