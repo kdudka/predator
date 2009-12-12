@@ -41,6 +41,11 @@ struct SymExec::Private {
         stor(stor_)
     {
     }
+
+    void execUnary(const CodeStorage::Insn &insn);
+    int /* val */ heapValFromCst(const struct cl_operand &op);
+    int /* var */ heapVarFromOperand(const struct cl_operand &op);
+    int /* val */ heapValFromOperand(const struct cl_operand &op);
 };
 
 SymExec::SymExec(CodeStorage::Storage &stor):
@@ -52,12 +57,94 @@ SymExec::~SymExec() {
     delete d;
 }
 
-void execUnary(SymbolicHeap::SymHeap &heap, const CodeStorage::Insn &insn) {
+int /* val */ SymExec::Private::heapValFromCst(const struct cl_operand &op) {
+    if (CL_TYPE_PTR != op.type->code)
+        // not implemented yet
+        TRAP;
+
+    const struct cl_cst &cst = op.data.cst;
+    const enum cl_type_e code = cst.code;
+    switch (code) {
+        case CL_TYPE_INT:
+            if (0 == cst.data.cst_int.value)
+                return SymbolicHeap::VAL_NULL;
+
+        default:
+            TRAP;
+            return SymbolicHeap::VAL_INVALID;
+    }
+}
+
+int /* var */ SymExec::Private::heapVarFromOperand(const struct cl_operand &op)
+{
+    const enum cl_operand_e code = op.code;
+    int uid;
+    switch (code) {
+        case CL_OPERAND_VAR:
+            uid = op.data.var.id;
+            break;
+
+        case CL_OPERAND_REG:
+            uid = op.data.reg.id;
+            break;
+
+        default:
+            TRAP;
+            return SymbolicHeap::OBJ_INVALID;
+    }
+
+    const cl_accessor *ac = op.accessor;
+    if (ac)
+        // not implemented yet
+        TRAP;
+
+    return heap.varByCVar(uid);
+}
+
+int /* val */ SymExec::Private::heapValFromOperand(const struct cl_operand &op)
+{
+    using namespace SymbolicHeap;
+
+    const enum cl_operand_e code = op.code;
+    switch (code) {
+        case CL_OPERAND_VAR:
+        case CL_OPERAND_REG: {
+            int var = heapVarFromOperand(op);
+            if (OBJ_INVALID == var)
+                TRAP;
+
+            return heap.valueOf(var);
+        }
+
+        case CL_OPERAND_CST:
+            return heapValFromCst(op);
+            break;
+
+        default:
+            TRAP;
+            return SymbolicHeap::OBJ_INVALID;
+    }
+}
+
+void SymExec::Private::execUnary(const CodeStorage::Insn &insn) {
+    using namespace SymbolicHeap;
+
     enum cl_unop_e code = static_cast<enum cl_unop_e> (insn.subCode);
     if (CL_UNOP_ASSIGN != code)
         // not implemented yet
         TRAP;
 
+    int varLhs = heapVarFromOperand(insn.operands[0]);
+    if (OBJ_INVALID == varLhs)
+        // could not resolve lhs
+        TRAP;
+
+    int valRhs = heapValFromOperand(insn.operands[1]);
+    if (VAL_INVALID == valRhs)
+        // could not resolve rhs
+        TRAP;
+
+    heap.objSetValue(varLhs, valRhs);
 }
 
 void SymExec::exec(const CodeStorage::Insn &insn) {
@@ -65,10 +152,10 @@ void SymExec::exec(const CodeStorage::Insn &insn) {
     d->lw = &insn.loc;
 
     CL_MSG_STREAM(cl_debug, d->lw << "debug: executing insn...");
-    enum cl_insn_e code = insn.code;
+    const enum cl_insn_e code = insn.code;
     switch (code) {
         case CL_INSN_UNOP:
-            execUnary(d->heap, insn);
+            d->execUnary(insn);
             break;
 
         default:

@@ -28,14 +28,19 @@ struct Var {
     const struct cl_type    *clt;
     int /* CodeStorage */   cVarUid;
     int /* val */           value;
+
+    // the following line helps to recognize an uninitialized instance
+    Var(): clt(0) { }
 };
 
+typedef std::map<int, int> TIdMap;
 typedef std::map<int, Var> TVarMap;
 
 // /////////////////////////////////////////////////////////////////////////////
 // SymHeap implementation
 struct SymHeap::Private {
     TVarMap varMap;
+    TIdMap cVarIdMap;
 
     int lastObj;
     int lastVal;
@@ -113,9 +118,11 @@ int /* CodeStorage var uid */ SymHeap::cVar(int var) {
 }
 
 int /* var */ SymHeap::varByCVar(int /* CodeStorage var */ uid) {
-    // TODO
-    TRAP;
-    return OBJ_INVALID;
+    TIdMap::iterator iter = d->cVarIdMap.find(uid);
+    if (d->cVarIdMap.end() == iter)
+        return OBJ_INVALID;
+    else
+        return iter->second;
 }
 
 int /* var */ SymHeap::subVar(int var, int nth) {
@@ -150,6 +157,7 @@ int /* var */ SymHeap::varCreate(const struct cl_type *clt,
         TRAP;
 
     int objId = ++(d->lastObj);
+    d->cVarIdMap[uid] = objId;
     Var &var = d->varMap[objId];
 
     var.clt         = clt;
@@ -168,6 +176,16 @@ int /* sls */ SymHeap::slsCreate(const struct cl_type *clt,
 }
 
 void SymHeap::objSetValue(int obj, int val) {
+    // first look for Var object
+    TVarMap::iterator varIter = d->varMap.find(obj);
+    if (d->varMap.end() != varIter) {
+        // obj is a Var object
+        Var &var = varIter->second;
+        var.value = val;
+        return;
+    }
+
+    // then look for Sls object
     // TODO
     TRAP;
 }
