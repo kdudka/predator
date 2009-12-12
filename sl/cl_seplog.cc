@@ -22,6 +22,7 @@
 #include "cl_private.hh"
 #include "cl_storage.hh"
 #include "storage.hh"
+#include "symheap.hh"
 
 #include <iostream>
 
@@ -29,10 +30,7 @@
 
 class SymExec {
     public:
-        SymExec(CodeStorage::Storage &stor):
-            stor_(stor)
-        {
-        }
+        SymExec(CodeStorage::Storage &stor);
 
         void exec(const CodeStorage::Fnc &);
 
@@ -45,6 +43,7 @@ class SymExec {
         const CodeStorage::Fnc      *fnc_;
         const CodeStorage::Block    *bb_;
         LocationWriter              lw_;
+        SymbolicHeap::SymHeap       heap_;
 };
 
 class ClSepLog: public ClStorageBuilder {
@@ -58,6 +57,11 @@ class ClSepLog: public ClStorageBuilder {
 
 // /////////////////////////////////////////////////////////////////////////////
 // SymExec implementation
+SymExec::SymExec(CodeStorage::Storage &stor):
+    stor_(stor)
+{
+}
+
 void SymExec::exec(const CodeStorage::Insn &insn) {
     using namespace CodeStorage;
     lw_ = &insn.loc;
@@ -82,6 +86,13 @@ void SymExec::exec(const CodeStorage::Fnc &fnc) {
 
     CL_MSG_STREAM(cl_debug, lw_ << "debug: entering "
             << nameOf(fnc) << "()...");
+
+    using namespace CodeStorage;
+    BOOST_FOREACH(const Var &var, fnc.vars) {
+        CL_DEBUG("--- creating stack variable: " << var.uid
+                << " (" << var.name << ")" );
+        heap_.varCreate(var.clt, var.uid);
+    }
 
     CL_DEBUG("looking for entry block...");
     const ControlFlow &cfg = fnc.cfg;

@@ -1,16 +1,15 @@
-file ../gcc-install/bin/gcc
-set args -fplugin=./slplug.so -std=c99 -pedantic -Wall -W -g -O0 -fPIC -c \
-    -I.. -I../gcc -iquote. data/inv-ok-01.c \
-    -fplugin-arg-slplug-verbose=5 \
-    -fplugin-arg-slplug-dump-pp \
-    -fplugin-arg-slplug-dump-types
 set backtrace limit 25
 set confirm 0
-set follow-fork-mode child
 set pagination 0
 set print pretty
 set unwindonsignal
-run
+file ../gcc-install/libexec/gcc/x86_64-unknown-linux-gnu/4.5.0/cc1
+run data/test.c \
+    -dumpbase test.c -quiet -o /dev/null \
+    -O0 -Wall -Wextra \
+    -fplugin=./slplug.so \
+    -fplugin-arg-slplug-verbose=1 \
+    -fplugin-arg-slplug-dump-pp
 echo \nbt:\n
 bt
 echo \nframe:\n

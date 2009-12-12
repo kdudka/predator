@@ -16,7 +16,8 @@
 # along with sl.  If not, see <http://www.gnu.org/licenses/>.
 
 CILLY   ?= ../invader-1_1/sources/cil/bin/cilly
-DATASET ?= data/dll.c data/slplug.c data/inv-*.c data/off.c data/hash_table.c
+DATASET ?= data/dll.c data/slplug.c data/inv-*.c data/off.c data/hash_table.c \
+		   data/test.c
 TIMEOUT ?= timeout 300
 
 # SPARSE_CFLAGS += `pkg-config sparse --cflags`
@@ -74,7 +75,8 @@ CL_OBJS = cl_chain.o \
 	code_listener.o \
 	location.o \
 	ssd.o \
-	storage.o
+	storage.o \
+	symheap.o
 
 libcl.a: $(CL_OBJS)
 	$(AR) r $@ $(CL_OBJS)
@@ -163,10 +165,10 @@ distclean: clean
 	rm -f *.o
 
 dbgsparse: slsparse
-	$(GDB) -x slsparse.gdb
+	$(GDB) -q -x slsparse.gdb
 
 dbgplug: slplug.so
-	$(GDB) -x slplug.gdb
+	$(GDB) -q -x slplug.gdb
 
 dotsparse:
 	$(MAKE) -C data distclean
