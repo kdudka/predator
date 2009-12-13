@@ -20,7 +20,6 @@
 #include "symexec.hh"
 
 #include "cl_private.hh"
-#include "location.hh"
 #include "storage.hh"
 #include "symheap.hh"
 
@@ -376,7 +375,7 @@ void SymHeapProcessor::execUnary(const CodeStorage::Insn &insn) {
     int varLhs = heapVarFromOperand(insn.operands[0]);
     switch (varLhs) {
         case OBJ_UNKNOWN:
-            CL_MSG_STREAM(cl_debug, lw_ <<
+            CL_MSG_STREAM(cl_debug, lw_ << "debug: "
                     "ignoring OBJ_UNKNOWN as lhs, this is definitely a bug "
                     "if there is no error reported above...");
             return;

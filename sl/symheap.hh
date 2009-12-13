@@ -20,9 +20,10 @@
 #ifndef H_GUARD_SYM_HEAP_H
 #define H_GUARD_SYM_HEAP_H
 
-#include "storage.hh"
-
 #include <vector>
+
+struct cl_accessor;
+struct cl_type;
 
 namespace SymbolicHeap {
 

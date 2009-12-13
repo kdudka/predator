@@ -20,7 +20,10 @@
 #ifndef H_GUARD_SYM_EXEC_H
 #define H_GUARD_SYM_EXEC_H
 
-#include "storage.hh"
+namespace CodeStorage {
+    struct Fnc;
+    struct Storage;
+}
 
 class SymExec {
     public:
