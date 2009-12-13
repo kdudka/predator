@@ -45,6 +45,7 @@ class SymHeapProcessor {
         int /* val */ heapValFromOperand(const struct cl_operand &op);
         void execUnary(const CodeStorage::Insn &insn);
         void execMalloc(const CodeStorage::TOperandList &opList);
+        void execFree(const CodeStorage::TOperandList &opList);
         void execCall(const CodeStorage::Insn &insn);
 
     private:
@@ -227,6 +228,55 @@ int /* val */ SymHeapProcessor::heapValFromOperand(const struct cl_operand &op)
     }
 }
 
+void SymHeapProcessor::execFree(const CodeStorage::TOperandList &opList) {
+    using namespace SymbolicHeap;
+    if (/* dst + fnc + ptr */ 3 != opList.size())
+        TRAP;
+
+    if (CL_OPERAND_VOID != opList[0].code)
+        // Oops, free() does not usually return a value
+        TRAP;
+
+    const int val = heapValFromOperand(opList[/* ptr given to free() */ 2]);
+    if (VAL_INVALID == val)
+        // could not resolve value to be freed
+        TRAP;
+
+    switch (val) {
+        case VAL_NULL:
+            CL_MSG_STREAM(cl_debug, lw_
+                    << "debug: ignoring free() called with NULL value");
+            return;
+
+        case VAL_INVALID:
+        case VAL_UNINITIALIZED:
+        case VAL_UNKNOWN:
+            CL_MSG_STREAM(cl_error, lw_
+                    << "error: invalid free() detected");
+            return;
+
+        default:
+            break;
+    }
+
+    const int obj = heap_.pointsTo(val);
+    switch (obj) {
+        case OBJ_DELETED:
+            CL_MSG_STREAM(cl_error, lw_
+                    << "error: double free() detected");
+            return;
+
+        case OBJ_UNKNOWN:
+        case OBJ_INVALID:
+            TRAP;
+        default:
+            break;
+    }
+
+    CL_DEBUG("executing free()");
+    heap_.objDestroy(obj);
+}
+
 void SymHeapProcessor::execMalloc(const CodeStorage::TOperandList &opList) {
     using namespace SymbolicHeap;
     if (/* dst + fnc + size */ 3 != opList.size())
@@ -301,6 +351,11 @@ void SymHeapProcessor::execCall(const CodeStorage::Insn &insn) {
 
     if (STREQ(fncName, "malloc")) {
         this->execMalloc(opList);
+        return;
+    }
+
+    if (STREQ(fncName, "free")) {
+        this->execFree(opList);
         return;
     }
 

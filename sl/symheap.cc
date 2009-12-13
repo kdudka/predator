@@ -259,6 +259,30 @@ void SymHeap::objSetValue(int obj, int val) {
 }
 
 void SymHeap::objDestroy(int obj) {
+    // first look for Var object
+    TVarMap::iterator varIter = d->varMap.find(obj);
+    if (d->varMap.end() != varIter) {
+        // obj is a Var object
+        Var &var = varIter->second;
+        const int val = var.placedAt;
+
+        if (-1 != var.cVarUid)
+            // TODO: carve out the error messages from this module
+            CL_MSG_STREAM_INTERNAL(cl_error,
+                    "error: attempt to free non-heap object");
+
+        // TODO: check for possible free() of non-root
+
+        // TODO: destroy complex objects recursively
+        d->varMap.erase(varIter);
+
+        // mark corresponding value as freed
+        Value &ref = d->valueMap[val];
+        ref.pointsTo = OBJ_DELETED;
+        return;
+    }
+
+    // then look for Sls object
     // TODO
     TRAP;
 }
