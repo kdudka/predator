@@ -139,14 +139,14 @@ const SymHeap::TCont& /* obj[] */ SymHeap::haveValue(int val) const {
     // TODO
     TRAP;
     static TCont nonsense;
-    return nonsense;;
+    return nonsense;
 }
 
 const SymHeap::TCont& /* obj[] */ SymHeap::notEqualTo(int obj) const {
     // TODO
     TRAP;
     static TCont nonsense;
-    return nonsense;;
+    return nonsense;
 }
 
 bool SymHeap::notEqual(int obj1, int obj2) const {

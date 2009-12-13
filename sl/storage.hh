@@ -418,11 +418,6 @@ class ControlFlow {
         const Block* operator[](const char *name) const;
 
         /**
-         * direct access to internal vector
-         */
-        const Block* operator[](unsigned idx) const { return bbs_.at(idx); }
-
-        /**
          * return STL-like iterator to go through all basic blocks inside
          */
         const_iterator begin()                const { return bbs_.begin(); }
