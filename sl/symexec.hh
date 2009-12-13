@@ -30,6 +30,11 @@ class SymExec {
         void exec(const CodeStorage::Fnc &);
 
     private:
+        // object copying not allowed
+        SymExec(const SymExec &);
+        SymExec& operator=(const SymExec &);
+
+    private:
         struct Private;
         Private *d;
 };

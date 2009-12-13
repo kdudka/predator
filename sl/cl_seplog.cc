@@ -50,7 +50,7 @@ void ClSepLog::run(CodeStorage::Storage &stor) {
         return;
     }
 
-    // this seems to be the way to go...
+    // run the symbolic execution
     SymExec se(stor);
     se.exec(*main);
 }

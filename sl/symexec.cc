@@ -155,7 +155,7 @@ void SymHeapProcessor::heapVarHandleAccessor(int *pObj,
             TRAP;
 
         default:
-            break;
+            return;
     }
 
 unknown_obj:
@@ -275,7 +275,7 @@ void SymHeapProcessor::execFree(const CodeStorage::TOperandList &opList) {
             break;
     }
 
-    CL_DEBUG("executing free()");
+    CL_MSG_STREAM(cl_debug, lw_ << "executing free()");
     heap_.objDestroy(obj);
 }
 
@@ -302,7 +302,7 @@ void SymHeapProcessor::execMalloc(const CodeStorage::TOperandList &opList) {
 
     // FIXME: we simply ignore the ammount of allocated memory
     const int cbAmount = cst.data.cst_int.value;
-    CL_DEBUG("executing malloc(" << cbAmount << ")");
+    CL_MSG_STREAM(cl_debug, lw_ << "executing malloc(" << cbAmount << ")");
 
     // FIXME: we can't use dst.type as type of the created obj in most cases :-(
     const int obj = heap_.varCreate(dst.type, /* heap obj */ -1);
@@ -374,14 +374,23 @@ void SymHeapProcessor::execUnary(const CodeStorage::Insn &insn) {
         TRAP;
 
     int varLhs = heapVarFromOperand(insn.operands[0]);
-    if (OBJ_INVALID == varLhs)
-        // could not resolve lhs
-        TRAP;
+    switch (varLhs) {
+        case OBJ_UNKNOWN:
+            CL_MSG_STREAM(cl_debug, lw_ <<
+                    "ignoring OBJ_UNKNOWN as lhs, this is definitely a bug "
+                    "if there is no error reported above...");
+            return;
+
+        case OBJ_DELETED:
+        case OBJ_INVALID:
+            TRAP;
+    }
 
     int valRhs = heapValFromOperand(insn.operands[1]);
     if (VAL_INVALID == valRhs)
         // could not resolve rhs
         TRAP;
+
 
     // TODO: check for possible JUNK here!
     heap_.objSetValue(varLhs, valRhs);
@@ -570,8 +579,10 @@ void SymExec::Private::updateState(const CodeStorage::Block *ofBlock,
     const size_t last = huni.size();
     huni.insert(heap);
 
+    // check if anything has changed
     if (huni.size() != last)
-        // schedule for next wheel if anything has changed
+
+        // schedule for next wheel
         todo.insert(ofBlock);
 }
         
@@ -638,7 +649,7 @@ void SymExec::Private::execBb() {
 }
 
 void SymExec::Private::execFncBody() {
-    if (!todo.empty())
+    if (!this->todo.empty())
         // not implemented yet
         TRAP;
 

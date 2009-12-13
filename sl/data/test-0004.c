@@ -7,7 +7,7 @@ int main() {
         void **data = ptr;
         ptr = malloc(sizeof ptr);
         free(ptr);
-        pt = data;
+        ptr = data;
     }
 
     return 0;
