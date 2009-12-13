@@ -54,19 +54,20 @@ class SymHeap {
 
     public:
         // basic heap lookup
-        int /* val */ valueOf(int obj);
-        int /* val */ placedAt(int obj);
-        int /* obj */ pointsTo(int val);
-        const TCont& /* obj[] */ haveValue(int val);
-        const TCont& /* obj[] */ notEqualTo(int obj);
-        bool notEqual(int obj1, int obj2);
+        int /* val */ valueOf(int obj) const;
+        int /* val */ placedAt(int obj) const;
+        int /* obj */ pointsTo(int val) const;
+        const TCont& /* obj[] */ haveValue(int val) const;
+        const TCont& /* obj[] */ notEqualTo(int obj) const;
+        bool notEqual(int obj1, int obj2) const;
 
     public:
         // static info lookup
         const struct cl_type* /* clt */ objType(int obj);
         const struct cl_type* /* clt */ valType(int val);
         int /* CodeStorage var uid */ cVar(int var);
-        int /* var */ varByCVar(int /* CodeStorage var */ uid);
+        int /* var */ varByCVar(int /* CodeStorage var */ uid) const;
+        void gatherCVars(TCont &out) const;
 
     public:
         // projection info lookup

@@ -96,7 +96,7 @@ int /* val */ SymHeap::Private::createValue(const struct cl_type *clt, int obj)
     return valId;
 }
 
-int /* val */ SymHeap::valueOf(int obj) {
+int /* val */ SymHeap::valueOf(int obj) const {
     switch (obj) {
         case OBJ_INVALID:
             return VAL_INVALID;
@@ -117,7 +117,7 @@ int /* val */ SymHeap::valueOf(int obj) {
     return var.value;
 }
 
-int /* val */ SymHeap::placedAt(int obj) {
+int /* val */ SymHeap::placedAt(int obj) const {
     TVarMap::iterator iter = d->varMap.find(obj);
     if (d->varMap.end() == iter)
         return OBJ_INVALID;
@@ -126,7 +126,7 @@ int /* val */ SymHeap::placedAt(int obj) {
     return var.placedAt;
 }
 
-int /* obj */ SymHeap::pointsTo(int val) {
+int /* obj */ SymHeap::pointsTo(int val) const {
     TValueMap::iterator iter = d->valueMap.find(val);
     if (d->valueMap.end() == iter)
         return VAL_INVALID;
@@ -135,21 +135,21 @@ int /* obj */ SymHeap::pointsTo(int val) {
     return value.pointsTo;
 }
 
-const SymHeap::TCont& /* obj[] */ SymHeap::haveValue(int val) {
+const SymHeap::TCont& /* obj[] */ SymHeap::haveValue(int val) const {
     // TODO
     TRAP;
     static TCont nonsense;
     return nonsense;;
 }
 
-const SymHeap::TCont& /* obj[] */ SymHeap::notEqualTo(int obj) {
+const SymHeap::TCont& /* obj[] */ SymHeap::notEqualTo(int obj) const {
     // TODO
     TRAP;
     static TCont nonsense;
     return nonsense;;
 }
 
-bool SymHeap::notEqual(int obj1, int obj2) {
+bool SymHeap::notEqual(int obj1, int obj2) const {
     // TODO
     TRAP;
     return false;
@@ -173,12 +173,18 @@ int /* CodeStorage var uid */ SymHeap::cVar(int var) {
     return -1;
 }
 
-int /* var */ SymHeap::varByCVar(int /* CodeStorage var */ uid) {
+int /* var */ SymHeap::varByCVar(int /* CodeStorage var */ uid) const {
     TIdMap::iterator iter = d->cVarIdMap.find(uid);
     if (d->cVarIdMap.end() == iter)
         return OBJ_INVALID;
     else
         return iter->second;
+}
+
+void SymHeap::gatherCVars(TCont &out) const {
+    TIdMap::const_iterator ii;
+    for (ii = d->cVarIdMap.begin(); ii != d->cVarIdMap.end(); ++ii)
+        out.push_back(ii->first);
 }
 
 int /* var */ SymHeap::subVar(int var, int nth) {
