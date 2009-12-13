@@ -184,7 +184,14 @@ int /* var */ SymHeapProcessor::heapVarFromOperand(const struct cl_operand &op)
         // unable to resolve static variable
         TRAP;
 
+    // go through the list of accessors
     const struct cl_accessor *ac = op.accessor;
+    if (ac && ac->code == CL_ACCESSOR_REF)
+        // CL_ACCESSOR_REF will be processed as soon as this function finishes
+        // ... otherwise we are encountering a bug!
+        ac = ac->next;
+
+    // process all other accessors (only CL_ACCESSOR_DEREF for now)
     while (ac) {
         this->heapVarHandleAccessor(&var, ac);
         ac = ac->next;
@@ -205,7 +212,10 @@ int /* val */ SymHeapProcessor::heapValFromOperand(const struct cl_operand &op)
             if (OBJ_INVALID == var)
                 TRAP;
 
-            return heap_.valueOf(var);
+            const struct cl_accessor *ac = op.accessor;
+            return (ac && ac->code == CL_ACCESSOR_REF)
+                ? heap_.placedAt(var)
+                : heap_.valueOf(var);
         }
 
         case CL_OPERAND_CST:
@@ -262,6 +272,7 @@ void SymHeapProcessor::execMalloc(const CodeStorage::TOperandList &opList) {
     }
 
     // store the result of malloc
+    // TODO: check for possible JUNK here!
     heap_.objSetValue(varLhs, val);
 }
 
@@ -315,6 +326,7 @@ void SymHeapProcessor::execUnary(const CodeStorage::Insn &insn) {
         // could not resolve rhs
         TRAP;
 
+    // TODO: check for possible JUNK here!
     heap_.objSetValue(varLhs, valRhs);
 }
 
