@@ -220,6 +220,7 @@ int /* var */ SymHeap::varCreate(const struct cl_type *clt,
             CL_DEBUG("CL_TYPE_INT treated as pointer");
             // go through!
 
+        case CL_TYPE_BOOL:
         case CL_TYPE_PTR:
             break;
 

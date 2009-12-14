@@ -39,7 +39,10 @@ enum {
     VAL_NULL          =  0,
     VAL_INVALID       = -1,
     VAL_UNINITIALIZED = -2,
-    VAL_UNKNOWN       = -3
+    VAL_UNKNOWN       = -3,
+
+    VAL_TRUE          = -4,
+    VAL_FALSE         = VAL_NULL
 };
 
 // needs review

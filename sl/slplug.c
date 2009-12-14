@@ -870,6 +870,7 @@ static const struct cl_operand stmt_cond_fixed_reg = {
         .file       = NULL,
         .line       = -1
     },
+    .scope          = CL_SCOPE_FUNCTION,
     .type           = &builtin_bool_type,
     .data = {
         .reg = {
