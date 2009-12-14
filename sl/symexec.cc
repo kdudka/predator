@@ -37,7 +37,7 @@ class SymHeapProcessor {
         {
         }
 
-        void exec(const CodeStorage::Insn &insn);
+        bool exec(const CodeStorage::Insn &insn);
 
     public:
         int /* val */ heapValFromCst(const struct cl_operand &op);
@@ -51,7 +51,7 @@ class SymHeapProcessor {
         void execBinary(const CodeStorage::Insn &insn);
         void execMalloc(const CodeStorage::TOperandList &opList);
         void execFree(const CodeStorage::TOperandList &opList);
-        void execCall(const CodeStorage::Insn &insn);
+        bool execCall(const CodeStorage::Insn &insn);
 
     private:
         SymbolicHeap::SymHeap       &heap_;
@@ -300,7 +300,7 @@ void SymHeapProcessor::execFree(const CodeStorage::TOperandList &opList) {
             break;
     }
 
-    CL_MSG_STREAM(cl_debug, lw_ << "executing free()");
+    CL_MSG_STREAM(cl_debug, lw_ << "debug: executing free()");
     heap_.objDestroy(obj);
 }
 
@@ -327,7 +327,7 @@ void SymHeapProcessor::execMalloc(const CodeStorage::TOperandList &opList) {
 
     // FIXME: we simply ignore the ammount of allocated memory
     const int cbAmount = cst.data.cst_int.value;
-    CL_MSG_STREAM(cl_debug, lw_ << "executing malloc(" << cbAmount << ")");
+    CL_MSG_STREAM(cl_debug, lw_ << "debug: executing malloc(" << cbAmount << ")");
 
     // FIXME: we can't use dst.type as type of the created obj in most cases :-(
     const int obj = heap_.varCreate(dst.type, /* heap obj */ -1);
@@ -353,41 +353,36 @@ void SymHeapProcessor::execMalloc(const CodeStorage::TOperandList &opList) {
     heap_.objSetValue(varLhs, val);
 }
 
-void SymHeapProcessor::execCall(const CodeStorage::Insn &insn) {
+bool SymHeapProcessor::execCall(const CodeStorage::Insn &insn) {
     using namespace SymbolicHeap;
 
     const CodeStorage::TOperandList &opList = insn.operands;
     const struct cl_operand &fnc = opList[1];
     if (CL_OPERAND_CST != fnc.code)
-        // indirect call not implemented yet
-        TRAP;
+        return false;
 
     const struct cl_cst &cst = fnc.data.cst;
     if (CL_TYPE_FNC != cst.code)
-        // incorrect cst used as fnc in call
-        TRAP;
+        return false;
+
+    if (CL_SCOPE_GLOBAL != fnc.scope || !cst.data.cst_fnc.is_extern)
+        return false;
 
     const char *fncName = cst.data.cst_fnc.name;
     if (!fncName)
-        // Aieee, anonymous fnc is going to be called
-        TRAP;
-
-    if (CL_SCOPE_GLOBAL != fnc.scope || !cst.data.cst_fnc.is_extern)
-        // generic function call not implemented yet
-        TRAP;
+        return false;
 
     if (STREQ(fncName, "malloc")) {
         this->execMalloc(opList);
-        return;
+        return true;
     }
 
     if (STREQ(fncName, "free")) {
         this->execFree(opList);
-        return;
+        return true;
     }
 
-    // TODO: handle generic function call
-    TRAP;
+    return false;
 }
 
 void SymHeapProcessor::execUnary(const CodeStorage::Insn &insn) {
@@ -453,28 +448,27 @@ void SymHeapProcessor::execBinary(const CodeStorage::Insn &insn) {
     heap_.objSetValue(dst, val);
 }
 
-void SymHeapProcessor::exec(const CodeStorage::Insn &insn) {
+bool SymHeapProcessor::exec(const CodeStorage::Insn &insn) {
     using namespace CodeStorage;
 
     lw_ = &insn.loc;
-    CL_MSG_STREAM(cl_debug, lw_ << "debug: executing non-terminal insn...");
 
     const enum cl_insn_e code = insn.code;
     switch (code) {
         case CL_INSN_UNOP:
             this->execUnary(insn);
-            break;
+            return true;
 
         case CL_INSN_BINOP:
             this->execBinary(insn);
-            break;
+            return true;
 
         case CL_INSN_CALL:
-            this->execCall(insn);
-            break;
+            return this->execCall(insn);
 
         default:
             TRAP;
+            return true;
     }
 }
 
@@ -605,21 +599,25 @@ struct SymExec::Private {
     CodeStorage::Storage        &stor;
     const CodeStorage::Fnc      *fnc;
     const CodeStorage::Block    *bb;
+    const CodeStorage::Insn     *insn;
     LocationWriter              lw;
     TStateMap                   state;
     TBlockSet                   todo;
 
     Private(CodeStorage::Storage &stor_):
-        stor(stor_)
+        stor(stor_),
+        fnc(0),
+        bb(0),
+        insn(0)
     {
     }
 
     void updateState(const CodeStorage::Block *ofBlock,
                      const SymbolicHeap::SymHeap &heap);
-    void execCondInsn(const CodeStorage::Insn &insn,
-                      const SymbolicHeap::SymHeap &heap);
-    void execTermInsn(const CodeStorage::Insn &insn,
-                      const SymbolicHeap::SymHeap &heap);
+    void execCondInsn(const SymbolicHeap::SymHeap &heap);
+    void execTermInsn(const SymbolicHeap::SymHeap &heap);
+    void execCallInsn(const SymbolicHeap::SymHeap &heap, SymHeapUnion &result);
+    void execInsn(SymHeapUnion &localState);
     void execBb();
     void execFncBody();
     void execFnc();
@@ -649,13 +647,12 @@ void SymExec::Private::updateState(const CodeStorage::Block *ofBlock,
         todo.insert(ofBlock);
 }
         
-void SymExec::Private::execCondInsn(const CodeStorage::Insn &insn,
-                                    const SymbolicHeap::SymHeap &heap)
+void SymExec::Private::execCondInsn(const SymbolicHeap::SymHeap &heap)
 {
     using namespace SymbolicHeap;
 
-    const CodeStorage::TOperandList &oplist = insn.operands;
-    const CodeStorage::TTargetList &tlist = insn.targets;
+    const CodeStorage::TOperandList &oplist = insn->operands;
+    const CodeStorage::TTargetList &tlist = insn->targets;
     if (2 != tlist.size() || 1 != oplist.size())
         TRAP;
 
@@ -676,20 +673,19 @@ void SymExec::Private::execCondInsn(const CodeStorage::Insn &insn,
     }
 }
 
-void SymExec::Private::execTermInsn(const CodeStorage::Insn &insn,
-                                    const SymbolicHeap::SymHeap &heap)
+void SymExec::Private::execTermInsn(const SymbolicHeap::SymHeap &heap)
 {
-    const CodeStorage::TTargetList &tlist = insn.targets;
+    const CodeStorage::TTargetList &tlist = insn->targets;
 
-    const enum cl_insn_e code = insn.code;
+    const enum cl_insn_e code = insn->code;
     switch (code) {
         case CL_INSN_RET:
-            CL_MSG_STREAM(cl_warn, LocationWriter(&insn.loc)
+            CL_MSG_STREAM(cl_warn, this->lw
                     << "warning: return statement ignored [not implemented]");
             break;
 
         case CL_INSN_COND:
-            this->execCondInsn(insn, heap);
+            this->execCondInsn(heap);
             break;
 
         case CL_INSN_JMP:
@@ -704,41 +700,91 @@ void SymExec::Private::execTermInsn(const CodeStorage::Insn &insn,
     }
 }
 
+void SymExec::Private::execCallInsn(const SymbolicHeap::SymHeap &heap,
+                                    SymHeapUnion &result)
+{
+    if (CL_INSN_CALL != insn->code)
+        TRAP;
+
+    const CodeStorage::TOperandList &opList = insn->operands;
+    const struct cl_operand &fnc = opList[1];
+    if (CL_OPERAND_CST != fnc.code)
+        TRAP;
+
+    const struct cl_cst &cst = fnc.data.cst;
+    if (CL_TYPE_FNC != cst.code)
+        TRAP;
+
+    // create args
+    // set args values
+    // create local variables
+    // do call
+    // destroy args
+    // destroy local variables
+    TRAP;
+}
+
+void SymExec::Private::execInsn(SymHeapUnion &localState) {
+    using SymbolicHeap::SymHeap;
+
+    // true for terminal instruction
+    const bool isTerm = cl_is_term_insn(insn->code);
+
+    // let's begin with empty resulting heap union
+    SymHeapUnion nextLocalState;
+
+    // go through all symbolic heaps corresponding to entry of this BB
+    int hCnt = 0;
+    BOOST_FOREACH(const SymHeap &heap, localState) {
+        CL_MSG_STREAM(cl_debug, this->lw << "debug: *** processing heap #"
+                << (++hCnt) << " of BB " << bb->name() << "...");
+
+        // working area for non-term instructions
+        SymHeap workingHeap(heap);
+        SymHeapProcessor proc(workingHeap);
+
+        if (isTerm)
+            // terminal insn
+            this->execTermInsn(workingHeap);
+
+        else if (proc.exec(*insn))
+            // non-terminal insn
+            nextLocalState.insert(workingHeap);
+
+        else
+            // call insn
+            this->execCallInsn(workingHeap, nextLocalState);
+    }
+
+    if (!isTerm)
+        // save result for next instruction
+        localState = nextLocalState;
+}
+
 void SymExec::Private::execBb() {
     using namespace CodeStorage;
     using SymbolicHeap::SymHeap;
 
-    // some debugging stuff
-    int bbCnt = 0;
     const std::string &name = bb->name();
     CL_MSG_STREAM(cl_debug, lw << "debug: >>> entering " << name << "...");
 
-    // FIXME: we simply copy whole container to avoid its damage by inserting
-    // during traversal ... that's really awkward due to performance
-    SymHeapUnion huni(this->state[this->bb]);
+    // this state will be changed per each instruction moreover it may grow
+    // terribly on any CL_INSN_CALL instruction
+    SymHeapUnion localState(this->state[this->bb]);
 
-    // go through all symbolic heaps corresponding to entry of this BB
-    BOOST_FOREACH(const SymHeap &heap, huni) {
-        CL_MSG_STREAM(cl_debug, this->lw << "debug: *** processing heap #"
-                << (++bbCnt) << " of BB " << name << "...");
+    // go through all BB insns
+    int iCnt = 0;
+    BOOST_FOREACH(const Insn *insn, *(this->bb)) {
+        if (0 < insn->loc.line)
+            // update location info
+            this->lw = &insn->loc;
 
-        // TODO: COW semantic
-        SymHeap workingHeap(heap);
-        SymHeapProcessor proc(workingHeap);
+        // execute current instruction on localState
+        CL_MSG_STREAM(cl_debug, this->lw << "debug: --- executing insn #"
+                << (++iCnt) << " of BB " << name << "...");
 
-        // go through all BB insns
-        BOOST_FOREACH(const Insn *insn, *bb) {
-            if (0 < insn->loc.line)
-                // update location info
-                this->lw = &insn->loc;
-
-            if (cl_is_term_insn(insn->code))
-                // terminal insn
-                this->execTermInsn(*insn, workingHeap);
-            else
-                // non-terminal insn
-                proc.exec(*insn);
-        }
+        this->insn = insn;
+        this->execInsn(localState);
     }
 }
 
