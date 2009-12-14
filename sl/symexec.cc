@@ -39,12 +39,16 @@ class SymHeapProcessor {
 
         void exec(const CodeStorage::Insn &insn);
 
-    private:
+    public:
         int /* val */ heapValFromCst(const struct cl_operand &op);
-        void heapVarHandleAccessor(int *pVar, const struct cl_accessor *ac);
         int /* var */ heapVarFromOperand(const struct cl_operand &op);
         int /* val */ heapValFromOperand(const struct cl_operand &op);
+
+    private:
+        void heapVarHandleAccessor(int *pVar, const struct cl_accessor *ac);
+        bool lhsFromOperand(int *pVar, const struct cl_operand &op);
         void execUnary(const CodeStorage::Insn &insn);
+        void execBinary(const CodeStorage::Insn &insn);
         void execMalloc(const CodeStorage::TOperandList &opList);
         void execFree(const CodeStorage::TOperandList &opList);
         void execCall(const CodeStorage::Insn &insn);
@@ -200,6 +204,28 @@ int /* var */ SymHeapProcessor::heapVarFromOperand(const struct cl_operand &op)
     }
 
     return var;
+}
+
+bool /* var */ SymHeapProcessor::lhsFromOperand(int *pVar,
+                                                const struct cl_operand &op)
+{
+    using namespace SymbolicHeap;
+
+    *pVar = heapVarFromOperand(op);
+    switch (*pVar) {
+        case OBJ_UNKNOWN:
+            CL_MSG_STREAM(cl_debug, lw_ << "debug: "
+                    "ignoring OBJ_UNKNOWN as lhs, this is definitely a bug "
+                    "if there is no error reported above...");
+            return false;
+
+        case OBJ_DELETED:
+        case OBJ_INVALID:
+            TRAP;
+
+        default:
+            return true;
+    }
 }
 
 int /* val */ SymHeapProcessor::heapValFromOperand(const struct cl_operand &op)
@@ -367,32 +393,64 @@ void SymHeapProcessor::execCall(const CodeStorage::Insn &insn) {
 void SymHeapProcessor::execUnary(const CodeStorage::Insn &insn) {
     using namespace SymbolicHeap;
 
-    enum cl_unop_e code = static_cast<enum cl_unop_e> (insn.subCode);
+    const enum cl_unop_e code = static_cast<enum cl_unop_e> (insn.subCode);
     if (CL_UNOP_ASSIGN != code)
         // not implemented yet
         TRAP;
 
-    int varLhs = heapVarFromOperand(insn.operands[0]);
-    switch (varLhs) {
-        case OBJ_UNKNOWN:
-            CL_MSG_STREAM(cl_debug, lw_ << "debug: "
-                    "ignoring OBJ_UNKNOWN as lhs, this is definitely a bug "
-                    "if there is no error reported above...");
-            return;
-
-        case OBJ_DELETED:
-        case OBJ_INVALID:
-            TRAP;
-    }
+    int varLhs;
+    if (!lhsFromOperand(&varLhs, insn.operands[0]))
+        return;
 
     int valRhs = heapValFromOperand(insn.operands[1]);
     if (VAL_INVALID == valRhs)
         // could not resolve rhs
         TRAP;
 
-
     // TODO: check for possible JUNK here!
     heap_.objSetValue(varLhs, valRhs);
+}
+
+void SymHeapProcessor::execBinary(const CodeStorage::Insn &insn) {
+    using namespace SymbolicHeap;
+
+    const enum cl_binop_e code = static_cast<enum cl_binop_e> (insn.subCode);
+    bool neg = false;
+    switch (code) {
+        case CL_BINOP_NE:
+            neg = true;
+            // fall through!
+        case CL_BINOP_EQ:
+            break;
+
+        default:
+            TRAP;
+    }
+
+    // resolve dst
+    int dst;
+    if (!lhsFromOperand(&dst, insn.operands[0]))
+        return;
+
+    // resolve src1, src2
+    const int val1 = heapValFromOperand(insn.operands[1]);
+    const int val2 = heapValFromOperand(insn.operands[2]);
+    if (val1 < 0 || val2 < 0)
+        // TODO: handle special values here
+        TRAP;
+
+    // execute CL_BINOP_EQ/CL_BINOP_NE
+    bool result = (val1 == val2);
+    if (neg)
+        result = !result;
+
+    // convert bool result to a heap value
+    const int val = (result)
+        ? VAL_TRUE
+        : VAL_FALSE;
+
+    // store resulting value
+    heap_.objSetValue(dst, val);
 }
 
 void SymHeapProcessor::exec(const CodeStorage::Insn &insn) {
@@ -405,6 +463,10 @@ void SymHeapProcessor::exec(const CodeStorage::Insn &insn) {
     switch (code) {
         case CL_INSN_UNOP:
             this->execUnary(insn);
+            break;
+
+        case CL_INSN_BINOP:
+            this->execBinary(insn);
             break;
 
         case CL_INSN_CALL:
@@ -554,6 +616,8 @@ struct SymExec::Private {
 
     void updateState(const CodeStorage::Block *ofBlock,
                      const SymbolicHeap::SymHeap &heap);
+    void execCondInsn(const CodeStorage::Insn &insn,
+                      const SymbolicHeap::SymHeap &heap);
     void execTermInsn(const CodeStorage::Insn &insn,
                       const SymbolicHeap::SymHeap &heap);
     void execBb();
@@ -585,6 +649,33 @@ void SymExec::Private::updateState(const CodeStorage::Block *ofBlock,
         todo.insert(ofBlock);
 }
         
+void SymExec::Private::execCondInsn(const CodeStorage::Insn &insn,
+                                    const SymbolicHeap::SymHeap &heap)
+{
+    using namespace SymbolicHeap;
+
+    const CodeStorage::TOperandList &oplist = insn.operands;
+    const CodeStorage::TTargetList &tlist = insn.targets;
+    if (2 != tlist.size() || 1 != oplist.size())
+        TRAP;
+
+    SymHeapProcessor proc(const_cast<SymHeap &>(heap));
+    const int val = proc.heapValFromOperand(oplist[0]);
+    switch (val) {
+        case VAL_TRUE:
+            this->updateState(tlist[0], heap);
+            break;
+
+        case VAL_FALSE:
+            this->updateState(tlist[1], heap);
+            break;
+
+        default:
+            // TODO: handle special values here
+            TRAP;
+    }
+}
+
 void SymExec::Private::execTermInsn(const CodeStorage::Insn &insn,
                                     const SymbolicHeap::SymHeap &heap)
 {
@@ -595,6 +686,10 @@ void SymExec::Private::execTermInsn(const CodeStorage::Insn &insn,
         case CL_INSN_RET:
             CL_MSG_STREAM(cl_warn, LocationWriter(&insn.loc)
                     << "warning: return statement ignored [not implemented]");
+            break;
+
+        case CL_INSN_COND:
+            this->execCondInsn(insn, heap);
             break;
 
         case CL_INSN_JMP:
