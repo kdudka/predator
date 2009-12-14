@@ -733,27 +733,31 @@ void SymExec::Private::execInsn(SymHeapUnion &localState) {
     // let's begin with empty resulting heap union
     SymHeapUnion nextLocalState;
 
-    // go through all symbolic heaps corresponding to entry of this BB
+    // go through all symbolic heaps corresponding to localState
     int hCnt = 0;
     BOOST_FOREACH(const SymHeap &heap, localState) {
         CL_MSG_STREAM(cl_debug, this->lw << "debug: *** processing heap #"
                 << (++hCnt) << " of BB " << bb->name() << "...");
 
-        // working area for non-term instructions
-        SymHeap workingHeap(heap);
-        SymHeapProcessor proc(workingHeap);
-
-        if (isTerm)
+        if (isTerm) {
             // terminal insn
-            this->execTermInsn(workingHeap);
+            this->execTermInsn(heap);
 
-        else if (proc.exec(*insn))
-            // non-terminal insn
-            nextLocalState.insert(workingHeap);
+        } else {
+            // working area for non-term instructions
+            SymHeap workingHeap(heap);
+            SymHeapProcessor proc(workingHeap);
 
-        else
-            // call insn
-            this->execCallInsn(workingHeap, nextLocalState);
+            // NOTE: this has to be tried *before* execCallInsn() to eventually
+            // catch malloc()/free() calls, which are treated differently
+            if (proc.exec(*insn))
+                // non-terminal insn
+                nextLocalState.insert(workingHeap);
+
+            else
+                // call insn
+                this->execCallInsn(workingHeap, nextLocalState);
+        }
     }
 
     if (!isTerm)
