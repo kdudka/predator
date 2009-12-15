@@ -124,7 +124,7 @@ namespace {
         SymHeapProcessor proc(heap);
         BOOST_FOREACH(int arg, args) {
             const struct cl_operand &op = opList[pos++];
-            const int val = proc.heapVarFromOperand(op);
+            const int val = proc.heapValFromOperand(op);
             if (SymbolicHeap::VAL_INVALID == val)
                 TRAP;
 
