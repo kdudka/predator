@@ -514,7 +514,7 @@ void ClStorageBuilder::fnc_arg_decl(int pos, const struct cl_operand *op) {
         TRAP;
 
     else
-        fnc.args.push_back(&var);
+        fnc.args.push_back(uid);
 }
 
 void ClStorageBuilder::fnc_close() {

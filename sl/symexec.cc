@@ -787,6 +787,7 @@ void SymExec::Private::execCallInsn(SymbolicHeap::SymHeap heap,
                                     SymHeapUnion &results)
 {
     using namespace CodeStorage;
+    using namespace SymbolicHeap;
 
     const TOperandList &opList = insn->operands;
     if (CL_INSN_CALL != insn->code || opList.size() < 2)
@@ -800,10 +801,24 @@ void SymExec::Private::execCallInsn(SymbolicHeap::SymHeap heap,
     // crate local variables of called fnc
     createStackFrame(heap, *fnc);
 
-    // set args values
+    // get called fnc's args
     const TArgByPos &args = fnc->args;
     if (args.size() + 2 != opList.size())
         TRAP;
+
+    // set args' values
+    int pos = /* dst + fnc */ 2;
+    SymHeapProcessor proc(heap);
+    BOOST_FOREACH(int arg, args) {
+        const struct cl_operand &op = opList[pos++];
+        const int val = proc.heapVarFromOperand(op);
+        if (VAL_INVALID == val)
+            TRAP;
+
+        const int lhs = heap.varByCVar(arg);
+        if (OBJ_INVALID == lhs)
+            TRAP;
+    }
 
     // do call (+ avoid call recursion somehow for now)
     // destroy args
