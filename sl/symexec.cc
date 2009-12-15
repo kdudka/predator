@@ -690,7 +690,7 @@ namespace SymbolicHeap {
             if (heap1.valIsCustom(value1))
                 // read the big comment within dfsStack() to see why this
                 // condition is useful/necessary
-                continue
+                continue;
 
             // schedule for DFS
             dfsStack.push(value1, value2);
