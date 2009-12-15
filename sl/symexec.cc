@@ -297,7 +297,7 @@ int /* var */ SymHeapProcessor::heapVarFromOperand(const struct cl_operand &op)
     // go through the list of accessors
     const struct cl_accessor *ac = op.accessor;
     if (ac && ac->code == CL_ACCESSOR_REF)
-        // CL_ACCESSOR_REF will be processed as soon as this function finishes
+        // CL_ACCESSOR_REF will be processed right after this function finishes
         // ... otherwise we are encountering a bug!
         ac = ac->next;
 
@@ -584,7 +584,7 @@ namespace {
             // we'll need to properly compare positive values
             return false;
 
-        // non-positive value always have to match, bail out otherwise
+        // non-positive values always have to match, bail out otherwise
         return a != b;
     }
 
@@ -636,6 +636,16 @@ namespace SymbolicHeap {
                 // value mismatch
                 return false;
 
+            if (value1 <= 0)
+                // no need for next wheel (special values already handled)
+                continue;
+
+            if (heap1.valIsCustom(value1))
+                // we can't follow fnc pointers by pointsTo() since they are
+                // sort of virtual from this ascpect (and we of course do
+                // not need to follow them)
+                continue;
+
             if (!hasKey(done, value1))
                 // schedule values for next wheel
                 todo.push(value1, value2);
@@ -672,6 +682,15 @@ namespace SymbolicHeap {
             if (!matchValues(valSubst, value1, value2))
                 // value mismatch, bail out now
                 return false;
+
+            if (value1 <= 0)
+                // no need for next wheel (special values already handled)
+                continue;
+
+            if (heap1.valIsCustom(value1))
+                // read the big comment within dfsStack() to see why this
+                // condition is useful/necessary
+                continue
 
             // schedule for DFS
             dfsStack.push(value1, value2);

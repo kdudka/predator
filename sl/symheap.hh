@@ -101,6 +101,7 @@ class SymHeap {
     public:
         // custom values manipulation (e.g. fnc pointers)
         int /* val */ valCreateCustom(const struct cl_type *clt, int cVal);
+        bool valIsCustom(int val) const;
         int /* cVal */ valGetCustom(const struct cl_type **pClt, int val) const;
 
     public:

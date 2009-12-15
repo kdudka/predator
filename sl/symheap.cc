@@ -320,6 +320,16 @@ int /* val */ SymHeap::valCreateCustom(const struct cl_type *clt, int cVal)
     return d->createValue(clt, cVal, true);
 }
 
+bool SymHeap::valIsCustom(int val) const {
+    TValueMap::iterator iter = d->valueMap.find(val);
+    if (d->valueMap.end() == iter)
+        // Oops, value not found at all
+        TRAP;
+
+    Value &value = iter->second;
+    return value.custom;
+}
+
 int /* cVal */ SymHeap::valGetCustom(const struct cl_type **pClt, int val) const
 {
     TValueMap::iterator iter = d->valueMap.find(val);
