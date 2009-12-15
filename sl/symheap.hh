@@ -99,6 +99,11 @@ class SymHeap {
         void delNeq(int obj1, int obj2);
 
     public:
+        // custom values manipulation (e.g. fnc pointers)
+        int /* val */ valCreateCustom(const struct cl_type *clt, int cVal);
+        int /* cVal */ valGetCustom(const struct cl_type **pClt, int val) const;
+
+    public:
         // TODO: move elsewhere
         void setReturnValue(int val);
         int /* val */ getReturnValue();

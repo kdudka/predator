@@ -37,6 +37,7 @@ struct Var {
 struct Value {
     const struct cl_type    *clt;
     int /* obj */           pointsTo;
+    bool                    custom;
 
     // the following line helps to recognize an uninitialized instance
     Value(): clt(0) { }
@@ -66,7 +67,8 @@ struct SymHeap::Private {
     {
     }
 
-    int /* val */ createValue(const struct cl_type *clt, int obj);
+    int /* val */ createValue(const struct cl_type *clt, int obj,
+                              bool custom = false);
 };
 
 SymHeap::SymHeap():
@@ -89,13 +91,15 @@ SymHeap& SymHeap::operator=(const SymHeap &ref) {
     return *this;
 }
 
-int /* val */ SymHeap::Private::createValue(const struct cl_type *clt, int obj)
+int /* val */ SymHeap::Private::createValue(const struct cl_type *clt, int obj,
+                                            bool custom)
 {
     const int valId = ++lastVal;
 
     Value &val = valueMap[valId];
     val.clt             = clt;
     val.pointsTo        = obj;
+    val.custom          = custom;
 
     return valId;
 }
@@ -136,6 +140,9 @@ int /* obj */ SymHeap::pointsTo(int val) const {
         return VAL_INVALID;
 
     Value &value = iter->second;
+    if (value.custom)
+        TRAP;
+
     return value.pointsTo;
 }
 
@@ -306,6 +313,30 @@ void SymHeap::addNeq(int obj1, int obj2) {
 void SymHeap::delNeq(int obj1, int obj2) {
     // TODO
     TRAP;
+}
+
+int /* val */ SymHeap::valCreateCustom(const struct cl_type *clt, int cVal)
+{
+    return d->createValue(clt, cVal, true);
+}
+
+int /* cVal */ SymHeap::valGetCustom(const struct cl_type **pClt, int val) const
+{
+    TValueMap::iterator iter = d->valueMap.find(val);
+    if (d->valueMap.end() == iter)
+        // custom value not found, this should never happen
+        TRAP;
+
+    Value &value = iter->second;
+    if (!value.custom)
+        // nope, this does not look like a custom value
+        TRAP;
+
+    if (pClt)
+        // TODO: this deserves a comment in the public header
+        *pClt = value.clt;
+
+    return /* cVar */ value.pointsTo;
 }
 
 void SymHeap::setReturnValue(int val) {

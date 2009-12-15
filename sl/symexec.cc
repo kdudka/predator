@@ -213,6 +213,12 @@ int /* val */ SymHeapProcessor::heapValFromCst(const struct cl_operand &op) {
                 return SymbolicHeap::VAL_NULL;
             // go through!
 
+        case CL_TYPE_FNC: {
+            // wrap fnc uid as SymHeap value
+            const int uid = cst.data.cst_fnc.uid;
+            return heap_.valCreateCustom(op.type, uid);
+        }
+
         default:
             TRAP;
             return SymbolicHeap::VAL_INVALID;
@@ -717,7 +723,8 @@ struct SymExec::Private {
                      const SymbolicHeap::SymHeap &heap);
     void execCondInsn(const SymbolicHeap::SymHeap &heap);
     void execTermInsn(const SymbolicHeap::SymHeap &heap);
-    CodeStorage::Fnc* resolveCallee(const struct cl_operand &op);
+    CodeStorage::Fnc* resolveCallee(const SymbolicHeap::SymHeap &heap,
+                                    const struct cl_operand &op);
     void execCallInsn(SymbolicHeap::SymHeap heap, SymHeapUnion &results);
     void execInsn(SymHeapUnion &localState);
     void execBb();
@@ -850,17 +857,33 @@ void SymExec::Private::execTermInsn(const SymbolicHeap::SymHeap &heap)
     }
 }
 
-CodeStorage::Fnc* SymExec::Private::resolveCallee(const struct cl_operand &op)
+CodeStorage::Fnc*
+SymExec::Private::resolveCallee(const SymbolicHeap::SymHeap &heap,
+                                const struct cl_operand &op)
 {
-    if (CL_OPERAND_CST != op.code)
-        // TODO: handle indirect call here!
-        TRAP;
+    using namespace SymbolicHeap;
+    int uid;
 
-    const struct cl_cst &cst = op.data.cst;
-    if (CL_TYPE_FNC != cst.code)
-        TRAP;
+    if (CL_OPERAND_CST == op.code) {
+        // direct call
+        const struct cl_cst &cst = op.data.cst;
+        if (CL_TYPE_FNC != cst.code)
+            TRAP;
 
-    const int uid = cst.data.cst_fnc.uid;
+        uid = cst.data.cst_fnc.uid;
+
+    } else {
+
+        // indirect call
+        SymHeapProcessor proc(const_cast<SymHeap &>(heap));
+        const int val = proc.heapValFromOperand(op);
+        if (VAL_INVALID == val)
+            // Oops, it does not really look as indirect call
+            TRAP;
+
+        uid = heap.valGetCustom(/* TODO: check type */ 0, val);
+    }
+
     return this->stor.anyFncById[uid];
 }
 
@@ -874,7 +897,7 @@ void SymExec::Private::execCallInsn(SymbolicHeap::SymHeap heap,
     if (CL_INSN_CALL != insn->code || opList.size() < 2)
         TRAP;
 
-    const Fnc *fnc = this->resolveCallee(opList[/* fnc */ 1]);
+    const Fnc *fnc = this->resolveCallee(heap, opList[/* fnc */ 1]);
     if (!fnc)
         // unable to resolve Fnc by UID
         TRAP;
