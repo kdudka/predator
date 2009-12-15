@@ -78,7 +78,8 @@ CL_OBJS = cl_chain.o \
 	storage.o \
 	symexec.o \
 	symheap.o \
-	symproc.o
+	symproc.o \
+	symstate.o
 
 libcl.a: $(CL_OBJS)
 	$(AR) r $@ $(CL_OBJS)
