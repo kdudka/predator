@@ -98,6 +98,11 @@ class SymHeap {
         void addNeq(int obj1, int obj2);
         void delNeq(int obj1, int obj2);
 
+    public:
+        // TODO: move elsewhere
+        void setReturnValue(int val);
+        int /* val */ getReturnValue();
+
     private:
         struct Private;
         Private *d;

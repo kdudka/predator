@@ -56,6 +56,9 @@ struct SymHeap::Private {
     int                     lastObj;
     int                     lastVal;
 
+    // TODO: move elsewhere
+    int                     retVal;
+
     Private():
         lastObj(0),
         lastVal(0)
@@ -302,6 +305,18 @@ void SymHeap::addNeq(int obj1, int obj2) {
 void SymHeap::delNeq(int obj1, int obj2) {
     // TODO
     TRAP;
+}
+
+void SymHeap::setReturnValue(int val) {
+    if (0 < val && !hasKey(d->valueMap, val))
+        // invalid value ought to be returned
+        TRAP;
+
+    d->retVal = val;
+}
+
+int /* val */ SymHeap::getReturnValue() {
+    return d->retVal;
 }
 
 } // namespace SymbolicHeap

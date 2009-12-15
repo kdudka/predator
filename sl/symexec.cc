@@ -604,6 +604,7 @@ struct SymExec::Private {
     SymHeapUnion                stateZero;
     TStateMap                   state;
     TBlockSet                   todo;
+    SymHeapUnion                *results;
 
     Private(CodeStorage::Storage &stor_):
         stor(stor_),
@@ -613,15 +614,16 @@ struct SymExec::Private {
     {
     }
 
+    void execReturn(SymbolicHeap::SymHeap heap);
     void updateState(const CodeStorage::Block *ofBlock,
                      const SymbolicHeap::SymHeap &heap);
     void execCondInsn(const SymbolicHeap::SymHeap &heap);
     void execTermInsn(const SymbolicHeap::SymHeap &heap);
-    void execCallInsn(const SymbolicHeap::SymHeap &heap, SymHeapUnion &result);
+    void execCallInsn(const SymbolicHeap::SymHeap &heap, SymHeapUnion &results);
     void execInsn(SymHeapUnion &localState);
     void execBb();
     void execFncBody();
-    void execFnc(const SymbolicHeap::SymHeap &init, SymHeapUnion &result);
+    void execFnc(const SymbolicHeap::SymHeap &init);
 };
 
 SymExec::SymExec(CodeStorage::Storage &stor):
@@ -646,6 +648,7 @@ void SymExec::exec(const CodeStorage::Fnc &fnc) {
 
     // container for resulting state
     SymHeapUnion results;
+    d->results = &results;
 
     BOOST_FOREACH(const SymHeap &zero, d->stateZero) {
         SymHeap init(zero);
@@ -661,10 +664,32 @@ void SymExec::exec(const CodeStorage::Fnc &fnc) {
 
         // well, we have successfully prepared the initial state,
         // now please execute the function!
-        d->execFnc(init, results);
+        d->execFnc(init);
     }
 
     // TODO: process results somehow (generate points-to graph, etc.)
+}
+
+void SymExec::Private::execReturn(SymbolicHeap::SymHeap heap)
+{
+    using namespace SymbolicHeap;
+
+    const CodeStorage::TOperandList &opList = insn->operands;
+    if (1 != opList.size())
+        TRAP;
+
+    const struct cl_operand &src = opList[0];
+    if (CL_OPERAND_VOID != src.code) {
+        SymHeapProcessor proc(heap);
+        const int val = proc.heapValFromOperand(src);
+        if (VAL_INVALID == val)
+            TRAP;
+
+        heap.setReturnValue(val);
+    }
+
+    SymHeapUnion &res = *(this->results);
+    res.insert(heap);
 }
 
 void SymExec::Private::updateState(const CodeStorage::Block *ofBlock,
@@ -715,8 +740,7 @@ void SymExec::Private::execTermInsn(const SymbolicHeap::SymHeap &heap)
     const enum cl_insn_e code = insn->code;
     switch (code) {
         case CL_INSN_RET:
-            CL_MSG_STREAM(cl_warn, this->lw
-                    << "warning: return statement ignored [not implemented]");
+            this->execReturn(heap);
             break;
 
         case CL_INSN_COND:
@@ -848,8 +872,7 @@ void SymExec::Private::execFncBody() {
     CL_DEBUG("execFncBody(): main loop terminated correctly...");
 }
 
-void SymExec::Private::execFnc(const SymbolicHeap::SymHeap &init,
-                               SymHeapUnion &results)
+void SymExec::Private::execFnc(const SymbolicHeap::SymHeap &init)
 {
     using namespace CodeStorage;
     using SymbolicHeap::SymHeap;
