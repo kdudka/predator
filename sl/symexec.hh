@@ -30,7 +30,9 @@ class SymExec {
         SymExec(CodeStorage::Storage &stor);
         ~SymExec();
 
-        void exec(const CodeStorage::Fnc &);
+        // TODO: some functions operating on d->stateZero??
+
+        void exec(const CodeStorage::Fnc & /*, TODO: results? */);
 
     private:
         // object copying not allowed

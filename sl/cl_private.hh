@@ -24,6 +24,7 @@
 #include "location.hh"
 
 #include <cstdlib>
+#include <cstring>
 #include <iostream>
 #include <sstream>
 #include <string>
