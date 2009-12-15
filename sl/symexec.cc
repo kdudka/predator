@@ -64,7 +64,7 @@ class SymHeapUnion {
 
     public:
         typedef TList::const_iterator const_iterator;
-        typedef const_iterator iterator;
+        typedef TList::iterator iterator;
 
     public:
         void insert(const SymbolicHeap::SymHeap &heap);
@@ -83,6 +83,9 @@ class SymHeapUnion {
          * return count of object stored in the container
          */
         size_t size()          const { return heaps_.size();  }
+
+        iterator begin()             { return heaps_.begin(); }
+        iterator end()               { return heaps_.end();   }
 
     private:
         TList heaps_;
@@ -104,6 +107,84 @@ namespace {
                     << " (" << var.name << ")" );
 
             heap.varCreate(var.clt, var.uid);
+        }
+    }
+
+    void setCallArgs(SymbolicHeap::SymHeap &heap,
+                     const CodeStorage::Fnc &fnc,
+                     const CodeStorage::TOperandList &opList)
+    {
+        // get called fnc's args
+        const CodeStorage::TArgByPos &args = fnc.args;
+        if (args.size() + 2 != opList.size())
+            TRAP;
+
+        // set args' values
+        int pos = /* dst + fnc */ 2;
+        SymHeapProcessor proc(heap);
+        BOOST_FOREACH(int arg, args) {
+            const struct cl_operand &op = opList[pos++];
+            const int val = proc.heapVarFromOperand(op);
+            if (SymbolicHeap::VAL_INVALID == val)
+                TRAP;
+
+            const int lhs = heap.varByCVar(arg);
+            if (SymbolicHeap::OBJ_INVALID == lhs)
+                TRAP;
+
+            // set arg's value
+            heap.objSetValue(lhs, val);
+        }
+    }
+
+    void assignReturnValue(SymbolicHeap::SymHeap &heap,
+                           const struct cl_operand &op)
+    {
+        if (CL_OPERAND_VOID == op.code)
+            // fnc returns void, thus we are done
+            return;
+
+        // FIXME: the following code has never run, use the debugger first
+        TRAP;
+
+        SymHeapProcessor proc(heap);
+        const int obj = proc.heapVarFromOperand(op);
+        if (SymbolicHeap::OBJ_INVALID == obj)
+            TRAP;
+
+        const int val = heap.getReturnValue();
+        if (SymbolicHeap::VAL_INVALID == val)
+            TRAP;
+
+        // we are ready to assign the return value
+        heap.objSetValue(obj, val);
+    }
+
+    void destroyStackFrame(SymbolicHeap::SymHeap &heap,
+                           const CodeStorage::Fnc &fnc)
+    {
+        using CodeStorage::Var;
+        BOOST_FOREACH(const Var &var, fnc.vars) {
+            CL_DEBUG("--- destroying stack variable: #" << var.uid
+                    << " (" << var.name << ")" );
+
+            const int obj = heap.varByCVar(var.uid);
+            if (obj < 0)
+                TRAP;
+
+            heap.objDestroy(obj);
+        }
+    }
+
+    void destroyStackFrame(SymHeapUnion huni, const CodeStorage::Fnc &fnc)
+    {
+        using SymbolicHeap::SymHeap;
+        CL_DEBUG("<<< destroying stack frame for " << nameOf(fnc) << "():");
+
+        int hCnt = 0;
+        BOOST_FOREACH(SymHeap &heap, huni) {
+            CL_DEBUG("*** destroying stack frame in result #" << (++hCnt));
+            destroyStackFrame(heap, fnc);
         }
     }
 }
@@ -800,31 +881,28 @@ void SymExec::Private::execCallInsn(SymbolicHeap::SymHeap heap,
 
     // crate local variables of called fnc
     createStackFrame(heap, *fnc);
+    setCallArgs(heap, *fnc, opList);
 
-    // get called fnc's args
-    const TArgByPos &args = fnc->args;
-    if (args.size() + 2 != opList.size())
-        TRAP;
+    // FIXME: this approach will sooner or later cause a stack overflow
+    // TODO: use an explicit stack instead
+    Private subExec(this->stor);
+    subExec.fnc = fnc;
+    subExec.results = &results;
 
-    // set args' values
-    int pos = /* dst + fnc */ 2;
-    SymHeapProcessor proc(heap);
-    BOOST_FOREACH(int arg, args) {
-        const struct cl_operand &op = opList[pos++];
-        const int val = proc.heapVarFromOperand(op);
-        if (VAL_INVALID == val)
-            TRAP;
+    // TODO: here detect recursion somehow!
+    subExec.execFnc(heap);
 
-        const int lhs = heap.varByCVar(arg);
-        if (OBJ_INVALID == lhs)
-            TRAP;
+    const struct cl_operand &opRet = opList[0];
+    if (CL_OPERAND_VOID != opRet.code) {
+        // go through results and perform assignment of the return value
+        BOOST_FOREACH(SymHeap &res, results) {
+            assignReturnValue(res, opRet);
+        }
     }
 
-    // do call (+ avoid call recursion somehow for now)
-    // destroy args
-    // destroy local variables
-    TRAP;
-    // go through results and perform assignment of the return value
+    // FIXME: we are going to free non-heap objects, and SymHeap tends to think
+    // it's a bug in the analyzed program :-)
+    destroyStackFrame(results, *fnc);
 }
 
 void SymExec::Private::execInsn(SymHeapUnion &localState) {
@@ -876,7 +954,7 @@ void SymExec::Private::execBb() {
     CL_MSG_STREAM(cl_debug, lw << "debug: >>> entering " << name << "...");
 
     // this state will be changed per each instruction
-    // NOTE: it may grow badly on any CL_INSN_CALL instruction
+    // NOTE: it may grow significantly on any CL_INSN_CALL instruction
     SymHeapUnion localState(this->state[this->bb]);
 
     // go through all BB insns
