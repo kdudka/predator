@@ -499,12 +499,22 @@ void ClStorageBuilder::fnc_open(const struct cl_operand *op) {
     d->bb = 0;
 }
 
-void ClStorageBuilder::fnc_arg_decl(int, const struct cl_operand *op) {
+void ClStorageBuilder::fnc_arg_decl(int pos, const struct cl_operand *op) {
     if (CL_OPERAND_VAR != op->code)
         TRAP;
 
     const int uid = op->data.var.id;
-    d->fnc->vars[uid] = Var(VAR_FNC_ARG, op);
+    Fnc &fnc = *(d->fnc);
+    Var &var = fnc.vars[uid];
+    var = Var(VAR_FNC_ARG, op);
+
+    const int argCnt = fnc.args.size();
+    if (argCnt + /* FIXME: start with zero instead? */ 1 != pos)
+        // argument list not sorted
+        TRAP;
+
+    else
+        fnc.args.push_back(&var);
 }
 
 void ClStorageBuilder::fnc_close() {

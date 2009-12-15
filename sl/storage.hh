@@ -441,12 +441,18 @@ class ControlFlow {
 struct File;
 
 /**
+ * STL-based map from function uid to corresponding Fnc object
+ */
+typedef std::vector<Var *> TArgByPos;
+
+/**
  * function definition
  */
 struct Fnc {
     File                        *file;  ///< reference place of fnc definition
     struct cl_operand           def;    ///< definition as low-level operand
     VarDb                       vars;   ///< per-function local variables
+    TArgByPos                   args;   ///< args addressed by position
     ControlFlow                 cfg;    ///< fnc code as control flow graph
 
     Fnc():

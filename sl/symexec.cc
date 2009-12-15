@@ -91,6 +91,23 @@ class SymHeapUnion {
 typedef std::set<const CodeStorage::Block *>                TBlockSet;
 typedef std::map<const CodeStorage::Block *, SymHeapUnion>  TStateMap;
 
+// utilities
+namespace {
+    void createStackFrame(SymbolicHeap::SymHeap &heap,
+                          const CodeStorage::Fnc &fnc)
+    {
+        using CodeStorage::Var;
+        CL_DEBUG(">>> creating stack frame for " << nameOf(fnc) << "():");
+
+        BOOST_FOREACH(const Var &var, fnc.vars) {
+            CL_DEBUG("--- creating stack variable: #" << var.uid
+                    << " (" << var.name << ")" );
+
+            heap.varCreate(var.clt, var.uid);
+        }
+    }
+}
+
 // /////////////////////////////////////////////////////////////////////////////
 // SymHeapProcessor implementation
 int /* val */ SymHeapProcessor::heapValFromCst(const struct cl_operand &op) {
@@ -620,7 +637,7 @@ struct SymExec::Private {
     void execCondInsn(const SymbolicHeap::SymHeap &heap);
     void execTermInsn(const SymbolicHeap::SymHeap &heap);
     CodeStorage::Fnc* resolveCallee(const struct cl_operand &op);
-    void execCallInsn(const SymbolicHeap::SymHeap &heap, SymHeapUnion &results);
+    void execCallInsn(SymbolicHeap::SymHeap heap, SymHeapUnion &results);
     void execInsn(SymHeapUnion &localState);
     void execBb();
     void execFncBody();
@@ -653,15 +670,7 @@ void SymExec::exec(const CodeStorage::Fnc &fnc) {
 
     BOOST_FOREACH(const SymHeap &zero, d->stateZero) {
         SymHeap init(zero);
-
-        // prepare local variables
-        // TODO: move to function and share with CL_INSN_CALL exec code
-        BOOST_FOREACH(const Var &var, fnc.vars) {
-            CL_DEBUG("--- creating stack variable: #" << var.uid
-                    << " (" << var.name << ")" );
-
-            init.varCreate(var.clt, var.uid);
-        }
+        createStackFrame(init, fnc);
 
         // well, we have successfully prepared the initial state,
         // now please execute the function!
@@ -774,20 +783,28 @@ CodeStorage::Fnc* SymExec::Private::resolveCallee(const struct cl_operand &op)
     return this->stor.anyFncById[uid];
 }
 
-void SymExec::Private::execCallInsn(const SymbolicHeap::SymHeap &heap,
+void SymExec::Private::execCallInsn(SymbolicHeap::SymHeap heap,
                                     SymHeapUnion &results)
 {
-    const CodeStorage::TOperandList &opList = insn->operands;
+    using namespace CodeStorage;
+
+    const TOperandList &opList = insn->operands;
     if (CL_INSN_CALL != insn->code || opList.size() < 2)
         TRAP;
 
-    const CodeStorage::Fnc *fnc = this->resolveCallee(opList[/* fnc */ 1]);
+    const Fnc *fnc = this->resolveCallee(opList[/* fnc */ 1]);
     if (!fnc)
         // unable to resolve Fnc by UID
         TRAP;
 
-    // create local variables
+    // crate local variables of called fnc
+    createStackFrame(heap, *fnc);
+
     // set args values
+    const TArgByPos &args = fnc->args;
+    if (args.size() + 2 != opList.size())
+        TRAP;
+
     // do call (+ avoid call recursion somehow for now)
     // destroy args
     // destroy local variables
