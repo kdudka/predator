@@ -28,9 +28,6 @@
 
 #include <boost/foreach.hpp>
 
-typedef std::set<const CodeStorage::Block *>                TBlockSet;
-typedef std::map<const CodeStorage::Block *, SymHeapUnion>  TStateMap;
-
 // utilities
 namespace {
     void createStackFrame(SymbolicHeap::SymHeap &heap,
@@ -129,7 +126,12 @@ namespace {
 // /////////////////////////////////////////////////////////////////////////////
 // SymExec implementation
 struct SymExec::Private {
+    typedef std::set<int /* fnc uid */>                         TBtSet;
+    typedef std::set<const CodeStorage::Block *>                TBlockSet;
+    typedef std::map<const CodeStorage::Block *, SymHeapUnion>  TStateMap;
+
     CodeStorage::Storage        &stor;
+    TBtSet                      *btSet;
     const CodeStorage::Fnc      *fnc;
     const CodeStorage::Block    *bb;
     const CodeStorage::Insn     *insn;
@@ -141,9 +143,11 @@ struct SymExec::Private {
 
     Private(CodeStorage::Storage &stor_):
         stor(stor_),
+        btSet(0),
         fnc(0),
         bb(0),
-        insn(0)
+        insn(0),
+        results(0)
     {
     }
 
@@ -152,8 +156,8 @@ struct SymExec::Private {
                      const SymbolicHeap::SymHeap &heap);
     void execCondInsn(const SymbolicHeap::SymHeap &heap);
     void execTermInsn(const SymbolicHeap::SymHeap &heap);
-    CodeStorage::Fnc* resolveCallee(const SymbolicHeap::SymHeap &heap,
-                                    const struct cl_operand &op);
+    int resolveCallee(const SymbolicHeap::SymHeap &heap,
+                      const struct cl_operand &op);
     void execCallInsn(SymbolicHeap::SymHeap heap, SymHeapUnion &results);
     void execInsn(SymHeapUnion &localState);
     void execBb();
@@ -177,6 +181,11 @@ SymExec::~SymExec() {
 void SymExec::exec(const CodeStorage::Fnc &fnc) {
     using CodeStorage::Var;
     using SymbolicHeap::SymHeap;
+
+    // wait, avoid recursion in the first place
+    Private::TBtSet btSet;
+    btSet.insert(uidOf(fnc));
+    d->btSet = &btSet;
 
     // set function ought to be executed
     d->fnc = &fnc;
@@ -247,11 +256,11 @@ void SymExec::Private::execCondInsn(const SymbolicHeap::SymHeap &heap)
     const int val = proc.heapValFromOperand(oplist[0]);
     switch (val) {
         case VAL_TRUE:
-            this->updateState(tlist[0], heap);
+            this->updateState(tlist[/* then label */ 0], heap);
             break;
 
         case VAL_FALSE:
-            this->updateState(tlist[1], heap);
+            this->updateState(tlist[/* else label */ 1], heap);
             break;
 
         default:
@@ -286,20 +295,17 @@ void SymExec::Private::execTermInsn(const SymbolicHeap::SymHeap &heap)
     }
 }
 
-CodeStorage::Fnc*
-SymExec::Private::resolveCallee(const SymbolicHeap::SymHeap &heap,
-                                const struct cl_operand &op)
+int SymExec::Private::resolveCallee(const SymbolicHeap::SymHeap &heap,
+                                    const struct cl_operand &op)
 {
     using namespace SymbolicHeap;
-    int uid;
-
     if (CL_OPERAND_CST == op.code) {
         // direct call
         const struct cl_cst &cst = op.data.cst;
         if (CL_TYPE_FNC != cst.code)
             TRAP;
 
-        uid = cst.data.cst_fnc.uid;
+        return cst.data.cst_fnc.uid;
 
     } else {
 
@@ -310,10 +316,8 @@ SymExec::Private::resolveCallee(const SymbolicHeap::SymHeap &heap,
             // Oops, it does not really look as indirect call
             TRAP;
 
-        uid = heap.valGetCustom(/* TODO: check type */ 0, val);
+        return heap.valGetCustom(/* TODO: check type */ 0, val);
     }
-
-    return this->stor.anyFncById[uid];
 }
 
 void SymExec::Private::execCallInsn(SymbolicHeap::SymHeap heap,
@@ -326,7 +330,15 @@ void SymExec::Private::execCallInsn(SymbolicHeap::SymHeap heap,
     if (CL_INSN_CALL != insn->code || opList.size() < 2)
         TRAP;
 
-    const Fnc *fnc = this->resolveCallee(heap, opList[/* fnc */ 1]);
+    const int uid = this->resolveCallee(heap, opList[/* fnc */ 1]);
+    if (hasKey(this->btSet, uid))
+        // *** recursion detected ***
+        TRAP;
+    else
+        // remember callee for next wheel
+        this->btSet->insert(uid);
+
+    const Fnc *fnc = this->stor.anyFncById[uid];
     if (!fnc)
         // unable to resolve Fnc by UID
         TRAP;
@@ -338,7 +350,8 @@ void SymExec::Private::execCallInsn(SymbolicHeap::SymHeap heap,
     // FIXME: this approach will sooner or later cause a stack overflow
     // TODO: use an explicit stack instead
     Private subExec(this->stor);
-    subExec.fnc = fnc;
+    subExec.btSet   = this->btSet;
+    subExec.fnc     = fnc;
     subExec.results = &results;
 
     // TODO: here detect recursion somehow!

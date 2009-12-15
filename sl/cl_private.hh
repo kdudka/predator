@@ -148,4 +148,9 @@ bool hasKey(const TCont &cont, const typename TCont::key_type &key) {
     return cont.end() != cont.find(key);
 }
 
+template <typename TCont>
+bool hasKey(const TCont *cont, const typename TCont::key_type &key) {
+    return hasKey(*cont, key);
+}
+
 #endif /* H_GUARD_CL_PRIVATE_H */
