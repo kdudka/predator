@@ -619,6 +619,7 @@ struct SymExec::Private {
                      const SymbolicHeap::SymHeap &heap);
     void execCondInsn(const SymbolicHeap::SymHeap &heap);
     void execTermInsn(const SymbolicHeap::SymHeap &heap);
+    CodeStorage::Fnc* resolveCallee(const struct cl_operand &op);
     void execCallInsn(const SymbolicHeap::SymHeap &heap, SymHeapUnion &results);
     void execInsn(SymHeapUnion &localState);
     void execBb();
@@ -759,28 +760,39 @@ void SymExec::Private::execTermInsn(const SymbolicHeap::SymHeap &heap)
     }
 }
 
-void SymExec::Private::execCallInsn(const SymbolicHeap::SymHeap &heap,
-                                    SymHeapUnion &result)
+CodeStorage::Fnc* SymExec::Private::resolveCallee(const struct cl_operand &op)
 {
-    if (CL_INSN_CALL != insn->code)
+    if (CL_OPERAND_CST != op.code)
+        // TODO: handle indirect call here!
         TRAP;
 
-    const CodeStorage::TOperandList &opList = insn->operands;
-    const struct cl_operand &fnc = opList[1];
-    if (CL_OPERAND_CST != fnc.code)
-        TRAP;
-
-    const struct cl_cst &cst = fnc.data.cst;
+    const struct cl_cst &cst = op.data.cst;
     if (CL_TYPE_FNC != cst.code)
         TRAP;
 
-    // create args
-    // set args values
+    const int uid = cst.data.cst_fnc.uid;
+    return this->stor.anyFncById[uid];
+}
+
+void SymExec::Private::execCallInsn(const SymbolicHeap::SymHeap &heap,
+                                    SymHeapUnion &results)
+{
+    const CodeStorage::TOperandList &opList = insn->operands;
+    if (CL_INSN_CALL != insn->code || opList.size() < 2)
+        TRAP;
+
+    const CodeStorage::Fnc *fnc = this->resolveCallee(opList[/* fnc */ 1]);
+    if (!fnc)
+        // unable to resolve Fnc by UID
+        TRAP;
+
     // create local variables
-    // do call
+    // set args values
+    // do call (+ avoid call recursion somehow for now)
     // destroy args
     // destroy local variables
     TRAP;
+    // go through results and perform assignment of the return value
 }
 
 void SymExec::Private::execInsn(SymHeapUnion &localState) {

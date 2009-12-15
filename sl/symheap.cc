@@ -61,7 +61,8 @@ struct SymHeap::Private {
 
     Private():
         lastObj(0),
-        lastVal(0)
+        lastVal(0),
+        retVal(VAL_INVALID)
     {
     }
 

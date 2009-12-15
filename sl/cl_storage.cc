@@ -395,8 +395,9 @@ void ClStorageBuilder::Private::digOperandCst(const struct cl_operand *op) {
         // fnc redefinition
         TRAP;
 
-    // index fnc name
+    // index fnc name and uid
     ref = fnc;
+    stor.anyFncById[uid] = fnc;
 }
 
 void ClStorageBuilder::Private::digOperand(const struct cl_operand *op) {
