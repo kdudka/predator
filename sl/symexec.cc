@@ -601,6 +601,7 @@ struct SymExec::Private {
     const CodeStorage::Block    *bb;
     const CodeStorage::Insn     *insn;
     LocationWriter              lw;
+    SymHeapUnion                stateZero;
     TStateMap                   state;
     TBlockSet                   todo;
 
@@ -620,16 +621,50 @@ struct SymExec::Private {
     void execInsn(SymHeapUnion &localState);
     void execBb();
     void execFncBody();
-    void execFnc();
+    void execFnc(const SymbolicHeap::SymHeap &init, SymHeapUnion &result);
 };
 
 SymExec::SymExec(CodeStorage::Storage &stor):
     d(new Private(stor))
 {
+    using SymbolicHeap::SymHeap;
+
+    // TODO: create and initialize global/static variables (stateZero)
+    d->stateZero.insert(SymHeap());
 }
 
 SymExec::~SymExec() {
     delete d;
+}
+
+void SymExec::exec(const CodeStorage::Fnc &fnc) {
+    using CodeStorage::Var;
+    using SymbolicHeap::SymHeap;
+
+    // set function ought to be executed
+    d->fnc = &fnc;
+
+    // container for resulting state
+    SymHeapUnion results;
+
+    BOOST_FOREACH(const SymHeap &zero, d->stateZero) {
+        SymHeap init(zero);
+
+        // prepare local variables
+        // TODO: move to function and share with CL_INSN_CALL exec code
+        BOOST_FOREACH(const Var &var, fnc.vars) {
+            CL_DEBUG("--- creating stack variable: #" << var.uid
+                    << " (" << var.name << ")" );
+
+            init.varCreate(var.clt, var.uid);
+        }
+
+        // well, we have successfully prepared the initial state,
+        // now please execute the function!
+        d->execFnc(init, results);
+    }
+
+    // TODO: process results somehow (generate points-to graph, etc.)
 }
 
 void SymExec::Private::updateState(const CodeStorage::Block *ofBlock,
@@ -772,8 +807,8 @@ void SymExec::Private::execBb() {
     const std::string &name = bb->name();
     CL_MSG_STREAM(cl_debug, lw << "debug: >>> entering " << name << "...");
 
-    // this state will be changed per each instruction moreover it may grow
-    // terribly on any CL_INSN_CALL instruction
+    // this state will be changed per each instruction
+    // NOTE: it may grow badly on any CL_INSN_CALL instruction
     SymHeapUnion localState(this->state[this->bb]);
 
     // go through all BB insns
@@ -813,46 +848,31 @@ void SymExec::Private::execFncBody() {
     CL_DEBUG("execFncBody(): main loop terminated correctly...");
 }
 
-void SymExec::Private::execFnc() {
+void SymExec::Private::execFnc(const SymbolicHeap::SymHeap &init,
+                               SymHeapUnion &results)
+{
     using namespace CodeStorage;
     using SymbolicHeap::SymHeap;
 
-    // create initial state for called function
-    // TODO: handle fnc args somehow
-    SymHeap init;
-    BOOST_FOREACH(const Var &var, fnc->vars) {
-        CL_DEBUG("--- creating stack variable: #" << var.uid
-                << " (" << var.name << ")" );
-        init.varCreate(var.clt, var.uid);
+    const std::string &fncName = nameOf(*this->fnc);
+    this->lw = &fnc->def.loc;
+    CL_MSG_STREAM(cl_debug, this->lw << "debug: >>> entering "
+            << fncName << "()...");
+
+    CL_DEBUG("looking for entry block...");
+    const ControlFlow &cfg = fnc->cfg;
+    this->bb = cfg.entry();
+    if (!this->bb) {
+        CL_MSG_STREAM(cl_error, this->lw << "error: "
+                << fncName << ": "
+                << "entry block not found");
+        return;
     }
 
     // insert initial state to the corresponding union
     SymHeapUnion &huni = this->state[this->bb];
     huni.insert(init);
 
+    // now we are ready for symbolic execution
     this->execFncBody();
-}
-
-void SymExec::exec(const CodeStorage::Fnc &fnc) {
-    using namespace CodeStorage;
-    using SymbolicHeap::SymHeap;
-
-    d->fnc = &fnc;
-    d->lw = &fnc.def.loc;
-
-    CL_MSG_STREAM(cl_debug, d->lw << "debug: >>> entering "
-            << nameOf(fnc) << "()...");
-
-    CL_DEBUG("looking for entry block...");
-    const ControlFlow &cfg = fnc.cfg;
-    d->bb = cfg.entry();
-    if (d->bb) {
-        // we are indeed ready to execute the function
-        d->execFnc();
-        return;
-    }
-
-    CL_MSG_STREAM(cl_error, d->lw << "error: "
-            << nameOf(fnc) << ": "
-            << "entry block not found");
 }
