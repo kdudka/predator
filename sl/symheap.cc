@@ -110,7 +110,11 @@ int /* val */ SymHeap::valueOf(int obj) const {
         case OBJ_INVALID:
             return VAL_INVALID;
 
+        case OBJ_LOST:
         case OBJ_DELETED:
+        case OBJ_DEREF_FAILED:
+            return VAL_DEREF_FAILED;
+
         case OBJ_UNKNOWN:
             return VAL_UNKNOWN;
 
@@ -252,6 +256,15 @@ int /* var */ SymHeap::varCreate(const struct cl_type *clt,
         d->cVarIdMap[uid] = objId;
 
     return objId;
+}
+
+int /* var */ SymHeap::varCreateAnon(int cbSize) {
+    TRAP;
+    return OBJ_INVALID;
+}
+
+void SymHeap::varDefineType(int var, const struct cl_type *clt) {
+    TRAP;
 }
 
 int /* sls */ SymHeap::slsCreate(const struct cl_type *clt,

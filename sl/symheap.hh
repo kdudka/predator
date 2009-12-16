@@ -32,7 +32,8 @@ enum {
     OBJ_INVALID       = -1,
     OBJ_DELETED       = -2,
     OBJ_UNKNOWN       = -3,
-    OBJ_LOST          = -4
+    OBJ_DEREF_FAILED  = -4,
+    OBJ_LOST          = -5
 };
 
 // special VALs
@@ -41,8 +42,9 @@ enum {
     VAL_INVALID       = -1,
     VAL_UNINITIALIZED = -2,
     VAL_UNKNOWN       = -3,
+    VAL_DEREF_FAILED  = -4,
 
-    VAL_TRUE          = -4,
+    VAL_TRUE          = -5,
     VAL_FALSE         = VAL_NULL
 };
 

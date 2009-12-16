@@ -71,16 +71,17 @@ void SymHeapProcessor::heapVarHandleAccessor(int *pObj,
     switch (val) {
         case VAL_NULL:
             CL_MSG_STREAM(cl_error, lw_ << "error: dereference of NULL value");
-            goto unknown_obj;
+            goto fail;
 
         case VAL_UNINITIALIZED:
             CL_MSG_STREAM(cl_error, lw_ << "error: dereference of uninitialized value");
-            goto unknown_obj;
+            goto fail;
 
         // TODO
         case VAL_UNKNOWN:
         case VAL_INVALID:
             TRAP;
+            goto fail;
 
         default:
             break;
@@ -98,8 +99,8 @@ void SymHeapProcessor::heapVarHandleAccessor(int *pObj,
             return;
     }
 
-unknown_obj:
-    *pObj = OBJ_UNKNOWN;
+fail:
+    *pObj = OBJ_DEREF_FAILED;
 }
 
 int /* var */ SymHeapProcessor::heapVarFromOperand(const struct cl_operand &op)
