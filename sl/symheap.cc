@@ -51,6 +51,7 @@ typedef std::map<int, Value> TValueMap;
 // SymHeap implementation
 struct SymHeap::Private {
     TIdMap                  cVarIdMap;
+    TIdMap                  cValIdMap;
     TVarMap                 varMap;
     TValueMap               valueMap;
 
@@ -317,7 +318,29 @@ void SymHeap::delNeq(int obj1, int obj2) {
 
 int /* val */ SymHeap::valCreateCustom(const struct cl_type *clt, int cVal)
 {
-    return d->createValue(clt, cVal, true);
+    TIdMap::iterator ii = d->cValIdMap.find(cVal);
+    if (d->cValIdMap.end() == ii) {
+        const int val = d->createValue(clt, cVal, true);
+        d->cValIdMap[cVal] = val;
+        return val;
+    }
+
+    // custom value already defined, we has to reuse it
+    const int val = ii->second;
+    TValueMap::iterator vi = d->valueMap.find(val);
+    if (d->valueMap.end() == vi)
+        TRAP;
+
+    const Value &ref = vi->second;
+    if (!ref.custom)
+        // heap corruption
+        TRAP;
+
+    if (ref.clt != clt)
+        // type mismatch
+        TRAP;
+
+    return val;
 }
 
 bool SymHeap::valIsCustom(int val) const {
