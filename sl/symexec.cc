@@ -118,14 +118,14 @@ namespace {
             if (obj < 0)
                 TRAP;
 
-            heap.objDestroy(obj);
+            heap.varDestroyNonHeap(obj);
         }
     }
 
     void destroyStackFrame(SymHeapUnion huni, const CodeStorage::Fnc &fnc)
     {
         using SymbolicHeap::SymHeap;
-        CL_DEBUG("<<< destroying stack frame for " << nameOf(fnc) << "():");
+        CL_DEBUG("<<< destroying stack frame of " << nameOf(fnc) << "():");
 
         int hCnt = 0;
         BOOST_FOREACH(SymHeap &heap, huni) {
@@ -328,7 +328,7 @@ int SymExec::Private::resolveCallee(const SymbolicHeap::SymHeap &heap,
         SymHeapProcessor proc(const_cast<SymHeap &>(heap));
         const int val = proc.heapValFromOperand(op);
         if (VAL_INVALID == val)
-            // Oops, it does not really look as indirect call
+            // Oops, it does not look as indirect call actually
             TRAP;
 
         return heap.valGetCustom(/* TODO: check type */ 0, val);
@@ -373,6 +373,7 @@ void SymExec::Private::execCallInsn(SymbolicHeap::SymHeap heap,
     // remember callee for next wheel
     this->btSet->insert(uid);
 
+    // look for Fnc object by UID
     const Fnc *fnc = this->stor.anyFncById[uid];
     if (!fnc)
         // unable to resolve Fnc by UID
@@ -386,10 +387,9 @@ void SymExec::Private::execCallInsn(SymbolicHeap::SymHeap heap,
     this->execCallInsn(fnc, heap, results);
 
     // go through results and perform assignment of the return value
-    assignReturnValue(results, opList[0]);
+    assignReturnValue(results, opList[/* dst */ 0]);
 
-    // FIXME: we are going to free non-heap objects, and SymHeap tends to think
-    // it's a bug in the analyzed program :-)
+    // final cleanup
     destroyStackFrame(results, *fnc);
 }
 

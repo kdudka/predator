@@ -283,8 +283,6 @@ void SymHeap::objDestroy(int obj) {
     if (d->varMap.end() != varIter) {
         // obj is a Var object
         Var &var = varIter->second;
-        const int val = var.placedAt;
-
         if (-1 != var.cVarUid)
             // TODO: carve out the error messages from this module
             CL_MSG_STREAM_INTERNAL(cl_error,
@@ -296,6 +294,7 @@ void SymHeap::objDestroy(int obj) {
         d->varMap.erase(varIter);
 
         // mark corresponding value as freed
+        const int val = var.placedAt;
         Value &ref = d->valueMap[val];
         ref.pointsTo = OBJ_DELETED;
         return;
@@ -304,6 +303,26 @@ void SymHeap::objDestroy(int obj) {
     // then look for Sls object
     // TODO
     TRAP;
+}
+
+void SymHeap::varDestroyNonHeap(int var) {
+    TVarMap::iterator varIter = d->varMap.find(var);
+    if (d->varMap.end() == varIter)
+        // var not found
+        TRAP;
+
+    Var &refVar = varIter->second;
+    if (-1 == refVar.cVarUid)
+        // wrong method used to destroy a heap object
+        TRAP;
+
+    // TODO: destroy complex objects recursively
+    d->varMap.erase(varIter);
+
+    // mark corresponding value as freed
+    const int val = refVar.placedAt;
+    Value &ref = d->valueMap[val];
+    ref.pointsTo = OBJ_LOST;
 }
 
 void SymHeap::addNeq(int obj1, int obj2) {

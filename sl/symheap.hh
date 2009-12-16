@@ -31,7 +31,8 @@ namespace SymbolicHeap {
 enum {
     OBJ_INVALID       = -1,
     OBJ_DELETED       = -2,
-    OBJ_UNKNOWN       = -3
+    OBJ_UNKNOWN       = -3,
+    OBJ_LOST          = -4
 };
 
 // special VALs
@@ -85,6 +86,10 @@ class SymHeap {
         int /* var */ varCreate(const struct cl_type *clt,
                                 int /* CodeStorage var */ uid);
 
+        int /* var */ varCreateAnon(int cbSize);
+
+        void varDefineType(int var, const struct cl_type *clt);
+
         int /* sls */ slsCreate(const struct cl_type *clt,
                                 const struct cl_accessor *selector);
 
@@ -92,6 +97,9 @@ class SymHeap {
         // heap objects alternation and destruction
         void objSetValue(int obj, int val);
         void objDestroy(int obj);
+
+        // this is the proper way to destroy non-heap object
+        void varDestroyNonHeap(int var);
 
     public:
         // inequality set alternation
