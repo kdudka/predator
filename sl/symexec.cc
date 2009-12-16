@@ -94,6 +94,18 @@ namespace {
         heap.objSetValue(obj, val);
     }
 
+    void assignReturnValue(SymHeapUnion &state,
+                           const struct cl_operand &op)
+    {
+        if (CL_OPERAND_VOID == op.code)
+            return;
+
+        // go through results and perform assignment of the return value
+        BOOST_FOREACH(SymbolicHeap::SymHeap &res, state) {
+            assignReturnValue(res, op);
+        }
+    }
+
     void destroyStackFrame(SymbolicHeap::SymHeap &heap,
                            const CodeStorage::Fnc &fnc)
     {
@@ -158,6 +170,9 @@ struct SymExec::Private {
     void execTermInsn(const SymbolicHeap::SymHeap &heap);
     int resolveCallee(const SymbolicHeap::SymHeap &heap,
                       const struct cl_operand &op);
+    void execCallInsn(const CodeStorage::Fnc *fnc,
+                      const SymbolicHeap::SymHeap &heap,
+                      SymHeapUnion &results);
     void execCallInsn(SymbolicHeap::SymHeap heap, SymHeapUnion &results);
     void execInsn(SymHeapUnion &localState);
     void execBb();
@@ -320,6 +335,21 @@ int SymExec::Private::resolveCallee(const SymbolicHeap::SymHeap &heap,
     }
 }
 
+void SymExec::Private::execCallInsn(const CodeStorage::Fnc *fnc,
+                                    const SymbolicHeap::SymHeap &heap,
+                                    SymHeapUnion &results)
+{
+    // FIXME: this approach will sooner or later cause a stack overflow
+    // TODO: use an explicit stack instead
+    Private subExec(this->stor);
+    subExec.btSet   = this->btSet;
+    subExec.fnc     = fnc;
+    subExec.results = &results;
+
+    // TODO: here detect recursion somehow!
+    subExec.execFnc(heap);
+}
+
 void SymExec::Private::execCallInsn(SymbolicHeap::SymHeap heap,
                                     SymHeapUnion &results)
 {
@@ -331,12 +361,17 @@ void SymExec::Private::execCallInsn(SymbolicHeap::SymHeap heap,
         TRAP;
 
     const int uid = this->resolveCallee(heap, opList[/* fnc */ 1]);
-    if (hasKey(this->btSet, uid))
+    if (hasKey(this->btSet, uid)) {
         // *** recursion detected ***
-        TRAP;
-    else
-        // remember callee for next wheel
-        this->btSet->insert(uid);
+        CL_MSG_STREAM(cl_error, this->lw << "error: "
+                "call recursion detected, cg subtree will be excluded");
+        heap.setReturnValue(VAL_UNKNOWN);
+        results.insert(heap);
+        return;
+    }
+
+    // remember callee for next wheel
+    this->btSet->insert(uid);
 
     const Fnc *fnc = this->stor.anyFncById[uid];
     if (!fnc)
@@ -347,23 +382,11 @@ void SymExec::Private::execCallInsn(SymbolicHeap::SymHeap heap,
     createStackFrame(heap, *fnc);
     setCallArgs(heap, *fnc, opList);
 
-    // FIXME: this approach will sooner or later cause a stack overflow
-    // TODO: use an explicit stack instead
-    Private subExec(this->stor);
-    subExec.btSet   = this->btSet;
-    subExec.fnc     = fnc;
-    subExec.results = &results;
+    // now please perform the call
+    this->execCallInsn(fnc, heap, results);
 
-    // TODO: here detect recursion somehow!
-    subExec.execFnc(heap);
-
-    const struct cl_operand &opRet = opList[0];
-    if (CL_OPERAND_VOID != opRet.code) {
-        // go through results and perform assignment of the return value
-        BOOST_FOREACH(SymHeap &res, results) {
-            assignReturnValue(res, opRet);
-        }
-    }
+    // go through results and perform assignment of the return value
+    assignReturnValue(results, opList[0]);
 
     // FIXME: we are going to free non-heap objects, and SymHeap tends to think
     // it's a bug in the analyzed program :-)
