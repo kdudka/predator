@@ -40,6 +40,7 @@ class SymHeapProcessor {
         int /* val */ heapValFromCst(const struct cl_operand &op);
         int /* var */ heapVarFromOperand(const struct cl_operand &op);
         int /* val */ heapValFromOperand(const struct cl_operand &op);
+        void heapSetVal(int /* obj */ lhs, int /* val */ rhs);
 
     private:
         void heapVarHandleAccessor(int *pVar, const struct cl_accessor *ac);

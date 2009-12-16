@@ -48,13 +48,14 @@ enum {
     VAL_FALSE         = VAL_NULL
 };
 
-// needs review
+// FIXME: the interface of SymHeap tends to be crowded
+// TODO: break to a sensible object model
 class SymHeap {
     public:
         SymHeap();
         ~SymHeap();
-        SymHeap(const SymHeap &);               ///< shallow copy
-        SymHeap& operator=(const SymHeap &);    ///< shallow copy
+        SymHeap(const SymHeap &);
+        SymHeap& operator=(const SymHeap &);
 
     public:
         typedef std::vector<int> TCont;
@@ -89,7 +90,8 @@ class SymHeap {
                                 int /* CodeStorage var */ uid);
 
         int /* var */ varCreateAnon(int cbSize);
-
+        int varSizeOfAnon(int var);
+        bool valPointsToAnon(int val);
         void varDefineType(int var, const struct cl_type *clt);
 
         int /* sls */ slsCreate(const struct cl_type *clt,

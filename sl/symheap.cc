@@ -172,6 +172,15 @@ bool SymHeap::notEqual(int obj1, int obj2) const {
 }
 
 const struct cl_type* /* clt */ SymHeap::objType(int obj) {
+    // first look for Var object
+    TVarMap::iterator varIter = d->varMap.find(obj);
+    if (d->varMap.end() != varIter) {
+        // obj is a Var object
+        Var &var = varIter->second;
+        return var.clt;
+    }
+
+    // then look for Sls object
     // TODO
     TRAP;
     return 0;
@@ -244,7 +253,7 @@ int /* var */ SymHeap::varCreate(const struct cl_type *clt,
             TRAP;
     }
 
-    int objId = ++(d->lastObj);
+    const int objId = ++(d->lastObj);
     Var &var = d->varMap[objId];
 
     var.clt         = clt;
@@ -259,11 +268,58 @@ int /* var */ SymHeap::varCreate(const struct cl_type *clt,
 }
 
 int /* var */ SymHeap::varCreateAnon(int cbSize) {
-    TRAP;
-    return OBJ_INVALID;
+    // FIXME: partially copy-pasted from varCreate()
+    const int objId = ++(d->lastObj);
+    Var &var = d->varMap[objId];
+
+    var.clt         = 0;
+    var.cVarUid     = /* FIXME: use union for this! */ cbSize;
+    var.placedAt    = d->createValue(0, objId);
+    var.value       = VAL_UNINITIALIZED;
+
+    return objId;
+}
+
+int SymHeap::varSizeOfAnon(int var) {
+    TVarMap::iterator iter = d->varMap.find(var);
+    if (d->varMap.end() == iter)
+        // not even a variable
+        TRAP;
+
+    Var &ref = iter->second;
+    if (ref.clt)
+        // not anonoymous variable at all
+        TRAP;
+
+    return /* cbSize */ ref.cVarUid;
+}
+
+bool SymHeap::valPointsToAnon(int val) {
+    if (val <= 0)
+        return false;
+
+    TValueMap::iterator valIter = d->valueMap.find(val);
+    if (d->valueMap.end() == valIter)
+        // not even a value
+        TRAP;
+
+    Value &value = valIter->second;
+    if (value.custom)
+        return false;
+
+    TVarMap::iterator iter = d->varMap.find(value.pointsTo);
+    if (d->varMap.end() == iter)
+        // not even a variable
+        TRAP;
+
+    const Var &ref = iter->second;
+    return !ref.clt;
 }
 
 void SymHeap::varDefineType(int var, const struct cl_type *clt) {
+    // TODO: update type of object
+    // TODO: update type of value pointing to the object
+    // TODO: recursively
     TRAP;
 }
 

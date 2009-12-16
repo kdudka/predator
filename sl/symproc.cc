@@ -193,6 +193,51 @@ int /* val */ SymHeapProcessor::heapValFromOperand(const struct cl_operand &op)
     }
 }
 
+void SymHeapProcessor::heapSetVal(int /* obj */ lhs, int /* val */ rhs) {
+    using namespace SymbolicHeap;
+
+    if (heap_.valPointsToAnon(rhs)) {
+        const int var = heap_.pointsTo(rhs);
+        if (OBJ_INVALID == var)
+            TRAP;
+
+        const struct cl_type *clt = heap_.objType(lhs);
+        if (!clt)
+            goto clt_done;
+
+        if (clt->code != CL_TYPE_PTR)
+            TRAP;
+
+        // move to next clt
+        // --> what are we pointing to actually?
+        clt = clt->items[0].type;
+        if (!clt)
+            TRAP;
+
+        if (CL_TYPE_VOID == clt->code)
+            goto clt_done;
+
+        const int cbGot = heap_.varSizeOfAnon(var);
+        const int cbNeed = clt->size;
+        if (cbGot != cbNeed) {
+            const bool isErr = (cbGot < cbNeed);
+            CL_MSG_STREAM(((isErr) ? cl_error : cl_warn), lw_
+                    << ((isErr) ? "error" : "warning")
+                    << ": amount of allocated memory not accurate");
+            CL_MSG_STREAM(cl_note, lw_ << "note: allocated: "
+                    << cbGot  << " bytes");
+            CL_MSG_STREAM(cl_note, lw_ << "note:  expected: "
+                    << cbNeed << " bytes");
+        }
+
+        heap_.varDefineType(var, clt);
+    }
+
+clt_done:
+    // TODO: check for possible JUNK here!
+    heap_.objSetValue(lhs, rhs);
+}
+
 void SymHeapProcessor::execFree(const CodeStorage::TOperandList &opList) {
     using namespace SymbolicHeap;
     if (/* dst + fnc + ptr */ 3 != opList.size())
@@ -263,32 +308,19 @@ void SymHeapProcessor::execMalloc(const CodeStorage::TOperandList &opList) {
         // amount of allocated memory not a number
         TRAP;
 
-    // FIXME: we simply ignore the ammount of allocated memory
     const int cbAmount = cst.data.cst_int.value;
     CL_MSG_STREAM(cl_debug, lw_ << "debug: executing malloc(" << cbAmount << ")");
-
-    // FIXME: we can't use dst.type as type of the created obj in most cases :-(
-    const int obj = heap_.varCreate(dst.type, /* heap obj */ -1);
+    const int obj = heap_.varCreateAnon(cbAmount);
     if (OBJ_INVALID == obj)
         // unable to create dynamic variable
         TRAP;
 
-    // TODO: delayed var creation?
     const int val = heap_.placedAt(obj);
-    switch (val) {
-        case VAL_NULL:
-        case VAL_INVALID:
-        case VAL_UNINITIALIZED:
-        case VAL_UNKNOWN:
-            TRAP;
-
-        default:
-            break;
-    }
+    if (val <= 0)
+        TRAP;
 
     // store the result of malloc
-    // TODO: check for possible JUNK here!
-    heap_.objSetValue(varLhs, val);
+    this->heapSetVal(varLhs, val);
 }
 
 bool SymHeapProcessor::execCall(const CodeStorage::Insn &insn) {
@@ -340,8 +372,7 @@ void SymHeapProcessor::execUnary(const CodeStorage::Insn &insn) {
         // could not resolve rhs
         TRAP;
 
-    // TODO: check for possible JUNK here!
-    heap_.objSetValue(varLhs, valRhs);
+    this->heapSetVal(varLhs, valRhs);
 }
 
 void SymHeapProcessor::execBinary(const CodeStorage::Insn &insn) {
