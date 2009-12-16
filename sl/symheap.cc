@@ -317,10 +317,30 @@ bool SymHeap::valPointsToAnon(int val) {
 }
 
 void SymHeap::varDefineType(int var, const struct cl_type *clt) {
-    // TODO: update type of object
-    // TODO: update type of value pointing to the object
-    // TODO: recursively
-    TRAP;
+    TVarMap::iterator varIter = d->varMap.find(var);
+    if (d->varMap.end() == varIter)
+        // var not found
+        TRAP;
+
+    Var &refVar = varIter->second;
+    if (refVar.clt)
+        // type redefinition not allowed
+        TRAP;
+
+    refVar.cVarUid = /* heap object */ -1;
+    refVar.clt     = clt;
+    // TODO: recursive construction of a complex object
+
+    TValueMap::iterator valIter = d->valueMap.find(refVar.placedAt);
+    if (d->valueMap.end() == valIter)
+        TRAP;
+
+    Value &value = valIter->second;
+    if (value.clt || value.custom)
+        TRAP;
+
+    value.clt = clt;
+    // TODO: recursive construction of a complex value
 }
 
 int /* sls */ SymHeap::slsCreate(const struct cl_type *clt,
