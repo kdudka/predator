@@ -367,9 +367,6 @@ void SymExec::Private::execCallInsn(SymbolicHeap::SymHeap heap,
         return;
     }
 
-    // remember callee for next wheel
-    this->btSet->insert(uid);
-
     // look for Fnc object by UID
     const Fnc *fnc = this->stor.anyFncById[uid];
     if (!fnc)
@@ -381,7 +378,10 @@ void SymExec::Private::execCallInsn(SymbolicHeap::SymHeap heap,
     setCallArgs(heap, *fnc, opList);
 
     // now please perform the call
+    this->btSet->insert(uid);
     this->execCallInsn(fnc, heap, results);
+    if (1 != this->btSet->erase(uid))
+        TRAP;
 
     // go through results and perform assignment of the return value
     assignReturnValue(results, opList[/* dst */ 0]);

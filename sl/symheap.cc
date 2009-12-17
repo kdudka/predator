@@ -158,7 +158,7 @@ void SymHeap::Private::createSubs(Var &refVar, const struct cl_type *clt) {
                 pVar->subVars.resize(cnt);
                 for (int i = 0; i < cnt; ++i) {
                     const struct cl_type *subClt = clt->items[i].type;
-                    const int obj = this->createValue(subClt, -1);
+                    const int obj = this->createVar(subClt, -1);
                     pVar->subVars[i] = obj;
 
                     Var &var = /* FIXME: suboptimal */ this->varMap[obj];
