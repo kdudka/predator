@@ -78,9 +78,6 @@ namespace {
             // fnc returns void, thus we are done
             return;
 
-        // FIXME: the following code has never run, use the debugger first
-        TRAP;
-
         SymHeapProcessor proc(heap);
         const int obj = proc.heapVarFromOperand(op);
         if (SymbolicHeap::OBJ_INVALID == obj)

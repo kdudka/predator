@@ -43,10 +43,17 @@ class SymHeapProcessor {
         void heapSetVal(int /* obj */ lhs, int /* val */ rhs);
 
     private:
+        void heapVarHandleAccessorDeref(int *pVar);
+        void heapVarHandleAccessorItem(int *pVar, const struct cl_accessor *ac);
         void heapVarHandleAccessor(int *pVar, const struct cl_accessor *ac);
         bool lhsFromOperand(int *pVar, const struct cl_operand &op);
         void execUnary(const CodeStorage::Insn &insn);
         void execBinary(const CodeStorage::Insn &insn);
+
+        // FIXME: malloc() can't operate on a single SymHeap, the resulting
+        // state should be a set of two symbolic heaps:
+        //      1. one with allocated memory (as we only do now)
+        //      2. one with VAL_NULL assigned to dst (to simulate OOM state)
         void execMalloc(const CodeStorage::TOperandList &opList);
         void execFree(const CodeStorage::TOperandList &opList);
         bool execCall(const CodeStorage::Insn &insn);

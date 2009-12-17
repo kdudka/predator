@@ -58,13 +58,9 @@ int /* val */ SymHeapProcessor::heapValFromCst(const struct cl_operand &op) {
     }
 }
 
-void SymHeapProcessor::heapVarHandleAccessor(int *pObj,
-                                             const struct cl_accessor *ac)
+void SymHeapProcessor::heapVarHandleAccessorDeref(int *pObj)
 {
     using namespace SymbolicHeap;
-    if (CL_ACCESSOR_DEREF != ac->code)
-        // not implemented yet
-        TRAP;
 
     // attempt to dereference
     const int val = heap_.valueOf(*pObj);
@@ -101,6 +97,39 @@ void SymHeapProcessor::heapVarHandleAccessor(int *pObj,
 
 fail:
     *pObj = OBJ_DEREF_FAILED;
+}
+
+void SymHeapProcessor::heapVarHandleAccessorItem(int *pObj,
+                                                 const struct cl_accessor *ac)
+{
+    using namespace SymbolicHeap;
+
+    // access subVar
+    const int id = ac->data.item.id;
+    *pObj = heap_.subVar(*pObj, id);
+
+    // check result of the SymHeap operation
+    if (OBJ_INVALID == *pObj)
+        *pObj = /* FIXME: misleading */ OBJ_DEREF_FAILED;
+}
+
+void SymHeapProcessor::heapVarHandleAccessor(int *pObj,
+                                             const struct cl_accessor *ac)
+{
+    const enum cl_accessor_e code = ac->code;
+    switch (code) {
+        case CL_ACCESSOR_DEREF:
+            this->heapVarHandleAccessorDeref(pObj);
+            return;
+
+        case CL_ACCESSOR_ITEM:
+            this->heapVarHandleAccessorItem(pObj, ac);
+            return;
+
+        case CL_ACCESSOR_REF:
+        case CL_ACCESSOR_DEREF_ARRAY:
+            TRAP;
+    }
 }
 
 int /* var */ SymHeapProcessor::heapVarFromOperand(const struct cl_operand &op)

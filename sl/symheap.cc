@@ -21,14 +21,20 @@
 #include "cl_private.hh"
 
 #include <map>
+#include <stack>
+
+#include <boost/tuple/tuple.hpp>
 
 namespace SymbolicHeap {
+
+typedef std::vector<int> TSub;
 
 struct Var {
     const struct cl_type    *clt;
     int /* CodeStorage */   cVarUid;
     int /* val */           placedAt;
     int /* val */           value;
+    TSub                    subVars;
 
     // the following line helps to recognize an uninitialized instance
     Var(): clt(0) { }
@@ -38,6 +44,7 @@ struct Value {
     const struct cl_type    *clt;
     int /* obj */           pointsTo;
     bool                    custom;
+    TSub                    subValues;
 
     // the following line helps to recognize an uninitialized instance
     Value(): clt(0) { }
@@ -70,6 +77,9 @@ struct SymHeap::Private {
 
     int /* val */ createValue(const struct cl_type *clt, int obj,
                               bool custom = false);
+    int /* var */ createVar(const struct cl_type *clt,
+                            int /* CodeStorage */ uid);
+    void createSubs(Var &refVar, const struct cl_type *clt);
 };
 
 SymHeap::SymHeap():
@@ -103,6 +113,59 @@ int /* val */ SymHeap::Private::createValue(const struct cl_type *clt, int obj,
     val.custom          = custom;
 
     return valId;
+}
+
+int /* var */ SymHeap::Private::createVar(const struct cl_type *clt,
+                                          int /* CodeStorage */ uid)
+{
+    const int objId = ++(this->lastObj);
+    Var &var = this->varMap[objId];
+
+    var.clt         = clt;
+    var.cVarUid     = uid;
+    var.placedAt    = this->createValue(clt, objId);
+    var.value       = VAL_UNINITIALIZED;
+
+    return objId;
+}
+
+void SymHeap::Private::createSubs(Var &refVar, const struct cl_type *clt) {
+    typedef std::pair<Var *, const struct cl_type *> TPair;
+    typedef std::stack<TPair> TStack;
+    TStack todo;
+
+    // we are using explicit stack to avoid recursion
+    todo.push(&refVar, clt);
+    while (!todo.empty()) {
+        Var *pVar;
+        const struct cl_type *clt;
+        boost::tie(pVar, clt) = todo.top();
+        todo.pop();
+
+        // FIXME: check whether clt may be NULL at this point
+        const enum cl_type_e code = clt->code;
+        switch (code) {
+            case CL_TYPE_PTR:
+                break;
+
+            case CL_TYPE_STRUCT: {
+                const int cnt = clt->item_cnt;
+                pVar->subVars.resize(cnt);
+                for (int i = 0; i < cnt; ++i) {
+                    const struct cl_type *subClt = clt->items[i].type;
+                    const int obj = this->createValue(subClt, -1);
+                    pVar->subVars[i] = obj;
+
+                    Var &var = /* FIXME: suboptimal */ this->varMap[obj];
+                    todo.push(&var, subClt);
+                }
+                break;
+            }
+
+            default:
+                TRAP;
+        }
+    }
 }
 
 int /* val */ SymHeap::valueOf(int obj) const {
@@ -213,9 +276,16 @@ void SymHeap::gatherCVars(TCont &out) const {
 }
 
 int /* var */ SymHeap::subVar(int var, int nth) {
-    // TODO
-    TRAP;
-    return OBJ_INVALID;
+    TVarMap::iterator iter = d->varMap.find(var);
+    if (d->varMap.end() == iter)
+        return OBJ_INVALID;
+
+    const Var &refVar = iter->second;
+    const TSub &subs = refVar.subVars;
+    const int cnt = subs.size();
+    return (nth < cnt)
+        ? subs[nth]
+        : OBJ_INVALID;
 }
 
 int /* val */ SymHeap::subVal(int val, int nth) {
@@ -253,13 +323,7 @@ int /* var */ SymHeap::varCreate(const struct cl_type *clt,
             TRAP;
     }
 
-    const int objId = ++(d->lastObj);
-    Var &var = d->varMap[objId];
-
-    var.clt         = clt;
-    var.cVarUid     = uid;
-    var.placedAt    = d->createValue(clt, objId);
-    var.value       = VAL_UNINITIALIZED;
+    const int objId = d->createVar(clt, uid);
 
     if (/* heap object */ -1 != uid)
         d->cVarIdMap[uid] = objId;
@@ -268,16 +332,7 @@ int /* var */ SymHeap::varCreate(const struct cl_type *clt,
 }
 
 int /* var */ SymHeap::varCreateAnon(int cbSize) {
-    // FIXME: partially copy-pasted from varCreate()
-    const int objId = ++(d->lastObj);
-    Var &var = d->varMap[objId];
-
-    var.clt         = 0;
-    var.cVarUid     = /* FIXME: use union for this! */ cbSize;
-    var.placedAt    = d->createValue(0, objId);
-    var.value       = VAL_UNINITIALIZED;
-
-    return objId;
+    return d->createVar(0, /* FIXME: use union for this! */ cbSize);
 }
 
 int SymHeap::varSizeOfAnon(int var) {
@@ -329,7 +384,7 @@ void SymHeap::varDefineType(int var, const struct cl_type *clt) {
 
     refVar.cVarUid = /* heap object */ -1;
     refVar.clt     = clt;
-    // TODO: recursive construction of a complex object
+    d->createSubs(refVar, clt);
 
     TValueMap::iterator valIter = d->valueMap.find(refVar.placedAt);
     if (d->valueMap.end() == valIter)
@@ -340,7 +395,6 @@ void SymHeap::varDefineType(int var, const struct cl_type *clt) {
         TRAP;
 
     value.clt = clt;
-    // TODO: recursive construction of a complex value
 }
 
 int /* sls */ SymHeap::slsCreate(const struct cl_type *clt,
