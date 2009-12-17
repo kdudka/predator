@@ -145,6 +145,11 @@ void SymHeap::Private::createSubs(Var &refVar, const struct cl_type *clt) {
         // FIXME: check whether clt may be NULL at this point
         const enum cl_type_e code = clt->code;
         switch (code) {
+            case CL_TYPE_CHAR:
+                CL_MSG_STREAM_INTERNAL(cl_warn, "warning: "
+                        "CL_TYPE_CHAR are not supported by SymHeap for now");
+                break;
+
             case CL_TYPE_PTR:
                 break;
 
