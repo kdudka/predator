@@ -23,6 +23,7 @@
 #include <map>
 #include <stack>
 
+#include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
 
 namespace SymbolicHeap {
@@ -79,6 +80,10 @@ struct SymHeap::Private {
                               bool custom = false);
     int /* var */ createVar(const struct cl_type *clt,
                             int /* CodeStorage */ uid);
+
+    void destroySingleVar(int var, bool isHeapVar);
+    void destroyVar(int var, bool isHeapVar);
+
     void createSubs(Var &refVar, const struct cl_type *clt);
 };
 
@@ -127,6 +132,63 @@ int /* var */ SymHeap::Private::createVar(const struct cl_type *clt,
     var.value       = VAL_UNINITIALIZED;
 
     return objId;
+}
+
+void SymHeap::Private::destroySingleVar(int var, bool isHeapVar) {
+    TVarMap::iterator varIter = this->varMap.find(var);
+    if (this->varMap.end() == varIter)
+        // var not found
+        TRAP;
+
+    Var &refVar = varIter->second;
+    if (isHeapVar && -1 != refVar.cVarUid)
+        // TODO: carve out the error messages from this module
+        CL_MSG_STREAM_INTERNAL(cl_error,
+                "error: attempt to free non-heap object");
+
+    if (!isHeapVar && -1 == refVar.cVarUid)
+        // wrong method used to destroy a heap object
+        TRAP;
+
+    // TODO: check for possible free() of non-root
+    // TODO: check for JUNK!
+
+    // mark corresponding value as freed
+    const int val = refVar.placedAt;
+    Value &ref = this->valueMap[val];
+    ref.pointsTo = (isHeapVar)
+        ? OBJ_DELETED
+        : OBJ_LOST;
+
+    // TODO: destroy complex objects recursively
+    this->varMap.erase(varIter);
+}
+
+void SymHeap::Private::destroyVar(int var, bool isHeapVar) {
+    typedef std::stack<int /* var */> TStack;
+    TStack todo;
+
+    // we are using explicit stack to avoid recursion
+    todo.push(var);
+    while (!todo.empty()) {
+        const int var = todo.top();
+        todo.pop();
+
+        TVarMap::iterator varIter = this->varMap.find(var);
+        if (this->varMap.end() == varIter)
+            // var not found
+            TRAP;
+
+        // schedule all subvars for removal
+        Var &refVar = varIter->second;
+        TSub &subs = refVar.subVars;
+        BOOST_FOREACH(int subVar, subs) {
+            todo.push(subVar);
+        }
+
+        // remove current
+        this->destroySingleVar(var, isHeapVar);
+    }
 }
 
 void SymHeap::Private::createSubs(Var &refVar, const struct cl_type *clt) {
@@ -429,22 +491,7 @@ void SymHeap::objDestroy(int obj) {
     // first look for Var object
     TVarMap::iterator varIter = d->varMap.find(obj);
     if (d->varMap.end() != varIter) {
-        // obj is a Var object
-        Var &var = varIter->second;
-        if (-1 != var.cVarUid)
-            // TODO: carve out the error messages from this module
-            CL_MSG_STREAM_INTERNAL(cl_error,
-                    "error: attempt to free non-heap object");
-
-        // TODO: check for possible free() of non-root
-
-        // TODO: destroy complex objects recursively
-        d->varMap.erase(varIter);
-
-        // mark corresponding value as freed
-        const int val = var.placedAt;
-        Value &ref = d->valueMap[val];
-        ref.pointsTo = OBJ_DELETED;
+        d->destroyVar(obj, true);
         return;
     }
 
@@ -454,23 +501,7 @@ void SymHeap::objDestroy(int obj) {
 }
 
 void SymHeap::varDestroyNonHeap(int var) {
-    TVarMap::iterator varIter = d->varMap.find(var);
-    if (d->varMap.end() == varIter)
-        // var not found
-        TRAP;
-
-    Var &refVar = varIter->second;
-    if (-1 == refVar.cVarUid)
-        // wrong method used to destroy a heap object
-        TRAP;
-
-    // TODO: destroy complex objects recursively
-    d->varMap.erase(varIter);
-
-    // mark corresponding value as freed
-    const int val = refVar.placedAt;
-    Value &ref = d->valueMap[val];
-    ref.pointsTo = OBJ_LOST;
+    d->destroyVar(var, false);
 }
 
 void SymHeap::addNeq(int obj1, int obj2) {
