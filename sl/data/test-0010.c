@@ -1,7 +1,5 @@
 #include <stdlib.h>
 
-#define TRIGGER_INV_BUG 1
-
 #define DLL_NEW(type) \
     ((type *) malloc(sizeof(type)))
 
@@ -59,12 +57,28 @@ int main()
     destroy_cyclic_sll(&list);
 
     {
-        int i;
-#if !TRIGGER_INV_BUG
         insert_item(&list);
-#endif
-        for (i = 0; i < 128; ++i)
-            insert_item(&list);
+        insert_item(&list);
+        insert_item(&list);
+        insert_item(&list);
+        insert_item(&list);
+        insert_item(&list);
+        insert_item(&list);
+        insert_item(&list);
+        insert_item(&list);
+        insert_item(&list);
+        insert_item(&list);
+        insert_item(&list);
+        insert_item(&list);
+        insert_item(&list);
+        insert_item(&list);
+        insert_item(&list);
+        insert_item(&list);
+        insert_item(&list);
+        insert_item(&list);
+        insert_item(&list);
+        insert_item(&list);
+        insert_item(&list);
 
         destroy_cyclic_sll(&list);
     }
