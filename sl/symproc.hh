@@ -27,14 +27,20 @@ namespace SymbolicHeap {
     class SymHeap;
 }
 
+class SymHeapUnion;
+
 class SymHeapProcessor {
     public:
-        SymHeapProcessor(SymbolicHeap::SymHeap &heap):
+        typedef SymbolicHeap::SymHeap   THeap;
+        typedef SymHeapUnion            TState;
+
+    public:
+        SymHeapProcessor(THeap &heap):
             heap_(heap)
         {
         }
 
-        bool exec(const CodeStorage::Insn &insn);
+        bool exec(TState &dst, const CodeStorage::Insn &insn);
 
     public:
         int /* val */ heapValFromCst(const struct cl_operand &op);
@@ -49,17 +55,12 @@ class SymHeapProcessor {
         bool lhsFromOperand(int *pVar, const struct cl_operand &op);
         void execUnary(const CodeStorage::Insn &insn);
         void execBinary(const CodeStorage::Insn &insn);
-
-        // FIXME: malloc() can't operate on a single SymHeap, the resulting
-        // state should be a set of two symbolic heaps:
-        //      1. one with allocated memory (as we only do now)
-        //      2. one with VAL_NULL assigned to dst (to simulate OOM state)
-        void execMalloc(const CodeStorage::TOperandList &opList);
+        void execMalloc(TState &dst, const CodeStorage::TOperandList &opList);
         void execFree(const CodeStorage::TOperandList &opList);
-        bool execCall(const CodeStorage::Insn &insn);
+        bool execCall(TState &dst, const CodeStorage::Insn &insn);
 
     private:
-        SymbolicHeap::SymHeap       &heap_;
+        THeap                       &heap_;
         LocationWriter              lw_;
 };
 

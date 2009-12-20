@@ -416,11 +416,7 @@ void SymExec::Private::execInsn(SymHeapUnion &localState) {
 
             // NOTE: this has to be tried *before* execCallInsn() to eventually
             // catch malloc()/free() calls, which are treated differently
-            if (proc.exec(*insn))
-                // non-terminal insn
-                nextLocalState.insert(workingHeap);
-
-            else
+            if (!proc.exec(nextLocalState, *insn))
                 // call insn
                 this->execCallInsn(workingHeap, nextLocalState);
         }

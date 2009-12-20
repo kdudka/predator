@@ -21,6 +21,7 @@
 
 #include "cl_private.hh"
 #include "symheap.hh"
+#include "symstate.hh"
 
 // /////////////////////////////////////////////////////////////////////////////
 // SymHeapProcessor implementation
@@ -316,7 +317,9 @@ void SymHeapProcessor::execFree(const CodeStorage::TOperandList &opList) {
     heap_.objDestroy(obj);
 }
 
-void SymHeapProcessor::execMalloc(const CodeStorage::TOperandList &opList) {
+void SymHeapProcessor::execMalloc(TState &state,
+                                  const CodeStorage::TOperandList &opList)
+{
     using namespace SymbolicHeap;
     if (/* dst + fnc + size */ 3 != opList.size())
         TRAP;
@@ -348,11 +351,16 @@ void SymHeapProcessor::execMalloc(const CodeStorage::TOperandList &opList) {
     if (val <= 0)
         TRAP;
 
+    // OOM state simulation (TODO: an option to turn this off?)
+    this->heapSetVal(varLhs, VAL_NULL);
+    state.insert(heap_);
+
     // store the result of malloc
     this->heapSetVal(varLhs, val);
+    state.insert(heap_);
 }
 
-bool SymHeapProcessor::execCall(const CodeStorage::Insn &insn) {
+bool SymHeapProcessor::execCall(TState &dst, const CodeStorage::Insn &insn) {
     using namespace SymbolicHeap;
 
     const CodeStorage::TOperandList &opList = insn.operands;
@@ -372,12 +380,13 @@ bool SymHeapProcessor::execCall(const CodeStorage::Insn &insn) {
         return false;
 
     if (STREQ(fncName, "malloc")) {
-        this->execMalloc(opList);
+        this->execMalloc(dst, opList);
         return true;
     }
 
     if (STREQ(fncName, "free")) {
         this->execFree(opList);
+        dst.insert(heap_);
         return true;
     }
 
@@ -446,7 +455,7 @@ void SymHeapProcessor::execBinary(const CodeStorage::Insn &insn) {
     heap_.objSetValue(dst, val);
 }
 
-bool SymHeapProcessor::exec(const CodeStorage::Insn &insn) {
+bool SymHeapProcessor::exec(TState &dst, const CodeStorage::Insn &insn) {
     using namespace CodeStorage;
 
     lw_ = &insn.loc;
@@ -455,14 +464,16 @@ bool SymHeapProcessor::exec(const CodeStorage::Insn &insn) {
     switch (code) {
         case CL_INSN_UNOP:
             this->execUnary(insn);
+            dst.insert(heap_);
             return true;
 
         case CL_INSN_BINOP:
             this->execBinary(insn);
+            dst.insert(heap_);
             return true;
 
         case CL_INSN_CALL:
-            return this->execCall(insn);
+            return this->execCall(dst, insn);
 
         default:
             TRAP;
