@@ -185,8 +185,11 @@ bool /* var */ SymHeapProcessor::lhsFromOperand(int *pVar,
             CL_MSG_STREAM(cl_debug, lw_ << "debug: "
                     "ignoring OBJ_UNKNOWN as lhs, this is definitely a bug "
                     "if there is no error reported above...");
+            // fall through!
+        case OBJ_DEREF_FAILED:
             return false;
 
+        case OBJ_LOST:
         case OBJ_DELETED:
         case OBJ_INVALID:
             TRAP;
