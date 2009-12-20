@@ -295,6 +295,11 @@ void SymExec::Private::execTermInsn(const SymbolicHeap::SymHeap &heap)
             this->execCondInsn(heap);
             break;
 
+        case CL_INSN_ABORT:
+            CL_MSG_STREAM(cl_debug, this->lw
+                    << "debug: CL_INSN_ABORT reached");
+            break;
+
         case CL_INSN_JMP:
             if (1 == tlist.size()) {
                 this->updateState(tlist[0], heap);
@@ -372,6 +377,14 @@ void SymExec::Private::execCallInsn(SymbolicHeap::SymHeap heap,
     if (!fnc)
         // unable to resolve Fnc by UID
         TRAP;
+
+    if (CL_OPERAND_VOID == fnc->def.code) {
+        CL_MSG_STREAM(cl_warn, this->lw << "warning: "
+                "ignoring call of undefined function");
+        heap.setReturnValue(VAL_UNKNOWN);
+        results.insert(heap);
+        return;
+    }
 
     // crate local variables of called fnc
     createStackFrame(heap, *fnc);
