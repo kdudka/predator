@@ -71,18 +71,18 @@ class SymHeap {
 
     public:
         // static info lookup
-        const struct cl_type* /* clt */ objType(int obj);
-        const struct cl_type* /* clt */ valType(int val);
-        int /* CodeStorage var uid */ cVar(int var);
+        const struct cl_type* /* clt */ objType(int obj) const;
+        const struct cl_type* /* clt */ valType(int val) const;
+        int /* CodeStorage var uid */ cVar(int var) const;
         int /* var */ varByCVar(int /* CodeStorage var */ uid) const;
         void gatherCVars(TCont &out) const;
 
     public:
         // projection info lookup
-        int /* var */ subVar(int var, int nth);
-        int /* val */ subVal(int val, int nth);
-        int /* var */ varParent(int var);
-        int /* val */ valParent(int val);
+        int /* var */ subVar(int var, int nth) const;
+        int /* val */ subVal(int val, int nth) const;
+        int /* var */ varParent(int var) const;
+        int /* val */ valParent(int val) const;
 
     public:
         // heap objects construction
@@ -90,8 +90,8 @@ class SymHeap {
                                 int /* CodeStorage var */ uid);
 
         int /* var */ varCreateAnon(int cbSize);
-        int varSizeOfAnon(int var);
-        bool valPointsToAnon(int val);
+        int varSizeOfAnon(int var) const;
+        bool valPointsToAnon(int val) const;
         void varDefineType(int var, const struct cl_type *clt);
 
         int /* sls */ slsCreate(const struct cl_type *clt,
@@ -119,7 +119,7 @@ class SymHeap {
     public:
         // TODO: move elsewhere
         void setReturnValue(int val);
-        int /* val */ getReturnValue();
+        int /* val */ getReturnValue() const;
 
     private:
         struct Private;

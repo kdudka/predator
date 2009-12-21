@@ -263,7 +263,7 @@ int /* val */ SymHeap::valueOf(int obj) const {
 int /* val */ SymHeap::placedAt(int obj) const {
     TVarMap::iterator iter = d->varMap.find(obj);
     if (d->varMap.end() == iter)
-        return OBJ_INVALID;
+        return VAL_INVALID;
 
     Var &var = iter->second;
     return var.placedAt;
@@ -272,7 +272,7 @@ int /* val */ SymHeap::placedAt(int obj) const {
 int /* obj */ SymHeap::pointsTo(int val) const {
     TValueMap::iterator iter = d->valueMap.find(val);
     if (d->valueMap.end() == iter)
-        return VAL_INVALID;
+        return OBJ_INVALID;
 
     Value &value = iter->second;
     if (value.custom)
@@ -301,7 +301,7 @@ bool SymHeap::notEqual(int obj1, int obj2) const {
     return false;
 }
 
-const struct cl_type* /* clt */ SymHeap::objType(int obj) {
+const struct cl_type* /* clt */ SymHeap::objType(int obj) const {
     // first look for Var object
     TVarMap::iterator varIter = d->varMap.find(obj);
     if (d->varMap.end() != varIter) {
@@ -316,13 +316,13 @@ const struct cl_type* /* clt */ SymHeap::objType(int obj) {
     return 0;
 }
 
-const struct cl_type* /* clt */ SymHeap::valType(int val) {
+const struct cl_type* /* clt */ SymHeap::valType(int val) const {
     // TODO
     TRAP;
     return 0;
 }
 
-int /* CodeStorage var uid */ SymHeap::cVar(int var) {
+int /* CodeStorage var uid */ SymHeap::cVar(int var) const {
     // TODO
     TRAP;
     return -1;
@@ -342,7 +342,7 @@ void SymHeap::gatherCVars(TCont &out) const {
         out.push_back(ii->first);
 }
 
-int /* var */ SymHeap::subVar(int var, int nth) {
+int /* var */ SymHeap::subVar(int var, int nth) const {
     TVarMap::iterator iter = d->varMap.find(var);
     if (d->varMap.end() == iter)
         return OBJ_INVALID;
@@ -355,19 +355,19 @@ int /* var */ SymHeap::subVar(int var, int nth) {
         : OBJ_INVALID;
 }
 
-int /* val */ SymHeap::subVal(int val, int nth) {
+int /* val */ SymHeap::subVal(int val, int nth) const {
     // TODO
     TRAP;
     return VAL_INVALID;
 }
 
-int /* var */ SymHeap::varParent(int var) {
+int /* var */ SymHeap::varParent(int var) const {
     // TODO
     TRAP;
     return OBJ_INVALID;
 }
 
-int /* val */ SymHeap::valParent(int val) {
+int /* val */ SymHeap::valParent(int val) const {
     // TODO
     TRAP;
     return VAL_INVALID;
@@ -399,10 +399,10 @@ int /* var */ SymHeap::varCreate(const struct cl_type *clt,
 }
 
 int /* var */ SymHeap::varCreateAnon(int cbSize) {
-    return d->createVar(0, /* FIXME: use union for this! */ cbSize);
+    return d->createVar(0, /* FIXME: use union for this? */ cbSize);
 }
 
-int SymHeap::varSizeOfAnon(int var) {
+int SymHeap::varSizeOfAnon(int var) const {
     TVarMap::iterator iter = d->varMap.find(var);
     if (d->varMap.end() == iter)
         // not even a variable
@@ -416,7 +416,7 @@ int SymHeap::varSizeOfAnon(int var) {
     return /* cbSize */ ref.cVarUid;
 }
 
-bool SymHeap::valPointsToAnon(int val) {
+bool SymHeap::valPointsToAnon(int val) const {
     if (val <= 0)
         return false;
 
@@ -578,7 +578,7 @@ void SymHeap::setReturnValue(int val) {
     d->retVal = val;
 }
 
-int /* val */ SymHeap::getReturnValue() {
+int /* val */ SymHeap::getReturnValue() const {
     return d->retVal;
 }
 
