@@ -74,10 +74,15 @@ void SymHeapProcessor::heapVarHandleAccessorDeref(int *pObj)
             CL_MSG_STREAM(cl_error, lw_ << "error: dereference of uninitialized value");
             goto fail;
 
-        // TODO
         case VAL_UNKNOWN:
+            *pObj = OBJ_UNKNOWN;
+            return;
+
         case VAL_INVALID:
             TRAP;
+            // go through!
+
+        case VAL_DEREF_FAILED:
             goto fail;
 
         default:
