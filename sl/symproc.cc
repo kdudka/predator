@@ -359,7 +359,8 @@ void SymHeapProcessor::execMalloc(TState &state,
     if (val <= 0)
         TRAP;
 
-    // OOM state simulation (TODO: an option to turn this off?)
+    // OOM state simulation
+    // FIXME: this feature should be strictly optional, it may explode badly
     this->heapSetVal(varLhs, VAL_NULL);
     state.insert(heap_);
 
@@ -421,6 +422,28 @@ void SymHeapProcessor::execUnary(const CodeStorage::Insn &insn) {
     this->heapSetVal(varLhs, valRhs);
 }
 
+namespace {
+    int handleSpecialValues(int val1, int val2) {
+        using namespace SymbolicHeap;
+
+        if (VAL_NULL <= val1 && VAL_NULL <= val2)
+            return VAL_FALSE;
+
+        const int lower = (val1 < val2) ? val1 : val2;
+        switch (lower) {
+            case VAL_INVALID:
+            case VAL_UNINITIALIZED:
+            case VAL_UNKNOWN:
+            case VAL_DEREF_FAILED:
+                return lower;
+
+            default:
+                TRAP;
+                return VAL_INVALID;
+        }
+    }
+}
+
 void SymHeapProcessor::execBinary(const CodeStorage::Insn &insn) {
     using namespace SymbolicHeap;
 
@@ -445,9 +468,7 @@ void SymHeapProcessor::execBinary(const CodeStorage::Insn &insn) {
     // resolve src1, src2
     const int val1 = heapValFromOperand(insn.operands[1]);
     const int val2 = heapValFromOperand(insn.operands[2]);
-    if (val1 < 0 || val2 < 0)
-        // TODO: handle special values here
-        TRAP;
+    int val = handleSpecialValues(val1, val2);
 
     // execute CL_BINOP_EQ/CL_BINOP_NE
     bool result = (val1 == val2);
@@ -455,9 +476,10 @@ void SymHeapProcessor::execBinary(const CodeStorage::Insn &insn) {
         result = !result;
 
     // convert bool result to a heap value
-    const int val = (result)
-        ? VAL_TRUE
-        : VAL_FALSE;
+    if (!val)
+        val = (result)
+            ? VAL_TRUE
+            : VAL_FALSE;
 
     // store resulting value
     heap_.objSetValue(dst, val);

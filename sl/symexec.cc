@@ -275,6 +275,12 @@ void SymExec::Private::execCondInsn(const SymbolicHeap::SymHeap &heap)
             this->updateState(tlist[/* else label */ 1], heap);
             break;
 
+        case VAL_DEREF_FAILED:
+            // error should have been already emitted
+            CL_MSG_STREAM(cl_debug, this->lw
+                    << "debug: ignored VAL_DEREF_FAILED");
+            break;
+
         default:
             // TODO: handle special values here
             TRAP;
