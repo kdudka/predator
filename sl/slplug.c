@@ -559,8 +559,20 @@ static struct cl_type* operand_type_lookup(tree t)
 
 static void handle_operand(struct cl_operand *op, tree t);
 
+static void handle_accessor_addr_expr(struct cl_accessor **ac, tree t)
+{
+    if (STRING_CST == TREE_CODE(TREE_OPERAND(t, 0)))
+        return;
+
+    chain_accessor(ac, CL_ACCESSOR_REF);
+    (*ac)->type = operand_type_lookup(t);
+}
+
 static void handle_accessor_array_ref(struct cl_accessor **ac, tree t)
 {
+    if (STRING_CST == TREE_CODE(TREE_OPERAND(t, 0)))
+        return;
+
     chain_accessor(ac, CL_ACCESSOR_DEREF_ARRAY);
     (*ac)->type = operand_type_lookup(t);
 
@@ -600,13 +612,11 @@ static bool handle_accessor(struct cl_accessor **ac, tree *pt)
     enum tree_code code = TREE_CODE(t);
     switch (code) {
         case ADDR_EXPR:
-            if (STRING_CST != TREE_CODE(TREE_OPERAND(t, 0)))
-                chain_accessor(ac, CL_ACCESSOR_REF);
+            handle_accessor_addr_expr(ac, t);
             break;
 
         case ARRAY_REF:
-            if (STRING_CST != TREE_CODE(TREE_OPERAND(t, 0)))
-                handle_accessor_array_ref(ac, t);
+            handle_accessor_array_ref(ac, t);
             break;
 
         case INDIRECT_REF:

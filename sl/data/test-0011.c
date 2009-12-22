@@ -9,4 +9,6 @@ int main() {
     if (v)
         // this should be OK
         *v = NULL;
+
+    return 0;
 }
