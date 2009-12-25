@@ -384,6 +384,7 @@ int /* var */ SymHeap::varCreate(const struct cl_type *clt,
 
         case CL_TYPE_BOOL:
         case CL_TYPE_PTR:
+        case CL_TYPE_STRUCT:
             break;
 
         default:
