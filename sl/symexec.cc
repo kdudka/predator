@@ -37,10 +37,16 @@ namespace {
                           const CodeStorage::Fnc &fnc)
     {
         using CodeStorage::Var;
-        CL_DEBUG(">>> creating stack frame for " << nameOf(fnc) << "():");
+        LocationWriter lw(&fnc.def.loc);
+        CL_MSG_STREAM(cl_debug, lw << "debug: "
+                ">>> creating stack frame for "
+                << nameOf(fnc) << "():");
 
         BOOST_FOREACH(const Var &var, fnc.vars) {
-            CL_DEBUG("--- creating stack variable: #" << var.uid
+            lw = &var.loc;
+            CL_MSG_STREAM(cl_debug, lw << "debug: "
+                    "--- creating stack variable: #"
+                    << var.uid
                     << " (" << var.name << ")" );
 
             heap.varCreate(var.clt, var.uid);
@@ -111,7 +117,10 @@ namespace {
     {
         using CodeStorage::Var;
         BOOST_FOREACH(const Var &var, fnc.vars) {
-            CL_DEBUG("--- destroying stack variable: #" << var.uid
+            LocationWriter lw(&var.loc);
+            CL_MSG_STREAM(cl_debug, lw << "debug: "
+                    "--- destroying stack variable: #"
+                    << var.uid
                     << " (" << var.name << ")" );
 
             const int obj = heap.varByCVar(var.uid);
@@ -125,7 +134,10 @@ namespace {
     void destroyStackFrame(SymHeapUnion huni, const CodeStorage::Fnc &fnc)
     {
         using SymbolicHeap::SymHeap;
-        CL_DEBUG("<<< destroying stack frame of " << nameOf(fnc) << "():");
+        LocationWriter lw(&fnc.def.loc);
+        CL_MSG_STREAM(cl_debug, lw << "debug: "
+                "<<< destroying stack frame of "
+                << nameOf(fnc) << "():");
 
         int hCnt = 0;
         BOOST_FOREACH(SymHeap &heap, huni) {
@@ -527,7 +539,8 @@ void SymExec::Private::execFncBody() {
         this->execBb();
     }
 
-    CL_DEBUG("execFncBody(): main loop terminated correctly...");
+    CL_MSG_STREAM(cl_debug, this->lw << "debug: "
+            "execFncBody(): main loop terminated correctly...");
 }
 
 void SymExec::Private::execFnc(const SymbolicHeap::SymHeap &init)
