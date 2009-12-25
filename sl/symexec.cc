@@ -20,13 +20,16 @@
 #include "symexec.hh"
 
 #include <set>
+#include <stack>
 
+#include "btprint.hh"
 #include "cl_private.hh"
 #include "storage.hh"
 #include "symproc.hh"
 #include "symstate.hh"
 
 #include <boost/foreach.hpp>
+#include <boost/tuple/tuple.hpp>
 
 // utilities
 namespace {
@@ -134,13 +137,16 @@ namespace {
 
 // /////////////////////////////////////////////////////////////////////////////
 // SymExec implementation
-struct SymExec::Private {
+struct SymExec::Private: public IBtPrinter {
     typedef std::set<int /* fnc uid */>                         TBtSet;
+    typedef std::pair<const CodeStorage::Fnc *, LocationWriter> TBtStackItem;
+    typedef std::stack<TBtStackItem>                            TBtStack;
     typedef std::set<const CodeStorage::Block *>                TBlockSet;
     typedef std::map<const CodeStorage::Block *, SymHeapUnion>  TStateMap;
 
     CodeStorage::Storage        &stor;
     TBtSet                      *btSet;
+    TBtStack                    *btStack;
     const CodeStorage::Fnc      *fnc;
     const CodeStorage::Block    *bb;
     const CodeStorage::Insn     *insn;
@@ -153,12 +159,16 @@ struct SymExec::Private {
     Private(CodeStorage::Storage &stor_):
         stor(stor_),
         btSet(0),
+        btStack(0),
         fnc(0),
         bb(0),
         insn(0),
         results(0)
     {
     }
+
+    // IBtPrinter implementation
+    virtual void printBackTrace();
 
     void execReturn(SymbolicHeap::SymHeap heap);
     void updateState(const CodeStorage::Block *ofBlock,
@@ -199,6 +209,10 @@ void SymExec::exec(const CodeStorage::Fnc &fnc) {
     btSet.insert(uidOf(fnc));
     d->btSet = &btSet;
 
+    // we would also like to print backtraces
+    Private::TBtStack btStack;
+    d->btStack = &btStack;
+
     // set function ought to be executed
     d->fnc = &fnc;
 
@@ -216,6 +230,21 @@ void SymExec::exec(const CodeStorage::Fnc &fnc) {
     }
 
     // TODO: process results somehow (generate points-to graph, etc.)
+}
+
+void SymExec::Private::printBackTrace() {
+    using namespace CodeStorage;
+
+    TBtStack bt(*btStack);
+    while (!bt.empty()) {
+        const Fnc *btFnc;
+        LocationWriter btLw;
+        boost::tie(btFnc, btLw) = bt.top();
+        bt.pop();
+
+        CL_MSG_STREAM(cl_note, btLw << "note: called from "
+                << nameOf(*btFnc) << "()");
+    }
 }
 
 void SymExec::Private::execReturn(SymbolicHeap::SymHeap heap)
@@ -354,8 +383,12 @@ void SymExec::Private::execCallInsn(const CodeStorage::Fnc *fnc,
     subExec.fnc     = fnc;
     subExec.results = &results;
 
-    // TODO: here detect recursion somehow!
+    // we need this to print fancy backtraces
+    this->btStack->push(fnc, this->lw);
+    subExec.btStack = this->btStack;
+
     subExec.execFnc(heap);
+    this->btStack->pop();
 }
 
 void SymExec::Private::execCallInsn(SymbolicHeap::SymHeap heap,
@@ -387,6 +420,7 @@ void SymExec::Private::execCallInsn(SymbolicHeap::SymHeap heap,
     if (CL_OPERAND_VOID == fnc->def.code) {
         CL_MSG_STREAM(cl_warn, this->lw << "warning: "
                 "ignoring call of undefined function");
+        this->printBackTrace();
         heap.setReturnValue(VAL_UNKNOWN);
         results.insert(heap);
         return;
@@ -505,9 +539,9 @@ void SymExec::Private::execFnc(const SymbolicHeap::SymHeap &init)
             << fncName << "()...");
 
     CL_DEBUG("looking for entry block...");
-    const ControlFlow &cfg = fnc->cfg;
-    this->bb = cfg.entry();
-    if (!this->bb) {
+    const Block *&entry = this->bb;
+    entry = fnc->cfg.entry();
+    if (!entry) {
         CL_MSG_STREAM(cl_error, this->lw << "error: "
                 << fncName << ": "
                 << "entry block not found");
@@ -515,7 +549,7 @@ void SymExec::Private::execFnc(const SymbolicHeap::SymHeap &init)
     }
 
     // insert initial state to the corresponding union
-    SymHeapUnion &huni = this->state[this->bb];
+    SymHeapUnion &huni = this->state[entry];
     huni.insert(init);
 
     // now we are ready for symbolic execution
