@@ -27,6 +27,7 @@ namespace SymbolicHeap {
     class SymHeap;
 }
 
+class IBtPrinter;
 class SymHeapUnion;
 
 class SymHeapProcessor {
@@ -35,8 +36,9 @@ class SymHeapProcessor {
         typedef SymHeapUnion            TState;
 
     public:
-        SymHeapProcessor(THeap &heap):
-            heap_(heap)
+        SymHeapProcessor(THeap &heap, IBtPrinter *btPrinter = 0):
+            heap_(heap),
+            btPrinter_(btPrinter)
         {
         }
 
@@ -49,6 +51,7 @@ class SymHeapProcessor {
         void heapSetVal(int /* obj */ lhs, int /* val */ rhs);
 
     private:
+        void printBackTrace();
         void heapVarHandleAccessorDeref(int *pVar);
         void heapVarHandleAccessorItem(int *pVar, const struct cl_accessor *ac);
         void heapVarHandleAccessor(int *pVar, const struct cl_accessor *ac);
@@ -61,6 +64,7 @@ class SymHeapProcessor {
 
     private:
         THeap                       &heap_;
+        IBtPrinter                  *btPrinter_;
         LocationWriter              lw_;
 };
 

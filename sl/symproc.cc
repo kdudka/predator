@@ -19,12 +19,20 @@
 
 #include "symproc.hh"
 
+#include "btprint.hh"
 #include "cl_private.hh"
 #include "symheap.hh"
 #include "symstate.hh"
 
 // /////////////////////////////////////////////////////////////////////////////
 // SymHeapProcessor implementation
+void SymHeapProcessor::printBackTrace() {
+    if (!btPrinter_)
+        TRAP;
+
+    btPrinter_->printBackTrace();
+}
+
 int /* val */ SymHeapProcessor::heapValFromCst(const struct cl_operand &op) {
     enum cl_type_e code = op.type->code;
     switch (code) {
@@ -75,10 +83,12 @@ void SymHeapProcessor::heapVarHandleAccessorDeref(int *pObj)
     switch (val) {
         case VAL_NULL:
             CL_MSG_STREAM(cl_error, lw_ << "error: dereference of NULL value");
+            this->printBackTrace();
             goto fail;
 
         case VAL_UNINITIALIZED:
             CL_MSG_STREAM(cl_error, lw_ << "error: dereference of uninitialized value");
+            this->printBackTrace();
             goto fail;
 
         case VAL_UNKNOWN:
@@ -308,6 +318,7 @@ void SymHeapProcessor::execFree(const CodeStorage::TOperandList &opList) {
         case VAL_UNKNOWN:
             CL_MSG_STREAM(cl_error, lw_
                     << "error: invalid free() detected");
+            this->printBackTrace();
             return;
 
         default:
@@ -319,6 +330,7 @@ void SymHeapProcessor::execFree(const CodeStorage::TOperandList &opList) {
         case OBJ_DELETED:
             CL_MSG_STREAM(cl_error, lw_
                     << "error: double free() detected");
+            this->printBackTrace();
             return;
 
         case OBJ_UNKNOWN:

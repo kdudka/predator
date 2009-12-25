@@ -211,6 +211,7 @@ void SymExec::exec(const CodeStorage::Fnc &fnc) {
 
     // we would also like to print backtraces
     Private::TBtStack btStack;
+    btStack.push(&fnc, &fnc.def.loc);
     d->btStack = &btStack;
 
     // set function ought to be executed
@@ -257,7 +258,7 @@ void SymExec::Private::execReturn(SymbolicHeap::SymHeap heap)
 
     const struct cl_operand &src = opList[0];
     if (CL_OPERAND_VOID != src.code) {
-        SymHeapProcessor proc(heap);
+        SymHeapProcessor proc(heap, this);
         const int val = proc.heapValFromOperand(src);
         if (VAL_INVALID == val)
             TRAP;
@@ -406,6 +407,7 @@ void SymExec::Private::execCallInsn(SymbolicHeap::SymHeap heap,
         // *** recursion detected ***
         CL_MSG_STREAM(cl_error, this->lw << "error: "
                 "call recursion detected, cg subtree will be excluded");
+        this->printBackTrace();
         heap.setReturnValue(VAL_UNKNOWN);
         results.insert(heap);
         return;
@@ -465,7 +467,7 @@ void SymExec::Private::execInsn(SymHeapUnion &localState) {
         } else {
             // working area for non-term instructions
             SymHeap workingHeap(heap);
-            SymHeapProcessor proc(workingHeap);
+            SymHeapProcessor proc(workingHeap, this);
 
             // NOTE: this has to be tried *before* execCallInsn() to eventually
             // catch malloc()/free() calls, which are treated differently
