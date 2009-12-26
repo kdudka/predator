@@ -248,14 +248,18 @@ void SymExec::exec(const CodeStorage::Fnc &fnc) {
 void SymExec::Private::printBackTrace() {
     using namespace CodeStorage;
 
-    TBtStack bt(*btStack);
+    const TBtStack &ref = *this->btStack;
+    if (ref.size() < 2)
+        return;
+
+    TBtStack bt(ref);
     while (!bt.empty()) {
         const Fnc *btFnc;
         LocationWriter btLw;
         boost::tie(btFnc, btLw) = bt.top();
         bt.pop();
 
-        CL_MSG_STREAM(cl_note, btLw << "note: called from "
+        CL_MSG_STREAM(cl_note, btLw << "note: from call of "
                 << nameOf(*btFnc) << "()");
     }
 }
