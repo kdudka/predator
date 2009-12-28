@@ -52,7 +52,7 @@ class SymHeapProcessor {
         int /* val */ heapValFromCst(const struct cl_operand &op);
         int /* var */ heapVarFromOperand(const struct cl_operand &op);
         int /* val */ heapValFromOperand(const struct cl_operand &op);
-        void checkForJunk(int val);
+        bool checkForJunk(int val);
         void heapSetVal(int /* obj */ lhs, int /* val */ rhs);
         void destroyObj(int obj);
 

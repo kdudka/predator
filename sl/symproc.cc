@@ -57,9 +57,9 @@ int /* val */ SymHeapProcessor::heapValFromCst(const struct cl_operand &op) {
     code = cst.code;
     switch (code) {
         case CL_TYPE_INT:
-            if (0 == cst.data.cst_int.value)
-                return SymbolicHeap::VAL_NULL;
-            // go through!
+            return (cst.data.cst_int.value)
+                ? SymbolicHeap::VAL_UNKNOWN
+                : SymbolicHeap::VAL_NULL;
 
         case CL_TYPE_FNC: {
             // wrap fnc uid as SymHeap value
@@ -70,6 +70,8 @@ int /* val */ SymHeapProcessor::heapValFromCst(const struct cl_operand &op) {
         case CL_TYPE_STRING: {
             // FIXME: this temporary workaround is highly suboptimal, subtle
             // and error-prone !!!
+            CL_MSG_STREAM(cl_warn, lw_ << "warning: "
+                    "CL_TYPE_STRING not supported by heapValFromCst()");
             const int uid = reinterpret_cast<long>(cst.data.cst_string.value);
             return heap_.valCreateCustom(op.type, uid);
         }
@@ -157,8 +159,9 @@ void SymHeapProcessor::heapVarHandleAccessor(int *pObj,
 
         case CL_ACCESSOR_REF:
             // CL_ACCESSOR_REF will be processed wihtin heapValFromOperand()
-            // on the way out of here ... otherwise we are encountering a bug!
-            break;
+            // on the way out from here ... otherwise we are encountering
+            // a bug!
+            return;
 
         case CL_ACCESSOR_DEREF_ARRAY:
             TRAP;
@@ -205,7 +208,7 @@ bool /* var */ SymHeapProcessor::lhsFromOperand(int *pVar,
 {
     using namespace SymbolicHeap;
 
-    *pVar = heapVarFromOperand(op);
+    *pVar = this->heapVarFromOperand(op);
     switch (*pVar) {
         case OBJ_UNKNOWN:
             CL_MSG_STREAM(cl_debug, lw_ << "debug: "
@@ -233,7 +236,7 @@ int /* val */ SymHeapProcessor::heapValFromOperand(const struct cl_operand &op)
     switch (code) {
         case CL_OPERAND_VAR:
         case CL_OPERAND_REG: {
-            int var = heapVarFromOperand(op);
+            const int var = this->heapVarFromOperand(op);
             if (OBJ_INVALID == var)
                 TRAP;
 
@@ -244,7 +247,7 @@ int /* val */ SymHeapProcessor::heapValFromOperand(const struct cl_operand &op)
         }
 
         case CL_OPERAND_CST:
-            return heapValFromCst(op);
+            return this->heapValFromCst(op);
 
         default:
             TRAP;
@@ -349,7 +352,7 @@ namespace {
                     break;
 
                 default:
-                    // other type of values should be safe to ignore here
+                    // other types of value should be safe to ignore here
                     // but worth to check by a debugger at least once anyway
                     TRAP;
             }
@@ -357,7 +360,7 @@ namespace {
     }
 }
 
-void SymHeapProcessor::checkForJunk(int val) {
+bool SymHeapProcessor::checkForJunk(int val) {
     using namespace SymbolicHeap;
     bool detected = false;
 
@@ -388,10 +391,7 @@ void SymHeapProcessor::checkForJunk(int val) {
         }
     }
 
-    if (detected)
-        // we would like to print the backtrace only once for a bunch of objects
-        // but this feature seems to be rarely useful in practice :-(
-        this->printBackTrace();
+    return detected;
 }
 
 void SymHeapProcessor::heapSetVal(int /* obj */ lhs, int /* val */ rhs) {
@@ -442,7 +442,8 @@ void SymHeapProcessor::heapSetVal(int /* obj */ lhs, int /* val */ rhs) {
 
 clt_done:
     heap_.objSetValue(lhs, rhs);
-    this->checkForJunk(oldValue);
+    if (this->checkForJunk(oldValue))
+        this->printBackTrace();
 }
 
 void SymHeapProcessor::destroyObj(int obj) {
@@ -454,9 +455,15 @@ void SymHeapProcessor::destroyObj(int obj) {
     heap_.objDestroy(obj);
 
     // now check for JUNK
+    bool junk = false;
     BOOST_FOREACH(int val, ptrs) {
-        this->checkForJunk(val);
+        if (this->checkForJunk(val))
+            junk = true;
     }
+
+    if (junk)
+        // print backtrace at most once per one call of destroyObj()
+        this->printBackTrace();
 }
 
 void SymHeapProcessor::execFree(const CodeStorage::TOperandList &opList) {
@@ -523,7 +530,7 @@ void SymHeapProcessor::execMalloc(TState &state,
         TRAP;
 
     const struct cl_operand &dst = opList[0];
-    int varLhs = heapVarFromOperand(dst);
+    const int varLhs = this->heapVarFromOperand(dst);
     if (OBJ_INVALID == varLhs)
         // could not resolve lhs
         TRAP;
@@ -601,10 +608,10 @@ void SymHeapProcessor::execUnary(const CodeStorage::Insn &insn) {
         TRAP;
 
     int varLhs;
-    if (!lhsFromOperand(&varLhs, insn.operands[0]))
+    if (!this->lhsFromOperand(&varLhs, insn.operands[0]))
         return;
 
-    int valRhs = heapValFromOperand(insn.operands[1]);
+    const int valRhs = this->heapValFromOperand(insn.operands[1]);
     if (VAL_INVALID == valRhs)
         // could not resolve rhs
         TRAP;
