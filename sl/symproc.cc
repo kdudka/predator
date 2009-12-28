@@ -192,9 +192,6 @@ int /* var */ SymHeapProcessor::heapVarFromOperand(const struct cl_operand &op)
 
     // process all accessors (only CL_ACCESSOR_DEREF for now)
     const struct cl_accessor *ac = op.accessor;
-    if (ac && ac->code == CL_ACCESSOR_REF)
-        ac = ac->next;
-
     while (ac) {
         this->heapVarHandleAccessor(&var, ac);
         ac = ac->next;
