@@ -156,6 +156,10 @@ void SymHeapProcessor::heapVarHandleAccessor(int *pObj,
             return;
 
         case CL_ACCESSOR_REF:
+            // CL_ACCESSOR_REF will be processed wihtin heapValFromOperand()
+            // on the way out of here ... otherwise we are encountering a bug!
+            break;
+
         case CL_ACCESSOR_DEREF_ARRAY:
             TRAP;
     }
@@ -186,14 +190,11 @@ int /* var */ SymHeapProcessor::heapVarFromOperand(const struct cl_operand &op)
         // unable to resolve static variable
         TRAP;
 
-    // go through the list of accessors
+    // process all accessors (only CL_ACCESSOR_DEREF for now)
     const struct cl_accessor *ac = op.accessor;
     if (ac && ac->code == CL_ACCESSOR_REF)
-        // CL_ACCESSOR_REF will be processed right after this function finishes
-        // ... otherwise we are encountering a bug!
         ac = ac->next;
 
-    // process all other accessors (only CL_ACCESSOR_DEREF for now)
     while (ac) {
         this->heapVarHandleAccessor(&var, ac);
         ac = ac->next;
@@ -291,6 +292,7 @@ namespace {
         while (!todo.empty()) {
             const int obj = todo.top();
             todo.pop();
+            done.insert(obj);
             if (SymbolicHeap::OBJ_RETURN == obj)
                 return false;
 
