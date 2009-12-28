@@ -5,6 +5,10 @@ int main() {
     while (1) {
         void **data = ptr;
         ptr = malloc(sizeof ptr);
+        if (!ptr)
+            // OOM
+            return -1;
+
         *ptr = data;
     }
 

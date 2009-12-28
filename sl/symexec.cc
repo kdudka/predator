@@ -132,6 +132,7 @@ namespace {
             if (obj < 0)
                 TRAP;
 
+            proc.setLocation(lw);
             proc.destroyObj(obj);
         }
     }
@@ -414,8 +415,6 @@ void SymExec::Private::execCallInsn(const CodeStorage::Fnc *fnc,
     subExec.btStack = this->btStack;
 
     subExec.execFnc(heap);
-    this->btStack->pop();
-
     if (1 != this->btSet->erase(uid))
         TRAP;
 }
@@ -473,8 +472,11 @@ void SymExec::Private::execCallInsn(SymbolicHeap::SymHeap heap,
     // go through results and perform assignment of the return value
     assignReturnValue(tmp, opList[/* dst */ 0]);
 
-    // final cleanup and merge of results
+    // final cleanup
     destroyStackFrame(this, tmp, *fnc);
+    this->btStack->pop();
+
+    // merge call results
     results.insert(tmp);
 }
 

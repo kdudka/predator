@@ -307,16 +307,86 @@ namespace {
         // TODO: now kill all the JUNK somehow :-)
         return true;
     }
+
+    template <class TCont, class THeap>
+    void getPtrValues(TCont &dst, THeap &heap, int obj) {
+        std::stack<int /* obj */> todo;
+        todo.push(obj);
+        while (!todo.empty()) {
+            const int obj = todo.top();
+            todo.pop();
+
+            const struct cl_type *clt = heap.objType(obj);
+            const enum cl_type_e code = (clt)
+                ? clt->code
+                : /* anonymous object of known size */ CL_TYPE_PTR;
+
+            switch (code) {
+                case CL_TYPE_PTR: {
+                    const int val = heap.valueOf(obj);
+                    if (0 < val)
+                        dst.push_back(val);
+
+                    break;
+                }
+
+                case CL_TYPE_STRUCT:
+                    for (int i = 0; i < clt->item_cnt; ++i) {
+                        const int subVar = heap.subVar(obj, i);
+                        if (subVar < 0)
+                            TRAP;
+
+                        todo.push(subVar);
+                    }
+                    break;
+
+                case CL_TYPE_BOOL:
+                    break;
+
+                default:
+                    // other type of values should be safe to ignore here
+                    // but worth to check by a debugger at least once anyway
+                    TRAP;
+            }
+        }
+    }
 }
 
 void SymHeapProcessor::checkForJunk(int val) {
     using namespace SymbolicHeap;
+    bool detected = false;
 
-    if (killJunk(heap_, val)) {
-        // TODO: emit warning message
-        this->printBackTrace();
-        TRAP;
+    std::stack<int /* val */> todo;
+    todo.push(val);
+    while (!todo.empty()) {
+        const int val = todo.top();
+        todo.pop();
+
+        if (killJunk(heap_, val)) {
+            detected = true;
+            const int obj = heap_.pointsTo(val);
+            if (obj <= 0)
+                TRAP;
+
+            // gather all values inside the junk object
+            std::vector<int /* val */> ptrs;
+            getPtrValues(ptrs, heap_, obj);
+
+            // destroy junk
+            CL_MSG_STREAM(cl_warn, lw_ << "warning: killing junk");
+            heap_.objDestroy(obj);
+
+            // schedule just created junk candidates for next wheel
+            BOOST_FOREACH(int ptrVal, ptrs) {
+                todo.push(ptrVal);
+            }
+        }
     }
+
+    if (detected)
+        // we would like to print the backtrace only once for a bunch of objects
+        // but this feature seems to be rarely useful in practice :-(
+        this->printBackTrace();
 }
 
 void SymHeapProcessor::heapSetVal(int /* obj */ lhs, int /* val */ rhs) {
@@ -368,51 +438,6 @@ void SymHeapProcessor::heapSetVal(int /* obj */ lhs, int /* val */ rhs) {
 clt_done:
     heap_.objSetValue(lhs, rhs);
     this->checkForJunk(oldValue);
-}
-
-namespace {
-    template <class TCont, class THeap>
-    void getPtrValues(TCont &dst, THeap &heap, int obj) {
-        std::stack<int /* obj */> todo;
-        todo.push(obj);
-        while (!todo.empty()) {
-            const int obj = todo.top();
-            todo.pop();
-
-            const struct cl_type *clt = heap.objType(obj);
-            const enum cl_type_e code = (clt)
-                ? clt->code
-                : /* anonymous object of known size */ CL_TYPE_PTR;
-
-            switch (code) {
-                case CL_TYPE_PTR: {
-                    const int val = heap.valueOf(obj);
-                    if (0 < val)
-                        dst.push_back(val);
-
-                    break;
-                }
-
-                case CL_TYPE_STRUCT:
-                    for (int i = 0; i < clt->item_cnt; ++i) {
-                        const int subVar = heap.subVar(obj, i);
-                        if (subVar < 0)
-                            TRAP;
-
-                        todo.push(subVar);
-                    }
-                    break;
-
-                case CL_TYPE_BOOL:
-                    break;
-
-                default:
-                    // other type of values should be safe to ignore here
-                    // but worth to check by a debugger at least once anyway
-                    TRAP;
-            }
-        }
-    }
 }
 
 void SymHeapProcessor::destroyObj(int obj) {

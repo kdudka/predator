@@ -22,23 +22,35 @@ void test_complex(void) {
     void *ptr = alloc_struct();
     free(ptr);
 
-#if 0
     // direct memory leak
     ptr = alloc_struct();
+#if 0
     ptr = NULL;
 #endif
+    free(ptr);
 
     struct Item *item = alloc_struct();
     // try to remove the following condition ;-)
+#if 1
     if (!item)
         abort();
+#endif
 
     // indirect memory leak
     item->p1 = malloc(1);
+    item->p2 = malloc(2);
 #if 1
     free(item->p1);
+    free(item->p2);
 #endif
     free(item);
+
+    while (1) {
+        void *anon = malloc(80);
+#if 1
+        free(anon);
+#endif
+    }
 }
 
 int main() {

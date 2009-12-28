@@ -44,6 +44,10 @@ class SymHeapProcessor {
 
         bool exec(TState &dst, const CodeStorage::Insn &insn);
 
+        void setLocation(const LocationWriter &lw) {
+            lw_ = lw;
+        }
+
     public:
         int /* val */ heapValFromCst(const struct cl_operand &op);
         int /* var */ heapVarFromOperand(const struct cl_operand &op);
