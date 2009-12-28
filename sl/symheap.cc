@@ -44,10 +44,17 @@ struct Var {
     Var(): clt(0), parent(VAL_INVALID) { }
 };
 
+enum EValue {
+    EV_HEAP = 0,
+    // TODO: EV_HEAP_OBJECT_OF_UNKNOWN_TYPE?
+    EV_CUSTOM,
+    EV_COMPOSITE
+};
+
 struct Value {
+    EValue                  code;
     const struct cl_type    *clt;
     int /* obj */           pointsTo;
-    bool                    custom;
     TSet                    haveValue;
 
     // TODO
@@ -77,8 +84,7 @@ struct SymHeap::Private {
     void releaseValueOf(int obj);
     void indexValueOf(int obj, int val);
 
-    int /* val */ createValue(const struct cl_type *clt, int obj,
-                              bool custom = false);
+    int /* val */ createValue(EValue code, const struct cl_type *clt, int obj);
     int /* var */ createVar(const struct cl_type *clt,
                             int /* CodeStorage */ uid);
 
@@ -141,15 +147,15 @@ void SymHeap::Private::indexValueOf(int obj, int val) {
     hv.insert(obj);
 }
 
-int /* val */ SymHeap::Private::createValue(const struct cl_type *clt, int obj,
-                                            bool custom)
+int /* val */ SymHeap::Private::createValue(EValue code,
+                                            const struct cl_type *clt, int obj)
 {
     const int valId = ++lastVal;
 
     Value &val = valueMap[valId];
+    val.code            = code;
     val.clt             = clt;
     val.pointsTo        = obj;
-    val.custom          = custom;
 
     return valId;
 }
@@ -162,7 +168,7 @@ int /* var */ SymHeap::Private::createVar(const struct cl_type *clt,
 
     var.clt         = clt;
     var.cVarUid     = uid;
-    var.placedAt    = this->createValue(clt, objId);
+    var.placedAt    = this->createValue(EV_HEAP, clt, objId);
     var.value       = VAL_UNINITIALIZED;
 
     return objId;
@@ -238,12 +244,14 @@ void SymHeap::Private::createSubs(int var, const struct cl_type *clt) {
                         "CL_TYPE_CHAR are not supported by SymHeap for now");
                 break;
 
+            case CL_TYPE_INT:
             case CL_TYPE_PTR:
                 break;
 
             case CL_TYPE_STRUCT: {
                 const int cnt = clt->item_cnt;
                 Var &ref = this->varMap[var];
+                ref.value = this->createValue(EV_COMPOSITE, clt, var);
                 ref.subVars.resize(cnt);
                 for (int i = 0; i < cnt; ++i) {
                     const struct cl_type *subClt = clt->items[i].type;
@@ -303,7 +311,7 @@ int /* obj */ SymHeap::pointsTo(int val) const {
         return OBJ_INVALID;
 
     Value &value = iter->second;
-    if (value.custom)
+    if (EV_HEAP != value.code)
         TRAP;
 
     return value.pointsTo;
@@ -403,9 +411,14 @@ int /* var */ SymHeap::varParent(int var) const {
 }
 
 int /* obj */ SymHeap::valGetCompositeObj(int val) const {
-    // TODO
-    TRAP;
-    return OBJ_INVALID;
+    TValueMap::iterator iter = d->valueMap.find(val);
+    if (d->valueMap.end() == iter)
+        return OBJ_INVALID;
+
+    const Value &ref = iter->second;
+    return (EV_COMPOSITE == ref.code)
+        ? /* FIXME: use union instead */ ref.pointsTo
+        : OBJ_INVALID;
 }
 
 int /* var */ SymHeap::varCreate(const struct cl_type *clt,
@@ -427,6 +440,7 @@ int /* var */ SymHeap::varCreate(const struct cl_type *clt,
     }
 
     const int objId = d->createVar(clt, uid);
+    d->createSubs(objId, clt);
 
     if (/* heap object */ -1 != uid)
         d->cVarIdMap[uid] = objId;
@@ -462,7 +476,7 @@ bool SymHeap::valPointsToAnon(int val) const {
         TRAP;
 
     Value &value = valIter->second;
-    if (value.custom)
+    if (EV_HEAP != value.code)
         return false;
 
     TVarMap::iterator iter = d->varMap.find(value.pointsTo);
@@ -497,7 +511,7 @@ void SymHeap::varDefineType(int var, const struct cl_type *clt) {
         TRAP;
 
     Value &value = valIter->second;
-    if (value.clt || value.custom)
+    if (value.clt || EV_HEAP != value.code)
         TRAP;
 
     value.clt = clt;
@@ -556,7 +570,7 @@ int /* val */ SymHeap::valCreateCustom(const struct cl_type *clt, int cVal)
 {
     TIdMap::iterator ii = d->cValIdMap.find(cVal);
     if (d->cValIdMap.end() == ii) {
-        const int val = d->createValue(clt, cVal, true);
+        const int val = d->createValue(EV_CUSTOM, clt, cVal);
         d->cValIdMap[cVal] = val;
         return val;
     }
@@ -568,7 +582,7 @@ int /* val */ SymHeap::valCreateCustom(const struct cl_type *clt, int cVal)
         TRAP;
 
     const Value &ref = vi->second;
-    if (!ref.custom)
+    if (EV_CUSTOM != ref.code)
         // heap corruption
         TRAP;
 
@@ -587,7 +601,7 @@ int /* cVal */ SymHeap::valGetCustom(const struct cl_type **pClt, int val) const
         TRAP;
 
     Value &value = iter->second;
-    if (!value.custom)
+    if (EV_CUSTOM != value.code)
         // not a custom value
         return VAL_INVALID;
 
