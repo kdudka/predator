@@ -29,6 +29,7 @@ namespace SymbolicHeap {
 
 // special OBJs
 enum {
+    OBJ_RETURN        =  0,
     OBJ_INVALID       = -1,
     OBJ_DELETED       = -2,
     OBJ_UNKNOWN       = -3,
@@ -65,8 +66,8 @@ class SymHeap {
         int /* val */ valueOf(int obj) const;
         int /* val */ placedAt(int obj) const;
         int /* obj */ pointsTo(int val) const;
-        const TCont& /* obj[] */ haveValue(int val) const;
-        const TCont& /* obj[] */ notEqualTo(int obj) const;
+        void haveValue(TCont /* obj[] */ &dst, int val) const;
+        void notEqualTo(TCont /* obj[] */ &dst, int obj) const;
         bool notEqual(int obj1, int obj2) const;
 
     public:
@@ -78,11 +79,9 @@ class SymHeap {
         void gatherCVars(TCont &out) const;
 
     public:
-        // projection info lookup
+        // complex variable (de)composition
         int /* var */ subVar(int var, int nth) const;
-        int /* val */ subVal(int val, int nth) const;
         int /* var */ varParent(int var) const;
-        int /* val */ valParent(int val) const;
 
     public:
         // heap objects construction
@@ -102,9 +101,6 @@ class SymHeap {
         void objSetValue(int obj, int val);
         void objDestroy(int obj);
 
-        // this is the proper way to destroy non-heap object
-        void varDestroyNonHeap(int var);
-
     public:
         // inequality set alternation
         void addNeq(int obj1, int obj2);
@@ -115,11 +111,6 @@ class SymHeap {
         int /* val */ valCreateCustom(const struct cl_type *clt, int cVal);
         bool valIsCustom(int val) const;
         int /* cVal */ valGetCustom(const struct cl_type **pClt, int val) const;
-
-    public:
-        // TODO: move elsewhere
-        void setReturnValue(int val);
-        int /* val */ getReturnValue() const;
 
     private:
         struct Private;

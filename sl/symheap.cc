@@ -21,6 +21,7 @@
 #include "cl_private.hh"
 
 #include <map>
+#include <set>
 #include <stack>
 
 #include <boost/foreach.hpp>
@@ -28,26 +29,28 @@
 
 namespace SymbolicHeap {
 
-typedef std::vector<int> TSub;
+typedef std::vector<int>    TSub;
+typedef std::set<int>       TSet;
 
 struct Var {
     const struct cl_type    *clt;
     int /* CodeStorage */   cVarUid;
     int /* val */           placedAt;
     int /* val */           value;
+    int /* var */           parent;
     TSub                    subVars;
 
-    // the following line helps to recognize an uninitialized instance
-    Var(): clt(0) { }
+    // TODO
+    Var(): clt(0), parent(VAL_INVALID) { }
 };
 
 struct Value {
     const struct cl_type    *clt;
     int /* obj */           pointsTo;
     bool                    custom;
-    TSub                    subValues;
+    TSet                    haveValue;
 
-    // the following line helps to recognize an uninitialized instance
+    // TODO
     Value(): clt(0) { }
 };
 
@@ -69,23 +72,35 @@ struct SymHeap::Private {
     // TODO: move elsewhere
     int                     retVal;
 
-    Private():
-        lastObj(0),
-        lastVal(0),
-        retVal(VAL_INVALID)
-    {
-    }
+    Private();
+
+    void releaseValueOf(int obj);
+    void indexValueOf(int obj, int val);
 
     int /* val */ createValue(const struct cl_type *clt, int obj,
                               bool custom = false);
     int /* var */ createVar(const struct cl_type *clt,
                             int /* CodeStorage */ uid);
 
-    void destroySingleVar(int var, bool isHeapVar);
-    void destroyVar(int var, bool isHeapVar);
+    void destroySingleVar(int var);
+    void destroyVar(int var);
 
-    void createSubs(Var &refVar, const struct cl_type *clt);
+    void createSubs(int var, const struct cl_type *clt);
 };
+
+SymHeap::Private::Private():
+    lastObj(0),
+    lastVal(0),
+    retVal(VAL_INVALID)
+{
+    // create OBJ_RETURN
+    Var &var = this->varMap[OBJ_RETURN];
+
+    var.clt         = 0;
+    var.cVarUid     = -1;
+    var.placedAt    = VAL_INVALID;
+    var.value       = VAL_UNINITIALIZED;
+}
 
 SymHeap::SymHeap():
     d(new Private)
@@ -105,6 +120,25 @@ SymHeap& SymHeap::operator=(const SymHeap &ref) {
     delete d;
     d = new Private(*ref.d);
     return *this;
+}
+
+void SymHeap::Private::releaseValueOf(int obj) {
+    // TODO: implement
+    const int val = this->varMap[obj].value;
+    if (val <= 0)
+        return;
+
+    Value &ref = this->valueMap[val];
+    TSet &hv = ref.haveValue;
+    if (1 != hv.erase(obj))
+        TRAP;
+}
+
+void SymHeap::Private::indexValueOf(int obj, int val) {
+    // TODO: implement
+    Value &ref = this->valueMap[val];
+    TSet &hv = ref.haveValue;
+    hv.insert(obj);
 }
 
 int /* val */ SymHeap::Private::createValue(const struct cl_type *clt, int obj,
@@ -134,24 +168,17 @@ int /* var */ SymHeap::Private::createVar(const struct cl_type *clt,
     return objId;
 }
 
-void SymHeap::Private::destroySingleVar(int var, bool isHeapVar) {
+void SymHeap::Private::destroySingleVar(int var) {
     TVarMap::iterator varIter = this->varMap.find(var);
     if (this->varMap.end() == varIter)
         // var not found
         TRAP;
 
-    Var &refVar = varIter->second;
-    if (isHeapVar && -1 != refVar.cVarUid)
-        // TODO: carve out the error messages from this module
-        CL_MSG_STREAM_INTERNAL(cl_error,
-                "error: attempt to free non-heap object");
+    const Var &refVar = varIter->second;
+    const bool isHeapVar = (-1 == refVar.cVarUid || !refVar.clt);
 
-    if (!isHeapVar && -1 == refVar.cVarUid)
-        // wrong method used to destroy a heap object
-        TRAP;
-
-    // TODO: check for possible free() of non-root
-    // TODO: check for JUNK!
+    // keep haveValue() up2date
+    this->releaseValueOf(var);
 
     // mark corresponding value as freed
     const int val = refVar.placedAt;
@@ -160,11 +187,10 @@ void SymHeap::Private::destroySingleVar(int var, bool isHeapVar) {
         ? OBJ_DELETED
         : OBJ_LOST;
 
-    // TODO: destroy complex objects recursively
     this->varMap.erase(varIter);
 }
 
-void SymHeap::Private::destroyVar(int var, bool isHeapVar) {
+void SymHeap::Private::destroyVar(int var) {
     typedef std::stack<int /* var */> TStack;
     TStack todo;
 
@@ -187,21 +213,21 @@ void SymHeap::Private::destroyVar(int var, bool isHeapVar) {
         }
 
         // remove current
-        this->destroySingleVar(var, isHeapVar);
+        this->destroySingleVar(var);
     }
 }
 
-void SymHeap::Private::createSubs(Var &refVar, const struct cl_type *clt) {
-    typedef std::pair<Var *, const struct cl_type *> TPair;
+void SymHeap::Private::createSubs(int var, const struct cl_type *clt) {
+    typedef std::pair<int /* var */, const struct cl_type *> TPair;
     typedef std::stack<TPair> TStack;
     TStack todo;
 
     // we are using explicit stack to avoid recursion
-    todo.push(&refVar, clt);
+    todo.push(var, clt);
     while (!todo.empty()) {
-        Var *pVar;
+        int var;
         const struct cl_type *clt;
-        boost::tie(pVar, clt) = todo.top();
+        boost::tie(var, clt) = todo.top();
         todo.pop();
 
         // FIXME: check whether clt may be NULL at this point
@@ -217,14 +243,16 @@ void SymHeap::Private::createSubs(Var &refVar, const struct cl_type *clt) {
 
             case CL_TYPE_STRUCT: {
                 const int cnt = clt->item_cnt;
-                pVar->subVars.resize(cnt);
+                Var &ref = this->varMap[var];
+                ref.subVars.resize(cnt);
                 for (int i = 0; i < cnt; ++i) {
                     const struct cl_type *subClt = clt->items[i].type;
-                    const int obj = this->createVar(subClt, -1);
-                    pVar->subVars[i] = obj;
+                    const int subVar = this->createVar(subClt, -1);
+                    ref.subVars[i] = subVar;
 
-                    Var &var = /* FIXME: suboptimal */ this->varMap[obj];
-                    todo.push(&var, subClt);
+                    Var &subRef = /* FIXME: suboptimal */ this->varMap[subVar];
+                    subRef.parent = var;
+                    todo.push(subVar, subClt);
                 }
                 break;
             }
@@ -281,18 +309,20 @@ int /* obj */ SymHeap::pointsTo(int val) const {
     return value.pointsTo;
 }
 
-const SymHeap::TCont& /* obj[] */ SymHeap::haveValue(int val) const {
-    // TODO
-    TRAP;
-    static TCont nonsense;
-    return nonsense;
+void SymHeap::haveValue(TCont /* obj[] */ &dst, int val) const {
+    TValueMap::iterator iter = d->valueMap.find(val);
+    if (d->valueMap.end() == iter)
+        return;
+
+    Value &value = iter->second;
+    BOOST_FOREACH(int obj, value.haveValue) {
+        dst.push_back(obj);
+    }
 }
 
-const SymHeap::TCont& /* obj[] */ SymHeap::notEqualTo(int obj) const {
+void SymHeap::notEqualTo(TCont /* obj[] */ &dst, int obj) const {
     // TODO
     TRAP;
-    static TCont nonsense;
-    return nonsense;
 }
 
 bool SymHeap::notEqual(int obj1, int obj2) const {
@@ -317,15 +347,23 @@ const struct cl_type* /* clt */ SymHeap::objType(int obj) const {
 }
 
 const struct cl_type* /* clt */ SymHeap::valType(int val) const {
-    // TODO
-    TRAP;
-    return 0;
+    TValueMap::iterator iter = d->valueMap.find(val);
+    if (d->valueMap.end() == iter)
+        return 0;
+
+    const Value &ref = iter->second;
+    return ref.clt;
 }
 
 int /* CodeStorage var uid */ SymHeap::cVar(int var) const {
-    // TODO
-    TRAP;
-    return -1;
+    TVarMap::iterator iter = d->varMap.find(var);
+    if (d->varMap.end() == iter)
+        return -1;
+
+    const Var &ref = iter->second;
+    return (ref.clt)
+        ? ref.cVarUid
+        : /* anonymous object of known size */ -1;
 }
 
 int /* var */ SymHeap::varByCVar(int /* CodeStorage var */ uid) const {
@@ -355,22 +393,13 @@ int /* var */ SymHeap::subVar(int var, int nth) const {
         : OBJ_INVALID;
 }
 
-int /* val */ SymHeap::subVal(int val, int nth) const {
-    // TODO
-    TRAP;
-    return VAL_INVALID;
-}
-
 int /* var */ SymHeap::varParent(int var) const {
-    // TODO
-    TRAP;
-    return OBJ_INVALID;
-}
+    TVarMap::iterator iter = d->varMap.find(var);
+    if (d->varMap.end() == iter)
+        return OBJ_INVALID;
 
-int /* val */ SymHeap::valParent(int val) const {
-    // TODO
-    TRAP;
-    return VAL_INVALID;
+    const Var &refVar = iter->second;
+    return refVar.parent;
 }
 
 int /* var */ SymHeap::varCreate(const struct cl_type *clt,
@@ -452,7 +481,10 @@ void SymHeap::varDefineType(int var, const struct cl_type *clt) {
 
     refVar.cVarUid = /* heap object */ -1;
     refVar.clt     = clt;
-    d->createSubs(refVar, clt);
+    d->createSubs(var, clt);
+
+    if (OBJ_RETURN == var)
+        return;
 
     TValueMap::iterator valIter = d->valueMap.find(refVar.placedAt);
     if (d->valueMap.end() == valIter)
@@ -474,6 +506,9 @@ int /* sls */ SymHeap::slsCreate(const struct cl_type *clt,
 }
 
 void SymHeap::objSetValue(int obj, int val) {
+    d->releaseValueOf(obj);
+    d->indexValueOf(obj, val);
+
     // first look for Var object
     TVarMap::iterator varIter = d->varMap.find(obj);
     if (d->varMap.end() != varIter) {
@@ -492,17 +527,13 @@ void SymHeap::objDestroy(int obj) {
     // first look for Var object
     TVarMap::iterator varIter = d->varMap.find(obj);
     if (d->varMap.end() != varIter) {
-        d->destroyVar(obj, true);
+        d->destroyVar(obj);
         return;
     }
 
     // then look for Sls object
     // TODO
     TRAP;
-}
-
-void SymHeap::varDestroyNonHeap(int var) {
-    d->destroyVar(var, false);
 }
 
 void SymHeap::addNeq(int obj1, int obj2) {
@@ -569,18 +600,6 @@ int /* cVal */ SymHeap::valGetCustom(const struct cl_type **pClt, int val) const
         *pClt = value.clt;
 
     return /* cVar */ value.pointsTo;
-}
-
-void SymHeap::setReturnValue(int val) {
-    if (0 < val && !hasKey(d->valueMap, val))
-        // invalid value ought to be returned
-        TRAP;
-
-    d->retVal = val;
-}
-
-int /* val */ SymHeap::getReturnValue() const {
-    return d->retVal;
 }
 
 } // namespace SymbolicHeap

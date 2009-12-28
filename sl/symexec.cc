@@ -83,21 +83,26 @@ namespace {
     void assignReturnValue(SymbolicHeap::SymHeap &heap,
                            const struct cl_operand &op)
     {
+        using namespace SymbolicHeap;
+
         if (CL_OPERAND_VOID == op.code)
             // fnc returns void, thus we are done
             return;
 
         SymHeapProcessor proc(heap);
         const int obj = proc.heapVarFromOperand(op);
-        if (SymbolicHeap::OBJ_INVALID == obj)
+        if (OBJ_INVALID == obj)
             TRAP;
 
-        const int val = heap.getReturnValue();
-        if (SymbolicHeap::VAL_INVALID == val)
+        const int val = heap.valueOf(OBJ_RETURN);
+        if (VAL_INVALID == val)
             TRAP;
 
         // we are ready to assign the return value
         heap.objSetValue(obj, val);
+
+        // kill the value, so that we are able to detect JUNK properly
+        heap.objSetValue(SymbolicHeap::OBJ_RETURN, VAL_INVALID);
     }
 
     void assignReturnValue(SymHeapUnion &state,
@@ -112,10 +117,12 @@ namespace {
         }
     }
 
-    void destroyStackFrame(SymbolicHeap::SymHeap &heap,
+    void destroyStackFrame(IBtPrinter *bt, SymbolicHeap::SymHeap &heap,
                            const CodeStorage::Fnc &fnc)
     {
         using CodeStorage::Var;
+        SymHeapProcessor proc(heap, bt);
+
         BOOST_FOREACH(const Var &var, fnc.vars) {
             LocationWriter lw(&var.loc);
             CL_MSG_STREAM(cl_debug, lw << "debug: "
@@ -127,11 +134,12 @@ namespace {
             if (obj < 0)
                 TRAP;
 
-            heap.varDestroyNonHeap(obj);
+            proc.destroyObj(obj);
         }
     }
 
-    void destroyStackFrame(SymHeapUnion huni, const CodeStorage::Fnc &fnc)
+    void destroyStackFrame(IBtPrinter *bt, SymHeapUnion huni,
+                           const CodeStorage::Fnc &fnc)
     {
         using SymbolicHeap::SymHeap;
         LocationWriter lw(&fnc.def.loc);
@@ -142,7 +150,7 @@ namespace {
         int hCnt = 0;
         BOOST_FOREACH(SymHeap &heap, huni) {
             CL_DEBUG("*** destroying stack frame in result #" << (++hCnt));
-            destroyStackFrame(heap, fnc);
+            destroyStackFrame(bt, heap, fnc);
         }
     }
 }
@@ -279,7 +287,7 @@ void SymExec::Private::execReturn(SymbolicHeap::SymHeap heap)
         if (VAL_INVALID == val)
             TRAP;
 
-        heap.setReturnValue(val);
+        heap.objSetValue(OBJ_RETURN, val);
     }
 
     SymHeapUnion &res = *(this->results);
@@ -424,7 +432,7 @@ void SymExec::Private::execCallInsn(SymbolicHeap::SymHeap heap,
         CL_MSG_STREAM(cl_error, this->lw << "error: "
                 "call recursion detected, cg subtree will be excluded");
         this->printBackTrace();
-        heap.setReturnValue(VAL_UNKNOWN);
+        heap.objSetValue(OBJ_RETURN, VAL_UNKNOWN);
         results.insert(heap);
         return;
     }
@@ -439,12 +447,16 @@ void SymExec::Private::execCallInsn(SymbolicHeap::SymHeap heap,
         CL_MSG_STREAM(cl_warn, this->lw << "warning: "
                 "ignoring call of undefined function");
         this->printBackTrace();
-        heap.setReturnValue(VAL_UNKNOWN);
+        heap.objSetValue(OBJ_RETURN, VAL_UNKNOWN);
         results.insert(heap);
         return;
     }
 
     // crate local variables of called fnc
+    // TODO: wrap createStackFrame/destroyStackFrame to an object?
+    const struct cl_type *cltRet = opList[0].type;
+    if (cltRet)
+        heap.varDefineType(OBJ_RETURN, cltRet);
     createStackFrame(heap, *fnc);
     setCallArgs(heap, *fnc, opList);
 
@@ -458,7 +470,7 @@ void SymExec::Private::execCallInsn(SymbolicHeap::SymHeap heap,
     assignReturnValue(results, opList[/* dst */ 0]);
 
     // final cleanup
-    destroyStackFrame(results, *fnc);
+    destroyStackFrame(this, results, *fnc);
 }
 
 void SymExec::Private::execInsn(SymHeapUnion &localState) {

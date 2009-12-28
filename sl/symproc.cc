@@ -24,6 +24,12 @@
 #include "symheap.hh"
 #include "symstate.hh"
 
+#include <set>
+#include <stack>
+#include <vector>
+
+#include <boost/foreach.hpp>
+
 // /////////////////////////////////////////////////////////////////////////////
 // SymHeapProcessor implementation
 void SymHeapProcessor::printBackTrace() {
@@ -248,10 +254,81 @@ int /* val */ SymHeapProcessor::heapValFromOperand(const struct cl_operand &op)
     }
 }
 
+namespace {
+    template <class TStack, class TSet, class THeap>
+    void digPointingObjects(TStack &todo, TSet &done, THeap &heap, int val) {
+        using namespace SymbolicHeap;
+
+        // go through all objects having the value
+        SymHeap::TCont cont;
+        heap.haveValue(cont, val);
+        BOOST_FOREACH(int obj, cont) {
+
+            // go through all super objects
+            while (0 < obj) {
+                if (!hasKey(done, obj))
+                    todo.push(obj);
+
+                obj = heap.varParent(obj);
+            }
+        }
+    }
+
+    template <class THeap>
+    bool killJunk(THeap &heap, int ptrVal) {
+        const int obj = heap.placedAt(ptrVal);
+        if (obj < 0)
+            // invalid object simply can't be JUNK
+            return false;
+
+        if (-1 != heap.cVar(obj))
+            // non-heap object simply can't be JUNK
+            return false;
+
+        std::stack<int /* var */> todo;
+        std::set<int /* var */> done;
+        digPointingObjects(todo, done, heap, ptrVal);
+        while (!todo.empty()) {
+            const int obj = todo.top();
+            todo.pop();
+            if (SymbolicHeap::OBJ_RETURN == obj)
+                return false;
+
+            if (-1 != heap.cVar(obj))
+                return false;
+
+            const int val = heap.placedAt(obj);
+            if (val <= 0)
+                TRAP;
+
+            digPointingObjects(todo, done, heap, val);
+        }
+
+        // TODO: now kill all the JUNK somehow :-)
+        return true;
+    }
+}
+
+void SymHeapProcessor::checkForJunk(int val) {
+    using namespace SymbolicHeap;
+
+    if (killJunk(heap_, val)) {
+        // TODO: emit warning message
+        this->printBackTrace();
+        TRAP;
+    }
+}
+
 void SymHeapProcessor::heapSetVal(int /* obj */ lhs, int /* val */ rhs) {
     using namespace SymbolicHeap;
 
+    // save the old value, which is going to be overwritten
+    const int oldValue = heap_.valueOf(lhs);
+    if (VAL_INVALID == oldValue)
+        TRAP;
+
     if (heap_.valPointsToAnon(rhs)) {
+        // anonymous object is going to be specified by a type
         const int var = heap_.pointsTo(rhs);
         if (OBJ_INVALID == var)
             TRAP;
@@ -289,8 +366,64 @@ void SymHeapProcessor::heapSetVal(int /* obj */ lhs, int /* val */ rhs) {
     }
 
 clt_done:
-    // TODO: check for possible JUNK here!
     heap_.objSetValue(lhs, rhs);
+    this->checkForJunk(oldValue);
+}
+
+namespace {
+    template <class TCont, class THeap>
+    void getPtrValues(TCont &dst, THeap &heap, int obj) {
+        std::stack<int /* obj */> todo;
+        todo.push(obj);
+        while (!todo.empty()) {
+            const int obj = todo.top();
+            todo.pop();
+
+            const struct cl_type *clt = heap.objType(obj);
+            const enum cl_type_e code = (clt)
+                ? clt->code
+                : /* anonymous object of known size */ CL_TYPE_PTR;
+
+            switch (code) {
+                case CL_TYPE_PTR: {
+                    const int val = heap.valueOf(obj);
+                    if (0 < val)
+                        dst.push_back(val);
+
+                    break;
+                }
+
+                case CL_TYPE_STRUCT:
+                    for (int i = 0; i < clt->item_cnt; ++i) {
+                        const int subVar = heap.subVar(obj, i);
+                        if (subVar < 0)
+                            TRAP;
+
+                        todo.push(subVar);
+                    }
+                    break;
+
+                default:
+                    // other type of values should be safe to ignore here
+                    // but worth to check by a debugger at least once anyway
+                    TRAP;
+            }
+        }
+    }
+}
+
+void SymHeapProcessor::destroyObj(int obj) {
+    // gather destroyed values
+    std::vector<int> ptrs;
+    getPtrValues(ptrs, heap_, obj);
+
+    // destroy object recursively
+    heap_.objDestroy(obj);
+
+    // now check for JUNK
+    BOOST_FOREACH(int val, ptrs) {
+        this->checkForJunk(val);
+    }
 }
 
 void SymHeapProcessor::execFree(const CodeStorage::TOperandList &opList) {
@@ -341,7 +474,9 @@ void SymHeapProcessor::execFree(const CodeStorage::TOperandList &opList) {
     }
 
     CL_MSG_STREAM(cl_debug, lw_ << "debug: executing free()");
-    heap_.objDestroy(obj);
+    // TODO: check for possible free() of non-heap object
+    // TODO: check for possible free() of non-root
+    this->destroyObj(obj);
 }
 
 void SymHeapProcessor::execMalloc(TState &state,
