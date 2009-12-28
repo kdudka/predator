@@ -100,7 +100,6 @@ namespace {
 
         // we are ready to assign the return value
         heap.objSetValue(obj, val);
-        heap.objDestroy(SymbolicHeap::OBJ_RETURN);
     }
 
     void assignReturnValue(SymHeapUnion &state,
@@ -135,6 +134,8 @@ namespace {
             proc.setLocation(lw);
             proc.destroyObj(obj);
         }
+
+        heap.objDestroy(SymbolicHeap::OBJ_RETURN);
     }
 
     void destroyStackFrame(IBtPrinter *bt, SymHeapUnion &huni,
@@ -455,11 +456,16 @@ void SymExec::Private::execCallInsn(SymbolicHeap::SymHeap heap,
         return;
     }
 
+    // create an object for return value (if needed)
+    const struct cl_type *cltRet = opList[0].type;
+    if (cltRet) {
+        // FIXME: improve the interface of SymHeap for the return value
+        heap.objDestroy(SymbolicHeap::OBJ_RETURN);
+        heap.varDefineType(OBJ_RETURN, cltRet);
+    }
+
     // crate local variables of called fnc
     // TODO: wrap createStackFrame/destroyStackFrame to an object?
-    const struct cl_type *cltRet = opList[0].type;
-    if (cltRet)
-        heap.varDefineType(OBJ_RETURN, cltRet);
     createStackFrame(heap, *fnc);
     setCallArgs(heap, *fnc, opList);
 

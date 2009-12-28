@@ -898,11 +898,11 @@ static void handle_stmt_cond_br(gimple stmt, const char *then_label,
     cli.data.insn_cond.then_label   = then_label;
     cli.data.insn_cond.else_label   = else_label;
 
-    // XXX
-    stmt_cond_fixed_reg.data.reg.id ++;
-
     read_gimple_location(&cli.loc, stmt);
     cl->insn(cl, &cli);
+
+    // XXX
+    stmt_cond_fixed_reg.data.reg.id ++;
 }
 
 static void handle_stmt_cond(gimple stmt)
