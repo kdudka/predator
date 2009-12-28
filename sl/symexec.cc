@@ -376,6 +376,7 @@ int SymExec::Private::resolveCallee(const SymbolicHeap::SymHeap &heap,
                                     const struct cl_operand &op)
 {
     using namespace SymbolicHeap;
+
     if (CL_OPERAND_CST == op.code) {
         // direct call
         const struct cl_cst &cst = op.data.cst;
@@ -385,7 +386,6 @@ int SymExec::Private::resolveCallee(const SymbolicHeap::SymHeap &heap,
         return cst.data.cst_fnc.uid;
 
     } else {
-
         // indirect call
         SymHeapProcessor proc(const_cast<SymHeap &>(heap));
         const int val = proc.heapValFromOperand(op);
@@ -402,19 +402,19 @@ void SymExec::Private::execCallInsn(const CodeStorage::Fnc *fnc,
                                     SymHeapUnion &results)
 {
     const int uid = uidOf(*fnc);
+
+    // avoid recursion
     this->btSet->insert(uid);
 
     // FIXME: this approach will sooner or later cause a stack overflow
     // TODO: use an explicit stack instead
     Private subExec(this->stor);
     subExec.btSet   = this->btSet;
+    subExec.btStack = this->btStack;
     subExec.fnc     = fnc;
     subExec.results = &results;
 
-    // we need this to print fancy backtraces
-    this->btStack->push(fnc, this->lw);
-    subExec.btStack = this->btStack;
-
+    // run!
     subExec.execFnc(heap);
     if (1 != this->btSet->erase(uid))
         TRAP;
@@ -430,38 +430,41 @@ void SymExec::Private::execCallInsn(SymbolicHeap::SymHeap heap,
     if (CL_INSN_CALL != insn->code || opList.size() < 2)
         TRAP;
 
-    const int uid = this->resolveCallee(heap, opList[/* fnc */ 1]);
-    if (hasKey(this->btSet, uid)) {
-        // *** recursion detected ***
-        CL_MSG_STREAM(cl_error, this->lw << "error: "
-                "call recursion detected, cg subtree will be excluded");
-        this->printBackTrace();
-        heap.objSetValue(OBJ_RETURN, VAL_UNKNOWN);
-        results.insert(heap);
-        return;
-    }
+    // look for lhs
+    const struct cl_operand &dst = opList[0];
+    const bool haveLhs = (CL_OPERAND_VOID != dst.code);
 
-    // look for Fnc object by UID
+    // look for Fnc ought to be called
+    const int uid = this->resolveCallee(heap, opList[/* fnc */ 1]);
     const Fnc *fnc = this->stor.anyFncById[uid];
     if (!fnc)
         // unable to resolve Fnc by UID
         TRAP;
 
+    // FIXME: this may stop working once we decide for hash or tree container
+    SymHeapUnion tmp;
+
+    if (hasKey(this->btSet, uid)) {
+        // *** recursion detected ***
+        CL_MSG_STREAM(cl_error, this->lw << "error: "
+                "call recursion detected, cg subtree will be excluded");
+        goto fail;
+    }
+
     if (CL_OPERAND_VOID == fnc->def.code) {
         CL_MSG_STREAM(cl_warn, this->lw << "warning: "
                 "ignoring call of undefined function");
-        this->printBackTrace();
-        heap.objSetValue(OBJ_RETURN, VAL_UNKNOWN);
-        results.insert(heap);
-        return;
+        goto fail;
     }
 
+    // we are ready to call a function, change backtrace stack accordingly
+    this->btStack->push(fnc, this->lw);
+
     // create an object for return value (if needed)
-    const struct cl_type *cltRet = opList[0].type;
-    if (cltRet) {
+    if (haveLhs) {
         // FIXME: improve the interface of SymHeap for the return value
         heap.objDestroy(SymbolicHeap::OBJ_RETURN);
-        heap.varDefineType(OBJ_RETURN, cltRet);
+        heap.varDefineType(OBJ_RETURN, dst.type);
     }
 
     // crate local variables of called fnc
@@ -469,21 +472,33 @@ void SymExec::Private::execCallInsn(SymbolicHeap::SymHeap heap,
     createStackFrame(heap, *fnc);
     setCallArgs(heap, *fnc, opList);
 
-    // FIXME: this may stop working once we decide for hash or tree container
-    SymHeapUnion tmp;
-
     // now please perform the call
     this->execCallInsn(fnc, heap, tmp);
 
     // go through results and perform assignment of the return value
-    assignReturnValue(tmp, opList[/* dst */ 0]);
+    assignReturnValue(tmp, dst);
 
     // final cleanup
     destroyStackFrame(this, tmp, *fnc);
     this->btStack->pop();
 
-    // merge call results
+    // we are done, merge call results
     results.insert(tmp);
+    return;
+
+fail:
+    // something wrong happened
+    this->printBackTrace();
+
+    if (haveLhs) {
+        // set return value to unknown
+        SymHeapProcessor proc(heap);
+        const int obj = proc.heapVarFromOperand(dst);
+        heap.objSetValue(obj, VAL_UNKNOWN);
+    }
+
+    // call failed, so that we have exactly one resulting heap
+    results.insert(heap);
 }
 
 void SymExec::Private::execInsn(SymHeapUnion &localState) {
