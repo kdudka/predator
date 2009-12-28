@@ -874,7 +874,7 @@ static /* const */ struct cl_type builtin_bool_type = {
     .size           = /* FIXME */ sizeof(bool)
 };
 
-static const struct cl_operand stmt_cond_fixed_reg = {
+static /* XXX const */ struct cl_operand stmt_cond_fixed_reg = {
     .code           = CL_OPERAND_REG,
     .loc = {
         .file       = NULL,
@@ -884,7 +884,7 @@ static const struct cl_operand stmt_cond_fixed_reg = {
     .type           = &builtin_bool_type,
     .data = {
         .reg = {
-            .id     = 0
+            .id     = /* XXX */ 0x1000
         }
     }
 };
@@ -897,6 +897,9 @@ static void handle_stmt_cond_br(gimple stmt, const char *then_label,
     cli.data.insn_cond.src          = &stmt_cond_fixed_reg;
     cli.data.insn_cond.then_label   = then_label;
     cli.data.insn_cond.else_label   = else_label;
+
+    // XXX
+    stmt_cond_fixed_reg.data.reg.id ++;
 
     read_gimple_location(&cli.loc, stmt);
     cl->insn(cl, &cli);
