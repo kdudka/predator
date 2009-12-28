@@ -40,7 +40,9 @@ static void destroy_cyclic_sll(sll_item_t **plist)
         sll_item_t *item = list->next;
         while (item != list) {
             sll_item_t *next = item->next;
+#if 1 // would you like to try our garbage collector? :-)
             free(item);
+#endif
             item = next;
         }
         free(list);
@@ -57,18 +59,6 @@ int main()
     destroy_cyclic_sll(&list);
 
     {
-        insert_item(&list);
-        insert_item(&list);
-        insert_item(&list);
-        insert_item(&list);
-        insert_item(&list);
-        insert_item(&list);
-        insert_item(&list);
-        insert_item(&list);
-        insert_item(&list);
-        insert_item(&list);
-        insert_item(&list);
-        insert_item(&list);
         insert_item(&list);
         insert_item(&list);
         insert_item(&list);

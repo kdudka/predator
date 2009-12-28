@@ -276,7 +276,14 @@ namespace {
     }
 
     template <class THeap>
-    bool killJunk(THeap &heap, int ptrVal) {
+    bool digJunk(THeap &heap, int ptrVal) {
+        if (ptrVal <= 0)
+            return false;
+
+        if (SymbolicHeap::VAL_INVALID != heap.valGetCustom(0, ptrVal))
+            // ignore custom values (e.g. fnc pointers)
+            return false;
+
         const int obj = heap.pointsTo(ptrVal);
         if (obj < 0)
             // invalid object simply can't be JUNK
@@ -306,7 +313,6 @@ namespace {
             digPointingObjects(todo, done, heap, val);
         }
 
-        // TODO: now kill all the JUNK somehow :-)
         return true;
     }
 
@@ -364,7 +370,7 @@ void SymHeapProcessor::checkForJunk(int val) {
         const int val = todo.top();
         todo.pop();
 
-        if (killJunk(heap_, val)) {
+        if (digJunk(heap_, val)) {
             detected = true;
             const int obj = heap_.pointsTo(val);
             if (obj <= 0)
