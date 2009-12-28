@@ -171,3 +171,11 @@ void SymHeapUnion::insert(const SymbolicHeap::SymHeap &heap) {
     // add given heap to union
     heaps_.push_back(heap);
 }
+
+void SymHeapUnion::insert(const SymHeapUnion &huni) {
+    using SymbolicHeap::SymHeap;
+
+    BOOST_FOREACH(const SymHeap &current, huni) {
+        this->insert(current);
+    }
+}

@@ -276,7 +276,7 @@ namespace {
 
     template <class THeap>
     bool killJunk(THeap &heap, int ptrVal) {
-        const int obj = heap.placedAt(ptrVal);
+        const int obj = heap.pointsTo(ptrVal);
         if (obj < 0)
             // invalid object simply can't be JUNK
             return false;

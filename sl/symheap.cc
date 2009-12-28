@@ -41,7 +41,14 @@ struct Var {
     TSub                    subVars;
 
     // TODO
-    Var(): clt(0), parent(VAL_INVALID) { }
+    Var():
+        clt(0),
+        cVarUid(-1),
+        placedAt(VAL_INVALID),
+        value(VAL_INVALID),
+        parent(VAL_INVALID)
+    {
+    }
 };
 
 enum EValue {
@@ -58,7 +65,12 @@ struct Value {
     TSet                    haveValue;
 
     // TODO
-    Value(): clt(0) { }
+    Value():
+        code(EV_HEAP),
+        clt(0),
+        pointsTo(OBJ_INVALID)
+    {
+    }
 };
 
 typedef std::map<int, int> TIdMap;
@@ -80,6 +92,7 @@ struct SymHeap::Private {
     int                     retVal;
 
     Private();
+    void initReturn();
 
     void releaseValueOf(int obj);
     void indexValueOf(int obj, int val);
@@ -94,11 +107,7 @@ struct SymHeap::Private {
     void createSubs(int var, const struct cl_type *clt);
 };
 
-SymHeap::Private::Private():
-    lastObj(0),
-    lastVal(0),
-    retVal(VAL_INVALID)
-{
+void SymHeap::Private::initReturn() {
     // create OBJ_RETURN
     Var &var = this->varMap[OBJ_RETURN];
 
@@ -106,6 +115,14 @@ SymHeap::Private::Private():
     var.cVarUid     = -1;
     var.placedAt    = VAL_INVALID;
     var.value       = VAL_UNINITIALIZED;
+}
+
+SymHeap::Private::Private():
+    lastObj(0),
+    lastVal(0),
+    retVal(VAL_INVALID)
+{
+    this->initReturn();
 }
 
 SymHeap::SymHeap():
@@ -135,6 +152,9 @@ void SymHeap::Private::releaseValueOf(int obj) {
         return;
 
     Value &ref = this->valueMap[val];
+    if (EV_COMPOSITE == ref.code)
+        return;
+
     TSet &hv = ref.haveValue;
     if (1 != hv.erase(obj))
         TRAP;
@@ -548,6 +568,14 @@ void SymHeap::objDestroy(int obj) {
     TVarMap::iterator varIter = d->varMap.find(obj);
     if (d->varMap.end() != varIter) {
         d->destroyVar(obj);
+        if (OBJ_RETURN == obj)
+            d->initReturn();
+
+        const Var &var = varIter->second;
+        const int uid = var.cVarUid;
+        if (/* heap object */ -1 != uid)
+            d->cVarIdMap.erase(uid);
+
         return;
     }
 

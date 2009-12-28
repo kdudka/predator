@@ -34,6 +34,7 @@ class SymHeapUnion {
 
     public:
         void insert(const SymbolicHeap::SymHeap &heap);
+        void insert(const SymHeapUnion &huni);
 
         /**
          * return STL-like iterator to go through the container

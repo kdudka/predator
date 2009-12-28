@@ -100,9 +100,7 @@ namespace {
 
         // we are ready to assign the return value
         heap.objSetValue(obj, val);
-
-        // kill the value, so that we are able to detect JUNK properly
-        heap.objSetValue(SymbolicHeap::OBJ_RETURN, VAL_INVALID);
+        heap.objDestroy(SymbolicHeap::OBJ_RETURN);
     }
 
     void assignReturnValue(SymHeapUnion &state,
@@ -138,7 +136,7 @@ namespace {
         }
     }
 
-    void destroyStackFrame(IBtPrinter *bt, SymHeapUnion huni,
+    void destroyStackFrame(IBtPrinter *bt, SymHeapUnion &huni,
                            const CodeStorage::Fnc &fnc)
     {
         using SymbolicHeap::SymHeap;
@@ -401,6 +399,9 @@ void SymExec::Private::execCallInsn(const CodeStorage::Fnc *fnc,
                                     const SymbolicHeap::SymHeap &heap,
                                     SymHeapUnion &results)
 {
+    const int uid = uidOf(*fnc);
+    this->btSet->insert(uid);
+
     // FIXME: this approach will sooner or later cause a stack overflow
     // TODO: use an explicit stack instead
     Private subExec(this->stor);
@@ -414,6 +415,9 @@ void SymExec::Private::execCallInsn(const CodeStorage::Fnc *fnc,
 
     subExec.execFnc(heap);
     this->btStack->pop();
+
+    if (1 != this->btSet->erase(uid))
+        TRAP;
 }
 
 void SymExec::Private::execCallInsn(SymbolicHeap::SymHeap heap,
@@ -460,17 +464,18 @@ void SymExec::Private::execCallInsn(SymbolicHeap::SymHeap heap,
     createStackFrame(heap, *fnc);
     setCallArgs(heap, *fnc, opList);
 
+    // FIXME: this may stop working once we decide for hash or tree container
+    SymHeapUnion tmp;
+
     // now please perform the call
-    this->btSet->insert(uid);
-    this->execCallInsn(fnc, heap, results);
-    if (1 != this->btSet->erase(uid))
-        TRAP;
+    this->execCallInsn(fnc, heap, tmp);
 
     // go through results and perform assignment of the return value
-    assignReturnValue(results, opList[/* dst */ 0]);
+    assignReturnValue(tmp, opList[/* dst */ 0]);
 
-    // final cleanup
-    destroyStackFrame(this, results, *fnc);
+    // final cleanup and merge of results
+    destroyStackFrame(this, tmp, *fnc);
+    results.insert(tmp);
 }
 
 void SymExec::Private::execInsn(SymHeapUnion &localState) {
