@@ -1,6 +1,7 @@
 #include <stdlib.h>
 
 void simple_test(void) {
+    // this should be OK
     void *ptr = malloc(sizeof(void *));
     free(ptr);
     ptr = &ptr;
@@ -17,11 +18,27 @@ void* alloc_struct(void) {
 }
 
 void test_complex(void) {
+    // this should be OK
     void *ptr = alloc_struct();
     free(ptr);
 
+#if 0
+    // direct memory leak
     ptr = alloc_struct();
     ptr = NULL;
+#endif
+
+    struct Item *item = alloc_struct();
+    // try to remove the following condition ;-)
+    if (!item)
+        abort();
+
+    // indirect memory leak
+    item->p1 = malloc(1);
+#if 1
+    free(item->p1);
+#endif
+    free(item);
 }
 
 int main() {

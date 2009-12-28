@@ -403,6 +403,9 @@ namespace {
                     }
                     break;
 
+                case CL_TYPE_BOOL:
+                    break;
+
                 default:
                     // other type of values should be safe to ignore here
                     // but worth to check by a debugger at least once anyway
@@ -444,6 +447,9 @@ void SymHeapProcessor::execFree(const CodeStorage::TOperandList &opList) {
         case VAL_NULL:
             CL_MSG_STREAM(cl_debug, lw_
                     << "debug: ignoring free() called with NULL value");
+            // go through!
+
+        case VAL_DEREF_FAILED:
             return;
 
         case VAL_INVALID:

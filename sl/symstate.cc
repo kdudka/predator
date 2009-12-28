@@ -58,17 +58,85 @@ namespace {
 
     template <class THeap>
     bool skipValue(const THeap &heap, int value) {
+        using namespace SymbolicHeap;
+
+        if (OBJ_INVALID != heap.valGetCompositeObj(value))
+            // compare composite objects recursively
+            return false;
+
         if (value <= 0)
             // no need for next wheel (special values already handled)
             return true;
 
-        if (SymbolicHeap::VAL_INVALID != heap.valGetCustom(0, value))
+        if (VAL_INVALID != heap.valGetCustom(0, value))
             // we can't follow fnc pointers by pointsTo() since they are
-            // sort of virtual from this ascpect (and we of course do
+            // sort of virtual from this aspect (and we of course do
             // not need to follow them)
             return true;
 
         return false;
+    }
+
+    template<class TStack, class THeap>
+    bool digComposite(TStack &dst, const THeap heap1, const THeap heap2,
+                      int value1, int value2)
+    {
+        using namespace SymbolicHeap;
+
+        const int cObj1 = heap1.valGetCompositeObj(value1);
+        const int cObj2 = heap2.valGetCompositeObj(value2);
+        if (OBJ_INVALID == cObj1 && OBJ_INVALID == cObj2)
+            return false;
+
+        if (OBJ_INVALID == cObj1 || OBJ_INVALID == cObj2)
+            // type mismatch (scalar vs. composite ought to be compared)
+            TRAP;
+
+        // FIXME: the following block of code is sort of copy-pasted
+        //        from symexec.cc
+        typedef std::pair<int /* obj */, int /* obj */> TItem;
+        std::stack<TItem> todo;
+        todo.push(cObj1, cObj2);
+        while (!todo.empty()) {
+            int o1, o2;
+            boost::tie(o1, o2) = todo.top();
+            todo.pop();
+
+            const struct cl_type *clt = heap1.objType(o1);
+            if (clt != heap2.objType(o2))
+                // type mismatch
+                TRAP;
+
+            const enum cl_type_e code = (clt)
+                ? clt->code
+                : /* anonymous object of known size */ CL_TYPE_PTR;
+
+            switch (code) {
+                case CL_TYPE_PTR: {
+                    const int val1 = heap1.valueOf(o1);
+                    const int val2 = heap2.valueOf(o2);
+                    dst.push(val1, val2);
+                    break;
+                }
+
+                case CL_TYPE_STRUCT:
+                    for (int i = 0; i < clt->item_cnt; ++i) {
+                        const int sub1 = heap1.subVar(o1, i);
+                        const int sub2 = heap2.subVar(o2, i);
+                        if (sub1 < 0 || sub2 < 0)
+                            TRAP;
+
+                        todo.push(sub1, sub2);
+                    }
+                    break;
+
+                default:
+                    // other type of values should be safe to ignore here
+                    // but worth to check by a debugger at least once anyway
+                    TRAP;
+            }
+        }
+        return true;
     }
 }
 
@@ -88,6 +156,15 @@ namespace SymbolicHeap {
             boost::tie(value1, value2) = todo.top();
             todo.pop();
             done.insert(value1);
+
+            if (digComposite(todo, heap1, heap2, value1, value2))
+                // compare composite objects recursively
+                continue;
+
+            // FIXME: this appears twice because of digComposite
+            if (!matchValues(valSubst, value1, value2))
+                // value mismatch
+                return false;
 
             // TODO: distinguish among SLS and single dynamic variables here
             const int obj1 = heap1.pointsTo(value1);
