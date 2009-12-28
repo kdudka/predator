@@ -82,6 +82,7 @@ class SymHeap {
         // complex variable (de)composition
         int /* var */ subVar(int var, int nth) const;
         int /* var */ varParent(int var) const;
+        int /* obj */ valGetCompositeObj(int val) const;
 
     public:
         // heap objects construction
@@ -109,7 +110,6 @@ class SymHeap {
     public:
         // custom values manipulation (e.g. fnc pointers)
         int /* val */ valCreateCustom(const struct cl_type *clt, int cVal);
-        bool valIsCustom(int val) const;
         int /* cVal */ valGetCustom(const struct cl_type **pClt, int val) const;
 
     private:

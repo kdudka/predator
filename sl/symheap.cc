@@ -402,6 +402,12 @@ int /* var */ SymHeap::varParent(int var) const {
     return refVar.parent;
 }
 
+int /* obj */ SymHeap::valGetCompositeObj(int val) const {
+    // TODO
+    TRAP;
+    return OBJ_INVALID;
+}
+
 int /* var */ SymHeap::varCreate(const struct cl_type *clt,
                                  int /* CodeStorage var */ uid)
 {
@@ -573,33 +579,23 @@ int /* val */ SymHeap::valCreateCustom(const struct cl_type *clt, int cVal)
     return val;
 }
 
-bool SymHeap::valIsCustom(int val) const {
-    TValueMap::iterator iter = d->valueMap.find(val);
-    if (d->valueMap.end() == iter)
-        // Oops, value not found at all
-        TRAP;
-
-    Value &value = iter->second;
-    return value.custom;
-}
-
 int /* cVal */ SymHeap::valGetCustom(const struct cl_type **pClt, int val) const
 {
     TValueMap::iterator iter = d->valueMap.find(val);
     if (d->valueMap.end() == iter)
-        // custom value not found, this should never happen
+        // value not found, this should never happen
         TRAP;
 
     Value &value = iter->second;
     if (!value.custom)
-        // nope, this does not look like a custom value
-        TRAP;
+        // not a custom value
+        return VAL_INVALID;
 
     if (pClt)
         // TODO: this deserves a comment in the public header
         *pClt = value.clt;
 
-    return /* cVar */ value.pointsTo;
+    return /* cVal */ value.pointsTo;
 }
 
 } // namespace SymbolicHeap

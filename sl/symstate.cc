@@ -55,6 +55,21 @@ namespace {
         subst[v1] = v2;
         return true;
     }
+
+    template <class THeap>
+    bool skipValue(const THeap &heap, int value) {
+        if (value <= 0)
+            // no need for next wheel (special values already handled)
+            return true;
+
+        if (SymbolicHeap::VAL_INVALID != heap.valGetCustom(0, value))
+            // we can't follow fnc pointers by pointsTo() since they are
+            // sort of virtual from this ascpect (and we of course do
+            // not need to follow them)
+            return true;
+
+        return false;
+    }
 }
 
 namespace SymbolicHeap {
@@ -88,14 +103,8 @@ namespace SymbolicHeap {
                 // value mismatch
                 return false;
 
-            if (value1 <= 0)
-                // no need for next wheel (special values already handled)
-                continue;
-
-            if (heap1.valIsCustom(value1))
-                // we can't follow fnc pointers by pointsTo() since they are
-                // sort of virtual from this ascpect (and we of course do
-                // not need to follow them)
+            if (skipValue(heap1, value1))
+                // no need for next wheel
                 continue;
 
             if (!hasKey(done, value1))
@@ -135,13 +144,8 @@ namespace SymbolicHeap {
                 // value mismatch, bail out now
                 return false;
 
-            if (value1 <= 0)
-                // no need for next wheel (special values already handled)
-                continue;
-
-            if (heap1.valIsCustom(value1))
-                // read the big comment within dfsStack() to see why this
-                // condition is useful/necessary
+            if (skipValue(heap1, value1))
+                // no need for next wheel
                 continue;
 
             // schedule for DFS
