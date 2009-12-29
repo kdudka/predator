@@ -596,6 +596,15 @@ bool SymHeapProcessor::execCall(TState &dst, const CodeStorage::Insn &insn) {
         return true;
     }
 
+    if (STREQ(fncName, "abort")) {
+        if (opList.size() != 2 || opList[0].code != CL_OPERAND_VOID)
+            TRAP;
+
+        // do nothing for abort()
+        dst.insert(heap_);
+        return true;
+    }
+
     return false;
 }
 
