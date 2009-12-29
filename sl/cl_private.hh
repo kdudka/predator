@@ -28,6 +28,7 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <tuple>
 
 #include <signal.h>
 #define TRAP raise(SIGTRAP)
@@ -151,6 +152,18 @@ bool hasKey(const TCont &cont, const typename TCont::key_type &key) {
 template <typename TCont>
 bool hasKey(const TCont *cont, const typename TCont::key_type &key) {
     return hasKey(*cont, key);
+}
+
+template <class TStack, class TFirst, class TSecond>
+void push(TStack &dst, const TFirst &first, const TSecond &second)
+{
+    dst.push(typename TStack::value_type(first, second));
+}
+
+template <class TStack, class TFirst, class TSecond>
+void push(TStack *dst, const TFirst &first, const TSecond &second)
+{
+    push(*dst, first, second);
 }
 
 #endif /* H_GUARD_CL_PRIVATE_H */

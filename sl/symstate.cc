@@ -96,7 +96,7 @@ namespace {
         //        from symexec.cc
         typedef std::pair<int /* obj */, int /* obj */> TItem;
         std::stack<TItem> todo;
-        todo.push(cObj1, cObj2);
+        push(todo, cObj1, cObj2);
         while (!todo.empty()) {
             int o1, o2;
             boost::tie(o1, o2) = todo.top();
@@ -115,7 +115,7 @@ namespace {
                 case CL_TYPE_PTR: {
                     const int val1 = heap1.valueOf(o1);
                     const int val2 = heap2.valueOf(o2);
-                    dst.push(val1, val2);
+                    push(dst, val1, val2);
                     break;
                 }
 
@@ -126,7 +126,7 @@ namespace {
                         if (sub1 < 0 || sub2 < 0)
                             TRAP;
 
-                        todo.push(sub1, sub2);
+                        push(todo, sub1, sub2);
                     }
                     break;
 
@@ -186,7 +186,7 @@ namespace SymbolicHeap {
 
             if (!hasKey(done, value1))
                 // schedule values for next wheel
-                todo.push(value1, value2);
+                push(todo, value1, value2);
         }
 
         // heaps are equal (isomorphism)
@@ -226,7 +226,7 @@ namespace SymbolicHeap {
                 continue;
 
             // schedule for DFS
-            dfsStack.push(value1, value2);
+            push(dfsStack, value1, value2);
         }
 
         // bad luck, we need to run DFS

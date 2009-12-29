@@ -249,7 +249,7 @@ void SymHeap::Private::createSubs(int var, const struct cl_type *clt) {
     TStack todo;
 
     // we are using explicit stack to avoid recursion
-    todo.push(var, clt);
+    push(todo, var, clt);
     while (!todo.empty()) {
         int var;
         const struct cl_type *clt;
@@ -281,7 +281,7 @@ void SymHeap::Private::createSubs(int var, const struct cl_type *clt) {
 
                     Var &subRef = /* FIXME: suboptimal */ this->varMap[subVar];
                     subRef.parent = var;
-                    todo.push(subVar, subClt);
+                    push(todo, subVar, subClt);
                 }
                 break;
             }

@@ -231,7 +231,7 @@ void SymExec::exec(const CodeStorage::Fnc &fnc) {
 
     // we would also like to print backtraces
     Private::TBtStack btStack;
-    btStack.push(&fnc, &fnc.def.loc);
+    push(btStack, &fnc, &fnc.def.loc);
     d->btStack = &btStack;
 
     // set function ought to be executed
@@ -458,7 +458,7 @@ void SymExec::Private::execCallInsn(SymbolicHeap::SymHeap heap,
     }
 
     // we are ready to call a function, change backtrace stack accordingly
-    this->btStack->push(fnc, this->lw);
+    push(this->btStack, fnc, this->lw);
 
     // create an object for return value (if needed)
     if (haveLhs) {

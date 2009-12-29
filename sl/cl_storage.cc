@@ -110,7 +110,7 @@ namespace {
                 (*dst)->data.array.index = idxDst;
 
                 // schedule array index as an operand for the next wheel
-                opStack.push(idxDst, idxSrc);
+                push(opStack, idxDst, idxSrc);
             }
 
             // move to next cl_accessor object (if any)
@@ -131,7 +131,7 @@ namespace {
         typedef std::pair<struct cl_operand *, const struct cl_operand *> TPair;
         typedef std::stack<TPair> TStack;
         TStack opStack;
-        opStack.push(&dst, src);
+        push(opStack, &dst, src);
         while (!opStack.empty()) {
             struct cl_operand *cDst;
             struct cl_operand const *cSrc;
