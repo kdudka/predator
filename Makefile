@@ -79,6 +79,7 @@ build_gcc: $(GCC_SRC)
 				--disable-multilib \
 				--prefix=$$TOP_LEVEL/$(GCC_INSTALL) \
 				--with-gmp=$(GCC_LIBS_PREFIX) \
+				--with-mpc=$(GCC_LIBS_PREFIX) \
 				--with-mpfr=$(GCC_LIBS_PREFIX); \
 		fi
 	cd $(GCC_BUILD) && $(MAKE)
