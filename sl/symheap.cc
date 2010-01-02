@@ -568,14 +568,14 @@ void SymHeap::objDestroy(int obj) {
     // first look for Var object
     TVarMap::iterator varIter = d->varMap.find(obj);
     if (d->varMap.end() != varIter) {
-        d->destroyVar(obj);
-        if (OBJ_RETURN == obj)
-            d->initReturn();
-
         const Var &var = varIter->second;
         const int uid = var.cVarUid;
         if (/* heap object */ -1 != uid)
             d->cVarIdMap.erase(uid);
+
+        d->destroyVar(obj);
+        if (OBJ_RETURN == obj)
+            d->initReturn();
 
         return;
     }
