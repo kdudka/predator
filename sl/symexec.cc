@@ -149,7 +149,9 @@ namespace {
 
         int hCnt = 0;
         BOOST_FOREACH(SymHeap &heap, huni) {
-            CL_DEBUG("*** destroying stack frame in result #" << (++hCnt));
+            CL_MSG_STREAM(cl_debug, lw << "debug: "
+                    "*** destroying stack frame in result #"
+                    << (++hCnt));
             destroyStackFrame(bt, heap, fnc);
         }
     }
@@ -249,6 +251,9 @@ void SymExec::exec(const CodeStorage::Fnc &fnc) {
         // now please execute the function!
         d->execFnc(init);
     }
+
+    // TODO: process return value
+    destroyStackFrame(d, results, fnc);
 
     // TODO: process results somehow (generate points-to graph, etc.)
 }

@@ -31,6 +31,7 @@ class SymExec {
         ~SymExec();
 
         // TODO: some functions operating on d->stateZero??
+        // TODO: we should be able to define return variable somehow
 
         void exec(const CodeStorage::Fnc & /*, TODO: results? */);
 

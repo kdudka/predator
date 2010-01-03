@@ -348,7 +348,11 @@ namespace {
                     }
                     break;
 
+                case CL_TYPE_CHAR:
+                    // TODO
+                    // fall through!
                 case CL_TYPE_BOOL:
+                case CL_TYPE_INT:
                     break;
 
                 default:

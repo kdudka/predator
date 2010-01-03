@@ -10,4 +10,6 @@ int main()
 
     mem = malloc(sizeof(char));
     void **err = mem;
+
+    return 0;
 }
