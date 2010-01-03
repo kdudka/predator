@@ -30,6 +30,9 @@ class SymExec {
         SymExec(CodeStorage::Storage &stor);
         ~SymExec();
 
+        bool fastMode() const;
+        void setFastMode(bool);
+
         // TODO: some functions operating on d->stateZero??
         // TODO: we should be able to define return variable somehow
 

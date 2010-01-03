@@ -177,6 +177,7 @@ struct SymExec::Private: public IBtPrinter {
     TStateMap                   state;
     TBlockSet                   todo;
     SymHeapUnion                *results;
+    bool                        fastMode;
 
     Private(CodeStorage::Storage &stor_):
         stor(stor_),
@@ -185,7 +186,8 @@ struct SymExec::Private: public IBtPrinter {
         fnc(0),
         bb(0),
         insn(0),
-        results(0)
+        results(0),
+        fastMode(false)
     {
     }
 
@@ -220,6 +222,14 @@ SymExec::SymExec(CodeStorage::Storage &stor):
 
 SymExec::~SymExec() {
     delete d;
+}
+
+bool SymExec::fastMode() const {
+    return d->fastMode;
+}
+
+void SymExec::setFastMode(bool val) {
+    d->fastMode = val;
 }
 
 void SymExec::exec(const CodeStorage::Fnc &fnc) {
@@ -414,10 +424,11 @@ void SymExec::Private::execCallInsn(const CodeStorage::Fnc *fnc,
     // FIXME: this approach will sooner or later cause a stack overflow
     // TODO: use an explicit stack instead
     Private subExec(this->stor);
-    subExec.btSet   = this->btSet;
-    subExec.btStack = this->btStack;
-    subExec.fnc     = fnc;
-    subExec.results = &results;
+    subExec.btSet       = this->btSet;
+    subExec.btStack     = this->btStack;
+    subExec.fastMode    = this->fastMode;
+    subExec.fnc         = fnc;
+    subExec.results     = &results;
 
     // run!
     subExec.execFnc(heap);
@@ -532,7 +543,7 @@ void SymExec::Private::execInsn(SymHeapUnion &localState) {
 
             // NOTE: this has to be tried *before* execCallInsn() to eventually
             // catch malloc()/free() calls, which are treated differently
-            if (!proc.exec(nextLocalState, *insn))
+            if (!proc.exec(nextLocalState, *insn, this->fastMode))
                 // call insn
                 this->execCallInsn(workingHeap, nextLocalState);
         }

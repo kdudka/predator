@@ -527,7 +527,8 @@ void SymHeapProcessor::execFree(const CodeStorage::TOperandList &opList) {
 }
 
 void SymHeapProcessor::execMalloc(TState &state,
-                                  const CodeStorage::TOperandList &opList)
+                                  const CodeStorage::TOperandList &opList,
+                                  bool fastMode)
 {
     using namespace SymbolicHeap;
     if (/* dst + fnc + size */ 3 != opList.size())
@@ -560,17 +561,20 @@ void SymHeapProcessor::execMalloc(TState &state,
     if (val <= 0)
         TRAP;
 
-    // OOM state simulation
-    // FIXME: this feature should be strictly optional, it may explode badly
-    this->heapSetVal(varLhs, VAL_NULL);
-    state.insert(heap_);
+    if (!fastMode) {
+        // OOM state simulation
+        this->heapSetVal(varLhs, VAL_NULL);
+        state.insert(heap_);
+    }
 
     // store the result of malloc
     this->heapSetVal(varLhs, val);
     state.insert(heap_);
 }
 
-bool SymHeapProcessor::execCall(TState &dst, const CodeStorage::Insn &insn) {
+bool SymHeapProcessor::execCall(TState &dst, const CodeStorage::Insn &insn,
+                                bool fastMode)
+{
     using namespace SymbolicHeap;
 
     const CodeStorage::TOperandList &opList = insn.operands;
@@ -590,7 +594,7 @@ bool SymHeapProcessor::execCall(TState &dst, const CodeStorage::Insn &insn) {
         return false;
 
     if (STREQ(fncName, "malloc")) {
-        this->execMalloc(dst, opList);
+        this->execMalloc(dst, opList, fastMode);
         return true;
     }
 
@@ -695,7 +699,9 @@ void SymHeapProcessor::execBinary(const CodeStorage::Insn &insn) {
     heap_.objSetValue(dst, val);
 }
 
-bool SymHeapProcessor::exec(TState &dst, const CodeStorage::Insn &insn) {
+bool SymHeapProcessor::exec(TState &dst, const CodeStorage::Insn &insn,
+                            bool fastMode)
+{
     using namespace CodeStorage;
 
     lw_ = &insn.loc;
@@ -713,7 +719,7 @@ bool SymHeapProcessor::exec(TState &dst, const CodeStorage::Insn &insn) {
             return true;
 
         case CL_INSN_CALL:
-            return this->execCall(dst, insn);
+            return this->execCall(dst, insn, fastMode);
 
         default:
             TRAP;

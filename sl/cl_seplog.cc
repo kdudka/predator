@@ -23,6 +23,8 @@
 #include "storage.hh"
 #include "symexec.hh"
 
+#include <string>
+
 class ClSepLog: public ClStorageBuilder {
     public:
         ClSepLog(const char *configString);
@@ -30,16 +32,30 @@ class ClSepLog: public ClStorageBuilder {
 
     protected:
         virtual void run(CodeStorage::Storage &);
+
+    private:
+        std::string configString_;
 };
 
 // /////////////////////////////////////////////////////////////////////////////
 // ClSepLog implementation
-ClSepLog::ClSepLog(const char *) {
-    // TODO
+ClSepLog::ClSepLog(const char *configString):
+    configString_(configString)
+{
 }
 
 ClSepLog::~ClSepLog() {
-    // TODO
+}
+
+namespace {
+    void initExec(SymExec &se, const std::string &cnf) {
+        using std::string;
+
+        if (string("fast") == cnf) {
+            CL_DEBUG("SymExec \"fast mode\" requested");
+            se.setFastMode(true);
+        }
+    }
 }
 
 void ClSepLog::run(CodeStorage::Storage &stor) {
@@ -53,6 +69,7 @@ void ClSepLog::run(CodeStorage::Storage &stor) {
 
     // run the symbolic execution
     SymExec se(stor);
+    initExec(se, configString_);
     se.exec(*main);
 }
 

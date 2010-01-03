@@ -42,7 +42,7 @@ class SymHeapProcessor {
         {
         }
 
-        bool exec(TState &dst, const CodeStorage::Insn &insn);
+        bool exec(TState &dst, const CodeStorage::Insn &insn, bool fastMode);
 
         void setLocation(const LocationWriter &lw) {
             lw_ = lw;
@@ -64,9 +64,11 @@ class SymHeapProcessor {
         bool lhsFromOperand(int *pVar, const struct cl_operand &op);
         void execUnary(const CodeStorage::Insn &insn);
         void execBinary(const CodeStorage::Insn &insn);
-        void execMalloc(TState &dst, const CodeStorage::TOperandList &opList);
+        void execMalloc(TState &dst, const CodeStorage::TOperandList &opList,
+                        bool fastMode);
         void execFree(const CodeStorage::TOperandList &opList);
-        bool execCall(TState &dst, const CodeStorage::Insn &insn);
+        bool execCall(TState &dst, const CodeStorage::Insn &insn,
+                      bool fastMode);
 
     private:
         THeap                       &heap_;
