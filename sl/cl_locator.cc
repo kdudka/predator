@@ -19,7 +19,6 @@
 
 #include "cl_locator.hh"
 #include "cl_private.hh"
-#include "ssd.hh"
 
 #include <boost/iostreams/device/file_descriptor.hpp>
 #include <boost/iostreams/stream.hpp>
@@ -92,8 +91,6 @@ class ClLocator: public ICodeListener {
     private:
         void printLocation(const struct cl_location *);
 };
-
-using namespace ssd;
 
 // /////////////////////////////////////////////////////////////////////////////
 // ClLocator implementation

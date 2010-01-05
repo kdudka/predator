@@ -58,7 +58,7 @@
     if (SL_VERBOSE_PLUG & verbose) { \
         fprintf (stderr, "%s:%d: %s: ", __FILE__, __LINE__, plugin_name); \
         fprintf (stderr, __VA_ARGS__); \
-        fprintf (stderr, "\n"); \
+        fprintf (stderr, " [internal location]\n"); \
     } \
 } while (0)
 
