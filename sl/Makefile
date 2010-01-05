@@ -17,7 +17,7 @@
 
 CILLY   ?= ../invader-1_1/sources/cil/bin/cilly
 DATASET ?= data/dll.c data/slplug.c data/inv-*.c data/off.c data/hash_table.c \
-		   data/test.c
+		   data/test-0010.c
 TIMEOUT ?= timeout 300
 
 # SPARSE_CFLAGS += `pkg-config sparse --cflags`
@@ -129,6 +129,7 @@ chkplug: slplug.so
 	TMP=`mktemp` \
 		&& ($(GCC_INSTALL)/bin/gcc $(CFLAGS) $(PLUG_CFLAGS) \
 		-fplugin=./slplug.so \
+		-fplugin-arg-slplug-bypass-seplog \
 		-c slplug.c >"$$TMP" 2>&1 \
 		|| (cat "$$TMP"; exit 1)) \
 		&& rm -fv "$$TMP"
