@@ -120,15 +120,18 @@ static struct plugin_info sl_info = {
 "    -fplugin-arg-slplug-dump-pp[=OUTPUT_FILE]          dump linearized code\n"
 "    -fplugin-arg-slplug-dump-types                     dump also type info\n"
 "    -fplugin-arg-slplug-gen-dot[=GLOBAL_CG_FILE]       generate CFGs\n"
-"    -fplugin-arg-slplug-seplog-args                    args given to seplog\n"
+"    -fplugin-arg-slplug-seplog-args=SEPLOG_ARGS        args given to seplog\n"
 "    -fplugin-arg-slplug-type-dot=TYPE_GRAPH_FILE       generate type graphs\n"
 "    -fplugin-arg-slplug-verbose[=VERBOSE_BITMASK]      turn on verbose mode\n"
 "\n"
 "VERBOSE_BITMASK:\n"
-"    1    debug gcc plug-in API and code_listener\n"
-"    2    print location info using \"locator\" code listener\n"
-"    4    print each gimple statement before its processing\n"
-"    8    dump gcc tree of unhandled expressions\n"
+"    1          debug gcc plug-in API and code_listener\n"
+"    2          print location info using \"locator\" code listener\n"
+"    4          print each gimple statement before its processing\n"
+"    8          dump gcc tree of unhandled expressions\n"
+"\n"
+"SEPLOG_ARGS:\n"
+"    fast       disable OOM simulation within symbolic execution of malloc()\n"
 };
 
 typedef htab_t type_db_t;
