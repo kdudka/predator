@@ -52,7 +52,8 @@ GDB ?= gdb
 	chkplug chksparse chkunit chkhead \
 	dbgplug dbgsparse \
 	dotplug dotsparse \
-	pphtml invpphtml
+	pphtml invpphtml \
+	distcheck
 
 all: slplug.so
 
@@ -217,3 +218,10 @@ invpphtml: ../ssd/util/eschtml ../ssd/util/tty2html $(CILLY)
 
 $(CILLY):
 	$(MAKE) -C .. build_inv
+
+distcheck:
+	rm -rfv ../sl_build
+	mkdir ../sl_build
+	cd ../sl_build && cmake ../sl
+	$(MAKE) -C ../sl_build
+	$(MAKE) -C ../sl_build test
