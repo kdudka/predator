@@ -520,8 +520,16 @@ void SymHeapProcessor::execFree(const CodeStorage::TOperandList &opList) {
             break;
     }
 
+    const int cVar = heap_.cVar(obj);
+    if (-1 != cVar) {
+        CL_DEBUG("about to free var #" << cVar);
+        CL_MSG_STREAM(cl_error, lw_
+                << "error: attempt to free a non-heap object");
+        this->printBackTrace();
+        return;
+    }
+
     CL_MSG_STREAM(cl_debug, lw_ << "debug: executing free()");
-    // TODO: check for possible free() of non-heap object
     // TODO: check for possible free() of non-root
     this->destroyObj(obj);
 }

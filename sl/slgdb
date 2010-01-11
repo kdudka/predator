@@ -23,10 +23,13 @@ test -x "$SL_PLUG"              || exit 1
 # use gdb by default
 test -z "$GDB" && GDB=gdb
 
+# use verbose level 1 by default
+test -z "$SL_VERBOSE" && SL_VERBOSE=1
+
 # run the debugger
 "$GDB" -x slplug.gdb --quiet --args "$CC1" "$1" \
     -dumpbase test.c -quiet -o /dev/null \
     -O0 -Wall -Wextra \
     -fplugin="$SL_PLUG" \
-    -fplugin-arg-libslplug-verbose=1 \
+    -fplugin-arg-libslplug-verbose="$SL_VERBOSE" \
     -fplugin-arg-libslplug-dump-pp
