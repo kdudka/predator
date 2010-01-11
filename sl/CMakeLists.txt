@@ -64,8 +64,8 @@ macro(ADD_CXX_ONLY_FLAG opt_name opt)
 endmacro()
 
 # we use c99 to compile *.c and c++0x to copmile *.cc
-ADD_C_ONLY_FLAG("C99" "-std=c99")
-ADD_CXX_ONLY_FLAG("STD_CXX_0X" "-std=c++0x")
+ADD_C_ONLY_FLAG(  "C99"             "-std=c99")
+ADD_CXX_ONLY_FLAG("STD_CXX_0X"      "-std=c++0x")
 
 # tweak warnings
 ADD_C_FLAG("PEDANTIC"               "-pedantic")
@@ -95,29 +95,29 @@ add_definitions("-I.. -I../gcc -I../ssd/src -fPIC")
 # Static library sl
 add_library(sl STATIC
     cl_chain.cc
- 	cl_dotgen.cc
- 	cl_factory.cc
- 	cl_locator.cc
- 	cl_pp.cc
- 	cl_seplog.cc
- 	cl_storage.cc
- 	cl_typedot.cc
- 	cld_argsub.cc
- 	cld_intchk.cc
- 	cld_opchk.cc
- 	cld_optrans.cc
- 	cld_unilabel.cc
- 	cld_uniregs.cc
- 	cld_univars.cc
- 	cld_unswitch.cc
- 	code_listener.cc
- 	location.cc
- 	ssd.cc
- 	storage.cc
- 	symexec.cc
- 	symheap.cc
- 	symproc.cc
- 	symstate.cc)
+    cl_dotgen.cc
+    cl_factory.cc
+    cl_locator.cc
+    cl_pp.cc
+    cl_seplog.cc
+    cl_storage.cc
+    cl_typedot.cc
+    cld_argsub.cc
+    cld_intchk.cc
+    cld_opchk.cc
+    cld_optrans.cc
+    cld_unilabel.cc
+    cld_uniregs.cc
+    cld_univars.cc
+    cld_unswitch.cc
+    code_listener.cc
+    location.cc
+    ssd.cc
+    storage.cc
+    symexec.cc
+    symheap.cc
+    symproc.cc
+    symstate.cc)
 
 target_link_libraries(sl
     boost_iostreams
@@ -126,9 +126,9 @@ target_link_libraries(sl
 add_library(slplug SHARED slplug.c)
 target_link_libraries(slplug sl)
 
-add_executable(test-all test-all.cc data/dll.c)
-target_link_libraries(test-all boost_unit_test_framework)
-add_test("data/dll.c-self_test" test-all)
+add_executable(test-dll test-dll.cc data/dll.c)
+target_link_libraries(test-dll boost_unit_test_framework)
+add_test("data/dll.c-self_test" test-dll)
 
 set(gcc45 "${sl_BINARY_DIR}/../gcc-install/bin/gcc")
 
@@ -154,7 +154,7 @@ endforeach()
 #endmacro(TEST)
 
 #DATASET ?= data/dll.c data/slplug.c data/inv-*.c data/off.c data/hash_table.c \
-#		   data/test-0010.c
+#           data/test-0010.c
 
 add_test("compile-self-extra" ${gcc45}
     -I ${sl_SOURCE_DIR}/..

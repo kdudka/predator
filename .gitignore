@@ -9,6 +9,7 @@ separate/*.o
 separate/separate
 separate/tags
 separate/test-all
+sl_build/
 sparse/
 ssd/
 gcc

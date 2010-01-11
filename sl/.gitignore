@@ -1,3 +1,4 @@
+*.dot
 *.o
 libcl.a
 slplug.so

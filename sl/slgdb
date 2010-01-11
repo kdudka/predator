@@ -1,0 +1,32 @@
+#!/bin/bash
+if test -z "$1" || test ! -e "$1"; then
+    echo Usage: slgdb foo.c
+    exit 1
+fi
+
+# basic setup
+set -x
+SL_BUILD=../sl_build
+SL_PLUG="$SL_BUILD/libslplug.so"
+CC1="../gcc-install/libexec/gcc/`ls ../gcc-install/lib/gcc/`/4.5.0/cc1"
+
+# initial checks
+test -e slplug.gdb              || exit 1
+test -x "$CC1"                  || exit 1
+test -d "$SL_BUILD"             || exit 1
+test -f "$SL_BUILD/Makefile"    || exit 1
+
+# attempt to make
+make -C "$SL_BUILD"             || exit 1
+test -x "$SL_PLUG"              || exit 1
+
+# use gdb by default
+test -z "$GDB" && GDB=gdb
+
+# run the debugger
+"$GDB" -x slplug.gdb --quiet --args "$CC1" "$1" \
+    -dumpbase test.c -quiet -o /dev/null \
+    -O0 -Wall -Wextra \
+    -fplugin="$SL_PLUG" \
+    -fplugin-arg-libslplug-verbose=1 \
+    -fplugin-arg-libslplug-dump-pp
