@@ -141,12 +141,16 @@ add_test("compile-self" ${gcc45}
 
 set(examples 0002 0003 0004 0005 0006 0007 0008 0009 0010 0011 0012 0013)
 
-foreach (num ${examples})
-    add_test("dry-run---example-${num}" ${gcc45}
-        -c ${sl_SOURCE_DIR}/data/test-${num}.c
-        -fplugin=${sl_BINARY_DIR}/libslplug.so
-        -fplugin-arg-libslplug-verbose=1)
-endforeach()
+# FIXME: define this macro more generically, in particular the count of args
+macro(test_sym_exec label tool arg1 arg2)
+    foreach (num ${examples})
+        add_test("${label}___example-${num}" ${tool} ${arg} ${arg2}
+            -c ${sl_SOURCE_DIR}/data/test-${num}.c
+            -fplugin=${sl_BINARY_DIR}/libslplug.so
+            -fplugin-arg-libslplug-verbose=1)
+    endforeach()
+endmacro()
+test_sym_exec("simple-test" ${gcc45} "" "")
 
 # FIXME: the doubly-nested triply-escaped sed magic might look a bit scary
 foreach (num ${examples})
@@ -157,10 +161,10 @@ foreach (num ${examples})
     set(cmd "${cmd} | sed s/`echo ${sl_SOURCE_DIR}/data/ ")
     set(cmd "${cmd} | sed 's/\\\\\\\\//\\\\\\\\\\\\\\\\\\\\\\\\//g'`//")
     set(cmd "${cmd} | diff -up ${sl_SOURCE_DIR}/data/test-${num}.err -")
-    add_test("diff-out---example-${num}" sh -c "${cmd}")
+    add_test("regression-test___example-${num}" sh -c "${cmd}")
 endforeach()
 
-add_test("compile-self-extra" ${gcc45}
+set(self_extra_opts
     -I ${sl_SOURCE_DIR}/..
     -I ${sl_SOURCE_DIR}/../gcc
     -c ${sl_SOURCE_DIR}/slplug.c
@@ -171,6 +175,16 @@ add_test("compile-self-extra" ${gcc45}
     -fplugin-arg-libslplug-type-dot=/dev/null
     -fplugin-arg-libslplug-verbose=15
     -fplugin-arg-libslplug-bypass-seplog)
+
+add_test("compile-self-extra" ${gcc45} ${self_extra_opts})
+add_test("compile-self-valgrind" valgrind
+    --error-exitcode=7
+    ${gcc45}
+    ${self_extra_opts})
+
+test_sym_exec("valgrind-test" valgrind
+    --error-exitcode=7
+    ${gcc45})
 
 add_test("headers_sanity-1" gcc -ansi -Wall -Wextra -Werror -pedantic
     -o /dev/null
