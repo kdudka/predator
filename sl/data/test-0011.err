@@ -1,0 +1,5 @@
+test-0011.c:6:8: error: dereference of NULL value
+test-0011.c:5:22: warning: killing junk
+test-0011.c:8:15: warning: killing junk
+test-0011.c:5:22: warning: killing junk
+test-0011.c:8:15: warning: killing junk

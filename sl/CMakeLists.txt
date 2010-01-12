@@ -139,11 +139,23 @@ add_test("compile-self" ${gcc45}
     -fplugin=${sl_BINARY_DIR}/libslplug.so
     -fplugin-arg-libslplug-bypass-seplog)
 
-foreach (example 0002 0003 0004 0005 0006 0007 0008 0009 0010 0011 0012 0013)
-add_test("example-${example}" ${gcc45}
-    -c ${sl_SOURCE_DIR}/data/test-${example}.c
+set(examples 0002 0003 0004 0005 0006 0007 0008 0009 0010 0011 0012 0013)
+
+foreach (num ${examples})
+add_test("dry-run---example-${num}" ${gcc45}
+    -c ${sl_SOURCE_DIR}/data/test-${num}.c
     -fplugin=${sl_BINARY_DIR}/libslplug.so
     -fplugin-arg-libslplug-verbose=1)
+endforeach()
+
+# FIXME: the doubly-nested triply-escaped sed magic might look a bit scary
+foreach (num ${examples})
+add_test("diff-out---example-${num}" sh -c "${gcc45} \\
+    -c ${sl_SOURCE_DIR}/data/test-${num}.c \\
+    -fplugin=${sl_BINARY_DIR}/libslplug.so \\
+    2>&1 \\
+    | sed s/`echo ${sl_SOURCE_DIR}/data/ | sed 's/\\\\//\\\\\\\\\\\\//g'`// \\
+    | diff -up - ${sl_SOURCE_DIR}/data/test-${num}.err")
 endforeach()
 
 ## unit tests

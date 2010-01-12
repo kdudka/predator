@@ -1,0 +1,12 @@
+test-0012.c:24:10: error: dereference of NULL value
+test-0012.c:40:16: note: from call of append_item()
+test-0012.c:34:5: note: from call of main()
+test-0012.c:24:10: error: dereference of NULL value
+test-0012.c:40:16: note: from call of append_item()
+test-0012.c:34:5: note: from call of main()
+test-0012.c:25:10: error: dereference of NULL value
+test-0012.c:40:16: note: from call of append_item()
+test-0012.c:34:5: note: from call of main()
+test-0012.c:25:10: error: dereference of NULL value
+test-0012.c:40:16: note: from call of append_item()
+test-0012.c:34:5: note: from call of main()
