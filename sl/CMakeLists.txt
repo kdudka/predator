@@ -142,31 +142,23 @@ add_test("compile-self" ${gcc45}
 set(examples 0002 0003 0004 0005 0006 0007 0008 0009 0010 0011 0012 0013)
 
 foreach (num ${examples})
-add_test("dry-run---example-${num}" ${gcc45}
-    -c ${sl_SOURCE_DIR}/data/test-${num}.c
-    -fplugin=${sl_BINARY_DIR}/libslplug.so
-    -fplugin-arg-libslplug-verbose=1)
+    add_test("dry-run---example-${num}" ${gcc45}
+        -c ${sl_SOURCE_DIR}/data/test-${num}.c
+        -fplugin=${sl_BINARY_DIR}/libslplug.so
+        -fplugin-arg-libslplug-verbose=1)
 endforeach()
 
 # FIXME: the doubly-nested triply-escaped sed magic might look a bit scary
 foreach (num ${examples})
-add_test("diff-out---example-${num}" sh -c "${gcc45} \\
-    -c ${sl_SOURCE_DIR}/data/test-${num}.c \\
-    -fplugin=${sl_BINARY_DIR}/libslplug.so \\
-    2>&1 \\
-    | sed s/`echo ${sl_SOURCE_DIR}/data/ | sed 's/\\\\//\\\\\\\\\\\\//g'`// \\
-    | diff -up - ${sl_SOURCE_DIR}/data/test-${num}.err")
+    set(cmd "${gcc45}")
+    set(cmd "${cmd} -c ${sl_SOURCE_DIR}/data/test-${num}.c")
+    set(cmd "${cmd} -fplugin=${sl_BINARY_DIR}/libslplug.so")
+    set(cmd "${cmd} 2>&1")
+    set(cmd "${cmd} | sed s/`echo ${sl_SOURCE_DIR}/data/ ")
+    set(cmd "${cmd} | sed 's/\\\\\\\\//\\\\\\\\\\\\\\\\\\\\\\\\//g'`//")
+    set(cmd "${cmd} | diff -up ${sl_SOURCE_DIR}/data/test-${num}.err -")
+    add_test("diff-out---example-${num}" sh -c "${cmd}")
 endforeach()
-
-## unit tests
-#macro(TEST name)
-#    add_executable(test-${name} test-${name}.cc)
-#    target_link_libraries(test-${name} boost_unit_test_framework)
-#    add_test(${name} test-${name})
-#endmacro(TEST)
-
-#DATASET ?= data/dll.c data/slplug.c data/inv-*.c data/off.c data/hash_table.c \
-#           data/test-0010.c
 
 add_test("compile-self-extra" ${gcc45}
     -I ${sl_SOURCE_DIR}/..
