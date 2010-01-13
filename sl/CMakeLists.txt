@@ -22,8 +22,7 @@ enable_testing()
 
 # Check Boost availability
 set(Boost_ADDITIONAL_VERSIONS "1.40" "1.41" "1.42" "1.43")
-include(FindBoost)
-find_package(Boost 1.40 REQUIRED
+find_package(Boost 1.37 REQUIRED
     iostreams
     system
     unit_test_framework)
