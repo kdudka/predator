@@ -53,7 +53,7 @@ GDB ?= gdb
 	dbgplug dbgsparse \
 	dotplug dotsparse \
 	pphtml invpphtml \
-	distcheck
+	distcheck wizard
 
 all: slplug.so
 
@@ -224,4 +224,10 @@ distcheck:
 	mkdir ../sl_build
 	cd ../sl_build && cmake ../sl
 	$(MAKE) -C ../sl_build
-	$(MAKE) -C ../sl_build test
+	cd ../sl_build && ctest --output-on-failure $(MAKEOPTS)
+
+wizard:
+	mkdir -p ../sl_build
+	cd ../sl_build && ccmake ../sl
+	$(MAKE) -C ../sl_build
+	cd ../sl_build && ctest --output-on-failure $(MAKEOPTS)
