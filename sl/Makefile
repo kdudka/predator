@@ -35,15 +35,7 @@ DBGFLAGS ?= -g -O0
 CFLAGS += $(DBGFLAGS)
 CXXFLAGS += $(DBGFLAGS)
 
-# fix for gcc plug-in broken linkage
-#
-# CXXFLAGS += -I../gcc-install/include/c++/4.5.0
-# CC = ../gcc-install/bin/gcc
-# CXX = ../gcc-install/bin/g++
-# LD = ../gcc-install/bin/g++
-
 LD = g++
-
 AR ?= ar
 RANLIB ?= ranlib
 GDB ?= gdb
@@ -117,13 +109,13 @@ slplug.so: LDFLAGS += -fPIC -shared $(CL_LIBS)
 slplug.so: slplug.o libcl.a
 	$(LD) -o $@ $(LDFLAGS) slplug.o -lcl -L.
 
-test-all: LDFLAGS += -lboost_unit_test_framework
-test-all: test-all.o data/dll.o
+test-dll: LDFLAGS += -lboost_unit_test_framework
+test-dll: test-dll.o data/dll.o
 
 test-list: data/list.c
 	$(CC) $(CFLAGS) -DSELF_TEST -o $@ $<
 
-chkunit: test-all
+chkunit: test-dll
 	./runtest.sh all --build_info=yes --log_level=test_suite
 
 chkplug: slplug.so
