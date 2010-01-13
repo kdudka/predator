@@ -116,7 +116,7 @@ test-list: data/list.c
 	$(CC) $(CFLAGS) -DSELF_TEST -o $@ $<
 
 chkunit: test-dll
-	./runtest.sh all --build_info=yes --log_level=test_suite
+	./runtest.sh dll --build_info=yes --log_level=test_suite
 
 chkplug: slplug.so
 	TMP=`mktemp` \
