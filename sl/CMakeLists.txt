@@ -132,8 +132,9 @@ add_test("data/dll.c-self_test" test-dll)
 set(gcc45 "${sl_BINARY_DIR}/../gcc-install/bin/gcc")
 
 add_test("compile-self" ${gcc45}
-    -I ${sl_SOURCE_DIR}/..
-    -I ${sl_SOURCE_DIR}/../gcc
+    ${CFLAGS}
+    -I${sl_SOURCE_DIR}/..
+    -I${sl_SOURCE_DIR}/../gcc
     -c ${sl_SOURCE_DIR}/slplug.c
     -fplugin=${sl_BINARY_DIR}/libslplug.so
     -fplugin-arg-libslplug-bypass-seplog)
@@ -154,6 +155,11 @@ test_sym_exec("simple-test" ${gcc45} "" "")
 # FIXME: the doubly-nested triply-escaped sed magic might look a bit scary
 foreach (num ${examples})
     set(cmd "${gcc45}")
+
+    # we use the following flag to avoid differences on 32bit vs 64bit archs
+    # in the error output, which is checked for exact match
+    set(cmd "${cmd} -m32")
+
     set(cmd "${cmd} -c ${sl_SOURCE_DIR}/data/test-${num}.c")
     set(cmd "${cmd} -fplugin=${sl_BINARY_DIR}/libslplug.so")
     set(cmd "${cmd} 2>&1")
@@ -166,8 +172,9 @@ foreach (num ${examples})
 endforeach()
 
 set(self_extra_opts
-    -I ${sl_SOURCE_DIR}/..
-    -I ${sl_SOURCE_DIR}/../gcc
+    ${CFLAGS}
+    -I${sl_SOURCE_DIR}/..
+    -I${sl_SOURCE_DIR}/../gcc
     -c ${sl_SOURCE_DIR}/slplug.c
     -fplugin=${sl_BINARY_DIR}/libslplug.so
     -fplugin-arg-libslplug-dump-pp=/dev/null

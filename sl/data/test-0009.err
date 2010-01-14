@@ -2,25 +2,25 @@ test-0009.c:6:12: warning: unused local variable 'ok'
 test-0009.c:9:11: warning: unused local variable 'warn'
 test-0009.c:12:12: warning: unused local variable 'err'
 test-0009.c:9:11: warning: amount of allocated memory not accurate
-test-0009.c:9:11: note: allocated: 8 bytes
+test-0009.c:9:11: note: allocated: 4 bytes
 test-0009.c:9:11: note:  expected: 1 bytes
 symheap.cc:264: warning: CL_TYPE_CHAR is not supported by SymHeap for now [internal location]
 test-0009.c:9:11: warning: amount of allocated memory not accurate
-test-0009.c:9:11: note: allocated: 8 bytes
+test-0009.c:9:11: note: allocated: 4 bytes
 test-0009.c:9:11: note:  expected: 1 bytes
 symheap.cc:264: warning: CL_TYPE_CHAR is not supported by SymHeap for now [internal location]
 test-0009.c:12:12: error: amount of allocated memory not accurate
 test-0009.c:12:12: note: allocated: 1 bytes
-test-0009.c:12:12: note:  expected: 8 bytes
+test-0009.c:12:12: note:  expected: 4 bytes
 test-0009.c:12:12: error: amount of allocated memory not accurate
 test-0009.c:12:12: note: allocated: 1 bytes
-test-0009.c:12:12: note:  expected: 8 bytes
+test-0009.c:12:12: note:  expected: 4 bytes
 test-0009.c:12:12: error: amount of allocated memory not accurate
 test-0009.c:12:12: note: allocated: 1 bytes
-test-0009.c:12:12: note:  expected: 8 bytes
+test-0009.c:12:12: note:  expected: 4 bytes
 test-0009.c:12:12: error: amount of allocated memory not accurate
 test-0009.c:12:12: note: allocated: 1 bytes
-test-0009.c:12:12: note:  expected: 8 bytes
+test-0009.c:12:12: note:  expected: 4 bytes
 test-0009.c:12:12: warning: killing junk
 test-0009.c:9:11: warning: killing junk
 test-0009.c:9:11: warning: killing junk
