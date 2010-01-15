@@ -53,11 +53,29 @@
     CL_MSG_STREAM(fnc, __FILE__ << ":" << __LINE__ \
             << ": " << to_stream << " [internal location]")
 
-#define CL_INTERNAL_ERROR(to_stream) \
-    CL_MSG_STREAM_INTERNAL(cl_error, "internal error: " << to_stream)
-
 #define CL_DEBUG(to_stream) \
     CL_MSG_STREAM_INTERNAL(cl_debug, "debug: " << to_stream)
+
+#define CL_WARN(to_stream) \
+    CL_MSG_STREAM_INTERNAL(cl_warn, "warning: " << to_stream)
+
+#define CL_ERROR(to_stream) \
+    CL_MSG_STREAM_INTERNAL(cl_error, "error: " << to_stream)
+
+#define CL_NOTE(to_stream) \
+    CL_MSG_STREAM_INTERNAL(cl_note, "note: " << to_stream)
+
+#define CL_DEBUG_MSG(loc, what) \
+    CL_MSG_STREAM(cl_debug, (loc) << "debug: " << what)
+
+#define CL_WARN_MSG(loc, what) \
+    CL_MSG_STREAM(cl_warn, (loc) << "warning: " << what)
+
+#define CL_ERROR_MSG(loc, what) \
+    CL_MSG_STREAM(cl_error, (loc) << "error: " << what)
+
+#define CL_NOTE_MSG(loc, what) \
+    CL_MSG_STREAM(cl_note, (loc) << "note: " << what)
 
 void cl_debug(const char *msg);
 void cl_warn(const char *msg);

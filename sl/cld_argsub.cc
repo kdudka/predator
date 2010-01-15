@@ -88,9 +88,8 @@ CldArgSubst::CldArgSubst(ICodeListener *slave):
 void CldArgSubst::regArg(int arg_id, const struct cl_operand *arg_src) {
     TMap::iterator i = map_.find(arg_id);
     if (map_.end() != i) {
-        CL_MSG_STREAM(cl_error, LocationWriter(0, &fncLoc_) << "error: "
-                << "argument #" << arg_id
-                << " of function '" << fnc_ << "'"
+        CL_ERROR_MSG(LocationWriter(0, &fncLoc_), "argument #"
+                << arg_id << " of function '" << fnc_ << "'"
                 << " is already declared as '"
                 << i->second.varName << "'");
         return;
@@ -114,13 +113,11 @@ void CldArgSubst::modifyOperand(struct cl_operand *op) {
     int arg = op->data.arg.id;
     TMap::iterator i = map_.find(arg);
     if (map_.end() == i) {
-        CL_MSG_STREAM(cl_error, LocationWriter(0, &loc_) << "error: "
-                << "argument #" << arg
-                << " of function '" << fnc_ << "'"
+        CL_ERROR_MSG(LocationWriter(0, &loc_), "argument #"
+                << arg << " of function '" << fnc_ << "'"
                 << " was not declared");
-        CL_MSG_STREAM(cl_note, LocationWriter(0, &fncLoc_) << "note: "
-                << "function '" << fnc_ << "'"
-                << " was declarede here");
+        CL_NOTE_MSG(LocationWriter(0, &fncLoc_), "function '"
+                << fnc_ << "'" << " was declarede here");
         return;
     }
 

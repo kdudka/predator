@@ -38,15 +38,12 @@ namespace {
     {
         using CodeStorage::Var;
         LocationWriter lw(&fnc.def.loc);
-        CL_MSG_STREAM(cl_debug, lw << "debug: "
-                ">>> creating stack frame for "
-                << nameOf(fnc) << "():");
+        CL_DEBUG_MSG(lw,
+                ">>> creating stack frame for " << nameOf(fnc) << "():");
 
         BOOST_FOREACH(const Var &var, fnc.vars) {
             lw = &var.loc;
-            CL_MSG_STREAM(cl_debug, lw << "debug: "
-                    "--- creating stack variable: #"
-                    << var.uid
+            CL_DEBUG_MSG(lw, "--- creating stack variable: #" << var.uid
                     << " (" << var.name << ")" );
 
             heap.varCreate(var.clt, var.uid);
@@ -122,10 +119,8 @@ namespace {
 
         BOOST_FOREACH(const Var &var, fnc.vars) {
             LocationWriter lw(&var.loc);
-            CL_MSG_STREAM(cl_debug, lw << "debug: "
-                    "--- destroying stack variable: #"
-                    << var.uid
-                    << " (" << var.name << ")" );
+            CL_DEBUG_MSG(lw, "--- destroying stack variable: #"
+                    << var.uid << " (" << var.name << ")" );
 
             const int obj = heap.varByCVar(var.uid);
             if (obj < 0)
@@ -143,14 +138,12 @@ namespace {
     {
         using SymbolicHeap::SymHeap;
         LocationWriter lw(&fnc.def.loc);
-        CL_MSG_STREAM(cl_debug, lw << "debug: "
-                "<<< destroying stack frame of "
+        CL_DEBUG_MSG(lw, "<<< destroying stack frame of "
                 << nameOf(fnc) << "():");
 
         int hCnt = 0;
         BOOST_FOREACH(SymHeap &heap, huni) {
-            CL_MSG_STREAM(cl_debug, lw << "debug: "
-                    "*** destroying stack frame in result #"
+            CL_DEBUG_MSG(lw, "*** destroying stack frame in result #"
                     << (++hCnt));
             destroyStackFrame(bt, heap, fnc);
         }
@@ -282,8 +275,7 @@ void SymExec::Private::printBackTrace() {
         boost::tie(btFnc, btLw) = bt.top();
         bt.pop();
 
-        CL_MSG_STREAM(cl_note, btLw << "note: from call of "
-                << nameOf(*btFnc) << "()");
+        CL_NOTE_MSG(btLw, "from call of " << nameOf(*btFnc) << "()");
     }
 }
 
@@ -346,8 +338,7 @@ void SymExec::Private::execCondInsn(const SymbolicHeap::SymHeap &heap)
 
         case VAL_DEREF_FAILED:
             // error should have been already emitted
-            CL_MSG_STREAM(cl_debug, this->lw
-                    << "debug: ignored VAL_DEREF_FAILED");
+            CL_DEBUG_MSG(this->lw, "ignored VAL_DEREF_FAILED");
             break;
 
         default:
@@ -371,8 +362,7 @@ void SymExec::Private::execTermInsn(const SymbolicHeap::SymHeap &heap)
             break;
 
         case CL_INSN_ABORT:
-            CL_MSG_STREAM(cl_debug, this->lw
-                    << "debug: CL_INSN_ABORT reached");
+            CL_DEBUG_MSG(this->lw, "CL_INSN_ABORT reached");
             break;
 
         case CL_INSN_JMP:
@@ -462,14 +452,13 @@ void SymExec::Private::execCallInsn(SymbolicHeap::SymHeap heap,
 
     if (hasKey(this->btSet, uid)) {
         // *** recursion detected ***
-        CL_MSG_STREAM(cl_error, this->lw << "error: "
+        CL_ERROR_MSG(this->lw,
                 "call recursion detected, cg subtree will be excluded");
         goto fail;
     }
 
     if (CL_OPERAND_VOID == fnc->def.code) {
-        CL_MSG_STREAM(cl_warn, this->lw << "warning: "
-                "ignoring call of undefined function");
+        CL_WARN_MSG(this->lw, "ignoring call of undefined function");
         goto fail;
     }
 
@@ -529,7 +518,7 @@ void SymExec::Private::execInsn(SymHeapUnion &localState) {
     // go through all symbolic heaps corresponding to localState
     int hCnt = 0;
     BOOST_FOREACH(const SymHeap &heap, localState) {
-        CL_MSG_STREAM(cl_debug, this->lw << "debug: *** processing heap #"
+        CL_DEBUG_MSG(this->lw, "*** processing heap #"
                 << (++hCnt) << " of BB " << bb->name() << "...");
 
         if (isTerm) {
@@ -559,7 +548,7 @@ void SymExec::Private::execBb() {
     using SymbolicHeap::SymHeap;
 
     const std::string &name = bb->name();
-    CL_MSG_STREAM(cl_debug, lw << "debug: >>> entering " << name << "...");
+    CL_DEBUG_MSG(lw, ">>> entering " << name << "...");
 
     // this state will be changed per each instruction
     // NOTE: it may grow significantly on any CL_INSN_CALL instruction
@@ -573,8 +562,8 @@ void SymExec::Private::execBb() {
             this->lw = &insn->loc;
 
         // execute current instruction on localState
-        CL_MSG_STREAM(cl_debug, this->lw << "debug: --- executing insn #"
-                << (++iCnt) << " of BB " << name << "...");
+        CL_DEBUG_MSG(this->lw, "--- executing insn #" << (++iCnt)
+                << " of BB " << name << "...");
 
         this->insn = insn;
         this->execInsn(localState);
@@ -599,8 +588,7 @@ void SymExec::Private::execFncBody() {
         this->execBb();
     }
 
-    CL_MSG_STREAM(cl_debug, this->lw << "debug: "
-            "execFncBody(): main loop terminated correctly...");
+    CL_DEBUG_MSG(this->lw, "execFncBody(): main loop terminated correctly...");
 }
 
 void SymExec::Private::execFnc(const SymbolicHeap::SymHeap &init)
@@ -610,16 +598,13 @@ void SymExec::Private::execFnc(const SymbolicHeap::SymHeap &init)
 
     const std::string &fncName = nameOf(*this->fnc);
     this->lw = &fnc->def.loc;
-    CL_MSG_STREAM(cl_debug, this->lw << "debug: >>> entering "
-            << fncName << "()...");
+    CL_DEBUG_MSG(this->lw, ">>> entering " << fncName << "()...");
 
     CL_DEBUG("looking for entry block...");
     const Block *&entry = this->bb;
     entry = fnc->cfg.entry();
     if (!entry) {
-        CL_MSG_STREAM(cl_error, this->lw << "error: "
-                << fncName << ": "
-                << "entry block not found");
+        CL_ERROR_MSG(this->lw, fncName << ": " << "entry block not found");
         return;
     }
 

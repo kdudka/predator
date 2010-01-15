@@ -156,8 +156,8 @@ void ClPrettyPrint::fnc_open(
             break;
 
         default:
-            CL_MSG_STREAM(cl_error, LocationWriter(&fnc->loc) << "error: "
-                    << "invalid scope for function: " << fnc->scope);
+            CL_ERROR_MSG(LocationWriter(&fnc->loc),
+                         "invalid scope for function: " << fnc->scope);
     }
     this->printVarType(fnc);
     SSD_COLORIZE(out_, C_LIGHT_BLUE) << fnc_;
@@ -239,6 +239,8 @@ void ClPrettyPrint::printIntegralCst(const struct cl_operand *op) {
 }
 
 void ClPrettyPrint::printCst(const struct cl_operand *op) {
+    const LocationWriter lw(loc_);
+
     enum cl_type_e code = op->data.cst.code;
     switch (code) {
         case CL_TYPE_INT:
@@ -248,8 +250,7 @@ void ClPrettyPrint::printCst(const struct cl_operand *op) {
         case CL_TYPE_FNC:
             this->printVarType(op);
             if (!op->data.cst.data.cst_fnc.name) {
-                CL_MSG_STREAM(cl_error, LocationWriter(loc_) << "error: "
-                        << "anonymous function");
+                CL_ERROR_MSG(lw, "anonymous function");
                 break;
             }
             out_ << SSD_INLINE_COLOR(C_LIGHT_GREEN, op->data.cst.data.cst_fnc.name);
@@ -258,8 +259,7 @@ void ClPrettyPrint::printCst(const struct cl_operand *op) {
         case CL_TYPE_STRING: {
                 const char *text = op->data.cst.data.cst_string.value;
                 if (!text) {
-                    CL_MSG_STREAM(cl_error, LocationWriter(loc_) << "error: "
-                            << "CL_TYPE_STRING with no string");
+                    CL_ERROR_MSG(lw, "CL_TYPE_STRING with no string");
                     break;
                 }
                 SSD_COLORIZE(out_, C_LIGHT_PURPLE) << "\"" << text << "\"";
@@ -405,8 +405,7 @@ void ClPrettyPrint::printNestedVar(const struct cl_operand *op) {
     switch (op->code) {
         case CL_OPERAND_VAR:
             if (!op->data.var.name) {
-                CL_MSG_STREAM(cl_error, LocationWriter(loc_) << "error: "
-                        << "anonymous variable");
+                CL_ERROR_MSG(LocationWriter(loc_), "anonymous variable");
                 break;
             }
             out_ << SSD_INLINE_COLOR(C_LIGHT_BLUE, "%m") << scopeFlag(op->scope)
@@ -430,9 +429,7 @@ void ClPrettyPrint::printNestedVar(const struct cl_operand *op) {
             break;
 
         default:
-            CL_MSG_STREAM(cl_debug, __FILE__ << ":" << __LINE__ << ": "
-                    << "internal error in " << __FUNCTION__
-                    << " [internal location]");
+            CL_ERROR("internal error in " << __FUNCTION__);
             break;
     }
 }
@@ -527,9 +524,8 @@ void ClPrettyPrint::printOperandVar(const struct cl_operand *op) {
 
 void ClPrettyPrint::printOperand(const struct cl_operand *op) {
     if (!op) {
-        CL_MSG_STREAM(cl_debug, LocationWriter(loc_) << "debug: "
-                << "no operand given to " << __FUNCTION__
-                << " [internal location]");
+        const LocationWriter lw(loc_);
+        CL_DEBUG_MSG(lw, "no operand given to " << __FUNCTION__);
         return;
     }
 
@@ -554,9 +550,7 @@ void ClPrettyPrint::printOperand(const struct cl_operand *op) {
 
 void ClPrettyPrint::printAssignmentLhs(const struct cl_operand *lhs) {
     if (!lhs || lhs->code == CL_OPERAND_VOID) {
-        CL_MSG_STREAM(cl_debug, Location(loc_) << "debug: "
-                << "no lhs given to " << __FUNCTION__
-                << " [internal location]");
+        CL_DEBUG_MSG(LocationWriter(loc_), "no lhs given to " << __FUNCTION__);
         return;
     }
 
@@ -896,12 +890,10 @@ ICodeListener* createClPrettyPrint(const char *args, bool showTypes) {
                   /* mode */ 0644);
         if (fd < 0) {
             using namespace boost::system;
-            CL_MSG_STREAM_INTERNAL(cl_error, "error: "
-                    "unable to create file '" << args << "'");
+            CL_ERROR("unable to create file '" << args << "'");
             errc::errc_t ec = static_cast<errc::errc_t>(errno);
             system_error err(errc::make_error_code(ec));
-            CL_MSG_STREAM_INTERNAL(cl_note, "note: "
-                    "got system error '" << err.what() << "'");
+            CL_NOTE("got system error '" << err.what() << "'");
             return 0;
         }
     }

@@ -304,9 +304,7 @@ struct cl_code_listener* cl_code_listener_create(const char *config_string)
         ClFactory factory;
         ICodeListener *listener = factory.create(config_string);
         if (!listener) {
-            CL_MSG_STREAM(cl_error, __FILE__ << ":" << __LINE__ << " error: "
-                    << "failed to create cl_code_listener [internal location]");
-
+            CL_ERROR("failed to create cl_code_listener");
             return NULL;
         }
 

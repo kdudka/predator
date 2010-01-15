@@ -211,12 +211,10 @@ void ClDotGenerator::createDotFile(std::ofstream &str, std::string fileName,
         fileName += ".dot";
 
     str.open(fileName.c_str(), ios::out);
-    if (str) {
+    if (str)
         CL_DEBUG("ClDotGenerator: created dot file '" << fileName << "'");
-    } else {
-        CL_MSG_STREAM_INTERNAL(cl_error, "error: "
-                               "unable to create file '" << fileName << "'");
-    }
+    else
+        CL_ERROR("unable to create file '" << fileName << "'");
 }
 
 void ClDotGenerator::closeSub(std::ofstream &str) {
@@ -225,10 +223,10 @@ void ClDotGenerator::closeSub(std::ofstream &str) {
 
 void ClDotGenerator::closeDot(std::ofstream &str) {
     ClDotGenerator::closeSub(str);
-    if (!str) {
-        CL_MSG_STREAM_INTERNAL(cl_warn, "warning: "
-                "error detected while closing a file");
-    }
+
+    if (!str)
+        CL_WARN("error detected while closing a file");
+
     str.close();
 }
 
@@ -596,8 +594,8 @@ void ClDotGenerator::insn_call_open(const struct cl_location *loc,
             // fall through!!
 
         default:
-            CL_MSG_STREAM(cl_warn, LocationWriter(loc, &loc_) << "warning: "
-                          "ClDotGenerator: unhandled call");
+            CL_WARN_MSG(LocationWriter(loc, &loc_),
+                    "ClDotGenerator: unhandled call");
             return;
     }
 

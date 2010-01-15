@@ -70,7 +70,7 @@ int /* val */ SymHeapProcessor::heapValFromCst(const struct cl_operand &op) {
         case CL_TYPE_STRING: {
             // FIXME: this temporary workaround is highly suboptimal, subtle
             // and error-prone !!!
-            CL_MSG_STREAM(cl_warn, lw_ << "warning: "
+            CL_WARN_MSG(lw_,
                     "CL_TYPE_STRING not supported by heapValFromCst()");
             const int uid = reinterpret_cast<long>(cst.data.cst_string.value);
             return heap_.valCreateCustom(op.type, uid);
@@ -90,12 +90,12 @@ void SymHeapProcessor::heapVarHandleAccessorDeref(int *pObj)
     const int val = heap_.valueOf(*pObj);
     switch (val) {
         case VAL_NULL:
-            CL_MSG_STREAM(cl_error, lw_ << "error: dereference of NULL value");
+            CL_ERROR_MSG(lw_, "dereference of NULL value");
             this->printBackTrace();
             goto fail;
 
         case VAL_UNINITIALIZED:
-            CL_MSG_STREAM(cl_error, lw_ << "error: dereference of uninitialized value");
+            CL_ERROR_MSG(lw_, "dereference of uninitialized value");
             this->printBackTrace();
             goto fail;
 
@@ -211,7 +211,7 @@ bool /* var */ SymHeapProcessor::lhsFromOperand(int *pVar,
     *pVar = this->heapVarFromOperand(op);
     switch (*pVar) {
         case OBJ_UNKNOWN:
-            CL_MSG_STREAM(cl_debug, lw_ << "debug: "
+            CL_DEBUG_MSG(lw_,
                     "ignoring OBJ_UNKNOWN as lhs, this is definitely a bug "
                     "if there is no error reported above...");
             // fall through!
@@ -385,7 +385,7 @@ bool SymHeapProcessor::checkForJunk(int val) {
             getPtrValues(ptrs, heap_, obj);
 
             // destroy junk
-            CL_MSG_STREAM(cl_warn, lw_ << "warning: killing junk");
+            CL_WARN_MSG(lw_, "killing junk");
             heap_.objDestroy(obj);
 
             // schedule just created junk candidates for next wheel
@@ -431,14 +431,15 @@ void SymHeapProcessor::heapSetVal(int /* obj */ lhs, int /* val */ rhs) {
         const int cbGot = heap_.varSizeOfAnon(var);
         const int cbNeed = clt->size;
         if (cbGot != cbNeed) {
-            const bool isErr = (cbGot < cbNeed);
-            CL_MSG_STREAM(((isErr) ? cl_error : cl_warn), lw_
-                    << ((isErr) ? "error" : "warning")
-                    << ": amount of allocated memory not accurate");
-            CL_MSG_STREAM(cl_note, lw_ << "note: allocated: "
-                    << cbGot  << " bytes");
-            CL_MSG_STREAM(cl_note, lw_ << "note:  expected: "
-                    << cbNeed << " bytes");
+            static const char szMsg[] =
+                "amount of allocated memory not accurate";
+            if (cbGot < cbNeed)
+                CL_ERROR_MSG(lw_, szMsg);
+            else
+                CL_WARN_MSG(lw_, szMsg);
+
+            CL_NOTE_MSG(lw_, "allocated: " << cbGot  << " bytes");
+            CL_NOTE_MSG(lw_, " expected: " << cbNeed << " bytes");
         }
 
         heap_.varDefineType(var, clt);
@@ -486,8 +487,7 @@ void SymHeapProcessor::execFree(const CodeStorage::TOperandList &opList) {
 
     switch (val) {
         case VAL_NULL:
-            CL_MSG_STREAM(cl_debug, lw_
-                    << "debug: ignoring free() called with NULL value");
+            CL_DEBUG_MSG(lw_, "ignoring free() called with NULL value");
             // go through!
 
         case VAL_DEREF_FAILED:
@@ -496,8 +496,7 @@ void SymHeapProcessor::execFree(const CodeStorage::TOperandList &opList) {
         case VAL_INVALID:
         case VAL_UNINITIALIZED:
         case VAL_UNKNOWN:
-            CL_MSG_STREAM(cl_error, lw_
-                    << "error: invalid free() detected");
+            CL_ERROR_MSG(lw_, "invalid free() detected");
             this->printBackTrace();
             return;
 
@@ -508,8 +507,7 @@ void SymHeapProcessor::execFree(const CodeStorage::TOperandList &opList) {
     const int obj = heap_.pointsTo(val);
     switch (obj) {
         case OBJ_DELETED:
-            CL_MSG_STREAM(cl_error, lw_
-                    << "error: double free() detected");
+            CL_ERROR_MSG(lw_, "double free() detected");
             this->printBackTrace();
             return;
 
@@ -523,13 +521,12 @@ void SymHeapProcessor::execFree(const CodeStorage::TOperandList &opList) {
     const int cVar = heap_.cVar(obj);
     if (-1 != cVar) {
         CL_DEBUG("about to free var #" << cVar);
-        CL_MSG_STREAM(cl_error, lw_
-                << "error: attempt to free a non-heap object");
+        CL_ERROR_MSG(lw_, "attempt to free a non-heap object");
         this->printBackTrace();
         return;
     }
 
-    CL_MSG_STREAM(cl_debug, lw_ << "debug: executing free()");
+    CL_DEBUG_MSG(lw_, "executing free()");
     // TODO: check for possible free() of non-root
     this->destroyObj(obj);
 }
@@ -559,7 +556,7 @@ void SymHeapProcessor::execMalloc(TState &state,
         TRAP;
 
     const int cbAmount = cst.data.cst_int.value;
-    CL_MSG_STREAM(cl_debug, lw_ << "debug: executing malloc(" << cbAmount << ")");
+    CL_DEBUG_MSG(lw_, "executing malloc(" << cbAmount << ")");
     const int obj = heap_.varCreateAnon(cbAmount);
     if (OBJ_INVALID == obj)
         // unable to create dynamic variable

@@ -260,8 +260,7 @@ void SymHeap::Private::createSubs(int var, const struct cl_type *clt) {
         const enum cl_type_e code = clt->code;
         switch (code) {
             case CL_TYPE_CHAR:
-                CL_MSG_STREAM_INTERNAL(cl_warn, "warning: "
-                        "CL_TYPE_CHAR is not supported by SymHeap for now");
+                CL_WARN("CL_TYPE_CHAR is not supported by SymHeap for now");
                 break;
 
             case CL_TYPE_BOOL:

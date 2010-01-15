@@ -391,8 +391,7 @@ const char* CldCbSeqChk::toString(EState state) {
 }
 
 void CldCbSeqChk::emitUnexpected(const char *what) {
-    CL_MSG_STREAM(cl_error, LocationWriter(0, &loc_) << "error: "
-            << "unexpected callback in state "
+    CL_ERROR_MSG(LocationWriter(0, &loc_), "unexpected callback in state "
             << toString(state_) << " (" << what << ")");
 }
 
@@ -558,10 +557,9 @@ void CldLabelChk::reset() {
 void CldLabelChk::defineLabel(const char *label) {
     LabelState &ls = map_[label];
     if (ls.defined) {
-        CL_MSG_STREAM(cl_error, LocationWriter(loc_) << "error: "
-                << "redefinition of label '" << label << "'");
-        CL_MSG_STREAM(cl_note, LocationWriter(ls.loc) << "note: "
-                << "originally defined here");
+        CL_ERROR_MSG(LocationWriter(loc_), "redefinition of label '"
+                << label << "'");
+        CL_NOTE_MSG(LocationWriter(ls.loc), "originally defined here");
     }
     ls.defined = true;
     if (ls.loc.locLine < 0)
@@ -580,16 +578,13 @@ void CldLabelChk::emitWarnings() {
     for (i = map_.begin(); i != map_.end(); ++i) {
         const std::string label = i->first;
         const LabelState &ls = i->second;
+        const LocationWriter lw(ls.loc, &loc_);
 
-        if (!ls.defined) {
-            CL_MSG_STREAM(cl_error, LocationWriter(ls.loc, &loc_) << "error: "
-                    << "jump to undefined label '" << label << "'");
-        }
+        if (!ls.defined)
+            CL_ERROR_MSG(lw, "jump to undefined label '" << label << "'");
 
-        if (!ls.reachable) {
-            CL_MSG_STREAM(cl_warn, LocationWriter(ls.loc, &loc_) << "warning: "
-                    << "unreachable label '" << label << "'");
-        }
+        if (!ls.reachable)
+            CL_WARN_MSG(lw, "unreachable label '" << label << "'");
     }
 }
 

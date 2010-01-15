@@ -62,8 +62,7 @@ void ClSepLog::run(CodeStorage::Storage &stor) {
     CL_DEBUG("looking for 'main()' at gl scope...");
     CodeStorage::Fnc *main = stor.glFncByName["main"];
     if (!main) {
-        CL_MSG_STREAM_INTERNAL(cl_error,
-                "error: main() not declared at global scope");
+        CL_ERROR("main() not declared at global scope");
         return;
     }
 

@@ -229,7 +229,7 @@ ICodeListener* CldChainFactory::create(const std::string &cldString,
     CL_DEBUG("CldChainFactory: cldString: " << cldString);
     TStringList cldList;
     if (!parseCldString(cldList, cldString)) {
-        CL_INTERNAL_ERROR("ivalid cld= option");
+        CL_ERROR("ivalid cld= option");
         return 0;
     }
 
@@ -241,7 +241,7 @@ ICodeListener* CldChainFactory::create(const std::string &cldString,
         CL_DEBUG("CldChainFactory: looking for decorator: " << cld);
         TMap::iterator i = map_.find(cld);
         if (i == map_.end()) {
-            CL_INTERNAL_ERROR("code_listener decorator not found: " << cld);
+            CL_ERROR("code_listener decorator not found: " << cld);
             return 0;
         }
 
@@ -303,11 +303,11 @@ ICodeListener* ClFactory::create(const char *config_string) {
 
     TStringMap args;
     if (!parseConfigString(args, config_string)) {
-        CL_INTERNAL_ERROR("invalid config_string given to ClFactory");
+        CL_ERROR("invalid config_string given to ClFactory");
         return 0;
     }
     if (!hasKey(args, "listener")) {
-        CL_INTERNAL_ERROR("no listener= option given to ClFactory");
+        CL_ERROR("no listener= option given to ClFactory");
         return 0;
     }
 
@@ -316,7 +316,7 @@ ICodeListener* ClFactory::create(const char *config_string) {
 
     Private::TMap::iterator i = d->map.find(name);
     if (i == d->map.end()) {
-        CL_INTERNAL_ERROR("listener not found: " << name);
+        CL_ERROR("listener not found: " << name);
         return 0;
     }
 

@@ -198,8 +198,7 @@ ClTypeDotGenerator::ClTypeDotGenerator(const char *glDotFile)
     if (glOut_) {
         CL_DEBUG("ClTypeDotGenerator: created dot file '" << glDotFile << "'");
     } else {
-        CL_MSG_STREAM_INTERNAL(cl_error, "error: "
-                               "unable to create file '" << glDotFile << "'");
+        CL_ERROR("unable to create file '" << glDotFile << "'");
     }
     glOut_ << "digraph types" << " {" << std::endl
         << "\tlabel=<<FONT POINT-SIZE=\"18\">"
@@ -214,8 +213,7 @@ ClTypeDotGenerator::~ClTypeDotGenerator() {
 void ClTypeDotGenerator::finalize() {
     glOut_ << "}" << std::endl;
     if (!glOut_) {
-        CL_MSG_STREAM_INTERNAL(cl_warn, "warning: "
-                "error detected while closing a file");
+        CL_WARN("error detected while closing a file");
     }
     glOut_.close();
 }
