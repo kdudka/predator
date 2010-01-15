@@ -19,14 +19,14 @@
 
 #include "symexec.hh"
 
-#include <set>
-#include <stack>
-
 #include "btprint.hh"
 #include "cl_private.hh"
 #include "storage.hh"
 #include "symproc.hh"
 #include "symstate.hh"
+
+#include <set>
+#include <stack>
 
 #include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
@@ -321,7 +321,7 @@ void SymExec::Private::updateState(const CodeStorage::Block *ofBlock,
     if (huni.size() != last)
 
         // schedule for next wheel
-        todo.insert(ofBlock);
+        this->todo.insert(ofBlock);
 }
         
 void SymExec::Private::execCondInsn(const SymbolicHeap::SymHeap &heap)
@@ -479,7 +479,7 @@ void SymExec::Private::execCallInsn(SymbolicHeap::SymHeap heap,
     // create an object for return value (if needed)
     if (haveLhs) {
         // FIXME: improve the interface of SymHeap for the return value
-        heap.objDestroy(SymbolicHeap::OBJ_RETURN);
+        heap.objDestroy(OBJ_RETURN);
         heap.varDefineType(OBJ_RETURN, dst.type);
     }
 
@@ -590,7 +590,7 @@ void SymExec::Private::execFncBody() {
     this->todo.insert(this->bb);
 
     // main loop
-    while (!todo.empty()) {
+    while (!this->todo.empty()) {
         // FIXME: take BBs in some reasonable order instead
         TBlockSet::iterator i = this->todo.begin();
         this->bb = *i;
