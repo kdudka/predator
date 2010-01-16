@@ -214,7 +214,7 @@ $(CILLY):
 distcheck:
 	rm -rfv ../sl_build
 	mkdir ../sl_build
-	cd ../sl_build && cmake ../sl
+	cd ../sl_build && cmake -DCFLAGS=$(CFLAGS) ../sl
 	$(MAKE) -C ../sl_build
 	cd ../sl_build && ctest --output-on-failure $(MAKEOPTS)
 
