@@ -36,7 +36,7 @@ class CldUnfoldSwitch: public ClDecoratorBase {
         }
 
         virtual void insn_switch_open(
-            const struct cl_location*loc,
+            const struct cl_location *,
             const struct cl_operand *src)
         {
             this->cloneSwitchSrc(src);

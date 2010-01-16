@@ -45,9 +45,7 @@ class ClTypeDotGenerator: public ICodeListener {
             fnc_ = fnc->data.cst.data.cst_fnc.name;
         }
 
-        virtual void fnc_arg_decl(
-            int                     arg_id,
-            const struct cl_operand *arg_src)
+        virtual void fnc_arg_decl(int, const struct cl_operand *arg_src)
         {
             this->handleOperand(arg_src);
         }
@@ -56,7 +54,7 @@ class ClTypeDotGenerator: public ICodeListener {
             fnc_.clear();
         }
 
-        virtual void bb_open(const char *bb_name) { }
+        virtual void bb_open(const char *) { }
 
         virtual void insn(const struct cl_insn *cli) {
             switch (cli->code) {
@@ -91,8 +89,7 @@ class ClTypeDotGenerator: public ICodeListener {
             }
         }
 
-        virtual void insn_call_open(
-            const struct cl_location*loc,
+        virtual void insn_call_open(const struct cl_location *,
             const struct cl_operand *dst,
             const struct cl_operand *fnc)
         {
@@ -100,9 +97,7 @@ class ClTypeDotGenerator: public ICodeListener {
             this->handleOperand(fnc);
         }
 
-        virtual void insn_call_arg(
-            int                     arg_id,
-            const struct cl_operand *arg_src)
+        virtual void insn_call_arg(int, const struct cl_operand *arg_src)
         {
             this->handleOperand(arg_src);
         }
@@ -110,17 +105,17 @@ class ClTypeDotGenerator: public ICodeListener {
         virtual void insn_call_close() { }
 
         virtual void insn_switch_open(
-            const struct cl_location*loc,
+            const struct cl_location *,
             const struct cl_operand *src)
         {
             this->handleOperand(src);
         }
 
         virtual void insn_switch_case(
-            const struct cl_location*loc,
+            const struct cl_location *,
             const struct cl_operand *val_lo,
             const struct cl_operand *val_hi,
-            const char              *label)
+            const char *)
         {
             this->handleOperand(val_lo);
             this->handleOperand(val_hi);

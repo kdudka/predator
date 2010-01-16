@@ -350,11 +350,15 @@ void SymHeap::haveValue(TCont /* obj[] */ &dst, int val) const {
 
 void SymHeap::notEqualTo(TCont /* obj[] */ &dst, int obj) const {
     // TODO
+    (void) dst;
+    (void) obj;
     TRAP;
 }
 
 bool SymHeap::notEqual(int obj1, int obj2) const {
     // TODO
+    (void) obj1;
+    (void) obj2;
     TRAP;
     return false;
 }
@@ -541,6 +545,8 @@ int /* sls */ SymHeap::slsCreate(const struct cl_type *clt,
                                  const struct cl_accessor *selector)
 {
     // TODO
+    (void) clt;
+    (void) selector;
     TRAP;
     return OBJ_INVALID;
 }
@@ -586,11 +592,15 @@ void SymHeap::objDestroy(int obj) {
 
 void SymHeap::addNeq(int obj1, int obj2) {
     // TODO
+    (void) obj1;
+    (void) obj2;
     TRAP;
 }
 
 void SymHeap::delNeq(int obj1, int obj2) {
     // TODO
+    (void) obj1;
+    (void) obj2;
     TRAP;
 }
 

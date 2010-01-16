@@ -63,20 +63,20 @@ macro(ADD_CXX_ONLY_FLAG opt_name opt)
 endmacro()
 
 # we use c99 to compile *.c and c++0x to copmile *.cc
-ADD_C_ONLY_FLAG(  "C99"             "-std=c99")
+ADD_C_ONLY_FLAG(  "STD_C99"         "-std=c99")
 ADD_CXX_ONLY_FLAG("STD_CXX_0X"      "-std=c++0x")
 
 # tweak warnings
-ADD_C_FLAG("PEDANTIC"               "-pedantic")
-ADD_C_FLAG("W_ALL"                  "-Wall")
+ADD_C_FLAG(       "PEDANTIC"        "-pedantic")
+ADD_C_FLAG(       "W_ALL"           "-Wall")
 ADD_CXX_ONLY_FLAG("W_NO_DEPRECATED" "-Wno-deprecated")
 
-option(SL_WEXTRA "Set to ON to use -Wextra (recommended)" OFF)
+option(SL_WEXTRA "Set to ON to use -Wextra (recommended)" ON)
 if(SL_WEXTRA)
     ADD_C_FLAG("W_EXTRA" "-Wextra")
 endif()
 
-option(SL_WERROR "Set to ON to use -Werror (recommended)" ON)
+option(SL_WERROR "Set to ON to use -Werror (recommended)" OFF)
 if(SL_WERROR)
     ADD_C_FLAG("W_ERROR" "-Werror")
 endif()

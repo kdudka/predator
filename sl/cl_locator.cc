@@ -58,7 +58,7 @@ class ClLocator: public ICodeListener {
             lastLoc_ = loc;
         }
 
-        virtual void insn_call_arg(int arg_id, const struct cl_operand *) { }
+        virtual void insn_call_arg(int, const struct cl_operand *) { }
         virtual void insn_call_close() { }
 
         virtual void insn_switch_open(const struct cl_location *loc,
@@ -109,7 +109,7 @@ void ClLocator::printLocation(const struct cl_location *loc) {
 
 // /////////////////////////////////////////////////////////////////////////////
 // public interface, see cl_locator.hh for more details
-ICodeListener* createClLocator(const char *args) {
+ICodeListener* createClLocator(const char *) {
     // TODO: open a file with open(2) if a file name is given in ARGS
     return new ClLocator(STDOUT_FILENO);
 }

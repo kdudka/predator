@@ -622,7 +622,7 @@ void ClPrettyPrint::printInsnRet(const struct cl_insn *cli) {
     out_ << std::endl;
 }
 
-void ClPrettyPrint::printInsnAbort(const struct cl_insn *cli) {
+void ClPrettyPrint::printInsnAbort(const struct cl_insn *) {
     out_ << "\t\t"
         << SSD_INLINE_COLOR(C_LIGHT_RED, "abort")
         << std::endl;
