@@ -64,6 +64,8 @@ namespace {
         SymHeapProcessor proc(heap);
         BOOST_FOREACH(int arg, args) {
             const struct cl_operand &op = opList[pos++];
+            proc.setLocation(&op.loc);
+
             const int val = proc.heapValFromOperand(op);
             if (SymbolicHeap::VAL_INVALID == val)
                 TRAP;
@@ -87,6 +89,8 @@ namespace {
             return;
 
         SymHeapProcessor proc(heap);
+        proc.setLocation(&op.loc);
+
         const int obj = proc.heapVarFromOperand(op);
         if (OBJ_INVALID == obj)
             TRAP;
@@ -290,6 +294,8 @@ void SymExec::Private::execReturn(SymbolicHeap::SymHeap heap)
     const struct cl_operand &src = opList[0];
     if (CL_OPERAND_VOID != src.code) {
         SymHeapProcessor proc(heap, this);
+        proc.setLocation(this->lw);
+
         const int val = proc.heapValFromOperand(src);
         if (VAL_INVALID == val)
             TRAP;
@@ -325,7 +331,9 @@ void SymExec::Private::execCondInsn(const SymbolicHeap::SymHeap &heap)
     if (2 != tlist.size() || 1 != oplist.size())
         TRAP;
 
-    SymHeapProcessor proc(const_cast<SymHeap &>(heap));
+    SymHeapProcessor proc(const_cast<SymHeap &>(heap), this);
+    proc.setLocation(this->lw);
+
     const int val = proc.heapValFromOperand(oplist[0]);
     switch (val) {
         case VAL_TRUE:
@@ -392,7 +400,9 @@ int SymExec::Private::resolveCallee(const SymbolicHeap::SymHeap &heap,
 
     } else {
         // indirect call
-        SymHeapProcessor proc(const_cast<SymHeap &>(heap));
+        SymHeapProcessor proc(const_cast<SymHeap &>(heap), this);
+        proc.setLocation(this->lw);
+
         const int val = proc.heapValFromOperand(op);
         if (VAL_INVALID == val)
             // Oops, it does not look as indirect call actually
@@ -497,7 +507,9 @@ fail:
 
     if (haveLhs) {
         // set return value to unknown
-        SymHeapProcessor proc(heap);
+        SymHeapProcessor proc(heap, this);
+        proc.setLocation(this->lw);
+
         const int obj = proc.heapVarFromOperand(dst);
         heap.objSetValue(obj, VAL_UNKNOWN);
     }
@@ -529,6 +541,7 @@ void SymExec::Private::execInsn(SymHeapUnion &localState) {
             // working area for non-term instructions
             SymHeap workingHeap(heap);
             SymHeapProcessor proc(workingHeap, this);
+            proc.setLocation(this->lw);
 
             // NOTE: this has to be tried *before* execCallInsn() to eventually
             // catch malloc()/free() calls, which are treated differently
