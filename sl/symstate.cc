@@ -194,7 +194,6 @@ namespace SymbolicHeap {
                 // variable mismatch
                 return false;
 
-            // TODO: here handle structured variables
             value1 = heap1.valueOf(obj1);
             value2 = heap2.valueOf(obj2);
             if (!matchValues(valSubst, value1, value2))

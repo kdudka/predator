@@ -622,7 +622,7 @@ void SymExec::Private::execBb() {
 
         // execute current instruction on localState
         CL_DEBUG_MSG(this->lw, "!!! executing insn #" << (++iCnt)
-                << " of BB " << name << "...");
+                << " of BB " << name);
 
         this->insn = insn;
         this->execInsn(localState);
@@ -646,8 +646,6 @@ void SymExec::Private::execFncBody() {
 
         this->execBb();
     }
-
-    CL_DEBUG_MSG(this->lw, "<<< leaving " << nameOf(*this->fnc));
 }
 
 void SymExec::Private::execFnc(const SymbolicHeap::SymHeap &init)
@@ -655,10 +653,12 @@ void SymExec::Private::execFnc(const SymbolicHeap::SymHeap &init)
     using namespace CodeStorage;
     using SymbolicHeap::SymHeap;
 
+    // look for fnc name
     const std::string &fncName = nameOf(*this->fnc);
     this->lw = &fnc->def.loc;
     CL_DEBUG_MSG(this->lw, ">>> entering " << fncName << "()");
 
+    // look for entry block
     const Block *&entry = this->bb;
     entry = fnc->cfg.entry();
     if (!entry) {
@@ -672,4 +672,7 @@ void SymExec::Private::execFnc(const SymbolicHeap::SymHeap &init)
 
     // now we are ready for symbolic execution
     this->execFncBody();
+
+    // done
+    CL_DEBUG_MSG(this->lw, "<<< leaving " << nameOf(*this->fnc) << "()");
 }
