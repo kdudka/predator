@@ -43,6 +43,11 @@
 #define DEBUG_CL_FACTORY                0
 
 /**
+ * if 1, print created/destroyed stack variables when running in verbose mode
+ */
+#define DEBUG_SE_STACK_FRAME            0
+
+/**
  * if 1, print gcc callbacks as they come when running in verbose mode
  */
 #define DEBUG_SLPLUG                    0

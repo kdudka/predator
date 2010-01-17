@@ -17,6 +17,7 @@
  * along with sl.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "config.h"
 #include "symexec.hh"
 
 #include "btprint.hh"
@@ -31,20 +32,28 @@
 #include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
 
+#ifndef DEBUG_SE_STACK_FRAME
+#   define DEBUG_SE_STACK_FRAME 0
+#endif
+
 // utilities
 namespace {
     void createStackFrame(SymbolicHeap::SymHeap &heap,
                           const CodeStorage::Fnc &fnc)
     {
         using CodeStorage::Var;
+#if DEBUG_SE_STACK_FRAME
         LocationWriter lw(&fnc.def.loc);
         CL_DEBUG_MSG(lw,
                 ">>> creating stack frame for " << nameOf(fnc) << "():");
+#endif
 
         BOOST_FOREACH(const Var &var, fnc.vars) {
+#if DEBUG_SE_STACK_FRAME
             lw = &var.loc;
-            CL_DEBUG_MSG(lw, "--- creating stack variable: #" << var.uid
+            CL_DEBUG_MSG(lw, ">>> creating stack variable: #" << var.uid
                     << " (" << var.name << ")" );
+#endif
 
             heap.varCreate(var.clt, var.uid);
         }
@@ -124,9 +133,11 @@ namespace {
         SymHeapProcessor proc(heap, bt);
 
         BOOST_FOREACH(const Var &var, fnc.vars) {
-            LocationWriter lw(&var.loc);
-            CL_DEBUG_MSG(lw, "--- destroying stack variable: #"
+            const LocationWriter lw(&var.loc);
+#if DEBUG_SE_STACK_FRAME
+            CL_DEBUG_MSG(lw, "<<< destroying stack variable: #"
                     << var.uid << " (" << var.name << ")" );
+#endif
 
             const int obj = heap.varByCVar(var.uid);
             if (obj < 0)
@@ -143,14 +154,20 @@ namespace {
                            const CodeStorage::Fnc &fnc)
     {
         using SymbolicHeap::SymHeap;
-        LocationWriter lw(&fnc.def.loc);
+
+#if DEBUG_SE_STACK_FRAME
+        const LocationWriter lw(&fnc.def.loc);
         CL_DEBUG_MSG(lw, "<<< destroying stack frame of "
                 << nameOf(fnc) << "():");
 
         int hCnt = 0;
+#endif
+
         BOOST_FOREACH(SymHeap &heap, huni) {
+#if DEBUG_SE_STACK_FRAME
             CL_DEBUG_MSG(lw, "*** destroying stack frame in result #"
                     << (++hCnt));
+#endif
             destroyStackFrame(bt, heap, fnc);
         }
     }
@@ -317,11 +334,18 @@ void SymExec::Private::updateState(const CodeStorage::Block *ofBlock,
     const size_t last = huni.size();
     huni.insert(heap);
 
-    // check if anything has changed
-    if (huni.size() != last)
+    const std::string &name = ofBlock->name();
 
+    // check if anything has changed
+    if (huni.size() == last) {
+        CL_DEBUG_MSG(lw, "--- block " << name << " left intact");
+
+    } else {
         // schedule for next wheel
         this->todo.insert(ofBlock);
+
+        CL_DEBUG_MSG(lw, "+++ block " << name << " scheduled for next wheel");
+    }
 }
         
 void SymExec::Private::execCondInsn(const SymbolicHeap::SymHeap &heap)
@@ -339,14 +363,17 @@ void SymExec::Private::execCondInsn(const SymbolicHeap::SymHeap &heap)
     const int val = proc.heapValFromOperand(oplist[0]);
     switch (val) {
         case VAL_TRUE:
+            CL_DEBUG_MSG(this->lw, ".T. CL_INSN_COND got VAL_TRUE");
             this->updateState(tlist[/* then label */ 0], heap);
             break;
 
         case VAL_FALSE:
+            CL_DEBUG_MSG(this->lw, ".F. CL_INSN_COND got VAL_FALSE");
             this->updateState(tlist[/* else label */ 1], heap);
             break;
 
         case VAL_UNKNOWN:
+            CL_DEBUG_MSG(this->lw, "??? CL_INSN_COND got VAL_UNKNOWN");
             // TODO: check for inconsistency here!
             // TODO: set val to VAL_TRUE in target 0
             // TODO: set val to VAL_FALSE in target 1
@@ -540,8 +567,10 @@ void SymExec::Private::execInsn(SymHeapUnion &localState) {
     // go through all symbolic heaps corresponding to localState
     int hCnt = 0;
     BOOST_FOREACH(const SymHeap &heap, localState) {
-        CL_DEBUG_MSG(this->lw, "*** processing heap #"
-                << (++hCnt) << " of BB " << bb->name() << "...");
+        if (1 < localState.size()) {
+            CL_DEBUG_MSG(this->lw, "*** processing heap #"
+                    << (++hCnt) << " of BB " << bb->name());
+        }
 
         if (isTerm) {
             // terminal insn
@@ -571,7 +600,7 @@ void SymExec::Private::execBb() {
     using SymbolicHeap::SymHeap;
 
     const std::string &name = bb->name();
-    CL_DEBUG_MSG(lw, ">>> entering " << name << "...");
+    CL_DEBUG_MSG(lw, "___ entering " << name << "...");
 
     // this state will be changed per each instruction
     // NOTE: it may grow significantly on any CL_INSN_CALL instruction
@@ -585,7 +614,7 @@ void SymExec::Private::execBb() {
             this->lw = &insn->loc;
 
         // execute current instruction on localState
-        CL_DEBUG_MSG(this->lw, "--- executing insn #" << (++iCnt)
+        CL_DEBUG_MSG(this->lw, "!!! executing insn #" << (++iCnt)
                 << " of BB " << name << "...");
 
         this->insn = insn;
@@ -611,7 +640,7 @@ void SymExec::Private::execFncBody() {
         this->execBb();
     }
 
-    CL_DEBUG_MSG(this->lw, "execFncBody(): main loop terminated correctly...");
+    CL_DEBUG_MSG(this->lw, "<<< leaving " << nameOf(*this->fnc));
 }
 
 void SymExec::Private::execFnc(const SymbolicHeap::SymHeap &init)
@@ -621,7 +650,7 @@ void SymExec::Private::execFnc(const SymbolicHeap::SymHeap &init)
 
     const std::string &fncName = nameOf(*this->fnc);
     this->lw = &fnc->def.loc;
-    CL_DEBUG_MSG(this->lw, ">>> entering " << fncName << "()...");
+    CL_DEBUG_MSG(this->lw, ">>> entering " << fncName << "()");
 
     const Block *&entry = this->bb;
     entry = fnc->cfg.entry();
