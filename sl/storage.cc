@@ -79,8 +79,8 @@ namespace {
     const struct cl_type* digVarType(const struct cl_operand *op) {
         const struct cl_accessor *ac = op->accessor;
 
-        // FIXME: this was not tested very well for all types of accessors
-        return (ac && ac->code != CL_ACCESSOR_REF)
+        // FIXME: this hasn't been tested very well for all types of accessors
+        return (ac)
             ? ac->type
             : op->type;
     }

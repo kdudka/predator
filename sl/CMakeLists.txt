@@ -139,7 +139,7 @@ add_test("compile-self" ${gcc45}
     -fplugin=${sl_BINARY_DIR}/libslplug.so
     -fplugin-arg-libslplug-bypass-seplog)
 
-set(examples 0002 0003 0004 0005 0006 0007 0008 0009 0010 0011 0012 0013)
+set(examples 0002 0003 0004 0005 0006 0007 0008 0009 0010 0011 0012 0013 0014)
 
 # FIXME: define this macro more generically, in particular the count of args
 macro(test_sym_exec label tool arg1 arg2)

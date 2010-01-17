@@ -164,7 +164,9 @@ void SymHeapProcessor::heapVarHandleAccessor(int *pObj,
             return;
 
         case CL_ACCESSOR_DEREF_ARRAY:
-            TRAP;
+            CL_WARN_MSG(lw_, "CL_ACCESSOR_DEREF_ARRAY not implemented yet");
+            *pObj = SymbolicHeap::OBJ_DEREF_FAILED;
+            return;
     }
 }
 
@@ -348,9 +350,8 @@ namespace {
                     }
                     break;
 
+                case CL_TYPE_ARRAY:
                 case CL_TYPE_CHAR:
-                    // TODO
-                    // fall through!
                 case CL_TYPE_BOOL:
                 case CL_TYPE_INT:
                     break;
@@ -667,17 +668,6 @@ void SymHeapProcessor::execBinary(const CodeStorage::Insn &insn) {
     using namespace SymbolicHeap;
 
     const enum cl_binop_e code = static_cast<enum cl_binop_e> (insn.subCode);
-    bool neg = false;
-    switch (code) {
-        case CL_BINOP_NE:
-            neg = true;
-            // fall through!
-        case CL_BINOP_EQ:
-            break;
-
-        default:
-            TRAP;
-    }
 
     // resolve dst
     int dst;
@@ -689,17 +679,35 @@ void SymHeapProcessor::execBinary(const CodeStorage::Insn &insn) {
     const int val2 = heapValFromOperand(insn.operands[2]);
     int val = handleSpecialValues(val1, val2);
 
+    bool neg = false;
+    bool result;
+    if (val)
+        goto done;
+
+    switch (code) {
+        case CL_BINOP_NE:
+            neg = true;
+            // fall through!
+        case CL_BINOP_EQ:
+            break;
+
+        default:
+            CL_WARN_MSG(lw_, "binary operator not implemented yet");
+            val = VAL_UNKNOWN;
+            goto done;
+    }
+
     // execute CL_BINOP_EQ/CL_BINOP_NE
-    bool result = (val1 == val2);
+    result = (val1 == val2);
     if (neg)
         result = !result;
 
     // convert bool result to a heap value
-    if (!val)
-        val = (result)
-            ? VAL_TRUE
-            : VAL_FALSE;
+    val = (result)
+        ? VAL_TRUE
+        : VAL_FALSE;
 
+done:
     // store resulting value
     heap_.objSetValue(dst, val);
 }

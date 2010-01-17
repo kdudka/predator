@@ -259,6 +259,10 @@ void SymHeap::Private::createSubs(int var, const struct cl_type *clt) {
         // FIXME: check whether clt may be NULL at this point
         const enum cl_type_e code = clt->code;
         switch (code) {
+            case CL_TYPE_ARRAY:
+                CL_WARN("CL_TYPE_ARRAY is not supported by SymHeap for now");
+                break;
+
             case CL_TYPE_CHAR:
                 CL_WARN("CL_TYPE_CHAR is not supported by SymHeap for now");
                 break;
@@ -459,6 +463,11 @@ int /* var */ SymHeap::varCreate(const struct cl_type *clt,
         case CL_TYPE_STRUCT:
             break;
 
+        case CL_TYPE_ARRAY:
+            if (CL_TYPE_CHAR == clt->items[0].type->code)
+                // make it possible to at least ignore strings
+                break;
+            // fall thorough!
         default:
             TRAP;
     }

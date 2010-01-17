@@ -130,6 +130,9 @@ namespace {
                     }
                     break;
 
+                case CL_TYPE_INT:
+                    break;
+
                 default:
                     // other type of values should be safe to ignore here
                     // but worth to check by a debugger at least once anyway

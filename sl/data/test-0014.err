@@ -1,0 +1,24 @@
+test-0014.c:227:13: warning: unused local variable 'list'
+test-0014.c:227:13: warning: unused local variable 'size'
+test-0014.c:218:13: warning: unused local variable 'msg'
+test-0014.c:37:6: warning: unused local variable 'msg'
+test-0014.c:218:13: warning: CL_TYPE_STRING not supported by heapValFromCst()
+test-0014.c:218:13: warning: CL_TYPE_STRING not supported by heapValFromCst()
+test-0014.c:51:9: warning: CL_ACCESSOR_DEREF_ARRAY not implemented yet
+test-0014.c:218:13: warning: CL_TYPE_STRING not supported by heapValFromCst()
+test-0014.c:51:9: warning: CL_ACCESSOR_DEREF_ARRAY not implemented yet
+test-0014.c:218:13: warning: CL_TYPE_STRING not supported by heapValFromCst()
+test-0014.c:218:13: warning: CL_TYPE_STRING not supported by heapValFromCst()
+test-0014.c:51:9: warning: CL_ACCESSOR_DEREF_ARRAY not implemented yet
+test-0014.c:218:13: warning: CL_TYPE_STRING not supported by heapValFromCst()
+test-0014.c:218:13: warning: CL_TYPE_STRING not supported by heapValFromCst()
+test-0014.c:218:13: warning: CL_TYPE_STRING not supported by heapValFromCst()
+test-0014.c:218:13: warning: CL_TYPE_STRING not supported by heapValFromCst()
+test-0014.c:51:9: warning: CL_ACCESSOR_DEREF_ARRAY not implemented yet
+test-0014.c:218:13: warning: CL_TYPE_STRING not supported by heapValFromCst()
+test-0014.c:51:9: warning: CL_ACCESSOR_DEREF_ARRAY not implemented yet
+test-0014.c:218:13: warning: CL_TYPE_STRING not supported by heapValFromCst()
+test-0014.c:51:9: warning: CL_ACCESSOR_DEREF_ARRAY not implemented yet
+test-0014.c:218:13: warning: CL_TYPE_STRING not supported by heapValFromCst()
+test-0014.c:218:13: warning: CL_TYPE_STRING not supported by heapValFromCst()
+test-0014.c:218:13: warning: CL_TYPE_STRING not supported by heapValFromCst()

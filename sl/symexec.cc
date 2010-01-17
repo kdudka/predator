@@ -64,7 +64,9 @@ namespace {
         SymHeapProcessor proc(heap);
         BOOST_FOREACH(int arg, args) {
             const struct cl_operand &op = opList[pos++];
-            proc.setLocation(&op.loc);
+            const Location last(&fnc.def.loc);
+            const LocationWriter lw(&op.loc, &last);
+            proc.setLocation(lw);
 
             const int val = proc.heapValFromOperand(op);
             if (SymbolicHeap::VAL_INVALID == val)
