@@ -40,11 +40,29 @@ namespace {
         return a != b;
     }
 
+    void sortValues(int &v1, int &v2) {
+        if (v1 <= v2)
+            return;
+
+        const int tmp = v1;
+        v1 = v2;
+        v2 = tmp;
+    }
+
     template <class TSubst>
     bool matchValues(TSubst &subst, int v1, int v2) {
         if (checkNonPosValues(v1, v2))
             // null vs. non-null, etc.
             return false;
+
+        // we need to have the values always in the same order to guarantee
+        // the substitution to be bijective ... there used to be a nasty bug
+        // at this point, leading to the following nonsense:
+        //   [17] = 17
+        //   [18] = 18
+        //   [35] = 17
+        //   [36] = 18
+        sortValues(v1, v2);
 
         typename TSubst::iterator iter = subst.find(v1);
         if (iter != subst.end())
