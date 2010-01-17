@@ -42,6 +42,16 @@
 #   define CL_DEBUG_CLD 0
 #endif
 
+#ifndef DEBUG_CL_FACTORY
+#   define DEBUG_CL_FACTORY 0
+#endif
+
+#if DEBUG_CL_FACTORY
+#   define CL_FACTORY_DEBUG(what) CL_DEBUG(what)
+#else
+#   define CL_FACTORY_DEBUG(what) (void) 0
+#endif
+
 using std::string;
 
 namespace {
@@ -226,7 +236,7 @@ CldChainFactory::CldChainFactory() {
 ICodeListener* CldChainFactory::create(const std::string &cldString,
                                        ICodeListener *slave)
 {
-    CL_DEBUG("CldChainFactory: cldString: " << cldString);
+    CL_FACTORY_DEBUG("CldChainFactory: cldString: " << cldString);
     TStringList cldList;
     if (!parseCldString(cldList, cldString)) {
         CL_ERROR("ivalid cld= option");
@@ -238,7 +248,7 @@ ICodeListener* CldChainFactory::create(const std::string &cldString,
     TStringList::reverse_iterator i;
     for (i = cldList.rbegin(); chain && (i != cldList.rend()); ++i) {
         const string &cld = *i;
-        CL_DEBUG("CldChainFactory: looking for decorator: " << cld);
+        CL_FACTORY_DEBUG("CldChainFactory: looking for decorator: " << cld);
         TMap::iterator i = map_.find(cld);
         if (i == map_.end()) {
             CL_ERROR("code_listener decorator not found: " << cld);
@@ -247,13 +257,13 @@ ICodeListener* CldChainFactory::create(const std::string &cldString,
 
         chain = (i->second)(chain);
         if (chain)
-            CL_DEBUG("CldChainFactory: decorator '" << cld
+            CL_FACTORY_DEBUG("CldChainFactory: decorator '" << cld
                     << "' created successfully");
 
 #if CL_DEBUG_CLD
         chain = createCldIntegrityChk(chain);
         if (chain)
-            CL_DEBUG("CldChainFactory: integrity checker for '" << cld
+            CL_FACTORY_DEBUG("CldChainFactory: integrity checker for '" << cld
                     << "' created successfully");
         else
             return 0;
@@ -299,7 +309,7 @@ ClFactory::~ClFactory() {
 }
 
 ICodeListener* ClFactory::create(const char *config_string) {
-    CL_DEBUG("ClFactory: config_string: " << config_string);
+    CL_FACTORY_DEBUG("ClFactory: config_string: " << config_string);
 
     TStringMap args;
     if (!parseConfigString(args, config_string)) {
@@ -312,7 +322,7 @@ ICodeListener* ClFactory::create(const char *config_string) {
     }
 
     const string &name = args["listener"];
-    CL_DEBUG("ClFactory: looking for listener: " << name);
+    CL_FACTORY_DEBUG("ClFactory: looking for listener: " << name);
 
     Private::TMap::iterator i = d->map.find(name);
     if (i == d->map.end()) {
@@ -321,7 +331,7 @@ ICodeListener* ClFactory::create(const char *config_string) {
     }
 
     const string &listenerArgs = args["listener_args"];
-    CL_DEBUG("ClFactory: creating listener '" << name << "' "
+    CL_FACTORY_DEBUG("ClFactory: creating listener '" << name << "' "
              "with args '" << listenerArgs << "'");
 
     ICodeListener *cl = (i->second)(listenerArgs.c_str());
@@ -329,10 +339,12 @@ ICodeListener* ClFactory::create(const char *config_string) {
         return 0;
 
     cl = createCldIntegrityChk(cl);
-    if (cl)
-        CL_DEBUG("ClFactory: createCldIntegrityChk() completed successfully");
-    else
+    if (cl) {
+        CL_FACTORY_DEBUG(
+                "ClFactory: createCldIntegrityChk() completed successfully");
+    } else {
         return 0;
+    }
 
     if (hasKey(args, "cld"))
         cl = d->cldFactory.create(args["cld"], cl);

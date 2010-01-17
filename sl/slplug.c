@@ -20,6 +20,7 @@
 // this include has to be the first (according the gcc plug-in API)
 #include <gcc/gcc-plugin.h>
 
+#include "config.h"
 #include "code_listener.h"
 
 #include <gcc/coretypes.h>
@@ -45,6 +46,10 @@
 #include <signal.h>
 #define TRAP raise(SIGTRAP)
 
+#ifndef DEBUG_SLPLUG
+#   define DEBUG_SLPLUG 0
+#endif
+
 #ifndef STREQ
 #   define STREQ(s1, s2) (0 == strcmp(s1, s2))
 #endif
@@ -53,14 +58,17 @@
 #define SL_ASSERT(expr) \
     if (!(expr)) abort()
 
-// TODO: replace with gcc native debugging infrastructure
-#define SL_LOG(...) do { \
-    if (SL_VERBOSE_PLUG & verbose) { \
-        fprintf (stderr, "%s:%d: %s: ", __FILE__, __LINE__, plugin_name); \
-        fprintf (stderr, __VA_ARGS__); \
-        fprintf (stderr, " [internal location]\n"); \
-    } \
-} while (0)
+#if DEBUG_SLPLUG
+#   define SL_LOG(...) do { \
+        if (SL_VERBOSE_PLUG & verbose) { \
+            fprintf (stderr, "%s:%d: %s: ", __FILE__, __LINE__, plugin_name); \
+            fprintf (stderr, __VA_ARGS__); \
+            fprintf (stderr, " [internal location]\n"); \
+        } \
+    } while (0)
+#else
+#   define SL_LOG(...) (void) 0
+#endif
 
 // TODO: replace with gcc native debugging infrastructure
 #define SL_LOG_FNC \
@@ -1488,6 +1496,9 @@ int plugin_init (struct plugin_name_args *plugin_info,
                  struct plugin_gcc_version *version)
 {
     struct sl_plug_options opt;
+
+    // suppress compile-time warning when (DEBUG_SLPLUG == 0)
+    (void) version;
 
     // global initialization
     int rv = slplug_init(plugin_info, &opt);
