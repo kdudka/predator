@@ -338,13 +338,20 @@ void SymExec::Private::updateState(const CodeStorage::Block *ofBlock,
 
     // check if anything has changed
     if (huni.size() == last) {
-        CL_DEBUG_MSG(lw, "--- block " << name << " left intact");
+        CL_DEBUG_MSG(this->lw, "--- block " << name << " left intact");
 
     } else {
-        // schedule for next wheel
+        const size_t last = this->todo.size();
+
+        // schedule for next wheel (if not already)
         this->todo.insert(ofBlock);
 
-        CL_DEBUG_MSG(lw, "+++ block " << name << " scheduled for next wheel");
+        const bool already = (this->todo.size() == last);
+        CL_DEBUG_MSG(this->lw, ((already) ? "-+-" : "+++")
+                << " block " << name
+                << ((already)
+                    ? " changed, but already scheduled"
+                    : " scheduled for next wheel"));
     }
 }
         
@@ -600,7 +607,7 @@ void SymExec::Private::execBb() {
     using SymbolicHeap::SymHeap;
 
     const std::string &name = bb->name();
-    CL_DEBUG_MSG(lw, "___ entering " << name << "...");
+    CL_DEBUG_MSG(lw, "___ entering " << name);
 
     // this state will be changed per each instruction
     // NOTE: it may grow significantly on any CL_INSN_CALL instruction
