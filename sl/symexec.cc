@@ -346,6 +346,14 @@ void SymExec::Private::execCondInsn(const SymbolicHeap::SymHeap &heap)
             this->updateState(tlist[/* else label */ 1], heap);
             break;
 
+        case VAL_UNKNOWN:
+            // TODO: check for inconsistency here!
+            // TODO: set val to VAL_TRUE in target 0
+            // TODO: set val to VAL_FALSE in target 1
+            this->updateState(tlist[/* then label */ 0], heap);
+            this->updateState(tlist[/* else label */ 1], heap);
+            break;
+
         case VAL_DEREF_FAILED:
             // error should have been already emitted
             CL_DEBUG_MSG(this->lw, "ignored VAL_DEREF_FAILED");
@@ -615,7 +623,6 @@ void SymExec::Private::execFnc(const SymbolicHeap::SymHeap &init)
     this->lw = &fnc->def.loc;
     CL_DEBUG_MSG(this->lw, ">>> entering " << fncName << "()...");
 
-    CL_DEBUG("looking for entry block...");
     const Block *&entry = this->bb;
     entry = fnc->cfg.entry();
     if (!entry) {
