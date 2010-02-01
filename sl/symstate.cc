@@ -74,6 +74,30 @@ namespace {
         return true;
     }
 
+    template <class TSubst, class THeap>
+    bool matchValues(TSubst &subst, const THeap &heap1, const THeap &heap2,
+                     int v1, int v2)
+    {
+        using namespace SymbolicHeap;
+
+        if (v1 <= 0 || v2 <= 0)
+            // this can't be a pair of custom values
+            return matchValues(subst, v1, v2);
+
+        const int cVal1 = heap1.valGetCustom(0, v1);
+        const int cVal2 = heap2.valGetCustom(0, v2);
+        if (OBJ_INVALID == cVal1 && OBJ_INVALID == cVal2)
+            // this can't be a pair of custom values
+            return matchValues(subst, v1, v2);
+
+        if (OBJ_INVALID == cVal1 || OBJ_INVALID == cVal2)
+            // custom and non-custom values are going to be compared
+            TRAP;
+
+        // match custom values
+        return (cVal1 == cVal2);
+    }
+
     template <class THeap>
     bool skipValue(const THeap &heap, int value) {
         using namespace SymbolicHeap;
@@ -87,16 +111,14 @@ namespace {
             return true;
 
         if (VAL_INVALID != heap.valGetCustom(0, value))
-            // we can't follow fnc pointers by pointsTo() since they are
-            // sort of virtual from this aspect (and we of course do
-            // not need to follow them)
+            // don't follow fnc pointers (and other custom values) by pointsTo()
             return true;
 
         return false;
     }
 
     template<class TStack, class THeap>
-    bool digComposite(TStack &dst, const THeap heap1, const THeap heap2,
+    bool digComposite(TStack &dst, const THeap &heap1, const THeap &heap2,
                       int value1, int value2)
     {
         using namespace SymbolicHeap;
@@ -183,7 +205,7 @@ namespace SymbolicHeap {
                 continue;
 
             // FIXME: this appears twice because of digComposite
-            if (!matchValues(valSubst, value1, value2))
+            if (!matchValues(valSubst, heap1, heap2, value1, value2))
                 // value mismatch
                 return false;
 
@@ -196,7 +218,7 @@ namespace SymbolicHeap {
 
             value1 = heap1.valueOf(obj1);
             value2 = heap2.valueOf(obj2);
-            if (!matchValues(valSubst, value1, value2))
+            if (!matchValues(valSubst, heap1, heap2, value1, value2))
                 // value mismatch
                 return false;
 
@@ -237,7 +259,7 @@ namespace SymbolicHeap {
             // retrieve values of static variables
             const int value1 = heap1.valueOf(var1);
             const int value2 = heap2.valueOf(var2);
-            if (!matchValues(valSubst, value1, value2))
+            if (!matchValues(valSubst, heap1, heap2, value1, value2))
                 // value mismatch, bail out now
                 return false;
 
