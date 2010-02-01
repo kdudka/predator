@@ -622,7 +622,7 @@ int /* val */ SymHeap::valCreateCustom(const struct cl_type *clt, int cVal)
         return val;
     }
 
-    // custom value already defined, we has to reuse it
+    // custom value already defined, we have to reuse it
     const int val = ii->second;
     TValueMap::iterator vi = d->valueMap.find(val);
     if (d->valueMap.end() == vi)

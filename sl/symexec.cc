@@ -86,7 +86,7 @@ namespace {
                 TRAP;
 
             // set arg's value
-            heap.objSetValue(lhs, val);
+            proc.heapSetVal(lhs, val);
         }
     }
 
@@ -319,7 +319,7 @@ void SymExec::Private::execReturn(SymbolicHeap::SymHeap heap)
         if (VAL_INVALID == val)
             TRAP;
 
-        heap.objSetValue(OBJ_RETURN, val);
+        proc.heapSetVal(OBJ_RETURN, val);
     }
 
     SymHeapUnion &res = *(this->results);

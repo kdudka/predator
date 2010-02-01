@@ -56,6 +56,9 @@ class SymHeapProcessor {
         void heapSetVal(int /* obj */ lhs, int /* val */ rhs);
         void destroyObj(int obj);
 
+        // strcmp() like value comparator (-1, 0, 1)
+        int heapCmpVals(int val1, int val2);
+
     private:
         void printBackTrace();
         void heapVarHandleAccessorDeref(int *pVar);

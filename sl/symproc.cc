@@ -472,6 +472,16 @@ void SymHeapProcessor::destroyObj(int obj) {
         this->printBackTrace();
 }
 
+int SymHeapProcessor::heapCmpVals(int val1, int val2) {
+    // TODO
+    if (val1 < val2)
+        return -1;
+    else if (val1 > val2)
+        return 1;
+    else
+        return 0;
+}
+
 void SymHeapProcessor::execFree(const CodeStorage::TOperandList &opList) {
     using namespace SymbolicHeap;
     if (/* dst + fnc + ptr */ 3 != opList.size())
@@ -698,7 +708,7 @@ void SymHeapProcessor::execBinary(const CodeStorage::Insn &insn) {
     }
 
     // execute CL_BINOP_EQ/CL_BINOP_NE
-    result = (val1 == val2);
+    result = (0 == this->heapCmpVals(val1, val2));
     if (neg)
         result = !result;
 
