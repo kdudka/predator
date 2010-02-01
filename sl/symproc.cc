@@ -513,7 +513,18 @@ void SymHeapProcessor::destroyObj(int obj) {
 }
 
 int SymHeapProcessor::heapCmpVals(int val1, int val2) {
-    // TODO
+    using namespace SymbolicHeap;
+
+    if (val1 < 0 || val2 <0)
+        // special values are not intended to be handled here
+        TRAP;
+
+    const int co1 = heap_.valGetCompositeObj(val1);
+    const int co2 = heap_.valGetCompositeObj(val2);
+    if (OBJ_INVALID != co1 || OBJ_INVALID != co2)
+        // composite objects are not allowed to be compared for now
+        TRAP;
+
     if (val1 < val2)
         return -1;
     else if (val1 > val2)
