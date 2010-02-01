@@ -61,6 +61,8 @@ class SymHeapProcessor {
 
     private:
         void printBackTrace();
+        void heapDefineType(int /* obj */ lhs, int /* val */ rhs);
+        void heapSetSingleVal(int /* obj */ lhs, int /* val */ rhs);
         void heapVarHandleAccessorDeref(int *pVar);
         void heapVarHandleAccessorItem(int *pVar, const struct cl_accessor *ac);
         void heapVarHandleAccessor(int *pVar, const struct cl_accessor *ac);

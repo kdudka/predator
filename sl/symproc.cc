@@ -399,57 +399,63 @@ bool SymHeapProcessor::checkForJunk(int val) {
     return detected;
 }
 
-void SymHeapProcessor::heapSetVal(int /* obj */ lhs, int /* val */ rhs) {
-    using namespace SymbolicHeap;
-
-    // save the old value, which is going to be overwritten
-    const int oldValue = heap_.valueOf(lhs);
-    if (VAL_INVALID == oldValue)
+void SymHeapProcessor::heapDefineType(int /* obj */ lhs, int /* val */ rhs) {
+    const int var = heap_.pointsTo(rhs);
+    if (SymbolicHeap::OBJ_INVALID == var)
         TRAP;
 
-    if (heap_.valPointsToAnon(rhs)) {
-        // anonymous object is going to be specified by a type
-        const int var = heap_.pointsTo(rhs);
-        if (OBJ_INVALID == var)
-            TRAP;
+    const struct cl_type *clt = heap_.objType(lhs);
+    if (!clt)
+        return;
 
-        const struct cl_type *clt = heap_.objType(lhs);
-        if (!clt)
-            goto clt_done;
+    if (clt->code != CL_TYPE_PTR)
+        TRAP;
 
-        if (clt->code != CL_TYPE_PTR)
-            TRAP;
+    // move to next clt
+    // --> what are we pointing to actually?
+    clt = clt->items[0].type;
+    if (!clt)
+        TRAP;
 
-        // move to next clt
-        // --> what are we pointing to actually?
-        clt = clt->items[0].type;
-        if (!clt)
-            TRAP;
+    if (CL_TYPE_VOID == clt->code)
+        return;
 
-        if (CL_TYPE_VOID == clt->code)
-            goto clt_done;
+    const int cbGot = heap_.varSizeOfAnon(var);
+    const int cbNeed = clt->size;
+    if (cbGot != cbNeed) {
+        static const char szMsg[] =
+            "amount of allocated memory not accurate";
+        if (cbGot < cbNeed)
+            CL_ERROR_MSG(lw_, szMsg);
+        else
+            CL_WARN_MSG(lw_, szMsg);
 
-        const int cbGot = heap_.varSizeOfAnon(var);
-        const int cbNeed = clt->size;
-        if (cbGot != cbNeed) {
-            static const char szMsg[] =
-                "amount of allocated memory not accurate";
-            if (cbGot < cbNeed)
-                CL_ERROR_MSG(lw_, szMsg);
-            else
-                CL_WARN_MSG(lw_, szMsg);
-
-            CL_NOTE_MSG(lw_, "allocated: " << cbGot  << " bytes");
-            CL_NOTE_MSG(lw_, " expected: " << cbNeed << " bytes");
-        }
-
-        heap_.varDefineType(var, clt);
+        CL_NOTE_MSG(lw_, "allocated: " << cbGot  << " bytes");
+        CL_NOTE_MSG(lw_, " expected: " << cbNeed << " bytes");
     }
 
-clt_done:
+    heap_.varDefineType(var, clt);
+}
+
+void SymHeapProcessor::heapSetSingleVal(int /* obj */ lhs, int /* val */ rhs) {
+    // save the old value, which is going to be overwritten
+    const int oldValue = heap_.valueOf(lhs);
+    if (SymbolicHeap::VAL_INVALID == oldValue)
+        TRAP;
+
     heap_.objSetValue(lhs, rhs);
     if (this->checkForJunk(oldValue))
         this->printBackTrace();
+}
+
+void SymHeapProcessor::heapSetVal(int /* obj */ lhs, int /* val */ rhs) {
+    using namespace SymbolicHeap;
+
+    if (heap_.valPointsToAnon(rhs))
+        // anonymous object is going to be specified by a type
+        this->heapDefineType(lhs, rhs);
+
+    this->heapSetSingleVal(lhs, rhs);
 }
 
 void SymHeapProcessor::destroyObj(int obj) {
