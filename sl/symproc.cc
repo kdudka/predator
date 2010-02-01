@@ -29,6 +29,7 @@
 #include <vector>
 
 #include <boost/foreach.hpp>
+#include <boost/tuple/tuple.hpp>
 
 // /////////////////////////////////////////////////////////////////////////////
 // SymHeapProcessor implementation
@@ -399,7 +400,7 @@ bool SymHeapProcessor::checkForJunk(int val) {
     return detected;
 }
 
-void SymHeapProcessor::heapDefineType(int /* obj */ lhs, int /* val */ rhs) {
+void SymHeapProcessor::heapVarDefineType(int /* obj */ lhs, int /* val */ rhs) {
     const int var = heap_.pointsTo(rhs);
     if (SymbolicHeap::OBJ_INVALID == var)
         TRAP;
@@ -443,6 +444,10 @@ void SymHeapProcessor::heapSetSingleVal(int /* obj */ lhs, int /* val */ rhs) {
     if (SymbolicHeap::VAL_INVALID == oldValue)
         TRAP;
 
+    if (heap_.valPointsToAnon(rhs))
+        // anonymous object is going to be specified by a type
+        this->heapVarDefineType(lhs, rhs);
+
     heap_.objSetValue(lhs, rhs);
     if (this->checkForJunk(oldValue))
         this->printBackTrace();
@@ -451,11 +456,40 @@ void SymHeapProcessor::heapSetSingleVal(int /* obj */ lhs, int /* val */ rhs) {
 void SymHeapProcessor::heapSetVal(int /* obj */ lhs, int /* val */ rhs) {
     using namespace SymbolicHeap;
 
-    if (heap_.valPointsToAnon(rhs))
-        // anonymous object is going to be specified by a type
-        this->heapDefineType(lhs, rhs);
+    // DFS for composite types
+    typedef std::pair<int /* obj */, int /* val */> TItem;
+    std::stack<TItem> todo;
+    push(todo, lhs, rhs);
+    while (!todo.empty()) {
+        int lhs, rhs;
+        boost::tie(lhs, rhs) = todo.top();
+        todo.pop();
 
-    this->heapSetSingleVal(lhs, rhs);
+        const int rObj = heap_.valGetCompositeObj(rhs);
+        if (OBJ_INVALID == rObj) {
+            // non-composite value
+            this->heapSetSingleVal(lhs, rhs);
+            continue;
+        }
+
+        const struct cl_type *clt = heap_.objType(rObj);
+        if (!clt || clt->code != CL_TYPE_STRUCT || clt != heap_.objType(lhs))
+            // type-info problem
+            TRAP;
+
+        // iterate through all fields
+        for (int i = 0; i < clt->item_cnt; ++i) {
+            const int lSub = heap_.subVar(lhs, i);
+            const int rSub = heap_.subVar(rObj, i);
+            if (lSub <= 0 || rSub <= 0)
+                // composition problem
+                TRAP;
+
+            // schedule sub for next wheel
+            const int rSubVal = heap_.valueOf(rSub);
+            push(todo, lSub, rSubVal);
+        }
+    }
 }
 
 void SymHeapProcessor::destroyObj(int obj) {
