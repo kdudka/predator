@@ -198,6 +198,7 @@ set(self_extra_opts
 add_test("compile-self-extra" ${gcc45} ${self_extra_opts})
 add_test("compile-self-valgrind" valgrind
     --error-exitcode=7
+    --suppressions=${sl_SOURCE_DIR}/gcc.valgrind
     ${gcc45}
     ${self_extra_opts})
 
