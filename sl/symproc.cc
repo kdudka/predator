@@ -691,23 +691,61 @@ bool SymHeapProcessor::execCall(TState &dst, const CodeStorage::Insn &insn,
     return false;
 }
 
+namespace {
+    void handleUnopTruthNot(int &val) {
+        using namespace SymbolicHeap;
+
+        switch (val) {
+            case VAL_FALSE:
+                val = VAL_TRUE;
+                break;
+
+            case VAL_TRUE:
+                val = VAL_FALSE;
+                break;
+
+            case VAL_INVALID:
+            case VAL_UNINITIALIZED:
+            case VAL_UNKNOWN:
+            case VAL_DEREF_FAILED:
+                break;
+
+            default:
+                TRAP;
+        }
+    }
+
+    void handleUnop(enum cl_unop_e code, int &val) {
+        switch (code) {
+            case CL_UNOP_TRUTH_NOT:
+                handleUnopTruthNot(val);
+                // fall through!
+
+            case CL_UNOP_ASSIGN:
+                break;
+
+            default:
+                TRAP;
+        }
+    }
+}
+
 void SymHeapProcessor::execUnary(const CodeStorage::Insn &insn) {
-    using namespace SymbolicHeap;
-
-    const enum cl_unop_e code = static_cast<enum cl_unop_e> (insn.subCode);
-    if (CL_UNOP_ASSIGN != code)
-        // not implemented yet
-        TRAP;
-
+    // resolve lhs
     int varLhs;
     if (!this->lhsFromOperand(&varLhs, insn.operands[0]))
         return;
 
-    const int valRhs = this->heapValFromOperand(insn.operands[1]);
-    if (VAL_INVALID == valRhs)
-        // could not resolve rhs
+    // resolve rhs
+    int valRhs = this->heapValFromOperand(insn.operands[1]);
+    if (SymbolicHeap::VAL_INVALID == valRhs)
         TRAP;
 
+    // handle unary operator
+    const enum cl_unop_e code = static_cast<enum cl_unop_e> (insn.subCode);
+    handleUnop(code, valRhs);
+
+    // store result
     this->heapSetVal(varLhs, valRhs);
 }
 
