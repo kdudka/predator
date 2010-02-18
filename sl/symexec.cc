@@ -379,6 +379,11 @@ void SymExec::Private::execCondInsn(const SymbolicHeap::SymHeap &heap)
             this->updateState(tlist[/* else label */ 1], heap);
             break;
 
+        case VAL_UNINITIALIZED:
+            CL_WARN_MSG(this->lw,
+                    "conditional jump depends on uninitialized value");
+            // fall through!
+
         case VAL_UNKNOWN:
             CL_DEBUG_MSG(this->lw, "??? CL_INSN_COND got VAL_UNKNOWN");
             // TODO: check for inconsistency here!
