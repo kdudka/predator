@@ -41,12 +41,14 @@ void SymHeapProcessor::printBackTrace() {
 }
 
 int /* val */ SymHeapProcessor::heapValFromCst(const struct cl_operand &op) {
+    bool isBool = false;
     enum cl_type_e code = op.type->code;
     switch (code) {
-        case CL_TYPE_INT:
-            CL_DEBUG("CL_TYPE_INT treated as pointer");
-            // go through!
+        case CL_TYPE_BOOL:
+            isBool = true;
+            break;
 
+        case CL_TYPE_INT:
         case CL_TYPE_PTR:
             break;
 
@@ -58,9 +60,15 @@ int /* val */ SymHeapProcessor::heapValFromCst(const struct cl_operand &op) {
     code = cst.code;
     switch (code) {
         case CL_TYPE_INT:
-            return (cst.data.cst_int.value)
-                ? SymbolicHeap::VAL_UNKNOWN
-                : SymbolicHeap::VAL_NULL;
+            if (isBool) {
+                return (cst.data.cst_int.value)
+                    ? SymbolicHeap::VAL_TRUE
+                    : SymbolicHeap::VAL_FALSE;
+            } else {
+                return (cst.data.cst_int.value)
+                    ? SymbolicHeap::VAL_UNKNOWN
+                    : SymbolicHeap::VAL_NULL;
+            }
 
         case CL_TYPE_FNC: {
             // wrap fnc uid as SymHeap value
