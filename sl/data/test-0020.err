@@ -1,0 +1,4 @@
+test-0020.c:8:5: error: call recursion detected, cg subtree will be excluded
+test-0020.c:20:16: note: from call of synthesize_unknown_bool_value()
+test-0020.c:37:51: note: from call of test__cond_reasoning__with_zero_lookback_level()
+test-0020.c:36:5: note: from call of main()
