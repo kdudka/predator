@@ -382,6 +382,7 @@ void SymExec::Private::execCondInsn(const SymbolicHeap::SymHeap &heap)
         case VAL_UNINITIALIZED:
             CL_WARN_MSG(this->lw,
                     "conditional jump depends on uninitialized value");
+            this->printBackTrace();
             // fall through!
 
         case VAL_UNKNOWN:
