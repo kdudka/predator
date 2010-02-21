@@ -616,6 +616,11 @@ class FileDb {
 typedef std::map<int /* uid */, Fnc *> TFncById;
 
 /**
+ * STL-based map from function uid to corresponding Var object
+ */
+typedef std::map<int /* uid */, Var *> TVarById;
+
+/**
  * a value type representing the @b whole @b serialised @b model of code
  * @todo Consider adding all-in-one VarDb. Note this will need globally unique
  * IDs for all vars. Well, we have something like that while using gcc. But
@@ -628,6 +633,7 @@ struct Storage {
     FileDb                      files;              ///< per file content
     FncDb                       orphans;            ///< @note not used for now
     TFncById                    anyFncById;         ///< IDs of all fncs
+    TVarById                    anyVarById;         ///< IDs of all vars
 };
 
 } // namespace CodeStorage
