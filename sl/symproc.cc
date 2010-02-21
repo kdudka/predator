@@ -895,7 +895,7 @@ bool SymHeapProcessor::execCall(TState &dst, const CodeStorage::Insn &insn,
         goto call_done;
 
     if (STREQ(fncName, "sl_plot_stack_frame")
-            && callPlotStackFrame(insn,heap_))
+            && callPlotStackFrame(insn, heap_))
         goto call_done;
 
     if (STREQ(fncName, "sl_plot_by_ptr")

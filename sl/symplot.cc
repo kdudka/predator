@@ -81,14 +81,6 @@ std::string PlotEnumerator::decorate(std::string name) {
 
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of SymHeapPlotter
-#define SL_QUOTE(what) \
-    "\"" << what << "\""
-
-#define SL_GRAPH(name) \
-    "digraph " << SL_QUOTE(name) << " {" << std::endl \
-    << "\tlabel=<<FONT POINT-SIZE=\"18\">" << name << "</FONT>>;" << std::endl \
-    << "\tlabelloc=t;" << std::endl
-
 struct SymHeapPlotter::Private {
     const CodeStorage::Storage          *stor;
     const SymbolicHeap::SymHeap         *heap;
@@ -101,10 +93,9 @@ struct SymHeapPlotter::Private {
     bool openDotFile(const std::string &name);
     void closeDotFile();
 
-    void plotNode(int id, const char *shape, const char *tColor,
-                  const char *bColor, const char *label);
-    void plotLonelyNode(int obj, const char *shape, const char *color,
-                        const char *text);
+    void plotNodeObj(int obj, int cVar, enum cl_type_e code);
+    void plotNodeValue(int val, enum cl_type_e code, const char *label);
+    void plotNodeAux(int src, enum cl_type_e code, const char *label);
 
     void plotEdgePointsTo(int value, int obj);
     void plotEdgeValueOf(int obj, int value);
@@ -125,12 +116,14 @@ struct SymHeapPlotter::Private {
     void plotCVar(int uid);
 };
 
+#define SL_QUOTE(what) "\"" << what << "\""
+
 bool SymHeapPlotter::Private::openDotFile(const std::string &plotName)
 {
     // compute a sort of unique file name
     PlotEnumerator *pe = PlotEnumerator::instance();
-    std::string fileName(pe->decorate(plotName));
-    fileName += ".dot";
+    std::string name(pe->decorate(plotName));
+    std::string fileName(name + ".dot");
 
     // now please create the file
     this->dotStream.open(fileName.c_str(), std::ios::out);
@@ -139,8 +132,13 @@ bool SymHeapPlotter::Private::openDotFile(const std::string &plotName)
         return false;
     }
 
+    // open graph
+    this->dotStream << "digraph " << SL_QUOTE(name) << " {" << std::endl
+        << "\tlabel=<<FONT POINT-SIZE=\"18\">"
+        << name << "</FONT>>;" << std::endl
+        << "\tlabelloc=t;" << std::endl;
+
     CL_DEBUG("symplot: created dot file '" << fileName << "'");
-    this->dotStream << SL_GRAPH(plotName);
     return this->dotStream;
 }
 
@@ -154,49 +152,121 @@ void SymHeapPlotter::Private::closeDotFile() {
     this->dotStream.close();
 }
 
-void SymHeapPlotter::Private::plotNode(int id, const char *shape,
-                                       const char *tColor, const char *bColor,
-                                       const char *label)
-{
-    this->dotStream << "\t" << SL_QUOTE(id)
-        << " [shape=" << shape
-        << ", color=" << bColor
-        << ", fontcolor=" << tColor
-        << ", label=" << SL_QUOTE("#" << id << " [" << label << "]") << "];"
-        << std::endl;
+namespace {
+    const char* prefixByCode(enum cl_type_e code) {
+        switch (code) {
+            case CL_TYPE_VOID:      return "void";
+            case CL_TYPE_UNKNOWN:   return "?";
+            case CL_TYPE_PTR:       return "*";
+            case CL_TYPE_FNC:       return "(*)()";
+            case CL_TYPE_STRUCT:    return "struct";
+            case CL_TYPE_UNION:     return "union";
+            case CL_TYPE_ARRAY:     return "array";
+            case CL_TYPE_STRING:    return "string";
+            case CL_TYPE_CHAR:      return "char";
+            case CL_TYPE_BOOL:      return "bool";
+            case CL_TYPE_INT:       return "int";
+            case CL_TYPE_ENUM:      return "enum";
+            default:                return "XXX";
+        }
+    }
+
+    const char* colorByCode(enum cl_type_e code) {
+        switch (code) {
+            case CL_TYPE_VOID:      return "red";
+            case CL_TYPE_UNKNOWN:   return "gray";
+            case CL_TYPE_PTR:       return "blue";
+            case CL_TYPE_FNC:       return "green";
+            case CL_TYPE_STRUCT:    return "black";
+            case CL_TYPE_UNION:     return "gray";
+            case CL_TYPE_ARRAY:     return "gray";
+            case CL_TYPE_STRING:    return "gray";
+            case CL_TYPE_CHAR:      return "gray";
+            case CL_TYPE_BOOL:      return "yellow";
+            case CL_TYPE_INT:       return "gray";
+            case CL_TYPE_ENUM:      return "gray";
+            default:                return "black";
+        }
+    }
 }
 
-void SymHeapPlotter::Private::plotLonelyNode(int obj, const char *shape,
-                                             const char *color,
-                                             const char *text)
+void SymHeapPlotter::Private::plotNodeObj(int obj, int cVar,
+                                          enum cl_type_e code)
+{
+    this->dotStream << "\t" << SL_QUOTE(obj)
+        << " [shape=box"
+        << ", color=" << colorByCode(code);
+
+    if (-1 == cVar) {
+        this->dotStream
+            << ", fontcolor=black"
+            << ", label=\"[" << prefixByCode(code) << "] #" << obj
+            << "\"];" << std::endl;
+
+        return;
+    }
+
+    const CodeStorage::Var &var = varById(*this->stor, cVar);
+    // this->lw = &var.loc;
+    this->dotStream
+        << ", fontcolor=blue"
+        << ", label=\"[" << prefixByCode(code) << "] #" << cVar;
+
+    const std::string &name = var.name;
+    if (!name.empty())
+        this->dotStream << " - " << name;
+
+    this->dotStream << "\"];" << std::endl;
+}
+
+void SymHeapPlotter::Private::plotNodeValue(int val, enum cl_type_e code,
+                                            const char *label)
+{
+    this->dotStream << "\t" << SL_QUOTE(val)
+        << " [shape=ellipse"
+        << ", color=" << colorByCode(code)
+        << ", fontcolor=green"
+        << ", label=\"[" << prefixByCode(code) << "] #" << val;
+
+    if (label)
+        this->dotStream << " [" << label << "]";
+
+    this->dotStream << "\"];" << std::endl;
+}
+
+void SymHeapPlotter::Private::plotNodeAux(int src, enum cl_type_e code,
+                                          const char *label)
 {
     const int id = ++(this->last);
-    this->dotStream << "\t" << SL_QUOTE("lonely" << id)
-        << " [shape=" << shape
-        << ", color=" << color
-        << ", label=" << SL_QUOTE(text) << "];"
+    this->dotStream << "\t"
+        << SL_QUOTE("lonely" << id)
+        << " [shape=plaintext"
+        << ", fontcolor=" << colorByCode(code)
+        << ", label=" << SL_QUOTE(label) << "];"
         << std::endl;
 
     this->dotStream << "\t"
-        << SL_QUOTE(obj) << " -> " << SL_QUOTE("lonely" << id)
-        << std::endl;
+        << SL_QUOTE(src) << " -> " << SL_QUOTE("lonely" << id)
+        << " [color=" << colorByCode(code)
+        << "];" << std::endl;
 }
 
 void SymHeapPlotter::Private::plotEdgePointsTo(int value, int obj) {
     this->dotStream << "\t" << SL_QUOTE(value) << " -> " << SL_QUOTE(obj)
-        << " [color=red];"
+        << " [color=green, fontcolor=green, label=\"pointsTo\"];"
         << std::endl;
 }
 
 void SymHeapPlotter::Private::plotEdgeValueOf(int obj, int value) {
     this->dotStream << "\t" << SL_QUOTE(obj) << " -> " << SL_QUOTE(value)
-        << " [color=blue];"
+        << " [color=blue, fontcolor=blue, label=\"hasValue\"];"
         << std::endl;
 }
 
 void SymHeapPlotter::Private::plotEdgeSub(int obj, int sub) {
     this->dotStream << "\t" << SL_QUOTE(obj) << " -> " << SL_QUOTE(sub)
-        << " [color=gray, style=dotted, arrowhead=open];"
+        << " [color=gray, style=dotted, arrowhead=open"
+        << ", fontcolor=gray, label=\"subVar\"];"
         << std::endl;
 }
 
@@ -212,26 +282,7 @@ void SymHeapPlotter::Private::plotSingleValue(int value) {
         TRAP;
 
     const enum cl_type_e code = clt->code;
-    switch (code) {
-        case CL_TYPE_PTR:
-            this->plotNode(value, "ellipse", "black", "blue", "PTR");
-            break;
-
-        case CL_TYPE_BOOL:
-            this->plotNode(value, "ellipse", "black", "yellow", "BOOL");
-            break;
-
-        case CL_TYPE_INT:
-            this->plotNode(value, "ellipse", "black", "black", "INT");
-            break;
-
-        case CL_TYPE_STRUCT:
-            this->plotNode(value, "ellipse", "black", "gray", "STRUCT");
-            break;
-
-        default:
-            TRAP;
-    }
+    this->plotNodeValue(value, code, 0);
 }
 
 void SymHeapPlotter::Private::plotSingleObj(int obj) {
@@ -242,32 +293,9 @@ void SymHeapPlotter::Private::plotSingleObj(int obj) {
     if (!clt)
         TRAP;
 
-    const char *color = (-1 == this->heap->cVar(obj))
-        ? "red"
-        : "blue";
-
+    const int cVar = this->heap->cVar(obj);
     const enum cl_type_e code = clt->code;
-    switch (code) {
-        case CL_TYPE_PTR:
-            this->plotNode(obj, "box", color, "blue", "PTR");
-            break;
-
-        case CL_TYPE_BOOL:
-            this->plotNode(obj, "box", color, "yellow", "BOOL");
-            break;
-
-        case CL_TYPE_INT:
-            this->plotNode(obj, "box", color, "black", "INT");
-            break;
-
-        case CL_TYPE_STRUCT:
-            // TODO: draw subgraph
-            this->plotNode(obj, "box", color, "gray", "STRUCT");
-            break;
-
-        default:
-            TRAP;
-    }
+    this->plotNodeObj(obj, cVar, code);
 }
 
 void SymHeapPlotter::Private::plotZeroValue(int obj)
@@ -279,15 +307,15 @@ void SymHeapPlotter::Private::plotZeroValue(int obj)
     const enum cl_type_e code = clt->code;
     switch (code) {
         case CL_TYPE_INT:
-            this->plotLonelyNode(obj, "ellipse", "black", "(int) 0");
+            this->plotNodeAux(obj, code, "[int] 0");
             break;
 
         case CL_TYPE_PTR:
-            this->plotLonelyNode(obj, "ellipse", "blue", "NULL");
+            this->plotNodeAux(obj, code, "NULL");
             break;
 
         case CL_TYPE_BOOL:
-            this->plotLonelyNode(obj, "ellipse", "yellow", "FALSE");
+            this->plotNodeAux(obj, code, "FALSE");
             break;
 
         default:
@@ -324,8 +352,8 @@ bool SymHeapPlotter::Private::handleCustomValue(int value) {
     std::string name(fncName);
     name += "()";
 
-    this->plotNode(value, "ellipse", "green", "green", "PTR");
-    this->plotLonelyNode(value, "box", "green", name.c_str());
+    this->plotNodeValue(value, CL_TYPE_FNC, 0);
+    this->plotNodeAux(value, CL_TYPE_FNC, name.c_str());
     return true;
 }
 
@@ -338,15 +366,15 @@ bool SymHeapPlotter::Private::handleUnknownValue(int value, int obj) {
             return false;
 
         case UV_DEREF_FAILED:
-            this->plotLonelyNode(obj, "ellipse", "red", "DEREF_FAILED");
+            this->plotNodeAux(obj, CL_TYPE_VOID, "DEREF_FAILED");
             return true;
 
         case UV_UNINITIALIZED:
-            this->plotLonelyNode(obj, "ellipse", "gray", "UNDEF");
+            this->plotNodeAux(obj, CL_TYPE_UNKNOWN, "UNDEF");
             return true;
 
         case UV_UNKNOWN:
-            this->plotLonelyNode(obj, "circle", "gray", "?");
+            this->plotNodeAux(obj, CL_TYPE_UNKNOWN, "?");
             return true;
 
         default:
@@ -371,7 +399,7 @@ bool SymHeapPlotter::Private::resolveValueOf(int *pDst, int obj) {
             return false;
 
         case VAL_TRUE:
-            this->plotLonelyNode(obj, "ellipse", "yellow", "TRUE");
+            this->plotNodeAux(obj, CL_TYPE_BOOL, "TRUE");
             return false;
 
         default:
@@ -394,23 +422,23 @@ bool SymHeapPlotter::Private::resolvePointsTo(int /* obj */ *pDst, int value) {
     const int obj = this->heap->pointsTo(value);
     switch (obj) {
         case OBJ_INVALID:
-            this->plotLonelyNode(value, "box", "red", "INVALID");
+            this->plotNodeAux(value, CL_TYPE_VOID, "INVALID");
             return false;
 
         case OBJ_DEREF_FAILED:
-            this->plotLonelyNode(value, "box", "gray", "DEREF_FAILED");
+            this->plotNodeAux(value, CL_TYPE_VOID, "DEREF_FAILED");
             return false;
 
         case OBJ_DELETED:
-            this->plotLonelyNode(value, "box", "gray", "DELETED");
+            this->plotNodeAux(value, CL_TYPE_VOID, "DELETED");
             return false;
 
         case OBJ_LOST:
-            this->plotLonelyNode(value, "box", "gray", "LOST");
+            this->plotNodeAux(value, CL_TYPE_VOID, "LOST");
             return false;
 
         case OBJ_UNKNOWN:
-            this->plotLonelyNode(value, "box", "gray", "?");
+            this->plotNodeAux(value, CL_TYPE_UNKNOWN, "?");
             return false;
 
         case OBJ_RETURN:
