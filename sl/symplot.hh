@@ -42,7 +42,8 @@ class SymHeapPlotter {
                             const CodeStorage::Fnc *fnc);
 
     private:
-        const CodeStorage::Storage &stor_;
+        struct Private;
+        Private *d;
 };
 
 #endif /* H_GUARD_SYM_PLOT_H */
