@@ -17,6 +17,7 @@
  * along with sl.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "config.h"
 #include "symstate.hh"
 
 #include "cl_private.hh"

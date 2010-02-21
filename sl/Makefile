@@ -72,6 +72,7 @@ CL_OBJS = cl_chain.o \
 	symdump.o \
 	symexec.o \
 	symheap.o \
+	symplot.o \
 	symproc.o \
 	symstate.o
 

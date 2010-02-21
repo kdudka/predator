@@ -17,22 +17,22 @@
  * along with sl.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#ifndef H_GUARD_SL_H
+#define H_GUARD_SL_H
 
-#ifndef H_GUARD_SYM_DUMP_H
-#define H_GUARD_SYM_DUMP_H
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-extern int have_symdump;
+#define SL_PLOT_STACK_FRAME(fnc, name) \
+    sl_plot_stack_frame((void (*)()) fnc, name)
 
-struct cl_type;
-namespace SymbolicHeap {
-    struct SymHeap;
+void sl_plot(const char *name);
+void sl_plot_stack_frame(void (*fnc)(), const char *name);
+void sl_plot_by_ptr(const void *ptr, const char *name);
+
+#ifdef __cplusplus
 }
+#endif
 
-void dump_clt(const struct cl_type *clt);
-void dump_obj(const SymbolicHeap::SymHeap &heap, int obj);
-void dump_value(const SymbolicHeap::SymHeap &heap, int value);
-void dump_value_refs(const SymbolicHeap::SymHeap &heap, int value);
-void dump_cvar(const SymbolicHeap::SymHeap &heap, int cVar);
-void dump_heap(const SymbolicHeap::SymHeap &heap);
-
-#endif /* H_GUARD_SYM_DUMP_H */
+#endif /* H_GUARD_SL_H */

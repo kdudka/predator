@@ -17,6 +17,7 @@
  * along with sl.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "config.h"
 #include "cld_unswitch.hh"
 
 #include "cl_decorator.hh"

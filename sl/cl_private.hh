@@ -30,9 +30,6 @@
 #include <string>
 #include <tuple>
 
-#include <signal.h>
-#define TRAP raise(SIGTRAP)
-
 #ifndef STREQ
 #   define STREQ(s1, s2) (0 == strcmp(s1, s2))
 #endif

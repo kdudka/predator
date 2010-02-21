@@ -18,21 +18,31 @@
  */
 
 
-#ifndef H_GUARD_SYM_DUMP_H
-#define H_GUARD_SYM_DUMP_H
+#ifndef H_GUARD_SYM_PLOT_H
+#define H_GUARD_SYM_PLOT_H
 
-extern int have_symdump;
+#include <string>
 
-struct cl_type;
-namespace SymbolicHeap {
-    struct SymHeap;
+namespace CodeStorage {
+    struct Fnc;
+    struct Storage;
 }
 
-void dump_clt(const struct cl_type *clt);
-void dump_obj(const SymbolicHeap::SymHeap &heap, int obj);
-void dump_value(const SymbolicHeap::SymHeap &heap, int value);
-void dump_value_refs(const SymbolicHeap::SymHeap &heap, int value);
-void dump_cvar(const SymbolicHeap::SymHeap &heap, int cVar);
-void dump_heap(const SymbolicHeap::SymHeap &heap);
+namespace SymbolicHeap {
+    class SymHeap;
+}
 
-#endif /* H_GUARD_SYM_DUMP_H */
+class SymHeapPlotter {
+    public:
+        SymHeapPlotter(const CodeStorage::Storage &);
+        ~SymHeapPlotter();
+
+        bool plotStackFrame(const std::string &name,
+                            const SymbolicHeap::SymHeap &,
+                            const CodeStorage::Fnc *fnc);
+
+    private:
+        const CodeStorage::Storage &stor_;
+};
+
+#endif /* H_GUARD_SYM_PLOT_H */

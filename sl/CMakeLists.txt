@@ -116,6 +116,7 @@ add_library(sl STATIC
     symdump.cc
     symexec.cc
     symheap.cc
+    symplot.cc
     symproc.cc
     symstate.cc)
 

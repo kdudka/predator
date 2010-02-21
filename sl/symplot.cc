@@ -17,22 +17,20 @@
  * along with sl.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "config.h"
+#include "symplot.hh"
 
-#ifndef H_GUARD_SYM_DUMP_H
-#define H_GUARD_SYM_DUMP_H
-
-extern int have_symdump;
-
-struct cl_type;
-namespace SymbolicHeap {
-    struct SymHeap;
+SymHeapPlotter::SymHeapPlotter(const CodeStorage::Storage &stor):
+    stor_(stor)
+{
 }
 
-void dump_clt(const struct cl_type *clt);
-void dump_obj(const SymbolicHeap::SymHeap &heap, int obj);
-void dump_value(const SymbolicHeap::SymHeap &heap, int value);
-void dump_value_refs(const SymbolicHeap::SymHeap &heap, int value);
-void dump_cvar(const SymbolicHeap::SymHeap &heap, int cVar);
-void dump_heap(const SymbolicHeap::SymHeap &heap);
+SymHeapPlotter::~SymHeapPlotter() {
+}
 
-#endif /* H_GUARD_SYM_DUMP_H */
+bool SymHeapPlotter::plotStackFrame(const std::string &name,
+                                    const SymbolicHeap::SymHeap &heap,
+                                    const CodeStorage::Fnc *fnc)
+{
+    TRAP;
+}

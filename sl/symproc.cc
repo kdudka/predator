@@ -17,11 +17,13 @@
  * along with sl.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "config.h"
 #include "symproc.hh"
 
 #include "btprint.hh"
 #include "cl_private.hh"
 #include "symheap.hh"
+#include "symplot.hh"
 #include "symstate.hh"
 
 #include <set>
@@ -702,6 +704,114 @@ void SymHeapProcessor::execMalloc(TState &state,
     state.insert(heap_);
 }
 
+namespace {
+    template <int N_ARGS, class TOpList>
+    bool chkVoidCall(const TOpList &opList)
+    {
+        if (/* dst + fnc */ 2 != opList.size() - N_ARGS)
+            return false;
+        else
+            return (CL_OPERAND_VOID == opList[0].code);
+    }
+
+    template <int NTH, class TOpList>
+    bool readPlotName(std::string &dst, const TOpList opList)
+    {
+        const cl_operand &op = opList[NTH + /* dst + fnc */ 2];
+        if (CL_OPERAND_CST != op.code)
+            return false;
+
+        const cl_cst &cst = op.data.cst;
+        if (CL_TYPE_STRING != cst.code)
+            return false;
+
+        dst = cst.data.cst_string.value;
+        return true;
+    }
+
+    template <int NTH, class TOpList, class THeap>
+    bool readHeapVal(int *dst, const TOpList opList, const THeap &heap)
+    {
+        // FIXME: we might use the already existing instance instead
+        SymHeapProcessor proc(const_cast<THeap &>(heap));
+
+        const cl_operand &op = opList[NTH + /* dst + fnc */ 2];
+        const int value = proc.heapValFromOperand(op);
+        if (value < 0)
+            return false;
+
+        *dst = value;
+        return true;
+    }
+
+    template <class TStor, class TFnc, class THeap>
+    bool fncFromHeapVal(const TStor &stor, const TFnc **dst, int value,
+                        const THeap &heap)
+    {
+        const int uid = heap.valGetCustom(/* pClt */ 0, value);
+        if (-1 == uid)
+            return false;
+
+        // FIXME: get rid of the const_cast
+        const TFnc *fnc = const_cast<TStor &>(stor).anyFncById[uid];
+        if (!fnc)
+            return false;
+
+        *dst = fnc;
+        return true;
+    }
+
+    template <class TInsn, class THeap>
+    bool callPlot(const TInsn &insn, const THeap &heap) {
+        TRAP;
+        (void) insn;
+        (void) heap;
+        return false;
+    }
+
+    template <class TInsn, class THeap>
+    bool callPlotByPtr(const TInsn &insn, const THeap &heap) {
+        TRAP;
+        (void) insn;
+        (void) heap;
+        return false;
+    }
+
+    template <class TInsn, class THeap>
+    bool callPlotStackFrame(const TInsn &insn, const THeap &heap) {
+        const CodeStorage::TOperandList &opList = insn.operands;
+        const CodeStorage::Storage &stor = *insn.stor;
+        const LocationWriter lw(&insn.loc);
+        SymHeapPlotter plotter(stor);
+
+        int value;
+        const CodeStorage::Fnc *fnc;
+        std::string plotName;
+
+        if (!chkVoidCall<2>(opList))
+            goto ignore_call;
+
+        if (!readHeapVal<0>(&value, opList, heap))
+            goto ignore_call;
+
+        if (!fncFromHeapVal(stor, &fnc, value, heap))
+            goto ignore_call;
+
+        if (!readPlotName<1>(plotName, opList))
+            goto ignore_call;
+
+        if (!plotter.plotStackFrame(plotName, heap, fnc))
+            CL_WARN_MSG(lw, "error while plotting '" << plotName << "'");
+        return true;
+
+ignore_call:
+        CL_WARN_MSG(lw,
+                "incorrectly called sl_plot_stack_frame() "
+                "not recognized as built-in");
+        return false;
+    }
+}
+
 bool SymHeapProcessor::execCall(TState &dst, const CodeStorage::Insn &insn,
                                 bool fastMode)
 {
@@ -730,8 +840,7 @@ bool SymHeapProcessor::execCall(TState &dst, const CodeStorage::Insn &insn,
 
     if (STREQ(fncName, "free")) {
         this->execFree(opList);
-        dst.insert(heap_);
-        return true;
+        goto call_done;
     }
 
     if (STREQ(fncName, "abort")) {
@@ -739,11 +848,24 @@ bool SymHeapProcessor::execCall(TState &dst, const CodeStorage::Insn &insn,
             TRAP;
 
         // do nothing for abort()
-        dst.insert(heap_);
-        return true;
+        goto call_done;
     }
 
+    if (STREQ(fncName, "sl_plot") && callPlot(insn, heap_))
+        goto call_done;
+
+    if (STREQ(fncName, "sl_plot_stack_frame") && callPlotStackFrame(insn,heap_))
+        goto call_done;
+
+    if (STREQ(fncName, "sl_plot_by_ptr") && callPlotByPtr(insn, heap_))
+        goto call_done;
+
+    // no built-in has been matched
     return false;
+
+call_done:
+    dst.insert(heap_);
+    return true;
 }
 
 namespace {

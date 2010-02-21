@@ -22,6 +22,9 @@
  * various compile-time options
  */
 
+#include <signal.h>
+#define TRAP raise(SIGTRAP)
+
 /**
  * if 1, check each code_listener decorator by the integrity checker
  */

@@ -17,6 +17,7 @@
  * along with sl.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "config.h"
 #include "cl_pp.hh"
 #include "cl_private.hh"
 #include "ssd.hh"
