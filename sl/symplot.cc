@@ -28,6 +28,7 @@
 #include <fstream>
 #include <iomanip>
 #include <map>
+#include <set>
 #include <sstream>
 #include <stack>
 #include <string>
@@ -88,6 +89,7 @@ struct SymHeapPlotter::Private {
     bool                                ok;
     LocationWriter                      lw;
     WorkList<int /* value */>           workList;
+    std::set<int /* obj */>             objDone;
     int                                 last;
 
     bool openDotFile(const std::string &name);
@@ -159,7 +161,7 @@ namespace {
             case CL_TYPE_VOID:      return "void";
             case CL_TYPE_UNKNOWN:   return "?";
             case CL_TYPE_PTR:       return "*";
-            case CL_TYPE_FNC:       return "(*)()";
+            case CL_TYPE_FNC:       return "fnc*";
             case CL_TYPE_STRUCT:    return "struct";
             case CL_TYPE_UNION:     return "union";
             case CL_TYPE_ARRAY:     return "array";
@@ -417,6 +419,11 @@ bool SymHeapPlotter::Private::resolveValueOf(int *pDst, int obj) {
     if (obj < 0)
         TRAP;
 
+    // avoid duplicates
+    if (hasKey(this->objDone, obj))
+        return false;
+    this->objDone.insert(obj);
+
     const int value = this->heap->valueOf(obj);
     switch (value) {
         case VAL_INVALID:
@@ -559,7 +566,6 @@ void SymHeapPlotter::Private::plotObj(int obj) {
         return;
 
     // connect the variable node with its value
-    // FIXME: the edge may appear more times if the variable is referenced
     this->plotEdgeValueOf(obj, value);
 
     // dig the target value recursively and plot (if not already)
