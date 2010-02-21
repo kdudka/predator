@@ -93,6 +93,7 @@ struct SymHeapPlotter::Private {
     bool openDotFile(const std::string &name);
     void closeDotFile();
 
+    bool digFieldName(std::string &dst, int obj);
     void plotNodeObj(int obj, int cVar, enum cl_type_e code);
     void plotNodeValue(int val, enum cl_type_e code, const char *label);
     void plotNodeAux(int src, enum cl_type_e code, const char *label);
@@ -190,6 +191,31 @@ namespace {
     }
 }
 
+bool SymHeapPlotter::Private::digFieldName(std::string &dst, int obj) {
+    const int parent = this->heap->varParent(obj);
+    if (SymbolicHeap::OBJ_INVALID == parent)
+        // no chance since there is no parent
+        return false;
+
+    const struct cl_type *clt = this->heap->objType(parent);
+    if (!clt || clt->code != CL_TYPE_STRUCT)
+        // type info problem
+        TRAP;
+
+    // dig field name
+    for (int i = 0; i < clt->item_cnt; ++i) {
+        const int sub = this->heap->subVar(parent, i);
+        if (obj == sub) {
+            dst = clt->items[i].name;
+            return true;
+        }
+    }
+
+    // not found?
+    TRAP;
+    return false;
+}
+
 void SymHeapPlotter::Private::plotNodeObj(int obj, int cVar,
                                           enum cl_type_e code)
 {
@@ -200,19 +226,22 @@ void SymHeapPlotter::Private::plotNodeObj(int obj, int cVar,
     if (-1 == cVar) {
         this->dotStream
             << ", fontcolor=black"
-            << ", label=\"[" << prefixByCode(code) << "] #" << obj
-            << "\"];" << std::endl;
+            << ", label=\"[" << prefixByCode(code) << "] #" << obj;
 
+        std::string name;
+        if (digFieldName(name, obj))
+            this->dotStream << " ." << name;
+
+        this->dotStream<< "\"];" << std::endl;
         return;
     }
 
     const CodeStorage::Var &var = varById(*this->stor, cVar);
-    // this->lw = &var.loc;
     this->dotStream
         << ", fontcolor=blue"
         << ", label=\"[" << prefixByCode(code) << "] #" << cVar;
 
-    const std::string &name = var.name;
+    std::string name = var.name;
     if (!name.empty())
         this->dotStream << " - " << name;
 
