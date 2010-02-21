@@ -165,8 +165,10 @@ namespace {
 
         BOOST_FOREACH(SymHeap &heap, huni) {
 #if DEBUG_SE_STACK_FRAME
-            CL_DEBUG_MSG(lw, "*** destroying stack frame in result #"
-                    << (++hCnt));
+            if (1 < huni.size()) {
+                CL_DEBUG_MSG(lw, "*** destroying stack frame in result #"
+                        << (++hCnt));
+            }
 #endif
             destroyStackFrame(bt, heap, fnc);
         }
@@ -372,37 +374,44 @@ void SymExec::Private::execCondInsn(const SymbolicHeap::SymHeap &heap)
         case VAL_TRUE:
             CL_DEBUG_MSG(this->lw, ".T. CL_INSN_COND got VAL_TRUE");
             this->updateState(tlist[/* then label */ 0], heap);
-            break;
+            return;
 
         case VAL_FALSE:
             CL_DEBUG_MSG(this->lw, ".F. CL_INSN_COND got VAL_FALSE");
             this->updateState(tlist[/* else label */ 1], heap);
+            return;
+
+        default:
+            break;
+    }
+
+    const EUnknownValue code = heap.valGetUnknown(val);
+    switch (code) {
+        case UV_UNKNOWN:
+            CL_DEBUG_MSG(this->lw, "??? CL_INSN_COND got VAL_UNKNOWN");
             break;
 
-        case VAL_UNINITIALIZED:
+        case UV_UNINITIALIZED:
             CL_WARN_MSG(this->lw,
                     "conditional jump depends on uninitialized value");
             this->printBackTrace();
-            // fall through!
-
-        case VAL_UNKNOWN:
-            CL_DEBUG_MSG(this->lw, "??? CL_INSN_COND got VAL_UNKNOWN");
-            // TODO: check for inconsistency here!
-            // TODO: set val to VAL_TRUE in target 0
-            // TODO: set val to VAL_FALSE in target 1
-            this->updateState(tlist[/* then label */ 0], heap);
-            this->updateState(tlist[/* else label */ 1], heap);
             break;
 
-        case VAL_DEREF_FAILED:
+        case UV_DEREF_FAILED:
             // error should have been already emitted
             CL_DEBUG_MSG(this->lw, "ignored VAL_DEREF_FAILED");
             break;
 
-        default:
-            // TODO: handle special values here
+        case UV_KNOWN:
             TRAP;
+            return;
     }
+
+    // TODO: check for inconsistency here!
+    // TODO: set val to VAL_TRUE in target 0
+    // TODO: set val to VAL_FALSE in target 1
+    this->updateState(tlist[/* then label */ 0], heap);
+    this->updateState(tlist[/* else label */ 1], heap);
 }
 
 void SymExec::Private::execTermInsn(const SymbolicHeap::SymHeap &heap)
@@ -560,8 +569,9 @@ fail:
         SymHeapProcessor proc(heap, this);
         proc.setLocation(this->lw);
 
+        const int val = heap.valCreateUnknown(UV_UNKNOWN, dst.type);
         const int obj = proc.heapVarFromOperand(dst);
-        heap.objSetValue(obj, VAL_UNKNOWN);
+        heap.objSetValue(obj, val);
     }
 
     // call failed, so that we have exactly one resulting heap

@@ -113,6 +113,7 @@ add_library(sl STATIC
     location.cc
     ssd.cc
     storage.cc
+    symdump.cc
     symexec.cc
     symheap.cc
     symproc.cc

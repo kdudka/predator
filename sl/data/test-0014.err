@@ -5,20 +5,30 @@ test-0014.c:37:6: warning: unused local variable 'msg'
 test-0014.c:218:13: warning: CL_TYPE_STRING not supported by heapValFromCst()
 test-0014.c:218:13: warning: CL_TYPE_STRING not supported by heapValFromCst()
 test-0014.c:51:9: warning: CL_ACCESSOR_DEREF_ARRAY not implemented yet
+test-0014.c:116:16: warning: binary operator not implemented yet
 test-0014.c:218:13: warning: CL_TYPE_STRING not supported by heapValFromCst()
 test-0014.c:51:9: warning: CL_ACCESSOR_DEREF_ARRAY not implemented yet
-test-0014.c:218:13: warning: CL_TYPE_STRING not supported by heapValFromCst()
-test-0014.c:218:13: warning: CL_TYPE_STRING not supported by heapValFromCst()
-test-0014.c:51:9: warning: CL_ACCESSOR_DEREF_ARRAY not implemented yet
-test-0014.c:218:13: warning: CL_TYPE_STRING not supported by heapValFromCst()
-test-0014.c:218:13: warning: CL_TYPE_STRING not supported by heapValFromCst()
+test-0014.c:127:16: warning: binary operator not implemented yet
 test-0014.c:218:13: warning: CL_TYPE_STRING not supported by heapValFromCst()
 test-0014.c:218:13: warning: CL_TYPE_STRING not supported by heapValFromCst()
 test-0014.c:51:9: warning: CL_ACCESSOR_DEREF_ARRAY not implemented yet
+test-0014.c:127:16: warning: binary operator not implemented yet
+test-0014.c:218:13: warning: CL_TYPE_STRING not supported by heapValFromCst()
+test-0014.c:141:16: warning: binary operator not implemented yet
+test-0014.c:218:13: warning: CL_TYPE_STRING not supported by heapValFromCst()
+test-0014.c:218:13: warning: CL_TYPE_STRING not supported by heapValFromCst()
 test-0014.c:218:13: warning: CL_TYPE_STRING not supported by heapValFromCst()
 test-0014.c:51:9: warning: CL_ACCESSOR_DEREF_ARRAY not implemented yet
+test-0014.c:116:16: warning: binary operator not implemented yet
 test-0014.c:218:13: warning: CL_TYPE_STRING not supported by heapValFromCst()
 test-0014.c:51:9: warning: CL_ACCESSOR_DEREF_ARRAY not implemented yet
+test-0014.c:189:16: warning: binary operator not implemented yet
 test-0014.c:218:13: warning: CL_TYPE_STRING not supported by heapValFromCst()
+test-0014.c:51:9: warning: CL_ACCESSOR_DEREF_ARRAY not implemented yet
+test-0014.c:172:16: warning: binary operator not implemented yet
 test-0014.c:218:13: warning: CL_TYPE_STRING not supported by heapValFromCst()
+test-0014.c:209:16: warning: binary operator not implemented yet
 test-0014.c:218:13: warning: CL_TYPE_STRING not supported by heapValFromCst()
+test-0014.c:155:16: warning: binary operator not implemented yet
+test-0014.c:218:13: warning: CL_TYPE_STRING not supported by heapValFromCst()
+test-0014.c:209:16: warning: binary operator not implemented yet

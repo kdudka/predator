@@ -18,7 +18,9 @@
  */
 
 #include "symheap.hh"
+
 #include "cl_private.hh"
+#include "symdump.hh"
 
 #include <map>
 #include <set>
@@ -26,6 +28,14 @@
 
 #include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
+
+namespace {
+    // XXX: force linker to pull-in the symdump module into .so
+    void pull_in_symdump(void) {
+        int sink = have_symdump;
+        (void) sink;
+    }
+}
 
 namespace SymbolicHeap {
 
@@ -54,6 +64,7 @@ struct Var {
 enum EValue {
     EV_HEAP = 0,
     // TODO: EV_HEAP_OBJECT_OF_UNKNOWN_TYPE?
+    EV_UNKOWN,
     EV_CUSTOM,
     EV_COMPOSITE
 };
@@ -85,8 +96,8 @@ struct SymHeap::Private {
     TVarMap                 varMap;
     TValueMap               valueMap;
 
-    int                     lastObj;
-    int                     lastVal;
+    // IDs are now unique, overlapping of var/val IDs used to cause headaches
+    int                     last;
 
     // TODO: move elsewhere
     int                     retVal;
@@ -114,12 +125,11 @@ void SymHeap::Private::initReturn() {
     var.clt         = 0;
     var.cVarUid     = -1;
     var.placedAt    = VAL_INVALID;
-    var.value       = VAL_UNINITIALIZED;
+    var.value       = this->createValue(EV_UNKOWN, 0, UV_UNINITIALIZED);
 }
 
 SymHeap::Private::Private():
-    lastObj(0),
-    lastVal(0),
+    last(0),
     retVal(VAL_INVALID)
 {
     this->initReturn();
@@ -152,8 +162,17 @@ void SymHeap::Private::releaseValueOf(int obj) {
         return;
 
     Value &ref = this->valueMap[val];
-    if (EV_COMPOSITE == ref.code)
-        return;
+
+    const EValue code = ref.code;
+    switch (code) {
+        case EV_COMPOSITE:
+        case EV_UNKOWN:
+            return;
+
+        case EV_HEAP:
+        case EV_CUSTOM:
+            break;
+    }
 
     TSet &hv = ref.haveValue;
     if (1 != hv.erase(obj))
@@ -170,7 +189,7 @@ void SymHeap::Private::indexValueOf(int obj, int val) {
 int /* val */ SymHeap::Private::createValue(EValue code,
                                             const struct cl_type *clt, int obj)
 {
-    const int valId = ++lastVal;
+    const int valId = ++last;
 
     Value &val = valueMap[valId];
     val.code            = code;
@@ -183,13 +202,13 @@ int /* val */ SymHeap::Private::createValue(EValue code,
 int /* var */ SymHeap::Private::createVar(const struct cl_type *clt,
                                           int /* CodeStorage */ uid)
 {
-    const int objId = ++(this->lastObj);
+    const int objId = ++(this->last);
     Var &var = this->varMap[objId];
 
     var.clt         = clt;
     var.cVarUid     = uid;
     var.placedAt    = this->createValue(EV_HEAP, clt, objId);
-    var.value       = VAL_UNINITIALIZED;
+    var.value       = this->createValue(EV_UNKOWN, 0, UV_UNINITIALIZED);
 
     return objId;
 }
@@ -303,10 +322,10 @@ int /* val */ SymHeap::valueOf(int obj) const {
         case OBJ_LOST:
         case OBJ_DELETED:
         case OBJ_DEREF_FAILED:
-            return VAL_DEREF_FAILED;
+            return d->createValue(EV_UNKOWN, 0, UV_DEREF_FAILED);
 
         case OBJ_UNKNOWN:
-            return VAL_UNKNOWN;
+            TRAP;
 
         default:
             break;
@@ -350,21 +369,6 @@ void SymHeap::haveValue(TCont /* obj[] */ &dst, int val) const {
     BOOST_FOREACH(int obj, value.haveValue) {
         dst.push_back(obj);
     }
-}
-
-void SymHeap::notEqualTo(TCont /* obj[] */ &dst, int obj) const {
-    // TODO
-    (void) dst;
-    (void) obj;
-    TRAP;
-}
-
-bool SymHeap::notEqual(int obj1, int obj2) const {
-    // TODO
-    (void) obj1;
-    (void) obj2;
-    TRAP;
-    return false;
 }
 
 const struct cl_type* /* clt */ SymHeap::objType(int obj) const {
@@ -599,18 +603,33 @@ void SymHeap::objDestroy(int obj) {
     TRAP;
 }
 
-void SymHeap::addNeq(int obj1, int obj2) {
-    // TODO
-    (void) obj1;
-    (void) obj2;
-    TRAP;
+int /* val */ SymHeap::valCreateUnknown(EUnknownValue code,
+                                        const struct cl_type *clt)
+{
+    return d->createValue(EV_UNKOWN, clt, static_cast<int>(code));
 }
 
-void SymHeap::delNeq(int obj1, int obj2) {
-    // TODO
-    (void) obj1;
-    (void) obj2;
-    TRAP;
+int /* val */ SymHeap::valDuplicateUnknown(int /* val */ tpl)
+{
+    TValueMap::iterator iter = d->valueMap.find(tpl);
+    if (d->valueMap.end() == iter)
+        // value not found, this should never happen
+        TRAP;
+
+    Value &value = iter->second;
+    return d->createValue(EV_UNKOWN, value.clt, value.pointsTo);
+}
+
+EUnknownValue SymHeap::valGetUnknown(int val) const {
+    TValueMap::iterator iter = d->valueMap.find(val);
+    if (d->valueMap.end() == iter)
+        // value not found, this should never happen
+        TRAP;
+
+    Value &value = iter->second;
+    return (EV_UNKOWN == value.code)
+        ? static_cast<EUnknownValue>(value.pointsTo)
+        : UV_KNOWN;
 }
 
 int /* val */ SymHeap::valCreateCustom(const struct cl_type *clt, int cVal)

@@ -41,12 +41,17 @@ enum {
 enum {
     VAL_NULL          =  0,
     VAL_INVALID       = -1,
-    VAL_UNINITIALIZED = -2,
-    VAL_UNKNOWN       = -3,
-    VAL_DEREF_FAILED  = -4,
 
-    VAL_TRUE          = -5,
+    VAL_TRUE          = -2,
     VAL_FALSE         = VAL_NULL
+};
+
+// various types of unknown values
+enum EUnknownValue {
+    UV_KNOWN = 0,
+    UV_UNKNOWN,
+    UV_UNINITIALIZED,
+    UV_DEREF_FAILED
 };
 
 // FIXME: the interface of SymHeap tends to be crowded
@@ -67,8 +72,6 @@ class SymHeap {
         int /* val */ placedAt(int obj) const;
         int /* obj */ pointsTo(int val) const;
         void haveValue(TCont /* obj[] */ &dst, int val) const;
-        void notEqualTo(TCont /* obj[] */ &dst, int obj) const;
-        bool notEqual(int obj1, int obj2) const;
 
     public:
         // static info lookup
@@ -103,9 +106,11 @@ class SymHeap {
         void objDestroy(int obj);
 
     public:
-        // inequality set alternation
-        void addNeq(int obj1, int obj2);
-        void delNeq(int obj1, int obj2);
+        // unkown values manipulation
+        int /* val */ valCreateUnknown(EUnknownValue code,
+                                       const struct cl_type *clt);
+        int /* val */ valDuplicateUnknown(int /* val */ tpl);
+        EUnknownValue valGetUnknown(int val) const;
 
     public:
         // custom values manipulation (e.g. fnc pointers)

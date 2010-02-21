@@ -81,8 +81,15 @@ namespace {
         using namespace SymbolicHeap;
 
         if (v1 <= 0 || v2 <= 0)
-            // this can't be a pair of custom values
+            // this can't be a pair of custom or unknown values
             return matchValues(subst, v1, v2);
+
+        // do we know the values?
+        const EUnknownValue uv1 = heap1.valGetUnknown(v1);
+        const EUnknownValue uv2 = heap2.valGetUnknown(v2);
+        if (UV_KNOWN != uv1 || UV_KNOWN != uv2)
+            // compare types of uknown values
+            return (uv1 == uv2);
 
         const int cVal1 = heap1.valGetCustom(0, v1);
         const int cVal2 = heap2.valGetCustom(0, v2);
@@ -112,6 +119,10 @@ namespace {
 
         if (VAL_INVALID != heap.valGetCustom(0, value))
             // don't follow fnc pointers (and other custom values) by pointsTo()
+            return true;
+
+        if (UV_KNOWN != heap.valGetUnknown(value))
+            // don't follow uknown values
             return true;
 
         return false;
@@ -208,6 +219,11 @@ namespace SymbolicHeap {
             if (!matchValues(valSubst, heap1, heap2, value1, value2))
                 // value mismatch
                 return false;
+
+            // FIXME: this appears twice because of digComposite
+            if (skipValue(heap1, value1))
+                // do not follow unknown value
+                continue;
 
             // TODO: distinguish among SLS and single dynamic variables here
             const int obj1 = heap1.pointsTo(value1);

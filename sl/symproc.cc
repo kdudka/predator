@@ -41,6 +41,8 @@ void SymHeapProcessor::printBackTrace() {
 }
 
 int /* val */ SymHeapProcessor::heapValFromCst(const struct cl_operand &op) {
+    using namespace SymbolicHeap;
+
     bool isBool = false;
     enum cl_type_e code = op.type->code;
     switch (code) {
@@ -62,12 +64,12 @@ int /* val */ SymHeapProcessor::heapValFromCst(const struct cl_operand &op) {
         case CL_TYPE_INT:
             if (isBool) {
                 return (cst.data.cst_int.value)
-                    ? SymbolicHeap::VAL_TRUE
-                    : SymbolicHeap::VAL_FALSE;
+                    ? VAL_TRUE
+                    : VAL_FALSE;
             } else {
                 return (cst.data.cst_int.value)
-                    ? SymbolicHeap::VAL_UNKNOWN
-                    : SymbolicHeap::VAL_NULL;
+                    ? heap_.valCreateUnknown(UV_UNKNOWN, op.type)
+                    : VAL_NULL;
             }
 
         case CL_TYPE_FNC: {
@@ -87,13 +89,14 @@ int /* val */ SymHeapProcessor::heapValFromCst(const struct cl_operand &op) {
 
         default:
             TRAP;
-            return SymbolicHeap::VAL_INVALID;
+            return VAL_INVALID;
     }
 }
 
 void SymHeapProcessor::heapVarHandleAccessorDeref(int *pObj)
 {
     using namespace SymbolicHeap;
+    EUnknownValue code;
 
     // attempt to dereference
     const int val = heap_.valueOf(*pObj);
@@ -103,24 +106,31 @@ void SymHeapProcessor::heapVarHandleAccessorDeref(int *pObj)
             this->printBackTrace();
             goto fail;
 
-        case VAL_UNINITIALIZED:
-            CL_ERROR_MSG(lw_, "dereference of uninitialized value");
-            this->printBackTrace();
-            goto fail;
-
-        case VAL_UNKNOWN:
-            *pObj = OBJ_UNKNOWN;
-            return;
-
         case VAL_INVALID:
             TRAP;
-            // go through!
-
-        case VAL_DEREF_FAILED:
             goto fail;
 
         default:
             break;
+    }
+
+    // do we really know the value?
+    code = heap_.valGetUnknown(val);
+    switch (code) {
+        case UV_KNOWN:
+            break;
+
+        case UV_UNKNOWN:
+            *pObj = OBJ_UNKNOWN;
+            return;
+
+        case UV_UNINITIALIZED:
+            CL_ERROR_MSG(lw_, "dereference of uninitialized value");
+            this->printBackTrace();
+            // fall through!
+
+        case UV_DEREF_FAILED:
+            goto fail;
     }
 
     // value lookup
@@ -239,6 +249,41 @@ bool /* var */ SymHeapProcessor::lhsFromOperand(int *pVar,
     }
 }
 
+namespace {
+    template <class THeap>
+    int /* val */ valueFromVar(THeap &heap, int var, const struct cl_type *clt,
+                               const struct cl_accessor *ac)
+    {
+        using namespace SymbolicHeap;
+        switch (var) {
+            case OBJ_INVALID:
+                TRAP;
+                return VAL_INVALID;
+
+            case OBJ_UNKNOWN:
+                return heap.valCreateUnknown(UV_UNKNOWN, clt);
+
+            case OBJ_DELETED:
+            case OBJ_DEREF_FAILED:
+            case OBJ_LOST:
+                return heap.valCreateUnknown(UV_DEREF_FAILED, clt);
+
+            case OBJ_RETURN:
+            default:
+                break;
+        }
+
+        // seek the last accessor
+        while (ac && ac->next)
+            ac = ac->next;
+
+        // handle CL_ACCESSOR_REF if any
+        return (ac && ac->code == CL_ACCESSOR_REF)
+            ? heap.placedAt(var)
+            : heap.valueOf(var);
+    }
+}
+
 int /* val */ SymHeapProcessor::heapValFromOperand(const struct cl_operand &op)
 {
     using namespace SymbolicHeap;
@@ -246,23 +291,17 @@ int /* val */ SymHeapProcessor::heapValFromOperand(const struct cl_operand &op)
     const enum cl_operand_e code = op.code;
     switch (code) {
         case CL_OPERAND_VAR:
-        case CL_OPERAND_REG: {
-            const int var = this->heapVarFromOperand(op);
-            if (OBJ_INVALID == var)
-                TRAP;
-
-            const struct cl_accessor *ac = op.accessor;
-            return (ac && ac->code == CL_ACCESSOR_REF)
-                ? heap_.placedAt(var)
-                : heap_.valueOf(var);
-        }
+        case CL_OPERAND_REG:
+            return valueFromVar(heap_,
+                    this->heapVarFromOperand(op),
+                    op.type, op.accessor);
 
         case CL_OPERAND_CST:
             return this->heapValFromCst(op);
 
         default:
             TRAP;
-            return OBJ_INVALID;
+            return VAL_INVALID;
     }
 }
 
@@ -287,21 +326,35 @@ namespace {
     }
 
     template <class THeap>
-    bool digJunk(THeap &heap, int ptrVal) {
-        if (ptrVal <= 0)
+    bool isHeapObject(const THeap &heap, int obj) {
+        using SymbolicHeap::OBJ_INVALID;
+        if (obj <= 0)
             return false;
 
-        if (SymbolicHeap::VAL_INVALID != heap.valGetCustom(0, ptrVal))
+        for (; OBJ_INVALID != obj; obj = heap.varParent(obj))
+            if (-1 != heap.cVar(obj))
+                return false;
+
+        return true;
+    }
+
+    template <class THeap>
+    bool digJunk(THeap &heap, int ptrVal) {
+        using namespace SymbolicHeap;
+        if (ptrVal <= 0 || UV_KNOWN != heap.valGetUnknown(ptrVal))
+            return false;
+
+        if (VAL_INVALID != heap.valGetCustom(0, ptrVal))
             // ignore custom values (e.g. fnc pointers)
             return false;
 
         const int obj = heap.pointsTo(ptrVal);
-        if (obj < 0)
-            // invalid object simply can't be JUNK
+        if (!isHeapObject(heap, obj))
+            // non-heap object simply can't be JUNK
             return false;
 
-        if (-1 != heap.cVar(obj))
-            // non-heap object simply can't be JUNK
+        if (-1 != heap.varParent(obj))
+            // ignore non-roots
             return false;
 
         std::stack<int /* var */> todo;
@@ -311,10 +364,7 @@ namespace {
             const int obj = todo.top();
             todo.pop();
             done.insert(obj);
-            if (SymbolicHeap::OBJ_RETURN == obj)
-                return false;
-
-            if (-1 != heap.cVar(obj))
+            if (!isHeapObject(heap, obj))
                 return false;
 
             const int val = heap.placedAt(obj);
@@ -558,20 +608,25 @@ void SymHeapProcessor::execFree(const CodeStorage::TOperandList &opList) {
     switch (val) {
         case VAL_NULL:
             CL_DEBUG_MSG(lw_, "ignoring free() called with NULL value");
-            // go through!
+            return;
+    }
 
-        case VAL_DEREF_FAILED:
+    const EUnknownValue code = heap_.valGetUnknown(val);
+    switch (code) {
+        case UV_KNOWN:
+            break;
+
+        case UV_UNKNOWN:
+            CL_DEBUG_MSG(lw_, "ignoring free() called on unknown value");
             return;
 
-        case VAL_INVALID:
-        case VAL_UNINITIALIZED:
-        case VAL_UNKNOWN:
-            CL_ERROR_MSG(lw_, "invalid free() detected");
+        case UV_UNINITIALIZED:
+            CL_ERROR_MSG(lw_, "free() called on uninitialized value");
             this->printBackTrace();
             return;
 
-        default:
-            break;
+        case UV_DEREF_FAILED:
+            return;
     }
 
     const int obj = heap_.pointsTo(val);
@@ -692,33 +747,40 @@ bool SymHeapProcessor::execCall(TState &dst, const CodeStorage::Insn &insn,
 }
 
 namespace {
-    void handleUnopTruthNot(int &val) {
+    template <class THeap>
+    void handleUnopTruthNot(THeap &heap, int &val) {
         using namespace SymbolicHeap;
 
         switch (val) {
             case VAL_FALSE:
                 val = VAL_TRUE;
-                break;
+                return;
 
             case VAL_TRUE:
                 val = VAL_FALSE;
-                break;
+                return;
 
             case VAL_INVALID:
-            case VAL_UNINITIALIZED:
-            case VAL_UNKNOWN:
-            case VAL_DEREF_FAILED:
-                break;
+                return;
 
             default:
-                TRAP;
+                break;
         }
+
+        const EUnknownValue code = heap.valGetUnknown(val);
+        if (UV_KNOWN == code)
+            // the value we got is not VAL_TRUE, VAL_FALSE, nor an unknown value
+            TRAP;
+
+        val = heap.valDuplicateUnknown(val);
+        // TODO: remember relation among unknown values ... challenge? :-)
     }
 
-    void handleUnop(enum cl_unop_e code, int &val) {
+    template <class THeap>
+    void handleUnop(THeap &heap, enum cl_unop_e code, int &val) {
         switch (code) {
             case CL_UNOP_TRUTH_NOT:
-                handleUnopTruthNot(val);
+                handleUnopTruthNot(heap, val);
                 // fall through!
 
             case CL_UNOP_ASSIGN:
@@ -743,25 +805,24 @@ void SymHeapProcessor::execUnary(const CodeStorage::Insn &insn) {
 
     // handle unary operator
     const enum cl_unop_e code = static_cast<enum cl_unop_e> (insn.subCode);
-    handleUnop(code, valRhs);
+    handleUnop(heap_, code, valRhs);
 
     // store result
     this->heapSetVal(varLhs, valRhs);
 }
 
 namespace {
-    int handleSpecialValues(int val1, int val2) {
+    template <class THeap>
+    int handleSpecialValues(THeap &/*heap*/, int val1, int val2) {
         using namespace SymbolicHeap;
 
         if (VAL_NULL <= val1 && VAL_NULL <= val2)
             return VAL_FALSE;
 
+        // TODO: handle unknown values here
         const int lower = (val1 < val2) ? val1 : val2;
         switch (lower) {
             case VAL_INVALID:
-            case VAL_UNINITIALIZED:
-            case VAL_UNKNOWN:
-            case VAL_DEREF_FAILED:
                 return lower;
 
             default:
@@ -784,7 +845,7 @@ void SymHeapProcessor::execBinary(const CodeStorage::Insn &insn) {
     // resolve src1, src2
     const int val1 = heapValFromOperand(insn.operands[1]);
     const int val2 = heapValFromOperand(insn.operands[2]);
-    int val = handleSpecialValues(val1, val2);
+    int val = handleSpecialValues(heap_, val1, val2);
 
     bool neg = false;
     bool result;
@@ -800,7 +861,7 @@ void SymHeapProcessor::execBinary(const CodeStorage::Insn &insn) {
 
         default:
             CL_WARN_MSG(lw_, "binary operator not implemented yet");
-            val = VAL_UNKNOWN;
+            val = heap_.valCreateUnknown(UV_UNKNOWN, insn.operands[0].type);
             goto done;
     }
 
@@ -816,6 +877,7 @@ void SymHeapProcessor::execBinary(const CodeStorage::Insn &insn) {
 
 done:
     // store resulting value
+    // FIXME: should we use SymHeapProcessor here?
     heap_.objSetValue(dst, val);
 }
 
