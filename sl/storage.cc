@@ -447,4 +447,15 @@ const File* FileDb::operator[](const char *name) const {
     return dbConstLookup(d->db, files_, filePath.string());
 }
 
+const Var& varById(const Storage &stor, int uid) {
+    const TVarDbById db0 = stor.varDbById;
+    TVarDbById::const_iterator iter = db0.find(uid);
+    if (db0.end() == iter)
+        // can't insert anything into const object
+        TRAP;
+
+    const VarDb &db1 = *iter->second;
+    return db1[uid];
+}
+
 } // namespace CodeStorage

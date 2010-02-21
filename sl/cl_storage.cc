@@ -325,17 +325,15 @@ void ClStorageBuilder::Private::digOperandVar(const struct cl_operand *op) {
         : op->data.var.id;
     enum cl_scope_e scope = op->scope;
     switch (scope) {
-        case CL_SCOPE_GLOBAL: {
-            Var &ref = stor.glVars[id] = Var(VAR_GL, op);
-            stor.anyVarById[id] = &ref;
+        case CL_SCOPE_GLOBAL:
+            stor.glVars[id] = Var(VAR_GL, op);
+            stor.varDbById[id] = &stor.glVars;
             break;
-        }
 
-        case CL_SCOPE_STATIC: {
-            Var &ref = file->vars[id] = Var(VAR_GL, op);
-            stor.anyVarById[id] = &ref;
+        case CL_SCOPE_STATIC:
+            file->vars[id] = Var(VAR_GL, op);
+            stor.varDbById[id] = &file->vars;
             break;
-        }
 
         case CL_SCOPE_FUNCTION: {
             Var &var = fnc->vars[id];
@@ -355,7 +353,7 @@ void ClStorageBuilder::Private::digOperandVar(const struct cl_operand *op) {
                 case VAR_GL:
                     TRAP;
             }
-            stor.anyVarById[id] = &var;
+            stor.varDbById[id] = &fnc->vars;
             break;
         }
 
@@ -516,7 +514,7 @@ void ClStorageBuilder::fnc_arg_decl(int pos, const struct cl_operand *op) {
     Fnc &fnc = *(d->fnc);
     Var &var = fnc.vars[uid];
     var = Var(VAR_FNC_ARG, op);
-    d->stor.anyVarById[uid] = &var;
+    d->stor.varDbById[uid] = &fnc.vars;
 
     const int argCnt = fnc.args.size();
     if (argCnt + /* FIXME: start with zero instead? */ 1 != pos)

@@ -616,9 +616,9 @@ class FileDb {
 typedef std::map<int /* uid */, Fnc *> TFncById;
 
 /**
- * STL-based map from function uid to corresponding Var object
+ * STL-based map from variable uid to corresponding VarDb object
  */
-typedef std::map<int /* uid */, Var *> TVarById;
+typedef std::map<int /* uid */, VarDb *> TVarDbById;
 
 /**
  * a value type representing the @b whole @b serialised @b model of code
@@ -633,8 +633,10 @@ struct Storage {
     FileDb                      files;              ///< per file content
     FncDb                       orphans;            ///< @note not used for now
     TFncById                    anyFncById;         ///< IDs of all fncs
-    TVarById                    anyVarById;         ///< IDs of all vars
+    TVarDbById                  varDbById;          ///< IDs of all vars
 };
+
+const Var& varById(const Storage &, int uid);
 
 } // namespace CodeStorage
 
