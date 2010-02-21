@@ -94,18 +94,30 @@ struct SymHeapPlotter::Private {
     const SymbolicHeap::SymHeap         *heap;
     std::ofstream                       dotStream;
     LocationWriter                      lw;
+    WorkList<int /* value */>           wl;
+
+    int                                 last;
+    int acquireId() {
+        return (this->last)++;
+    }
 
     bool openDotFile(const std::string &name);
     bool closeDotFile();
 
     void plotNode(int id, const char *shape, const char *color,
                   const char *label);
+    void plotLonelyNode(int obj, const char *shape, const char *color,
+                        const char *text);
 
     void plotPointsTo(int value, int obj);
     void plotValueOf(int obj, int value);
+    void plotCompEdge(int obj, int sub);
 
     void plotValue(int value);
     void plotObj(int obj);
+
+    bool resolveValueOf(int /* value */ *pDst, int obj);
+    bool resolvePointsTo(int /* obj */ *pDst, int val);
 
     bool handleCustomValue(int value);
     bool handleUnknownValue(int value);
@@ -156,6 +168,21 @@ void SymHeapPlotter::Private::plotNode(int id, const char *shape,
         << std::endl;
 }
 
+void SymHeapPlotter::Private::plotLonelyNode(int obj, const char *shape,
+                                             const char *color,
+                                             const char *text)
+{
+    const int id = this->acquireId();
+    this->dotStream << "\t" << SL_QUOTE(id)
+        << " [shape=" << shape
+        << ", color=" << color
+        << ", label=" << SL_QUOTE(text) << "];"
+        << std::endl;
+
+    this->dotStream << "\t" << SL_QUOTE(obj) << " -> " << SL_QUOTE(id)
+        << std::endl;
+}
+
 void SymHeapPlotter::Private::plotPointsTo(int value, int obj) {
     this->dotStream << "\t" << SL_QUOTE(value) << " -> " << SL_QUOTE(obj)
         << " [color=red];"
@@ -168,32 +195,35 @@ void SymHeapPlotter::Private::plotValueOf(int obj, int value) {
         << std::endl;
 }
 
+void SymHeapPlotter::Private::plotCompEdge(int obj, int sub) {
+    this->dotStream << "\t" << SL_QUOTE(obj) << " -> " << SL_QUOTE(sub)
+        << " [color=gray, style=dotted, arrowhead=open];"
+        << std::endl;
+}
+
 void SymHeapPlotter::Private::plotValue(int value) {
     if (SymbolicHeap::VAL_NULL == value)
-        // TODO: visualize VAL_NULL somehow
-        return;
+        TRAP;
 
     if (value < 0)
-        // TODO
         TRAP;
 
     const struct cl_type *clt = this->heap->valType(value);
     if (!clt)
-        // TODO
         TRAP;
 
     const enum cl_type_e code = clt->code;
     switch (code) {
         case CL_TYPE_PTR:
-            this->plotNode(value, "circle", "blue", "PTR");
+            this->plotNode(value, "ellipse", "blue", "PTR");
             break;
 
         case CL_TYPE_BOOL:
-            this->plotNode(value, "circle", "yellow", "BOOL");
+            this->plotNode(value, "ellipse", "yellow", "BOOL");
             break;
 
         case CL_TYPE_INT:
-            this->plotNode(value, "circle", "gray", "INT");
+            this->plotNode(value, "ellipse", "gray", "INT");
             break;
 
         case CL_TYPE_STRUCT:
@@ -213,12 +243,10 @@ void SymHeapPlotter::Private::plotObj(int obj) {
         todo.pop();
 
         if (obj <= 0)
-            // TODO
             TRAP;
 
         const struct cl_type *clt = this->heap->objType(obj);
         if (!clt)
-            // TODO
             TRAP;
 
         const enum cl_type_e code = clt->code;
@@ -237,13 +265,117 @@ void SymHeapPlotter::Private::plotObj(int obj) {
 
             case CL_TYPE_STRUCT:
                 // TODO: draw subgraph
-                for (int i = 0; i < clt->item_cnt; ++i)
-                    todo.push(this->heap->subVar(obj, i));
+                this->plotNode(obj, "box", "gray", "STRUCT");
+                for (int i = 0; i < clt->item_cnt; ++i) {
+                    const int sub = this->heap->subVar(obj, i);
+                    this->plotCompEdge(obj, sub);
+                    todo.push(sub);
+                }
                 break;
 
             default:
                 TRAP;
         }
+    }
+}
+
+bool SymHeapPlotter::Private::resolveValueOf(int *pDst, int obj) {
+    using namespace SymbolicHeap;
+    if (obj < 0)
+        TRAP;
+
+    const struct cl_type *clt = this->heap->objType(obj);
+    if (!clt)
+        TRAP;
+
+    const int value = this->heap->valueOf(obj);
+    switch (value) {
+        case VAL_INVALID:
+            TRAP;
+            return false;
+
+        case VAL_NULL /* = VAL_FALSE*/:
+            switch (clt->code) {
+                case CL_TYPE_INT:
+                    this->plotLonelyNode(obj, "ellipse", "black", "(int) 0");
+                    return false;
+
+                case CL_TYPE_PTR:
+                    this->plotLonelyNode(obj, "ellipse", "blue", "NULL");
+                    return false;
+
+                case CL_TYPE_BOOL:
+                    this->plotLonelyNode(obj, "ellipse", "yellow", "FALSE");
+                    return false;
+
+                default:
+                    TRAP;
+            }
+            return false;
+
+        case VAL_TRUE:
+            if (CL_TYPE_BOOL != clt->code)
+                TRAP;
+            this->plotLonelyNode(obj, "circle", "yellow", "TRUE");
+            return false;
+
+        default:
+            break;
+    }
+
+    const EUnknownValue code = this->heap->valGetUnknown(value);
+    switch (code) {
+        case UV_KNOWN:
+            *pDst = value;
+            return true;
+
+        case UV_DEREF_FAILED:
+            this->plotLonelyNode(obj, "ellipse", "red", "DEREF_FAILED");
+            return false;
+
+        case UV_UNINITIALIZED:
+            this->plotLonelyNode(obj, "ellipse", "gray", "UNINITIALIZED");
+            return false;
+
+        case UV_UNKNOWN:
+            this->plotLonelyNode(obj, "circle", "gray", "?");
+            return false;
+
+        default:
+            TRAP;
+            return false;
+    }
+}
+
+bool SymHeapPlotter::Private::resolvePointsTo(int /* obj */ *pDst, int value) {
+    using namespace SymbolicHeap;
+
+    const int obj = this->heap->pointsTo(value);
+    switch (obj) {
+        case OBJ_INVALID:
+            this->plotLonelyNode(obj, "box", "red", "INVALID");
+            return false;
+
+        case OBJ_DEREF_FAILED:
+            this->plotLonelyNode(obj, "box", "gray", "DEREF_FAILED");
+            return false;
+
+        case OBJ_DELETED:
+            this->plotLonelyNode(obj, "box", "gray", "DELETED");
+            return false;
+
+        case OBJ_LOST:
+            this->plotLonelyNode(obj, "box", "gray", "LOST");
+            return false;
+
+        case OBJ_UNKNOWN:
+            this->plotLonelyNode(obj, "box", "gray", "?");
+            return false;
+
+        case OBJ_RETURN:
+        default:
+            *pDst = obj;
+            return true;
     }
 }
 
@@ -289,14 +421,14 @@ void SymHeapPlotter::Private::digValueOf(TWL &dst, int obj) {
             case CL_TYPE_PTR:
             case CL_TYPE_BOOL:
             case CL_TYPE_INT: {
-                const int value = this->heap->valueOf(obj);
-                this->plotValueOf(obj, value);
-                dst.schedule(value);
+                int value;
+                if (this->resolveValueOf(&value, obj))
+                    dst.schedule(value);
                 break;
             }
 
             case CL_TYPE_STRUCT:
-                // TODO: draw subgraph
+                // TODO: draw edges
                 for (int i = 0; i < clt->item_cnt; ++i)
                     todo.push(this->heap->subVar(obj, i));
                 break;
@@ -311,11 +443,10 @@ bool SymHeapPlotter::Private::digValue(int value) {
     using namespace SymbolicHeap;
     bool ok = true;
 
-    WorkList<int /* value */> wl(value);
+    wl.schedule(value);
     while (wl.next(value)) {
         if (value <= VAL_NULL)
-            // TODO: handle special values somehow
-            continue;
+            TRAP;
 
         if (this->handleCustomValue(value))
             continue;
@@ -323,12 +454,14 @@ bool SymHeapPlotter::Private::digValue(int value) {
         if (this->handleUnknownValue(value))
             continue;
 
-        // TODO: handle composite values
+        int obj = this->heap->valGetCompositeObj(value);
+        if (OBJ_INVALID != obj) {
+            this->digValueOf(wl, obj);
+            continue;
+        }
 
         this->plotValue(value);
-        const int obj = this->heap->pointsTo(value);
-        if (obj < 0)
-            // TODO: handle special objects somehow
+        if (!this->resolvePointsTo(&obj, value))
             continue;
 
         this->plotObj(obj);
@@ -344,8 +477,10 @@ bool SymHeapPlotter::Private::digObj(int obj) {
     if (obj < 0)
         return true;
 
-    // TODO
-    const int value = this->heap->valueOf(obj);
+    int value;
+    if (!this->resolveValueOf(&value, obj))
+        return true;
+
     return this->digValue(value);
 }
 
@@ -370,6 +505,7 @@ SymHeapPlotter::SymHeapPlotter(const CodeStorage::Storage   &stor,
 {
     d->stor = &stor;
     d->heap = &heap;
+    d->last = /* XXX */ 0x10000;
 }
 
 SymHeapPlotter::~SymHeapPlotter() {
