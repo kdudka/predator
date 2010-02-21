@@ -433,6 +433,9 @@ void ClStorageBuilder::Private::digOperand(const struct cl_operand *op) {
 }
 
 void ClStorageBuilder::Private::openInsn(Insn *newInsn) {
+    // set pointer to the owning instance of Storage
+    newInsn->stor = &this->stor;
+
     if (insn)
         // Aiee, insn already opened
         TRAP;

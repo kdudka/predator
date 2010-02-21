@@ -194,6 +194,7 @@ void readTypeTree(TypeDb &db, const struct cl_type *clt);
 
 class Block;
 class ControlFlow;
+struct Storage;
 
 /**
  * generic STL-based list of cl_operand objects.
@@ -211,6 +212,11 @@ typedef STD_VECTOR(const Block *) TTargetList;
  * high-level representation of an intermediate code instruction
  */
 struct Insn {
+    /**
+     * instance of Storage which owns the Insn object
+     */
+    Storage                     *stor;
+
     /**
      * type of instruction, see #cl_insn_e documentation
      * @note now there can be also CL_INSN_CALL and CL_INSN_SWITCH
