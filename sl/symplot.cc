@@ -29,9 +29,11 @@
 #include <iomanip>
 #include <map>
 #include <sstream>
+#include <stack>
 #include <string>
 
 #include <boost/foreach.hpp>
+//#include <boost/tuple/tuple.hpp>
 
 // singleton
 class PlotEnumerator {
@@ -100,12 +102,16 @@ struct SymHeapPlotter::Private {
                   const char *label);
 
     void plotPointsTo(int value, int obj);
+    void plotValueOf(int obj, int value);
 
     void plotValue(int value);
     void plotObj(int obj);
 
     bool handleCustomValue(int value);
     bool handleUnknownValue(int value);
+
+    template <class TWL> void digValueOf(TWL &dst, int obj);
+
     bool digValue(int value);
     bool digObj(int obj);
     bool digCVar(int uid);
@@ -156,6 +162,12 @@ void SymHeapPlotter::Private::plotPointsTo(int value, int obj) {
         << std::endl;
 }
 
+void SymHeapPlotter::Private::plotValueOf(int obj, int value) {
+    this->dotStream << "\t" << SL_QUOTE(obj) << " -> " << SL_QUOTE(value)
+        << " [color=blue];"
+        << std::endl;
+}
+
 void SymHeapPlotter::Private::plotValue(int value) {
     if (SymbolicHeap::VAL_NULL == value)
         // TODO: visualize VAL_NULL somehow
@@ -185,7 +197,7 @@ void SymHeapPlotter::Private::plotValue(int value) {
             break;
 
         case CL_TYPE_STRUCT:
-            CL_ERROR("value of type CL_TYPE_STRUCT not implemented");
+            this->plotNode(value, "circle", "green", "place-holder");
             break;
 
         default:
@@ -194,35 +206,44 @@ void SymHeapPlotter::Private::plotValue(int value) {
 }
 
 void SymHeapPlotter::Private::plotObj(int obj) {
-    if (obj <= 0)
-        // TODO
-        TRAP;
+    std::stack<int /* obj */> todo;
+    todo.push(obj);
+    while (!todo.empty()) {
+        obj = todo.top();
+        todo.pop();
 
-    const struct cl_type *clt = this->heap->objType(obj);
-    if (!clt)
-        // TODO
-        TRAP;
-
-    const enum cl_type_e code = clt->code;
-    switch (code) {
-        case CL_TYPE_PTR:
-            this->plotNode(obj, "box", "blue", "PTR");
-            break;
-
-        case CL_TYPE_BOOL:
-            this->plotNode(obj, "box", "yellow", "BOOL");
-            break;
-
-        case CL_TYPE_INT:
-            this->plotNode(obj, "box", "gray", "INT");
-            break;
-
-        case CL_TYPE_STRUCT:
-            CL_ERROR("object of type CL_TYPE_STRUCT not implemented");
-            break;
-
-        default:
+        if (obj <= 0)
+            // TODO
             TRAP;
+
+        const struct cl_type *clt = this->heap->objType(obj);
+        if (!clt)
+            // TODO
+            TRAP;
+
+        const enum cl_type_e code = clt->code;
+        switch (code) {
+            case CL_TYPE_PTR:
+                this->plotNode(obj, "box", "blue", "PTR");
+                break;
+
+            case CL_TYPE_BOOL:
+                this->plotNode(obj, "box", "yellow", "BOOL");
+                break;
+
+            case CL_TYPE_INT:
+                this->plotNode(obj, "box", "gray", "INT");
+                break;
+
+            case CL_TYPE_STRUCT:
+                // TODO: draw subgraph
+                for (int i = 0; i < clt->item_cnt; ++i)
+                    todo.push(this->heap->subVar(obj, i));
+                break;
+
+            default:
+                TRAP;
+        }
     }
 }
 
@@ -245,6 +266,45 @@ bool SymHeapPlotter::Private::handleUnknownValue(int value) {
 
     CL_ERROR("handleUnknownValue not implemented");
     return true;
+}
+
+// FIXME: copy-pasted from plotObj()
+template <class TWL>
+void SymHeapPlotter::Private::digValueOf(TWL &dst, int obj) {
+    std::stack<int /* obj */> todo;
+    todo.push(obj);
+    while (!todo.empty()) {
+        obj = todo.top();
+        todo.pop();
+
+        if (obj < 0)
+            continue;
+
+        const struct cl_type *clt = this->heap->objType(obj);
+        if (!clt)
+            continue;
+
+        const enum cl_type_e code = clt->code;
+        switch (code) {
+            case CL_TYPE_PTR:
+            case CL_TYPE_BOOL:
+            case CL_TYPE_INT: {
+                const int value = this->heap->valueOf(obj);
+                this->plotValueOf(obj, value);
+                dst.schedule(value);
+                break;
+            }
+
+            case CL_TYPE_STRUCT:
+                // TODO: draw subgraph
+                for (int i = 0; i < clt->item_cnt; ++i)
+                    todo.push(this->heap->subVar(obj, i));
+                break;
+
+            default:
+                TRAP;
+        }
+    }
 }
 
 bool SymHeapPlotter::Private::digValue(int value) {
@@ -273,7 +333,7 @@ bool SymHeapPlotter::Private::digValue(int value) {
 
         this->plotObj(obj);
         this->plotPointsTo(value, obj);
-        // TODO: const bool ok = this->digObj(obj);
+        this->digValueOf(wl, obj);
     }
 
     return ok;

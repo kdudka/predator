@@ -51,5 +51,6 @@ class WorkList {
 
             todo.push(item);
             done.insert(item);
+            return true;
         }
 };

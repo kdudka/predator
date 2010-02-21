@@ -268,7 +268,7 @@ void SymHeap::Private::createSubs(int var, const struct cl_type *clt) {
     typedef std::stack<TPair> TStack;
     TStack todo;
 
-    // we are using explicit stack to avoid recursion
+    // we use explicit stack to avoid recursion
     push(todo, var, clt);
     while (!todo.empty()) {
         int var;
