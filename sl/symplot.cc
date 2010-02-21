@@ -27,7 +27,9 @@
 #include <fstream>
 #include <iomanip>
 #include <map>
+#include <set>
 #include <sstream>
+#include <stack>
 #include <string>
 
 #include <boost/foreach.hpp>
@@ -88,10 +90,10 @@ std::string PlotEnumerator::decorate(std::string name) {
     << "\tlabelloc=t;" << std::endl
 
 struct SymHeapPlotter::Private {
-    const CodeStorage::Storage      *stor;
-    const SymbolicHeap::SymHeap     *heap;
-    std::ofstream                   dotStream;
-    LocationWriter                  lw;
+    const CodeStorage::Storage          *stor;
+    const SymbolicHeap::SymHeap         *heap;
+    std::ofstream                       dotStream;
+    LocationWriter                      lw;
 
     bool openDotFile(const std::string &name);
     bool closeDotFile();
@@ -99,9 +101,16 @@ struct SymHeapPlotter::Private {
     void plotNode(int id, const char *shape, const char *color,
                   const char *label);
 
-    bool plotValue(int value);
-    bool plotObj(int obj);
-    bool plotCVar(int uid);
+    void plotPointsTo(int value, int obj);
+
+    void plotValue(int value);
+    void plotObj(int obj);
+
+    bool handleCustomValue(int value);
+    bool handleUnknownValue(int value);
+    bool digValue(int value);
+    bool digObj(int obj);
+    bool digCVar(int uid);
 };
 
 bool SymHeapPlotter::Private::openDotFile(const std::string &plotName)
@@ -143,8 +152,18 @@ void SymHeapPlotter::Private::plotNode(int id, const char *shape,
         << std::endl;
 }
 
-bool SymHeapPlotter::Private::plotValue(int value) {
-    if (value <= 0)
+void SymHeapPlotter::Private::plotPointsTo(int value, int obj) {
+    this->dotStream << "\t" << SL_QUOTE(value) << " -> " << SL_QUOTE(obj)
+        << " [color=red];"
+        << std::endl;
+}
+
+void SymHeapPlotter::Private::plotValue(int value) {
+    if (SymbolicHeap::VAL_NULL == value)
+        // TODO: visualize VAL_NULL somehow
+        return;
+
+    if (value < 0)
         // TODO
         TRAP;
 
@@ -167,15 +186,16 @@ bool SymHeapPlotter::Private::plotValue(int value) {
             this->plotNode(value, "circle", "gray", "INT");
             break;
 
+        case CL_TYPE_STRUCT:
+            CL_ERROR("value of type CL_TYPE_STRUCT not implemented");
+            break;
+
         default:
             TRAP;
     }
-
-    // TODO
-    return false;
 }
 
-bool SymHeapPlotter::Private::plotObj(int obj) {
+void SymHeapPlotter::Private::plotObj(int obj) {
     if (obj <= 0)
         // TODO
         TRAP;
@@ -202,12 +222,65 @@ bool SymHeapPlotter::Private::plotObj(int obj) {
         default:
             TRAP;
     }
-
-    // TODO
-    return false;
 }
 
-bool SymHeapPlotter::Private::plotCVar(int uid) {
+bool SymHeapPlotter::Private::handleCustomValue(int value) {
+    const struct cl_type *clt;
+    const int cVal = this->heap->valGetCustom(&clt, value);
+    if (-1 == cVal)
+        return false;
+
+    CL_ERROR("handleCustomValue not implemented");
+    return true;
+}
+
+bool SymHeapPlotter::Private::handleUnknownValue(int value) {
+    using namespace SymbolicHeap;
+
+    const EUnknownValue code = this->heap->valGetUnknown(value);
+    if (UV_KNOWN == code)
+        return false;
+
+    CL_ERROR("handleUnknownValue not implemented");
+    return true;
+}
+
+bool SymHeapPlotter::Private::digValue(int value) {
+    bool ok = true;
+
+    std::set  <int /* value */> done;
+    std::stack<int /* value */> todo;
+    todo.push(value);
+    while (!todo.empty()) {
+        const int value = todo.top();
+        todo.pop();
+        done.insert(value);
+
+        if (this->handleCustomValue(value))
+            continue;
+
+        if (this->handleUnknownValue(value))
+            continue;
+
+        const int obj = this->heap->pointsTo(value);
+        this->plotPointsTo(value, obj);
+        // TODO: const bool ok = this->digObj(obj);
+    }
+
+    return ok;
+}
+
+bool SymHeapPlotter::Private::digObj(int obj) {
+    this->plotObj(obj);
+    if (obj < 0)
+        return true;
+
+    // TODO
+    const int value = this->heap->valueOf(obj);
+    return this->digValue(value);
+}
+
+bool SymHeapPlotter::Private::digCVar(int uid) {
     using namespace SymbolicHeap;
 
     const CodeStorage::Var &var = varById(*this->stor, uid);
@@ -219,7 +292,7 @@ bool SymHeapPlotter::Private::plotCVar(int uid) {
     if (OBJ_INVALID == obj)
         CL_DEBUG_MSG(this->lw, "varByCVar lookup failed");
 
-    return this->plotObj(obj);
+    return this->digObj(obj);
 }
 
 SymHeapPlotter::SymHeapPlotter(const CodeStorage::Storage   &stor,
@@ -246,7 +319,7 @@ bool SymHeapPlotter::plot(const std::string &name) {
     SymHeap::TCont cVars;
     d->heap->gatherCVars(cVars);
     BOOST_FOREACH(int uid, cVars) {
-        if (!d->plotCVar(uid))
+        if (!d->digCVar(uid))
             ok = false;
     }
 
@@ -261,7 +334,7 @@ bool SymHeapPlotter::plotHeapValue(const std::string &name, int value) {
         return false;
 
     // plot by value
-    const bool ok = d->plotValue(value);
+    const bool ok = d->digValue(value);
 
     // close dot file
     d->closeDotFile();
@@ -283,7 +356,7 @@ bool SymHeapPlotter::plotStackFrame(const std::string           &name,
     // go through all stack variables
     bool ok = true;
     BOOST_FOREACH(const Var &var, fnc.vars) {
-        if (!d->plotCVar(var.uid))
+        if (!d->digCVar(var.uid))
             ok = false;
     }
 
