@@ -23,13 +23,12 @@
 #include "cl_private.hh"
 #include "storage.hh"
 #include "symheap.hh"
+#include "worklist.hh"
 
 #include <fstream>
 #include <iomanip>
 #include <map>
-#include <set>
 #include <sstream>
-#include <stack>
 #include <string>
 
 #include <boost/foreach.hpp>
@@ -55,7 +54,6 @@ class PlotEnumerator {
         typedef std::map<std::string, int> TMap;
         TMap map_;
 };
-
 
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of PlotEnumerator
@@ -253,13 +251,11 @@ bool SymHeapPlotter::Private::digValue(int value) {
     using namespace SymbolicHeap;
     bool ok = true;
 
-    std::set  <int /* value */> done;
-    std::stack<int /* value */> todo;
-    todo.push(value);
-    while (!todo.empty()) {
-        const int value = todo.top();
-        todo.pop();
-        done.insert(value);
+    WorkList<int /* value */> wl(value);
+    while (wl.next(value)) {
+        if (value <= VAL_NULL)
+            // TODO: handle special values somehow
+            continue;
 
         if (this->handleCustomValue(value))
             continue;
@@ -267,9 +263,7 @@ bool SymHeapPlotter::Private::digValue(int value) {
         if (this->handleUnknownValue(value))
             continue;
 
-        if (value <= VAL_NULL)
-            // TODO: handle special values somehow
-            continue;
+        // TODO: handle composite values
 
         this->plotValue(value);
         const int obj = this->heap->pointsTo(value);
