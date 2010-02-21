@@ -219,6 +219,10 @@ void SymHeapPlotter::Private::plotObj(int obj) {
             this->plotNode(obj, "box", "gray", "INT");
             break;
 
+        case CL_TYPE_STRUCT:
+            CL_ERROR("object of type CL_TYPE_STRUCT not implemented");
+            break;
+
         default:
             TRAP;
     }
@@ -246,6 +250,7 @@ bool SymHeapPlotter::Private::handleUnknownValue(int value) {
 }
 
 bool SymHeapPlotter::Private::digValue(int value) {
+    using namespace SymbolicHeap;
     bool ok = true;
 
     std::set  <int /* value */> done;
@@ -262,7 +267,17 @@ bool SymHeapPlotter::Private::digValue(int value) {
         if (this->handleUnknownValue(value))
             continue;
 
+        if (value <= VAL_NULL)
+            // TODO: handle special values somehow
+            continue;
+
+        this->plotValue(value);
         const int obj = this->heap->pointsTo(value);
+        if (obj < 0)
+            // TODO: handle special objects somehow
+            continue;
+
+        this->plotObj(obj);
         this->plotPointsTo(value, obj);
         // TODO: const bool ok = this->digObj(obj);
     }
