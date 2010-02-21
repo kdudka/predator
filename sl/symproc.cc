@@ -715,7 +715,7 @@ namespace {
     }
 
     template <int NTH, class TOpList>
-    bool readPlotName(std::string &dst, const TOpList opList)
+    bool readPlotName(std::string *dst, const TOpList opList)
     {
         const cl_operand &op = opList[NTH + /* dst + fnc */ 2];
         if (CL_OPERAND_CST != op.code)
@@ -725,7 +725,7 @@ namespace {
         if (CL_TYPE_STRING != cst.code)
             return false;
 
-        dst = cst.data.cst_string.value;
+        *dst = cst.data.cst_string.value;
         return true;
     }
 
@@ -741,6 +741,25 @@ namespace {
             return false;
 
         *dst = value;
+        return true;
+    }
+
+    template <class TInsn, class THeap>
+    bool readNameAndValue(std::string *pName, int *pValue,
+                          const TInsn &insn, const THeap &heap)
+    {
+        const CodeStorage::TOperandList &opList = insn.operands;
+        const LocationWriter lw(&insn.loc);
+
+        if (!chkVoidCall<2>(opList))
+            return false;
+
+        if (!readHeapVal<0>(pValue, opList, heap))
+            return false;
+
+        if (!readPlotName<1>(pName, opList))
+            return false;
+
         return true;
     }
 
@@ -761,54 +780,74 @@ namespace {
         return true;
     }
 
+    void emitPrototypeError(const LocationWriter &lw, const std::string &fnc) {
+        CL_WARN_MSG(lw, "incorrectly called "
+                << fnc << "() not recognized as built-in");
+    }
+
+    void emitPlotError(const LocationWriter &lw, const std::string &plotName) {
+        CL_WARN_MSG(lw, "error while plotting '" << plotName << "'");
+    }
+
     template <class TInsn, class THeap>
     bool callPlot(const TInsn &insn, const THeap &heap) {
-        TRAP;
-        (void) insn;
-        (void) heap;
-        return false;
+        const CodeStorage::TOperandList &opList = insn.operands;
+        const LocationWriter lw(&insn.loc);
+
+        std::string plotName;
+        if (!chkVoidCall<1>(opList) || !readPlotName<0>(&plotName, opList)) {
+            emitPrototypeError(lw, "sl_plot");
+            return false;
+        }
+
+        const CodeStorage::Storage &stor = *insn.stor;
+        SymHeapPlotter plotter(stor, heap);
+        if (!plotter.plot(plotName))
+            emitPlotError(lw, plotName);
+
+        return true;
     }
 
     template <class TInsn, class THeap>
     bool callPlotByPtr(const TInsn &insn, const THeap &heap) {
-        TRAP;
-        (void) insn;
-        (void) heap;
-        return false;
+        const LocationWriter lw(&insn.loc);
+
+        std::string plotName;
+        int value;
+        if (!readNameAndValue(&plotName, &value, insn, heap)) {
+            emitPrototypeError(lw, "sl_plot_by_ptr");
+            return false;
+        }
+
+        const CodeStorage::Storage &stor = *insn.stor;
+        SymHeapPlotter plotter(stor, heap);
+        if (!plotter.plotHeapValue(plotName, value))
+            emitPlotError(lw, plotName);
+
+        return true;
     }
 
     template <class TInsn, class THeap>
     bool callPlotStackFrame(const TInsn &insn, const THeap &heap) {
-        const CodeStorage::TOperandList &opList = insn.operands;
         const CodeStorage::Storage &stor = *insn.stor;
         const LocationWriter lw(&insn.loc);
-        SymHeapPlotter plotter(stor);
 
+        std::string plotName;
         int value;
         const CodeStorage::Fnc *fnc;
-        std::string plotName;
 
-        if (!chkVoidCall<2>(opList))
-            goto ignore_call;
+        if (!readNameAndValue(&plotName, &value, insn, heap)
+                || !fncFromHeapVal(stor, &fnc, value, heap))
+        {
+            emitPrototypeError(lw, "sl_plot_stack_frame");
+            return false;
+        }
 
-        if (!readHeapVal<0>(&value, opList, heap))
-            goto ignore_call;
+        SymHeapPlotter plotter(stor, heap);
+        if (!plotter.plotStackFrame(plotName, *fnc))
+            emitPlotError(lw, plotName);
 
-        if (!fncFromHeapVal(stor, &fnc, value, heap))
-            goto ignore_call;
-
-        if (!readPlotName<1>(plotName, opList))
-            goto ignore_call;
-
-        if (!plotter.plotStackFrame(plotName, heap, fnc))
-            CL_WARN_MSG(lw, "error while plotting '" << plotName << "'");
         return true;
-
-ignore_call:
-        CL_WARN_MSG(lw,
-                "incorrectly called sl_plot_stack_frame() "
-                "not recognized as built-in");
-        return false;
     }
 }
 
@@ -851,13 +890,16 @@ bool SymHeapProcessor::execCall(TState &dst, const CodeStorage::Insn &insn,
         goto call_done;
     }
 
-    if (STREQ(fncName, "sl_plot") && callPlot(insn, heap_))
+    if (STREQ(fncName, "sl_plot")
+            && callPlot(insn, heap_))
         goto call_done;
 
-    if (STREQ(fncName, "sl_plot_stack_frame") && callPlotStackFrame(insn,heap_))
+    if (STREQ(fncName, "sl_plot_stack_frame")
+            && callPlotStackFrame(insn,heap_))
         goto call_done;
 
-    if (STREQ(fncName, "sl_plot_by_ptr") && callPlotByPtr(insn, heap_))
+    if (STREQ(fncName, "sl_plot_by_ptr")
+            && callPlotByPtr(insn, heap_))
         goto call_done;
 
     // no built-in has been matched

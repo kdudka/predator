@@ -21,12 +21,16 @@
 #include "symplot.hh"
 
 #include "cl_private.hh"
+#include "storage.hh"
+#include "symheap.hh"
 
 #include <fstream>
 #include <iomanip>
 #include <map>
 #include <sstream>
 #include <string>
+
+#include <boost/foreach.hpp>
 
 // singleton
 class PlotEnumerator {
@@ -66,7 +70,7 @@ std::string PlotEnumerator::decorate(std::string name) {
         << std::setw(/* width of the ID suffix */ 4)
         << id;
 
-    // merge name with id
+    // merge name with ID
     name += "-";
     name += str.str();
     return name;
@@ -76,14 +80,30 @@ std::string PlotEnumerator::decorate(std::string name) {
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of SymHeapPlotter
 struct SymHeapPlotter::Private {
-    const CodeStorage::Storage  *stor;
-    std::ofstream               dotStream;
+    const CodeStorage::Storage      *stor;
+    const SymbolicHeap::SymHeap     *heap;
+    std::ofstream                   dotStream;
+    LocationWriter                  lw;
+
+    bool plotCVar(int uid);
 };
 
-SymHeapPlotter::SymHeapPlotter(const CodeStorage::Storage &stor):
+bool SymHeapPlotter::Private::plotCVar(int uid) {
+    const CodeStorage::Var &var = varById(*this->stor, uid);
+    this->lw = &var.loc;
+    CL_DEBUG_MSG(this->lw, "XXX plotting stack variable: #" << var.uid
+            << " (" << var.name << ")" );
+
+    // TODO
+    return false;
+}
+
+SymHeapPlotter::SymHeapPlotter(const CodeStorage::Storage   &stor,
+                               const SymbolicHeap::SymHeap  &heap):
     d(new Private)
 {
     d->stor = &stor;
+    d->heap = &heap;
 }
 
 SymHeapPlotter::~SymHeapPlotter() {
@@ -92,30 +112,64 @@ SymHeapPlotter::~SymHeapPlotter() {
 
 namespace {
     bool createDotFile(std::ofstream &str, const std::string &plotName) {
+        // compute a sort of unique file name
         PlotEnumerator *pe = PlotEnumerator::instance();
         std::string fileName(pe->decorate(plotName));
         fileName += ".dot";
 
+        // now please create the file
         str.open(fileName.c_str(), std::ios::out);
         if (!str) {
             CL_ERROR("unable to create file '" << fileName << "'");
             return false;
         }
 
+        // all OK
         CL_DEBUG("symplot: created dot file '" << fileName << "'");
         return true;
     }
 }
 
-bool SymHeapPlotter::plotStackFrame(const std::string &name,
-                                    const SymbolicHeap::SymHeap &heap,
-                                    const CodeStorage::Fnc *fnc)
-{
+bool SymHeapPlotter::plot(const std::string &name) {
+    using namespace SymbolicHeap;
     if (!createDotFile(d->dotStream, name))
         return false;
 
-    (void) heap;
-    (void) fnc;
+    bool ok = true;
+    SymHeap::TCont cVars;
+    d->heap->gatherCVars(cVars);
+    BOOST_FOREACH(int uid, cVars) {
+        if (!d->plotCVar(uid))
+            ok = false;
+    }
+
+    d->dotStream.close();
+    return ok;
+}
+
+bool SymHeapPlotter::plotHeapValue(const std::string &name, int value) {
+    (void) name;
+    (void) value;
     TRAP;
-    return true;
+    return false;
+}
+
+bool SymHeapPlotter::plotStackFrame(const std::string           &name,
+                                    const CodeStorage::Fnc      &fnc)
+{
+    using namespace CodeStorage;
+    if (!createDotFile(d->dotStream, name))
+        return false;
+
+    d->lw = &fnc.def.loc;
+    CL_DEBUG_MSG(d->lw, "XXX plotting stack frame of " << nameOf(fnc) << "():");
+
+    bool ok = true;
+    BOOST_FOREACH(const Var &var, fnc.vars) {
+        if (!d->plotCVar(var.uid))
+            ok = false;
+    }
+
+    d->dotStream.close();
+    return ok;
 }

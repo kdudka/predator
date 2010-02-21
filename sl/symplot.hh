@@ -34,12 +34,14 @@ namespace SymbolicHeap {
 
 class SymHeapPlotter {
     public:
-        SymHeapPlotter(const CodeStorage::Storage &);
+        SymHeapPlotter(const CodeStorage::Storage   &stor,
+                       const SymbolicHeap::SymHeap  &heap);
         ~SymHeapPlotter();
 
-        bool plotStackFrame(const std::string &name,
-                            const SymbolicHeap::SymHeap &,
-                            const CodeStorage::Fnc *fnc);
+        bool plot(const std::string &name);
+        bool plotHeapValue(const std::string &name, int value);
+        bool plotStackFrame(const std::string           &name,
+                            const CodeStorage::Fnc      &fnc);
 
     private:
         struct Private;
