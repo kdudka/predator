@@ -79,6 +79,14 @@ std::string PlotEnumerator::decorate(std::string name) {
 
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of SymHeapPlotter
+#define SL_QUOTE(what) \
+    "\"" << what << "\""
+
+#define SL_GRAPH(name) \
+    "digraph " << SL_QUOTE(name) << " {" << std::endl \
+    << "\tlabel=<<FONT POINT-SIZE=\"18\">" << name << "</FONT>>;" << std::endl \
+    << "\tlabelloc=t;" << std::endl
+
 struct SymHeapPlotter::Private {
     const CodeStorage::Storage      *stor;
     const SymbolicHeap::SymHeap     *heap;
@@ -88,8 +96,12 @@ struct SymHeapPlotter::Private {
     bool openDotFile(const std::string &name);
     bool closeDotFile();
 
-    bool plotCVar(int uid);
+    void plotNode(int id, const char *shape, const char *color,
+                  const char *label);
+
     bool plotValue(int value);
+    bool plotObj(int obj);
+    bool plotCVar(int uid);
 };
 
 bool SymHeapPlotter::Private::openDotFile(const std::string &plotName)
@@ -106,31 +118,108 @@ bool SymHeapPlotter::Private::openDotFile(const std::string &plotName)
         return false;
     }
 
-    // all OK
     CL_DEBUG("symplot: created dot file '" << fileName << "'");
-    return true;
+    this->dotStream << SL_GRAPH(plotName);
+    return this->dotStream;
 }
 
 bool SymHeapPlotter::Private::closeDotFile() {
+    // close graph
+    this->dotStream << "}" << std::endl;
+
+    // close stream
     const bool ok = this->dotStream;
     this->dotStream.close();
     return ok;
 }
 
-bool SymHeapPlotter::Private::plotCVar(int uid) {
-    const CodeStorage::Var &var = varById(*this->stor, uid);
-    this->lw = &var.loc;
-    CL_DEBUG_MSG(this->lw, "XXX plotting stack variable: #" << var.uid
-            << " (" << var.name << ")" );
+void SymHeapPlotter::Private::plotNode(int id, const char *shape,
+                                       const char *color, const char *label)
+{
+    this->dotStream << "\t" << SL_QUOTE(id)
+        << " [shape=" << shape
+        << ", color=" << color
+        << ", label=" << SL_QUOTE("#" << id << " [" << label << "]") << "];"
+        << std::endl;
+}
+
+bool SymHeapPlotter::Private::plotValue(int value) {
+    if (value <= 0)
+        // TODO
+        TRAP;
+
+    const struct cl_type *clt = this->heap->valType(value);
+    if (!clt)
+        // TODO
+        TRAP;
+
+    const enum cl_type_e code = clt->code;
+    switch (code) {
+        case CL_TYPE_PTR:
+            this->plotNode(value, "circle", "blue", "PTR");
+            break;
+
+        case CL_TYPE_BOOL:
+            this->plotNode(value, "circle", "yellow", "BOOL");
+            break;
+
+        case CL_TYPE_INT:
+            this->plotNode(value, "circle", "gray", "INT");
+            break;
+
+        default:
+            TRAP;
+    }
 
     // TODO
     return false;
 }
 
-bool SymHeapPlotter::Private::plotValue(int value) {
+bool SymHeapPlotter::Private::plotObj(int obj) {
+    if (obj <= 0)
+        // TODO
+        TRAP;
+
+    const struct cl_type *clt = this->heap->objType(obj);
+    if (!clt)
+        // TODO
+        TRAP;
+
+    const enum cl_type_e code = clt->code;
+    switch (code) {
+        case CL_TYPE_PTR:
+            this->plotNode(obj, "box", "blue", "PTR");
+            break;
+
+        case CL_TYPE_BOOL:
+            this->plotNode(obj, "box", "yellow", "BOOL");
+            break;
+
+        case CL_TYPE_INT:
+            this->plotNode(obj, "box", "gray", "INT");
+            break;
+
+        default:
+            TRAP;
+    }
+
     // TODO
-    (void) value;
     return false;
+}
+
+bool SymHeapPlotter::Private::plotCVar(int uid) {
+    using namespace SymbolicHeap;
+
+    const CodeStorage::Var &var = varById(*this->stor, uid);
+    this->lw = &var.loc;
+    CL_DEBUG_MSG(this->lw, "XXX plotting stack variable: #" << var.uid
+            << " (" << var.name << ")" );
+
+    const int obj = this->heap->varByCVar(uid);
+    if (OBJ_INVALID == obj)
+        CL_DEBUG_MSG(this->lw, "varByCVar lookup failed");
+
+    return this->plotObj(obj);
 }
 
 SymHeapPlotter::SymHeapPlotter(const CodeStorage::Storage   &stor,

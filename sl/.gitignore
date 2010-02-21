@@ -1,5 +1,6 @@
 *.dot
 *.o
+*.svg
 libcl.a
 slplug.so
 slsparse
