@@ -215,6 +215,8 @@ struct SymExec::Private: public IBtPrinter {
     void execReturn(SymbolicHeap::SymHeap heap);
     void updateState(const CodeStorage::Block *ofBlock,
                      const SymbolicHeap::SymHeap &heap);
+    void updateState(const CodeStorage::Block *ofBlock,
+                     SymbolicHeap::SymHeap heap, int obj, int val);
     void execCondInsn(const SymbolicHeap::SymHeap &heap);
     void execTermInsn(const SymbolicHeap::SymHeap &heap);
     int resolveCallee(const SymbolicHeap::SymHeap &heap,
@@ -357,6 +359,14 @@ void SymExec::Private::updateState(const CodeStorage::Block *ofBlock,
     }
 }
         
+void SymExec::Private::updateState(const CodeStorage::Block *ofBlock,
+                                   SymbolicHeap::SymHeap heap, int obj, int val)
+{
+    // TODO: some defensive checks, maybe use SymHeapProcessor also?
+    heap.objSetValue(obj, val);
+    this->updateState(ofBlock, heap);
+}
+
 void SymExec::Private::execCondInsn(const SymbolicHeap::SymHeap &heap)
 {
     using namespace SymbolicHeap;
@@ -408,10 +418,9 @@ void SymExec::Private::execCondInsn(const SymbolicHeap::SymHeap &heap)
     }
 
     // TODO: check for inconsistency here!
-    // TODO: set val to VAL_TRUE in target 0
-    // TODO: set val to VAL_FALSE in target 1
-    this->updateState(tlist[/* then label */ 0], heap);
-    this->updateState(tlist[/* else label */ 1], heap);
+    const int obj = proc.heapVarFromOperand(oplist[0]);
+    this->updateState(tlist[/* then label */ 0], heap, obj, VAL_TRUE);
+    this->updateState(tlist[/* else label */ 1], heap, obj, VAL_FALSE);
 }
 
 void SymExec::Private::execTermInsn(const SymbolicHeap::SymHeap &heap)
