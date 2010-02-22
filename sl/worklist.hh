@@ -17,6 +17,9 @@
  * along with sl.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#ifndef H_GUARD_WORKLIST_H
+#define H_GUARD_WORKLIST_H
+
 #include <set>
 #include <stack>
 
@@ -54,3 +57,5 @@ class WorkList {
             return true;
         }
 };
+
+#endif /* H_GUARD_WORKLIST_H */

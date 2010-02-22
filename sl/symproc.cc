@@ -572,27 +572,6 @@ void SymHeapProcessor::destroyObj(int obj) {
         this->printBackTrace();
 }
 
-int SymHeapProcessor::heapCmpVals(int val1, int val2) {
-    using namespace SymbolicHeap;
-
-    if (val1 < 0 || val2 <0)
-        // special values are not intended to be handled here
-        TRAP;
-
-    const int co1 = heap_.valGetCompositeObj(val1);
-    const int co2 = heap_.valGetCompositeObj(val2);
-    if (OBJ_INVALID != co1 || OBJ_INVALID != co2)
-        // composite objects are not allowed to be compared for now
-        TRAP;
-
-    if (val1 < val2)
-        return -1;
-    else if (val1 > val2)
-        return 1;
-    else
-        return 0;
-}
-
 void SymHeapProcessor::execFree(const CodeStorage::TOperandList &opList) {
     using namespace SymbolicHeap;
     if (/* dst + fnc + ptr */ 3 != opList.size())
@@ -911,40 +890,186 @@ call_done:
 }
 
 namespace {
-    template <class THeap>
-    void handleUnopTruthNot(THeap &heap, int &val) {
+    bool handleUnopTruthNotTrivial(int &val) {
         using namespace SymbolicHeap;
 
         switch (val) {
             case VAL_FALSE:
                 val = VAL_TRUE;
-                return;
+                return true;
 
             case VAL_TRUE:
                 val = VAL_FALSE;
-                return;
+                return true;
 
             case VAL_INVALID:
-                return;
+                return true;
 
             default:
-                break;
+                return false;
         }
+    }
+}
 
-        const EUnknownValue code = heap.valGetUnknown(val);
-        if (UV_KNOWN == code)
-            // the value we got is not VAL_TRUE, VAL_FALSE, nor an unknown value
+template <class THeap>
+void handleUnopTruthNot(THeap &heap, int &val, const struct cl_type *clt) {
+    using namespace SymbolicHeap;
+
+    if (!clt || clt->code != CL_TYPE_BOOL)
+        // inappropriate type for CL_UNOP_TRUTH_NOT
+        TRAP;
+
+    if (handleUnopTruthNotTrivial(val))
+        // we are done
+        return;
+
+    const EUnknownValue code = heap.valGetUnknown(val);
+    if (UV_KNOWN == code)
+        // the value we got is not VAL_TRUE, VAL_FALSE, nor an unknown value
+        TRAP;
+
+    val = heap.valDuplicateUnknown(val);
+    // TODO: remember relation among unknown values ... challenge? :-)
+}
+
+namespace {
+    int /* val */ handleOpCmpBool(enum cl_binop_e code, int v1, int v2)
+    {
+        using namespace SymbolicHeap;
+
+        // TODO: describe the following magic somehow
+        int /* val */ valElim = VAL_FALSE;
+        switch (code) {
+            case CL_BINOP_EQ:
+                valElim = VAL_TRUE;
+                // fall through!
+
+            case CL_BINOP_NE:
+                break;
+
+            default:
+                // crazy comparison of bool values
+                TRAP;
+                return VAL_INVALID;
+        }
+        if (v1 == valElim)
+            return v2;
+        if (v2 == valElim)
+            return v1;
+
+        if (v1 < 0 || v2 < 0)
             TRAP;
 
-        val = heap.valDuplicateUnknown(val);
-        // TODO: remember relation among unknown values ... challenge? :-)
-    }
+        // trivial value comparison
+        bool result = (v1 == v2);
+        if (CL_BINOP_NE == code)
+            result = !result;
 
-    template <class THeap>
-    void handleUnop(THeap &heap, enum cl_unop_e code, int &val) {
+        return (result)
+            ? VAL_TRUE
+            : VAL_FALSE;
+    }
+}
+
+template <class THeap>
+int /* val */ handleOpCmpInt(THeap &heap, enum cl_binop_e code, int v1, int v2,
+                             const struct cl_type *clt)
+{
+        using namespace SymbolicHeap;
+        if (v1 < 0 || v2 < 0)
+            TRAP;
+
+        // trivial value comparison
+        bool result = (v1 == v2);
+
+        switch (code) {
+            case CL_BINOP_EQ:
+                break;
+
+            case CL_BINOP_NE:
+                result = !result;
+                break;
+
+            default:
+                return heap.valCreateUnknown(UV_UNKNOWN, clt);
+        }
+
+        return (result)
+            ? VAL_TRUE
+            : VAL_FALSE;
+}
+
+namespace {
+    int /* val */ handleOpCmpPtr(enum cl_binop_e code, int v1, int v2)
+    {
+        using namespace SymbolicHeap;
+        if (v1 < 0 || v2 < 0)
+            TRAP;
+
+        // trivial value comparison
+        bool result = (v1 == v2);
+
+        switch (code) {
+            case CL_BINOP_EQ:
+                break;
+
+            case CL_BINOP_NE:
+                result = !result;
+                break;
+
+            default:
+                // crazy comparison of pointer values
+                TRAP;
+                return VAL_INVALID;
+        }
+
+        return (result)
+            ? VAL_TRUE
+            : VAL_FALSE;
+    }
+}
+
+template <class THeap>
+int /* val */ handleOpCmp(THeap &heap, enum cl_binop_e code,
+                          const struct cl_type *clt, int v1, int v2)
+{
+    // clt is assumed to be valid at this point
+    switch (clt->code) {
+        case CL_TYPE_PTR:
+            return handleOpCmpPtr(code, v1, v2);
+
+        case CL_TYPE_BOOL:
+            return handleOpCmpBool(code, v1, v2);
+
+        case CL_TYPE_INT:
+            return handleOpCmpInt(heap, code, v1, v2, clt);
+
+        default:
+            // unexpected clt->code
+            TRAP;
+            return SymbolicHeap::VAL_INVALID;
+    }
+}
+
+// template for generic (unary, binary, ...) operator handlers
+template <int ARITY, class THeap>
+struct OpHandler {
+    static int /* val */ handleOp(THeap &heap, int code, const int rhs[ARITY],
+                                  const struct cl_type *clt[ARITY]);
+};
+
+// unary operator handler
+template <class THeap>
+struct OpHandler</* unary */ 1, THeap> {
+    static int handleOp(THeap &heap, int iCode, const int rhs[1],
+                        const struct cl_type *clt[1])
+    {
+        int val = rhs[0];
+
+        const enum cl_unop_e code = static_cast<enum cl_unop_e>(iCode);
         switch (code) {
             case CL_UNOP_TRUTH_NOT:
-                handleUnopTruthNot(heap, val);
+                handleUnopTruthNot(heap, val, clt[0]);
                 // fall through!
 
             case CL_UNOP_ASSIGN:
@@ -953,122 +1078,100 @@ namespace {
             default:
                 TRAP;
         }
+
+        return val;
     }
-}
+};
 
-void SymHeapProcessor::execUnary(const CodeStorage::Insn &insn) {
-    // resolve lhs
-    int varLhs;
-    if (!this->lhsFromOperand(&varLhs, insn.operands[0]))
-        return;
-
-    // resolve rhs
-    int valRhs = this->heapValFromOperand(insn.operands[1]);
-    if (SymbolicHeap::VAL_INVALID == valRhs)
-        TRAP;
-
-    // handle unary operator
-    const enum cl_unop_e code = static_cast<enum cl_unop_e> (insn.subCode);
-    handleUnop(heap_, code, valRhs);
-
-    // store result
-    this->heapSetVal(varLhs, valRhs);
-}
-
-namespace {
-    template <class THeap>
-    int handleSpecialValues(THeap &/*heap*/, int val1, int val2) {
+// binary operator handler
+template <class THeap>
+struct OpHandler</* binary */ 2, THeap> {
+    static int handleOp(THeap &heap, int iCode, const int rhs[2],
+                        const struct cl_type *clt[2])
+    {
         using namespace SymbolicHeap;
 
-        if (VAL_NULL <= val1 && VAL_NULL <= val2)
-            return VAL_FALSE;
+        if (!clt[0] || clt[0] != clt[1])
+            // we don't support arrays, pointer arithmetic and the like,
+            // the types therfore have to match with each other for a binary
+            // operator
+            TRAP;
 
-        // TODO: handle unknown values here
-        const int lower = (val1 < val2) ? val1 : val2;
-        switch (lower) {
-            case VAL_INVALID:
-                return lower;
+        const enum cl_binop_e code = static_cast<enum cl_binop_e>(iCode);
+        switch (code) {
+            case CL_BINOP_EQ:
+            case CL_BINOP_NE:
+            case CL_BINOP_LT:
+            case CL_BINOP_GT:
+            case CL_BINOP_LE:
+            case CL_BINOP_GE:
+                return handleOpCmp(heap, code, clt[0], rhs[0], rhs[1]);
+
+            case CL_BINOP_PLUS:
+            case CL_BINOP_MINUS:
+                CL_WARN("binary operator not implemented yet");
+                return heap.valCreateUnknown(UV_UNKNOWN, clt[0]);
 
             default:
                 TRAP;
-                return VAL_INVALID;
+                return SymbolicHeap::VAL_INVALID;
         }
     }
+};
+
+// C++ does not support partial specialisation of functions, this helps
+template <int ARITY, class THeap>
+int handleOp(THeap &heap, int code, const int rhs[ARITY],
+             const struct cl_type *clt[ARITY])
+{
+    return OpHandler<ARITY, THeap>::handleOp(heap, code, rhs, clt);
 }
 
-void SymHeapProcessor::execBinary(const CodeStorage::Insn &insn) {
-    using namespace SymbolicHeap;
-
-    const enum cl_binop_e code = static_cast<enum cl_binop_e> (insn.subCode);
-
-    // resolve dst
-    int dst;
-    if (!lhsFromOperand(&dst, insn.operands[0]))
+template <int ARITY>
+void SymHeapProcessor::execOp(const CodeStorage::Insn &insn) {
+    // resolve lhs
+    int varLhs;
+    if (!this->lhsFromOperand(&varLhs, insn.operands[/* dst */ 0]))
         return;
 
-    // resolve src1, src2
-    const int val1 = heapValFromOperand(insn.operands[1]);
-    const int val2 = heapValFromOperand(insn.operands[2]);
-    int val = handleSpecialValues(heap_, val1, val2);
-
-    bool neg = false;
-    bool result;
-    if (val)
-        goto done;
-
-    switch (code) {
-        case CL_BINOP_NE:
-            neg = true;
-            // fall through!
-        case CL_BINOP_EQ:
-            break;
-
-        default:
-            CL_WARN_MSG(lw_, "binary operator not implemented yet");
-            val = heap_.valCreateUnknown(UV_UNKNOWN, insn.operands[0].type);
-            goto done;
+    // gather rhs values (and type-info)
+    int rhs[ARITY];
+    const struct cl_type *clt[ARITY];
+    for (int i = 0; i < ARITY; ++i) {
+        const struct cl_operand &op = insn.operands[i + /* [+dst] */ 1];
+        clt[i] = op.type;
+        rhs[i] = this->heapValFromOperand(op);
+        if (SymbolicHeap::VAL_INVALID == rhs[i])
+            TRAP;
     }
 
-    // execute CL_BINOP_EQ/CL_BINOP_NE
-    result = (0 == this->heapCmpVals(val1, val2));
-    if (neg)
-        result = !result;
-
-    // convert bool result to a heap value
-    val = (result)
-        ? VAL_TRUE
-        : VAL_FALSE;
-
-done:
-    // store resulting value
-    // FIXME: should we use SymHeapProcessor here?
-    heap_.objSetValue(dst, val);
+    // handle generic operator and store result
+    const int valResult = handleOp<ARITY>(heap_, insn.subCode, rhs, clt);
+    this->heapSetVal(varLhs, valResult);
 }
 
 bool SymHeapProcessor::exec(TState &dst, const CodeStorage::Insn &insn,
                             bool fastMode)
 {
-    using namespace CodeStorage;
-
     lw_ = &insn.loc;
-
     const enum cl_insn_e code = insn.code;
     switch (code) {
         case CL_INSN_UNOP:
-            this->execUnary(insn);
-            dst.insert(heap_);
-            return true;
+            this->execOp<1>(insn);
+            break;
 
         case CL_INSN_BINOP:
-            this->execBinary(insn);
-            dst.insert(heap_);
-            return true;
+            this->execOp<2>(insn);
+            break;
 
         case CL_INSN_CALL:
             return this->execCall(dst, insn, fastMode);
 
         default:
             TRAP;
-            return true;
     }
+
+    // we've got only one resulting heap, insert it into the target state
+    dst.insert(heap_);
+    return true;
 }

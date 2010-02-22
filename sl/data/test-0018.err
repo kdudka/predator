@@ -1,17 +1,8 @@
-test-0018.c:41:5: warning: binary operator not implemented yet
-test-0018.c:49:14: warning: killing junk
-test-0018.c:49:14: warning: killing junk
-test-0018.c:49:14: warning: killing junk
-test-0018.c:41:26: warning: binary operator not implemented yet
-test-0018.c:41:5: warning: binary operator not implemented yet
-test-0018.c:41:5: warning: binary operator not implemented yet
 test-0018.c:49:14: warning: killing junk
 test-0018.c:49:14: warning: killing junk
 test-0018.c:49:14: warning: killing junk
 test-0018.c:49:14: warning: killing junk
 test-0018.c:49:14: warning: killing junk
-test-0018.c:41:26: warning: binary operator not implemented yet
-test-0018.c:41:26: warning: binary operator not implemented yet
-test-0018.c:41:5: warning: binary operator not implemented yet
-test-0018.c:41:5: warning: binary operator not implemented yet
-test-0018.c:41:5: warning: binary operator not implemented yet
+test-0018.c:49:14: warning: killing junk
+test-0018.c:49:14: warning: killing junk
+test-0018.c:49:14: warning: killing junk

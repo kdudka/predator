@@ -56,9 +56,6 @@ class SymHeapProcessor {
         void heapSetVal(int /* obj */ lhs, int /* val */ rhs);
         void destroyObj(int obj);
 
-        // strcmp() like value comparator (-1, 0, 1)
-        int heapCmpVals(int val1, int val2);
-
     private:
         void printBackTrace();
         void heapSetSingleVal(int /* obj */ lhs, int /* val */ rhs);
@@ -67,8 +64,7 @@ class SymHeapProcessor {
         void heapVarHandleAccessorItem(int *pVar, const struct cl_accessor *ac);
         void heapVarHandleAccessor(int *pVar, const struct cl_accessor *ac);
         bool lhsFromOperand(int *pVar, const struct cl_operand &op);
-        void execUnary(const CodeStorage::Insn &insn);
-        void execBinary(const CodeStorage::Insn &insn);
+        template <int ARITY> void execOp(const CodeStorage::Insn &insn);
         void execMalloc(TState &dst, const CodeStorage::TOperandList &opList,
                         bool fastMode);
         void execFree(const CodeStorage::TOperandList &opList);
