@@ -932,7 +932,7 @@ void handleUnopTruthNot(THeap &heap, int &val, const struct cl_type *clt) {
     val = heap.valDuplicateUnknown(origValue);
     // FIXME: not tested
     TRAP;
-    heap.addEqIf(origValue, val, VAL_FALSE);
+    heap.addEqIf(origValue, val, VAL_TRUE, true);
 }
 
 template <class THeap>
@@ -999,17 +999,9 @@ int /* val */ handleOpCmpPtr(THeap &heap, enum cl_binop_e code,
     if (v1 < 0 || v2 < 0)
         TRAP;
 
-    // FIXME: not tested
-    bool result;
-    if (!heap.proveEq(&result, v1, v2))
-        return heap.valCreateUnknown(UV_UNKNOWN, dstClt);
-
     switch (code) {
         case CL_BINOP_EQ:
-            break;
-
         case CL_BINOP_NE:
-            result = !result;
             break;
 
         default:
@@ -1017,6 +1009,20 @@ int /* val */ handleOpCmpPtr(THeap &heap, enum cl_binop_e code,
             TRAP;
             return VAL_INVALID;
     }
+
+    // FIXME: not tested
+    bool result;
+    if (!heap.proveEq(&result, v1, v2)) {
+        // we don't know know if the values are equal or not
+        const int val = heap.valCreateUnknown(UV_UNKNOWN, dstClt);
+
+        // store the relation over the triple (val, v1, v2) for posteriors
+        heap.addEqIf(val, v1, v2, CL_BINOP_NE == code);
+        return val;
+    }
+
+    if (CL_BINOP_NE == code)
+        result = !result;
 
     return (result)
         ? VAL_TRUE

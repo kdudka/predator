@@ -610,17 +610,6 @@ int /* val */ SymHeap::valCreateUnknown(EUnknownValue code,
     return d->createValue(EV_UNKOWN, clt, static_cast<int>(code));
 }
 
-int /* val */ SymHeap::valDuplicateUnknown(int /* val */ tpl)
-{
-    TValueMap::iterator iter = d->valueMap.find(tpl);
-    if (d->valueMap.end() == iter)
-        // value not found, this should never happen
-        TRAP;
-
-    Value &value = iter->second;
-    return d->createValue(EV_UNKOWN, value.clt, value.pointsTo);
-}
-
 EUnknownValue SymHeap::valGetUnknown(int val) const {
     TValueMap::iterator iter = d->valueMap.find(val);
     if (d->valueMap.end() == iter)
@@ -631,6 +620,30 @@ EUnknownValue SymHeap::valGetUnknown(int val) const {
     return (EV_UNKOWN == value.code)
         ? static_cast<EUnknownValue>(value.pointsTo)
         : UV_KNOWN;
+}
+
+void SymHeap::valReplaceUnknown(int val, int /* val */ replaceBy) {
+    // collect objects having the value valDst
+    TCont rlist;
+    this->haveValue(rlist, val);
+
+    // go through the list and replace the value by valSrc
+    BOOST_FOREACH(const int obj, rlist) {
+        this->objSetValue(obj, replaceBy);
+    }
+
+    // TODO: cleanup all relevant IfEq predicates
+}
+
+int /* val */ SymHeap::valDuplicateUnknown(int /* val */ tpl)
+{
+    TValueMap::iterator iter = d->valueMap.find(tpl);
+    if (d->valueMap.end() == iter)
+        // value not found, this should never happen
+        TRAP;
+
+    Value &value = iter->second;
+    return d->createValue(EV_UNKOWN, value.clt, value.pointsTo);
 }
 
 int /* val */ SymHeap::valCreateCustom(const struct cl_type *clt, int cVal)
@@ -679,11 +692,14 @@ int /* cVal */ SymHeap::valGetCustom(const struct cl_type **pClt, int val) const
     return /* cVal */ value.pointsTo;
 }
 
-void SymHeap::addEqIf(int valCond, int valA, int valB) {
+void SymHeap::addEqIf(int valCond, int valA, int valB, bool neg) {
     (void) valCond;
     (void) valA;
     (void) valB;
+    (void) neg;
+#if 0
     TRAP;
+#endif
 }
 
 namespace {
@@ -750,8 +766,10 @@ bool SymHeap::proveEq(bool *result, int valA, int valB) const {
             break;
     }
 
+#if 0
     // TODO: properly handle unknown values
     TRAP;
+#endif
     return false;
 }
 

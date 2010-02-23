@@ -109,8 +109,9 @@ class SymHeap {
         // unkown values manipulation
         int /* val */ valCreateUnknown(EUnknownValue code,
                                        const struct cl_type *clt);
-        int /* val */ valDuplicateUnknown(int /* val */ tpl);
         EUnknownValue valGetUnknown(int val) const;
+        int /* val */ valDuplicateUnknown(int /* val */ tpl);
+        void valReplaceUnknown(int val, int /* val */ replaceBy);
 
     public:
         // custom values manipulation (e.g. fnc pointers)
@@ -119,7 +120,7 @@ class SymHeap {
 
     public:
         // equality reasoning
-        void addEqIf(int valCond, int valA, int valB);
+        void addEqIf(int valCond, int valA, int valB, bool neg);
         bool proveEq(bool *result, int valA, int valB) const;
 
     private:

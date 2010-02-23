@@ -363,16 +363,7 @@ void SymExec::Private::updateState(const CodeStorage::Block *ofBlock,
                                    SymbolicHeap::SymHeap heap, int valDst,
                                    int valSrc)
 {
-    // collect objects having the value valDst
-    SymbolicHeap::SymHeap::TCont rlist;
-    heap.haveValue(rlist, valDst);
-
-    // go through the list and replace the value by valSrc
-    BOOST_FOREACH(const int obj, rlist) {
-        heap.objSetValue(obj, valSrc);
-    }
-
-    // insert the just created symbolic heap to the target state
+    heap.valReplaceUnknown(valDst, valSrc);
     this->updateState(ofBlock, heap);
 }
 
