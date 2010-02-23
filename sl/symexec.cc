@@ -216,7 +216,7 @@ struct SymExec::Private: public IBtPrinter {
     void updateState(const CodeStorage::Block *ofBlock,
                      const SymbolicHeap::SymHeap &heap);
     void updateState(const CodeStorage::Block *ofBlock,
-                     SymbolicHeap::SymHeap heap, int obj, int val);
+                     SymbolicHeap::SymHeap heap, int valDst, int valSrc);
     void execCondInsn(const SymbolicHeap::SymHeap &heap);
     void execTermInsn(const SymbolicHeap::SymHeap &heap);
     int resolveCallee(const SymbolicHeap::SymHeap &heap,
@@ -360,10 +360,19 @@ void SymExec::Private::updateState(const CodeStorage::Block *ofBlock,
 }
         
 void SymExec::Private::updateState(const CodeStorage::Block *ofBlock,
-                                   SymbolicHeap::SymHeap heap, int obj, int val)
+                                   SymbolicHeap::SymHeap heap, int valDst,
+                                   int valSrc)
 {
-    // TODO: some defensive checks, maybe use SymHeapProcessor also?
-    heap.objSetValue(obj, val);
+    // collect objects having the value valDst
+    SymbolicHeap::SymHeap::TCont rlist;
+    heap.haveValue(rlist, valDst);
+
+    // go through the list and replace the value by valSrc
+    BOOST_FOREACH(const int obj, rlist) {
+        heap.objSetValue(obj, valSrc);
+    }
+
+    // insert the just created symbolic heap to the target state
     this->updateState(ofBlock, heap);
 }
 
@@ -418,9 +427,8 @@ void SymExec::Private::execCondInsn(const SymbolicHeap::SymHeap &heap)
     }
 
     // TODO: check for inconsistency here!
-    const int obj = proc.heapVarFromOperand(oplist[0]);
-    this->updateState(tlist[/* then label */ 0], heap, obj, VAL_TRUE);
-    this->updateState(tlist[/* else label */ 1], heap, obj, VAL_FALSE);
+    this->updateState(tlist[/* then label */ 0], heap, val, VAL_TRUE);
+    this->updateState(tlist[/* else label */ 1], heap, val, VAL_FALSE);
 }
 
 void SymExec::Private::execTermInsn(const SymbolicHeap::SymHeap &heap)

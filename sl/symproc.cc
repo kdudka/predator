@@ -1114,12 +1114,12 @@ struct OpHandler</* binary */ 2, THeap> {
 
             default:
                 TRAP;
-                return SymbolicHeap::VAL_INVALID;
+                return VAL_INVALID;
         }
     }
 };
 
-// C++ does not support partial specialisation of functions, this helps
+// C++ does not support partial specialisation of function templates, this helps
 template <int ARITY, class THeap>
 int handleOp(THeap &heap, int code, const int rhs[ARITY],
              const struct cl_type *clt[ARITY])
