@@ -928,122 +928,111 @@ void handleUnopTruthNot(THeap &heap, int &val, const struct cl_type *clt) {
         // the value we got is not VAL_TRUE, VAL_FALSE, nor an unknown value
         TRAP;
 
-    val = heap.valDuplicateUnknown(val);
-    // TODO: remember relation among unknown values ... challenge? :-)
-}
-
-namespace {
-    int /* val */ handleOpCmpBool(enum cl_binop_e code, int v1, int v2)
-    {
-        using namespace SymbolicHeap;
-
-        // TODO: describe the following magic somehow
-        int /* val */ valElim = VAL_FALSE;
-        switch (code) {
-            case CL_BINOP_EQ:
-                valElim = VAL_TRUE;
-                // fall through!
-
-            case CL_BINOP_NE:
-                break;
-
-            default:
-                // crazy comparison of bool values
-                TRAP;
-                return VAL_INVALID;
-        }
-        if (v1 == valElim)
-            return v2;
-        if (v2 == valElim)
-            return v1;
-
-        if (v1 < 0 || v2 < 0)
-            TRAP;
-
-        // trivial value comparison
-        bool result = (v1 == v2);
-        if (CL_BINOP_NE == code)
-            result = !result;
-
-        return (result)
-            ? VAL_TRUE
-            : VAL_FALSE;
-    }
+    const int origValue = val;
+    val = heap.valDuplicateUnknown(origValue);
+    // FIXME: not tested
+    TRAP;
+    heap.addEqIf(origValue, val, VAL_FALSE);
 }
 
 template <class THeap>
-int /* val */ handleOpCmpInt(THeap &heap, enum cl_binop_e code, int v1, int v2,
-                             const struct cl_type *clt)
+int /* val */ handleOpCmpBool(THeap &heap, enum cl_binop_e code,
+                              const struct cl_type *dstClt, int v1, int v2)
 {
-        using namespace SymbolicHeap;
-        if (v1 < 0 || v2 < 0)
+    using namespace SymbolicHeap;
+
+    // TODO: describe the following magic somehow
+    int /* val */ valElim = VAL_FALSE;
+    switch (code) {
+        case CL_BINOP_EQ:
+            valElim = VAL_TRUE;
+            // fall through!
+
+        case CL_BINOP_NE:
+            break;
+
+        default:
+            // crazy comparison of bool values
             TRAP;
+            return VAL_INVALID;
+    }
+    if (v1 == valElim)
+        return v2;
+    if (v2 == valElim)
+        return v1;
 
-        // trivial value comparison
-        bool result = (v1 == v2);
+    if (v1 < 0 || v2 < 0)
+        TRAP;
 
-        switch (code) {
-            case CL_BINOP_EQ:
-                break;
+    // FIXME: not tested
+    bool result;
+    if (!heap.proveEq(&result, v1, v2))
+        return heap.valCreateUnknown(UV_UNKNOWN, dstClt);
 
-            case CL_BINOP_NE:
-                result = !result;
-                break;
+    // invert if needed
+    if (CL_BINOP_NE == code)
+        result = !result;
 
-            default:
-                return heap.valCreateUnknown(UV_UNKNOWN, clt);
-        }
-
-        return (result)
-            ? VAL_TRUE
-            : VAL_FALSE;
+    return (result)
+        ? VAL_TRUE
+        : VAL_FALSE;
 }
 
-namespace {
-    int /* val */ handleOpCmpPtr(enum cl_binop_e code, int v1, int v2)
-    {
-        using namespace SymbolicHeap;
-        if (v1 < 0 || v2 < 0)
+template <class THeap>
+int /* val */ handleOpCmpInt(THeap &heap, enum cl_binop_e code,
+                             const struct cl_type *dstClt, int v1, int v2)
+{
+    if (v1 < 0 || v2 < 0)
+        TRAP;
+
+    (void) code;
+
+    // FIXME: we give up any reasoning about integral values for now
+    return heap.valCreateUnknown(SymbolicHeap::UV_UNKNOWN, dstClt);
+}
+
+template <class THeap>
+int /* val */ handleOpCmpPtr(THeap &heap, enum cl_binop_e code,
+                             const struct cl_type *dstClt, int v1, int v2)
+{
+    using namespace SymbolicHeap;
+    if (v1 < 0 || v2 < 0)
+        TRAP;
+
+    // FIXME: not tested
+    bool result;
+    if (!heap.proveEq(&result, v1, v2))
+        return heap.valCreateUnknown(UV_UNKNOWN, dstClt);
+
+    switch (code) {
+        case CL_BINOP_EQ:
+            break;
+
+        case CL_BINOP_NE:
+            result = !result;
+            break;
+
+        default:
+            // crazy comparison of pointer values
             TRAP;
-
-        // trivial value comparison
-        bool result = (v1 == v2);
-
-        switch (code) {
-            case CL_BINOP_EQ:
-                break;
-
-            case CL_BINOP_NE:
-                result = !result;
-                break;
-
-            default:
-                // crazy comparison of pointer values
-                TRAP;
-                return VAL_INVALID;
-        }
-
-        return (result)
-            ? VAL_TRUE
-            : VAL_FALSE;
+            return VAL_INVALID;
     }
+
+    return (result)
+        ? VAL_TRUE
+        : VAL_FALSE;
 }
 
 template <class THeap>
 int /* val */ handleOpCmp(THeap &heap, enum cl_binop_e code,
+                          const struct cl_type *dstClt,
                           const struct cl_type *clt, int v1, int v2)
 {
     // clt is assumed to be valid at this point
     switch (clt->code) {
-        case CL_TYPE_PTR:
-            return handleOpCmpPtr(code, v1, v2);
-
-        case CL_TYPE_BOOL:
-            return handleOpCmpBool(code, v1, v2);
-
-        case CL_TYPE_INT:
-            return handleOpCmpInt(heap, code, v1, v2, clt);
-
+        case CL_TYPE_PTR:  return handleOpCmpPtr (heap, code, dstClt, v1, v2);
+        case CL_TYPE_BOOL: return handleOpCmpBool(heap, code, dstClt, v1, v2);
+        case CL_TYPE_INT:  return handleOpCmpInt (heap, code, dstClt, v1, v2);
         default:
             // unexpected clt->code
             TRAP;
@@ -1055,14 +1044,14 @@ int /* val */ handleOpCmp(THeap &heap, enum cl_binop_e code,
 template <int ARITY, class THeap>
 struct OpHandler {
     static int /* val */ handleOp(THeap &heap, int code, const int rhs[ARITY],
-                                  const struct cl_type *clt[ARITY]);
+                                  const struct cl_type *clt[ARITY +/* dst */1]);
 };
 
 // unary operator handler
 template <class THeap>
 struct OpHandler</* unary */ 1, THeap> {
     static int handleOp(THeap &heap, int iCode, const int rhs[1],
-                        const struct cl_type *clt[1])
+                        const struct cl_type *clt[1 + /* dst type */ 1])
     {
         int val = rhs[0];
 
@@ -1120,7 +1109,7 @@ namespace {
 template <class THeap>
 struct OpHandler</* binary */ 2, THeap> {
     static int handleOp(THeap &heap, int iCode, const int rhs[2],
-                        const struct cl_type *clt[2])
+                        const struct cl_type *clt[2 + /* dst type */ 1])
     {
         using namespace SymbolicHeap;
 
@@ -1144,7 +1133,7 @@ struct OpHandler</* binary */ 2, THeap> {
             case CL_BINOP_GT:
             case CL_BINOP_LE:
             case CL_BINOP_GE:
-                return handleOpCmp(heap, code, cltA, rhs[0], rhs[1]);
+                return handleOpCmp(heap, code, clt[2], cltA, rhs[0], rhs[1]);
 
             case CL_BINOP_PLUS:
             case CL_BINOP_MINUS:
@@ -1161,7 +1150,7 @@ struct OpHandler</* binary */ 2, THeap> {
 // C++ does not support partial specialisation of function templates, this helps
 template <int ARITY, class THeap>
 int handleOp(THeap &heap, int code, const int rhs[ARITY],
-             const struct cl_type *clt[ARITY])
+             const struct cl_type *clt[ARITY + /* dst type */ 1])
 {
     return OpHandler<ARITY, THeap>::handleOp(heap, code, rhs, clt);
 }
@@ -1170,12 +1159,16 @@ template <int ARITY>
 void SymHeapProcessor::execOp(const CodeStorage::Insn &insn) {
     // resolve lhs
     int varLhs;
-    if (!this->lhsFromOperand(&varLhs, insn.operands[/* dst */ 0]))
+    const struct cl_operand &dst = insn.operands[/* dst */ 0];
+    if (!this->lhsFromOperand(&varLhs, dst))
         return;
+
+    // store cl_type of dst operand
+    const struct cl_type *clt[ARITY + /* dst type */ 1];
+    clt[/* dst type */ ARITY] = dst.type;
 
     // gather rhs values (and type-info)
     int rhs[ARITY];
-    const struct cl_type *clt[ARITY];
     for (int i = 0; i < ARITY; ++i) {
         const struct cl_operand &op = insn.operands[i + /* [+dst] */ 1];
         clt[i] = op.type;

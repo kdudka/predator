@@ -679,4 +679,80 @@ int /* cVal */ SymHeap::valGetCustom(const struct cl_type **pClt, int val) const
     return /* cVal */ value.pointsTo;
 }
 
+void SymHeap::addEqIf(int valCond, int valA, int valB) {
+    (void) valCond;
+    (void) valA;
+    (void) valB;
+    TRAP;
+}
+
+namespace {
+    // ensure (valA <= valB)
+    void sortValues(int &valA, int &valB) {
+        if (valA <= valB)
+            return;
+
+        const int tmp = valA;
+        valA = valB;
+        valB = tmp;
+    }
+
+    // FIXME: not tested
+    bool proveEqBool(bool *result, int valA, int valB) {
+        if ((valA == valB) && (VAL_TRUE == valA || VAL_FALSE == valA)) {
+            // values are equal
+            *result = true;
+            return true;
+        }
+
+        // we presume (VAL_TRUE < VAL_FALSE) and (valA <= valB) at this point
+        if (VAL_TRUE == valA && VAL_FALSE == valB) {
+            // values are not equal
+            *result = false;
+            return true;
+        }
+
+        // we don't really know if the values are equal or not
+        return false;
+    }
+}
+
+bool SymHeap::proveEq(bool *result, int valA, int valB) const {
+    if (VAL_INVALID == valA || VAL_INVALID == valB)
+        // we can prove nothing for invalid values
+        return false;
+
+    // having the values always in the same order leads to simpler code
+    sortValues(valA, valB);
+
+    // non-heap comparison of bool values
+    if (proveEqBool(result, valA, valB))
+        return true;
+
+    // we presume (0 <= valA) and (0 < valB) at this point
+    TValueMap::iterator iter = d->valueMap.find(valB);
+    if (d->valueMap.end() == iter)
+        // valB not found, this should never happen
+        TRAP;
+
+    // now look at the type of valB
+    const Value &valueB = iter->second;
+    const EValue code = valueB.code;
+    switch (code) {
+        case EV_HEAP:
+        case EV_CUSTOM:
+        case EV_COMPOSITE:
+            // it should be safe to just the compare IDs in this case
+            *result = (valA == valB);
+            return true;
+
+        case EV_UNKOWN:
+            break;
+    }
+
+    // TODO: properly handle unknown values
+    TRAP;
+    return false;
+}
+
 } // namespace SymbolicHeap

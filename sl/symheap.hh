@@ -117,6 +117,11 @@ class SymHeap {
         int /* val */ valCreateCustom(const struct cl_type *clt, int cVal);
         int /* cVal */ valGetCustom(const struct cl_type **pClt, int val) const;
 
+    public:
+        // equality reasoning
+        void addEqIf(int valCond, int valA, int valB);
+        bool proveEq(bool *result, int valA, int valB) const;
+
     private:
         struct Private;
         Private *d;
