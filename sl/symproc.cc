@@ -1083,6 +1083,39 @@ struct OpHandler</* unary */ 1, THeap> {
     }
 };
 
+namespace {
+    bool operator==(const struct cl_type &cltA, const struct cl_type &cltB) {
+        if (cltA.uid == cltB.uid)
+            return true;
+
+        const enum cl_type_e code = cltA.code;
+        if (cltB.code != code)
+            return false;
+
+        switch (code) {
+            case CL_TYPE_PTR: {
+                const struct cl_type *nextA = cltA.items[0].type;
+                const struct cl_type *nextB = cltB.items[0].type;
+
+                // FIXME: use an explicit stack instead of recursion
+                return operator==(*nextA, *nextB);
+            }
+
+            case CL_TYPE_STRUCT:
+                // TODO: dive into fields
+
+            default:
+                // TODO
+                TRAP;
+                return false;
+        }
+    }
+
+    bool operator!=(const struct cl_type &cltA, const struct cl_type &cltB) {
+        return !(cltA == cltB);
+    }
+}
+
 // binary operator handler
 template <class THeap>
 struct OpHandler</* binary */ 2, THeap> {
@@ -1091,7 +1124,13 @@ struct OpHandler</* binary */ 2, THeap> {
     {
         using namespace SymbolicHeap;
 
-        if (!clt[0] || clt[0] != clt[1])
+        const struct cl_type *const cltA = clt[0];
+        const struct cl_type *const cltB = clt[1];
+        if (!cltA || !cltB)
+            // type-info is missing
+            TRAP;
+
+        if (*cltA != *cltB)
             // we don't support arrays, pointer arithmetic and the like,
             // the types therfore have to match with each other for a binary
             // operator
@@ -1105,12 +1144,12 @@ struct OpHandler</* binary */ 2, THeap> {
             case CL_BINOP_GT:
             case CL_BINOP_LE:
             case CL_BINOP_GE:
-                return handleOpCmp(heap, code, clt[0], rhs[0], rhs[1]);
+                return handleOpCmp(heap, code, cltA, rhs[0], rhs[1]);
 
             case CL_BINOP_PLUS:
             case CL_BINOP_MINUS:
                 CL_WARN("binary operator not implemented yet");
-                return heap.valCreateUnknown(UV_UNKNOWN, clt[0]);
+                return heap.valCreateUnknown(UV_UNKNOWN, cltA);
 
             default:
                 TRAP;
