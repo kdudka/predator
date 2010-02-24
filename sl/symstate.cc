@@ -22,9 +22,9 @@
 
 #include "cl_private.hh"
 #include "util.hh"
+#include "worklist.hh"
 
 #include <map>
-#include <set>
 #include <stack>
 
 #include <boost/foreach.hpp>
@@ -121,8 +121,8 @@ namespace {
         return false;
     }
 
-    template<class TStack, class THeap>
-    bool digComposite(TStack &dst, const THeap &heap1, const THeap &heap2,
+    template<class TWL, class THeap>
+    bool digComposite(TWL &wl, const THeap &heap1, const THeap &heap2,
                       int value1, int value2)
     {
         using namespace SymbolicHeap;
@@ -159,7 +159,7 @@ namespace {
                 case CL_TYPE_PTR: {
                     const int val1 = heap1.valueOf(o1);
                     const int val2 = heap2.valueOf(o2);
-                    push(dst, val1, val2);
+                    wl.schedule(val1, val2);
                     break;
                 }
 
@@ -188,23 +188,19 @@ namespace {
 }
 
 namespace SymbolicHeap {
-    template <class TStack, class TSubst>
-    bool dfsCmp(TStack &todo,
-                TSubst &valSubst,
-                const SymHeap &heap1,
-                const SymHeap &heap2)
+    template <class TWL, class TSubst>
+    bool dfsCmp(TWL             &wl,
+                TSubst          &valSubst,
+                const SymHeap   &heap1,
+                const SymHeap   &heap2)
     {
-        // FIXME: not very efficient implementation of DFS
-        std::set<int> done;
-
         // DFS loop
-        while (!todo.empty()) {
+        typename TWL::value_type item;
+        while (wl.next(item)) {
             int value1, value2;
-            boost::tie(value1, value2) = todo.top();
-            todo.pop();
-            done.insert(value1);
+            boost::tie(value1, value2) = item;
 
-            if (digComposite(todo, heap1, heap2, value1, value2))
+            if (digComposite(wl, heap1, heap2, value1, value2))
                 // compare composite objects recursively
                 continue;
 
@@ -235,9 +231,8 @@ namespace SymbolicHeap {
                 // no need for next wheel
                 continue;
 
-            if (!hasKey(done, value1))
-                // schedule values for next wheel
-                push(todo, value1, value2);
+            // schedule values for next wheel
+            wl.schedule(value1, value2);
         }
 
         // heaps are equal (isomorphism)
@@ -247,8 +242,7 @@ namespace SymbolicHeap {
     bool operator== (const SymHeap &heap1, const SymHeap &heap2) {
         // DFS stack
         typedef std::pair<int, int> TValuePair;
-        typedef std::stack<TValuePair> TValueStack;
-        TValueStack dfsStack;
+        WorkList<TValuePair> wl;
 
         // value substitution (isomorphism)
         typedef std::map<int, int> TSubst;
@@ -277,11 +271,11 @@ namespace SymbolicHeap {
                 continue;
 
             // schedule for DFS
-            push(dfsStack, value1, value2);
+            wl.schedule(value1, value2);
         }
 
         // bad luck, we need to run DFS
-        return dfsCmp(dfsStack, valSubst, heap1, heap2);
+        return dfsCmp(wl, valSubst, heap1, heap2);
     }
 }
 

@@ -47,7 +47,10 @@ GDB ?= gdb
 	pphtml invpphtml \
 	distcheck wizard
 
-all: slplug.so
+all:
+	mkdir -p ../sl_build
+	cd ../sl_build && cmake -DCFLAGS=$(CFLAGS) ../sl
+	$(MAKE) -C ../sl_build
 
 CL_OBJS = cl_chain.o \
 	cl_dotgen.o \
@@ -159,9 +162,11 @@ clean:
 	rm -f hash_table.o type_enumerator.o
 	rm -f slplug.o slplug.so
 	$(MAKE) distclean -C data
+	$(MAKE) clean -C ../sl_build || true
 
 distclean: clean
 	rm -f *.o
+	rm -rfv ../sl_build
 
 dbgsparse: slsparse
 	$(GDB) -q -x slsparse.gdb

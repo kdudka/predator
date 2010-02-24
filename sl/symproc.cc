@@ -25,8 +25,8 @@
 #include "symheap.hh"
 #include "symplot.hh"
 #include "symstate.hh"
+#include "worklist.hh"
 
-#include <set>
 #include <stack>
 #include <vector>
 
@@ -308,8 +308,8 @@ int /* val */ SymHeapProcessor::heapValFromOperand(const struct cl_operand &op)
 }
 
 namespace {
-    template <class TStack, class TSet, class THeap>
-    void digPointingObjects(TStack &todo, TSet &done, THeap &heap, int val) {
+    template <class TWL, class THeap>
+    void digPointingObjects(TWL &wl, THeap &heap, int val) {
         using namespace SymbolicHeap;
 
         // go through all objects having the value
@@ -319,9 +319,7 @@ namespace {
 
             // go through all super objects
             while (0 < obj) {
-                if (!hasKey(done, obj))
-                    todo.push(obj);
-
+                wl.schedule(obj);
                 obj = heap.varParent(obj);
             }
         }
@@ -350,7 +348,7 @@ namespace {
             // ignore custom values (e.g. fnc pointers)
             return false;
 
-        const int obj = heap.pointsTo(ptrVal);
+        int obj = heap.pointsTo(ptrVal);
         if (!isHeapObject(heap, obj))
             // non-heap object simply can't be JUNK
             return false;
@@ -359,13 +357,9 @@ namespace {
             // ignore non-roots
             return false;
 
-        std::stack<int /* var */> todo;
-        std::set<int /* var */> done;
-        digPointingObjects(todo, done, heap, ptrVal);
-        while (!todo.empty()) {
-            const int obj = todo.top();
-            todo.pop();
-            done.insert(obj);
+        WorkList<int /* var */> wl;
+        digPointingObjects(wl, heap, ptrVal);
+        while (wl.next(obj)) {
             if (!isHeapObject(heap, obj))
                 return false;
 
@@ -373,7 +367,7 @@ namespace {
             if (val <= 0)
                 TRAP;
 
-            digPointingObjects(todo, done, heap, val);
+            digPointingObjects(wl, heap, val);
         }
 
         return true;

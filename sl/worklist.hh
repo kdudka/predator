@@ -28,6 +28,9 @@
 // really stupid, but easy to use, DFS implementation
 template <class T>
 class WorkList {
+    public:
+        typedef T value_type;
+
     private:
         std::stack<T> todo;
         std::set<T>   done;
@@ -55,6 +58,11 @@ class WorkList {
             todo.push(item);
             done.insert(item);
             return true;
+        }
+
+        template <class T1, class T2>
+        bool schedule(const T1 &i1, const T2 &i2) {
+            return this->schedule(T(i1, i2));
         }
 };
 
