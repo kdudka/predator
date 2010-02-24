@@ -51,6 +51,14 @@ class NeqDb {
             (void) valGt;
             return false;
         }
+        void add(int valLt, int valGt) {
+#if 0
+            // TODO
+            (void) valLt;
+            (void) valGt;
+            TRAP;
+#endif
+        }
 };
 
 class EqIfDb {
@@ -694,10 +702,33 @@ void SymHeap::valReplaceUnknown(int val, int /* val */ replaceBy) {
             this->objSetValue(obj, replaceBy);
         }
 
+        // handle all EqIf prdicates
+        // FIXME: not tested at all
         EqIfDb::TDst eqIfs;
         d->eqIfDb.lookupOnce(eqIfs, val);
-        BOOST_FOREACH(EqIfDb::TPred pred, eqIfs) {
-            TRAP;
+        BOOST_FOREACH(const EqIfDb::TPred &pred, eqIfs) {
+            int valCond, valLt, valGt; bool neg;
+            boost::tie(valCond, valLt, valGt, neg) = pred;
+
+            // deduce if the values are equal or not equal
+            bool areEqual = false;
+            switch (replaceBy) {
+                case VAL_FALSE:
+                    areEqual = neg;
+                    break;
+
+                case VAL_TRUE:
+                    areEqual = !neg;
+                    break;
+
+                default:
+                    TRAP;
+            }
+
+            if (areEqual)
+                wl.schedule(TItem(valGt, valLt));
+            else
+                d->neqDb.add(valLt, valGt);
         }
     }
 }
