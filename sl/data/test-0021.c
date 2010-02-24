@@ -17,19 +17,23 @@ void trigger_null_dereference(void)
 void test__cond_reasoning__with_single_lookback_level() {
     // value of PTR is not initialized for now
     void *ptr;
+    void **pptr = &ptr;
 
     // obtain unknown value
     void **const who_knows = synthesize_unknown_ptr_value();
 
     // who_knows is UNKNOWN at this point
-    if (who_knows == &ptr) {
+    if (who_knows == pptr) {
 
         // who_knows should be seen as &PTR at this point, fail otherwise
         *who_knows = NULL;
     } else {
 
-        // FIXME: who_knows is still UNKNOWN here
-        // TODO: we should be at least aware of (who_knows != &ptr)
+        // now we have explicit info about who_knows != &ptr, fail otherwise
+        if (who_knows == &ptr)
+            trigger_null_dereference();
+        else
+            ptr = NULL;
     }
 
     if (ptr != NULL)
