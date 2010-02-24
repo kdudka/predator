@@ -96,7 +96,7 @@ struct SymHeapPlotter::Private {
     void closeDotFile();
 
     bool digFieldName(std::string &dst, int obj);
-    void plotNodeObj(int obj, int cVar, enum cl_type_e code);
+    void plotNodeObj(int obj, enum cl_type_e code);
     void plotNodeValue(int val, enum cl_type_e code, const char *label);
     void plotNodeAux(int src, enum cl_type_e code, const char *label);
 
@@ -218,34 +218,42 @@ bool SymHeapPlotter::Private::digFieldName(std::string &dst, int obj) {
     return false;
 }
 
-void SymHeapPlotter::Private::plotNodeObj(int obj, int cVar,
-                                          enum cl_type_e code)
-{
+void SymHeapPlotter::Private::plotNodeObj(int obj, enum cl_type_e code) {
+    using namespace SymbolicHeap;
     this->dotStream << "\t" << SL_QUOTE(obj)
         << " [shape=box"
         << ", color=" << colorByCode(code);
 
+    // dig root object
+    int root = obj, next;
+    while (OBJ_INVALID != (next = this->heap->varParent(root)))
+        root = next;
+
+    if (-1 == this->heap->cVar(root))
+        // colorize heap (sub)object
+        this->dotStream << ", fontcolor=red";
+
+    else
+        // colorize on-stack object
+        this->dotStream << ", fontcolor=blue";
+
+    this->dotStream << ", label=\"[" << prefixByCode(code) << "] #";
+
+    const int cVar = this->heap->cVar(obj);
     if (-1 == cVar) {
-        this->dotStream
-            << ", fontcolor=black"
-            << ", label=\"[" << prefixByCode(code) << "] #" << obj;
+        this->dotStream << obj;
 
-        std::string name;
-        if (digFieldName(name, obj))
-            this->dotStream << " ." << name;
-
-        this->dotStream<< "\"];" << std::endl;
-        return;
+    } else {
+        this->dotStream << cVar;
+        const CodeStorage::Var &var = varById(*this->stor, cVar);
+        std::string name = var.name;
+        if (!name.empty())
+            this->dotStream << " - " << name;
     }
 
-    const CodeStorage::Var &var = varById(*this->stor, cVar);
-    this->dotStream
-        << ", fontcolor=blue"
-        << ", label=\"[" << prefixByCode(code) << "] #" << cVar;
-
-    std::string name = var.name;
-    if (!name.empty())
-        this->dotStream << " - " << name;
+    std::string filedName;
+    if (digFieldName(filedName, obj))
+        this->dotStream << " ." << filedName;
 
     this->dotStream << "\"];" << std::endl;
 }
@@ -324,9 +332,8 @@ void SymHeapPlotter::Private::plotSingleObj(int obj) {
     if (!clt)
         TRAP;
 
-    const int cVar = this->heap->cVar(obj);
     const enum cl_type_e code = clt->code;
-    this->plotNodeObj(obj, cVar, code);
+    this->plotNodeObj(obj, code);
 }
 
 void SymHeapPlotter::Private::plotZeroValue(int obj)
@@ -498,9 +505,9 @@ void SymHeapPlotter::Private::digObj(int obj) {
         const enum cl_type_e code = clt->code;
         switch (code) {
             case CL_TYPE_PTR: {
+                this->plotSingleObj(obj);
                 int value;
                 if (this->resolveValueOf(&value, obj)) {
-                    this->plotSingleObj(obj);
                     this->plotEdgeValueOf(obj, value);
                     this->workList.schedule(value);
                 }
@@ -512,7 +519,9 @@ void SymHeapPlotter::Private::digObj(int obj) {
                 this->plotSingleObj(obj);
                 for (int i = 0; i < clt->item_cnt; ++i) {
                     const int sub = this->heap->subVar(obj, i);
-                    this->plotEdgeSub(obj, sub);
+                    if (!hasKey(this->objDone, sub))
+                        this->plotEdgeSub(obj, sub);
+
                     todo.push(sub);
                 }
                 break;

@@ -166,7 +166,7 @@ clean:
 
 distclean: clean
 	rm -f *.o
-	rm -rfv ../sl_build
+	rm -rf ../sl_build
 
 dbgsparse: slsparse
 	$(GDB) -q -x slsparse.gdb
@@ -219,7 +219,7 @@ $(CILLY):
 	$(MAKE) -C .. build_inv
 
 distcheck:
-	rm -rfv ../sl_build
+	rm -rf ../sl_build
 	mkdir ../sl_build
 	cd ../sl_build && cmake -DCFLAGS=$(CFLAGS) ../sl
 	$(MAKE) -C ../sl_build

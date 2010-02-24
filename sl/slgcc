@@ -1,0 +1,45 @@
+#!/bin/bash
+if test -z "$1" || test ! -e "$1"; then
+    echo Usage: slgdb foo.c
+    exit 1
+fi
+
+# basic setup
+SL_BUILD=../sl_build
+SL_PLUG="$SL_BUILD/libslplug.so"
+GCC="../gcc-install/bin/gcc"
+SVG_VIEWER=chromium
+
+# initial checks
+test -x "$GCC"                              || exit 1
+test -d "$SL_BUILD"                         || exit 1
+test -f "$SL_BUILD/Makefile"                || exit 1
+
+# attempt to make
+make -s "$MAKEOPTS" -C "$SL_BUILD" -s       || exit 1
+test -x "$SL_PLUG"                          || exit 1
+
+# use verbose level 1 by default
+test -z "$SL_VERBOSE" && SL_VERBOSE=0
+
+# use pp code listener by default
+test -z "$SL_OPTS" && SL_OPTS="-fplugin-arg-libslplug-dump-pp"
+
+if test x1 = "x$SL_PLOT"; then
+    # wipe all .dot and .svg
+    rm -f *.dot *.svg
+fi
+
+# run the gcc
+"$GCC" -c "$1" -o /dev/null \
+    -O0 -Wall -Wextra \
+    -fplugin="$SL_PLUG" \
+    -fplugin-arg-libslplug-verbose="$SL_VERBOSE" \
+    $SL_OPTS \
+    || exit $?
+
+if test x1 = "x$SL_PLOT"; then
+    # visualize graphs
+    make "$MAKEOPTS" -f data/Makefile           || exit $?
+    "$SVG_VIEWER" *.svg
+fi
