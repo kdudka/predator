@@ -44,20 +44,26 @@ namespace {
 namespace SymbolicHeap {
 
 class NeqDb {
+    private:
+        typedef std::pair<int /* valLt */, int /* valGt */> TItem;
+        typedef std::set<TItem> TCont;
+        TCont cont_;
+
     public:
         bool areNeq(int valLt, int valGt) {
-            // TODO
-            (void) valLt;
-            (void) valGt;
-            return false;
+            sortValues(valLt, valGt);
+            TItem item(valLt, valGt);
+            return hasKey(cont_, item);
         }
         void add(int valLt, int valGt) {
-#if 0
-            // TODO
-            (void) valLt;
-            (void) valGt;
-            TRAP;
-#endif
+            sortValues(valLt, valGt);
+            TItem item(valLt, valGt);
+            cont_.insert(item);
+        }
+        void del(int valLt, int valGt) {
+            sortValues(valLt, valGt);
+            TItem item(valLt, valGt);
+            cont_.erase(item);
         }
 };
 
@@ -692,6 +698,9 @@ void SymHeap::valReplaceUnknown(int val, int /* val */ replaceBy) {
     WorkList<TItem> wl(item);
     while (wl.next(item)) {
         boost::tie(val, replaceBy) = item;
+
+        // remove inqueality if any
+        d->neqDb.del(val, replaceBy);
 
         // collect objects having the value valDst
         TCont rlist;
