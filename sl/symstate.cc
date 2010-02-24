@@ -21,6 +21,7 @@
 #include "symstate.hh"
 
 #include "cl_private.hh"
+#include "util.hh"
 
 #include <map>
 #include <set>
@@ -39,15 +40,6 @@ namespace {
 
         // non-positive values always have to match, bail out otherwise
         return a != b;
-    }
-
-    void sortValues(int &v1, int &v2) {
-        if (v1 <= v2)
-            return;
-
-        const int tmp = v1;
-        v1 = v2;
-        v2 = tmp;
     }
 
     template <class TSubst>

@@ -22,6 +22,8 @@
 
 #include "cl_private.hh"
 #include "symdump.hh"
+#include "util.hh"
+#include "worklist.hh"
 
 #include <map>
 #include <set>
@@ -29,16 +31,67 @@
 
 #include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
+#include <boost/tuple/tuple_comparison.hpp>
 
 namespace {
     // XXX: force linker to pull-in the symdump module into .so
     void pull_in_symdump(void) {
-        int sink = have_symdump;
+        int sink = ::have_symdump;
         (void) sink;
     }
 }
 
 namespace SymbolicHeap {
+
+class NeqDb {
+    public:
+        bool areNeq(int valLt, int valGt) {
+            // TODO
+            (void) valLt;
+            (void) valGt;
+            return false;
+        }
+};
+
+class EqIfDb {
+    public:
+        typedef boost::tuple<
+                int  /* valCond */,
+                int  /* valLt   */,
+                int  /* ValGt   */,
+                bool /* neg     */>
+            TPred;
+
+        typedef std::vector<TPred>                  TDst;
+
+    private:
+        typedef std::set<TPred>                     TSet;
+        typedef std::map<int /* valCond */, TSet>   TMap;
+        TMap cont_;
+
+    public:
+        void add(TPred pred) {
+            const int valCond = pred.get<0>();
+            TSet &ref = cont_[valCond];
+            ref.insert(pred);
+        }
+
+        void lookupOnce(TDst &dst, int valCond) {
+            TMap::iterator iter = cont_.find(valCond);
+            if (cont_.end() == iter)
+                // no match
+                return;
+
+            // stream out all the relevant predicates
+            const TSet &ref = iter->second;
+            BOOST_FOREACH(const TPred &pred, ref) {
+                dst.push_back(pred);
+            }
+
+            // delete the db entry afterwards
+            cont_.erase(iter);
+        }
+};
 
 typedef std::vector<int>    TSub;
 typedef std::set<int>       TSet;
@@ -96,6 +149,8 @@ struct SymHeap::Private {
     TIdMap                  cValIdMap;
     TVarMap                 varMap;
     TValueMap               valueMap;
+    NeqDb                   neqDb;
+    EqIfDb                  eqIfDb;
 
     // IDs are now unique, overlapping of var/val IDs used to cause headaches
     int                     last;
@@ -623,16 +678,28 @@ EUnknownValue SymHeap::valGetUnknown(int val) const {
 }
 
 void SymHeap::valReplaceUnknown(int val, int /* val */ replaceBy) {
-    // collect objects having the value valDst
-    TCont rlist;
-    this->haveValue(rlist, val);
+    typedef std::pair<int /* val */, int /* replaceBy */> TItem;
+    TItem item(val, replaceBy);
 
-    // go through the list and replace the value by valSrc
-    BOOST_FOREACH(const int obj, rlist) {
-        this->objSetValue(obj, replaceBy);
+    WorkList<TItem> wl(item);
+    while (wl.next(item)) {
+        boost::tie(val, replaceBy) = item;
+
+        // collect objects having the value valDst
+        TCont rlist;
+        this->haveValue(rlist, val);
+
+        // go through the list and replace the value by valSrc
+        BOOST_FOREACH(const int obj, rlist) {
+            this->objSetValue(obj, replaceBy);
+        }
+
+        EqIfDb::TDst eqIfs;
+        d->eqIfDb.lookupOnce(eqIfs, val);
+        BOOST_FOREACH(EqIfDb::TPred pred, eqIfs) {
+            TRAP;
+        }
     }
-
-    // TODO: cleanup all relevant IfEq predicates
 }
 
 int /* val */ SymHeap::valDuplicateUnknown(int /* val */ tpl)
@@ -693,26 +760,44 @@ int /* cVal */ SymHeap::valGetCustom(const struct cl_type **pClt, int val) const
 }
 
 void SymHeap::addEqIf(int valCond, int valA, int valB, bool neg) {
-    (void) valCond;
-    (void) valA;
-    (void) valB;
-    (void) neg;
-#if 0
-    TRAP;
-#endif
+    if (VAL_INVALID == valA || VAL_INVALID == valB)
+        TRAP;
+
+    TValueMap::iterator iter = d->valueMap.find(valCond);
+    if (d->valueMap.end() == iter)
+        // valCond not found, this should never happen
+        TRAP;
+
+    const Value *pValue = &iter->second;
+    if (!pValue->clt || !pValue->clt->code == CL_TYPE_BOOL)
+        // valCond is not a bool value
+        TRAP;
+
+    if (EV_UNKOWN != pValue->code)
+        // valCond is not an unknown value
+        TRAP;
+
+    // having the values always in the same order leads to simpler code
+    sortValues(valA, valB);
+    if (valB <= 0)
+        // valB can't be an unknown value
+        TRAP;
+
+    iter = d->valueMap.find(valB);
+    if (d->valueMap.end() == iter)
+        // valB not found, this should never happen
+        TRAP;
+
+    pValue = &iter->second;
+    if (EV_UNKOWN != pValue->code)
+        // valB is not an unknown value
+        TRAP;
+
+    // all seems fine to store the predicate
+    d->eqIfDb.add(EqIfDb::TPred(valCond, valA, valB, neg));
 }
 
 namespace {
-    // ensure (valA <= valB)
-    void sortValues(int &valA, int &valB) {
-        if (valA <= valB)
-            return;
-
-        const int tmp = valA;
-        valA = valB;
-        valB = tmp;
-    }
-
     // FIXME: not tested
     bool proveEqBool(bool *result, int valA, int valB) {
         if ((valA == valB) && (VAL_TRUE == valA || VAL_FALSE == valA)) {
@@ -766,10 +851,13 @@ bool SymHeap::proveEq(bool *result, int valA, int valB) const {
             break;
     }
 
-#if 0
-    // TODO: properly handle unknown values
-    TRAP;
-#endif
+    if (d->neqDb.areNeq(valA, valB)) {
+        // good luck, we have explicit info the values are not equal
+        *result = false;
+        return true;
+    }
+
+    // giving up, really no idea if the values are equal or not...
     return false;
 }
 
