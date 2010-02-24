@@ -40,6 +40,8 @@ fi
 
 if test x1 = "x$SL_PLOT"; then
     # visualize graphs
-    make "$MAKEOPTS" -f data/Makefile           || exit $?
+    printf "graph visualization in progress ... "
+    make "$MAKEOPTS" -s -f data/Makefile    || exit $?
+    printf "done\n"
     "$SVG_VIEWER" *.svg
 fi

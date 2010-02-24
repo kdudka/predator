@@ -61,7 +61,8 @@ int main()
 
     while (list.head) {
         sll_item_t *next = list.head->next;
-        sl_plot("test24-04");
+        if (!next)
+            sl_plot("test24-04");
         free(list.head);
         list.head = next;
     }
