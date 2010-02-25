@@ -56,6 +56,20 @@ void dump_clt(const struct cl_type *clt) {
     cout << ")";
 }
 
+namespace {
+    bool isHeapObject(const SymbolicHeap::SymHeap &heap, int id) {
+        return (SymbolicHeap::VAL_INVALID != heap.placedAt(id));
+    }
+
+    bool isIdValid(int id) {
+        if (0 <= id)
+            return true;
+
+        std::cout << "    error: invalid ID\n";
+        return false;
+    }
+}
+
 void dump_obj(const SymbolicHeap::SymHeap &heap, int obj) {
     using namespace SymbolicHeap;
     using std::cout;
@@ -67,9 +81,18 @@ void dump_obj(const SymbolicHeap::SymHeap &heap, int obj) {
         case OBJ_UNKNOWN:       cout << "    OBJ_UNKNOWN\n";       return;
         case OBJ_DEREF_FAILED:  cout << "    OBJ_DEREF_FAILED\n";  return;
         case OBJ_LOST:          cout << "    OBJ_LOST\n";          return;
-        case OBJ_RETURN:        cout << "    OBJ_RETURN\n";        return;
+
+        case OBJ_RETURN:        cout << "    OBJ_RETURN\n";
         default:
             break;
+    }
+
+    if (!isIdValid(obj))
+        return;
+
+    if (!isHeapObject(heap, obj)) {
+        cout << "    error: #" << obj << " is not ID of a heap object\n";
+        return;
     }
 
     const struct cl_type *clt = heap.objType(obj);
@@ -139,6 +162,14 @@ int /* pointsTo */ dump_value_core(const SymbolicHeap::SymHeap &heap, int value)
 
         default:
             break;
+    }
+
+    if (!isIdValid(value))
+        return OBJ_INVALID;
+
+    if (isHeapObject(heap, value)) {
+        cout << "    error: #" << value << " is ID of a heap object\n";
+        return OBJ_INVALID;
     }
 
     const struct cl_type *clt = heap.valType(value);
@@ -233,4 +264,21 @@ void dump_heap(const SymbolicHeap::SymHeap &heap) {
         dump_cvar(heap, cv);
         cout << "\n";
     }
+}
+
+void dump_id(const SymbolicHeap::SymHeap &heap, int id) {
+    using std::cout;
+    cout << "dump_id(#" << id << ")\n";
+    if (id <= 0) {
+        cout << "    error: given ID is not a positive number\n";
+        return;
+    }
+
+    if (SymbolicHeap::VAL_INVALID != heap.placedAt(id))
+        // assume object ID
+        dump_obj(heap, id);
+
+    else
+        // assume value ID
+        dump_value(heap, id);
 }

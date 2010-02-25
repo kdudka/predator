@@ -34,6 +34,6 @@ void dump_value(const SymbolicHeap::SymHeap &heap, int value);
 void dump_value_refs(const SymbolicHeap::SymHeap &heap, int value);
 void dump_cvar(const SymbolicHeap::SymHeap &heap, int cVar);
 void dump_heap(const SymbolicHeap::SymHeap &heap);
-void dump_any(const SymbolicHeap::SymHeap &heap, int anyId);
+void dump_id(const SymbolicHeap::SymHeap &heap, int id);
 
 #endif /* H_GUARD_SYM_DUMP_H */

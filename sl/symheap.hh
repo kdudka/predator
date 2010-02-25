@@ -42,7 +42,7 @@ enum {
     VAL_NULL          =  0,
     VAL_INVALID       = -1,
 
-    VAL_TRUE          = -2,
+    VAL_TRUE          = (/* XXX */ OBJ_LOST - 1),
     VAL_FALSE         = VAL_NULL
 };
 
