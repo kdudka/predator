@@ -9,7 +9,7 @@ int main() {
         if (p1 != p2) {
             *p2 = (void *)0;
         } else {
-        sl_plot("test26-02");
+            sl_plot("test26-02");
         }
     } else {
         sl_plot("test26-01");

@@ -8,4 +8,6 @@ int main() {
             *p2 = (void *)0;
         }
     }
+
+    return 0;
 }

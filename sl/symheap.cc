@@ -858,7 +858,7 @@ bool SymHeap::proveEq(bool *result, int valA, int valB) const {
         return false;
 
     if (valA == valB) {
-        // value IDs match exatctly ... the prove is done
+        // identical value IDs ... the prove is done
         *result = true;
         return true;
     }

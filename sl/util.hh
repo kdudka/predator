@@ -26,7 +26,7 @@ void sortValues(T &a, T &b) {
     if (a <= b)
         return;
 
-    const int tmp = a;
+    const T tmp = a;
     a = b;
     b = tmp;
 }
