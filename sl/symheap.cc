@@ -196,7 +196,8 @@ void SymHeap::Private::initReturn() {
     var.clt         = 0;
     var.cVarUid     = -1;
     var.placedAt    = VAL_INVALID;
-    var.value       = this->createValue(EV_UNKOWN, 0, UV_UNINITIALIZED);
+    var.value       = this->createValue(EV_UNKOWN, 0, UV_UNINITIALIZED,
+                                        OBJ_RETURN);
 }
 
 SymHeap::Private::Private():
@@ -233,25 +234,12 @@ void SymHeap::Private::releaseValueOf(int obj) {
         return;
 
     Value &ref = this->valueMap[val];
-
-    const EValue code = ref.code;
-    switch (code) {
-        case EV_COMPOSITE:
-        case EV_UNKOWN:
-            return;
-
-        case EV_HEAP:
-        case EV_CUSTOM:
-            break;
-    }
-
     TSet &hv = ref.haveValue;
     if (1 != hv.erase(obj))
         TRAP;
 }
 
 void SymHeap::Private::indexValueOf(int obj, int val) {
-    // TODO: implement
     Value &ref = this->valueMap[val];
     TSet &hv = ref.haveValue;
     hv.insert(obj);
@@ -369,7 +357,8 @@ void SymHeap::Private::createSubs(int var, const struct cl_type *clt) {
             case CL_TYPE_STRUCT: {
                 const int cnt = clt->item_cnt;
                 Var &ref = this->varMap[var];
-                ref.value = this->createValue(EV_COMPOSITE, clt, var);
+                ref.value = this->createValue(EV_COMPOSITE, clt, var,
+                                              /* TODO: check */ var);
                 ref.subVars.resize(cnt);
                 for (int i = 0; i < cnt; ++i) {
                     const struct cl_type *subClt = clt->items[i].type;
