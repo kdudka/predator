@@ -178,7 +178,8 @@ struct SymHeap::Private {
     void releaseValueOf(int obj);
     void indexValueOf(int obj, int val);
 
-    int /* val */ createValue(EValue code, const struct cl_type *clt, int obj);
+    int /* val */ createValue(EValue code, const struct cl_type *clt, int obj,
+                              int referrer = OBJ_INVALID);
     int /* var */ createVar(const struct cl_type *clt,
                             int /* CodeStorage */ uid);
 
@@ -257,7 +258,8 @@ void SymHeap::Private::indexValueOf(int obj, int val) {
 }
 
 int /* val */ SymHeap::Private::createValue(EValue code,
-                                            const struct cl_type *clt, int obj)
+                                            const struct cl_type *clt, int obj,
+                                            int referrer)
 {
     const int valId = ++last;
 
@@ -265,6 +267,9 @@ int /* val */ SymHeap::Private::createValue(EValue code,
     val.code            = code;
     val.clt             = clt;
     val.pointsTo        = obj;
+
+    if (OBJ_INVALID != referrer)
+        val.haveValue.insert(referrer);
 
     return valId;
 }
@@ -278,7 +283,7 @@ int /* var */ SymHeap::Private::createVar(const struct cl_type *clt,
     var.clt         = clt;
     var.cVarUid     = uid;
     var.placedAt    = this->createValue(EV_HEAP, clt, objId);
-    var.value       = this->createValue(EV_UNKOWN, 0, UV_UNINITIALIZED);
+    var.value       = this->createValue(EV_UNKOWN, 0, UV_UNINITIALIZED, objId);
 
     return objId;
 }
