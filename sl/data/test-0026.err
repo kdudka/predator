@@ -1,0 +1,2 @@
+test-0026.c:7:8: error: uninitialized local variable 'p1'
+test-0026.c:7:8: error: uninitialized local variable 'p2'

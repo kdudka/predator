@@ -857,6 +857,12 @@ bool SymHeap::proveEq(bool *result, int valA, int valB) const {
         // we can prove nothing for invalid values
         return false;
 
+    if (valA == valB) {
+        // value IDs match exatctly ... the prove is done
+        *result = true;
+        return true;
+    }
+
     // having the values always in the same order leads to simpler code
     sortValues(valA, valB);
 
@@ -878,6 +884,7 @@ bool SymHeap::proveEq(bool *result, int valA, int valB) const {
         case EV_CUSTOM:
         case EV_COMPOSITE:
             // it should be safe to just the compare IDs in this case
+            // NOTE: we in fact know (valA != valB) at this point, look above
             *result = (valA == valB);
             return true;
 
