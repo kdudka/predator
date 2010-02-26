@@ -45,9 +45,10 @@ GDB ?= gdb
 	dbgplug dbgsparse \
 	dotplug dotsparse \
 	pphtml invpphtml \
-	distcheck wizard
+	distcheck wizard \
+	version.h
 
-all:
+all: version.h
 	mkdir -p ../sl_build
 	cd ../sl_build && cmake -DCFLAGS=$(CFLAGS) ../sl
 	$(MAKE) -C ../sl_build
@@ -84,7 +85,7 @@ libcl.a: $(CL_OBJS)
 	$(RANLIB) $@
 
 #TODO: dependency scanning
-$(CL_OBJS): code_listener.h config.h *.hh
+$(CL_OBJS): code_listener.h config.h *.hh version.h
 cl_seplog.o: ../seplog/symbolic-heap.cc
 
 #$(CL_OBJS): CXXFLAGS += -fPIC -std=c++0x -pedantic -Wall -Werror
@@ -218,7 +219,7 @@ invpphtml: ../ssd/util/eschtml ../ssd/util/tty2html $(CILLY)
 $(CILLY):
 	$(MAKE) -C .. build_inv
 
-distcheck:
+distcheck: version.h
 	rm -rf ../sl_build
 	mkdir ../sl_build
 	cd ../sl_build && cmake -DCFLAGS=$(CFLAGS) ../sl
@@ -230,3 +231,8 @@ wizard:
 	cd ../sl_build && ccmake ../sl
 	$(MAKE) -C ../sl_build
 	cd ../sl_build && ctest --output-on-failure $(MAKEOPTS)
+
+version.h:
+	printf "#define SL_GIT_SHA1 \"%s\"\n" \
+		`git log | head -1 | cut -f2 -d" "` \
+		| tee $@

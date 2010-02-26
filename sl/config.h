@@ -22,8 +22,15 @@
  * various compile-time options
  */
 
-#include <signal.h>
-#define TRAP raise(SIGTRAP)
+#include <signal.h>     // needed for TRAP ... raise(SIGRAP)
+#include <stdio.h>      // needed for TRAP ... fprintf(stderr, ...)
+#include "version.h"    // needed for SL_GIT_SHA1
+
+#define TRAP do { \
+    fprintf(stderr, "%s:%d: killing self by SIGTRAP [SHA1 %s]\n", \
+            __FILE__, __LINE__, SL_GIT_SHA1); \
+    raise(SIGKILL); \
+} while (0)
 
 /**
  * if 1, check each code_listener decorator by the integrity checker

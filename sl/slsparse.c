@@ -17,6 +17,7 @@
  * along with sl.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "config.h"
 #include "code_listener.h"
 #include "type_enumerator.h"
 
@@ -38,10 +39,6 @@
 #include <sparse/storage.h>
 #include <sparse/symbol.h>
 #include <sparse/token.h>
-
-// safe to remove (it's here for debugging purposes only)
-#include <signal.h>
-#define TRAP raise(SIGTRAP)
 
 #define DO_EXPAND_SYMBOL            1
 #define DO_PER_EP_UNSAA             1

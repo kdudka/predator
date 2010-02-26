@@ -42,10 +42,6 @@
 
 #include <stdarg.h>
 
-// safe to remove (it's here for debugging purposes only)
-#include <signal.h>
-#define TRAP raise(SIGTRAP)
-
 #ifndef DEBUG_SLPLUG
 #   define DEBUG_SLPLUG 0
 #endif

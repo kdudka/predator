@@ -6,3 +6,4 @@ slplug.so
 slsparse
 tags
 test-dll
+version.h
