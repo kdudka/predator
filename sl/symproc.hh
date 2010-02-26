@@ -25,6 +25,7 @@
 #include "symid.hh"
 
 class IBtPrinter;
+class SymHeap;
 class SymHeapUnion;
 
 class SymHeapProcessor {

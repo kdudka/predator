@@ -30,6 +30,8 @@ namespace CodeStorage {
     struct Storage;
 }
 
+class SymHeap;
+
 class SymHeapPlotter {
     public:
         ~SymHeapPlotter();

@@ -26,6 +26,7 @@
 extern int have_symdump;
 
 struct cl_type;
+class SymHeap;
 
 void dump_clt(const struct cl_type *clt);
 void dump_obj(const SymHeap &heap, TObjId obj);
