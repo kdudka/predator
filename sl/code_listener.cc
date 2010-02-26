@@ -18,10 +18,14 @@
  */
 
 #include "code_listener.h"
+
+#include "cl.hh"
 #include "cl_factory.hh"
+#include "cl_msg.hh"
 #include "cl_private.hh"
 
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 
 #include <unistd.h>

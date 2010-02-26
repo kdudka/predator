@@ -19,7 +19,11 @@
 
 #include "config.h"
 #include "cl_dotgen.hh"
-#include "cl_private.hh"
+
+#include "cl.hh"
+#include "cl_msg.hh"
+#include "location.hh"
+#include "util.hh"
 
 #include <libgen.h>         // for basename(3)
 

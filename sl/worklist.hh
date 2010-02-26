@@ -23,8 +23,6 @@
 #include <set>
 #include <stack>
 
-#include "cl_private.hh"
-
 // really stupid, but easy to use, DFS implementation
 template <class T>
 class WorkList {

@@ -19,7 +19,11 @@
 
 #include "config.h"
 #include "cl_typedot.hh"
-#include "cl_private.hh"
+
+#include "cl_msg.hh"
+#include "cl.hh"
+#include "location.hh"
+#include "util.hh"
 
 #include <fstream>
 #include <set>

@@ -21,10 +21,11 @@
 #include "symexec.hh"
 
 #include "btprint.hh"
-#include "cl_private.hh"
+#include "cl_msg.hh"
 #include "storage.hh"
 #include "symproc.hh"
 #include "symstate.hh"
+#include "util.hh"
 
 #include <set>
 #include <stack>

@@ -20,11 +20,13 @@
 #ifndef H_GUARD_CLD_UNILABEL_H
 #define H_GUARD_CLD_UNILABEL_H
 
-#include "cl_private.hh"    // for enum cl_scope_e
+#include "code_listener.h"
+
+class ICodeListener;
 
 /**
- * create ICgListener implementation (TODO: document)
- * @return on heap allocated instance of ICgListener object
+ * create ICodeListener implementation (TODO: document)
+ * @return on heap allocated instance of ICodeListener object
  */
 ICodeListener* createCldUniLabel(ICodeListener *, cl_scope_e scope);
 

@@ -19,6 +19,7 @@
 
 #include "cl_seplog.hh"
 
+#include "cl_msg.hh"
 #include "cl_storage.hh"
 #include "storage.hh"
 #include "symexec.hh"

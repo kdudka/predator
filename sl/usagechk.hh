@@ -20,7 +20,7 @@
 #ifndef H_GUARD_USAGECHK_H
 #define H_GUARD_USAGECHK_H
 
-#include "cl_private.hh"
+#include "cl_msg.hh"
 #include "location.hh"
 
 #include <map>

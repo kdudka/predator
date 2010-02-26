@@ -21,10 +21,11 @@
 #include "symproc.hh"
 
 #include "btprint.hh"
-#include "cl_private.hh"
+#include "cl_msg.hh"
 #include "symheap.hh"
 #include "symplot.hh"
 #include "symstate.hh"
+#include "util.hh"
 #include "worklist.hh"
 
 #include <stack>
@@ -903,7 +904,7 @@ void handleUnopTruthNot(THeap &heap, TValueId &val, const struct cl_type *clt) {
     val = heap.valDuplicateUnknown(origValue);
     // FIXME: not tested
     TRAP;
-    heap.addEqIf(origValue, val, VAL_TRUE, true);
+    heap.addEqIf(origValue, val, VAL_TRUE, /* neg */ true);
 }
 
 template <class THeap>
@@ -934,6 +935,7 @@ TValueId handleOpCmpBool(THeap &heap, enum cl_binop_e code,
         TRAP;
 
     // FIXME: not tested
+    TRAP;
     bool result;
     if (!heap.proveEq(&result, v1, v2))
         return heap.valCreateUnknown(UV_UNKNOWN, dstClt);
@@ -981,14 +983,15 @@ TValueId handleOpCmpPtr(THeap &heap, enum cl_binop_e code,
     // FIXME: not tested
     bool result;
     if (!heap.proveEq(&result, v1, v2)) {
-        // we don't know know if the values are equal or not
+        // we don't know if the values are equal or not
         const TValueId val = heap.valCreateUnknown(UV_UNKNOWN, dstClt);
 
         // store the relation over the triple (val, v1, v2) for posteriors
-        heap.addEqIf(val, v1, v2, CL_BINOP_NE == code);
+        heap.addEqIf(val, v1, v2, /* neg */ CL_BINOP_NE == code);
         return val;
     }
 
+    // invert if needed
     if (CL_BINOP_NE == code)
         result = !result;
 

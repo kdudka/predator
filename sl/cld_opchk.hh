@@ -18,6 +18,7 @@
  */
 
 #include "cl_decorator.hh"
+#include "location.hh"
 
 class CldOpCheckerBase: public ClDecoratorBase {
     public:

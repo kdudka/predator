@@ -20,7 +20,7 @@
 #ifndef H_GUARD_CL_DECORATOR_H
 #define H_GUARD_CL_DECORATOR_H
 
-#include "cl_private.hh"
+#include "cl.hh"
 
 class ClDecoratorBase: public ICodeListener {
     public:

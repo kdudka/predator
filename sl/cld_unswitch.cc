@@ -21,7 +21,6 @@
 #include "cld_unswitch.hh"
 
 #include "cl_decorator.hh"
-#include "cl_private.hh"
 #include "cld_unilabel.hh"
 
 #include <sstream>

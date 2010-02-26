@@ -17,8 +17,10 @@
  * along with sl.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "code_listener.h"
 #include "location.hh"
-#include "cl_private.hh"
+
+#include <iostream>
 
 Location::Location():
     locLine(-1),

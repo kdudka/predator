@@ -20,7 +20,7 @@
 #ifndef H_GUARD_CL_FACTORY_H
 #define H_GUARD_CL_FACTORY_H
 
-#include "cl_private.hh"
+class ICodeListener;
 
 /**
  * factory responsible for creating ICodeListener for desired call graph format

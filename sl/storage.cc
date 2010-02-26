@@ -20,7 +20,7 @@
 #include "config.h"
 #include "storage.hh"
 
-#include "cl_private.hh"
+#include "cl_msg.hh"
 
 #include <map>
 #include <stack>

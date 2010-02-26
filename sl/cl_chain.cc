@@ -23,6 +23,8 @@
  */
 
 #include "code_listener.h"
+#include "cl.hh"
+#include "cl_msg.hh"
 #include "cl_private.hh"
 
 #include <boost/foreach.hpp>

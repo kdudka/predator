@@ -18,7 +18,9 @@
  */
 
 #include "cl_locator.hh"
-#include "cl_private.hh"
+
+#include "cl.hh"
+#include "location.hh"
 
 #include <boost/iostreams/device/file_descriptor.hpp>
 #include <boost/iostreams/stream.hpp>

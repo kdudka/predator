@@ -20,10 +20,12 @@
 #include "config.h"
 #include "symplot.hh"
 
-#include "cl_private.hh"
+#include "cl_msg.hh"
+#include "location.hh"
 #include "storage.hh"
 #include "symheap.hh"
 #include "worklist.hh"
+#include "util.hh"
 
 #include <fstream>
 #include <iomanip>

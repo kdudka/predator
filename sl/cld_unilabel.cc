@@ -18,7 +18,9 @@
  */
 
 #include "cld_unilabel.hh"
+
 #include "cl_decorator.hh"
+#include "cl_msg.hh"
 
 #include <map>
 #include <sstream>

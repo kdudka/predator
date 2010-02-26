@@ -8,7 +8,7 @@
 /**
  * @mainpage
  * @author Kamil Dudka <kdudka@redhat.com>
- * @date 2009-11-20
+ * @date 2010-02-26
  * @remark
  *
  * - Documentation of code_listener.h might be a viable start. Reading this

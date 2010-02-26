@@ -23,8 +23,8 @@
 struct ICodeListener;
 
 /**
- * create ICgListener implementation (TODO: document)
- * @return on heap allocated instance of ICgListener object
+ * create ICodeListener implementation (TODO: document)
+ * @return on heap allocated instance of ICodeListener object
  */
 ICodeListener* createCldIntegrityChk(ICodeListener *);
 

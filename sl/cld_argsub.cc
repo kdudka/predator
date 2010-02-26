@@ -19,7 +19,10 @@
 
 #include "config.h"
 #include "cld_argsub.hh"
+
+#include "cl_msg.hh"
 #include "cld_optrans.hh"
+#include "location.hh"
 
 #include <map>
 #include <string>

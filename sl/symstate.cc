@@ -20,7 +20,7 @@
 #include "config.h"
 #include "symstate.hh"
 
-#include "cl_private.hh"
+#include "code_listener.h"
 #include "util.hh"
 #include "worklist.hh"
 

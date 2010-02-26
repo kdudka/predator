@@ -22,6 +22,7 @@
 #include "cl_dotgen.hh"
 #include "cl_factory.hh"
 #include "cl_locator.hh"
+#include "cl_msg.hh"
 #include "cl_pp.hh"
 #include "cl_seplog.hh"
 #include "cl_typedot.hh"
@@ -32,6 +33,8 @@
 #include "cld_uniregs.hh"
 #include "cld_univars.hh"
 #include "cld_unswitch.hh"
+
+#include "util.hh"
 
 #include <ctype.h>
 #include <map>
