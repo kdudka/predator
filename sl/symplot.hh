@@ -21,14 +21,14 @@
 #ifndef H_GUARD_SYM_PLOT_H
 #define H_GUARD_SYM_PLOT_H
 
+#include "symid.hh"
+
 #include <string>
 
 namespace CodeStorage {
     struct Fnc;
     struct Storage;
 }
-
-class SymHeap;
 
 class SymHeapPlotter {
     public:
@@ -39,7 +39,7 @@ class SymHeapPlotter {
         bool plot(const std::string                 &name);
 
         bool plotHeapValue(const std::string        &name,
-                           int                      value);
+                           TValueId                 value);
 
         bool plotStackFrame(const std::string       &name,
                             const CodeStorage::Fnc  &fnc);

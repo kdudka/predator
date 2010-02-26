@@ -22,9 +22,9 @@
 
 #include "location.hh"
 #include "storage.hh"
+#include "symid.hh"
 
 class IBtPrinter;
-class SymHeap;
 class SymHeapUnion;
 
 class SymHeapProcessor {
@@ -46,21 +46,22 @@ class SymHeapProcessor {
         }
 
     public:
-        int /* val */ heapValFromCst(const struct cl_operand &op);
-        int /* var */ heapVarFromOperand(const struct cl_operand &op);
-        int /* val */ heapValFromOperand(const struct cl_operand &op);
-        bool checkForJunk(int val);
-        void heapSetVal(int /* obj */ lhs, int /* val */ rhs);
-        void destroyObj(int obj);
+        TValueId heapValFromCst(const struct cl_operand &op);
+        TObjId heapVarFromOperand(const struct cl_operand &op);
+        TValueId heapValFromOperand(const struct cl_operand &op);
+        bool checkForJunk(TValueId val);
+        void heapSetVal(TObjId lhs, TValueId rhs);
+        void destroyObj(TObjId obj);
 
     private:
         void printBackTrace();
-        void heapSetSingleVal(int /* obj */ lhs, int /* val */ rhs);
-        void heapVarDefineType(int /* obj */ lhs, int /* val */ rhs);
-        void heapVarHandleAccessorDeref(int *pVar);
-        void heapVarHandleAccessorItem(int *pVar, const struct cl_accessor *ac);
-        void heapVarHandleAccessor(int *pVar, const struct cl_accessor *ac);
-        bool lhsFromOperand(int *pVar, const struct cl_operand &op);
+        void heapSetSingleVal(TObjId lhs, TValueId rhs);
+        void heapVarDefineType(TObjId lhs, TValueId rhs);
+        void heapVarHandleAccessorDeref(TObjId *pVar);
+        void heapVarHandleAccessorItem(TObjId *pVar,
+                                       const struct cl_accessor *ac);
+        void heapVarHandleAccessor(TObjId *pVar, const struct cl_accessor *ac);
+        bool lhsFromOperand(TObjId *pVar, const struct cl_operand &op);
         template <int ARITY> void execOp(const CodeStorage::Insn &insn);
         void execMalloc(TState &dst, const CodeStorage::TOperandList &opList,
                         bool fastMode);

@@ -22,6 +22,9 @@
 
 #include <climits>
 
+// well, this is redundant in this header, but saves a few lines of code
+class SymHeap;
+
 // special OBJs
 typedef enum {
     OBJ_RETURN        =  0,
@@ -43,6 +46,6 @@ typedef enum {
     VAL_FALSE         = VAL_NULL,
 
     VAL_MAX_ID        = /* XXX */ UINT_MAX
-} TValId;
+} TValueId;
 
 #endif /* H_GUARD_SYM_ID_H */

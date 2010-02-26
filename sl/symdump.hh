@@ -21,15 +21,16 @@
 #ifndef H_GUARD_SYM_DUMP_H
 #define H_GUARD_SYM_DUMP_H
 
+#include "symid.hh"
+
 extern int have_symdump;
 
 struct cl_type;
-class SymHeap;
 
 void dump_clt(const struct cl_type *clt);
-void dump_obj(const SymHeap &heap, int obj);
-void dump_value(const SymHeap &heap, int value);
-void dump_value_refs(const SymHeap &heap, int value);
+void dump_obj(const SymHeap &heap, TObjId obj);
+void dump_value(const SymHeap &heap, TValueId value);
+void dump_value_refs(const SymHeap &heap, TValueId value);
 void dump_cvar(const SymHeap &heap, int cVar);
 void dump_heap(const SymHeap &heap);
 void dump_id(const SymHeap &heap, int id);

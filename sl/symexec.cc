@@ -74,11 +74,11 @@ namespace {
             const LocationWriter lw(&op.loc, &last);
             proc.setLocation(lw);
 
-            const int val = proc.heapValFromOperand(op);
+            const TValueId val = proc.heapValFromOperand(op);
             if (VAL_INVALID == val)
                 TRAP;
 
-            const int lhs = heap.varByCVar(arg);
+            const TObjId lhs = heap.varByCVar(arg);
             if (OBJ_INVALID == lhs)
                 TRAP;
 
@@ -95,11 +95,11 @@ namespace {
         SymHeapProcessor proc(heap);
         proc.setLocation(&op.loc);
 
-        const int obj = proc.heapVarFromOperand(op);
+        const TObjId obj = proc.heapVarFromOperand(op);
         if (OBJ_INVALID == obj)
             TRAP;
 
-        const int val = heap.valueOf(OBJ_RETURN);
+        const TValueId val = heap.valueOf(OBJ_RETURN);
         if (VAL_INVALID == val)
             TRAP;
 
@@ -132,7 +132,7 @@ namespace {
                     << var.uid << " (" << var.name << ")" );
 #endif
 
-            const int obj = heap.varByCVar(var.uid);
+            const TObjId obj = heap.varByCVar(var.uid);
             if (obj < 0)
                 TRAP;
 
@@ -207,7 +207,7 @@ struct SymExec::Private: public IBtPrinter {
     void execReturn(SymHeap heap);
     void updateState(const CodeStorage::Block *ofBlock, const SymHeap &heap);
     void updateState(const CodeStorage::Block *ofBlock, SymHeap heap,
-                     int valDst, int valSrc);
+                     TValueId valDst, TValueId valSrc);
     void execCondInsn(const SymHeap &heap);
     void execTermInsn(const SymHeap &heap);
     int resolveCallee(const SymHeap &heap, const struct cl_operand &op);
@@ -303,7 +303,7 @@ void SymExec::Private::execReturn(SymHeap heap)
         SymHeapProcessor proc(heap, this);
         proc.setLocation(this->lw);
 
-        const int val = proc.heapValFromOperand(src);
+        const TValueId val = proc.heapValFromOperand(src);
         if (VAL_INVALID == val)
             TRAP;
 
@@ -344,7 +344,8 @@ void SymExec::Private::updateState(const CodeStorage::Block *ofBlock,
 }
         
 void SymExec::Private::updateState(const CodeStorage::Block *ofBlock,
-                                   SymHeap heap, int valDst, int valSrc)
+                                   SymHeap heap, TValueId valDst,
+                                   TValueId valSrc)
 {
     heap.valReplaceUnknown(valDst, valSrc);
     this->updateState(ofBlock, heap);
@@ -359,7 +360,7 @@ void SymExec::Private::execCondInsn(const SymHeap &heap) {
     SymHeapProcessor proc(const_cast<SymHeap &>(heap), this);
     proc.setLocation(this->lw);
 
-    const int val = proc.heapValFromOperand(oplist[0]);
+    const TValueId val = proc.heapValFromOperand(oplist[0]);
     switch (val) {
         case VAL_TRUE:
             CL_DEBUG_MSG(this->lw, ".T. CL_INSN_COND got VAL_TRUE");
@@ -447,7 +448,7 @@ int SymExec::Private::resolveCallee(const SymHeap &heap,
         SymHeapProcessor proc(const_cast<SymHeap &>(heap), this);
         proc.setLocation(this->lw);
 
-        const int val = proc.heapValFromOperand(op);
+        const TValueId val = proc.heapValFromOperand(op);
         if (VAL_INVALID == val)
             // Oops, it does not look as indirect call actually
             TRAP;
@@ -550,8 +551,8 @@ fail:
         SymHeapProcessor proc(heap, this);
         proc.setLocation(this->lw);
 
-        const int val = heap.valCreateUnknown(UV_UNKNOWN, dst.type);
-        const int obj = proc.heapVarFromOperand(dst);
+        const TValueId val = heap.valCreateUnknown(UV_UNKNOWN, dst.type);
+        const TObjId obj = proc.heapVarFromOperand(dst);
         heap.objSetValue(obj, val);
     }
 

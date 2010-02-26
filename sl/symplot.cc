@@ -41,7 +41,7 @@ class PlotEnumerator {
     public:
         static PlotEnumerator* instance() {
             return (inst_)
-                ? inst_
+                ? (inst_)
                 : (inst_ = new PlotEnumerator);
         }
 
@@ -88,34 +88,34 @@ struct SymHeapPlotter::Private {
     std::ofstream                       dotStream;
     bool                                ok;
     LocationWriter                      lw;
-    WorkList<int /* value */>           workList;
-    std::set<int /* obj */>             objDone;
+    WorkList<TValueId>                  workList;
+    std::set<TObjId>                    objDone;
     int                                 last;
 
     bool openDotFile(const std::string &name);
     void closeDotFile();
 
-    bool digFieldName(std::string &dst, int obj);
-    void plotNodeObj(int obj, enum cl_type_e code);
-    void plotNodeValue(int val, enum cl_type_e code, const char *label);
+    bool digFieldName(std::string &dst, TObjId obj);
+    void plotNodeObj(TObjId obj, enum cl_type_e code);
+    void plotNodeValue(TValueId val, enum cl_type_e code, const char *label);
     void plotNodeAux(int src, enum cl_type_e code, const char *label);
 
-    void plotEdgePointsTo(int value, int obj);
-    void plotEdgeValueOf(int obj, int value);
-    void plotEdgeSub(int obj, int sub);
+    void plotEdgePointsTo(TValueId value, TObjId obj);
+    void plotEdgeValueOf(TObjId obj, TValueId value);
+    void plotEdgeSub(TObjId obj, TObjId sub);
 
-    void plotSingleValue(int value);
-    void plotSingleObj(int obj);
-    void plotZeroValue(int obj);
+    void plotSingleValue(TValueId value);
+    void plotSingleObj(TObjId obj);
+    void plotZeroValue(TObjId obj);
 
-    bool handleCustomValue(int value);
-    bool handleUnknownValue(int value, int obj);
-    bool resolveValueOf(int /* value */ *pDst, int obj);
-    bool resolvePointsTo(int /* obj */ *pDst, int val);
+    bool handleCustomValue(TValueId value);
+    bool handleUnknownValue(TValueId value, TObjId obj);
+    bool resolveValueOf(TValueId *pDst, TObjId obj);
+    bool resolvePointsTo(TObjId *pDst, TValueId val);
 
-    void digObj(int obj);
+    void digObj(TObjId obj);
     void digValues();
-    void plotObj(int obj);
+    void plotObj(TObjId obj);
     void plotCVar(int uid);
 };
 
@@ -193,8 +193,8 @@ namespace {
     }
 }
 
-bool SymHeapPlotter::Private::digFieldName(std::string &dst, int obj) {
-    const int parent = this->heap->varParent(obj);
+bool SymHeapPlotter::Private::digFieldName(std::string &dst, TObjId obj) {
+    const TObjId parent = this->heap->varParent(obj);
     if (OBJ_INVALID == parent)
         // no chance since there is no parent
         return false;
@@ -206,7 +206,7 @@ bool SymHeapPlotter::Private::digFieldName(std::string &dst, int obj) {
 
     // dig field name
     for (int i = 0; i < clt->item_cnt; ++i) {
-        const int sub = this->heap->subVar(parent, i);
+        const TObjId sub = this->heap->subVar(parent, i);
         if (obj == sub) {
             dst = clt->items[i].name;
             return true;
@@ -218,13 +218,13 @@ bool SymHeapPlotter::Private::digFieldName(std::string &dst, int obj) {
     return false;
 }
 
-void SymHeapPlotter::Private::plotNodeObj(int obj, enum cl_type_e code) {
+void SymHeapPlotter::Private::plotNodeObj(TObjId obj, enum cl_type_e code) {
     this->dotStream << "\t" << SL_QUOTE(obj)
         << " [shape=box"
         << ", color=" << colorByCode(code);
 
     // dig root object
-    int root = obj, next;
+    TObjId root = obj, next;
     while (OBJ_INVALID != (next = this->heap->varParent(root)))
         root = next;
 
@@ -257,7 +257,7 @@ void SymHeapPlotter::Private::plotNodeObj(int obj, enum cl_type_e code) {
     this->dotStream << "\"];" << std::endl;
 }
 
-void SymHeapPlotter::Private::plotNodeValue(int val, enum cl_type_e code,
+void SymHeapPlotter::Private::plotNodeValue(TValueId val, enum cl_type_e code,
                                             const char *label)
 {
     this->dotStream << "\t" << SL_QUOTE(val)
@@ -289,26 +289,26 @@ void SymHeapPlotter::Private::plotNodeAux(int src, enum cl_type_e code,
         << "];" << std::endl;
 }
 
-void SymHeapPlotter::Private::plotEdgePointsTo(int value, int obj) {
+void SymHeapPlotter::Private::plotEdgePointsTo(TValueId value, TObjId obj) {
     this->dotStream << "\t" << SL_QUOTE(value) << " -> " << SL_QUOTE(obj)
         << " [color=green, fontcolor=green, label=\"pointsTo\"];"
         << std::endl;
 }
 
-void SymHeapPlotter::Private::plotEdgeValueOf(int obj, int value) {
+void SymHeapPlotter::Private::plotEdgeValueOf(TObjId obj, TValueId value) {
     this->dotStream << "\t" << SL_QUOTE(obj) << " -> " << SL_QUOTE(value)
         << " [color=blue, fontcolor=blue, label=\"hasValue\"];"
         << std::endl;
 }
 
-void SymHeapPlotter::Private::plotEdgeSub(int obj, int sub) {
+void SymHeapPlotter::Private::plotEdgeSub(TObjId obj, TObjId sub) {
     this->dotStream << "\t" << SL_QUOTE(obj) << " -> " << SL_QUOTE(sub)
         << " [color=gray, style=dotted, arrowhead=open"
         << ", fontcolor=gray, label=\"subVar\"];"
         << std::endl;
 }
 
-void SymHeapPlotter::Private::plotSingleValue(int value) {
+void SymHeapPlotter::Private::plotSingleValue(TValueId value) {
     if (VAL_NULL == value)
         TRAP;
 
@@ -323,7 +323,7 @@ void SymHeapPlotter::Private::plotSingleValue(int value) {
     this->plotNodeValue(value, code, 0);
 }
 
-void SymHeapPlotter::Private::plotSingleObj(int obj) {
+void SymHeapPlotter::Private::plotSingleObj(TObjId obj) {
     if (obj <= 0)
         TRAP;
 
@@ -335,7 +335,7 @@ void SymHeapPlotter::Private::plotSingleObj(int obj) {
     this->plotNodeObj(obj, code);
 }
 
-void SymHeapPlotter::Private::plotZeroValue(int obj)
+void SymHeapPlotter::Private::plotZeroValue(TObjId obj)
 {
     const struct cl_type *clt = this->heap->objType(obj);
     if (!clt)
@@ -360,7 +360,7 @@ void SymHeapPlotter::Private::plotZeroValue(int obj)
     }
 }
 
-bool SymHeapPlotter::Private::handleCustomValue(int value) {
+bool SymHeapPlotter::Private::handleCustomValue(TValueId value) {
     using namespace CodeStorage;
 
     const struct cl_type *clt;
@@ -394,7 +394,7 @@ bool SymHeapPlotter::Private::handleCustomValue(int value) {
     return true;
 }
 
-bool SymHeapPlotter::Private::handleUnknownValue(int value, int obj) {
+bool SymHeapPlotter::Private::handleUnknownValue(TValueId value, TObjId obj) {
     const EUnknownValue code = this->heap->valGetUnknown(value);
     switch (code) {
         case UV_KNOWN:
@@ -418,7 +418,7 @@ bool SymHeapPlotter::Private::handleUnknownValue(int value, int obj) {
     }
 }
 
-bool SymHeapPlotter::Private::resolveValueOf(int *pDst, int obj) {
+bool SymHeapPlotter::Private::resolveValueOf(TValueId *pDst, TObjId obj) {
     if (obj < 0)
         TRAP;
 
@@ -427,7 +427,7 @@ bool SymHeapPlotter::Private::resolveValueOf(int *pDst, int obj) {
         return false;
     this->objDone.insert(obj);
 
-    const int value = this->heap->valueOf(obj);
+    const TValueId value = this->heap->valueOf(obj);
     switch (value) {
         case VAL_INVALID:
             TRAP;
@@ -455,8 +455,8 @@ bool SymHeapPlotter::Private::resolveValueOf(int *pDst, int obj) {
     return true;
 }
 
-bool SymHeapPlotter::Private::resolvePointsTo(int /* obj */ *pDst, int value) {
-    const int obj = this->heap->pointsTo(value);
+bool SymHeapPlotter::Private::resolvePointsTo(TObjId *pDst, TValueId value) {
+    const TObjId obj = this->heap->pointsTo(value);
     switch (obj) {
         case OBJ_INVALID:
             this->plotNodeAux(value, CL_TYPE_VOID, "INVALID");
@@ -485,8 +485,8 @@ bool SymHeapPlotter::Private::resolvePointsTo(int /* obj */ *pDst, int value) {
     }
 }
 
-void SymHeapPlotter::Private::digObj(int obj) {
-    std::stack<int /* obj */> todo;
+void SymHeapPlotter::Private::digObj(TObjId obj) {
+    std::stack<TObjId> todo;
     todo.push(obj);
     while (!todo.empty()) {
         obj = todo.top();
@@ -500,7 +500,7 @@ void SymHeapPlotter::Private::digObj(int obj) {
         switch (code) {
             case CL_TYPE_PTR: {
                 this->plotSingleObj(obj);
-                int value;
+                TValueId value;
                 if (this->resolveValueOf(&value, obj)) {
                     this->plotEdgeValueOf(obj, value);
                     this->workList.schedule(value);
@@ -512,7 +512,7 @@ void SymHeapPlotter::Private::digObj(int obj) {
                 // TODO: draw subgraph
                 this->plotSingleObj(obj);
                 for (int i = 0; i < clt->item_cnt; ++i) {
-                    const int sub = this->heap->subVar(obj, i);
+                    const TObjId sub = this->heap->subVar(obj, i);
                     if (!hasKey(this->objDone, sub))
                         this->plotEdgeSub(obj, sub);
 
@@ -527,7 +527,7 @@ void SymHeapPlotter::Private::digObj(int obj) {
 }
 
 void SymHeapPlotter::Private::digValues() {
-    int value;
+    TValueId value;
     while (workList.next(value)) {
         if (value <= 0)
             // bare value can't be followed
@@ -536,7 +536,7 @@ void SymHeapPlotter::Private::digValues() {
         // plot the value itself
         this->plotSingleValue(value);
 
-        int obj = this->heap->valGetCompositeObj(value);
+        TObjId obj = this->heap->valGetCompositeObj(value);
         if (OBJ_INVALID != obj) {
             // dig composite object and eventually schedule the values inside
             this->digObj(obj);
@@ -558,12 +558,12 @@ void SymHeapPlotter::Private::digValues() {
 }
 
 // called only from plotCVar() for now
-void SymHeapPlotter::Private::plotObj(int obj) {
+void SymHeapPlotter::Private::plotObj(TObjId obj) {
     // plot the variable itself
     this->plotSingleObj(obj);
 
     // look for the value inside
-    int value;
+    TValueId value;
     if (!this->resolveValueOf(&value, obj))
         // we got a bare value, which can't be followed, so we're done
         return;
@@ -584,7 +584,7 @@ void SymHeapPlotter::Private::plotCVar(int uid) {
             << " (" << var.name << ")" );
 
     // SymbolicHeap variable lookup
-    const int obj = this->heap->varByCVar(uid);
+    const TObjId obj = this->heap->varByCVar(uid);
     if (OBJ_INVALID == obj)
         CL_DEBUG_MSG(this->lw, "varByCVar lookup failed");
 
@@ -623,7 +623,7 @@ bool SymHeapPlotter::plot(const std::string &name) {
     return d->ok;
 }
 
-bool SymHeapPlotter::plotHeapValue(const std::string &name, int value) {
+bool SymHeapPlotter::plotHeapValue(const std::string &name, TValueId value) {
     // create dot file
     d->ok = true;
     if (!d->openDotFile(name))

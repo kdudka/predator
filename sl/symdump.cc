@@ -58,7 +58,8 @@ void dump_clt(const struct cl_type *clt) {
 
 namespace {
     bool isHeapObject(const SymHeap &heap, int id) {
-        return (VAL_INVALID != heap.placedAt(id));
+        const TObjId obj = static_cast<TObjId>(id);
+        return (VAL_INVALID != heap.placedAt(obj));
     }
 
     bool isIdValid(int id) {
@@ -70,7 +71,7 @@ namespace {
     }
 }
 
-void dump_obj(const SymHeap &heap, int obj) {
+void dump_obj(const SymHeap &heap, TObjId obj) {
     using std::cout;
     cout << "dump_obj(#" << obj << ")\n";
 
@@ -105,16 +106,16 @@ void dump_obj(const SymHeap &heap, int obj) {
     if (-1 != cVar)
         cout << "    cVar      = /* CodeStorage var uid */ #" << cVar << "\n";
 
-    const int placedAt = heap.placedAt(obj);
+    const TValueId placedAt = heap.placedAt(obj);
     if (0 < placedAt)
         cout << "    placedAt  = /* value */ #" << placedAt << "\n";
 
     // TODO: check valPointsToAnon()
-    const int value = heap.valueOf(obj);
+    const TValueId value = heap.valueOf(obj);
     if (0 < value)
         cout << "    value     = /* value */ #" << value << "\n";
 
-    const int parent = heap.varParent(obj);
+    const TObjId parent = heap.varParent(obj);
     if (-1 != parent)
         cout << "    parent    = /* obj */ #" << parent << "\n";
 
@@ -134,12 +135,12 @@ void dump_obj(const SymHeap &heap, int obj) {
 }
 
 namespace {
-int /* pointsTo */ dump_value_core(const SymHeap &heap, int value)
+TObjId /* pointsTo */ dump_value_core(const SymHeap &heap, TValueId value)
 {
     using std::cout;
     cout << "dump_value(#" << value << ")\n";
 
-    SymHeap::TCont refs;
+    SymHeap::TContObj refs;
     heap.haveValue(refs, value);
     BOOST_FOREACH(const int obj, refs) {
         cout << "    ref found : /* obj */ #" << obj << "\n";
@@ -208,13 +209,13 @@ int /* pointsTo */ dump_value_core(const SymHeap &heap, int value)
         return OBJ_INVALID;
     }
 
-    const int compObj = heap.valGetCompositeObj(value);
+    const TObjId compObj = heap.valGetCompositeObj(value);
     if (OBJ_INVALID != compObj) {
         cout << "    compObj   = /* obj */ #" << compObj << "\n";
         return OBJ_INVALID;
     }
 
-    const int pointsTo = heap.pointsTo(value);
+    const TObjId pointsTo = heap.pointsTo(value);
     if (0 < pointsTo)
         cout << "    pointsTo  = /* obj */ #" << pointsTo << "\n";
 
@@ -222,29 +223,29 @@ int /* pointsTo */ dump_value_core(const SymHeap &heap, int value)
 }
 } // namespace
 
-void dump_value(const SymHeap &heap, int value) {
-    const int pointsTo = dump_value_core(heap, value);
+void dump_value(const SymHeap &heap, TValueId value) {
+    const TObjId pointsTo = dump_value_core(heap, value);
     if (0 < pointsTo) {
         std::cout << "\n";
         dump_obj(heap, pointsTo);
     }
 }
 
-void dump_value_refs(const SymHeap &heap, int value) {
+void dump_value_refs(const SymHeap &heap, TValueId value) {
     // dump value itself
     dump_value_core(heap, value);
 
     // dump all referrer objects
-    SymHeap::TCont refs;
+    SymHeap::TContObj refs;
     heap.haveValue(refs, value);
-    BOOST_FOREACH(const int obj, refs) {
+    BOOST_FOREACH(const TObjId obj, refs) {
         std::cout << "\n";
         dump_obj(heap, obj);
     }
 }
 
 void dump_cvar(const SymHeap &heap, int cVar) {
-    const int obj = heap.varByCVar(cVar);
+    const TObjId obj = heap.varByCVar(cVar);
     dump_obj(heap, obj);
 }
 
@@ -273,9 +274,9 @@ void dump_id(const SymHeap &heap, int id) {
 
     if (isHeapObject(heap, id))
         // assume object ID
-        dump_obj(heap, id);
+        dump_obj(heap, static_cast<TObjId>(id));
 
     else
         // assume value ID
-        dump_value(heap, id);
+        dump_value(heap, static_cast<TValueId>(id));
 }

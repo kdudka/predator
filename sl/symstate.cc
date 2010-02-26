@@ -43,7 +43,7 @@ namespace {
     }
 
     template <class TSubst>
-    bool matchValues(TSubst &subst, int v1, int v2) {
+    bool matchValues(TSubst &subst, TValueId v1, TValueId v2) {
         if (checkNonPosValues(v1, v2))
             // null vs. non-null, etc.
             return false;
@@ -69,7 +69,7 @@ namespace {
 
     template <class TSubst, class THeap>
     bool matchValues(TSubst &subst, const THeap &heap1, const THeap &heap2,
-                     int v1, int v2)
+                     TValueId v1, TValueId v2)
     {
         if (v1 <= 0 || v2 <= 0)
             // this can't be a pair of custom or unknown values
@@ -97,7 +97,7 @@ namespace {
     }
 
     template <class THeap>
-    bool skipValue(const THeap &heap, int value) {
+    bool skipValue(const THeap &heap, TValueId value) {
         if (OBJ_INVALID != heap.valGetCompositeObj(value))
             // compare composite objects recursively
             return false;
@@ -119,10 +119,10 @@ namespace {
 
     template<class TWL, class THeap>
     bool digComposite(TWL &wl, const THeap &heap1, const THeap &heap2,
-                      int value1, int value2)
+                      TValueId value1, TValueId value2)
     {
-        const int cObj1 = heap1.valGetCompositeObj(value1);
-        const int cObj2 = heap2.valGetCompositeObj(value2);
+        const TObjId cObj1 = heap1.valGetCompositeObj(value1);
+        const TObjId cObj2 = heap2.valGetCompositeObj(value2);
         if (OBJ_INVALID == cObj1 && OBJ_INVALID == cObj2)
             return false;
 
@@ -132,11 +132,11 @@ namespace {
 
         // FIXME: the following block of code is sort of copy-pasted
         //        from symexec.cc
-        typedef std::pair<int /* obj */, int /* obj */> TItem;
+        typedef std::pair<TObjId, TObjId> TItem;
         std::stack<TItem> todo;
         push(todo, cObj1, cObj2);
         while (!todo.empty()) {
-            int o1, o2;
+            TObjId o1, o2;
             boost::tie(o1, o2) = todo.top();
             todo.pop();
 
@@ -151,16 +151,16 @@ namespace {
 
             switch (code) {
                 case CL_TYPE_PTR: {
-                    const int val1 = heap1.valueOf(o1);
-                    const int val2 = heap2.valueOf(o2);
+                    const TValueId val1 = heap1.valueOf(o1);
+                    const TValueId val2 = heap2.valueOf(o2);
                     wl.schedule(val1, val2);
                     break;
                 }
 
                 case CL_TYPE_STRUCT:
                     for (int i = 0; i < clt->item_cnt; ++i) {
-                        const int sub1 = heap1.subVar(o1, i);
-                        const int sub2 = heap2.subVar(o2, i);
+                        const TObjId sub1 = heap1.subVar(o1, i);
+                        const TObjId sub2 = heap2.subVar(o2, i);
                         if (sub1 < 0 || sub2 < 0)
                             TRAP;
 
@@ -190,7 +190,7 @@ bool dfsCmp(TWL             &wl,
     // DFS loop
     typename TWL::value_type item;
     while (wl.next(item)) {
-        int value1, value2;
+        TValueId value1, value2;
         boost::tie(value1, value2) = item;
 
         if (digComposite(wl, heap1, heap2, value1, value2))
@@ -208,8 +208,8 @@ bool dfsCmp(TWL             &wl,
             continue;
 
         // TODO: distinguish among SLS and single dynamic variables here
-        const int obj1 = heap1.pointsTo(value1);
-        const int obj2 = heap2.pointsTo(value2);
+        const TObjId obj1 = heap1.pointsTo(value1);
+        const TObjId obj2 = heap2.pointsTo(value2);
         if (checkNonPosValues(obj1, obj2))
             // variable mismatch
             return false;
@@ -234,11 +234,11 @@ bool dfsCmp(TWL             &wl,
 
 bool operator== (const SymHeap &heap1, const SymHeap &heap2) {
     // DFS stack
-    typedef std::pair<int, int> TValuePair;
+    typedef std::pair<TValueId, TValueId> TValuePair;
     WorkList<TValuePair> wl;
 
     // value substitution (isomorphism)
-    typedef std::map<int, int> TSubst;
+    typedef std::map<TValueId, TValueId> TSubst;
     TSubst valSubst;
 
     // NOTE: we do not check cVars themselves among heaps
@@ -246,15 +246,15 @@ bool operator== (const SymHeap &heap1, const SymHeap &heap2) {
     SymHeap::TCont cVars;
     heap1.gatherCVars(cVars);
     BOOST_FOREACH(int uid, cVars) {
-        const int var1 = heap1.varByCVar(uid);
-        const int var2 = heap2.varByCVar(uid);
+        const TObjId var1 = heap1.varByCVar(uid);
+        const TObjId var2 = heap2.varByCVar(uid);
         if (var1 < 0 || var2 < 0)
             // heap corruption detected
             TRAP;
 
         // retrieve values of static variables
-        const int value1 = heap1.valueOf(var1);
-        const int value2 = heap2.valueOf(var2);
+        const TValueId value1 = heap1.valueOf(var1);
+        const TValueId value2 = heap2.valueOf(var2);
         if (!matchValues(valSubst, heap1, heap2, value1, value2))
             // value mismatch, bail out now
             return false;

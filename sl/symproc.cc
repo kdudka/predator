@@ -42,7 +42,7 @@ void SymHeapProcessor::printBackTrace() {
     btPrinter_->printBackTrace();
 }
 
-int /* val */ SymHeapProcessor::heapValFromCst(const struct cl_operand &op) {
+TValueId SymHeapProcessor::heapValFromCst(const struct cl_operand &op) {
     bool isBool = false;
     enum cl_type_e code = op.type->code;
     switch (code) {
@@ -93,12 +93,12 @@ int /* val */ SymHeapProcessor::heapValFromCst(const struct cl_operand &op) {
     }
 }
 
-void SymHeapProcessor::heapVarHandleAccessorDeref(int *pObj)
+void SymHeapProcessor::heapVarHandleAccessorDeref(TObjId *pObj)
 {
     EUnknownValue code;
 
     // attempt to dereference
-    const int val = heap_.valueOf(*pObj);
+    const TValueId val = heap_.valueOf(*pObj);
     switch (val) {
         case VAL_NULL:
             CL_ERROR_MSG(lw_, "dereference of NULL value");
@@ -148,7 +148,7 @@ fail:
     *pObj = OBJ_DEREF_FAILED;
 }
 
-void SymHeapProcessor::heapVarHandleAccessorItem(int *pObj,
+void SymHeapProcessor::heapVarHandleAccessorItem(TObjId *pObj,
                                                  const struct cl_accessor *ac)
 {
     // access subVar
@@ -160,7 +160,7 @@ void SymHeapProcessor::heapVarHandleAccessorItem(int *pObj,
         *pObj = /* FIXME: misleading */ OBJ_DEREF_FAILED;
 }
 
-void SymHeapProcessor::heapVarHandleAccessor(int *pObj,
+void SymHeapProcessor::heapVarHandleAccessor(TObjId *pObj,
                                              const struct cl_accessor *ac)
 {
     const enum cl_accessor_e code = ac->code;
@@ -186,7 +186,7 @@ void SymHeapProcessor::heapVarHandleAccessor(int *pObj,
     }
 }
 
-int /* var */ SymHeapProcessor::heapVarFromOperand(const struct cl_operand &op)
+TObjId SymHeapProcessor::heapVarFromOperand(const struct cl_operand &op)
 {
     int uid;
 
@@ -205,7 +205,7 @@ int /* var */ SymHeapProcessor::heapVarFromOperand(const struct cl_operand &op)
             return OBJ_INVALID;
     }
 
-    int var = heap_.varByCVar(uid);
+    TObjId var = heap_.varByCVar(uid);
     if (OBJ_INVALID == var)
         // unable to resolve static variable
         TRAP;
@@ -220,8 +220,7 @@ int /* var */ SymHeapProcessor::heapVarFromOperand(const struct cl_operand &op)
     return var;
 }
 
-bool /* var */ SymHeapProcessor::lhsFromOperand(int *pVar,
-                                                const struct cl_operand &op)
+bool SymHeapProcessor::lhsFromOperand(TObjId *pVar, const struct cl_operand &op)
 {
     *pVar = this->heapVarFromOperand(op);
     switch (*pVar) {
@@ -245,8 +244,8 @@ bool /* var */ SymHeapProcessor::lhsFromOperand(int *pVar,
 
 namespace {
     template <class THeap>
-    int /* val */ valueFromVar(THeap &heap, int var, const struct cl_type *clt,
-                               const struct cl_accessor *ac)
+    TValueId valueFromVar(THeap &heap, TObjId var, const struct cl_type *clt,
+                          const struct cl_accessor *ac)
     {
         switch (var) {
             case OBJ_INVALID:
@@ -277,7 +276,7 @@ namespace {
     }
 }
 
-int /* val */ SymHeapProcessor::heapValFromOperand(const struct cl_operand &op)
+TValueId SymHeapProcessor::heapValFromOperand(const struct cl_operand &op)
 {
     const enum cl_operand_e code = op.code;
     switch (code) {
@@ -298,11 +297,11 @@ int /* val */ SymHeapProcessor::heapValFromOperand(const struct cl_operand &op)
 
 namespace {
     template <class TWL, class THeap>
-    void digPointingObjects(TWL &wl, THeap &heap, int val) {
+    void digPointingObjects(TWL &wl, THeap &heap, TValueId val) {
         // go through all objects having the value
-        SymHeap::TCont cont;
+        SymHeap::TContObj cont;
         heap.haveValue(cont, val);
-        BOOST_FOREACH(int obj, cont) {
+        BOOST_FOREACH(TObjId obj, cont) {
 
             // go through all super objects
             while (0 < obj) {
@@ -313,7 +312,7 @@ namespace {
     }
 
     template <class THeap>
-    bool isHeapObject(const THeap &heap, int obj) {
+    bool isHeapObject(const THeap &heap, TObjId obj) {
         if (obj <= 0)
             return false;
 
@@ -325,7 +324,7 @@ namespace {
     }
 
     template <class THeap>
-    bool digJunk(THeap &heap, int ptrVal) {
+    bool digJunk(THeap &heap, TValueId ptrVal) {
         if (ptrVal <= 0 || UV_KNOWN != heap.valGetUnknown(ptrVal))
             return false;
 
@@ -333,7 +332,7 @@ namespace {
             // ignore custom values (e.g. fnc pointers)
             return false;
 
-        int obj = heap.pointsTo(ptrVal);
+        TObjId obj = heap.pointsTo(ptrVal);
         if (!isHeapObject(heap, obj))
             // non-heap object simply can't be JUNK
             return false;
@@ -342,13 +341,13 @@ namespace {
             // ignore non-roots
             return false;
 
-        WorkList<int /* var */> wl;
+        WorkList<TObjId> wl;
         digPointingObjects(wl, heap, ptrVal);
         while (wl.next(obj)) {
             if (!isHeapObject(heap, obj))
                 return false;
 
-            const int val = heap.placedAt(obj);
+            const TValueId val = heap.placedAt(obj);
             if (val <= 0)
                 TRAP;
 
@@ -359,11 +358,11 @@ namespace {
     }
 
     template <class TCont, class THeap>
-    void getPtrValues(TCont &dst, THeap &heap, int obj) {
-        std::stack<int /* obj */> todo;
+    void getPtrValues(TCont &dst, THeap &heap, TObjId obj) {
+        std::stack<TObjId> todo;
         todo.push(obj);
         while (!todo.empty()) {
-            const int obj = todo.top();
+            const TObjId obj = todo.top();
             todo.pop();
 
             const struct cl_type *clt = heap.objType(obj);
@@ -373,7 +372,7 @@ namespace {
 
             switch (code) {
                 case CL_TYPE_PTR: {
-                    const int val = heap.valueOf(obj);
+                    const TValueId val = heap.valueOf(obj);
                     if (0 < val)
                         dst.push_back(val);
 
@@ -382,7 +381,7 @@ namespace {
 
                 case CL_TYPE_STRUCT:
                     for (int i = 0; i < clt->item_cnt; ++i) {
-                        const int subVar = heap.subVar(obj, i);
+                        const TObjId subVar = heap.subVar(obj, i);
                         if (subVar < 0)
                             TRAP;
 
@@ -405,23 +404,23 @@ namespace {
     }
 }
 
-bool SymHeapProcessor::checkForJunk(int val) {
+bool SymHeapProcessor::checkForJunk(TValueId val) {
     bool detected = false;
 
-    std::stack<int /* val */> todo;
+    std::stack<TValueId> todo;
     todo.push(val);
     while (!todo.empty()) {
-        const int val = todo.top();
+        const TValueId val = todo.top();
         todo.pop();
 
         if (digJunk(heap_, val)) {
             detected = true;
-            const int obj = heap_.pointsTo(val);
+            const TObjId obj = heap_.pointsTo(val);
             if (obj <= 0)
                 TRAP;
 
             // gather all values inside the junk object
-            std::vector<int /* val */> ptrs;
+            std::vector<TValueId> ptrs;
             getPtrValues(ptrs, heap_, obj);
 
             // destroy junk
@@ -429,7 +428,7 @@ bool SymHeapProcessor::checkForJunk(int val) {
             heap_.objDestroy(obj);
 
             // schedule just created junk candidates for next wheel
-            BOOST_FOREACH(int ptrVal, ptrs) {
+            BOOST_FOREACH(TValueId ptrVal, ptrs) {
                 todo.push(ptrVal);
             }
         }
@@ -438,8 +437,8 @@ bool SymHeapProcessor::checkForJunk(int val) {
     return detected;
 }
 
-void SymHeapProcessor::heapVarDefineType(int /* obj */ lhs, int /* val */ rhs) {
-    const int var = heap_.pointsTo(rhs);
+void SymHeapProcessor::heapVarDefineType(TObjId lhs, TValueId rhs) {
+    const TObjId var = heap_.pointsTo(rhs);
     if (OBJ_INVALID == var)
         TRAP;
 
@@ -476,9 +475,9 @@ void SymHeapProcessor::heapVarDefineType(int /* obj */ lhs, int /* val */ rhs) {
     heap_.varDefineType(var, clt);
 }
 
-void SymHeapProcessor::heapSetSingleVal(int /* obj */ lhs, int /* val */ rhs) {
+void SymHeapProcessor::heapSetSingleVal(TObjId lhs, TValueId rhs) {
     // save the old value, which is going to be overwritten
-    const int oldValue = heap_.valueOf(lhs);
+    const TValueId oldValue = heap_.valueOf(lhs);
     if (VAL_INVALID == oldValue)
         TRAP;
 
@@ -491,17 +490,18 @@ void SymHeapProcessor::heapSetSingleVal(int /* obj */ lhs, int /* val */ rhs) {
         this->printBackTrace();
 }
 
-void SymHeapProcessor::heapSetVal(int /* obj */ lhs, int /* val */ rhs) {
+void SymHeapProcessor::heapSetVal(TObjId lhs, TValueId rhs) {
     // DFS for composite types
-    typedef std::pair<int /* obj */, int /* val */> TItem;
+    typedef std::pair<TObjId, TValueId> TItem;
     std::stack<TItem> todo;
     push(todo, lhs, rhs);
     while (!todo.empty()) {
-        int lhs, rhs;
+        TObjId lhs;
+        TValueId rhs;
         boost::tie(lhs, rhs) = todo.top();
         todo.pop();
 
-        const int rObj = heap_.valGetCompositeObj(rhs);
+        const TObjId rObj = heap_.valGetCompositeObj(rhs);
         if (OBJ_INVALID == rObj) {
             // non-composite value
             this->heapSetSingleVal(lhs, rhs);
@@ -515,22 +515,22 @@ void SymHeapProcessor::heapSetVal(int /* obj */ lhs, int /* val */ rhs) {
 
         // iterate through all fields
         for (int i = 0; i < clt->item_cnt; ++i) {
-            const int lSub = heap_.subVar(lhs, i);
-            const int rSub = heap_.subVar(rObj, i);
+            const TObjId lSub = heap_.subVar(lhs, i);
+            const TObjId rSub = heap_.subVar(rObj, i);
             if (lSub <= 0 || rSub <= 0)
                 // composition problem
                 TRAP;
 
             // schedule sub for next wheel
-            const int rSubVal = heap_.valueOf(rSub);
+            const TValueId rSubVal = heap_.valueOf(rSub);
             push(todo, lSub, rSubVal);
         }
     }
 }
 
-void SymHeapProcessor::destroyObj(int obj) {
+void SymHeapProcessor::destroyObj(TObjId obj) {
     // gather destroyed values
-    std::vector<int> ptrs;
+    std::vector<TValueId> ptrs;
     getPtrValues(ptrs, heap_, obj);
 
     // destroy object recursively
@@ -538,7 +538,7 @@ void SymHeapProcessor::destroyObj(int obj) {
 
     // now check for JUNK
     bool junk = false;
-    BOOST_FOREACH(int val, ptrs) {
+    BOOST_FOREACH(TValueId val, ptrs) {
         if (this->checkForJunk(val))
             junk = true;
     }
@@ -556,7 +556,7 @@ void SymHeapProcessor::execFree(const CodeStorage::TOperandList &opList) {
         // Oops, free() does not usually return a value
         TRAP;
 
-    const int val = heapValFromOperand(opList[/* ptr given to free() */ 2]);
+    const TValueId val = heapValFromOperand(opList[/* ptr given to free() */2]);
     if (VAL_INVALID == val)
         // could not resolve value to be freed
         TRAP;
@@ -565,6 +565,9 @@ void SymHeapProcessor::execFree(const CodeStorage::TOperandList &opList) {
         case VAL_NULL:
             CL_DEBUG_MSG(lw_, "ignoring free() called with NULL value");
             return;
+
+        default:
+            break;
     }
 
     const EUnknownValue code = heap_.valGetUnknown(val);
@@ -585,7 +588,7 @@ void SymHeapProcessor::execFree(const CodeStorage::TOperandList &opList) {
             return;
     }
 
-    const int obj = heap_.pointsTo(val);
+    const TObjId obj = heap_.pointsTo(val);
     switch (obj) {
         case OBJ_DELETED:
             CL_ERROR_MSG(lw_, "double free() detected");
@@ -620,7 +623,7 @@ void SymHeapProcessor::execMalloc(TState &state,
         TRAP;
 
     const struct cl_operand &dst = opList[0];
-    const int varLhs = this->heapVarFromOperand(dst);
+    const TObjId varLhs = this->heapVarFromOperand(dst);
     if (OBJ_INVALID == varLhs)
         // could not resolve lhs
         TRAP;
@@ -637,12 +640,12 @@ void SymHeapProcessor::execMalloc(TState &state,
 
     const int cbAmount = cst.data.cst_int.value;
     CL_DEBUG_MSG(lw_, "executing malloc(" << cbAmount << ")");
-    const int obj = heap_.varCreateAnon(cbAmount);
+    const TObjId obj = heap_.varCreateAnon(cbAmount);
     if (OBJ_INVALID == obj)
         // unable to create dynamic variable
         TRAP;
 
-    const int val = heap_.placedAt(obj);
+    const TValueId val = heap_.placedAt(obj);
     if (val <= 0)
         TRAP;
 
@@ -683,13 +686,13 @@ namespace {
     }
 
     template <int NTH, class TOpList, class THeap>
-    bool readHeapVal(int *dst, const TOpList opList, const THeap &heap)
+    bool readHeapVal(TValueId *dst, const TOpList opList, const THeap &heap)
     {
         // FIXME: we might use the already existing instance instead
         SymHeapProcessor proc(const_cast<THeap &>(heap));
 
         const cl_operand &op = opList[NTH + /* dst + fnc */ 2];
-        const int value = proc.heapValFromOperand(op);
+        const TValueId value = proc.heapValFromOperand(op);
         if (value < 0)
             return false;
 
@@ -698,7 +701,7 @@ namespace {
     }
 
     template <class TInsn, class THeap>
-    bool readNameAndValue(std::string *pName, int *pValue,
+    bool readNameAndValue(std::string *pName, TValueId *pValue,
                           const TInsn &insn, const THeap &heap)
     {
         const CodeStorage::TOperandList &opList = insn.operands;
@@ -717,7 +720,7 @@ namespace {
     }
 
     template <class TStor, class TFnc, class THeap>
-    bool fncFromHeapVal(const TStor &stor, const TFnc **dst, int value,
+    bool fncFromHeapVal(const TStor &stor, const TFnc **dst, TValueId value,
                         const THeap &heap)
     {
         const int uid = heap.valGetCustom(/* pClt */ 0, value);
@@ -766,7 +769,7 @@ namespace {
         const LocationWriter lw(&insn.loc);
 
         std::string plotName;
-        int value;
+        TValueId value;
         if (!readNameAndValue(&plotName, &value, insn, heap)) {
             emitPrototypeError(lw, "sl_plot_by_ptr");
             return false;
@@ -786,7 +789,7 @@ namespace {
         const LocationWriter lw(&insn.loc);
 
         std::string plotName;
-        int value;
+        TValueId value;
         const CodeStorage::Fnc *fnc;
 
         if (!readNameAndValue(&plotName, &value, insn, heap)
@@ -862,7 +865,7 @@ call_done:
 }
 
 namespace {
-    bool handleUnopTruthNotTrivial(int &val) {
+    bool handleUnopTruthNotTrivial(TValueId &val) {
         switch (val) {
             case VAL_FALSE:
                 val = VAL_TRUE;
@@ -882,7 +885,7 @@ namespace {
 }
 
 template <class THeap>
-void handleUnopTruthNot(THeap &heap, int &val, const struct cl_type *clt) {
+void handleUnopTruthNot(THeap &heap, TValueId &val, const struct cl_type *clt) {
     if (!clt || clt->code != CL_TYPE_BOOL)
         // inappropriate type for CL_UNOP_TRUTH_NOT
         TRAP;
@@ -896,7 +899,7 @@ void handleUnopTruthNot(THeap &heap, int &val, const struct cl_type *clt) {
         // the value we got is not VAL_TRUE, VAL_FALSE, nor an unknown value
         TRAP;
 
-    const int origValue = val;
+    const TValueId origValue = val;
     val = heap.valDuplicateUnknown(origValue);
     // FIXME: not tested
     TRAP;
@@ -904,11 +907,11 @@ void handleUnopTruthNot(THeap &heap, int &val, const struct cl_type *clt) {
 }
 
 template <class THeap>
-int /* val */ handleOpCmpBool(THeap &heap, enum cl_binop_e code,
-                              const struct cl_type *dstClt, int v1, int v2)
+TValueId handleOpCmpBool(THeap &heap, enum cl_binop_e code,
+                         const struct cl_type *dstClt, TValueId v1, TValueId v2)
 {
     // TODO: describe the following magic somehow
-    int /* val */ valElim = VAL_FALSE;
+    TValueId valElim = VAL_FALSE;
     switch (code) {
         case CL_BINOP_EQ:
             valElim = VAL_TRUE;
@@ -945,8 +948,8 @@ int /* val */ handleOpCmpBool(THeap &heap, enum cl_binop_e code,
 }
 
 template <class THeap>
-int /* val */ handleOpCmpInt(THeap &heap, enum cl_binop_e code,
-                             const struct cl_type *dstClt, int v1, int v2)
+TValueId handleOpCmpInt(THeap &heap, enum cl_binop_e code,
+                        const struct cl_type *dstClt, TValueId v1, TValueId v2)
 {
     if (v1 < 0 || v2 < 0)
         TRAP;
@@ -958,8 +961,8 @@ int /* val */ handleOpCmpInt(THeap &heap, enum cl_binop_e code,
 }
 
 template <class THeap>
-int /* val */ handleOpCmpPtr(THeap &heap, enum cl_binop_e code,
-                             const struct cl_type *dstClt, int v1, int v2)
+TValueId handleOpCmpPtr(THeap &heap, enum cl_binop_e code,
+                        const struct cl_type *dstClt, TValueId v1, TValueId v2)
 {
     if (v1 < 0 || v2 < 0)
         TRAP;
@@ -979,7 +982,7 @@ int /* val */ handleOpCmpPtr(THeap &heap, enum cl_binop_e code,
     bool result;
     if (!heap.proveEq(&result, v1, v2)) {
         // we don't know know if the values are equal or not
-        const int val = heap.valCreateUnknown(UV_UNKNOWN, dstClt);
+        const TValueId val = heap.valCreateUnknown(UV_UNKNOWN, dstClt);
 
         // store the relation over the triple (val, v1, v2) for posteriors
         heap.addEqIf(val, v1, v2, CL_BINOP_NE == code);
@@ -995,9 +998,9 @@ int /* val */ handleOpCmpPtr(THeap &heap, enum cl_binop_e code,
 }
 
 template <class THeap>
-int /* val */ handleOpCmp(THeap &heap, enum cl_binop_e code,
-                          const struct cl_type *dstClt,
-                          const struct cl_type *clt, int v1, int v2)
+TValueId handleOpCmp(THeap &heap, enum cl_binop_e code,
+                     const struct cl_type *dstClt, const struct cl_type *clt,
+                     TValueId v1, TValueId v2)
 {
     // clt is assumed to be valid at this point
     switch (clt->code) {
@@ -1014,17 +1017,17 @@ int /* val */ handleOpCmp(THeap &heap, enum cl_binop_e code,
 // template for generic (unary, binary, ...) operator handlers
 template <int ARITY, class THeap>
 struct OpHandler {
-    static int /* val */ handleOp(THeap &heap, int code, const int rhs[ARITY],
-                                  const struct cl_type *clt[ARITY +/* dst */1]);
+    static TValueId handleOp(THeap &heap, int code, const TValueId rhs[ARITY],
+                             const struct cl_type *clt[ARITY +/* dst */1]);
 };
 
 // unary operator handler
 template <class THeap>
 struct OpHandler</* unary */ 1, THeap> {
-    static int handleOp(THeap &heap, int iCode, const int rhs[1],
-                        const struct cl_type *clt[1 + /* dst type */ 1])
+    static TValueId handleOp(THeap &heap, int iCode, const TValueId rhs[1],
+                             const struct cl_type *clt[1 + /* dst type */ 1])
     {
-        int val = rhs[0];
+        TValueId val = rhs[0];
 
         const enum cl_unop_e code = static_cast<enum cl_unop_e>(iCode);
         switch (code) {
@@ -1079,8 +1082,8 @@ namespace {
 // binary operator handler
 template <class THeap>
 struct OpHandler</* binary */ 2, THeap> {
-    static int handleOp(THeap &heap, int iCode, const int rhs[2],
-                        const struct cl_type *clt[2 + /* dst type */ 1])
+    static TValueId handleOp(THeap &heap, int iCode, const TValueId rhs[2],
+                             const struct cl_type *clt[2 + /* dst type */ 1])
     {
         const struct cl_type *const cltA = clt[0];
         const struct cl_type *const cltB = clt[1];
@@ -1118,8 +1121,8 @@ struct OpHandler</* binary */ 2, THeap> {
 
 // C++ does not support partial specialisation of function templates, this helps
 template <int ARITY, class THeap>
-int handleOp(THeap &heap, int code, const int rhs[ARITY],
-             const struct cl_type *clt[ARITY + /* dst type */ 1])
+TValueId handleOp(THeap &heap, int code, const TValueId rhs[ARITY],
+                  const struct cl_type *clt[ARITY + /* dst type */ 1])
 {
     return OpHandler<ARITY, THeap>::handleOp(heap, code, rhs, clt);
 }
@@ -1127,7 +1130,7 @@ int handleOp(THeap &heap, int code, const int rhs[ARITY],
 template <int ARITY>
 void SymHeapProcessor::execOp(const CodeStorage::Insn &insn) {
     // resolve lhs
-    int varLhs;
+    TObjId varLhs;
     const struct cl_operand &dst = insn.operands[/* dst */ 0];
     if (!this->lhsFromOperand(&varLhs, dst))
         return;
@@ -1137,7 +1140,7 @@ void SymHeapProcessor::execOp(const CodeStorage::Insn &insn) {
     clt[/* dst type */ ARITY] = dst.type;
 
     // gather rhs values (and type-info)
-    int rhs[ARITY];
+    TValueId rhs[ARITY];
     for (int i = 0; i < ARITY; ++i) {
         const struct cl_operand &op = insn.operands[i + /* [+dst] */ 1];
         clt[i] = op.type;
@@ -1147,7 +1150,7 @@ void SymHeapProcessor::execOp(const CodeStorage::Insn &insn) {
     }
 
     // handle generic operator and store result
-    const int valResult = handleOp<ARITY>(heap_, insn.subCode, rhs, clt);
+    const TValueId valResult = handleOp<ARITY>(heap_, insn.subCode, rhs, clt);
     this->heapSetVal(varLhs, valResult);
 }
 

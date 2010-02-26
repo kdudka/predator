@@ -45,64 +45,64 @@ class SymHeap {
         SymHeap& operator=(const SymHeap &);
 
     public:
-        typedef std::vector<int> TCont;
+        typedef std::vector<int>        TCont;
+        typedef std::vector<TObjId>     TContObj;
+        typedef std::vector<TValueId>   TContValue;
 
     public:
         // basic heap lookup
-        int /* val */ valueOf(int obj) const;
-        int /* val */ placedAt(int obj) const;
-        int /* obj */ pointsTo(int val) const;
-        void haveValue(TCont /* obj[] */ &dst, int val) const;
+        TValueId valueOf(TObjId obj) const;
+        TValueId placedAt(TObjId obj) const;
+        TObjId pointsTo(TValueId val) const;
+        void haveValue(TContObj &dst, TValueId val) const;
 
     public:
         // static info lookup
-        const struct cl_type* /* clt */ objType(int obj) const;
-        const struct cl_type* /* clt */ valType(int val) const;
-        int /* CodeStorage var uid */ cVar(int var) const;
-        int /* var */ varByCVar(int /* CodeStorage var */ uid) const;
+        const struct cl_type* /* clt */ objType(TObjId obj) const;
+        const struct cl_type* /* clt */ valType(TValueId val) const;
+        int /* CodeStorage var uid */ cVar(TObjId var) const;
+        TObjId /* var */ varByCVar(int /* CodeStorage var */ uid) const;
         void gatherCVars(TCont &out) const;
 
     public:
         // complex variable (de)composition
-        int /* var */ subVar(int var, int nth) const;
-        int /* var */ varParent(int var) const;
-        int /* obj */ valGetCompositeObj(int val) const;
+        TObjId /* var */ subVar(TObjId var, int nth) const;
+        TObjId /* var */ varParent(TObjId var) const;
+        TObjId /* obj */ valGetCompositeObj(TValueId val) const;
 
     public:
         // heap objects construction
-        int /* var */ varCreate(const struct cl_type *clt,
-                                int /* CodeStorage var */ uid);
+        TObjId /* var */ varCreate(const struct cl_type *clt,
+                                   int /* CodeStorage var */ uid);
 
-        int /* var */ varCreateAnon(int cbSize);
-        int varSizeOfAnon(int var) const;
-        bool valPointsToAnon(int val) const;
-        void varDefineType(int var, const struct cl_type *clt);
-
-        int /* sls */ slsCreate(const struct cl_type *clt,
-                                const struct cl_accessor *selector);
+        TObjId /* var */ varCreateAnon(int cbSize);
+        int varSizeOfAnon(TObjId var) const;
+        bool valPointsToAnon(TValueId val) const;
+        void varDefineType(TObjId, const struct cl_type *clt);
 
     public:
         // heap objects alternation and destruction
-        void objSetValue(int obj, int val);
-        void objDestroy(int obj);
+        void objSetValue(TObjId obj, TValueId val);
+        void objDestroy(TObjId obj);
 
     public:
         // unkown values manipulation
-        int /* val */ valCreateUnknown(EUnknownValue code,
-                                       const struct cl_type *clt);
-        EUnknownValue valGetUnknown(int val) const;
-        int /* val */ valDuplicateUnknown(int /* val */ tpl);
-        void valReplaceUnknown(int val, int /* val */ replaceBy);
+        TValueId valCreateUnknown(EUnknownValue code,
+                                  const struct cl_type *clt);
+        EUnknownValue valGetUnknown(TValueId val) const;
+        TValueId valDuplicateUnknown(TValueId tpl);
+        void valReplaceUnknown(TValueId val, TValueId replaceBy);
 
     public:
         // custom values manipulation (e.g. fnc pointers)
-        int /* val */ valCreateCustom(const struct cl_type *clt, int cVal);
-        int /* cVal */ valGetCustom(const struct cl_type **pClt, int val) const;
+        TValueId valCreateCustom(const struct cl_type *clt, int cVal);
+        int /* cVal */ valGetCustom(const struct cl_type **pClt,
+                                    TValueId val) const;
 
     public:
         // equality reasoning
-        void addEqIf(int valCond, int valA, int valB, bool neg);
-        bool proveEq(bool *result, int valA, int valB) const;
+        void addEqIf(TValueId valCond, TValueId valA, TValueId valB, bool neg);
+        bool proveEq(bool *result, TValueId valA, TValueId valB) const;
 
     private:
         struct Private;
