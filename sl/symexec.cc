@@ -38,9 +38,7 @@
 
 // utilities
 namespace {
-    void createStackFrame(SymbolicHeap::SymHeap &heap,
-                          const CodeStorage::Fnc &fnc)
-    {
+    void createStackFrame(SymHeap &heap, const CodeStorage::Fnc &fnc) {
         using CodeStorage::Var;
 #if DEBUG_SE_STACK_FRAME
         LocationWriter lw(&fnc.def.loc);
@@ -59,8 +57,7 @@ namespace {
         }
     }
 
-    void setCallArgs(SymbolicHeap::SymHeap &heap,
-                     const CodeStorage::Fnc &fnc,
+    void setCallArgs(SymHeap &heap, const CodeStorage::Fnc &fnc,
                      const CodeStorage::TOperandList &opList)
     {
         // get called fnc's args
@@ -78,11 +75,11 @@ namespace {
             proc.setLocation(lw);
 
             const int val = proc.heapValFromOperand(op);
-            if (SymbolicHeap::VAL_INVALID == val)
+            if (VAL_INVALID == val)
                 TRAP;
 
             const int lhs = heap.varByCVar(arg);
-            if (SymbolicHeap::OBJ_INVALID == lhs)
+            if (OBJ_INVALID == lhs)
                 TRAP;
 
             // set arg's value
@@ -90,11 +87,7 @@ namespace {
         }
     }
 
-    void assignReturnValue(SymbolicHeap::SymHeap &heap,
-                           const struct cl_operand &op)
-    {
-        using namespace SymbolicHeap;
-
+    void assignReturnValue(SymHeap &heap, const struct cl_operand &op) {
         if (CL_OPERAND_VOID == op.code)
             // fnc returns void, thus we are done
             return;
@@ -121,12 +114,12 @@ namespace {
             return;
 
         // go through results and perform assignment of the return value
-        BOOST_FOREACH(SymbolicHeap::SymHeap &res, state) {
+        BOOST_FOREACH(SymHeap &res, state) {
             assignReturnValue(res, op);
         }
     }
 
-    void destroyStackFrame(IBtPrinter *bt, SymbolicHeap::SymHeap &heap,
+    void destroyStackFrame(IBtPrinter *bt, SymHeap &heap,
                            const CodeStorage::Fnc &fnc)
     {
         using CodeStorage::Var;
@@ -147,13 +140,12 @@ namespace {
             proc.destroyObj(obj);
         }
 
-        heap.objDestroy(SymbolicHeap::OBJ_RETURN);
+        heap.objDestroy(OBJ_RETURN);
     }
 
     void destroyStackFrame(IBtPrinter *bt, SymHeapUnion &huni,
                            const CodeStorage::Fnc &fnc)
     {
-        using SymbolicHeap::SymHeap;
 
 #if DEBUG_SE_STACK_FRAME
         const LocationWriter lw(&fnc.def.loc);
@@ -212,30 +204,25 @@ struct SymExec::Private: public IBtPrinter {
     // IBtPrinter implementation
     virtual void printBackTrace();
 
-    void execReturn(SymbolicHeap::SymHeap heap);
-    void updateState(const CodeStorage::Block *ofBlock,
-                     const SymbolicHeap::SymHeap &heap);
-    void updateState(const CodeStorage::Block *ofBlock,
-                     SymbolicHeap::SymHeap heap, int valDst, int valSrc);
-    void execCondInsn(const SymbolicHeap::SymHeap &heap);
-    void execTermInsn(const SymbolicHeap::SymHeap &heap);
-    int resolveCallee(const SymbolicHeap::SymHeap &heap,
-                      const struct cl_operand &op);
-    void execCallInsn(const CodeStorage::Fnc *fnc,
-                      const SymbolicHeap::SymHeap &heap,
+    void execReturn(SymHeap heap);
+    void updateState(const CodeStorage::Block *ofBlock, const SymHeap &heap);
+    void updateState(const CodeStorage::Block *ofBlock, SymHeap heap,
+                     int valDst, int valSrc);
+    void execCondInsn(const SymHeap &heap);
+    void execTermInsn(const SymHeap &heap);
+    int resolveCallee(const SymHeap &heap, const struct cl_operand &op);
+    void execCallInsn(const CodeStorage::Fnc *fnc, const SymHeap &heap,
                       SymHeapUnion &results);
-    void execCallInsn(SymbolicHeap::SymHeap heap, SymHeapUnion &results);
+    void execCallInsn(SymHeap heap, SymHeapUnion &results);
     void execInsn(SymHeapUnion &localState);
     void execBb();
     void execFncBody();
-    void execFnc(const SymbolicHeap::SymHeap &init);
+    void execFnc(const SymHeap &init);
 };
 
 SymExec::SymExec(CodeStorage::Storage &stor):
     d(new Private(stor))
 {
-    using SymbolicHeap::SymHeap;
-
     // TODO: create and initialize global/static variables (stateZero)
     d->stateZero.insert(SymHeap());
 }
@@ -254,7 +241,6 @@ void SymExec::setFastMode(bool val) {
 
 void SymExec::exec(const CodeStorage::Fnc &fnc) {
     using CodeStorage::Var;
-    using SymbolicHeap::SymHeap;
 
     // wait, avoid recursion in the first place
     Private::TBtSet btSet;
@@ -306,10 +292,8 @@ void SymExec::Private::printBackTrace() {
     }
 }
 
-void SymExec::Private::execReturn(SymbolicHeap::SymHeap heap)
+void SymExec::Private::execReturn(SymHeap heap)
 {
-    using namespace SymbolicHeap;
-
     const CodeStorage::TOperandList &opList = insn->operands;
     if (1 != opList.size())
         TRAP;
@@ -331,7 +315,7 @@ void SymExec::Private::execReturn(SymbolicHeap::SymHeap heap)
 }
 
 void SymExec::Private::updateState(const CodeStorage::Block *ofBlock,
-                                   const SymbolicHeap::SymHeap &heap)
+                                   const SymHeap &heap)
 {
     // update *target* state
     SymHeapUnion &huni = this->state[ofBlock];
@@ -360,17 +344,13 @@ void SymExec::Private::updateState(const CodeStorage::Block *ofBlock,
 }
         
 void SymExec::Private::updateState(const CodeStorage::Block *ofBlock,
-                                   SymbolicHeap::SymHeap heap, int valDst,
-                                   int valSrc)
+                                   SymHeap heap, int valDst, int valSrc)
 {
     heap.valReplaceUnknown(valDst, valSrc);
     this->updateState(ofBlock, heap);
 }
 
-void SymExec::Private::execCondInsn(const SymbolicHeap::SymHeap &heap)
-{
-    using namespace SymbolicHeap;
-
+void SymExec::Private::execCondInsn(const SymHeap &heap) {
     const CodeStorage::TOperandList &oplist = insn->operands;
     const CodeStorage::TTargetList &tlist = insn->targets;
     if (2 != tlist.size() || 1 != oplist.size())
@@ -422,8 +402,7 @@ void SymExec::Private::execCondInsn(const SymbolicHeap::SymHeap &heap)
     this->updateState(tlist[/* else label */ 1], heap, val, VAL_FALSE);
 }
 
-void SymExec::Private::execTermInsn(const SymbolicHeap::SymHeap &heap)
-{
+void SymExec::Private::execTermInsn(const SymHeap &heap) {
     const CodeStorage::TTargetList &tlist = insn->targets;
 
     const enum cl_insn_e code = insn->code;
@@ -452,11 +431,9 @@ void SymExec::Private::execTermInsn(const SymbolicHeap::SymHeap &heap)
     }
 }
 
-int SymExec::Private::resolveCallee(const SymbolicHeap::SymHeap &heap,
+int SymExec::Private::resolveCallee(const SymHeap &heap,
                                     const struct cl_operand &op)
 {
-    using namespace SymbolicHeap;
-
     if (CL_OPERAND_CST == op.code) {
         // direct call
         const struct cl_cst &cst = op.data.cst;
@@ -480,8 +457,7 @@ int SymExec::Private::resolveCallee(const SymbolicHeap::SymHeap &heap,
 }
 
 void SymExec::Private::execCallInsn(const CodeStorage::Fnc *fnc,
-                                    const SymbolicHeap::SymHeap &heap,
-                                    SymHeapUnion &results)
+                                    const SymHeap &heap, SymHeapUnion &results)
 {
     const int uid = uidOf(*fnc);
 
@@ -503,11 +479,8 @@ void SymExec::Private::execCallInsn(const CodeStorage::Fnc *fnc,
         TRAP;
 }
 
-void SymExec::Private::execCallInsn(SymbolicHeap::SymHeap heap,
-                                    SymHeapUnion &results)
-{
+void SymExec::Private::execCallInsn(SymHeap heap, SymHeapUnion &results) {
     using namespace CodeStorage;
-    using namespace SymbolicHeap;
 
     const TOperandList &opList = insn->operands;
     if (CL_INSN_CALL != insn->code || opList.size() < 2)
@@ -587,8 +560,6 @@ fail:
 }
 
 void SymExec::Private::execInsn(SymHeapUnion &localState) {
-    using SymbolicHeap::SymHeap;
-
     // true for terminal instruction
     const bool isTerm = cl_is_term_insn(insn->code);
 
@@ -628,7 +599,6 @@ void SymExec::Private::execInsn(SymHeapUnion &localState) {
 
 void SymExec::Private::execBb() {
     using namespace CodeStorage;
-    using SymbolicHeap::SymHeap;
 
     const std::string &name = bb->name();
     CL_DEBUG_MSG(lw, "___ entering " << name);
@@ -672,10 +642,9 @@ void SymExec::Private::execFncBody() {
     }
 }
 
-void SymExec::Private::execFnc(const SymbolicHeap::SymHeap &init)
+void SymExec::Private::execFnc(const SymHeap &init)
 {
     using namespace CodeStorage;
-    using SymbolicHeap::SymHeap;
 
     // look for fnc name
     const std::string &fncName = nameOf(*this->fnc);

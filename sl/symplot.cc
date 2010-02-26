@@ -84,7 +84,7 @@ std::string PlotEnumerator::decorate(std::string name) {
 // implementation of SymHeapPlotter
 struct SymHeapPlotter::Private {
     const CodeStorage::Storage          *stor;
-    const SymbolicHeap::SymHeap         *heap;
+    const SymHeap                       *heap;
     std::ofstream                       dotStream;
     bool                                ok;
     LocationWriter                      lw;
@@ -195,7 +195,7 @@ namespace {
 
 bool SymHeapPlotter::Private::digFieldName(std::string &dst, int obj) {
     const int parent = this->heap->varParent(obj);
-    if (SymbolicHeap::OBJ_INVALID == parent)
+    if (OBJ_INVALID == parent)
         // no chance since there is no parent
         return false;
 
@@ -219,7 +219,6 @@ bool SymHeapPlotter::Private::digFieldName(std::string &dst, int obj) {
 }
 
 void SymHeapPlotter::Private::plotNodeObj(int obj, enum cl_type_e code) {
-    using namespace SymbolicHeap;
     this->dotStream << "\t" << SL_QUOTE(obj)
         << " [shape=box"
         << ", color=" << colorByCode(code);
@@ -310,7 +309,7 @@ void SymHeapPlotter::Private::plotEdgeSub(int obj, int sub) {
 }
 
 void SymHeapPlotter::Private::plotSingleValue(int value) {
-    if (SymbolicHeap::VAL_NULL == value)
+    if (VAL_NULL == value)
         TRAP;
 
     if (value < 0)
@@ -396,8 +395,6 @@ bool SymHeapPlotter::Private::handleCustomValue(int value) {
 }
 
 bool SymHeapPlotter::Private::handleUnknownValue(int value, int obj) {
-    using namespace SymbolicHeap;
-
     const EUnknownValue code = this->heap->valGetUnknown(value);
     switch (code) {
         case UV_KNOWN:
@@ -422,7 +419,6 @@ bool SymHeapPlotter::Private::handleUnknownValue(int value, int obj) {
 }
 
 bool SymHeapPlotter::Private::resolveValueOf(int *pDst, int obj) {
-    using namespace SymbolicHeap;
     if (obj < 0)
         TRAP;
 
@@ -460,8 +456,6 @@ bool SymHeapPlotter::Private::resolveValueOf(int *pDst, int obj) {
 }
 
 bool SymHeapPlotter::Private::resolvePointsTo(int /* obj */ *pDst, int value) {
-    using namespace SymbolicHeap;
-
     const int obj = this->heap->pointsTo(value);
     switch (obj) {
         case OBJ_INVALID:
@@ -543,7 +537,7 @@ void SymHeapPlotter::Private::digValues() {
         this->plotSingleValue(value);
 
         int obj = this->heap->valGetCompositeObj(value);
-        if (SymbolicHeap::OBJ_INVALID != obj) {
+        if (OBJ_INVALID != obj) {
             // dig composite object and eventually schedule the values inside
             this->digObj(obj);
             continue;
@@ -591,7 +585,7 @@ void SymHeapPlotter::Private::plotCVar(int uid) {
 
     // SymbolicHeap variable lookup
     const int obj = this->heap->varByCVar(uid);
-    if (SymbolicHeap::OBJ_INVALID == obj)
+    if (OBJ_INVALID == obj)
         CL_DEBUG_MSG(this->lw, "varByCVar lookup failed");
 
     // plot as regular heap object
@@ -599,7 +593,7 @@ void SymHeapPlotter::Private::plotCVar(int uid) {
 }
 
 SymHeapPlotter::SymHeapPlotter(const CodeStorage::Storage   &stor,
-                               const SymbolicHeap::SymHeap  &heap):
+                               const SymHeap                &heap):
     d(new Private)
 {
     d->stor = &stor;
@@ -618,7 +612,7 @@ bool SymHeapPlotter::plot(const std::string &name) {
         return false;
 
     // go through all stack variables
-    SymbolicHeap::SymHeap::TCont cVars;
+    SymHeap::TCont cVars;
     d->heap->gatherCVars(cVars);
     BOOST_FOREACH(int uid, cVars) {
         d->plotCVar(uid);

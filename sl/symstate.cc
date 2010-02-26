@@ -71,8 +71,6 @@ namespace {
     bool matchValues(TSubst &subst, const THeap &heap1, const THeap &heap2,
                      int v1, int v2)
     {
-        using namespace SymbolicHeap;
-
         if (v1 <= 0 || v2 <= 0)
             // this can't be a pair of custom or unknown values
             return matchValues(subst, v1, v2);
@@ -100,8 +98,6 @@ namespace {
 
     template <class THeap>
     bool skipValue(const THeap &heap, int value) {
-        using namespace SymbolicHeap;
-
         if (OBJ_INVALID != heap.valGetCompositeObj(value))
             // compare composite objects recursively
             return false;
@@ -125,8 +121,6 @@ namespace {
     bool digComposite(TWL &wl, const THeap &heap1, const THeap &heap2,
                       int value1, int value2)
     {
-        using namespace SymbolicHeap;
-
         const int cObj1 = heap1.valGetCompositeObj(value1);
         const int cObj2 = heap2.valGetCompositeObj(value2);
         if (OBJ_INVALID == cObj1 && OBJ_INVALID == cObj2)
@@ -187,101 +181,97 @@ namespace {
     }
 }
 
-namespace SymbolicHeap {
-    template <class TWL, class TSubst>
-    bool dfsCmp(TWL             &wl,
-                TSubst          &valSubst,
-                const SymHeap   &heap1,
-                const SymHeap   &heap2)
-    {
-        // DFS loop
-        typename TWL::value_type item;
-        while (wl.next(item)) {
-            int value1, value2;
-            boost::tie(value1, value2) = item;
+template <class TWL, class TSubst>
+bool dfsCmp(TWL             &wl,
+            TSubst          &valSubst,
+            const SymHeap   &heap1,
+            const SymHeap   &heap2)
+{
+    // DFS loop
+    typename TWL::value_type item;
+    while (wl.next(item)) {
+        int value1, value2;
+        boost::tie(value1, value2) = item;
 
-            if (digComposite(wl, heap1, heap2, value1, value2))
-                // compare composite objects recursively
-                continue;
+        if (digComposite(wl, heap1, heap2, value1, value2))
+            // compare composite objects recursively
+            continue;
 
-            // FIXME: this appears twice because of digComposite
-            if (!matchValues(valSubst, heap1, heap2, value1, value2))
-                // value mismatch
-                return false;
+        // FIXME: this appears twice because of digComposite
+        if (!matchValues(valSubst, heap1, heap2, value1, value2))
+            // value mismatch
+            return false;
 
-            // FIXME: this appears twice because of digComposite
-            if (skipValue(heap1, value1))
-                // do not follow unknown value
-                continue;
+        // FIXME: this appears twice because of digComposite
+        if (skipValue(heap1, value1))
+            // do not follow unknown value
+            continue;
 
-            // TODO: distinguish among SLS and single dynamic variables here
-            const int obj1 = heap1.pointsTo(value1);
-            const int obj2 = heap2.pointsTo(value2);
-            if (checkNonPosValues(obj1, obj2))
-                // variable mismatch
-                return false;
+        // TODO: distinguish among SLS and single dynamic variables here
+        const int obj1 = heap1.pointsTo(value1);
+        const int obj2 = heap2.pointsTo(value2);
+        if (checkNonPosValues(obj1, obj2))
+            // variable mismatch
+            return false;
 
-            value1 = heap1.valueOf(obj1);
-            value2 = heap2.valueOf(obj2);
-            if (!matchValues(valSubst, heap1, heap2, value1, value2))
-                // value mismatch
-                return false;
+        value1 = heap1.valueOf(obj1);
+        value2 = heap2.valueOf(obj2);
+        if (!matchValues(valSubst, heap1, heap2, value1, value2))
+            // value mismatch
+            return false;
 
-            if (skipValue(heap1, value1))
-                // no need for next wheel
-                continue;
+        if (skipValue(heap1, value1))
+            // no need for next wheel
+            continue;
 
-            // schedule values for next wheel
-            wl.schedule(value1, value2);
-        }
-
-        // heaps are equal (isomorphism)
-        return true;
+        // schedule values for next wheel
+        wl.schedule(value1, value2);
     }
 
-    bool operator== (const SymHeap &heap1, const SymHeap &heap2) {
-        // DFS stack
-        typedef std::pair<int, int> TValuePair;
-        WorkList<TValuePair> wl;
-
-        // value substitution (isomorphism)
-        typedef std::map<int, int> TSubst;
-        TSubst valSubst;
-
-        // NOTE: we do not check cVars themselves among heaps
-        // they are *supposed* to be the same
-        SymHeap::TCont cVars;
-        heap1.gatherCVars(cVars);
-        BOOST_FOREACH(int uid, cVars) {
-            const int var1 = heap1.varByCVar(uid);
-            const int var2 = heap2.varByCVar(uid);
-            if (var1 < 0 || var2 < 0)
-                // heap corruption detected
-                TRAP;
-
-            // retrieve values of static variables
-            const int value1 = heap1.valueOf(var1);
-            const int value2 = heap2.valueOf(var2);
-            if (!matchValues(valSubst, heap1, heap2, value1, value2))
-                // value mismatch, bail out now
-                return false;
-
-            if (skipValue(heap1, value1))
-                // no need for next wheel
-                continue;
-
-            // schedule for DFS
-            wl.schedule(value1, value2);
-        }
-
-        // bad luck, we need to run DFS
-        return dfsCmp(wl, valSubst, heap1, heap2);
-    }
+    // heaps are equal (isomorphism)
+    return true;
 }
 
-void SymHeapUnion::insert(const SymbolicHeap::SymHeap &heap) {
-    using SymbolicHeap::SymHeap;
+bool operator== (const SymHeap &heap1, const SymHeap &heap2) {
+    // DFS stack
+    typedef std::pair<int, int> TValuePair;
+    WorkList<TValuePair> wl;
 
+    // value substitution (isomorphism)
+    typedef std::map<int, int> TSubst;
+    TSubst valSubst;
+
+    // NOTE: we do not check cVars themselves among heaps
+    // they are *supposed* to be the same
+    SymHeap::TCont cVars;
+    heap1.gatherCVars(cVars);
+    BOOST_FOREACH(int uid, cVars) {
+        const int var1 = heap1.varByCVar(uid);
+        const int var2 = heap2.varByCVar(uid);
+        if (var1 < 0 || var2 < 0)
+            // heap corruption detected
+            TRAP;
+
+        // retrieve values of static variables
+        const int value1 = heap1.valueOf(var1);
+        const int value2 = heap2.valueOf(var2);
+        if (!matchValues(valSubst, heap1, heap2, value1, value2))
+            // value mismatch, bail out now
+            return false;
+
+        if (skipValue(heap1, value1))
+            // no need for next wheel
+            continue;
+
+        // schedule for DFS
+        wl.schedule(value1, value2);
+    }
+
+    // bad luck, we need to run DFS
+    return dfsCmp(wl, valSubst, heap1, heap2);
+}
+
+void SymHeapUnion::insert(const SymHeap &heap) {
     // FIXME: not very efficient implementation of union :-)
     // TODO: implement the container as either hash or tree data structure
     BOOST_FOREACH(const SymHeap &current, heaps_) {
@@ -295,8 +285,6 @@ void SymHeapUnion::insert(const SymbolicHeap::SymHeap &heap) {
 }
 
 void SymHeapUnion::insert(const SymHeapUnion &huni) {
-    using SymbolicHeap::SymHeap;
-
     BOOST_FOREACH(const SymHeap &current, huni) {
         this->insert(current);
     }

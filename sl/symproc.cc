@@ -43,8 +43,6 @@ void SymHeapProcessor::printBackTrace() {
 }
 
 int /* val */ SymHeapProcessor::heapValFromCst(const struct cl_operand &op) {
-    using namespace SymbolicHeap;
-
     bool isBool = false;
     enum cl_type_e code = op.type->code;
     switch (code) {
@@ -97,7 +95,6 @@ int /* val */ SymHeapProcessor::heapValFromCst(const struct cl_operand &op) {
 
 void SymHeapProcessor::heapVarHandleAccessorDeref(int *pObj)
 {
-    using namespace SymbolicHeap;
     EUnknownValue code;
 
     // attempt to dereference
@@ -154,8 +151,6 @@ fail:
 void SymHeapProcessor::heapVarHandleAccessorItem(int *pObj,
                                                  const struct cl_accessor *ac)
 {
-    using namespace SymbolicHeap;
-
     // access subVar
     const int id = ac->data.item.id;
     *pObj = heap_.subVar(*pObj, id);
@@ -186,14 +181,13 @@ void SymHeapProcessor::heapVarHandleAccessor(int *pObj,
 
         case CL_ACCESSOR_DEREF_ARRAY:
             CL_WARN_MSG(lw_, "CL_ACCESSOR_DEREF_ARRAY not implemented yet");
-            *pObj = SymbolicHeap::OBJ_DEREF_FAILED;
+            *pObj = OBJ_DEREF_FAILED;
             return;
     }
 }
 
 int /* var */ SymHeapProcessor::heapVarFromOperand(const struct cl_operand &op)
 {
-    using SymbolicHeap::OBJ_INVALID;
     int uid;
 
     const enum cl_operand_e code = op.code;
@@ -229,8 +223,6 @@ int /* var */ SymHeapProcessor::heapVarFromOperand(const struct cl_operand &op)
 bool /* var */ SymHeapProcessor::lhsFromOperand(int *pVar,
                                                 const struct cl_operand &op)
 {
-    using namespace SymbolicHeap;
-
     *pVar = this->heapVarFromOperand(op);
     switch (*pVar) {
         case OBJ_UNKNOWN:
@@ -256,7 +248,6 @@ namespace {
     int /* val */ valueFromVar(THeap &heap, int var, const struct cl_type *clt,
                                const struct cl_accessor *ac)
     {
-        using namespace SymbolicHeap;
         switch (var) {
             case OBJ_INVALID:
                 TRAP;
@@ -288,8 +279,6 @@ namespace {
 
 int /* val */ SymHeapProcessor::heapValFromOperand(const struct cl_operand &op)
 {
-    using namespace SymbolicHeap;
-
     const enum cl_operand_e code = op.code;
     switch (code) {
         case CL_OPERAND_VAR:
@@ -310,8 +299,6 @@ int /* val */ SymHeapProcessor::heapValFromOperand(const struct cl_operand &op)
 namespace {
     template <class TWL, class THeap>
     void digPointingObjects(TWL &wl, THeap &heap, int val) {
-        using namespace SymbolicHeap;
-
         // go through all objects having the value
         SymHeap::TCont cont;
         heap.haveValue(cont, val);
@@ -327,7 +314,6 @@ namespace {
 
     template <class THeap>
     bool isHeapObject(const THeap &heap, int obj) {
-        using SymbolicHeap::OBJ_INVALID;
         if (obj <= 0)
             return false;
 
@@ -340,7 +326,6 @@ namespace {
 
     template <class THeap>
     bool digJunk(THeap &heap, int ptrVal) {
-        using namespace SymbolicHeap;
         if (ptrVal <= 0 || UV_KNOWN != heap.valGetUnknown(ptrVal))
             return false;
 
@@ -421,7 +406,6 @@ namespace {
 }
 
 bool SymHeapProcessor::checkForJunk(int val) {
-    using namespace SymbolicHeap;
     bool detected = false;
 
     std::stack<int /* val */> todo;
@@ -456,7 +440,7 @@ bool SymHeapProcessor::checkForJunk(int val) {
 
 void SymHeapProcessor::heapVarDefineType(int /* obj */ lhs, int /* val */ rhs) {
     const int var = heap_.pointsTo(rhs);
-    if (SymbolicHeap::OBJ_INVALID == var)
+    if (OBJ_INVALID == var)
         TRAP;
 
     const struct cl_type *clt = heap_.objType(lhs);
@@ -495,7 +479,7 @@ void SymHeapProcessor::heapVarDefineType(int /* obj */ lhs, int /* val */ rhs) {
 void SymHeapProcessor::heapSetSingleVal(int /* obj */ lhs, int /* val */ rhs) {
     // save the old value, which is going to be overwritten
     const int oldValue = heap_.valueOf(lhs);
-    if (SymbolicHeap::VAL_INVALID == oldValue)
+    if (VAL_INVALID == oldValue)
         TRAP;
 
     if (heap_.valPointsToAnon(rhs))
@@ -508,8 +492,6 @@ void SymHeapProcessor::heapSetSingleVal(int /* obj */ lhs, int /* val */ rhs) {
 }
 
 void SymHeapProcessor::heapSetVal(int /* obj */ lhs, int /* val */ rhs) {
-    using namespace SymbolicHeap;
-
     // DFS for composite types
     typedef std::pair<int /* obj */, int /* val */> TItem;
     std::stack<TItem> todo;
@@ -567,7 +549,6 @@ void SymHeapProcessor::destroyObj(int obj) {
 }
 
 void SymHeapProcessor::execFree(const CodeStorage::TOperandList &opList) {
-    using namespace SymbolicHeap;
     if (/* dst + fnc + ptr */ 3 != opList.size())
         TRAP;
 
@@ -635,7 +616,6 @@ void SymHeapProcessor::execMalloc(TState &state,
                                   const CodeStorage::TOperandList &opList,
                                   bool fastMode)
 {
-    using namespace SymbolicHeap;
     if (/* dst + fnc + size */ 3 != opList.size())
         TRAP;
 
@@ -827,8 +807,6 @@ namespace {
 bool SymHeapProcessor::execCall(TState &dst, const CodeStorage::Insn &insn,
                                 bool fastMode)
 {
-    using namespace SymbolicHeap;
-
     const CodeStorage::TOperandList &opList = insn.operands;
     const struct cl_operand &fnc = opList[1];
     if (CL_OPERAND_CST != fnc.code)
@@ -885,8 +863,6 @@ call_done:
 
 namespace {
     bool handleUnopTruthNotTrivial(int &val) {
-        using namespace SymbolicHeap;
-
         switch (val) {
             case VAL_FALSE:
                 val = VAL_TRUE;
@@ -907,8 +883,6 @@ namespace {
 
 template <class THeap>
 void handleUnopTruthNot(THeap &heap, int &val, const struct cl_type *clt) {
-    using namespace SymbolicHeap;
-
     if (!clt || clt->code != CL_TYPE_BOOL)
         // inappropriate type for CL_UNOP_TRUTH_NOT
         TRAP;
@@ -933,8 +907,6 @@ template <class THeap>
 int /* val */ handleOpCmpBool(THeap &heap, enum cl_binop_e code,
                               const struct cl_type *dstClt, int v1, int v2)
 {
-    using namespace SymbolicHeap;
-
     // TODO: describe the following magic somehow
     int /* val */ valElim = VAL_FALSE;
     switch (code) {
@@ -982,14 +954,13 @@ int /* val */ handleOpCmpInt(THeap &heap, enum cl_binop_e code,
     (void) code;
 
     // FIXME: we give up any reasoning about integral values for now
-    return heap.valCreateUnknown(SymbolicHeap::UV_UNKNOWN, dstClt);
+    return heap.valCreateUnknown(UV_UNKNOWN, dstClt);
 }
 
 template <class THeap>
 int /* val */ handleOpCmpPtr(THeap &heap, enum cl_binop_e code,
                              const struct cl_type *dstClt, int v1, int v2)
 {
-    using namespace SymbolicHeap;
     if (v1 < 0 || v2 < 0)
         TRAP;
 
@@ -1036,7 +1007,7 @@ int /* val */ handleOpCmp(THeap &heap, enum cl_binop_e code,
         default:
             // unexpected clt->code
             TRAP;
-            return SymbolicHeap::VAL_INVALID;
+            return VAL_INVALID;
     }
 }
 
@@ -1111,8 +1082,6 @@ struct OpHandler</* binary */ 2, THeap> {
     static int handleOp(THeap &heap, int iCode, const int rhs[2],
                         const struct cl_type *clt[2 + /* dst type */ 1])
     {
-        using namespace SymbolicHeap;
-
         const struct cl_type *const cltA = clt[0];
         const struct cl_type *const cltB = clt[1];
         if (!cltA || !cltB)
@@ -1173,7 +1142,7 @@ void SymHeapProcessor::execOp(const CodeStorage::Insn &insn) {
         const struct cl_operand &op = insn.operands[i + /* [+dst] */ 1];
         clt[i] = op.type;
         rhs[i] = this->heapValFromOperand(op);
-        if (SymbolicHeap::VAL_INVALID == rhs[i])
+        if (VAL_INVALID == rhs[i])
             TRAP;
     }
 

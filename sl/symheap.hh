@@ -20,31 +20,12 @@
 #ifndef H_GUARD_SYM_HEAP_H
 #define H_GUARD_SYM_HEAP_H
 
+#include "symid.hh"
+
 #include <vector>
 
 struct cl_accessor;
 struct cl_type;
-
-namespace SymbolicHeap {
-
-// special OBJs
-enum {
-    OBJ_RETURN        =  0,
-    OBJ_INVALID       = -1,
-    OBJ_DELETED       = -2,
-    OBJ_UNKNOWN       = -3,
-    OBJ_DEREF_FAILED  = -4,
-    OBJ_LOST          = -5
-};
-
-// special VALs
-enum {
-    VAL_NULL          =  0,
-    VAL_INVALID       = -1,
-
-    VAL_TRUE          = (/* XXX */ OBJ_LOST - 1),
-    VAL_FALSE         = VAL_NULL
-};
 
 // various types of unknown values
 enum EUnknownValue {
@@ -127,7 +108,5 @@ class SymHeap {
         struct Private;
         Private *d;
 };
-
-} // namespace SymbolicHeap
 
 #endif /* H_GUARD_SYM_HEAP_H */

@@ -57,8 +57,8 @@ void dump_clt(const struct cl_type *clt) {
 }
 
 namespace {
-    bool isHeapObject(const SymbolicHeap::SymHeap &heap, int id) {
-        return (SymbolicHeap::VAL_INVALID != heap.placedAt(id));
+    bool isHeapObject(const SymHeap &heap, int id) {
+        return (VAL_INVALID != heap.placedAt(id));
     }
 
     bool isIdValid(int id) {
@@ -70,8 +70,7 @@ namespace {
     }
 }
 
-void dump_obj(const SymbolicHeap::SymHeap &heap, int obj) {
-    using namespace SymbolicHeap;
+void dump_obj(const SymHeap &heap, int obj) {
     using std::cout;
     cout << "dump_obj(#" << obj << ")\n";
 
@@ -135,9 +134,8 @@ void dump_obj(const SymbolicHeap::SymHeap &heap, int obj) {
 }
 
 namespace {
-int /* pointsTo */ dump_value_core(const SymbolicHeap::SymHeap &heap, int value)
+int /* pointsTo */ dump_value_core(const SymHeap &heap, int value)
 {
-    using namespace SymbolicHeap;
     using std::cout;
     cout << "dump_value(#" << value << ")\n";
 
@@ -224,7 +222,7 @@ int /* pointsTo */ dump_value_core(const SymbolicHeap::SymHeap &heap, int value)
 }
 } // namespace
 
-void dump_value(const SymbolicHeap::SymHeap &heap, int value) {
+void dump_value(const SymHeap &heap, int value) {
     const int pointsTo = dump_value_core(heap, value);
     if (0 < pointsTo) {
         std::cout << "\n";
@@ -232,12 +230,12 @@ void dump_value(const SymbolicHeap::SymHeap &heap, int value) {
     }
 }
 
-void dump_value_refs(const SymbolicHeap::SymHeap &heap, int value) {
+void dump_value_refs(const SymHeap &heap, int value) {
     // dump value itself
     dump_value_core(heap, value);
 
     // dump all referrer objects
-    SymbolicHeap::SymHeap::TCont refs;
+    SymHeap::TCont refs;
     heap.haveValue(refs, value);
     BOOST_FOREACH(const int obj, refs) {
         std::cout << "\n";
@@ -245,13 +243,12 @@ void dump_value_refs(const SymbolicHeap::SymHeap &heap, int value) {
     }
 }
 
-void dump_cvar(const SymbolicHeap::SymHeap &heap, int cVar) {
+void dump_cvar(const SymHeap &heap, int cVar) {
     const int obj = heap.varByCVar(cVar);
     dump_obj(heap, obj);
 }
 
-void dump_heap(const SymbolicHeap::SymHeap &heap) {
-    using namespace SymbolicHeap;
+void dump_heap(const SymHeap &heap) {
     using std::cout;
 
     cout << "dump_heap(SymHeap object at "
@@ -266,7 +263,7 @@ void dump_heap(const SymbolicHeap::SymHeap &heap) {
     }
 }
 
-void dump_id(const SymbolicHeap::SymHeap &heap, int id) {
+void dump_id(const SymHeap &heap, int id) {
     using std::cout;
     cout << "dump_id(#" << id << ")\n";
     if (id <= 0) {
@@ -274,7 +271,7 @@ void dump_id(const SymbolicHeap::SymHeap &heap, int id) {
         return;
     }
 
-    if (SymbolicHeap::VAL_INVALID != heap.placedAt(id))
+    if (isHeapObject(heap, id))
         // assume object ID
         dump_obj(heap, id);
 

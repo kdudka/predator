@@ -26,14 +26,14 @@
 
 class SymHeapUnion {
     private:
-        typedef std::vector<SymbolicHeap::SymHeap> TList;
+        typedef std::vector<SymHeap> TList;
 
     public:
         typedef TList::const_iterator const_iterator;
         typedef TList::iterator iterator;
 
     public:
-        void insert(const SymbolicHeap::SymHeap &heap);
+        void insert(const SymHeap &heap);
         void insert(const SymHeapUnion &huni);
 
         /**

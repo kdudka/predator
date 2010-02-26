@@ -41,8 +41,6 @@ namespace {
     }
 }
 
-namespace SymbolicHeap {
-
 class NeqDb {
     private:
         typedef std::pair<int /* valLt */, int /* valGt */> TItem;
@@ -901,5 +899,3 @@ bool SymHeap::proveEq(bool *result, int valA, int valB) const {
     // giving up, really no idea if the values are equal or not...
     return false;
 }
-
-} // namespace SymbolicHeap

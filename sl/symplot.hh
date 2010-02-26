@@ -28,15 +28,13 @@ namespace CodeStorage {
     struct Storage;
 }
 
-namespace SymbolicHeap {
-    class SymHeap;
-}
+class SymHeap;
 
 class SymHeapPlotter {
     public:
         ~SymHeapPlotter();
         SymHeapPlotter(const CodeStorage::Storage   &stor,
-                       const SymbolicHeap::SymHeap  &heap);
+                       const SymHeap                &heap);
 
         bool plot(const std::string                 &name);
 

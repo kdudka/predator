@@ -23,26 +23,23 @@
 #include "location.hh"
 #include "storage.hh"
 
-namespace SymbolicHeap {
-    class SymHeap;
-}
-
 class IBtPrinter;
+class SymHeap;
 class SymHeapUnion;
 
 class SymHeapProcessor {
     public:
-        typedef SymbolicHeap::SymHeap   THeap;
-        typedef SymHeapUnion            TState;
+        typedef SymHeapUnion TState;
 
     public:
-        SymHeapProcessor(THeap &heap, IBtPrinter *btPrinter = 0):
+        SymHeapProcessor(SymHeap &heap, IBtPrinter *btPrinter = 0):
             heap_(heap),
             btPrinter_(btPrinter)
         {
         }
 
-        bool exec(TState &dst, const CodeStorage::Insn &insn, bool fastMode);
+        bool exec(SymHeapUnion &dst, const CodeStorage::Insn &insn,
+                  bool fastMode);
 
         void setLocation(const LocationWriter &lw) {
             lw_ = lw;
@@ -72,7 +69,7 @@ class SymHeapProcessor {
                       bool fastMode);
 
     private:
-        THeap                       &heap_;
+        SymHeap                     &heap_;
         IBtPrinter                  *btPrinter_;
         LocationWriter              lw_;
 };
