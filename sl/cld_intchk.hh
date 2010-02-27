@@ -20,10 +20,20 @@
 #ifndef H_GUARD_CLD_INTCHK_H
 #define H_GUARD_CLD_INTCHK_H
 
-struct ICodeListener;
+/**
+ * @file cld_intchk.hh
+ * declaration of createCldIntegrityChk() - code listener integrity checker
+ * decorator
+ */
+
+class ICodeListener;
 
 /**
- * create ICodeListener implementation (TODO: document)
+ * create code listener integrity checker decorator
+ *
+ * see the ClFactory class and DEBUG_CL_FACTORY and CL_DEBUG_CLD macros from
+ * config.h
+ *
  * @return on heap allocated instance of ICodeListener object
  */
 ICodeListener* createCldIntegrityChk(ICodeListener *);

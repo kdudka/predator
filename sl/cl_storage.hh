@@ -20,12 +20,21 @@
 #ifndef H_GUARD_CL_STORAGE_H
 #define H_GUARD_CL_STORAGE_H
 
+/**
+ * @file cl_storage.hh
+ * Definition of ClStorageBuilder base class
+ */
+
 #include "cl.hh"
 
 namespace CodeStorage {
     struct Storage;
 }
 
+/**
+ * base class for all CodeStorage based code listeners, see run()
+ * @note design pattern @b template @b method
+ */
 class ClStorageBuilder: public ICodeListener {
     protected:
         ClStorageBuilder();

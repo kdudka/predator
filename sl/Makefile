@@ -235,4 +235,6 @@ wizard:
 version.h:
 	printf "#define SL_GIT_SHA1 \"%s\"\n" \
 		`git log | head -1 | cut -f2 -d" "` \
-		| tee $@
+		| tee $@.tmp \
+		&& install -C -v $@.tmp $@ \
+		&& rm -f $@.tmp

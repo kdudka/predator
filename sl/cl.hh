@@ -20,63 +20,81 @@
 #ifndef H_GUARD_CL_H
 #define H_GUARD_CL_H
 
+/**
+ * @file cl.hh
+ * definition of ICodeListener interface
+ */
+
 #include "code_listener.h"
 
 /**
- * C++ interface for listener objects. It can be wrapped to struct code_listener
- * object when exposing to pure C world. See code_listener for details about
- * methods and their parameters.
+ * C++ interface for listener objects. It can be wrapped to struct
+ * cl_code_listener object when exposing to pure C world.
+ *
+ * @copydoc cl_code_listener
  */
 class ICodeListener {
     public:
         virtual ~ICodeListener() { }
 
+        /// See cl_code_listener::file_open
         virtual void file_open(
             const char              *file_name)
             = 0;
 
+        /// See cl_code_listener::file_close
         virtual void file_close()
             = 0;
 
+        /// See cl_code_listener::fnc_open
         virtual void fnc_open(
             const struct cl_operand *fnc)
             = 0;
 
+        /// See cl_code_listener::fnc_arg_decl
         virtual void fnc_arg_decl(
             int                     arg_id,
             const struct cl_operand *arg_src)
             = 0;
 
+        /// See cl_code_listener::fnc_close
         virtual void fnc_close()
             = 0;
 
+        /// See cl_code_listener::bb_open
         virtual void bb_open(
             const char              *bb_name)
             = 0;
 
+        /// See cl_code_listener::insn
         virtual void insn(
             const struct cl_insn    *cli)
             = 0;
 
+        /// See cl_code_listener::insn_call_open
         virtual void insn_call_open(
             const struct cl_location*loc,
             const struct cl_operand *dst,
             const struct cl_operand *fnc)
             = 0;
 
+        /// See cl_code_listener::insn_call_arg
         virtual void insn_call_arg(
             int                     arg_id,
             const struct cl_operand *arg_src)
             = 0;
 
+        /// See cl_code_listener::insn_call_close
         virtual void insn_call_close()
             = 0;
 
+        /// See cl_code_listener::insn_switch_open
         virtual void insn_switch_open(
             const struct cl_location*loc,
             const struct cl_operand *src)
             = 0;
 
+        /// See cl_code_listener::insn_switch_case
         virtual void insn_switch_case(
             const struct cl_location*loc,
             const struct cl_operand *val_lo,
@@ -84,9 +102,13 @@ class ICodeListener {
             const char              *label)
             = 0;
 
+        /// See cl_code_listener::insn_switch_close
         virtual void insn_switch_close()
             = 0;
 
+        /**
+         * this method is called before the listener object is destroyed
+         */
         virtual void finalize()
             = 0;
 };

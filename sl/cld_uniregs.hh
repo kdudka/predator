@@ -20,10 +20,16 @@
 #ifndef H_GUARD_CLD_UNIREGS_H
 #define H_GUARD_CLD_UNIREGS_H
 
+/**
+ * @file cld_uniregs.hh
+ * declaration of createCldUniRegs() - code listener decorator @b
+ * "unify_regs"
+ */
+
 class ICodeListener;
 
 /**
- * create ICodeListener implementation (TODO: document)
+ * create code listener decorator for register unification
  * @return on heap allocated instance of ICodeListener object
  */
 ICodeListener* createCldUniRegs(ICodeListener *);

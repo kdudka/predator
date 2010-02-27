@@ -20,12 +20,21 @@
 #ifndef H_GUARD_CLD_UNILABEL_H
 #define H_GUARD_CLD_UNILABEL_H
 
+/**
+ * @file cld_unilabel.hh
+ * declaration of createCldUniLabel() - code listener decorators @b
+ * "unify_labels_*"
+ */
+
 #include "code_listener.h"
 
 class ICodeListener;
 
 /**
- * create ICodeListener implementation (TODO: document)
+ * create code listener decorator for label unification
+ * @param scope unification level - CL_SCOPE_GLOBAL, CL_SCOPE_STATIC or
+ * CL_SCOPE_FUNCTION
+ *
  * @return on heap allocated instance of ICodeListener object
  */
 ICodeListener* createCldUniLabel(ICodeListener *, cl_scope_e scope);

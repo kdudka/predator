@@ -20,11 +20,19 @@
 #ifndef H_GUARD_CL_TYPEDOT_H
 #define H_GUARD_CL_TYPEDOT_H
 
-struct ICodeListener;
+/**
+ * @file cl_typedot.hh
+ * declaration of createClTypeDotGenerator() aka @b "typedot"
+ */
+
+class ICodeListener;
 
 /**
- * @todo document
+ * create "dotgen" ICodeListener implementation
+ * @param config_string Name of the output dot file is the only configuration
+ * string for now. It's an compulsory argument and can't be NULL.
+ * @todo proper documentation of the "typedot" code listener
  */
-ICodeListener* createClTypeDotGenerator(const char *);
+ICodeListener* createClTypeDotGenerator(const char *config_string);
 
 #endif /* H_GUARD_CL_TYPEDOT_H */

@@ -20,11 +20,20 @@
 #ifndef H_GUARD_CL_PP_H
 #define H_GUARD_CL_PP_H
 
-struct ICodeListener;
+/**
+ * @file cl_pp.hh
+ * declaration of createClPrettyPrint() aka @b "pp"
+ */
+
+class ICodeListener;
 
 /**
- * @todo document
+ * create "pp" (pretty print) ICodeListener implementation
+ * @param config_string Name of a file to write to.  If NULL is given, stdout is
+ * used.  If the output device is terminal the output may be colorized.
+ * @param showTypes If true, dump type information as well.
+ * @todo proper documentation of the "pp" code listener
  */
-ICodeListener* createClPrettyPrint(const char *, bool showTypes);
+ICodeListener* createClPrettyPrint(const char *config_string, bool showTypes);
 
 #endif /* H_GUARD_CL_PP_H */

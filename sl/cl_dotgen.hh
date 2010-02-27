@@ -20,11 +20,20 @@
 #ifndef H_GUARD_CL_DOTGEN_H
 #define H_GUARD_CL_DOTGEN_H
 
-struct ICodeListener;
+/**
+ * @file cl_dotgen.hh
+ * declaration of createClDotGenerator() aka @b "dotgen"
+ */
+
+class ICodeListener;
 
 /**
- * @todo document
+ * create "dotgen" ICodeListener implementation
+ * @param config_string Name of global dot file is the only configuration string
+ * for now. It's optional, you can pass NULL to prevent the global dot file from
+ * creating.
+ * @todo proper documentation of the "dotgen" code listener
  */
-ICodeListener* createClDotGenerator(const char *);
+ICodeListener* createClDotGenerator(const char *config_string);
 
 #endif /* H_GUARD_CL_DOTGEN_H */

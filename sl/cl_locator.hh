@@ -20,10 +20,19 @@
 #ifndef H_GUARD_CL_LOCATOR_H
 #define H_GUARD_CL_LOCATOR_H
 
-struct ICodeListener;
+/**
+ * @file cl_locator.hh
+ * declaration of createClLocator() aka @b "locator"
+ */
+
+class ICodeListener;
 
 /**
- * @todo document
+ * create "locator" ICodeListener implementation
+ *
+ * There is not configuration for now.
+ *
+ * @todo proper documentation of the "locator" code listener
  */
 ICodeListener* createClLocator(const char *);
 

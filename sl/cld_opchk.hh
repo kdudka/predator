@@ -17,6 +17,9 @@
  * along with sl.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#ifndef H_GUARD_CLD_OPCHK_H
+#define H_GUARD_CLD_OPCHK_H
+
 #include "cl_decorator.hh"
 #include "location.hh"
 
@@ -131,3 +134,5 @@ class CldOpCheckerBase: public ClDecoratorBase {
         void handleSrc(const struct cl_operand *);
         void handleDstSrc(const struct cl_operand *);
 };
+
+#endif /* H_GUARD_CLD_OPCHK_H */

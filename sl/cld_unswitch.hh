@@ -20,10 +20,17 @@
 #ifndef H_GUARD_CLD_UNSWITCH_H
 #define H_GUARD_CLD_UNSWITCH_H
 
-struct ICodeListener;
+/**
+ * @file cld_unswitch.hh
+ * declaration of createCldUnfoldSwitch() - code listener decorator @b
+ * "unifold_switch"
+ */
+
+class ICodeListener;
 
 /**
- * create ICodeListener implementation (TODO: document)
+ * create a code listener decorator which converts all CL_INSN_SWITCH to
+ * a sequence of CL_INSN_COND instructions.
  * @return on heap allocated instance of ICodeListener object
  */
 ICodeListener* createCldUnfoldSwitch(ICodeListener *);

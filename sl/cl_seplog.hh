@@ -20,11 +20,19 @@
 #ifndef H_GUARD_CL_SEPLOG_H
 #define H_GUARD_CL_SEPLOG_H
 
-struct ICodeListener;
+/**
+ * @file cl_seplog.hh
+ * declaration of createClSepLog() aka @b "seplog" - see SymExec
+ */
+
+class ICodeListener;
 
 /**
- * @todo document
+ * create "seplog" ICodeListener implementation - see SymExec
+ * @param config_string If "fast" is given, some computationally expensive
+ * analysis will be omitted.
+ * @todo proper documentation of the "seplog" code listener
  */
-ICodeListener* createClSepLog(const char *configString);
+ICodeListener* createClSepLog(const char *config_string);
 
 #endif /* H_GUARD_CL_SEPLOG_H */

@@ -20,10 +20,29 @@
 #ifndef H_GUARD_CL_DECORATOR_H
 #define H_GUARD_CL_DECORATOR_H
 
+/**
+ * @file cl_decorator.hh
+ * definition of ClDecoratorBase base class
+ */
+
 #include "cl.hh"
 
+/**
+ * base class for all ICodeListener decorators
+ *
+ * The class itself can't be instantiated.  You always need to inherit the
+ * class.  The only thing which has to be implemented in the derived class is
+ * constructor, which calls the parent constructor with an instance of
+ * ICodeListener as the argument.  All other methods which are not overridden
+ * will be forwarded to that instance of ICodeListener.
+ * @note design pattern @b decorator
+ */
 class ClDecoratorBase: public ICodeListener {
     public:
+        /**
+         * @attention the slave ICodeListener will be deleted automatically on
+         * the object's destruction
+         */
         virtual ~ClDecoratorBase() {
             delete slave_;
         }
@@ -111,6 +130,11 @@ class ClDecoratorBase: public ICodeListener {
         }
 
     protected:
+        /**
+         * @param slave An instance of ICodeListener.  All methods which are not
+         * overridden in the derived class will be forwarded to this instance.
+         * @copydoc ~ClDecoratorBase()
+         */
         ClDecoratorBase(ICodeListener *slave):
             slave_(slave)
         {

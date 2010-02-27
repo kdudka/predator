@@ -20,10 +20,19 @@
 #ifndef H_GUARD_CL_FACTORY_H
 #define H_GUARD_CL_FACTORY_H
 
+/**
+ * @file cl_factory.hh
+ * ClFactory - factory for ICodeListener objects
+ */
+
 class ICodeListener;
 
 /**
- * factory responsible for creating ICodeListener for desired call graph format
+ * factory responsible for creating ICodeListener objects
+ *
+ * See DEBUG_CL_FACTORY from config.h.
+ *
+ * @todo proper documentation for ClFactory config_string
  */
 class ClFactory {
     public:
@@ -31,7 +40,8 @@ class ClFactory {
         ~ClFactory();
 
         /**
-         * @todo document
+         * create desired ICodeListener object
+         * @copydoc cl_code_listener_create()
          */
         ICodeListener* create(const char *config_string);
 

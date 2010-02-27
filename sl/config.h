@@ -22,9 +22,9 @@
  * various compile-time options
  */
 
-#include <signal.h>     // needed for TRAP ... raise(SIGRAP)
-#include <stdio.h>      // needed for TRAP ... fprintf(stderr, ...)
-#include "version.h"    // needed for SL_GIT_SHA1
+#include <signal.h>     /* needed for TRAP ... raise(SIGRAP)        */
+#include <stdio.h>      /* needed for TRAP ... fprintf(stderr, ...) */
+#include "version.h"    /* needed for SL_GIT_SHA1                   */
 
 /**
  * jump to debugger by default in case anything interesting happens

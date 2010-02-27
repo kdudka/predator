@@ -208,6 +208,10 @@ test_sym_exec("valgrind-test" valgrind
     --error-exitcode=7
     ${gcc45})
 
+add_test("headers_sanity-0" gcc -ansi -Wall -Wextra -Werror -pedantic
+    -o /dev/null
+    -c ${sl_SOURCE_DIR}/config.h)
+
 add_test("headers_sanity-1" gcc -ansi -Wall -Wextra -Werror -pedantic
     -o /dev/null
     -c ${sl_SOURCE_DIR}/code_listener.h)

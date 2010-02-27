@@ -20,10 +20,16 @@
 #ifndef H_GUARD_CLD_UNIVARS_H
 #define H_GUARD_CLD_UNIVARS_H
 
+/**
+ * @file cld_univars.hh
+ * declaration of createCldUniVars() - code listener decorator @b
+ * "unify_vars"
+ */
+
 class ICodeListener;
 
 /**
- * create ICodeListener implementation (TODO: document)
+ * create code listener decorator for unification of variables
  * @return on heap allocated instance of ICodeListener object
  */
 ICodeListener* createCldUniVars(ICodeListener *);

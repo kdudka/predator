@@ -17,6 +17,9 @@
  * along with sl.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#ifndef H_GUARD_CLD_OPTRANS_H
+#define H_GUARD_CLD_OPTRANS_H
+
 #include "cl_decorator.hh"
 
 class CldOpTransBase: public ClDecoratorBase {
@@ -175,3 +178,5 @@ class CldOpTransBase: public ClDecoratorBase {
     private:
         void traverseOperand(struct cl_operand *op);
 };
+
+#endif /* H_GUARD_CLD_OPTRANS_H */
