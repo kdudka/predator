@@ -13,9 +13,9 @@ int main() {
     const bool who_knows = synthesize_unknown_bool_value();
 
     // who_knows is UNKNOWN at this point
-    sl_plot("before-cond");
+    ___sl_plot("before-cond");
     if (who_knows)
-        sl_plot("branch-false");
+        ___sl_plot("branch-false");
     else
-        sl_plot("branch-true");
+        ___sl_plot("branch-true");
 }

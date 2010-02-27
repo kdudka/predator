@@ -24,12 +24,12 @@
 extern "C" {
 #endif
 
-#define SL_PLOT_STACK_FRAME(fnc, name) \
-    sl_plot_stack_frame((void (*)()) fnc, name)
+#define ___SL_PLOT_STACK_FRAME(fnc, name) \
+    ___sl_plot_stack_frame((void (*)()) fnc, name)
 
-void sl_plot(const char *name);
-void sl_plot_stack_frame(void (*fnc)(), const char *name);
-void sl_plot_by_ptr(const void *ptr, const char *name);
+void ___sl_plot(const char *name);
+void ___sl_plot_stack_frame(void (*fnc)(), const char *name);
+void ___sl_plot_by_ptr(const void *ptr, const char *name);
 
 #ifdef __cplusplus
 }

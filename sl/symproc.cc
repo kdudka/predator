@@ -753,7 +753,7 @@ namespace {
 
         std::string plotName;
         if (!chkVoidCall<1>(opList) || !readPlotName<0>(&plotName, opList)) {
-            emitPrototypeError(lw, "sl_plot");
+            emitPrototypeError(lw, "___sl_plot");
             return false;
         }
 
@@ -772,7 +772,7 @@ namespace {
         std::string plotName;
         TValueId value;
         if (!readNameAndValue(&plotName, &value, insn, heap)) {
-            emitPrototypeError(lw, "sl_plot_by_ptr");
+            emitPrototypeError(lw, "___sl_plot_by_ptr");
             return false;
         }
 
@@ -796,7 +796,7 @@ namespace {
         if (!readNameAndValue(&plotName, &value, insn, heap)
                 || !fncFromHeapVal(stor, &fnc, value, heap))
         {
-            emitPrototypeError(lw, "sl_plot_stack_frame");
+            emitPrototypeError(lw, "___sl_plot_stack_frame");
             return false;
         }
 
@@ -845,15 +845,15 @@ bool SymHeapProcessor::execCall(TState &dst, const CodeStorage::Insn &insn,
         goto call_done;
     }
 
-    if (STREQ(fncName, "sl_plot")
+    if (STREQ(fncName, "___sl_plot")
             && callPlot(insn, heap_))
         goto call_done;
 
-    if (STREQ(fncName, "sl_plot_stack_frame")
+    if (STREQ(fncName, "___sl_plot_stack_frame")
             && callPlotStackFrame(insn, heap_))
         goto call_done;
 
-    if (STREQ(fncName, "sl_plot_by_ptr")
+    if (STREQ(fncName, "___sl_plot_by_ptr")
             && callPlotByPtr(insn, heap_))
         goto call_done;
 

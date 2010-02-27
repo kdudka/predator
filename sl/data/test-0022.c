@@ -19,7 +19,7 @@ static sll_item_t* create_item(sll_item_t *list)
         ? list
         : item;
 
-    SL_PLOT_STACK_FRAME(create_item, "create-done");
+    ___SL_PLOT_STACK_FRAME(create_item, "create-done");
     return item;
 }
 
@@ -32,13 +32,13 @@ static sll_item_t** insert_item(sll_item_t **plist)
         *plist = create_item(NULL);
     }
 
-    sl_plot("insert-done");
+    ___sl_plot("insert-done");
     return plist;
 }
 
 static void destroy_cyclic_sll(sll_item_t **plist)
 {
-    sl_plot_by_ptr(plist, "on-destroy");
+    ___sl_plot_by_ptr(plist, "on-destroy");
     sll_item_t *list = *plist;
     if (list) {
         sll_item_t *item = list->next;
@@ -66,7 +66,7 @@ int main()
         destroy_cyclic_sll(&list);
     }
 
-    sl_plot("before-last-free");
+    ___sl_plot("before-last-free");
     free(list);
     return 0;
 }
