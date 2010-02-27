@@ -112,8 +112,8 @@ static int verbose = 0;
 
 // plug-in meta-data according to gcc plug-in API
 static struct plugin_info sl_info = {
-    .version = "slplug 0.1 [experimental]",
-    .help =    "slplug 0.1 [experimental]\n"
+    .version = "slplug [SHA1 " SL_GIT_SHA1 "]",
+    .help =    "slplug [SHA1 " SL_GIT_SHA1 "]\n"
 "\n"
 "Usage: gcc -fplugin=slplug.so [OPTIONS] ...\n"
 "\n"

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2009-2010 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of sl.
  *
@@ -26,10 +26,13 @@
 #include <stdio.h>      // needed for TRAP ... fprintf(stderr, ...)
 #include "version.h"    // needed for SL_GIT_SHA1
 
+/**
+ * jump to debugger by default in case anything interesting happens
+ */
 #define TRAP do { \
     fprintf(stderr, "%s:%d: killing self by SIGTRAP [SHA1 %s]\n", \
             __FILE__, __LINE__, SL_GIT_SHA1); \
-    raise(SIGKILL); \
+    raise(SIGTRAP); \
 } while (0)
 
 /**
