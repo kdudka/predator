@@ -46,7 +46,7 @@ enum EUnknownValue {
 /**
  * @b symbolic @b heap representation, the core part of "seplog" project
  * @todo The interface of SymHeap tends to be crowded.  It should be split to a
- * sensible object model.  Carving out subVar(), varParent() and
+ * sensible object model.  Carving out subObj(), objParent() and
  * valGetCompositeObj() might be a viable start.
  */
 class SymHeap {
@@ -154,10 +154,10 @@ class SymHeap {
          * @return A valid object ID in case of success, invalid otherwise.
          * @attention This interface is not strong enough as soon as we allow
          * recursive call of functions.
-         * @todo extend the interface constituted by SymHeap::varByCVar() to
+         * @todo extend the interface constituted by SymHeap::objByCVar() to
          * deal with the recursive call of functions.
          */
-        TObjId varByCVar(int uid) const;
+        TObjId objByCVar(int uid) const;
 
         /**
          * collect all static/automatic variables (see CodeStorage) which have
@@ -185,7 +185,7 @@ class SymHeap {
          * @note the upper bound of nth can be obtained e.g. by objType()
          * @return A valid object ID in case of success, invalid otherwise.
          */
-        TObjId subVar(TObjId obj, int nth) const;
+        TObjId subObj(TObjId obj, int nth) const;
 
         /**
          * check if the given value is part of a composite object, return ID of
@@ -193,7 +193,7 @@ class SymHeap {
          * @param obj ID of the object to check
          * @return A valid object ID in case of success, invalid otherwise.
          */
-        TObjId varParent(TObjId obj) const;
+        TObjId objParent(TObjId obj) const;
 
     public:
         /**
@@ -202,10 +202,10 @@ class SymHeap {
          * @param uid CodeStorage variable ID for non-heap object, or -1 for a
          * heap object of known type
          * @note If you need to create a heap object of unknown type, use
-         * varCreateAnon() instead.
+         * objCreateAnon() instead.
          * @return ID of the just created symbolic heap object
          */
-        TObjId varCreate(const struct cl_type *clt, int uid);
+        TObjId objCreate(const struct cl_type *clt, int uid);
 
         /**
          * create a new symbolic heap object of known size, but @b unknown @b
@@ -213,7 +213,7 @@ class SymHeap {
          * @param cbSize size of the object in @b bytes
          * @return ID of the just created symbolic heap object
          */
-        TObjId varCreateAnon(int cbSize);
+        TObjId objCreateAnon(int cbSize);
 
         /**
          * return size of the given object of @b unknown @b type
@@ -221,7 +221,7 @@ class SymHeap {
          * @attention This method may not be called on objects with known type.
          * @return the size in @b bytes
          */
-        int varSizeOfAnon(TObjId obj) const;
+        int objSizeOfAnon(TObjId obj) const;
 
         /**
          * return true iff the given value points to an object of @b unknown @b
@@ -237,7 +237,7 @@ class SymHeap {
          * @note This may trigger creation of all sub-objects, if the given type
          * is a composite type.
          */
-        void varDefineType(TObjId obj, const struct cl_type *clt);
+        void objDefineType(TObjId obj, const struct cl_type *clt);
 
     public:
         /**

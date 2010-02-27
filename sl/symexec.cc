@@ -54,7 +54,7 @@ namespace {
                     << " (" << var.name << ")" );
 #endif
 
-            heap.varCreate(var.clt, var.uid);
+            heap.objCreate(var.clt, var.uid);
         }
     }
 
@@ -79,7 +79,7 @@ namespace {
             if (VAL_INVALID == val)
                 TRAP;
 
-            const TObjId lhs = heap.varByCVar(arg);
+            const TObjId lhs = heap.objByCVar(arg);
             if (OBJ_INVALID == lhs)
                 TRAP;
 
@@ -133,7 +133,7 @@ namespace {
                     << var.uid << " (" << var.name << ")" );
 #endif
 
-            const TObjId obj = heap.varByCVar(var.uid);
+            const TObjId obj = heap.objByCVar(var.uid);
             if (obj < 0)
                 TRAP;
 
@@ -521,7 +521,7 @@ void SymExec::Private::execCallInsn(SymHeap heap, SymHeapUnion &results) {
     if (haveLhs) {
         // FIXME: improve the interface of SymHeap for the return value
         heap.objDestroy(OBJ_RETURN);
-        heap.varDefineType(OBJ_RETURN, dst.type);
+        heap.objDefineType(OBJ_RETURN, dst.type);
     }
 
     // crate local variables of called fnc

@@ -115,7 +115,7 @@ struct Var {
     TValueId                placedAt;
     TValueId                value;
     TObjId                  parent;
-    TObjSub                 subVars;
+    TObjSub                 subObjs;
 
     // TODO
     Var():
@@ -319,9 +319,9 @@ void SymHeap::Private::destroyVar(TObjId var) {
 
         // schedule all subvars for removal
         Var &refVar = varIter->second;
-        TObjSub &subs = refVar.subVars;
-        BOOST_FOREACH(TObjId subVar, subs) {
-            todo.push(subVar);
+        TObjSub &subs = refVar.subObjs;
+        BOOST_FOREACH(TObjId subObj, subs) {
+            todo.push(subObj);
         }
 
         // remove current
@@ -363,15 +363,15 @@ void SymHeap::Private::createSubs(TObjId var, const struct cl_type *clt) {
                 Var &ref = this->varMap[var];
                 ref.value = this->createValue(EV_COMPOSITE, clt, var,
                                               /* TODO: check */ var);
-                ref.subVars.resize(cnt);
+                ref.subObjs.resize(cnt);
                 for (int i = 0; i < cnt; ++i) {
                     const struct cl_type *subClt = clt->items[i].type;
-                    const TObjId subVar = this->createVar(subClt, -1);
-                    ref.subVars[i] = subVar;
+                    const TObjId subObj = this->createVar(subClt, -1);
+                    ref.subObjs[i] = subObj;
 
-                    Var &subRef = /* FIXME: suboptimal */ this->varMap[subVar];
+                    Var &subRef = /* FIXME: suboptimal */ this->varMap[subObj];
                     subRef.parent = var;
-                    push(todo, subVar, subClt);
+                    push(todo, subObj, subClt);
                 }
                 break;
             }
@@ -474,7 +474,7 @@ int /* CodeStorage var uid */ SymHeap::cVar(TObjId var) const {
         : /* anonymous object of known size */ -1;
 }
 
-TObjId SymHeap::varByCVar(int /* CodeStorage var */ uid) const {
+TObjId SymHeap::objByCVar(int /* CodeStorage var */ uid) const {
     TIdObjMap::iterator iter = d->cVarIdMap.find(uid);
     if (d->cVarIdMap.end() == iter)
         return OBJ_INVALID;
@@ -488,20 +488,20 @@ void SymHeap::gatherCVars(TCont &out) const {
         out.push_back(ii->first);
 }
 
-TObjId SymHeap::subVar(TObjId var, int nth) const {
+TObjId SymHeap::subObj(TObjId var, int nth) const {
     TVarMap::iterator iter = d->varMap.find(var);
     if (d->varMap.end() == iter)
         return OBJ_INVALID;
 
     const Var &refVar = iter->second;
-    const TObjSub &subs = refVar.subVars;
+    const TObjSub &subs = refVar.subObjs;
     const int cnt = subs.size();
     return (nth < cnt)
         ? subs[nth]
         : OBJ_INVALID;
 }
 
-TObjId SymHeap::varParent(TObjId var) const {
+TObjId SymHeap::objParent(TObjId var) const {
     TVarMap::iterator iter = d->varMap.find(var);
     if (d->varMap.end() == iter)
         return OBJ_INVALID;
@@ -521,7 +521,7 @@ TObjId SymHeap::valGetCompositeObj(TValueId val) const {
         : OBJ_INVALID;
 }
 
-TObjId SymHeap::varCreate(const struct cl_type *clt,
+TObjId SymHeap::objCreate(const struct cl_type *clt,
                           int /* CodeStorage var */ uid)
 {
     const enum cl_type_e code = clt->code;
@@ -553,11 +553,11 @@ TObjId SymHeap::varCreate(const struct cl_type *clt,
     return objId;
 }
 
-TObjId SymHeap::varCreateAnon(int cbSize) {
+TObjId SymHeap::objCreateAnon(int cbSize) {
     return d->createVar(0, /* FIXME: use union for this? */ cbSize);
 }
 
-int SymHeap::varSizeOfAnon(TObjId var) const {
+int SymHeap::objSizeOfAnon(TObjId var) const {
     TVarMap::iterator iter = d->varMap.find(var);
     if (d->varMap.end() == iter)
         // not even a variable
@@ -593,7 +593,7 @@ bool SymHeap::valPointsToAnon(TValueId val) const {
     return !ref.clt;
 }
 
-void SymHeap::varDefineType(TObjId var, const struct cl_type *clt) {
+void SymHeap::objDefineType(TObjId var, const struct cl_type *clt) {
     TVarMap::iterator varIter = d->varMap.find(var);
     if (d->varMap.end() == varIter)
         // var not found

@@ -159,8 +159,8 @@ namespace {
 
                 case CL_TYPE_STRUCT:
                     for (int i = 0; i < clt->item_cnt; ++i) {
-                        const TObjId sub1 = heap1.subVar(o1, i);
-                        const TObjId sub2 = heap2.subVar(o2, i);
+                        const TObjId sub1 = heap1.subObj(o1, i);
+                        const TObjId sub2 = heap2.subObj(o2, i);
                         if (sub1 < 0 || sub2 < 0)
                             TRAP;
 
@@ -246,8 +246,8 @@ bool operator== (const SymHeap &heap1, const SymHeap &heap2) {
     SymHeap::TCont cVars;
     heap1.gatherCVars(cVars);
     BOOST_FOREACH(int uid, cVars) {
-        const TObjId var1 = heap1.varByCVar(uid);
-        const TObjId var2 = heap2.varByCVar(uid);
+        const TObjId var1 = heap1.objByCVar(uid);
+        const TObjId var2 = heap2.objByCVar(uid);
         if (var1 < 0 || var2 < 0)
             // heap corruption detected
             TRAP;

@@ -115,17 +115,17 @@ void dump_obj(const SymHeap &heap, TObjId obj) {
     if (0 < value)
         cout << "    value     = /* value */ #" << value << "\n";
 
-    const TObjId parent = heap.varParent(obj);
+    const TObjId parent = heap.objParent(obj);
     if (-1 != parent)
         cout << "    parent    = /* obj */ #" << parent << "\n";
 
     if (clt && clt->code == CL_TYPE_STRUCT) {
         for (int i = 0; i < clt->item_cnt; ++i) {
-            const int sub = heap.subVar(obj, i);
+            const int sub = heap.subObj(obj, i);
             if (sub <= 0)
                 continue;
 
-            cout << "    subVar[" << i << "] = /* obj */ #" << sub << "\n";
+            cout << "    subObj[" << i << "] = /* obj */ #" << sub << "\n";
         }
     }
 
@@ -245,7 +245,7 @@ void dump_value_refs(const SymHeap &heap, TValueId value) {
 }
 
 void dump_cvar(const SymHeap &heap, int cVar) {
-    const TObjId obj = heap.varByCVar(cVar);
+    const TObjId obj = heap.objByCVar(cVar);
     dump_obj(heap, obj);
 }
 

@@ -152,9 +152,9 @@ fail:
 void SymHeapProcessor::heapVarHandleAccessorItem(TObjId *pObj,
                                                  const struct cl_accessor *ac)
 {
-    // access subVar
+    // access subObj
     const int id = ac->data.item.id;
-    *pObj = heap_.subVar(*pObj, id);
+    *pObj = heap_.subObj(*pObj, id);
 
     // check result of the SymHeap operation
     if (OBJ_INVALID == *pObj)
@@ -206,7 +206,7 @@ TObjId SymHeapProcessor::heapVarFromOperand(const struct cl_operand &op)
             return OBJ_INVALID;
     }
 
-    TObjId var = heap_.varByCVar(uid);
+    TObjId var = heap_.objByCVar(uid);
     if (OBJ_INVALID == var)
         // unable to resolve static variable
         TRAP;
@@ -307,7 +307,7 @@ namespace {
             // go through all super objects
             while (0 < obj) {
                 wl.schedule(obj);
-                obj = heap.varParent(obj);
+                obj = heap.objParent(obj);
             }
         }
     }
@@ -317,7 +317,7 @@ namespace {
         if (obj <= 0)
             return false;
 
-        for (; OBJ_INVALID != obj; obj = heap.varParent(obj))
+        for (; OBJ_INVALID != obj; obj = heap.objParent(obj))
             if (-1 != heap.cVar(obj))
                 return false;
 
@@ -338,7 +338,7 @@ namespace {
             // non-heap object simply can't be JUNK
             return false;
 
-        if (-1 != heap.varParent(obj))
+        if (-1 != heap.objParent(obj))
             // ignore non-roots
             return false;
 
@@ -382,11 +382,11 @@ namespace {
 
                 case CL_TYPE_STRUCT:
                     for (int i = 0; i < clt->item_cnt; ++i) {
-                        const TObjId subVar = heap.subVar(obj, i);
-                        if (subVar < 0)
+                        const TObjId subObj = heap.subObj(obj, i);
+                        if (subObj < 0)
                             TRAP;
 
-                        todo.push(subVar);
+                        todo.push(subObj);
                     }
                     break;
 
@@ -459,7 +459,7 @@ void SymHeapProcessor::heapVarDefineType(TObjId lhs, TValueId rhs) {
     if (CL_TYPE_VOID == clt->code)
         return;
 
-    const int cbGot = heap_.varSizeOfAnon(var);
+    const int cbGot = heap_.objSizeOfAnon(var);
     const int cbNeed = clt->size;
     if (cbGot != cbNeed) {
         static const char szMsg[] =
@@ -473,7 +473,7 @@ void SymHeapProcessor::heapVarDefineType(TObjId lhs, TValueId rhs) {
         CL_NOTE_MSG(lw_, " expected: " << cbNeed << " bytes");
     }
 
-    heap_.varDefineType(var, clt);
+    heap_.objDefineType(var, clt);
 }
 
 void SymHeapProcessor::heapSetSingleVal(TObjId lhs, TValueId rhs) {
@@ -516,8 +516,8 @@ void SymHeapProcessor::heapSetVal(TObjId lhs, TValueId rhs) {
 
         // iterate through all fields
         for (int i = 0; i < clt->item_cnt; ++i) {
-            const TObjId lSub = heap_.subVar(lhs, i);
-            const TObjId rSub = heap_.subVar(rObj, i);
+            const TObjId lSub = heap_.subObj(lhs, i);
+            const TObjId rSub = heap_.subObj(rObj, i);
             if (lSub <= 0 || rSub <= 0)
                 // composition problem
                 TRAP;
@@ -641,7 +641,7 @@ void SymHeapProcessor::execMalloc(TState &state,
 
     const int cbAmount = cst.data.cst_int.value;
     CL_DEBUG_MSG(lw_, "executing malloc(" << cbAmount << ")");
-    const TObjId obj = heap_.varCreateAnon(cbAmount);
+    const TObjId obj = heap_.objCreateAnon(cbAmount);
     if (OBJ_INVALID == obj)
         // unable to create dynamic variable
         TRAP;

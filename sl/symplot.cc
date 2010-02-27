@@ -196,7 +196,7 @@ namespace {
 }
 
 bool SymHeapPlotter::Private::digFieldName(std::string &dst, TObjId obj) {
-    const TObjId parent = this->heap->varParent(obj);
+    const TObjId parent = this->heap->objParent(obj);
     if (OBJ_INVALID == parent)
         // no chance since there is no parent
         return false;
@@ -208,7 +208,7 @@ bool SymHeapPlotter::Private::digFieldName(std::string &dst, TObjId obj) {
 
     // dig field name
     for (int i = 0; i < clt->item_cnt; ++i) {
-        const TObjId sub = this->heap->subVar(parent, i);
+        const TObjId sub = this->heap->subObj(parent, i);
         if (obj == sub) {
             dst = clt->items[i].name;
             return true;
@@ -227,7 +227,7 @@ void SymHeapPlotter::Private::plotNodeObj(TObjId obj, enum cl_type_e code) {
 
     // dig root object
     TObjId root = obj, next;
-    while (OBJ_INVALID != (next = this->heap->varParent(root)))
+    while (OBJ_INVALID != (next = this->heap->objParent(root)))
         root = next;
 
     if (-1 == this->heap->cVar(root))
@@ -306,7 +306,7 @@ void SymHeapPlotter::Private::plotEdgeValueOf(TObjId obj, TValueId value) {
 void SymHeapPlotter::Private::plotEdgeSub(TObjId obj, TObjId sub) {
     this->dotStream << "\t" << SL_QUOTE(obj) << " -> " << SL_QUOTE(sub)
         << " [color=gray, style=dotted, arrowhead=open"
-        << ", fontcolor=gray, label=\"subVar\"];"
+        << ", fontcolor=gray, label=\"subObj\"];"
         << std::endl;
 }
 
@@ -514,7 +514,7 @@ void SymHeapPlotter::Private::digObj(TObjId obj) {
                 // TODO: draw subgraph
                 this->plotSingleObj(obj);
                 for (int i = 0; i < clt->item_cnt; ++i) {
-                    const TObjId sub = this->heap->subVar(obj, i);
+                    const TObjId sub = this->heap->subObj(obj, i);
                     if (!hasKey(this->objDone, sub))
                         this->plotEdgeSub(obj, sub);
 
@@ -586,9 +586,9 @@ void SymHeapPlotter::Private::plotCVar(int uid) {
             << " (" << var.name << ")" );
 
     // SymbolicHeap variable lookup
-    const TObjId obj = this->heap->varByCVar(uid);
+    const TObjId obj = this->heap->objByCVar(uid);
     if (OBJ_INVALID == obj)
-        CL_DEBUG_MSG(this->lw, "varByCVar lookup failed");
+        CL_DEBUG_MSG(this->lw, "objByCVar lookup failed");
 
     // plot as regular heap object
     this->plotObj(obj);
