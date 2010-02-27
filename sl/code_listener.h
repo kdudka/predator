@@ -505,6 +505,9 @@ enum cl_insn_e {
     CL_INSN_SWITCH
 };
 
+/**
+ * return true if the given code denotes a terminal instruction
+ */
 bool cl_is_term_insn(enum cl_insn_e code);
 
 /**

@@ -31,8 +31,8 @@ class ICodeListener;
 /**
  * create code listener integrity checker decorator
  *
- * see the ClFactory class and DEBUG_CL_FACTORY and CL_DEBUG_CLD macros from
- * config.h
+ * see the ClFactory class and config.h::DEBUG_CL_FACTORY and
+ * config.h::CL_DEBUG_CLD macros
  *
  * @return on heap allocated instance of ICodeListener object
  */

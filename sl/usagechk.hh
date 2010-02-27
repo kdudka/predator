@@ -59,6 +59,7 @@ class UsageChecker {
         void emitPendingMessages(const Location &loc);
 
     private:
+#ifndef BUILDING_DOX
         struct Usage {
             bool            read;
             bool            written;
@@ -71,6 +72,7 @@ class UsageChecker {
         typedef std::map<int, Usage> TMap;
         TMap                map_;
         std::string         what_;
+#endif
 };
 
 template <class TKey, class TValue>

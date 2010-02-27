@@ -664,6 +664,9 @@ void SymHeap::objDestroy(TObjId obj) {
 TValueId SymHeap::valCreateUnknown(EUnknownValue code,
                                    const struct cl_type *clt)
 {
+    if (UV_KNOWN == code)
+        TRAP;
+
     return d->createValue(EV_UNKOWN, clt, static_cast<TObjId>(code));
 }
 
@@ -880,9 +883,9 @@ bool SymHeap::proveEq(bool *result, TValueId valA, TValueId valB) const {
         case EV_HEAP:
         case EV_CUSTOM:
         case EV_COMPOSITE:
-            // it should be safe to just the compare IDs in this case
+            // it should be safe to just compare the IDs in this case
             // NOTE: we in fact know (valA != valB) at this point, look above
-            *result = (valA == valB);
+            *result = /* (valA == valB) */ false;
             return true;
 
         case EV_UNKOWN:

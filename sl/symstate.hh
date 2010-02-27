@@ -20,10 +20,23 @@
 #ifndef H_GUARD_SYM_STATE_H
 #define H_GUARD_SYM_STATE_H
 
+/**
+ * @file symstate.hh
+ * SymHeapUnion - symbolic state represented as a union of SymHeap objects
+ */
+
 #include <vector>
 
 #include "symheap.hh"
 
+/**
+ * symbolic state represented as a union of SymHeap objects (aka disjuncts)
+ *
+ * During the symbolic execution (see SymExec) we keep such a state per each
+ * basic block of the function just being processed.  The result of symbolically
+ * executed function is then the SymHeapUnion taken from the basic block
+ * containing CL_INSN_RET as soon as the fix-point calculation has terminated.
+ */
 class SymHeapUnion {
     private:
         typedef std::vector<SymHeap> TList;
@@ -33,25 +46,25 @@ class SymHeapUnion {
         typedef TList::iterator iterator;
 
     public:
+        /// insert given SymHeap object into the union
         void insert(const SymHeap &heap);
+
+        /// merge given SymHeapUnion object into self
         void insert(const SymHeapUnion &huni);
 
-        /**
-         * return STL-like iterator to go through the container
-         */
-        const_iterator begin() const { return heaps_.begin(); }
-
-        /**
-         * return STL-like iterator to go through the container
-         */
-        const_iterator end()   const { return heaps_.end();   }
-
-        /**
-         * return count of object stored in the container
-         */
+        /// return count of object stored in the container
         size_t size()          const { return heaps_.size();  }
 
+        /// return STL-like iterator to go through the container
+        const_iterator begin() const { return heaps_.begin(); }
+
+        /// return STL-like iterator to go through the container
+        const_iterator end()   const { return heaps_.end();   }
+
+        /// @copydoc begin() const
         iterator begin()             { return heaps_.begin(); }
+
+        /// @copydoc begin() const
         iterator end()               { return heaps_.end();   }
 
     private:

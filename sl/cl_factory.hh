@@ -30,7 +30,7 @@ class ICodeListener;
 /**
  * factory responsible for creating ICodeListener objects
  *
- * See DEBUG_CL_FACTORY from config.h.
+ * see config.h::DEBUG_CL_FACTORY
  *
  * @todo proper documentation for ClFactory config_string
  */
