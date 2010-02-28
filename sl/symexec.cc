@@ -60,7 +60,7 @@ namespace {
 
     void setCallArgs(SymHeap &heap, const CodeStorage::Fnc &fnc,
                      const CodeStorage::TOperandList &opList,
-                     IBtPrinter *bt)
+                     IBtPrinter *bt, const LocationWriter &lw)
     {
         // get called fnc's args
         const CodeStorage::TArgByPos &args = fnc.args;
@@ -72,8 +72,10 @@ namespace {
         SymHeapProcessor proc(heap, bt);
         BOOST_FOREACH(int arg, args) {
             const struct cl_operand &op = opList[pos++];
+#if 0
             const Location last(&fnc.def.loc);
             const LocationWriter lw(&op.loc, &last);
+#endif
             proc.setLocation(lw);
 
             const TValueId val = proc.heapValFromOperand(op);
@@ -516,9 +518,6 @@ void SymExec::Private::execCallInsn(SymHeap heap, SymHeapUnion &results) {
         goto fail;
     }
 
-    // we are ready to call a function, change backtrace stack accordingly
-    push(this->btStack, fnc, this->lw);
-
     // create an object for return value (if needed)
     if (haveLhs) {
         // FIXME: improve the interface of SymHeap for the return value
@@ -529,7 +528,10 @@ void SymExec::Private::execCallInsn(SymHeap heap, SymHeapUnion &results) {
     // crate local variables of called fnc
     // TODO: wrap createStackFrame/destroyStackFrame to an object?
     createStackFrame(heap, *fnc);
-    setCallArgs(heap, *fnc, opList, /* (IBtPrinter *) */ this);
+    setCallArgs(heap, *fnc, opList, /* (IBtPrinter *) */ this, this->lw);
+
+    // we are ready to call a function, change backtrace stack accordingly
+    push(this->btStack, fnc, this->lw);
 
     // now please perform the call
     this->execCallInsn(fnc, heap, tmp);
