@@ -144,7 +144,8 @@ add_test("compile-self" ${gcc45}
 set(examples
     0002 0003 0004 0005 0006 0007 0008 0009
     0010 0011 0012 0013 0014 0016 0017 0018
-    0019 0020 0021 0022 0023 0024 0025 0026)
+    0019 0020 0021 0022 0023 0024 0025 0026
+    0027)
 
 # FIXME: define this macro more generically, in particular the count of args
 macro(test_sym_exec label tool arg1 arg2)

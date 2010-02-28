@@ -597,11 +597,11 @@ void SymHeapProcessor::execFree(const CodeStorage::TOperandList &opList) {
             return;
 
         case OBJ_LOST:
-            // TODO: emit an error message and write a test-case
-            // this is double error in the analyzed program :-)
-            // 1. it attempts to free a non-heap object
-            // 2. the object no longer exists anyhow
-            TRAP;
+            // this is a double error in the analyzed program :-)
+            CL_ERROR_MSG(lw_, "attempt to free a non-heap object"
+                              ", which does not exist anyhow");
+            this->printBackTrace();
+            return;
 
         case OBJ_UNKNOWN:
         case OBJ_INVALID:
@@ -618,7 +618,11 @@ void SymHeapProcessor::execFree(const CodeStorage::TOperandList &opList) {
         return;
     }
 
-    // TODO: check for possible free() of non-root and write a test-case
+    if (OBJ_INVALID != heap_.objParent(obj)) {
+        CL_ERROR_MSG(lw_, "attempt to free a non-root object");
+        this->printBackTrace();
+        return;
+    }
 
     CL_DEBUG_MSG(lw_, "executing free()");
     this->destroyObj(obj);
