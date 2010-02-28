@@ -1,0 +1,12 @@
+test-0030.c:18:9: error: free() called on uninitialized value
+test-0030.c:25:12: note: from call of alloc_triple()
+test-0030.c:24:5: note: from call of main()
+test-0030.c:18:9: error: free() called on uninitialized value
+test-0030.c:25:12: note: from call of alloc_triple()
+test-0030.c:24:5: note: from call of main()
+test-0030.c:18:9: error: free() called on uninitialized value
+test-0030.c:25:12: note: from call of alloc_triple()
+test-0030.c:24:5: note: from call of main()
+test-0030.c:18:9: error: free() called on uninitialized value
+test-0030.c:25:12: note: from call of alloc_triple()
+test-0030.c:24:5: note: from call of main()
