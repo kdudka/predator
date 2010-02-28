@@ -81,10 +81,10 @@ class SymHeapPlotter {
                             const CodeStorage::Fnc &fnc);
 
     private:
-        /// object copying is not allowed
+        /// object copying is @b not allowed
         SymHeapPlotter(const SymHeapPlotter &);
 
-        /// object copying is not allowed
+        /// object copying is @b not allowed
         SymHeapPlotter& operator=(const SymHeapPlotter &);
 
     private:

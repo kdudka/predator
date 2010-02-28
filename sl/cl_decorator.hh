@@ -32,7 +32,7 @@
  *
  * The class itself can't be instantiated.  You always need to inherit the
  * class.  The only thing which has to be implemented in the derived class is
- * constructor, which calls the parent constructor with an instance of
+ * a constructor, which calls the parent constructor with an instance of
  * ICodeListener as the argument.  All other methods which are not overridden
  * will be forwarded to that instance of ICodeListener.
  * @note design pattern @b decorator

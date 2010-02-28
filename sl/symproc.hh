@@ -73,7 +73,7 @@ class SymHeapProcessor {
         /**
          * execute a @b non-terminal instruction using the managed symbolic heap
          * @note see also CodeStorage::Insn
-         * @note see also code_listener.h::is_term_insn
+         * @note see also code_listener.h::cl_is_term_insn()
          * @param dst a container to store the result(s) to
          * @param insn an instruction to be executed
          * @param fastMode if true, omit some computationally expensive

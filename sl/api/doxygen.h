@@ -9,6 +9,10 @@
  * @mainpage
  * @author Kamil Dudka <kdudka@redhat.com>
  * @version @include version.h
+ * @note The @b up2date @b sources are available (among other ways) through a <A
+ * HREF="http://www.stud.fit.vutbr.cz/~xdudka00/cgi-bin/gitweb.cgi?p=tools">
+ * <B>gitweb interface</B></A>.
+ *
  * @remark
  *
  * - Documentation of code_listener.h might be a viable start. Reading this
@@ -20,16 +24,18 @@
  *   ClDecoratorBase abstract class is the place to go.
  *
  * - If you prefer to work with a traversable program model instead of callback
- *   sequence, you should start with CodeStorage namespace documentation. In
- *   this case all necessary data are gathered into on heap allocated object
- *   model and then available for various analysis.
+ *   sequence, you should start with CodeStorage namespace documentation, in
+ *   particular the CodeStorage::Storage class.  Using this approach all
+ *   necessary data are gathered into on heap allocated object model and then
+ *   available for various types of analysis.
  *
  * - If you are interested in @b symbolic @b execution, see SymHeap,
- *   SymHeapUnion, SymHeapProcessor and SymExec classes.
+ *   SymHeapUnion, SymHeapProcessor and SymExec classes and the symid.hh header.
  *
  * - If you need some equipment for debugging of the symbolic execution, look at
- *   symdump.hh and symplot.hh.
+ *   symdump.hh and the class SymHeapPlotter.
  *
- * - If you are going to participate this project, you can pick one of the
- *   <A HREF="todo.html"><B>todo-list</B></A> items.
+ * - If you are interested in participation on this project and don't know where
+ *   to start, you can pick one of the outstanding <A
+ *   HREF="todo.html"><B>todo-list</B></A> items.
  */

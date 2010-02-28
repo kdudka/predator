@@ -22,7 +22,7 @@
 
 /**
  * @file symid.hh
- * types used for identification of SymHeap entitites - symid.hh::TObjId and
+ * types used for identification of SymHeap entities - symid.hh::TObjId and
  * symid.hh::TValueId
  */
 
@@ -30,8 +30,8 @@
 
 /**
  * SymHeap @b object @b ID
- * @note Though the type is defined as enumeral for now, peers should not rely
- * on that fact, it may be subject for change in the future.
+ * @note Though the type is defined as enumeration for now, the code should not
+ * rely on that fact, as it may be subject for change in the future.
  */
 typedef enum {
     /**
@@ -85,8 +85,8 @@ typedef enum {
 
 /**
  * SymHeap @b value @b ID
- * @note Though the type is defined as enumeral for now, peers should not rely
- * on that fact, it may be subject for change in the future.
+ * @note Though the type is defined as enumeration for now, the code should not
+ * rely on that fact, as it may be subject for change in the future.
  */
 typedef enum {
     /**
