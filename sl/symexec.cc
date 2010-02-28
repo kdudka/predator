@@ -96,7 +96,7 @@ namespace {
         SymHeapProcessor proc(heap);
         proc.setLocation(&op.loc);
 
-        const TObjId obj = proc.heapVarFromOperand(op);
+        const TObjId obj = proc.heapObjFromOperand(op);
         if (OBJ_INVALID == obj)
             TRAP;
 
@@ -553,7 +553,7 @@ fail:
         proc.setLocation(this->lw);
 
         const TValueId val = heap.valCreateUnknown(UV_UNKNOWN, dst.type);
-        const TObjId obj = proc.heapVarFromOperand(dst);
+        const TObjId obj = proc.heapObjFromOperand(dst);
         heap.objSetValue(obj, val);
     }
 

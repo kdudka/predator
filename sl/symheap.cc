@@ -287,7 +287,7 @@ void SymHeap::Private::destroySingleVar(TObjId var) {
         TRAP;
 
     const Var &refVar = varIter->second;
-    const bool isHeapVar = (-1 == refVar.cVarUid || !refVar.clt);
+    const bool isHeapObj = (-1 == refVar.cVarUid || !refVar.clt);
 
     // keep haveValue() up2date
     this->releaseValueOf(var);
@@ -295,7 +295,7 @@ void SymHeap::Private::destroySingleVar(TObjId var) {
     // mark corresponding value as freed
     const TValueId val = refVar.placedAt;
     Value &ref = this->valueMap[val];
-    ref.pointsTo = (isHeapVar)
+    ref.pointsTo = (isHeapObj)
         ? OBJ_DELETED
         : OBJ_LOST;
 

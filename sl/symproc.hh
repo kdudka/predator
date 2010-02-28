@@ -88,7 +88,7 @@ class SymHeapProcessor {
 
     public:
         /// obtain a heap object corresponding to the given operand
-        TObjId heapVarFromOperand(const struct cl_operand &op);
+        TObjId heapObjFromOperand(const struct cl_operand &op);
 
         /// obtain a heap value corresponding to the given operand
         TValueId heapValFromOperand(const struct cl_operand &op);
@@ -113,13 +113,13 @@ class SymHeapProcessor {
     private:
         void printBackTrace();
         void heapSetSingleVal(TObjId lhs, TValueId rhs);
-        void heapVarDefineType(TObjId lhs, TValueId rhs);
-        void heapVarHandleAccessorDeref(TObjId *pVar);
-        void heapVarHandleAccessorItem(TObjId *pVar,
+        void heapObjDefineType(TObjId lhs, TValueId rhs);
+        void heapObjHandleAccessorDeref(TObjId *pObj);
+        void heapObjHandleAccessorItem(TObjId *pObj,
                                        const struct cl_accessor *ac);
-        void heapVarHandleAccessor(TObjId *pVar, const struct cl_accessor *ac);
+        void heapObjHandleAccessor(TObjId *pObj, const struct cl_accessor *ac);
         TValueId heapValFromCst(const struct cl_operand &op);
-        bool lhsFromOperand(TObjId *pVar, const struct cl_operand &op);
+        bool lhsFromOperand(TObjId *pObj, const struct cl_operand &op);
         template <int ARITY> void execOp(const CodeStorage::Insn &insn);
         void execMalloc(TState &dst, const CodeStorage::TOperandList &opList,
                         bool fastMode);

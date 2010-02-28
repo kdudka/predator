@@ -94,7 +94,7 @@ TValueId SymHeapProcessor::heapValFromCst(const struct cl_operand &op) {
     }
 }
 
-void SymHeapProcessor::heapVarHandleAccessorDeref(TObjId *pObj)
+void SymHeapProcessor::heapObjHandleAccessorDeref(TObjId *pObj)
 {
     EUnknownValue code;
 
@@ -149,7 +149,7 @@ fail:
     *pObj = OBJ_DEREF_FAILED;
 }
 
-void SymHeapProcessor::heapVarHandleAccessorItem(TObjId *pObj,
+void SymHeapProcessor::heapObjHandleAccessorItem(TObjId *pObj,
                                                  const struct cl_accessor *ac)
 {
     // access subObj
@@ -161,17 +161,17 @@ void SymHeapProcessor::heapVarHandleAccessorItem(TObjId *pObj,
         *pObj = /* FIXME: misleading */ OBJ_DEREF_FAILED;
 }
 
-void SymHeapProcessor::heapVarHandleAccessor(TObjId *pObj,
+void SymHeapProcessor::heapObjHandleAccessor(TObjId *pObj,
                                              const struct cl_accessor *ac)
 {
     const enum cl_accessor_e code = ac->code;
     switch (code) {
         case CL_ACCESSOR_DEREF:
-            this->heapVarHandleAccessorDeref(pObj);
+            this->heapObjHandleAccessorDeref(pObj);
             return;
 
         case CL_ACCESSOR_ITEM:
-            this->heapVarHandleAccessorItem(pObj, ac);
+            this->heapObjHandleAccessorItem(pObj, ac);
             return;
 
         case CL_ACCESSOR_REF:
@@ -187,7 +187,7 @@ void SymHeapProcessor::heapVarHandleAccessor(TObjId *pObj,
     }
 }
 
-TObjId SymHeapProcessor::heapVarFromOperand(const struct cl_operand &op)
+TObjId SymHeapProcessor::heapObjFromOperand(const struct cl_operand &op)
 {
     int uid;
 
@@ -214,17 +214,17 @@ TObjId SymHeapProcessor::heapVarFromOperand(const struct cl_operand &op)
     // process all accessors (only CL_ACCESSOR_DEREF for now)
     const struct cl_accessor *ac = op.accessor;
     while (ac) {
-        this->heapVarHandleAccessor(&var, ac);
+        this->heapObjHandleAccessor(&var, ac);
         ac = ac->next;
     }
 
     return var;
 }
 
-bool SymHeapProcessor::lhsFromOperand(TObjId *pVar, const struct cl_operand &op)
+bool SymHeapProcessor::lhsFromOperand(TObjId *pObj, const struct cl_operand &op)
 {
-    *pVar = this->heapVarFromOperand(op);
-    switch (*pVar) {
+    *pObj = this->heapObjFromOperand(op);
+    switch (*pObj) {
         case OBJ_UNKNOWN:
             CL_DEBUG_MSG(lw_,
                     "ignoring OBJ_UNKNOWN as lhs, this is definitely a bug "
@@ -284,7 +284,7 @@ TValueId SymHeapProcessor::heapValFromOperand(const struct cl_operand &op)
         case CL_OPERAND_VAR:
         case CL_OPERAND_REG:
             return valueFromVar(heap_,
-                    this->heapVarFromOperand(op),
+                    this->heapObjFromOperand(op),
                     op.type, op.accessor);
 
         case CL_OPERAND_CST:
@@ -438,7 +438,7 @@ bool SymHeapProcessor::checkForJunk(TValueId val) {
     return detected;
 }
 
-void SymHeapProcessor::heapVarDefineType(TObjId lhs, TValueId rhs) {
+void SymHeapProcessor::heapObjDefineType(TObjId lhs, TValueId rhs) {
     const TObjId var = heap_.pointsTo(rhs);
     if (OBJ_INVALID == var)
         TRAP;
@@ -484,7 +484,7 @@ void SymHeapProcessor::heapSetSingleVal(TObjId lhs, TValueId rhs) {
 
     if (heap_.valPointsToAnon(rhs))
         // anonymous object is going to be specified by a type
-        this->heapVarDefineType(lhs, rhs);
+        this->heapObjDefineType(lhs, rhs);
 
     heap_.objSetValue(lhs, rhs);
     if (this->checkForJunk(oldValue))
@@ -624,7 +624,7 @@ void SymHeapProcessor::execMalloc(TState &state,
         TRAP;
 
     const struct cl_operand &dst = opList[0];
-    const TObjId varLhs = this->heapVarFromOperand(dst);
+    const TObjId varLhs = this->heapObjFromOperand(dst);
     if (OBJ_INVALID == varLhs)
         // could not resolve lhs
         TRAP;
