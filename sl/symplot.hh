@@ -21,6 +21,11 @@
 #ifndef H_GUARD_SYM_PLOT_H
 #define H_GUARD_SYM_PLOT_H
 
+/**
+ * @file symplot.hh
+ * SymHeapPlotter - symbolic heap plotter
+ */
+
 #include "symid.hh"
 
 #include <string>
@@ -32,23 +37,54 @@ namespace CodeStorage {
 
 class SymHeap;
 
+/**
+ * @file symplot.hh
+ * symbolic heap @b plotter
+ * @note it should be safe to call the plot* methods more times per one instance
+ * of SymHeapPlotter.  The already plotted entities should be not plotted again
+ * in that case.
+ */
 class SymHeapPlotter {
     public:
+        /**
+         * initialize plotter by static-info and symbolic heap
+         * @param stor all-in-one info about the analyzed code, see CodeStorage
+         * @param heap a symbolic heap which is going to be plotted
+         */
+        SymHeapPlotter(const CodeStorage::Storage &stor, const SymHeap &heap);
         ~SymHeapPlotter();
-        SymHeapPlotter(const CodeStorage::Storage   &stor,
-                       const SymHeap                &heap);
 
-        bool plot(const std::string                 &name);
+        /**
+         * plot the whole symbolic heap, starting from static/automatic
+         * variables
+         * @param name base name of the resulting dot file, which will be
+         * decorated by a serial number
+         */
+        bool plot(const std::string &name);
 
-        bool plotHeapValue(const std::string        &name,
-                           TValueId                 value);
+        /**
+         * plot a sub-heap reachable from the given heap value
+         * @param name base name of the resulting dot file, which will be
+         * decorated by a serial number
+         * @param value ID of a value denoting the requested sub-heap
+         */
+        bool plotHeapValue(const std::string &name, TValueId value);
 
-        bool plotStackFrame(const std::string       &name,
-                            const CodeStorage::Fnc  &fnc);
+        /**
+         * plot a sub-heap reachable from automatic variables of the given
+         * function
+         * @param name base name of the resulting dot file, which will be
+         * decorated by a serial number
+         * @param fnc a function to look for the automatic variables
+         */
+        bool plotStackFrame(const std::string &name,
+                            const CodeStorage::Fnc &fnc);
 
     private:
-        // object copying is not allowed
+        /// object copying is not allowed
         SymHeapPlotter(const SymHeapPlotter &);
+
+        /// object copying is not allowed
         SymHeapPlotter& operator=(const SymHeapPlotter &);
 
     private:

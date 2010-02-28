@@ -22,7 +22,7 @@
 
 /**
  * @file symstate.hh
- * SymHeapUnion - symbolic state represented as a union of SymHeap objects
+ * SymHeapUnion - @b symbolic @b state represented as a union of SymHeap objects
  */
 
 #include <vector>

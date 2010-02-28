@@ -21,19 +21,38 @@
 #ifndef H_GUARD_SYM_DUMP_H
 #define H_GUARD_SYM_DUMP_H
 
+/**
+ * @file symdump.hh
+ * collection of dump_* functions operating on a SymHeap object, handy when @b debugging
+ */
+
 #include "symid.hh"
 
-extern int have_symdump;
+/// an internal constant, statically initialized to 1
+extern const int have_symdump;
 
 struct cl_type;
 class SymHeap;
 
+/// dump @b type-info given as clt
 void dump_clt(const struct cl_type *clt);
+
+/// dump a symbolic heap @b object
 void dump_obj(const SymHeap &heap, TObjId obj);
+
+/// dump a symbolic heap @b value
 void dump_value(const SymHeap &heap, TValueId value);
+
+/// dump a symbolic heap value, including all (directly) @b referred @b objects
 void dump_value_refs(const SymHeap &heap, TValueId value);
+
+/// dump a static/automatic @b variable, see CodeStorage
 void dump_cvar(const SymHeap &heap, int cVar);
+
+/// dump a @b all static/automatic @b variables of the given symbolic heap
 void dump_heap(const SymHeap &heap);
+
+/// dump any @b existing @b positive ID as either heap object or a heap value
 void dump_id(const SymHeap &heap, int id);
 
 #endif /* H_GUARD_SYM_DUMP_H */

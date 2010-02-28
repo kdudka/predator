@@ -27,7 +27,7 @@
 
 #include <boost/foreach.hpp>
 
-int have_symdump = 1;
+const int have_symdump = 1;
 
 void dump_clt(const struct cl_type *clt) {
     using std::cout;
