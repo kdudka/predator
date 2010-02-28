@@ -30,7 +30,7 @@ class ICodeListener;
 /**
  * create "pp" (pretty print) ICodeListener implementation
  * @param config_string Name of a file to write to.  If NULL is given, stdout is
- * used.  If the output device is terminal the output may be colorized.
+ * used.  If the output device is terminal, the output may be colorized.
  * @param showTypes If true, dump type information as well.
  * @todo proper documentation of the "pp" code listener
  */

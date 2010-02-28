@@ -131,6 +131,8 @@ class SymHeapProcessor {
         SymHeap                     &heap_;
         IBtPrinter                  *btPrinter_;
         LocationWriter              lw_;
+
+        template <int N, class T> friend struct OpHandler;
 };
 
 #endif /* H_GUARD_SYM_PROC_H */

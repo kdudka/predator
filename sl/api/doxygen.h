@@ -29,7 +29,7 @@
  *   necessary data are gathered into on heap allocated object model and then
  *   available for various types of analysis.
  *
- * - If you are interested in @b symbolic @b execution, see SymHeap,
+ * - If you are interested in @b symbolic @b execution, see the SymHeap,
  *   SymHeapUnion, SymHeapProcessor and SymExec classes and the symid.hh header.
  *
  * - If you need some equipment for debugging of the symbolic execution, look at

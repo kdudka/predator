@@ -1,8 +1,9 @@
 #!/bin/sh
-TIMEOUT="timeout 16"
+TIMEOUT="timeout 8"
 
-echo "ATTENTION: This script is not supposed to be run !!!"
-echo "           Please do not commit generated files to prevent a disaster..."
+echo "ATTENTION: This script is not intended to be run !!!"
+echo "           Please do not commit the generated files to prevent" \
+                 "a disaster..."
 for i in data/test-00??.c; do
   printf -- "--- "
   basename $i .c

@@ -17,7 +17,7 @@
 
 .PHONY: clean doc wizard
 
-doc:
+doc: ../version.h
 	doxygen doxygen.conf
 
 wizard:
@@ -25,3 +25,6 @@ wizard:
 
 clean:
 	rm -rfv html
+
+../version.h:
+	$(MAKE) -C .. version.h

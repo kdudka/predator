@@ -211,7 +211,7 @@ TObjId SymHeapProcessor::heapObjFromOperand(const struct cl_operand &op)
         // unable to resolve static variable
         TRAP;
 
-    // process all accessors (only CL_ACCESSOR_DEREF for now)
+    // process all accessors
     const struct cl_accessor *ac = op.accessor;
     while (ac) {
         this->heapObjHandleAccessor(&var, ac);
@@ -596,6 +596,13 @@ void SymHeapProcessor::execFree(const CodeStorage::TOperandList &opList) {
             this->printBackTrace();
             return;
 
+        case OBJ_LOST:
+            // TODO: emit an error message and write a test-case
+            // this is double error in the analyzed program :-)
+            // 1. it attempts to free a non-heap object
+            // 2. the object no longer exists anyhow
+            TRAP;
+
         case OBJ_UNKNOWN:
         case OBJ_INVALID:
             TRAP;
@@ -611,8 +618,9 @@ void SymHeapProcessor::execFree(const CodeStorage::TOperandList &opList) {
         return;
     }
 
+    // TODO: check for possible free() of non-root and write a test-case
+
     CL_DEBUG_MSG(lw_, "executing free()");
-    // TODO: check for possible free() of non-root
     this->destroyObj(obj);
 }
 
@@ -643,7 +651,7 @@ void SymHeapProcessor::execMalloc(TState &state,
     CL_DEBUG_MSG(lw_, "executing malloc(" << cbAmount << ")");
     const TObjId obj = heap_.objCreateAnon(cbAmount);
     if (OBJ_INVALID == obj)
-        // unable to create dynamic variable
+        // unable to create a heap object
         TRAP;
 
     const TValueId val = heap_.placedAt(obj);
@@ -1018,16 +1026,16 @@ TValueId handleOpCmp(THeap &heap, enum cl_binop_e code,
 }
 
 // template for generic (unary, binary, ...) operator handlers
-template <int ARITY, class THeap>
+template <int ARITY, class TProc>
 struct OpHandler {
-    static TValueId handleOp(THeap &heap, int code, const TValueId rhs[ARITY],
+    static TValueId handleOp(TProc &proc, int code, const TValueId rhs[ARITY],
                              const struct cl_type *clt[ARITY +/* dst */1]);
 };
 
 // unary operator handler
-template <class THeap>
-struct OpHandler</* unary */ 1, THeap> {
-    static TValueId handleOp(THeap &heap, int iCode, const TValueId rhs[1],
+template <class TProc>
+struct OpHandler</* unary */ 1, TProc> {
+    static TValueId handleOp(TProc &proc, int iCode, const TValueId rhs[1],
                              const struct cl_type *clt[1 + /* dst type */ 1])
     {
         TValueId val = rhs[0];
@@ -1035,7 +1043,7 @@ struct OpHandler</* unary */ 1, THeap> {
         const enum cl_unop_e code = static_cast<enum cl_unop_e>(iCode);
         switch (code) {
             case CL_UNOP_TRUTH_NOT:
-                handleUnopTruthNot(heap, val, clt[0]);
+                handleUnopTruthNot(proc.heap_, val, clt[0]);
                 // fall through!
 
             case CL_UNOP_ASSIGN:
@@ -1083,9 +1091,9 @@ namespace {
 }
 
 // binary operator handler
-template <class THeap>
-struct OpHandler</* binary */ 2, THeap> {
-    static TValueId handleOp(THeap &heap, int iCode, const TValueId rhs[2],
+template <class TProc>
+struct OpHandler</* binary */ 2, TProc> {
+    static TValueId handleOp(TProc &proc, int iCode, const TValueId rhs[2],
                              const struct cl_type *clt[2 + /* dst type */ 1])
     {
         const struct cl_type *const cltA = clt[0];
@@ -1096,10 +1104,11 @@ struct OpHandler</* binary */ 2, THeap> {
 
         if (*cltA != *cltB)
             // we don't support arrays, pointer arithmetic and the like,
-            // the types therfore have to match with each other for a binary
+            // the types therefor have to match with each other for a binary
             // operator
             TRAP;
 
+        SymHeap &heap = proc.heap_;
         const enum cl_binop_e code = static_cast<enum cl_binop_e>(iCode);
         switch (code) {
             case CL_BINOP_EQ:
@@ -1112,7 +1121,7 @@ struct OpHandler</* binary */ 2, THeap> {
 
             case CL_BINOP_PLUS:
             case CL_BINOP_MINUS:
-                CL_WARN("binary operator not implemented yet");
+                CL_WARN_MSG(proc.lw_, "binary operator not implemented yet");
                 return heap.valCreateUnknown(UV_UNKNOWN, cltA);
 
             default:
@@ -1123,11 +1132,11 @@ struct OpHandler</* binary */ 2, THeap> {
 };
 
 // C++ does not support partial specialisation of function templates, this helps
-template <int ARITY, class THeap>
-TValueId handleOp(THeap &heap, int code, const TValueId rhs[ARITY],
+template <int ARITY, class TProc>
+TValueId handleOp(TProc &proc, int code, const TValueId rhs[ARITY],
                   const struct cl_type *clt[ARITY + /* dst type */ 1])
 {
-    return OpHandler<ARITY, THeap>::handleOp(heap, code, rhs, clt);
+    return OpHandler<ARITY, TProc>::handleOp(proc, code, rhs, clt);
 }
 
 template <int ARITY>
@@ -1153,7 +1162,7 @@ void SymHeapProcessor::execOp(const CodeStorage::Insn &insn) {
     }
 
     // handle generic operator and store result
-    const TValueId valResult = handleOp<ARITY>(heap_, insn.subCode, rhs, clt);
+    const TValueId valResult = handleOp<ARITY>(*this, insn.subCode, rhs, clt);
     this->heapSetVal(varLhs, valResult);
 }
 

@@ -786,7 +786,6 @@ int /* cVal */ SymHeap::valGetCustom(const struct cl_type **pClt, TValueId val)
         return VAL_INVALID;
 
     if (pClt)
-        // TODO: this deserves a comment in the public header
         *pClt = value.clt;
 
     return /* cVal */ value.pointsTo;

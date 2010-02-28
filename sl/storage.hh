@@ -551,7 +551,7 @@ struct File {
 };
 
 /**
- * lookup container for set of Fnc objects
+ * lookup container for set of File objects
  */
 class FileDb {
     private:

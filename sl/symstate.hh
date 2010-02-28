@@ -33,9 +33,10 @@
  * symbolic state represented as a union of SymHeap objects (aka disjuncts)
  *
  * During the symbolic execution (see SymExec) we keep such a state per each
- * basic block of the function just being processed.  The result of symbolically
- * executed function is then the SymHeapUnion taken from the basic block
- * containing CL_INSN_RET as soon as the fix-point calculation has terminated.
+ * basic block of the function just being processed.  The result of a
+ * symbolically executed function is then the SymHeapUnion taken from the basic
+ * block containing CL_INSN_RET as soon as the fix-point calculation has
+ * terminated.
  */
 class SymHeapUnion {
     private:

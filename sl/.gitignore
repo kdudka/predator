@@ -1,6 +1,7 @@
 *.dot
 *.o
 *.svg
+data/test-0015.err
 libcl.a
 slplug.so
 slsparse

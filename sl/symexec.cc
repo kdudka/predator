@@ -399,7 +399,6 @@ void SymExec::Private::execCondInsn(const SymHeap &heap) {
             return;
     }
 
-    // TODO: check for inconsistency here!
     this->updateState(tlist[/* then label */ 0], heap, val, VAL_TRUE);
     this->updateState(tlist[/* else label */ 1], heap, val, VAL_FALSE);
 }
