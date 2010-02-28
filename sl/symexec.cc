@@ -59,7 +59,8 @@ namespace {
     }
 
     void setCallArgs(SymHeap &heap, const CodeStorage::Fnc &fnc,
-                     const CodeStorage::TOperandList &opList)
+                     const CodeStorage::TOperandList &opList,
+                     IBtPrinter *bt)
     {
         // get called fnc's args
         const CodeStorage::TArgByPos &args = fnc.args;
@@ -68,7 +69,7 @@ namespace {
 
         // set args' values
         int pos = /* dst + fnc */ 2;
-        SymHeapProcessor proc(heap);
+        SymHeapProcessor proc(heap, bt);
         BOOST_FOREACH(int arg, args) {
             const struct cl_operand &op = opList[pos++];
             const Location last(&fnc.def.loc);
@@ -88,12 +89,14 @@ namespace {
         }
     }
 
-    void assignReturnValue(SymHeap &heap, const struct cl_operand &op) {
+    void assignReturnValue(SymHeap &heap, const struct cl_operand &op,
+                           IBtPrinter *bt)
+    {
         if (CL_OPERAND_VOID == op.code)
             // fnc returns void, thus we are done
             return;
 
-        SymHeapProcessor proc(heap);
+        SymHeapProcessor proc(heap, bt);
         proc.setLocation(&op.loc);
 
         const TObjId obj = proc.heapObjFromOperand(op);
@@ -108,15 +111,15 @@ namespace {
         heap.objSetValue(obj, val);
     }
 
-    void assignReturnValue(SymHeapUnion &state,
-                           const struct cl_operand &op)
+    void assignReturnValue(SymHeapUnion &state, const struct cl_operand &op,
+                           IBtPrinter *bt)
     {
         if (CL_OPERAND_VOID == op.code)
             return;
 
         // go through results and perform assignment of the return value
         BOOST_FOREACH(SymHeap &res, state) {
-            assignReturnValue(res, op);
+            assignReturnValue(res, op, bt);
         }
     }
 
@@ -526,13 +529,13 @@ void SymExec::Private::execCallInsn(SymHeap heap, SymHeapUnion &results) {
     // crate local variables of called fnc
     // TODO: wrap createStackFrame/destroyStackFrame to an object?
     createStackFrame(heap, *fnc);
-    setCallArgs(heap, *fnc, opList);
+    setCallArgs(heap, *fnc, opList, /* (IBtPrinter *) */ this);
 
     // now please perform the call
     this->execCallInsn(fnc, heap, tmp);
 
     // go through results and perform assignment of the return value
-    assignReturnValue(tmp, dst);
+    assignReturnValue(tmp, dst, /* (IBtPrinter *) */ this);
 
     // final cleanup
     destroyStackFrame(this, tmp, *fnc);

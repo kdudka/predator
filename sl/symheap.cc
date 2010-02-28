@@ -581,7 +581,7 @@ bool SymHeap::valPointsToAnon(TValueId val) const {
         TRAP;
 
     Value &value = valIter->second;
-    if (EV_HEAP != value.code)
+    if (EV_HEAP != value.code || value.pointsTo < 0)
         return false;
 
     TVarMap::iterator iter = d->varMap.find(value.pointsTo);

@@ -103,8 +103,7 @@ void SymHeapProcessor::heapObjHandleAccessorDeref(TObjId *pObj)
     switch (val) {
         case VAL_NULL:
             CL_ERROR_MSG(lw_, "dereference of NULL value");
-            this->printBackTrace();
-            goto fail;
+            goto fail_with_bt;
 
         case VAL_INVALID:
             TRAP;
@@ -126,8 +125,7 @@ void SymHeapProcessor::heapObjHandleAccessorDeref(TObjId *pObj)
 
         case UV_UNINITIALIZED:
             CL_ERROR_MSG(lw_, "dereference of uninitialized value");
-            this->printBackTrace();
-            // fall through!
+            goto fail_with_bt;
 
         case UV_DEREF_FAILED:
             goto fail;
@@ -136,14 +134,24 @@ void SymHeapProcessor::heapObjHandleAccessorDeref(TObjId *pObj)
     // value lookup
     *pObj = heap_.pointsTo(val);
     switch (*pObj) {
-        // TODO
+        case OBJ_LOST:
+            CL_ERROR_MSG(lw_, "dereference of non-existing non-heap object");
+            goto fail_with_bt;
+
         case OBJ_DELETED:
+            CL_ERROR_MSG(lw_, "dereference of already deleted heap object");
+            goto fail_with_bt;
+
+        case OBJ_UNKNOWN:
         case OBJ_INVALID:
             TRAP;
 
         default:
             return;
     }
+
+fail_with_bt:
+    this->printBackTrace();
 
 fail:
     *pObj = OBJ_DEREF_FAILED;
@@ -492,6 +500,12 @@ void SymHeapProcessor::heapSetSingleVal(TObjId lhs, TValueId rhs) {
 }
 
 void SymHeapProcessor::heapSetVal(TObjId lhs, TValueId rhs) {
+    if (0 < rhs && UV_DEREF_FAILED == heap_.valGetUnknown(rhs)) {
+        // we're already on an error path
+        heap_.objSetValue(lhs, rhs);
+        return;
+    }
+
     // DFS for composite types
     typedef std::pair<TObjId, TValueId> TItem;
     std::stack<TItem> todo;
