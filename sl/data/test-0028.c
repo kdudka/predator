@@ -9,9 +9,9 @@ static void chain_item(list_t *list, list_t item) {
 
 static void safe_free_list(list_t list) {
     while (list.head && (list.head = list.next)) {
-        list_t *next = list.head->next;
+        list.next = list.head->next;
         free(list.head);
-        list.head = next;
+        list.head = list.next;
     }
 }
 

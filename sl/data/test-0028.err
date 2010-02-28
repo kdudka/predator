@@ -2,73 +2,73 @@ test-0028.c:20:13: error: amount of allocated memory not accurate
 test-0028.c:20:13: note: allocated: 4 bytes
 test-0028.c:20:13: note:  expected: 8 bytes
 test-0028.c:21:15: error: dereference of NULL value
-test-0028.c:12:17: error: dereference of non-existing non-heap object
+test-0028.c:12:30: error: dereference of non-existing non-heap object
 test-0028.c:22:19: note: from call of safe_free_list()
 test-0028.c:18:5: note: from call of main()
 test-0028.c:13:13: error: attempt to free a non-heap object, which does not exist anyhow
 test-0028.c:22:19: note: from call of safe_free_list()
 test-0028.c:18:5: note: from call of main()
-test-0028.c:12:17: error: dereference of non-existing non-heap object
-test-0028.c:22:19: note: from call of safe_free_list()
-test-0028.c:18:5: note: from call of main()
-test-0028.c:12:17: error: dereference of non-existing non-heap object
+test-0028.c:12:30: error: dereference of non-existing non-heap object
 test-0028.c:22:19: note: from call of safe_free_list()
 test-0028.c:18:5: note: from call of main()
 test-0028.c:13:13: error: attempt to free a non-heap object, which does not exist anyhow
 test-0028.c:22:19: note: from call of safe_free_list()
 test-0028.c:18:5: note: from call of main()
-test-0028.c:13:13: error: attempt to free a non-heap object, which does not exist anyhow
-test-0028.c:22:19: note: from call of safe_free_list()
-test-0028.c:18:5: note: from call of main()
-test-0028.c:12:17: error: dereference of non-existing non-heap object
+test-0028.c:12:30: error: dereference of non-existing non-heap object
 test-0028.c:22:19: note: from call of safe_free_list()
 test-0028.c:18:5: note: from call of main()
 test-0028.c:13:13: error: attempt to free a non-heap object, which does not exist anyhow
 test-0028.c:22:19: note: from call of safe_free_list()
 test-0028.c:18:5: note: from call of main()
-test-0028.c:12:17: error: dereference of non-existing non-heap object
-test-0028.c:22:19: note: from call of safe_free_list()
-test-0028.c:18:5: note: from call of main()
-test-0028.c:12:17: error: dereference of non-existing non-heap object
+test-0028.c:12:30: error: dereference of non-existing non-heap object
 test-0028.c:22:19: note: from call of safe_free_list()
 test-0028.c:18:5: note: from call of main()
 test-0028.c:13:13: error: attempt to free a non-heap object, which does not exist anyhow
 test-0028.c:22:19: note: from call of safe_free_list()
 test-0028.c:18:5: note: from call of main()
+test-0028.c:12:30: error: dereference of non-existing non-heap object
+test-0028.c:22:19: note: from call of safe_free_list()
+test-0028.c:18:5: note: from call of main()
 test-0028.c:13:13: error: attempt to free a non-heap object, which does not exist anyhow
 test-0028.c:22:19: note: from call of safe_free_list()
 test-0028.c:18:5: note: from call of main()
-test-0028.c:12:17: error: dereference of non-existing non-heap object
+test-0028.c:12:30: error: dereference of non-existing non-heap object
+test-0028.c:22:19: note: from call of safe_free_list()
+test-0028.c:18:5: note: from call of main()
+test-0028.c:13:13: error: attempt to free a non-heap object, which does not exist anyhow
+test-0028.c:22:19: note: from call of safe_free_list()
+test-0028.c:18:5: note: from call of main()
+test-0028.c:12:30: error: dereference of non-existing non-heap object
 test-0028.c:23:19: note: from call of safe_free_list()
 test-0028.c:18:5: note: from call of main()
 test-0028.c:13:13: error: attempt to free a non-heap object, which does not exist anyhow
 test-0028.c:23:19: note: from call of safe_free_list()
 test-0028.c:18:5: note: from call of main()
-test-0028.c:12:17: error: dereference of non-existing non-heap object
-test-0028.c:23:19: note: from call of safe_free_list()
-test-0028.c:18:5: note: from call of main()
-test-0028.c:12:17: error: dereference of non-existing non-heap object
+test-0028.c:12:30: error: dereference of non-existing non-heap object
 test-0028.c:23:19: note: from call of safe_free_list()
 test-0028.c:18:5: note: from call of main()
 test-0028.c:13:13: error: attempt to free a non-heap object, which does not exist anyhow
 test-0028.c:23:19: note: from call of safe_free_list()
 test-0028.c:18:5: note: from call of main()
-test-0028.c:13:13: error: attempt to free a non-heap object, which does not exist anyhow
-test-0028.c:23:19: note: from call of safe_free_list()
-test-0028.c:18:5: note: from call of main()
-test-0028.c:12:17: error: dereference of non-existing non-heap object
+test-0028.c:12:30: error: dereference of non-existing non-heap object
 test-0028.c:23:19: note: from call of safe_free_list()
 test-0028.c:18:5: note: from call of main()
 test-0028.c:13:13: error: attempt to free a non-heap object, which does not exist anyhow
 test-0028.c:23:19: note: from call of safe_free_list()
 test-0028.c:18:5: note: from call of main()
-test-0028.c:12:17: error: dereference of non-existing non-heap object
-test-0028.c:23:19: note: from call of safe_free_list()
-test-0028.c:18:5: note: from call of main()
-test-0028.c:12:17: error: dereference of non-existing non-heap object
+test-0028.c:12:30: error: dereference of non-existing non-heap object
 test-0028.c:23:19: note: from call of safe_free_list()
 test-0028.c:18:5: note: from call of main()
 test-0028.c:13:13: error: attempt to free a non-heap object, which does not exist anyhow
+test-0028.c:23:19: note: from call of safe_free_list()
+test-0028.c:18:5: note: from call of main()
+test-0028.c:12:30: error: dereference of non-existing non-heap object
+test-0028.c:23:19: note: from call of safe_free_list()
+test-0028.c:18:5: note: from call of main()
+test-0028.c:13:13: error: attempt to free a non-heap object, which does not exist anyhow
+test-0028.c:23:19: note: from call of safe_free_list()
+test-0028.c:18:5: note: from call of main()
+test-0028.c:12:30: error: dereference of non-existing non-heap object
 test-0028.c:23:19: note: from call of safe_free_list()
 test-0028.c:18:5: note: from call of main()
 test-0028.c:13:13: error: attempt to free a non-heap object, which does not exist anyhow
