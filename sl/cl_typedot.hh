@@ -22,7 +22,7 @@
 
 /**
  * @file cl_typedot.hh
- * declaration of createClTypeDotGenerator() aka @b "typedot"
+ * constructor createClTypeDotGenerator() of the @b "typedot" code listener
  */
 
 class ICodeListener;

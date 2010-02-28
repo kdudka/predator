@@ -22,7 +22,7 @@
 
 /**
  * @file cl_locator.hh
- * declaration of createClLocator() aka @b "locator"
+ * constructor createClLocator() of the @b "locator" code listener
  */
 
 class ICodeListener;

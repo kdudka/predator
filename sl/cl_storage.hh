@@ -22,7 +22,7 @@
 
 /**
  * @file cl_storage.hh
- * Definition of ClStorageBuilder base class
+ * ClStorageBuilder - base class for CodeStorage based code listeners
  */
 
 #include "cl.hh"

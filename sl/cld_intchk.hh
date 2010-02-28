@@ -22,8 +22,7 @@
 
 /**
  * @file cld_intchk.hh
- * declaration of createCldIntegrityChk() - code listener integrity checker
- * decorator
+ * constructor createCldIntegrityChk() - of the integrity checker decorator
  */
 
 class ICodeListener;

@@ -22,7 +22,7 @@
 
 /**
  * @file cl_dotgen.hh
- * declaration of createClDotGenerator() aka @b "dotgen"
+ * constructor createClDotGenerator() of the @b "dotgen" code listener
  */
 
 class ICodeListener;

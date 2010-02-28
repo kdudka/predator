@@ -22,7 +22,7 @@
 
 /**
  * @file cl_seplog.hh
- * declaration of createClSepLog() aka @b "seplog" - see SymExec
+ * constructor createClSepLog() of the @b "seplog" code listener - see SymExec
  */
 
 class ICodeListener;

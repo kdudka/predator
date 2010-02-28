@@ -22,7 +22,7 @@
 
 /**
  * @file cl_msg.hh
- * functions and macros for emitting error, warning, info and debug messages
+ * Macros for emitting @b error, @b warning, @b info and @b debug messages
  * through the code listener interface
  */
 

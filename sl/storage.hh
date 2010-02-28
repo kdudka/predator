@@ -34,7 +34,7 @@
 
 /**
  * @file storage.hh
- * an easy to use model of storage for serialised code_listener objects
+ * an easy to use model of @b storage for serialised code_listener objects
  */
 
 /**

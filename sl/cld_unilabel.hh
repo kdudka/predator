@@ -22,8 +22,7 @@
 
 /**
  * @file cld_unilabel.hh
- * declaration of createCldUniLabel() - code listener decorators @b
- * "unify_labels_*"
+ * constructor createCldUniLabel() - of the @b "unify_labels_*" decorators
  */
 
 #include "code_listener.h"

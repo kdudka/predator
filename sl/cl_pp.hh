@@ -22,7 +22,7 @@
 
 /**
  * @file cl_pp.hh
- * declaration of createClPrettyPrint() aka @b "pp"
+ * constructor createClPrettyPrint() of the @b "pp" code listener
  */
 
 class ICodeListener;

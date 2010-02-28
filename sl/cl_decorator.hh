@@ -22,7 +22,7 @@
 
 /**
  * @file cl_decorator.hh
- * definition of ClDecoratorBase base class
+ * ClDecoratorBase - base class for all code listener @b decorators
  */
 
 #include "cl.hh"

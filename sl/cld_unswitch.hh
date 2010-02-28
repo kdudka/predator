@@ -22,8 +22,7 @@
 
 /**
  * @file cld_unswitch.hh
- * declaration of createCldUnfoldSwitch() - code listener decorator @b
- * "unifold_switch"
+ * constructor createCldUnfoldSwitch() - of the @b "unifold_switch" decorator
  */
 
 class ICodeListener;

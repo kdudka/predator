@@ -22,7 +22,7 @@
 
 /**
  * @file cl.hh
- * definition of ICodeListener interface
+ * ICodeListener interface
  */
 
 #include "code_listener.h"

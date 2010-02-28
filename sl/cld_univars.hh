@@ -22,8 +22,7 @@
 
 /**
  * @file cld_univars.hh
- * declaration of createCldUniVars() - code listener decorator @b
- * "unify_vars"
+ * constructor createCldUniVars() of the @b "unify_vars" decorator
  */
 
 class ICodeListener;

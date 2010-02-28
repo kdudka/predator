@@ -22,8 +22,7 @@
 
 /**
  * @file cld_uniregs.hh
- * declaration of createCldUniRegs() - code listener decorator @b
- * "unify_regs"
+ * constructor createCldUniRegs() of the @b "unify_regs" decorator
  */
 
 class ICodeListener;
