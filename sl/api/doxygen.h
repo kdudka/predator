@@ -8,7 +8,7 @@
 /**
  * @mainpage
  * @author Kamil Dudka <kdudka@redhat.com>
- * @date 2010-02-26
+ * @version @include version.h
  * @remark
  *
  * - Documentation of code_listener.h might be a viable start. Reading this
@@ -24,6 +24,12 @@
  *   this case all necessary data are gathered into on heap allocated object
  *   model and then available for various analysis.
  *
+ * - If you are interested in @b symbolic @b execution, see SymHeap,
+ *   SymHeapUnion, SymHeapProcessor and SymExec classes.
+ *
+ * - If you need some equipment for debugging of the symbolic execution, look at
+ *   symdump.hh and symplot.hh.
+ *
  * - If you are going to participate this project, you can pick one of the
- *   <A HREF="todo.html"><B>todo-list</B></A> items...
+ *   <A HREF="todo.html"><B>todo-list</B></A> items.
  */

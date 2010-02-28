@@ -298,7 +298,6 @@ struct Insn {
  * Basic block - a single node in ControlFlow graph. Once the basic block is
  * ready, it contains (possibly empty) sequence of non-terminating instructions
  * and exactly one terminating instruction.
- * @todo reverse links to precedent blocks?
  */
 class Block {
     private:
@@ -383,9 +382,7 @@ class Block {
 /**
  * Control flow graph - an easy to analyse representation of the intermediate
  * code. Nodes of the graph are basic blocks - instances of Block
- * @todo list of exits?
- * @todo list of aborts?
- * @todo support for (non-recursive) call graph unfolding
+ * @todo support for (non-recursive) call graph unfolding?
  */
 class ControlFlow {
     private:
@@ -622,9 +619,6 @@ typedef std::map<int /* uid */, VarDb *> TVarDbById;
 
 /**
  * a value type representing the @b whole @b serialised @b model of code
- * @todo Consider adding all-in-one VarDb. Note this will need globally unique
- * IDs for all vars. Well, we have something like that while using gcc. But
- * isn't the requirement too restrictive for other parsers?
  */
 struct Storage {
     TypeDb                      types;              ///< type info access point
