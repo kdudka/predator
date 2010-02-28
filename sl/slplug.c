@@ -120,11 +120,11 @@ static struct plugin_info sl_info = {
 "OPTIONS:\n"
 "    -fplugin-arg-slplug-help\n"
 "    -fplugin-arg-slplug-version\n"
-"    -fplugin-arg-slplug-bypass-seplog                  do not run seplog\n"
+"    -fplugin-arg-slplug-bypass-symexec                 do not run symexec\n"
 "    -fplugin-arg-slplug-dump-pp[=OUTPUT_FILE]          dump linearized code\n"
 "    -fplugin-arg-slplug-dump-types                     dump also type info\n"
 "    -fplugin-arg-slplug-gen-dot[=GLOBAL_CG_FILE]       generate CFGs\n"
-"    -fplugin-arg-slplug-seplog-args=SEPLOG_ARGS        args given to seplog\n"
+"    -fplugin-arg-slplug-symexec-args=SYMEXEC_ARGS      args given to symexec\n"
 "    -fplugin-arg-slplug-type-dot=TYPE_GRAPH_FILE       generate type graphs\n"
 "    -fplugin-arg-slplug-verbose[=VERBOSE_BITMASK]      turn on verbose mode\n"
 "\n"
@@ -134,7 +134,7 @@ static struct plugin_info sl_info = {
 "    4          print each gimple statement before its processing\n"
 "    8          dump gcc tree of unhandled expressions\n"
 "\n"
-"SEPLOG_ARGS:\n"
+"SYMEXEC_ARGS:\n"
 "    fast       disable OOM simulation within symbolic execution of malloc()\n"
 };
 
@@ -1319,11 +1319,11 @@ struct sl_plug_options {
     bool                    dump_types;
     bool                    use_dotgen;
     bool                    use_pp;
-    bool                    use_seplog;
+    bool                    use_symexec;
     bool                    use_typedot;
     const char              *gl_dot_file;
     const char              *pp_out_file;
-    const char              *seplog_args;
+    const char              *symexec_args;
     const char              *type_dot_file;
 };
 
@@ -1332,8 +1332,8 @@ static int slplug_init(const struct plugin_name_args *info,
 {
     // initialize opt data
     memset (opt, 0, sizeof(*opt));
-    opt->use_seplog         = true;
-    opt->seplog_args        = "";
+    opt->use_symexec         = true;
+    opt->symexec_args        = "";
 
     // initialize global plug-in name
     plugin_name = info->full_name;
@@ -1364,8 +1364,8 @@ static int slplug_init(const struct plugin_name_args *info,
             printf ("\n%s\n", sl_info.help);
             return EXIT_FAILURE;
 
-        } else if (STREQ(key, "bypass-seplog")) {
-            opt->use_seplog     = false;
+        } else if (STREQ(key, "bypass-symexec")) {
+            opt->use_symexec    = false;
             // TODO: warn about ignoring extra value?
 
         } else if (STREQ(key, "dump-pp")) {
@@ -1380,8 +1380,8 @@ static int slplug_init(const struct plugin_name_args *info,
             opt->use_dotgen     = true;
             opt->gl_dot_file    = value;
 
-        } else if (STREQ(key, "seplog-args")) {
-            opt->seplog_args = (value)
+        } else if (STREQ(key, "symexec-args")) {
+            opt->symexec_args = (value)
                 ? value
                 : "";
 
@@ -1433,7 +1433,7 @@ static bool sl_append_def_listener(struct cl_code_listener *chain,
                                    const char *listener, const char *args,
                                    const struct sl_plug_options *opt)
 {
-    const char *cld = (opt->use_seplog)
+    const char *cld = (opt->use_symexec)
         ? "unfold_switch,unify_labels_gl"
         : "unify_labels_fnc,unify_regs,unify_vars";
 
@@ -1480,8 +1480,8 @@ create_cl_chain(const struct sl_plug_options *opt)
             && !sl_append_def_listener(chain, "typedot", opt->type_dot_file, opt))
         return NULL;
 
-    if (opt->use_seplog
-            && !sl_append_def_listener(chain, "seplog", opt->seplog_args, opt))
+    if (opt->use_symexec
+            && !sl_append_def_listener(chain, "symexec", opt->symexec_args, opt))
         return NULL;
 
     return chain;

@@ -98,7 +98,7 @@ add_library(sl STATIC
     cl_factory.cc
     cl_locator.cc
     cl_pp.cc
-    cl_seplog.cc
+    cl_symexec.cc
     cl_storage.cc
     cl_typedot.cc
     cld_argsub.cc
@@ -139,7 +139,7 @@ add_test("compile-self" ${gcc45}
     -I${sl_SOURCE_DIR}/../gcc
     -c ${sl_SOURCE_DIR}/slplug.c
     -fplugin=${sl_BINARY_DIR}/libslplug.so
-    -fplugin-arg-libslplug-bypass-seplog)
+    -fplugin-arg-libslplug-bypass-symexec)
 
 set(examples
     0002 0003 0004 0005 0006 0007 0008 0009
@@ -195,7 +195,7 @@ set(self_extra_opts
     -fplugin-arg-libslplug-gen-dot=/dev/null
     -fplugin-arg-libslplug-type-dot=/dev/null
     -fplugin-arg-libslplug-verbose=15
-    -fplugin-arg-libslplug-bypass-seplog)
+    -fplugin-arg-libslplug-bypass-symexec)
 
 add_test("compile-self-extra" ${gcc45} ${self_extra_opts})
 add_test("compile-self-valgrind" valgrind

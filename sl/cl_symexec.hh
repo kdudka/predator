@@ -17,22 +17,22 @@
  * along with sl.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef H_GUARD_CL_SEPLOG_H
-#define H_GUARD_CL_SEPLOG_H
+#ifndef H_GUARD_CL_SYMEXEC_H
+#define H_GUARD_CL_SYMEXEC_H
 
 /**
- * @file cl_seplog.hh
- * constructor createClSepLog() of the @b "seplog" code listener - see SymExec
+ * @file cl_symexec.hh
+ * constructor createClSymExec() of the @b "symexec" code listener - see SymExec
  */
 
 class ICodeListener;
 
 /**
- * create "seplog" ICodeListener implementation - see SymExec
+ * create "symexec" ICodeListener implementation - see SymExec
  * @param config_string If "fast" is given, some computationally expensive
  * analysis will be omitted.
- * @todo proper documentation of the "seplog" code listener
+ * @todo proper documentation of the "symexec" code listener
  */
-ICodeListener* createClSepLog(const char *config_string);
+ICodeListener* createClSymExec(const char *config_string);
 
-#endif /* H_GUARD_CL_SEPLOG_H */
+#endif /* H_GUARD_CL_SYMEXEC_H */

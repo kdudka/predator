@@ -17,7 +17,7 @@
  * along with sl.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "cl_seplog.hh"
+#include "cl_symexec.hh"
 
 #include "cl_msg.hh"
 #include "cl_storage.hh"
@@ -26,10 +26,10 @@
 
 #include <string>
 
-class ClSepLog: public ClStorageBuilder {
+class ClSymExec: public ClStorageBuilder {
     public:
-        ClSepLog(const char *configString);
-        virtual ~ClSepLog();
+        ClSymExec(const char *configString);
+        virtual ~ClSymExec();
 
     protected:
         virtual void run(CodeStorage::Storage &);
@@ -39,13 +39,13 @@ class ClSepLog: public ClStorageBuilder {
 };
 
 // /////////////////////////////////////////////////////////////////////////////
-// ClSepLog implementation
-ClSepLog::ClSepLog(const char *configString):
+// ClSymExec implementation
+ClSymExec::ClSymExec(const char *configString):
     configString_(configString)
 {
 }
 
-ClSepLog::~ClSepLog() {
+ClSymExec::~ClSymExec() {
 }
 
 namespace {
@@ -59,7 +59,7 @@ namespace {
     }
 }
 
-void ClSepLog::run(CodeStorage::Storage &stor) {
+void ClSymExec::run(CodeStorage::Storage &stor) {
     CL_DEBUG("looking for 'main()' at gl scope...");
     CodeStorage::Fnc *main = stor.glFncByName["main"];
     if (!main) {
@@ -75,7 +75,7 @@ void ClSepLog::run(CodeStorage::Storage &stor) {
 
 
 // /////////////////////////////////////////////////////////////////////////////
-// public interface, see cl_seplog.hh for more details
-ICodeListener* createClSepLog(const char *configString) {
-    return new ClSepLog(configString);
+// public interface, see cl_symexec.hh for more details
+ICodeListener* createClSymExec(const char *configString) {
+    return new ClSymExec(configString);
 }

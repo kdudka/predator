@@ -58,7 +58,7 @@ CL_OBJS = cl_chain.o \
 	cl_factory.o \
 	cl_locator.o \
 	cl_pp.o \
-	cl_seplog.o \
+	cl_symexec.o \
 	cl_storage.o \
 	cl_typedot.o \
 	cld_argsub.o \
@@ -86,7 +86,6 @@ libcl.a: $(CL_OBJS)
 
 #TODO: dependency scanning
 $(CL_OBJS): code_listener.h config.h *.hh version.h
-cl_seplog.o: ../seplog/symbolic-heap.cc
 
 #$(CL_OBJS): CXXFLAGS += -fPIC -std=c++0x -pedantic -Wall -Werror
 $(CL_OBJS): CXXFLAGS += -fPIC -std=c++0x -pedantic -Wall
@@ -128,7 +127,7 @@ chkplug: slplug.so
 	TMP=`mktemp` \
 		&& ($(GCC_INSTALL)/bin/gcc $(CFLAGS) $(PLUG_CFLAGS) \
 		-fplugin=./slplug.so \
-		-fplugin-arg-slplug-bypass-seplog \
+		-fplugin-arg-slplug-bypass-symexec \
 		-c slplug.c >"$$TMP" 2>&1 \
 		|| (cat "$$TMP"; exit 1)) \
 		&& rm -fv "$$TMP"

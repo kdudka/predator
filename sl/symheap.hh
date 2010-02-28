@@ -22,7 +22,7 @@
 
 /**
  * @file symheap.hh
- * SymHeap - @b symbolic @b heap representation, the core part of "seplog"
+ * SymHeap - @b symbolic @b heap representation, the core part of "symexec"
  * project
  */
 
@@ -44,7 +44,7 @@ enum EUnknownValue {
 };
 
 /**
- * @b symbolic @b heap representation, the core part of "seplog" project
+ * @b symbolic @b heap representation, the core part of "symexec" project
  * @todo The interface of SymHeap tends to be crowded.  It should be split to a
  * sensible object model.  Carving out subObj(), objParent() and
  * valGetCompositeObj() might be a viable start.
