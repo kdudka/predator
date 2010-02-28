@@ -20,27 +20,52 @@
 #ifndef H_GUARD_SYM_EXEC_H
 #define H_GUARD_SYM_EXEC_H
 
+/**
+ * @file symexec.hh
+ * SymExec - top level loop of the @b symbolic @b execution
+ */
+
 namespace CodeStorage {
     struct Fnc;
     struct Storage;
 }
 
+/**
+ * top level loop of the @b symbolic @b execution
+ * @todo design some interface to interact with the surrounding environment,
+ * something to set/get state of the global variables, and something set/get
+ * function arguments and the return value
+ */
 class SymExec {
     public:
+        /**
+         * load the static info about the analyzed code
+         * @param stor all-in-one static info about the analyzed code, see
+         * CodeStorage for details
+         */
         SymExec(CodeStorage::Storage &stor);
         ~SymExec();
 
+        /// return true if the @b fast @b mode is enabled
         bool fastMode() const;
+
+        /// enable/disable the @b fast @b mode
         void setFastMode(bool);
 
         // TODO: some functions operating on d->stateZero??
         // TODO: we should be able to define return variable somehow
 
-        void exec(const CodeStorage::Fnc & /*, TODO: results? */);
+        /**
+         * symbolically @b execute a function
+         * @param fnc a function requested to be executed
+         */
+        void exec(const CodeStorage::Fnc &fnc /*, TODO: results? */);
 
     private:
-        // object copying not allowed
+        /// object copying is @b not allowed
         SymExec(const SymExec &);
+
+        /// object copying is @b not allowed
         SymExec& operator=(const SymExec &);
 
     private:
