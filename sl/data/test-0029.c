@@ -7,11 +7,12 @@ static void chain_item(list_t *list, list_t *item) {
     list->next = item;
 }
 
-static void safe_free_list(list_t *list) {
-    while (list->head && (list->head = list->next)) {
-        list->next = list->head->next;
-        free(list->head);
-        list->head = list->next;
+static void free_list(list_t *list) {
+    list = list->next;
+    while (list) {
+        list_t *next = list->next;
+        free(list);
+        list = next;
     }
 }
 
@@ -19,7 +20,6 @@ int main() {
     list_t list = { .head = &list, .next = NULL };
     list_t *item = (list_t *) malloc(sizeof *item);
     chain_item(&list, item);
-    safe_free_list(&list);
-    safe_free_list(&list);
+    free_list(list.head);
     return 0;
 }
