@@ -25,7 +25,6 @@
  * SymHeapUnion - @b symbolic @b state represented as a union of SymHeap objects
  */
 
-#include <algorithm>
 #include <vector>
 
 #include "symheap.hh"
@@ -91,8 +90,8 @@ class SymHeapScheduler: public SymHeapUnion {
         /// import of SymHeapUnion rewrites the base and invalidates all flags
         SymHeapScheduler& operator=(const SymHeapUnion &huni) {
             static_cast<SymHeapUnion &>(*this) = huni;
-            done_.resize(huni.size());
-            std::fill(done_.begin(), done_.end(), false);
+            done_.clear();
+            done_.resize(huni.size(), false);
             return *this;
         }
 
@@ -113,9 +112,9 @@ class SymHeapScheduler: public SymHeapUnion {
             return done_[nth];
         }
 
-        /// mark all symbolic heaps inside as processed
-        void setDone() {
-            std::fill(done_.begin(), done_.end(), true);
+        /// mark the nth symbolic heap as processed
+        void setDone(int nth) {
+            done_[nth] = true;
         }
 
     private:

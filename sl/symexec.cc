@@ -617,6 +617,7 @@ void SymExec::Private::execBb() {
 
     // state valid for the entry of this BB
     SymHeapScheduler &origin = this->state[this->bb];
+    const int origCnt = origin.size();
 
     // this state will be changed per each instruction
     // NOTE: it may grow significantly on any CL_INSN_CALL instruction
@@ -637,11 +638,13 @@ void SymExec::Private::execBb() {
         this->execInsn(localState);
     }
 
-    // Mark all symbolic heaps as "done", all of them have been processed. They
-    // will be omitted on the next call of execBb() for the same BB since there
-    // is no chance to get different results for the same symbolic heaps on the
-    // input.
-    origin.setDone();
+    // Mark symbolic heaps that have been processed as done. They will be
+    // omitted on the next call of execBb() for the same BB since there is no
+    // chance to get different results for the same symbolic heaps on the input.
+    // NOTE: We don't know whether origCnt == origin.size() at this point, but
+    //       only                  origCnt <= origin.size()
+    for (int h = 0; h < origCnt; ++h)
+        origin.setDone(h);
 }
 
 void SymExec::Private::execFncBody() {
