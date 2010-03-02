@@ -176,11 +176,11 @@ namespace {
 // /////////////////////////////////////////////////////////////////////////////
 // SymExec implementation
 struct SymExec::Private: public IBtPrinter {
-    typedef std::set<int /* fnc uid */>                         TBtSet;
-    typedef std::pair<const CodeStorage::Fnc *, LocationWriter> TBtStackItem;
-    typedef std::stack<TBtStackItem>                            TBtStack;
-    typedef std::set<const CodeStorage::Block *>                TBlockSet;
-    typedef std::map<const CodeStorage::Block *, SymHeapUnion>  TStateMap;
+    typedef std::set<int /* fnc uid */>                            TBtSet;
+    typedef std::pair<const CodeStorage::Fnc *, LocationWriter>    TBtStackItem;
+    typedef std::stack<TBtStackItem>                               TBtStack;
+    typedef std::set<const CodeStorage::Block *>                   TBlockSet;
+    typedef std::map<const CodeStorage::Block *, SymHeapScheduler> TStateMap;
 
     CodeStorage::Storage        &stor;
     TBtSet                      *btSet;
@@ -220,7 +220,7 @@ struct SymExec::Private: public IBtPrinter {
     void execCallInsn(const CodeStorage::Fnc *fnc, const SymHeap &heap,
                       SymHeapUnion &results);
     void execCallInsn(SymHeap heap, SymHeapUnion &results);
-    void execInsn(SymHeapUnion &localState);
+    void execInsn(SymHeapScheduler &localState);
     void execBb();
     void execFncBody();
     void execFnc(const SymHeap &init);
@@ -565,7 +565,7 @@ fail:
     results.insert(heap);
 }
 
-void SymExec::Private::execInsn(SymHeapUnion &localState) {
+void SymExec::Private::execInsn(SymHeapScheduler &localState) {
     // true for terminal instruction
     const bool isTerm = cl_is_term_insn(insn->code);
 
@@ -573,11 +573,17 @@ void SymExec::Private::execInsn(SymHeapUnion &localState) {
     SymHeapUnion nextLocalState;
 
     // go through all symbolic heaps corresponding to localState
-    int hCnt = 0;
-    BOOST_FOREACH(const SymHeap &heap, localState) {
-        if (1 < localState.size()) {
-            CL_DEBUG_MSG(this->lw, "*** processing heap #"
-                    << (++hCnt) << " of BB " << bb->name());
+    const int hCnt = localState.size();
+    for (int h = 0; h < hCnt; ++h) {
+        if (localState.isDone(h))
+            // for this particular symbolic heap, we already know the result and
+            // the result is already included in the resulting state, skip it
+            continue;
+
+        const SymHeap &heap = localState[h];
+        if (1 < hCnt) {
+            CL_DEBUG_MSG(this->lw, "*** processing heap #" << h
+                    << " of BB " << bb->name());
         }
 
         if (isTerm) {
@@ -609,9 +615,12 @@ void SymExec::Private::execBb() {
     const std::string &name = bb->name();
     CL_DEBUG_MSG(lw, "___ entering " << name);
 
+    // state valid for the entry of this BB
+    SymHeapScheduler &origin = this->state[this->bb];
+
     // this state will be changed per each instruction
     // NOTE: it may grow significantly on any CL_INSN_CALL instruction
-    SymHeapUnion localState(this->state[this->bb]);
+    SymHeapScheduler localState(origin);
 
     // go through all BB insns
     int iCnt = 0;
@@ -627,6 +636,12 @@ void SymExec::Private::execBb() {
         this->insn = insn;
         this->execInsn(localState);
     }
+
+    // Mark all symbolic heaps as "done", all of them have been processed. They
+    // will be omitted on the next call of execBb() for the same BB since there
+    // is no chance to get different results for the same symbolic heaps on the
+    // input.
+    origin.setDone();
 }
 
 void SymExec::Private::execFncBody() {

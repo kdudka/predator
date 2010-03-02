@@ -25,6 +25,7 @@
  * SymHeapUnion - @b symbolic @b state represented as a union of SymHeap objects
  */
 
+#include <algorithm>
 #include <vector>
 
 #include "symheap.hh"
@@ -47,14 +48,21 @@ class SymHeapUnion {
         typedef TList::iterator iterator;
 
     public:
+        virtual ~SymHeapUnion() { }
+
         /// insert given SymHeap object into the union
-        void insert(const SymHeap &heap);
+        virtual void insert(const SymHeap &heap);
 
         /// merge given SymHeapUnion object into self
-        void insert(const SymHeapUnion &huni);
+        virtual void insert(const SymHeapUnion &huni);
 
         /// return count of object stored in the container
         size_t size()          const { return heaps_.size();  }
+
+        /// return nth SymHeap object, 0 <= nth < size()
+        const SymHeap& operator[](int nth) const {
+            return heaps_[nth];
+        }
 
         /// return STL-like iterator to go through the container
         const_iterator begin() const { return heaps_.begin(); }
@@ -70,6 +78,48 @@ class SymHeapUnion {
 
     private:
         TList heaps_;
+};
+
+/**
+ * Extension of SymHeapUnion, which distinguishes among already processed
+ * symbolic heaps and symbolic heaps scheduled for processing.  Newly inserted
+ * symbolic heaps are always marked as scheduled.  They can be marked as done
+ * later, using the setDone() method.
+ */
+class SymHeapScheduler: public SymHeapUnion {
+    public:
+        /// import of SymHeapUnion rewrites the base and invalidates all flags
+        SymHeapScheduler& operator=(const SymHeapUnion &huni) {
+            static_cast<SymHeapUnion &>(*this) = huni;
+            done_.resize(huni.size());
+            std::fill(done_.begin(), done_.end(), false);
+            return *this;
+        }
+
+        virtual void insert(const SymHeap &heap) {
+            const size_t last = this->size();
+            SymHeapUnion::insert(heap);
+            if (this->size() == last)
+                // nothing has been changed
+                return;
+
+            // schedule the just inserted SymHeap for processing
+            done_.push_back(false);
+        }
+
+    public:
+        /// check if the nth symbolic heap has been already processed
+        bool isDone(int nth) const {
+            return done_[nth];
+        }
+
+        /// mark all symbolic heaps inside as processed
+        void setDone() {
+            std::fill(done_.begin(), done_.end(), true);
+        }
+
+    private:
+        std::vector<bool> done_;
 };
 
 

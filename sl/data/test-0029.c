@@ -1,6 +1,9 @@
 #include <stdlib.h>
 
-typedef struct list { struct list *head; struct list *next; } list_t;
+typedef struct list {
+    struct list *head;
+    struct list *next;
+} list_t;
 
 static void chain_item(list_t *list, list_t *item) {
     *item = *list;

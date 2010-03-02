@@ -23,7 +23,8 @@
 
 /**
  * @file symdump.hh
- * collection of dump_* functions operating on a SymHeap object, handy when @b debugging
+ * collection of dump_* functions operating on a SymHeap object, handy when @b
+ * debugging
  */
 
 #include "symid.hh"
