@@ -23,7 +23,7 @@
 /**
  * @file symheap.hh
  * SymHeap - @b symbolic @b heap representation, the core part of "symexec"
- * project
+ * code listener
  */
 
 #include "symid.hh"

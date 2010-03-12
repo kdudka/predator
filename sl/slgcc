@@ -16,7 +16,7 @@ test -d "$SL_BUILD"                         || exit 1
 test -f "$SL_BUILD/Makefile"                || exit 1
 
 # attempt to make
-make -s "$MAKEOPTS"                         || exit 1
+make -s $MAKEOPTS                           || exit 1
 test -x "$SL_PLUG"                          || exit 1
 
 # use verbose level 1 by default

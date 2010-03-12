@@ -25,7 +25,7 @@
  *
  * - If you prefer to work with a traversable program model instead of callback
  *   sequence, you should start with CodeStorage namespace documentation, in
- *   particular the CodeStorage::Storage class.  Using this approach all
+ *   particular the CodeStorage::Storage class.  Using this approach, all
  *   necessary data are gathered into on heap allocated object model and then
  *   available for various types of analysis.
  *
