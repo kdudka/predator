@@ -36,6 +36,7 @@
 #include <string>
 
 #include <boost/foreach.hpp>
+#include <boost/tuple/tuple.hpp>
 
 // singleton
 class PlotEnumerator {
@@ -93,6 +94,9 @@ struct SymHeapPlotter::Private {
     std::set<TObjId>                    objDone;
     int                                 last;
 
+    typedef std::pair<TObjId, TValueId> TEdgeValueOf;
+    std::vector<TEdgeValueOf>           evList;
+
     bool openDotFile(const std::string &name);
     void closeDotFile();
 
@@ -104,6 +108,9 @@ struct SymHeapPlotter::Private {
     void plotEdgePointsTo(TValueId value, TObjId obj);
     void plotEdgeValueOf(TObjId obj, TValueId value);
     void plotEdgeSub(TObjId obj, TObjId sub);
+
+    void gobbleEdgeValueOf(TObjId obj, TValueId value);
+    void emitPendingEdges();
 
     void plotSingleValue(TValueId value);
     void plotSingleObj(TObjId obj);
@@ -147,6 +154,9 @@ bool SymHeapPlotter::Private::openDotFile(const std::string &plotName)
 }
 
 void SymHeapPlotter::Private::closeDotFile() {
+    // emit pending edges
+    this->emitPendingEdges();
+
     // close graph
     this->dotStream << "}" << std::endl;
     if (!this->dotStream)
@@ -305,8 +315,20 @@ void SymHeapPlotter::Private::plotEdgeValueOf(TObjId obj, TValueId value) {
 void SymHeapPlotter::Private::plotEdgeSub(TObjId obj, TObjId sub) {
     this->dotStream << "\t" << SL_QUOTE(obj) << " -> " << SL_QUOTE(sub)
         << " [color=gray, style=dotted, arrowhead=open"
-        << ", fontcolor=gray, label=\"subObj\"];"
+        << ", fontcolor=gray, label=\"field\"];"
         << std::endl;
+}
+
+void SymHeapPlotter::Private::gobbleEdgeValueOf(TObjId obj, TValueId value) {
+    TEdgeValueOf edge(obj, value);
+    this->evList.push_back(edge);
+}
+
+void SymHeapPlotter::Private::emitPendingEdges() {
+    BOOST_FOREACH(const TEdgeValueOf &edge, this->evList) {
+        this->plotEdgeValueOf(edge.first, edge.second);
+    }
+    this->evList.clear();
 }
 
 void SymHeapPlotter::Private::plotSingleValue(TValueId value) {
@@ -487,10 +509,12 @@ bool SymHeapPlotter::Private::resolvePointsTo(TObjId *pDst, TValueId value) {
 }
 
 void SymHeapPlotter::Private::digObj(TObjId obj) {
-    std::stack<TObjId> todo;
-    todo.push(obj);
+    typedef std::pair<TObjId, bool /* last */> TStackItem;
+    std::stack<TStackItem> todo;
+    push(todo, obj, false);
     while (!todo.empty()) {
-        obj = todo.top();
+        bool last;
+        boost::tie(obj, last) = todo.top();
         todo.pop();
 
         const struct cl_type *clt = this->heap->objType(obj);
@@ -503,27 +527,37 @@ void SymHeapPlotter::Private::digObj(TObjId obj) {
                 this->plotSingleObj(obj);
                 TValueId value;
                 if (this->resolveValueOf(&value, obj)) {
-                    this->plotEdgeValueOf(obj, value);
+                    this->gobbleEdgeValueOf(obj, value);
                     this->workList.schedule(value);
                 }
                 break;
             }
 
             case CL_TYPE_STRUCT:
-                // TODO: draw subgraph
+                this->dotStream
+                    << "subgraph \"cluster" << obj << "\" {"    << std::endl
+                    << "\tlabel=" << SL_QUOTE("") << ";"        << std::endl
+                    << "\tcolor=black;"                         << std::endl
+                    << "\tbgcolor=gray98;"                      << std::endl
+                    << "\tstyle=dashed;"                        << std::endl;
+
                 this->plotSingleObj(obj);
                 for (int i = 0; i < clt->item_cnt; ++i) {
                     const TObjId sub = this->heap->subObj(obj, i);
                     if (!hasKey(this->objDone, sub))
                         this->plotEdgeSub(obj, sub);
 
-                    todo.push(sub);
+                    push(todo, sub, /* last */ (0 == i));
                 }
                 break;
 
             default:
                 TRAP;
         }
+
+        if (last)
+            // we are done with the current cluster, close it now
+            this->dotStream << "}" << std::endl;
     }
 }
 

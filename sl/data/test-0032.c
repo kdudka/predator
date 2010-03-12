@@ -62,5 +62,6 @@ int main()
 {
     struct h_list_item *item = alloc_h_list_item();
     insert_list_item(0, &item->binder, item);
+    ___sl_plot("test-0032");
     return 0;
 }
