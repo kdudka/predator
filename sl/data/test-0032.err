@@ -1,1 +1,1 @@
-data/test-0032.c:63:25: warning: killing junk
+test-0032.c:64:21: warning: killing junk

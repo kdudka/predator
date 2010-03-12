@@ -333,25 +333,41 @@ namespace {
     }
 
     template <class THeap>
-    bool digJunk(THeap &heap, TValueId ptrVal) {
-        if (ptrVal <= 0 || UV_KNOWN != heap.valGetUnknown(ptrVal))
+    void digRootObject(THeap &heap, TValueId *pValue) {
+        TObjId obj = heap.pointsTo(*pValue);
+        if (obj < 0)
+            TRAP;
+
+        TObjId parent;
+        while (OBJ_INVALID != (parent = heap.objParent(obj)))
+            obj = parent;
+
+        TValueId val = heap.placedAt(obj);
+        if (val <= 0)
+            TRAP;
+
+        *pValue = val;
+    }
+
+    template <class THeap>
+    bool digJunk(THeap &heap, TValueId *ptrVal) {
+        if (*ptrVal <= 0 || UV_KNOWN != heap.valGetUnknown(*ptrVal))
             return false;
 
-        if (VAL_INVALID != heap.valGetCustom(0, ptrVal))
+        if (VAL_INVALID != heap.valGetCustom(0, *ptrVal))
             // ignore custom values (e.g. fnc pointers)
             return false;
 
-        TObjId obj = heap.pointsTo(ptrVal);
+        TObjId obj = heap.pointsTo(*ptrVal);
         if (!isHeapObject(heap, obj))
             // non-heap object simply can't be JUNK
             return false;
 
-        if (-1 != heap.objParent(obj))
-            // ignore non-roots
-            return false;
+        // only root objects can be destroyed
+        digRootObject(heap, ptrVal);
 
         WorkList<TObjId> wl;
-        digPointingObjects(wl, heap, ptrVal);
+        digPointingObjects(wl, heap, *ptrVal);
         while (wl.next(obj)) {
             if (!isHeapObject(heap, obj))
                 return false;
@@ -419,10 +435,10 @@ bool SymHeapProcessor::checkForJunk(TValueId val) {
     std::stack<TValueId> todo;
     todo.push(val);
     while (!todo.empty()) {
-        const TValueId val = todo.top();
+        TValueId val = todo.top();
         todo.pop();
 
-        if (digJunk(heap_, val)) {
+        if (digJunk(heap_, &val)) {
             detected = true;
             const TObjId obj = heap_.pointsTo(val);
             if (obj <= 0)
