@@ -79,7 +79,7 @@ class SymHeap {
          * @param obj ID of the object to look into
          * @return A valid value ID in case of success, invalid otherwise.
          * @note It may also return @b unknown, @b composite or @b custom value,
-         * depending on type of the queried object.
+         * depending on kind of the queried object.
          * @note The operation has always a unique result.
          */
         TValueId valueOf(TObjId obj) const;
@@ -255,7 +255,7 @@ class SymHeap {
         /**
          * @b destroy the given heap object.  All values which have been
          * pointing to the object, will now point to either OBJ_DELETED or
-         * OBJ_LOST, depending on type of the object being destroyed.
+         * OBJ_LOST, depending on kind of the object being destroyed.
          * @param obj ID of the object to destroy
          * @note This is really @b low-level @b implementation.  It does not
          * e.g. check for junk.  If you are interested in this ability, you
@@ -267,7 +267,7 @@ class SymHeap {
         /**
          * create an @b unkown @b value, which does not guarantee trivial
          * inequality with other values - see proveEq()
-         * @param code fine-grained type of the unknown value, UV_KNOWN is not
+         * @param code fine-grained kind of the unknown value, UV_KNOWN is not
          * allowed here
          * @param clt static type-info about the unknown value, compulsory.
          * @return ID of the just created value
@@ -278,7 +278,7 @@ class SymHeap {
         /**
          * check the state of a @b possibly @b unknown @b value
          * @param val ID of the value to check
-         * @return fine-grained type of the unknown value, or UV_KNOWN in case
+         * @return fine-grained kind of the unknown value, or UV_KNOWN in case
          * of known value
          */
         EUnknownValue valGetUnknown(TValueId val) const;

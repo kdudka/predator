@@ -209,7 +209,7 @@ struct cl_type {
     cl_type_uid_t                       uid;
 
     /**
-     * type of type (enumeration)
+     * kind of type (enumeration)
      */
     enum cl_type_e                      code;
 
@@ -282,7 +282,7 @@ enum cl_accessor_e {
  */
 struct cl_accessor {
     /**
-     * type of accessor (enumeration)
+     * kind of accessor (enumeration)
      */
     enum cl_accessor_e                  code;
 
@@ -324,7 +324,7 @@ struct cl_accessor {
  */
 struct cl_cst {
     /**
-     * type of constant (enumeration)
+     * kind of constant (enumeration)
      */
     enum cl_type_e code;
 
@@ -403,7 +403,7 @@ enum cl_operand_e {
  */
 struct cl_operand {
     /**
-     * type of operand (enumeration)
+     * kind of operand (enumeration)
      */
     enum cl_operand_e                   code;
 
@@ -570,7 +570,7 @@ enum cl_binop_e {
  */
 struct cl_insn {
     /**
-     * type of instruction (enumeration)
+     * kind of instruction (enumeration)
      */
     enum cl_insn_e                      code;
 

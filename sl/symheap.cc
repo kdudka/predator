@@ -875,7 +875,7 @@ bool SymHeap::proveEq(bool *result, TValueId valA, TValueId valB) const {
         // valB not found, this should never happen
         TRAP;
 
-    // now look at the type of valB
+    // now look at the kind of valB
     const Value &valueB = iter->second;
     const EValue code = valueB.code;
     switch (code) {

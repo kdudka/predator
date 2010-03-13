@@ -58,7 +58,7 @@ enum EVar {
  * high-level variable representation
  */
 struct Var {
-    EVar                        code;   ///< high-level type of variable
+    EVar                        code;   ///< high-level kind of variable
     struct cl_location          loc;    ///< location of its declaration
 
     /**
@@ -87,7 +87,7 @@ struct Var {
 
     /**
      * wrap low-level operand to Var object
-     * @param code type of variable
+     * @param code kind of variable
      * @param op Pointer to low-level operand to be used for Var construction.
      */
     Var(EVar code, const struct cl_operand *op);
@@ -237,7 +237,7 @@ struct Insn {
     Storage                     *stor;
 
     /**
-     * type of instruction, see #cl_insn_e documentation
+     * kind of instruction, see #cl_insn_e documentation
      * @note now there can be also CL_INSN_CALL and CL_INSN_SWITCH
      */
     enum cl_insn_e              code;
