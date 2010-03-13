@@ -3,6 +3,10 @@ GCC_BUILD = gcc-build
 GCC_INSTALL = gcc-install
 GCC_LIBS_PREFIX ?= /usr
 
+GMP_LIB  ?= $(GCC_LIBS_PREFIX)
+MPC_LIB  ?= $(GCC_LIBS_PREFIX)
+MPFR_LIB ?= $(GCC_LIBS_PREFIX)
+
 ABDUCT = abduction.tgz
 ABDUCT_DIR = abductor_prover
 ABDUCT_CIL = $(ABDUCT_DIR)/cil
@@ -78,9 +82,9 @@ build_gcc: $(GCC_SRC)
 				--enable-languages=c++,c \
 				--disable-multilib \
 				--prefix=$$TOP_LEVEL/$(GCC_INSTALL) \
-				--with-gmp=$(GCC_LIBS_PREFIX) \
-				--with-mpc=$(GCC_LIBS_PREFIX) \
-				--with-mpfr=$(GCC_LIBS_PREFIX); \
+				--with-gmp=$(GMP_LIB) \
+				--with-mpc=$(MPC_LIB) \
+				--with-mpfr=$(MPFR_LIB); \
 		fi
 	cd $(GCC_BUILD) && $(MAKE)
 	cd $(GCC_BUILD) && $(MAKE) -j1 install
