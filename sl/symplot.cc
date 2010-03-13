@@ -332,11 +332,10 @@ void SymHeapPlotter::Private::emitPendingEdges() {
 }
 
 void SymHeapPlotter::Private::plotSingleValue(TValueId value) {
-    if (VAL_NULL == value)
-        TRAP;
-
-    if (value < 0)
-        TRAP;
+    if (value <= 0) {
+        this->plotNodeValue(value, CL_TYPE_UNKNOWN, 0);
+        return;
+    }
 
     const struct cl_type *clt = this->heap->valType(value);
     if (!clt)
@@ -564,12 +563,12 @@ void SymHeapPlotter::Private::digObj(TObjId obj) {
 void SymHeapPlotter::Private::digValues() {
     TValueId value;
     while (workList.next(value)) {
-        if (value <= 0)
-            // bare value can't be followed
-            TRAP;
-
         // plot the value itself
         this->plotSingleValue(value);
+
+        if (value <= 0)
+            // bare value can't be followed
+            continue;
 
         TObjId obj = this->heap->valGetCompositeObj(value);
         if (OBJ_INVALID != obj) {
