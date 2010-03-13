@@ -771,7 +771,7 @@ namespace {
             return false;
 
         // FIXME: get rid of the const_cast
-        const TFnc *fnc = const_cast<TStor &>(stor).anyFncById[uid];
+        const TFnc *fnc = const_cast<TStor &>(stor).fncs[uid];
         if (!fnc)
             return false;
 

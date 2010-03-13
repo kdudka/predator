@@ -140,6 +140,23 @@ Var::Var(EVar code_, const struct cl_operand *op):
     }
 }
 
+bool isOnStack(const Var &var) {
+    const EVar code = var.code;
+    switch (code) {
+        case VAR_FNC_ARG:
+        case VAR_REG:
+        case VAR_LC:
+            return true;
+
+        case VAR_VOID:
+        case VAR_GL:
+            return false;
+    }
+
+    TRAP;
+    return false;
+}
+
 
 // /////////////////////////////////////////////////////////////////////////////
 // VarDb implementation
@@ -398,64 +415,6 @@ Fnc*& FncDb::operator[](int uid) {
 
 const Fnc* FncDb::operator[](int uid) const {
     return dbConstLookup(d->db, fncs_, uid);
-}
-
-
-// /////////////////////////////////////////////////////////////////////////////
-// FileDb implementation
-struct FileDb::Private {
-    typedef std::map<std::string, unsigned> TMap;
-    TMap db;
-};
-
-FileDb::FileDb():
-    d(new Private)
-{
-}
-
-FileDb::FileDb(const FileDb &ref):
-    d(new Private(*ref.d))
-{
-}
-
-FileDb::~FileDb() {
-    delete d;
-}
-
-FileDb& FileDb::operator=(const FileDb &ref) {
-    delete d;
-    d = new Private(*ref.d);
-    return *this;
-}
-
-File*& FileDb::operator[](const char *name) {
-    boost::filesystem::path filePath(name);
-    filePath.normalize();
-    const std::string &canonName = filePath.string();
-
-    File* &ref = dbLookup(d->db, files_, canonName, 0);
-    if (!ref)
-        // XXX: the object will be NOT destroyed by File
-        ref = new File(canonName);
-
-    return ref;
-}
-
-const File* FileDb::operator[](const char *name) const {
-    boost::filesystem::path filePath(name);
-    filePath.normalize();
-    return dbConstLookup(d->db, files_, filePath.string());
-}
-
-const Var& varById(const Storage &stor, int uid) {
-    const TVarDbById db0 = stor.varDbById;
-    TVarDbById::const_iterator iter = db0.find(uid);
-    if (db0.end() == iter)
-        // can't insert anything into const object
-        TRAP;
-
-    const VarDb &db1 = *iter->second;
-    return db1[uid];
 }
 
 } // namespace CodeStorage

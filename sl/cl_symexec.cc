@@ -61,7 +61,8 @@ namespace {
 
 void ClSymExec::run(CodeStorage::Storage &stor) {
     CL_DEBUG("looking for 'main()' at gl scope...");
-    CodeStorage::Fnc *main = stor.glFncByName["main"];
+    const int uid = stor.fncNames.glNames["main"];
+    CodeStorage::Fnc *main = stor.fncs[uid];
     if (!main) {
         CL_ERROR("main() not declared at global scope");
         return;

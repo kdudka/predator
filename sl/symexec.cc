@@ -40,21 +40,24 @@
 // utilities
 namespace {
     void createStackFrame(SymHeap &heap, const CodeStorage::Fnc &fnc) {
-        using CodeStorage::Var;
+        using namespace CodeStorage;
 #if DEBUG_SE_STACK_FRAME
         LocationWriter lw(&fnc.def.loc);
         CL_DEBUG_MSG(lw,
                 ">>> creating stack frame for " << nameOf(fnc) << "():");
 #endif
 
-        BOOST_FOREACH(const Var &var, fnc.vars) {
+        BOOST_FOREACH(const int uid, fnc.vars) {
+            const Var &var = fnc.stor->vars[uid];
+            if (isOnStack(var)) {
 #if DEBUG_SE_STACK_FRAME
-            lw = &var.loc;
-            CL_DEBUG_MSG(lw, ">>> creating stack variable: #" << var.uid
-                    << " (" << var.name << ")" );
+                lw = &var.loc;
+                CL_DEBUG_MSG(lw, ">>> creating stack variable: #" << var.uid
+                        << " (" << var.name << ")" );
 #endif
 
-            heap.objCreate(var.clt, var.uid);
+                heap.objCreate(var.clt, var.uid);
+            }
         }
     }
 
@@ -131,7 +134,8 @@ namespace {
         using CodeStorage::Var;
         SymHeapProcessor proc(heap, bt);
 
-        BOOST_FOREACH(const Var &var, fnc.vars) {
+        BOOST_FOREACH(const int uid, fnc.vars) {
+            const Var &var = fnc.stor->vars[uid];
             const LocationWriter lw(&var.loc);
 #if DEBUG_SE_STACK_FRAME
             CL_DEBUG_MSG(lw, "<<< destroying stack variable: #"
@@ -498,7 +502,7 @@ void SymExec::Private::execCallInsn(SymHeap heap, SymHeapUnion &results) {
 
     // look for Fnc ought to be called
     const int uid = this->resolveCallee(heap, opList[/* fnc */ 1]);
-    const Fnc *fnc = this->stor.anyFncById[uid];
+    const Fnc *fnc = this->stor.fncs[uid];
     if (!fnc)
         // unable to resolve Fnc by UID
         TRAP;

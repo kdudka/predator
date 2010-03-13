@@ -23,6 +23,7 @@
 #include "code_listener.h"
 
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -91,6 +92,8 @@ struct Var {
      */
     Var(EVar code, const struct cl_operand *op);
 };
+
+bool isOnStack(const Var &);
 
 /**
  * lookup container for set of Var objects
@@ -191,6 +194,22 @@ class TypeDb {
  * @param clt an arbitrary code listener type to be read
  */
 void readTypeTree(TypeDb &db, const struct cl_type *clt);
+
+/**
+ * name to UID mapping for global/static symbols
+ */
+struct NameDb {
+    typedef std::map<std::string, int /* uid */>    TNameMap;
+    typedef std::map<std::string, TNameMap>         TFileMap;
+
+    TNameMap        glNames;
+    TFileMap        lcNames;
+};
+
+// TODO: implement?
+int /* uid */ lookup(const NameDb &db,
+                     const std::string &file,
+                     const std::string &name);
 
 class Block;
 class ControlFlow;
@@ -441,25 +460,21 @@ class ControlFlow {
         Private *d;
 };
 
-struct File;
-
-/**
- * STL-based map from function uid to corresponding Fnc object
- */
-typedef std::vector<int> TArgByPos;
+typedef std::vector<int>        TArgByPos;
+typedef std::set<int>           TVarList;
 
 /**
  * function definition
  */
 struct Fnc {
-    File                        *file;  ///< reference place of fnc definition
     struct cl_operand           def;    ///< definition as low-level operand
-    VarDb                       vars;   ///< per-function local variables
+    Storage                     *stor;  ///< owning Storage object
+    TVarList                    vars;   ///< uids of variables used by the fnc
     TArgByPos                   args;   ///< args uid addressed by arg position
     ControlFlow                 cfg;    ///< fnc code as control flow graph
 
     Fnc():
-        file(0)
+        stor(0)
     {
         def.code = CL_OPERAND_VOID;
     }
@@ -531,106 +546,15 @@ class FncDb {
 };
 
 /**
- * STL-based map from function name to corresponding Fnc object
- */
-typedef std::map<std::string, Fnc *> TFncNames;
-
-/**
- * file content representation
- */
-struct File {
-    /* const */ std::string     name;           ///< file name
-    VarDb                       vars;           ///< static variables
-    FncDb                       fncs;           ///< functions per file
-    TFncNames                   fncByName;      ///< associated fnc names
-
-    File(const std::string &name_):
-        name(name_)
-    {
-    }
-};
-
-/**
- * lookup container for set of File objects
- */
-class FileDb {
-    private:
-        typedef STD_VECTOR(File *) TList;
-
-    public:
-        typedef TList::const_iterator const_iterator;
-        typedef const_iterator iterator;
-
-    public:
-        FileDb();
-        ~FileDb();
-        FileDb(const FileDb &);                 ///< shallow copy
-        FileDb& operator=(const FileDb &);      ///< shallow copy
-
-        /**
-         * look for a File object by name, create one if not found
-         * @param name name of the file to look for
-         * @return referenced pointer to either a found or just created File
-         * @note given file name is always canonicalized before lookup
-         * @attention created objects will @b not be destroyed automatically
-         */
-        File*& operator[](const char *name);
-
-        /**
-         * look for a File object by name, crash if not found
-         * @attention It is not safe to look for a non-existing File object, it
-         * will jump to debugger in that case.
-         * @param name name of the file to look for
-         * @return pointer to the found File object
-         * @note given file name is always canonicalized before lookup
-         */
-        const File* operator[](const char *name) const;
-
-        /**
-         * return STL-like iterator to go through all files inside
-         */
-        const_iterator begin() const { return files_.begin(); }
-
-        /**
-         * return STL-like iterator to go through all files inside
-         */
-        const_iterator end()   const { return files_.end();   }
-
-        /**
-         * return count of files inside the container
-         */
-        size_t size()          const { return files_.size();  }
-
-    private:
-        TList files_;
-        struct Private;
-        Private *d;
-};
-
-/**
- * STL-based map from function uid to corresponding Fnc object
- */
-typedef std::map<int /* uid */, Fnc *> TFncById;
-
-/**
- * STL-based map from variable uid to corresponding VarDb object
- */
-typedef std::map<int /* uid */, VarDb *> TVarDbById;
-
-/**
  * a value type representing the @b whole @b serialised @b model of code
  */
 struct Storage {
-    TypeDb                      types;              ///< type info access point
-    VarDb                       glVars;             ///< global variables
-    TFncNames                   glFncByName;        ///< names of gl fncs
-    FileDb                      files;              ///< per file content
-    FncDb                       orphans;            ///< @note not used for now
-    TFncById                    anyFncById;         ///< IDs of all fncs
-    TVarDbById                  varDbById;          ///< IDs of all vars
+    TypeDb                      types;      ///< type info lookup container
+    VarDb                       vars;       ///< variables lookup container
+    FncDb                       fncs;       ///< functions lookup container
+    NameDb                      varNames;   ///< fnc names lookup container
+    NameDb                      fncNames;   ///< var names lookup container
 };
-
-const Var& varById(const Storage &, int uid);
 
 } // namespace CodeStorage
 

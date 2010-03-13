@@ -269,24 +269,16 @@ namespace {
         delete fnc;
     }
 
-    void releaseFncDb(FncDb &fncMap) {
-        BOOST_FOREACH(const Fnc *fnc, fncMap) {
+    void releaseStorage(Storage &stor) {
+        BOOST_FOREACH(const Fnc *fnc, stor.fncs) {
             destroyFnc(const_cast<Fnc *>(fnc));
         }
-    }
-
-    void releaseStorage(Storage &stor) {
-        BOOST_FOREACH(const File *file, stor.files) {
-            releaseFncDb(const_cast<File *>(file)->fncs);
-            delete file;
-        }
-        releaseFncDb(stor.orphans);
     }
 }
 
 struct ClStorageBuilder::Private {
     Storage     stor;
-    File        *file;
+    const char  *file;
     Fnc         *fnc;
     Block       *bb;
     Insn        *insn;
@@ -324,20 +316,30 @@ void ClStorageBuilder::Private::digOperandVar(const struct cl_operand *op) {
     int id = (CL_OPERAND_REG == op->code)
         ? op->data.reg.id
         : op->data.var.id;
+
+    // mark as used in the current function
+    this->fnc->vars.insert(id);
+
     enum cl_scope_e scope = op->scope;
     switch (scope) {
-        case CL_SCOPE_GLOBAL:
-            stor.glVars[id] = Var(VAR_GL, op);
-            stor.varDbById[id] = &stor.glVars;
+        case CL_SCOPE_GLOBAL: {
+            Var &ref = stor.vars[id] = Var(VAR_GL, op);
+            if (!ref.name.empty())
+                stor.varNames.glNames[ref.name] = id;
             break;
+        }
 
-        case CL_SCOPE_STATIC:
-            file->vars[id] = Var(VAR_GL, op);
-            stor.varDbById[id] = &file->vars;
+        case CL_SCOPE_STATIC: {
+            Var &ref = stor.vars[id] = Var(VAR_GL, op);
+            const char *file = ref.loc.file;
+            if (file && !ref.name.empty())
+                stor.varNames.lcNames[file][ref.name] = id;
             break;
+        }
 
         case CL_SCOPE_FUNCTION: {
-            Var &var = fnc->vars[id];
+            Var &var = stor.vars[id];
+
             EVar code = var.code;
             switch (code) {
                 case VAR_VOID:
@@ -354,7 +356,6 @@ void ClStorageBuilder::Private::digOperandVar(const struct cl_operand *op) {
                 case VAR_GL:
                     TRAP;
             }
-            stor.varDbById[id] = &fnc->vars;
             break;
         }
 
@@ -369,10 +370,6 @@ void ClStorageBuilder::Private::digOperandCst(const struct cl_operand *op) {
         // we are interested only in fncs for now
         return;
 
-    // look for File where the fnc is defined/declared
-    const char *fileName = op->loc.file;
-    File *file = stor.files[fileName];
-
     // check scope
     enum cl_scope_e scope = op->scope;
     switch (scope) {
@@ -384,25 +381,19 @@ void ClStorageBuilder::Private::digOperandCst(const struct cl_operand *op) {
             TRAP;
     }
 
-    // select appropriate index by scope
-    TFncNames &fncMap = (CL_SCOPE_GLOBAL == scope)
-        ? stor.glFncByName
-        : file->fncByName;
-
-    // look for precedent fnc name
-    const char *fncName = cst.data.cst_fnc.name;
-    Fnc* &ref = fncMap[fncName];
-
-    // look for fnc by UID
+    // create a place-holder if needed
     const int uid = cst.data.cst_fnc.uid;
-    Fnc *fnc = file->fncs[uid];
-    if (ref && ref != fnc)
-        // fnc redefinition
-        TRAP;
+    Fnc *fnc = stor.fncs[uid];
+    fnc->stor = &stor;
 
-    // index fnc name and uid
-    ref = fnc;
-    stor.anyFncById[uid] = fnc;
+    // select the appropriate name mapping by scope
+    NameDb::TNameMap &nameMap = (CL_SCOPE_GLOBAL == scope)
+        ? stor.fncNames.glNames
+        : stor.fncNames.lcNames[this->file];
+
+    // store name-to-uid mapping if needed
+    const char *name = cst.data.cst_fnc.name;
+    nameMap[name] = uid;
 }
 
 void ClStorageBuilder::Private::digOperand(const struct cl_operand *op) {
@@ -465,8 +456,10 @@ void ClStorageBuilder::Private::closeInsn() {
 }
 
 void ClStorageBuilder::file_open(const char *fileName) {
-    FileDb &fmap = d->stor.files;
-    d->file = fmap[fileName];
+    if (!fileName)
+        TRAP;
+
+    d->file = fileName;
 }
 
 void ClStorageBuilder::file_close() {
@@ -488,16 +481,15 @@ void ClStorageBuilder::fnc_open(const struct cl_operand *op) {
         TRAP;
 
     // store file for fnc
-    FileDb &fmap = d->stor.files;
-    d->file = fmap[op->loc.file];
+    d->file = op->loc.file;
 
     // set current fnc
     int uid = cst.data.cst_fnc.uid;
-    Fnc *fnc = d->file->fncs[uid];
+    Fnc *fnc = d->stor.fncs[uid];
+    fnc->stor = &d->stor;
     d->fnc = fnc;
 
     // store fnc definition
-    fnc->file = d->file;
     struct cl_operand &def = fnc->def;
     storeOperand(def, op);
     d->digOperand(&def);
@@ -513,9 +505,9 @@ void ClStorageBuilder::fnc_arg_decl(int pos, const struct cl_operand *op) {
 
     const int uid = op->data.var.id;
     Fnc &fnc = *(d->fnc);
-    Var &var = fnc.vars[uid];
+    Var &var = d->stor.vars[uid];
+    d->fnc->vars.insert(uid);
     var = Var(VAR_FNC_ARG, op);
-    d->stor.varDbById[uid] = &fnc.vars;
 
     const int argCnt = fnc.args.size();
     if (argCnt + /* FIXME: start with zero instead? */ 1 != pos)

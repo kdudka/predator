@@ -1,4 +1,4 @@
 test-0027.c:12:9: error: attempt to free a non-heap object, which does not exist anyhow
 test-0027.c:16:13: error: attempt to free a non-root object
 test-0027.c:17:13: error: attempt to free a non-root object
-test-0027.c:14:37: warning: killing junk
+test-0027.c:14:47: warning: killing junk

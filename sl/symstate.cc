@@ -79,7 +79,7 @@ namespace {
         const EUnknownValue uv1 = heap1.valGetUnknown(v1);
         const EUnknownValue uv2 = heap2.valGetUnknown(v2);
         if (UV_KNOWN != uv1 || UV_KNOWN != uv2)
-            // compare types of uknown values
+            // compare kinds of uknown values
             return (uv1 == uv2);
 
         const int cVal1 = heap1.valGetCustom(0, v1);
@@ -204,7 +204,7 @@ bool dfsCmp(TWL             &wl,
 
         // FIXME: this appears twice because of digComposite
         if (skipValue(heap1, value1))
-            // do not follow unknown value
+            // no need for next wheel
             continue;
 
         // TODO: distinguish among SLS and single dynamic variables here

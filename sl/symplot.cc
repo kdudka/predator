@@ -255,7 +255,7 @@ void SymHeapPlotter::Private::plotNodeObj(TObjId obj, enum cl_type_e code) {
 
     } else {
         this->dotStream << cVar;
-        const CodeStorage::Var &var = varById(*this->stor, cVar);
+        const CodeStorage::Var &var = this->stor->vars[cVar];
         std::string name = var.name;
         if (!name.empty())
             this->dotStream << " - " << name;
@@ -399,7 +399,7 @@ bool SymHeapPlotter::Private::handleCustomValue(TValueId value) {
 
     // FIXME: get rid of the const_cast
     Storage &storage = const_cast<Storage &>(*this->stor);
-    const Fnc *fnc = storage.anyFncById[cVal];
+    const Fnc *fnc = storage.fncs[cVal];
     if (!fnc)
         TRAP;
 
@@ -612,7 +612,7 @@ void SymHeapPlotter::Private::plotObj(TObjId obj) {
 
 void SymHeapPlotter::Private::plotCVar(int uid) {
     // CodeStorage variable lookup
-    const CodeStorage::Var &var = varById(*this->stor, uid);
+    const CodeStorage::Var &var = this->stor->vars[uid];
     this->lw = &var.loc;
     CL_DEBUG_MSG(this->lw, "XXX plotting stack variable: #" << var.uid
             << " (" << var.name << ")" );
@@ -686,8 +686,8 @@ bool SymHeapPlotter::plotStackFrame(const std::string           &name,
     CL_DEBUG_MSG(d->lw, "XXX plotting stack frame of " << nameOf(fnc) << "():");
 
     // go through all stack variables
-    BOOST_FOREACH(const Var &var, fnc.vars) {
-        d->plotCVar(var.uid);
+    BOOST_FOREACH(const int uid, fnc.vars) {
+        d->plotCVar(uid);
     }
 
     // close dot file
