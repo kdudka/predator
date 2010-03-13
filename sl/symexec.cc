@@ -75,10 +75,6 @@ namespace {
         SymHeapProcessor proc(heap, bt);
         BOOST_FOREACH(int arg, args) {
             const struct cl_operand &op = opList[pos++];
-#if 0
-            const Location last(&fnc.def.loc);
-            const LocationWriter lw(&op.loc, &last);
-#endif
             proc.setLocation(lw);
 
             const TValueId val = proc.heapValFromOperand(op);
@@ -136,18 +132,20 @@ namespace {
 
         BOOST_FOREACH(const int uid, fnc.vars) {
             const Var &var = fnc.stor->vars[uid];
-            const LocationWriter lw(&var.loc);
+            if (isOnStack(var)) {
+                const LocationWriter lw(&var.loc);
 #if DEBUG_SE_STACK_FRAME
-            CL_DEBUG_MSG(lw, "<<< destroying stack variable: #"
-                    << var.uid << " (" << var.name << ")" );
+                CL_DEBUG_MSG(lw, "<<< destroying stack variable: #"
+                        << var.uid << " (" << var.name << ")" );
 #endif
 
-            const TObjId obj = heap.objByCVar(var.uid);
-            if (obj < 0)
-                TRAP;
+                const TObjId obj = heap.objByCVar(var.uid);
+                if (obj < 0)
+                    TRAP;
 
-            proc.setLocation(lw);
-            proc.destroyObj(obj);
+                proc.setLocation(lw);
+                proc.destroyObj(obj);
+            }
         }
 
         heap.objDestroy(OBJ_RETURN);
@@ -156,7 +154,6 @@ namespace {
     void destroyStackFrame(IBtPrinter *bt, SymHeapUnion &huni,
                            const CodeStorage::Fnc &fnc)
     {
-
 #if DEBUG_SE_STACK_FRAME
         const LocationWriter lw(&fnc.def.loc);
         CL_DEBUG_MSG(lw, "<<< destroying stack frame of "
