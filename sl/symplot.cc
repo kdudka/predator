@@ -602,11 +602,19 @@ void SymHeapPlotter::Private::plotObj(TObjId obj) {
         // we got a bare value, which can't be followed, so we're done
         return;
 
+    if (OBJ_INVALID != this->heap->valGetCompositeObj(value)) {
+        // dig composite object and eventually schedule the values inside
+        this->digObj(obj);
+        goto wl_ready;
+    }
+
     // connect the variable node with its value
     this->plotEdgeValueOf(obj, value);
 
     // dig the target value recursively and plot (if not already)
     this->workList.schedule(value);
+
+wl_ready:
     this->digValues();
 }
 
