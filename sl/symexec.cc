@@ -75,7 +75,7 @@ struct SymExec::Private: public IBtPrinter {
     void execTermInsn(const SymHeap &heap);
     void execCallFailed(SymHeap heap, SymHeapUnion &results,
                         const struct cl_operand &dst);
-    void execCallInsn(const SymHeap &heap, SymHeapUnion &results);
+    void execInsnCall(const SymHeap &heap, SymHeapUnion &results);
     void execInsn(SymHeapScheduler &localState);
     void execBb();
     void execFncBody();
@@ -83,15 +83,15 @@ struct SymExec::Private: public IBtPrinter {
 };
 
 SymExec::Private::Private(CodeStorage::Storage &stor_):
-    stor(stor_),
-    btSet(0),
-    btStack(0),
-    fnc(0),
-    bb(0),
-    insn(0),
-    results(0),
-    callCache(0),
-    fastMode(false)
+    stor        (stor_),
+    btSet       (0),
+    btStack     (0),
+    fnc         (0),
+    bb          (0),
+    insn        (0),
+    results     (0),
+    callCache   (0),
+    fastMode    (false)
 {
 }
 
@@ -354,7 +354,7 @@ void SymExec::Private::execCallFailed(SymHeap heap, SymHeapUnion &results,
     results.insert(heap);
 }
 
-void SymExec::Private::execCallInsn(const SymHeap &heap, SymHeapUnion &results)
+void SymExec::Private::execInsnCall(const SymHeap &heap, SymHeapUnion &results)
 {
     using namespace CodeStorage;
     const TOperandList &opList = insn->operands;
@@ -444,11 +444,11 @@ void SymExec::Private::execInsn(SymHeapScheduler &localState) {
             SymHeapProcessor proc(workingHeap, this);
             proc.setLocation(this->lw);
 
-            // NOTE: this has to be tried *before* execCallInsn() to eventually
+            // NOTE: this has to be tried *before* execInsnCall() to eventually
             // catch malloc()/free() calls, which are treated differently
             if (!proc.exec(nextLocalState, *insn, this->fastMode))
                 // call insn
-                this->execCallInsn(workingHeap, nextLocalState);
+                this->execInsnCall(workingHeap, nextLocalState);
         }
     }
 
