@@ -130,7 +130,11 @@ void SymCallCtx::Private::destroyStackFrame() {
             }
         }
 
-        res.objDestroy(OBJ_RETURN);
+        // We need to look for junk since there can be a function returning an
+        // allocated object. The ignoring the return value on the caller's side
+        // can trigger a memory leak.
+        // TODO: write a test-case for this!
+        proc.destroyObj(OBJ_RETURN);
     }
 }
 

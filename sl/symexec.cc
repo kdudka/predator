@@ -175,7 +175,7 @@ void SymExec::setFastMode(bool val) {
     d->fastMode = val;
 }
 
-void SymExec::exec(const CodeStorage::Fnc &fnc) {
+void SymExec::exec(const CodeStorage::Fnc &fnc, SymHeapUnion &results) {
     using CodeStorage::Var;
 
     // set function ought to be executed
@@ -194,9 +194,6 @@ void SymExec::exec(const CodeStorage::Fnc &fnc) {
     // call cache
     SymCallCache callCache(d);
     d->callCache = &callCache;
-
-    // container for the resulting state
-    SymHeapUnion results;
 
     BOOST_FOREACH(const SymHeap &init, d->stateZero) {
         // XXX: synthesize CL_INSN_CALL
@@ -219,9 +216,6 @@ void SymExec::exec(const CodeStorage::Fnc &fnc) {
         // merge call results
         ctx.flushCallResults(results);
     }
-
-    // TODO: process the results somehow
-    (void) results;
 }
 
 void SymExec::Private::printBackTrace() {

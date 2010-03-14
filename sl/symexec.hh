@@ -25,6 +25,8 @@
  * SymExec - top level loop of the @b symbolic @b execution
  */
 
+class SymHeapUnion;
+
 namespace CodeStorage {
     struct Fnc;
     struct Storage;
@@ -52,14 +54,21 @@ class SymExec {
         /// enable/disable the @b fast @b mode
         void setFastMode(bool);
 
-        // TODO: some functions operating on d->stateZero??
-        // TODO: we should be able to define return variable somehow
+        /**
+         * initial state.  By default, there is only one symbolic heap in that
+         * state.  SymExec takes care of creation and initialization of
+         * global/static variables in it.  You can change the symbolic heap
+         * and/or add another one.  But be sure that all the disjuncts contain
+         * all global/static variables.
+         */
+        SymHeapUnion& stateZero();
 
         /**
-         * symbolically @b execute a function
+         * symbolically @b execute a function, starting from stateZero() state
          * @param fnc a function requested to be executed
+         * @param results a container for results of the symbolic execution
          */
-        void exec(const CodeStorage::Fnc &fnc /*, TODO: results? */);
+        void exec(const CodeStorage::Fnc &fnc, SymHeapUnion &results);
 
     private:
         /// object copying is @b not allowed
