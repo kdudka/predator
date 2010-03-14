@@ -73,6 +73,7 @@ CL_OBJS = cl_chain.o \
 	location.o \
 	ssd.o \
 	storage.o \
+	symcall.o \
 	symdump.o \
 	symexec.o \
 	symheap.o \

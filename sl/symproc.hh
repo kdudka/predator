@@ -93,6 +93,9 @@ class SymHeapProcessor {
         /// obtain a heap value corresponding to the given operand
         TValueId heapValFromOperand(const struct cl_operand &op);
 
+        /// resolve Fnc uid from the given opreand, -1 if there is no such Fnc
+        int /* uid */ fncFromOperand(const struct cl_operand &op);
+
         /**
          * check if a sub-heap reachable from the given value is also reachable
          * from somewhere else.  If not, such a sub-heap is considered as

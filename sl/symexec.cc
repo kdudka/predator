@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2009-2010 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of sl.
  *
@@ -23,6 +23,7 @@
 #include "btprint.hh"
 #include "cl_msg.hh"
 #include "storage.hh"
+#include "symcall.hh"
 #include "symproc.hh"
 #include "symstate.hh"
 #include "util.hh"
@@ -36,143 +37,6 @@
 #ifndef DEBUG_SE_STACK_FRAME
 #   define DEBUG_SE_STACK_FRAME 0
 #endif
-
-// utilities
-namespace {
-    void createStackFrame(SymHeap &heap, const CodeStorage::Fnc &fnc) {
-        using namespace CodeStorage;
-#if DEBUG_SE_STACK_FRAME
-        LocationWriter lw(&fnc.def.loc);
-        CL_DEBUG_MSG(lw,
-                ">>> creating stack frame for " << nameOf(fnc) << "():");
-#endif
-
-        BOOST_FOREACH(const int uid, fnc.vars) {
-            const Var &var = fnc.stor->vars[uid];
-            if (isOnStack(var)) {
-#if DEBUG_SE_STACK_FRAME
-                lw = &var.loc;
-                CL_DEBUG_MSG(lw, ">>> creating stack variable: #" << var.uid
-                        << " (" << var.name << ")" );
-#endif
-
-                heap.objCreate(var.clt, var.uid);
-            }
-        }
-    }
-
-    void setCallArgs(SymHeap &heap, const CodeStorage::Fnc &fnc,
-                     const CodeStorage::TOperandList &opList,
-                     IBtPrinter *bt, const LocationWriter &lw)
-    {
-        // get called fnc's args
-        const CodeStorage::TArgByPos &args = fnc.args;
-        if (args.size() + 2 != opList.size())
-            TRAP;
-
-        // set args' values
-        int pos = /* dst + fnc */ 2;
-        SymHeapProcessor proc(heap, bt);
-        BOOST_FOREACH(int arg, args) {
-            const struct cl_operand &op = opList[pos++];
-            proc.setLocation(lw);
-
-            const TValueId val = proc.heapValFromOperand(op);
-            if (VAL_INVALID == val)
-                TRAP;
-
-            const TObjId lhs = heap.objByCVar(arg);
-            if (OBJ_INVALID == lhs)
-                TRAP;
-
-            // set arg's value
-            proc.heapSetVal(lhs, val);
-        }
-    }
-
-    void assignReturnValue(SymHeap &heap, const struct cl_operand &op,
-                           IBtPrinter *bt)
-    {
-        if (CL_OPERAND_VOID == op.code)
-            // fnc returns void, thus we are done
-            return;
-
-        SymHeapProcessor proc(heap, bt);
-        proc.setLocation(&op.loc);
-
-        const TObjId obj = proc.heapObjFromOperand(op);
-        if (OBJ_INVALID == obj)
-            TRAP;
-
-        const TValueId val = heap.valueOf(OBJ_RETURN);
-        if (VAL_INVALID == val)
-            TRAP;
-
-        // we are ready to assign the return value
-        heap.objSetValue(obj, val);
-    }
-
-    void assignReturnValue(SymHeapUnion &state, const struct cl_operand &op,
-                           IBtPrinter *bt)
-    {
-        if (CL_OPERAND_VOID == op.code)
-            return;
-
-        // go through results and perform assignment of the return value
-        BOOST_FOREACH(SymHeap &res, state) {
-            assignReturnValue(res, op, bt);
-        }
-    }
-
-    void destroyStackFrame(IBtPrinter *bt, SymHeap &heap,
-                           const CodeStorage::Fnc &fnc)
-    {
-        using CodeStorage::Var;
-        SymHeapProcessor proc(heap, bt);
-
-        BOOST_FOREACH(const int uid, fnc.vars) {
-            const Var &var = fnc.stor->vars[uid];
-            if (isOnStack(var)) {
-                const LocationWriter lw(&var.loc);
-#if DEBUG_SE_STACK_FRAME
-                CL_DEBUG_MSG(lw, "<<< destroying stack variable: #"
-                        << var.uid << " (" << var.name << ")" );
-#endif
-
-                const TObjId obj = heap.objByCVar(var.uid);
-                if (obj < 0)
-                    TRAP;
-
-                proc.setLocation(lw);
-                proc.destroyObj(obj);
-            }
-        }
-
-        heap.objDestroy(OBJ_RETURN);
-    }
-
-    void destroyStackFrame(IBtPrinter *bt, SymHeapUnion &huni,
-                           const CodeStorage::Fnc &fnc)
-    {
-#if DEBUG_SE_STACK_FRAME
-        const LocationWriter lw(&fnc.def.loc);
-        CL_DEBUG_MSG(lw, "<<< destroying stack frame of "
-                << nameOf(fnc) << "():");
-
-        int hCnt = 0;
-#endif
-
-        BOOST_FOREACH(SymHeap &heap, huni) {
-#if DEBUG_SE_STACK_FRAME
-            if (1 < huni.size()) {
-                CL_DEBUG_MSG(lw, "*** destroying stack frame in result #"
-                        << (++hCnt));
-            }
-#endif
-            destroyStackFrame(bt, heap, fnc);
-        }
-    }
-}
 
 // /////////////////////////////////////////////////////////////////////////////
 // SymExec implementation
@@ -194,19 +58,11 @@ struct SymExec::Private: public IBtPrinter {
     TStateMap                   state;
     TBlockSet                   todo;
     SymHeapUnion                *results;
+    SymCallCache                *callCache;
     bool                        fastMode;
 
-    Private(CodeStorage::Storage &stor_):
-        stor(stor_),
-        btSet(0),
-        btStack(0),
-        fnc(0),
-        bb(0),
-        insn(0),
-        results(0),
-        fastMode(false)
-    {
-    }
+    Private(CodeStorage::Storage &stor_);
+    Private(const Private &par, const CodeStorage::Fnc &fnc, SymHeapUnion &res);
 
     // IBtPrinter implementation
     virtual void printBackTrace();
@@ -217,15 +73,42 @@ struct SymExec::Private: public IBtPrinter {
                      TValueId valDst, TValueId valSrc);
     void execCondInsn(const SymHeap &heap);
     void execTermInsn(const SymHeap &heap);
-    int resolveCallee(const SymHeap &heap, const struct cl_operand &op);
-    void execCallInsn(const CodeStorage::Fnc *fnc, const SymHeap &heap,
-                      SymHeapUnion &results);
-    void execCallInsn(SymHeap heap, SymHeapUnion &results);
+    void execCallFailed(SymHeap heap, SymHeapUnion &results,
+                        const struct cl_operand &dst);
+    void execCallInsn(const SymHeap &heap, SymHeapUnion &results);
     void execInsn(SymHeapScheduler &localState);
     void execBb();
     void execFncBody();
     void execFnc(const SymHeap &init);
 };
+
+SymExec::Private::Private(CodeStorage::Storage &stor_):
+    stor(stor_),
+    btSet(0),
+    btStack(0),
+    fnc(0),
+    bb(0),
+    insn(0),
+    results(0),
+    callCache(0),
+    fastMode(false)
+{
+}
+
+SymExec::Private::Private(const Private &parent, const CodeStorage::Fnc &fnc,
+                          SymHeapUnion &res)
+:
+    stor        (parent.stor),
+    btSet       (parent.btSet),
+    btStack     (parent.btStack),
+    fnc         (&fnc),
+    bb          (0),
+    insn        (0),
+    results     (&res),
+    callCache   (parent.callCache),
+    fastMode    (parent.fastMode)
+{
+}
 
 SymExec::SymExec(CodeStorage::Storage &stor):
     d(new Private(stor))
@@ -262,23 +145,36 @@ void SymExec::exec(const CodeStorage::Fnc &fnc) {
     // set function ought to be executed
     d->fnc = &fnc;
 
-    // container for resulting state
+    // container for the resulting state
     SymHeapUnion results;
-    d->results = &results;
+
+    // call cache
+    SymCallCache callCache(d);
+    d->callCache = &callCache;
 
     BOOST_FOREACH(const SymHeap &zero, d->stateZero) {
         SymHeap init(zero);
-        createStackFrame(init, fnc);
 
-        // well, we have successfully prepared the initial state,
-        // now please execute the function!
-        d->execFnc(init);
+        // XXX: synthesize CL_INSN_CALL
+        CodeStorage::Insn insn;
+        insn.stor = fnc.stor;
+        insn.code = CL_INSN_CALL;
+        insn.loc  = fnc.def.loc;
+        insn.operands.resize(2);
+        insn.operands[1] = fnc.def;
+
+        SymCallCtx &ctx = callCache.getCallCtx(init, insn);
+        if (!ctx.needExec())
+            // this seems a bit over-optimized
+            TRAP;
+
+        // now perform the call!
+        d->results = &ctx.rawResults();
+        d->execFnc(ctx.entry());
+        ctx.flushCallResults(results);
     }
 
-    // TODO: process return value
-    destroyStackFrame(d, results, fnc);
-
-    // TODO: process results somehow (generate points-to graph, etc.)
+    // TODO: process the results somehow
 }
 
 void SymExec::Private::printBackTrace() {
@@ -438,125 +334,17 @@ void SymExec::Private::execTermInsn(const SymHeap &heap) {
     }
 }
 
-int SymExec::Private::resolveCallee(const SymHeap &heap,
-                                    const struct cl_operand &op)
+void SymExec::Private::execCallFailed(SymHeap heap, SymHeapUnion &results,
+                                      const struct cl_operand &dst)
 {
-    if (CL_OPERAND_CST == op.code) {
-        // direct call
-        const struct cl_cst &cst = op.data.cst;
-        if (CL_TYPE_FNC != cst.code)
-            TRAP;
-
-        return cst.data.cst_fnc.uid;
-
-    } else {
-        // indirect call
-        SymHeapProcessor proc(const_cast<SymHeap &>(heap), this);
-        proc.setLocation(this->lw);
-
-        const TValueId val = proc.heapValFromOperand(op);
-        if (VAL_INVALID == val)
-            // Oops, it does not look as indirect call actually
-            TRAP;
-
-        return heap.valGetCustom(/* TODO: check type */ 0, val);
-    }
-}
-
-void SymExec::Private::execCallInsn(const CodeStorage::Fnc *fnc,
-                                    const SymHeap &heap, SymHeapUnion &results)
-{
-    const int uid = uidOf(*fnc);
-
-    // avoid recursion
-    this->btSet->insert(uid);
-
-    // FIXME: this approach will sooner or later cause a stack overflow
-    // TODO: use an explicit stack instead
-    Private subExec(this->stor);
-    subExec.btSet       = this->btSet;
-    subExec.btStack     = this->btStack;
-    subExec.fastMode    = this->fastMode;
-    subExec.fnc         = fnc;
-    subExec.results     = &results;
-
-    // run!
-    subExec.execFnc(heap);
-    if (1 != this->btSet->erase(uid))
-        TRAP;
-}
-
-void SymExec::Private::execCallInsn(SymHeap heap, SymHeapUnion &results) {
-    using namespace CodeStorage;
-
-    const TOperandList &opList = insn->operands;
-    if (CL_INSN_CALL != insn->code || opList.size() < 2)
-        TRAP;
-
-    // look for lhs
-    const struct cl_operand &dst = opList[0];
-    const bool haveLhs = (CL_OPERAND_VOID != dst.code);
-
-    // look for Fnc ought to be called
-    const int uid = this->resolveCallee(heap, opList[/* fnc */ 1]);
-    const Fnc *fnc = this->stor.fncs[uid];
-    if (!fnc)
-        // unable to resolve Fnc by UID
-        TRAP;
-
-    // FIXME: this may stop working once we decide for hash or tree container
-    SymHeapUnion tmp;
-
-    if (hasKey(this->btSet, uid)) {
-        // *** recursion detected ***
-        CL_ERROR_MSG(this->lw,
-                "call recursion detected, cg subtree will be excluded");
-        goto fail;
-    }
-
-    if (CL_OPERAND_VOID == fnc->def.code) {
-        CL_WARN_MSG(this->lw, "ignoring call of undefined function");
-        goto fail;
-    }
-
-    // create an object for return value (if needed)
-    if (haveLhs) {
-        // FIXME: improve the interface of SymHeap for the return value
-        heap.objDestroy(OBJ_RETURN);
-        heap.objDefineType(OBJ_RETURN, dst.type);
-    }
-
-    // crate local variables of called fnc
-    // TODO: wrap createStackFrame/destroyStackFrame to an object?
-    createStackFrame(heap, *fnc);
-    setCallArgs(heap, *fnc, opList, /* (IBtPrinter *) */ this, this->lw);
-
-    // we are ready to call a function, change backtrace stack accordingly
-    push(this->btStack, fnc, this->lw);
-
-    // now please perform the call
-    this->execCallInsn(fnc, heap, tmp);
-
-    // go through results and perform assignment of the return value
-    assignReturnValue(tmp, dst, /* (IBtPrinter *) */ this);
-
-    // final cleanup
-    destroyStackFrame(this, tmp, *fnc);
-    this->btStack->pop();
-
-    // we are done, merge call results
-    results.insert(tmp);
-    return;
-
-fail:
-    // something wrong happened
+    // something wrong happened, print the backtrace
     this->printBackTrace();
 
-    if (haveLhs) {
-        // set return value to unknown
+    if (CL_OPERAND_VOID != dst.code) {
         SymHeapProcessor proc(heap, this);
         proc.setLocation(this->lw);
 
+        // set return value to unknown
         const TValueId val = heap.valCreateUnknown(UV_UNKNOWN, dst.type);
         const TObjId obj = proc.heapObjFromOperand(dst);
         heap.objSetValue(obj, val);
@@ -564,6 +352,65 @@ fail:
 
     // call failed, so that we have exactly one resulting heap
     results.insert(heap);
+}
+
+void SymExec::Private::execCallInsn(const SymHeap &heap, SymHeapUnion &results)
+{
+    using namespace CodeStorage;
+    const TOperandList &opList = insn->operands;
+    if (CL_INSN_CALL != insn->code || opList.size() < 2)
+        TRAP;
+
+    // look for Fnc ought to be called
+    SymHeapProcessor proc(const_cast<SymHeap &>(heap), this);
+    proc.setLocation(this->lw);
+    const int uid = proc.fncFromOperand(opList[/* fnc */ 1]);
+    const Fnc *fnc = this->stor.fncs[uid];
+    if (!fnc)
+        // unable to resolve Fnc by UID
+        TRAP;
+
+    if (hasKey(this->btSet, uid)) {
+        // *** recursion detected ***
+        CL_ERROR_MSG(this->lw,
+                "call recursion detected, cg subtree will be excluded");
+        this->execCallFailed(heap, results, opList[/* dst */ 0]);
+        return;
+    }
+
+    if (CL_OPERAND_VOID == fnc->def.code) {
+        CL_WARN_MSG(this->lw, "ignoring call of undefined function");
+        this->execCallFailed(heap, results, opList[/* dst */ 0]);
+        return;
+    }
+
+    // get call context
+    SymCallCtx &ctx = this->callCache->getCallCtx(heap, *insn);
+    if (!ctx.needExec()) {
+        CL_DEBUG_MSG(this->lw, "(x) call of function optimized out");
+        ctx.flushCallResults(results);
+        return;
+    }
+
+    // we are ready to call a function, change backtrace stack accordingly
+    push(this->btStack, fnc, this->lw);
+
+    // enter backtrace
+    this->btSet->insert(uid);
+
+    // run!
+    // FIXME: this approach will sooner or later cause a stack overflow
+    // TODO: use an explicit stack instead
+    Private subExec(*this, *fnc, ctx.rawResults());
+    subExec.execFnc(ctx.entry());
+    if (1 != this->btSet->erase(uid))
+        TRAP;
+
+    // merge call results
+    ctx.flushCallResults(results);
+
+    // leave backtrace
+    this->btStack->pop();
 }
 
 void SymExec::Private::execInsn(SymHeapScheduler &localState) {

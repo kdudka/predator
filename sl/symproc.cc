@@ -304,6 +304,26 @@ TValueId SymHeapProcessor::heapValFromOperand(const struct cl_operand &op)
     }
 }
 
+int /* uid */ SymHeapProcessor::fncFromOperand(const struct cl_operand &op) {
+    if (CL_OPERAND_CST == op.code) {
+        // direct call
+        const struct cl_cst &cst = op.data.cst;
+        if (CL_TYPE_FNC != cst.code)
+            TRAP;
+
+        return cst.data.cst_fnc.uid;
+
+    } else {
+        // indirect call
+        const TValueId val = this->heapValFromOperand(op);
+        if (VAL_INVALID == val)
+            // Oops, it does not look as indirect call actually
+            TRAP;
+
+        return heap_.valGetCustom(/* TODO: check type */ 0, val);
+    }
+}
+
 namespace {
     template <class TWL, class THeap>
     void digPointingObjects(TWL &wl, THeap &heap, TValueId val) {
