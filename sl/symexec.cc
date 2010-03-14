@@ -132,6 +132,9 @@ void SymExec::setFastMode(bool val) {
 void SymExec::exec(const CodeStorage::Fnc &fnc) {
     using CodeStorage::Var;
 
+    // set function ought to be executed
+    d->fnc = &fnc;
+
     // wait, avoid recursion in the first place
     Private::TBtSet btSet;
     btSet.insert(uidOf(fnc));
@@ -142,19 +145,14 @@ void SymExec::exec(const CodeStorage::Fnc &fnc) {
     push(btStack, &fnc, &fnc.def.loc);
     d->btStack = &btStack;
 
-    // set function ought to be executed
-    d->fnc = &fnc;
-
-    // container for the resulting state
-    SymHeapUnion results;
-
     // call cache
     SymCallCache callCache(d);
     d->callCache = &callCache;
 
-    BOOST_FOREACH(const SymHeap &zero, d->stateZero) {
-        SymHeap init(zero);
+    // container for the resulting state
+    SymHeapUnion results;
 
+    BOOST_FOREACH(const SymHeap &init, d->stateZero) {
         // XXX: synthesize CL_INSN_CALL
         CodeStorage::Insn insn;
         insn.stor = fnc.stor;
@@ -163,18 +161,21 @@ void SymExec::exec(const CodeStorage::Fnc &fnc) {
         insn.operands.resize(2);
         insn.operands[1] = fnc.def;
 
+        // create call context
         SymCallCtx &ctx = callCache.getCallCtx(init, insn);
-        if (!ctx.needExec())
-            // this seems a bit over-optimized
-            TRAP;
+        if (ctx.needExec()) {
+            d->results = &ctx.rawResults();
 
-        // now perform the call!
-        d->results = &ctx.rawResults();
-        d->execFnc(ctx.entry());
+            // now perform the call!
+            d->execFnc(ctx.entry());
+        }
+
+        // merge call results
         ctx.flushCallResults(results);
     }
 
     // TODO: process the results somehow
+    (void) results;
 }
 
 void SymExec::Private::printBackTrace() {
@@ -392,10 +393,10 @@ void SymExec::Private::execInsnCall(const SymHeap &heap, SymHeapUnion &results)
         return;
     }
 
-    // we are ready to call a function, change backtrace stack accordingly
+    // enter backtrace
     push(this->btStack, fnc, this->lw);
 
-    // enter backtrace
+    // avoid recursion
     this->btSet->insert(uid);
 
     // run!
