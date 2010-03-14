@@ -30,7 +30,8 @@
  *   available for various types of analysis.
  *
  * - If you are interested in @b symbolic @b execution, see the SymHeap,
- *   SymHeapUnion, SymHeapProcessor and SymExec classes and the symid.hh header.
+ *   SymHeapUnion, SymHeapProcessor, SymCallCache and SymExec classes and the
+ *   symid.hh header.
  *
  * - If you need some equipment for debugging of the symbolic execution, look at
  *   symdump.hh and the class SymHeapPlotter.

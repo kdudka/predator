@@ -453,7 +453,7 @@ void SymExec::Private::execInsn(SymHeapScheduler &localState) {
     }
 
     if (!isTerm)
-        // save result for next instruction
+        // propagate the result to the entry of next instruction
         localState = nextLocalState;
 }
 
@@ -523,7 +523,7 @@ void SymExec::Private::execFnc(const SymHeap &init)
     this->lw = &fnc->def.loc;
     CL_DEBUG_MSG(this->lw, ">>> entering " << fncName << "()");
 
-    // look for entry block
+    // look for the entry block
     const Block *&entry = this->bb;
     entry = fnc->cfg.entry();
     if (!entry) {

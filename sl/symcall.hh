@@ -22,8 +22,8 @@
 
 /**
  * @file symcall.hh
- * classes SymCallCache and SymCallCtx for function call optimization during the
- * symbolic execution
+ * classes SymCallCache and SymCallCtx for function @b call @b optimization
+ * during the symbolic execution
  */
 
 class IBtPrinter;
@@ -32,7 +32,6 @@ class SymHeapUnion;
 
 namespace CodeStorage {
     struct Insn;
-    struct Storage;
 }
 
 /**
@@ -43,7 +42,7 @@ class SymCallCtx {
     public:
         /**
          * check if we need to execute the function call in this context.  If @b
-         * true, you need to execute the call, starting with entry() and insert
+         * true, you need to execute the call, starting with entry(), and insert
          * all results into rawResults().  If @b false, you don't need to
          * execute the function call and you can use the already cached result.
          */
@@ -71,8 +70,13 @@ class SymCallCtx {
         void flushCallResults(SymHeapUnion &dst);
 
     private:
+        /// @note these objects can't be created/destroyed out of SymCallCache
         SymCallCtx();
+
+        /// @note these objects can't be created/destroyed out of SymCallCache
         ~SymCallCtx();
+
+        /// @note these objects can't be created/destroyed out of SymCallCache
         friend class SymCallCache;
 
         /// object copying is @b not allowed
@@ -97,8 +101,8 @@ class SymCallCache {
         ~SymCallCache();
 
         /**
-         * cache entry point.  This will return either existing, or a newly
-         * created call context.
+         * cache entry point.  This returns either existing, or a newly created
+         * call context.
          * @param heap a symbolic heap valid for call entry
          * @param insn a call instruction which is about to be executed
          * @return reference to the corresponding SymCallCtx object
