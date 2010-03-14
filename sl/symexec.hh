@@ -34,9 +34,8 @@ namespace CodeStorage {
 
 /**
  * top level loop of the @b symbolic @b execution
- * @todo design some interface to interact with the surrounding environment,
- * something to set/get state of the global variables, and something set/get
- * function arguments and the return value
+ *
+ * for now, @b fast @b mode means that OOM analysis is omitted
  */
 class SymExec {
     public:
@@ -60,11 +59,14 @@ class SymExec {
          * global/static variables in it.  You can change the symbolic heap
          * and/or add another one.  But be sure that all the disjuncts contain
          * all global/static variables.
+         * @attention The state can't be changed during the symbolic execution.
+         * In particular, call of SymExec::exec(fnc, stateZero()) is really bad
+         * idea.  You need to use a temporary SymHeapUnion object in that case.
          */
         SymHeapUnion& stateZero();
 
         /**
-         * symbolically @b execute a function, starting from stateZero() state
+         * symbolically @b execute a function, starting from stateZero()
          * @param fnc a function requested to be executed
          * @param results a container for results of the symbolic execution
          */
