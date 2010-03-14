@@ -50,9 +50,7 @@ class SymHeapProcessor {
          * guess it will be not that easy as it sounds.
          * @param heap an instance of SymHeap to operate on
          * @param btPrinter an instance of IBtPrinter used to print backtraces.
-         * Be sure you have one while performing certain operations.  It will
-         * jump to debugger if the backtrace is about to be printed without
-         * having any instance of IBtPrinter.
+         * If omitted, no backtraces are printed.
          */
         SymHeapProcessor(SymHeap &heap, IBtPrinter *btPrinter = 0):
             heap_(heap),

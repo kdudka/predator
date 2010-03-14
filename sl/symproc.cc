@@ -38,7 +38,7 @@
 // SymHeapProcessor implementation
 void SymHeapProcessor::printBackTrace() {
     if (!btPrinter_)
-        TRAP;
+        return;
 
     btPrinter_->printBackTrace();
 }

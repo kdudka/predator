@@ -64,12 +64,7 @@ ClSymExec::~ClSymExec() {
 
 void ClSymExec::digGlJunk(SymHeap &heap) {
     using namespace CodeStorage;
-
-    // FIXME: move it to SymHeapProcessor?
-    struct DummyBtPrinter: public IBtPrinter {
-        virtual void printBackTrace() { }
-    } bt;
-    SymHeapProcessor proc(heap, &bt);
+    SymHeapProcessor proc(heap);
 
     BOOST_FOREACH(const Var &var, stor_->vars) {
         if (VAR_GL == var.code) {
