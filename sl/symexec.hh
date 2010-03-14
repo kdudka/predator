@@ -44,7 +44,7 @@ class SymExec {
          * @param stor all-in-one static info about the analyzed code, see
          * CodeStorage for details
          */
-        SymExec(CodeStorage::Storage &stor);
+        SymExec(const CodeStorage::Storage &stor);
         ~SymExec();
 
         /// return true if the @b fast @b mode is enabled

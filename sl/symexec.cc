@@ -91,7 +91,7 @@ struct SymExec::Private: public IBtPrinter {
     typedef std::set<const CodeStorage::Block *>                   TBlockSet;
     typedef std::map<const CodeStorage::Block *, SymHeapScheduler> TStateMap;
 
-    CodeStorage::Storage        &stor;
+    const CodeStorage::Storage  &stor;
     TBtSet                      *btSet;
     TBtStack                    *btStack;
     const CodeStorage::Fnc      *fnc;
@@ -105,7 +105,7 @@ struct SymExec::Private: public IBtPrinter {
     SymCallCache                *callCache;
     bool                        fastMode;
 
-    Private(CodeStorage::Storage &stor_);
+    Private(const CodeStorage::Storage &stor_);
     Private(const Private &par, const CodeStorage::Fnc &fnc, SymHeapUnion &res);
 
     // IBtPrinter implementation
@@ -126,7 +126,7 @@ struct SymExec::Private: public IBtPrinter {
     void execFnc(const SymHeap &init);
 };
 
-SymExec::Private::Private(CodeStorage::Storage &stor_):
+SymExec::Private::Private(const CodeStorage::Storage &stor_):
     stor        (stor_),
     btSet       (0),
     btStack     (0),
@@ -154,7 +154,7 @@ SymExec::Private::Private(const Private &parent, const CodeStorage::Fnc &fnc,
 {
 }
 
-SymExec::SymExec(CodeStorage::Storage &stor):
+SymExec::SymExec(const CodeStorage::Storage &stor):
     d(new Private(stor))
 {
     // create the initial state, consisting of global/static variables

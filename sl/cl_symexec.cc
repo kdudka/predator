@@ -42,9 +42,9 @@ class ClSymExec: public ClStorageBuilder {
         virtual void run(CodeStorage::Storage &);
 
     private:
-        std::string             configString_;
-        CodeStorage::Storage    *stor_;
-        LocationWriter          lw_;
+        std::string                     configString_;
+        const CodeStorage::Storage      *stor_;
+        LocationWriter                  lw_;
 
     private:
         void digGlJunk(SymHeap &);
@@ -118,7 +118,7 @@ void ClSymExec::run(CodeStorage::Storage &stor) {
     CL_DEBUG("looking for 'main()' at gl scope...");
     const int uid = stor.fncNames.glNames["main"];
     const CodeStorage::Fnc *main = stor.fncs[uid];
-    if (!main) {
+    if (!main || CL_OPERAND_VOID == main->def.code) {
         CL_ERROR("main() not declared at global scope");
         return;
     }
