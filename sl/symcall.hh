@@ -26,8 +26,7 @@
  * symbolic execution
  */
 
-#include "btprint.hh"
-
+class IBtPrinter;
 class SymHeap;
 class SymHeapUnion;
 
@@ -37,36 +36,36 @@ namespace CodeStorage {
 }
 
 /**
- * function call context, which represents an entry to SymCallCache
+ * function call context, which represents a cache entry of SymCallCache
  * @note these objects can't be created/destroyed out of SymCallCache
  */
 class SymCallCtx {
     public:
         /**
          * check if we need to execute the function call in this context.  If @b
-         * true, you need to execute the call, starting with @b entry() and
-         * insert all results into @b rawResults().  If @b false, you don't need
-         * to execute the function call and you can use the already cached
-         * result.
+         * true, you need to execute the call, starting with entry() and insert
+         * all results into rawResults().  If @b false, you don't need to
+         * execute the function call and you can use the already cached result.
          */
         bool needExec() const;
 
         /**
-         * a pre-computed symbolic heap valid for the entry of eventual function
-         * call.  Do not use this method, if @b needExec has returned @b false.
+         * a pre-computed symbolic heap valid for the entry of the eventual
+         * function call.  Do not use this method if needExec() has returned @b
+         * false.
          */
         const SymHeap& entry() const;
 
         /**
-         * a place for raw results of a function call, later used for the merge
-         * of states.  Do not use this method, if @b needExec has returned @b
-         * false.
+         * a place for raw results of a function call, later polished and merged
+         * into the target state.  Do not use this method if needExec() has
+         * returned @b false.
          */
         SymHeapUnion& rawResults();
 
         /**
          * merge the (either cached, or just computed) results of the
-         * corresponding function call into target state
+         * corresponding function call into the target state
          * @param dst target state
          */
         void flushCallResults(SymHeapUnion &dst);
@@ -90,7 +89,10 @@ class SymCallCtx {
 /// persistent cache for results of fncs called during the symbolic execution
 class SymCallCache {
     public:
-        /// @param bt object able to print backtrace when necessary/suitable
+        /**
+         * create long term cache, this should happen once per SymExec lifetime
+         * @param bt an object able to print backtraces when necessary/suitable
+         */
         SymCallCache(IBtPrinter *bt);
         ~SymCallCache();
 
