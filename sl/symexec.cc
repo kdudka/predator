@@ -38,6 +38,50 @@
 #   define DEBUG_SE_STACK_FRAME 0
 #endif
 
+// utilities
+namespace {
+
+void createGlVar(SymHeap &heap, const CodeStorage::Var &var) {
+    // create the corresponding heap object
+    const struct cl_type *clt = var.clt;
+    const TObjId obj = heap.objCreate(clt, var.uid);
+
+    // now attempt to initialize the variable since it is a global/static var
+    const enum cl_type_e code = clt->code;
+    switch (code) {
+        case CL_TYPE_INT:
+        case CL_TYPE_PTR:
+            heap.objSetValue(obj, VAL_NULL);
+            break;
+
+        case CL_TYPE_BOOL:
+            heap.objSetValue(obj, VAL_FALSE);
+            break;
+
+        case CL_TYPE_STRUCT:
+            // TODO: go through the struct recursively and initialize
+            // fall through!
+
+        default:
+            // only a few types are supported in case of gl variables for now
+            TRAP;
+    }
+}
+
+void createGlVars(SymHeap &heap, const CodeStorage::Storage &stor) {
+    using namespace CodeStorage;
+    BOOST_FOREACH(const Var &var, stor.vars) {
+        if (VAR_GL == var.code) {
+            const LocationWriter lw(&var.loc);
+            CL_DEBUG_MSG(lw, "(g) creating global variable: #" << var.uid
+                    << " (" << var.name << ")");
+            createGlVar(heap, var);
+        }
+    }
+}
+
+}
+
 // /////////////////////////////////////////////////////////////////////////////
 // SymExec implementation
 struct SymExec::Private: public IBtPrinter {
@@ -113,8 +157,10 @@ SymExec::Private::Private(const Private &parent, const CodeStorage::Fnc &fnc,
 SymExec::SymExec(CodeStorage::Storage &stor):
     d(new Private(stor))
 {
-    // TODO: create and initialize global/static variables (stateZero)
-    d->stateZero.insert(SymHeap());
+    // create the initial state, consisting of global/static variables
+    SymHeap init;
+    createGlVars(init, stor);
+    d->stateZero.insert(init);
 }
 
 SymExec::~SymExec() {
