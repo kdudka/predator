@@ -106,6 +106,7 @@ slplug.so: slplug.o libcl.a
 	$(LD) -o $@ $(LDFLAGS) slplug.o -lcl -L.
 
 clean:
+	rm -f version.h
 	rm -f libcl.a $(CL_OBJS)
 	rm -f slsparse $(SLSPARSE_OBJS)
 	rm -f slplug.o slplug.so
