@@ -12,8 +12,6 @@ SVG_VIEWER=chromium
 
 # initial checks
 test -x "$GCC"                              || exit 1
-test -d "$SL_BUILD"                         || exit 1
-test -f "$SL_BUILD/Makefile"                || exit 1
 
 # attempt to make
 make -s $MAKEOPTS                           || exit 1

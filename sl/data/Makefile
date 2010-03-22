@@ -30,6 +30,16 @@ inv-ign-??.c: $(CILLY)
 		exit 1; else \
 		exit 0; fi
 
+invpphtml: ../../ssd/util/eschtml ../../ssd/util/tty2html $(CILLY)
+	for i in $(DATASET); do \
+		echo "--- $$i"; \
+		$(TIMEOUT) \
+			$(CILLY) "$$i" 2>&1 \
+			| ../ssd/util/eschtml \
+			| ../ssd/util/tty2html \
+			> $$i-inv.pp.html; \
+	done
+
 clean:
 	rm -fv *.$(FORMAT) test-inv-???-??
 

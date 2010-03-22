@@ -1,15 +1,9 @@
-abduction.tgz
-abductor_prover/
+gcc
 gcc-build/
 gcc-install/
 gcc-src/
 invader-1_1/
 invader.zip
-separate/*.o
-separate/separate
-separate/tags
-separate/test-all
 sl_build/
 sparse/
 ssd/
-gcc

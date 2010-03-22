@@ -23,7 +23,7 @@
 #include "cl.hh"
 #include "cl_msg.hh"
 #include "location.hh"
-#include "ssd.hh"
+#include "ssd.h"
 
 #include <errno.h>
 #include <fcntl.h>
