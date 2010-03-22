@@ -57,7 +57,7 @@ clean:
 
 # wipe out all
 distclean: clean
-	rm -rf $(GCC_SRC) $(GCC_INSTALL)
+	rm -rf gcc $(GCC_SRC) $(GCC_INSTALL)
 	$(MAKE) -C sl distclean
 
 # initialize a git repo for Invader and apply downstream patches
