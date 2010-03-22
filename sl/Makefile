@@ -107,16 +107,15 @@ slplug.so: slplug.o libcl.a
 
 clean:
 	rm -f libcl.a $(CL_OBJS)
-	rm -f test-list test-all test-all.o data/dll.o
-	rm -f slsparse slsparse.o sparse-internal-symbols.dot
-	rm -f hash_table.o type_enumerator.o
+	rm -f slsparse $(SLSPARSE_OBJS)
 	rm -f slplug.o slplug.so
-	$(MAKE) distclean -C data
-	$(MAKE) clean -C ../sl_build || true
+	rm -f slplug.c*.dot
+	$(MAKE) clean -C data
+	if test -d ../sl_build; then $(MAKE) clean -C ../sl_build; fi
 
 distclean: clean
-	rm -f *.o *.dot
 	rm -rf ../sl_build
+	$(MAKE) distclean -C data
 
 distcheck: distclean
 	$(MAKE) check

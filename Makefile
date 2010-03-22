@@ -37,13 +37,28 @@ CURL            ?= curl --location -v       # URL grabber command-line
 GIT             ?= git                      # use this to override git(1)
 SVN             ?= svn                      # use this to override svn(1)
 
-.PHONY: fetch unpack build_gcc update_gcc update_gcc_src_only build_inv
+.PHONY: clean distclean fetch unpack \
+	build_gcc update_gcc update_gcc_src_only \
+	build_inv
 
 # fetch all, but gcc
 fetch: $(INVADER) $(SPARSE) $(SSD_GIT)
 
 # unpack Invader's sources
 unpack: $(INVADER_DIR)
+
+# wipe out all, but gcc
+clean:
+	rm -rf $(INVADER) $(SPARSE) $(SSD_GIT)
+	rm -rf $(INVADER_DIR)
+	rm -rf $(GCC_BUILD)
+	rm -rf sl_build
+	$(MAKE) -C sl clean
+
+# wipe out all
+distclean: clean
+	rm -rf $(GCC_SRC) $(GCC_INSTALL)
+	$(MAKE) -C sl distclean
 
 # initialize a git repo for Invader and apply downstream patches
 $(INVADER_DIR): $(INVADER)
