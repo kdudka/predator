@@ -12,6 +12,7 @@ Makefile            root Makefile, among others useful to build gcc from SVN
 
 Files maintained locally only
 =============================
+gcc                 symlink to gcc internal headers (feel free to override)
 gcc-build/          working directory for build of gcc
 gcc-install/        location of the installed gcc after a successful build
 gcc-src/            SVN working copy of gcc sources

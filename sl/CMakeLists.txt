@@ -132,9 +132,10 @@ add_executable(test-dll test-dll.cc data/dll.c)
 target_link_libraries(test-dll boost_unit_test_framework)
 add_test("data/dll.c-self_test" test-dll)
 
-set(gcc45 "${sl_BINARY_DIR}/../gcc-install/bin/gcc")
+SET(GCC45 "${sl_BINARY_DIR}/../gcc-install/bin/gcc"
+    CACHE STRING "absolute path to executable of gcc-4.5")
 
-add_test("compile-self" ${gcc45}
+add_test("compile-self" ${GCC45}
     ${CFLAGS}
     -I${sl_SOURCE_DIR}/..
     -I${sl_SOURCE_DIR}/../gcc
@@ -158,10 +159,10 @@ macro(test_sym_exec label tool arg1 arg2)
             -fplugin-arg-libslplug-verbose=1)
     endforeach()
 endmacro()
-test_sym_exec("simple-test" ${gcc45} "" "")
+test_sym_exec("simple-test" ${GCC45} "" "")
 
 foreach (num ${examples})
-    set(cmd "${gcc45}")
+    set(cmd "${GCC45}")
 
     # we use the following flag to avoid differences on 32bit vs 64bit archs
     # in the error output, which is checked for exact match
@@ -200,16 +201,16 @@ set(self_extra_opts
     -fplugin-arg-libslplug-verbose=15
     -fplugin-arg-libslplug-bypass-symexec)
 
-add_test("compile-self-extra" ${gcc45} ${self_extra_opts})
+add_test("compile-self-extra" ${GCC45} ${self_extra_opts})
 add_test("compile-self-valgrind" valgrind
     --error-exitcode=7
     --suppressions=${sl_SOURCE_DIR}/gcc.valgrind
-    ${gcc45}
+    ${GCC45}
     ${self_extra_opts})
 
 test_sym_exec("valgrind-test" valgrind
     --error-exitcode=7
-    ${gcc45})
+    ${GCC45})
 
 add_test("headers_sanity-0" gcc -ansi -Wall -Wextra -Werror -pedantic
     -o /dev/null

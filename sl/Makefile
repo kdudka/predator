@@ -20,10 +20,6 @@ CTEST           ?= ctest
 DATASET         ?= data/*.c
 TIMEOUT         ?= timeout 300
 
-GCC_SRC         ?= ../gcc-src
-GCC_BUILD       ?= ../gcc-build
-GCC_INSTALL     ?= ../gcc-install
-
 LD              ?= g++
 AR              ?= ar
 RANLIB          ?= ranlib
