@@ -15,27 +15,27 @@
 # You should have received a copy of the GNU General Public License
 # along with sl.  If not, see <http://www.gnu.org/licenses/>.
 
-GCC_SRC         ?= gcc-src                  # SVN working copy for gcc src
-GCC_BUILD       ?= gcc-build                # working directory gcc build
-GCC_INSTALL     ?= gcc-install              # where to install gcc from SVN
+GCC_SRC         ?= gcc-src#                 # SVN working copy for gcc src
+GCC_BUILD       ?= gcc-build#               # working directory gcc build
+GCC_INSTALL     ?= gcc-install#             # where to install gcc from SVN
 
-GCC_LIBS_PREFIX ?= /usr                     # common prefix for gcc prereqs
+GCC_LIBS_PREFIX ?= /usr#                    # common prefix for gcc prereqs
 
-GMP_LIB         ?= $(GCC_LIBS_PREFIX)       # location of -lgmp
-MPC_LIB         ?= $(GCC_LIBS_PREFIX)       # location of -lmpc
-MPFR_LIB        ?= $(GCC_LIBS_PREFIX)       # location of -lmpfr
+GMP_LIB         ?= $(GCC_LIBS_PREFIX)#      # location of -lgmp
+MPC_LIB         ?= $(GCC_LIBS_PREFIX)#      # location of -lmpc
+MPFR_LIB        ?= $(GCC_LIBS_PREFIX)#      # location of -lmpfr
 
 INVADER         ?= invader.zip
 INVADER_DIR     ?= invader-1_1
 INVADER_SRC     ?= $(INVADER_DIR)/sources
 INVADER_CIL     ?= $(INVADER_SRC)/cil
 
-SPARSE          ?= sparse                   # local git repo for SPARSE
-SSD_GIT         ?= ssd                      # local git repo for SSD
+SPARSE          ?= sparse#                  # local git repo for SPARSE
+SSD_GIT         ?= ssd#                     # local git repo for SSD
 
-CURL            ?= curl --location -v       # URL grabber command-line
-GIT             ?= git                      # use this to override git(1)
-SVN             ?= svn                      # use this to override svn(1)
+CURL            ?= curl --location -v#      # URL grabber command-line
+GIT             ?= git#                     # use this to override git(1)
+SVN             ?= svn#                     # use this to override svn(1)
 
 .PHONY: clean distclean fetch unpack \
 	build_gcc update_gcc update_gcc_src_only \

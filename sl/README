@@ -1,0 +1,31 @@
+Files maintained by the git repository
+======================================
+api/                API documentation template, use 'make -C api' to generate it
+api/html/index.html generated API documentation
+data/               test-suite data and standalone examples
+data/test-00??.c    test-cases as programs being analysed by the plug-in
+data/test-00??.err  expected error/warning message per each test-case
+CMakeLists.txt      CMake input file (new test-cases and modules are added here)
+COPYING             GPLv3 license text
+Makefile            initiator the CMake based out-of-source build and test-suite
+Makefile.chk        checks whether all headers are self-compilable
+code_listener.h     code_listener interface, useful for writing plug-ins, etc.
+config.h            various compile-time configuration (debugging options, ...)
+cl*                 code_listener related source codes
+cld_*               code_listener decorators
+sl.h                a header file included _only_ by analysed programs
+slgcc               a wrapper script which runs gcc with the plug-in
+slgdb               a wrapper script which runs gcc with the plug-in within gdb
+slplug.c            gcc-dependent part of the gcc plug-in
+slsparse.c          sparse-dependent part of the sparse client
+storage.hh          CodeStorage interface
+sym*                Symbolic Execution related source codes
+
+
+Useful targets of the root Makefile
+===================================
+all                 build the gcc plug-in, using CMake
+check               check the gcc plug-in, using CTest
+slsparse            build sparse client (not supposed to work well right now)
+slplug.so           emergency build of the gcc plug-in (does not require CMake)
+distcheck           this should be (successfully) run before each 'git push'
