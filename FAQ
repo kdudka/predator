@@ -1,5 +1,5 @@
-A: What equipment do I need to compile GCC from SVN sources?
-Q: * SVN client
+Q: What equipment do I need to compile GCC from SVN sources?
+A: * SVN client
      - the executable is called 'svn'
      - usually provided by a package called 'subversion'
      - available at http://subversion.apache.org/
@@ -19,8 +19,8 @@ Q: * SVN client
      - package is usually called 'mpfr'
      - on binary distros you may need also the 'mpfr-devel' sub-package
 
-A: What equipment do I need to compile the GCC plug-in?
-Q: * CMake 2.8+
+Q: What equipment do I need to compile the GCC plug-in?
+A: * CMake 2.8+
      - available at http://www.cmake.org
      - the executable is called 'cmake'
      - usually provided by a package called 'cmake'
@@ -30,28 +30,28 @@ Q: * CMake 2.8+
      - package is usually called 'boost'
      - on binary distros you may need also the 'boost-devel' sub-package
 
-A: What equipment do I need to run the test-suite?
-Q: * 32bit system headers, especially in case of 64bit OS
+Q: What equipment do I need to run the test-suite?
+A: * 32bit system headers, especially in case of 64bit OS
      - on Ubuntu/Debian provided by a package called 'libc6-dev-i386'
      - you can their status by 'gcc -m32 -o /dev/null /usr/include/stdlib.h'
 
-A: How can I compile GCC from SVN sources?
-Q:
+Q: How can I compile GCC from SVN sources?
+A:
     $ make build_gcc
 
-A: How can I compile the GCC plug-in?
-Q:
+Q: How can I compile the GCC plug-in?
+A:
     $ make -C sl
 
-A: How can I run the test-suite?
-Q:
+Q: How can I run the test-suite?
+A:
     $ make -C sl check
 
-A: Can I compile the plug-in using my system GCC instead?
-Q: Yes, you need GCC version 4.5+ or a working snapshot.
+Q: Can I compile the plug-in using my system GCC instead?
+A: Yes, you need GCC version 4.5+ or a working snapshot.
 
-A: How can I compile the plug-in against my system GCC?
-Q:
+Q: How can I compile the plug-in against my system GCC?
+A:
     $ ln -sfT GCC_PLUGIN_HEADERS ./gcc
     $ make -C sl
 
