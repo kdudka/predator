@@ -1,0 +1,63 @@
+A: What equipment do I need to compile GCC from SVN sources?
+Q: * SVN client
+     - the executable is called 'svn'
+     - usually provided by a package called 'subversion'
+     - available at http://subversion.apache.org/
+
+   * GMP library (including the -devel stuff)
+     - available at http://gmplib.org/
+     - package is usually called 'gmp'
+     - on binary distros you may need also the 'gmp-devel' sub-package
+
+   * MPC library (including the -devel stuff)
+     - available at http://www.multiprecision.org/
+     - package is usually called 'mpc' or 'libmpc'
+     - on binary distros you may need also the 'libmpc-devel' sub-package
+
+   * MPFR library (including the -devel stuff)
+     - available at http://www.mpfr.org/
+     - package is usually called 'mpfr'
+     - on binary distros you may need also the 'mpfr-devel' sub-package
+
+A: What equipment do I need to compile the GCC plug-in?
+Q: * CMake 2.8+
+     - available at http://www.cmake.org
+     - the executable is called 'cmake'
+     - usually provided by a package called 'cmake'
+
+   * Boost libraries 1.37+
+     - available at http://www.boost.org/
+     - package is usually called 'boost'
+     - on binary distros you may need also the 'boost-devel' sub-package
+
+A: What equipment do I need to run the test-suite?
+Q: * 32bit system headers, especially in case of 64bit OS
+     - on Ubuntu/Debian provided by a package called 'libc6-dev-i386'
+     - you can their status by 'gcc -m32 -o /dev/null /usr/include/stdlib.h'
+
+A: How can I compile GCC from SVN sources?
+Q:
+    $ make build_gcc
+
+A: How can I compile the GCC plug-in?
+Q:
+    $ make -C sl
+
+A: How can I run the test-suite?
+Q:
+    $ make -C sl check
+
+A: Can I compile the plug-in using my system GCC instead?
+Q: Yes, you need GCC version 4.5+ or a working snapshot.
+
+A: How can I compile the plug-in against my system GCC?
+Q:
+    $ ln -sfT GCC_PLUGIN_HEADERS ./gcc
+    $ make -C sl
+
+    You need to replace GCC_PLUGIN_HEADERS by a directory containing the gcc
+    plug-in headers (gcc-plugin.h, tree-pass.h, and the like).  No idea, if
+    there is something like standardized location for them across all
+    distributions.  On my box they are located in:
+
+    /usr/lib64/gcc/x86_64-pc-linux-gnu/4.5.0-alpha20091224/plugin/include

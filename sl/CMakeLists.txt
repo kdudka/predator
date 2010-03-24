@@ -132,7 +132,7 @@ add_executable(test-dll test-dll.cc data/dll.c)
 target_link_libraries(test-dll boost_unit_test_framework)
 add_test("data/dll.c-self_test" test-dll)
 
-SET(GCC45 "${sl_BINARY_DIR}/../gcc-install/bin/gcc"
+set(GCC45 "${sl_BINARY_DIR}/../gcc-install/bin/gcc"
     CACHE STRING "absolute path to executable of gcc-4.5")
 
 add_test("compile-self" ${GCC45}

@@ -1,5 +1,7 @@
 Files maintained by the git repository
 ======================================
+FAQ                 Frequently Asked Questions (and corresponding answers)
+Makefile            root Makefile, among others useful to build gcc from SVN
 invader-extras/     downstream patches for Invader
 ocaml/mltags        script generating tags for ocaml
 seplog/             implementation of symbolic heap by Peter Peringer
@@ -7,7 +9,6 @@ sl/                 current _trunk_ of all source codes
 sl/COPYING          GPLv3 license text
 sl/README           more specific README for the source codes
 sparse-extras/      downstream patches for sparse
-Makefile            root Makefile, among others useful to build gcc from SVN
 
 
 Files maintained locally only
