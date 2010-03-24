@@ -22,8 +22,8 @@ storage.hh          CodeStorage interface
 sym*                Symbolic Execution related source codes
 
 
-Useful targets of the root Makefile
-===================================
+Useful Makefile targets
+=======================
 all                 build the gcc plug-in, using CMake
 check               check the gcc plug-in, using CTest
 slsparse            build sparse client (not supposed to work well right now)

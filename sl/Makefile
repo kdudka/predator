@@ -108,7 +108,7 @@ clean:
 	rm -f slplug.o slplug.so
 	rm -f slplug.c*.dot
 	$(MAKE) clean -C data
-	if test -d ../sl_build; then $(MAKE) clean -C ../sl_build; fi
+	if test -e ../sl_build/Makefile; then $(MAKE) clean -C ../sl_build; fi
 
 distclean: clean
 	rm -rf ../sl_build
