@@ -22,9 +22,13 @@
  * various compile-time options
  */
 
-#include "version.h"    /* needed for TRAP ....SL_GIT_SHA1          */
 #include <signal.h>     /* needed for TRAP ... raise(SIGTRAP)       */
 #include <stdio.h>      /* needed for TRAP ... fprintf(stderr, ...) */
+
+/**
+ * defined in version.c to avoid rebuild of all modules on git-commit
+ */
+extern const char *sl_git_sha1;
 
 /**
  * jump to debugger by default in case anything interesting happens
@@ -32,7 +36,7 @@
  */
 #define TRAP do { \
     fprintf(stderr, "%s:%d: killing self by SIGTRAP [SHA1 %s]\n", \
-            __FILE__, __LINE__, SL_GIT_SHA1); \
+            __FILE__, __LINE__, sl_git_sha1); \
     raise(SIGTRAP); \
 } while (0)
 

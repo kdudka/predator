@@ -22,6 +22,7 @@
 
 #include "config.h"
 #include "code_listener.h"
+#include "version.h"
 
 #include <gcc/coretypes.h>
 #include <gcc/diagnostic.h>

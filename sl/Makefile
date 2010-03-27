@@ -71,7 +71,8 @@ CL_OBJS = cl_chain.o \
 	symheap.o \
 	symplot.o \
 	symproc.o \
-	symstate.o
+	symstate.o \
+	version.o
 
 CL_LIBS = -lboost_iostreams -lboost_system
 

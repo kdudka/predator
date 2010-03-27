@@ -119,7 +119,8 @@ add_library(sl STATIC
     symheap.cc
     symplot.cc
     symproc.cc
-    symstate.cc)
+    symstate.cc
+    version.c)
 
 target_link_libraries(sl
     boost_iostreams
