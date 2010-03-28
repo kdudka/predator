@@ -26,7 +26,13 @@
  * symid.hh::TValueId
  */
 
+#include "config.h"
+
 #include <climits>          // needed for UINT_MAX
+
+#ifndef DEBUG_SYMID_FORCE_INT
+#   define DEBUG_SYMID_FORCE_INT 0
+#endif
 
 /**
  * SymHeap @b object @b ID
@@ -121,5 +127,10 @@ typedef enum {
      */
     VAL_MAX_ID        = /* XXX */ UINT_MAX
 } TValueId;
+
+#if DEBUG_SYMID_FORCE_INT
+#   define TObjId int
+#   define TValueId int
+#endif
 
 #endif /* H_GUARD_SYM_ID_H */

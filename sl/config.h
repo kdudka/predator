@@ -69,3 +69,8 @@ extern const char *sl_git_sha1;
  * if 1, print gcc callbacks as they come when running in verbose mode
  */
 #define DEBUG_SLPLUG                    0
+
+/**
+ * if 1, define TObjId and TValueId is integers (makes debugging easier)
+ */
+#define DEBUG_SYMID_FORCE_INT           0
