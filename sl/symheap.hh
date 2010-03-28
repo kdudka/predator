@@ -43,30 +43,26 @@ enum EUnknownValue {
     UV_DEREF_FAILED         ///< value equivalent of symid.hh::OBJ_DEREF_FAILED
 };
 
+class SymHeap;
+
 /**
- * @b symbolic @b heap representation, the core part of "symexec" project
- * @todo The interface of SymHeap tends to be crowded.  It should be split to a
- * sensible object model.  Carving out subObj(), objParent() and
- * valGetCompositeObj() might be a viable start.
+ * symbolic heap @b core - no type-info, no object composition on this level
  */
-class SymHeap {
+class SymHeapCore {
     public:
         /// create an empty symbolic heap
-        SymHeap();
+        SymHeapCore();
 
         /// destruction of the symbolic heap invalidates all IDs of its entities
-        ~SymHeap();
+        virtual ~SymHeapCore();
 
         /// @note there is no such thing like COW implemented for now
-        SymHeap(const SymHeap &);
+        SymHeapCore(const SymHeapCore &);
 
         /// @note there is no such thing like COW implemented for now
-        SymHeap& operator=(const SymHeap &);
+        SymHeapCore& operator=(const SymHeapCore &);
 
     public:
-        /// container used to store foreign (integral) IDs to
-        typedef std::vector<int>        TCont;
-
         /// container used to store object IDs to
         typedef std::vector<TObjId>     TContObj;
 
@@ -80,9 +76,12 @@ class SymHeap {
          * @return A valid value ID in case of success, invalid otherwise.
          * @note It may also return @b unknown, @b composite or @b custom value,
          * depending on kind of the queried object.
-         * @note The operation has always a unique result.
+         * @note It may acquire a new value ID in case the value is not known.
+         * @todo SymHeapCore::valueOf is declared const - we should either
+         * implement it such, or declare it non-const.  Once it is acomplished,
+         * we may also declare it non-virtual.
          */
-        TValueId valueOf(TObjId obj) const;
+        virtual TValueId valueOf(TObjId obj) const;
 
         /**
          * return a value corresponding to @b symbolic @b address of the given
@@ -112,7 +111,132 @@ class SymHeap {
          */
         void haveValue(TContObj &dst, TValueId val) const;
 
+    protected:
+        /**
+         * create a new symbolic heap object
+         * @return ID of the just created symbolic heap object
+         */
+        TObjId objCreate();
+
+        /**
+         * create a new symbolic heap value
+         * @param code kind of the unknown value, UV_KNOWN if not unknown
+         * @param target pointed object's ID
+         * @return ID of the just created symbolic heap value
+         */
+        TValueId valCreate(EUnknownValue code, TObjId target);
+
     public:
+        TObjId lastObjId() const;
+        TValueId lastValueId() const;
+
+    public:
+        /**
+         * @b set @b value of the given object, which has to be @b valid and may
+         * @b not be a composite object
+         * @param obj ID of the object to set value of
+         * @param val ID requested to be stored into the object
+         * @note This is really @b low-level @b implementation.  It does not
+         * check for junk, delayed type-info definition, etc.  If you are
+         * interested in such abilities, you are looking for
+         * SymHeapProcessor::heapSetVal().
+         */
+        virtual void objSetValue(TObjId obj, TValueId val);
+
+    protected:
+        /**
+         * @b destroy the given heap object.  All values which have been
+         * pointing to the object, will now point to either OBJ_DELETED or
+         * OBJ_LOST, depending on kind of the object being destroyed.
+         * @param obj ID of the object to destroy
+         * @param kind OBJ_DELETED for heap object, or OBJ_LOST for
+         * static/automatic object
+         * @note This is really @b low-level @b implementation.  It does not
+         * e.g. check for junk.  If you are interested in this ability, you
+         * are looking for SymHeapProcessor::destroyObj().
+         */
+        void objDestroy(TObjId obj, TObjId kind);
+
+    public:
+        /**
+         * check the state of a @b possibly @b unknown @b value
+         * @param val ID of the value to check
+         * @return fine-grained kind of the unknown value, or UV_KNOWN in case
+         * of known value
+         * @todo rename SymHeapCore::valGetUnknown
+         */
+        EUnknownValue valGetUnknown(TValueId val) const;
+
+        /// duplicate the given @b unknown @b value
+        virtual TValueId valDuplicateUnknown(TValueId tpl);
+
+        /**
+         * replace all occurrences of the given @b unknown value by @b any (not
+         * necessarily unknown) value, given as the second argument
+         * @param val ID of the value about to be replaced.  It @b must be an
+         * unknown value.
+         * @param replaceBy @b any value to replace by.  It may be another
+         * unknown value, known value or even a special value.
+         * @note This method is heavily used by non-deterministic execution of
+         * CL_INSN_COND.
+         */
+        void valReplaceUnknown(TValueId val, TValueId replaceBy);
+
+    public:
+        /**
+         * introduce a new @b EqIf @b predicate (if not present already)
+         * @todo Documentation of addEqIf() needs to be re-worded.
+         * @param valCond as soon as valCond becomes a known value, an explicit
+         * (in)equality will be deduced for valA and valB.  This means valCond
+         * stands for a @b trigger.  It must be an @b unknown @b Boolean value.
+         * @param valA one side of the (in)equality scheduled for consideration
+         * @param valB one side of the (in)equality scheduled for consideration
+         * @param neg @b polarity, (valA == valB) iff (valCond != @b neg)
+         */
+        void addEqIf(TValueId valCond, TValueId valA, TValueId valB, bool neg);
+
+        /**
+         * @b reasoning about possibly unknown heap values
+         * @param result where to store the result to in case of @b success
+         * @param valA one side of the (in)equality being proved
+         * @param valB one side of the (in)equality being proved
+         * @return true, if we know the values are either equal, or non-equal;
+         * false if @b don't @b know
+         * @note The content of *result is not touched at all in case the
+         * reasoning has been not successful.
+         */
+        bool proveEq(bool *result, TValueId valA, TValueId valB) const;
+
+    private:
+        struct Private;
+        Private *d;
+};
+
+/**
+ * @b symbolic @b heap representation, the core part of "symexec" project
+ */
+class SymHeap: public SymHeapCore {
+    public:
+        /// create an empty symbolic heap
+        SymHeap();
+
+        /// destruction of the symbolic heap invalidates all IDs of its entities
+        virtual ~SymHeap();
+
+        /// @note there is no such thing like COW implemented for now
+        SymHeap(const SymHeap &);
+
+        /// @note there is no such thing like COW implemented for now
+        SymHeap& operator=(const SymHeap &);
+
+    public:
+        /// container used to store foreign (integral) IDs to
+        typedef std::vector<int>        TCont;
+
+    public:
+        // XXX
+        virtual TValueId valueOf(TObjId obj) const;
+
         /**
          * look for static type-info of the given object, which has to be @b
          * valid
@@ -240,17 +364,6 @@ class SymHeap {
         void objDefineType(TObjId obj, const struct cl_type *clt);
 
     public:
-        /**
-         * @b set @b value of the given object, which has to be @b valid and may
-         * @b not be a composite object
-         * @param obj ID of the object to set value of
-         * @param val ID requested to be stored into the object
-         * @note This is really @b low-level @b implementation.  It does not
-         * check for junk, delayed type-info definition, etc.  If you are
-         * interested in such abilities, you are looking for
-         * SymHeapProcessor::heapSetVal().
-         */
-        void objSetValue(TObjId obj, TValueId val);
 
         /**
          * @b destroy the given heap object.  All values which have been
@@ -261,7 +374,7 @@ class SymHeap {
          * e.g. check for junk.  If you are interested in this ability, you
          * are looking for SymHeapProcessor::destroyObj().
          */
-        void objDestroy(TObjId obj);
+        virtual void objDestroy(TObjId obj);
 
     public:
         /**
@@ -274,29 +387,6 @@ class SymHeap {
          */
         TValueId valCreateUnknown(EUnknownValue code,
                                   const struct cl_type *clt);
-
-        /**
-         * check the state of a @b possibly @b unknown @b value
-         * @param val ID of the value to check
-         * @return fine-grained kind of the unknown value, or UV_KNOWN in case
-         * of known value
-         */
-        EUnknownValue valGetUnknown(TValueId val) const;
-
-        /// duplicate the given @b unknown @b value
-        TValueId valDuplicateUnknown(TValueId tpl);
-
-        /**
-         * replace all occurrences of the given @b unknown value by @b any (not
-         * necessarily unknown) value, given as the second argument
-         * @param val ID of the value about to be replaced.  It @b must be an
-         * unknown value.
-         * @param replaceBy @b any value to replace by.  It may be another
-         * unknown value, known value or even a special value.
-         * @note This method is heavily used by non-deterministic execution of
-         * CL_INSN_COND.
-         */
-        void valReplaceUnknown(TValueId val, TValueId replaceBy);
 
     public:
         /**
@@ -318,34 +408,16 @@ class SymHeap {
          */
         int valGetCustom(const struct cl_type **pClt, TValueId val) const;
 
-    public:
-        /**
-         * introduce a new @b EqIf @b predicate (if not present already)
-         * @todo Documentation of addEqIf() needs to be re-worded.
-         * @param valCond as soon as valCond becomes a known value, an explicit
-         * (in)equality will be deduced for valA and valB.  This means valCond
-         * stands for a @b trigger.  It must be an @b unknown @b Boolean value.
-         * @param valA one side of the (in)equality scheduled for consideration
-         * @param valB one side of the (in)equality scheduled for consideration
-         * @param neg @b polarity, (valA == valB) iff (valCond != @b neg)
-         */
-        void addEqIf(TValueId valCond, TValueId valA, TValueId valB, bool neg);
-
-        /**
-         * @b reasoning about possibly unknown heap values
-         * @param result where to store the result to in case of @b success
-         * @param valA one side of the (in)equality being proved
-         * @param valB one side of the (in)equality being proved
-         * @return true, if we know the values are either equal, or non-equal;
-         * false if @b don't @b know
-         * @note The content of *result is not touched at all in case the
-         * reasoning has been not successful.
-         */
-        bool proveEq(bool *result, TValueId valA, TValueId valB) const;
-
     private:
         struct Private;
         Private *d;
+
+    private:
+        void resizeIfNeeded();
+        TValueId createCompValue(const struct cl_type *clt, TObjId obj);
+        TObjId createSubVar(const struct cl_type *clt, TObjId parent);
+        void createSubs(TObjId obj);
+        void destroyObj(TObjId obj);
 };
 
 #endif /* H_GUARD_SYM_HEAP_H */

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2009-2010 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of sl.
  *
@@ -106,283 +106,77 @@ class EqIfDb {
         }
 };
 
-typedef std::vector<TObjId>     TObjSub;
-typedef std::set<TObjId>        TObjSet;
-
-struct Var {
-    const struct cl_type    *clt;
-    int /* CodeStorage */   cVarUid;
-    TValueId                placedAt;
-    TValueId                value;
-    TObjId                  parent;
-    TObjSub                 subObjs;
-
-    // TODO
-    Var():
-        clt(0),
-        cVarUid(-1),
-        placedAt(VAL_INVALID),
-        value(VAL_INVALID),
-        parent(OBJ_INVALID)
-    {
-    }
-};
-
-enum EValue {
-    EV_HEAP = 0,
-    // TODO: EV_HEAP_OBJECT_OF_UNKNOWN_TYPE?
-    EV_UNKOWN,
-    EV_CUSTOM,
-    EV_COMPOSITE
-};
-
-struct Value {
-    EValue                  code;
-    const struct cl_type    *clt;
-    TObjId                  pointsTo;
-    TObjSet                 haveValue;
-
-    // TODO
-    Value():
-        code(EV_HEAP),
-        clt(0),
-        pointsTo(OBJ_INVALID)
-    {
-    }
-};
-
-typedef std::map<int, TObjId>       TIdObjMap;
-typedef std::map<int, TValueId>     TIdValueMap;
-typedef std::map<TObjId, Var>       TVarMap;
-typedef std::map<TValueId, Value>   TValueMap;
-
 // /////////////////////////////////////////////////////////////////////////////
-// SymHeap implementation
-struct SymHeap::Private {
-    TIdObjMap               cVarIdMap;
-    TIdValueMap             cValIdMap;
-    TVarMap                 varMap;
-    TValueMap               valueMap;
+// implementation of SymHeapCore
+struct SymHeapCore::Private {
+    struct Object {
+        TValueId            address;
+        TValueId            value;
+
+        Object(): address(VAL_INVALID), value(VAL_INVALID) { }
+    };
+
+    struct Value {
+        EUnknownValue       code;
+        TObjId              target;
+        std::set<TObjId>    referrers;
+
+        Value(): code(UV_KNOWN), target(OBJ_INVALID) { }
+    };
+
+    std::vector<Object>     objects;
+    std::vector<Value>      values;
+
     NeqDb                   neqDb;
     EqIfDb                  eqIfDb;
 
-    // IDs are now unique, overlapping of var/val IDs used to cause headaches
-    int                     last;
-
-    // TODO: move elsewhere
-    int                     retVal;
-
-    Private();
-    void initReturn();
-
     void releaseValueOf(TObjId obj);
-    void indexValueOf(TObjId obj, TValueId val);
-
-    // TODO: split the following two methods and merge only what is common
-    TValueId createValue(EValue code, const struct cl_type *clt, TObjId obj,
-                         TObjId referrer = OBJ_INVALID);
-    TValueId createValue(EValue code, const struct cl_type *clt,
-                         EUnknownValue uv, TObjId referrer = OBJ_INVALID) {
-        return this->createValue(code, clt, static_cast<TObjId>(uv), referrer);
-    }
-
-    TObjId createVar(const struct cl_type *clt, int /* CodeStorage */ uid);
-
-    void destroySingleVar(TObjId var);
-    void destroyVar(TObjId var);
-
-    void createSubs(TObjId var, const struct cl_type *clt);
 };
 
-void SymHeap::Private::initReturn() {
-    // create OBJ_RETURN
-    Var &var = this->varMap[OBJ_RETURN];
+void SymHeapCore::Private::releaseValueOf(TObjId obj) {
+    // this method is strictly private, range checks should be already done
+    const TValueId val = this->objects[obj].value;
+    if (val <= 0)
+        return;
 
-    var.clt         = 0;
-    var.cVarUid     = -1;
-    var.placedAt    = VAL_INVALID;
-    var.value       = this->createValue(EV_UNKOWN, 0, UV_UNINITIALIZED,
-                                        OBJ_RETURN);
+    Value &ref = this->values.at(val);
+    if (1 != ref.referrers.erase(obj))
+        // *** offset detected ***
+        TRAP;
 }
 
-SymHeap::Private::Private():
-    last(0),
-    retVal(VAL_INVALID)
-{
-    this->initReturn();
-}
-
-SymHeap::SymHeap():
+SymHeapCore::SymHeapCore():
     d(new Private)
 {
+    d->objects.resize(/* OBJ_RETURN */ 1);
+    d->values.resize(/* VAL_NULL */ 1);
+
+    // (un)initialize OBJ_RETURN
+    Private::Object &ref = d->objects[OBJ_RETURN];
+    ref.value = this->valCreate(UV_UNINITIALIZED, OBJ_UNKNOWN);
+
+    // store backward reference to OBJ_RETURN
+    Private::Value &refValue = d->values[ref.value];
+    refValue.referrers.insert(OBJ_RETURN);
 }
 
-SymHeap::SymHeap(const SymHeap &ref):
+SymHeapCore::SymHeapCore(const SymHeapCore &ref):
     d(new Private(*ref.d))
 {
 }
 
-SymHeap::~SymHeap() {
+SymHeapCore::~SymHeapCore() {
     delete d;
 }
 
-SymHeap& SymHeap::operator=(const SymHeap &ref) {
+SymHeapCore& SymHeapCore::operator=(const SymHeapCore &ref) {
     delete d;
     d = new Private(*ref.d);
     return *this;
 }
 
-void SymHeap::Private::releaseValueOf(TObjId obj) {
-    // TODO: implement
-    const TValueId val = this->varMap[obj].value;
-    if (val <= 0)
-        return;
-
-    Value &ref = this->valueMap[val];
-    TObjSet &hv = ref.haveValue;
-    if (1 != hv.erase(obj))
-        TRAP;
-}
-
-void SymHeap::Private::indexValueOf(TObjId obj, TValueId val) {
-    Value &ref = this->valueMap[val];
-    TObjSet &hv = ref.haveValue;
-    hv.insert(obj);
-}
-
-TValueId SymHeap::Private::createValue(EValue code, const struct cl_type *clt,
-                                       TObjId obj, TObjId referrer)
-{
-    const TValueId valId = static_cast<TValueId>(++last);
-
-    Value &val = valueMap[valId];
-    val.code            = code;
-    val.clt             = clt;
-    val.pointsTo        = obj;
-
-    if (OBJ_INVALID != referrer)
-        val.haveValue.insert(referrer);
-
-    return valId;
-}
-
-TObjId SymHeap::Private::createVar(const struct cl_type *clt,
-                                   int /* CodeStorage */ uid)
-{
-    const TObjId objId = static_cast<TObjId>(++last);
-    Var &var = this->varMap[objId];
-
-    var.clt         = clt;
-    var.cVarUid     = uid;
-    var.placedAt    = this->createValue(EV_HEAP, clt, objId);
-    var.value       = this->createValue(EV_UNKOWN, 0, UV_UNINITIALIZED, objId);
-
-    return objId;
-}
-
-void SymHeap::Private::destroySingleVar(TObjId var) {
-    TVarMap::iterator varIter = this->varMap.find(var);
-    if (this->varMap.end() == varIter)
-        // var not found
-        TRAP;
-
-    const Var &refVar = varIter->second;
-    const bool isHeapObj = (-1 == refVar.cVarUid || !refVar.clt);
-
-    // keep haveValue() up2date
-    this->releaseValueOf(var);
-
-    // mark corresponding value as freed
-    const TValueId val = refVar.placedAt;
-    Value &ref = this->valueMap[val];
-    ref.pointsTo = (isHeapObj)
-        ? OBJ_DELETED
-        : OBJ_LOST;
-
-    this->varMap.erase(varIter);
-}
-
-void SymHeap::Private::destroyVar(TObjId var) {
-    typedef std::stack<TObjId> TStack;
-    TStack todo;
-
-    // we are using explicit stack to avoid recursion
-    todo.push(var);
-    while (!todo.empty()) {
-        const TObjId var = todo.top();
-        todo.pop();
-
-        TVarMap::iterator varIter = this->varMap.find(var);
-        if (this->varMap.end() == varIter)
-            // var not found
-            TRAP;
-
-        // schedule all subvars for removal
-        Var &refVar = varIter->second;
-        TObjSub &subs = refVar.subObjs;
-        BOOST_FOREACH(TObjId subObj, subs) {
-            todo.push(subObj);
-        }
-
-        // remove current
-        this->destroySingleVar(var);
-    }
-}
-
-void SymHeap::Private::createSubs(TObjId var, const struct cl_type *clt) {
-    typedef std::pair<TObjId, const struct cl_type *> TPair;
-    typedef std::stack<TPair> TStack;
-    TStack todo;
-
-    // we use explicit stack to avoid recursion
-    push(todo, var, clt);
-    while (!todo.empty()) {
-        TObjId var;
-        const struct cl_type *clt;
-        boost::tie(var, clt) = todo.top();
-        todo.pop();
-
-        // FIXME: check whether clt may be NULL at this point
-        const enum cl_type_e code = clt->code;
-        switch (code) {
-            case CL_TYPE_ARRAY:
-                CL_WARN("CL_TYPE_ARRAY is not supported by SymHeap for now");
-                break;
-
-            case CL_TYPE_CHAR:
-                CL_WARN("CL_TYPE_CHAR is not supported by SymHeap for now");
-                break;
-
-            case CL_TYPE_BOOL:
-            case CL_TYPE_INT:
-            case CL_TYPE_PTR:
-                break;
-
-            case CL_TYPE_STRUCT: {
-                const int cnt = clt->item_cnt;
-                Var &ref = this->varMap[var];
-                ref.value = this->createValue(EV_COMPOSITE, clt, var,
-                                              /* TODO: check */ var);
-                ref.subObjs.resize(cnt);
-                for (int i = 0; i < cnt; ++i) {
-                    const struct cl_type *subClt = clt->items[i].type;
-                    const TObjId subObj = this->createVar(subClt, -1);
-                    ref.subObjs[i] = subObj;
-
-                    Var &subRef = /* FIXME: suboptimal */ this->varMap[subObj];
-                    subRef.parent = var;
-                    push(todo, subObj, subClt);
-                }
-                break;
-            }
-
-            default:
-                TRAP;
-        }
-    }
-}
-
-TValueId SymHeap::valueOf(TObjId obj) const {
+TValueId SymHeapCore::valueOf(TObjId obj) const {
+    // handle special cases first
     switch (obj) {
         case OBJ_INVALID:
             return VAL_INVALID;
@@ -390,299 +184,158 @@ TValueId SymHeap::valueOf(TObjId obj) const {
         case OBJ_LOST:
         case OBJ_DELETED:
         case OBJ_DEREF_FAILED:
-            return d->createValue(EV_UNKOWN, 0, UV_DEREF_FAILED);
+            return /* XXX */ const_cast<SymHeapCore *>(this)
+                ->valCreate(UV_DEREF_FAILED, OBJ_DEREF_FAILED);
 
         case OBJ_UNKNOWN:
-            TRAP;
+            return /* XXX */ const_cast<SymHeapCore *>(this)
+                ->valCreate(UV_UNKNOWN, OBJ_UNKNOWN);
 
         default:
+            if (this->lastObjId() < obj)
+                // out of range
+                return VAL_INVALID;
+
             break;
     }
 
-    TVarMap::iterator iter = d->varMap.find(obj);
-    if (d->varMap.end() == iter)
+    if (this->lastObjId() < obj || obj < 0)
+        // object ID is either out of range, or does not represent a valid obj
         return VAL_INVALID;
 
-    Var &var = iter->second;
-    return var.value;
+    const Private::Object &ref = d->objects[obj];
+    return ref.value;
 }
 
-TValueId SymHeap::placedAt(TObjId obj) const {
-    TVarMap::iterator iter = d->varMap.find(obj);
-    if (d->varMap.end() == iter)
+TValueId SymHeapCore::placedAt(TObjId obj) const {
+    if (this->lastObjId() < obj || obj <= 0)
+        // object ID is either out of range, or does not represent a valid obj
         return VAL_INVALID;
 
-    Var &var = iter->second;
-    return var.placedAt;
+    const Private::Object &ref = d->objects[obj];
+    return ref.address;
 }
 
-TObjId SymHeap::pointsTo(TValueId val) const {
-    TValueMap::iterator iter = d->valueMap.find(val);
-    if (d->valueMap.end() == iter)
+TObjId SymHeapCore::pointsTo(TValueId val) const {
+    if (this->lastValueId() < val || val <= 0)
+        // value ID is either out of range, or does not point to a valid obj
         return OBJ_INVALID;
 
-    Value &value = iter->second;
-    if (EV_HEAP != value.code)
-        TRAP;
-
-    return value.pointsTo;
+    const Private::Value &ref = d->values[val];
+    return ref.target;
 }
 
-void SymHeap::haveValue(TContObj &dst, TValueId val) const {
-    TValueMap::iterator iter = d->valueMap.find(val);
-    if (d->valueMap.end() == iter)
+void SymHeapCore::haveValue(TContObj &dst, TValueId val) const {
+    if (this->lastValueId() < val || val <= 0)
+        // value ID is either out of range, or does not point to a valid obj
         return;
 
-    Value &value = iter->second;
-    BOOST_FOREACH(TObjId obj, value.haveValue) {
+    const Private::Value &ref = d->values[val];
+    BOOST_FOREACH(TObjId obj, ref.referrers) {
         dst.push_back(obj);
     }
 }
 
-const struct cl_type* /* clt */ SymHeap::objType(TObjId obj) const {
-    // first look for Var object
-    TVarMap::iterator varIter = d->varMap.find(obj);
-    if (d->varMap.end() != varIter) {
-        // obj is a Var object
-        Var &var = varIter->second;
-        return var.clt;
-    }
+TObjId SymHeapCore::objCreate() {
+    const TObjId obj = static_cast<TObjId>(d->objects.size());
+    d->objects.resize(obj + 1);
 
-    // then look for Sls object
-    // TODO
-    TRAP;
-    return 0;
+    Private::Object &ref = d->objects[obj];
+    ref.address = this->valCreate(UV_KNOWN, obj);
+    ref.value   = this->valCreate(UV_UNINITIALIZED, OBJ_UNKNOWN);
+
+    // store backward reference
+    Private::Value &refValue = d->values[ref.value];
+    refValue.referrers.insert(obj);
+
+    return obj;
 }
 
-const struct cl_type* /* clt */ SymHeap::valType(TValueId val) const {
-    TValueMap::iterator iter = d->valueMap.find(val);
-    if (d->valueMap.end() == iter)
-        return 0;
+TValueId SymHeapCore::valCreate(EUnknownValue code, TObjId target) {
+    if (this->lastObjId() < target)
+        // target out of range (we allow OBJ_INVALID here for custom values)
+        TRAP;
 
-    const Value &ref = iter->second;
-    return ref.clt;
+    const TValueId val = static_cast<TValueId>(d->values.size());
+    d->values.resize(val + 1);
+
+    Private::Value &ref = d->values[val];
+    ref.code = code;
+    if (UV_KNOWN == code)
+        // ignore target for unknown values, they should be not followed anyhow
+        ref.target = target;
+
+    return val;
 }
 
-int /* CodeStorage var uid */ SymHeap::cVar(TObjId var) const {
-    TVarMap::iterator iter = d->varMap.find(var);
-    if (d->varMap.end() == iter)
-        return -1;
-
-    const Var &ref = iter->second;
-    return (ref.clt)
-        ? ref.cVarUid
-        : /* anonymous object of known size */ -1;
+TObjId SymHeapCore::lastObjId() const {
+    const size_t cnt = d->objects.size() - /* safe because of OBJ_RETURN */ 1;
+    return static_cast<TObjId>(cnt);
 }
 
-TObjId SymHeap::objByCVar(int /* CodeStorage var */ uid) const {
-    TIdObjMap::iterator iter = d->cVarIdMap.find(uid);
-    if (d->cVarIdMap.end() == iter)
-        return OBJ_INVALID;
-    else
-        return iter->second;
+TValueId SymHeapCore::lastValueId() const {
+    const size_t cnt = d->values.size() - /* safe because of VAL_NULL */ 1;
+    return static_cast<TValueId>(cnt);
 }
 
-void SymHeap::gatherCVars(TCont &out) const {
-    TIdObjMap::const_iterator ii;
-    for (ii = d->cVarIdMap.begin(); ii != d->cVarIdMap.end(); ++ii)
-        out.push_back(ii->first);
+void SymHeapCore::objSetValue(TObjId obj, TValueId val) {
+    if (this->lastObjId() < obj || obj < 0
+            || this->lastValueId() < val || val == VAL_INVALID)
+        // out of range
+        TRAP;
+
+    d->releaseValueOf(obj);
+    d->objects[obj].value = val;
+    if (0 <= val)
+        d->values[val].referrers.insert(obj);
 }
 
-TObjId SymHeap::subObj(TObjId var, int nth) const {
-    TVarMap::iterator iter = d->varMap.find(var);
-    if (d->varMap.end() == iter)
-        return OBJ_INVALID;
+/// @todo handle OBJ_RETURN somehow specially
+void SymHeapCore::objDestroy(TObjId obj, TObjId kind) {
+    if (this->lastObjId() < obj || obj < 0)
+        // out of range
+        TRAP;
 
-    const Var &refVar = iter->second;
-    const TObjSub &subs = refVar.subObjs;
-    const int cnt = subs.size();
-    return (nth < cnt)
-        ? subs[nth]
-        : OBJ_INVALID;
-}
-
-TObjId SymHeap::objParent(TObjId var) const {
-    TVarMap::iterator iter = d->varMap.find(var);
-    if (d->varMap.end() == iter)
-        return OBJ_INVALID;
-
-    const Var &refVar = iter->second;
-    return refVar.parent;
-}
-
-TObjId SymHeap::valGetCompositeObj(TValueId val) const {
-    TValueMap::iterator iter = d->valueMap.find(val);
-    if (d->valueMap.end() == iter)
-        return OBJ_INVALID;
-
-    const Value &ref = iter->second;
-    return (EV_COMPOSITE == ref.code)
-        ? /* FIXME: use union instead */ ref.pointsTo
-        : OBJ_INVALID;
-}
-
-TObjId SymHeap::objCreate(const struct cl_type *clt,
-                          int /* CodeStorage var */ uid)
-{
-    const enum cl_type_e code = clt->code;
-    switch (code) {
-        case CL_TYPE_INT:
-            CL_DEBUG("CL_TYPE_INT treated as pointer");
-            // go through!
-
-        case CL_TYPE_BOOL:
-        case CL_TYPE_PTR:
-        case CL_TYPE_STRUCT:
+    switch (kind) {
+        case OBJ_DELETED:
+        case OBJ_LOST:
             break;
 
-        case CL_TYPE_ARRAY:
-            if (CL_TYPE_CHAR == clt->items[0].type->code)
-                // make it possible to at least ignore strings
-                break;
-            // fall thorough!
         default:
             TRAP;
     }
 
-    const TObjId objId = d->createVar(clt, uid);
-    d->createSubs(objId, clt);
+    if (OBJ_RETURN != obj) {
+        TValueId addr = d->objects[obj].address;
+        if (addr <= 0)
+            // object about to be destroyed has invalid address
+            TRAP;
+        d->values.at(addr).target = kind;
+    }
 
-    if (/* heap object */ -1 != uid)
-        d->cVarIdMap[uid] = objId;
-
-    return objId;
-}
-
-TObjId SymHeap::objCreateAnon(int cbSize) {
-    return d->createVar(0, /* FIXME: use union for this? */ cbSize);
-}
-
-int SymHeap::objSizeOfAnon(TObjId var) const {
-    TVarMap::iterator iter = d->varMap.find(var);
-    if (d->varMap.end() == iter)
-        // not even a variable
-        TRAP;
-
-    Var &ref = iter->second;
-    if (ref.clt)
-        // not anonoymous variable at all
-        TRAP;
-
-    return /* cbSize */ ref.cVarUid;
-}
-
-bool SymHeap::valPointsToAnon(TValueId val) const {
-    if (val <= 0)
-        return false;
-
-    TValueMap::iterator valIter = d->valueMap.find(val);
-    if (d->valueMap.end() == valIter)
-        // not even a value
-        TRAP;
-
-    Value &value = valIter->second;
-    if (EV_HEAP != value.code || value.pointsTo < 0)
-        return false;
-
-    TVarMap::iterator iter = d->varMap.find(value.pointsTo);
-    if (d->varMap.end() == iter)
-        // not even a variable
-        TRAP;
-
-    const Var &ref = iter->second;
-    return !ref.clt;
-}
-
-void SymHeap::objDefineType(TObjId var, const struct cl_type *clt) {
-    TVarMap::iterator varIter = d->varMap.find(var);
-    if (d->varMap.end() == varIter)
-        // var not found
-        TRAP;
-
-    Var &refVar = varIter->second;
-    if (refVar.clt)
-        // type redefinition not allowed
-        TRAP;
-
-    refVar.cVarUid = /* heap object */ -1;
-    refVar.clt     = clt;
-    d->createSubs(var, clt);
-
-    if (OBJ_RETURN == var)
-        return;
-
-    TValueMap::iterator valIter = d->valueMap.find(refVar.placedAt);
-    if (d->valueMap.end() == valIter)
-        TRAP;
-
-    Value &value = valIter->second;
-    if (value.clt || EV_HEAP != value.code)
-        TRAP;
-
-    value.clt = clt;
-}
-
-void SymHeap::objSetValue(TObjId obj, TValueId val) {
     d->releaseValueOf(obj);
-    d->indexValueOf(obj, val);
-
-    // first look for Var object
-    TVarMap::iterator varIter = d->varMap.find(obj);
-    if (d->varMap.end() != varIter) {
-        // obj is a Var object
-        Var &var = varIter->second;
-        var.value = val;
-        return;
-    }
-
-    // then look for Sls object
-    // TODO
-    TRAP;
+    d->objects[obj].address = VAL_INVALID;
+    d->objects[obj].value   = VAL_INVALID;
 }
 
-void SymHeap::objDestroy(TObjId obj) {
-    // first look for Var object
-    TVarMap::iterator varIter = d->varMap.find(obj);
-    if (d->varMap.end() != varIter) {
-        const Var &var = varIter->second;
-        const int uid = var.cVarUid;
-        if (/* heap object */ -1 != uid)
-            d->cVarIdMap.erase(uid);
-
-        d->destroyVar(obj);
-        if (OBJ_RETURN == obj)
-            d->initReturn();
-
-        return;
-    }
-
-    // then look for Sls object
-    // TODO
-    TRAP;
-}
-
-TValueId SymHeap::valCreateUnknown(EUnknownValue code,
-                                   const struct cl_type *clt)
-{
-    if (UV_KNOWN == code)
+EUnknownValue SymHeapCore::valGetUnknown(TValueId val) const {
+    if (this->lastValueId() < val || val <= 0)
+        // out of range
         TRAP;
 
-    return d->createValue(EV_UNKOWN, clt, static_cast<TObjId>(code));
+    return d->values[val].code;
 }
 
-EUnknownValue SymHeap::valGetUnknown(TValueId val) const {
-    TValueMap::iterator iter = d->valueMap.find(val);
-    if (d->valueMap.end() == iter)
-        // value not found, this should never happen
-        TRAP;
+TValueId SymHeapCore::valDuplicateUnknown(TValueId val) {
+    if (this->lastValueId() < val || val <= 0)
+        // value ID is either out of range, or does not point to a valid obj
+        return VAL_INVALID;
 
-    Value &value = iter->second;
-    return (EV_UNKOWN == value.code)
-        ? static_cast<EUnknownValue>(value.pointsTo)
-        : UV_KNOWN;
+    const Private::Value &ref = d->values[val];
+    return this->valCreate(ref.code, ref.target);
 }
 
-void SymHeap::valReplaceUnknown(TValueId val, TValueId replaceBy) {
+void SymHeapCore::valReplaceUnknown(TValueId val, TValueId replaceBy) {
     typedef std::pair<TValueId /* val */, TValueId /* replaceBy */> TItem;
     TItem item(val, replaceBy);
 
@@ -703,7 +356,6 @@ void SymHeap::valReplaceUnknown(TValueId val, TValueId replaceBy) {
         }
 
         // handle all EqIf prdicates
-        // FIXME: not tested at all
         EqIfDb::TDst eqIfs;
         d->eqIfDb.lookupOnce(eqIfs, val);
         BOOST_FOREACH(const EqIfDb::TPred &pred, eqIfs) {
@@ -733,96 +385,28 @@ void SymHeap::valReplaceUnknown(TValueId val, TValueId replaceBy) {
     }
 }
 
-TValueId SymHeap::valDuplicateUnknown(TValueId tpl)
-{
-    TValueMap::iterator iter = d->valueMap.find(tpl);
-    if (d->valueMap.end() == iter)
-        // value not found, this should never happen
-        TRAP;
-
-    Value &value = iter->second;
-    return d->createValue(EV_UNKOWN, value.clt, value.pointsTo);
-}
-
-TValueId SymHeap::valCreateCustom(const struct cl_type *clt, int cVal)
-{
-    TIdValueMap::iterator ii = d->cValIdMap.find(cVal);
-    if (d->cValIdMap.end() == ii) {
-        const TValueId val = d->createValue(EV_CUSTOM, clt,
-                                            static_cast<TObjId>(cVal));
-        d->cValIdMap[cVal] = val;
-        return val;
-    }
-
-    // custom value already defined, we have to reuse it
-    const TValueId val = ii->second;
-    TValueMap::iterator vi = d->valueMap.find(val);
-    if (d->valueMap.end() == vi)
-        TRAP;
-
-    const Value &ref = vi->second;
-    if (EV_CUSTOM != ref.code)
-        // heap corruption
-        TRAP;
-
-    if (ref.clt != clt)
-        // type mismatch
-        TRAP;
-
-    return val;
-}
-
-int /* cVal */ SymHeap::valGetCustom(const struct cl_type **pClt, TValueId val)
-    const
-{
-    TValueMap::iterator iter = d->valueMap.find(val);
-    if (d->valueMap.end() == iter)
-        // value not found, this should never happen
-        TRAP;
-
-    Value &value = iter->second;
-    if (EV_CUSTOM != value.code)
-        // not a custom value
-        return VAL_INVALID;
-
-    if (pClt)
-        *pClt = value.clt;
-
-    return /* cVal */ value.pointsTo;
-}
-
-void SymHeap::addEqIf(TValueId valCond, TValueId valA, TValueId valB, bool neg)
-{
+void SymHeapCore::addEqIf(TValueId valCond, TValueId valA, TValueId valB, bool neg) {
     if (VAL_INVALID == valA || VAL_INVALID == valB)
         TRAP;
 
-    TValueMap::iterator iter = d->valueMap.find(valCond);
-    if (d->valueMap.end() == iter)
-        // valCond not found, this should never happen
+    if (this->lastValueId() < valCond || valCond <= 0)
+        // value ID is either out of range, or invalid
         TRAP;
 
-    const Value *pValue = &iter->second;
-    if (!pValue->clt || !pValue->clt->code == CL_TYPE_BOOL)
-        // valCond is not a bool value
-        TRAP;
-
-    if (EV_UNKOWN != pValue->code)
+    // TODO: check somehow if the type of valCond is CL_TYPE_BOOL at this point
+    const Private::Value &refCond = d->values[valCond];
+    if (UV_KNOWN == refCond.code)
         // valCond is not an unknown value
         TRAP;
 
     // having the values always in the same order leads to simpler code
     sortValues(valA, valB);
-    if (valB <= 0)
+    if (this->lastValueId() < valB || valB <= 0)
         // valB can't be an unknown value
         TRAP;
 
-    iter = d->valueMap.find(valB);
-    if (d->valueMap.end() == iter)
-        // valB not found, this should never happen
-        TRAP;
-
-    pValue = &iter->second;
-    if (EV_UNKOWN != pValue->code)
+    const Private::Value &refB = d->values[valB];
+    if (UV_KNOWN == refB.code)
         // valB is not an unknown value
         TRAP;
 
@@ -851,7 +435,7 @@ namespace {
     }
 }
 
-bool SymHeap::proveEq(bool *result, TValueId valA, TValueId valB) const {
+bool SymHeapCore::proveEq(bool *result, TValueId valA, TValueId valB) const {
     if (VAL_INVALID == valA || VAL_INVALID == valB)
         // we can prove nothing for invalid values
         return false;
@@ -870,25 +454,18 @@ bool SymHeap::proveEq(bool *result, TValueId valA, TValueId valB) const {
         return true;
 
     // we presume (0 <= valA) and (0 < valB) at this point
-    TValueMap::iterator iter = d->valueMap.find(valB);
-    if (d->valueMap.end() == iter)
-        // valB not found, this should never happen
+    if (this->lastValueId() < valB || valB < 0)
         TRAP;
 
-    // now look at the kind of valB
-    const Value &valueB = iter->second;
-    const EValue code = valueB.code;
-    switch (code) {
-        case EV_HEAP:
-        case EV_CUSTOM:
-        case EV_COMPOSITE:
-            // it should be safe to just compare the IDs in this case
-            // NOTE: we in fact know (valA != valB) at this point, look above
-            *result = /* (valA == valB) */ false;
-            return true;
+    const Private::Value &refB = d->values[valB];
 
-        case EV_UNKOWN:
-            break;
+    // now look at the kind of valB
+    const EUnknownValue code = refB.code;
+    if (UV_KNOWN == code) {
+        // it should be safe to just compare the IDs in this case
+        // NOTE: we in fact know (valA != valB) at this point, look above
+        *result = /* (valA == valB) */ false;
+        return true;
     }
 
     if (d->neqDb.areNeq(valA, valB)) {
@@ -900,3 +477,449 @@ bool SymHeap::proveEq(bool *result, TValueId valA, TValueId valB) const {
     // giving up, really no idea if the values are equal or not...
     return false;
 }
+
+
+// /////////////////////////////////////////////////////////////////////////////
+// implementation of SymHeap
+struct SymHeap::Private {
+    struct Object {
+        const struct cl_type        *clt;
+        size_t                      cbSize;
+        int /* CodeStorage */       cVar;
+        TObjId                      parent;
+        TContObj                    subObjs;
+
+        Object(): clt(0), cbSize(0), cVar(-1), parent(OBJ_INVALID) { }
+    };
+
+    struct Value {
+        const struct cl_type        *clt;
+        TObjId                      compObj;
+        bool                        isCustom;
+        int                         customData;
+
+        Value(): clt(0), compObj(OBJ_INVALID), isCustom(false) { }
+    };
+
+    /// @attention this will break as soon as we allow recursion
+    typedef std::map<int, TObjId>   TCVarMap;
+    TCVarMap                        cVarMap;
+
+    typedef std::map<int, TValueId> TCValueMap;
+    TCValueMap                      cValueMap;
+
+    std::vector<Object>             objects;
+    std::vector<Value>              values;
+};
+
+void SymHeap::resizeIfNeeded() {
+    const size_t lastValueId = this->lastValueId();
+    if (d->values.size() <= lastValueId)
+        d->values.resize(lastValueId + 1);
+
+    const size_t lastObjId = this->lastObjId();
+    if (d->objects.size() <= lastObjId)
+        d->objects.resize(lastObjId + 1);
+}
+
+TValueId SymHeap::createCompValue(const struct cl_type *clt, TObjId obj) {
+    const TValueId val = SymHeapCore::valCreate(UV_KNOWN, OBJ_INVALID);
+    if (VAL_INVALID == val)
+        TRAP;
+
+    this->resizeIfNeeded();
+    Private::Value &ref = d->values[val];
+    ref.clt         = clt;
+    ref.compObj     = obj;
+
+    return val;
+}
+
+TObjId SymHeap::createSubVar(const struct cl_type *clt, TObjId parent) {
+    const TObjId obj = SymHeapCore::objCreate();
+    if (OBJ_INVALID == obj)
+        TRAP;
+
+    this->resizeIfNeeded();
+    Private::Object &ref = d->objects[obj];
+    ref.clt         = clt;
+    ref.parent      = parent;
+
+    // FIXME: the following two commands are copy-pasted from SymHeap::objCreate
+    // look for object's address
+    TValueId val = SymHeapCore::placedAt(obj);
+    if (VAL_INVALID == val)
+        TRAP;
+
+    // initialize value's type
+    d->values.at(val).clt = clt;
+
+    return obj;
+}
+
+void SymHeap::createSubs(TObjId obj) {
+    const struct cl_type *clt = d->objects.at(obj).clt;
+
+    typedef std::pair<TObjId, const struct cl_type *> TPair;
+    typedef std::stack<TPair> TStack;
+    TStack todo;
+
+    // we use explicit stack to avoid recursion
+    push(todo, obj, clt);
+    while (!todo.empty()) {
+        boost::tie(obj, clt) = todo.top();
+        todo.pop();
+
+        // FIXME: check whether clt may be NULL at this point
+        const enum cl_type_e code = clt->code;
+        switch (code) {
+            case CL_TYPE_ARRAY:
+                CL_WARN("CL_TYPE_ARRAY is not supported by SymHeap for now");
+                break;
+
+            case CL_TYPE_CHAR:
+                CL_WARN("CL_TYPE_CHAR is not supported by SymHeap for now");
+                break;
+
+            case CL_TYPE_BOOL:
+            case CL_TYPE_INT:
+            case CL_TYPE_PTR:
+                break;
+
+            case CL_TYPE_STRUCT: {
+                const int cnt = clt->item_cnt;
+                SymHeapCore::objSetValue(obj, this->createCompValue(clt, obj));
+                d->objects[obj].subObjs.resize(cnt);
+                for (int i = 0; i < cnt; ++i) {
+                    const struct cl_type *subClt = clt->items[i].type;
+                    const TObjId subObj = this->createSubVar(subClt, obj);
+                    d->objects[obj].subObjs[i] = subObj;
+                    push(todo, subObj, subClt);
+                }
+                break;
+            }
+
+            default:
+                TRAP;
+        }
+    }
+}
+
+// XXX
+TValueId SymHeap::valueOf(TObjId obj) const {
+    const TValueId val = SymHeapCore::valueOf(obj);
+    const_cast<SymHeap *>(this)->resizeIfNeeded();
+    return val;
+}
+
+void SymHeap::destroyObj(TObjId obj) {
+    typedef std::stack<TObjId> TStack;
+    TStack todo;
+
+    // we are using explicit stack to avoid recursion
+    todo.push(obj);
+    while (!todo.empty()) {
+        obj = todo.top();
+        todo.pop();
+
+        // schedule all subvars for removal
+        const Private::Object &ref = d->objects.at(obj);
+        BOOST_FOREACH(TObjId subObj, ref.subObjs) {
+            todo.push(subObj);
+        }
+
+        // remove current
+        const TObjId kind = (-1 == ref.cVar)
+            ? OBJ_DELETED
+            : OBJ_LOST;
+        SymHeapCore::objDestroy(obj, kind);
+    }
+}
+
+SymHeap::SymHeap():
+    d(new Private)
+{
+    this->resizeIfNeeded();
+}
+
+SymHeap::SymHeap(const SymHeap &ref):
+    SymHeapCore(ref),
+    d(new Private(*ref.d))
+{
+}
+
+SymHeap::~SymHeap() {
+    delete d;
+}
+
+SymHeap& SymHeap::operator=(const SymHeap &ref) {
+    SymHeapCore::operator=(ref);
+    delete d;
+    d = new Private(*ref.d);
+    return *this;
+}
+
+const struct cl_type* SymHeap::objType(TObjId obj) const {
+    if (this->lastObjId() < obj || obj <= 0)
+        // object ID is either out of range, or does not represent a valid obj
+        return 0;
+
+    return d->objects[obj].clt;
+}
+
+const struct cl_type* SymHeap::valType(TValueId val) const {
+    if (this->lastValueId() < val || val <= 0)
+        // value ID is either out of range, or does not point a valid obj
+        return 0;
+
+    return d->values[val].clt;
+}
+
+int SymHeap::cVar(TObjId obj) const {
+    if (this->lastObjId() < obj || obj <= 0)
+        // object ID is either out of range, or does not represent a valid obj
+        return -1;
+
+    return d->objects[obj].cVar;
+}
+
+/// @attention this will break as soon as we allow recursion
+TObjId SymHeap::objByCVar(int uid) const {
+    Private::TCVarMap::iterator iter = d->cVarMap.find(uid);
+    if (d->cVarMap.end() == iter)
+        return OBJ_INVALID;
+    else
+        return iter->second;
+}
+
+void SymHeap::gatherCVars(TCont &dst) const {
+    Private::TCVarMap::const_iterator i;
+    for (i = d->cVarMap.begin(); i != d->cVarMap.end(); ++i)
+        dst.push_back(i->first);
+}
+
+TObjId SymHeap::valGetCompositeObj(TValueId val) const {
+    if (this->lastValueId() < val || val <= 0)
+        // value ID is either out of range, or does not point a valid obj
+        return OBJ_INVALID;
+
+    return d->values[val].compObj;
+}
+
+TObjId SymHeap::subObj(TObjId obj, int nth) const {
+    if (this->lastObjId() < obj || obj <= 0)
+        // object ID is either out of range, or does not represent a valid obj
+        return OBJ_INVALID;
+
+    const Private::Object &ref = d->objects[obj];
+    const TContObj &subs = ref.subObjs;
+    const int cnt = subs.size();
+    return (nth < cnt)
+        ? subs[nth]
+        : /* nth is out of range */ OBJ_INVALID;
+}
+
+TObjId SymHeap::objParent(TObjId obj) const {
+    if (this->lastObjId() < obj || obj <= 0)
+        // object ID is either out of range, or does not represent a valid obj
+        return OBJ_INVALID;
+
+    return d->objects[obj].parent;
+}
+
+TObjId SymHeap::objCreate(const struct cl_type *clt, int uid) {
+    const enum cl_type_e code = clt->code;
+    switch (code) {
+        case CL_TYPE_INT:
+        case CL_TYPE_BOOL:
+        case CL_TYPE_PTR:
+        case CL_TYPE_STRUCT:
+            break;
+
+        case CL_TYPE_ARRAY:
+            if (CL_TYPE_CHAR == clt->items[0].type->code)
+                // make it possible to at least ignore strings
+                break;
+            // fall thorough!
+
+        default:
+            // TODO: handle also other types somehow?
+            TRAP;
+    }
+
+    const TObjId obj = SymHeapCore::objCreate();
+    if (OBJ_INVALID == obj)
+        return OBJ_INVALID;
+
+    this->resizeIfNeeded();
+    Private::Object &ref = d->objects[obj];
+    ref.clt     = clt;
+    ref.cVar    = uid;
+    this->createSubs(obj);
+
+    if (/* heap object */ -1 != uid)
+        d->cVarMap[uid] = obj;
+
+    // look for object's address
+    TValueId val = SymHeapCore::placedAt(obj);
+    if (VAL_INVALID == val)
+        TRAP;
+
+    // initialize value's type
+    d->values.at(val).clt = clt;
+
+    return obj;
+}
+
+TObjId SymHeap::objCreateAnon(int cbSize) {
+    const TObjId obj = SymHeapCore::objCreate();
+    this->resizeIfNeeded();
+    d->objects[obj].cbSize = cbSize;
+
+    return obj;
+}
+
+int SymHeap::objSizeOfAnon(TObjId obj) const {
+    if (this->lastObjId() < obj || obj <= 0)
+        // object ID is either out of range, or does not represent a valid obj
+        TRAP;
+
+    const Private::Object &ref = d->objects[obj];
+    if (ref.clt)
+        // we know the type, so that it does not look like an anonymous object
+        TRAP;
+
+    return ref.cbSize;
+}
+
+bool SymHeap::valPointsToAnon(TValueId val) const {
+    if (val <= 0)
+        return false;
+
+    const TObjId obj = SymHeapCore::pointsTo(val);
+    if (obj <= 0)
+        // value does not point to anything (OBJ_RETURN also makes no sense)
+        return false;
+
+    const Private::Object &ref = d->objects.at(obj);
+    return !ref.clt;
+}
+
+void SymHeap::objDefineType(TObjId obj, const struct cl_type *clt) {
+    if (this->lastObjId() < obj || obj < 0)
+        // object ID is either out of range, or does not represent a valid obj
+        TRAP;
+
+    Private::Object &ref = d->objects[obj];
+    if (ref.clt)
+        // type redefinition not allowed for now
+        TRAP;
+
+    // delayed object's type definition
+    ref.clt = clt;
+    this->createSubs(obj);
+
+    if (OBJ_RETURN == obj)
+        // OBJ_RETURN has no address
+        return;
+
+    // look for object's address
+    TValueId val = SymHeapCore::placedAt(obj);
+    if (VAL_INVALID == val)
+        TRAP;
+
+    // delayed value's type definition
+    d->values.at(val).clt = clt;
+}
+
+void SymHeap::objDestroy(TObjId obj) {
+    if (this->lastObjId() < obj || obj < 0)
+        // object ID is either out of range, or does not represent a valid obj
+        TRAP;
+
+    Private::Object &ref = d->objects[obj];
+    const int uid = ref.cVar;
+    if (/* heap object */ -1 != uid)
+        d->cVarMap.erase(uid);
+
+    this->destroyObj(obj);
+    if (OBJ_RETURN == obj) {
+        // (un)initialize OBJ_RETURN for next wheel
+        const TValueId uv = this->valCreate(UV_UNINITIALIZED, OBJ_UNKNOWN);
+        SymHeapCore::objSetValue(OBJ_RETURN, uv);
+        d->objects[OBJ_RETURN].clt = 0;
+    }
+}
+
+TValueId SymHeap::valCreateUnknown(EUnknownValue code,
+                                   const struct cl_type *clt)
+{
+    const TValueId val = SymHeapCore::valCreate(code, OBJ_UNKNOWN);
+    if (VAL_INVALID == val)
+        return VAL_INVALID;
+
+    this->resizeIfNeeded();
+    d->values[val].clt = clt;
+    return val;
+}
+
+TValueId SymHeap::valCreateCustom(const struct cl_type *clt, int cVal) {
+    Private::TCValueMap::iterator iter = d->cValueMap.find(cVal);
+    if (d->cValueMap.end() == iter) {
+        // cVal not found, create a new wrapper for it
+        const TValueId val = SymHeapCore::valCreate(UV_KNOWN, OBJ_INVALID);
+        if (VAL_INVALID == val)
+            return VAL_INVALID;
+
+        this->resizeIfNeeded();
+        Private::Value &ref = d->values[val];
+        ref.clt         = clt;
+        ref.isCustom    = true;
+        ref.customData  = cVal;
+
+        return val;
+    }
+
+    // custom value already wrapped, we have to reuse it
+    const TValueId val = iter->second;
+    const Private::Value &ref = d->values.at(val);
+    if (!ref.isCustom)
+        // heap corruption
+        TRAP;
+
+    if (ref.clt != clt)
+        // type mismatch
+        TRAP;
+
+    return val;
+}
+
+int SymHeap::valGetCustom(const struct cl_type **pClt, TValueId val) const {
+    if (this->lastValueId() < val || val <= 0)
+        // value ID is either out of range, or does not point to a valid obj
+        return -1;
+
+    const Private::Value &ref = d->values[val];
+    if (!ref.isCustom)
+        // not a custom value
+        return -1;
+
+    if (pClt)
+        // provide type info if requested to do so
+        *pClt = ref.clt;
+
+    return ref.customData;
+}
+
+#if 0
+void SymHeap::Private::initReturn() {
+    // create OBJ_RETURN
+    Var &var = this->varMap[OBJ_RETURN];
+
+    var.clt         = 0;
+    var.cVarUid     = -1;
+    var.placedAt    = VAL_INVALID;
+    var.value       = this->createValue(EV_UNKOWN, 0, UV_UNINITIALIZED,
+                                        OBJ_RETURN);
+}
+#endif
