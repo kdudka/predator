@@ -414,6 +414,7 @@ class SymHeap: public SymHeapCore {
 
     private:
         void resizeIfNeeded();
+        void initValClt(TObjId obj);
         TValueId createCompValue(const struct cl_type *clt, TObjId obj);
         TObjId createSubVar(const struct cl_type *clt, TObjId parent);
         void createSubs(TObjId obj);

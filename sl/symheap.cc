@@ -44,22 +44,22 @@ namespace {
 
 class NeqDb {
     private:
-        typedef std::pair<int /* valLt */, int /* valGt */> TItem;
+        typedef std::pair<TValueId /* valLt */, TValueId /* valGt */> TItem;
         typedef std::set<TItem> TCont;
         TCont cont_;
 
     public:
-        bool areNeq(int valLt, int valGt) {
+        bool areNeq(TValueId valLt, TValueId valGt) {
             sortValues(valLt, valGt);
             TItem item(valLt, valGt);
             return hasKey(cont_, item);
         }
-        void add(int valLt, int valGt) {
+        void add(TValueId valLt, TValueId valGt) {
             sortValues(valLt, valGt);
             TItem item(valLt, valGt);
             cont_.insert(item);
         }
-        void del(int valLt, int valGt) {
+        void del(TValueId valLt, TValueId valGt) {
             sortValues(valLt, valGt);
             TItem item(valLt, valGt);
             cont_.erase(item);
@@ -237,16 +237,21 @@ void SymHeapCore::haveValue(TContObj &dst, TValueId val) const {
 }
 
 TObjId SymHeapCore::objCreate() {
+    // acquire object ID
     const TObjId obj = static_cast<TObjId>(d->objects.size());
     d->objects.resize(obj + 1);
 
-    Private::Object &ref = d->objects[obj];
-    ref.address = this->valCreate(UV_KNOWN, obj);
-    ref.value   = this->valCreate(UV_UNINITIALIZED, OBJ_UNKNOWN);
+    // obtain value pair
+    const TValueId address = this->valCreate(UV_KNOWN, obj);
+    const TValueId value   = this->valCreate(UV_UNINITIALIZED, OBJ_UNKNOWN);
+
+    // keeping a reference here may cause headaches in case of reallocation
+    d->objects[obj].address = address;
+    d->objects[obj].value   = value;
 
     // store backward reference
-    Private::Value &refValue = d->values[ref.value];
-    refValue.referrers.insert(obj);
+    Private::Value &ref = d->values[value];
+    ref.referrers.insert(obj);
 
     return obj;
 }
@@ -256,6 +261,7 @@ TValueId SymHeapCore::valCreate(EUnknownValue code, TObjId target) {
         // target out of range (we allow OBJ_INVALID here for custom values)
         TRAP;
 
+    // acquire value ID
     const TValueId val = static_cast<TValueId>(d->values.size());
     d->values.resize(val + 1);
 
@@ -286,14 +292,16 @@ void SymHeapCore::objSetValue(TObjId obj, TValueId val) {
 
     d->releaseValueOf(obj);
     d->objects[obj].value = val;
-    if (0 <= val)
-        d->values[val].referrers.insert(obj);
+    if (val < 0)
+        return;
+
+    Private::Value &ref = d->values.at(val);
+    ref.referrers.insert(obj);
 }
 
-/// @todo handle OBJ_RETURN somehow specially
 void SymHeapCore::objDestroy(TObjId obj, TObjId kind) {
     if (this->lastObjId() < obj || obj < 0)
-        // out of range
+        // out of range (we allow to destroy OBJ_RETURN)
         TRAP;
 
     switch (kind) {
@@ -310,6 +318,7 @@ void SymHeapCore::objDestroy(TObjId obj, TObjId kind) {
         if (addr <= 0)
             // object about to be destroyed has invalid address
             TRAP;
+
         d->values.at(addr).target = kind;
     }
 
@@ -415,7 +424,6 @@ void SymHeapCore::addEqIf(TValueId valCond, TValueId valA, TValueId valB, bool n
 }
 
 namespace {
-    // FIXME: not tested
     bool proveEqBool(bool *result, int valA, int valB) {
         if ((valA == valB) && (VAL_TRUE == valA || VAL_FALSE == valA)) {
             // values are equal
@@ -450,8 +458,11 @@ bool SymHeapCore::proveEq(bool *result, TValueId valA, TValueId valB) const {
     sortValues(valA, valB);
 
     // non-heap comparison of bool values
-    if (proveEqBool(result, valA, valB))
+    if (proveEqBool(result, valA, valB)) {
+        // FIXME: not tested, worth to check with a debugger first
+        TRAP;
         return true;
+    }
 
     // we presume (0 <= valA) and (0 < valB) at this point
     if (this->lastValueId() < valB || valB < 0)
@@ -535,6 +546,17 @@ TValueId SymHeap::createCompValue(const struct cl_type *clt, TObjId obj) {
     return val;
 }
 
+void SymHeap::initValClt(TObjId obj) {
+    // look for object's address
+    TValueId val = SymHeapCore::placedAt(obj);
+    if (VAL_INVALID == val)
+        TRAP;
+
+    // initialize value's type
+    Private::Object &ref = d->objects[obj];
+    d->values.at(val).clt = ref.clt;
+}
+
 TObjId SymHeap::createSubVar(const struct cl_type *clt, TObjId parent) {
     const TObjId obj = SymHeapCore::objCreate();
     if (OBJ_INVALID == obj)
@@ -545,15 +567,7 @@ TObjId SymHeap::createSubVar(const struct cl_type *clt, TObjId parent) {
     ref.clt         = clt;
     ref.parent      = parent;
 
-    // FIXME: the following two commands are copy-pasted from SymHeap::objCreate
-    // look for object's address
-    TValueId val = SymHeapCore::placedAt(obj);
-    if (VAL_INVALID == val)
-        TRAP;
-
-    // initialize value's type
-    d->values.at(val).clt = clt;
-
+    this->initValClt(obj);
     return obj;
 }
 
@@ -569,8 +583,10 @@ void SymHeap::createSubs(TObjId obj) {
     while (!todo.empty()) {
         boost::tie(obj, clt) = todo.top();
         todo.pop();
+        if (!clt)
+            // missing type-info
+            TRAP;
 
-        // FIXME: check whether clt may be NULL at this point
         const enum cl_type_e code = clt->code;
         switch (code) {
             case CL_TYPE_ARRAY:
@@ -589,6 +605,9 @@ void SymHeap::createSubs(TObjId obj) {
             case CL_TYPE_STRUCT: {
                 const int cnt = clt->item_cnt;
                 SymHeapCore::objSetValue(obj, this->createCompValue(clt, obj));
+
+                // keeping a reference at this point may cause headaches in case
+                // of reallocation
                 d->objects[obj].subObjs.resize(cnt);
                 for (int i = 0; i < cnt; ++i) {
                     const struct cl_type *subClt = clt->items[i].type;
@@ -760,14 +779,7 @@ TObjId SymHeap::objCreate(const struct cl_type *clt, int uid) {
     if (/* heap object */ -1 != uid)
         d->cVarMap[uid] = obj;
 
-    // look for object's address
-    TValueId val = SymHeapCore::placedAt(obj);
-    if (VAL_INVALID == val)
-        TRAP;
-
-    // initialize value's type
-    d->values.at(val).clt = clt;
-
+    this->initValClt(obj);
     return obj;
 }
 
@@ -823,13 +835,8 @@ void SymHeap::objDefineType(TObjId obj, const struct cl_type *clt) {
         // OBJ_RETURN has no address
         return;
 
-    // look for object's address
-    TValueId val = SymHeapCore::placedAt(obj);
-    if (VAL_INVALID == val)
-        TRAP;
-
     // delayed value's type definition
-    d->values.at(val).clt = clt;
+    this->initValClt(obj);
 }
 
 void SymHeap::objDestroy(TObjId obj) {
@@ -839,8 +846,10 @@ void SymHeap::objDestroy(TObjId obj) {
 
     Private::Object &ref = d->objects[obj];
     const int uid = ref.cVar;
-    if (/* heap object */ -1 != uid)
-        d->cVarMap.erase(uid);
+    if (uid != /* heap object */ -1
+            && 1 != d->cVarMap.erase(uid))
+        // *** offset detected while removing cVar reference ***
+        TRAP;
 
     this->destroyObj(obj);
     if (OBJ_RETURN == obj) {
@@ -910,16 +919,3 @@ int SymHeap::valGetCustom(const struct cl_type **pClt, TValueId val) const {
 
     return ref.customData;
 }
-
-#if 0
-void SymHeap::Private::initReturn() {
-    // create OBJ_RETURN
-    Var &var = this->varMap[OBJ_RETURN];
-
-    var.clt         = 0;
-    var.cVarUid     = -1;
-    var.placedAt    = VAL_INVALID;
-    var.value       = this->createValue(EV_UNKOWN, 0, UV_UNINITIALIZED,
-                                        OBJ_RETURN);
-}
-#endif
