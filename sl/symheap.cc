@@ -352,19 +352,23 @@ void SymHeapCore::valReplaceUnknown(TValueId val, TValueId replaceBy) {
     while (wl.next(item)) {
         boost::tie(val, replaceBy) = item;
 
-        // remove inqueality if any
+        // remove inequeality if any
+#if 0
+        // FIXME: if the inequeality is already defined, we get a contradiction,
+        //        which we should warn about (instead of silently ignoring it)
         d->neqDb.del(val, replaceBy);
+#endif
 
-        // collect objects having the value valDst
+        // collect objects having the value 'val'
         TContObj rlist;
         this->haveValue(rlist, val);
 
-        // go through the list and replace the value by valSrc
+        // go through the list and replace the value by 'replaceBy'
         BOOST_FOREACH(const TObjId obj, rlist) {
             this->objSetValue(obj, replaceBy);
         }
 
-        // handle all EqIf prdicates
+        // handle all EqIf predicates
         EqIfDb::TDst eqIfs;
         d->eqIfDb.lookupOnce(eqIfs, val);
         BOOST_FOREACH(const EqIfDb::TPred &pred, eqIfs) {
@@ -548,12 +552,12 @@ TValueId SymHeap::createCompValue(const struct cl_type *clt, TObjId obj) {
 
 void SymHeap::initValClt(TObjId obj) {
     // look for object's address
-    TValueId val = SymHeapCore::placedAt(obj);
+    const TValueId val = SymHeapCore::placedAt(obj);
     if (VAL_INVALID == val)
         TRAP;
 
     // initialize value's type
-    Private::Object &ref = d->objects[obj];
+    const Private::Object &ref = d->objects[obj];
     d->values.at(val).clt = ref.clt;
 }
 
