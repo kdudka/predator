@@ -1,20 +1,20 @@
 /*
  * Copyright (C) 2010 Kamil Dudka <kdudka@redhat.com>
  *
- * This file is part of sl.
+ * This file is part of predator.
  *
- * sl is free software: you can redistribute it and/or modify
+ * predator is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * any later version.
  *
- * sl is distributed in the hope that it will be useful,
+ * predator is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with sl.  If not, see <http://www.gnu.org/licenses/>.
+ * along with predator.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 
