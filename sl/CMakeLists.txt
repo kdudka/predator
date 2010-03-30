@@ -95,6 +95,7 @@ add_definitions("-I.. -I../gcc -I../ssd/src -fPIC")
 add_library(sl STATIC
     cl_chain.cc
     cl_dotgen.cc
+    cl_easy.cc
     cl_factory.cc
     cl_locator.cc
     cl_pp.cc

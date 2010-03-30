@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2010 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of sl.
  *
@@ -17,22 +17,13 @@
  * along with sl.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef H_GUARD_CL_SYMEXEC_H
-#define H_GUARD_CL_SYMEXEC_H
+#ifndef H_GUARD_EASY_H
+#define H_GUARD_EASY_H
 
-/**
- * @file cl_symexec.hh
- * constructor createClSymExec() of the @b "symexec" code listener - see SymExec
- */
+namespace CodeStorage {
+    struct Storage;
+}
 
-class ICodeListener;
+extern void clEasyRun(CodeStorage::Storage &, const char *configString);
 
-/**
- * create "symexec" ICodeListener implementation - see SymExec
- * @param config_string If "fast" is given, some computationally expensive
- * analysis will be omitted.
- * @todo proper documentation of the "symexec" code listener
- */
-ICodeListener* createClSymExec(const char *config_string);
-
-#endif /* H_GUARD_CL_SYMEXEC_H */
+#endif /* H_GUARD_EASY_H */

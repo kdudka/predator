@@ -20,11 +20,11 @@
 #include "config.h"
 
 #include "cl_dotgen.hh"
+#include "cl_easy.hh"
 #include "cl_factory.hh"
 #include "cl_locator.hh"
 #include "cl_msg.hh"
 #include "cl_pp.hh"
-#include "cl_symexec.hh"
 #include "cl_typedot.hh"
 
 #include "cld_argsub.hh"
@@ -300,10 +300,10 @@ ClFactory::ClFactory():
     d(new Private)
 {
     d->map["dotgen"]        = &createClDotGenerator;
+    d->map["easy"]          = &createClEasy;
     d->map["locator"]       = &createClLocator;
     d->map["pp"]            = &createClPrettyPrintDef;
     d->map["pp_with_types"] = &createClPrettyPrintWithTypes;
-    d->map["symexec"]       = &createClSymExec;
     d->map["typedot"]       = &createClTypeDotGenerator;
 }
 

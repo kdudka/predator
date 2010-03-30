@@ -118,6 +118,7 @@ static struct plugin_info sl_info = {
 "\n"
 "Usage: gcc -fplugin=slplug.so [OPTIONS] ...\n"
 "\n"
+"// TODO: replace \"symexec\" by something more generic??\n"
 "OPTIONS:\n"
 "    -fplugin-arg-slplug-help\n"
 "    -fplugin-arg-slplug-version\n"
@@ -1482,7 +1483,7 @@ create_cl_chain(const struct sl_plug_options *opt)
         return NULL;
 
     if (opt->use_symexec
-            && !sl_append_def_listener(chain, "symexec", opt->symexec_args, opt))
+            && !sl_append_def_listener(chain, "easy", opt->symexec_args, opt))
         return NULL;
 
     return chain;

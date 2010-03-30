@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2009-2010 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of sl.
  *
@@ -18,11 +18,10 @@
  */
 
 #include "config.h"
-#include "cl_symexec.hh"
+#include "easy.hh"
 
 #include "btprint.hh"
 #include "cl_msg.hh"
-#include "cl_storage.hh"
 #include "location.hh"
 #include "storage.hh"
 #include "symexec.hh"
@@ -33,40 +32,28 @@
 
 #include <boost/foreach.hpp>
 
-class ClSymExec: public ClStorageBuilder {
-    public:
-        ClSymExec(const char *configString);
-        virtual ~ClSymExec();
+namespace {
 
-    protected:
-        virtual void run(CodeStorage::Storage &);
+void initExec(SymExec &se, std::string cnf) {
+    using std::string;
+    if (cnf.empty())
+        return;
 
-    private:
-        std::string                     configString_;
-        const CodeStorage::Storage      *stor_;
-        LocationWriter                  lw_;
+    if (string("fast") == cnf) {
+        CL_DEBUG("SymExec \"fast mode\" requested");
+        se.setFastMode(true);
+        return;
+    }
 
-    private:
-        void digGlJunk(SymHeap &);
-        void digGlJunk(SymHeapUnion &);
-};
-
-// /////////////////////////////////////////////////////////////////////////////
-// ClSymExec implementation
-ClSymExec::ClSymExec(const char *configString):
-    configString_(configString),
-    stor_(0)
-{
+    // unhandled config string
+    TRAP;
 }
 
-ClSymExec::~ClSymExec() {
-}
-
-void ClSymExec::digGlJunk(SymHeap &heap) {
+void digGlJunk(CodeStorage::Storage &stor, SymHeap &heap) {
     using namespace CodeStorage;
     SymHeapProcessor proc(heap);
 
-    BOOST_FOREACH(const Var &var, stor_->vars) {
+    BOOST_FOREACH(const Var &var, stor.vars) {
         if (VAR_GL == var.code) {
             const LocationWriter lw(&var.loc);
             CL_DEBUG_MSG(lw, "(g) destroying gl variable: #"
@@ -82,39 +69,11 @@ void ClSymExec::digGlJunk(SymHeap &heap) {
     }
 }
 
-void ClSymExec::digGlJunk(SymHeapUnion &results) {
-    int hCnt = 0;
-    BOOST_FOREACH(SymHeap &heap, results) {
-        if (1 < results.size()) {
-            CL_DEBUG_MSG(lw_, "*** destroying gl variables in result #"
-                    << (++hCnt));
-        }
+} // namespace
 
-        this->digGlJunk(heap);
-    }
-}
-
-namespace {
-    void initExec(SymExec &se, const std::string &cnf) {
-        using std::string;
-        if (cnf.empty())
-            return;
-
-        if (string("fast") == cnf) {
-            CL_DEBUG("SymExec \"fast mode\" requested");
-            se.setFastMode(true);
-            return;
-        }
-
-        // unhandled config string
-        TRAP;
-    }
-}
-
-void ClSymExec::run(CodeStorage::Storage &stor) {
-    // keep the reference for digGlJunk(...)
-    stor_ = &stor;
-
+// /////////////////////////////////////////////////////////////////////////////
+// see easy.hh for details
+void clEasyRun(CodeStorage::Storage &stor, const char *configString) {
     CL_DEBUG("looking for 'main()' at gl scope...");
     const int uid = stor.fncNames.glNames["main"];
     const CodeStorage::Fnc *main = stor.fncs[uid];
@@ -124,23 +83,24 @@ void ClSymExec::run(CodeStorage::Storage &stor) {
     }
 
     // lw points to declaration of main()
-    lw_ = &main->def.loc;
+    const LocationWriter lw(&main->def.loc);
 
     // initialize SymExec
     SymExec se(stor);
-    initExec(se, configString_);
+    initExec(se, configString);
 
     // run the symbolic execution
     SymHeapUnion results;
     se.exec(*main, results);
 
-    CL_DEBUG_MSG(lw_, "(g) looking for gl junk...");
-    this->digGlJunk(results);
-}
+    CL_DEBUG_MSG(lw, "(g) looking for gl junk...");
+    int hCnt = 0;
+    BOOST_FOREACH(SymHeap &heap, results) {
+        if (1 < results.size()) {
+            CL_DEBUG_MSG(lw, "*** destroying gl variables in result #"
+                    << (++hCnt));
+        }
 
-
-// /////////////////////////////////////////////////////////////////////////////
-// public interface, see cl_symexec.hh for more details
-ICodeListener* createClSymExec(const char *configString) {
-    return new ClSymExec(configString);
+        digGlJunk(stor, heap);
+    }
 }
