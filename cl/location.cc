@@ -17,8 +17,8 @@
  * along with predator.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "code_listener.h"
-#include "location.hh"
+#include <cl/code_listener.h>
+#include <cl/location.hh>
 
 #include <iostream>
 

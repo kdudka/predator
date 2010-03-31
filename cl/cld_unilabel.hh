@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2009 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -17,8 +17,25 @@
  * along with predator.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "config.h"
-#include "version.h"
+#ifndef H_GUARD_CLD_UNILABEL_H
+#define H_GUARD_CLD_UNILABEL_H
 
-// see the comment in config.h for details
-const char *sl_git_sha1 = SL_GIT_SHA1;
+/**
+ * @file cld_unilabel.hh
+ * constructor createCldUniLabel() - of the @b "unify_labels_*" decorators
+ */
+
+#include <cl/code_listener.h>
+
+class ICodeListener;
+
+/**
+ * create code listener decorator for label unification
+ * @param scope unification level - CL_SCOPE_GLOBAL, CL_SCOPE_STATIC or
+ * CL_SCOPE_FUNCTION
+ *
+ * @return on heap allocated instance of ICodeListener object
+ */
+ICodeListener* createCldUniLabel(ICodeListener *, cl_scope_e scope);
+
+#endif /* H_GUARD_CLD_UNILABEL_H */

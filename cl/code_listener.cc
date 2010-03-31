@@ -17,11 +17,11 @@
  * along with predator.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "code_listener.h"
+#include <cl/code_listener.h>
+#include <cl/cl_msg.hh>
 
 #include "cl.hh"
 #include "cl_factory.hh"
-#include "cl_msg.hh"
 #include "cl_private.hh"
 
 #include <cstdio>

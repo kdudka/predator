@@ -20,7 +20,8 @@
 #include "config.h"
 #include "cl_storage.hh"
 
-#include "storage.hh"
+#include <cl/storage.hh>
+
 #include "util.hh"
 
 #include <cstring>

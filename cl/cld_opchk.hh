@@ -21,7 +21,7 @@
 #define H_GUARD_CLD_OPCHK_H
 
 #include "cl_decorator.hh"
-#include "location.hh"
+#include <cl/location.hh>
 
 class CldOpCheckerBase: public ClDecoratorBase {
     public:

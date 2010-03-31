@@ -18,9 +18,9 @@
  */
 
 #include "config.h"
-#include "storage.hh"
 
-#include "cl_msg.hh"
+#include <cl/storage.hh>
+#include <cl/cl_msg.hh>
 
 #include <map>
 #include <stack>

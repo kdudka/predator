@@ -18,7 +18,8 @@
  */
 
 #include "config.h"
-#include "easy.hh"
+
+#include <cl/easy.hh>
 
 #include "btprint.hh"
 #include "cl_msg.hh"

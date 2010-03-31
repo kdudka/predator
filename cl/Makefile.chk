@@ -1,5 +1,3 @@
-#!/bin/bash
-#
 # Copyright (C) 2009 Kamil Dudka <kdudka@redhat.com>
 #
 # This file is part of predator.
@@ -17,21 +15,15 @@
 # You should have received a copy of the GNU General Public License
 # along with predator.  If not, see <http://www.gnu.org/licenses/>.
 
-VALGRIND=valgrind
-VALGRIND_EC=3
-VALGRIND_EC_LEAK=4
-VALGRIND_OPTS="--leak-check=full --error-exitcode=$VALGRIND_EC \
---suppressions=runtest.valgrind"
+HEADERS ?= *.h *.hh
 
-set -x
-test -n "$1" || exit 1
-TEMP=`mktemp` || exit 1
-TEST="./test-$1"
-shift
-$VALGRIND $VALGRIND_OPTS --log-fd=3 $TEST "$@" 3>"$TEMP"; EC=$?
-if test $EC = 0; then
-    grep LEAK "$TEMP" && EC=$VALGRIND_EC_LEAK
-fi
-test $EC = 0 || cat "$TEMP" 1>&2
-rm -fv "$TEMP"
-exit $EC
+SINK ?= /dev/null
+
+CXXFLAGS += -std=c++0x -pedantic -Wall -W -Werror -I../include
+
+.PHONY: check $(HEADERS)
+
+# check whether each header is self-compilable
+check: $(HEADERS)
+$(HEADERS):
+	$(CXX) $(CXXFLAGS) -o $(SINK) -c $@

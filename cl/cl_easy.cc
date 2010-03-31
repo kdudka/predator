@@ -20,9 +20,10 @@
 #include "config.h"
 #include "cl_easy.hh"
 
-#include "cl_msg.hh"
+#include <cl/cl_msg.hh>
+#include <cl/easy.hh>
+
 #include "cl_storage.hh"
-#include "easy.hh"
 
 #include <string>
 

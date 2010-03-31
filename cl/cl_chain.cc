@@ -22,9 +22,10 @@
  * @attention not tested yet
  */
 
-#include "code_listener.h"
+#include <cl/code_listener.h>
+#include <cl/cl_msg.hh>
+
 #include "cl.hh"
-#include "cl_msg.hh"
 #include "cl_private.hh"
 
 #include <boost/foreach.hpp>

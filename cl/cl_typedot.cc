@@ -20,9 +20,10 @@
 #include "config.h"
 #include "cl_typedot.hh"
 
-#include "cl_msg.hh"
+#include <cl/cl_msg.hh>
+#include <cl/location.hh>
+
 #include "cl.hh"
-#include "location.hh"
 #include "util.hh"
 
 #include <fstream>

@@ -20,8 +20,8 @@
 #ifndef H_GUARD_USAGECHK_H
 #define H_GUARD_USAGECHK_H
 
-#include "cl_msg.hh"
-#include "location.hh"
+#include <cl/cl_msg.hh>
+#include <cl/location.hh>
 
 #include <map>
 #include <string>

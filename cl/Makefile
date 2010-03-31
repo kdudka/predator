@@ -1,0 +1,60 @@
+# Copyright (C) 2010 Kamil Dudka <kdudka@redhat.com>
+#
+# This file is part of predator.
+#
+# predator is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# any later version.
+#
+# predator is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with predator.  If not, see <http://www.gnu.org/licenses/>.
+
+CMAKE           ?= cmake
+CTEST           ?= ctest
+
+.PHONY: all clean distclean \
+	distcheck \
+	version.h
+
+all: version.h ../ssd
+	mkdir -p ../cl_build
+	cd ../cl_build && $(CMAKE) ../cl
+	$(MAKE) -C ../cl_build
+
+check: all
+	cd ../cl_build && $(CTEST) --output-on-failure
+
+version.h:
+	printf "#define CL_GIT_SHA1 \"%s\"\n" \
+		`git log | head -1 | cut -f2 -d" "` \
+		| tee $@.tmp \
+		&& install -C -v $@.tmp $@ \
+		&& rm -f $@.tmp
+
+clean:
+	rm -f version.h
+	if test -e ../cl_build/Makefile; then $(MAKE) clean -C ../cl_build; fi
+
+distclean: clean
+	rm -rf ../cl_build
+
+distcheck: distclean
+	$(MAKE) check
+
+#../sparse:
+#	$(MAKE) -C .. sparse
+#
+#../sparse/libsparse.a: ../sparse
+#	$(MAKE) -C ../sparse
+
+../ssd:
+	$(MAKE) -C .. ssd
+
+#../ssd/util/faketty.so: ../ssd/util/faketty.c
+#	$(MAKE) -C ../ssd/util

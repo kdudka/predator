@@ -19,11 +19,12 @@
 
 #include "config.h"
 
+#include <cl/cl_msg.hh>
+
 #include "cl_dotgen.hh"
 #include "cl_easy.hh"
 #include "cl_factory.hh"
 #include "cl_locator.hh"
-#include "cl_msg.hh"
 #include "cl_pp.hh"
 #include "cl_typedot.hh"
 

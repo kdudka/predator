@@ -20,9 +20,10 @@
 #include "config.h"
 #include "cl_pp.hh"
 
+#include <cl/cl_msg.hh>
+#include <cl/location.hh>
+
 #include "cl.hh"
-#include "cl_msg.hh"
-#include "location.hh"
 #include "ssd.h"
 
 #include <errno.h>

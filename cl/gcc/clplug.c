@@ -20,9 +20,10 @@
 // this include has to be the first (according the gcc plug-in API)
 #include <gcc/gcc-plugin.h>
 
-#include "config.h"
-#include "code_listener.h"
-#include "version.h"
+#include <cl/code_listener.h>
+
+#include "../config.h"
+#include "../version.h"
 
 #include <gcc/coretypes.h>
 #include <gcc/diagnostic.h>
@@ -113,8 +114,8 @@ static int verbose = 0;
 
 // plug-in meta-data according to gcc plug-in API
 static struct plugin_info sl_info = {
-    .version = "slplug [SHA1 " SL_GIT_SHA1 "]",
-    .help =    "slplug [SHA1 " SL_GIT_SHA1 "]\n"
+    .version = "slplug [SHA1 " CL_GIT_SHA1 "]",
+    .help =    "slplug [SHA1 " CL_GIT_SHA1 "]\n"
 "\n"
 "Usage: gcc -fplugin=slplug.so [OPTIONS] ...\n"
 "\n"
