@@ -2,28 +2,34 @@ Files maintained by the git repository
 ======================================
 FAQ                 Frequently Asked Questions (and corresponding answers)
 Makefile            root Makefile, among others useful to build gcc from SVN
+cl/                 source codes of Separation Logic based analysis
+cl/COPYING          GPLv3 license text
+cl/README           more specific README for the source codes of cl
 invader-extras/     downstream patches for Invader
 ocaml/mltags        script generating tags for ocaml sources
 seplog/             implementation of symbolic heap by Peter Peringer
-sl/                 current _trunk_ of all source codes
+sl/                 source codes of Separation Logic based analysis
 sl/COPYING          GPLv3 license text
-sl/README           more specific README for the source codes
+sl/README           more specific README for the source codes of sl
 sparse-extras/      downstream patches for sparse
 
 
 Files maintained locally only
 =============================
+cl_build/           working directory for build of libsl.so
 gcc                 symlink to gcc internal headers (feel free to override)
 gcc-build/          working directory for build of gcc
 gcc-install/        location of the installed gcc after a successful build
 gcc-src/            SVN working copy of gcc sources
-sl_build/           working directory for build of the gcc plug-in
+sl_build/           working directory for build of libcl.so
 sparse/             local git repository for SPARSE
 ssd/                local git repository for SSD
 
 
 Useful targets of the root Makefile
 ===================================
+check               run 'make check' in 'cl' and 'sl'
+distcheck           run 'make distcheck' in 'cl' and 'sl'
 fetch               fetch all sources, but gcc (default)
 build_gcc           build gcc from SVN sources (NOTE: this may take some time)
 build_inv           build Invader from sources

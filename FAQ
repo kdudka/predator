@@ -45,7 +45,7 @@ A:
 
 Q: How can I run the test-suite?
 A:
-    $ make -C sl check
+    $ make check
 
 Q: Can I compile the plug-in against my system GCC instead?
 A: Yes, you need GCC version 4.5+ or a working snapshot.
@@ -64,11 +64,11 @@ A:
 
 Q: How can I run the test-suite using my system GCC?
 A:
-    $ make -C sl check CMAKE="cmake -D GCC45=gcc-4.5.0-alpha20091224"
+    $ make check CMAKE="cmake -D GCC45=gcc-4.5.0-alpha20091224"
 
     You need to replace gcc-4.5.0-alpha20091224 by either absolute path to your
     gcc executable, or a ralative one to $PATH.
 
 Q: How can I run the test-suite in parallel?
 A:
-    $ make -C sl check CTEST="ctest -j9"
+    $ make check CTEST="ctest -j9"

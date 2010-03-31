@@ -33,6 +33,9 @@
 
 #include <boost/foreach.hpp>
 
+// required by the gcc plug-in API
+extern "C" { int plugin_is_GPL_compatible; }
+
 namespace {
 
 void initExec(SymExec &se, std::string cnf) {

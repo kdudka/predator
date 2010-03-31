@@ -99,9 +99,6 @@
         debug_tree(expr); \
 } while (0)
 
-// required by gcc plug-in API
-int plugin_is_GPL_compatible;
-
 // name of the plug-in given by gcc during initialization
 static const char *plugin_name = "[uninitialized]";
 
@@ -113,23 +110,26 @@ static int verbose = 0;
 #define SL_VERBOSE_UNHANDLED_EXPR   (1 << 3)
 
 // plug-in meta-data according to gcc plug-in API
+// TODO: split also version of code_listener and version of peer
 static struct plugin_info sl_info = {
-    .version = "slplug [SHA1 " CL_GIT_SHA1 "]",
-    .help =    "slplug [SHA1 " CL_GIT_SHA1 "]\n"
+    .version = "XXX [SHA1 " CL_GIT_SHA1 "]",
+    .help =    "XXX [SHA1 " CL_GIT_SHA1 "]\n"
 "\n"
-"Usage: gcc -fplugin=slplug.so [OPTIONS] ...\n"
+"Usage: gcc -fplugin=XXX.so [OPTIONS] ...\n"
 "\n"
 "// TODO: replace \"symexec\" by something more generic??\n"
 "OPTIONS:\n"
-"    -fplugin-arg-slplug-help\n"
-"    -fplugin-arg-slplug-version\n"
-"    -fplugin-arg-slplug-bypass-symexec                 do not run symexec\n"
-"    -fplugin-arg-slplug-dump-pp[=OUTPUT_FILE]          dump linearized code\n"
-"    -fplugin-arg-slplug-dump-types                     dump also type info\n"
-"    -fplugin-arg-slplug-gen-dot[=GLOBAL_CG_FILE]       generate CFGs\n"
-"    -fplugin-arg-slplug-symexec-args=SYMEXEC_ARGS      args given to symexec\n"
-"    -fplugin-arg-slplug-type-dot=TYPE_GRAPH_FILE       generate type graphs\n"
-"    -fplugin-arg-slplug-verbose[=VERBOSE_BITMASK]      turn on verbose mode\n"
+"    -fplugin-arg-XXX-help\n"
+"    -fplugin-arg-XXX-version\n"
+"    -fplugin-arg-XXX-bypass-symexec                 do not run symexec\n"
+"    -fplugin-arg-XXX-dump-pp[=OUTPUT_FILE]          dump linearized code\n"
+"    -fplugin-arg-XXX-dump-types                     dump also type info\n"
+"    -fplugin-arg-XXX-gen-dot[=GLOBAL_CG_FILE]       generate CFGs\n"
+"    -fplugin-arg-XXX-symexec-args=SYMEXEC_ARGS      args given to symexec\n"
+"    -fplugin-arg-XXX-type-dot=TYPE_GRAPH_FILE       generate type graphs\n"
+"    -fplugin-arg-XXX-verbose[=VERBOSE_BITMASK]      turn on verbose mode\n"
+"\n"
+"//TODO: replace XXX by name of the shared library in run-time\n"
 "\n"
 "VERBOSE_BITMASK:\n"
 "    1          debug gcc plug-in API and code_listener\n"

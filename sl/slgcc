@@ -6,7 +6,7 @@ fi
 
 # basic setup
 SL_BUILD=../sl_build
-SL_PLUG="$SL_BUILD/libslplug.so"
+SL_PLUG="$SL_BUILD/libsl.so"
 GCC="../gcc-install/bin/gcc"
 SVG_VIEWER=chromium
 
@@ -21,7 +21,7 @@ test -x "$SL_PLUG"                          || exit 1
 test -z "$SL_VERBOSE" && SL_VERBOSE=0
 
 # use pp code listener by default
-test -z "$SL_OPTS" && SL_OPTS="-fplugin-arg-libslplug-dump-pp"
+test -z "$SL_OPTS" && SL_OPTS="-fplugin-arg-libsl-dump-pp"
 
 if test x1 = "x$SL_PLOT"; then
     # wipe all .dot and .svg
@@ -32,7 +32,7 @@ fi
 "$GCC" -c "$1" -o /dev/null \
     -O0 -Wall -Wextra \
     -fplugin="$SL_PLUG" \
-    -fplugin-arg-libslplug-verbose="$SL_VERBOSE" \
+    -fplugin-arg-libsl-verbose="$SL_VERBOSE" \
     $SL_OPTS \
     || exit $?
 

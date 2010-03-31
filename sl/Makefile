@@ -26,7 +26,8 @@ RANLIB          ?= ranlib
 	distcheck \
 	version.h
 
-all: version.h ../ssd ../cl_build/libcl.so
+all: version.h ../cl_build/libcl.so
+	$(MAKE) -C ../cl_build # make sure the libcl.so is up2date
 	mkdir -p ../sl_build
 	cd ../sl_build && $(CMAKE) ../sl
 	$(MAKE) -C ../sl_build
