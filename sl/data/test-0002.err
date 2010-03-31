@@ -1,4 +1,2 @@
-test-0002.c:8:18: error: uninitialized local variable 'undef'
-test-0002.c:6:12: warning: unused local variable 'err'
 test-0002.c:6:18: error: dereference of NULL value
 test-0002.c:8:18: error: dereference of uninitialized value

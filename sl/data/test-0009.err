@@ -1,6 +1,3 @@
-test-0009.c:6:12: warning: unused local variable 'ok'
-test-0009.c:9:11: warning: unused local variable 'warn'
-test-0009.c:12:12: warning: unused local variable 'err'
 test-0009.c:9:11: warning: amount of allocated memory not accurate
 test-0009.c:9:11: note: allocated: 4 bytes
 test-0009.c:9:11: note:  expected: 1 bytes

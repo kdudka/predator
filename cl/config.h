@@ -51,6 +51,11 @@ extern const char *cl_git_sha1;
 #define CLD_ARG_SUBST_KEEP_TYPE_REF     1
 
 /**
+ * if 1, do not check for unused local variables and registers
+ */
+#define CLD_BYPASS_USAGE_CHK            1
+
+/**
  * type enumerator debug level; set to 0 to disable debugging
  */
 #define DEBUG_TYPE_ENUMERATOR           0

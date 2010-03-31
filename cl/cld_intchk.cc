@@ -27,6 +27,10 @@
 #include <map>
 #include <string>
 
+#ifndef CLD_BYPASS_USAGE_CHK
+#   define CLD_BYPASS_USAGE_CHK 0
+#endif
+
 class CldCbSeqChk: public ClDecoratorBase {
     public:
         CldCbSeqChk(ICodeListener *slave);
@@ -589,14 +593,27 @@ void CldLabelChk::emitWarnings() {
     }
 }
 
+namespace {
+
+#if CLD_BYPASS_USAGE_CHK
+ICodeListener* usageChk(ICodeListener *slave) {
+    return slave;
+}
+#else
+ICodeListener* usageChk(ICodeListener *slave) {
+    return
+        new CldLcVarUsageChk(
+        new CldRegUsageChk(slave));
+}
+#endif
+
+} // namespace
+
 
 // /////////////////////////////////////////////////////////////////////////////
 // public interface, see cld_intchk.hh for more details
 ICodeListener* createCldIntegrityChk(ICodeListener *slave) {
-    return
-        new CldLcVarUsageChk(
-        new CldRegUsageChk(
+    return usageChk(
         new CldLabelChk(
-        new CldCbSeqChk(slave)
-        )));
+        new CldCbSeqChk(slave)));
 }

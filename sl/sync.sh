@@ -10,7 +10,7 @@ for i in data/test-00??.c; do
   $TIMEOUT ../gcc-install/bin/gcc \
     -m32 \
     -c `readlink -f $i` \
-    -fplugin=../sl_build/libslplug.so \
+    -fplugin=../sl_build/libsl.so \
     2>&1 \
     | grep -v '\[internal location\]$' \
     | sed s/`readlink -f data | sed 's/\\//\\\\\\//g'`\\/// \

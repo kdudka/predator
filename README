@@ -27,8 +27,9 @@ ssd/                local git repository for SSD
 
 Useful targets of the root Makefile
 ===================================
+all                 run 'make' in cl, sl and fa_analysis (default)
 check               run 'make check' in cl, sl and fa_analysis
 distcheck           run 'make distcheck' in cl, sl and fa_analysis
-fetch               fetch all sources, but gcc (default)
+fetch               fetch all sources, but gcc
 build_gcc           build gcc from SVN sources (NOTE: this may take some time)
 build_inv           build Invader from sources
