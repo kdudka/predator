@@ -34,11 +34,12 @@ version.h:
 	printf "#define CL_GIT_SHA1 \"%s\"\n" \
 		`git log | head -1 | cut -f2 -d" "` \
 		| tee $@.tmp \
-		&& install -C -v $@.tmp $@ \
+		&& install -m0644 -C -v $@.tmp $@ \
 		&& rm -f $@.tmp
 
 clean:
 	rm -f version.h
+	rm -f gcc/*.dot
 	if test -e ../cl_build/Makefile; then $(MAKE) clean -C ../cl_build; fi
 
 distclean: clean

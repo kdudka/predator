@@ -21,4 +21,4 @@
 #include "version.h"
 
 // see the comment in config.h for details
-const char *cl_git_sha1 = CL_GIT_SHA1;
+const char *sl_git_sha1 = SL_GIT_SHA1;

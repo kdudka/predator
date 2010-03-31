@@ -20,7 +20,8 @@
 #include "config.h"
 #include "symdump.hh"
 
-#include "code_listener.h"
+#include <cl/code_listener.h>
+
 #include "symheap.hh"
 
 #include <iostream>

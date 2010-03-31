@@ -17,20 +17,16 @@
 
 CMAKE           ?= cmake
 CTEST           ?= ctest
-DATASET         ?= data/*.c
-TIMEOUT         ?= timeout 300
 
 LD              ?= g++
 AR              ?= ar
 RANLIB          ?= ranlib
 
-PLUG_CFLAGS     ?= -fPIC -std=c99 -pedantic -Wall -W -Werror -I.. -I../gcc -iquote.
-
 .PHONY: all clean distclean \
 	distcheck \
 	version.h
 
-all: version.h ../ssd
+all: version.h ../ssd ../cl_build/libcl.so
 	mkdir -p ../sl_build
 	cd ../sl_build && $(CMAKE) ../sl
 	$(MAKE) -C ../sl_build
@@ -42,73 +38,11 @@ version.h:
 	printf "#define SL_GIT_SHA1 \"%s\"\n" \
 		`git log | head -1 | cut -f2 -d" "` \
 		| tee $@.tmp \
-		&& install -C -v $@.tmp $@ \
+		&& install -m0644 -C -v $@.tmp $@ \
 		&& rm -f $@.tmp
-
-CL_OBJS = cl_chain.o \
-	cl_dotgen.o \
-	cl_easy.o \
-	cl_factory.o \
-	cl_locator.o \
-	cl_pp.o \
-	cl_symexec.o \
-	cl_storage.o \
-	cl_typedot.o \
-	cld_argsub.o \
-	cld_intchk.o \
-	cld_opchk.o \
-	cld_optrans.o \
-	cld_unilabel.o \
-	cld_uniregs.o \
-	cld_univars.o \
-	cld_unswitch.o \
-	code_listener.o \
-	location.o \
-	ssd.o \
-	storage.o \
-	symcall.o \
-	symdump.o \
-	symexec.o \
-	symheap.o \
-	symplot.o \
-	symproc.o \
-	symstate.o \
-	version.o
-
-CL_LIBS = -lboost_iostreams -lboost_system
-
-libcl.a: $(CL_OBJS)
-	$(AR) r $@ $(CL_OBJS)
-	$(RANLIB) $@
-
-SLSPARSE_OBJS = \
-	hash_table.o \
-	slsparse.o \
-	type_enumerator.o
-
-#TODO: dependency scanning
-$(CL_OBJS) $(SLSPARSE_OBJS) slplug.o: *.h *.hh
-
-$(CL_OBJS):     CXXFLAGS += -fPIC -std=c++0x -pedantic -Wall -Wextra
-ssd.o:          CXXFLAGS += -DHAVE_ISATTY
-slplug.o:         CFLAGS += $(PLUG_CFLAGS)
-
-$(SLSPARSE_OBJS): ../sparse
-$(SLSPARSE_OBJS): CFLAGS += -fPIC -Wall -Wextra -I.. 
-slsparse: $(SLSPARSE_OBJS) libcl.a ../sparse/libsparse.a
-	$(CC) $(CFLAGS) -o $@ $(SLSPARSE_OBJS) \
-		-L. -lcl ../sparse/libsparse.a $(CL_LIBS) $(LDFLAGS)
-
-slplug.so: LDFLAGS += -fPIC -shared $(CL_LIBS)
-slplug.so: slplug.o libcl.a
-	$(LD) -o $@ $(LDFLAGS) slplug.o -lcl -L.
 
 clean:
 	rm -f version.h
-	rm -f libcl.a $(CL_OBJS)
-	rm -f slsparse $(SLSPARSE_OBJS)
-	rm -f slplug.o slplug.so
-	rm -f slplug.c*.dot
 	$(MAKE) clean -C data
 	if test -e ../sl_build/Makefile; then $(MAKE) clean -C ../sl_build; fi
 
@@ -118,6 +52,9 @@ distclean: clean
 
 distcheck: distclean
 	$(MAKE) check
+
+../cl_build/libcl.so:
+	$(MAKE) -C ../cl
 
 #pphtml: ../sl_build/libslplug.so ../ssd/util/faketty.so
 #	for i in $(DATASET); do \
@@ -133,15 +70,9 @@ distcheck: distclean
 #			| ../ssd/util/tty2html \
 #			> $$i.pp.html; \
 #	done
-
-../sparse:
-	$(MAKE) -C .. sparse
-
-../sparse/libsparse.a: ../sparse
-	$(MAKE) -C ../sparse
-
-../ssd:
-	$(MAKE) -C .. ssd
-
-../ssd/util/faketty.so: ../ssd/util/faketty.c
-	$(MAKE) -C ../ssd/util
+#
+#../ssd:
+#	$(MAKE) -C .. ssd
+#
+#../ssd/util/faketty.so: ../ssd/util/faketty.c
+#	$(MAKE) -C ../ssd/util

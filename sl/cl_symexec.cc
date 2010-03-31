@@ -20,11 +20,11 @@
 #include "config.h"
 
 #include <cl/easy.hh>
+#include <cl/cl_msg.hh>
+#include <cl/location.hh>
+#include <cl/storage.hh>
 
 #include "btprint.hh"
-#include "cl_msg.hh"
-#include "location.hh"
-#include "storage.hh"
 #include "symexec.hh"
 #include "symproc.hh"
 #include "symstate.hh"

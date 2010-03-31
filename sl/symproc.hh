@@ -26,8 +26,9 @@
  * operations
  */
 
-#include "location.hh"
-#include "storage.hh"
+#include <cl/location.hh>
+#include <cl/storage.hh>
+
 #include "symid.hh"
 
 class IBtPrinter;

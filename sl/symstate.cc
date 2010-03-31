@@ -20,7 +20,8 @@
 #include "config.h"
 #include "symstate.hh"
 
-#include "code_listener.h"
+#include <cl/code_listener.h>
+
 #include "util.hh"
 #include "worklist.hh"
 

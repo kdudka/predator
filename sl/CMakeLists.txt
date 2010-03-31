@@ -18,25 +18,16 @@
 # project metadata
 cmake_minimum_requireD(VERSION 2.8)
 project(sl C CXX)
+add_definitions("-I../include")
 enable_testing()
 
 # Check Boost availability
 set(Boost_ADDITIONAL_VERSIONS "1.40" "1.41" "1.42" "1.43")
 find_package(Boost 1.37 REQUIRED
     iostreams
-    system
-    unit_test_framework)
+    system)
 link_directories(${Boost_LIBRARY_DIRS})
 include_directories(${Boost_INCLUDE_DIRS})
-
-# Check for isatty(3)
-include(CheckFunctionExists)
-check_function_exists("isatty" HAVE_ISATTY)
-if (HAVE_ISATTY)
-    add_definitions("-DHAVE_ISATTY=1")
-else()
-    add_definitions("-DHAVE_ISATTY=0")
-endif()
 
 # Check for a C compiler flag
 include(CheckCCompilerFlag)
@@ -88,32 +79,9 @@ else()
     add_definitions("-O3 -DNDEBUG")
 endif()
 
-# tweak include dirs, etc.
-add_definitions("-I.. -I../gcc -I../ssd/src -fPIC")
-
 # Static library sl
-add_library(sl STATIC
-    cl_chain.cc
-    cl_dotgen.cc
-    cl_easy.cc
-    cl_factory.cc
-    cl_locator.cc
-    cl_pp.cc
+add_library(sl SHARED
     cl_symexec.cc
-    cl_storage.cc
-    cl_typedot.cc
-    cld_argsub.cc
-    cld_intchk.cc
-    cld_opchk.cc
-    cld_optrans.cc
-    cld_unilabel.cc
-    cld_uniregs.cc
-    cld_univars.cc
-    cld_unswitch.cc
-    code_listener.cc
-    location.cc
-    ssd.cc
-    storage.cc
     symcall.cc
     symdump.cc
     symexec.cc
@@ -123,27 +91,12 @@ add_library(sl STATIC
     symstate.cc
     version.c)
 
-target_link_libraries(sl
-    boost_iostreams
-    boost_system)
-
-add_library(slplug SHARED slplug.c)
-target_link_libraries(slplug sl)
-
-add_executable(test-dll test-dll.cc data/dll.c)
-target_link_libraries(test-dll boost_unit_test_framework)
-add_test("data/dll.c-self_test" test-dll)
+# link with code_listener
+find_library(CL_LIB cl ../cl_build)
+target_link_libraries(sl ${CL_LIB})
 
 set(GCC45 "${sl_BINARY_DIR}/../gcc-install/bin/gcc"
     CACHE STRING "absolute path to executable of gcc-4.5")
-
-add_test("compile-self" ${GCC45}
-    ${CFLAGS}
-    -I${sl_SOURCE_DIR}/..
-    -I${sl_SOURCE_DIR}/../gcc
-    -c ${sl_SOURCE_DIR}/slplug.c
-    -fplugin=${sl_BINARY_DIR}/libslplug.so
-    -fplugin-arg-libslplug-bypass-symexec)
 
 set(examples
     0002 0003 0004 0005 0006 0007 0008 0009
@@ -157,8 +110,8 @@ macro(test_sym_exec label tool arg1 arg2)
     foreach (num ${examples})
         add_test("${label}___example-${num}" ${tool} ${arg} ${arg2}
             -c ${sl_SOURCE_DIR}/data/test-${num}.c
-            -fplugin=${sl_BINARY_DIR}/libslplug.so
-            -fplugin-arg-libslplug-verbose=1)
+            -fplugin=${sl_BINARY_DIR}/libsl.so
+            -fplugin-arg-libsl-verbose=1)
     endforeach()
 endmacro()
 test_sym_exec("simple-test" ${GCC45} "" "")
@@ -171,7 +124,7 @@ foreach (num ${examples})
     set(cmd "${cmd} -m32")
 
     set(cmd "${cmd} -c ${sl_SOURCE_DIR}/data/test-${num}.c")
-    set(cmd "${cmd} -fplugin=${sl_BINARY_DIR}/libslplug.so")
+    set(cmd "${cmd} -fplugin=${sl_BINARY_DIR}/libsl.so")
     set(cmd "${cmd} 2>&1")
 
     # FIXME: the following line significantly decreases coverage of the test
@@ -195,20 +148,13 @@ set(self_extra_opts
     -I${sl_SOURCE_DIR}/..
     -I${sl_SOURCE_DIR}/../gcc
     -c ${sl_SOURCE_DIR}/slplug.c
-    -fplugin=${sl_BINARY_DIR}/libslplug.so
-    -fplugin-arg-libslplug-dump-pp=/dev/null
-    -fplugin-arg-libslplug-dump-types
-    -fplugin-arg-libslplug-gen-dot=/dev/null
-    -fplugin-arg-libslplug-type-dot=/dev/null
-    -fplugin-arg-libslplug-verbose=15
-    -fplugin-arg-libslplug-bypass-symexec)
-
-add_test("compile-self-extra" ${GCC45} ${self_extra_opts})
-add_test("compile-self-valgrind" valgrind
-    --error-exitcode=7
-    --suppressions=${sl_SOURCE_DIR}/gcc.valgrind
-    ${GCC45}
-    ${self_extra_opts})
+    -fplugin=${sl_BINARY_DIR}/libsl.so
+    -fplugin-arg-libsl-dump-pp=/dev/null
+    -fplugin-arg-libsl-dump-types
+    -fplugin-arg-libsl-gen-dot=/dev/null
+    -fplugin-arg-libsl-type-dot=/dev/null
+    -fplugin-arg-libsl-verbose=15
+    -fplugin-arg-libsl-bypass-symexec)
 
 test_sym_exec("valgrind-test" valgrind
     --error-exitcode=7
@@ -218,10 +164,6 @@ add_test("headers_sanity-0" gcc -ansi -Wall -Wextra -Werror -pedantic
     -o /dev/null
     -c ${sl_SOURCE_DIR}/config.h)
 
-add_test("headers_sanity-1" gcc -ansi -Wall -Wextra -Werror -pedantic
-    -o /dev/null
-    -c ${sl_SOURCE_DIR}/code_listener.h)
-
-add_test("headers_sanity-2" make -j
+add_test("headers_sanity-1" make -j
     -C ${sl_SOURCE_DIR}
     -f ${sl_SOURCE_DIR}/Makefile.chk)

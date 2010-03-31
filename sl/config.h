@@ -41,34 +41,9 @@ extern const char *sl_git_sha1;
 } while (0)
 
 /**
- * if 1, check each code_listener decorator by the integrity checker
- */
-#define CL_DEBUG_CLD                    0
-
-/**
- * if 1, use ugly temporary workaround for missing type info of sparse args
- */
-#define CLD_ARG_SUBST_KEEP_TYPE_REF     1
-
-/**
- * type enumerator debug level; set to 0 to disable debugging
- */
-#define DEBUG_TYPE_ENUMERATOR           0
-
-/**
- * if 1, print progress of code_listener factory when running in verbose mode
- */
-#define DEBUG_CL_FACTORY                0
-
-/**
  * if 1, print created/destroyed stack variables when running in verbose mode
  */
 #define DEBUG_SE_STACK_FRAME            0
-
-/**
- * if 1, print gcc callbacks as they come when running in verbose mode
- */
-#define DEBUG_SLPLUG                    0
 
 /**
  * if 1, define TObjId and TValueId is integers (makes debugging easier)

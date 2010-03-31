@@ -20,8 +20,9 @@
 #include "config.h"
 #include "symheap.hh"
 
-#include "cl_msg.hh"
-#include "code_listener.h"
+#include <cl/cl_msg.hh>
+#include <cl/code_listener.h>
+
 #include "symdump.hh"
 #include "util.hh"
 #include "worklist.hh"

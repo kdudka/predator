@@ -20,8 +20,9 @@
 #include "config.h"
 #include "symproc.hh"
 
+#include <cl/cl_msg.hh>
+
 #include "btprint.hh"
-#include "cl_msg.hh"
 #include "symheap.hh"
 #include "symplot.hh"
 #include "symstate.hh"
