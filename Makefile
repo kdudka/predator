@@ -39,7 +39,8 @@ SVN             ?= svn#                     # use this to override svn(1)
 
 .PHONY: all check clean distcheck distclean fetch unpack \
 	build_gcc update_gcc update_gcc_src_only \
-	build_inv
+	build_inv \
+	api_cl api_sl api
 
 all: $(SSD_GIT) include/gcc/
 	$(MAKE) -C cl $@
@@ -74,6 +75,16 @@ distcheck: include/gcc/
 	$(MAKE) -C cl $@
 	$(MAKE) -C sl $@
 	$(MAKE) -C fa_analysis $@
+
+api_cl:
+	$(MAKE) -C cl/api clean
+	$(MAKE) -C cl/api
+
+api_sl:
+	$(MAKE) -C sl/api clean
+	$(MAKE) -C sl/api
+
+api: api_cl api_sl
 
 # initialize a git repo for Invader and apply downstream patches
 $(INVADER_DIR): $(INVADER)
