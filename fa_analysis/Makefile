@@ -32,7 +32,6 @@ check: all
 
 clean:
 	rm -f version.h
-	$(MAKE) clean -C data
 	if test -e ../fa_analysis_build/Makefile; then \
 		$(MAKE) clean -C ../fa_analysis_build; \
 	fi
