@@ -24,6 +24,8 @@ A: * CMake 2.8+
      - available at http://www.cmake.org
      - the executable is called 'cmake'
      - usually provided by a package called 'cmake'
+     - though minimal required version of CMake is 2.6, known to work is 2.8+,
+       please report any issues with other CMake versions
 
    * Boost libraries 1.37+
      - available at http://www.boost.org/

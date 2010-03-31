@@ -11,7 +11,6 @@ ocaml/mltags        script generating tags for ocaml sources
 seplog/             implementation of symbolic heap by Peter Peringer
 sl/                 source codes of Separation Logic based analysis
 sl/README           more specific README for the source codes of sl
-sparse-extras/      downstream patches for sparse
 
 
 Files maintained locally only
@@ -28,8 +27,8 @@ ssd/                local git repository for SSD
 
 Useful targets of the root Makefile
 ===================================
-check               run 'make check' in 'cl' and 'sl'
-distcheck           run 'make distcheck' in 'cl' and 'sl'
+check               run 'make check' in cl, sl and fa_analysis
+distcheck           run 'make distcheck' in cl, sl and fa_analysis
 fetch               fetch all sources, but gcc (default)
 build_gcc           build gcc from SVN sources (NOTE: this may take some time)
 build_inv           build Invader from sources

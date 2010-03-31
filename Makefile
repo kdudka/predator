@@ -37,9 +37,14 @@ CURL            ?= curl --location -v#      # URL grabber command-line
 GIT             ?= git#                     # use this to override git(1)
 SVN             ?= svn#                     # use this to override svn(1)
 
-.PHONY: check clean distcheck distclean fetch unpack \
+.PHONY: all check clean distcheck distclean fetch unpack \
 	build_gcc update_gcc update_gcc_src_only \
 	build_inv
+
+all: $(SSD_GIT) include/gcc/
+	$(MAKE) -C cl $@
+	$(MAKE) -C sl $@
+	$(MAKE) -C fa_analysis $@
 
 # fetch all, but gcc
 fetch: $(INVADER) $(SPARSE) $(SSD_GIT)
@@ -60,12 +65,12 @@ distclean: clean
 	rm -rf gcc $(GCC_SRC) $(GCC_INSTALL)
 	$(MAKE) -C sl distclean
 
-check:
+check: include/gcc/
 	$(MAKE) -C cl $@
 	$(MAKE) -C sl $@
 	$(MAKE) -C fa_analysis $@
 
-distcheck:
+distcheck: include/gcc/
 	$(MAKE) -C cl $@
 	$(MAKE) -C sl $@
 	$(MAKE) -C fa_analysis $@
@@ -129,9 +134,6 @@ $(INVADER):
 # initialize a local git repo for SPARSE
 $(SPARSE):
 	$(GIT) clone git://git.kernel.org/pub/scm/devel/sparse/chrisl/sparse.git $@
-	cd $@ && $(GIT) checkout -b sl
-	cd $@ && $(GIT) am ../sparse-extras/*.patch
-	cd $@ && ln -s ../sparse-extras/local.mk
 
 # create SVN working copy for gcc sources
 $(GCC_SRC):
