@@ -33,7 +33,8 @@ A: * CMake 2.8+
 Q: What equipment do I need to run the test-suite?
 A: * 32bit system headers, especially in case of 64bit OS
      - on Ubuntu/Debian provided by a package called 'libc6-dev-i386'
-     - you can their status by 'gcc -m32 -o /dev/null /usr/include/stdlib.h'
+     - you can check their status
+       by 'gcc -m32 -o /dev/null /usr/include/stdlib.h'
 
 Q: How can I compile GCC from SVN sources?
 A:

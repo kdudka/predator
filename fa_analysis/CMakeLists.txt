@@ -17,7 +17,7 @@
 
 # project metadata
 cmake_minimum_requireD(VERSION 2.8)
-project(sl C CXX)
+project(fa_analysis C CXX)
 include("../CMakeLists.common")
 add_definitions("-I../include")
 

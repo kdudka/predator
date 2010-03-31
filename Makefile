@@ -52,7 +52,7 @@ clean:
 	rm -rf $(INVADER) $(SPARSE) $(SSD_GIT)
 	rm -rf $(INVADER_DIR)
 	rm -rf $(GCC_BUILD)
-	rm -rf cl_build sl_build
+	rm -rf cl_build sl_build fa_analysis_build
 	$(MAKE) -C sl clean
 
 # wipe out all
