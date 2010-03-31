@@ -21,63 +21,7 @@ project(sl C CXX)
 add_definitions("-I../include")
 enable_testing()
 
-# Check Boost availability
-set(Boost_ADDITIONAL_VERSIONS "1.40" "1.41" "1.42" "1.43")
-find_package(Boost 1.37 REQUIRED
-    iostreams
-    system)
-link_directories(${Boost_LIBRARY_DIRS})
-include_directories(${Boost_INCLUDE_DIRS})
-
-# Check for a C compiler flag
-include(CheckCCompilerFlag)
-macro(ADD_C_FLAG opt_name opt)
-    check_c_compiler_flag(${opt} HAVE_${opt_name})
-    if(HAVE_${opt_name})
-        add_definitions(${opt})
-    endif()
-endmacro()
-macro(ADD_C_ONLY_FLAG opt_name opt)
-    check_c_compiler_flag(${opt} C_HAVE_${opt_name})
-    if(C_HAVE_${opt_name})
-        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${opt}")
-    endif()
-endmacro()
-
-# Check for a C++ compiler flag
-include(CheckCXXCompilerFlag)
-macro(ADD_CXX_ONLY_FLAG opt_name opt)
-    check_cxx_compiler_flag(${opt} CXX_HAVE_${opt_name})
-    if(CXX_HAVE_${opt_name})
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${opt}")
-    endif()
-endmacro()
-
-# we use c99 to compile *.c and c++0x to copmile *.cc
-ADD_C_ONLY_FLAG(  "STD_C99"         "-std=c99")
-ADD_CXX_ONLY_FLAG("STD_CXX_0X"      "-std=c++0x")
-
-# tweak warnings
-ADD_C_FLAG(       "PEDANTIC"        "-pedantic")
-ADD_C_FLAG(       "W_ALL"           "-Wall")
-ADD_CXX_ONLY_FLAG("W_NO_DEPRECATED" "-Wno-deprecated")
-
-option(SL_WEXTRA "Set to ON to use -Wextra (recommended)" ON)
-if(SL_WEXTRA)
-    ADD_C_FLAG("W_EXTRA" "-Wextra")
-endif()
-
-option(SL_WERROR "Set to ON to use -Werror (recommended)" OFF)
-if(SL_WERROR)
-    ADD_C_FLAG("W_ERROR" "-Werror")
-endif()
-
-option(SL_DEBUG "Set to OFF to boost performance" ON)
-if(SL_DEBUG)
-    add_definitions("-O0 -g")
-else()
-    add_definitions("-O3 -DNDEBUG")
-endif()
+include("../CMakeLists.common")
 
 # Static library sl
 add_library(sl SHARED
@@ -94,9 +38,6 @@ add_library(sl SHARED
 # link with code_listener
 find_library(CL_LIB cl ../cl_build)
 target_link_libraries(sl ${CL_LIB})
-
-set(GCC45 "${sl_BINARY_DIR}/../gcc-install/bin/gcc"
-    CACHE STRING "absolute path to executable of gcc-4.5")
 
 set(examples
     0002 0003 0004 0005 0006 0007 0008 0009
