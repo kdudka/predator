@@ -1,4 +1,5 @@
 cl_build/
+fa_analysis_build/
 gcc
 gcc-build/
 gcc-install/

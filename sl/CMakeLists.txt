@@ -23,7 +23,7 @@ enable_testing()
 
 include("../CMakeLists.common")
 
-# Static library sl
+# libsl.so
 add_library(sl SHARED
     cl_symexec.cc
     symcall.cc

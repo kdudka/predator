@@ -9,7 +9,6 @@ CMakeLists.txt      CMake list (new test-cases and modules are added here)
 COPYING             GPLv3 license text
 Makefile            initiator of the CMake based out-of-source build and tests
 Makefile.chk        checks whether all headers are self-compilable
-code_listener.h     code_listener interface, useful for writing plug-ins, etc.
 config.h            various compile-time configuration (debugging options, ...)
 sl.h                a header file included _only_ by analysed programs
 slgcc               a wrapper script which runs gcc with the plug-in

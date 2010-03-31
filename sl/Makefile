@@ -18,10 +18,6 @@
 CMAKE           ?= cmake
 CTEST           ?= ctest
 
-LD              ?= g++
-AR              ?= ar
-RANLIB          ?= ranlib
-
 .PHONY: all clean distclean \
 	distcheck \
 	version.h

@@ -34,7 +34,7 @@ endif()
 # tweak include dirs, etc.
 add_definitions("-I../include -I../include/gcc -fPIC")
 
-# Static library cl
+# libcl.so
 add_library(cl SHARED
     cl_chain.cc
     cl_dotgen.cc
