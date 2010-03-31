@@ -52,7 +52,7 @@ A: Yes, you need GCC version 4.5+ or a working snapshot.
 
 Q: How can I compile the plug-in against my system GCC?
 A:
-    $ ln -sfT GCC_PLUGIN_HEADERS ./gcc
+    $ ln -sfT GCC_PLUGIN_HEADERS include/gcc
     $ make -C sl
 
     You need to replace GCC_PLUGIN_HEADERS by a directory containing the gcc

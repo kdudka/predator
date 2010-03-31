@@ -63,10 +63,12 @@ distclean: clean
 check:
 	$(MAKE) -C cl $@
 	$(MAKE) -C sl $@
+	$(MAKE) -C fa_analysis $@
 
 distcheck:
 	$(MAKE) -C cl $@
 	$(MAKE) -C sl $@
+	$(MAKE) -C fa_analysis $@
 
 # initialize a git repo for Invader and apply downstream patches
 $(INVADER_DIR): $(INVADER)

@@ -1,15 +1,15 @@
 Files maintained by the git repository
 ======================================
+COPYING             GPLv3 license text
 FAQ                 Frequently Asked Questions (and corresponding answers)
 Makefile            root Makefile, among others useful to build gcc from SVN
 cl/                 source codes of Separation Logic based analysis
-cl/COPYING          GPLv3 license text
 cl/README           more specific README for the source codes of cl
+fa_analysis/        Jiri Simacek's pet project
 invader-extras/     downstream patches for Invader
 ocaml/mltags        script generating tags for ocaml sources
 seplog/             implementation of symbolic heap by Peter Peringer
 sl/                 source codes of Separation Logic based analysis
-sl/COPYING          GPLv3 license text
 sl/README           more specific README for the source codes of sl
 sparse-extras/      downstream patches for sparse
 

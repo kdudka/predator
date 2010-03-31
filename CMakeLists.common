@@ -74,4 +74,4 @@ else()
 endif()
 
 set(GCC45 "../gcc-install/bin/gcc"
-    CACHE STRING "absolute path to executable of gcc-4.5")
+    CACHE STRING "absolute path of executable of gcc-4.5")
