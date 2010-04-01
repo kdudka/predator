@@ -39,6 +39,7 @@ struct cl_type;
 enum EUnknownValue {
     UV_KNOWN = 0,           ///< known value - what we usually wish we had
     UV_UNKNOWN,             ///< unknown value - what we usually have in reality
+    UV_UNKNOWN_NOT_NULL,    ///< we now the value is not VAL_NULL (only for int)
     UV_UNINITIALIZED,       ///< unknown value of an uninitialised object
     UV_DEREF_FAILED         ///< value equivalent of symid.hh::OBJ_DEREF_FAILED
 };

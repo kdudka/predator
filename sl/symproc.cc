@@ -70,7 +70,7 @@ TValueId SymHeapProcessor::heapValFromCst(const struct cl_operand &op) {
                     : VAL_FALSE;
             } else {
                 return (cst.data.cst_int.value)
-                    ? heap_.valCreateUnknown(UV_UNKNOWN, op.type)
+                    ? heap_.valCreateUnknown(UV_UNKNOWN_NOT_NULL, op.type)
                     : VAL_NULL;
             }
 
@@ -121,6 +121,7 @@ void SymHeapProcessor::heapObjHandleAccessorDeref(TObjId *pObj)
             break;
 
         case UV_UNKNOWN:
+        case UV_UNKNOWN_NOT_NULL:
             *pObj = OBJ_UNKNOWN;
             return;
 
@@ -627,6 +628,10 @@ void SymHeapProcessor::execFree(const CodeStorage::TOperandList &opList) {
         case UV_KNOWN:
             break;
 
+        case UV_UNKNOWN_NOT_NULL:
+            TRAP;
+            // fall through!
+
         case UV_UNKNOWN:
             CL_DEBUG_MSG(lw_, "ignoring free() called on unknown value");
             return;
@@ -1019,9 +1024,37 @@ TValueId handleOpCmpInt(THeap &heap, enum cl_binop_e code,
     if (v1 < 0 || v2 < 0)
         TRAP;
 
-    (void) code;
+    // make sure at least of the values is VAL_NULL, which means zero
+    // in case of CL_TYPE_INT
+    sortValues(v1, v2);
+    bool eq;
+    if (v1 != VAL_NULL)
+        goto who_knows;
 
-    // FIXME: we give up any reasoning about integral values for now
+    // check whether the second value is also VAL_NULL, which implies equality
+    eq = (v2 == VAL_NULL);
+
+    if (!eq && UV_UNKNOWN_NOT_NULL != heap.valGetUnknown(v2))
+        // bad luck, the second value is not known to be NULL, nor non-NULL
+        goto who_knows;
+
+    switch (code) {
+        case CL_BINOP_NE:
+            eq = !eq;
+            // fall through!
+
+        case CL_BINOP_EQ:
+            return (eq)
+                ? VAL_TRUE
+                : VAL_FALSE;
+
+        default:
+            // hard to compare unknown values by <, <=, >, >=
+            goto who_knows;
+    }
+
+who_knows:
+    // unknown result of compare operation
     return heap.valCreateUnknown(UV_UNKNOWN, dstClt);
 }
 
