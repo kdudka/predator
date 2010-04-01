@@ -1039,6 +1039,24 @@ TValueId handleOpCmpInt(THeap &heap, enum cl_binop_e code,
         goto who_knows;
 
     switch (code) {
+        case CL_BINOP_LT:
+        case CL_BINOP_GT:
+            if (eq)
+                // we got either (0 < 0), or (0 > 0)
+                return VAL_FALSE;
+            else
+                // bad luck, hard to compare unknown values for < >
+                goto who_knows;
+
+        case CL_BINOP_LE:
+        case CL_BINOP_GE:
+            if (eq)
+                // we got either (0 <= 0), or (0 >= 0)
+                return VAL_TRUE;
+            else
+                // bad luck, hard to compare unknown values for <= >=
+                goto who_knows;
+
         case CL_BINOP_NE:
             eq = !eq;
             // fall through!
@@ -1049,8 +1067,7 @@ TValueId handleOpCmpInt(THeap &heap, enum cl_binop_e code,
                 : VAL_FALSE;
 
         default:
-            // hard to compare unknown values by <, <=, >, >=
-            goto who_knows;
+            TRAP;
     }
 
 who_knows:

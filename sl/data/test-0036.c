@@ -51,5 +51,13 @@ int main()
         // something went wrong, shout now
         *gl_ptr = gl_ptr;
 
+    if (i1 < i2)
+        // something went wrong, shout now
+        *gl_ptr = gl_ptr;
+
+    if (i1 > i2)
+        // something went wrong, shout now
+        *gl_ptr = gl_ptr;
+
     return 0;
 }
