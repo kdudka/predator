@@ -45,7 +45,7 @@ int main()
         // something went wrong, shout now
         *gl_ptr = gl_ptr;
 
-    // test #5 - (i1 == 0), (i2 == 0)
+    // test #6 - (i1 == 0), (i2 == 0)
     i2 = 0;
     if (i1 != i2)
         // something went wrong, shout now

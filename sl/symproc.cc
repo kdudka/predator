@@ -1024,7 +1024,7 @@ TValueId handleOpCmpInt(THeap &heap, enum cl_binop_e code,
     if (v1 < 0 || v2 < 0)
         TRAP;
 
-    // make sure at least of the values is VAL_NULL, which means zero
+    // make sure at least one of the values is VAL_NULL, which means zero
     // in case of CL_TYPE_INT
     sortValues(v1, v2);
     bool eq;
