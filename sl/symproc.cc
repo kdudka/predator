@@ -330,7 +330,7 @@ namespace {
     void digPointingObjects(TWL &wl, THeap &heap, TValueId val) {
         // go through all objects having the value
         SymHeap::TContObj cont;
-        heap.haveValue(cont, val);
+        heap.usedBy(cont, val);
         BOOST_FOREACH(TObjId obj, cont) {
 
             // go through all super objects

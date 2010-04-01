@@ -120,7 +120,7 @@ struct SymHeapCore::Private {
     struct Value {
         EUnknownValue       code;
         TObjId              target;
-        std::set<TObjId>    referrers;
+        std::set<TObjId>    usedBy;
 
         Value(): code(UV_KNOWN), target(OBJ_INVALID) { }
     };
@@ -141,7 +141,7 @@ void SymHeapCore::Private::releaseValueOf(TObjId obj) {
         return;
 
     Value &ref = this->values.at(val);
-    if (1 != ref.referrers.erase(obj))
+    if (1 != ref.usedBy.erase(obj))
         // *** offset detected ***
         TRAP;
 }
@@ -158,7 +158,7 @@ SymHeapCore::SymHeapCore():
 
     // store backward reference to OBJ_RETURN
     Private::Value &refValue = d->values[ref.value];
-    refValue.referrers.insert(OBJ_RETURN);
+    refValue.usedBy.insert(OBJ_RETURN);
 }
 
 SymHeapCore::SymHeapCore(const SymHeapCore &ref):
@@ -226,13 +226,13 @@ TObjId SymHeapCore::pointsTo(TValueId val) const {
     return ref.target;
 }
 
-void SymHeapCore::haveValue(TContObj &dst, TValueId val) const {
+void SymHeapCore::usedBy(TContObj &dst, TValueId val) const {
     if (this->lastValueId() < val || val <= 0)
         // value ID is either out of range, or does not point to a valid obj
         return;
 
     const Private::Value &ref = d->values[val];
-    BOOST_FOREACH(TObjId obj, ref.referrers) {
+    BOOST_FOREACH(TObjId obj, ref.usedBy) {
         dst.push_back(obj);
     }
 }
@@ -252,7 +252,7 @@ TObjId SymHeapCore::objCreate() {
 
     // store backward reference
     Private::Value &ref = d->values[value];
-    ref.referrers.insert(obj);
+    ref.usedBy.insert(obj);
 
     return obj;
 }
@@ -297,7 +297,7 @@ void SymHeapCore::objSetValue(TObjId obj, TValueId val) {
         return;
 
     Private::Value &ref = d->values.at(val);
-    ref.referrers.insert(obj);
+    ref.usedBy.insert(obj);
 }
 
 void SymHeapCore::objDestroy(TObjId obj, TObjId kind) {
@@ -362,7 +362,7 @@ void SymHeapCore::valReplaceUnknown(TValueId val, TValueId replaceBy) {
 
         // collect objects having the value 'val'
         TContObj rlist;
-        this->haveValue(rlist, val);
+        this->usedBy(rlist, val);
 
         // go through the list and replace the value by 'replaceBy'
         BOOST_FOREACH(const TObjId obj, rlist) {

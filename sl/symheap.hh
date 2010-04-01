@@ -109,7 +109,7 @@ class SymHeapCore {
          * @param val ID of the value to look for
          * @note The operation may return from 0 to n results.
          */
-        void haveValue(TContObj &dst, TValueId val) const;
+        void usedBy(TContObj &dst, TValueId val) const;
 
     protected:
         /**
