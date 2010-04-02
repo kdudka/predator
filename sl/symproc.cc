@@ -1023,17 +1023,17 @@ TValueId handleOpCmpInt(THeap &heap, enum cl_binop_e code,
     if (v1 < 0 || v2 < 0)
         TRAP;
 
-    // check whether the second value is also VAL_NULL, which implies equality
+    // check if the values are equal
     bool eq;
     if (!heap.proveEq(&eq, v1, v2))
-        // bad luck, the second value is not known to be NULL, nor non-NULL
+        // we don't know if the values are equal or not
         goto who_knows;
 
     switch (code) {
         case CL_BINOP_LT:
         case CL_BINOP_GT:
             if (eq)
-                // we got either (0 < 0), or (0 > 0)
+                // we got either (x < x), or (x > x)
                 return VAL_FALSE;
             else
                 // bad luck, hard to compare unknown values for < >
@@ -1042,7 +1042,7 @@ TValueId handleOpCmpInt(THeap &heap, enum cl_binop_e code,
         case CL_BINOP_LE:
         case CL_BINOP_GE:
             if (eq)
-                // we got either (0 <= 0), or (0 >= 0)
+                // we got either (x <= x), or (x >= x)
                 return VAL_TRUE;
             else
                 // bad luck, hard to compare unknown values for <= >=
@@ -1062,7 +1062,7 @@ TValueId handleOpCmpInt(THeap &heap, enum cl_binop_e code,
     }
 
 who_knows:
-    // unknown result of compare operation
+    // unknown result of int comparison
     TValueId val = heap.valCreateUnknown(UV_UNKNOWN, dstClt);
     switch (code) {
         case CL_BINOP_EQ:
@@ -1097,7 +1097,7 @@ TValueId handleOpCmpPtr(THeap &heap, enum cl_binop_e code,
             return VAL_INVALID;
     }
 
-    // FIXME: not tested
+    // check if the values are equal
     bool result;
     if (!heap.proveEq(&result, v1, v2)) {
         // we don't know if the values are equal or not

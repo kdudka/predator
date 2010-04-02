@@ -56,6 +56,9 @@ class NeqDb {
             return hasKey(cont_, item);
         }
         void add(TValueId valLt, TValueId valGt) {
+            if (valLt == valGt)
+                TRAP;
+
             sortValues(valLt, valGt);
             TItem item(valLt, valGt);
             cont_.insert(item);
