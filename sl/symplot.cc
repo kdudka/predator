@@ -431,10 +431,6 @@ bool SymHeapPlotter::Private::handleUnknownValue(TValueId value, TObjId obj) {
             this->plotNodeAux(obj, CL_TYPE_UNKNOWN, "UNDEF");
             return true;
 
-        case UV_UNKNOWN_NOT_NULL:
-            this->plotNodeAux(obj, CL_TYPE_UNKNOWN, "!=0");
-            return true;
-
         case UV_UNKNOWN:
             this->plotNodeAux(obj, CL_TYPE_UNKNOWN, "?");
             return true;

@@ -339,7 +339,6 @@ void SymExec::Private::execCondInsn(const SymHeap &heap) {
             break;
 
         case UV_KNOWN:
-        case UV_UNKNOWN_NOT_NULL:
             TRAP;
             return;
     }

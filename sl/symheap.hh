@@ -39,7 +39,6 @@ struct cl_type;
 enum EUnknownValue {
     UV_KNOWN = 0,           ///< known value - what we usually wish we had
     UV_UNKNOWN,             ///< unknown value - what we usually have in reality
-    UV_UNKNOWN_NOT_NULL,    ///< we now the value is not VAL_NULL (only for int)
     UV_UNINITIALIZED,       ///< unknown value of an uninitialised object
     UV_DEREF_FAILED         ///< value equivalent of symid.hh::OBJ_DEREF_FAILED
 };
@@ -184,6 +183,13 @@ class SymHeapCore {
         void valReplaceUnknown(TValueId val, TValueId replaceBy);
 
     public:
+        /**
+         * introduce a new @b Neq @b predicate (if not present already)
+         * @param valA one side of the inequality
+         * @param valB one side of the inequality
+         */
+        void addNeq(TValueId valA, TValueId valB);
+
         /**
          * introduce a new @b EqIf @b predicate (if not present already)
          * @todo Documentation of addEqIf() needs to be re-worded.

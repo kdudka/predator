@@ -60,11 +60,6 @@ class NeqDb {
             TItem item(valLt, valGt);
             cont_.insert(item);
         }
-        void del(TValueId valLt, TValueId valGt) {
-            sortValues(valLt, valGt);
-            TItem item(valLt, valGt);
-            cont_.erase(item);
-        }
 };
 
 class EqIfDb {
@@ -353,12 +348,12 @@ void SymHeapCore::valReplaceUnknown(TValueId val, TValueId replaceBy) {
     while (wl.next(item)) {
         boost::tie(val, replaceBy) = item;
 
-        // remove inequeality if any
-#if 0
-        // FIXME: if the inequeality is already defined, we get a contradiction,
-        //        which we should warn about (instead of silently ignoring it)
-        d->neqDb.del(val, replaceBy);
-#endif
+        // ensure there hasn't been any inequality defined among the pair
+        if (d->neqDb.areNeq(val, replaceBy)) {
+            CL_ERROR("inconsistency detected among values #" << val
+                    << " and #" << replaceBy);
+            TRAP;
+        }
 
         // collect objects having the value 'val'
         TContObj rlist;
@@ -399,7 +394,13 @@ void SymHeapCore::valReplaceUnknown(TValueId val, TValueId replaceBy) {
     }
 }
 
-void SymHeapCore::addEqIf(TValueId valCond, TValueId valA, TValueId valB, bool neg) {
+void SymHeapCore::addNeq(TValueId valA, TValueId valB) {
+    d->neqDb.add(valA, valB);
+}
+
+void SymHeapCore::addEqIf(TValueId valCond, TValueId valA, TValueId valB,
+                          bool neg)
+{
     if (VAL_INVALID == valA || VAL_INVALID == valB)
         TRAP;
 

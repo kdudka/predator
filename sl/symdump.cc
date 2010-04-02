@@ -188,10 +188,6 @@ TObjId /* pointsTo */ dump_value_core(const SymHeap &heap, TValueId value)
             cout << "    code      = UV_UNKNOWN\n";
             return OBJ_INVALID;
 
-        case UV_UNKNOWN_NOT_NULL:
-            cout << "    code      = UV_UNKNOWN_NOT_NULL\n";
-            return OBJ_INVALID;
-
         case UV_UNINITIALIZED:
             cout << "    code      = UV_UNINITIALIZED\n";
             return OBJ_INVALID;

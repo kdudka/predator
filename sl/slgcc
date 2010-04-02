@@ -29,8 +29,7 @@ if test x1 = "x$SL_PLOT"; then
 fi
 
 # run the gcc
-"$GCC" -c "$1" -o /dev/null \
-    -O0 -Wall -Wextra \
+"$GCC" -c "$1" -o /dev/null -O0 \
     -fplugin="$SL_PLUG" \
     -fplugin-arg-libsl-verbose="$SL_VERBOSE" \
     $SL_OPTS \
