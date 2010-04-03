@@ -128,7 +128,7 @@ build_gcc: $(GCC_SRC)
 		fi
 	cd $(GCC_BUILD) && $(MAKE)
 	cd $(GCC_BUILD) && $(MAKE) -j1 install
-	ln -fsvT ../gcc-install/lib/gcc/`ls gcc-install/lib/gcc/`/4.5.0/plugin/include include/gcc
+	$(MAKE) include/gcc
 
 # updated SVN working directory of gcc
 update_gcc_src_only: $(GCC_SRC)
@@ -153,3 +153,6 @@ $(GCC_SRC):
 # clone read-only git repo of SSD
 $(SSD_GIT):
 	$(GIT) clone http://dudka.no-ip.org/git/ssd.git $@
+
+include/gcc: gcc-install/lib/gcc
+	ln -fsvT ../gcc-install/lib/gcc/`ls gcc-install/lib/gcc/`/4.5.0/plugin/include include/gcc

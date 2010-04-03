@@ -13,7 +13,6 @@ config.h            various compile-time configuration (debugging options, ...)
 sl.h                a header file included _only_ by analysed programs
 slgcc               a wrapper script which runs gcc with the plug-in
 slgdb               a wrapper script which runs gcc with the plug-in within gdb
-storage.hh          CodeStorage interface
 sym*                Symbolic Execution related source codes
 
 
