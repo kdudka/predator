@@ -21,7 +21,7 @@
 #define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_NO_MAIN
 
-#include "data/dll.h"
+#include "dll.h"
 
 #include <boost/test/auto_unit_test.hpp>
 #include <boost/test/debug.hpp>

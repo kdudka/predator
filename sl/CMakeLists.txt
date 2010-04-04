@@ -16,7 +16,7 @@
 # along with predator.  If not, see <http://www.gnu.org/licenses/>.
 
 # project metadata
-cmake_minimum_requireD(VERSION 2.8)
+cmake_minimum_required(VERSION 2.6)
 project(sl C CXX)
 add_definitions("-I../include")
 enable_testing()

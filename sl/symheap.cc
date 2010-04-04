@@ -192,10 +192,6 @@ TValueId SymHeapCore::valueOf(TObjId obj) const {
                 ->valCreate(UV_UNKNOWN, OBJ_UNKNOWN);
 
         default:
-            if (this->lastObjId() < obj)
-                // out of range
-                return VAL_INVALID;
-
             break;
     }
 
