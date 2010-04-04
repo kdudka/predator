@@ -1,12 +1,12 @@
 Files maintained by the git repository
 ======================================
+../COPYING          GPLv3 license text
 api/                API documentation template, use 'make -C api' to generate it
 api/html/index.html generated API documentation
 data/               test-suite data and standalone examples
 data/test-00??.c    test-cases as programs being analysed by the plug-in
 data/test-00??.err  expected error/warning messages per each test-case
 CMakeLists.txt      CMake list (new test-cases and modules are added here)
-COPYING             GPLv3 license text
 Makefile            initiator of the CMake based out-of-source build and tests
 Makefile.chk        checks whether all headers are self-compilable
 config.h            various compile-time configuration (debugging options, ...)
