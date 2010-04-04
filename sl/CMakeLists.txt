@@ -44,7 +44,7 @@ set(examples
     0010 0011 0012 0013 0014 0016 0017 0018
     0019 0020 0021 0022 0023 0024 0025 0026
     0027 0028 0029 0030 0031 0032 0033 0034
-    0035 0036)
+    0035 0036 0037)
 
 # FIXME: define this macro more generically, in particular the count of args
 macro(test_sym_exec label tool arg1 arg2)
