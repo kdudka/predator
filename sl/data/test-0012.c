@@ -1,3 +1,4 @@
+#include "../sl.h"
 #include <stdlib.h>
 
 typedef struct sll          sll_t;
@@ -40,6 +41,7 @@ int main()
     append_item(&list);
     append_item(&list);
     append_item(&list);
+    ___sl_plot_by_ptr(&list, "test-0012.c");
     append_item(&list);
     append_item(&list);
     append_item(&list);
