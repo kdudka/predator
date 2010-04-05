@@ -32,6 +32,10 @@
 
 #include <boost/foreach.hpp>
 
+#ifndef DEBUG_SE_STACK_FRAME
+#   define DEBUG_SE_STACK_FRAME 0
+#endif
+
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of SymCallCtx
 struct SymCallCtx::Private {

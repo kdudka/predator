@@ -1,0 +1,11 @@
+test-0008.c:15:33: error: call recursion detected, cg subtree will be excluded
+test-0008.c:27:17: note: from call of dispose_list_recursively()
+test-0008.c:37:9: note: from call of test()
+test-0008.c:35:5: note: from call of main()
+test-0008.c:15:33: error: call recursion detected, cg subtree will be excluded
+test-0008.c:32:17: note: from call of dispose_list_recursively()
+test-0008.c:37:9: note: from call of test()
+test-0008.c:35:5: note: from call of main()
+test-0008.c:31:7: warning: killing junk
+test-0008.c:37:9: note: from call of test()
+test-0008.c:35:5: note: from call of main()
