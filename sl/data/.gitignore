@@ -1,3 +1,5 @@
 *.dot
 *.svg
 *.pp.html
+test-0015.err
+test-0015.err.fast
