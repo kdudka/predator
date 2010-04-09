@@ -35,10 +35,6 @@
 #include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
 
-#ifndef DEBUG_SE_STACK_FRAME
-#   define DEBUG_SE_STACK_FRAME 0
-#endif
-
 // utilities
 namespace {
 

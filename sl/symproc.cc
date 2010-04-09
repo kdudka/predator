@@ -1211,13 +1211,18 @@ struct OpHandler</* binary */ 2, TProc> {
             // type-info is missing
             TRAP;
 
-        if (*cltA != *cltB)
+        SymHeap &heap = proc.heap_;
+        if (*cltA != *cltB) {
             // we don't support arrays, pointer arithmetic and the like,
             // the types therefor have to match with each other for a binary
             // operator
-            TRAP;
+            CL_ERROR_MSG(proc.lw_,
+                    "mixing of types for a binary operator not supported yet");
+            CL_NOTE_MSG(proc.lw_,
+                    "the analysis may crash because of the error above");
+            return heap.valCreateUnknown(UV_UNKNOWN, cltA);
+        }
 
-        SymHeap &heap = proc.heap_;
         const enum cl_binop_e code = static_cast<enum cl_binop_e>(iCode);
         switch (code) {
             case CL_BINOP_EQ:

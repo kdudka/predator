@@ -1,0 +1,4 @@
+test-0021.c:7:5: error: call recursion detected, cg subtree will be excluded
+test-0021.c:23:18: note: from call of synthesize_unknown_ptr_value()
+test-0021.c:45:53: note: from call of test__cond_reasoning__with_single_lookback_level()
+test-0021.c:44:5: note: from call of main()

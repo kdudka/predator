@@ -1,0 +1,3 @@
+test-0033.c:93:25: error: dereference of already deleted heap object
+test-0033.c:150:19: note: from call of destroy_h_list()
+test-0033.c:122:5: note: from call of main()

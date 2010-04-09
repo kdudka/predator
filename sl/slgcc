@@ -17,7 +17,7 @@ test -x "$GCC"                              || exit 1
 make -s $MAKEOPTS                           || exit 1
 test -x "$SL_PLUG"                          || exit 1
 
-# use verbose level 1 by default
+# use verbose level 0 by default
 test -z "$SL_VERBOSE" && SL_VERBOSE=0
 
 # use pp code listener by default

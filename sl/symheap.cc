@@ -27,6 +27,7 @@
 #include "util.hh"
 #include "worklist.hh"
 
+#include <algorithm>
 #include <map>
 #include <set>
 #include <stack>
@@ -191,10 +192,6 @@ TValueId SymHeapCore::valueOf(TObjId obj) const {
                 ->valCreate(UV_UNKNOWN, OBJ_UNKNOWN);
 
         default:
-            if (this->lastObjId() < obj)
-                // out of range
-                return VAL_INVALID;
-
             break;
     }
 
@@ -237,7 +234,8 @@ void SymHeapCore::usedBy(TContObj &dst, TValueId val) const {
 
 TObjId SymHeapCore::objCreate() {
     // acquire object ID
-    const TObjId obj = static_cast<TObjId>(d->objects.size());
+    const size_t last = std::max(d->objects.size(), d->values.size());
+    const TObjId obj = static_cast<TObjId>(last);
     d->objects.resize(obj + 1);
 
     // obtain value pair
@@ -261,7 +259,8 @@ TValueId SymHeapCore::valCreate(EUnknownValue code, TObjId target) {
         TRAP;
 
     // acquire value ID
-    const TValueId val = static_cast<TValueId>(d->values.size());
+    const size_t last = std::max(d->objects.size(), d->values.size());
+    const TValueId val = static_cast<TValueId>(last);
     d->values.resize(val + 1);
 
     Private::Value &ref = d->values[val];

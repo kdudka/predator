@@ -16,7 +16,7 @@
 # along with predator.  If not, see <http://www.gnu.org/licenses/>.
 
 # project metadata
-cmake_minimum_requireD(VERSION 2.8)
+cmake_minimum_required(VERSION 2.6)
 project(sl C CXX)
 add_definitions("-I../include")
 enable_testing()
@@ -44,7 +44,7 @@ set(examples
     0010 0011 0012 0013 0014 0016 0017 0018
     0019 0020 0021 0022 0023 0024 0025 0026
     0027 0028 0029 0030 0031 0032 0033 0034
-    0035 0036)
+    0035 0036 0037)
 
 # FIXME: define this macro more generically, in particular the count of args
 macro(test_sym_exec label tool arg1 arg2)
@@ -57,32 +57,40 @@ macro(test_sym_exec label tool arg1 arg2)
 endmacro()
 test_sym_exec("simple-test" ${GCC45} "" "")
 
-foreach (num ${examples})
-    set(cmd "${GCC45}")
+# FIXME: define this macro more generically, in particular the count of args
+macro(test_sym_exec_regre ext arg1)
+    foreach (num ${examples})
+        set(cmd "${GCC45}")
 
-    # we use the following flag to avoid differences on 32bit vs 64bit archs
-    # in the error output, which is checked for exact match
-    set(cmd "${cmd} -m32")
+        # we use the following flag to avoid differences on 32bit vs 64bit archs
+        # in the error output, which is checked for exact match
+        set(cmd "${cmd} -m32")
 
-    set(cmd "${cmd} -c ${sl_SOURCE_DIR}/data/test-${num}.c")
-    set(cmd "${cmd} -fplugin=${sl_BINARY_DIR}/libsl.so")
-    set(cmd "${cmd} 2>&1")
+        set(cmd "${cmd} -c ${sl_SOURCE_DIR}/data/test-${num}.c")
+        set(cmd "${cmd} -fplugin=${sl_BINARY_DIR}/libsl.so ${arg1}")
+        set(cmd "${cmd} 2>&1")
 
-    # FIXME: the following line significantly decreases coverage of the test
-    # suite; we should perhaps use awk or whatever to trim only the location
-    # part from messages with internal location
-    set(cmd "${cmd} | grep -v '\\\\[internal location\\\\]\$'")
+        # FIXME: the following line significantly decreases coverage of the test
+        # suite; we should perhaps use awk or whatever to trim only the location
+        # part from messages with internal location
+        set(cmd "${cmd} | grep -v '\\\\[internal location\\\\]\$'")
 
-    # FIXME: the doubly-nested triply-escaped sed magic might look a bit scary
-    set(cmd "${cmd} | sed s/`echo ${sl_SOURCE_DIR}/data/ ")
-    set(cmd "${cmd} | sed 's/\\\\\\\\//\\\\\\\\\\\\\\\\\\\\\\\\//g'`//")
-    set(cmd "${cmd} | sed s/`echo ${sl_SOURCE_DIR}/ ")
-    set(cmd "${cmd} | sed 's/\\\\\\\\//\\\\\\\\\\\\\\\\\\\\\\\\//g'`//")
+        # FIXME: the doubly-nested triply-escaped sed magic might look a bit
+        # scary
+        set(cmd "${cmd} | sed s/`echo ${sl_SOURCE_DIR}/data/ ")
+        set(cmd "${cmd} | sed 's/\\\\\\\\//\\\\\\\\\\\\\\\\\\\\\\\\//g'`//")
+        set(cmd "${cmd} | sed s/`echo ${sl_SOURCE_DIR}/ ")
+        set(cmd "${cmd} | sed 's/\\\\\\\\//\\\\\\\\\\\\\\\\\\\\\\\\//g'`//")
 
-    # ... and finally diff with the expected output
-    set(cmd "${cmd} | diff -up ${sl_SOURCE_DIR}/data/test-${num}.err -")
-    add_test("regression-test___example-${num}" sh -c "${cmd}")
-endforeach()
+        # ... and finally diff with the expected output
+        set(cmd
+            "${cmd} | diff -up ${sl_SOURCE_DIR}/data/test-${num}.err${ext} -")
+        add_test("regression-test___example-${num}${ext}" sh -c "${cmd}")
+    endforeach()
+endmacro(test_sym_exec_regre)
+
+test_sym_exec_regre(".fast" "-fplugin-arg-libsl-symexec-args=fast")
+test_sym_exec_regre("" "")
 
 set(self_extra_opts
     ${CFLAGS}

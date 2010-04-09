@@ -32,7 +32,7 @@ check: all
 
 version.h:
 	printf "#define CL_GIT_SHA1 \"%s\"\n" \
-		`git log | head -1 | cut -f2 -d" "` \
+		`git log -1 . | head -1 | cut -f2 -d" "` \
 		| tee $@.tmp \
 		&& install -m0644 -C -v $@.tmp $@ \
 		&& rm -f $@.tmp
