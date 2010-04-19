@@ -21,8 +21,6 @@ using std::pair;
 using boost::unordered_set;
 using boost::unordered_map;
 
-TA::TACache TA::defaultTACache;
-
 struct LhsEnv {
 
 	size_t index;
@@ -138,41 +136,43 @@ struct Env {
 
 };
 
-void TA::downwardTranslation(LTS& lts, const SLIndex& index) const {
+template <class T>
+void TA<T>::downwardTranslation(LTS& lts, const Index<size_t>& stateIndex, const Index<T>& labelIndex) const {
 	// build an index of non-translated left-hand sides
 	Index<const vector<size_t>*> lhs;
 	this->buildLhsIndex(lhs);
-	lts = LTS(index.labels.size() + this->maxRank, index.states.size() + lhs.size());
+	lts = LTS(labelIndex.size() + this->maxRank, stateIndex.size() + lhs.size());
 	for (Index<const vector<size_t>*>::iterator i = lhs.begin(); i != lhs.end(); ++i) {
 		for (size_t j = 0; j < i->first->size(); ++j)
-			lts.addTransition(index.states.size() + i->second, index.labels.size() + j, index.states[(*i->first)[j]]);
+			lts.addTransition(stateIndex.size() + i->second, labelIndex.size() + j, stateIndex[(*i->first)[j]]);
 	}
-	for (std::set<trans_cache_type::value_type*>::const_iterator i = this->transitions.begin(); i != this->transitions.end(); ++i)
-		lts.addTransition(index.states[(*i)->first._rhs], index.labels[(*i)->first._label], index.states.size() + lhs[&((*i)->first._lhs->first)]);
+	for (typename std::set<typename trans_cache_type::value_type*>::const_iterator i = this->transitions.begin(); i != this->transitions.end(); ++i)
+		lts.addTransition(stateIndex[(*i)->first._rhs], labelIndex[(*i)->first._label], stateIndex.size() + lhs[&((*i)->first._lhs->first)]);
 }
 
-void TA::downwardSimulation(vector<vector<bool> >& rel, const Index<size_t>& stateIndex) const {
+template <class T>
+void TA<T>::downwardSimulation(vector<vector<bool> >& rel, const Index<size_t>& stateIndex) const {
 	LTS lts;
-	SLIndex slIndex;
-	slIndex.states.map = stateIndex.map;
-	this->buildTransIndex(slIndex.labels);
-	this->downwardTranslation(lts, slIndex);
+	Index<T> labelIndex;
+	this->buildLabelIndex(labelIndex);
+	this->downwardTranslation(lts, stateIndex, labelIndex);
 	OLRTAlgorithm alg(lts);
 	alg.init();
 	alg.run();
 	alg.buildRel(stateIndex.size(), rel);
 }
 
-void TA::upwardTranslation(LTS& lts, vector<vector<size_t> >& part, vector<vector<bool> >& rel, const SLIndex& slIndex, const vector<vector<bool> >& sim) const {
+template <class T>
+void TA<T>::upwardTranslation(LTS& lts, vector<vector<size_t> >& part, vector<vector<bool> >& rel, const Index<size_t>& stateIndex, const Index<T>& labelIndex, const vector<vector<bool> >& sim) const {
 	set<LhsEnv> lhsEnvSet;
 	map<Env, size_t> envMap;
 	vector<const Env*> head;
 	part.clear();
-	for (std::set<trans_cache_type::value_type*>::const_iterator i = this->transitions.begin(); i != this->transitions.end(); ++i) {
+	for (typename std::set<typename trans_cache_type::value_type*>::const_iterator i = this->transitions.begin(); i != this->transitions.end(); ++i) {
 		vector<size_t> lhs;
-		slIndex.states.translate(lhs, (*i)->first._lhs->first);
-		size_t label = slIndex.labels[(*i)->first._label];
-		size_t rhs = slIndex.states[(*i)->first._rhs];
+		stateIndex.translate(lhs, (*i)->first._lhs->first);
+		size_t label = labelIndex[(*i)->first._label];
+		size_t rhs = stateIndex[(*i)->first._rhs];
 		for (size_t j = 0; j < lhs.size(); ++j) {
 			// insert required items into lhsEnv and lhsMap and build equivalence classes
 			bool inserted;
@@ -181,28 +181,28 @@ void TA::upwardTranslation(LTS& lts, vector<vector<size_t> >& part, vector<vecto
 				inserted = false;
 				for (size_t k = 0; k < head.size(); ++k) {
 					if (Env::eq(*head[k], env->first, sim)) {
-						part[k].push_back(env->second + slIndex.states.size());
+						part[k].push_back(env->second + stateIndex.size());
 						inserted = true;
 						break;
 					}
 				}
 				if (!inserted) {
 					head.push_back(&env->first);
-					part.push_back(std::vector<size_t>(1, env->second + slIndex.states.size()));
+					part.push_back(std::vector<size_t>(1, env->second + stateIndex.size()));
 				}
 			}
 		}
 	}
-	lts = LTS(slIndex.labels.size() + 1, slIndex.states.size() + envMap.size());
-	for (set<trans_cache_type::value_type*>::const_iterator i = this->transitions.begin(); i != this->transitions.end(); ++i) {
+	lts = LTS(labelIndex.size() + 1, stateIndex.size() + envMap.size());
+	for (typename set<typename trans_cache_type::value_type*>::const_iterator i = this->transitions.begin(); i != this->transitions.end(); ++i) {
 		vector<size_t> lhs;
-		slIndex.states.translate(lhs, (*i)->first._lhs->first);
-		size_t label = slIndex.labels[(*i)->first._label];
-		size_t rhs = slIndex.states[(*i)->first._rhs];
+		stateIndex.translate(lhs, (*i)->first._lhs->first);
+		size_t label = labelIndex[(*i)->first._label];
+		size_t rhs = stateIndex[(*i)->first._rhs];
 		for (size_t j = 0; j < lhs.size(); ++j) {
 			// find particular env
 			map<Env, size_t>::iterator env = Env::find(LhsEnv::find(lhs, j, lhsEnvSet), label, rhs, envMap);
-			lts.addTransition(lhs[j], slIndex.labels.size(), env->second);
+			lts.addTransition(lhs[j], labelIndex.size(), env->second);
 			lts.addTransition(env->second, label, rhs);
 		}
 	}
@@ -219,18 +219,18 @@ void TA::upwardTranslation(LTS& lts, vector<vector<size_t> >& part, vector<vecto
 	}
 }
 
-void TA::upwardSimulation(vector<vector<bool> >& rel, const Index<size_t>& stateIndex, const vector<vector<bool> >& param) const {
+template <class T>
+void TA<T>::upwardSimulation(vector<vector<bool> >& rel, const Index<size_t>& stateIndex, const vector<vector<bool> >& param) const {
 	LTS lts;
-	SLIndex slIndex;
-	slIndex.states.map = stateIndex.map;
-	this->buildTransIndex(slIndex.labels);
+	Index<T> labelIndex;
+	this->buildLabelIndex(labelIndex);
 	std::vector<std::vector<size_t> > part;
 	std::vector<std::vector<bool> > initRel;
-	this->upwardTranslation(lts, part, initRel, slIndex, param);
+	this->upwardTranslation(lts, part, initRel, stateIndex, labelIndex, param);
 	OLRTAlgorithm alg(lts);
 	// accepting states to block 1
 	std::vector<size_t> finalStates;
-	slIndex.states.translate(finalStates, vector<size_t>(this->finalStates.begin(), this->finalStates.end())); 
+	stateIndex.translate(finalStates, vector<size_t>(this->finalStates.begin(), this->finalStates.end())); 
 	alg.fakeSplit(finalStates);
 	// environments to blocks 2, 3, ...
 	for (size_t i = 0; i < part.size(); ++i)
@@ -342,8 +342,9 @@ inline void printEl(size_t x, const set<size_t>& y) {
 }
 */
 
-bool TA::subseteq(const TA& a, const TA& b) {
+template <class T>
+bool TA<T>::subseteq(const TA<T>& a, const TA<T>& b) {
 //	std::cout << "TA::subseteq()\n";
-	return AntichainExt::subseteq(a, b);
+	return AntichainExt<T>::subseteq(a, b);
 }
 

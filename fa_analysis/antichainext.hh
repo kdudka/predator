@@ -11,19 +11,20 @@
 using boost::unordered_set;
 using boost::unordered_map;
 
+template <class T>
 class AntichainExt : public Antichain {
 
 protected:
 
 //	state_cache_type stateCache;
 
-	typedef vector<TA::trans_cache_type::value_type*> trans_list_type;
+	typedef vector<typename TA<T>::trans_cache_type::value_type*> trans_list_type;
 
 private:
 
 	vector<vector<trans_list_type> > aTransIndex;
 
-	void simInsert(pair<size_t, set<size_t> >& el, bool& isAccepting, size_t rhs, const TA& aut) {
+	void simInsert(pair<size_t, set<size_t> >& el, bool& isAccepting, size_t rhs, const TA<T>& aut) {
 		// minimization
 		for (vector<size_t>::const_iterator i = this->relIndex[rhs].begin(); i != this->relIndex[rhs].end(); ++i) {
 			if (el.second.find(*i) != el.second.end())
@@ -37,7 +38,7 @@ private:
 
 public:
 
-	void aAddTransition(TA::trans_cache_type::value_type* t, size_t bSize) {
+	void aAddTransition(typename TA<T>::trans_cache_type::value_type* t, size_t bSize) {
 		unordered_set<size_t> s;
 		for (size_t i = 0; i < t->first._lhs->first.size(); ++i) {
 			if (s.insert(t->first._lhs->first[i]).second) {
@@ -49,8 +50,8 @@ public:
 	}
 
 	void finalizeTransitions() {
-		for (vector<vector<trans_list_type> >::iterator i = this->aTransIndex.begin(); i != this->aTransIndex.end(); ++i) {
-			for (vector<trans_list_type>::iterator j = i->begin(); j != i->end(); ++j)
+		for (typename vector<vector<trans_list_type> >::iterator i = this->aTransIndex.begin(); i != this->aTransIndex.end(); ++i) {
+			for (typename vector<trans_list_type>::iterator j = i->begin(); j != i->end(); ++j)
 				utils::unique(*j, trans_list_type(*j));
 		}
 	}
@@ -92,7 +93,7 @@ public:
 
 			ResponseExt(AntichainExt& ac) : ac(ac), state(), fixed(1) {}
 		
-			bool get(const pair<size_t, state_cache_type::value_type*>& el, const TA::trans_cache_type::value_type* t, size_t index) {
+			bool get(const pair<size_t, state_cache_type::value_type*>& el, const typename TA<T>::trans_cache_type::value_type* t, size_t index) {
 				this->state.clear();
 				this->fixed.front() = el.second;
 				for (size_t i = 0; i < t->first._lhs->first.size(); ++i) {
@@ -112,14 +113,14 @@ public:
 			}
 		
 			bool next() {
-				for (vector<State>::iterator i = this->state.begin(); i != this->state.end(); ++i) {
+				for (typename vector<State>::iterator i = this->state.begin(); i != this->state.end(); ++i) {
 					if (i->next())
 						return true;
 				}
 				return false;
 			}
 			
-			bool match(const TA::trans_cache_type::value_type* t) {
+			bool match(const typename TA<T>::trans_cache_type::value_type* t) {
 				for (size_t i = 0; i < t->first._lhs->first.size(); ++i) {
 					if ((*this->state[i].current)->first.count(t->first._lhs->first[i]) == 0)
 						return false;
@@ -129,19 +130,21 @@ public:
 			
 	};
 
-	static bool subseteq(const TA& a, const TA& b) {
+	static bool subseteq(const TA<T>& a, const TA<T>& b) {
 
-		TA::TACache cache;
-		TA c(cache);
+		typename TA<T>::TACache cache;
+		TA<T> c(cache);
 		size_t countB;
-		b.uniteRenamed(c, a, countB);
+		TA<T>::uniteRenamed(c, b, a, countB);
 //		c.toStream(std::cout);
-		SLIndex slIndex;
-		c.buildIndex(slIndex);
-		size_t cSize = slIndex.states.size();
-		slIndex.states.clear();
+		Index<size_t> stateIndex;
+//		SLIndex slIndex;
+//		c.buildIndex(slIndex);
+		c.buildStateIndex(stateIndex);
+		size_t cSize = stateIndex.size();
+		stateIndex.clear();
 		for (size_t i = 0; i < cSize; ++i)
-			slIndex.states.add(i);
+			stateIndex.add(i);
 		// compute simulation
 		vector<vector<bool> > upsim, dwnsim, ident(cSize, vector<bool>(cSize, false));
 		for (size_t i = 0; i < cSize; ++i)
@@ -153,9 +156,9 @@ public:
 		AntichainExt antichain(upsim);
 		AntichainExt::ResponseExt response(antichain);
 		antichain.initIndex(cSize - countB, countB);
-		vector<TA::trans_cache_type::value_type*> aLeaves;
-		unordered_map<size_t, vector<TA::trans_cache_type::value_type*> > bTrans, bLeaves;
-		for (set<TA::trans_cache_type::value_type*>::const_iterator i = c.transitions.begin(); i != c.transitions.end(); ++i) {
+		vector<typename TA<T>::trans_cache_type::value_type*> aLeaves;
+		unordered_map<size_t, vector<typename TA<T>::trans_cache_type::value_type*> > bTrans, bLeaves;
+		for (typename set<typename TA<T>::trans_cache_type::value_type*>::const_iterator i = c.transitions.begin(); i != c.transitions.end(); ++i) {
 			size_t arity = (*i)->first._lhs->first.size();
 			if ((*i)->first._rhs >= countB) {
 				if (arity == 0) {
@@ -165,9 +168,9 @@ public:
 				}
 			} else {	
 				if (arity == 0) {
-					bLeaves.insert(make_pair((*i)->first._label, vector<TA::trans_cache_type::value_type*>())).first->second.push_back(*i);
+					bLeaves.insert(make_pair((*i)->first._label, vector<typename TA<T>::trans_cache_type::value_type*>())).first->second.push_back(*i);
 				} else {
-					bTrans.insert(make_pair((*i)->first._label, vector<TA::trans_cache_type::value_type*>())).first->second.push_back(*i);
+					bTrans.insert(make_pair((*i)->first._label, vector<typename TA<T>::trans_cache_type::value_type*>())).first->second.push_back(*i);
 				}
 			}
 		}
@@ -175,14 +178,14 @@ public:
 		// initialization
 		// Post(\emptyset)
 		vector<pair<size_t, set<size_t> > > post;
-		for (vector<TA::trans_cache_type::value_type*>::iterator i = aLeaves.begin(); i != aLeaves.end(); ++i) {
-			unordered_map<size_t, vector<TA::trans_cache_type::value_type*> >::iterator range = bLeaves.find((*i)->first._label);
+		for (typename vector<typename TA<T>::trans_cache_type::value_type*>::iterator i = aLeaves.begin(); i != aLeaves.end(); ++i) {
+			typename unordered_map<size_t, vector<typename TA<T>::trans_cache_type::value_type*> >::iterator range = bLeaves.find((*i)->first._label);
 			// careful
 			if (range == bLeaves.end())
 				return false;
 			pair<size_t, set<size_t> > newEl((*i)->first._rhs, set<size_t>());
 			bool isAccepting = c.isFinalState(newEl.first);
-			for (vector<TA::trans_cache_type::value_type*>::iterator j = range->second.begin(); j != range->second.end(); ++j)
+			for (typename vector<typename TA<T>::trans_cache_type::value_type*>::iterator j = range->second.begin(); j != range->second.end(); ++j)
 				antichain.simInsert(newEl, isAccepting, (*j)->first._rhs, c);
 			if (isAccepting)
 				return false;
@@ -202,20 +205,20 @@ public:
 		
 			// Post(Processed)
 			post.clear();
-			vector<vector<TA::trans_cache_type::value_type*> >& aTrans = antichain.getATrans(el.first, countB);
+			vector<vector<typename TA<T>::trans_cache_type::value_type*> >& aTrans = antichain.getATrans(el.first, countB);
 			for (size_t i = 0; i < aTrans.size(); ++i) {
 				trans_list_type& aTransList = aTrans[i];
-				for (trans_list_type::iterator j = aTransList.begin(); j != aTransList.end(); ++j) {
+				for (typename trans_list_type::iterator j = aTransList.begin(); j != aTransList.end(); ++j) {
 					if (!response.get(el, *j, i))
 						continue;
-					unordered_map<size_t, vector<TA::trans_cache_type::value_type*> >::iterator range = bTrans.find((*j)->first._label);
+					typename unordered_map<size_t, vector<typename TA<T>::trans_cache_type::value_type*> >::iterator range = bTrans.find((*j)->first._label);
 					// careful
 					if (range == bTrans.end())
 						return false;
 					do {
 						pair<size_t, set<size_t> > newEl((*j)->first._rhs, set<size_t>());
 						bool isAccepting = c.isFinalState(newEl.first);
-						for (vector<TA::trans_cache_type::value_type*>::iterator k = range->second.begin(); k != range->second.end(); ++k) {
+						for (typename vector<typename TA<T>::trans_cache_type::value_type*>::iterator k = range->second.begin(); k != range->second.end(); ++k) {
 							if (response.match(*k))
 								antichain.simInsert(newEl, isAccepting, (*k)->first._rhs, c);
 						}

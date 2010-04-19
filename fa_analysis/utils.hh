@@ -8,18 +8,18 @@
 #include <boost/unordered_set.hpp>
 #include <boost/unordered_map.hpp>
 
-template <class T1, class T2 = size_t>
+template <class T>
 struct Index {
 	
-	std::map<T1, T2> map;
+	std::map<T, size_t> map;
 	
-	typedef typename std::map<T1, T2>::const_iterator iterator;
+	typedef typename std::map<T, size_t>::const_iterator iterator;
 	
-	typename Index<T1, T2>::iterator begin() const {
+	typename Index<T>::iterator begin() const {
 		return this->map.begin();
 	}
 	
-	typename Index<T1, T2>::iterator end() const {
+	typename Index<T>::iterator end() const {
 		return this->map.end();
 	}
 
@@ -27,42 +27,42 @@ struct Index {
 		this->map.clear();
 	}
 
-	size_t get(const T1& x) {
-		return this->map.insert(std::pair<T1, T2>(x, this->map.size())).first->second;
+	size_t get(const T& x) {
+		return this->map.insert(make_pair(x, this->map.size())).first->second;
 	}
 
-	bool add(const T1& x) {
-		return this->map.insert(std::pair<T1, T2>(x, this->map.size())).second;
+	bool add(const T& x) {
+		return this->map.insert(make_pair(x, this->map.size())).second;
 	}
 	
 	size_t size() const {
 		return this->map.size();
 	}
 	
-	T2 translate(const T1& x) const {
-		typename std::map<T1, T2>::const_iterator i = this->map.find(x);
+	size_t translate(const T& x) const {
+		typename std::map<T, size_t>::const_iterator i = this->map.find(x);
 		if (i == this->map.end())
 			throw std::runtime_error("Indexer::translate() : lookup failed");
 		return i->second;
 	}
 	
-	T2 translateOTF(const T1& x) {
-		return this->map.insert(std::pair<T1, T2>(x, this->map.size())).first->second;
+	size_t translateOTF(const T& x) {
+		return this->map.insert(make_pair(x, this->map.size())).first->second;
 	}
 
-	T2 operator[](const T1& x) const {
+	size_t operator[](const T& x) const {
 		return this->translate(x);
 	}
 
-	void translate(std::vector<T2>& dst, const std::vector<T1>& src, size_t offset = 0) const {
+	void translate(std::vector<size_t>& dst, const std::vector<T>& src, size_t offset = 0) const {
 		dst.clear();
-		for (typename std::vector<T1>::const_iterator i = src.begin(); i != src.end(); ++i)
+		for (typename std::vector<T>::const_iterator i = src.begin(); i != src.end(); ++i)
 			dst.push_back(this->translate(*i) + offset);
 	}	
 
-	void translateOTF(std::vector<T2>& dst, const std::vector<T1>& src, size_t offset = 0) {
+	void translateOTF(std::vector<size_t>& dst, const std::vector<T>& src, size_t offset = 0) {
 		dst.clear();
-		for (typename std::vector<T1>::const_iterator i = src.begin(); i != src.end(); ++i)
+		for (typename std::vector<T>::const_iterator i = src.begin(); i != src.end(); ++i)
 			dst.push_back(this->translateOTF(*i) + offset);
 	}	
 
@@ -79,7 +79,7 @@ struct FullIndex : public Index<T> {
 	}
 
 	int add(const T& x) {
-		std::pair<typename std::map<T, size_t>::iterator, bool> y = this->map.insert(std::pair<T, size_t>(x, this->map.size()));
+		std::pair<typename std::map<T, size_t>::iterator, bool> y = this->map.insert(make_pair(x, this->map.size()));
 		if (y.second)
 			this->index.push_back(x);
 		return y.first->second;

@@ -34,6 +34,11 @@ public:
 		this->listeners.push_back(x);
 	}
 
+	value_type* find(const T& x) {
+		typename store_type::iterator i = this->store.find(x);
+		return (i == this->store.end())?(NULL):(&*i);
+	}
+
 	value_type* lookup(const T& x) {
 		return this->addRef(&*this->store.insert(std::make_pair(x, 0)).first);
 	}
@@ -49,6 +54,14 @@ public:
 			(*i)->drop(x);
 		this->store.erase(x->first);
 		return 0;
+	}
+	
+	void clear() {
+		for (typename std::vector<Listener*>::iterator i = this->listeners.begin(); i != this->listeners.end(); ++i) {
+			for (typename store_type::iterator j = this->store.begin(); j != this->store.end(); ++j)
+				(*i)->drop(*j);
+		}
+		this->store.clear();
 	}
 
 };
