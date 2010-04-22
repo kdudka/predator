@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2009-2010 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2010 Petr Peringer, FIT
  *
  * This file is part of predator.
  *
@@ -22,13 +23,14 @@
 
 /**
  * @file symheap.hh
- * SymHeap - @b symbolic @b heap representation, the core part of "symexec"
+ * SymHeap1 - @b symbolic @b heap representation, the core part of "symexec"
  * code listener
  */
 
 #include "symid.hh"
 
 #include <vector>
+#include <list>
 
 struct cl_accessor;
 struct cl_type;
@@ -40,10 +42,18 @@ enum EUnknownValue {
     UV_KNOWN = 0,           ///< known value - what we usually wish we had
     UV_UNKNOWN,             ///< unknown value - what we usually have in reality
     UV_UNINITIALIZED,       ///< unknown value of an uninitialised object
-    UV_DEREF_FAILED         ///< value equivalent of symid.hh::OBJ_DEREF_FAILED
+    UV_DEREF_FAILED,        ///< value equivalent of symid.hh::OBJ_DEREF_FAILED
+    UV_ABSTRACT             ///< abstract value (needs concretization before use)
 };
 
+/// basic kind of object
+enum TObjKind { VAR, SLS, DLS, ARR };
+
+/// abstract segment length
+enum TAbstractLen { EMPTY=0, SINGLE=1, PE, NE };
+
 class SymHeap;
+class SymHeap1;
 
 /**
  * symbolic heap @b core - no type-info, no object composition on this level
@@ -61,6 +71,8 @@ class SymHeapCore {
 
         /// @note there is no such thing like COW implemented for now
         SymHeapCore& operator=(const SymHeapCore &);
+
+        // TODO: explicit Clone operation, use shared_ptr for Privete implementation
 
     public:
         /// container used to store object IDs to
@@ -167,6 +179,9 @@ class SymHeapCore {
          */
         EUnknownValue valGetUnknown(TValueId val) const;
 
+        /// check if value is abstract
+        bool valIsAbstract(TValueId val) const { return valGetUnknown(val)==UV_ABSTRACT; }
+
         /// duplicate the given @b unknown @b value
         virtual TValueId valDuplicateUnknown(TValueId tpl);
 
@@ -222,19 +237,19 @@ class SymHeapCore {
 /**
  * @b symbolic @b heap representation, the core part of "symexec" project
  */
-class SymHeap: public SymHeapCore {
+class SymHeap1: public SymHeapCore {
     public:
         /// create an empty symbolic heap
-        SymHeap();
+        SymHeap1();
 
         /// destruction of the symbolic heap invalidates all IDs of its entities
-        virtual ~SymHeap();
+        virtual ~SymHeap1();
 
         /// @note there is no such thing like COW implemented for now
-        SymHeap(const SymHeap &);
+        SymHeap1(const SymHeap1 &);
 
         /// @note there is no such thing like COW implemented for now
-        SymHeap& operator=(const SymHeap &);
+        SymHeap1& operator=(const SymHeap1 &);
 
     public:
         /// container used to store foreign (integral) IDs to
@@ -285,7 +300,7 @@ class SymHeap: public SymHeapCore {
          * @return A valid object ID in case of success, invalid otherwise.
          * @attention This interface is not strong enough as soon as we allow
          * recursive call of functions.
-         * @todo extend the interface constituted by SymHeap::objByCVar() to
+         * @todo extend the interface constituted by SymHeap1::objByCVar() to
          * deal with the recursive call of functions.
          */
         TObjId objByCVar(int uid) const;
@@ -325,6 +340,11 @@ class SymHeap: public SymHeapCore {
          * @return A valid object ID in case of success, invalid otherwise.
          */
         TObjId objParent(TObjId obj) const;
+
+        /**
+         * count pointers inside structure
+         */
+        unsigned numPtr2Struct(TObjId obj) const;
 
     public:
         /**
@@ -428,4 +448,86 @@ class SymHeap: public SymHeapCore {
         void destroyObj(TObjId obj);
 };
 
+
+/**
+ * symbolic heap representation with singly linked list segments - facade 
+ * this is test prototype
+ * TODO: DLS - doubly linked lists
+ * TODO: merge all into SymHeap1
+ */
+class SymHeap2: public SymHeap1 {
+    public:
+        /// create an empty symbolic heap
+        SymHeap2();
+
+        /// destruction of the symbolic heap invalidates all IDs of its entities
+        virtual ~SymHeap2();
+
+        /// @note there is no such thing like COW implemented for now
+        SymHeap2(const SymHeap2 &);
+
+        /// @note there is no such thing like COW implemented for now
+        SymHeap2& operator=(const SymHeap2 &);
+
+  public: // methods
+        /// get kind of object
+        TObjKind objKind(TObjId obj) const; // TODO: move to base class?
+
+        /// test if object is abstract segment
+        bool objIsAbstract(TObjId obj) const;
+
+        /// get identification of next pointer in structure
+        int slsGetNextId(TObjId obj) const;
+
+        // get type of SLS structure
+        //inherited const struct cl_type* objType(TObjId obj) const;
+        // TODO: encapsulate kind and type into a pair
+
+        /// returns id of prototype object (lambda representation)  TODO: can be undefined?
+        TObjId slsGetLambdaId(TObjId obj) const;
+
+        /// sets id of prototype object (lambda representation)  TODO: can be undefined?
+        void slsSetLambdaId(TObjId obj, TObjId lambda);
+
+        TAbstractLen slsGetLength(TObjId obj) const;
+        void slsSetLength(TObjId obj, TAbstractLen lambda);
+
+        /// concretize - empty variant
+        void Concretize_E(TObjId abstract_object); 
+        /// concretize - nonempty variant
+        void Concretize_NE(TObjId abstract_object); 
+
+        /// abstract two objects connected by given value if possible
+        void Abstract(TValueId ptrValue);
+        /// search te heap and abstract all objects possible
+        void Abstract();
+
+    private:
+        /// create sls, needs to set value and lambda later
+        TObjId slsCreate(const struct cl_type *clt, int nextid, TAbstractLen alen);
+        /// clone sls
+        TObjId slsClone(TObjId ls);
+        
+        /// delete sls
+        void slsDestroy(TObjId id);
+
+        // local private implementation
+        struct Private;
+        Private *d;
+};
+
+/// concretize abstract object pointed by given value
+void Concretize(std::vector<SymHeap> &shset, TValueId ptrValue);
+
+
+// choose implementation
+#if 0
+    struct SymHeap : public SymHeap1 {};
+#else
+    // with segment abstractions
+    struct SymHeap : public SymHeap2 {};
+#endif
+
 #endif /* H_GUARD_SYM_HEAP_H */
+
+// vim: tw=120

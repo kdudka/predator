@@ -31,6 +31,7 @@
 
 #include <set>
 #include <stack>
+#include <list>
 
 #include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
@@ -116,7 +117,7 @@ struct SymExec::Private: public IBtPrinter {
     void execTermInsn(const SymHeap &heap);
     void execCallFailed(SymHeap heap, SymHeapUnion &results,
                         const struct cl_operand &dst);
-    void execInsnCall(const SymHeap &heap, SymHeapUnion &results);
+    void execInsnCall(const SymHeap &heap, SymHeapUnion &results, std::list<SymHeap> &todo );
     void execInsn(SymHeapScheduler &localState);
     void execBb();
     void execFncBody();
@@ -298,6 +299,8 @@ void SymExec::Private::execCondInsn(const SymHeap &heap) {
     if (2 != tlist.size() || 1 != oplist.size())
         TRAP;
 
+    // IF (operand) GOTO target0 ELSE target1
+
     SymHeapProcessor proc(const_cast<SymHeap &>(heap), this);
     proc.setLocation(this->lw);
 
@@ -316,6 +319,8 @@ void SymExec::Private::execCondInsn(const SymHeap &heap) {
         default:
             break;
     }
+
+    // operand value is unknown, go to both targets
 
     const EUnknownValue code = heap.valGetUnknown(val);
     switch (code) {
@@ -392,7 +397,7 @@ void SymExec::Private::execCallFailed(SymHeap heap, SymHeapUnion &results,
     results.insert(heap);
 }
 
-void SymExec::Private::execInsnCall(const SymHeap &heap, SymHeapUnion &results)
+void SymExec::Private::execInsnCall(const SymHeap &heap, SymHeapUnion &results, std::list<SymHeap> &todo)
 {
     using namespace CodeStorage;
     const TOperandList &opList = insn->operands;
@@ -478,15 +483,22 @@ void SymExec::Private::execInsn(SymHeapScheduler &localState) {
 
         } else {
             // working area for non-term instructions
-            SymHeap workingHeap(heap);
-            SymHeapProcessor proc(workingHeap, this);
-            proc.setLocation(this->lw);
+            SymHeap startHeap(heap);    // clone source heap
+            std::list<SymHeap> todo;
+            todo.push_back(startHeap);     // first heap to analyze
+            while(todo.size()>0) {
+                SymHeap workingHeap(todo.front()); // use first SH
+                todo.pop_front();
 
-            // NOTE: this has to be tried *before* execInsnCall() to eventually
-            // catch malloc()/free() calls, which are treated differently
-            if (!proc.exec(nextLocalState, *insn, this->fastMode))
-                // call insn
-                this->execInsnCall(workingHeap, nextLocalState);
+                SymHeapProcessor proc(workingHeap, this);
+                proc.setLocation(this->lw);
+
+                // NOTE: this has to be tried *before* execInsnCall() to eventually
+                // catch malloc()/free() calls, which are treated differently
+                if (!proc.exec(nextLocalState, todo, *insn, this->fastMode))
+                    // call insn
+                    this->execInsnCall(workingHeap, nextLocalState, todo);
+            }
         }
     }
 
@@ -579,3 +591,5 @@ void SymExec::Private::execFnc(const SymHeap &init)
     // done
     CL_DEBUG_MSG(this->lw, "<<< leaving " << nameOf(*this->fnc) << "()");
 }
+
+// vim: tw=120

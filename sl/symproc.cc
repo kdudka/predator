@@ -252,6 +252,8 @@ bool SymHeapProcessor::lhsFromOperand(TObjId *pObj, const struct cl_operand &op)
             TRAP;
 
         default:
+            if(this->heap_.objIsAbstract(*pObj)) 
+                return false;
             return true;
     }
 }
@@ -276,6 +278,8 @@ namespace {
 
             case OBJ_RETURN:
             default:
+                if(objIsAbstract(var)) // should be concretized
+                    TRAP;
                 break;
         }
 
@@ -1253,13 +1257,18 @@ TValueId handleOp(TProc &proc, int code, const TValueId rhs[ARITY],
     return OpHandler<ARITY, TProc>::handleOp(proc, code, rhs, clt);
 }
 
+
 template <int ARITY>
-void SymHeapProcessor::execOp(const CodeStorage::Insn &insn) {
+void SymHeapProcessor::execOp(const CodeStorage::Insn &insn, std::list<SymHeap> &todo) {
     // resolve lhs
-    TObjId varLhs;
+    TObjId varLhs = NO_OBJECT;
     const struct cl_operand &dst = insn.operands[/* dst */ 0];
-    if (!this->lhsFromOperand(&varLhs, dst))
-        return;
+    if (!this->lhsFromOperand(&varLhs, dst)) {
+        if(heap_->objIsAbstract(varLhs))
+            Concretize(heap_,varLhs,todo); // add to todo-list if abstract variant possible
+        else
+            return;
+    }
 
     // store cl_type of dst operand
     const struct cl_type *clt[ARITY + /* dst type */ 1];
@@ -1273,25 +1282,29 @@ void SymHeapProcessor::execOp(const CodeStorage::Insn &insn) {
         rhs[i] = this->heapValFromOperand(op);
         if (VAL_INVALID == rhs[i])
             TRAP;
+        if(valIsAbstract(rhs[i]))
+            Concretize(heap_,rhs[i],todo); // add to todo-list if abstract variant possible
     }
+
+    // ASSERT: all operands are non-abstract
 
     // handle generic operator and store result
     const TValueId valResult = handleOp<ARITY>(*this, insn.subCode, rhs, clt);
     this->heapSetVal(varLhs, valResult);
 }
 
-bool SymHeapProcessor::exec(TState &dst, const CodeStorage::Insn &insn,
+bool SymHeapProcessor::exec(TState &dst, std::list<SymHeap> &todo, const CodeStorage::Insn &insn,
                             bool fastMode)
 {
     lw_ = &insn.loc;
     const enum cl_insn_e code = insn.code;
     switch (code) {
         case CL_INSN_UNOP:
-            this->execOp<1>(insn);
+            this->execOp<1>(insn, todo) 
             break;
 
         case CL_INSN_BINOP:
-            this->execOp<2>(insn);
+            this->execOp<2>(insn, todo) 
             break;
 
         case CL_INSN_CALL:

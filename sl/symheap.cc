@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2009-2010 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2010 Petr Peringer, FIT
  *
  * This file is part of predator.
  *
@@ -499,8 +500,8 @@ bool SymHeapCore::proveEq(bool *result, TValueId valA, TValueId valB) const {
 
 
 // /////////////////////////////////////////////////////////////////////////////
-// implementation of SymHeap
-struct SymHeap::Private {
+// implementation of SymHeap1
+struct SymHeap1::Private {
     struct Object {
         const struct cl_type        *clt;
         size_t                      cbSize;
@@ -531,7 +532,7 @@ struct SymHeap::Private {
     std::vector<Value>              values;
 };
 
-void SymHeap::resizeIfNeeded() {
+void SymHeap1::resizeIfNeeded() {
     const size_t lastValueId = this->lastValueId();
     if (d->values.size() <= lastValueId)
         d->values.resize(lastValueId + 1);
@@ -541,7 +542,7 @@ void SymHeap::resizeIfNeeded() {
         d->objects.resize(lastObjId + 1);
 }
 
-TValueId SymHeap::createCompValue(const struct cl_type *clt, TObjId obj) {
+TValueId SymHeap1::createCompValue(const struct cl_type *clt, TObjId obj) {
     const TValueId val = SymHeapCore::valCreate(UV_KNOWN, OBJ_INVALID);
     if (VAL_INVALID == val)
         TRAP;
@@ -554,7 +555,7 @@ TValueId SymHeap::createCompValue(const struct cl_type *clt, TObjId obj) {
     return val;
 }
 
-void SymHeap::initValClt(TObjId obj) {
+void SymHeap1::initValClt(TObjId obj) {
     // look for object's address
     const TValueId val = SymHeapCore::placedAt(obj);
     if (VAL_INVALID == val)
@@ -565,7 +566,7 @@ void SymHeap::initValClt(TObjId obj) {
     d->values.at(val).clt = ref.clt;
 }
 
-TObjId SymHeap::createSubVar(const struct cl_type *clt, TObjId parent) {
+TObjId SymHeap1::createSubVar(const struct cl_type *clt, TObjId parent) {
     const TObjId obj = SymHeapCore::objCreate();
     if (OBJ_INVALID == obj)
         TRAP;
@@ -579,7 +580,7 @@ TObjId SymHeap::createSubVar(const struct cl_type *clt, TObjId parent) {
     return obj;
 }
 
-void SymHeap::createSubs(TObjId obj) {
+void SymHeap1::createSubs(TObjId obj) {
     const struct cl_type *clt = d->objects.at(obj).clt;
 
     typedef std::pair<TObjId, const struct cl_type *> TPair;
@@ -598,11 +599,11 @@ void SymHeap::createSubs(TObjId obj) {
         const enum cl_type_e code = clt->code;
         switch (code) {
             case CL_TYPE_ARRAY:
-                CL_WARN("CL_TYPE_ARRAY is not supported by SymHeap for now");
+                CL_WARN("CL_TYPE_ARRAY is not supported by SymHeap1 for now");
                 break;
 
             case CL_TYPE_CHAR:
-                CL_WARN("CL_TYPE_CHAR is not supported by SymHeap for now");
+                CL_WARN("CL_TYPE_CHAR is not supported by SymHeap1 for now");
                 break;
 
             case CL_TYPE_BOOL:
@@ -633,13 +634,13 @@ void SymHeap::createSubs(TObjId obj) {
 }
 
 // XXX
-TValueId SymHeap::valueOf(TObjId obj) const {
+TValueId SymHeap1::valueOf(TObjId obj) const {
     const TValueId val = SymHeapCore::valueOf(obj);
-    const_cast<SymHeap *>(this)->resizeIfNeeded();
+    const_cast<SymHeap1 *>(this)->resizeIfNeeded();
     return val;
 }
 
-void SymHeap::destroyObj(TObjId obj) {
+void SymHeap1::destroyObj(TObjId obj) {
     typedef std::stack<TObjId> TStack;
     TStack todo;
 
@@ -663,30 +664,30 @@ void SymHeap::destroyObj(TObjId obj) {
     }
 }
 
-SymHeap::SymHeap():
+SymHeap1::SymHeap1():
     d(new Private)
 {
     this->resizeIfNeeded();
 }
 
-SymHeap::SymHeap(const SymHeap &ref):
+SymHeap1::SymHeap1(const SymHeap1 &ref):
     SymHeapCore(ref),
     d(new Private(*ref.d))
 {
 }
 
-SymHeap::~SymHeap() {
+SymHeap1::~SymHeap1() {
     delete d;
 }
 
-SymHeap& SymHeap::operator=(const SymHeap &ref) {
+SymHeap1& SymHeap1::operator=(const SymHeap1 &ref) {
     SymHeapCore::operator=(ref);
     delete d;
     d = new Private(*ref.d);
     return *this;
 }
 
-const struct cl_type* SymHeap::objType(TObjId obj) const {
+const struct cl_type* SymHeap1::objType(TObjId obj) const {
     if (this->lastObjId() < obj || obj <= 0)
         // object ID is either out of range, or does not represent a valid obj
         return 0;
@@ -694,7 +695,7 @@ const struct cl_type* SymHeap::objType(TObjId obj) const {
     return d->objects[obj].clt;
 }
 
-const struct cl_type* SymHeap::valType(TValueId val) const {
+const struct cl_type* SymHeap1::valType(TValueId val) const {
     if (this->lastValueId() < val || val <= 0)
         // value ID is either out of range, or does not point a valid obj
         return 0;
@@ -702,7 +703,7 @@ const struct cl_type* SymHeap::valType(TValueId val) const {
     return d->values[val].clt;
 }
 
-int SymHeap::cVar(TObjId obj) const {
+int SymHeap1::cVar(TObjId obj) const {
     if (this->lastObjId() < obj || obj <= 0)
         // object ID is either out of range, or does not represent a valid obj
         return -1;
@@ -711,7 +712,7 @@ int SymHeap::cVar(TObjId obj) const {
 }
 
 /// @attention this will break as soon as we allow recursion
-TObjId SymHeap::objByCVar(int uid) const {
+TObjId SymHeap1::objByCVar(int uid) const {
     Private::TCVarMap::iterator iter = d->cVarMap.find(uid);
     if (d->cVarMap.end() == iter)
         return OBJ_INVALID;
@@ -719,13 +720,13 @@ TObjId SymHeap::objByCVar(int uid) const {
         return iter->second;
 }
 
-void SymHeap::gatherCVars(TCont &dst) const {
+void SymHeap1::gatherCVars(TCont &dst) const {
     Private::TCVarMap::const_iterator i;
     for (i = d->cVarMap.begin(); i != d->cVarMap.end(); ++i)
         dst.push_back(i->first);
 }
 
-TObjId SymHeap::valGetCompositeObj(TValueId val) const {
+TObjId SymHeap1::valGetCompositeObj(TValueId val) const {
     if (this->lastValueId() < val || val <= 0)
         // value ID is either out of range, or does not point a valid obj
         return OBJ_INVALID;
@@ -733,7 +734,7 @@ TObjId SymHeap::valGetCompositeObj(TValueId val) const {
     return d->values[val].compObj;
 }
 
-TObjId SymHeap::subObj(TObjId obj, int nth) const {
+TObjId SymHeap1::subObj(TObjId obj, int nth) const {
     if (this->lastObjId() < obj || obj <= 0)
         // object ID is either out of range, or does not represent a valid obj
         return OBJ_INVALID;
@@ -746,7 +747,7 @@ TObjId SymHeap::subObj(TObjId obj, int nth) const {
         : /* nth is out of range */ OBJ_INVALID;
 }
 
-TObjId SymHeap::objParent(TObjId obj) const {
+TObjId SymHeap1::objParent(TObjId obj) const {
     if (this->lastObjId() < obj || obj <= 0)
         // object ID is either out of range, or does not represent a valid obj
         return OBJ_INVALID;
@@ -754,7 +755,26 @@ TObjId SymHeap::objParent(TObjId obj) const {
     return d->objects[obj].parent;
 }
 
-TObjId SymHeap::objCreate(const struct cl_type *clt, int uid) {
+/// count number of pointers inside struct
+unsigned SymHeap1::numPtr2Struct(TObjId obj) const {
+    // check if top-level
+    if(d->objects[obj].parent == OBJ_INVALID) 
+        TRAP;
+    unsigned count = 0;
+    // go through all items    FIXME/TODO:hierarchy?
+    TObjId o;
+    int i;
+    while( (o=subObj(obj,i))!=OBJ_INVALID) {
+        TContObj set;
+        TValueId address = placedAt(o);
+        usedBy(set,address);
+        count += set.size();  // usedByCount
+    } // while
+
+    return count;
+}
+
+TObjId SymHeap1::objCreate(const struct cl_type *clt, int uid) {
     const enum cl_type_e code = clt->code;
     switch (code) {
         case CL_TYPE_INT:
@@ -791,7 +811,7 @@ TObjId SymHeap::objCreate(const struct cl_type *clt, int uid) {
     return obj;
 }
 
-TObjId SymHeap::objCreateAnon(int cbSize) {
+TObjId SymHeap1::objCreateAnon(int cbSize) {
     const TObjId obj = SymHeapCore::objCreate();
     this->resizeIfNeeded();
     d->objects[obj].cbSize = cbSize;
@@ -799,7 +819,7 @@ TObjId SymHeap::objCreateAnon(int cbSize) {
     return obj;
 }
 
-int SymHeap::objSizeOfAnon(TObjId obj) const {
+int SymHeap1::objSizeOfAnon(TObjId obj) const {
     if (this->lastObjId() < obj || obj <= 0)
         // object ID is either out of range, or does not represent a valid obj
         TRAP;
@@ -812,7 +832,7 @@ int SymHeap::objSizeOfAnon(TObjId obj) const {
     return ref.cbSize;
 }
 
-bool SymHeap::valPointsToAnon(TValueId val) const {
+bool SymHeap1::valPointsToAnon(TValueId val) const {
     if (val <= 0)
         return false;
 
@@ -825,7 +845,7 @@ bool SymHeap::valPointsToAnon(TValueId val) const {
     return !ref.clt;
 }
 
-void SymHeap::objDefineType(TObjId obj, const struct cl_type *clt) {
+void SymHeap1::objDefineType(TObjId obj, const struct cl_type *clt) {
     if (this->lastObjId() < obj || obj < 0)
         // object ID is either out of range, or does not represent a valid obj
         TRAP;
@@ -847,7 +867,7 @@ void SymHeap::objDefineType(TObjId obj, const struct cl_type *clt) {
     this->initValClt(obj);
 }
 
-void SymHeap::objDestroy(TObjId obj) {
+void SymHeap1::objDestroy(TObjId obj) {
     if (this->lastObjId() < obj || obj < 0)
         // object ID is either out of range, or does not represent a valid obj
         TRAP;
@@ -868,7 +888,7 @@ void SymHeap::objDestroy(TObjId obj) {
     }
 }
 
-TValueId SymHeap::valCreateUnknown(EUnknownValue code,
+TValueId SymHeap1::valCreateUnknown(EUnknownValue code,
                                    const struct cl_type *clt)
 {
     const TValueId val = SymHeapCore::valCreate(code, OBJ_UNKNOWN);
@@ -880,7 +900,7 @@ TValueId SymHeap::valCreateUnknown(EUnknownValue code,
     return val;
 }
 
-TValueId SymHeap::valCreateCustom(const struct cl_type *clt, int cVal) {
+TValueId SymHeap1::valCreateCustom(const struct cl_type *clt, int cVal) {
     Private::TCValueMap::iterator iter = d->cValueMap.find(cVal);
     if (d->cValueMap.end() == iter) {
         // cVal not found, create a new wrapper for it
@@ -911,7 +931,7 @@ TValueId SymHeap::valCreateCustom(const struct cl_type *clt, int cVal) {
     return val;
 }
 
-int SymHeap::valGetCustom(const struct cl_type **pClt, TValueId val) const {
+int SymHeap1::valGetCustom(const struct cl_type **pClt, TValueId val) const {
     if (this->lastValueId() < val || val <= 0)
         // value ID is either out of range, or does not point to a valid obj
         return -1;
@@ -927,3 +947,312 @@ int SymHeap::valGetCustom(const struct cl_type **pClt, TValueId val) const {
 
     return ref.customData;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// /////////////////////////////////////////////////////////////////////////////
+// implementation of SymHeap2
+struct SymHeap2::Private {
+    struct Object {
+        TObjKind        kind;
+        int             nextid;
+        TAbstractLen    alen;
+        TObjId          lambda;
+
+        Object(): kind(SLS), nextid(-1), alen(PE), lambda(OBJ_INVALID) { }
+    };
+
+    std::map<TObjId,Object> sl_segments;
+};
+
+
+/// create an empty symbolic heap
+SymHeap2::SymHeap2() :
+    d(new Private)
+{
+}
+
+/// destruction of the symbolic heap invalidates all IDs of its entities
+SymHeap2::~SymHeap2() {
+    delete d;
+}
+
+/// copy construction
+SymHeap2::SymHeap2(const SymHeap2 &o) : 
+    SymHeap1(o),
+    d(new Private(*o.d))
+{
+    //CL_WARN("***copy_ctr\n") ;
+}
+
+/// assign heaps
+SymHeap2& SymHeap2::operator=(const SymHeap2 &o)
+{
+    if(&o==this) 
+        return *this;
+    SymHeap1::operator=(o);
+    delete d;
+    d = new Private(*o.d);
+    return *this;
+}
+
+// methods
+
+/// get kind of object
+//TODO: move to base class
+TObjKind SymHeap2::objKind(TObjId obj) const {
+    if(d->sl_segments.count(obj)==0)
+        TRAP;
+    return d->sl_segments[obj].kind;
+}
+
+/// test if object is abstract segment
+bool SymHeap2::objIsAbstract(TObjId obj) const {
+    return objKind(obj)!=VAR;
+}
+
+/// get identification of next pointer in structure
+int SymHeap2::slsGetNextId(TObjId obj) const {
+    if(d->sl_segments.count(obj)==0)
+        TRAP;
+    return d->sl_segments[obj].nextid;
+}
+
+
+/// returns id of prototype object (lambda representation)  TODO: can be undefined?
+TObjId SymHeap2::slsGetLambdaId(TObjId obj) const {
+    if(d->sl_segments.count(obj)==0)
+        TRAP;
+    return d->sl_segments[obj].lambda;
+}
+
+/// sets id of prototype object (lambda representation)  TODO: can be undefined?
+void SymHeap2::slsSetLambdaId(TObjId obj, TObjId lambda) {
+    if(d->sl_segments.count(obj)==0)
+        TRAP;
+    d->sl_segments[obj].lambda=lambda;
+}
+
+TAbstractLen SymHeap2::slsGetLength(TObjId obj) const {
+    if(d->sl_segments.count(obj)==0)
+        TRAP;
+    return d->sl_segments[obj].alen;
+}
+
+void SymHeap2::slsSetLength(TObjId obj, TAbstractLen alen) {
+    if(d->sl_segments.count(obj)==0)
+        TRAP;
+    d->sl_segments[obj].alen=alen;
+}
+
+
+/// concretize abstract segment - nonempty variant
+void SymHeap2::Concretize_NE(TObjId abstract_object) 
+{
+    TRAP;
+    // TODO: should keep the same OID?
+
+    // 1. create struct (clone prototype?)
+//    TValueId sptrval = slsCreateItem(abstract_object);
+
+    // 2. clone/recycle listsegment
+//    TValueId aptrval = slsClone(abstract_object);
+
+    // 3. relink pointer2segment to pointer2struct
+//    TValueId retv = join_values(ptrValue,s);
+//    valReplaceUnknown(s,);  // like assignment a=v, keep a_id
+
+    // 4. link sruct-next to new listsegment
+
+    // 5. delete old listsegment
+    slsDestroy(abstract_object); 
+}
+
+
+//TODO: method of top SymHeap will be better layer for this kind of operation
+/// concretize abstract segment - empty variant
+void SymHeap2::Concretize_E(TObjId abstract_object) 
+{
+    // checking if possible
+    if(slsGetLength(abstract_object) != PE) 
+        TRAP;
+
+    // TODO: cannot keep the same OID
+    // empty segment variant
+
+    // get values
+    TValueId v = valueOf(abstract_object);   // we expect correct type of pointer value
+    TValueId a = placedAt(abstract_object);
+
+    // delete listsegment object
+    slsDestroy(abstract_object); 
+
+    // join pointer2abstract-value and next-value
+    // TODO: verify
+    valReplaceUnknown(a,v);  // keep v_id
+
+    // WARNING: resulting value can be abstract, too
+}
+
+
+/// concretize abstract object pointed by ptr value
+void Concretize(SymHeap &sh, TValueId ptrValue, std::list<SymHeap> &todo) 
+{
+    TObjId ao = sh.pointsTo(ptrValue);
+    if (!sh.objIsAbstract(ao))
+        TRAP;                   // something is wrong at caller
+
+    // ASSERT: ao is target abstract object
+
+    // 1. create empty variant (possibly empty segments only)
+    if(sh.slsGetLength(ao) == PE) {
+        SymHeap sh0(sh);        // clone
+        sh0.Concretize_E(ao);
+        todo.push_back(sh0);    // process this state later
+    }
+
+    // 2. nonempty variant - modify existing heap
+    sh.Concretize_NE(ao);
+}
+
+
+/// abstract two objects connected by given value if possible
+void SymHeap2::Abstract(TValueId ptrValue)
+{
+    // check, if abstraction possible:
+    TContObj set;
+    usedBy(set,ptrValue);
+    if(set.size()!=1)
+        TRAP; // precondition failed
+
+    TObjId firstn = set[0];     // referenced by this value only
+    TObjId first  = objParent(firstn);  // whole struct id
+    TObjId second = pointsTo(ptrValue); // pointer target struct id
+    // TODO: link pointers can point INSIDE structs
+
+    // first some type checking
+    const cl_type * valtype     = valType(ptrValue);    // always POINTER to struct
+    const cl_type * firsttype   = objType(first);       // type of struct or segment
+    const cl_type * secondtype  = objType(second);
+    if (firsttype!=secondtype)
+        return; // can not abstract nonhomogeneous list
+
+    TObjKind firstkind  = objKind(first);
+    TObjKind secondkind = objKind(second);
+    // there are 4 possible variants:
+    // struct struct
+    // struct seg
+    // seg    struct
+    // seg    seg
+
+    if(firstkind==VAR && secondkind==VAR) {
+        // 1. determine nextptr from ptrVal
+        // 2. check, if not other items pointed
+        int nextid=-1;
+        int i=0;
+        TObjId o;
+        // go through all items
+        while( (o=subObj(first,i))!=OBJ_INVALID) {
+            if(o==firstn) {
+                nextid=i; // mark nextitem number
+                break;
+            }
+        } // while
+        if( nextid == -1 ) 
+            TRAP;
+        if(numPtr2Struct(first)!=1)
+            return;
+        if(numPtr2Struct(second)!=1)
+            return;
+
+        // create listsegment from 2 structs
+        TObjId s = slsCreate(firsttype,nextid,NE);
+        TObjId nextptr = subObj(second,nextid);
+        objSetValue(s,valueOf(nextptr));
+        objReplace(first,s);
+        objDestroy(second);
+
+        // TODO: prototype values and lambda
+
+    }else
+    if(firstkind==VAR && secondkind==SLS) {
+        // check type
+
+    }else
+    if(firstkind==SLS && secondkind==VAR) {
+        // check types, 
+
+    }else
+    if(firstkind==SLS && secondkind==SLS) {
+        if (!slsCompatible(first,second))
+            return;
+        // join
+
+
+    }
+
+    
+
+    // TODO lambda checking
+
+}
+
+/// search te heap and abstract all objects possible
+void SymHeap2::Abstract()
+{
+    // TODO
+    TRAP;
+
+    // for all pointer to struct values used by single var
+    //    call Abstract(val)
+}
+
+/// create sls, needs to set value and lambda later
+TObjId SymHeap2::slsCreate(const struct cl_type *clt, int nextid, TAbstractLen alen) {
+    TObjId id = objCreate(clt, /* heap-object */ -1);
+    d->sl_segments[id].nextid = nextid;
+    d->sl_segments[id].kind = SLS;
+    d->sl_segments[id].alen = alen;
+    d->sl_segments[id].lambda = OBJ_INVALID;
+    return id;
+}
+
+/// clone sls object
+TObjId SymHeap2::slsClone(TObjId ls) {
+    // TODO: assert
+    const cl_type *typ = objType(ls);
+    // create ls
+    TObjId id = slsCreate(typ, d->sl_segments[ls].nextid, d->sl_segments[ls].alen);
+    // set
+    objSetValue(id,valueOf(ls));
+    d->sl_segments[ls].lambda = d->sl_segments[id].lambda;
+    //TODO: check completness
+
+    return id;
+}
+
+/// delete sls
+void SymHeap2::slsDestroy(TObjId id) {
+    // TODO: check if unlinked
+    d->sl_segments.erase(id);
+    objDestroy(id);
+}
+
+// vim: tw=120

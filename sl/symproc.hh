@@ -29,7 +29,10 @@
 #include <cl/location.hh>
 #include <cl/storage.hh>
 
+#include <list>
+
 #include "symid.hh"
+#include "symheap.hh"
 
 class IBtPrinter;
 class SymHeap;
@@ -83,7 +86,7 @@ class SymHeapProcessor {
          * @note returning false in this case does @b not mean there has been an
          * error
          */
-        bool exec(TState &dst, const CodeStorage::Insn &insn, bool fastMode);
+        bool exec(TState &dst, std::list<SymHeap>& todo, const CodeStorage::Insn &insn, bool fastMode);
 
     public:
         /// obtain a heap object corresponding to the given operand
