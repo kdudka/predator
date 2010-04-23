@@ -183,7 +183,10 @@ class SymHeapCore {
         EUnknownValue valGetUnknown(TValueId val) const;
 
         /// check if value is abstract
-        bool valIsAbstract(TValueId val) const { return valGetUnknown(val)==UV_ABSTRACT; }
+        bool valIsAbstract(TValueId val) const {
+            return (0 < val)
+                && (valGetUnknown(val) == UV_ABSTRACT);
+        }
 
         /// duplicate the given @b unknown @b value
         virtual TValueId valDuplicateUnknown(TValueId tpl);
