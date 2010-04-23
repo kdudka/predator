@@ -767,7 +767,7 @@ TObjId SymHeap1::objParent(TObjId obj) const {
 /// count number of pointers inside struct
 unsigned SymHeap1::numPtr2Struct(TObjId obj) const {
     // check if top-level
-    if(d->objects[obj].parent == OBJ_INVALID) 
+    if(d->objects[obj].parent == OBJ_INVALID)
         TRAP;
     unsigned count = 0;
     // go through all items    FIXME/TODO:hierarchy?
@@ -1007,7 +1007,7 @@ SymHeap2::~SymHeap2() {
 }
 
 /// copy construction
-SymHeap2::SymHeap2(const SymHeap2 &o) : 
+SymHeap2::SymHeap2(const SymHeap2 &o) :
     SymHeap1(o),
     d(new Private(*o.d))
 {
@@ -1017,7 +1017,7 @@ SymHeap2::SymHeap2(const SymHeap2 &o) :
 /// assign heaps
 SymHeap2& SymHeap2::operator=(const SymHeap2 &o)
 {
-    if(&o==this) 
+    if(&o==this)
         return *this;
     SymHeap1::operator=(o);
     delete d;
@@ -1077,7 +1077,7 @@ void SymHeap2::slsSetLength(TObjId obj, TAbstractLen alen) {
 
 
 /// concretize abstract segment - nonempty variant
-void SymHeap2::Concretize_NE(TObjId abstract_object) 
+void SymHeap2::Concretize_NE(TObjId abstract_object)
 {
     TRAP;
     // TODO: should keep the same OID?
@@ -1095,16 +1095,16 @@ void SymHeap2::Concretize_NE(TObjId abstract_object)
     // 4. link sruct-next to new listsegment
 
     // 5. delete old listsegment
-    slsDestroy(abstract_object); 
+    slsDestroy(abstract_object);
 }
 
 
 //TODO: method of top SymHeap will be better layer for this kind of operation
 /// concretize abstract segment - empty variant
-void SymHeap2::Concretize_E(TObjId abstract_object) 
+void SymHeap2::Concretize_E(TObjId abstract_object)
 {
     // checking if possible
-    if(slsGetLength(abstract_object) != PE) 
+    if(slsGetLength(abstract_object) != PE)
         TRAP;
 
     // TODO: cannot keep the same OID
@@ -1115,7 +1115,7 @@ void SymHeap2::Concretize_E(TObjId abstract_object)
     TValueId a = placedAt(abstract_object);
 
     // delete listsegment object
-    slsDestroy(abstract_object); 
+    slsDestroy(abstract_object);
 
     // join pointer2abstract-value and next-value
     // TODO: verify
@@ -1126,7 +1126,7 @@ void SymHeap2::Concretize_E(TObjId abstract_object)
 
 
 /// concretize abstract object pointed by ptr value
-void Concretize(SymHeap &sh, TObjId ao, std::list<SymHeap> &todo) 
+void Concretize(SymHeap &sh, TObjId ao, std::list<SymHeap> &todo)
 {
     if (!sh.objIsAbstract(ao))
         TRAP;                   // something is wrong at caller
@@ -1178,7 +1178,7 @@ void SymHeap2::Abstract(TValueId ptrValue)
     if(firstkind==VAR && secondkind==VAR) {
         // 1. determine nextptr from ptrVal
         int nextid = nthItemOf(firstn);
-        if( nextid == -1 ) 
+        if( nextid == -1 )
             TRAP;
         // 2. check, if not other items pointed
         if(numPtr2Struct(first)!=1)
@@ -1205,7 +1205,7 @@ void SymHeap2::Abstract(TValueId ptrValue)
     }else
     if(firstkind==SLS && secondkind==VAR) {
         TRAP;
-        // check types, 
+        // check types,
 
     }else
     if(firstkind==SLS && secondkind==SLS) {
@@ -1217,7 +1217,7 @@ void SymHeap2::Abstract(TValueId ptrValue)
 
     }
 
-    
+
 
     // TODO lambda checking
 

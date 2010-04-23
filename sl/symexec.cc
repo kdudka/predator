@@ -284,7 +284,7 @@ void SymExec::Private::updateState(const CodeStorage::Block *ofBlock,
                     : " scheduled for next wheel"));
     }
 }
-        
+
 void SymExec::Private::updateState(const CodeStorage::Block *ofBlock,
                                    SymHeap heap, TValueId valDst,
                                    TValueId valSrc)

@@ -458,7 +458,7 @@ class SymHeap1: public SymHeapCore {
 
 
 /**
- * symbolic heap representation with singly linked list segments - facade 
+ * symbolic heap representation with singly linked list segments - facade
  * this is test prototype
  * TODO: DLS - doubly linked lists
  * TODO: merge all into SymHeap1
@@ -501,9 +501,9 @@ class SymHeap2: public SymHeap1 {
         void slsSetLength(TObjId obj, TAbstractLen lambda);
 
         /// concretize - empty variant
-        void Concretize_E(TObjId abstract_object); 
+        void Concretize_E(TObjId abstract_object);
         /// concretize - nonempty variant
-        void Concretize_NE(TObjId abstract_object); 
+        void Concretize_NE(TObjId abstract_object);
 
         /// abstract two objects connected by given value if possible
         void Abstract(TValueId ptrValue);
@@ -515,7 +515,7 @@ class SymHeap2: public SymHeap1 {
         TObjId slsCreate(const struct cl_type *clt, int nextid, TAbstractLen alen);
         /// clone sls
         TObjId slsClone(TObjId ls);
-        
+
         /// delete sls
         void slsDestroy(TObjId id);
 

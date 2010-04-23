@@ -252,7 +252,7 @@ bool SymHeapProcessor::lhsFromOperand(TObjId *pObj, const struct cl_operand &op)
             TRAP;
 
         default:
-            if(this->heap_.objIsAbstract(*pObj)) 
+            if(this->heap_.objIsAbstract(*pObj))
                 return false;
             return true;
     }
@@ -1307,7 +1307,7 @@ bool SymHeapProcessor::exec(TState &dst, std::list<SymHeap> &todo, const CodeSto
             break;
 
         case CL_INSN_BINOP:
-            this->execOp<2>(insn, todo); 
+            this->execOp<2>(insn, todo);
             break;
 
         case CL_INSN_CALL:
