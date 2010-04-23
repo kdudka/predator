@@ -336,7 +336,17 @@ void SymHeapCore::objDestroy(TObjId obj, TObjId kind) {
 }
 
 EUnknownValue SymHeapCore::valGetUnknown(TValueId val) const {
-    if (this->lastValueId() < val || val <= 0)
+    switch (val) {
+        case VAL_NULL: /* == VAL_FALSE */
+        case VAL_TRUE:
+            return UV_KNOWN;
+
+        case VAL_INVALID:
+            // fall through! (basically equal to "out of range")
+        default:
+            break;
+    }
+    if (this->lastValueId() < val || val < 0)
         // out of range
         TRAP;
     return d->values[val].code;
