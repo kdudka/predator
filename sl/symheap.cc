@@ -233,6 +233,14 @@ void SymHeapCore::usedBy(TContObj &dst, TValueId val) const {
     }
 }
 
+/// return how many objects use the value
+unsigned SymHeapCore::usedByCount(TValueId val) const {
+    if (this->lastValueId() < val || val <= 0)
+        // value ID is either out of range, or does not point to a valid obj
+        return 0; // means: "not used"
+    return d->values[val].usedBy.size();
+}
+
 TObjId SymHeapCore::objCreate() {
     // acquire object ID
     const size_t last = std::max(d->objects.size(), d->values.size());
@@ -330,7 +338,6 @@ EUnknownValue SymHeapCore::valGetUnknown(TValueId val) const {
     if (this->lastValueId() < val || val <= 0)
         // out of range
         TRAP;
-
     return d->values[val].code;
 }
 
@@ -506,10 +513,11 @@ struct SymHeap1::Private {
         const struct cl_type        *clt;
         size_t                      cbSize;
         int /* CodeStorage */       cVar;
+        int                         nth_item; // -1  OR  0 .. parent.item_cnt-1
         TObjId                      parent;
         TContObj                    subObjs;
 
-        Object(): clt(0), cbSize(0), cVar(-1), parent(OBJ_INVALID) { }
+        Object(): clt(0), cbSize(0), cVar(-1), nth_item(-1), parent(OBJ_INVALID) { }
     };
 
     struct Value {
@@ -621,6 +629,7 @@ void SymHeap1::createSubs(TObjId obj) {
                 for (int i = 0; i < cnt; ++i) {
                     const struct cl_type *subClt = clt->items[i].type;
                     const TObjId subObj = this->createSubVar(subClt, obj);
+                    d->objects[subObj].nth_item = i; // postion in struct
                     d->objects[obj].subObjs[i] = subObj;
                     push(todo, subObj, subClt);
                 }
@@ -633,7 +642,7 @@ void SymHeap1::createSubs(TObjId obj) {
     }
 }
 
-// XXX
+// FIXME why resize?
 TValueId SymHeap1::valueOf(TObjId obj) const {
     const TValueId val = SymHeapCore::valueOf(obj);
     const_cast<SymHeap1 *>(this)->resizeIfNeeded();
@@ -763,12 +772,10 @@ unsigned SymHeap1::numPtr2Struct(TObjId obj) const {
     unsigned count = 0;
     // go through all items    FIXME/TODO:hierarchy?
     TObjId o;
-    int i;
+    int i=0;
     while( (o=subObj(obj,i))!=OBJ_INVALID) {
-        TContObj set;
         TValueId address = placedAt(o);
-        usedBy(set,address);
-        count += set.size();  // usedByCount
+        count += usedByCount(address);
     } // while
 
     return count;
@@ -949,6 +956,11 @@ int SymHeap1::valGetCustom(const struct cl_type **pClt, TValueId val) const {
 }
 
 
+/// return abstract offset of object in struct
+int  SymHeap1::nthItemOf(TObjId o) const {
+    return d->objects[o].nth_item;
+}
+
 
 
 
@@ -1019,8 +1031,8 @@ SymHeap2& SymHeap2::operator=(const SymHeap2 &o)
 //TODO: move to base class
 TObjKind SymHeap2::objKind(TObjId obj) const {
     if(d->sl_segments.count(obj)==0)
-        TRAP;
-    return d->sl_segments[obj].kind;
+       return VAR; // non-abstract
+    return d->sl_segments[obj].kind; // abstract object
 }
 
 /// test if object is abstract segment
@@ -1050,6 +1062,7 @@ void SymHeap2::slsSetLambdaId(TObjId obj, TObjId lambda) {
     d->sl_segments[obj].lambda=lambda;
 }
 
+/// get abstract length of listsegment
 TAbstractLen SymHeap2::slsGetLength(TObjId obj) const {
     if(d->sl_segments.count(obj)==0)
         TRAP;
@@ -1113,9 +1126,8 @@ void SymHeap2::Concretize_E(TObjId abstract_object)
 
 
 /// concretize abstract object pointed by ptr value
-void Concretize(SymHeap &sh, TValueId ptrValue, std::list<SymHeap> &todo) 
+void Concretize(SymHeap &sh, TObjId ao, std::list<SymHeap> &todo) 
 {
-    TObjId ao = sh.pointsTo(ptrValue);
     if (!sh.objIsAbstract(ao))
         TRAP;                   // something is wrong at caller
 
@@ -1137,12 +1149,13 @@ void Concretize(SymHeap &sh, TValueId ptrValue, std::list<SymHeap> &todo)
 void SymHeap2::Abstract(TValueId ptrValue)
 {
     // check, if abstraction possible:
-    TContObj set;
-    usedBy(set,ptrValue);
-    if(set.size()!=1)
+    if(usedByCount(ptrValue) != 1)
         TRAP; // precondition failed
 
+    TContObj set;
+    usedBy(set,ptrValue);
     TObjId firstn = set[0];     // referenced by this value only
+
     TObjId first  = objParent(firstn);  // whole struct id
     TObjId second = pointsTo(ptrValue); // pointer target struct id
     // TODO: link pointers can point INSIDE structs
@@ -1164,19 +1177,10 @@ void SymHeap2::Abstract(TValueId ptrValue)
 
     if(firstkind==VAR && secondkind==VAR) {
         // 1. determine nextptr from ptrVal
-        // 2. check, if not other items pointed
-        int nextid=-1;
-        int i=0;
-        TObjId o;
-        // go through all items
-        while( (o=subObj(first,i))!=OBJ_INVALID) {
-            if(o==firstn) {
-                nextid=i; // mark nextitem number
-                break;
-            }
-        } // while
+        int nextid = nthItemOf(firstn);
         if( nextid == -1 ) 
             TRAP;
+        // 2. check, if not other items pointed
         if(numPtr2Struct(first)!=1)
             return;
         if(numPtr2Struct(second)!=1)
@@ -1186,23 +1190,28 @@ void SymHeap2::Abstract(TValueId ptrValue)
         TObjId s = slsCreate(firsttype,nextid,NE);
         TObjId nextptr = subObj(second,nextid);
         objSetValue(s,valueOf(nextptr));
-        objReplace(first,s);
+        TRAP;
+
+//        objReplace(first,s);
         objDestroy(second);
 
         // TODO: prototype values and lambda
 
     }else
     if(firstkind==VAR && secondkind==SLS) {
+        TRAP;
         // check type
 
     }else
     if(firstkind==SLS && secondkind==VAR) {
+        TRAP;
         // check types, 
 
     }else
     if(firstkind==SLS && secondkind==SLS) {
-        if (!slsCompatible(first,second))
-            return;
+        TRAP;
+//        if (!slsCompatible(first,second))
+//            return;
         // join
 
 

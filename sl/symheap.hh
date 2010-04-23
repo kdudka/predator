@@ -123,6 +123,9 @@ class SymHeapCore {
          */
         void usedBy(TContObj &dst, TValueId val) const;
 
+        /// return how many objects use the value
+        unsigned usedByCount(TValueId val) const;
+
     protected:
         /**
          * create a new symbolic heap object
@@ -346,6 +349,11 @@ class SymHeap1: public SymHeapCore {
          */
         unsigned numPtr2Struct(TObjId obj) const;
 
+        /**
+         * return index of subobject in struct, or -1 if not subobject
+         */
+        int nthItemOf(TObjId o) const;
+
     public:
         /**
          * create a new symbolic heap object of @b known @b type
@@ -516,9 +524,8 @@ class SymHeap2: public SymHeap1 {
         Private *d;
 };
 
-/// concretize abstract object pointed by given value
-void Concretize(std::vector<SymHeap> &shset, TValueId ptrValue);
-
+/// concretize abstract object pointed by given value, add empty variant to todo-list
+void Concretize(SymHeap &sh, TObjId o, std::list<SymHeap> &todo);
 
 // choose implementation
 #if 0

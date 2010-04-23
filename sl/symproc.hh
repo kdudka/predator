@@ -125,7 +125,7 @@ class SymHeapProcessor {
         void heapObjHandleAccessor(TObjId *pObj, const struct cl_accessor *ac);
         TValueId heapValFromCst(const struct cl_operand &op);
         bool lhsFromOperand(TObjId *pObj, const struct cl_operand &op);
-        template <int ARITY> void execOp(const CodeStorage::Insn &insn);
+        template <int ARITY> void execOp(const CodeStorage::Insn &insn, std::list<SymHeap> &todo);
         void execMalloc(TState &dst, const CodeStorage::TOperandList &opList,
                         bool fastMode);
         void execFree(const CodeStorage::TOperandList &opList);

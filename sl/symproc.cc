@@ -278,7 +278,7 @@ namespace {
 
             case OBJ_RETURN:
             default:
-                if(objIsAbstract(var)) // should be concretized
+                if(heap.objIsAbstract(var)) // should be concretized
                     TRAP;
                 break;
         }
@@ -1261,11 +1261,11 @@ TValueId handleOp(TProc &proc, int code, const TValueId rhs[ARITY],
 template <int ARITY>
 void SymHeapProcessor::execOp(const CodeStorage::Insn &insn, std::list<SymHeap> &todo) {
     // resolve lhs
-    TObjId varLhs = NO_OBJECT;
+    TObjId varLhs = OBJ_INVALID;
     const struct cl_operand &dst = insn.operands[/* dst */ 0];
     if (!this->lhsFromOperand(&varLhs, dst)) {
-        if(heap_->objIsAbstract(varLhs))
-            Concretize(heap_,varLhs,todo); // add to todo-list if abstract variant possible
+        if(heap_.objIsAbstract(varLhs))
+            Concretize(heap_, varLhs, todo); // add to todo-list if abstract variant possible
         else
             return;
     }
@@ -1282,8 +1282,11 @@ void SymHeapProcessor::execOp(const CodeStorage::Insn &insn, std::list<SymHeap> 
         rhs[i] = this->heapValFromOperand(op);
         if (VAL_INVALID == rhs[i])
             TRAP;
-        if(valIsAbstract(rhs[i]))
-            Concretize(heap_,rhs[i],todo); // add to todo-list if abstract variant possible
+        if(heap_.valIsAbstract(rhs[i])) {
+            TObjId o = heap_.pointsTo(rhs[i]);    // target object
+            if(heap_.objIsAbstract(o))
+                Concretize(heap_,o,todo);   // add to todo-list if abstract variant possible
+        }
     }
 
     // ASSERT: all operands are non-abstract
@@ -1300,11 +1303,11 @@ bool SymHeapProcessor::exec(TState &dst, std::list<SymHeap> &todo, const CodeSto
     const enum cl_insn_e code = insn.code;
     switch (code) {
         case CL_INSN_UNOP:
-            this->execOp<1>(insn, todo) 
+            this->execOp<1>(insn, todo);
             break;
 
         case CL_INSN_BINOP:
-            this->execOp<2>(insn, todo) 
+            this->execOp<2>(insn, todo); 
             break;
 
         case CL_INSN_CALL:
