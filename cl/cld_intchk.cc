@@ -594,19 +594,15 @@ void CldLabelChk::emitWarnings() {
 }
 
 namespace {
-
+    ICodeListener* usageChk(ICodeListener *slave) {
 #if CLD_BYPASS_USAGE_CHK
-ICodeListener* usageChk(ICodeListener *slave) {
-    return slave;
-}
+        return slave;
 #else
-ICodeListener* usageChk(ICodeListener *slave) {
-    return
-        new CldLcVarUsageChk(
-        new CldRegUsageChk(slave));
-}
+        return
+            new CldLcVarUsageChk(
+            new CldRegUsageChk(slave));
 #endif
-
+    }
 } // namespace
 
 
