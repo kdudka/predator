@@ -15,6 +15,9 @@
 # You should have received a copy of the GNU General Public License
 # along with predator.  If not, see <http://www.gnu.org/licenses/>.
 
+GCC45           ?= gcc-4.5.0.tar.bz2#       # released gcc 4.5
+GCC45_DIR       ?= gcc-4.5.0#               # unpackged release of gcc 4.5
+
 GCC_SRC         ?= gcc-src#                 # SVN working copy for gcc src
 GCC_BUILD       ?= gcc-build#               # working directory gcc build
 GCC_INSTALL     ?= gcc-install#             # where to install gcc from SVN
@@ -38,7 +41,7 @@ GIT             ?= git#                     # use this to override git(1)
 SVN             ?= svn#                     # use this to override svn(1)
 
 .PHONY: all check clean distcheck distclean fetch unpack \
-	build_gcc update_gcc update_gcc_src_only \
+	build_gcc build_gcc45 update_gcc update_gcc_src_only \
 	build_inv \
 	api_cl api_sl api
 
@@ -51,11 +54,11 @@ all: $(SSD_GIT) include/gcc/
 fetch: $(INVADER) $(SPARSE) $(SSD_GIT)
 
 # unpack Invader's sources
-unpack: $(INVADER_DIR)
+unpack: $(INVADER_DIR) $(GCC45_DIR)
 
 # wipe out all, but gcc
 clean:
-	rm -rf $(INVADER) $(SPARSE) $(SSD_GIT)
+	rm -rf $(INVADER) $(SPARSE) $(SSD_GIT) $(GCC45_DIR)
 	rm -rf $(INVADER_DIR)
 	rm -rf $(GCC_BUILD)
 	rm -rf cl_build sl_build fa_analysis_build
@@ -86,6 +89,10 @@ api_sl:
 
 api: api_cl api_sl
 
+# unpack released gcc 4.5
+$(GCC45_DIR): $(GCC45)
+	tar xf $(GCC45)
+
 # initialize a git repo for Invader and apply downstream patches
 $(INVADER_DIR): $(INVADER)
 	unzip -o $(INVADER)
@@ -104,6 +111,11 @@ build_inv: $(INVADER_DIR)
 	$(MAKE) -C $(INVADER_CIL) -j1 # oops, we don't support parallel build?
 	# TODO: make check ... challenge? :-)
 	# TODO: make install
+
+# build gcc from the released tarball, instead of the SVN sources
+build_gcc45: $(GCC45_DIR)
+	ln -fsvT $(GCC45_DIR) $(GCC_SRC)
+	$(MAKE) build_gcc
 
 # build gcc from sources
 build_gcc: $(GCC_SRC)
@@ -141,6 +153,10 @@ update_gcc: update_gcc_src_only
 # fetch Invader tarball
 $(INVADER):
 	$(CURL) -o $@ 'http://www.eastlondonmassive.org/invader-1_1.zip'
+
+# fetch released gcc 4.5
+$(GCC45):
+	$(CURL) -o $@ 'ftp://ftp.lip6.fr/pub/gcc/releases/gcc-4.5.0/gcc-4.5.0.tar.bz2'
 
 # initialize a local git repo for SPARSE
 $(SPARSE):

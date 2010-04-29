@@ -75,3 +75,7 @@ A:
 Q: How can I run the test-suite in parallel?
 A:
     $ make check CTEST="ctest -j9"
+
+Q: How can I compile gcc from the released tarball instead of the SVN sources?
+A:
+    $ make build_gcc45

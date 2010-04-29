@@ -1,9 +1,11 @@
 cl_build/
 fa_analysis_build/
 gcc
+gcc-4.5.0/
+gcc-4.5.0.tar.bz2
 gcc-build/
 gcc-install/
-gcc-src/
+gcc-src
 invader-1_1/
 invader.zip
 sl_build/
