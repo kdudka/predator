@@ -10,8 +10,8 @@ struct sll {
 };
 
 struct sll_item {
+    //int x;
     sll_item_t      *next;
-    sll_t           *list;
 };
 
 #define ALLOC(type) \
@@ -26,7 +26,6 @@ static void append_item(sll_t *list)
         abort();
 
     (*dst)->next = NULL;
-    (*dst)->list = list;
 
     list->last = &(*dst)->next;
 }
@@ -39,7 +38,8 @@ int main()
     list.last = &list.head;
     ___sl_plot("test38-01");    // print empty list state
 
-    for(int i=0; i<100; i++) 
+    int i;
+    for(i=0; i<100; i++) 
         append_item(&list);
     
     ___sl_plot("test38-02");
