@@ -62,6 +62,11 @@ class SymHeapProcessor {
         {
         }
 
+        ~SymHeapProcessor() {
+            if(todolist.size() != 0)
+                TRAP;   // we should move the contents of todolist first
+        }
+
         /**
          * update location info
          * @note this method is used to provide as accurate as possible location
@@ -86,7 +91,7 @@ class SymHeapProcessor {
          * @note returning false in this case does @b not mean there has been an
          * error
          */
-        bool exec(TState &dst, std::list<SymHeap>& todo, const CodeStorage::Insn &insn, bool fastMode);
+        bool exec(TState &dst, const CodeStorage::Insn &insn, bool fastMode);
 
     public:
         /// obtain a heap object corresponding to the given operand
@@ -115,6 +120,11 @@ class SymHeapProcessor {
         /// high-level interface to SymHeap::objDestroy()
         void destroyObj(TObjId obj);
 
+        /// empty todolist moving contents to other list
+        void splice(std::list<SymHeap> &l) {
+            l.splice(l.end(),todolist);         // constant-time operation
+        }
+
     private:
         void printBackTrace();
         void heapSetSingleVal(TObjId lhs, TValueId rhs);
@@ -125,7 +135,7 @@ class SymHeapProcessor {
         void heapObjHandleAccessor(TObjId *pObj, const struct cl_accessor *ac);
         TValueId heapValFromCst(const struct cl_operand &op);
         bool lhsFromOperand(TObjId *pObj, const struct cl_operand &op);
-        template <int ARITY> void execOp(const CodeStorage::Insn &insn, std::list<SymHeap> &todo);
+        template <int ARITY> void execOp(const CodeStorage::Insn &insn);
         void execMalloc(TState &dst, const CodeStorage::TOperandList &opList,
                         bool fastMode);
         void execFree(const CodeStorage::TOperandList &opList);
@@ -133,9 +143,10 @@ class SymHeapProcessor {
                       bool fastMode);
 
     private:
-        SymHeap                     &heap_;
+        SymHeap                     &heap_;     /// heap to operate on
         IBtPrinter                  *btPrinter_;
         LocationWriter              lw_;
+        std::list<SymHeap>          todolist;   /// for concretized siblings
 
         template <int N, class T> friend struct OpHandler;
 };

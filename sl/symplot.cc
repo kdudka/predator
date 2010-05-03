@@ -231,9 +231,12 @@ bool SymHeapPlotter::Private::digFieldName(std::string &dst, TObjId obj) {
 }
 
 void SymHeapPlotter::Private::plotNodeObj(TObjId obj, enum cl_type_e code) {
-    this->dotStream << "\t" << SL_QUOTE(obj)
-        << " [shape=box"
-        << ", color=" << colorByCode(code);
+    this->dotStream << "\t" << SL_QUOTE(obj);
+    bool abstract = this->heap->objIsAbstract(obj);
+    if(abstract)
+        this->dotStream << " [shape=box, style=dashed, color=" << colorByCode(code);
+    else
+        this->dotStream << " [shape=box" << ", color=" << colorByCode(code);
 
     // dig root object
     TObjId root = obj, next;
@@ -248,7 +251,12 @@ void SymHeapPlotter::Private::plotNodeObj(TObjId obj, enum cl_type_e code) {
         // colorize on-stack object
         this->dotStream << ", fontcolor=blue";
 
-    this->dotStream << ", label=\"[" << prefixByCode(code) << "] #";
+    if(abstract) {
+        const char *prefix = (this->heap->slsGetLength(obj)==PE) ? "PE" : "NE";
+        this->dotStream << ", label=\"ls[" << prefix << "] #";
+    }
+    else
+        this->dotStream << ", label=\"[" << prefixByCode(code) << "] #";
 
     const int cVar = this->heap->cVar(obj);
     if (-1 == cVar) {
@@ -339,11 +347,14 @@ void SymHeapPlotter::Private::plotSingleValue(TValueId value) {
     }
 
     const struct cl_type *clt = this->heap->valType(value);
-    if (!clt)
-        TRAP;
-
-    const enum cl_type_e code = clt->code;
-    this->plotNodeValue(value, code, 0);
+    if (clt) {
+        const enum cl_type_e code = clt->code;
+        this->plotNodeValue(value, code, 0);
+    } else {
+        if(!this->heap->valIsAbstract(value))
+            TRAP;       // non-abstract value without type-info?
+        this->plotNodeValue(value, CL_TYPE_PTR, "a"); // for abstract objects
+    }
 }
 
 void SymHeapPlotter::Private::plotSingleObj(TObjId obj) {
@@ -351,11 +362,14 @@ void SymHeapPlotter::Private::plotSingleObj(TObjId obj) {
         TRAP;
 
     const struct cl_type *clt = this->heap->objType(obj);
-    if (!clt)
-        TRAP;
-
-    const enum cl_type_e code = clt->code;
-    this->plotNodeObj(obj, code);
+    if (clt) {
+        const enum cl_type_e code = clt->code;
+        this->plotNodeObj(obj, code);
+    } else {
+        if(!this->heap->objIsAbstract(obj))
+            TRAP;       // non-abstract object without type-info?
+        this->plotNodeObj(obj, CL_TYPE_PTR);
+    }
 }
 
 void SymHeapPlotter::Private::plotZeroValue(TObjId obj)
@@ -518,6 +532,17 @@ void SymHeapPlotter::Private::digObj(TObjId obj) {
         todo.pop();
 
         const struct cl_type *clt = this->heap->objType(obj);
+        if (!clt && this->heap->objIsAbstract(obj)) {
+            // TODO: check
+            // copied --- same as pointer
+            this->plotSingleObj(obj);
+            TValueId value;     // listsegment value
+            if (this->resolveValueOf(&value, obj)) {
+                this->gobbleEdgeValueOf(obj, value);
+                this->workList.schedule(value);
+            }
+            continue;
+        }
         if (!clt)
             TRAP;
 
@@ -552,6 +577,7 @@ void SymHeapPlotter::Private::digObj(TObjId obj) {
                 break;
 
             default:
+                CL_DEBUG_MSG(this->lw, "SymHeapPlotter::Private::digObj("<<obj<<"): Unimplemented type: " << code );
                 TRAP;
         }
 
@@ -703,3 +729,5 @@ bool SymHeapPlotter::plotStackFrame(const std::string           &name,
     d->closeDotFile();
     return d->ok;
 }
+
+// vim: tw=120

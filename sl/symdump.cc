@@ -184,6 +184,10 @@ TObjId /* pointsTo */ dump_value_core(const SymHeap &heap, TValueId value)
         case UV_KNOWN:
             break;
 
+//        case UV_ABSTRACT:
+//            cout << "    code      = UV_ABSTRACT\n";
+//            break; ?
+
         case UV_UNKNOWN:
             cout << "    code      = UV_UNKNOWN\n";
             return OBJ_INVALID;

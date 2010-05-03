@@ -259,10 +259,12 @@ void SymExec::Private::execReturn(SymHeap heap)
 void SymExec::Private::updateState(const CodeStorage::Block *ofBlock,
                                    const SymHeap &heap)
 {
+    SymHeap h(heap); // clone
+    Abstract(h);
     // update *target* state
     SymHeapUnion &huni = this->state[ofBlock];
     const size_t last = huni.size();
-    huni.insert(heap);
+    huni.insert(h);
 
     const std::string &name = ofBlock->name();
 
@@ -397,6 +399,7 @@ void SymExec::Private::execCallFailed(SymHeap heap, SymHeapUnion &results,
     results.insert(heap);
 }
 
+// TODO: add concretization to argument evaluation (depends on allowed form of arguments)
 void SymExec::Private::execInsnCall(const SymHeap &heap, SymHeapUnion &results, std::list<SymHeap> &todo)
 {
     using namespace CodeStorage;
@@ -408,6 +411,7 @@ void SymExec::Private::execInsnCall(const SymHeap &heap, SymHeapUnion &results, 
     SymHeapProcessor proc(const_cast<SymHeap &>(heap), this);
     proc.setLocation(this->lw);
     const int uid = proc.fncFromOperand(opList[/* fnc */ 1]);
+    proc.splice(todo);
     const Fnc *fnc = this->stor.fncs[uid];
     if (!fnc)
         // unable to resolve Fnc by UID
@@ -484,8 +488,9 @@ void SymExec::Private::execInsn(SymHeapScheduler &localState) {
         } else {
             // working area for non-term instructions
             SymHeap startHeap(heap);    // clone source heap
-            std::list<SymHeap> todo;
-            todo.push_back(startHeap);     // first heap to analyze
+
+            std::list<SymHeap> todo;    // we can add concretized heaps during execution
+            todo.push_back(startHeap);  // first heap to analyze
             while(todo.size()>0) {
                 SymHeap workingHeap(todo.front()); // use first SH
                 todo.pop_front();
@@ -495,9 +500,10 @@ void SymExec::Private::execInsn(SymHeapScheduler &localState) {
 
                 // NOTE: this has to be tried *before* execInsnCall() to eventually
                 // catch malloc()/free() calls, which are treated differently
-                if (!proc.exec(nextLocalState, todo, *insn, this->fastMode))
+                if (!proc.exec(nextLocalState, *insn, this->fastMode))
                     // call insn
                     this->execInsnCall(workingHeap, nextLocalState, todo);
+                proc.splice(todo);      // add concretized variants
             }
         }
     }

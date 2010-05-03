@@ -42,18 +42,16 @@ enum EUnknownValue {
     UV_KNOWN = 0,           ///< known value - what we usually wish we had
     UV_UNKNOWN,             ///< unknown value - what we usually have in reality
     UV_UNINITIALIZED,       ///< unknown value of an uninitialised object
-    UV_DEREF_FAILED,        ///< value equivalent of symid.hh::OBJ_DEREF_FAILED
-    UV_ABSTRACT             ///< abstract value (needs concretization before use)
+    UV_DEREF_FAILED         ///< value equivalent of symid.hh::OBJ_DEREF_FAILED
 };
 
-/// basic kind of object
+/// basic kind of object (FIXME: private only?)
 enum TObjKind { VAR, SLS, DLS, ARR };
 
 /// abstract segment length
 enum TAbstractLen { EMPTY=0, SINGLE=1, PE, NE };
 
 class SymHeap;
-class SymHeap1;
 
 /**
  * symbolic heap @b core - no type-info, no object composition on this level
@@ -182,11 +180,6 @@ class SymHeapCore {
          */
         EUnknownValue valGetUnknown(TValueId val) const;
 
-        /// check if value is abstract
-        bool valIsAbstract(TValueId val) const {
-            return (0 < val)
-                && (valGetUnknown(val) == UV_ABSTRACT);
-        }
 
         /// duplicate the given @b unknown @b value
         virtual TValueId valDuplicateUnknown(TValueId tpl);
@@ -202,6 +195,9 @@ class SymHeapCore {
          * CL_INSN_COND.
          */
         void valReplaceUnknown(TValueId val, TValueId replaceBy);
+
+        /// change all variables using value _val to value _newval (all known)
+        void valReplace(TValueId _val, TValueId _newval);
 
     public:
         /**
@@ -348,11 +344,6 @@ class SymHeap1: public SymHeapCore {
         TObjId objParent(TObjId obj) const;
 
         /**
-         * count pointers inside structure
-         */
-        unsigned numPtr2Struct(TObjId obj) const;
-
-        /**
          * return index of subobject in struct, or -1 if not subobject
          */
         int nthItemOf(TObjId o) const;
@@ -487,12 +478,18 @@ class SymHeap2: public SymHeap1 {
         /// test if object is abstract segment
         bool objIsAbstract(TObjId obj) const;
 
+        /// check if value is abstract (points to abstract object)
+        bool valIsAbstract(TValueId val) const {
+            return (val > 0) && 
+                   (pointsTo(val) != OBJ_UNKNOWN) && objIsAbstract(pointsTo(val));
+        }
+
         /// get identification of next pointer in structure
         int slsGetNextId(TObjId obj) const;
 
         // get type of SLS structure
         //inherited const struct cl_type* objType(TObjId obj) const;
-        // TODO: encapsulate kind and type into a pair
+        // TODO: encapsulate kind and type into a pair? add operator== etc
 
         /// returns id of prototype object (lambda representation)  TODO: can be undefined?
         TObjId slsGetLambdaId(TObjId obj) const;
@@ -500,18 +497,19 @@ class SymHeap2: public SymHeap1 {
         /// sets id of prototype object (lambda representation)  TODO: can be undefined?
         void slsSetLambdaId(TObjId obj, TObjId lambda);
 
+        /// get abstract segment length (TODO: rename, make universal for sls/dls/arrs)
         TAbstractLen slsGetLength(TObjId obj) const;
         void slsSetLength(TObjId obj, TAbstractLen lambda);
+
+        const struct cl_type * slsType(TObjId obj) const;
 
         /// concretize - empty variant
         void Concretize_E(TObjId abstract_object);
         /// concretize - nonempty variant
-        void Concretize_NE(TObjId abstract_object);
+        TObjId Concretize_NE(TObjId abstract_object);
 
         /// abstract two objects connected by given value if possible
         void Abstract(TValueId ptrValue);
-        /// search te heap and abstract all objects possible
-        void Abstract();
 
     private:
         /// create sls, needs to set value and lambda later
@@ -528,7 +526,10 @@ class SymHeap2: public SymHeap1 {
 };
 
 /// concretize abstract object pointed by given value, add empty variant to todo-list
-void Concretize(SymHeap &sh, TObjId o, std::list<SymHeap> &todo);
+void Concretize(SymHeap &sh, TObjId &o, std::list<SymHeap> &todo);
+
+/// search te heap and abstract all objects possible
+void Abstract(SymHeap &sh);
 
 // choose implementation
 #if 0

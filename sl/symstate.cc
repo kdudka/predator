@@ -148,7 +148,7 @@ namespace {
 
             const enum cl_type_e code = (clt)
                 ? clt->code
-                : /* anonymous object of known size */ CL_TYPE_PTR;
+                : /* anonymous object of known size */ CL_TYPE_PTR;     // segments?
 
             switch (code) {
                 case CL_TYPE_PTR: {
@@ -214,6 +214,23 @@ bool dfsCmp(TWL             &wl,
         if (checkNonPosValues(obj1, obj2))
             // variable mismatch
             return false;
+
+        // abstract segment (SLS only) detection and comparison
+        if(heap1.objIsAbstract(obj1) != heap2.objIsAbstract(obj2))
+            return false;
+        if(heap1.objIsAbstract(obj1)) {         // both abstract
+            // TODO: create friend function with parameters(h1,o1,h2,o2)
+            if(heap1.objKind(obj1) != heap2.objKind(obj2))
+                return false;
+            if(heap1.slsType(obj1) != heap2.slsType(obj2))
+                return false;
+            if(heap1.slsGetNextId(obj1) != heap2.slsGetNextId(obj2))
+                return false;
+            if(heap1.slsGetLength(obj1) != heap2.slsGetLength(obj2))
+                return false;
+            // TODO: lambda comparison (like struct cmp?)
+            // if all is equal, we can compare nextptr-values
+        }
 
         value1 = heap1.valueOf(obj1);
         value2 = heap2.valueOf(obj2);
@@ -290,3 +307,5 @@ void SymHeapUnion::insert(const SymHeapUnion &huni) {
         this->insert(current);
     }
 }
+
+// vim: tw=120
