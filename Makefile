@@ -100,7 +100,7 @@ $(INVADER_DIR): $(INVADER)
 		&& $(GIT) init \
 		&& $(GIT) add * \
 		&& $(GIT) commit -m "initial import of $(INVADER)" \
-		&& $(GIT) branch -a orig \
+		&& $(GIT) branch orig \
 		&& $(GIT) am ../invader-extras/00*.patch \
 		&& $(GIT) checkout -b next
 	cd $(INVADER_SRC) && ../../ocaml/mltags
