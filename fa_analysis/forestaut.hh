@@ -4,99 +4,67 @@
 #include <vector>
 #include <stdexcept>
 
+#include "varinfo.hh"
 #include "treeaut.hh"
 #include "labman.hh"
 
 using std::vector;
+using std::pair;
 
 class FA {
 
 	friend class UFA;
 
-	vector<size_t> variables;
+public:
 
-	vector<TA<const vector<size_t>*>*> roots;
-	
-	size_t stateOffset;
+	union label_type {
 
-	mutable TAManager<const vector<size_t>*>& taMan;
-	mutable LabMan& labMan;
+		const vector<var_info>* data;
+		const vector<const class Box*>* dataB;
+
+		label_type(const vector<var_info>* data) : data(data) {}
+		label_type(const vector<const class Box*>* dataB) : dataB(dataB) {}
+
+		friend size_t hash_value(const label_type& l) {
+			return hash_value(l.data);
+		}
+
+		bool operator<(const label_type& rhs) const { return this->data < rhs.data; }
+
+		bool operator==(const label_type& rhs) const { return this->data == rhs.data; }
+
+	};
 
 protected:
 
+	vector<var_info> variables;
+
+	vector<TA<label_type>*> roots;
 	
+	mutable TAManager<label_type>& taMan;
 
 public:
 
 	static const size_t varNull = (size_t)(-1);
 	static const size_t varUndef = (size_t)(-2);
 
-	FA(TAManager<const vector<size_t>*>& taMan, LabMan& labMan) : stateOffset(0), taMan(taMan), labMan(labMan) {}
+	FA(TAManager<label_type>& taMan) : taMan(taMan) {}
 	
-	FA(const FA& src) : variables(src.variables), roots(src.roots), stateOffset(src.stateOffset), taMan(src.taMan), labMan(src.labMan) {
-		for (vector<TA<const vector<size_t>*>*>::iterator i = this->roots.begin(); i != this->roots.end(); ++i)
+	FA(const FA& src) : variables(src.variables), roots(src.roots), taMan(src.taMan) {
+		for (vector<TA<label_type>*>::iterator i = this->roots.begin(); i != this->roots.end(); ++i)
 			this->taMan.addRef(*i);
 	}
 
 	~FA() {
-		for (vector<TA<const vector<size_t>*>*>::iterator i = this->roots.begin(); i != this->roots.end(); ++i)
+		for (vector<TA<label_type>*>::iterator i = this->roots.begin(); i != this->roots.end(); ++i)
 			this->taMan.release(*i);
 	}
-
-	void mergeRoot(size_t dst, size_t src) {
-	}
-
-	// try to indetify which roots to merge
-	void collect() {
-	}
-
-	void reorder(const vector<size_t>& variables) {
-	}
-
-/* execution bits */
-	size_t newVar() {
-		size_t id = this->variables.size();
-		this->variables.push_back(varUndef);
-		return id;
-	}
-	
-	void dropVars(size_t count) {
-		assert(count <= this->variables.size());
-		this->variables.resize(this->variables.size() - count);
-	}
-	
-	bool x_eq_y(size_t x, size_t y) {
-		return this->variables[x] == this->variables[y];
-	}
-	
-	void x_ass_new(size_t x, size_t pointerSlots, size_t dataSlots) {
-		if (dataSlots > 0)
-			throw std::runtime_error("Data handling not implemented! (désolé)");
-		
-	}
-	
-	void x_ass_null(size_t x) {
-		// TODO: identify garbage
-		this->variables[x] = varNull;
-		// TODO: reorder
-	}
-	
-	void x_ass_y(size_t x, size_t y) {
-		// TODO: identify garbage
-		this->variables[x] = this->variables[y];
-		// TODO: reorder
-	}
-	
-	void x_ass_y_next(size_t x, size_t y, size_t selector) {
-		// TODO: identify garbage
-		
-	}	
 
 };
 
 class UFA {
 	
-	TA<const vector<size_t>*>& backend;
+	TA<FA::label_type>& backend;
 	
 	size_t stateOffset;
 	
@@ -104,25 +72,25 @@ class UFA {
 	
 public:
 
-	UFA(TA<const vector<size_t>*>& backend, LabMan& labMan) : backend(backend), stateOffset(1), labMan(labMan) {
+	UFA(TA<FA::label_type>& backend, LabMan& labMan) : backend(backend), stateOffset(1), labMan(labMan) {
 		// let 0 be the only accepting state
 		this->backend.addFinalState(0);
 	}
 
-	TA<const vector<size_t>*>& fa2ta(TA<const vector<size_t>*>& dst, Index<size_t>& index, const FA& src) {
+	TA<FA::label_type>& fa2ta(TA<FA::label_type>& dst, Index<size_t>& index, const FA& src) {
 		vector<size_t> lhs;
 		dst.clear();
-		for (vector<TA<const vector<size_t>*>*>::const_iterator i = src.roots.begin(); i != src.roots.end(); ++i) {
-			TA<const vector<size_t>*>::reduce(dst, **i, index, this->stateOffset + index.size());
+		for (vector<TA<FA::label_type>*>::const_iterator i = src.roots.begin(); i != src.roots.end(); ++i) {
+			TA<FA::label_type>::reduce(dst, **i, index, this->stateOffset, false);
 			lhs.push_back(index[(*i)->getFinalState()]);
 		}
-		dst.addTransition(lhs, labMan.lookup(src.variables, lhs.size()), 0);
+		dst.addTransition(lhs, &labMan.lookup(src.variables, lhs.size()), 0);
 		dst.addFinalState(0);
 		return dst;
 	}
 
-	void join(const TA<const vector<size_t>*>& src, const Index<size_t>& index) {
-		TA<const vector<size_t>*>::disjointUnion(this->backend, src);
+	void join(const TA<FA::label_type>& src, const Index<size_t>& index) {
+		TA<FA::label_type>::disjointUnion(this->backend, src, false);
 		this->stateOffset += index.size();
 	}
 

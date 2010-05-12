@@ -22,7 +22,7 @@ include("../CMakeLists.common")
 add_definitions("-I../include")
 
 # libfa.so
-add_library(fa SHARED cl_fa.cc treeaut.cc forestaut.cc)
+add_library(fa SHARED cl_fa.cc treeaut.cc box.cc forestaut.cc forestautext.cc)
 
 # link with code_listener
 find_library(CL_LIB cl ../cl_build)
