@@ -153,8 +153,8 @@ public:
 		upsim = ident;
 		vector<vector<size_t> > upsimIndex;
 		utils::relIndex(upsimIndex, upsim);
-		AntichainExt antichain(upsim);
-		AntichainExt::ResponseExt response(antichain);
+		AntichainExt<T> antichain(upsim);
+		typename AntichainExt<T>::ResponseExt response(antichain);
 		antichain.initIndex(cSize - countB, countB);
 		vector<typename TA<T>::trans_cache_type::value_type*> aLeaves;
 		unordered_map<size_t, vector<typename TA<T>::trans_cache_type::value_type*> > bTrans, bLeaves;

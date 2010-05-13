@@ -654,6 +654,8 @@ public:
 	}
 
 	TA<T>& unfoldAtRoot(TA<T>& dst, size_t newState) {
+		// TODO: 
+		return dst;
 	}
 	
 	TA<T>& unfoldAtLeaf(TA<T>& dst, size_t selector) {

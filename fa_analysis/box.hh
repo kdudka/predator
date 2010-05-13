@@ -21,45 +21,10 @@ using std::vector;
 using std::string;
 using std::pair;
 
-class Box : public FA {
-
-	friend class BoxTemplate;
-
-	const class BoxTemplate& templ;
-
-protected:
-
-	Box(TAManager<label_type>& taMan, const class BoxTemplate& templ) : FA(taMan), templ(templ) {
-		
-	}
-
-public:
-
-	const class BoxTemplate& getTemplate() const {
-		return this->templ;
-	}
-/*
-	bool isPrimitive() const {
-		return this->type == 0;
-	}
-
-	bool isRootReference() const {
-		return this->type == 1;
-	}
-*/
-	friend size_t hash_value(const Box& b) {
-		return hash_value(hash_value(&b.templ) + hash_value(b.variables));
-	}
-
-	bool operator==(const Box& rhs) const {
-		return (&this->templ == &rhs.templ) && (this->variables == rhs.variables);
-	}
-
-};
-
 class BoxTemplate {
 
 	friend class TemplateManager;
+	friend class Box;
 
 	size_t type;
 	size_t tag;
@@ -70,7 +35,7 @@ class BoxTemplate {
 	vector<root_type> roots;
 
 protected:
-
+/*
 	static FA::label_type translateLabel(LabMan& labMan, const vector<const BoxTemplate*>* label, const boost::unordered_map<const BoxTemplate*, const Box*>& args) {
 		vector<const Box*> v;
 		for (vector<const BoxTemplate*>::const_iterator i = label->begin(); i != label->end(); ++i) {
@@ -81,7 +46,7 @@ protected:
 		}
 		return &labMan.lookup(v);
 	}
-
+*/
 	BoxTemplate(size_t type, size_t tag) : type(type), tag(tag) {}
 
 public:
@@ -97,7 +62,7 @@ public:
 	static BoxTemplate createReferenceTemplate(size_t root) {
 		return BoxTemplate(2, root);
 	}
-
+/*
 	Box createInstance(TAManager<FA::label_type>& taMan, LabMan& labMan, const vector<size_t>& offsets, const boost::unordered_map<const BoxTemplate*, const Box*>& args) const {
 		Box box(taMan, *this);
 		if (this->type == 1) {
@@ -119,7 +84,7 @@ public:
 		for (size_t i = 0; i < this->variables.size(); ++i)
 			box.variables.push_back(var_info(this->variables[i].index, offsets[i]));
 	}
-
+*/
 	void computeTrigger(vector<const BoxTemplate*>& templates) {
 		templates.clear();
 		std::set<const BoxTemplate*> s;
@@ -152,6 +117,76 @@ public:
 
 	size_t getReference() const {
 		return this->tag;
+	}
+
+};
+
+class Box : public FA {
+
+//	friend class BoxTemplate;
+
+	const BoxTemplate& templ;
+
+protected:
+
+	static FA::label_type translateLabel(LabMan& labMan, const vector<const BoxTemplate*>* label, const boost::unordered_map<const BoxTemplate*, const Box*>& args) {
+		vector<const Box*> v;
+		for (vector<const BoxTemplate*>::const_iterator i = label->begin(); i != label->end(); ++i) {
+			boost::unordered_map<const BoxTemplate*, const Box*>::const_iterator j = args.find(*i);
+			if (j == args.end())
+				throw std::runtime_error("template instance undefined");
+			v.push_back(j->second);
+		}
+		return &labMan.lookup(v);
+	}
+
+public:
+
+	Box(const BoxTemplate& templ, TAManager<FA::label_type>& taMan, LabMan& labMan, const vector<size_t>& offsets, const boost::unordered_map<const BoxTemplate*, const Box*>& args)
+		: FA(taMan), templ(templ) {
+		if (this->templ.type == 1) {
+			assert(offsets.size() == 2);
+			this->variables.push_back(var_info(0, offsets[0]));
+			this->variables.push_back(var_info(1, offsets[1]));
+		} else if (this->templ.type == 0) {
+			assert(offsets.size() == this->templ.variables.size());
+			for (vector<BoxTemplate::root_type>::const_iterator j = this->templ.roots.begin(); j != this->templ.roots.end(); ++j) {
+				TA<FA::label_type>* ta = taMan.alloc();
+				for (BoxTemplate::root_type::iterator i = j->begin(); i != j->end(); ++i)
+					ta->addTransition(i->lhs(), Box::translateLabel(labMan, i->label(), args), i->rhs());
+				ta->addFinalState(j->getFinalState());
+				this->roots.push_back(ta);
+			}
+			for (size_t i = 0; i < this->templ.variables.size(); ++i)
+				this->variables.push_back(var_info(this->templ.variables[i].index, offsets[i]));
+		}
+	}
+/*
+	Box(TAManager<label_type>& taMan, const class BoxTemplate& templ) : FA(taMan), templ(templ) {
+		
+	}
+*/
+	const class BoxTemplate& getTemplate() const {
+		return this->templ;
+	}
+/*
+	bool isPrimitive() const {
+		return this->type == 0;
+	}
+
+	bool isRootReference() const {
+		return this->type == 1;
+	}
+*/
+	
+
+
+	friend size_t hash_value(const Box& b) {
+		return hash_value(hash_value(&b.templ) + hash_value(b.variables));
+	}
+
+	bool operator==(const Box& rhs) const {
+		return (&this->templ == &rhs.templ) && (this->variables == rhs.variables);
 	}
 
 };
