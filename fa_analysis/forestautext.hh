@@ -6,9 +6,9 @@
 
 #include <boost/unordered_map.hpp>
 
+#include "box.hh"
 #include "labman.hh"
 #include "forestaut.hh"
-#include "boxman.hh"
 
 using std::vector;
 using std::set;
@@ -17,7 +17,7 @@ using std::make_pair;
 
 class FAE : public FA {
 
-	mutable BoxMan& boxMan;
+	mutable BoxManager& boxMan;
 	mutable LabMan& labMan;
 
 	size_t stateOffset;
@@ -41,37 +41,49 @@ protected:
 	void setRootReference(size_t state, size_t reference) {
 		this->root_reference_index[state] = reference;
 	}
-/*
-	void reorderBoxes(vector<const Box*>& boxes, vector<size_t>& indeces) {
-		vector<std::pair<const Box*, size_t> > tmp;
-		for (size_t i = 0; i< boxes.size(); ++i)
-			tmp.push_back(std::make_pair(boxes[i], i));
+
+	static void reorderBoxes(vector<const Box*>& label, vector<size_t>& lhs) {
+		vector<std::pair<const Box*, vector<size_t> > > tmp;
+		std::vector<size_t>::iterator lhsBegin = lhs.end(), lhsEnd = lhs.begin();
+		for (size_t i = 0; i < boxes.size(); ++i) {
+			lhsStart = lhsEnd;
+			lhsEnd += label[i]->getArity();
+			tmp.push_back(std::make_pair(label[i], std::vector<size_t>(lhsBegin, lhsEnd)));
+		}
 		std::sort(tmp.begin(), tmp.end());
-		indeces.clear();
+		lhs.clear();
 		for (size_t i = 0; i < tmp.size(); ++i) {
-			boxes[i] = tmp[i].first;
-			indeces.push_back(tmp[i].second);
+			label[i] = tmp[i].first;
+			lhs.insert(lhs.end(), tmp[i].second.begin(), tmp[i].second.end());
 		}
 	}
-*/
+
 	void relabelReferences(TA<label_type>& ta, const vector<size_t>& index) {
-/*		for (TA<label_type>::iterator i = ta.begin(); i != ta.end(); ++i) {
-			if ((i->label()->size() == 1) && (*i->label())[0]->getTemplate()->isReference()) {
-				ta->addTransition(vector<size_t>(), this->labMan.lookup((*i->label())[0]->getTemplate()->getReference()
+		for (TA<label_type>::iterator i = ta.begin(); i != ta.end(); ++i) {
+			if ((i->label()->size() == 1) && (*i->label())[0]->isReference()) {
+				size_t ref = (*i->label())[0]->getReference();
+				if (index[ref] == ref) {
+					ta->addTransition(*i);
+				} else {
+					vector<const Box*> label({ &this->boxManager.getReference(index[ref]) });
+					ta->addTransition(
+						vector<size_t>(), &this->labMan.lookup(label), i->rhs()
+					);
+				}
 			} else {
 				ta->addTransition(*i);
 			}
-		}*/
+		}
 	}
 
-	FAE* mergeRoot(size_t dst, size_t src) {
+	// replaces this->roots[src] by null
+	void mergeRoot(size_t dst, size_t src) {
 		assert(src < this->roots.size() && dst < this->roots.size());
-		FAE* result = new FAE(this->taMan, this->labMan, this->boxMan);
-		result->stateOffset = this->stateOffset;
-		TA<label_type>* ta = result->taMan.alloc();
+		TA<label_type>* ta = this->taMan.alloc();
+		ta->addFinalState(this->roots[dst]->getFinalState());
 		size_t refState = (size_t)(-1);
 		for (TA<label_type>::iterator i = this->roots[dst]->begin(); i != this->roots[dst]->end(); ++i) {
-			if ((i->label().dataB->size() == 1) && (*i->label().dataB)[0]->getTemplate().isReference(src)) {
+			if ((i->label().dataB->size() == 1) && (*i->label().dataB)[0]->isReference(src)) {
 				assert(refState == (size_t)(-1));
 				refState = i->rhs();
 			} else {
@@ -81,20 +93,15 @@ protected:
 		assert(refState != (size_t)(-1));
 		// avoid screwing things up
 		this->roots[src]->unfoldAtRoot(*ta, refState);
-		ta->addFinalState(this->roots[dst]->getFinalState());
-		for (size_t i = 0; i < src; ++i) {
-			taMan.addRef(this->roots[i]);
-			result->roots.push_back(this->roots[i]);
-		}
-		for (size_t i = src + 1; i < this->roots.size(); ++i) {
-			taMan.addRef(this->roots[i]);
-			result->roots.push_back(this->roots[i]);
-		}
-//		TA<label_type>* ta2 = result->taMan.alloc();
+		this->taMan.release(this->roots[dst]);
+		this->roots[dst] = ta;
+		this->taMan.release(this->roots[src]);
+		this->roots[src] = NULL;
 	}
 
 	// try to indetify which roots to merge
 	void collect() {
+		
 	}
 
 	void reorderHeap(const vector<size_t>& variables) {
@@ -102,7 +109,7 @@ protected:
 
 public:
 
-	FAE(TAManager<FA::label_type>& taMan, LabMan& labMan, BoxMan& boxMan)
+	FAE(TAManager<FA::label_type>& taMan, LabMan& labMan, BoxManager& boxMan)
 	 : FA(taMan), boxMan(boxMan), labMan(labMan), stateOffset(1) {}
 
 /* execution bits */

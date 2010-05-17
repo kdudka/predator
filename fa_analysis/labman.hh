@@ -19,7 +19,7 @@ public:
 	const std::vector<var_info>& lookup(const std::vector<var_info>& x, size_t arity) {
 		return this->varStore.lookup(std::make_pair(arity, x))->first.second;
 	}
-	
+
 	const std::vector<const class Box*>& lookup(const std::vector<const class Box*>& x) {
 		return this->boxStore.lookup(x)->first;
 	}

@@ -1,12 +1,11 @@
 #ifndef BOX_MAN_H
 #define BOX_MAN_H
 
-#include "cache.hh"
 #include "box.hh"
 
 class BoxMan {
 	
-	Cache<Box> store;
+	boost::unordered_map<std::pair<BoxTemplate*, vector<size_t> >, Box> boxes;
 
 public:
 
