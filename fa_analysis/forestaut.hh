@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <stdexcept>
+#include <cassert>
 
 #include "varinfo.hh"
 #include "treeaut.hh"
@@ -27,6 +28,12 @@ public:
 
 		friend size_t hash_value(const label_type& l) {
 			return hash_value(l.data);
+		}
+
+		const class Box& head() const {
+			assert(this->dataB);
+			assert(this->dataB.size() > 0);
+			return *(*this->dataB)[0];
 		}
 
 		bool operator<(const label_type& rhs) const { return this->data < rhs.data; }

@@ -3,6 +3,8 @@
 
 #include <vector>
 #include <set>
+#include <map>
+#include <stdexcept>
 
 #include <boost/unordered_map.hpp>
 
@@ -12,8 +14,10 @@
 
 using std::vector;
 using std::set;
+using std::map;
 using std::pair;
 using std::make_pair;
+using std::runtime_error;
 
 class FAE : public FA {
 
@@ -83,7 +87,7 @@ protected:
 		ta->addFinalState(this->roots[dst]->getFinalState());
 		size_t refState = (size_t)(-1);
 		for (TA<label_type>::iterator i = this->roots[dst]->begin(); i != this->roots[dst]->end(); ++i) {
-			if ((i->label().dataB->size() == 1) && (*i->label().dataB)[0]->isReference(src)) {
+			if (i->label().head().isReference(src)) {
 				assert(refState == (size_t)(-1));
 				refState = i->rhs();
 			} else {
@@ -97,6 +101,75 @@ protected:
 		this->roots[dst] = ta;
 		this->taMan.release(this->roots[src]);
 		this->roots[src] = NULL;
+	}
+
+	static void removeMulOcc(vector<size_t>& x) {
+		set<size_t> s;
+		size_t offset = 0;
+		for (size_t i = 0; i < x.size(); ++i) {
+			if (s.insert(x[i]).second)
+				x[offset++] = x[i];
+		}
+		x.resize(s.size());
+	}
+
+	static void evaluateLhsOrder(const vector<const Box*>& label, vector<size_t>& order) {
+		map<size_t, size_t> m;
+		order.clear();
+		size_t offset = 0;
+		for (vector<const Box*>::const_iterator i = label.begin(); i != label.end(); ++i) {
+			const vector<size_t>& selectors = (*i)->getDownwardCoverage(0).first;
+			for (vector<size_t>::const_iterator j = selectors.begin(); j != selectors.end(); ++j) {
+				if (m.insert(make_pair(*j, offset++)).second)
+					throw runtime_error("FAE::evaluateLhsOrder(): A selector was defined more than once!");
+			}
+		}
+		for (map<size_t, size_t>::iterator i = m.begin(); i != m.end(); ++i)
+			order.push_back(i->second);
+	}
+
+	static bool updateO(boost::unordered_map<size_t, vector<size_t> >& o, size_t state, const vector<size_t>& v) {
+		pair<boost::unordered_map<size_t, vector<size_t> >::iterator, bool> p =
+			o.insert(make_pair(i->rhs(), v));
+		if (p.second)
+			return true;
+		if (p.first->second.size() > v.size())
+			throw runtime_error("FAE::updateO(): Inconsistent update of 'o'!");
+		for (size_t i = 0; i < p.first->second.size(); ++i) {
+			if (v[i] != p.first->second[i])
+				throw runtime_error("FAE::updateO(): Inconsistent update of 'o' (prefix match)!");
+		}
+		if (p.first->second.size() != v.size()) {
+			p.first->second = v;
+			return true;
+		}
+		return false;
+	}
+
+	void computeDownwardO(const TA<label_type>& ta, boost::unordered_map<size_t, vector<size_t> >& o) {
+		o.clear();
+		bool changed = true;
+		while (changed) {
+			changed = false;
+			for (TA<label_type>::iterator i = ta.begin(); i != ta.end(); ++i) {
+				vector<size_t> v;
+				if (i->label().head().isReference()) {
+					v = { i->label().head().getReference() };
+				} else {
+					vector<size_t> order;
+					FAE::evaluateLhsOrder(*i->label().dataB, order);
+					for (vector<size_t>::iterator j = order.begin(); j != order.end(); ++j) {
+						vector<size_t>& v2 = o.insert(make_pair(i->lhs()[*j], vector<size_t>())).first->second;
+						if (v2.empty())
+							break;
+						v.insert(v.end(), v2.begin(), v2.end());
+					}
+					FAE::removeMulOcc(v);
+				}
+				if (updateO(o, i->rhs(), v))
+					changed = true;
+			}
+		}
 	}
 
 	// try to indetify which roots to merge
