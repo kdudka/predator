@@ -5,6 +5,7 @@
 #include <set>
 #include <map>
 #include <stdexcept>
+#include <algorithm>
 
 #include <boost/unordered_map.hpp>
 
@@ -26,14 +27,16 @@ class FAE : public FA {
 
 	size_t stateOffset;
 
-	boost::unordered_map<size_t, size_t> root_reference_index;
+	vector<vector<size_t> > rootMap;
+
+//	boost::unordered_map<size_t, size_t> root_reference_index;
 
 protected:
 
 	size_t freshState() {
 		return this->stateOffset++;
 	}
-
+/*
 	bool isRootReference(size_t state, size_t& reference) {
 		boost::unordered_map<size_t, size_t>::iterator i = this->root_reference_index.find(state);
 		if (i == this->root_reference_index.end())
@@ -44,6 +47,16 @@ protected:
 
 	void setRootReference(size_t state, size_t reference) {
 		this->root_reference_index[state] = reference;
+	}
+*/
+	static void removeMultOcc(vector<size_t>& x) {
+		set<size_t> s;
+		size_t offset = 0;
+		for (size_t i = 0; i < x.size(); ++i) {
+			if (s.insert(x[i]).second)
+				x[offset++] = x[i];
+		}
+		x.resize(s.size());
 	}
 
 	static void reorderBoxes(vector<const Box*>& label, vector<size_t>& lhs) {
@@ -62,13 +75,33 @@ protected:
 		}
 	}
 
-	void relabelReferences(TA<label_type>& ta, const vector<size_t>& index) {
-		for (TA<label_type>::iterator i = ta.begin(); i != ta.end(); ++i) {
-			if ((i->label()->size() == 1) && (*i->label())[0]->isReference()) {
-				size_t ref = (*i->label())[0]->getReference();
+	static void renameVector(vector<size_t>& dst, vector<size_t>& index) {
+		for (vector<size_t>::iterator i = dst.begin(); i != dst.end(); ++i) {
+			assert(index[*i] != (-1));
+			*i = index[*i];
+		}
+	}
+
+	static void updateMap(vector<size_t>& dst, size_t ref, const vector<size_t>& src) {
+		vector<size_t> res;
+		vector<size_t>::iterator i = std::find(dst.begin(), dst.end(), ref);
+		assert(i != dst.end());
+		std::copy(dst.begin(), i, res.end());
+		std::copy(src.begin(), src.end(), res.end());
+		std::copy(i + 1, dst.end(), res.end());
+		FAE::removeMultOcc(res);
+		std::swap(dst, res);
+	}
+
+	TA<label_type>* relabelReferences(TA<label_type>* src, const vector<size_t>& index) {
+		TA<label_type>* ta = this->taMan.alloc();
+		for (TA<label_type>::iterator i = src->begin(); i != src->end(); ++i) {
+			if (i->label().head().isReference()) {
+				size_t ref = i->label().head().getReference();
 				if (index[ref] == ref) {
 					ta->addTransition(*i);
 				} else {
+					assert(index[ref] != (-1));
 					vector<const Box*> label({ &this->boxManager.getReference(index[ref]) });
 					ta->addTransition(
 						vector<size_t>(), &this->labMan.lookup(label), i->rhs()
@@ -78,16 +111,17 @@ protected:
 				ta->addTransition(*i);
 			}
 		}
+		return ta;
 	}
 
 	// replaces this->roots[src] by null
-	void mergeRoot(size_t dst, size_t src) {
-		assert(src < this->roots.size() && dst < this->roots.size());
+	TA<label_type>* mergeRoot(TA<label_type>* dst, size_t refName, TA<label_type>* src) {
+		assert(refName < this->roots.size());
 		TA<label_type>* ta = this->taMan.alloc();
-		ta->addFinalState(this->roots[dst]->getFinalState());
+		ta->addFinalState(dst->getFinalState());
 		size_t refState = (size_t)(-1);
-		for (TA<label_type>::iterator i = this->roots[dst]->begin(); i != this->roots[dst]->end(); ++i) {
-			if (i->label().head().isReference(src)) {
+		for (TA<label_type>::iterator i = dst->begin(); i != dst->end(); ++i) {
+			if (i->label().head().isReference(refName)) {
 				assert(refState == (size_t)(-1));
 				refState = i->rhs();
 			} else {
@@ -96,21 +130,8 @@ protected:
 		}
 		assert(refState != (size_t)(-1));
 		// avoid screwing things up
-		this->roots[src]->unfoldAtRoot(*ta, refState);
-		this->taMan.release(this->roots[dst]);
-		this->roots[dst] = ta;
-		this->taMan.release(this->roots[src]);
-		this->roots[src] = NULL;
-	}
-
-	static void removeMulOcc(vector<size_t>& x) {
-		set<size_t> s;
-		size_t offset = 0;
-		for (size_t i = 0; i < x.size(); ++i) {
-			if (s.insert(x[i]).second)
-				x[offset++] = x[i];
-		}
-		x.resize(s.size());
+		src->unfoldAtRoot(*ta, refState);
+		return ta;
 	}
 
 	static void evaluateLhsOrder(const vector<const Box*>& label, vector<size_t>& order) {
@@ -134,10 +155,10 @@ protected:
 		if (p.second)
 			return true;
 		if (p.first->second.size() > v.size())
-			throw runtime_error("FAE::updateO(): Inconsistent update of 'o'!");
+			throw runtime_error("FAE::updateO(): Inconsistent update of 'o' (length mismatch)!");
 		for (size_t i = 0; i < p.first->second.size(); ++i) {
 			if (v[i] != p.first->second[i])
-				throw runtime_error("FAE::updateO(): Inconsistent update of 'o' (prefix match)!");
+				throw runtime_error("FAE::updateO(): Inconsistent update of 'o' (prefix mismatch)!");
 		}
 		if (p.first->second.size() != v.size()) {
 			p.first->second = v;
@@ -146,7 +167,8 @@ protected:
 		return false;
 	}
 
-	void computeDownwardO(const TA<label_type>& ta, boost::unordered_map<size_t, vector<size_t> >& o) {
+	// computes downward 'o' function
+	static void computeDownwardO(const TA<label_type>& ta, boost::unordered_map<size_t, vector<size_t> >& o) {
 		o.clear();
 		bool changed = true;
 		while (changed) {
@@ -159,16 +181,121 @@ protected:
 					vector<size_t> order;
 					FAE::evaluateLhsOrder(*i->label().dataB, order);
 					for (vector<size_t>::iterator j = order.begin(); j != order.end(); ++j) {
-						vector<size_t>& v2 = o.insert(make_pair(i->lhs()[*j], vector<size_t>())).first->second;
-						if (v2.empty())
+						boost::unordered_map<size_t, vector<size_t> >::iterator k = o.find(i->lhs()[*j]);
+						if (k == o.end())
 							break;
-						v.insert(v.end(), v2.begin(), v2.end());
+						v.insert(v.end(), k->second.begin(), k->second.end());
 					}
-					FAE::removeMulOcc(v);
+					FAE::removeMultOcc(v);
 				}
-				if (updateO(o, i->rhs(), v))
+				if (FAE::updateO(o, i->rhs(), v))
 					changed = true;
 			}
+		}
+	}
+
+	static bool isUniqueRef(const TA<label_type>& ta, size_t ref) {
+		boost::unordered_map<size_t, size_t> index;
+		for (TA<label_type>::iterator i = ta.begin(); i != ta.end(); ++i) {
+			if (i->label().head().isReference(ref))
+				index.insert(make_pair(i->rhs(), 1));
+		}
+		bool changed = true;
+		while (changed) {
+			changed = false;
+			for (TA<label_type>::iterator i = ta.begin(); i != ta.end(); ++i) {
+				if (!i->label().head().isReference()) {
+					size_t sum = 0;
+					for (vector<size_t>::iterator j = i->lhs().begin(); j != i->lhs().end(); ++j)
+						sum += index.insert(make_pair(*j, 0)).first->second;
+					if (sum == 0)
+						continue;
+					// if everything is reachable, then we can safely conclude here
+					if (sum > 1)
+						return false;
+					size_t& k = index.insert(make_pair(i->rhs(), 0)).first->second;
+//					sum = std::min(sum, 2);
+//					if (k < sum) {
+//						k = sum;
+//						changed = true;
+//					}
+					if (k == 0) {
+						k = 1;
+						changed = true;
+					}
+				}
+			}
+		}
+		return true;
+	}
+
+	void visitDown(size_t c, set<size_t>& visited, vector<size_t>& order, set<size_t>& marked) {
+		if (!visited.insert(c).second) {
+			marked.insert(c);
+			return;
+		}
+		order.push_back(c);
+		for (vector<size_t>::iterator i = this->rootMap[c].begin(); i != this->rootMap[c].end(); ++i) {
+			this->visitDown(*i, visited, order, marked);
+			if ((marked.count(*i) == 0) && (!FAE::isUniqueRef(*this->roots[c], *i)))
+				marked.insert(*i);
+		}
+	}
+
+	void traverse(vector<size_t>& order, set<size_t>& marked, vector<size_t>& garbage) {
+		// TODO: upward traversal
+		order.clear();
+		marked.clear();
+		set<size_t> visited;
+		for (vector<size_t>::iterator i = this->variables.begin(); i != variables.end(); ++i) {
+			size_t root = i->first;
+			// mark rootpoint pointed by a variable
+			marked.insert(root);
+			// check whether we traversed this one before
+			if (visited.count(root))
+				continue;
+			this->visitDown(root, visited, order, marked);
+		}
+		garbage.clear();
+		for (size_t i = 0; i < this->roots.size(); ++i) {
+			if (!visited.count(i))
+				garbage.push_back(i);
+		}
+	}
+
+	// normalize representation
+	void normalize() {
+		vector<size_t> order, garbage;
+		vector<size_t> marked;
+		this->traverse(order, marked, garbage);
+		vector<size_t> index(this->roots.size(), (size_t)(-1));
+		size_t offset = 0;
+		vector<TA<label_type>*> newRoots;
+		vector<vector<size_t> > newRootMap;
+		for (vector<size_t>::iterator i = order.begin(); i < order.end(); ++i) {
+			if (marked.count(*i)) {
+				newRoots.push_back(this->taMan.addRef(this->roots[*i]));
+				newRootMap.push_back(this->rootMap[*i]);
+				index[*i] = offset++;
+			} else {
+				assert(newRoots.size());
+				TA<label_type>* ta = this->mergeRoot(newRoots.back(), *i, this->roots[*i]);
+				this->taMan.release(newRoots.back());
+				newRoots.back() = ta;
+				FAE::updateMap(newRootMap.back(), *i, this->rootMap[*i]);
+			}
+		}
+		// update representation
+		for (vector<TA<label_type>*>::iterator i = this->roots.begin(); i != this->roots.end(); ++i) {
+			if (*i)
+				this->taMan.release(*i);
+		}
+		this->roots.resize(offset);
+		this->rootMap.resize(offset);
+		for (size_t i = 0; i < this->roots.size(); ++i) {
+			this->roots[i] = FAE::relabelReferences(newRoots[i], index);
+			this->rootMap[i] = FAE::renameVector(newRootMap[i], index);
+			this->taMan.release(newRoots[i]);
 		}
 	}
 

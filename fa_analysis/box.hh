@@ -20,6 +20,9 @@
 using std::vector;
 using std::string;
 using std::pair;
+using std::set;
+using std::make_pair;
+using std::runtime_error;
 
 class BoxTemplate {
 
@@ -159,15 +162,15 @@ public:
 
 public:
 
-	static std::vector<size_t> getDownwardCoverage(const std::vector<const Box*>& label) const {
-		std::vector<size_t> v;
-		for (std::vector<const Box*>::const_iterator i = label.begin(); i != label.end(); ++i) {
+	static vector<size_t> getDownwardCoverage(const vector<const Box*>& label) const {
+		vector<size_t> v;
+		for (vector<const Box*>::const_iterator i = label.begin(); i != label.end(); ++i) {
 			switch ((*i)->type) {
 				case selID: v.push_back((*i)->getSelector());
 				case refID: continue;
 				default:
 					assert((*i)->roots.size());
-					std::vector<size_t> v2 = Box::getDownwardCoverage(*(*i)->roots[0]);
+					vector<size_t> v2 = Box::getDownwardCoverage(*(*i)->roots[0]);
 					v.insert(v.end(), v2.begin(), v2.end());
 					break;
 			}
@@ -175,19 +178,19 @@ public:
 		return v;
 	}
 	
-	static std::vector<size_t> getDownwardCoverage(const TA<label_type>& ta) const {
-		std::vector<size_t> v;
+	static vector<size_t> getDownwardCoverage(const TA<label_type>& ta) const {
+		vector<size_t> v;
 		bool b = false;
 		for (TA<label_type>::iterator i = ta.begin(); i != ta.end(); ++i) {
 			if (!ta.isFinalState(i->rhs()))
 				continue;
-			std::vector<size_t> v2 = Box::getDownwardCoverage(*i->label());
+			vector<size_t> v2 = Box::getDownwardCoverage(*i->label());
 			if (!b) {
 				v = v2;
 				b = true;
 			} else {
 				if (v != v2)
-					throw std::runtime_error("Box::getDownwardCoverage(): Inconsistent accepting rules while computing selector coverage!");
+					throw runtime_error("Box::getDownwardCoverage(): Inconsistent accepting rules while computing selector coverage!");
 			}			
 		}
 		return v;
@@ -203,11 +206,11 @@ public:
 	void computeCoverage() {
 		assert(this->isBox());
 //		this->selCoverage.clear();
-		for (std::vector<TA<label_type>*>::iterator i = this->roots.begin(); i != this->roots.end(); ++i) {
-			std::vector<size_t> v = Box::getDownwardCoverage(**i);
-			std::set<size_t> s(v.begin(), v.end());
+		for (vector<TA<label_type>*>::iterator i = this->roots.begin(); i != this->roots.end(); ++i) {
+			vector<size_t> v = Box::getDownwardCoverage(**i);
+			set<size_t> s(v.begin(), v.end());
 			if (v.size() != s.size())
-				throw std::runtime_error("Box::computeCoverage(): A selector was defined more than once!");
+				throw runtime_error("Box::computeCoverage(): A selector was defined more than once!");
 			this->selCoverage.push_back(make_pair(v, s));
 		}
 	}
@@ -225,13 +228,13 @@ public:
 	static Box createSelector(TAManager<FA::label_type>& taMan, size_t selector, offset = 0) {
 		Box box(taMan, Box::selID, selector);
 		box.variables.push_back(var_info(0, offset));
-		std::set<size_t> coverage;
+		set<size_t> coverage;
 		covarage.insert(selector);
-		box.selCoverage.push_back(coverage);
+		box.selCoverage.push_back(make_pair(vector<size_t>({ selector }), coverage));
 		return box;
 	}
 
-	static Box createReference(TAManager<FA::label_type>& taMan,size_t root) {
+	static Box createReference(TAManager<FA::label_type>& taMan, size_t root) {
 		return Box(taMan, Box::refID, root);
 	}
 /*
@@ -298,7 +301,7 @@ public:
 
 	void computeTrigger(vector<const Box*>& boxes) {
 		boxes.clear();
-		std::set<const BoxTemplate*> s;
+		set<const Box*> s;
 		for (TA<label_type>::iterator i = this->roots[0]->begin(); i != this->roots[0]->end(); ++i) {
 			if (this->roots[0]->isFinalState(i->rhs()))
 				s.insert(i->label()->begin(), i->label()->end());

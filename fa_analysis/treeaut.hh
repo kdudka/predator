@@ -693,16 +693,16 @@ public:
 		return this->taCache.lookup(dst)->first;
 	}
 	
-	void addRef(TA<T>* x) {
+	TA<T>* addRef(TA<T>* x) {
 		typename Cache<TA<T>*>::value_type* v = this->taCache.find(x);
 		assert(v);
-		this->taCache.addRef(v);
+		return &this->taCache.addRef(v)->first;
 	}
 	
-	void release(TA<T>* x) {
+	size_t release(TA<T>* x) {
 		typename Cache<TA<T>*>::value_type* v = this->taCache.find(x);
 		assert(v);
-		this->taCache.release(v);
+		return this->taCache.release(v);
 	}
 	
 	void clear() {
