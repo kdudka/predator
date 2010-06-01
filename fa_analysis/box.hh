@@ -55,19 +55,19 @@ protected:
 public:
 
 	static const size_t boxID = 0;
-	static const size_t selectorID = 1;
-	static const size_t referenceID = 2;
+	static const size_t selID = 1;
+	static const size_t refID = 2;
 
 	static BoxTemplate createBox() {
-		return BoxTemplate(BoxTemplate::BoxID, 0);
+		return BoxTemplate(BoxTemplate::boxID, 0);
 	}
 
 	static BoxTemplate createSelector(size_t selector) {
-		return BoxTemplate(BoxTemplate::SelectorID, selector);
+		return BoxTemplate(BoxTemplate::selID, selector);
 	}
 
 	static BoxTemplate createReference(size_t root) {
-		return BoxTemplate(BoxTemplate::ReferenceID, root);
+		return BoxTemplate(BoxTemplate::refID, root);
 	}
 /*
 	Box createInstance(TAManager<FA::label_type>& taMan, LabMan& labMan, const vector<size_t>& offsets, const boost::unordered_map<const BoxTemplate*, const Box*>& args) const {
@@ -106,7 +106,7 @@ public:
 
 class Box : public FA {
 
-	friend class TemplateManager;
+	friend class BoxManager;
 
 	size_t type;
 	size_t tag;
@@ -125,7 +125,11 @@ public:
 
 	const std::set<size_t>& getSelCoverage(size_t x = 0) const {
 		assert(x < this->roots.size());
-		return this->selCoverage[x];
+		return this->selCoverage[x].second;
+	}
+
+	bool isBox() const {
+		return this->type == Box::boxID;
 	}
 
 	bool isSelector() const {
@@ -162,7 +166,7 @@ public:
 
 public:
 
-	static vector<size_t> getDownwardCoverage(const vector<const Box*>& label) const {
+	static vector<size_t> getDownwardCoverage(const vector<const Box*>& label) {
 		vector<size_t> v;
 		for (vector<const Box*>::const_iterator i = label.begin(); i != label.end(); ++i) {
 			switch ((*i)->type) {
@@ -178,13 +182,13 @@ public:
 		return v;
 	}
 	
-	static vector<size_t> getDownwardCoverage(const TA<label_type>& ta) const {
+	static vector<size_t> getDownwardCoverage(const TA<label_type>& ta) {
 		vector<size_t> v;
 		bool b = false;
 		for (TA<label_type>::iterator i = ta.begin(); i != ta.end(); ++i) {
 			if (!ta.isFinalState(i->rhs()))
 				continue;
-			vector<size_t> v2 = Box::getDownwardCoverage(*i->label());
+			vector<size_t> v2 = Box::getDownwardCoverage(*i->label().dataB);
 			if (!b) {
 				v = v2;
 				b = true;
@@ -205,7 +209,7 @@ public:
 
 	void computeCoverage() {
 		assert(this->isBox());
-//		this->selCoverage.clear();
+		this->selCoverage.clear();
 		for (vector<TA<label_type>*>::iterator i = this->roots.begin(); i != this->roots.end(); ++i) {
 			vector<size_t> v = Box::getDownwardCoverage(**i);
 			set<size_t> s(v.begin(), v.end());
@@ -217,7 +221,7 @@ public:
 
 protected:
 
-	Box(TAManager<FA::label_type>& taMan, size_t type, size_t tag) : taMan(taMan), type(type), tag(tag) {}
+	Box(TAManager<FA::label_type>& taMan, size_t type, size_t tag) : FA(taMan), type(type), tag(tag) {}
 
 public:
 
@@ -225,11 +229,11 @@ public:
 		return Box(taMan, Box::boxID, 0);
 	}
 
-	static Box createSelector(TAManager<FA::label_type>& taMan, size_t selector, offset = 0) {
+	static Box createSelector(TAManager<FA::label_type>& taMan, size_t selector, size_t offset = 0) {
 		Box box(taMan, Box::selID, selector);
 		box.variables.push_back(var_info(0, offset));
 		set<size_t> coverage;
-		covarage.insert(selector);
+		coverage.insert(selector);
 		box.selCoverage.push_back(make_pair(vector<size_t>({ selector }), coverage));
 		return box;
 	}
@@ -248,6 +252,7 @@ public:
 		}
 		return &labMan.lookup(v);
 	}
+*/
 /*
 public:
 
@@ -270,6 +275,7 @@ public:
 				this->variables.push_back(var_info(this->templ.variables[i].index, offsets[i]));
 		}
 	}
+*/
 /*
 	Box(TAManager<label_type>& taMan, const class BoxTemplate& templ) : FA(taMan), templ(templ) {
 		
@@ -304,7 +310,7 @@ public:
 		set<const Box*> s;
 		for (TA<label_type>::iterator i = this->roots[0]->begin(); i != this->roots[0]->end(); ++i) {
 			if (this->roots[0]->isFinalState(i->rhs()))
-				s.insert(i->label()->begin(), i->label()->end());
+				s.insert(i->label().dataB->begin(), i->label().dataB->end());
 		}
 		boxes = vector<const Box*>(s.begin(), s.end());
 	}
@@ -367,7 +373,7 @@ protected:
 
 	const Box& loadBox(const string& name, const boost::unordered_map<string, string>& database) {
 
-		boost::unordered_map<string, const Box*>::iterator i = this->boxIndex.find(name);
+		boost::unordered_map<string, Box>::iterator i = this->boxIndex.find(name);
 		if (i != this->boxIndex.end())
 			return i->second;
 

@@ -32,7 +32,7 @@ public:
 
 		const class Box& head() const {
 			assert(this->dataB);
-			assert(this->dataB.size() > 0);
+			assert(this->dataB->size() > 0);
 			return *(*this->dataB)[0];
 		}
 

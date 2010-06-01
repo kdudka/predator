@@ -62,8 +62,8 @@ protected:
 	static void reorderBoxes(vector<const Box*>& label, vector<size_t>& lhs) {
 		vector<std::pair<const Box*, vector<size_t> > > tmp;
 		std::vector<size_t>::iterator lhsBegin = lhs.end(), lhsEnd = lhs.begin();
-		for (size_t i = 0; i < boxes.size(); ++i) {
-			lhsStart = lhsEnd;
+		for (size_t i = 0; i < label.size(); ++i) {
+			lhsBegin = lhsEnd;
 			lhsEnd += label[i]->getArity();
 			tmp.push_back(std::make_pair(label[i], std::vector<size_t>(lhsBegin, lhsEnd)));
 		}
@@ -77,7 +77,7 @@ protected:
 
 	static void renameVector(vector<size_t>& dst, vector<size_t>& index) {
 		for (vector<size_t>::iterator i = dst.begin(); i != dst.end(); ++i) {
-			assert(index[*i] != (-1));
+			assert(index[*i] != (size_t)(-1));
 			*i = index[*i];
 		}
 	}
@@ -101,8 +101,8 @@ protected:
 				if (index[ref] == ref) {
 					ta->addTransition(*i);
 				} else {
-					assert(index[ref] != (-1));
-					vector<const Box*> label({ &this->boxManager.getReference(index[ref]) });
+					assert(index[ref] != (size_t)(-1));
+					vector<const Box*> label({ &this->boxMan.getReference(index[ref]) });
 					ta->addTransition(
 						vector<size_t>(), &this->labMan.lookup(label), i->rhs()
 					);
@@ -151,7 +151,7 @@ protected:
 
 	static bool updateO(boost::unordered_map<size_t, vector<size_t> >& o, size_t state, const vector<size_t>& v) {
 		pair<boost::unordered_map<size_t, vector<size_t> >::iterator, bool> p =
-			o.insert(make_pair(i->rhs(), v));
+			o.insert(make_pair(state, v));
 		if (p.second)
 			return true;
 		if (p.first->second.size() > v.size())
@@ -206,7 +206,7 @@ protected:
 			for (TA<label_type>::iterator i = ta.begin(); i != ta.end(); ++i) {
 				if (!i->label().head().isReference()) {
 					size_t sum = 0;
-					for (vector<size_t>::iterator j = i->lhs().begin(); j != i->lhs().end(); ++j)
+					for (vector<size_t>::const_iterator j = i->lhs().begin(); j != i->lhs().end(); ++j)
 						sum += index.insert(make_pair(*j, 0)).first->second;
 					if (sum == 0)
 						continue;
@@ -247,8 +247,8 @@ protected:
 		order.clear();
 		marked.clear();
 		set<size_t> visited;
-		for (vector<size_t>::iterator i = this->variables.begin(); i != variables.end(); ++i) {
-			size_t root = i->first;
+		for (vector<var_info>::iterator i = this->variables.begin(); i != variables.end(); ++i) {
+			size_t root = i->index;
 			// mark rootpoint pointed by a variable
 			marked.insert(root);
 			// check whether we traversed this one before
@@ -266,7 +266,7 @@ protected:
 	// normalize representation
 	void normalize() {
 		vector<size_t> order, garbage;
-		vector<size_t> marked;
+		set<size_t> marked;
 		this->traverse(order, marked, garbage);
 		vector<size_t> index(this->roots.size(), (size_t)(-1));
 		size_t offset = 0;
@@ -293,9 +293,10 @@ protected:
 		this->roots.resize(offset);
 		this->rootMap.resize(offset);
 		for (size_t i = 0; i < this->roots.size(); ++i) {
-			this->roots[i] = FAE::relabelReferences(newRoots[i], index);
-			this->rootMap[i] = FAE::renameVector(newRootMap[i], index);
+			this->roots[i] = this->relabelReferences(newRoots[i], index);
 			this->taMan.release(newRoots[i]);
+			FAE::renameVector(newRootMap[i], index);
+			this->rootMap[i] = newRootMap[i];
 		}
 	}
 
@@ -342,7 +343,7 @@ public:
 			// create leaf rule
 //			vector<const Box*> label = { &this->boxMan.lookup(Box::createReference(varUndef)) };
 //			ta->addTransition(vector<size_t>(), &this->labMan.lookup(label) , s);
-			this->setRootReference(s, varUndef);
+//			this->setRootReference(s, varUndef);
 			// prepare the rest
 //			tmp.insert(make_pair(&this->boxMan.lookup(Box::createPrimitive(i)), s));
 		}

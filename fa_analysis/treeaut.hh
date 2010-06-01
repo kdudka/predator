@@ -696,7 +696,7 @@ public:
 	TA<T>* addRef(TA<T>* x) {
 		typename Cache<TA<T>*>::value_type* v = this->taCache.find(x);
 		assert(v);
-		return &this->taCache.addRef(v)->first;
+		return this->taCache.addRef(v), x;
 	}
 	
 	size_t release(TA<T>* x) {
