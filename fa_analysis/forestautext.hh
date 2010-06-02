@@ -331,8 +331,14 @@ protected:
 				TA<label_type>* ta = this->taMan.alloc();
 				vector<size_t> lhs;
 				for (size_t j = 0; j < i->lhs().size(); ++j) {
+					size_t reference;
+					if (this->isRootReference(i->lhs()[j], reference)) {
+						// update new left-hand-side
+						lhs.push_back(this->addRootReference(*ta, reference));
+						continue;
+					}
 					// update new left-hand-side
-					lhs.push_back(this->addRootReference(*ta, fae->roots.size());
+					lhs.push_back(this->addRootReference(*ta, fae->roots.size()));
 					// prepare new root
 					TA<label_type>* tmp = fae->taMan->clone(fae->roots[root]);
 					tmp->clearFinalStates();
@@ -352,7 +358,7 @@ protected:
 		}
 	}
 
-	void decomposeAtRoot(size_t x) {
+	void decomposeAtRoot(vector<FAE*>& dst, size_t x) const {
 	}
 
 public:
@@ -379,7 +385,7 @@ public:
 		return this->variables[x] == this->variables[y];
 	}
 	
-	void x_ass_new(size_t x, size_t pointerSlots, size_t dataSlots) {
+	void x_ass_new(vector<FAE*>& dst, size_t x, size_t pointerSlots, size_t dataSlots) const {
 		if (dataSlots > 0)
 			throw std::runtime_error("Data handling not implemented! (désolé)");
 		// TODO: identify garbage
@@ -409,7 +415,7 @@ public:
 		// TODO: reorder
 	}
 	
-	void del_x(size_t x) {
+	void del_x(vector<FAE*>& dst, size_t x) const {
 		size_t root = this->variables[x].index;
 		
 		if (this->variables[x].offset != 0) {
