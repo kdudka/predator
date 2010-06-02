@@ -29,22 +29,33 @@ class FAE : public FA {
 
 	vector<vector<size_t> > rootMap;
 
-//	boost::unordered_map<size_t, size_t> root_reference_index;
+	boost::unordered_map<size_t, size_t> root_reference_index;
+	boost::unordered_map<size_t, size_t> inv_root_reference_index;
 
 protected:
 
 	size_t freshState() {
 		return this->stateOffset++;
 	}
-/*
+	
+	size_t addRootReference(TA<label_type>* dst, size_t root) {
+		pair<boost::unordered_map<size_t, size_t>::iterator, bool> p =
+			this->root_reference_index.insert(make_pair(root, this->stateOffset));
+		if (p.second)
+			this->inv_root_reference_index.insert(make_pair(this->stateOffset++, root))
+		vector<const Box*> label = { &this->boxMan.getReference(root) };
+		ta->addTransition(vector<size_t>(), &this->labMan.lookup(label), p.first->second);
+		return p.first->second;
+	}
+
 	bool isRootReference(size_t state, size_t& reference) {
-		boost::unordered_map<size_t, size_t>::iterator i = this->root_reference_index.find(state);
+		boost::unordered_map<size_t, size_t>::iterator i = this->inv_root_reference_index.find(state);
 		if (i == this->root_reference_index.end())
 			return false;
 		reference = i->second;
 		return true;		
 	}
-
+/*
 	void setRootReference(size_t state, size_t reference) {
 		this->root_reference_index[state] = reference;
 	}
@@ -264,10 +275,14 @@ protected:
 	}
 
 	// normalize representation
-	void normalize() {
+	void normalize(const vector<size_t>& requiredGarbage) {
 		vector<size_t> order, garbage;
 		set<size_t> marked;
 		this->traverse(order, marked, garbage);
+		if (garbage != requiredGarbage) {
+			// TODO: raise some reasonable exception here (instead of runtime_error)
+			throw runtime_error("garbage missmatch");
+		}
 		vector<size_t> index(this->roots.size(), (size_t)(-1));
 		size_t offset = 0;
 		vector<TA<label_type>*> newRoots;
@@ -298,6 +313,7 @@ protected:
 			FAE::renameVector(newRootMap[i], index);
 			this->rootMap[i] = newRootMap[i];
 		}
+		
 	}
 
 	// try to indetify which roots to merge
@@ -308,10 +324,44 @@ protected:
 	void reorderHeap(const vector<size_t>& variables) {
 	}
 
+	void isolateRoot(vector<FAE*>& dst, size_t root) const {
+		for (TA<label_type>::iterator i = this->roots[root]->begin(); i != this->roots[root]->end(); ++i) {
+			if (i->rhs() == this->roots[root]->getFinalState()) {
+				FAE* fae = new FAE(src);
+				TA<label_type>* ta = this->taMan.alloc();
+				vector<size_t> lhs;
+				for (size_t j = 0; j < i->lhs().size(); ++j) {
+					// update new left-hand-side
+					lhs.push_back(this->addRootReference(*ta, fae->roots.size());
+					// prepare new root
+					TA<label_type>* tmp = fae->taMan->clone(fae->roots[root]);
+					tmp->clearFinalStates();
+					tmp->addFinalState(i->lhs()[i]);
+					TA<label_type>* tmp2 = fae->taMan->alloc();
+					tmp->unreachableFree(*tmp2);
+					fae->taMan->release(tmp);
+					fae->roots.push_back(tmp2);
+				}
+				ta->addTransition(lhs, i->label(), i->rhs());
+				ta->addFinalState(i->rhs());
+				// exchange the original automaton with a new one
+				fae->taMan->release(fae->roots[root]);
+				fae->roots[root] = ta;
+				dst.push_back(fae);
+			}
+		}
+	}
+
+	void decomposeAtRoot(size_t x) {
+	}
+
 public:
 
 	FAE(TAManager<FA::label_type>& taMan, LabMan& labMan, BoxManager& boxMan)
 	 : FA(taMan), boxMan(boxMan), labMan(labMan), stateOffset(1) {}
+
+	FAE(const FAE& x)
+	 : FA(x), boxMan(x.boxMan), labMan(x.labMan), rootMap(x.rootMap), stateOffset(x.stateOffset) {}
 
 /* execution bits */
 	size_t newVar() {
@@ -357,6 +407,15 @@ public:
 		ta->addTransition(lhs, &label, f);
 		ta->addFinalState(f);		
 		// TODO: reorder
+	}
+	
+	void del_x(size_t x) {
+		size_t root = this->variables[x].index;
+		
+		if (this->variables[x].offset != 0) {
+			// TODO: raise some reasonable exception here (instead of runtime_error)
+			throw runtime_error("")
+		}
 	}
 	
 	void x_ass_null(size_t x) {

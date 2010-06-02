@@ -137,6 +137,8 @@ public:
 template <class T>
 class TA {
 
+	friend class TAManager;
+
 public:
 
     typedef Cache<TT<T> > trans_cache_type;
@@ -455,6 +457,8 @@ public:
 	void addFinalState(size_t state) { this->finalStates.insert(state); }
 	
 	void removeFinalState(size_t state) { this->finalStates.erase(state); }
+	
+	void clearFinalStates() { this->finalStates.clear(); }
 
 	bool isFinalState(size_t state) const { return (this->finalStates.find(state) != this->finalStates.end()); }
 	
@@ -693,6 +697,11 @@ public:
 		return this->taCache.lookup(dst)->first;
 	}
 	
+	TA<T>* clone(TA<T>* src) {
+		assert(src->backend == &this->backend);
+		return this->taCache.lookup(new TA<T>(src))->first;
+	}
+
 	TA<T>* addRef(TA<T>* x) {
 		typename Cache<TA<T>*>::value_type* v = this->taCache.find(x);
 		assert(v);
