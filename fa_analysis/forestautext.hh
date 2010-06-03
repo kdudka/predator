@@ -34,15 +34,25 @@ class FAE : public FA {
 
 protected:
 
+	void newState() {
+		++this->stateOffset;
+	}
+	
+	size_t nextState() {
+		return this->stateOffset;
+	}
+	
 	size_t freshState() {
 		return this->stateOffset++;
 	}
 	
 	size_t addRootReference(TA<label_type>* dst, size_t root) {
 		pair<boost::unordered_map<size_t, size_t>::iterator, bool> p =
-			this->root_reference_index.insert(make_pair(root, this->stateOffset));
-		if (p.second)
-			this->inv_root_reference_index.insert(make_pair(this->stateOffset++, root))
+			this->root_reference_index.insert(make_pair(root, this->nextState()));
+		if (p.second) {
+			this->inv_root_reference_index.insert(make_pair(this->nextState(), root))
+			this->newState();
+		}
 		vector<const Box*> label = { &this->boxMan.getReference(root) };
 		ta->addTransition(vector<size_t>(), &this->labMan.lookup(label), p.first->second);
 		return p.first->second;
@@ -54,6 +64,14 @@ protected:
 			return false;
 		reference = i->second;
 		return true;		
+	}
+	
+	static bool containsBox(label_type label) {
+		for (vector<const Box*>::iterator i = label.dataB->begin(); i != label.dataB->end(); ++i) {
+			if ((*i)->isBox())
+				return true;
+		}
+		return false;
 	}
 /*
 	void setRootReference(size_t state, size_t reference) {
@@ -187,7 +205,9 @@ protected:
 			for (TA<label_type>::iterator i = ta.begin(); i != ta.end(); ++i) {
 				vector<size_t> v;
 				if (i->label().head().isReference()) {
-					v = { i->label().head().getReference() };
+					size_t ref = i->label().head().getReference();
+					if (ref != varNull && ref != varUndef)
+						v = { ref };
 				} else {
 					vector<size_t> order;
 					FAE::evaluateLhsOrder(*i->label().dataB, order);
@@ -281,8 +301,10 @@ protected:
 		this->traverse(order, marked, garbage);
 		if (garbage != requiredGarbage) {
 			// TODO: raise some reasonable exception here (instead of runtime_error)
-			throw runtime_error("garbage missmatch");
+			throw runtime_error("FAE::normalize(): garbage missmatch!");
 		}
+		for (vector<size_t>::iterator i = garbage.begin(); i != garbage.end(); ++i)
+			this->taMan.release(this->roots[*i]);
 		vector<size_t> index(this->roots.size(), (size_t)(-1));
 		size_t offset = 0;
 		vector<TA<label_type>*> newRoots;
@@ -324,7 +346,7 @@ protected:
 	void reorderHeap(const vector<size_t>& variables) {
 	}
 
-	void isolateRoot(vector<FAE*>& dst, size_t root) const {
+	void isolateRoot(vector<pair<FAE*, bool> >& dst, size_t root) const {
 		for (TA<label_type>::iterator i = this->roots[root]->begin(); i != this->roots[root]->end(); ++i) {
 			if (i->rhs() == this->roots[root]->getFinalState()) {
 				FAE* fae = new FAE(src);
@@ -353,12 +375,13 @@ protected:
 				// exchange the original automaton with a new one
 				fae->taMan->release(fae->roots[root]);
 				fae->roots[root] = ta;
-				dst.push_back(fae);
+				dst.push_back(make_pair(fae, FAE::containsBox(i->label())));
 			}
 		}
 	}
 
 	void decomposeAtRoot(vector<FAE*>& dst, size_t x) const {
+		throw runtime_error("FAE::decomposeAtRoot(): boxes not implemented! (désolé)");
 	}
 
 public:
@@ -387,7 +410,7 @@ public:
 	
 	void x_ass_new(vector<FAE*>& dst, size_t x, size_t pointerSlots, size_t dataSlots) const {
 		if (dataSlots > 0)
-			throw std::runtime_error("Data handling not implemented! (désolé)");
+			throw std::runtime_error("FAE::x_ass_new(): Data handling not implemented! (désolé)");
 		// TODO: identify garbage
 		TA<label_type>* ta = this->taMan.alloc();
 		this->variables[x] = var_info(this->roots.size(), 0);
@@ -416,11 +439,35 @@ public:
 	}
 	
 	void del_x(vector<FAE*>& dst, size_t x) const {
+		dst.clear();
 		size_t root = this->variables[x].index;
-		
-		if (this->variables[x].offset != 0) {
-			// TODO: raise some reasonable exception here (instead of runtime_error)
-			throw runtime_error("")
+		vector<pair<FAE*, bool> > tmp;
+		this->isolateRoot(tmp, root);
+		for (vector<pair<FAE*, bool> >::iterator i = tmp.begin(), i != tmp.end(); ++i) {
+			if (i->second) {
+				i->first->decomposeAtRoot(dst, root);
+				delete i->first;
+			} else {
+				dst.push_back(i->first);
+			}
+		}
+		for (vector<FAE*>::iterator i = dst.begin(), i != dst.end(); ++i) {
+			if ((*i)->variables[x].offset != 0) {
+				// TODO: raise some reasonable exception here (instead of runtime_error)
+				throw runtime_error("FAE::del_x(): call on a variable pointing inside allocated block!");
+			}
+			(*i)->variables[x].index = varUndef;
+			// make all references to this rootpoint dangling
+			vector<size_t> index((*i)->roots.size());
+			for (size_t j = 0; j < (*i)->roots.size(); ++j)
+				index[j] = (j == root)?(varUndef):(j);
+			for (size_t j = 0; j < (*i)->roots.size(); ++j) {
+				TA<label_type>* ta = FAE::relabelReferences((*i)->roots[j], index);
+				(*i)->taMan.release((*i)->roots[j]);
+				(*i)->roots[j] = ta;				
+			}
+			// normalize
+			(*i)->normalize({ root });
 		}
 	}
 	
