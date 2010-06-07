@@ -641,7 +641,7 @@ public:
 		return dst;
 	}
 
-	static TA<T>& renamedUnion(TA<T>& dst, const TA<T>& a, const TA<T>& b, size_t& aSize) {
+	static TA<T>& renamedUnion(TA<T>& dst, const TA<T>& a, const TA<T>& b, size_t& aSize) const {
 		Index<size_t> index;
 		reduce(dst, a, index);
 		aSize = index.size();
@@ -650,19 +650,25 @@ public:
 		return dst;
 	}
 
-	static TA<T>& renamedUnion(TA<T>& dst, const TA<T>& src, size_t offset, size_t& srcSize) {
+	static TA<T>& renamedUnion(TA<T>& dst, const TA<T>& src, size_t offset, size_t& srcSize) const {
 		Index<size_t> index;
 		reduce(dst, src, index, offset);
 		srcSize = index.size();
 		return dst;
 	}
 
-	TA<T>& unfoldAtRoot(TA<T>& dst, size_t newState) {
-		// TODO: 
+	TA<T>& unfoldAtRoot(TA<T>& dst, size_t newState, bool addFnalState = true) const {
+		for (typename set<typename trans_cache_type::value_type*>::const_iterator i = this->transitions.begin(); i != this->transitions.end(); ++i) {
+			dst.addTransition(*i);
+			if (this->isFinalState((*i)->first._rhs))
+				dst.addTransition((*i)->first._lhs, (*i)->first._label, newState);
+		}
+		if (addFinalState)
+			dst.addFinalState(newState);
 		return dst;
 	}
 	
-	TA<T>& unfoldAtLeaf(TA<T>& dst, size_t selector) {
+	TA<T>& unfoldAtLeaf(TA<T>& dst, size_t selector) const {
 	}
 
 };

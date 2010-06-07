@@ -143,8 +143,7 @@ protected:
 		return ta;
 	}
 
-	// replaces this->roots[src] by null
-	TA<label_type>* mergeRoot(TA<label_type>* dst, size_t refName, TA<label_type>* src) {
+	TA<label_type>* mergeRoot(TA<label_type>* dst, size_t refName, TA<label_type>* src) const {
 		assert(refName < this->roots.size());
 		TA<label_type>* ta = this->taMan.alloc();
 		ta->addFinalState(dst->getFinalState());
@@ -159,7 +158,7 @@ protected:
 		}
 		assert(refState != (size_t)(-1));
 		// avoid screwing things up
-		src->unfoldAtRoot(*ta, refState);
+		src->unfoldAtRoot(*ta, refState, false);
 		return ta;
 	}
 
