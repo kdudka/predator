@@ -137,7 +137,7 @@ public:
 template <class T>
 class TA {
 
-	friend class TAManager;
+//	friend template <class U> class TAManager<T>;
 
 public:
 
@@ -641,7 +641,7 @@ public:
 		return dst;
 	}
 
-	static TA<T>& renamedUnion(TA<T>& dst, const TA<T>& a, const TA<T>& b, size_t& aSize) const {
+	static TA<T>& renamedUnion(TA<T>& dst, const TA<T>& a, const TA<T>& b, size_t& aSize) {
 		Index<size_t> index;
 		reduce(dst, a, index);
 		aSize = index.size();
@@ -650,20 +650,20 @@ public:
 		return dst;
 	}
 
-	static TA<T>& renamedUnion(TA<T>& dst, const TA<T>& src, size_t offset, size_t& srcSize) const {
+	static TA<T>& renamedUnion(TA<T>& dst, const TA<T>& src, size_t offset, size_t& srcSize) {
 		Index<size_t> index;
 		reduce(dst, src, index, offset);
 		srcSize = index.size();
 		return dst;
 	}
 
-	TA<T>& unfoldAtRoot(TA<T>& dst, size_t newState, bool addFnalState = true) const {
+	TA<T>& unfoldAtRoot(TA<T>& dst, size_t newState, bool registerFinalState = true) const {
 		for (typename set<typename trans_cache_type::value_type*>::const_iterator i = this->transitions.begin(); i != this->transitions.end(); ++i) {
 			dst.addTransition(*i);
 			if (this->isFinalState((*i)->first._rhs))
-				dst.addTransition((*i)->first._lhs, (*i)->first._label, newState);
+				dst.addTransition((*i)->first._lhs->first, (*i)->first._label, newState);
 		}
-		if (addFinalState)
+		if (registerFinalState)
 			dst.addFinalState(newState);
 		return dst;
 	}
@@ -705,7 +705,7 @@ public:
 	
 	TA<T>* clone(TA<T>* src) {
 		assert(src->backend == &this->backend);
-		return this->taCache.lookup(new TA<T>(src))->first;
+		return this->taCache.lookup(new TA<T>(*src))->first;
 	}
 
 	TA<T>* addRef(TA<T>* x) {

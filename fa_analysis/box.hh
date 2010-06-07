@@ -23,7 +23,7 @@ using std::pair;
 using std::set;
 using std::make_pair;
 using std::runtime_error;
-
+/*
 class BoxTemplate {
 
 	friend class TemplateManager;
@@ -38,7 +38,7 @@ class BoxTemplate {
 	vector<root_type> roots;
 
 protected:
-/*
+
 	static FA::label_type translateLabel(LabMan& labMan, const vector<const BoxTemplate*>* label, const boost::unordered_map<const BoxTemplate*, const Box*>& args) {
 		vector<const Box*> v;
 		for (vector<const BoxTemplate*>::const_iterator i = label->begin(); i != label->end(); ++i) {
@@ -49,7 +49,7 @@ protected:
 		}
 		return &labMan.lookup(v);
 	}
-*/
+
 	BoxTemplate(size_t type, size_t tag) : type(type), tag(tag) {}
 
 public:
@@ -69,7 +69,7 @@ public:
 	static BoxTemplate createReference(size_t root) {
 		return BoxTemplate(BoxTemplate::refID, root);
 	}
-/*
+
 	Box createInstance(TAManager<FA::label_type>& taMan, LabMan& labMan, const vector<size_t>& offsets, const boost::unordered_map<const BoxTemplate*, const Box*>& args) const {
 		Box box(taMan, *this);
 		if (this->type == 1) {
@@ -91,7 +91,7 @@ public:
 		for (size_t i = 0; i < this->variables.size(); ++i)
 			box.variables.push_back(var_info(this->variables[i].index, offsets[i]));
 	}
-*/
+
 	void computeTrigger(vector<const BoxTemplate*>& templates) {
 		templates.clear();
 		std::set<const BoxTemplate*> s;
@@ -103,7 +103,7 @@ public:
 	}
 
 };
-
+*/
 class Box : public FA {
 
 	friend class BoxManager;
