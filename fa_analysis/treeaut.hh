@@ -12,8 +12,6 @@
 
 #include "cache.hh"
 #include "utils.hh"
-//#include "timreader.hh"
-//#include "timwriter.hh"
 #include "lts.hh"
 
 using std::vector;
@@ -174,99 +172,59 @@ public:
 		bool operator!=(const Iterator& rhs) const { return this->_i != rhs._i; }
 
 	};
-/*
-	class Reader : public TimbukReader {
 
-		TA<size_t>* dst;
-		string name;
+public:
 
-	protected:
+	typedef typename boost::unordered_map<size_t, vector<const TT<T>*> > dfs_cache_type;
+
+	class DFSIterator {
+		
+		const dfs_cache_type& _cache;
+		set<size_t> _visited;
+		vector<pair<typename vector<const TT<T>*>::const_iterator, typename vector<const TT<T>*>::const_iterator> > _stack;
 	
-		virtual void newLabel(const string&, size_t, size_t) {}
-		
-		virtual void beginModel(const string& name) {
-			this->dst->clear();
-			this->name = name;
+		void insertLhs(const vector<size_t>& lhs) {
+			for (vector<size_t>::const_iterator i = lhs.begin(); i != lhs.end(); ++i) {
+				if (this->_visited.insert(*i).second) {
+					typename dfs_cache_type::const_iterator j = this->_cache.find(*i);
+					if (j != this->_cache.end())
+						this->_stack.push_back(make_pair(j->second.begin(), j->second.end()));
+				}
+			}
 		}
-		
-		virtual void newState(const string&, size_t) {}
-		
-		virtual void newFinalState(size_t id) {
-			this->dst->addFinalState(id);
-		}
-		
-		virtual void endDeclaration() {}
-
-		virtual void newTransition(const vector<size_t>& lhs, size_t label, size_t rhs) {
-			this->dst->addTransition(lhs, label, rhs);
-		}
-		
-		virtual void endModel() {}
 		
 	public:
-
-		Reader(std::istream& input = std::cin, const string& name = "")
-			: TimbukReader(input, name), dst(NULL) {}
-		
-		TA<size_t>& run(TA<size_t>& dst) {
-			this->dst = &dst;
-			this->run_simple();
-			return dst;
+		DFSIterator(const dfs_cache_type& cache, const vector<size_t>& stack)
+			: _cache(cache), _visited() {
+			this->insertLhs(stack);
 		}
+		
+		bool isValid() const { return !this->_stack.empty(); }
+		
+		bool next() {
+			size_t oldSize = this->_stack.size();
+			this->insertLhs((*this->_stack.back().first)->_lhs->first);
+			if (this->_stack.size() != oldSize)
+				return true;
+			do {
+				++this->_stack.back().first;
+				if (this->_stack.back().first != this->_stack.back().second)
+					return true;
+				this->_stack.pop_back();
+			} while (!this->_stack.empty());
+			return false;
+		}
+		
+		const TT<T>& operator*() const { return **this->_stack.back().first; }
+
+		const TT<T>* operator->() const { return *this->_stack.back().first; }
 
 	};
 
-	class MultiReader : public TimbukReader {
-
-		Backend& backend;
-
-	public:
-
-		vector<TA<size_t> > automata;
-		vector<string> names;
-
-	protected:
-	
-		virtual void newLabel(const string&, size_t, size_t) {}
-		
-		virtual void beginModel(const string& name) {
-			this->automata.push_back(TA<size_t>(this->cache));
-			this->names.push_back(name);
-		}
-		
-		virtual void newState(const string&, size_t) {}
-		
-		virtual void newFinalState(size_t id) {
-			this->automata.back().addFinalState(id);
-		}
-		
-		virtual void endDeclaration() {}
-
-		virtual void newTransition(const vector<size_t>& lhs, size_t label, size_t rhs) {
-			this->automata.back().addTransition(lhs, label, rhs);
-		}
-		
-		virtual void endModel() {}
-		
-	public:
-
-		MultiReader(std::istream& input, Backend& backend, const string& name = "")
-			: TimbukReader(input, name), backend(backend) {}
-
-		void clear() {
-			this->automata.clear();
-			this->names.clear();
-		}
-
-		void run() {
-			this->run_main();
-		}
-
-	};
-*/
 public:
 
 	typedef Iterator iterator;
+	typedef DFSIterator dfs_iterator;
 
 public:
 
@@ -280,41 +238,7 @@ public:
 //	std::map<const std::vector<int>*, int> lhsMap;
 
 public:
-/*
-	static TA<size_t>& fromStream(TA<size_t>& dst, std::istream& input = std::cin, const string& name = "") {
-		return Reader(input, name).run(dst);
-	}
-	
-	static TA<size_t>& fromStream(TA<size_t>& dst, Reader& reader) {
-		return reader.run(dst);
-	}
 
-	void toStream(std::ostream& output, const string& name = "TreeAutomaton") {
-		map<T, size_t> labels;
-		set<size_t> states;
-		for (typename set<typename trans_cache_type::value_type*>::iterator i = this->transitions.begin(); i != this->transitions.end(); ++i) {
-			labels.insert(make_pair((*i)->first._label, (*i)->first._lhs->first.size()));
-			states.insert((*i)->first._rhs);
-			for (size_t j = 0; j < (*i)->first._lhs->first.size(); ++j)
-				states.insert((*i)->first._lhs->first[j]);
-		}
-		TimbukWriter writer(output);
-		writer.startAlphabet();
-		for (typename map<T, size_t>::iterator i = labels.begin(); i != labels.end(); ++i)
-			writer.writeLabel(i->first, i->second);
-		writer.newModel(name);
-		writer.startStates();
-		for (set<size_t>::iterator i = states.begin(); i != states.end(); ++i)
-			writer.writeState(*i);
-		writer.startFinalStates();
-		for (set<size_t>::iterator i = this->finalStates.begin(); i != this->finalStates.end(); ++i)
-			writer.writeState(*i);
-		writer.startTransitions();
-		for (typename set<typename trans_cache_type::value_type*>::iterator i = this->transitions.begin(); i != this->transitions.end(); ++i)
-			writer.writeTransition((*i)->first._lhs->first, (*i)->first._label, (*i)->first._rhs);
-		writer.terminate();
-	}
-*/
 	TA(Backend& backend) : backend(&backend), next_state(0), maxRank(0) {}
 	
 	TA(const TA<T>& ta) : backend(ta.backend), next_state(ta.next_state), maxRank(ta.maxRank), transitions(ta.transitions), finalStates(ta.finalStates) {
@@ -326,7 +250,15 @@ public:
 
 	TA<T>::Iterator begin() const { return TA<T>::Iterator(this->transitions.begin()); }
 	TA<T>::Iterator end() const { return TA<T>::Iterator(this->transitions.end()); }
-	
+
+	TA<T>::DFSIterator dfsStart(const dfs_cache_type& cache) const {
+		return TA<T>::DFSIterator(cache, vector<size_t>(this->finalStates.begin(), this->finalStates.end()));
+	}
+
+	TA<T>::DFSIterator dfsStart(const dfs_cache_type& cache, const vector<size_t>& stack) const {
+		return TA<T>::DFSIterator(cache, stack);
+	}
+
 	TA<T>& operator=(const TT<T>& rhs) {
 		this->clear();
 		this->next_state = rhs.next_state;
@@ -388,6 +320,11 @@ public:
 			index.add(&(*i)->first._lhs->first);
 	}
 	
+	void buildDFSCache(dfs_cache_type& cache) const {
+		for (typename set<typename trans_cache_type::value_type*>::const_iterator i = this->transitions.begin(); i != this->transitions.end(); ++i)
+			cache.insert(make_pair(i->first._rhs, vector<const TT<T>*>())).first->second.push_back(&i->first);
+	}
+	
 	typename trans_cache_type::value_type* addTransition(const vector<size_t>& lhs, const T& label, size_t rhs) {
 		if (lhs.size() > this->maxRank)
 			this->maxRank = lhs.size();
@@ -405,19 +342,7 @@ public:
 			this->transCache().release(x);
 		return x;
 	}
-/* !! uncommenting this will screw it up
-protected:
 
-	void addTransition(TA::cache_type::iterator transition) {
-		if (transition->first.lhs().size() > this->maxRank)
-			this->maxRank = transition->first.lhs().size();
-		TA::cache_type::iterator x = this->cacheAddRef(transition);
-		if (!this->transitions.insert(x).second)
-			this->cacheRelease(x);
-	}
-
-public:
-*/
 	typename trans_cache_type::value_type* addTransition(const typename trans_cache_type::value_type* transition) {
 		if (transition->first.lhs().size() > this->maxRank)
 			this->maxRank = transition->first.lhs().size();
