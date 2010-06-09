@@ -219,6 +219,14 @@ public:
 		}
 	}
 
+	bool outputCovers(size_t selector) const {
+		switch (this->type) {
+			case Box::selID: return this->getSelector() == selector;
+			case Box::boxID: return this->selCoverage.front().second.count(selector) > 0;
+			default: return false;
+		}
+	}
+
 protected:
 
 	Box(TAManager<FA::label_type>& taMan, size_t type, size_t tag) : FA(taMan), type(type), tag(tag) {}

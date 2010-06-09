@@ -241,9 +241,11 @@ public:
 
 	TA(Backend& backend) : backend(&backend), next_state(0), maxRank(0) {}
 	
-	TA(const TA<T>& ta) : backend(ta.backend), next_state(ta.next_state), maxRank(ta.maxRank), transitions(ta.transitions), finalStates(ta.finalStates) {
+	TA(const TA<T>& ta, bool copyFinalStates = true) : backend(ta.backend), next_state(ta.next_state), maxRank(ta.maxRank), transitions(ta.transitions) {
 		for (typename std::set<typename trans_cache_type::value_type*>::iterator i = this->transitions.begin(); i != this->transitions.end(); ++i)
 			this->transCache().addRef(*i);
+		if (copyFinalStates)
+			this->finalStates = ta.finalStates;
 	}
 	
 	~TA() { this->clear(); }
@@ -628,9 +630,9 @@ public:
 		return this->taCache.lookup(dst)->first;
 	}
 	
-	TA<T>* clone(TA<T>* src) {
+	TA<T>* clone(TA<T>* src, bool copyFinalStates = true) {
 		assert(src->backend == &this->backend);
-		return this->taCache.lookup(new TA<T>(*src))->first;
+		return this->taCache.lookup(new TA<T>(*src, copyFinalStates))->first;
 	}
 
 	TA<T>* addRef(TA<T>* x) {

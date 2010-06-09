@@ -12,6 +12,7 @@
 #include "box.hh"
 #include "labman.hh"
 #include "forestaut.hh"
+#include "utils.hh"
 
 using std::vector;
 using std::set;
@@ -28,9 +29,12 @@ class FAE : public FA {
 	size_t stateOffset;
 
 	vector<vector<size_t> > rootMap;
+	
+	// root -> (selector -> root)
+	boost::unordered_map<size_t, map<size_t, size_t> > selectorMap;
 
-	boost::unordered_map<size_t, size_t> root_reference_index;
-	boost::unordered_map<size_t, size_t> inv_root_reference_index;
+	boost::unordered_map<size_t, size_t> rootReferenceIndex;
+	boost::unordered_map<size_t, size_t> invRootReferenceIndex;
 
 protected:
 
@@ -48,9 +52,9 @@ protected:
 	
 	size_t addRootReference(TA<label_type>& dst, size_t root) {
 		pair<boost::unordered_map<size_t, size_t>::iterator, bool> p =
-			this->root_reference_index.insert(make_pair(root, this->nextState()));
+			this->rootReferenceIndex.insert(make_pair(root, this->nextState()));
 		if (p.second) {
-			this->inv_root_reference_index.insert(make_pair(this->nextState(), root));
+			this->invRootReferenceIndex.insert(make_pair(this->nextState(), root));
 			this->newState();
 		}
 		vector<const Box*> label = { &this->boxMan.getReference(root) };
@@ -59,8 +63,8 @@ protected:
 	}
 
 	bool isRootReference(size_t state, size_t& reference) const {
-		boost::unordered_map<size_t, size_t>::const_iterator i = this->inv_root_reference_index.find(state);
-		if (i == this->root_reference_index.end())
+		boost::unordered_map<size_t, size_t>::const_iterator i = this->invRootReferenceIndex.find(state);
+		if (i == this->invRootReferenceIndex.end())
 			return false;
 		reference = i->second;
 		return true;		
@@ -161,9 +165,9 @@ protected:
 		src->unfoldAtRoot(*ta, refState, false);
 		return ta;
 	}
-
+/*
 	static void evaluateLhsOrder(const vector<const Box*>& label, vector<size_t>& order) {
-		map<size_t, size_t> m;
+		boost::unordered_map<size_t, size_t> m;
 		order.clear();
 		size_t offset = 0;
 		for (vector<const Box*>::const_iterator i = label.begin(); i != label.end(); ++i) {
@@ -176,7 +180,7 @@ protected:
 		for (map<size_t, size_t>::iterator i = m.begin(); i != m.end(); ++i)
 			order.push_back(i->second);
 	}
-
+*/
 	static bool updateO(boost::unordered_map<size_t, vector<size_t> >& o, size_t state, const vector<size_t>& v) {
 		pair<boost::unordered_map<size_t, vector<size_t> >::iterator, bool> p =
 			o.insert(make_pair(state, v));
@@ -208,9 +212,9 @@ protected:
 					if (ref != varNull && ref != varUndef)
 						v = { ref };
 				} else {
-					vector<size_t> order;
-					FAE::evaluateLhsOrder(*i->label().dataB, order);
-					for (vector<size_t>::iterator j = order.begin(); j != order.end(); ++j) {
+//					vector<size_t> order;
+//					FAE::evaluateLhsOrder(*i->label().dataB, order);
+					for (vector<size_t>::iterator j = i->lhs().begin(); j != i->lhs().end(); ++j) {
 						boost::unordered_map<size_t, vector<size_t> >::iterator k = o.find(i->lhs()[*j]);
 						if (k == o.end())
 							break;
@@ -337,7 +341,75 @@ protected:
 		
 	}
 
+	void decomposeAtRoot(vector<FAE*>& dst, size_t root, const vector<size_t>& selectors) const {
+		throw runtime_error("FAE::decomposeAtRoot(): box decomposition not implemented! (désolé)");
+	}
+/*	
+	void decomposeAtRoot(vector<FAE*>& dst, size_t root) const {
+		throw runtime_error("FAE::decomposeAtRoot(): boxes not implemented! (désolé)");
+	}
+
+	void 
+*/
+	// ensures that the given selectors (or at least the boxes which contain them) become "free" in the result
+	void isolateAtRoot(vector<FAE*>& dst, size_t root, const vector<size_t>& selectors) const {
+		set<size_t> sSelectors(selectors.begin(), selector.end());
+		boost::unordered_map<size_t, map<size_t, size_t> >::iterator i = this->selectorMap.find(root);
+		if (i != this->selectorMap.end())
+			throw runtime_error("FAE::isolateRoot(): some selectors are hidden somewhere else! (not implemented yet)");
+		for (TA<label_type>::iterator i = this->roots[root]->begin(); i != this->roots[root]->end(); ++i) {
+			if (i->rhs() == this->roots[root]->getFinalState()) {
+				// TODO: check that the following value is properly released (in case f an exception)
+				FAE* fae = new FAE(*this);
+				TA<label_type>* ta = fae->taMan.clone(this->roots[root], false);
+				vector<size_t> lhs;
+				size_t lhsOffset = 0;
+				bool needsDecomposition = false;
+				for (vector<const Box*>::const_iterator j = i->label().dataB->begin(); j != i->label().dataB->end(); ++j) {
+					if (!utils::checkIntersection((*j)->getDownwardCoverage(0).second, sSelectors)) {
+						// this box is not interesting
+						for (size_t k = 0; k < (*j)->getArity(); ++k, ++lhsOffset)
+							lhs.push_back(i->lhs()[lhsOffsset]);
+					} else {
+						// we have to isolate
+						for (size_t k = 0; k < (*j)->getArity(); ++k, ++lhsOffset) {
+							if (this->isRootReference(i->lhs()[lhsOffset], reference)) {
+								// no need to create a reference when it's already there
+								lhs.push_back(i->lhs()[lhsOffset]);
+							} else {
+								// update new left-hand-side
+								lhs.push_back(fae->addRootReference(*ta, fae->roots.size()));
+								// prepare new root
+								TA<label_type>* tmp = fae->taMan.clone(fae->roots[root], false);
+								tmp->addFinalState(i->lhs()[lhsOffset]);
+								TA<label_type>* tmp2 = fae->taMan.alloc();
+								tmp->unreachableFree(*tmp2);
+								fae->taMan.release(tmp);
+								fae->roots.push_back(tmp2);
+							}
+						}
+						needsDecomosition = (*j)->isBox();
+					}
+				}
+				size_t newState = fae->freshState();
+				ta->addTransition(lhs, i->label(), newState);
+				ta->addFinalState(newState);
+				// exchange the original automaton with a new one
+				fae->taMan.release(fae->roots[root]);
+				fae->roots[root] = ta;
+				if (needsDecomposition) {
+					fae->decomposeAtRoot(dst, root, selectors);
+					delete fae;
+				} else dst.push_back(fae);
+			}
+		}
+	}
+/*
+	// returns configurations with isolated accepting rules, flag is set if we need to decompose further on
 	void isolateRoot(vector<pair<FAE*, bool> >& dst, size_t root) const {
+		boost::unordered_map<size_t, map<size_t, size_t> >::iterator i = this->selectorMap.find(root);
+		if (i != this->selectorMap.end())
+			throw runtime_error("FAE::isolateRoot(): some selectors are hidden somewhere else! (not implemented yet)");
 		for (TA<label_type>::iterator i = this->roots[root]->begin(); i != this->roots[root]->end(); ++i) {
 			if (i->rhs() == this->roots[root]->getFinalState()) {
 				FAE* fae = new FAE(*this);
@@ -371,17 +443,49 @@ protected:
 		}
 	}
 
-	void decomposeAtRoot(vector<FAE*>& dst, size_t x) const {
-		throw runtime_error("FAE::decomposeAtRoot(): boxes not implemented! (désolé)");
+	void createRootpoint(vector<pair<FAE*, bool> >& dst, size_t root, size_t selector) const {
+		for (TA<label_type>::iterator i = this->roots[root]->begin(); i != this->roots[root]->end(); ++i) {
+			if (i->rhs() == this->roots[root]->getFinalState()) {
+				FAE* fae = new FAE(*this);
+				TA<label_type>* ta = fae->taMan.alloc();
+				vector<size_t> lhs;
+				for (size_t j = 0; j < i->lhs().size(); ++j) {
+					size_t reference;
+					if (this->isRootReference(i->lhs()[j], reference)) {
+						// update new left-hand-side
+						lhs.push_back(fae->addRootReference(*ta, reference));
+						continue;
+					}
+					// update new left-hand-side
+					lhs.push_back(fae->addRootReference(*ta, fae->roots.size()));
+					// prepare new root
+					TA<label_type>* tmp = fae->taMan.clone(fae->roots[root]);
+					tmp->clearFinalStates();
+					tmp->addFinalState(i->lhs()[j]);
+					TA<label_type>* tmp2 = fae->taMan.alloc();
+					tmp->unreachableFree(*tmp2);
+					fae->taMan.release(tmp);
+					fae->roots.push_back(tmp2);
+				}
+				ta->addTransition(lhs, i->label(), i->rhs());
+				ta->addFinalState(i->rhs());
+				// exchange the original automaton with a new one
+				fae->taMan.release(fae->roots[root]);
+				fae->roots[root] = ta;
+				dst.push_back(make_pair(fae, FAE::containsBox(i->label())));
+			}
+		}
 	}
-
+*/
 public:
 
+	// state 0 should never be allocated by FAE
 	FAE(TAManager<FA::label_type>& taMan, LabMan& labMan, BoxManager& boxMan)
 	 : FA(taMan), boxMan(boxMan), labMan(labMan), stateOffset(1) {}
 
 	FAE(const FAE& x)
-	 : FA(x), boxMan(x.boxMan), labMan(x.labMan), stateOffset(x.stateOffset), rootMap(x.rootMap) {}
+	 : FA(x), boxMan(x.boxMan), labMan(x.labMan), stateOffset(x.stateOffset), rootMap(x.rootMap),
+	 selectorMap(x.selectorMap), rootReferenceIndex(rootReferenceIndex), invRootReferenceIndex(invRootReferenceIndex) {}
 
 /* execution bits */
 	size_t newVar() {
@@ -392,7 +496,7 @@ public:
 	
 	void dropVars(size_t count) {
 		assert(count <= this->variables.size());
-		while (count--) this->variables.pop_back();
+		while (count-- > 0) this->variables.pop_back();
 	}
 	
 	bool x_eq_y(size_t x, size_t y) {
@@ -458,21 +562,23 @@ public:
 				(*i)->roots[j] = ta;				
 			}
 			// normalize
-			(*i)->normalize({ root });
+			(*i)->normalize({root});
 		}
 	}
 	
-	void x_ass_null(size_t x) {
-		// TODO: identify garbage
-		this->variables[x] = var_info(varNull, 0);
-		// TODO: reorder
+	void x_ass_null(vector<FAE*>& dst, size_t x) const {
+		FAE* fae = new FAE(*this);
+		fae->variables[x] = var_info(varNull, 0);
+		fae->normalize({});
+		dst.push_back(fae);
 	}
 	
-	void x_ass_y(size_t x, size_t y, int offset) {
-		// TODO: identify garbage
-		this->variables[x] = this->variables[y];
-		this->variables[x].offset += offset;
-		// TODO: reorder
+	void x_ass_y(vector<FAE*>& dst, size_t x, size_t y, int offset) {
+		FAE* fae = new FAE(*this);
+		fae->variables[x] = fae->variables[y];
+		fae->variables[x].offset += offset;
+		fae->normalize({});
+		dst.push_back(fae);
 	}
 	
 	void x_ass_y_next(size_t x, size_t y, size_t selector) {
