@@ -843,7 +843,7 @@ unsigned countTargets(const SymHeap1 &sh, TObjId obj) {
 }
 
 /// return true if pointer value
-bool isPointer(const SymHeap1 &sh, TValueId val) {
+bool isValPointer(const SymHeap1 &sh, TValueId val) {
     const struct cl_type *clt = sh.valType(val);
     if(!clt)
         TRAP;
@@ -852,7 +852,7 @@ bool isPointer(const SymHeap1 &sh, TValueId val) {
 }
 
 /// return true if pointer variable
-bool isPointer(const SymHeap1 &sh, TObjId obj) {
+bool isObjPointer(const SymHeap1 &sh, TObjId obj) {
     const struct cl_type *clt = sh.objType(obj);
     if(!clt)
         TRAP;
@@ -862,7 +862,7 @@ bool isPointer(const SymHeap1 &sh, TObjId obj) {
 
 /// count number of pointers in object [recursive]
 unsigned countPointers(const SymHeap1 &sh, TObjId obj) {
-    unsigned count = isPointer(sh,obj);  // 0|1
+    unsigned count = isObjPointer(sh,obj);  // 0|1
     int num_items = countSubObjects(sh,obj);
     if(num_items==0) // not a composite (structure/array)
         return count;
