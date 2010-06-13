@@ -1,10 +1,15 @@
 #include <stdlib.h>
 
 // return VAL_UNKNOWN of type CL_TYPE_PTR while running symbolic execution
-// NOTE: executing this function on bare metal is usually bad idea
 void** synthesize_unknown_ptr_value(void)
 {
-    return synthesize_unknown_ptr_value();
+    int a = 1, b = 2;
+    void *pa = &a, *pb = &b;
+
+    // our analysis gets confused at this point because of weak support of ints
+    return (a < b)
+        ? &pa
+        : &pb;
 }
 
 // reaching this function indicates we are on a wrong way

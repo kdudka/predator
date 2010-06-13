@@ -49,3 +49,11 @@ extern const char *sl_git_sha1;
  * if 1, define TObjId and TValueId is integers (makes debugging easier)
  */
 #define DEBUG_SYMID_FORCE_INT           0
+
+/**
+ * maximal call depth
+ * @attention Be careful here, setting it to big value may cause a stack
+ * overflow because of the current suboptimal approach used in
+ * SymExec::Private::execInsnCall()
+ */
+#define SE_MAX_CALL_DEPTH               0x100

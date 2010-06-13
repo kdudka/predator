@@ -105,7 +105,8 @@ void SymCallCtx::Private::destroyStackFrame() {
 #if DEBUG_SE_STACK_FRAME
     const LocationWriter lw(&ref.def.loc);
     CL_DEBUG_MSG(lw, "<<< destroying stack frame of "
-            << nameOf(ref) << "():");
+            << nameOf(ref) << "():"
+            << ", nestLevel = " << this->nestLevel);
 
     int hCnt = 0;
 #endif
@@ -188,7 +189,8 @@ void SymCallCache::Private::createStackFrame() {
 
 #if DEBUG_SE_STACK_FRAME
     CL_DEBUG_MSG(this->lw,
-            ">>> creating stack frame for " << nameOf(ref) << "()");
+            ">>> creating stack frame for " << nameOf(ref) << "()"
+            << ", nestLevel = " << this->nestLevel);
 #endif
 
     BOOST_FOREACH(const int uid, ref.vars) {
@@ -276,8 +278,7 @@ SymCallCtx& SymCallCache::getCallCtx(SymHeap heap,
     // check recursion depth (if any)
     d->nestLevel = d->bt->countOccurrencesOfFnc(uid);
     if (1 != d->nestLevel)
-        // recursive calls haven't been well tested yet
-        TRAP;
+        CL_WARN_MSG(d->lw, "support of call recursion is not stable yet");
 
     // initialize local variables of the called fnc
     d->createStackFrame();

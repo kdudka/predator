@@ -89,7 +89,6 @@ struct SymExec::Private {
     typedef std::map<const CodeStorage::Block *, SymHeapScheduler> TStateMap;
 
     const CodeStorage::Storage  &stor;
-    TBtSet                      *btSet;
     SymBackTrace                *btStack;
     const CodeStorage::Fnc      *fnc;
     const CodeStorage::Block    *bb;
@@ -122,7 +121,6 @@ struct SymExec::Private {
 
 SymExec::Private::Private(const CodeStorage::Storage &stor_):
     stor        (stor_),
-    btSet       (0),
     btStack     (0),
     fnc         (0),
     bb          (0),
@@ -137,7 +135,6 @@ SymExec::Private::Private(const Private &parent, const CodeStorage::Fnc &fnc,
                           SymHeapUnion &res)
 :
     stor        (parent.stor),
-    btSet       (parent.btSet),
     btStack     (parent.btStack),
     fnc         (&fnc),
     bb          (0),
@@ -175,13 +172,8 @@ void SymExec::exec(const CodeStorage::Fnc &fnc, SymHeapUnion &results) {
     // set function ought to be executed
     d->fnc = &fnc;
 
-    // wait, avoid recursion in the first place
-    Private::TBtSet btSet;
-    const int fncId = uidOf(fnc);
-    btSet.insert(fncId);
-    d->btSet = &btSet;
-
     // backtrace shared among all instances of SymExec::Private
+    const int fncId = uidOf(fnc);
     SymBackTrace btStack(d->stor, fncId);
     d->btStack = &btStack;
 
@@ -395,10 +387,9 @@ void SymExec::Private::execInsnCall(const SymHeap &heap, SymHeapUnion &results, 
         // unable to resolve Fnc by UID
         TRAP;
 
-    if (hasKey(this->btSet, uid)) {
-        // *** recursion detected ***
-        CL_ERROR_MSG(this->lw,
-                "call recursion detected, cg subtree will be excluded");
+    if (SE_MAX_CALL_DEPTH < this->btStack->size()) {
+        CL_ERROR_MSG(this->lw, "call depth exceeds SE_MAX_CALL_DEPTH"
+                << " (" << SE_MAX_CALL_DEPTH << ")");
         this->execCallFailed(heap, results, opList[/* dst */ 0]);
         return;
     }
@@ -420,16 +411,11 @@ void SymExec::Private::execInsnCall(const SymHeap &heap, SymHeapUnion &results, 
         return;
     }
 
-    // avoid recursion
-    this->btSet->insert(uid);
-
     // run!
     // FIXME: this approach will sooner or later cause a stack overflow
     // TODO: use an explicit stack instead
     Private subExec(*this, *fnc, ctx.rawResults());
     subExec.execFnc(ctx.entry());
-    if (1 != this->btSet->erase(uid))
-        TRAP;
 
     // merge call results
     ctx.flushCallResults(results);

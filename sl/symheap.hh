@@ -262,6 +262,8 @@ struct CVar {
 inline bool operator<(const CVar &a, const CVar &b) {
     if (a.uid < b.uid)
         return true;
+    else if (b.uid < a.uid)
+        return false;
     else
         return a.inst < b.inst;
 }
