@@ -42,7 +42,8 @@ namespace {
 void createGlVar(SymHeap &heap, const CodeStorage::Var &var) {
     // create the corresponding heap object
     const struct cl_type *clt = var.clt;
-    const TObjId obj = heap.objCreate(clt, var.uid);
+    const CVar cVar(var.uid, /* gl variable */ 0);
+    const TObjId obj = heap.objCreate(clt, cVar);
 
     // now attempt to initialize the variable since it is a global/static var
     const enum cl_type_e code = clt->code;
@@ -408,6 +409,9 @@ void SymExec::Private::execInsnCall(const SymHeap &heap, SymHeapUnion &results, 
         return;
     }
 
+    // enter backtrace
+    this->btStack->pushCall(uidOf(*fnc), this->lw);
+
     // get call context
     SymCallCtx &ctx = this->callCache->getCallCtx(heap, *insn);
     if (!ctx.needExec()) {
@@ -415,9 +419,6 @@ void SymExec::Private::execInsnCall(const SymHeap &heap, SymHeapUnion &results, 
         ctx.flushCallResults(results);
         return;
     }
-
-    // enter backtrace
-    this->btStack->pushCall(uidOf(*fnc), this->lw);
 
     // avoid recursion
     this->btSet->insert(uid);

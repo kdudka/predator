@@ -261,11 +261,11 @@ bool operator== (const SymHeap &heap1, const SymHeap &heap2) {
 
     // NOTE: we do not check cVars themselves among heaps
     // they are *supposed* to be the same
-    SymHeap::TCont cVars;
+    SymHeap::TContCVar cVars;
     heap1.gatherCVars(cVars);
-    BOOST_FOREACH(int uid, cVars) {
-        const TObjId var1 = heap1.objByCVar(uid);
-        const TObjId var2 = heap2.objByCVar(uid);
+    BOOST_FOREACH(CVar cv, cVars) {
+        const TObjId var1 = heap1.objByCVar(cv);
+        const TObjId var2 = heap2.objByCVar(cv);
         if (var1 < 0 || var2 < 0)
             // heap corruption detected
             TRAP;

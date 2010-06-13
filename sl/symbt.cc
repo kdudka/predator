@@ -25,6 +25,7 @@
 
 #include "util.hh"
 
+#include <map>
 #include <stack>
 #include <utility>
 
@@ -33,30 +34,97 @@
 struct SymBackTrace::Private {
     typedef std::pair<const CodeStorage::Fnc *, LocationWriter>     TStackItem;
     typedef std::stack<TStackItem>                                  TStack;
+    typedef std::map<const CodeStorage::Fnc *, int /* cnt */>       TMap;
 
     const CodeStorage::Storage      &stor;
     TStack                          btStack;
+    TMap                            nestMap;
 
     Private(const CodeStorage::Storage &stor_):
         stor(stor_)
     {
     }
+
+    const CodeStorage::Fnc* fncById(int id) const;
+    const CodeStorage::Fnc* fncOnTop() const;
+    void pushFnc(const CodeStorage::Fnc *, const LocationWriter &);
+    void popFnc();
 };
+
+const CodeStorage::Fnc* SymBackTrace::Private::fncOnTop() const {
+    if (this->btStack.empty())
+        // empty stack, so there is no top
+        return 0;
+
+    const TStackItem top = this->btStack.top();
+    const CodeStorage::Fnc *fnc = top.first;
+    if (!fnc)
+        // bt corruption detected
+        TRAP;
+
+    return fnc;
+}
+
+const CodeStorage::Fnc* SymBackTrace::Private::fncById(int id) const {
+    const CodeStorage::Fnc *fnc = this->stor.fncs[id];
+    if (!fnc)
+        // invalid fnc ID
+        TRAP;
+
+    return fnc;
+}
+
+void SymBackTrace::Private::pushFnc(const CodeStorage::Fnc *fnc,
+                                    const LocationWriter   &lw)
+{
+    push(this->btStack, fnc, lw);
+    int &ref = this->nestMap[fnc];
+    if (ref < 0 || static_cast<int>(this->btStack.size()) < ref)
+        // bt corruption detected
+        TRAP;
+
+    // increment instance counter
+    ++ref;
+}
+
+void SymBackTrace::Private::popFnc() {
+    const CodeStorage::Fnc *fnc = this->fncOnTop();
+    this->btStack.pop();
+
+    // decrement instance counter
+    int &ref = this->nestMap[fnc];
+    --ref;
+
+    if (ref < 0 || static_cast<int>(this->btStack.size()) < ref)
+        // bt corruption detected
+        TRAP;
+}
 
 SymBackTrace::SymBackTrace(const CodeStorage::Storage &stor, int rootFncId):
     d(new Private(stor))
 {
-    const CodeStorage::Fnc *root = d->stor.fncs[rootFncId];
-    if (!root)
-        // unable to resolve Fnc by UID
-        TRAP;
+    if (-1 == rootFncId)
+        // no root, we're done
+        return;
 
     // first item of usual backtraces is usually main()
-    push(d->btStack, root, &root->def.loc);
+    const CodeStorage::Fnc *root = d->fncById(rootFncId);
+    d->pushFnc(root, &root->def.loc);
+}
+
+SymBackTrace::SymBackTrace(const SymBackTrace &ref):
+    d(new Private(*ref.d))
+{
 }
 
 SymBackTrace::~SymBackTrace() {
     delete d;
+}
+
+SymBackTrace& SymBackTrace::operator=(const SymBackTrace &ref) {
+    delete d;
+    d = new Private(*ref.d);
+    return *this;
 }
 
 void SymBackTrace::printBackTrace() {
@@ -78,23 +146,17 @@ void SymBackTrace::printBackTrace() {
 }
 
 void SymBackTrace::pushCall(int fncId, const LocationWriter &lw) {
-    const CodeStorage::Fnc *fnc = d->stor.fncs[fncId];
-    if (!fnc)
-        // unable to resolve Fnc by UID
-        TRAP;
-
-    // TODO
-    push(d->btStack, fnc, lw);
+    const CodeStorage::Fnc *fnc = d->fncById(fncId);
+    d->pushFnc(fnc, lw);
 }
 
 const CodeStorage::Fnc* SymBackTrace::popCall() {
-    const Private::TStackItem top = d->btStack.top();
-    const CodeStorage::Fnc *fnc = top.first;
+    const CodeStorage::Fnc *fnc = d->fncOnTop();
     if (!fnc)
         // bt corruption detected
         TRAP;
 
-    d->btStack.pop();
+    d->popFnc();
     return fnc;
 }
 
@@ -103,8 +165,15 @@ unsigned SymBackTrace::size() const {
 }
 
 int SymBackTrace::countOccurrencesOfFnc(int fncId) const {
-    // TODO
-    (void) fncId;
-    TRAP;
-    return -1;
+    const CodeStorage::Fnc *fnc = d->fncById(fncId);
+    return d->nestMap[fnc];
+}
+
+int SymBackTrace::countOccurrencesOfTopFnc() const {
+    const CodeStorage::Fnc *fnc = d->fncOnTop();
+    if (!fnc)
+        // empty stack -> not occurrences
+        return 0;
+
+    return d->nestMap[fnc];
 }

@@ -24,6 +24,7 @@
 #include <cl/location.hh>
 #include <cl/storage.hh>
 
+#include "symbt.hh"
 #include "symheap.hh"
 #include "symproc.hh"
 #include "symstate.hh"
@@ -39,11 +40,12 @@
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of SymCallCtx
 struct SymCallCtx::Private {
-    IBtPrinter                  *bt;
+    SymBackTrace                *bt;
     SymHeap                     heap;
     const CodeStorage::Fnc      *fnc;
     const struct cl_operand     *dst;
     SymHeapUnion                rawResults;
+    int                         nestLevel;
 
     void assignReturnValue();
     void destroyStackFrame();
@@ -126,7 +128,8 @@ void SymCallCtx::Private::destroyStackFrame() {
                         << var.uid << " (" << var.name << ")" );
 #endif
 
-                const TObjId obj = res.objByCVar(var.uid);
+                const CVar cVar(var.uid, this->nestLevel);
+                const TObjId obj = res.objByCVar(cVar);
                 if (obj < 0)
                     TRAP;
 
@@ -153,11 +156,12 @@ void SymCallCtx::flushCallResults(SymHeapUnion &dst) {
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of SymCallCache
 struct SymCallCache::Private {
-    IBtPrinter                  *bt;
+    SymBackTrace                *bt;
     LocationWriter              lw;
     SymHeap                     *heap;
     SymHeapProcessor            *proc;
     const CodeStorage::Fnc      *fnc;
+    int                         nestLevel;
 
     /* XXX */ std::vector<SymCallCtx *> cont;
 
@@ -165,7 +169,7 @@ struct SymCallCache::Private {
     void setCallArgs(const CodeStorage::TOperandList &opList);
 };
 
-SymCallCache::SymCallCache(IBtPrinter *bt):
+SymCallCache::SymCallCache(SymBackTrace *bt):
     d(new Private)
 {
     d->bt = bt;
@@ -196,7 +200,8 @@ void SymCallCache::Private::createStackFrame() {
                     << " (" << var.name << ")" );
 #endif
 
-            this->heap->objCreate(var.clt, var.uid);
+            const CVar cVar(var.uid, this->nestLevel);
+            this->heap->objCreate(var.clt, cVar);
         }
     }
 }
@@ -208,17 +213,27 @@ void SymCallCache::Private::setCallArgs(const CodeStorage::TOperandList &opList)
     if (args.size() + 2 != opList.size())
         TRAP;
 
+    // wait, we're crossing stack frame boundaries here!  We need to use one
+    // backtrace instance for source operands and another one for destination
+    // operands.  The called function already appears on the given backtrace, so
+    // that we can get the source backtrace by removing it from there locally.
+    SymBackTrace callerSiteBt(*this->bt);
+    callerSiteBt.popCall();
+    SymHeapProcessor srcProc(*this->heap, &callerSiteBt);
+
     // set args' values
     int pos = /* dst + fnc */ 2;
     BOOST_FOREACH(int arg, args) {
         const struct cl_operand &op = opList[pos++];
+        srcProc.setLocation(this->lw);
         this->proc->setLocation(this->lw);
 
-        const TValueId val = this->proc->heapValFromOperand(op);
+        const TValueId val = srcProc.heapValFromOperand(op);
         if (VAL_INVALID == val)
             TRAP;
 
-        const TObjId lhs = this->heap->objByCVar(arg);
+        const CVar cVar(arg, this->nestLevel);
+        const TObjId lhs = this->heap->objByCVar(cVar);
         if (OBJ_INVALID == lhs)
             TRAP;
 
@@ -258,6 +273,12 @@ SymCallCtx& SymCallCache::getCallCtx(SymHeap heap,
         // this should have been handled elsewhere
         TRAP;
 
+    // check recursion depth (if any)
+    d->nestLevel = d->bt->countOccurrencesOfFnc(uid);
+    if (1 != d->nestLevel)
+        // recursive calls haven't been well tested yet
+        TRAP;
+
     // initialize local variables of the called fnc
     d->createStackFrame();
     d->setCallArgs(opList);
@@ -271,6 +292,7 @@ SymCallCtx& SymCallCache::getCallCtx(SymHeap heap,
     ctx->d->fnc  = d->fnc;
     ctx->d->heap = *d->heap;
     ctx->d->dst  = &dst;
+    ctx->d->nestLevel = d->nestLevel;
     d->cont.push_back(ctx);
     return *ctx;
 }

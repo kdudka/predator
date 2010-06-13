@@ -22,7 +22,7 @@
 
 #include <cl/cl_msg.hh>
 
-#include "btprint.hh"
+#include "symbt.hh"
 #include "symheap.hh"
 #include "symplot.hh"
 #include "symstate.hh"
@@ -38,10 +38,7 @@
 // /////////////////////////////////////////////////////////////////////////////
 // SymHeapProcessor implementation
 void SymHeapProcessor::printBackTrace() {
-    if (!btPrinter_)
-        return;
-
-    btPrinter_->printBackTrace();
+    bt_->printBackTrace();
 }
 
 TValueId SymHeapProcessor::heapValFromCst(const struct cl_operand &op) {
@@ -234,7 +231,9 @@ TObjId SymHeapProcessor::heapObjFromOperand(const struct cl_operand &op)
             return OBJ_INVALID;
     }
 
-    TObjId var = heap_.objByCVar(uid);
+    const int nestLevel = bt_->countOccurrencesOfTopFnc();
+    const CVar cVar(uid, nestLevel);
+    TObjId var = heap_.objByCVar(cVar);
     if (OBJ_INVALID == var)
         // unable to resolve static variable
         TRAP;
@@ -370,7 +369,7 @@ namespace {
             return false;
 
         for (; OBJ_INVALID != obj; obj = heap.objParent(obj))
-            if (-1 != heap.cVar(obj))
+            if (heap.cVar(0, obj))
                 return false;
 
         return true;
@@ -689,9 +688,9 @@ void SymHeapProcessor::execFree(const CodeStorage::TOperandList &opList) {
 
     // FIXME: should check ifAllocated (is there possibility for error?)
     //        aliasing problem for  free(first item pointer)
-    const int cVar = heap_.cVar(obj);
-    if (-1 != cVar) {
-        CL_DEBUG("about to free var #" << cVar);
+    CVar cVar;
+    if (heap_.cVar(&cVar, obj)) {
+        CL_DEBUG("about to free var #" << cVar.uid);
         CL_ERROR_MSG(lw_, "attempt to free a non-heap object");
         this->printBackTrace();
         return;
@@ -777,11 +776,12 @@ namespace {
         return true;
     }
 
-    template <int NTH, class TOpList, class THeap>
-    bool readHeapVal(TValueId *dst, const TOpList opList, const THeap &heap)
+    template <int NTH, class TOpList, class THeap, class TBt>
+    bool readHeapVal(TValueId *dst, const TOpList opList, const THeap &heap,
+                     TBt *bt)
     {
         // FIXME: we might use the already existing instance instead
-        SymHeapProcessor proc(const_cast<THeap &>(heap));
+        SymHeapProcessor proc(const_cast<THeap &>(heap), bt);
 
         const cl_operand &op = opList[NTH + /* dst + fnc */ 2];
         const TValueId value = proc.heapValFromOperand(op);
@@ -792,9 +792,9 @@ namespace {
         return true;
     }
 
-    template <class TInsn, class THeap>
+    template <class TInsn, class THeap, class TBt>
     bool readNameAndValue(std::string *pName, TValueId *pValue,
-                          const TInsn &insn, const THeap &heap)
+                          const TInsn &insn, const THeap &heap, TBt bt)
     {
         const CodeStorage::TOperandList &opList = insn.operands;
         const LocationWriter lw(&insn.loc);
@@ -802,7 +802,7 @@ namespace {
         if (!chkVoidCall<2>(opList))
             return false;
 
-        if (!readHeapVal<0>(pValue, opList, heap))
+        if (!readHeapVal<0>(pValue, opList, heap, bt))
             return false;
 
         if (!readPlotName<1>(pName, opList))
@@ -856,13 +856,13 @@ namespace {
         return true;
     }
 
-    template <class TInsn, class THeap>
-    bool callPlotByPtr(const TInsn &insn, const THeap &heap) {
+    template <class TInsn, class THeap, class TBt>
+    bool callPlotByPtr(const TInsn &insn, const THeap &heap, TBt *bt) {
         const LocationWriter lw(&insn.loc);
 
         std::string plotName;
         TValueId value;
-        if (!readNameAndValue(&plotName, &value, insn, heap)) {
+        if (!readNameAndValue(&plotName, &value, insn, heap, bt)) {
             emitPrototypeError(lw, "___sl_plot_by_ptr");
             return false;
         }
@@ -875,8 +875,8 @@ namespace {
         return true;
     }
 
-    template <class TInsn, class THeap>
-    bool callPlotStackFrame(const TInsn &insn, const THeap &heap) {
+    template <class TInsn, class THeap, class TBt>
+    bool callPlotStackFrame(const TInsn &insn, const THeap &heap, TBt *bt) {
         const CodeStorage::Storage &stor = *insn.stor;
         const LocationWriter lw(&insn.loc);
 
@@ -884,7 +884,7 @@ namespace {
         TValueId value;
         const CodeStorage::Fnc *fnc;
 
-        if (!readNameAndValue(&plotName, &value, insn, heap)
+        if (!readNameAndValue(&plotName, &value, insn, heap, bt)
                 || !fncFromHeapVal(stor, &fnc, value, heap))
         {
             emitPrototypeError(lw, "___sl_plot_stack_frame");
@@ -892,7 +892,7 @@ namespace {
         }
 
         SymHeapPlotter plotter(stor, heap);
-        if (!plotter.plotStackFrame(plotName, *fnc))
+        if (!plotter.plotStackFrame(plotName, *fnc, bt))
             emitPlotError(lw, plotName);
 
         return true;
@@ -941,11 +941,11 @@ bool SymHeapProcessor::execCall(TState &dst, const CodeStorage::Insn &insn,
         goto call_done;
 
     if (STREQ(fncName, "___sl_plot_stack_frame")
-            && callPlotStackFrame(insn, heap_))
+            && callPlotStackFrame(insn, heap_, bt_))
         goto call_done;
 
     if (STREQ(fncName, "___sl_plot_by_ptr")
-            && callPlotByPtr(insn, heap_))
+            && callPlotByPtr(insn, heap_, bt_))
         goto call_done;
 
     // no built-in has been matched

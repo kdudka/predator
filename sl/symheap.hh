@@ -237,6 +237,36 @@ class SymHeapCore {
 };
 
 /**
+ * bundles static identification of a variable with its instance number
+ *
+ * In order to enable call recursion, we need to distinguish among various
+ * instances of the same automatic variable in case a function is called
+ * recursively.
+ */
+struct CVar {
+    /// static identification of a variable
+    int uid;
+
+    /// zero for global/static variables, instance number 1..n otherwise
+    int inst;
+
+    CVar(): uid(-1) { }
+
+    CVar(int uid_, int inst_):
+        uid(uid_),
+        inst(inst_)
+    {
+    }
+};
+
+inline bool operator<(const CVar &a, const CVar &b) {
+    if (a.uid < b.uid)
+        return true;
+    else
+        return a.inst < b.inst;
+}
+
+/**
  * @b symbolic @b heap representation, the core part of "symexec" project
  */
 class SymHeap1: public SymHeapCore {
@@ -254,8 +284,8 @@ class SymHeap1: public SymHeapCore {
         SymHeap1& operator=(const SymHeap1 &);
 
     public:
-        /// container used to store foreign (integral) IDs to
-        typedef std::vector<int>        TCont;
+        /// container used to store CVar objects to
+        typedef std::vector<CVar> TContCVar;
 
     public:
         // XXX
@@ -288,24 +318,23 @@ class SymHeap1: public SymHeapCore {
         /**
          * look for a static/automatic variable corresponding to the given
          * symbolic heap object, which has to be @b valid
+         * @param dst instance of CVar object, to store the lookup result in
+         * case of success.  This may be also NULL, if there is no need to
+         * return the identification.
          * @param obj ID of the object to look for
-         * @return ID of a static/automatic variable (see CodeStorage) in case
-         * of success, -1 otherwise (which usually means the given object was
-         * allocated dynamically)
+         * @return true for in case of success (which means the variable is
+         * static/automatic, false otherwise (which usually means the given
+         * object was allocated dynamically)
          */
-        int cVar(TObjId obj) const;
+        bool cVar(CVar *dst, TObjId obj) const;
 
         /**
          * look for a heap object corresponding to the given static/automatic
          * variable
-         * @param uid ID of the static/automatic variable to look for
+         * @param cVar static/automatic variable to look for
          * @return A valid object ID in case of success, invalid otherwise.
-         * @attention This interface is not strong enough as soon as we allow
-         * recursive call of functions.
-         * @todo extend the interface constituted by SymHeap1::objByCVar() to
-         * deal with the recursive call of functions.
          */
-        TObjId objByCVar(int uid) const;
+        TObjId objByCVar(CVar cVar) const;
 
         /**
          * collect all static/automatic variables (see CodeStorage) which have
@@ -313,7 +342,7 @@ class SymHeap1: public SymHeapCore {
          * @param dst reference to a container to store the result to
          * @note The operation may return from 0 to n results.
          */
-        void gatherCVars(TCont &dst) const;
+        void gatherCVars(TContCVar &dst) const;
 
     public:
         /**
@@ -352,13 +381,13 @@ class SymHeap1: public SymHeapCore {
         /**
          * create a new symbolic heap object of @b known @b type
          * @param clt pointer to static type-info (see CodeStorage), compulsory.
-         * @param uid CodeStorage variable ID for non-heap object, or -1 for a
-         * heap object of known type
+         * @param cVar variable identification for non-heap object.  Use the
+         * default constructor for a heap object of known type
          * @note If you need to create a heap object of unknown type, use
          * objCreateAnon() instead.
          * @return ID of the just created symbolic heap object
          */
-        TObjId objCreate(const struct cl_type *clt, int uid);
+        TObjId objCreate(const struct cl_type *clt, CVar cVar = CVar());
 
         /**
          * create a new symbolic heap object of known size, but @b unknown @b

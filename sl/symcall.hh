@@ -26,7 +26,7 @@
  * during the symbolic execution
  */
 
-class IBtPrinter;
+class SymBackTrace;
 class SymHeap;
 class SymHeapUnion;
 
@@ -95,9 +95,11 @@ class SymCallCache {
     public:
         /**
          * create long term cache, this should happen once per SymExec lifetime
-         * @param bt an object able to print backtraces when necessary/suitable
+         * @param bt an instance of symbolic backtrace used to distinguish among
+         * instances of automatic variables and to print backtraces when
+         * necessary/suitable
          */
-        SymCallCache(IBtPrinter *bt);
+        SymCallCache(SymBackTrace *bt);
         ~SymCallCache();
 
         /**

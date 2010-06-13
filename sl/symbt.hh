@@ -40,9 +40,13 @@ class SymBackTrace: public IBtPrinter {
          * @param stor reference to storage object, later used for resolving fnc
          * IDs
          * @param rootFncId root function to start the backtrace with, in simple
-         * programs usually main()
+         * programs usually main(), -1 if there is no root (e.g. while looking
+         * for global junk)
          */
         SymBackTrace(const CodeStorage::Storage &stor, int rootFncId);
+
+        SymBackTrace(const SymBackTrace &);
+        SymBackTrace& operator=(const SymBackTrace &);
 
         virtual ~SymBackTrace();
 
@@ -77,6 +81,12 @@ class SymBackTrace: public IBtPrinter {
          * distinguish among different instances of the same local variable.
          */
         int countOccurrencesOfFnc(int fncId) const;
+
+        /**
+         * same as countOccurrencesOfFnc(), but operating on top of the
+         * backtrace stack
+         */
+        int countOccurrencesOfTopFnc() const;
 
     private:
         struct Private;

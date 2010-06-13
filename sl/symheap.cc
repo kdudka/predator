@@ -541,17 +541,77 @@ bool SymHeapCore::proveEq(bool *result, TValueId valA, TValueId valB) const {
 
 
 // /////////////////////////////////////////////////////////////////////////////
+// CVar lookup container
+class CVarMap {
+    private:
+        typedef std::map<CVar, TObjId>              TMap;
+        typedef std::pair<TObjId, int /* cnt */>    TGlItem;
+        typedef std::map<int /* uid */, TGlItem>    TGlMap;
+
+        TMap    lc_;
+        TGlMap  gl_;
+
+    public:
+        void insert(CVar cVar, TObjId obj) {
+            lc_[cVar] = obj;
+
+            // gl scope
+            TGlItem &ref = gl_[cVar.uid];
+            ref.first = obj;
+            ref.second ++;
+        }
+
+        void remove(CVar cVar) {
+            if (1 != lc_.erase(cVar))
+                // *** offset detected ***
+                TRAP;
+
+            // gl scope
+            TGlMap::iterator iter = gl_.find(cVar.uid);
+            if (gl_.end() == iter)
+                // *** offset detected ***
+                TRAP;
+
+            TGlItem &ref = iter->second;
+            if (0 == --ref.second)
+                gl_.erase(iter);
+        }
+
+        TObjId find(CVar cVar) {
+            TMap::iterator iterLc = lc_.find(cVar);
+            if (lc_.end() != iterLc)
+                return iterLc->second;
+
+            // gl scope
+            TGlMap::iterator iterGl = gl_.find(cVar.uid);
+            if (gl_.end() == iterGl)
+                // not found even there
+                return OBJ_INVALID;
+
+            const TGlItem &ref = iterGl->second;
+            return ref.first;
+        }
+
+        template <class TCont>
+        void getAll(TCont &dst) {
+            TMap::const_iterator i;
+            for (i = lc_.begin(); i != lc_.end(); ++i)
+                dst.push_back(i->first);
+        }
+};
+
+// /////////////////////////////////////////////////////////////////////////////
 // implementation of SymHeap1
 struct SymHeap1::Private {
     struct Object {
         const struct cl_type        *clt;
         size_t                      cbSize;
-        int /* CodeStorage */       cVar;
+        CVar                        cVar;
         int                         nth_item; // -1  OR  0 .. parent.item_cnt-1
         TObjId                      parent;
         TContObj                    subObjs;
 
-        Object(): clt(0), cbSize(0), cVar(-1), nth_item(-1), parent(OBJ_INVALID) { }
+        Object(): clt(0), cbSize(0), nth_item(-1), parent(OBJ_INVALID) { }
     };
 
     struct Value {
@@ -563,9 +623,7 @@ struct SymHeap1::Private {
         Value(): clt(0), compObj(OBJ_INVALID), isCustom(false) { }
     };
 
-    /// @attention this will break as soon as we allow recursion
-    typedef std::map<int, TObjId>   TCVarMap;
-    TCVarMap                        cVarMap;
+    CVarMap                         cVarMap;
 
     typedef std::map<int, TValueId> TCValueMap;
     TCValueMap                      cValueMap;
@@ -700,7 +758,7 @@ void SymHeap1::destroyObj(TObjId obj) {
         }
 
         // remove current
-        const TObjId kind = (-1 == ref.cVar)
+        const TObjId kind = (-1 == ref.cVar.uid)
             ? OBJ_DELETED
             : OBJ_LOST;
         SymHeapCore::objDestroy(obj, kind);
@@ -746,27 +804,30 @@ const struct cl_type* SymHeap1::valType(TValueId val) const {
     return d->values[val].clt;
 }
 
-int SymHeap1::cVar(TObjId obj) const {
+bool SymHeap1::cVar(CVar *dst, TObjId obj) const {
     if (this->lastObjId() < obj || obj <= 0)
         // object ID is either out of range, or does not represent a valid obj
-        return -1;
+        return false;
 
-    return d->objects[obj].cVar;
+    const CVar &cVar = d->objects[obj].cVar;
+    if (-1 == cVar.uid)
+        // looks like a heap object
+        return false;
+
+    if (dst)
+        // return its identification if requested to do so
+        *dst = cVar;
+
+    // non-heap object
+    return true;
 }
 
-/// @attention this will break as soon as we allow recursion
-TObjId SymHeap1::objByCVar(int uid) const {
-    Private::TCVarMap::iterator iter = d->cVarMap.find(uid);
-    if (d->cVarMap.end() == iter)
-        return OBJ_INVALID;
-    else
-        return iter->second;
+TObjId SymHeap1::objByCVar(CVar cVar) const {
+    return d->cVarMap.find(cVar);
 }
 
-void SymHeap1::gatherCVars(TCont &dst) const {
-    Private::TCVarMap::const_iterator i;
-    for (i = d->cVarMap.begin(); i != d->cVarMap.end(); ++i)
-        dst.push_back(i->first);
+void SymHeap1::gatherCVars(TContCVar &dst) const {
+    d->cVarMap.getAll(dst);
 }
 
 TObjId SymHeap1::valGetCompositeObj(TValueId val) const {
@@ -877,7 +938,7 @@ unsigned countPointers(const SymHeap1 &sh, TObjId obj) {
 
 /////////////////////////////////////////////////////////////////////////////
 
-TObjId SymHeap1::objCreate(const struct cl_type *clt, int uid) {
+TObjId SymHeap1::objCreate(const struct cl_type *clt, CVar cVar) {
     if(clt) {
         const enum cl_type_e code = clt->code;
         switch (code) {
@@ -906,12 +967,12 @@ TObjId SymHeap1::objCreate(const struct cl_type *clt, int uid) {
     this->resizeIfNeeded();
     Private::Object &ref = d->objects[obj];
     ref.clt     = clt;
-    ref.cVar    = uid;
+    ref.cVar    = cVar;
     if(clt)
         this->createSubs(obj);
 
-    if (/* heap object */ -1 != uid)
-        d->cVarMap[uid] = obj;
+    if (/* heap object */ -1 != cVar.uid)
+        d->cVarMap.insert(cVar, obj);
 
     this->initValClt(obj);
     return obj;
@@ -979,11 +1040,9 @@ void SymHeap1::objDestroy(TObjId obj) {
         TRAP;
 
     Private::Object &ref = d->objects[obj];
-    const int uid = ref.cVar;
-    if (uid != /* heap object */ -1
-            && 1 != d->cVarMap.erase(uid))
-        // *** offset detected while removing cVar reference ***
-        TRAP;
+    const CVar cv = ref.cVar;
+    if (cv.uid != /* heap object */ -1)
+        d->cVarMap.remove(cv);
 
     this->destroyObj(obj);
     if (OBJ_RETURN == obj) {
@@ -1196,7 +1255,7 @@ TObjId SymHeap2::Concretize_NE(TObjId ao)
 
     // 1. create struct (clone prototype?)
     const struct cl_type * clt = slsType(ao);
-    TObjId o = objCreate(clt,-1);  // create structure
+    TObjId o = objCreate(clt);  // create structure
 
 
     // 2. recycle listsegment, change to possibly empty
@@ -1490,7 +1549,7 @@ void Abstract(SymHeap &sh)
 
 /// create sls, needs to set value and lambda later
 TObjId SymHeap2::slsCreate(const struct cl_type *clt, int nextid, TAbstractLen alen) {
-    TObjId id = objCreate(/* no type */ 0, /* heap-object */ -1);
+    TObjId id = objCreate(/* no type */ 0, /* heap-object */ CVar());
     d->sl_segments[id].clt = clt;
     d->sl_segments[id].nextid = nextid;
     d->sl_segments[id].alen = alen;

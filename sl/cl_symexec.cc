@@ -24,7 +24,7 @@
 #include <cl/location.hh>
 #include <cl/storage.hh>
 
-#include "btprint.hh"
+#include "symbt.hh"
 #include "symexec.hh"
 #include "symproc.hh"
 #include "symstate.hh"
@@ -55,7 +55,8 @@ void initExec(SymExec &se, std::string cnf) {
 
 void digGlJunk(CodeStorage::Storage &stor, SymHeap &heap) {
     using namespace CodeStorage;
-    SymHeapProcessor proc(heap);
+    SymBackTrace bt(stor, /* no root */ -1);
+    SymHeapProcessor proc(heap, &bt);
 
     BOOST_FOREACH(const Var &var, stor.vars) {
         if (VAR_GL == var.code) {
@@ -63,7 +64,8 @@ void digGlJunk(CodeStorage::Storage &stor, SymHeap &heap) {
             CL_DEBUG_MSG(lw, "(g) destroying gl variable: #"
                     << var.uid << " (" << var.name << ")" );
 
-            const TObjId obj = heap.objByCVar(var.uid);
+            const CVar cVar(var.uid, /* gl variable */ 0);
+            const TObjId obj = heap.objByCVar(cVar);
             if (obj < 0)
                 TRAP;
 

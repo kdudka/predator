@@ -20,6 +20,7 @@
 #ifndef H_GUARD_BTPRINT_H
 #define H_GUARD_BTPRINT_H
 
+/// @todo drop this interface, it became rarely useful recently
 class IBtPrinter {
     public:
         virtual ~IBtPrinter() { }

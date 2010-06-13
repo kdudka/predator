@@ -103,9 +103,12 @@ void dump_obj(const SymHeap &heap, TObjId obj) {
         cout << "\n";
     }
 
-    const int cVar = heap.cVar(obj);
-    if (-1 != cVar)
-        cout << "    cVar      = /* CodeStorage var uid */ #" << cVar << "\n";
+    CVar cVar;
+    if (heap.cVar(&cVar, obj)) {
+        cout << "    cVar      = /* CodeStorage var uid */ #" << cVar.uid
+            << ", inst = " << cVar.inst
+            << "\n";
+    }
 
     const TValueId placedAt = heap.placedAt(obj);
     if (0 < placedAt)
@@ -249,7 +252,7 @@ void dump_value_refs(const SymHeap &heap, TValueId value) {
     }
 }
 
-void dump_cvar(const SymHeap &heap, int cVar) {
+void dump_cvar(const SymHeap &heap, CVar cVar) {
     const TObjId obj = heap.objByCVar(cVar);
     dump_obj(heap, obj);
 }
@@ -261,9 +264,9 @@ void dump_heap(const SymHeap &heap) {
         << static_cast<const void *>(&heap)
         << ")\n";
 
-    SymHeap::TCont cVars;
+    SymHeap::TContCVar cVars;
     heap.gatherCVars(cVars);
-    BOOST_FOREACH(const int cv, cVars) {
+    BOOST_FOREACH(const CVar cv, cVars) {
         dump_cvar(heap, cv);
         cout << "\n";
     }
