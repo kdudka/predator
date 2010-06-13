@@ -37,10 +37,6 @@
 
 // /////////////////////////////////////////////////////////////////////////////
 // SymHeapProcessor implementation
-void SymHeapProcessor::printBackTrace() {
-    bt_->printBackTrace();
-}
-
 TValueId SymHeapProcessor::heapValFromCst(const struct cl_operand &op) {
     bool isBool = false;
     enum cl_type_e code = op.type->code;
@@ -164,7 +160,7 @@ void SymHeapProcessor::heapObjHandleAccessorDeref(TObjId *pObj)
     }
 
 fail_with_bt:
-    this->printBackTrace();
+    bt_->printBackTrace();
 
 fail:
     *pObj = OBJ_DEREF_FAILED;
@@ -555,7 +551,7 @@ void SymHeapProcessor::heapSetSingleVal(TObjId lhs, TValueId rhs) {
 
     heap_.objSetValue(lhs, rhs);
     if (this->checkForJunk(oldValue))
-        this->printBackTrace();
+        bt_->printBackTrace();
 }
 
 void SymHeapProcessor::heapSetVal(TObjId lhs, TValueId rhs) {
@@ -619,7 +615,7 @@ void SymHeapProcessor::destroyObj(TObjId obj) {
 
     if (junk)
         // print backtrace at most once per one call of destroyObj()
-        this->printBackTrace();
+        bt_->printBackTrace();
 }
 
 void SymHeapProcessor::execFree(const CodeStorage::TOperandList &opList) {
@@ -655,7 +651,7 @@ void SymHeapProcessor::execFree(const CodeStorage::TOperandList &opList) {
 
         case UV_UNINITIALIZED:
             CL_ERROR_MSG(lw_, "free() called on uninitialized value");
-            this->printBackTrace();
+            bt_->printBackTrace();
             return;
 
         case UV_DEREF_FAILED:
@@ -666,14 +662,14 @@ void SymHeapProcessor::execFree(const CodeStorage::TOperandList &opList) {
     switch (obj) {
         case OBJ_DELETED:
             CL_ERROR_MSG(lw_, "double free() detected");
-            this->printBackTrace();
+            bt_->printBackTrace();
             return;
 
         case OBJ_LOST:
             // this is a double error in the analyzed program :-)
             CL_ERROR_MSG(lw_, "attempt to free a non-heap object"
                               ", which does not exist anyhow");
-            this->printBackTrace();
+            bt_->printBackTrace();
             return;
 
         case OBJ_UNKNOWN:
@@ -692,13 +688,13 @@ void SymHeapProcessor::execFree(const CodeStorage::TOperandList &opList) {
     if (heap_.cVar(&cVar, obj)) {
         CL_DEBUG("about to free var #" << cVar.uid);
         CL_ERROR_MSG(lw_, "attempt to free a non-heap object");
-        this->printBackTrace();
+        bt_->printBackTrace();
         return;
     }
 
     if (OBJ_INVALID != heap_.objParent(obj)) {
         CL_ERROR_MSG(lw_, "attempt to free a non-root object");
-        this->printBackTrace();
+        bt_->printBackTrace();
         return;
     }
 

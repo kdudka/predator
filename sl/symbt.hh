@@ -26,7 +26,6 @@
  */
 
 #include <cl/location.hh>
-#include "btprint.hh"
 
 namespace CodeStorage {
     struct Fnc;
@@ -34,7 +33,7 @@ namespace CodeStorage {
 }
 
 /// backtrace management
-class SymBackTrace: public IBtPrinter {
+class SymBackTrace {
     public:
         /**
          * @param stor reference to storage object, later used for resolving fnc

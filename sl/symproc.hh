@@ -127,9 +127,6 @@ class SymHeapProcessor {
         }
 
     private:
-        /// @todo optimize out the function, it became rarely useful recently
-        void printBackTrace();
-
         void heapSetSingleVal(TObjId lhs, TValueId rhs);
         void heapObjDefineType(TObjId lhs, TValueId rhs);
         void heapObjHandleAccessorDeref(TObjId *pObj);
