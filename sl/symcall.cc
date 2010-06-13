@@ -105,7 +105,7 @@ void SymCallCtx::Private::destroyStackFrame() {
 #if DEBUG_SE_STACK_FRAME
     const LocationWriter lw(&ref.def.loc);
     CL_DEBUG_MSG(lw, "<<< destroying stack frame of "
-            << nameOf(ref) << "():"
+            << nameOf(ref) << "()"
             << ", nestLevel = " << this->nestLevel);
 
     int hCnt = 0;

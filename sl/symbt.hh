@@ -43,16 +43,18 @@ class SymBackTrace {
          * for global junk)
          */
         SymBackTrace(const CodeStorage::Storage &stor, int rootFncId);
+        ~SymBackTrace();
 
         SymBackTrace(const SymBackTrace &);
         SymBackTrace& operator=(const SymBackTrace &);
 
-        virtual ~SymBackTrace();
-
-        /// see IBtPrinter::printBackTrace for details
-        virtual void printBackTrace();
-
     public:
+        /**
+         * stream out the backtrace, using CL_NOTE_MSG; or do nothing if the
+         * backtrace is trivial
+         */
+        void printBackTrace();
+
         /**
          * enter a call of function, thus enlarge the backtrace by one
          * @param fncId ID of function, which is being called

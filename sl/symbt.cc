@@ -45,8 +45,8 @@ struct SymBackTrace::Private {
     {
     }
 
-    const CodeStorage::Fnc* fncById(int id) const;
     const CodeStorage::Fnc* fncOnTop() const;
+    const CodeStorage::Fnc* fncById(int id) const;
     void pushFnc(const CodeStorage::Fnc *, const LocationWriter &);
     void popFnc();
 };
