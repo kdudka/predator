@@ -359,6 +359,14 @@ void SymHeapUnion::insert(const SymHeap &heap) {
             return;
     }
 
+#if SE_STATE_HASH_OPTIMIZATION_DEBUG
+    BOOST_FOREACH(const SymHeap &current, heaps_) {
+        if (heap == current)
+            // *** hash function failed ***
+            TRAP;
+    }
+#endif
+
     // add given heap to union
     row.push_back(heaps_.size());
     heaps_.push_back(heap);
