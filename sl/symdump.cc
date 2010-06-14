@@ -18,7 +18,6 @@
  */
 
 #include "config.h"
-#include "symdump.hh"
 
 #include <cl/code_listener.h>
 
@@ -27,6 +26,10 @@
 #include <iostream>
 
 #include <boost/foreach.hpp>
+
+// XXX
+#define SymHeap SymHeap1
+#include "symdump.hh"
 
 const int have_symdump = 1;
 

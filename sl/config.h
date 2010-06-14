@@ -51,12 +51,18 @@ extern const char *sl_git_sha1;
 #define DEBUG_SYMID_FORCE_INT           0
 
 /**
+ * if 1, call optimization is not performed; it may introduce some compile-time
+ * warnings and memory leaks as a side effect
+ */
+#define SE_BYPASS_CALL_CACHE                1
+
+/**
  * maximal call depth
  * @attention Be careful here, setting it to big value may cause a stack
  * overflow because of the current suboptimal approach used in
  * SymExec::Private::execInsnCall()
  */
-#define SE_MAX_CALL_DEPTH               0x100
+#define SE_MAX_CALL_DEPTH                   0x100
 
 /**
  * if 1, SymHeapUnion uses (trivial) hash optimization

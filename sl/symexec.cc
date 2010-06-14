@@ -408,6 +408,9 @@ void SymExec::Private::execInsnCall(const SymHeap &heap, SymHeapUnion &results, 
     if (!ctx.needExec()) {
         CL_DEBUG_MSG(this->lw, "(x) call of function optimized out");
         ctx.flushCallResults(results);
+
+        // leave backtrace
+        this->btStack->popCall();
         return;
     }
 

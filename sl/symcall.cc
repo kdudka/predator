@@ -37,6 +37,9 @@
 #   define DEBUG_SE_STACK_FRAME 0
 #endif
 
+#ifndef SE_BYPASS_CALL_CACHE
+#   define SE_BYPASS_CALL_CACHE 0
+#endif
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of SymCallCtx
 struct SymCallCtx::Private {
@@ -46,6 +49,7 @@ struct SymCallCtx::Private {
     const struct cl_operand     *dst;
     SymHeapUnion                rawResults;
     int                         nestLevel;
+    bool                        pending;
 
     void assignReturnValue();
     void destroyStackFrame();
@@ -54,6 +58,7 @@ struct SymCallCtx::Private {
 SymCallCtx::SymCallCtx():
     d(new Private)
 {
+    d->pending = true;
 }
 
 SymCallCtx::~SymCallCtx() {
@@ -61,12 +66,10 @@ SymCallCtx::~SymCallCtx() {
 }
 
 bool SymCallCtx::needExec() const {
-    // TODO: optimization
-    return true;
+    return d->pending;
 }
 
 const SymHeap& SymCallCtx::entry() const {
-    // TODO: optimization
     return d->heap;
 }
 
@@ -148,23 +151,66 @@ void SymCallCtx::Private::destroyStackFrame() {
 }
 
 void SymCallCtx::flushCallResults(SymHeapUnion &dst) {
-    // TODO: optimization
-    d->assignReturnValue();
-    d->destroyStackFrame();
+    if (d->pending) {
+        d->pending = false;
+        d->assignReturnValue();
+        d->destroyStackFrame();
+    }
     dst.insert(d->rawResults);
 }
 
 // /////////////////////////////////////////////////////////////////////////////
+// TODO: write some summary
+class PerFncCache {
+    private:
+        typedef std::vector<SymCallCtx *> TCtxMap;
+
+        SymHeapUnion    huni_;
+        TCtxMap         ctxMap_;
+
+    public:
+        ~PerFncCache() {
+            BOOST_FOREACH(SymCallCtx *ctx, ctxMap_) {
+                delete ctx;
+            }
+        }
+
+        SymCallCtx* lookup(SymHeap &heap) {
+#if SE_BYPASS_CALL_CACHE
+            return 0;
+#endif
+            int idx = huni_.lookup(heap);
+            if (-1 == idx)
+                return 0;
+
+            return ctxMap_.at(idx);
+        }
+
+        // FIXME: suboptimal interaction with SymHeapUnion during lookup/insert
+        void insert(SymHeap &heap, SymCallCtx *ctx) {
+#if SE_BYPASS_CALL_CACHE
+            return;
+#endif
+            huni_.insert(heap);
+            ctxMap_.push_back(ctx);
+            if (huni_.size() != ctxMap_.size())
+                // integrity of PerFncCache broken, perhaps called unexpectedly?
+                TRAP;
+        }
+};
+
+// /////////////////////////////////////////////////////////////////////////////
 // implementation of SymCallCache
 struct SymCallCache::Private {
+    typedef std::map<int /* uid */, PerFncCache> TCache;
+
+    TCache                      cache;
     SymBackTrace                *bt;
     LocationWriter              lw;
     SymHeap                     *heap;
     SymHeapProcessor            *proc;
     const CodeStorage::Fnc      *fnc;
     int                         nestLevel;
-
-    /* XXX */ std::vector<SymCallCtx *> cont;
 
     void createStackFrame();
     void setCallArgs(const CodeStorage::TOperandList &opList);
@@ -177,9 +223,6 @@ SymCallCache::SymCallCache(SymBackTrace *bt):
 }
 
 SymCallCache::~SymCallCache() {
-    BOOST_FOREACH(SymCallCtx *ctx, d->cont) {
-        delete ctx;
-    }
     delete d;
 }
 
@@ -275,6 +318,9 @@ SymCallCtx& SymCallCache::getCallCtx(SymHeap heap,
         // this should have been handled elsewhere
         TRAP;
 
+    CL_DEBUG_MSG(d->lw, "SymCallCtx::getCallCtx() is considering function "
+            << nameOf(*d->fnc) << "()");
+
     // check recursion depth (if any)
     d->nestLevel = d->bt->countOccurrencesOfFnc(uid);
     if (1 != d->nestLevel)
@@ -284,16 +330,22 @@ SymCallCtx& SymCallCache::getCallCtx(SymHeap heap,
     d->createStackFrame();
     d->setCallArgs(opList);
 
-    // TODO: prune heap
-    // TODO: cache lookup
+    // TODO: prune heap at this point
+    
+    // cache lookup
+    PerFncCache &pfc = d->cache[uid];
+    SymCallCtx *ctx = pfc.lookup(heap);
+    if (ctx)
+        return *ctx;
 
     // XXX
-    SymCallCtx *ctx = new SymCallCtx;
+    ctx = new SymCallCtx;
+    pfc.insert(heap, ctx);
+
     ctx->d->bt   = d->bt;
     ctx->d->fnc  = d->fnc;
     ctx->d->heap = *d->heap;
     ctx->d->dst  = &dst;
     ctx->d->nestLevel = d->nestLevel;
-    d->cont.push_back(ctx);
     return *ctx;
 }

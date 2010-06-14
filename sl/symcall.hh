@@ -26,8 +26,9 @@
  * during the symbolic execution
  */
 
+#include "symheap.hh"
+
 class SymBackTrace;
-class SymHeap;
 class SymHeapUnion;
 
 namespace CodeStorage {
@@ -77,6 +78,7 @@ class SymCallCtx {
         ~SymCallCtx();
 
         /// @note these objects can't be created/destroyed out of SymCallCache
+        friend class /* SymCallCache helper */ PerFncCache;
         friend class SymCallCache;
 
         /// object copying is @b not allowed
