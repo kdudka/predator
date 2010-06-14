@@ -87,6 +87,20 @@ struct FullIndex : public Index<T> {
 	
 };
 
+template <class T>
+class Guard {
+	T* obj;
+public:
+	Guard(T* obj) : obj(obj) {}
+	~Guard() {
+		if (this->obj)
+			delete this->obj;
+	}
+	void release() {
+		this->obj = NULL;
+	}
+};
+
 class utils {
 	
 public:

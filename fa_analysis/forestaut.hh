@@ -63,42 +63,14 @@ public:
 	}
 
 	~FA() {
+		this->clear();
+	}
+	
+	void clear() {
 		for (vector<TA<label_type>*>::iterator i = this->roots.begin(); i != this->roots.end(); ++i)
 			this->taMan.release(*i);
-	}
-
-};
-
-class UFA {
-	
-	TA<FA::label_type>& backend;
-	
-	size_t stateOffset;
-	
-	mutable LabMan& labMan;
-	
-public:
-
-	UFA(TA<FA::label_type>& backend, LabMan& labMan) : backend(backend), stateOffset(1), labMan(labMan) {
-		// let 0 be the only accepting state
-		this->backend.addFinalState(0);
-	}
-
-	TA<FA::label_type>& fa2ta(TA<FA::label_type>& dst, Index<size_t>& index, const FA& src) {
-		vector<size_t> lhs;
-		dst.clear();
-		for (vector<TA<FA::label_type>*>::const_iterator i = src.roots.begin(); i != src.roots.end(); ++i) {
-			TA<FA::label_type>::reduce(dst, **i, index, this->stateOffset, false);
-			lhs.push_back(index[(*i)->getFinalState()]);
-		}
-		dst.addTransition(lhs, &labMan.lookup(src.variables, lhs.size()), 0);
-		dst.addFinalState(0);
-		return dst;
-	}
-
-	void join(const TA<FA::label_type>& src, const Index<size_t>& index) {
-		TA<FA::label_type>::disjointUnion(this->backend, src, false);
-		this->stateOffset += index.size();
+		this->roots.clear();
+		this->variables.clear()
 	}
 
 };

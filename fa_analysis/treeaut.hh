@@ -204,14 +204,18 @@ public:
 		bool next() {
 			size_t oldSize = this->_stack.size();
 			this->insertLhs((*this->_stack.back().first)->_lhs->first);
+			// if something changed then we have a new "working" item on the top of the stack
 			if (this->_stack.size() != oldSize)
 				return true;
 			do {
 				++this->_stack.back().first;
+				// is there something to process ?
 				if (this->_stack.back().first != this->_stack.back().second)
 					return true;
+				// discard processed queue
 				this->_stack.pop_back();
 			} while (!this->_stack.empty());
+			// nothing else remains
 			return false;
 		}
 		
@@ -280,6 +284,13 @@ public:
 			this->transCache().release(*i);
 		this->transitions.clear();
 		this->finalStates.clear();
+	}
+
+	void load(const TA<T>::dfs_cache_type& cache, const TA<T>& ta, const vector<size_t>& stack, bool registerFinalStates = true) {
+		for (TA<T>::dfs_iterator i = ta.dfsStart(dfsCache, stack); i->isValid(); ++i)
+			this->addTransition(*i);
+		if (registerFinalStates)
+			this->addFinalStates(stack);
 	}
 	
 	size_t newState() { return this->next_state++; }
@@ -382,6 +393,8 @@ public:
 	}
 
 	void addFinalState(size_t state) { this->finalStates.insert(state); }
+	
+	void addFinalStates(const vector<size_t>& states) { this->finalStates.insert(states.begin(), states.end()); }
 	
 	void removeFinalState(size_t state) { this->finalStates.erase(state); }
 	
