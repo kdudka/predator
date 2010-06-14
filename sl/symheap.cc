@@ -602,6 +602,14 @@ class CVarMap {
             for (i = lc_.begin(); i != lc_.end(); ++i)
                 dst.push_back(i->first);
         }
+
+        template <class TFunctor>
+        void goThroughObjs(TFunctor &f)
+        {
+            TMap::const_iterator i;
+            for (i = lc_.begin(); i != lc_.end(); ++i)
+                f(i->second);
+        }
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -739,19 +747,22 @@ void SymHeap1::createSubs(TObjId obj) {
 }
 
 #if SE_STATE_HASH_OPTIMIZATION
-size_t SymHeap1::hash() const {
-    // FIXME: suboptimal hash implementation
-    size_t hashVal = 0;
+struct Hasher {
+    const SymHeap1      &heap;
+    size_t              hashVal;
 
-    TContCVar cVars;
-    this->gatherCVars(cVars);
-    BOOST_FOREACH(CVar cv, cVars) {
-        const TObjId var = this->objByCVar(cv);
+    Hasher(const SymHeap1 &heap_):
+        heap(heap_),
+        hashVal(0)
+    {
+    }
+
+    void operator() (TObjId var) {
         if (var < 0)
             // heap corruption detected
             TRAP;
 
-        const TValueId value = this->valueOf(var);
+        const TValueId value = heap.valueOf(var);
 #if SE_STATE_HASH_OPTIMIZATION_DEBUG
         CL_DEBUG("SymHeap1::hash() - var #" << var
                 << " has value: " << value);
@@ -759,19 +770,19 @@ size_t SymHeap1::hash() const {
         if (value <= 0) {
             // special value, add it into the hash
             hashVal -= (7 * value);
-            continue;
+            return;
         }
 
-        if (OBJ_INVALID != this->valGetCompositeObj(value))
+        if (OBJ_INVALID != heap.valGetCompositeObj(value))
             // skip composite values for now
-            continue;
+            return;
 
-        if (VAL_INVALID != this->valGetCustom(0, value))
+        if (VAL_INVALID != heap.valGetCustom(0, value))
             // skip custom values for now
-            continue;
+            return;
 
         // add the EUnknownValue code into the hash
-        const EUnknownValue code = this->valGetUnknown(value);
+        const EUnknownValue code = heap.valGetUnknown(value);
         hashVal += (1 << static_cast<int>(code));
 
 #if 0
@@ -783,11 +794,16 @@ size_t SymHeap1::hash() const {
         hashVal += cnt;
 #endif
     }
+};
 
+size_t SymHeap1::hash() const {
+    // FIXME: suboptimal hash implementation
+    Hasher f(*this);
+    d->cVarMap.goThroughObjs(f);
 #if SE_STATE_HASH_OPTIMIZATION_DEBUG
-    CL_DEBUG("SymHeap1::hash() returning " << hashVal );
+    CL_DEBUG("SymHeap1::hash() returning " << f.hashVal);
 #endif
-    return hashVal;
+    return f.hashVal;
 }
 #endif
 
