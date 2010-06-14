@@ -37,6 +37,10 @@
 #include <boost/tuple/tuple.hpp>
 #include <boost/tuple/tuple_comparison.hpp>
 
+#ifndef SE_STATE_HASH_OPTIMIZATION_DEBUG
+#   define SE_STATE_HASH_OPTIMIZATION_DEBUG 0
+#endif
+
 namespace {
     // XXX: force linker to pull-in the symdump module into .so
     void pull_in_symdump(void) {
@@ -733,6 +737,50 @@ void SymHeap1::createSubs(TObjId obj) {
         }
     }
 }
+
+#if SE_STATE_HASH_OPTIMIZATION
+size_t SymHeap1::hash() const {
+    // FIXME: suboptimal hash implementation
+    size_t hashVal = 0;
+
+    TContCVar cVars;
+    this->gatherCVars(cVars);
+    BOOST_FOREACH(CVar cv, cVars) {
+        const TObjId var = this->objByCVar(cv);
+        if (var < 0)
+            // heap corruption detected
+            TRAP;
+
+        const TValueId value = this->valueOf(var);
+        if (value <= 0) {
+            // special value, add it into the hash
+            hashVal -= (7 * value);
+            continue;
+        }
+
+        hashVal += this->usedByCount(value);
+
+#if 0
+        if (OBJ_INVALID != this->valGetCompositeObj(value))
+            // skip composite values for now
+            continue;
+
+        if (VAL_INVALID != this->valGetCustom(0, value))
+            // skip custom values for now
+            continue;
+
+        // add the EUnknownValue code into the hash
+        const EUnknownValue code = this->valGetUnknown(value);
+        hashVal += (1 << static_cast<int>(code));
+#endif
+    }
+
+#if SE_STATE_HASH_OPTIMIZATION_DEBUG
+    CL_DEBUG("SymHeap1::hash() returning " << hashVal );
+#endif
+    return hashVal;
+}
+#endif
 
 // FIXME why resize?
 TValueId SymHeap1::valueOf(TObjId obj) const {

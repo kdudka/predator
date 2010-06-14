@@ -57,3 +57,9 @@ extern const char *sl_git_sha1;
  * SymExec::Private::execInsnCall()
  */
 #define SE_MAX_CALL_DEPTH               0x100
+
+/**
+ * if 1, SymHeapUnion uses (trivial) hash optimization
+ */
+#define SE_STATE_HASH_OPTIMIZATION          1
+#define SE_STATE_HASH_OPTIMIZATION_DEBUG    0

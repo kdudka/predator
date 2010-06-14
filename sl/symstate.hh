@@ -47,7 +47,11 @@ class SymHeapUnion {
         typedef TList::iterator iterator;
 
     public:
-        virtual ~SymHeapUnion() { }
+        SymHeapUnion();
+        virtual ~SymHeapUnion();
+
+        SymHeapUnion(const SymHeapUnion &);
+        SymHeapUnion& operator=(const SymHeapUnion &);
 
         /// insert given SymHeap object into the union
         virtual void insert(const SymHeap &heap);
@@ -77,6 +81,10 @@ class SymHeapUnion {
 
     private:
         TList heaps_;
+
+    private:
+        struct Private;
+        Private *d;
 };
 
 /**

@@ -27,10 +27,15 @@
  * code listener
  */
 
+#include "config.h"
 #include "symid.hh"
 
 #include <vector>
 #include <list>
+
+#ifndef SE_STATE_HASH_OPTIMIZATION
+#   define SE_STATE_HASH_OPTIMIZATION 0
+#endif
 
 struct cl_accessor;
 struct cl_type;
@@ -284,6 +289,10 @@ class SymHeap1: public SymHeapCore {
 
         /// @note there is no such thing like COW implemented for now
         SymHeap1& operator=(const SymHeap1 &);
+
+#if SE_STATE_HASH_OPTIMIZATION
+        virtual size_t hash() const;
+#endif
 
     public:
         /// container used to store CVar objects to

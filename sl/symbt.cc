@@ -21,6 +21,7 @@
 #include "symbt.hh"
 
 #include <cl/cl_msg.hh>
+#include <cl/location.hh>
 #include <cl/storage.hh>
 
 #include "util.hh"

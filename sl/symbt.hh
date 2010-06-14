@@ -25,7 +25,7 @@
  * SymBackTrace - backtrace management
  */
 
-#include <cl/location.hh>
+struct LocationWriter;
 
 namespace CodeStorage {
     struct Fnc;
