@@ -752,15 +752,16 @@ size_t SymHeap1::hash() const {
             TRAP;
 
         const TValueId value = this->valueOf(var);
+#if SE_STATE_HASH_OPTIMIZATION_DEBUG
+        CL_DEBUG("SymHeap1::hash() - var #" << var
+                << " has value: " << value);
+#endif
         if (value <= 0) {
             // special value, add it into the hash
             hashVal -= (7 * value);
             continue;
         }
 
-        hashVal += this->usedByCount(value);
-
-#if 0
         if (OBJ_INVALID != this->valGetCompositeObj(value))
             // skip composite values for now
             continue;
@@ -772,6 +773,14 @@ size_t SymHeap1::hash() const {
         // add the EUnknownValue code into the hash
         const EUnknownValue code = this->valGetUnknown(value);
         hashVal += (1 << static_cast<int>(code));
+
+#if 0
+        const unsigned cnt = this->usedByCount(value);
+#if SE_STATE_HASH_OPTIMIZATION_DEBUG
+        CL_DEBUG("SymHeap1::hash() - value #" << value
+                << " used " << cnt << " times");
+#endif
+        hashVal += cnt;
 #endif
     }
 

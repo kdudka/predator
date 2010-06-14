@@ -61,10 +61,10 @@ extern const char *sl_git_sha1;
 /**
  * if 1, SymHeapUnion uses (trivial) hash optimization
  */
-#define SE_STATE_HASH_OPTIMIZATION          0
+#define SE_STATE_HASH_OPTIMIZATION          1
 
 /**
  * if 1, turn on extensive debugging of hash optimization with significant
  * performance impact and a lot of noise in the debug output
  */
-#define SE_STATE_HASH_OPTIMIZATION_DEBUG    1
+#define SE_STATE_HASH_OPTIMIZATION_DEBUG    0
