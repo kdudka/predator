@@ -24,9 +24,10 @@
 #include <cl/location.hh>
 #include <cl/storage.hh>
 
+#include "symbt.hh"
 #include "symheap.hh"
-#include "worklist.hh"
 #include "util.hh"
+#include "worklist.hh"
 
 #include <fstream>
 #include <iomanip>
@@ -125,7 +126,7 @@ struct SymHeapPlotter::Private {
     void digObj(TObjId obj);
     void digValues();
     void plotObj(TObjId obj);
-    void plotCVar(int uid);
+    void plotCVar(CVar cVar);
 };
 
 #define SL_QUOTE(what) "\"" << what << "\""
@@ -243,7 +244,7 @@ void SymHeapPlotter::Private::plotNodeObj(TObjId obj, enum cl_type_e code) {
     while (OBJ_INVALID != (next = this->heap->objParent(root)))
         root = next;
 
-    if (-1 == this->heap->cVar(root))
+    if (this->heap->cVar(0, root))
         // colorize heap (sub)object
         this->dotStream << ", fontcolor=red";
 
@@ -258,16 +259,16 @@ void SymHeapPlotter::Private::plotNodeObj(TObjId obj, enum cl_type_e code) {
     else
         this->dotStream << ", label=\"[" << prefixByCode(code) << "] #";
 
-    const int cVar = this->heap->cVar(obj);
-    if (-1 == cVar) {
-        this->dotStream << obj;
-
-    } else {
-        this->dotStream << cVar;
-        const CodeStorage::Var &var = this->stor->vars[cVar];
+    CVar cVar;
+    if (this->heap->cVar(&cVar, obj)) {
+        this->dotStream << cVar.uid;
+        const CodeStorage::Var &var = this->stor->vars[cVar.uid];
         std::string name = var.name;
         if (!name.empty())
             this->dotStream << " - " << name;
+    }
+    else {
+        this->dotStream << obj;
     }
 
     std::string filedName;
@@ -645,15 +646,15 @@ wl_ready:
     this->digValues();
 }
 
-void SymHeapPlotter::Private::plotCVar(int uid) {
+void SymHeapPlotter::Private::plotCVar(CVar cVar) {
     // CodeStorage variable lookup
-    const CodeStorage::Var &var = this->stor->vars[uid];
+    const CodeStorage::Var &var = this->stor->vars[cVar.uid];
     this->lw = &var.loc;
     CL_DEBUG_MSG(this->lw, "XXX plotting stack variable: #" << var.uid
             << " (" << var.name << ")" );
 
     // SymbolicHeap variable lookup
-    const TObjId obj = this->heap->objByCVar(uid);
+    const TObjId obj = this->heap->objByCVar(cVar);
     if (OBJ_INVALID == obj)
         CL_DEBUG_MSG(this->lw, "objByCVar lookup failed");
 
@@ -681,10 +682,10 @@ bool SymHeapPlotter::plot(const std::string &name) {
         return false;
 
     // go through all stack variables
-    SymHeap::TCont cVars;
+    SymHeap::TContCVar cVars;
     d->heap->gatherCVars(cVars);
-    BOOST_FOREACH(int uid, cVars) {
-        d->plotCVar(uid);
+    BOOST_FOREACH(CVar cv, cVars) {
+        d->plotCVar(cv);
     }
 
     // close dot file
@@ -708,7 +709,8 @@ bool SymHeapPlotter::plotHeapValue(const std::string &name, TValueId value) {
 }
 
 bool SymHeapPlotter::plotStackFrame(const std::string           &name,
-                                    const CodeStorage::Fnc      &fnc)
+                                    const CodeStorage::Fnc      &fnc,
+                                    SymBackTrace                *bt)
 {
     using namespace CodeStorage;
 
@@ -722,7 +724,9 @@ bool SymHeapPlotter::plotStackFrame(const std::string           &name,
 
     // go through all stack variables
     BOOST_FOREACH(const int uid, fnc.vars) {
-        d->plotCVar(uid);
+        const int nestLevel = bt->countOccurrencesOfFnc(uidOf(fnc));
+        const CVar cVar(uid, nestLevel);
+        d->plotCVar(cVar);
     }
 
     // close dot file

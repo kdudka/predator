@@ -24,6 +24,7 @@
 #include <cl/location.hh>
 #include <cl/storage.hh>
 
+#include "symbt.hh"
 #include "symheap.hh"
 #include "symproc.hh"
 #include "symstate.hh"
@@ -36,14 +37,19 @@
 #   define DEBUG_SE_STACK_FRAME 0
 #endif
 
+#ifndef SE_BYPASS_CALL_CACHE
+#   define SE_BYPASS_CALL_CACHE 0
+#endif
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of SymCallCtx
 struct SymCallCtx::Private {
-    IBtPrinter                  *bt;
+    SymBackTrace                *bt;
     SymHeap                     heap;
     const CodeStorage::Fnc      *fnc;
     const struct cl_operand     *dst;
     SymHeapUnion                rawResults;
+    int                         nestLevel;
+    bool                        pending;
 
     void assignReturnValue();
     void destroyStackFrame();
@@ -52,6 +58,7 @@ struct SymCallCtx::Private {
 SymCallCtx::SymCallCtx():
     d(new Private)
 {
+    d->pending = true;
 }
 
 SymCallCtx::~SymCallCtx() {
@@ -59,12 +66,10 @@ SymCallCtx::~SymCallCtx() {
 }
 
 bool SymCallCtx::needExec() const {
-    // TODO: optimization
-    return true;
+    return d->pending;
 }
 
 const SymHeap& SymCallCtx::entry() const {
-    // TODO: optimization
     return d->heap;
 }
 
@@ -103,7 +108,8 @@ void SymCallCtx::Private::destroyStackFrame() {
 #if DEBUG_SE_STACK_FRAME
     const LocationWriter lw(&ref.def.loc);
     CL_DEBUG_MSG(lw, "<<< destroying stack frame of "
-            << nameOf(ref) << "():");
+            << nameOf(ref) << "()"
+            << ", nestLevel = " << this->nestLevel);
 
     int hCnt = 0;
 #endif
@@ -126,7 +132,8 @@ void SymCallCtx::Private::destroyStackFrame() {
                         << var.uid << " (" << var.name << ")" );
 #endif
 
-                const TObjId obj = res.objByCVar(var.uid);
+                const CVar cVar(var.uid, this->nestLevel);
+                const TObjId obj = res.objByCVar(cVar);
                 if (obj < 0)
                     TRAP;
 
@@ -144,37 +151,78 @@ void SymCallCtx::Private::destroyStackFrame() {
 }
 
 void SymCallCtx::flushCallResults(SymHeapUnion &dst) {
-    // TODO: optimization
-    d->assignReturnValue();
-    d->destroyStackFrame();
+    if (d->pending) {
+        d->pending = false;
+        d->assignReturnValue();
+        d->destroyStackFrame();
+    }
     dst.insert(d->rawResults);
 }
 
 // /////////////////////////////////////////////////////////////////////////////
+// TODO: write some summary
+class PerFncCache {
+    private:
+        typedef std::vector<SymCallCtx *> TCtxMap;
+
+        SymHeapUnion    huni_;
+        TCtxMap         ctxMap_;
+
+    public:
+        ~PerFncCache() {
+            BOOST_FOREACH(SymCallCtx *ctx, ctxMap_) {
+                delete ctx;
+            }
+        }
+
+        SymCallCtx* lookup(SymHeap &heap) {
+#if SE_BYPASS_CALL_CACHE
+            return 0;
+#endif
+            int idx = huni_.lookup(heap);
+            if (-1 == idx)
+                return 0;
+
+            return ctxMap_.at(idx);
+        }
+
+        // FIXME: suboptimal interaction with SymHeapUnion during lookup/insert
+        void insert(SymHeap &heap, SymCallCtx *ctx) {
+#if SE_BYPASS_CALL_CACHE
+            return;
+#endif
+            huni_.insert(heap);
+            ctxMap_.push_back(ctx);
+            if (huni_.size() != ctxMap_.size())
+                // integrity of PerFncCache broken, perhaps called unexpectedly?
+                TRAP;
+        }
+};
+
+// /////////////////////////////////////////////////////////////////////////////
 // implementation of SymCallCache
 struct SymCallCache::Private {
-    IBtPrinter                  *bt;
+    typedef std::map<int /* uid */, PerFncCache> TCache;
+
+    TCache                      cache;
+    SymBackTrace                *bt;
     LocationWriter              lw;
     SymHeap                     *heap;
     SymHeapProcessor            *proc;
     const CodeStorage::Fnc      *fnc;
-
-    /* XXX */ std::vector<SymCallCtx *> cont;
+    int                         nestLevel;
 
     void createStackFrame();
     void setCallArgs(const CodeStorage::TOperandList &opList);
 };
 
-SymCallCache::SymCallCache(IBtPrinter *bt):
+SymCallCache::SymCallCache(SymBackTrace *bt):
     d(new Private)
 {
     d->bt = bt;
 }
 
 SymCallCache::~SymCallCache() {
-    BOOST_FOREACH(SymCallCtx *ctx, d->cont) {
-        delete ctx;
-    }
     delete d;
 }
 
@@ -184,7 +232,8 @@ void SymCallCache::Private::createStackFrame() {
 
 #if DEBUG_SE_STACK_FRAME
     CL_DEBUG_MSG(this->lw,
-            ">>> creating stack frame for " << nameOf(ref) << "()");
+            ">>> creating stack frame for " << nameOf(ref) << "()"
+            << ", nestLevel = " << this->nestLevel);
 #endif
 
     BOOST_FOREACH(const int uid, ref.vars) {
@@ -196,7 +245,8 @@ void SymCallCache::Private::createStackFrame() {
                     << " (" << var.name << ")" );
 #endif
 
-            this->heap->objCreate(var.clt, var.uid);
+            const CVar cVar(var.uid, this->nestLevel);
+            this->heap->objCreate(var.clt, cVar);
         }
     }
 }
@@ -208,17 +258,27 @@ void SymCallCache::Private::setCallArgs(const CodeStorage::TOperandList &opList)
     if (args.size() + 2 != opList.size())
         TRAP;
 
+    // wait, we're crossing stack frame boundaries here!  We need to use one
+    // backtrace instance for source operands and another one for destination
+    // operands.  The called function already appears on the given backtrace, so
+    // that we can get the source backtrace by removing it from there locally.
+    SymBackTrace callerSiteBt(*this->bt);
+    callerSiteBt.popCall();
+    SymHeapProcessor srcProc(*this->heap, &callerSiteBt);
+
     // set args' values
     int pos = /* dst + fnc */ 2;
     BOOST_FOREACH(int arg, args) {
         const struct cl_operand &op = opList[pos++];
+        srcProc.setLocation(this->lw);
         this->proc->setLocation(this->lw);
 
-        const TValueId val = this->proc->heapValFromOperand(op);
+        const TValueId val = srcProc.heapValFromOperand(op);
         if (VAL_INVALID == val)
             TRAP;
 
-        const TObjId lhs = this->heap->objByCVar(arg);
+        const CVar cVar(arg, this->nestLevel);
+        const TObjId lhs = this->heap->objByCVar(cVar);
         if (OBJ_INVALID == lhs)
             TRAP;
 
@@ -258,19 +318,34 @@ SymCallCtx& SymCallCache::getCallCtx(SymHeap heap,
         // this should have been handled elsewhere
         TRAP;
 
+    CL_DEBUG_MSG(d->lw, "SymCallCtx::getCallCtx() is considering function "
+            << nameOf(*d->fnc) << "()");
+
+    // check recursion depth (if any)
+    d->nestLevel = d->bt->countOccurrencesOfFnc(uid);
+    if (1 != d->nestLevel)
+        CL_WARN_MSG(d->lw, "support of call recursion is not stable yet");
+
     // initialize local variables of the called fnc
     d->createStackFrame();
     d->setCallArgs(opList);
 
-    // TODO: prune heap
-    // TODO: cache lookup
+    // TODO: prune heap at this point
+    
+    // cache lookup
+    PerFncCache &pfc = d->cache[uid];
+    SymCallCtx *ctx = pfc.lookup(heap);
+    if (ctx)
+        return *ctx;
 
     // XXX
-    SymCallCtx *ctx = new SymCallCtx;
+    ctx = new SymCallCtx;
+    pfc.insert(heap, ctx);
+
     ctx->d->bt   = d->bt;
     ctx->d->fnc  = d->fnc;
     ctx->d->heap = *d->heap;
     ctx->d->dst  = &dst;
-    d->cont.push_back(ctx);
+    ctx->d->nestLevel = d->nestLevel;
     return *ctx;
 }

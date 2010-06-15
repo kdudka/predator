@@ -35,6 +35,7 @@ namespace CodeStorage {
     struct Storage;
 }
 
+class SymBackTrace;
 class SymHeap;
 
 /**
@@ -76,9 +77,12 @@ class SymHeapPlotter {
          * @param name base name of the resulting dot file, which will be
          * decorated by a serial number
          * @param fnc a function to look for the automatic variables
+         * @param bt an instance of symbolic backtrace used to distinguish among
+         * instances of automatic variables
          */
         bool plotStackFrame(const std::string &name,
-                            const CodeStorage::Fnc &fnc);
+                            const CodeStorage::Fnc &fnc,
+                            SymBackTrace *bt);
 
     private:
         /// object copying is @b not allowed

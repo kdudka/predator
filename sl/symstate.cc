@@ -20,19 +20,67 @@
 #include "config.h"
 #include "symstate.hh"
 
+#include <cl/cl_msg.hh>
 #include <cl/code_listener.h>
 
 #include "util.hh"
 #include "worklist.hh"
 
+#include <iomanip>
 #include <map>
 #include <stack>
 
 #include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
 
+#ifndef SE_STATE_HASH_OPTIMIZATION
+#   define SE_STATE_HASH_OPTIMIZATION 0
+#endif
+
+#ifndef SE_STATE_HASH_OPTIMIZATION_DEBUG
+#   define SE_STATE_HASH_OPTIMIZATION_DEBUG 0
+#endif
+
 // /////////////////////////////////////////////////////////////////////////////
 // SymHeapUnion implementation
+struct SymHeapUnion::Private {
+#if SE_STATE_HASH_OPTIMIZATION
+    // FIXME: suboptimal htable implementation
+    static const int HASH_SIZE = 37;
+    typedef std::vector<unsigned>   TRow;
+    typedef std::vector<TRow>       TMap;
+    TMap hmap;
+
+    Private():
+        hmap(HASH_SIZE)
+    {
+    }
+#endif
+};
+
+SymHeapUnion::SymHeapUnion():
+    d(new Private)
+{
+}
+
+SymHeapUnion::SymHeapUnion(const SymHeapUnion &ref):
+    heaps_(ref.heaps_),
+    d(new Private(*ref.d))
+{
+}
+
+SymHeapUnion::~SymHeapUnion() {
+    delete d;
+}
+
+SymHeapUnion& SymHeapUnion::operator=(const SymHeapUnion &ref) {
+    heaps_ = ref.heaps_;
+
+    delete d;
+    d = new Private(*ref.d);
+    return *this;
+}
+
 namespace {
     bool checkNonPosValues(int a, int b) {
         if (0 < a && 0 < b)
@@ -259,16 +307,26 @@ bool operator== (const SymHeap &heap1, const SymHeap &heap2) {
     typedef std::map<TValueId, TValueId> TSubst;
     TSubst valSubst;
 
-    // NOTE: we do not check cVars themselves among heaps
-    // they are *supposed* to be the same
-    SymHeap::TCont cVars;
-    heap1.gatherCVars(cVars);
-    BOOST_FOREACH(int uid, cVars) {
-        const TObjId var1 = heap1.objByCVar(uid);
-        const TObjId var2 = heap2.objByCVar(uid);
+    // FIXME: suboptimal interface of SymHeap::gatherCVars()
+    SymHeap::TContCVar cVars1, cVars2;
+    heap1.gatherCVars(cVars1);
+    heap1.gatherCVars(cVars2);
+    if (cVars1.size() != cVars2.size())
+        // different count of program variables
+        // --> no chance the heaps are equal up to isomorphism
+        return false;
+
+    // FIXME: rewrite the following nonsense
+    std::set<CVar> cVars;
+    BOOST_FOREACH(CVar cv, cVars1) { cVars.insert(cv); }
+    BOOST_FOREACH(CVar cv, cVars2) { cVars.insert(cv); }
+
+    BOOST_FOREACH(CVar cv, cVars) {
+        const TObjId var1 = heap1.objByCVar(cv);
+        const TObjId var2 = heap2.objByCVar(cv);
         if (var1 < 0 || var2 < 0)
-            // heap corruption detected
-            TRAP;
+            // static variable mismatch
+            return false;
 
         // retrieve values of static variables
         const TValueId value1 = heap1.valueOf(var1);
@@ -289,9 +347,72 @@ bool operator== (const SymHeap &heap1, const SymHeap &heap2) {
     return dfsCmp(wl, valSubst, heap1, heap2);
 }
 
+int SymHeapUnion::lookup(const SymHeap &heap) const {
+#if SE_STATE_HASH_OPTIMIZATION
+    const size_t hash = heap.hash() % Private::HASH_SIZE;
+    const Private::TRow &row = d->hmap.at(hash);
+
+    if (!heaps_.empty() && row.size() != heaps_.size()) {
+        const float ratio = static_cast<float>(heaps_.size()) / row.size();
+        CL_DEBUG("SE_STATE_HASH_OPTIMIZATION is taking place"
+                << ", estimated speedup is "
+                << std::fixed << std::setprecision(2) << ratio);
+    }
+
+    BOOST_FOREACH(unsigned idx, row) {
+        if (heap == heaps_[idx])
+            return idx;
+    }
+#else
+    const int cnt = this->size();
+    for(int idx = 0; idx < cnt; ++idx) {
+        if (heap == heaps_[idx])
+            return idx;
+    }
+#endif
+
+    // not found
+    return -1;
+}
+
+#if SE_STATE_HASH_OPTIMIZATION
 void SymHeapUnion::insert(const SymHeap &heap) {
-    // FIXME: not very efficient implementation of union :-)
-    // TODO: implement the container as either hash or tree data structure
+    const size_t hash = heap.hash() % Private::HASH_SIZE;
+    Private::TRow &row = d->hmap.at(hash);
+
+    if (!heaps_.empty() && row.size() != heaps_.size()) {
+        const float ratio = static_cast<float>(heaps_.size()) / row.size();
+        CL_DEBUG("SE_STATE_HASH_OPTIMIZATION is taking place"
+                << ", estimated speedup is "
+                << std::fixed << std::setprecision(2) << ratio);
+    }
+
+#if SE_STATE_HASH_OPTIMIZATION_DEBUG
+    CL_DEBUG("SE_STATE_HASH_OPTIMIZATION: row size is " << row.size());
+#endif
+
+    BOOST_FOREACH(unsigned idx, row) {
+        // TODO: check for entailment instead
+        if (heap == heaps_[idx])
+            return;
+    }
+
+#if SE_STATE_HASH_OPTIMIZATION_DEBUG
+    BOOST_FOREACH(const SymHeap &current, heaps_) {
+        if (heap == current)
+            // *** hash function failed ***
+            TRAP;
+    }
+#endif
+
+    // add given heap to union
+    row.push_back(heaps_.size());
+    heaps_.push_back(heap);
+}
+
+#else // no optimization
+
+void SymHeapUnion::insert(const SymHeap &heap) {
     BOOST_FOREACH(const SymHeap &current, heaps_) {
         // TODO: check for entailment instead
         if (heap == current)
@@ -301,6 +422,8 @@ void SymHeapUnion::insert(const SymHeap &heap) {
     // add given heap to union
     heaps_.push_back(heap);
 }
+
+#endif
 
 void SymHeapUnion::insert(const SymHeapUnion &huni) {
     BOOST_FOREACH(const SymHeap &current, huni) {

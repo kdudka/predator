@@ -34,7 +34,7 @@
 #include "symid.hh"
 #include "symheap.hh"
 
-class IBtPrinter;
+class SymBackTrace;
 class SymHeap;
 class SymHeapUnion;
 
@@ -53,12 +53,13 @@ class SymHeapProcessor {
          * SymHeap and a class providing the write access on top of that.  I
          * guess it will be not that easy as it sounds.
          * @param heap an instance of SymHeap to operate on
-         * @param btPrinter an instance of IBtPrinter used to print backtraces.
-         * If omitted, no backtraces are printed.
+         * @param bt an instance of symbolic backtrace used to distinguish among
+         * instances of automatic variables and to print backtraces when
+         * necessary/suitable
          */
-        SymHeapProcessor(SymHeap &heap, IBtPrinter *btPrinter = 0):
+        SymHeapProcessor(SymHeap &heap, SymBackTrace *bt):
             heap_(heap),
-            btPrinter_(btPrinter)
+            bt_(bt)
         {
         }
 
@@ -126,7 +127,6 @@ class SymHeapProcessor {
         }
 
     private:
-        void printBackTrace();
         void heapSetSingleVal(TObjId lhs, TValueId rhs);
         void heapObjDefineType(TObjId lhs, TValueId rhs);
         void heapObjHandleAccessorDeref(TObjId *pObj);
@@ -144,7 +144,7 @@ class SymHeapProcessor {
 
     private:
         SymHeap                     &heap_;     /// heap to operate on
-        IBtPrinter                  *btPrinter_;
+        SymBackTrace                *bt_;
         LocationWriter              lw_;
         std::list<SymHeap>          todolist;   /// for concretized siblings
 

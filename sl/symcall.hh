@@ -26,8 +26,9 @@
  * during the symbolic execution
  */
 
-class IBtPrinter;
-class SymHeap;
+#include "symheap.hh"
+
+class SymBackTrace;
 class SymHeapUnion;
 
 namespace CodeStorage {
@@ -77,6 +78,7 @@ class SymCallCtx {
         ~SymCallCtx();
 
         /// @note these objects can't be created/destroyed out of SymCallCache
+        friend class /* SymCallCache helper */ PerFncCache;
         friend class SymCallCache;
 
         /// object copying is @b not allowed
@@ -95,9 +97,11 @@ class SymCallCache {
     public:
         /**
          * create long term cache, this should happen once per SymExec lifetime
-         * @param bt an object able to print backtraces when necessary/suitable
+         * @param bt an instance of symbolic backtrace used to distinguish among
+         * instances of automatic variables and to print backtraces when
+         * necessary/suitable
          */
-        SymCallCache(IBtPrinter *bt);
+        SymCallCache(SymBackTrace *bt);
         ~SymCallCache();
 
         /**

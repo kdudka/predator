@@ -49,3 +49,28 @@ extern const char *sl_git_sha1;
  * if 1, define TObjId and TValueId is integers (makes debugging easier)
  */
 #define DEBUG_SYMID_FORCE_INT           0
+
+/**
+ * if 1, call optimization is not performed; it may introduce some compile-time
+ * warnings and memory leaks as a side effect
+ */
+#define SE_BYPASS_CALL_CACHE                1
+
+/**
+ * maximal call depth
+ * @attention Be careful here, setting it to big value may cause a stack
+ * overflow because of the current suboptimal approach used in
+ * SymExec::Private::execInsnCall()
+ */
+#define SE_MAX_CALL_DEPTH                   0x100
+
+/**
+ * if 1, SymHeapUnion uses (trivial) hash optimization
+ */
+#define SE_STATE_HASH_OPTIMIZATION          0
+
+/**
+ * if 1, turn on extensive debugging of hash optimization with significant
+ * performance impact and a lot of noise in the debug output
+ */
+#define SE_STATE_HASH_OPTIMIZATION_DEBUG    0

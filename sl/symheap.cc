@@ -37,6 +37,10 @@
 #include <boost/tuple/tuple.hpp>
 #include <boost/tuple/tuple_comparison.hpp>
 
+#ifndef SE_STATE_HASH_OPTIMIZATION_DEBUG
+#   define SE_STATE_HASH_OPTIMIZATION_DEBUG 0
+#endif
+
 namespace {
     // XXX: force linker to pull-in the symdump module into .so
     void pull_in_symdump(void) {
@@ -541,17 +545,85 @@ bool SymHeapCore::proveEq(bool *result, TValueId valA, TValueId valB) const {
 
 
 // /////////////////////////////////////////////////////////////////////////////
+// CVar lookup container
+class CVarMap {
+    private:
+        typedef std::map<CVar, TObjId>              TMap;
+        typedef std::pair<TObjId, int /* cnt */>    TGlItem;
+        typedef std::map<int /* uid */, TGlItem>    TGlMap;
+
+        TMap    lc_;
+        TGlMap  gl_;
+
+    public:
+        void insert(CVar cVar, TObjId obj) {
+            lc_[cVar] = obj;
+
+            // gl scope
+            TGlItem &ref = gl_[cVar.uid];
+            ref.first = obj;
+            ref.second ++;
+        }
+
+        void remove(CVar cVar) {
+            if (1 != lc_.erase(cVar))
+                // *** offset detected ***
+                TRAP;
+
+            // gl scope
+            TGlMap::iterator iter = gl_.find(cVar.uid);
+            if (gl_.end() == iter)
+                // *** offset detected ***
+                TRAP;
+
+            TGlItem &ref = iter->second;
+            if (0 == --ref.second)
+                gl_.erase(iter);
+        }
+
+        TObjId find(CVar cVar) {
+            TMap::iterator iterLc = lc_.find(cVar);
+            if (lc_.end() != iterLc)
+                return iterLc->second;
+
+            // gl scope
+            TGlMap::iterator iterGl = gl_.find(cVar.uid);
+            if (gl_.end() == iterGl)
+                // not found even there
+                return OBJ_INVALID;
+
+            const TGlItem &ref = iterGl->second;
+            return ref.first;
+        }
+
+        template <class TCont>
+        void getAll(TCont &dst) {
+            TMap::const_iterator i;
+            for (i = lc_.begin(); i != lc_.end(); ++i)
+                dst.push_back(i->first);
+        }
+
+        template <class TFunctor>
+        void goThroughObjs(TFunctor &f)
+        {
+            TMap::const_iterator i;
+            for (i = lc_.begin(); i != lc_.end(); ++i)
+                f(i->second);
+        }
+};
+
+// /////////////////////////////////////////////////////////////////////////////
 // implementation of SymHeap1
 struct SymHeap1::Private {
     struct Object {
         const struct cl_type        *clt;
         size_t                      cbSize;
-        int /* CodeStorage */       cVar;
+        CVar                        cVar;
         int                         nth_item; // -1  OR  0 .. parent.item_cnt-1
         TObjId                      parent;
         TContObj                    subObjs;
 
-        Object(): clt(0), cbSize(0), cVar(-1), nth_item(-1), parent(OBJ_INVALID) { }
+        Object(): clt(0), cbSize(0), nth_item(-1), parent(OBJ_INVALID) { }
     };
 
     struct Value {
@@ -563,9 +635,7 @@ struct SymHeap1::Private {
         Value(): clt(0), compObj(OBJ_INVALID), isCustom(false) { }
     };
 
-    /// @attention this will break as soon as we allow recursion
-    typedef std::map<int, TObjId>   TCVarMap;
-    TCVarMap                        cVarMap;
+    CVarMap                         cVarMap;
 
     typedef std::map<int, TValueId> TCValueMap;
     TCValueMap                      cValueMap;
@@ -676,6 +746,67 @@ void SymHeap1::createSubs(TObjId obj) {
     }
 }
 
+#if SE_STATE_HASH_OPTIMIZATION
+struct Hasher {
+    const SymHeap1      &heap;
+    size_t              hashVal;
+
+    Hasher(const SymHeap1 &heap_):
+        heap(heap_),
+        hashVal(0)
+    {
+    }
+
+    void operator() (TObjId var) {
+        if (var < 0)
+            // heap corruption detected
+            TRAP;
+
+        const TValueId value = heap.valueOf(var);
+#if SE_STATE_HASH_OPTIMIZATION_DEBUG
+        CL_DEBUG("SymHeap1::hash() - var #" << var
+                << " has value: " << value);
+#endif
+        if (value <= 0) {
+            // special value, add it into the hash
+            hashVal -= (7 * value);
+            return;
+        }
+
+        if (OBJ_INVALID != heap.valGetCompositeObj(value))
+            // skip composite values for now
+            return;
+
+        if (VAL_INVALID != heap.valGetCustom(0, value))
+            // skip custom values for now
+            return;
+
+        // add the EUnknownValue code into the hash
+        const EUnknownValue code = heap.valGetUnknown(value);
+        hashVal += (1 << static_cast<int>(code));
+
+#if 0
+        const unsigned cnt = this->usedByCount(value);
+#if SE_STATE_HASH_OPTIMIZATION_DEBUG
+        CL_DEBUG("SymHeap1::hash() - value #" << value
+                << " used " << cnt << " times");
+#endif
+        hashVal += cnt;
+#endif
+    }
+};
+
+size_t SymHeap1::hash() const {
+    // FIXME: suboptimal hash implementation
+    Hasher f(*this);
+    d->cVarMap.goThroughObjs(f);
+#if SE_STATE_HASH_OPTIMIZATION_DEBUG
+    CL_DEBUG("SymHeap1::hash() returning " << f.hashVal);
+#endif
+    return f.hashVal;
+}
+#endif
+
 // FIXME why resize?
 TValueId SymHeap1::valueOf(TObjId obj) const {
     const TValueId val = SymHeapCore::valueOf(obj);
@@ -700,7 +831,7 @@ void SymHeap1::destroyObj(TObjId obj) {
         }
 
         // remove current
-        const TObjId kind = (-1 == ref.cVar)
+        const TObjId kind = (-1 == ref.cVar.uid)
             ? OBJ_DELETED
             : OBJ_LOST;
         SymHeapCore::objDestroy(obj, kind);
@@ -746,27 +877,30 @@ const struct cl_type* SymHeap1::valType(TValueId val) const {
     return d->values[val].clt;
 }
 
-int SymHeap1::cVar(TObjId obj) const {
+bool SymHeap1::cVar(CVar *dst, TObjId obj) const {
     if (this->lastObjId() < obj || obj <= 0)
         // object ID is either out of range, or does not represent a valid obj
-        return -1;
+        return false;
 
-    return d->objects[obj].cVar;
+    const CVar &cVar = d->objects[obj].cVar;
+    if (-1 == cVar.uid)
+        // looks like a heap object
+        return false;
+
+    if (dst)
+        // return its identification if requested to do so
+        *dst = cVar;
+
+    // non-heap object
+    return true;
 }
 
-/// @attention this will break as soon as we allow recursion
-TObjId SymHeap1::objByCVar(int uid) const {
-    Private::TCVarMap::iterator iter = d->cVarMap.find(uid);
-    if (d->cVarMap.end() == iter)
-        return OBJ_INVALID;
-    else
-        return iter->second;
+TObjId SymHeap1::objByCVar(CVar cVar) const {
+    return d->cVarMap.find(cVar);
 }
 
-void SymHeap1::gatherCVars(TCont &dst) const {
-    Private::TCVarMap::const_iterator i;
-    for (i = d->cVarMap.begin(); i != d->cVarMap.end(); ++i)
-        dst.push_back(i->first);
+void SymHeap1::gatherCVars(TContCVar &dst) const {
+    d->cVarMap.getAll(dst);
 }
 
 TObjId SymHeap1::valGetCompositeObj(TValueId val) const {
@@ -843,7 +977,7 @@ unsigned countTargets(const SymHeap1 &sh, TObjId obj) {
 }
 
 /// return true if pointer value
-bool isPointer(const SymHeap1 &sh, TValueId val) {
+bool isValPointer(const SymHeap1 &sh, TValueId val) {
     const struct cl_type *clt = sh.valType(val);
     if(!clt)
         TRAP;
@@ -852,7 +986,7 @@ bool isPointer(const SymHeap1 &sh, TValueId val) {
 }
 
 /// return true if pointer variable
-bool isPointer(const SymHeap1 &sh, TObjId obj) {
+bool isObjPointer(const SymHeap1 &sh, TObjId obj) {
     const struct cl_type *clt = sh.objType(obj);
     if(!clt)
         TRAP;
@@ -862,7 +996,7 @@ bool isPointer(const SymHeap1 &sh, TObjId obj) {
 
 /// count number of pointers in object [recursive]
 unsigned countPointers(const SymHeap1 &sh, TObjId obj) {
-    unsigned count = isPointer(sh,obj);  // 0|1
+    unsigned count = isObjPointer(sh,obj);  // 0|1
     int num_items = countSubObjects(sh,obj);
     if(num_items==0) // not a composite (structure/array)
         return count;
@@ -877,7 +1011,7 @@ unsigned countPointers(const SymHeap1 &sh, TObjId obj) {
 
 /////////////////////////////////////////////////////////////////////////////
 
-TObjId SymHeap1::objCreate(const struct cl_type *clt, int uid) {
+TObjId SymHeap1::objCreate(const struct cl_type *clt, CVar cVar) {
     if(clt) {
         const enum cl_type_e code = clt->code;
         switch (code) {
@@ -906,12 +1040,12 @@ TObjId SymHeap1::objCreate(const struct cl_type *clt, int uid) {
     this->resizeIfNeeded();
     Private::Object &ref = d->objects[obj];
     ref.clt     = clt;
-    ref.cVar    = uid;
+    ref.cVar    = cVar;
     if(clt)
         this->createSubs(obj);
 
-    if (/* heap object */ -1 != uid)
-        d->cVarMap[uid] = obj;
+    if (/* heap object */ -1 != cVar.uid)
+        d->cVarMap.insert(cVar, obj);
 
     this->initValClt(obj);
     return obj;
@@ -979,11 +1113,9 @@ void SymHeap1::objDestroy(TObjId obj) {
         TRAP;
 
     Private::Object &ref = d->objects[obj];
-    const int uid = ref.cVar;
-    if (uid != /* heap object */ -1
-            && 1 != d->cVarMap.erase(uid))
-        // *** offset detected while removing cVar reference ***
-        TRAP;
+    const CVar cv = ref.cVar;
+    if (cv.uid != /* heap object */ -1)
+        d->cVarMap.remove(cv);
 
     this->destroyObj(obj);
     if (OBJ_RETURN == obj) {
@@ -1196,7 +1328,7 @@ TObjId SymHeap2::Concretize_NE(TObjId ao)
 
     // 1. create struct (clone prototype?)
     const struct cl_type * clt = slsType(ao);
-    TObjId o = objCreate(clt,-1);  // create structure
+    TObjId o = objCreate(clt);  // create structure
 
 
     // 2. recycle listsegment, change to possibly empty
@@ -1490,7 +1622,7 @@ void Abstract(SymHeap &sh)
 
 /// create sls, needs to set value and lambda later
 TObjId SymHeap2::slsCreate(const struct cl_type *clt, int nextid, TAbstractLen alen) {
-    TObjId id = objCreate(/* no type */ 0, /* heap-object */ -1);
+    TObjId id = objCreate(/* no type */ 0, /* heap-object */ CVar());
     d->sl_segments[id].clt = clt;
     d->sl_segments[id].nextid = nextid;
     d->sl_segments[id].alen = alen;

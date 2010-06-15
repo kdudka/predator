@@ -2,10 +2,10 @@
 #include <stdbool.h>
 
 // return VAL_UNKNOWN of type CL_TYPE_BOOL while running symbolic execution
-// NOTE: executing this function on bare metal is usually bad idea
 bool synthesize_unknown_bool_value(void)
 {
-    return synthesize_unknown_bool_value();
+    int a = 1, b = 2;
+    return (a < b);
 }
 
 int main() {

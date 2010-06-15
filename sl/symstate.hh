@@ -47,7 +47,17 @@ class SymHeapUnion {
         typedef TList::iterator iterator;
 
     public:
-        virtual ~SymHeapUnion() { }
+        SymHeapUnion();
+        virtual ~SymHeapUnion();
+
+        SymHeapUnion(const SymHeapUnion &);
+        SymHeapUnion& operator=(const SymHeapUnion &);
+
+        /**
+         * look for the given symbolic heap, return its index if found, -1
+         * otherwise
+         */
+        int lookup(const SymHeap &heap) const;
 
         /// insert given SymHeap object into the union
         virtual void insert(const SymHeap &heap);
@@ -77,6 +87,10 @@ class SymHeapUnion {
 
     private:
         TList heaps_;
+
+    private:
+        struct Private;
+        Private *d;
 };
 
 /**

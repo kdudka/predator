@@ -1,3 +1,0 @@
-test-0023.c:8:5: error: call recursion detected, cg subtree will be excluded
-test-0023.c:13:16: note: from call of synthesize_unknown_bool_value()
-test-0023.c:11:5: note: from call of main()
