@@ -120,11 +120,7 @@ protected:
 		}
 		return false;
 	}
-/*
-	void setRootReference(size_t state, size_t reference) {
-		this->root_reference_index[state] = reference;
-	}
-*/
+
 	static void removeMultOcc(vector<size_t>& x) {
 		set<size_t> s;
 		size_t offset = 0;
@@ -206,22 +202,7 @@ protected:
 		src->unfoldAtRoot(*ta, refState, false);
 		return ta;
 	}
-/*
-	static void evaluateLhsOrder(const vector<const Box*>& label, vector<size_t>& order) {
-		boost::unordered_map<size_t, size_t> m;
-		order.clear();
-		size_t offset = 0;
-		for (vector<const Box*>::const_iterator i = label.begin(); i != label.end(); ++i) {
-			const vector<size_t>& selectors = (*i)->getDownwardCoverage(0).first;
-			for (vector<size_t>::const_iterator j = selectors.begin(); j != selectors.end(); ++j) {
-				if (!m.insert(make_pair(*j, offset++)).second)
-					throw runtime_error("FAE::evaluateLhsOrder(): A selector was defined more than once!");
-			}
-		}
-		for (map<size_t, size_t>::iterator i = m.begin(); i != m.end(); ++i)
-			order.push_back(i->second);
-	}
-*/
+
 	static bool updateO(boost::unordered_map<size_t, vector<size_t> >& o, size_t state, const vector<size_t>& v) {
 		pair<boost::unordered_map<size_t, vector<size_t> >::iterator, bool> p =
 			o.insert(make_pair(state, v));
@@ -339,7 +320,7 @@ protected:
 	}
 
 	// normalize representation
-	void normalize(const vector<size_t>& requiredGarbage) {
+	void normalize(const vector<size_t>& requiredGarbage = {}) {
 		vector<size_t> order, garbage;
 		set<size_t> marked;
 		this->traverse(order, marked, garbage);
@@ -387,11 +368,13 @@ protected:
 	}
 
 	// ensures that the given selectors (or at least the boxes which contain them) become "free" in the result
-	void isolateAtRoot(vector<FAE*>& dst, size_t root, const vector<size_t>& selectors) const {
+	void isolateAtRoot(vector<FAE*>& dst, size_t root, const vector<size_t>& selectors = {}) const {
 		set<size_t> sSelectors(selectors.begin(), selector.end());
 		boost::unordered_map<size_t, map<size_t, size_t> >::iterator i = this->selectorMap.find(root);
 		if (i != this->selectorMap.end())
 			throw runtime_error("FAE::isolateRoot(): some selectors are hidden somewhere else! (not implemented yet)");
+				assert(this->variables[y].index < this->roots.size());
+		assert(root < this->roots.size());
 		for (TA<label_type>::iterator i = this->roots[root]->begin(); i != this->roots[root]->end(); ++i) {
 			if (i->rhs() == this->roots[root]->getFinalState()) {
 				FAE* fae = new FAE(*this);
@@ -401,7 +384,8 @@ protected:
 				size_t lhsOffset = 0;
 				bool needsDecomposition = false;
 				for (vector<const Box*>::const_iterator j = i->label().dataB->begin(); j != i->label().dataB->end(); ++j) {
-					if (!utils::checkIntersection((*j)->getDownwardCoverage(0).second, sSelectors)) {
+					// if called with selectors being empty then it isolates everything
+					if (!selectors.empty() && !utils::checkIntersection((*j)->getDownwardCoverage(0).second, sSelectors)) {
 						// this box is not interesting
 						for (size_t k = 0; k < (*j)->getArity(); ++k, ++lhsOffset)
 							lhs.push_back(i->lhs()[lhsOffsset]);
@@ -441,6 +425,47 @@ protected:
 			}
 		}
 	}
+	
+	void findSelectorDestination(const TT<label_type>* transition, size_t selector, size_t& dest, size_t& offset) const {
+		dest = varUndef;
+		offset = 0;
+		size_t lhsOffset = 0;
+		bool found = false;
+		for (vector<const Box*>::iterator i = transition->label().dataB->begin(); i != transition->label().dataB->end(); ++i) {
+			if ((*i)->isSelector(selector)) {
+				assert(!found);
+				if (!this->isRootReference(transition->lhs()[lhsOffset], dest))
+					throw runtime_error("FAE::findSelectorDestination(): destination is not a reference!");
+				offset = (*i)->getSelectorOffset();
+				found = true;
+			}
+			lhsOffset += (*i)->getArity();
+		}
+		// TODO: emit some warning here
+	}
+
+	void changeSelectorDestination(TA<label_type>& dst, const TT<label_type>* transition, size_t selector, size_t dest, size_t offset) {
+		vector<size_t> lhs;
+		vector<const Box*> label;
+		size_t lhsOffset = 0;
+		bool found = false;
+		for (vector<const Box*>::iterator i = transition->label().dataB->begin(); i != transition->label().dataB->end(); ++i) {
+			if ((*i)->isSelector(selector)) {
+				assert(!found);
+				lhs.push_back(this->addRootReference(dst, dest));
+				label.push_back(&this->boxMan.getSelector(selector, offset));
+				found = true;
+			} else {
+				lhs.insert(lhs.end(), transition->lhs().begin() + lhsOffset, transition->lhs().begin() + lhsOffset + (*i)->getArity());
+				label.push_back(*i);
+			}
+			lhsOffset += (*i)->getArity();
+		}
+		if (!found)
+			throw runtime_error("FAE::changeSelectorDestination(): pointer slot not defined!");
+		FAE::reorderBoxes(label, lhs);
+		dst.addTransition(lhs, &this->labMan.lookup(label), transition->rhs());
+	}
 
 public:
 
@@ -457,55 +482,66 @@ public:
 	}
 
 /* execution bits */
-	size_t newVar() {
-		size_t id = this->variables.size();
-		this->variables.push_back(var_info(varUndef, 0));
-		return id;
+	void newVar(vector<FAE*>& dst, size_t& id) {
+		assert(dst.empty());
+		FAE* fae = new FAE(*this);
+		Guard guard(fae);
+		id = fae->variables.size();
+		fae->variables.push_back(var_info(varUndef, 0));
+		fae->normalize();
+		dst.push_back(fae);
+		guard.release();
 	}
 	
-	void dropVars(size_t count) {
-		assert(count <= this->variables.size());
-		while (count-- > 0) this->variables.pop_back();
+	void dropVars(vector<FAE*>& dst, size_t count) {
+		assert(dst.empty());
+		FAE* fae = new FAE(*this);
+		Guard guard(fae);
+		assert(count <= fae->variables.size());
+		while (count-- > 0) fae->variables.pop_back();
+		fae->normalize();
+		dst.push_back(fae);
+		guard.release();
 	}
 	
-	bool x_eq_y(size_t x, size_t y) {
+	bool x_eq_y(size_t x, size_t y) const {
+		assert(x < this->variables.size());
+		assert(y < this->variables.size());
+		if ((this->variables[x] == varUndef) || (this->variables[y] == varUndef))
+			throw runtime_error("FAE:x_eq_y(): comparing undefined variables!");
 		return this->variables[x] == this->variables[y];
 	}
-/*	
+	
 	void x_ass_new(vector<FAE*>& dst, size_t x, size_t pointerSlots, size_t dataSlots) const {
+		assert(dst.empty());
+		assert(x < this->variables.size());
 		if (dataSlots > 0)
 			throw std::runtime_error("FAE::x_ass_new(): Data handling not implemented! (désolé)");
-		// TODO: identify garbage
-		TA<label_type>* ta = this->taMan.alloc();
-		this->variables[x] = var_info(this->roots.size(), 0);
-		this->roots.push_back(ta);
-		set<pair<const Box*, size_t> > tmp;
-		for (size_t i = 0; i < pointerSlots; ++i) {
-			// create fresh state
-			size_t s = this->freshState();
-			// create leaf rule
-//			vector<const Box*> label = { &this->boxMan.lookup(Box::createReference(varUndef)) };
-//			ta->addTransition(vector<size_t>(), &this->labMan.lookup(label) , s);
-//			this->setRootReference(s, varUndef);
-			// prepare the rest
-//			tmp.insert(make_pair(&this->boxMan.lookup(Box::createPrimitive(i)), s));
-		}
-		vector<size_t> lhs;
+		FAE* fae = new FAE(*this);
+		Guard guard(fae);
+		TA<label_type>* ta = fae->taMan.alloc();
+		fae->variables[x] = var_info(fae->roots.size(), 0);
+		fae->roots.push_back(ta);
+		// build lhs out of undefs
+		vector<size_t> lhs(fae->addRootReference(*ta, varUndef), pointerSlots);
+		// build label out of selectors
 		vector<const Box*> label;
-		for (set<pair<const Box*, size_t> >::iterator i = tmp.begin(); i != tmp.end(); ++i) {
-			lhs.push_back(i->second);
-			label.push_back(i->first);
-		}
-		size_t f = this->freshState();
-		ta->addTransition(lhs, &label, f);
-		ta->addFinalState(f);		
-		// TODO: reorder
+		for (size_t i = 0; i < pointerSlots; ++i)
+			label.push_back(&fae->boxMan.getSelector(i));
+		FAE::reorderBoxes(label, lhs);
+		size_t f = fae->freshState();
+		ta->addTransition(lhs, &fae->labMan.lookup(label), f);
+		ta->addFinalState(f);
+		fae->normalize();
+		dst.push_back(fae);
+		guard.release();
 	}
-*/	
+
 	void del_x(vector<FAE*>& dst, size_t x) const {
-		dst.clear();
+		assert(dst.empty());
+		assert(x < this->variables.size());
 		size_t root = this->variables[x].index;
-		this->isolateAtRoot(dst, root, {});
+		this->isolateAtRoot(dst, root);
 		for (vector<FAE*>::iterator i = dst.begin(); i != dst.end(); ++i) {
 			if ((*i)->variables[x].offset != 0) {
 				// TODO: raise some reasonable exception here (instead of runtime_error)
@@ -527,23 +563,84 @@ public:
 	}
 	
 	void x_ass_null(vector<FAE*>& dst, size_t x) const {
+		assert(dst.empty());
+		assert(x < this->variables.size());
 		FAE* fae = new FAE(*this);
+		Guard guard(fae);
 		fae->variables[x] = var_info(varNull, 0);
-		fae->normalize({});
+		fae->normalize();
 		dst.push_back(fae);
+		guard.release();
 	}
 	
-	void x_ass_y(vector<FAE*>& dst, size_t x, size_t y, int offset) {
+	void x_ass_y(vector<FAE*>& dst, size_t x, size_t y, size_t offset) {
+		assert(dst.empty());
+		assert(x < this->variables.size());
+		assert(y < this->variables.size());
 		FAE* fae = new FAE(*this);
+		Guard guard(fae);
 		fae->variables[x] = fae->variables[y];
 		fae->variables[x].offset += offset;
-		fae->normalize({});
+		fae->normalize();
 		dst.push_back(fae);
+		guard.release();
 	}
 	
-	void x_ass_y_next(size_t x, size_t y, size_t selector) {
-		// TODO: identify garbage
-		
+	void x_ass_y_next(vector<FAE*>& dst, size_t x, size_t y, size_t selector) {
+		assert(dst.empty());
+		assert(x < this->variables.size());
+		assert(y < this->variables.size());
+		// TODO: raise some reasonable exception here (instead of runtime_error)
+		switch (this->variables[y].index) {
+			case varNull: throw runtime_error("FAE::x_ass_y_next(): source variable contains NULL!");
+			case varUndef: throw runtime_error("FAE::x_ass_y_next(): source variable undefined!");
+		}
+		size_t root = this->variables[y].index;
+		selector += this->variables[y].offset;
+		assert(root < this->roots.size());
+		this->isolateAtRoot(dst, root, {selector});
+		for (vector<FAE*>::iterator i = dst.begin(); i != dst.end(); ++i) {
+			// find the destination of the selector
+			size_t dest, offset;
+			for (TA<label_type>::iterator j = (i*)->roots[root]->begin(); j != (i*)->roots[root]->end(); ++j) {
+				if (j->rhs() == (i*)->roots[root]->getFinalState()) {
+					// only one accepting rule is exppected
+					(*i)->findSelectorDestination(*j, selector, (*i)->variables[x].index, (*i)->variables[x].offset);
+					break;
+				}				
+			}		
+			(*i)->normalize();
+		}
+	}	
+
+	void x_next_ass_y(vector<FAE*>& dst, size_t x, size_t y, size_t selector) {
+		assert(dst.empty());
+		assert(x < this->variables.size());
+		assert(y < this->variables.size());
+		// TODO: raise some reasonable exception here (instead of runtime_error)
+		switch (this->variables[x].index) {
+			case varNull: throw runtime_error("FAE::x_ass_y_next(): destination variable contains NULL!");
+			case varUndef: throw runtime_error("FAE::x_ass_y_next(): destination variable undefined!");
+		}
+		size_t root = this->variables[x].index;
+		selector += this->variables[x].offset;
+		assert(root < this->roots.size());
+		this->isolateAtRoot(dst, root, {selector});
+		for (vector<FAE*>::iterator i = dst.begin(); i != dst.end(); ++i) {
+			TA<label_type>* ta = (*i)->taMan.alloc();
+			for (TA<label_type>::iterator j = (*i)->roots[root]->begin(); j != (*i)->roots[root]->end(); ++j) {
+				if (j->rhs() == (*i)->roots[root]->getFinalState()) {
+					// only one accepting rule is exppected
+					(*i)->changeSelectorDestination(*ta, *j, selector, (*i)->variables[y].index, (*i)->variables[y].offset);
+				} else {
+					ta->addTransition(*j);
+				}
+			}		
+			ta->addFinalState((i*)->roots[root]->getFinalState());
+			(*i)->taMan.release((*i)->roots[root]);
+			(*i)->roots[root] = ta;
+			(*i)->normalize();
+		}
 	}	
 
 };

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef ERROR_H
+#define ERROR_H
 
 #include <sstream>
 #include <iomanip>
@@ -39,3 +40,7 @@ public:
 	}
 
 };
+
+
+
+#endif

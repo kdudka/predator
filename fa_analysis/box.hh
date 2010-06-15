@@ -23,87 +23,7 @@ using std::pair;
 using std::set;
 using std::make_pair;
 using std::runtime_error;
-/*
-class BoxTemplate {
 
-	friend class TemplateManager;
-	friend class Box;
-
-	size_t type;
-	size_t tag;
-
-	typedef TA<const vector<const BoxTemplate*>*> root_type;
-
-	vector<var_info> variables;
-	vector<root_type> roots;
-
-protected:
-
-	static FA::label_type translateLabel(LabMan& labMan, const vector<const BoxTemplate*>* label, const boost::unordered_map<const BoxTemplate*, const Box*>& args) {
-		vector<const Box*> v;
-		for (vector<const BoxTemplate*>::const_iterator i = label->begin(); i != label->end(); ++i) {
-			boost::unordered_map<const BoxTemplate*, const Box*>::const_iterator j = args.find(*i);
-			if (j == args.end())
-				throw std::runtime_error("template instance undefined");
-			v.push_back(j->second);
-		}
-		return &labMan.lookup(v);
-	}
-
-	BoxTemplate(size_t type, size_t tag) : type(type), tag(tag) {}
-
-public:
-
-	static const size_t boxID = 0;
-	static const size_t selID = 1;
-	static const size_t refID = 2;
-
-	static BoxTemplate createBox() {
-		return BoxTemplate(BoxTemplate::boxID, 0);
-	}
-
-	static BoxTemplate createSelector(size_t selector) {
-		return BoxTemplate(BoxTemplate::selID, selector);
-	}
-
-	static BoxTemplate createReference(size_t root) {
-		return BoxTemplate(BoxTemplate::refID, root);
-	}
-
-	Box createInstance(TAManager<FA::label_type>& taMan, LabMan& labMan, const vector<size_t>& offsets, const boost::unordered_map<const BoxTemplate*, const Box*>& args) const {
-		Box box(taMan, *this);
-		if (this->type == 1) {
-			assert(offsets.size() == 2);
-			box.variables.push_back(var_info(0, offsets[0]));
-			box.variables.push_back(var_info(1, offsets[1]));
-			return box;
-		}
-		if (this->type == 2)
-			return box;
-		assert(offsets.size() == this->variables.size());
-		for (vector<root_type>::const_iterator j = this->roots.begin(); j != this->roots.end(); ++j) {
-			TA<FA::label_type>* ta = taMan.alloc();
-			for (root_type::iterator i = j->begin(); i != j->end(); ++i)
-				ta->addTransition(i->lhs(), BoxTemplate::translateLabel(labMan, i->label(), args), i->rhs());
-			ta->addFinalState(j->getFinalState());
-			box.roots.push_back(ta);
-		}
-		for (size_t i = 0; i < this->variables.size(); ++i)
-			box.variables.push_back(var_info(this->variables[i].index, offsets[i]));
-	}
-
-	void computeTrigger(vector<const BoxTemplate*>& templates) {
-		templates.clear();
-		std::set<const BoxTemplate*> s;
-		for (root_type::iterator i = this->roots[0].begin(); i != this->roots[0].end(); ++i) {
-			if (this->roots[0].isFinalState(i->rhs()))
-				s.insert(i->label()->begin(), i->label()->end());
-		}
-		templates = vector<const BoxTemplate*>(s.begin(), s.end());
-	}
-
-};
-*/
 class Box : public FA {
 
 	friend class BoxManager;
@@ -141,7 +61,19 @@ public:
 	}
 
 	size_t getSelector() const {
+		assert(this->isSelector());
 		return this->tag;
+	}
+
+	size_t getSelector(size_t& offset) const {
+		assert(this->isSelector());
+		offset = this->variables[0].offset;
+		return this->tag;
+	}
+
+	size_t getSelectorOffset() const {
+		assert(this->isSelector());
+		return this->variables[0].offset;
 	}
 
 	bool isReference() const {
