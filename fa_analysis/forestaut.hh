@@ -14,7 +14,7 @@ using std::pair;
 
 class FA {
 
-	friend class UFA;
+	friend class UFAE;
 
 public:
 
@@ -70,7 +70,7 @@ public:
 		for (vector<TA<label_type>*>::iterator i = this->roots.begin(); i != this->roots.end(); ++i)
 			this->taMan.release(*i);
 		this->roots.clear();
-		this->variables.clear()
+		this->variables.clear();
 	}
 
 };

@@ -2,6 +2,7 @@
 #define UTILS_H
 
 #include <vector>
+#include <set>
 #include <map>
 #include <ostream>
 
@@ -168,7 +169,7 @@ public:
 	}
 	
 	template <class T>
-	static void set_intersection(std::vector<T>& dst, const std::vector<std::vector<T> >& src) {
+	static void setIntersection(std::vector<T>& dst, const std::vector<std::vector<T> >& src) {
 		boost::unordered_map<T, size_t> m;
 		for (typename std::vector<std::vector<T> >::const_iterator i = src.begin(); i != src.end(); ++i) {
 			for (typename std::vector<T>::const_iterator j = i->begin(); j != i->end(); ++j)
@@ -182,7 +183,7 @@ public:
 	}
 
 	template <class T>
-	static void set_intersection(std::set<T>& dst, const std::set<T>& src1, const std::set<T>& src2) {
+	static void setIntersection(std::set<T>& dst, const std::set<T>& src1, const std::set<T>& src2) {
 		typename std::set<T>::const_iterator i1 = src1.begin(), i2 = src2.begin();
 		dst.clear();
 		while (i1 != src1.end() && i2 != src2.end()) {
@@ -195,7 +196,7 @@ public:
 
 	// union
 	template <class T>
-	static void set_union(std::vector<T>& dst, const std::vector<std::vector<T> >& src) {
+	static void setUnion(std::vector<T>& dst, const std::vector<std::vector<T> >& src) {
 		boost::unordered_set<T> m;
 		for (typename std::vector<std::vector<T> >::const_iterator i = src.begin(); i != src.end(); ++i) {
 			for (typename std::vector<T>::const_iterator j = i->begin(); j != i->end(); ++j)

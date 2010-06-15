@@ -286,7 +286,7 @@ public:
 		this->finalStates.clear();
 	}
 
-	void load(const TA<T>::dfs_cache_type& cache, const TA<T>& ta, const vector<size_t>& stack, bool registerFinalStates = true) {
+	void loadFromDFS(const TA<T>::dfs_cache_type& dfsCache, const TA<T>& ta, const vector<size_t>& stack, bool registerFinalStates = true) {
 		for (TA<T>::dfs_iterator i = ta.dfsStart(dfsCache, stack); i->isValid(); ++i)
 			this->addTransition(*i);
 		if (registerFinalStates)
@@ -335,7 +335,7 @@ public:
 	
 	void buildDFSCache(dfs_cache_type& cache) const {
 		for (typename set<typename trans_cache_type::value_type*>::const_iterator i = this->transitions.begin(); i != this->transitions.end(); ++i)
-			cache.insert(make_pair(i->first._rhs, vector<const TT<T>*>())).first->second.push_back(&i->first);
+			cache.insert(make_pair((*i)->first._rhs, vector<const TT<T>*>())).first->second.push_back(&(*i)->first);
 	}
 	
 	typename trans_cache_type::value_type* addTransition(const vector<size_t>& lhs, const T& label, size_t rhs) {

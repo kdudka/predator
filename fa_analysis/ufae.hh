@@ -6,7 +6,7 @@
 #include "utils.hh"
 #include "treeaut.hh"
 #include "labman.hh"
-#include "fooretautext.hh"
+#include "forestautext.hh"
 
 class UFAE {
 	
@@ -40,17 +40,17 @@ public:
 		this->stateOffset += index.size();
 	}
 
-	void ta2fae(vetor<FAE*>& dst, TAManager<FA::label_type>& taMan, LabMan& labMan, BoxManager& boxMan) const {
+	void ta2fae(vector<FAE*>& dst, TAManager<FA::label_type>& taMan, LabMan& labMan, BoxManager& boxMan) const {
 		TA<FA::label_type>::dfs_cache_type dfsCache;
 		this->backend.buildDFSCache(dfsCache);
-		vector<const TT<T>*>& v = dfsCache.insert(make_pair(0, vector<const TT<T>*>())).first->second;
+		vector<const TT<FA::label_type>*>& v = dfsCache.insert(make_pair(0, vector<const TT<FA::label_type>*>())).first->second;
 		// iterate over all "synthetic" transitions and constuct new FAE for each
-		for (vector<const TT<T>*>::iterator i = v.begin(); i != v.end(); ++i) {
+		for (vector<const TT<FA::label_type>*>::iterator i = v.begin(); i != v.end(); ++i) {
 			FAE* fae = new FAE(taMan, labMan, boxMan);
-			Guard guard(fae);
-			fae->loadTA(dfsCache, *i, this->stateOffset);
-			dst->push_back(fae);
-			guard->release();
+			Guard<FAE> guard(fae);
+			fae->loadTA(this->backend, dfsCache, *i, this->stateOffset);
+			dst.push_back(fae);
+			guard.release();
 		}
 	}
 

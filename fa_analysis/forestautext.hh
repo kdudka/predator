@@ -47,7 +47,7 @@ public:
 		this->invRootReferenceIndex.clear();
 	}
 	
-	void loadTA(const TA<FA::label_type>::dfs_cache_type& dfsCache, const TT<T>* top, size_t stateOffset) {
+	void loadTA(const TA<label_type>& src, const TA<label_type>::dfs_cache_type& dfsCache, const TT<label_type>* top, size_t stateOffset) {
 		this->clear();
 		this->variables = *top->label().data;
 		this->stateOffset = stateOffset;
@@ -55,7 +55,7 @@ public:
 			TA<label_type>* ta = this->taMan.alloc();
 			this->roots.push_back(ta);
 			// add reachable transitions
-			for (TA<T>::dfs_iterator j = this->dfsStart(dfsCache, {*i}); i->isValid(); ++j) {
+			for (TA<label_type>::dfs_iterator j = src.dfsStart(dfsCache, {*i}); j.isValid(); j.next()) {
 				ta->addTransition(*j);
 				if (j->lhs().empty())
 					this->registerRootReference(j->label().head().getReference(), j->rhs());
@@ -88,8 +88,7 @@ protected:
 	void registerRootReference(size_t root, size_t state) {
 		if (!this->rootReferenceIndex.insert(make_pair(root, state)).second)
 			throw runtime_error("FAE::registerRootReference(): root reference already registered!");
-		
-		if (!this->invRootReferenceIndex.insert(make_pair(this->nextState(), root)))
+		if (!this->invRootReferenceIndex.insert(make_pair(this->nextState(), root)).second)
 			throw runtime_error("FAE::registerRootReference(): state <-> root reference association corrupted!");
 	}
 
@@ -236,7 +235,7 @@ protected:
 				} else {
 //					vector<size_t> order;
 //					FAE::evaluateLhsOrder(*i->label().dataB, order);
-					for (vector<size_t>::iterator j = i->lhs().begin(); j != i->lhs().end(); ++j) {
+					for (vector<size_t>::const_iterator j = i->lhs().begin(); j != i->lhs().end(); ++j) {
 						boost::unordered_map<size_t, vector<size_t> >::iterator k = o.find(i->lhs()[*j]);
 						if (k == o.end())
 							break;
@@ -320,7 +319,7 @@ protected:
 	}
 
 	// normalize representation
-	void normalize(const vector<size_t>& requiredGarbage = {}) {
+	void normalize(const vector<size_t>& requiredGarbage = vector<size_t>()) {
 		vector<size_t> order, garbage;
 		set<size_t> marked;
 		this->traverse(order, marked, garbage);
@@ -368,17 +367,16 @@ protected:
 	}
 
 	// ensures that the given selectors (or at least the boxes which contain them) become "free" in the result
-	void isolateAtRoot(vector<FAE*>& dst, size_t root, const vector<size_t>& selectors = {}) const {
-		set<size_t> sSelectors(selectors.begin(), selector.end());
-		boost::unordered_map<size_t, map<size_t, size_t> >::iterator i = this->selectorMap.find(root);
+	void isolateAtRoot(vector<FAE*>& dst, size_t root, const vector<size_t>& selectors = vector<size_t>()) const {
+		set<size_t> sSelectors(selectors.begin(), selectors.end());
+		boost::unordered_map<size_t, map<size_t, size_t> >::const_iterator i = this->selectorMap.find(root);
 		if (i != this->selectorMap.end())
 			throw runtime_error("FAE::isolateRoot(): some selectors are hidden somewhere else! (not implemented yet)");
-				assert(this->variables[y].index < this->roots.size());
 		assert(root < this->roots.size());
 		for (TA<label_type>::iterator i = this->roots[root]->begin(); i != this->roots[root]->end(); ++i) {
 			if (i->rhs() == this->roots[root]->getFinalState()) {
 				FAE* fae = new FAE(*this);
-				Guard guard(fae);
+				Guard<FAE> guard(fae);
 				TA<label_type>* ta = fae->taMan.clone(this->roots[root], false);
 				vector<size_t> lhs;
 				size_t lhsOffset = 0;
@@ -388,10 +386,11 @@ protected:
 					if (!selectors.empty() && !utils::checkIntersection((*j)->getDownwardCoverage(0).second, sSelectors)) {
 						// this box is not interesting
 						for (size_t k = 0; k < (*j)->getArity(); ++k, ++lhsOffset)
-							lhs.push_back(i->lhs()[lhsOffsset]);
+							lhs.push_back(i->lhs()[lhsOffset]);
 					} else {
 						// we have to isolate here
 						for (size_t k = 0; k < (*j)->getArity(); ++k, ++lhsOffset) {
+							size_t reference;
 							if (this->isRootReference(i->lhs()[lhsOffset], reference)) {
 								// no need to create a reference when it's already there
 								lhs.push_back(i->lhs()[lhsOffset]);
@@ -404,10 +403,14 @@ protected:
 								TA<label_type>* tmp2 = fae->taMan.alloc();
 								tmp->unreachableFree(*tmp2);
 								fae->taMan.release(tmp);
+								// compute 'o'
+								boost::unordered_map<size_t, vector<size_t> > o;
+								FAE::computeDownwardO(*tmp2, o);
 								fae->roots.push_back(tmp2);
+								fae->rootMap.push_back(o[tmp2->getFinalState()]);
 							}
 						}
-						needsDecomosition = (*j)->isBox();
+						needsDecomposition = (*j)->isBox();
 					}
 				}
 				size_t newState = fae->freshState();
@@ -416,6 +419,9 @@ protected:
 				// exchange the original automaton with a new one
 				fae->taMan.release(fae->roots[root]);
 				fae->roots[root] = ta;
+				boost::unordered_map<size_t, vector<size_t> > o;
+				FAE::computeDownwardO(*ta, o);
+				fae->rootMap[root] = o[ta->getFinalState()];
 				if (needsDecomposition) {
 					fae->decomposeAtRoot(dst, root, selectors);
 				} else {
@@ -426,15 +432,15 @@ protected:
 		}
 	}
 	
-	void findSelectorDestination(const TT<label_type>* transition, size_t selector, size_t& dest, size_t& offset) const {
+	void findSelectorDestination(const TT<label_type>& transition, size_t selector, size_t& dest, size_t& offset) const {
 		dest = varUndef;
 		offset = 0;
 		size_t lhsOffset = 0;
 		bool found = false;
-		for (vector<const Box*>::iterator i = transition->label().dataB->begin(); i != transition->label().dataB->end(); ++i) {
+		for (vector<const Box*>::const_iterator i = transition.label().dataB->begin(); i != transition.label().dataB->end(); ++i) {
 			if ((*i)->isSelector(selector)) {
 				assert(!found);
-				if (!this->isRootReference(transition->lhs()[lhsOffset], dest))
+				if (!this->isRootReference(transition.lhs()[lhsOffset], dest))
 					throw runtime_error("FAE::findSelectorDestination(): destination is not a reference!");
 				offset = (*i)->getSelectorOffset();
 				found = true;
@@ -444,19 +450,19 @@ protected:
 		// TODO: emit some warning here
 	}
 
-	void changeSelectorDestination(TA<label_type>& dst, const TT<label_type>* transition, size_t selector, size_t dest, size_t offset) {
+	void changeSelectorDestination(TA<label_type>& dst, const TT<label_type>& transition, size_t selector, size_t dest, size_t offset) {
 		vector<size_t> lhs;
 		vector<const Box*> label;
 		size_t lhsOffset = 0;
 		bool found = false;
-		for (vector<const Box*>::iterator i = transition->label().dataB->begin(); i != transition->label().dataB->end(); ++i) {
+		for (vector<const Box*>::const_iterator i = transition.label().dataB->begin(); i != transition.label().dataB->end(); ++i) {
 			if ((*i)->isSelector(selector)) {
 				assert(!found);
 				lhs.push_back(this->addRootReference(dst, dest));
 				label.push_back(&this->boxMan.getSelector(selector, offset));
 				found = true;
 			} else {
-				lhs.insert(lhs.end(), transition->lhs().begin() + lhsOffset, transition->lhs().begin() + lhsOffset + (*i)->getArity());
+				lhs.insert(lhs.end(), transition.lhs().begin() + lhsOffset, transition.lhs().begin() + lhsOffset + (*i)->getArity());
 				label.push_back(*i);
 			}
 			lhsOffset += (*i)->getArity();
@@ -464,14 +470,18 @@ protected:
 		if (!found)
 			throw runtime_error("FAE::changeSelectorDestination(): pointer slot not defined!");
 		FAE::reorderBoxes(label, lhs);
-		dst.addTransition(lhs, &this->labMan.lookup(label), transition->rhs());
+		dst.addTransition(lhs, &this->labMan.lookup(label), transition.rhs());
 	}
 
 public:
 
 	// state 0 should never be allocated by FAE
 	FAE(TAManager<FA::label_type>& taMan, LabMan& labMan, BoxManager& boxMan)
-	 : FA(taMan), boxMan(boxMan), labMan(labMan), stateOffset(1) {}
+	 : FA(taMan), boxMan(boxMan), labMan(labMan), stateOffset(1) {
+		 // init special root references (this is not required)
+		 this->registerRootReference(varNull, varNull);
+		 this->registerRootReference(varUndef, varUndef);
+	}
 
 	FAE(const FAE& x)
 	 : FA(x), boxMan(x.boxMan), labMan(x.labMan), stateOffset(x.stateOffset), rootMap(x.rootMap),
@@ -485,7 +495,7 @@ public:
 	void newVar(vector<FAE*>& dst, size_t& id) {
 		assert(dst.empty());
 		FAE* fae = new FAE(*this);
-		Guard guard(fae);
+		Guard<FAE> guard(fae);
 		id = fae->variables.size();
 		fae->variables.push_back(var_info(varUndef, 0));
 		fae->normalize();
@@ -496,7 +506,7 @@ public:
 	void dropVars(vector<FAE*>& dst, size_t count) {
 		assert(dst.empty());
 		FAE* fae = new FAE(*this);
-		Guard guard(fae);
+		Guard<FAE> guard(fae);
 		assert(count <= fae->variables.size());
 		while (count-- > 0) fae->variables.pop_back();
 		fae->normalize();
@@ -507,8 +517,8 @@ public:
 	bool x_eq_y(size_t x, size_t y) const {
 		assert(x < this->variables.size());
 		assert(y < this->variables.size());
-		if ((this->variables[x] == varUndef) || (this->variables[y] == varUndef))
-			throw runtime_error("FAE:x_eq_y(): comparing undefined variables!");
+		if ((this->variables[x].index == varUndef) || (this->variables[y].index == varUndef))
+			throw runtime_error("FAE:x_eq_y(): comparing undefined value!");
 		return this->variables[x] == this->variables[y];
 	}
 	
@@ -518,7 +528,7 @@ public:
 		if (dataSlots > 0)
 			throw std::runtime_error("FAE::x_ass_new(): Data handling not implemented! (désolé)");
 		FAE* fae = new FAE(*this);
-		Guard guard(fae);
+		Guard<FAE> guard(fae);
 		TA<label_type>* ta = fae->taMan.alloc();
 		fae->variables[x] = var_info(fae->roots.size(), 0);
 		fae->roots.push_back(ta);
@@ -540,6 +550,11 @@ public:
 	void del_x(vector<FAE*>& dst, size_t x) const {
 		assert(dst.empty());
 		assert(x < this->variables.size());
+		// raise some reasonable exception here
+		switch (this->variables[x].index) {
+			case varNull: throw runtime_error("FAE::x_ass_y_next(): destination variable contains NULL!");
+			case varUndef: throw runtime_error("FAE::x_ass_y_next(): destination variable undefined!");
+		}
 		size_t root = this->variables[x].index;
 		this->isolateAtRoot(dst, root);
 		for (vector<FAE*>::iterator i = dst.begin(); i != dst.end(); ++i) {
@@ -566,7 +581,7 @@ public:
 		assert(dst.empty());
 		assert(x < this->variables.size());
 		FAE* fae = new FAE(*this);
-		Guard guard(fae);
+		Guard<FAE> guard(fae);
 		fae->variables[x] = var_info(varNull, 0);
 		fae->normalize();
 		dst.push_back(fae);
@@ -578,7 +593,7 @@ public:
 		assert(x < this->variables.size());
 		assert(y < this->variables.size());
 		FAE* fae = new FAE(*this);
-		Guard guard(fae);
+		Guard<FAE> guard(fae);
 		fae->variables[x] = fae->variables[y];
 		fae->variables[x].offset += offset;
 		fae->normalize();
@@ -601,9 +616,8 @@ public:
 		this->isolateAtRoot(dst, root, {selector});
 		for (vector<FAE*>::iterator i = dst.begin(); i != dst.end(); ++i) {
 			// find the destination of the selector
-			size_t dest, offset;
-			for (TA<label_type>::iterator j = (i*)->roots[root]->begin(); j != (i*)->roots[root]->end(); ++j) {
-				if (j->rhs() == (i*)->roots[root]->getFinalState()) {
+			for (TA<label_type>::iterator j = (*i)->roots[root]->begin(); j != (*i)->roots[root]->end(); ++j) {
+				if (j->rhs() == (*i)->roots[root]->getFinalState()) {
 					// only one accepting rule is exppected
 					(*i)->findSelectorDestination(*j, selector, (*i)->variables[x].index, (*i)->variables[x].offset);
 					break;
@@ -636,7 +650,7 @@ public:
 					ta->addTransition(*j);
 				}
 			}		
-			ta->addFinalState((i*)->roots[root]->getFinalState());
+			ta->addFinalState((*i)->roots[root]->getFinalState());
 			(*i)->taMan.release((*i)->roots[root]);
 			(*i)->roots[root] = ta;
 			(*i)->normalize();
