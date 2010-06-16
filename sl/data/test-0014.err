@@ -14,8 +14,6 @@ test-0014.c:141:16: warning: binary operator not implemented yet
 test-0014.c:260:12: warning: CL_TYPE_STRING not supported by heapValFromCst()
 test-0014.c:264:12: warning: CL_TYPE_STRING not supported by heapValFromCst()
 test-0014.c:268:12: warning: CL_TYPE_STRING not supported by heapValFromCst()
-test-0014.c:51:9: warning: CL_ACCESSOR_DEREF_ARRAY not implemented yet
-test-0014.c:116:16: warning: binary operator not implemented yet
 test-0014.c:272:12: warning: CL_TYPE_STRING not supported by heapValFromCst()
 test-0014.c:51:9: warning: CL_ACCESSOR_DEREF_ARRAY not implemented yet
 test-0014.c:189:16: warning: binary operator not implemented yet

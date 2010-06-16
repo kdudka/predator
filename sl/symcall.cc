@@ -40,6 +40,7 @@
 #ifndef SE_BYPASS_CALL_CACHE
 #   define SE_BYPASS_CALL_CACHE 0
 #endif
+
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of SymCallCtx
 struct SymCallCtx::Private {
@@ -51,8 +52,8 @@ struct SymCallCtx::Private {
     int                         nestLevel;
     bool                        pending;
 
-    void assignReturnValue();
-    void destroyStackFrame();
+    void assignReturnValue(SymHeapUnion &state);
+    void destroyStackFrame(SymHeapUnion &state);
 };
 
 SymCallCtx::SymCallCtx():
@@ -77,14 +78,14 @@ SymHeapUnion& SymCallCtx::rawResults() {
     return d->rawResults;
 }
 
-void SymCallCtx::Private::assignReturnValue() {
+void SymCallCtx::Private::assignReturnValue(SymHeapUnion &state) {
     const cl_operand &op = *this->dst;
     if (CL_OPERAND_VOID == op.code)
         // we're done for a function returning void
         return;
 
     // go through results and perform assignment of the return value
-    BOOST_FOREACH(SymHeap &res, this->rawResults) {
+    BOOST_FOREACH(SymHeap &res, state) {
         SymHeapProcessor proc(res, this->bt);
         proc.setLocation(&op.loc);
 
@@ -101,7 +102,7 @@ void SymCallCtx::Private::assignReturnValue() {
     }
 }
 
-void SymCallCtx::Private::destroyStackFrame() {
+void SymCallCtx::Private::destroyStackFrame(SymHeapUnion &state) {
     using namespace CodeStorage;
     const Fnc &ref = *this->fnc;
 
@@ -114,7 +115,7 @@ void SymCallCtx::Private::destroyStackFrame() {
     int hCnt = 0;
 #endif
 
-    BOOST_FOREACH(SymHeap &res, this->rawResults) {
+    BOOST_FOREACH(SymHeap &res, state) {
 #if DEBUG_SE_STACK_FRAME
         if (1 < this->rawResults.size()) {
             CL_DEBUG_MSG(lw, "*** destroying stack frame in result #"
@@ -151,12 +152,16 @@ void SymCallCtx::Private::destroyStackFrame() {
 }
 
 void SymCallCtx::flushCallResults(SymHeapUnion &dst) {
-    if (d->pending) {
-        d->pending = false;
-        d->assignReturnValue();
-        d->destroyStackFrame();
-    }
-    dst.insert(d->rawResults);
+    // mark as done
+    d->pending = false;
+
+    // polish the results
+    SymHeapUnion results(d->rawResults);
+    d->assignReturnValue(results);
+    d->destroyStackFrame(results);
+
+    // flush results
+    dst.insert(results);
 }
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -335,17 +340,17 @@ SymCallCtx& SymCallCache::getCallCtx(SymHeap heap,
     // cache lookup
     PerFncCache &pfc = d->cache[uid];
     SymCallCtx *ctx = pfc.lookup(heap);
-    if (ctx)
-        return *ctx;
+    if (!ctx) {
+        // cache miss
+        ctx = new SymCallCtx;
+        ctx->d->bt      = d->bt;
+        ctx->d->fnc     = d->fnc;
+        ctx->d->heap    = heap;
+        pfc.insert(heap, ctx);
+    }
 
-    // XXX
-    ctx = new SymCallCtx;
-    pfc.insert(heap, ctx);
-
-    ctx->d->bt   = d->bt;
-    ctx->d->fnc  = d->fnc;
-    ctx->d->heap = *d->heap;
-    ctx->d->dst  = &dst;
-    ctx->d->nestLevel = d->nestLevel;
+    // keep some properties later required to process the results
+    ctx->d->dst         = &dst;
+    ctx->d->nestLevel   = d->nestLevel;
     return *ctx;
 }

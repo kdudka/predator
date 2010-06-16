@@ -43,18 +43,18 @@ extern const char *sl_git_sha1;
 /**
  * if 1, print created/destroyed stack variables when running in verbose mode
  */
-#define DEBUG_SE_STACK_FRAME            0
+#define DEBUG_SE_STACK_FRAME                0
 
 /**
  * if 1, define TObjId and TValueId is integers (makes debugging easier)
  */
-#define DEBUG_SYMID_FORCE_INT           0
+#define DEBUG_SYMID_FORCE_INT               0
 
 /**
  * if 1, call optimization is not performed; it may introduce some compile-time
  * warnings and memory leaks as a side effect
  */
-#define SE_BYPASS_CALL_CACHE                1
+#define SE_BYPASS_CALL_CACHE                0
 
 /**
  * maximal call depth
