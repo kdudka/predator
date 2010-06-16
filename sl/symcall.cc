@@ -323,13 +323,15 @@ SymCallCtx& SymCallCache::getCallCtx(SymHeap heap,
         // this should have been handled elsewhere
         TRAP;
 
-    CL_DEBUG_MSG(d->lw, "SymCallCtx::getCallCtx() is considering function "
-            << nameOf(*d->fnc) << "()");
+    CL_DEBUG_MSG(d->lw, "SymCallCache is looking for "
+            << nameOf(*d->fnc) << "()...");
 
     // check recursion depth (if any)
     d->nestLevel = d->bt->countOccurrencesOfFnc(uid);
-    if (1 != d->nestLevel)
+    if (1 != d->nestLevel) {
         CL_WARN_MSG(d->lw, "support of call recursion is not stable yet");
+        CL_NOTE_MSG(d->lw, "nestLevel is " << d->nestLevel);
+    }
 
     // initialize local variables of the called fnc
     d->createStackFrame();

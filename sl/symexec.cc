@@ -401,12 +401,13 @@ void SymExec::Private::execInsnCall(const SymHeap &heap, SymHeapUnion &results, 
     }
 
     // enter backtrace
-    this->btStack->pushCall(uidOf(*fnc), this->lw);
+    this->btStack->pushCall(uid, this->lw);
 
     // get call context
     SymCallCtx &ctx = this->callCache->getCallCtx(heap, *insn);
     if (!ctx.needExec()) {
-        CL_DEBUG_MSG(this->lw, "(x) call of function optimized out");
+        CL_DEBUG_MSG(this->lw, "(x) call of function optimized out: "
+                << nameOf(*fnc) << "()");
         ctx.flushCallResults(results);
 
         // leave backtrace
