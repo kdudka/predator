@@ -25,6 +25,7 @@
 #include <cl/storage.hh>
 
 #include "symbt.hh"
+#include "symcut.hh"
 #include "symheap.hh"
 #include "symproc.hh"
 #include "symstate.hh"
@@ -45,12 +46,14 @@
 // implementation of SymCallCtx
 struct SymCallCtx::Private {
     SymBackTrace                *bt;
-    SymHeap                     heap;
     const CodeStorage::Fnc      *fnc;
+    SymHeap                     heap;
+    SymHeap                     surround;
     const struct cl_operand     *dst;
     SymHeapUnion                rawResults;
     int                         nestLevel;
-    bool                        pending;
+    bool                        computed;
+    bool                        flushed;
 
     void assignReturnValue(SymHeapUnion &state);
     void destroyStackFrame(SymHeapUnion &state);
@@ -59,7 +62,8 @@ struct SymCallCtx::Private {
 SymCallCtx::SymCallCtx():
     d(new Private)
 {
-    d->pending = true;
+    d->computed = false;
+    d->flushed = false;
 }
 
 SymCallCtx::~SymCallCtx() {
@@ -67,7 +71,7 @@ SymCallCtx::~SymCallCtx() {
 }
 
 bool SymCallCtx::needExec() const {
-    return d->pending;
+    return !d->computed;
 }
 
 const SymHeap& SymCallCtx::entry() const {
@@ -153,12 +157,19 @@ void SymCallCtx::Private::destroyStackFrame(SymHeapUnion &state) {
 
 void SymCallCtx::flushCallResults(SymHeapUnion &dst) {
     // mark as done
-    d->pending = false;
+    d->computed = true;
+    d->flushed = true;
 
     // polish the results
     SymHeapUnion results(d->rawResults);
     d->assignReturnValue(results);
     d->destroyStackFrame(results);
+
+    // now merge the results with the original surround
+    // TODO: some verbose output
+    BOOST_FOREACH(SymHeap &heap, results) {
+        joinHeapsByCVars(&heap, &d->surround);
+    }
 
     // flush results
     dst.insert(results);
@@ -217,14 +228,30 @@ struct SymCallCache::Private {
     const CodeStorage::Fnc      *fnc;
     int                         nestLevel;
 
+    SymHeap::TContCVar          glVars;
+
     void createStackFrame();
-    void setCallArgs(const CodeStorage::TOperandList &opList);
+    void setCallArgs(const CodeStorage::TOperandList &opList,
+                     SymHeap::TContCVar &args);
 };
 
 SymCallCache::SymCallCache(SymBackTrace *bt):
     d(new Private)
 {
+    using namespace CodeStorage;
     d->bt = bt;
+
+    const Storage &stor = bt->stor();
+    BOOST_FOREACH(const Var &var, stor.vars) {
+        if (VAR_GL == var.code) {
+            const CVar cVar(var.uid, /* gl variable */ 0);
+            d->glVars.push_back(cVar);
+        }
+    }
+
+    const unsigned found = d->glVars.size();
+    if (found)
+        CL_DEBUG("(g) SymCallCache found " << found << " gl variable(s)");
 }
 
 SymCallCache::~SymCallCache() {
@@ -256,7 +283,8 @@ void SymCallCache::Private::createStackFrame() {
     }
 }
 
-void SymCallCache::Private::setCallArgs(const CodeStorage::TOperandList &opList)
+void SymCallCache::Private::setCallArgs(const CodeStorage::TOperandList &opList,
+                                        SymHeap::TContCVar &cut)
 {
     // get called fnc's args
     const CodeStorage::TArgByPos &args = this->fnc->args;
@@ -282,7 +310,10 @@ void SymCallCache::Private::setCallArgs(const CodeStorage::TOperandList &opList)
         if (VAL_INVALID == val)
             TRAP;
 
+        // store arg as program variable (later used for heap pruning)
         const CVar cVar(arg, this->nestLevel);
+        cut.push_back(cVar);
+
         const TObjId lhs = this->heap->objByCVar(cVar);
         if (OBJ_INVALID == lhs)
             TRAP;
@@ -333,16 +364,36 @@ SymCallCtx& SymCallCache::getCallCtx(SymHeap heap,
         CL_NOTE_MSG(d->lw, "nestLevel is " << d->nestLevel);
     }
 
+    // start with gl variables as the cut
+    SymHeap::TContCVar cut(d->glVars);
+
     // initialize local variables of the called fnc
     d->createStackFrame();
-    d->setCallArgs(opList);
+    d->setCallArgs(opList, cut);
 
-    // TODO: prune heap at this point
+    // prune heap
+    SymHeap surround;
+    CL_DEBUG_MSG(d->lw, "|C| pruning heap by " << cut.size() << " variable(s)");
+    splitHeapByCVars(&heap, cut, &surround);
     
     // cache lookup
     PerFncCache &pfc = d->cache[uid];
     SymCallCtx *ctx = pfc.lookup(heap);
-    if (!ctx) {
+    if (ctx) {
+        if (!ctx->d->computed) {
+            // oops, we are not ready for this!
+            CL_ERROR("SymCallCache: cache entry found, but result not computed yet"
+                     ", perhaps a recursive function call?");
+            TRAP;
+        }
+        if (!ctx->d->flushed) {
+            // oops, we are not ready for this!
+            CL_ERROR("SymCallCache: cache entry found, but result not flushed yet"
+                     ", perhaps a recursive function call?");
+            TRAP;
+        }
+    }
+    else {
         // cache miss
         ctx = new SymCallCtx;
         ctx->d->bt      = d->bt;
@@ -351,8 +402,12 @@ SymCallCtx& SymCallCache::getCallCtx(SymHeap heap,
         pfc.insert(heap, ctx);
     }
 
+    // not flushed yet
+    ctx->d->flushed     = false;
+
     // keep some properties later required to process the results
     ctx->d->dst         = &dst;
     ctx->d->nestLevel   = d->nestLevel;
+    ctx->d->surround    = surround;
     return *ctx;
 }

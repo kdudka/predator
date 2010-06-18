@@ -128,6 +128,10 @@ SymBackTrace& SymBackTrace::operator=(const SymBackTrace &ref) {
     return *this;
 }
 
+const CodeStorage::Storage& SymBackTrace::stor() const {
+    return d->stor;
+}
+
 void SymBackTrace::printBackTrace() {
     using namespace CodeStorage;
 

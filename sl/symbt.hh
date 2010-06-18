@@ -48,6 +48,12 @@ class SymBackTrace {
         SymBackTrace(const SymBackTrace &);
         SymBackTrace& operator=(const SymBackTrace &);
 
+        /**
+         * @todo consider fitness of this method in the public interface of
+         * SymBackTrace
+         */
+        const CodeStorage::Storage& stor() const;
+
     public:
         /**
          * stream out the backtrace, using CL_NOTE_MSG; or do nothing if the

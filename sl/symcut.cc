@@ -20,9 +20,17 @@
 #include "config.h"
 #include "symcut.hh"
 
+#ifndef SE_DISABLE_SYMCUT
+#   define SE_DISABLE_SYMCUT 0
+#endif
+
 void splitHeapByCVars(SymHeap *srcDst, const SymHeap::TContCVar &cut,
                       SymHeap *saveSurroundTo)
 {
+#if SE_DISABLE_SYMCUT
+    return;
+#endif
+
     // TODO
     (void) srcDst;
     (void) cut;
@@ -32,6 +40,10 @@ void splitHeapByCVars(SymHeap *srcDst, const SymHeap::TContCVar &cut,
 
 void joinHeapsByCVars(SymHeap *srcDst, const SymHeap *src2)
 {
+#if SE_DISABLE_SYMCUT
+    return;
+#endif
+
     // TODO
     (void) srcDst;
     (void) src2;
