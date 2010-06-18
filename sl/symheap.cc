@@ -1655,4 +1655,4 @@ void SymHeap2::slsDestroy(TObjId id) {
     objDestroy(id);
 }
 
-// vim: tw=120
+// vim: tw=80

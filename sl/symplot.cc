@@ -734,4 +734,4 @@ bool SymHeapPlotter::plotStackFrame(const std::string           &name,
     return d->ok;
 }
 
-// vim: tw=120
+// vim: tw=80

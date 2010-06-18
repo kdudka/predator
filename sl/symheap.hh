@@ -581,4 +581,4 @@ void Abstract(SymHeap &sh);
 
 #endif /* H_GUARD_SYM_HEAP_H */
 
-// vim: tw=120
+// vim: tw=80

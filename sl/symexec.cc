@@ -566,4 +566,4 @@ void SymExec::Private::execFnc(const SymHeap &init)
     CL_DEBUG_MSG(this->lw, "<<< leaving " << nameOf(*this->fnc) << "()");
 }
 
-// vim: tw=120
+// vim: tw=80

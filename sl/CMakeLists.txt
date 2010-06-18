@@ -28,6 +28,7 @@ add_library(sl SHARED
     cl_symexec.cc
     symbt.cc
     symcall.cc
+    symcut.cc
     symdump.cc
     symexec.cc
     symheap.cc

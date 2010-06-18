@@ -431,4 +431,4 @@ void SymHeapUnion::insert(const SymHeapUnion &huni) {
     }
 }
 
-// vim: tw=120
+// vim: tw=80
