@@ -176,7 +176,8 @@ void SymCallCtx::flushCallResults(SymHeapUnion &dst) {
 }
 
 // /////////////////////////////////////////////////////////////////////////////
-// TODO: write some summary
+// call context cache per one fnc
+// FIXME: suboptimal interaction with SymHeapUnion during lookup/insert
 class PerFncCache {
     private:
         typedef std::vector<SymCallCtx *> TCtxMap;
@@ -191,7 +192,11 @@ class PerFncCache {
             }
         }
 
-        SymCallCtx* lookup(SymHeap &heap) {
+        /**
+         * look for the given heap; return the corresponding call ctx if found,
+         * 0 otherwise
+         */
+        SymCallCtx* lookup(const SymHeap &heap) {
 #if SE_BYPASS_CALL_CACHE
             return 0;
 #endif
@@ -202,8 +207,10 @@ class PerFncCache {
             return ctxMap_.at(idx);
         }
 
-        // FIXME: suboptimal interaction with SymHeapUnion during lookup/insert
-        void insert(SymHeap &heap, SymCallCtx *ctx) {
+        /**
+         * store the given heap with its corresponding call ctx into the cache
+         */
+        void insert(const SymHeap &heap, SymCallCtx *ctx) {
 #if SE_BYPASS_CALL_CACHE
             return;
 #endif
@@ -233,6 +240,7 @@ struct SymCallCache::Private {
     void createStackFrame();
     void setCallArgs(const CodeStorage::TOperandList &opList,
                      SymHeap::TContCVar &args);
+    SymCallCtx* getCallCtx(int uid, const SymHeap &heap);
 };
 
 SymCallCache::SymCallCache(SymBackTrace *bt):
@@ -323,6 +331,38 @@ void SymCallCache::Private::setCallArgs(const CodeStorage::TOperandList &opList,
     }
 }
 
+SymCallCtx* SymCallCache::Private::getCallCtx(int uid, const SymHeap &heap) {
+    // cache lookup
+    PerFncCache &pfc = this->cache[uid];
+    SymCallCtx *ctx = pfc.lookup(heap);
+    if (!ctx) {
+        // cache miss
+        ctx = new SymCallCtx;
+        ctx->d->bt      = this->bt;
+        ctx->d->fnc     = this->fnc;
+        ctx->d->heap    = heap;
+        pfc.insert(heap, ctx);
+        return ctx;
+    }
+
+    // cache hit, perform some sanity checks
+    if (!ctx->d->computed) {
+        // oops, we are not ready for this!
+        CL_ERROR("SymCallCache: cache entry found, but result not computed yet"
+                 ", perhaps a recursive function call?");
+        return 0;
+    }
+    if (!ctx->d->flushed) {
+        // oops, we are not ready for this!
+        CL_ERROR("SymCallCache: cache entry found, but result not flushed yet"
+                 ", perhaps a recursive function call?");
+        return 0;
+    }
+
+    // all OK, return the cached ctx
+    return ctx;
+}
+
 SymCallCtx& SymCallCache::getCallCtx(SymHeap heap,
                                      const CodeStorage::Insn &insn)
 {
@@ -376,31 +416,10 @@ SymCallCtx& SymCallCache::getCallCtx(SymHeap heap,
     CL_DEBUG_MSG(d->lw, "|C| pruning heap by " << cut.size() << " variable(s)");
     splitHeapByCVars(&heap, cut, &surround);
     
-    // cache lookup
-    PerFncCache &pfc = d->cache[uid];
-    SymCallCtx *ctx = pfc.lookup(heap);
-    if (ctx) {
-        if (!ctx->d->computed) {
-            // oops, we are not ready for this!
-            CL_ERROR("SymCallCache: cache entry found, but result not computed yet"
-                     ", perhaps a recursive function call?");
-            TRAP;
-        }
-        if (!ctx->d->flushed) {
-            // oops, we are not ready for this!
-            CL_ERROR("SymCallCache: cache entry found, but result not flushed yet"
-                     ", perhaps a recursive function call?");
-            TRAP;
-        }
-    }
-    else {
-        // cache miss
-        ctx = new SymCallCtx;
-        ctx->d->bt      = d->bt;
-        ctx->d->fnc     = d->fnc;
-        ctx->d->heap    = heap;
-        pfc.insert(heap, ctx);
-    }
+    // get either an existing ctx, or create a new one
+    SymCallCtx *ctx = d->getCallCtx(uid, heap);
+    if (!ctx)
+        TRAP;
 
     // not flushed yet
     ctx->d->flushed     = false;
