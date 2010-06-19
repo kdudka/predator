@@ -155,7 +155,7 @@ namespace {
             // no need for next wheel (special values already handled)
             return true;
 
-        if (VAL_INVALID != heap.valGetCustom(0, value))
+        if (-1 != heap.valGetCustom(0, value))
             // don't follow fnc pointers (and other custom values) by pointsTo()
             return true;
 

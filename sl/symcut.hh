@@ -38,7 +38,7 @@
  * SymHeap; it will be used to stored the (possibly empty) part of heap that is
  * cut off
  */
-void splitHeapByCVars(SymHeap *srcDst, const SymHeap::TContCVar &cut,
+void splitHeapByCVars(SymHeap *srcDst, SymHeap::TContCVar cut,
                       SymHeap *saveSurroundTo = 0);
 
 /**

@@ -156,22 +156,26 @@ void SymCallCtx::Private::destroyStackFrame(SymHeapUnion &state) {
 }
 
 void SymCallCtx::flushCallResults(SymHeapUnion &dst) {
+    if (d->flushed)
+        // are we really ready for this?
+        TRAP;
+
     // mark as done
     d->computed = true;
     d->flushed = true;
 
-    // polish the results
-    SymHeapUnion results(d->rawResults);
-    d->assignReturnValue(results);
-    d->destroyStackFrame(results);
-
     // now merge the results with the original surround
     // TODO: some verbose output
+    SymHeapUnion results(d->rawResults);
     BOOST_FOREACH(SymHeap &heap, results) {
         joinHeapsByCVars(&heap, &d->surround);
     }
 
-    // flush results
+    // polish the results
+    d->assignReturnValue(results);
+    d->destroyStackFrame(results);
+
+    // flush the results
     dst.insert(results);
 }
 
@@ -237,9 +241,8 @@ struct SymCallCache::Private {
 
     SymHeap::TContCVar          glVars;
 
-    void createStackFrame();
-    void setCallArgs(const CodeStorage::TOperandList &opList,
-                     SymHeap::TContCVar &args);
+    void createStackFrame(SymHeap::TContCVar &vars);
+    void setCallArgs(const CodeStorage::TOperandList &opList);
     SymCallCtx* getCallCtx(int uid, const SymHeap &heap);
 };
 
@@ -249,6 +252,7 @@ SymCallCache::SymCallCache(SymBackTrace *bt):
     using namespace CodeStorage;
     d->bt = bt;
 
+    // gather all gl variables
     const Storage &stor = bt->stor();
     BOOST_FOREACH(const Var &var, stor.vars) {
         if (VAR_GL == var.code) {
@@ -257,6 +261,7 @@ SymCallCache::SymCallCache(SymBackTrace *bt):
         }
     }
 
+    // count gl variables
     const unsigned found = d->glVars.size();
     if (found)
         CL_DEBUG("(g) SymCallCache found " << found << " gl variable(s)");
@@ -266,7 +271,7 @@ SymCallCache::~SymCallCache() {
     delete d;
 }
 
-void SymCallCache::Private::createStackFrame() {
+void SymCallCache::Private::createStackFrame(SymHeap::TContCVar &cVars) {
     using namespace CodeStorage;
     const Fnc &ref = *this->fnc;
 
@@ -276,23 +281,28 @@ void SymCallCache::Private::createStackFrame() {
             << ", nestLevel = " << this->nestLevel);
 #endif
 
+    // go through all variables that are visible from the function
     BOOST_FOREACH(const int uid, ref.vars) {
         const Var &var = ref.stor->vars[uid];
         if (isOnStack(var)) {
+            // automatic variable (and/or fnc arg)
 #if DEBUG_SE_STACK_FRAME
             LocationWriter lw(&var.loc);
             CL_DEBUG_MSG(lw, ">>> creating stack variable: #" << var.uid
                     << " (" << var.name << ")" );
 #endif
 
-            const CVar cVar(var.uid, this->nestLevel);
-            this->heap->objCreate(var.clt, cVar);
+            // gather stack frame in order to prune the heap afterwards
+            const CVar cv(var.uid, this->nestLevel);
+            cVars.push_back(cv);
+
+            // now create the SymHeap object
+            this->heap->objCreate(var.clt, cv);
         }
     }
 }
 
-void SymCallCache::Private::setCallArgs(const CodeStorage::TOperandList &opList,
-                                        SymHeap::TContCVar &cut)
+void SymCallCache::Private::setCallArgs(const CodeStorage::TOperandList &opList)
 {
     // get called fnc's args
     const CodeStorage::TArgByPos &args = this->fnc->args;
@@ -318,10 +328,8 @@ void SymCallCache::Private::setCallArgs(const CodeStorage::TOperandList &opList,
         if (VAL_INVALID == val)
             TRAP;
 
-        // store arg as program variable (later used for heap pruning)
+        // cVar lookup
         const CVar cVar(arg, this->nestLevel);
-        cut.push_back(cVar);
-
         const TObjId lhs = this->heap->objByCVar(cVar);
         if (OBJ_INVALID == lhs)
             TRAP;
@@ -408,8 +416,8 @@ SymCallCtx& SymCallCache::getCallCtx(SymHeap heap,
     SymHeap::TContCVar cut(d->glVars);
 
     // initialize local variables of the called fnc
-    d->createStackFrame();
-    d->setCallArgs(opList, cut);
+    d->createStackFrame(cut);
+    d->setCallArgs(opList);
 
     // prune heap
     SymHeap surround;

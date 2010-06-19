@@ -20,6 +20,8 @@
 #ifndef H_GUARD_WORKLIST_H
 #define H_GUARD_WORKLIST_H
 
+#include "util.hh"
+
 #include <set>
 #include <stack>
 
