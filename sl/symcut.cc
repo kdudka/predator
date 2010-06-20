@@ -77,20 +77,22 @@ void digSubObjs(const SymHeap &src, SymHeap &dst,
             // we should be set up
             continue;
 
-        if (CL_TYPE_STRUCT != clt->code) {
-            for (int i = 0; i < clt->item_cnt; ++i) {
-                const TObjId subSrc = src.subObj(objSrc, i);
-                const TObjId subDst = dst.subObj(objDst, i);
-                if (subSrc < 0 || subDst < 0)
-                    TRAP;
+        // store mapping of composite value
+        valMap[src.valueOf(objSrc)] = dst.valueOf(objDst);
 
-                push(todo, subSrc, subDst);
-                if (!wl.schedule(subSrc, subDst))
-                    TRAP;
+        // go through fields
+        for (int i = 0; i < clt->item_cnt; ++i) {
+            const TObjId subSrc = src.subObj(objSrc, i);
+            const TObjId subDst = dst.subObj(objDst, i);
+            if (subSrc < 0 || subDst < 0)
+                TRAP;
 
-                objMap[subSrc] = subDst;
-                valMap[src.placedAt(subSrc)] = dst.placedAt(subDst);
-            }
+            push(todo, subSrc, subDst);
+            if (!wl.schedule(subSrc, subDst))
+                TRAP;
+
+            objMap[subSrc] = subDst;
+            valMap[src.placedAt(subSrc)] = dst.placedAt(subDst);
         }
     }
 }
@@ -155,20 +157,14 @@ void deepCopy(const SymHeap &src, SymHeap &dst, TCut &cut,
             // this should have been handled elsewhere
             TRAP;
 
-        if (objSrc != OBJ_RETURN) {
-            // store value IDs mapping
-            const TValueId at = src.placedAt(objSrc);
-            const TValueId atDst = dst.placedAt(objDst);
-            valMap[at] = atDst;
+        if (objSrc == OBJ_RETURN && objDst == OBJ_RETURN)
+            // FIXME: really safe to ignore?
+            continue;
 
-            // go from the value backward
-            // FIXME: overkill in case of joinHeapsByCVars (performance impact)
-            SymHeap::TContObj uses;
-            src.usedBy(uses, at);
-            BOOST_FOREACH(TObjId objSrc, uses) {
-                addObjectIfNeeded(src, dst, cut, objMap, valMap, wl, objSrc);
-            }
-        }
+        // read the address
+        const TValueId atSrc = src.placedAt(objSrc);
+        if (atSrc <=0)
+            TRAP;
 
         // read the original value
         const TValueId valSrc = src.valueOf(objSrc);
@@ -179,6 +175,7 @@ void deepCopy(const SymHeap &src, SymHeap &dst, TCut &cut,
         // FIXME: overkill in case of joinHeapsByCVars (performance impact)
         SymHeap::TContObj uses;
         src.usedBy(uses, valSrc);
+        src.usedBy(uses, atSrc);
         BOOST_FOREACH(TObjId objSrc, uses) {
             addObjectIfNeeded(src, dst, cut, objMap, valMap, wl, objSrc);
         }
@@ -187,10 +184,7 @@ void deepCopy(const SymHeap &src, SymHeap &dst, TCut &cut,
         if (OBJ_INVALID != compSrc) {
             const TObjId compDst =
                 addObjectIfNeeded(src, dst, cut, objMap, valMap, wl, compSrc);
-
-            const TValueId valDst = dst.valueOf(compDst);
-            valMap[valSrc] = valDst;
-            dst.objSetValue(objDst, valDst);
+            dst.objSetValue(objDst, dst.valueOf(compDst));
             continue;
         }
 
@@ -200,10 +194,10 @@ void deepCopy(const SymHeap &src, SymHeap &dst, TCut &cut,
             continue;
         }
 
-        typename TValMap::iterator iter = valMap.find(valSrc);
-        if (valMap.end() != iter) {
+        typename TValMap::iterator iterValSrc = valMap.find(valSrc);
+        if (valMap.end() != iterValSrc) {
             // good luck, we have already handled the target value
-            dst.objSetValue(objDst, iter->second);
+            dst.objSetValue(objDst, iterValSrc->second);
             continue;
         }
 
@@ -227,24 +221,12 @@ void deepCopy(const SymHeap &src, SymHeap &dst, TCut &cut,
             continue;
         }
 
-        if (src.valPointsToAnon(valSrc)) {
-            // we know size of the target, but not the type etc.
-            const TObjId anon = src.pointsTo(valSrc);
-            const int cbSize = src.objSizeOfAnon(anon);
-            const TObjId anonDst = dst.objCreateAnon(cbSize);
-            objMap[anon] = anonDst;
-            const TValueId valDst = dst.placedAt(anonDst);
-            valMap[src.placedAt(anon)] = valDst;
-            dst.objSetValue(objDst, valDst);
-            continue;
-        }
-
-        const TObjId target = src.pointsTo(valSrc);
-        if (OBJ_INVALID == target)
+        const TObjId targetSrc = src.pointsTo(valSrc);
+        if (OBJ_INVALID == targetSrc)
             TRAP;
 
-        if (target < 0) {
-            switch (target) {
+        if (targetSrc < 0) {
+            switch (targetSrc) {
                 case OBJ_DELETED:
                 case OBJ_LOST:
                     break;
@@ -252,13 +234,14 @@ void deepCopy(const SymHeap &src, SymHeap &dst, TCut &cut,
                     TRAP;
             }
 
-            // FIXME: really safe to ignore (valClt == 0) ??
-            const struct cl_type *valClt = src.valType(valSrc);
-            const TObjId objTmp = dst.objCreate(valClt);
+            // FIXME: really safe to ignore (cltValSrc == 0) ??
+            const struct cl_type *cltValSrc = src.valType(valSrc);
+            const TObjId objTmp = dst.objCreate(cltValSrc);
             const TValueId valDst = dst.placedAt(objTmp);
 
             // FIXME: avoid using of friend?
-            dynamic_cast<SymHeapCore &>(dst).objDestroy(objTmp, target);
+            SymHeapCore &core = dynamic_cast<SymHeapCore &>(dst);
+            core.objDestroy(objTmp, /* OBJ_DELETED/OBJ_LOST */ targetSrc);
 
             valMap[valSrc] = valDst;
             dst.objSetValue(objDst, valDst);
@@ -267,7 +250,7 @@ void deepCopy(const SymHeap &src, SymHeap &dst, TCut &cut,
 
         // traverse recursively
         const TObjId targetDst =
-            addObjectIfNeeded(src, dst, cut, objMap, valMap, wl, target);
+            addObjectIfNeeded(src, dst, cut, objMap, valMap, wl, targetSrc);
         const TValueId at = dst.placedAt(targetDst);
         dst.objSetValue(objDst, at);
     }
