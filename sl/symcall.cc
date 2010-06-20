@@ -38,8 +38,8 @@
 #   define DEBUG_SE_STACK_FRAME 0
 #endif
 
-#ifndef SE_BYPASS_CALL_CACHE
-#   define SE_BYPASS_CALL_CACHE 0
+#ifndef SE_DISABLE_CALL_CACHE
+#   define SE_DISABLE_CALL_CACHE 0
 #endif
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -201,7 +201,7 @@ class PerFncCache {
          * 0 otherwise
          */
         SymCallCtx* lookup(const SymHeap &heap) {
-#if SE_BYPASS_CALL_CACHE
+#if SE_DISABLE_CALL_CACHE
             return 0;
 #endif
             int idx = huni_.lookup(heap);
@@ -215,7 +215,7 @@ class PerFncCache {
          * store the given heap with its corresponding call ctx into the cache
          */
         void insert(const SymHeap &heap, SymCallCtx *ctx) {
-#if SE_BYPASS_CALL_CACHE
+#if SE_DISABLE_CALL_CACHE
             return;
 #endif
             huni_.insert(heap);

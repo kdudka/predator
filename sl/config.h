@@ -51,18 +51,19 @@ extern const char *sl_git_sha1;
 #define DEBUG_SYMID_FORCE_INT               0
 
 /**
- * if 1, call optimization is not performed; it may introduce some compile-time
- * warnings and memory leaks as a side effect
- */
-#define SE_BYPASS_CALL_CACHE                0
-
-/**
- * if 1, bypass SymHeap2::abstract
+ * if 1, comment out the body of SymHeap2::abstract
  */
 #define SE_DISABLE_ABSTRACT                 0
 
 /**
+ * if 1, call optimization is not performed; it may introduce some compile-time
+ * warnings and memory leaks as a side effect
+ */
+#define SE_DISABLE_CALL_CACHE               0
+
+/**
  * if 1, do not use the @b symcut module at all
+ * @note symcut currently doesn't work well when (SE_DISABLE_ABSTRACT == 0)
  */
 #define SE_DISABLE_SYMCUT                   1
 

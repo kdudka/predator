@@ -233,7 +233,7 @@ TValueId handleValue(DeepCopyData &dc, TValueId valSrc) {
     return at;
 }
 
-void deepCopy(DeepCopyData &dc) {
+void deepCopy(DeepCopyData &dc, bool digBackward) {
     const SymHeap   &src = dc.src;
     SymHeap         &dst = dc.dst;
 
@@ -260,13 +260,14 @@ void deepCopy(DeepCopyData &dc) {
         if (VAL_INVALID == valSrc)
             TRAP;
 
-        // go from the value backward
-        // FIXME: overkill in case of joinHeapsByCVars (performance impact)
-        SymHeap::TContObj uses;
-        src.usedBy(uses, valSrc);
-        src.usedBy(uses, atSrc);
-        BOOST_FOREACH(TObjId objSrc, uses) {
-            addObjectIfNeeded(dc, objSrc);
+        if (/* optimization */ digBackward) {
+            // go from the value backward
+            SymHeap::TContObj uses;
+            src.usedBy(uses, valSrc);
+            src.usedBy(uses, atSrc);
+            BOOST_FOREACH(TObjId objSrc, uses) {
+                addObjectIfNeeded(dc, objSrc);
+            }
         }
 
         // do whatever we need to do with the value
@@ -277,11 +278,13 @@ void deepCopy(DeepCopyData &dc) {
         // now set object's value
         dst.objSetValue(objDst, valSrc);
 
-        // now poke all values related by Neq or EqIf predicates
-        SymHeap::TContValue relatedVals;
-        src.gatherRelatedValues(relatedVals, valSrc);
-        BOOST_FOREACH(TValueId relValSrc, relatedVals) {
-            handleValue(dc, relValSrc);
+        if (/* optimization */ digBackward) {
+            // now poke all values related by Neq or EqIf predicates
+            SymHeap::TContValue relatedVals;
+            src.gatherRelatedValues(relatedVals, valSrc);
+            BOOST_FOREACH(TValueId relValSrc, relatedVals) {
+                handleValue(dc, relValSrc);
+            }
         }
     }
 
@@ -290,7 +293,7 @@ void deepCopy(DeepCopyData &dc) {
 }
 
 void prune(const SymHeap &src, SymHeap &dst,
-           /* NON-const */ DeepCopyData::TCut &cut)
+           /* NON-const */ DeepCopyData::TCut &cut, bool forwardOnly = false)
 {
     DeepCopyData dc(src, dst, cut);
     DeepCopyData::TCut snap(cut);
@@ -311,7 +314,7 @@ void prune(const SymHeap &src, SymHeap &dst,
     }
 
     // go through the worklist
-    deepCopy(dc);
+    deepCopy(dc, !forwardOnly);
 }
 
 namespace {
@@ -387,7 +390,7 @@ void joinHeapsByCVars(const SymBackTrace *bt, SymHeap *srcDst,
 #if SE_DISABLE_SYMCUT
     return;
 #endif
-    // gather program variables
+    // gather _all_ program variables of *src2
     SymHeap::TContCVar all;
     src2->gatherCVars(all);
 
@@ -395,6 +398,6 @@ void joinHeapsByCVars(const SymBackTrace *bt, SymHeap *srcDst,
     DeepCopyData::TCut cset;
     fillSet(cset, all);
     
-    // FIXME: performance impact
-    prune(*src2, *srcDst, cset);
+    // forward-only merge of *src2 into *srcDst
+    prune(*src2, *srcDst, cset, /* optimization */ true);
 }
