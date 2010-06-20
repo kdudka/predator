@@ -65,7 +65,7 @@ extern const char *sl_git_sha1;
  * if 1, do not use the @b symcut module at all
  * @note symcut currently doesn't work well when (SE_DISABLE_ABSTRACT == 0)
  */
-#define SE_DISABLE_SYMCUT                   1
+#define SE_DISABLE_SYMCUT                   0
 
 /**
  * maximal call depth

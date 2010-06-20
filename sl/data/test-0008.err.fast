@@ -1,6 +1,0 @@
-test-0008.c:15:33: warning: support of call recursion is not stable yet
-test-0008.c:15:33: note: nestLevel is 2
-test-0008.c:15:33: warning: support of call recursion is not stable yet
-test-0008.c:15:33: note: nestLevel is 2
-test-0008.c:15:33: warning: support of call recursion is not stable yet
-test-0008.c:15:33: note: nestLevel is 3

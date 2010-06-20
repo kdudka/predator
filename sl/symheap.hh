@@ -564,6 +564,8 @@ class SymHeap2: public SymHeap1 {
     private:
         /// create sls, needs to set value and lambda later
         TObjId slsCreate(const struct cl_type *clt, int nextid, TAbstractLen alen);
+        friend TObjId addObjectIfNeeded(DeepCopyData &dc, TObjId objSrc);
+
         /// clone sls
         TObjId slsClone(TObjId ls);
 

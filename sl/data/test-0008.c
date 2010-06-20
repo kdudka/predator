@@ -34,7 +34,7 @@ void test(TDisposeList dispose_list) {
 
 int main() {
     test(dispose_list_using_while);
-    test(dispose_list_recursively);
+    //test(dispose_list_recursively);
 
     return 0;
 }

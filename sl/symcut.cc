@@ -93,16 +93,27 @@ void digSubObjs(DeepCopyData &dc, TObjId objSrc, TObjId objDst)
         boost::tie(objSrc, objDst) = todo.top();
         todo.pop();
 
-        const struct cl_type *clt = src.objType(objSrc);
-        if (clt != dst.objType(objDst))
+        // special quirk for SLSs
+        const struct cl_type *cltSrc = src.objType(objSrc);
+        const struct cl_type *cltDst = dst.objType(objDst);
+        if (!cltSrc && src.objIsAbstract(objSrc)) {
+            if (cltDst || !dst.objIsAbstract(objDst))
+                // SLS cloning problem
+                TRAP;
+
+            cltSrc = /* FIXME: suboptimal API */ src.slsType(objSrc);
+            cltDst = /* FIXME: suboptimal API */ dst.slsType(objDst);
+        }
+
+        if (cltSrc != cltDst)
             // type mismatch
             TRAP;
 
-        if (!clt)
+        if (!cltSrc)
             // anonymous object of known size
             continue;
 
-        if (CL_TYPE_STRUCT != clt->code)
+        if (CL_TYPE_STRUCT != cltSrc->code)
             // we should be set up
             continue;
 
@@ -110,7 +121,7 @@ void digSubObjs(DeepCopyData &dc, TObjId objSrc, TObjId objDst)
         dc.valMap[src.valueOf(objSrc)] = dst.valueOf(objDst);
 
         // go through fields
-        for (int i = 0; i < clt->item_cnt; ++i) {
+        for (int i = 0; i < cltSrc->item_cnt; ++i) {
             const TObjId subSrc = src.subObj(objSrc, i);
             const TObjId subDst = dst.subObj(objDst, i);
             if (subSrc < 0 || subDst < 0)
@@ -145,6 +156,22 @@ TObjId addObjectIfNeeded(DeepCopyData &dc, TObjId objSrc) {
 
     SymHeap &dst = dc.dst;
     const struct cl_type *clt = src.objType(rootSrc);
+
+    // special quirk for SLSs
+    if (!clt && src.objIsAbstract(rootSrc)) {
+        clt = /* FIXME: suboptimal API */ src.slsType(rootSrc);
+        const int nextId = src.slsGetNextId(rootSrc);
+        const TAbstractLen len = src.slsGetLength(rootSrc);
+        const TObjId slsObjDst = dst.slsCreate(clt, nextId, len);
+        if (slsObjDst <= 0)
+            TRAP;
+
+        add(dc, rootSrc, slsObjDst);
+        // FIXME: sub-objects of SLS are not supported at all??
+        //digSubObjs(dc, rootSrc, slsObjDst);
+        return dc.objMap[objSrc];
+    }
+
     if (clt) {
         const TObjId rootDst = dst.objCreate(clt, cv);
         add(dc, rootSrc, rootDst);
