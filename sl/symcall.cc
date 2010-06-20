@@ -123,7 +123,7 @@ void SymCallCtx::Private::destroyStackFrame(SymHeapUnion &state) {
 #if DEBUG_SE_STACK_FRAME
         if (1 < this->rawResults.size()) {
             CL_DEBUG_MSG(lw, "*** destroying stack frame in result #"
-                    << (++hCnt));
+                    << (hCnt++));
         }
 #endif
         SymHeapProcessor proc(res, this->bt);
@@ -168,7 +168,7 @@ void SymCallCtx::flushCallResults(SymHeapUnion &dst) {
     // TODO: some verbose output
     SymHeapUnion results(d->rawResults);
     BOOST_FOREACH(SymHeap &heap, results) {
-        joinHeapsByCVars(&heap, &d->surround);
+        joinHeapsByCVars(d->bt, &heap, &d->surround);
     }
 
     // polish the results
@@ -422,7 +422,7 @@ SymCallCtx& SymCallCache::getCallCtx(SymHeap heap,
     // prune heap
     SymHeap surround;
     CL_DEBUG_MSG(d->lw, "|C| pruning heap by " << cut.size() << " variable(s)");
-    splitHeapByCVars(&heap, cut, &surround);
+    splitHeapByCVars(d->bt, &heap, cut, &surround);
     
     // get either an existing ctx, or create a new one
     SymCallCtx *ctx = d->getCallCtx(uid, heap);

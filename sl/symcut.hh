@@ -27,6 +27,8 @@
 
 #include "symheap.hh"
 
+class SymBackTrace;
+
 /**
  * split symbolic heap into two parts regarding the list of program variables
  * @note In the corner case, the result may be identical to the input.  Then
@@ -38,7 +40,8 @@
  * SymHeap; it will be used to stored the (possibly empty) part of heap that is
  * cut off
  */
-void splitHeapByCVars(SymHeap *srcDst, SymHeap::TContCVar cut,
+void splitHeapByCVars(const SymBackTrace *bt, SymHeap *srcDst,
+                      const SymHeap::TContCVar &cut,
                       SymHeap *saveSurroundTo = 0);
 
 /**
@@ -46,7 +49,7 @@ void splitHeapByCVars(SymHeap *srcDst, SymHeap::TContCVar cut,
  * @param srcDst the instance of heap to operate on
  * @param src2 the other instance of heap, which is used read-only
  */
-void joinHeapsByCVars(SymHeap *srcDst, const SymHeap *src2);
-
+void joinHeapsByCVars(const SymBackTrace *bt, SymHeap *srcDst,
+                      const SymHeap *src2);
 
 #endif /* H_GUARD_SYM_CUT_H */

@@ -57,6 +57,11 @@ extern const char *sl_git_sha1;
 #define SE_BYPASS_CALL_CACHE                0
 
 /**
+ * if 1, bypass SymHeap2::abstract
+ */
+#define SE_DISABLE_ABSTRACT                 0
+
+/**
  * if 1, do not use the @b symcut module at all
  */
 #define SE_DISABLE_SYMCUT                   1

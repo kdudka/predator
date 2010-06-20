@@ -175,6 +175,10 @@ class SymHeapCore {
          */
         void objDestroy(TObjId obj, TObjId kind);
 
+        template <class TWL, class TCut, class TObjMap, class TValMap>
+        friend void deepCopy(const SymHeap &src, SymHeap &dst, TCut &cut,
+                             TObjMap &objMap, TValMap &valMap, TWL &wl);
+
     public:
         /**
          * check the state of a @b possibly @b unknown @b value

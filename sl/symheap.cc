@@ -37,6 +37,10 @@
 #include <boost/tuple/tuple.hpp>
 #include <boost/tuple/tuple_comparison.hpp>
 
+#ifndef SE_DISABLE_ABSTRACT
+#   define SE_DISABLE_ABSTRACT 0
+#endif
+
 #ifndef SE_STATE_HASH_OPTIMIZATION_DEBUG
 #   define SE_STATE_HASH_OPTIMIZATION_DEBUG 0
 #endif
@@ -919,9 +923,13 @@ TObjId SymHeap1::subObj(TObjId obj, int nth) const {
     const Private::Object &ref = d->objects[obj];
     const TContObj &subs = ref.subObjs;
     const int cnt = subs.size();
+
+    // this helps to avoid a warning when compiling with DEBUG_SYMID_FORCE_INT
+    static const TObjId OUT_OF_RANGE = OBJ_INVALID;
+
     return (nth < cnt)
         ? subs[nth]
-        : /* nth is out of range */ OBJ_INVALID;
+        : /* nth is out of range */ OUT_OF_RANGE;
 }
 
 TObjId SymHeap1::objParent(TObjId obj) const {
@@ -1421,6 +1429,9 @@ const cl_type * slsCompatibleType(SymHeap2 &sh, TObjId a, TObjId b) {
 /// abstract two objects connected by given value if possible
 void SymHeap2::Abstract(TValueId ptrValue)
 {
+#if SE_DISABLE_ABSTRACT
+    return;
+#endif
     // TODO: this is too simple
 
     // check, if abstraction possible:
