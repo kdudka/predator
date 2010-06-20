@@ -56,6 +56,7 @@ enum TObjKind { VAR, SLS, DLS, ARR };
 /// abstract segment length
 enum TAbstractLen { EMPTY=0, SINGLE=1, PE, NE };
 
+struct DeepCopyData;
 class SymHeap;
 
 /**
@@ -175,9 +176,7 @@ class SymHeapCore {
          */
         void objDestroy(TObjId obj, TObjId kind);
 
-        template <class TWL, class TCut, class TObjMap, class TValMap>
-        friend void deepCopy(const SymHeap &src, SymHeap &dst, TCut &cut,
-                             TObjMap &objMap, TValMap &valMap, TWL &wl);
+        friend TValueId handleValue(DeepCopyData &dc, TValueId valSrc);
 
     public:
         /**

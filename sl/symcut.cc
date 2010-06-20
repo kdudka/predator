@@ -51,12 +51,41 @@ void fillSet(TSet &dst, const TList &src)
     }
 }
 
-template <class TObjMap, class TValMap, class TWL>
-void digSubObjs(const SymHeap &src, SymHeap &dst,
-                TObjMap &objMap, TValMap &valMap, TWL &wl,
-                TObjId objSrc, TObjId objDst)
+struct DeepCopyData {
+    typedef std::map<TObjId   /* src */, TObjId   /* dst */>    TObjMap;
+    typedef std::map<TValueId /* src */, TValueId /* dst */>    TValMap;
+    typedef std::pair<TObjId  /* src */, TObjId   /* dst */>    TItem;
+    typedef std::set<CVar>                                      TCut;
+
+    const SymHeap       &src;
+    SymHeap             &dst;
+    TCut                &cut;
+
+    TObjMap             objMap;
+    TValMap             valMap;
+
+    WorkList<TItem>     wl;
+
+    DeepCopyData(const SymHeap &src_, SymHeap &dst_, TCut &cut_):
+        src(src_),
+        dst(dst_),
+        cut(cut_)
+    {
+    }
+};
+
+void add(DeepCopyData &dc, TObjId objSrc, TObjId objDst) {
+    dc.objMap[objSrc] = objDst;
+    dc.valMap[dc.src.placedAt(objSrc)] = dc.dst.placedAt(objDst);
+    dc.wl.schedule(objSrc, objDst);
+}
+
+void digSubObjs(DeepCopyData &dc, TObjId objSrc, TObjId objDst)
 {
-    typedef typename TWL::value_type TItem;
+    const SymHeap   &src = dc.src;
+    SymHeap         &dst = dc.dst;
+
+    typedef DeepCopyData::TItem TItem;
     std::stack<TItem> todo;
     push(todo, objSrc, objDst);
     while (!todo.empty()) {
@@ -78,7 +107,7 @@ void digSubObjs(const SymHeap &src, SymHeap &dst,
             continue;
 
         // store mapping of composite value
-        valMap[src.valueOf(objSrc)] = dst.valueOf(objDst);
+        dc.valMap[src.valueOf(objSrc)] = dst.valueOf(objDst);
 
         // go through fields
         for (int i = 0; i < clt->item_cnt; ++i) {
@@ -87,31 +116,24 @@ void digSubObjs(const SymHeap &src, SymHeap &dst,
             if (subSrc < 0 || subDst < 0)
                 TRAP;
 
+            add(dc, subSrc, subDst);
             push(todo, subSrc, subDst);
-            if (!wl.schedule(subSrc, subDst))
-                TRAP;
-
-            objMap[subSrc] = subDst;
-            valMap[src.placedAt(subSrc)] = dst.placedAt(subDst);
         }
     }
 }
 
-template <class TCut, class TObjMap, class TValMap, class TWL>
-TObjId addObjectIfNeeded(const SymHeap &src, SymHeap &dst, TCut &cut,
-                         TObjMap &objMap, TValMap &valMap, TWL &wl,
-                         TObjId objSrc)
-{
+TObjId addObjectIfNeeded(DeepCopyData &dc, TObjId objSrc) {
     if (OBJ_RETURN == objSrc)
         // FIXME: safe to ignore??
         return OBJ_RETURN;
 
-    typename TObjMap::iterator iter = objMap.find(objSrc);
-    if (objMap.end() != iter)
+    DeepCopyData::TObjMap::iterator iterObjSrc = dc.objMap.find(objSrc);
+    if (dc.objMap.end() != iterObjSrc)
         // mapping already known
-        return iter->second;
+        return iterObjSrc->second;
 
-    // got to root
+    // go to root
+    const SymHeap &src = dc.src;
     TObjId rootSrc = objSrc, tmp;
     while (OBJ_INVALID != (tmp = src.objParent(rootSrc)))
         rootSrc = tmp;
@@ -119,16 +141,15 @@ TObjId addObjectIfNeeded(const SymHeap &src, SymHeap &dst, TCut &cut,
     CVar cv;
     if (src.cVar(&cv, rootSrc))
         // enlarge the cut if needed
-        cut.insert(cv);
+        dc.cut.insert(cv);
 
+    SymHeap &dst = dc.dst;
     const struct cl_type *clt = src.objType(rootSrc);
     if (clt) {
         const TObjId rootDst = dst.objCreate(clt, cv);
-        objMap[rootSrc] = rootDst;
-        valMap[src.placedAt(rootSrc)] = dst.placedAt(rootDst);
-        wl.schedule(rootSrc, rootDst);
-        digSubObjs(src, dst, objMap, valMap, wl, rootSrc, rootDst);
-        return objMap[objSrc];
+        add(dc, rootSrc, rootDst);
+        digSubObjs(dc, rootSrc, rootDst);
+        return dc.objMap[objSrc];
     }
 
     // assume anonymous object of known size
@@ -138,18 +159,86 @@ TObjId addObjectIfNeeded(const SymHeap &src, SymHeap &dst, TCut &cut,
 
     const int cbSize = src.objSizeOfAnon(objSrc);
     const TObjId objDst = dst.objCreateAnon(cbSize);
-    objMap[objSrc] = objDst;
-    valMap[src.placedAt(objSrc)] = dst.placedAt(objDst);
-    wl.schedule(objSrc, objDst);
+    add(dc, objSrc, objDst);
     return objDst;
 }
 
-template <class TWL, class TCut, class TObjMap, class TValMap>
-void deepCopy(const SymHeap &src, SymHeap &dst, TCut &cut,
-              TObjMap &objMap, TValMap &valMap, TWL &wl)
-{
-    typename TWL::value_type item;
-    while (wl.next(item)) {
+TValueId handleValue(DeepCopyData &dc, TValueId valSrc) {
+    const SymHeap   &src = dc.src;
+    SymHeap         &dst = dc.dst;
+
+    const TObjId compSrc = src.valGetCompositeObj(valSrc);
+    if (OBJ_INVALID != compSrc) {
+        const TObjId compDst = addObjectIfNeeded(dc, compSrc);
+        return dst.valueOf(compDst);
+    }
+
+    if (valSrc <= 0)
+        // special value IDs always match
+        return valSrc;
+
+    DeepCopyData::TValMap &valMap = dc.valMap;
+    DeepCopyData::TValMap::iterator iterValSrc = valMap.find(valSrc);
+    if (valMap.end() != iterValSrc)
+        // good luck, we have already handled the target value
+        return iterValSrc->second;
+
+    const struct cl_type *cltCustom = 0;
+    const int custom = src.valGetCustom(&cltCustom, valSrc);
+    if (-1 != custom) {
+        // custom value, e.g. fnc pointer
+        const TValueId valDst = dst.valCreateCustom(cltCustom, custom);
+        valMap[valSrc] = valDst;
+        return valDst;
+    }
+
+    const EUnknownValue code = src.valGetUnknown(valSrc);
+    if (UV_KNOWN != code) {
+        // custom value, e.g. fnc pointer
+        const struct cl_type *cltUnkown = src.valType(valSrc);
+        const TValueId valDst = dst.valCreateUnknown(code, cltUnkown);
+        valMap[valSrc] = valDst;
+        return valDst;
+    }
+
+    const TObjId targetSrc = src.pointsTo(valSrc);
+    if (OBJ_INVALID == targetSrc)
+        TRAP;
+
+    if (targetSrc < 0) {
+        switch (targetSrc) {
+            case OBJ_DELETED:
+            case OBJ_LOST:
+                break;
+            default:
+                TRAP;
+        }
+
+        // FIXME: really safe to ignore (cltValSrc == 0) ??
+        const struct cl_type *cltValSrc = src.valType(valSrc);
+        const TObjId objTmp = dst.objCreate(cltValSrc);
+        const TValueId valDst = dst.placedAt(objTmp);
+
+        // FIXME: avoid using of friend?
+        SymHeapCore &core = dynamic_cast<SymHeapCore &>(dst);
+        core.objDestroy(objTmp, /* OBJ_DELETED/OBJ_LOST */ targetSrc);
+
+        valMap[valSrc] = valDst;
+        return valDst;
+    }
+
+    // traverse recursively
+    const TObjId targetDst = addObjectIfNeeded(dc, targetSrc);
+    const TValueId at = dst.placedAt(targetDst);
+    return at;
+}
+
+void deepCopy(DeepCopyData &dc) {
+    const SymHeap   &src = dc.src;
+    SymHeap         &dst = dc.dst;
+
+    DeepCopyData::TItem item;
+    while (dc.wl.next(item)) {
         const TObjId objSrc = item.first;
         const TObjId objDst = item.second;
 
@@ -167,7 +256,7 @@ void deepCopy(const SymHeap &src, SymHeap &dst, TCut &cut,
             TRAP;
 
         // read the original value
-        const TValueId valSrc = src.valueOf(objSrc);
+        TValueId valSrc = src.valueOf(objSrc);
         if (VAL_INVALID == valSrc)
             TRAP;
 
@@ -177,112 +266,42 @@ void deepCopy(const SymHeap &src, SymHeap &dst, TCut &cut,
         src.usedBy(uses, valSrc);
         src.usedBy(uses, atSrc);
         BOOST_FOREACH(TObjId objSrc, uses) {
-            addObjectIfNeeded(src, dst, cut, objMap, valMap, wl, objSrc);
+            addObjectIfNeeded(dc, objSrc);
         }
 
-        const TObjId compSrc = src.valGetCompositeObj(valSrc);
-        if (OBJ_INVALID != compSrc) {
-            const TObjId compDst =
-                addObjectIfNeeded(src, dst, cut, objMap, valMap, wl, compSrc);
-            dst.objSetValue(objDst, dst.valueOf(compDst));
-            continue;
-        }
-
-        if (valSrc <= 0) {
-            // special value IDs always match
-            dst.objSetValue(objDst, valSrc);
-            continue;
-        }
-
-        typename TValMap::iterator iterValSrc = valMap.find(valSrc);
-        if (valMap.end() != iterValSrc) {
-            // good luck, we have already handled the target value
-            dst.objSetValue(objDst, iterValSrc->second);
-            continue;
-        }
-
-        const struct cl_type *cltCustom = 0;
-        const int custom = src.valGetCustom(&cltCustom, valSrc);
-        if (-1 != custom) {
-            // custom value, e.g. fnc pointer
-            const TValueId valDst = dst.valCreateCustom(cltCustom, custom);
-            valMap[valSrc] = valDst;
-            dst.objSetValue(objDst, valDst);
-            continue;
-        }
-
-        const EUnknownValue code = src.valGetUnknown(valSrc);
-        if (UV_KNOWN != code) {
-            // custom value, e.g. fnc pointer
-            const struct cl_type *cltUnkown = src.valType(valSrc);
-            const TValueId valDst = dst.valCreateUnknown(code, cltUnkown);
-            valMap[valSrc] = valDst;
-            dst.objSetValue(objDst, valDst);
-            continue;
-        }
-
-        const TObjId targetSrc = src.pointsTo(valSrc);
-        if (OBJ_INVALID == targetSrc)
+        // do whatever we need to do with the value
+        valSrc = handleValue(dc, valSrc);
+        if (VAL_INVALID == valSrc)
             TRAP;
 
-        if (targetSrc < 0) {
-            switch (targetSrc) {
-                case OBJ_DELETED:
-                case OBJ_LOST:
-                    break;
-                default:
-                    TRAP;
-            }
-
-            // FIXME: really safe to ignore (cltValSrc == 0) ??
-            const struct cl_type *cltValSrc = src.valType(valSrc);
-            const TObjId objTmp = dst.objCreate(cltValSrc);
-            const TValueId valDst = dst.placedAt(objTmp);
-
-            // FIXME: avoid using of friend?
-            SymHeapCore &core = dynamic_cast<SymHeapCore &>(dst);
-            core.objDestroy(objTmp, /* OBJ_DELETED/OBJ_LOST */ targetSrc);
-
-            valMap[valSrc] = valDst;
-            dst.objSetValue(objDst, valDst);
-            continue;
-        }
-
-        // traverse recursively
-        const TObjId targetDst =
-            addObjectIfNeeded(src, dst, cut, objMap, valMap, wl, targetSrc);
-        const TValueId at = dst.placedAt(targetDst);
-        dst.objSetValue(objDst, at);
+        // now set object's value
+        dst.objSetValue(objDst, valSrc);
     }
 }
 
-template <class TCut>
-void prune(const SymHeap &src, SymHeap &dst, /* NON-const */ TCut &cut) {
-    // injective mapping of object IDs and value IDs
-    std::map<TObjId /* src */, TObjId /* dst */> objMap;
-    std::map<TValueId /* src */, TValueId /* dst */>  valMap;
-
-    // worklist running through SymHeap objects
-    typedef std::pair<TObjId /* src */, TObjId /* dst */> TItem;
-    WorkList<TItem> wl;
+void prune(const SymHeap &src, SymHeap &dst,
+           /* NON-const */ DeepCopyData::TCut &cut)
+{
+    DeepCopyData dc(src, dst, cut);
+    DeepCopyData::TCut snap(cut);
 
     // go through all program variables
-    BOOST_FOREACH(CVar cv, cut) {
-        const TObjId obj = src.objByCVar(cv);
-        if (OBJ_INVALID == obj)
+    BOOST_FOREACH(CVar cv, snap) {
+        const TObjId objSrc = dc.src.objByCVar(cv);
+        if (OBJ_INVALID == objSrc)
             // failed to resolve program variable
             TRAP;
 
-        const struct cl_type *clt = src.objType(obj);
-        if (!clt)
+        const struct cl_type *cltObjSrc = dc.src.objType(objSrc);
+        if (!cltObjSrc)
             // we should always know type of program variables
             TRAP;
 
-        addObjectIfNeeded(src, dst, cut, objMap, valMap, wl, obj);
+        addObjectIfNeeded(dc, objSrc);
     }
 
     // go through the worklist
-    deepCopy(src, dst, cut, objMap, valMap, wl);
+    deepCopy(dc);
 }
 
 namespace {
@@ -301,7 +320,7 @@ void splitHeapByCVars(const SymBackTrace *bt, SymHeap *srcDst,
     return;
 #endif
     // std::vector -> std::set
-    std::set<CVar> cset;
+    DeepCopyData::TCut cset;
     fillSet(cset, cut);
 
     // cut the first part
@@ -319,7 +338,7 @@ void splitHeapByCVars(const SymBackTrace *bt, SymHeap *srcDst,
     srcDst->gatherCVars(all);
 
     // FIXME: use an algorithm?
-    std::set<CVar> complement;
+    DeepCopyData::TCut complement;
     BOOST_FOREACH(const CVar &cv, all) {
         if (!hasKey(cset, cv))
             complement.insert(cv);
@@ -339,13 +358,14 @@ void splitHeapByCVars(const SymBackTrace *bt, SymHeap *srcDst,
 
     // basic sanity check
     if (cntA < cntOrig || cntA + cntB != cntTotal) {
-        CL_ERROR("symcut: prune() failed, attempt to plot heaps...");
-        plotHeap(bt, *srcDst, "prune-input");
-        plotHeap(bt, dst, "prune-output");
+        CL_ERROR("symcut: splitHeapByCVars() failed, attempt to plot heaps...");
+        plotHeap(bt, *srcDst,         "prune-input");
+        plotHeap(bt,  dst,            "prune-output");
         plotHeap(bt, *saveSurroundTo, "prune-surround");
         CL_NOTE("symcut: plot done, please consider analyzing the results");
         TRAP;
     }
+
     *srcDst = dst;
 }
 
@@ -361,7 +381,7 @@ void joinHeapsByCVars(const SymBackTrace *bt, SymHeap *srcDst,
     src2->gatherCVars(all);
 
     // std::vector -> std::set
-    std::set<CVar> cset;
+    DeepCopyData::TCut cset;
     fillSet(cset, all);
     
     // FIXME: performance impact
