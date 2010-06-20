@@ -30,8 +30,9 @@
 #include "config.h"
 #include "symid.hh"
 
-#include <vector>
 #include <list>
+#include <map>      // for SymHeapCore::TValMap (just a test)
+#include <vector>
 
 #ifndef SE_STATE_HASH_OPTIMIZATION
 #   define SE_STATE_HASH_OPTIMIZATION 0
@@ -238,6 +239,12 @@ class SymHeapCore {
          * reasoning has been not successful.
          */
         bool proveEq(bool *result, TValueId valA, TValueId valB) const;
+
+    public:
+        // just a test
+        typedef std::map<TValueId, TValueId> TValMap;
+        void gatherRelatedValues(TContValue &dst, TValueId val) const;
+        void copyRelevantPreds(SymHeapCore &dst, const TValMap &valMap) const;
 
     private:
         struct Private;

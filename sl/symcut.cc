@@ -276,7 +276,17 @@ void deepCopy(DeepCopyData &dc) {
 
         // now set object's value
         dst.objSetValue(objDst, valSrc);
+
+        // now poke all values related by Neq or EqIf predicates
+        SymHeap::TContValue relatedVals;
+        src.gatherRelatedValues(relatedVals, valSrc);
+        BOOST_FOREACH(TValueId relValSrc, relatedVals) {
+            handleValue(dc, relValSrc);
+        }
     }
+
+    // finally copy all relevant Neq/EqIf predicates
+    src.copyRelevantPreds(dst, dc.valMap);
 }
 
 void prune(const SymHeap &src, SymHeap &dst,
@@ -366,6 +376,7 @@ void splitHeapByCVars(const SymBackTrace *bt, SymHeap *srcDst,
         TRAP;
     }
 
+    // update *srcDst (we can't do it sooner because of the plotting above)
     *srcDst = dst;
 }
 

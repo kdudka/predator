@@ -54,6 +54,15 @@ namespace {
 
 }
 
+// NeqDb/EqIfDb helper
+template <class TDst>
+void emitOne(TDst &dst, TValueId val) {
+    if (val <= 0)
+        return;
+
+    dst.push_back(val);
+}
+
 class NeqDb {
     private:
         typedef std::pair<TValueId /* valLt */, TValueId /* valGt */> TItem;
@@ -74,6 +83,21 @@ class NeqDb {
             TItem item(valLt, valGt);
             cont_.insert(item);
         }
+
+        template <class TDst>
+        void gatherRelatedValues(TDst &dst, TValueId val) const {
+            // FIXME: suboptimal due to performace
+            BOOST_FOREACH(const TItem &item, cont_) {
+                if (item.first == val)
+                    emitOne(dst, item.second);
+                else if (item.second == val)
+                    emitOne(dst, item.first);
+            }
+        }
+
+        friend void SymHeapCore::copyRelevantPreds(SymHeapCore &dst,
+                                                   const SymHeapCore::TValMap &)
+                                                   const;
 };
 
 class EqIfDb {
@@ -114,7 +138,42 @@ class EqIfDb {
             // delete the db entry afterwards
             cont_.erase(iter);
         }
+
+        template <class TDst2>
+        void gatherRelatedValues(TDst2 &dst, TValueId val) const;
+
+        friend void SymHeapCore::copyRelevantPreds(SymHeapCore &dst,
+                                                   const SymHeapCore::TValMap &)
+                                                   const;
 };
+
+template <class TDst2>
+void EqIfDb::gatherRelatedValues(TDst2 &dst, TValueId val) const {
+    // FIXME: suboptimal due to performace
+    TMap::const_iterator iter;
+    for (iter = cont_.begin(); iter != cont_.end(); ++iter) {
+        const TSet &line = iter->second;
+        BOOST_FOREACH(const TPred &pred, line) {
+            TValueId valCond, valLt, valGt; bool neg;
+            boost::tie(valCond, valLt, valGt, neg) = pred;
+            // FIXME: some are not realistic
+            // TODO: prune and write some documentation of what is
+            // possible and what is not
+            if (valCond == val) {
+                emitOne(dst, valLt);
+                emitOne(dst, valGt);
+            }
+            if (valLt == val) {
+                emitOne(dst, valCond);
+                emitOne(dst, valGt);
+            }
+            if (valGt == val) {
+                emitOne(dst, valCond);
+                emitOne(dst, valLt);
+            }
+        }
+    }
+}
 
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of SymHeapCore
@@ -547,6 +606,73 @@ bool SymHeapCore::proveEq(bool *result, TValueId valA, TValueId valB) const {
     return false;
 }
 
+void SymHeapCore::gatherRelatedValues(TContValue &dst, TValueId val) const {
+    d->neqDb.gatherRelatedValues(dst, val);
+    d->eqIfDb.gatherRelatedValues(dst, val);
+}
+
+template <class TValMap>
+bool valMapLookup(const TValMap &valMap, TValueId *pVal) {
+    if (*pVal <= VAL_NULL)
+        // special values always match, no need for mapping
+        return true;
+
+    typename TValMap::const_iterator iter = valMap.find(*pVal);
+    if (valMap.end() == iter)
+        // mapping not found
+        return false;
+
+    // match
+    *pVal = iter->second;
+    return true;
+}
+
+template <class TValMap>
+void copyRelevantEqIf(SymHeapCore &dst, const EqIfDb::TPred &pred,
+                      const TValMap &valMap)
+{
+    // FIXME: this code has never run, let's go with a debugger first
+    TRAP;
+
+    TValueId valCond, valLt, valGt; bool neg;
+    boost::tie(valCond, valLt, valGt, neg) = pred;
+
+    if (!valMapLookup(valMap, &valCond)
+            || !valMapLookup(valMap, &valLt)
+            || !valMapLookup(valMap, &valGt))
+        // not relevant
+        return;
+
+    // create the image now!
+    dst.addEqIf(valCond, valLt, valGt, neg);
+}
+
+void SymHeapCore::copyRelevantPreds(SymHeapCore &dst, const TValMap &valMap)
+    const
+{
+    // go through NeqDb
+    BOOST_FOREACH(const NeqDb::TItem &item, d->neqDb.cont_) {
+        TValueId valLt = item.first;
+        TValueId valGt = item.second;
+
+        if (!valMapLookup(valMap, &valLt) || !valMapLookup(valMap, &valGt))
+            // not relevant
+            continue;
+
+        // create the image now!
+        dst.addNeq(valLt, valGt);
+    }
+
+    // go through EqIfDb
+    EqIfDb::TMap &db = d->eqIfDb.cont_;
+    EqIfDb::TMap::const_iterator iter;
+    for (iter = db.begin(); iter != db.end(); ++iter) {
+        const EqIfDb::TSet &line = iter->second;
+        BOOST_FOREACH(const EqIfDb::TPred &pred, line) {
+            copyRelevantEqIf(dst, pred, valMap);
+        }
+    }
+}
 
 // /////////////////////////////////////////////////////////////////////////////
 // CVar lookup container
