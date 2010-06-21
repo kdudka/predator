@@ -710,7 +710,7 @@ bool SymHeapPlotter::plotHeapValue(const std::string &name, TValueId value) {
 
 bool SymHeapPlotter::plotStackFrame(const std::string           &name,
                                     const CodeStorage::Fnc      &fnc,
-                                    SymBackTrace                *bt)
+                                    const SymBackTrace          *bt)
 {
     using namespace CodeStorage;
 

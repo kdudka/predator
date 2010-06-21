@@ -59,7 +59,7 @@ class SymBackTrace {
          * stream out the backtrace, using CL_NOTE_MSG; or do nothing if the
          * backtrace is trivial
          */
-        void printBackTrace();
+        void printBackTrace() const;
 
         /**
          * enter a call of function, thus enlarge the backtrace by one
@@ -97,6 +97,8 @@ class SymBackTrace {
 
         /// return the topmost function in the backtrace
         const CodeStorage::Fnc* topFnc() const;
+
+        LocationWriter topCallLoc() const;
 
     private:
         struct Private;

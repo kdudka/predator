@@ -80,9 +80,9 @@ class SymHeapPlotter {
          * @param bt an instance of symbolic backtrace used to distinguish among
          * instances of automatic variables
          */
-        bool plotStackFrame(const std::string &name,
-                            const CodeStorage::Fnc &fnc,
-                            SymBackTrace *bt);
+        bool plotStackFrame(const std::string           &name,
+                            const CodeStorage::Fnc      &fnc,
+                            const SymBackTrace          *bt);
 
     private:
         /// object copying is @b not allowed

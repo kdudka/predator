@@ -57,7 +57,7 @@ const CodeStorage::Fnc* SymBackTrace::Private::fncOnTop() const {
         // empty stack, so there is no top
         return 0;
 
-    const TStackItem top = this->btStack.top();
+    const TStackItem &top = this->btStack.top();
     const CodeStorage::Fnc *fnc = top.first;
     if (!fnc)
         // bt corruption detected
@@ -132,7 +132,7 @@ const CodeStorage::Storage& SymBackTrace::stor() const {
     return d->stor;
 }
 
-void SymBackTrace::printBackTrace() {
+void SymBackTrace::printBackTrace() const {
     using namespace CodeStorage;
 
     const Private::TStack &ref = d->btStack;
@@ -185,4 +185,13 @@ int SymBackTrace::countOccurrencesOfTopFnc() const {
 
 const CodeStorage::Fnc* SymBackTrace::topFnc() const {
     return d->fncOnTop();
+}
+
+LocationWriter SymBackTrace::topCallLoc() const {
+    if (d->btStack.empty())
+        // empty stack, so there is no top
+        return LocationWriter();
+
+    const Private::TStackItem &top = d->btStack.top();
+    return top.second;
 }

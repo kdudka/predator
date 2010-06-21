@@ -57,7 +57,7 @@ class SymHeapProcessor {
          * instances of automatic variables and to print backtraces when
          * necessary/suitable
          */
-        SymHeapProcessor(SymHeap &heap, SymBackTrace *bt):
+        SymHeapProcessor(SymHeap &heap, const SymBackTrace *bt):
             heap_(heap),
             bt_(bt)
         {
@@ -144,7 +144,7 @@ class SymHeapProcessor {
 
     private:
         SymHeap                     &heap_;     /// heap to operate on
-        SymBackTrace                *bt_;
+        const SymBackTrace          *bt_;
         LocationWriter              lw_;
         std::list<SymHeap>          todolist;   /// for concretized siblings
 
