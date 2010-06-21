@@ -95,6 +95,9 @@ class SymBackTrace {
          */
         int countOccurrencesOfTopFnc() const;
 
+        /// return the topmost function in the backtrace
+        const CodeStorage::Fnc* topFnc() const;
+
     private:
         struct Private;
         Private *d;

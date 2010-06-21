@@ -38,14 +38,14 @@ extern "C" { int plugin_is_GPL_compatible; }
 
 namespace {
 
-void initExec(SymExec &se, std::string cnf) {
+void parseConfigString(SymExecParams &sep, std::string cnf) {
     using std::string;
     if (cnf.empty())
         return;
 
     if (string("fast") == cnf) {
         CL_DEBUG("SymExec \"fast mode\" requested");
-        se.setFastMode(true);
+        sep.fastMode = true;
         return;
     }
 
@@ -92,8 +92,9 @@ void clEasyRun(CodeStorage::Storage &stor, const char *configString) {
     const LocationWriter lw(&main->def.loc);
 
     // initialize SymExec
-    SymExec se(stor);
-    initExec(se, configString);
+    SymExecParams sep;
+    parseConfigString(sep, configString);
+    SymExec se(stor, sep);
 
     // run the symbolic execution
     SymHeapUnion results;

@@ -182,3 +182,7 @@ int SymBackTrace::countOccurrencesOfTopFnc() const {
 
     return d->nestMap[fnc];
 }
+
+const CodeStorage::Fnc* SymBackTrace::topFnc() const {
+    return d->fncOnTop();
+}

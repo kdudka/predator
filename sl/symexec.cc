@@ -82,13 +82,47 @@ void createGlVars(SymHeap &heap, const CodeStorage::Storage &stor) {
 } // namespace
 
 // /////////////////////////////////////////////////////////////////////////////
+// SymExecEngine
+class SymExecEngine {
+    public:
+        SymExecEngine(const SymExec &se, const SymBackTrace &bt,
+                      const SymHeap &init):
+            stor_(se.stor()),
+            params_(se.params()),
+            bt_(bt)
+        {
+            this->initEngine(init);
+        }
+
+    public:
+        // TODO: describe this tricky interface
+        const CodeStorage::Fnc* run(SymHeapUnion &dst);
+
+    private:
+        typedef const CodeStorage::Block                   *TBlock;
+        typedef std::set<TBlock>                            TBlockSet;
+        typedef std::map<TBlock, SymHeapScheduler>          TStateMap;
+
+        const CodeStorage::Storage      &stor_;
+        SymExecParams                   params_;
+        const SymBackTrace              &bt_;
+
+        TBlock                          block_;
+        TStateMap                       stateMap_;
+        TBlockSet                       todo_;
+
+    private:
+        void initEngine(const SymHeap &init);
+};
+
+// /////////////////////////////////////////////////////////////////////////////
 // SymExec implementation
 struct SymExec::Private {
-    typedef std::set<int /* fnc uid */>                            TBtSet;
     typedef std::set<const CodeStorage::Block *>                   TBlockSet;
     typedef std::map<const CodeStorage::Block *, SymHeapScheduler> TStateMap;
 
     const CodeStorage::Storage  &stor;
+    SymExecParams               params;
     SymBackTrace                *btStack;
     const CodeStorage::Fnc      *fnc;
     const CodeStorage::Block    *bb;
@@ -99,7 +133,6 @@ struct SymExec::Private {
     TBlockSet                   todo;
     SymHeapUnion                *results;
     SymCallCache                *callCache;
-    bool                        fastMode;
 
     Private(const CodeStorage::Storage &stor_);
     Private(const Private &par, const CodeStorage::Fnc &fnc, SymHeapUnion &res);
@@ -112,7 +145,8 @@ struct SymExec::Private {
     void execTermInsn(const SymHeap &heap);
     void execCallFailed(SymHeap heap, SymHeapUnion &results,
                         const struct cl_operand &dst);
-    void execInsnCall(const SymHeap &heap, SymHeapUnion &results, std::list<SymHeap> &todo );
+    void execInsnCall(const SymHeap &heap, SymHeapUnion &results);
+    bool execInsnLoop(SymHeapUnion &dst, const SymHeap &src);
     void execInsn(SymHeapScheduler &localState);
     void execBb();
     void execFncBody();
@@ -126,8 +160,7 @@ SymExec::Private::Private(const CodeStorage::Storage &stor_):
     bb          (0),
     insn        (0),
     results     (0),
-    callCache   (0),
-    fastMode    (false)
+    callCache   (0)
 {
 }
 
@@ -135,19 +168,21 @@ SymExec::Private::Private(const Private &parent, const CodeStorage::Fnc &fnc,
                           SymHeapUnion &res)
 :
     stor        (parent.stor),
+    params      (parent.params),
     btStack     (parent.btStack),
     fnc         (&fnc),
     bb          (0),
     insn        (0),
     results     (&res),
-    callCache   (parent.callCache),
-    fastMode    (parent.fastMode)
+    callCache   (parent.callCache)
 {
 }
 
-SymExec::SymExec(const CodeStorage::Storage &stor):
+SymExec::SymExec(const CodeStorage::Storage &stor, const SymExecParams &params):
     d(new Private(stor))
 {
+    d->params = params;
+
     // create the initial state, consisting of global/static variables
     SymHeap init;
     createGlVars(init, stor);
@@ -158,12 +193,12 @@ SymExec::~SymExec() {
     delete d;
 }
 
-bool SymExec::fastMode() const {
-    return d->fastMode;
+const CodeStorage::Storage& SymExec::stor() const {
+    return d->stor;
 }
 
-void SymExec::setFastMode(bool val) {
-    d->fastMode = val;
+const SymExecParams& SymExec::params() const {
+    return d->params;
 }
 
 void SymExec::exec(const CodeStorage::Fnc &fnc, SymHeapUnion &results) {
@@ -369,8 +404,7 @@ void SymExec::Private::execCallFailed(SymHeap heap, SymHeapUnion &results,
     results.insert(heap);
 }
 
-// TODO: add concretization to argument evaluation (depends on allowed form of arguments)
-void SymExec::Private::execInsnCall(const SymHeap &heap, SymHeapUnion &results, std::list<SymHeap> &todo)
+void SymExec::Private::execInsnCall(const SymHeap &heap, SymHeapUnion &results)
 {
     using namespace CodeStorage;
     const TOperandList &opList = insn->operands;
@@ -381,7 +415,6 @@ void SymExec::Private::execInsnCall(const SymHeap &heap, SymHeapUnion &results, 
     SymHeapProcessor proc(const_cast<SymHeap &>(heap), this->btStack);
     proc.setLocation(this->lw);
     const int uid = proc.fncFromOperand(opList[/* fnc */ 1]);
-    proc.splice(todo);
     const Fnc *fnc = this->stor.fncs[uid];
     if (!fnc)
         // unable to resolve Fnc by UID
@@ -428,6 +461,30 @@ void SymExec::Private::execInsnCall(const SymHeap &heap, SymHeapUnion &results, 
     this->btStack->popCall();
 }
 
+bool SymExec::Private::execInsnLoop(SymHeapUnion &dst, const SymHeap &src) {
+    std::list<SymHeap> todo;    // we can add concretized heaps during execution
+    todo.push_back(src);        // first heap to analyze
+    while(todo.size()>0) {
+        SymHeap &workingHeap = todo.front(); // use first SH
+
+        SymHeapProcessor proc(workingHeap, this->btStack);
+        proc.setLocation(this->lw);
+
+        if (!proc.exec(dst, *insn, this->params.fastMode)) {
+            // assume CL_INSN_CALL
+            if (1 != todo.size())
+                TRAP;
+
+            return false;
+        }
+
+        todo.pop_front();
+        proc.splice(todo);      // add concretized variants
+    }
+
+    return true;
+}
+
 void SymExec::Private::execInsn(SymHeapScheduler &localState) {
     // true for terminal instruction
     const bool isTerm = cl_is_term_insn(insn->code);
@@ -452,28 +509,15 @@ void SymExec::Private::execInsn(SymHeapScheduler &localState) {
         if (isTerm) {
             // terminal insn
             this->execTermInsn(heap);
-
-        } else {
-            // working area for non-term instructions
-            SymHeap startHeap(heap);    // clone source heap
-
-            std::list<SymHeap> todo;    // we can add concretized heaps during execution
-            todo.push_back(startHeap);  // first heap to analyze
-            while(todo.size()>0) {
-                SymHeap workingHeap(todo.front()); // use first SH
-                todo.pop_front();
-
-                SymHeapProcessor proc(workingHeap, this->btStack);
-                proc.setLocation(this->lw);
-
-                // NOTE: this has to be tried *before* execInsnCall() to eventually
-                // catch malloc()/free() calls, which are treated differently
-                if (!proc.exec(nextLocalState, *insn, this->fastMode))
-                    // call insn
-                    this->execInsnCall(workingHeap, nextLocalState, todo);
-                proc.splice(todo);      // add concretized variants
-            }
+            continue;
         }
+
+        if (this->execInsnLoop(nextLocalState, heap))
+            // regular heap instruction
+            continue;
+
+        // assume CL_INSN_CALL
+        this->execInsnCall(heap, nextLocalState);
     }
 
     if (!isTerm)

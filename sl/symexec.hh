@@ -32,6 +32,15 @@ namespace CodeStorage {
     struct Storage;
 }
 
+struct SymExecParams {
+    bool fastMode;          ///< enable/disable the @b fast @b mode
+
+    SymExecParams():
+        fastMode(false)
+    {
+    }
+};
+
 /**
  * top level loop of the @b symbolic @b execution
  *
@@ -42,16 +51,14 @@ class SymExec {
         /**
          * load the static info about the analyzed code
          * @param stor all-in-one static info about the analyzed code, see
+         * @param params initialization parameters of the symbolic execution
          * CodeStorage for details
          */
-        SymExec(const CodeStorage::Storage &stor);
+        SymExec(const CodeStorage::Storage &stor, const SymExecParams &params);
         ~SymExec();
 
-        /// return true if the @b fast @b mode is enabled
-        bool fastMode() const;
-
-        /// enable/disable the @b fast @b mode
-        void setFastMode(bool);
+        const CodeStorage::Storage& stor() const;
+        const SymExecParams& params() const;
 
         /**
          * initial state.  By default, there is only one symbolic heap in that
