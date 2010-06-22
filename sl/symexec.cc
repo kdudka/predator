@@ -184,7 +184,7 @@ void SymExecEngine::execReturn() {
         if (VAL_INVALID == val)
             TRAP;
 
-        proc.heapSetVal(OBJ_RETURN, val);
+        proc.objSetValue(OBJ_RETURN, val);
     }
 
     // commit one of the function results

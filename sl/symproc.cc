@@ -557,7 +557,7 @@ void SymHeapProcessor::heapSetSingleVal(TObjId lhs, TValueId rhs) {
         bt_->printBackTrace();
 }
 
-void SymHeapProcessor::heapSetVal(TObjId lhs, TValueId rhs) {
+void SymHeapProcessor::objSetValue(TObjId lhs, TValueId rhs) {
     if (0 < rhs && UV_DEREF_FAILED == heap_.valGetUnknown(rhs)) {
         // we're already on an error path
         heap_.objSetValue(lhs, rhs);
@@ -601,7 +601,7 @@ void SymHeapProcessor::heapSetVal(TObjId lhs, TValueId rhs) {
     }
 }
 
-void SymHeapProcessor::destroyObj(TObjId obj) {
+void SymHeapProcessor::objDestroy(TObjId obj) {
     // gather potentialy destroyed pointer sub-values
     std::vector<TValueId> ptrs;
     getPtrValues(ptrs, heap_, obj);
@@ -617,7 +617,7 @@ void SymHeapProcessor::destroyObj(TObjId obj) {
     }
 
     if (junk)
-        // print backtrace at most once per one call of destroyObj()
+        // print backtrace at most once per one call of objDestroy()
         bt_->printBackTrace();
 }
 
@@ -702,7 +702,7 @@ void SymHeapProcessor::execFree(const CodeStorage::TOperandList &opList) {
     }
 
     CL_DEBUG_MSG(lw_, "executing free()");
-    this->destroyObj(obj);
+    this->objDestroy(obj);
 }
 
 void SymHeapProcessor::execMalloc(TState &state,
@@ -741,12 +741,12 @@ void SymHeapProcessor::execMalloc(TState &state,
 
     if (!fastMode) {
         // OOM state simulation
-        this->heapSetVal(varLhs, VAL_NULL);
+        this->objSetValue(varLhs, VAL_NULL);
         state.insert(heap_);
     }
 
     // store the result of malloc
-    this->heapSetVal(varLhs, val);
+    this->objSetValue(varLhs, val);
     state.insert(heap_);
 }
 
@@ -1315,7 +1315,7 @@ void SymHeapProcessor::execOp(const CodeStorage::Insn &insn) {
 
     // handle generic operator and store result
     const TValueId valResult = handleOp<ARITY>(*this, insn.subCode, rhs, clt);
-    this->heapSetVal(varLhs, valResult);
+    this->objSetValue(varLhs, valResult);
 }
 
 bool SymHeapProcessor::exec(TState &dst, const CodeStorage::Insn &insn,

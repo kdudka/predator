@@ -116,10 +116,10 @@ class SymHeapProcessor {
         bool checkForJunk(TValueId val);
 
         /// high-level interface to SymHeap::objSetValue()
-        void heapSetVal(TObjId lhs, TValueId rhs);
+        void objSetValue(TObjId lhs, TValueId rhs);
 
         /// high-level interface to SymHeap::objDestroy()
-        void destroyObj(TObjId obj);
+        void objDestroy(TObjId obj);
 
         /// empty todolist moving contents to other list
         void splice(std::list<SymHeap> &l) {

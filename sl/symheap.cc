@@ -944,7 +944,7 @@ TValueId SymHeap1::valueOf(TObjId obj) const {
     return val;
 }
 
-void SymHeap1::destroyObj(TObjId obj) {
+void SymHeap1::objDestroyPriv(TObjId obj) {
     typedef std::stack<TObjId> TStack;
     TStack todo;
 
@@ -1256,7 +1256,7 @@ void SymHeap1::objDestroy(TObjId obj) {
     if (cv.uid != /* heap object */ -1)
         d->cVarMap.remove(cv);
 
-    this->destroyObj(obj);
+    this->objDestroyPriv(obj);
     if (OBJ_RETURN == obj) {
         // (un)initialize OBJ_RETURN for next wheel
         const TValueId uv = this->valCreate(UV_UNINITIALIZED, OBJ_UNKNOWN);

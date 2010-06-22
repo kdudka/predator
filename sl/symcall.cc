@@ -143,7 +143,7 @@ void SymCallCtx::Private::destroyStackFrame(SymHeapUnion &state) {
                     TRAP;
 
                 proc.setLocation(lw);
-                proc.destroyObj(obj);
+                proc.objDestroy(obj);
             }
         }
 
@@ -151,7 +151,7 @@ void SymCallCtx::Private::destroyStackFrame(SymHeapUnion &state) {
         // allocated object.  Then ignoring the return value on the caller's
         // side can trigger a memory leak.
         // TODO: write a test-case for this!
-        proc.destroyObj(OBJ_RETURN);
+        proc.objDestroy(OBJ_RETURN);
     }
 }
 
@@ -335,7 +335,7 @@ void SymCallCache::Private::setCallArgs(const CodeStorage::TOperandList &opList)
             TRAP;
 
         // set arg's value
-        this->proc->heapSetVal(lhs, val);
+        this->proc->objSetValue(lhs, val);
     }
 }
 

@@ -70,7 +70,7 @@ void digGlJunk(CodeStorage::Storage &stor, SymHeap &heap) {
                 TRAP;
 
             proc.setLocation(lw);
-            proc.destroyObj(obj);
+            proc.objDestroy(obj);
         }
     }
 }
