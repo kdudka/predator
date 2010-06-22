@@ -38,11 +38,8 @@ class SymBackTrace {
         /**
          * @param stor reference to storage object, later used for resolving fnc
          * IDs
-         * @param rootFncId root function to start the backtrace with, in simple
-         * programs usually main(), -1 if there is no root (e.g. while looking
-         * for global junk)
          */
-        SymBackTrace(const CodeStorage::Storage &stor, int rootFncId);
+        SymBackTrace(const CodeStorage::Storage &stor);
         ~SymBackTrace();
 
         SymBackTrace(const SymBackTrace &);
@@ -60,6 +57,13 @@ class SymBackTrace {
          * backtrace is trivial
          */
         void printBackTrace() const;
+
+        /**
+         * insert the bottom most function of the backtrace (aka root)
+         * @param rootFncId root function to start the backtrace with, in simple
+         * programs usually main()
+         */
+        void pushCallRoot(int rootFncId);
 
         /**
          * enter a call of function, thus enlarge the backtrace by one

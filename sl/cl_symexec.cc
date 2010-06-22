@@ -55,7 +55,7 @@ void parseConfigString(SymExecParams &sep, std::string cnf) {
 
 void digGlJunk(CodeStorage::Storage &stor, SymHeap &heap) {
     using namespace CodeStorage;
-    SymBackTrace bt(stor, /* no root */ -1);
+    SymBackTrace bt(stor);
     SymHeapProcessor proc(heap, &bt);
 
     BOOST_FOREACH(const Var &var, stor.vars) {

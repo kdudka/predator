@@ -101,16 +101,9 @@ void SymBackTrace::Private::popFnc() {
         TRAP;
 }
 
-SymBackTrace::SymBackTrace(const CodeStorage::Storage &stor, int rootFncId):
+SymBackTrace::SymBackTrace(const CodeStorage::Storage &stor):
     d(new Private(stor))
 {
-    if (-1 == rootFncId)
-        // no root, we're done
-        return;
-
-    // first item of usual backtraces is usually main()
-    const CodeStorage::Fnc *root = d->fncById(rootFncId);
-    d->pushFnc(root, &root->def.loc);
 }
 
 SymBackTrace::SymBackTrace(const SymBackTrace &ref):
@@ -148,6 +141,12 @@ void SymBackTrace::printBackTrace() const {
 
         CL_NOTE_MSG(btLw, "from call of " << nameOf(*btFnc) << "()");
     }
+}
+
+void SymBackTrace::pushCallRoot(int fncId) {
+    // first item of usual backtraces is usually main()
+    const CodeStorage::Fnc *root = d->fncById(fncId);
+    d->pushFnc(root, &root->def.loc);
 }
 
 void SymBackTrace::pushCall(int fncId, const LocationWriter &lw) {

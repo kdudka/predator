@@ -371,10 +371,8 @@ bool /* complete */ SymExecEngine::execInsn() {
             // the result is already included in the resulting state, skip it
             continue;
 
-        if (1 < hCnt) {
-            CL_DEBUG_MSG(lw_, "*** processing heap #" << heapIdx_
-                    << " of BB " << block_->name());
-        }
+        if (1 < hCnt)
+            CL_DEBUG_MSG(lw_, "*** processing heap #" << heapIdx_);
 
         if (isTerm) {
             // terminal insn
@@ -397,9 +395,20 @@ bool /* complete */ SymExecEngine::execInsn() {
 }
 
 bool /* complete */ SymExecEngine::execBlock() {
+    const std::string &name = block_->name();
+
     // state valid for the entry of this BB
     SymHeapScheduler &origin = stateMap_[block_];
     const int origCnt = origin.size();
+
+    if (insnIdx_ || heapIdx_) {
+        // some debugging output of the resume process
+        const CodeStorage::Insn *insn = block_->operator[](insnIdx_);
+        const LocationWriter lw(&insn->loc);
+        CL_DEBUG_MSG(lw_, "___ we are back in " << name
+                << ", insn #" << insnIdx_
+                << ", heap #" << (heapIdx_ - 1));
+    }
 
     if (!insnIdx_)
         // fresh run, let's initialize the local state by BB entry
@@ -413,9 +422,9 @@ bool /* complete */ SymExecEngine::execBlock() {
             // update location info
             lw_ = &insn->loc;
 
-        // execute current instruction on localState
+        // execute current instruction
         if (!this->execInsn())
-            // fucntion call reached, we should stand by
+            // function call reached, we should stand by
             return false;
 
         // swap states in order to be ready for next insn
@@ -431,6 +440,7 @@ bool /* complete */ SymExecEngine::execBlock() {
         origin.setDone(h);
 
     // the whole block should be processed now
+    CL_DEBUG_MSG(lw_, "___ completed batch for " << name);
     insnIdx_ = 0;
     return true;
 }
@@ -483,7 +493,7 @@ const SymHeap* SymExecEngine::callEntry() const {
     if (heapIdx_ < 1)
         TRAP;
 
-    return &localState_[heapIdx_ - /* already incremented for next wheel*/ 1];
+    return &localState_[heapIdx_ - /* already incremented for next wheel */ 1];
 }
 
 const CodeStorage::Insn* SymExecEngine::callInsn() const {
@@ -518,7 +528,7 @@ struct SymExec::Private {
     Private(SymExec &se_, const CodeStorage::Storage &stor_):
         se(se_),
         stor(stor_),
-        bt(stor, /* no root for now */ -1),
+        bt(stor_),
         callCache(&bt)
     {
     }
@@ -627,6 +637,8 @@ void SymExec::Private::execRoot(const StackItem &item) {
             // remove top of the stack
             delete item.engine;
             rtStack.pop();
+
+            // wake up the caller (if any)
             continue;
         }
 
@@ -664,14 +676,15 @@ void SymExec::Private::execRoot(const StackItem &item) {
 }
 
 void SymExec::exec(const CodeStorage::Fnc &fnc, SymHeapUnion &results) {
-    BOOST_FOREACH(const SymHeap &init, d->stateZero) {
+    // go through all symbolic heaps of the inital state, merging the results
+    // all together
+    BOOST_FOREACH(const SymHeap &heap, d->stateZero) {
         if (d->bt.size())
             // *** bt offset detected ***
             TRAP;
 
-        // FIXME: suboptimal inteface of SymBackTrace
-        // TODO: implement something like SymBackTrace::declareRoot()
-        d->bt = SymBackTrace(d->stor, uidOf(fnc));
+        // initialize backtrace
+        d->bt.pushCallRoot(uidOf(fnc));
 
         // XXX: synthesize CL_INSN_CALL
         CodeStorage::Insn insn;
@@ -682,7 +695,7 @@ void SymExec::exec(const CodeStorage::Fnc &fnc, SymHeapUnion &results) {
         insn.operands[1] = fnc.def;
 
         // get call context
-        SymCallCtx &ctx = d->callCache.getCallCtx(init, insn);
+        SymCallCtx &ctx = d->callCache.getCallCtx(heap, insn);
         if (!ctx.needExec()) {
             CL_WARN_MSG(d->bt.topCallLoc(), "(x) root function optimized out: "
                     << nameOf(fnc) << "()");
