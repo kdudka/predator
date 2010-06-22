@@ -23,10 +23,13 @@
 #include <vector>
 #include <set>
 #include <map>
+#include <sstream>
 #include <ostream>
 
 #include <boost/unordered_set.hpp>
 #include <boost/unordered_map.hpp>
+
+//#define MK_STR(x) ((std::ostringstream*)&(std::ostringstream() << x))->str()
 
 template <class T>
 struct Index {
@@ -125,6 +128,26 @@ class utils {
 	
 public:
 	
+	// build equivalence classes
+	static void relBuildClasses(const std::vector<std::vector<bool> >& rel, std::vector<size_t>& headIndex) {
+		headIndex.resize(rel.size());
+		std::vector<size_t> head;
+		for (size_t i = 0; i < rel.size(); ++i) {
+			bool found = false;
+			for (size_t j = 0; j < head.size(); ++j) {
+				if (rel[i][head[j]] && rel[head[j]][i]) {
+					headIndex[i] = head[j];
+					found = true;
+					break;
+				}
+			}
+			if (!found) {
+				headIndex[i] = i;
+				head.push_back(i);
+			}
+		}
+	}
+
 	// build equivalence classes
 	static void relBuildClasses(const std::vector<std::vector<bool> >& rel, std::vector<size_t>& index, std::vector<size_t>& head) {
 		index.resize(rel.size());

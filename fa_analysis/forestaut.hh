@@ -23,13 +23,11 @@
 #include <vector>
 #include <stdexcept>
 #include <cassert>
+#include <ostream>
 
 #include "varinfo.hh"
 #include "treeaut.hh"
 #include "labman.hh"
-
-using std::vector;
-using std::pair;
 
 class FA {
 
@@ -37,13 +35,17 @@ class FA {
 
 public:
 
-	union label_type {
+	struct label_type {
 
-		const vector<var_info>* data;
-		const vector<const class Box*>* dataB;
+		size_t type;
+		
+		union {
+			const std::vector<var_info>* data;
+			const std::vector<const class Box*>* dataB;
+		};
 
-		label_type(const vector<var_info>* data) : data(data) {}
-		label_type(const vector<const class Box*>* dataB) : dataB(dataB) {}
+		label_type(const std::vector<var_info>* data) : type(0), data(data) {}
+		label_type(const std::vector<const class Box*>* dataB) : type(1), dataB(dataB) {}
 
 		friend size_t hash_value(const label_type& l) {
 			return hash_value(l.data);
@@ -59,13 +61,15 @@ public:
 
 		bool operator==(const label_type& rhs) const { return this->data == rhs.data; }
 
+		friend std::ostream& operator<<(std::ostream& os, const FA::label_type& label);
+
 	};
 
 protected:
 
-	vector<var_info> variables;
+	std::vector<var_info> variables;
 
-	vector<TA<label_type>*> roots;
+	std::vector<TA<label_type>*> roots;
 	
 	mutable TAManager<label_type>& taMan;
 
@@ -77,7 +81,7 @@ public:
 	FA(TAManager<label_type>& taMan) : taMan(taMan) {}
 	
 	FA(const FA& src) : variables(src.variables), roots(src.roots), taMan(src.taMan) {
-		for (vector<TA<label_type>*>::iterator i = this->roots.begin(); i != this->roots.end(); ++i)
+		for (std::vector<TA<label_type>*>::iterator i = this->roots.begin(); i != this->roots.end(); ++i)
 			this->taMan.addRef(*i);
 	}
 
@@ -86,12 +90,12 @@ public:
 	}
 	
 	void clear() {
-		for (vector<TA<label_type>*>::iterator i = this->roots.begin(); i != this->roots.end(); ++i)
+		for (std::vector<TA<label_type>*>::iterator i = this->roots.begin(); i != this->roots.end(); ++i)
 			this->taMan.release(*i);
 		this->roots.clear();
 		this->variables.clear();
 	}
-
+	
 };
 
 #endif

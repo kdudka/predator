@@ -17,8 +17,8 @@
  * along with predator.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef TREEAUT_H
-#define TREEAUT_H
+#ifndef TREE_AUT_H
+#define TREE_AUT_H
 
 #include <vector>
 #include <set>
@@ -194,18 +194,18 @@ public:
 
 public:
 
-	typedef typename boost::unordered_map<size_t, vector<const TT<T>*> > dfs_cache_type;
+	typedef typename boost::unordered_map<size_t, std::vector<const TT<T>*> > td_cache_type;
 
 	class DFSIterator {
 		
-		const dfs_cache_type& _cache;
+		const td_cache_type& _cache;
 		set<size_t> _visited;
 		vector<pair<typename vector<const TT<T>*>::const_iterator, typename vector<const TT<T>*>::const_iterator> > _stack;
 	
 		void insertLhs(const vector<size_t>& lhs) {
 			for (vector<size_t>::const_iterator i = lhs.begin(); i != lhs.end(); ++i) {
 				if (this->_visited.insert(*i).second) {
-					typename dfs_cache_type::const_iterator j = this->_cache.find(*i);
+					typename td_cache_type::const_iterator j = this->_cache.find(*i);
 					if (j != this->_cache.end())
 						this->_stack.push_back(make_pair(j->second.begin(), j->second.end()));
 				}
@@ -213,7 +213,7 @@ public:
 		}
 		
 	public:
-		DFSIterator(const dfs_cache_type& cache, const vector<size_t>& stack)
+		DFSIterator(const td_cache_type& cache, const vector<size_t>& stack)
 			: _cache(cache), _visited() {
 			this->insertLhs(stack);
 		}
@@ -243,6 +243,9 @@ public:
 		const TT<T>* operator->() const { return *this->_stack.back().first; }
 
 	};
+	
+	typedef boost::unordered_map<const T*, std::vector<const TT<T>*> > lt_cache_type;
+//	typedef boost::unordered_map<size_t, lt_cache_type> slt_cache_type;
 
 public:
 
@@ -276,11 +279,11 @@ public:
 	TA<T>::Iterator begin() const { return TA<T>::Iterator(this->transitions.begin()); }
 	TA<T>::Iterator end() const { return TA<T>::Iterator(this->transitions.end()); }
 
-	TA<T>::DFSIterator dfsStart(const dfs_cache_type& cache) const {
+	TA<T>::DFSIterator dfsStart(const td_cache_type& cache) const {
 		return TA<T>::DFSIterator(cache, vector<size_t>(this->finalStates.begin(), this->finalStates.end()));
 	}
 
-	TA<T>::DFSIterator dfsStart(const dfs_cache_type& cache, const vector<size_t>& stack) const {
+	TA<T>::DFSIterator dfsStart(const td_cache_type& cache, const vector<size_t>& stack) const {
 		return TA<T>::DFSIterator(cache, stack);
 	}
 
@@ -352,11 +355,35 @@ public:
 			index.add(&(*i)->first._lhs->first);
 	}
 	
-	void buildDFSCache(dfs_cache_type& cache) const {
+	void buildTDCache(td_cache_type& cache) const {
 		for (typename set<typename trans_cache_type::value_type*>::const_iterator i = this->transitions.begin(); i != this->transitions.end(); ++i)
 			cache.insert(make_pair((*i)->first._rhs, vector<const TT<T>*>())).first->second.push_back(&(*i)->first);
 	}
-	
+/*	
+	void buildSLTBUCache(slt_cache_type& cache, leaf_cache_type& leafCache) const {
+		boost::unordered_map<std::pair<size_t, const T*>, std::set<const TT<T>*> > tmp;
+		for (typename set<typename trans_cache_type::value_type*>::const_iterator i = this->transitions.begin(); i != this->transitions.end(); ++i) {
+			if ((*i)->first._lhs->first.empty()) {
+				leafCache.insert(make_pair(&(*i)->first._label, std::set<const TT<T>*>())).first->second.insert(&(*i)->first);
+				continue;
+			}
+			for (std::vector<size_t>::const_iterator j = (*i)->first._lhs->first.begin(); j != (*i)->first._lhs->first.end(); ++j)
+				tmp.insert(make_pair(make_pair(*j, &(*i)->first._label), vector<const TT<T>*>())).first->second.insert(&(*i)->first);
+		}
+		for (boost::unordered_map<std::pair<size_t, const T*>, std::set<const TT<T>*> >::const_iterator i = tmp.begin(); i != tmp.end(); ++i) {
+			cache.insert(
+				make_pair(i->first.first, boost::unordered_map<const T*, std::vector<const TT<T>*> >())
+			).first->second.insert(
+				make_pair(i->first.second, std::vector<const TT<T>*>(i->second.begin(), i->second.end()))
+			);
+		}
+	}
+*/	
+	void buildLTCache(lt_cache_type& cache) const {
+		for (typename set<typename trans_cache_type::value_type*>::const_iterator i = this->transitions.begin(); i != this->transitions.end(); ++i)
+			cache.insert(make_pair(&(*i)->first._label, std::vector<const TT<T>*>())).first->second.push_back(&(*i)->first);
+	}
+
 	typename trans_cache_type::value_type* addTransition(const vector<size_t>& lhs, const T& label, size_t rhs) {
 		if (lhs.size() > this->maxRank)
 			this->maxRank = lhs.size();
@@ -465,20 +492,130 @@ public:
 			}
 		}
 	}
+
+	void getIntersectingStates(std::vector<size_t>& dst, const TA<T>& predicate) const {
+		lt_cache_type cache1, cache2;
+		this->buildLTCache(cache1);
+		predicate.buildLTCache(cache2);
+		std::vector<std::pair<size_t, size_t> > stack;
+		boost::unordered_map<std::pair<size_t, size_t>, size_t> product;
+		for (typename lt_cache_type::const_iterator i = cache1.begin(); i != cache1.end(); ++i) {
+			if (!(*i)->second.front()->_lhs->first.empty())
+				continue;
+			typename lt_cache_type::const_iterator j = cache2.find(i->first);
+			if (j == cache2.end())
+				continue;
+			for (typename std::vector<const TT<T>*>::const_iterator k = i->second.begin(); k != i->second.end(); ++k) {
+				for (typename std::vector<const TT<T>*>::const_iterator l = j->second.begin(); l != j->second.end(); ++l)
+					stack.push_back(make_pair((*k)->_rhs, (*l)->_rhs));
+			}
+		}
+		while (!stack.empty()) {
+			std::pair<size_t, size_t> s = stack.back();
+			stack.pop_back();
+			for (typename lt_cache_type::const_iterator i = cache1.begin(); i != cache1.end(); ++i) {
+				if ((*i)->second.front()->_lhs->first.empty())
+					continue;
+				typename lt_cache_type::const_iterator j = cache2.find(i->first);
+				if (j == cache2.end())
+					continue;
+				for (typename std::vector<const TT<T>*>::const_iterator k = i->second.begin(); k != i->second.end(); ++k) {
+					for (typename std::vector<const TT<T>*>::const_iterator l = j->second.begin(); l != j->second.end(); ++l) {
+						assert((*k)->_lhs->first.size() == (*l)->_lhs->first.size());
+						std::vector<size_t> lhs; 
+						for (size_t m = 0; m < (*k)->_lhs->first.size(); ++m) {
+							boost::unordered_map<std::pair<size_t, size_t>, size_t>::iterator n = product.find(
+								make_pair((*k)->_lhs->first[m], (*l)->_lhs->first[m])
+							);
+							if (n == product.end())
+								break;
+							lhs.push_back(n->second);
+						}
+						if (lhs.size() < (*k)->_lhs->first.size())
+							continue;
+						std::pair<boost::unordered_map<std::pair<size_t, size_t>, size_t>::iterator, bool> p =
+							product.insert(make_pair(make_pair((*k)->_rhs, (*l)->_rhs), product.size()));
+						if (p.second) {
+							stack.push_back(p.first->first);
+							if (predicate.isFinalState((*l)->_rhs))
+								dst.push_back((*k)->_rhs);
+						}
+					}
+				}
+			}
+		}
+	}
+	
+	static TA<T>& intersection(TA<T>& dst, const TA<T>& src1, const TA<T>& src2) {
+		lt_cache_type cache1, cache2;
+		src1.buildLTCache(cache1);
+		src2.buildLTCache(cache2);
+		std::vector<std::pair<size_t, size_t> > stack;
+		boost::unordered_map<std::pair<size_t, size_t>, size_t> product;
+		for (typename lt_cache_type::const_iterator i = cache1.begin(); i != cache1.end(); ++i) {
+			if (!(*i)->second.front()->_lhs->first.empty())
+				continue;
+			typename lt_cache_type::const_iterator j = cache2.find(i->first);
+			if (j == cache2.end())
+				continue;
+			for (typename std::vector<const TT<T>*>::const_iterator k = i->second.begin(); k != i->second.end(); ++k) {
+				for (typename std::vector<const TT<T>*>::const_iterator l = j->second.begin(); l != j->second.end(); ++l)
+					stack.push_back(make_pair((*k)->_rhs, (*l)->_rhs));
+			}
+		}
+		while (!stack.empty()) {
+			std::pair<size_t, size_t> s = stack.back();
+			stack.pop_back();
+			for (typename lt_cache_type::const_iterator i = cache1.begin(); i != cache1.end(); ++i) {
+				if ((*i)->second.front()->_lhs->first.empty())
+					continue;
+				typename lt_cache_type::const_iterator j = cache2.find(i->first);
+				if (j == cache2.end())
+					continue;
+				for (typename std::vector<const TT<T>*>::const_iterator k = i->second.begin(); k != i->second.end(); ++k) {
+					for (typename std::vector<const TT<T>*>::const_iterator l = j->second.begin(); l != j->second.end(); ++l) {
+						assert((*k)->_lhs->first.size() == (*l)->_lhs->first.size());
+						std::vector<size_t> lhs; 
+						for (size_t m = 0; m < (*k)->_lhs->first.size(); ++m) {
+							boost::unordered_map<std::pair<size_t, size_t>, size_t>::iterator n = product.find(
+								make_pair((*k)->_lhs->first[m], (*l)->_lhs->first[m])
+							);
+							if (n == product.end())
+								break;
+							lhs.push_back(n->second);
+						}
+						if (lhs.size() < (*k)->_lhs->first.size())
+							continue;
+						std::pair<boost::unordered_map<std::pair<size_t, size_t>, size_t>::iterator, bool> p =
+							product.insert(make_pair(make_pair((*k)->_rhs, (*l)->_rhs), product.size()));
+						if (p.second) {
+							stack.push_back(p.first->first);
+							dst.addTransition(lhs, (*k)->_label, p.first->second);
+							if (src1.isFinalState((*k)->_rhs) && src2.isFinalState((*l)->_rhs))
+								dst.addFinalState(p.first->second);
+						}
+					}
+				}
+			}
+		}
+	}
 	
 	// collapses states according to a given relation
 	TA<T>& collapsed(TA<T>& dst, const vector<vector<bool> >& rel, const Index<size_t>& stateIndex) const {
-		vector<size_t> index, head;
-		utils::relBuildClasses(rel, index, head);
+		vector<size_t> headIndex;
+		utils::relBuildClasses(rel, headIndex);
+//		vector<size_t> index, head;
+//		utils::relBuildClasses(rel, index, head);
 		for (typename set<typename trans_cache_type::value_type*>::const_iterator i = this->transitions.begin(); i != this->transitions.end(); ++i) {
 			vector<size_t> lhs;
 			stateIndex.translate(lhs, (*i)->first._lhs->first);
 			for (size_t j = 0; j < lhs.size(); ++j)
-				lhs[j] = head[index[lhs[j]]];
-			dst.addTransition(lhs, (*i)->first._label, head[index[stateIndex[(*i)->first._rhs]]]);
+//				lhs[j] = head[index[lhs[j]]];
+				lhs[j] = headIndex[lhs[j]];
+			dst.addTransition(lhs, (*i)->first._label, headIndex[stateIndex[(*i)->first._rhs]]);
 		}
 		for (set<size_t>::const_iterator i = this->finalStates.begin(); i != this->finalStates.end(); ++i)
-			dst.addFinalState(head[index[stateIndex[*i]]]);
+			dst.addFinalState(headIndex[stateIndex[*i]]);
 		return dst; 
 	}
 	

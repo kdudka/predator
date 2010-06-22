@@ -18,6 +18,24 @@
  */
 
 #include "forestaut.hh"
+#include "box.hh"
 
 const size_t FA::varNull;
 const size_t FA::varUndef;
+
+std::ostream& operator<<(std::ostream& os, const FA::label_type& label) {
+	os << '<';
+	switch (label.type) {
+		case 0:
+			os << "v:";
+			for (std::vector<var_info>::const_iterator i = label.data->begin(); i != label.data->end(); ++i)
+				os << *i << ':';
+			break;
+		case 1:
+			os << "b:";
+			for (std::vector<const class Box*>::const_iterator i = label.dataB->begin(); i != label.dataB->end(); ++i)
+				os << **i << ':';
+			break;
+	}
+	return os << '>';
+}

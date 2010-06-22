@@ -28,10 +28,11 @@
 
 #include <boost/unordered_map.hpp>
 
+#include "forestaut.hh"
 #include "box.hh"
 #include "labman.hh"
-#include "forestaut.hh"
 #include "utils.hh"
+#include "tatimint.hh"
 
 using std::vector;
 using std::set;
@@ -66,7 +67,7 @@ public:
 		this->invRootReferenceIndex.clear();
 	}
 	
-	void loadTA(const TA<label_type>& src, const TA<label_type>::dfs_cache_type& dfsCache, const TT<label_type>* top, size_t stateOffset) {
+	void loadTA(const TA<label_type>& src, const TA<label_type>::td_cache_type& cache, const TT<label_type>* top, size_t stateOffset) {
 		this->clear();
 		this->variables = *top->label().data;
 		this->stateOffset = stateOffset;
@@ -74,7 +75,7 @@ public:
 			TA<label_type>* ta = this->taMan.alloc();
 			this->roots.push_back(ta);
 			// add reachable transitions
-			for (TA<label_type>::dfs_iterator j = src.dfsStart(dfsCache, {*i}); j.isValid(); j.next()) {
+			for (TA<label_type>::dfs_iterator j = src.dfsStart(cache, {*i}); j.isValid(); j.next()) {
 				ta->addTransition(*j);
 				if (j->lhs().empty())
 					this->registerRootReference(j->label().head().getReference(), j->rhs());
@@ -514,23 +515,19 @@ public:
 	void newVar(vector<FAE*>& dst, size_t& id) {
 		assert(dst.empty());
 		FAE* fae = new FAE(*this);
-		Guard<FAE> guard(fae);
+		dst.push_back(fae);
 		id = fae->variables.size();
 		fae->variables.push_back(var_info(varUndef, 0));
 		fae->normalize();
-		dst.push_back(fae);
-		guard.release();
 	}
 	
 	void dropVars(vector<FAE*>& dst, size_t count) {
 		assert(dst.empty());
 		FAE* fae = new FAE(*this);
-		Guard<FAE> guard(fae);
+		dst.push_back(fae);
 		assert(count <= fae->variables.size());
 		while (count-- > 0) fae->variables.pop_back();
 		fae->normalize();
-		dst.push_back(fae);
-		guard.release();
 	}
 	
 	bool x_eq_y(size_t x, size_t y) const {
@@ -547,7 +544,7 @@ public:
 		if (dataSlots > 0)
 			throw std::runtime_error("FAE::x_ass_new(): Data handling not implemented! (désolé)");
 		FAE* fae = new FAE(*this);
-		Guard<FAE> guard(fae);
+		dst.push_back(fae);
 		TA<label_type>* ta = fae->taMan.alloc();
 		fae->variables[x] = var_info(fae->roots.size(), 0);
 		fae->roots.push_back(ta);
@@ -562,8 +559,6 @@ public:
 		ta->addTransition(lhs, &fae->labMan.lookup(label), f);
 		ta->addFinalState(f);
 		fae->normalize();
-		dst.push_back(fae);
-		guard.release();
 	}
 
 	void del_x(vector<FAE*>& dst, size_t x) const {
@@ -600,11 +595,9 @@ public:
 		assert(dst.empty());
 		assert(x < this->variables.size());
 		FAE* fae = new FAE(*this);
-		Guard<FAE> guard(fae);
+		dst.push_back(fae);
 		fae->variables[x] = var_info(varNull, 0);
 		fae->normalize();
-		dst.push_back(fae);
-		guard.release();
 	}
 	
 	void x_ass_y(vector<FAE*>& dst, size_t x, size_t y, size_t offset) {
@@ -612,12 +605,10 @@ public:
 		assert(x < this->variables.size());
 		assert(y < this->variables.size());
 		FAE* fae = new FAE(*this);
-		Guard<FAE> guard(fae);
+		dst.push_back(fae);
 		fae->variables[x] = fae->variables[y];
 		fae->variables[x].offset += offset;
 		fae->normalize();
-		dst.push_back(fae);
-		guard.release();
 	}
 	
 	void x_ass_y_next(vector<FAE*>& dst, size_t x, size_t y, size_t selector) {
@@ -675,6 +666,15 @@ public:
 			(*i)->normalize();
 		}
 	}	
+
+	friend std::ostream& operator<<(std::ostream& os, const FAE& fae) {
+		for (size_t i = 0; i < fae.roots.size(); ++i) {
+			std::ostringstream ss;
+			ss << "root" << i;
+			TAWriter<FA::label_type>(os).writeOne(*fae.roots[i], ss.str());
+		}
+		return os;
+	}
 
 };
 

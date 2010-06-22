@@ -25,6 +25,7 @@
 #include <string>
 #include <stdexcept>
 #include <fstream>
+#include <ostream>
 #include <sstream>
 
 #include <boost/unordered_map.hpp>
@@ -49,6 +50,7 @@ class Box : public FA {
 
 	size_t type;
 	size_t tag;
+	std::string name;
 
 	std::vector<std::pair<std::vector<size_t>, std::set<size_t> > > selCoverage;
 
@@ -113,6 +115,10 @@ public:
 			case refID: return 0;
 			default: return this->variables.size() - 1;
 		}
+	}
+	
+	const std::string& getName() const {
+		return this->name;
 	}
 
 public:
@@ -180,16 +186,19 @@ public:
 
 protected:
 
-	Box(TAManager<FA::label_type>& taMan, size_t type, size_t tag) : FA(taMan), type(type), tag(tag) {}
+	Box(TAManager<FA::label_type>& taMan, size_t type, size_t tag, const std::string& name)
+	 : FA(taMan), type(type), tag(tag), name(name) {}
 
 public:
 
-	static Box createBox(TAManager<FA::label_type>& taMan) {
-		return Box(taMan, Box::boxID, 0);
+	static Box createBox(TAManager<FA::label_type>& taMan, const std::string& name) {
+		return Box(taMan, Box::boxID, 0, name);
 	}
 
 	static Box createSelector(TAManager<FA::label_type>& taMan, size_t selector, size_t offset = 0) {
-		Box box(taMan, Box::selID, selector);
+		std::ostringstream ss;
+		ss << "s" << selector;
+		Box box(taMan, Box::selID, selector, ss.str());
 		box.variables.push_back(var_info(0, offset));
 		set<size_t> coverage;
 		coverage.insert(selector);
@@ -198,7 +207,9 @@ public:
 	}
 
 	static Box createReference(TAManager<FA::label_type>& taMan, size_t root) {
-		return Box(taMan, Box::refID, root);
+		std::ostringstream ss;
+		ss << "r" << root;
+		return Box(taMan, Box::refID, root, ss.str());
 	}
 /*
 	static FA::label_type translateLabel(LabMan& labMan, const vector<const BoxTemplate*>* label, const boost::unordered_map<const BoxTemplate*, const Box*>& args) {
@@ -274,6 +285,10 @@ public:
 		boxes = vector<const Box*>(s.begin(), s.end());
 	}
 
+	friend std::ostream& operator<<(std::ostream& os, const Box& x) {
+		return os << x.name;
+	}
+
 };
 
 class BoxManager {
@@ -347,7 +362,7 @@ protected:
 			throw std::runtime_error("Box '" + name + "' not found!");
 
 		Box& box = this->boxIndex.insert(
-			make_pair(name, Box::createBox(this->taMan))
+			make_pair(name, Box::createBox(this->taMan, name))
 		).first->second;
 
 		std::fstream input(j->second);

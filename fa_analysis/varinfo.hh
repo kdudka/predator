@@ -20,6 +20,8 @@
 #ifndef VAR_INFO_H
 #define VAR_INFO_H
 
+#include <ostream>
+
 #include <boost/unordered_map.hpp>
 
 using boost::hash_value;
@@ -38,6 +40,10 @@ struct var_info {
 
 	bool operator==(const var_info& rhs) const {
 		return (this->index == rhs.index) && (this->offset == rhs.offset);
+	}
+	
+	friend std::ostream& operator<<(std::ostream& os, const var_info& x) {
+		return os << x.index << '+' << x.offset;
 	}
 
 };

@@ -21,6 +21,7 @@
 #define UFAE_H
 
 #include <vector>
+#include <ostream>
 
 #include "utils.hh"
 #include "treeaut.hh"
@@ -60,17 +61,20 @@ public:
 	}
 
 	void ta2fae(vector<FAE*>& dst, TAManager<FA::label_type>& taMan, LabMan& labMan, BoxManager& boxMan) const {
-		TA<FA::label_type>::dfs_cache_type dfsCache;
-		this->backend.buildDFSCache(dfsCache);
-		vector<const TT<FA::label_type>*>& v = dfsCache.insert(make_pair(0, vector<const TT<FA::label_type>*>())).first->second;
+		TA<FA::label_type>::td_cache_type cache;
+		this->backend.buildTDCache(cache);
+		vector<const TT<FA::label_type>*>& v = cache.insert(make_pair(0, vector<const TT<FA::label_type>*>())).first->second;
 		// iterate over all "synthetic" transitions and constuct new FAE for each
 		for (vector<const TT<FA::label_type>*>::iterator i = v.begin(); i != v.end(); ++i) {
 			FAE* fae = new FAE(taMan, labMan, boxMan);
-			Guard<FAE> guard(fae);
-			fae->loadTA(this->backend, dfsCache, *i, this->stateOffset);
 			dst.push_back(fae);
-			guard.release();
+			fae->loadTA(this->backend, cache, *i, this->stateOffset);
 		}
+	}
+
+	friend std::ostream& operator<<(std::ostream& os, const UFAE& ufae) {
+		TAWriter<FA::label_type>(os).writeOne(ufae.backend);
+		return os;
 	}
 
 };

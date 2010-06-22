@@ -21,10 +21,12 @@
 #define TA_TIM_INT_H
 
 #include <string>
+#include <sstream>
 #include <map>
 
 #include "timbuk.hh"
 #include "treeaut.hh"
+#include "utils.hh"
 
 using std::string;
 
@@ -131,17 +133,20 @@ public:
 
 };
 
+template <class T>
 class TAWriter : public TimbukWriter {
 
 public:
 
 	TAWriter(std::ostream& output) : TimbukWriter(output) {}
 
-	void writeOne(const TA<string>& aut, const string& name = "TreeAutomaton") {
+	void writeOne(const TA<T>& aut, const string& name = "TreeAutomaton") {
 		map<string, size_t> labels;
 		set<size_t> states;
-		for (TA<string>::iterator i = aut.begin(); i != aut.end(); ++i) {
-			labels.insert(make_pair(i->label(), i->lhs().size()));
+		for (typename TA<T>::iterator i = aut.begin(); i != aut.end(); ++i) {
+			std::ostringstream ss;
+			ss << i->label();
+			labels.insert(make_pair(ss.str(), i->lhs().size()));
 			states.insert(i->rhs());
 			for (size_t j = 0; j < i->lhs().size(); ++j)
 				states.insert(i->lhs()[j]);
@@ -157,11 +162,19 @@ public:
 		for (set<size_t>::iterator i = aut.getFinalStates().begin(); i != aut.getFinalStates().end(); ++i)
 			this->writeState(*i);
 		this->startTransitions();
-		for (TA<string>::iterator i = aut.begin(); i != aut.end(); ++i)
-			this->writeTransition(i->lhs(), i->label(), i->rhs());
+		for (typename TA<T>::iterator i = aut.begin(); i != aut.end(); ++i) {
+			std::ostringstream ss;
+			ss << i->label();
+			this->writeTransition(i->lhs(), ss.str(), i->rhs());
+		}
 		this->terminate();
 	}
-
+/*	
+	friend std::ostream& operator<<(std::ostream& os, const TA<T>& ta) {
+		TAWriter<T>(os).writeOne(ta);
+		return os;
+	}
+*/
 };
 
 #endif
