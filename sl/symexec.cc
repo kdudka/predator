@@ -511,12 +511,7 @@ SymHeapUnion* SymExecEngine::callResults() {
 
 // /////////////////////////////////////////////////////////////////////////////
 // SymExec implementation
-struct StackItem {
-    SymCallCtx      *ctx;
-    SymExecEngine   *engine;
-    SymHeapUnion    *results;
-};
-
+struct StackItem;
 struct SymExec::Private {
     SymExec                     &se;
     const CodeStorage::Storage  &stor;
@@ -537,7 +532,9 @@ struct SymExec::Private {
                                             const CodeStorage::Insn     &insn,
                                             SymHeapUnion                &dst);
 
-    void execRoot(const StackItem &item);
+    SymExecEngine* createEngine(const SymHeap &src, SymHeapUnion &dst);
+
+    void execLoop(const StackItem &item);
 };
 
 SymExec::SymExec(const CodeStorage::Storage &stor, const SymExecParams &params):
@@ -603,9 +600,6 @@ fail:
 
     const struct cl_operand dst = opList[/* dst */ 0];
     if (CL_OPERAND_VOID != dst.code) {
-        SymHeapProcessor proc(heap, &this->bt);
-        proc.setLocation(this->bt.topCallLoc());
-
         // set return value to unknown
         const TValueId val = heap.valCreateUnknown(UV_UNKNOWN, dst.type);
         const TObjId obj = proc.heapObjFromOperand(dst);
@@ -617,7 +611,19 @@ fail:
     return 0;
 }
 
-void SymExec::Private::execRoot(const StackItem &item) {
+SymExecEngine* SymExec::Private::createEngine(const SymHeap     &src,
+                                              SymHeapUnion      &dst)
+{
+    return new SymExecEngine(this->se, this->bt, src, dst);
+}
+
+struct StackItem {
+    SymCallCtx      *ctx;
+    SymExecEngine   *eng;
+    SymHeapUnion    *dst;
+};
+
+void SymExec::Private::execLoop(const StackItem &item) {
     using CodeStorage::Fnc;
 
     // run-time stack
@@ -628,29 +634,34 @@ void SymExec::Private::execRoot(const StackItem &item) {
     // main loop
     while (!rtStack.empty()) {
         const StackItem &item = rtStack.top();
+        SymExecEngine *engine = item.eng;
 
-        if (item.engine->run()) {
+        // do as much as we can at the current call level
+        if (engine->run()) {
             // call done at this level
-            item.ctx->flushCallResults(*item.results);
+            item.ctx->flushCallResults(*item.dst);
             this->bt.popCall();
 
             // remove top of the stack
-            delete item.engine;
+            delete engine;
             rtStack.pop();
 
             // wake up the caller (if any)
             continue;
         }
 
-        // next call
-        const SymHeap &entry = *item.engine->callEntry();
-        const CodeStorage::Insn &insn = *item.engine->callInsn();
-        const Fnc *fnc = this->resolveCallInsn(entry, insn, *item.results);
+        // function call requested
+        // --> we need to nest unless the computed result is already available
+        const SymHeap &entry = *engine->callEntry();
+        const CodeStorage::Insn &insn = *engine->callInsn();
+        const Fnc *fnc = this->resolveCallInsn(entry, insn, *item.dst);
         if (!fnc)
-            // the error message should have been already emitted
+            // the error message should have been already emitted, but there
+            // will be probably some VAL_UNKNOWN in the result; now wake up
+            // the caller
             continue;
 
-        // get call context
+        // call cache lookup
         SymCallCtx &ctx = this->callCache.getCallCtx(entry, insn);
         if (!ctx.needExec()) {
             const LocationWriter lw(this->bt.topCallLoc());
@@ -658,25 +669,30 @@ void SymExec::Private::execRoot(const StackItem &item) {
                     << nameOf(*fnc) << "()");
 
             // use the cached result
-            ctx.flushCallResults(*item.engine->callResults());
+            ctx.flushCallResults(*engine->callResults());
 
             // leave backtrace
             this->bt.popCall();
+
+            // wake up the caller
             continue;
         }
 
-        // enter a new function call
+        // prepare a new run-time stack item for the call
         StackItem next;
         next.ctx = &ctx;
-        next.engine = new SymExecEngine(this->se, this->bt, ctx.entry(),
-                                        ctx.rawResults());
-        next.results = item.engine->callResults();
+        next.eng = this->createEngine(ctx.entry(), ctx.rawResults());
+
+        // pass the result back to the caller as soon as we have one
+        next.dst = item.eng->callResults();
+
+        // perform the call now!
         rtStack.push(next);
     }
 }
 
 void SymExec::exec(const CodeStorage::Fnc &fnc, SymHeapUnion &results) {
-    // go through all symbolic heaps of the inital state, merging the results
+    // go through all symbolic heaps of the initial state, merging the results
     // all together
     BOOST_FOREACH(const SymHeap &heap, d->stateZero) {
         if (d->bt.size())
@@ -694,9 +710,10 @@ void SymExec::exec(const CodeStorage::Fnc &fnc, SymHeapUnion &results) {
         insn.operands.resize(2);
         insn.operands[1] = fnc.def;
 
-        // get call context
+        // get call context for the root function
         SymCallCtx &ctx = d->callCache.getCallCtx(heap, insn);
         if (!ctx.needExec()) {
+            // not likely to happen in the way that SymExec is currently used
             CL_WARN_MSG(d->bt.topCallLoc(), "(x) root function optimized out: "
                     << nameOf(fnc) << "()");
 
@@ -707,11 +724,10 @@ void SymExec::exec(const CodeStorage::Fnc &fnc, SymHeapUnion &results) {
         // root stack item
         StackItem si;
         si.ctx = &ctx;
-        si.engine = new SymExecEngine(*this, d->bt, ctx.entry(),
-                                      ctx.rawResults());
-        si.results = &results;
+        si.eng = d->createEngine(ctx.entry(), ctx.rawResults());
+        si.dst = &results;
 
         // root call
-        d->execRoot(si);
+        d->execLoop(si);
     }
 }
