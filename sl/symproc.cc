@@ -545,9 +545,12 @@ void SymHeapProcessor::heapSetSingleVal(TObjId lhs, TValueId rhs) {
     if (VAL_INVALID == oldValue)
         TRAP;
 
-    if (heap_.valPointsToAnon(rhs))
-        // anonymous object is going to be specified by a type
-        this->heapObjDefineType(lhs, rhs);
+    if (0 < rhs) {
+        const TObjId target = heap_.pointsTo(rhs);
+        if (0 < target && !heap_.objType(target))
+            // anonymous object is going to be specified by a type
+            this->heapObjDefineType(lhs, rhs);
+    }
 
     heap_.objSetValue(lhs, rhs);
     if (this->checkForJunk(oldValue))

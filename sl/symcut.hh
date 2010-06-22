@@ -33,6 +33,8 @@ class SymBackTrace;
  * split symbolic heap into two parts regarding the list of program variables
  * @note In the corner case, the result may be identical to the input.  Then
  * the heap pointed by saveSurroundTo will be empty.
+ * @param bt an instance of symbolic backtrace used to distinguish among
+ * instances of automatic variables
  * @param srcDst the instance of heap to operate on, it has to contain all
  * program variables that are specified by cut.
  * @param cut list of program variables to cut the heap by
@@ -46,6 +48,8 @@ void splitHeapByCVars(const SymBackTrace *bt, SymHeap *srcDst,
 
 /**
  * split two disjunct symbolic heaps together, going from program variables
+ * @param bt an instance of symbolic backtrace used to distinguish among
+ * instances of automatic variables
  * @param srcDst the instance of heap to operate on
  * @param src2 the other instance of heap, which is used read-only
  */

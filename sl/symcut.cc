@@ -180,8 +180,7 @@ TObjId addObjectIfNeeded(DeepCopyData &dc, TObjId objSrc) {
     }
 
     // assume anonymous object of known size
-    const TValueId at = src.placedAt(objSrc);
-    if (!src.valPointsToAnon(at))
+    if (src.objType(objSrc))
         TRAP;
 
     const int cbSize = src.objSizeOfAnon(objSrc);

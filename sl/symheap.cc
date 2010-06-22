@@ -749,11 +749,11 @@ struct SymHeap1::Private {
         const struct cl_type        *clt;
         size_t                      cbSize;
         CVar                        cVar;
-        int                         nth_item; // -1  OR  0 .. parent.item_cnt-1
+        //int                       nth_item; // -1  OR  0 .. parent.item_cnt-1
         TObjId                      parent;
         TContObj                    subObjs;
 
-        Object(): clt(0), cbSize(0), nth_item(-1), parent(OBJ_INVALID) { }
+        Object(): clt(0), cbSize(0), parent(OBJ_INVALID) { }
     };
 
     struct Value {
@@ -863,7 +863,7 @@ void SymHeap1::createSubs(TObjId obj) {
                 for (int i = 0; i < cnt; ++i) {
                     const struct cl_type *subClt = clt->items[i].type;
                     const TObjId subObj = this->createSubVar(subClt, obj);
-                    d->objects[subObj].nth_item = i; // postion in struct
+                    //d->objects[subObj].nth_item = i; // postion in struct
                     d->objects[obj].subObjs[i] = subObj;
                     push(todo, subObj, subClt);
                 }
@@ -1070,6 +1070,24 @@ TObjId SymHeap1::objParent(TObjId obj) const {
 // utility functions
 /////////////////////////////////////////////////////////////////////////////
 
+/// return index of subobject in struct, or -1 if not subobject
+int nthItemOf(const SymHeap1 &sh, TObjId o) {
+    const TObjId parent = sh.objParent(o);
+    if (OBJ_INVALID == parent)
+        return -1;
+
+    const struct cl_type *clt = sh.objType(parent);
+    if (!clt || clt->code != CL_TYPE_STRUCT)
+        TRAP;
+
+    for (int i = 0; i < clt->item_cnt; ++i)
+        if (sh.subObj(parent, i))
+            return i;
+
+    TRAP;
+    return -1;
+}
+
 /// count sub-objects in composite objects (single-level only)
 int countSubObjects(const SymHeap1 &sh, TObjId o)
 {
@@ -1206,19 +1224,6 @@ int SymHeap1::objSizeOfAnon(TObjId obj) const {
     return ref.cbSize;
 }
 
-bool SymHeap1::valPointsToAnon(TValueId val) const {
-    if (val <= 0)
-        return false;
-
-    const TObjId obj = SymHeapCore::pointsTo(val);
-    if (obj <= 0)
-        // value does not point to anything (OBJ_RETURN also makes no sense)
-        return false;
-
-    const Private::Object &ref = d->objects.at(obj);
-    return !ref.clt;
-}
-
 void SymHeap1::objDefineType(TObjId obj, const struct cl_type *clt) {
     if (this->lastObjId() < obj || obj < 0)
         // object ID is either out of range, or does not represent a valid obj
@@ -1319,29 +1324,6 @@ int SymHeap1::valGetCustom(const struct cl_type **pClt, TValueId val) const {
 
     return ref.customData;
 }
-
-
-/// return abstract offset of object in struct
-int  SymHeap1::nthItemOf(TObjId o) const {
-    return d->objects[o].nth_item;
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -1600,7 +1582,7 @@ void SymHeap2::Abstract(TValueId ptrValue)
 //CL_WARN("Abstract(value) VAR+VAR ********************************");
         // FIXME: only simplest case works for now
         // 1. determine nextptr
-        int nextid = nthItemOf(firstn);
+        int nextid = nthItemOf(*this, firstn);
         if (nextid == -1)
             TRAP;
         // 2. check, if single item pointed
@@ -1640,7 +1622,7 @@ void SymHeap2::Abstract(TValueId ptrValue)
     {
 //CL_WARN("Abstract(value) VAR+SLS ********************************");
         // 1. determine nextptr
-        int nextid = nthItemOf(firstn);
+        int nextid = nthItemOf(*this, firstn);
         if (nextid == -1)
             TRAP;
         if(nextid != slsGetNextId(second))

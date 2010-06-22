@@ -293,12 +293,17 @@ struct CVar {
     }
 };
 
+/**
+ * lexicographical comparison of CVar objects
+ * @note we need it in order to place the objects into ordered containers
+ */
 inline bool operator<(const CVar &a, const CVar &b) {
     if (a.uid < b.uid)
         return true;
     else if (b.uid < a.uid)
         return false;
     else
+        // we know (a.uid == b.uid) at this point, let's compare .inst
         return a.inst < b.inst;
 }
 
@@ -412,17 +417,12 @@ class SymHeap1: public SymHeapCore {
          */
         TObjId objParent(TObjId obj) const;
 
-        /**
-         * return index of subobject in struct, or -1 if not subobject
-         */
-        int nthItemOf(TObjId o) const;
-
     public:
         /**
          * create a new symbolic heap object of @b known @b type
          * @param clt pointer to static type-info (see CodeStorage), compulsory.
          * @param cVar variable identification for non-heap object.  Use the
-         * default constructor for a heap object of known type
+         * default CVar constructor for a heap object of known type
          * @note If you need to create a heap object of unknown type, use
          * objCreateAnon() instead.
          * @return ID of the just created symbolic heap object
@@ -444,13 +444,6 @@ class SymHeap1: public SymHeapCore {
          * @return the size in @b bytes
          */
         int objSizeOfAnon(TObjId obj) const;
-
-        /**
-         * return true iff the given value points to an object of @b unknown @b
-         * type
-         * @param val ID of the value to check
-         */
-        bool valPointsToAnon(TValueId val) const;
 
         /**
          * delayed static type-info definition of the given object
