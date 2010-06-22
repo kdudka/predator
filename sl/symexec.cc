@@ -532,7 +532,7 @@ struct SymExec::Private {
                                             const CodeStorage::Insn     &insn,
                                             SymHeapUnion                &dst);
 
-    SymExecEngine* createEngine(const SymHeap &src, SymHeapUnion &dst);
+    SymExecEngine* createEngine(SymCallCtx &ctx);
 
     void execLoop(const StackItem &item);
 };
@@ -611,10 +611,12 @@ fail:
     return 0;
 }
 
-SymExecEngine* SymExec::Private::createEngine(const SymHeap     &src,
-                                              SymHeapUnion      &dst)
-{
-    return new SymExecEngine(this->se, this->bt, src, dst);
+SymExecEngine* SymExec::Private::createEngine(SymCallCtx &ctx) {
+    return new SymExecEngine(
+            this->se,
+            this->bt,
+            ctx.entry(),
+            ctx.rawResults());
 }
 
 struct StackItem {
@@ -681,7 +683,7 @@ void SymExec::Private::execLoop(const StackItem &item) {
         // prepare a new run-time stack item for the call
         StackItem next;
         next.ctx = &ctx;
-        next.eng = this->createEngine(ctx.entry(), ctx.rawResults());
+        next.eng = this->createEngine(ctx);
 
         // pass the result back to the caller as soon as we have one
         next.dst = item.eng->callResults();
@@ -724,7 +726,7 @@ void SymExec::exec(const CodeStorage::Fnc &fnc, SymHeapUnion &results) {
         // root stack item
         StackItem si;
         si.ctx = &ctx;
-        si.eng = d->createEngine(ctx.entry(), ctx.rawResults());
+        si.eng = d->createEngine(ctx);
         si.dst = &results;
 
         // root call

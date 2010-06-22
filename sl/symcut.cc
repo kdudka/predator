@@ -196,6 +196,7 @@ TValueId handleValue(DeepCopyData &dc, TValueId valSrc) {
 
     const TObjId compSrc = src.valGetCompositeObj(valSrc);
     if (OBJ_INVALID != compSrc) {
+        // value of a composite object
         const TObjId compDst = addObjectIfNeeded(dc, compSrc);
         return dst.valueOf(compDst);
     }
@@ -207,7 +208,7 @@ TValueId handleValue(DeepCopyData &dc, TValueId valSrc) {
     DeepCopyData::TValMap &valMap = dc.valMap;
     DeepCopyData::TValMap::iterator iterValSrc = valMap.find(valSrc);
     if (valMap.end() != iterValSrc)
-        // good luck, we have already handled the target value
+        // good luck, we have already handled the value before
         return iterValSrc->second;
 
     const struct cl_type *cltCustom = 0;
@@ -221,18 +222,20 @@ TValueId handleValue(DeepCopyData &dc, TValueId valSrc) {
 
     const EUnknownValue code = src.valGetUnknown(valSrc);
     if (UV_KNOWN != code) {
-        // custom value, e.g. fnc pointer
+        // unknown value
         const struct cl_type *cltUnkown = src.valType(valSrc);
         const TValueId valDst = dst.valCreateUnknown(code, cltUnkown);
         valMap[valSrc] = valDst;
         return valDst;
     }
 
+    // now is the time to "dereference" the value
     const TObjId targetSrc = src.pointsTo(valSrc);
     if (OBJ_INVALID == targetSrc)
         TRAP;
 
     if (targetSrc < 0) {
+        // special handling for OBJ_DELETED/OBJ_LOST
         switch (targetSrc) {
             case OBJ_DELETED:
             case OBJ_LOST:
@@ -254,10 +257,11 @@ TValueId handleValue(DeepCopyData &dc, TValueId valSrc) {
         return valDst;
     }
 
-    // traverse recursively
+    // create the target object, if it does not exist already
     const TObjId targetDst = addObjectIfNeeded(dc, targetSrc);
-    const TValueId at = dst.placedAt(targetDst);
-    return at;
+
+    // return target object's address
+    return dst.placedAt(targetDst);
 }
 
 void deepCopy(DeepCopyData &dc, bool digBackward) {

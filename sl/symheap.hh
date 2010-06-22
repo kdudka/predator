@@ -31,7 +31,7 @@
 #include "symid.hh"
 
 #include <list>
-#include <map>      // for SymHeapCore::TValMap (just a test)
+#include <map>                  // for SymHeapCore::TValMap
 #include <vector>
 
 #ifndef SE_STATE_HASH_OPTIMIZATION
@@ -241,9 +241,28 @@ class SymHeapCore {
         bool proveEq(bool *result, TValueId valA, TValueId valB) const;
 
     public:
-        // just a test
+        /// a type used for (injective) value IDs mapping
         typedef std::map<TValueId, TValueId> TValMap;
+
+        /**
+         * return the list of values that are connected to the given value by a
+         * Neq/EqIf predicate
+         * @param dst a container to place the result in
+         * @param val the reference value, used to search the predicates and
+         * then all the related values accordingly
+         */
         void gatherRelatedValues(TContValue &dst, TValueId val) const;
+
+        /**
+         * copy all @b relevant predicates from the symbolic heap to another
+         * symbolic heap, using the given (injective) value IDs mapping.  Here
+         * @b relevant means that there exist a suitable mapping for all values
+         * connected by the predicate
+         * @param dst destination heap, there will be added the relevant
+         * predicates
+         * @param valMap an (injective) value mapping, used for translation
+         * of value IDs among heaps
+         */
         void copyRelevantPreds(SymHeapCore &dst, const TValMap &valMap) const;
 
     private:
