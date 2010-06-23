@@ -78,7 +78,7 @@ public:
 	void clear() {
 		for (typename std::vector<Listener*>::iterator i = this->listeners.begin(); i != this->listeners.end(); ++i) {
 			for (typename store_type::iterator j = this->store.begin(); j != this->store.end(); ++j)
-				(*i)->drop(*j);
+				(*i)->drop(&*j);
 		}
 		this->store.clear();
 	}

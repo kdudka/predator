@@ -188,6 +188,35 @@ int main(int argc, char* argv[]) {
 		for (std::vector<FAE*>::iterator j = newC.begin(); j != newC.end(); ++j)
 			std::cout << **j;
 	}
+	
+	TA<FA::label_type> ta(backend), ta2(backend);
+	UFAE ufae(ta2, labMan);
+	Index<size_t> index;
+
+	for (size_t i = 0; i < store[4].size(); ++i)
+		ufae.fae2ta(ta, index, *store[4][i]);
+	ufae.join(ta, index);
+	ta.clear();
+	index.clear();
+	for (size_t i = 0; i < store[7].size(); ++i)
+		ufae.fae2ta(ta, index, *store[7][i]);
+	ufae.join(ta, index);
+	ta.clear();
+	index.clear();
+	for (size_t i = 0; i < store[10].size(); ++i)
+		ufae.fae2ta(ta, index, *store[10][i]);
+	ufae.join(ta, index);
+	ta.clear();
+	index.clear();
+	for (size_t i = 0; i < store[13].size(); ++i)
+		ufae.fae2ta(ta, index, *store[13][i]);
+	ufae.join(ta, index);
+	ta.clear();
+	index.clear();
+
+	ta2.minimized(ta);
+	
+	DEBUG_MSG(ta);
 
 	DEBUG_MSG("cleanup");
 	

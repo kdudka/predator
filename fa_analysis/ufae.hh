@@ -45,10 +45,9 @@ public:
 
 	TA<FA::label_type>& fae2ta(TA<FA::label_type>& dst, Index<size_t>& index, const FAE& src) {
 		vector<size_t> lhs;
-		dst.clear();
 		for (vector<TA<FA::label_type>*>::const_iterator i = src.roots.begin(); i != src.roots.end(); ++i) {
 			TA<FA::label_type>::reduce(dst, **i, index, this->stateOffset, false);
-			lhs.push_back(index[(*i)->getFinalState()]);
+			lhs.push_back(index[(*i)->getFinalState()] + this->stateOffset);
 		}
 		dst.addTransition(lhs, &labMan.lookup(src.variables, lhs.size()), 0);
 		dst.addFinalState(0);

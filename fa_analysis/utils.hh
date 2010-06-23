@@ -74,6 +74,7 @@ struct Index {
 		return i->second;
 	}
 	
+	// HACK: better keep this static (not virtual)
 	size_t translateOTF(const T& x) {
 		return this->map.insert(make_pair(x, this->map.size())).first->second;
 	}
@@ -106,13 +107,26 @@ struct FullIndex : public Index<T> {
 		this->index.clear();
 	}
 
-	int add(const T& x) {
+	size_t add(const T& x) {
 		std::pair<typename std::map<T, size_t>::iterator, bool> y = this->map.insert(make_pair(x, this->map.size()));
 		if (y.second)
 			this->index.push_back(x);
 		return y.first->second;
 	}
-	
+
+	size_t translateOTF(const T& x) {
+		std::pair<typename std::map<T, size_t>::iterator, bool> y = this->map.insert(make_pair(x, this->map.size()));
+		if (y.second)
+			this->index.push_back(x);
+		return y.first->second;
+	}
+
+	void translateOTF(std::vector<size_t>& dst, const std::vector<T>& src, size_t offset = 0) {
+		dst.clear();
+		for (typename std::vector<T>::const_iterator i = src.begin(); i != src.end(); ++i)
+			dst.push_back(this->translateOTF(*i) + offset);
+	}	
+
 };
 
 template <class T>

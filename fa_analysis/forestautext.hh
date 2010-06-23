@@ -524,12 +524,12 @@ protected:
 
 public:
 
-	// state 0 should never be allocated by FAE
+	// state 0 should never be allocated by FAE (?)
 	FAE(TA<label_type>::Manager& taMan, LabMan& labMan, BoxManager& boxMan)
 	 : FA(taMan), boxMan(&boxMan), labMan(&labMan), stateOffset(1) {
 		 // init special root references (this is not required)
-		 this->registerRootReference(varNull, varNull);
-		 this->registerRootReference(varUndef, varUndef);
+//		 this->registerRootReference(varNull, this->freshState());
+//		 this->registerRootReference(varUndef, this->freshState());
 	}
 
 	FAE(const FAE& x)

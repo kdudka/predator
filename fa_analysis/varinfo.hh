@@ -43,6 +43,7 @@ struct var_info {
 	}
 	
 	friend std::ostream& operator<<(std::ostream& os, const var_info& x) {
+		os << 'v';
 		switch (x.index) {
 			case (size_t)(-1): return os << "<null>";
 			case (size_t)(-2): return os << "<undef>";

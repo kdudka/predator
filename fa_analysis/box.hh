@@ -197,7 +197,7 @@ public:
 
 	static Box createSelector(TA<FA::label_type>::Manager& taMan, size_t selector, size_t offset = 0) {
 		std::ostringstream ss;
-		ss << "s" << selector;
+		ss << "s" << selector << '+' << offset;
 		Box box(taMan, Box::selID, selector, ss.str());
 		box.variables.push_back(var_info(0, offset));
 		set<size_t> coverage;

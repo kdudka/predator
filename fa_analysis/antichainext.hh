@@ -151,10 +151,10 @@ public:
 
 	static bool subseteq(const TA<T>& a, const TA<T>& b) {
 
-		typename TA<T>::TACache cache;
-		TA<T> c(cache);
+		typename TA<T>::Backend backend;
+		TA<T> c(backend);
 		size_t countB;
-		TA<T>::uniteRenamed(c, b, a, countB);
+		TA<T>::renamedUnion(c, b, a, countB);
 //		c.toStream(std::cout);
 		Index<size_t> stateIndex;
 //		SLIndex slIndex;
@@ -176,7 +176,7 @@ public:
 		typename AntichainExt<T>::ResponseExt response(antichain);
 		antichain.initIndex(cSize - countB, countB);
 		vector<typename TA<T>::trans_cache_type::value_type*> aLeaves;
-		unordered_map<size_t, vector<typename TA<T>::trans_cache_type::value_type*> > bTrans, bLeaves;
+		unordered_map<T, vector<typename TA<T>::trans_cache_type::value_type*> > bTrans, bLeaves;
 		for (typename set<typename TA<T>::trans_cache_type::value_type*>::const_iterator i = c.transitions.begin(); i != c.transitions.end(); ++i) {
 			size_t arity = (*i)->first._lhs->first.size();
 			if ((*i)->first._rhs >= countB) {
@@ -198,7 +198,7 @@ public:
 		// Post(\emptyset)
 		vector<pair<size_t, set<size_t> > > post;
 		for (typename vector<typename TA<T>::trans_cache_type::value_type*>::iterator i = aLeaves.begin(); i != aLeaves.end(); ++i) {
-			typename unordered_map<size_t, vector<typename TA<T>::trans_cache_type::value_type*> >::iterator range = bLeaves.find((*i)->first._label);
+			typename unordered_map<T, vector<typename TA<T>::trans_cache_type::value_type*> >::iterator range = bLeaves.find((*i)->first._label);
 			// careful
 			if (range == bLeaves.end())
 				return false;
@@ -230,7 +230,7 @@ public:
 				for (typename trans_list_type::iterator j = aTransList.begin(); j != aTransList.end(); ++j) {
 					if (!response.get(el, *j, i))
 						continue;
-					typename unordered_map<size_t, vector<typename TA<T>::trans_cache_type::value_type*> >::iterator range = bTrans.find((*j)->first._label);
+					typename unordered_map<T, vector<typename TA<T>::trans_cache_type::value_type*> >::iterator range = bTrans.find((*j)->first._label);
 					// careful
 					if (range == bTrans.end())
 						return false;

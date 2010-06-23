@@ -287,7 +287,7 @@ public:
 		return TA<T>::DFSIterator(cache, stack);
 	}
 
-	TA<T>& operator=(const TT<T>& rhs) {
+	TA<T>& operator=(const TA<T>& rhs) {
 		this->clear();
 		this->next_state = rhs.next_state;
 		this->maxRank = rhs.maxRank;
@@ -324,7 +324,6 @@ public:
 	}
 	
 	void buildStateIndex(Index<size_t>& index) const {
-		index.clear();
 		for (typename set<typename trans_cache_type::value_type*>::const_iterator i = this->transitions.begin(); i != this->transitions.end(); ++i) {
 			for (vector<size_t>::const_iterator j = (*i)->first._lhs->first.begin(); j != (*i)->first._lhs->first.end(); ++j)
 				index.add(*j);
@@ -332,8 +331,18 @@ public:
 		}
 	}
 
+	void buildSortedStateIndex(Index<size_t>& index) const {
+		std::set<size_t> s;
+		for (typename set<typename trans_cache_type::value_type*>::const_iterator i = this->transitions.begin(); i != this->transitions.end(); ++i) {
+			for (std::vector<size_t>::const_iterator j = (*i)->first._lhs->first.begin(); j != (*i)->first._lhs->first.end(); ++j)
+				s.insert(*j);
+			s.insert((*i)->first._rhs);
+		}
+		for (std::set<size_t>::iterator i = s.begin(); i != s.end(); ++i)
+			index.add(*i);
+	}
+
 	void buildLabelIndex(Index<T>& index) const {
-		index.clear();
 		for (typename set<typename trans_cache_type::value_type*>::const_iterator i = this->transitions.begin(); i != this->transitions.end(); ++i)
 			index.add((*i)->first._label);
 	}
@@ -349,9 +358,8 @@ public:
 		}
 	}
 */
-	void buildLhsIndex(Index<vector<size_t>*>& index) const {
-		index.clear();
-		for (typename set<typename trans_cache_type::value_type*>::iterator i = this->transitions.begin(); i != this->transitions.end(); ++i)
+	void buildLhsIndex(Index<const std::vector<size_t>*>& index) const {
+		for (typename std::set<typename trans_cache_type::value_type*>::iterator i = this->transitions.begin(); i != this->transitions.end(); ++i)
 			index.add(&(*i)->first._lhs->first);
 	}
 	
@@ -500,7 +508,7 @@ public:
 		std::vector<std::pair<size_t, size_t> > stack;
 		boost::unordered_map<std::pair<size_t, size_t>, size_t> product;
 		for (typename lt_cache_type::const_iterator i = cache1.begin(); i != cache1.end(); ++i) {
-			if (!(*i)->second.front()->_lhs->first.empty())
+			if (!i->second.front()->_lhs->first.empty())
 				continue;
 			typename lt_cache_type::const_iterator j = cache2.find(i->first);
 			if (j == cache2.end())
@@ -514,7 +522,7 @@ public:
 			std::pair<size_t, size_t> s = stack.back();
 			stack.pop_back();
 			for (typename lt_cache_type::const_iterator i = cache1.begin(); i != cache1.end(); ++i) {
-				if ((*i)->second.front()->_lhs->first.empty())
+				if (i->second.front()->_lhs->first.empty())
 					continue;
 				typename lt_cache_type::const_iterator j = cache2.find(i->first);
 				if (j == cache2.end())
@@ -553,7 +561,7 @@ public:
 		std::vector<std::pair<size_t, size_t> > stack;
 		boost::unordered_map<std::pair<size_t, size_t>, size_t> product;
 		for (typename lt_cache_type::const_iterator i = cache1.begin(); i != cache1.end(); ++i) {
-			if (!(*i)->second.front()->_lhs->first.empty())
+			if (!i->second.front()->_lhs->first.empty())
 				continue;
 			typename lt_cache_type::const_iterator j = cache2.find(i->first);
 			if (j == cache2.end())
@@ -567,7 +575,7 @@ public:
 			std::pair<size_t, size_t> s = stack.back();
 			stack.pop_back();
 			for (typename lt_cache_type::const_iterator i = cache1.begin(); i != cache1.end(); ++i) {
-				if ((*i)->second.front()->_lhs->first.empty())
+				if (i->second.front()->_lhs->first.empty())
 					continue;
 				typename lt_cache_type::const_iterator j = cache2.find(i->first);
 				if (j == cache2.end())
@@ -598,6 +606,7 @@ public:
 				}
 			}
 		}
+		return dst;
 	}
 	
 	// collapses states according to a given relation
@@ -687,7 +696,7 @@ public:
 	
 	TA<T>& minimized(TA<T>& dst) const {
 		Index<size_t> stateIndex;
-		this->buildStateIndex(stateIndex);
+		this->buildSortedStateIndex(stateIndex);
 		vector<vector<bool> > cons(stateIndex.size(), vector<bool>(stateIndex.size(), true));
 		return this->minimized(dst, cons, stateIndex);
 	}
@@ -766,6 +775,7 @@ public:
 	
 	TA<T>& unfoldAtLeaf(TA<T>& dst, size_t selector) const {
 		// TODO:
+		return dst;
 	}
 
 	class Manager : Cache<TA<T>*>::Listener {

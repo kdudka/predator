@@ -366,3 +366,6 @@ bool TA<T>::subseteq(const TA<T>& a, const TA<T>& b) {
 	return AntichainExt<T>::subseteq(a, b);
 }
 
+// this is really sad :-(
+#include "forestaut.hh"
+template class TA<FA::label_type>;
