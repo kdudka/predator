@@ -71,27 +71,38 @@ protected:
 
 	std::vector<TA<label_type>*> roots;
 	
-	mutable TAManager<label_type>& taMan;
+	mutable TA<label_type>::Manager* taMan;
 
 public:
 
 	static const size_t varNull = (size_t)(-1);
 	static const size_t varUndef = (size_t)(-2);
 
-	FA(TAManager<label_type>& taMan) : taMan(taMan) {}
+	FA(TA<label_type>::Manager& taMan) : taMan(&taMan) {}
 	
 	FA(const FA& src) : variables(src.variables), roots(src.roots), taMan(src.taMan) {
 		for (std::vector<TA<label_type>*>::iterator i = this->roots.begin(); i != this->roots.end(); ++i)
-			this->taMan.addRef(*i);
+			this->taMan->addRef(*i);
 	}
 
 	~FA() {
 		this->clear();
 	}
 	
+	FA& operator=(const FA& x) {
+		for (std::vector<TA<label_type>*>::iterator i = this->roots.begin(); i != this->roots.end(); ++i)
+			this->taMan->release(*i);
+		this->variables = x.variables;
+		this->roots = x.roots;
+		this->taMan = x.taMan;
+		for (std::vector<TA<label_type>*>::iterator i = this->roots.begin(); i != this->roots.end(); ++i)
+			this->taMan->addRef(*i);
+		return *this;		
+	}
+	
 	void clear() {
 		for (std::vector<TA<label_type>*>::iterator i = this->roots.begin(); i != this->roots.end(); ++i)
-			this->taMan.release(*i);
+			this->taMan->release(*i);
 		this->roots.clear();
 		this->variables.clear();
 	}

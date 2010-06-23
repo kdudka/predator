@@ -25,11 +25,16 @@
 #include <map>
 #include <sstream>
 #include <ostream>
+#include <iostream>
 
 #include <boost/unordered_set.hpp>
 #include <boost/unordered_map.hpp>
 
-//#define MK_STR(x) ((std::ostringstream*)&(std::ostringstream() << x))->str()
+#ifdef DEBUG
+#define DEBUG_MSG(x) do { std::cerr << x << std::endl; } while (0)
+#else
+#define DEBUG_MSG(x)
+#endif
 
 template <class T>
 struct Index {

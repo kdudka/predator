@@ -765,10 +765,66 @@ public:
 	}
 	
 	TA<T>& unfoldAtLeaf(TA<T>& dst, size_t selector) const {
+		// TODO:
 	}
 
-};
+	class Manager : Cache<TA<T>*>::Listener {
+	
+		mutable typename TA<T>::Backend& backend;
+	
+		Cache<TA<T>*> taCache;
+		std::vector<TA<T>*> taPool;
 
+	protected:
+
+		virtual void drop(typename Cache<TA<T>*>::value_type* x) {
+			x->first->clear();
+			this->taPool.push_back(x->first);
+		}
+	
+	public:
+
+		Manager(typename TA<T>::Backend& backend) : backend(backend) {}
+	
+		TA<T>* alloc() {
+			TA<T>* dst;
+			if (!this->taPool.empty()) {
+				dst = this->taPool.back();
+				this->taPool.pop_back();
+			} else {
+				dst = new TA<T>(this->backend);
+			}
+			return this->taCache.lookup(dst)->first;
+		}
+	
+		TA<T>* clone(TA<T>* src, bool copyFinalStates = true) {
+			assert(src->backend == &this->backend);
+			return this->taCache.lookup(new TA<T>(*src, copyFinalStates))->first;
+		}
+
+		TA<T>* addRef(TA<T>* x) {
+			typename Cache<TA<T>*>::value_type* v = this->taCache.find(x);
+			assert(v);
+			return this->taCache.addRef(v), x;
+		}
+	
+		size_t release(TA<T>* x) {
+			typename Cache<TA<T>*>::value_type* v = this->taCache.find(x);
+			assert(v);
+			return this->taCache.release(v);
+		}
+	
+		void clear() {
+			this->taCache.clear();
+			for (typename vector<TA<T>*>::iterator i = this->taPool.begin(); i != this->taPool.end(); ++i)
+				delete *i;
+			this->taPool.clear();
+		}
+	
+	};
+
+};
+/*
 template <class T>
 class TAManager : Cache<TA<T>*>::Listener {
 	
@@ -824,5 +880,5 @@ public:
 	}
 	
 };
-
+*/
 #endif

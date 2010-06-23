@@ -19,11 +19,16 @@
 cmake_minimum_required(VERSION 2.6)
 project(fa_analysis C CXX)
 include("../CMakeLists.common")
-add_definitions("-I../include")
+add_definitions("-I../include -g -DDEBUG")
 
-# libfa.so
-add_library(fa SHARED cl_fa.cc treeaut.cc box.cc forestaut.cc forestautext.cc ufae.cc)
+# libfa.a
+add_library(fa treeaut.cc timbuk.cc box.cc forestaut.cc forestautext.cc ufae.cc)
+# libfa_analysis.so
+add_library(fa_analysis SHARED cl_fa.cc)
+# test
+add_executable(fa_test test.cc)
 
 # link with code_listener
 find_library(CL_LIB cl ../cl_build)
-target_link_libraries(fa ${CL_LIB})
+target_link_libraries(fa_analysis fa ${CL_LIB})
+target_link_libraries(fa_test fa)

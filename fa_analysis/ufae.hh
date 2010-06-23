@@ -60,7 +60,7 @@ public:
 		this->stateOffset += index.size();
 	}
 
-	void ta2fae(vector<FAE*>& dst, TAManager<FA::label_type>& taMan, LabMan& labMan, BoxManager& boxMan) const {
+	void ta2fae(vector<FAE*>& dst, TA<FA::label_type>::Manager& taMan, LabMan& labMan, BoxManager& boxMan) const {
 		TA<FA::label_type>::td_cache_type cache;
 		this->backend.buildTDCache(cache);
 		vector<const TT<FA::label_type>*>& v = cache.insert(make_pair(0, vector<const TT<FA::label_type>*>())).first->second;

@@ -169,12 +169,7 @@ public:
 		}
 		this->terminate();
 	}
-/*	
-	friend std::ostream& operator<<(std::ostream& os, const TA<T>& ta) {
-		TAWriter<T>(os).writeOne(ta);
-		return os;
-	}
-*/
+	
 };
 
 #endif

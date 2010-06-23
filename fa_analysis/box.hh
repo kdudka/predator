@@ -186,16 +186,16 @@ public:
 
 protected:
 
-	Box(TAManager<FA::label_type>& taMan, size_t type, size_t tag, const std::string& name)
+	Box(TA<FA::label_type>::Manager& taMan, size_t type, size_t tag, const std::string& name)
 	 : FA(taMan), type(type), tag(tag), name(name) {}
 
 public:
 
-	static Box createBox(TAManager<FA::label_type>& taMan, const std::string& name) {
+	static Box createBox(TA<FA::label_type>::Manager& taMan, const std::string& name) {
 		return Box(taMan, Box::boxID, 0, name);
 	}
 
-	static Box createSelector(TAManager<FA::label_type>& taMan, size_t selector, size_t offset = 0) {
+	static Box createSelector(TA<FA::label_type>::Manager& taMan, size_t selector, size_t offset = 0) {
 		std::ostringstream ss;
 		ss << "s" << selector;
 		Box box(taMan, Box::selID, selector, ss.str());
@@ -206,9 +206,13 @@ public:
 		return box;
 	}
 
-	static Box createReference(TAManager<FA::label_type>& taMan, size_t root) {
+	static Box createReference(TA<FA::label_type>::Manager& taMan, size_t root) {
 		std::ostringstream ss;
-		ss << "r" << root;
+		switch (root) {
+			case varNull: ss << "rNull"; break;
+			case varUndef: ss << "rUndef"; break;
+			default: ss << "r" << root;
+		}
 		return Box(taMan, Box::refID, root, ss.str());
 	}
 /*
@@ -293,7 +297,7 @@ public:
 
 class BoxManager {
 
-	mutable TAManager<FA::label_type>& taMan;
+	mutable TA<FA::label_type>::Manager& taMan;
 	mutable LabMan& labMan;
 
 	boost::unordered_map<string, Box> boxIndex;
@@ -411,7 +415,7 @@ protected:
 
 public:
 
-	BoxManager(TAManager<FA::label_type>& taMan, LabMan& labMan) : taMan(taMan), labMan(labMan) {}
+	BoxManager(TA<FA::label_type>::Manager& taMan, LabMan& labMan) : taMan(taMan), labMan(labMan) {}
 
 	void loadTemplates(const boost::unordered_map<string, string>& database) {
 		for (boost::unordered_map<string, string>::const_iterator i = database.begin(); i != database.end(); ++i)

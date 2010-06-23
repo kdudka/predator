@@ -25,6 +25,7 @@
 #include <ostream>
 #include <iostream>
 #include <string>
+#include <vector>
 #include <map>
 
 #include "error.hh"
@@ -445,7 +446,7 @@ public:
 	}
 	
 	void writeState(size_t state) {
-		this->out << " s" << state;
+		this->out << " q" << state;
 	}
 
 	void writeState(const std::string& state) {
@@ -465,19 +466,19 @@ public:
 		if (lhs.size() > 0) {
 			this->out << 's' << lhs[0];
 			for (size_t i = 1; i < lhs.size(); ++i)
-				this->out << ",s" << lhs[i];
+				this->out << ",q" << lhs[i];
 		}
-		this->out << ")->s" << rhs;
+		this->out << ")->q" << rhs;
 	}
 
 	void writeTransition(const std::vector<size_t>& lhs, const std::string& label, size_t rhs) {
 		this->out << std::endl << label << '(';
 		if (lhs.size() > 0) {
-			this->out << 's' << lhs[0];
+			this->out << 'q' << lhs[0];
 			for (size_t i = 1; i < lhs.size(); ++i)
-				this->out << ",s" << lhs[i];
+				this->out << ",q" << lhs[i];
 		}
-		this->out << ")->s" << rhs;
+		this->out << ")->q" << rhs;
 	}
 
 	void writeTransition(const std::vector<string>& lhs, const std::string& label, const std::string& rhs) {
