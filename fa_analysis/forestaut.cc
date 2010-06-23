@@ -26,14 +26,27 @@ const size_t FA::varUndef;
 std::ostream& operator<<(std::ostream& os, const FA::label_type& label) {
 	os << '<';
 	switch (label.type) {
-		case 0:
-			for (std::vector<var_info>::const_iterator i = label.data->begin(); i != label.data->end(); ++i)
-				os << *i;
+		case 0: {
+			assert(!label.data->empty());
+			std::vector<var_info>::const_iterator i = label.data->begin();
+			os << *i;
+			for (++i; i != label.data->end(); ++i)
+				os << ',' << *i;
 			break;
-		case 1:
-			for (std::vector<const class Box*>::const_iterator i = label.dataB->begin(); i != label.dataB->end(); ++i)
-				os << **i;
+		}
+		case 1: {
+			assert(!label.dataB->empty());
+			std::vector<const class Box*>::const_iterator i = label.dataB->begin();
+			os << **i;
+			for (++i; i != label.dataB->end(); ++i)
+				os << ',' << **i;
 			break;
+		}
 	}
 	return os << '>';
+}
+
+std::ostream& operator<<(std::ostream& os, const TA<FA::label_type>& ta) {
+	TAWriter<FA::label_type>(os).writeOne(ta);
+	return os;
 }

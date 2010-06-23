@@ -197,7 +197,7 @@ public:
 
 	static Box createSelector(TA<FA::label_type>::Manager& taMan, size_t selector, size_t offset = 0) {
 		std::ostringstream ss;
-		ss << "s" << selector << '+' << offset;
+		ss << "s:" << selector << '+' << offset;
 		Box box(taMan, Box::selID, selector, ss.str());
 		box.variables.push_back(var_info(0, offset));
 		set<size_t> coverage;
@@ -209,9 +209,9 @@ public:
 	static Box createReference(TA<FA::label_type>::Manager& taMan, size_t root) {
 		std::ostringstream ss;
 		switch (root) {
-			case varNull: ss << "rNull"; break;
-			case varUndef: ss << "rUndef"; break;
-			default: ss << "r" << root;
+			case varNull: ss << "r:null"; break;
+			case varUndef: ss << "r:undef"; break;
+			default: ss << "r:" << root;
 		}
 		return Box(taMan, Box::refID, root, ss.str());
 	}

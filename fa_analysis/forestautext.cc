@@ -18,3 +18,22 @@
  */
 
 #include "forestautext.hh"
+
+std::ostream& operator<<(std::ostream& os, const FAE& fae) {
+	TA<FA::label_type>* ta = fae.taMan->alloc();
+	os << "variables:";
+	for (std::vector<var_info>::const_iterator i = fae.variables.begin(); i != fae.variables.end(); ++i)
+		os << ' ' << *i;
+	os << std::endl << "roots:" << std::endl;
+	for (size_t i = 0; i < fae.roots.size(); ++i) {
+		std::ostringstream ss;
+		ss << "root" << i << '_';
+		for (size_t j = 0; j < fae.rootMap[i].size(); ++j)
+			ss << fae.rootMap[i][j];
+		ta->clear();
+		fae.roots[i]->minimized(*ta);
+		TAWriter<FA::label_type>(os).writeOne(*ta, ss.str());
+	}
+	fae.taMan->release(ta);
+	return os;
+}

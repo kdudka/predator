@@ -41,9 +41,9 @@ using std::pair;
 using std::make_pair;
 using std::runtime_error;
 
-std::ostream& operator<<(std::ostream& os, const TA<FA::label_type>& ta);
-
 class FAE : public FA {
+
+	friend std::ostream& operator<<(std::ostream& os, const FAE& fae);
 
 	mutable BoxManager* boxMan;
 	mutable LabMan* labMan;
@@ -369,11 +369,16 @@ protected:
 		set<size_t> marked;
 		this->traverse(order, marked, garbage);
 		if (garbage != requiredGarbage) {
+			utils::printCont(std::cout, garbage);
+			std::cout << std::endl;
 			// TODO: raise some reasonable exception here (instead of runtime_error)
 			throw runtime_error("FAE::normalize(): garbage missmatch!");
 		}
-		for (vector<size_t>::iterator i = garbage.begin(); i != garbage.end(); ++i)
+		// remove garage
+		for (vector<size_t>::iterator i = garbage.begin(); i != garbage.end(); ++i) {
 			this->taMan->release(this->roots[*i]);
+			this->roots[*i] = NULL;
+		}
 		vector<size_t> index(this->roots.size(), (size_t)(-1));
 		size_t offset = 0;
 		vector<TA<label_type>*> newRoots;
@@ -615,7 +620,11 @@ public:
 				// TODO: raise some reasonable exception here (instead of runtime_error)
 				throw runtime_error("FAE::del_x(): call on a variable pointing inside allocated block!");
 			}
-			(*i)->variables[x].index = varUndef;
+			// update variable content
+			for (std::vector<var_info>::iterator j = (*i)->variables.begin(); j != (*i)->variables.end(); ++j) {
+				if (j->index == root)
+					j->index = varUndef;
+			}
 			// make all references to this rootpoint dangling
 			vector<size_t> index((*i)->roots.size());
 			for (size_t j = 0; j < (*i)->roots.size(); ++j)
@@ -704,26 +713,6 @@ public:
 			(*i)->normalize();
 		}
 	}	
-
-	friend std::ostream& operator<<(std::ostream& os, const TA<label_type>& ta) {
-		TAWriter<label_type>(os).writeOne(ta);
-		return os;
-	}
-
-	friend std::ostream& operator<<(std::ostream& os, const FAE& fae) {
-		os << "variables:";
-		for (std::vector<var_info>::const_iterator i = fae.variables.begin(); i != fae.variables.end(); ++i)
-			os << ' ' << *i;
-		os << std::endl << "roots:" << std::endl;
-		for (size_t i = 0; i < fae.roots.size(); ++i) {
-			std::ostringstream ss;
-			ss << "root" << i << '_';
-			for (size_t j = 0; j < fae.rootMap[i].size(); ++j)
-				ss << fae.rootMap[i][j];
-			TAWriter<FA::label_type>(os).writeOne(*fae.roots[i], ss.str());
-		}
-		return os;
-	}
 
 };
 

@@ -174,7 +174,18 @@ int main(int argc, char* argv[]) {
 		Instr(Instr::x_ass_y, "x", 0, "y"),
 		Instr(Instr::x_ass_new, "y", 1),
 		Instr(Instr::x_next_ass_y, "y", 0, "x"),
-		Instr(Instr::x_ass_y, "x", 0, "y")
+		Instr(Instr::x_ass_y, "x", 0, "y"),
+		Instr(Instr::x_ass_y_next, "x", 0, "y"),
+		Instr(Instr::del_x, "y"),
+		Instr(Instr::x_ass_y, "y", 0, "x"),
+		Instr(Instr::x_ass_y_next, "x", 0, "y"),
+		Instr(Instr::del_x, "y"),
+		Instr(Instr::x_ass_y, "y", 0, "x"),
+		Instr(Instr::x_ass_y_next, "x", 0, "y"),
+		Instr(Instr::del_x, "y"),
+		Instr(Instr::x_ass_y, "y", 0, "x"),
+		Instr(Instr::rm_var, "y"),
+		Instr(Instr::rm_var, "x")
 	};
 
 	std::map<std::string, size_t> vars;
@@ -188,7 +199,7 @@ int main(int argc, char* argv[]) {
 		for (std::vector<FAE*>::iterator j = newC.begin(); j != newC.end(); ++j)
 			std::cout << **j;
 	}
-	
+/*	
 	TA<FA::label_type> ta(backend), ta2(backend);
 	UFAE ufae(ta2, labMan);
 	Index<size_t> index;
@@ -217,7 +228,7 @@ int main(int argc, char* argv[]) {
 	ta2.minimized(ta);
 	
 	DEBUG_MSG(ta);
-
+*/
 	DEBUG_MSG("cleanup");
 	
 	for (size_t i = 0; i < store.size(); ++i) {

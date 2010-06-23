@@ -109,4 +109,6 @@ public:
 	
 };
 
+//std::ostream& operator<<(std::ostream& os, const TA<FA::label_type>& ta);
+
 #endif
