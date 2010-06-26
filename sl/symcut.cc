@@ -301,12 +301,12 @@ void deepCopy(DeepCopyData &dc, bool digBackward) {
         }
 
         // do whatever we need to do with the value
-        valSrc = handleValue(dc, valSrc);
-        if (VAL_INVALID == valSrc)
+        const TValueId valDst = handleValue(dc, valSrc);
+        if (VAL_INVALID == valDst)
             TRAP;
 
         // now set object's value
-        dst.objSetValue(objDst, valSrc);
+        dst.objSetValue(objDst, valDst);
 
         if (/* optimization */ digBackward) {
             // now poke all values related by Neq or EqIf predicates

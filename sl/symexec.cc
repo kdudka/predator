@@ -329,7 +329,7 @@ bool /* handled */ SymExecEngine::execInsnLoop() {
 
     std::list<SymHeap> todo;    // we can add concretized heaps during execution
     todo.push_back(src);        // first heap to analyze
-    while(todo.size()>0) {
+    while(!todo.empty()) {
         SymHeap &workingHeap = todo.front(); // use first SH
 
         SymHeapProcessor proc(workingHeap, &bt_);
@@ -411,7 +411,7 @@ bool /* complete */ SymExecEngine::execBlock() {
     }
 
     if (!insnIdx_)
-        // fresh run, let's initialize the local state by BB entry
+        // fresh run, let's initialize the local state by the BB entry
         localState_ = origin;
 
     // go through the remainder of BB insns
@@ -439,7 +439,7 @@ bool /* complete */ SymExecEngine::execBlock() {
     for (int h = 0; h < origCnt; ++h)
         origin.setDone(h);
 
-    // the whole block should be processed now
+    // the whole block is processed now
     CL_DEBUG_MSG(lw_, "___ completed batch for " << name);
     insnIdx_ = 0;
     return true;
@@ -483,7 +483,7 @@ bool /* complete */ SymExecEngine::run() {
             return false;
     }
 
-    // we should be done with this function
+    // we are done with this function
     CL_DEBUG_MSG(lw, "<<< leaving " << nameOf(*fnc) << "()");
     waiting_ = false;
     return true;
@@ -659,13 +659,14 @@ void SymExec::Private::execLoop(const StackItem &item) {
         const Fnc *fnc = this->resolveCallInsn(entry, insn, *item.dst);
         if (!fnc)
             // the error message should have been already emitted, but there
-            // will be probably some VAL_UNKNOWN in the result; now wake up
+            // are probably some unknown values in the result; now wake up
             // the caller
             continue;
 
         // call cache lookup
         SymCallCtx &ctx = this->callCache.getCallCtx(entry, insn);
         if (!ctx.needExec()) {
+            // call cache hit
             const LocationWriter lw(this->bt.topCallLoc());
             CL_DEBUG_MSG(lw, "(x) call of function optimized out: "
                     << nameOf(*fnc) << "()");
