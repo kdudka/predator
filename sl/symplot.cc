@@ -119,7 +119,7 @@ struct SymHeapPlotter::Private {
     void plotZeroValue(TObjId obj);
 
     bool handleCustomValue(TValueId value);
-    bool handleUnknownValue(TValueId value, TObjId obj);
+    bool handleUnknownValue(TValueId value);
     bool resolveValueOf(TValueId *pDst, TObjId obj);
     bool resolvePointsTo(TObjId *pDst, TValueId val);
 
@@ -347,15 +347,39 @@ void SymHeapPlotter::Private::plotSingleValue(TValueId value) {
         return;
     }
 
-    const struct cl_type *clt = this->heap->valType(value);
-    if (clt) {
-        const enum cl_type_e code = clt->code;
-        this->plotNodeValue(value, code, 0);
-    } else {
-        if(!this->heap->valIsAbstract(value))
-            TRAP;       // non-abstract value without type-info?
-        this->plotNodeValue(value, CL_TYPE_PTR, "a"); // for abstract objects
+    // traverse all Neq/EqIf predicates
+    SymHeap::TContValue relatedVals;
+    this->heap->gatherRelatedValues(relatedVals, value);
+    BOOST_FOREACH(TValueId peer, relatedVals) {
+        if (0 < peer)
+            this->workList.schedule(peer);
+
+        bool eq;
+        if (!this->heap->proveEq(&eq, value, peer))
+            goto unhandled_pred;
+
+        if (!eq && peer == VAL_NULL) {
+            // value is said to be non-zero
+            this->plotNodeAux(value, CL_TYPE_BOOL, "non-zero");
+            continue;
+        }
+
+unhandled_pred:
+        CL_WARN("SymHeapPlotter: unhandled predicate over values #"
+                << value << " and #" << peer);
     }
+
+    const struct cl_type *clt = this->heap->valType(value);
+    if (!clt /* FIXME: suboptimal API */ && this->heap->valIsAbstract(value)) {
+        this->plotNodeValue(value, CL_TYPE_PTR, "a"); // for abstract objects
+        return;
+    }
+
+    const enum cl_type_e code = (clt)
+        ? clt->code
+        : CL_TYPE_UNKNOWN;
+
+    this->plotNodeValue(value, code, 0);
 }
 
 void SymHeapPlotter::Private::plotSingleObj(TObjId obj) {
@@ -432,22 +456,22 @@ bool SymHeapPlotter::Private::handleCustomValue(TValueId value) {
     return true;
 }
 
-bool SymHeapPlotter::Private::handleUnknownValue(TValueId value, TObjId obj) {
+bool SymHeapPlotter::Private::handleUnknownValue(TValueId value) {
     const EUnknownValue code = this->heap->valGetUnknown(value);
     switch (code) {
         case UV_KNOWN:
             return false;
 
         case UV_DEREF_FAILED:
-            this->plotNodeAux(obj, CL_TYPE_VOID, "DEREF_FAILED");
+            this->plotNodeAux(value, CL_TYPE_VOID, "UV_DEREF_FAILED");
             return true;
 
         case UV_UNINITIALIZED:
-            this->plotNodeAux(obj, CL_TYPE_UNKNOWN, "UNDEF");
+            this->plotNodeAux(value, CL_TYPE_UNKNOWN, "UV_UNINITIALIZED");
             return true;
 
         case UV_UNKNOWN:
-            this->plotNodeAux(obj, CL_TYPE_UNKNOWN, "?");
+            this->plotNodeAux(value, CL_TYPE_UNKNOWN, "UV_UNKNOWN");
             return true;
 
         default:
@@ -483,9 +507,6 @@ bool SymHeapPlotter::Private::resolveValueOf(TValueId *pDst, TObjId obj) {
             break;
     }
 
-    if (this->handleUnknownValue(value, obj))
-        return false;
-
     if (this->handleCustomValue(value))
         return false;
 
@@ -494,6 +515,9 @@ bool SymHeapPlotter::Private::resolveValueOf(TValueId *pDst, TObjId obj) {
 }
 
 bool SymHeapPlotter::Private::resolvePointsTo(TObjId *pDst, TValueId value) {
+    if (this->handleUnknownValue(value))
+        return false;
+
     const TObjId obj = this->heap->pointsTo(value);
     switch (obj) {
         case OBJ_INVALID:
@@ -549,6 +573,7 @@ void SymHeapPlotter::Private::digObj(TObjId obj) {
 
         const enum cl_type_e code = clt->code;
         switch (code) {
+            case CL_TYPE_INT:
             case CL_TYPE_PTR: {
                 this->plotSingleObj(obj);
                 TValueId value;

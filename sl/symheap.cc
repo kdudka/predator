@@ -57,9 +57,11 @@ namespace {
 // NeqDb/EqIfDb helper
 template <class TDst>
 void emitOne(TDst &dst, TValueId val) {
+#if 0
+    // the following condition seems to clash with our needs in SymHeapPlotter
     if (val <= 0)
         return;
-
+#endif
     dst.push_back(val);
 }
 

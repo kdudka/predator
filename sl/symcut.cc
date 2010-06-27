@@ -313,7 +313,8 @@ void deepCopy(DeepCopyData &dc, bool digBackward) {
             SymHeap::TContValue relatedVals;
             src.gatherRelatedValues(relatedVals, valSrc);
             BOOST_FOREACH(TValueId relValSrc, relatedVals) {
-                handleValue(dc, relValSrc);
+                if (0 < relValSrc)
+                    handleValue(dc, relValSrc);
             }
         }
     }

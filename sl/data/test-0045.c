@@ -2,16 +2,18 @@
 
 int* max_core(int *pa, int *pb)
 {
-    if (*pb < *pa)
-        return pa;
-    else if (*pa < *pb)
-        return pb;
-    else
+    if (*pa == *pb)
+        // utilize the prover at this point
         return (int *)0;
+    else
+        return (*pa < *pb)
+            ? pb
+            : pa;
 }
 
 int max(int **ppa, int **ppb) {
     const int *pmax = max_core(*ppa, *ppb);
+    ___sl_plot("test-0045-fnc");
     return *pmax;
 }
 
@@ -40,6 +42,6 @@ int main()
     const int result = (&x == &y);
 
     // dump all possibilities of the resulting state
-    ___sl_plot("test-0045");
+    ___sl_plot("test-0045-end");
     return result;
 }
