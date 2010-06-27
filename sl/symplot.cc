@@ -99,6 +99,9 @@ struct SymHeapPlotter::Private {
     typedef std::pair<TObjId, TValueId> TEdgeValueOf;
     std::vector<TEdgeValueOf>           evList;
 
+    typedef std::pair<TValueId, TValueId> TEdgeNeq;
+    std::set<TEdgeNeq>                  neqSet;
+
     bool openDotFile(const std::string &name);
     void closeDotFile();
 
@@ -109,9 +112,11 @@ struct SymHeapPlotter::Private {
 
     void plotEdgePointsTo(TValueId value, TObjId obj);
     void plotEdgeValueOf(TObjId obj, TValueId value);
+    void plotEdgeNeq(TValueId val1, TValueId val2);
     void plotEdgeSub(TObjId obj, TObjId sub);
 
     void gobbleEdgeValueOf(TObjId obj, TValueId value);
+    void gobbleEdgeNeq(TValueId val1, TValueId val2);
     void emitPendingEdges();
 
     void plotSingleValue(TValueId value);
@@ -322,6 +327,12 @@ void SymHeapPlotter::Private::plotEdgeValueOf(TObjId obj, TValueId value) {
         << std::endl;
 }
 
+void SymHeapPlotter::Private::plotEdgeNeq(TValueId val1, TValueId val2) {
+    this->dotStream << "\t" << SL_QUOTE(val1) << " -> " << SL_QUOTE(val2)
+        << " [color=yellow, fontcolor=red, label=\"Neq\", arrowhead=none];"
+        << std::endl;
+}
+
 void SymHeapPlotter::Private::plotEdgeSub(TObjId obj, TObjId sub) {
     this->dotStream << "\t" << SL_QUOTE(obj) << " -> " << SL_QUOTE(sub)
         << " [color=gray, style=dotted, arrowhead=open"
@@ -334,11 +345,28 @@ void SymHeapPlotter::Private::gobbleEdgeValueOf(TObjId obj, TValueId value) {
     this->evList.push_back(edge);
 }
 
+void SymHeapPlotter::Private::gobbleEdgeNeq(TValueId val1, TValueId val2) {
+    // Neq predicates induce a symmetric relation, let's handle them such
+    sortValues(val1, val2);
+
+    TEdgeNeq edge(val1, val2);
+    this->neqSet.insert(edge);
+}
+
 void SymHeapPlotter::Private::emitPendingEdges() {
+    // plot all valueOf edges
     BOOST_FOREACH(const TEdgeValueOf &edge, this->evList) {
         this->plotEdgeValueOf(edge.first, edge.second);
     }
+
+    // plot all Neq edges
+    BOOST_FOREACH(const TEdgeNeq &edge, this->neqSet) {
+        this->plotEdgeNeq(edge.first, edge.second);
+    }
+
+    // cleanup for next wheel
     this->evList.clear();
+    this->neqSet.clear();
 }
 
 void SymHeapPlotter::Private::plotSingleValue(TValueId value) {
@@ -358,10 +386,17 @@ void SymHeapPlotter::Private::plotSingleValue(TValueId value) {
         if (!this->heap->proveEq(&eq, value, peer))
             goto unhandled_pred;
 
-        if (!eq && peer == VAL_NULL) {
-            // value is said to be non-zero
-            this->plotNodeAux(value, CL_TYPE_BOOL, "non-zero");
-            continue;
+        if (!eq) {
+            if (VAL_NULL == peer) {
+                // 'value' is said to be non-zero
+                this->plotNodeAux(value, CL_TYPE_BOOL, "non-zero");
+                continue;
+            }
+            else if (VAL_NULL < peer) {
+                // regular Neq predicate
+                this->gobbleEdgeNeq(value, peer);
+                continue;
+            }
         }
 
 unhandled_pred:
