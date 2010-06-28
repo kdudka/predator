@@ -46,6 +46,11 @@ extern const char *sl_git_sha1;
 #define DEBUG_SE_STACK_FRAME                0
 
 /**
+ * if 1, SymHeapPlotter prints some extra debugging info
+ */
+#define DEBUG_SYMPLOT                       0
+
+/**
  * if 1, define TObjId and TValueId is integers (makes debugging easier)
  */
 #define DEBUG_SYMID_FORCE_INT               0

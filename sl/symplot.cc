@@ -40,6 +40,10 @@
 #include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
 
+#ifndef DEBUG_SYMPLOT
+#   define DEBUG_SYMPLOT 0
+#endif
+
 // singleton
 class PlotEnumerator {
     public:
@@ -710,8 +714,10 @@ void SymHeapPlotter::Private::plotCVar(CVar cVar) {
     // CodeStorage variable lookup
     const CodeStorage::Var &var = this->stor->vars[cVar.uid];
     this->lw = &var.loc;
+#if DEBUG_SYMPLOT
     CL_DEBUG_MSG(this->lw, "XXX plotting stack variable: #" << var.uid
             << " (" << var.name << ")" );
+#endif
 
     // SymbolicHeap variable lookup
     const TObjId obj = this->heap->objByCVar(cVar);
@@ -780,7 +786,9 @@ bool SymHeapPlotter::plotStackFrame(const std::string           &name,
         return false;
 
     d->lw = &fnc.def.loc;
+#if DEBUG_SYMPLOT
     CL_DEBUG_MSG(d->lw, "XXX plotting stack frame of " << nameOf(fnc) << "():");
+#endif
 
     // go through all stack variables
     BOOST_FOREACH(const int uid, fnc.vars) {
