@@ -29,9 +29,10 @@
 #include "symstate.hh"
 #include "util.hh"
 
-#include <set>
-#include <stack>
 #include <list>
+#include <set>
+#include <sstream>
+#include <stack>
 
 #include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
@@ -138,6 +139,7 @@ class SymExecEngine {
         void execCondInsn();
         void execTermInsn();
         bool execInsnLoop();
+        void echoInsn();
         bool execInsn();
         bool execBlock();
 };
@@ -350,6 +352,293 @@ bool /* handled */ SymExecEngine::execInsnLoop() {
     return true;
 }
 
+namespace {
+
+void operandToStreamCstInt(std::ostream &str, const struct cl_operand &op) {
+    const struct cl_cst &cst = op.data.cst;
+    const int val = cst.data.cst_int.value;
+
+    const enum cl_type_e code = op.type->code;
+    switch (code) {
+        case CL_TYPE_INT:
+            str << "(int)" << val;
+            break;
+
+        case CL_TYPE_BOOL:
+            str << (val ? "true" : "false");
+            break;
+
+        case CL_TYPE_PTR:
+            if (!val) {
+                str << "NULL";
+                break;
+            }
+            // fall through!
+
+        default:
+            TRAP;
+    }
+}
+
+void operandToStreamCst(std::ostream &str, const struct cl_operand &op) {
+    const struct cl_cst &cst = op.data.cst;
+    const enum cl_type_e code = cst.code;
+    switch (code) {
+        case CL_TYPE_INT:
+            operandToStreamCstInt(str, op);
+            break;
+
+        case CL_TYPE_FNC: {
+            const char *name = cst.data.cst_fnc.name;
+            if (!name)
+                TRAP;
+
+            str << name;
+            break;
+        }
+
+        case CL_TYPE_STRING: {
+            const char *text = cst.data.cst_string.value;
+            if (!text)
+                TRAP;
+
+            str << "\"" << text << "\"";
+            break;
+        }
+
+        default:
+            TRAP;
+    }
+}
+
+void operandToStreamAcs(std::ostream &str, const struct cl_accessor *ac) {
+    if (!ac)
+        return;
+
+    // FIXME: copy/pasted from cl_pp.cc
+    if (ac && ac->code == CL_ACCESSOR_DEREF &&
+            ac->next && ac->next->code == CL_ACCESSOR_ITEM)
+    {
+        ac = ac->next;
+        str << "->" << ac->type->items[ac->data.item.id].name;
+        ac = ac->next;
+    }
+
+    for (; ac; ac = ac->next) {
+        enum cl_accessor_e code = ac->code;
+        switch (code) {
+            case CL_ACCESSOR_DEREF_ARRAY:
+                str << " [...]";
+                break;
+
+            case CL_ACCESSOR_ITEM:
+                str << "." << ac->type->items[ac->data.item.id].name;
+                break;
+
+            case CL_ACCESSOR_REF:
+                if (!ac->next)
+                    // already handled
+                    break;
+                // fall through!
+
+            default:
+                TRAP;
+        }
+    }
+}
+
+void operandToStreamVar(std::ostream &str, const struct cl_operand &op) {
+    const struct cl_accessor *ac = op.accessor;
+
+    // FIXME: copy/pasted from cl_pp.cc
+    const struct cl_accessor *is_ref = ac;
+    while (is_ref && (is_ref->next || is_ref->code != CL_ACCESSOR_REF))
+        is_ref = is_ref->next;
+    if (is_ref)
+        str << "&";
+
+    if (ac && ac->code == CL_ACCESSOR_DEREF &&
+            (!ac->next || ac->next->code != CL_ACCESSOR_ITEM))
+    {
+        str << "*";
+        ac = ac->next;
+    }
+
+    // obtain var ID and name (if any)
+    const enum cl_operand_e code = op.code;
+    const char *name = NULL;
+    int uid = -1;
+    switch (code) {
+        case CL_OPERAND_REG:
+            uid = op.data.reg.id;
+            break;
+
+        case CL_OPERAND_VAR:
+            uid = op.data.var.id;
+            name = op.data.var.name;
+            break;
+
+        default:
+            TRAP;
+            break;
+    }
+
+    // print var itself
+    str << "#" << uid;
+    if (name)
+        str << ":" << name;
+
+    // print all accessors excecpt CL_ACCESSOR_REF, which shloud have been
+    // already handled
+    operandToStreamAcs(str, ac);
+}
+
+void operandToStream(std::ostream &str, const struct cl_operand &op) {
+    const enum cl_operand_e code = op.code;
+    switch (code) {
+        case CL_OPERAND_VOID:
+            // this should have been handled elsewhere
+            TRAP;
+            break;
+
+        case CL_OPERAND_CST:
+            operandToStreamCst(str, op);
+            break;
+
+        case CL_OPERAND_REG:
+        case CL_OPERAND_VAR:
+            operandToStreamVar(str, op);
+            break;
+
+        default:
+            TRAP;
+    }
+}
+
+void unOpToStream(std::ostream &str, int subCode,
+                  const CodeStorage::TOperandList &opList)
+{
+    operandToStream(str, opList[/* dst */ 0]);
+    str << " = ";
+
+    const enum cl_unop_e code = static_cast<enum cl_unop_e>(subCode);
+    switch (code) {
+        case CL_UNOP_ASSIGN:
+            break;
+
+        case CL_UNOP_TRUTH_NOT:
+            str << "!";
+            break;
+    }
+
+    operandToStream(str, opList[/* src */ 1]);
+}
+
+void binOpToStream(std::ostream &str, int subCode,
+                   const CodeStorage::TOperandList &opList)
+{
+    const enum cl_binop_e code = static_cast<enum cl_binop_e>(subCode);
+    operandToStream(str, opList[/* dst */ 0]);
+    str << " = (";
+    operandToStream(str, opList[/* src1 */ 1]);
+
+    // TODO: move this to cl API
+    switch (code) {
+        case CL_BINOP_EQ:           str << " == "; break;
+        case CL_BINOP_NE:           str << " != "; break;
+        case CL_BINOP_LT:           str << " < ";  break;
+        case CL_BINOP_GT:           str << " > ";  break;
+        case CL_BINOP_LE:           str << " <= "; break;
+        case CL_BINOP_GE:           str << " >= "; break;
+        case CL_BINOP_PLUS:         str << " + ";  break;
+        case CL_BINOP_MINUS:        str << " - ";  break;
+        default:
+            TRAP;
+    }
+
+    operandToStream(str, opList[/* src2 */ 2]);
+    str << ")";
+}
+
+void callToStream(std::ostream &str, const CodeStorage::TOperandList &opList) {
+    const struct cl_operand &dst = opList[/* dst */ 0];
+    if (CL_OPERAND_VOID != dst.code) {
+        operandToStream(str, dst);
+        str << " = ";
+    }
+    operandToStream(str, opList[/* fnc */ 1]);
+    str << " (";
+    for (unsigned i = /* dst + fnc */ 2; i < opList.size(); ++i)
+    {
+        if (2 < i)
+            str << ", ";
+
+        operandToStream(str, opList[i]);
+    }
+    str << ")";
+}
+
+void retToStream(std::ostream &str, const struct cl_operand &src) {
+    str << "return";
+
+    if (CL_OPERAND_VOID == src.code)
+        return;
+
+    str << " ";
+    operandToStream(str, src);
+}
+
+} // namespace
+
+void SymExecEngine::echoInsn() {
+    using namespace CodeStorage;
+
+    const Insn *insn = block_->operator[](insnIdx_);
+    const TOperandList &opList = insn->operands;
+    const TTargetList &tList = insn->targets;
+    std::ostringstream str;
+
+    const enum cl_insn_e code = insn->code;
+    switch (code) {
+        case CL_INSN_UNOP:
+            unOpToStream(str, insn->subCode, opList);
+            break;
+
+        case CL_INSN_BINOP:
+            binOpToStream(str, insn->subCode, opList);
+            break;
+
+        case CL_INSN_CALL:
+            callToStream(str, opList);
+            break;
+
+        case CL_INSN_RET:
+            retToStream(str, opList[/* src */ 0]);
+            break;
+
+        case CL_INSN_COND:
+            str << "if (";
+            operandToStream(str, opList[/* src */ 0]);
+            str << ") goto " << tList[/* then label */ 0]->name();
+            str <<  " else " << tList[/* else label */ 1]->name();
+            break;
+
+        case CL_INSN_JMP:
+            str << "goto " << tList[/* target */ 0]->name();
+            break;
+
+        case CL_INSN_ABORT:
+            str << "abort";
+            break;
+
+        default:
+            TRAP;
+    }
+
+    std::string echo(str.str());
+    CL_DEBUG_MSG(lw_, "!!! executing insn #" << insnIdx_ << " ... " << echo);
+}
+
 bool /* complete */ SymExecEngine::execInsn() {
     const CodeStorage::Insn *insn = block_->operator[](insnIdx_);
 
@@ -360,7 +649,7 @@ bool /* complete */ SymExecEngine::execInsn() {
         // let's begin with empty resulting heap union
         // TODO: implement SymHeapUnion::clear()
         nextLocalState_ = SymHeapUnion();
-        CL_DEBUG_MSG(lw_, "!!! executing insn #" << insnIdx_);
+        this->echoInsn();
     }
 
     // go through the remainder of symbolic heaps corresponding to localState_
@@ -703,7 +992,7 @@ void SymExec::exec(const CodeStorage::Fnc &fnc, SymHeapUnion &results) {
             TRAP;
 
         // initialize backtrace
-        d->bt.pushCallRoot(uidOf(fnc));
+        d->bt.pushCall(uidOf(fnc), &fnc.def.loc);
 
         // XXX: synthesize CL_INSN_CALL
         CodeStorage::Insn insn;

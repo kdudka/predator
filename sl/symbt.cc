@@ -143,12 +143,6 @@ void SymBackTrace::printBackTrace() const {
     }
 }
 
-void SymBackTrace::pushCallRoot(int fncId) {
-    // first item of usual backtraces is usually main()
-    const CodeStorage::Fnc *root = d->fncById(fncId);
-    d->pushFnc(root, &root->def.loc);
-}
-
 void SymBackTrace::pushCall(int fncId, const LocationWriter &lw) {
     const CodeStorage::Fnc *fnc = d->fncById(fncId);
     d->pushFnc(fnc, lw);

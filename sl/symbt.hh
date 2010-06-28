@@ -59,13 +59,6 @@ class SymBackTrace {
         void printBackTrace() const;
 
         /**
-         * insert the bottom most function of the backtrace (aka root)
-         * @param rootFncId root function to start the backtrace with, in simple
-         * programs usually main()
-         */
-        void pushCallRoot(int rootFncId);
-
-        /**
          * enter a call of function, thus enlarge the backtrace by one
          * @param fncId ID of function, which is being called
          * @param lw location of the call related to the caller (definitely @b
