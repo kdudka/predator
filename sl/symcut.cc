@@ -363,6 +363,8 @@ void splitHeapByCVars(const SymBackTrace *bt, SymHeap *srcDst,
 #if SE_DISABLE_SYMCUT
     return;
 #endif
+    CL_DEBUG("splitHeapByCVars() started: cut by " << cut.size() << " variable(s)");
+
     // std::vector -> std::set
     DeepCopyData::TCut cset;
     fillSet(cset, cut);

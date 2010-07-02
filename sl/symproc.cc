@@ -92,14 +92,9 @@ TValueId SymHeapProcessor::heapValFromCst(const struct cl_operand &op) {
     }
 }
 
-void SymHeapProcessor::heapObjHandleAccessorDeref(TObjId *pObj)
+void SymHeapProcessor::heapObjHandleAccessorDeref(TObjId *pObj, bool silent)
 {
     EUnknownValue code;
-
-    // check if abstract object
-    if(heap_.objIsAbstract(*pObj))
-        Concretize(heap_, *pObj, todolist);     // variants possible 
-    // WARNING: *pObj is changed !
 
     // TODO: check --- it should be pointer variable, => NON-ABSTRACT ?
 
@@ -107,6 +102,9 @@ void SymHeapProcessor::heapObjHandleAccessorDeref(TObjId *pObj)
     const TValueId val = heap_.valueOf(*pObj);
     switch (val) {
         case VAL_NULL:
+            if (silent)
+                goto fail;
+
             CL_ERROR_MSG(lw_, "dereference of NULL value");
             goto fail_with_bt;
 
@@ -129,6 +127,9 @@ void SymHeapProcessor::heapObjHandleAccessorDeref(TObjId *pObj)
             return;
 
         case UV_UNINITIALIZED:
+            if (silent)
+                goto fail;
+
             CL_ERROR_MSG(lw_, "dereference of uninitialized value");
             goto fail_with_bt;
 
@@ -140,10 +141,16 @@ void SymHeapProcessor::heapObjHandleAccessorDeref(TObjId *pObj)
     *pObj = heap_.pointsTo(val);
     switch (*pObj) {
         case OBJ_LOST:
+            if (silent)
+                goto fail;
+
             CL_ERROR_MSG(lw_, "dereference of non-existing non-heap object");
             goto fail_with_bt;
 
         case OBJ_DELETED:
+            if (silent)
+                goto fail;
+
             CL_ERROR_MSG(lw_, "dereference of already deleted heap object");
             goto fail_with_bt;
 
@@ -153,9 +160,6 @@ void SymHeapProcessor::heapObjHandleAccessorDeref(TObjId *pObj)
 
         default:
             // valid object
-            if(heap_.objIsAbstract(*pObj))
-                Concretize(heap_, *pObj, todolist);     // variants possible 
-                // WARNING: *pObj is changed
             return;
     }
 
@@ -169,10 +173,6 @@ fail:
 void SymHeapProcessor::heapObjHandleAccessorItem(TObjId *pObj,
                                                  const struct cl_accessor *ac)
 {
-    // *pObj should be non-abstract object, (all subObjs are too)
-    if(heap_.objIsAbstract(*pObj))
-        TRAP;
-
     // access subObj
     const int id = ac->data.item.id;
     *pObj = heap_.subObj(*pObj, id);
@@ -183,12 +183,13 @@ void SymHeapProcessor::heapObjHandleAccessorItem(TObjId *pObj,
 }
 
 void SymHeapProcessor::heapObjHandleAccessor(TObjId *pObj,
-                                             const struct cl_accessor *ac)
+                                             const struct cl_accessor *ac,
+                                             bool silent)
 {
     const enum cl_accessor_e code = ac->code;
     switch (code) {
         case CL_ACCESSOR_DEREF:
-            this->heapObjHandleAccessorDeref(pObj);
+            this->heapObjHandleAccessorDeref(pObj, silent);
             return;
 
         case CL_ACCESSOR_ITEM:
@@ -208,7 +209,8 @@ void SymHeapProcessor::heapObjHandleAccessor(TObjId *pObj,
     }
 }
 
-TObjId SymHeapProcessor::heapObjFromOperand(const struct cl_operand &op)
+TObjId SymHeapProcessor::heapObjFromOperand(const struct cl_operand &op,
+                                            bool silent)
 {
     int uid;
 
@@ -237,7 +239,7 @@ TObjId SymHeapProcessor::heapObjFromOperand(const struct cl_operand &op)
     // process all accessors
     const struct cl_accessor *ac = op.accessor;
     while (ac) {
-        this->heapObjHandleAccessor(&var, ac);
+        this->heapObjHandleAccessor(&var, ac, silent);
         ac = ac->next;
     }
 
@@ -304,14 +306,15 @@ namespace {
     }
 }
 
-TValueId SymHeapProcessor::heapValFromOperand(const struct cl_operand &op)
+TValueId SymHeapProcessor::heapValFromOperand(const struct cl_operand &op,
+                                              bool silent)
 {
     const enum cl_operand_e code = op.code;
     switch (code) {
         case CL_OPERAND_VAR:
         case CL_OPERAND_REG:
             return valueFromVar(heap_,
-                    this->heapObjFromOperand(op),
+                    this->heapObjFromOperand(op, silent),
                     op.type, op.accessor);
 
         case CL_OPERAND_CST:
@@ -522,7 +525,16 @@ void SymHeapProcessor::heapObjDefineType(TObjId lhs, TValueId rhs) {
     if (CL_TYPE_VOID == clt->code)
         return;
 
+    // XXX: special quirk for abstract objects
+    // TODO: make the API generic again
+    if (heap_.objIsAbstract(var))
+        return;
+
     const int cbGot = heap_.objSizeOfAnon(var);
+    if (!cbGot)
+        // anonymous object of zero size
+        TRAP;
+
     const int cbNeed = clt->size;
     if (cbGot != cbNeed) {
         static const char szMsg[] =
@@ -680,8 +692,6 @@ void SymHeapProcessor::execFree(const CodeStorage::TOperandList &opList) {
             TRAP;
 
         default:
-            if(heap_.objIsAbstract(obj))
-                TRAP;   // TODO: should be concretized
             break;
     }
 
@@ -1278,11 +1288,14 @@ TValueId handleOp(TProc &proc, int code, const TValueId rhs[ARITY],
 
 
 template <int ARITY>
-void SymHeapProcessor::execOp(const CodeStorage::Insn &insn) {
+void SymHeapProcessor::execOpCore(TState &results,
+                                  const CodeStorage::Insn &insn)
+{
     // resolve lhs
     TObjId varLhs = OBJ_INVALID;
     const struct cl_operand &dst = insn.operands[/* dst */ 0];
     if (!this->lhsFromOperand(&varLhs, dst)) {
+        results.insert(heap_);
         return;
     }
     // ASSERT: lhs is not abstract
@@ -1299,16 +1312,6 @@ void SymHeapProcessor::execOp(const CodeStorage::Insn &insn) {
         rhs[i] = this->heapValFromOperand(op);
         if (VAL_INVALID == rhs[i])
             TRAP;
-
-        // TODO: remove this code, it can be done later?
-        if(heap_.valIsAbstract(rhs[i])) {       // only pointers allowed?
-            TObjId o = heap_.pointsTo(rhs[i]);  // target object
-            if(heap_.objIsAbstract(o)) {
-                Concretize(heap_,o,todolist);   // add to todo-list if abstract variant possible
-                // WARNING: o changed
-                rhs[i] = heap_.placedAt(o);   // modify operand
-            }
-        }
     }
 
     // ASSERT: all operands are non-abstract
@@ -1316,6 +1319,63 @@ void SymHeapProcessor::execOp(const CodeStorage::Insn &insn) {
     // handle generic operator and store result
     const TValueId valResult = handleOp<ARITY>(*this, insn.subCode, rhs, clt);
     this->objSetValue(varLhs, valResult);
+    results.insert(heap_);
+}
+
+template <int ARITY>
+void SymHeapProcessor::execOp(TState &results, const CodeStorage::Insn &insn) {
+    this->execOpCore<ARITY>(results, insn);
+}
+
+/// we expect a dereference only as unary operation
+template <>
+void SymHeapProcessor::execOp<1>(TState &results, const CodeStorage::Insn &insn)
+{
+    const enum cl_unop_e code = static_cast<enum cl_unop_e>(insn.subCode);
+    switch (code) {
+        case CL_UNOP_ASSIGN:
+            break;
+
+        case CL_UNOP_TRUTH_NOT:
+            // we don't expect any dereference in such an instruction
+            this->execOpCore<1>(results, insn);
+            return;
+    }
+
+    const struct cl_operand &src = insn.operands[/* src */ 1];
+    const struct cl_accessor *ac = src.accessor;
+    if (!ac || CL_ACCESSOR_DEREF != ac->code) {
+        // we expect the dereference only as the first accessor
+        this->execOpCore<1>(results, insn);
+        return;
+    }
+
+    // Concretize() loop, you can consider its documentation (if available)
+    std::list<SymHeap> todo;
+    todo.push_back(heap_);
+    while (!todo.empty()) {
+        SymHeap &sh = todo.front();
+        SymHeapProcessor proc(sh, bt_);
+        proc.setLocation(lw_);
+
+        // first just check if the rhs value is abstract
+        const TValueId val = proc.heapValFromOperand(src, /* silent */ true);
+        if (VAL_INVALID == val)
+            TRAP;
+
+        if(sh.valIsAbstract(val)) {             // only pointers allowed?
+            TObjId o = heap_.pointsTo(val);     // target object
+            if(sh.objIsAbstract(o)) {
+                // add to todo-list if abstract variant possible
+                Concretize(sh, o, todo);
+                // WARNING: o changed
+            }
+        }
+
+        // process the current heap and move to the next one (if any)
+        proc.execOpCore<1>(results, insn);
+        todo.pop_front();
+    }
 }
 
 bool SymHeapProcessor::exec(TState &dst, const CodeStorage::Insn &insn,
@@ -1325,21 +1385,18 @@ bool SymHeapProcessor::exec(TState &dst, const CodeStorage::Insn &insn,
     const enum cl_insn_e code = insn.code;
     switch (code) {
         case CL_INSN_UNOP:
-            this->execOp<1>(insn);
-            break;
+            this->execOp<1>(dst, insn);
+            return true;
 
         case CL_INSN_BINOP:
-            this->execOp<2>(insn);
-            break;
+            this->execOp<2>(dst, insn);
+            return true;
 
         case CL_INSN_CALL:
             return this->execCall(dst, insn, fastMode);
 
         default:
             TRAP;
+            return false;
     }
-
-    // we've got only one resulting heap, insert it into the target state
-    dst.insert(heap_);
-    return true;
 }

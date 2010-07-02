@@ -421,7 +421,6 @@ SymCallCtx& SymCallCache::getCallCtx(SymHeap heap,
 
     // prune heap
     SymHeap surround;
-    CL_DEBUG_MSG(d->lw, "|C| pruning heap by " << cut.size() << " variable(s)");
     splitHeapByCVars(d->bt, &heap, cut, &surround);
     
     // get either an existing ctx, or create a new one

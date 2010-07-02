@@ -29,8 +29,6 @@
 #include <cl/location.hh>
 #include <cl/storage.hh>
 
-#include <list>
-
 #include "symid.hh"
 #include "symheap.hh"
 
@@ -64,8 +62,6 @@ class SymHeapProcessor {
         }
 
         ~SymHeapProcessor() {
-            if(todolist.size() != 0)
-                TRAP;   // we should move the contents of todolist first
         }
 
         /**
@@ -96,10 +92,12 @@ class SymHeapProcessor {
 
     public:
         /// obtain a heap object corresponding to the given operand
-        TObjId heapObjFromOperand(const struct cl_operand &op);
+        TObjId heapObjFromOperand(const struct cl_operand &op,
+                                  bool silent = false);
 
         /// obtain a heap value corresponding to the given operand
-        TValueId heapValFromOperand(const struct cl_operand &op);
+        TValueId heapValFromOperand(const struct cl_operand &op,
+                                    bool silent = false);
 
         /// resolve Fnc uid from the given opreand, -1 if there is no such Fnc
         int /* uid */ fncFromOperand(const struct cl_operand &op);
@@ -121,21 +119,20 @@ class SymHeapProcessor {
         /// high-level interface to SymHeap::objDestroy()
         void objDestroy(TObjId obj);
 
-        /// empty todolist moving contents to other list
-        void splice(std::list<SymHeap> &l) {
-            l.splice(l.end(),todolist);         // constant-time operation
-        }
-
     private:
         void heapSetSingleVal(TObjId lhs, TValueId rhs);
         void heapObjDefineType(TObjId lhs, TValueId rhs);
-        void heapObjHandleAccessorDeref(TObjId *pObj);
+        void heapObjHandleAccessorDeref(TObjId *pObj, bool silent);
         void heapObjHandleAccessorItem(TObjId *pObj,
                                        const struct cl_accessor *ac);
-        void heapObjHandleAccessor(TObjId *pObj, const struct cl_accessor *ac);
+        void heapObjHandleAccessor(TObjId *pObj, const struct cl_accessor *ac,
+                                   bool silent);
         TValueId heapValFromCst(const struct cl_operand &op);
         bool lhsFromOperand(TObjId *pObj, const struct cl_operand &op);
-        template <int ARITY> void execOp(const CodeStorage::Insn &insn);
+        template <int ARITY> void execOpCore(TState &results,
+                                             const CodeStorage::Insn &insn);
+        template <int ARITY> void execOp(TState &results,
+                                         const CodeStorage::Insn &insn);
         void execMalloc(TState &dst, const CodeStorage::TOperandList &opList,
                         bool fastMode);
         void execFree(const CodeStorage::TOperandList &opList);
@@ -146,7 +143,6 @@ class SymHeapProcessor {
         SymHeap                     &heap_;     /// heap to operate on
         const SymBackTrace          *bt_;
         LocationWriter              lw_;
-        std::list<SymHeap>          todolist;   /// for concretized siblings
 
         template <int N, class T> friend struct OpHandler;
 };

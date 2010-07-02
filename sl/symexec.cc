@@ -29,7 +29,6 @@
 #include "symstate.hh"
 #include "util.hh"
 
-#include <list>
 #include <set>
 #include <sstream>
 #include <stack>
@@ -327,29 +326,13 @@ void SymExecEngine::execTermInsn() {
 
 bool /* handled */ SymExecEngine::execInsnLoop() {
     const CodeStorage::Insn *insn = block_->operator[](insnIdx_);
-    const SymHeap &src = localState_[heapIdx_];
 
-    std::list<SymHeap> todo;    // we can add concretized heaps during execution
-    todo.push_back(src);        // first heap to analyze
-    while(!todo.empty()) {
-        SymHeap &workingHeap = todo.front(); // use first SH
+    // working area for non-terminal instructions
+    SymHeap workingHeap(localState_[heapIdx_]);
+    SymHeapProcessor proc(workingHeap, &bt_);
+    proc.setLocation(lw_);
 
-        SymHeapProcessor proc(workingHeap, &bt_);
-        proc.setLocation(lw_);
-
-        if (!proc.exec(nextLocalState_, *insn, params_.fastMode)) {
-            // assume CL_INSN_CALL
-            if (1 != todo.size())
-                TRAP;
-
-            return false;
-        }
-
-        todo.pop_front();
-        proc.splice(todo);      // add concretized variants
-    }
-
-    return true;
+    return proc.exec(nextLocalState_, *insn, params_.fastMode);
 }
 
 namespace {
@@ -496,11 +479,6 @@ void operandToStreamVar(std::ostream &str, const struct cl_operand &op) {
 void operandToStream(std::ostream &str, const struct cl_operand &op) {
     const enum cl_operand_e code = op.code;
     switch (code) {
-        case CL_OPERAND_VOID:
-            // this should have been handled elsewhere
-            TRAP;
-            break;
-
         case CL_OPERAND_CST:
             operandToStreamCst(str, op);
             break;
@@ -510,6 +488,8 @@ void operandToStream(std::ostream &str, const struct cl_operand &op) {
             operandToStreamVar(str, op);
             break;
 
+        case CL_OPERAND_VOID:
+            // this should have been handled elsewhere
         default:
             TRAP;
     }
@@ -591,11 +571,9 @@ void retToStream(std::ostream &str, const struct cl_operand &src) {
 } // namespace
 
 void SymExecEngine::echoInsn() {
-    using namespace CodeStorage;
-
-    const Insn *insn = block_->operator[](insnIdx_);
-    const TOperandList &opList = insn->operands;
-    const TTargetList &tList = insn->targets;
+    const CodeStorage::Insn *insn = block_->operator[](insnIdx_);
+    const CodeStorage::TOperandList &opList = insn->operands;
+    const CodeStorage::TTargetList &tList = insn->targets;
     std::ostringstream str;
 
     const enum cl_insn_e code = insn->code;
