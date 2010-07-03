@@ -129,15 +129,16 @@ class SymHeapProcessor {
                                    bool silent);
         TValueId heapValFromCst(const struct cl_operand &op);
         bool lhsFromOperand(TObjId *pObj, const struct cl_operand &op);
-        template <int ARITY> void execOpCore(TState &results,
-                                             const CodeStorage::Insn &insn);
-        template <int ARITY> void execOp(TState &results,
-                                         const CodeStorage::Insn &insn);
+        template <int ARITY> void execOp(const CodeStorage::Insn &insn);
         void execMalloc(TState &dst, const CodeStorage::TOperandList &opList,
                         bool fastMode);
         void execFree(const CodeStorage::TOperandList &opList);
         bool execCall(TState &dst, const CodeStorage::Insn &insn,
                       bool fastMode);
+        void concretizeLoop(TState &dst, const CodeStorage::Insn &insn,
+                            const struct cl_operand &src);
+        bool concretizeIfNeeded(TState &dst, const CodeStorage::Insn &insn);
+        bool execCore(TState &dst, const CodeStorage::Insn &insn, bool fast);
 
     private:
         SymHeap                     &heap_;     /// heap to operate on

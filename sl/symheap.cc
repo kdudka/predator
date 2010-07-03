@@ -85,6 +85,14 @@ class NeqDb {
             TItem item(valLt, valGt);
             cont_.insert(item);
         }
+        void del(TValueId valLt, TValueId valGt) {
+            if (valLt == valGt)
+                TRAP;
+
+            sortValues(valLt, valGt);
+            TItem item(valLt, valGt);
+            cont_.erase(item);
+        }
 
         template <class TDst>
         void gatherRelatedValues(TDst &dst, TValueId val) const {
@@ -202,6 +210,7 @@ struct SymHeapCore::Private {
     EqIfDb                  eqIfDb;
 
     void releaseValueOf(TObjId obj);
+    TObjId acquireObj();
 };
 
 void SymHeapCore::Private::releaseValueOf(TObjId obj) {
@@ -214,6 +223,13 @@ void SymHeapCore::Private::releaseValueOf(TObjId obj) {
     if (1 != ref.usedBy.erase(obj))
         // *** offset detected ***
         TRAP;
+}
+
+TObjId SymHeapCore::Private::acquireObj() {
+    const size_t last = std::max(this->objects.size(), this->values.size());
+    const TObjId obj = static_cast<TObjId>(last);
+    this->objects.resize(obj + 1);
+    return obj;
 }
 
 SymHeapCore::SymHeapCore():
@@ -311,11 +327,20 @@ unsigned SymHeapCore::usedByCount(TValueId val) const {
     return d->values[val].usedBy.size();
 }
 
+TObjId SymHeapCore::objDup(TObjId objOrigin) {
+    // acquire a new object
+    const TObjId obj = d->acquireObj();
+    d->objects[obj].address = this->valCreate(UV_KNOWN, obj);
+
+    // copy the value inside, while keeping backward references etc.
+    const Private::Object &origin = d->objects.at(objOrigin);
+    this->objSetValue(obj, origin.value);
+    return obj;
+}
+
 TObjId SymHeapCore::objCreate() {
     // acquire object ID
-    const size_t last = std::max(d->objects.size(), d->values.size());
-    const TObjId obj = static_cast<TObjId>(last);
-    d->objects.resize(obj + 1);
+    const TObjId obj = d->acquireObj();
 
     // obtain value pair
     const TValueId address = this->valCreate(UV_KNOWN, obj);
@@ -451,6 +476,7 @@ void SymHeapCore::valReplace(TValueId _val, TValueId _newval) {
     // FIXME: solve possible problem with EQ/NEQ database records?
     //        old: any RELOP _val --> new: any !RELOP _newval ?
     // how about (in-place) change from struct to abstract segment?
+    d->neqDb.del(_val, _newval);
 }
 
 void SymHeapCore::valReplaceUnknown(TValueId val, TValueId replaceBy) {
@@ -946,6 +972,62 @@ TValueId SymHeap1::valueOf(TObjId obj) const {
     return val;
 }
 
+struct ObjDupStackItem {
+    TObjId  srcObj;
+    TObjId  dstParent;
+    int     nth;
+};
+
+TObjId SymHeap1::objDup(TObjId obj) {
+    TObjId image = OBJ_INVALID;
+
+    ObjDupStackItem item;
+    item.srcObj = obj;
+    item.dstParent = OBJ_INVALID;
+
+    std::stack<ObjDupStackItem> todo;
+    todo.push(item);
+    while (!todo.empty()) {
+        item = todo.top();
+        todo.pop();
+
+        // duplicate a single object
+        const TObjId src = item.srcObj;
+        const TObjId dst = SymHeapCore::objDup(src);
+        this->resizeIfNeeded();
+        if (OBJ_INVALID == image)
+            image = dst;
+
+        // copy the metadata
+        d->objects[dst] = d->objects[src];
+        d->objects[dst].parent = item.dstParent;
+
+        // update the reference to self in the parent object
+        if (OBJ_INVALID != item.dstParent) {
+            Private::Object &refParent = d->objects.at(item.dstParent);
+            refParent.subObjs[item.nth] = dst;
+        }
+
+        const TContObj subObjs(d->objects[src].subObjs);
+        if (subObjs.empty())
+            continue;
+
+        // assume composite object
+        const struct cl_type *clt = d->objects[src].clt;
+        SymHeapCore::objSetValue(dst, this->createCompValue(clt, dst));
+
+        // traverse composite types recursively
+        for (unsigned i = 0; i < subObjs.size(); ++i) {
+            item.srcObj     = subObjs[i];
+            item.dstParent  = dst;
+            item.nth        = i;
+            todo.push(item);
+        }
+    }
+
+    return image;
+}
+
 void SymHeap1::objDestroyPriv(TObjId obj) {
     typedef std::stack<TObjId> TStack;
     TStack todo;
@@ -1066,6 +1148,16 @@ TObjId SymHeap1::objParent(TObjId obj) const {
         return OBJ_INVALID;
 
     return d->objects[obj].parent;
+}
+
+TObjId subObjByChain(SymHeap1 &sh, TObjId obj, TFieldIdxChain ic) {
+    BOOST_FOREACH(const int nth, ic) {
+        obj = sh.subObj(obj, nth);
+        if (OBJ_INVALID == obj)
+            break;
+    }
+
+    return obj;
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -1327,6 +1419,336 @@ int SymHeap1::valGetCustom(const struct cl_type **pClt, TValueId val) const {
     return ref.customData;
 }
 
+// /////////////////////////////////////////////////////////////////////////////
+// implementation of SymHeapEx
+struct SymHeapEx::Private {
+    struct ObjectEx {
+        EObjKind            kind;
+        int                 level;
+        TFieldIdxChain      icBind;
+        TFieldIdxChain      icPeer;
+
+        ObjectEx(): kind(OK_CONCRETE), level(-1) { }
+    };
+
+    typedef std::map<TObjId, ObjectEx> TObjMap;
+    TObjMap objMap;
+};
+
+SymHeapEx::SymHeapEx():
+    d(new Private)
+{
+}
+
+SymHeapEx::SymHeapEx(const SymHeapEx &ref):
+    SymHeap1(ref),
+    d(new Private(*ref.d))
+{
+}
+
+SymHeapEx::~SymHeapEx() {
+    delete d;
+}
+
+SymHeapEx& SymHeapEx::operator=(const SymHeapEx &ref) {
+    SymHeap1::operator=(ref);
+    delete d;
+    d = new Private(*ref.d);
+    return *this;
+}
+
+TObjId SymHeapEx::objDup(TObjId objOld) {
+    const TObjId objNew = SymHeap1::objDup(objOld);
+    Private::TObjMap::iterator iter = d->objMap.find(objOld);
+    if (d->objMap.end() != iter) {
+        // duplicte metadata of an abstract object
+        Private::ObjectEx tmp(iter->second);
+        d->objMap[objNew] = tmp;
+    }
+
+    return objNew;
+}
+
+EObjKind SymHeapEx::objKind(TObjId obj) const {
+    Private::TObjMap::iterator iter = d->objMap.find(obj);
+    return (d->objMap.end() == iter)
+        ? OK_CONCRETE
+        : iter->second.kind;
+}
+
+int SymHeapEx::objAbstractLevel(TObjId obj) const {
+    Private::TObjMap::iterator iter = d->objMap.find(obj);
+    return (d->objMap.end() == iter)
+        ? /* OK_CONCRETE */ 0
+        : iter->second.level;
+}
+
+TFieldIdxChain SymHeapEx::objBinderField(TObjId obj) const {
+    Private::TObjMap::iterator iter = d->objMap.find(obj);
+    if (d->objMap.end() == iter)
+        // invalid call of SymHeapEx::objBinderField()
+        TRAP;
+
+    return iter->second.icBind;
+}
+
+TFieldIdxChain SymHeapEx::objPeerField(TObjId obj) const {
+    Private::TObjMap::iterator iter = d->objMap.find(obj);
+    if (d->objMap.end() == iter)
+        // invalid call of SymHeapEx::objPeerField()
+        TRAP;
+
+    return iter->second.icPeer;
+}
+
+void SymHeapEx::objAbstract(TObjId obj, EObjKind kind, TFieldIdxChain icBind,
+                            TFieldIdxChain icPeer)
+{
+    CL_DEBUG("SymHeapEx::objAbstract() is taking place...");
+    if (hasKey(d->objMap, obj))
+        // invalid call of SymHeapEx::objAbstract()
+        TRAP;
+
+    const TValueId addr = this->placedAt(obj);
+    const TObjId objBind = subObjByChain(*this, obj, icBind);
+    const TValueId valNext = this->valueOf(objBind);
+    if (addr == valNext)
+        // *** self-loop detected ***
+        TRAP;
+
+    if (!icPeer.empty())
+        // TODO: store Neq predicate for the peer in case of DLS
+        TRAP;
+
+    // initialize abstract object
+    Private::ObjectEx &ref = d->objMap[obj];
+    ref.kind    = kind;
+    ref.level   = /* TODO */ 1;
+    ref.icBind  = icBind;
+    ref.icPeer  = icPeer;
+
+    // TODO: go through all nested abstract objects and increase the level
+}
+
+void SymHeapEx::objConcretize(TObjId obj) {
+    CL_DEBUG("SymHeapEx::objConcretize() is taking place...");
+    Private::TObjMap::iterator iter = d->objMap.find(obj);
+    if (d->objMap.end() == iter)
+        // invalid call of SymHeapEx::objConcretize()
+        TRAP;
+
+    if (1 != iter->second.level)
+        // not implemented
+        TRAP;
+
+    // just remove the object ID from the map
+    d->objMap.erase(iter);
+}
+
+bool doesAnyonePointToInside(const SymHeap1 &sh, TObjId obj) {
+    // traverse the given composite object recursively
+    std::stack<TObjId> todo;
+    todo.push(obj);
+    while (!todo.empty()) {
+        obj = todo.top();
+        todo.pop();
+
+        const struct cl_type *clt = sh.objType(obj);
+        if (!clt || clt->code != CL_TYPE_STRUCT)
+            TRAP;
+
+        for (int i = 0; i < clt->item_cnt; ++i) {
+            const TObjId sub = sh.subObj(obj, i);
+            const TValueId subAddr = sh.placedAt(sub);
+            if (sh.usedByCount(subAddr))
+                return true;
+
+            const struct cl_type *subClt = sh.objType(sub);
+            if (subClt && subClt->code == CL_TYPE_STRUCT)
+                todo.push(sub);
+        }
+    }
+
+    return false;
+}
+
+EObjKind discover(const SymHeapEx &sh, TObjId obj, TFieldIdxChain &icBind,
+                  TFieldIdxChain &icPeer)
+{
+    const struct cl_type *clt = sh.objType(obj);
+    if (CL_TYPE_STRUCT != clt->code)
+        TRAP;
+
+    // TODO: search recursively
+    int nth = -1;
+    for (int i = 0; i < clt->item_cnt; ++i) {
+        const TObjId objPtrNext = sh.subObj(obj, i);
+        const TValueId valNext = sh.valueOf(objPtrNext);
+        if (valNext <= 0)
+            continue;
+
+        if (sh.valType(valNext) != clt)
+            continue;
+
+        if (UV_KNOWN != sh.valGetUnknown(valNext))
+            continue;
+
+        if (-1 == nth)
+            nth = i;
+        else
+            CL_DEBUG("discover() is taking first selector of suitable type as "
+                    "'next', but there are more of such candidates!");
+    }
+
+    if (-1 == nth)
+        // no match
+        return OK_CONCRETE;
+
+    icBind.push_back(nth);
+
+    // TODO: DLS
+    (void) icPeer;
+    return OK_SLS;
+}
+
+void objReplace(SymHeap1 &sh, TObjId oldObj, TObjId newObj) {
+    if (OBJ_INVALID != sh.objParent(oldObj)
+            || OBJ_INVALID != sh.objParent(newObj))
+        // attempt to replace a sub-object
+        TRAP;
+
+    // resolve object addresses
+    const TValueId oldAddr = sh.placedAt(oldObj);
+    const TValueId newAddr = sh.placedAt(newObj);
+    if (oldAddr <= 0 || newAddr <= 0)
+        TRAP;
+
+    // update all references
+    sh.valReplace(oldAddr, newAddr);
+
+    // now destroy the object
+    sh.objDestroy(oldObj);
+}
+
+TObjId projectSubObj(const SymHeapEx &sh, TObjId sub, TObjId from, TObjId to) {
+    std::stack<int> nthStack;
+
+    TObjId parent;
+    while (OBJ_INVALID != (parent = sh.objParent(sub))) {
+        nthStack.push(nthItemOf(sh, sub));
+        if (parent == from)
+            break;
+        else
+            sub = parent;
+    }
+
+    while (!nthStack.empty()) {
+        to = sh.subObj(to, nthStack.top());
+        if (OBJ_INVALID == to)
+            TRAP;
+
+        nthStack.pop();
+    }
+
+    return to;
+}
+
+void abstract(SymHeapEx &sh, TObjId obj) {
+#if SE_DISABLE_ABSTRACT
+    return;
+#endif
+    if (doesAnyonePointToInside(sh, obj))
+        return;
+
+    // a temporary solution preventing as from an infinite loop
+    std::set<TObjId> done;
+    while (!hasKey(done, obj)) {
+        done.insert(obj);
+        if (1 < sh.objAbstractLevel(obj))
+            // not supported for now
+            TRAP;
+
+        TFieldIdxChain icBind;
+        TFieldIdxChain icPeer;
+        const EObjKind kind = discover(sh, obj, icBind, icPeer);
+        if (OK_CONCRETE == kind)
+            return;
+
+        if (OK_SLS != kind)
+            // something more than OK_SLS
+            TRAP;
+
+        const TObjId objPtrNext = subObjByChain(sh, obj, icBind);
+        const TValueId valNext = sh.valueOf(objPtrNext);
+        if (valNext <= 0)
+            // this looks like a failure of discover()
+            TRAP;
+
+        if (1 != sh.usedByCount(valNext))
+            // the next object is pointed, giving up...
+            return;
+
+        // resolve the 'next' ptr
+        const TObjId objNext = sh.pointsTo(valNext);
+        if (doesAnyonePointToInside(sh, objNext))
+            // somone points to a field of the target object, giving up...
+            return;
+
+        if (OK_CONCRETE == sh.objKind(objNext))
+            // abstract the _next_ object
+            sh.objAbstract(objNext, kind, icBind, icPeer);
+
+        // we're constructing the abstract object from a concrete one --> it
+        // implies non-empty LS at this point
+        const TValueId addr = sh.placedAt(obj);
+        sh.addNeq(addr, valNext);
+
+        if (OK_SLS != sh.objKind(objNext))
+            TRAP;
+
+        // replace self by the next object
+        objReplace(sh, obj, objNext);
+
+        // move to the next object
+        obj = objNext;
+    }
+}
+
+void Concretize(SymHeap &sh, TObjId &ao, std::list<SymHeap> &todo) {
+    const TFieldIdxChain ciBind = sh.objBinderField(ao);
+    const TObjId objPtrNext = subObjByChain(sh, ao, ciBind);
+    const TValueId valNext = sh.valueOf(objPtrNext);
+    const TObjId objNext = sh.pointsTo(valNext);
+    const TValueId addr = sh.placedAt(ao);
+
+    // check if the LS may be empty
+    bool eq;
+    if (!sh.proveEq(&eq, addr, valNext)) {
+        // possibly empty LS
+        SymHeap sh0(sh);
+        if (OBJ_INVALID == objNext) {
+            // 'next' pointer does not point to a valid object
+            sh0.valReplace(addr, valNext);
+            sh0.objDestroy(ao);
+        }
+        else
+            objReplace(sh0, ao, objNext);
+        todo.push_back(sh0);
+    }
+
+    if (eq)
+        // self loop?
+        TRAP;
+
+    // duplicate self as abstract object
+    const TObjId aoDup = sh.objDup(ao);
+
+    // concretize self
+    sh.objConcretize(ao);
+
+    // now chain it all together
+    sh.objSetValue(objPtrNext, sh.placedAt(aoDup));
+}
 
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of SymHeap2
@@ -1485,7 +1907,7 @@ void SymHeap2::Concretize_E(TObjId abstract_object)
     // WARNING: resulting value can be abstract, too
 }
 
-
+#if 0
 /// concretize abstract object pointed by ptr value
 void Concretize(SymHeap &sh, TObjId &ao, std::list<SymHeap> &todo)
 {
@@ -1504,6 +1926,7 @@ void Concretize(SymHeap &sh, TObjId &ao, std::list<SymHeap> &todo)
     // 2. nonempty variant - modify existing heap
     ao = sh.Concretize_NE(ao);
 }
+#endif
 
 /// dig root object
 TObjId objRoot(SymHeap1 &sh, TObjId obj) {
@@ -1717,7 +2140,8 @@ void SymHeap2::Abstract(TValueId ptrValue)
 /// search te heap and abstract all objects possible
 void Abstract(SymHeap &sh)
 {
-    // TODO:   better interface?   SymHeap Abstract(const SymHeap&); // copy
+    // FIXME: brute force method
+    // TODO: start from cVars instead
     int i;
     for(i=0; i<=sh.lastObjId(); ++i) {
         TObjId o = static_cast<TObjId>(i);
@@ -1726,18 +2150,16 @@ void Abstract(SymHeap &sh)
             continue;   // no address value => invalid object id
 
         const struct cl_type *clt = sh.objType(o);
-        if(!clt && sh.objIsAbstract(o))
-            clt = sh.slsType(o);
-
-        if(!clt)        // FIXME: *** why is this possible?
-            continue;   // no type-info
+        if(!clt)
+            continue;   // anonymous object of known size
 
         if(clt->code != CL_TYPE_STRUCT)
             continue;   // we can abstract structs only
 
-        // object is of type struct variable or segment
-        if(sh.usedByCount(addr)==1)     // single use of object address
-            sh.Abstract(addr);  // it changes the heap (TODO: check if not a problem)
+        if(sh.usedByCount(addr)==1)
+            // a candidate for abstraction
+            abstract(sh, o);
+
     } // for each object-id
 }
 

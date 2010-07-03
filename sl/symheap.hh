@@ -131,6 +131,9 @@ class SymHeapCore {
         /// return how many objects use the value
         unsigned usedByCount(TValueId val) const;
 
+        /// create a duplicate of the given object with a new object ID
+        virtual TObjId objDup(TObjId obj);
+
     protected:
         /**
          * create a new symbolic heap object
@@ -336,6 +339,9 @@ class SymHeap1: public SymHeapCore {
         // XXX
         virtual TValueId valueOf(TObjId obj) const;
 
+        /// create a deep copy of the given object with new object IDs
+        virtual TObjId objDup(TObjId obj);
+
         /**
          * look for static type-info of the given object, which has to be @b
          * valid
@@ -512,6 +518,85 @@ class SymHeap1: public SymHeapCore {
         void objDestroyPriv(TObjId obj);
 };
 
+enum EObjKind {
+    OK_CONCRETE = 0,
+    OK_SLS,
+    OK_DLS
+};
+
+typedef std::vector<int /* nth */> TFieldIdxChain;
+
+TObjId subObjByChain(SymHeap1 &sh, TObjId obj, TFieldIdxChain ic);
+
+class SymHeapEx: public SymHeap1 {
+    public:
+        /// create an empty symbolic heap
+        SymHeapEx();
+
+        /// destruction of the symbolic heap invalidates all IDs of its entities
+        virtual ~SymHeapEx();
+
+        /// @note there is no such thing like COW implemented for now
+        SymHeapEx(const SymHeapEx &);
+
+        /// @note there is no such thing like COW implemented for now
+        SymHeapEx& operator=(const SymHeapEx &);
+
+    public:
+        virtual TObjId objDup(TObjId obj);
+
+    public:
+        /**
+         * return @b kind of the object. Here @b kind means concrete object,
+         * SLS, DLS, and the like.
+         */
+        EObjKind objKind(TObjId obj) const;
+
+        /**
+         * return @b abstraction level of the given object.  Zero means concrete
+         * object, 1 means regular SLS or DLS object, 2 stands for an abstract
+         * object that consists of another abstract objects, and so on and so
+         * forth.
+         */
+        int objAbstractLevel(TObjId obj) const;
+
+        /**
+         * return a @b binding sub-object of the given @b abstract object.  Here
+         * @b binding objects stands for the filed usually called @c next or @c
+         * prev.
+         */
+        TFieldIdxChain objBinderField(TObjId obj) const;
+
+        /**
+         * return a @b peer sub-object - for a head object, you get the field
+         * containing a pointer to tail and vice versa.  Note we don't
+         * distinguish among head and tail, it's just a @b peer in our
+         * terminology.
+         * @note This method basically makes sense only for DLS.
+         */
+        TFieldIdxChain objPeerField(TObjId obj) const;
+
+        /**
+         * convert the given @b concrete object to an abstract object.  If you
+         * need to create higher level abstract object, just call this method
+         * more times, but always on the root object, which should be a concrete
+         * object.
+         */
+        void objAbstract(TObjId obj, EObjKind kind, TFieldIdxChain bidnerField,
+                         TFieldIdxChain /* not used for SLS */ peerField);
+
+        /**
+         * convert the given @b abstract object to a less abstract object.  If
+         * the given object is a regular SLS/DLS object, it results to a
+         * concrete object.  Otherwise, the abstraction level is just decreased.
+         */
+        void objConcretize(TObjId obj);
+
+        // TODO: override objDestroy() some day
+    private:
+        struct Private;
+        Private *d;
+};
 
 /**
  * symbolic heap representation with singly linked list segments - facade
@@ -598,9 +683,11 @@ void Abstract(SymHeap &sh);
 // choose implementation
 #if 0
     struct SymHeap : public SymHeap1 {};
-#else
+//#else
     // with segment abstractions
     struct SymHeap : public SymHeap2 {};
+#else
+    struct SymHeap : public SymHeapEx {};
 #endif
 
 #endif /* H_GUARD_SYM_HEAP_H */

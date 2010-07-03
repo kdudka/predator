@@ -56,7 +56,7 @@ extern const char *sl_git_sha1;
 #define DEBUG_SYMID_FORCE_INT               0
 
 /**
- * if 1, comment out the body of SymHeap2::abstract
+ * if 1, comment out the body of SymHeapEx::abstract()
  */
 #define SE_DISABLE_ABSTRACT                 0
 

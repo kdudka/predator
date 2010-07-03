@@ -228,7 +228,17 @@ namespace {
         }
         return true;
     }
+
+bool cmpAbstractObjects(const SymHeap &sh1, const SymHeap &sh2,
+                        TObjId ao1, TObjId ao2)
+{
+    // TODO
+    return sh1.objAbstractLevel(ao1) == sh2.objAbstractLevel(ao2)
+        && sh1.objBinderField  (ao1) == sh2.objBinderField  (ao2)
+        && sh1.objPeerField    (ao1) == sh2.objPeerField    (ao2);
 }
+
+} // namespace 
 
 template <class TWL, class TSubst>
 bool dfsCmp(TWL             &wl,
@@ -263,22 +273,15 @@ bool dfsCmp(TWL             &wl,
             // variable mismatch
             return false;
 
-        // abstract segment (SLS only) detection and comparison
-        if(heap1.objIsAbstract(obj1) != heap2.objIsAbstract(obj2))
+        const EObjKind kind = heap1.objKind(obj1);
+        if (heap2.objKind(obj2) != kind)
+            // kind of object mismatch
             return false;
-        if(heap1.objIsAbstract(obj1)) {         // both abstract
-            // TODO: create friend function with parameters(h1,o1,h2,o2)
-            if(heap1.objKind(obj1) != heap2.objKind(obj2))
-                return false;
-            if(heap1.slsType(obj1) != heap2.slsType(obj2))
-                return false;
-            if(heap1.slsGetNextId(obj1) != heap2.slsGetNextId(obj2))
-                return false;
-            if(heap1.slsGetLength(obj1) != heap2.slsGetLength(obj2))
-                return false;
-            // TODO: lambda comparison (like struct cmp?)
-            // if all is equal, we can compare nextptr-values
-        }
+
+        if (OK_CONCRETE != kind
+                && !cmpAbstractObjects(heap1, heap2, obj1, obj2))
+            // abstract objects are not equeal
+            return false;
 
         value1 = heap1.valueOf(obj1);
         value2 = heap2.valueOf(obj2);

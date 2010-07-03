@@ -1,8 +1,6 @@
 *.dot
 *.svg
 *.pp.html
-test-0015.err
-test-0015.err.fast
 test-0039.err
 test-0039.err.fast
 test-0040.err

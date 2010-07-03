@@ -33,7 +33,7 @@ fi
     -fplugin="$SL_PLUG" \
     -fplugin-arg-libsl-verbose="$SL_VERBOSE" \
     $SL_OPTS \
-    || exit $?
+    #|| exit $?
 
 if test x1 = "x$SL_PLOT"; then
     # visualize graphs

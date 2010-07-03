@@ -264,8 +264,6 @@ bool SymHeapProcessor::lhsFromOperand(TObjId *pObj, const struct cl_operand &op)
             TRAP;
 
         default:
-            if(this->heap_.objIsAbstract(*pObj))
-                TRAP; // should be concretized
             return true;
     }
 }
@@ -290,8 +288,6 @@ namespace {
 
             case OBJ_RETURN:
             default:
-                if(heap.objIsAbstract(var)) // should be concretized
-                    TRAP;
                 break;
         }
 
@@ -523,11 +519,6 @@ void SymHeapProcessor::heapObjDefineType(TObjId lhs, TValueId rhs) {
         TRAP;
 
     if (CL_TYPE_VOID == clt->code)
-        return;
-
-    // XXX: special quirk for abstract objects
-    // TODO: make the API generic again
-    if (heap_.objIsAbstract(var))
         return;
 
     const int cbGot = heap_.objSizeOfAnon(var);
@@ -1288,16 +1279,13 @@ TValueId handleOp(TProc &proc, int code, const TValueId rhs[ARITY],
 
 
 template <int ARITY>
-void SymHeapProcessor::execOpCore(TState &results,
-                                  const CodeStorage::Insn &insn)
-{
+void SymHeapProcessor::execOp(const CodeStorage::Insn &insn) {
     // resolve lhs
     TObjId varLhs = OBJ_INVALID;
     const struct cl_operand &dst = insn.operands[/* dst */ 0];
-    if (!this->lhsFromOperand(&varLhs, dst)) {
-        results.insert(heap_);
+    if (!this->lhsFromOperand(&varLhs, dst))
         return;
-    }
+
     // ASSERT: lhs is not abstract
 
     // store cl_type of dst operand
@@ -1319,37 +1307,12 @@ void SymHeapProcessor::execOpCore(TState &results,
     // handle generic operator and store result
     const TValueId valResult = handleOp<ARITY>(*this, insn.subCode, rhs, clt);
     this->objSetValue(varLhs, valResult);
-    results.insert(heap_);
 }
 
-template <int ARITY>
-void SymHeapProcessor::execOp(TState &results, const CodeStorage::Insn &insn) {
-    this->execOpCore<ARITY>(results, insn);
-}
-
-/// we expect a dereference only as unary operation
-template <>
-void SymHeapProcessor::execOp<1>(TState &results, const CodeStorage::Insn &insn)
+void SymHeapProcessor::concretizeLoop(TState                    &dst,
+                                      const CodeStorage::Insn   &insn,
+                                      const struct cl_operand   &src)
 {
-    const enum cl_unop_e code = static_cast<enum cl_unop_e>(insn.subCode);
-    switch (code) {
-        case CL_UNOP_ASSIGN:
-            break;
-
-        case CL_UNOP_TRUTH_NOT:
-            // we don't expect any dereference in such an instruction
-            this->execOpCore<1>(results, insn);
-            return;
-    }
-
-    const struct cl_operand &src = insn.operands[/* src */ 1];
-    const struct cl_accessor *ac = src.accessor;
-    if (!ac || CL_ACCESSOR_DEREF != ac->code) {
-        // we expect the dereference only as the first accessor
-        this->execOpCore<1>(results, insn);
-        return;
-    }
-
     // Concretize() loop, you can consider its documentation (if available)
     std::list<SymHeap> todo;
     todo.push_back(heap_);
@@ -1363,34 +1326,65 @@ void SymHeapProcessor::execOp<1>(TState &results, const CodeStorage::Insn &insn)
         if (VAL_INVALID == val)
             TRAP;
 
-        if(sh.valIsAbstract(val)) {             // only pointers allowed?
-            TObjId o = heap_.pointsTo(val);     // target object
-            if(sh.objIsAbstract(o)) {
-                // add to todo-list if abstract variant possible
-                Concretize(sh, o, todo);
-                // WARNING: o changed
-            }
+        // we expect a pointer at this point
+        if (0 < val) {
+            /* TODO: const */ TObjId target = sh.pointsTo(val);
+            if (OK_CONCRETE != sh.objKind(target))
+                Concretize(sh, target, todo);
         }
 
         // process the current heap and move to the next one (if any)
-        proc.execOpCore<1>(results, insn);
+        proc.execCore(dst, insn, /* fast */ false);
         todo.pop_front();
     }
 }
 
-bool SymHeapProcessor::exec(TState &dst, const CodeStorage::Insn &insn,
-                            bool fastMode)
+bool SymHeapProcessor::concretizeIfNeeded(TState &results,
+                                          const CodeStorage::Insn &insn)
 {
-    lw_ = &insn.loc;
+    const enum cl_insn_e code = insn.code;
+    const size_t opCnt = insn.operands.size();
+    if (opCnt != /* deref */ 2 && opCnt != /* free() */ 3)
+        // neither dereference, nor free()
+        return false;
+
+    const struct cl_operand &src = insn.operands[/* src */ 1];
+    const struct cl_accessor *ac = src.accessor;
+    if (ac && CL_ACCESSOR_DEREF == ac->code) {
+        // we expect the dereference only as the first accessor
+        if (CL_INSN_UNOP != code ||
+                CL_UNOP_ASSIGN != static_cast<enum cl_unop_e>(insn.subCode))
+            TRAP;
+
+        // we should go through concretization
+        this->concretizeLoop(results, insn, src);
+        return true;
+    }
+
+    if (CL_INSN_CALL != code || CL_OPERAND_CST != src.code)
+        return false;
+
+    const struct cl_cst &cst = src.data.cst;
+    if (CL_TYPE_FNC != cst.code || !STREQ(cst.data.cst_fnc.name, "free"))
+        return false;
+
+    // assume call of free()
+    this->concretizeLoop(results, insn, insn.operands[/* addr */ 2]);
+    return true;
+}
+
+bool SymHeapProcessor::execCore(TState &dst, const CodeStorage::Insn &insn,
+                                bool fastMode)
+{
     const enum cl_insn_e code = insn.code;
     switch (code) {
         case CL_INSN_UNOP:
-            this->execOp<1>(dst, insn);
-            return true;
+            this->execOp<1>(insn);
+            break;
 
         case CL_INSN_BINOP:
-            this->execOp<2>(dst, insn);
-            return true;
+            this->execOp<2>(insn);
+            break;
 
         case CL_INSN_CALL:
             return this->execCall(dst, insn, fastMode);
@@ -1399,4 +1393,18 @@ bool SymHeapProcessor::exec(TState &dst, const CodeStorage::Insn &insn,
             TRAP;
             return false;
     }
+
+    dst.insert(heap_);
+    return true;
+}
+
+bool SymHeapProcessor::exec(TState &dst, const CodeStorage::Insn &insn,
+                            bool fastMode)
+{
+    lw_ = &insn.loc;
+    if (this->concretizeIfNeeded(dst, insn))
+        // concretization loop done
+        return true;
+
+    return this->execCore(dst, insn, fastMode);
 }

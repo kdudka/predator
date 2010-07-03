@@ -242,7 +242,7 @@ bool SymHeapPlotter::Private::digFieldName(std::string &dst, TObjId obj) {
 
 void SymHeapPlotter::Private::plotNodeObj(TObjId obj, enum cl_type_e code) {
     this->dotStream << "\t" << SL_QUOTE(obj);
-    bool abstract = this->heap->objIsAbstract(obj);
+    bool abstract = (OK_CONCRETE != this->heap->objKind(obj));
     if(abstract)
         this->dotStream << " [shape=box, style=dashed, color=" << colorByCode(code);
     else
@@ -261,10 +261,8 @@ void SymHeapPlotter::Private::plotNodeObj(TObjId obj, enum cl_type_e code) {
         // colorize on-stack object
         this->dotStream << ", fontcolor=blue";
 
-    if(abstract) {
-        const char *prefix = (this->heap->slsGetLength(obj)==PE) ? "PE" : "NE";
-        this->dotStream << ", label=\"ls[" << prefix << "] #";
-    }
+    if(abstract)
+        this->dotStream << ", label=\"ls[] #";
     else
         this->dotStream << ", label=\"[" << prefixByCode(code) << "] #";
 
@@ -409,11 +407,6 @@ unhandled_pred:
     }
 
     const struct cl_type *clt = this->heap->valType(value);
-    if (!clt /* FIXME: suboptimal API */ && this->heap->valIsAbstract(value)) {
-        this->plotNodeValue(value, CL_TYPE_PTR, "a"); // for abstract objects
-        return;
-    }
-
     const enum cl_type_e code = (clt)
         ? clt->code
         : CL_TYPE_UNKNOWN;
@@ -426,14 +419,10 @@ void SymHeapPlotter::Private::plotSingleObj(TObjId obj) {
         TRAP;
 
     const struct cl_type *clt = this->heap->objType(obj);
-    if (clt) {
-        const enum cl_type_e code = clt->code;
-        this->plotNodeObj(obj, code);
-    } else {
-        if(!this->heap->objIsAbstract(obj))
-            TRAP;       // non-abstract object without type-info?
-        this->plotNodeObj(obj, CL_TYPE_PTR);
-    }
+    if (!clt)
+        TRAP;
+
+    this->plotNodeObj(obj, clt->code);
 }
 
 void SymHeapPlotter::Private::plotZeroValue(TObjId obj)
@@ -596,17 +585,6 @@ void SymHeapPlotter::Private::digObj(TObjId obj) {
         todo.pop();
 
         const struct cl_type *clt = this->heap->objType(obj);
-        if (!clt && this->heap->objIsAbstract(obj)) {
-            // TODO: check
-            // copied --- same as pointer
-            this->plotSingleObj(obj);
-            TValueId value;     // listsegment value
-            if (this->resolveValueOf(&value, obj)) {
-                this->gobbleEdgeValueOf(obj, value);
-                this->workList.schedule(value);
-            }
-            continue;
-        }
         if (!clt)
             TRAP;
 

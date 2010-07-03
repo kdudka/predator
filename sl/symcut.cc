@@ -93,19 +93,8 @@ void digSubObjs(DeepCopyData &dc, TObjId objSrc, TObjId objDst)
         boost::tie(objSrc, objDst) = todo.top();
         todo.pop();
 
-        // special quirk for SLSs
         const struct cl_type *cltSrc = src.objType(objSrc);
-        const struct cl_type *cltDst = dst.objType(objDst);
-        if (!cltSrc && src.objIsAbstract(objSrc)) {
-            if (cltDst || !dst.objIsAbstract(objDst))
-                // SLS cloning problem
-                TRAP;
-
-            cltSrc = /* FIXME: suboptimal API */ src.slsType(objSrc);
-            cltDst = /* FIXME: suboptimal API */ dst.slsType(objDst);
-        }
-
-        if (cltSrc != cltDst)
+        if (dst.objType(objDst) != cltSrc)
             // type mismatch
             TRAP;
 
@@ -156,37 +145,40 @@ TObjId addObjectIfNeeded(DeepCopyData &dc, TObjId objSrc) {
 
     SymHeap &dst = dc.dst;
     const struct cl_type *clt = src.objType(rootSrc);
-
-    // special quirk for SLSs
-    if (!clt && src.objIsAbstract(rootSrc)) {
-        clt = /* FIXME: suboptimal API */ src.slsType(rootSrc);
-        const int nextId = src.slsGetNextId(rootSrc);
-        const TAbstractLen len = src.slsGetLength(rootSrc);
-        const TObjId slsObjDst = dst.slsCreate(clt, nextId, len);
-        if (slsObjDst <= 0)
+    if (!clt) {
+        // assume anonymous object of known size
+        if (src.objType(objSrc))
             TRAP;
 
-        add(dc, rootSrc, slsObjDst);
-        // FIXME: sub-objects of SLS are not supported at all??
-        //digSubObjs(dc, rootSrc, slsObjDst);
-        return dc.objMap[objSrc];
+        const int cbSize = src.objSizeOfAnon(objSrc);
+        const TObjId objDst = dst.objCreateAnon(cbSize);
+        add(dc, objSrc, objDst);
+        return objDst;
     }
 
-    if (clt) {
-        const TObjId rootDst = dst.objCreate(clt, cv);
-        add(dc, rootSrc, rootDst);
-        digSubObjs(dc, rootSrc, rootDst);
-        return dc.objMap[objSrc];
+    const TObjId rootDst = dst.objCreate(clt, cv);
+    add(dc, rootSrc, rootDst);
+    digSubObjs(dc, rootSrc, rootDst);
+
+    const EObjKind kind = src.objKind(rootSrc);
+    switch (kind) {
+        case OK_DLS:
+            // not tested yet
+            TRAP;
+
+        case OK_SLS: {
+            const TFieldIdxChain icBind = src.objBinderField(rootSrc);
+            const TFieldIdxChain icPeer = src.objPeerField(rootSrc);
+            dst.objAbstract(rootDst, kind, icBind, icPeer);
+        }
+        // fall through!
+
+        case OK_CONCRETE:
+            return dc.objMap[objSrc];
     }
 
-    // assume anonymous object of known size
-    if (src.objType(objSrc))
-        TRAP;
-
-    const int cbSize = src.objSizeOfAnon(objSrc);
-    const TObjId objDst = dst.objCreateAnon(cbSize);
-    add(dc, objSrc, objDst);
-    return objDst;
+    TRAP;
+    return OBJ_INVALID;
 }
 
 TValueId handleValue(DeepCopyData &dc, TValueId valSrc) {
