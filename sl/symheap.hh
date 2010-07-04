@@ -526,7 +526,7 @@ enum EObjKind {
 
 typedef std::vector<int /* nth */> TFieldIdxChain;
 
-TObjId subObjByChain(SymHeap1 &sh, TObjId obj, TFieldIdxChain ic);
+TObjId subObjByChain(const SymHeap1 &sh, TObjId obj, TFieldIdxChain ic);
 
 class SymHeapEx: public SymHeap1 {
     public:

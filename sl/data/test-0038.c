@@ -39,9 +39,9 @@ int main()
     ___sl_plot("test38-01");    // print empty list state
 
     int i;
-    for(i=0; i<100; i++) 
+    for(i=0; i<100; i++)
         append_item(&list);
-    
+
     ___sl_plot("test38-02");
     {
         // delete first

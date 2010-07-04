@@ -106,6 +106,8 @@ struct SymHeapPlotter::Private {
     typedef std::pair<TValueId, TValueId> TEdgeNeq;
     std::set<TEdgeNeq>                  neqSet;
 
+    std::set<TObjId>                    binders;
+
     bool openDotFile(const std::string &name);
     void closeDotFile();
 
@@ -126,6 +128,8 @@ struct SymHeapPlotter::Private {
     void plotSingleValue(TValueId value);
     void plotSingleObj(TObjId obj);
     void plotZeroValue(TObjId obj);
+    void digBinder(TObjId obj);
+    void openCluster(TObjId obj);
 
     bool handleCustomValue(TValueId value);
     bool handleUnknownValue(TValueId value);
@@ -242,11 +246,12 @@ bool SymHeapPlotter::Private::digFieldName(std::string &dst, TObjId obj) {
 
 void SymHeapPlotter::Private::plotNodeObj(TObjId obj, enum cl_type_e code) {
     this->dotStream << "\t" << SL_QUOTE(obj);
-    bool abstract = (OK_CONCRETE != this->heap->objKind(obj));
-    if(abstract)
-        this->dotStream << " [shape=box, style=dashed, color=" << colorByCode(code);
+    this->dotStream << " [shape=box";
+
+    if (hasKey(this->binders, obj))
+        this->dotStream << ", color=red, penwidth=3.0, style=dashed";
     else
-        this->dotStream << " [shape=box" << ", color=" << colorByCode(code);
+        this->dotStream << ", color=" << colorByCode(code);
 
     // dig root object
     TObjId root = obj, next;
@@ -254,17 +259,14 @@ void SymHeapPlotter::Private::plotNodeObj(TObjId obj, enum cl_type_e code) {
         root = next;
 
     if (this->heap->cVar(0, root))
-        // colorize heap (sub)object
-        this->dotStream << ", fontcolor=red";
-
-    else
         // colorize on-stack object
         this->dotStream << ", fontcolor=blue";
 
-    if(abstract)
-        this->dotStream << ", label=\"ls[] #";
     else
-        this->dotStream << ", label=\"[" << prefixByCode(code) << "] #";
+        // colorize heap (sub)object
+        this->dotStream << ", fontcolor=red";
+
+    this->dotStream << ", label=\"[" << prefixByCode(code) << "] #";
 
     CVar cVar;
     if (this->heap->cVar(&cVar, obj)) {
@@ -450,6 +452,57 @@ void SymHeapPlotter::Private::plotZeroValue(TObjId obj)
     }
 }
 
+void SymHeapPlotter::Private::digBinder(TObjId obj) {
+    EObjKind kind = this->heap->objKind(obj);
+    switch (kind) {
+        case OK_CONCRETE:
+            return;
+
+        case OK_SLS:
+        case OK_DLS:
+            break;
+    }
+
+    const TFieldIdxChain icBind = this->heap->objBinderField(obj);
+    const TObjId objBind = subObjByChain(*this->heap, obj, icBind);
+    if (objBind <= 0)
+        TRAP;
+
+    this->binders.insert(objBind);
+}
+
+void SymHeapPlotter::Private::openCluster(TObjId obj) {
+    const char *label, *color, *pw;
+    EObjKind kind = this->heap->objKind(obj);
+    switch (kind) {
+        case OK_CONCRETE:
+            label = "";
+            color = "black";
+            pw = "1.0";
+            break;
+
+        case OK_SLS:
+            label = "SLS";
+            color = "red";
+            pw = "3.0";
+            break;
+
+        case OK_DLS:
+            label = "DLS";
+            color = "yellow";
+            pw = "3.0";
+            break;
+    }
+    this->dotStream
+        << "subgraph \"cluster" << obj << "\" {"    << std::endl
+        << "\tlabel=" << SL_QUOTE(label) << ";"     << std::endl
+        << "\tcolor=" << color << ";"               << std::endl
+        << "\tfontcolor=" << color << ";"           << std::endl
+        << "\tbgcolor=gray98;"                      << std::endl
+        << "\tstyle=dashed;"                        << std::endl
+        << "\tpenwidth=" << pw << ";"               << std::endl;
+}
+
 bool SymHeapPlotter::Private::handleCustomValue(TValueId value) {
     using namespace CodeStorage;
 
@@ -602,13 +655,8 @@ void SymHeapPlotter::Private::digObj(TObjId obj) {
             }
 
             case CL_TYPE_STRUCT:
-                this->dotStream
-                    << "subgraph \"cluster" << obj << "\" {"    << std::endl
-                    << "\tlabel=" << SL_QUOTE("") << ";"        << std::endl
-                    << "\tcolor=black;"                         << std::endl
-                    << "\tbgcolor=gray98;"                      << std::endl
-                    << "\tstyle=dashed;"                        << std::endl;
-
+                this->digBinder(obj);
+                this->openCluster(obj);
                 this->plotSingleObj(obj);
                 for (int i = 0; i < clt->item_cnt; ++i) {
                     const TObjId sub = this->heap->subObj(obj, i);

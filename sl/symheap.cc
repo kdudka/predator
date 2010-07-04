@@ -1150,7 +1150,7 @@ TObjId SymHeap1::objParent(TObjId obj) const {
     return d->objects[obj].parent;
 }
 
-TObjId subObjByChain(SymHeap1 &sh, TObjId obj, TFieldIdxChain ic) {
+TObjId subObjByChain(const SymHeap1 &sh, TObjId obj, TFieldIdxChain ic) {
     BOOST_FOREACH(const int nth, ic) {
         obj = sh.subObj(obj, nth);
         if (OBJ_INVALID == obj)
