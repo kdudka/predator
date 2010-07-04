@@ -804,6 +804,7 @@ struct SymHeap1::Private {
 
     std::vector<Object>             objects;
     std::vector<Value>              values;
+    TContObj                        roots;
 };
 
 void SymHeap1::resizeIfNeeded() {
@@ -1115,6 +1116,10 @@ void SymHeap1::gatherCVars(TContCVar &dst) const {
     d->cVarMap.getAll(dst);
 }
 
+void SymHeap1::gatherRootObjs(TContObj &dst) const {
+    dst = d->roots;
+}
+
 TObjId SymHeap1::valGetCompositeObj(TValueId val) const {
     if (this->lastValueId() < val || val <= 0)
         // value ID is either out of range, or does not point a valid obj
@@ -1287,8 +1292,11 @@ TObjId SymHeap1::objCreate(const struct cl_type *clt, CVar cVar) {
     Private::Object &ref = d->objects[obj];
     ref.clt     = clt;
     ref.cVar    = cVar;
-    if(clt)
+    if(clt) {
         this->createSubs(obj);
+        if (CL_TYPE_STRUCT == clt->code)
+            d->roots.push_back(obj);
+    }
 
     if (/* heap object */ -1 != cVar.uid)
         d->cVarMap.insert(cVar, obj);

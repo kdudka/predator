@@ -399,6 +399,15 @@ class SymHeap1: public SymHeapCore {
          */
         void gatherCVars(TContCVar &dst) const;
 
+        /**
+         * collect all (either static/automatic) or dynamic @b root objects.
+         * Here @b root means that the object contains some sub-objects, but is
+         * @b not part of another object
+         * @param dst reference to a container to store the result to
+         * @note The operation may return from 0 to n results.
+         */
+        void gatherRootObjs(TContObj &dst) const;
+
     public:
         /**
          * check if the given value represents a @b composite @b object, return

@@ -28,6 +28,8 @@
 
 #include <stack>
 
+#include <boost/foreach.hpp>
+
 typedef std::pair<TObjId, TObjId> TObjPair;
 
 // helper template for traverseSubObjs()
@@ -272,27 +274,25 @@ void abstract(SymHeapEx &sh, TObjId obj) {
 } // namespace
 
 void abstractIfNeeded(SymHeap &sh) {
-    // FIXME: brute force method
-    // TODO: start from cVars instead
-    int i;
-    for(i=0; i<=sh.lastObjId(); ++i) {
-        TObjId o = static_cast<TObjId>(i);
-        TValueId addr = sh.placedAt(o);
-        if(addr==VAL_INVALID)
-            continue;   // no address value => invalid object id
+    SymHeapCore::TContObj roots;
+    sh.gatherRootObjs(roots);
+    BOOST_FOREACH(const TObjId obj, roots) {
+        const TValueId addr = sh.placedAt(obj);
+        const unsigned uses = sh.usedByCount(addr);
+        switch (uses) {
+            case 0:
+                CL_WARN("abstractIfNeeded() encountered an unused root boject #"
+                        << obj);
+                // fall through!
 
-        const struct cl_type *clt = sh.objType(o);
-        if(!clt)
-            continue;   // anonymous object of known size
+            default:
+                continue;
 
-        if(clt->code != CL_TYPE_STRUCT)
-            continue;   // we can abstract structs only
-
-        if(sh.usedByCount(addr)==1)
-            // a candidate for abstraction
-            abstract(sh, o);
-
-    } // for each object-id
+            case 1:
+                // a candidate for abstraction
+                abstract(sh, obj);
+        }
+    }
 }
 
 void concretizeObj(SymHeap &sh, TObjId ao, TSymHeapList &todo) {
