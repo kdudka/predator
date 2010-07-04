@@ -227,6 +227,13 @@ class ProbeVisitor {
             return /* continue */ true;
 
         const TObjId target = sh.pointsTo(valNext);
+        const TValueId targetAddr = sh.placedAt(target);
+        if (targetAddr <= 0)
+            TRAP;
+
+        if (1 != sh.usedByCount(targetAddr))
+            return /* continue */ true;
+
         return doesAnyonePointToInside(sh, target);
     }
 };
@@ -284,21 +291,66 @@ void digAnyListSelectors(TDst &dst, const SymHeap &sh, TObjId obj)
     }
 }
 
+unsigned /* len */ discoverSls(const SymHeap &sh, TObjId obj,
+                               TFieldIdxChain icNext)
+{
+    ProbeVisitor visitor(sh, obj);
+
+    // we use std::set to avoid an infinite loop
+    std::set<TObjId> path;
+    while (!hasKey(path, obj)) {
+        path.insert(obj);
+
+        const TObjId objNext = subObjByChain(sh, obj, icNext);
+        if (!visitor(sh, objNext))
+            // so far no problem encountered, move one step further
+            obj = objNext;
+    }
+
+    return path.size() - 1;
+}
+
 void abstract(SymHeap &sh, TObjId obj) {
 #if !SE_DISABLE_ABSTRACT
     if (!probe(sh, obj))
 #endif
         return;
+    CL_DEBUG("abstract: initial probe was successful...");
 
-    CL_DEBUG("abstract: initial probe was successful, now "
-            "digging selectors...");
-
+    // gather suitable selectors
     std::vector<TFieldIdxChain> selectors;
     digAnyListSelectors(selectors, sh, obj);
     const unsigned cnt = selectors.size();
     CL_DEBUG("abstract: found " << cnt << " list selector candidate(s)");
     if (!cnt)
         TRAP;
+
+    // choose the best selectors for SLS/DLS
+    unsigned idxBest;
+    unsigned slsBestLenght = 0;
+    for (unsigned i = 0; i < cnt; ++i) {
+        CL_DEBUG("abstract: calling discoverSls() on selector "
+                << (i + 1) << "/" << cnt);
+
+        const unsigned len = discoverSls(sh, obj, selectors[i]);
+        // TODO: look for DLS at this point
+        if (!len)
+            continue;
+
+        CL_DEBUG("abstract: found SLS of length " << len);
+        if (slsBestLenght < len) {
+            slsBestLenght = len;
+            idxBest = i;
+        }
+    }
+
+    // TODO: handle a threshold here
+    if (!slsBestLenght) {
+        CL_DEBUG("abstract: no list segment found, bailing out");
+        return;
+    }
+
+    const TFieldIdxChain &icNext = selectors[idxBest];
 
     // a temporary solution preventing as from an infinite loop
     std::set<TObjId> done;
