@@ -29,6 +29,7 @@
 #include <stack>
 
 #include <boost/foreach.hpp>
+#include <boost/tuple/tuple.hpp>
 
 typedef std::pair<TObjId, TObjId> TObjPair;
 
@@ -217,7 +218,7 @@ class ProbeVisitor {
                 TRAP;
         }
 
-    bool operator()(SymHeap &sh, TObjId obj) const {
+    bool operator()(const SymHeap &sh, TObjId obj) const {
         const TValueId valNext = sh.valueOf(obj);
         if (valNext <= 0 || sh.valType(valNext) != clt_)
             return /* continue */ true;
@@ -238,6 +239,51 @@ bool probe(SymHeap &sh, TObjId obj) {
     return !traverseSubObjs(sh, obj, visitor);
 }
 
+// TODO: hook this somehow on the existing visitor infrastructure in order
+//       to avoid code duplicity ... challenge? ;-)
+// NOTE: we have basically the same code in SymHeapPlotter::Private::digObj()
+template <class TDst>
+void digAnyListSelectors(TDst &dst, const SymHeap &sh, TObjId obj)
+{
+    const ProbeVisitor visitor(sh, obj);
+    TFieldIdxChain ic;
+
+    typedef boost::tuple<TObjId, int /* nth */, bool /* last */> TStackItem;
+    std::stack<TStackItem> todo;
+    todo.push(TStackItem(obj, -1, false));
+    while (!todo.empty()) {
+        bool last;
+        int nth;
+        boost::tie(obj, nth, last) = todo.top();
+        todo.pop();
+
+        const struct cl_type *clt = sh.objType(obj);
+        if (clt && clt->code == CL_TYPE_STRUCT) {
+            if (-1 != nth)
+                // nest into structure
+                ic.push_back(nth);
+
+            for (int i = 0; i < clt->item_cnt; ++i) {
+                const TObjId sub = sh.subObj(obj, i);
+                if (!visitor(sh, sub)) {
+                    // great, we have a candidate
+                    ic.push_back(i);
+                    dst.push_back(ic);
+                    ic.pop_back();
+                }
+
+                const struct cl_type *subClt = sh.objType(sub);
+                if (subClt && subClt->code == CL_TYPE_STRUCT)
+                    todo.push(TStackItem(sub, i, /* last */ (0 == i)));
+            }
+        }
+
+        if (last)
+            // leave the structure
+            ic.pop_back();
+    }
+}
+
 void abstract(SymHeap &sh, TObjId obj) {
 #if !SE_DISABLE_ABSTRACT
     if (!probe(sh, obj))
@@ -246,6 +292,13 @@ void abstract(SymHeap &sh, TObjId obj) {
 
     CL_DEBUG("abstract: initial probe was successful, now "
             "digging selectors...");
+
+    std::vector<TFieldIdxChain> selectors;
+    digAnyListSelectors(selectors, sh, obj);
+    const unsigned cnt = selectors.size();
+    CL_DEBUG("abstract: found " << cnt << " list selector candidate(s)");
+    if (!cnt)
+        TRAP;
 
     // a temporary solution preventing as from an infinite loop
     std::set<TObjId> done;
