@@ -476,7 +476,7 @@ void SymHeapCore::valReplace(TValueId _val, TValueId _newval) {
     // FIXME: solve possible problem with EQ/NEQ database records?
     //        old: any RELOP _val --> new: any !RELOP _newval ?
     // how about (in-place) change from struct to abstract segment?
-    d->neqDb.del(_val, _newval);
+    this->delNeq(_val, _newval);
 }
 
 void SymHeapCore::valReplaceUnknown(TValueId val, TValueId replaceBy) {
@@ -535,6 +535,10 @@ void SymHeapCore::valReplaceUnknown(TValueId val, TValueId replaceBy) {
 
 void SymHeapCore::addNeq(TValueId valA, TValueId valB) {
     d->neqDb.add(valA, valB);
+}
+
+void SymHeapCore::delNeq(TValueId valA, TValueId valB) {
+    d->neqDb.del(valA, valB);
 }
 
 void SymHeapCore::addEqIf(TValueId valCond, TValueId valA, TValueId valB,
@@ -1001,6 +1005,9 @@ TObjId SymHeap1::objDup(TObjId obj) {
         // copy the metadata
         d->objects[dst] = d->objects[src];
         d->objects[dst].parent = item.dstParent;
+
+        // initialize clt of its address
+        this->initValClt(dst);
 
         // update the reference to self in the parent object
         if (OBJ_INVALID != item.dstParent) {
@@ -1543,6 +1550,12 @@ void SymHeapEx::objConcretize(TObjId obj) {
 
     // just remove the object ID from the map
     d->objMap.erase(iter);
+
+    // we have just concretized an object, the pointing value can't be NULL by
+    // definition --> let's remove the Neq(addr, NULL) if such a predicate
+    // exists
+    const TValueId addr = this->placedAt(obj);
+    this->delNeq(VAL_NULL, addr);
 }
 
 bool doesAnyonePointToInside(const SymHeap1 &sh, TObjId obj) {
