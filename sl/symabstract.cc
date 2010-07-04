@@ -37,17 +37,17 @@ template <class TItem> struct TraverseSubObjsHelper { };
 
 // specialisation for TObjId, which means basic implementation of the traversal
 template <> struct TraverseSubObjsHelper<TObjId> {
-    static const struct cl_type* getItemClt(const SymHeap1 &sh, TObjId obj) {
+    static const struct cl_type* getItemClt(const SymHeap &sh, TObjId obj) {
         return sh.objType(obj);
     }
-    static TObjId getNextItem(const SymHeap1 &sh, TObjId obj, int nth) {
+    static TObjId getNextItem(const SymHeap &sh, TObjId obj, int nth) {
         return sh.subObj(obj, nth);
     }
 };
 
 // specialisation suitable for traversing two composite objects simultaneously
 template <> struct TraverseSubObjsHelper<TObjPair> {
-    static const struct cl_type* getItemClt(const SymHeap1 &sh, TObjPair item) {
+    static const struct cl_type* getItemClt(const SymHeap &sh, TObjPair item) {
         const struct cl_type *clt1 = sh.objType(item.first);
         const struct cl_type *clt2 = sh.objType(item.second);
         if (clt1 != clt2)
@@ -55,7 +55,7 @@ template <> struct TraverseSubObjsHelper<TObjPair> {
 
         return clt1;
     }
-    static TObjPair getNextItem(const SymHeap1 &sh, TObjPair item, int nth) {
+    static TObjPair getNextItem(const SymHeap &sh, TObjPair item, int nth) {
         item.first  = sh.subObj(item.first,  nth);
         item.second = sh.subObj(item.second, nth);
         return item;
@@ -93,16 +93,16 @@ bool /* complete */ traverseSubObjs(THeap &sh, TItem item, TVisitor visitor) {
 
 namespace {
 
-bool doesAnyonePointToInsideVisitor(const SymHeap1 &sh, TObjId sub) {
+bool doesAnyonePointToInsideVisitor(const SymHeap &sh, TObjId sub) {
     const TValueId subAddr = sh.placedAt(sub);
     return /* continue */ !sh.usedByCount(subAddr);
 }
 
-bool doesAnyonePointToInside(const SymHeap1 &sh, TObjId obj) {
+bool doesAnyonePointToInside(const SymHeap &sh, TObjId obj) {
     return !traverseSubObjs(sh, obj, doesAnyonePointToInsideVisitor);
 }
 
-bool abstractNonMatchingValuesVisitor(SymHeap1 &sh, TObjPair item) {
+bool abstractNonMatchingValuesVisitor(SymHeap &sh, TObjPair item) {
     const TObjId dst = item.second;
     const TValueId valSrc = sh.valueOf(item.first);
     const TValueId valDst = sh.valueOf(dst);
@@ -127,7 +127,7 @@ bool abstractNonMatchingValuesVisitor(SymHeap1 &sh, TObjPair item) {
 }
 
 // when abstracting an object, we need to abstract all non-matching values in
-void abstractNonMatchingValues(SymHeapEx &sh, TObjId src, TObjId dst) {
+void abstractNonMatchingValues(SymHeap &sh, TObjId src, TObjId dst) {
     if (OK_CONCRETE == sh.objKind(dst))
         // invalid call of abstractNonMatchingValues()
         TRAP;
@@ -146,7 +146,7 @@ void abstractNonMatchingValues(SymHeapEx &sh, TObjId src, TObjId dst) {
     sh.objSetValue(objBind, valBind);
 }
 
-void objReplace(SymHeap1 &sh, TObjId oldObj, TObjId newObj) {
+void objReplace(SymHeap &sh, TObjId oldObj, TObjId newObj) {
     if (OBJ_INVALID != sh.objParent(oldObj)
             || OBJ_INVALID != sh.objParent(newObj))
         // attempt to replace a sub-object
@@ -165,7 +165,7 @@ void objReplace(SymHeap1 &sh, TObjId oldObj, TObjId newObj) {
     sh.objDestroy(oldObj);
 }
 
-EObjKind discover(const SymHeapEx &sh, TObjId obj, TFieldIdxChain &icBind,
+EObjKind discover(const SymHeap &sh, TObjId obj, TFieldIdxChain &icBind,
                   TFieldIdxChain &icPeer)
 {
     const struct cl_type *clt = sh.objType(obj);
@@ -204,7 +204,7 @@ EObjKind discover(const SymHeapEx &sh, TObjId obj, TFieldIdxChain &icBind,
     return OK_SLS;
 }
 
-void abstract(SymHeapEx &sh, TObjId obj) {
+void abstract(SymHeap &sh, TObjId obj) {
 #if SE_DISABLE_ABSTRACT
     return;
 #endif

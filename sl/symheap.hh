@@ -23,7 +23,7 @@
 
 /**
  * @file symheap.hh
- * SymHeap1 - @b symbolic @b heap representation, the core part of "symexec"
+ * SymHeapTyped - @b symbolic @b heap representation, the core part of "symexec"
  * code listener
  */
 
@@ -77,7 +77,8 @@ class SymHeapCore {
         /// @note there is no such thing like COW implemented for now
         SymHeapCore& operator=(const SymHeapCore &);
 
-        // TODO: explicit Clone operation, use shared_ptr for Privete implementation
+        // TODO: explicit Clone operation, use shared_ptr for Privete
+        // implementation
 
     public:
         /// container used to store object IDs to
@@ -317,19 +318,19 @@ inline bool operator<(const CVar &a, const CVar &b) {
 /**
  * @b symbolic @b heap representation, the core part of "symexec" project
  */
-class SymHeap1: public SymHeapCore {
+class SymHeapTyped: public SymHeapCore {
     public:
         /// create an empty symbolic heap
-        SymHeap1();
+        SymHeapTyped();
 
         /// destruction of the symbolic heap invalidates all IDs of its entities
-        virtual ~SymHeap1();
+        virtual ~SymHeapTyped();
 
         /// @note there is no such thing like COW implemented for now
-        SymHeap1(const SymHeap1 &);
+        SymHeapTyped(const SymHeapTyped &);
 
         /// @note there is no such thing like COW implemented for now
-        SymHeap1& operator=(const SymHeap1 &);
+        SymHeapTyped& operator=(const SymHeapTyped &);
 
 #if SE_STATE_HASH_OPTIMIZATION
         virtual size_t hash() const;
@@ -539,21 +540,21 @@ enum EObjKind {
 
 typedef std::vector<int /* nth */> TFieldIdxChain;
 
-TObjId subObjByChain(const SymHeap1 &sh, TObjId obj, TFieldIdxChain ic);
+TObjId subObjByChain(const SymHeapTyped &sh, TObjId obj, TFieldIdxChain ic);
 
-class SymHeapEx: public SymHeap1 {
+class SymHeap: public SymHeapTyped {
     public:
         /// create an empty symbolic heap
-        SymHeapEx();
+        SymHeap();
 
         /// destruction of the symbolic heap invalidates all IDs of its entities
-        virtual ~SymHeapEx();
+        virtual ~SymHeap();
 
         /// @note there is no such thing like COW implemented for now
-        SymHeapEx(const SymHeapEx &);
+        SymHeap(const SymHeap &);
 
         /// @note there is no such thing like COW implemented for now
-        SymHeapEx& operator=(const SymHeapEx &);
+        SymHeap& operator=(const SymHeap &);
 
     public:
         virtual TObjId objDup(TObjId obj);
@@ -611,98 +612,4 @@ class SymHeapEx: public SymHeap1 {
         Private *d;
 };
 
-/**
- * symbolic heap representation with singly linked list segments - facade
- * this is test prototype
- * TODO: DLS - doubly linked lists
- * TODO: merge all into SymHeap1
- */
-class SymHeap2: public SymHeap1 {
-    public:
-        /// create an empty symbolic heap
-        SymHeap2();
-
-        /// destruction of the symbolic heap invalidates all IDs of its entities
-        virtual ~SymHeap2();
-
-        /// @note there is no such thing like COW implemented for now
-        SymHeap2(const SymHeap2 &);
-
-        /// @note there is no such thing like COW implemented for now
-        SymHeap2& operator=(const SymHeap2 &);
-
-  public: // methods
-        /// get kind of object
-        TObjKind objKind(TObjId obj) const; // TODO: move to base class?
-
-        /// test if object is abstract segment
-        bool objIsAbstract(TObjId obj) const;
-
-        /// check if value is abstract (points to abstract object)
-        bool valIsAbstract(TValueId val) const {
-            return (val > 0) && 
-                   (pointsTo(val) != OBJ_UNKNOWN) && objIsAbstract(pointsTo(val));
-        }
-
-        /// get identification of next pointer in structure
-        int slsGetNextId(TObjId obj) const;
-
-        // get type of SLS structure
-        //inherited const struct cl_type* objType(TObjId obj) const;
-        // TODO: encapsulate kind and type into a pair? add operator== etc
-
-        /// returns id of prototype object (lambda representation)  TODO: can be undefined?
-        TObjId slsGetLambdaId(TObjId obj) const;
-
-        /// sets id of prototype object (lambda representation)  TODO: can be undefined?
-        void slsSetLambdaId(TObjId obj, TObjId lambda);
-
-        /// get abstract segment length (TODO: rename, make universal for sls/dls/arrs)
-        TAbstractLen slsGetLength(TObjId obj) const;
-        void slsSetLength(TObjId obj, TAbstractLen lambda);
-
-        const struct cl_type * slsType(TObjId obj) const;
-
-        /// concretize - empty variant
-        void Concretize_E(TObjId abstract_object);
-        /// concretize - nonempty variant
-        TObjId Concretize_NE(TObjId abstract_object);
-
-        /// abstract two objects connected by given value if possible
-        void Abstract(TValueId ptrValue);
-
-    private:
-        /// create sls, needs to set value and lambda later
-        TObjId slsCreate(const struct cl_type *clt, int nextid, TAbstractLen alen);
-        friend TObjId addObjectIfNeeded(DeepCopyData &dc, TObjId objSrc);
-
-        /// clone sls
-        TObjId slsClone(TObjId ls);
-
-        /// delete sls
-        void slsDestroy(TObjId id);
-
-        // local private implementation
-        struct Private;
-        Private *d;
-};
-
-/// concretize abstract object pointed by given value, add empty variant to todo-list
-void Concretize(SymHeap &sh, TObjId &o, std::list<SymHeap> &todo);
-
-/// search te heap and abstract all objects possible
-void Abstract(SymHeap &sh);
-
-// choose implementation
-#if 0
-    struct SymHeap : public SymHeap1 {};
-//#else
-    // with segment abstractions
-    struct SymHeap : public SymHeap2 {};
-#else
-    struct SymHeap : public SymHeapEx {};
-#endif
-
 #endif /* H_GUARD_SYM_HEAP_H */
-
-// vim: tw=80
