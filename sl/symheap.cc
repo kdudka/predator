@@ -1694,14 +1694,19 @@ void abstract(SymHeapEx &sh, TObjId obj) {
             // somone points to a field of the target object, giving up...
             return;
 
-        if (OK_CONCRETE == sh.objKind(objNext))
+        if (OK_CONCRETE == sh.objKind(objNext)) {
             // abstract the _next_ object
             sh.objAbstract(objNext, kind, icBind, icPeer);
 
-        // we're constructing the abstract object from a concrete one --> it
-        // implies non-empty LS at this point
-        const TValueId addr = sh.placedAt(obj);
-        sh.addNeq(addr, valNext);
+            // we're constructing the abstract object from a concrete one --> it
+            // implies non-empty LS at this point
+            const TValueId addrNext = sh.placedAt(objNext);
+            const TObjId objNextNextPtr = subObjByChain(sh, objNext, icBind);
+            const TValueId valNextNext = sh.valueOf(objNextNextPtr);
+            if (addrNext <= 0 || valNextNext < /* we allow NULL here */ 0)
+                TRAP;
+            sh.addNeq(addrNext, valNextNext);
+        }
 
         if (OK_SLS != sh.objKind(objNext))
             TRAP;
