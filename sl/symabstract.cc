@@ -33,10 +33,8 @@
 
 /// abstraction trigger threshold for SLS
 static const unsigned SLS_LEN_THRESHOLD = 1;
-#if 0
 static const unsigned SLS_SPARE_PREFIX  = 0;
 static const unsigned SLS_SPARE_SUFFIX  = 0;
-#endif
 
 typedef std::pair<TObjId, TObjId> TObjPair;
 
@@ -173,45 +171,6 @@ void objReplace(SymHeap &sh, TObjId oldObj, TObjId newObj) {
     sh.objDestroy(oldObj);
 }
 
-EObjKind discover(const SymHeap &sh, TObjId obj, TFieldIdxChain &icBind,
-                  TFieldIdxChain &icPeer)
-{
-    const struct cl_type *clt = sh.objType(obj);
-    if (CL_TYPE_STRUCT != clt->code)
-        TRAP;
-
-    // TODO: search recursively
-    int nth = -1;
-    for (int i = 0; i < clt->item_cnt; ++i) {
-        const TObjId objPtrNext = sh.subObj(obj, i);
-        const TValueId valNext = sh.valueOf(objPtrNext);
-        if (valNext <= 0)
-            continue;
-
-        if (sh.valType(valNext) != clt)
-            continue;
-
-        if (UV_KNOWN != sh.valGetUnknown(valNext))
-            continue;
-
-        if (-1 == nth)
-            nth = i;
-        else
-            CL_DEBUG("discover() is taking first selector of suitable type as "
-                    "'next', but there are more of such candidates!");
-    }
-
-    if (-1 == nth)
-        // no match
-        return OK_CONCRETE;
-
-    icBind.push_back(nth);
-
-    // TODO: DLS
-    (void) icPeer;
-    return OK_SLS;
-}
-
 class ProbeVisitor {
     private:
         TValueId                addr_;
@@ -317,6 +276,17 @@ unsigned /* len */ discoverSls(const SymHeap &sh, TObjId obj,
     return path.size() - 1;
 }
 
+void skipObj(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext) {
+    const TObjId objPtrNext = subObjByChain(sh, *pObj, icNext);
+    const TValueId valNext = sh.valueOf(objPtrNext);
+    const TObjId objNext = sh.pointsTo(valNext);
+    if (OBJ_INVALID == objNext)
+        TRAP;
+
+    // move to the next object
+    *pObj = objNext;
+}
+
 void conjureSls(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext) {
     const TObjId objPtrNext = subObjByChain(sh, *pObj, icNext);
     const TValueId valNext = sh.valueOf(objPtrNext);
@@ -384,21 +354,32 @@ void abstract(SymHeap &sh, TObjId obj) {
         }
     }
 
+    // did we find at least something?
     if (!slsBestLenght) {
         CL_DEBUG("abstract: no list segment found, bailing out");
         return;
     }
 
-    if (slsBestLenght < SLS_LEN_THRESHOLD) {
-        CL_DEBUG("abstract: maximal SLS length (" << slsBestLenght
-                << ") is smaller than SLS_LEN_THRESHOLD ("
-                << SLS_LEN_THRESHOLD << "), bailing out");
+    // yes, we did ... check the threshold
+    static const unsigned threshold = SLS_LEN_THRESHOLD
+        + SLS_SPARE_PREFIX
+        + SLS_SPARE_SUFFIX;
+    if (slsBestLenght < threshold) {
+        CL_DEBUG("abstract: the best SLS length (" << slsBestLenght
+                << ") is under threshold (" << threshold << "), bailing out");
         return;
     }
 
+    // all OK
     const TFieldIdxChain &icNext = selectors[idxBest];
-    // TODO: handle SLS_SPARE_???FIX at this point
-    for (unsigned i = 0; i < slsBestLenght; ++i)
+
+    // handle SLS_SPARE_PREFIX/SLS_SPARE_SUFFIX
+    const int len = slsBestLenght - SLS_SPARE_PREFIX - SLS_SPARE_SUFFIX;
+    for (int i = 0; i < static_cast<int>(SLS_SPARE_PREFIX); ++i)
+        skipObj(sh, &obj, icNext);
+
+    // now create the SLS as requested
+    for (int i = 0; i < len; ++i)
         conjureSls(sh, &obj, icNext);
 }
 
