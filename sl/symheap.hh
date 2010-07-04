@@ -591,7 +591,7 @@ class SymHeap: public SymHeapTyped {
          * object.
          */
         void objAbstract(TObjId obj, EObjKind kind, TFieldIdxChain bidnerField,
-                         TFieldIdxChain /* not used for SLS */ peerField);
+                         TFieldIdxChain peerField = TFieldIdxChain());
 
         /**
          * convert the given @b abstract object to a less abstract object.  If

@@ -31,6 +31,13 @@
 #include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
 
+/// abstraction trigger threshold for SLS
+static const unsigned SLS_LEN_THRESHOLD = 1;
+#if 0
+static const unsigned SLS_SPARE_PREFIX  = 0;
+static const unsigned SLS_SPARE_SUFFIX  = 0;
+#endif
+
 typedef std::pair<TObjId, TObjId> TObjPair;
 
 // helper template for traverseSubObjs()
@@ -310,6 +317,39 @@ unsigned /* len */ discoverSls(const SymHeap &sh, TObjId obj,
     return path.size() - 1;
 }
 
+void conjureSls(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext) {
+    const TObjId objPtrNext = subObjByChain(sh, *pObj, icNext);
+    const TValueId valNext = sh.valueOf(objPtrNext);
+    if (valNext <= 0 || 1 != sh.usedByCount(valNext))
+        // this looks like a failure of discoverSls()
+        TRAP;
+
+    const TObjId objNext = sh.pointsTo(valNext);
+    if (OK_CONCRETE == sh.objKind(objNext)) {
+        // abstract the _next_ object
+        sh.objAbstract(objNext, OK_SLS, icNext);
+
+        // we're constructing the abstract object from a concrete one --> it
+        // implies non-empty LS at this point
+        const TValueId addrNext = sh.placedAt(objNext);
+        const TObjId objNextNextPtr = subObjByChain(sh, objNext, icNext);
+        const TValueId valNextNext = sh.valueOf(objNextNextPtr);
+        if (addrNext <= 0 || valNextNext < /* we allow NULL here */ 0)
+            TRAP;
+        sh.addNeq(addrNext, valNextNext);
+    }
+
+    if (OK_SLS != sh.objKind(objNext))
+        TRAP;
+
+    // replace self by the next object
+    abstractNonMatchingValues(sh, *pObj, objNext);
+    objReplace(sh, *pObj, objNext);
+
+    // move to the next object
+    *pObj = objNext;
+}
+
 void abstract(SymHeap &sh, TObjId obj) {
 #if !SE_DISABLE_ABSTRACT
     if (!probe(sh, obj))
@@ -344,72 +384,22 @@ void abstract(SymHeap &sh, TObjId obj) {
         }
     }
 
-    // TODO: handle a threshold here
     if (!slsBestLenght) {
         CL_DEBUG("abstract: no list segment found, bailing out");
         return;
     }
 
-    const TFieldIdxChain &icNext = selectors[idxBest];
-
-    // a temporary solution preventing as from an infinite loop
-    std::set<TObjId> done;
-    while (!hasKey(done, obj)) {
-        done.insert(obj);
-        if (1 < sh.objAbstractLevel(obj))
-            // not supported for now
-            TRAP;
-
-        TFieldIdxChain icBind;
-        TFieldIdxChain icPeer;
-        const EObjKind kind = discover(sh, obj, icBind, icPeer);
-        if (OK_CONCRETE == kind)
-            return;
-
-        if (OK_SLS != kind)
-            // something more than OK_SLS
-            TRAP;
-
-        const TObjId objPtrNext = subObjByChain(sh, obj, icBind);
-        const TValueId valNext = sh.valueOf(objPtrNext);
-        if (valNext <= 0)
-            // this looks like a failure of discover()
-            TRAP;
-
-        if (1 != sh.usedByCount(valNext))
-            // the next object is pointed, giving up...
-            return;
-
-        // resolve the 'next' ptr
-        const TObjId objNext = sh.pointsTo(valNext);
-        if (doesAnyonePointToInside(sh, objNext))
-            // somone points to a field of the target object, giving up...
-            return;
-
-        if (OK_CONCRETE == sh.objKind(objNext)) {
-            // abstract the _next_ object
-            sh.objAbstract(objNext, kind, icBind, icPeer);
-
-            // we're constructing the abstract object from a concrete one --> it
-            // implies non-empty LS at this point
-            const TValueId addrNext = sh.placedAt(objNext);
-            const TObjId objNextNextPtr = subObjByChain(sh, objNext, icBind);
-            const TValueId valNextNext = sh.valueOf(objNextNextPtr);
-            if (addrNext <= 0 || valNextNext < /* we allow NULL here */ 0)
-                TRAP;
-            sh.addNeq(addrNext, valNextNext);
-        }
-
-        if (OK_SLS != sh.objKind(objNext))
-            TRAP;
-
-        // replace self by the next object
-        abstractNonMatchingValues(sh, obj, objNext);
-        objReplace(sh, obj, objNext);
-
-        // move to the next object
-        obj = objNext;
+    if (slsBestLenght < SLS_LEN_THRESHOLD) {
+        CL_DEBUG("abstract: maximal SLS length (" << slsBestLenght
+                << ") is smaller than SLS_LEN_THRESHOLD ("
+                << SLS_LEN_THRESHOLD << "), bailing out");
+        return;
     }
+
+    const TFieldIdxChain &icNext = selectors[idxBest];
+    // TODO: handle SLS_SPARE_???FIX at this point
+    for (unsigned i = 0; i < slsBestLenght; ++i)
+        conjureSls(sh, &obj, icNext);
 }
 
 } // namespace
