@@ -28,33 +28,120 @@
 
 #include <stack>
 
-namespace {
+typedef std::pair<TObjId, TObjId> TObjPair;
 
-bool doesAnyonePointToInside(const SymHeap1 &sh, TObjId obj) {
-    // traverse the given composite object recursively
-    std::stack<TObjId> todo;
-    todo.push(obj);
+// helper template for traverseSubObjs()
+template <class TItem> struct TraverseSubObjsHelper { };
+
+// specialisation for TObjId, which means basic implementation of the traversal
+template <> struct TraverseSubObjsHelper<TObjId> {
+    static const struct cl_type* getItemClt(const SymHeap1 &sh, TObjId obj) {
+        return sh.objType(obj);
+    }
+    static TObjId getNextItem(const SymHeap1 &sh, TObjId obj, int nth) {
+        return sh.subObj(obj, nth);
+    }
+};
+
+// specialisation suitable for traversing two composite objects simultaneously
+template <> struct TraverseSubObjsHelper<TObjPair> {
+    static const struct cl_type* getItemClt(const SymHeap1 &sh, TObjPair item) {
+        const struct cl_type *clt1 = sh.objType(item.first);
+        const struct cl_type *clt2 = sh.objType(item.second);
+        if (clt1 != clt2)
+            TRAP;
+
+        return clt1;
+    }
+    static TObjPair getNextItem(const SymHeap1 &sh, TObjPair item, int nth) {
+        item.first  = sh.subObj(item.first,  nth);
+        item.second = sh.subObj(item.second, nth);
+        return item;
+    }
+};
+
+// take the given visitor through a composite object (or whatever you pass in)
+template <class THeap, typename TVisitor, class TItem = TObjId>
+bool /* complete */ traverseSubObjs(THeap &sh, TItem item, TVisitor visitor) {
+    std::stack<TItem> todo;
+    todo.push(item);
     while (!todo.empty()) {
-        obj = todo.top();
+        item = todo.top();
         todo.pop();
 
-        const struct cl_type *clt = sh.objType(obj);
+        typedef TraverseSubObjsHelper<TItem> THelper;
+        const struct cl_type *clt = THelper::getItemClt(sh, item);
         if (!clt || clt->code != CL_TYPE_STRUCT)
             TRAP;
 
         for (int i = 0; i < clt->item_cnt; ++i) {
-            const TObjId sub = sh.subObj(obj, i);
-            const TValueId subAddr = sh.placedAt(sub);
-            if (sh.usedByCount(subAddr))
-                return true;
+            const TItem next = THelper::getNextItem(sh, item, i);
+            if (!/* continue */visitor(sh, next))
+                return false;
 
-            const struct cl_type *subClt = sh.objType(sub);
+            const struct cl_type *subClt = THelper::getItemClt(sh, next);
             if (subClt && subClt->code == CL_TYPE_STRUCT)
-                todo.push(sub);
+                todo.push(next);
         }
     }
 
-    return false;
+    // the traversal is done, without any interption by visitor
+    return true;
+}
+
+namespace {
+
+bool doesAnyonePointToInsideVisitor(const SymHeap1 &sh, TObjId sub) {
+    const TValueId subAddr = sh.placedAt(sub);
+    return /* continue */ !sh.usedByCount(subAddr);
+}
+
+bool doesAnyonePointToInside(const SymHeap1 &sh, TObjId obj) {
+    return !traverseSubObjs(sh, obj, doesAnyonePointToInsideVisitor);
+}
+
+bool abstractNonMatchingValuesVisitor(SymHeap1 &sh, TObjPair item) {
+    const TObjId dst = item.second;
+    const TValueId valSrc = sh.valueOf(item.first);
+    const TValueId valDst = sh.valueOf(dst);
+    bool eq;
+    if (sh.proveEq(&eq, valSrc, valDst) && eq)
+        // values are equal
+        return /* continue */ true;
+
+    // attempt to dig some type-info for the new unknown value
+    const struct cl_type *clt = sh.valType(valSrc);
+    const struct cl_type *cltDst = sh.valType(valDst);
+    if (!clt)
+        clt = cltDst;
+    else if (cltDst && cltDst != clt)
+        // should be safe to ignore
+        TRAP;
+
+    // create a new unknown value as placeholder
+    const TValueId valNew = sh.valCreateUnknown(UV_UNKNOWN, clt);
+    sh.objSetValue(dst, valNew);
+    return /* continue */ true;
+}
+
+// when abstracting an object, we need to abstract all non-matching values in
+void abstractNonMatchingValues(SymHeapEx &sh, TObjId src, TObjId dst) {
+    if (OK_CONCRETE == sh.objKind(dst))
+        // invalid call of abstractNonMatchingValues()
+        TRAP;
+
+    // wait, first preserve the value of binder
+    const TObjId objBind = subObjByChain(sh, dst, sh.objBinderField(dst));
+    const TValueId valBind = sh.valueOf(objBind);
+    if (!sh.objPeerField(dst).empty())
+        // TODO: do the same for the 'peer' field, DLS are involved
+        TRAP;
+
+    const TObjPair item(src, dst);
+    traverseSubObjs(sh, item, abstractNonMatchingValuesVisitor);
+
+    // now restore the possibly smashed value of binder
+    sh.objSetValue(objBind, valBind);
 }
 
 void objReplace(SymHeap1 &sh, TObjId oldObj, TObjId newObj) {
@@ -174,6 +261,7 @@ void abstract(SymHeapEx &sh, TObjId obj) {
             TRAP;
 
         // replace self by the next object
+        abstractNonMatchingValues(sh, obj, objNext);
         objReplace(sh, obj, objNext);
 
         // move to the next object

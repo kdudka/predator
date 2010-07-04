@@ -946,15 +946,6 @@ struct Hasher {
         // add the EUnknownValue code into the hash
         const EUnknownValue code = heap.valGetUnknown(value);
         hashVal += (1 << static_cast<int>(code));
-
-#if 0
-        const unsigned cnt = this->usedByCount(value);
-#if SE_STATE_HASH_OPTIMIZATION_DEBUG
-        CL_DEBUG("SymHeap1::hash() - value #" << value
-                << " used " << cnt << " times");
-#endif
-        hashVal += cnt;
-#endif
     }
 };
 
@@ -969,7 +960,7 @@ size_t SymHeap1::hash() const {
 }
 #endif
 
-// FIXME why resize?
+// FIXME: possible creation of a new unknown value on dereference of OBJ_UNKNOWN
 TValueId SymHeap1::valueOf(TObjId obj) const {
     const TValueId val = SymHeapCore::valueOf(obj);
     const_cast<SymHeap1 *>(this)->resizeIfNeeded();
@@ -981,8 +972,8 @@ struct ObjDupStackItem {
     TObjId  dstParent;
     int     nth;
 };
-
 TObjId SymHeap1::objDup(TObjId obj) {
+    CL_DEBUG("SymHeap1::objDup() is taking place...");
     TObjId image = OBJ_INVALID;
 
     ObjDupStackItem item;
@@ -1718,7 +1709,6 @@ void SymHeap2::Concretize_E(TObjId abstract_object)
     // WARNING: resulting value can be abstract, too
 }
 
-#if 0
 /// concretize abstract object pointed by ptr value
 void Concretize(SymHeap &sh, TObjId &ao, std::list<SymHeap> &todo)
 {
@@ -1737,7 +1727,6 @@ void Concretize(SymHeap &sh, TObjId &ao, std::list<SymHeap> &todo)
     // 2. nonempty variant - modify existing heap
     ao = sh.Concretize_NE(ao);
 }
-#endif
 
 /// dig root object
 TObjId objRoot(SymHeap1 &sh, TObjId obj) {
