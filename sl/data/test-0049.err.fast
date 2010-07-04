@@ -2,6 +2,12 @@ test-0049.c:34:20: warning: binary operator not implemented yet
 test-0049.c:34:20: warning: binary operator not implemented yet
 test-0049.c:34:20: warning: binary operator not implemented yet
 test-0049.c:34:20: warning: binary operator not implemented yet
+test-0049.c:34:20: warning: binary operator not implemented yet
+test-0049.c:48:18: warning: killing junk
+test-0049.c:48:18: warning: killing junk
+test-0049.c:48:18: warning: killing junk
+test-0049.c:48:18: warning: killing junk
+test-0049.c:48:18: warning: killing junk
 test-0049.c:48:18: warning: killing junk
 test-0049.c:48:18: warning: killing junk
 test-0049.c:48:18: warning: killing junk

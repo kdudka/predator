@@ -33,7 +33,7 @@
 
 /// abstraction trigger threshold for SLS
 static const unsigned SLS_LEN_THRESHOLD = 1;
-static const unsigned SLS_SPARE_PREFIX  = 0;
+static const unsigned SLS_SPARE_PREFIX  = 1;
 static const unsigned SLS_SPARE_SUFFIX  = 0;
 
 typedef std::pair<TObjId, TObjId> TObjPair;

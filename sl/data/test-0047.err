@@ -16,6 +16,18 @@ test-0047.c:17:35: warning: binary operator not implemented yet
 test-0047.c:17:35: warning: binary operator not implemented yet
 test-0047.c:32:19: warning: binary operator not implemented yet
 test-0047.c:32:19: warning: binary operator not implemented yet
+test-0047.c:17:35: warning: binary operator not implemented yet
+test-0047.c:17:35: warning: binary operator not implemented yet
+test-0047.c:32:19: warning: binary operator not implemented yet
+test-0047.c:32:19: warning: binary operator not implemented yet
+test-0047.c:34:26: warning: killing junk
+test-0047.c:34:26: warning: killing junk
+test-0047.c:34:26: warning: killing junk
+test-0047.c:34:26: warning: killing junk
+test-0047.c:34:26: warning: killing junk
+test-0047.c:34:26: warning: killing junk
+test-0047.c:34:26: warning: killing junk
+test-0047.c:34:26: warning: killing junk
 test-0047.c:34:26: warning: killing junk
 test-0047.c:34:26: warning: killing junk
 test-0047.c:34:26: warning: killing junk
