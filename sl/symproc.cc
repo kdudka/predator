@@ -22,6 +22,7 @@
 
 #include <cl/cl_msg.hh>
 
+#include "symabstract.hh"
 #include "symbt.hh"
 #include "symheap.hh"
 #include "symplot.hh"
@@ -1314,7 +1315,7 @@ void SymHeapProcessor::concretizeLoop(TState                    &dst,
                                       const struct cl_operand   &src)
 {
     // Concretize() loop, you can consider its documentation (if available)
-    std::list<SymHeap> todo;
+    TSymHeapList todo;
     todo.push_back(heap_);
     while (!todo.empty()) {
         SymHeap &sh = todo.front();
@@ -1330,7 +1331,7 @@ void SymHeapProcessor::concretizeLoop(TState                    &dst,
         if (0 < val) {
             /* TODO: const */ TObjId target = sh.pointsTo(val);
             if (OK_CONCRETE != sh.objKind(target))
-                Concretize(sh, target, todo);
+                concretizeObj(sh, target, todo);
         }
 
         // process the current heap and move to the next one (if any)

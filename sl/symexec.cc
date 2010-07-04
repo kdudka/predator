@@ -23,6 +23,7 @@
 #include <cl/cl_msg.hh>
 #include <cl/storage.hh>
 
+#include "symabstract.hh"
 #include "symbt.hh"
 #include "symcall.hh"
 #include "symproc.hh"
@@ -131,13 +132,12 @@ class SymExecEngine {
     private:
         void initEngine(const SymHeap &init);
         void execReturn();
-        void updateState(const CodeStorage::Block *ofBlock, const SymHeap &);
-        void updateState(const CodeStorage::Block *ofBlock);
-        void updateState(const CodeStorage::Block *ofBlock, TValueId valDst,
-                         TValueId valSrc);
+        void updateState(const CodeStorage::Block *ofBlock,
+                         TValueId valDst = VAL_INVALID,
+                         TValueId valSrc = VAL_INVALID);
         void execCondInsn();
         void execTermInsn();
-        bool execInsnLoop();
+        bool execNontermInsn();
         void echoInsn();
         bool execInsn();
         bool execBlock();
@@ -193,15 +193,22 @@ void SymExecEngine::execReturn() {
 }
 
 void SymExecEngine::updateState(const CodeStorage::Block *ofBlock,
-                                const SymHeap &heap)
+                                TValueId valDst, TValueId valSrc)
 {
-    SymHeap h(heap); // clone
-    Abstract(h);
+    // clone the current symbolic heap, as we are going to change it eventually
+    SymHeap sh(localState_[heapIdx_]);
+
+    if (VAL_INVALID != valDst && VAL_INVALID != valSrc)
+        // replace an unknown value while traversing an unambiguous condition
+        sh.valReplaceUnknown(valDst, valSrc);
+
+    // time to consider abstraction
+    abstractIfNeeded(sh);
 
     // update *target* state
     SymHeapUnion &huni = stateMap_[ofBlock];
     const size_t last = huni.size();
-    huni.insert(h);
+    huni.insert(sh);
 
     const std::string &name = ofBlock->name();
 
@@ -222,19 +229,6 @@ void SymExecEngine::updateState(const CodeStorage::Block *ofBlock,
                     ? " changed, but already scheduled"
                     : " scheduled for next wheel"));
     }
-}
-
-void SymExecEngine::updateState(const CodeStorage::Block *ofBlock) {
-    const SymHeap &heap = localState_[heapIdx_];
-    this->updateState(ofBlock, heap);
-}
-
-void SymExecEngine::updateState(const CodeStorage::Block *ofBlock,
-                                TValueId valDst, TValueId valSrc)
-{
-    SymHeap heap(localState_[heapIdx_]);
-    heap.valReplaceUnknown(valDst, valSrc);
-    this->updateState(ofBlock, heap);
 }
 
 void SymExecEngine::execCondInsn() {
@@ -324,7 +318,7 @@ void SymExecEngine::execTermInsn() {
     }
 }
 
-bool /* handled */ SymExecEngine::execInsnLoop() {
+bool /* handled */ SymExecEngine::execNontermInsn() {
     const CodeStorage::Insn *insn = block_->operator[](insnIdx_);
 
     // working area for non-terminal instructions
@@ -647,7 +641,7 @@ bool /* complete */ SymExecEngine::execInsn() {
             continue;
         }
 
-        if (this->execInsnLoop())
+        if (this->execNontermInsn())
             // regular heap instruction
             continue;
 

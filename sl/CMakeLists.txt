@@ -26,6 +26,7 @@ include("../CMakeLists.common")
 # libsl.so
 add_library(sl SHARED
     cl_symexec.cc
+    symabstract.cc
     symbt.cc
     symcall.cc
     symcut.cc
