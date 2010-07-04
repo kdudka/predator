@@ -46,6 +46,11 @@ extern const char *sl_git_sha1;
 #define DEBUG_SE_STACK_FRAME                0
 
 /**
+ * if 1, the symcut module prints some extra debugging info
+ */
+#define DEBUG_SYMCUT                        0
+
+/**
  * if 1, SymHeapPlotter prints some extra debugging info
  */
 #define DEBUG_SYMPLOT                       0

@@ -41,6 +41,10 @@
 #   define SE_DISABLE_SYMCUT 0
 #endif
 
+#ifndef DEBUG_SYMCUT
+#   define DEBUG_SYMCUT 0
+#endif
+
 template <class TSet, class TList>
 void fillSet(TSet &dst, const TList &src)
 {
@@ -139,9 +143,18 @@ TObjId addObjectIfNeeded(DeepCopyData &dc, TObjId objSrc) {
         rootSrc = tmp;
 
     CVar cv;
-    if (src.cVar(&cv, rootSrc))
+    if (src.cVar(&cv, rootSrc)) {
         // enlarge the cut if needed
+#if DEBUG_SYMCUT
+        const size_t orig = dc.cut.size();
+#endif
         dc.cut.insert(cv);
+#if DEBUG_SYMCUT
+        if (dc.cut.size() != orig)
+            CL_DEBUG("addObjectIfNeeded() is enlarging the cut by cVar #"
+                    << cv.uid << ", nestlevel = " << cv.inst);
+#endif
+    }
 
     SymHeap &dst = dc.dst;
     const struct cl_type *clt = src.objType(rootSrc);
@@ -181,9 +194,18 @@ TObjId addObjectIfNeeded(DeepCopyData &dc, TObjId objSrc) {
     return OBJ_INVALID;
 }
 
-TValueId handleValue(DeepCopyData &dc, TValueId valSrc) {
+TValueId handleValue(DeepCopyData &dc, TValueId valSrc, bool digBackward) {
     const SymHeap   &src = dc.src;
     SymHeap         &dst = dc.dst;
+
+    if (/* optimization */ digBackward) {
+        // go from the value backward
+        SymHeap::TContObj uses;
+        src.usedBy(uses, valSrc);
+        BOOST_FOREACH(TObjId objSrc, uses) {
+            addObjectIfNeeded(dc, objSrc);
+        }
+    }
 
     const TObjId compSrc = src.valGetCompositeObj(valSrc);
     if (OBJ_INVALID != compSrc) {
@@ -277,23 +299,22 @@ void deepCopy(DeepCopyData &dc, bool digBackward) {
         if (atSrc <=0)
             TRAP;
 
-        // read the original value
-        TValueId valSrc = src.valueOf(objSrc);
-        if (VAL_INVALID == valSrc)
-            TRAP;
-
         if (/* optimization */ digBackward) {
             // go from the value backward
             SymHeap::TContObj uses;
-            src.usedBy(uses, valSrc);
             src.usedBy(uses, atSrc);
             BOOST_FOREACH(TObjId objSrc, uses) {
                 addObjectIfNeeded(dc, objSrc);
             }
         }
 
+        // read the original value
+        TValueId valSrc = src.valueOf(objSrc);
+        if (VAL_INVALID == valSrc)
+            TRAP;
+
         // do whatever we need to do with the value
-        const TValueId valDst = handleValue(dc, valSrc);
+        const TValueId valDst = handleValue(dc, valSrc, digBackward);
         if (VAL_INVALID == valDst)
             TRAP;
 
@@ -305,8 +326,13 @@ void deepCopy(DeepCopyData &dc, bool digBackward) {
             SymHeap::TContValue relatedVals;
             src.gatherRelatedValues(relatedVals, valSrc);
             BOOST_FOREACH(TValueId relValSrc, relatedVals) {
-                if (0 < relValSrc)
-                    handleValue(dc, relValSrc);
+                if (valSrc <=0 || relValSrc <= 0)
+                    continue;
+#if DEBUG_SYMCUT
+                CL_DEBUG("deepCopy() is traversing a predicate: #"
+                        << valSrc << " -> #" << relValSrc);
+#endif
+                handleValue(dc, relValSrc, digBackward);
             }
         }
     }
@@ -370,7 +396,9 @@ void splitHeapByCVars(const SymBackTrace *bt, SymHeap *srcDst,
         *srcDst = dst;
         return;
     }
-
+#if DEBUG_SYMCUT
+    CL_DEBUG("splitHeapByCVars() is computing the surround...");
+#endif
     // get the complete list of program variables
     SymHeap::TContCVar all;
     srcDst->gatherCVars(all);

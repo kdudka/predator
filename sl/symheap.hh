@@ -180,7 +180,7 @@ class SymHeapCore {
          */
         void objDestroy(TObjId obj, TObjId kind);
 
-        friend TValueId handleValue(DeepCopyData &dc, TValueId valSrc);
+        friend TValueId handleValue(DeepCopyData &dc, TValueId valSrc, bool);
 
     public:
         /**
