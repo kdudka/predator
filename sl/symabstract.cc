@@ -260,16 +260,20 @@ void digAnyListSelectors(TDst &dst, const SymHeap &sh, TObjId obj)
 unsigned /* len */ discoverSls(const SymHeap &sh, TObjId obj,
                                TFieldIdxChain icNext)
 {
-    ProbeVisitor visitor(sh, obj);
-
     // we use std::set to avoid an infinite loop
     std::set<TObjId> path;
     while (!hasKey(path, obj)) {
         path.insert(obj);
+        ProbeVisitor visitor(sh, obj);
 
-        const TObjId objNext = subObjByChain(sh, obj, icNext);
-        if (!visitor(sh, objNext))
-            // so far no problem encountered, move one step further
+        const TObjId objPtrNext = subObjByChain(sh, obj, icNext);
+        if (visitor(sh, objPtrNext))
+            // we can't go further
+            break;
+
+        const TValueId valNext = sh.valueOf(objPtrNext);
+        const TObjId objNext = sh.pointsTo(valNext);
+        if (0 < objNext)
             obj = objNext;
     }
 
