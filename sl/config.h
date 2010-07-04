@@ -61,7 +61,7 @@ extern const char *sl_git_sha1;
 #define DEBUG_SYMID_FORCE_INT               0
 
 /**
- * if 1, comment out the body of SymHeapEx::abstract()
+ * if 1, comment out the body of abstract()
  */
 #define SE_DISABLE_ABSTRACT                 0
 
@@ -91,3 +91,9 @@ extern const char *sl_git_sha1;
  * performance impact and a lot of noise in the debug output
  */
 #define SE_STATE_HASH_OPTIMIZATION_DEBUG    0
+
+/**
+ * if more than zero, jump to debugger as soon as N graph of the same name has
+ * been plotted
+ */
+#define SYMPLOT_STOP_AFTER_N_STATES         0x10

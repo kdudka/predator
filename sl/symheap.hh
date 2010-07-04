@@ -51,12 +51,6 @@ enum EUnknownValue {
     UV_DEREF_FAILED         ///< value equivalent of symid.hh::OBJ_DEREF_FAILED
 };
 
-/// basic kind of object (FIXME: private only?)
-enum TObjKind { VAR, SLS, DLS, ARR };
-
-/// abstract segment length
-enum TAbstractLen { EMPTY=0, SINGLE=1, PE, NE };
-
 struct DeepCopyData;
 class SymHeap;
 

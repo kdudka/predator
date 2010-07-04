@@ -1,0 +1,51 @@
+#include "../sl.h"
+#include <stdlib.h>
+
+struct item {
+    struct item *head;
+    struct item *next;
+};
+
+struct item* alloc_or_die(void)
+{
+    struct item *pi = malloc(sizeof(*pi));
+    if (pi)
+        return pi;
+    else
+        abort();
+}
+
+struct item* create_sll_head(void)
+{
+    struct item *head = alloc_or_die();
+    head->head = head;
+    head->next = NULL;
+    return head;
+}
+
+struct item* create_sll(void)
+{
+    struct item *head = create_sll_head();
+    struct item *sll = head;
+    ___sl_plot_by_ptr(sll, "00-sll-head-ready");
+
+    // NOTE: running this on bare metal may cause the machine to swap a bit
+    int i;
+    for (i = 1; i; ++i) {
+        sll->next = alloc_or_die();
+        sll->next->head = head;
+        sll->next->next = NULL;
+
+        sll = sll->next;
+        ___sl_plot_by_ptr(sll, "01-sll-append-done");
+    }
+
+    return sll;
+}
+
+int main()
+{
+    struct item *sll = create_sll();
+    ___sl_plot_by_ptr(sll, "02-sll-ready");
+    return 0;
+}

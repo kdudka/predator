@@ -44,6 +44,10 @@
 #   define DEBUG_SYMPLOT 0
 #endif
 
+#ifndef SYMPLOT_STOP_AFTER_N_STATES
+#   define SYMPLOT_STOP_AFTER_N_STATES 0
+#endif
+
 // singleton
 class PlotEnumerator {
     public:
@@ -73,6 +77,13 @@ PlotEnumerator *PlotEnumerator::inst_ = 0;
 std::string PlotEnumerator::decorate(std::string name) {
     // obtain a unique ID for the given name
     const int id = map_[name] ++;
+#if SYMPLOT_STOP_AFTER_N_STATES
+    if (SYMPLOT_STOP_AFTER_N_STATES < id) {
+        CL_ERROR("SYMPLOT_STOP_AFTER_N_STATES (" << SYMPLOT_STOP_AFTER_N_STATES
+                << ") exceeded, now stopping per user's request...");
+        TRAP;
+    }
+#endif
 
     // convert the ID to string
     std::ostringstream str;

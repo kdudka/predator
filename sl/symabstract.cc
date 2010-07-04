@@ -87,7 +87,7 @@ bool /* complete */ traverseSubObjs(THeap &sh, TItem item, TVisitor visitor) {
         }
     }
 
-    // the traversal is done, without any interption by visitor
+    // the traversal is done, without any interruption by visitor
     return true;
 }
 
@@ -120,7 +120,7 @@ bool abstractNonMatchingValuesVisitor(SymHeap &sh, TObjPair item) {
         // should be safe to ignore
         TRAP;
 
-    // create a new unknown value as placeholder
+    // create a new unknown value as a placeholder
     const TValueId valNew = sh.valCreateUnknown(UV_UNKNOWN, clt);
     sh.objSetValue(dst, valNew);
     return /* continue */ true;
@@ -161,7 +161,7 @@ void objReplace(SymHeap &sh, TObjId oldObj, TObjId newObj) {
     // update all references
     sh.valReplace(oldAddr, newAddr);
 
-    // now destroy the object
+    // now destroy the old object
     sh.objDestroy(oldObj);
 }
 
@@ -204,12 +204,48 @@ EObjKind discover(const SymHeap &sh, TObjId obj, TFieldIdxChain &icBind,
     return OK_SLS;
 }
 
-void abstract(SymHeap &sh, TObjId obj) {
-#if SE_DISABLE_ABSTRACT
-    return;
-#endif
+class ProbeVisitor {
+    private:
+        TValueId                addr_;
+        const struct cl_type    *clt_;
+
+    public:
+        ProbeVisitor(const SymHeap &sh, TObjId obj) {
+            addr_ = sh.placedAt(obj);
+            clt_  = sh.objType(obj);
+            if (!addr_ || !clt_ || CL_TYPE_STRUCT != clt_->code)
+                TRAP;
+        }
+
+    bool operator()(SymHeap &sh, TObjId obj) const {
+        const TValueId valNext = sh.valueOf(obj);
+        if (valNext <= 0 || sh.valType(valNext) != clt_)
+            return /* continue */ true;
+
+        if (valNext == addr_ || UV_KNOWN != sh.valGetUnknown(valNext))
+            return /* continue */ true;
+
+        const TObjId target = sh.pointsTo(valNext);
+        return doesAnyonePointToInside(sh, target);
+    }
+};
+
+bool probe(SymHeap &sh, TObjId obj) {
     if (doesAnyonePointToInside(sh, obj))
+        return false;
+
+    const ProbeVisitor visitor(sh, obj);
+    return !traverseSubObjs(sh, obj, visitor);
+}
+
+void abstract(SymHeap &sh, TObjId obj) {
+#if !SE_DISABLE_ABSTRACT
+    if (!probe(sh, obj))
+#endif
         return;
+
+    CL_DEBUG("abstract: initial probe was successful, now "
+            "digging selectors...");
 
     // a temporary solution preventing as from an infinite loop
     std::set<TObjId> done;
@@ -281,7 +317,7 @@ void abstractIfNeeded(SymHeap &sh) {
         const unsigned uses = sh.usedByCount(addr);
         switch (uses) {
             case 0:
-                CL_WARN("abstractIfNeeded() encountered an unused root boject #"
+                CL_WARN("abstractIfNeeded() encountered an unused root object #"
                         << obj);
                 // fall through!
 
