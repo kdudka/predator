@@ -575,8 +575,8 @@ void SymHeapCore::addEqIf(TValueId valCond, TValueId valA, TValueId valB,
         TRAP;
 
     const Private::Value &refB = d->values[valB];
-    if (UV_KNOWN == refB.code || UV_ABSTRACT == refB.code)
-        // valB is not an unknown value
+    if (UV_KNOWN == refB.code)
+        // valB is not an unknown value (we count UV_ABSTRACT as unknown here)
         TRAP;
 
     // all seems fine to store the predicate

@@ -454,9 +454,9 @@ void skipObj(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext) {
     *pObj = objNext;
 }
 
-void ensureAbstract(SymHeap &sh, TObjId obj, EObjKind kind,
-                    TFieldIdxChain icBind,
-                    TFieldIdxChain icPeer = TFieldIdxChain())
+bool /* changed */ ensureAbstract(SymHeap &sh, TObjId obj, EObjKind kind,
+                                  TFieldIdxChain icBind,
+                                  TFieldIdxChain icPeer = TFieldIdxChain())
 {
     const EObjKind kindOrig = sh.objKind(obj);
     if (OK_CONCRETE != kindOrig) {
@@ -466,22 +466,12 @@ void ensureAbstract(SymHeap &sh, TObjId obj, EObjKind kind,
 
         // already abstract
         // TODO: check if the selectors match with each other
-        return;
+        return false;
     }
 
     // abstract a concrete object
     sh.objAbstract(obj, kind, icBind, icPeer);
-
-    // we're constructing the abstract object from a concrete one --> it
-    // implies non-empty LS at this point
-    const TValueId addr = sh.placedAt(obj);
-    const TObjId objNextPtr = subObjByChain(sh, obj, icBind);
-    const TValueId valNext = sh.valueOf(objNextPtr);
-    if (addr <= 0 || valNext < /* we allow NULL here */ 0)
-        TRAP;
-
-    // FIXME: this will not work for DLS!
-    sh.addNeq(addr, valNext);
+    return true;
 }
 
 void conjureSls(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext) {
@@ -493,7 +483,18 @@ void conjureSls(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext) {
 
     // make sure the next object is abstract
     const TObjId objNext = sh.pointsTo(valNext);
-    ensureAbstract(sh, objNext, OK_SLS, icNext);
+    if (ensureAbstract(sh, objNext, OK_SLS, icNext)) {
+        // we're constructing the abstract object from a concrete one --> it
+        // implies non-empty LS at this point
+        const TValueId addr = sh.placedAt(objNext);
+        const TObjId objNextPtr = subObjByChain(sh, objNext, icNext);
+        const TValueId valNextNext = sh.valueOf(objNextPtr);
+        if (addr <= 0 || valNextNext < /* we allow VAL_NULL here */ 0)
+            TRAP;
+
+        sh.addNeq(addr, valNextNext);
+    }
+
     if (OK_SLS != sh.objKind(objNext))
         TRAP;
 
@@ -503,6 +504,19 @@ void conjureSls(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext) {
 
     // move to the next object
     *pObj = objNext;
+}
+
+void storeDlsCrossNeq(SymHeap &sh, TObjId obj, TObjId peer)
+{
+    const TFieldIdxChain icBindPrev = sh.objBinderField(obj);
+    const TObjId ptrPrev = subObjByChain(sh, obj, icBindPrev);
+    const TValueId valPrev = sh.valueOf(ptrPrev);
+    sh.addNeq(valPrev, sh.placedAt(obj));
+
+    const TFieldIdxChain icBindNext = sh.objBinderField(peer);
+    const TObjId ptrNext = subObjByChain(sh, peer, icBindNext);
+    const TValueId valNext = sh.valueOf(ptrNext);
+    sh.addNeq(valNext, sh.placedAt(peer));
 }
 
 void conjureDls(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext,
@@ -520,21 +534,16 @@ void conjureDls(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext,
     const TValueId valNextNext = sh.placedAt(objNextNext);
 
     // abstract the next two objects, while crossing their selectors
-    ensureAbstract(sh, objNext,     OK_DLS, icPrev, icNext);
-    ensureAbstract(sh, objNextNext, OK_DLS, icNext, icPrev);
+    const bool c1 = ensureAbstract(sh, objNext,     OK_DLS, icPrev, icNext);
+    const bool c2 = ensureAbstract(sh, objNextNext, OK_DLS, icNext, icPrev);
 
     // introduce some UV_UNKNOWN values if necessary
     abstractNonMatchingValues(sh, *pObj, objNext);
 
     // make sure, there are no inconsistencies among the two parts of DLS
-    bool eq = false;
-    if (!sh.proveEq(&eq, valNext, valNextNext)) {
-        abstractNonMatchingValues(sh, objNext, objNextNext);
-        abstractNonMatchingValues(sh, objNextNext, objNext);
-    }
-    if (eq)
-        // *** dummy abstract object detected ***
-        TRAP;
+    // FIXME: Is it always necessary?
+    abstractNonMatchingValues(sh, objNext, objNextNext);
+    abstractNonMatchingValues(sh, objNextNext, objNext);
 
     // preserve back-link
     const TValueId valBackLink = sh.valueOf(subObjByChain(sh, *pObj, icPrev));
@@ -546,6 +555,10 @@ void conjureDls(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext,
     const TObjId objNextNextPeer = subObjByChain(sh, objNextNext, icPrev);
     sh.objSetValue(objNextPeer,     valNextNext);
     sh.objSetValue(objNextNextPeer, valNext    );
+
+    // if both objects were concrete, DLS is said to be non-empty
+    if (c1 && c2)
+        storeDlsCrossNeq(sh, objNext, objNextNext);
 
     // consume the given object and move to another one
     objReplace(sh, *pObj, objNext);
