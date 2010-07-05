@@ -285,39 +285,41 @@ void digAnyListSelectors(TDst &dst, const SymHeap &sh, TObjId obj,
     }
 }
 
-unsigned /* len */ discoverSls(const SymHeap &sh, TObjId obj,
-                               TFieldIdxChain icNext)
+unsigned /* len */ discoverSeg(const SymHeap &sh, TObjId obj, EObjKind kind,
+                               TFieldIdxChain icBind,
+                               TFieldIdxChain icPeer = TFieldIdxChain())
 {
     // we use std::set to avoid an infinite loop
     std::set<TObjId> path;
     while (!hasKey(path, obj)) {
         path.insert(obj);
 
-        const TObjId objPtrNext = subObjByChain(sh, obj, icNext);
-        const ProbeVisitor visitor(sh, obj, OK_SLS);
+        const TObjId objPtrNext = subObjByChain(sh, obj, icBind);
+        const ProbeVisitor visitor(sh, obj, kind);
         if (visitor(sh, objPtrNext))
             // we can't go further
             break;
 
         const TValueId valNext = sh.valueOf(objPtrNext);
         const TObjId objNext = sh.pointsTo(valNext);
-        if (0 < objNext)
-            obj = objNext;
+        if (objNext <= 0)
+            // there is no valid next object
+            break;
+
+        if (OK_DLS == kind) {
+            // check the back-link
+            const TValueId addrSelf = sh.placedAt(obj);
+            const TObjId objBackLink = subObjByChain(sh, objNext, icPeer);
+            const TValueId valBackLink = sh.valueOf(objBackLink);
+            if (valBackLink != addrSelf)
+                // inappropriate back-link
+                break;
+        }
+
+        obj = objNext;
     }
 
     return path.size() - 1;
-}
-
-unsigned /* len */ discoverDls(const SymHeap &sh, TObjId obj,
-                               TFieldIdxChain icBind, TFieldIdxChain icPeer)
-{
-    // TODO
-    TRAP;
-    (void) sh;
-    (void) obj;
-    (void) icBind;
-    (void) icPeer;
-    return /* not found */ 0;
 }
 
 template <class TSelectorList>
@@ -343,7 +345,8 @@ unsigned discoverAllDlls(const SymHeap              &sh,
                 // we demand on two distinct selectors for a DLL
                 continue;
 
-            const unsigned len  = discoverDls(sh, obj, selectors[bind],
+            const unsigned len  = discoverSeg(sh, obj, OK_DLS,
+                                              selectors[bind],
                                               selectors[peer]);
             if (!len)
                 continue;
@@ -400,8 +403,7 @@ unsigned discoverAllSegments(const SymHeap          &sh,
         CL_DEBUG("abstract: calling discoverSls() on selector "
                 << (i + 1) << "/" << cnt);
 
-        const unsigned len = discoverSls(sh, obj, selectors[i]);
-        // TODO: look for DLS at this point
+        const unsigned len = discoverSeg(sh, obj, OK_SLS, selectors[i]);
         if (!len)
             continue;
 
