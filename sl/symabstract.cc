@@ -153,6 +153,7 @@ void abstractNonMatchingValues(SymHeap &sh, TObjId src, TObjId dst) {
         // TODO: do the same for the 'peer' field, DLS are involved
         TRAP;
 
+    // traverse all sub-objects
     const TObjPair item(src, dst);
     traverseSubObjs(sh, item, abstractNonMatchingValuesVisitor);
 

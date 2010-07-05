@@ -1361,7 +1361,7 @@ TFieldIdxChain SymHeap::objPeerField(TObjId obj) const {
 }
 
 void SymHeap::objAbstract(TObjId obj, EObjKind kind, TFieldIdxChain icBind,
-                            TFieldIdxChain icPeer)
+                          TFieldIdxChain icPeer)
 {
     CL_DEBUG("SymHeap::objAbstract() is taking place...");
     if (hasKey(d->objMap, obj))
