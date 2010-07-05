@@ -465,7 +465,11 @@ bool /* changed */ ensureAbstract(SymHeap &sh, TObjId obj, EObjKind kind,
             TRAP;
 
         // already abstract
-        // TODO: check if the selectors match with each other
+        if (sh.objBinderField(obj) != icBind
+                || sh.objPeerField(obj) != icPeer)
+            // TODO: handle this case somehow!
+            TRAP;
+
         return false;
     }
 
@@ -506,17 +510,19 @@ void conjureSls(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext) {
     *pObj = objNext;
 }
 
-void storeDlsCrossNeq(SymHeap &sh, TObjId obj, TObjId peer)
-{
+void storeDlsCrossNeq(SymHeap &sh, TObjId obj, TObjId peer) {
+    // dig the value before
     const TFieldIdxChain icBindPrev = sh.objBinderField(obj);
     const TObjId ptrPrev = subObjByChain(sh, obj, icBindPrev);
     const TValueId valPrev = sh.valueOf(ptrPrev);
-    sh.addNeq(valPrev, sh.placedAt(obj));
 
+    // dig the value after
     const TFieldIdxChain icBindNext = sh.objBinderField(peer);
     const TObjId ptrNext = subObjByChain(sh, peer, icBindNext);
     const TValueId valNext = sh.valueOf(ptrNext);
-    sh.addNeq(valNext, sh.placedAt(peer));
+
+    // define a Neq predicate among them
+    sh.addNeq(valPrev, valNext);
 }
 
 void conjureDls(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext,
@@ -558,6 +564,7 @@ void conjureDls(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext,
 
     // if both objects were concrete, DLS is said to be non-empty
     if (c1 && c2)
+        // FIXME: the condition above is far from complete
         storeDlsCrossNeq(sh, objNext, objNextNext);
 
     // consume the given object and move to another one
@@ -707,13 +714,16 @@ void spliceOutSegmentIfNeeded(SymHeap &sh, TObjId ao, TObjId peer,
     const TObjId nextPtrNext = subObjByChain(sh, peer, sh.objBinderField(peer));
     const TValueId valNext = sh.valueOf(nextPtrNext);
     bool eq;
-    if (sh.proveEq(&eq, addrSelf, valNext))
-        // segment is _guaranteed_ to be non-empty, we're done
-        return;
+    if (sh.proveEq(&eq, addrSelf, valNext)) {
+        if (eq)
+            // self loop?
+            TRAP;
 
-    if (eq)
-        // self loop?
-        TRAP;
+        // segment is _guaranteed_ to be non-empty now, but the concretization
+        // makes it _possibly_ empty 
+        sh.delNeq(addrSelf, valNext);
+        return;
+    }
 
     // possibly empty LS
     SymHeap sh0(sh);

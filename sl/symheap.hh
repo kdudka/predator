@@ -263,8 +263,8 @@ class SymHeapCore {
          */
         void copyRelevantPreds(SymHeapCore &dst, const TValMap &valMap) const;
 
-    protected:
-        // safe to disclose for public?
+    public:
+        // FIXME: safe to disclose for public?
         void delNeq(TValueId val1, TValueId val2);
 
     private:
