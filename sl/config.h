@@ -82,18 +82,7 @@ extern const char *sl_git_sha1;
 #define SE_MAX_CALL_DEPTH                   0x100
 
 /**
- * if 1, SymHeapUnion uses (trivial) hash optimization
- */
-#define SE_STATE_HASH_OPTIMIZATION          0
-
-/**
- * if 1, turn on extensive debugging of hash optimization with significant
- * performance impact and a lot of noise in the debug output
- */
-#define SE_STATE_HASH_OPTIMIZATION_DEBUG    0
-
-/**
  * if more than zero, jump to debugger as soon as N graph of the same name has
  * been plotted
  */
-#define SYMPLOT_STOP_AFTER_N_STATES         0x10
+#define SYMPLOT_STOP_AFTER_N_STATES         0x40

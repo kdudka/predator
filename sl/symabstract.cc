@@ -131,7 +131,7 @@ bool abstractNonMatchingValuesVisitor(SymHeap &sh, TObjPair item) {
 
     // FIXME: A virtual junk may be introduced at this point!  The junk is not
     // anyhow reported to user, but causes the annoying warnings about dangling
-    // root objects.  We should probably treat it as regular false alarm,
+    // root objects.  We should probably treat it as regular (false?) alarm,
     // utilize SymHeapProcessor to collect it and properly report.  However it
     // requires to pull-in location info, backtrace and the like.  Luckily, the
     // junk is not going to survive next run of symcut anyway, so it should not
@@ -205,6 +205,10 @@ class ProbeVisitor {
         if (targetAddr <= 0)
             TRAP;
 
+        if (sh.cVar(0, obj))
+            // a list segment through non-heap objects basically makes no sense
+            return /* continue */ true;
+
         if (1 != sh.usedByCount(targetAddr))
             return /* continue */ true;
 
@@ -222,6 +226,7 @@ bool probe(SymHeap &sh, TObjId obj) {
 
 // TODO: hook this somehow on the existing visitor infrastructure in order
 //       to avoid code duplicity ... challenge? ;-)
+//
 // NOTE: we have basically the same code in SymHeapPlotter::Private::digObj()
 template <class TDst>
 void digAnyListSelectors(TDst &dst, const SymHeap &sh, TObjId obj)
@@ -272,9 +277,9 @@ unsigned /* len */ discoverSls(const SymHeap &sh, TObjId obj,
     std::set<TObjId> path;
     while (!hasKey(path, obj)) {
         path.insert(obj);
-        ProbeVisitor visitor(sh, obj);
 
         const TObjId objPtrNext = subObjByChain(sh, obj, icNext);
+        const ProbeVisitor visitor(sh, obj);
         if (visitor(sh, objPtrNext))
             // we can't go further
             break;

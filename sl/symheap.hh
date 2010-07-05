@@ -34,10 +34,6 @@
 #include <map>                  // for SymHeapCore::TValMap
 #include <vector>
 
-#ifndef SE_STATE_HASH_OPTIMIZATION
-#   define SE_STATE_HASH_OPTIMIZATION 0
-#endif
-
 struct cl_accessor;
 struct cl_type;
 
@@ -325,10 +321,6 @@ class SymHeapTyped: public SymHeapCore {
 
         /// @note there is no such thing like COW implemented for now
         SymHeapTyped& operator=(const SymHeapTyped &);
-
-#if SE_STATE_HASH_OPTIMIZATION
-        virtual size_t hash() const;
-#endif
 
     public:
         /// container used to store CVar objects to

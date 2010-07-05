@@ -41,10 +41,6 @@
 #   define SE_DISABLE_ABSTRACT 0
 #endif
 
-#ifndef SE_STATE_HASH_OPTIMIZATION_DEBUG
-#   define SE_STATE_HASH_OPTIMIZATION_DEBUG 0
-#endif
-
 namespace {
     // XXX: force linker to pull-in the symdump module into .so
     void pull_in_symdump(void) {
@@ -909,58 +905,6 @@ void SymHeapTyped::createSubs(TObjId obj) {
         }
     }
 }
-
-#if SE_STATE_HASH_OPTIMIZATION
-struct Hasher {
-    const SymHeapTyped      &heap;
-    size_t              hashVal;
-
-    Hasher(const SymHeapTyped &heap_):
-        heap(heap_),
-        hashVal(0)
-    {
-    }
-
-    void operator() (TObjId var) {
-        if (var < 0)
-            // heap corruption detected
-            TRAP;
-
-        const TValueId value = heap.valueOf(var);
-#if SE_STATE_HASH_OPTIMIZATION_DEBUG
-        CL_DEBUG("SymHeapTyped::hash() - var #" << var
-                << " has value: " << value);
-#endif
-        if (value <= 0) {
-            // special value, add it into the hash
-            hashVal -= (7 * value);
-            return;
-        }
-
-        if (OBJ_INVALID != heap.valGetCompositeObj(value))
-            // skip composite values for now
-            return;
-
-        if (VAL_INVALID != heap.valGetCustom(0, value))
-            // skip custom values for now
-            return;
-
-        // add the EUnknownValue code into the hash
-        const EUnknownValue code = heap.valGetUnknown(value);
-        hashVal += (1 << static_cast<int>(code));
-    }
-};
-
-size_t SymHeapTyped::hash() const {
-    // FIXME: suboptimal hash implementation
-    Hasher f(*this);
-    d->cVarMap.goThroughObjs(f);
-#if SE_STATE_HASH_OPTIMIZATION_DEBUG
-    CL_DEBUG("SymHeapTyped::hash() returning " << f.hashVal);
-#endif
-    return f.hashVal;
-}
-#endif
 
 // FIXME: possible creation of a new unknown value on dereference of OBJ_UNKNOWN
 TValueId SymHeapTyped::valueOf(TObjId obj) const {

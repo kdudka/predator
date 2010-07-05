@@ -33,29 +33,10 @@
 #include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
 
-#ifndef SE_STATE_HASH_OPTIMIZATION
-#   define SE_STATE_HASH_OPTIMIZATION 0
-#endif
-
-#ifndef SE_STATE_HASH_OPTIMIZATION_DEBUG
-#   define SE_STATE_HASH_OPTIMIZATION_DEBUG 0
-#endif
-
 // /////////////////////////////////////////////////////////////////////////////
 // SymHeapUnion implementation
 struct SymHeapUnion::Private {
-#if SE_STATE_HASH_OPTIMIZATION
-    // FIXME: suboptimal htable implementation
-    static const int HASH_SIZE = 37;
-    typedef std::vector<unsigned>   TRow;
-    typedef std::vector<TRow>       TMap;
-    TMap hmap;
-
-    Private():
-        hmap(HASH_SIZE)
-    {
-    }
-#endif
+    // originally reserved for hash optimization
 };
 
 SymHeapUnion::SymHeapUnion():
@@ -351,70 +332,16 @@ bool operator== (const SymHeap &heap1, const SymHeap &heap2) {
 }
 
 int SymHeapUnion::lookup(const SymHeap &heap) const {
-#if SE_STATE_HASH_OPTIMIZATION
-    const size_t hash = heap.hash() % Private::HASH_SIZE;
-    const Private::TRow &row = d->hmap.at(hash);
-
-    if (!heaps_.empty() && row.size() != heaps_.size()) {
-        const float ratio = static_cast<float>(heaps_.size()) / row.size();
-        CL_DEBUG("SE_STATE_HASH_OPTIMIZATION is taking place"
-                << ", estimated speedup is "
-                << std::fixed << std::setprecision(2) << ratio);
-    }
-
-    BOOST_FOREACH(unsigned idx, row) {
-        if (heap == heaps_[idx])
-            return idx;
-    }
-#else
     const int cnt = this->size();
     for(int idx = 0; idx < cnt; ++idx) {
         if (heap == heaps_[idx])
             return idx;
     }
-#endif
 
     // not found
     return -1;
 }
 
-#if SE_STATE_HASH_OPTIMIZATION
-void SymHeapUnion::insert(const SymHeap &heap) {
-    const size_t hash = heap.hash() % Private::HASH_SIZE;
-    Private::TRow &row = d->hmap.at(hash);
-
-    if (!heaps_.empty() && row.size() != heaps_.size()) {
-        const float ratio = static_cast<float>(heaps_.size()) / row.size();
-        CL_DEBUG("SE_STATE_HASH_OPTIMIZATION is taking place"
-                << ", estimated speedup is "
-                << std::fixed << std::setprecision(2) << ratio);
-    }
-
-#if SE_STATE_HASH_OPTIMIZATION_DEBUG
-    CL_DEBUG("SE_STATE_HASH_OPTIMIZATION: row size is " << row.size());
-#endif
-
-    BOOST_FOREACH(unsigned idx, row) {
-        // TODO: check for entailment instead
-        if (heap == heaps_[idx])
-            return;
-    }
-
-#if SE_STATE_HASH_OPTIMIZATION_DEBUG
-    BOOST_FOREACH(const SymHeap &current, heaps_) {
-        if (heap == current)
-            // *** hash function failed ***
-            TRAP;
-    }
-#endif
-
-    // add given heap to union
-    row.push_back(heaps_.size());
-    heaps_.push_back(heap);
-}
-
-#else // no optimization
-
 void SymHeapUnion::insert(const SymHeap &heap) {
     BOOST_FOREACH(const SymHeap &current, heaps_) {
         // TODO: check for entailment instead
@@ -425,8 +352,6 @@ void SymHeapUnion::insert(const SymHeap &heap) {
     // add given heap to union
     heaps_.push_back(heap);
 }
-
-#endif
 
 void SymHeapUnion::insert(const SymHeapUnion &huni) {
     BOOST_FOREACH(const SymHeap &current, huni) {
