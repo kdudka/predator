@@ -479,7 +479,18 @@ void SymHeapPlotter::Private::digBinder(TObjId obj) {
     if (objBind <= 0)
         TRAP;
 
+    // store icBind
     this->binders.insert(objBind);
+    if (OK_SLS == kind)
+        return;
+
+    const TFieldIdxChain icPeer = this->heap->objPeerField(obj);
+    const TObjId objPeer = subObjByChain(*this->heap, obj, icPeer);
+    if (objBind <= 0)
+        TRAP;
+
+    // store icPeer
+    this->binders.insert(objPeer);
 }
 
 void SymHeapPlotter::Private::openCluster(TObjId obj) {
@@ -499,7 +510,7 @@ void SymHeapPlotter::Private::openCluster(TObjId obj) {
             break;
 
         case OK_DLS:
-            label = "DLS";
+            label = "DLS/2";
             color = "yellow";
             pw = "3.0";
             break;
