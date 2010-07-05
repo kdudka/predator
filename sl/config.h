@@ -61,7 +61,7 @@ extern const char *sl_git_sha1;
 #define DEBUG_SYMID_FORCE_INT               0
 
 /**
- * if 1, comment out the body of abstract()
+ * if 1, comment out the body of abstractIfNeeded()
  */
 #define SE_DISABLE_ABSTRACT                 0
 

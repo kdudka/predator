@@ -184,12 +184,17 @@ class ProbeVisitor {
     private:
         TValueId                addr_;
         const struct cl_type    *clt_;
+        unsigned                arrity_;
 
     public:
-        ProbeVisitor(const SymHeap &sh, TObjId obj) {
+        ProbeVisitor(const SymHeap &sh, TObjId obj, EObjKind kind) {
             addr_ = sh.placedAt(obj);
             clt_  = sh.objType(obj);
             if (!addr_ || !clt_ || CL_TYPE_STRUCT != clt_->code)
+                TRAP;
+
+            arrity_ = static_cast<unsigned>(kind);
+            if (!arrity_)
                 TRAP;
         }
 
@@ -218,18 +223,18 @@ class ProbeVisitor {
             // a list segment through non-heap objects basically makes no sense
             return /* continue */ true;
 
-        if (1 != sh.usedByCount(targetAddr))
+        if (sh.usedByCount(targetAddr) != arrity_)
             return /* continue */ true;
 
         return doesAnyonePointToInside(sh, target);
     }
 };
 
-bool probe(SymHeap &sh, TObjId obj) {
+bool probe(SymHeap &sh, TObjId obj, EObjKind kind) {
     if (doesAnyonePointToInside(sh, obj))
         return false;
 
-    const ProbeVisitor visitor(sh, obj);
+    const ProbeVisitor visitor(sh, obj, kind);
     return !traverseSubObjs(sh, obj, visitor);
 }
 
@@ -238,9 +243,10 @@ bool probe(SymHeap &sh, TObjId obj) {
 //
 // NOTE: we have basically the same code in SymHeapPlotter::Private::digObj()
 template <class TDst>
-void digAnyListSelectors(TDst &dst, const SymHeap &sh, TObjId obj)
+void digAnyListSelectors(TDst &dst, const SymHeap &sh, TObjId obj,
+                         EObjKind kind)
 {
-    const ProbeVisitor visitor(sh, obj);
+    const ProbeVisitor visitor(sh, obj, kind);
     TFieldIdxChain ic;
 
     typedef boost::tuple<TObjId, int /* nth */, bool /* last */> TStackItem;
@@ -288,7 +294,7 @@ unsigned /* len */ discoverSls(const SymHeap &sh, TObjId obj,
         path.insert(obj);
 
         const TObjId objPtrNext = subObjByChain(sh, obj, icNext);
-        const ProbeVisitor visitor(sh, obj);
+        const ProbeVisitor visitor(sh, obj, OK_SLS);
         if (visitor(sh, objPtrNext))
             // we can't go further
             break;
@@ -346,22 +352,35 @@ void conjureSls(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext) {
     *pObj = objNext;
 }
 
-void abstract(SymHeap &sh, TObjId obj) {
-#if !SE_DISABLE_ABSTRACT
-    if (!probe(sh, obj))
-#endif
+void abstract(SymHeap &sh, TObjId obj, EObjKind kind) {
+    switch (kind) {
+        case OK_CONCRETE:
+            // invalid call of abstract()
+            TRAP;
+
+        case OK_SLS:
+            CL_DEBUG("abstract: considering SLS abstraction...");
+            break;
+
+        case OK_DLS:
+            CL_DEBUG("abstract: considering DLS abstraction...");
+            break;
+    }
+
+    if (probe(sh, obj, kind))
+        CL_DEBUG("abstract: initial probe was successful!");
+    else
         return;
-    CL_DEBUG("abstract: initial probe was successful...");
 
     // gather suitable selectors
     std::vector<TFieldIdxChain> selectors;
-    digAnyListSelectors(selectors, sh, obj);
+    digAnyListSelectors(selectors, sh, obj, kind);
     const unsigned cnt = selectors.size();
     CL_DEBUG("abstract: found " << cnt << " list selector candidate(s)");
     if (!cnt)
         TRAP;
 
-    // choose the best selectors for SLS/DLS
+    // choose the best selectors for SLS
     unsigned idxBest;
     unsigned slsBestLenght = 0;
     for (unsigned i = 0; i < cnt; ++i) {
@@ -412,6 +431,9 @@ void abstract(SymHeap &sh, TObjId obj) {
 } // namespace
 
 void abstractIfNeeded(SymHeap &sh) {
+#if SE_DISABLE_ABSTRACT
+    return;
+#endif
     SymHeapCore::TContObj roots;
     sh.gatherRootObjs(roots);
     BOOST_FOREACH(const TObjId obj, roots) {
@@ -434,8 +456,12 @@ void abstractIfNeeded(SymHeap &sh) {
                 continue;
 
             case 1:
-                // a candidate for abstraction
-                abstract(sh, obj);
+                // a candidate for SLS
+                abstract(sh, obj, OK_SLS);
+
+            case 2:
+                // a candidate for DLS
+                abstract(sh, obj, OK_DLS);
         }
     }
 }

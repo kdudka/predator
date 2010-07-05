@@ -522,10 +522,16 @@ class SymHeapTyped: public SymHeapCore {
         void objDestroyPriv(TObjId obj);
 };
 
+/**
+ * object kind enumeration
+ * @attenetion Please do not change the integral values, they're fixed in order
+ * to simplify the code of ProbeVisitor.  Simply speaking, the integral values
+ * stand for the count of binding pointers.
+ */
 enum EObjKind {
-    OK_CONCRETE = 0,
-    OK_SLS,
-    OK_DLS
+    OK_CONCRETE     = 0,
+    OK_SLS          = 1,
+    OK_DLS          = 2
 };
 
 typedef std::vector<int /* nth */> TFieldIdxChain;
