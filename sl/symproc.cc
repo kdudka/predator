@@ -120,7 +120,8 @@ void SymHeapProcessor::heapObjHandleAccessorDeref(TObjId *pObj, bool silent)
     // do we really know the value?
     code = heap_.valGetUnknown(val);
     switch (code) {
-        case UV_KNOWN:  // concrete or abstract
+        case UV_KNOWN:
+        case UV_ABSTRACT:
             break;
 
         case UV_UNKNOWN:
@@ -390,8 +391,18 @@ namespace {
 
     template <class THeap>
     bool digJunk(THeap &heap, TValueId *ptrVal) {
-        if (*ptrVal <= 0 || UV_KNOWN != heap.valGetUnknown(*ptrVal))
+        if (*ptrVal <= 0)
             return false;
+
+        const EUnknownValue code = heap.valGetUnknown(*ptrVal);
+        switch (code) {
+            case UV_KNOWN:
+            case UV_ABSTRACT:
+                break;
+
+            default:
+                return false;
+        }
 
         if (VAL_INVALID != heap.valGetCustom(0, *ptrVal))
             // ignore custom values (e.g. fnc pointers)
@@ -649,6 +660,10 @@ void SymHeapProcessor::execFree(const CodeStorage::TOperandList &opList) {
 
     const EUnknownValue code = heap_.valGetUnknown(val);
     switch (code) {
+        case UV_ABSTRACT:
+            TRAP;
+            // fall through!
+
         case UV_KNOWN:
             break;
 
@@ -988,7 +1003,7 @@ void handleUnopTruthNot(THeap &heap, TValueId &val, const struct cl_type *clt) {
         return;
 
     const EUnknownValue code = heap.valGetUnknown(val);
-    if (UV_KNOWN == code)
+    if (UV_KNOWN == code || UV_ABSTRACT == code)
         // the value we got is not VAL_TRUE, VAL_FALSE, nor an unknown value
         TRAP;
 

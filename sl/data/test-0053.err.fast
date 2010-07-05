@@ -5,5 +5,13 @@ test-0053.c:50:13: warning: killing junk
 test-0053.c:50:13: warning: killing junk
 test-0053.c:66:27: note: from call of destroy_cyclic_sll()
 test-0053.c:55:5: note: from call of main()
+test-0053.c:50:13: warning: killing junk
+test-0053.c:50:13: warning: killing junk
+test-0053.c:66:27: note: from call of destroy_cyclic_sll()
+test-0053.c:55:5: note: from call of main()
+test-0053.c:50:13: warning: killing junk
+test-0053.c:50:13: warning: killing junk
+test-0053.c:66:27: note: from call of destroy_cyclic_sll()
+test-0053.c:55:5: note: from call of main()
 test-0053.c:65:20: warning: binary operator not implemented yet
 test-0053.c:65:20: warning: binary operator not implemented yet

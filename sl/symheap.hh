@@ -42,6 +42,7 @@ struct cl_type;
  */
 enum EUnknownValue {
     UV_KNOWN = 0,           ///< known value - what we usually wish we had
+    UV_ABSTRACT,            ///< points to SLS/DLS (the prover needs to know it)
     UV_UNKNOWN,             ///< unknown value - what we usually have in reality
     UV_UNINITIALIZED,       ///< unknown value of an uninitialised object
     UV_DEREF_FAILED         ///< value equivalent of symid.hh::OBJ_DEREF_FAILED
@@ -139,6 +140,9 @@ class SymHeapCore {
          * @return ID of the just created symbolic heap value
          */
         TValueId valCreate(EUnknownValue code, TObjId target);
+
+        /// alter an already existing value (use with caution)
+        void valSetUnknown(TValueId val, EUnknownValue code);
 
     public:
         TObjId lastObjId() const;

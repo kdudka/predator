@@ -280,6 +280,7 @@ void SymExecEngine::execCondInsn() {
             break;
 
         case UV_KNOWN:
+        case UV_ABSTRACT:
             TRAP;
             return;
     }

@@ -195,11 +195,19 @@ class ProbeVisitor {
 
     bool operator()(const SymHeap &sh, TObjId obj) const {
         const TValueId valNext = sh.valueOf(obj);
-        if (valNext <= 0 || sh.valType(valNext) != clt_)
+        if (valNext <= 0 || valNext == addr_ || sh.valType(valNext) != clt_)
             return /* continue */ true;
 
-        if (valNext == addr_ || UV_KNOWN != sh.valGetUnknown(valNext))
-            return /* continue */ true;
+        const EUnknownValue code = sh.valGetUnknown(valNext);
+        switch (code) {
+            case UV_KNOWN:
+            case UV_ABSTRACT:
+                // only known objects can be chained
+                break;
+
+            default:
+                return /* continue */ true;
+        }
 
         const TObjId target = sh.pointsTo(valNext);
         const TValueId targetAddr = sh.placedAt(target);

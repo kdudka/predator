@@ -234,12 +234,19 @@ TValueId handleValue(DeepCopyData &dc, TValueId valSrc, bool digBackward) {
     }
 
     const EUnknownValue code = src.valGetUnknown(valSrc);
-    if (UV_KNOWN != code) {
-        // unknown value
-        const struct cl_type *cltUnkown = src.valType(valSrc);
-        const TValueId valDst = dst.valCreateUnknown(code, cltUnkown);
-        valMap[valSrc] = valDst;
-        return valDst;
+    switch (code) {
+        case UV_ABSTRACT:
+            // will be handled later
+        case UV_KNOWN:
+            break;
+
+        default: {
+            // a proper unkonwn value
+            const struct cl_type *cltUnkown = src.valType(valSrc);
+            const TValueId valDst = dst.valCreateUnknown(code, cltUnkown);
+            valMap[valSrc] = valDst;
+            return valDst;
+        }
     }
 
     // now is the time to "dereference" the value
@@ -272,9 +279,14 @@ TValueId handleValue(DeepCopyData &dc, TValueId valSrc, bool digBackward) {
 
     // create the target object, if it does not exist already
     const TObjId targetDst = addObjectIfNeeded(dc, targetSrc);
+    const TValueId valDst = dst.placedAt(targetDst);
+
+    if (UV_ABSTRACT == code)
+        // preserve UV_ABSTRACT code
+        dst.valSetUnknown(valDst, UV_ABSTRACT);
 
     // return target object's address
-    return dst.placedAt(targetDst);
+    return valDst;
 }
 
 void deepCopy(DeepCopyData &dc, bool digBackward) {

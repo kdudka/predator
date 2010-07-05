@@ -552,6 +552,7 @@ bool SymHeapPlotter::Private::handleUnknownValue(TValueId value) {
     const EUnknownValue code = this->heap->valGetUnknown(value);
     switch (code) {
         case UV_KNOWN:
+        case UV_ABSTRACT:
             return false;
 
         case UV_DEREF_FAILED:

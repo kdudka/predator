@@ -365,11 +365,29 @@ TValueId SymHeapCore::valCreate(EUnknownValue code, TObjId target) {
 
     Private::Value &ref = d->values[val];
     ref.code = code;
-    if (UV_KNOWN == code)
+    if (UV_KNOWN == code || UV_ABSTRACT == code)
         // ignore target for unknown values, they should be not followed anyhow
         ref.target = target;
 
     return val;
+}
+
+void SymHeapCore::valSetUnknown(TValueId val, EUnknownValue code) {
+    switch (code) {
+        case UV_KNOWN:
+        case UV_ABSTRACT:
+            break;
+
+        default:
+            // please check if the caller is aware of what he's doing
+            TRAP;
+    }
+
+    Private::Value &ref = d->values[val];
+    if (ref.target <= 0)
+        TRAP;
+
+    ref.code = code;
 }
 
 TObjId SymHeapCore::lastObjId() const {
@@ -550,7 +568,7 @@ void SymHeapCore::addEqIf(TValueId valCond, TValueId valA, TValueId valB,
 
     // TODO: check somehow if the type of valCond is CL_TYPE_BOOL at this point
     const Private::Value &refCond = d->values[valCond];
-    if (UV_KNOWN == refCond.code)
+    if (UV_KNOWN == refCond.code || UV_ABSTRACT == refCond.code)
         // valCond is not an unknown value
         TRAP;
 
@@ -561,7 +579,7 @@ void SymHeapCore::addEqIf(TValueId valCond, TValueId valA, TValueId valB,
         TRAP;
 
     const Private::Value &refB = d->values[valB];
-    if (UV_KNOWN == refB.code)
+    if (UV_KNOWN == refB.code || UV_ABSTRACT == refB.code)
         // valB is not an unknown value
         TRAP;
 
@@ -620,6 +638,8 @@ bool SymHeapCore::proveEq(bool *result, TValueId valA, TValueId valB) const {
     const EUnknownValue code = refB.code;
     if (UV_KNOWN == code) {
         // it should be safe to just compare the IDs in this case
+        // NOTE: it's not that when UV_ABSTRACT is involved
+
         // NOTE: we in fact know (valA != valB) at this point, look above
         *result = /* (valA == valB) */ false;
         return true;
@@ -1323,6 +1343,10 @@ TObjId SymHeap::objDup(TObjId objOld) {
         // duplicte metadata of an abstract object
         Private::ObjectEx tmp(iter->second);
         d->objMap[objNew] = tmp;
+
+        // set the pointing value's code to UV_ABSTRACT
+        const TValueId addrNew = this->placedAt(objNew);
+        SymHeapCore::valSetUnknown(addrNew, UV_ABSTRACT);
     }
 
     return objNew;
@@ -1368,7 +1392,10 @@ void SymHeap::objAbstract(TObjId obj, EObjKind kind, TFieldIdxChain icBind,
         // invalid call of SymHeap::objAbstract()
         TRAP;
 
+    // mark the value as UV_ABSTRACT
     const TValueId addr = this->placedAt(obj);
+    SymHeapCore::valSetUnknown(addr, UV_ABSTRACT);
+
     const TObjId objBind = subObjByChain(*this, obj, icBind);
     const TValueId valNext = this->valueOf(objBind);
     if (addr == valNext)
@@ -1403,10 +1430,13 @@ void SymHeap::objConcretize(TObjId obj) {
     // just remove the object ID from the map
     d->objMap.erase(iter);
 
+    // mark the value as UV_KNOWN
+    const TValueId addr = this->placedAt(obj);
+    SymHeapCore::valSetUnknown(addr, UV_KNOWN);
+
     // we have just concretized an object, the pointing value can't be NULL by
     // definition --> let's remove the Neq(addr, NULL) if such a predicate
     // exists
-    const TValueId addr = this->placedAt(obj);
     this->delNeq(VAL_NULL, addr);
 }
 

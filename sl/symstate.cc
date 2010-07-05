@@ -108,9 +108,9 @@ namespace {
         // do we know the values?
         const EUnknownValue uv1 = heap1.valGetUnknown(v1);
         const EUnknownValue uv2 = heap2.valGetUnknown(v2);
-        if (UV_KNOWN != uv1 || UV_KNOWN != uv2)
-            // compare kinds of uknown values
-            return (uv1 == uv2);
+        if (uv1 != uv2)
+            // mismatch in kind of unknown values
+            return false;
 
         const int cVal1 = heap1.valGetCustom(0, v1);
         const int cVal2 = heap2.valGetCustom(0, v2);
@@ -140,11 +140,16 @@ namespace {
             // don't follow fnc pointers (and other custom values) by pointsTo()
             return true;
 
-        if (UV_KNOWN != heap.valGetUnknown(value))
-            // don't follow uknown values
-            return true;
+        const EUnknownValue code = heap.valGetUnknown(value);
+        switch (code) {
+            case UV_KNOWN:
+            case UV_ABSTRACT:
+                return false;
 
-        return false;
+            default:
+                // don't follow uknown values
+                return true;
+        }
     }
 
     template<class TWL, class THeap>
