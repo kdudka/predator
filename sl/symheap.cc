@@ -37,10 +37,6 @@
 #include <boost/tuple/tuple.hpp>
 #include <boost/tuple/tuple_comparison.hpp>
 
-#ifndef SE_DISABLE_ABSTRACT
-#   define SE_DISABLE_ABSTRACT 0
-#endif
-
 namespace {
     // XXX: force linker to pull-in the symdump module into .so
     void pull_in_symdump(void) {

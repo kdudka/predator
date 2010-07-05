@@ -61,15 +61,20 @@ extern const char *sl_git_sha1;
 #define DEBUG_SYMID_FORCE_INT               0
 
 /**
- * if 1, comment out the body of abstractIfNeeded()
- */
-#define SE_DISABLE_ABSTRACT                 0
-
-/**
  * if 1, call optimization is not performed; it may introduce some compile-time
  * warnings and memory leaks as a side effect
  */
 #define SE_DISABLE_CALL_CACHE               0
+
+/**
+ * if 1, do not use DLS (Doubly-linked List Segment) abstracion
+ */
+#define SE_DISABLE_DLS                      0
+
+/**
+ * if 1, do not use SLS (Signly-linked List Segment) abstracion
+ */
+#define SE_DISABLE_SLS                      0
 
 /**
  * if 1, do not use the @b symcut module at all

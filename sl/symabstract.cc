@@ -31,6 +31,14 @@
 #include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
 
+#ifndef SE_DISABLE_DLS
+#   define SE_DISABLE_DLS 0
+#endif
+
+#ifndef SE_DISABLE_SLS
+#   define SE_DISABLE_SLS 0
+#endif
+
 /// common configuration template for abstraction triggering
 struct AbstractionThreshold {
     unsigned sparePrefix;
@@ -165,11 +173,6 @@ void abstractNonMatchingValues(SymHeap &sh, TObjId src, TObjId dst) {
     // wait, first preserve the value of binder
     const TObjId objBind = subObjByChain(sh, dst, sh.objBinderField(dst));
     const TValueId valBind = sh.valueOf(objBind);
-#if 0
-    if (!sh.objPeerField(dst).empty())
-        // TODO: do the same for the 'peer' field, DLS are involved
-        TRAP;
-#endif
 
     // traverse all sub-objects
     const TObjPair item(src, dst);
@@ -350,7 +353,7 @@ unsigned discoverAllDlls(const SymHeap              &sh,
 {
     const int cnt = selectors.size();
     if (cnt < 2) {
-        CL_DEBUG("abstract: not enough selectors for OK_DLS");
+        CL_DEBUG("<-- not enough selectors for OK_DLS");
         return /* found nothing */ 0;
     }
 
@@ -370,7 +373,7 @@ unsigned discoverAllDlls(const SymHeap              &sh,
             if (!len)
                 continue;
 
-            CL_DEBUG("abstract: found DLS of length " << len);
+            CL_DEBUG("--- found DLS of length " << len);
             if (bestLen < len) {
                 bestLen = len;
                 bestNext = next;
@@ -380,7 +383,7 @@ unsigned discoverAllDlls(const SymHeap              &sh,
     }
 
     if (!bestLen) {
-        CL_DEBUG("abstract: no DLS found");
+        CL_DEBUG("<--- no DLS found");
         return /* not found */ 0;
     }
 
@@ -399,7 +402,7 @@ unsigned discoverAllSegments(const SymHeap          &sh,
                              TFieldIdxChain         *icPrev)
 {
     const unsigned cnt = selectors.size();
-    CL_DEBUG("abstract: found " << cnt << " list selector candidate(s)");
+    CL_DEBUG("--- found " << cnt << " list selector candidate(s)");
     if (!cnt)
         TRAP;
 
@@ -419,14 +422,11 @@ unsigned discoverAllSegments(const SymHeap          &sh,
     unsigned idxBest;
     unsigned slsBestLength = 0;
     for (unsigned i = 0; i < cnt; ++i) {
-        CL_DEBUG("abstract: calling discoverSls() on selector "
-                << (i + 1) << "/" << cnt);
-
         const unsigned len = discoverSeg(sh, obj, OK_SLS, selectors[i]);
         if (!len)
             continue;
 
-        CL_DEBUG("abstract: found SLS of length " << len);
+        CL_DEBUG("--- found SLS of length " << len);
         if (slsBestLength < len) {
             slsBestLength = len;
             idxBest = i;
@@ -434,7 +434,7 @@ unsigned discoverAllSegments(const SymHeap          &sh,
     }
 
     if (!slsBestLength) {
-        CL_DEBUG("abstract: no SLS found");
+        CL_DEBUG("<-- no SLS found");
         return /* not found */ 0;
     }
 
@@ -562,7 +562,7 @@ void considerXlsAbstraction(SymHeap &sh, TObjId obj, EObjKind kind,
                                     + at.spareSuffix;
 
     if (lenTotal < threshold) {
-        CL_DEBUG("abstract: the best SLS length (" << lenTotal
+        CL_DEBUG("<-- length of the longest segment (" << lenTotal
                 << ") is under the threshold (" << threshold << ")");
         return;
     }
@@ -576,6 +576,7 @@ void considerXlsAbstraction(SymHeap &sh, TObjId obj, EObjKind kind,
         for (int i = 0; i < len; ++i)
             conjureSls(sh, &obj, icNext);
 
+        CL_DEBUG("AAA successfully abstracted SLS");
         return;
     }
 
@@ -584,9 +585,11 @@ void considerXlsAbstraction(SymHeap &sh, TObjId obj, EObjKind kind,
         // wait, this is not going to work well;  you should tweak the threshold
         TRAP;
 
-    // now create the SLS as requested
+    // now create the DLS as requested
     for (int i = /* we need one more object for DLS */ 1; i < len; ++i)
         conjureDls(sh, &obj, icNext, icPrev);
+
+    CL_DEBUG("AAA successfully abstracted DLS");
 }
 
 void considerAbstraction(SymHeap &sh, TObjId obj, EObjKind kind) {
@@ -596,18 +599,18 @@ void considerAbstraction(SymHeap &sh, TObjId obj, EObjKind kind) {
             TRAP;
 
         case OK_SLS:
-            CL_DEBUG("abstract: considering SLS abstraction...");
+            CL_DEBUG("--> considering SLS abstraction...");
             break;
 
         case OK_DLS:
-            CL_DEBUG("abstract: considering DLS abstraction...");
+            CL_DEBUG("--> considering DLS abstraction...");
             break;
     }
 
-    if (probe(sh, obj, kind))
-        CL_DEBUG("abstract: initial probe was successful!");
-    else
+    if (!probe(sh, obj, kind)) {
+        CL_DEBUG("<-- initial probe failed");
         return;
+    }
 
     // gather suitable selectors
     std::vector<TFieldIdxChain> selectors;
@@ -628,9 +631,6 @@ void considerAbstraction(SymHeap &sh, TObjId obj, EObjKind kind) {
 } // namespace
 
 void abstractIfNeeded(SymHeap &sh) {
-#if SE_DISABLE_ABSTRACT
-    return;
-#endif
     SymHeapCore::TContObj roots;
     sh.gatherRootObjs(roots);
     BOOST_FOREACH(const TObjId obj, roots) {
@@ -654,11 +654,17 @@ void abstractIfNeeded(SymHeap &sh) {
 
             case 1:
                 // a candidate for SLS
+#if !SE_DISABLE_SLS
                 considerAbstraction(sh, obj, OK_SLS);
+#endif
+                break;
 
             case 2:
                 // a candidate for DLS
+#if !SE_DISABLE_DLS
                 considerAbstraction(sh, obj, OK_DLS);
+#endif
+                break;
         }
     }
 }
