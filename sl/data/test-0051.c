@@ -64,7 +64,7 @@ int main()
     if (sll) {
         // assertion failed, yell now
         sll = NULL;
-        sll = sll->next;
+        *sll = *sll->next;
     }
 
     return 0;
