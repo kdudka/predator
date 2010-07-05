@@ -57,7 +57,7 @@ static struct AbstractionThreshold slsThreshold = {
 static struct AbstractionThreshold dlsThreshold = {
     /* sparePrefix */ 0,
     /* innerSegLen */ 2,
-    /* spareSuffix */ 0
+    /* spareSuffix */ 0     /* 1 is recommended here */
 };
 
 typedef std::pair<TObjId, TObjId> TObjPair;
@@ -526,11 +526,6 @@ void conjureDls(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext,
     // introduce some UV_UNKNOWN values if necessary
     abstractNonMatchingValues(sh, *pObj, objNext);
 
-    // preserve back-link
-    const TValueId valBackLink = sh.valueOf(subObjByChain(sh, *pObj, icPrev));
-    const TObjId objNextBackLink = subObjByChain(sh, objNext, icPrev);
-    sh.objSetValue(objNextBackLink, valBackLink);
-
     // make sure, there are no inconsistencies among the two parts of DLS
     bool eq = false;
     if (!sh.proveEq(&eq, valNext, valNextNext)) {
@@ -540,6 +535,11 @@ void conjureDls(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext,
     if (eq)
         // *** dummy abstract object detected ***
         TRAP;
+
+    // preserve back-link
+    const TValueId valBackLink = sh.valueOf(subObjByChain(sh, *pObj, icPrev));
+    const TObjId objNextBackLink = subObjByChain(sh, objNext, icPrev);
+    sh.objSetValue(objNextBackLink, valBackLink);
 
     // now materialize the DLS from two objects by a cross-link
     const TObjId objNextPeer     = subObjByChain(sh, objNext,     icNext);
@@ -684,6 +684,8 @@ void abstractIfNeeded(SymHeap &sh) {
     }
 }
 
+namespace {
+
 void spliceOutSegmentIfNeeded(SymHeap &sh, TObjId ao, TObjId peer,
                               TSymHeapList &todo)
 {
@@ -717,6 +719,8 @@ void spliceOutSegmentIfNeeded(SymHeap &sh, TObjId ao, TObjId peer,
     // schedule the empty variant for processing
     todo.push_back(sh0);
 }
+
+} // namespace
 
 void concretizeObj(SymHeap &sh, TObjId obj, TSymHeapList &todo) {
     TObjId ao = obj;
@@ -755,4 +759,11 @@ void concretizeObj(SymHeap &sh, TObjId obj, TSymHeapList &todo) {
             : sh.objPeerField(obj));
     sh.objConcretize(obj);
     sh.objSetValue(ptrNext, aoDupAddr);
+
+    if (OK_DLS == kind) {
+        // update DLS back-link
+        const TFieldIdxChain icPrev = sh.objBinderField(aoDup);
+        const TObjId backLink = subObjByChain(sh, aoDup, icPrev);
+        sh.objSetValue(backLink, sh.placedAt(obj));
+    }
 }

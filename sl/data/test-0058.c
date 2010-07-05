@@ -24,19 +24,23 @@ struct item* alloc_and_zero(void)
     return pi;
 }
 
+struct item* create_item(struct item *end)
+{
+    struct item *pi = alloc_and_zero();
+    pi->prev = end;
+    end->next = pi;
+    return pi;
+}
+
 struct item* create_dll(void)
 {
     struct item *dll = alloc_and_zero();
-    struct item *now = dll;
-
-    // NOTE: running this on bare metal may cause the machine to swap a bit
-    int i;
-    for (i = 1; i; ++i) {
-        now->next = alloc_and_zero();
-        now->next->prev = now;
-        now = now->next;
-    }
-
+    struct item *pi = create_item(dll);
+    pi = create_item(pi);
+    pi = create_item(pi);
+    pi = create_item(pi);
+    pi = create_item(pi);
+    pi = create_item(pi);
     return dll;
 }
 
@@ -58,6 +62,10 @@ void fast_forward(struct item **pDll)
 int main()
 {
     struct item *dll = create_dll();
+    if (!dll)
+        // the condition above forces abstraction
+        return 1;
+
     fast_forward(&dll);
     ___sl_plot_by_ptr(dll, "03-ff-done");
 
