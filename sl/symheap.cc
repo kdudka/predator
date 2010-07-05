@@ -1402,10 +1402,6 @@ void SymHeap::objAbstract(TObjId obj, EObjKind kind, TFieldIdxChain icBind,
         // *** self-loop detected ***
         TRAP;
 
-    if (!icPeer.empty())
-        // TODO: store Neq predicate for the peer in case of DLS
-        TRAP;
-
     // initialize abstract object
     Private::ObjectEx &ref = d->objMap[obj];
     ref.kind    = kind;

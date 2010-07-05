@@ -165,9 +165,11 @@ void abstractNonMatchingValues(SymHeap &sh, TObjId src, TObjId dst) {
     // wait, first preserve the value of binder
     const TObjId objBind = subObjByChain(sh, dst, sh.objBinderField(dst));
     const TValueId valBind = sh.valueOf(objBind);
+#if 0
     if (!sh.objPeerField(dst).empty())
         // TODO: do the same for the 'peer' field, DLS are involved
         TRAP;
+#endif
 
     // traverse all sub-objects
     const TObjPair item(src, dst);
@@ -343,8 +345,8 @@ template <class TSelectorList>
 unsigned discoverAllDlls(const SymHeap              &sh,
                          const TObjId               obj,
                          const TSelectorList        &selectors,
-                         TFieldIdxChain             *icBind,
-                         TFieldIdxChain             *icPeer)
+                         TFieldIdxChain             *icNext,
+                         TFieldIdxChain             *icPrev)
 {
     const int cnt = selectors.size();
     if (cnt < 2) {
@@ -352,27 +354,27 @@ unsigned discoverAllDlls(const SymHeap              &sh,
         return /* found nothing */ 0;
     }
 
-    unsigned bestLen = 0, bestBind, bestPeer;
+    unsigned bestLen = 0, bestNext, bestPrev;
 
     // if (2 < cnt), try all possible combinations
     // NOTE: This may take some time...
-    for (int bind = 0; bind < cnt; ++bind) {
-        for (int peer = 0; peer < cnt; ++peer) {
-            if (bind == peer)
+    for (int next = 0; next < cnt; ++next) {
+        for (int prev = 0; prev < cnt; ++prev) {
+            if (next == prev)
                 // we demand on two distinct selectors for a DLL
                 continue;
 
             const unsigned len  = discoverSeg(sh, obj, OK_DLS,
-                                              selectors[bind],
-                                              selectors[peer]);
+                                              selectors[next],
+                                              selectors[prev]);
             if (!len)
                 continue;
 
             CL_DEBUG("abstract: found DLS of length " << len);
             if (bestLen < len) {
                 bestLen = len;
-                bestBind = bind;
-                bestPeer = peer;
+                bestNext = next;
+                bestPrev = prev;
             }
         }
     }
@@ -383,8 +385,8 @@ unsigned discoverAllDlls(const SymHeap              &sh,
     }
 
     // something found
-    *icBind = selectors[bestBind];
-    *icPeer = selectors[bestPeer];
+    *icNext = selectors[bestNext];
+    *icPrev = selectors[bestPrev];
     return bestLen;
 }
 
@@ -393,8 +395,8 @@ unsigned discoverAllSegments(const SymHeap          &sh,
                              const TObjId           obj,
                              const EObjKind         kind,
                              const TSelectorList    &selectors,
-                             TFieldIdxChain         *icBind,
-                             TFieldIdxChain         *icPeer)
+                             TFieldIdxChain         *icNext,
+                             TFieldIdxChain         *icPrev)
 {
     const unsigned cnt = selectors.size();
     CL_DEBUG("abstract: found " << cnt << " list selector candidate(s)");
@@ -410,7 +412,7 @@ unsigned discoverAllSegments(const SymHeap          &sh,
             break;
 
         case OK_DLS:
-            return discoverAllDlls(sh, obj, selectors, icBind, icPeer);
+            return discoverAllDlls(sh, obj, selectors, icNext, icPrev);
     }
 
     // choose the best selectors for SLS
@@ -437,7 +439,7 @@ unsigned discoverAllSegments(const SymHeap          &sh,
     }
 
     // something found
-    *icBind = selectors[idxBest];
+    *icNext = selectors[idxBest];
     return slsBestLength;
 }
 
@@ -468,7 +470,7 @@ void ensureAbstract(SymHeap &sh, TObjId obj, EObjKind kind,
     }
 
     // abstract a concrete object
-    sh.objAbstract(obj, OK_SLS, icBind, icPeer);
+    sh.objAbstract(obj, kind, icBind, icPeer);
 
     // we're constructing the abstract object from a concrete one --> it
     // implies non-empty LS at this point
@@ -501,28 +503,43 @@ void conjureSls(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext) {
     *pObj = objNext;
 }
 
-void conjureDls(SymHeap &sh, TObjId *pObj, TFieldIdxChain icBind,
-                TFieldIdxChain icPeer)
+void conjureDls(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext,
+                TFieldIdxChain icPrev)
 {
     // jump to next
     TObjId carraige = *pObj;
-    skipObj(sh, &carraige, icBind);
+    skipObj(sh, &carraige, icNext);
     const TObjId objNext = carraige;
+    const TValueId valNext = sh.placedAt(objNext);
 
     // jump to next
-    skipObj(sh, &carraige, icBind);
+    skipObj(sh, &carraige, icNext);
     const TObjId objNextNext = carraige;
+    const TValueId valNextNext = sh.placedAt(objNextNext);
 
     // abstract the next two objects, while crossing their selectors
-    ensureAbstract(sh, objNext,     OK_DLS, icBind, icPeer);
-    ensureAbstract(sh, objNextNext, OK_DLS, icPeer, icBind);
+    ensureAbstract(sh, objNext,     OK_DLS, icPrev, icNext);
+    ensureAbstract(sh, objNextNext, OK_DLS, icNext, icPrev);
 
-    // TODO
-    TRAP;
+    // introduce some UV_UNKNOWN if necessary
+    abstractNonMatchingValues(sh, *pObj, objNext);
+    const TValueId valBackLink = sh.valueOf(subObjByChain(sh, *pObj, icPrev));
+    const TObjId objNextBackLink = subObjByChain(sh, objNext, icPrev);
+    sh.objSetValue(objNextBackLink, valBackLink);
+
+    // now materialize the DLS from two objects by a cross-link
+    const TObjId objNextPeer     = subObjByChain(sh, objNext,     icNext);
+    const TObjId objNextNextPeer = subObjByChain(sh, objNextNext, icPrev);
+    sh.objSetValue(objNextPeer,     valNextNext);
+    sh.objSetValue(objNextNextPeer, valNext    );
+
+    // consume the given object and move to another one
+    objReplace(sh, *pObj, objNext);
+    *pObj = objNext;
 }
 
 void considerXlsAbstraction(SymHeap &sh, TObjId obj, EObjKind kind,
-                            TFieldIdxChain icBind, TFieldIdxChain icPeer,
+                            TFieldIdxChain icNext, TFieldIdxChain icPrev,
                             unsigned lenTotal)
 {
     AbstractionThreshold at;
@@ -553,20 +570,23 @@ void considerXlsAbstraction(SymHeap &sh, TObjId obj, EObjKind kind,
     // handle SLS_SPARE_PREFIX/SLS_SPARE_SUFFIX
     const int len = lenTotal - at.sparePrefix - at.spareSuffix;
     for (int i = 0; i < static_cast<int>(at.sparePrefix); ++i)
-        skipObj(sh, &obj, icBind);
+        skipObj(sh, &obj, icNext);
 
-    if (OK_DLS == kind && len < 2)
+    if (OK_SLS == kind) {
+        for (int i = 0; i < len; ++i)
+            conjureSls(sh, &obj, icNext);
+
+        return;
+    }
+
+    // assume OK_DLS (see the switch above)
+    if (len < 2)
         // wait, this is not going to work well;  you should tweak the threshold
         TRAP;
 
     // now create the SLS as requested
-    for (int i = 0; i < len; ++i) {
-        if (OK_SLS == kind)
-            conjureSls(sh, &obj, icBind);
-        else
-            // assume OK_DLS (see the switch above)
-            conjureDls(sh, &obj, icBind, icPeer);
-    }
+    for (int i = /* we need one more object for DLS */ 1; i < len; ++i)
+        conjureDls(sh, &obj, icNext, icPrev);
 }
 
 void considerAbstraction(SymHeap &sh, TObjId obj, EObjKind kind) {
@@ -594,15 +614,15 @@ void considerAbstraction(SymHeap &sh, TObjId obj, EObjKind kind) {
     digAnyListSelectors(selectors, sh, obj, kind);
 
     // run the LS discovering process
-    TFieldIdxChain icBind, icPeer;
+    TFieldIdxChain icNext, icPrev;
     const unsigned lsBestLength = discoverAllSegments(sh, obj, kind, selectors,
-                                                      &icBind, &icPeer);
+                                                      &icNext, &icPrev);
     if (!lsBestLength)
         // nothing found
         return;
 
     // consider abstraction threshold and trigger the abstraction eventually
-    considerXlsAbstraction(sh, obj, kind, icBind, icPeer, lsBestLength);
+    considerXlsAbstraction(sh, obj, kind, icNext, icPrev, lsBestLength);
 }
 
 } // namespace

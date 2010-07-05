@@ -176,9 +176,6 @@ TObjId addObjectIfNeeded(DeepCopyData &dc, TObjId objSrc) {
     const EObjKind kind = src.objKind(rootSrc);
     switch (kind) {
         case OK_DLS:
-            // not tested yet
-            TRAP;
-
         case OK_SLS: {
             const TFieldIdxChain icBind = src.objBinderField(rootSrc);
             const TFieldIdxChain icPeer = src.objPeerField(rootSrc);
