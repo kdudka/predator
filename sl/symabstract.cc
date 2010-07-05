@@ -31,10 +31,26 @@
 #include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
 
+/// common configuration template for abstraction triggering
+struct AbstractionThreshold {
+    unsigned sparePrefix;
+    unsigned innerSegLen;
+    unsigned spareSuffix;
+};
+
 /// abstraction trigger threshold for SLS
-static const unsigned SLS_LEN_THRESHOLD = 1;
-static const unsigned SLS_SPARE_PREFIX  = 1;
-static const unsigned SLS_SPARE_SUFFIX  = 0;
+static struct AbstractionThreshold slsThreshold = {
+    /* sparePrefix */ 1,
+    /* innerSegLen */ 1,
+    /* spareSuffix */ 0
+};
+
+/// abstraction trigger threshold for DLS
+static struct AbstractionThreshold dlsThreshold = {
+    /* sparePrefix */ 1,
+    /* innerSegLen */ 1,
+    /* spareSuffix */ 0
+};
 
 typedef std::pair<TObjId, TObjId> TObjPair;
 
@@ -322,6 +338,7 @@ unsigned /* len */ discoverSeg(const SymHeap &sh, TObjId obj, EObjKind kind,
     return path.size() - 1;
 }
 
+// TODO: merge the code somehow directly into discoverAllSegments
 template <class TSelectorList>
 unsigned discoverAllDlls(const SymHeap              &sh,
                          const TObjId               obj,
@@ -468,13 +485,40 @@ void conjureSls(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext) {
     *pObj = objNext;
 }
 
-void considerSlsAbstraction(SymHeap &sh, TObjId obj, TFieldIdxChain icBind,
+void conjureDls(SymHeap &sh, TObjId *pObj, TFieldIdxChain icBind,
+                TFieldIdxChain icPeer)
+{
+    // TODO
+    (void) sh;
+    (void) pObj;
+    (void) icBind;
+    (void) icPeer;
+    TRAP;
+}
+
+void considerXlsAbstraction(SymHeap &sh, TObjId obj, EObjKind kind,
+                            TFieldIdxChain icBind, TFieldIdxChain icPeer,
                             unsigned lenTotal)
 {
+    AbstractionThreshold at;
+    switch (kind) {
+        case OK_CONCRETE:
+            // invalid call of considerXlsAbstraction()
+            TRAP;
+
+        case OK_SLS:
+            at = slsThreshold;
+            break;
+
+        case OK_DLS:
+            at = dlsThreshold;
+            break;
+    }
+
     // check the threshold
-    static const unsigned threshold = SLS_LEN_THRESHOLD
-        + SLS_SPARE_PREFIX
-        + SLS_SPARE_SUFFIX;
+    static const unsigned threshold = at.sparePrefix + at.innerSegLen
+                                    + at.spareSuffix;
+
     if (lenTotal < threshold) {
         CL_DEBUG("abstract: the best SLS length (" << lenTotal
                 << ") is under the threshold (" << threshold << ")");
@@ -482,25 +526,18 @@ void considerSlsAbstraction(SymHeap &sh, TObjId obj, TFieldIdxChain icBind,
     }
 
     // handle SLS_SPARE_PREFIX/SLS_SPARE_SUFFIX
-    const int len = lenTotal - SLS_SPARE_PREFIX - SLS_SPARE_SUFFIX;
-    for (int i = 0; i < static_cast<int>(SLS_SPARE_PREFIX); ++i)
+    const int len = lenTotal - at.sparePrefix - at.spareSuffix;
+    for (int i = 0; i < static_cast<int>(at.sparePrefix); ++i)
         skipObj(sh, &obj, icBind);
 
     // now create the SLS as requested
-    for (int i = 0; i < len; ++i)
-        conjureSls(sh, &obj, icBind);
-}
-
-void considerDlsAbstraction(SymHeap &sh, TObjId obj, TFieldIdxChain icBind,
-                            TFieldIdxChain icPeer, unsigned lenTotal)
-{
-    // TODO
-    (void) sh;
-    (void) obj;
-    (void) icBind;
-    (void) icPeer;
-    (void) lenTotal;
-    TRAP;
+    for (int i = 0; i < len; ++i) {
+        if (OK_SLS == kind)
+            conjureSls(sh, &obj, icBind);
+        else
+            // assume OK_DLS (see the switch above)
+            conjureDls(sh, &obj, icBind, icPeer);
+    }
 }
 
 void considerAbstraction(SymHeap &sh, TObjId obj, EObjKind kind) {
@@ -535,11 +572,8 @@ void considerAbstraction(SymHeap &sh, TObjId obj, EObjKind kind) {
         // nothing found
         return;
 
-    if (OK_SLS == kind)
-        considerSlsAbstraction(sh, obj, icBind, lsBestLength);
-    else
-        // assume OK_DLS (see the switch above)
-        considerDlsAbstraction(sh, obj, icBind, icPeer, lsBestLength);
+    // consider abstraction threshold and trigger the abstraction eventually
+    considerXlsAbstraction(sh, obj, kind, icBind, icPeer, lsBestLength);
 }
 
 } // namespace
