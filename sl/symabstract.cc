@@ -506,13 +506,13 @@ void conjureSls(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext) {
 void conjureDls(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext,
                 TFieldIdxChain icPrev)
 {
-    // jump to next
+    // jump next
     TObjId carraige = *pObj;
     skipObj(sh, &carraige, icNext);
     const TObjId objNext = carraige;
     const TValueId valNext = sh.placedAt(objNext);
 
-    // jump to next
+    // jump next
     skipObj(sh, &carraige, icNext);
     const TObjId objNextNext = carraige;
     const TValueId valNextNext = sh.placedAt(objNextNext);
@@ -521,8 +521,10 @@ void conjureDls(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext,
     ensureAbstract(sh, objNext,     OK_DLS, icPrev, icNext);
     ensureAbstract(sh, objNextNext, OK_DLS, icNext, icPrev);
 
-    // introduce some UV_UNKNOWN if necessary
+    // introduce some UV_UNKNOWN values if necessary
     abstractNonMatchingValues(sh, *pObj, objNext);
+
+    // preserve back-link
     const TValueId valBackLink = sh.valueOf(subObjByChain(sh, *pObj, icPrev));
     const TObjId objNextBackLink = subObjByChain(sh, objNext, icPrev);
     sh.objSetValue(objNextBackLink, valBackLink);
@@ -538,14 +540,14 @@ void conjureDls(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext,
     *pObj = objNext;
 }
 
-void considerXlsAbstraction(SymHeap &sh, TObjId obj, EObjKind kind,
+void considerSegAbstraction(SymHeap &sh, TObjId obj, EObjKind kind,
                             TFieldIdxChain icNext, TFieldIdxChain icPrev,
                             unsigned lenTotal)
 {
     AbstractionThreshold at;
     switch (kind) {
         case OK_CONCRETE:
-            // invalid call of considerXlsAbstraction()
+            // invalid call of considerSegAbstraction()
             TRAP;
 
         case OK_SLS:
@@ -625,7 +627,7 @@ void considerAbstraction(SymHeap &sh, TObjId obj, EObjKind kind) {
         return;
 
     // consider abstraction threshold and trigger the abstraction eventually
-    considerXlsAbstraction(sh, obj, kind, icNext, icPrev, lsBestLength);
+    considerSegAbstraction(sh, obj, kind, icNext, icPrev, lsBestLength);
 }
 
 } // namespace
@@ -670,6 +672,10 @@ void abstractIfNeeded(SymHeap &sh) {
 }
 
 void concretizeObj(SymHeap &sh, TObjId ao, TSymHeapList &todo) {
+    if (OK_SLS != sh.objKind(ao))
+        // not yet tested
+        TRAP;
+
     const TFieldIdxChain ciBind = sh.objBinderField(ao);
     const TObjId objPtrNext = subObjByChain(sh, ao, ciBind);
     const TValueId valNext = sh.valueOf(objPtrNext);
