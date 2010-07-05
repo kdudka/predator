@@ -208,9 +208,9 @@ class ProbeVisitor {
         unsigned                arrity_;
 
     public:
-        ProbeVisitor(const SymHeap &sh, TObjId obj, EObjKind kind) {
-            addr_ = sh.placedAt(obj);
-            clt_  = sh.objType(obj);
+        ProbeVisitor(const SymHeap &sh, TObjId root, EObjKind kind) {
+            addr_ = sh.placedAt(root);
+            clt_  = sh.objType(root);
             if (!addr_ || !clt_ || CL_TYPE_STRUCT != clt_->code)
                 TRAP;
 
@@ -343,7 +343,7 @@ unsigned /* len */ discoverSeg(const SymHeap &sh, TObjId obj, EObjKind kind,
     return path.size() - 1;
 }
 
-// TODO: merge the code somehow directly into discoverAllSegments
+// TODO: merge somehow the following code directly into discoverAllSegments()
 template <class TSelectorList>
 unsigned discoverAllDlls(const SymHeap              &sh,
                          const TObjId               obj,
@@ -465,7 +465,7 @@ void ensureAbstract(SymHeap &sh, TObjId obj, EObjKind kind,
             TRAP;
 
         // already abstract
-        // TODO: check if the selectors match
+        // TODO: check if the selectors match with each other
         return;
     }
 
@@ -479,6 +479,8 @@ void ensureAbstract(SymHeap &sh, TObjId obj, EObjKind kind,
     const TValueId valNext = sh.valueOf(objNextPtr);
     if (addr <= 0 || valNext < /* we allow NULL here */ 0)
         TRAP;
+
+    // FIXME: this will not work for DLS!
     sh.addNeq(addr, valNext);
 }
 
@@ -529,6 +531,16 @@ void conjureDls(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext,
     const TObjId objNextBackLink = subObjByChain(sh, objNext, icPrev);
     sh.objSetValue(objNextBackLink, valBackLink);
 
+    // make sure, there are no inconsistencies among the two parts of DLS
+    bool eq = false;
+    if (!sh.proveEq(&eq, valNext, valNextNext)) {
+        abstractNonMatchingValues(sh, objNext, objNextNext);
+        abstractNonMatchingValues(sh, objNextNext, objNext);
+    }
+    if (eq)
+        // *** dummy abstract object detected ***
+        TRAP;
+
     // now materialize the DLS from two objects by a cross-link
     const TObjId objNextPeer     = subObjByChain(sh, objNext,     icNext);
     const TObjId objNextNextPeer = subObjByChain(sh, objNextNext, icPrev);
@@ -569,25 +581,26 @@ void considerSegAbstraction(SymHeap &sh, TObjId obj, EObjKind kind,
         return;
     }
 
-    // handle SLS_SPARE_PREFIX/SLS_SPARE_SUFFIX
+    // handle sparePrefix/spareSuffix
     const int len = lenTotal - at.sparePrefix - at.spareSuffix;
     for (int i = 0; i < static_cast<int>(at.sparePrefix); ++i)
         skipObj(sh, &obj, icNext);
 
     if (OK_SLS == kind) {
+        // perform SLS abstraction!
         for (int i = 0; i < len; ++i)
             conjureSls(sh, &obj, icNext);
 
         CL_DEBUG("AAA successfully abstracted SLS");
         return;
     }
-
     // assume OK_DLS (see the switch above)
+
     if (len < 2)
         // wait, this is not going to work well;  you should tweak the threshold
         TRAP;
 
-    // now create the DLS as requested
+    // perform DLS abstraction!
     for (int i = /* we need one more object for DLS */ 1; i < len; ++i)
         conjureDls(sh, &obj, icNext, icPrev);
 
@@ -671,42 +684,75 @@ void abstractIfNeeded(SymHeap &sh) {
     }
 }
 
-void concretizeObj(SymHeap &sh, TObjId ao, TSymHeapList &todo) {
-    if (OK_SLS != sh.objKind(ao))
-        // not yet tested
-        TRAP;
-
-    const TFieldIdxChain ciBind = sh.objBinderField(ao);
-    const TObjId objPtrNext = subObjByChain(sh, ao, ciBind);
-    const TValueId valNext = sh.valueOf(objPtrNext);
-    const TObjId objNext = sh.pointsTo(valNext);
-    const TValueId addr = sh.placedAt(ao);
-
+void spliceOutSegmentIfNeeded(SymHeap &sh, TObjId ao, TObjId peer,
+                              TSymHeapList &todo)
+{
     // check if the LS may be empty
+    const TValueId addrSelf = sh.placedAt(ao);
+    const TObjId nextPtrNext = subObjByChain(sh, peer, sh.objBinderField(peer));
+    const TValueId valNext = sh.valueOf(nextPtrNext);
     bool eq;
-    if (!sh.proveEq(&eq, addr, valNext)) {
-        // possibly empty LS
-        SymHeap sh0(sh);
-        if (OBJ_INVALID == objNext) {
-            // 'next' pointer does not point to a valid object
-            sh0.valReplace(addr, valNext);
-            sh0.objDestroy(ao);
-        }
-        else
-            objReplace(sh0, ao, objNext);
-        todo.push_back(sh0);
-    }
+    if (sh.proveEq(&eq, addrSelf, valNext))
+        // segment is _guaranteed_ to be non-empty, we're done
+        return;
 
     if (eq)
         // self loop?
         TRAP;
 
+    // possibly empty LS
+    SymHeap sh0(sh);
+    if (ao != peer) {
+        // OK_DLS --> destroy peer
+        const TFieldIdxChain icPrev = sh0.objBinderField(ao);
+        const TValueId valPrev = sh0.valueOf(subObjByChain(sh0, ao, icPrev));
+        sh0.valReplace(sh0.placedAt(peer), valPrev);
+        sh0.objDestroy(peer);
+    }
+
+    // destroy self
+    sh0.valReplace(addrSelf, valNext);
+    sh0.objDestroy(ao);
+
+    // schedule the empty variant for processing
+    todo.push_back(sh0);
+}
+
+void concretizeObj(SymHeap &sh, TObjId obj, TSymHeapList &todo) {
+    TObjId ao = obj;
+
+    // branch by SLS/DLS
+    const EObjKind kind = sh.objKind(obj);
+    switch (kind) {
+        case OK_CONCRETE:
+            // invalid call of concretizeObj()
+            TRAP;
+
+        case OK_SLS:
+            break;
+
+        case OK_DLS:
+            // jump to peer
+            skipObj(sh, &ao, sh.objPeerField(obj));
+            break;
+    }
+
+    // handle possibly empty variant (if exists)
+    spliceOutSegmentIfNeeded(sh, obj, ao, todo);
+
     // duplicate self as abstract object
-    const TObjId aoDup = sh.objDup(ao);
+    const TObjId aoDup = sh.objDup(obj);
+    const TValueId aoDupAddr = sh.placedAt(aoDup);
+    if (OK_DLS == kind) {
+        // DLS relink
+        const TObjId peerField = subObjByChain(sh, ao, sh.objPeerField(ao));
+        sh.objSetValue(peerField, aoDupAddr);
+    }
 
-    // concretize self
-    sh.objConcretize(ao);
-
-    // now chain it all together
-    sh.objSetValue(objPtrNext, sh.placedAt(aoDup));
+    // concretize self and recover the list
+    const TObjId ptrNext = subObjByChain(sh, obj, (OK_SLS == kind)
+            ? sh.objBinderField(obj)
+            : sh.objPeerField(obj));
+    sh.objConcretize(obj);
+    sh.objSetValue(ptrNext, aoDupAddr);
 }
