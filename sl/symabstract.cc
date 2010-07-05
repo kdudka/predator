@@ -47,8 +47,8 @@ static struct AbstractionThreshold slsThreshold = {
 
 /// abstraction trigger threshold for DLS
 static struct AbstractionThreshold dlsThreshold = {
-    /* sparePrefix */ 1,
-    /* innerSegLen */ 1,
+    /* sparePrefix */ 0,
+    /* innerSegLen */ 2,
     /* spareSuffix */ 0
 };
 
@@ -452,28 +452,44 @@ void skipObj(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext) {
     *pObj = objNext;
 }
 
+void ensureAbstract(SymHeap &sh, TObjId obj, EObjKind kind,
+                    TFieldIdxChain icBind,
+                    TFieldIdxChain icPeer = TFieldIdxChain())
+{
+    const EObjKind kindOrig = sh.objKind(obj);
+    if (OK_CONCRETE != kindOrig) {
+        if (kind != kindOrig)
+            // about to abstract an already abstract object of incompatible type
+            TRAP;
+
+        // already abstract
+        // TODO: check if the selectors match
+        return;
+    }
+
+    // abstract a concrete object
+    sh.objAbstract(obj, OK_SLS, icBind, icPeer);
+
+    // we're constructing the abstract object from a concrete one --> it
+    // implies non-empty LS at this point
+    const TValueId addr = sh.placedAt(obj);
+    const TObjId objNextPtr = subObjByChain(sh, obj, icBind);
+    const TValueId valNext = sh.valueOf(objNextPtr);
+    if (addr <= 0 || valNext < /* we allow NULL here */ 0)
+        TRAP;
+    sh.addNeq(addr, valNext);
+}
+
 void conjureSls(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext) {
     const TObjId objPtrNext = subObjByChain(sh, *pObj, icNext);
     const TValueId valNext = sh.valueOf(objPtrNext);
     if (valNext <= 0 || 1 != sh.usedByCount(valNext))
-        // this looks like a failure of discoverSls()
+        // this looks like a failure of discoverSeg()
         TRAP;
 
+    // make sure the next object is abstract
     const TObjId objNext = sh.pointsTo(valNext);
-    if (OK_CONCRETE == sh.objKind(objNext)) {
-        // abstract the _next_ object
-        sh.objAbstract(objNext, OK_SLS, icNext);
-
-        // we're constructing the abstract object from a concrete one --> it
-        // implies non-empty LS at this point
-        const TValueId addrNext = sh.placedAt(objNext);
-        const TObjId objNextNextPtr = subObjByChain(sh, objNext, icNext);
-        const TValueId valNextNext = sh.valueOf(objNextNextPtr);
-        if (addrNext <= 0 || valNextNext < /* we allow NULL here */ 0)
-            TRAP;
-        sh.addNeq(addrNext, valNextNext);
-    }
-
+    ensureAbstract(sh, objNext, OK_SLS, icNext);
     if (OK_SLS != sh.objKind(objNext))
         TRAP;
 
@@ -488,11 +504,20 @@ void conjureSls(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext) {
 void conjureDls(SymHeap &sh, TObjId *pObj, TFieldIdxChain icBind,
                 TFieldIdxChain icPeer)
 {
+    // jump to next
+    TObjId carraige = *pObj;
+    skipObj(sh, &carraige, icBind);
+    const TObjId objNext = carraige;
+
+    // jump to next
+    skipObj(sh, &carraige, icBind);
+    const TObjId objNextNext = carraige;
+
+    // abstract the next two objects, while crossing their selectors
+    ensureAbstract(sh, objNext,     OK_DLS, icBind, icPeer);
+    ensureAbstract(sh, objNextNext, OK_DLS, icPeer, icBind);
+
     // TODO
-    (void) sh;
-    (void) pObj;
-    (void) icBind;
-    (void) icPeer;
     TRAP;
 }
 
@@ -529,6 +554,10 @@ void considerXlsAbstraction(SymHeap &sh, TObjId obj, EObjKind kind,
     const int len = lenTotal - at.sparePrefix - at.spareSuffix;
     for (int i = 0; i < static_cast<int>(at.sparePrefix); ++i)
         skipObj(sh, &obj, icBind);
+
+    if (OK_DLS == kind && len < 2)
+        // wait, this is not going to work well;  you should tweak the threshold
+        TRAP;
 
     // now create the SLS as requested
     for (int i = 0; i < len; ++i) {
