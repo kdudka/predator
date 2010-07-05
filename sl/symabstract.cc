@@ -308,6 +308,73 @@ unsigned /* len */ discoverSls(const SymHeap &sh, TObjId obj,
     return path.size() - 1;
 }
 
+template <class TSelectorList>
+unsigned discoverAllDlls(const SymHeap              &sh,
+                         const TObjId               obj,
+                         const TSelectorList        &selectors,
+                         TFieldIdxChain             *icBind,
+                         TFieldIdxChain             *icPeer)
+{
+    // TODO
+    (void) sh;
+    (void) obj;
+    (void) selectors;
+    (void) icBind;
+    (void) icPeer;
+    return /* found nothing */ 0;
+}
+
+template <class TSelectorList>
+unsigned discoverAllSegments(const SymHeap          &sh,
+                             const TObjId           obj,
+                             const EObjKind         kind,
+                             const TSelectorList    &selectors,
+                             TFieldIdxChain         *icBind,
+                             TFieldIdxChain         *icPeer)
+{
+    const unsigned cnt = selectors.size();
+    CL_DEBUG("abstract: found " << cnt << " list selector candidate(s)");
+    if (!cnt)
+        TRAP;
+
+    switch (kind) {
+        case OK_CONCRETE:
+            // ivalid call of discoverAllSegments()
+            TRAP;
+
+        case OK_SLS:
+            break;
+
+        case OK_DLS:
+            return discoverAllDlls(sh, obj, selectors, icBind, icPeer);
+    }
+
+    // choose the best selectors for SLS
+    unsigned idxBest;
+    unsigned slsBestLength = 0;
+    for (unsigned i = 0; i < cnt; ++i) {
+        CL_DEBUG("abstract: calling discoverSls() on selector "
+                << (i + 1) << "/" << cnt);
+
+        const unsigned len = discoverSls(sh, obj, selectors[i]);
+        // TODO: look for DLS at this point
+        if (!len)
+            continue;
+
+        CL_DEBUG("abstract: found SLS of length " << len);
+        if (slsBestLength < len) {
+            slsBestLength = len;
+            idxBest = i;
+        }
+    }
+
+    if (slsBestLength)
+        // something found
+        *icBind = selectors[idxBest];
+
+    return slsBestLength;
+}
+
 void skipObj(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext) {
     const TObjId objPtrNext = subObjByChain(sh, *pObj, icNext);
     const TValueId valNext = sh.valueOf(objPtrNext);
@@ -352,6 +419,41 @@ void conjureSls(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext) {
     *pObj = objNext;
 }
 
+void considerSlsAbstraction(SymHeap &sh, TObjId obj, TFieldIdxChain icBind,
+                            unsigned lenTotal)
+{
+    // check the threshold
+    static const unsigned threshold = SLS_LEN_THRESHOLD
+        + SLS_SPARE_PREFIX
+        + SLS_SPARE_SUFFIX;
+    if (lenTotal < threshold) {
+        CL_DEBUG("abstract: the best SLS length (" << lenTotal
+                << ") is under the threshold (" << threshold << ")");
+        return;
+    }
+
+    // handle SLS_SPARE_PREFIX/SLS_SPARE_SUFFIX
+    const int len = lenTotal - SLS_SPARE_PREFIX - SLS_SPARE_SUFFIX;
+    for (int i = 0; i < static_cast<int>(SLS_SPARE_PREFIX); ++i)
+        skipObj(sh, &obj, icBind);
+
+    // now create the SLS as requested
+    for (int i = 0; i < len; ++i)
+        conjureSls(sh, &obj, icBind);
+}
+
+void considerDlsAbstraction(SymHeap &sh, TObjId obj, TFieldIdxChain icBind,
+                            TFieldIdxChain icPeer, unsigned lenTotal)
+{
+    // TODO
+    (void) sh;
+    (void) obj;
+    (void) icBind;
+    (void) icPeer;
+    (void) lenTotal;
+    TRAP;
+}
+
 void abstract(SymHeap &sh, TObjId obj, EObjKind kind) {
     switch (kind) {
         case OK_CONCRETE:
@@ -375,57 +477,20 @@ void abstract(SymHeap &sh, TObjId obj, EObjKind kind) {
     // gather suitable selectors
     std::vector<TFieldIdxChain> selectors;
     digAnyListSelectors(selectors, sh, obj, kind);
-    const unsigned cnt = selectors.size();
-    CL_DEBUG("abstract: found " << cnt << " list selector candidate(s)");
-    if (!cnt)
-        TRAP;
 
-    // choose the best selectors for SLS
-    unsigned idxBest;
-    unsigned slsBestLenght = 0;
-    for (unsigned i = 0; i < cnt; ++i) {
-        CL_DEBUG("abstract: calling discoverSls() on selector "
-                << (i + 1) << "/" << cnt);
-
-        const unsigned len = discoverSls(sh, obj, selectors[i]);
-        // TODO: look for DLS at this point
-        if (!len)
-            continue;
-
-        CL_DEBUG("abstract: found SLS of length " << len);
-        if (slsBestLenght < len) {
-            slsBestLenght = len;
-            idxBest = i;
-        }
-    }
-
-    // did we find at least something?
-    if (!slsBestLenght) {
+    // run the LS discovering process
+    TFieldIdxChain icBind, icPeer;
+    const unsigned lsBestLength = discoverAllSegments(sh, obj, kind, selectors,
+                                                      &icBind, &icPeer);
+    if (!lsBestLength) {
         CL_DEBUG("abstract: no list segment found");
         return;
     }
 
-    // yes, we did ... check the threshold
-    static const unsigned threshold = SLS_LEN_THRESHOLD
-        + SLS_SPARE_PREFIX
-        + SLS_SPARE_SUFFIX;
-    if (slsBestLenght < threshold) {
-        CL_DEBUG("abstract: the best SLS length (" << slsBestLenght
-                << ") is under the threshold (" << threshold << ")");
-        return;
-    }
-
-    // all OK
-    const TFieldIdxChain &icNext = selectors[idxBest];
-
-    // handle SLS_SPARE_PREFIX/SLS_SPARE_SUFFIX
-    const int len = slsBestLenght - SLS_SPARE_PREFIX - SLS_SPARE_SUFFIX;
-    for (int i = 0; i < static_cast<int>(SLS_SPARE_PREFIX); ++i)
-        skipObj(sh, &obj, icNext);
-
-    // now create the SLS as requested
-    for (int i = 0; i < len; ++i)
-        conjureSls(sh, &obj, icNext);
+    if (OK_SLS == kind)
+        considerSlsAbstraction(sh, obj, icBind, lsBestLength);
+    else
+        considerDlsAbstraction(sh, obj, icBind, icPeer, lsBestLength);
 }
 
 } // namespace
