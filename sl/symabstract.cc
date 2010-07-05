@@ -308,6 +308,18 @@ unsigned /* len */ discoverSls(const SymHeap &sh, TObjId obj,
     return path.size() - 1;
 }
 
+unsigned /* len */ discoverDls(const SymHeap &sh, TObjId obj,
+                               TFieldIdxChain icBind, TFieldIdxChain icPeer)
+{
+    // TODO
+    TRAP;
+    (void) sh;
+    (void) obj;
+    (void) icBind;
+    (void) icPeer;
+    return /* not found */ 0;
+}
+
 template <class TSelectorList>
 unsigned discoverAllDlls(const SymHeap              &sh,
                          const TObjId               obj,
@@ -315,13 +327,45 @@ unsigned discoverAllDlls(const SymHeap              &sh,
                          TFieldIdxChain             *icBind,
                          TFieldIdxChain             *icPeer)
 {
-    // TODO
-    (void) sh;
-    (void) obj;
-    (void) selectors;
-    (void) icBind;
-    (void) icPeer;
-    return /* found nothing */ 0;
+    const int cnt = selectors.size();
+    if (cnt < 2) {
+        CL_DEBUG("abstract: not enough selectors for OK_DLS");
+        return /* found nothing */ 0;
+    }
+
+    unsigned bestLen = 0, bestBind, bestPeer;
+
+    // if (2 < cnt), try all possible combinations
+    // NOTE: This may take some time...
+    for (int bind = 0; bind < cnt; ++bind) {
+        for (int peer = 0; peer < cnt; ++peer) {
+            if (bind == peer)
+                // we demand on two distinct selectors for a DLL
+                continue;
+
+            const unsigned len  = discoverDls(sh, obj, selectors[bind],
+                                              selectors[peer]);
+            if (!len)
+                continue;
+
+            CL_DEBUG("abstract: found DLS of length " << len);
+            if (bestLen < len) {
+                bestLen = len;
+                bestBind = bind;
+                bestPeer = peer;
+            }
+        }
+    }
+
+    if (!bestLen) {
+        CL_DEBUG("abstract: no DLS found");
+        return /* not found */ 0;
+    }
+
+    // something found
+    *icBind = selectors[bestBind];
+    *icPeer = selectors[bestPeer];
+    return bestLen;
 }
 
 template <class TSelectorList>
@@ -368,10 +412,13 @@ unsigned discoverAllSegments(const SymHeap          &sh,
         }
     }
 
-    if (slsBestLength)
-        // something found
-        *icBind = selectors[idxBest];
+    if (!slsBestLength) {
+        CL_DEBUG("abstract: no SLS found");
+        return /* not found */ 0;
+    }
 
+    // something found
+    *icBind = selectors[idxBest];
     return slsBestLength;
 }
 
@@ -454,10 +501,10 @@ void considerDlsAbstraction(SymHeap &sh, TObjId obj, TFieldIdxChain icBind,
     TRAP;
 }
 
-void abstract(SymHeap &sh, TObjId obj, EObjKind kind) {
+void considerAbstraction(SymHeap &sh, TObjId obj, EObjKind kind) {
     switch (kind) {
         case OK_CONCRETE:
-            // invalid call of abstract()
+            // invalid call of considerAbstraction()
             TRAP;
 
         case OK_SLS:
@@ -482,14 +529,14 @@ void abstract(SymHeap &sh, TObjId obj, EObjKind kind) {
     TFieldIdxChain icBind, icPeer;
     const unsigned lsBestLength = discoverAllSegments(sh, obj, kind, selectors,
                                                       &icBind, &icPeer);
-    if (!lsBestLength) {
-        CL_DEBUG("abstract: no list segment found");
+    if (!lsBestLength)
+        // nothing found
         return;
-    }
 
     if (OK_SLS == kind)
         considerSlsAbstraction(sh, obj, icBind, lsBestLength);
     else
+        // assume OK_DLS (see the switch above)
         considerDlsAbstraction(sh, obj, icBind, icPeer, lsBestLength);
 }
 
@@ -522,11 +569,11 @@ void abstractIfNeeded(SymHeap &sh) {
 
             case 1:
                 // a candidate for SLS
-                abstract(sh, obj, OK_SLS);
+                considerAbstraction(sh, obj, OK_SLS);
 
             case 2:
                 // a candidate for DLS
-                abstract(sh, obj, OK_DLS);
+                considerAbstraction(sh, obj, OK_DLS);
         }
     }
 }
