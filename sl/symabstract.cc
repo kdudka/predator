@@ -360,7 +360,7 @@ void abstract(SymHeap &sh, TObjId obj) {
 
     // did we find at least something?
     if (!slsBestLenght) {
-        CL_DEBUG("abstract: no list segment found, bailing out");
+        CL_DEBUG("abstract: no list segment found");
         return;
     }
 
@@ -370,7 +370,7 @@ void abstract(SymHeap &sh, TObjId obj) {
         + SLS_SPARE_SUFFIX;
     if (slsBestLenght < threshold) {
         CL_DEBUG("abstract: the best SLS length (" << slsBestLenght
-                << ") is under threshold (" << threshold << "), bailing out");
+                << ") is under the threshold (" << threshold << ")");
         return;
     }
 
@@ -393,7 +393,14 @@ void abstractIfNeeded(SymHeap &sh) {
     SymHeapCore::TContObj roots;
     sh.gatherRootObjs(roots);
     BOOST_FOREACH(const TObjId obj, roots) {
+        if (sh.cVar(0, obj))
+            // skip static/automatic objects
+            continue;
+
         const TValueId addr = sh.placedAt(obj);
+        if (VAL_INVALID ==addr)
+            continue;
+
         const unsigned uses = sh.usedByCount(addr);
         switch (uses) {
             case 0:

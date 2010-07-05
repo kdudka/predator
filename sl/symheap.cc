@@ -1050,6 +1050,10 @@ void SymHeapTyped::objDestroyPriv(TObjId obj) {
             : OBJ_LOST;
         SymHeapCore::objDestroy(obj, kind);
     }
+
+    // remove self from roots (if ever there)
+    remove_if(d->roots.begin(), d->roots.end(),
+            bind2nd(std::equal_to<TObjId>(), obj));
 }
 
 SymHeapTyped::SymHeapTyped():
