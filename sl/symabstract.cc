@@ -128,6 +128,14 @@ bool abstractNonMatchingValuesVisitor(SymHeap &sh, TObjPair item) {
 
     // create a new unknown value as a placeholder
     const TValueId valNew = sh.valCreateUnknown(UV_UNKNOWN, clt);
+
+    // FIXME: A virtual junk may be introduced at this point!  The junk is not
+    // anyhow reported to user, but causes the annoying warnings about dangling
+    // root objects.  We should probably treat it as regular false alarm,
+    // utilize SymHeapProcessor to collect it and properly report.  However it
+    // requires to pull-in location info, backtrace and the like.  Luckily, the
+    // junk is not going to survive next run of symcut anyway, so it should not
+    // shoot down the analysis completely.
     sh.objSetValue(dst, valNew);
     return /* continue */ true;
 }
