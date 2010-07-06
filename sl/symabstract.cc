@@ -424,10 +424,8 @@ unsigned discoverAllDlls(const SymHeap              &sh,
                          TFieldIdxChain             *icPrev)
 {
     const int cnt = selectors.size();
-    if (cnt < 2) {
-        CL_DEBUG("<-- not enough selectors for OK_DLS");
+    if (cnt < 2)
         return /* found nothing */ 0;
-    }
 
     unsigned bestLen = 0, bestNext, bestPrev;
 
@@ -445,7 +443,7 @@ unsigned discoverAllDlls(const SymHeap              &sh,
             if (!len)
                 continue;
 
-            CL_DEBUG("--- found DLS of length " << len);
+            CL_DEBUG("        --> found DLS of length " << len);
             if (bestLen < len) {
                 bestLen = len;
                 bestNext = next;
@@ -455,7 +453,7 @@ unsigned discoverAllDlls(const SymHeap              &sh,
     }
 
     if (!bestLen) {
-        CL_DEBUG("<--- no DLS found");
+        CL_DEBUG("        <-- no DLS found");
         return /* not found */ 0;
     }
 
@@ -474,7 +472,7 @@ unsigned discoverAllSegments(const SymHeap          &sh,
                              TFieldIdxChain         *icPrev)
 {
     const unsigned cnt = selectors.size();
-    CL_DEBUG("--- found " << cnt << " list selector candidate(s)");
+    CL_DEBUG("    --> found " << cnt << " list selector candidate(s)");
     if (!cnt)
         TRAP;
 
@@ -498,7 +496,7 @@ unsigned discoverAllSegments(const SymHeap          &sh,
         if (!len)
             continue;
 
-        CL_DEBUG("--- found SLS of length " << len);
+        CL_DEBUG("        --> found SLS of length " << len);
         if (slsBestLength < len) {
             slsBestLength = len;
             idxBest = i;
@@ -506,7 +504,7 @@ unsigned discoverAllSegments(const SymHeap          &sh,
     }
 
     if (!slsBestLength) {
-        CL_DEBUG("<-- no SLS found");
+        CL_DEBUG("        <-- no SLS found");
         return /* not found */ 0;
     }
 
@@ -711,13 +709,19 @@ bool considerSegAbstraction(SymHeap &sh, TObjId obj, EObjKind kind,
                                     + at.spareSuffix;
 
     if (lenTotal < threshold) {
-        CL_DEBUG("<-- length of the longest segment (" << lenTotal
-                << ") is under the threshold (" << threshold << ")");
+        CL_DEBUG("<-- length (" << lenTotal
+                << ") of the longest segment is under the threshold ("
+                << threshold << ")");
         return false;
     }
 
+    CL_DEBUG("    --- length of the longest segment is " << lenTotal
+            << ", prefix=" << at.sparePrefix
+            << ", suffix=" << at.spareSuffix);
+
     // handle sparePrefix/spareSuffix
     const int len = lenTotal - at.sparePrefix - at.spareSuffix;
+    CL_DEBUG("    AAA initiating abstraction of length " << len);
     for (int i = 0; i < static_cast<int>(at.sparePrefix); ++i)
         skipObj(sh, &obj, icNext);
 
@@ -726,7 +730,7 @@ bool considerSegAbstraction(SymHeap &sh, TObjId obj, EObjKind kind,
         for (int i = 0; i < len; ++i)
             slSegAbstractionStep(sh, &obj, icNext);
 
-        CL_DEBUG("AAA successfully abstracted SLS");
+        CL_DEBUG("<-- successfully abstracted SLS");
         return true;
     }
     // assume OK_DLS (see the switch above)
@@ -735,7 +739,7 @@ bool considerSegAbstraction(SymHeap &sh, TObjId obj, EObjKind kind,
     for (int i = 0; i < len; ++i)
         dlSegAbstractionStep(sh, &obj, icNext, icPrev);
 
-    CL_DEBUG("AAA successfully abstracted DLS");
+    CL_DEBUG("<-- successfully abstracted DLS");
     return true;
 }
 
@@ -779,9 +783,10 @@ bool considerAbstraction(SymHeap &sh, EObjKind kind, TCont entries) {
         bestNext        = icNext;
         bestPrev        = icPrev;
     }
-    if (!bestLen)
-        // nothing found
+    if (!bestLen) {
+        CL_DEBUG("<-- nothing useful found");
         return false;
+    }
 
     // consider abstraction threshold and trigger the abstraction eventually
     return considerSegAbstraction(sh, bestEntry, kind, bestNext, bestPrev,
@@ -869,8 +874,9 @@ void spliceOutSegmentIfNeeded(SymHeap &sh, TObjId ao, TObjId peer,
             // self loop?
             TRAP;
 
-        // segment is _guaranteed_ to be non-empty now, but the concretization
-        // makes it _possibly_ empty 
+        // the segment was _guaranteed_ to be non-empty now, but
+        // the concretization makes it _possibly_ empty
+        // --> remove the Neq predicate 
         sh.delNeq(addrSelf, valNext);
         return;
     }
