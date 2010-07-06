@@ -315,16 +315,7 @@ bool segNotEmpty(const SymHeap &sh, TObjId seg) {
     const TObjId next = nextPtrFromSeg(sh, seg);
     const TValueId nextVal = sh.valueOf(next);
     const TValueId addr = sh.placedAt(seg);
-
-    bool eq;
-    if (!sh.proveEq(&eq, addr, nextVal))
-        return /* possibly empty */ false;
-
-    if (eq)
-        // invalid SLS
-        TRAP;
-
-    return /* not empty */ true;
+    return /* not empty */ proveNeq(sh, addr, nextVal);
 }
 
 class ProbeVisitor {
@@ -432,7 +423,7 @@ void digAnyListSelectors(TDst &dst, const SymHeap &sh, TObjId obj,
     }
 }
 
-unsigned /* len */ discoverSeg(const SymHeap &sh, TObjId entry, EObjKind kind,
+unsigned /* len */ segDiscover(const SymHeap &sh, TObjId entry, EObjKind kind,
                                TFieldIdxChain icBind,
                                TFieldIdxChain icPeer = TFieldIdxChain())
 {
@@ -505,35 +496,47 @@ unsigned /* len */ discoverSeg(const SymHeap &sh, TObjId entry, EObjKind kind,
     return rawPathLen - dlSegsOnPath;
 }
 
-// TODO: merge somehow the following code directly into discoverAllSegments()
 template <class TSelectorList>
-unsigned discoverAllDlls(const SymHeap              &sh,
-                         const TObjId               obj,
-                         const TSelectorList        &selectors,
-                         TFieldIdxChain             *icNext,
-                         TFieldIdxChain             *icPrev)
+unsigned segDiscoverAll(const SymHeap &sh, const TObjId obj, EObjKind kind,
+                        const TSelectorList &selectors, TFieldIdxChain *icNext,
+                        TFieldIdxChain *icPrev)
 {
-    const int cnt = selectors.size();
-    if (cnt < 2)
-        return /* found nothing */ 0;
+    // check count of the selectors
+    const unsigned cnt = selectors.size();
+    CL_DEBUG("    --> found " << cnt << " list selector candidate(s)");
+    if (!cnt)
+        // why are we called actually?
+        TRAP;
 
-    unsigned bestLen = 0, bestNext, bestPrev;
+    unsigned prevMax = cnt;
+    switch (kind) {
+        case OK_CONCRETE:
+            // invalid call of segDiscoverAll()
+            TRAP;
 
-    // if (2 < cnt), try all possible combinations
+        case OK_SLS:
+            // just choose one selector
+            prevMax = /* dummy value */ 1;
+            break;
+
+        case OK_DLS:
+            // we need at least 2 selectors for DLS abstraction
+            if (cnt < 2)
+                return /* found nothing */ 0;
+    }
+
+    // if (2 < cnt), try all possible combinations in case of DLS
     // NOTE: This may take some time...
-    for (int next = 0; next < cnt; ++next) {
-        for (int prev = 0; prev < cnt; ++prev) {
-            if (next == prev)
-                // we demand on two distinct selectors for a DLL
-                continue;
-
-            const unsigned len  = discoverSeg(sh, obj, OK_DLS,
-                                              selectors[next],
-                                              selectors[prev]);
+    unsigned bestLen = 0, bestNext, bestPrev;
+    for (unsigned next = 0; next < cnt; ++next) {
+        for (unsigned prev = 0; prev < prevMax; ++prev) {
+            const unsigned len = segDiscover(sh, obj, kind,
+                                             selectors[next],
+                                             selectors[prev]);
             if (!len)
                 continue;
 
-            CL_DEBUG("        --> found DLS of length " << len);
+            CL_DEBUG("        --> found segment of length " << len);
             if (bestLen < len) {
                 bestLen = len;
                 bestNext = next;
@@ -543,7 +546,7 @@ unsigned discoverAllDlls(const SymHeap              &sh,
     }
 
     if (!bestLen) {
-        CL_DEBUG("        <-- no DLS found");
+        CL_DEBUG("        <-- no segment found");
         return /* not found */ 0;
     }
 
@@ -553,57 +556,7 @@ unsigned discoverAllDlls(const SymHeap              &sh,
     return bestLen;
 }
 
-template <class TSelectorList>
-unsigned discoverAllSegments(const SymHeap          &sh,
-                             const TObjId           obj,
-                             const EObjKind         kind,
-                             const TSelectorList    &selectors,
-                             TFieldIdxChain         *icNext,
-                             TFieldIdxChain         *icPrev)
-{
-    const unsigned cnt = selectors.size();
-    CL_DEBUG("    --> found " << cnt << " list selector candidate(s)");
-    if (!cnt)
-        TRAP;
-
-    switch (kind) {
-        case OK_CONCRETE:
-            // ivalid call of discoverAllSegments()
-            TRAP;
-
-        case OK_SLS:
-            break;
-
-        case OK_DLS:
-            return discoverAllDlls(sh, obj, selectors, icNext, icPrev);
-    }
-
-    // choose the best selectors for SLS
-    unsigned idxBest;
-    unsigned slsBestLength = 0;
-    for (unsigned i = 0; i < cnt; ++i) {
-        const unsigned len = discoverSeg(sh, obj, OK_SLS, selectors[i]);
-        if (!len)
-            continue;
-
-        CL_DEBUG("        --> found SLS of length " << len);
-        if (slsBestLength < len) {
-            slsBestLength = len;
-            idxBest = i;
-        }
-    }
-
-    if (!slsBestLength) {
-        CL_DEBUG("        <-- no SLS found");
-        return /* not found */ 0;
-    }
-
-    // something found
-    *icNext = selectors[idxBest];
-    return slsBestLength;
-}
-
-void ensureSlSeg(SymHeap &sh, TObjId obj, TFieldIdxChain icBind) {
+void slSegCreateIfNeeded(SymHeap &sh, TObjId obj, TFieldIdxChain icBind) {
     const EObjKind kind = sh.objKind(obj);
     switch (kind) {
         case OK_SLS:
@@ -638,12 +591,12 @@ void slSegAbstractionStep(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext) {
     const TObjId objPtrNext = subObjByChain(sh, *pObj, icNext);
     const TValueId valNext = sh.valueOf(objPtrNext);
     if (valNext <= 0 || 1 != sh.usedByCount(valNext))
-        // this looks like a failure of discoverSeg()
+        // this looks like a failure of segDiscover()
         TRAP;
 
     // make sure the next object is abstract
     const TObjId objNext = sh.pointsTo(valNext);
-    ensureSlSeg(sh, objNext, icNext);
+    slSegCreateIfNeeded(sh, objNext, icNext);
     if (OK_SLS != sh.objKind(objNext))
         TRAP;
 
@@ -675,6 +628,10 @@ void dlSegHandleCrossNeq(SymHeap &sh, TObjId dls, TFun fun) {
 void dlSegCreate(SymHeap &sh, TObjId o1, TObjId o2,
                  TFieldIdxChain icNext, TFieldIdxChain icPrev)
 {
+    if (OK_CONCRETE != sh.objKind(o1) || OK_CONCRETE != sh.objKind(o2))
+        // invalid call of dlSegCreate()
+        TRAP;
+
     sh.objAbstract(o1, OK_DLS, icPrev, icNext);
     sh.objAbstract(o2, OK_DLS, icNext, icPrev);
 
@@ -757,7 +714,7 @@ void dlSegAbstractionStep(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext,
     EObjKind kind = sh.objKind(o1);
     switch (kind) {
         case OK_SLS:
-            // *** discoverSeg() failure detected ***
+            // *** segDiscover() failure detected ***
             TRAP;
 
         case OK_DLS:
@@ -796,6 +753,7 @@ bool considerSegAbstraction(SymHeap &sh, TObjId obj, EObjKind kind,
                             TFieldIdxChain icNext, TFieldIdxChain icPrev,
                             unsigned lenTotal)
 {
+    // select the appropriate threshold for the given type of abstraction
     AbstractionThreshold at;
     switch (kind) {
         case OK_CONCRETE:
@@ -811,7 +769,7 @@ bool considerSegAbstraction(SymHeap &sh, TObjId obj, EObjKind kind,
             break;
     }
 
-    // check the threshold
+    // check whether the threshold is satisfied or not
     static const unsigned threshold = at.sparePrefix + at.innerSegLen
                                     + at.spareSuffix;
 
@@ -828,9 +786,10 @@ bool considerSegAbstraction(SymHeap &sh, TObjId obj, EObjKind kind,
 
     // handle sparePrefix/spareSuffix
     const int len = lenTotal - at.sparePrefix - at.spareSuffix;
-    CL_DEBUG("    AAA initiating abstraction of length " << len);
     for (int i = 0; i < static_cast<int>(at.sparePrefix); ++i)
         skipObj(sh, &obj, icNext);
+
+    CL_DEBUG("    AAA initiating abstraction of length " << len);
 
     if (OK_SLS == kind) {
         // perform SLS abstraction!
@@ -878,8 +837,8 @@ bool considerAbstraction(SymHeap &sh, EObjKind kind, TCont entries) {
 
         // run the LS discovering process
         TFieldIdxChain icNext, icPrev;
-        const unsigned len = discoverAllSegments(sh, obj, kind, selectors,
-                                                 &icNext, &icPrev);
+        const unsigned len = segDiscoverAll(sh, obj, kind, selectors,
+                                            &icNext, &icPrev);
 
         if (len <= bestLen)
             continue;
