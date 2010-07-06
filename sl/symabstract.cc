@@ -56,8 +56,8 @@ static struct AbstractionThreshold slsThreshold = {
 /// abstraction trigger threshold for DLS
 static struct AbstractionThreshold dlsThreshold = {
     /* sparePrefix */ 0,
-    /* innerSegLen */ 2,
-    /* spareSuffix */ 0     /* 1 is recommended here */
+    /* innerSegLen */ 1,
+    /* spareSuffix */ 1
 };
 
 typedef std::pair<TObjId, TObjId> TObjPair;
@@ -166,20 +166,35 @@ bool abstractNonMatchingValuesVisitor(SymHeap &sh, TObjPair item) {
 
 // when abstracting an object, we need to abstract all non-matching values in
 void abstractNonMatchingValues(SymHeap &sh, TObjId src, TObjId dst) {
-    if (OK_CONCRETE == sh.objKind(dst))
+    const EObjKind kind = sh.objKind(dst);
+    if (OK_CONCRETE == kind)
         // invalid call of abstractNonMatchingValues()
         TRAP;
 
-    // wait, first preserve the value of binder
+    // wait, first preserve the value of binder and peer
     const TObjId objBind = subObjByChain(sh, dst, sh.objBinderField(dst));
     const TValueId valBind = sh.valueOf(objBind);
+    TObjId   objPeer = OBJ_INVALID;
+    TValueId valPeer = VAL_INVALID;
+    if (OK_DLS == kind) {
+        objPeer = subObjByChain(sh, dst, sh.objPeerField(dst));
+        valPeer = sh.valueOf(objPeer);
+    }
 
     // traverse all sub-objects
     const TObjPair item(src, dst);
     traverseSubObjs(sh, item, abstractNonMatchingValuesVisitor);
 
-    // now restore the possibly smashed value of binder
+    // now restore the possibly smashed value of binder and peer
     sh.objSetValue(objBind, valBind);
+    if (OK_DLS == kind)
+        sh.objSetValue(objPeer, valPeer);
+}
+
+void abstractNonMatchingValuesBidir(SymHeap &sh, TObjId o1, TObjId o2) {
+    // TODO: extend the visitor to do both in one pass
+    abstractNonMatchingValues(sh, o1, o2);
+    abstractNonMatchingValues(sh, o2, o1);
 }
 
 void objReplace(SymHeap &sh, TObjId oldObj, TObjId newObj) {
@@ -199,6 +214,27 @@ void objReplace(SymHeap &sh, TObjId oldObj, TObjId newObj) {
 
     // now destroy the old object
     sh.objDestroy(oldObj);
+}
+
+void skipObj(const SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext) {
+    const TObjId objPtrNext = subObjByChain(sh, *pObj, icNext);
+    const TValueId valNext = sh.valueOf(objPtrNext);
+    const TObjId objNext = sh.pointsTo(valNext);
+    if (OBJ_INVALID == objNext)
+        TRAP;
+
+    // move to the next object
+    *pObj = objNext;
+}
+
+TObjId dlSegPeer(const SymHeap &sh, TObjId dls) {
+    if (OK_DLS != sh.objKind(dls))
+        // invalid call of dlsPeer()
+        TRAP;
+
+    TObjId peer = dls;
+    skipObj(sh, &peer, sh.objPeerField(dls));
+    return peer;
 }
 
 class ProbeVisitor {
@@ -306,14 +342,40 @@ void digAnyListSelectors(TDst &dst, const SymHeap &sh, TObjId obj,
     }
 }
 
-unsigned /* len */ discoverSeg(const SymHeap &sh, TObjId obj, EObjKind kind,
+unsigned /* len */ discoverSeg(const SymHeap &sh, TObjId entry, EObjKind kind,
                                TFieldIdxChain icBind,
                                TFieldIdxChain icPeer = TFieldIdxChain())
 {
+    int dlSegsOnPath = 0;
+
     // we use std::set to avoid an infinite loop
+    TObjId obj = entry;
     std::set<TObjId> path;
     while (!hasKey(path, obj)) {
         path.insert(obj);
+
+        const EObjKind kindEncountered = sh.objKind(obj);
+        if (OK_DLS == kindEncountered) {
+            // we've hit an already existing DLS on path, let's handle it such
+            if (OK_DLS != kind)
+                // arrity vs. kind mismatch
+                TRAP;
+
+            // check selectors
+            const TFieldIdxChain icPeerEncountered = sh.objPeerField(obj);
+            if (icPeerEncountered != icBind && icPeerEncountered != icPeer)
+                // completely incompatible DLS, it gives us no go
+                break;
+
+            // jump to peer
+            skipObj(sh, &obj, sh.objPeerField(obj));
+            if (hasKey(path, obj))
+                // we came from the wrong side this time
+                break;
+
+            path.insert(obj);
+            dlSegsOnPath++;
+        }
 
         const TObjId objPtrNext = subObjByChain(sh, obj, icBind);
         const ProbeVisitor visitor(sh, obj, kind);
@@ -340,7 +402,16 @@ unsigned /* len */ discoverSeg(const SymHeap &sh, TObjId obj, EObjKind kind,
         obj = objNext;
     }
 
-    return path.size() - 1;
+    // if there is at least one DLS on the path, we demand that the path begins
+    // with a DLS;  otherwise we just ignore the path and wait for a better one
+    if (dlSegsOnPath && OK_DLS != sh.objKind(entry))
+        return /* not found */ 0;
+
+    // path consisting of N nodes has N-1 edges
+    const unsigned rawPathLen = path.size() - 1;
+
+    // each DLS consists of two nodes
+    return rawPathLen - dlSegsOnPath;
 }
 
 // TODO: merge somehow the following code directly into discoverAllSegments()
@@ -443,42 +514,38 @@ unsigned discoverAllSegments(const SymHeap          &sh,
     return slsBestLength;
 }
 
-void skipObj(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext) {
-    const TObjId objPtrNext = subObjByChain(sh, *pObj, icNext);
-    const TValueId valNext = sh.valueOf(objPtrNext);
-    const TObjId objNext = sh.pointsTo(valNext);
-    if (OBJ_INVALID == objNext)
-        TRAP;
+void ensureSlSeg(SymHeap &sh, TObjId obj, TFieldIdxChain icBind) {
+    const EObjKind kind = sh.objKind(obj);
+    switch (kind) {
+        case OK_SLS:
+            // already abstract, check binder
+            if (sh.objBinderField(obj) == icBind)
+                // all OK
+                return;
+            // fall through!
 
-    // move to the next object
-    *pObj = objNext;
-}
-
-bool /* changed */ ensureAbstract(SymHeap &sh, TObjId obj, EObjKind kind,
-                                  TFieldIdxChain icBind,
-                                  TFieldIdxChain icPeer = TFieldIdxChain())
-{
-    const EObjKind kindOrig = sh.objKind(obj);
-    if (OK_CONCRETE != kindOrig) {
-        if (kind != kindOrig)
-            // about to abstract an already abstract object of incompatible type
+        case OK_DLS:
             TRAP;
+            // fall through!
 
-        // already abstract
-        if (sh.objBinderField(obj) != icBind
-                || sh.objPeerField(obj) != icPeer)
-            // TODO: handle this case somehow!
-            TRAP;
-
-        return false;
+        case OK_CONCRETE:
+            break;
     }
 
     // abstract a concrete object
-    sh.objAbstract(obj, kind, icBind, icPeer);
-    return true;
+    sh.objAbstract(obj, OK_SLS, icBind);
+
+    // we're constructing the abstract object from a concrete one --> it
+    // implies non-empty LS at this point
+    const TValueId addr = sh.placedAt(obj);
+    const TObjId objNextPtr = subObjByChain(sh, obj, icBind);
+    const TValueId valNext = sh.valueOf(objNextPtr);
+    if (addr <= 0 || valNext < /* we allow VAL_NULL here */ 0)
+        TRAP;
+    sh.addNeq(addr, valNext);
 }
 
-void conjureSls(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext) {
+void slSegAbstractionStep(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext) {
     const TObjId objPtrNext = subObjByChain(sh, *pObj, icNext);
     const TValueId valNext = sh.valueOf(objPtrNext);
     if (valNext <= 0 || 1 != sh.usedByCount(valNext))
@@ -487,22 +554,12 @@ void conjureSls(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext) {
 
     // make sure the next object is abstract
     const TObjId objNext = sh.pointsTo(valNext);
-    if (ensureAbstract(sh, objNext, OK_SLS, icNext)) {
-        // we're constructing the abstract object from a concrete one --> it
-        // implies non-empty LS at this point
-        const TValueId addr = sh.placedAt(objNext);
-        const TObjId objNextPtr = subObjByChain(sh, objNext, icNext);
-        const TValueId valNextNext = sh.valueOf(objNextPtr);
-        if (addr <= 0 || valNextNext < /* we allow VAL_NULL here */ 0)
-            TRAP;
-
-        sh.addNeq(addr, valNextNext);
-    }
-
+    ensureSlSeg(sh, objNext, icNext);
     if (OK_SLS != sh.objKind(objNext))
         TRAP;
 
     // replace self by the next object
+    // FIXME: should be abstractNonMatchingValuesBidir()?
     abstractNonMatchingValues(sh, *pObj, objNext);
     objReplace(sh, *pObj, objNext);
 
@@ -510,7 +567,7 @@ void conjureSls(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext) {
     *pObj = objNext;
 }
 
-void storeDlsCrossNeq(SymHeap &sh, TObjId obj, TObjId peer) {
+void dlsStoreCrossNeq(SymHeap &sh, TObjId obj, TObjId peer) {
     // dig the value before
     const TFieldIdxChain icBindPrev = sh.objBinderField(obj);
     const TObjId ptrPrev = subObjByChain(sh, obj, icBindPrev);
@@ -525,20 +582,104 @@ void storeDlsCrossNeq(SymHeap &sh, TObjId obj, TObjId peer) {
     sh.addNeq(valPrev, valNext);
 }
 
-void conjureDls(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext,
-                TFieldIdxChain icPrev)
+void dlSegCreate(SymHeap &sh, TObjId o1, TObjId o2,
+                 TFieldIdxChain icNext, TFieldIdxChain icPrev)
 {
-    // jump next
-    TObjId carraige = *pObj;
-    skipObj(sh, &carraige, icNext);
-    const TObjId objNext = carraige;
-    const TValueId valNext = sh.placedAt(objNext);
+    sh.objAbstract(o1, OK_DLS, icPrev, icNext);
+    sh.objAbstract(o2, OK_DLS, icNext, icPrev);
 
-    // jump next
-    skipObj(sh, &carraige, icNext);
-    const TObjId objNextNext = carraige;
-    const TValueId valNextNext = sh.placedAt(objNextNext);
+    // introduce some UV_UNKNOWN values if necessary
+    abstractNonMatchingValuesBidir(sh, o1, o2);
 
+    // a just created DLS is said to be non-empty
+    dlsStoreCrossNeq(sh, o1, o2);
+}
+
+void dlSegGoblle(SymHeap &sh, TObjId dls, TObjId var, bool backward) {
+    if (OK_DLS != sh.objKind(dls) || OK_CONCRETE != sh.objKind(var))
+        // invalid call of dlSegGoblle()
+        TRAP;
+
+    if (!backward)
+        // jump to peer
+        skipObj(sh, &dls, sh.objPeerField(dls));
+
+    // introduce some UV_UNKNOWN values if necessary
+    abstractNonMatchingValues(sh, var, dls);
+
+    if (backward)
+        // not implemented yet
+        TRAP;
+
+    // store the pointer DLS -> VAR
+    const TFieldIdxChain icBind = sh.objBinderField(dls);
+    const TObjId dlsNextPtr = subObjByChain(sh, dls, icBind);
+    const TObjId varNextPtr = subObjByChain(sh, var, icBind);
+    sh.objSetValue(dlsNextPtr, sh.valueOf(varNextPtr));
+
+    // replace VAR by DLS
+    objReplace(sh, var, dls);
+}
+
+void dlSegMerge(SymHeap &sh, TObjId seg1, TObjId seg2) {
+    const TObjId peer1 = dlSegPeer(sh, seg1);
+    const TObjId peer2 = dlSegPeer(sh, seg2);
+
+    // introduce some UV_UNKNOWN values if necessary
+    abstractNonMatchingValuesBidir(sh, seg1, seg2);
+    abstractNonMatchingValuesBidir(sh, peer1, peer2);
+
+    // FIXME: handle Neq predicates properly
+
+    objReplace(sh, seg1, seg2);
+    objReplace(sh, peer1, peer2);
+}
+
+void dlSegAbstractionStep(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext,
+                          TFieldIdxChain icPrev)
+{
+    // the first object is clear
+    const TObjId o1 = *pObj;
+
+    // we'll find the next one later on
+    TObjId o2 = o1;
+
+    EObjKind kind = sh.objKind(o1);
+    switch (kind) {
+        case OK_SLS:
+            // *** discoverSeg() failure detected ***
+            TRAP;
+
+        case OK_DLS:
+            // jump to peer
+            skipObj(sh, &o2, sh.objPeerField(o2));
+
+            // jump to next object
+            skipObj(sh, &o2, sh.objBinderField(o2));
+            if (OK_CONCRETE == sh.objKind(o2)) {
+                // DLS + VAR
+                dlSegGoblle(sh, o1, o2, /* backward */ false);
+                return;
+            }
+
+            // DLS + DLS
+            dlSegMerge(sh, o1, o2);
+            return;
+
+        case OK_CONCRETE:
+            skipObj(sh, &o2, icNext);
+            if (OK_CONCRETE == sh.objKind(o2)) {
+                // VAR + VAR
+                dlSegCreate(sh, o1, o2, icNext, icPrev);
+                return;
+            }
+
+            // VAR + DLS
+            dlSegGoblle(sh, o2, o1, /* backward */ true);
+            *pObj = o2;
+            return;
+    }
+#if 0
     // abstract the next two objects, while crossing their selectors
     const bool c1 = ensureAbstract(sh, objNext,     OK_DLS, icPrev, icNext);
     const bool c2 = ensureAbstract(sh, objNextNext, OK_DLS, icNext, icPrev);
@@ -570,9 +711,10 @@ void conjureDls(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext,
     // consume the given object and move to another one
     objReplace(sh, *pObj, objNext);
     *pObj = objNext;
+#endif
 }
 
-void considerSegAbstraction(SymHeap &sh, TObjId obj, EObjKind kind,
+bool considerSegAbstraction(SymHeap &sh, TObjId obj, EObjKind kind,
                             TFieldIdxChain icNext, TFieldIdxChain icPrev,
                             unsigned lenTotal)
 {
@@ -598,7 +740,7 @@ void considerSegAbstraction(SymHeap &sh, TObjId obj, EObjKind kind,
     if (lenTotal < threshold) {
         CL_DEBUG("<-- length of the longest segment (" << lenTotal
                 << ") is under the threshold (" << threshold << ")");
-        return;
+        return false;
     }
 
     // handle sparePrefix/spareSuffix
@@ -609,25 +751,23 @@ void considerSegAbstraction(SymHeap &sh, TObjId obj, EObjKind kind,
     if (OK_SLS == kind) {
         // perform SLS abstraction!
         for (int i = 0; i < len; ++i)
-            conjureSls(sh, &obj, icNext);
+            slSegAbstractionStep(sh, &obj, icNext);
 
         CL_DEBUG("AAA successfully abstracted SLS");
-        return;
+        return true;
     }
     // assume OK_DLS (see the switch above)
 
-    if (len < 2)
-        // wait, this is not going to work well;  you should tweak the threshold
-        TRAP;
-
     // perform DLS abstraction!
-    for (int i = /* we need one more object for DLS */ 1; i < len; ++i)
-        conjureDls(sh, &obj, icNext, icPrev);
+    for (int i = 0; i < len; ++i)
+        dlSegAbstractionStep(sh, &obj, icNext, icPrev);
 
     CL_DEBUG("AAA successfully abstracted DLS");
+    return true;
 }
 
-void considerAbstraction(SymHeap &sh, TObjId obj, EObjKind kind) {
+template <class TCont>
+bool considerAbstraction(SymHeap &sh, EObjKind kind, TCont entries) {
     switch (kind) {
         case OK_CONCRETE:
             // invalid call of considerAbstraction()
@@ -642,30 +782,44 @@ void considerAbstraction(SymHeap &sh, TObjId obj, EObjKind kind) {
             break;
     }
 
-    if (!probe(sh, obj, kind)) {
-        CL_DEBUG("<-- initial probe failed");
-        return;
+    // go through all candidates and find the best possible abstraction
+    std::vector<TFieldIdxChain> bestSelectors;
+    TFieldIdxChain bestNext, bestPrev;
+    TObjId bestEntry;
+    unsigned bestLen = 0;
+    BOOST_FOREACH(const TObjId obj, entries) {
+        // gather suitable selectors
+        std::vector<TFieldIdxChain> selectors;
+        digAnyListSelectors(selectors, sh, obj, kind);
+
+        // run the LS discovering process
+        TFieldIdxChain icNext, icPrev;
+        const unsigned len = discoverAllSegments(sh, obj, kind, selectors,
+                                                 &icNext, &icPrev);
+
+        if (len <= bestLen)
+            continue;
+
+        bestLen         = len;
+        bestEntry       = obj;
+        bestSelectors   = selectors;
+        bestNext        = icNext;
+        bestPrev        = icPrev;
     }
-
-    // gather suitable selectors
-    std::vector<TFieldIdxChain> selectors;
-    digAnyListSelectors(selectors, sh, obj, kind);
-
-    // run the LS discovering process
-    TFieldIdxChain icNext, icPrev;
-    const unsigned lsBestLength = discoverAllSegments(sh, obj, kind, selectors,
-                                                      &icNext, &icPrev);
-    if (!lsBestLength)
+    if (!bestLen)
         // nothing found
-        return;
+        return false;
 
     // consider abstraction threshold and trigger the abstraction eventually
-    considerSegAbstraction(sh, obj, kind, icNext, icPrev, lsBestLength);
+    return considerSegAbstraction(sh, bestEntry, kind, bestNext, bestPrev,
+                                  bestLen);
 }
 
-} // namespace
+bool abstractIfNeededLoop(SymHeap &sh) {
+    SymHeapCore::TContObj slSegEntries;
+    SymHeapCore::TContObj dlSegEntries;
 
-void abstractIfNeeded(SymHeap &sh) {
+    // collect all possible SLS/DLS entries
     SymHeapCore::TContObj roots;
     sh.gatherRootObjs(roots);
     BOOST_FOREACH(const TObjId obj, roots) {
@@ -680,28 +834,51 @@ void abstractIfNeeded(SymHeap &sh) {
         const unsigned uses = sh.usedByCount(addr);
         switch (uses) {
             case 0:
-                CL_WARN("abstractIfNeeded() encountered an unused root object #"
-                        << obj);
+                CL_WARN("abstractIfNeededLoop() encountered an unused root "
+                        "object #" << obj);
                 // fall through!
 
             default:
                 continue;
 
             case 1:
-                // a candidate for SLS
 #if !SE_DISABLE_SLS
-                considerAbstraction(sh, obj, OK_SLS);
+                if (probe(sh, obj, OK_SLS))
+                    // a candidate for SLS entry
+                    slSegEntries.push_back(obj);
 #endif
                 break;
 
             case 2:
-                // a candidate for DLS
 #if !SE_DISABLE_DLS
-                considerAbstraction(sh, obj, OK_DLS);
+                if (probe(sh, obj, OK_DLS))
+                    // a candidate for DLS entry
+                    dlSegEntries.push_back(obj);
 #endif
                 break;
         }
     }
+
+    // TODO: check if the order of following two steps is anyhow important
+    if (!slSegEntries.empty() && considerAbstraction(sh, OK_SLS, slSegEntries))
+        return true;
+
+    if (!dlSegEntries.empty() && considerAbstraction(sh, OK_DLS, dlSegEntries))
+        return true;
+
+    // no hit
+    return false;
+}
+
+} // namespace
+
+void abstractIfNeeded(SymHeap &sh) {
+#if SE_DISABLE_SLS && SE_DISABLE_DLS
+    (void) sh;
+#else
+    while (abstractIfNeededLoop(sh))
+        ;
+#endif
 }
 
 namespace {
