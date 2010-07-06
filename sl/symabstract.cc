@@ -202,7 +202,6 @@ void abstractNonMatchingValues(SymHeap &sh, TObjId src, TObjId dst) {
 }
 
 void abstractNonMatchingValuesBidir(SymHeap &sh, TObjId o1, TObjId o2) {
-    // TODO: extend the visitor to do both in one pass
     abstractNonMatchingValues(sh, o1, o2);
     abstractNonMatchingValues(sh, o2, o1);
 }
@@ -237,14 +236,78 @@ void skipObj(const SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext) {
     *pObj = objNext;
 }
 
+TObjId nextPtrFromSeg(const SymHeap &sh, TObjId seg) {
+    if (OK_CONCRETE == sh.objKind(seg))
+        // invalid call of lSegNext()
+        TRAP;
+
+    const TFieldIdxChain icBind = sh.objBinderField(seg);
+    return subObjByChain(sh, seg, icBind);
+}
+
 TObjId dlSegPeer(const SymHeap &sh, TObjId dls) {
     if (OK_DLS != sh.objKind(dls))
-        // invalid call of dlsPeer()
+        // invalid call of dlSegPeer()
         TRAP;
 
     TObjId peer = dls;
     skipObj(sh, &peer, sh.objPeerField(dls));
     return peer;
+}
+
+bool dlSegNotEmpty(const SymHeap &sh, TObjId dls) {
+    if (OK_DLS != sh.objKind(dls))
+        // invalid call of dlSegNotEmpty()
+        TRAP;
+
+    const TObjId peer = dlSegPeer(sh, dls);
+
+    // dig pointer-to-next objects
+    const TObjId next1 = nextPtrFromSeg(sh, dls);
+    const TObjId next2 = nextPtrFromSeg(sh, peer);
+
+    // red the values (addresses of the surround)
+    const TValueId val1 = sh.valueOf(next1);
+    const TValueId val2 = sh.valueOf(next2);
+
+    bool eq;
+    if (!sh.proveEq(&eq, val1, val2))
+        return /* possibly empty */ false;
+
+    if (eq)
+        // invalid DLS
+        TRAP;
+
+    return /* not empty */ true;
+}
+
+bool segNotEmpty(const SymHeap &sh, TObjId seg) {
+    const EObjKind kind = sh.objKind(seg);
+    switch (kind) {
+        case OK_CONCRETE:
+            // invalid call of segNotEmpty()
+            TRAP;
+
+        case OK_SLS:
+            break;
+
+        case OK_DLS:
+            return dlSegNotEmpty(sh, seg);
+    }
+
+    const TObjId next = nextPtrFromSeg(sh, seg);
+    const TValueId nextVal = sh.valueOf(next);
+    const TValueId addr = sh.placedAt(seg);
+
+    bool eq;
+    if (!sh.proveEq(&eq, addr, nextVal))
+        return /* possibly empty */ false;
+
+    if (eq)
+        // invalid SLS
+        TRAP;
+
+    return /* not empty */ true;
 }
 
 class ProbeVisitor {
@@ -568,7 +631,6 @@ void slSegAbstractionStep(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext) {
         TRAP;
 
     // replace self by the next object
-    // FIXME: should be abstractNonMatchingValuesBidir()?
     abstractNonMatchingValues(sh, *pObj, objNext);
     objReplace(sh, *pObj, objNext);
 
@@ -576,22 +638,20 @@ void slSegAbstractionStep(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext) {
     *pObj = objNext;
 }
 
-void dlsStoreCrossNeq(SymHeap &sh, TObjId obj, TObjId peer) {
-    // TODO: first implement proper Neq handling elsewhere
-    return;
+template <typename TFun>
+void dlSegHandleCrossNeq(SymHeap &sh, TObjId dls, TFun fun) {
+    const TObjId peer = dlSegPeer(sh, dls);
 
-    // dig the value before
-    const TFieldIdxChain icBindPrev = sh.objBinderField(obj);
-    const TObjId ptrPrev = subObjByChain(sh, obj, icBindPrev);
-    const TValueId valPrev = sh.valueOf(ptrPrev);
+    // dig pointer-to-next objects
+    const TObjId next1 = nextPtrFromSeg(sh, dls);
+    const TObjId next2 = nextPtrFromSeg(sh, peer);
 
-    // dig the value after
-    const TFieldIdxChain icBindNext = sh.objBinderField(peer);
-    const TObjId ptrNext = subObjByChain(sh, peer, icBindNext);
-    const TValueId valNext = sh.valueOf(ptrNext);
+    // red the values (addresses of the surround)
+    const TValueId val1 = sh.valueOf(next1);
+    const TValueId val2 = sh.valueOf(next2);
 
-    // define a Neq predicate among them
-    sh.addNeq(valPrev, valNext);
+    // add/del Neq as requested
+    (sh.*fun)(val1, val2);
 }
 
 void dlSegCreate(SymHeap &sh, TObjId o1, TObjId o2,
@@ -604,13 +664,16 @@ void dlSegCreate(SymHeap &sh, TObjId o1, TObjId o2,
     abstractNonMatchingValuesBidir(sh, o1, o2);
 
     // a just created DLS is said to be non-empty
-    dlsStoreCrossNeq(sh, o1, o2);
+    dlSegHandleCrossNeq(sh, o1, &SymHeapCore::addNeq);
 }
 
-void dlSegGoblle(SymHeap &sh, TObjId dls, TObjId var, bool backward) {
+void dlSegGobble(SymHeap &sh, TObjId dls, TObjId var, bool backward) {
     if (OK_DLS != sh.objKind(dls) || OK_CONCRETE != sh.objKind(var))
-        // invalid call of dlSegGoblle()
+        // invalid call of dlSegGobble()
         TRAP;
+
+    // kill Neq if any
+    dlSegHandleCrossNeq(sh, dls, &SymHeap::delNeq);
 
     if (!backward)
         // jump to peer
@@ -623,8 +686,6 @@ void dlSegGoblle(SymHeap &sh, TObjId dls, TObjId var, bool backward) {
         // not implemented yet
         TRAP;
 
-    // FIXME: handle Neq predicates properly
-
     // store the pointer DLS -> VAR
     const TFieldIdxChain icBind = sh.objBinderField(dls);
     const TObjId dlsNextPtr = subObjByChain(sh, dls, icBind);
@@ -633,9 +694,23 @@ void dlSegGoblle(SymHeap &sh, TObjId dls, TObjId var, bool backward) {
 
     // replace VAR by DLS
     objReplace(sh, var, dls);
+
+    // we've just added an object, the DLS can't be empty
+    dlSegHandleCrossNeq(sh, dls, &SymHeap::addNeq);
 }
 
 void dlSegMerge(SymHeap &sh, TObjId seg1, TObjId seg2) {
+    // the resulting DLS will be non-empty as long as at least one of the given
+    // DLS is non-empty
+    const bool ne = dlSegNotEmpty(sh, seg1) || dlSegNotEmpty(sh, seg2);
+    if (ne) {
+        // one of the following calls might be probably optimized out, but
+        // premature optimization is the root of all evil...
+        dlSegHandleCrossNeq(sh, seg1, &SymHeap::delNeq);
+        dlSegHandleCrossNeq(sh, seg2, &SymHeap::delNeq);
+    }
+
+    // dig peer objects
     const TObjId peer1 = dlSegPeer(sh, seg1);
     const TObjId peer2 = dlSegPeer(sh, seg2);
 
@@ -643,10 +718,13 @@ void dlSegMerge(SymHeap &sh, TObjId seg1, TObjId seg2) {
     abstractNonMatchingValuesBidir(sh, seg1, seg2);
     abstractNonMatchingValuesBidir(sh, peer1, peer2);
 
-    // FIXME: handle Neq predicates properly
-
+    // replace both parts point-wise
     objReplace(sh, seg1, seg2);
     objReplace(sh, peer1, peer2);
+
+    if (ne)
+        // non-empty DLS
+        dlSegHandleCrossNeq(sh, seg2, &SymHeap::addNeq);
 }
 
 void dlSegAbstractionStep(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext,
@@ -666,13 +744,13 @@ void dlSegAbstractionStep(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext,
 
         case OK_DLS:
             // jump to peer
-            skipObj(sh, &o2, sh.objPeerField(o2));
+            o2 = dlSegPeer(sh, o2);
 
-            // jump to next object
+            // jump to the next object (as we know such an object exists)
             skipObj(sh, &o2, sh.objBinderField(o2));
             if (OK_CONCRETE == sh.objKind(o2)) {
                 // DLS + VAR
-                dlSegGoblle(sh, o1, o2, /* backward */ false);
+                dlSegGobble(sh, o1, o2, /* backward */ false);
                 return;
             }
 
@@ -681,6 +759,7 @@ void dlSegAbstractionStep(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext,
             return;
 
         case OK_CONCRETE:
+            // jump to the next object (as we know such an object exists)
             skipObj(sh, &o2, icNext);
             if (OK_CONCRETE == sh.objKind(o2)) {
                 // VAR + VAR
@@ -689,7 +768,7 @@ void dlSegAbstractionStep(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext,
             }
 
             // VAR + DLS
-            dlSegGoblle(sh, o2, o1, /* backward */ true);
+            dlSegGobble(sh, o2, o1, /* backward */ true);
             *pObj = o2;
             return;
     }
@@ -743,14 +822,14 @@ bool considerSegAbstraction(SymHeap &sh, TObjId obj, EObjKind kind,
         CL_DEBUG("<-- successfully abstracted SLS");
         return true;
     }
-    // assume OK_DLS (see the switch above)
+    else {
+        // perform DLS abstraction!
+        for (int i = 0; i < len; ++i)
+            dlSegAbstractionStep(sh, &obj, icNext, icPrev);
 
-    // perform DLS abstraction!
-    for (int i = 0; i < len; ++i)
-        dlSegAbstractionStep(sh, &obj, icNext, icPrev);
-
-    CL_DEBUG("<-- successfully abstracted DLS");
-    return true;
+        CL_DEBUG("<-- successfully abstracted DLS");
+        return true;
+    }
 }
 
 template <class TCont>
@@ -803,7 +882,7 @@ bool considerAbstraction(SymHeap &sh, EObjKind kind, TCont entries) {
                                   bestLen);
 }
 
-bool abstractIfNeededLoop(SymHeap &sh) {
+bool abstractIfNeededCore(SymHeap &sh) {
     SymHeapCore::TContObj slSegEntries;
     SymHeapCore::TContObj dlSegEntries;
 
@@ -858,36 +937,25 @@ bool abstractIfNeededLoop(SymHeap &sh) {
     return false;
 }
 
-} // namespace
-
-void abstractIfNeeded(SymHeap &sh) {
-#if SE_DISABLE_SLS && SE_DISABLE_DLS
-    (void) sh;
-#else
-    while (abstractIfNeededLoop(sh))
-        ;
-#endif
-}
-
-namespace {
-
 void spliceOutSegmentIfNeeded(SymHeap &sh, TObjId ao, TObjId peer,
                               TSymHeapList &todo)
 {
     // check if the LS may be empty
     const TValueId addrSelf = sh.placedAt(ao);
-    const TObjId nextPtrNext = subObjByChain(sh, peer, sh.objBinderField(peer));
-    const TValueId valNext = sh.valueOf(nextPtrNext);
-    bool eq;
-    if (sh.proveEq(&eq, addrSelf, valNext)) {
-        if (eq)
-            // self loop?
-            TRAP;
-
+    if (segNotEmpty(sh, ao)) {
         // the segment was _guaranteed_ to be non-empty now, but
         // the concretization makes it _possibly_ empty
         // --> remove the Neq predicate 
-        sh.delNeq(addrSelf, valNext);
+        if (ao == peer) {
+            // SLS
+            const TObjId next = nextPtrFromSeg(sh, ao);
+            const TValueId nextVal = sh.valueOf(next);
+            sh.delNeq(addrSelf, nextVal); 
+        }
+        else
+            // DLS
+            dlSegHandleCrossNeq(sh, ao, &SymHeapCore::delNeq);
+
         return;
     }
 
@@ -902,6 +970,8 @@ void spliceOutSegmentIfNeeded(SymHeap &sh, TObjId ao, TObjId peer,
     }
 
     // destroy self
+    const TObjId next = nextPtrFromSeg(sh, peer);
+    const TValueId valNext = sh.valueOf(next);
     sh0.valReplace(addrSelf, valNext);
     sh0.objDestroy(ao);
 
@@ -910,6 +980,15 @@ void spliceOutSegmentIfNeeded(SymHeap &sh, TObjId ao, TObjId peer,
 }
 
 } // namespace
+
+void abstractIfNeeded(SymHeap &sh) {
+#if SE_DISABLE_SLS && SE_DISABLE_DLS
+    (void) sh;
+#else
+    while (abstractIfNeededCore(sh))
+        ;
+#endif
+}
 
 void concretizeObj(SymHeap &sh, TObjId obj, TSymHeapList &todo) {
     TObjId ao = obj;

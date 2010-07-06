@@ -549,6 +549,11 @@ void SymHeapCore::addNeq(TValueId valA, TValueId valB) {
 }
 
 void SymHeapCore::delNeq(TValueId valA, TValueId valB) {
+    // just for debugging purposes
+#if 0
+    if (!d->neqDb.areNeq(valA, valB))
+        TRAP;
+#endif
     d->neqDb.del(valA, valB);
 }
 
@@ -1430,10 +1435,13 @@ void SymHeap::objConcretize(TObjId obj) {
     const TValueId addr = this->placedAt(obj);
     SymHeapCore::valSetUnknown(addr, UV_KNOWN);
 
+    // TODO: check if really necessary;  it should be caller's responsibility
+#if 0
     // we have just concretized an object, the pointing value can't be NULL by
     // definition --> let's remove the Neq(addr, NULL) if such a predicate
     // exists
     this->delNeq(VAL_NULL, addr);
+#endif
 }
 
 // vim: tw=80

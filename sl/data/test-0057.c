@@ -48,6 +48,8 @@ struct item* fast_forward_core(struct item *dll)
         ___sl_plot("01-ff-one-step");
         dll = next;
     }
+
+    return dll;
 }
 
 void fast_forward(struct item **pDll)
