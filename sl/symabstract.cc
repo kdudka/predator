@@ -261,7 +261,7 @@ bool proveNeq(const SymHeap &sh, TValueId v1, TValueId v2) {
         return /* no idea */ false;
 
     if (eq)
-        // equal ... basically means 'ivalid LS'
+        // equal ... basically means 'invalid LS'
         TRAP;
 
     return /* not equal */ true;
@@ -355,7 +355,8 @@ class ProbeVisitor {
         const TObjId target = sh.pointsTo(valNext);
         const TValueId targetAddr = sh.placedAt(target);
         if (targetAddr <= 0)
-            TRAP;
+            // someone points to an already deleted object
+            return /* continue */ true;
 
         if (sh.cVar(0, obj))
             // a list segment through non-heap objects basically makes no sense
