@@ -118,6 +118,7 @@ struct SymHeapPlotter::Private {
     std::set<TEdgeNeq>                  neqSet;
 
     std::set<TObjId>                    binders;
+    std::set<TObjId>                    peers;
 
     bool openDotFile(const std::string &name);
     void closeDotFile();
@@ -259,7 +260,9 @@ void SymHeapPlotter::Private::plotNodeObj(TObjId obj, enum cl_type_e code) {
     this->dotStream << "\t" << SL_QUOTE(obj);
     this->dotStream << " [shape=box";
 
-    if (hasKey(this->binders, obj))
+    if (hasKey(this->peers, obj))
+        this->dotStream << ", color=yellow, penwidth=3.0, style=dashed";
+    else if (hasKey(this->binders, obj))
         this->dotStream << ", color=red, penwidth=3.0, style=dashed";
     else
         this->dotStream << ", color=" << colorByCode(code);
@@ -490,7 +493,7 @@ void SymHeapPlotter::Private::digBinder(TObjId obj) {
         TRAP;
 
     // store icPeer
-    this->binders.insert(objPeer);
+    this->peers.insert(objPeer);
 }
 
 void SymHeapPlotter::Private::openCluster(TObjId obj) {

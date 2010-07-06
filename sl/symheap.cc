@@ -629,6 +629,13 @@ bool SymHeapCore::proveEq(bool *result, TValueId valA, TValueId valB) const {
         return true;
     }
 
+    if (UV_ABSTRACT == this->valGetUnknown(valA)) {
+        // UV_ABSTRACT is treated as _unkown_ value here, it has to be valB
+        const TValueId tmp = valA;
+        valA = valB;
+        valB = tmp;
+    }
+
     // we presume (0 <= valA) and (0 < valB) at this point
     if (this->lastValueId() < valB || valB < 0)
         TRAP;

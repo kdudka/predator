@@ -255,6 +255,18 @@ TObjId dlSegPeer(const SymHeap &sh, TObjId dls) {
     return peer;
 }
 
+bool proveNeq(const SymHeap &sh, TValueId v1, TValueId v2) {
+    bool eq;
+    if (!sh.proveEq(&eq, v1, v2))
+        return /* no idea */ false;
+
+    if (eq)
+        // equal ... basically means 'ivalid LS'
+        TRAP;
+
+    return /* not equal */ true;
+}
+
 bool dlSegNotEmpty(const SymHeap &sh, TObjId dls) {
     if (OK_DLS != sh.objKind(dls))
         // invalid call of dlSegNotEmpty()
@@ -270,15 +282,20 @@ bool dlSegNotEmpty(const SymHeap &sh, TObjId dls) {
     const TValueId val1 = sh.valueOf(next1);
     const TValueId val2 = sh.valueOf(next2);
 
-    bool eq;
-    if (!sh.proveEq(&eq, val1, val2))
+    // attempt to prove both
+    const bool ne1 = proveNeq(sh, val1, sh.placedAt(peer));
+    const bool ne2 = proveNeq(sh, val2, sh.placedAt(dls));
+    if (ne1 && ne2)
+        return /* not empty */ true;
+
+    if (!ne1 && !ne2)
         return /* possibly empty */ false;
 
-    if (eq)
-        // invalid DLS
-        TRAP;
-
-    return /* not empty */ true;
+    // the given DLS is guaranteed to be non empty in one direction, but not
+    // vice versa --> such a DLS is considered as mutant and should be not
+    // passed through
+    TRAP;
+    return false;
 }
 
 bool segNotEmpty(const SymHeap &sh, TObjId seg) {
@@ -646,12 +663,13 @@ void dlSegHandleCrossNeq(SymHeap &sh, TObjId dls, TFun fun) {
     const TObjId next1 = nextPtrFromSeg(sh, dls);
     const TObjId next2 = nextPtrFromSeg(sh, peer);
 
-    // red the values (addresses of the surround)
+    // read the values (addresses of the surround)
     const TValueId val1 = sh.valueOf(next1);
     const TValueId val2 = sh.valueOf(next2);
 
     // add/del Neq as requested
-    (sh.*fun)(val1, val2);
+    (sh.*fun)(val1, sh.placedAt(peer));
+    (sh.*fun)(val2, sh.placedAt(dls));
 }
 
 void dlSegCreate(SymHeap &sh, TObjId o1, TObjId o2,
