@@ -24,6 +24,7 @@
 #include <cl/cl_msg.hh>
 #include <cl/storage.hh>
 
+#include "symproc.hh"       // for checkForJunk()
 #include "util.hh"
 
 #include <stack>
@@ -132,63 +133,72 @@ bool doesAnyonePointToInside(const SymHeap &sh, TObjId obj) {
     return !traverseSubObjs(sh, obj, doesAnyonePointToInsideVisitor);
 }
 
-bool abstractNonMatchingValuesVisitor(SymHeap &sh, TObjPair item) {
-    const TObjId dst = item.second;
-    const TValueId valSrc = sh.valueOf(item.first);
-    const TValueId valDst = sh.valueOf(dst);
-    bool eq;
-    if (sh.proveEq(&eq, valSrc, valDst) && eq)
-        // values are equal
+// visitor
+struct ValueAbstractor {
+    std::set<TObjId> ignoreList;
+
+    bool operator()(SymHeap &sh, TObjPair item) {
+        const TObjId dst = item.second;
+        if (hasKey(ignoreList, dst))
+            return /* continue */ true;
+
+        const TValueId valSrc = sh.valueOf(item.first);
+        const TValueId valDst = sh.valueOf(dst);
+        bool eq;
+        if (sh.proveEq(&eq, valSrc, valDst) && eq)
+            // values are equal
+            return /* continue */ true;
+
+        // attempt to dig some type-info for the new unknown value
+        const struct cl_type *clt = sh.valType(valSrc);
+        const struct cl_type *cltDst = sh.valType(valDst);
+        if (!clt)
+            clt = cltDst;
+        else if (cltDst && cltDst != clt)
+            // should be safe to ignore
+            TRAP;
+
+        // create a new unknown value as a placeholder
+        const TValueId valNew = sh.valCreateUnknown(UV_UNKNOWN, clt);
+        const TValueId oldVal = sh.valueOf(dst);
+        sh.objSetValue(dst, valNew);
+
+        // if the last reference is gone, we have a problem
+        if (checkForJunk(sh, oldVal))
+            CL_ERROR("junk detected during abstraction"
+                    ", the analysis is no more sound!");
+
         return /* continue */ true;
-
-    // attempt to dig some type-info for the new unknown value
-    const struct cl_type *clt = sh.valType(valSrc);
-    const struct cl_type *cltDst = sh.valType(valDst);
-    if (!clt)
-        clt = cltDst;
-    else if (cltDst && cltDst != clt)
-        // should be safe to ignore
-        TRAP;
-
-    // create a new unknown value as a placeholder
-    const TValueId valNew = sh.valCreateUnknown(UV_UNKNOWN, clt);
-
-    // FIXME: A virtual junk may be introduced at this point!  The junk is not
-    // anyhow reported to user, but causes the annoying warnings about dangling
-    // root objects.  We should probably treat it as regular (false?) alarm,
-    // utilize SymHeapProcessor to collect it and properly report.  However it
-    // requires to pull-in location info, backtrace and the like.  Luckily, the
-    // junk is not going to survive next run of symcut anyway, so it should not
-    // shoot down the analysis completely.
-    sh.objSetValue(dst, valNew);
-    return /* continue */ true;
-}
+    }
+};
 
 // when abstracting an object, we need to abstract all non-matching values in
 void abstractNonMatchingValues(SymHeap &sh, TObjId src, TObjId dst) {
-    const EObjKind kind = sh.objKind(dst);
-    if (OK_CONCRETE == kind)
-        // invalid call of abstractNonMatchingValues()
-        TRAP;
+    ValueAbstractor visitor;
+    TObjId tmp;
 
-    // wait, first preserve the value of binder and peer
-    const TObjId objBind = subObjByChain(sh, dst, sh.objBinderField(dst));
-    const TValueId valBind = sh.valueOf(objBind);
-    TObjId   objPeer = OBJ_INVALID;
-    TValueId valPeer = VAL_INVALID;
-    if (OK_DLS == kind) {
-        objPeer = subObjByChain(sh, dst, sh.objPeerField(dst));
-        valPeer = sh.valueOf(objPeer);
+    // build the ignore-list
+    const EObjKind kind = sh.objKind(dst);
+    switch (kind) {
+        case OK_CONCRETE:
+            // invalid call of abstractNonMatchingValues()
+            TRAP;
+
+        case OK_DLS:
+            // preserve 'peer' field
+            tmp = subObjByChain(sh, dst, sh.objPeerField(dst));
+            visitor.ignoreList.insert(tmp);
+            // fall through!
+
+        case OK_SLS:
+            // preserve 'bind' field
+            tmp = subObjByChain(sh, dst, sh.objBinderField(dst));
+            visitor.ignoreList.insert(tmp);
     }
 
     // traverse all sub-objects
     const TObjPair item(src, dst);
-    traverseSubObjs(sh, item, abstractNonMatchingValuesVisitor);
-
-    // now restore the possibly smashed value of binder and peer
-    sh.objSetValue(objBind, valBind);
-    if (OK_DLS == kind)
-        sh.objSetValue(objPeer, valPeer);
+    traverseSubObjs(sh, item, visitor);
 }
 
 void abstractNonMatchingValuesBidir(SymHeap &sh, TObjId o1, TObjId o2) {
