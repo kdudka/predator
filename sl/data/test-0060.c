@@ -1,0 +1,73 @@
+#include "../sl.h"
+#include <stdlib.h>
+
+#define DLL_NEW(type) \
+    ((type *) malloc(sizeof(type)))
+
+typedef struct dll_item dll_item_t;
+struct dll_item {
+    dll_item_t  *next;
+    dll_item_t  *prev;
+};
+
+static dll_item_t* create_base(void)
+{
+    dll_item_t *i1= DLL_NEW(dll_item_t);
+    if (!i1)
+        abort();
+
+    dll_item_t *i2= DLL_NEW(dll_item_t);
+    if (!i2)
+        abort();
+
+    i1->next = i2;
+    i1->prev = i2;
+
+    i2->next = i1;
+    i2->prev = i1;
+
+    return i1;
+}
+
+void insert_item(dll_item_t *list)
+{
+    dll_item_t *item = DLL_NEW(dll_item_t);
+    if (!item)
+        abort();
+
+    item->next = list;
+    item->prev = list->prev;
+
+    list->prev->next = item;
+    list->prev = item;
+}
+
+
+static void destroy_cyclic_dll(dll_item_t *list)
+{
+    dll_item_t *ref = list->prev;
+    while (list != ref) {
+        list = list->next;
+        free(list->prev);
+    }
+    free(ref);
+}
+
+int main()
+{
+    dll_item_t *list = create_base();
+    ___sl_plot_by_ptr(&list, "01-cyclic-dll-base");
+
+    insert_item(list);
+    ___sl_plot_by_ptr(&list, "02-cyclic-dll-inserted-one");
+
+    int i;
+    for (i = 1; i; ++i)
+        insert_item(list);
+    ___sl_plot_by_ptr(&list, "03-cyclic-dll-inserted-many");
+
+    destroy_cyclic_dll(list);
+    ___sl_plot_by_ptr(&list, "04-cyclic-dll-destroyed");
+
+    return 0;
+}
