@@ -49,7 +49,7 @@ struct item* fast_forward_core(struct item *dll)
     ___sl_plot("00-ff-begin");
     struct item *next;
     while ((next = dll->next)) {
-        ___sl_plot("01-ff-one-step");
+        ___sl_plot_by_ptr(&dll, "01-ff-one-step");
         dll = next;
     }
 }
@@ -62,10 +62,6 @@ void fast_forward(struct item **pDll)
 int main()
 {
     struct item *dll = create_dll();
-    if (!dll)
-        // the condition above forces abstraction
-        return 1;
-
     fast_forward(&dll);
     ___sl_plot_by_ptr(dll, "03-ff-done");
 

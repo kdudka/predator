@@ -38,8 +38,16 @@
 #   define DEBUG_SE_STACK_FRAME 0
 #endif
 
+#ifndef SE_ABSTRACT_ON_CALL_DONE
+#   define ABSTRACT_ON_CALL_DONE 0
+#endif
+
 #ifndef SE_DISABLE_CALL_CACHE
 #   define SE_DISABLE_CALL_CACHE 0
+#endif
+
+#if SE_ABSTRACT_ON_CALL_DONE
+#   include "symabstract.hh"
 #endif
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -155,6 +163,21 @@ void SymCallCtx::Private::destroyStackFrame(SymHeapUnion &state) {
     }
 }
 
+namespace {
+
+void flush(SymHeapUnion &dst, const SymHeapUnion src) {
+    BOOST_FOREACH(SymHeap sh, src) {
+#if SE_ABSTRACT_ON_CALL_DONE
+        // after the final merge and cleanup, chances are that the abstraction
+        // may be useful
+        abstractIfNeeded(sh);
+#endif
+        dst.insert(sh);
+    }
+}
+
+} // namespace
+
 void SymCallCtx::flushCallResults(SymHeapUnion &dst) {
     if (d->flushed)
         // are we really ready for this?
@@ -176,7 +199,7 @@ void SymCallCtx::flushCallResults(SymHeapUnion &dst) {
     d->destroyStackFrame(results);
 
     // flush the results
-    dst.insert(results);
+    flush(dst, results);
 }
 
 // /////////////////////////////////////////////////////////////////////////////

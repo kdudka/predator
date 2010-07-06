@@ -985,6 +985,11 @@ TObjId SymHeapTyped::objDup(TObjId obj) {
         }
     }
 
+    const Private::Object &ref = d->objects[obj];
+    if (ref.clt && ref.clt->code == CL_TYPE_STRUCT && -1 == ref.parent)
+        // if the original was a root object, the new one must also be
+        d->roots.push_back(image);
+
     return image;
 }
 

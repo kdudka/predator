@@ -55,7 +55,7 @@ static struct AbstractionThreshold slsThreshold = {
 
 /// abstraction trigger threshold for DLS
 static struct AbstractionThreshold dlsThreshold = {
-    /* sparePrefix */ 0,
+    /* sparePrefix */ 0,    // any non-zero value will break the algorithm
     /* innerSegLen */ 1,
     /* spareSuffix */ 1
 };
@@ -399,13 +399,14 @@ unsigned /* len */ discoverSeg(const SymHeap &sh, TObjId entry, EObjKind kind,
                 break;
         }
 
+        // if there is at least one DLS on the path, we demand that the path
+        // begins with a DLS;  otherwise we just ignore the path and wait for
+        // a better one
+        if (dlSegsOnPath && OK_DLS != sh.objKind(entry))
+            return /* not found */ 0;
+
         obj = objNext;
     }
-
-    // if there is at least one DLS on the path, we demand that the path begins
-    // with a DLS;  otherwise we just ignore the path and wait for a better one
-    if (dlSegsOnPath && OK_DLS != sh.objKind(entry))
-        return /* not found */ 0;
 
     // path consisting of N nodes has N-1 edges
     const unsigned rawPathLen = path.size() - 1;
@@ -568,6 +569,9 @@ void slSegAbstractionStep(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext) {
 }
 
 void dlsStoreCrossNeq(SymHeap &sh, TObjId obj, TObjId peer) {
+    // TODO: first implement proper Neq handling elsewhere
+    return;
+
     // dig the value before
     const TFieldIdxChain icBindPrev = sh.objBinderField(obj);
     const TObjId ptrPrev = subObjByChain(sh, obj, icBindPrev);
@@ -610,6 +614,8 @@ void dlSegGoblle(SymHeap &sh, TObjId dls, TObjId var, bool backward) {
     if (backward)
         // not implemented yet
         TRAP;
+
+    // FIXME: handle Neq predicates properly
 
     // store the pointer DLS -> VAR
     const TFieldIdxChain icBind = sh.objBinderField(dls);
@@ -679,39 +685,6 @@ void dlSegAbstractionStep(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext,
             *pObj = o2;
             return;
     }
-#if 0
-    // abstract the next two objects, while crossing their selectors
-    const bool c1 = ensureAbstract(sh, objNext,     OK_DLS, icPrev, icNext);
-    const bool c2 = ensureAbstract(sh, objNextNext, OK_DLS, icNext, icPrev);
-
-    // introduce some UV_UNKNOWN values if necessary
-    abstractNonMatchingValues(sh, *pObj, objNext);
-
-    // make sure, there are no inconsistencies among the two parts of DLS
-    // FIXME: Is it always necessary?
-    abstractNonMatchingValues(sh, objNext, objNextNext);
-    abstractNonMatchingValues(sh, objNextNext, objNext);
-
-    // preserve back-link
-    const TValueId valBackLink = sh.valueOf(subObjByChain(sh, *pObj, icPrev));
-    const TObjId objNextBackLink = subObjByChain(sh, objNext, icPrev);
-    sh.objSetValue(objNextBackLink, valBackLink);
-
-    // now materialize the DLS from two objects by a cross-link
-    const TObjId objNextPeer     = subObjByChain(sh, objNext,     icNext);
-    const TObjId objNextNextPeer = subObjByChain(sh, objNextNext, icPrev);
-    sh.objSetValue(objNextPeer,     valNextNext);
-    sh.objSetValue(objNextNextPeer, valNext    );
-
-    // if both objects were concrete, DLS is said to be non-empty
-    if (c1 && c2)
-        // FIXME: the condition above is far from complete
-        storeDlsCrossNeq(sh, objNext, objNextNext);
-
-    // consume the given object and move to another one
-    objReplace(sh, *pObj, objNext);
-    *pObj = objNext;
-#endif
 }
 
 bool considerSegAbstraction(SymHeap &sh, TObjId obj, EObjKind kind,

@@ -67,6 +67,11 @@ extern const char *sl_git_sha1;
 #define SE_DISABLE_CALL_CACHE               0
 
 /**
+ * if 1, perform abstraction after each just completed call on @b caller's side
+ */
+#define SE_ABSTRACT_ON_CALL_DONE            1
+
+/**
  * if 1, do not use DLS (Doubly-linked List Segment) abstracion
  */
 #define SE_DISABLE_DLS                      0
