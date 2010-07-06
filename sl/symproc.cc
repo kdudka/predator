@@ -479,7 +479,7 @@ namespace {
     }
 }
 
-bool SymHeapProcessor::checkForJunk(TValueId val) {
+bool checkForJunk(SymHeap &sh, TValueId val, LocationWriter lw) {
     bool detected = false;
 
     std::stack<TValueId> todo;
@@ -488,19 +488,20 @@ bool SymHeapProcessor::checkForJunk(TValueId val) {
         TValueId val = todo.top();
         todo.pop();
 
-        if (digJunk(heap_, &val)) {
+        if (digJunk(sh, &val)) {
             detected = true;
-            const TObjId obj = heap_.pointsTo(val);
+            const TObjId obj = sh.pointsTo(val);
             if (obj <= 0)
                 TRAP;
 
             // gather all values inside the junk object
             std::vector<TValueId> ptrs;
-            getPtrValues(ptrs, heap_, obj);
+            getPtrValues(ptrs, sh, obj);
 
             // destroy junk
-            CL_WARN_MSG(lw_, "killing junk");
-            heap_.objDestroy(obj);
+            if (lw)
+                CL_WARN_MSG(lw, "killing junk");
+            sh.objDestroy(obj);
 
             // schedule just created junk candidates for next wheel
             BOOST_FOREACH(TValueId ptrVal, ptrs) {
@@ -568,7 +569,7 @@ void SymHeapProcessor::heapSetSingleVal(TObjId lhs, TValueId rhs) {
     }
 
     heap_.objSetValue(lhs, rhs);
-    if (this->checkForJunk(oldValue))
+    if (checkForJunk(heap_, oldValue, lw_))
         bt_->printBackTrace();
 }
 
@@ -627,7 +628,7 @@ void SymHeapProcessor::objDestroy(TObjId obj) {
     // now check for JUNK
     bool junk = false;
     BOOST_FOREACH(TValueId val, ptrs) {
-        if (this->checkForJunk(val)) // value not used
+        if (checkForJunk(heap_, val, lw_))
             junk = true;
     }
 

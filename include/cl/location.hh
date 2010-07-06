@@ -54,6 +54,12 @@ struct LocationWriter {
         last(last_)
     {
     }
+
+    /// return true if any valid location is there
+    operator bool() const {
+        return -1 != loc.locLine
+            || -1 != last.locLine;
+    }
 };
 std::ostream& operator<<(std::ostream &, const LocationWriter &);
 
