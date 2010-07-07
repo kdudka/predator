@@ -27,6 +27,7 @@
 #include "symproc.hh"       // for checkForJunk()
 #include "util.hh"
 
+#include <set>
 #include <stack>
 
 #include <boost/foreach.hpp>
@@ -160,11 +161,11 @@ struct ValueAbstractor {
 
         // create a new unknown value as a placeholder
         const TValueId valNew = sh.valCreateUnknown(UV_UNKNOWN, clt);
-        const TValueId oldVal = sh.valueOf(dst);
+        const TValueId valOld = sh.valueOf(dst);
         sh.objSetValue(dst, valNew);
 
         // if the last reference is gone, we have a problem
-        if (checkForJunk(sh, oldVal))
+        if (checkForJunk(sh, valOld))
             CL_ERROR("junk detected during abstraction"
                     ", the analysis is no more sound!");
 
@@ -292,7 +293,7 @@ bool dlSegNotEmpty(const SymHeap &sh, TObjId dls) {
         return /* possibly empty */ false;
 
     // the given DLS is guaranteed to be non empty in one direction, but not
-    // vice versa --> such a DLS is considered as mutant and should be not
+    // vice versa --> such a DLS is considered as mutant and should not be
     // passed through
     TRAP;
     return false;
@@ -454,6 +455,12 @@ unsigned /* len */ segDiscover(const SymHeap &sh, TObjId entry, EObjKind kind,
                 // we came from the wrong side this time
                 break;
 
+            // if there is at least one DLS on the path, we demand that the path
+            // begins with a DLS;  otherwise we just ignore the path and wait
+            // for a better one
+            if (OK_DLS != sh.objKind(entry))
+                return /* not found */ 0;
+
             path.insert(obj);
             dlSegsOnPath++;
         }
@@ -480,12 +487,6 @@ unsigned /* len */ segDiscover(const SymHeap &sh, TObjId entry, EObjKind kind,
                 break;
         }
 
-        // if there is at least one DLS on the path, we demand that the path
-        // begins with a DLS;  otherwise we just ignore the path and wait for
-        // a better one
-        if (dlSegsOnPath && OK_DLS != sh.objKind(entry))
-            return /* not found */ 0;
-
         obj = objNext;
     }
 
@@ -497,7 +498,7 @@ unsigned /* len */ segDiscover(const SymHeap &sh, TObjId entry, EObjKind kind,
 }
 
 template <class TSelectorList>
-unsigned segDiscoverAll(const SymHeap &sh, const TObjId obj, EObjKind kind,
+unsigned segDiscoverAll(const SymHeap &sh, const TObjId entry, EObjKind kind,
                         const TSelectorList &selectors, TFieldIdxChain *icNext,
                         TFieldIdxChain *icPrev)
 {
@@ -534,7 +535,7 @@ unsigned segDiscoverAll(const SymHeap &sh, const TObjId obj, EObjKind kind,
                 // we need two _distinct_ selectors for a DLS
                 continue;
 
-            const unsigned len = segDiscover(sh, obj, kind,
+            const unsigned len = segDiscover(sh, entry, kind,
                                              selectors[next],
                                              selectors[prev]);
             if (!len)
@@ -790,7 +791,7 @@ bool considerSegAbstraction(SymHeap &sh, TObjId obj, EObjKind kind,
 
     // handle sparePrefix/spareSuffix
     const int len = lenTotal - at.sparePrefix - at.spareSuffix;
-    for (int i = 0; i < static_cast<int>(at.sparePrefix); ++i)
+    for (unsigned i = 0; i < at.sparePrefix; ++i)
         skipObj(sh, &obj, icNext);
 
     CL_DEBUG("    AAA initiating abstraction of length " << len);
@@ -972,7 +973,7 @@ void abstractIfNeeded(SymHeap &sh) {
 }
 
 void concretizeObj(SymHeap &sh, TObjId obj, TSymHeapList &todo) {
-    TObjId ao = obj;
+    TObjId peer = obj;
 
     // branch by SLS/DLS
     const EObjKind kind = sh.objKind(obj);
@@ -986,19 +987,19 @@ void concretizeObj(SymHeap &sh, TObjId obj, TSymHeapList &todo) {
 
         case OK_DLS:
             // jump to peer
-            skipObj(sh, &ao, sh.objPeerField(obj));
+            skipObj(sh, &peer, sh.objPeerField(obj));
             break;
     }
 
     // handle the possibly empty variant (if exists)
-    spliceOutSegmentIfNeeded(sh, obj, ao, todo);
+    spliceOutSegmentIfNeeded(sh, obj, peer, todo);
 
     // duplicate self as abstract object
     const TObjId aoDup = sh.objDup(obj);
     const TValueId aoDupAddr = sh.placedAt(aoDup);
     if (OK_DLS == kind) {
         // DLS relink
-        const TObjId peerField = subObjByChain(sh, ao, sh.objPeerField(ao));
+        const TObjId peerField = subObjByChain(sh, peer, sh.objPeerField(peer));
         sh.objSetValue(peerField, aoDupAddr);
     }
 
