@@ -530,6 +530,10 @@ unsigned segDiscoverAll(const SymHeap &sh, const TObjId obj, EObjKind kind,
     unsigned bestLen = 0, bestNext, bestPrev;
     for (unsigned next = 0; next < cnt; ++next) {
         for (unsigned prev = 0; prev < prevMax; ++prev) {
+            if (OK_DLS == kind && next == prev)
+                // we need two _distinct_ selectors for a DLS
+                continue;
+
             const unsigned len = segDiscover(sh, obj, kind,
                                              selectors[next],
                                              selectors[prev]);
