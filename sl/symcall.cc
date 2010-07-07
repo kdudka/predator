@@ -98,7 +98,7 @@ void SymCallCtx::Private::assignReturnValue(SymHeapUnion &state) {
 
     // go through results and perform assignment of the return value
     BOOST_FOREACH(SymHeap &res, state) {
-        SymHeapProcessor proc(res, this->bt);
+        SymProc proc(res, this->bt);
         proc.setLocation(&op.loc);
 
         const TObjId obj = proc.heapObjFromOperand(op);
@@ -134,7 +134,7 @@ void SymCallCtx::Private::destroyStackFrame(SymHeapUnion &state) {
                     << (hCnt++));
         }
 #endif
-        SymHeapProcessor proc(res, this->bt);
+        SymProc proc(res, this->bt);
 
         BOOST_FOREACH(const int uid, ref.vars) {
             const Var &var = ref.stor->vars[uid];
@@ -258,7 +258,7 @@ struct SymCallCache::Private {
     SymBackTrace                *bt;
     LocationWriter              lw;
     SymHeap                     *heap;
-    SymHeapProcessor            *proc;
+    SymProc                     *proc;
     const CodeStorage::Fnc      *fnc;
     int                         nestLevel;
 
@@ -338,7 +338,7 @@ void SymCallCache::Private::setCallArgs(const CodeStorage::TOperandList &opList)
     // that we can get the source backtrace by removing it from there locally.
     SymBackTrace callerSiteBt(*this->bt);
     callerSiteBt.popCall();
-    SymHeapProcessor srcProc(*this->heap, &callerSiteBt);
+    SymProc srcProc(*this->heap, &callerSiteBt);
 
     // set args' values
     int pos = /* dst + fnc */ 2;
@@ -404,8 +404,8 @@ SymCallCtx& SymCallCache::getCallCtx(SymHeap heap,
     if (CL_INSN_CALL != insn.code || opList.size() < 2)
         TRAP;
 
-    // create SymHeapProcessor and update the location info
-    SymHeapProcessor proc(heap, d->bt);
+    // create SymProc and update the location info
+    SymProc proc(heap, d->bt);
     proc.setLocation((d->lw = &insn.loc));
     d->heap = &heap;
     d->proc = &proc;

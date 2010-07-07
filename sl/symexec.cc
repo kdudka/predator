@@ -178,7 +178,7 @@ void SymExecEngine::execReturn() {
 
     const struct cl_operand &src = opList[0];
     if (CL_OPERAND_VOID != src.code) {
-        SymHeapProcessor proc(heap, &bt_);
+        SymProc proc(heap, &bt_);
         proc.setLocation(lw_);
 
         const TValueId val = proc.heapValFromOperand(src);
@@ -241,7 +241,7 @@ void SymExecEngine::execCondInsn() {
     // IF (operand) GOTO target0 ELSE target1
 
     const SymHeap &heap = localState_[heapIdx_];
-    SymHeapProcessor proc(const_cast<SymHeap &>(heap), &bt_);
+    SymProc proc(const_cast<SymHeap &>(heap), &bt_);
     proc.setLocation(lw_);
 
     const TValueId val = proc.heapValFromOperand(oplist[0]);
@@ -324,7 +324,7 @@ bool /* handled */ SymExecEngine::execNontermInsn() {
 
     // working area for non-terminal instructions
     SymHeap workingHeap(localState_[heapIdx_]);
-    SymHeapProcessor proc(workingHeap, &bt_);
+    SymProc proc(workingHeap, &bt_);
     proc.setLocation(lw_);
 
     return proc.exec(nextLocalState_, *insn, params_.fastMode);
@@ -832,7 +832,7 @@ const CodeStorage::Fnc* SymExec::Private::resolveCallInsn(
         TRAP;
 
     // look for Fnc ought to be called
-    SymHeapProcessor proc(heap, &this->bt);
+    SymProc proc(heap, &this->bt);
     const LocationWriter lw(&insn.loc);
     proc.setLocation(lw);
     const int uid = proc.fncFromOperand(opList[/* fnc */ 1]);

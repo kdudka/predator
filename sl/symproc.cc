@@ -37,8 +37,8 @@
 #include <boost/tuple/tuple.hpp>
 
 // /////////////////////////////////////////////////////////////////////////////
-// SymHeapProcessor implementation
-TValueId SymHeapProcessor::heapValFromCst(const struct cl_operand &op) {
+// SymProc implementation
+TValueId SymProc::heapValFromCst(const struct cl_operand &op) {
     bool isBool = false;
     enum cl_type_e code = op.type->code;
     switch (code) {
@@ -93,8 +93,7 @@ TValueId SymHeapProcessor::heapValFromCst(const struct cl_operand &op) {
     }
 }
 
-void SymHeapProcessor::heapObjHandleAccessorDeref(TObjId *pObj, bool silent)
-{
+void SymProc::heapObjHandleAccessorDeref(TObjId *pObj, bool silent) {
     EUnknownValue code;
 
     // TODO: check --- it should be pointer variable, => NON-ABSTRACT ?
@@ -172,8 +171,8 @@ fail:
     *pObj = OBJ_DEREF_FAILED;
 }
 
-void SymHeapProcessor::heapObjHandleAccessorItem(TObjId *pObj,
-                                                 const struct cl_accessor *ac)
+void SymProc::heapObjHandleAccessorItem(TObjId *pObj,
+                                        const struct cl_accessor *ac)
 {
     // access subObj
     const int id = ac->data.item.id;
@@ -184,9 +183,9 @@ void SymHeapProcessor::heapObjHandleAccessorItem(TObjId *pObj,
         *pObj = /* FIXME: misleading */ OBJ_DEREF_FAILED;
 }
 
-void SymHeapProcessor::heapObjHandleAccessor(TObjId *pObj,
-                                             const struct cl_accessor *ac,
-                                             bool silent)
+void SymProc::heapObjHandleAccessor(TObjId *pObj,
+                                    const struct cl_accessor *ac,
+                                    bool silent)
 {
     const enum cl_accessor_e code = ac->code;
     switch (code) {
@@ -211,9 +210,7 @@ void SymHeapProcessor::heapObjHandleAccessor(TObjId *pObj,
     }
 }
 
-TObjId SymHeapProcessor::heapObjFromOperand(const struct cl_operand &op,
-                                            bool silent)
-{
+TObjId SymProc::heapObjFromOperand(const struct cl_operand &op, bool silent) {
     int uid;
 
     const enum cl_operand_e code = op.code;
@@ -248,8 +245,7 @@ TObjId SymHeapProcessor::heapObjFromOperand(const struct cl_operand &op,
     return var;
 }
 
-bool SymHeapProcessor::lhsFromOperand(TObjId *pObj, const struct cl_operand &op)
-{
+bool SymProc::lhsFromOperand(TObjId *pObj, const struct cl_operand &op) {
     *pObj = this->heapObjFromOperand(op);
     switch (*pObj) {
         case OBJ_UNKNOWN:
@@ -304,9 +300,7 @@ namespace {
     }
 }
 
-TValueId SymHeapProcessor::heapValFromOperand(const struct cl_operand &op,
-                                              bool silent)
-{
+TValueId SymProc::heapValFromOperand(const struct cl_operand &op, bool silent) {
     const enum cl_operand_e code = op.code;
     switch (code) {
         case CL_OPERAND_VAR:
@@ -324,7 +318,7 @@ TValueId SymHeapProcessor::heapValFromOperand(const struct cl_operand &op,
     }
 }
 
-int /* uid */ SymHeapProcessor::fncFromOperand(const struct cl_operand &op) {
+int /* uid */ SymProc::fncFromOperand(const struct cl_operand &op) {
     if (CL_OPERAND_CST == op.code) {
         // direct call
         const struct cl_cst &cst = op.data.cst;
@@ -513,7 +507,7 @@ bool checkForJunk(SymHeap &sh, TValueId val, LocationWriter lw) {
     return detected;
 }
 
-void SymHeapProcessor::heapObjDefineType(TObjId lhs, TValueId rhs) {
+void SymProc::heapObjDefineType(TObjId lhs, TValueId rhs) {
     const TObjId var = heap_.pointsTo(rhs);
     if (OBJ_INVALID == var)
         TRAP;
@@ -555,7 +549,7 @@ void SymHeapProcessor::heapObjDefineType(TObjId lhs, TValueId rhs) {
     heap_.objDefineType(var, clt);
 }
 
-void SymHeapProcessor::heapSetSingleVal(TObjId lhs, TValueId rhs) {
+void SymProc::heapSetSingleVal(TObjId lhs, TValueId rhs) {
     // save the old value, which is going to be overwritten
     const TValueId oldValue = heap_.valueOf(lhs);
     if (VAL_INVALID == oldValue)
@@ -573,7 +567,7 @@ void SymHeapProcessor::heapSetSingleVal(TObjId lhs, TValueId rhs) {
         bt_->printBackTrace();
 }
 
-void SymHeapProcessor::objSetValue(TObjId lhs, TValueId rhs) {
+void SymProc::objSetValue(TObjId lhs, TValueId rhs) {
     if (0 < rhs && UV_DEREF_FAILED == heap_.valGetUnknown(rhs)) {
         // we're already on an error path
         heap_.objSetValue(lhs, rhs);
@@ -617,7 +611,7 @@ void SymHeapProcessor::objSetValue(TObjId lhs, TValueId rhs) {
     }
 }
 
-void SymHeapProcessor::objDestroy(TObjId obj) {
+void SymProc::objDestroy(TObjId obj) {
     // gather potentialy destroyed pointer sub-values
     std::vector<TValueId> ptrs;
     getPtrValues(ptrs, heap_, obj);
@@ -637,7 +631,7 @@ void SymHeapProcessor::objDestroy(TObjId obj) {
         bt_->printBackTrace();
 }
 
-void SymHeapProcessor::execFree(const CodeStorage::TOperandList &opList) {
+void SymProc::execFree(const CodeStorage::TOperandList &opList) {
     if (/* dst + fnc + ptr */ 3 != opList.size())
         TRAP;
 
@@ -723,9 +717,8 @@ void SymHeapProcessor::execFree(const CodeStorage::TOperandList &opList) {
     this->objDestroy(obj);
 }
 
-void SymHeapProcessor::execMalloc(TState &state,
-                                  const CodeStorage::TOperandList &opList,
-                                  bool fastMode)
+void SymProc::execMalloc(TState &state, const CodeStorage::TOperandList &opList,
+                         bool fastMode)
 {
     if (/* dst + fnc + size */ 3 != opList.size())
         TRAP;
@@ -798,7 +791,7 @@ namespace {
                      TBt *bt)
     {
         // FIXME: we might use the already existing instance instead
-        SymHeapProcessor proc(const_cast<THeap &>(heap), bt);
+        SymProc proc(const_cast<THeap &>(heap), bt);
 
         const cl_operand &op = opList[NTH + /* dst + fnc */ 2];
         const TValueId value = proc.heapValFromOperand(op);
@@ -916,8 +909,8 @@ namespace {
     }
 }
 
-bool SymHeapProcessor::execCall(TState &dst, const CodeStorage::Insn &insn,
-                                bool fastMode)
+bool SymProc::execCall(TState &dst, const CodeStorage::Insn &insn,
+                       bool fastMode)
 {
     const CodeStorage::TOperandList &opList = insn.operands;
     const struct cl_operand &fnc = opList[1];
@@ -1296,7 +1289,7 @@ TValueId handleOp(TProc &proc, int code, const TValueId rhs[ARITY],
 
 
 template <int ARITY>
-void SymHeapProcessor::execOp(const CodeStorage::Insn &insn) {
+void SymProc::execOp(const CodeStorage::Insn &insn) {
     // resolve lhs
     TObjId varLhs = OBJ_INVALID;
     const struct cl_operand &dst = insn.operands[/* dst */ 0];
@@ -1326,16 +1319,15 @@ void SymHeapProcessor::execOp(const CodeStorage::Insn &insn) {
     this->objSetValue(varLhs, valResult);
 }
 
-void SymHeapProcessor::concretizeLoop(TState                    &dst,
-                                      const CodeStorage::Insn   &insn,
-                                      const struct cl_operand   &src)
+void SymProc::concretizeLoop(TState &dst, const CodeStorage::Insn &insn,
+                             const struct cl_operand &src)
 {
     // Concretize() loop, you can consider its documentation (if available)
     TSymHeapList todo;
     todo.push_back(heap_);
     while (!todo.empty()) {
         SymHeap &sh = todo.front();
-        SymHeapProcessor proc(sh, bt_);
+        SymProc proc(sh, bt_);
         proc.setLocation(lw_);
 
         // first just check if the rhs value is abstract
@@ -1356,8 +1348,7 @@ void SymHeapProcessor::concretizeLoop(TState                    &dst,
     }
 }
 
-bool SymHeapProcessor::concretizeIfNeeded(TState &results,
-                                          const CodeStorage::Insn &insn)
+bool SymProc::concretizeIfNeeded(TState &results, const CodeStorage::Insn &insn)
 {
     const enum cl_insn_e code = insn.code;
     const size_t opCnt = insn.operands.size();
@@ -1390,8 +1381,8 @@ bool SymHeapProcessor::concretizeIfNeeded(TState &results,
     return true;
 }
 
-bool SymHeapProcessor::execCore(TState &dst, const CodeStorage::Insn &insn,
-                                bool fastMode)
+bool SymProc::execCore(TState &dst, const CodeStorage::Insn &insn,
+                       bool fastMode)
 {
     const enum cl_insn_e code = insn.code;
     switch (code) {
@@ -1415,9 +1406,7 @@ bool SymHeapProcessor::execCore(TState &dst, const CodeStorage::Insn &insn,
     return true;
 }
 
-bool SymHeapProcessor::exec(TState &dst, const CodeStorage::Insn &insn,
-                            bool fastMode)
-{
+bool SymProc::exec(TState &dst, const CodeStorage::Insn &insn, bool fastMode) {
     lw_ = &insn.loc;
     if (this->concretizeIfNeeded(dst, insn))
         // concretization loop done

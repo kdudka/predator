@@ -22,7 +22,7 @@
 
 /**
  * @file symproc.hh
- * SymHeapProcessor - a layer on top of SymHeap, providing some additional
+ * SymProc - a layer on top of SymHeap, providing some additional
  * operations
  */
 
@@ -53,7 +53,7 @@ bool checkForJunk(SymHeap &sh, TValueId val,
 /**
  * a layer on top of SymHeap, providing some additional operations
  */
-class SymHeapProcessor {
+class SymProc {
     public:
         /// a type used to insert resulting SymHeap objects to
         typedef SymHeapUnion TState;
@@ -61,7 +61,7 @@ class SymHeapProcessor {
     public:
         /**
          * creation of the symbolic heap processor is a really cheap operation
-         * @todo split SymHeapProcessor into class operating only on const
+         * @todo split SymProc into class operating only on const
          * SymHeap and a class providing the write access on top of that.  I
          * guess it will be not that easy as it sounds.
          * @param heap an instance of SymHeap to operate on
@@ -69,13 +69,13 @@ class SymHeapProcessor {
          * instances of automatic variables and to print backtraces when
          * necessary/suitable
          */
-        SymHeapProcessor(SymHeap &heap, const SymBackTrace *bt):
+        SymProc(SymHeap &heap, const SymBackTrace *bt):
             heap_(heap),
             bt_(bt)
         {
         }
 
-        ~SymHeapProcessor() {
+        ~SymProc() {
         }
 
         /**

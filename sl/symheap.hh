@@ -157,7 +157,7 @@ class SymHeapCore {
          * @note This is really @b low-level @b implementation.  It does not
          * check for junk, delayed type-info definition, etc.  If you are
          * interested in such abilities, you are looking for
-         * SymHeapProcessor::objSetValue().
+         * SymProc::objSetValue().
          */
         virtual void objSetValue(TObjId obj, TValueId val);
 
@@ -171,7 +171,7 @@ class SymHeapCore {
          * static/automatic object
          * @note This is really @b low-level @b implementation.  It does not
          * e.g. check for junk.  If you are interested in this ability, you
-         * are looking for SymHeapProcessor::objDestroy().
+         * are looking for SymProc::objDestroy().
          */
         void objDestroy(TObjId obj, TObjId kind);
 
@@ -473,7 +473,7 @@ class SymHeapTyped: public SymHeapCore {
          * @param obj ID of the object to destroy
          * @note This is really @b low-level @b implementation.  It does not
          * e.g. check for junk.  If you are interested in this ability, you
-         * are looking for SymHeapProcessor::objDestroy().
+         * are looking for SymProc::objDestroy().
          */
         virtual void objDestroy(TObjId obj);
 

@@ -34,6 +34,7 @@ namespace CodeStorage {
 
 struct SymExecParams {
     bool fastMode;          ///< enable/disable the @b fast @b mode
+    bool skipPlot;          ///< simply ignore all ___sl_plot* calls
 
     SymExecParams():
         fastMode(false)
