@@ -50,6 +50,17 @@ class SymHeapUnion;
 bool checkForJunk(SymHeap &sh, TValueId val,
                   LocationWriter lw = LocationWriter());
 
+struct SymProcExecParams {
+    bool fastMode;          ///< enable/disable the @b fast @b mode
+    bool skipPlot;          ///< simply ignore all ___sl_plot* calls
+
+    SymProcExecParams():
+        fastMode(false),
+        skipPlot(false)
+    {
+    }
+};
+
 /**
  * a layer on top of SymHeap, providing some additional operations
  */
@@ -102,7 +113,8 @@ class SymProc {
          * @note returning false in this case does @b not mean there has been an
          * error
          */
-        bool exec(TState &dst, const CodeStorage::Insn &insn, bool fastMode);
+        bool exec(TState &dst, const CodeStorage::Insn &insn,
+                  SymProcExecParams ep);
 
     public:
         /// obtain a heap object corresponding to the given operand
@@ -137,11 +149,12 @@ class SymProc {
                         bool fastMode);
         void execFree(const CodeStorage::TOperandList &opList);
         bool execCall(TState &dst, const CodeStorage::Insn &insn,
-                      bool fastMode);
+                      SymProcExecParams ep);
         void concretizeLoop(TState &dst, const CodeStorage::Insn &insn,
                             const struct cl_operand &src);
         bool concretizeIfNeeded(TState &dst, const CodeStorage::Insn &insn);
-        bool execCore(TState &dst, const CodeStorage::Insn &insn, bool fast);
+        bool execCore(TState &dst, const CodeStorage::Insn &insn,
+                      SymProcExecParams ep);
 
     private:
         SymHeap                     &heap_;     /// heap to operate on

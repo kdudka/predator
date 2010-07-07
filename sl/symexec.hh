@@ -37,7 +37,8 @@ struct SymExecParams {
     bool skipPlot;          ///< simply ignore all ___sl_plot* calls
 
     SymExecParams():
-        fastMode(false)
+        fastMode(false),
+        skipPlot(false)
     {
     }
 };

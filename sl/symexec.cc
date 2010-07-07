@@ -327,7 +327,13 @@ bool /* handled */ SymExecEngine::execNontermInsn() {
     SymProc proc(workingHeap, &bt_);
     proc.setLocation(lw_);
 
-    return proc.exec(nextLocalState_, *insn, params_.fastMode);
+    // set some properties of the execution
+    SymProcExecParams ep;
+    ep.fastMode = params_.fastMode;
+    ep.skipPlot = params_.skipPlot;
+
+    // execute the instruction
+    return proc.exec(nextLocalState_, *insn, ep);
 }
 
 namespace {

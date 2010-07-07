@@ -49,6 +49,15 @@ void parseConfigString(SymExecParams &sep, std::string cnf) {
         return;
     }
 
+    // TODO: make it possible to handle both parameters together (comma
+    // separated list or whatever)
+    // TODO: document all the parameters somewhere
+    if (string("noplot") == cnf) {
+        CL_DEBUG("SymExec \"noplot mode\" requested");
+        sep.skipPlot = true;
+        return;
+    }
+
     // unhandled config string
     TRAP;
 }

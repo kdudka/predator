@@ -57,6 +57,7 @@ macro(test_sym_exec label tool arg1 arg2)
         add_test("${label}___example-${num}" ${tool} ${arg} ${arg2}
             -c ${sl_SOURCE_DIR}/data/test-${num}.c
             -fplugin=${sl_BINARY_DIR}/libsl.so
+            -fplugin-arg-libsl-symexec-args=noplot
             -fplugin-arg-libsl-verbose=1)
     endforeach()
 endmacro()

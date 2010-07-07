@@ -910,7 +910,7 @@ namespace {
 }
 
 bool SymProc::execCall(TState &dst, const CodeStorage::Insn &insn,
-                       bool fastMode)
+                       SymProcExecParams ep)
 {
     const CodeStorage::TOperandList &opList = insn.operands;
     const struct cl_operand &fnc = opList[1];
@@ -929,7 +929,7 @@ bool SymProc::execCall(TState &dst, const CodeStorage::Insn &insn,
         return false;
 
     if (STREQ(fncName, "malloc")) {
-        this->execMalloc(dst, opList, fastMode);
+        this->execMalloc(dst, opList, ep.fastMode);
         return true;
     }
 
@@ -946,17 +946,39 @@ bool SymProc::execCall(TState &dst, const CodeStorage::Insn &insn,
         goto call_done;
     }
 
-    if (STREQ(fncName, "___sl_plot")
-            && callPlot(insn, heap_))
-        goto call_done;
+    if (STREQ(fncName, "___sl_plot")) {
+        if (ep.skipPlot)
+            CL_DEBUG_MSG(lw_, "___sl_plot skipped per user's request");
 
-    if (STREQ(fncName, "___sl_plot_stack_frame")
-            && callPlotStackFrame(insn, heap_, bt_))
-        goto call_done;
+        else if (!callPlot(insn, heap_))
+            // invalid prototype etc.
+            return false;
 
-    if (STREQ(fncName, "___sl_plot_by_ptr")
-            && callPlotByPtr(insn, heap_, bt_))
         goto call_done;
+    }
+
+    if (STREQ(fncName, "___sl_plot_stack_frame")) {
+        if (ep.skipPlot)
+            CL_DEBUG_MSG(lw_,
+                    "___sl_plot_stack_frame skipped per user's request");
+
+        else if (!callPlotStackFrame(insn, heap_, bt_))
+            // invalid prototype etc.
+            return false;
+
+        goto call_done;
+    }
+
+    if (STREQ(fncName, "___sl_plot_by_ptr")) {
+        if (ep.skipPlot)
+            CL_DEBUG_MSG(lw_, "___sl_plot_by_ptr skipped per user's request");
+
+        else if (!callPlotByPtr(insn, heap_, bt_))
+            // invalid prototype etc.
+            return false;
+
+        goto call_done;
+    }
 
     // no built-in has been matched
     return false;
@@ -1343,7 +1365,7 @@ void SymProc::concretizeLoop(TState &dst, const CodeStorage::Insn &insn,
         }
 
         // process the current heap and move to the next one (if any)
-        proc.execCore(dst, insn, /* fast */ false);
+        proc.execCore(dst, insn, SymProcExecParams());
         todo.pop_front();
     }
 }
@@ -1382,7 +1404,7 @@ bool SymProc::concretizeIfNeeded(TState &results, const CodeStorage::Insn &insn)
 }
 
 bool SymProc::execCore(TState &dst, const CodeStorage::Insn &insn,
-                       bool fastMode)
+                       SymProcExecParams ep)
 {
     const enum cl_insn_e code = insn.code;
     switch (code) {
@@ -1395,7 +1417,7 @@ bool SymProc::execCore(TState &dst, const CodeStorage::Insn &insn,
             break;
 
         case CL_INSN_CALL:
-            return this->execCall(dst, insn, fastMode);
+            return this->execCall(dst, insn, ep);
 
         default:
             TRAP;
@@ -1406,11 +1428,13 @@ bool SymProc::execCore(TState &dst, const CodeStorage::Insn &insn,
     return true;
 }
 
-bool SymProc::exec(TState &dst, const CodeStorage::Insn &insn, bool fastMode) {
+bool SymProc::exec(TState &dst, const CodeStorage::Insn &insn,
+                   SymProcExecParams ep)
+{
     lw_ = &insn.loc;
     if (this->concretizeIfNeeded(dst, insn))
         // concretization loop done
         return true;
 
-    return this->execCore(dst, insn, fastMode);
+    return this->execCore(dst, insn, ep);
 }
