@@ -163,6 +163,10 @@ TObjId /* pointsTo */ dump_value_core(const SymHeap &heap, TValueId value)
             cout << "    VAL_TRUE\n";
             return OBJ_INVALID;
 
+        case VAL_DEREF_FAILED:
+            cout << "    VAL_DEREF_FAILED\n";
+            return OBJ_INVALID;
+
         default:
             break;
     }
@@ -197,10 +201,6 @@ TObjId /* pointsTo */ dump_value_core(const SymHeap &heap, TValueId value)
 
         case UV_UNINITIALIZED:
             cout << "    code      = UV_UNINITIALIZED\n";
-            return OBJ_INVALID;
-
-        case UV_DEREF_FAILED:
-            cout << "    code      = UV_DEREF_FAILED\n";
             return OBJ_INVALID;
     }
 

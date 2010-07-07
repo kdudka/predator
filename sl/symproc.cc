@@ -112,6 +112,9 @@ void SymProc::heapObjHandleAccessorDeref(TObjId *pObj, bool silent) {
             TRAP;
             goto fail;
 
+        case VAL_DEREF_FAILED:
+            goto fail;
+
         default:
             break;
     }
@@ -133,9 +136,6 @@ void SymProc::heapObjHandleAccessorDeref(TObjId *pObj, bool silent) {
 
             CL_ERROR_MSG(lw_, "dereference of uninitialized value");
             goto fail_with_bt;
-
-        case UV_DEREF_FAILED:
-            goto fail;
     }
 
     // value lookup
@@ -282,7 +282,7 @@ namespace {
             case OBJ_DELETED:
             case OBJ_DEREF_FAILED:
             case OBJ_LOST:
-                return heap.valCreateUnknown(UV_DEREF_FAILED, clt);
+                return VAL_DEREF_FAILED;
 
             case OBJ_RETURN:
             default:
@@ -568,7 +568,7 @@ void SymProc::heapSetSingleVal(TObjId lhs, TValueId rhs) {
 }
 
 void SymProc::objSetValue(TObjId lhs, TValueId rhs) {
-    if (0 < rhs && UV_DEREF_FAILED == heap_.valGetUnknown(rhs)) {
+    if (VAL_DEREF_FAILED == rhs) {
         // we're already on an error path
         heap_.objSetValue(lhs, rhs);
         return;
@@ -649,6 +649,9 @@ void SymProc::execFree(const CodeStorage::TOperandList &opList) {
             CL_DEBUG_MSG(lw_, "ignoring free() called with NULL value");
             return;
 
+        case VAL_DEREF_FAILED:
+            return;
+
         default:
             break;
     }
@@ -669,9 +672,6 @@ void SymProc::execFree(const CodeStorage::TOperandList &opList) {
         case UV_UNINITIALIZED:
             CL_ERROR_MSG(lw_, "free() called on uninitialized value");
             bt_->printBackTrace();
-            return;
-
-        case UV_DEREF_FAILED:
             return;
     }
 
@@ -1139,6 +1139,9 @@ template <class THeap>
 TValueId handleOpCmpPtr(THeap &heap, enum cl_binop_e code,
                         const struct cl_type *dstClt, TValueId v1, TValueId v2)
 {
+    if (VAL_DEREF_FAILED == v1 || VAL_DEREF_FAILED == v2)
+        return VAL_DEREF_FAILED;
+
     if (v1 < 0 || v2 < 0)
         TRAP;
 

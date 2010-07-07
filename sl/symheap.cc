@@ -37,15 +37,6 @@
 #include <boost/tuple/tuple.hpp>
 #include <boost/tuple/tuple_comparison.hpp>
 
-namespace {
-    // XXX: force linker to pull-in the symdump module into .so
-    void pull_in_symdump(void) {
-        int sink = ::have_symdump;
-        (void) sink;
-    }
-
-}
-
 // NeqDb/EqIfDb helper
 template <class TDst>
 void emitOne(TDst &dst, TValueId val) {
@@ -263,12 +254,11 @@ TValueId SymHeapCore::valueOf(TObjId obj) const {
         case OBJ_LOST:
         case OBJ_DELETED:
         case OBJ_DEREF_FAILED:
-            return /* XXX */ const_cast<SymHeapCore *>(this)
-                ->valCreate(UV_DEREF_FAILED, OBJ_DEREF_FAILED);
+            return VAL_DEREF_FAILED;
 
         case OBJ_UNKNOWN:
-            return /* XXX */ const_cast<SymHeapCore *>(this)
-                ->valCreate(UV_UNKNOWN, OBJ_UNKNOWN);
+            // not implemented
+            TRAP;
 
         default:
             break;
@@ -932,13 +922,6 @@ void SymHeapTyped::createSubs(TObjId obj) {
                 TRAP;
         }
     }
-}
-
-// FIXME: possible creation of a new unknown value on dereference of OBJ_UNKNOWN
-TValueId SymHeapTyped::valueOf(TObjId obj) const {
-    const TValueId val = SymHeapCore::valueOf(obj);
-    const_cast<SymHeapTyped *>(this)->resizeIfNeeded();
-    return val;
 }
 
 struct ObjDupStackItem {

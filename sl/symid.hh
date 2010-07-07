@@ -123,6 +123,11 @@ typedef enum {
     VAL_TRUE          = (OBJ_UNKNOWN - 1),
 
     /**
+     * value equivalent of symid.hh::OBJ_DEREF_FAILED
+     */
+    VAL_DEREF_FAILED  = (VAL_TRUE - 1),
+
+    /**
      * @copydoc symid.hh::OBJ_MAX_ID
      */
     VAL_MAX_ID        = /* XXX */ UINT_MAX

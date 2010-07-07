@@ -256,6 +256,11 @@ void SymExecEngine::execCondInsn() {
             this->updateState(tlist[/* else label */ 1]);
             return;
 
+        case VAL_DEREF_FAILED:
+            // error should have been already emitted
+            CL_DEBUG_MSG(lw_, "ignored VAL_DEREF_FAILED");
+            return;
+
         default:
             break;
     }
@@ -272,11 +277,6 @@ void SymExecEngine::execCondInsn() {
             CL_WARN_MSG(lw_,
                     "conditional jump depends on uninitialized value");
             bt_.printBackTrace();
-            break;
-
-        case UV_DEREF_FAILED:
-            // error should have been already emitted
-            CL_DEBUG_MSG(lw_, "ignored VAL_DEREF_FAILED");
             break;
 
         case UV_KNOWN:

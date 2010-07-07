@@ -44,8 +44,7 @@ enum EUnknownValue {
     UV_KNOWN = 0,           ///< known value - what we usually wish we had
     UV_ABSTRACT,            ///< points to SLS/DLS (the prover needs to know it)
     UV_UNKNOWN,             ///< unknown value - what we usually have in reality
-    UV_UNINITIALIZED,       ///< unknown value of an uninitialised object
-    UV_DEREF_FAILED         ///< value equivalent of symid.hh::OBJ_DEREF_FAILED
+    UV_UNINITIALIZED        ///< unknown value of an uninitialised object
 };
 
 struct DeepCopyData;
@@ -86,11 +85,8 @@ class SymHeapCore {
          * @note It may also return @b unknown, @b composite or @b custom value,
          * depending on kind of the queried object.
          * @note It may acquire a new value ID in case the value is not known.
-         * @todo SymHeapCore::valueOf is declared const - we should either
-         * implement it such, or declare it non-const.  Once it is acomplished,
-         * we may also declare it non-virtual.
          */
-        virtual TValueId valueOf(TObjId obj) const;
+        TValueId valueOf(TObjId obj) const;
 
         /**
          * return a value corresponding to @b symbolic @b address of the given
@@ -331,9 +327,6 @@ class SymHeapTyped: public SymHeapCore {
         typedef std::vector<CVar> TContCVar;
 
     public:
-        // XXX
-        virtual TValueId valueOf(TObjId obj) const;
-
         /// create a deep copy of the given object with new object IDs
         virtual TObjId objDup(TObjId obj);
 

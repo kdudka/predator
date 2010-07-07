@@ -569,10 +569,6 @@ bool SymHeapPlotter::Private::handleUnknownValue(TValueId value) {
         case UV_ABSTRACT:
             return false;
 
-        case UV_DEREF_FAILED:
-            this->plotNodeAux(value, CL_TYPE_VOID, "UV_DEREF_FAILED");
-            return true;
-
         case UV_UNINITIALIZED:
             this->plotNodeAux(value, CL_TYPE_UNKNOWN, "UV_UNINITIALIZED");
             return true;
@@ -608,6 +604,10 @@ bool SymHeapPlotter::Private::resolveValueOf(TValueId *pDst, TObjId obj) {
 
         case VAL_TRUE:
             this->plotNodeAux(obj, CL_TYPE_BOOL, "TRUE");
+            return false;
+
+        case VAL_DEREF_FAILED:
+            this->plotNodeAux(obj, CL_TYPE_VOID, "UV_DEREF_FAILED");
             return false;
 
         default:
