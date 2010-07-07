@@ -94,7 +94,7 @@ template <> struct TraverseSubObjsHelper<TObjPair> {
 };
 
 // take the given visitor through a composite object (or whatever you pass in)
-template <class THeap, typename TVisitor, class TItem = TObjId>
+template <class THeap, class TVisitor, class TItem = TObjId>
 bool /* complete */ traverseSubObjs(THeap &sh, TItem item, TVisitor visitor) {
     std::stack<TItem> todo;
     todo.push(item);
@@ -137,7 +137,7 @@ bool doesAnyonePointToInside(const SymHeap &sh, TObjId obj) {
 struct ValueAbstractor {
     std::set<TObjId> ignoreList;
 
-    bool operator()(SymHeap &sh, TObjPair item) {
+    bool operator()(SymHeap &sh, TObjPair item) const {
         const TObjId dst = item.second;
         if (hasKey(ignoreList, dst))
             return /* continue */ true;
@@ -238,7 +238,7 @@ void skipObj(const SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext) {
 
 TObjId nextPtrFromSeg(const SymHeap &sh, TObjId seg) {
     if (OK_CONCRETE == sh.objKind(seg))
-        // invalid call of lSegNext()
+        // invalid call of nextPtrFromSeg()
         TRAP;
 
     const TFieldIdxChain icBind = sh.objBinderField(seg);
@@ -255,13 +255,13 @@ TObjId dlSegPeer(const SymHeap &sh, TObjId dls) {
     return peer;
 }
 
-bool proveNeq(const SymHeap &sh, TValueId v1, TValueId v2) {
+bool segProveNeq(const SymHeap &sh, TValueId v1, TValueId v2) {
     bool eq;
     if (!sh.proveEq(&eq, v1, v2))
         return /* no idea */ false;
 
     if (eq)
-        // equal ... basically means 'invalid LS'
+        // equal ... basically means 'invalid segment'
         TRAP;
 
     return /* not equal */ true;
@@ -283,8 +283,8 @@ bool dlSegNotEmpty(const SymHeap &sh, TObjId dls) {
     const TValueId val2 = sh.valueOf(next2);
 
     // attempt to prove both
-    const bool ne1 = proveNeq(sh, val1, sh.placedAt(peer));
-    const bool ne2 = proveNeq(sh, val2, sh.placedAt(dls));
+    const bool ne1 = segProveNeq(sh, val1, sh.placedAt(peer));
+    const bool ne2 = segProveNeq(sh, val2, sh.placedAt(dls));
     if (ne1 && ne2)
         return /* not empty */ true;
 
@@ -315,7 +315,7 @@ bool segNotEmpty(const SymHeap &sh, TObjId seg) {
     const TObjId next = nextPtrFromSeg(sh, seg);
     const TValueId nextVal = sh.valueOf(next);
     const TValueId addr = sh.placedAt(seg);
-    return /* not empty */ proveNeq(sh, addr, nextVal);
+    return /* not empty */ segProveNeq(sh, addr, nextVal);
 }
 
 class ProbeVisitor {
@@ -425,8 +425,7 @@ void digAnyListSelectors(TDst &dst, const SymHeap &sh, TObjId obj,
 }
 
 unsigned /* len */ segDiscover(const SymHeap &sh, TObjId entry, EObjKind kind,
-                               TFieldIdxChain icBind,
-                               TFieldIdxChain icPeer = TFieldIdxChain())
+                               TFieldIdxChain icBind, TFieldIdxChain icPeer)
 {
     int dlSegsOnPath = 0;
 
@@ -987,7 +986,7 @@ void concretizeObj(SymHeap &sh, TObjId obj, TSymHeapList &todo) {
             break;
     }
 
-    // handle possibly empty variant (if exists)
+    // handle the possibly empty variant (if exists)
     spliceOutSegmentIfNeeded(sh, obj, ao, todo);
 
     // duplicate self as abstract object
