@@ -1,15 +1,20 @@
+#include "../sl.h"
 #include <stdlib.h>
 
 int main() {
-    void **ptr = NULL;
-    while (1) {
-        void **data = ptr;
-        ptr = malloc(sizeof ptr);
+    struct item {
+        struct item *next;
+    } *ptr = NULL;
+
+    for(;;) {
+        void *data = ptr;
+        ptr = malloc(sizeof *ptr);
         if (!ptr)
             // OOM
             return -1;
 
-        *ptr = data;
+        ptr->next = data;
+        ___sl_plot("test-0001-snapshot");
     }
 
     return 0;

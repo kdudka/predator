@@ -1220,6 +1220,8 @@ void SymHeapTyped::objDefineType(TObjId obj, const struct cl_type *clt) {
     // delayed object's type definition
     ref.clt = clt;
     this->createSubs(obj);
+    if (CL_TYPE_STRUCT == clt->code)
+        d->roots.push_back(obj);
 
     if (OBJ_RETURN == obj)
         // OBJ_RETURN has no address

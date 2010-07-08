@@ -1347,7 +1347,6 @@ void SymProc::execOp(const CodeStorage::Insn &insn) {
 void SymProc::concretizeLoop(TState &dst, const CodeStorage::Insn &insn,
                              const struct cl_operand &src)
 {
-    // Concretize() loop, you can consider its documentation (if available)
     TSymHeapList todo;
     todo.push_back(heap_);
     while (!todo.empty()) {
@@ -1362,7 +1361,7 @@ void SymProc::concretizeLoop(TState &dst, const CodeStorage::Insn &insn,
 
         // we expect a pointer at this point
         if (0 < val) {
-            /* TODO: const */ TObjId target = sh.pointsTo(val);
+            const TObjId target = sh.pointsTo(val);
             if (OK_CONCRETE != sh.objKind(target))
                 concretizeObj(sh, target, todo);
         }

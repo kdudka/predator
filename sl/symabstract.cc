@@ -135,6 +135,9 @@ bool doesAnyonePointToInside(const SymHeap &sh, TObjId obj) {
 }
 
 TValueId mergeValues(SymHeap &sh, TValueId v1, TValueId v2) {
+    if (v1 == v2)
+        return v1;
+
     // attempt to dig some type-info for the new unknown value
     const struct cl_type *clt1 = sh.valType(v1);
     const struct cl_type *clt2 = sh.valType(v2);
