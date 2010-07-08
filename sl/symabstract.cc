@@ -134,6 +134,30 @@ bool doesAnyonePointToInside(const SymHeap &sh, TObjId obj) {
     return !traverseSubObjs(sh, obj, doesAnyonePointToInsideVisitor);
 }
 
+TValueId mergeValues(SymHeap &sh, TValueId v1, TValueId v2) {
+    // attempt to dig some type-info for the new unknown value
+    const struct cl_type *clt1 = sh.valType(v1);
+    const struct cl_type *clt2 = sh.valType(v2);
+    if (clt1 && clt2 && clt1 != clt2)
+        // should be safe to ignore
+        TRAP;
+
+    // if we know type of at least one of the values, use it
+    const struct cl_type *clt = (clt1)
+        ? clt1
+        : clt2;
+
+    // if the types of _unknown_ values are compatible, it should be safe to
+    // pass it through;  UV_UNKNOWN otherwise
+    const EUnknownValue code1 = sh.valGetUnknown(v1);
+    const EUnknownValue code2 = sh.valGetUnknown(v2);
+    const EUnknownValue code = (code1 != UV_KNOWN && code1 == code2)
+        ? code1
+        : UV_UNKNOWN;
+
+    return sh.valCreateUnknown(code, clt);
+}
+
 // visitor
 struct ValueAbstractor {
     std::set<TObjId> ignoreList;
@@ -150,22 +174,12 @@ struct ValueAbstractor {
             // values are equal
             return /* continue */ true;
 
-        // attempt to dig some type-info for the new unknown value
-        const struct cl_type *clt = sh.valType(valSrc);
-        const struct cl_type *cltDst = sh.valType(valDst);
-        if (!clt)
-            clt = cltDst;
-        else if (cltDst && cltDst != clt)
-            // should be safe to ignore
-            TRAP;
-
         // create a new unknown value as a placeholder
-        const TValueId valNew = sh.valCreateUnknown(UV_UNKNOWN, clt);
-        const TValueId valOld = sh.valueOf(dst);
+        const TValueId valNew = mergeValues(sh, valSrc, valDst);
         sh.objSetValue(dst, valNew);
 
         // if the last reference is gone, we have a problem
-        if (checkForJunk(sh, valOld))
+        if (checkForJunk(sh, valDst))
             CL_ERROR("junk detected during abstraction"
                     ", the analysis is no more sound!");
 
@@ -173,29 +187,57 @@ struct ValueAbstractor {
     }
 };
 
-// when abstracting an object, we need to abstract all non-matching values in
-void abstractNonMatchingValues(SymHeap &sh, TObjId src, TObjId dst) {
-    ValueAbstractor visitor;
+// visitor
+struct UnknownValuesDuplicator {
+    std::set<TObjId> ignoreList;
+
+    bool operator()(SymHeap &sh, TObjId obj) const {
+        if (hasKey(ignoreList, obj))
+            return /* continue */ true;
+
+        const TValueId valOld = sh.valueOf(obj);
+        if (valOld <= 0)
+            return /* continue */ true;
+
+        const EUnknownValue code = sh.valGetUnknown(valOld);
+        if (UV_KNOWN == code)
+            return /* continue */ true;
+
+        // duplicate any unknown value
+        const TValueId valNew = sh.valDuplicateUnknown(valOld);
+        sh.objSetValue(obj, valNew);
+
+        return /* continue */ true;
+    }
+};
+
+template <class TIgnoreList>
+void buildIgnoreList(const SymHeap &sh, TObjId obj, TIgnoreList &ignoreList) {
     TObjId tmp;
 
-    // build the ignore-list
-    const EObjKind kind = sh.objKind(dst);
+    const EObjKind kind = sh.objKind(obj);
     switch (kind) {
         case OK_CONCRETE:
-            // invalid call of abstractNonMatchingValues()
+            // invalid call of buildIgnoreList()
             TRAP;
 
         case OK_DLS:
             // preserve 'peer' field
-            tmp = subObjByChain(sh, dst, sh.objPeerField(dst));
-            visitor.ignoreList.insert(tmp);
+            tmp = subObjByChain(sh, obj, sh.objPeerField(obj));
+            ignoreList.insert(tmp);
             // fall through!
 
         case OK_SLS:
             // preserve 'bind' field
-            tmp = subObjByChain(sh, dst, sh.objBinderField(dst));
-            visitor.ignoreList.insert(tmp);
+            tmp = subObjByChain(sh, obj, sh.objBinderField(obj));
+            ignoreList.insert(tmp);
     }
+}
+
+// when abstracting an object, we need to abstract all non-matching values in
+void abstractNonMatchingValues(SymHeap &sh, TObjId src, TObjId dst) {
+    ValueAbstractor visitor;
+    buildIgnoreList(sh, dst, visitor.ignoreList);
 
     // traverse all sub-objects
     const TObjPair item(src, dst);
@@ -205,6 +247,15 @@ void abstractNonMatchingValues(SymHeap &sh, TObjId src, TObjId dst) {
 void abstractNonMatchingValuesBidir(SymHeap &sh, TObjId o1, TObjId o2) {
     abstractNonMatchingValues(sh, o1, o2);
     abstractNonMatchingValues(sh, o2, o1);
+}
+
+// when concretizing an object, we need to duplicate all _unknown_ values
+void duplicateUnknownValues(SymHeap &sh, TObjId obj) {
+    UnknownValuesDuplicator visitor;
+    buildIgnoreList(sh, obj, visitor.ignoreList);
+
+    // traverse all sub-objects
+    traverseSubObjs(sh, obj, visitor);
 }
 
 void objReplace(SymHeap &sh, TObjId oldObj, TObjId newObj) {
@@ -1002,6 +1053,9 @@ void concretizeObj(SymHeap &sh, TObjId obj, TSymHeapList &todo) {
         const TObjId peerField = subObjByChain(sh, peer, sh.objPeerField(peer));
         sh.objSetValue(peerField, aoDupAddr);
     }
+
+    // duplicate all unknown values, to keep the prover working
+    duplicateUnknownValues(sh, obj);
 
     // concretize self and recover the list
     const TObjId ptrNext = subObjByChain(sh, obj, (OK_SLS == kind)

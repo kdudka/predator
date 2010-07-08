@@ -354,6 +354,10 @@ class SymHeapTyped: public SymHeapCore {
          */
         const struct cl_type* valType(TValueId val) const;
 
+        /// overriden to preserve the type-info during duplication
+        virtual TValueId valDuplicateUnknown(TValueId tpl);
+
+    public:
         /**
          * look for a static/automatic variable corresponding to the given
          * symbolic heap object, which has to be @b valid

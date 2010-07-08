@@ -636,7 +636,7 @@ bool SymHeapCore::proveEq(bool *result, TValueId valA, TValueId valB) const {
     const EUnknownValue code = refB.code;
     if (UV_KNOWN == code) {
         // it should be safe to just compare the IDs in this case
-        // NOTE: it's not that when UV_ABSTRACT is involved
+        // NOTE: it's not that easy when UV_ABSTRACT is involved
 
         // NOTE: we in fact know (valA != valB) at this point, look above
         *result = /* (valA == valB) */ false;
@@ -1053,6 +1053,21 @@ const struct cl_type* SymHeapTyped::valType(TValueId val) const {
         return 0;
 
     return d->values[val].clt;
+}
+
+TValueId SymHeapTyped::valDuplicateUnknown(TValueId val) {
+    if (this->lastValueId() < val || val <= 0)
+        // value ID is either out of range, or does not point to a valid obj
+        return VAL_INVALID;
+
+    // duplicate the value by core
+    const TValueId dup = SymHeapCore::valDuplicateUnknown(val);
+    this->resizeIfNeeded();
+
+    // duplicate also the type-info
+    d->values.at(dup).clt = this->valType(val);
+
+    return dup;
 }
 
 bool SymHeapTyped::cVar(CVar *dst, TObjId obj) const {
