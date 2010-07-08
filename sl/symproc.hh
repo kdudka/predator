@@ -36,20 +36,6 @@ class SymBackTrace;
 class SymHeap;
 class SymHeapUnion;
 
-/**
- * check if a sub-heap reachable from the given value is also reachable from
- * somewhere else.  If not, such a sub-heap is considered as garbage and
- * removed.  Some warnings may be issued during the garbage collecting, but no
- * backtraces are printed.  The caller is responsible for printing of backtraces
- * (if ever motivated to do so).
- * @param sh instance of the symbolic heap to search in
- * @param val ID of the heap value to check for junk
- * @param lw pass some location info in, if you want to issue warning
- * @return true if any junk has been detected/collected
- */
-bool checkForJunk(SymHeap &sh, TValueId val,
-                  LocationWriter lw = LocationWriter());
-
 struct SymProcExecParams {
     bool fastMode;          ///< enable/disable the @b fast @b mode
     bool skipPlot;          ///< simply ignore all ___sl_plot* calls

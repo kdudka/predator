@@ -47,11 +47,7 @@ class SymHeapUnion {
         typedef TList::iterator iterator;
 
     public:
-        SymHeapUnion();
-        virtual ~SymHeapUnion();
-
-        SymHeapUnion(const SymHeapUnion &);
-        SymHeapUnion& operator=(const SymHeapUnion &);
+        virtual ~SymHeapUnion() { }
 
         /**
          * look for the given symbolic heap, return its index if found, -1
@@ -87,10 +83,6 @@ class SymHeapUnion {
 
     private:
         TList heaps_;
-
-    private:
-        struct Private;
-        Private *d;
 };
 
 /**

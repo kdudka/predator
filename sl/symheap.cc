@@ -25,6 +25,7 @@
 #include <cl/code_listener.h>
 
 #include "symdump.hh"
+#include "symutil.hh"
 #include "util.hh"
 #include "worklist.hh"
 
@@ -1131,16 +1132,6 @@ TObjId SymHeapTyped::objParent(TObjId obj) const {
         return OBJ_INVALID;
 
     return d->objects[obj].parent;
-}
-
-TObjId subObjByChain(const SymHeapTyped &sh, TObjId obj, TFieldIdxChain ic) {
-    BOOST_FOREACH(const int nth, ic) {
-        obj = sh.subObj(obj, nth);
-        if (OBJ_INVALID == obj)
-            break;
-    }
-
-    return obj;
 }
 
 TObjId SymHeapTyped::objCreate(const struct cl_type *clt, CVar cVar) {

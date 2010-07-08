@@ -32,10 +32,12 @@ add_library(sl SHARED
     symcut.cc
     symdump.cc
     symexec.cc
+    symgc.cc
     symheap.cc
     symplot.cc
     symproc.cc
     symstate.cc
+    symutil.cc
     version.c)
 
 # link with code_listener

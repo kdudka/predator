@@ -24,11 +24,12 @@
 
 #include "symabstract.hh"
 #include "symbt.hh"
+#include "symgc.hh"
 #include "symheap.hh"
 #include "symplot.hh"
 #include "symstate.hh"
+#include "symutil.hh"
 #include "util.hh"
-#include "worklist.hh"
 
 #include <stack>
 #include <vector>
@@ -338,175 +339,6 @@ int /* uid */ SymProc::fncFromOperand(const struct cl_operand &op) {
     }
 }
 
-namespace {
-    template <class TWL, class THeap>
-    void digPointingObjects(TWL &wl, THeap &heap, TValueId val) {
-        // go through all objects having the value
-        SymHeap::TContObj cont;
-        heap.usedBy(cont, val);
-        BOOST_FOREACH(TObjId obj, cont) {
-
-            // go through all super objects
-            while (0 < obj) {
-                wl.schedule(obj);
-                obj = heap.objParent(obj);
-            }
-        }
-    }
-
-    template <class THeap>
-    bool isHeapObject(const THeap &heap, TObjId obj) {
-        if (obj <= 0)
-            return false;
-
-        for (; OBJ_INVALID != obj; obj = heap.objParent(obj))
-            if (heap.cVar(0, obj))
-                return false;
-
-        return true;
-    }
-
-    template <class THeap>
-    void digRootObject(THeap &heap, TValueId *pValue) {
-        TObjId obj = heap.pointsTo(*pValue);
-        if (obj < 0)
-            TRAP;
-
-        TObjId parent;
-        while (OBJ_INVALID != (parent = heap.objParent(obj)))
-            obj = parent;
-
-        TValueId val = heap.placedAt(obj);
-        if (val <= 0)
-            TRAP;
-
-        *pValue = val;
-    }
-
-    template <class THeap>
-    bool digJunk(THeap &heap, TValueId *ptrVal) {
-        if (*ptrVal <= 0)
-            return false;
-
-        const EUnknownValue code = heap.valGetUnknown(*ptrVal);
-        switch (code) {
-            case UV_KNOWN:
-            case UV_ABSTRACT:
-                break;
-
-            default:
-                return false;
-        }
-
-        if (VAL_INVALID != heap.valGetCustom(0, *ptrVal))
-            // ignore custom values (e.g. fnc pointers)
-            return false;
-
-        TObjId obj = heap.pointsTo(*ptrVal);
-        if (!isHeapObject(heap, obj))
-            // non-heap object simply can't be JUNK
-            return false;
-
-        // only root objects can be destroyed
-        digRootObject(heap, ptrVal);
-
-        WorkList<TObjId> wl;
-        digPointingObjects(wl, heap, *ptrVal);
-        while (wl.next(obj)) {
-            if (!isHeapObject(heap, obj))
-                return false;
-
-            const TValueId val = heap.placedAt(obj);
-            if (val <= 0)
-                TRAP;
-
-            digPointingObjects(wl, heap, val);
-        }
-
-        return true;
-    }
-
-    template <class TCont, class THeap>
-    void getPtrValues(TCont &dst, THeap &heap, TObjId obj) {
-        std::stack<TObjId> todo;
-        todo.push(obj);
-        while (!todo.empty()) {
-            const TObjId obj = todo.top();
-            todo.pop();
-
-            const struct cl_type *clt = heap.objType(obj);
-            const enum cl_type_e code = (clt)
-                ? clt->code
-                : /* anonymous object of known size */ CL_TYPE_PTR;
-
-            switch (code) {
-                case CL_TYPE_PTR: {
-                    const TValueId val = heap.valueOf(obj);
-                    if (0 < val)
-                        dst.push_back(val);
-
-                    break;
-                }
-
-                case CL_TYPE_STRUCT:
-                    for (int i = 0; i < clt->item_cnt; ++i) {
-                        const TObjId subObj = heap.subObj(obj, i);
-                        if (subObj < 0)
-                            TRAP;
-
-                        todo.push(subObj);
-                    }
-                    break;
-
-                case CL_TYPE_ARRAY:
-                case CL_TYPE_CHAR:
-                case CL_TYPE_BOOL:
-                case CL_TYPE_INT:
-                    break;
-
-                default:
-                    // other types of value should be safe to ignore here
-                    // but worth to check by a debugger at least once anyway
-                    TRAP;
-            }
-        }
-    }
-}
-
-bool checkForJunk(SymHeap &sh, TValueId val, LocationWriter lw) {
-    bool detected = false;
-
-    std::stack<TValueId> todo;
-    todo.push(val);
-    while (!todo.empty()) {
-        TValueId val = todo.top();
-        todo.pop();
-
-        if (digJunk(sh, &val)) {
-            detected = true;
-            const TObjId obj = sh.pointsTo(val);
-            if (obj <= 0)
-                TRAP;
-
-            // gather all values inside the junk object
-            std::vector<TValueId> ptrs;
-            getPtrValues(ptrs, sh, obj);
-
-            // destroy junk
-            if (lw)
-                CL_WARN_MSG(lw, "killing junk");
-            sh.objDestroy(obj);
-
-            // schedule just created junk candidates for next wheel
-            BOOST_FOREACH(TValueId ptrVal, ptrs) {
-                todo.push(ptrVal);
-            }
-        }
-    }
-
-    return detected;
-}
-
 void SymProc::heapObjDefineType(TObjId lhs, TValueId rhs) {
     const TObjId var = heap_.pointsTo(rhs);
     if (OBJ_INVALID == var)
@@ -563,7 +395,7 @@ void SymProc::heapSetSingleVal(TObjId lhs, TValueId rhs) {
     }
 
     heap_.objSetValue(lhs, rhs);
-    if (checkForJunk(heap_, oldValue, lw_))
+    if (collectJunk(heap_, oldValue, lw_))
         bt_->printBackTrace();
 }
 
@@ -622,7 +454,7 @@ void SymProc::objDestroy(TObjId obj) {
     // now check for JUNK
     bool junk = false;
     BOOST_FOREACH(TValueId val, ptrs) {
-        if (checkForJunk(heap_, val, lw_))
+        if (collectJunk(heap_, val, lw_))
             junk = true;
     }
 

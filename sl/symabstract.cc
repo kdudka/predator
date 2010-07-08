@@ -24,7 +24,8 @@
 #include <cl/cl_msg.hh>
 #include <cl/storage.hh>
 
-#include "symproc.hh"       // for checkForJunk()
+#include "symgc.hh"
+#include "symutil.hh"
 #include "util.hh"
 
 #include <set>
@@ -182,7 +183,7 @@ struct ValueAbstractor {
         sh.objSetValue(dst, valNew);
 
         // if the last reference is gone, we have a problem
-        if (checkForJunk(sh, valDst))
+        if (collectJunk(sh, valDst))
             CL_ERROR("junk detected during abstraction"
                     ", the analysis is no more sound!");
 

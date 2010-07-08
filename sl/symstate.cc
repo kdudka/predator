@@ -35,33 +35,6 @@
 
 // /////////////////////////////////////////////////////////////////////////////
 // SymHeapUnion implementation
-struct SymHeapUnion::Private {
-    // originally reserved for hash optimization
-};
-
-SymHeapUnion::SymHeapUnion():
-    d(new Private)
-{
-}
-
-SymHeapUnion::SymHeapUnion(const SymHeapUnion &ref):
-    heaps_(ref.heaps_),
-    d(new Private(*ref.d))
-{
-}
-
-SymHeapUnion::~SymHeapUnion() {
-    delete d;
-}
-
-SymHeapUnion& SymHeapUnion::operator=(const SymHeapUnion &ref) {
-    heaps_ = ref.heaps_;
-
-    delete d;
-    d = new Private(*ref.d);
-    return *this;
-}
-
 namespace {
     bool checkNonPosValues(int a, int b) {
         if (0 < a && 0 < b)

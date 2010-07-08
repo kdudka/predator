@@ -48,7 +48,6 @@ enum EUnknownValue {
 };
 
 struct DeepCopyData;
-class SymHeap;
 
 /**
  * symbolic heap @b core - no type-info, no object composition on this level
@@ -532,8 +531,6 @@ enum EObjKind {
 };
 
 typedef std::vector<int /* nth */> TFieldIdxChain;
-
-TObjId subObjByChain(const SymHeapTyped &sh, TObjId obj, TFieldIdxChain ic);
 
 class SymHeap: public SymHeapTyped {
     public:
