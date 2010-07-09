@@ -125,9 +125,9 @@ namespace {
         }
     }
 
-    template<class TWL, class THeap>
-    bool digComposite(TWL &wl, const THeap &heap1, const THeap &heap2,
-                      TValueId value1, TValueId value2)
+    template<class THeap>
+    bool isComposite(const THeap &heap1, const THeap &heap2,
+                     TValueId value1, TValueId value2)
     {
         const TObjId cObj1 = heap1.valGetCompositeObj(value1);
         const TObjId cObj2 = heap2.valGetCompositeObj(value2);
@@ -138,8 +138,18 @@ namespace {
             // type mismatch (scalar vs. composite ought to be compared)
             TRAP;
 
-        // FIXME: the following block of code is sort of copy-pasted
-        //        from symexec.cc
+        return true;
+    }
+
+    template<class TWL, class THeap>
+    bool digComposite(TWL &wl, const THeap &heap1, const THeap &heap2,
+                      TValueId value1, TValueId value2)
+    {
+        const TObjId cObj1 = heap1.valGetCompositeObj(value1);
+        const TObjId cObj2 = heap2.valGetCompositeObj(value2);
+        // cObj1 and cObj2 are supposed to be valid at this point, see
+        // isComposite()
+
         typedef std::pair<TObjId, TObjId> TItem;
         std::stack<TItem> todo;
         push(todo, cObj1, cObj2);
@@ -151,7 +161,7 @@ namespace {
             const struct cl_type *clt = heap1.objType(o1);
             if (clt != heap2.objType(o2))
                 // type mismatch
-                TRAP;
+                return false;
 
             const enum cl_type_e code = (clt)
                 ? clt->code
@@ -211,9 +221,14 @@ bool dfsCmp(TWL             &wl,
         TValueId value1, value2;
         boost::tie(value1, value2) = item;
 
-        if (digComposite(wl, heap1, heap2, value1, value2))
+        if (isComposite(heap1, heap2, value1, value2)) {
+            if (!digComposite(wl, heap1, heap2, value1, value2))
+                // object type mismatch (something nasty in the analyzed code)
+                return false;
+
             // compare composite objects recursively
             continue;
+        }
 
         // FIXME: this appears twice because of digComposite
         if (!matchValues(valSubst, heap1, heap2, value1, value2))

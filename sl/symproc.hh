@@ -140,7 +140,7 @@ class SymProc {
                       SymProcExecParams ep);
 
     private:
-        SymHeap                     &heap_;     /// heap to operate on
+        SymHeap                     &heap_;     ///< heap to operate on
         const SymBackTrace          *bt_;
         LocationWriter              lw_;
 

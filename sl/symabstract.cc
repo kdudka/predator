@@ -126,6 +126,9 @@ bool /* complete */ traverseSubObjs(THeap &sh, TItem item, TVisitor visitor) {
 
 namespace {
 
+// we use a controlled recursion of depth 1
+void flatScan(SymHeap &sh, EObjKind kind, TObjId obj);
+
 bool doesAnyonePointToInsideVisitor(const SymHeap &sh, TObjId sub) {
     const TValueId subAddr = sh.placedAt(sub);
     return /* continue */ !sh.usedByCount(subAddr);
@@ -145,6 +148,67 @@ TValueId /* addr */ segClone(SymHeap &sh, TValueId atAddr) {
 
     const TObjId dup = sh.objDup(seg);
     return sh.placedAt(dup);
+}
+
+TValueId /* new addr */ considerFlatScan(SymHeap &sh, TObjId obj) {
+    const TValueId addr = sh.placedAt(obj);
+    const unsigned cnt = sh.usedByCount(addr);
+
+    TObjId refObj = OBJ_INVALID;
+    if (0 < cnt) {
+        // keep track of at least one pointing object
+        SymHeapCore::TContObj refs;
+        sh.usedBy(refs, addr);
+        refObj = refs.at(0);
+    }
+
+    switch (cnt) {
+        case 0:
+            CL_WARN("considerFlatScan() encountered an unused root "
+                    "object #" << obj);
+            return addr;
+
+        case 1:
+            // we use a controlled recursion of depth 1
+            flatScan(sh, OK_SLS, obj);
+            break;
+
+        case 2:
+            // we use a controlled recursion of depth 1
+            flatScan(sh, OK_DLS, obj);
+            break;
+    }
+
+    // attempt to search the new address
+    const TValueId newAddr = sh.valueOf(refObj);
+    if (newAddr <= 0)
+        TRAP;
+
+    if (newAddr != addr)
+        CL_DEBUG("flatScan(): address of the scanned object has been changed");
+
+    return newAddr;
+}
+
+void considerFlatScan(SymHeap &sh, TValueId *val1, TValueId *val2) {
+    const EUnknownValue code1 = sh.valGetUnknown(*val1);
+    if (UV_KNOWN != code1 && UV_ABSTRACT != code1)
+        // too fuzzy for us
+        return;
+
+    const EUnknownValue code2 = sh.valGetUnknown(*val2);
+    if (UV_KNOWN != code2 && UV_ABSTRACT != code2)
+        // too fuzzy for us
+        return;
+
+    const TObjId o1 = sh.pointsTo(*val1);
+    const TObjId o2 = sh.pointsTo(*val2);
+    if (o1 <= 0 || o2 <= 0)
+        // there is no valid target --> nothing to abstract actually
+        return;
+
+    *val1 = considerFlatScan(sh, o1);
+    *val2 = considerFlatScan(sh, o2);
 }
 
 TValueId mergeValues(SymHeap &sh, TValueId v1, TValueId v2) {
@@ -187,19 +251,24 @@ TValueId mergeValues(SymHeap &sh, TValueId v1, TValueId v2) {
 
 // visitor
 struct ValueAbstractor {
-    std::set<TObjId> ignoreList;
+    std::set<TObjId>    ignoreList;
+    bool                flatScan;
 
     bool operator()(SymHeap &sh, TObjPair item) const {
         const TObjId dst = item.second;
         if (hasKey(ignoreList, dst))
             return /* continue */ true;
 
-        const TValueId valSrc = sh.valueOf(item.first);
-        const TValueId valDst = sh.valueOf(dst);
+        TValueId valSrc = sh.valueOf(item.first);
+        TValueId valDst = sh.valueOf(dst);
         bool eq;
         if (sh.proveEq(&eq, valSrc, valDst) && eq)
             // values are equal
             return /* continue */ true;
+
+        if (!flatScan)
+            // prepare any nested abstractions for collapsing eventually
+            considerFlatScan(sh, &valSrc, &valDst);
 
         // create a new unknown value as a placeholder
         const TValueId valNew = mergeValues(sh, valSrc, valDst);
@@ -278,8 +347,11 @@ void buildIgnoreList(const SymHeap &sh, TObjId obj, TIgnoreList &ignoreList) {
 }
 
 // when abstracting an object, we need to abstract all non-matching values in
-void abstractNonMatchingValues(SymHeap &sh, TObjId src, TObjId dst) {
+void abstractNonMatchingValues(SymHeap &sh, TObjId src, TObjId dst,
+                               bool flatScan)
+{
     ValueAbstractor visitor;
+    visitor.flatScan = flatScan;
     buildIgnoreList(sh, dst, visitor.ignoreList);
 
     // traverse all sub-objects
@@ -287,9 +359,11 @@ void abstractNonMatchingValues(SymHeap &sh, TObjId src, TObjId dst) {
     traverseSubObjs(sh, item, visitor);
 }
 
-void abstractNonMatchingValuesBidir(SymHeap &sh, TObjId o1, TObjId o2) {
-    abstractNonMatchingValues(sh, o1, o2);
-    abstractNonMatchingValues(sh, o2, o1);
+void abstractNonMatchingValuesBidir(SymHeap &sh, TObjId o1, TObjId o2,
+                                    bool flatScan)
+{
+    abstractNonMatchingValues(sh, o1, o2, flatScan);
+    abstractNonMatchingValues(sh, o2, o1, flatScan);
 }
 
 // when concretizing an object, we need to duplicate all _unknown_ values
@@ -574,7 +648,9 @@ void slSegCreateIfNeeded(SymHeap &sh, TObjId obj, TFieldIdxChain icBind) {
     sh.addNeq(addr, valNext);
 }
 
-void slSegAbstractionStep(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext) {
+void slSegAbstractionStep(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext,
+                          bool flatScan)
+{
     const TObjId objPtrNext = subObjByChain(sh, *pObj, icNext);
     const TValueId valNext = sh.valueOf(objPtrNext);
     if (valNext <= 0 || 1 != sh.usedByCount(valNext))
@@ -588,7 +664,7 @@ void slSegAbstractionStep(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext) {
         TRAP;
 
     // replace self by the next object
-    abstractNonMatchingValues(sh, *pObj, objNext);
+    abstractNonMatchingValues(sh, *pObj, objNext, flatScan);
     objReplace(sh, *pObj, objNext);
 
     // move to the next object
@@ -613,7 +689,7 @@ void dlSegHandleCrossNeq(SymHeap &sh, TObjId dls, TFun fun) {
 }
 
 void dlSegCreate(SymHeap &sh, TObjId o1, TObjId o2,
-                 TFieldIdxChain icNext, TFieldIdxChain icPrev)
+                 TFieldIdxChain icNext, TFieldIdxChain icPrev, bool flatScan)
 {
     if (OK_CONCRETE != sh.objKind(o1) || OK_CONCRETE != sh.objKind(o2))
         // invalid call of dlSegCreate()
@@ -623,13 +699,15 @@ void dlSegCreate(SymHeap &sh, TObjId o1, TObjId o2,
     sh.objAbstract(o2, OK_DLS, icNext, icPrev);
 
     // introduce some UV_UNKNOWN values if necessary
-    abstractNonMatchingValuesBidir(sh, o1, o2);
+    abstractNonMatchingValuesBidir(sh, o1, o2, flatScan);
 
     // a just created DLS is said to be non-empty
     dlSegHandleCrossNeq(sh, o1, &SymHeapCore::addNeq);
 }
 
-void dlSegGobble(SymHeap &sh, TObjId dls, TObjId var, bool backward) {
+void dlSegGobble(SymHeap &sh, TObjId dls, TObjId var, bool backward,
+                 bool flatScan)
+{
     if (OK_DLS != sh.objKind(dls) || OK_CONCRETE != sh.objKind(var))
         // invalid call of dlSegGobble()
         TRAP;
@@ -642,7 +720,7 @@ void dlSegGobble(SymHeap &sh, TObjId dls, TObjId var, bool backward) {
         skipObj(sh, &dls, sh.objPeerField(dls));
 
     // introduce some UV_UNKNOWN values if necessary
-    abstractNonMatchingValues(sh, var, dls);
+    abstractNonMatchingValues(sh, var, dls, flatScan);
 
     if (backward)
         // not implemented yet
@@ -661,7 +739,7 @@ void dlSegGobble(SymHeap &sh, TObjId dls, TObjId var, bool backward) {
     dlSegHandleCrossNeq(sh, dls, &SymHeap::addNeq);
 }
 
-void dlSegMerge(SymHeap &sh, TObjId seg1, TObjId seg2) {
+void dlSegMerge(SymHeap &sh, TObjId seg1, TObjId seg2, bool flatScan) {
     // the resulting DLS will be non-empty as long as at least one of the given
     // DLS is non-empty
     const bool ne = dlSegNotEmpty(sh, seg1) || dlSegNotEmpty(sh, seg2);
@@ -677,8 +755,8 @@ void dlSegMerge(SymHeap &sh, TObjId seg1, TObjId seg2) {
     const TObjId peer2 = dlSegPeer(sh, seg2);
 
     // introduce some UV_UNKNOWN values if necessary
-    abstractNonMatchingValuesBidir(sh, seg1, seg2);
-    abstractNonMatchingValuesBidir(sh, peer1, peer2);
+    abstractNonMatchingValuesBidir(sh,  seg1,  seg2, flatScan);
+    abstractNonMatchingValuesBidir(sh, peer1, peer2, flatScan);
 
     // replace both parts point-wise
     objReplace(sh, seg1, seg2);
@@ -690,7 +768,7 @@ void dlSegMerge(SymHeap &sh, TObjId seg1, TObjId seg2) {
 }
 
 void dlSegAbstractionStep(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext,
-                          TFieldIdxChain icPrev)
+                          TFieldIdxChain icPrev, bool flatScan)
 {
     // the first object is clear
     const TObjId o1 = *pObj;
@@ -712,12 +790,12 @@ void dlSegAbstractionStep(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext,
             skipObj(sh, &o2, sh.objBinderField(o2));
             if (OK_CONCRETE == sh.objKind(o2)) {
                 // DLS + VAR
-                dlSegGobble(sh, o1, o2, /* backward */ false);
+                dlSegGobble(sh, o1, o2, /* backward */ false, flatScan);
                 return;
             }
 
             // DLS + DLS
-            dlSegMerge(sh, o1, o2);
+            dlSegMerge(sh, o1, o2, flatScan);
             return;
 
         case OK_CONCRETE:
@@ -725,12 +803,12 @@ void dlSegAbstractionStep(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext,
             skipObj(sh, &o2, icNext);
             if (OK_CONCRETE == sh.objKind(o2)) {
                 // VAR + VAR
-                dlSegCreate(sh, o1, o2, icNext, icPrev);
+                dlSegCreate(sh, o1, o2, icNext, icPrev, flatScan);
                 return;
             }
 
             // VAR + DLS
-            dlSegGobble(sh, o2, o1, /* backward */ true);
+            dlSegGobble(sh, o2, o1, /* backward */ true, flatScan);
             *pObj = o2;
             return;
     }
@@ -738,7 +816,7 @@ void dlSegAbstractionStep(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext,
 
 bool considerSegAbstraction(SymHeap &sh, TObjId obj, EObjKind kind,
                             TFieldIdxChain icNext, TFieldIdxChain icPrev,
-                            unsigned lenTotal)
+                            unsigned lenTotal, bool flatScan)
 {
     // select the appropriate threshold for the given type of abstraction
     AbstractionThreshold at;
@@ -757,8 +835,11 @@ bool considerSegAbstraction(SymHeap &sh, TObjId obj, EObjKind kind,
     }
 
     // check whether the threshold is satisfied or not
-    static const unsigned threshold = at.sparePrefix + at.innerSegLen
-                                    + at.spareSuffix;
+    unsigned threshold = at.sparePrefix + at.innerSegLen + at.spareSuffix;
+    if (flatScan) {
+        CL_DEBUG("    FFF ignoring threshold cfg during flat scan!");
+        threshold = 1;
+    }
 
     if (lenTotal < threshold) {
         CL_DEBUG("<-- length (" << lenTotal
@@ -767,21 +848,24 @@ bool considerSegAbstraction(SymHeap &sh, TObjId obj, EObjKind kind,
         return false;
     }
 
-    CL_DEBUG("    --- length of the longest segment is " << lenTotal
-            << ", prefix=" << at.sparePrefix
-            << ", suffix=" << at.spareSuffix);
+    int len = lenTotal;
+    if (!flatScan) {
+        CL_DEBUG("    --- length of the longest segment is " << lenTotal
+                << ", prefix=" << at.sparePrefix
+                << ", suffix=" << at.spareSuffix);
 
-    // handle sparePrefix/spareSuffix
-    const int len = lenTotal - at.sparePrefix - at.spareSuffix;
-    for (unsigned i = 0; i < at.sparePrefix; ++i)
-        skipObj(sh, &obj, icNext);
+        // handle sparePrefix/spareSuffix
+        len = lenTotal - at.sparePrefix - at.spareSuffix;
+        for (unsigned i = 0; i < at.sparePrefix; ++i)
+            skipObj(sh, &obj, icNext);
+    }
 
     CL_DEBUG("    AAA initiating abstraction of length " << len);
 
     if (OK_SLS == kind) {
         // perform SLS abstraction!
         for (int i = 0; i < len; ++i)
-            slSegAbstractionStep(sh, &obj, icNext);
+            slSegAbstractionStep(sh, &obj, icNext, flatScan);
 
         CL_DEBUG("<-- successfully abstracted SLS");
         return true;
@@ -789,7 +873,7 @@ bool considerSegAbstraction(SymHeap &sh, TObjId obj, EObjKind kind,
     else {
         // perform DLS abstraction!
         for (int i = 0; i < len; ++i)
-            dlSegAbstractionStep(sh, &obj, icNext, icPrev);
+            dlSegAbstractionStep(sh, &obj, icNext, icPrev, flatScan);
 
         CL_DEBUG("<-- successfully abstracted DLS");
         return true;
@@ -797,7 +881,9 @@ bool considerSegAbstraction(SymHeap &sh, TObjId obj, EObjKind kind,
 }
 
 template <class TCont>
-bool considerAbstraction(SymHeap &sh, EObjKind kind, TCont entries) {
+bool considerAbstraction(SymHeap &sh, EObjKind kind, TCont entries,
+                         bool flatScan = false)
+{
     switch (kind) {
         case OK_CONCRETE:
             // invalid call of considerAbstraction()
@@ -843,7 +929,16 @@ bool considerAbstraction(SymHeap &sh, EObjKind kind, TCont entries) {
 
     // consider abstraction threshold and trigger the abstraction eventually
     return considerSegAbstraction(sh, bestEntry, kind, bestNext, bestPrev,
-                                  bestLen);
+                                  bestLen, flatScan);
+}
+
+void flatScan(SymHeap &sh, EObjKind kind, TObjId obj) {
+    if (!probe(sh, obj, kind))
+        return;
+
+    SymHeapCore::TContObj cont;
+    cont.push_back(obj);
+    considerAbstraction(sh, kind, cont, /* flatScan */ true);
 }
 
 bool abstractIfNeededCore(SymHeap &sh) {
