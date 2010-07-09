@@ -1,0 +1,8 @@
+test-0062.c:45:20: warning: binary operator not implemented yet
+test-0062.c:75:20: warning: binary operator not implemented yet
+test-0062.c:87:9: warning: killing junk
+test-0062.c:94:25: note: from call of create_sane_shape()
+test-0062.c:92:5: note: from call of main()
+test-0062.c:97:9: warning: killing junk
+test-0062.c:97:9: warning: killing junk
+test-0062.c:97:9: warning: killing junk

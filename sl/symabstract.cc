@@ -135,6 +135,18 @@ bool doesAnyonePointToInside(const SymHeap &sh, TObjId obj) {
     return !traverseSubObjs(sh, obj, doesAnyonePointToInsideVisitor);
 }
 
+TValueId /* addr */ segClone(SymHeap &sh, TValueId atAddr) {
+    const TObjId seg = sh.pointsTo(atAddr);
+    const EObjKind kind = sh.objKind(seg);
+    if (OK_SLS != kind) {
+        CL_ERROR("segment cloning implemented only for SLS");
+        TRAP;
+    }
+
+    const TObjId dup = sh.objDup(seg);
+    return sh.placedAt(dup);
+}
+
 TValueId mergeValues(SymHeap &sh, TValueId v1, TValueId v2) {
     if (v1 == v2)
         return v1;
@@ -159,6 +171,17 @@ TValueId mergeValues(SymHeap &sh, TValueId v1, TValueId v2) {
         ? code1
         : UV_UNKNOWN;
 
+    if (UV_ABSTRACT == code) {
+        CL_WARN("support for nested segments is not fully implemented yet");
+        if (1 != sh.usedByCount(v1))
+            TRAP;
+
+        // by merging the values, we drop the last reference;  destroy the seg
+        const TObjId seg = sh.pointsTo(v1);
+        sh.objDestroy(seg);
+        return VAL_INVALID;
+    }
+
     return sh.valCreateUnknown(code, clt);
 }
 
@@ -180,6 +203,9 @@ struct ValueAbstractor {
 
         // create a new unknown value as a placeholder
         const TValueId valNew = mergeValues(sh, valSrc, valDst);
+        if (VAL_INVALID == valNew)
+            return /* continue */ true;
+
         sh.objSetValue(dst, valNew);
 
         // if the last reference is gone, we have a problem
@@ -203,13 +229,26 @@ struct UnknownValuesDuplicator {
         if (valOld <= 0)
             return /* continue */ true;
 
+        // branch by _unknown_ value type
+        TValueId valNew = VAL_INVALID;
         const EUnknownValue code = sh.valGetUnknown(valOld);
-        if (UV_KNOWN == code)
-            return /* continue */ true;
+        switch (code) {
+            case UV_KNOWN:
+                // we can keep known values as they are (shared data)
+                break;
+
+            case UV_ABSTRACT:
+                // we need to clone nested list segments
+                valNew = segClone(sh, valOld);
+                break;
+
+            default:
+                valNew = sh.valDuplicateUnknown(valOld);
+        }
 
         // duplicate any unknown value
-        const TValueId valNew = sh.valDuplicateUnknown(valOld);
-        sh.objSetValue(obj, valNew);
+        if (VAL_INVALID != valNew)
+            sh.objSetValue(obj, valNew);
 
         return /* continue */ true;
     }
