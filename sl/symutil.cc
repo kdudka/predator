@@ -111,3 +111,117 @@ void getPtrValues(SymHeapCore::TContValue &dst, const SymHeap &heap,
         }
     }
 }
+
+void objReplace(SymHeap &sh, TObjId oldObj, TObjId newObj) {
+    if (OBJ_INVALID != sh.objParent(oldObj)
+            || OBJ_INVALID != sh.objParent(newObj))
+        // attempt to replace a sub-object
+        TRAP;
+
+    // resolve object addresses
+    const TValueId oldAddr = sh.placedAt(oldObj);
+    const TValueId newAddr = sh.placedAt(newObj);
+    if (oldAddr <= 0 || newAddr <= 0)
+        TRAP;
+
+    // update all references
+    sh.valReplace(oldAddr, newAddr);
+
+    // now destroy the old object
+    sh.objDestroy(oldObj);
+}
+
+void skipObj(const SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext) {
+    const TObjId objPtrNext = subObjByChain(sh, *pObj, icNext);
+    const TValueId valNext = sh.valueOf(objPtrNext);
+    const TObjId objNext = sh.pointsTo(valNext);
+    if (OBJ_INVALID == objNext)
+        TRAP;
+
+    // move to the next object
+    *pObj = objNext;
+}
+
+TObjId nextPtrFromSeg(const SymHeap &sh, TObjId seg) {
+    if (OK_CONCRETE == sh.objKind(seg))
+        // invalid call of nextPtrFromSeg()
+        TRAP;
+
+    const TFieldIdxChain icBind = sh.objBinderField(seg);
+    return subObjByChain(sh, seg, icBind);
+}
+
+TObjId dlSegPeer(const SymHeap &sh, TObjId dls) {
+    if (OK_DLS != sh.objKind(dls))
+        // invalid call of dlSegPeer()
+        TRAP;
+
+    TObjId peer = dls;
+    skipObj(sh, &peer, sh.objPeerField(dls));
+    return peer;
+}
+
+namespace {
+    bool segProveNeq(const SymHeap &sh, TValueId v1, TValueId v2) {
+        bool eq;
+        if (!sh.proveEq(&eq, v1, v2))
+            return /* no idea */ false;
+
+        if (eq)
+            // equal ... basically means 'invalid segment'
+            TRAP;
+
+        return /* not equal */ true;
+    }
+}
+
+bool dlSegNotEmpty(const SymHeap &sh, TObjId dls) {
+    if (OK_DLS != sh.objKind(dls))
+        // invalid call of dlSegNotEmpty()
+        TRAP;
+
+    const TObjId peer = dlSegPeer(sh, dls);
+
+    // dig pointer-to-next objects
+    const TObjId next1 = nextPtrFromSeg(sh, dls);
+    const TObjId next2 = nextPtrFromSeg(sh, peer);
+
+    // red the values (addresses of the surround)
+    const TValueId val1 = sh.valueOf(next1);
+    const TValueId val2 = sh.valueOf(next2);
+
+    // attempt to prove both
+    const bool ne1 = segProveNeq(sh, val1, sh.placedAt(peer));
+    const bool ne2 = segProveNeq(sh, val2, sh.placedAt(dls));
+    if (ne1 && ne2)
+        return /* not empty */ true;
+
+    if (!ne1 && !ne2)
+        return /* possibly empty */ false;
+
+    // the given DLS is guaranteed to be non empty in one direction, but not
+    // vice versa --> such a DLS is considered as mutant and should not be
+    // passed through
+    TRAP;
+    return false;
+}
+
+bool segNotEmpty(const SymHeap &sh, TObjId seg) {
+    const EObjKind kind = sh.objKind(seg);
+    switch (kind) {
+        case OK_CONCRETE:
+            // invalid call of segNotEmpty()
+            TRAP;
+
+        case OK_SLS:
+            break;
+
+        case OK_DLS:
+            return dlSegNotEmpty(sh, seg);
+    }
+
+    const TObjId next = nextPtrFromSeg(sh, seg);
+    const TValueId nextVal = sh.valueOf(next);
+    const TValueId addr = sh.placedAt(seg);
+    return /* not empty */ segProveNeq(sh, addr, nextVal);
+}

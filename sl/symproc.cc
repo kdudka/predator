@@ -94,7 +94,7 @@ TValueId SymProc::heapValFromCst(const struct cl_operand &op) {
     }
 }
 
-void SymProc::heapObjHandleAccessorDeref(TObjId *pObj, bool silent) {
+void SymProc::heapObjHandleAccessorDeref(TObjId *pObj) {
     EUnknownValue code;
 
     // TODO: check --- it should be pointer variable, => NON-ABSTRACT ?
@@ -103,9 +103,6 @@ void SymProc::heapObjHandleAccessorDeref(TObjId *pObj, bool silent) {
     const TValueId val = heap_.valueOf(*pObj);
     switch (val) {
         case VAL_NULL:
-            if (silent)
-                goto fail;
-
             CL_ERROR_MSG(lw_, "dereference of NULL value");
             goto fail_with_bt;
 
@@ -132,9 +129,6 @@ void SymProc::heapObjHandleAccessorDeref(TObjId *pObj, bool silent) {
             return;
 
         case UV_UNINITIALIZED:
-            if (silent)
-                goto fail;
-
             CL_ERROR_MSG(lw_, "dereference of uninitialized value");
             goto fail_with_bt;
     }
@@ -143,16 +137,10 @@ void SymProc::heapObjHandleAccessorDeref(TObjId *pObj, bool silent) {
     *pObj = heap_.pointsTo(val);
     switch (*pObj) {
         case OBJ_LOST:
-            if (silent)
-                goto fail;
-
             CL_ERROR_MSG(lw_, "dereference of non-existing non-heap object");
             goto fail_with_bt;
 
         case OBJ_DELETED:
-            if (silent)
-                goto fail;
-
             CL_ERROR_MSG(lw_, "dereference of already deleted heap object");
             goto fail_with_bt;
 
@@ -185,13 +173,12 @@ void SymProc::heapObjHandleAccessorItem(TObjId *pObj,
 }
 
 void SymProc::heapObjHandleAccessor(TObjId *pObj,
-                                    const struct cl_accessor *ac,
-                                    bool silent)
+                                    const struct cl_accessor *ac)
 {
     const enum cl_accessor_e code = ac->code;
     switch (code) {
         case CL_ACCESSOR_DEREF:
-            this->heapObjHandleAccessorDeref(pObj, silent);
+            this->heapObjHandleAccessorDeref(pObj);
             return;
 
         case CL_ACCESSOR_ITEM:
@@ -211,7 +198,11 @@ void SymProc::heapObjHandleAccessor(TObjId *pObj,
     }
 }
 
-TObjId SymProc::heapObjFromOperand(const struct cl_operand &op, bool silent) {
+namespace {
+
+TObjId varFromOperand(const struct cl_operand &op, const SymHeap &sh,
+                      const SymBackTrace *bt)
+{
     int uid;
 
     const enum cl_operand_e code = op.code;
@@ -229,9 +220,15 @@ TObjId SymProc::heapObjFromOperand(const struct cl_operand &op, bool silent) {
             return OBJ_INVALID;
     }
 
-    const int nestLevel = bt_->countOccurrencesOfTopFnc();
+    const int nestLevel = bt->countOccurrencesOfTopFnc();
     const CVar cVar(uid, nestLevel);
-    TObjId var = heap_.objByCVar(cVar);
+    return sh.objByCVar(cVar);
+}
+
+} // namespace
+
+TObjId SymProc::heapObjFromOperand(const struct cl_operand &op) {
+    TObjId var = varFromOperand(op, heap_, bt_);
     if (OBJ_INVALID == var)
         // unable to resolve static variable
         TRAP;
@@ -239,7 +236,7 @@ TObjId SymProc::heapObjFromOperand(const struct cl_operand &op, bool silent) {
     // process all accessors
     const struct cl_accessor *ac = op.accessor;
     while (ac) {
-        this->heapObjHandleAccessor(&var, ac, silent);
+        this->heapObjHandleAccessor(&var, ac);
         ac = ac->next;
     }
 
@@ -301,13 +298,13 @@ namespace {
     }
 }
 
-TValueId SymProc::heapValFromOperand(const struct cl_operand &op, bool silent) {
+TValueId SymProc::heapValFromOperand(const struct cl_operand &op) {
     const enum cl_operand_e code = op.code;
     switch (code) {
         case CL_OPERAND_VAR:
         case CL_OPERAND_REG:
             return valueFromVar(heap_,
-                    this->heapObjFromOperand(op, silent),
+                    this->heapObjFromOperand(op),
                     op.type, op.accessor);
 
         case CL_OPERAND_CST:
@@ -1176,9 +1173,11 @@ void SymProc::execOp(const CodeStorage::Insn &insn) {
     this->objSetValue(varLhs, valResult);
 }
 
-void SymProc::concretizeLoop(TState &dst, const CodeStorage::Insn &insn,
-                             const struct cl_operand &src)
+bool SymProc::concretizeLoop(TState &dst, const CodeStorage::Insn &insn,
+                             const struct cl_operand &op)
 {
+    bool hit = false;
+
     TSymHeapList todo;
     todo.push_back(heap_);
     while (!todo.empty()) {
@@ -1186,34 +1185,26 @@ void SymProc::concretizeLoop(TState &dst, const CodeStorage::Insn &insn,
         SymProc proc(sh, bt_);
         proc.setLocation(lw_);
 
-        // first just check if the rhs value is abstract
-        const TValueId val = proc.heapValFromOperand(src, /* silent */ true);
-        if (VAL_INVALID == val)
-            TRAP;
-
         // we expect a pointer at this point
-        if (0 < val) {
-            const TObjId target = sh.pointsTo(val);
-            if (OK_CONCRETE != sh.objKind(target))
-                concretizeObj(sh, target, todo);
+        const TObjId ptr = varFromOperand(op, sh, bt_);
+        const TValueId val = sh.valueOf(ptr);
+        if (0 < val && UV_ABSTRACT == sh.valGetUnknown(val)) {
+            hit = true;
+            concretizeObj(sh, val, todo);
         }
 
         // process the current heap and move to the next one (if any)
         proc.execCore(dst, insn, SymProcExecParams());
         todo.pop_front();
     }
+
+    return hit;
 }
 
-bool SymProc::concretizeIfNeeded(TState &results, const CodeStorage::Insn &insn)
-{
+namespace {
+bool checkForDeref(const struct cl_operand &op, const CodeStorage::Insn &insn) {
     const enum cl_insn_e code = insn.code;
-    const size_t opCnt = insn.operands.size();
-    if (opCnt != /* deref */ 2 && opCnt != /* free() */ 3)
-        // neither dereference, nor free()
-        return false;
-
-    const struct cl_operand &src = insn.operands[/* src */ 1];
-    const struct cl_accessor *ac = src.accessor;
+    const struct cl_accessor *ac = op.accessor;
     if (ac && CL_ACCESSOR_DEREF == ac->code) {
         // we expect the dereference only as the first accessor
         if (CL_INSN_UNOP != code ||
@@ -1221,10 +1212,39 @@ bool SymProc::concretizeIfNeeded(TState &results, const CodeStorage::Insn &insn)
             TRAP;
 
         // we should go through concretization
-        this->concretizeLoop(results, insn, src);
         return true;
     }
 
+    return false;
+}
+} // namespace
+
+bool SymProc::concretizeIfNeeded(TState &results, const CodeStorage::Insn &insn)
+{
+    const size_t opCnt = insn.operands.size();
+    if (opCnt != /* deref */ 2 && opCnt != /* free() */ 3)
+        // neither dereference, nor free()
+        return false;
+
+    bool hitDeref = false;
+    bool hitConcretize = false;
+    BOOST_FOREACH(const struct cl_operand &op, insn.operands) {
+        if (!checkForDeref(op, insn))
+            continue;
+
+        hitDeref = true;
+
+        if (hitConcretize)
+            // FIXME: are we ready for two dereferences within one insn?
+            TRAP;
+
+        hitConcretize = this->concretizeLoop(results, insn, op);
+    }
+    if (hitDeref)
+        return true;
+
+    const enum cl_insn_e code = insn.code;
+    const struct cl_operand &src = insn.operands[/* src */ 1];
     if (CL_INSN_CALL != code || CL_OPERAND_CST != src.code)
         return false;
 

@@ -262,118 +262,6 @@ void duplicateUnknownValues(SymHeap &sh, TObjId obj) {
     traverseSubObjs(sh, obj, visitor);
 }
 
-void objReplace(SymHeap &sh, TObjId oldObj, TObjId newObj) {
-    if (OBJ_INVALID != sh.objParent(oldObj)
-            || OBJ_INVALID != sh.objParent(newObj))
-        // attempt to replace a sub-object
-        TRAP;
-
-    // resolve object addresses
-    const TValueId oldAddr = sh.placedAt(oldObj);
-    const TValueId newAddr = sh.placedAt(newObj);
-    if (oldAddr <= 0 || newAddr <= 0)
-        TRAP;
-
-    // update all references
-    sh.valReplace(oldAddr, newAddr);
-
-    // now destroy the old object
-    sh.objDestroy(oldObj);
-}
-
-void skipObj(const SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext) {
-    const TObjId objPtrNext = subObjByChain(sh, *pObj, icNext);
-    const TValueId valNext = sh.valueOf(objPtrNext);
-    const TObjId objNext = sh.pointsTo(valNext);
-    if (OBJ_INVALID == objNext)
-        TRAP;
-
-    // move to the next object
-    *pObj = objNext;
-}
-
-TObjId nextPtrFromSeg(const SymHeap &sh, TObjId seg) {
-    if (OK_CONCRETE == sh.objKind(seg))
-        // invalid call of nextPtrFromSeg()
-        TRAP;
-
-    const TFieldIdxChain icBind = sh.objBinderField(seg);
-    return subObjByChain(sh, seg, icBind);
-}
-
-TObjId dlSegPeer(const SymHeap &sh, TObjId dls) {
-    if (OK_DLS != sh.objKind(dls))
-        // invalid call of dlSegPeer()
-        TRAP;
-
-    TObjId peer = dls;
-    skipObj(sh, &peer, sh.objPeerField(dls));
-    return peer;
-}
-
-bool segProveNeq(const SymHeap &sh, TValueId v1, TValueId v2) {
-    bool eq;
-    if (!sh.proveEq(&eq, v1, v2))
-        return /* no idea */ false;
-
-    if (eq)
-        // equal ... basically means 'invalid segment'
-        TRAP;
-
-    return /* not equal */ true;
-}
-
-bool dlSegNotEmpty(const SymHeap &sh, TObjId dls) {
-    if (OK_DLS != sh.objKind(dls))
-        // invalid call of dlSegNotEmpty()
-        TRAP;
-
-    const TObjId peer = dlSegPeer(sh, dls);
-
-    // dig pointer-to-next objects
-    const TObjId next1 = nextPtrFromSeg(sh, dls);
-    const TObjId next2 = nextPtrFromSeg(sh, peer);
-
-    // red the values (addresses of the surround)
-    const TValueId val1 = sh.valueOf(next1);
-    const TValueId val2 = sh.valueOf(next2);
-
-    // attempt to prove both
-    const bool ne1 = segProveNeq(sh, val1, sh.placedAt(peer));
-    const bool ne2 = segProveNeq(sh, val2, sh.placedAt(dls));
-    if (ne1 && ne2)
-        return /* not empty */ true;
-
-    if (!ne1 && !ne2)
-        return /* possibly empty */ false;
-
-    // the given DLS is guaranteed to be non empty in one direction, but not
-    // vice versa --> such a DLS is considered as mutant and should not be
-    // passed through
-    TRAP;
-    return false;
-}
-
-bool segNotEmpty(const SymHeap &sh, TObjId seg) {
-    const EObjKind kind = sh.objKind(seg);
-    switch (kind) {
-        case OK_CONCRETE:
-            // invalid call of segNotEmpty()
-            TRAP;
-
-        case OK_SLS:
-            break;
-
-        case OK_DLS:
-            return dlSegNotEmpty(sh, seg);
-    }
-
-    const TObjId next = nextPtrFromSeg(sh, seg);
-    const TValueId nextVal = sh.valueOf(next);
-    const TValueId addr = sh.placedAt(seg);
-    return /* not empty */ segProveNeq(sh, addr, nextVal);
-}
-
 class ProbeVisitor {
     private:
         TValueId                addr_;
@@ -974,6 +862,25 @@ bool abstractIfNeededCore(SymHeap &sh) {
     return false;
 }
 
+void spliceOutListSegmentCore(SymHeap &sh, TObjId obj, TObjId peer)
+{
+    const TObjId next = nextPtrFromSeg(sh, peer);
+    const TValueId valNext = sh.valueOf(next);
+
+    if (obj != peer) {
+        // OK_DLS --> destroy peer
+        const TFieldIdxChain icPrev = sh.objBinderField(obj);
+        const TValueId valPrev = sh.valueOf(subObjByChain(sh, obj, icPrev));
+        sh.valReplace(sh.placedAt(peer), valPrev);
+        sh.objDestroy(peer);
+    }
+
+    // destroy self
+    const TValueId addr = sh.placedAt(obj);
+    sh.valReplace(addr, valNext);
+    sh.objDestroy(obj);
+}
+
 void spliceOutSegmentIfNeeded(SymHeap &sh, TObjId ao, TObjId peer,
                               TSymHeapList &todo)
 {
@@ -998,21 +905,7 @@ void spliceOutSegmentIfNeeded(SymHeap &sh, TObjId ao, TObjId peer,
 
     // possibly empty LS
     SymHeap sh0(sh);
-    if (ao != peer) {
-        // OK_DLS --> destroy peer
-        const TFieldIdxChain icPrev = sh0.objBinderField(ao);
-        const TValueId valPrev = sh0.valueOf(subObjByChain(sh0, ao, icPrev));
-        sh0.valReplace(sh0.placedAt(peer), valPrev);
-        sh0.objDestroy(peer);
-    }
-
-    // destroy self
-    const TObjId next = nextPtrFromSeg(sh, peer);
-    const TValueId valNext = sh.valueOf(next);
-    sh0.valReplace(addrSelf, valNext);
-    sh0.objDestroy(ao);
-
-    // schedule the empty variant for processing
+    spliceOutListSegmentCore(sh0, ao, peer);
     todo.push_back(sh0);
 }
 
@@ -1027,7 +920,8 @@ void abstractIfNeeded(SymHeap &sh) {
 #endif
 }
 
-void concretizeObj(SymHeap &sh, TObjId obj, TSymHeapList &todo) {
+void concretizeObj(SymHeap &sh, TValueId addr, TSymHeapList &todo) {
+    const TObjId obj = sh.pointsTo(addr);
     TObjId peer = obj;
 
     // branch by SLS/DLS
@@ -1074,4 +968,20 @@ void concretizeObj(SymHeap &sh, TObjId obj, TSymHeapList &todo) {
         const TObjId backLink = subObjByChain(sh, aoDup, icPrev);
         sh.objSetValue(backLink, sh.placedAt(obj));
     }
+}
+
+void spliceOutListSegment(SymHeap &sh, TValueId atAddr, TValueId pointingTo)
+{
+    const TObjId obj = sh.pointsTo(atAddr);
+    const EObjKind kind = sh.objKind(obj);
+    const TObjId peer = (OK_DLS == kind)
+        ? dlSegPeer(sh, obj)
+        : obj;
+
+    const TObjId next = nextPtrFromSeg(sh, peer);
+    const TValueId valNext = sh.valueOf(next);
+    if (valNext != pointingTo)
+        TRAP;
+
+    spliceOutListSegmentCore(sh, obj, peer);
 }

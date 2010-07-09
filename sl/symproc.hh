@@ -104,12 +104,10 @@ class SymProc {
 
     public:
         /// obtain a heap object corresponding to the given operand
-        TObjId heapObjFromOperand(const struct cl_operand &op,
-                                  bool silent = false);
+        TObjId heapObjFromOperand(const struct cl_operand &op);
 
         /// obtain a heap value corresponding to the given operand
-        TValueId heapValFromOperand(const struct cl_operand &op,
-                                    bool silent = false);
+        TValueId heapValFromOperand(const struct cl_operand &op);
 
         /// resolve Fnc uid from the given opreand, -1 if there is no such Fnc
         int /* uid */ fncFromOperand(const struct cl_operand &op);
@@ -123,11 +121,10 @@ class SymProc {
     private:
         void heapSetSingleVal(TObjId lhs, TValueId rhs);
         void heapObjDefineType(TObjId lhs, TValueId rhs);
-        void heapObjHandleAccessorDeref(TObjId *pObj, bool silent);
+        void heapObjHandleAccessorDeref(TObjId *pObj);
         void heapObjHandleAccessorItem(TObjId *pObj,
                                        const struct cl_accessor *ac);
-        void heapObjHandleAccessor(TObjId *pObj, const struct cl_accessor *ac,
-                                   bool silent);
+        void heapObjHandleAccessor(TObjId *pObj, const struct cl_accessor *ac);
         TValueId heapValFromCst(const struct cl_operand &op);
         bool lhsFromOperand(TObjId *pObj, const struct cl_operand &op);
         template <int ARITY> void execOp(const CodeStorage::Insn &insn);
@@ -136,7 +133,7 @@ class SymProc {
         void execFree(const CodeStorage::TOperandList &opList);
         bool execCall(TState &dst, const CodeStorage::Insn &insn,
                       SymProcExecParams ep);
-        void concretizeLoop(TState &dst, const CodeStorage::Insn &insn,
+        bool concretizeLoop(TState &dst, const CodeStorage::Insn &insn,
                             const struct cl_operand &src);
         bool concretizeIfNeeded(TState &dst, const CodeStorage::Insn &insn);
         bool execCore(TState &dst, const CodeStorage::Insn &insn,

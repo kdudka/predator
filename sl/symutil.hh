@@ -40,4 +40,16 @@ void digRootObject(const SymHeap &heap, TValueId *pValue);
 void getPtrValues(SymHeapCore::TContValue &dst, const SymHeap &heap,
                   TObjId obj);
 
+void objReplace(SymHeap &sh, TObjId oldObj, TObjId newObj);
+
+void skipObj(const SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext);
+
+TObjId nextPtrFromSeg(const SymHeap &sh, TObjId seg);
+
+TObjId dlSegPeer(const SymHeap &sh, TObjId dls);
+
+bool dlSegNotEmpty(const SymHeap &sh, TObjId dls);
+
+bool segNotEmpty(const SymHeap &sh, TObjId seg);
+
 #endif /* H_GUARD_SYMUTIL_H */

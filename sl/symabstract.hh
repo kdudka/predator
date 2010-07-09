@@ -33,8 +33,10 @@
 
 typedef std::list<SymHeap> TSymHeapList;
 
-void concretizeObj(SymHeap &srcDst, TObjId obj, TSymHeapList &dst);
+void concretizeObj(SymHeap &srcDst, TValueId atAddr, TSymHeapList &dst);
 
 void abstractIfNeeded(SymHeap &sh);
+
+void spliceOutListSegment(SymHeap &sh, TValueId atAddr, TValueId pointingTo);
 
 #endif /* H_GUARD_SYMABSTRACT_H */

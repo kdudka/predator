@@ -196,7 +196,7 @@ class SymHeapCore {
          * @note This method is heavily used by non-deterministic execution of
          * CL_INSN_COND.
          */
-        void valReplaceUnknown(TValueId val, TValueId replaceBy);
+        virtual void valReplaceUnknown(TValueId val, TValueId replaceBy);
 
         /// change all variables using value _val to value _newval (all known)
         void valReplace(TValueId _val, TValueId _newval);
@@ -208,6 +208,13 @@ class SymHeapCore {
          * @param valB one side of the inequality
          */
         void addNeq(TValueId valA, TValueId valB);
+
+        /**
+         * remove the given @b Neq @b predice if such exists
+         * @param valA one side of the inequality
+         * @param valB one side of the inequality
+         */
+        void delNeq(TValueId valA, TValueId valB);
 
         /**
          * introduce a new @b EqIf @b predicate (if not present already)
@@ -231,7 +238,7 @@ class SymHeapCore {
          * @note The content of *result is not touched at all in case the
          * reasoning has been not successful.
          */
-        bool proveEq(bool *result, TValueId valA, TValueId valB) const;
+        virtual bool proveEq(bool *result, TValueId valA, TValueId valB) const;
 
     public:
         /// a type used for (injective) value IDs mapping
@@ -258,9 +265,9 @@ class SymHeapCore {
          */
         void copyRelevantPreds(SymHeapCore &dst, const TValMap &valMap) const;
 
-    public:
-        // FIXME: safe to disclose for public?
-        void delNeq(TValueId val1, TValueId val2);
+    protected:
+        /// template method
+        virtual void valReplaceUnknownImpl(TValueId val, TValueId replaceBy);
 
     private:
         struct Private;
@@ -596,7 +603,17 @@ class SymHeap: public SymHeapTyped {
          */
         void objConcretize(TObjId obj);
 
-        // TODO: override objDestroy() some day
+    protected:
+        /// overriden in order to see through SLS/DLS
+        virtual void valReplaceUnknownImpl(TValueId val, TValueId replaceBy);
+
+    public:
+        /// overriden in order to see through SLS/DLS
+        virtual bool proveEq(bool *result, TValueId valA, TValueId valB) const;
+
+        /// overriden in order to remove internal data of abstract objects
+        virtual void objDestroy(TObjId obj);
+
     private:
         struct Private;
         Private *d;

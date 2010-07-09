@@ -24,6 +24,7 @@
 #include <cl/cl_msg.hh>
 #include <cl/code_listener.h>
 
+#include "symabstract.hh"
 #include "symdump.hh"
 #include "symutil.hh"
 #include "util.hh"
@@ -481,6 +482,18 @@ void SymHeapCore::valReplace(TValueId _val, TValueId _newval) {
     this->delNeq(_val, _newval);
 }
 
+// template method
+void SymHeapCore::valReplaceUnknownImpl(TValueId val, TValueId replaceBy) {
+    // collect objects having the value 'val'
+    TContObj rlist;
+    this->usedBy(rlist, val);
+
+    // go through the list and replace the value by 'replaceBy'
+    BOOST_FOREACH(const TObjId obj, rlist) {
+        this->objSetValue(obj, replaceBy);
+    }
+}
+
 void SymHeapCore::valReplaceUnknown(TValueId val, TValueId replaceBy) {
     typedef std::pair<TValueId /* val */, TValueId /* replaceBy */> TItem;
     TItem item(val, replaceBy);
@@ -496,14 +509,8 @@ void SymHeapCore::valReplaceUnknown(TValueId val, TValueId replaceBy) {
             TRAP;
         }
 
-        // collect objects having the value 'val'
-        TContObj rlist;
-        this->usedBy(rlist, val);
-
-        // go through the list and replace the value by 'replaceBy'
-        BOOST_FOREACH(const TObjId obj, rlist) {
-            this->objSetValue(obj, replaceBy);
-        }
+        // make it possible to override the implementation (template method)
+        this->valReplaceUnknownImpl(val, replaceBy);
 
         // handle all EqIf predicates
         EqIfDb::TDst eqIfs;
@@ -1442,4 +1449,64 @@ void SymHeap::objConcretize(TObjId obj) {
 #endif
 }
 
-// vim: tw=80
+void SymHeap::valReplaceUnknownImpl(TValueId val, TValueId replaceBy) {
+    const EUnknownValue code = this->valGetUnknown(val);
+    switch (code) {
+        case UV_KNOWN:
+            TRAP;
+
+        case UV_ABSTRACT:
+            spliceOutListSegment(*this, val, replaceBy);
+            return;
+
+        default:
+            SymHeapTyped::valReplaceUnknownImpl(val, replaceBy);
+    }
+}
+
+bool SymHeap::proveEq(bool *result, TValueId valA, TValueId valB) const {
+    if (SymHeapTyped::proveEq(result, valA, valB))
+        return true;
+
+    // having the values always in the same order leads to simpler code
+    sortValues(valA, valB);
+    if (VAL_NULL != valA)
+        return false;
+
+    EUnknownValue code = this->valGetUnknown(valB);
+    if (UV_ABSTRACT != code)
+        // we are interested only in abstract objects here
+        return false;
+
+    TObjId obj = this->pointsTo(valB);
+    if (OK_DLS == this->objKind(obj))
+        // jump to peer in case of DLS
+        obj = dlSegPeer(*this, obj);
+
+    const TObjId next = nextPtrFromSeg(*this, obj);
+    const TValueId valNext = this->valueOf(next);
+    if (VAL_NULL == valNext)
+        // we alraeady know that there is no Neq(valB, VAL_NULL) defined, from
+        // the call of SymHeapTyped::proveEq() above
+        return false;
+
+    code = this->valGetUnknown(valNext);
+    switch (code) {
+        case UV_KNOWN:
+            // prove done
+            *result = false;
+            return true;
+
+        case UV_ABSTRACT:
+            // not implemented
+            TRAP;
+
+        default:
+            return false;
+    }
+}
+
+void SymHeap::objDestroy(TObjId obj) {
+    SymHeapTyped::objDestroy(obj);
+    d->objMap.erase(obj);
+}
