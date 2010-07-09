@@ -1,0 +1,10 @@
+test-0063.c:45:20: warning: binary operator not implemented yet
+test-0063.c:75:20: warning: binary operator not implemented yet
+test-0063.c:86:9: warning: killing junk
+test-0063.c:91:25: note: from call of create_sane_shape()
+test-0063.c:99:30: note: from call of demo()
+test-0063.c:97:5: note: from call of main()
+test-0063.c:45:20: warning: binary operator not implemented yet
+test-0063.c:103:9: warning: killing junk
+test-0063.c:103:9: warning: killing junk
+test-0063.c:103:9: warning: killing junk
