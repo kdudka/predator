@@ -1,3 +1,8 @@
+// Creating a structure in which each node has tree next pointers, each of them has again three
+// next pointers, but only one of them is used to, in fact, bind these structures into a sort of
+// SLL. One works via a pointer to an item of a structure here (i.e., having and using a pointer
+// into teh middle of a structure).
+
 #include "../sl.h"
 #include <stdlib.h>
 

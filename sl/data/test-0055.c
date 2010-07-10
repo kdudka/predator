@@ -1,3 +1,6 @@
+// Creating a DLL whose node structure is for testing purposes split and the prev
+// pointer is in a sub-structure of the main node structure.
+
 #include "../sl.h"
 #include <stdlib.h>
 

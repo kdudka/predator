@@ -1,3 +1,5 @@
+// Creating a SLL with head pointers.
+
 #include "../sl.h"
 #include <stdlib.h>
 

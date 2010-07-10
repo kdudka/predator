@@ -1,3 +1,5 @@
+// Creating a DLL.
+
 #include "../sl.h"
 #include <stdlib.h>
 
