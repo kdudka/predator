@@ -1,3 +1,5 @@
+// Creating an SLL of SLLs.
+
 #include "../sl.h"
 #include <stdlib.h>
 

@@ -1,3 +1,5 @@
+// Creating a DLL and destroying it forwards, then creating another one and deleting it backwards.
+
 #include "../sl.h"
 #include <stdlib.h>
 

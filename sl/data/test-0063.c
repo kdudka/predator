@@ -1,3 +1,6 @@
+// Creating an SLL of SLLs which is in the end forced to be a successor of some
+// regular SLL (dirty).
+
 #include "../sl.h"
 #include <stdlib.h>
 

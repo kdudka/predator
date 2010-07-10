@@ -1,3 +1,5 @@
+// Creating and then deleting a cyclic DLL.
+
 #include "../sl.h"
 #include <stdlib.h>
 

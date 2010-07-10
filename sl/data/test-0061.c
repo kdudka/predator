@@ -1,3 +1,7 @@
+// Create a SLL based on the node structure of DLL (only next is used). 
+// Then traverse the list while setting values of prev (thus creating a DLL). 
+// Finally, traverse the list while resetting next (thus creating a reversed SLL).
+
 #include "../sl.h"
 #include <stdlib.h>
 

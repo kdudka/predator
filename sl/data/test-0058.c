@@ -1,3 +1,5 @@
+// Creating and then traversing a DLL.
+
 #include "../sl.h"
 #include <stdlib.h>
 

@@ -1,3 +1,5 @@
+// Creating a DLL with all elements pointing to a shared data element (sentinel).
+
 #include "../sl.h"
 #include <stdlib.h>
 
