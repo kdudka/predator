@@ -1,3 +1,5 @@
+// A basic test of creating a SLL, starting with a possibly undefined list pointer.
+
 #include "../sl.h"
 #include <stdlib.h>
 

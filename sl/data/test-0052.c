@@ -49,7 +49,7 @@ struct item* create_sll(void)
     // NOTE: running this on bare metal may cause the machine to swap a bit
     int i;
     for (i = 1; i; ++i) {
-        // just choose here an arbitrary selector here, we should be able to
+        // just choose an arbitrary selector here, we should be able to
         // find the 'next' ptr anywhere
         struct item **next = &pi->triple_3rd.field_1st;
 
