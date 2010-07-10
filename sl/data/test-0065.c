@@ -1,16 +1,12 @@
-// Creating an SLL of SLLs which is in the end forced to be a successor of some
-// regular SLL (dirty).
+// Creating an SLL with two marked successor nodes (via non-null data elements),
+// and then reversing the list.
 
 #include "../sl.h"
 #include <stdlib.h>
 
 struct item {
     struct item *next;
-};
-
-struct master_item {
-    struct item             *slave;
-    struct master_item      *next;
+    struct item *data1, *data2; // abusing the structure to be able to model some external data
 };
 
 struct item* alloc_or_die(void)
@@ -22,18 +18,10 @@ struct item* alloc_or_die(void)
         abort();
 }
 
-struct master_item* alloc_or_die_master(void)
-{
-    struct master_item *pm = malloc(sizeof(*pm));
-    if (pm)
-        return pm;
-    else
-        abort();
-}
-
 struct item* create_sll_item(struct item *next) {
     struct item *pi = alloc_or_die();
     pi->next = next;
+    pi->data1 = pi->data2 = NULL;
     return pi;
 }
 
@@ -60,51 +48,39 @@ struct item* create_slseg(void *end)
     return sls;
 }
 
-struct master_item* create_master_item(struct master_item *next) {
-    struct master_item *pm = alloc_or_die_master();
-    pm->slave = create_slseg(NULL);
-    pm->next  = next;
-    return pm;
-}
-
-struct master_item* create_shape(void)
+struct item* reverse_sll(struct item *list)
 {
-    struct master_item *item = create_master_item(NULL);
-    item = create_master_item(item);
-    item = create_master_item(item);
+    struct item *prev, *next;
 
-    // NOTE: running this on bare metal may cause the machine to swap a bit
-    int i;
-    for (i = 1; i; ++i)
-        item = create_master_item(item);
+    if (list) 
+        next = list->next;
+    else
+        return list;
 
-    // the return will trigger further abstraction (stack frame destruction)
-    return item;
-}
+    while (next) {
+        prev = list;
+        list = next;
+        next = list->next;
+        list->next = prev;
+    }
 
-struct master_item* create_sane_shape(void)
-{
-    struct master_item *list = create_shape();
-    struct master_item *shape = list->next;
-    free(list);
-    return shape;
-}
-
-struct item* demo(void) {
-    struct master_item *shape = create_sane_shape();
-    struct item *all = create_slseg(shape);
-    ___SL_PLOT_FNC(demo);
-    return all;
+    return list;
 }
 
 int main()
 {
-    struct item *shape = demo();
-    ___sl_plot_by_ptr(&shape, "00-shape");
-
-    // trigger a memory leak
-    free(shape);
+    struct item *sll = create_slseg(NULL);
+    sll = create_sll_item(sll);
+    sll->data2 = sll; // mark the second selected node (we create the list from the end)
+    sll = create_sll_item(sll);
+    sll->data1 = sll; // mark the first selected node
+    sll = create_slseg(sll);
 
     ___SL_PLOT_FNC(main);
+
+    sll = reverse_sll(sll);
+
+    ___SL_PLOT_FNC(main);
+
     return 0;
 }
