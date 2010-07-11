@@ -52,4 +52,8 @@ bool dlSegNotEmpty(const SymHeap &sh, TObjId dls);
 
 bool segNotEmpty(const SymHeap &sh, TObjId seg);
 
+bool segEqual(const SymHeap &sh, TValueId v1, TValueId v2);
+
+void segDestroy(SymHeap &sh, TObjId seg);
+
 #endif /* H_GUARD_SYMUTIL_H */

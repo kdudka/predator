@@ -231,7 +231,7 @@ TValueId mergeValues(SymHeap &sh, TValueId v1, TValueId v2) {
     // pass it through;  UV_UNKNOWN otherwise
     const EUnknownValue code1 = sh.valGetUnknown(v1);
     const EUnknownValue code2 = sh.valGetUnknown(v2);
-    const EUnknownValue code = (code1 != UV_KNOWN && code1 == code2)
+    EUnknownValue code = (code1 != UV_KNOWN && code1 == code2)
         ? code1
         : UV_UNKNOWN;
 
@@ -240,10 +240,15 @@ TValueId mergeValues(SymHeap &sh, TValueId v1, TValueId v2) {
         if (1 != sh.usedByCount(v1))
             CL_NOTE("even worse with DLS abstraction nesting");
 
-        // by merging the values, we drop the last reference;  destroy the seg
-        const TObjId seg = sh.pointsTo(v1);
-        sh.objDestroy(seg);
-        return VAL_INVALID;
+        if (segEqual(sh, v1, v2)) {
+            // by merging the values, we drop the last reference;  destroy the seg
+            const TObjId seg = sh.pointsTo(v1);
+            segDestroy(sh, seg);
+            return VAL_INVALID;
+        }
+        else
+            // segments are not equal, no chance to merge them
+            code = UV_UNKNOWN;
     }
 
     return sh.valCreateUnknown(code, clt);
@@ -380,9 +385,22 @@ class ProbeVisitor {
         TValueId                addr_;
         const struct cl_type    *clt_;
         unsigned                arrity_;
+        TFieldIdxChain          icNext_;
+
+        bool dlSegEndCandidate(const SymHeap &sh, TObjId obj) const {
+            if (OK_DLS != static_cast<EObjKind>(arrity_) || icNext_.empty())
+                // we are not looking for a DLS either
+                return false;
+
+            const TObjId nextPtr = subObjByChain(sh, obj, icNext_);
+            return (VAL_NULL == sh.valueOf(nextPtr));
+        }
 
     public:
-        ProbeVisitor(const SymHeap &sh, TObjId root, EObjKind kind) {
+        ProbeVisitor(const SymHeap &sh, TObjId root, EObjKind kind,
+                     TFieldIdxChain icNext = TFieldIdxChain()):
+            icNext_(icNext)
+        {
             addr_ = sh.placedAt(root);
             clt_  = sh.objType(root);
             if (!addr_ || !clt_ || CL_TYPE_STRUCT != clt_->code)
@@ -419,7 +437,9 @@ class ProbeVisitor {
             // a list segment through non-heap objects basically makes no sense
             return /* continue */ true;
 
-        if (sh.usedByCount(targetAddr) != arrity_)
+        // special quirk for DLS "end"
+        const unsigned refs = sh.usedByCount(targetAddr);
+        if (refs != arrity_ && (1 != refs || !this->dlSegEndCandidate(sh, obj)))
             return /* continue */ true;
 
         return doesAnyonePointToInside(sh, target);
@@ -518,20 +538,12 @@ unsigned /* len */ segDiscover(const SymHeap &sh, TObjId entry, EObjKind kind,
                 // we came from the wrong side this time
                 break;
 
-#if 0
-            // if there is at least one DLS on the path, we demand that the path
-            // begins with a DLS;  otherwise we just ignore the path and wait
-            // for a better one
-            if (OK_DLS != sh.objKind(entry))
-                return /* not found */ 0;
-#endif
-
             path.insert(obj);
             dlSegsOnPath++;
         }
 
         const TObjId objPtrNext = subObjByChain(sh, obj, icNext);
-        const ProbeVisitor visitor(sh, obj, kind);
+        const ProbeVisitor visitor(sh, obj, kind, icNext);
         if (visitor(sh, objPtrNext))
             // we can't go further
             break;

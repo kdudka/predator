@@ -225,3 +225,58 @@ bool segNotEmpty(const SymHeap &sh, TObjId seg) {
     const TValueId addr = sh.placedAt(seg);
     return /* not empty */ segProveNeq(sh, addr, nextVal);
 }
+
+bool segEqual(const SymHeap &sh, TValueId v1, TValueId v2) {
+    const TObjId o1 = sh.pointsTo(v1);
+    const TObjId o2 = sh.pointsTo(v2);
+    if (o1 <= 0 || o2 <= 0)
+        TRAP;
+
+    const EObjKind kind = sh.objKind(o1);
+    if (sh.objKind(o2) != kind)
+        return false;
+
+    TObjId peer1 = o1;
+    TObjId peer2 = o2;
+    switch (kind) {
+        case OK_CONCRETE:
+            // invalid call of segEqual()
+            TRAP;
+
+        case OK_DLS:
+            if (sh.objPeerField(o1) != sh.objPeerField(o2))
+                // 'peer' selector mismatch
+                return false;
+
+            peer1 = dlSegPeer(sh, o1);
+            peer2 = dlSegPeer(sh, o2);
+            // fall through!
+
+        case OK_SLS:
+            if (sh.objNextField(o1) != sh.objNextField(o2))
+                // 'next' selector mismatch
+                return false;
+    }
+
+    // so far equal, now compare the 'next' values
+    const TObjId next1 = nextPtrFromSeg(sh, peer1);
+    const TObjId next2 = nextPtrFromSeg(sh, peer2);
+    return (sh.valueOf(next1) == sh.valueOf(next2));
+}
+
+void segDestroy(SymHeap &sh, TObjId seg) {
+    const EObjKind kind = sh.objKind(seg);
+    switch (kind) {
+        case OK_CONCRETE:
+            // invalid call of segDestroy()
+            TRAP;
+
+        case OK_DLS:
+            sh.objDestroy(dlSegPeer(sh, seg));
+            // fall through!
+
+        case OK_SLS:
+            sh.objDestroy(seg);
+    }
+}
+
