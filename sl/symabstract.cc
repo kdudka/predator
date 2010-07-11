@@ -140,14 +140,27 @@ bool doesAnyonePointToInside(const SymHeap &sh, TObjId obj) {
 
 TValueId /* addr */ segClone(SymHeap &sh, TValueId atAddr) {
     const TObjId seg = sh.pointsTo(atAddr);
-    const EObjKind kind = sh.objKind(seg);
-    if (OK_SLS != kind) {
-        CL_ERROR("segment cloning implemented only for SLS");
-        TRAP;
+    const TObjId dupSeg = sh.objDup(seg);
+
+    if (OK_DLS == sh.objKind(seg)) {
+        // we need to clone the peer as well
+        const TObjId peer = dlSegPeer(sh, seg);
+        const TObjId dupPeer = sh.objDup(peer);
+
+        // dig the 'peer' selectors of the cloned objects
+        const TFieldIdxChain icpSeg  = sh.objPeerField(dupSeg);
+        const TFieldIdxChain icpPeer = sh.objPeerField(dupPeer);
+
+        // resolve selectors -> sub-objects
+        const TObjId ppSeg  = subObjByChain(sh, dupSeg , icpSeg);
+        const TObjId ppPeer = subObjByChain(sh, dupPeer, icpPeer);
+
+        // now cross the 'peer' pointers
+        sh.objSetValue(ppSeg, sh.placedAt(dupPeer));
+        sh.objSetValue(ppPeer, sh.placedAt(dupSeg));
     }
 
-    const TObjId dup = sh.objDup(seg);
-    return sh.placedAt(dup);
+    return sh.placedAt(dupSeg);
 }
 
 TValueId /* new addr */ considerFlatScan(SymHeap &sh, TObjId obj) {
@@ -236,7 +249,7 @@ TValueId mergeValues(SymHeap &sh, TValueId v1, TValueId v2) {
         : UV_UNKNOWN;
 
     if (UV_ABSTRACT == code) {
-        CL_WARN("support for nested segments is not fully implemented yet");
+        CL_WARN("support for nested segments is not well tested yet");
         if (1 != sh.usedByCount(v1))
             CL_NOTE("even worse with DLS abstraction nesting");
 
