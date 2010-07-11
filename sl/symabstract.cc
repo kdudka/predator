@@ -392,7 +392,15 @@ class ProbeVisitor {
                 // we are not looking for a DLS either
                 return false;
 
-            const TObjId nextPtr = subObjByChain(sh, obj, icNext_);
+            const TObjId root = sh.pointsTo(addr_);
+            TObjId nextPtr = subObjByChain(sh, root, icNext_);
+            obj = sh.pointsTo(sh.valueOf(nextPtr));
+            if (obj <= 0)
+                // no valid next object
+                return false;
+
+            // if the next object has zero as 'next', give it a chance to go
+            nextPtr = subObjByChain(sh, obj, icNext_);
             return (VAL_NULL == sh.valueOf(nextPtr));
         }
 
