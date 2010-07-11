@@ -4,17 +4,20 @@ if test -z "$1" || test ! -e "$1"; then
     exit 1
 fi
 
+self="`readlink -f "$0"`"
+topdir="`dirname "$self"`/.."
+
 # basic setup
-SL_BUILD=../sl_build
+SL_BUILD="$topdir/sl_build"
 SL_PLUG="$SL_BUILD/libsl.so"
-GCC="../gcc-install/bin/gcc"
+GCC="$topdir/gcc-install/bin/gcc"
 SVG_VIEWER=chromium
 
 # initial checks
 test -x "$GCC"                              || exit 1
 
 # attempt to make
-make -s $MAKEOPTS                           || exit 1
+make -s $MAKEOPTS -C "$topdir/sl"           || exit 1
 test -x "$SL_PLUG"                          || exit 1
 
 # use verbose level 0 by default
@@ -38,7 +41,8 @@ fi
 if test x1 = "x$SL_PLOT"; then
     # visualize graphs
     printf "graph visualization in progress ... "
-    make $MAKEOPTS -s -f data/Makefile TIMEOUT="timeout 2" || exit $?
+    make $MAKEOPTS -s -f "$topdir/sl/data/Makefile" TIMEOUT="timeout 2" \
+        || exit $?
     printf "done\n"
     "$SVG_VIEWER" *.svg
 fi
