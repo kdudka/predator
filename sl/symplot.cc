@@ -118,7 +118,7 @@ struct SymHeapPlotter::Private {
     typedef std::pair<TValueId, TValueId> TEdgeNeq;
     std::set<TEdgeNeq>                  neqSet;
 
-    std::set<TObjId>                    binders;
+    std::set<TObjId>                    nexts;
     std::set<TObjId>                    peers;
 
     bool openDotFile(const std::string &name);
@@ -141,7 +141,7 @@ struct SymHeapPlotter::Private {
     void plotSingleValue(TValueId value);
     void plotSingleObj(TObjId obj);
     void plotZeroValue(TObjId obj);
-    void digBinder(TObjId obj);
+    void digNext(TObjId obj);
     void openCluster(TObjId obj);
 
     bool handleCustomValue(TValueId value);
@@ -263,7 +263,7 @@ void SymHeapPlotter::Private::plotNodeObj(TObjId obj, enum cl_type_e code) {
 
     if (hasKey(this->peers, obj))
         this->dotStream << ", color=yellow, penwidth=3.0, style=dashed";
-    else if (hasKey(this->binders, obj))
+    else if (hasKey(this->nexts, obj))
         this->dotStream << ", color=red, penwidth=3.0, style=dashed";
     else
         this->dotStream << ", color=" << colorByCode(code);
@@ -467,7 +467,7 @@ void SymHeapPlotter::Private::plotZeroValue(TObjId obj)
     }
 }
 
-void SymHeapPlotter::Private::digBinder(TObjId obj) {
+void SymHeapPlotter::Private::digNext(TObjId obj) {
     EObjKind kind = this->heap->objKind(obj);
     switch (kind) {
         case OK_CONCRETE:
@@ -478,13 +478,13 @@ void SymHeapPlotter::Private::digBinder(TObjId obj) {
             break;
     }
 
-    const TFieldIdxChain icBind = this->heap->objBinderField(obj);
+    const TFieldIdxChain icBind = this->heap->objNextField(obj);
     const TObjId objBind = subObjByChain(*this->heap, obj, icBind);
     if (objBind <= 0)
         TRAP;
 
     // store icBind
-    this->binders.insert(objBind);
+    this->nexts.insert(objBind);
     if (OK_SLS == kind)
         return;
 
@@ -682,7 +682,7 @@ void SymHeapPlotter::Private::digObj(TObjId obj) {
             }
 
             case CL_TYPE_STRUCT:
-                this->digBinder(obj);
+                this->digNext(obj);
                 this->openCluster(obj);
                 this->plotSingleObj(obj);
                 for (int i = 0; i < clt->item_cnt; ++i) {

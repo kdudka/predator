@@ -576,7 +576,7 @@ class SymHeap: public SymHeapTyped {
          * @b binding objects stands for the filed usually called @c next or @c
          * prev.
          */
-        TFieldIdxChain objBinderField(TObjId obj) const;
+        TFieldIdxChain objNextField(TObjId obj) const;
 
         /**
          * return a @b peer sub-object - for a head object, you get the field

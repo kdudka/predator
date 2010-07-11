@@ -203,7 +203,7 @@ bool cmpAbstractObjects(const SymHeap &sh1, const SymHeap &sh2,
 {
     // TODO
     return sh1.objAbstractLevel(ao1) == sh2.objAbstractLevel(ao2)
-        && sh1.objBinderField  (ao1) == sh2.objBinderField  (ao2)
+        && sh1.objNextField    (ao1) == sh2.objNextField    (ao2)
         && sh1.objPeerField    (ao1) == sh2.objPeerField    (ao2);
 }
 

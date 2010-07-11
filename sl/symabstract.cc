@@ -340,8 +340,8 @@ void buildIgnoreList(const SymHeap &sh, TObjId obj, TIgnoreList &ignoreList) {
             // fall through!
 
         case OK_SLS:
-            // preserve 'bind' field
-            tmp = subObjByChain(sh, obj, sh.objBinderField(obj));
+            // preserve 'next' field
+            tmp = subObjByChain(sh, obj, sh.objNextField(obj));
             ignoreList.insert(tmp);
     }
 }
@@ -488,7 +488,7 @@ void digAnyListSelectors(TDst &dst, const SymHeap &sh, TObjId obj,
 // FIXME: this function tends to be crowded
 // TODO: split to some reasonable functions
 unsigned /* len */ segDiscover(const SymHeap &sh, TObjId entry, EObjKind kind,
-                               TFieldIdxChain icBind, TFieldIdxChain icPeer)
+                               TFieldIdxChain icNext, TFieldIdxChain icPrev)
 {
     int dlSegsOnPath = 0;
 
@@ -508,7 +508,7 @@ unsigned /* len */ segDiscover(const SymHeap &sh, TObjId entry, EObjKind kind,
 
             // check selectors
             const TFieldIdxChain icPeerEncountered = sh.objPeerField(obj);
-            if (icPeerEncountered != icBind && icPeerEncountered != icPeer)
+            if (icPeerEncountered != icNext && icPeerEncountered != icPrev)
                 // completely incompatible DLS, it gives us no go
                 break;
 
@@ -530,7 +530,7 @@ unsigned /* len */ segDiscover(const SymHeap &sh, TObjId entry, EObjKind kind,
             dlSegsOnPath++;
         }
 
-        const TObjId objPtrNext = subObjByChain(sh, obj, icBind);
+        const TObjId objPtrNext = subObjByChain(sh, obj, icNext);
         const ProbeVisitor visitor(sh, obj, kind);
         if (visitor(sh, objPtrNext))
             // we can't go further
@@ -545,7 +545,7 @@ unsigned /* len */ segDiscover(const SymHeap &sh, TObjId entry, EObjKind kind,
         if (OK_DLS == kind) {
             // check the back-link
             const TValueId addrSelf = sh.placedAt(obj);
-            const TObjId objBackLink = subObjByChain(sh, objNext, icPeer);
+            const TObjId objBackLink = subObjByChain(sh, objNext, icPrev);
             const TValueId valBackLink = sh.valueOf(objBackLink);
             if (objCurrent == entry && VAL_NULL == valBackLink)
                 // we allow VAL_NULL as backLink in the first item of DLL
@@ -631,12 +631,12 @@ unsigned segDiscoverAll(const SymHeap &sh, const TObjId entry, EObjKind kind,
     return bestLen;
 }
 
-void slSegCreateIfNeeded(SymHeap &sh, TObjId obj, TFieldIdxChain icBind) {
+void slSegCreateIfNeeded(SymHeap &sh, TObjId obj, TFieldIdxChain icNext) {
     const EObjKind kind = sh.objKind(obj);
     switch (kind) {
         case OK_SLS:
-            // already abstract, check binder
-            if (sh.objBinderField(obj) == icBind)
+            // already abstract, check the next pointer
+            if (sh.objNextField(obj) == icNext)
                 // all OK
                 return;
             // fall through!
@@ -650,12 +650,12 @@ void slSegCreateIfNeeded(SymHeap &sh, TObjId obj, TFieldIdxChain icBind) {
     }
 
     // abstract a concrete object
-    sh.objAbstract(obj, OK_SLS, icBind);
+    sh.objAbstract(obj, OK_SLS, icNext);
 
     // we're constructing the abstract object from a concrete one --> it
     // implies non-empty LS at this point
     const TValueId addr = sh.placedAt(obj);
-    const TObjId objNextPtr = subObjByChain(sh, obj, icBind);
+    const TObjId objNextPtr = subObjByChain(sh, obj, icNext);
     const TValueId valNext = sh.valueOf(objNextPtr);
     if (addr <= 0 || valNext < /* we allow VAL_NULL here */ 0)
         TRAP;
@@ -720,9 +720,9 @@ void dlSegGobble(SymHeap &sh, TObjId dls, TObjId var, bool backward,
     abstractNonMatchingValues(sh, var, dls, flatScan);
 
     // store the pointer DLS -> VAR
-    const TFieldIdxChain icBind = sh.objBinderField(dls);
-    const TObjId dlsNextPtr = subObjByChain(sh, dls, icBind);
-    const TObjId varNextPtr = subObjByChain(sh, var, icBind);
+    const TFieldIdxChain icNext = sh.objNextField(dls);
+    const TObjId dlsNextPtr = subObjByChain(sh, dls, icNext);
+    const TObjId varNextPtr = subObjByChain(sh, var, icNext);
     sh.objSetValue(dlsNextPtr, sh.valueOf(varNextPtr));
 
     // replace VAR by DLS
@@ -741,7 +741,7 @@ void dlSegMerge(SymHeap &sh, TObjId seg1, TObjId seg2, bool flatScan) {
         dlSegHandleCrossNeq(sh, seg2, &SymHeap::delNeq);
     }
 
-    if (sh.objBinderField(seg1) != sh.objBinderField(seg2)
+    if (sh.objNextField(seg1) != sh.objNextField(seg2)
             || (sh.objPeerField(seg1) != sh.objPeerField(seg2)))
         // failure of segDiscover()?
         TRAP;
@@ -791,7 +791,7 @@ void dlSegAbstractionStep(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext,
             o2 = dlSegPeer(sh, o2);
 
             // jump to the next object (as we know such an object exists)
-            skipObj(sh, &o2, sh.objBinderField(o2));
+            skipObj(sh, &o2, sh.objNextField(o2));
             if (OK_CONCRETE == sh.objKind(o2)) {
                 // DLS + VAR
                 dlSegGobble(sh, o1, o2, /* backward */ false, flatScan);
@@ -1014,7 +1014,7 @@ void spliceOutListSegmentCore(SymHeap &sh, TObjId obj, TObjId peer)
 
     if (obj != peer) {
         // OK_DLS --> destroy peer
-        const TFieldIdxChain icPrev = sh.objBinderField(obj);
+        const TFieldIdxChain icPrev = sh.objNextField(obj);
         const TValueId valPrev = sh.valueOf(subObjByChain(sh, obj, icPrev));
         sh.valReplace(sh.placedAt(peer), valPrev);
         sh.objDestroy(peer);
@@ -1102,14 +1102,14 @@ void concretizeObj(SymHeap &sh, TValueId addr, TSymHeapList &todo) {
 
     // concretize self and recover the list
     const TObjId ptrNext = subObjByChain(sh, obj, (OK_SLS == kind)
-            ? sh.objBinderField(obj)
+            ? sh.objNextField(obj)
             : sh.objPeerField(obj));
     sh.objConcretize(obj);
     sh.objSetValue(ptrNext, aoDupAddr);
 
     if (OK_DLS == kind) {
         // update DLS back-link
-        const TFieldIdxChain icPrev = sh.objBinderField(aoDup);
+        const TFieldIdxChain icPrev = sh.objNextField(aoDup);
         const TObjId backLink = subObjByChain(sh, aoDup, icPrev);
         sh.objSetValue(backLink, sh.placedAt(obj));
     }

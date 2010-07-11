@@ -115,7 +115,7 @@ void dump_kind(const SymHeap &heap, TObjId obj) {
             cout << ", icNext = ";
     }
 
-    dump_ic(clt, heap.objBinderField(obj));
+    dump_ic(clt, heap.objNextField(obj));
     const int level = heap.objAbstractLevel(obj);
     if (1 != level)
         cout << ", level = " << level;
@@ -225,7 +225,7 @@ void dump_obj(const SymHeap &heap, TObjId obj) {
 
     if (OK_CONCRETE != kind) {
         cout << "    next      = ";
-        const TFieldIdxChain icNext = heap.objBinderField(obj);
+        const TFieldIdxChain icNext = heap.objNextField(obj);
         const TObjId nextPtr = subObjByChain(heap, obj, icNext);
         const TValueId valNext = heap.valueOf(nextPtr);
         if (0 < valNext) {

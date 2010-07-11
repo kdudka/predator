@@ -1321,7 +1321,7 @@ struct SymHeap::Private {
     struct ObjectEx {
         EObjKind            kind;
         int                 level;
-        TFieldIdxChain      icBind;
+        TFieldIdxChain      icNext;
         TFieldIdxChain      icPeer;
 
         ObjectEx(): kind(OK_CONCRETE), level(-1) { }
@@ -1383,13 +1383,13 @@ int SymHeap::objAbstractLevel(TObjId obj) const {
         : iter->second.level;
 }
 
-TFieldIdxChain SymHeap::objBinderField(TObjId obj) const {
+TFieldIdxChain SymHeap::objNextField(TObjId obj) const {
     Private::TObjMap::iterator iter = d->objMap.find(obj);
     if (d->objMap.end() == iter)
-        // invalid call of SymHeap::objBinderField()
+        // invalid call of SymHeap::objNextField()
         TRAP;
 
-    return iter->second.icBind;
+    return iter->second.icNext;
 }
 
 TFieldIdxChain SymHeap::objPeerField(TObjId obj) const {
@@ -1401,7 +1401,7 @@ TFieldIdxChain SymHeap::objPeerField(TObjId obj) const {
     return iter->second.icPeer;
 }
 
-void SymHeap::objAbstract(TObjId obj, EObjKind kind, TFieldIdxChain icBind,
+void SymHeap::objAbstract(TObjId obj, EObjKind kind, TFieldIdxChain icNext,
                           TFieldIdxChain icPeer)
 {
     if (hasKey(d->objMap, obj))
@@ -1412,7 +1412,7 @@ void SymHeap::objAbstract(TObjId obj, EObjKind kind, TFieldIdxChain icBind,
     const TValueId addr = this->placedAt(obj);
     SymHeapCore::valSetUnknown(addr, UV_ABSTRACT);
 
-    const TObjId objBind = subObjByChain(*this, obj, icBind);
+    const TObjId objBind = subObjByChain(*this, obj, icNext);
     const TValueId valNext = this->valueOf(objBind);
     if (addr == valNext)
         // *** self-loop detected ***
@@ -1422,7 +1422,7 @@ void SymHeap::objAbstract(TObjId obj, EObjKind kind, TFieldIdxChain icBind,
     Private::ObjectEx &ref = d->objMap[obj];
     ref.kind    = kind;
     ref.level   = /* TODO */ 1;
-    ref.icBind  = icBind;
+    ref.icNext  = icNext;
     ref.icPeer  = icPeer;
 
     // TODO: go through all nested abstract objects and increase the level

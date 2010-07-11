@@ -147,8 +147,8 @@ TObjId nextPtrFromSeg(const SymHeap &sh, TObjId seg) {
         // invalid call of nextPtrFromSeg()
         TRAP;
 
-    const TFieldIdxChain icBind = sh.objBinderField(seg);
-    return subObjByChain(sh, seg, icBind);
+    const TFieldIdxChain icNext = sh.objNextField(seg);
+    return subObjByChain(sh, seg, icNext);
 }
 
 TObjId dlSegPeer(const SymHeap &sh, TObjId dls) {
