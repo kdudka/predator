@@ -1,12 +1,14 @@
-// Creating an SLL with two marked successor nodes (via non-null data elements),
-// and then reversing the list.
-
 #include "../sl.h"
 #include <stdlib.h>
 
 struct item {
-    struct item *next;
-    struct item *data1, *data2; // abusing the structure to be able to model some external data
+    struct item             *next;
+    struct item             *prev;
+};
+
+struct master_item {
+    struct master_item      *next;
+    struct item             *dll;
 };
 
 struct item* alloc_or_die(void)
@@ -18,17 +20,61 @@ struct item* alloc_or_die(void)
         abort();
 }
 
-struct item* create_sll_item(struct item *next) {
+struct master_item* alloc_or_die_master(void)
+{
+    struct master_item *pm = malloc(sizeof(*pm));
+    if (pm)
+        return pm;
+    else
+        abort();
+}
+
+struct item* alloc_and_zero(void)
+{
     struct item *pi = alloc_or_die();
-    pi->next = next;
-    pi->data1 = pi->data2 = NULL;
+    pi->next = NULL;
+    pi->prev = NULL;
+
     return pi;
 }
 
-struct item* create_sll(void *end)
+struct item* create_dll_item(struct item *dll)
 {
-    struct item *sll = create_sll_item(end);
+    dll->next = alloc_and_zero();
+    dll->next->prev = dll;
+    return dll->next;
+}
+
+struct item* create_dll(void)
+{
+    struct item *dll = alloc_and_zero();
+    dll = create_dll_item(dll);
+    dll = create_dll_item(dll);
+    dll = create_dll_item(dll);
+    dll = create_dll_item(dll);
+
+    // NOTE: running this on bare metal may cause the machine to swap a bit
+    int i;
+    for (i = 1; i; ++i)
+        dll = create_dll_item(dll);
+
+    //___SL_PLOT_FNC(create_dll);
+    return dll;
+}
+
+struct master_item* create_sll_item(struct master_item *next) {
+    struct master_item *pm = alloc_or_die_master();
+    pm->next = next;
+    pm->dll = create_dll();
+    return pm;
+}
+
+struct master_item* create_sll_of_dll(void *end)
+{
+    struct master_item *sll = create_sll_item(end);
+    ___sl_plot("00");
     sll = create_sll_item(sll);
+    ___sl_plot("01");
     sll = create_sll_item(sll);
 
     // NOTE: running this on bare metal may cause the machine to swap a bit
@@ -40,47 +86,9 @@ struct item* create_sll(void *end)
     return sll;
 }
 
-struct item* create_slseg(void *end)
-{
-    struct item *list = create_sll(end);
-    struct item *sls = list->next;
-    free(list);
-    return sls;
-}
-
-struct item* reverse_sll(struct item *list)
-{
-    struct item *prev, *next;
-
-    if (list) 
-        next = list->next;
-    else
-        return list;
-
-    while (next) {
-        prev = list;
-        list = next;
-        next = list->next;
-        list->next = prev;
-    }
-
-    return list;
-}
-
 int main()
 {
-    struct item *sll = create_slseg(NULL);
-    sll = create_sll_item(sll);
-    sll->data2 = sll; // mark the second selected node (we create the list from the end)
-    sll = create_sll_item(sll);
-    sll->data1 = sll; // mark the first selected node
-    sll = create_slseg(sll);
-
+    struct master_item *sll = create_sll_of_dll(NULL);
     ___SL_PLOT_FNC(main);
-
-    sll = reverse_sll(sll);
-
-    ___SL_PLOT_FNC(main);
-
     return 0;
 }
