@@ -58,7 +58,7 @@ static struct AbstractionThreshold slsThreshold = {
 
 /// abstraction trigger threshold for DLS
 static struct AbstractionThreshold dlsThreshold = {
-    /* sparePrefix */ 0,    // any non-zero value will break the algorithm
+    /* sparePrefix */ 1,
     /* innerSegLen */ 1,
     /* spareSuffix */ 1
 };
@@ -238,7 +238,7 @@ TValueId mergeValues(SymHeap &sh, TValueId v1, TValueId v2) {
     if (UV_ABSTRACT == code) {
         CL_WARN("support for nested segments is not fully implemented yet");
         if (1 != sh.usedByCount(v1))
-            TRAP;
+            CL_NOTE("even worse with DLS abstraction nesting");
 
         // by merging the values, we drop the last reference;  destroy the seg
         const TObjId seg = sh.pointsTo(v1);
@@ -462,14 +462,18 @@ void digAnyListSelectors(TDst &dst, const SymHeap &sh, TObjId obj,
 
             for (int i = 0; i < clt->item_cnt; ++i) {
                 const TObjId sub = sh.subObj(obj, i);
-                if (!visitor(sh, sub)) {
+                const struct cl_type *subClt = sh.objType(sub);
+                const bool backLinkCandidate = (VAL_NULL == sh.valueOf(sub)
+                        && subClt && subClt->code == CL_TYPE_PTR
+                        && subClt->items[0].type == clt);
+
+                if (backLinkCandidate || !visitor(sh, sub)) {
                     // great, we have a candidate
                     ic.push_back(i);
                     dst.push_back(ic);
                     ic.pop_back();
                 }
 
-                const struct cl_type *subClt = sh.objType(sub);
                 if (subClt && subClt->code == CL_TYPE_STRUCT)
                     todo.push(TStackItem(sub, i, /* last */ (0 == i)));
             }
@@ -481,6 +485,8 @@ void digAnyListSelectors(TDst &dst, const SymHeap &sh, TObjId obj,
     }
 }
 
+// FIXME: this function tends to be crowded
+// TODO: split to some reasonable functions
 unsigned /* len */ segDiscover(const SymHeap &sh, TObjId entry, EObjKind kind,
                                TFieldIdxChain icBind, TFieldIdxChain icPeer)
 {
@@ -491,13 +497,14 @@ unsigned /* len */ segDiscover(const SymHeap &sh, TObjId entry, EObjKind kind,
     std::set<TObjId> path;
     while (!hasKey(path, obj)) {
         path.insert(obj);
+        const TObjId objCurrent = obj;
 
         const EObjKind kindEncountered = sh.objKind(obj);
         if (OK_DLS == kindEncountered) {
             // we've hit an already existing DLS on path, let's handle it such
             if (OK_DLS != kind)
                 // arrity vs. kind mismatch
-                TRAP;
+                break;
 
             // check selectors
             const TFieldIdxChain icPeerEncountered = sh.objPeerField(obj);
@@ -511,11 +518,13 @@ unsigned /* len */ segDiscover(const SymHeap &sh, TObjId entry, EObjKind kind,
                 // we came from the wrong side this time
                 break;
 
+#if 0
             // if there is at least one DLS on the path, we demand that the path
             // begins with a DLS;  otherwise we just ignore the path and wait
             // for a better one
             if (OK_DLS != sh.objKind(entry))
                 return /* not found */ 0;
+#endif
 
             path.insert(obj);
             dlSegsOnPath++;
@@ -538,11 +547,16 @@ unsigned /* len */ segDiscover(const SymHeap &sh, TObjId entry, EObjKind kind,
             const TValueId addrSelf = sh.placedAt(obj);
             const TObjId objBackLink = subObjByChain(sh, objNext, icPeer);
             const TValueId valBackLink = sh.valueOf(objBackLink);
+            if (objCurrent == entry && VAL_NULL == valBackLink)
+                // we allow VAL_NULL as backLink in the first item of DLL
+                goto blink_ok;
+
             if (valBackLink != addrSelf)
                 // inappropriate back-link
                 break;
         }
 
+blink_ok:
         obj = objNext;
     }
 
@@ -671,23 +685,6 @@ void slSegAbstractionStep(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext,
     *pObj = objNext;
 }
 
-template <typename TFun>
-void dlSegHandleCrossNeq(SymHeap &sh, TObjId dls, TFun fun) {
-    const TObjId peer = dlSegPeer(sh, dls);
-
-    // dig pointer-to-next objects
-    const TObjId next1 = nextPtrFromSeg(sh, dls);
-    const TObjId next2 = nextPtrFromSeg(sh, peer);
-
-    // read the values (addresses of the surround)
-    const TValueId val1 = sh.valueOf(next1);
-    const TValueId val2 = sh.valueOf(next2);
-
-    // add/del Neq as requested
-    (sh.*fun)(val1, sh.placedAt(peer));
-    (sh.*fun)(val2, sh.placedAt(dls));
-}
-
 void dlSegCreate(SymHeap &sh, TObjId o1, TObjId o2,
                  TFieldIdxChain icNext, TFieldIdxChain icPrev, bool flatScan)
 {
@@ -722,10 +719,6 @@ void dlSegGobble(SymHeap &sh, TObjId dls, TObjId var, bool backward,
     // introduce some UV_UNKNOWN values if necessary
     abstractNonMatchingValues(sh, var, dls, flatScan);
 
-    if (backward)
-        // not implemented yet
-        TRAP;
-
     // store the pointer DLS -> VAR
     const TFieldIdxChain icBind = sh.objBinderField(dls);
     const TObjId dlsNextPtr = subObjByChain(sh, dls, icBind);
@@ -744,22 +737,33 @@ void dlSegMerge(SymHeap &sh, TObjId seg1, TObjId seg2, bool flatScan) {
     // DLS is non-empty
     const bool ne = dlSegNotEmpty(sh, seg1) || dlSegNotEmpty(sh, seg2);
     if (ne) {
-        // one of the following calls might be probably optimized out, but
-        // premature optimization is the root of all evil...
         dlSegHandleCrossNeq(sh, seg1, &SymHeap::delNeq);
         dlSegHandleCrossNeq(sh, seg2, &SymHeap::delNeq);
     }
 
-    // dig peer objects
+    if (sh.objBinderField(seg1) != sh.objBinderField(seg2)
+            || (sh.objPeerField(seg1) != sh.objPeerField(seg2)))
+        // failure of segDiscover()?
+        TRAP;
+
     const TObjId peer1 = dlSegPeer(sh, seg1);
+    const TObjId nextPtr = nextPtrFromSeg(sh, peer1);
+    const TValueId valNext = sh.valueOf(nextPtr);
+    if (valNext != sh.placedAt(seg2))
+        TRAP;
+
     const TObjId peer2 = dlSegPeer(sh, seg2);
 
     // introduce some UV_UNKNOWN values if necessary
     abstractNonMatchingValuesBidir(sh,  seg1,  seg2, flatScan);
     abstractNonMatchingValuesBidir(sh, peer1, peer2, flatScan);
 
+    // preserve backLink
+    const TValueId valNext2 = sh.valueOf(nextPtrFromSeg(sh, seg1));
+    sh.objSetValue(nextPtrFromSeg(sh, seg2), valNext2);
+
     // replace both parts point-wise
-    objReplace(sh, seg1, seg2);
+    objReplace(sh,  seg1,  seg2);
     objReplace(sh, peer1, peer2);
 
     if (ne)
@@ -796,7 +800,7 @@ void dlSegAbstractionStep(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext,
 
             // DLS + DLS
             dlSegMerge(sh, o1, o2, flatScan);
-            return;
+            break;
 
         case OK_CONCRETE:
             // jump to the next object (as we know such an object exists)
@@ -804,14 +808,21 @@ void dlSegAbstractionStep(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext,
             if (OK_CONCRETE == sh.objKind(o2)) {
                 // VAR + VAR
                 dlSegCreate(sh, o1, o2, icNext, icPrev, flatScan);
+                dlSegNotEmpty(sh, o1);
                 return;
             }
 
             // VAR + DLS
             dlSegGobble(sh, o2, o1, /* backward */ true, flatScan);
-            *pObj = o2;
-            return;
+            break;
     }
+
+    // the current object has been just consumed, move to the next one
+    *pObj = o2;
+
+    // just check if the Neq predicates work well so far (safe to remove when
+    // not debugging)
+    (void) dlSegNotEmpty(sh, o2);
 }
 
 bool considerSegAbstraction(SymHeap &sh, TObjId obj, EObjKind kind,
@@ -1104,7 +1115,7 @@ void concretizeObj(SymHeap &sh, TValueId addr, TSymHeapList &todo) {
     }
 }
 
-void spliceOutListSegment(SymHeap &sh, TValueId atAddr, TValueId pointingTo)
+bool spliceOutListSegment(SymHeap &sh, TValueId atAddr, TValueId pointingTo)
 {
     const TObjId obj = sh.pointsTo(atAddr);
     const EObjKind kind = sh.objKind(obj);
@@ -1115,7 +1126,66 @@ void spliceOutListSegment(SymHeap &sh, TValueId atAddr, TValueId pointingTo)
     const TObjId next = nextPtrFromSeg(sh, peer);
     const TValueId valNext = sh.valueOf(next);
     if (valNext != pointingTo)
-        TRAP;
+        return false;
 
     spliceOutListSegmentCore(sh, obj, peer);
+    return true;
+}
+
+bool haveDlSeg(SymHeap &sh, TValueId atAddr, TValueId pointingTo) {
+    if (UV_ABSTRACT != sh.valGetUnknown(atAddr))
+        // not an abstract object
+        return false;
+
+    const TObjId seg = sh.pointsTo(atAddr);
+    if (OK_DLS != sh.objKind(seg))
+        // not a DLS
+        return false;
+
+    const TObjId peer = dlSegPeer(sh, seg);
+    if (OK_DLS != sh.objKind(peer))
+        // invalid peer
+        return false;
+
+    // compare the end-points
+    const TObjId nextPtr = nextPtrFromSeg(sh, peer);
+    const TValueId valNext = sh.valueOf(nextPtr);
+    return (valNext == pointingTo);
+}
+
+// FIXME: we use the following nonsense to avoid an infinite recursion through
+// a call of virtual method;  we should get rid of this ASAP
+struct SymHeapQuirk: public SymHeap {
+    SymHeapQuirk(const SymHeap &sh):
+        SymHeap(sh)
+    {
+    }
+
+    virtual void addNeq(TValueId valA, TValueId valB) {
+        SymHeapCore::addNeq(valA, valB);
+    }
+
+    virtual void delNeq(TValueId valA, TValueId valB) {
+        SymHeapCore::delNeq(valA, valB);
+    }
+};
+
+void dlSegHandleCrossNeq(SymHeap &sh, TObjId dls, TNeqOp op) {
+    const TObjId peer = dlSegPeer(sh, dls);
+
+    // dig pointer-to-next objects
+    const TObjId next1 = nextPtrFromSeg(sh, dls);
+    const TObjId next2 = nextPtrFromSeg(sh, peer);
+
+    // read the values (addresses of the surround)
+    const TValueId val1 = sh.valueOf(next1);
+    const TValueId val2 = sh.valueOf(next2);
+
+    // FIXME: suboptimal API, we need two nonsense clone operations, in order
+    // to avoid an infinite recursion through a virtual call of addNeq/delNeq,
+    // ridiculous...
+    SymHeapQuirk q(sh);
+    (q.*op)(val1, sh.placedAt(peer));
+    (q.*op)(val2, sh.placedAt(dls));
+    sh = q;
 }

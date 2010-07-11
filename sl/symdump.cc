@@ -23,6 +23,7 @@
 #include <cl/code_listener.h>
 
 #include "symheap.hh"
+#include "symutil.hh"
 
 #include <iostream>
 
@@ -30,9 +31,13 @@
 
 const int have_symdump = 1;
 
-void dump_clt(const struct cl_type *clt) {
-    using std::cout;
+using std::cout;
 
+namespace {
+TObjId /* pointsTo */ dump_value_core(const SymHeap &heap, TValueId value);
+}
+
+void dump_clt(const struct cl_type *clt) {
     cout << "*((const struct cl_type *)"
         << static_cast<const void *>(clt)
         << ")";
@@ -58,7 +63,7 @@ void dump_clt(const struct cl_type *clt) {
 }
 
 namespace {
-    bool isHeapObject(const SymHeap &heap, int id) {
+    bool isObject(const SymHeap &heap, int id) {
         const TObjId obj = static_cast<TObjId>(id);
         return (VAL_INVALID != heap.placedAt(obj));
     }
@@ -72,8 +77,51 @@ namespace {
     }
 }
 
+void dump_ic(const struct cl_type *clt, TFieldIdxChain ic) {
+    for (unsigned i = 0; i < ic.size(); ++i) {
+        if (i)
+            cout << ".";
+
+        const int idx = ic[i];
+        if (!clt || clt->code != CL_TYPE_STRUCT) {
+            cout << "XXX";
+            return;
+        }
+
+        cout << idx;
+        const char *name = clt->items[idx].name;
+        if (name)
+            cout << "(" << name << ")";
+
+        clt = clt->items[idx].type;
+    }
+}
+
+void dump_kind(const SymHeap &heap, TObjId obj) {
+    const struct cl_type *clt = heap.objType(obj);
+    const EObjKind kind = heap.objKind(obj);
+    switch (kind) {
+        case OK_CONCRETE:
+            cout << "OK_CONCRETE";
+            return;
+
+        case OK_SLS:
+            cout << "OK_SLS, icNext = ";
+            break;
+
+        case OK_DLS:
+            cout << "OK_DLS, icPeer = ";
+            dump_ic(clt, heap.objPeerField(obj));
+            cout << ", icNext = ";
+    }
+
+    dump_ic(clt, heap.objBinderField(obj));
+    const int level = heap.objAbstractLevel(obj);
+    if (1 != level)
+        cout << ", level = " << level;
+}
+
 void dump_obj(const SymHeap &heap, TObjId obj) {
-    using std::cout;
     cout << "dump_obj(#" << obj << ")\n";
 
     switch (obj) {
@@ -91,7 +139,7 @@ void dump_obj(const SymHeap &heap, TObjId obj) {
     if (!isIdValid(obj))
         return;
 
-    if (!isHeapObject(heap, obj)) {
+    if (!isObject(heap, obj)) {
         cout << "    error: #" << obj << " is not ID of a heap object\n";
         return;
     }
@@ -110,14 +158,27 @@ void dump_obj(const SymHeap &heap, TObjId obj) {
             << "\n";
     }
 
+    cout << "    kind      = ";
+    dump_kind(heap, obj);
+    cout << "\n";
+
     const TValueId placedAt = heap.placedAt(obj);
     if (0 < placedAt)
         cout << "    placedAt  = /* value */ #" << placedAt << "\n";
 
     // TODO: check valPointsToAnon()
     const TValueId value = heap.valueOf(obj);
-    if (0 < value)
-        cout << "    value     = /* value */ #" << value << "\n";
+    if (VAL_NULL == value && clt && clt->code == CL_TYPE_PTR)
+        cout << "    value     = VAL_NULL" << value << "\n";
+    else if (0 < value) {
+        cout << "    value     = /* value */ #" << value;
+        const struct cl_type *cltVal = heap.valType(value);
+        if (cltVal) {
+            cout << ", clt = ";
+            dump_clt(cltVal);
+        }
+        cout << "\n";
+    }
 
     const TObjId parent = heap.objParent(obj);
     if (-1 != parent)
@@ -125,23 +186,63 @@ void dump_obj(const SymHeap &heap, TObjId obj) {
 
     if (clt && clt->code == CL_TYPE_STRUCT) {
         for (int i = 0; i < clt->item_cnt; ++i) {
-            const int sub = heap.subObj(obj, i);
+            const TObjId sub = heap.subObj(obj, i);
             if (sub <= 0)
                 continue;
 
-            cout << "    subObj[" << i << "] = /* obj */ #" << sub << "\n";
+            cout << "    subObj[" << i << "] = /* obj */ #" << sub;
+            const char *name = clt->items[i].name;
+            if (name)
+                cout << ", \"" << name << "\"";
+            const struct cl_type *subClt = clt->items[i].type;
+            if (subClt) {
+                cout << ", clt = ";
+                dump_clt(subClt);
+            }
+            cout << ", val = " << heap.valueOf(sub) << "\n";
         }
     }
 
     if (-1 != parent)
         // unguarded recursion
         dump_obj(heap, parent);
+
+    const EObjKind kind = heap.objKind(obj);
+    if (OK_DLS == kind) {
+        cout << "    peer      = ";
+        const TFieldIdxChain icPeer = heap.objPeerField(obj);
+        const TObjId peerPtr = subObjByChain(heap, obj, icPeer);
+        const TValueId valPeer = heap.valueOf(peerPtr);
+        if (0 < valPeer) {
+            const TObjId peer = heap.pointsTo(valPeer);
+            cout << "/* obj */ #" << peer << ", kind = ";
+            dump_kind(heap, peer);
+            cout << "\n";
+        }
+        else
+            cout << "XXX\n";
+    }
+
+    if (OK_CONCRETE != kind) {
+        cout << "    next      = ";
+        const TFieldIdxChain icNext = heap.objBinderField(obj);
+        const TObjId nextPtr = subObjByChain(heap, obj, icNext);
+        const TValueId valNext = heap.valueOf(nextPtr);
+        if (0 < valNext) {
+            const TObjId next = heap.pointsTo(valNext);
+            cout << "/* obj */ #" << next << ", kind = ";
+            dump_kind(heap, next);
+            cout << "\n";
+        }
+        else
+            // FIXME: possible recursion
+            dump_value_core(heap, valNext);
+    }
 }
 
 namespace {
 TObjId /* pointsTo */ dump_value_core(const SymHeap &heap, TValueId value)
 {
-    using std::cout;
     cout << "dump_value(#" << value << ")\n";
 
     SymHeap::TContObj refs;
@@ -174,7 +275,7 @@ TObjId /* pointsTo */ dump_value_core(const SymHeap &heap, TValueId value)
     if (!isIdValid(value))
         return OBJ_INVALID;
 
-    if (isHeapObject(heap, value)) {
+    if (isObject(heap, value)) {
         cout << "    error: #" << value << " is ID of a heap object\n";
         return OBJ_INVALID;
     }
@@ -258,8 +359,6 @@ void dump_cvar(const SymHeap &heap, CVar cVar) {
 }
 
 void dump_heap(const SymHeap &heap) {
-    using std::cout;
-
     cout << "dump_heap(SymHeap object at "
         << static_cast<const void *>(&heap)
         << ")\n";
@@ -273,14 +372,13 @@ void dump_heap(const SymHeap &heap) {
 }
 
 void dump_id(const SymHeap &heap, int id) {
-    using std::cout;
     cout << "dump_id(#" << id << ")\n";
     if (id <= 0) {
         cout << "    error: given ID is not a positive number\n";
         return;
     }
 
-    if (isHeapObject(heap, id))
+    if (isObject(heap, id))
         // assume object ID
         dump_obj(heap, static_cast<TObjId>(id));
 

@@ -207,14 +207,14 @@ class SymHeapCore {
          * @param valA one side of the inequality
          * @param valB one side of the inequality
          */
-        void addNeq(TValueId valA, TValueId valB);
+        virtual void addNeq(TValueId valA, TValueId valB);
 
         /**
          * remove the given @b Neq @b predice if such exists
          * @param valA one side of the inequality
          * @param valB one side of the inequality
          */
-        void delNeq(TValueId valA, TValueId valB);
+        virtual void delNeq(TValueId valA, TValueId valB);
 
         /**
          * introduce a new @b EqIf @b predicate (if not present already)
@@ -267,7 +267,7 @@ class SymHeapCore {
 
     protected:
         /// template method
-        virtual void valReplaceUnknownImpl(TValueId val, TValueId replaceBy);
+        virtual bool valReplaceUnknownImpl(TValueId val, TValueId replaceBy);
 
     private:
         struct Private;
@@ -360,7 +360,7 @@ class SymHeapTyped: public SymHeapCore {
          */
         const struct cl_type* valType(TValueId val) const;
 
-        /// overriden to preserve the type-info during duplication
+        /// overridden to preserve the type-info during duplication
         virtual TValueId valDuplicateUnknown(TValueId tpl);
 
     public:
@@ -604,14 +604,20 @@ class SymHeap: public SymHeapTyped {
         void objConcretize(TObjId obj);
 
     protected:
-        /// overriden in order to see through SLS/DLS
-        virtual void valReplaceUnknownImpl(TValueId val, TValueId replaceBy);
+        /// overridden in order to see through SLS/DLS
+        virtual bool valReplaceUnknownImpl(TValueId val, TValueId replaceBy);
 
     public:
-        /// overriden in order to see through SLS/DLS
+        /// overridden in order to complement DLS Neq
+        virtual void addNeq(TValueId valA, TValueId valB);
+
+        /// overridden in order to complement DLS Neq
+        virtual void delNeq(TValueId valA, TValueId valB);
+
+        /// overridden in order to see through SLS/DLS
         virtual bool proveEq(bool *result, TValueId valA, TValueId valB) const;
 
-        /// overriden in order to remove internal data of abstract objects
+        /// overridden in order to remove internal data of abstract objects
         virtual void objDestroy(TObjId obj);
 
     private:

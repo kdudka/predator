@@ -25,7 +25,6 @@
 #include <cl/code_listener.h>
 
 #include "symabstract.hh"
-#include "symdump.hh"
 #include "symutil.hh"
 #include "util.hh"
 #include "worklist.hh"
@@ -479,11 +478,11 @@ void SymHeapCore::valReplace(TValueId _val, TValueId _newval) {
     // FIXME: solve possible problem with EQ/NEQ database records?
     //        old: any RELOP _val --> new: any !RELOP _newval ?
     // how about (in-place) change from struct to abstract segment?
-    this->delNeq(_val, _newval);
+    SymHeapCore::delNeq(_val, _newval);
 }
 
 // template method
-void SymHeapCore::valReplaceUnknownImpl(TValueId val, TValueId replaceBy) {
+bool SymHeapCore::valReplaceUnknownImpl(TValueId val, TValueId replaceBy) {
     // collect objects having the value 'val'
     TContObj rlist;
     this->usedBy(rlist, val);
@@ -492,6 +491,9 @@ void SymHeapCore::valReplaceUnknownImpl(TValueId val, TValueId replaceBy) {
     BOOST_FOREACH(const TObjId obj, rlist) {
         this->objSetValue(obj, replaceBy);
     }
+
+    // this implementation is so easy that it really can't fail
+    return true;
 }
 
 void SymHeapCore::valReplaceUnknown(TValueId val, TValueId replaceBy) {
@@ -510,7 +512,11 @@ void SymHeapCore::valReplaceUnknown(TValueId val, TValueId replaceBy) {
         }
 
         // make it possible to override the implementation (template method)
-        this->valReplaceUnknownImpl(val, replaceBy);
+        if (!this->valReplaceUnknownImpl(val, replaceBy)) {
+            CL_WARN("overridden implementation valReplaceUnknownImpl() failed"
+                    ", has to over-approximate...");
+            continue;
+        }
 
         // handle all EqIf predicates
         EqIfDb::TDst eqIfs;
@@ -537,7 +543,7 @@ void SymHeapCore::valReplaceUnknown(TValueId val, TValueId replaceBy) {
             if (areEqual)
                 wl.schedule(TItem(valGt, valLt));
             else
-                d->neqDb.add(valLt, valGt);
+                this->addNeq(valLt, valGt);
         }
     }
 }
@@ -1439,29 +1445,39 @@ void SymHeap::objConcretize(TObjId obj) {
     // mark the value as UV_KNOWN
     const TValueId addr = this->placedAt(obj);
     SymHeapCore::valSetUnknown(addr, UV_KNOWN);
-
-    // TODO: check if really necessary;  it should be caller's responsibility
-#if 0
-    // we have just concretized an object, the pointing value can't be NULL by
-    // definition --> let's remove the Neq(addr, NULL) if such a predicate
-    // exists
-    this->delNeq(VAL_NULL, addr);
-#endif
 }
 
-void SymHeap::valReplaceUnknownImpl(TValueId val, TValueId replaceBy) {
+bool SymHeap::valReplaceUnknownImpl(TValueId val, TValueId replaceBy) {
     const EUnknownValue code = this->valGetUnknown(val);
     switch (code) {
         case UV_KNOWN:
             TRAP;
+            return false;
 
         case UV_ABSTRACT:
-            spliceOutListSegment(*this, val, replaceBy);
-            return;
+            return spliceOutListSegment(*this, val, replaceBy);
 
         default:
-            SymHeapTyped::valReplaceUnknownImpl(val, replaceBy);
+            return SymHeapTyped::valReplaceUnknownImpl(val, replaceBy);
     }
+}
+
+void SymHeap::addNeq(TValueId valA, TValueId valB) {
+    if (haveDlSeg(*this, valA, valB))
+        dlSegHandleCrossNeq(*this, this->pointsTo(valA), &SymHeapCore::addNeq);
+    else if (haveDlSeg(*this, valB, valA))
+        dlSegHandleCrossNeq(*this, this->pointsTo(valB), &SymHeapCore::addNeq);
+    else
+        SymHeapTyped::addNeq(valA, valB);
+}
+
+void SymHeap::delNeq(TValueId valA, TValueId valB) {
+    if (haveDlSeg(*this, valA, valB))
+        dlSegHandleCrossNeq(*this, this->pointsTo(valA), &SymHeapCore::delNeq);
+    else if (haveDlSeg(*this, valB, valA))
+        dlSegHandleCrossNeq(*this, this->pointsTo(valB), &SymHeapCore::delNeq);
+    else
+        SymHeapTyped::delNeq(valA, valB);
 }
 
 bool SymHeap::proveEq(bool *result, TValueId valA, TValueId valB) const {
@@ -1498,8 +1514,9 @@ bool SymHeap::proveEq(bool *result, TValueId valA, TValueId valB) const {
             return true;
 
         case UV_ABSTRACT:
-            // not implemented
-            TRAP;
+            CL_WARN("SymHeap::proveEq() "
+                    "does not see through a chain of segments");
+            return false;
 
         default:
             return false;

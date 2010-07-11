@@ -27,7 +27,7 @@
  * debugging
  */
 
-#include "symid.hh"
+#include "symheap.hh"
 
 /// an internal constant, statically initialized to 1
 extern const int have_symdump;
@@ -37,6 +37,12 @@ class SymHeap;
 
 /// dump @b type-info given as clt
 void dump_clt(const struct cl_type *clt);
+
+/// dump a chain of selectors
+void dump_ic(const struct cl_type *clt, TFieldIdxChain ic);
+
+/// dump @b kind of the given object
+void dump_kind(const SymHeap &heap, TObjId obj);
 
 /// dump a symbolic heap @b object
 void dump_obj(const SymHeap &heap, TObjId obj);
