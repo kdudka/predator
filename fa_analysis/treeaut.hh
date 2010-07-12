@@ -500,8 +500,8 @@ public:
 			}
 		}
 	}
-
-	void getIntersectingStates(std::vector<size_t>& dst, const TA<T>& predicate) const {
+// TODO: get rid of the code dulication
+	void intersectingStates(std::vector<size_t>& dst, const TA<T>& predicate) const {
 		lt_cache_type cache1, cache2;
 		this->buildLTCache(cache1);
 		predicate.buildLTCache(cache2);
@@ -607,6 +607,28 @@ public:
 			}
 		}
 		return dst;
+	}
+	
+	void heightAbstraction(std::vector<std::vector<size_t> >& partitions, size_t height) const {
+		Index<size_t> stateIndex;
+		this->buildStateIndex(stateIndex);
+		std::vector<size_t> classIndex(stateIndex.size(), 0), newClassIndex(stateIndex.size());
+		boost::unordered_map<std::pair<T, std::vector<size_t> >, size_t> classes;
+		do {
+			classes.clear();
+			for (typename set<typename trans_cache_type::value_type*>::const_iterator i = this->transitions.begin(); i != this->transitions.end(); ++i) {
+				std::vector<size_t> tmp = { classIndex[stateIndex[(*i)->first._rhs]] };
+				for (std::vector<size_t>::const_iterator j = (*i)->first._lhs->first.begin(); j != (*i)->first._lhs->first.end(); ++j)
+					tmp.push_back(classIndex[stateIndex[*j]]);
+				newClassIndex[classIndex[stateIndex[(*i)->first._rhs]]] =
+					classes.insert(make_pair(make_pair((*i)->first._label, tmp), classes.size())).first->second;
+			}
+			std::swap(classIndex, newClassIndex);
+		} while (height--);
+		partitions.clear();
+		partitions.resize(classes.size());
+		for (Index<size_t>::iterator i = stateIndex.begin(); i != stateIndex.end(); ++i)
+			partitions[classIndex[i->second]].push_back(i->first);
 	}
 	
 	// collapses states according to a given relation
