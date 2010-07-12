@@ -43,6 +43,4 @@ bool haveDlSeg(SymHeap &sh, TValueId atAddr, TValueId pointingTo);
 
 typedef void (SymHeap::*TNeqOp)(TValueId, TValueId);
 
-void dlSegHandleCrossNeq(SymHeap &sh, TObjId dls, TNeqOp op);
-
 #endif /* H_GUARD_SYMABSTRACT_H */

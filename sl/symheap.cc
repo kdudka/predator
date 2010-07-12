@@ -478,7 +478,7 @@ void SymHeapCore::valReplace(TValueId _val, TValueId _newval) {
     // FIXME: solve possible problem with EQ/NEQ database records?
     //        old: any RELOP _val --> new: any !RELOP _newval ?
     // how about (in-place) change from struct to abstract segment?
-    SymHeapCore::delNeq(_val, _newval);
+    SymHeapCore::neqOp(NEQ_DEL, _val, _newval);
 }
 
 // template method
@@ -543,22 +543,24 @@ void SymHeapCore::valReplaceUnknown(TValueId val, TValueId replaceBy) {
             if (areEqual)
                 wl.schedule(TItem(valGt, valLt));
             else
-                this->addNeq(valLt, valGt);
+                this->neqOp(NEQ_ADD, valLt, valGt);
         }
     }
 }
 
-void SymHeapCore::addNeq(TValueId valA, TValueId valB) {
-    d->neqDb.add(valA, valB);
-}
+void SymHeapCore::neqOp(ENeqOp op, TValueId valA, TValueId valB) {
+    switch (op) {
+        case NEQ_NOP:
+            break;
 
-void SymHeapCore::delNeq(TValueId valA, TValueId valB) {
-    // just for debugging purposes
-#if 0
-    if (!d->neqDb.areNeq(valA, valB))
-        TRAP;
-#endif
-    d->neqDb.del(valA, valB);
+        case NEQ_ADD:
+            d->neqDb.add(valA, valB);
+            break;
+
+        case NEQ_DEL:
+            d->neqDb.del(valA, valB);
+            break;
+    }
 }
 
 void SymHeapCore::addEqIf(TValueId valCond, TValueId valA, TValueId valB,
@@ -721,7 +723,7 @@ void SymHeapCore::copyRelevantPreds(SymHeapCore &dst, const TValMap &valMap)
             continue;
 
         // create the image now!
-        dst.addNeq(valLt, valGt);
+        dst.neqOp(NEQ_ADD, valLt, valGt);
     }
 
     // go through EqIfDb
@@ -1462,22 +1464,31 @@ bool SymHeap::valReplaceUnknownImpl(TValueId val, TValueId replaceBy) {
     }
 }
 
-void SymHeap::addNeq(TValueId valA, TValueId valB) {
-    if (haveDlSeg(*this, valA, valB))
-        dlSegHandleCrossNeq(*this, this->pointsTo(valA), &SymHeapCore::addNeq);
-    else if (haveDlSeg(*this, valB, valA))
-        dlSegHandleCrossNeq(*this, this->pointsTo(valB), &SymHeapCore::addNeq);
-    else
-        SymHeapTyped::addNeq(valA, valB);
+void SymHeap::dlSegCrossNeqOp(ENeqOp op, TValueId dlsAddr) {
+    const TObjId dls = this->pointsTo(dlsAddr);
+    const TObjId peer = dlSegPeer(*this, dls);
+    const TValueId peerAddr = this->placedAt(peer);
+
+    // dig pointer-to-next objects
+    const TObjId next1 = nextPtrFromSeg(*this, dls);
+    const TObjId next2 = nextPtrFromSeg(*this, peer);
+
+    // read the values (addresses of the surround)
+    const TValueId val1 = this->valueOf(next1);
+    const TValueId val2 = this->valueOf(next2);
+
+    // add/del Neq predicates
+    SymHeapCore::neqOp(op, val1, peerAddr);
+    SymHeapCore::neqOp(op, val2, dlsAddr);
 }
 
-void SymHeap::delNeq(TValueId valA, TValueId valB) {
+void SymHeap::neqOp(ENeqOp op, TValueId valA, TValueId valB) {
     if (haveDlSeg(*this, valA, valB))
-        dlSegHandleCrossNeq(*this, this->pointsTo(valA), &SymHeapCore::delNeq);
+        this->dlSegCrossNeqOp(op, valA);
     else if (haveDlSeg(*this, valB, valA))
-        dlSegHandleCrossNeq(*this, this->pointsTo(valB), &SymHeapCore::delNeq);
+        this->dlSegCrossNeqOp(op, valB);
     else
-        SymHeapTyped::delNeq(valA, valB);
+        SymHeapTyped::neqOp(op, valA, valB);
 }
 
 bool SymHeap::proveEq(bool *result, TValueId valA, TValueId valB) const {

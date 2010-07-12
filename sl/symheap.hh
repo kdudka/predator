@@ -202,19 +202,20 @@ class SymHeapCore {
         void valReplace(TValueId _val, TValueId _newval);
 
     public:
-        /**
-         * introduce a new @b Neq @b predicate (if not present already)
-         * @param valA one side of the inequality
-         * @param valB one side of the inequality
-         */
-        virtual void addNeq(TValueId valA, TValueId valB);
+        enum ENeqOp {
+            NEQ_NOP = 0,
+            NEQ_ADD,
+            NEQ_DEL
+        };
 
         /**
-         * remove the given @b Neq @b predice if such exists
+         * introduce a new @b Neq @b predicate (if not present already), or
+         * remove an existing one
+         * @param requested operation - NEQ_ADD or NEQ_DEL
          * @param valA one side of the inequality
          * @param valB one side of the inequality
          */
-        virtual void delNeq(TValueId valA, TValueId valB);
+        virtual void neqOp(ENeqOp op, TValueId valA, TValueId valB);
 
         /**
          * introduce a new @b EqIf @b predicate (if not present already)
@@ -603,22 +604,22 @@ class SymHeap: public SymHeapTyped {
          */
         void objConcretize(TObjId obj);
 
-    protected:
-        /// overridden in order to see through SLS/DLS
-        virtual bool valReplaceUnknownImpl(TValueId val, TValueId replaceBy);
-
     public:
         /// overridden in order to complement DLS Neq
-        virtual void addNeq(TValueId valA, TValueId valB);
-
-        /// overridden in order to complement DLS Neq
-        virtual void delNeq(TValueId valA, TValueId valB);
+        virtual void neqOp(ENeqOp op, TValueId valA, TValueId valB);
 
         /// overridden in order to see through SLS/DLS
         virtual bool proveEq(bool *result, TValueId valA, TValueId valB) const;
 
         /// overridden in order to remove internal data of abstract objects
         virtual void objDestroy(TObjId obj);
+
+    protected:
+        /// overridden in order to see through SLS/DLS
+        virtual bool valReplaceUnknownImpl(TValueId val, TValueId replaceBy);
+
+    private:
+        void dlSegCrossNeqOp(ENeqOp op, TValueId dlsAddr);
 
     private:
         struct Private;

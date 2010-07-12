@@ -138,6 +138,15 @@ bool doesAnyonePointToInside(const SymHeap &sh, TObjId obj) {
     return !traverseSubObjs(sh, obj, doesAnyonePointToInsideVisitor);
 }
 
+void dlSegHandleCrossNeq(SymHeap &sh, TObjId dls, SymHeap::ENeqOp op) {
+    const TObjId peer = dlSegPeer(sh, dls);
+    const TObjId next = nextPtrFromSeg(sh, peer);
+    const TValueId valNext = sh.valueOf(next);
+    const TValueId valSelf = sh.placedAt(dls);
+
+    sh.neqOp(op, valSelf, valNext);
+}
+
 TValueId /* addr */ segClone(SymHeap &sh, TValueId atAddr) {
     const TObjId seg = sh.pointsTo(atAddr);
     const TObjId dupSeg = sh.objDup(seg);
@@ -458,9 +467,11 @@ class ProbeVisitor {
             // a list segment through non-heap objects basically makes no sense
             return /* continue */ true;
 
-        // special quirk for DLS "end"
+        // compare arrity vs. count of references
         const unsigned refs = sh.usedByCount(targetAddr);
-        if (refs != arrity_ && (1 != refs || !this->dlSegEndCandidate(sh, obj)))
+        if (refs != arrity_
+                // special quirk for DLS "end"
+                && (1 != refs || !this->dlSegEndCandidate(sh, obj)))
             return /* continue */ true;
 
         return doesAnyonePointToInside(sh, target);
@@ -527,7 +538,7 @@ void digAnyListSelectors(TDst &dst, const SymHeap &sh, TObjId obj,
 }
 
 // FIXME: this function tends to be crowded
-// TODO: split to some reasonable functions
+// TODO: split it somehow to some more dedicated functions
 unsigned /* len */ segDiscover(const SymHeap &sh, TObjId entry, EObjKind kind,
                                TFieldIdxChain icNext, TFieldIdxChain icPrev)
 {
@@ -580,16 +591,16 @@ unsigned /* len */ segDiscover(const SymHeap &sh, TObjId entry, EObjKind kind,
             const TValueId addrSelf = sh.placedAt(obj);
             const TObjId objBackLink = subObjByChain(sh, objNext, icPrev);
             const TValueId valBackLink = sh.valueOf(objBackLink);
-            if (objCurrent == entry && VAL_NULL == valBackLink)
-                // we allow VAL_NULL as backLink in the first item of DLL
-                goto blink_ok;
 
-            if (valBackLink != addrSelf)
+            // we allow VAL_NULL as backLink in the first item of DLL
+            const bool dlSegHeadCandidate =
+                (objCurrent == entry && VAL_NULL == valBackLink);
+
+            if (!dlSegHeadCandidate && valBackLink != addrSelf)
                 // inappropriate back-link
                 break;
         }
 
-blink_ok:
         obj = objNext;
     }
 
@@ -690,9 +701,7 @@ void slSegCreateIfNeeded(SymHeap &sh, TObjId obj, TFieldIdxChain icNext) {
     const TValueId addr = sh.placedAt(obj);
     const TObjId objNextPtr = subObjByChain(sh, obj, icNext);
     const TValueId valNext = sh.valueOf(objNextPtr);
-    if (addr <= 0 || valNext < /* we allow VAL_NULL here */ 0)
-        TRAP;
-    sh.addNeq(addr, valNext);
+    sh.neqOp(SymHeap::NEQ_ADD, addr, valNext);
 }
 
 void slSegAbstractionStep(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext,
@@ -732,7 +741,7 @@ void dlSegCreate(SymHeap &sh, TObjId o1, TObjId o2,
     abstractNonMatchingValuesBidir(sh, o1, o2, flatScan);
 
     // a just created DLS is said to be non-empty
-    dlSegHandleCrossNeq(sh, o1, &SymHeapCore::addNeq);
+    dlSegHandleCrossNeq(sh, o1, SymHeap::NEQ_ADD);
 }
 
 void dlSegGobble(SymHeap &sh, TObjId dls, TObjId var, bool backward,
@@ -743,7 +752,7 @@ void dlSegGobble(SymHeap &sh, TObjId dls, TObjId var, bool backward,
         TRAP;
 
     // kill Neq if any
-    dlSegHandleCrossNeq(sh, dls, &SymHeap::delNeq);
+    dlSegHandleCrossNeq(sh, dls, SymHeap::NEQ_DEL);
 
     if (!backward)
         // jump to peer
@@ -762,7 +771,7 @@ void dlSegGobble(SymHeap &sh, TObjId dls, TObjId var, bool backward,
     objReplace(sh, var, dls);
 
     // we've just added an object, the DLS can't be empty
-    dlSegHandleCrossNeq(sh, dls, &SymHeap::addNeq);
+    dlSegHandleCrossNeq(sh, dls, SymHeap::NEQ_ADD);
 }
 
 void dlSegMerge(SymHeap &sh, TObjId seg1, TObjId seg2, bool flatScan) {
@@ -770,8 +779,8 @@ void dlSegMerge(SymHeap &sh, TObjId seg1, TObjId seg2, bool flatScan) {
     // DLS is non-empty
     const bool ne = dlSegNotEmpty(sh, seg1) || dlSegNotEmpty(sh, seg2);
     if (ne) {
-        dlSegHandleCrossNeq(sh, seg1, &SymHeap::delNeq);
-        dlSegHandleCrossNeq(sh, seg2, &SymHeap::delNeq);
+        dlSegHandleCrossNeq(sh, seg1, SymHeap::NEQ_DEL);
+        dlSegHandleCrossNeq(sh, seg2, SymHeap::NEQ_DEL);
     }
 
     if (sh.objNextField(seg1) != sh.objNextField(seg2)
@@ -801,7 +810,7 @@ void dlSegMerge(SymHeap &sh, TObjId seg1, TObjId seg2, bool flatScan) {
 
     if (ne)
         // non-empty DLS
-        dlSegHandleCrossNeq(sh, seg2, &SymHeap::addNeq);
+        dlSegHandleCrossNeq(sh, seg2, SymHeap::NEQ_ADD);
 }
 
 void dlSegAbstractionStep(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext,
@@ -1068,15 +1077,9 @@ void spliceOutSegmentIfNeeded(SymHeap &sh, TObjId ao, TObjId peer,
         // the segment was _guaranteed_ to be non-empty now, but
         // the concretization makes it _possibly_ empty
         // --> remove the Neq predicate 
-        if (ao == peer) {
-            // SLS
-            const TObjId next = nextPtrFromSeg(sh, ao);
-            const TValueId nextVal = sh.valueOf(next);
-            sh.delNeq(addrSelf, nextVal); 
-        }
-        else
-            // DLS
-            dlSegHandleCrossNeq(sh, ao, &SymHeapCore::delNeq);
+        const TObjId next = nextPtrFromSeg(sh, peer);
+        const TValueId nextVal = sh.valueOf(next);
+        sh.neqOp(SymHeap::NEQ_DEL, addrSelf, nextVal); 
 
         return;
     }
@@ -1184,41 +1187,4 @@ bool haveDlSeg(SymHeap &sh, TValueId atAddr, TValueId pointingTo) {
     const TObjId nextPtr = nextPtrFromSeg(sh, peer);
     const TValueId valNext = sh.valueOf(nextPtr);
     return (valNext == pointingTo);
-}
-
-// FIXME: we use the following nonsense to avoid an infinite recursion through
-// a call of virtual method;  we should get rid of this ASAP
-struct SymHeapQuirk: public SymHeap {
-    SymHeapQuirk(const SymHeap &sh):
-        SymHeap(sh)
-    {
-    }
-
-    virtual void addNeq(TValueId valA, TValueId valB) {
-        SymHeapCore::addNeq(valA, valB);
-    }
-
-    virtual void delNeq(TValueId valA, TValueId valB) {
-        SymHeapCore::delNeq(valA, valB);
-    }
-};
-
-void dlSegHandleCrossNeq(SymHeap &sh, TObjId dls, TNeqOp op) {
-    const TObjId peer = dlSegPeer(sh, dls);
-
-    // dig pointer-to-next objects
-    const TObjId next1 = nextPtrFromSeg(sh, dls);
-    const TObjId next2 = nextPtrFromSeg(sh, peer);
-
-    // read the values (addresses of the surround)
-    const TValueId val1 = sh.valueOf(next1);
-    const TValueId val2 = sh.valueOf(next2);
-
-    // FIXME: suboptimal API, we need two nonsense clone operations, in order
-    // to avoid an infinite recursion through a virtual call of addNeq/delNeq,
-    // ridiculous...
-    SymHeapQuirk q(sh);
-    (q.*op)(val1, sh.placedAt(peer));
-    (q.*op)(val2, sh.placedAt(dls));
-    sh = q;
 }

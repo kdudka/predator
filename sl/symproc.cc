@@ -69,7 +69,7 @@ TValueId SymProc::heapValFromCst(const struct cl_operand &op) {
 
                 // create a new unknown non-NULL value
                 TValueId val = heap_.valCreateUnknown(UV_UNKNOWN, op.type);
-                heap_.addNeq(val, VAL_NULL);
+                heap_.neqOp(SymHeap::NEQ_ADD, val, VAL_NULL);
                 return val;
             }
 
