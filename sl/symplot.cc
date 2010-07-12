@@ -149,6 +149,7 @@ struct SymHeapPlotter::Private {
     bool resolveValueOf(TValueId *pDst, TObjId obj);
     bool resolvePointsTo(TObjId *pDst, TValueId val);
 
+    void digObjCore(TObjId obj);
     void digObj(TObjId obj);
     void digValues();
     void plotObj(TObjId obj);
@@ -655,7 +656,7 @@ bool SymHeapPlotter::Private::resolvePointsTo(TObjId *pDst, TValueId value) {
     }
 }
 
-void SymHeapPlotter::Private::digObj(TObjId obj) {
+void SymHeapPlotter::Private::digObjCore(TObjId obj) {
     typedef std::pair<TObjId, bool /* last */> TStackItem;
     std::stack<TStackItem> todo;
     push(todo, obj, false);
@@ -703,6 +704,32 @@ void SymHeapPlotter::Private::digObj(TObjId obj) {
             // we are done with the current cluster, close it now
             this->dotStream << "}" << std::endl;
     }
+}
+
+void SymHeapPlotter::Private::digObj(TObjId obj) {
+    if (OK_DLS != this->heap->objKind(obj)) {
+        this->digObjCore(obj);
+        return;
+    }
+
+    const TObjId peer = dlSegPeer(*this->heap, obj);
+    if (peer <= 0)
+        TRAP;
+
+    // open a cluster
+    this->dotStream
+        << "subgraph \"clusterDLS" << obj << "\" {" << std::endl
+        << "\tlabel=DLS;"                           << std::endl
+        << "\tcolor=yellow;"                        << std::endl
+        << "\tfontcolor=yellow;"                    << std::endl
+        << "\tstyle=dashed;"                        << std::endl;
+
+    // plot the two parts of a DLS into the cluster
+    this->digObjCore(obj);
+    this->digObjCore(peer);
+
+    // close the cluster
+    this->dotStream << "}" << std::endl;
 }
 
 void SymHeapPlotter::Private::digValues() {
