@@ -116,9 +116,6 @@ void dump_kind(const SymHeap &heap, TObjId obj) {
     }
 
     dump_ic(clt, heap.objNextField(obj));
-    const int level = heap.objAbstractLevel(obj);
-    if (1 != level)
-        cout << ", level = " << level;
 }
 
 void dump_obj(const SymHeap &heap, TObjId obj) {

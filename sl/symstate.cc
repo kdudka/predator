@@ -201,10 +201,8 @@ namespace {
 bool cmpAbstractObjects(const SymHeap &sh1, const SymHeap &sh2,
                         TObjId ao1, TObjId ao2)
 {
-    // TODO
-    return sh1.objAbstractLevel(ao1) == sh2.objAbstractLevel(ao2)
-        && sh1.objNextField    (ao1) == sh2.objNextField    (ao2)
-        && sh1.objPeerField    (ao1) == sh2.objPeerField    (ao2);
+    return sh1.objNextField(ao1) == sh2.objNextField(ao2)
+        && sh1.objPeerField(ao1) == sh2.objPeerField(ao2);
 }
 
 } // namespace 

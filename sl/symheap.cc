@@ -1322,11 +1322,10 @@ int SymHeapTyped::valGetCustom(const struct cl_type **pClt, TValueId val) const
 struct SymHeap::Private {
     struct ObjectEx {
         EObjKind            kind;
-        int                 level;
         TFieldIdxChain      icNext;
         TFieldIdxChain      icPeer;
 
-        ObjectEx(): kind(OK_CONCRETE), level(-1) { }
+        ObjectEx(): kind(OK_CONCRETE) { }
     };
 
     typedef std::map<TObjId, ObjectEx> TObjMap;
@@ -1359,7 +1358,7 @@ TObjId SymHeap::objDup(TObjId objOld) {
     const TObjId objNew = SymHeapTyped::objDup(objOld);
     Private::TObjMap::iterator iter = d->objMap.find(objOld);
     if (d->objMap.end() != iter) {
-        // duplicte metadata of an abstract object
+        // duplicate metadata of an abstract object
         Private::ObjectEx tmp(iter->second);
         d->objMap[objNew] = tmp;
 
@@ -1376,13 +1375,6 @@ EObjKind SymHeap::objKind(TObjId obj) const {
     return (d->objMap.end() == iter)
         ? OK_CONCRETE
         : iter->second.kind;
-}
-
-int SymHeap::objAbstractLevel(TObjId obj) const {
-    Private::TObjMap::iterator iter = d->objMap.find(obj);
-    return (d->objMap.end() == iter)
-        ? /* OK_CONCRETE */ 0
-        : iter->second.level;
 }
 
 TFieldIdxChain SymHeap::objNextField(TObjId obj) const {
@@ -1423,11 +1415,8 @@ void SymHeap::objAbstract(TObjId obj, EObjKind kind, TFieldIdxChain icNext,
     // initialize abstract object
     Private::ObjectEx &ref = d->objMap[obj];
     ref.kind    = kind;
-    ref.level   = /* TODO */ 1;
     ref.icNext  = icNext;
     ref.icPeer  = icPeer;
-
-    // TODO: go through all nested abstract objects and increase the level
 }
 
 void SymHeap::objConcretize(TObjId obj) {
@@ -1435,10 +1424,6 @@ void SymHeap::objConcretize(TObjId obj) {
     Private::TObjMap::iterator iter = d->objMap.find(obj);
     if (d->objMap.end() == iter)
         // invalid call of SymHeap::objConcretize()
-        TRAP;
-
-    if (1 != iter->second.level)
-        // not implemented
         TRAP;
 
     // just remove the object ID from the map
@@ -1513,7 +1498,7 @@ bool SymHeap::proveEq(bool *result, TValueId valA, TValueId valB) const {
     const TObjId next = nextPtrFromSeg(*this, obj);
     const TValueId valNext = this->valueOf(next);
     if (VAL_NULL == valNext)
-        // we alraeady know that there is no Neq(valB, VAL_NULL) defined, from
+        // we already know that there is no Neq(valB, VAL_NULL) defined, from
         // the call of SymHeapTyped::proveEq() above
         return false;
 

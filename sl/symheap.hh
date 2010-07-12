@@ -565,14 +565,6 @@ class SymHeap: public SymHeapTyped {
         EObjKind objKind(TObjId obj) const;
 
         /**
-         * return @b abstraction level of the given object.  Zero means concrete
-         * object, 1 means regular SLS or DLS object, 2 stands for an abstract
-         * object that consists of another abstract objects, and so on and so
-         * forth.
-         */
-        int objAbstractLevel(TObjId obj) const;
-
-        /**
          * return a @b binding sub-object of the given @b abstract object.  Here
          * @b binding objects stands for the filed usually called @c next or @c
          * prev.
