@@ -63,67 +63,6 @@ static struct AbstractionThreshold dlsThreshold = {
     /* spareSuffix */ 1
 };
 
-typedef std::pair<TObjId, TObjId> TObjPair;
-
-// helper template for traverseSubObjs()
-template <class TItem> struct TraverseSubObjsHelper { };
-
-// specialisation for TObjId, which means basic implementation of the traversal
-template <> struct TraverseSubObjsHelper<TObjId> {
-    static const struct cl_type* getItemClt(const SymHeap &sh, TObjId obj) {
-        return sh.objType(obj);
-    }
-    static TObjId getNextItem(const SymHeap &sh, TObjId obj, int nth) {
-        return sh.subObj(obj, nth);
-    }
-};
-
-// specialisation suitable for traversing two composite objects simultaneously
-template <> struct TraverseSubObjsHelper<TObjPair> {
-    static const struct cl_type* getItemClt(const SymHeap &sh, TObjPair item) {
-        const struct cl_type *clt1 = sh.objType(item.first);
-        const struct cl_type *clt2 = sh.objType(item.second);
-        if (clt1 != clt2)
-            TRAP;
-
-        return clt1;
-    }
-    static TObjPair getNextItem(const SymHeap &sh, TObjPair item, int nth) {
-        item.first  = sh.subObj(item.first,  nth);
-        item.second = sh.subObj(item.second, nth);
-        return item;
-    }
-};
-
-// take the given visitor through a composite object (or whatever you pass in)
-template <class THeap, class TVisitor, class TItem = TObjId>
-bool /* complete */ traverseSubObjs(THeap &sh, TItem item, TVisitor visitor) {
-    std::stack<TItem> todo;
-    todo.push(item);
-    while (!todo.empty()) {
-        item = todo.top();
-        todo.pop();
-
-        typedef TraverseSubObjsHelper<TItem> THelper;
-        const struct cl_type *clt = THelper::getItemClt(sh, item);
-        if (!clt || clt->code != CL_TYPE_STRUCT)
-            TRAP;
-
-        for (int i = 0; i < clt->item_cnt; ++i) {
-            const TItem next = THelper::getNextItem(sh, item, i);
-            if (!/* continue */visitor(sh, next))
-                return false;
-
-            const struct cl_type *subClt = THelper::getItemClt(sh, next);
-            if (subClt && subClt->code == CL_TYPE_STRUCT)
-                todo.push(next);
-        }
-    }
-
-    // the traversal is done, without any interruption by visitor
-    return true;
-}
-
 namespace {
 
 // we use a controlled recursion of depth 1
@@ -231,6 +170,115 @@ void considerFlatScan(SymHeap &sh, TValueId *val1, TValueId *val2) {
 
     *val1 = considerFlatScan(sh, o1);
     *val2 = considerFlatScan(sh, o2);
+}
+
+template <class TIgnoreList>
+void buildIgnoreList(const SymHeap &sh, TObjId obj, TIgnoreList &ignoreList) {
+    TObjId tmp;
+
+    const EObjKind kind = sh.objKind(obj);
+    switch (kind) {
+        case OK_CONCRETE:
+            // invalid call of buildIgnoreList()
+            TRAP;
+
+        case OK_DLS:
+            // preserve 'peer' field
+            tmp = subObjByChain(sh, obj, sh.objPeerField(obj));
+            ignoreList.insert(tmp);
+            // fall through!
+
+        case OK_SLS:
+            // preserve 'next' field
+            tmp = subObjByChain(sh, obj, sh.objNextField(obj));
+            ignoreList.insert(tmp);
+    }
+}
+
+struct DataMatchVisitor {
+    std::set<TObjId> ignoreList;
+
+    bool operator()(const SymHeap &sh, TObjPair item) const {
+        const TObjId o1 = item.first;
+        if (hasKey(ignoreList, o1))
+            return /* continue */ true;
+
+        // first compare value IDs
+        const TValueId v1 = sh.valueOf(o1);
+        const TValueId v2 = sh.valueOf(item.second);
+        if (v1 == v2)
+            return /* continue */ true;
+
+        // special values have to match
+        if (v1 <= 0 || v2 <= 0)
+            return /* mismatch */ false;
+
+        // compare _unknown_ value codes
+        const EUnknownValue code = sh.valGetUnknown(v1);
+        if (code != sh.valGetUnknown(v2))
+            return /* mismatch */ false;
+
+        switch (code) {
+            case UV_UNINITIALIZED:
+                // basically the asme as UV_KNOWN
+            case UV_KNOWN:
+                // known values have to match
+                return false;
+
+            case UV_UNKNOWN:
+                // safe to keep UV_UNKNOWN values as they are
+                return true;
+
+            case UV_ABSTRACT:
+                TRAP;
+        }
+        return /* mismatch */ false;
+    }
+};
+
+bool segEqual(const SymHeap &sh, TValueId v1, TValueId v2) {
+    const TObjId o1 = sh.pointsTo(v1);
+    const TObjId o2 = sh.pointsTo(v2);
+    if (o1 <= 0 || o2 <= 0)
+        TRAP;
+
+    const EObjKind kind = sh.objKind(o1);
+    if (sh.objKind(o2) != kind)
+        return false;
+
+    TObjId peer1 = o1;
+    TObjId peer2 = o2;
+    switch (kind) {
+        case OK_CONCRETE:
+            // invalid call of segEqual()
+            TRAP;
+
+        case OK_DLS:
+            if (sh.objPeerField(o1) != sh.objPeerField(o2))
+                // 'peer' selector mismatch
+                return false;
+
+            peer1 = dlSegPeer(sh, o1);
+            peer2 = dlSegPeer(sh, o2);
+            // fall through!
+
+        case OK_SLS:
+            if (sh.objNextField(o1) != sh.objNextField(o2))
+                // 'next' selector mismatch
+                return false;
+    }
+
+    // so far equal, now compare the 'next' values
+    const TObjId next1 = nextPtrFromSeg(sh, peer1);
+    const TObjId next2 = nextPtrFromSeg(sh, peer2);
+    if (sh.valueOf(next1) != sh.valueOf(next2))
+        return false;
+
+    // compare the data
+    DataMatchVisitor visitor;
+    buildIgnoreList(sh, o1, visitor.ignoreList);
+    const TObjPair item(o1, o2);
+    return traverseSubObjs(sh, item, visitor);
 }
 
 TValueId mergeValues(SymHeap &sh, TValueId v1, TValueId v2) {
@@ -349,29 +397,6 @@ struct UnknownValuesDuplicator {
         return /* continue */ true;
     }
 };
-
-template <class TIgnoreList>
-void buildIgnoreList(const SymHeap &sh, TObjId obj, TIgnoreList &ignoreList) {
-    TObjId tmp;
-
-    const EObjKind kind = sh.objKind(obj);
-    switch (kind) {
-        case OK_CONCRETE:
-            // invalid call of buildIgnoreList()
-            TRAP;
-
-        case OK_DLS:
-            // preserve 'peer' field
-            tmp = subObjByChain(sh, obj, sh.objPeerField(obj));
-            ignoreList.insert(tmp);
-            // fall through!
-
-        case OK_SLS:
-            // preserve 'next' field
-            tmp = subObjByChain(sh, obj, sh.objNextField(obj));
-            ignoreList.insert(tmp);
-    }
-}
 
 // when abstracting an object, we need to abstract all non-matching values in
 void abstractNonMatchingValues(SymHeap &sh, TObjId src, TObjId dst,
@@ -850,7 +875,6 @@ void dlSegAbstractionStep(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext,
             if (OK_CONCRETE == sh.objKind(o2)) {
                 // VAR + VAR
                 dlSegCreate(sh, o1, o2, icNext, icPrev, flatScan);
-                dlSegNotEmpty(sh, o1);
                 return;
             }
 
@@ -1074,13 +1098,11 @@ void spliceOutSegmentIfNeeded(SymHeap &sh, TObjId ao, TObjId peer,
     // check if the LS may be empty
     const TValueId addrSelf = sh.placedAt(ao);
     if (segNotEmpty(sh, ao)) {
-        // the segment was _guaranteed_ to be non-empty now, but
-        // the concretization makes it _possibly_ empty
-        // --> remove the Neq predicate 
+        // the segment was _guaranteed_ to be non-empty now, but the
+        // concretization makes it _possibly_ empty --> remove the Neq predicate 
         const TObjId next = nextPtrFromSeg(sh, peer);
         const TValueId nextVal = sh.valueOf(next);
         sh.neqOp(SymHeap::NEQ_DEL, addrSelf, nextVal); 
-
         return;
     }
 
