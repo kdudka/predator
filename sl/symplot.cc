@@ -128,6 +128,7 @@ struct SymHeapPlotter::Private {
     void plotNodeObj(TObjId obj, enum cl_type_e code);
     void plotNodeValue(TValueId val, enum cl_type_e code, const char *label);
     void plotNodeAux(int src, enum cl_type_e code, const char *label);
+    void plotNeqZero(TValueId val);
 
     void plotEdgePointsTo(TValueId value, TObjId obj);
     void plotEdgeValueOf(TObjId obj, TValueId value);
@@ -335,6 +336,27 @@ void SymHeapPlotter::Private::plotNodeAux(int src, enum cl_type_e code,
         << "];" << std::endl;
 }
 
+void SymHeapPlotter::Private::plotNeqZero(TValueId val) {
+    const struct cl_type *clt = this->heap->valType(val);
+    const bool isPtr = (clt && clt->code != CL_TYPE_INT);
+    const char *label = (isPtr)
+        ? "!= NULL"
+        : "!= 0";
+
+    const int id = ++(this->last);
+    this->dotStream << "\t"
+        << SL_QUOTE("lonely" << id)
+        << " [shape=plaintext"
+        << ", fontcolor=" << colorByCode(CL_TYPE_VOID)
+        << ", label=" << SL_QUOTE(label) << "];"
+        << std::endl;
+
+    this->dotStream << "\t"
+        << SL_QUOTE(val) << " -> " << SL_QUOTE("lonely" << id)
+        << " [color=" << colorByCode(CL_TYPE_BOOL)
+        << "];" << std::endl;
+}
+
 void SymHeapPlotter::Private::plotEdgePointsTo(TValueId value, TObjId obj) {
     this->dotStream << "\t" << SL_QUOTE(value) << " -> " << SL_QUOTE(obj)
         << " [color=green, fontcolor=green, label=\"pointsTo\"];"
@@ -409,7 +431,7 @@ void SymHeapPlotter::Private::plotSingleValue(TValueId value) {
         if (!eq) {
             if (VAL_NULL == peer) {
                 // 'value' is said to be non-zero
-                this->plotNodeAux(value, CL_TYPE_BOOL, "non-zero");
+                this->plotNeqZero(value);
                 continue;
             }
             else if (VAL_NULL < peer) {
