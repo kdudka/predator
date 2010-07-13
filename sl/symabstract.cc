@@ -1073,8 +1073,29 @@ bool abstractIfNeededCore(SymHeap &sh) {
     return false;
 }
 
-void spliceOutListSegmentCore(SymHeap &sh, TObjId obj, TObjId peer)
-{
+bool dlSegReplaceByConcrete(SymHeap &sh, TObjId obj, TObjId peer) {
+    // first kill any related Neq predicates, we're going to concretize anyway
+    dlSegHandleCrossNeq(sh, obj, SymHeap::NEQ_DEL);
+
+    // take the value of 'next' pointer from peer
+    const TObjId peerPtr = subObjByChain(sh, obj, sh.objPeerField(obj));
+    const TValueId valNext = sh.valueOf(nextPtrFromSeg(sh, peer));
+    sh.objSetValue(peerPtr, valNext);
+
+    // redirect all references originally pointing to peer to the current object
+    const TValueId addrSelf = sh.placedAt(obj);
+    const TValueId addrPeer = sh.placedAt(peer);
+    sh.valReplace(addrPeer, addrSelf);
+
+    // destroy the peer object and concretize self
+    sh.objDestroy(peer);
+    sh.objSetConcrete(obj);
+
+    // this can't fail (at least I hope so...)
+    return true;
+}
+
+void spliceOutListSegmentCore(SymHeap &sh, TObjId obj, TObjId peer) {
     const TObjId next = nextPtrFromSeg(sh, peer);
     const TValueId valNext = sh.valueOf(next);
 
@@ -1180,6 +1201,13 @@ bool spliceOutListSegment(SymHeap &sh, TValueId atAddr, TValueId pointingTo)
     const TObjId peer = (OK_DLS == kind)
         ? dlSegPeer(sh, obj)
         : obj;
+
+    if (OK_DLS == sh.objKind(obj)) {
+        const TObjId peer = dlSegPeer(sh, obj);
+        if (sh.placedAt(peer) == pointingTo)
+            // assume identity over the two parts of DLS
+            return dlSegReplaceByConcrete(sh, obj, peer);
+    }
 
     const TObjId next = nextPtrFromSeg(sh, peer);
     const TValueId valNext = sh.valueOf(next);
