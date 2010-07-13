@@ -719,7 +719,7 @@ void slSegCreateIfNeeded(SymHeap &sh, TObjId obj, TFieldIdxChain icNext) {
     }
 
     // abstract a concrete object
-    sh.objAbstract(obj, OK_SLS, icNext);
+    sh.objSetAbstract(obj, OK_SLS, icNext);
 
     // we're constructing the abstract object from a concrete one --> it
     // implies non-empty LS at this point
@@ -759,8 +759,8 @@ void dlSegCreate(SymHeap &sh, TObjId o1, TObjId o2,
         // invalid call of dlSegCreate()
         TRAP;
 
-    sh.objAbstract(o1, OK_DLS, icPrev, icNext);
-    sh.objAbstract(o2, OK_DLS, icNext, icPrev);
+    sh.objSetAbstract(o1, OK_DLS, icPrev, icNext);
+    sh.objSetAbstract(o2, OK_DLS, icNext, icPrev);
 
     // introduce some UV_UNKNOWN values if necessary
     abstractNonMatchingValuesBidir(sh, o1, o2, flatScan);
@@ -1162,7 +1162,7 @@ void concretizeObj(SymHeap &sh, TValueId addr, TSymHeapList &todo) {
     const TObjId ptrNext = subObjByChain(sh, obj, (OK_SLS == kind)
             ? sh.objNextField(obj)
             : sh.objPeerField(obj));
-    sh.objConcretize(obj);
+    sh.objSetConcrete(obj);
     sh.objSetValue(ptrNext, aoDupAddr);
 
     if (OK_DLS == kind) {

@@ -1395,8 +1395,8 @@ TFieldIdxChain SymHeap::objPeerField(TObjId obj) const {
     return iter->second.icPeer;
 }
 
-void SymHeap::objAbstract(TObjId obj, EObjKind kind, TFieldIdxChain icNext,
-                          TFieldIdxChain icPeer)
+void SymHeap::objSetAbstract(TObjId obj, EObjKind kind, TFieldIdxChain icNext,
+                             TFieldIdxChain icPeer)
 {
     if (hasKey(d->objMap, obj))
         // invalid call of SymHeap::objAbstract()
@@ -1419,7 +1419,7 @@ void SymHeap::objAbstract(TObjId obj, EObjKind kind, TFieldIdxChain icNext,
     ref.icPeer  = icPeer;
 }
 
-void SymHeap::objConcretize(TObjId obj) {
+void SymHeap::objSetConcrete(TObjId obj) {
     CL_DEBUG("SymHeap::objConcretize() is taking place...");
     Private::TObjMap::iterator iter = d->objMap.find(obj);
     if (d->objMap.end() == iter)

@@ -586,15 +586,20 @@ class SymHeap: public SymHeapTyped {
          * more times, but always on the root object, which should be a concrete
          * object.
          */
-        void objAbstract(TObjId obj, EObjKind kind, TFieldIdxChain bidnerField,
-                         TFieldIdxChain peerField = TFieldIdxChain());
+        void objSetAbstract(TObjId obj, EObjKind kind,
+                            TFieldIdxChain bidnerField,
+                            TFieldIdxChain peerField = TFieldIdxChain());
+
+        // TODO
+        bool objShared(TObjId obj) const;
+        void objSetShared(TObjId obj, bool shared);
 
         /**
          * convert the given @b abstract object to a less abstract object.  If
          * the given object is a regular SLS/DLS object, it results to a
          * concrete object.  Otherwise, the abstraction level is just decreased.
          */
-        void objConcretize(TObjId obj);
+        void objSetConcrete(TObjId obj);
 
     public:
         /// overridden in order to complement DLS Neq

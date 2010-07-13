@@ -179,7 +179,7 @@ TObjId addObjectIfNeeded(DeepCopyData &dc, TObjId objSrc) {
         case OK_SLS: {
             const TFieldIdxChain icNext = src.objNextField(rootSrc);
             const TFieldIdxChain icPeer = src.objPeerField(rootSrc);
-            dst.objAbstract(rootDst, kind, icNext, icPeer);
+            dst.objSetAbstract(rootDst, kind, icNext, icPeer);
         }
         // fall through!
 
