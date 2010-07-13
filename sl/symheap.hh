@@ -581,6 +581,19 @@ class SymHeap: public SymHeapTyped {
         TFieldIdxChain objPeerField(TObjId obj) const;
 
         /**
+         * true, if the @b abstract object is shared (default); it has to be
+         * duplicated on call of concretizeObj() otherwise
+         */
+        bool objShared(TObjId obj) const;
+
+        /**
+         * set it to zero, if the object should be duplicated on call of
+         * concretizeObj().  By default, all nested abstractions are shared
+         */
+        void objSetShared(TObjId obj, bool shared);
+
+    public:
+        /**
          * convert the given @b concrete object to an abstract object.  If you
          * need to create higher level abstract object, just call this method
          * more times, but always on the root object, which should be a concrete
@@ -589,10 +602,6 @@ class SymHeap: public SymHeapTyped {
         void objSetAbstract(TObjId obj, EObjKind kind,
                             TFieldIdxChain bidnerField,
                             TFieldIdxChain peerField = TFieldIdxChain());
-
-        // TODO
-        bool objShared(TObjId obj) const;
-        void objSetShared(TObjId obj, bool shared);
 
         /**
          * convert the given @b abstract object to a less abstract object.  If

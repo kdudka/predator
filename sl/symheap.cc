@@ -1332,8 +1332,9 @@ struct SymHeap::Private {
         EObjKind            kind;
         TFieldIdxChain      icNext;
         TFieldIdxChain      icPeer;
+        bool                shared;
 
-        ObjectEx(): kind(OK_CONCRETE) { }
+        ObjectEx(): kind(OK_CONCRETE), shared(true) { }
     };
 
     typedef std::map<TObjId, ObjectEx> TObjMap;
@@ -1403,10 +1404,28 @@ TFieldIdxChain SymHeap::objPeerField(TObjId obj) const {
     return iter->second.icPeer;
 }
 
+bool SymHeap::objShared(TObjId obj) const {
+    Private::TObjMap::iterator iter = d->objMap.find(obj);
+    if (d->objMap.end() == iter)
+        // invalid call of SymHeap::objShared()
+        TRAP;
+
+    return iter->second.shared;
+}
+
+void SymHeap::objSetShared(TObjId obj, bool shared) {
+    Private::TObjMap::iterator iter = d->objMap.find(obj);
+    if (d->objMap.end() == iter)
+        // invalid call of SymHeap::objSetShared()
+        TRAP;
+
+    iter->second.shared = shared;
+}
+
 void SymHeap::objSetAbstract(TObjId obj, EObjKind kind, TFieldIdxChain icNext,
                              TFieldIdxChain icPeer)
 {
-    if (hasKey(d->objMap, obj))
+    if (OK_CONCRETE == kind || hasKey(d->objMap, obj))
         // invalid call of SymHeap::objAbstract()
         TRAP;
 

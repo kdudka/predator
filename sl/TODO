@@ -1,0 +1,5 @@
+o  join of states ... example:
+   - input: empty | 1 node | SLS 0+ | SLS 1+
+   - output: SLS 0+
+
+o  aliasing of a field with zero offset with pointer to the surrounding object

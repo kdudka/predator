@@ -312,8 +312,13 @@ TValueId mergeValues(SymHeap &sh, TValueId v1, TValueId v2) {
 
         if (segEqual(sh, v1, v2)) {
             // by merging the values, we drop the last reference;  destroy the seg
-            const TObjId seg = sh.pointsTo(v1);
-            segDestroy(sh, seg);
+            const TObjId seg1 = sh.pointsTo(v1);
+            segDestroy(sh, seg1);
+
+            // duplicate the nested abstract object on call of concretizeObj()
+            const TObjId seg2 = sh.pointsTo(v2);
+            sh.objSetShared(seg2, false);
+
             return VAL_INVALID;
         }
         else
@@ -382,8 +387,9 @@ struct UnknownValuesDuplicator {
                 break;
 
             case UV_ABSTRACT:
-                // we need to clone nested list segments
-                valNew = segClone(sh, valOld);
+                if (!sh.objShared(sh.pointsTo(valOld)))
+                    // we need to clone nested list segments
+                    valNew = segClone(sh, valOld);
                 break;
 
             default:

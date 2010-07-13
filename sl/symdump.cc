@@ -221,6 +221,12 @@ void dump_obj(const SymHeap &heap, TObjId obj) {
     }
 
     if (OK_CONCRETE != kind) {
+        cout << "    shared    = ";
+        if (heap.objShared(obj))
+            cout << "true\n";
+        else
+            cout << "false\n";
+
         cout << "    next      = ";
         const TFieldIdxChain icNext = heap.objNextField(obj);
         const TObjId nextPtr = subObjByChain(heap, obj, icNext);

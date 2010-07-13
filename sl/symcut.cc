@@ -180,6 +180,9 @@ TObjId addObjectIfNeeded(DeepCopyData &dc, TObjId objSrc) {
             const TFieldIdxChain icNext = src.objNextField(rootSrc);
             const TFieldIdxChain icPeer = src.objPeerField(rootSrc);
             dst.objSetAbstract(rootDst, kind, icNext, icPeer);
+
+            const bool shared = src.objShared(rootSrc);
+            dst.objSetShared(rootDst, shared);
         }
         // fall through!
 
