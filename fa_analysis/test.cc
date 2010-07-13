@@ -36,7 +36,8 @@ public:
 		x_ass_null = 4,
 		x_ass_y = 5,
 		x_ass_y_next = 6,
-		x_next_ass_y = 7
+		x_next_ass_y = 7,
+		x_not_null = 8
 	} op_code_type;
 
 	static const char* op_code_names[];
@@ -109,6 +110,12 @@ public:
 				src->x_next_ass_y(dst, x, y, this->arg);
 				break;
 			}
+			case x_not_null: {
+				size_t x = Instr::findVarId(this->dstId, vars);
+				if (src->x_not_null(x))
+					dst.push_back(new FAE(*src));
+				break;
+			}
 		}
 	}
 	
@@ -140,12 +147,14 @@ const char* Instr::op_code_names[] = {
 	"x_ass_null",
 	"x_ass_y",
 	"x_ass_y_next",
-	"x_next_ass_y"
+	"x_next_ass_y",
+	"x_not_null"
 };
 
 void sym_exec(std::vector<FAE*>& dst, std::map<std::string, size_t>& vars, const std::vector<FAE*>& src, const Instr& instr) {
 	for (std::vector<FAE*>::const_iterator i = src.begin(); i != src.end(); ++i)
 		instr.execute(dst, vars, *i);
+	
 }
 
 int main(int argc, char* argv[]) {
@@ -164,18 +173,31 @@ int main(int argc, char* argv[]) {
 	std::vector<Instr> code = {
 		Instr(Instr::add_var, "x"),
 		Instr(Instr::add_var, "y"),
-		Instr(Instr::x_ass_null, "x"),
-		Instr(Instr::x_ass_null, "y"),
-		Instr(Instr::x_ass_new, "y", 1),
-		Instr(Instr::x_next_ass_y, "y", 0, "x"),
-		Instr(Instr::x_ass_y, "x", 0, "y"),
-		Instr(Instr::x_ass_new, "y", 1),
-		Instr(Instr::x_next_ass_y, "y", 0, "x"),
-		Instr(Instr::x_ass_y, "x", 0, "y"),
-		Instr(Instr::x_ass_new, "y", 1),
-		Instr(Instr::x_next_ass_y, "y", 0, "x"),
-		Instr(Instr::x_ass_y, "x", 0, "y"),
-		Instr(Instr::x_ass_y_next, "x", 0, "y"),
+		Instr(Instr::x_ass_null, "x"),				// x = null
+		Instr(Instr::x_ass_null, "y"),				// y = null
+		Instr(Instr::x_ass_new, "y", 1),			// y = new(1)
+		Instr(Instr::x_next_ass_y, "y", 0, "x"),	// y.next(0) = x
+		Instr(Instr::x_ass_y, "x", 0, "y"),			// x = y
+		Instr(Instr::x_ass_new, "y", 1),			// y = new(1)
+		Instr(Instr::x_next_ass_y, "y", 0, "x"),	// y.next(0) = x
+		Instr(Instr::x_ass_y, "x", 0, "y"),			// x = y
+		Instr(Instr::x_ass_new, "y", 1),			// y = new(1)
+		Instr(Instr::x_next_ass_y, "y", 0, "x"),	// y.next(0) = x
+		Instr(Instr::x_ass_y, "x", 0, "y"),			// x = y
+		Instr(Instr::add_var, "z"),
+		Instr(Instr::x_ass_null, "z"),
+		Instr(Instr::x_not_null, "x"),
+		Instr(Instr::x_ass_y, "y", 0, "x"),			// y = x
+		Instr(Instr::x_ass_y_next, "x", 0, "x"),	// x = x.next
+		Instr(Instr::x_next_ass_y, "y", 0, "z"),	// y.next = z
+		Instr(Instr::x_ass_y, "z", 0, "y"),			// z = x
+		Instr(Instr::x_not_null, "x"),
+		Instr(Instr::x_ass_y, "y", 0, "x"),			// y = x
+		Instr(Instr::x_ass_y_next, "x", 0, "x"),	// x = x.next
+		Instr(Instr::x_next_ass_y, "y", 0, "z"),	// y.next = z
+		Instr(Instr::x_ass_y, "z", 0, "y")			// z = x
+
+/*		Instr(Instr::x_ass_y_next, "x", 0, "y"),	// x.next(0) = y
 		Instr(Instr::del_x, "y"),
 		Instr(Instr::x_ass_y, "y", 0, "x"),
 		Instr(Instr::x_ass_y_next, "x", 0, "y"),
@@ -185,7 +207,7 @@ int main(int argc, char* argv[]) {
 		Instr(Instr::del_x, "y"),
 		Instr(Instr::x_ass_y, "y", 0, "x"),
 		Instr(Instr::rm_var, "y"),
-		Instr(Instr::rm_var, "x")
+		Instr(Instr::rm_var, "x")*/
 	};
 
 	std::map<std::string, size_t> vars;
@@ -194,10 +216,13 @@ int main(int argc, char* argv[]) {
 		store.push_back(std::vector<FAE*>());
 		std::vector<FAE*>& oldC = *(&store.back() - 1);
 		std::vector<FAE*>& newC = store.back();
+		DEBUG_MSG("===");
 		DEBUG_MSG("executing " << *i);
 		sym_exec(newC, vars, oldC, *i);
-		for (std::vector<FAE*>::iterator j = newC.begin(); j != newC.end(); ++j)
+		for (std::vector<FAE*>::iterator j = newC.begin(); j != newC.end(); ++j) {
+			(*j)->doAbstraction();
 			std::cout << **j;
+		}
 	}
 /*	
 	TA<FA::label_type> ta(backend), ta2(backend);

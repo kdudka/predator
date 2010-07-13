@@ -25,6 +25,7 @@
 #include <map>
 #include <stdexcept>
 #include <algorithm>
+//#include <sstream>
 
 #include <boost/unordered_map.hpp>
 
@@ -416,6 +417,28 @@ protected:
 		}
 	}
 
+	void abstract() {
+		for (size_t i = 0; i < this->roots.size(); ++i) {
+			TA<label_type>* ta = this->taMan->alloc();
+			this->roots[i]->minimized(*ta);
+			this->taMan->release(this->roots[i]);
+			Index<size_t> stateIndex;
+			ta->buildStateIndex(stateIndex);
+			std::vector<std::vector<bool> > rel(stateIndex.size(), std::vector<bool>(stateIndex.size(), false));
+			boost::unordered_map<size_t, vector<size_t> > o;
+			FAE::computeDownwardO(*ta, o);
+			for (Index<size_t>::iterator j = stateIndex.begin(); j != stateIndex.end(); ++j) {
+				for (Index<size_t>::iterator k = stateIndex.begin(); k != stateIndex.end(); ++k) {
+					if (o[j->first] == o[k->first])
+						rel[j->second][k->second] = true;
+				}
+			}
+			ta->heightAbstraction(rel, 1, stateIndex);
+			this->roots[i] = this->taMan->alloc();
+			ta->collapsed(*this->roots[i], rel, stateIndex);
+		}
+	}
+
 	void decomposeAtRoot(vector<FAE*>& dst, size_t root, const vector<size_t>& selectors) const {
 		throw runtime_error("FAE::decomposeAtRoot(): box decomposition not implemented! (désolé)");
 	}
@@ -538,8 +561,8 @@ public:
 	}
 
 	FAE(const FAE& x)
-	 : FA(x), boxMan(x.boxMan), labMan(x.labMan), stateOffset(x.stateOffset), rootMap(x.rootMap),
-	 selectorMap(x.selectorMap), rootReferenceIndex(x.rootReferenceIndex), invRootReferenceIndex(x.invRootReferenceIndex) {}
+		: FA(x), boxMan(x.boxMan), labMan(x.labMan), stateOffset(x.stateOffset), rootMap(x.rootMap),
+		selectorMap(x.selectorMap), rootReferenceIndex(x.rootReferenceIndex), invRootReferenceIndex(x.invRootReferenceIndex) {}
 
 	~FAE() {
 		this->clear();
@@ -555,6 +578,10 @@ public:
 		this->rootReferenceIndex = x.rootReferenceIndex;
 		this->invRootReferenceIndex = x.invRootReferenceIndex;
 		return *this;		
+	}
+
+	void doAbstraction() {
+		this->abstract();
 	}
 
 /* execution bits */
@@ -573,6 +600,11 @@ public:
 		fae->normalize();
 	}
 	
+	bool x_not_null(size_t x) const {
+		assert(x < this->variables.size());
+		return this->variables[x].index != varNull;
+	}
+
 	bool x_eq_y(size_t x, size_t y) const {
 		assert(x < this->variables.size());
 		assert(y < this->variables.size());
@@ -682,7 +714,7 @@ public:
 		}
 	}	
 
-	void x_next_ass_y(vector<FAE*>& dst, size_t x, size_t y, size_t selector) const {
+	void x_next_ass_y(std::vector<FAE*>& dst, size_t x, size_t y, size_t selector) const {
 		assert(x < this->variables.size());
 		assert(y < this->variables.size());
 		// TODO: raise some reasonable exception here (instead of runtime_error)
@@ -693,25 +725,33 @@ public:
 		size_t root = this->variables[x].index;
 		selector += this->variables[x].offset;
 		assert(root < this->roots.size());
-		this->isolateAtRoot(dst, root, {selector});
-		for (vector<FAE*>::iterator i = dst.begin(); i != dst.end(); ++i) {
-			TA<label_type>* ta = (*i)->taMan->alloc();
-			for (TA<label_type>::iterator j = (*i)->roots[root]->begin(); j != (*i)->roots[root]->end(); ++j) {
-				if (j->rhs() == (*i)->roots[root]->getFinalState()) {
-					// only one accepting rule is exppected
-					(*i)->changeSelectorDestination(*ta, *j, selector, (*i)->variables[y].index, (*i)->variables[y].offset);
-				} else {
-					ta->addTransition(*j);
-				}
-			}		
-			ta->addFinalState((*i)->roots[root]->getFinalState());
-			(*i)->taMan->release((*i)->roots[root]);
-			(*i)->roots[root] = ta;
-			boost::unordered_map<size_t, vector<size_t> > o;
-			FAE::computeDownwardO(*ta, o);
-			(*i)->rootMap[root] = o[ta->getFinalState()];
-			(*i)->normalize();
+		std::vector<FAE*> tmp;
+		this->isolateAtRoot(tmp, root, {selector});
+		try {
+			for (vector<FAE*>::iterator i = tmp.begin(); i != tmp.end(); ++i) {
+				TA<label_type>* ta = (*i)->taMan->alloc();
+				for (TA<label_type>::iterator j = (*i)->roots[root]->begin(); j != (*i)->roots[root]->end(); ++j) {
+					if (j->rhs() == (*i)->roots[root]->getFinalState()) {
+						// only one accepting rule is exppected
+						(*i)->changeSelectorDestination(*ta, *j, selector, (*i)->variables[y].index, (*i)->variables[y].offset);
+					} else {
+						ta->addTransition(*j);
+					}
+				}		
+				ta->addFinalState((*i)->roots[root]->getFinalState());
+				(*i)->taMan->release((*i)->roots[root]);
+				(*i)->roots[root] = ta;
+				boost::unordered_map<size_t, vector<size_t> > o;
+				FAE::computeDownwardO(*ta, o);
+				(*i)->rootMap[root] = o[ta->getFinalState()];
+				(*i)->normalize();
+			}
+		} catch (...) {
+			for (vector<FAE*>::iterator i = tmp.begin(); i != tmp.end(); ++i)
+				delete *i;
+			throw;
 		}
+		dst.insert(dst.end(), tmp.begin(), tmp.end());
 	}	
 
 };

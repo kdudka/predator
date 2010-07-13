@@ -95,6 +95,13 @@ struct Index {
 			dst.push_back(this->translateOTF(*i) + offset);
 	}	
 
+	friend std::ostream& operator<<(std::ostream& os, const Index<T>& x) {
+		os << '[';
+		for (typename std::map<T, size_t>::const_iterator i = x.begin(); i != x.end(); ++i)
+			os << '(' << i->first << ',' << i->second << ')';
+		return os << ']';
+	}
+
 };
 
 template <class T>

@@ -609,12 +609,10 @@ public:
 		return dst;
 	}
 	
-	void heightAbstraction(std::vector<std::vector<size_t> >& partitions, size_t height) const {
-		Index<size_t> stateIndex;
-		this->buildStateIndex(stateIndex);
+	void heightAbstraction(std::vector<std::vector<bool> >& result, size_t height, const Index<size_t>& stateIndex) const {
 		std::vector<size_t> classIndex(stateIndex.size(), 0), newClassIndex(stateIndex.size());
 		boost::unordered_map<std::pair<T, std::vector<size_t> >, size_t> classes;
-		do {
+		while (height--) {
 			classes.clear();
 			for (typename set<typename trans_cache_type::value_type*>::const_iterator i = this->transitions.begin(); i != this->transitions.end(); ++i) {
 				std::vector<size_t> tmp = { classIndex[stateIndex[(*i)->first._rhs]] };
@@ -624,24 +622,47 @@ public:
 					classes.insert(make_pair(make_pair((*i)->first._label, tmp), classes.size())).first->second;
 			}
 			std::swap(classIndex, newClassIndex);
-		} while (height--);
-		partitions.clear();
-		partitions.resize(classes.size());
-		for (Index<size_t>::iterator i = stateIndex.begin(); i != stateIndex.end(); ++i)
-			partitions[classIndex[i->second]].push_back(i->first);
+		}
+		for (size_t i = 0; i < result.size(); ++i) {
+			for (size_t j = 0; j < i; ++j) {
+				if (classIndex[i] != classIndex[j]) {
+					result[i][j] = 0;
+					result[j][i] = 0;
+				}
+			}
+		}
+	}
+
+	void predicateAbstraction(std::vector<std::vector<bool> >& result, const TA<T>& predicate, const Index<size_t>& stateIndex) const {
+		std::vector<size_t> states;
+		this->intersectingStates(states, predicate);
+		std::set<size_t> s;
+		for (std::vector<size_t>::iterator i = states.begin(); i != states.end(); ++i)
+			s.insert(stateIndex[*i]);
+		for (size_t i = 0; i < result.size(); ++i) {
+			for (size_t j = 0; j < i; ++j) {
+				if ((s.count(i) == 0) || (s.count(j) == 0)) {
+					result[i][j] = 0;
+					result[j][i] = 0;
+				}
+			}
+		}
 	}
 	
 	// collapses states according to a given relation
 	TA<T>& collapsed(TA<T>& dst, const vector<vector<bool> >& rel, const Index<size_t>& stateIndex) const {
 		vector<size_t> headIndex;
 		utils::relBuildClasses(rel, headIndex);
-//		vector<size_t> index, head;
-//		utils::relBuildClasses(rel, index, head);
+		// TODO: perhaps improve indexing
+		std::vector<size_t> invStateIndex(stateIndex.size());
+		for (Index<size_t>::iterator i = stateIndex.begin(); i != stateIndex.end(); ++i)
+			invStateIndex[i->second] = i->first;
+		for (std::vector<size_t>::iterator i = headIndex.begin(); i != headIndex.end(); ++i)
+			*i = invStateIndex[*i];
 		for (typename set<typename trans_cache_type::value_type*>::const_iterator i = this->transitions.begin(); i != this->transitions.end(); ++i) {
 			vector<size_t> lhs;
 			stateIndex.translate(lhs, (*i)->first._lhs->first);
 			for (size_t j = 0; j < lhs.size(); ++j)
-//				lhs[j] = head[index[lhs[j]]];
 				lhs[j] = headIndex[lhs[j]];
 			dst.addTransition(lhs, (*i)->first._label, headIndex[stateIndex[(*i)->first._rhs]]);
 		}

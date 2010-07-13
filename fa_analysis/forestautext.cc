@@ -33,6 +33,7 @@ std::ostream& operator<<(std::ostream& os, const FAE& fae) {
 		ta->clear();
 		fae.roots[i]->minimized(*ta);
 		TAWriter<FA::label_type>(os).writeOne(*ta, ss.str());
+//		TAWriter<FA::label_type>(os).writeOne(*fae.roots[i], ss.str());
 	}
 	fae.taMan->release(ta);
 	return os;
