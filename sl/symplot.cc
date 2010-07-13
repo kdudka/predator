@@ -307,8 +307,12 @@ void SymHeapPlotter::Private::plotNodeObj(TObjId obj, enum cl_type_e code) {
 void SymHeapPlotter::Private::plotNodeValue(TValueId val, enum cl_type_e code,
                                             const char *label)
 {
+    // visualize the count of references as pen width
+    const float pw = static_cast<float>(this->heap->usedByCount(val));
+
     this->dotStream << "\t" << SL_QUOTE(val)
         << " [shape=ellipse"
+        << ", penwidth=" << pw
         << ", color=" << colorByCode(code)
         << ", fontcolor=green"
         << ", label=\"[" << prefixByCode(code) << "] #" << val;
