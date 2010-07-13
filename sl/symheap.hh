@@ -588,7 +588,7 @@ class SymHeap: public SymHeapTyped {
 
         /**
          * set it to zero, if the object should be duplicated on call of
-         * concretizeObj().  By default, all nested abstractions are shared
+         * concretizeObj().  By default, all nested abstractions are shared.
          */
         void objSetShared(TObjId obj, bool shared);
 

@@ -166,7 +166,7 @@ void dump_obj(const SymHeap &heap, TObjId obj) {
     // TODO: check valPointsToAnon()
     const TValueId value = heap.valueOf(obj);
     if (VAL_NULL == value && clt && clt->code == CL_TYPE_PTR)
-        cout << "    value     = VAL_NULL" << value << "\n";
+        cout << "    value     = VAL_NULL\n";
     else if (0 < value) {
         cout << "    value     = /* value */ #" << value;
         const struct cl_type *cltVal = heap.valType(value);

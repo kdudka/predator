@@ -116,13 +116,9 @@ TValueId /* new addr */ considerFlatScan(SymHeap &sh, TObjId obj) {
     const TValueId addr = sh.placedAt(obj);
     const unsigned cnt = sh.usedByCount(addr);
 
-    TObjId refObj = OBJ_INVALID;
-    if (0 < cnt) {
-        // keep track of at least one pointing object
-        SymHeapCore::TContObj refs;
-        sh.usedBy(refs, addr);
-        refObj = refs.at(0);
-    }
+    // keep track of at least one pointing object
+    SymHeapCore::TContObj refObjs;
+    sh.usedBy(refObjs, addr);
 
     switch (cnt) {
         case 0:
@@ -142,7 +138,13 @@ TValueId /* new addr */ considerFlatScan(SymHeap &sh, TObjId obj) {
     }
 
     // attempt to search the new address
-    const TValueId newAddr = sh.valueOf(refObj);
+    TValueId newAddr = VAL_INVALID;
+    BOOST_FOREACH(const TObjId ref, refObjs) {
+        newAddr = sh.valueOf(ref);
+        if (0 < newAddr)
+            // FIXME: does it cover all cases?
+            break;
+    }
     if (newAddr <= 0)
         TRAP;
 
