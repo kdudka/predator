@@ -226,7 +226,7 @@ namespace {
             case CL_TYPE_ARRAY:     return "gray";
             case CL_TYPE_STRING:    return "gray";
             case CL_TYPE_CHAR:      return "gray";
-            case CL_TYPE_BOOL:      return "yellow";
+            case CL_TYPE_BOOL:      return "gold";
             case CL_TYPE_INT:       return "gray";
             case CL_TYPE_ENUM:      return "gray";
             default:                return "black";
@@ -264,7 +264,7 @@ void SymHeapPlotter::Private::plotNodeObj(TObjId obj, enum cl_type_e code) {
     this->dotStream << " [shape=box";
 
     if (hasKey(this->peers, obj))
-        this->dotStream << ", color=yellow, penwidth=3.0, style=dashed";
+        this->dotStream << ", color=gold, penwidth=3.0, style=dashed";
     else if (hasKey(this->nexts, obj))
         this->dotStream << ", color=red, penwidth=3.0, style=dashed";
     else
@@ -371,7 +371,7 @@ void SymHeapPlotter::Private::plotEdgeValueOf(TObjId obj, TValueId value) {
 
 void SymHeapPlotter::Private::plotEdgeNeq(TValueId val1, TValueId val2) {
     this->dotStream << "\t" << SL_QUOTE(val1) << " -> " << SL_QUOTE(val2)
-        << " [color=yellow, fontcolor=red, label=\"Neq\", arrowhead=none];"
+        << " [color=gold, fontcolor=red, label=\"Neq\", arrowhead=none];"
         << std::endl;
 }
 
@@ -538,7 +538,7 @@ void SymHeapPlotter::Private::openCluster(TObjId obj) {
 
         case OK_DLS:
             label = "DLS/2";
-            color = "yellow";
+            color = "gold";
             pw = "3.0";
             break;
     }
@@ -742,8 +742,8 @@ void SymHeapPlotter::Private::digObj(TObjId obj) {
     this->dotStream
         << "subgraph \"clusterDLS" << obj << "\" {" << std::endl
         << "\tlabel=DLS;"                           << std::endl
-        << "\tcolor=yellow;"                        << std::endl
-        << "\tfontcolor=yellow;"                    << std::endl
+        << "\tcolor=gold;"                          << std::endl
+        << "\tfontcolor=gold;"                      << std::endl
         << "\tstyle=dashed;"                        << std::endl;
 
     // plot the two parts of a DLS into the cluster
