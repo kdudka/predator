@@ -47,16 +47,6 @@ void objReplace(SymHeap &sh, TObjId oldObj, TObjId newObj);
 
 void skipObj(const SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext);
 
-TObjId nextPtrFromSeg(const SymHeap &sh, TObjId seg);
-
-TObjId dlSegPeer(const SymHeap &sh, TObjId dls);
-
-bool dlSegNotEmpty(const SymHeap &sh, TObjId dls);
-
-bool segNotEmpty(const SymHeap &sh, TObjId seg);
-
-void segDestroy(SymHeap &sh, TObjId seg);
-
 typedef std::pair<TObjId, TObjId> TObjPair;
 
 // helper template for traverseSubObjs()

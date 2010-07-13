@@ -36,6 +36,7 @@ add_library(sl SHARED
     symheap.cc
     symplot.cc
     symproc.cc
+    symseg.cc
     symstate.cc
     symutil.cc
     version.c)

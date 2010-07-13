@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2009-2010 Kamil Dudka <kdudka@redhat.com>
- * Copyright (C) 2010 Petr Peringer, FIT
+ * Copyright (C) 2010 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -18,25 +17,31 @@
  * along with predator.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef H_GUARD_SYMABSTRACT_H
-#define H_GUARD_SYMABSTRACT_H
+#ifndef H_GUARD_SYMSEG_H
+#define H_GUARD_SYMSEG_H
 
 /**
- * @file symabstract.hh
+ * @file symseg.hh
  * @todo some dox
  */
 
 #include "config.h"
-#include "symheap.hh"
+#include "symid.hh"
 
-#include <list>
+class SymHeap;
 
-typedef std::list<SymHeap> TSymHeapList;
+bool haveDlSeg(SymHeap &sh, TValueId atAddr, TValueId pointingTo);
 
-void concretizeObj(SymHeap &srcDst, TValueId atAddr, TSymHeapList &dst);
+bool haveDlSegAt(SymHeap &sh, TValueId atAddr, TValueId peerAddr);
 
-void abstractIfNeeded(SymHeap &sh);
+TObjId nextPtrFromSeg(const SymHeap &sh, TObjId seg);
 
-bool spliceOutListSegment(SymHeap &sh, TValueId atAddr, TValueId pointingTo);
+TObjId dlSegPeer(const SymHeap &sh, TObjId dls);
 
-#endif /* H_GUARD_SYMABSTRACT_H */
+bool dlSegNotEmpty(const SymHeap &sh, TObjId dls);
+
+bool segNotEmpty(const SymHeap &sh, TObjId seg);
+
+void segDestroy(SymHeap &sh, TObjId seg);
+
+#endif /* H_GUARD_SYMSEG_H */

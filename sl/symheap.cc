@@ -25,6 +25,7 @@
 #include <cl/code_listener.h>
 
 #include "symabstract.hh"
+#include "symseg.hh"
 #include "symutil.hh"
 #include "util.hh"
 #include "worklist.hh"

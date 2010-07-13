@@ -26,6 +26,7 @@
 
 #include "symbt.hh"
 #include "symheap.hh"
+#include "symseg.hh"
 #include "symutil.hh"
 #include "util.hh"
 #include "worklist.hh"

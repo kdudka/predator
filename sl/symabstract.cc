@@ -25,6 +25,7 @@
 #include <cl/storage.hh>
 
 #include "symgc.hh"
+#include "symseg.hh"
 #include "symutil.hh"
 #include "util.hh"
 
@@ -1274,45 +1275,4 @@ bool spliceOutListSegment(SymHeap &sh, TValueId atAddr, TValueId pointingTo)
 
     spliceOutListSegmentCore(sh, obj, peer);
     return true;
-}
-
-bool haveDlSeg(SymHeap &sh, TValueId atAddr, TValueId pointingTo) {
-    if (UV_ABSTRACT != sh.valGetUnknown(atAddr))
-        // not an abstract object
-        return false;
-
-    const TObjId seg = sh.pointsTo(atAddr);
-    if (OK_DLS != sh.objKind(seg))
-        // not a DLS
-        return false;
-
-    const TObjId peer = dlSegPeer(sh, seg);
-    if (OK_DLS != sh.objKind(peer))
-        // invalid peer
-        return false;
-
-    // compare the end-points
-    const TObjId nextPtr = nextPtrFromSeg(sh, peer);
-    const TValueId valNext = sh.valueOf(nextPtr);
-    return (valNext == pointingTo);
-}
-
-bool haveDlSegAt(SymHeap &sh, TValueId atAddr, TValueId peerAddr) {
-    if (UV_ABSTRACT != sh.valGetUnknown(atAddr)
-            || UV_ABSTRACT != sh.valGetUnknown(peerAddr))
-        // not abstract objects
-        return false;
-
-    const TObjId seg = sh.pointsTo(atAddr);
-    if (OK_DLS != sh.objKind(seg))
-        // not a DLS
-        return false;
-
-    const TObjId peer = dlSegPeer(sh, seg);
-    if (OK_DLS != sh.objKind(peer))
-        // invalid peer
-        return false;
-
-    // compare the end-points
-    return (sh.placedAt(peer) == peerAddr);
 }
