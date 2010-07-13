@@ -563,6 +563,21 @@ void SymHeapCore::neqOp(ENeqOp op, TValueId valA, TValueId valB) {
     }
 }
 
+namespace {
+    void moveKnownValueToLeft(const SymHeapCore &sh,
+                              TValueId &valA, TValueId &valB)
+    {
+        sortValues(valA, valB);
+
+        if (UV_ABSTRACT == sh.valGetUnknown(valA)) {
+            // UV_ABSTRACT is treated as _unkown_ value here, it has to be valB
+            const TValueId tmp = valA;
+            valA = valB;
+            valB = tmp;
+        }
+    }
+}
+
 void SymHeapCore::addEqIf(TValueId valCond, TValueId valA, TValueId valB,
                           bool neg)
 {
@@ -580,7 +595,7 @@ void SymHeapCore::addEqIf(TValueId valCond, TValueId valA, TValueId valB,
         TRAP;
 
     // having the values always in the same order leads to simpler code
-    sortValues(valA, valB);
+    moveKnownValueToLeft(*this, valA, valB);
     if (this->lastValueId() < valB || valB <= 0)
         // valB can't be an unknown value
         TRAP;
@@ -626,20 +641,13 @@ bool SymHeapCore::proveEq(bool *result, TValueId valA, TValueId valB) const {
     }
 
     // having the values always in the same order leads to simpler code
-    sortValues(valA, valB);
+    moveKnownValueToLeft(*this, valA, valB);
 
     // non-heap comparison of bool values
     if (proveEqBool(result, valA, valB)) {
         // FIXME: not tested, worth to check with a debugger first
         TRAP;
         return true;
-    }
-
-    if (UV_ABSTRACT == this->valGetUnknown(valA)) {
-        // UV_ABSTRACT is treated as _unkown_ value here, it has to be valB
-        const TValueId tmp = valA;
-        valA = valB;
-        valB = tmp;
     }
 
     // we presume (0 <= valA) and (0 < valB) at this point
@@ -1465,15 +1473,31 @@ void SymHeap::dlSegCrossNeqOp(ENeqOp op, TValueId dlsAddr) {
     // add/del Neq predicates
     SymHeapCore::neqOp(op, val1, peerAddr);
     SymHeapCore::neqOp(op, val2, dlsAddr);
+
+    if (NEQ_DEL == op)
+        // removing the 1+ flag implies removal of the 2+ flag
+        SymHeapCore::neqOp(NEQ_DEL, peerAddr, dlsAddr);
 }
 
 void SymHeap::neqOp(ENeqOp op, TValueId valA, TValueId valB) {
-    if (haveDlSeg(*this, valA, valB))
+    if (NEQ_ADD == op && haveDlSegAt(*this, valA, valB)) {
+        // adding the 2+ flag implies adding of the 1+ flag
         this->dlSegCrossNeqOp(op, valA);
-    else if (haveDlSeg(*this, valB, valA))
+        goto fallback;
+    }
+
+    if (haveDlSeg(*this, valA, valB)) {
+        this->dlSegCrossNeqOp(op, valA);
+        return;
+    }
+
+    if (haveDlSeg(*this, valB, valA)) {
         this->dlSegCrossNeqOp(op, valB);
-    else
-        SymHeapTyped::neqOp(op, valA, valB);
+        return;
+    }
+
+fallback:
+    SymHeapTyped::neqOp(op, valA, valB);
 }
 
 bool SymHeap::proveEq(bool *result, TValueId valA, TValueId valB) const {

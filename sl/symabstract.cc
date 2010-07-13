@@ -765,8 +765,10 @@ void dlSegCreate(SymHeap &sh, TObjId o1, TObjId o2,
     // introduce some UV_UNKNOWN values if necessary
     abstractNonMatchingValuesBidir(sh, o1, o2, flatScan);
 
-    // a just created DLS is said to be non-empty
-    dlSegHandleCrossNeq(sh, o1, SymHeap::NEQ_ADD);
+    // a just created DLS is said to be 2+
+    const TValueId a1 = sh.placedAt(o1);
+    const TValueId a2 = sh.placedAt(o2);
+    sh.neqOp(SymHeap::NEQ_ADD, a1, a2);
 }
 
 void dlSegGobble(SymHeap &sh, TObjId dls, TObjId var, bool backward,
@@ -777,6 +779,7 @@ void dlSegGobble(SymHeap &sh, TObjId dls, TObjId var, bool backward,
         TRAP;
 
     // kill Neq if any
+    // TODO: we may distinguish among 1+/2+ at this point
     dlSegHandleCrossNeq(sh, dls, SymHeap::NEQ_DEL);
 
     if (!backward)
@@ -804,6 +807,7 @@ void dlSegMerge(SymHeap &sh, TObjId seg1, TObjId seg2, bool flatScan) {
     // DLS is non-empty
     const bool ne = dlSegNotEmpty(sh, seg1) || dlSegNotEmpty(sh, seg2);
     if (ne) {
+        // TODO: we may distinguish among 1+/2+ at this point
         dlSegHandleCrossNeq(sh, seg1, SymHeap::NEQ_DEL);
         dlSegHandleCrossNeq(sh, seg2, SymHeap::NEQ_DEL);
     }
@@ -1237,4 +1241,24 @@ bool haveDlSeg(SymHeap &sh, TValueId atAddr, TValueId pointingTo) {
     const TObjId nextPtr = nextPtrFromSeg(sh, peer);
     const TValueId valNext = sh.valueOf(nextPtr);
     return (valNext == pointingTo);
+}
+
+bool haveDlSegAt(SymHeap &sh, TValueId atAddr, TValueId peerAddr) {
+    if (UV_ABSTRACT != sh.valGetUnknown(atAddr)
+            || UV_ABSTRACT != sh.valGetUnknown(peerAddr))
+        // not abstract objects
+        return false;
+
+    const TObjId seg = sh.pointsTo(atAddr);
+    if (OK_DLS != sh.objKind(seg))
+        // not a DLS
+        return false;
+
+    const TObjId peer = dlSegPeer(sh, seg);
+    if (OK_DLS != sh.objKind(peer))
+        // invalid peer
+        return false;
+
+    // compare the end-points
+    return (sh.placedAt(peer) == peerAddr);
 }

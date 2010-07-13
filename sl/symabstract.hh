@@ -41,6 +41,8 @@ bool spliceOutListSegment(SymHeap &sh, TValueId atAddr, TValueId pointingTo);
 
 bool haveDlSeg(SymHeap &sh, TValueId atAddr, TValueId pointingTo);
 
+bool haveDlSegAt(SymHeap &sh, TValueId atAddr, TValueId peerAddr);
+
 typedef void (SymHeap::*TNeqOp)(TValueId, TValueId);
 
 #endif /* H_GUARD_SYMABSTRACT_H */
