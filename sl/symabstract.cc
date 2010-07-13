@@ -281,6 +281,54 @@ bool segEqual(const SymHeap &sh, TValueId v1, TValueId v2) {
     return traverseSubObjs(sh, item, visitor);
 }
 
+bool segMayBePrototype(const SymHeap &sh, const TValueId segAt) {
+    const TObjId seg = sh.pointsTo(segAt);
+    TObjId peer = seg;
+    TObjId nextPtr;
+    TValueId addr;
+
+    const EObjKind kind = sh.objKind(seg);
+    switch (kind) {
+        case OK_CONCRETE:
+            // concrete objects are not supported as prototypes now
+            TRAP;
+            return false;
+
+        case OK_SLS:
+            if (1 != sh.usedByCount(segAt)) {
+                CL_WARN("head is referenced, refusing SLS as prototype");
+                return false;
+            }
+            break;
+
+        case OK_DLS:
+            if (2 != sh.usedByCount(segAt)) {
+                CL_WARN("head is referenced, refusing DLS as prototype");
+                return false;
+            }
+            peer = dlSegPeer(sh, seg);
+            addr = sh.placedAt(peer);
+            if (1 != sh.usedByCount(addr)) {
+                CL_WARN("tail is referenced, refusing DLS as prototype");
+                return false;
+            }
+            nextPtr = nextPtrFromSeg(sh, peer);
+            if (VAL_NULL != sh.valueOf(nextPtr)) {
+                CL_WARN("next-link is not NULL, refusing DLS as prototype");
+                return false;
+            }
+            break;
+    }
+
+    nextPtr = nextPtrFromSeg(sh, seg);
+    if (VAL_NULL != sh.valueOf(nextPtr)) {
+        CL_WARN("out-link is not NULL, refusing segment as prototype");
+        return false;
+    }
+
+    return true;
+}
+
 TValueId mergeValues(SymHeap &sh, TValueId v1, TValueId v2) {
     if (v1 == v2)
         return v1;
@@ -307,10 +355,10 @@ TValueId mergeValues(SymHeap &sh, TValueId v1, TValueId v2) {
 
     if (UV_ABSTRACT == code) {
         CL_WARN("support for nested segments is not well tested yet");
-        if (1 != sh.usedByCount(v1))
-            CL_NOTE("even worse with DLS abstraction nesting");
-
-        if (segEqual(sh, v1, v2)) {
+        if (segEqual(sh, v1, v2)
+                && segMayBePrototype(sh, v1)
+                && segMayBePrototype(sh, v2))
+        {
             // by merging the values, we drop the last reference;  destroy the seg
             const TObjId seg1 = sh.pointsTo(v1);
             segDestroy(sh, seg1);
