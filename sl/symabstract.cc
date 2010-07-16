@@ -112,19 +112,14 @@ TValueId /* addr */ segClone(SymHeap &sh, TValueId atAddr) {
     return sh.placedAt(dupSeg);
 }
 
-TValueId /* new addr */ considerFlatScan(SymHeap &sh, TObjId obj) {
+void considerFlatScan(SymHeap &sh, TObjId obj) {
     const TValueId addr = sh.placedAt(obj);
     const unsigned cnt = sh.usedByCount(addr);
-
-    // keep track of at least one pointing object
-    SymHeapCore::TContObj refObjs;
-    sh.usedBy(refObjs, addr);
-
     switch (cnt) {
         case 0:
             CL_WARN("considerFlatScan() encountered an unused root "
                     "object #" << obj);
-            return addr;
+            break;
 
         case 1:
             // we use a controlled recursion of depth 1
@@ -136,43 +131,27 @@ TValueId /* new addr */ considerFlatScan(SymHeap &sh, TObjId obj) {
             flatScan(sh, OK_DLS, obj);
             break;
     }
-
-    // attempt to search the new address
-    TValueId newAddr = VAL_INVALID;
-    BOOST_FOREACH(const TObjId ref, refObjs) {
-        newAddr = sh.valueOf(ref);
-        if (0 < newAddr)
-            // FIXME: does it cover all cases?
-            break;
-    }
-    if (newAddr <= 0)
-        TRAP;
-
-    if (newAddr != addr)
-        CL_DEBUG("flatScan(): address of the scanned object has been changed");
-
-    return newAddr;
 }
 
-void considerFlatScan(SymHeap &sh, TValueId *val1, TValueId *val2) {
-    const EUnknownValue code1 = sh.valGetUnknown(*val1);
+void considerFlatScan(SymHeap &sh, TValueId val1, TValueId val2) {
+    const EUnknownValue code1 = sh.valGetUnknown(val1);
     if (UV_KNOWN != code1 && UV_ABSTRACT != code1)
         // too fuzzy for us
         return;
 
-    const EUnknownValue code2 = sh.valGetUnknown(*val2);
+    const EUnknownValue code2 = sh.valGetUnknown(val2);
     if (UV_KNOWN != code2 && UV_ABSTRACT != code2)
         // too fuzzy for us
         return;
 
-    const TObjId o1 = sh.pointsTo(*val1);
-    const TObjId o2 = sh.pointsTo(*val2);
+    const TObjId o1 = sh.pointsTo(val1);
+    const TObjId o2 = sh.pointsTo(val2);
     if (o1 <= 0 || o2 <= 0)
         // there is no valid target --> nothing to abstract actually
         return;
 
-    *val1 = considerFlatScan(sh, o1);
-    *val2 = considerFlatScan(sh, o2);
+    considerFlatScan(sh, o1);
+    considerFlatScan(sh, o2);
 }
 
 template <class TIgnoreList>
@@ -284,7 +263,7 @@ bool segEqual(const SymHeap &sh, TValueId v1, TValueId v2) {
     return traverseSubObjs(sh, item, visitor);
 }
 
-bool segMayBePrototype(const SymHeap &sh, const TValueId segAt) {
+bool segMayBePrototype(const SymHeap &sh, const TValueId segAt, bool refByDls) {
     const TObjId seg = sh.pointsTo(segAt);
     TObjId peer = seg;
     TObjId nextPtr;
@@ -298,14 +277,14 @@ bool segMayBePrototype(const SymHeap &sh, const TValueId segAt) {
             return false;
 
         case OK_SLS:
-            if (1 != sh.usedByCount(segAt)) {
+            if ((1U + refByDls) != sh.usedByCount(segAt)) {
                 CL_WARN("head is referenced, refusing SLS as prototype");
                 return false;
             }
             break;
 
         case OK_DLS:
-            if (2 != sh.usedByCount(segAt)) {
+            if ((2U + refByDls) != sh.usedByCount(segAt)) {
                 CL_WARN("head is referenced, refusing DLS as prototype");
                 return false;
             }
@@ -332,7 +311,9 @@ bool segMayBePrototype(const SymHeap &sh, const TValueId segAt) {
     return true;
 }
 
-TValueId mergeValues(SymHeap &sh, TValueId v1, TValueId v2) {
+TValueId mergeValues(SymHeap &sh, TValueId v1, TValueId v2,
+                     bool srcRefByDls, bool dstRefByDls)
+{
     if (v1 == v2)
         return v1;
 
@@ -359,8 +340,8 @@ TValueId mergeValues(SymHeap &sh, TValueId v1, TValueId v2) {
     if (UV_ABSTRACT == code) {
         CL_WARN("support for nested segments is not well tested yet");
         if (segEqual(sh, v1, v2)
-                && segMayBePrototype(sh, v1)
-                && segMayBePrototype(sh, v2))
+                && segMayBePrototype(sh, v1, srcRefByDls)
+                && segMayBePrototype(sh, v2, dstRefByDls))
         {
             // by merging the values, we drop the last reference;  destroy the seg
             const TObjId seg1 = sh.pointsTo(v1);
@@ -370,7 +351,7 @@ TValueId mergeValues(SymHeap &sh, TValueId v1, TValueId v2) {
             const TObjId seg2 = sh.pointsTo(v2);
             sh.objSetShared(seg2, false);
 
-            return VAL_INVALID;
+            return v2;
         }
         else
             // segments are not equal, no chance to merge them
@@ -383,9 +364,13 @@ TValueId mergeValues(SymHeap &sh, TValueId v1, TValueId v2) {
 // visitor
 struct ValueAbstractor {
     std::set<TObjId>    ignoreList;
+    bool                srcIsDlSeg;
+    bool                dstIsDlSeg;
     bool                flatScan;
+    bool                bidir;
 
     bool operator()(SymHeap &sh, TObjPair item) const {
+        const TObjId src = item.first;
         const TObjId dst = item.second;
         if (hasKey(ignoreList, dst))
             return /* continue */ true;
@@ -397,16 +382,19 @@ struct ValueAbstractor {
             // values are equal
             return /* continue */ true;
 
-        if (!flatScan)
+        if (!this->flatScan) {
             // prepare any nested abstractions for collapsing eventually
-            considerFlatScan(sh, &valSrc, &valDst);
+            considerFlatScan(sh, valSrc, valDst);
+            valSrc = sh.valueOf(src);
+            valDst = sh.valueOf(dst);
+        }
 
         // create a new unknown value as a placeholder
-        const TValueId valNew = mergeValues(sh, valSrc, valDst);
-        if (VAL_INVALID == valNew)
-            return /* continue */ true;
-
+        const TValueId valNew = mergeValues(sh, valSrc, valDst,
+                                            this->srcIsDlSeg, this->dstIsDlSeg);
         sh.objSetValue(dst, valNew);
+        if (this->bidir)
+            sh.objSetValue(src, valNew);
 
         // if the last reference is gone, we have a problem
         if (collectJunk(sh, valDst))
@@ -457,22 +445,19 @@ struct UnknownValuesDuplicator {
 
 // when abstracting an object, we need to abstract all non-matching values in
 void abstractNonMatchingValues(SymHeap &sh, TObjId src, TObjId dst,
-                               bool flatScan)
+                               bool flatScan, bool bidir = false,
+                               bool fresh = false)
 {
     ValueAbstractor visitor;
-    visitor.flatScan = flatScan;
+    visitor.srcIsDlSeg  = (!fresh && OK_DLS == sh.objKind(src));
+    visitor.dstIsDlSeg  = (!fresh && OK_DLS == sh.objKind(dst));
+    visitor.flatScan    = flatScan;
+    visitor.bidir       = bidir;
     buildIgnoreList(sh, dst, visitor.ignoreList);
 
     // traverse all sub-objects
     const TObjPair item(src, dst);
     traverseSubObjs(sh, item, visitor);
-}
-
-void abstractNonMatchingValuesBidir(SymHeap &sh, TObjId o1, TObjId o2,
-                                    bool flatScan)
-{
-    abstractNonMatchingValues(sh, o1, o2, flatScan);
-    abstractNonMatchingValues(sh, o2, o1, flatScan);
 }
 
 // when concretizing an object, we need to duplicate all _unknown_ values
@@ -820,7 +805,8 @@ void dlSegCreate(SymHeap &sh, TObjId o1, TObjId o2,
     sh.objSetAbstract(o2, OK_DLS, icNext, icPrev);
 
     // introduce some UV_UNKNOWN values if necessary
-    abstractNonMatchingValuesBidir(sh, o1, o2, flatScan);
+    abstractNonMatchingValues(sh, o1, o2, flatScan, /* bidir */ true,
+                              /* fresh */ true);
 
     // a just created DLS is said to be 2+
     const TValueId a1 = sh.placedAt(o1);
@@ -883,8 +869,8 @@ void dlSegMerge(SymHeap &sh, TObjId seg1, TObjId seg2, bool flatScan) {
     const TObjId peer2 = dlSegPeer(sh, seg2);
 
     // introduce some UV_UNKNOWN values if necessary
-    abstractNonMatchingValuesBidir(sh,  seg1,  seg2, flatScan);
-    abstractNonMatchingValuesBidir(sh, peer1, peer2, flatScan);
+    abstractNonMatchingValues(sh,  seg1,  seg2, flatScan, /* bidir */ true);
+    abstractNonMatchingValues(sh, peer1, peer2, flatScan, /* bidir */ true);
 
     // preserve backLink
     const TValueId valNext2 = sh.valueOf(nextPtrFromSeg(sh, seg1));
