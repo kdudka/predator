@@ -7,6 +7,7 @@ for i in test-0???.c; do
     cd $test        || exit 1
     cp -v ../$i .   || exit 1
     timeout 8 ../../slgcc $i
-    make -C ..
+    ls *.dot >/dev/null 2>&1 \
+        && make -f ../Makefile
     cd ..           || exit 1
 done

@@ -4,7 +4,7 @@ BASENAME ?= basename
 DOT      ?= dot
 FORMAT   ?= svg
 SED      ?= sed
-TIMEOUT  ?= timeout 300
+TIMEOUT  ?= timeout 30
 CILLY    ?= ../../invader-1_1/sources/cil/bin/cilly
 
 all: *.dot
