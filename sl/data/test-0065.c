@@ -67,6 +67,15 @@ struct item* reverse_sll(struct item *list)
     return list;
 }
 
+void destroy_sll(struct item *list)
+{
+    while (list) {
+        struct item *next = list->next;
+        // free(list);
+        list = next;
+    }
+}
+
 int main()
 {
     struct item *sll = create_slseg(NULL);
@@ -81,6 +90,8 @@ int main()
     sll = reverse_sll(sll);
 
     ___SL_PLOT_FNC(main);
+
+    destroy_sll(sll);
 
     return 0;
 }
