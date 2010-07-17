@@ -53,16 +53,17 @@ struct item* reverse_sll(struct item *list)
     struct item *prev, *next;
 
     if (list) 
-        next = list->next;
-    else
-        return list;
+      prev = NULL;
+    else 
+      return list;
 
-    while (next) {
-        prev = list;
-        list = next;
+    while (list->next) {
         next = list->next;
         list->next = prev;
+        prev = list;
+        list = next;
     }
+    list->next = prev;
 
     return list;
 }
@@ -71,7 +72,7 @@ void destroy_sll(struct item *list)
 {
     while (list) {
         struct item *next = list->next;
-        // free(list);
+        free(list);
         list = next;
     }
 }
@@ -85,11 +86,11 @@ int main()
     sll->data1 = sll; // mark the first selected node
     sll = create_slseg(sll);
 
-    ___SL_PLOT_FNC(main);
+    ___sl_plot("main1");
 
     sll = reverse_sll(sll);
 
-    ___SL_PLOT_FNC(main);
+    ___sl_plot("main2");
 
     destroy_sll(sll);
 
