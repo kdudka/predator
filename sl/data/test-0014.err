@@ -1,11 +1,6 @@
 test-0014.c:235:12: warning: CL_TYPE_STRING not supported by heapValFromCst()
 test-0014.c:240:12: warning: CL_TYPE_STRING not supported by heapValFromCst()
 test-0014.c:51:9: warning: CL_ACCESSOR_DEREF_ARRAY not implemented yet
-test-0014.c:37:6: warning: end of function dll_die() has not been reached
-test-0014.c:51:9: note: from call of dll_die()
-test-0014.c:111:17: note: from call of create_item()
-test-0014.c:241:18: note: from call of dll_push_back()
-test-0014.c:233:5: note: from call of main()
 test-0014.c:116:16: warning: binary operator not implemented yet
 test-0014.c:244:12: warning: CL_TYPE_STRING not supported by heapValFromCst()
 test-0014.c:127:16: warning: binary operator not implemented yet

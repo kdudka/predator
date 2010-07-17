@@ -110,6 +110,4 @@ int main()
 
     append_one(&my_list);
     ___sl_plot("01");
-
-    abort();
 }

@@ -322,6 +322,7 @@ void SymExecEngine::execTermInsn() {
 
         case CL_INSN_ABORT:
             CL_DEBUG_MSG(lw_, "CL_INSN_ABORT reached");
+            retReached_ = true;
             break;
 
         case CL_INSN_JMP:
