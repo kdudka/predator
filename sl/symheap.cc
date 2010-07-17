@@ -645,11 +645,8 @@ bool SymHeapCore::proveEq(bool *result, TValueId valA, TValueId valB) const {
     moveKnownValueToLeft(*this, valA, valB);
 
     // non-heap comparison of bool values
-    if (proveEqBool(result, valA, valB)) {
-        // FIXME: not tested, worth to check with a debugger first
-        TRAP;
+    if (proveEqBool(result, valA, valB))
         return true;
-    }
 
     // we presume (0 <= valA) and (0 < valB) at this point
     if (this->lastValueId() < valB || valB < 0)

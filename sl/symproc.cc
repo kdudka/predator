@@ -905,7 +905,7 @@ template <class THeap>
 TValueId handleOpCmpInt(THeap &heap, enum cl_binop_e code,
                         const struct cl_type *dstClt, TValueId v1, TValueId v2)
 {
-    if (v1 < 0 || v2 < 0)
+    if (VAL_INVALID == v1 || VAL_INVALID == v2)
         TRAP;
 
     // check if the values are equal
