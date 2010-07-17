@@ -11,7 +11,6 @@ topdir="`dirname "$self"`/.."
 SL_BUILD="$topdir/sl_build"
 SL_PLUG="$SL_BUILD/libsl.so"
 GCC="$topdir/gcc-install/bin/gcc"
-SVG_VIEWER=chromium
 
 # initial checks
 test -x "$GCC"                              || exit 1
@@ -25,6 +24,9 @@ test -z "$SL_VERBOSE" && SL_VERBOSE=0
 
 # use pp code listener by default
 test -z "$SL_OPTS" && SL_OPTS="-fplugin-arg-libsl-dump-pp"
+
+# use chromium as default SVG_VIEWER
+test -z "$SVG_VIEWER" && SVG_VIEWER=chromium
 
 if test x1 = "x$SL_PLOT"; then
     # wipe all .dot and .svg
