@@ -22,10 +22,61 @@
 #include <cl/storage.hh>
 #include <cl/cl_msg.hh>
 
+#include "util.hh"
+
 #include <map>
 #include <stack>
 
 #include <boost/filesystem/path.hpp>
+#include <boost/tuple/tuple.hpp>
+
+bool operator==(const struct cl_type &a, const struct cl_type &b) {
+    // go through the given types recursively and match UIDs etc.
+    typedef std::pair<const struct cl_type *, const struct cl_type *> TItem;
+    std::stack<TItem> todo;
+    push(todo, &a, &b);
+    while (!todo.empty()) {
+        const struct cl_type *cltA, *cltB;
+        boost::tie(cltA, cltB) = todo.top();
+        todo.pop();
+
+        if (cltA->uid == cltB->uid)
+            // UID matched, go next
+            continue;
+
+        const enum cl_type_e code = cltA->code;
+        if (cltB->code != code)
+            // code mismatch
+            return false;
+
+        const int cnt = cltA->item_cnt;
+        if (cltB->item_cnt != cnt)
+            // mismatch in the count of sub-types
+            return false;
+
+        switch (code) {
+            default:
+                // TODO
+                TRAP;
+                return false;
+
+            case CL_TYPE_PTR:
+            case CL_TYPE_STRUCT:
+                // nest into types
+                for (int i = 0; i < cnt; ++i) {
+                    const struct cl_type_item *ciA = cltA->items + i;
+                    const struct cl_type_item *ciB = cltB->items + i;
+                    if (ciA->name && ciB->name && !STREQ(ciA->name, ciB->name))
+                        return false;
+
+                    push(todo, ciA->type, ciB->type);
+                }
+        }
+    }
+
+    // all OK
+    return true;
+}
 
 namespace CodeStorage {
 

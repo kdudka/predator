@@ -1054,39 +1054,6 @@ struct OpHandler</* unary */ 1, TProc> {
     }
 };
 
-namespace {
-    bool operator==(const struct cl_type &cltA, const struct cl_type &cltB) {
-        if (cltA.uid == cltB.uid)
-            return true;
-
-        const enum cl_type_e code = cltA.code;
-        if (cltB.code != code)
-            return false;
-
-        switch (code) {
-            case CL_TYPE_PTR: {
-                const struct cl_type *nextA = cltA.items[0].type;
-                const struct cl_type *nextB = cltB.items[0].type;
-
-                // FIXME: use an explicit stack instead of recursion
-                return operator==(*nextA, *nextB);
-            }
-
-            case CL_TYPE_STRUCT:
-                // TODO: dive into fields
-
-            default:
-                // TODO
-                TRAP;
-                return false;
-        }
-    }
-
-    bool operator!=(const struct cl_type &cltA, const struct cl_type &cltB) {
-        return !(cltA == cltB);
-    }
-}
-
 // binary operator handler
 template <class TProc>
 struct OpHandler</* binary */ 2, TProc> {

@@ -28,6 +28,7 @@
 #include "symcall.hh"
 #include "symproc.hh"
 #include "symstate.hh"
+#include "symutil.hh"
 #include "util.hh"
 
 #include <set>
@@ -40,32 +41,45 @@
 // utilities
 namespace {
 
-void createGlVar(SymHeap &heap, const CodeStorage::Var &var) {
-    // create the corresponding heap object
-    const struct cl_type *clt = var.clt;
-    const CVar cVar(var.uid, /* gl variable */ 0);
-    const TObjId obj = heap.objCreate(clt, cVar);
+// attempt to initialize a global/static variable
+bool initSingleGlVar(SymHeap &sh, TObjId obj) {
+    const struct cl_type *clt = sh.objType(obj);
+    if (!clt)
+        TRAP;
 
-    // now attempt to initialize the variable since it is a global/static var
     const enum cl_type_e code = clt->code;
     switch (code) {
         case CL_TYPE_INT:
         case CL_TYPE_PTR:
-            heap.objSetValue(obj, VAL_NULL);
+            sh.objSetValue(obj, VAL_NULL);
             break;
 
         case CL_TYPE_BOOL:
-            heap.objSetValue(obj, VAL_FALSE);
+            sh.objSetValue(obj, VAL_FALSE);
             break;
 
         case CL_TYPE_STRUCT:
-            // TODO: go through the struct recursively and initialize
             // fall through!
 
         default:
             // only a few types are supported in case of gl variables for now
             TRAP;
     }
+
+    return /* continue */ true;
+}
+
+void createGlVar(SymHeap &sh, const CodeStorage::Var &var) {
+    // create the corresponding heap object
+    const struct cl_type *clt = var.clt;
+    const CVar cVar(var.uid, /* gl variable */ 0);
+    const TObjId obj = sh.objCreate(clt, cVar);
+
+    // now attempt to initialize the variable since it is a global/static var
+    if (CL_TYPE_STRUCT == clt->code)
+        traverseSubObjs(sh, obj, initSingleGlVar);
+    else
+        initSingleGlVar(sh, obj);
 }
 
 void createGlVars(SymHeap &heap, const CodeStorage::Storage &stor) {

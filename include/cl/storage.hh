@@ -38,6 +38,14 @@
  * an easy to use model of @b storage for serialised code_listener objects
  */
 
+/// compare given two pieces of static type-info semantically
+bool operator==(const struct cl_type &cltA, const struct cl_type &cltB);
+
+/// compare given two pieces of static type-info semantically
+inline bool operator!=(const struct cl_type &cltA, const struct cl_type &cltB) {
+    return !(cltA == cltB);
+}
+
 /**
  * an easy to use model of storage for serialised code_listener objects
  */

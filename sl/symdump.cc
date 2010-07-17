@@ -26,6 +26,7 @@
 #include "symutil.hh"
 
 #include <iostream>
+#include <stack>
 
 #include <boost/foreach.hpp>
 
@@ -35,9 +36,8 @@ using std::cout;
 
 namespace {
 TObjId /* pointsTo */ dump_value_core(const SymHeap &heap, TValueId value);
-}
 
-void dump_clt(const struct cl_type *clt) {
+void dump_clt_core(const struct cl_type *clt) {
     cout << "*((const struct cl_type *)"
         << static_cast<const void *>(clt)
         << ")";
@@ -60,6 +60,64 @@ void dump_clt(const struct cl_type *clt) {
         case CL_TYPE_STRING:    cout << "CL_TYPE_STRING"    ; break;
     }
     cout << ")";
+}
+
+} // namespace
+
+struct CltStackItem {
+    const struct cl_type    *clt;
+    const char              *name;
+    bool                    last;
+};
+void dump_clt(const struct cl_type *clt) {
+    CltStackItem item;
+    item.clt    = clt;
+    item.name   = 0;
+    item.last   = false;
+
+    // type stack
+    std::stack<CltStackItem> todo;
+    todo.push(item);
+
+    int nestLevel = 0;
+    while (!todo.empty()) {
+        item = todo.top();
+        todo.pop();
+
+        // indent regarding the current nest level
+        const std::string indent(nestLevel << 2, ' ');
+        cout << indent;
+
+        // print field name if any
+        const char *name = item.name;
+        if (name)
+            cout << "." << name << " = ";
+
+        // print type at the current level
+        clt = item.clt;
+        if (!clt)
+            TRAP;
+        dump_clt_core(clt);
+        cout << "\n";
+
+        if (CL_TYPE_STRUCT == clt->code) {
+            // nest into struct
+            ++nestLevel;
+
+            // dig all sub-types
+            for (int i = 0; i < clt->item_cnt; ++i) {
+                item.clt    = clt->items[i].type;
+                item.name   = clt->items[i].name;
+                item.last   = (0 == i);
+
+                todo.push(item);
+            }
+        }
+
+        // FIXME: this may misbehave under some circumstances
+        if (item.last)
+            --nestLevel;
+    }
 }
 
 namespace {
@@ -144,7 +202,7 @@ void dump_obj(const SymHeap &heap, TObjId obj) {
     const struct cl_type *clt = heap.objType(obj);
     if (clt) {
         cout << "    clt       = ";
-        dump_clt(clt);
+        dump_clt_core(clt);
         cout << "\n";
     }
 
@@ -172,7 +230,7 @@ void dump_obj(const SymHeap &heap, TObjId obj) {
         const struct cl_type *cltVal = heap.valType(value);
         if (cltVal) {
             cout << ", clt = ";
-            dump_clt(cltVal);
+            dump_clt_core(cltVal);
         }
         cout << "\n";
     }
@@ -194,7 +252,7 @@ void dump_obj(const SymHeap &heap, TObjId obj) {
             const struct cl_type *subClt = clt->items[i].type;
             if (subClt) {
                 cout << ", clt = ";
-                dump_clt(subClt);
+                dump_clt_core(subClt);
             }
             cout << ", val = " << heap.valueOf(sub) << "\n";
         }
@@ -286,7 +344,7 @@ TObjId /* pointsTo */ dump_value_core(const SymHeap &heap, TValueId value)
     const struct cl_type *clt = heap.valType(value);
     if (clt) {
         cout << "    clt       = ";
-        dump_clt(clt);
+        dump_clt_core(clt);
         cout << "\n";
     }
 
@@ -315,7 +373,7 @@ TObjId /* pointsTo */ dump_value_core(const SymHeap &heap, TValueId value)
         cout << "    cVal      = /* custom value */ #" << custom;
         if (cltCustom) {
             cout << ", clt = ";
-            dump_clt(clt);
+            dump_clt_core(clt);
         }
         cout << "\n";
         return OBJ_INVALID;
