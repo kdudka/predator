@@ -5,3 +5,6 @@ o  join of states ... example:
 o  aliasing of a field with zero offset with pointer to the surrounding object
 
 o  explicit initializers of gl variables are completely ignored at the moment
+
+o  symstate: proper comparison of Neq and EqIf predicates (it will require to
+   extend the interface of SymHeap if we want to do it enough efficiently)

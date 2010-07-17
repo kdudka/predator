@@ -218,6 +218,36 @@ bool cmpAbstractObjects(const SymHeap &sh1, const SymHeap &sh2,
 } // namespace 
 
 template <class TWL, class TSubst>
+bool matchPreds(TWL             &wl,
+                TSubst          &valSubst,
+                const SymHeap   &heap1,
+                const SymHeap   &heap2,
+                TValueId        v1,
+                TValueId        v2)
+{
+    SymHeap::TContValue rel1, rel2;
+    heap1.gatherRelatedValues(rel1, v1);
+    heap2.gatherRelatedValues(rel2, v2);
+
+    const unsigned cnt = rel1.size();
+    if (rel2.size() != cnt)
+        return false;
+
+    // We will probably need to extend the interface of SymHeap in order
+    // to compare predicates enough efficiently...
+#if 0
+    // TODO
+    if (cnt)
+        TRAP;
+#else
+    (void) wl;
+    (void) valSubst;
+#endif
+
+    return true;
+}
+
+template <class TWL, class TSubst>
 bool dfsCmp(TWL             &wl,
             TSubst          &valSubst,
             const SymHeap   &heap1,
@@ -228,6 +258,9 @@ bool dfsCmp(TWL             &wl,
     while (wl.next(item)) {
         TValueId value1, value2;
         boost::tie(value1, value2) = item;
+
+        if (!matchPreds(wl, valSubst, heap1, heap2, value1, value2))
+            return false;
 
         if (!matchValues(valSubst, heap1, heap2, value1, value2))
             // value mismatch

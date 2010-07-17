@@ -1,4 +1,6 @@
 test-0062.c:47:20: warning: binary operator not implemented yet
+test-0062.c:47:20: warning: binary operator not implemented yet
+test-0062.c:77:20: warning: binary operator not implemented yet
 test-0062.c:77:20: warning: binary operator not implemented yet
 test-0062.c:89:9: warning: killing junk
 test-0062.c:96:25: note: from call of create_sane_shape()

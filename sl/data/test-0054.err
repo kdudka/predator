@@ -3,6 +3,11 @@ test-0054.c:36:20: warning: binary operator not implemented yet
 test-0054.c:36:20: warning: binary operator not implemented yet
 test-0054.c:36:20: warning: binary operator not implemented yet
 test-0054.c:36:20: warning: binary operator not implemented yet
+test-0054.c:36:20: warning: binary operator not implemented yet
+test-0054.c:48:18: warning: killing junk
+test-0054.c:48:18: warning: killing junk
+test-0054.c:48:18: warning: killing junk
+test-0054.c:48:18: warning: killing junk
 test-0054.c:48:18: warning: killing junk
 test-0054.c:48:18: warning: killing junk
 test-0054.c:48:18: warning: killing junk

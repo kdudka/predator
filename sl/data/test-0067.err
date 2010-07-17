@@ -1,5 +1,4 @@
 test-0067.c:60:20: warning: binary operator not implemented yet
+test-0067.c:60:20: warning: binary operator not implemented yet
 test-0067.c:82:20: warning: binary operator not implemented yet
-test-0067.c:104:6: warning: end of function destroy_master() has not been reached
-test-0067.c:120:19: note: from call of destroy_master()
-test-0067.c:112:5: note: from call of main()
+test-0067.c:82:20: warning: binary operator not implemented yet

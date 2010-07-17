@@ -1,4 +1,6 @@
 test-0071.c:47:20: warning: binary operator not implemented yet
+test-0071.c:47:20: warning: binary operator not implemented yet
+test-0071.c:80:20: warning: binary operator not implemented yet
 test-0071.c:80:20: warning: binary operator not implemented yet
 test-0071.c:100:22: error: dereference of already deleted heap object
 test-0071.c:112:22: note: from call of destroy_slave()

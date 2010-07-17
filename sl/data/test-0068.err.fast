@@ -3,6 +3,7 @@ test-0068.c:34:20: warning: binary operator not implemented yet
 test-0068.c:34:20: warning: binary operator not implemented yet
 test-0068.c:34:20: warning: binary operator not implemented yet
 test-0068.c:34:20: warning: binary operator not implemented yet
+test-0068.c:34:20: warning: binary operator not implemented yet
 test-0068.c:62:13: warning: killing junk
 test-0068.c:62:13: warning: killing junk
 test-0068.c:62:13: warning: killing junk

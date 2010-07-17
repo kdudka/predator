@@ -1,4 +1,6 @@
 test-0066.c:58:20: warning: binary operator not implemented yet
+test-0066.c:58:20: warning: binary operator not implemented yet
+test-0066.c:82:20: warning: binary operator not implemented yet
 test-0066.c:82:20: warning: binary operator not implemented yet
 test-0066.c:91:25: warning: killing junk
 test-0066.c:91:25: warning: killing junk
