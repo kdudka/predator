@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2009-2010 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -199,10 +199,20 @@ namespace {
     }
 
 bool cmpAbstractObjects(const SymHeap &sh1, const SymHeap &sh2,
-                        TObjId ao1, TObjId ao2)
+                        TObjId o1, TObjId o2)
 {
-    return sh1.objNextField(ao1) == sh2.objNextField(ao2)
-        && sh1.objPeerField(ao1) == sh2.objPeerField(ao2);
+    const EObjKind kind = sh1.objKind(o1);
+    if (sh2.objKind(o2) != kind)
+        // kind of object mismatch
+        return false;
+
+    if (OK_CONCRETE == kind)
+        // no abstract objects involved
+        return true;
+
+    // compare 'next' and 'peer' pointers
+    return sh1.objNextField(o1) == sh2.objNextField(o2)
+        && sh1.objPeerField(o1) == sh2.objPeerField(o2);
 }
 
 } // namespace 
@@ -219,6 +229,14 @@ bool dfsCmp(TWL             &wl,
         TValueId value1, value2;
         boost::tie(value1, value2) = item;
 
+        if (!matchValues(valSubst, heap1, heap2, value1, value2))
+            // value mismatch
+            return false;
+
+        if (skipValue(heap1, value1))
+            // no need for next wheel
+            continue;
+
         if (isComposite(heap1, heap2, value1, value2)) {
             if (!digComposite(wl, heap1, heap2, value1, value2))
                 // object type mismatch (something nasty in the analyzed code)
@@ -228,42 +246,18 @@ bool dfsCmp(TWL             &wl,
             continue;
         }
 
-        // FIXME: this appears twice because of digComposite
-        if (!matchValues(valSubst, heap1, heap2, value1, value2))
-            // value mismatch
-            return false;
-
-        // FIXME: this appears twice because of digComposite
-        if (skipValue(heap1, value1))
-            // no need for next wheel
-            continue;
-
-        // TODO: distinguish among SLS and single dynamic variables here
         const TObjId obj1 = heap1.pointsTo(value1);
         const TObjId obj2 = heap2.pointsTo(value2);
         if (checkNonPosValues(obj1, obj2))
             // variable mismatch
             return false;
 
-        const EObjKind kind = heap1.objKind(obj1);
-        if (heap2.objKind(obj2) != kind)
-            // kind of object mismatch
-            return false;
-
-        if (OK_CONCRETE != kind
-                && !cmpAbstractObjects(heap1, heap2, obj1, obj2))
+        if (!cmpAbstractObjects(heap1, heap2, obj1, obj2))
             // abstract objects are not equeal
             return false;
 
         value1 = heap1.valueOf(obj1);
         value2 = heap2.valueOf(obj2);
-        if (!matchValues(valSubst, heap1, heap2, value1, value2))
-            // value mismatch
-            return false;
-
-        if (skipValue(heap1, value1))
-            // no need for next wheel
-            continue;
 
         // schedule values for next wheel
         wl.schedule(value1, value2);
@@ -306,19 +300,12 @@ bool operator== (const SymHeap &heap1, const SymHeap &heap2) {
         // retrieve values of static variables
         const TValueId value1 = heap1.valueOf(var1);
         const TValueId value2 = heap2.valueOf(var2);
-        if (!matchValues(valSubst, heap1, heap2, value1, value2))
-            // value mismatch, bail out now
-            return false;
-
-        if (skipValue(heap1, value1))
-            // no need for next wheel
-            continue;
 
         // schedule for DFS
         wl.schedule(value1, value2);
     }
 
-    // bad luck, we need to run DFS
+    // run DFS
     return dfsCmp(wl, valSubst, heap1, heap2);
 }
 
