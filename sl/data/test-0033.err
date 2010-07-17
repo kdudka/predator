@@ -1,3 +1,11 @@
 test-0033.c:93:25: error: dereference of already deleted heap object
 test-0033.c:150:19: note: from call of destroy_h_list()
 test-0033.c:122:5: note: from call of main()
+test-0033.c:52:13: warning: end of function destroy_list() has not been reached
+test-0033.c:93:25: note: from call of destroy_list()
+test-0033.c:150:19: note: from call of destroy_h_list()
+test-0033.c:122:5: note: from call of main()
+test-0033.c:81:13: warning: end of function destroy_h_list() has not been reached
+test-0033.c:150:19: note: from call of destroy_h_list()
+test-0033.c:122:5: note: from call of main()
+test-0033.c:122:5: warning: end of function main() has not been reached

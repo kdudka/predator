@@ -109,7 +109,8 @@ class SymExecEngine {
             block_(0),
             insnIdx_(0),
             heapIdx_(0),
-            waiting_(false)
+            waiting_(false),
+            retReached_(false)
         {
             this->initEngine(src);
         }
@@ -138,6 +139,7 @@ class SymExecEngine {
         unsigned                        insnIdx_;
         unsigned                        heapIdx_;
         bool                            waiting_;
+        bool                            retReached_;
 
         SymHeapScheduler                localState_;
         SymHeapUnion                    nextLocalState_;
@@ -204,6 +206,7 @@ void SymExecEngine::execReturn() {
 
     // commit one of the function results
     dst_.insert(heap);
+    retReached_ = true;
 }
 
 void SymExecEngine::updateState(const CodeStorage::Block *ofBlock,
@@ -763,6 +766,12 @@ bool /* complete */ SymExecEngine::run() {
         if (!this->execBlock())
             // function call reached, suspend the execution for now
             return false;
+    }
+
+    if (!retReached_) {
+        CL_WARN_MSG(lw, "end of function "
+                << nameOf(*fnc) << "() has not been reached");
+        bt_.printBackTrace();
     }
 
     // we are done with this function

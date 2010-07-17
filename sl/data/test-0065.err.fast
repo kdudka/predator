@@ -1,79 +1,39 @@
 test-0065.c:36:20: warning: binary operator not implemented yet
 test-0065.c:36:20: warning: binary operator not implemented yet
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
-test-0065.c:72:18: warning: killing junk
+test-0065.c:70:6: warning: end of function destroy_sll() has not been reached
+test-0065.c:94:16: note: from call of destroy_sll()
+test-0065.c:79:5: note: from call of main()
+test-0065.c:70:6: warning: end of function destroy_sll() has not been reached
+test-0065.c:94:16: note: from call of destroy_sll()
+test-0065.c:79:5: note: from call of main()
+test-0065.c:70:6: warning: end of function destroy_sll() has not been reached
+test-0065.c:94:16: note: from call of destroy_sll()
+test-0065.c:79:5: note: from call of main()
+test-0065.c:70:6: warning: end of function destroy_sll() has not been reached
+test-0065.c:94:16: note: from call of destroy_sll()
+test-0065.c:79:5: note: from call of main()
+test-0065.c:70:6: warning: end of function destroy_sll() has not been reached
+test-0065.c:94:16: note: from call of destroy_sll()
+test-0065.c:79:5: note: from call of main()
+test-0065.c:70:6: warning: end of function destroy_sll() has not been reached
+test-0065.c:94:16: note: from call of destroy_sll()
+test-0065.c:79:5: note: from call of main()
+test-0065.c:70:6: warning: end of function destroy_sll() has not been reached
+test-0065.c:94:16: note: from call of destroy_sll()
+test-0065.c:79:5: note: from call of main()
+test-0065.c:70:6: warning: end of function destroy_sll() has not been reached
+test-0065.c:94:16: note: from call of destroy_sll()
+test-0065.c:79:5: note: from call of main()
+test-0065.c:70:6: warning: end of function destroy_sll() has not been reached
+test-0065.c:94:16: note: from call of destroy_sll()
+test-0065.c:79:5: note: from call of main()
+test-0065.c:70:6: warning: end of function destroy_sll() has not been reached
+test-0065.c:94:16: note: from call of destroy_sll()
+test-0065.c:79:5: note: from call of main()
+test-0065.c:70:6: warning: end of function destroy_sll() has not been reached
+test-0065.c:94:16: note: from call of destroy_sll()
+test-0065.c:79:5: note: from call of main()
+test-0065.c:70:6: warning: end of function destroy_sll() has not been reached
+test-0065.c:94:16: note: from call of destroy_sll()
+test-0065.c:79:5: note: from call of main()
+test-0065.c:79:5: warning: end of function main() has not been reached

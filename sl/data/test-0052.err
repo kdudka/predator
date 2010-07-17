@@ -3,3 +3,6 @@ test-0052.c:56:20: warning: binary operator not implemented yet
 test-0052.c:56:20: warning: binary operator not implemented yet
 test-0052.c:56:20: warning: binary operator not implemented yet
 test-0052.c:56:20: warning: binary operator not implemented yet
+test-0052.c:74:6: warning: end of function destroy_sll() has not been reached
+test-0052.c:90:16: note: from call of destroy_sll()
+test-0052.c:85:5: note: from call of main()
