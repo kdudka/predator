@@ -36,7 +36,7 @@ struct list_head {
  */
 static inline int list_empty(const struct list_head *head)
 {
-    ___SL_PLOT_FNC(list_empty);
+    //___SL_PLOT_FNC(list_empty);
 	return head->next == head;
 }
 
@@ -94,10 +94,12 @@ struct my_item* my_alloc(void)
     return ptr;
 }
 
-void append_one(void *list)
+void append_one(struct list_head *head)
 {
     struct my_item *ptr = my_alloc();
-    list_add_tail(&ptr->link, list);
+    list_add_tail(&ptr->link, head);
+    ___sl_plot_by_ptr(&ptr,  "01-ptr");
+    ___sl_plot_by_ptr(&head, "01-head");
 }
 
 int main()
@@ -106,8 +108,6 @@ int main()
     if (!list_empty(&my_list))
         return 1;
 
-    ___sl_plot("01");
-
     append_one(&my_list);
-    ___sl_plot("01");
+    ___sl_plot_by_ptr(&my_list, "02-head");
 }

@@ -70,6 +70,11 @@ struct CltStackItem {
     bool                    last;
 };
 void dump_clt(const struct cl_type *clt) {
+    if (!clt) {
+        cout << "NULL\n";
+        return;
+    }
+
     CltStackItem item;
     item.clt    = clt;
     item.name   = 0;

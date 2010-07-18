@@ -32,10 +32,14 @@
 
 #include <boost/foreach.hpp>
 
+#ifndef GC_ADMIT_LINUX_LISTS
+#   define GC_ADMIT_LINUX_LISTS 0
+#endif
+
 namespace {
 
 template <class TWL>
-void digPointingObjects(TWL &wl, const SymHeap &heap, TValueId val) {
+void digPointingObjectsCore(TWL &wl, const SymHeap &heap, TValueId val) {
     // go through all objects having the value
     SymHeap::TContObj cont;
     heap.usedBy(cont, val);
@@ -47,6 +51,32 @@ void digPointingObjects(TWL &wl, const SymHeap &heap, TValueId val) {
             obj = heap.objParent(obj);
         }
     }
+}
+
+#if GC_ADMIT_LINUX_LISTS
+template <class TWL>
+struct WLWrap {
+    TWL &wl;
+    WLWrap (TWL &wl_): wl(wl_) { }
+    bool operator()(const SymHeap &sh, TObjId sub) const {
+        const TValueId at = sh.placedAt(sub);
+        digPointingObjectsCore(wl, sh, at);
+        return /* continue */ true;
+    }
+};
+#endif
+
+template <class TWL>
+void digPointingObjects(TWL &wl, const SymHeap &sh, TValueId val) {
+    digPointingObjectsCore(wl, sh, val);
+
+#if GC_ADMIT_LINUX_LISTS
+    const TObjId root = objRoot(sh, sh.pointsTo(val));
+    if (0 < root && objIsStruct(sh, root)) {
+        const WLWrap<TWL> visitor(wl);
+        traverseSubObjs(sh, root, visitor);
+    }
+#endif
 }
 
 bool digJunk(const SymHeap &heap, TValueId *ptrVal) {

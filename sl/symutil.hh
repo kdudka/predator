@@ -40,6 +40,25 @@ bool isHeapObject(const SymHeap &heap, TObjId obj);
 
 void digRootObject(const SymHeap &heap, TValueId *pValue);
 
+inline TObjId /* root */ objRoot(const SymHeap &sh, TObjId obj) {
+    TObjId root = obj;
+    while (OBJ_INVALID != (obj = sh.objParent(root)))
+        root = obj;
+
+    return root;
+}
+
+
+inline bool objIsStruct(const SymHeap &sh, TObjId obj) {
+    if (obj < 0)
+        // an invalid object can't be CL_TYPE_STRUCT
+        return false;
+
+    const struct cl_type *clt = sh.objType(obj);
+    return clt
+        && clt->code == CL_TYPE_STRUCT;
+}
+
 void getPtrValues(SymHeapCore::TContValue &dst, const SymHeap &heap,
                   TObjId obj);
 
