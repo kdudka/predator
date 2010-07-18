@@ -526,23 +526,26 @@ void SymHeapPlotter::Private::digNext(TObjId obj) {
 }
 
 void SymHeapPlotter::Private::openCluster(TObjId obj) {
-    const char *label, *color, *pw;
+    std::string label;
+    const char *color, *pw;
     EObjKind kind = this->heap->objKind(obj);
+    if (OK_CONCRETE !=kind && !this->heap->objShared(obj))
+        label = "[prototype] ";
+
     switch (kind) {
         case OK_CONCRETE:
-            label = "";
             color = "black";
             pw = "1.0";
             break;
 
         case OK_SLS:
-            label = "SLS";
+            label += "SLS";
             color = "red";
             pw = "3.0";
             break;
 
         case OK_DLS:
-            label = "DLS/2";
+            label += "DLS/2";
             color = "gold";
             pw = "3.0";
             break;
@@ -743,10 +746,14 @@ void SymHeapPlotter::Private::digObj(TObjId obj) {
     if (peer <= 0)
         TRAP;
 
+    const char *label = (this->heap->objShared(obj))
+        ? "DLS"
+        : "[prototype] DLS";
+
     // open a cluster
     this->dotStream
         << "subgraph \"clusterDLS" << obj << "\" {" << std::endl
-        << "\tlabel=DLS;"                           << std::endl
+        << "\tlabel=" << SL_QUOTE(label)            << std::endl
         << "\tcolor=gold;"                          << std::endl
         << "\tfontcolor=gold;"                      << std::endl
         << "\tstyle=dashed;"                        << std::endl;
