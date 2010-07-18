@@ -1,5 +1,10 @@
 #include "../sl.h"
+
+#include <linux/stddef.h>
+#include <stddef.h>
 #include <stdlib.h>
+
+#define typeof(x) __typeof__(x)
 
 struct list_head {
 	struct list_head *next, *prev;
@@ -98,8 +103,18 @@ void append_one(struct list_head *head)
 {
     struct my_item *ptr = my_alloc();
     list_add_tail(&ptr->link, head);
+#if 0
     ___sl_plot_by_ptr(&ptr,  "01-ptr");
     ___sl_plot_by_ptr(&head, "01-head");
+#endif
+}
+
+void traverse(struct list_head *head)
+{
+    struct my_item *now;
+    list_for_each_entry_reverse(now, head, link) {
+        ___sl_plot_by_ptr(&now, "now");
+    }
 }
 
 int main()
@@ -109,5 +124,12 @@ int main()
         return 1;
 
     append_one(&my_list);
-    ___sl_plot_by_ptr(&my_list, "02-head");
+    ___sl_plot_by_ptr(&my_list, "01");
+
+    append_one(&my_list);
+    ___sl_plot_by_ptr(&my_list, "02");
+
+    traverse(&my_list);
+
+    return 0;
 }
