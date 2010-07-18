@@ -45,7 +45,7 @@ struct item* create_dll(void)
 
 int main()
 {
-    struct item *sll = create_dll();
-    ___sl_plot_by_ptr(sll, "02-dll-ready");
+    struct item *dll = create_dll();
+    ___sl_plot_by_ptr(dll, "02-dll-ready");
     return 0;
 }
