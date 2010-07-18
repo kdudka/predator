@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <stdlib.h>
 
+#define prefetch(x) ((void) 0)
 #define typeof(x) __typeof__(x)
 
 struct list_head {

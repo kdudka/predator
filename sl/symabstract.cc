@@ -35,6 +35,10 @@
 #include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
 
+#ifndef GC_ADMIT_LINUX_LISTS
+#   define GC_ADMIT_LINUX_LISTS 0
+#endif
+
 #ifndef SE_DISABLE_DLS
 #   define SE_DISABLE_DLS 0
 #endif
@@ -117,8 +121,11 @@ void considerFlatScan(SymHeap &sh, TObjId obj) {
     const unsigned cnt = sh.usedByCount(addr);
     switch (cnt) {
         case 0:
-            CL_WARN("considerFlatScan() encountered an unused root "
-                    "object #" << obj);
+#if GC_ADMIT_LINUX_LISTS
+            if (!doesAnyonePointToInside(sh, obj))
+#endif
+                CL_WARN("considerFlatScan() encountered an unused root "
+                        "object #" << obj);
             break;
 
         case 1:
@@ -1084,8 +1091,11 @@ bool abstractIfNeededCore(SymHeap &sh) {
         const unsigned uses = sh.usedByCount(addr);
         switch (uses) {
             case 0:
-                CL_WARN("abstractIfNeededLoop() encountered an unused root "
-                        "object #" << obj);
+#if GC_ADMIT_LINUX_LISTS
+                if (!doesAnyonePointToInside(sh, obj))
+#endif
+                    CL_WARN("abstractIfNeededLoop() encountered an unused root "
+                            "object #" << obj);
                 // fall through!
 
             default:

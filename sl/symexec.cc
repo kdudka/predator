@@ -543,14 +543,15 @@ void binOpToStream(std::ostream &str, int subCode,
 
     // TODO: move this to cl API
     switch (code) {
-        case CL_BINOP_EQ:           str << " == "; break;
-        case CL_BINOP_NE:           str << " != "; break;
-        case CL_BINOP_LT:           str << " < ";  break;
-        case CL_BINOP_GT:           str << " > ";  break;
-        case CL_BINOP_LE:           str << " <= "; break;
-        case CL_BINOP_GE:           str << " >= "; break;
-        case CL_BINOP_PLUS:         str << " + ";  break;
-        case CL_BINOP_MINUS:        str << " - ";  break;
+        case CL_BINOP_EQ:               str << " == ";          break;
+        case CL_BINOP_NE:               str << " != ";          break;
+        case CL_BINOP_LT:               str << " < ";           break;
+        case CL_BINOP_GT:               str << " > ";           break;
+        case CL_BINOP_LE:               str << " <= ";          break;
+        case CL_BINOP_GE:               str << " >= ";          break;
+        case CL_BINOP_PLUS:             str << " + ";           break;
+        case CL_BINOP_MINUS:            str << " - ";           break;
+        case CL_BINOP_POINTER_PLUS:     str << " (ptr +) ";     break;
         default:
             TRAP;
     }
