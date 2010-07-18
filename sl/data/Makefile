@@ -41,7 +41,7 @@ invpphtml: ../../ssd/util/eschtml ../../ssd/util/tty2html $(CILLY)
 	done
 
 clean:
-	rm -fv *.$(FORMAT) test-inv-???-??
+	rm -fv *.$(FORMAT) *.$(DOT) test-inv-???-??
 
 distclean: clean
 	rm -fv *.dot *.pp.html
