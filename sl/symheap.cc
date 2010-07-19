@@ -818,11 +818,11 @@ struct SymHeapTyped::Private {
         const struct cl_type        *clt;
         size_t                      cbSize;
         CVar                        cVar;
-        //int                       nth_item; // -1  OR  0 .. parent.item_cnt-1
+        int                         nthItem; // -1  OR  0 .. parent.item_cnt-1
         TObjId                      parent;
         TContObj                    subObjs;
 
-        Object(): clt(0), cbSize(0), parent(OBJ_INVALID) { }
+        Object(): clt(0), cbSize(0), nthItem(-1), parent(OBJ_INVALID) { }
     };
 
     struct Value {
@@ -933,7 +933,7 @@ void SymHeapTyped::createSubs(TObjId obj) {
                 for (int i = 0; i < cnt; ++i) {
                     const struct cl_type *subClt = clt->items[i].type;
                     const TObjId subObj = this->createSubVar(subClt, obj);
-                    //d->objects[subObj].nth_item = i; // postion in struct
+                    d->objects[subObj].nthItem = i; // postion in struct
                     d->objects[obj].subObjs[i] = subObj;
                     push(todo, subObj, subClt);
                 }
@@ -1147,12 +1147,20 @@ TObjId SymHeapTyped::subObj(TObjId obj, int nth) const {
         : /* nth is out of range */ OUT_OF_RANGE;
 }
 
-TObjId SymHeapTyped::objParent(TObjId obj) const {
+TObjId SymHeapTyped::objParent(TObjId obj, int *nth) const {
     if (this->lastObjId() < obj || obj <= 0)
         // object ID is either out of range, or does not represent a valid obj
         return OBJ_INVALID;
 
-    return d->objects[obj].parent;
+    const Private::Object &ref = d->objects[obj];
+    const TObjId parent = ref.parent;
+    if (OBJ_INVALID == parent)
+        return OBJ_INVALID;
+
+    if (nth)
+        *nth = ref.nthItem;
+
+    return parent;
 }
 
 TObjId SymHeapTyped::objCreate(const struct cl_type *clt, CVar cVar) {

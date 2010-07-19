@@ -1022,30 +1022,48 @@ TValueId handleOpCmp(THeap &heap, enum cl_binop_e code,
     }
 }
 
-TValueId handlePointerPlus(const SymHeap &sh, TValueId ptr,
-                           const struct cl_operand &op)
+TValueId handlePointerPlus(const SymHeap &sh, const struct cl_type *clt,
+                           TValueId ptr, const struct cl_operand &op)
 {
+    // jump to _target_ type
+    if (!clt || clt->code != CL_TYPE_PTR)
+        TRAP;
+    clt = clt->items[0].type;
+
+    // read integral offset
     if (CL_OPERAND_CST != op.code)
         TRAP;
-
     const struct cl_cst &cst = op.data.cst;
     if (CL_TYPE_INT != op.type->code)
         TRAP;
-
     int off = cst.data.cst_int.value;
-
-    // FIXME: check the correctness of object vs. value type handling here
-    const struct cl_type *clt = sh.valType(ptr);
-    if (!clt)
-        TRAP;
-
-    // compute byte offset
-    off *= clt->size;
     CL_DEBUG("handlePointerPlus(): " << off << "b offset requested");
 
-    // TODO
-    TRAP;
-    return VAL_INVALID;
+    // seek root object while cumulating the offset
+    TObjId obj = sh.pointsTo(ptr);
+    TObjId parent;
+    int nth;
+    while (OBJ_INVALID != (parent = sh.objParent(obj, &nth))) {
+        const struct cl_type *cltParent = sh.objType(parent);
+        if (cltParent->item_cnt <= nth)
+            TRAP;
+
+        off += cltParent->items[nth].offset;
+        obj = parent;
+    }
+
+    if (off)
+        // TODO: handle general moves within a single object
+        TRAP;
+
+    // get the final address and check type compatibility
+    const TValueId addr = sh.placedAt(obj);
+    const struct cl_type *cltDst = sh.valType(addr);
+    if (!cltDst || *cltDst != *clt)
+        // type problem
+        TRAP;
+
+    return addr;
 }
 
 // template for generic (unary, binary, ...) operator handlers
@@ -1162,7 +1180,8 @@ void SymProc::execOp(const CodeStorage::Insn &insn) {
     if (2 == ARITY && CL_BINOP_POINTER_PLUS
             == static_cast<enum cl_binop_e>(insn.subCode))
     {
-        valResult = handlePointerPlus(heap_, rhs[0], opList[/* src2 */ 2]);
+        valResult = handlePointerPlus(heap_, clt[/* dst type */ ARITY],
+                                      rhs[0], opList[/* src2 */ 2]);
         goto rhs_ready;
     }
 

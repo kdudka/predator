@@ -427,9 +427,11 @@ class SymHeapTyped: public SymHeapCore {
          * check if the given value is part of a composite object, return ID of
          * the @b surrounding @b object in that case, OBJ_INVALID otherwise
          * @param obj ID of the object to check
+         * @param nth if not NULL, return position of the sub-object within the
+         * parent object
          * @return A valid object ID in case of success, invalid otherwise.
          */
-        TObjId objParent(TObjId obj) const;
+        TObjId objParent(TObjId obj, int *nth = 0) const;
 
     public:
         /**

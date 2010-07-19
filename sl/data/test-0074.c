@@ -40,7 +40,7 @@ int main()
 
     struct s s;
     struct list_head *h3 = &s.h3;
-    struct s *ps = ((char *)h3 - offsetof(struct s, h3));
+    struct s *ps = (struct s *) ((char *)h3 - offsetof(struct s, h3));
     if (ps != &s)
         free(ps);
 }
