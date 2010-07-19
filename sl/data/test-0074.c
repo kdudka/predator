@@ -3,6 +3,7 @@
 #include <linux/stddef.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #define prefetch(x) ((void) 0)
 #define typeof(x) __typeof__(x)
@@ -39,4 +40,7 @@ int main()
 
     struct s s;
     struct list_head *h3 = &s.h3;
+    struct s *ps = ((char *)h3 - offsetof(struct s, h3));
+    if (ps != &s)
+        free(ps);
 }

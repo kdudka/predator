@@ -498,10 +498,14 @@ static void read_raw_operand(struct cl_operand *op, tree t)
             op->code                            = CL_OPERAND_CST;
             op->data.cst.code                   = CL_TYPE_INT;
 
-            // FIXME: this is not going to work well...
-            op->data.cst.data.cst_int.value     = TREE_INT_CST_HIGH(t)
-                ? (int) TREE_INT_CST_HIGH(t)
-                : (int) TREE_INT_CST_LOW(t);
+            // I don't understand the following code, see gcc/print-tree.c
+            if (TREE_INT_CST_HIGH (t) == 0 || (TREE_INT_CST_LOW (t) != 0
+                        && TREE_INT_CST_HIGH (t) == -1))
+                op->data.cst.data.cst_int.value = TREE_INT_CST_LOW (t);
+            else
+                // FIXME: this would probably overflow...
+                TRAP;
+
             break;
 
         case STRING_CST:
