@@ -949,7 +949,8 @@ void SymExec::Private::execLoop(const StackItem &item) {
         // --> we need to nest unless the computed result is already available
         const SymHeap &entry = *engine->callEntry();
         const CodeStorage::Insn &insn = *engine->callInsn();
-        const Fnc *fnc = this->resolveCallInsn(entry, insn, *item.dst);
+        SymHeapUnion &results = *engine->callResults();
+        const Fnc *fnc = this->resolveCallInsn(entry, insn, results);
         if (!fnc)
             // the error message should have been already emitted, but there
             // are probably some unknown values in the result; now wake up

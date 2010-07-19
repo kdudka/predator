@@ -1022,6 +1022,32 @@ TValueId handleOpCmp(THeap &heap, enum cl_binop_e code,
     }
 }
 
+TValueId handlePointerPlus(const SymHeap &sh, TValueId ptr,
+                           const struct cl_operand &op)
+{
+    if (CL_OPERAND_CST != op.code)
+        TRAP;
+
+    const struct cl_cst &cst = op.data.cst;
+    if (CL_TYPE_INT != op.type->code)
+        TRAP;
+
+    int off = cst.data.cst_int.value;
+
+    // FIXME: check the correctness of object vs. value type handling here
+    const struct cl_type *clt = sh.valType(ptr);
+    if (!clt)
+        TRAP;
+
+    // compute byte offset
+    off *= clt->size;
+    CL_DEBUG("handlePointerPlus(): " << off << "b offset requested");
+
+    // TODO
+    TRAP;
+    return VAL_INVALID;
+}
+
 // template for generic (unary, binary, ...) operator handlers
 template <int ARITY, class TProc>
 struct OpHandler {
@@ -1117,26 +1143,33 @@ void SymProc::execOp(const CodeStorage::Insn &insn) {
     if (!this->lhsFromOperand(&varLhs, dst))
         return;
 
-    // ASSERT: lhs is not abstract
-
     // store cl_type of dst operand
     const struct cl_type *clt[ARITY + /* dst type */ 1];
     clt[/* dst type */ ARITY] = dst.type;
 
     // gather rhs values (and type-info)
+    const CodeStorage::TOperandList &opList = insn.operands;
     TValueId rhs[ARITY];
     for (int i = 0; i < ARITY; ++i) {
-        const struct cl_operand &op = insn.operands[i + /* [+dst] */ 1];
+        const struct cl_operand &op = opList[i + /* [+dst] */ 1];
         clt[i] = op.type;
         rhs[i] = this->heapValFromOperand(op);
         if (VAL_INVALID == rhs[i])
             TRAP;
     }
 
-    // ASSERT: all operands are non-abstract
+    TValueId valResult = VAL_INVALID;
+    if (2 == ARITY && CL_BINOP_POINTER_PLUS
+            == static_cast<enum cl_binop_e>(insn.subCode))
+    {
+        valResult = handlePointerPlus(heap_, rhs[0], opList[/* src2 */ 2]);
+        goto rhs_ready;
+    }
 
     // handle generic operator and store result
-    const TValueId valResult = handleOp<ARITY>(*this, insn.subCode, rhs, clt);
+    valResult = handleOp<ARITY>(*this, insn.subCode, rhs, clt);
+
+rhs_ready:
     this->objSetValue(varLhs, valResult);
 }
 
