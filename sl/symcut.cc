@@ -142,6 +142,10 @@ TObjId addObjectIfNeeded(DeepCopyData &dc, TObjId objSrc) {
     while (OBJ_INVALID != (tmp = src.objParent(rootSrc)))
         rootSrc = tmp;
 
+    if (!src.objExists(rootSrc))
+        // TODO: implement cloning of virtual objects
+        TRAP;
+
     CVar cv;
     if (src.cVar(&cv, rootSrc)) {
         // enlarge the cut if needed

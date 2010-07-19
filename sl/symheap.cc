@@ -821,8 +821,16 @@ struct SymHeapTyped::Private {
         int                         nthItem; // -1  OR  0 .. parent.item_cnt-1
         TObjId                      parent;
         TContObj                    subObjs;
+        bool                        dummy;
 
-        Object(): clt(0), cbSize(0), nthItem(-1), parent(OBJ_INVALID) { }
+        Object():
+            clt(0),
+            cbSize(0),
+            nthItem(-1),
+            parent(OBJ_INVALID),
+            dummy(false)
+        {
+        }
     };
 
     struct Value {
@@ -933,7 +941,7 @@ void SymHeapTyped::createSubs(TObjId obj) {
                 for (int i = 0; i < cnt; ++i) {
                     const struct cl_type *subClt = clt->items[i].type;
                     const TObjId subObj = this->createSubVar(subClt, obj);
-                    d->objects[subObj].nthItem = i; // postion in struct
+                    d->objects[subObj].nthItem = i; // position in struct
                     d->objects[obj].subObjs[i] = subObj;
                     push(todo, subObj, subClt);
                 }
@@ -967,6 +975,10 @@ TObjId SymHeapTyped::objDup(TObjId obj) {
 
         // duplicate a single object
         const TObjId src = item.srcObj;
+        if (!this->objExists(src))
+            // not implemented
+            TRAP;
+
         const TObjId dst = SymHeapCore::objDup(src);
         this->resizeIfNeeded();
         if (OBJ_INVALID == image)
@@ -1206,12 +1218,110 @@ TObjId SymHeapTyped::objCreate(const struct cl_type *clt, CVar cVar) {
     return obj;
 }
 
+struct SurroundStackItem {
+    TObjId                  obj;
+    int                     off;
+    const struct cl_type    *clt;
+    int                     subOff;
+};
+
+// NOTE: the implementation is really far from complete, sooner or later we will
+//       need to distinguish if the placeholder already exists
+TObjId SymHeapTyped::objPretendSurroundOf(TObjId                objReal,
+                                          int                   offsetReal,
+                                          const struct cl_type *cltVirt)
+{
+    if (!cltVirt || cltVirt->code != CL_TYPE_STRUCT)
+        // not supported
+        TRAP;
+
+    // create a low-level object
+    const TObjId obj = SymHeapCore::objCreate();
+    this->resizeIfNeeded();
+
+    // store the type-info
+    d->objects[obj].clt = cltVirt;
+
+    // start with the _virtual_ root
+    SurroundStackItem item;
+    item.obj = obj;
+    item.off = 0;
+    item.clt = cltVirt;
+    item.subOff = 0;
+
+    // FIXME: we have basically the same traversal in symabstract and symplot
+    int off = 0;
+    std::stack<SurroundStackItem> todo;
+    todo.push(item);
+    while (!todo.empty()) {
+        item = todo.top();
+        todo.pop();
+
+        const struct cl_type *clt = item.clt;
+        if (!clt)
+            // missing type-info
+            TRAP;
+
+        const TObjId obj = item.obj;
+        if (CL_TYPE_STRUCT == clt->code) {
+            // cumulate the up to now offset
+            off += item.off;
+
+            const int cnt = clt->item_cnt;
+            SymHeapCore::objSetValue(obj, this->createCompValue(clt, obj));
+
+            // keeping a reference at this point may cause headaches in case
+            // of reallocation
+            d->objects[obj].subObjs.resize(cnt);
+            for (int i = 0; i < cnt; ++i) {
+                const struct cl_type *subClt = clt->items[i].type;
+                item.off = clt->items[i].offset;
+                if (off + item.off == offsetReal) {
+                    // we've hit the object being surrounded
+                    d->objects[obj].subObjs[i] = objReal;
+                    d->objects[objReal].nthItem = i;
+                    continue;
+                }
+
+                // create placeholders for all other objects (recursively)
+                const TObjId subObj = this->createSubVar(subClt, obj);
+                d->objects[subObj].nthItem = i;
+                d->objects[subObj].dummy = true;
+                d->objects[obj].subObjs[i] = subObj;
+
+                // push the field for next wheel
+                item.obj = subObj;
+                item.clt = subClt;
+                item.subOff = (i)
+                    ? 0
+                    : item.off;
+                todo.push(item);
+            }
+            break;
+        }
+
+        if (item.subOff)
+            // last item at this level, restore the cumulative offset
+            off -= item.subOff;
+    }
+
+    this->initValClt(obj);
+    return obj;
+}
+
 TObjId SymHeapTyped::objCreateAnon(int cbSize) {
     const TObjId obj = SymHeapCore::objCreate();
     this->resizeIfNeeded();
     d->objects[obj].cbSize = cbSize;
 
     return obj;
+}
+
+bool SymHeapTyped::objExists(TObjId obj) const {
+    if (VAL_INVALID == this->placedAt(obj))
+        return false;
+
+    return !d->objects[obj].dummy;
 }
 
 int SymHeapTyped::objSizeOfAnon(TObjId obj) const {

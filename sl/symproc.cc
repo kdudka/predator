@@ -186,7 +186,7 @@ void SymProc::heapObjHandleAccessor(TObjId *pObj,
             return;
 
         case CL_ACCESSOR_REF:
-            // CL_ACCESSOR_REF will be processed wihtin heapValFromOperand()
+            // CL_ACCESSOR_REF will be processed within heapValFromOperand()
             // on the way out from here ... otherwise we are encountering
             // a bug!
             return;
@@ -238,6 +238,12 @@ TObjId SymProc::heapObjFromOperand(const struct cl_operand &op) {
     while (ac) {
         this->heapObjHandleAccessor(&var, ac);
         ac = ac->next;
+    }
+
+    if (0 < var && !heap_.objExists(var)) {
+        CL_ERROR_MSG(lw_, "dereference of a pointer that is out of range");
+        bt_->printBackTrace();
+        return OBJ_DEREF_FAILED;
     }
 
     return var;
@@ -1054,9 +1060,17 @@ TValueId handlePointerPlus(SymHeap &sh, const struct cl_type *clt,
     }
 
     if (off < 0) {
-        CL_DEBUG("handlePointerPlus(): object underflow by "
-                << (-off) << "b treated as unknown value");
-        return sh.valCreateUnknown(UV_UNKNOWN, clt);
+        // The surrounding object does not exist in real-word!  If we still need
+        // to operate on Linux lists, we need to create a virtual one...
+        CL_WARN("support for virtual objects is not implemented yet");
+        const TObjId virt = sh.objPretendSurroundOf(obj, -off, clt);
+        if (OBJ_INVALID == virt) {
+            CL_WARN("handlePointerPlus(): object underflow by "
+                    << (-off) << "b treated as unknown value");
+            return sh.valCreateUnknown(UV_UNKNOWN, clt);
+        }
+
+        return sh.placedAt(virt);
     }
 
     if (off)

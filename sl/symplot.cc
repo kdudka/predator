@@ -268,6 +268,8 @@ void SymHeapPlotter::Private::plotNodeObj(TObjId obj, enum cl_type_e code) {
         this->dotStream << ", color=gold, penwidth=3.0, style=dashed";
     else if (hasKey(this->nexts, obj))
         this->dotStream << ", color=red, penwidth=3.0, style=dashed";
+    else if (!this->heap->objExists(obj))
+        this->dotStream << ", color=white";
     else
         this->dotStream << ", color=" << colorByCode(code);
 
