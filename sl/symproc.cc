@@ -126,8 +126,7 @@ void SymProc::heapObjHandleAccessorDeref(TObjId *pObj) {
 
         case UV_UNKNOWN:
             CL_ERROR_MSG(lw_, "dereference of unknown value");
-            *pObj = OBJ_UNKNOWN;
-            return;
+            goto fail_with_bt;
 
         case UV_UNINITIALIZED:
             CL_ERROR_MSG(lw_, "dereference of uninitialized value");
@@ -497,6 +496,7 @@ void SymProc::execFree(const CodeStorage::TOperandList &opList) {
 
         case UV_UNKNOWN:
             CL_ERROR_MSG(lw_, "ignoring free() called on unknown value");
+            bt_->printBackTrace();
             return;
 
         case UV_UNINITIALIZED:

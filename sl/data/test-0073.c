@@ -114,7 +114,7 @@ void traverse(struct list_head *head)
 {
     struct my_item *now;
     list_for_each_entry_reverse(now, head, link) {
-        ___sl_plot_by_ptr(&now, "now");
+        ___sl_plot("now");
     }
 }
 
