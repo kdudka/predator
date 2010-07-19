@@ -100,7 +100,7 @@ template <> struct TraverseSubObjsHelper<TObjPair> {
 
 // take the given visitor through a composite object (or whatever you pass in)
 template <class THeap, class TVisitor, class TItem = TObjId>
-bool /* complete */ traverseSubObjs(THeap &sh, TItem item, TVisitor visitor) {
+bool /* complete */ traverseSubObjs(THeap &sh, TItem item, TVisitor &visitor) {
     std::stack<TItem> todo;
     todo.push(item);
     while (!todo.empty()) {

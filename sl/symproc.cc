@@ -1029,6 +1029,66 @@ TValueId handleOpCmp(THeap &heap, enum cl_binop_e code,
     }
 }
 
+/// return offset of an object within another object;  -1 if not found
+int offsetIn(const SymHeap &sh, TObjId in, TObjId of) {
+    int offset = 0;
+    TObjId parent;
+
+    int nth;
+    while (OBJ_INVALID != (parent = sh.objParent(of, &nth))) {
+        const struct cl_type *clt = sh.objType(parent);
+        if (!clt || clt->item_cnt <= nth)
+            TRAP;
+
+        offset += clt->items[nth].offset;
+        if (parent == in)
+            return offset;
+
+        of = parent;
+    }
+
+    return /* not found */ -1;
+}
+
+struct SubByOffsetFinder {
+    TObjId                  root;
+    TObjId                  subFound;
+    const struct cl_type    *cltToSeek;
+    int                     offToSeek;
+
+    bool operator()(const SymHeap &sh, TObjId sub) {
+        const struct cl_type *clt = sh.objType(sub);
+        if (!clt || *clt != *this->cltToSeek)
+            return /* continue */ true;
+
+        if (this->offToSeek != offsetIn(sh, this->root, sub))
+            return /* continue */ true;
+
+        // found!
+        this->subFound = sub;
+        return /* break */ false;
+    }
+};
+
+TObjId subSeekByOffset(const SymHeap &sh, TObjId obj,
+                       const struct cl_type *clt, int offToSeek)
+{
+    if (!offToSeek)
+        return obj;
+
+    // prepare visitor
+    SubByOffsetFinder visitor;
+    visitor.root        = obj;
+    visitor.cltToSeek   = clt;
+    visitor.offToSeek   = offToSeek;
+
+    // look for the requested sub-object
+    if (traverseSubObjs(sh, obj, visitor))
+        return OBJ_INVALID;
+    else
+        return visitor.subFound;
+}
+
 TValueId handlePointerPlus(SymHeap &sh, const struct cl_type *clt,
                            TValueId ptr, const struct cl_operand &op)
 {
@@ -1073,8 +1133,8 @@ TValueId handlePointerPlus(SymHeap &sh, const struct cl_type *clt,
         return sh.placedAt(virt);
     }
 
-    if (off)
-        // TODO: handle general moves within a single object
+    obj = subSeekByOffset(sh, obj, clt, off);
+    if (obj <= 0)
         TRAP;
 
     // get the final address and check type compatibility

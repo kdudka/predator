@@ -715,6 +715,9 @@ void SymHeapPlotter::Private::digObjCore(TObjId obj) {
             }
 
             case CL_TYPE_STRUCT:
+                // avoid duplicates
+                this->objDone.insert(obj);
+
                 this->digNext(obj);
                 this->openCluster(obj);
                 this->plotSingleObj(obj);
