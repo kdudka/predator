@@ -125,6 +125,7 @@ void SymProc::heapObjHandleAccessorDeref(TObjId *pObj) {
             break;
 
         case UV_UNKNOWN:
+            CL_ERROR_MSG(lw_, "dereference of unknown value");
             *pObj = OBJ_UNKNOWN;
             return;
 
@@ -495,7 +496,7 @@ void SymProc::execFree(const CodeStorage::TOperandList &opList) {
             break;
 
         case UV_UNKNOWN:
-            CL_DEBUG_MSG(lw_, "ignoring free() called on unknown value");
+            CL_ERROR_MSG(lw_, "ignoring free() called on unknown value");
             return;
 
         case UV_UNINITIALIZED:
@@ -1022,7 +1023,7 @@ TValueId handleOpCmp(THeap &heap, enum cl_binop_e code,
     }
 }
 
-TValueId handlePointerPlus(const SymHeap &sh, const struct cl_type *clt,
+TValueId handlePointerPlus(SymHeap &sh, const struct cl_type *clt,
                            TValueId ptr, const struct cl_operand &op)
 {
     // jump to _target_ type
@@ -1050,6 +1051,12 @@ TValueId handlePointerPlus(const SymHeap &sh, const struct cl_type *clt,
 
         off += cltParent->items[nth].offset;
         obj = parent;
+    }
+
+    if (off < 0) {
+        CL_DEBUG("handlePointerPlus(): object underflow by "
+                << (-off) << "b treated as unknown value");
+        return sh.valCreateUnknown(UV_UNKNOWN, clt);
     }
 
     if (off)

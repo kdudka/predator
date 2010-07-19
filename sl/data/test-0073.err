@@ -1,5 +1,4 @@
-test-0073.c:116:5: error: mixing of types for a binary operator not supported yet
-test-0073.c:116:5: note: the analysis may crash because of the error above
+test-0073.c:116:5: error: dereference of unknown value
 test-0073.c:113:6: warning: end of function traverse() has not been reached
 test-0073.c:133:13: note: from call of traverse()
 test-0073.c:121:5: note: from call of main()

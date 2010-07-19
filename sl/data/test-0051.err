@@ -2,3 +2,5 @@ test-0051.c:32:20: warning: binary operator not implemented yet
 test-0051.c:32:20: warning: binary operator not implemented yet
 test-0051.c:32:20: warning: binary operator not implemented yet
 test-0051.c:32:20: warning: binary operator not implemented yet
+test-0051.c:50:13: error: ignoring free() called on unknown value
+test-0051.c:50:13: error: ignoring free() called on unknown value
