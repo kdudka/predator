@@ -751,7 +751,13 @@ void SymHeapPlotter::Private::digObjCore(TObjId obj) {
 void SymHeapPlotter::Private::digObj(TObjId obj) {
     // seek root, in order to draw the whole object, even if the root is not
     // pointed from anywhere
-    obj = objRoot(*this->heap, obj);
+    TObjId parent;
+    while (OBJ_INVALID != (parent = this->heap->objParent(obj))) {
+        if (!hasKey(this->objDone, parent))
+            this->plotEdgeSub(parent, obj);
+
+        obj = parent;
+    }
 
     if (OK_DLS != this->heap->objKind(obj)) {
         this->digObjCore(obj);
