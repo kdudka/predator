@@ -101,8 +101,8 @@ TValueId /* addr */ segClone(SymHeap &sh, TValueId atAddr) {
         const TObjId dupPeer = sh.objDup(peer);
 
         // dig the 'peer' selectors of the cloned objects
-        const TFieldIdxChain icpSeg  = sh.objPeerField(dupSeg);
-        const TFieldIdxChain icpPeer = sh.objPeerField(dupPeer);
+        const TFieldIdxChain icpSeg  = sh.objBindingField(BF_PEER, dupSeg);
+        const TFieldIdxChain icpPeer = sh.objBindingField(BF_PEER, dupPeer);
 
         // resolve selectors -> sub-objects
         const TObjId ppSeg  = subObjByChain(sh, dupSeg , icpSeg);
@@ -173,13 +173,13 @@ void buildIgnoreList(const SymHeap &sh, TObjId obj, TIgnoreList &ignoreList) {
 
         case OK_DLS:
             // preserve 'peer' field
-            tmp = subObjByChain(sh, obj, sh.objPeerField(obj));
+            tmp = subObjByChain(sh, obj, sh.objBindingField(BF_PEER, obj));
             ignoreList.insert(tmp);
             // fall through!
 
         case OK_SLS:
             // preserve 'next' field
-            tmp = subObjByChain(sh, obj, sh.objNextField(obj));
+            tmp = subObjByChain(sh, obj, sh.objBindingField(BF_NEXT, obj));
             ignoreList.insert(tmp);
     }
 }
@@ -243,7 +243,8 @@ bool segEqual(const SymHeap &sh, TValueId v1, TValueId v2) {
             TRAP;
 
         case OK_DLS:
-            if (sh.objPeerField(o1) != sh.objPeerField(o2))
+            if (sh.objBindingField(BF_PEER, o1)
+                    != sh.objBindingField(BF_PEER, o2))
                 // 'peer' selector mismatch
                 return false;
 
@@ -252,7 +253,8 @@ bool segEqual(const SymHeap &sh, TValueId v1, TValueId v2) {
             // fall through!
 
         case OK_SLS:
-            if (sh.objNextField(o1) != sh.objNextField(o2))
+            if (sh.objBindingField(BF_NEXT, o1)
+                    != sh.objBindingField(BF_NEXT, o2))
                 // 'next' selector mismatch
                 return false;
     }
@@ -633,13 +635,14 @@ unsigned /* len */ segDiscover(const SymHeap &sh, TObjId entry, EObjKind kind,
                 break;
 
             // check selectors
-            const TFieldIdxChain icPeerEncountered = sh.objPeerField(obj);
+            const TFieldIdxChain icPeerEncountered =
+                sh.objBindingField(BF_PEER, obj);
             if (icPeerEncountered != icNext && icPeerEncountered != icPrev)
                 // completely incompatible DLS, it gives us no go
                 break;
 
             // jump to peer
-            skipObj(sh, &obj, sh.objPeerField(obj));
+            skipObj(sh, &obj, sh.objBindingField(BF_PEER, obj));
             if (hasKey(path, obj))
                 // we came from the wrong side this time
                 break;
@@ -754,7 +757,7 @@ void slSegCreateIfNeeded(SymHeap &sh, TObjId obj, TFieldIdxChain icNext) {
     switch (kind) {
         case OK_SLS:
             // already abstract, check the next pointer
-            if (sh.objNextField(obj) == icNext)
+            if (sh.objBindingField(BF_NEXT, obj) == icNext)
                 // all OK
                 return;
             // fall through!
@@ -768,7 +771,7 @@ void slSegCreateIfNeeded(SymHeap &sh, TObjId obj, TFieldIdxChain icNext) {
     }
 
     // abstract a concrete object
-    sh.objSetAbstract(obj, OK_SLS, icNext);
+    sh.objSetAbstract(obj, OK_SLS, /* TODO */ TFieldIdxChain(), icNext);
 
     // we're constructing the abstract object from a concrete one --> it
     // implies non-empty LS at this point
@@ -808,8 +811,8 @@ void dlSegCreate(SymHeap &sh, TObjId o1, TObjId o2,
         // invalid call of dlSegCreate()
         TRAP;
 
-    sh.objSetAbstract(o1, OK_DLS, icPrev, icNext);
-    sh.objSetAbstract(o2, OK_DLS, icNext, icPrev);
+    sh.objSetAbstract(o1, OK_DLS, /* TODO */ TFieldIdxChain(), icPrev, icNext);
+    sh.objSetAbstract(o2, OK_DLS, /* TODO */ TFieldIdxChain(), icNext, icPrev);
 
     // introduce some UV_UNKNOWN values if necessary
     abstractNonMatchingValues(sh, o1, o2, flatScan, /* bidir */ true,
@@ -834,13 +837,13 @@ void dlSegGobble(SymHeap &sh, TObjId dls, TObjId var, bool backward,
 
     if (!backward)
         // jump to peer
-        skipObj(sh, &dls, sh.objPeerField(dls));
+        skipObj(sh, &dls, sh.objBindingField(BF_PEER, dls));
 
     // introduce some UV_UNKNOWN values if necessary
     abstractNonMatchingValues(sh, var, dls, flatScan);
 
     // store the pointer DLS -> VAR
-    const TFieldIdxChain icNext = sh.objNextField(dls);
+    const TFieldIdxChain icNext = sh.objBindingField(BF_NEXT, dls);
     const TObjId dlsNextPtr = subObjByChain(sh, dls, icNext);
     const TObjId varNextPtr = subObjByChain(sh, var, icNext);
     sh.objSetValue(dlsNextPtr, sh.valueOf(varNextPtr));
@@ -862,8 +865,8 @@ void dlSegMerge(SymHeap &sh, TObjId seg1, TObjId seg2, bool flatScan) {
         dlSegHandleCrossNeq(sh, seg2, SymHeap::NEQ_DEL);
     }
 
-    if (sh.objNextField(seg1) != sh.objNextField(seg2)
-            || (sh.objPeerField(seg1) != sh.objPeerField(seg2)))
+    if (sh.objBindingField(BF_NEXT, seg1) != sh.objBindingField(BF_NEXT, seg2)
+    || (sh.objBindingField(BF_PEER, seg1) != sh.objBindingField(BF_PEER, seg2)))
         // failure of segDiscover()?
         TRAP;
 
@@ -912,7 +915,7 @@ void dlSegAbstractionStep(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext,
             o2 = dlSegPeer(sh, o2);
 
             // jump to the next object (as we know such an object exists)
-            skipObj(sh, &o2, sh.objNextField(o2));
+            skipObj(sh, &o2, sh.objBindingField(BF_NEXT, o2));
             if (OK_CONCRETE == sh.objKind(o2)) {
                 // DLS + VAR
                 dlSegGobble(sh, o1, o2, /* backward */ false, flatScan);
@@ -1135,7 +1138,8 @@ bool dlSegReplaceByConcrete(SymHeap &sh, TObjId obj, TObjId peer) {
     dlSegHandleCrossNeq(sh, obj, SymHeap::NEQ_DEL);
 
     // take the value of 'next' pointer from peer
-    const TObjId peerPtr = subObjByChain(sh, obj, sh.objPeerField(obj));
+    const TFieldIdxChain icPeer = sh.objBindingField(BF_PEER, obj);
+    const TObjId peerPtr = subObjByChain(sh, obj, icPeer);
     const TValueId valNext = sh.valueOf(nextPtrFromSeg(sh, peer));
     sh.objSetValue(peerPtr, valNext);
 
@@ -1158,7 +1162,7 @@ void spliceOutListSegmentCore(SymHeap &sh, TObjId obj, TObjId peer) {
 
     if (obj != peer) {
         // OK_DLS --> destroy peer
-        const TFieldIdxChain icPrev = sh.objNextField(obj);
+        const TFieldIdxChain icPrev = sh.objBindingField(BF_NEXT, obj);
         const TValueId valPrev = sh.valueOf(subObjByChain(sh, obj, icPrev));
         sh.valReplace(sh.placedAt(peer), valPrev);
         sh.objDestroy(peer);
@@ -1217,7 +1221,7 @@ void concretizeObj(SymHeap &sh, TValueId addr, TSymHeapList &todo) {
 
         case OK_DLS:
             // jump to peer
-            skipObj(sh, &peer, sh.objPeerField(obj));
+            skipObj(sh, &peer, sh.objBindingField(BF_PEER, obj));
             break;
     }
 
@@ -1229,7 +1233,8 @@ void concretizeObj(SymHeap &sh, TValueId addr, TSymHeapList &todo) {
     const TValueId aoDupAddr = sh.placedAt(aoDup);
     if (OK_DLS == kind) {
         // DLS relink
-        const TObjId peerField = subObjByChain(sh, peer, sh.objPeerField(peer));
+        const TFieldIdxChain icPeer = sh.objBindingField(BF_PEER, peer);
+        const TObjId peerField = subObjByChain(sh, peer, icPeer);
         sh.objSetValue(peerField, aoDupAddr);
     }
 
@@ -1238,14 +1243,14 @@ void concretizeObj(SymHeap &sh, TValueId addr, TSymHeapList &todo) {
 
     // concretize self and recover the list
     const TObjId ptrNext = subObjByChain(sh, obj, (OK_SLS == kind)
-            ? sh.objNextField(obj)
-            : sh.objPeerField(obj));
+            ? sh.objBindingField(BF_NEXT, obj)
+            : sh.objBindingField(BF_PEER, obj));
     sh.objSetConcrete(obj);
     sh.objSetValue(ptrNext, aoDupAddr);
 
     if (OK_DLS == kind) {
         // update DLS back-link
-        const TFieldIdxChain icPrev = sh.objNextField(aoDup);
+        const TFieldIdxChain icPrev = sh.objBindingField(BF_NEXT, aoDup);
         const TObjId backLink = subObjByChain(sh, aoDup, icPrev);
         sh.objSetValue(backLink, sh.placedAt(obj));
     }

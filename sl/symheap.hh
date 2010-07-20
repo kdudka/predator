@@ -547,6 +547,15 @@ enum EObjKind {
     OK_DLS          = 2
 };
 
+/**
+ * enumeration of segment fields that are treated somehow special
+ */
+enum EBindingField {
+    BF_NEXT,        ///< pointer to next (used by SLS and DLS)
+    BF_PEER,        ///< pointer to peer (used by DLS only)
+    BF_HEAD         ///< position of the head sub-object (used by Linux lists)
+};
+
 typedef std::vector<int /* nth */> TFieldIdxChain;
 
 class SymHeap: public SymHeapTyped {
@@ -574,20 +583,10 @@ class SymHeap: public SymHeapTyped {
         EObjKind objKind(TObjId obj) const;
 
         /**
-         * return a @b binding sub-object of the given @b abstract object.  Here
-         * @b binding objects stands for the filed usually called @c next or @c
-         * prev.
+         * return a binding field of the given @b abstract object, specified
+         * by bf
          */
-        TFieldIdxChain objNextField(TObjId obj) const;
-
-        /**
-         * return a @b peer sub-object - for a head object, you get the field
-         * containing a pointer to tail and vice versa.  Note we don't
-         * distinguish among head and tail, it's just a @b peer in our
-         * terminology.
-         * @note This method basically makes sense only for DLS.
-         */
-        TFieldIdxChain objPeerField(TObjId obj) const;
+        TFieldIdxChain objBindingField(EBindingField bf, TObjId obj) const;
 
         /**
          * true, if the @b abstract object is shared (default); it has to be
@@ -609,7 +608,8 @@ class SymHeap: public SymHeapTyped {
          * object.
          */
         void objSetAbstract(TObjId obj, EObjKind kind,
-                            TFieldIdxChain bidnerField,
+                            TFieldIdxChain headField,
+                            TFieldIdxChain nextField,
                             TFieldIdxChain peerField = TFieldIdxChain());
 
         /**

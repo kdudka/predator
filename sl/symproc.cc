@@ -1120,8 +1120,8 @@ TValueId handlePointerPlus(SymHeap &sh, const struct cl_type *clt,
     }
 
     if (off < 0) {
-        // The surrounding object does not exist in real-word!  If we still need
-        // to operate on Linux lists, we need to create a virtual one...
+        // The surrounding object does not exist in the real world!  If we still
+        // need to operate on Linux lists, we need to create a virtual one...
         CL_WARN("support for virtual objects is not implemented yet");
         const TObjId virt = sh.objPretendSurroundOf(obj, -off, clt);
         if (OBJ_INVALID == virt) {

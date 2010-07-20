@@ -1454,6 +1454,7 @@ int SymHeapTyped::valGetCustom(const struct cl_type **pClt, TValueId val) const
 struct SymHeap::Private {
     struct ObjectEx {
         EObjKind            kind;
+        TFieldIdxChain      icHead;
         TFieldIdxChain      icNext;
         TFieldIdxChain      icPeer;
         bool                shared;
@@ -1510,22 +1511,20 @@ EObjKind SymHeap::objKind(TObjId obj) const {
         : iter->second.kind;
 }
 
-TFieldIdxChain SymHeap::objNextField(TObjId obj) const {
+TFieldIdxChain SymHeap::objBindingField(EBindingField bf, TObjId obj) const {
     Private::TObjMap::iterator iter = d->objMap.find(obj);
     if (d->objMap.end() == iter)
-        // invalid call of SymHeap::objNextField()
+        // invalid call of SymHeap::objBindingField()
         TRAP;
 
-    return iter->second.icNext;
-}
-
-TFieldIdxChain SymHeap::objPeerField(TObjId obj) const {
-    Private::TObjMap::iterator iter = d->objMap.find(obj);
-    if (d->objMap.end() == iter)
-        // invalid call of SymHeap::objPeerField()
-        TRAP;
-
-    return iter->second.icPeer;
+    switch (bf) {
+        case BF_HEAD: return iter->second.icHead;
+        case BF_NEXT: return iter->second.icNext;
+        case BF_PEER: return iter->second.icPeer;
+        default:
+            TRAP;
+            return TFieldIdxChain();
+    }
 }
 
 bool SymHeap::objShared(TObjId obj) const {
@@ -1546,8 +1545,11 @@ void SymHeap::objSetShared(TObjId obj, bool shared) {
     iter->second.shared = shared;
 }
 
-void SymHeap::objSetAbstract(TObjId obj, EObjKind kind, TFieldIdxChain icNext,
-                             TFieldIdxChain icPeer)
+void SymHeap::objSetAbstract(TObjId             obj,
+                             EObjKind           kind,
+                             TFieldIdxChain     icHead,
+                             TFieldIdxChain     icNext,
+                             TFieldIdxChain     icPeer)
 {
     if (OK_CONCRETE == kind || hasKey(d->objMap, obj))
         // invalid call of SymHeap::objAbstract()
@@ -1566,6 +1568,7 @@ void SymHeap::objSetAbstract(TObjId obj, EObjKind kind, TFieldIdxChain icNext,
     // initialize abstract object
     Private::ObjectEx &ref = d->objMap[obj];
     ref.kind    = kind;
+    ref.icHead  = icHead;
     ref.icNext  = icNext;
     ref.icPeer  = icPeer;
 }

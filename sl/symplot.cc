@@ -508,7 +508,7 @@ void SymHeapPlotter::Private::digNext(TObjId obj) {
             break;
     }
 
-    const TFieldIdxChain icBind = this->heap->objNextField(obj);
+    const TFieldIdxChain icBind = this->heap->objBindingField(BF_NEXT, obj);
     const TObjId objBind = subObjByChain(*this->heap, obj, icBind);
     if (objBind <= 0)
         TRAP;
@@ -518,7 +518,7 @@ void SymHeapPlotter::Private::digNext(TObjId obj) {
     if (OK_SLS == kind)
         return;
 
-    const TFieldIdxChain icPeer = this->heap->objPeerField(obj);
+    const TFieldIdxChain icPeer = this->heap->objBindingField(BF_PEER, obj);
     const TObjId objPeer = subObjByChain(*this->heap, obj, icPeer);
     if (objBind <= 0)
         TRAP;
