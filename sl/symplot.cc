@@ -552,12 +552,19 @@ void SymHeapPlotter::Private::openCluster(TObjId obj) {
             pw = "3.0";
             break;
     }
+
     this->dotStream
         << "subgraph \"cluster" << obj << "\" {"    << std::endl
         << "\tlabel=" << SL_QUOTE(label) << ";"     << std::endl
         << "\tcolor=" << color << ";"               << std::endl
-        << "\tfontcolor=" << color << ";"           << std::endl
-        << "\tbgcolor=gray98;"                      << std::endl
+        << "\tfontcolor=" << color << ";"           << std::endl;
+
+    if (!this->heap->objExists(obj))
+        pw = "0.1";
+    else
+        this->dotStream << "\tbgcolor=gray98;"      << std::endl;
+
+    this->dotStream
         << "\tstyle=dashed;"                        << std::endl
         << "\tpenwidth=" << pw << ";"               << std::endl;
 }

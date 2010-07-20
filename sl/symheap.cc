@@ -1238,9 +1238,8 @@ TObjId SymHeapTyped::objPretendSurroundOf(TObjId                objReal,
     // create a low-level object
     const TObjId obj = SymHeapCore::objCreate();
     this->resizeIfNeeded();
-
-    // store the type-info
     d->objects[obj].clt = cltVirt;
+    d->objects[obj].dummy = true;
 
     // start with the _virtual_ root
     SurroundStackItem item;
@@ -1280,6 +1279,7 @@ TObjId SymHeapTyped::objPretendSurroundOf(TObjId                objReal,
                     // we've hit the object being surrounded
                     d->objects[obj].subObjs[i] = objReal;
                     d->objects[objReal].nthItem = i;
+                    d->objects[objReal].parent = obj;
                     continue;
                 }
 
@@ -1297,7 +1297,6 @@ TObjId SymHeapTyped::objPretendSurroundOf(TObjId                objReal,
                     : item.off;
                 todo.push(item);
             }
-            break;
         }
 
         if (item.subOff)
@@ -1370,6 +1369,15 @@ void SymHeapTyped::objDestroy(TObjId obj) {
     const CVar cv = ref.cVar;
     if (cv.uid != /* heap object */ -1)
         d->cVarMap.remove(cv);
+
+    // seek the virtual root if any
+    TObjId tmp;
+    while (OBJ_INVALID != (tmp = this->objParent(obj))) {
+        if (this->objExists(tmp))
+            TRAP;
+
+        obj = tmp;
+    }
 
     this->objDestroyPriv(obj);
     if (OBJ_RETURN == obj) {
