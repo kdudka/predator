@@ -28,6 +28,9 @@ int main()
 #define ROOT(type, field, addr) \
     (type *) ((char *)addr - offsetof(type, field))
 
+    // let's use the following on stack variable to recognize stack smashing
+    int i = -1;
+
     struct litem li;
     struct list_head *lh  = &li.lhead;
 
@@ -40,9 +43,20 @@ int main()
     pgi->li.lhead.next = &pli->lhead;
     ___sl_plot("01");
 
-    // this should be out of range
+    // this should be out of range --> stack smashing
     pgi->h0.next = NULL;
     pgi->h1.prev = NULL;
+
+    // surprisingly i==0 at this point (because of the stack smashing)
+    // ----------
+    // - gcc
+    // - sparse
+    // - valgrind
+    // - Invader
+    // ----------
+    // + Predator
+    if (!i)
+        free(pli);
 
     return 0;
 }

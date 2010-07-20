@@ -753,8 +753,10 @@ void SymHeapPlotter::Private::digObj(TObjId obj) {
     // pointed from anywhere
     TObjId parent;
     while (OBJ_INVALID != (parent = this->heap->objParent(obj))) {
-        if (!hasKey(this->objDone, parent))
+        if (!hasKey(this->objDone, parent)) {
+            this->objDone.insert(obj);
             this->plotEdgeSub(parent, obj);
+        }
 
         obj = parent;
     }
