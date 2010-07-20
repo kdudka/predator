@@ -33,13 +33,16 @@ int main()
 
     struct litem *pli = ROOT(struct litem, lhead, lh);
     struct gitem *pgi = ROOT(struct gitem, li, &li);
+
+    // this should be OK
+    pli->data = pgi;
+    pli->lhead.prev = NULL;
+    pgi->li.lhead.next = &pli->lhead;
     ___sl_plot("01");
 
-    if (pli != &li)
-        free(pli);
-
-    if (pli != &pgi->li)
-        free(pli);
+    // this should be out of range
+    pgi->h0.next = NULL;
+    pgi->h1.prev = NULL;
 
     return 0;
 }
