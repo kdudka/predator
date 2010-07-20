@@ -1,2 +1,2 @@
-test-0077.c:47:18: error: dereference of a pointer that is out of range
-test-0077.c:48:18: error: dereference of a pointer that is out of range
+test-0077.c:43:18: error: dereference of a pointer that is out of range
+test-0077.c:44:18: error: dereference of a pointer that is out of range

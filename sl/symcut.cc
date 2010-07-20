@@ -29,6 +29,7 @@
 
 #include "worklist.hh"
 
+#include <iomanip>
 #include <map>
 #include <set>
 #include <stack>
@@ -437,6 +438,10 @@ void splitHeapByCVars(const SymBackTrace *bt, SymHeap *srcDst,
     CL_DEBUG("splitHeapByCVars() finished: "
             << cntOrig << " -> " << cntA << " |" << cntB
             << " (" << cntTotal << " program variables in total)");
+
+    const float ratio = 100.0 * dst.lastValueId() / srcDst->lastValueId();
+    CL_DEBUG("splitHeapByCVars() resulting heap size: " << std::fixed
+            << std::setprecision(2) << std::setw(5) << ratio << "%");
 
     // basic sanity check
     if (cntA < cntOrig || cntA + cntB != cntTotal) {
