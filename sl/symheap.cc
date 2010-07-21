@@ -1559,7 +1559,7 @@ void SymHeap::objSetAbstract(TObjId obj, EObjKind kind,
     SymHeapCore::valSetUnknown(addr, UV_ABSTRACT);
 
     // mark the address of 'head' as UV_ABSTRACT
-    const TValueId addrHead = this->placedAt(segHead(*this, obj));
+    const TValueId addrHead = segHeadAddr(*this, obj);
     SymHeapCore::valSetUnknown(addrHead, UV_ABSTRACT);
 
     const TObjId objBind = subObjByChain(*this, obj, bf.next);
@@ -1577,7 +1577,7 @@ void SymHeap::objSetConcrete(TObjId obj) {
         TRAP;
 
     // mark the address of 'head' as UV_KNOWN
-    const TValueId addrHead = this->placedAt(segHead(*this, obj));
+    const TValueId addrHead = segHeadAddr(*this, obj);
     SymHeapCore::valSetUnknown(addrHead, UV_KNOWN);
 
     // mark the value as UV_KNOWN
@@ -1603,10 +1603,11 @@ bool SymHeap::valReplaceUnknownImpl(TValueId val, TValueId replaceBy) {
     }
 }
 
-void SymHeap::dlSegCrossNeqOp(ENeqOp op, TValueId headAddr) {
-    const TObjId head1 = this->pointsTo(headAddr);
+void SymHeap::dlSegCrossNeqOp(ENeqOp op, TValueId headAddr1) {
+    const TObjId head1 = this->pointsTo(headAddr1);
     const TObjId seg1 = objRoot(*this, head1);
     const TObjId seg2 = dlSegPeer(*this, seg1);
+    const TValueId headAddr2 = segHeadAddr(*this, seg2);
 
     // dig pointer-to-next objects
     const TObjId next1 = nextPtrFromSeg(*this, seg1);
@@ -1616,19 +1617,13 @@ void SymHeap::dlSegCrossNeqOp(ENeqOp op, TValueId headAddr) {
     const TValueId val1 = this->valueOf(next1);
     const TValueId val2 = this->valueOf(next2);
 
-    // compute addresses of heads
-    const TFieldIdxChain icHead = this->objBinding(seg1).head;
-    const TObjId head2 = subObjByChain(*this, seg2, icHead);
-    const TValueId addrHead1 = this->placedAt(head1);
-    const TValueId addrHead2 = this->placedAt(head2);
-
     // add/del Neq predicates
-    SymHeapCore::neqOp(op, val1, addrHead2);
-    SymHeapCore::neqOp(op, val2, addrHead1);
+    SymHeapCore::neqOp(op, val1, headAddr2);
+    SymHeapCore::neqOp(op, val2, headAddr1);
 
     if (NEQ_DEL == op)
         // removing the 1+ flag implies removal of the 2+ flag
-        SymHeapCore::neqOp(NEQ_DEL, addrHead1, addrHead2);
+        SymHeapCore::neqOp(NEQ_DEL, headAddr1, headAddr2);
 }
 
 void SymHeap::neqOp(ENeqOp op, TValueId valA, TValueId valB) {

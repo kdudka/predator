@@ -74,8 +74,8 @@ bool dlSegNotEmpty(const SymHeap &sh, TObjId dls) {
     const TValueId val2 = sh.valueOf(next2);
 
     // attempt to prove both
-    const bool ne1 = segProveNeq(sh, val1, sh.placedAt(peer));
-    const bool ne2 = segProveNeq(sh, val2, sh.placedAt(dls));
+    const bool ne1 = segProveNeq(sh, val1, segHeadAddr(sh, peer));
+    const bool ne2 = segProveNeq(sh, val2, segHeadAddr(sh, dls));
     if (ne1 && ne2)
         return /* not empty */ true;
 
@@ -106,8 +106,8 @@ bool segNotEmpty(const SymHeap &sh, TObjId seg) {
 
     const TObjId next = nextPtrFromSeg(sh, seg);
     const TValueId nextVal = sh.valueOf(next);
-    const TValueId addr = sh.placedAt(seg);
-    return /* not empty */ segProveNeq(sh, addr, nextVal);
+    const TValueId headAddr = segHeadAddr(sh, seg);
+    return /* not empty */ segProveNeq(sh, headAddr, nextVal);
 }
 
 void segDestroy(SymHeap &sh, TObjId seg) {
@@ -166,5 +166,5 @@ bool haveDlSegAt(SymHeap &sh, TValueId atAddr, TValueId peerAddr) {
         return false;
 
     // compare the end-points
-    return (sh.placedAt(segHead(sh, peer)) == peerAddr);
+    return (segHeadAddr(sh, peer) == peerAddr);
 }

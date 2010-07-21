@@ -87,7 +87,7 @@ void dlSegHandleCrossNeq(SymHeap &sh, TObjId dls, SymHeap::ENeqOp op) {
     const TObjId next = nextPtrFromSeg(sh, peer);
     const TValueId valNext = sh.valueOf(next);
 
-    const TValueId headAddr = sh.placedAt(segHead(sh, dls));
+    const TValueId headAddr = segHeadAddr(sh, dls);
     sh.neqOp(op, headAddr, valNext);
 }
 
@@ -486,6 +486,7 @@ class ProbeVisitor {
         unsigned                arrity_;
         TFieldIdxChain          icNext_;
 
+        // FIXME: this can't work well for Linux lists
         bool dlSegEndCandidate(const SymHeap &sh, TObjId obj) const {
             if (OK_DLS != static_cast<EObjKind>(arrity_) || icNext_.empty())
                 // we are not looking for a DLS either
@@ -827,7 +828,7 @@ void slSegCreateIfNeeded(SymHeap &sh, TObjId obj, const SegBindingFields &bf) {
 
     // we're constructing the abstract object from a concrete one
     // --> it implies non-empty LS at this point
-    const TValueId headAddr = sh.placedAt(segHead(sh, obj));
+    const TValueId headAddr = segHeadAddr(sh, obj);
     const TValueId valNext = sh.valueOf(subObjByChain(sh, obj, bf.next));
     sh.neqOp(SymHeap::NEQ_ADD, headAddr, valNext);
 }
@@ -873,8 +874,8 @@ void dlSegCreate(SymHeap &sh, TObjId o1, TObjId o2, SegBindingFields bf,
                               /* fresh */ true);
 
     // a just created DLS is said to be 2+
-    const TValueId a1 = sh.placedAt(segHead(sh, o1));
-    const TValueId a2 = sh.placedAt(segHead(sh, o2));
+    const TValueId a1 = segHeadAddr(sh, o1);
+    const TValueId a2 = segHeadAddr(sh, o2);
     sh.neqOp(SymHeap::NEQ_ADD, a1, a2);
 }
 
@@ -1252,13 +1253,14 @@ void spliceOutSegmentIfNeeded(SymHeap &sh, TObjId ao, TObjId peer,
                               TSymHeapList &todo)
 {
     // check if the LS may be empty
-    const TValueId addrSelf = sh.placedAt(ao);
     if (segNotEmpty(sh, ao)) {
         // the segment was _guaranteed_ to be non-empty now, but the
         // concretization makes it _possibly_ empty --> remove the Neq predicate 
         const TObjId next = nextPtrFromSeg(sh, peer);
         const TValueId nextVal = sh.valueOf(next);
-        sh.neqOp(SymHeap::NEQ_DEL, addrSelf, nextVal); 
+        const TValueId headAddr = segHeadAddr(sh, ao);
+
+        sh.neqOp(SymHeap::NEQ_DEL, headAddr, nextVal); 
         return;
     }
 
@@ -1280,12 +1282,13 @@ void abstractIfNeeded(SymHeap &sh) {
 }
 
 void concretizeObj(SymHeap &sh, TValueId addr, TSymHeapList &todo) {
-    const TObjId obj = sh.pointsTo(addr);
-    TObjId peer = obj;
+    TObjId obj = sh.pointsTo(addr);
 
-    if (obj != segHead(sh, obj))
-        // TODO
-        TRAP;
+    if (OK_HEAD == sh.objKind(obj)) {
+        CL_WARN("concretization of Linux lists is not implemented yet");
+        obj = objRoot(sh, obj);
+    }
+    TObjId peer = obj;
 
     // branch by SLS/DLS
     const EObjKind kind = sh.objKind(obj);
@@ -1309,12 +1312,12 @@ void concretizeObj(SymHeap &sh, TValueId addr, TSymHeapList &todo) {
 
     // duplicate self as abstract object
     const TObjId aoDup = sh.objDup(obj);
-    const TValueId aoDupAddr = sh.placedAt(aoDup);
+    const TValueId aoDupHeadAddr = segHeadAddr(sh, aoDup);
     if (OK_DLS == kind) {
         // DLS relink
         const TFieldIdxChain icPeer = sh.objBinding(peer).peer;
         const TObjId peerField = subObjByChain(sh, peer, icPeer);
-        sh.objSetValue(peerField, aoDupAddr);
+        sh.objSetValue(peerField, aoDupHeadAddr);
     }
 
     // duplicate all unknown values, to keep the prover working
@@ -1325,13 +1328,14 @@ void concretizeObj(SymHeap &sh, TValueId addr, TSymHeapList &todo) {
             ? sh.objBinding(obj).next
             : sh.objBinding(obj).peer);
     sh.objSetConcrete(obj);
-    sh.objSetValue(ptrNext, aoDupAddr);
+    sh.objSetValue(ptrNext, aoDupHeadAddr);
 
     if (OK_DLS == kind) {
         // update DLS back-link
-        const TFieldIdxChain icPrev = sh.objBinding(aoDup).next;
-        const TObjId backLink = subObjByChain(sh, aoDup, icPrev);
-        sh.objSetValue(backLink, sh.placedAt(obj));
+        const SegBindingFields &bf = sh.objBinding(aoDup);
+        const TObjId backLink = subObjByChain(sh, aoDup, bf.next);
+        const TValueId headAddr = sh.placedAt(subObjByChain(sh, obj, bf.head));
+        sh.objSetValue(backLink, headAddr);
     }
 }
 

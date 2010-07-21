@@ -50,4 +50,9 @@ inline TObjId segHead(const SymHeap &sh, TObjId seg) {
     return subObjByChain(sh, seg, icHead);
 }
 
+inline TValueId segHeadAddr(const SymHeap &sh, TObjId seg) {
+    const TObjId head = segHead(sh, seg);
+    return sh.placedAt(head);
+}
+
 #endif /* H_GUARD_SYMSEG_H */
