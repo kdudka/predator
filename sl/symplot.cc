@@ -594,8 +594,11 @@ bool SymHeapPlotter::Private::handleCustomValue(TValueId value) {
         TRAP;
 
     clt = clt->items[0].type;
-    if (!clt || clt->code != CL_TYPE_FNC)
-        TRAP;
+    if (!clt || clt->code != CL_TYPE_FNC) {
+        this->plotNodeValue(value, CL_TYPE_UNKNOWN, 0);
+        this->plotNodeAux(value, CL_TYPE_UNKNOWN, "?");
+        return true;
+    }
 
     // FIXME: get rid of the const_cast
     Storage &storage = const_cast<Storage &>(*this->stor);
@@ -723,6 +726,8 @@ void SymHeapPlotter::Private::digObjCore(TObjId obj) {
 
         const enum cl_type_e code = clt->code;
         switch (code) {
+            case CL_TYPE_ARRAY:
+            case CL_TYPE_CHAR:
             case CL_TYPE_INT:
             case CL_TYPE_PTR: {
                 this->plotSingleObj(obj);
