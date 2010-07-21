@@ -595,8 +595,7 @@ bool SymHeapPlotter::Private::handleCustomValue(TValueId value) {
 
     clt = clt->items[0].type;
     if (!clt || clt->code != CL_TYPE_FNC) {
-        this->plotNodeValue(value, CL_TYPE_UNKNOWN, 0);
-        this->plotNodeAux(value, CL_TYPE_UNKNOWN, "?");
+        CL_WARN_MSG(this->lw, "custom value ignored while plotting");
         return true;
     }
 
@@ -748,6 +747,12 @@ void SymHeapPlotter::Private::digObjCore(TObjId obj) {
                 this->plotSingleObj(obj);
                 for (int i = 0; i < clt->item_cnt; ++i) {
                     const TObjId sub = this->heap->subObj(obj, i);
+                    const struct cl_type *subClt = this->heap->objType(sub);
+                    if (!subClt || (subClt->code == CL_TYPE_STRUCT
+                                && !subClt->item_cnt))
+                        // skip empty structures
+                        continue;
+
                     if (!hasKey(this->objDone, sub))
                         this->plotEdgeSub(obj, sub);
 
