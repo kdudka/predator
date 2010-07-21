@@ -1,3 +1,6 @@
+// Creating a Linux list (with the list head structure nested in data nodes), containing two 
+// data nodes and a head node.
+
 #include "../sl.h"
 
 #include <linux/stddef.h>

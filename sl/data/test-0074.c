@@ -1,3 +1,5 @@
+// A test of offset computation for nested structures.
+
 #include "../sl.h"
 
 #include <linux/stddef.h>
@@ -41,6 +43,9 @@ int main()
     struct s s;
     struct list_head *h3 = &s.h3;
     struct s *ps = (struct s *) ((char *)h3 - offsetof(struct s, h3));
+
+    // ___sl_plot("01");
+
     if (ps != &s)
         free(ps);
 }
