@@ -110,7 +110,7 @@ class SymExecEngine {
             insnIdx_(0),
             heapIdx_(0),
             waiting_(false),
-            retReached_(false)
+            endReached_(false)
         {
             this->initEngine(src);
         }
@@ -139,7 +139,7 @@ class SymExecEngine {
         unsigned                        insnIdx_;
         unsigned                        heapIdx_;
         bool                            waiting_;
-        bool                            retReached_;
+        bool                            endReached_;
 
         SymHeapScheduler                localState_;
         SymHeapUnion                    nextLocalState_;
@@ -206,7 +206,7 @@ void SymExecEngine::execReturn() {
 
     // commit one of the function results
     dst_.insert(heap);
-    retReached_ = true;
+    endReached_ = true;
 }
 
 void SymExecEngine::updateState(const CodeStorage::Block *ofBlock,
@@ -322,7 +322,7 @@ void SymExecEngine::execTermInsn() {
 
         case CL_INSN_ABORT:
             CL_DEBUG_MSG(lw_, "CL_INSN_ABORT reached");
-            retReached_ = true;
+            endReached_ = true;
             break;
 
         case CL_INSN_JMP:
@@ -718,7 +718,7 @@ bool /* complete */ SymExecEngine::execBlock() {
         localState_ = nextLocalState_;
     }
 
-    // Mark symbolic heaps that have been processed as done. They will be
+    // Mark symbolic heaps that have been processed as done.  They will be
     // omitted on the next call of execBlock() for the same BB since there is no
     // chance to get different results for the same symbolic heaps on the input.
     // NOTE: We don't know whether origCnt == origin.size() at this point, but
@@ -757,9 +757,12 @@ bool /* complete */ SymExecEngine::run() {
         block_ = *i;
         todo_.erase(i);
 
-        const std::string &name = block_->name();
+        // update location info
         const CodeStorage::Insn *first = block_->operator[](0);
-        const LocationWriter lw(&first->loc);
+        lw_ = &first->loc;
+
+        // enter the basic block
+        const std::string &name = block_->name();
         CL_DEBUG_MSG(lw_, "___ entering " << name);
         insnIdx_ = 0;
         heapIdx_ = 0;
@@ -770,7 +773,7 @@ bool /* complete */ SymExecEngine::run() {
             return false;
     }
 
-    if (!retReached_) {
+    if (!endReached_) {
         CL_WARN_MSG(lw, "end of function "
                 << nameOf(*fnc) << "() has not been reached");
         bt_.printBackTrace();

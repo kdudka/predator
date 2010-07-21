@@ -211,7 +211,7 @@ class SymHeapCore {
         /**
          * introduce a new @b Neq @b predicate (if not present already), or
          * remove an existing one
-         * @param requested operation - NEQ_ADD or NEQ_DEL
+         * @param op requested operation - NEQ_ADD or NEQ_DEL
          * @param valA one side of the inequality
          * @param valB one side of the inequality
          */
@@ -537,7 +537,7 @@ class SymHeapTyped: public SymHeapCore {
 
 /**
  * object kind enumeration
- * @attenetion Please do not change the integral values, they're fixed in order
+ * @attention Please do not change the integral values, they're fixed in order
  * to simplify the code of ProbeVisitor.  Simply speaking, the integral values
  * stand for the count of binding pointers.
  */

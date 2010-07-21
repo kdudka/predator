@@ -37,7 +37,7 @@ class SymHeap;
 class SymHeapUnion;
 
 struct SymProcExecParams {
-    bool fastMode;          ///< enable/disable the @b fast @b mode
+    bool fastMode;          ///< enable/disable OOM state simulation
     bool skipPlot;          ///< simply ignore all ___sl_plot* calls
 
     SymProcExecParams():
@@ -91,8 +91,7 @@ class SymProc {
          * @note see also code_listener.h::cl_is_term_insn()
          * @param dst a container to store the result(s) to
          * @param insn an instruction to be executed
-         * @param fastMode if true, omit some computationally expensive
-         * techniques
+         * @param ep execution parameters - see SymProcExecParams for details
          * @return true, if the requested instruction has been processed; false
          * if the instruction has to be processed elsewhere (usually
          * CL_INSN_CALL)
