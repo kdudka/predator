@@ -38,7 +38,8 @@ TObjId dlSegPeer(const SymHeap &sh, TObjId dls) {
         TRAP;
 
     TObjId peer = dls;
-    skipObj(sh, &peer, sh.objBinding(dls).peer);
+    const SegBindingFields &bf = sh.objBinding(dls);
+    skipObj(sh, &peer, bf.head, bf.peer);
     return peer;
 }
 

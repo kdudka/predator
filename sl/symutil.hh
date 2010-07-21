@@ -35,6 +35,7 @@
 #include <stack>
 
 TObjId subObjByChain(const SymHeap &sh, TObjId obj, TFieldIdxChain ic);
+TObjId subObjByInvChain(const SymHeap &sh, TObjId obj, TFieldIdxChain ic);
 
 bool isHeapObject(const SymHeap &heap, TObjId obj);
 
@@ -64,7 +65,8 @@ void getPtrValues(SymHeapCore::TContValue &dst, const SymHeap &heap,
 
 void objReplace(SymHeap &sh, TObjId oldObj, TObjId newObj);
 
-void skipObj(const SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext);
+void skipObj(const SymHeap &sh, TObjId *pObj, TFieldIdxChain icHead,
+             TFieldIdxChain icNext);
 
 typedef std::pair<TObjId, TObjId> TObjPair;
 

@@ -27,15 +27,18 @@
 #   define STREQ(s1, s2) (0 == strcmp(s1, s2))
 #endif
 
-// ensure (a <= b)
 template <typename T>
-void sortValues(T &a, T &b) {
-    if (a <= b)
-        return;
-
+void swapValues(T &a, T &b) {
     const T tmp = a;
     a = b;
     b = tmp;
+}
+
+// ensure (a <= b)
+template <typename T>
+void sortValues(T &a, T &b) {
+    if (b < a)
+        swapValues(a, b);
 }
 
 template <typename TCont>

@@ -38,6 +38,37 @@ TObjId subObjByChain(const SymHeap &sh, TObjId obj, TFieldIdxChain ic) {
     return obj;
 }
 
+TObjId subObjByInvChain(const SymHeap &sh, TObjId obj, TFieldIdxChain ic) {
+    std::stack<int> chkStack;
+
+    // just slowly go to the root
+    for (unsigned i = 0; i < ic.size(); ++i) {
+        int nth;
+        const TObjId parent = sh.objParent(obj, &nth);
+        if (OBJ_INVALID == parent)
+            TRAP;
+
+        chkStack.push(nth);
+        obj = parent;
+    }
+
+    // now check if the captured selector sequence matches the given one
+    // FIXME: skip this part when not debugging?
+    for (unsigned i = 0; i < ic.size(); ++i) {
+        if (chkStack.empty())
+            TRAP;
+
+        if (chkStack.top() != ic[i])
+            TRAP;
+
+        chkStack.pop();
+    }
+    if (!chkStack.empty())
+        TRAP;
+
+    return obj;
+}
+
 bool isHeapObject(const SymHeap &heap, TObjId obj) {
     if (obj <= 0)
         return false;
@@ -131,10 +162,12 @@ void objReplace(SymHeap &sh, TObjId oldObj, TObjId newObj) {
     sh.objDestroy(oldObj);
 }
 
-void skipObj(const SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext) {
+void skipObj(const SymHeap &sh, TObjId *pObj, TFieldIdxChain icHead,
+             TFieldIdxChain icNext)
+{
     const TObjId objPtrNext = subObjByChain(sh, *pObj, icNext);
-    const TValueId valNext = sh.valueOf(objPtrNext);
-    const TObjId objNext = sh.pointsTo(valNext);
+    const TObjId headNext = sh.pointsTo(sh.valueOf(objPtrNext));
+    const TObjId objNext = subObjByInvChain(sh, headNext, icHead);
     if (OBJ_INVALID == objNext)
         TRAP;
 

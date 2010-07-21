@@ -662,7 +662,7 @@ unsigned /* len */ segDiscover(const SymHeap &sh, TObjId entry, EObjKind kind,
                 break;
 
             // jump to peer
-            skipObj(sh, &obj, sh.objBinding(obj).peer);
+            obj = dlSegPeer(sh, obj);
             if (hasKey(path, obj))
                 // we came from the wrong side this time
                 break;
@@ -777,12 +777,12 @@ unsigned segDiscoverAll(const SymHeap &sh, const TObjId entry, EObjKind kind,
     return bestLen;
 }
 
-void slSegCreateIfNeeded(SymHeap &sh, TObjId obj, TFieldIdxChain icNext) {
+void slSegCreateIfNeeded(SymHeap &sh, TObjId obj, const SegBindingFields &bf) {
     const EObjKind kind = sh.objKind(obj);
     switch (kind) {
         case OK_SLS:
             // already abstract, check the next pointer
-            if (sh.objBinding(obj).next == icNext)
+            if (sh.objBinding(obj) == bf)
                 // all OK
                 return;
             // fall through!
@@ -796,30 +796,28 @@ void slSegCreateIfNeeded(SymHeap &sh, TObjId obj, TFieldIdxChain icNext) {
     }
 
     // abstract a concrete object
-    SegBindingFields bf;
-    bf.next = icNext;
     sh.objSetAbstract(obj, OK_SLS, bf);
 
     // we're constructing the abstract object from a concrete one --> it
     // implies non-empty LS at this point
     const TValueId addr = sh.placedAt(obj);
-    const TObjId objNextPtr = subObjByChain(sh, obj, icNext);
+    const TObjId objNextPtr = subObjByChain(sh, obj, bf.next);
     const TValueId valNext = sh.valueOf(objNextPtr);
     sh.neqOp(SymHeap::NEQ_ADD, addr, valNext);
 }
 
-void slSegAbstractionStep(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext,
+void slSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf,
                           bool flatScan)
 {
-    const TObjId objPtrNext = subObjByChain(sh, *pObj, icNext);
+    const TObjId objPtrNext = subObjByChain(sh, *pObj, bf.next);
     const TValueId valNext = sh.valueOf(objPtrNext);
     if (valNext <= 0 || 1 != sh.usedByCount(valNext))
         // this looks like a failure of segDiscover()
         TRAP;
 
     // make sure the next object is abstract
-    const TObjId objNext = sh.pointsTo(valNext);
-    slSegCreateIfNeeded(sh, objNext, icNext);
+    const TObjId objNext = subObjByInvChain(sh, sh.pointsTo(valNext), bf.head);
+    slSegCreateIfNeeded(sh, objNext, bf);
     if (OK_SLS != sh.objKind(objNext))
         TRAP;
 
@@ -831,20 +829,17 @@ void slSegAbstractionStep(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext,
     *pObj = objNext;
 }
 
-void dlSegCreate(SymHeap &sh, TObjId o1, TObjId o2,
-                 TFieldIdxChain icNext, TFieldIdxChain icPrev, bool flatScan)
+void dlSegCreate(SymHeap &sh, TObjId o1, TObjId o2, SegBindingFields bf,
+                 bool flatScan)
 {
     if (OK_CONCRETE != sh.objKind(o1) || OK_CONCRETE != sh.objKind(o2))
         // invalid call of dlSegCreate()
         TRAP;
 
-    SegBindingFields bf;
-    bf.next = icPrev;
-    bf.peer = icNext;
+    swapValues(bf.next, bf.peer);
     sh.objSetAbstract(o1, OK_DLS, bf);
 
-    bf.next = icNext;
-    bf.peer = icPrev;
+    swapValues(bf.next, bf.peer);
     sh.objSetAbstract(o2, OK_DLS, bf);
 
     // introduce some UV_UNKNOWN values if necessary
@@ -870,7 +865,7 @@ void dlSegGobble(SymHeap &sh, TObjId dls, TObjId var, bool backward,
 
     if (!backward)
         // jump to peer
-        skipObj(sh, &dls, sh.objBinding(dls).peer);
+        dls = dlSegPeer(sh, dls);
 
     // introduce some UV_UNKNOWN values if necessary
     abstractNonMatchingValues(sh, var, dls, flatScan);
@@ -927,8 +922,8 @@ void dlSegMerge(SymHeap &sh, TObjId seg1, TObjId seg2, bool flatScan) {
         dlSegHandleCrossNeq(sh, seg2, SymHeap::NEQ_ADD);
 }
 
-void dlSegAbstractionStep(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext,
-                          TFieldIdxChain icPrev, bool flatScan)
+void dlSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf,
+                          bool flatScan)
 {
     // the first object is clear
     const TObjId o1 = *pObj;
@@ -947,7 +942,7 @@ void dlSegAbstractionStep(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext,
             o2 = dlSegPeer(sh, o2);
 
             // jump to the next object (as we know such an object exists)
-            skipObj(sh, &o2, sh.objBinding(o2).next);
+            skipObj(sh, &o2, sh.objBinding(o2).head, sh.objBinding(o2).next);
             if (OK_CONCRETE == sh.objKind(o2)) {
                 // DLS + VAR
                 dlSegGobble(sh, o1, o2, /* backward */ false, flatScan);
@@ -960,10 +955,10 @@ void dlSegAbstractionStep(SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext,
 
         case OK_CONCRETE:
             // jump to the next object (as we know such an object exists)
-            skipObj(sh, &o2, icNext);
+            skipObj(sh, &o2, bf.head, bf.next);
             if (OK_CONCRETE == sh.objKind(o2)) {
                 // VAR + VAR
-                dlSegCreate(sh, o1, o2, icNext, icPrev, flatScan);
+                dlSegCreate(sh, o1, o2, bf, flatScan);
                 return;
             }
 
@@ -1023,7 +1018,7 @@ bool considerSegAbstraction(SymHeap &sh, TObjId obj, EObjKind kind,
         // handle sparePrefix/spareSuffix
         len = lenTotal - at.sparePrefix - at.spareSuffix;
         for (unsigned i = 0; i < at.sparePrefix; ++i)
-            skipObj(sh, &obj, bf.next);
+            skipObj(sh, &obj, bf.head, bf.next);
     }
 
     CL_DEBUG("    AAA initiating abstraction of length " << len);
@@ -1031,7 +1026,7 @@ bool considerSegAbstraction(SymHeap &sh, TObjId obj, EObjKind kind,
     if (OK_SLS == kind) {
         // perform SLS abstraction!
         for (int i = 0; i < len; ++i)
-            slSegAbstractionStep(sh, &obj, bf.next, flatScan);
+            slSegAbstractionStep(sh, &obj, bf, flatScan);
 
         CL_DEBUG("<-- successfully abstracted SLS");
         return true;
@@ -1039,7 +1034,7 @@ bool considerSegAbstraction(SymHeap &sh, TObjId obj, EObjKind kind,
     else {
         // perform DLS abstraction!
         for (int i = 0; i < len; ++i)
-            dlSegAbstractionStep(sh, &obj, bf.next, bf.peer, flatScan);
+            dlSegAbstractionStep(sh, &obj, bf, flatScan);
 
         CL_DEBUG("<-- successfully abstracted DLS");
         return true;
@@ -1065,7 +1060,7 @@ bool considerAbstraction(SymHeap &sh, EObjKind kind, TCont entries,
     }
 
     // go through all candidates and find the best possible abstraction
-    SegBindingFields bestBinding;
+    SegBindingFields bestBf;
     TObjId bestEntry;
     unsigned bestLen = 0;
 
@@ -1084,18 +1079,17 @@ bool considerAbstraction(SymHeap &sh, EObjKind kind, TCont entries,
         digAnyListSelectors(selectors, sh, head, kind);
 
         // run the LS discovering process
-        TFieldIdxChain icNext, icPrev;
+        SegBindingFields bf;
+        bf.head = icHead;
         const unsigned len = segDiscoverAll(sh, obj, kind, selectors,
-                                            icHead, &icNext, &icPrev);
+                                            icHead, &bf.next, &bf.peer);
 
         if (len <= bestLen)
             continue;
 
-        bestLen             = len;
-        bestEntry           = obj;
-        bestBinding.head    = icHead;
-        bestBinding.next    = icNext;
-        bestBinding.peer    = icPrev;
+        bestLen     = len;
+        bestEntry   = obj;
+        bestBf      = bf;
     }
     if (!bestLen) {
         CL_DEBUG("<-- nothing useful found");
@@ -1103,7 +1097,7 @@ bool considerAbstraction(SymHeap &sh, EObjKind kind, TCont entries,
     }
 
     // consider abstraction threshold and trigger the abstraction eventually
-    return considerSegAbstraction(sh, bestEntry, kind, bestBinding, bestLen,
+    return considerSegAbstraction(sh, bestEntry, kind, bestBf, bestLen,
                                   flatScan);
 }
 
@@ -1273,7 +1267,7 @@ void concretizeObj(SymHeap &sh, TValueId addr, TSymHeapList &todo) {
 
         case OK_DLS:
             // jump to peer
-            skipObj(sh, &peer, sh.objBinding(obj).peer);
+            peer = dlSegPeer(sh, obj);
             break;
     }
 
