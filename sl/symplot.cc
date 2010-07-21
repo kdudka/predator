@@ -505,6 +505,7 @@ void SymHeapPlotter::Private::digNext(TObjId obj) {
     switch (kind) {
         case OK_CONCRETE:
         case OK_HEAD:
+        case OK_PART:
             return;
 
         case OK_SLS:
@@ -550,6 +551,7 @@ void SymHeapPlotter::Private::openCluster(TObjId obj) {
 
     switch (kind) {
         case OK_CONCRETE:
+        case OK_PART:
             color = "black";
             pw = "1.0";
             break;

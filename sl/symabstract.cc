@@ -169,6 +169,7 @@ void buildIgnoreList(const SymHeap &sh, TObjId obj, TIgnoreList &ignoreList) {
     switch (kind) {
         case OK_CONCRETE:
         case OK_HEAD:
+        case OK_PART:
             // invalid call of buildIgnoreList()
             TRAP;
 
@@ -241,6 +242,7 @@ bool segEqual(const SymHeap &sh, TValueId v1, TValueId v2) {
     switch (kind) {
         case OK_CONCRETE:
         case OK_HEAD:
+        case OK_PART:
             // invalid call of segEqual()
             TRAP;
 
@@ -282,6 +284,7 @@ bool segMayBePrototype(const SymHeap &sh, const TValueId segAt, bool refByDls) {
     switch (kind) {
         case OK_CONCRETE:
         case OK_HEAD:
+        case OK_PART:
             // concrete objects are not supported as prototypes now
             TRAP;
             return false;
@@ -750,6 +753,7 @@ unsigned segDiscoverAll(const SymHeap &sh, const TObjId entry, EObjKind kind,
     switch (kind) {
         case OK_CONCRETE:
         case OK_HEAD:
+        case OK_PART:
             // invalid call of segDiscoverAll()
             TRAP;
 
@@ -809,6 +813,7 @@ void slSegCreateIfNeeded(SymHeap &sh, TObjId obj, const SegBindingFields &bf) {
     switch (kind) {
         case OK_SLS:
         case OK_HEAD:
+        case OK_PART:
             // already abstract, check the next pointer
             if (sh.objBinding(obj) == bf)
                 // all OK
@@ -851,6 +856,9 @@ void slSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf,
     // replace self by the next object
     abstractNonMatchingValues(sh, *pObj, objNext, flatScan);
     objReplace(sh, *pObj, objNext);
+    if (!bf.head.empty())
+        // TODO: replace all references to 'head'
+        TRAP;
 
     // move to the next object
     *pObj = objNext;
@@ -898,12 +906,14 @@ void dlSegGobble(SymHeap &sh, TObjId dls, TObjId var, bool backward,
     abstractNonMatchingValues(sh, var, dls, flatScan);
 
     // store the pointer DLS -> VAR
-    const TFieldIdxChain icNext = sh.objBinding(dls).next;
-    const TObjId dlsNextPtr = subObjByChain(sh, dls, icNext);
-    const TObjId varNextPtr = subObjByChain(sh, var, icNext);
+    const SegBindingFields &bf = sh.objBinding(dls);
+    const TObjId dlsNextPtr = subObjByChain(sh, dls, bf.next);
+    const TObjId varNextPtr = subObjByChain(sh, var, bf.next);
     sh.objSetValue(dlsNextPtr, sh.valueOf(varNextPtr));
 
     // replace VAR by DLS
+    const TObjId varHead = subObjByChain(sh, var, bf.head);
+    sh.valReplace(sh.placedAt(varHead), segHeadAddr(sh, dls));
     objReplace(sh, var, dls);
 
     // we've just added an object, the DLS can't be empty
@@ -940,6 +950,10 @@ void dlSegMerge(SymHeap &sh, TObjId seg1, TObjId seg2, bool flatScan) {
     const TValueId valNext2 = sh.valueOf(nextPtrFromSeg(sh, seg1));
     sh.objSetValue(nextPtrFromSeg(sh, seg2), valNext2);
 
+    // update all references to 'head'
+    sh.valReplace(segHeadAddr(sh,  seg1), segHeadAddr(sh,  seg2));
+    sh.valReplace(segHeadAddr(sh, peer1), segHeadAddr(sh, peer2));
+
     // replace both parts point-wise
     objReplace(sh,  seg1,  seg2);
     objReplace(sh, peer1, peer2);
@@ -962,6 +976,7 @@ void dlSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf,
     switch (kind) {
         case OK_SLS:
         case OK_HEAD:
+        case OK_PART:
             // *** segDiscover() failure detected ***
             TRAP;
 
@@ -1012,6 +1027,7 @@ bool considerSegAbstraction(SymHeap &sh, TObjId obj, EObjKind kind,
     switch (kind) {
         case OK_CONCRETE:
         case OK_HEAD:
+        case OK_PART:
             // invalid call of considerSegAbstraction()
             TRAP;
 
@@ -1077,6 +1093,7 @@ bool considerAbstraction(SymHeap &sh, EObjKind kind, TCont entries,
     switch (kind) {
         case OK_CONCRETE:
         case OK_HEAD:
+        case OK_PART:
             // invalid call of considerAbstraction()
             TRAP;
 
@@ -1295,6 +1312,7 @@ void concretizeObj(SymHeap &sh, TValueId addr, TSymHeapList &todo) {
     switch (kind) {
         case OK_CONCRETE:
         case OK_HEAD:
+        case OK_PART:
             // invalid call of concretizeObj()
             TRAP;
 

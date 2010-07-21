@@ -546,7 +546,8 @@ enum EObjKind {
     OK_SLS          = 1,
     OK_DLS          = 2,
 
-    OK_HEAD
+    OK_HEAD,
+    OK_PART
 };
 
 typedef std::vector<int /* nth */> TFieldIdxChain;

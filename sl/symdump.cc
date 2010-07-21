@@ -172,6 +172,10 @@ void dump_kind(const SymHeap &heap, TObjId obj) {
             cout << "OK_HEAD";
             return;
 
+        case OK_PART:
+            cout << "OK_PART";
+            return;
+
         case OK_SLS:
             cout << "OK_SLS, icNext = ";
             break;
@@ -292,12 +296,19 @@ void dump_obj(const SymHeap &heap, TObjId obj) {
             cout << "/* obj */ #" << peer << ", kind = ";
             dump_kind(heap, peer);
             cout << "\n";
+            if (OK_HEAD == heap.objKind(peer)) {
+                cout << "    peerObj   = ";
+                const TObjId peerObj = objRoot(heap, peer);
+                cout << "/* obj */ #" << peerObj << ", kind = ";
+                dump_kind(heap, peerObj);
+                cout << "\n";
+            }
         }
         else
             cout << "XXX\n";
     }
 
-    if (OK_CONCRETE != kind) {
+    if (OK_CONCRETE != kind && OK_HEAD != kind && OK_PART != kind) {
         cout << "    shared    = ";
         if (heap.objShared(obj))
             cout << "true\n";

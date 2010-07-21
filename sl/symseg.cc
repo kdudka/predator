@@ -94,6 +94,7 @@ bool segNotEmpty(const SymHeap &sh, TObjId seg) {
     switch (kind) {
         case OK_CONCRETE:
         case OK_HEAD:
+        case OK_PART:
             // invalid call of segNotEmpty()
             TRAP;
 
@@ -115,6 +116,7 @@ void segDestroy(SymHeap &sh, TObjId seg) {
     switch (kind) {
         case OK_CONCRETE:
         case OK_HEAD:
+        case OK_PART:
             // invalid call of segDestroy()
             TRAP;
 

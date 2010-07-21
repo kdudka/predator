@@ -206,8 +206,8 @@ bool cmpAbstractObjects(const SymHeap &sh1, const SymHeap &sh2,
         // kind of object mismatch
         return false;
 
-    if (OK_CONCRETE == kind)
-        // no abstract objects involved
+    if (OK_CONCRETE == kind || OK_HEAD ==kind || OK_PART)
+        // no abstract objects comparison
         return true;
 
     // compare binding fields

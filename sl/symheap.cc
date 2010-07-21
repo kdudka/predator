@@ -1508,9 +1508,12 @@ EObjKind SymHeap::objKind(TObjId obj) const {
         return iter->second.kind;
 
     const TObjId root = objRoot(*this, obj);
-    return (hasKey(d->objMap, root))
+    if (!hasKey(d->objMap, root))
+        return OK_CONCRETE;
+
+    return (segHead(*this, root) == obj)
         ? OK_HEAD
-        : OK_CONCRETE;
+        : OK_PART;
 }
 
 const SegBindingFields& SymHeap::objBinding(TObjId obj) const {
