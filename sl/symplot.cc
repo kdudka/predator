@@ -119,6 +119,7 @@ struct SymHeapPlotter::Private {
     typedef std::pair<TValueId, TValueId> TEdgeNeq;
     std::set<TEdgeNeq>                  neqSet;
 
+    std::set<TObjId>                    heads;
     std::set<TObjId>                    nexts;
     std::set<TObjId>                    peers;
 
@@ -264,7 +265,9 @@ void SymHeapPlotter::Private::plotNodeObj(TObjId obj, enum cl_type_e code) {
     this->dotStream << "\t" << SL_QUOTE(obj);
     this->dotStream << " [shape=box";
 
-    if (hasKey(this->peers, obj))
+    if (hasKey(this->heads, obj))
+        this->dotStream << ", color=green, penwidth=3.0, style=dashed";
+    else if (hasKey(this->peers, obj))
         this->dotStream << ", color=gold, penwidth=3.0, style=dashed";
     else if (hasKey(this->nexts, obj))
         this->dotStream << ", color=red, penwidth=3.0, style=dashed";
@@ -506,6 +509,16 @@ void SymHeapPlotter::Private::digNext(TObjId obj) {
         case OK_SLS:
         case OK_DLS:
             break;
+    }
+
+    const TFieldIdxChain icHead = this->heap->objBindingField(BF_HEAD, obj);
+    if (!icHead.empty()) {
+        const TObjId objHead = subObjByChain(*this->heap, obj, icHead);
+        if (objHead <= 0)
+            TRAP;
+
+        // store icHead
+        this->heads.insert(objHead);
     }
 
     const TFieldIdxChain icBind = this->heap->objBindingField(BF_NEXT, obj);

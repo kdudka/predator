@@ -554,7 +554,7 @@ class ProbeVisitor {
     }
 };
 
-bool probe(SymHeap &sh, TObjId obj, EObjKind kind) {
+bool probe(SymHeap &sh, TObjId obj, EObjKind kind, TFieldIdxChain icHead) {
     if (doesAnyonePointToInside(sh, obj))
         return false;
 
@@ -1014,9 +1014,9 @@ bool considerSegAbstraction(SymHeap &sh, TObjId obj, EObjKind kind,
     }
 }
 
-template <class TCont>
+template <class TCont, class TContHeads>
 bool considerAbstraction(SymHeap &sh, EObjKind kind, TCont entries,
-                         bool flatScan = false)
+                         TContHeads icHead, bool flatScan = false)
 {
     switch (kind) {
         case OK_CONCRETE:
@@ -1067,17 +1067,30 @@ bool considerAbstraction(SymHeap &sh, EObjKind kind, TCont entries,
 }
 
 void flatScan(SymHeap &sh, EObjKind kind, TObjId obj) {
-    if (!probe(sh, obj, kind))
+    if (!probe(sh, obj, kind, /* TODO */ TFieldIdxChain()))
         return;
 
     SymHeapCore::TContObj cont;
     cont.push_back(obj);
-    considerAbstraction(sh, kind, cont, /* flatScan */ true);
+
+    // TODO
+    std::vector<TFieldIdxChain> heads;
+    heads.push_back(TFieldIdxChain());
+
+    considerAbstraction(sh, kind, cont, heads, /* flatScan */ true);
+}
+
+bool lookForListHead(TFieldIdxChain *icHead, const SymHeap &sh, TObjId obj) {
+    // TODO
+    return false;
 }
 
 bool abstractIfNeededCore(SymHeap &sh) {
     SymHeapCore::TContObj slSegEntries;
     SymHeapCore::TContObj dlSegEntries;
+
+    std::vector<TFieldIdxChain> slSegHeads;
+    std::vector<TFieldIdxChain> dlSegHeads;
 
     // collect all possible SLS/DLS entries
     SymHeapCore::TContObj roots;
@@ -1088,17 +1101,22 @@ bool abstractIfNeededCore(SymHeap &sh) {
             continue;
 
         const TValueId addr = sh.placedAt(obj);
-        if (VAL_INVALID ==addr)
+        if (VAL_INVALID == addr)
             continue;
 
-        const unsigned uses = sh.usedByCount(addr);
+        TFieldIdxChain icHead;
+        unsigned uses = sh.usedByCount(addr);
+        if (!uses) {
+            if (!lookForListHead(&icHead, sh, obj))
+                continue;
+
+            const TObjId objHead = subObjByChain(sh, obj, icHead);
+            uses = sh.usedByCount(sh.placedAt(objHead));
+        }
+
         switch (uses) {
             case 0:
-#if GC_ADMIT_LINUX_LISTS
-                if (!doesAnyonePointToInside(sh, obj))
-#endif
-                    CL_WARN("abstractIfNeededLoop() encountered an unused root "
-                            "object #" << obj);
+                TRAP;
                 // fall through!
 
             default:
@@ -1106,27 +1124,33 @@ bool abstractIfNeededCore(SymHeap &sh) {
 
             case 1:
 #if !SE_DISABLE_SLS
-                if (probe(sh, obj, OK_SLS))
+                if (probe(sh, obj, OK_SLS, icHead)) {
                     // a candidate for SLS entry
                     slSegEntries.push_back(obj);
+                    slSegHeads.push_back(icHead);
+                }
 #endif
                 break;
 
             case 2:
 #if !SE_DISABLE_DLS
-                if (probe(sh, obj, OK_DLS))
+                if (probe(sh, obj, OK_DLS, icHead)) {
                     // a candidate for DLS entry
                     dlSegEntries.push_back(obj);
+                    dlSegHeads.push_back(icHead);
+                }
 #endif
                 break;
         }
     }
 
     // TODO: check if the order of following two steps is anyhow important
-    if (!slSegEntries.empty() && considerAbstraction(sh, OK_SLS, slSegEntries))
+    if (!slSegEntries.empty()
+            && considerAbstraction(sh, OK_SLS, slSegEntries, slSegHeads))
         return true;
 
-    if (!dlSegEntries.empty() && considerAbstraction(sh, OK_DLS, dlSegEntries))
+    if (!dlSegEntries.empty()
+            && considerAbstraction(sh, OK_DLS, dlSegEntries, dlSegHeads))
         return true;
 
     // no hit
