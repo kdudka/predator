@@ -554,16 +554,49 @@ class ProbeVisitor {
     }
 };
 
-bool probe(const SymHeap &sh, TObjId obj, EObjKind kind, TFieldIdxChain icHead)
-{
-    if (!icHead.empty())
-        TRAP;
+template <class TDst>
+class ProbeVisitorTopLevel {
+    private:
+        TDst        &heads;
+        EObjKind    kind;
 
-    if (doesAnyonePointToInside(sh, obj))
-        return false;
+    public:
+        ProbeVisitorTopLevel(TDst &heads_, EObjKind kind_):
+            heads(heads_),
+            kind(kind_)
+        {
+        }
 
-    const ProbeVisitor visitor(sh, obj, kind);
-    return !traverseSubObjs(sh, obj, visitor);
+        bool operator()(const SymHeap &sh, TObjId sub) {
+            const struct cl_type *clt = sh.objType(sub);
+            if (!clt || clt->code != CL_TYPE_STRUCT)
+                return /* continue */ true;
+
+            if (doesAnyonePointToInside(sh, sub))
+                return /* continue */ true;
+
+            const ProbeVisitor visitor(sh, sub, kind);
+            if (traverseSubObjs(sh, sub, visitor))
+                return /* continue */ true;
+
+            heads.push_back(/* TODO */ TFieldIdxChain());
+            return /* continue */ true;
+        }
+};
+
+template <class TDst>
+void probe(TDst &heads, const SymHeap &sh, TObjId obj, EObjKind kind) {
+    // create low level visitor
+    ProbeVisitorTopLevel<TDst> visitor(heads, kind);
+
+    // try to treat the root as list head (regular lists)
+    visitor(sh, obj);
+
+    // TODO
+#if 0
+    // try to look for alternative list heads (Linux lists)
+    traverseSubObjs(sh, obj, visitor);
+#endif
 }
 
 // TODO: hook this somehow on the existing visitor infrastructure in order
@@ -1082,21 +1115,19 @@ bool considerAbstraction(SymHeap &sh, EObjKind kind, TCont entries,
 }
 
 void flatScan(SymHeap &sh, EObjKind kind, TObjId obj) {
-    if (!probe(sh, obj, kind, /* TODO */ TFieldIdxChain()))
-        return;
+    std::vector<TFieldIdxChain> heads;
+    probe(heads, sh, obj, kind);
 
     SymHeapCore::TContObj cont;
-    cont.push_back(obj);
-
-    // TODO
-    std::vector<TFieldIdxChain> heads;
-    heads.push_back(TFieldIdxChain());
+    BOOST_FOREACH(const TFieldIdxChain icHead, heads) {
+        cont.push_back(obj);
+    }
 
     considerAbstraction(sh, kind, cont, heads, /* flatScan */ true);
 }
 
 template <class TDst>
-void digAnyListHeads(TDst &dst, const SymHeap &sh, TObjId obj,
+void digAnyListHeads(TDst &heads, const SymHeap &sh, TObjId obj,
                      EObjKind kind)
 {
     if (sh.cVar(0, obj))
@@ -1111,8 +1142,7 @@ void digAnyListHeads(TDst &dst, const SymHeap &sh, TObjId obj,
     if (static_cast<unsigned>(kind) != uses)
         return;
 
-    if (probe(sh, obj, kind, /* TODO */ TFieldIdxChain()))
-        dst.push_back(/* TODO */ TFieldIdxChain());
+    probe(heads, sh, obj, kind);
 }
 
 bool abstractIfNeededCore(SymHeap &sh) {
