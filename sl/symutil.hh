@@ -127,4 +127,67 @@ bool /* complete */ traverseSubObjs(THeap &sh, TItem item, TVisitor &visitor) {
     return true;
 }
 
+template <class TData>
+struct SubTraversalStackItem {
+    TData   data;
+    int     nth;
+    bool    last;
+};
+
+// take the given visitor through a composite object (or whatever you pass in)
+template <class THeap, class TVisitor, class TItem = TObjId>
+bool /* complete */ traverseSubObjsIc(THeap &sh, TItem item, TVisitor &visitor)
+{
+    TFieldIdxChain ic;
+
+    typedef SubTraversalStackItem<TItem> TStackItem;
+    TStackItem si;
+    si.data = item;
+    si.nth  = -1;
+    si.last = false;
+
+    std::stack<TStackItem> todo;
+    todo.push(si);
+    while (!todo.empty()) {
+        si = todo.top();
+        todo.pop();
+        item = si.data;
+
+        typedef TraverseSubObjsHelper<TItem> THelper;
+        const struct cl_type *clt = THelper::getItemClt(sh, item);
+        if (!clt || clt->code != CL_TYPE_STRUCT)
+            TRAP;
+
+        if (-1 != si.nth)
+            // nest into structure
+            ic.push_back(si.nth);
+
+        for (int i = 0; i < clt->item_cnt; ++i) {
+            ic.push_back(i);
+
+            const TItem next = THelper::getNextItem(sh, item, i);
+            if (!/* continue */visitor(sh, next, ic))
+                return false;
+
+            ic.pop_back();
+
+            const struct cl_type *subClt = THelper::getItemClt(sh, next);
+            if (!subClt || subClt->code != CL_TYPE_STRUCT)
+                continue;
+
+            si.data = next;
+            si.nth  = i;
+            si.last = (0 == i);
+            todo.push(si);
+        }
+
+        if (si.last)
+            // leave the structure
+            ic.pop_back();
+    }
+
+    // the traversal is done, without any interruption by visitor
+    return true;
+}
+
 #endif /* H_GUARD_SYMUTIL_H */

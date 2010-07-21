@@ -567,7 +567,7 @@ class ProbeVisitorTopLevel {
         {
         }
 
-        bool operator()(const SymHeap &sh, TObjId sub) {
+        bool operator()(const SymHeap &sh, TObjId sub, TFieldIdxChain ic) {
             const struct cl_type *clt = sh.objType(sub);
             if (!clt || clt->code != CL_TYPE_STRUCT)
                 return /* continue */ true;
@@ -579,7 +579,7 @@ class ProbeVisitorTopLevel {
             if (traverseSubObjs(sh, sub, visitor))
                 return /* continue */ true;
 
-            heads.push_back(/* TODO */ TFieldIdxChain());
+            heads.push_back(ic);
             return /* continue */ true;
         }
 };
@@ -590,64 +590,53 @@ void probe(TDst &heads, const SymHeap &sh, TObjId obj, EObjKind kind) {
     ProbeVisitorTopLevel<TDst> visitor(heads, kind);
 
     // try to treat the root as list head (regular lists)
-    visitor(sh, obj);
+    visitor(sh, obj, /* use the root */ TFieldIdxChain());
 
     // TODO
 #if 0
     // try to look for alternative list heads (Linux lists)
-    traverseSubObjs(sh, obj, visitor);
+    traverseSubObjsIc(sh, obj, visitor);
 #endif
 }
 
-// TODO: hook this somehow on the existing visitor infrastructure in order
-//       to avoid code duplicity ... challenge? ;-)
-//
-// NOTE: we have basically the same code in SymHeapPlotter::Private::digObj()
+template <class TDst>
+class SelectorFinder {
+    private:
+        TDst                    &dst_;
+        const struct cl_type    *clt_;
+        const ProbeVisitor      visitor_;
+        const EObjKind          kind_;
+
+    public:
+        SelectorFinder(TDst &dst, const SymHeap &sh, TObjId root, EObjKind kind)
+            :
+            dst_(dst),
+            clt_(sh.objType(root)),
+            visitor_(sh, root, kind),
+            kind_(kind)
+        {
+        }
+
+        bool operator()(const SymHeap &sh, TObjId sub, TFieldIdxChain ic) {
+            const struct cl_type *subClt = sh.objType(sub);
+            const bool backLinkCandidate = (VAL_NULL == sh.valueOf(sub)
+                    && subClt && subClt->code == CL_TYPE_PTR
+                    && subClt->items[0].type == clt_);
+
+            if (backLinkCandidate || !visitor_(sh, sub))
+                // great, we have a candidate
+                dst_.push_back(ic);
+
+            return /* continue */ true;
+        }
+};
+
 template <class TDst>
 void digAnyListSelectors(TDst &dst, const SymHeap &sh, TObjId obj,
                          EObjKind kind)
 {
-    const ProbeVisitor visitor(sh, obj, kind);
-    TFieldIdxChain ic;
-
-    typedef boost::tuple<TObjId, int /* nth */, bool /* last */> TStackItem;
-    std::stack<TStackItem> todo;
-    todo.push(TStackItem(obj, -1, false));
-    while (!todo.empty()) {
-        bool last;
-        int nth;
-        boost::tie(obj, nth, last) = todo.top();
-        todo.pop();
-
-        const struct cl_type *clt = sh.objType(obj);
-        if (clt && clt->code == CL_TYPE_STRUCT) {
-            if (-1 != nth)
-                // nest into structure
-                ic.push_back(nth);
-
-            for (int i = 0; i < clt->item_cnt; ++i) {
-                const TObjId sub = sh.subObj(obj, i);
-                const struct cl_type *subClt = sh.objType(sub);
-                const bool backLinkCandidate = (VAL_NULL == sh.valueOf(sub)
-                        && subClt && subClt->code == CL_TYPE_PTR
-                        && subClt->items[0].type == clt);
-
-                if (backLinkCandidate || !visitor(sh, sub)) {
-                    // great, we have a candidate
-                    ic.push_back(i);
-                    dst.push_back(ic);
-                    ic.pop_back();
-                }
-
-                if (subClt && subClt->code == CL_TYPE_STRUCT)
-                    todo.push(TStackItem(sub, i, /* last */ (0 == i)));
-            }
-        }
-
-        if (last)
-            // leave the structure
-            ic.pop_back();
-    }
+    SelectorFinder<TDst> visitor(dst, sh, obj, kind);
+    traverseSubObjsIc(sh, obj, visitor);
 }
 
 // FIXME: this function tends to be crowded
