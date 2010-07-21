@@ -1454,9 +1454,7 @@ int SymHeapTyped::valGetCustom(const struct cl_type **pClt, TValueId val) const
 struct SymHeap::Private {
     struct ObjectEx {
         EObjKind            kind;
-        TFieldIdxChain      icHead;
-        TFieldIdxChain      icNext;
-        TFieldIdxChain      icPeer;
+        SegBindingFields    bf;
         bool                shared;
 
         ObjectEx(): kind(OK_CONCRETE), shared(true) { }
@@ -1511,20 +1509,13 @@ EObjKind SymHeap::objKind(TObjId obj) const {
         : iter->second.kind;
 }
 
-TFieldIdxChain SymHeap::objBindingField(EBindingField bf, TObjId obj) const {
+const SegBindingFields& SymHeap::objBinding(TObjId obj) const {
     Private::TObjMap::iterator iter = d->objMap.find(obj);
     if (d->objMap.end() == iter)
         // invalid call of SymHeap::objBindingField()
         TRAP;
 
-    switch (bf) {
-        case BF_HEAD: return iter->second.icHead;
-        case BF_NEXT: return iter->second.icNext;
-        case BF_PEER: return iter->second.icPeer;
-        default:
-            TRAP;
-            return TFieldIdxChain();
-    }
+    return iter->second.bf;
 }
 
 bool SymHeap::objShared(TObjId obj) const {
@@ -1545,11 +1536,8 @@ void SymHeap::objSetShared(TObjId obj, bool shared) {
     iter->second.shared = shared;
 }
 
-void SymHeap::objSetAbstract(TObjId             obj,
-                             EObjKind           kind,
-                             TFieldIdxChain     icHead,
-                             TFieldIdxChain     icNext,
-                             TFieldIdxChain     icPeer)
+void SymHeap::objSetAbstract(TObjId obj, EObjKind kind,
+                             const SegBindingFields &bf)
 {
     if (OK_CONCRETE == kind || hasKey(d->objMap, obj))
         // invalid call of SymHeap::objAbstract()
@@ -1559,7 +1547,7 @@ void SymHeap::objSetAbstract(TObjId             obj,
     const TValueId addr = this->placedAt(obj);
     SymHeapCore::valSetUnknown(addr, UV_ABSTRACT);
 
-    const TObjId objBind = subObjByChain(*this, obj, icNext);
+    const TObjId objBind = subObjByChain(*this, obj, bf.next);
     const TValueId valNext = this->valueOf(objBind);
     if (addr == valNext)
         // *** self-loop detected ***
@@ -1568,9 +1556,7 @@ void SymHeap::objSetAbstract(TObjId             obj,
     // initialize abstract object
     Private::ObjectEx &ref = d->objMap[obj];
     ref.kind    = kind;
-    ref.icHead  = icHead;
-    ref.icNext  = icNext;
-    ref.icPeer  = icPeer;
+    ref.bf      = bf;
 }
 
 void SymHeap::objSetConcrete(TObjId obj) {

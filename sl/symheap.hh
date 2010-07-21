@@ -547,16 +547,30 @@ enum EObjKind {
     OK_DLS          = 2
 };
 
-/**
- * enumeration of segment fields that are treated somehow special
- */
-enum EBindingField {
-    BF_NEXT,        ///< pointer to next (used by SLS and DLS)
-    BF_PEER,        ///< pointer to peer (used by DLS only)
-    BF_HEAD         ///< position of the head sub-object (used by Linux lists)
+typedef std::vector<int /* nth */> TFieldIdxChain;
+
+struct SegBindingFields {
+    /// pointer to next (used by SLS and DLS)
+    TFieldIdxChain head;
+
+    /// pointer to peer (used by DLS only)
+    TFieldIdxChain next;
+
+    /// position of the head sub-object (used by Linux lists)
+    TFieldIdxChain peer;
 };
 
-typedef std::vector<int /* nth */> TFieldIdxChain;
+inline bool operator==(const SegBindingFields &bf1, const SegBindingFields &bf2)
+{
+    return bf1.head == bf2.head
+        && bf1.next == bf2.next
+        && bf1.peer == bf2.peer;
+}
+
+inline bool operator!=(const SegBindingFields &bf1, const SegBindingFields &bf2)
+{
+    return !operator==(bf1, bf2);
+}
 
 class SymHeap: public SymHeapTyped {
     public:
@@ -583,10 +597,9 @@ class SymHeap: public SymHeapTyped {
         EObjKind objKind(TObjId obj) const;
 
         /**
-         * return a binding field of the given @b abstract object, specified
-         * by bf
+         * return the binding fields for the given @b abstract object
          */
-        TFieldIdxChain objBindingField(EBindingField bf, TObjId obj) const;
+        const SegBindingFields& objBinding(TObjId obj) const;
 
         /**
          * true, if the @b abstract object is shared (default); it has to be
@@ -608,9 +621,7 @@ class SymHeap: public SymHeapTyped {
          * object.
          */
         void objSetAbstract(TObjId obj, EObjKind kind,
-                            TFieldIdxChain headField,
-                            TFieldIdxChain nextField,
-                            TFieldIdxChain peerField = TFieldIdxChain());
+                            const SegBindingFields &binding);
 
         /**
          * convert the given @b abstract object to a less abstract object.  If

@@ -511,7 +511,7 @@ void SymHeapPlotter::Private::digNext(TObjId obj) {
             break;
     }
 
-    const TFieldIdxChain icHead = this->heap->objBindingField(BF_HEAD, obj);
+    const TFieldIdxChain icHead = this->heap->objBinding(obj).head;
     if (!icHead.empty()) {
         const TObjId objHead = subObjByChain(*this->heap, obj, icHead);
         if (objHead <= 0)
@@ -521,7 +521,7 @@ void SymHeapPlotter::Private::digNext(TObjId obj) {
         this->heads.insert(objHead);
     }
 
-    const TFieldIdxChain icBind = this->heap->objBindingField(BF_NEXT, obj);
+    const TFieldIdxChain icBind = this->heap->objBinding(obj).next;
     const TObjId objBind = subObjByChain(*this->heap, obj, icBind);
     if (objBind <= 0)
         TRAP;
@@ -531,7 +531,7 @@ void SymHeapPlotter::Private::digNext(TObjId obj) {
     if (OK_SLS == kind)
         return;
 
-    const TFieldIdxChain icPeer = this->heap->objBindingField(BF_PEER, obj);
+    const TFieldIdxChain icPeer = this->heap->objBinding(obj).peer;
     const TObjId objPeer = subObjByChain(*this->heap, obj, icPeer);
     if (objBind <= 0)
         TRAP;

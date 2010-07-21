@@ -210,9 +210,8 @@ bool cmpAbstractObjects(const SymHeap &sh1, const SymHeap &sh2,
         // no abstract objects involved
         return true;
 
-    // compare 'next' and 'peer' pointers
-    return sh1.objBindingField(BF_NEXT, o1) == sh2.objBindingField(BF_NEXT, o2)
-        && sh1.objBindingField(BF_PEER, o1) == sh2.objBindingField(BF_PEER, o2);
+    // compare binding fields
+    return sh1.objBinding(o1) == sh2.objBinding(o2);
 }
 
 } // namespace 

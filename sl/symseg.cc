@@ -28,7 +28,7 @@ TObjId nextPtrFromSeg(const SymHeap &sh, TObjId seg) {
         // invalid call of nextPtrFromSeg()
         TRAP;
 
-    const TFieldIdxChain icNext = sh.objBindingField(BF_NEXT, seg);
+    const TFieldIdxChain icNext = sh.objBinding(seg).next;
     return subObjByChain(sh, seg, icNext);
 }
 
@@ -38,7 +38,7 @@ TObjId dlSegPeer(const SymHeap &sh, TObjId dls) {
         TRAP;
 
     TObjId peer = dls;
-    skipObj(sh, &peer, sh.objBindingField(BF_PEER, dls));
+    skipObj(sh, &peer, sh.objBinding(dls).peer);
     return peer;
 }
 

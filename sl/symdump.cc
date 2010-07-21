@@ -174,11 +174,18 @@ void dump_kind(const SymHeap &heap, TObjId obj) {
 
         case OK_DLS:
             cout << "OK_DLS, icPeer = ";
-            dump_ic(clt, heap.objBindingField(BF_PEER, obj));
+            dump_ic(clt, heap.objBinding(obj).peer );
             cout << ", icNext = ";
     }
 
-    dump_ic(clt, heap.objBindingField(BF_NEXT, obj));
+    dump_ic(clt, heap.objBinding(obj).next);
+
+    const TFieldIdxChain icHead = heap.objBinding(obj).head;
+    if (icHead.empty())
+        return;
+
+    cout << ", icHead = ";
+    dump_ic(clt, icHead);
 }
 
 void dump_obj(const SymHeap &heap, TObjId obj) {
@@ -273,7 +280,7 @@ void dump_obj(const SymHeap &heap, TObjId obj) {
     const EObjKind kind = heap.objKind(obj);
     if (OK_DLS == kind) {
         cout << "    peer      = ";
-        const TFieldIdxChain icPeer = heap.objBindingField(BF_PEER, obj);
+        const TFieldIdxChain icPeer = heap.objBinding(obj).peer;
         const TObjId peerPtr = subObjByChain(heap, obj, icPeer);
         const TValueId valPeer = heap.valueOf(peerPtr);
         if (0 < valPeer) {
@@ -294,7 +301,7 @@ void dump_obj(const SymHeap &heap, TObjId obj) {
             cout << "false\n";
 
         cout << "    next      = ";
-        const TFieldIdxChain icNext = heap.objBindingField(BF_NEXT, obj);
+        const TFieldIdxChain icNext = heap.objBinding(obj).next;
         const TObjId nextPtr = subObjByChain(heap, obj, icNext);
         const TValueId valNext = heap.valueOf(nextPtr);
         if (0 < valNext) {

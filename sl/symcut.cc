@@ -182,10 +182,8 @@ TObjId addObjectIfNeeded(DeepCopyData &dc, TObjId objSrc) {
     switch (kind) {
         case OK_DLS:
         case OK_SLS: {
-            const TFieldIdxChain icHead = src.objBindingField(BF_HEAD, rootSrc);
-            const TFieldIdxChain icNext = src.objBindingField(BF_NEXT, rootSrc);
-            const TFieldIdxChain icPeer = src.objBindingField(BF_PEER, rootSrc);
-            dst.objSetAbstract(rootDst, kind, icHead, icNext, icPeer);
+            SegBindingFields segBinding = src.objBinding(rootSrc);
+            dst.objSetAbstract(rootDst, kind, segBinding);
 
             const bool shared = src.objShared(rootSrc);
             dst.objSetShared(rootDst, shared);
