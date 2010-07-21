@@ -1504,13 +1504,18 @@ TObjId SymHeap::objDup(TObjId objOld) {
 
 EObjKind SymHeap::objKind(TObjId obj) const {
     Private::TObjMap::iterator iter = d->objMap.find(obj);
-    return (d->objMap.end() == iter)
-        ? OK_CONCRETE
-        : iter->second.kind;
+    if (d->objMap.end() != iter)
+        return iter->second.kind;
+
+    const TObjId root = objRoot(*this, obj);
+    return (hasKey(d->objMap, root))
+        ? OK_HEAD
+        : OK_CONCRETE;
 }
 
 const SegBindingFields& SymHeap::objBinding(TObjId obj) const {
-    Private::TObjMap::iterator iter = d->objMap.find(obj);
+    const TObjId root = objRoot(*this, obj);
+    Private::TObjMap::iterator iter = d->objMap.find(root);
     if (d->objMap.end() == iter)
         // invalid call of SymHeap::objBindingField()
         TRAP;
@@ -1519,7 +1524,8 @@ const SegBindingFields& SymHeap::objBinding(TObjId obj) const {
 }
 
 bool SymHeap::objShared(TObjId obj) const {
-    Private::TObjMap::iterator iter = d->objMap.find(obj);
+    const TObjId root = objRoot(*this, obj);
+    Private::TObjMap::iterator iter = d->objMap.find(root);
     if (d->objMap.end() == iter)
         // invalid call of SymHeap::objShared()
         TRAP;
@@ -1543,20 +1549,24 @@ void SymHeap::objSetAbstract(TObjId obj, EObjKind kind,
         // invalid call of SymHeap::objAbstract()
         TRAP;
 
-    // mark the value as UV_ABSTRACT
-    const TValueId addr = this->placedAt(obj);
-    SymHeapCore::valSetUnknown(addr, UV_ABSTRACT);
-
-    const TObjId objBind = subObjByChain(*this, obj, bf.next);
-    const TValueId valNext = this->valueOf(objBind);
-    if (addr == valNext)
-        // *** self-loop detected ***
-        TRAP;
-
     // initialize abstract object
     Private::ObjectEx &ref = d->objMap[obj];
     ref.kind    = kind;
     ref.bf      = bf;
+
+    // mark the value as UV_ABSTRACT
+    const TValueId addr = this->placedAt(obj);
+    SymHeapCore::valSetUnknown(addr, UV_ABSTRACT);
+
+    // mark the address of 'head' as UV_ABSTRACT
+    const TValueId addrHead = this->placedAt(segHead(*this, obj));
+    SymHeapCore::valSetUnknown(addrHead, UV_ABSTRACT);
+
+    const TObjId objBind = subObjByChain(*this, obj, bf.next);
+    const TValueId valNext = this->valueOf(objBind);
+    if (addr == valNext || addrHead == valNext)
+        // *** self-loop detected ***
+        TRAP;
 }
 
 void SymHeap::objSetConcrete(TObjId obj) {
@@ -1566,12 +1576,16 @@ void SymHeap::objSetConcrete(TObjId obj) {
         // invalid call of SymHeap::objConcretize()
         TRAP;
 
-    // just remove the object ID from the map
-    d->objMap.erase(iter);
+    // mark the address of 'head' as UV_KNOWN
+    const TValueId addrHead = this->placedAt(segHead(*this, obj));
+    SymHeapCore::valSetUnknown(addrHead, UV_KNOWN);
 
     // mark the value as UV_KNOWN
     const TValueId addr = this->placedAt(obj);
     SymHeapCore::valSetUnknown(addr, UV_KNOWN);
+
+    // just remove the object ID from the map
+    d->objMap.erase(iter);
 }
 
 bool SymHeap::valReplaceUnknownImpl(TValueId val, TValueId replaceBy) {
@@ -1589,26 +1603,32 @@ bool SymHeap::valReplaceUnknownImpl(TValueId val, TValueId replaceBy) {
     }
 }
 
-void SymHeap::dlSegCrossNeqOp(ENeqOp op, TValueId dlsAddr) {
-    const TObjId dls = this->pointsTo(dlsAddr);
-    const TObjId peer = dlSegPeer(*this, dls);
-    const TValueId peerAddr = this->placedAt(peer);
+void SymHeap::dlSegCrossNeqOp(ENeqOp op, TValueId headAddr) {
+    const TObjId head1 = this->pointsTo(headAddr);
+    const TObjId seg1 = objRoot(*this, head1);
+    const TObjId seg2 = dlSegPeer(*this, seg1);
 
     // dig pointer-to-next objects
-    const TObjId next1 = nextPtrFromSeg(*this, dls);
-    const TObjId next2 = nextPtrFromSeg(*this, peer);
+    const TObjId next1 = nextPtrFromSeg(*this, seg1);
+    const TObjId next2 = nextPtrFromSeg(*this, seg2);
 
     // read the values (addresses of the surround)
     const TValueId val1 = this->valueOf(next1);
     const TValueId val2 = this->valueOf(next2);
 
+    // compute addresses of heads
+    const TFieldIdxChain icHead = this->objBinding(seg1).head;
+    const TObjId head2 = subObjByChain(*this, seg2, icHead);
+    const TValueId addrHead1 = this->placedAt(head1);
+    const TValueId addrHead2 = this->placedAt(head2);
+
     // add/del Neq predicates
-    SymHeapCore::neqOp(op, val1, peerAddr);
-    SymHeapCore::neqOp(op, val2, dlsAddr);
+    SymHeapCore::neqOp(op, val1, addrHead2);
+    SymHeapCore::neqOp(op, val2, addrHead1);
 
     if (NEQ_DEL == op)
         // removing the 1+ flag implies removal of the 2+ flag
-        SymHeapCore::neqOp(NEQ_DEL, peerAddr, dlsAddr);
+        SymHeapCore::neqOp(NEQ_DEL, addrHead1, addrHead2);
 }
 
 void SymHeap::neqOp(ENeqOp op, TValueId valA, TValueId valB) {
@@ -1632,6 +1652,7 @@ fallback:
     SymHeapTyped::neqOp(op, valA, valB);
 }
 
+// TODO: check if the implementation is ready for Linux lists
 bool SymHeap::proveEq(bool *result, TValueId valA, TValueId valB) const {
     if (SymHeapTyped::proveEq(result, valA, valB))
         return true;

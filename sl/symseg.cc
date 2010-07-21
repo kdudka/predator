@@ -33,11 +33,12 @@ TObjId nextPtrFromSeg(const SymHeap &sh, TObjId seg) {
 }
 
 TObjId dlSegPeer(const SymHeap &sh, TObjId dls) {
-    if (OK_DLS != sh.objKind(dls))
+    const TObjId root = objRoot(sh, dls);
+    if (OK_DLS != sh.objKind(root))
         // invalid call of dlSegPeer()
         TRAP;
 
-    TObjId peer = dls;
+    TObjId peer = root;
     const SegBindingFields &bf = sh.objBinding(dls);
     skipObj(sh, &peer, bf.head, bf.peer);
     return peer;
@@ -92,6 +93,7 @@ bool segNotEmpty(const SymHeap &sh, TObjId seg) {
     const EObjKind kind = sh.objKind(seg);
     switch (kind) {
         case OK_CONCRETE:
+        case OK_HEAD:
             // invalid call of segNotEmpty()
             TRAP;
 
@@ -112,6 +114,7 @@ void segDestroy(SymHeap &sh, TObjId seg) {
     const EObjKind kind = sh.objKind(seg);
     switch (kind) {
         case OK_CONCRETE:
+        case OK_HEAD:
             // invalid call of segDestroy()
             TRAP;
 
@@ -130,7 +133,7 @@ bool haveDlSeg(SymHeap &sh, TValueId atAddr, TValueId pointingTo) {
         // not an abstract object
         return false;
 
-    const TObjId seg = sh.pointsTo(atAddr);
+    const TObjId seg = objRoot(sh, sh.pointsTo(atAddr));
     if (OK_DLS != sh.objKind(seg))
         // not a DLS
         return false;
@@ -152,7 +155,7 @@ bool haveDlSegAt(SymHeap &sh, TValueId atAddr, TValueId peerAddr) {
         // not abstract objects
         return false;
 
-    const TObjId seg = sh.pointsTo(atAddr);
+    const TObjId seg = objRoot(sh, sh.pointsTo(atAddr));
     if (OK_DLS != sh.objKind(seg))
         // not a DLS
         return false;
@@ -163,5 +166,5 @@ bool haveDlSegAt(SymHeap &sh, TValueId atAddr, TValueId peerAddr) {
         return false;
 
     // compare the end-points
-    return (sh.placedAt(peer) == peerAddr);
+    return (sh.placedAt(segHead(sh, peer)) == peerAddr);
 }

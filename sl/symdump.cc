@@ -168,6 +168,10 @@ void dump_kind(const SymHeap &heap, TObjId obj) {
             cout << "OK_CONCRETE";
             return;
 
+        case OK_HEAD:
+            cout << "OK_HEAD";
+            return;
+
         case OK_SLS:
             cout << "OK_SLS, icNext = ";
             break;

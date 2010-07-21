@@ -168,8 +168,6 @@ void skipObj(const SymHeap &sh, TObjId *pObj, TFieldIdxChain icHead,
     const TObjId objPtrNext = subObjByChain(sh, *pObj, icNext);
     const TObjId headNext = sh.pointsTo(sh.valueOf(objPtrNext));
     const TObjId objNext = subObjByInvChain(sh, headNext, icHead);
-    if (OBJ_INVALID == objNext)
-        TRAP;
 
     // move to the next object
     *pObj = objNext;

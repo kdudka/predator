@@ -544,7 +544,9 @@ class SymHeapTyped: public SymHeapCore {
 enum EObjKind {
     OK_CONCRETE     = 0,
     OK_SLS          = 1,
-    OK_DLS          = 2
+    OK_DLS          = 2,
+
+    OK_HEAD
 };
 
 typedef std::vector<int /* nth */> TFieldIdxChain;
@@ -645,7 +647,7 @@ class SymHeap: public SymHeapTyped {
         virtual bool valReplaceUnknownImpl(TValueId val, TValueId replaceBy);
 
     private:
-        void dlSegCrossNeqOp(ENeqOp op, TValueId dlsAddr);
+        void dlSegCrossNeqOp(ENeqOp op, TValueId headAddr);
 
     private:
         struct Private;

@@ -86,9 +86,9 @@ void dlSegHandleCrossNeq(SymHeap &sh, TObjId dls, SymHeap::ENeqOp op) {
     const TObjId peer = dlSegPeer(sh, dls);
     const TObjId next = nextPtrFromSeg(sh, peer);
     const TValueId valNext = sh.valueOf(next);
-    const TValueId valSelf = sh.placedAt(dls);
 
-    sh.neqOp(op, valSelf, valNext);
+    const TValueId headAddr = sh.placedAt(segHead(sh, dls));
+    sh.neqOp(op, headAddr, valNext);
 }
 
 TValueId /* addr */ segClone(SymHeap &sh, TValueId atAddr) {
@@ -168,6 +168,7 @@ void buildIgnoreList(const SymHeap &sh, TObjId obj, TIgnoreList &ignoreList) {
     const EObjKind kind = sh.objKind(obj);
     switch (kind) {
         case OK_CONCRETE:
+        case OK_HEAD:
             // invalid call of buildIgnoreList()
             TRAP;
 
@@ -239,6 +240,7 @@ bool segEqual(const SymHeap &sh, TValueId v1, TValueId v2) {
     TObjId peer2 = o2;
     switch (kind) {
         case OK_CONCRETE:
+        case OK_HEAD:
             // invalid call of segEqual()
             TRAP;
 
@@ -279,6 +281,7 @@ bool segMayBePrototype(const SymHeap &sh, const TValueId segAt, bool refByDls) {
     const EObjKind kind = sh.objKind(seg);
     switch (kind) {
         case OK_CONCRETE:
+        case OK_HEAD:
             // concrete objects are not supported as prototypes now
             TRAP;
             return false;
@@ -555,17 +558,21 @@ class ProbeVisitor {
 template <class TDst>
 class ProbeVisitorTopLevel {
     private:
-        TDst        &heads;
-        EObjKind    kind;
+        TDst        &heads_;
+        EObjKind    kind_;
 
     public:
-        ProbeVisitorTopLevel(TDst &heads_, EObjKind kind_):
-            heads(heads_),
-            kind(kind_)
+        ProbeVisitorTopLevel(TDst &heads, EObjKind kind):
+            heads_(heads),
+            kind_(kind)
         {
         }
 
         bool operator()(const SymHeap &sh, TObjId sub, TFieldIdxChain ic) {
+            const TValueId addr = sh.placedAt(sub);
+            if (sh.usedByCount(addr) != static_cast<unsigned>(kind_))
+                return /* continue */ true;
+
             const struct cl_type *clt = sh.objType(sub);
             if (!clt || clt->code != CL_TYPE_STRUCT)
                 return /* continue */ true;
@@ -573,11 +580,11 @@ class ProbeVisitorTopLevel {
             if (doesAnyonePointToInside(sh, sub))
                 return /* continue */ true;
 
-            const ProbeVisitor visitor(sh, sub, kind);
+            const ProbeVisitor visitor(sh, sub, kind_);
             if (traverseSubObjs(sh, sub, visitor))
                 return /* continue */ true;
 
-            heads.push_back(ic);
+            heads_.push_back(ic);
             return /* continue */ true;
         }
 };
@@ -628,10 +635,25 @@ class SelectorFinder {
 
 template <class TDst>
 void digAnyListSelectors(TDst &dst, const SymHeap &sh, TObjId obj,
-                         EObjKind kind)
+                         EObjKind kind, TFieldIdxChain icHead)
 {
-    SelectorFinder<TDst> visitor(dst, sh, obj, kind);
+    // jump to list head
+    obj = subObjByChain(sh, obj, icHead);
+
+    // start with the head, going down the line
+    std::vector<TFieldIdxChain> tmp;
+    SelectorFinder<TDst> visitor(tmp, sh, obj, kind);
     traverseSubObjsIc(sh, obj, visitor);
+
+    // now merge it together
+    BOOST_FOREACH(const TFieldIdxChain &ic, tmp) {
+        // TODO: rewrite the following nonsense
+        TFieldIdxChain icTmp(icHead);
+        BOOST_FOREACH(const int i, ic) {
+            icTmp.push_back(i);
+        }
+        dst.push_back(icTmp);
+    }
 }
 
 // FIXME: this function tends to be crowded
@@ -672,20 +694,23 @@ unsigned /* len */ segDiscover(const SymHeap &sh, TObjId entry, EObjKind kind,
         }
 
         const TObjId objPtrNext = subObjByChain(sh, obj, bf.next);
-        const ProbeVisitor visitor(sh, obj, kind, bf.next);
+        // FIXME: check that nothing but head is pointed from outside!!!
+        const TObjId head = subObjByChain(sh, obj, bf.head);
+        const ProbeVisitor visitor(sh, head, kind, /* FIXME */ bf.next);
         if (visitor(sh, objPtrNext))
             // we can't go further
             break;
 
-        const TValueId valNext = sh.valueOf(objPtrNext);
-        const TObjId objNext = sh.pointsTo(valNext);
+        TObjId objNext = obj;
+        skipObj(sh, &objNext, bf.head, bf.next);
         if (objNext <= 0)
             // there is no valid next object
             break;
 
         if (OK_DLS == kind) {
             // check the back-link
-            const TValueId addrSelf = sh.placedAt(obj);
+            const TObjId head = subObjByChain(sh, obj, bf.head);
+            const TValueId addrHead = sh.placedAt(head);
             const TObjId objBackLink = subObjByChain(sh, objNext, bf.peer);
             const TValueId valBackLink = sh.valueOf(objBackLink);
 
@@ -693,7 +718,7 @@ unsigned /* len */ segDiscover(const SymHeap &sh, TObjId entry, EObjKind kind,
             const bool dlSegHeadCandidate =
                 (objCurrent == entry && VAL_NULL == valBackLink);
 
-            if (!dlSegHeadCandidate && valBackLink != addrSelf)
+            if (!dlSegHeadCandidate && valBackLink != addrHead)
                 // inappropriate back-link
                 break;
         }
@@ -723,6 +748,7 @@ unsigned segDiscoverAll(const SymHeap &sh, const TObjId entry, EObjKind kind,
     unsigned prevMax = cnt;
     switch (kind) {
         case OK_CONCRETE:
+        case OK_HEAD:
             // invalid call of segDiscoverAll()
             TRAP;
 
@@ -781,6 +807,7 @@ void slSegCreateIfNeeded(SymHeap &sh, TObjId obj, const SegBindingFields &bf) {
     const EObjKind kind = sh.objKind(obj);
     switch (kind) {
         case OK_SLS:
+        case OK_HEAD:
             // already abstract, check the next pointer
             if (sh.objBinding(obj) == bf)
                 // all OK
@@ -798,12 +825,11 @@ void slSegCreateIfNeeded(SymHeap &sh, TObjId obj, const SegBindingFields &bf) {
     // abstract a concrete object
     sh.objSetAbstract(obj, OK_SLS, bf);
 
-    // we're constructing the abstract object from a concrete one --> it
-    // implies non-empty LS at this point
-    const TValueId addr = sh.placedAt(obj);
-    const TObjId objNextPtr = subObjByChain(sh, obj, bf.next);
-    const TValueId valNext = sh.valueOf(objNextPtr);
-    sh.neqOp(SymHeap::NEQ_ADD, addr, valNext);
+    // we're constructing the abstract object from a concrete one
+    // --> it implies non-empty LS at this point
+    const TValueId headAddr = sh.placedAt(segHead(sh, obj));
+    const TValueId valNext = sh.valueOf(subObjByChain(sh, obj, bf.next));
+    sh.neqOp(SymHeap::NEQ_ADD, headAddr, valNext);
 }
 
 void slSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf,
@@ -847,8 +873,8 @@ void dlSegCreate(SymHeap &sh, TObjId o1, TObjId o2, SegBindingFields bf,
                               /* fresh */ true);
 
     // a just created DLS is said to be 2+
-    const TValueId a1 = sh.placedAt(o1);
-    const TValueId a2 = sh.placedAt(o2);
+    const TValueId a1 = sh.placedAt(segHead(sh, o1));
+    const TValueId a2 = sh.placedAt(segHead(sh, o2));
     sh.neqOp(SymHeap::NEQ_ADD, a1, a2);
 }
 
@@ -934,6 +960,7 @@ void dlSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf,
     EObjKind kind = sh.objKind(o1);
     switch (kind) {
         case OK_SLS:
+        case OK_HEAD:
             // *** segDiscover() failure detected ***
             TRAP;
 
@@ -983,6 +1010,7 @@ bool considerSegAbstraction(SymHeap &sh, TObjId obj, EObjKind kind,
     AbstractionThreshold at;
     switch (kind) {
         case OK_CONCRETE:
+        case OK_HEAD:
             // invalid call of considerSegAbstraction()
             TRAP;
 
@@ -1047,6 +1075,7 @@ bool considerAbstraction(SymHeap &sh, EObjKind kind, TCont entries,
 {
     switch (kind) {
         case OK_CONCRETE:
+        case OK_HEAD:
             // invalid call of considerAbstraction()
             TRAP;
 
@@ -1072,11 +1101,10 @@ bool considerAbstraction(SymHeap &sh, EObjKind kind, TCont entries,
     for (unsigned i = 0; i < cnt; ++i) {
         const TObjId obj = entries[i];
         const TFieldIdxChain icHead = heads[i];
-        const TObjId head = subObjByChain(sh, obj, icHead);
 
         // gather suitable selectors
         std::vector<TFieldIdxChain> selectors;
-        digAnyListSelectors(selectors, sh, head, kind);
+        digAnyListSelectors(selectors, sh, obj, kind, icHead);
 
         // run the LS discovering process
         SegBindingFields bf;
@@ -1123,10 +1151,6 @@ void digAnyListHeads(TDst &heads, const SymHeap &sh, TObjId obj,
 
     const TValueId addr = sh.placedAt(obj);
     if (VAL_INVALID == addr)
-        return;
-
-    const unsigned uses = sh.usedByCount(addr);
-    if (static_cast<unsigned>(kind) != uses)
         return;
 
     probe(heads, sh, obj, kind);
@@ -1203,6 +1227,10 @@ bool dlSegReplaceByConcrete(SymHeap &sh, TObjId obj, TObjId peer) {
 }
 
 void spliceOutListSegmentCore(SymHeap &sh, TObjId obj, TObjId peer) {
+    if (obj != segHead(sh, obj))
+        // TODO
+        TRAP;
+
     const TObjId next = nextPtrFromSeg(sh, peer);
     const TValueId valNext = sh.valueOf(next);
 
@@ -1255,10 +1283,15 @@ void concretizeObj(SymHeap &sh, TValueId addr, TSymHeapList &todo) {
     const TObjId obj = sh.pointsTo(addr);
     TObjId peer = obj;
 
+    if (obj != segHead(sh, obj))
+        // TODO
+        TRAP;
+
     // branch by SLS/DLS
     const EObjKind kind = sh.objKind(obj);
     switch (kind) {
         case OK_CONCRETE:
+        case OK_HEAD:
             // invalid call of concretizeObj()
             TRAP;
 

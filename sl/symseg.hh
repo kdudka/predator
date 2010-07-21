@@ -26,7 +26,8 @@
  */
 
 #include "config.h"
-#include "symid.hh"
+#include "symheap.hh"
+#include "symutil.hh"
 
 class SymHeap;
 
@@ -43,5 +44,10 @@ bool dlSegNotEmpty(const SymHeap &sh, TObjId dls);
 bool segNotEmpty(const SymHeap &sh, TObjId seg);
 
 void segDestroy(SymHeap &sh, TObjId seg);
+
+inline TObjId segHead(const SymHeap &sh, TObjId seg) {
+    const TFieldIdxChain icHead = sh.objBinding(seg).head;
+    return subObjByChain(sh, seg, icHead);
+}
 
 #endif /* H_GUARD_SYMSEG_H */

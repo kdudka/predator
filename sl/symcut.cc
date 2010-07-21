@@ -191,6 +191,7 @@ TObjId addObjectIfNeeded(DeepCopyData &dc, TObjId objSrc) {
         // fall through!
 
         case OK_CONCRETE:
+        case OK_HEAD:
             return dc.objMap[objSrc];
     }
 
