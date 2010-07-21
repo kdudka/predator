@@ -554,7 +554,11 @@ class ProbeVisitor {
     }
 };
 
-bool probe(SymHeap &sh, TObjId obj, EObjKind kind, TFieldIdxChain icHead) {
+bool probe(const SymHeap &sh, TObjId obj, EObjKind kind, TFieldIdxChain icHead)
+{
+    if (!icHead.empty())
+        TRAP;
+
     if (doesAnyonePointToInside(sh, obj))
         return false;
 
@@ -1016,7 +1020,7 @@ bool considerSegAbstraction(SymHeap &sh, TObjId obj, EObjKind kind,
 
 template <class TCont, class TContHeads>
 bool considerAbstraction(SymHeap &sh, EObjKind kind, TCont entries,
-                         TContHeads icHead, bool flatScan = false)
+                         TContHeads heads, bool flatScan = false)
 {
     switch (kind) {
         case OK_CONCRETE:
@@ -1037,7 +1041,18 @@ bool considerAbstraction(SymHeap &sh, EObjKind kind, TCont entries,
     TFieldIdxChain bestNext, bestPrev;
     TObjId bestEntry;
     unsigned bestLen = 0;
-    BOOST_FOREACH(const TObjId obj, entries) {
+
+    // check how many candidates did we get
+    const unsigned cnt = entries.size();
+    if (heads.size() != cnt)
+        TRAP;
+
+    for (unsigned i = 0; i < cnt; ++i) {
+        const TObjId obj = entries[i];
+        if (!heads[i].empty())
+            // TODO
+            TRAP;
+
         // gather suitable selectors
         std::vector<TFieldIdxChain> selectors;
         digAnyListSelectors(selectors, sh, obj, kind);
@@ -1080,9 +1095,24 @@ void flatScan(SymHeap &sh, EObjKind kind, TObjId obj) {
     considerAbstraction(sh, kind, cont, heads, /* flatScan */ true);
 }
 
-bool lookForListHead(TFieldIdxChain *icHead, const SymHeap &sh, TObjId obj) {
-    // TODO
-    return false;
+template <class TDst>
+void digAnyListHeads(TDst &dst, const SymHeap &sh, TObjId obj,
+                     EObjKind kind)
+{
+    if (sh.cVar(0, obj))
+        // skip static/automatic objects
+        return;
+
+    const TValueId addr = sh.placedAt(obj);
+    if (VAL_INVALID == addr)
+        return;
+
+    const unsigned uses = sh.usedByCount(addr);
+    if (static_cast<unsigned>(kind) != uses)
+        return;
+
+    if (probe(sh, obj, kind, /* TODO */ TFieldIdxChain()))
+        dst.push_back(/* TODO */ TFieldIdxChain());
 }
 
 bool abstractIfNeededCore(SymHeap &sh) {
@@ -1096,52 +1126,27 @@ bool abstractIfNeededCore(SymHeap &sh) {
     SymHeapCore::TContObj roots;
     sh.gatherRootObjs(roots);
     BOOST_FOREACH(const TObjId obj, roots) {
-        if (sh.cVar(0, obj))
-            // skip static/automatic objects
-            continue;
+        // look for SLS heads
+        std::vector<TFieldIdxChain> heads;
+        (void) heads;
 
-        const TValueId addr = sh.placedAt(obj);
-        if (VAL_INVALID == addr)
-            continue;
-
-        TFieldIdxChain icHead;
-        unsigned uses = sh.usedByCount(addr);
-        if (!uses) {
-            if (!lookForListHead(&icHead, sh, obj))
-                continue;
-
-            const TObjId objHead = subObjByChain(sh, obj, icHead);
-            uses = sh.usedByCount(sh.placedAt(objHead));
-        }
-
-        switch (uses) {
-            case 0:
-                TRAP;
-                // fall through!
-
-            default:
-                continue;
-
-            case 1:
 #if !SE_DISABLE_SLS
-                if (probe(sh, obj, OK_SLS, icHead)) {
-                    // a candidate for SLS entry
-                    slSegEntries.push_back(obj);
-                    slSegHeads.push_back(icHead);
-                }
-#endif
-                break;
-
-            case 2:
-#if !SE_DISABLE_DLS
-                if (probe(sh, obj, OK_DLS, icHead)) {
-                    // a candidate for DLS entry
-                    dlSegEntries.push_back(obj);
-                    dlSegHeads.push_back(icHead);
-                }
-#endif
-                break;
+        digAnyListHeads(heads, sh, obj, OK_SLS);
+        BOOST_FOREACH(const TFieldIdxChain icHead, heads) {
+            slSegEntries.push_back(obj);
+            slSegHeads.push_back(icHead);
         }
+
+        // look for DLS heads
+        heads.clear();
+#endif
+#if !SE_DISABLE_DLS
+        digAnyListHeads(heads, sh, obj, OK_DLS);
+        BOOST_FOREACH(const TFieldIdxChain icHead, heads) {
+            dlSegEntries.push_back(obj);
+            dlSegHeads.push_back(icHead);
+        }
+#endif
     }
 
     // TODO: check if the order of following two steps is anyhow important
