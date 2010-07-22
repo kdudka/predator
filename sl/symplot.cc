@@ -178,8 +178,9 @@ bool SymHeapPlotter::Private::openDotFile(const std::string &plotName)
     // open graph
     this->dotStream << "digraph " << SL_QUOTE(name) << " {" << std::endl
         << "\tlabel=<<FONT POINT-SIZE=\"18\">"
-        << name << "</FONT>>;" << std::endl
-        << "\tlabelloc=t;" << std::endl;
+        << name << "</FONT>>;"                      << std::endl
+        << "\tclusterrank=local;"                   << std::endl
+        << "\tlabelloc=t;"                          << std::endl;
 
     CL_DEBUG("symplot: created dot file '" << fileName << "'");
     return this->dotStream;
@@ -576,7 +577,8 @@ void SymHeapPlotter::Private::openCluster(TObjId obj) {
     }
 
     this->dotStream
-        << "subgraph \"cluster" << obj << "\" {"    << std::endl
+        << "subgraph \"cluster" <<(++last)<< "\" {" << std::endl
+        << "\trank=same;"                           << std::endl
         << "\tlabel=" << SL_QUOTE(label) << ";"     << std::endl
         << "\tcolor=" << color << ";"               << std::endl
         << "\tfontcolor=" << color << ";"           << std::endl;
@@ -808,7 +810,7 @@ void SymHeapPlotter::Private::digObj(TObjId obj) {
 
     // open a cluster
     this->dotStream
-        << "subgraph \"clusterDLS" << obj << "\" {" << std::endl
+        << "subgraph \"cluster" <<(++last)<< "\" {" << std::endl
         << "\tlabel=" << SL_QUOTE(label)            << std::endl
         << "\tcolor=gold;"                          << std::endl
         << "\tfontcolor=gold;"                      << std::endl
