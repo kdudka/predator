@@ -1221,6 +1221,57 @@ bool abstractIfNeededCore(SymHeap &sh) {
     return false;
 }
 
+void segReplaceRefs(SymHeap &sh, TValueId valOld, TValueId valNew) {
+    if (UV_ABSTRACT != sh.valGetUnknown(valOld))
+        TRAP;
+
+    TObjId objOld = sh.pointsTo(valOld);
+    TObjId headOld = objOld;
+    sh.valReplace(valOld, valNew);
+
+    const EObjKind kind = sh.objKind(objOld);
+    switch (kind) {
+        case OK_SLS:
+        case OK_DLS:
+            headOld = segHead(sh, objOld);
+            if (headOld == objOld)
+                // no Linux lists involved
+                return;
+
+        case OK_HEAD:
+            break;
+
+        default:
+            TRAP;
+    }
+
+    TObjId objNew = sh.pointsTo(valNew);
+    if (objNew < 0)
+        return;
+
+    const TFieldIdxChain icHead = sh.objBinding(objOld).head;
+    if (icHead.empty())
+        return;
+
+    if (OK_HEAD == kind) {
+        objOld = subObjByInvChain(sh, objOld, icHead);
+        if (objOld < 0)
+            TRAP;
+
+        objNew = subObjByInvChain(sh, objNew, icHead);
+        if (objNew < 0)
+            return;
+
+        sh.valReplace(sh.placedAt(objOld), sh.placedAt(objNew));
+    }
+    else {
+        // TODO: check this with a debugger at least once
+        TRAP;
+        const TObjId headNew = subObjByChain(sh, objNew, icHead);
+        sh.valReplace(sh.placedAt(headOld), sh.placedAt(headNew));
+    }
+}
+
 bool dlSegReplaceByConcrete(SymHeap &sh, TObjId obj, TObjId peer) {
     // first kill any related Neq predicates, we're going to concretize anyway
     dlSegHandleCrossNeq(sh, obj, SymHeap::NEQ_DEL);
@@ -1234,7 +1285,7 @@ bool dlSegReplaceByConcrete(SymHeap &sh, TObjId obj, TObjId peer) {
     // redirect all references originally pointing to peer to the current object
     const TValueId addrSelf = sh.placedAt(obj);
     const TValueId addrPeer = sh.placedAt(peer);
-    sh.valReplace(addrPeer, addrSelf);
+    segReplaceRefs(sh, addrPeer, addrSelf);
 
     // destroy the peer object and concretize self
     sh.objDestroy(peer);
@@ -1245,10 +1296,6 @@ bool dlSegReplaceByConcrete(SymHeap &sh, TObjId obj, TObjId peer) {
 }
 
 void spliceOutListSegmentCore(SymHeap &sh, TObjId obj, TObjId peer) {
-    if (obj != segHead(sh, obj))
-        // TODO
-        TRAP;
-
     const TObjId next = nextPtrFromSeg(sh, peer);
     const TValueId valNext = sh.valueOf(next);
 
@@ -1256,13 +1303,12 @@ void spliceOutListSegmentCore(SymHeap &sh, TObjId obj, TObjId peer) {
         // OK_DLS --> destroy peer
         const TFieldIdxChain icPrev = sh.objBinding(obj).next;
         const TValueId valPrev = sh.valueOf(subObjByChain(sh, obj, icPrev));
-        sh.valReplace(sh.placedAt(peer), valPrev);
+        segReplaceRefs(sh, segHeadAddr(sh, peer), valPrev);
         sh.objDestroy(peer);
     }
 
     // destroy self
-    const TValueId addr = sh.placedAt(obj);
-    sh.valReplace(addr, valNext);
+    segReplaceRefs(sh, segHeadAddr(sh, obj), valNext);
     sh.objDestroy(obj);
 }
 

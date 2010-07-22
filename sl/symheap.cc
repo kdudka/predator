@@ -1497,6 +1497,10 @@ TObjId SymHeap::objDup(TObjId objOld) {
         // set the pointing value's code to UV_ABSTRACT
         const TValueId addrNew = this->placedAt(objNew);
         SymHeapCore::valSetUnknown(addrNew, UV_ABSTRACT);
+
+        // mark the address of 'head' as UV_ABSTRACT
+        const TValueId addrHead = segHeadAddr(*this, objNew);
+        SymHeapCore::valSetUnknown(addrHead, UV_ABSTRACT);
     }
 
     return objNew;
