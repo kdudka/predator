@@ -24,6 +24,7 @@
 #include <cl/code_listener.h>
 
 #include "util.hh"
+#include "symutil.hh"
 #include "worklist.hh"
 
 #include <iomanip>
@@ -198,7 +199,10 @@ namespace {
         return true;
     }
 
-bool cmpAbstractObjects(const SymHeap &sh1, const SymHeap &sh2,
+} // namespace 
+
+template <class TWL>
+bool cmpAbstractObjects(TWL &wl, const SymHeap &sh1, const SymHeap &sh2,
                         TObjId o1, TObjId o2)
 {
     const EObjKind kind = sh1.objKind(o1);
@@ -206,15 +210,28 @@ bool cmpAbstractObjects(const SymHeap &sh1, const SymHeap &sh2,
         // kind of object mismatch
         return false;
 
-    if (OK_CONCRETE == kind || OK_HEAD ==kind || OK_PART)
+    if (OK_CONCRETE == kind || OK_PART == kind)
         // no abstract objects comparison
         return true;
 
     // compare binding fields
-    return sh1.objBinding(o1) == sh2.objBinding(o2);
-}
+    const SegBindingFields bf = sh1.objBinding(o1);
+    if (sh2.objBinding(o2) != bf)
+        return false;
 
-} // namespace 
+    if (OK_HEAD != kind)
+        return true;
+
+    // jump to root objects
+    o1 = subObjByInvChain(sh1, o1, bf.head);
+    o2 = subObjByInvChain(sh2, o2, bf.head);
+
+    // schedule roots for the next wheel
+    const TValueId v1 = sh1.placedAt(o1);
+    const TValueId v2 = sh2.placedAt(o1);
+    wl.schedule(v1, v2);
+    return true;
+}
 
 template <class TWL, class TSubst>
 bool matchPreds(TWL             &wl,
@@ -284,7 +301,7 @@ bool dfsCmp(TWL             &wl,
             // variable mismatch
             return false;
 
-        if (!cmpAbstractObjects(heap1, heap2, obj1, obj2))
+        if (!cmpAbstractObjects(wl, heap1, heap2, obj1, obj2))
             // abstract objects are not equeal
             return false;
 
