@@ -514,32 +514,31 @@ void SymHeapPlotter::Private::digNext(TObjId obj) {
             break;
     }
 
-    const TFieldIdxChain icHead = this->heap->objBinding(obj).head;
+    const SegBindingFields &bf = this->heap->objBinding(obj);
+    const TFieldIdxChain icHead = bf.head;
     if (!icHead.empty()) {
         const TObjId objHead = subObjByChain(*this->heap, obj, icHead);
         if (objHead <= 0)
             TRAP;
 
-        // store icHead
+        // store 'head' pointer object
         this->heads.insert(objHead);
     }
 
-    const TFieldIdxChain icBind = this->heap->objBinding(obj).next;
-    const TObjId objBind = subObjByChain(*this->heap, obj, icBind);
-    if (objBind <= 0)
+    const TObjId objNext = subObjByChain(*this->heap, obj, bf.next);
+    if (objNext <= 0)
         TRAP;
 
-    // store icBind
-    this->nexts.insert(objBind);
+    // store 'next' poitner object
+    this->nexts.insert(objNext);
     if (OK_SLS == kind)
         return;
 
-    const TFieldIdxChain icPeer = this->heap->objBinding(obj).peer;
-    const TObjId objPeer = subObjByChain(*this->heap, obj, icPeer);
-    if (objBind <= 0)
+    const TObjId objPeer = subObjByChain(*this->heap, obj, bf.peer);
+    if (objPeer <= 0)
         TRAP;
 
-    // store icPeer
+    // store 'peer' pointer object
     this->peers.insert(objPeer);
 }
 

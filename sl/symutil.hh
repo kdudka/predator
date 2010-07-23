@@ -60,6 +60,27 @@ inline bool objIsStruct(const SymHeap &sh, TObjId obj) {
         && clt->code == CL_TYPE_STRUCT;
 }
 
+/// return offset of an object within another object;  -1 if not found
+inline int subOffsetIn(const SymHeap &sh, TObjId in, TObjId of) {
+    int offset = 0;
+    TObjId parent;
+
+    int nth;
+    while (OBJ_INVALID != (parent = sh.objParent(of, &nth))) {
+        const struct cl_type *clt = sh.objType(parent);
+        if (!clt || clt->item_cnt <= nth)
+            TRAP;
+
+        offset += clt->items[nth].offset;
+        if (parent == in)
+            return offset;
+
+        of = parent;
+    }
+
+    return /* not found */ -1;
+}
+
 void getPtrValues(SymHeapCore::TContValue &dst, const SymHeap &heap,
                   TObjId obj);
 

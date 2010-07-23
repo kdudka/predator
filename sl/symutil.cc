@@ -46,20 +46,21 @@ TObjId subObjByInvChain(const SymHeap &sh, TObjId obj, TFieldIdxChain ic) {
         int nth;
         const TObjId parent = sh.objParent(obj, &nth);
         if (OBJ_INVALID == parent)
-            TRAP;
+            // count mismatch
+            return OBJ_INVALID;
 
         chkStack.push(nth);
         obj = parent;
     }
 
     // now check if the captured selector sequence matches the given one
-    // FIXME: skip this part when not debugging?
     for (unsigned i = 0; i < ic.size(); ++i) {
         if (chkStack.empty())
             TRAP;
 
         if (chkStack.top() != ic[i])
-            TRAP;
+            // field mismatch
+            return OBJ_INVALID;
 
         chkStack.pop();
     }

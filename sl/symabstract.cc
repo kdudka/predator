@@ -812,15 +812,13 @@ void slSegCreateIfNeeded(SymHeap &sh, TObjId obj, const SegBindingFields &bf) {
     const EObjKind kind = sh.objKind(obj);
     switch (kind) {
         case OK_SLS:
-        case OK_HEAD:
-        case OK_PART:
             // already abstract, check the next pointer
             if (sh.objBinding(obj) == bf)
                 // all OK
                 return;
             // fall through!
 
-        case OK_DLS:
+        default:
             TRAP;
             // fall through!
 
@@ -853,12 +851,16 @@ void slSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf,
     if (OK_SLS != sh.objKind(objNext))
         TRAP;
 
-    // replace self by the next object
+    // merge data
     abstractNonMatchingValues(sh, *pObj, objNext, flatScan);
+
+    // replace all references to 'head'
+    const TFieldIdxChain icHead = sh.objBinding(objNext).head;
+    const TObjId head = subObjByChain(sh, *pObj, icHead);
+    sh.valReplace(sh.placedAt(head), segHeadAddr(sh, objNext));
+
+    // replace self by the next object
     objReplace(sh, *pObj, objNext);
-    if (!bf.head.empty())
-        // TODO: replace all references to 'head'
-        TRAP;
 
     // move to the next object
     *pObj = objNext;
@@ -1258,9 +1260,24 @@ void segReplaceRefs(SymHeap &sh, TValueId valOld, TValueId valNew) {
         if (objOld < 0)
             TRAP;
 
-        objNew = subObjByInvChain(sh, objNew, icHead);
-        if (objNew < 0)
+        const TValueId addrOld = sh.placedAt(objOld);
+        if (0 == sh.usedByCount(addrOld))
+            // root not used anyway
             return;
+
+        objNew = subObjByInvChain(sh, objNew, icHead);
+        if (objNew < 0) {
+            // attempt to create a virtual object
+            const int off = subOffsetIn(sh, objOld, headOld);
+            const struct cl_type *clt = sh.objType(objOld);
+            CL_DEBUG("segReplaceRefs() attempts to create a virtual object"
+                    ", offset=" << off);
+
+            objNew = sh.objPretendSurroundOf(objNew, -off, clt);
+            if (objNew < 0)
+                // unable to create the virtual object ... what's the next step?
+                TRAP;
+        }
 
         sh.valReplace(sh.placedAt(objOld), sh.placedAt(objNew));
     }

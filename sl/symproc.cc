@@ -1029,27 +1029,6 @@ TValueId handleOpCmp(THeap &heap, enum cl_binop_e code,
     }
 }
 
-/// return offset of an object within another object;  -1 if not found
-int offsetIn(const SymHeap &sh, TObjId in, TObjId of) {
-    int offset = 0;
-    TObjId parent;
-
-    int nth;
-    while (OBJ_INVALID != (parent = sh.objParent(of, &nth))) {
-        const struct cl_type *clt = sh.objType(parent);
-        if (!clt || clt->item_cnt <= nth)
-            TRAP;
-
-        offset += clt->items[nth].offset;
-        if (parent == in)
-            return offset;
-
-        of = parent;
-    }
-
-    return /* not found */ -1;
-}
-
 struct SubByOffsetFinder {
     TObjId                  root;
     TObjId                  subFound;
@@ -1061,7 +1040,7 @@ struct SubByOffsetFinder {
         if (!clt || *clt != *this->cltToSeek)
             return /* continue */ true;
 
-        if (this->offToSeek != offsetIn(sh, this->root, sub))
+        if (this->offToSeek != subOffsetIn(sh, this->root, sub))
             return /* continue */ true;
 
         // found!
@@ -1122,7 +1101,6 @@ TValueId handlePointerPlus(SymHeap &sh, const struct cl_type *clt,
     if (off < 0) {
         // The surrounding object does not exist in the real world!  If we still
         // need to operate on Linux lists, we need to create a virtual one...
-        CL_WARN("support for virtual objects is not implemented yet");
         const TObjId virt = sh.objPretendSurroundOf(obj, -off, clt);
         if (OBJ_INVALID == virt) {
             CL_WARN("handlePointerPlus(): object underflow by "

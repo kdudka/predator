@@ -1231,6 +1231,7 @@ TObjId SymHeapTyped::objPretendSurroundOf(TObjId                objReal,
                                           int                   offsetReal,
                                           const struct cl_type *cltVirt)
 {
+    CL_WARN("support for virtual objects is not implemented yet");
     if (!cltVirt || cltVirt->code != CL_TYPE_STRUCT)
         // not supported
         TRAP;
