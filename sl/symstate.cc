@@ -228,7 +228,7 @@ bool cmpAbstractObjects(TWL &wl, const SymHeap &sh1, const SymHeap &sh2,
 
     // schedule roots for the next wheel
     const TValueId v1 = sh1.placedAt(o1);
-    const TValueId v2 = sh2.placedAt(o1);
+    const TValueId v2 = sh2.placedAt(o2);
     wl.schedule(v1, v2);
     return true;
 }
@@ -241,6 +241,11 @@ bool matchPreds(TWL             &wl,
                 TValueId        v1,
                 TValueId        v2)
 {
+    if (VAL_NULL == v1 && VAL_NULL == v2)
+        // FIXME: some dangling Neq(VAL_NULL, (int)...) predicates appear
+        // at times and cause the analysis to loop indefinitely :-/
+        return /* XXX */ true;
+
     SymHeap::TContValue rel1, rel2;
     heap1.gatherRelatedValues(rel1, v1);
     heap2.gatherRelatedValues(rel2, v2);

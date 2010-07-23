@@ -1,12 +1,9 @@
 test-0063.c:48:20: warning: binary operator not implemented yet
-test-0063.c:48:20: warning: binary operator not implemented yet
-test-0063.c:78:20: warning: binary operator not implemented yet
 test-0063.c:78:20: warning: binary operator not implemented yet
 test-0063.c:89:9: warning: killing junk
 test-0063.c:94:25: note: from call of create_sane_shape()
 test-0063.c:102:30: note: from call of demo()
 test-0063.c:100:5: note: from call of main()
-test-0063.c:48:20: warning: binary operator not implemented yet
 test-0063.c:48:20: warning: binary operator not implemented yet
 test-0063.c:106:9: warning: killing junk
 test-0063.c:106:9: warning: killing junk
