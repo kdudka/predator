@@ -78,7 +78,7 @@ public:
 			TA<label_type>* ta = this->taMan->alloc();
 			this->roots.push_back(ta);
 			// add reachable transitions
-			for (TA<label_type>::dfs_iterator j = src.dfsStart(cache, {*i}); j.isValid(); j.next()) {
+			for (TA<label_type>::dfs_iterator j = src.dfsStart(cache, itov(*i)); j.isValid(); j.next()) {
 				ta->addTransition(*j);
 				if (j->lhs().empty())
 					this->registerRootReference(j->label().head().getReference(), j->rhs());
@@ -122,7 +122,7 @@ protected:
 			this->invRootReferenceIndex.insert(make_pair(this->nextState(), root));
 			this->newState();
 		}
-		vector<const Box*> label = { &this->boxMan->getReference(root) };
+		vector<const Box*> label = itov(&this->boxMan->getReference(root));
 		dst.addTransition(vector<size_t>(), &this->labMan->lookup(label), p.first->second);
 		return p.first->second;
 	}
@@ -273,7 +273,7 @@ protected:
 				if (i->label().head().isReference()) {
 					size_t ref = i->label().head().getReference();
 					if (!FAE::isNullOrUndef(ref)) {
-						v = { ref };
+						v = itov(ref);
 					}
 				} else {
 //					vector<size_t> order;
@@ -667,7 +667,7 @@ public:
 				(*i)->roots[j] = ta;				
 			}
 			// normalize
-			(*i)->normalize({root});
+			(*i)->normalize(itov(root));
 		}
 	}
 	
@@ -700,7 +700,7 @@ public:
 		size_t root = this->variables[y].index;
 		selector += this->variables[y].offset;
 		assert(root < this->roots.size());
-		this->isolateAtRoot(dst, root, {selector});
+		this->isolateAtRoot(dst, root, itov(selector));
 		for (vector<FAE*>::iterator i = dst.begin(); i != dst.end(); ++i) {
 			// find the destination of the selector
 			for (TA<label_type>::iterator j = (*i)->roots[root]->begin(); j != (*i)->roots[root]->end(); ++j) {
@@ -726,7 +726,7 @@ public:
 		selector += this->variables[x].offset;
 		assert(root < this->roots.size());
 		std::vector<FAE*> tmp;
-		this->isolateAtRoot(tmp, root, {selector});
+		this->isolateAtRoot(tmp, root, itov(selector));
 		try {
 			for (vector<FAE*>::iterator i = tmp.begin(); i != tmp.end(); ++i) {
 				TA<label_type>* ta = (*i)->taMan->alloc();

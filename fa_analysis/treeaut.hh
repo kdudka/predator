@@ -276,15 +276,15 @@ public:
 	
 	~TA() { this->clear(); }
 
-	TA<T>::Iterator begin() const { return TA<T>::Iterator(this->transitions.begin()); }
-	TA<T>::Iterator end() const { return TA<T>::Iterator(this->transitions.end()); }
+	typename TA<T>::Iterator begin() const { return typename TA<T>::Iterator(this->transitions.begin()); }
+	typename TA<T>::Iterator end() const { return typename TA<T>::Iterator(this->transitions.end()); }
 
-	TA<T>::DFSIterator dfsStart(const td_cache_type& cache) const {
-		return TA<T>::DFSIterator(cache, vector<size_t>(this->finalStates.begin(), this->finalStates.end()));
+	typename TA<T>::DFSIterator dfsStart(const td_cache_type& cache) const {
+		return typename TA<T>::DFSIterator(cache, vector<size_t>(this->finalStates.begin(), this->finalStates.end()));
 	}
 
-	TA<T>::DFSIterator dfsStart(const td_cache_type& cache, const vector<size_t>& stack) const {
-		return TA<T>::DFSIterator(cache, stack);
+	typename TA<T>::DFSIterator dfsStart(const td_cache_type& cache, const vector<size_t>& stack) const {
+		return typename TA<T>::DFSIterator(cache, stack);
 	}
 
 	TA<T>& operator=(const TA<T>& rhs) {
@@ -615,7 +615,7 @@ public:
 		while (height--) {
 			classes.clear();
 			for (typename set<typename trans_cache_type::value_type*>::const_iterator i = this->transitions.begin(); i != this->transitions.end(); ++i) {
-				std::vector<size_t> tmp = { classIndex[stateIndex[(*i)->first._rhs]] };
+				std::vector<size_t> tmp = itov(classIndex[stateIndex[(*i)->first._rhs]]);
 				for (std::vector<size_t>::const_iterator j = (*i)->first._lhs->first.begin(); j != (*i)->first._lhs->first.end(); ++j)
 					tmp.push_back(classIndex[stateIndex[*j]]);
 				newClassIndex[classIndex[stateIndex[(*i)->first._rhs]]] =
@@ -729,7 +729,7 @@ public:
 	}
 	
 	TA<T>& minimized(TA<T>& dst, const vector<vector<bool> >& cons, const Index<size_t>& stateIndex) const {
-		TA<T>::Backend backend;
+		typename TA<T>::Backend backend;
 		vector<vector<bool> > dwn;
 		this->downwardSimulation(dwn, stateIndex);
 		utils::relAnd(dwn, cons, dwn);

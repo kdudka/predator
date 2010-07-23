@@ -21,6 +21,7 @@
 #define TIMBUK_H
 
 #include <cstdio>
+#include <cstdlib>
 #include <istream>
 #include <ostream>
 #include <iostream>

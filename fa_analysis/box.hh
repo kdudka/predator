@@ -202,7 +202,7 @@ public:
 		box.variables.push_back(var_info(0, offset));
 		set<size_t> coverage;
 		coverage.insert(selector);
-		box.selCoverage.push_back(make_pair(vector<size_t>({ selector }), coverage));
+		box.selCoverage.push_back(make_pair(itov(selector), coverage));
 		return box;
 	}
 
@@ -369,7 +369,7 @@ protected:
 			make_pair(name, Box::createBox(this->taMan, name))
 		).first->second;
 
-		std::fstream input(j->second);
+		std::fstream input(j->second.c_str());
 
 		TAReader reader(input, j->second);
 

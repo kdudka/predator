@@ -166,49 +166,49 @@ int main(int argc, char* argv[]) {
 	LabMan labMan;
 	BoxManager boxMan(taMan, labMan);
 	
-	std::vector<std::vector<FAE*> > store = { std::vector<FAE*>({ new FAE(taMan, labMan, boxMan) }) };
+	std::vector<std::vector<FAE*> > store;
+	store.push_back(itov( new FAE(taMan, labMan, boxMan) ));
 	
 	DEBUG_MSG("ready");
 	
-	std::vector<Instr> code = {
-		Instr(Instr::add_var, "x"),
-		Instr(Instr::add_var, "y"),
-		Instr(Instr::x_ass_null, "x"),				// x = null
-		Instr(Instr::x_ass_null, "y"),				// y = null
-		Instr(Instr::x_ass_new, "y", 1),			// y = new(1)
-		Instr(Instr::x_next_ass_y, "y", 0, "x"),	// y.next(0) = x
-		Instr(Instr::x_ass_y, "x", 0, "y"),			// x = y
-		Instr(Instr::x_ass_new, "y", 1),			// y = new(1)
-		Instr(Instr::x_next_ass_y, "y", 0, "x"),	// y.next(0) = x
-		Instr(Instr::x_ass_y, "x", 0, "y"),			// x = y
-		Instr(Instr::x_ass_new, "y", 1),			// y = new(1)
-		Instr(Instr::x_next_ass_y, "y", 0, "x"),	// y.next(0) = x
-		Instr(Instr::x_ass_y, "x", 0, "y"),			// x = y
-		Instr(Instr::add_var, "z"),
-		Instr(Instr::x_ass_null, "z"),
-		Instr(Instr::x_not_null, "x"),
-		Instr(Instr::x_ass_y, "y", 0, "x"),			// y = x
-		Instr(Instr::x_ass_y_next, "x", 0, "x"),	// x = x.next
-		Instr(Instr::x_next_ass_y, "y", 0, "z"),	// y.next = z
-		Instr(Instr::x_ass_y, "z", 0, "y"),			// z = x
-		Instr(Instr::x_not_null, "x"),
-		Instr(Instr::x_ass_y, "y", 0, "x"),			// y = x
-		Instr(Instr::x_ass_y_next, "x", 0, "x"),	// x = x.next
-		Instr(Instr::x_next_ass_y, "y", 0, "z"),	// y.next = z
-		Instr(Instr::x_ass_y, "z", 0, "y")			// z = x
+	std::vector<Instr> code;
+	code.push_back(Instr(Instr::add_var, "x"));
+	code.push_back(Instr(Instr::add_var, "y"));
+	code.push_back(Instr(Instr::x_ass_null, "x"));				// x = null
+	code.push_back(Instr(Instr::x_ass_null, "y"));				// y = null
+	code.push_back(Instr(Instr::x_ass_new, "y", 1));			// y = new(1)
+	code.push_back(Instr(Instr::x_next_ass_y, "y", 0, "x"));	// y.next(0) = x
+	code.push_back(Instr(Instr::x_ass_y, "x", 0, "y"));			// x = y
+	code.push_back(Instr(Instr::x_ass_new, "y", 1));			// y = new(1)
+	code.push_back(Instr(Instr::x_next_ass_y, "y", 0, "x"));	// y.next(0) = x
+	code.push_back(Instr(Instr::x_ass_y, "x", 0, "y"));			// x = y
+	code.push_back(Instr(Instr::x_ass_new, "y", 1));			// y = new(1)
+	code.push_back(Instr(Instr::x_next_ass_y, "y", 0, "x"));	// y.next(0) = x
+	code.push_back(Instr(Instr::x_ass_y, "x", 0, "y"));			// x = y
+	code.push_back(Instr(Instr::add_var, "z"));
+	code.push_back(Instr(Instr::x_ass_null, "z"));
+	code.push_back(Instr(Instr::x_not_null, "x"));
+	code.push_back(Instr(Instr::x_ass_y, "y", 0, "x"));			// y = x
+	code.push_back(Instr(Instr::x_ass_y_next, "x", 0, "x"));	// x = x.next
+	code.push_back(Instr(Instr::x_next_ass_y, "y", 0, "z"));	// y.next = z
+	code.push_back(Instr(Instr::x_ass_y, "z", 0, "y"));			// z = x
+	code.push_back(Instr(Instr::x_not_null, "x"));
+	code.push_back(Instr(Instr::x_ass_y, "y", 0, "x"));			// y = x
+	code.push_back(Instr(Instr::x_ass_y_next, "x", 0, "x"));	// x = x.next
+	code.push_back(Instr(Instr::x_next_ass_y, "y", 0, "z"));	// y.next = z
+	code.push_back(Instr(Instr::x_ass_y, "z", 0, "y"));			// z = x
 
-/*		Instr(Instr::x_ass_y_next, "x", 0, "y"),	// x.next(0) = y
-		Instr(Instr::del_x, "y"),
-		Instr(Instr::x_ass_y, "y", 0, "x"),
-		Instr(Instr::x_ass_y_next, "x", 0, "y"),
-		Instr(Instr::del_x, "y"),
-		Instr(Instr::x_ass_y, "y", 0, "x"),
-		Instr(Instr::x_ass_y_next, "x", 0, "y"),
-		Instr(Instr::del_x, "y"),
-		Instr(Instr::x_ass_y, "y", 0, "x"),
-		Instr(Instr::rm_var, "y"),
-		Instr(Instr::rm_var, "x")*/
-	};
+/*	code.push_back(Instr(Instr::x_ass_y_next, "x", 0, "y"));	// x.next(0) = y
+	code.push_back(Instr(Instr::del_x, "y"));
+	code.push_back(Instr(Instr::x_ass_y, "y", 0, "x"));
+	code.push_back(Instr(Instr::x_ass_y_next, "x", 0, "y"));
+	code.push_back(Instr(Instr::del_x, "y"));
+	code.push_back(Instr(Instr::x_ass_y, "y", 0, "x"));
+	code.push_back(Instr(Instr::x_ass_y_next, "x", 0, "y"));
+	code.push_back(Instr(Instr::del_x, "y"));
+	code.push_back(Instr(Instr::x_ass_y, "y", 0, "x"));
+	code.push_back(Instr(Instr::rm_var, "y"));
+	code.push_back(Instr(Instr::rm_var, "x"));*/
 
 	std::map<std::string, size_t> vars;
 
