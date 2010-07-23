@@ -673,7 +673,8 @@ bool SymHeapPlotter::Private::resolveValueOf(TValueId *pDst, TObjId obj) {
             return false;
 
         case VAL_DEREF_FAILED:
-            this->plotNodeAux(obj, CL_TYPE_VOID, "UV_DEREF_FAILED");
+            if (this->heap->objExists(obj))
+                this->plotNodeAux(obj, CL_TYPE_VOID, "UV_DEREF_FAILED");
             return false;
 
         default:

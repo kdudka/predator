@@ -1299,6 +1299,9 @@ TObjId SymHeapTyped::objPretendSurroundOf(TObjId                objReal,
                 todo.push(item);
             }
         }
+        else
+            // TODO: avoid wasting of value IDs (and memory) at this point
+            this->objSetValue(obj, VAL_DEREF_FAILED);
 
         if (item.subOff)
             // last item at this level, restore the cumulative offset
