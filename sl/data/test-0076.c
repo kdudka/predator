@@ -1,3 +1,6 @@
+// Linux lists: testing outcasting to the superior structures of (nested) list heads,
+// testing outcasting for the case when the superior structure does not exist. 
+
 #include "../sl.h"
 
 #include <linux/stddef.h>

@@ -1,3 +1,6 @@
+// Linux lists: a test of writing into a non-existing envelope of a list head,
+// resulting into stack smashing (since the head is on the stack).
+
 #include "../sl.h"
 
 #include <linux/stddef.h>
@@ -41,7 +44,9 @@ int main()
 
     // this should be out of range --> stack smashing
     pgi->h0.next = NULL;
+    ___sl_plot("02");
     pgi->h1.prev = NULL;
+    ___sl_plot("02");
 
     // surprisingly i==0 at this point (because of the stack smashing)
     // ----------

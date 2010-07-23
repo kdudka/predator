@@ -1,3 +1,6 @@
+// Linux lists: testing outcasting to the superior structures of (nested) list heads,
+// testing aliasing of the first item of a structure with the beginning of the structure. 
+
 #include "../sl.h"
 
 #include <linux/stddef.h>
