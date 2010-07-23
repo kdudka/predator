@@ -376,7 +376,7 @@ void SymHeapPlotter::Private::plotEdgePointsTo(TValueId value, TObjId obj) {
 
 void SymHeapPlotter::Private::plotEdgeValueOf(TObjId obj, TValueId value) {
     this->dotStream << "\t" << SL_QUOTE(obj) << " -> " << SL_QUOTE(value)
-        << " [color=blue, fontcolor=blue, label=\"hasValue\"];"
+        << " [color=blue, fontcolor=blue];"
         << std::endl;
 }
 
