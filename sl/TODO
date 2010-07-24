@@ -8,3 +8,12 @@ o  explicit initializers of gl variables are completely ignored at the moment
 
 o  symstate: proper comparison of Neq and EqIf predicates (it will require to
    extend the interface of SymHeap if we want to do it enough efficiently)
+
+o FIXME:
+  - test0077b: outcast via an incompatible structure; leads to somehow corrupted
+    ghost structure in which a "field" edge is strangely replaced by a "pointsTo"
+    arc which does not make sense in the given context.
+  - jonathan-DLL.c: announces junk, which should not appear.
+  - jonathan-skip-list.c: no way for us to manage, but the tool completely crashes,
+    which should not happen (dealing with structures such as skip lists is 
+    a challenge---of course, the solution should be reasonably general).
