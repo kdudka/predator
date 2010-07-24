@@ -553,13 +553,13 @@ enum EObjKind {
 typedef std::vector<int /* nth */> TFieldIdxChain;
 
 struct SegBindingFields {
-    /// pointer to next (used by SLS and DLS)
+    /// position of the head sub-object (used by Linux lists)
     TFieldIdxChain head;
 
-    /// pointer to peer (used by DLS only)
+    /// pointer to next (used by SLS and DLS)
     TFieldIdxChain next;
 
-    /// position of the head sub-object (used by Linux lists)
+    /// pointer to peer (used by DLS only)
     TFieldIdxChain peer;
 };
 
