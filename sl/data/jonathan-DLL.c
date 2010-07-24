@@ -22,11 +22,9 @@ struct DLL {
 struct DLL *new_list (int size)
 {
   struct DLL *new_node = NULL;
-//  int temp_size = 0;
   struct DLL *list = NULL;
   struct DLL *tail = NULL;
 
-//  while(temp_size < size)
   while(size > 0)
   {
 	  new_node = (struct DLL *) malloc(sizeof(struct DLL)); // TV: junk according to Predator???
@@ -44,10 +42,8 @@ struct DLL *new_list (int size)
 		  tail = new_node;          // TV: junk according to Predator???
 	  }
 	  new_node->next = NULL;
-//	  temp_size++;
 	  size--;
 
-//	  printf("a number: %d\n", temp_size);
 	  printf("a number: %d\n", size);
   }
 
