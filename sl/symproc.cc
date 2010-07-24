@@ -1241,13 +1241,11 @@ void SymProc::execOp(const CodeStorage::Insn &insn) {
     {
         valResult = handlePointerPlus(heap_, clt[/* dst type */ ARITY],
                                       rhs[0], opList[/* src2 */ 2]);
-        goto rhs_ready;
     }
+    else 
+        // handle generic operator and store result
+        valResult = handleOp<ARITY>(*this, insn.subCode, rhs, clt);
 
-    // handle generic operator and store result
-    valResult = handleOp<ARITY>(*this, insn.subCode, rhs, clt);
-
-rhs_ready:
     this->objSetValue(varLhs, valResult);
 }
 
