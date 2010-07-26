@@ -37,6 +37,13 @@
 #endif
 
 template <class T>
+std::vector<T> itov(const T &item) {
+	std::vector<T> vec;
+	vec.push_back(item);
+	return vec;
+}
+
+template <class T>
 struct Index {
 	
 	std::map<T, size_t> map;
