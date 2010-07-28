@@ -196,7 +196,7 @@ public:
 
 	typedef typename boost::unordered_map<size_t, std::vector<const TT<T>*> > td_cache_type;
 
-	class DFSIterator {
+	class TDIterator {
 		
 		const td_cache_type& _cache;
 		set<size_t> _visited;
@@ -213,7 +213,7 @@ public:
 		}
 		
 	public:
-		DFSIterator(const td_cache_type& cache, const vector<size_t>& stack)
+		TDIterator(const td_cache_type& cache, const vector<size_t>& stack)
 			: _cache(cache), _visited() {
 			this->insertLhs(stack);
 		}
@@ -243,14 +243,16 @@ public:
 		const TT<T>* operator->() const { return *this->_stack.back().first; }
 
 	};
-	
+
+	typedef typename boost::unordered_map<size_t, std::vector<const TT<T>*> > bu_cache_type;
+
 	typedef boost::unordered_map<const T*, std::vector<const TT<T>*> > lt_cache_type;
 //	typedef boost::unordered_map<size_t, lt_cache_type> slt_cache_type;
 
 public:
 
 	typedef Iterator iterator;
-	typedef DFSIterator dfs_iterator;
+	typedef TDIterator td_iterator;
 
 public:
 
@@ -279,12 +281,12 @@ public:
 	typename TA<T>::Iterator begin() const { return typename TA<T>::Iterator(this->transitions.begin()); }
 	typename TA<T>::Iterator end() const { return typename TA<T>::Iterator(this->transitions.end()); }
 
-	typename TA<T>::DFSIterator dfsStart(const td_cache_type& cache) const {
-		return typename TA<T>::DFSIterator(cache, vector<size_t>(this->finalStates.begin(), this->finalStates.end()));
+	typename TA<T>::TDIterator tdStart(const td_cache_type& cache) const {
+		return typename TA<T>::TDIterator(cache, vector<size_t>(this->finalStates.begin(), this->finalStates.end()));
 	}
 
-	typename TA<T>::DFSIterator dfsStart(const td_cache_type& cache, const vector<size_t>& stack) const {
-		return typename TA<T>::DFSIterator(cache, stack);
+	typename TA<T>::TDIterator tdStart(const td_cache_type& cache, const vector<size_t>& stack) const {
+		return typename TA<T>::TDIterator(cache, stack);
 	}
 
 	TA<T>& operator=(const TA<T>& rhs) {
@@ -366,6 +368,17 @@ public:
 	void buildTDCache(td_cache_type& cache) const {
 		for (typename set<typename trans_cache_type::value_type*>::const_iterator i = this->transitions.begin(); i != this->transitions.end(); ++i)
 			cache.insert(make_pair((*i)->first._rhs, vector<const TT<T>*>())).first->second.push_back(&(*i)->first);
+	}
+
+	void buildBUCache(bu_cache_type& cache) const {
+		boost::unordered_set<size_t> s;
+		for (typename set<typename trans_cache_type::value_type*>::const_iterator i = this->transitions.begin(); i != this->transitions.end(); ++i) {
+			s.clear();
+			for (std::vector<size_t>::const_iterator j = (*i)->first._lhs->first.begin(); j != (*i)->first._lhs->first.end(); ++j) {
+				if (s.insert(*j).second)
+					cache.insert(make_pair(*j, vector<const TT<T>*>())).first->second.push_back(&(*i)->first);
+			}
+		}
 	}
 /*	
 	void buildSLTBUCache(slt_cache_type& cache, leaf_cache_type& leafCache) const {
@@ -640,11 +653,15 @@ public:
 		for (std::vector<size_t>::iterator i = states.begin(); i != states.end(); ++i)
 			s.insert(stateIndex[*i]);
 		for (size_t i = 0; i < result.size(); ++i) {
+			if (s.count(i) == 1)
+				continue;
 			for (size_t j = 0; j < i; ++j) {
-				if ((s.count(i) == 0) || (s.count(j) == 0)) {
-					result[i][j] = 0;
-					result[j][i] = 0;
-				}
+				result[i][j] = 0;
+				result[j][i] = 0;
+			}
+			for (size_t j = i + 1; j < result.size(); ++j) {
+				result[i][j] = 0;
+				result[j][i] = 0;
 			}
 		}
 	}
@@ -815,12 +832,12 @@ public:
 			dst.addFinalState(newState);
 		return dst;
 	}
-	
+/*	
 	TA<T>& unfoldAtLeaf(TA<T>& dst, size_t selector) const {
 		// TODO:
 		return dst;
 	}
-
+*/
 	class Manager : Cache<TA<T>*>::Listener {
 	
 		mutable typename TA<T>::Backend& backend;

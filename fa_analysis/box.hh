@@ -184,6 +184,10 @@ public:
 		}
 	}
 
+	bool inputCovers(size_t selector) const {
+		throw runtime_error("Box::cinputCovers(): not implemented!");
+	}
+
 protected:
 
 	Box(TA<FA::label_type>::Manager& taMan, size_t type, size_t tag, const std::string& name)
@@ -227,58 +231,6 @@ public:
 		return &labMan.lookup(v);
 	}
 */
-/*
-public:
-
-	Box(const BoxTemplate& templ, TAManager<FA::label_type>& taMan, LabMan& labMan, const vector<size_t>& offsets, const boost::unordered_map<const BoxTemplate*, const Box*>& args)
-		: FA(taMan), templ(templ) {
-		if (this->templ.type == BoxTemplate::referenceID) {
-			assert(offsets.size() == 2);
-			this->variables.push_back(var_info(0, offsets[0]));
-			this->variables.push_back(var_info(1, offsets[1]));
-		} else if (this->templ.type == BoxTemplate::boxID) {
-			assert(offsets.size() == this->templ.variables.size());
-			for (vector<BoxTemplate::root_type>::const_iterator j = this->templ.roots.begin(); j != this->templ.roots.end(); ++j) {
-				TA<FA::label_type>* ta = taMan.alloc();
-				for (BoxTemplate::root_type::iterator i = j->begin(); i != j->end(); ++i)
-					ta->addTransition(i->lhs(), Box::translateLabel(labMan, i->label(), args), i->rhs());
-				ta->addFinalState(j->getFinalState());
-				this->roots.push_back(ta);
-			}
-			for (size_t i = 0; i < this->templ.variables.size(); ++i)
-				this->variables.push_back(var_info(this->templ.variables[i].index, offsets[i]));
-		}
-	}
-*/
-/*
-	Box(TAManager<label_type>& taMan, const class BoxTemplate& templ) : FA(taMan), templ(templ) {
-		
-	}
-*/
-/*
-	const BoxTemplate& getTemplate() const {
-		return this->templ;
-	}
-*/
-/*
-	bool isPrimitive() const {
-		return this->type == 0;
-	}
-
-	bool isRootReference() const {
-		return this->type == 1;
-	}
-*/
-/*
-	friend size_t hash_value(const Box& b) {
-		return hash_value(hash_value(&b.templ) + hash_value(b.variables));
-	}
-
-	bool operator==(const Box& rhs) const {
-		return (&this->templ == &rhs.templ) && (this->variables == rhs.variables);
-	}
-*/
-
 	void computeTrigger(vector<const Box*>& boxes) {
 		boxes.clear();
 		set<const Box*> s;
