@@ -303,6 +303,77 @@ protected:
 		}
 	}
 
+	// ensures the existence of 'o' (can create more accepting states)
+	TA<label_type>* normalizeTA(TA<label_type>* src, boost::unordered_map<size_t, vector<size_t> >& o) {
+		TA<label_type>* ta = this->taMan->alloc();
+		TA<label_type>::bu_cache_type buCache;
+		src->buildBUCache(buCache);
+		o.clear();
+		boost::unordered_map<std::pair<size_t, std::vector<size_t> >, size_t> newStates;
+		boost::unordered_map<size_t, std::vector<size_t> > aux;
+		std::vector<std::pair<size_t, size_t> > stack;
+		for (TA<label_type>::iterator i = src->begin(); i != src->end(); ++i) {
+			if (!i->label().head().isReference())
+				continue;
+			vector<size_t> v;
+			size_t ref = i->label().head().getReference();
+			if (!FAE::isNullOrUndef(ref))
+				v = itov(ref);
+			std::pair<boost::unordered_map<std::pair<size_t, std::vector<size_t> >, size_t>::iterator, bool> p =
+				newStates.insert(std::make_pair(std::make_pair(i->rhs(), v), this->nextState()));
+			ta->addTransition(i->lhs(), i->label(), p.first->second);
+			if (!p.second)
+				continue;
+			this->newState();
+			stack.push_back(std::make_pair(i->rhs(), p.first->second));
+			aux.insert(std::make_pair(i->rhs(), std::vector<size_t>())).first->second.push_back(p.first->second);
+			o[p.first->second] = v;
+		}
+		while (!stack.empty()) {
+			std::pair<size_t, size_t> x = stack.back();
+			stack.pop_back();
+			TA<label_type>::bu_cache_type::iterator i = buCache.find(x.first);
+			if (i == buCache.end())
+				continue;
+			for (std::vector<const TT<label_type>*>::iterator j = i->second.begin(); j != i->second.end(); ++j) {
+				std::vector<std::pair<std::vector<size_t>::const_iterator, std::vector<size_t>::const_iterator> > pool;
+				std::vector<std::vector<size_t>::const_iterator> current;
+				for (std::vector<size_t>::const_iterator k = (*j)->lhs().begin(); k != (*j)->lhs().end(); ++k) {
+					boost::unordered_map<size_t, std::vector<size_t> >::iterator l = aux.find(*k);
+					if (l == aux.end())
+						break;
+					pool.push_back(std::make_pair(l->second.begin(), l->second.end()));
+					current.push_back(l->second.begin());
+				}
+				if (pool.size() != (*j)->lhs().size())
+					continue;
+				while (current.back() != pool.back().second) {
+					vector<size_t> v;
+					for (std::vector<std::vector<size_t>::const_iterator>::iterator k = current.begin(); k != current.end(); ++k) {
+						std::vector<size_t>& tmp = o[**k];
+						v.insert(v.end(), tmp.begin(), tmp.end());
+					}
+					FAE::removeMultOcc(v);
+					std::pair<boost::unordered_map<std::pair<size_t, std::vector<size_t> >, size_t>::iterator, bool> p =
+						newStates.insert(std::make_pair(std::make_pair((*j)->rhs(), v), this->nextState()));
+					ta->addTransition((*j)->lhs(), (*j)->label(), p.first->second);
+					if (!p.second)
+						continue;
+					this->newState();
+					stack.push_back(std::make_pair((*j)->rhs(), p.first->second));
+					aux.insert(std::make_pair((*j)->rhs(), std::vector<size_t>())).first->second.push_back(p.first->second);
+					o[p.first->second] = v;
+					for (size_t k = 0; (++current[k] == pool[k].second) && (k + 1 < pool.size()); ++k)
+						current[k] = pool[k].first;
+				}
+			}
+		}
+		boost::unordered_map<size_t, std::vector<size_t> >::iterator i = aux.find(src->getFinalState());
+		for (std::vector<size_t>::iterator j = i->second.begin(); j != i->second.end(); ++j)
+			ta->addFinalState(*j);
+		return ta;
+	}
+
 	static bool isUniqueRef(const TA<label_type>& ta, size_t ref) {
 		boost::unordered_map<size_t, size_t> index;
 		for (TA<label_type>::iterator i = ta.begin(); i != ta.end(); ++i) {
@@ -519,8 +590,8 @@ protected:
 	}
 
 	// ensures the given state appears exactly once in each run
-	TA<label_type>* propagateState(TA<label_type>* src, size_t state) {
-		std::vector<std::pair<size_t, size_t> > stack = itov(std::make_pair(state, state));
+	TA<label_type>* propagateReference(TA<label_type>* src, size_t refState) {
+		std::vector<std::pair<size_t, size_t> > stack = itov(std::make_pair(refState, refState));
 		boost::unordered_map<size_t, size_t> newStates;
 		TA<label_type>* ta = this->taMan->clone(src, false);
 		TA<label_type>::bu_cache_type buCache;
@@ -538,7 +609,7 @@ protected:
 				if (p.second) {
 					this->newState();
 					stack.push_back(*p.first);
-				}					
+				}
 				for (size_t k = 0; k < (*j)->lhs().size(); ++k) {
 					if ((*j)->lhs()[k] != x.first)
 						continue;
