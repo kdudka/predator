@@ -869,7 +869,8 @@ const CodeStorage::Fnc* SymExec::Private::resolveCallInsn(
     SymProc proc(heap, &this->bt);
     const LocationWriter lw(&insn.loc);
     proc.setLocation(lw);
-    const int uid = proc.fncFromOperand(opList[/* fnc */ 1]);
+    const struct cl_operand &opFnc = opList[/* fnc */ 1];
+    const int uid = proc.fncFromOperand(opFnc);
     const CodeStorage::Fnc *fnc = this->stor.fncs[uid];
     if (!fnc)
         // unable to resolve Fnc by UID
@@ -882,7 +883,13 @@ const CodeStorage::Fnc* SymExec::Private::resolveCallInsn(
     }
 
     if (CL_OPERAND_VOID == fnc->def.code) {
-        CL_WARN_MSG(lw, "ignoring call of undefined function");
+        const struct cl_cst &cst = opFnc.data.cst;
+        const char *name = cst.data.cst_fnc.name;
+        if (CL_TYPE_FNC != cst.code || !name)
+            TRAP;
+
+        CL_WARN_MSG(lw, "ignoring call of undefined function: "
+                << name << "()");
         goto fail;
     }
 

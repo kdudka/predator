@@ -1,4 +1,4 @@
-test-0082.c:79:6: warning: ignoring call of undefined function
+test-0082.c:79:6: warning: ignoring call of undefined function: puts()
 test-0082.c:36:20: error: dereference of NULL value
 test-0082.c:81:14: note: from call of new_list()
 test-0082.c:76:5: note: from call of main()
@@ -9,10 +9,10 @@ test-0082.c:45:8: warning: binary operator not implemented yet
 test-0082.c:45:8: warning: binary operator not implemented yet
 test-0082.c:47:10: warning: CL_TYPE_STRING not supported by heapValFromCst()
 test-0082.c:47:10: warning: CL_TYPE_STRING not supported by heapValFromCst()
-test-0082.c:47:10: warning: ignoring call of undefined function
+test-0082.c:47:10: warning: ignoring call of undefined function: printf()
 test-0082.c:81:14: note: from call of new_list()
 test-0082.c:76:5: note: from call of main()
-test-0082.c:47:10: warning: ignoring call of undefined function
+test-0082.c:47:10: warning: ignoring call of undefined function: printf()
 test-0082.c:81:14: note: from call of new_list()
 test-0082.c:76:5: note: from call of main()
 test-0082.c:41:20: error: dereference of NULL value
@@ -35,16 +35,16 @@ test-0082.c:47:10: warning: CL_TYPE_STRING not supported by heapValFromCst()
 test-0082.c:47:10: warning: CL_TYPE_STRING not supported by heapValFromCst()
 test-0082.c:47:10: warning: CL_TYPE_STRING not supported by heapValFromCst()
 test-0082.c:47:10: warning: CL_TYPE_STRING not supported by heapValFromCst()
-test-0082.c:47:10: warning: ignoring call of undefined function
+test-0082.c:47:10: warning: ignoring call of undefined function: printf()
 test-0082.c:81:14: note: from call of new_list()
 test-0082.c:76:5: note: from call of main()
-test-0082.c:47:10: warning: ignoring call of undefined function
+test-0082.c:47:10: warning: ignoring call of undefined function: printf()
 test-0082.c:81:14: note: from call of new_list()
 test-0082.c:76:5: note: from call of main()
-test-0082.c:47:10: warning: ignoring call of undefined function
+test-0082.c:47:10: warning: ignoring call of undefined function: printf()
 test-0082.c:81:14: note: from call of new_list()
 test-0082.c:76:5: note: from call of main()
-test-0082.c:47:10: warning: ignoring call of undefined function
+test-0082.c:47:10: warning: ignoring call of undefined function: printf()
 test-0082.c:81:14: note: from call of new_list()
 test-0082.c:76:5: note: from call of main()
 test-0082.c:40:16: error: dereference of NULL value
@@ -68,13 +68,13 @@ test-0082.c:45:8: warning: binary operator not implemented yet
 test-0082.c:47:10: warning: CL_TYPE_STRING not supported by heapValFromCst()
 test-0082.c:47:10: warning: CL_TYPE_STRING not supported by heapValFromCst()
 test-0082.c:47:10: warning: CL_TYPE_STRING not supported by heapValFromCst()
-test-0082.c:47:10: warning: ignoring call of undefined function
+test-0082.c:47:10: warning: ignoring call of undefined function: printf()
 test-0082.c:81:14: note: from call of new_list()
 test-0082.c:76:5: note: from call of main()
-test-0082.c:47:10: warning: ignoring call of undefined function
+test-0082.c:47:10: warning: ignoring call of undefined function: printf()
 test-0082.c:81:14: note: from call of new_list()
 test-0082.c:76:5: note: from call of main()
-test-0082.c:47:10: warning: ignoring call of undefined function
+test-0082.c:47:10: warning: ignoring call of undefined function: printf()
 test-0082.c:81:14: note: from call of new_list()
 test-0082.c:76:5: note: from call of main()
 test-0082.c:40:16: error: dereference of NULL value
@@ -106,16 +106,16 @@ test-0082.c:47:10: warning: CL_TYPE_STRING not supported by heapValFromCst()
 test-0082.c:47:10: warning: CL_TYPE_STRING not supported by heapValFromCst()
 test-0082.c:47:10: warning: CL_TYPE_STRING not supported by heapValFromCst()
 test-0082.c:47:10: warning: CL_TYPE_STRING not supported by heapValFromCst()
-test-0082.c:47:10: warning: ignoring call of undefined function
+test-0082.c:47:10: warning: ignoring call of undefined function: printf()
 test-0082.c:81:14: note: from call of new_list()
 test-0082.c:76:5: note: from call of main()
-test-0082.c:47:10: warning: ignoring call of undefined function
+test-0082.c:47:10: warning: ignoring call of undefined function: printf()
 test-0082.c:81:14: note: from call of new_list()
 test-0082.c:76:5: note: from call of main()
-test-0082.c:47:10: warning: ignoring call of undefined function
+test-0082.c:47:10: warning: ignoring call of undefined function: printf()
 test-0082.c:81:14: note: from call of new_list()
 test-0082.c:76:5: note: from call of main()
-test-0082.c:47:10: warning: ignoring call of undefined function
+test-0082.c:47:10: warning: ignoring call of undefined function: printf()
 test-0082.c:81:14: note: from call of new_list()
 test-0082.c:76:5: note: from call of main()
 test-0082.c:40:16: error: dereference of NULL value
@@ -156,19 +156,19 @@ test-0082.c:47:10: warning: CL_TYPE_STRING not supported by heapValFromCst()
 test-0082.c:47:10: warning: CL_TYPE_STRING not supported by heapValFromCst()
 test-0082.c:47:10: warning: CL_TYPE_STRING not supported by heapValFromCst()
 test-0082.c:47:10: warning: CL_TYPE_STRING not supported by heapValFromCst()
-test-0082.c:47:10: warning: ignoring call of undefined function
+test-0082.c:47:10: warning: ignoring call of undefined function: printf()
 test-0082.c:81:14: note: from call of new_list()
 test-0082.c:76:5: note: from call of main()
-test-0082.c:47:10: warning: ignoring call of undefined function
+test-0082.c:47:10: warning: ignoring call of undefined function: printf()
 test-0082.c:81:14: note: from call of new_list()
 test-0082.c:76:5: note: from call of main()
-test-0082.c:47:10: warning: ignoring call of undefined function
+test-0082.c:47:10: warning: ignoring call of undefined function: printf()
 test-0082.c:81:14: note: from call of new_list()
 test-0082.c:76:5: note: from call of main()
-test-0082.c:47:10: warning: ignoring call of undefined function
+test-0082.c:47:10: warning: ignoring call of undefined function: printf()
 test-0082.c:81:14: note: from call of new_list()
 test-0082.c:76:5: note: from call of main()
-test-0082.c:47:10: warning: ignoring call of undefined function
+test-0082.c:47:10: warning: ignoring call of undefined function: printf()
 test-0082.c:81:14: note: from call of new_list()
 test-0082.c:76:5: note: from call of main()
 test-0082.c:40:16: error: dereference of NULL value
@@ -219,30 +219,30 @@ test-0082.c:47:10: warning: CL_TYPE_STRING not supported by heapValFromCst()
 test-0082.c:47:10: warning: CL_TYPE_STRING not supported by heapValFromCst()
 test-0082.c:47:10: warning: CL_TYPE_STRING not supported by heapValFromCst()
 test-0082.c:47:10: warning: CL_TYPE_STRING not supported by heapValFromCst()
-test-0082.c:47:10: warning: ignoring call of undefined function
+test-0082.c:47:10: warning: ignoring call of undefined function: printf()
 test-0082.c:81:14: note: from call of new_list()
 test-0082.c:76:5: note: from call of main()
-test-0082.c:47:10: warning: ignoring call of undefined function
+test-0082.c:47:10: warning: ignoring call of undefined function: printf()
 test-0082.c:81:14: note: from call of new_list()
 test-0082.c:76:5: note: from call of main()
-test-0082.c:47:10: warning: ignoring call of undefined function
+test-0082.c:47:10: warning: ignoring call of undefined function: printf()
 test-0082.c:81:14: note: from call of new_list()
 test-0082.c:76:5: note: from call of main()
-test-0082.c:47:10: warning: ignoring call of undefined function
+test-0082.c:47:10: warning: ignoring call of undefined function: printf()
 test-0082.c:81:14: note: from call of new_list()
 test-0082.c:76:5: note: from call of main()
-test-0082.c:47:10: warning: ignoring call of undefined function
+test-0082.c:47:10: warning: ignoring call of undefined function: printf()
 test-0082.c:81:14: note: from call of new_list()
 test-0082.c:76:5: note: from call of main()
-test-0082.c:47:10: warning: ignoring call of undefined function
-test-0082.c:81:14: note: from call of new_list()
-test-0082.c:76:5: note: from call of main()
-test-0082.c:40:16: error: dereference of NULL value
+test-0082.c:47:10: warning: ignoring call of undefined function: printf()
 test-0082.c:81:14: note: from call of new_list()
 test-0082.c:76:5: note: from call of main()
 test-0082.c:40:16: error: dereference of NULL value
 test-0082.c:81:14: note: from call of new_list()
 test-0082.c:76:5: note: from call of main()
+test-0082.c:40:16: error: dereference of NULL value
+test-0082.c:81:14: note: from call of new_list()
+test-0082.c:76:5: note: from call of main()
 test-0082.c:41:20: error: dereference of NULL value
 test-0082.c:81:14: note: from call of new_list()
 test-0082.c:76:5: note: from call of main()
@@ -286,19 +286,19 @@ test-0082.c:47:10: warning: CL_TYPE_STRING not supported by heapValFromCst()
 test-0082.c:47:10: warning: CL_TYPE_STRING not supported by heapValFromCst()
 test-0082.c:47:10: warning: CL_TYPE_STRING not supported by heapValFromCst()
 test-0082.c:47:10: warning: CL_TYPE_STRING not supported by heapValFromCst()
-test-0082.c:47:10: warning: ignoring call of undefined function
+test-0082.c:47:10: warning: ignoring call of undefined function: printf()
 test-0082.c:81:14: note: from call of new_list()
 test-0082.c:76:5: note: from call of main()
-test-0082.c:47:10: warning: ignoring call of undefined function
+test-0082.c:47:10: warning: ignoring call of undefined function: printf()
 test-0082.c:81:14: note: from call of new_list()
 test-0082.c:76:5: note: from call of main()
-test-0082.c:47:10: warning: ignoring call of undefined function
+test-0082.c:47:10: warning: ignoring call of undefined function: printf()
 test-0082.c:81:14: note: from call of new_list()
 test-0082.c:76:5: note: from call of main()
-test-0082.c:47:10: warning: ignoring call of undefined function
+test-0082.c:47:10: warning: ignoring call of undefined function: printf()
 test-0082.c:81:14: note: from call of new_list()
 test-0082.c:76:5: note: from call of main()
-test-0082.c:47:10: warning: ignoring call of undefined function
+test-0082.c:47:10: warning: ignoring call of undefined function: printf()
 test-0082.c:81:14: note: from call of new_list()
 test-0082.c:76:5: note: from call of main()
 test-0082.c:41:20: error: dereference of NULL value
@@ -350,19 +350,19 @@ test-0082.c:47:10: warning: CL_TYPE_STRING not supported by heapValFromCst()
 test-0082.c:47:10: warning: CL_TYPE_STRING not supported by heapValFromCst()
 test-0082.c:47:10: warning: CL_TYPE_STRING not supported by heapValFromCst()
 test-0082.c:47:10: warning: CL_TYPE_STRING not supported by heapValFromCst()
-test-0082.c:47:10: warning: ignoring call of undefined function
+test-0082.c:47:10: warning: ignoring call of undefined function: printf()
 test-0082.c:81:14: note: from call of new_list()
 test-0082.c:76:5: note: from call of main()
-test-0082.c:47:10: warning: ignoring call of undefined function
+test-0082.c:47:10: warning: ignoring call of undefined function: printf()
 test-0082.c:81:14: note: from call of new_list()
 test-0082.c:76:5: note: from call of main()
-test-0082.c:47:10: warning: ignoring call of undefined function
+test-0082.c:47:10: warning: ignoring call of undefined function: printf()
 test-0082.c:81:14: note: from call of new_list()
 test-0082.c:76:5: note: from call of main()
-test-0082.c:47:10: warning: ignoring call of undefined function
+test-0082.c:47:10: warning: ignoring call of undefined function: printf()
 test-0082.c:81:14: note: from call of new_list()
 test-0082.c:76:5: note: from call of main()
-test-0082.c:47:10: warning: ignoring call of undefined function
+test-0082.c:47:10: warning: ignoring call of undefined function: printf()
 test-0082.c:81:14: note: from call of new_list()
 test-0082.c:76:5: note: from call of main()
 test-0082.c:41:20: error: dereference of NULL value
@@ -406,16 +406,16 @@ test-0082.c:47:10: warning: CL_TYPE_STRING not supported by heapValFromCst()
 test-0082.c:47:10: warning: CL_TYPE_STRING not supported by heapValFromCst()
 test-0082.c:47:10: warning: CL_TYPE_STRING not supported by heapValFromCst()
 test-0082.c:47:10: warning: CL_TYPE_STRING not supported by heapValFromCst()
-test-0082.c:47:10: warning: ignoring call of undefined function
+test-0082.c:47:10: warning: ignoring call of undefined function: printf()
 test-0082.c:81:14: note: from call of new_list()
 test-0082.c:76:5: note: from call of main()
-test-0082.c:47:10: warning: ignoring call of undefined function
+test-0082.c:47:10: warning: ignoring call of undefined function: printf()
 test-0082.c:81:14: note: from call of new_list()
 test-0082.c:76:5: note: from call of main()
-test-0082.c:47:10: warning: ignoring call of undefined function
+test-0082.c:47:10: warning: ignoring call of undefined function: printf()
 test-0082.c:81:14: note: from call of new_list()
 test-0082.c:76:5: note: from call of main()
-test-0082.c:47:10: warning: ignoring call of undefined function
+test-0082.c:47:10: warning: ignoring call of undefined function: printf()
 test-0082.c:81:14: note: from call of new_list()
 test-0082.c:76:5: note: from call of main()
 test-0082.c:41:20: error: dereference of NULL value
@@ -450,13 +450,13 @@ test-0082.c:45:8: warning: binary operator not implemented yet
 test-0082.c:47:10: warning: CL_TYPE_STRING not supported by heapValFromCst()
 test-0082.c:47:10: warning: CL_TYPE_STRING not supported by heapValFromCst()
 test-0082.c:47:10: warning: CL_TYPE_STRING not supported by heapValFromCst()
-test-0082.c:47:10: warning: ignoring call of undefined function
+test-0082.c:47:10: warning: ignoring call of undefined function: printf()
 test-0082.c:81:14: note: from call of new_list()
 test-0082.c:76:5: note: from call of main()
-test-0082.c:47:10: warning: ignoring call of undefined function
+test-0082.c:47:10: warning: ignoring call of undefined function: printf()
 test-0082.c:81:14: note: from call of new_list()
 test-0082.c:76:5: note: from call of main()
-test-0082.c:47:10: warning: ignoring call of undefined function
+test-0082.c:47:10: warning: ignoring call of undefined function: printf()
 test-0082.c:81:14: note: from call of new_list()
 test-0082.c:76:5: note: from call of main()
 test-0082.c:41:20: error: dereference of NULL value
@@ -481,10 +481,10 @@ test-0082.c:45:8: warning: binary operator not implemented yet
 test-0082.c:45:8: warning: binary operator not implemented yet
 test-0082.c:47:10: warning: CL_TYPE_STRING not supported by heapValFromCst()
 test-0082.c:47:10: warning: CL_TYPE_STRING not supported by heapValFromCst()
-test-0082.c:47:10: warning: ignoring call of undefined function
+test-0082.c:47:10: warning: ignoring call of undefined function: printf()
 test-0082.c:81:14: note: from call of new_list()
 test-0082.c:76:5: note: from call of main()
-test-0082.c:47:10: warning: ignoring call of undefined function
+test-0082.c:47:10: warning: ignoring call of undefined function: printf()
 test-0082.c:81:14: note: from call of new_list()
 test-0082.c:76:5: note: from call of main()
 test-0082.c:41:20: error: dereference of NULL value
@@ -498,7 +498,7 @@ test-0082.c:81:14: note: from call of new_list()
 test-0082.c:76:5: note: from call of main()
 test-0082.c:45:8: warning: binary operator not implemented yet
 test-0082.c:47:10: warning: CL_TYPE_STRING not supported by heapValFromCst()
-test-0082.c:47:10: warning: ignoring call of undefined function
+test-0082.c:47:10: warning: ignoring call of undefined function: printf()
 test-0082.c:81:14: note: from call of new_list()
 test-0082.c:76:5: note: from call of main()
 test-0082.c:30:36: warning: killing junk
@@ -661,69 +661,69 @@ test-0082.c:30:36: warning: killing junk
 test-0082.c:30:36: warning: killing junk
 test-0082.c:81:14: note: from call of new_list()
 test-0082.c:76:5: note: from call of main()
-test-0082.c:59:7: warning: ignoring call of undefined function
+test-0082.c:59:7: warning: ignoring call of undefined function: puts()
 test-0082.c:83:12: note: from call of print_list()
 test-0082.c:76:5: note: from call of main()
-test-0082.c:59:7: warning: ignoring call of undefined function
+test-0082.c:59:7: warning: ignoring call of undefined function: puts()
 test-0082.c:83:12: note: from call of print_list()
 test-0082.c:76:5: note: from call of main()
-test-0082.c:59:7: warning: ignoring call of undefined function
+test-0082.c:59:7: warning: ignoring call of undefined function: puts()
 test-0082.c:83:12: note: from call of print_list()
 test-0082.c:76:5: note: from call of main()
-test-0082.c:59:7: warning: ignoring call of undefined function
+test-0082.c:59:7: warning: ignoring call of undefined function: puts()
 test-0082.c:83:12: note: from call of print_list()
 test-0082.c:76:5: note: from call of main()
-test-0082.c:59:7: warning: ignoring call of undefined function
+test-0082.c:59:7: warning: ignoring call of undefined function: puts()
 test-0082.c:83:12: note: from call of print_list()
 test-0082.c:76:5: note: from call of main()
-test-0082.c:59:7: warning: ignoring call of undefined function
+test-0082.c:59:7: warning: ignoring call of undefined function: puts()
 test-0082.c:83:12: note: from call of print_list()
 test-0082.c:76:5: note: from call of main()
-test-0082.c:59:7: warning: ignoring call of undefined function
+test-0082.c:59:7: warning: ignoring call of undefined function: puts()
 test-0082.c:83:12: note: from call of print_list()
 test-0082.c:76:5: note: from call of main()
-test-0082.c:59:7: warning: ignoring call of undefined function
+test-0082.c:59:7: warning: ignoring call of undefined function: puts()
 test-0082.c:83:12: note: from call of print_list()
 test-0082.c:76:5: note: from call of main()
-test-0082.c:59:7: warning: ignoring call of undefined function
+test-0082.c:59:7: warning: ignoring call of undefined function: puts()
 test-0082.c:83:12: note: from call of print_list()
 test-0082.c:76:5: note: from call of main()
-test-0082.c:59:7: warning: ignoring call of undefined function
+test-0082.c:59:7: warning: ignoring call of undefined function: puts()
 test-0082.c:83:12: note: from call of print_list()
 test-0082.c:76:5: note: from call of main()
-test-0082.c:59:7: warning: ignoring call of undefined function
+test-0082.c:59:7: warning: ignoring call of undefined function: puts()
 test-0082.c:83:12: note: from call of print_list()
 test-0082.c:76:5: note: from call of main()
-test-0082.c:59:7: warning: ignoring call of undefined function
+test-0082.c:59:7: warning: ignoring call of undefined function: puts()
 test-0082.c:83:12: note: from call of print_list()
 test-0082.c:76:5: note: from call of main()
-test-0082.c:59:7: warning: ignoring call of undefined function
+test-0082.c:59:7: warning: ignoring call of undefined function: puts()
 test-0082.c:83:12: note: from call of print_list()
 test-0082.c:76:5: note: from call of main()
-test-0082.c:59:7: warning: ignoring call of undefined function
+test-0082.c:59:7: warning: ignoring call of undefined function: puts()
 test-0082.c:83:12: note: from call of print_list()
 test-0082.c:76:5: note: from call of main()
-test-0082.c:59:7: warning: ignoring call of undefined function
+test-0082.c:59:7: warning: ignoring call of undefined function: puts()
 test-0082.c:83:12: note: from call of print_list()
 test-0082.c:76:5: note: from call of main()
-test-0082.c:59:7: warning: ignoring call of undefined function
+test-0082.c:59:7: warning: ignoring call of undefined function: puts()
 test-0082.c:83:12: note: from call of print_list()
 test-0082.c:76:5: note: from call of main()
-test-0082.c:59:7: warning: ignoring call of undefined function
+test-0082.c:59:7: warning: ignoring call of undefined function: puts()
 test-0082.c:83:12: note: from call of print_list()
 test-0082.c:76:5: note: from call of main()
-test-0082.c:59:7: warning: ignoring call of undefined function
+test-0082.c:59:7: warning: ignoring call of undefined function: puts()
 test-0082.c:83:12: note: from call of print_list()
 test-0082.c:76:5: note: from call of main()
-test-0082.c:59:7: warning: ignoring call of undefined function
+test-0082.c:59:7: warning: ignoring call of undefined function: puts()
 test-0082.c:83:12: note: from call of print_list()
 test-0082.c:76:5: note: from call of main()
-test-0082.c:59:7: warning: ignoring call of undefined function
+test-0082.c:59:7: warning: ignoring call of undefined function: puts()
 test-0082.c:83:12: note: from call of print_list()
 test-0082.c:76:5: note: from call of main()
-test-0082.c:59:7: warning: ignoring call of undefined function
+test-0082.c:59:7: warning: ignoring call of undefined function: puts()
 test-0082.c:83:12: note: from call of print_list()
 test-0082.c:76:5: note: from call of main()
-test-0082.c:59:7: warning: ignoring call of undefined function
+test-0082.c:59:7: warning: ignoring call of undefined function: puts()
 test-0082.c:83:12: note: from call of print_list()
 test-0082.c:76:5: note: from call of main()

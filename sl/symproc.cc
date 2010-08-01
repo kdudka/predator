@@ -745,6 +745,8 @@ namespace {
     }
 }
 
+// TODO: move all the implementations of built-ins to a separate module and
+//       create some reasonable interface for adding new ones
 bool SymProc::execCall(TState &dst, const CodeStorage::Insn &insn,
                        SymProcExecParams ep)
 {
