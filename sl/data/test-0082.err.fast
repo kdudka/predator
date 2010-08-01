@@ -1,0 +1,97 @@
+test-0082.c:79:6: warning: ignoring call of undefined function
+test-0082.c:45:8: warning: binary operator not implemented yet
+test-0082.c:47:10: warning: CL_TYPE_STRING not supported by heapValFromCst()
+test-0082.c:47:10: warning: ignoring call of undefined function
+test-0082.c:81:14: note: from call of new_list()
+test-0082.c:76:5: note: from call of main()
+test-0082.c:45:8: warning: binary operator not implemented yet
+test-0082.c:47:10: warning: CL_TYPE_STRING not supported by heapValFromCst()
+test-0082.c:47:10: warning: ignoring call of undefined function
+test-0082.c:81:14: note: from call of new_list()
+test-0082.c:76:5: note: from call of main()
+test-0082.c:45:8: warning: binary operator not implemented yet
+test-0082.c:47:10: warning: CL_TYPE_STRING not supported by heapValFromCst()
+test-0082.c:47:10: warning: ignoring call of undefined function
+test-0082.c:81:14: note: from call of new_list()
+test-0082.c:76:5: note: from call of main()
+test-0082.c:45:8: warning: binary operator not implemented yet
+test-0082.c:47:10: warning: CL_TYPE_STRING not supported by heapValFromCst()
+test-0082.c:47:10: warning: ignoring call of undefined function
+test-0082.c:81:14: note: from call of new_list()
+test-0082.c:76:5: note: from call of main()
+test-0082.c:45:8: warning: binary operator not implemented yet
+test-0082.c:47:10: warning: CL_TYPE_STRING not supported by heapValFromCst()
+test-0082.c:47:10: warning: ignoring call of undefined function
+test-0082.c:81:14: note: from call of new_list()
+test-0082.c:76:5: note: from call of main()
+test-0082.c:45:8: warning: binary operator not implemented yet
+test-0082.c:47:10: warning: CL_TYPE_STRING not supported by heapValFromCst()
+test-0082.c:47:10: warning: ignoring call of undefined function
+test-0082.c:81:14: note: from call of new_list()
+test-0082.c:76:5: note: from call of main()
+test-0082.c:59:7: warning: ignoring call of undefined function
+test-0082.c:83:12: note: from call of print_list()
+test-0082.c:76:5: note: from call of main()
+test-0082.c:59:7: warning: ignoring call of undefined function
+test-0082.c:83:12: note: from call of print_list()
+test-0082.c:76:5: note: from call of main()
+test-0082.c:59:7: warning: ignoring call of undefined function
+test-0082.c:83:12: note: from call of print_list()
+test-0082.c:76:5: note: from call of main()
+test-0082.c:59:7: warning: ignoring call of undefined function
+test-0082.c:83:12: note: from call of print_list()
+test-0082.c:76:5: note: from call of main()
+test-0082.c:59:7: warning: ignoring call of undefined function
+test-0082.c:83:12: note: from call of print_list()
+test-0082.c:76:5: note: from call of main()
+test-0082.c:59:7: warning: ignoring call of undefined function
+test-0082.c:83:12: note: from call of print_list()
+test-0082.c:76:5: note: from call of main()
+test-0082.c:59:7: warning: ignoring call of undefined function
+test-0082.c:83:12: note: from call of print_list()
+test-0082.c:76:5: note: from call of main()
+test-0082.c:59:7: warning: ignoring call of undefined function
+test-0082.c:83:12: note: from call of print_list()
+test-0082.c:76:5: note: from call of main()
+test-0082.c:59:7: warning: ignoring call of undefined function
+test-0082.c:83:12: note: from call of print_list()
+test-0082.c:76:5: note: from call of main()
+test-0082.c:59:7: warning: ignoring call of undefined function
+test-0082.c:83:12: note: from call of print_list()
+test-0082.c:76:5: note: from call of main()
+test-0082.c:59:7: warning: ignoring call of undefined function
+test-0082.c:83:12: note: from call of print_list()
+test-0082.c:76:5: note: from call of main()
+test-0082.c:59:7: warning: ignoring call of undefined function
+test-0082.c:83:12: note: from call of print_list()
+test-0082.c:76:5: note: from call of main()
+test-0082.c:59:7: warning: ignoring call of undefined function
+test-0082.c:83:12: note: from call of print_list()
+test-0082.c:76:5: note: from call of main()
+test-0082.c:59:7: warning: ignoring call of undefined function
+test-0082.c:83:12: note: from call of print_list()
+test-0082.c:76:5: note: from call of main()
+test-0082.c:59:7: warning: ignoring call of undefined function
+test-0082.c:83:12: note: from call of print_list()
+test-0082.c:76:5: note: from call of main()
+test-0082.c:59:7: warning: ignoring call of undefined function
+test-0082.c:83:12: note: from call of print_list()
+test-0082.c:76:5: note: from call of main()
+test-0082.c:59:7: warning: ignoring call of undefined function
+test-0082.c:83:12: note: from call of print_list()
+test-0082.c:76:5: note: from call of main()
+test-0082.c:59:7: warning: ignoring call of undefined function
+test-0082.c:83:12: note: from call of print_list()
+test-0082.c:76:5: note: from call of main()
+test-0082.c:59:7: warning: ignoring call of undefined function
+test-0082.c:83:12: note: from call of print_list()
+test-0082.c:76:5: note: from call of main()
+test-0082.c:59:7: warning: ignoring call of undefined function
+test-0082.c:83:12: note: from call of print_list()
+test-0082.c:76:5: note: from call of main()
+test-0082.c:59:7: warning: ignoring call of undefined function
+test-0082.c:83:12: note: from call of print_list()
+test-0082.c:76:5: note: from call of main()
+test-0082.c:59:7: warning: ignoring call of undefined function
+test-0082.c:83:12: note: from call of print_list()
+test-0082.c:76:5: note: from call of main()
