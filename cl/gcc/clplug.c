@@ -52,6 +52,15 @@
 #   define STREQ(s1, s2) (0 == strcmp(s1, s2))
 #endif
 
+// somewhere after 4.5.0, the GGC_CNEW somehow vanished
+#ifndef GGC_CNEW
+#   define GGC_CNEW(type) ggc_internal_cleared_alloc_stat(sizeof (type))
+#endif
+
+// somewhere after 4.5.0, the declaration has been moved to
+// gimple-pretty-print.h, which is no longer available for public
+extern void print_gimple_stmt (FILE *, gimple, int, int);
+
 // this should be using gcc's fancy_abort(), but it was actually not tested
 #define SL_ASSERT(expr) \
     if (!(expr)) abort()
@@ -633,6 +642,9 @@ static bool handle_accessor(struct cl_accessor **ac, tree *pt)
         case ARRAY_REF:
             handle_accessor_array_ref(ac, t);
             break;
+
+        case MEM_REF:
+            // MEM_REF appeared after 4.5.0 (should be equal to INDIRECT_REF)
 
         case INDIRECT_REF:
             handle_accessor_indirect_ref(ac, t);
@@ -1284,7 +1296,7 @@ static void cb_start_unit (void *gcc_data, void *user_data)
     (void) user_data;
 
     SL_LOG ("processing input file '%s'", main_input_filename);
-    cl->file_open(cl, main_input_filename);
+    cl->file_open(cl, input_filename);
 }
 
 static void cb_finish_unit (void *gcc_data, void *user_data)
