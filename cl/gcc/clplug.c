@@ -643,9 +643,10 @@ static bool handle_accessor(struct cl_accessor **ac, tree *pt)
             handle_accessor_array_ref(ac, t);
             break;
 
+#ifdef MEM_REF
         case MEM_REF:
             // MEM_REF appeared after 4.5.0 (should be equal to INDIRECT_REF)
-
+#endif
         case INDIRECT_REF:
             handle_accessor_indirect_ref(ac, t);
             break;
