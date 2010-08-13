@@ -255,9 +255,10 @@ protected:
 		return ta;
 	}
 
-	static bool updateO(boost::unordered_map<size_t, vector<size_t> >& o, size_t state, const vector<size_t>& v) {
-		pair<boost::unordered_map<size_t, vector<size_t> >::iterator, bool> p =
-			o.insert(make_pair(state, v));
+	typedef boost::unordered_map<size_t, vector<size_t> > o_map_type;
+
+	static bool updateO(o_map_type& o, size_t state, const vector<size_t>& v) {
+		pair<o_map_type::iterator, bool> p = o.insert(make_pair(state, v));
 		if (p.second)
 			return true;
 		if (p.first->second.size() > v.size())
@@ -274,7 +275,7 @@ protected:
 	}
 
 	// computes downward 'o' function
-	static void computeDownwardO(const TA<label_type>& ta, boost::unordered_map<size_t, vector<size_t> >& o) {
+	static void computeDownwardO(const TA<label_type>& ta, o_map_type& o) {
 		o.clear();
 		bool changed = true;
 		while (changed) {
@@ -290,7 +291,7 @@ protected:
 //					vector<size_t> order;
 //					FAE::evaluateLhsOrder(*i->label().dataB, order);
 					for (vector<size_t>::const_iterator j = i->lhs().begin(); j != i->lhs().end(); ++j) {
-						boost::unordered_map<size_t, vector<size_t> >::iterator k = o.find(*j);
+						o_map_type::iterator k = o.find(*j);
 						if (k == o.end())
 							break;
 						v.insert(v.end(), k->second.begin(), k->second.end());
@@ -304,12 +305,14 @@ protected:
 	}
 
 	// ensures the existence of 'o' (can create more accepting states)
-	TA<label_type>* normalizeTA(TA<label_type>* src, boost::unordered_map<size_t, vector<size_t> >& o) {
+	TA<label_type>* normalizeTA(TA<label_type>* src, o_map_type& o) {
 		TA<label_type>* ta = this->taMan->alloc();
 		TA<label_type>::bu_cache_type buCache;
 		src->buildBUCache(buCache);
 		o.clear();
+		// <original state, 'o' vector>
 		boost::unordered_map<std::pair<size_t, std::vector<size_t> >, size_t> newStates;
+		// new state -> original state
 		boost::unordered_map<size_t, std::vector<size_t> > aux;
 		std::vector<std::pair<size_t, size_t> > stack;
 		for (TA<label_type>::iterator i = src->begin(); i != src->end(); ++i) {
@@ -457,7 +460,7 @@ protected:
 			// TODO: raise some reasonable exception here (instead of runtime_error)
 			throw runtime_error("FAE::normalize(): garbage missmatch!");
 		}
-		// remove garage
+		// remove garbage
 		for (vector<size_t>::iterator i = garbage.begin(); i != garbage.end(); ++i) {
 			this->taMan->release(this->roots[*i]);
 			this->roots[*i] = NULL;
@@ -507,7 +510,7 @@ protected:
 			Index<size_t> stateIndex;
 			ta->buildStateIndex(stateIndex);
 			std::vector<std::vector<bool> > rel(stateIndex.size(), std::vector<bool>(stateIndex.size(), false));
-			boost::unordered_map<size_t, vector<size_t> > o;
+			o_map_type o;
 			FAE::computeDownwardO(*ta, o);
 			for (Index<size_t>::iterator j = stateIndex.begin(); j != stateIndex.end(); ++j) {
 				for (Index<size_t>::iterator k = stateIndex.begin(); k != stateIndex.end(); ++k) {
@@ -518,6 +521,7 @@ protected:
 			ta->heightAbstraction(rel, 1, stateIndex);
 			this->roots[i] = this->taMan->alloc();
 			ta->collapsed(*this->roots[i], rel, stateIndex);
+			this->taMan->release(ta);
 		}
 	}
 
@@ -577,7 +581,7 @@ protected:
 				// exchange the original automaton with the new one
 				fae.taMan->release(fae.roots[root]);
 				fae.roots[root] = ta;
-				boost::unordered_map<size_t, vector<size_t> > o;
+				o_map_type o;
 				FAE::computeDownwardO(*ta, o);
 				fae.rootMap[root] = o[ta->getFinalState()];
 				if (needsDecomposition) {
@@ -611,7 +615,7 @@ protected:
 					stack.push_back(*p.first);
 				}
 				for (size_t k = 0; k < (*j)->lhs().size(); ++k) {
-					if ((*j)->lhs()[k] != x.first)
+					if (tmp[k] != x.first)
 						continue;
 					tmp[k] = x.second;
 					ta->addTransition(tmp, (*j)->label(), p.first->second);
@@ -625,23 +629,29 @@ protected:
 		ta->addFinalState(i->second);
 		return ta;
 	}
-/*
-	void isolateAtLeaf(vector<FAE*>& dst, size_t root, size_t reference) const {
+
+	template <class F>
+	void split(vector<FAE*>& dst, size_t root, F f) const {
 		assert(root < this->roots.size());
-		size_t refState = this->findRootReference(reference);
+//		size_t refState = this->findRootReference(reference);
 		TA<label_type>::td_cache_type dfsCache;
 		this->roots[root]->buildTDCache(dfsCache);
 		for (TA<label_type>::iterator i = this->roots[root]->begin(); i != this->roots[root]->end(); ++i) {
-			if (std::find(i->lhs().begin(), i->lhs().end(), refState) == i->lhs().end())
+			// is it interesting?
+			if (!f(*i))
 				continue;
 			FAE* fae = new FAE(*this);
+			// lower part (renamed)
 			TA<label_type>* ta = fae->taMan->alloc();
 			Index<size_t> index;
 			ta->addFinalState(index.translateOTF(i->rhs()) + fae->nextState());
-			TA<label_type>::dfs_iterator j = fae->roots[root]->dfsStart(dfsCache, itov(i->rhs()));
-			for (; j.isValid(); j.next()) {
+			for (
+				TA<label_type>::td_iterator j = fae->roots[root]->tdStart(dfsCache, itov(i->rhs()));
+				j.isValid();
+				j.next()
+			) {
 				if (j->label().head().isReference()) {
-					ta->add(*j);
+					ta->addTransition(*j);
 					continue;
 				}
 				std::vector<size_t> tmp;
@@ -649,16 +659,59 @@ protected:
 				ta->addTransition(tmp, j->label(), index.translateOTF(j->rhs()) + fae->nextState());
 			}
 			fae->incrementStateOffset(index.size());
-			ta2->addFinalState(i->rhs());
-			TA<label_type>* ta2 = fae->taMan->alloc();
+			// the rest
+			TA<label_type>* ta2 = fae->taMan->clone(fae->roots[root]);
+			size_t state = fae->addRootReference(*ta2, fae->roots.size());
 			for (TA<label_type>::iterator j = fae->roots[root]->begin(); j != fae->roots[root]->end(); ++j) {
-				if (std::find(j->lhs().begin(), j->lhs().end(), i->rhs()) == j->lhs().end()) {
-					ta2->
+				std::vector<size_t> tmp = j->lhs();
+				for (size_t k = 0; k < j->lhs().size(); ++k) {
+					if (tmp[k] != i->rhs())
+						continue;
+					tmp[k] = state;
+					ta2->addTransition(tmp, j->label(), j->rhs());
+					tmp[k] = i->rhs();
 				}
-				
+			}
+			o_map_type o;
+			FAE::computeDownwardO(*ta, o);
+			o_map_type::iterator j = o.find(ta->getFinalState());
+			assert(j != o.end());
+			fae->rootMap[fae->roots.size()] = *j;
+			o.clear();
+			fae->roots.push_back(ta);
+			ta = fae->propagateReference(ta2, state);
+			fae->taMan->release(ta2);
+			ta2 = fae->normalizeTA(ta, o);
+			fae->taMan->release(ta);
+			if (ta2->getFinalStates().size() == 1) {
+				fae->taMan->release(fae->roots[root]);
+				fae->roots[root] = ta2;
+				j = o.find(ta2->getFinalState());
+				assert(j != o.end());
+				fae->rootMap[root] = *j;
+				dst.push_back(fae);
+				continue;
+			}
+			// for more accepting states
+			for (std::set<size_t>::const_iterator k = ta2->getFinalStates().begin(); k != ta2->getFinalStates().end(); ++k) {
+				FAE* fae2 = new FAE(*fae);
+				ta = fae2->taMan->clone(ta2, false);
+				ta->addFinalState(*k);
+				fae->taMan->release(ta2);
+				ta2 = fae2->taMan->alloc();
+				ta->minimized(*ta2);
+				fae2->taMan->release(ta);
+				fae2->taMan->release(fae2->roots[root]);
+				fae2->roots[root] = ta2;
+				j = o.find(ta2->getFinalState());
+				assert(j != o.end());
+				fae2->rootMap[root] = *j;
+				dst.push_back(fae2);
+			}
+			delete fae;
 		}		
 	}	
-*/	
+	
 	void findSelectorDestination(const TT<label_type>& transition, size_t selector, size_t& dest, size_t& offset) const {
 		dest = varUndef;
 		offset = 0;
@@ -792,8 +845,8 @@ public:
 		assert(x < this->variables.size());
 		// raise some reasonable exception here
 		switch (this->variables[x].index) {
-			case varNull: throw runtime_error("FAE::x_ass_y_next(): destination variable contains NULL!");
-			case varUndef: throw runtime_error("FAE::x_ass_y_next(): destination variable undefined!");
+			case varNull: throw runtime_error("FAE::del_x(): destination variable contains NULL!");
+			case varUndef: throw runtime_error("FAE::del_x(): destination variable undefined!");
 		}
 		size_t root = this->variables[x].index;
 		this->isolateAtRoot(dst, root);
@@ -903,6 +956,9 @@ public:
 		}
 		dst.insert(dst.end(), tmp.begin(), tmp.end());
 	}	
+
+	// reverse run
+	
 
 };
 

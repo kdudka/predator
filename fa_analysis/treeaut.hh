@@ -781,7 +781,7 @@ public:
 	
 	// makes state numbers contiguous
 	TA& reduced(TA<T>& dst, Index<size_t>& index) const {
-		return reduce(dst, *this, index);
+		return TA<T>::reduce(dst, *this, index);
 	}
 	
 	static TA<T>& disjointUnion(TA<T>& dst, const TA<T>& a, const TA<T>& b) {
