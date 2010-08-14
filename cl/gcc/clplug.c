@@ -912,7 +912,7 @@ static /* XXX const */ struct cl_operand stmt_cond_fixed_reg = {
     .type           = &builtin_bool_type,
     .data = {
         .reg = {
-            .id     = /* XXX */ 0x1000
+            .id     = /* XXX */ 0x100000
         }
     }
 };
