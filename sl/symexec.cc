@@ -107,19 +107,23 @@ struct BlockPtr {
 };
 bool operator<(const BlockPtr &a, const BlockPtr &b) {
     if (a.bb == b.bb)
-        // identical blocks
+        // identical blocks, we're done
         return false;
 
-    // TODO: optimization - do not go through the strings twice
+    // first try to compare the names of blocks, as they're said to be more
+    // consistent among runs than the addresses of CodeStorage::Block objects
+    // NOTE: They're however _not_ guaranteed to be consistent among two
+    //       different gcc builds anyway, and I am not yet talking about
+    //       gcc versions...
     const std::string &aName = a.bb->name();
     const std::string &bName = b.bb->name();
-    if (aName < bName)
-        return true;
-    else if (bName < aName)
-        return false;
+    const int cmp = aName.compare(bName);
+    if (cmp)
+        return (cmp < 0);
+
     else
         // names are equal, just compare the pointers to keep std::set working
-        return a.bb < b.bb;
+        return (a.bb < b.bb);
 }
 
 // /////////////////////////////////////////////////////////////////////////////

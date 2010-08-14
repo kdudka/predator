@@ -202,6 +202,12 @@ class SymHeapCore {
         void valReplace(TValueId _val, TValueId _newval);
 
     public:
+        // TODO: review the following interface and write some dox
+        void addAlias(TValueId val1, TValueId val2);
+        TValueId valCreateByOffset(TValueId valRef, int off);
+        TValueId valGetByOffset(TValueId valRef, int off);
+
+    public:
         enum ENeqOp {
             NEQ_NOP = 0,
             NEQ_ADD,

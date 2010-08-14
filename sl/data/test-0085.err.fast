@@ -1,0 +1,2 @@
+test-0085.c:42:9: error: attempt to free a non-root object
+test-0085.c:45:9: error: attempt to free a non-root object

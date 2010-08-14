@@ -2,8 +2,6 @@ o  join of states ... example:
    - input: empty | 1 node | SLS 0+ | SLS 1+
    - output: SLS 0+
 
-o  aliasing of a field with zero offset with pointer to the surrounding object
-
 o  explicit initializers of gl variables are completely ignored at the moment
 
 o  symstate: proper comparison of Neq and EqIf predicates (it will require to

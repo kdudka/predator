@@ -50,6 +50,55 @@ void emitOne(TDst &dst, TValueId val) {
     dst.push_back(val);
 }
 
+/// alias lookup db (fully symmetric)
+class AliasDb {
+    private:
+        typedef std::set<TValueId>              TSet;
+        typedef std::map<TValueId, TSet *>      TMap;
+        TMap cont_;
+
+    public:
+        AliasDb() { }
+        AliasDb(const AliasDb &ref) {
+            this->operator=(ref);
+        }
+
+        // deep copy
+        AliasDb& operator=(const AliasDb &ref) {
+            BOOST_FOREACH(TMap::value_type item, ref.cont_) {
+                const TSet &origin = *(item.second);
+                cont_[item.first] = new TSet(origin);
+            }
+
+            return *this;
+        }
+
+        ~AliasDb() {
+            // we use a set to avoid a double free during the destruction
+            std::set<TSet *> done;
+
+            BOOST_FOREACH(TMap::value_type item, cont_) {
+                TSet *s = item.second;
+                if (hasKey(done, s))
+                    // already deleted
+                    continue;
+
+                done.insert(s);
+                delete s;
+            }
+        }
+
+        bool lookup(TValueId v1, TValueId v2) {
+            TMap::iterator iter = cont_.find(v1);
+            if (cont_.end() == iter)
+                return false;
+            else
+                return hasKey(iter->second, v2);
+        }
+
+        void add(TValueId v1, TValueId v2);
+};
+
 class NeqDb {
     private:
         typedef std::pair<TValueId /* valLt */, TValueId /* valGt */> TItem;
@@ -170,6 +219,55 @@ void EqIfDb::gatherRelatedValues(TDst2 &dst, TValueId val) const {
     }
 }
 
+void AliasDb::add(TValueId v1, TValueId v2) {
+    // first look for existing aliases
+    TMap::iterator i1 = cont_.find(v1);
+    TMap::iterator i2 = cont_.find(v2);
+    const bool hasSet1 = cont_.end() != i1;
+    const bool hasSet2 = cont_.end() != i2;
+
+    if (hasSet1 && hasSet2) {
+        // connect two clusters of aliases all together
+        TSet *s1 = i1->second;
+        TSet *s2 = i2->second;
+
+        // FIXME: not tested yet
+        TRAP;
+
+        // merge sets
+        s1->insert(s2->begin(), s2->end());
+
+        // replace all references
+        BOOST_FOREACH(TValueId val, *s1) {
+            cont_[val] = s1;
+        }
+
+        // s2 should be no more referenced at this point
+        // (as long as AliasDb works correctly)
+        delete s2;
+    }
+
+    if (!hasSet1 && !hasSet2) {
+        TSet *s = new TSet();
+        s->insert(v1);
+        s->insert(v2);
+        cont_[v1] = s;
+        cont_[v2] = s;
+        return;
+    }
+
+    if (hasSet1) {
+        TSet *s = i1->second;
+        s->insert(v2);
+        cont_[v2] = s;
+    }
+    else /* if (hasSet2) */ {
+        TSet *s = i2->second;
+        s->insert(v1);
+        cont_[v1] = s;
+    }
+}
+
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of SymHeapCore
 struct SymHeapCore::Private {
@@ -191,6 +289,7 @@ struct SymHeapCore::Private {
     std::vector<Object>     objects;
     std::vector<Value>      values;
 
+    AliasDb                 aliasDb;
     NeqDb                   neqDb;
     EqIfDb                  eqIfDb;
 
@@ -482,6 +581,10 @@ void SymHeapCore::valReplace(TValueId _val, TValueId _newval) {
     SymHeapCore::neqOp(NEQ_DEL, _val, _newval);
 }
 
+void SymHeapCore::addAlias(TValueId v1, TValueId v2) {
+    d->aliasDb.add(v1, v2);
+}
+
 // template method
 bool SymHeapCore::valReplaceUnknownImpl(TValueId val, TValueId replaceBy) {
     // collect objects having the value 'val'
@@ -635,8 +738,8 @@ bool SymHeapCore::proveEq(bool *result, TValueId valA, TValueId valB) const {
         // we can prove nothing for invalid values
         return false;
 
-    if (valA == valB) {
-        // identical value IDs ... the prove is done
+    if (valA == valB || d->aliasDb.lookup(valA, valB)) {
+        // identical value IDs (or explicit aliasing) ... the prove is done
         *result = true;
         return true;
     }
@@ -939,10 +1042,18 @@ void SymHeapTyped::createSubs(TObjId obj) {
                 // of reallocation
                 d->objects[obj].subObjs.resize(cnt);
                 for (int i = 0; i < cnt; ++i) {
-                    const struct cl_type *subClt = clt->items[i].type;
+                    const struct cl_type_item *item = clt->items + i;
+                    const struct cl_type *subClt = item->type;
                     const TObjId subObj = this->createSubVar(subClt, obj);
                     d->objects[subObj].nthItem = i; // position in struct
                     d->objects[obj].subObjs[i] = subObj;
+
+                    if (!item->offset) {
+                        // declare explicit aliasing with parent object's addr
+                        SymHeapCore::addAlias(this->placedAt(obj),
+                                              this->placedAt(subObj));
+                    }
+
                     push(todo, subObj, subClt);
                 }
                 break;
