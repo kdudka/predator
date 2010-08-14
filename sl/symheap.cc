@@ -472,6 +472,9 @@ TObjId SymHeapCore::objDup(TObjId objOrigin) {
     // copy the value inside, while keeping backward references etc.
     const Private::Object &origin = d->objects.at(objOrigin);
     this->objSetValue(obj, origin.value);
+
+    // we've just created an object, let's notify posterity
+    this->notifyResize(/* valOnly */ false);
     return obj;
 }
 
@@ -491,6 +494,8 @@ TObjId SymHeapCore::objCreate() {
     Private::Value &ref = d->values[value];
     ref.usedBy.insert(obj);
 
+    // we've just created an object, let's notify posterity
+    this->notifyResize(/* valOnly */ false);
     return obj;
 }
 
@@ -510,6 +515,8 @@ TValueId SymHeapCore::valCreate(EUnknownValue code, TObjId target) {
         // ignore target for unknown values, they should be not followed anyhow
         ref.target = target;
 
+    // we've just created a new value, let's notify posterity
+    this->notifyResize(/* valOnly */ true);
     return val;
 }
 
@@ -607,7 +614,11 @@ TValueId SymHeapCore::valDuplicateUnknown(TValueId val) {
         return VAL_INVALID;
 
     const Private::Value &ref = d->values[val];
-    return this->valCreate(ref.code, ref.target);
+    const TValueId valNew = this->valCreate(ref.code, ref.target);
+
+    // we've just created a new value, let's notify posterity
+    this->notifyResize(/* valOnly */ true);
+    return valNew;
 }
 
 /// change value of all variables with value _val to (fresh) _newval
@@ -715,6 +726,9 @@ TValueId SymHeapCore::valCreateByOffset(TOffVal ov) {
     // create a new unknown value and associate it with the offset
     val = this->valCreate(UV_UNKNOWN, /* no valid target */ OBJ_INVALID);
     d->offsetDb.add(ov, val);
+
+    // we've just created a new value, let's notify posterity
+    this->notifyResize(/* valOnly */ true);
     return val;
 }
 
@@ -1029,10 +1043,14 @@ struct SymHeapTyped::Private {
     TContObj                        roots;
 };
 
-void SymHeapTyped::resizeIfNeeded() {
+void SymHeapTyped::notifyResize(bool valOnly) {
     const size_t lastValueId = this->lastValueId();
     if (d->values.size() <= lastValueId)
         d->values.resize(lastValueId + 1);
+
+    if (valOnly)
+        // no objects created recently
+        return;
 
     const size_t lastObjId = this->lastObjId();
     if (d->objects.size() <= lastObjId)
@@ -1044,7 +1062,6 @@ TValueId SymHeapTyped::createCompValue(const struct cl_type *clt, TObjId obj) {
     if (VAL_INVALID == val)
         TRAP;
 
-    this->resizeIfNeeded();
     Private::Value &ref = d->values[val];
     ref.clt         = clt;
     ref.compObj     = obj;
@@ -1068,7 +1085,6 @@ TObjId SymHeapTyped::createSubVar(const struct cl_type *clt, TObjId parent) {
     if (OBJ_INVALID == obj)
         TRAP;
 
-    this->resizeIfNeeded();
     Private::Object &ref = d->objects[obj];
     ref.clt         = clt;
     ref.parent      = parent;
@@ -1165,7 +1181,6 @@ TObjId SymHeapTyped::objDup(TObjId obj) {
             TRAP;
 
         const TObjId dst = SymHeapCore::objDup(src);
-        this->resizeIfNeeded();
         if (OBJ_INVALID == image)
             image = dst;
 
@@ -1238,7 +1253,7 @@ void SymHeapTyped::objDestroyPriv(TObjId obj) {
 SymHeapTyped::SymHeapTyped():
     d(new Private)
 {
-    this->resizeIfNeeded();
+    SymHeapTyped::notifyResize(/* valOnly */ false);
 }
 
 SymHeapTyped::SymHeapTyped(const SymHeapTyped &ref):
@@ -1281,7 +1296,6 @@ TValueId SymHeapTyped::valDuplicateUnknown(TValueId val) {
 
     // duplicate the value by core
     const TValueId dup = SymHeapCore::valDuplicateUnknown(val);
-    this->resizeIfNeeded();
 
     // duplicate also the type-info
     d->values.at(dup).clt = this->valType(val);
@@ -1386,7 +1400,6 @@ TObjId SymHeapTyped::objCreate(const struct cl_type *clt, CVar cVar) {
     if (OBJ_INVALID == obj)
         return OBJ_INVALID;
 
-    this->resizeIfNeeded();
     Private::Object &ref = d->objects[obj];
     ref.clt     = clt;
     ref.cVar    = cVar;
@@ -1423,7 +1436,6 @@ TObjId SymHeapTyped::objPretendSurroundOf(TObjId                objReal,
 
     // create a low-level object
     const TObjId obj = SymHeapCore::objCreate();
-    this->resizeIfNeeded();
     d->objects[obj].clt = cltVirt;
     d->objects[obj].dummy = true;
 
@@ -1499,7 +1511,6 @@ TObjId SymHeapTyped::objPretendSurroundOf(TObjId                objReal,
 
 TObjId SymHeapTyped::objCreateAnon(int cbSize) {
     const TObjId obj = SymHeapCore::objCreate();
-    this->resizeIfNeeded();
     d->objects[obj].cbSize = cbSize;
 
     return obj;
@@ -1584,7 +1595,6 @@ TValueId SymHeapTyped::valCreateUnknown(EUnknownValue code,
     if (VAL_INVALID == val)
         return VAL_INVALID;
 
-    this->resizeIfNeeded();
     d->values[val].clt = clt;
     return val;
 }
@@ -1597,7 +1607,6 @@ TValueId SymHeapTyped::valCreateCustom(const struct cl_type *clt, int cVal) {
         if (VAL_INVALID == val)
             return VAL_INVALID;
 
-        this->resizeIfNeeded();
         Private::Value &ref = d->values[val];
         ref.clt         = clt;
         ref.isCustom    = true;

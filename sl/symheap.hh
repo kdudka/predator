@@ -289,6 +289,9 @@ class SymHeapCore {
         /// template method
         virtual bool valReplaceUnknownImpl(TValueId val, TValueId replaceBy);
 
+        /// template method
+        virtual void notifyResize(bool /* valOnly */) { }
+
     private:
         struct Private;
         Private *d;
@@ -541,12 +544,14 @@ class SymHeapTyped: public SymHeapCore {
          */
         int valGetCustom(const struct cl_type **pClt, TValueId val) const;
 
+    protected:
+        virtual void notifyResize(bool valOnly);
+
     private:
         struct Private;
         Private *d;
 
     private:
-        void resizeIfNeeded();
         void initValClt(TObjId obj);
         TValueId createCompValue(const struct cl_type *clt, TObjId obj);
         TObjId createSubVar(const struct cl_type *clt, TObjId parent);
