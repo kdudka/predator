@@ -99,6 +99,59 @@ class AliasDb {
         void add(TValueId v1, TValueId v2);
 };
 
+/// cluster values that are related by known offset between each other
+class OffsetDb {
+    public:
+        typedef SymHeapCore::TOffVal                TOffVal;
+        typedef SymHeapCore::TOffValCont            TOffValCont;
+
+    private:
+        typedef std::map<TOffVal, TValueId>         TOffMap;
+        typedef std::map<TValueId, TOffValCont>     TValMap;
+        TOffMap                 offMap_;
+        TValMap                 valMap_;
+        const TOffValCont       empty_;
+
+        void addNoClobber(const TOffVal &ov, TValueId target) {
+            if (hasKey(offMap_, ov))
+                // *** redefinition detected ***
+                TRAP;
+
+            offMap_[ov] = target;
+            valMap_[target].push_back(ov);
+        }
+
+    public:
+        void add(TOffVal ov, TValueId target) {
+            // add the given relation
+            this->addNoClobber(ov, target);
+
+            // and now the other way around
+            const TValueId src = ov.first;
+            ov.first = target;
+            ov.second = -ov.second;
+            this->addNoClobber(ov, src);
+        }
+
+        TValueId lookup(const TOffVal &ov) {
+            TOffMap::iterator iter = offMap_.find(ov);
+            if (offMap_.end() == iter)
+                // not found
+                return VAL_INVALID;
+
+            return iter->second;
+        }
+
+        const TOffValCont& getOffValues(TValueId val) {
+            TValMap::iterator iter = valMap_.find(val);
+            if (valMap_.end() == iter)
+                // not found
+                return empty_;
+
+            return iter->second;
+        }
+};
+
 class NeqDb {
     private:
         typedef std::pair<TValueId /* valLt */, TValueId /* valGt */> TItem;
@@ -290,6 +343,7 @@ struct SymHeapCore::Private {
     std::vector<Value>      values;
 
     AliasDb                 aliasDb;
+    OffsetDb                offsetDb;
     NeqDb                   neqDb;
     EqIfDb                  eqIfDb;
 
@@ -650,6 +704,26 @@ void SymHeapCore::valReplaceUnknown(TValueId val, TValueId replaceBy) {
                 this->neqOp(NEQ_ADD, valLt, valGt);
         }
     }
+}
+
+TValueId SymHeapCore::valCreateByOffset(TOffVal ov) {
+    // first look if such a value already exists
+    TValueId val = d->offsetDb.lookup(ov);
+    if (0 < val)
+        return val;
+
+    // create a new unknown value and associate it with the offset
+    val = this->valCreate(UV_UNKNOWN, /* no valid target */ OBJ_INVALID);
+    d->offsetDb.add(ov, val);
+    return val;
+}
+
+TValueId SymHeapCore::valGetByOffset(TOffVal ov) const {
+    return d->offsetDb.lookup(ov);
+}
+
+void SymHeapCore::gatherOffValues(TOffValCont &dst, TValueId ref) const {
+    dst = d->offsetDb.getOffValues(ref);
 }
 
 void SymHeapCore::neqOp(ENeqOp op, TValueId valA, TValueId valB) {

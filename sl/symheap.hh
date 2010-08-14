@@ -202,10 +202,23 @@ class SymHeapCore {
         void valReplace(TValueId _val, TValueId _newval);
 
     public:
-        // TODO: review the following interface and write some dox
+        /**
+         * declare explicit aliasing among the given pair of values.  It may be
+         * later used in SymHeapCore::proveEq().  This method is known to be
+         * called from SymHeapTyped, during the creation of a composite type.
+         * @note No differences are made between val1 and val2.  The arguments
+         * are fully symmetric.
+         */
         void addAlias(TValueId val1, TValueId val2);
-        TValueId valCreateByOffset(TValueId valRef, int off);
-        TValueId valGetByOffset(TValueId valRef, int off);
+
+        // TODO: review the following interface and write some dox
+        typedef std::pair<TValueId /* valRef */, int /* offset */>  TOffVal;
+        typedef std::vector<TOffVal>                                TOffValCont;
+
+        // TODO: review the following interface and write some dox
+        TValueId valCreateByOffset(TOffVal);
+        TValueId valGetByOffset(TOffVal) const;
+        void gatherOffValues(TOffValCont &dst, TValueId ref) const;
 
     public:
         enum ENeqOp {
