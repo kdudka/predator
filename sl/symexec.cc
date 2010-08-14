@@ -96,6 +96,32 @@ void createGlVars(SymHeap &heap, const CodeStorage::Storage &stor) {
 
 } // namespace
 
+/// we want BBs to be taken from the scheduler somehow deterministically
+struct BlockPtr {
+    const CodeStorage::Block *bb;
+
+    BlockPtr(const CodeStorage::Block *bb_):
+        bb(bb_)
+    {
+    }
+};
+bool operator<(const BlockPtr &a, const BlockPtr &b) {
+    if (a.bb == b.bb)
+        // identical blocks
+        return false;
+
+    // TODO: optimization - do not go through the strings twice
+    const std::string &aName = a.bb->name();
+    const std::string &bName = b.bb->name();
+    if (aName < bName)
+        return true;
+    else if (bName < aName)
+        return false;
+    else
+        // names are equal, just compare the pointers to keep std::set working
+        return a.bb < b.bb;
+}
+
 // /////////////////////////////////////////////////////////////////////////////
 // SymExecEngine
 class SymExecEngine {
@@ -125,7 +151,7 @@ class SymExecEngine {
 
     private:
         typedef const CodeStorage::Block                   *TBlock;
-        typedef std::set<TBlock>                            TBlockSet;
+        typedef std::set<BlockPtr>                          TBlockSet;
         typedef std::map<TBlock, SymHeapScheduler>          TStateMap;
 
         const CodeStorage::Storage      &stor_;
@@ -754,7 +780,7 @@ bool /* complete */ SymExecEngine::run() {
     while (!todo_.empty()) {
         // FIXME: take BBs in some reasonable order instead
         TBlockSet::iterator i = todo_.begin();
-        block_ = *i;
+        block_ = i->bb;
         todo_.erase(i);
 
         // update location info
