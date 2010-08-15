@@ -240,12 +240,6 @@ TObjId SymProc::heapObjFromOperand(const struct cl_operand &op) {
         ac = ac->next;
     }
 
-    if (0 < var && !heap_.objExists(var)) {
-        CL_ERROR_MSG(lw_, "dereference of a pointer that is out of range");
-        bt_->printBackTrace();
-        return OBJ_DEREF_FAILED;
-    }
-
     return var;
 }
 
@@ -270,38 +264,75 @@ bool SymProc::lhsFromOperand(TObjId *pObj, const struct cl_operand &op) {
     }
 }
 
-namespace {
-    template <class THeap>
-    TValueId valueFromVar(THeap &heap, TObjId var, const struct cl_type *clt,
-                          const struct cl_accessor *ac)
-    {
-        switch (var) {
-            case OBJ_INVALID:
-                TRAP;
-                return VAL_INVALID;
+TValueId SymProc::resolveOffValue(TValueId val, const struct cl_operand &op) {
+    const struct cl_accessor *ac = op.accessor;
+    if (!ac || ac->code != CL_ACCESSOR_DEREF)
+        // invalid call of SymProc::resolveOffValue()
+        TRAP;
 
-            case OBJ_UNKNOWN:
-                return heap.valCreateUnknown(UV_UNKNOWN, clt);
-
-            case OBJ_DELETED:
-            case OBJ_DEREF_FAILED:
-            case OBJ_LOST:
-                return VAL_DEREF_FAILED;
-
-            case OBJ_RETURN:
-            default:
-                break;
-        }
-
-        // seek the last accessor
-        while (ac && ac->next)
-            ac = ac->next;
-
-        // handle CL_ACCESSOR_REF if any
-        return (ac && ac->code == CL_ACCESSOR_REF)
-            ? heap.placedAt(var)
-            : heap.valueOf(var);
+    // go through the list of selectors, cumulating the offset
+    int off = 0;
+    for (ac = ac->next; ac && ac->code == CL_ACCESSOR_ITEM; ac = ac->next) {
+        const struct cl_type *clt = ac->type;
+        const int nth = ac->data.item.id;
+        off += clt->items[nth].offset;
     }
+
+    if (!off || !ac || ac->code != CL_ACCESSOR_REF)
+        // we've got some extraordinary chain of accessors, giving up...
+        goto fail;
+
+    // look for the off-value
+    val = heap_.valGetByOffset(SymHeapCore::TOffVal(val, off));
+    if (0 < val)
+        // all OK
+        return val;
+
+fail:
+    CL_DEBUG_MSG(&op.loc, "SymProc::resolveOffValue() failed");
+    return heap_.valCreateUnknown(UV_UNKNOWN, op.type);
+}
+
+TValueId SymProc::heapValFromObj(const struct cl_operand &op) {
+    // seek the last accessor
+    const struct cl_accessor *ac = op.accessor;
+    const bool isDeref = (ac && ac->code == CL_ACCESSOR_DEREF);
+    while (ac && ac->next)
+        ac = ac->next;
+
+    // check if the chain of accessorss ends with CL_ACCESSOR_REF
+    const bool isAdrrOf = (ac && ac->code == CL_ACCESSOR_REF);
+    if (isDeref && isAdrrOf) {
+        // special quirk for off-values
+        const TObjId obj = varFromOperand(op, heap_, bt_);
+        const TValueId val = heap_.valueOf(obj);
+        if (0 < val && UV_UNKNOWN == heap_.valGetUnknown(val))
+            return this->resolveOffValue(val, op);
+    }
+
+    const TObjId var = this->heapObjFromOperand(op);
+    switch (var) {
+        case OBJ_INVALID:
+            TRAP;
+            return VAL_INVALID;
+
+        case OBJ_UNKNOWN:
+            return heap_.valCreateUnknown(UV_UNKNOWN, op.type);
+
+        case OBJ_DELETED:
+        case OBJ_DEREF_FAILED:
+        case OBJ_LOST:
+            return VAL_DEREF_FAILED;
+
+        case OBJ_RETURN:
+        default:
+            break;
+    }
+
+    // handle CL_ACCESSOR_REF if any
+    return (isAdrrOf)
+        ? heap_.placedAt(var)
+        : heap_.valueOf(var);
 }
 
 TValueId SymProc::heapValFromOperand(const struct cl_operand &op) {
@@ -309,9 +340,7 @@ TValueId SymProc::heapValFromOperand(const struct cl_operand &op) {
     switch (code) {
         case CL_OPERAND_VAR:
         case CL_OPERAND_REG:
-            return valueFromVar(heap_,
-                    this->heapObjFromOperand(op),
-                    op.type, op.accessor);
+            return this->heapValFromObj(op);
 
         case CL_OPERAND_CST:
             return this->heapValFromCst(op);
@@ -1101,20 +1130,14 @@ TValueId handlePointerPlus(SymHeap &sh, const struct cl_type *clt,
     }
 
     if (off < 0) {
-        // The surrounding object does not exist in the real world!  If we still
-        // need to operate on Linux lists, we need to create a virtual one...
-        const TObjId virt = sh.objPretendSurroundOf(obj, -off, clt);
-        if (OBJ_INVALID == virt) {
-            CL_WARN("handlePointerPlus(): object underflow by "
-                    << (-off) << "b treated as unknown value");
-            return sh.valCreateUnknown(UV_UNKNOWN, clt);
-        }
-
-        return sh.placedAt(virt);
+        // we need to create an off-value
+        const SymHeapCore::TOffVal ov(sh.placedAt(obj), off);
+        return sh.valCreateByOffset(ov);
     }
 
     obj = subSeekByOffset(sh, obj, clt, off);
     if (obj <= 0)
+        // TODO: create an unknown value?
         TRAP;
 
     // get the final address and check type compatibility

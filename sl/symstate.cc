@@ -310,10 +310,6 @@ bool dfsCmp(TWL             &wl,
             // abstract objects are not equeal
             return false;
 
-        if (heap1.objExists(obj1) != heap2.objExists(obj2))
-            // one of the compared objects is virtual
-            return false;
-
         value1 = heap1.valueOf(obj1);
         value2 = heap2.valueOf(obj2);
 

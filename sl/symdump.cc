@@ -219,9 +219,6 @@ void dump_obj(const SymHeap &heap, TObjId obj) {
         return;
     }
 
-    if (!heap.objExists(obj))
-        cout << "    virtual   = true\n";
-
     const struct cl_type *clt = heap.objType(obj);
     if (clt) {
         cout << "    clt       = ";

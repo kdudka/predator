@@ -272,8 +272,6 @@ void SymHeapPlotter::Private::plotNodeObj(TObjId obj, enum cl_type_e code) {
         this->dotStream << ", color=gold, penwidth=3.0, style=dashed";
     else if (hasKey(this->nexts, obj))
         this->dotStream << ", color=red, penwidth=3.0, style=dashed";
-    else if (!this->heap->objExists(obj))
-        this->dotStream << ", color=white";
     else
         this->dotStream << ", color=" << colorByCode(code);
 
@@ -580,12 +578,8 @@ void SymHeapPlotter::Private::openCluster(TObjId obj) {
         << "\trank=same;"                           << std::endl
         << "\tlabel=" << SL_QUOTE(label) << ";"     << std::endl
         << "\tcolor=" << color << ";"               << std::endl
-        << "\tfontcolor=" << color << ";"           << std::endl;
-
-    if (!this->heap->objExists(obj))
-        pw = "0.1";
-    else
-        this->dotStream << "\tbgcolor=gray98;"      << std::endl;
+        << "\tfontcolor=" << color << ";"           << std::endl
+        << "\tbgcolor=gray98;"                      << std::endl;
 
     this->dotStream
         << "\tstyle=dashed;"                        << std::endl
@@ -673,8 +667,7 @@ bool SymHeapPlotter::Private::resolveValueOf(TValueId *pDst, TObjId obj) {
             return false;
 
         case VAL_DEREF_FAILED:
-            if (this->heap->objExists(obj))
-                this->plotNodeAux(obj, CL_TYPE_VOID, "UV_DEREF_FAILED");
+            this->plotNodeAux(obj, CL_TYPE_VOID, "UV_DEREF_FAILED");
             return false;
 
         default:

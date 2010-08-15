@@ -1266,20 +1266,20 @@ void segReplaceRefs(SymHeap &sh, TValueId valOld, TValueId valNew) {
             return;
 
         objNew = subObjByInvChain(sh, objNew, icHead);
-        if (objNew < 0) {
+        if (0 < objNew)
+            valNew = sh.placedAt(objNew);
+
+        else {
             // attempt to create a virtual object
             const int off = subOffsetIn(sh, objOld, headOld);
-            const struct cl_type *clt = sh.objType(objOld);
             CL_DEBUG("segReplaceRefs() attempts to create a virtual object"
                     ", offset=" << off);
 
-            objNew = sh.objPretendSurroundOf(objNew, -off, clt);
-            if (objNew < 0)
-                // unable to create the virtual object ... what's the next step?
-                TRAP;
+            const SymHeapCore::TOffVal ov(valNew, -off);
+            valNew = sh.valCreateByOffset(ov);
         }
 
-        sh.valReplace(sh.placedAt(objOld), sh.placedAt(objNew));
+        sh.valReplace(sh.placedAt(objOld), valNew);
     }
     else {
         // TODO: check this with a debugger at least once

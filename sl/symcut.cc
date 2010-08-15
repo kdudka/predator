@@ -143,10 +143,6 @@ TObjId addObjectIfNeeded(DeepCopyData &dc, TObjId objSrc) {
     while (OBJ_INVALID != (tmp = src.objParent(rootSrc)))
         rootSrc = tmp;
 
-    if (!src.objExists(rootSrc))
-        // TODO: implement cloning of virtual objects
-        TRAP;
-
     CVar cv;
     if (src.cVar(&cv, rootSrc)) {
         // enlarge the cut if needed
@@ -211,6 +207,15 @@ TValueId handleValue(DeepCopyData &dc, TValueId valSrc, bool digBackward) {
         BOOST_FOREACH(TObjId objSrc, uses) {
             addObjectIfNeeded(dc, objSrc);
         }
+    }
+
+    // setup off-values mapping (if not already)
+    SymHeap::TOffValCont offValues;
+    src.gatherOffValues(offValues, valSrc);
+    BOOST_FOREACH(const SymHeap::TOffVal &ov, offValues) {
+        // TODO: implement and double-check the direction, etc.
+        TRAP;
+        (void) ov;
     }
 
     const TObjId compSrc = src.valGetCompositeObj(valSrc);

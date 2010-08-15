@@ -867,6 +867,7 @@ bool SymHeapCore::proveEq(bool *result, TValueId valA, TValueId valB) const {
 }
 
 void SymHeapCore::gatherRelatedValues(TContValue &dst, TValueId val) const {
+    // TODO: should we care about off-values here
     d->neqDb.gatherRelatedValues(dst, val);
     d->eqIfDb.gatherRelatedValues(dst, val);
 }
@@ -1176,10 +1177,6 @@ TObjId SymHeapTyped::objDup(TObjId obj) {
 
         // duplicate a single object
         const TObjId src = item.srcObj;
-        if (!this->objExists(src))
-            // not implemented
-            TRAP;
-
         const TObjId dst = SymHeapCore::objDup(src);
         if (OBJ_INVALID == image)
             image = dst;
@@ -1416,111 +1413,11 @@ TObjId SymHeapTyped::objCreate(const struct cl_type *clt, CVar cVar) {
     return obj;
 }
 
-struct SurroundStackItem {
-    TObjId                  obj;
-    int                     off;
-    const struct cl_type    *clt;
-    int                     subOff;
-};
-
-// NOTE: the implementation is really far from complete, sooner or later we will
-//       need to distinguish if the placeholder already exists
-TObjId SymHeapTyped::objPretendSurroundOf(TObjId                objReal,
-                                          int                   offsetReal,
-                                          const struct cl_type *cltVirt)
-{
-    CL_WARN("support for virtual objects is not implemented yet");
-    if (!cltVirt || cltVirt->code != CL_TYPE_STRUCT)
-        // not supported
-        TRAP;
-
-    // create a low-level object
-    const TObjId obj = SymHeapCore::objCreate();
-    d->objects[obj].clt = cltVirt;
-    d->objects[obj].dummy = true;
-
-    // start with the _virtual_ root
-    SurroundStackItem item;
-    item.obj = obj;
-    item.off = 0;
-    item.clt = cltVirt;
-    item.subOff = 0;
-
-    // FIXME: we have basically the same traversal in symabstract and symplot
-    int off = 0;
-    std::stack<SurroundStackItem> todo;
-    todo.push(item);
-    while (!todo.empty()) {
-        item = todo.top();
-        todo.pop();
-
-        const struct cl_type *clt = item.clt;
-        if (!clt)
-            // missing type-info
-            TRAP;
-
-        const TObjId obj = item.obj;
-        if (CL_TYPE_STRUCT == clt->code) {
-            // cumulate the up to now offset
-            off += item.off;
-
-            const int cnt = clt->item_cnt;
-            SymHeapCore::objSetValue(obj, this->createCompValue(clt, obj));
-
-            // keeping a reference at this point may cause headaches in case
-            // of reallocation
-            d->objects[obj].subObjs.resize(cnt);
-            for (int i = 0; i < cnt; ++i) {
-                const struct cl_type *subClt = clt->items[i].type;
-                item.off = clt->items[i].offset;
-                if (off + item.off == offsetReal) {
-                    // we've hit the object being surrounded
-                    d->objects[obj].subObjs[i] = objReal;
-                    d->objects[objReal].nthItem = i;
-                    d->objects[objReal].parent = obj;
-                    continue;
-                }
-
-                // create placeholders for all other objects (recursively)
-                const TObjId subObj = this->createSubVar(subClt, obj);
-                d->objects[subObj].nthItem = i;
-                d->objects[subObj].dummy = true;
-                d->objects[obj].subObjs[i] = subObj;
-
-                // push the field for next wheel
-                item.obj = subObj;
-                item.clt = subClt;
-                item.subOff = (i)
-                    ? 0
-                    : item.off;
-                todo.push(item);
-            }
-        }
-        else
-            // TODO: avoid wasting of value IDs (and memory) at this point
-            this->objSetValue(obj, VAL_DEREF_FAILED);
-
-        if (item.subOff)
-            // last item at this level, restore the cumulative offset
-            off -= item.subOff;
-    }
-
-    this->initValClt(obj);
-    return obj;
-}
-
 TObjId SymHeapTyped::objCreateAnon(int cbSize) {
     const TObjId obj = SymHeapCore::objCreate();
     d->objects[obj].cbSize = cbSize;
 
     return obj;
-}
-
-bool SymHeapTyped::objExists(TObjId obj) const {
-    if (VAL_INVALID == this->placedAt(obj))
-        return false;
-
-    return !d->objects[obj].dummy;
 }
 
 int SymHeapTyped::objSizeOfAnon(TObjId obj) const {
@@ -1570,14 +1467,8 @@ void SymHeapTyped::objDestroy(TObjId obj) {
     if (cv.uid != /* heap object */ -1)
         d->cVarMap.remove(cv);
 
-    // seek the virtual root if any
-    TObjId tmp;
-    while (OBJ_INVALID != (tmp = this->objParent(obj))) {
-        if (this->objExists(tmp))
-            TRAP;
-
-        obj = tmp;
-    }
+    if (OBJ_INVALID != this->objParent(obj))
+        TRAP;
 
     this->objDestroyPriv(obj);
     if (OBJ_RETURN == obj) {

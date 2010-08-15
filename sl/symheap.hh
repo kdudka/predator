@@ -467,13 +467,6 @@ class SymHeapTyped: public SymHeapCore {
          */
         TObjId objCreate(const struct cl_type *clt, CVar cVar = CVar());
 
-        // TODO: write some dox
-        TObjId objPretendSurroundOf(TObjId objReal, int offset,
-                                    const struct cl_type *cltVirt);
-
-        // TODO: implement the same method in base, then override
-        bool objExists(TObjId obj) const;
-
         /**
          * create a new symbolic heap object of known size, but @b unknown @b
          * type
