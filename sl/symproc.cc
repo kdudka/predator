@@ -163,13 +163,17 @@ fail:
 void SymProc::heapObjHandleAccessorItem(TObjId *pObj,
                                         const struct cl_accessor *ac)
 {
+    if (*pObj < 0)
+        // nothing to do at this level, keep going...
+        return;
+
     // access subObj
     const int id = ac->data.item.id;
     *pObj = heap_.subObj(*pObj, id);
 
-    // check result of the SymHeap operation
     if (OBJ_INVALID == *pObj)
-        *pObj = /* FIXME: misleading */ OBJ_DEREF_FAILED;
+        // no such sub-object
+        TRAP;
 }
 
 void SymProc::heapObjHandleAccessor(TObjId *pObj,
@@ -390,7 +394,23 @@ int /* uid */ SymProc::fncFromOperand(const struct cl_operand &op) {
             // Oops, it does not look as indirect call actually
             TRAP;
 
-        return heap_.valGetCustom(/* TODO: check type */ 0, val);
+        // obtain the inner content of the custom value and check its type-info
+        const struct cl_type *clt;
+        const int uid = heap_.valGetCustom(&clt, val);
+        if (-1 == uid)
+            // unable to resolve custom value
+            TRAP;
+
+        if (!clt || clt->code != CL_TYPE_PTR)
+            // not a pointer
+            TRAP;
+
+        clt = clt->items[0].type;
+        if (!clt || clt->code != CL_TYPE_FNC)
+            // not a function
+            TRAP;
+
+        return uid;
     }
 }
 
@@ -1287,13 +1307,15 @@ void SymProc::execOp(const CodeStorage::Insn &insn) {
     if (2 == ARITY && CL_BINOP_POINTER_PLUS
             == static_cast<enum cl_binop_e>(insn.subCode))
     {
+        // handle pointer plus
         valResult = handlePointerPlus(heap_, clt[/* dst type */ ARITY],
                                       rhs[0], opList[/* src2 */ 2]);
     }
-    else 
-        // handle generic operator and store result
+    else
+        // handle generic operator
         valResult = handleOp<ARITY>(*this, insn.subCode, rhs, clt);
 
+    // store the result
     this->objSetValue(varLhs, valResult);
 }
 
@@ -1327,19 +1349,17 @@ bool SymProc::concretizeLoop(TState &dst, const CodeStorage::Insn &insn,
 
 namespace {
 bool checkForDeref(const struct cl_operand &op, const CodeStorage::Insn &insn) {
-    const enum cl_insn_e code = insn.code;
     const struct cl_accessor *ac = op.accessor;
-    if (ac && CL_ACCESSOR_DEREF == ac->code) {
+    if (!ac || CL_ACCESSOR_DEREF != ac->code)
         // we expect the dereference only as the first accessor
-        if (CL_INSN_UNOP != code ||
-                CL_UNOP_ASSIGN != static_cast<enum cl_unop_e>(insn.subCode))
-            TRAP;
+        return false;
 
-        // we should go through concretization
-        return true;
-    }
+    const enum cl_unop_e code = static_cast<enum cl_unop_e>(insn.subCode);
+    if (CL_INSN_UNOP != insn.code || CL_UNOP_ASSIGN != code)
+        TRAP;
 
-    return false;
+    // we should go through concretization
+    return true;
 }
 } // namespace
 
