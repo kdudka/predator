@@ -178,7 +178,8 @@ void SymProc::heapObjHandleAccessor(TObjId *pObj,
     const enum cl_accessor_e code = ac->code;
     switch (code) {
         case CL_ACCESSOR_DEREF:
-            this->heapObjHandleAccessorDeref(pObj);
+            // this should have been handled elsewhere
+            TRAP;
             return;
 
         case CL_ACCESSOR_ITEM:
@@ -227,20 +228,82 @@ TObjId varFromOperand(const struct cl_operand &op, const SymHeap &sh,
 
 } // namespace
 
-TObjId SymProc::heapObjFromOperand(const struct cl_operand &op) {
-    TObjId var = varFromOperand(op, heap_, bt_);
-    if (OBJ_INVALID == var)
-        // unable to resolve static variable
+bool SymProc::resolveOffValue(TObjId *pObj, const struct cl_accessor **pAc) {
+    const struct cl_accessor *ac = *pAc;
+    if (!ac || ac->code != CL_ACCESSOR_DEREF)
+        // invalid call of SymProc::resolveOffValue()
         TRAP;
 
-    // process all accessors
-    const struct cl_accessor *ac = op.accessor;
-    while (ac) {
-        this->heapObjHandleAccessor(&var, ac);
+    ac = ac->next;
+    if (!ac || ac->code != CL_ACCESSOR_ITEM)
+        // no selectors --> no offset to compute
+        return false;
+
+    const TValueId val = heap_.valueOf(*pObj);
+    if (val <= 0 || UV_UNKNOWN != heap_.valGetUnknown(val))
+        // we're not interested here in such a value
+        return false;
+
+    // going through the chain of CL_ACCESSOR_ITEM, look for the target
+    int off = 0;
+    TValueId valTarget = VAL_INVALID;
+    while (ac && ac->code == CL_ACCESSOR_ITEM && VAL_INVALID == valTarget) {
+        // compute cumulative offset at the current level
+        const struct cl_type *clt = ac->type;
+        const int nth = ac->data.item.id;
+        off += clt->items[nth].offset;
+
+        if (off)
+            // attempt to resolve off-value
+            valTarget = heap_.valGetByOffset(SymHeapCore::TOffVal(val, off));
+
+        // jump to the next accessor
         ac = ac->next;
     }
 
-    return var;
+    if (VAL_INVALID == valTarget)
+        // not found
+        return false;
+
+    const TObjId target = heap_.pointsTo(valTarget);
+    if (target <= 0)
+        // TODO: should we allow to operate on invalid targets?
+        TRAP;
+
+    // successfully resolved off-value
+    *pObj = target;
+    *pAc  = ac;
+    return true;
+}
+
+TObjId SymProc::heapObjFromOperand(const struct cl_operand &op) {
+    TObjId obj = varFromOperand(op, heap_, bt_);
+    if (OBJ_INVALID == obj)
+        // unable to resolve static variable
+        TRAP;
+
+    const struct cl_accessor *ac = op.accessor;
+    if (!ac)
+        // no accessors, we're done
+        return obj;
+
+    // first check for dereference and handle any off-value eventually
+    if (ac->code == CL_ACCESSOR_DEREF && !this->resolveOffValue(&obj, &ac)) {
+        // fallback to plain dereference
+        this->heapObjHandleAccessorDeref(&obj);
+        ac = ac->next;
+    }
+
+    if (ac && ac->code == CL_ACCESSOR_DEREF)
+        // oops, we don't support chaining of CL_ACCESSOR_DEREF
+        TRAP;
+
+    while (ac) {
+        this->heapObjHandleAccessor(&obj, ac);
+        ac = ac->next;
+    }
+
+    return obj;
 }
 
 bool SymProc::lhsFromOperand(TObjId *pObj, const struct cl_operand &op) {
@@ -264,52 +327,7 @@ bool SymProc::lhsFromOperand(TObjId *pObj, const struct cl_operand &op) {
     }
 }
 
-TValueId SymProc::resolveOffValue(TValueId val, const struct cl_operand &op) {
-    const struct cl_accessor *ac = op.accessor;
-    if (!ac || ac->code != CL_ACCESSOR_DEREF)
-        // invalid call of SymProc::resolveOffValue()
-        TRAP;
-
-    // go through the list of selectors, cumulating the offset
-    int off = 0;
-    for (ac = ac->next; ac && ac->code == CL_ACCESSOR_ITEM; ac = ac->next) {
-        const struct cl_type *clt = ac->type;
-        const int nth = ac->data.item.id;
-        off += clt->items[nth].offset;
-    }
-
-    if (!off || !ac || ac->code != CL_ACCESSOR_REF)
-        // we've got some extraordinary chain of accessors, giving up...
-        goto fail;
-
-    // look for the off-value
-    val = heap_.valGetByOffset(SymHeapCore::TOffVal(val, off));
-    if (0 < val)
-        // all OK
-        return val;
-
-fail:
-    CL_DEBUG_MSG(&op.loc, "SymProc::resolveOffValue() failed");
-    return heap_.valCreateUnknown(UV_UNKNOWN, op.type);
-}
-
 TValueId SymProc::heapValFromObj(const struct cl_operand &op) {
-    // seek the last accessor
-    const struct cl_accessor *ac = op.accessor;
-    const bool isDeref = (ac && ac->code == CL_ACCESSOR_DEREF);
-    while (ac && ac->next)
-        ac = ac->next;
-
-    // check if the chain of accessorss ends with CL_ACCESSOR_REF
-    const bool isAdrrOf = (ac && ac->code == CL_ACCESSOR_REF);
-    if (isDeref && isAdrrOf) {
-        // special quirk for off-values
-        const TObjId obj = varFromOperand(op, heap_, bt_);
-        const TValueId val = heap_.valueOf(obj);
-        if (0 < val && UV_UNKNOWN == heap_.valGetUnknown(val))
-            return this->resolveOffValue(val, op);
-    }
-
     const TObjId var = this->heapObjFromOperand(op);
     switch (var) {
         case OBJ_INVALID:
@@ -329,8 +347,13 @@ TValueId SymProc::heapValFromObj(const struct cl_operand &op) {
             break;
     }
 
+    // seek the last accessor
+    const struct cl_accessor *ac = op.accessor;
+    while (ac && ac->next)
+        ac = ac->next;
+
     // handle CL_ACCESSOR_REF if any
-    return (isAdrrOf)
+    return (ac && ac->code == CL_ACCESSOR_REF)
         ? heap_.placedAt(var)
         : heap_.valueOf(var);
 }
