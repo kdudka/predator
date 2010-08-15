@@ -110,10 +110,11 @@ void dump_clt(const struct cl_type *clt) {
             ++nestLevel;
 
             // dig all sub-types
-            for (int i = 0; i < clt->item_cnt; ++i) {
+            const int last = clt->item_cnt - 1;
+            for (int i = last; 0 <= i ; --i) {
                 item.clt    = clt->items[i].type;
                 item.name   = clt->items[i].name;
-                item.last   = (0 == i);
+                item.last   = (last == i);
 
                 todo.push(item);
             }
@@ -122,6 +123,47 @@ void dump_clt(const struct cl_type *clt) {
         // FIXME: this may misbehave under some circumstances
         if (item.last)
             --nestLevel;
+    }
+}
+
+void dump_ac(const struct cl_accessor *ac) {
+    if (!ac)
+        cout << "(empty)\n";
+
+    for (int i = 0; ac; ac = ac->next, ++i) {
+        cout << i << ". ";
+        const struct cl_type *clt = ac->type;
+
+        const enum cl_accessor_e code = ac->code;
+        switch (code) {
+            case CL_ACCESSOR_REF:
+                cout << "CL_ACCESSOR_REF:";
+                break;
+
+            case CL_ACCESSOR_DEREF:
+                cout << "CL_ACCESSOR_DEREF:";
+                break;
+
+            case CL_ACCESSOR_ITEM: {
+                const struct cl_type_item *item = clt->items + ac->data.item.id;
+                cout << "CL_ACCESSOR_ITEM: [+"
+                    << item->offset << "]";
+                const char *name = item->name;
+                if (name)
+                    cout << " ." << name;
+                cout << ",";
+                break;
+            }
+
+            case CL_ACCESSOR_DEREF_ARRAY:
+                cout << "CL_ACCESSOR_DEREF_ARRAY: ["
+                    << ac->data.array.index << "],";
+                break;
+        }
+
+        cout << " clt = ";
+        dump_clt(clt);
+        cout << "\n";
     }
 }
 

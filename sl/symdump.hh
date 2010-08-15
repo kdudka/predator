@@ -38,6 +38,9 @@ class SymHeap;
 /// dump @b type-info given as clt
 void dump_clt(const struct cl_type *clt);
 
+/// dump a chainf of accessors
+void dump_ac(const struct cl_accessor *ac);
+
 /// dump a chain of selectors
 void dump_ic(const struct cl_type *clt, TFieldIdxChain ic);
 
