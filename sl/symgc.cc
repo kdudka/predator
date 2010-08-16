@@ -74,7 +74,7 @@ void digPointingObjects(TWL &wl, const SymHeap &sh, TValueId val) {
     const TObjId root = objRoot(sh, sh.pointsTo(val));
     if (0 < root && objIsStruct(sh, root)) {
         const WLWrap<TWL> visitor(wl);
-        traverseSubObjs(sh, root, visitor);
+        traverseSubObjs(sh, root, visitor, /* leavesOnly */ false);
     }
 #endif
 }

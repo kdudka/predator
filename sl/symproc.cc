@@ -474,10 +474,29 @@ void SymProc::heapSetSingleVal(TObjId lhs, TValueId rhs) {
         bt_->printBackTrace();
 }
 
+struct SpecialValueWriter {
+    TValueId valToWrite;
+
+    bool operator()(SymHeap &sh, TObjId sub) {
+        sh.objSetValue(sub, valToWrite);
+        return /* continue */ true;
+    }
+};
+
 void SymProc::objSetValue(TObjId lhs, TValueId rhs) {
+    // FIXME: handle some other special values also this way?
     if (VAL_DEREF_FAILED == rhs) {
         // we're already on an error path
-        heap_.objSetValue(lhs, rhs);
+        const struct cl_type *clt = heap_.objType(lhs);
+        if (!clt || clt->code != CL_TYPE_STRUCT) {
+            heap_.objSetValue(lhs, rhs);
+            return;
+        }
+
+        // fill values of all sub-objects by 'rhs'
+        SpecialValueWriter writer;
+        writer.valToWrite = rhs;
+        traverseSubObjs(heap_, lhs, writer, /* leavesOnly */ true);
         return;
     }
 
@@ -1136,7 +1155,7 @@ TObjId subSeekByOffset(const SymHeap &sh, TObjId obj,
     visitor.offToSeek   = offToSeek;
 
     // look for the requested sub-object
-    if (traverseSubObjs(sh, obj, visitor))
+    if (traverseSubObjs(sh, obj, visitor, /* leavesOnly */ false))
         return OBJ_INVALID;
     else
         return visitor.subFound;

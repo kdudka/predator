@@ -77,7 +77,7 @@ void createGlVar(SymHeap &sh, const CodeStorage::Var &var) {
 
     // now attempt to initialize the variable since it is a global/static var
     if (CL_TYPE_STRUCT == clt->code)
-        traverseSubObjs(sh, obj, initSingleGlVar);
+        traverseSubObjs(sh, obj, initSingleGlVar, /* leavesOnly */ true);
     else
         initSingleGlVar(sh, obj);
 }

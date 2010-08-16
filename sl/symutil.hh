@@ -123,7 +123,9 @@ template <> struct TraverseSubObjsHelper<TObjPair> {
 
 // take the given visitor through a composite object (or whatever you pass in)
 template <class THeap, class TVisitor, class TItem = TObjId>
-bool /* complete */ traverseSubObjs(THeap &sh, TItem item, TVisitor &visitor) {
+bool /* complete */ traverseSubObjs(THeap &sh, TItem item, TVisitor &visitor,
+                                    bool leavesOnly)
+{
     std::stack<TItem> todo;
     todo.push(item);
     while (!todo.empty()) {
@@ -137,12 +139,18 @@ bool /* complete */ traverseSubObjs(THeap &sh, TItem item, TVisitor &visitor) {
 
         for (int i = 0; i < clt->item_cnt; ++i) {
             const TItem next = THelper::getNextItem(sh, item, i);
-            if (!/* continue */visitor(sh, next))
-                return false;
 
             const struct cl_type *subClt = THelper::getItemClt(sh, next);
-            if (subClt && subClt->code == CL_TYPE_STRUCT)
+            if (subClt && subClt->code == CL_TYPE_STRUCT) {
                 todo.push(next);
+
+                if (leavesOnly)
+                    // do not call the visitor for internal nodes, if requested
+                    continue;
+            }
+
+            if (!/* continue */visitor(sh, next))
+                return false;
         }
     }
 

@@ -126,7 +126,7 @@ class OffsetDb {
             // add the given relation
             this->addNoClobber(ov, target);
 
-            // and now the other way around
+            // and now the other way around (TODO: check if really necessary)
             const TValueId src = ov.first;
             ov.first = target;
             ov.second = -ov.second;
@@ -471,7 +471,7 @@ TObjId SymHeapCore::objDup(TObjId objOrigin) {
 
     // copy the value inside, while keeping backward references etc.
     const Private::Object &origin = d->objects.at(objOrigin);
-    this->objSetValue(obj, origin.value);
+    SymHeapCore::objSetValue(obj, origin.value);
 
     // we've just created an object, let's notify posterity
     this->notifyResize(/* valOnly */ false);
@@ -1268,6 +1268,19 @@ SymHeapTyped& SymHeapTyped::operator=(const SymHeapTyped &ref) {
     delete d;
     d = new Private(*ref.d);
     return *this;
+}
+
+void SymHeapTyped::objSetValue(TObjId obj, TValueId val) {
+    if (this->lastObjId() < obj || obj < 0)
+        // object ID is either out of range, or does not represent a valid obj
+        TRAP;
+
+    if (!d->objects[obj].subObjs.empty())
+        // invalid call of SymHeapTyped::objSetValue(), you want probably go
+        // through SymProc::objSetValue()
+        TRAP;
+
+    SymHeapCore::objSetValue(obj, val);
 }
 
 const struct cl_type* SymHeapTyped::objType(TObjId obj) const {

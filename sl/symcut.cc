@@ -209,15 +209,6 @@ TValueId handleValue(DeepCopyData &dc, TValueId valSrc, bool digBackward) {
         }
     }
 
-    // setup off-values mapping (if not already)
-    SymHeap::TOffValCont offValues;
-    src.gatherOffValues(offValues, valSrc);
-    BOOST_FOREACH(const SymHeap::TOffVal &ov, offValues) {
-        // TODO: implement and double-check the direction, etc.
-        TRAP;
-        (void) ov;
-    }
-
     const TObjId compSrc = src.valGetCompositeObj(valSrc);
     if (OBJ_INVALID != compSrc) {
         // value of a composite object
@@ -244,7 +235,20 @@ TValueId handleValue(DeepCopyData &dc, TValueId valSrc, bool digBackward) {
         return valDst;
     }
 
+    // load off-values mapping
+    SymHeap::TOffValCont offValues;
+    src.gatherOffValues(offValues, valSrc);
+
     const EUnknownValue code = src.valGetUnknown(valSrc);
+    if (UV_UNKNOWN == code && !offValues.empty()) {
+        // handle an off-value
+        BOOST_FOREACH(const SymHeap::TOffVal &ov, offValues) {
+            // TODO: implement and double-check the direction, etc.
+            TRAP;
+            (void) ov;
+        }
+    }
+
     switch (code) {
         case UV_ABSTRACT:
             // will be handled later
@@ -341,8 +345,16 @@ void deepCopy(DeepCopyData &dc, bool digBackward) {
         if (VAL_INVALID == valDst)
             TRAP;
 
-        // now set object's value
-        dst.objSetValue(objDst, valDst);
+        // check for composite values
+        const bool comp1 = (-1 != src.valGetCompositeObj(valSrc));
+        const bool comp2 = (-1 != dst.valGetCompositeObj(valDst));
+        if (comp1 != comp2)
+            // composite values malfunction
+            TRAP;
+
+        if (!comp1)
+            // now set object's value
+            dst.objSetValue(objDst, valDst);
 
         if (/* optimization */ digBackward) {
             // now poke all values related by Neq or EqIf predicates

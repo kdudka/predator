@@ -79,7 +79,8 @@ bool doesAnyonePointToInsideVisitor(const SymHeap &sh, TObjId sub) {
 }
 
 bool doesAnyonePointToInside(const SymHeap &sh, TObjId obj) {
-    return !traverseSubObjs(sh, obj, doesAnyonePointToInsideVisitor);
+    return !traverseSubObjs(sh, obj, doesAnyonePointToInsideVisitor,
+                            /* leavesOnly */ false);
 }
 
 void dlSegHandleCrossNeq(SymHeap &sh, TObjId dls, SymHeap::ENeqOp op) {
@@ -271,7 +272,7 @@ bool segEqual(const SymHeap &sh, TValueId v1, TValueId v2) {
     DataMatchVisitor visitor;
     buildIgnoreList(sh, o1, visitor.ignoreList);
     const TObjPair item(o1, o2);
-    return traverseSubObjs(sh, item, visitor);
+    return traverseSubObjs(sh, item, visitor, /* leavesOnly */ true);
 }
 
 bool segMayBePrototype(const SymHeap &sh, const TValueId segAt, bool refByDls) {
@@ -470,7 +471,7 @@ void abstractNonMatchingValues(SymHeap &sh, TObjId src, TObjId dst,
 
     // traverse all sub-objects
     const TObjPair item(src, dst);
-    traverseSubObjs(sh, item, visitor);
+    traverseSubObjs(sh, item, visitor, /* leavesOnly */ true);
 }
 
 // when concretizing an object, we need to duplicate all _unknown_ values
@@ -479,7 +480,7 @@ void duplicateUnknownValues(SymHeap &sh, TObjId obj) {
     buildIgnoreList(sh, obj, visitor.ignoreList);
 
     // traverse all sub-objects
-    traverseSubObjs(sh, obj, visitor);
+    traverseSubObjs(sh, obj, visitor, /* leavesOnly */ true);
 }
 
 class ProbeVisitor {
@@ -585,7 +586,7 @@ class ProbeVisitorTopLevel {
                 return /* continue */ true;
 
             const ProbeVisitor visitor(sh, sub, kind_);
-            if (traverseSubObjs(sh, sub, visitor))
+            if (traverseSubObjs(sh, sub, visitor, /* leavesOnly */ true))
                 return /* continue */ true;
 
             heads_.push_back(ic);

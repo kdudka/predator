@@ -359,6 +359,9 @@ class SymHeapTyped: public SymHeapCore {
         /// create a deep copy of the given object with new object IDs
         virtual TObjId objDup(TObjId obj);
 
+        /// overridden to catch all misuses
+        virtual void objSetValue(TObjId obj, TValueId val);
+
         /**
          * look for static type-info of the given object, which has to be @b
          * valid
