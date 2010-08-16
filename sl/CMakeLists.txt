@@ -61,6 +61,7 @@ macro(test_sym_exec label tool arg1 arg2)
     foreach (num ${examples})
         add_test("${label}___example-${num}" ${tool} ${arg} ${arg2}
             -c ${sl_SOURCE_DIR}/data/test-${num}.c
+            -DPREDATOR
             -fplugin=${sl_BINARY_DIR}/libsl.so
             -fplugin-arg-libsl-symexec-args=noplot
             -fplugin-arg-libsl-verbose=1)
@@ -78,7 +79,7 @@ macro(test_sym_exec_regre ext arg1)
         set(cmd "${cmd} -m32")
 
         set(cmd "${cmd} -c ${sl_SOURCE_DIR}/data/test-${num}.c")
-        set(cmd "${cmd} -fplugin=${sl_BINARY_DIR}/libsl.so ${arg1}")
+        set(cmd "${cmd} -DPREDATOR -fplugin=${sl_BINARY_DIR}/libsl.so ${arg1}")
         set(cmd "${cmd} 2>&1")
 
         # FIXME: the following line significantly decreases coverage of the test
@@ -108,6 +109,7 @@ set(self_extra_opts
     -I${sl_SOURCE_DIR}/..
     -I${sl_SOURCE_DIR}/../gcc
     -c ${sl_SOURCE_DIR}/slplug.c
+    -DPREDATOR
     -fplugin=${sl_BINARY_DIR}/libsl.so
     -fplugin-arg-libsl-dump-pp=/dev/null
     -fplugin-arg-libsl-dump-types

@@ -30,9 +30,32 @@ extern "C" {
 #define ___SL_PLOT_FNC(fnc) \
     ___SL_PLOT_STACK_FRAME(fnc, #fnc)
 
+#ifdef PREDATOR
+// declare built-ins
 void ___sl_plot(const char *name);
 void ___sl_plot_stack_frame(void (*fnc)(), const char *name);
 void ___sl_plot_by_ptr(const void *ptr, const char *name);
+
+#else
+// dummy implementations of our built-ins, useful to run our test-cases on bare
+// metal, other analyzers without (compatible) plotting interface, etc.
+
+static inline void ___sl_plot(const char *name)
+{
+    (void) name;
+}
+
+static inline void ___sl_plot_stack_frame(void (*fnc)(), const char *name)
+{
+    (void) fnc;
+    (void) name;
+}
+
+static inline void ___sl_plot_by_ptr(const void *ptr, const char *name) {
+    (void) ptr;
+    (void) name;
+}
+#endif
 
 #ifdef __cplusplus
 }

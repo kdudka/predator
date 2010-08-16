@@ -19,6 +19,7 @@ gen(){
       $TIMEOUT ../gcc-install/bin/gcc \
         -m32 \
         -c `readlink -f $i` \
+        -DPREDATOR \
         -fplugin=../sl_build/libsl.so $1 \
         2>&1 \
         | grep -v '\[internal location\]$' \
