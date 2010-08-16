@@ -113,10 +113,13 @@ struct SymHeapPlotter::Private {
     std::set<TObjId>                    objDone;
     int                                 last;
 
-    typedef std::pair<TObjId, TValueId> TEdgeValueOf;
+    typedef std::pair<TObjId, TValueId>                     TEdgeValueOf;
     std::vector<TEdgeValueOf>           evList;
 
-    typedef std::pair<TValueId, TValueId> TEdgeNeq;
+    typedef std::pair<TValueId, SymHeap::TOffVal>           TEdgeOffVal;
+    std::vector<TEdgeOffVal>            ovList;
+
+    typedef std::pair<TValueId, TValueId>                   TEdgeNeq;
     std::set<TEdgeNeq>                  neqSet;
 
     std::set<TObjId>                    heads;
@@ -134,10 +137,12 @@ struct SymHeapPlotter::Private {
 
     void plotEdgePointsTo(TValueId value, TObjId obj);
     void plotEdgeValueOf(TObjId obj, TValueId value);
+    void plotEdgeOffValue(const TEdgeOffVal &eov);
     void plotEdgeNeq(TValueId val1, TValueId val2);
     void plotEdgeSub(TObjId obj, TObjId sub);
 
     void gobbleEdgeValueOf(TObjId obj, TValueId value);
+    void gobbleEdgeOffValue(TValueId val, const SymHeap::TOffVal &ov);
     void gobbleEdgeNeq(TValueId val1, TValueId val2);
     void emitPendingEdges();
 
@@ -378,6 +383,15 @@ void SymHeapPlotter::Private::plotEdgeValueOf(TObjId obj, TValueId value) {
         << std::endl;
 }
 
+void SymHeapPlotter::Private::plotEdgeOffValue(const TEdgeOffVal &eov) {
+    const TValueId dst = eov.first;
+    const SymHeap::TOffVal &ov = eov.second;
+    this->dotStream << "\t" << SL_QUOTE(ov.first) << " -> " << SL_QUOTE(dst)
+        << " [color=red, fontcolor=red,"
+        << " label=\"[+" << ov.second << "]\"];"
+        << std::endl;
+}
+
 void SymHeapPlotter::Private::plotEdgeNeq(TValueId val1, TValueId val2) {
     this->dotStream << "\t" << SL_QUOTE(val1) << " -> " << SL_QUOTE(val2)
         << " [color=gold, fontcolor=red, label=\"Neq\", arrowhead=none];"
@@ -396,6 +410,13 @@ void SymHeapPlotter::Private::gobbleEdgeValueOf(TObjId obj, TValueId value) {
     this->evList.push_back(edge);
 }
 
+void SymHeapPlotter::Private::gobbleEdgeOffValue(TValueId val,
+                                                 const SymHeap::TOffVal &ov)
+{
+    TEdgeOffVal edge(val, ov);
+    this->ovList.push_back(edge);
+}
+
 void SymHeapPlotter::Private::gobbleEdgeNeq(TValueId val1, TValueId val2) {
     // Neq predicates induce a symmetric relation, let's handle them such
     sortValues(val1, val2);
@@ -410,6 +431,11 @@ void SymHeapPlotter::Private::emitPendingEdges() {
         this->plotEdgeValueOf(edge.first, edge.second);
     }
 
+    // plot all off-value edges
+    BOOST_FOREACH(const TEdgeOffVal &edge, this->ovList) {
+        this->plotEdgeOffValue(edge);
+    }
+
     // plot all Neq edges
     BOOST_FOREACH(const TEdgeNeq &edge, this->neqSet) {
         this->plotEdgeNeq(edge.first, edge.second);
@@ -417,6 +443,7 @@ void SymHeapPlotter::Private::emitPendingEdges() {
 
     // cleanup for next wheel
     this->evList.clear();
+    this->ovList.clear();
     this->neqSet.clear();
 }
 
@@ -424,6 +451,20 @@ void SymHeapPlotter::Private::plotSingleValue(TValueId value) {
     if (value <= 0) {
         this->plotNodeValue(value, CL_TYPE_UNKNOWN, 0);
         return;
+    }
+
+    // visualize off-value relations
+    SymHeap::TOffValCont offValues;
+    this->heap->gatherOffValues(offValues, value);
+    BOOST_FOREACH(const SymHeap::TOffVal &ov, offValues) {
+        if (ov.second < 0)
+            // we came to the predicate from the less interesting side; let's
+            // just wait for the value on the opposite side of the predicate
+            // (note that the other value is _not_ guaranteed to come anyway)
+            continue;
+
+        this->workList.schedule(ov.first);
+        this->gobbleEdgeOffValue(value, ov);
     }
 
     // traverse all Neq/EqIf predicates

@@ -8,14 +8,6 @@ o  symstate: proper comparison of Neq and EqIf predicates (it will require to
    extend the interface of SymHeap if we want to do it enough efficiently)
 
 o FIXME:
-  - test0077b: outcast via an incompatible structure; leads to somehow corrupted
-    ghost structure in which a "field" edge is strangely replaced by a "pointsTo"
-    arc which does not make sense in the given context.
-
-    kdudka: Looks rather as symplot (or even dot) issue, the result seems sane.
-    Basically we are not able to plot clusters that have a common subgraph with
-    each other.
-
   - jonathan-DLL.c: announces junk, which should not appear.
 
     kdudka: Nope, the result is more perfect than one would expect to get.  We
