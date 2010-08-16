@@ -241,12 +241,18 @@ TValueId handleValue(DeepCopyData &dc, TValueId valSrc, bool digBackward) {
 
     const EUnknownValue code = src.valGetUnknown(valSrc);
     if (UV_UNKNOWN == code && !offValues.empty()) {
-        // handle an off-value
-        BOOST_FOREACH(const SymHeap::TOffVal &ov, offValues) {
-            // TODO: implement and double-check the direction, etc.
+        if (1 != offValues.size())
             TRAP;
-            (void) ov;
-        }
+
+        // handle an off-value
+        const SymHeap::TOffVal &ov = offValues.front();
+        if (0 < ov.second)
+            TRAP;
+
+        // store the off-value's mapping
+        const TValueId valDst = dst.valCreateByOffset(ov);
+        valMap[valSrc] = valDst;
+        return valDst;
     }
 
     switch (code) {

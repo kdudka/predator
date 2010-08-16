@@ -94,6 +94,30 @@ TValueId SymProc::heapValFromCst(const struct cl_operand &op) {
     }
 }
 
+bool SymProc::checkForInvalidDeref(TObjId obj) {
+    switch (obj) {
+        case OBJ_LOST:
+            CL_ERROR_MSG(lw_, "dereference of non-existing non-heap object");
+            break;
+
+        case OBJ_DELETED:
+            CL_ERROR_MSG(lw_, "dereference of already deleted heap object");
+            break;
+
+        case OBJ_UNKNOWN:
+        case OBJ_INVALID:
+            TRAP;
+
+        default:
+            // valid object
+            return false;
+    }
+
+    // an invalid dereference has been detected
+    bt_->printBackTrace();
+    return true;
+}
+
 void SymProc::heapObjHandleAccessorDeref(TObjId *pObj) {
     EUnknownValue code;
 
@@ -135,23 +159,12 @@ void SymProc::heapObjHandleAccessorDeref(TObjId *pObj) {
 
     // value lookup
     *pObj = heap_.pointsTo(val);
-    switch (*pObj) {
-        case OBJ_LOST:
-            CL_ERROR_MSG(lw_, "dereference of non-existing non-heap object");
-            goto fail_with_bt;
+    if (this->checkForInvalidDeref(*pObj))
+        // bt has been already printed
+        goto fail;
 
-        case OBJ_DELETED:
-            CL_ERROR_MSG(lw_, "dereference of already deleted heap object");
-            goto fail_with_bt;
-
-        case OBJ_UNKNOWN:
-        case OBJ_INVALID:
-            TRAP;
-
-        default:
-            // valid object
-            return;
-    }
+    // all OK
+    return;
 
 fail_with_bt:
     bt_->printBackTrace();
@@ -232,7 +245,7 @@ TObjId varFromOperand(const struct cl_operand &op, const SymHeap &sh,
 
 } // namespace
 
-bool SymProc::resolveOffValue(TObjId *pObj, const struct cl_accessor **pAc) {
+TValueId SymProc::resolveOffValue(TObjId obj, const struct cl_accessor **pAc) {
     const struct cl_accessor *ac = *pAc;
     if (!ac || ac->code != CL_ACCESSOR_DEREF)
         // invalid call of SymProc::resolveOffValue()
@@ -241,12 +254,12 @@ bool SymProc::resolveOffValue(TObjId *pObj, const struct cl_accessor **pAc) {
     ac = ac->next;
     if (!ac || ac->code != CL_ACCESSOR_ITEM)
         // no selectors --> no offset to compute
-        return false;
+        return VAL_INVALID;
 
-    const TValueId val = heap_.valueOf(*pObj);
+    const TValueId val = heap_.valueOf(obj);
     if (val <= 0 || UV_UNKNOWN != heap_.valGetUnknown(val))
         // we're not interested here in such a value
-        return false;
+        return VAL_INVALID;
 
     // going through the chain of CL_ACCESSOR_ITEM, look for the target
     int off = 0;
@@ -265,19 +278,11 @@ bool SymProc::resolveOffValue(TObjId *pObj, const struct cl_accessor **pAc) {
         ac = ac->next;
     }
 
-    if (VAL_INVALID == valTarget)
-        // not found
-        return false;
+    if (VAL_INVALID != valTarget)
+        // found!
+        *pAc  = ac;
 
-    const TObjId target = heap_.pointsTo(valTarget);
-    if (target <= 0)
-        // TODO: should we allow to operate on invalid targets?
-        TRAP;
-
-    // successfully resolved off-value
-    *pObj = target;
-    *pAc  = ac;
-    return true;
+    return valTarget;
 }
 
 TObjId SymProc::heapObjFromOperand(const struct cl_operand &op) {
@@ -292,10 +297,20 @@ TObjId SymProc::heapObjFromOperand(const struct cl_operand &op) {
         return obj;
 
     // first check for dereference and handle any off-value eventually
-    if (ac->code == CL_ACCESSOR_DEREF && !this->resolveOffValue(&obj, &ac)) {
-        // fallback to plain dereference
-        this->heapObjHandleAccessorDeref(&obj);
-        ac = ac->next;
+    if (ac->code == CL_ACCESSOR_DEREF) {
+        const TValueId valTarget = this->resolveOffValue(obj, &ac);
+        if (VAL_INVALID == valTarget) {
+            // fallback to plain dereference
+            this->heapObjHandleAccessorDeref(&obj);
+            ac = ac->next;
+        }
+        else {
+            // successfully resolved off-value
+            obj = heap_.pointsTo(valTarget);
+            if (this->checkForInvalidDeref(obj))
+                // ... but no valid target in the end anyway
+                return OBJ_DEREF_FAILED;
+        }
     }
 
     if (ac && ac->code == CL_ACCESSOR_DEREF)
@@ -332,8 +347,8 @@ bool SymProc::lhsFromOperand(TObjId *pObj, const struct cl_operand &op) {
 }
 
 TValueId SymProc::heapValFromObj(const struct cl_operand &op) {
-    const TObjId var = this->heapObjFromOperand(op);
-    switch (var) {
+    const TObjId obj = this->heapObjFromOperand(op);
+    switch (obj) {
         case OBJ_INVALID:
             TRAP;
             return VAL_INVALID;
@@ -358,8 +373,8 @@ TValueId SymProc::heapValFromObj(const struct cl_operand &op) {
 
     // handle CL_ACCESSOR_REF if any
     return (ac && ac->code == CL_ACCESSOR_REF)
-        ? heap_.placedAt(var)
-        : heap_.valueOf(var);
+        ? heap_.placedAt(obj)
+        : heap_.valueOf(obj);
 }
 
 TValueId SymProc::heapValFromOperand(const struct cl_operand &op) {

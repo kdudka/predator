@@ -124,7 +124,8 @@ class SymProc {
         void heapObjHandleAccessorItem(TObjId *pObj,
                                        const struct cl_accessor *ac);
         void heapObjHandleAccessor(TObjId *pObj, const struct cl_accessor *ac);
-        bool resolveOffValue(TObjId *pobj, const struct cl_accessor **pAc);
+        TValueId resolveOffValue(TObjId obj, const struct cl_accessor **pAc);
+        bool checkForInvalidDeref(TObjId obj);
         TValueId heapValFromObj(const struct cl_operand &op);
         TValueId heapValFromCst(const struct cl_operand &op);
         bool lhsFromOperand(TObjId *pObj, const struct cl_operand &op);
