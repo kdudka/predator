@@ -786,7 +786,7 @@ namespace {
         }
 
         const CodeStorage::Storage &stor = *insn.stor;
-        SymHeapPlotter plotter(stor, heap);
+        SymPlot plotter(stor, heap);
         if (!plotter.plot(plotName))
             emitPlotError(lw, plotName);
 
@@ -805,7 +805,7 @@ namespace {
         }
 
         const CodeStorage::Storage &stor = *insn.stor;
-        SymHeapPlotter plotter(stor, heap);
+        SymPlot plotter(stor, heap);
         if (!plotter.plotHeapValue(plotName, value))
             emitPlotError(lw, plotName);
 
@@ -828,7 +828,7 @@ namespace {
             return false;
         }
 
-        SymHeapPlotter plotter(stor, heap);
+        SymPlot plotter(stor, heap);
         if (!plotter.plotStackFrame(plotName, *fnc, bt))
             emitPlotError(lw, plotName);
 

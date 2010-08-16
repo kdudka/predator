@@ -43,7 +43,7 @@
 template <class TDst>
 void emitOne(TDst &dst, TValueId val) {
 #if 0
-    // the following condition seems to clash with our needs in SymHeapPlotter
+    // the following condition seems to clash with our needs in SymPlot
     if (val <= 0)
         return;
 #endif

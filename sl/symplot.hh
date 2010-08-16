@@ -23,7 +23,7 @@
 
 /**
  * @file symplot.hh
- * SymHeapPlotter - symbolic heap plotter
+ * SymPlot - symbolic heap plotter
  */
 
 #include "symid.hh"
@@ -42,18 +42,18 @@ class SymHeap;
  * @file symplot.hh
  * symbolic heap @b plotter
  * @note it should be safe to call the plot* methods more times per one instance
- * of SymHeapPlotter.  The already plotted entities should be not plotted again
- * in that case.
+ * of SymPlot.  The already plotted entities should be not plotted again in that
+ * case.
  */
-class SymHeapPlotter {
+class SymPlot {
     public:
         /**
          * initialize plotter by static-info and symbolic heap
          * @param stor all-in-one info about the analyzed code, see CodeStorage
          * @param heap a symbolic heap which is going to be plotted
          */
-        SymHeapPlotter(const CodeStorage::Storage &stor, const SymHeap &heap);
-        ~SymHeapPlotter();
+        SymPlot(const CodeStorage::Storage &stor, const SymHeap &heap);
+        ~SymPlot();
 
         /**
          * plot the whole symbolic heap, starting from static/automatic
@@ -86,10 +86,10 @@ class SymHeapPlotter {
 
     private:
         /// object copying is @b not allowed
-        SymHeapPlotter(const SymHeapPlotter &);
+        SymPlot(const SymPlot &);
 
         /// object copying is @b not allowed
-        SymHeapPlotter& operator=(const SymHeapPlotter &);
+        SymPlot& operator=(const SymPlot &);
 
     private:
         struct Private;

@@ -102,8 +102,8 @@ std::string PlotEnumerator::decorate(std::string name) {
 
 
 // /////////////////////////////////////////////////////////////////////////////
-// implementation of SymHeapPlotter
-struct SymHeapPlotter::Private {
+// implementation of SymPlot
+struct SymPlot::Private {
     const CodeStorage::Storage          *stor;
     const SymHeap                       *heap;
     std::ofstream                       dotStream;
@@ -166,7 +166,7 @@ struct SymHeapPlotter::Private {
 
 #define SL_QUOTE(what) "\"" << what << "\""
 
-bool SymHeapPlotter::Private::openDotFile(const std::string &plotName)
+bool SymPlot::Private::openDotFile(const std::string &plotName)
 {
     // compute a sort of unique file name
     PlotEnumerator *pe = PlotEnumerator::instance();
@@ -191,7 +191,7 @@ bool SymHeapPlotter::Private::openDotFile(const std::string &plotName)
     return this->dotStream;
 }
 
-void SymHeapPlotter::Private::closeDotFile() {
+void SymPlot::Private::closeDotFile() {
     // emit pending edges
     this->emitPendingEdges();
 
@@ -242,7 +242,7 @@ namespace {
     }
 }
 
-bool SymHeapPlotter::Private::digFieldName(std::string &dst, TObjId obj) {
+bool SymPlot::Private::digFieldName(std::string &dst, TObjId obj) {
     const TObjId parent = this->heap->objParent(obj);
     if (OBJ_INVALID == parent)
         // no chance since there is no parent
@@ -267,7 +267,7 @@ bool SymHeapPlotter::Private::digFieldName(std::string &dst, TObjId obj) {
     return false;
 }
 
-void SymHeapPlotter::Private::plotNodeObj(TObjId obj, enum cl_type_e code) {
+void SymPlot::Private::plotNodeObj(TObjId obj, enum cl_type_e code) {
     this->dotStream << "\t" << SL_QUOTE(obj);
     this->dotStream << " [shape=box";
 
@@ -314,7 +314,7 @@ void SymHeapPlotter::Private::plotNodeObj(TObjId obj, enum cl_type_e code) {
     this->dotStream << "\"];" << std::endl;
 }
 
-void SymHeapPlotter::Private::plotNodeValue(TValueId val, enum cl_type_e code,
+void SymPlot::Private::plotNodeValue(TValueId val, enum cl_type_e code,
                                             const char *label)
 {
     // visualize the count of references as pen width
@@ -333,7 +333,7 @@ void SymHeapPlotter::Private::plotNodeValue(TValueId val, enum cl_type_e code,
     this->dotStream << "\"];" << std::endl;
 }
 
-void SymHeapPlotter::Private::plotNodeAux(int src, enum cl_type_e code,
+void SymPlot::Private::plotNodeAux(int src, enum cl_type_e code,
                                           const char *label)
 {
     const int id = ++(this->last);
@@ -350,7 +350,7 @@ void SymHeapPlotter::Private::plotNodeAux(int src, enum cl_type_e code,
         << "];" << std::endl;
 }
 
-void SymHeapPlotter::Private::plotNeqZero(TValueId val) {
+void SymPlot::Private::plotNeqZero(TValueId val) {
     const struct cl_type *clt = this->heap->valType(val);
     const bool isPtr = (clt && clt->code != CL_TYPE_INT);
     const char *label = (isPtr)
@@ -371,19 +371,19 @@ void SymHeapPlotter::Private::plotNeqZero(TValueId val) {
         << "];" << std::endl;
 }
 
-void SymHeapPlotter::Private::plotEdgePointsTo(TValueId value, TObjId obj) {
+void SymPlot::Private::plotEdgePointsTo(TValueId value, TObjId obj) {
     this->dotStream << "\t" << SL_QUOTE(value) << " -> " << SL_QUOTE(obj)
         << " [color=green, fontcolor=green, label=\"pointsTo\"];"
         << std::endl;
 }
 
-void SymHeapPlotter::Private::plotEdgeValueOf(TObjId obj, TValueId value) {
+void SymPlot::Private::plotEdgeValueOf(TObjId obj, TValueId value) {
     this->dotStream << "\t" << SL_QUOTE(obj) << " -> " << SL_QUOTE(value)
         << " [color=blue, fontcolor=blue];"
         << std::endl;
 }
 
-void SymHeapPlotter::Private::plotEdgeOffValue(const TEdgeOffVal &eov) {
+void SymPlot::Private::plotEdgeOffValue(const TEdgeOffVal &eov) {
     const TValueId dst = eov.first;
     const SymHeap::TOffVal &ov = eov.second;
     this->dotStream << "\t" << SL_QUOTE(ov.first) << " -> " << SL_QUOTE(dst)
@@ -392,32 +392,32 @@ void SymHeapPlotter::Private::plotEdgeOffValue(const TEdgeOffVal &eov) {
         << std::endl;
 }
 
-void SymHeapPlotter::Private::plotEdgeNeq(TValueId val1, TValueId val2) {
+void SymPlot::Private::plotEdgeNeq(TValueId val1, TValueId val2) {
     this->dotStream << "\t" << SL_QUOTE(val1) << " -> " << SL_QUOTE(val2)
         << " [color=gold, fontcolor=red, label=\"Neq\", arrowhead=none];"
         << std::endl;
 }
 
-void SymHeapPlotter::Private::plotEdgeSub(TObjId obj, TObjId sub) {
+void SymPlot::Private::plotEdgeSub(TObjId obj, TObjId sub) {
     this->dotStream << "\t" << SL_QUOTE(obj) << " -> " << SL_QUOTE(sub)
         << " [color=gray, style=dotted, arrowhead=open"
         << ", fontcolor=gray, label=\"field\"];"
         << std::endl;
 }
 
-void SymHeapPlotter::Private::gobbleEdgeValueOf(TObjId obj, TValueId value) {
+void SymPlot::Private::gobbleEdgeValueOf(TObjId obj, TValueId value) {
     TEdgeValueOf edge(obj, value);
     this->evList.push_back(edge);
 }
 
-void SymHeapPlotter::Private::gobbleEdgeOffValue(TValueId val,
+void SymPlot::Private::gobbleEdgeOffValue(TValueId val,
                                                  const SymHeap::TOffVal &ov)
 {
     TEdgeOffVal edge(val, ov);
     this->ovList.push_back(edge);
 }
 
-void SymHeapPlotter::Private::gobbleEdgeNeq(TValueId val1, TValueId val2) {
+void SymPlot::Private::gobbleEdgeNeq(TValueId val1, TValueId val2) {
     // Neq predicates induce a symmetric relation, let's handle them such
     sortValues(val1, val2);
 
@@ -425,7 +425,7 @@ void SymHeapPlotter::Private::gobbleEdgeNeq(TValueId val1, TValueId val2) {
     this->neqSet.insert(edge);
 }
 
-void SymHeapPlotter::Private::emitPendingEdges() {
+void SymPlot::Private::emitPendingEdges() {
     // plot all valueOf edges
     BOOST_FOREACH(const TEdgeValueOf &edge, this->evList) {
         this->plotEdgeValueOf(edge.first, edge.second);
@@ -447,7 +447,7 @@ void SymHeapPlotter::Private::emitPendingEdges() {
     this->neqSet.clear();
 }
 
-void SymHeapPlotter::Private::plotSingleValue(TValueId value) {
+void SymPlot::Private::plotSingleValue(TValueId value) {
     if (value <= 0) {
         this->plotNodeValue(value, CL_TYPE_UNKNOWN, 0);
         return;
@@ -492,7 +492,7 @@ void SymHeapPlotter::Private::plotSingleValue(TValueId value) {
         }
 
 unhandled_pred:
-        CL_WARN("SymHeapPlotter: unhandled predicate over values #"
+        CL_WARN("SymPlot: unhandled predicate over values #"
                 << value << " and #" << peer);
     }
 
@@ -504,7 +504,7 @@ unhandled_pred:
     this->plotNodeValue(value, code, 0);
 }
 
-void SymHeapPlotter::Private::plotSingleObj(TObjId obj) {
+void SymPlot::Private::plotSingleObj(TObjId obj) {
     if (obj <= 0)
         TRAP;
 
@@ -515,7 +515,7 @@ void SymHeapPlotter::Private::plotSingleObj(TObjId obj) {
     this->plotNodeObj(obj, clt->code);
 }
 
-void SymHeapPlotter::Private::plotZeroValue(TObjId obj)
+void SymPlot::Private::plotZeroValue(TObjId obj)
 {
     const struct cl_type *clt = this->heap->objType(obj);
     if (!clt)
@@ -540,7 +540,7 @@ void SymHeapPlotter::Private::plotZeroValue(TObjId obj)
     }
 }
 
-void SymHeapPlotter::Private::digNext(TObjId obj) {
+void SymPlot::Private::digNext(TObjId obj) {
     EObjKind kind = this->heap->objKind(obj);
     switch (kind) {
         case OK_CONCRETE:
@@ -581,7 +581,7 @@ void SymHeapPlotter::Private::digNext(TObjId obj) {
     this->peers.insert(objPeer);
 }
 
-void SymHeapPlotter::Private::openCluster(TObjId obj) {
+void SymPlot::Private::openCluster(TObjId obj) {
     std::string label;
     const char *color, *pw;
     EObjKind kind = this->heap->objKind(obj);
@@ -627,7 +627,7 @@ void SymHeapPlotter::Private::openCluster(TObjId obj) {
         << "\tpenwidth=" << pw << ";"               << std::endl;
 }
 
-bool SymHeapPlotter::Private::handleCustomValue(TValueId value) {
+bool SymPlot::Private::handleCustomValue(TValueId value) {
     using namespace CodeStorage;
 
     const struct cl_type *clt;
@@ -663,7 +663,7 @@ bool SymHeapPlotter::Private::handleCustomValue(TValueId value) {
     return true;
 }
 
-bool SymHeapPlotter::Private::handleUnknownValue(TValueId value) {
+bool SymPlot::Private::handleUnknownValue(TValueId value) {
     const EUnknownValue code = this->heap->valGetUnknown(value);
     switch (code) {
         case UV_KNOWN:
@@ -684,7 +684,7 @@ bool SymHeapPlotter::Private::handleUnknownValue(TValueId value) {
     }
 }
 
-bool SymHeapPlotter::Private::resolveValueOf(TValueId *pDst, TObjId obj) {
+bool SymPlot::Private::resolveValueOf(TValueId *pDst, TObjId obj) {
     if (obj < 0)
         TRAP;
 
@@ -722,7 +722,7 @@ bool SymHeapPlotter::Private::resolveValueOf(TValueId *pDst, TObjId obj) {
     return true;
 }
 
-bool SymHeapPlotter::Private::resolvePointsTo(TObjId *pDst, TValueId value) {
+bool SymPlot::Private::resolvePointsTo(TObjId *pDst, TValueId value) {
     if (this->handleUnknownValue(value))
         return false;
 
@@ -755,7 +755,7 @@ bool SymHeapPlotter::Private::resolvePointsTo(TObjId *pDst, TValueId value) {
     }
 }
 
-void SymHeapPlotter::Private::digObjCore(TObjId obj) {
+void SymPlot::Private::digObjCore(TObjId obj) {
     typedef std::pair<TObjId, bool /* last */> TStackItem;
     std::stack<TStackItem> todo;
     push(todo, obj, false);
@@ -806,7 +806,7 @@ void SymHeapPlotter::Private::digObjCore(TObjId obj) {
                 break;
 
             default:
-                CL_DEBUG_MSG(this->lw, "SymHeapPlotter::Private::digObj("<<obj<<"): Unimplemented type: " << code );
+                CL_DEBUG_MSG(this->lw, "SymPlot::Private::digObj("<<obj<<"): Unimplemented type: " << code );
                 TRAP;
         }
 
@@ -816,7 +816,7 @@ void SymHeapPlotter::Private::digObjCore(TObjId obj) {
     }
 }
 
-void SymHeapPlotter::Private::digObj(TObjId obj) {
+void SymPlot::Private::digObj(TObjId obj) {
     // seek root, in order to draw the whole object, even if the root is not
     // pointed from anywhere
     TObjId parent;
@@ -858,7 +858,7 @@ void SymHeapPlotter::Private::digObj(TObjId obj) {
     this->dotStream << "}" << std::endl;
 }
 
-void SymHeapPlotter::Private::digValues() {
+void SymPlot::Private::digValues() {
     TValueId value;
     while (workList.next(value)) {
         // plot the value itself
@@ -890,7 +890,7 @@ void SymHeapPlotter::Private::digValues() {
 }
 
 // called only from plotCVar() for now
-void SymHeapPlotter::Private::plotObj(TObjId obj) {
+void SymPlot::Private::plotObj(TObjId obj) {
     // plot the variable itself
     this->plotSingleObj(obj);
 
@@ -916,7 +916,7 @@ wl_ready:
     this->digValues();
 }
 
-void SymHeapPlotter::Private::plotCVar(CVar cVar) {
+void SymPlot::Private::plotCVar(CVar cVar) {
     // CodeStorage variable lookup
     const CodeStorage::Var &var = this->stor->vars[cVar.uid];
     this->lw = &var.loc;
@@ -934,7 +934,7 @@ void SymHeapPlotter::Private::plotCVar(CVar cVar) {
     this->plotObj(obj);
 }
 
-SymHeapPlotter::SymHeapPlotter(const CodeStorage::Storage   &stor,
+SymPlot::SymPlot(const CodeStorage::Storage   &stor,
                                const SymHeap                &heap):
     d(new Private)
 {
@@ -943,11 +943,11 @@ SymHeapPlotter::SymHeapPlotter(const CodeStorage::Storage   &stor,
     d->last = 0;
 }
 
-SymHeapPlotter::~SymHeapPlotter() {
+SymPlot::~SymPlot() {
     delete d;
 }
 
-bool SymHeapPlotter::plot(const std::string &name) {
+bool SymPlot::plot(const std::string &name) {
     // create dot file
     d->ok = true;
     if (!d->openDotFile(name))
@@ -965,7 +965,7 @@ bool SymHeapPlotter::plot(const std::string &name) {
     return d->ok;
 }
 
-bool SymHeapPlotter::plotHeapValue(const std::string &name, TValueId value) {
+bool SymPlot::plotHeapValue(const std::string &name, TValueId value) {
     // create dot file
     d->ok = true;
     if (!d->openDotFile(name))
@@ -980,7 +980,7 @@ bool SymHeapPlotter::plotHeapValue(const std::string &name, TValueId value) {
     return d->ok;
 }
 
-bool SymHeapPlotter::plotStackFrame(const std::string           &name,
+bool SymPlot::plotStackFrame(const std::string           &name,
                                     const CodeStorage::Fnc      &fnc,
                                     const SymBackTrace          *bt)
 {

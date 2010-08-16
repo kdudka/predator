@@ -405,7 +405,7 @@ namespace {
     void plotHeap(const SymBackTrace *bt, const SymHeap &heap, const char *name)
     {
         const CodeStorage::Storage &stor = bt->stor();
-        SymHeapPlotter plotter(stor, heap);
+        SymPlot plotter(stor, heap);
         plotter.plot(name);
     }
 }
