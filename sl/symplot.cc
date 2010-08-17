@@ -166,8 +166,7 @@ struct SymPlot::Private {
 
 #define SL_QUOTE(what) "\"" << what << "\""
 
-bool SymPlot::Private::openDotFile(const std::string &plotName)
-{
+bool SymPlot::Private::openDotFile(const std::string &plotName) {
     // compute a sort of unique file name
     PlotEnumerator *pe = PlotEnumerator::instance();
     std::string name(pe->decorate(plotName));
@@ -315,7 +314,7 @@ void SymPlot::Private::plotNodeObj(TObjId obj, enum cl_type_e code) {
 }
 
 void SymPlot::Private::plotNodeValue(TValueId val, enum cl_type_e code,
-                                            const char *label)
+                                     const char *label)
 {
     // visualize the count of references as pen width
     const float pw = static_cast<float>(this->heap->usedByCount(val));
@@ -334,7 +333,7 @@ void SymPlot::Private::plotNodeValue(TValueId val, enum cl_type_e code,
 }
 
 void SymPlot::Private::plotNodeAux(int src, enum cl_type_e code,
-                                          const char *label)
+                                   const char *label)
 {
     const int id = ++(this->last);
     this->dotStream << "\t"
@@ -411,7 +410,7 @@ void SymPlot::Private::gobbleEdgeValueOf(TObjId obj, TValueId value) {
 }
 
 void SymPlot::Private::gobbleEdgeOffValue(TValueId val,
-                                                 const SymHeap::TOffVal &ov)
+                                          const SymHeap::TOffVal &ov)
 {
     TEdgeOffVal edge(val, ov);
     this->ovList.push_back(edge);
@@ -515,8 +514,7 @@ void SymPlot::Private::plotSingleObj(TObjId obj) {
     this->plotNodeObj(obj, clt->code);
 }
 
-void SymPlot::Private::plotZeroValue(TObjId obj)
-{
+void SymPlot::Private::plotZeroValue(TObjId obj) {
     const struct cl_type *clt = this->heap->objType(obj);
     if (!clt)
         TRAP;
@@ -806,7 +804,8 @@ void SymPlot::Private::digObjCore(TObjId obj) {
                 break;
 
             default:
-                CL_DEBUG_MSG(this->lw, "SymPlot::Private::digObj("<<obj<<"): Unimplemented type: " << code );
+                CL_DEBUG_MSG(this->lw, "SymPlot::Private::digObj(" << obj
+                        << "): Unimplemented type: " << code);
                 TRAP;
         }
 
@@ -934,8 +933,7 @@ void SymPlot::Private::plotCVar(CVar cVar) {
     this->plotObj(obj);
 }
 
-SymPlot::SymPlot(const CodeStorage::Storage   &stor,
-                               const SymHeap                &heap):
+SymPlot::SymPlot(const CodeStorage::Storage &stor, const SymHeap &heap):
     d(new Private)
 {
     d->stor = &stor;
@@ -981,8 +979,8 @@ bool SymPlot::plotHeapValue(const std::string &name, TValueId value) {
 }
 
 bool SymPlot::plotStackFrame(const std::string           &name,
-                                    const CodeStorage::Fnc      &fnc,
-                                    const SymBackTrace          *bt)
+                             const CodeStorage::Fnc      &fnc,
+                             const SymBackTrace          *bt)
 {
     using namespace CodeStorage;
 
