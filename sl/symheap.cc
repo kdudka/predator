@@ -332,9 +332,10 @@ struct SymHeapCore::Private {
     };
 
     struct Value {
-        EUnknownValue       code;
-        TObjId              target;
-        std::set<TObjId>    usedBy;
+        EUnknownValue                   code;
+        TObjId                          target;
+        typedef std::set<TObjId>        TUsedBy;
+        TUsedBy                         usedBy;
 
         Value(): code(UV_KNOWN), target(OBJ_INVALID) { }
     };
@@ -347,9 +348,23 @@ struct SymHeapCore::Private {
     NeqDb                   neqDb;
     EqIfDb                  eqIfDb;
 
+    void valueDestructor(TValueId value);
     void releaseValueOf(TObjId obj);
     TObjId acquireObj();
 };
+
+void SymHeapCore::Private::valueDestructor(TValueId val) {
+#if 0
+    TContValue related;
+    this->neqDb.gatherRelatedValues(related, val);
+    this->eqIfDb.gatherRelatedValues(related, val);
+    if (!related.empty())
+        // value being destroyed is held by a predicate
+        TRAP;
+#else
+    (void) val;
+#endif
+}
 
 void SymHeapCore::Private::releaseValueOf(TObjId obj) {
     // this method is strictly private, range checks should be already done
@@ -357,10 +372,13 @@ void SymHeapCore::Private::releaseValueOf(TObjId obj) {
     if (val <= 0)
         return;
 
-    Value &ref = this->values.at(val);
-    if (1 != ref.usedBy.erase(obj))
+    Value::TUsedBy &uses = this->values.at(val).usedBy;
+    if (1 != uses.erase(obj))
         // *** offset detected ***
         TRAP;
+
+    if (uses.empty())
+        this->valueDestructor(val);
 }
 
 TObjId SymHeapCore::Private::acquireObj() {
@@ -965,7 +983,8 @@ class CVarMap {
                 // gl variable explicitly requested
                 return (found)
                     ? iter->second
-                    : OBJ_INVALID;
+                    // avoid a compile-time warning with DEBUG_SYMID_FORCE_INT
+                    : static_cast<TObjId>(OBJ_INVALID);
             }
 
             // automatic fallback to gl variable

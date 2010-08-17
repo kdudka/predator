@@ -52,6 +52,10 @@ namespace {
             // null vs. non-null, etc.
             return false;
 
+        else if (v1 <= VAL_NULL)
+            // no need to save mapping of special values, they're fixed anyway
+            return true;
+
         // we need to have the values always in the same order to guarantee
         // the substitution to be bijective ... there used to be a nasty bug
         // at this point, leading to the following nonsense:
@@ -86,6 +90,7 @@ namespace {
             // mismatch in kind of unknown values
             return false;
 
+        // FIXME: should we check also the target type-info?
         const int cVal1 = heap1.valGetCustom(0, v1);
         const int cVal2 = heap2.valGetCustom(0, v2);
         if (OBJ_INVALID == cVal1 && OBJ_INVALID == cVal2)
@@ -233,22 +238,31 @@ bool cmpAbstractObjects(TWL &wl, const SymHeap &sh1, const SymHeap &sh2,
     return true;
 }
 
+// wrapper on top of SymHeapCore::gatherRelatedValues() that filters out
+// unused values
+template <class TDst>
+void gatherRelatedValues(TDst &dst, const SymHeap &sh, TValueId ref) {
+    TDst tmp;
+    sh.gatherRelatedValues(tmp, ref);
+
+    // TODO: rewrite to use std::copy_if()
+    BOOST_FOREACH(TValueId val, tmp) {
+        if (sh.usedByCount(val))
+            dst.push_back(val);
+    }
+}
+
 template <class TWL, class TSubst>
 bool matchPreds(TWL             &wl,
                 TSubst          &valSubst,
-                const SymHeap   &heap1,
-                const SymHeap   &heap2,
+                const SymHeap   &sh1,
+                const SymHeap   &sh2,
                 TValueId        v1,
                 TValueId        v2)
 {
-    if (VAL_NULL == v1 && VAL_NULL == v2)
-        // FIXME: some dangling Neq(VAL_NULL, (int)...) predicates appear
-        // at times and cause the analysis to loop indefinitely :-/
-        return /* XXX */ true;
-
     SymHeap::TContValue rel1, rel2;
-    heap1.gatherRelatedValues(rel1, v1);
-    heap2.gatherRelatedValues(rel2, v2);
+    gatherRelatedValues(rel1, sh1, v1);
+    gatherRelatedValues(rel2, sh2, v2);
 
     const unsigned cnt = rel1.size();
     if (rel2.size() != cnt)
@@ -280,11 +294,12 @@ bool dfsCmp(TWL             &wl,
         TValueId value1, value2;
         boost::tie(value1, value2) = item;
 
-        if (!matchPreds(wl, valSubst, heap1, heap2, value1, value2))
-            return false;
-
         if (!matchValues(valSubst, heap1, heap2, value1, value2))
             // value mismatch
+            return false;
+
+        if (!matchPreds(wl, valSubst, heap1, heap2, value1, value2))
+            // predicate mismatch
             return false;
 
         if (skipValue(heap1, value1))
