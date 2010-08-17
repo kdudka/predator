@@ -65,16 +65,19 @@ struct DeepCopyData {
     const SymHeap       &src;
     SymHeap             &dst;
     TCut                &cut;
+    const bool          digBackward;
 
     TObjMap             objMap;
     TValMap             valMap;
 
     WorkList<TItem>     wl;
 
-    DeepCopyData(const SymHeap &src_, SymHeap &dst_, TCut &cut_):
+    DeepCopyData(const SymHeap &src_, SymHeap &dst_, TCut &cut_,
+                 bool digBackward_):
         src(src_),
         dst(dst_),
-        cut(cut_)
+        cut(cut_),
+        digBackward(digBackward_)
     {
     }
 };
@@ -196,8 +199,8 @@ TObjId addObjectIfNeeded(DeepCopyData &dc, TObjId objSrc) {
     return OBJ_INVALID;
 }
 
-void trackUses(DeepCopyData &dc, TValueId valSrc, bool digBackward) {
-    if (!digBackward)
+void trackUses(DeepCopyData &dc, TValueId valSrc) {
+    if (!dc.digBackward)
         // optimization
         return;
 
@@ -209,11 +212,11 @@ void trackUses(DeepCopyData &dc, TValueId valSrc, bool digBackward) {
     }
 }
 
-TValueId handleValue(DeepCopyData &dc, TValueId valSrc, bool digBackward) {
+TValueId handleValue(DeepCopyData &dc, TValueId valSrc) {
     const SymHeap   &src = dc.src;
     SymHeap         &dst = dc.dst;
 
-    trackUses(dc, valSrc, /* optimization */ digBackward);
+    trackUses(dc, valSrc);
 
     const TObjId compSrc = src.valGetCompositeObj(valSrc);
     if (OBJ_INVALID != compSrc) {
@@ -233,7 +236,7 @@ TValueId handleValue(DeepCopyData &dc, TValueId valSrc, bool digBackward) {
         if (ov.second < 0)
             continue;
 
-        trackUses(dc, ov.first, digBackward);
+        trackUses(dc, ov.first);
     }
 
     DeepCopyData::TValMap &valMap = dc.valMap;
@@ -262,7 +265,7 @@ TValueId handleValue(DeepCopyData &dc, TValueId valSrc, bool digBackward) {
             TRAP;
 
         // FIXME: avoid unguarded recursion on handleValue() here
-        ov.first = handleValue(dc, ov.first, digBackward);
+        ov.first = handleValue(dc, ov.first);
 
         // store the off-value's mapping
         const TValueId valDst = dst.valCreateByOffset(ov);
@@ -325,7 +328,7 @@ TValueId handleValue(DeepCopyData &dc, TValueId valSrc, bool digBackward) {
     return valDst;
 }
 
-void deepCopy(DeepCopyData &dc, bool digBackward) {
+void deepCopy(DeepCopyData &dc) {
     const SymHeap   &src = dc.src;
     SymHeap         &dst = dc.dst;
 
@@ -347,7 +350,7 @@ void deepCopy(DeepCopyData &dc, bool digBackward) {
         if (atSrc <=0)
             TRAP;
 
-        trackUses(dc, atSrc, /* optimization */ digBackward);
+        trackUses(dc, atSrc);
 
         // read the original value
         TValueId valSrc = src.valueOf(objSrc);
@@ -355,7 +358,7 @@ void deepCopy(DeepCopyData &dc, bool digBackward) {
             TRAP;
 
         // do whatever we need to do with the value
-        const TValueId valDst = handleValue(dc, valSrc, digBackward);
+        const TValueId valDst = handleValue(dc, valSrc);
         if (VAL_INVALID == valDst)
             TRAP;
 
@@ -370,7 +373,7 @@ void deepCopy(DeepCopyData &dc, bool digBackward) {
             // now set object's value
             dst.objSetValue(objDst, valDst);
 
-        if (/* optimization */ digBackward) {
+        if (/* optimization */ dc.digBackward) {
             // now poke all values related by Neq or EqIf predicates
             SymHeap::TContValue relatedVals;
             src.gatherRelatedValues(relatedVals, valSrc);
@@ -381,7 +384,7 @@ void deepCopy(DeepCopyData &dc, bool digBackward) {
                 CL_DEBUG("deepCopy() is traversing a predicate: #"
                         << valSrc << " -> #" << relValSrc);
 #endif
-                handleValue(dc, relValSrc, digBackward);
+                handleValue(dc, relValSrc);
             }
         }
     }
@@ -393,7 +396,7 @@ void deepCopy(DeepCopyData &dc, bool digBackward) {
 void prune(const SymHeap &src, SymHeap &dst,
            /* NON-const */ DeepCopyData::TCut &cut, bool forwardOnly = false)
 {
-    DeepCopyData dc(src, dst, cut);
+    DeepCopyData dc(src, dst, cut, !forwardOnly);
     DeepCopyData::TCut snap(cut);
 
     // go through all program variables
@@ -412,7 +415,7 @@ void prune(const SymHeap &src, SymHeap &dst,
     }
 
     // go through the worklist
-    deepCopy(dc, !forwardOnly);
+    deepCopy(dc);
 }
 
 namespace {
