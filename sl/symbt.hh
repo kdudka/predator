@@ -25,6 +25,8 @@
  * SymBackTrace - backtrace management
  */
 
+#include <vector>
+
 struct LocationWriter;
 
 namespace CodeStorage {
@@ -96,6 +98,11 @@ class SymBackTrace {
         const CodeStorage::Fnc* topFnc() const;
 
         LocationWriter topCallLoc() const;
+
+        bool hasRecursiveCall() const;
+
+        typedef std::vector<int /* uid */> TFncSeq;
+        TFncSeq &getFncSequence() const;
 
     private:
         struct Private;

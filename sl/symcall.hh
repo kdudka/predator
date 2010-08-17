@@ -32,6 +32,7 @@ class SymBackTrace;
 class SymHeapUnion;
 
 namespace CodeStorage {
+    struct Fnc;
     struct Insn;
 }
 
@@ -108,10 +109,14 @@ class SymCallCache {
          * cache entry point.  This returns either existing, or a newly created
          * call context.
          * @param heap a symbolic heap valid for call entry
+         * @param fnc a function which is about to be called
          * @param insn a call instruction which is about to be executed
+         * @note parameters fnc and insn have to match with each other!
          * @return reference to the corresponding SymCallCtx object
          */
-        SymCallCtx& getCallCtx(SymHeap heap, const CodeStorage::Insn &insn);
+        SymCallCtx& getCallCtx(SymHeap                      heap,
+                               const CodeStorage::Fnc       &fnc,
+                               const CodeStorage::Insn      &insn);
 
     private:
         /// object copying is @b not allowed

@@ -939,67 +939,68 @@ void SymHeapCore::copyRelevantPreds(SymHeapCore &dst, const TValMap &valMap)
 // CVar lookup container
 class CVarMap {
     private:
-        typedef std::map<CVar, TObjId>              TMap;
-        typedef std::pair<TObjId, int /* cnt */>    TGlItem;
-        typedef std::map<int /* uid */, TGlItem>    TGlMap;
-
-        TMap    lc_;
-        TGlMap  gl_;
+        typedef std::map<CVar, TObjId>              TCont;
+        TCont                                       cont_;
 
     public:
         void insert(CVar cVar, TObjId obj) {
-            lc_[cVar] = obj;
-
-            // gl scope
-            TGlItem &ref = gl_[cVar.uid];
-            ref.first = obj;
-            ref.second ++;
+            const unsigned last = cont_.size();
+            cont_[cVar] = obj;
+            if (last == cont_.size())
+                // attempt to reinsert and/or redefine CVar mapping
+                TRAP;
         }
 
         void remove(CVar cVar) {
-            if (1 != lc_.erase(cVar))
+            if (1 != cont_.erase(cVar))
                 // *** offset detected ***
                 TRAP;
-
-            // gl scope
-            TGlMap::iterator iter = gl_.find(cVar.uid);
-            if (gl_.end() == iter)
-                // *** offset detected ***
-                TRAP;
-
-            TGlItem &ref = iter->second;
-            if (0 == --ref.second)
-                gl_.erase(iter);
         }
 
-        TObjId find(CVar cVar) {
-            TMap::iterator iterLc = lc_.find(cVar);
-            if (lc_.end() != iterLc)
-                return iterLc->second;
+        TObjId find(const CVar &cVar) {
+            // regular lookup
+            TCont::iterator iter = cont_.find(cVar);
+            const bool found = (cont_.end() != iter);
+            if (!cVar.inst) {
+                // gl variable explicitly requested
+                return (found)
+                    ? iter->second
+                    : OBJ_INVALID;
+            }
 
-            // gl scope
-            TGlMap::iterator iterGl = gl_.find(cVar.uid);
-            if (gl_.end() == iterGl)
-                // not found even there
+            // automatic fallback to gl variable
+            CVar gl = cVar;
+            gl.inst = /* global variable */ 0;
+            TCont::iterator iterGl = cont_.find(gl);
+            const bool foundGl = (cont_.end() != iterGl);
+
+            if (!found && !foundGl)
+                // not found anywhere
                 return OBJ_INVALID;
 
-            const TGlItem &ref = iterGl->second;
-            return ref.first;
+            if (found && foundGl)
+                // clash on uid among lc/gl variable
+                TRAP;
+
+            if (found)
+                return iter->second;
+            else /* if (foundGl) */
+                return iterGl->second;
         }
 
-        template <class TCont>
-        void getAll(TCont &dst) {
-            TMap::const_iterator i;
-            for (i = lc_.begin(); i != lc_.end(); ++i)
-                dst.push_back(i->first);
+        template <class TDst>
+        void getAll(TDst &dst) {
+            BOOST_FOREACH(const TCont::value_type &item, cont_) {
+                dst.push_back(item.first);
+            }
         }
 
         template <class TFunctor>
         void goThroughObjs(TFunctor &f)
         {
-            TMap::const_iterator i;
-            for (i = lc_.begin(); i != lc_.end(); ++i)
-                f(i->second);
+            BOOST_FOREACH(const TCont::value_type &item, cont_) {
+                f(item.second);
+            }
         }
 };
 

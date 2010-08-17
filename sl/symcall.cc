@@ -96,9 +96,16 @@ void SymCallCtx::Private::assignReturnValue(SymHeapUnion &state) {
         // we're done for a function returning void
         return;
 
+    // wait, we're crossing stack frame boundaries here!  We need to use one
+    // backtrace instance for source operands and another one for destination
+    // operands.  The called function already appears on the given backtrace, so
+    // that we can get the source backtrace by removing it from there locally.
+    SymBackTrace callerSiteBt(*this->bt);
+    callerSiteBt.popCall();
+
     // go through results and perform assignment of the return value
     BOOST_FOREACH(SymHeap &res, state) {
-        SymProc proc(res, this->bt);
+        SymProc proc(res, &callerSiteBt);
         proc.setLocation(&op.loc);
 
         const TObjId obj = proc.heapObjFromOperand(op);
@@ -110,7 +117,7 @@ void SymCallCtx::Private::assignReturnValue(SymHeapUnion &state) {
             TRAP;
 
         // assign the return value in the current symbolic heap
-        res.objSetValue(obj, val);
+        proc.objSetValue(obj, val);
     }
 }
 
@@ -252,7 +259,11 @@ class PerFncCache {
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of SymCallCache
 struct SymCallCache::Private {
-    typedef std::map<int /* uid */, PerFncCache> TCache;
+    typedef SymBackTrace::TFncSeq                       TFncSeq;
+    typedef SymHeapTyped::TContCVar                     TCVars;
+    typedef std::map<int /* uid */, PerFncCache>        TCacheCol;
+    typedef std::map<TCVars, TCacheCol>                 TCacheRow;
+    typedef std::map<TFncSeq, TCacheRow>                TCache;
 
     TCache                      cache;
     SymBackTrace                *bt;
@@ -363,8 +374,26 @@ void SymCallCache::Private::setCallArgs(const CodeStorage::TOperandList &opList)
 }
 
 SymCallCtx* SymCallCache::Private::getCallCtx(int uid, const SymHeap &heap) {
-    // cache lookup
-    PerFncCache &pfc = this->cache[uid];
+    TFncSeq seq;
+    if (this->bt->hasRecursiveCall())
+        // FIXME: this seems to be a silly limitation -- we require the call
+        // sequence to match as long as any recursion is involved
+        seq = this->bt->getFncSequence();
+
+    // 1st level cache lookup
+    TCacheRow &row = this->cache[seq];
+
+    // 2nd level cache lookup
+    // FIXME: We rely on the assumption that gatherCVars() returns the variables
+    //        always in the same order, however SymHeapTyped API does not
+    //        guarantee anything like that.  Luckily it should cause nothing
+    //        evil in the analysis, only some unnecessary bloat of cache...
+    SymHeap::TContCVar cVars;
+    heap.gatherCVars(cVars);
+    TCacheCol &col = row[cVars];
+
+    // 3rd level cache lookup
+    PerFncCache &pfc = col[uid];
     SymCallCtx *ctx = pfc.lookup(heap);
     if (!ctx) {
         // cache miss
@@ -394,8 +423,9 @@ SymCallCtx* SymCallCache::Private::getCallCtx(int uid, const SymHeap &heap) {
     return ctx;
 }
 
-SymCallCtx& SymCallCache::getCallCtx(SymHeap heap,
-                                     const CodeStorage::Insn &insn)
+SymCallCtx& SymCallCache::getCallCtx(SymHeap                    heap,
+                                     const CodeStorage::Fnc     &fnc,
+                                     const CodeStorage::Insn    &insn)
 {
     using namespace CodeStorage;
 
@@ -418,17 +448,13 @@ SymCallCtx& SymCallCache::getCallCtx(SymHeap heap,
         heap.objDefineType(OBJ_RETURN, dst.type);
     }
 
-    // look for Fnc ought to be called
-    const int uid = proc.fncFromOperand(opList[/* fnc */ 1]);
-    d->fnc = insn.stor->fncs[uid];
-    if (!d->fnc || CL_OPERAND_VOID == d->fnc->def.code)
-        // this should have been handled elsewhere
-        TRAP;
-
+    // store Fnc ought to be called
+    d->fnc = &fnc;
     CL_DEBUG_MSG(d->lw, "SymCallCache is looking for "
-            << nameOf(*d->fnc) << "()...");
+            << nameOf(fnc) << "()...");
 
     // check recursion depth (if any)
+    const int uid = uidOf(fnc);
     d->nestLevel = d->bt->countOccurrencesOfFnc(uid);
     if (1 != d->nestLevel) {
         CL_WARN_MSG(d->lw, "support of call recursion is not stable yet");

@@ -998,7 +998,7 @@ void SymExec::Private::execLoop(const StackItem &item) {
             continue;
 
         // call cache lookup
-        SymCallCtx &ctx = this->callCache.getCallCtx(entry, insn);
+        SymCallCtx &ctx = this->callCache.getCallCtx(entry, *fnc, insn);
         if (!ctx.needExec()) {
             // call cache hit
             const LocationWriter lw(this->bt.topCallLoc());
@@ -1048,7 +1048,7 @@ void SymExec::exec(const CodeStorage::Fnc &fnc, SymHeapUnion &results) {
         insn.operands[1] = fnc.def;
 
         // get call context for the root function
-        SymCallCtx &ctx = d->callCache.getCallCtx(heap, insn);
+        SymCallCtx &ctx = d->callCache.getCallCtx(heap, fnc, insn);
         if (!ctx.needExec()) {
             // not likely to happen in the way that SymExec is currently used
             CL_WARN_MSG(d->bt.topCallLoc(), "(x) root function optimized out: "

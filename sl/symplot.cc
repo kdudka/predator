@@ -301,6 +301,8 @@ void SymPlot::Private::plotNodeObj(TObjId obj, enum cl_type_e code) {
         std::string name = var.name;
         if (!name.empty())
             this->dotStream << " - " << name;
+        if (1 < cVar.inst)
+            this->dotStream << ", inst = " << cVar.inst;
     }
     else {
         this->dotStream << obj;

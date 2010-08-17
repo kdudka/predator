@@ -30,6 +30,7 @@
 #include <stack>
 #include <utility>
 
+#include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
 
 struct SymBackTrace::Private {
@@ -40,6 +41,7 @@ struct SymBackTrace::Private {
     const CodeStorage::Storage      &stor;
     TStack                          btStack;
     TMap                            nestMap;
+    TFncSeq                         fncSeq;
 
     Private(const CodeStorage::Storage &stor_):
         stor(stor_)
@@ -79,6 +81,8 @@ void SymBackTrace::Private::pushFnc(const CodeStorage::Fnc *fnc,
                                     const LocationWriter   &lw)
 {
     push(this->btStack, fnc, lw);
+    this->fncSeq.push_back(uidOf(*fnc));
+
     int &ref = this->nestMap[fnc];
     if (ref < 0 || static_cast<int>(this->btStack.size()) < ref)
         // bt corruption detected
@@ -91,10 +95,17 @@ void SymBackTrace::Private::pushFnc(const CodeStorage::Fnc *fnc,
 void SymBackTrace::Private::popFnc() {
     const CodeStorage::Fnc *fnc = this->fncOnTop();
     this->btStack.pop();
+    this->fncSeq.pop_back();
 
     // decrement instance counter
     int &ref = this->nestMap[fnc];
     --ref;
+
+    if (!ref) {
+        // remove any dangling key eventually
+        this->nestMap.erase(fnc);
+        return;
+    }
 
     if (ref < 0 || static_cast<int>(this->btStack.size()) < ref)
         // bt corruption detected
@@ -187,4 +198,24 @@ LocationWriter SymBackTrace::topCallLoc() const {
 
     const Private::TStackItem &top = d->btStack.top();
     return top.second;
+}
+
+bool SymBackTrace::hasRecursiveCall() const {
+    BOOST_FOREACH(const Private::TMap::value_type &item, d->nestMap) {
+        const int cnt = item.second;
+        if (cnt <= 0)
+            // seems like internal error of SymBackTrace
+            TRAP;
+
+        if (1 < cnt)
+            // a recursive call has been found
+            return true;
+    }
+
+    // found nothing interesting, looks like a regular bt
+    return false;
+}
+
+SymBackTrace::TFncSeq& SymBackTrace::getFncSequence() const {
+    return d->fncSeq;
 }
