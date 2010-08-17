@@ -196,18 +196,24 @@ TObjId addObjectIfNeeded(DeepCopyData &dc, TObjId objSrc) {
     return OBJ_INVALID;
 }
 
+void trackUses(DeepCopyData &dc, TValueId valSrc, bool digBackward) {
+    if (!digBackward)
+        // optimization
+        return;
+
+    // go from the value backward
+    SymHeap::TContObj uses;
+    dc.src.usedBy(uses, valSrc);
+    BOOST_FOREACH(TObjId objSrc, uses) {
+        addObjectIfNeeded(dc, objSrc);
+    }
+}
+
 TValueId handleValue(DeepCopyData &dc, TValueId valSrc, bool digBackward) {
     const SymHeap   &src = dc.src;
     SymHeap         &dst = dc.dst;
 
-    if (/* optimization */ digBackward) {
-        // go from the value backward
-        SymHeap::TContObj uses;
-        src.usedBy(uses, valSrc);
-        BOOST_FOREACH(TObjId objSrc, uses) {
-            addObjectIfNeeded(dc, objSrc);
-        }
-    }
+    trackUses(dc, valSrc, /* optimization */ digBackward);
 
     const TObjId compSrc = src.valGetCompositeObj(valSrc);
     if (OBJ_INVALID != compSrc) {
@@ -219,6 +225,16 @@ TValueId handleValue(DeepCopyData &dc, TValueId valSrc, bool digBackward) {
     if (valSrc <= 0)
         // special value IDs always match
         return valSrc;
+
+    // traverse all off-values (only in one direction)
+    SymHeap::TOffValCont offValues;
+    src.gatherOffValues(offValues, valSrc);
+    BOOST_FOREACH(const SymHeap::TOffVal &ov, offValues) {
+        if (ov.second < 0)
+            continue;
+
+        trackUses(dc, ov.first, digBackward);
+    }
 
     DeepCopyData::TValMap &valMap = dc.valMap;
     DeepCopyData::TValMap::iterator iterValSrc = valMap.find(valSrc);
@@ -235,19 +251,18 @@ TValueId handleValue(DeepCopyData &dc, TValueId valSrc, bool digBackward) {
         return valDst;
     }
 
-    // load off-values mapping
-    SymHeap::TOffValCont offValues;
-    src.gatherOffValues(offValues, valSrc);
-
     const EUnknownValue code = src.valGetUnknown(valSrc);
     if (UV_UNKNOWN == code && !offValues.empty()) {
         if (1 != offValues.size())
             TRAP;
 
         // handle an off-value
-        const SymHeap::TOffVal &ov = offValues.front();
+        SymHeap::TOffVal ov = offValues.front();
         if (0 < ov.second)
             TRAP;
+
+        // FIXME: avoid unguarded recursion on handleValue() here
+        ov.first = handleValue(dc, ov.first, digBackward);
 
         // store the off-value's mapping
         const TValueId valDst = dst.valCreateByOffset(ov);
@@ -332,14 +347,7 @@ void deepCopy(DeepCopyData &dc, bool digBackward) {
         if (atSrc <=0)
             TRAP;
 
-        if (/* optimization */ digBackward) {
-            // go from the value backward
-            SymHeap::TContObj uses;
-            src.usedBy(uses, atSrc);
-            BOOST_FOREACH(TObjId objSrc, uses) {
-                addObjectIfNeeded(dc, objSrc);
-            }
-        }
+        trackUses(dc, atSrc, /* optimization */ digBackward);
 
         // read the original value
         TValueId valSrc = src.valueOf(objSrc);
