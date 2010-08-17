@@ -458,13 +458,13 @@ void SymPlot::Private::plotSingleValue(TValueId value) {
     SymHeap::TOffValCont offValues;
     this->heap->gatherOffValues(offValues, value);
     BOOST_FOREACH(const SymHeap::TOffVal &ov, offValues) {
+        this->workList.schedule(ov.first);
         if (ov.second < 0)
             // we came to the predicate from the less interesting side; let's
             // just wait for the value on the opposite side of the predicate
             // (note that the other value is _not_ guaranteed to come anyway)
             continue;
 
-        this->workList.schedule(ov.first);
         this->gobbleEdgeOffValue(value, ov);
     }
 
