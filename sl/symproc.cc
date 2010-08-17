@@ -119,8 +119,6 @@ bool SymProc::checkForInvalidDeref(TObjId obj) {
 }
 
 void SymProc::heapObjHandleAccessorDeref(TObjId *pObj) {
-    EUnknownValue code;
-
     // TODO: check --- it should be pointer variable, => NON-ABSTRACT ?
 
     // attempt to dereference
@@ -128,21 +126,21 @@ void SymProc::heapObjHandleAccessorDeref(TObjId *pObj) {
     switch (val) {
         case VAL_NULL:
             CL_ERROR_MSG(lw_, "dereference of NULL value");
-            goto fail_with_bt;
+            bt_->printBackTrace();
+            // fall through!
+
+        case VAL_DEREF_FAILED:
+            *pObj = OBJ_DEREF_FAILED;
+            return;
 
         case VAL_INVALID:
             TRAP;
-            goto fail;
-
-        case VAL_DEREF_FAILED:
-            goto fail;
-
         default:
             break;
     }
 
     // do we really know the value?
-    code = heap_.valGetUnknown(val);
+    const EUnknownValue code = heap_.valGetUnknown(val);
     switch (code) {
         case UV_KNOWN:
         case UV_ABSTRACT:
@@ -150,24 +148,20 @@ void SymProc::heapObjHandleAccessorDeref(TObjId *pObj) {
 
         case UV_UNKNOWN:
             CL_ERROR_MSG(lw_, "dereference of unknown value");
-            goto fail_with_bt;
+            bt_->printBackTrace();
+            goto fail;
 
         case UV_UNINITIALIZED:
             CL_ERROR_MSG(lw_, "dereference of uninitialized value");
-            goto fail_with_bt;
+            bt_->printBackTrace();
+            goto fail;
     }
 
     // value lookup
     *pObj = heap_.pointsTo(val);
-    if (this->checkForInvalidDeref(*pObj))
-        // bt has been already printed
-        goto fail;
-
-    // all OK
-    return;
-
-fail_with_bt:
-    bt_->printBackTrace();
+    if (!this->checkForInvalidDeref(*pObj))
+        // all OK
+        return;
 
 fail:
     *pObj = OBJ_DEREF_FAILED;
