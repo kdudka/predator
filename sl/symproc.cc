@@ -118,7 +118,7 @@ bool SymProc::checkForInvalidDeref(TObjId obj) {
     return true;
 }
 
-void SymProc::heapObjHandleAccessorDeref(TObjId *pObj) {
+void SymProc::handleDerefCore(TObjId *pObj) {
     // TODO: check --- it should be pointer variable, => NON-ABSTRACT ?
 
     // attempt to dereference
@@ -274,6 +274,22 @@ TValueId SymProc::resolveOffValue(TObjId obj, const struct cl_accessor **pAc) {
     return valTarget;
 }
 
+void SymProc::handleDeref(TObjId *pObj, const struct cl_accessor **pAc) {
+    const TValueId valTarget = this->resolveOffValue(*pObj, pAc);
+    if (VAL_INVALID == valTarget) {
+        // fallback to plain dereference
+        this->handleDerefCore(pObj);
+        *pAc = (*pAc)->next;
+    }
+    else {
+        // successfully resolved off-value
+        *pObj = heap_.pointsTo(valTarget);
+        if (this->checkForInvalidDeref(*pObj))
+            // ... but no valid target in the end anyway
+            *pObj = OBJ_DEREF_FAILED;
+    }
+}
+
 TObjId SymProc::heapObjFromOperand(const struct cl_operand &op) {
     // resolve static variable
     TObjId obj = varFromOperand(op, heap_, bt_);
@@ -285,21 +301,8 @@ TObjId SymProc::heapObjFromOperand(const struct cl_operand &op) {
         return obj;
 
     // first check for dereference and handle any off-value eventually
-    if (ac->code == CL_ACCESSOR_DEREF) {
-        const TValueId valTarget = this->resolveOffValue(obj, &ac);
-        if (VAL_INVALID == valTarget) {
-            // fallback to plain dereference
-            this->heapObjHandleAccessorDeref(&obj);
-            ac = ac->next;
-        }
-        else {
-            // successfully resolved off-value
-            obj = heap_.pointsTo(valTarget);
-            if (this->checkForInvalidDeref(obj))
-                // ... but no valid target in the end anyway
-                return OBJ_DEREF_FAILED;
-        }
-    }
+    if (ac->code == CL_ACCESSOR_DEREF)
+        this->handleDeref(&obj, &ac);
 
     // we don't support chaining of CL_ACCESSOR_DEREF (yet?)
     SE_BREAK_IF(ac && ac->code == CL_ACCESSOR_DEREF);
