@@ -27,11 +27,15 @@
 #include "symutil.hh"
 #include "worklist.hh"
 
+#include <algorithm>            // for std::copy_if
+#include <functional>           // for std::bind
 #include <iomanip>
 #include <map>
 #include <stack>
 
 #include <boost/foreach.hpp>
+#include <boost/lambda/lambda.hpp>
+#include <boost/lambda/bind.hpp>
 #include <boost/tuple/tuple.hpp>
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -242,14 +246,17 @@ bool cmpAbstractObjects(TWL &wl, const SymHeap &sh1, const SymHeap &sh2,
 // unused values
 template <class TDst>
 void gatherRelatedValues(TDst &dst, const SymHeap &sh, TValueId ref) {
+    using namespace boost::lambda;
+
     TDst tmp;
     sh.gatherRelatedValues(tmp, ref);
 
-    // TODO: rewrite to use std::copy_if()
-    BOOST_FOREACH(TValueId val, tmp) {
-        if (sh.usedByCount(val))
-            dst.push_back(val);
-    }
+    // NOTE: beware of the std::cref(sh) usage here -- if you use just 'sh'
+    //       instead of std::cref(sh), you decrease the over all performance
+    //       10x (!!!), no matter how aggressive optimization you pass to
+    //       the compiler in that case
+    std::copy_if(tmp.begin(), tmp.end(), std::back_inserter(dst),
+            bind(&SymHeapCore::usedByCount, std::cref(sh), _1));
 }
 
 template <class TWL, class TSubst>
@@ -354,12 +361,12 @@ bool operator== (const SymHeap &heap1, const SymHeap &heap2) {
         // --> no chance the heaps are equal up to isomorphism
         return false;
 
-    // FIXME: rewrite the following nonsense
-    std::set<CVar> cVars;
-    BOOST_FOREACH(CVar cv, cVars1) { cVars.insert(cv); }
-    BOOST_FOREACH(CVar cv, cVars2) { cVars.insert(cv); }
+    // merge cVars
+    std::set<CVar> all;
+    std::copy(cVars1.begin(), cVars1.end(), std::inserter(all, all.begin()));
+    std::copy(cVars2.begin(), cVars2.end(), std::inserter(all, all.begin()));
 
-    BOOST_FOREACH(CVar cv, cVars) {
+    BOOST_FOREACH(CVar cv, all) {
         const TObjId var1 = heap1.objByCVar(cv);
         const TObjId var2 = heap2.objByCVar(cv);
         if (var1 < 0 || var2 < 0)

@@ -462,7 +462,6 @@ void SymPlot::Private::plotSingleValue(TValueId value) {
         if (ov.second < 0)
             // we came to the predicate from the less interesting side; let's
             // just wait for the value on the opposite side of the predicate
-            // (note that the other value is _not_ guaranteed to come anyway)
             continue;
 
         this->gobbleEdgeOffValue(value, ov);

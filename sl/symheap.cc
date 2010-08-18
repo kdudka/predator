@@ -250,9 +250,7 @@ class EqIfDb {
 
             // stream out all the relevant predicates
             const TSet &ref = iter->second;
-            BOOST_FOREACH(const TPred &pred, ref) {
-                dst.push_back(pred);
-            }
+            std::copy(ref.begin(), ref.end(), std::back_inserter(dst));
 
             // delete the db entry afterwards
             cont_.erase(iter);
@@ -494,10 +492,8 @@ void SymHeapCore::usedBy(TContObj &dst, TValueId val) const {
         // value ID is either out of range, or does not point to a valid obj
         return;
 
-    const Private::Value &ref = d->values[val];
-    BOOST_FOREACH(TObjId obj, ref.usedBy) {
-        dst.push_back(obj);
-    }
+    const Private::Value::TUsedBy &usedBy = d->values[val].usedBy;
+    std::copy(usedBy.begin(), usedBy.end(), std::back_inserter(dst));
 }
 
 /// return how many objects use the value

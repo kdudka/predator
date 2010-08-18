@@ -29,6 +29,7 @@
 #include "symutil.hh"
 #include "util.hh"
 
+#include <algorithm>                // for std::copy()
 #include <set>
 #include <stack>
 
@@ -652,11 +653,8 @@ void digAnyListSelectors(TDst &dst, const SymHeap &sh, TObjId obj,
 
     // now merge it together
     BOOST_FOREACH(const TFieldIdxChain &ic, tmp) {
-        // TODO: rewrite the following nonsense
         TFieldIdxChain icTmp(icHead);
-        BOOST_FOREACH(const int i, ic) {
-            icTmp.push_back(i);
-        }
+        std::copy(ic.begin(), ic.end(), std::back_inserter(icTmp));
         dst.push_back(icTmp);
     }
 }

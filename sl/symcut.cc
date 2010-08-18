@@ -29,6 +29,7 @@
 
 #include "worklist.hh"
 
+#include <algorithm>            // for std::copy, std::set_difference
 #include <iomanip>
 #include <map>
 #include <set>
@@ -49,11 +50,7 @@
 template <class TSet, class TList>
 void fillSet(TSet &dst, const TList &src)
 {
-    // FIXME: use an algorithm?
-    typedef typename TList::const_reference TRef;
-    BOOST_FOREACH(TRef ref, src) {
-        dst.insert(ref);
-    }
+    std::copy(src.begin(), src.end(), std::inserter(dst, dst.begin()));
 }
 
 struct DeepCopyData {
@@ -461,12 +458,10 @@ void splitHeapByCVars(const SymBackTrace *bt, SymHeap *srcDst,
     SymHeap::TContCVar all;
     srcDst->gatherCVars(all);
 
-    // FIXME: use an algorithm?
+    // compute set difference
     DeepCopyData::TCut complement;
-    BOOST_FOREACH(const CVar &cv, all) {
-        if (!hasKey(cset, cv))
-            complement.insert(cv);
-    }
+    std::set_difference(all.begin(), all.end(), cset.begin(), cset.end(),
+            std::inserter(complement, complement.begin()));
 
     // compute the surrounding part of heap
     prune(*srcDst, *saveSurroundTo, complement);
