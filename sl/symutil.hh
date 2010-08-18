@@ -68,8 +68,7 @@ inline int subOffsetIn(const SymHeap &sh, TObjId in, TObjId of) {
     int nth;
     while (OBJ_INVALID != (parent = sh.objParent(of, &nth))) {
         const struct cl_type *clt = sh.objType(parent);
-        if (!clt || clt->item_cnt <= nth)
-            TRAP;
+        SE_BREAK_IF(!clt || clt->item_cnt <= nth);
 
         offset += clt->items[nth].offset;
         if (parent == in)
@@ -107,12 +106,9 @@ template <> struct TraverseSubObjsHelper<TObjId> {
 // specialisation suitable for traversing two composite objects simultaneously
 template <> struct TraverseSubObjsHelper<TObjPair> {
     static const struct cl_type* getItemClt(const SymHeap &sh, TObjPair item) {
-        const struct cl_type *clt1 = sh.objType(item.first);
-        const struct cl_type *clt2 = sh.objType(item.second);
-        if (clt1 != clt2)
-            TRAP;
-
-        return clt1;
+        const struct cl_type *clt = sh.objType(item.first);
+        SE_BREAK_IF(clt != sh.objType(item.second));
+        return clt;
     }
     static TObjPair getNextItem(const SymHeap &sh, TObjPair item, int nth) {
         item.first  = sh.subObj(item.first,  nth);
@@ -134,8 +130,7 @@ bool /* complete */ traverseSubObjs(THeap &sh, TItem item, TVisitor &visitor,
 
         typedef TraverseSubObjsHelper<TItem> THelper;
         const struct cl_type *clt = THelper::getItemClt(sh, item);
-        if (!clt || clt->code != CL_TYPE_STRUCT)
-            TRAP;
+        SE_BREAK_IF(!clt || clt->code != CL_TYPE_STRUCT);
 
         for (int i = 0; i < clt->item_cnt; ++i) {
             const TItem next = THelper::getNextItem(sh, item, i);
@@ -186,8 +181,7 @@ bool /* complete */ traverseSubObjsIc(THeap &sh, TItem item, TVisitor &visitor)
 
         typedef TraverseSubObjsHelper<TItem> THelper;
         const struct cl_type *clt = THelper::getItemClt(sh, item);
-        if (!clt || clt->code != CL_TYPE_STRUCT)
-            TRAP;
+        SE_BREAK_IF(!clt || clt->code != CL_TYPE_STRUCT);
 
         if (-1 != si.nth)
             // nest into structure

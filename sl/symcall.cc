@@ -109,12 +109,10 @@ void SymCallCtx::Private::assignReturnValue(SymHeapUnion &state) {
         proc.setLocation(&op.loc);
 
         const TObjId obj = proc.heapObjFromOperand(op);
-        if (OBJ_INVALID == obj)
-            TRAP;
+        SE_BREAK_IF(OBJ_INVALID == obj);
 
         const TValueId val = res.valueOf(OBJ_RETURN);
-        if (VAL_INVALID == val)
-            TRAP;
+        SE_BREAK_IF(VAL_INVALID == val);
 
         // assign the return value in the current symbolic heap
         proc.objSetValue(obj, val);
@@ -154,8 +152,7 @@ void SymCallCtx::Private::destroyStackFrame(SymHeapUnion &state) {
 
                 const CVar cVar(var.uid, this->nestLevel);
                 const TObjId obj = res.objByCVar(cVar);
-                if (obj < 0)
-                    TRAP;
+                SE_BREAK_IF(obj < 0);
 
                 proc.setLocation(lw);
                 proc.objDestroy(obj);
@@ -188,7 +185,7 @@ void flush(SymHeapUnion &dst, const SymHeapUnion src) {
 void SymCallCtx::flushCallResults(SymHeapUnion &dst) {
     if (d->flushed)
         // are we really ready for this?
-        TRAP;
+        SE_TRAP;
 
     // mark as done
     d->computed = true;
@@ -252,7 +249,7 @@ class PerFncCache {
             ctxMap_.push_back(ctx);
             if (huni_.size() != ctxMap_.size())
                 // integrity of PerFncCache broken, perhaps called unexpectedly?
-                TRAP;
+                SE_TRAP;
         }
 };
 
@@ -340,8 +337,7 @@ void SymCallCache::Private::setCallArgs(const CodeStorage::TOperandList &opList)
 {
     // get called fnc's args
     const CodeStorage::TArgByPos &args = this->fnc->args;
-    if (args.size() + 2 != opList.size())
-        TRAP;
+    SE_BREAK_IF(args.size() + 2 != opList.size());
 
     // wait, we're crossing stack frame boundaries here!  We need to use one
     // backtrace instance for source operands and another one for destination
@@ -359,14 +355,12 @@ void SymCallCache::Private::setCallArgs(const CodeStorage::TOperandList &opList)
         this->proc->setLocation(this->lw);
 
         const TValueId val = srcProc.heapValFromOperand(op);
-        if (VAL_INVALID == val)
-            TRAP;
+        SE_BREAK_IF(VAL_INVALID == val);
 
         // cVar lookup
         const CVar cVar(arg, this->nestLevel);
         const TObjId lhs = this->heap->objByCVar(cVar);
-        if (OBJ_INVALID == lhs)
-            TRAP;
+        SE_BREAK_IF(OBJ_INVALID == lhs);
 
         // set arg's value
         this->proc->objSetValue(lhs, val);
@@ -431,8 +425,7 @@ SymCallCtx& SymCallCache::getCallCtx(SymHeap                    heap,
 
     // check insn validity
     const TOperandList &opList = insn.operands;
-    if (CL_INSN_CALL != insn.code || opList.size() < 2)
-        TRAP;
+    SE_BREAK_IF(CL_INSN_CALL != insn.code || opList.size() < 2);
 
     // create SymProc and update the location info
     SymProc proc(heap, d->bt);
@@ -475,8 +468,7 @@ SymCallCtx& SymCallCache::getCallCtx(SymHeap                    heap,
     
     // get either an existing ctx, or create a new one
     SymCallCtx *ctx = d->getCallCtx(uid, heap);
-    if (!ctx)
-        TRAP;
+    SE_BREAK_IF(!ctx);
 
     // not flushed yet
     ctx->d->flushed     = false;

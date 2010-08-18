@@ -117,9 +117,8 @@ class OffsetDb {
         const TOffValCont       empty_;
 
         void addNoClobber(const TOffVal &ov, TValueId target) {
-            if (hasKey(offMap_, ov))
-                // *** redefinition detected ***
-                TRAP;
+            // check for redefinition
+            SE_BREAK_IF(hasKey(offMap_, ov));
 
             offMap_[ov] = target;
             valMap_[target].push_back(ov);
@@ -169,16 +168,14 @@ class NeqDb {
             return hasKey(cont_, item);
         }
         void add(TValueId valLt, TValueId valGt) {
-            if (valLt == valGt)
-                TRAP;
+            SE_BREAK_IF(valLt == valGt);
 
             sortValues(valLt, valGt);
             TItem item(valLt, valGt);
             cont_.insert(item);
         }
         void del(TValueId valLt, TValueId valGt) {
-            if (valLt == valGt)
-                TRAP;
+            SE_BREAK_IF(valLt == valGt);
 
             sortValues(valLt, valGt);
             TItem item(valLt, valGt);
@@ -270,10 +267,11 @@ class EqIfDb {
             }
 
             // TODO
+#if SE_SELF_TEST
             std::vector<TValueId> tmp;
             this->gatherRelatedValues(tmp, val);
-            if (!tmp.empty())
-                TRAP;
+            SE_BREAK_IF(!tmp.empty());
+#endif
         }
 
         friend void SymHeapCore::copyRelevantPreds(SymHeapCore &dst,
@@ -322,8 +320,9 @@ void AliasDb::add(TValueId v1, TValueId v2) {
         TSet *s2 = i2->second;
 
         // FIXME: not tested yet
-        TRAP;
-
+#if SE_SELF_TEST
+        SE_TRAP;
+#endif
         // merge sets
         s1->insert(s2->begin(), s2->end());
 
@@ -407,7 +406,7 @@ void SymHeapCore::Private::releaseValueOf(TObjId obj) {
     Value::TUsedBy &uses = this->values.at(val).usedBy;
     if (1 != uses.erase(obj))
         // *** offset detected ***
-        TRAP;
+        SE_TRAP;
 
     if (uses.empty())
         this->valueDestructor(val);
@@ -463,7 +462,7 @@ TValueId SymHeapCore::valueOf(TObjId obj) const {
 
         case OBJ_UNKNOWN:
             // not implemented
-            TRAP;
+            SE_TRAP;
 
         default:
             break;
@@ -548,9 +547,8 @@ TObjId SymHeapCore::objCreate() {
 }
 
 TValueId SymHeapCore::valCreate(EUnknownValue code, TObjId target) {
-    if (this->lastObjId() < target)
-        // target out of range (we allow OBJ_INVALID here for custom values)
-        TRAP;
+    // check range (we allow OBJ_INVALID here for custom values)
+    SE_BREAK_IF(this->lastObjId() < target);
 
     // acquire value ID
     const size_t last = std::max(d->objects.size(), d->values.size());
@@ -569,6 +567,7 @@ TValueId SymHeapCore::valCreate(EUnknownValue code, TObjId target) {
 }
 
 void SymHeapCore::valSetUnknown(TValueId val, EUnknownValue code) {
+#if SE_SELF_TEST
     switch (code) {
         case UV_KNOWN:
         case UV_ABSTRACT:
@@ -576,12 +575,12 @@ void SymHeapCore::valSetUnknown(TValueId val, EUnknownValue code) {
 
         default:
             // please check if the caller is aware of what he's doing
-            TRAP;
+            SE_TRAP;
     }
+#endif
 
     Private::Value &ref = d->values[val];
-    if (ref.target <= 0)
-        TRAP;
+    SE_BREAK_IF(ref.target <= 0);
 
     ref.code = code;
 }
@@ -597,10 +596,9 @@ TValueId SymHeapCore::lastValueId() const {
 }
 
 void SymHeapCore::objSetValue(TObjId obj, TValueId val) {
-    if (this->lastObjId() < obj || obj < 0
-            || this->lastValueId() < val || val == VAL_INVALID)
-        // out of range
-        TRAP;
+    // check range
+    SE_BREAK_IF(this->lastObjId() < obj || obj < 0
+             || this->lastValueId() < val || val == VAL_INVALID);
 
     d->releaseValueOf(obj);
     d->objects[obj].value = val;
@@ -640,9 +638,9 @@ void SymHeapCore::pack() {
 }
 
 void SymHeapCore::objDestroy(TObjId obj, TObjId kind) {
-    if (this->lastObjId() < obj || obj < 0)
-        // out of range (we allow to destroy OBJ_RETURN)
-        TRAP;
+#if SE_SELF_TEST
+    // check range (we allow to destroy OBJ_RETURN)
+    SE_BREAK_IF(this->lastObjId() < obj || obj < 0);
 
     switch (kind) {
         case OBJ_DELETED:
@@ -650,14 +648,14 @@ void SymHeapCore::objDestroy(TObjId obj, TObjId kind) {
             break;
 
         default:
-            TRAP;
+            SE_TRAP;
     }
+#endif
 
     if (OBJ_RETURN != obj) {
         TValueId addr = d->objects[obj].address;
-        if (addr <= 0)
-            // object about to be destroyed has invalid address
-            TRAP;
+        // check address validity
+        SE_BREAK_IF(addr <= 0);
 
         d->values.at(addr).target = kind;
     }
@@ -678,9 +676,10 @@ EUnknownValue SymHeapCore::valGetUnknown(TValueId val) const {
         default:
             break;
     }
-    if (this->lastValueId() < val || val < 0)
-        // out of range
-        TRAP;
+
+    // check range
+    SE_BREAK_IF(this->lastValueId() < val || val < 0);
+
     return d->values[val].code;
 }
 
@@ -749,12 +748,14 @@ void SymHeapCore::valReplaceUnknown(TValueId val, TValueId replaceBy) {
     while (wl.next(item)) {
         boost::tie(val, replaceBy) = item;
 
+#if SE_SELF_TEST
         // ensure there hasn't been any inequality defined among the pair
         if (d->neqDb.areNeq(val, replaceBy)) {
             CL_ERROR("inconsistency detected among values #" << val
                     << " and #" << replaceBy);
-            TRAP;
+            SE_TRAP;
         }
+#endif
 
         // make it possible to override the implementation (template method)
         if (!this->valReplaceUnknownImpl(val, replaceBy)) {
@@ -782,7 +783,7 @@ void SymHeapCore::valReplaceUnknown(TValueId val, TValueId replaceBy) {
                     break;
 
                 default:
-                    TRAP;
+                    SE_TRAP;
             }
 
             if (areEqual)
@@ -849,29 +850,30 @@ namespace {
 void SymHeapCore::addEqIf(TValueId valCond, TValueId valA, TValueId valB,
                           bool neg)
 {
-    if (VAL_INVALID == valA || VAL_INVALID == valB)
-        TRAP;
+#if SE_SELF_TEST
+    SE_BREAK_IF(VAL_INVALID == valA || VAL_INVALID == valB);
 
-    if (this->lastValueId() < valCond || valCond <= 0)
-        // value ID is either out of range, or invalid
-        TRAP;
+    // check value ID validity
+    SE_BREAK_IF(this->lastValueId() < valCond || valCond <= 0);
 
     // TODO: check somehow if the type of valCond is CL_TYPE_BOOL at this point
     const Private::Value &refCond = d->values[valCond];
-    if (UV_KNOWN == refCond.code || UV_ABSTRACT == refCond.code)
-        // valCond is not an unknown value
-        TRAP;
+
+    // valCond must be an unknown value
+    SE_BREAK_IF(UV_KNOWN == refCond.code || UV_ABSTRACT == refCond.code);
+#endif
 
     // having the values always in the same order leads to simpler code
     moveKnownValueToLeft(*this, valA, valB);
-    if (this->lastValueId() < valB || valB <= 0)
-        // valB can't be an unknown value
-        TRAP;
 
+#if SE_SELF_TEST
+    // valB must be an unknown value
+    SE_BREAK_IF(this->lastValueId() < valB || valB <= 0);
+
+    // valB must be an unknown value (we count UV_ABSTRACT as unknown here)
     const Private::Value &refB = d->values[valB];
-    if (UV_KNOWN == refB.code)
-        // valB is not an unknown value (we count UV_ABSTRACT as unknown here)
-        TRAP;
+    SE_BREAK_IF(UV_KNOWN == refB.code);
+#endif
 
     // all seems fine to store the predicate
     d->eqIfDb.add(EqIfDb::TPred(valCond, valA, valB, neg));
@@ -916,8 +918,7 @@ bool SymHeapCore::proveEq(bool *result, TValueId valA, TValueId valB) const {
         return true;
 
     // we presume (0 <= valA) and (0 < valB) at this point
-    if (this->lastValueId() < valB || valB < 0)
-        TRAP;
+    SE_BREAK_IF(this->lastValueId() < valB || valB < 0);
 
     const Private::Value &refB = d->values[valB];
 
@@ -969,7 +970,9 @@ void copyRelevantEqIf(SymHeapCore &dst, const EqIfDb::TPred &pred,
                       const TValMap &valMap)
 {
     // FIXME: this code has never run, let's go with a debugger first
-    TRAP;
+#if SE_SELF_TEST
+    SE_TRAP;
+#endif
 
     TValueId valCond, valLt, valGt; bool neg;
     boost::tie(valCond, valLt, valGt, neg) = pred;
@@ -1020,17 +1023,19 @@ class CVarMap {
 
     public:
         void insert(CVar cVar, TObjId obj) {
+#if SE_SELF_TEST
             const unsigned last = cont_.size();
+#endif
             cont_[cVar] = obj;
-            if (last == cont_.size())
-                // attempt to reinsert and/or redefine CVar mapping
-                TRAP;
+
+            // check for mapping redefinition
+            SE_BREAK_IF(last == cont_.size());
         }
 
         void remove(CVar cVar) {
             if (1 != cont_.erase(cVar))
                 // *** offset detected ***
-                TRAP;
+                SE_TRAP;
         }
 
         TObjId find(const CVar &cVar) {
@@ -1055,9 +1060,8 @@ class CVarMap {
                 // not found anywhere
                 return OBJ_INVALID;
 
-            if (found && foundGl)
-                // clash on uid among lc/gl variable
-                TRAP;
+            // check for clash on uid among lc/gl variable
+            SE_BREAK_IF(found && foundGl);
 
             if (found)
                 return iter->second;
@@ -1138,8 +1142,7 @@ void SymHeapTyped::notifyResize(bool valOnly) {
 
 TValueId SymHeapTyped::createCompValue(const struct cl_type *clt, TObjId obj) {
     const TValueId val = SymHeapCore::valCreate(UV_KNOWN, OBJ_INVALID);
-    if (VAL_INVALID == val)
-        TRAP;
+    SE_BREAK_IF(VAL_INVALID == val);
 
     Private::Value &ref = d->values[val];
     ref.clt         = clt;
@@ -1151,8 +1154,7 @@ TValueId SymHeapTyped::createCompValue(const struct cl_type *clt, TObjId obj) {
 void SymHeapTyped::initValClt(TObjId obj) {
     // look for object's address
     const TValueId val = SymHeapCore::placedAt(obj);
-    if (VAL_INVALID == val)
-        TRAP;
+    SE_BREAK_IF(VAL_INVALID == val);
 
     // initialize value's type
     const Private::Object &ref = d->objects[obj];
@@ -1161,8 +1163,7 @@ void SymHeapTyped::initValClt(TObjId obj) {
 
 TObjId SymHeapTyped::createSubVar(const struct cl_type *clt, TObjId parent) {
     const TObjId obj = SymHeapCore::objCreate();
-    if (OBJ_INVALID == obj)
-        TRAP;
+    SE_BREAK_IF(OBJ_INVALID == obj);
 
     Private::Object &ref = d->objects[obj];
     ref.clt         = clt;
@@ -1184,9 +1185,7 @@ void SymHeapTyped::createSubs(TObjId obj) {
     while (!todo.empty()) {
         boost::tie(obj, clt) = todo.top();
         todo.pop();
-        if (!clt)
-            // missing type-info
-            TRAP;
+        SE_BREAK_IF(!clt);
 
         const enum cl_type_e code = clt->code;
         switch (code) {
@@ -1229,7 +1228,7 @@ void SymHeapTyped::createSubs(TObjId obj) {
             }
 
             default:
-                TRAP;
+                SE_TRAP;
         }
     }
 }
@@ -1349,14 +1348,15 @@ SymHeapTyped& SymHeapTyped::operator=(const SymHeapTyped &ref) {
 }
 
 void SymHeapTyped::objSetValue(TObjId obj, TValueId val) {
-    if (this->lastObjId() < obj || obj < 0)
-        // object ID is either out of range, or does not represent a valid obj
-        TRAP;
+#if SE_SELF_TEST
+    // range check
+    SE_BREAK_IF(this->lastObjId() < obj || obj < 0);
 
     if (!d->objects[obj].subObjs.empty())
         // invalid call of SymHeapTyped::objSetValue(), you want probably go
         // through SymProc::objSetValue()
-        TRAP;
+        SE_TRAP;
+#endif
 
     SymHeapCore::objSetValue(obj, val);
 }
@@ -1463,6 +1463,7 @@ TObjId SymHeapTyped::objParent(TObjId obj, int *nth) const {
 }
 
 TObjId SymHeapTyped::objCreate(const struct cl_type *clt, CVar cVar) {
+#if SE_SELF_TEST
     if(clt) {
         const enum cl_type_e code = clt->code;
         switch (code) {
@@ -1480,9 +1481,10 @@ TObjId SymHeapTyped::objCreate(const struct cl_type *clt, CVar cVar) {
 
             default:
                 // TODO: handle also other types somehow?
-                TRAP;
+                SE_TRAP;
         }
     }
+#endif
 
     const TObjId obj = SymHeapCore::objCreate();
     if (OBJ_INVALID == obj)
@@ -1512,27 +1514,25 @@ TObjId SymHeapTyped::objCreateAnon(int cbSize) {
 }
 
 int SymHeapTyped::objSizeOfAnon(TObjId obj) const {
-    if (this->lastObjId() < obj || obj <= 0)
-        // object ID is either out of range, or does not represent a valid obj
-        TRAP;
+    // range check
+    SE_BREAK_IF(this->lastObjId() < obj || obj <= 0);
 
     const Private::Object &ref = d->objects[obj];
-    if (ref.clt)
-        // we know the type, so that it does not look like an anonymous object
-        TRAP;
+
+    // if we know the type, it's not an anonymous object
+    SE_BREAK_IF(ref.clt);
 
     return ref.cbSize;
 }
 
 void SymHeapTyped::objDefineType(TObjId obj, const struct cl_type *clt) {
-    if (this->lastObjId() < obj || obj < 0)
-        // object ID is either out of range, or does not represent a valid obj
-        TRAP;
+    // range check
+    SE_BREAK_IF(this->lastObjId() < obj || obj < 0);
 
     Private::Object &ref = d->objects[obj];
-    if (ref.clt)
-        // type redefinition not allowed for now
-        TRAP;
+
+    // type redefinition not allowed for now
+    SE_BREAK_IF(ref.clt);
 
     // delayed object's type definition
     ref.clt = clt;
@@ -1549,17 +1549,15 @@ void SymHeapTyped::objDefineType(TObjId obj, const struct cl_type *clt) {
 }
 
 void SymHeapTyped::objDestroy(TObjId obj) {
-    if (this->lastObjId() < obj || obj < 0)
-        // object ID is either out of range, or does not represent a valid obj
-        TRAP;
+    // range check
+    SE_BREAK_IF(this->lastObjId() < obj || obj < 0);
 
     Private::Object &ref = d->objects[obj];
     const CVar cv = ref.cVar;
     if (cv.uid != /* heap object */ -1)
         d->cVarMap.remove(cv);
 
-    if (OBJ_INVALID != this->objParent(obj))
-        TRAP;
+    SE_BREAK_IF(OBJ_INVALID != this->objParent(obj));
 
     this->objDestroyPriv(obj);
     if (OBJ_RETURN == obj) {
@@ -1599,14 +1597,15 @@ TValueId SymHeapTyped::valCreateCustom(const struct cl_type *clt, int cVal) {
 
     // custom value already wrapped, we have to reuse it
     const TValueId val = iter->second;
-    const Private::Value &ref = d->values.at(val);
-    if (!ref.isCustom)
-        // heap corruption
-        TRAP;
 
-    if (ref.clt != clt)
-        // type mismatch
-        TRAP;
+#if SE_SELF_TEST
+    // check heap integrity
+    const Private::Value &ref = d->values.at(val);
+    SE_BREAK_IF(!ref.isCustom);
+
+    // type-info has to match
+    SE_BREAK_IF(ref.clt != clt);
+#endif
 
     return val;
 }
@@ -1703,9 +1702,9 @@ EObjKind SymHeap::objKind(TObjId obj) const {
 const SegBindingFields& SymHeap::objBinding(TObjId obj) const {
     const TObjId root = objRoot(*this, obj);
     Private::TObjMap::iterator iter = d->objMap.find(root);
-    if (d->objMap.end() == iter)
-        // invalid call of SymHeap::objBindingField()
-        TRAP;
+
+    // validate call of SymHeap::objBindingField()
+    SE_BREAK_IF(d->objMap.end() == iter);
 
     return iter->second.bf;
 }
@@ -1713,18 +1712,18 @@ const SegBindingFields& SymHeap::objBinding(TObjId obj) const {
 bool SymHeap::objShared(TObjId obj) const {
     const TObjId root = objRoot(*this, obj);
     Private::TObjMap::iterator iter = d->objMap.find(root);
-    if (d->objMap.end() == iter)
-        // invalid call of SymHeap::objShared()
-        TRAP;
+
+    // validate call of SymHeap::objShared()
+    SE_BREAK_IF(d->objMap.end() == iter);
 
     return iter->second.shared;
 }
 
 void SymHeap::objSetShared(TObjId obj, bool shared) {
     Private::TObjMap::iterator iter = d->objMap.find(obj);
-    if (d->objMap.end() == iter)
-        // invalid call of SymHeap::objSetShared()
-        TRAP;
+
+    // validate call of SymHeap::objSetShared()
+    SE_BREAK_IF(d->objMap.end() == iter);
 
     iter->second.shared = shared;
 }
@@ -1732,9 +1731,8 @@ void SymHeap::objSetShared(TObjId obj, bool shared) {
 void SymHeap::objSetAbstract(TObjId obj, EObjKind kind,
                              const SegBindingFields &bf)
 {
-    if (OK_CONCRETE == kind || hasKey(d->objMap, obj))
-        // invalid call of SymHeap::objAbstract()
-        TRAP;
+    // validate call of SymHeap::objAbstract()
+    SE_BREAK_IF(OK_CONCRETE == kind || hasKey(d->objMap, obj));
 
     // initialize abstract object
     Private::ObjectEx &ref = d->objMap[obj];
@@ -1749,19 +1747,20 @@ void SymHeap::objSetAbstract(TObjId obj, EObjKind kind,
     const TValueId addrHead = segHeadAddr(*this, obj);
     SymHeapCore::valSetUnknown(addrHead, UV_ABSTRACT);
 
+#if SE_SELF_TEST
+    // check for self-loops
     const TObjId objBind = subObjByChain(*this, obj, bf.next);
     const TValueId valNext = this->valueOf(objBind);
-    if (addr == valNext || addrHead == valNext)
-        // *** self-loop detected ***
-        TRAP;
+    SE_BREAK_IF(addr == valNext || addrHead == valNext);
+#endif
 }
 
 void SymHeap::objSetConcrete(TObjId obj) {
     CL_DEBUG("SymHeap::objConcretize() is taking place...");
     Private::TObjMap::iterator iter = d->objMap.find(obj);
-    if (d->objMap.end() == iter)
-        // invalid call of SymHeap::objConcretize()
-        TRAP;
+
+    // validate call of SymHeap::objConcretize()
+    SE_BREAK_IF(d->objMap.end() == iter);
 
     // mark the address of 'head' as UV_KNOWN
     const TValueId addrHead = segHeadAddr(*this, obj);
@@ -1779,7 +1778,7 @@ bool SymHeap::valReplaceUnknownImpl(TValueId val, TValueId replaceBy) {
     const EUnknownValue code = this->valGetUnknown(val);
     switch (code) {
         case UV_KNOWN:
-            TRAP;
+            SE_TRAP;
             return false;
 
         case UV_ABSTRACT:

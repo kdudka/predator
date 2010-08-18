@@ -101,9 +101,8 @@ namespace {
             // this can't be a pair of custom values
             return matchValues(subst, v1, v2);
 
-        if (OBJ_INVALID == cVal1 || OBJ_INVALID == cVal2)
-            // custom and non-custom values are going to be compared
-            TRAP;
+        // custom and non-custom values can't to be compared
+        SE_BREAK_IF(OBJ_INVALID == cVal1 || OBJ_INVALID == cVal2);
 
         // match custom values
         return (cVal1 == cVal2);
@@ -144,9 +143,8 @@ namespace {
         if (OBJ_INVALID == cObj1 && OBJ_INVALID == cObj2)
             return false;
 
-        if (OBJ_INVALID == cObj1 || OBJ_INVALID == cObj2)
-            // type mismatch (scalar vs. composite ought to be compared)
-            TRAP;
+        // types has to match (scalar vs. composite can't be compared)
+        SE_BREAK_IF(OBJ_INVALID == cObj1 || OBJ_INVALID == cObj2);
 
         return true;
     }
@@ -189,8 +187,7 @@ namespace {
                     for (int i = 0; i < clt->item_cnt; ++i) {
                         const TObjId sub1 = heap1.subObj(o1, i);
                         const TObjId sub2 = heap2.subObj(o2, i);
-                        if (sub1 < 0 || sub2 < 0)
-                            TRAP;
+                        SE_BREAK_IF(sub1 < 0 || sub2 < 0);
 
                         push(todo, sub1, sub2);
                     }
@@ -202,7 +199,10 @@ namespace {
                 default:
                     // other type of values should be safe to ignore here
                     // but worth to check by a debugger at least once anyway
-                    TRAP;
+#if SE_SELF_TEST
+                    SE_TRAP;
+#endif
+                    break;
             }
         }
         return true;

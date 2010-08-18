@@ -99,10 +99,7 @@ void digSubObjs(DeepCopyData &dc, TObjId objSrc, TObjId objDst)
         todo.pop();
 
         const struct cl_type *cltSrc = src.objType(objSrc);
-        if (dst.objType(objDst) != cltSrc)
-            // type mismatch
-            TRAP;
-
+        SE_BREAK_IF(dst.objType(objDst) != cltSrc);
         if (!cltSrc)
             // anonymous object of known size
             continue;
@@ -118,8 +115,7 @@ void digSubObjs(DeepCopyData &dc, TObjId objSrc, TObjId objDst)
         for (int i = 0; i < cltSrc->item_cnt; ++i) {
             const TObjId subSrc = src.subObj(objSrc, i);
             const TObjId subDst = dst.subObj(objDst, i);
-            if (subSrc < 0 || subDst < 0)
-                TRAP;
+            SE_BREAK_IF(subSrc < 0 || subDst < 0);
 
             add(dc, subSrc, subDst);
             push(todo, subSrc, subDst);
@@ -161,8 +157,7 @@ TObjId addObjectIfNeeded(DeepCopyData &dc, TObjId objSrc) {
     const struct cl_type *clt = src.objType(rootSrc);
     if (!clt) {
         // assume anonymous object of known size
-        if (src.objType(objSrc))
-            TRAP;
+        SE_BREAK_IF(src.objType(objSrc));
 
         const int cbSize = src.objSizeOfAnon(objSrc);
         const TObjId objDst = dst.objCreateAnon(cbSize);
@@ -192,7 +187,7 @@ TObjId addObjectIfNeeded(DeepCopyData &dc, TObjId objSrc) {
             return dc.objMap[objSrc];
     }
 
-    TRAP;
+    SE_TRAP;
     return OBJ_INVALID;
 }
 
@@ -259,13 +254,11 @@ TValueId handleValue(DeepCopyData &dc, TValueId valSrc) {
 
     const EUnknownValue code = src.valGetUnknown(valSrc);
     if (UV_UNKNOWN == code && !offValues.empty()) {
-        if (1 != offValues.size())
-            TRAP;
+        SE_BREAK_IF(1 != offValues.size());
 
         // handle an off-value
         SymHeap::TOffVal ov = offValues.front();
-        if (0 < ov.second)
-            TRAP;
+        SE_BREAK_IF(0 < ov.second);
 
         // FIXME: avoid unguarded recursion on handleValue() here
         ov.first = handleValue(dc, ov.first);
@@ -293,8 +286,7 @@ TValueId handleValue(DeepCopyData &dc, TValueId valSrc) {
 
     // now is the time to "dereference" the value
     const TObjId targetSrc = src.pointsTo(valSrc);
-    if (OBJ_INVALID == targetSrc)
-        TRAP;
+    SE_BREAK_IF(OBJ_INVALID == targetSrc);
 
     if (targetSrc < 0) {
         // special handling for OBJ_DELETED/OBJ_LOST
@@ -303,7 +295,7 @@ TValueId handleValue(DeepCopyData &dc, TValueId valSrc) {
             case OBJ_LOST:
                 break;
             default:
-                TRAP;
+                SE_TRAP;
         }
 
         // FIXME: really safe to ignore (cltValSrc == 0) ??
@@ -340,39 +332,32 @@ void deepCopy(DeepCopyData &dc) {
         const TObjId objSrc = item.first;
         const TObjId objDst = item.second;
 
-        if (objSrc < 0 || objDst < 0)
-            // this should have been handled elsewhere
-            TRAP;
-
+        SE_BREAK_IF(objSrc < 0 || objDst < 0);
         if (objSrc == OBJ_RETURN && objDst == OBJ_RETURN)
             // FIXME: really safe to ignore?
             continue;
 
         // read the address
         const TValueId atSrc = src.placedAt(objSrc);
-        if (atSrc <=0)
-            TRAP;
+        SE_BREAK_IF(atSrc <=0);
 
         trackUses(dc, atSrc);
 
         // read the original value
         TValueId valSrc = src.valueOf(objSrc);
-        if (VAL_INVALID == valSrc)
-            TRAP;
+        SE_BREAK_IF(VAL_INVALID == valSrc);
 
         // do whatever we need to do with the value
         const TValueId valDst = handleValue(dc, valSrc);
-        if (VAL_INVALID == valDst)
-            TRAP;
+        SE_BREAK_IF(VAL_INVALID == valDst);
 
+#if SE_SELF_TEST
         // check for composite values
         const bool comp1 = (-1 != src.valGetCompositeObj(valSrc));
         const bool comp2 = (-1 != dst.valGetCompositeObj(valDst));
-        if (comp1 != comp2)
-            // composite values malfunction
-            TRAP;
-
-        if (!comp1)
+        SE_BREAK_IF(comp1 != comp2);
+#endif
+        if (-1 == src.valGetCompositeObj(valSrc))
             // now set object's value
             dst.objSetValue(objDst, valDst);
 
@@ -405,14 +390,13 @@ void prune(const SymHeap &src, SymHeap &dst,
     // go through all program variables
     BOOST_FOREACH(CVar cv, snap) {
         const TObjId objSrc = dc.src.objByCVar(cv);
-        if (OBJ_INVALID == objSrc)
-            // failed to resolve program variable
-            TRAP;
+        SE_BREAK_IF(OBJ_INVALID == objSrc);
 
+#if SE_SELF_TEST
+        // we should always know type of program variables
         const struct cl_type *cltObjSrc = dc.src.objType(objSrc);
-        if (!cltObjSrc)
-            // we should always know type of program variables
-            TRAP;
+        SE_BREAK_IF(!cltObjSrc);
+#endif
 
         addObjectIfNeeded(dc, objSrc);
     }
@@ -486,7 +470,7 @@ void splitHeapByCVars(const SymBackTrace *bt, SymHeap *srcDst,
         plotHeap(bt,  dst,            "prune-output");
         plotHeap(bt, *saveSurroundTo, "prune-surround");
         CL_NOTE("symcut: plot done, please consider analyzing the results");
-        TRAP;
+        SE_TRAP;
     }
 
     // update *srcDst (we can't do it sooner because of the plotting above)

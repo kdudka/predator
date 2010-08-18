@@ -173,7 +173,7 @@ void buildIgnoreList(const SymHeap &sh, TObjId obj, TIgnoreList &ignoreList) {
         case OK_HEAD:
         case OK_PART:
             // invalid call of buildIgnoreList()
-            TRAP;
+            SE_TRAP;
 
         case OK_DLS:
             // preserve 'peer' field
@@ -223,7 +223,7 @@ struct DataMatchVisitor {
                 return true;
 
             case UV_ABSTRACT:
-                TRAP;
+                SE_TRAP;
         }
         return /* mismatch */ false;
     }
@@ -232,8 +232,7 @@ struct DataMatchVisitor {
 bool segEqual(const SymHeap &sh, TValueId v1, TValueId v2) {
     const TObjId o1 = sh.pointsTo(v1);
     const TObjId o2 = sh.pointsTo(v2);
-    if (o1 <= 0 || o2 <= 0)
-        TRAP;
+    SE_BREAK_IF(o1 <= 0 || o2 <= 0);
 
     const EObjKind kind = sh.objKind(o1);
     if (sh.objKind(o2) != kind)
@@ -246,7 +245,7 @@ bool segEqual(const SymHeap &sh, TValueId v1, TValueId v2) {
         case OK_HEAD:
         case OK_PART:
             // invalid call of segEqual()
-            TRAP;
+            SE_TRAP;
 
         case OK_DLS:
             if (sh.objBinding(o1).peer != sh.objBinding(o2).peer)
@@ -288,7 +287,7 @@ bool segMayBePrototype(const SymHeap &sh, const TValueId segAt, bool refByDls) {
         case OK_HEAD:
         case OK_PART:
             // concrete objects are not supported as prototypes now
-            TRAP;
+            SE_TRAP;
             return false;
 
         case OK_SLS:
@@ -335,9 +334,9 @@ TValueId mergeValues(SymHeap &sh, TValueId v1, TValueId v2,
     // attempt to dig some type-info for the new unknown value
     const struct cl_type *clt1 = sh.valType(v1);
     const struct cl_type *clt2 = sh.valType(v2);
-    if (clt1 && clt2 && clt1 != clt2)
-        // should be safe to ignore
-        TRAP;
+
+    // should be safe to ignore
+    SE_BREAK_IF(clt1 && clt2 && clt1 != clt2);
 
     // if we know type of at least one of the values, use it
     const struct cl_type *clt = (clt1)
@@ -516,12 +515,10 @@ class ProbeVisitor {
         {
             addr_ = sh.placedAt(root);
             clt_  = sh.objType(root);
-            if (!addr_ || !clt_ || CL_TYPE_STRUCT != clt_->code)
-                TRAP;
+            SE_BREAK_IF(!addr_ || !clt_ || CL_TYPE_STRUCT != clt_->code);
 
             arrity_ = static_cast<unsigned>(kind);
-            if (!arrity_)
-                TRAP;
+            SE_BREAK_IF(!arrity_);
         }
 
     bool operator()(const SymHeap &sh, TObjId obj) const {
@@ -746,7 +743,7 @@ unsigned segDiscoverAll(const SymHeap &sh, const TObjId entry, EObjKind kind,
     CL_DEBUG("    --> found " << cnt << " list selector candidate(s)");
     if (!cnt)
         // why are we called actually?
-        TRAP;
+        SE_TRAP;
 
     unsigned prevMax = cnt;
     switch (kind) {
@@ -754,7 +751,7 @@ unsigned segDiscoverAll(const SymHeap &sh, const TObjId entry, EObjKind kind,
         case OK_HEAD:
         case OK_PART:
             // invalid call of segDiscoverAll()
-            TRAP;
+            SE_TRAP;
 
         case OK_SLS:
             // just choose one selector
@@ -818,7 +815,7 @@ void slSegCreateIfNeeded(SymHeap &sh, TObjId obj, const SegBindingFields &bf) {
             // fall through!
 
         default:
-            TRAP;
+            SE_TRAP;
             // fall through!
 
         case OK_CONCRETE:
@@ -840,15 +837,14 @@ void slSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf,
 {
     const TObjId objPtrNext = subObjByChain(sh, *pObj, bf.next);
     const TValueId valNext = sh.valueOf(objPtrNext);
-    if (valNext <= 0 || 1 != sh.usedByCount(valNext))
-        // this looks like a failure of segDiscover()
-        TRAP;
+
+    // check for a failure of segDiscover()
+    SE_BREAK_IF(valNext <= 0 || 1 != sh.usedByCount(valNext));
 
     // make sure the next object is abstract
     const TObjId objNext = subObjByInvChain(sh, sh.pointsTo(valNext), bf.head);
     slSegCreateIfNeeded(sh, objNext, bf);
-    if (OK_SLS != sh.objKind(objNext))
-        TRAP;
+    SE_BREAK_IF(OK_SLS != sh.objKind(objNext));
 
     // merge data
     abstractNonMatchingValues(sh, *pObj, objNext, flatScan);
@@ -868,9 +864,8 @@ void slSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf,
 void dlSegCreate(SymHeap &sh, TObjId o1, TObjId o2, SegBindingFields bf,
                  bool flatScan)
 {
-    if (OK_CONCRETE != sh.objKind(o1) || OK_CONCRETE != sh.objKind(o2))
-        // invalid call of dlSegCreate()
-        TRAP;
+    // validate call of dlSegCreate()
+    SE_BREAK_IF(OK_CONCRETE != sh.objKind(o1) || OK_CONCRETE != sh.objKind(o2));
 
     swapValues(bf.next, bf.peer);
     sh.objSetAbstract(o1, OK_DLS, bf);
@@ -891,9 +886,8 @@ void dlSegCreate(SymHeap &sh, TObjId o1, TObjId o2, SegBindingFields bf,
 void dlSegGobble(SymHeap &sh, TObjId dls, TObjId var, bool backward,
                  bool flatScan)
 {
-    if (OK_DLS != sh.objKind(dls) || OK_CONCRETE != sh.objKind(var))
-        // invalid call of dlSegGobble()
-        TRAP;
+    // validate call of dlSegGobble()
+    SE_BREAK_IF(OK_DLS != sh.objKind(dls) || OK_CONCRETE != sh.objKind(var));
 
     // kill Neq if any
     // TODO: we may distinguish among 1+/2+ at this point
@@ -931,15 +925,15 @@ void dlSegMerge(SymHeap &sh, TObjId seg1, TObjId seg2, bool flatScan) {
         dlSegHandleCrossNeq(sh, seg2, SymHeap::NEQ_DEL);
     }
 
-    if (sh.objBinding(seg1) != sh.objBinding(seg2))
-        // failure of segDiscover()?
-        TRAP;
+    // check for a failure of segDiscover()
+    SE_BREAK_IF(sh.objBinding(seg1) != sh.objBinding(seg2));
 
     const TObjId peer1 = dlSegPeer(sh, seg1);
+#if SE_SELF_TEST
     const TObjId nextPtr = nextPtrFromSeg(sh, peer1);
     const TValueId valNext = sh.valueOf(nextPtr);
-    if (valNext != sh.placedAt(seg2))
-        TRAP;
+    SE_BREAK_IF(valNext != sh.placedAt(seg2));
+#endif
 
     const TObjId peer2 = dlSegPeer(sh, seg2);
 
@@ -979,7 +973,7 @@ void dlSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf,
         case OK_HEAD:
         case OK_PART:
             // *** segDiscover() failure detected ***
-            TRAP;
+            SE_TRAP;
 
         case OK_DLS:
             // jump to peer
@@ -1030,7 +1024,7 @@ bool considerSegAbstraction(SymHeap &sh, TObjId obj, EObjKind kind,
         case OK_HEAD:
         case OK_PART:
             // invalid call of considerSegAbstraction()
-            TRAP;
+            SE_TRAP;
 
         case OK_SLS:
             at = slsThreshold;
@@ -1096,7 +1090,7 @@ bool considerAbstraction(SymHeap &sh, EObjKind kind, TCont entries,
         case OK_HEAD:
         case OK_PART:
             // invalid call of considerAbstraction()
-            TRAP;
+            SE_TRAP;
 
         case OK_SLS:
             CL_DEBUG("--> considering SLS abstraction...");
@@ -1114,8 +1108,7 @@ bool considerAbstraction(SymHeap &sh, EObjKind kind, TCont entries,
 
     // check how many candidates did we get
     const unsigned cnt = entries.size();
-    if (heads.size() != cnt)
-        TRAP;
+    SE_BREAK_IF(heads.size() != cnt);
 
     for (unsigned i = 0; i < cnt; ++i) {
         const TObjId obj = entries[i];
@@ -1223,8 +1216,7 @@ bool abstractIfNeededCore(SymHeap &sh) {
 }
 
 void segReplaceRefs(SymHeap &sh, TValueId valOld, TValueId valNew) {
-    if (UV_ABSTRACT != sh.valGetUnknown(valOld))
-        TRAP;
+    SE_BREAK_IF(UV_ABSTRACT != sh.valGetUnknown(valOld));
 
     TObjId objOld = sh.pointsTo(valOld);
     TObjId headOld = objOld;
@@ -1243,7 +1235,7 @@ void segReplaceRefs(SymHeap &sh, TValueId valOld, TValueId valNew) {
             break;
 
         default:
-            TRAP;
+            SE_TRAP;
     }
 
     TObjId objNew = sh.pointsTo(valNew);
@@ -1256,8 +1248,7 @@ void segReplaceRefs(SymHeap &sh, TValueId valOld, TValueId valNew) {
 
     if (OK_HEAD == kind) {
         objOld = subObjByInvChain(sh, objOld, icHead);
-        if (objOld < 0)
-            TRAP;
+        SE_BREAK_IF(objOld < 0);
 
         const TValueId addrOld = sh.placedAt(objOld);
         if (0 == sh.usedByCount(addrOld))
@@ -1282,7 +1273,7 @@ void segReplaceRefs(SymHeap &sh, TValueId valOld, TValueId valNew) {
     }
     else {
         // TODO: check this with a debugger at least once
-        TRAP;
+        SE_TRAP;
         const TObjId headNew = subObjByChain(sh, objNew, icHead);
         sh.valReplace(sh.placedAt(headOld), sh.placedAt(headNew));
     }
@@ -1376,7 +1367,7 @@ void concretizeObj(SymHeap &sh, TValueId addr, TSymHeapList &todo) {
         case OK_HEAD:
         case OK_PART:
             // invalid call of concretizeObj()
-            TRAP;
+            SE_TRAP;
 
         case OK_SLS:
             break;

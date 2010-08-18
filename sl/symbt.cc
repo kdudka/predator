@@ -61,18 +61,18 @@ const CodeStorage::Fnc* SymBackTrace::Private::fncOnTop() const {
 
     const TStackItem &top = this->btStack.top();
     const CodeStorage::Fnc *fnc = top.first;
-    if (!fnc)
-        // bt corruption detected
-        TRAP;
+
+    // check bt integrity
+    SE_BREAK_IF(!fnc);
 
     return fnc;
 }
 
 const CodeStorage::Fnc* SymBackTrace::Private::fncById(int id) const {
     const CodeStorage::Fnc *fnc = this->stor.fncs[id];
-    if (!fnc)
-        // invalid fnc ID
-        TRAP;
+
+    // check fnc ID validity
+    SE_BREAK_IF(!fnc);
 
     return fnc;
 }
@@ -84,9 +84,9 @@ void SymBackTrace::Private::pushFnc(const CodeStorage::Fnc *fnc,
     this->fncSeq.push_back(uidOf(*fnc));
 
     int &ref = this->nestMap[fnc];
-    if (ref < 0 || static_cast<int>(this->btStack.size()) < ref)
-        // bt corruption detected
-        TRAP;
+
+    // check bt integrity
+    SE_BREAK_IF(ref < 0 || static_cast<int>(this->btStack.size()) < ref);
 
     // increment instance counter
     ++ref;
@@ -107,9 +107,8 @@ void SymBackTrace::Private::popFnc() {
         return;
     }
 
-    if (ref < 0 || static_cast<int>(this->btStack.size()) < ref)
-        // bt corruption detected
-        TRAP;
+    // check bt integrity
+    SE_BREAK_IF(ref < 0 || static_cast<int>(this->btStack.size()) < ref);
 }
 
 SymBackTrace::SymBackTrace(const CodeStorage::Storage &stor):
@@ -161,9 +160,9 @@ void SymBackTrace::pushCall(int fncId, const LocationWriter &lw) {
 
 const CodeStorage::Fnc* SymBackTrace::popCall() {
     const CodeStorage::Fnc *fnc = d->fncOnTop();
-    if (!fnc)
-        // bt corruption detected
-        TRAP;
+
+    // check bt integrity
+    SE_BREAK_IF(!fnc);
 
     d->popFnc();
     return fnc;
@@ -203,9 +202,7 @@ LocationWriter SymBackTrace::topCallLoc() const {
 bool SymBackTrace::hasRecursiveCall() const {
     BOOST_FOREACH(const Private::TMap::value_type &item, d->nestMap) {
         const int cnt = item.second;
-        if (cnt <= 0)
-            // seems like internal error of SymBackTrace
-            TRAP;
+        SE_BREAK_IF(cnt <= 0);
 
         if (1 < cnt)
             // a recursive call has been found

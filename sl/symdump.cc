@@ -100,8 +100,7 @@ void dump_clt(const struct cl_type *clt) {
 
         // print type at the current level
         clt = item.clt;
-        if (!clt)
-            TRAP;
+        SE_BREAK_IF(!clt);
         dump_clt_core(clt);
         cout << "\n";
 

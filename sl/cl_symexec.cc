@@ -59,7 +59,7 @@ void parseConfigString(SymExecParams &sep, std::string cnf) {
     }
 
     // unhandled config string
-    TRAP;
+    SE_TRAP;
 }
 
 void digGlJunk(CodeStorage::Storage &stor, SymHeap &heap) {
@@ -75,8 +75,7 @@ void digGlJunk(CodeStorage::Storage &stor, SymHeap &heap) {
 
             const CVar cVar(var.uid, /* gl variable */ 0);
             const TObjId obj = heap.objByCVar(cVar);
-            if (obj < 0)
-                TRAP;
+            SE_BREAK_IF(obj < 0);
 
             proc.setLocation(lw);
             proc.objDestroy(obj);

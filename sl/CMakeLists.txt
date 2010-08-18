@@ -23,6 +23,12 @@ enable_testing()
 
 include("../CMakeLists.common")
 
+if(SL_DEBUG)
+else()
+    # be more self-confident in production
+    add_definitions("-DSE_OPTIMIZED_BUILD")
+endif()
+
 # libsl.so
 add_library(sl SHARED
     cl_symexec.cc
@@ -118,9 +124,12 @@ set(self_extra_opts
     -fplugin-arg-libsl-verbose=15
     -fplugin-arg-libsl-bypass-symexec)
 
-test_sym_exec("valgrind-test" valgrind
-    --error-exitcode=7
-    ${GCC45})
+option(SL_TEST_VALGRIND "Set to ON to enable valgrind tests" OFF)
+if(SL_TEST_VALGRIND)
+    test_sym_exec("valgrind-test" valgrind
+        --error-exitcode=7
+        ${GCC45})
+endif()
 
 add_test("headers_sanity-0" gcc -ansi -Wall -Wextra -Werror -pedantic
     -o /dev/null

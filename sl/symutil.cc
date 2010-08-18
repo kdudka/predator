@@ -55,8 +55,7 @@ TObjId subObjByInvChain(const SymHeap &sh, TObjId obj, TFieldIdxChain ic) {
 
     // now check if the captured selector sequence matches the given one
     for (unsigned i = 0; i < ic.size(); ++i) {
-        if (chkStack.empty())
-            TRAP;
+        SE_BREAK_IF(chkStack.empty());
 
         if (chkStack.top() != ic[i])
             // field mismatch
@@ -64,8 +63,7 @@ TObjId subObjByInvChain(const SymHeap &sh, TObjId obj, TFieldIdxChain ic) {
 
         chkStack.pop();
     }
-    if (!chkStack.empty())
-        TRAP;
+    SE_BREAK_IF(!chkStack.empty());
 
     return obj;
 }
@@ -83,16 +81,14 @@ bool isHeapObject(const SymHeap &heap, TObjId obj) {
 
 void digRootObject(const SymHeap &heap, TValueId *pValue) {
     TObjId obj = heap.pointsTo(*pValue);
-    if (obj < 0)
-        TRAP;
+    SE_BREAK_IF(obj < 0);
 
     TObjId parent;
     while (OBJ_INVALID != (parent = heap.objParent(obj)))
         obj = parent;
 
     TValueId val = heap.placedAt(obj);
-    if (val <= 0)
-        TRAP;
+    SE_BREAK_IF(val <= 0);
 
     *pValue = val;
 }
@@ -123,8 +119,7 @@ void getPtrValues(SymHeapCore::TContValue &dst, const SymHeap &heap,
             case CL_TYPE_STRUCT:
                 for (int i = 0; i < clt->item_cnt; ++i) {
                     const TObjId subObj = heap.subObj(obj, i);
-                    if (subObj < 0)
-                        TRAP;
+                    SE_BREAK_IF(subObj < 0);
 
                     todo.push(subObj);
                 }
@@ -139,22 +134,23 @@ void getPtrValues(SymHeapCore::TContValue &dst, const SymHeap &heap,
             default:
                 // other types of value should be safe to ignore here
                 // but worth to check by a debugger at least once anyway
-                TRAP;
+#if SE_SELF_TEST
+                SE_TRAP;
+#endif
+                break;
         }
     }
 }
 
 void objReplace(SymHeap &sh, TObjId oldObj, TObjId newObj) {
-    if (OBJ_INVALID != sh.objParent(oldObj)
-            || OBJ_INVALID != sh.objParent(newObj))
-        // attempt to replace a sub-object
-        TRAP;
+    // check for possible replacement of sub-object
+    SE_BREAK_IF(OBJ_INVALID != sh.objParent(oldObj)
+             || OBJ_INVALID != sh.objParent(newObj));
 
     // resolve object addresses
     const TValueId oldAddr = sh.placedAt(oldObj);
     const TValueId newAddr = sh.placedAt(newObj);
-    if (oldAddr <= 0 || newAddr <= 0)
-        TRAP;
+    SE_BREAK_IF(oldAddr <= 0 || newAddr <= 0);
 
     // update all references
     sh.valReplace(oldAddr, newAddr);

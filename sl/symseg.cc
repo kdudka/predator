@@ -24,19 +24,17 @@
 #include "symutil.hh"
 
 TObjId nextPtrFromSeg(const SymHeap &sh, TObjId seg) {
-    if (OK_CONCRETE == sh.objKind(seg))
-        // invalid call of nextPtrFromSeg()
-        TRAP;
+    // validate call of nextPtrFromSeg()
+    SE_BREAK_IF(OK_CONCRETE == sh.objKind(seg));
 
     const TFieldIdxChain icNext = sh.objBinding(seg).next;
     return subObjByChain(sh, seg, icNext);
 }
 
 TObjId dlSegPeer(const SymHeap &sh, TObjId dls) {
+    // validate call of dlSegPeer()
     const TObjId root = objRoot(sh, dls);
-    if (OK_DLS != sh.objKind(root))
-        // invalid call of dlSegPeer()
-        TRAP;
+    SE_BREAK_IF(OK_DLS != sh.objKind(root));
 
     TObjId peer = root;
     const SegBindingFields &bf = sh.objBinding(dls);
@@ -50,18 +48,16 @@ namespace {
         if (!sh.proveEq(&eq, v1, v2))
             return /* no idea */ false;
 
-        if (eq)
-            // equal ... basically means 'invalid segment'
-            TRAP;
+        // equal basically means 'invalid segment'
+        SE_BREAK_IF(eq);
 
         return /* not equal */ true;
     }
 }
 
 bool dlSegNotEmpty(const SymHeap &sh, TObjId dls) {
-    if (OK_DLS != sh.objKind(dls))
-        // invalid call of dlSegNotEmpty()
-        TRAP;
+    // validate call of dlSegNotEmpty()
+    SE_BREAK_IF(OK_DLS != sh.objKind(dls));
 
     const TObjId peer = dlSegPeer(sh, dls);
 
@@ -79,13 +75,15 @@ bool dlSegNotEmpty(const SymHeap &sh, TObjId dls) {
     if (ne1 && ne2)
         return /* not empty */ true;
 
+#if SE_SELF_TEST
     if (!ne1 && !ne2)
         return /* possibly empty */ false;
 
     // the given DLS is guaranteed to be non empty in one direction, but not
     // vice versa --> such a DLS is considered as mutant and should not be
     // passed through
-    TRAP;
+    SE_TRAP;
+#endif
     return false;
 }
 
@@ -96,7 +94,7 @@ bool segNotEmpty(const SymHeap &sh, TObjId seg) {
         case OK_HEAD:
         case OK_PART:
             // invalid call of segNotEmpty()
-            TRAP;
+            SE_TRAP;
 
         case OK_SLS:
             break;
@@ -118,7 +116,7 @@ void segDestroy(SymHeap &sh, TObjId seg) {
         case OK_HEAD:
         case OK_PART:
             // invalid call of segDestroy()
-            TRAP;
+            SE_TRAP;
 
         case OK_DLS:
             sh.objDestroy(dlSegPeer(sh, seg));

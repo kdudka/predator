@@ -52,7 +52,7 @@ TValueId SymProc::heapValFromCst(const struct cl_operand &op) {
             break;
 
         default:
-            TRAP;
+            SE_TRAP;
     }
 
     const struct cl_cst &cst = op.data.cst;
@@ -89,7 +89,7 @@ TValueId SymProc::heapValFromCst(const struct cl_operand &op) {
         }
 
         default:
-            TRAP;
+            SE_TRAP;
             return VAL_INVALID;
     }
 }
@@ -106,7 +106,7 @@ bool SymProc::checkForInvalidDeref(TObjId obj) {
 
         case OBJ_UNKNOWN:
         case OBJ_INVALID:
-            TRAP;
+            SE_TRAP;
 
         default:
             // valid object
@@ -134,7 +134,7 @@ void SymProc::heapObjHandleAccessorDeref(TObjId *pObj) {
             return;
 
         case VAL_INVALID:
-            TRAP;
+            SE_TRAP;
         default:
             break;
     }
@@ -177,10 +177,7 @@ void SymProc::heapObjHandleAccessorItem(TObjId *pObj,
     // access subObj
     const int id = ac->data.item.id;
     *pObj = heap_.subObj(*pObj, id);
-
-    if (OBJ_INVALID == *pObj)
-        // no such sub-object
-        TRAP;
+    SE_BREAK_IF(OBJ_INVALID == *pObj);
 }
 
 void SymProc::heapObjHandleAccessor(TObjId *pObj,
@@ -190,7 +187,7 @@ void SymProc::heapObjHandleAccessor(TObjId *pObj,
     switch (code) {
         case CL_ACCESSOR_DEREF:
             // this should have been handled elsewhere
-            TRAP;
+            SE_TRAP;
             return;
 
         case CL_ACCESSOR_ITEM:
@@ -228,7 +225,7 @@ TObjId varFromOperand(const struct cl_operand &op, const SymHeap &sh,
             break;
 
         default:
-            TRAP;
+            SE_TRAP;
             return OBJ_INVALID;
     }
 
@@ -241,9 +238,9 @@ TObjId varFromOperand(const struct cl_operand &op, const SymHeap &sh,
 
 TValueId SymProc::resolveOffValue(TObjId obj, const struct cl_accessor **pAc) {
     const struct cl_accessor *ac = *pAc;
-    if (!ac || ac->code != CL_ACCESSOR_DEREF)
-        // invalid call of SymProc::resolveOffValue()
-        TRAP;
+
+    // validate call of SymProc::resolveOffValue()
+    SE_BREAK_IF(!ac || ac->code != CL_ACCESSOR_DEREF);
 
     ac = ac->next;
     if (!ac || ac->code != CL_ACCESSOR_ITEM)
@@ -280,10 +277,9 @@ TValueId SymProc::resolveOffValue(TObjId obj, const struct cl_accessor **pAc) {
 }
 
 TObjId SymProc::heapObjFromOperand(const struct cl_operand &op) {
+    // resolve static variable
     TObjId obj = varFromOperand(op, heap_, bt_);
-    if (OBJ_INVALID == obj)
-        // unable to resolve static variable
-        TRAP;
+    SE_BREAK_IF(OBJ_INVALID == obj);
 
     const struct cl_accessor *ac = op.accessor;
     if (!ac)
@@ -307,9 +303,8 @@ TObjId SymProc::heapObjFromOperand(const struct cl_operand &op) {
         }
     }
 
-    if (ac && ac->code == CL_ACCESSOR_DEREF)
-        // oops, we don't support chaining of CL_ACCESSOR_DEREF
-        TRAP;
+    // we don't support chaining of CL_ACCESSOR_DEREF (yet?)
+    SE_BREAK_IF(ac && ac->code == CL_ACCESSOR_DEREF);
 
     while (ac) {
         this->heapObjHandleAccessor(&obj, ac);
@@ -333,7 +328,7 @@ bool SymProc::lhsFromOperand(TObjId *pObj, const struct cl_operand &op) {
         case OBJ_LOST:
         case OBJ_DELETED:
         case OBJ_INVALID:
-            TRAP;
+            SE_TRAP;
 
         default:
             return true;
@@ -344,7 +339,7 @@ TValueId SymProc::heapValFromObj(const struct cl_operand &op) {
     const TObjId obj = this->heapObjFromOperand(op);
     switch (obj) {
         case OBJ_INVALID:
-            TRAP;
+            SE_TRAP;
             return VAL_INVALID;
 
         case OBJ_UNKNOWN:
@@ -382,7 +377,7 @@ TValueId SymProc::heapValFromOperand(const struct cl_operand &op) {
             return this->heapValFromCst(op);
 
         default:
-            TRAP;
+            SE_TRAP;
             return VAL_INVALID;
     }
 }
@@ -391,8 +386,7 @@ int /* uid */ SymProc::fncFromOperand(const struct cl_operand &op) {
     if (CL_OPERAND_CST == op.code) {
         // direct call
         const struct cl_cst &cst = op.data.cst;
-        if (CL_TYPE_FNC != cst.code)
-            TRAP;
+        SE_BREAK_IF(CL_TYPE_FNC != cst.code);
 
         return cst.data.cst_fnc.uid;
 
@@ -401,23 +395,21 @@ int /* uid */ SymProc::fncFromOperand(const struct cl_operand &op) {
         const TValueId val = this->heapValFromOperand(op);
         if (VAL_INVALID == val)
             // Oops, it does not look as indirect call actually
-            TRAP;
+            SE_TRAP;
 
         // obtain the inner content of the custom value and check its type-info
         const struct cl_type *clt;
         const int uid = heap_.valGetCustom(&clt, val);
-        if (-1 == uid)
-            // unable to resolve custom value
-            TRAP;
+        SE_BREAK_IF(-1 == uid);
 
-        if (!clt || clt->code != CL_TYPE_PTR)
-            // not a pointer
-            TRAP;
+#if SE_SELF_TEST
+        // check for a pointer
+        SE_BREAK_IF(!clt || clt->code != CL_TYPE_PTR);
 
+        // check for a function
         clt = clt->items[0].type;
-        if (!clt || clt->code != CL_TYPE_FNC)
-            // not a function
-            TRAP;
+        SE_BREAK_IF(!clt || clt->code != CL_TYPE_FNC);
+#endif
 
         return uid;
     }
@@ -425,29 +417,26 @@ int /* uid */ SymProc::fncFromOperand(const struct cl_operand &op) {
 
 void SymProc::heapObjDefineType(TObjId lhs, TValueId rhs) {
     const TObjId var = heap_.pointsTo(rhs);
-    if (OBJ_INVALID == var)
-        TRAP;
+    SE_BREAK_IF(OBJ_INVALID == var);
 
     const struct cl_type *clt = heap_.objType(lhs);
     if (!clt)
         return;
 
-    if (clt->code != CL_TYPE_PTR)
-        TRAP;
+    SE_BREAK_IF(clt->code != CL_TYPE_PTR);
 
     // move to next clt
     // --> what are we pointing to actually?
     clt = clt->items[0].type;
-    if (!clt)
-        TRAP;
+    SE_BREAK_IF(!clt);
 
     if (CL_TYPE_VOID == clt->code)
         return;
 
     const int cbGot = heap_.objSizeOfAnon(var);
-    if (!cbGot)
-        // anonymous object of zero size
-        TRAP;
+
+    // anonymous objects of zero size are not allowed
+    SE_BREAK_IF(!cbGot);
 
     const int cbNeed = clt->size;
     if (cbGot != cbNeed) {
@@ -468,8 +457,7 @@ void SymProc::heapObjDefineType(TObjId lhs, TValueId rhs) {
 void SymProc::heapSetSingleVal(TObjId lhs, TValueId rhs) {
     // save the old value, which is going to be overwritten
     const TValueId oldValue = heap_.valueOf(lhs);
-    if (VAL_INVALID == oldValue)
-        TRAP;
+    SE_BREAK_IF(VAL_INVALID == oldValue);
 
     if (0 < rhs) {
         const TObjId target = heap_.pointsTo(rhs);
@@ -526,18 +514,15 @@ void SymProc::objSetValue(TObjId lhs, TValueId rhs) {
             continue;
         }
 
+        // check type-info
         const struct cl_type *clt = heap_.objType(rObj);
-        if (!clt || clt->code != CL_TYPE_STRUCT || clt != heap_.objType(lhs))
-            // type-info problem
-            TRAP;
+        SE_BREAK_IF(!clt || clt->code != CL_TYPE_STRUCT || clt != heap_.objType(lhs));
 
         // iterate through all fields
         for (int i = 0; i < clt->item_cnt; ++i) {
             const TObjId lSub = heap_.subObj(lhs, i);
             const TObjId rSub = heap_.subObj(rObj, i);
-            if (lSub <= 0 || rSub <= 0)
-                // composition problem
-                TRAP;
+            SE_BREAK_IF(lSub <= 0 || rSub <= 0);
 
             // schedule sub for next wheel
             const TValueId rSubVal = heap_.valueOf(rSub);
@@ -567,17 +552,14 @@ void SymProc::objDestroy(TObjId obj) {
 }
 
 void SymProc::execFree(const CodeStorage::TOperandList &opList) {
-    if (/* dst + fnc + ptr */ 3 != opList.size())
-        TRAP;
+    SE_BREAK_IF(/* dst + fnc + ptr */ 3 != opList.size());
 
-    if (CL_OPERAND_VOID != opList[0].code)
-        // Oops, free() does not usually return a value
-        TRAP;
+    // free() does not usually return a value
+    SE_BREAK_IF(CL_OPERAND_VOID != opList[0].code);
 
+    // resolve value to be freed
     const TValueId val = heapValFromOperand(opList[/* ptr given to free() */2]);
-    if (VAL_INVALID == val)
-        // could not resolve value to be freed
-        TRAP;
+    SE_BREAK_IF(VAL_INVALID == val);
 
     switch (val) {
         case VAL_NULL:
@@ -594,7 +576,7 @@ void SymProc::execFree(const CodeStorage::TOperandList &opList) {
     const EUnknownValue code = heap_.valGetUnknown(val);
     switch (code) {
         case UV_ABSTRACT:
-            TRAP;
+            SE_TRAP;
             // fall through!
 
         case UV_KNOWN:
@@ -627,7 +609,7 @@ void SymProc::execFree(const CodeStorage::TOperandList &opList) {
 
         case OBJ_UNKNOWN:
         case OBJ_INVALID:
-            TRAP;
+            SE_TRAP;
 
         default:
             break;
@@ -656,35 +638,29 @@ void SymProc::execFree(const CodeStorage::TOperandList &opList) {
 void SymProc::execMalloc(TState &state, const CodeStorage::TOperandList &opList,
                          bool fastMode)
 {
-    if (/* dst + fnc + size */ 3 != opList.size())
-        TRAP;
+    SE_BREAK_IF(/* dst + fnc + size */ 3 != opList.size());
 
+    // resolve lhs
     const struct cl_operand &dst = opList[0];
     const TObjId varLhs = this->heapObjFromOperand(dst);
-    if (OBJ_INVALID == varLhs)
-        // could not resolve lhs
-        TRAP;
+    SE_BREAK_IF(OBJ_INVALID == varLhs);
 
+    // amount of allocated memory must be a constant
     const struct cl_operand &amount = opList[2];
-    if (CL_OPERAND_CST != amount.code)
-        // amount of allocated memory not constant
-        TRAP;
+    SE_BREAK_IF(CL_OPERAND_CST != amount.code);
 
+    // amount of allocated memory must be a number
     const struct cl_cst &cst = amount.data.cst;
-    if (CL_TYPE_INT != cst.code)
-        // amount of allocated memory not a number
-        TRAP;
-
+    SE_BREAK_IF(CL_TYPE_INT != cst.code);
     const int cbAmount = cst.data.cst_int.value;
     CL_DEBUG_MSG(lw_, "executing malloc(" << cbAmount << ")");
+
+    // now create a heap object
     const TObjId obj = heap_.objCreateAnon(cbAmount);
-    if (OBJ_INVALID == obj)
-        // unable to create a heap object
-        TRAP;
+    SE_BREAK_IF(OBJ_INVALID == obj);
 
     const TValueId val = heap_.placedAt(obj);
-    if (val <= 0)
-        TRAP;
+    SE_BREAK_IF(val <= 0);
 
     if (!fastMode) {
         // OOM state simulation
@@ -877,8 +853,7 @@ bool SymProc::execCall(TState &dst, const CodeStorage::Insn &insn,
     }
 
     if (STREQ(fncName, "abort")) {
-        if (opList.size() != 2 || opList[0].code != CL_OPERAND_VOID)
-            TRAP;
+        SE_BREAK_IF(opList.size() != 2 || opList[0].code != CL_OPERAND_VOID);
 
         // do nothing for abort()
         goto call_done;
@@ -948,23 +923,28 @@ namespace {
 
 template <class THeap>
 void handleUnopTruthNot(THeap &heap, TValueId &val, const struct cl_type *clt) {
-    if (!clt || clt->code != CL_TYPE_BOOL)
-        // inappropriate type for CL_UNOP_TRUTH_NOT
-        TRAP;
+    // check type validity wrt. CL_UNOP_TRUTH_NOT
+    SE_BREAK_IF(!clt || clt->code != CL_TYPE_BOOL);
 
     if (handleUnopTruthNotTrivial(val))
         // we are done
         return;
 
+    // the value we got msut be VAL_TRUE, VAL_FALSE, or an unknown value
+#if SE_SELF_TEST
     const EUnknownValue code = heap.valGetUnknown(val);
-    if (UV_KNOWN == code || UV_ABSTRACT == code)
-        // the value we got is not VAL_TRUE, VAL_FALSE, nor an unknown value
-        TRAP;
+    SE_BREAK_IF(UV_KNOWN == code || UV_ABSTRACT == code);
+#else
+    (void) clt;
+#endif
 
     const TValueId origValue = val;
     val = heap.valDuplicateUnknown(origValue);
+
     // FIXME: not tested
-    TRAP;
+#if SE_SELF_TEST
+    SE_TRAP;
+#endif
     heap.addEqIf(origValue, val, VAL_TRUE, /* neg */ true);
 }
 
@@ -984,7 +964,7 @@ TValueId handleOpCmpBool(THeap &heap, enum cl_binop_e code,
 
         default:
             // crazy comparison of bool values
-            TRAP;
+            SE_TRAP;
             return VAL_INVALID;
     }
     if (v1 == valElim)
@@ -992,11 +972,10 @@ TValueId handleOpCmpBool(THeap &heap, enum cl_binop_e code,
     if (v2 == valElim)
         return v1;
 
-    if (v1 < 0 || v2 < 0)
-        TRAP;
+    SE_BREAK_IF(v1 < 0 || v2 < 0);
 
     // FIXME: not tested
-    TRAP;
+    SE_TRAP;
     bool result;
     if (!heap.proveEq(&result, v1, v2))
         return heap.valCreateUnknown(UV_UNKNOWN, dstClt);
@@ -1014,8 +993,7 @@ template <class THeap>
 TValueId handleOpCmpInt(THeap &heap, enum cl_binop_e code,
                         const struct cl_type *dstClt, TValueId v1, TValueId v2)
 {
-    if (VAL_INVALID == v1 || VAL_INVALID == v2)
-        TRAP;
+    SE_BREAK_IF(VAL_INVALID == v1 || VAL_INVALID == v2);
 
     // check if the values are equal
     bool eq;
@@ -1052,7 +1030,7 @@ TValueId handleOpCmpInt(THeap &heap, enum cl_binop_e code,
                 : VAL_FALSE;
 
         default:
-            TRAP;
+            SE_TRAP;
     }
 
 who_knows:
@@ -1080,8 +1058,7 @@ TValueId handleOpCmpPtr(THeap &heap, enum cl_binop_e code,
     if (VAL_DEREF_FAILED == v1 || VAL_DEREF_FAILED == v2)
         return VAL_DEREF_FAILED;
 
-    if (v1 < 0 || v2 < 0)
-        TRAP;
+    SE_BREAK_IF(v1 < 0 || v2 < 0);
 
     switch (code) {
         case CL_BINOP_EQ:
@@ -1090,7 +1067,7 @@ TValueId handleOpCmpPtr(THeap &heap, enum cl_binop_e code,
 
         default:
             // crazy comparison of pointer values
-            TRAP;
+            SE_TRAP;
             return VAL_INVALID;
     }
 
@@ -1126,7 +1103,7 @@ TValueId handleOpCmp(THeap &heap, enum cl_binop_e code,
         case CL_TYPE_INT:  return handleOpCmpInt (heap, code, dstClt, v1, v2);
         default:
             // unexpected clt->code
-            TRAP;
+            SE_TRAP;
             return VAL_INVALID;
     }
 }
@@ -1174,16 +1151,13 @@ TValueId handlePointerPlus(SymHeap &sh, const struct cl_type *clt,
                            TValueId ptr, const struct cl_operand &op)
 {
     // jump to _target_ type
-    if (!clt || clt->code != CL_TYPE_PTR)
-        TRAP;
+    SE_BREAK_IF(!clt || clt->code != CL_TYPE_PTR);
     clt = clt->items[0].type;
 
     // read integral offset
-    if (CL_OPERAND_CST != op.code)
-        TRAP;
+    SE_BREAK_IF(CL_OPERAND_CST != op.code);
     const struct cl_cst &cst = op.data.cst;
-    if (CL_TYPE_INT != op.type->code)
-        TRAP;
+    SE_BREAK_IF(CL_TYPE_INT != op.type->code);
     int off = cst.data.cst_int.value;
     CL_DEBUG("handlePointerPlus(): " << off << "b offset requested");
 
@@ -1193,8 +1167,7 @@ TValueId handlePointerPlus(SymHeap &sh, const struct cl_type *clt,
     int nth;
     while (OBJ_INVALID != (parent = sh.objParent(obj, &nth))) {
         const struct cl_type *cltParent = sh.objType(parent);
-        if (cltParent->item_cnt <= nth)
-            TRAP;
+        SE_BREAK_IF(cltParent->item_cnt <= nth);
 
         off += cltParent->items[nth].offset;
         obj = parent;
@@ -1209,14 +1182,14 @@ TValueId handlePointerPlus(SymHeap &sh, const struct cl_type *clt,
     obj = subSeekByOffset(sh, obj, clt, off);
     if (obj <= 0)
         // TODO: create an unknown value?
-        TRAP;
+        SE_TRAP;
 
     // get the final address and check type compatibility
     const TValueId addr = sh.placedAt(obj);
+#if SE_SELF_TEST
     const struct cl_type *cltDst = sh.valType(addr);
-    if (!cltDst || *cltDst != *clt)
-        // type problem
-        TRAP;
+    SE_BREAK_IF(!cltDst || *cltDst != *clt);
+#endif
 
     return addr;
 }
@@ -1246,7 +1219,7 @@ struct OpHandler</* unary */ 1, TProc> {
                 break;
 
             default:
-                TRAP;
+                SE_TRAP;
         }
 
         return val;
@@ -1261,9 +1234,7 @@ struct OpHandler</* binary */ 2, TProc> {
     {
         const struct cl_type *const cltA = clt[0];
         const struct cl_type *const cltB = clt[1];
-        if (!cltA || !cltB)
-            // type-info is missing
-            TRAP;
+        SE_BREAK_IF(!cltA || !cltB);
 
         SymHeap &heap = proc.heap_;
         if (*cltA != *cltB) {
@@ -1293,7 +1264,7 @@ struct OpHandler</* binary */ 2, TProc> {
                 return heap.valCreateUnknown(UV_UNKNOWN, cltA);
 
             default:
-                TRAP;
+                SE_TRAP;
                 return VAL_INVALID;
         }
     }
@@ -1327,8 +1298,7 @@ void SymProc::execOp(const CodeStorage::Insn &insn) {
         const struct cl_operand &op = opList[i + /* [+dst] */ 1];
         clt[i] = op.type;
         rhs[i] = this->heapValFromOperand(op);
-        if (VAL_INVALID == rhs[i])
-            TRAP;
+        SE_BREAK_IF(VAL_INVALID == rhs[i]);
     }
 
     TValueId valResult = VAL_INVALID;
@@ -1382,9 +1352,12 @@ bool checkForDeref(const struct cl_operand &op, const CodeStorage::Insn &insn) {
         // we expect the dereference only as the first accessor
         return false;
 
+#if SE_SELF_TEST
     const enum cl_unop_e code = static_cast<enum cl_unop_e>(insn.subCode);
-    if (CL_INSN_UNOP != insn.code || CL_UNOP_ASSIGN != code)
-        TRAP;
+    SE_BREAK_IF(CL_INSN_UNOP != insn.code || CL_UNOP_ASSIGN != code);
+#else
+    (void) insn;
+#endif
 
     // we should go through concretization
     return true;
@@ -1408,7 +1381,7 @@ bool SymProc::concretizeIfNeeded(TState &results, const CodeStorage::Insn &insn)
 
         if (hitConcretize)
             // FIXME: are we ready for two dereferences within one insn?
-            TRAP;
+            SE_TRAP;
 
         hitConcretize = this->concretizeLoop(results, insn, op);
     }
@@ -1446,7 +1419,7 @@ bool SymProc::execCore(TState &dst, const CodeStorage::Insn &insn,
             return this->execCall(dst, insn, ep);
 
         default:
-            TRAP;
+            SE_TRAP;
             return false;
     }
 

@@ -44,8 +44,7 @@ namespace {
 // attempt to initialize a global/static variable
 bool initSingleGlVar(SymHeap &sh, TObjId obj) {
     const struct cl_type *clt = sh.objType(obj);
-    if (!clt)
-        TRAP;
+    SE_BREAK_IF(!clt);
 
     const enum cl_type_e code = clt->code;
     switch (code) {
@@ -63,7 +62,7 @@ bool initSingleGlVar(SymHeap &sh, TObjId obj) {
 
         default:
             // only a few types are supported in case of gl variables for now
-            TRAP;
+            SE_TRAP;
     }
 
     return /* continue */ true;
@@ -217,8 +216,7 @@ void SymExecEngine::initEngine(const SymHeap &init)
 void SymExecEngine::execReturn() {
     const CodeStorage::Insn *insn = block_->operator[](insnIdx_);
     const CodeStorage::TOperandList &opList = insn->operands;
-    if (1 != opList.size())
-        TRAP;
+    SE_BREAK_IF(1 != opList.size());
 
     SymHeap heap(localState_[heapIdx_]);
 
@@ -228,8 +226,7 @@ void SymExecEngine::execReturn() {
         proc.setLocation(lw_);
 
         const TValueId val = proc.heapValFromOperand(src);
-        if (VAL_INVALID == val)
-            TRAP;
+        SE_BREAK_IF(VAL_INVALID == val);
 
         proc.objSetValue(OBJ_RETURN, val);
     }
@@ -282,8 +279,7 @@ void SymExecEngine::execCondInsn() {
     const CodeStorage::Insn *insn = block_->operator[](insnIdx_);
     const CodeStorage::TOperandList &oplist = insn->operands;
     const CodeStorage::TTargetList &tlist = insn->targets;
-    if (2 != tlist.size() || 1 != oplist.size())
-        TRAP;
+    SE_BREAK_IF(2 != tlist.size() || 1 != oplist.size());
 
     // IF (operand) GOTO target0 ELSE target1
 
@@ -328,7 +324,7 @@ void SymExecEngine::execCondInsn() {
 
         case UV_KNOWN:
         case UV_ABSTRACT:
-            TRAP;
+            SE_TRAP;
             return;
     }
 
@@ -363,7 +359,7 @@ void SymExecEngine::execTermInsn() {
             // go through!
 
         default:
-            TRAP;
+            SE_TRAP;
     }
 }
 
@@ -408,7 +404,10 @@ void operandToStreamCstInt(std::ostream &str, const struct cl_operand &op) {
             // fall through!
 
         default:
-            TRAP;
+#if SE_SELF_TEST
+            SE_TRAP;
+#endif
+            break;
     }
 }
 
@@ -422,8 +421,7 @@ void operandToStreamCst(std::ostream &str, const struct cl_operand &op) {
 
         case CL_TYPE_FNC: {
             const char *name = cst.data.cst_fnc.name;
-            if (!name)
-                TRAP;
+            SE_BREAK_IF(!name);
 
             str << name;
             break;
@@ -431,15 +429,17 @@ void operandToStreamCst(std::ostream &str, const struct cl_operand &op) {
 
         case CL_TYPE_STRING: {
             const char *text = cst.data.cst_string.value;
-            if (!text)
-                TRAP;
+            SE_BREAK_IF(!text);
 
             str << "\"" << text << "\"";
             break;
         }
 
         default:
-            TRAP;
+#if SE_SELF_TEST
+            SE_TRAP;
+#endif
+            break;
     }
 }
 
@@ -474,7 +474,10 @@ void operandToStreamAcs(std::ostream &str, const struct cl_accessor *ac) {
                 // fall through!
 
             default:
-                TRAP;
+#if SE_SELF_TEST
+                SE_TRAP;
+#endif
+                break;
         }
     }
 }
@@ -511,7 +514,9 @@ void operandToStreamVar(std::ostream &str, const struct cl_operand &op) {
             break;
 
         default:
-            TRAP;
+#if SE_SELF_TEST
+            SE_TRAP;
+#endif
             break;
     }
 
@@ -540,7 +545,10 @@ void operandToStream(std::ostream &str, const struct cl_operand &op) {
         case CL_OPERAND_VOID:
             // this should have been handled elsewhere
         default:
-            TRAP;
+#if SE_SELF_TEST
+            SE_TRAP;
+#endif
+            break;
     }
 }
 
@@ -583,7 +591,10 @@ void binOpToStream(std::ostream &str, int subCode,
         case CL_BINOP_MINUS:            str << " - ";           break;
         case CL_BINOP_POINTER_PLUS:     str << " (ptr +) ";     break;
         default:
-            TRAP;
+#if SE_SELF_TEST
+            SE_TRAP;
+#endif
+            break;
     }
 
     operandToStream(str, opList[/* src2 */ 2]);
@@ -660,7 +671,10 @@ void SymExecEngine::echoInsn() {
             break;
 
         default:
-            TRAP;
+#if SE_SELF_TEST
+            SE_TRAP;
+#endif
+            break;
     }
 
     std::string echo(str.str());
@@ -775,9 +789,9 @@ bool /* complete */ SymExecEngine::run() {
     else {
         // we have a fresh instance of SymExecEngine
         waiting_ = true;
-        if (1 != todo_.size())
-            // protocol error
-            TRAP;
+
+        // check for possible protocol error
+        SE_BREAK_IF(1 != todo_.size());
     }
 
     // main loop of SymExecEngine
@@ -816,17 +830,15 @@ bool /* complete */ SymExecEngine::run() {
 }
 
 const SymHeap* SymExecEngine::callEntry() const {
-    if (heapIdx_ < 1)
-        TRAP;
-
+    SE_BREAK_IF(heapIdx_ < 1);
     return &localState_[heapIdx_ - /* already incremented for next wheel */ 1];
 }
 
 const CodeStorage::Insn* SymExecEngine::callInsn() const {
     const CodeStorage::Insn *insn = block_->operator[](insnIdx_);
-    if (CL_INSN_CALL != insn->code)
-        // protocol error
-        TRAP;
+
+    // check for possible protocol error
+    SE_BREAK_IF(CL_INSN_CALL != insn->code);
 
     return insn;
 }
@@ -892,8 +904,7 @@ const CodeStorage::Fnc* SymExec::Private::resolveCallInsn(
         SymHeapUnion                &results)
 {
     const CodeStorage::TOperandList &opList = insn.operands;
-    if (CL_INSN_CALL != insn.code || opList.size() < 2)
-        TRAP;
+    SE_BREAK_IF(CL_INSN_CALL != insn.code || opList.size() < 2);
 
     // look for Fnc ought to be called
     SymProc proc(heap, &this->bt);
@@ -902,9 +913,7 @@ const CodeStorage::Fnc* SymExec::Private::resolveCallInsn(
     const struct cl_operand &opFnc = opList[/* fnc */ 1];
     const int uid = proc.fncFromOperand(opFnc);
     const CodeStorage::Fnc *fnc = this->stor.fncs[uid];
-    if (!fnc)
-        // unable to resolve Fnc by UID
-        TRAP;
+    SE_BREAK_IF(!fnc);
 
     if (SE_MAX_CALL_DEPTH < this->bt.size()) {
         CL_ERROR_MSG(lw, "call depth exceeds SE_MAX_CALL_DEPTH"
@@ -915,8 +924,7 @@ const CodeStorage::Fnc* SymExec::Private::resolveCallInsn(
     if (CL_OPERAND_VOID == fnc->def.code) {
         const struct cl_cst &cst = opFnc.data.cst;
         const char *name = cst.data.cst_fnc.name;
-        if (CL_TYPE_FNC != cst.code || !name)
-            TRAP;
+        SE_BREAK_IF(CL_TYPE_FNC != cst.code || !name);
 
         CL_WARN_MSG(lw, "ignoring call of undefined function: "
                 << name << "()");
@@ -1032,9 +1040,8 @@ void SymExec::exec(const CodeStorage::Fnc &fnc, SymHeapUnion &results) {
     // go through all symbolic heaps of the initial state, merging the results
     // all together
     BOOST_FOREACH(const SymHeap &heap, d->stateZero) {
-        if (d->bt.size())
-            // *** bt offset detected ***
-            TRAP;
+        // check for bt offset
+        SE_BREAK_IF(d->bt.size());
 
         // initialize backtrace
         d->bt.pushCall(uidOf(fnc), &fnc.def.loc);

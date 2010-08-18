@@ -25,6 +25,12 @@
 #include <signal.h>     /* needed for TRAP ... raise(SIGTRAP)       */
 #include <stdio.h>      /* needed for TRAP ... fprintf(stderr, ...) */
 
+#ifdef SE_OPTIMIZED_BUILD
+#   define SE_SELF_TEST                     0
+#else
+#   define SE_SELF_TEST                     1
+#endif
+
 /**
  * defined in version.c to avoid rebuild of all modules on git-commit
  */
@@ -33,12 +39,38 @@ extern const char *sl_git_sha1;
 /**
  * jump to debugger by default in case anything interesting happens
  * @note this behavior may be subject for change in the future
+ * @note for comfortable source code browsing, it's recommended to tweak your
+ * editor, in order to highlight SE_TRAP as as keyword, as well as SE_BREAK_IF
  */
-#define TRAP do { \
-    fprintf(stderr, "%s:%d: killing self by SIGTRAP [SHA1 %s]\n", \
-            __FILE__, __LINE__, sl_git_sha1); \
-    raise(SIGTRAP); \
+#define SE_TRAP do {                                                        \
+    fprintf(stderr, "%s:%d: killing self by SIGTRAP [SHA1 %s]\n",           \
+            __FILE__, __LINE__, sl_git_sha1);                               \
+                                                                            \
+    raise(SIGTRAP);                                                         \
 } while (0)
+
+#if SE_SELF_TEST
+/**
+ * conditional variant of TRAP, do nothing as long as cond is not satisfied
+ * @attention the macro suffer from the same flaw as std::assert - the given
+ * expression is not evaluated at all unless you're running a debug build
+ * @note the macro has exactly opposite semantic than std::assert
+ * @note for comfortable source code browsing, it's recommended to tweak your
+ * editor, in order to highlight SE_BREAK_IF as as keyword, as well as SE_TRAP
+ */
+#   define SE_BREAK_IF(cond) do {                                           \
+        if (!(cond))                                                        \
+            break;                                                          \
+                                                                            \
+        fprintf(stderr, "%s:%d: conditional breakpoint fired: "             \
+                "SE_BREAK_IF(%s)\n", __FILE__, __LINE__, #cond);            \
+                                                                            \
+        SE_TRAP;                                                            \
+    } while (0)
+
+#else /* SE_SELF_TEST */
+#   define SE_BREAK_IF(cond) do { } while (0)
+#endif
 
 /**
  * if 1, print created/destroyed stack variables when running in verbose mode
