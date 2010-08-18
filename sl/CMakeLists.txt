@@ -29,6 +29,12 @@ else()
     add_definitions("-DSE_OPTIMIZED_BUILD")
 endif()
 
+option(SE_USE_INT3_AS_BRK
+       "Set to ON to use INT3 for breakpoints (SIGTRAP is used by default)" OFF)
+if(SE_USE_INT3_AS_BRK)
+    add_definitions("-DSE_USE_INT3_AS_BRK")
+endif()
+
 # libsl.so
 add_library(sl SHARED
     cl_symexec.cc
