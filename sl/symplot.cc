@@ -574,7 +574,11 @@ void SymPlot::Private::digNext(TObjId obj) {
 
 void SymPlot::Private::openCluster(TObjId obj) {
     std::string label;
+#if SE_SELF_TEST
     const char *color, *pw;
+#else
+    const char *color = "", *pw = "";
+#endif
     EObjKind kind = this->heap->objKind(obj);
     if (OK_CONCRETE !=kind && !this->heap->objShared(obj))
         label = "[prototype] ";

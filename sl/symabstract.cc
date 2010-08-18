@@ -766,7 +766,11 @@ unsigned segDiscoverAll(const SymHeap &sh, const TObjId entry, EObjKind kind,
 
     // if (2 < cnt), try all possible combinations in case of DLS
     // NOTE: This may take some time...
+#if SE_SELF_TEST
     unsigned bestLen = 0, bestNext, bestPrev;
+#else
+    unsigned bestLen = 0, bestNext = 0, bestPrev = 0;
+#endif
     for (unsigned next = 0; next < cnt; ++next) {
         for (unsigned prev = 0; prev < prevMax; ++prev) {
             if (OK_DLS == kind && next == prev)
@@ -1018,16 +1022,17 @@ bool considerSegAbstraction(SymHeap &sh, TObjId obj, EObjKind kind,
                             bool flatScan)
 {
     // select the appropriate threshold for the given type of abstraction
-    AbstractionThreshold at;
+    AbstractionThreshold at = slsThreshold;
     switch (kind) {
         case OK_CONCRETE:
         case OK_HEAD:
         case OK_PART:
             // invalid call of considerSegAbstraction()
             SE_TRAP;
+            return false;
 
         case OK_SLS:
-            at = slsThreshold;
+            // at == slsThreshold
             break;
 
         case OK_DLS:
@@ -1103,7 +1108,11 @@ bool considerAbstraction(SymHeap &sh, EObjKind kind, TCont entries,
 
     // go through all candidates and find the best possible abstraction
     SegBindingFields bestBf;
+#if SE_SELF_TEST
     TObjId bestEntry;
+#else
+    TObjId bestEntry = OBJ_INVALID;
+#endif
     unsigned bestLen = 0;
 
     // check how many candidates did we get

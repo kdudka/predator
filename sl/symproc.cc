@@ -1139,6 +1139,9 @@ TObjId subSeekByOffset(const SymHeap &sh, TObjId obj,
     visitor.root        = obj;
     visitor.cltToSeek   = clt;
     visitor.offToSeek   = offToSeek;
+#if !SE_SELF_TEST
+    visitor.subFound    = OBJ_INVALID;
+#endif
 
     // look for the requested sub-object
     if (traverseSubObjs(sh, obj, visitor, /* leavesOnly */ false))
