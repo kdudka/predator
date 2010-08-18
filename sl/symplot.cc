@@ -260,7 +260,9 @@ bool SymPlot::Private::digFieldName(std::string &dst, TObjId obj) {
     }
 
     // not found?
+#if SE_SELF_TEST
     SE_TRAP;
+#endif
     return false;
 }
 
@@ -632,7 +634,6 @@ bool SymPlot::Private::handleCustomValue(TValueId value) {
         return false;
 
     SE_BREAK_IF(!clt || clt->code != CL_TYPE_PTR);
-
     clt = clt->items[0].type;
     if (!clt || clt->code != CL_TYPE_FNC) {
         CL_WARN_MSG(this->lw, "custom value ignored while plotting");

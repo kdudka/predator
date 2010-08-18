@@ -890,7 +890,6 @@ void dlSegCreate(SymHeap &sh, TObjId o1, TObjId o2, SegBindingFields bf,
 void dlSegGobble(SymHeap &sh, TObjId dls, TObjId var, bool backward,
                  bool flatScan)
 {
-    // validate call of dlSegGobble()
     SE_BREAK_IF(OK_DLS != sh.objKind(dls) || OK_CONCRETE != sh.objKind(var));
 
     // kill Neq if any
@@ -1012,9 +1011,10 @@ void dlSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf,
     // the current object has been just consumed, move to the next one
     *pObj = o2;
 
-    // just check if the Neq predicates work well so far (safe to remove when
-    // not debugging)
-    (void) dlSegNotEmpty(sh, o2);
+#if SE_SELF_TEST
+    // just check if the Neq predicates work well so far
+    dlSegNotEmpty(sh, o2);
+#endif
 }
 
 bool considerSegAbstraction(SymHeap &sh, TObjId obj, EObjKind kind,
@@ -1282,7 +1282,9 @@ void segReplaceRefs(SymHeap &sh, TValueId valOld, TValueId valNew) {
     }
     else {
         // TODO: check this with a debugger at least once
+#if SE_SELF_TEST
         SE_TRAP;
+#endif
         const TObjId headNew = subObjByChain(sh, objNew, icHead);
         sh.valReplace(sh.placedAt(headOld), sh.placedAt(headNew));
     }

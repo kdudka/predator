@@ -37,7 +37,7 @@ A:
 
 Q: How can I turn off all the debugging features and boost the performance?
 A:
-    $ make -C sl CMAKE="cmake -D DEBUG=OFF"
+    $ make -C sl CMAKE="cmake -D SL_DEBUG=OFF"
 
 Q: What equipment do I need to run the test-suite?
 A: * 32bit system headers, especially in case of 64bit OS

@@ -289,6 +289,7 @@ TValueId handleValue(DeepCopyData &dc, TValueId valSrc) {
     SE_BREAK_IF(OBJ_INVALID == targetSrc);
 
     if (targetSrc < 0) {
+#if SE_SELF_TEST
         // special handling for OBJ_DELETED/OBJ_LOST
         switch (targetSrc) {
             case OBJ_DELETED:
@@ -297,6 +298,7 @@ TValueId handleValue(DeepCopyData &dc, TValueId valSrc) {
             default:
                 SE_TRAP;
         }
+#endif
 
         // FIXME: really safe to ignore (cltValSrc == 0) ??
         const struct cl_type *cltValSrc = src.valType(valSrc);
@@ -463,6 +465,7 @@ void splitHeapByCVars(const SymBackTrace *bt, SymHeap *srcDst,
     CL_DEBUG("splitHeapByCVars() resulting heap size: " << std::fixed
             << std::setprecision(2) << std::setw(5) << ratio << "%");
 
+#if SE_SELF_TEST
     // basic sanity check
     if (cntA < cntOrig || cntA + cntB != cntTotal) {
         CL_ERROR("symcut: splitHeapByCVars() failed, attempt to plot heaps...");
@@ -472,6 +475,9 @@ void splitHeapByCVars(const SymBackTrace *bt, SymHeap *srcDst,
         CL_NOTE("symcut: plot done, please consider analyzing the results");
         SE_TRAP;
     }
+#else
+    (void) bt;
+#endif
 
     // update *srcDst (we can't do it sooner because of the plotting above)
     *srcDst = dst;

@@ -56,7 +56,6 @@ TObjId subObjByInvChain(const SymHeap &sh, TObjId obj, TFieldIdxChain ic) {
     // now check if the captured selector sequence matches the given one
     for (unsigned i = 0; i < ic.size(); ++i) {
         SE_BREAK_IF(chkStack.empty());
-
         if (chkStack.top() != ic[i])
             // field mismatch
             return OBJ_INVALID;
@@ -144,8 +143,8 @@ void getPtrValues(SymHeapCore::TContValue &dst, const SymHeap &heap,
 
 void objReplace(SymHeap &sh, TObjId oldObj, TObjId newObj) {
     // check for possible replacement of sub-object
-    SE_BREAK_IF(OBJ_INVALID != sh.objParent(oldObj)
-             || OBJ_INVALID != sh.objParent(newObj));
+    SE_BREAK_IF(OBJ_INVALID != sh.objParent(oldObj));
+    SE_BREAK_IF(OBJ_INVALID != sh.objParent(newObj));
 
     // resolve object addresses
     const TValueId oldAddr = sh.placedAt(oldObj);

@@ -239,9 +239,7 @@ TObjId varFromOperand(const struct cl_operand &op, const SymHeap &sh,
 TValueId SymProc::resolveOffValue(TObjId obj, const struct cl_accessor **pAc) {
     const struct cl_accessor *ac = *pAc;
 
-    // validate call of SymProc::resolveOffValue()
     SE_BREAK_IF(!ac || ac->code != CL_ACCESSOR_DEREF);
-
     ac = ac->next;
     if (!ac || ac->code != CL_ACCESSOR_ITEM)
         // no selectors --> no offset to compute
@@ -377,7 +375,9 @@ TValueId SymProc::heapValFromOperand(const struct cl_operand &op) {
             return this->heapValFromCst(op);
 
         default:
+#if SE_SELF_TEST
             SE_TRAP;
+#endif
             return VAL_INVALID;
     }
 }
@@ -422,7 +422,6 @@ void SymProc::heapObjDefineType(TObjId lhs, TValueId rhs) {
     const struct cl_type *clt = heap_.objType(lhs);
     if (!clt)
         return;
-
     SE_BREAK_IF(clt->code != CL_TYPE_PTR);
 
     // move to next clt
@@ -433,9 +432,8 @@ void SymProc::heapObjDefineType(TObjId lhs, TValueId rhs) {
     if (CL_TYPE_VOID == clt->code)
         return;
 
-    const int cbGot = heap_.objSizeOfAnon(var);
-
     // anonymous objects of zero size are not allowed
+    const int cbGot = heap_.objSizeOfAnon(var);
     SE_BREAK_IF(!cbGot);
 
     const int cbNeed = clt->size;
@@ -975,7 +973,9 @@ TValueId handleOpCmpBool(THeap &heap, enum cl_binop_e code,
     SE_BREAK_IF(v1 < 0 || v2 < 0);
 
     // FIXME: not tested
+#if SE_SELF_TEST
     SE_TRAP;
+#endif
     bool result;
     if (!heap.proveEq(&result, v1, v2))
         return heap.valCreateUnknown(UV_UNKNOWN, dstClt);
