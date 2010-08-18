@@ -39,6 +39,10 @@
 #include <boost/tuple/tuple.hpp>
 #include <boost/tuple/tuple_comparison.hpp>
 
+#ifndef DEBUG_UNUSED_VALUES
+#   define DEBUG_UNUSED_VALUES 0
+#endif
+
 // NeqDb/EqIfDb helper
 template <class TDst>
 void emitOne(TDst &dst, TValueId val) {
@@ -387,7 +391,11 @@ struct SymHeapCore::Private {
 };
 
 void SymHeapCore::Private::valueDestructor(TValueId val) {
+#if DEBUG_UNUSED_VALUES
     CL_DEBUG("SymHeapCore: value #" << val << " became internally unused");
+#else
+    (void) val;
+#endif
 }
 
 void SymHeapCore::Private::releaseValueOf(TObjId obj) {

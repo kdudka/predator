@@ -61,6 +61,11 @@ extern const char *sl_git_sha1;
 #define DEBUG_SYMID_FORCE_INT               0
 
 /**
+ * if 1, SymHeapCore leaves a debug message when a value became unused
+ */
+#define DEBUG_UNUSED_VALUES                 0
+
+/**
  * if 1, the garbage collector does not see objects pointed beyond the root as
  * garbage
  */
