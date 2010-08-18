@@ -156,6 +156,14 @@ class SymHeapCore {
          */
         virtual void objSetValue(TObjId obj, TValueId val);
 
+        /**
+         * remove dangling predicates.  Remove any predicates containing a value
+         * that is no more referred internally.  Do not call the method as long
+         * as you hold any value IDs externally, you may loose some useful
+         * predicates in that case.
+         */
+        virtual void pack();
+
     protected:
         /**
          * @b destroy the given heap object.  All values which have been

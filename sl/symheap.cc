@@ -159,7 +159,7 @@ class NeqDb {
         TCont cont_;
 
     public:
-        bool areNeq(TValueId valLt, TValueId valGt) {
+        bool areNeq(TValueId valLt, TValueId valGt) const {
             sortValues(valLt, valGt);
             TItem item(valLt, valGt);
             return hasKey(cont_, item);
@@ -181,9 +181,27 @@ class NeqDb {
             cont_.erase(item);
         }
 
+        bool empty() const {
+            return cont_.empty();
+        }
+
+        void killByValue(TValueId val) {
+            // FIXME: suboptimal due to performance
+            TCont snap(cont_);
+            BOOST_FOREACH(const TItem &item, snap) {
+                if (item.first != val && item.second != val)
+                    continue;
+
+                CL_DEBUG("NeqDb::killByValue(#" << val
+                        << ") removed dangling Neq predicate");
+
+                cont_.erase(item);
+            }
+        }
+
         template <class TDst>
         void gatherRelatedValues(TDst &dst, TValueId val) const {
-            // FIXME: suboptimal due to performace
+            // FIXME: suboptimal due to performance
             BOOST_FOREACH(const TItem &item, cont_) {
                 if (item.first == val)
                     emitOne(dst, item.second);
@@ -214,6 +232,10 @@ class EqIfDb {
         TMap cont_;
 
     public:
+        bool empty() const {
+            return cont_.empty();
+        }
+
         void add(TPred pred) {
             const TValueId valCond = pred.get<0>();
             TSet &ref = cont_[valCond];
@@ -239,6 +261,19 @@ class EqIfDb {
         template <class TDst2>
         void gatherRelatedValues(TDst2 &dst, TValueId val) const;
 
+        void killByValue(TValueId val) {
+            if (cont_.erase(val)) {
+                CL_DEBUG("EqIfDb::killByValue(#" << val
+                        << ") removed dangling EqIf predicate");
+            }
+
+            // TODO
+            std::vector<TValueId> tmp;
+            this->gatherRelatedValues(tmp, val);
+            if (!tmp.empty())
+                TRAP;
+        }
+
         friend void SymHeapCore::copyRelevantPreds(SymHeapCore &dst,
                                                    const SymHeapCore::TValMap &)
                                                    const;
@@ -246,7 +281,7 @@ class EqIfDb {
 
 template <class TDst2>
 void EqIfDb::gatherRelatedValues(TDst2 &dst, TValueId val) const {
-    // FIXME: suboptimal due to performace
+    // FIXME: suboptimal due to performance
     TMap::const_iterator iter;
     for (iter = cont_.begin(); iter != cont_.end(); ++iter) {
         const TSet &line = iter->second;
@@ -354,16 +389,7 @@ struct SymHeapCore::Private {
 };
 
 void SymHeapCore::Private::valueDestructor(TValueId val) {
-#if 0
-    TContValue related;
-    this->neqDb.gatherRelatedValues(related, val);
-    this->eqIfDb.gatherRelatedValues(related, val);
-    if (!related.empty())
-        // value being destroyed is held by a predicate
-        TRAP;
-#else
-    (void) val;
-#endif
+    CL_DEBUG("SymHeapCore: value #" << val << " became internally unused");
 }
 
 void SymHeapCore::Private::releaseValueOf(TObjId obj) {
@@ -579,6 +605,34 @@ void SymHeapCore::objSetValue(TObjId obj, TValueId val) {
 
     Private::Value &ref = d->values.at(val);
     ref.usedBy.insert(obj);
+}
+
+void SymHeapCore::pack() {
+    const bool hasNeq  = !d->neqDb.empty();
+    const bool hasEqIf = !d->eqIfDb.empty();
+    if (!hasNeq && !hasEqIf)
+        // no predicates found, we're done
+        return;
+
+    if (hasEqIf) {
+        CL_WARN("SymHeapCore::pack() encountered an EqIf predicate, chances are"
+                " that it will cause some problems elsewhere...");
+    }
+
+    const unsigned cnt = d->values.size();
+    for (unsigned i = 1; i < cnt; ++i) {
+        const TValueId val = static_cast<TValueId>(i);
+        const Private::Value &ref = d->values[val];
+        if (!ref.usedBy.empty())
+            // value used, keep going...
+            continue;
+
+        if (hasNeq)
+            d->neqDb.killByValue(val);
+
+        if (hasEqIf)
+            d->eqIfDb.killByValue(val);
+    }
 }
 
 void SymHeapCore::objDestroy(TObjId obj, TObjId kind) {

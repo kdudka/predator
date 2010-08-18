@@ -31,3 +31,9 @@ o FIXME:
 
     It's easy for us to place there some fancy error message instead of the
     breakpoint, however not that easy to handle the test-case properly :-/
+
+o KNOWN BUGS
+  - test-0081, test-0084 and test-0086, when analysed by latest gcc (4.6.0
+    dirty, SVN rev. 163325), cause the analysis to die on assertion failure
+    within dlSegMerge().  If I disable SE_ABSTRACT_ON_CALL_DONE, the tests
+    pass just fine.
