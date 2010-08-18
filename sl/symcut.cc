@@ -339,7 +339,7 @@ void deepCopy(DeepCopyData &dc) {
 
         // read the address
         const TValueId atSrc = src.placedAt(objSrc);
-        SE_BREAK_IF(atSrc <=0);
+        SE_BREAK_IF(atSrc <= 0);
 
         trackUses(dc, atSrc);
 
@@ -366,7 +366,7 @@ void deepCopy(DeepCopyData &dc) {
             SymHeap::TContValue relatedVals;
             src.gatherRelatedValues(relatedVals, valSrc);
             BOOST_FOREACH(TValueId relValSrc, relatedVals) {
-                if (valSrc <=0 || relValSrc <= 0)
+                if (valSrc <= 0 || relValSrc <= 0)
                     continue;
 #if DEBUG_SYMCUT
                 CL_DEBUG("deepCopy() is traversing a predicate: #"

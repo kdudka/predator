@@ -1,10 +1,5 @@
-Q: What equipment do I need to compile GCC from SVN sources?
-A: * SVN client
-     - the executable is called 'svn'
-     - usually provided by a package called 'subversion'
-     - available at http://subversion.apache.org/
-
-   * GMP library (including the -devel stuff)
+Q: What equipment do I need to compile GCC?
+A: * GMP library (including the -devel stuff)
      - available at http://gmplib.org/
      - package is usually called 'gmp'
      - on binary distros you may need also the 'gmp-devel' sub-package
@@ -19,6 +14,10 @@ A: * SVN client
      - package is usually called 'mpfr'
      - on binary distros you may need also the 'mpfr-devel' sub-package
 
+Q: How can I compile gcc from the released tarball?
+A:
+    $ make build_gcc45
+
 Q: What equipment do I need to compile the GCC plug-in?
 A: * CMake 2.8+
      - available at http://www.cmake.org
@@ -32,23 +31,27 @@ A: * CMake 2.8+
      - package is usually called 'boost'
      - on binary distros you may need also the 'boost-devel' sub-package
 
+Q: How can I compile the GCC plug-in?
+A:
+    $ make -C sl
+
+Q: How can I turn off all the debugging features and boost the performance?
+A:
+    $ make -C sl CMAKE="cmake -D DEBUG=OFF"
+
 Q: What equipment do I need to run the test-suite?
 A: * 32bit system headers, especially in case of 64bit OS
      - on Ubuntu/Debian provided by a package called 'libc6-dev-i386'
      - you can check their status
        by 'gcc -m32 -o /dev/null /usr/include/stdlib.h'
 
-Q: How can I compile GCC from SVN sources?
-A:
-    $ make build_gcc
-
-Q: How can I compile the GCC plug-in?
-A:
-    $ make -C sl
-
 Q: How can I run the test-suite?
 A:
     $ make check
+
+Q: How can I run the test-suite in parallel?
+A:
+    $ make check CTEST="ctest -j9"
 
 Q: Can I compile the plug-in against my system GCC instead?
 A: Yes, you need GCC version 4.5+ or a working snapshot.
@@ -72,10 +75,6 @@ A:
     You need to replace gcc-4.5.0-alpha20091224 by either absolute path to your
     gcc executable, or a ralative one to $PATH.
 
-Q: How can I run the test-suite in parallel?
+Q: How can I compile GCC from SVN sources?
 A:
-    $ make check CTEST="ctest -j9"
-
-Q: How can I compile gcc from the released tarball instead of the SVN sources?
-A:
-    $ make build_gcc45
+    $ make build_gcc

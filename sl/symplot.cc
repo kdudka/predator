@@ -579,7 +579,8 @@ void SymPlot::Private::openCluster(TObjId obj) {
 #else
     const char *color = "", *pw = "";
 #endif
-    EObjKind kind = this->heap->objKind(obj);
+
+    const EObjKind kind = this->heap->objKind(obj);
     if (OK_CONCRETE !=kind && !this->heap->objShared(obj))
         label = "[prototype] ";
 

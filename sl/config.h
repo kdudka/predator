@@ -51,7 +51,7 @@ extern const char *sl_git_sha1;
 
 #if SE_SELF_TEST
 /**
- * conditional variant of TRAP, do nothing as long as cond is not satisfied
+ * conditional variant of SE_TRAP, do nothing as long as cond is not satisfied
  * @attention the macro suffer from the same flaw as std::assert - the given
  * expression is not evaluated at all unless you're running a debug build
  * @note the macro has exactly opposite semantic than std::assert

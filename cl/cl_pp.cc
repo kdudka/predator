@@ -413,7 +413,7 @@ void ClPrettyPrint::printNestedVar(const struct cl_operand *op) {
                 CL_ERROR_MSG(LocationWriter(loc_), "anonymous variable");
                 break;
             }
-            out_ << SSD_INLINE_COLOR(C_LIGHT_BLUE, "%m") << scopeFlag(op->scope)
+            out_ << SSD_INLINE_COLOR(C_LIGHT_BLUE, "%m" << scopeFlag(op->scope))
                 << op->data.var.id << ":";
             switch (op->scope) {
                 case CL_SCOPE_GLOBAL:
