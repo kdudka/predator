@@ -55,13 +55,24 @@ bool operator==(const struct cl_type &a, const struct cl_type &b) {
             return false;
 
         switch (code) {
-            default:
-                // TODO
+            case CL_TYPE_VOID:
+            case CL_TYPE_UNKNOWN:
+            case CL_TYPE_INT:
+            case CL_TYPE_CHAR:
+            case CL_TYPE_BOOL:
+            case CL_TYPE_ENUM:
+                return false;
+
+            case CL_TYPE_STRING:
+                // should be used only by cl_cst, see the dox
                 TRAP;
                 return false;
 
             case CL_TYPE_PTR:
+            case CL_TYPE_FNC:
             case CL_TYPE_STRUCT:
+            case CL_TYPE_UNION:
+            case CL_TYPE_ARRAY:
                 // nest into types
                 for (int i = 0; i < cnt; ++i) {
                     const struct cl_type_item *ciA = cltA->items + i;

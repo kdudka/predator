@@ -123,10 +123,11 @@ class SymProc {
         void heapObjHandleAccessorItem(TObjId *pObj,
                                        const struct cl_accessor *ac);
         void heapObjHandleAccessor(TObjId *pObj, const struct cl_accessor *ac);
-        TValueId resolveOffValue(TObjId obj, const struct cl_accessor **pAc);
-        void handleDeref(TObjId *pObj, const struct cl_accessor **pAc);
-        void handleDerefCore(TObjId *pObj);
         bool checkForInvalidDeref(TObjId obj);
+        TObjId handleDerefCore(TValueId value);
+        void handleDeref(TObjId *pObj, const struct cl_accessor **pAc);
+        void resolveAliasing(TValueId *pVal, const struct cl_type *cltTarget);
+        void resolveOffValue(TValueId *pVal, const struct cl_accessor **pAc);
         TValueId heapValFromObj(const struct cl_operand &op);
         TValueId heapValFromCst(const struct cl_operand &op);
         bool lhsFromOperand(TObjId *pObj, const struct cl_operand &op);

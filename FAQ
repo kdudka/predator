@@ -35,9 +35,9 @@ Q: How can I compile the GCC plug-in?
 A:
     $ make -C sl
 
-Q: How can I turn off all the debugging features and boost the performance?
+Q: How can I make a debug build?
 A:
-    $ make -C sl CMAKE="cmake -D SL_DEBUG=OFF"
+    $ make -C sl CMAKE="cmake -D SL_DEBUG=ON"
 
 Q: What equipment do I need to run the test-suite?
 A: * 32bit system headers, especially in case of 64bit OS

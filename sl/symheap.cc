@@ -59,7 +59,11 @@ class AliasDb {
     private:
         typedef std::set<TValueId>              TSet;
         typedef std::map<TValueId, TSet *>      TMap;
-        TMap cont_;
+        TMap            cont_;
+        const TSet      empty_;
+
+    public:
+        typedef TSet                            TLine;
 
     public:
         AliasDb() { }
@@ -92,12 +96,20 @@ class AliasDb {
             }
         }
 
-        bool lookup(TValueId v1, TValueId v2) {
-            TMap::iterator iter = cont_.find(v1);
+        bool lookup(TValueId v1, TValueId v2) const {
+            TMap::const_iterator iter = cont_.find(v1);
             if (cont_.end() == iter)
                 return false;
             else
                 return hasKey(iter->second, v2);
+        }
+
+        const TLine& getByValue(TValueId val) const {
+            TMap::const_iterator iter = cont_.find(val);
+            if (cont_.end() == iter)
+                return empty_;
+            else
+                return *iter->second;
         }
 
         void add(TValueId v1, TValueId v2);
@@ -817,6 +829,11 @@ TValueId SymHeapCore::valGetByOffset(TOffVal ov) const {
 
 void SymHeapCore::gatherOffValues(TOffValCont &dst, TValueId ref) const {
     dst = d->offsetDb.getOffValues(ref);
+}
+
+void SymHeapCore::gatherValAliasing(TContValue &dst, TValueId ref) const {
+    const AliasDb::TLine &line = d->aliasDb.getByValue(ref);
+    std::copy(line.begin(), line.end(), std::back_inserter(dst));
 }
 
 void SymHeapCore::neqOp(ENeqOp op, TValueId valA, TValueId valB) {

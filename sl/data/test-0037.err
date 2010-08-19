@@ -3,7 +3,9 @@ test-0037.c:20:13: error: dereference of NULL value
 test-0037.c:21:13: error: dereference of NULL value
 test-0037.c:21:13: error: dereference of NULL value
 test-0037.c:27:11: error: dereference of NULL value
+test-0037.c:27:11: error: type of the pointer being dereferenced does not match type of the target object
 test-0037.c:27:11: error: dereference of NULL value
+test-0037.c:27:11: error: type of the pointer being dereferenced does not match type of the target object
 test-0037.c:28:8: error: mixing of types for a binary operator not supported yet
 test-0037.c:28:8: note: the analysis may crash because of the error above
 test-0037.c:28:8: error: mixing of types for a binary operator not supported yet
