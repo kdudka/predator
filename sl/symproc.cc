@@ -227,6 +227,14 @@ void SymProc::resolveAliasing(TValueId *pVal, const struct cl_type *cltTarget) {
         // no aliasing, all seems OK
         return;
 
+    if (CL_TYPE_PTR == clt->code && CL_TYPE_PTR == cltTarget->code
+            && CL_TYPE_FNC !=       clt->items[0].type->code
+            && CL_TYPE_FNC != cltTarget->items[0].type->code)
+        // multi-level dereference may be handled eventually later, as long
+        // as both _target_ pointers are data pointers.  Generally it's not
+        // guaranteed that sizeof(void *) == sizeof(void (*)())
+        return;
+
     // get all aliases of 'val'
     SymHeap::TContValue aliasing;
     heap_.gatherValAliasing(aliasing, val);
