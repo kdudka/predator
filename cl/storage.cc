@@ -56,11 +56,18 @@ bool operator==(const struct cl_type &a, const struct cl_type &b) {
 
         switch (code) {
             case CL_TYPE_VOID:
-            case CL_TYPE_UNKNOWN:
             case CL_TYPE_INT:
             case CL_TYPE_CHAR:
             case CL_TYPE_BOOL:
+                if (cltA->name && cltB->name && STREQ(cltA->name, cltB->name))
+                    // FIXME: we simply ignore differences that gcc seems
+                    //        important!
+                    return true;
+
+                // fall through!
+
             case CL_TYPE_ENUM:
+            case CL_TYPE_UNKNOWN:
                 return false;
 
             case CL_TYPE_STRING:

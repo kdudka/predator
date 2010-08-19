@@ -1,6 +1,10 @@
 #!/bin/sh
 TIMEOUT="timeout 8"
 
+ALL=data/test-00??.c
+test -n "$1" && ALL="$*"
+export ALL
+
 echo "ATTENTION: This script is not intended to be run !!!"
 echo "           Please do not commit the generated files to prevent" \
                  "a disaster..."
@@ -12,7 +16,7 @@ ticks(){
 }
 
 gen(){
-    for i in data/test-00??.c; do
+    for i in $ALL; do
       printf -- "--- "
       printf "%s" "`basename $i .c` "
       test -n "$1" && printf "%s " "$1"
