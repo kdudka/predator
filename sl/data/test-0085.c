@@ -36,15 +36,13 @@ int main()
         // something went wrong, yell
         null->next = pd;
 
-    // wait, the following is _not_ covered by our aliasing check ... whoever
-    // really needs it is either incompetent or using some tricky programming
-    // techniques that we are not going to support anyway
+    // this is ugly, but it works :-)
     free(i0);
 
     // this is always bad idea
     free(i1);
 
-    // this should be OK
+    // this should be considered as double-free
     free(pd);
 
     return EXIT_SUCCESS;

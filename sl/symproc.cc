@@ -122,8 +122,11 @@ TObjId SymProc::handleDerefCore(TValueId val) {
     // do we really know the value?
     const EUnknownValue code = heap_.valGetUnknown(val);
     switch (code) {
-        case UV_KNOWN:
         case UV_ABSTRACT:
+#if SE_SELF_TEST
+            SE_TRAP;
+#endif
+        case UV_KNOWN:
             break;
 
         case UV_UNKNOWN:
@@ -175,7 +178,7 @@ void SymProc::heapObjHandleAccessor(TObjId *pObj,
             return;
 
         case CL_ACCESSOR_REF:
-            // CL_ACCESSOR_REF will be processed within heapValFromOperand()
+            // CL_ACCESSOR_REF will be processed within heapValFromObj()
             // on the way out from here ... otherwise we are encountering
             // a bug!
             return;
@@ -330,7 +333,7 @@ void SymProc::handleDeref(TObjId *pObj, const struct cl_accessor **pAc) {
         // we're already on an error path
         return;
 
-    // derive the target type the type of pointer we're dereferencing
+    // derive the target type of the pointer we're dereferencing
     const struct cl_type *clt = heap_.objType(obj);
     const struct cl_type *cltTarget = targetTypeOfPtr(clt);
     SE_BREAK_IF(!clt || !cltTarget || cltTarget->code == CL_TYPE_VOID);
@@ -486,7 +489,6 @@ int /* uid */ SymProc::fncFromOperand(const struct cl_operand &op) {
         clt = clt->items[0].type;
         SE_BREAK_IF(!clt || clt->code != CL_TYPE_FNC);
 #endif
-
         return uid;
     }
 }
@@ -622,28 +624,7 @@ void SymProc::objDestroy(TObjId obj) {
         bt_->printBackTrace();
 }
 
-void SymProc::execFree(const CodeStorage::TOperandList &opList) {
-    SE_BREAK_IF(/* dst + fnc + ptr */ 3 != opList.size());
-
-    // free() does not usually return a value
-    SE_BREAK_IF(CL_OPERAND_VOID != opList[0].code);
-
-    // resolve value to be freed
-    const TValueId val = heapValFromOperand(opList[/* ptr given to free() */2]);
-    SE_BREAK_IF(VAL_INVALID == val);
-
-    switch (val) {
-        case VAL_NULL:
-            CL_DEBUG_MSG(lw_, "ignoring free() called with NULL value");
-            return;
-
-        case VAL_DEREF_FAILED:
-            return;
-
-        default:
-            break;
-    }
-
+void SymProc::execFreeCore(const TValueId val) {
     const EUnknownValue code = heap_.valGetUnknown(val);
     switch (code) {
         case UV_ABSTRACT:
@@ -654,7 +635,7 @@ void SymProc::execFree(const CodeStorage::TOperandList &opList) {
             break;
 
         case UV_UNKNOWN:
-            CL_ERROR_MSG(lw_, "ignoring free() called on unknown value");
+            CL_ERROR_MSG(lw_, "free() called on unknown value");
             bt_->printBackTrace();
             return;
 
@@ -686,8 +667,6 @@ void SymProc::execFree(const CodeStorage::TOperandList &opList) {
             break;
     }
 
-    // FIXME: should check ifAllocated (is there possibility for error?)
-    //        aliasing problem for  free(first item pointer)
     CVar cVar;
     if (heap_.cVar(&cVar, obj)) {
         CL_DEBUG("about to free var #" << cVar.uid);
@@ -704,6 +683,60 @@ void SymProc::execFree(const CodeStorage::TOperandList &opList) {
 
     CL_DEBUG_MSG(lw_, "executing free()");
     this->objDestroy(obj);
+}
+
+void SymProc::seekAliasedRoot(TValueId *pValue) {
+    const TValueId val = *pValue;
+    const TObjId obj = heap_.pointsTo(val);
+    if (obj < 0)
+        // no valid target anyway
+        return;
+
+    // seek the root
+    const TObjId root = objRoot(heap_, obj);
+    SE_BREAK_IF(root < 0);
+    if (obj == root)
+        // we've already got the root object
+        return;
+
+    // get root's address
+    const TValueId valRoot = heap_.placedAt(root);
+    SE_BREAK_IF(valRoot <= 0);
+
+    // finally check if the given value is alias of the root or not
+    bool eq;
+    if (!heap_.proveEq(&eq, val, valRoot) && !eq)
+        return;
+
+    // found!
+    CL_DEBUG_MSG(lw_, "alias of root matched during execution of free()");
+    *pValue = valRoot;
+}
+
+void SymProc::execFree(const CodeStorage::TOperandList &opList) {
+    SE_BREAK_IF(/* dst + fnc + ptr */ 3 != opList.size());
+
+    // free() does not usually return a value
+    SE_BREAK_IF(CL_OPERAND_VOID != opList[0].code);
+
+    // resolve value to be freed
+    TValueId val = heapValFromOperand(opList[/* ptr given to free() */2]);
+    SE_BREAK_IF(VAL_INVALID == val);
+
+    switch (val) {
+        case VAL_NULL:
+            CL_DEBUG_MSG(lw_, "ignoring free() called with NULL value");
+            return;
+
+        case VAL_DEREF_FAILED:
+            return;
+
+        default:
+            break;
+    }
+
+    this->seekAliasedRoot(&val);
+    this->execFreeCore(val);
 }
 
 void SymProc::execMalloc(TState &state, const CodeStorage::TOperandList &opList,

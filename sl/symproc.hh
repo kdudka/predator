@@ -126,6 +126,7 @@ class SymProc {
         bool checkForInvalidDeref(TObjId obj);
         TObjId handleDerefCore(TValueId value);
         void handleDeref(TObjId *pObj, const struct cl_accessor **pAc);
+        void seekAliasedRoot(TValueId *pVal);
         void resolveAliasing(TValueId *pVal, const struct cl_type *cltTarget);
         void resolveOffValue(TValueId *pVal, const struct cl_accessor **pAc);
         TValueId heapValFromObj(const struct cl_operand &op);
@@ -134,6 +135,7 @@ class SymProc {
         template <int ARITY> void execOp(const CodeStorage::Insn &insn);
         void execMalloc(TState &dst, const CodeStorage::TOperandList &opList,
                         bool fastMode);
+        void execFreeCore(TValueId val);
         void execFree(const CodeStorage::TOperandList &opList);
         bool execCall(TState &dst, const CodeStorage::Insn &insn,
                       SymProcExecParams ep);
