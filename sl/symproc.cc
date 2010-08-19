@@ -705,7 +705,7 @@ void SymProc::seekAliasedRoot(TValueId *pValue) {
 
     // finally check if the given value is alias of the root or not
     bool eq;
-    if (!heap_.proveEq(&eq, val, valRoot) && !eq)
+    if (!heap_.proveEq(&eq, val, valRoot) || !eq)
         return;
 
     // found!

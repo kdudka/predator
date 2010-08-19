@@ -36,11 +36,11 @@ int main()
         // something went wrong, yell
         null->next = pd;
 
-    // this is ugly, but it works :-)
-    free(i0);
-
     // this is always bad idea
     free(i1);
+
+    // this is ugly, but it works :-)
+    free(i0);
 
     // this should be considered as double-free
     free(pd);
