@@ -538,13 +538,22 @@ void SymProc::heapSetSingleVal(TObjId lhs, TValueId rhs) {
         bt_->printBackTrace();
 }
 
-struct SpecialValueWriter {
-    TValueId valToWrite;
+class ValueWriter {
+    private:
+        SymProc             &proc_;
+        const TValueId      valToWrite_;
 
-    bool operator()(SymHeap &sh, TObjId sub) {
-        sh.objSetValue(sub, valToWrite);
-        return /* continue */ true;
-    }
+    public:
+        ValueWriter(SymProc *proc, TValueId valToWrite):
+            proc_(*proc),
+            valToWrite_(valToWrite)
+        {
+        }
+
+        bool operator()(SymHeap &, TObjId sub) {
+            proc_.heapSetSingleVal(sub, valToWrite_);
+            return /* continue */ true;
+        }
 };
 
 class ValueMirror {
@@ -574,8 +583,7 @@ void SymProc::objSetValue(TObjId lhs, TValueId rhs) {
         }
 
         // fill values of all sub-objects by 'rhs'
-        SpecialValueWriter writer;
-        writer.valToWrite = rhs;
+        ValueWriter writer(this, rhs);
         traverseSubObjs(heap_, lhs, writer, /* leavesOnly */ true);
         return;
     }

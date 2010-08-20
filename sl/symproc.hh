@@ -153,7 +153,8 @@ class SymProc {
 
         template <int N, class T> friend struct OpHandler;
 
-        // internal helper of SymProc::objSetValue()
+        // internal helpers of SymProc::objSetValue()
+        friend class ValueWriter;
         friend class ValueMirror;
 };
 
