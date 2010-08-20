@@ -160,6 +160,10 @@ void SymProc::heapObjHandleAccessorItem(TObjId *pObj,
     // access subObj
     const int id = ac->data.item.id;
     *pObj = heap_.subObj(*pObj, id);
+
+    // Although this may be a regular error in the analysed program, we don't
+    // have a meaningful error message for that yet.  It should be safe to
+    // ignore the failure in a production build, as it will be caught later.
     SE_BREAK_IF(OBJ_INVALID == *pObj);
 }
 
@@ -219,7 +223,9 @@ TObjId varFromOperand(const struct cl_operand &op, const SymHeap &sh,
 
 } // namespace
 
-void SymProc::resolveAliasing(TValueId *pVal, const struct cl_type *cltTarget) {
+void SymProc::resolveAliasing(TValueId *pVal, const struct cl_type *cltTarget,
+                              bool virtualDefeference)
+{
     TValueId val = *pVal;
     const struct cl_type *clt = heap_.valType(val);
     if (!clt)
@@ -261,9 +267,12 @@ void SymProc::resolveAliasing(TValueId *pVal, const struct cl_type *cltTarget) {
     }
 
     if (!cntMatch) {
-        CL_ERROR_MSG(lw_,
-                "type of the pointer being dereferenced does not match "
-                "type of the target object");
+        if (!virtualDefeference) {
+            CL_ERROR_MSG(lw_,
+                    "type of the pointer being dereferenced does not match "
+                    "type of the target object");
+        }
+
         return;
     }
 
@@ -318,15 +327,26 @@ namespace {
         SE_BREAK_IF(!clt);
         return clt;
     }
+
+    bool seekRefAccessor(const struct cl_accessor *ac) {
+        for(; ac; ac = ac->next) {
+            if (CL_ACCESSOR_REF != ac->code)
+                continue;
+
+            // there should be no more accessors after the first CL_ACCESSOR_REF
+            SE_BREAK_IF(ac->next);
+            return true;
+        }
+
+        // not found
+        return false;
+    }
 }
 
-// TODO: there should be probably some by-pass for accessors chains of the form
-//       CL_ACCESSOR_DEREF -> ... -> CL_ACCESSOR_REF as we should not claim
-//       there is an invalid reference, if only an address is actually being
-//       computed
 void SymProc::handleDeref(TObjId *pObj, const struct cl_accessor **pAc) {
     // mark the current accessor as done in advance, and move to the next one
-    *pAc = (*pAc)->next;
+    const struct cl_accessor *ac = *pAc;
+    *pAc = ac->next;
 
     const TObjId obj = *pObj;
     if (obj < 0)
@@ -356,8 +376,17 @@ void SymProc::handleDeref(TObjId *pObj, const struct cl_accessor **pAc) {
             break;
     }
 
+    // We need to introduce a less chatty variant of a dereference for accessor
+    // chains of the form:
+    //
+    //      CL_ACCESSOR_DEREF -> ... -> CL_ACCESSOR_REF
+    //
+    // ... as we should not claim there is an invalid reference, if only
+    // an address is actually being computed
+    const bool virtualDefeference = seekRefAccessor(ac);
+
     // attempt to resolve aliasing
-    this->resolveAliasing(&val, cltTarget);
+    this->resolveAliasing(&val, cltTarget, virtualDefeference);
 
     // attempt to resolve an off-value
     this->resolveOffValue(&val, pAc);
@@ -432,13 +461,8 @@ TValueId SymProc::heapValFromObj(const struct cl_operand &op) {
             break;
     }
 
-    // seek the last accessor
-    const struct cl_accessor *ac = op.accessor;
-    while (ac && ac->next)
-        ac = ac->next;
-
     // handle CL_ACCESSOR_REF if any
-    return (ac && ac->code == CL_ACCESSOR_REF)
+    return (seekRefAccessor(op.accessor))
         ? heap_.placedAt(obj)
         : heap_.valueOf(obj);
 }
