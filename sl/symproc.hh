@@ -56,6 +56,10 @@ class SymProc {
         {
         }
 
+        SymHeap&                    sh() { return heap_; }
+        const SymBackTrace*         bt() { return bt_; }
+        const LocationWriter&       lw() { return lw_;   }
+
         /**
          * update location info
          * @note this method is used to provide as accurate as possible location
@@ -136,6 +140,8 @@ class SymExecCore: public SymProc {
             ep_(ep)
         {
         }
+
+        const SymExecCoreParams& params() const { return ep_; }
 
     public:
         /**

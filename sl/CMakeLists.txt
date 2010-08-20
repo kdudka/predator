@@ -40,6 +40,7 @@ add_library(sl SHARED
     cl_symexec.cc
     clutil.cc
     symabstract.cc
+    symbin.cc
     symbt.cc
     symcall.cc
     symcut.cc
