@@ -61,7 +61,7 @@ inline bool objIsStruct(const SymHeap &sh, TObjId obj) {
 }
 
 /// return offset of an object within another object;  -1 if not found
-inline int subOffsetIn(const SymHeap &sh, TObjId in, TObjId of) {
+inline int subOffsetIn(const SymHeapTyped &sh, TObjId in, TObjId of) {
     int offset = 0;
     TObjId parent;
 

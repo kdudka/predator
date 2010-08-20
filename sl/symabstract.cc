@@ -1366,7 +1366,7 @@ void concretizeObj(SymHeap &sh, TValueId addr, TSymHeapList &todo) {
     TObjId obj = sh.pointsTo(addr);
 
     if (OK_HEAD == sh.objKind(obj)) {
-        CL_WARN("concretization of Linux lists is not implemented yet");
+        CL_WARN("concretization of Linux lists is not stable yet");
         obj = objRoot(sh, obj);
     }
     TObjId peer = obj;

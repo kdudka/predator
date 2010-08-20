@@ -1283,9 +1283,16 @@ TObjId SymHeapTyped::objDup(TObjId obj) {
         this->initValClt(dst);
 
         // update the reference to self in the parent object
-        if (OBJ_INVALID != item.dstParent) {
-            Private::Object &refParent = d->objects.at(item.dstParent);
+        const TObjId parent = item.dstParent;
+        if (OBJ_INVALID != parent) {
+            Private::Object &refParent = d->objects.at(parent);
             refParent.subObjs[item.nth] = dst;
+
+            if (!subOffsetIn(*this, parent, dst)) {
+                // declare explicit aliasing with parent object's addr
+                SymHeapCore::addAlias(this->placedAt(dst),
+                                      this->placedAt(parent));
+            }
         }
 
         const TContObj subObjs(d->objects[src].subObjs);
