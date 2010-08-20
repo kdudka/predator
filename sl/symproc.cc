@@ -1287,7 +1287,6 @@ TValueId handlePointerPlus(SymHeap &sh, const struct cl_type *clt,
     const struct cl_type *cltDst = sh.valType(addr);
     SE_BREAK_IF(!cltDst || *cltDst != *clt);
 #endif
-
     return addr;
 }
 
@@ -1329,19 +1328,16 @@ struct OpHandler</* binary */ 2, TProc> {
     static TValueId handleOp(TProc &proc, int iCode, const TValueId rhs[2],
                              const struct cl_type *clt[2 + /* dst type */ 1])
     {
+        SymHeap &heap = proc.heap_;
         const struct cl_type *const cltA = clt[0];
         const struct cl_type *const cltB = clt[1];
         SE_BREAK_IF(!cltA || !cltB);
 
-        SymHeap &heap = proc.heap_;
-        if (*cltA != *cltB) {
-            // we don't support arrays, pointer arithmetic and the like,
-            // the types therefor have to match with each other for a binary
-            // operator
+        if ((CL_TYPE_PTR != cltA->code || CL_TYPE_PTR != cltB->code)
+                && *cltA != *cltB)
+        {
             CL_ERROR_MSG(proc.lw_,
-                    "mixing of types for a binary operator not supported yet");
-            CL_NOTE_MSG(proc.lw_,
-                    "the analysis may crash because of the error above");
+                    "unsupported mixing of types for a binary operator");
             return heap.valCreateUnknown(UV_UNKNOWN, cltA);
         }
 
