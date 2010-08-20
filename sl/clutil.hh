@@ -34,4 +34,6 @@ const struct cl_type* targetTypeOfPtr(const struct cl_type *clt);
 
 bool seekRefAccessor(const struct cl_accessor *ac);
 
+int intCstFromOperand(const struct cl_operand *op);
+
 #endif /* H_GUARD_CLUTIL_H */

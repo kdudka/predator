@@ -354,12 +354,12 @@ void SymProc::handleDeref(TObjId *pObj, const struct cl_accessor **pAc) {
             break;
     }
 
-    // We need to introduce a less chatty variant of a dereference for accessor
+    // We need to introduce a less chatty variant of dereference for accessor
     // chains of the form:
     //
     //      CL_ACCESSOR_DEREF -> ... -> CL_ACCESSOR_REF
     //
-    // ... as we should not claim there is an invalid reference, if only
+    // ... as we should not claim there is an invalid dereference, if only
     // an address is actually being computed
     const bool virtualDefeference = seekRefAccessor(ac);
 
@@ -745,12 +745,7 @@ void SymProc::execMalloc(TState &state, const CodeStorage::TOperandList &opList,
 
     // amount of allocated memory must be a constant
     const struct cl_operand &amount = opList[2];
-    SE_BREAK_IF(CL_OPERAND_CST != amount.code);
-
-    // amount of allocated memory must be a number
-    const struct cl_cst &cst = amount.data.cst;
-    SE_BREAK_IF(CL_TYPE_INT != cst.code);
-    const int cbAmount = cst.data.cst_int.value;
+    const int cbAmount = intCstFromOperand(&amount);
     CL_DEBUG_MSG(lw_, "executing malloc(" << cbAmount << ")");
 
     // now create a heap object
@@ -1257,10 +1252,7 @@ TValueId handlePointerPlus(SymHeap &sh, const struct cl_type *clt,
     clt = targetTypeOfPtr(clt);
 
     // read integral offset
-    SE_BREAK_IF(CL_OPERAND_CST != op.code);
-    const struct cl_cst &cst = op.data.cst;
-    SE_BREAK_IF(CL_TYPE_INT != op.type->code);
-    int off = cst.data.cst_int.value;
+    int off = intCstFromOperand(&op);
     CL_DEBUG("handlePointerPlus(): " << off << "b offset requested");
 
     // seek root object while cumulating the offset

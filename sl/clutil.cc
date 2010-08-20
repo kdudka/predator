@@ -41,3 +41,12 @@ bool seekRefAccessor(const struct cl_accessor *ac) {
     // not found
     return false;
 }
+
+int intCstFromOperand(const struct cl_operand *op) {
+    SE_BREAK_IF(CL_OPERAND_CST != op->code || CL_TYPE_INT != op->type->code);
+
+    const struct cl_cst &cst = op->data.cst;
+    SE_BREAK_IF(CL_TYPE_INT != cst.code);
+
+    return cst.data.cst_int.value;
+}
