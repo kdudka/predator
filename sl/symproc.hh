@@ -151,7 +151,8 @@ class SymProc {
         const SymBackTrace          *bt_;
         LocationWriter              lw_;
 
-        template <int N, class T> friend struct OpHandler;
+        // internal helper of SymProc::execOp()
+        template <int N> friend struct OpHandler;
 
         // internal helpers of SymProc::objSetValue()
         friend class ValueWriter;

@@ -1291,16 +1291,16 @@ TValueId handlePointerPlus(SymHeap &sh, const struct cl_type *clt,
 }
 
 // template for generic (unary, binary, ...) operator handlers
-template <int ARITY, class TProc>
+template <int ARITY>
 struct OpHandler {
-    static TValueId handleOp(TProc &proc, int code, const TValueId rhs[ARITY],
+    static TValueId handleOp(SymProc &proc, int code, const TValueId rhs[ARITY],
                              const struct cl_type *clt[ARITY +/* dst */1]);
 };
 
 // unary operator handler
-template <class TProc>
-struct OpHandler</* unary */ 1, TProc> {
-    static TValueId handleOp(TProc &proc, int iCode, const TValueId rhs[1],
+template <>
+struct OpHandler</* unary */ 1> {
+    static TValueId handleOp(SymProc &proc, int iCode, const TValueId rhs[1],
                              const struct cl_type *clt[1 + /* dst type */ 1])
     {
         TValueId val = rhs[0];
@@ -1323,9 +1323,9 @@ struct OpHandler</* unary */ 1, TProc> {
 };
 
 // binary operator handler
-template <class TProc>
-struct OpHandler</* binary */ 2, TProc> {
-    static TValueId handleOp(TProc &proc, int iCode, const TValueId rhs[2],
+template <>
+struct OpHandler</* binary */ 2> {
+    static TValueId handleOp(SymProc &proc, int iCode, const TValueId rhs[2],
                              const struct cl_type *clt[2 + /* dst type */ 1])
     {
         SymHeap &heap = proc.heap_;
@@ -1363,15 +1363,6 @@ struct OpHandler</* binary */ 2, TProc> {
     }
 };
 
-// C++ does not support partial specialisation of function templates, this helps
-template <int ARITY, class TProc>
-TValueId handleOp(TProc &proc, int code, const TValueId rhs[ARITY],
-                  const struct cl_type *clt[ARITY + /* dst type */ 1])
-{
-    return OpHandler<ARITY, TProc>::handleOp(proc, code, rhs, clt);
-}
-
-
 template <int ARITY>
 void SymProc::execOp(const CodeStorage::Insn &insn) {
     // resolve lhs
@@ -1404,7 +1395,7 @@ void SymProc::execOp(const CodeStorage::Insn &insn) {
     }
     else
         // handle generic operator
-        valResult = handleOp<ARITY>(*this, insn.subCode, rhs, clt);
+        valResult = OpHandler<ARITY>::handleOp(*this, insn.subCode, rhs, clt);
 
     // store the result
     this->objSetValue(varLhs, valResult);
