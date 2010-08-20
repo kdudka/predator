@@ -371,7 +371,7 @@ SymCallCtx* SymCallCache::Private::getCallCtx(int uid, const SymHeap &heap) {
     TFncSeq seq;
     if (this->bt->hasRecursiveCall())
         // FIXME: this seems to be a silly limitation -- we require the call
-        // sequence to match as long as any recursion is involved
+        // sequence to match as long as any there is any recursion involved
         seq = this->bt->getFncSequence();
 
     // 1st level cache lookup

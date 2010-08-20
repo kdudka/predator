@@ -547,6 +547,22 @@ struct SpecialValueWriter {
     }
 };
 
+class ValueMirror {
+    private:
+        SymProc &proc_;
+
+    public:
+        ValueMirror(SymProc *proc): proc_(*proc) { }
+
+        bool operator()(SymHeap &sh, const TObjPair &item) const {
+            const TObjId lhs = item.first;
+            const TValueId rhs = sh.valueOf(item.second);
+            proc_.heapSetSingleVal(lhs, rhs);
+
+            return /* continue */ true;
+        }
+};
+
 void SymProc::objSetValue(TObjId lhs, TValueId rhs) {
     // FIXME: handle some other special values also this way?
     if (VAL_DEREF_FAILED == rhs) {
@@ -564,38 +580,17 @@ void SymProc::objSetValue(TObjId lhs, TValueId rhs) {
         return;
     }
 
-    // DFS for composite types
-    typedef std::pair<TObjId, TValueId> TItem;
-    std::stack<TItem> todo;
-    push(todo, lhs, rhs);
-    while (!todo.empty()) {
-        TObjId lhs;
-        TValueId rhs;
-        boost::tie(lhs, rhs) = todo.top();
-        todo.pop();
-
-        const TObjId rObj = heap_.valGetCompositeObj(rhs);
-        if (OBJ_INVALID == rObj) {
-            // non-composite value
-            this->heapSetSingleVal(lhs, rhs);
-            continue;
-        }
-
-        // check type-info
-        const struct cl_type *clt = heap_.objType(rObj);
-        SE_BREAK_IF(!clt || clt->code != CL_TYPE_STRUCT || clt != heap_.objType(lhs));
-
-        // iterate through all fields
-        for (int i = 0; i < clt->item_cnt; ++i) {
-            const TObjId lSub = heap_.subObj(lhs, i);
-            const TObjId rSub = heap_.subObj(rObj, i);
-            SE_BREAK_IF(lSub <= 0 || rSub <= 0);
-
-            // schedule sub for next wheel
-            const TValueId rSubVal = heap_.valueOf(rSub);
-            push(todo, lSub, rSubVal);
-        }
+    const TObjId rObj = heap_.valGetCompositeObj(rhs);
+    if (OBJ_INVALID == rObj) {
+        // non-composite value
+        this->heapSetSingleVal(lhs, rhs);
+        return;
     }
+
+    // DFS for composite types
+    const TObjPair item(lhs, rObj);
+    const ValueMirror mirror(this);
+    traverseSubObjs(heap_, item, mirror, /* leavesOnly */ true);
 }
 
 void SymProc::objDestroy(TObjId obj) {

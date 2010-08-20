@@ -152,6 +152,9 @@ class SymProc {
         LocationWriter              lw_;
 
         template <int N, class T> friend struct OpHandler;
+
+        // internal helper of SymProc::objSetValue()
+        friend class ValueMirror;
 };
 
 #endif /* H_GUARD_SYM_PROC_H */
