@@ -24,6 +24,7 @@
 #include <cl/cl_msg.hh>
 #include <cl/storage.hh>
 
+#include "clutil.hh"
 #include "symgc.hh"
 #include "symseg.hh"
 #include "symutil.hh"
@@ -626,7 +627,7 @@ class SelectorFinder {
             const struct cl_type *subClt = sh.objType(sub);
             const bool backLinkCandidate = (VAL_NULL == sh.valueOf(sub)
                     && subClt && subClt->code == CL_TYPE_PTR
-                    && subClt->items[0].type == clt_);
+                    && *targetTypeOfPtr(subClt) == *clt_);
 
             if (backLinkCandidate || !visitor_(sh, sub))
                 // great, we have a candidate

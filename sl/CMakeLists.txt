@@ -38,6 +38,7 @@ endif()
 # libsl.so
 add_library(sl SHARED
     cl_symexec.cc
+    clutil.cc
     symabstract.cc
     symbt.cc
     symcall.cc

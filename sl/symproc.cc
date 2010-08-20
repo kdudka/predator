@@ -22,6 +22,7 @@
 
 #include <cl/cl_msg.hh>
 
+#include "clutil.hh"
 #include "symabstract.hh"
 #include "symbt.hh"
 #include "symgc.hh"
@@ -237,8 +238,8 @@ void SymProc::resolveAliasing(TValueId *pVal, const struct cl_type *cltTarget,
         return;
 
     if (CL_TYPE_PTR == clt->code && CL_TYPE_PTR == cltTarget->code
-            && CL_TYPE_FNC !=       clt->items[0].type->code
-            && CL_TYPE_FNC != cltTarget->items[0].type->code)
+            && CL_TYPE_FNC != targetTypeOfPtr(clt)->code
+            && CL_TYPE_FNC != targetTypeOfPtr(cltTarget)->code)
         // multi-level dereference may be handled eventually later, as long
         // as both _target_ pointers are data pointers.  Generally it's not
         // guaranteed that sizeof(void *) == sizeof(void (*)())
@@ -318,29 +319,6 @@ void SymProc::resolveOffValue(TValueId *pVal, const struct cl_accessor **pAc) {
     // successfully resolved off-value
     *pAc  = ac;
     *pVal = valTarget;
-}
-
-namespace {
-    const struct cl_type* targetTypeOfPtr(const struct cl_type *clt) {
-        SE_BREAK_IF(!clt || clt->code != CL_TYPE_PTR || clt->item_cnt != 1);
-        clt = clt->items[0].type;
-        SE_BREAK_IF(!clt);
-        return clt;
-    }
-
-    bool seekRefAccessor(const struct cl_accessor *ac) {
-        for(; ac; ac = ac->next) {
-            if (CL_ACCESSOR_REF != ac->code)
-                continue;
-
-            // there should be no more accessors after the first CL_ACCESSOR_REF
-            SE_BREAK_IF(ac->next);
-            return true;
-        }
-
-        // not found
-        return false;
-    }
 }
 
 void SymProc::handleDeref(TObjId *pObj, const struct cl_accessor **pAc) {
@@ -504,15 +482,7 @@ int /* uid */ SymProc::fncFromOperand(const struct cl_operand &op) {
         const struct cl_type *clt;
         const int uid = heap_.valGetCustom(&clt, val);
         SE_BREAK_IF(-1 == uid);
-
-#if SE_SELF_TEST
-        // check for a pointer
-        SE_BREAK_IF(!clt || clt->code != CL_TYPE_PTR);
-
-        // check for a function
-        clt = clt->items[0].type;
-        SE_BREAK_IF(!clt || clt->code != CL_TYPE_FNC);
-#endif
+        SE_BREAK_IF(CL_TYPE_FNC != targetTypeOfPtr(clt)->code);
         return uid;
     }
 }
@@ -1284,8 +1254,7 @@ TValueId handlePointerPlus(SymHeap &sh, const struct cl_type *clt,
                            TValueId ptr, const struct cl_operand &op)
 {
     // jump to _target_ type
-    SE_BREAK_IF(!clt || clt->code != CL_TYPE_PTR);
-    clt = clt->items[0].type;
+    clt = targetTypeOfPtr(clt);
 
     // read integral offset
     SE_BREAK_IF(CL_OPERAND_CST != op.code);
