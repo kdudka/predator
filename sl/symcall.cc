@@ -58,13 +58,13 @@ struct SymCallCtx::Private {
     SymHeap                     heap;
     SymHeap                     surround;
     const struct cl_operand     *dst;
-    SymHeapUnion                rawResults;
+    SymState                    rawResults;
     int                         nestLevel;
     bool                        computed;
     bool                        flushed;
 
-    void assignReturnValue(SymHeapUnion &state);
-    void destroyStackFrame(SymHeapUnion &state);
+    void assignReturnValue(SymState &state);
+    void destroyStackFrame(SymState &state);
 };
 
 SymCallCtx::SymCallCtx():
@@ -86,11 +86,11 @@ const SymHeap& SymCallCtx::entry() const {
     return d->heap;
 }
 
-SymHeapUnion& SymCallCtx::rawResults() {
+SymState& SymCallCtx::rawResults() {
     return d->rawResults;
 }
 
-void SymCallCtx::Private::assignReturnValue(SymHeapUnion &state) {
+void SymCallCtx::Private::assignReturnValue(SymState &state) {
     const cl_operand &op = *this->dst;
     if (CL_OPERAND_VOID == op.code)
         // we're done for a function returning void
@@ -119,7 +119,7 @@ void SymCallCtx::Private::assignReturnValue(SymHeapUnion &state) {
     }
 }
 
-void SymCallCtx::Private::destroyStackFrame(SymHeapUnion &state) {
+void SymCallCtx::Private::destroyStackFrame(SymState &state) {
     using namespace CodeStorage;
     const Fnc &ref = *this->fnc;
 
@@ -169,7 +169,7 @@ void SymCallCtx::Private::destroyStackFrame(SymHeapUnion &state) {
 
 namespace {
 
-void flush(SymHeapUnion &dst, const SymHeapUnion src) {
+void flush(SymState &dst, const SymState src) {
     BOOST_FOREACH(SymHeap sh, src) {
 #if SE_ABSTRACT_ON_CALL_DONE
         // after the final merge and cleanup, chances are that the abstraction
@@ -182,7 +182,7 @@ void flush(SymHeapUnion &dst, const SymHeapUnion src) {
 
 } // namespace
 
-void SymCallCtx::flushCallResults(SymHeapUnion &dst) {
+void SymCallCtx::flushCallResults(SymState &dst) {
     if (d->flushed)
         // are we really ready for this?
         SE_TRAP;
@@ -193,7 +193,7 @@ void SymCallCtx::flushCallResults(SymHeapUnion &dst) {
 
     // now merge the results with the original surround
     // TODO: some verbose output
-    SymHeapUnion results(d->rawResults);
+    SymState results(d->rawResults);
     BOOST_FOREACH(SymHeap &heap, results) {
         joinHeapsByCVars(d->bt, &heap, &d->surround);
     }
@@ -208,12 +208,12 @@ void SymCallCtx::flushCallResults(SymHeapUnion &dst) {
 
 // /////////////////////////////////////////////////////////////////////////////
 // call context cache per one fnc
-// FIXME: suboptimal interaction with SymHeapUnion during lookup/insert
+// FIXME: suboptimal interaction with SymState during lookup/insert
 class PerFncCache {
     private:
         typedef std::vector<SymCallCtx *> TCtxMap;
 
-        SymHeapUnion    huni_;
+        SymState        huni_;
         TCtxMap         ctxMap_;
 
     public:

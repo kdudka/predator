@@ -39,7 +39,7 @@
 #include <boost/tuple/tuple.hpp>
 
 // /////////////////////////////////////////////////////////////////////////////
-// SymHeapUnion implementation
+// SymState implementation
 namespace {
     bool checkNonPosValues(int a, int b) {
         if (0 < a && 0 < b)
@@ -385,7 +385,7 @@ bool operator== (const SymHeap &heap1, const SymHeap &heap2) {
     return dfsCmp(wl, valSubst, heap1, heap2);
 }
 
-int SymHeapUnion::lookup(const SymHeap &heap) const {
+int SymState::lookup(const SymHeap &heap) const {
     const int cnt = this->size();
     for(int idx = 0; idx < cnt; ++idx) {
         if (heap == heaps_[idx])
@@ -396,7 +396,7 @@ int SymHeapUnion::lookup(const SymHeap &heap) const {
     return -1;
 }
 
-void SymHeapUnion::insert(const SymHeap &heap) {
+void SymState::insert(const SymHeap &heap) {
     BOOST_FOREACH(const SymHeap &current, heaps_) {
         // TODO: check for entailment instead
         if (heap == current)
@@ -407,7 +407,7 @@ void SymHeapUnion::insert(const SymHeap &heap) {
     heaps_.push_back(heap);
 }
 
-void SymHeapUnion::insert(const SymHeapUnion &huni) {
+void SymState::insert(const SymState &huni) {
     BOOST_FOREACH(const SymHeap &current, huni) {
         this->insert(current);
     }

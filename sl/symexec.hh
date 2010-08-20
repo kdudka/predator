@@ -25,7 +25,7 @@
  * SymExec - top level loop of the @b symbolic @b execution
  */
 
-class SymHeapUnion;
+class SymState;
 
 namespace CodeStorage {
     struct Fnc;
@@ -70,16 +70,16 @@ class SymExec {
          * all global/static variables.
          * @attention The state can't be changed during the symbolic execution.
          * In particular, call of SymExec::exec(fnc, stateZero()) is really bad
-         * idea.  You need to use a temporary SymHeapUnion object in that case.
+         * idea.  You need to use a temporary SymState object in that case.
          */
-        SymHeapUnion& stateZero();
+        SymState& stateZero();
 
         /**
          * symbolically @b execute a function, starting from stateZero()
          * @param fnc a function requested to be executed
          * @param results a container for results of the symbolic execution
          */
-        void exec(const CodeStorage::Fnc &fnc, SymHeapUnion &results);
+        void exec(const CodeStorage::Fnc &fnc, SymState &results);
 
     private:
         /// object copying is @b not allowed

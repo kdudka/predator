@@ -22,7 +22,7 @@
 
 /**
  * @file symstate.hh
- * SymHeapUnion - @b symbolic @b state represented as a union of SymHeap objects
+ * SymState - @b symbolic @b state represented as a union of SymHeap objects
  */
 
 #include <vector>
@@ -34,11 +34,11 @@
  *
  * During the symbolic execution (see SymExec) we keep such a state per each
  * basic block of the function just being processed.  The result of a
- * symbolically executed function is then the SymHeapUnion taken from the basic
+ * symbolically executed function is then the SymState taken from the basic
  * block containing CL_INSN_RET as soon as the fix-point calculation has
  * terminated.
  */
-class SymHeapUnion {
+class SymState {
     private:
         typedef std::vector<SymHeap> TList;
 
@@ -47,7 +47,7 @@ class SymHeapUnion {
         typedef TList::iterator iterator;
 
     public:
-        virtual ~SymHeapUnion() { }
+        virtual ~SymState() { }
 
         /**
          * look for the given symbolic heap, return its index if found, -1
@@ -58,8 +58,8 @@ class SymHeapUnion {
         /// insert given SymHeap object into the union
         virtual void insert(const SymHeap &heap);
 
-        /// merge given SymHeapUnion object into self
-        virtual void insert(const SymHeapUnion &huni);
+        /// merge given SymState object into self
+        virtual void insert(const SymState &huni);
 
         /// return count of object stored in the container
         size_t size()          const { return heaps_.size();  }
@@ -86,16 +86,16 @@ class SymHeapUnion {
 };
 
 /**
- * Extension of SymHeapUnion, which distinguishes among already processed
+ * Extension of SymState, which distinguishes among already processed
  * symbolic heaps and symbolic heaps scheduled for processing.  Newly inserted
  * symbolic heaps are always marked as scheduled.  They can be marked as done
  * later, using the setDone() method.
  */
-class SymHeapScheduler: public SymHeapUnion {
+class SymHeapScheduler: public SymState {
     public:
-        /// import of SymHeapUnion rewrites the base and invalidates all flags
-        SymHeapScheduler& operator=(const SymHeapUnion &huni) {
-            static_cast<SymHeapUnion &>(*this) = huni;
+        /// import of SymState rewrites the base and invalidates all flags
+        SymHeapScheduler& operator=(const SymState &huni) {
+            static_cast<SymState &>(*this) = huni;
             done_.clear();
             done_.resize(huni.size(), false);
             return *this;
@@ -103,7 +103,7 @@ class SymHeapScheduler: public SymHeapUnion {
 
         virtual void insert(const SymHeap &heap) {
             const size_t last = this->size();
-            SymHeapUnion::insert(heap);
+            SymState::insert(heap);
             if (this->size() == last)
                 // nothing has been changed
                 return;

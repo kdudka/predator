@@ -130,7 +130,7 @@ bool operator<(const BlockPtr &a, const BlockPtr &b) {
 class SymExecEngine {
     public:
         SymExecEngine(const SymExec &se, const SymBackTrace &bt,
-                      const SymHeap &src, SymHeapUnion &dst):
+                      const SymHeap &src, SymState &dst):
             stor_(se.stor()),
             params_(se.params()),
             bt_(bt),
@@ -150,7 +150,7 @@ class SymExecEngine {
         // TODO: describe the interface briefly
         const SymHeap*              callEntry() const;
         const CodeStorage::Insn*    callInsn() const;
-        SymHeapUnion*               callResults();
+        SymState*                   callResults();
 
     private:
         typedef const CodeStorage::Block                   *TBlock;
@@ -160,7 +160,7 @@ class SymExecEngine {
         const CodeStorage::Storage      &stor_;
         SymExecParams                   params_;
         const SymBackTrace              &bt_;
-        SymHeapUnion                    &dst_;
+        SymState                        &dst_;
 
         TStateMap                       stateMap_;
         TBlockSet                       todo_;
@@ -171,7 +171,7 @@ class SymExecEngine {
         bool                            endReached_;
 
         SymHeapScheduler                localState_;
-        SymHeapUnion                    nextLocalState_;
+        SymState                        nextLocalState_;
         LocationWriter                  lw_;
 
     private:
@@ -206,7 +206,7 @@ void SymExecEngine::initEngine(const SymHeap &init)
     }
 
     // insert initial state to the corresponding union
-    SymHeapUnion &huni = stateMap_[entry];
+    SymState &huni = stateMap_[entry];
     huni.insert(init);
 
     // schedule the entry block for processing
@@ -250,7 +250,7 @@ void SymExecEngine::updateState(const CodeStorage::Block *ofBlock,
     abstractIfNeeded(sh);
 
     // update *target* state
-    SymHeapUnion &huni = stateMap_[ofBlock];
+    SymState &huni = stateMap_[ofBlock];
     const size_t last = huni.size();
     huni.insert(sh);
 
@@ -689,8 +689,8 @@ bool /* complete */ SymExecEngine::execInsn() {
 
     if (!heapIdx_) {
         // let's begin with empty resulting heap union
-        // TODO: implement SymHeapUnion::clear()
-        nextLocalState_ = SymHeapUnion();
+        // TODO: implement SymState::clear()
+        nextLocalState_ = SymState();
         this->echoInsn();
     }
 
@@ -843,7 +843,7 @@ const CodeStorage::Insn* SymExecEngine::callInsn() const {
     return insn;
 }
 
-SymHeapUnion* SymExecEngine::callResults() {
+SymState* SymExecEngine::callResults() {
     return &nextLocalState_;
 }
 
@@ -854,7 +854,7 @@ struct SymExec::Private {
     SymExec                     &se;
     const CodeStorage::Storage  &stor;
     SymExecParams               params;
-    SymHeapUnion                stateZero;
+    SymState                    stateZero;
     SymBackTrace                bt;
     SymCallCache                callCache;
 
@@ -868,7 +868,7 @@ struct SymExec::Private {
 
     const CodeStorage::Fnc* resolveCallInsn(SymHeap                     entry,
                                             const CodeStorage::Insn     &insn,
-                                            SymHeapUnion                &dst);
+                                            SymState                    &dst);
 
     SymExecEngine* createEngine(SymCallCtx &ctx);
 
@@ -901,7 +901,7 @@ const SymExecParams& SymExec::params() const {
 const CodeStorage::Fnc* SymExec::Private::resolveCallInsn(
         SymHeap                     heap,
         const CodeStorage::Insn     &insn,
-        SymHeapUnion                &results)
+        SymState                    &results)
 {
     const CodeStorage::TOperandList &opList = insn.operands;
     SE_BREAK_IF(CL_INSN_CALL != insn.code || opList.size() < 2);
@@ -963,7 +963,7 @@ SymExecEngine* SymExec::Private::createEngine(SymCallCtx &ctx) {
 struct StackItem {
     SymCallCtx      *ctx;
     SymExecEngine   *eng;
-    SymHeapUnion    *dst;
+    SymState        *dst;
 };
 
 void SymExec::Private::execLoop(const StackItem &item) {
@@ -997,7 +997,7 @@ void SymExec::Private::execLoop(const StackItem &item) {
         // --> we need to nest unless the computed result is already available
         const SymHeap &entry = *engine->callEntry();
         const CodeStorage::Insn &insn = *engine->callInsn();
-        SymHeapUnion &results = *engine->callResults();
+        SymState &results = *engine->callResults();
         const Fnc *fnc = this->resolveCallInsn(entry, insn, results);
         if (!fnc)
             // the error message should have been already emitted, but there
@@ -1036,7 +1036,7 @@ void SymExec::Private::execLoop(const StackItem &item) {
     }
 }
 
-void SymExec::exec(const CodeStorage::Fnc &fnc, SymHeapUnion &results) {
+void SymExec::exec(const CodeStorage::Fnc &fnc, SymState &results) {
     // go through all symbolic heaps of the initial state, merging the results
     // all together
     BOOST_FOREACH(const SymHeap &heap, d->stateZero) {

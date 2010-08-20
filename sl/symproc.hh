@@ -34,16 +34,12 @@
 
 class SymBackTrace;
 class SymHeap;
-class SymHeapUnion;
+class SymState;
 
 /**
  * a layer on top of SymHeap, providing some additional operations
  */
 class SymProc {
-    public:
-        /// a type used to insert resulting SymHeap objects to
-        typedef SymHeapUnion TState;
-
     public:
         /**
          * creation of the symbolic heap processor is a really cheap operation
@@ -127,6 +123,7 @@ struct SymExecCoreParams {
     }
 };
 
+/// extension of SymProc, now only used by SymExecEngine::execNontermInsn()
 class SymExecCore: public SymProc {
     public:
         /**
@@ -153,7 +150,7 @@ class SymExecCore: public SymProc {
          * if the instruction has to be processed elsewhere (usually
          * CL_INSN_CALL)
          */
-        bool exec(TState &dst, const CodeStorage::Insn &insn);
+        bool exec(SymState &dst, const CodeStorage::Insn &insn);
 
     private:
         bool lhsFromOperand(TObjId *pObj, const struct cl_operand &op);
@@ -162,16 +159,16 @@ class SymExecCore: public SymProc {
         template <int ARITY>
         void execOp(const CodeStorage::Insn &insn);
 
-        void execMalloc(TState &dst, const CodeStorage::TOperandList &opList);
+        void execMalloc(SymState &dst, const CodeStorage::TOperandList &opList);
         void execFreeCore(TValueId val);
         void execFree(const CodeStorage::TOperandList &opList);
-        bool execCall(TState &dst, const CodeStorage::Insn &insn);
+        bool execCall(SymState &dst, const CodeStorage::Insn &insn);
 
-        bool concretizeLoop(TState &dst, const CodeStorage::Insn &insn,
+        bool concretizeLoop(SymState &dst, const CodeStorage::Insn &insn,
                             const struct cl_operand &src);
 
-        bool concretizeIfNeeded(TState &dst, const CodeStorage::Insn &insn);
-        bool execCore(TState &dst, const CodeStorage::Insn &insn);
+        bool concretizeIfNeeded(SymState &dst, const CodeStorage::Insn &insn);
+        bool execCore(SymState &dst, const CodeStorage::Insn &insn);
 
     private:
         const SymExecCoreParams ep_;

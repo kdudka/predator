@@ -29,7 +29,7 @@
 #include "symheap.hh"
 
 class SymBackTrace;
-class SymHeapUnion;
+class SymState;
 
 namespace CodeStorage {
     struct Fnc;
@@ -62,14 +62,14 @@ class SymCallCtx {
          * into the target state.  Do not use this method if needExec() has
          * returned @b false.
          */
-        SymHeapUnion& rawResults();
+        SymState& rawResults();
 
         /**
          * merge the (either cached, or just computed) results of the
          * corresponding function call into the target state
          * @param dst target state
          */
-        void flushCallResults(SymHeapUnion &dst);
+        void flushCallResults(SymState &dst);
 
     private:
         /// @note these objects can't be created/destroyed out of SymCallCache

@@ -738,7 +738,7 @@ void SymExecCore::execFree(const CodeStorage::TOperandList &opList) {
     this->execFreeCore(val);
 }
 
-void SymExecCore::execMalloc(TState                             &state,
+void SymExecCore::execMalloc(SymState                           &state,
                              const CodeStorage::TOperandList    &opList)
 {
     SE_BREAK_IF(/* dst + fnc + size */ 3 != opList.size());
@@ -921,7 +921,7 @@ namespace {
 
 // TODO: move all the implementations of built-ins to a separate module and
 //       create some reasonable interface for adding new ones
-bool SymExecCore::execCall(TState &dst, const CodeStorage::Insn &insn) {
+bool SymExecCore::execCall(SymState &dst, const CodeStorage::Insn &insn) {
     const CodeStorage::TOperandList &opList = insn.operands;
     const struct cl_operand &fnc = opList[1];
     if (CL_OPERAND_CST != fnc.code)
@@ -1401,7 +1401,7 @@ void SymExecCore::execOp(const CodeStorage::Insn &insn) {
     this->objSetValue(varLhs, valResult);
 }
 
-bool SymExecCore::concretizeLoop(TState                         &dst,
+bool SymExecCore::concretizeLoop(SymState                       &dst,
                                  const CodeStorage::Insn        &insn,
                                  const struct cl_operand        &op)
 {
@@ -1449,7 +1449,7 @@ bool checkForDeref(const struct cl_operand &op, const CodeStorage::Insn &insn) {
 }
 } // namespace
 
-bool SymExecCore::concretizeIfNeeded(TState                     &results,
+bool SymExecCore::concretizeIfNeeded(SymState                   &results,
                                      const CodeStorage::Insn    &insn)
 {
     const size_t opCnt = insn.operands.size();
@@ -1488,7 +1488,7 @@ bool SymExecCore::concretizeIfNeeded(TState                     &results,
     return true;
 }
 
-bool SymExecCore::execCore(TState &dst, const CodeStorage::Insn &insn) {
+bool SymExecCore::execCore(SymState &dst, const CodeStorage::Insn &insn) {
     const enum cl_insn_e code = insn.code;
     switch (code) {
         case CL_INSN_UNOP:
@@ -1511,7 +1511,7 @@ bool SymExecCore::execCore(TState &dst, const CodeStorage::Insn &insn) {
     return true;
 }
 
-bool SymExecCore::exec(TState &dst, const CodeStorage::Insn &insn) {
+bool SymExecCore::exec(SymState &dst, const CodeStorage::Insn &insn) {
     lw_ = &insn.loc;
     if (this->concretizeIfNeeded(dst, insn))
         // concretization loop done

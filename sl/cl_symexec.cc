@@ -105,7 +105,7 @@ void clEasyRun(CodeStorage::Storage &stor, const char *configString) {
     SymExec se(stor, sep);
 
     // run the symbolic execution
-    SymHeapUnion results;
+    SymState results;
     se.exec(*main, results);
 
     CL_DEBUG_MSG(lw, "(g) looking for gl junk...");
