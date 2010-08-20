@@ -1825,20 +1825,19 @@ void SymHeap::neqOp(ENeqOp op, TValueId valA, TValueId valB) {
     if (NEQ_ADD == op && haveDlSegAt(*this, valA, valB)) {
         // adding the 2+ flag implies adding of the 1+ flag
         this->dlSegCrossNeqOp(op, valA);
-        goto fallback;
+    }
+    else {
+        if (haveDlSeg(*this, valA, valB)) {
+            this->dlSegCrossNeqOp(op, valA);
+            return;
+        }
+
+        if (haveDlSeg(*this, valB, valA)) {
+            this->dlSegCrossNeqOp(op, valB);
+            return;
+        }
     }
 
-    if (haveDlSeg(*this, valA, valB)) {
-        this->dlSegCrossNeqOp(op, valA);
-        return;
-    }
-
-    if (haveDlSeg(*this, valB, valA)) {
-        this->dlSegCrossNeqOp(op, valB);
-        return;
-    }
-
-fallback:
     SymHeapTyped::neqOp(op, valA, valB);
 }
 

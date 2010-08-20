@@ -475,10 +475,7 @@ void SymPlot::Private::plotSingleValue(TValueId value) {
             this->workList.schedule(peer);
 
         bool eq;
-        if (!this->heap->proveEq(&eq, value, peer))
-            goto unhandled_pred;
-
-        if (!eq) {
+        if (this->heap->proveEq(&eq, value, peer) && eq) {
             if (VAL_NULL == peer) {
                 // 'value' is said to be non-zero
                 this->plotNeqZero(value);
@@ -491,7 +488,6 @@ void SymPlot::Private::plotSingleValue(TValueId value) {
             }
         }
 
-unhandled_pred:
         CL_WARN("SymPlot: unhandled predicate over values #"
                 << value << " and #" << peer);
     }
@@ -891,19 +887,17 @@ void SymPlot::Private::plotObj(TObjId obj) {
         // we got a bare value, which can't be followed, so we're done
         return;
 
-    if (OBJ_INVALID != this->heap->valGetCompositeObj(value)) {
+    if (OBJ_INVALID == this->heap->valGetCompositeObj(value)) {
+        // connect the variable node with its value
+        this->plotEdgeValueOf(obj, value);
+
+        // dig the target value recursively and plot (if not already)
+        this->workList.schedule(value);
+    }
+    else
         // dig composite object and eventually schedule the values inside
         this->digObj(obj);
-        goto wl_ready;
-    }
 
-    // connect the variable node with its value
-    this->plotEdgeValueOf(obj, value);
-
-    // dig the target value recursively and plot (if not already)
-    this->workList.schedule(value);
-
-wl_ready:
     this->digValues();
 }
 
