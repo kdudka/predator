@@ -398,27 +398,6 @@ TObjId SymProc::heapObjFromOperand(const struct cl_operand &op) {
     return obj;
 }
 
-bool SymProc::lhsFromOperand(TObjId *pObj, const struct cl_operand &op) {
-    *pObj = this->heapObjFromOperand(op);
-    switch (*pObj) {
-        case OBJ_UNKNOWN:
-            CL_DEBUG_MSG(lw_,
-                    "ignoring OBJ_UNKNOWN as lhs, this is definitely a bug "
-                    "if there is no error reported above...");
-            // fall through!
-        case OBJ_DEREF_FAILED:
-            return false;
-
-        case OBJ_LOST:
-        case OBJ_DELETED:
-        case OBJ_INVALID:
-            SE_TRAP;
-
-        default:
-            return true;
-    }
-}
-
 TValueId SymProc::heapValFromObj(const struct cl_operand &op) {
     const TObjId obj = this->heapObjFromOperand(op);
     switch (obj) {
@@ -621,7 +600,30 @@ void SymProc::objDestroy(TObjId obj) {
         bt_->printBackTrace();
 }
 
-void SymProc::execFreeCore(const TValueId val) {
+// /////////////////////////////////////////////////////////////////////////////
+// SymExecCore implementation
+bool SymExecCore::lhsFromOperand(TObjId *pObj, const struct cl_operand &op) {
+    *pObj = this->heapObjFromOperand(op);
+    switch (*pObj) {
+        case OBJ_UNKNOWN:
+            CL_DEBUG_MSG(lw_,
+                    "ignoring OBJ_UNKNOWN as lhs, this is definitely a bug "
+                    "if there is no error reported above...");
+            // fall through!
+        case OBJ_DEREF_FAILED:
+            return false;
+
+        case OBJ_LOST:
+        case OBJ_DELETED:
+        case OBJ_INVALID:
+            SE_TRAP;
+
+        default:
+            return true;
+    }
+}
+
+void SymExecCore::execFreeCore(const TValueId val) {
     const EUnknownValue code = heap_.valGetUnknown(val);
     switch (code) {
         case UV_ABSTRACT:
@@ -682,7 +684,7 @@ void SymProc::execFreeCore(const TValueId val) {
     this->objDestroy(obj);
 }
 
-void SymProc::seekAliasedRoot(TValueId *pValue) {
+void SymExecCore::seekAliasedRoot(TValueId *pValue) {
     const TValueId val = *pValue;
     const TObjId obj = heap_.pointsTo(val);
     if (obj < 0)
@@ -710,7 +712,7 @@ void SymProc::seekAliasedRoot(TValueId *pValue) {
     *pValue = valRoot;
 }
 
-void SymProc::execFree(const CodeStorage::TOperandList &opList) {
+void SymExecCore::execFree(const CodeStorage::TOperandList &opList) {
     SE_BREAK_IF(/* dst + fnc + ptr */ 3 != opList.size());
 
     // free() does not usually return a value
@@ -736,8 +738,8 @@ void SymProc::execFree(const CodeStorage::TOperandList &opList) {
     this->execFreeCore(val);
 }
 
-void SymProc::execMalloc(TState &state, const CodeStorage::TOperandList &opList,
-                         bool fastMode)
+void SymExecCore::execMalloc(TState                             &state,
+                             const CodeStorage::TOperandList    &opList)
 {
     SE_BREAK_IF(/* dst + fnc + size */ 3 != opList.size());
 
@@ -758,7 +760,7 @@ void SymProc::execMalloc(TState &state, const CodeStorage::TOperandList &opList,
     const TValueId val = heap_.placedAt(obj);
     SE_BREAK_IF(val <= 0);
 
-    if (!fastMode) {
+    if (!ep_.fastMode) {
         // OOM state simulation
         this->objSetValue(varLhs, VAL_NULL);
         state.insert(heap_);
@@ -919,9 +921,7 @@ namespace {
 
 // TODO: move all the implementations of built-ins to a separate module and
 //       create some reasonable interface for adding new ones
-bool SymProc::execCall(TState &dst, const CodeStorage::Insn &insn,
-                       SymProcExecParams ep)
-{
+bool SymExecCore::execCall(TState &dst, const CodeStorage::Insn &insn) {
     const CodeStorage::TOperandList &opList = insn.operands;
     const struct cl_operand &fnc = opList[1];
     if (CL_OPERAND_CST != fnc.code)
@@ -939,7 +939,7 @@ bool SymProc::execCall(TState &dst, const CodeStorage::Insn &insn,
         return false;
 
     if (STREQ(fncName, "malloc")) {
-        this->execMalloc(dst, opList, ep.fastMode);
+        this->execMalloc(dst, opList);
         return true;
     }
 
@@ -956,7 +956,7 @@ bool SymProc::execCall(TState &dst, const CodeStorage::Insn &insn,
     }
 
     if (STREQ(fncName, "___sl_plot")) {
-        if (ep.skipPlot)
+        if (ep_.skipPlot)
             CL_DEBUG_MSG(lw_, "___sl_plot skipped per user's request");
 
         else if (!callPlot(insn, heap_))
@@ -967,7 +967,7 @@ bool SymProc::execCall(TState &dst, const CodeStorage::Insn &insn,
     }
 
     if (STREQ(fncName, "___sl_plot_stack_frame")) {
-        if (ep.skipPlot)
+        if (ep_.skipPlot)
             CL_DEBUG_MSG(lw_,
                     "___sl_plot_stack_frame skipped per user's request");
 
@@ -979,7 +979,7 @@ bool SymProc::execCall(TState &dst, const CodeStorage::Insn &insn,
     }
 
     if (STREQ(fncName, "___sl_plot_by_ptr")) {
-        if (ep.skipPlot)
+        if (ep_.skipPlot)
             CL_DEBUG_MSG(lw_, "___sl_plot_by_ptr skipped per user's request");
 
         else if (!callPlotByPtr(insn, heap_, bt_))
@@ -1364,7 +1364,7 @@ struct OpHandler</* binary */ 2> {
 };
 
 template <int ARITY>
-void SymProc::execOp(const CodeStorage::Insn &insn) {
+void SymExecCore::execOp(const CodeStorage::Insn &insn) {
     // resolve lhs
     TObjId varLhs = OBJ_INVALID;
     const struct cl_operand &dst = insn.operands[/* dst */ 0];
@@ -1401,8 +1401,9 @@ void SymProc::execOp(const CodeStorage::Insn &insn) {
     this->objSetValue(varLhs, valResult);
 }
 
-bool SymProc::concretizeLoop(TState &dst, const CodeStorage::Insn &insn,
-                             const struct cl_operand &op)
+bool SymExecCore::concretizeLoop(TState                         &dst,
+                                 const CodeStorage::Insn        &insn,
+                                 const struct cl_operand        &op)
 {
     bool hit = false;
 
@@ -1410,8 +1411,8 @@ bool SymProc::concretizeLoop(TState &dst, const CodeStorage::Insn &insn,
     todo.push_back(heap_);
     while (!todo.empty()) {
         SymHeap &sh = todo.front();
-        SymProc proc(sh, bt_);
-        proc.setLocation(lw_);
+        SymExecCore core(sh, bt_, ep_);
+        core.setLocation(lw_);
 
         // we expect a pointer at this point
         const TObjId ptr = varFromOperand(op, sh, bt_);
@@ -1422,7 +1423,7 @@ bool SymProc::concretizeLoop(TState &dst, const CodeStorage::Insn &insn,
         }
 
         // process the current heap and move to the next one (if any)
-        proc.execCore(dst, insn, SymProcExecParams());
+        core.execCore(dst, insn);
         todo.pop_front();
     }
 
@@ -1448,7 +1449,8 @@ bool checkForDeref(const struct cl_operand &op, const CodeStorage::Insn &insn) {
 }
 } // namespace
 
-bool SymProc::concretizeIfNeeded(TState &results, const CodeStorage::Insn &insn)
+bool SymExecCore::concretizeIfNeeded(TState                     &results,
+                                     const CodeStorage::Insn    &insn)
 {
     const size_t opCnt = insn.operands.size();
     if (opCnt != /* deref */ 2 && opCnt != /* free() */ 3)
@@ -1486,9 +1488,7 @@ bool SymProc::concretizeIfNeeded(TState &results, const CodeStorage::Insn &insn)
     return true;
 }
 
-bool SymProc::execCore(TState &dst, const CodeStorage::Insn &insn,
-                       SymProcExecParams ep)
-{
+bool SymExecCore::execCore(TState &dst, const CodeStorage::Insn &insn) {
     const enum cl_insn_e code = insn.code;
     switch (code) {
         case CL_INSN_UNOP:
@@ -1500,7 +1500,7 @@ bool SymProc::execCore(TState &dst, const CodeStorage::Insn &insn,
             break;
 
         case CL_INSN_CALL:
-            return this->execCall(dst, insn, ep);
+            return this->execCall(dst, insn);
 
         default:
             SE_TRAP;
@@ -1511,13 +1511,11 @@ bool SymProc::execCore(TState &dst, const CodeStorage::Insn &insn,
     return true;
 }
 
-bool SymProc::exec(TState &dst, const CodeStorage::Insn &insn,
-                   SymProcExecParams ep)
-{
+bool SymExecCore::exec(TState &dst, const CodeStorage::Insn &insn) {
     lw_ = &insn.loc;
     if (this->concretizeIfNeeded(dst, insn))
         // concretization loop done
         return true;
 
-    return this->execCore(dst, insn, ep);
+    return this->execCore(dst, insn);
 }

@@ -366,18 +366,18 @@ void SymExecEngine::execTermInsn() {
 bool /* handled */ SymExecEngine::execNontermInsn() {
     const CodeStorage::Insn *insn = block_->operator[](insnIdx_);
 
-    // working area for non-terminal instructions
-    SymHeap workingHeap(localState_[heapIdx_]);
-    SymProc proc(workingHeap, &bt_);
-    proc.setLocation(lw_);
-
     // set some properties of the execution
-    SymProcExecParams ep;
+    SymExecCoreParams ep;
     ep.fastMode = params_.fastMode;
     ep.skipPlot = params_.skipPlot;
 
+    // working area for non-terminal instructions
+    SymHeap workingHeap(localState_[heapIdx_]);
+    SymExecCore core(workingHeap, &bt_, ep);
+    core.setLocation(lw_);
+
     // execute the instruction
-    return proc.exec(nextLocalState_, *insn, ep);
+    return core.exec(nextLocalState_, *insn);
 }
 
 namespace {

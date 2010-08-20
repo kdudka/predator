@@ -36,17 +36,6 @@ class SymBackTrace;
 class SymHeap;
 class SymHeapUnion;
 
-struct SymProcExecParams {
-    bool fastMode;          ///< enable/disable OOM state simulation
-    bool skipPlot;          ///< simply ignore all ___sl_plot* calls
-
-    SymProcExecParams():
-        fastMode(false),
-        skipPlot(false)
-    {
-    }
-};
-
 /**
  * a layer on top of SymHeap, providing some additional operations
  */
@@ -58,7 +47,6 @@ class SymProc {
     public:
         /**
          * creation of the symbolic heap processor is a really cheap operation
-         * @todo split SymProc into class operating only on const
          * SymHeap and a class providing the write access on top of that.  I
          * guess it will be not that easy as it sounds.
          * @param heap an instance of SymHeap to operate on
@@ -72,9 +60,6 @@ class SymProc {
         {
         }
 
-        ~SymProc() {
-        }
-
         /**
          * update location info
          * @note this method is used to provide as accurate as possible location
@@ -84,22 +69,6 @@ class SymProc {
         void setLocation(const LocationWriter &lw) {
             lw_ = lw;
         }
-
-        /**
-         * execute a @b non-terminal instruction using the managed symbolic heap
-         * @note see also CodeStorage::Insn
-         * @note see also code_listener.h::cl_is_term_insn()
-         * @param dst a container to store the result(s) to
-         * @param insn an instruction to be executed
-         * @param ep execution parameters - see SymProcExecParams for details
-         * @return true, if the requested instruction has been processed; false
-         * if the instruction has to be processed elsewhere (usually
-         * CL_INSN_CALL)
-         * @note returning false in this case does @b not mean there has been an
-         * error
-         */
-        bool exec(TState &dst, const CodeStorage::Insn &insn,
-                  SymProcExecParams ep);
 
     public:
         /// obtain a heap object corresponding to the given operand
@@ -117,46 +86,95 @@ class SymProc {
         /// high-level interface to SymHeap::objDestroy()
         void objDestroy(TObjId obj);
 
-    private:
+    protected:
         void heapSetSingleVal(TObjId lhs, TValueId rhs);
         void heapObjDefineType(TObjId lhs, TValueId rhs);
         void heapObjHandleAccessorItem(TObjId *pObj,
                                        const struct cl_accessor *ac);
+
         void heapObjHandleAccessor(TObjId *pObj, const struct cl_accessor *ac);
         bool checkForInvalidDeref(TObjId obj);
         TObjId handleDerefCore(TValueId value);
         void handleDeref(TObjId *pObj, const struct cl_accessor **pAc);
-        void seekAliasedRoot(TValueId *pVal);
         void resolveAliasing(TValueId *pVal, const struct cl_type *cltTarget,
                              bool virtualDereference);
+
         void resolveOffValue(TValueId *pVal, const struct cl_accessor **pAc);
         TValueId heapValFromObj(const struct cl_operand &op);
         TValueId heapValFromCst(const struct cl_operand &op);
-        bool lhsFromOperand(TObjId *pObj, const struct cl_operand &op);
-        template <int ARITY> void execOp(const CodeStorage::Insn &insn);
-        void execMalloc(TState &dst, const CodeStorage::TOperandList &opList,
-                        bool fastMode);
-        void execFreeCore(TValueId val);
-        void execFree(const CodeStorage::TOperandList &opList);
-        bool execCall(TState &dst, const CodeStorage::Insn &insn,
-                      SymProcExecParams ep);
-        bool concretizeLoop(TState &dst, const CodeStorage::Insn &insn,
-                            const struct cl_operand &src);
-        bool concretizeIfNeeded(TState &dst, const CodeStorage::Insn &insn);
-        bool execCore(TState &dst, const CodeStorage::Insn &insn,
-                      SymProcExecParams ep);
 
-    private:
+    protected:
         SymHeap                     &heap_;     ///< heap to operate on
         const SymBackTrace          *bt_;
         LocationWriter              lw_;
 
-        // internal helper of SymProc::execOp()
+        // internal helper of SymExecCore::execOp()
         template <int N> friend struct OpHandler;
 
         // internal helpers of SymProc::objSetValue()
         friend class ValueWriter;
         friend class ValueMirror;
+};
+
+struct SymExecCoreParams {
+    bool fastMode;          ///< enable/disable OOM state simulation
+    bool skipPlot;          ///< simply ignore all ___sl_plot* calls
+
+    SymExecCoreParams():
+        fastMode(false),
+        skipPlot(false)
+    {
+    }
+};
+
+class SymExecCore: public SymProc {
+    public:
+        /**
+         * @copydoc SymProc::SymProc
+         * @param ep execution parameters - see SymExecCoreParams for details
+         */
+        SymExecCore(SymHeap &heap, const SymBackTrace *bt,
+                    const SymExecCoreParams &ep):
+            SymProc(heap, bt),
+            ep_(ep)
+        {
+        }
+
+    public:
+        /**
+         * execute a @b non-terminal instruction using the managed symbolic heap
+         * @note see also CodeStorage::Insn
+         * @note see also code_listener.h::cl_is_term_insn()
+         * @param dst a container to store the result(s) to
+         * @param insn an instruction to be executed
+         * @note returning false in this case does @b not mean there has been an
+         * error
+         * @return true, if the requested instruction has been processed; false
+         * if the instruction has to be processed elsewhere (usually
+         * CL_INSN_CALL)
+         */
+        bool exec(TState &dst, const CodeStorage::Insn &insn);
+
+    private:
+        bool lhsFromOperand(TObjId *pObj, const struct cl_operand &op);
+        void seekAliasedRoot(TValueId *pVal);
+
+        template <int ARITY>
+        void execOp(const CodeStorage::Insn &insn);
+
+        void execMalloc(TState &dst, const CodeStorage::TOperandList &opList);
+        void execFreeCore(TValueId val);
+        void execFree(const CodeStorage::TOperandList &opList);
+        bool execCall(TState &dst, const CodeStorage::Insn &insn);
+
+        bool concretizeLoop(TState &dst, const CodeStorage::Insn &insn,
+                            const struct cl_operand &src);
+
+        bool concretizeIfNeeded(TState &dst, const CodeStorage::Insn &insn);
+        bool execCore(TState &dst, const CodeStorage::Insn &insn);
+
+    private:
+        const SymExecCoreParams ep_;
 };
 
 #endif /* H_GUARD_SYM_PROC_H */
