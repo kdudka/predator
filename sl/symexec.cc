@@ -156,7 +156,7 @@ class SymExecEngine {
     private:
         typedef const CodeStorage::Block                   *TBlock;
         typedef std::set<BlockPtr>                          TBlockSet;
-        typedef std::map<TBlock, SymHeapScheduler>          TStateMap;
+        typedef std::map<TBlock, SymStateMarked>            TStateMap;
 
         const CodeStorage::Storage      &stor_;
         SymExecParams                   params_;
@@ -171,7 +171,7 @@ class SymExecEngine {
         bool                            waiting_;
         bool                            endReached_;
 
-        SymHeapScheduler                localState_;
+        SymStateMarked                  localState_;
         SymState                        nextLocalState_;
         LocationWriter                  lw_;
 
@@ -712,7 +712,7 @@ bool /* complete */ SymExecEngine::execBlock() {
     const std::string &name = block_->name();
 
     // state valid for the entry of this BB
-    SymHeapScheduler &origin = stateMap_[block_];
+    SymStateMarked &origin = stateMap_[block_];
     const int origCnt = origin.size();
 
     if (insnIdx_ || heapIdx_) {

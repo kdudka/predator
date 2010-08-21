@@ -104,10 +104,10 @@ class SymState {
  * symbolic heaps are always marked as scheduled.  They can be marked as done
  * later, using the setDone() method.
  */
-class SymHeapScheduler: public SymState {
+class SymStateMarked: public SymState {
     public:
         /// import of SymState rewrites the base and invalidates all flags
-        SymHeapScheduler& operator=(const SymState &huni) {
+        SymStateMarked& operator=(const SymState &huni) {
             static_cast<SymState &>(*this) = huni;
             done_.clear();
             done_.resize(huni.size(), false);
