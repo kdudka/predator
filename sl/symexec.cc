@@ -23,6 +23,7 @@
 #include <cl/cl_msg.hh>
 #include <cl/storage.hh>
 
+#include "clutil.hh"
 #include "symabstract.hh"
 #include "symbt.hh"
 #include "symcall.hh"
@@ -500,25 +501,8 @@ void operandToStreamVar(std::ostream &str, const struct cl_operand &op) {
     }
 
     // obtain var ID and name (if any)
-    const enum cl_operand_e code = op.code;
     const char *name = NULL;
-    int uid = -1;
-    switch (code) {
-        case CL_OPERAND_REG:
-            uid = op.data.reg.id;
-            break;
-
-        case CL_OPERAND_VAR:
-            uid = op.data.var.id;
-            name = op.data.var.name;
-            break;
-
-        default:
-#if SE_SELF_TEST
-            SE_TRAP;
-#endif
-            break;
-    }
+    const int uid = varIdFromOperand(&op, &name);
 
     // print var itself
     str << "#" << uid;

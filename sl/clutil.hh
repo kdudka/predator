@@ -36,4 +36,6 @@ bool seekRefAccessor(const struct cl_accessor *ac);
 
 int intCstFromOperand(const struct cl_operand *op);
 
+int varIdFromOperand(const struct cl_operand *op, const char **pName = 0);
+
 #endif /* H_GUARD_CLUTIL_H */

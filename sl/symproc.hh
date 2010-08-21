@@ -57,7 +57,7 @@ class SymProc {
         }
 
         SymHeap&                    sh() { return heap_; }
-        const SymBackTrace*         bt() { return bt_; }
+        const SymBackTrace*         bt() { return bt_;   }
         const LocationWriter&       lw() { return lw_;   }
 
         /**

@@ -200,23 +200,7 @@ namespace {
 TObjId varFromOperand(const struct cl_operand &op, const SymHeap &sh,
                       const SymBackTrace *bt)
 {
-    int uid;
-
-    const enum cl_operand_e code = op.code;
-    switch (code) {
-        case CL_OPERAND_VAR:
-            uid = op.data.var.id;
-            break;
-
-        case CL_OPERAND_REG:
-            uid = op.data.reg.id;
-            break;
-
-        default:
-            SE_TRAP;
-            return OBJ_INVALID;
-    }
-
+    const int uid = varIdFromOperand(&op);
     const int nestLevel = bt->countOccurrencesOfTopFnc();
     const CVar cVar(uid, nestLevel);
     return sh.objByCVar(cVar);
