@@ -70,7 +70,7 @@ class SymState {
 
         /// return nth SymHeap object, 0 <= nth < size()
         const SymHeap& operator[](int nth) const {
-            return heaps_[nth];
+            return heaps_.at(nth);
         }
 
         /// return STL-like iterator to go through the container
@@ -119,6 +119,7 @@ class SymStateMarked: public SymState {
             done_.clear();
         }
 
+    protected:
         virtual void insertNew(const SymHeap &sh) {
             SymState::insertNew(sh);
 
@@ -129,12 +130,12 @@ class SymStateMarked: public SymState {
     public:
         /// check if the nth symbolic heap has been already processed
         bool isDone(int nth) const {
-            return done_[nth];
+            return done_.at(nth);
         }
 
         /// mark the nth symbolic heap as processed
         void setDone(int nth) {
-            done_[nth] = true;
+            done_.at(nth) = true;
         }
 
     private:
