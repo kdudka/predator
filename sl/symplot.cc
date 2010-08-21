@@ -475,7 +475,7 @@ void SymPlot::Private::plotSingleValue(TValueId value) {
             this->workList.schedule(peer);
 
         bool eq;
-        if (this->heap->proveEq(&eq, value, peer) && eq) {
+        if (this->heap->proveEq(&eq, value, peer) && !eq) {
             if (VAL_NULL == peer) {
                 // 'value' is said to be non-zero
                 this->plotNeqZero(value);
