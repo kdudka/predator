@@ -49,6 +49,10 @@ class SymState {
     public:
         virtual ~SymState() { }
 
+        virtual void clear() {
+            heaps_.clear();
+        }
+
         /**
          * look for the given symbolic heap, return its index if found, -1
          * otherwise
@@ -56,10 +60,10 @@ class SymState {
         int lookup(const SymHeap &heap) const;
 
         /// insert given SymHeap object into the union
-        virtual void insert(const SymHeap &heap);
+        void insert(const SymHeap &heap);
 
         /// merge given SymState object into self
-        virtual void insert(const SymState &huni);
+        void insert(const SymState &huni);
 
         /// return count of object stored in the container
         size_t size()          const { return heaps_.size();  }
@@ -81,6 +85,15 @@ class SymState {
         /// @copydoc begin() const
         iterator end()               { return heaps_.end();   }
 
+    protected:
+        /// insert @b new SymHeap that @ must be guaranteed to be not in yet
+        virtual void insertNew(const SymHeap &sh) {
+            heaps_.push_back(sh);
+        }
+
+        /// lookup/insert optimization in SymCallCache implementation
+        friend class PerFncCache;
+
     private:
         TList heaps_;
 };
@@ -101,12 +114,13 @@ class SymHeapScheduler: public SymState {
             return *this;
         }
 
-        virtual void insert(const SymHeap &heap) {
-            const size_t last = this->size();
-            SymState::insert(heap);
-            if (this->size() == last)
-                // nothing has been changed
-                return;
+        virtual void clear() {
+            SymState::clear();
+            done_.clear();
+        }
+
+        virtual void insertNew(const SymHeap &sh) {
+            SymState::insertNew(sh);
 
             // schedule the just inserted SymHeap for processing
             done_.push_back(false);

@@ -208,7 +208,6 @@ void SymCallCtx::flushCallResults(SymState &dst) {
 
 // /////////////////////////////////////////////////////////////////////////////
 // call context cache per one fnc
-// FIXME: suboptimal interaction with SymState during lookup/insert
 class PerFncCache {
     private:
         typedef std::vector<SymCallCtx *> TCtxMap;
@@ -245,11 +244,9 @@ class PerFncCache {
 #if SE_DISABLE_CALL_CACHE
             return;
 #endif
-            huni_.insert(heap);
+            huni_.insertNew(heap);
             ctxMap_.push_back(ctx);
-            if (huni_.size() != ctxMap_.size())
-                // integrity of PerFncCache broken, perhaps called unexpectedly?
-                SE_TRAP;
+            SE_BREAK_IF(huni_.size() != ctxMap_.size());
         }
 };
 

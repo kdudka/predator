@@ -29,8 +29,6 @@
 #include "symheap.hh"
 #include "symutil.hh"
 
-class SymHeap;
-
 bool haveDlSeg(SymHeap &sh, TValueId atAddr, TValueId pointingTo);
 
 bool haveDlSegAt(SymHeap &sh, TValueId atAddr, TValueId peerAddr);

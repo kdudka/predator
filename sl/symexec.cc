@@ -673,8 +673,7 @@ bool /* complete */ SymExecEngine::execInsn() {
 
     if (!heapIdx_) {
         // let's begin with empty resulting heap union
-        // TODO: implement SymState::clear()
-        nextLocalState_ = SymState();
+        nextLocalState_.clear();
         this->echoInsn();
     }
 

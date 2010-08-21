@@ -404,7 +404,7 @@ void SymState::insert(const SymHeap &heap) {
     }
 
     // add given heap to union
-    heaps_.push_back(heap);
+    this->insertNew(heap);
 }
 
 void SymState::insert(const SymState &huni) {
