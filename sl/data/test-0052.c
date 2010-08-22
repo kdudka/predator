@@ -1,7 +1,7 @@
-// Creating a structure in which each node has tree next pointers, each of them has again three
-// next pointers, but only one of them is used to, in fact, bind these structures into a sort of
-// SLL. One works via a pointer to an item of a structure here (i.e., having and using a pointer
-// into teh middle of a structure).
+// more excessive test-case for SLS discovery; Each node contains 9 pointers of
+// the same type, split into 3 sub-structures of the same type.  8 of them are
+// always NULL, only one pointer is actually used for the SLL binding; it also
+// plots some graphs that should better explain what's going on here
 
 #include "../sl.h"
 #include <stdlib.h>

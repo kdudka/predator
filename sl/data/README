@@ -1,0 +1,415 @@
+SLS abstraction
+===============
+    test-0001.c - infinite loop creating a SLL
+                - it plots a heap graph per each iteration
+                - OOM state is properly handled, so that "fast" mode makes no
+                  difference
+
+                - thanks to the SLS abstraction, the program reaches its end
+                  during the symbolic execution (though it can't happen in real
+                  world as long as there is some memory available)
+
+                - junk is properly detected since there is some memory
+                  allocated, but nothing is free'd afterwards
+
+    test-0038.c - simple SLL creation/destruction
+                - one false alarm caused by the poor support of integral values
+                - contributed by Petr Peringer
+
+    test-0047.c - SLL creation, starting with uninitialized list pointer
+                - because of the injected bug, it has to explore two times more
+                  states
+
+                - plots two heap graphs per each iteration (two variants
+                  considered because of the uninitialized value mentioned above)
+
+    test-0048.c - handling of shared/existential values during the abstraction
+
+    test-0049.c - abstraction of SLL, each node contains a pointer to head
+
+    test-0050.c - simple visualization of SLS abstraction in progress
+
+    test-0052.c - regression test for SLS discovery (struct nesting, etc.)
+
+    test-0053.c - SLS creation/destruction
+                - a memory leak injected into the SLL destruction routine
+                - can be turned into a leak-less example by the '#if 0' inside
+
+    test-0065.c - SLL reversion with an ordering check
+                - contributed by Tomas Vojnar
+
+    test-0083.c - an example taken from fa_analysis
+                - seen infinite because we abstract out integral values
+                - it ignores the OOM state
+                - no flaws reported with -fplugin-arg-libsl-symexec-args=fast
+
+
+DLS abstraction
+===============
+    test-0054.c - simple DLL creation
+                - seen infinite because we abstract out integral values
+                - the fix-point calculation terminates thanks to DLS abstraction
+
+    test-0055.c - a regression test focused on DLS discovery
+
+    test-0056.c - a regression test focused on DLS shared data
+
+    test-0057.c - concretization of DLS
+                - it creates a (possibly infinite) DLL
+                - the abstraction is triggered
+                - the list is traversed from its one end to its other end
+                  (concretization/abstraction)
+
+    test-0058.c - alternation of test-0057.c
+                - it creates a DLL of fixed length, though long enough to
+                  trigger the DLS abstraction
+
+                - as there is less non-determinism, it produces fewer graphs
+
+    test-0059.c - forward/backward destruction of DLL
+
+    test-0060.c - DLS abstraction of a cyclic DLL
+
+    test-0068.c - a regression test focused on DLS discovery/abstraction
+
+    test-0069.c - a regression test focused on handling of 1+/2+ DLS
+
+    test-0082.c - a.k.a. jonathan-DLL.c
+                - an example provided by Jonathan Cederberg
+                - seen infinite because we abstract out integral values
+                - does not care about the OOM state, what makes our analysis
+                  a bit complex
+
+                - works better with -fplugin-arg-libsl-symexec-args=fast
+
+
+Higher level SLS/DLS abstraction, etc.
+======================================
+    test-0061.c - conversion of SLL to DLL and vice versa
+                    1. creates a singly-linked list, using the 'next' selector
+                       for biding
+
+                    2. goes through the list and completes the missing values
+                       of 'prev' selector, in order to obtain a doubly-linked
+                       list
+
+                    3. goes through the list and zero the 'next' selector
+                       of each node, in order to get a reversed singly-linked
+                       list
+
+    test-0062.c - SLS nesting
+                - a (possibly infinite) SLL
+                - each node points to a standalone (possibly infinite) SLL
+
+    test-0063.c - SLS of SLSs at end of another SLS
+                - connected through incompatible pointer conversion
+                - plots some heap graphs that explain a lot
+                - mind the [prototype] prefix used in the SLS node visualization
+
+    test-0064.c - more excessive test for SLS nesting and connecting
+
+    test-0066.c - SLS of DLSs
+                - a (possibly infinite) SLL
+                - each node points to a standalone (possibly infinite) DLL
+
+    test-0067.c - test-0066.c extended of two step destruction
+                    1. the nested DLLs are destroyed
+                    2. the master SLL is destroyed
+
+    test-0070.c - distinguish among shared/prototype objects
+
+    test-0071.c - SLL, each node points to a shared SLL
+
+    test-0072.c - DLL, each node points to a standalone DLL
+                - indirect function call (not so synthetic use case here)
+                - bounded recursion of depth 2
+                - see the function dll_create_generic() for details
+
+
+Linux lists
+===========
+    test-0073.c - playing with some macros from <linux/list.h>
+                - no abstraction involved
+                - the heap graphs should be self-explaining
+
+    test-0075.c - off-values handling, aliasing of the 1st field with the root
+                - see the checks inside and the generated graph for more info
+
+    test-0076.c - another test/example focused on off-values handling
+
+    test-0077b.c- a successfully caught wrong usage of an off-value
+
+    test-0078.c - abstraction of Linux like DLL
+                - operating on real macros taken from <linux/list.h>
+                - the heap graphs explain how it works
+
+    test-0079.c - simplified variant of test-0078.c
+                - useful mainly for debugging purposes
+
+    test-0080.c - Linux lists reduced to SLLs
+                - traversal of the abstracted list
+
+    test-0081.c - traversal of Linux like DLL
+                - abstraction/concretization
+                - some macros were expanded in order to make the code clear
+
+    test-0084.c - destruction of Linux like DLL
+                - the example itself is written a bit awkward, but works
+                - successfully analyzed
+
+    test-0085.c - regression test focused on aliasing of a field with the root
+                - test for address comparison and call of free()
+                - some of the tests are a bit crazy, however being used in
+                  handling of Linux like DLS in some way
+
+    test-0086.c - a simplified variant of test-0084.c that is closer to reality
+
+    test-0087.c - alternation of test-0086.c where the list head is placed at
+                  zero offset within each node (surprisingly it causes the
+                  analysis to be much more difficult as the pointer-plus
+                  operation vanishes when the offset is zero)
+
+                - plots heap graphs of Linux like DLS destruction in progress
+
+    test-0088.c - the core problem from test-0087.c narrowed down to a minimal
+                  example
+
+
+Show-case
+=========
+- Do we have any competitor in case of these examples?
+
+    test-0037.c - glibc claims there is "double free or corruption"
+                - valgrind says:
+                    Conditional jump or move depends on uninitialised value(s)
+                       at 0x4005DA: main (test-0037.c:28)
+
+                    Invalid free() / delete / delete[]
+                       at 0x4A07100: free (vg_replace_malloc.c:366)
+                       by 0x4005F3: main (test-0037.c:31)
+                    Address 0x4c4a040 is 0 bytes inside a block of size 8 free'd
+                       at 0x4A07100: free (vg_replace_malloc.c:366)
+                       by 0x4005E7: main (test-0037.c:29)
+
+                - Predator says:
+                    test-0037.c:27:11: error: type of the pointer being
+                    dereferenced does not match type of the target object
+
+                    test-0037.c:31:13: error: double free() detected
+                    test-0037.c:19:24: warning: killing junk
+                    test-0037.c:19:24: warning: killing junk
+                    test-0037.c:19:24: warning: killing junk
+
+    test-0077.c - stack smashing detection:
+                    test-0077.c:46:18: error: dereference of unknown value
+                    test-0077.c:48:18: error: dereference of unknown value
+
+
+Call cache
+==========
+    test-0041.c - infinite recursion
+                - the analysis survives fairly well
+                - the result is however not much useful
+
+    test-0042.c - regression test focused on call cache
+                - inspired by an already fixed bug there
+
+    test-0043.c - regression test focused on call cache
+                - inspired by an already fixed bug there
+                - the comments inside are valid only with SE_DISABLE_SYMCUT
+                - with symcut enabled, we have even more cache hits!
+
+
+symplot tutorial
+================
+    test-0046.c - visualization of Neq predicates
+
+
+"Hello world!" like examples
+============================
+         list.c - trivial destruction of SLL
+                - finite length (0, 1 and 2 nodes)
+                - recursive and non-recursive variant of the algorithm
+                - can be passed through Predator with:
+                    -DSELF_TEST
+                    -fplugin-arg-libsl-symexec-args=fast
+
+    test-0002.c - invalid dereference
+                    - NULL value
+                    - an uninitialized value
+
+    test-0003.c - invalid free()
+                    - uninitialized value
+                    - non-heap object
+                    - double free
+
+    test-0004.c - infinite loop, one malloc() and one free() per each iteration
+                - the analysis stops, though the program is infinite
+                - there is no junk and no memory error possible
+                - Predator issues a warning:
+                    "end of function main() has not been reached"
+
+    test-0005.c - non-recursive destruction of a SLL that consists of two nodes
+                - OOM state is not handled properly and the analysis detects a
+                  dereference of NULL value and possible junk as the consequence
+                  of it
+
+                - when analysed in "fast" mode, no flaws are detected
+
+    test-0006.c - another variant of two nodes long SLL destruction
+                - also reports problems caused by unhandled OOM state
+                - silent in "fast" mode
+
+    test-0007.c - indirect function call (trivial case)
+
+    test-0008.c - indirect function call (more realistic case)
+                - generic procedure that creates a fixed length SLL and call
+                  a destruction routine, using a function pointer given as
+                  argument
+
+                - called two times with two different functions given as the
+                  argument
+
+                - once the test uses a loop-based SLL destruction routine
+                - once the test uses a recursive SLL destruction routine
+                - also a bit chatty when OOM errors are analyzed
+
+    test-0009.c - checking of size of allocated memory (the easiest case)
+                - based on type information of the pointer
+                - as soon as the (void *) pointer is assigned to a type-safe
+                  pointer, the size of _target_ type is compared with the size
+                  given to malloc() as the argument
+
+                - we support only constant parameters of malloc(), known in the
+                  time of program's compilation
+
+                - we don't support arrays at all (nor static, nor dynamic)
+
+    test-0010.c - fixed length SLL creation/destruction
+                - no OOM errors here
+                - utilizes our garbage collector
+                - Predator properly reports the junk, directly at the place
+                  where it's introduced, along with full backtrace
+
+    test-0011.c - trivial test-case focused on OOM states handling
+
+    test-0012.c - another test-case for fixed length SLL creation/destruction
+                - no OOM errors
+                - no junk
+
+    test-0013.c - regression test focused on the garbage collector
+                - not fully automatic, some "#if 1" inside
+                - mainly for debugging purposes
+                - infinite loop properly detected
+
+    test-0014.c - automatic regression test, based on dll.c/test-dll.cc
+                - some noise that comes from unsupported handling of strings
+                - but the DLL operations itself seem to be analysed properly
+
+    test-0016.c - SLL creation, fixed length on bare metal
+                - seen infinite because we abstract out integral values
+                - the analysis terminates thanks to the garbage collector
+                - no SLS abstraction involved here
+
+    test-0017.c - an alternation of test-0016.c
+                - seen infinite because we abstract out integral values
+                - the analysis terminates thanks to finite number of states
+                - garbage collector not utilized here
+
+    test-0018.c - modification of test-0017.c
+                - explicit destruction replaced by assignment of NULL value
+                - garbage collector utilized
+
+    test-0019.c - a smoke test for SymHeapCore functionality
+
+    test-0020.c - regression test of reasoning about unknown bool values
+
+    test-0021.c - regression test of reasoning about unknown pointer values
+
+    test-0022.c - a dummy test for symplot
+
+    test-0023.c - show-case of non-deterministic condition handling
+                - plots 3 heap graphs:
+                    - before the condition
+                    - "then" branch
+                    - "else" branch
+
+    test-0024.c - another test-case for SLL construction/destruction
+                - fixed length (though some SLS may be created)
+                - plots some heap graphs
+
+    test-0025.c - a regression test for inconsistency checking (trivial case)
+
+    test-0026.c - alternation of test-0025.c that plots some heap graphs
+
+    test-0027.c - regression test for detection of some errors on call of free()
+
+    test-0028.c - regression test for invalid dereference, etc.
+
+    test-0029.c - error-free variant of test-0028.c (a hard to find error fixed)
+
+    test-0030.c - OOM error detection demo, bad variant of the example
+
+    test-0031.c - OOM error detection demo, good variant of the example
+
+    test-0032.c - a regression test for the garbage collector
+                - focused on composite types nesting
+                - inspired by an already fixed bug, see 2327f5c for details
+
+    test-0033.c - two levels of doubly-linked lists
+                - not many of nodes, some #if 1 inside
+                - mostly for debugging purposes
+                - intentionally injected a bug into the example
+
+    test-0034.c - a test-case for global variables (only one pointer)
+
+    test-0035.c - a test-case for collecting of global junk
+
+    test-0036.c - a torture test focused on Neq predicates, prover, etc.
+
+    test-0044.c - a torture test focused on chaining of dereferences
+
+    test-0045.c - a test that checks if Neq predicates are honored by symstate
+
+          off.c - a tiny test-case for field offset retrieving from gcc
+                - no main() inside
+                - recommended options:
+                    -fplugin-arg-libsl-bypass-symexec
+                    -fplugin-arg-libsl-dump-pp
+
+    test-0074.c - regression test focused on nested struct offset computation
+
+
+Tiny DLL library written on scratch
+===================================
+    dll.h - API
+    dll.c - implementation
+    test-dll.cc - Boost/test based test-suite, written in C++
+
+- can't be analysed on its own by Predator for now as there is no main()
+- there might be some bugs as it has never been used anywhere
+- no bugs encountered so far
+- consider playing with test-0014.c instead
+
+
+Implementation of skip-list
+===========================
+    jonathan-skip-list.c
+
+- contributed by Jonathan Cederberg
+- no chance to analyse by Predator as we don't support arrays yet
+
+
+Known bugs
+==========
+    test-0015.c - the analysis terminates prematurely
+                - seems to be a bug of symcut
+                - works correctly with SE_DISABLE_SYMCUT
+                - will be analysed/fixed ASAP
+
+    test-0051.c - handled fairly well as we are not able to learn such a shape
+                - but we should probably not allow the abstraction at all here
+                - it should be pretty easy to fix
+                - we just need to utilize the DataMatchVisitor even during
+                  segment discovery process (it's too late for that when the
+                  segment is already being constructed)

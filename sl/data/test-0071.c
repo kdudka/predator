@@ -1,4 +1,4 @@
-// Creating an SLL with elements pointing to a shared DLL.
+// Creating an SLL with elements pointing to a shared SLL.
 
 #include "../sl.h"
 #include <stdlib.h>

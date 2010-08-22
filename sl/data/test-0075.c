@@ -36,9 +36,7 @@ int main()
     struct list_head *gh1 = &gi.h1;
     struct list_head *lh  = &gi.li.lhead;
 
-    // FIXME: aliasing of the first item with root address (known bug)
     struct gitem *pgi0 = ROOT(struct gitem, h0, gh0);
-
     struct gitem *pgi1 = ROOT(struct gitem, h1, gh1);
     struct litem *pli = ROOT(struct litem, lhead, lh);
     ___sl_plot("01");
@@ -48,6 +46,14 @@ int main()
 
     if (pli != &gi.li)
         free(pli);
+
+    if (pgi0 != pgi1)
+        // aliasing of the first item with address of the root
+        free(pgi1);
+
+    if ((void *)&gi != &gh0->next)
+        // aliasing of the first item with address of the root (2x)
+        free(pgi1);
 
     return 0;
 }
