@@ -51,7 +51,7 @@ namespace {
     }
 
     template <class TSubst>
-    bool matchValues(TSubst &subst, TValueId v1, TValueId v2) {
+    bool matchValues(TSubst subst[2], TValueId v1, TValueId v2) {
         if (checkNonPosValues(v1, v2))
             // null vs. non-null, etc.
             return false;
@@ -60,22 +60,21 @@ namespace {
             // no need to save mapping of special values, they're fixed anyway
             return true;
 
-        // we need to have the values always in the same order to guarantee
-        // the substitution to be bijective ... there used to be a nasty bug
-        // at this point, leading to the following nonsense:
-        //   [17] = 17
-        //   [18] = 18
-        //   [35] = 17
-        //   [36] = 18
-        sortValues(v1, v2);
-
-        typename TSubst::iterator iter = subst.find(v1);
-        if (iter != subst.end())
+        // left-to-right check
+        typename TSubst::iterator iter1 = subst[0].find(v1);
+        if (iter1 != subst[0].end())
             // substitution already defined, check if it applies seamlessly
-            return iter->second == v2;
+            return iter1->second == v2;
 
-        // define a new substitution
-        subst[v1] = v2;
+        // right-to-left check
+        typename TSubst::iterator iter2 = subst[1].find(v2);
+        if (iter2 != subst[1].end())
+            // substitution already defined, check if it applies seamlessly
+            return iter2->second == v1;
+
+        // not found --> define a new substitution
+        subst[0][v1] = v2;
+        subst[1][v2] = v1;
         return true;
     }
 
@@ -350,7 +349,7 @@ bool operator== (const SymHeap &heap1, const SymHeap &heap2) {
 
     // value substitution (isomorphism)
     typedef std::map<TValueId, TValueId> TSubst;
-    TSubst valSubst;
+    TSubst valSubst[2];
 
     // FIXME: suboptimal interface of SymHeap::gatherCVars()
     SymHeap::TContCVar cVars1, cVars2;

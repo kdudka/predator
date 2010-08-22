@@ -12,6 +12,8 @@ SLS abstraction
                 - junk is properly detected since there is some memory
                   allocated, but nothing is free'd afterwards
 
+    test-0015.c - creation/destruction of a cyclic SLL
+
     test-0038.c - simple SLL creation/destruction
                 - one false alarm caused by the poor support of integral values
                 - contributed by Petr Peringer
@@ -402,11 +404,6 @@ Implementation of skip-list
 
 Known bugs
 ==========
-    test-0015.c - the analysis terminates prematurely
-                - seems to be a bug of symcut
-                - works correctly with SE_DISABLE_SYMCUT
-                - will be analysed/fixed ASAP
-
     test-0051.c - handled fairly well as we are not able to learn such a shape
                 - but we should probably not allow the abstraction at all here
                 - it should be pretty easy to fix
