@@ -571,12 +571,12 @@ class SymHeapTyped: public SymHeapCore {
  * stand for the count of binding pointers.
  */
 enum EObjKind {
-    OK_CONCRETE     = 0,
-    OK_SLS          = 1,
-    OK_DLS          = 2,
+    OK_CONCRETE     = 0,    ///< concrete object (not a segment)
+    OK_SLS          = 1,    ///< singly-linked list segment
+    OK_DLS          = 2,    ///< doubly-linked list segment
 
-    OK_HEAD,
-    OK_PART
+    OK_HEAD,                ///< segment's head (useful for Linux lists)
+    OK_PART                 ///< part of a segment (sub-object)
 };
 
 typedef std::vector<int /* nth */> TFieldIdxChain;
@@ -656,20 +656,29 @@ class SymHeap: public SymHeapTyped {
                             const SegBindingFields &binding);
 
         /**
-         * convert the given @b abstract object to a less abstract object.  If
+         * convert the given @b abstract object to a concrete object.  If
          * the given object is a regular SLS/DLS object, it results to a
          * concrete object.  Otherwise, the abstraction level is just decreased.
          */
         void objSetConcrete(TObjId obj);
 
     public:
-        /// overridden in order to complement DLS Neq
+        /**
+         * @copydoc SymHeapTyped::neqOp
+         * @note overridden in order to complement DLS Neq
+         */
         virtual void neqOp(ENeqOp op, TValueId valA, TValueId valB);
 
-        /// overridden in order to see through SLS/DLS
+        /**
+         * @copydoc SymHeapTyped::proveEq
+         * @note overridden in order to see through SLS/DLS
+         */
         virtual bool proveEq(bool *result, TValueId valA, TValueId valB) const;
 
-        /// overridden in order to remove internal data of abstract objects
+        /**
+         * @copydoc SymHeapTyped::objDestroy
+         * @note overridden in order to remove internal data of abstract objects
+         */
         virtual void objDestroy(TObjId obj);
 
     protected:

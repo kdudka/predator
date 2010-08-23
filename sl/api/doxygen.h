@@ -14,14 +14,23 @@
  *
  * @remark
  *
- * - If you are interested in @b symbolic @b execution, see the SymHeap,
- *   SymHeapUnion, SymHeapProcessor, SymCallCache and SymExec classes and the
- *   symid.hh header.
+ * - symbolic heap: symid.hh, SymHeapCore, SymHeapTyped, SymHeap
  *
- * - If you need some equipment for debugging of the symbolic execution, look at
- *   symdump.hh and the class SymHeapPlotter.
+ * - symbolic heap framework: SymBackTrace, SymProc, collectJunk()
  *
- * - If you are interested in participation on this project and don't know where
- *   to start, you can pick one of the outstanding <A
- *   HREF="todo.html"><B>todo-list</B></A> items.
+ * - symbolic state: SymState
+ *
+ * - symbolic execution: SymExec, SymExecCore, handleBuiltIn()
+ *
+ * - list segment abstraction: symabstract.hh, symseg.hh
+ *
+ * - function call optimization: SymCallCache, SymCallCtx, symcut.hh
+ *
+ * - symbolic heap plotter: SymPlot
+ *
+ * - debugging helpers: symdump.hh
+ *
+ * - other helpers: util.hh, clutil.hh, symutil.hh, worklist.hh
+ *
+ * - configuration: config.h
  */

@@ -25,7 +25,7 @@
 #include <set>
 #include <stack>
 
-// really stupid, but easy to use, DFS implementation
+/// really stupid, but easy to use, DFS implementation
 template <class T>
 class WorkList {
     public:

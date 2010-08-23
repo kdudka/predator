@@ -80,14 +80,9 @@ TValueId SymProc::heapValFromCst(const struct cl_operand &op) {
             return heap_.valCreateCustom(op.type, uid);
         }
 
-        case CL_TYPE_STRING: {
-            // FIXME: this temporary workaround is highly suboptimal, subtle
-            // and error-prone !!!
-            CL_WARN_MSG(lw_,
-                    "CL_TYPE_STRING not supported by heapValFromCst()");
-            const int uid = reinterpret_cast<long>(cst.data.cst_string.value);
-            return heap_.valCreateCustom(op.type, uid);
-        }
+        case CL_TYPE_STRING:
+            CL_WARN_MSG(lw_, "CL_TYPE_STRING not supported by SymProc");
+            return heap_.valCreateUnknown(UV_UNKNOWN, op.type);
 
         default:
             SE_TRAP;
