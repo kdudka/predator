@@ -61,20 +61,22 @@ namespace {
             return true;
 
         // left-to-right check
-        typename TSubst::iterator iter1 = subst[0].find(v1);
-        if (iter1 != subst[0].end())
+        TSubst &ltr = subst[/* ltr */ 0];
+        typename TSubst::iterator iter1 = ltr.find(v1);
+        if (iter1 != ltr.end())
             // substitution already defined, check if it applies seamlessly
             return iter1->second == v2;
 
         // right-to-left check
-        typename TSubst::iterator iter2 = subst[1].find(v2);
-        if (iter2 != subst[1].end())
+        TSubst &rtl = subst[/* rtl */ 1];
+        typename TSubst::iterator iter2 = rtl.find(v2);
+        if (iter2 != rtl.end())
             // substitution already defined, check if it applies seamlessly
             return iter2->second == v1;
 
         // not found --> define a new substitution
-        subst[0][v1] = v2;
-        subst[1][v2] = v1;
+        ltr[v1] = v2;
+        rtl[v2] = v1;
         return true;
     }
 
@@ -349,7 +351,7 @@ bool operator== (const SymHeap &heap1, const SymHeap &heap2) {
 
     // value substitution (isomorphism)
     typedef std::map<TValueId, TValueId> TSubst;
-    TSubst valSubst[2];
+    TSubst valSubst[/* left-to-right + right-to-left */ 2];
 
     // FIXME: suboptimal interface of SymHeap::gatherCVars()
     SymHeap::TContCVar cVars1, cVars2;

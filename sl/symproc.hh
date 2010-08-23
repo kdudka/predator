@@ -86,7 +86,7 @@ class SymProc {
         /// high-level interface to SymHeap::objDestroy()
         void objDestroy(TObjId obj);
 
-    protected:
+    private:
         void heapSetSingleVal(TObjId lhs, TValueId rhs);
         void heapObjDefineType(TObjId lhs, TValueId rhs);
         void heapObjHandleAccessorItem(TObjId *pObj,
