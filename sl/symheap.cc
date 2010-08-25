@@ -157,6 +157,20 @@ class OffsetDb {
             return iter->second;
         }
 
+        int /* offset */ lookup(TValueId v1, TValueId v2) {
+            TValMap::iterator iter = valMap_.find(v1);
+            if (valMap_.end() == iter)
+                return /* not found */ 0;
+
+            BOOST_FOREACH(const TOffVal &ov, iter->second) {
+                if (v2 == ov.first)
+                    // FIXME: check direction
+                    return ov.second;
+            }
+
+            return /* not found */ 0;
+        }
+
         const TOffValCont& getOffValues(TValueId val) {
             TValMap::iterator iter = valMap_.find(val);
             if (valMap_.end() == iter)
@@ -922,6 +936,12 @@ bool SymHeapCore::proveEq(bool *result, TValueId valA, TValueId valB) const {
     if (valA == valB || d->aliasDb.lookup(valA, valB)) {
         // identical value IDs (or explicit aliasing) ... the prove is done
         *result = true;
+        return true;
+    }
+
+    if (d->offsetDb.lookup(valA, valB)) {
+        // there is an offset defined among the values, they can't be equal
+        *result = false;
         return true;
     }
 

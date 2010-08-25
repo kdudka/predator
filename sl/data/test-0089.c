@@ -70,17 +70,11 @@ void chk_offval_handling()
     struct outer *d0 = ROOT(struct outer, m0, ptr);
     struct outer *d1 = ROOT(struct outer, m1, ptr);
     struct outer *same_d1 = ROOT(struct outer, m1, same_ptr);
-    void *x = &d1->m1;
     ___sl_plot("test-0089-01");
+
+    // we are able to deduce this
     CHK_EQ(ptr, d0);
-
-    // TODO: we should be able to deduce this
     CHK_NEQ(d0, same_d1);
-
-    // this works
-    CHK_EQ(ptr, x);
-
-    // TODO: we should be able to deduce this, as (x == &d1->m1)
     CHK_EQ(ptr, &d1->m1);
 
     // this should be detected as invalid free()
