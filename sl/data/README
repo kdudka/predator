@@ -176,6 +176,8 @@ Linux lists
     test-0088.c - the core problem from test-0087.c narrowed down to a minimal
                   example
 
+    test-0089.c - regression test focused on off-values, address aliasing, etc.
+
 
 Show-case
 =========

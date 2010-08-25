@@ -1,0 +1,24 @@
+test-0089.c:122:5: error: attempt to free a non-root object
+test-0089.c:123:5: error: attempt to free a non-root object
+test-0089.c:124:5: error: attempt to free a non-root object
+test-0089.c:78:5: error: double free() detected
+test-0089.c:127:24: note: from call of chk_offval_handling()
+test-0089.c:96:5: note: from call of main()
+test-0089.c:84:5: error: double free() detected
+test-0089.c:127:24: note: from call of chk_offval_handling()
+test-0089.c:96:5: note: from call of main()
+test-0089.c:87:9: error: free() called on unknown value
+test-0089.c:127:24: note: from call of chk_offval_handling()
+test-0089.c:96:5: note: from call of main()
+test-0089.c:90:9: error: double free() detected
+test-0089.c:127:24: note: from call of chk_offval_handling()
+test-0089.c:96:5: note: from call of main()
+test-0089.c:93:9: error: double free() detected
+test-0089.c:127:24: note: from call of chk_offval_handling()
+test-0089.c:96:5: note: from call of main()
+test-0089.c:93:9: error: double free() detected
+test-0089.c:127:24: note: from call of chk_offval_handling()
+test-0089.c:96:5: note: from call of main()
+test-0089.c:122:5: warning: killing junk
+test-0089.c:123:5: warning: killing junk
+test-0089.c:124:5: warning: killing junk
