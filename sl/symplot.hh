@@ -94,6 +94,9 @@ class SymPlot {
     private:
         struct Private;
         Private *d;
+
+        // internal helper of SymPlot::Private::digObjCore()
+        friend class ObjectDigger;
 };
 
 #endif /* H_GUARD_SYM_PLOT_H */

@@ -22,6 +22,7 @@
 
 #include <cl/code_listener.h>
 
+#include "clutil.hh"
 #include "symheap.hh"
 #include "symutil.hh"
 
@@ -64,65 +65,38 @@ void dump_clt_core(const struct cl_type *clt) {
 
 } // namespace
 
-struct CltStackItem {
-    const struct cl_type    *clt;
-    const char              *name;
-    bool                    last;
-};
+bool dump_clt_visitor(TFieldIdxChain ic, const struct cl_type_item *item) {
+    // indent regarding the current nest level
+    const unsigned nestLevel = ic.size();
+    const std::string indent(nestLevel << 2, ' ');
+    cout << indent;
+
+    // print field name if any
+    const char *name = item->name;
+    if (name)
+        cout << "." << name << " = ";
+
+    // print type at the current level
+    const struct cl_type *clt = item->type;
+    SE_BREAK_IF(!clt);
+    dump_clt_core(clt);
+    cout << "\n";
+
+    return /* continue */ true;
+}
+
 void dump_clt(const struct cl_type *clt) {
     if (!clt) {
         cout << "NULL\n";
         return;
     }
 
-    CltStackItem item;
-    item.clt    = clt;
-    item.name   = 0;
-    item.last   = false;
+    // print type at the current level
+    dump_clt_core(clt);
+    cout << "\n";
 
-    // type stack
-    std::stack<CltStackItem> todo;
-    todo.push(item);
-
-    int nestLevel = 0;
-    while (!todo.empty()) {
-        item = todo.top();
-        todo.pop();
-
-        // indent regarding the current nest level
-        const std::string indent(nestLevel << 2, ' ');
-        cout << indent;
-
-        // print field name if any
-        const char *name = item.name;
-        if (name)
-            cout << "." << name << " = ";
-
-        // print type at the current level
-        clt = item.clt;
-        SE_BREAK_IF(!clt);
-        dump_clt_core(clt);
-        cout << "\n";
-
-        if (CL_TYPE_STRUCT == clt->code) {
-            // nest into struct
-            ++nestLevel;
-
-            // dig all sub-types
-            const int last = clt->item_cnt - 1;
-            for (int i = last; 0 <= i ; --i) {
-                item.clt    = clt->items[i].type;
-                item.name   = clt->items[i].name;
-                item.last   = (last == i);
-
-                todo.push(item);
-            }
-        }
-
-        // FIXME: this may misbehave under some circumstances
-        if (item.last)
-            --nestLevel;
-    }
+    // go through the type recursively
+    traverseTypeIc<TFieldIdxChain>(clt, dump_clt_visitor);
 }
 
 void dump_ac(const struct cl_accessor *ac) {

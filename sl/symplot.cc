@@ -24,6 +24,7 @@
 #include <cl/location.hh>
 #include <cl/storage.hh>
 
+#include "clutil.hh"
 #include "symbt.hh"
 #include "symheap.hh"
 #include "symseg.hh"
@@ -743,65 +744,82 @@ bool SymPlot::Private::resolvePointsTo(TObjId *pDst, TValueId value) {
     }
 }
 
-void SymPlot::Private::digObjCore(TObjId obj) {
-    typedef std::pair<TObjId, bool /* last */> TStackItem;
-    std::stack<TStackItem> todo;
-    push(todo, obj, false);
-    while (!todo.empty()) {
-        bool last;
-        boost::tie(obj, last) = todo.top();
-        todo.pop();
+class ObjectDigger {
+    private:
+        SymPlot::Private    *const self_;
+        const TObjId        root_;
+        unsigned            level_;
 
-        const struct cl_type *clt = this->heap->objType(obj);
-        SE_BREAK_IF(!clt);
+    public:
+        ObjectDigger(SymPlot::Private *self, TObjId root):
+            self_(self),
+            root_(root),
+            level_(0)
+        {
+            const struct cl_type *clt = self_->heap->objType(root);
+            this->operate(TFieldIdxChain(), clt);
+        }
 
-        const enum cl_type_e code = clt->code;
-        switch (code) {
-            case CL_TYPE_ARRAY:
-            case CL_TYPE_CHAR:
-            case CL_TYPE_INT:
-            case CL_TYPE_PTR: {
-                this->plotSingleObj(obj);
-                TValueId value;
-                if (this->resolveValueOf(&value, obj)) {
-                    this->gobbleEdgeValueOf(obj, value);
-                    this->workList.schedule(value);
-                }
-                break;
-            }
+        ~ObjectDigger() {
+            // finally close all pending clusters
+            for(; 0 < level_; --level_)
+                self_->dotStream << "}" << std::endl;
+        }
 
-            case CL_TYPE_STRUCT:
+        bool operator()(TFieldIdxChain ic, const struct cl_type_item *item) {
+            this->operate(ic, item->type);
+            return /* continue */ true;
+        }
+
+        void operate(TFieldIdxChain ic, const struct cl_type *clt) {
+            SE_BREAK_IF(!clt);
+
+            const SymHeap &sh = *self_->heap;
+            const TObjId obj = subObjByChain(sh, root_, ic);
+            SE_BREAK_IF(obj <= 0);
+
+            // first close all pending clusters
+            for(; ic.size() < level_; --level_)
+                self_->dotStream << "}" << std::endl;
+            level_ = ic.size();
+
+            if (CL_TYPE_STRUCT == clt->code) {
                 // avoid duplicates
-                this->objDone.insert(obj);
+                self_->objDone.insert(obj);
 
-                this->digNext(obj);
-                this->openCluster(obj);
-                this->plotSingleObj(obj);
+                self_->digNext(obj);
+                self_->openCluster(obj);
+                self_->plotSingleObj(obj);
                 for (int i = 0; i < clt->item_cnt; ++i) {
-                    const TObjId sub = this->heap->subObj(obj, i);
-                    const struct cl_type *subClt = this->heap->objType(sub);
+                    const TObjId sub = self_->heap->subObj(obj, i);
+                    const struct cl_type *subClt = self_->heap->objType(sub);
                     if (!subClt || (subClt->code == CL_TYPE_STRUCT
                                 && !subClt->item_cnt))
                         // skip empty structures
                         continue;
 
-                    if (!hasKey(this->objDone, sub))
-                        this->plotEdgeSub(obj, sub);
-
-                    push(todo, sub, /* last */ (0 == i));
+                    if (!hasKey(self_->objDone, sub))
+                        self_->plotEdgeSub(obj, sub);
                 }
-                break;
-
-            default:
-                CL_DEBUG_MSG(this->lw, "SymPlot::Private::digObj(" << obj
-                        << "): Unimplemented type: " << code);
-                SE_TRAP;
+            }
+            else {
+                self_->plotSingleObj(obj);
+                TValueId value;
+                if (self_->resolveValueOf(&value, obj)) {
+                    self_->gobbleEdgeValueOf(obj, value);
+                    self_->workList.schedule(value);
+                }
+            }
         }
+};
 
-        if (last)
-            // we are done with the current cluster, close it now
-            this->dotStream << "}" << std::endl;
-    }
+void SymPlot::Private::digObjCore(TObjId obj) {
+    if (hasKey(this->objDone, obj))
+        return;
+
+    ObjectDigger visitor(this, obj);
+    const struct cl_type *clt = this->heap->objType(obj);
+    traverseTypeIc<TFieldIdxChain>(clt, visitor, /* digOnlyStructs */ true);
 }
 
 void SymPlot::Private::digObj(TObjId obj) {
