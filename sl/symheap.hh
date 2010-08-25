@@ -50,7 +50,7 @@ enum EUnknownValue {
 struct DeepCopyData;
 
 /**
- * symbolic heap @b core - no type-info, no object composition on this level
+ * symbolic heap @b core - no type-info, no object composition at this level
  */
 class SymHeapCore {
     public:

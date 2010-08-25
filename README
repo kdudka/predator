@@ -2,25 +2,25 @@ Files maintained by the git repository
 ======================================
 COPYING             GPLv3 license text
 FAQ                 Frequently Asked Questions (and corresponding answers)
-Makefile            root Makefile, among others useful to build gcc from SVN
-cl/                 source codes of Separation Logic based analysis
+Makefile            root Makefile, among others useful to build gcc
+cl/                 source codes of Code Listener and its gcc front-end
 cl/README           more specific README for the source codes of cl
 fa_analysis/        Jiri Simacek's pet project
 invader-extras/     downstream patches for Invader
 ocaml/mltags        script generating tags for ocaml sources
-seplog/             implementation of symbolic heap by Peter Peringer
+seplog/             original implementation of symbolic heap by Petr Peringer
 sl/                 source codes of Separation Logic based analysis
 sl/README           more specific README for the source codes of sl
 
 
 Files maintained locally only
 =============================
-cl_build/           working directory for build of libsl.so
+cl_build/           working directory for build of libcl.so
 gcc                 symlink to gcc internal headers (feel free to override)
 gcc-build/          working directory for build of gcc
 gcc-install/        location of the installed gcc after a successful build
-gcc-src/            SVN working copy of gcc sources
-sl_build/           working directory for build of libcl.so
+gcc-src/            symlink to (or SVN working copy of) gcc sources
+sl_build/           working directory for build of libsl.so
 sparse/             local git repository for SPARSE
 ssd/                local git repository for SSD
 
@@ -30,6 +30,5 @@ Useful targets of the root Makefile
 all                 run 'make' in cl, sl and fa_analysis (default)
 check               run 'make check' in cl, sl and fa_analysis
 distcheck           run 'make distcheck' in cl, sl and fa_analysis
-fetch               fetch all sources, but gcc
+build_gcc45         build gcc from the released tarball
 build_gcc           build gcc from SVN sources (NOTE: this may take some time)
-build_inv           build Invader from sources

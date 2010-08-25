@@ -15,7 +15,7 @@ int main() {
     // who_knows is UNKNOWN at this point
     ___sl_plot("before-cond");
     if (who_knows)
-        ___sl_plot("branch-false");
+        ___sl_plot("then-branch");
     else
-        ___sl_plot("branch-true");
+        ___sl_plot("else-branch");
 }

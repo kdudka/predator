@@ -22,7 +22,7 @@
 
 /**
  * @file symexec.hh
- * SymExec - top level loop of the @b symbolic @b execution
+ * SymExec - top level algorithm of the @b symbolic @b execution
  */
 
 class SymState;
@@ -44,7 +44,7 @@ struct SymExecParams {
 };
 
 /**
- * top level loop of the @b symbolic @b execution
+ * top level algorithm of the @b symbolic @b execution
  *
  * for now, @b fast @b mode means that OOM analysis is omitted
  */

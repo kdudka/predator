@@ -10,10 +10,12 @@ CMakeLists.txt      CMake list (new test-cases and modules are added here)
 Makefile            initiator of the CMake based out-of-source build and tests
 Makefile.chk        checks whether all headers are self-compilable
 config.h            various compile-time configuration (debugging options, ...)
+run                 a simple script that compiles and executes the given example
 sl.h                a header file included _only_ by analysed programs
 slgcc               a wrapper script which runs gcc with the plug-in
 slgdb               a wrapper script which runs gcc with the plug-in within gdb
 sym*                Symbolic Execution related source codes
+                    (some details available via 'grep -A4 @file *.hh')
 
 
 Useful Makefile targets
