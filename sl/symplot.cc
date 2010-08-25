@@ -131,15 +131,13 @@ struct SymPlot::Private {
     void closeDotFile();
 
     bool digFieldName(std::string &dst, TObjId obj);
-    void plotNodeObj(TObjId obj, enum cl_type_e code);
+    void plotNodeObj(TObjId obj);
     void plotNodeValue(TValueId val, enum cl_type_e code, const char *label);
     void plotNodeAux(int src, enum cl_type_e code, const char *label);
     void plotNeqZero(TValueId val);
 
     void plotEdgePointsTo(TValueId value, TObjId obj);
     void plotEdgeValueOf(TObjId obj, TValueId value);
-    void plotEdgeOffValue(const TEdgeOffVal &eov);
-    void plotEdgeNeq(TValueId val1, TValueId val2);
     void plotEdgeSub(TObjId obj, TObjId sub);
 
     void gobbleEdgeValueOf(TObjId obj, TValueId value);
@@ -148,7 +146,6 @@ struct SymPlot::Private {
     void emitPendingEdges();
 
     void plotSingleValue(TValueId value);
-    void plotSingleObj(TObjId obj);
     void plotZeroValue(TObjId obj);
     void digNext(TObjId obj);
     void openCluster(TObjId obj);
@@ -243,7 +240,8 @@ namespace {
 }
 
 bool SymPlot::Private::digFieldName(std::string &dst, TObjId obj) {
-    const TObjId parent = this->heap->objParent(obj);
+    int nth;
+    const TObjId parent = this->heap->objParent(obj, &nth);
     if (OBJ_INVALID == parent)
         // no chance since there is no parent
         return false;
@@ -251,23 +249,20 @@ bool SymPlot::Private::digFieldName(std::string &dst, TObjId obj) {
     const struct cl_type *clt = this->heap->objType(parent);
     SE_BREAK_IF(!clt || clt->code != CL_TYPE_STRUCT);
 
-    // dig field name
-    for (int i = 0; i < clt->item_cnt; ++i) {
-        const TObjId sub = this->heap->subObj(parent, i);
-        if (obj == sub) {
-            dst = clt->items[i].name;
-            return true;
-        }
-    }
+    const char *name = clt->items[nth].name;
+    SE_BREAK_IF(!name);
 
-    // not found?
-#if SE_SELF_TEST
-    SE_TRAP;
-#endif
-    return false;
+    dst = name;
+    return true;
 }
 
-void SymPlot::Private::plotNodeObj(TObjId obj, enum cl_type_e code) {
+void SymPlot::Private::plotNodeObj(TObjId obj) {
+    SE_BREAK_IF(obj <= 0);
+    const struct cl_type *clt = this->heap->objType(obj);
+
+    SE_BREAK_IF(!clt);
+    const enum cl_type_e code = clt->code;
+
     this->dotStream << "\t" << SL_QUOTE(obj);
     this->dotStream << " [shape=box";
 
@@ -385,21 +380,6 @@ void SymPlot::Private::plotEdgeValueOf(TObjId obj, TValueId value) {
         << std::endl;
 }
 
-void SymPlot::Private::plotEdgeOffValue(const TEdgeOffVal &eov) {
-    const TValueId dst = eov.first;
-    const SymHeap::TOffVal &ov = eov.second;
-    this->dotStream << "\t" << SL_QUOTE(ov.first) << " -> " << SL_QUOTE(dst)
-        << " [color=red, fontcolor=red,"
-        << " label=\"[+" << ov.second << "]\"];"
-        << std::endl;
-}
-
-void SymPlot::Private::plotEdgeNeq(TValueId val1, TValueId val2) {
-    this->dotStream << "\t" << SL_QUOTE(val1) << " -> " << SL_QUOTE(val2)
-        << " [color=gold, fontcolor=red, label=\"Neq\", arrowhead=none];"
-        << std::endl;
-}
-
 void SymPlot::Private::plotEdgeSub(TObjId obj, TObjId sub) {
     this->dotStream << "\t" << SL_QUOTE(obj) << " -> " << SL_QUOTE(sub)
         << " [color=gray, style=dotted, arrowhead=open"
@@ -435,12 +415,21 @@ void SymPlot::Private::emitPendingEdges() {
 
     // plot all off-value edges
     BOOST_FOREACH(const TEdgeOffVal &edge, this->ovList) {
-        this->plotEdgeOffValue(edge);
+        const TValueId dst = edge.first;
+        const SymHeap::TOffVal &ov = edge.second;
+        this->dotStream << "\t" << SL_QUOTE(ov.first) << " -> " << SL_QUOTE(dst)
+            << " [color=red, fontcolor=red,"
+            << " label=\"[+" << ov.second << "]\"];"
+            << std::endl;
     }
 
     // plot all Neq edges
     BOOST_FOREACH(const TEdgeNeq &edge, this->neqSet) {
-        this->plotEdgeNeq(edge.first, edge.second);
+        const TValueId v1 = edge.first;
+        const TValueId v2 = edge.second;
+        this->dotStream << "\t" << SL_QUOTE(v1) << " -> " << SL_QUOTE(v2)
+            << " [color=gold, fontcolor=red, label=\"Neq\", arrowhead=none];"
+            << std::endl;
     }
 
     // cleanup for next wheel
@@ -499,15 +488,6 @@ void SymPlot::Private::plotSingleValue(TValueId value) {
         : CL_TYPE_UNKNOWN;
 
     this->plotNodeValue(value, code, 0);
-}
-
-void SymPlot::Private::plotSingleObj(TObjId obj) {
-    SE_BREAK_IF(obj <= 0);
-
-    const struct cl_type *clt = this->heap->objType(obj);
-    SE_BREAK_IF(!clt);
-
-    this->plotNodeObj(obj, clt->code);
 }
 
 void SymPlot::Private::plotZeroValue(TObjId obj) {
@@ -771,47 +751,51 @@ class ObjectDigger {
             return /* continue */ true;
         }
 
-        void operate(TFieldIdxChain ic, const struct cl_type *clt) {
-            SE_BREAK_IF(!clt);
-
-            const SymHeap &sh = *self_->heap;
-            const TObjId obj = subObjByChain(sh, root_, ic);
-            SE_BREAK_IF(obj <= 0);
-
-            // first close all pending clusters
-            for(; ic.size() < level_; --level_)
-                self_->dotStream << "}" << std::endl;
-            level_ = ic.size();
-
-            if (CL_TYPE_STRUCT == clt->code) {
-                // avoid duplicates
-                self_->objDone.insert(obj);
-
-                self_->digNext(obj);
-                self_->openCluster(obj);
-                self_->plotSingleObj(obj);
-                for (int i = 0; i < clt->item_cnt; ++i) {
-                    const TObjId sub = self_->heap->subObj(obj, i);
-                    const struct cl_type *subClt = self_->heap->objType(sub);
-                    if (!subClt || (subClt->code == CL_TYPE_STRUCT
-                                && !subClt->item_cnt))
-                        // skip empty structures
-                        continue;
-
-                    if (!hasKey(self_->objDone, sub))
-                        self_->plotEdgeSub(obj, sub);
-                }
-            }
-            else {
-                self_->plotSingleObj(obj);
-                TValueId value;
-                if (self_->resolveValueOf(&value, obj)) {
-                    self_->gobbleEdgeValueOf(obj, value);
-                    self_->workList.schedule(value);
-                }
-            }
-        }
+        void operate(TFieldIdxChain ic, const struct cl_type *clt);
 };
+
+void ObjectDigger::operate(TFieldIdxChain ic, const struct cl_type *clt) {
+    SE_BREAK_IF(!clt);
+
+    const SymHeap &sh = *self_->heap;
+    const TObjId obj = subObjByChain(sh, root_, ic);
+    SE_BREAK_IF(obj <= 0);
+
+    // first close all pending clusters
+    for(; ic.size() < level_; --level_)
+        self_->dotStream << "}" << std::endl;
+    level_ = ic.size();
+
+    if (CL_TYPE_STRUCT != clt->code) {
+        self_->plotNodeObj(obj);
+
+        TValueId value;
+        if (self_->resolveValueOf(&value, obj)) {
+            self_->gobbleEdgeValueOf(obj, value);
+            self_->workList.schedule(value);
+        }
+
+        return;
+    }
+
+    // avoid duplicates
+    self_->objDone.insert(obj);
+
+    self_->digNext(obj);
+    self_->openCluster(obj);
+    self_->plotNodeObj(obj);
+    for (int i = 0; i < clt->item_cnt; ++i) {
+        const TObjId sub = self_->heap->subObj(obj, i);
+        const struct cl_type *subClt = self_->heap->objType(sub);
+        if (!subClt || (subClt->code == CL_TYPE_STRUCT
+                    && !subClt->item_cnt))
+            // skip empty structures
+            continue;
+
+        if (!hasKey(self_->objDone, sub))
+            self_->plotEdgeSub(obj, sub);
+    }
+}
 
 void SymPlot::Private::digObjCore(TObjId obj) {
     if (hasKey(this->objDone, obj))
@@ -825,15 +809,7 @@ void SymPlot::Private::digObjCore(TObjId obj) {
 void SymPlot::Private::digObj(TObjId obj) {
     // seek root, in order to draw the whole object, even if the root is not
     // pointed from anywhere
-    TObjId parent;
-    while (OBJ_INVALID != (parent = this->heap->objParent(obj))) {
-        if (!hasKey(this->objDone, parent)) {
-            this->objDone.insert(obj);
-            this->plotEdgeSub(parent, obj);
-        }
-
-        obj = parent;
-    }
+    obj = objRoot(*this->heap, obj);
 
     if (OK_DLS != this->heap->objKind(obj)) {
         this->digObjCore(obj);
@@ -886,7 +862,7 @@ void SymPlot::Private::digValues() {
             continue;
 
         // plot the pointing object and the corresponding "valueOf" edge
-        this->plotSingleObj(obj);
+        this->plotNodeObj(obj);
         this->plotEdgePointsTo(value, obj);
 
         // follow values inside the object
@@ -897,7 +873,7 @@ void SymPlot::Private::digValues() {
 // called only from plotCVar() for now
 void SymPlot::Private::plotObj(TObjId obj) {
     // plot the variable itself
-    this->plotSingleObj(obj);
+    this->plotNodeObj(obj);
 
     // look for the value inside
     TValueId value;
