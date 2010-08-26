@@ -95,8 +95,8 @@ bool fncFromHeapVal(const TStor &stor, const TFnc **dst, TValueId value,
     if (-1 == uid)
         return false;
 
-    // FIXME: get rid of the const_cast
-    const TFnc *fnc = const_cast<TStor &>(stor).fncs[uid];
+    const CodeStorage::FncDb &fncs = stor.fncs;
+    const TFnc *fnc = fncs[uid];
     if (!fnc)
         return false;
 

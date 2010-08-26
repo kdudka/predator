@@ -73,7 +73,7 @@ set(examples
 # FIXME: define this macro more generically, in particular the count of args
 macro(test_sym_exec label tool arg1 arg2)
     foreach (num ${examples})
-        add_test("${label}___example-${num}" ${tool} ${arg} ${arg2}
+        add_test("${label}___example-${num}" ${tool} ${arg1} ${arg2}
             -c ${sl_SOURCE_DIR}/data/test-${num}.c
             -DPREDATOR
             -fplugin=${sl_BINARY_DIR}/libsl.so

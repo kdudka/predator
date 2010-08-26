@@ -256,7 +256,6 @@ void dump_obj(const SymHeap &heap, TObjId obj) {
     if (0 < placedAt)
         cout << "    placedAt  = /* value */ #" << placedAt << "\n";
 
-    // TODO: check valPointsToAnon()
     const TValueId value = heap.valueOf(obj);
     if (VAL_NULL == value && clt && clt->code == CL_TYPE_PTR)
         cout << "    value     = VAL_NULL\n";

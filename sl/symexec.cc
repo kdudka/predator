@@ -563,7 +563,7 @@ void binOpToStream(std::ostream &str, int subCode,
     str << " = (";
     operandToStream(str, opList[/* src1 */ 1]);
 
-    // TODO: move this to cl API
+    // TODO: move this to cl API (or clutil)
     switch (code) {
         case CL_BINOP_EQ:               str << " == ";          break;
         case CL_BINOP_NE:               str << " != ";          break;

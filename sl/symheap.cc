@@ -141,7 +141,7 @@ class OffsetDb {
             // add the given relation
             this->addNoClobber(ov, target);
 
-            // and now the other way around (TODO: check if really necessary)
+            // and now the other way around
             const TValueId src = ov.first;
             ov.first = target;
             ov.second = -ov.second;
@@ -978,7 +978,7 @@ bool SymHeapCore::proveEq(bool *result, TValueId valA, TValueId valB) const {
 }
 
 void SymHeapCore::gatherRelatedValues(TContValue &dst, TValueId val) const {
-    // TODO: should we care about off-values here
+    // TODO: should we care about off-values here?
     d->neqDb.gatherRelatedValues(dst, val);
     d->eqIfDb.gatherRelatedValues(dst, val);
 }

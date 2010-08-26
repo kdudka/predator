@@ -192,7 +192,6 @@ void SymCallCtx::flushCallResults(SymState &dst) {
     d->flushed = true;
 
     // now merge the results with the original surround
-    // TODO: some verbose output
     SymState results(d->rawResults);
     BOOST_FOREACH(SymHeap &heap, results) {
         joinHeapsByCVars(d->bt, &heap, &d->surround);

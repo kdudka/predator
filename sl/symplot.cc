@@ -617,9 +617,8 @@ bool SymPlot::Private::handleCustomValue(TValueId value) {
         return true;
     }
 
-    // FIXME: get rid of the const_cast
-    Storage &storage = const_cast<Storage &>(*this->stor);
-    const Fnc *fnc = storage.fncs[cVal];
+    const CodeStorage::FncDb &fncs = this->stor->fncs;
+    const Fnc *fnc = fncs[cVal];
     SE_BREAK_IF(!fnc);
 
     const char *fncName = nameOf(*fnc);
@@ -742,8 +741,14 @@ class ObjectDigger {
 
         ~ObjectDigger() {
             // finally close all pending clusters
-            for(; 0 < level_; --level_)
+            this->setupNestLevel(0);
+        }
+
+        void setupNestLevel(unsigned targetLevel) {
+            for(; targetLevel < level_; --level_)
                 self_->dotStream << "}" << std::endl;
+
+            level_ = targetLevel;
         }
 
         bool operator()(TFieldIdxChain ic, const struct cl_type_item *item) {
@@ -762,9 +767,7 @@ void ObjectDigger::operate(TFieldIdxChain ic, const struct cl_type *clt) {
     SE_BREAK_IF(obj <= 0);
 
     // first close all pending clusters
-    for(; ic.size() < level_; --level_)
-        self_->dotStream << "}" << std::endl;
-    level_ = ic.size();
+    this->setupNestLevel(ic.size());
 
     if (CL_TYPE_STRUCT != clt->code) {
         self_->plotNodeObj(obj);
@@ -900,7 +903,7 @@ void SymPlot::Private::plotCVar(CVar cVar) {
     const CodeStorage::Var &var = this->stor->vars[cVar.uid];
     this->lw = &var.loc;
 #if DEBUG_SYMPLOT
-    CL_DEBUG_MSG(this->lw, "XXX plotting stack variable: #" << var.uid
+    CL_DEBUG_MSG(this->lw, "-X- plotting stack variable: #" << var.uid
             << " (" << var.name << ")" );
 #endif
 
@@ -971,7 +974,7 @@ bool SymPlot::plotStackFrame(const std::string           &name,
 
     d->lw = &fnc.def.loc;
 #if DEBUG_SYMPLOT
-    CL_DEBUG_MSG(d->lw, "XXX plotting stack frame of " << nameOf(fnc) << "():");
+    CL_DEBUG_MSG(d->lw, "-X- plotting stack frame of " << nameOf(fnc) << "():");
 #endif
 
     // go through all stack variables

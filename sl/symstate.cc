@@ -398,14 +398,9 @@ int SymState::lookup(const SymHeap &heap) const {
 }
 
 void SymState::insert(const SymHeap &heap) {
-    BOOST_FOREACH(const SymHeap &current, heaps_) {
-        // TODO: check for entailment instead
-        if (heap == current)
-            return;
-    }
-
-    // add given heap to union
-    this->insertNew(heap);
+    if (-1 == this->lookup(heap))
+        // add given heap to union
+        this->insertNew(heap);
 }
 
 void SymState::insert(const SymState &huni) {
