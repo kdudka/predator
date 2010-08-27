@@ -585,10 +585,10 @@ bool SymExecCore::lhsFromOperand(TObjId *pObj, const struct cl_operand &op) {
     *pObj = this->heapObjFromOperand(op);
     switch (*pObj) {
         case OBJ_UNKNOWN:
-            CL_DEBUG_MSG(lw_,
-                    "ignoring OBJ_UNKNOWN as lhs, this is definitely a bug "
-                    "if there is no error reported above...");
+            CL_ERROR_MSG(lw_, "attempt to use an unknown value as l-value");
+            bt_->printBackTrace();
             // fall through!
+
         case OBJ_DEREF_FAILED:
             return false;
 

@@ -744,16 +744,17 @@ class ObjectDigger {
             this->setupNestLevel(0);
         }
 
+        bool operator()(TFieldIdxChain ic, const struct cl_type_item *item) {
+            this->operate(ic, item->type);
+            return /* continue */ true;
+        }
+
+    private:
         void setupNestLevel(unsigned targetLevel) {
             for(; targetLevel < level_; --level_)
                 self_->dotStream << "}" << std::endl;
 
             level_ = targetLevel;
-        }
-
-        bool operator()(TFieldIdxChain ic, const struct cl_type_item *item) {
-            this->operate(ic, item->type);
-            return /* continue */ true;
         }
 
         void operate(TFieldIdxChain ic, const struct cl_type *clt);

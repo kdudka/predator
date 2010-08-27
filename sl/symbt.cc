@@ -180,7 +180,7 @@ int SymBackTrace::countOccurrencesOfFnc(int fncId) const {
 int SymBackTrace::countOccurrencesOfTopFnc() const {
     const CodeStorage::Fnc *fnc = d->fncOnTop();
     if (!fnc)
-        // empty stack -> not occurrences
+        // empty stack --> no occurrence
         return 0;
 
     return d->nestMap[fnc];
