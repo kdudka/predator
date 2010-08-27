@@ -851,6 +851,8 @@ TValueId handleOpCmpBool(THeap &heap, enum cl_binop_e code,
         return v2;
     if (v2 == valElim)
         return v1;
+    if (v1 == v2)
+        return valElim;
 
     SE_BREAK_IF(v1 < 0 || v2 < 0);
 

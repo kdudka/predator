@@ -229,6 +229,7 @@ void SymExecEngine::execReturn() {
         const TValueId val = proc.heapValFromOperand(src);
         SE_BREAK_IF(VAL_INVALID == val);
 
+        heap.objDefineType(OBJ_RETURN, src.type);
         proc.objSetValue(OBJ_RETURN, val);
     }
 

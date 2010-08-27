@@ -32,7 +32,7 @@ test -z "$SL_OPTS" && SL_OPTS="-fplugin-arg-libsl-dump-pp"
 "$GDB" --quiet --args "$CC1" "$1" \
     -DPREDATOR \
     -dumpbase test.c -quiet -o /dev/null \
-    -O0 -Wall -Wextra \
+    -m32 -O0 -Wall -Wextra \
     -fplugin="$SL_PLUG" \
     -fplugin-arg-libsl-verbose="$SL_VERBOSE" \
     $SL_OPTS

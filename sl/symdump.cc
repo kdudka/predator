@@ -143,7 +143,8 @@ void dump_ac(const struct cl_accessor *ac) {
 namespace {
     bool isObject(const SymHeap &heap, int id) {
         const TObjId obj = static_cast<TObjId>(id);
-        return (VAL_INVALID != heap.placedAt(obj));
+        return (OBJ_RETURN == obj)
+            || (VAL_INVALID != heap.placedAt(obj));
     }
 
     bool isIdValid(int id) {

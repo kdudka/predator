@@ -500,6 +500,7 @@ static void read_raw_operand(struct cl_operand *op, tree t)
         case VAR_DECL:
         case PARM_DECL:
         case FUNCTION_DECL:
+        case RESULT_DECL:
             read_operand_decl(op, t);
             break;
 

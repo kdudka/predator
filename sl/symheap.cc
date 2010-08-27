@@ -683,12 +683,9 @@ void SymHeapCore::objDestroy(TObjId obj, TObjId kind) {
     }
 #endif
 
-    if (OBJ_RETURN != obj) {
-        TValueId addr = d->objects[obj].address;
-        SE_BREAK_IF(addr <= 0);
-
+    TValueId addr = d->objects[obj].address;
+    if (0 < addr)
         d->values.at(addr).target = kind;
-    }
 
     d->releaseValueOf(obj);
     d->objects[obj].address = VAL_INVALID;
@@ -1405,8 +1402,9 @@ void SymHeapTyped::objSetValue(TObjId obj, TValueId val) {
 }
 
 const struct cl_type* SymHeapTyped::objType(TObjId obj) const {
-    if (this->lastObjId() < obj || obj <= 0)
+    if (this->lastObjId() < obj || obj < 0)
         // object ID is either out of range, or does not represent a valid obj
+        // (we allow OBJ_RETURN here)
         return 0;
 
     return d->objects[obj].clt;
@@ -1473,8 +1471,9 @@ TObjId SymHeapTyped::valGetCompositeObj(TValueId val) const {
 }
 
 TObjId SymHeapTyped::subObj(TObjId obj, int nth) const {
-    if (this->lastObjId() < obj || obj <= 0)
+    if (this->lastObjId() < obj || obj < 0)
         // object ID is either out of range, or does not represent a valid obj
+        // (we allow OBJ_RETURN here)
         return OBJ_INVALID;
 
     const Private::Object &ref = d->objects[obj];
@@ -1601,7 +1600,10 @@ void SymHeapTyped::objDestroy(TObjId obj) {
         // (un)initialize OBJ_RETURN for next wheel
         const TValueId uv = this->valCreate(UV_UNINITIALIZED, OBJ_UNKNOWN);
         SymHeapCore::objSetValue(OBJ_RETURN, uv);
-        d->objects[OBJ_RETURN].clt = 0;
+
+        Private::Object &ref = d->objects[OBJ_RETURN];
+        ref.clt = 0;
+        ref.subObjs.clear();
     }
 }
 

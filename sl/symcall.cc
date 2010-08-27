@@ -429,13 +429,8 @@ SymCallCtx& SymCallCache::getCallCtx(SymHeap                    heap,
     d->heap = &heap;
     d->proc = &proc;
 
-    // look for lhs
-    const struct cl_operand &dst = opList[/* dst */ 0];
-    if (CL_OPERAND_VOID != dst.code) {
-        // create an object for return value
-        heap.objDestroy(OBJ_RETURN);
-        heap.objDefineType(OBJ_RETURN, dst.type);
-    }
+    // re-initialize OBJ_RETURN
+    heap.objDestroy(OBJ_RETURN);
 
     // store Fnc ought to be called
     d->fnc = &fnc;
@@ -470,7 +465,7 @@ SymCallCtx& SymCallCache::getCallCtx(SymHeap                    heap,
     ctx->d->flushed     = false;
 
     // keep some properties later required to process the results
-    ctx->d->dst         = &dst;
+    ctx->d->dst         = &opList[/* dst */ 0];
     ctx->d->nestLevel   = d->nestLevel;
     ctx->d->surround    = surround;
     return *ctx;
