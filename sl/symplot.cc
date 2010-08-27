@@ -802,9 +802,6 @@ void ObjectDigger::operate(TFieldIdxChain ic, const struct cl_type *clt) {
 }
 
 void SymPlot::Private::digObjCore(TObjId obj) {
-    if (hasKey(this->objDone, obj))
-        return;
-
     ObjectDigger visitor(this, obj);
     const struct cl_type *clt = this->heap->objType(obj);
     traverseTypeIc<TFieldIdxChain>(clt, visitor, /* digOnlyStructs */ true);
