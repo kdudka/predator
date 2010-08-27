@@ -52,13 +52,8 @@ bool readPlotName(std::string *dst, const TOpList opList)
     return true;
 }
 
-template <int NTH, class TOpList, class THeap, class TBt>
-bool readHeapVal(TValueId *dst, const TOpList opList, const THeap &heap,
-                 TBt *bt)
-{
-    // FIXME: we might use the already existing instance instead
-    SymProc proc(const_cast<THeap &>(heap), bt);
-
+template <int NTH, class TOpList, class TProc>
+bool readHeapVal(TValueId *dst, const TOpList opList, TProc &proc) {
     const cl_operand &op = opList[NTH + /* dst + fnc */ 2];
     const TValueId value = proc.heapValFromOperand(op);
     if (value < 0)
@@ -68,9 +63,11 @@ bool readHeapVal(TValueId *dst, const TOpList opList, const THeap &heap,
     return true;
 }
 
-template <class TInsn, class THeap, class TBt>
-bool readNameAndValue(std::string *pName, TValueId *pValue,
-                      const TInsn &insn, const THeap &heap, TBt bt)
+template <class TInsn, class TProc>
+bool readNameAndValue(std::string       *pName,
+                      TValueId          *pValue,
+                      const TInsn       &insn,
+                      TProc             &proc)
 {
     const CodeStorage::TOperandList &opList = insn.operands;
     const LocationWriter lw(&insn.loc);
@@ -78,7 +75,7 @@ bool readNameAndValue(std::string *pName, TValueId *pValue,
     if (!chkVoidCall<2>(opList))
         return false;
 
-    if (!readHeapVal<0>(pValue, opList, heap, bt))
+    if (!readHeapVal<0>(pValue, opList, proc))
         return false;
 
     if (!readPlotName<1>(pName, opList))
@@ -104,6 +101,7 @@ bool fncFromHeapVal(const TStor &stor, const TFnc **dst, TValueId value,
     return true;
 }
 
+namespace {
 void emitPrototypeError(const LocationWriter &lw, const std::string &fnc) {
     CL_WARN_MSG(lw, "incorrectly called "
             << fnc << "() not recognized as built-in");
@@ -112,6 +110,7 @@ void emitPrototypeError(const LocationWriter &lw, const std::string &fnc) {
 void emitPlotError(const LocationWriter &lw, const std::string &plotName) {
     CL_WARN_MSG(lw, "error while plotting '" << plotName << "'");
 }
+} // namespace
 
 template <class TInsn, class THeap>
 bool callPlot(const TInsn &insn, const THeap &heap) {
@@ -132,43 +131,44 @@ bool callPlot(const TInsn &insn, const THeap &heap) {
     return true;
 }
 
-template <class TInsn, class THeap, class TBt>
-bool callPlotByPtr(const TInsn &insn, const THeap &heap, TBt *bt) {
+template <class TInsn, class TProc>
+bool callPlotByPtr(const TInsn &insn, TProc &proc) {
     const LocationWriter lw(&insn.loc);
 
     std::string plotName;
     TValueId value;
-    if (!readNameAndValue(&plotName, &value, insn, heap, bt)) {
+    if (!readNameAndValue(&plotName, &value, insn, proc)) {
         emitPrototypeError(lw, "___sl_plot_by_ptr");
         return false;
     }
 
     const CodeStorage::Storage &stor = *insn.stor;
-    SymPlot plotter(stor, heap);
+    SymPlot plotter(stor, proc.sh());
     if (!plotter.plotHeapValue(plotName, value))
         emitPlotError(lw, plotName);
 
     return true;
 }
 
-template <class TInsn, class THeap, class TBt>
-bool callPlotStackFrame(const TInsn &insn, const THeap &heap, TBt *bt) {
+template <class TInsn, class TProc>
+bool callPlotStackFrame(const TInsn &insn, TProc &proc) {
     const CodeStorage::Storage &stor = *insn.stor;
     const LocationWriter lw(&insn.loc);
+    const SymHeap &sh = proc.sh();
 
     std::string plotName;
     TValueId value;
     const CodeStorage::Fnc *fnc;
 
-    if (!readNameAndValue(&plotName, &value, insn, heap, bt)
-            || !fncFromHeapVal(stor, &fnc, value, heap))
+    if (!readNameAndValue(&plotName, &value, insn, proc)
+            || !fncFromHeapVal(stor, &fnc, value, sh))
     {
         emitPrototypeError(lw, "___sl_plot_stack_frame");
         return false;
     }
 
-    SymPlot plotter(stor, heap);
-    if (!plotter.plotStackFrame(plotName, *fnc, bt))
+    SymPlot plotter(stor, sh);
+    if (!plotter.plotStackFrame(plotName, *fnc, proc.bt()))
         emitPlotError(lw, plotName);
 
     return true;
@@ -190,7 +190,6 @@ bool handleBuiltIn(SymState                     &dst,
     SE_BREAK_IF(!fncName);
 
     SymHeap                     &sh = core.sh();
-    const SymBackTrace          *bt = core.bt();
     const LocationWriter        &lw = core.lw();
     const SymExecCoreParams     &ep = core.params();
 
@@ -217,7 +216,7 @@ bool handleBuiltIn(SymState                     &dst,
             CL_DEBUG_MSG(lw,
                     "___sl_plot_stack_frame skipped per user's request");
 
-        else if (!callPlotStackFrame(insn, sh, bt))
+        else if (!callPlotStackFrame(insn, core))
             // invalid prototype etc.
             return false;
 
@@ -228,7 +227,7 @@ bool handleBuiltIn(SymState                     &dst,
         if (ep.skipPlot)
             CL_DEBUG_MSG(lw, "___sl_plot_by_ptr skipped per user's request");
 
-        else if (!callPlotByPtr(insn, sh, bt))
+        else if (!callPlotByPtr(insn, core))
             // invalid prototype etc.
             return false;
 
