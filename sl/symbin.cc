@@ -112,8 +112,15 @@ void emitPlotError(const LocationWriter &lw, const std::string &plotName) {
 }
 } // namespace
 
+#define DO_PLOT(method) do {                                                \
+    const CodeStorage::Storage &stor = *insn.stor;                          \
+    SymPlot plotter(stor, sh);                                              \
+    if (!plotter.method)                                                    \
+        emitPlotError(lw, plotName);                                        \
+} while (0)
+
 template <class TInsn, class THeap>
-bool callPlot(const TInsn &insn, const THeap &heap) {
+bool callPlot(const TInsn &insn, const THeap &sh) {
     const CodeStorage::TOperandList &opList = insn.operands;
     const LocationWriter lw(&insn.loc);
 
@@ -123,11 +130,7 @@ bool callPlot(const TInsn &insn, const THeap &heap) {
         return false;
     }
 
-    const CodeStorage::Storage &stor = *insn.stor;
-    SymPlot plotter(stor, heap);
-    if (!plotter.plot(plotName))
-        emitPlotError(lw, plotName);
-
+    DO_PLOT(plot(plotName));
     return true;
 }
 
@@ -142,11 +145,8 @@ bool callPlotByPtr(const TInsn &insn, TProc &proc) {
         return false;
     }
 
-    const CodeStorage::Storage &stor = *insn.stor;
-    SymPlot plotter(stor, proc.sh());
-    if (!plotter.plotHeapValue(plotName, value))
-        emitPlotError(lw, plotName);
-
+    const SymHeap &sh = proc.sh();
+    DO_PLOT(plotHeapValue(plotName, value));
     return true;
 }
 
@@ -167,12 +167,22 @@ bool callPlotStackFrame(const TInsn &insn, TProc &proc) {
         return false;
     }
 
-    SymPlot plotter(stor, sh);
-    if (!plotter.plotStackFrame(plotName, *fnc, proc.bt()))
-        emitPlotError(lw, plotName);
-
+    DO_PLOT(plotStackFrame(plotName, *fnc, proc.bt()));
     return true;
 }
+
+#define HANDLE_PLOT_CALL(name, call) do {                                   \
+    if (STREQ(fncName, #name)) {                                            \
+        if (ep.skipPlot)                                                    \
+            CL_DEBUG_MSG(lw, #name " skipped per user's request");          \
+                                                                            \
+        else if (!(call))                                                   \
+            return false;                                                   \
+                                                                            \
+        dst.insert(sh);                                                     \
+        return true;                                                        \
+    }                                                                       \
+} while (0)
 
 bool handleBuiltIn(SymState                     &dst,
                    SymExecCore                  &core,
@@ -197,47 +207,14 @@ bool handleBuiltIn(SymState                     &dst,
         SE_BREAK_IF(opList.size() != 2 || opList[0].code != CL_OPERAND_VOID);
 
         // do nothing for abort()
-        goto call_done;
+        dst.insert(sh);
+        return true;
     }
 
-    if (STREQ(fncName, "___sl_plot")) {
-        if (ep.skipPlot)
-            CL_DEBUG_MSG(lw, "___sl_plot skipped per user's request");
-
-        else if (!callPlot(insn, sh))
-            // invalid prototype etc.
-            return false;
-
-        goto call_done;
-    }
-
-    if (STREQ(fncName, "___sl_plot_stack_frame")) {
-        if (ep.skipPlot)
-            CL_DEBUG_MSG(lw,
-                    "___sl_plot_stack_frame skipped per user's request");
-
-        else if (!callPlotStackFrame(insn, core))
-            // invalid prototype etc.
-            return false;
-
-        goto call_done;
-    }
-
-    if (STREQ(fncName, "___sl_plot_by_ptr")) {
-        if (ep.skipPlot)
-            CL_DEBUG_MSG(lw, "___sl_plot_by_ptr skipped per user's request");
-
-        else if (!callPlotByPtr(insn, core))
-            // invalid prototype etc.
-            return false;
-
-        goto call_done;
-    }
+    HANDLE_PLOT_CALL(___sl_plot,             callPlot(insn, sh)             );
+    HANDLE_PLOT_CALL(___sl_plot_by_ptr,      callPlotByPtr(insn, core)      );
+    HANDLE_PLOT_CALL(___sl_plot_stack_frame, callPlotStackFrame(insn, core) );
 
     // no built-in has been matched
     return false;
-
-call_done:
-    dst.insert(sh);
-    return true;
 }
