@@ -161,8 +161,7 @@ void SymCallCtx::Private::destroyStackFrame(SymState &state) {
 
         // We need to look for junk since there can be a function returning an
         // allocated object.  Then ignoring the return value on the caller's
-        // side can trigger a memory leak.
-        // TODO: write a test-case for this!
+        // side can trigger a memory leak.  See data/test-0090.c for a use case.
         proc.objDestroy(OBJ_RETURN);
     }
 }

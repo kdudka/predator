@@ -383,6 +383,8 @@ symplot tutorial
 
     test-0074.c - regression test focused on nested struct offset computation
 
+    test-0090.c - regression test focused on return values leaking memory
+
 
 Tiny DLL library written on scratch
 ===================================
