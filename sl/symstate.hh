@@ -148,7 +148,7 @@ class SymStateMarked: public SymState {
 
 /**
  * higher-level container that maintains a SymStateMarked object per each basic
- * block.  It's among other used by SymExecEngine and PathTracer classes.
+ * block.  It's used by SymExecEngine and PathTracer classes.
  */
 class SymStateMap {
     public:

@@ -22,7 +22,7 @@
 
 /**
  * @file symproc.hh
- * SymProc - a layer on top of SymHeap, providing some additional
+ * SymProc - a layer on top of SymHeap, providing some higher-level
  * operations
  */
 
@@ -37,7 +37,7 @@ class SymHeap;
 class SymState;
 
 /**
- * a layer on top of SymHeap, providing some additional operations
+ * a layer on top of SymHeap, providing some higher-level operations
  */
 class SymProc {
     public:

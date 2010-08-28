@@ -458,7 +458,8 @@ SymCallCtx& SymCallCache::getCallCtx(SymHeap                    heap,
     
     // get either an existing ctx, or create a new one
     SymCallCtx *ctx = d->getCallCtx(uid, heap);
-    SE_BREAK_IF(!ctx);
+    if (!ctx)
+        SE_TRAP;
 
     // not flushed yet
     ctx->d->flushed     = false;

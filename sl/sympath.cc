@@ -115,7 +115,7 @@ void PathTracer::printPaths() const {
             continue;
         }
 
-        // do one step on the current level
+        // do one step at the current level
         const unsigned level = pstack.size();
         const TBlock src = inbound[top.nth++];
 
