@@ -43,6 +43,14 @@ static void leak2(void)
     alloc_pair();
 }
 
+static void leak3(void)
+{
+    struct pair data = alloc_pair();
+    data = alloc_pair();
+    free(data.p0);
+    free(data.p1);
+}
+
 int main()
 {
     should_be_ok();
@@ -50,6 +58,7 @@ int main()
     leak0();
     leak1();
     leak2();
+    leak3();
 
     return EXIT_SUCCESS;
 }
