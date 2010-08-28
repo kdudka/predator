@@ -47,7 +47,7 @@ struct SymBackTrace::Private {
         }
     };
 
-    typedef std::stack<const IPathPrinter *>                        TStackPP;
+    typedef std::stack<const IPathTracer *>                         TStackPP;
     typedef std::stack<BtStackItem>                                 TStack;
     typedef std::map<const CodeStorage::Fnc *, int /* cnt */>       TMap;
 
@@ -169,11 +169,11 @@ void SymBackTrace::printBackTrace() const {
             // perform path tracing at the current level
             SE_BREAK_IF(ppStack.empty());
 
-            const IPathPrinter *pp = ppStack.top();
+            const IPathTracer *pp = ppStack.top();
             ppStack.pop();
             SE_BREAK_IF(!pp);
 
-            pp->printPath();
+            pp->printPaths();
         }
 
         CL_NOTE_MSG(item.lw, "from call of " << nameOf(item.fnc) << "()");
@@ -244,11 +244,11 @@ SymBackTrace::TFncSeq& SymBackTrace::getFncSequence() const {
     return d->fncSeq;
 }
 
-void SymBackTrace::pushPathPrinter(const IPathPrinter *pp) {
+void SymBackTrace::pushPathTracer(const IPathTracer *pp) {
     d->ppStack.push(pp);
 }
 
-void SymBackTrace::popPathPrinter(const IPathPrinter *pp) {
+void SymBackTrace::popPathTracer(const IPathTracer *pp) {
     SE_BREAK_IF(d->ppStack.empty());
     SE_BREAK_IF(d->ppStack.top() != pp);
     (void) pp;

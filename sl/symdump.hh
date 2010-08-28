@@ -38,10 +38,10 @@ class SymHeap;
 /// dump @b type-info given as clt
 void dump_clt(const struct cl_type *clt);
 
-/// dump a chain of accessors
+/// dump a chain of @b accessors
 void dump_ac(const struct cl_accessor *ac);
 
-/// dump a chain of selectors
+/// dump a chain of @b selectors
 void dump_ic(const struct cl_type *clt, TFieldIdxChain ic);
 
 /// dump @b kind of the given object

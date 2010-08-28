@@ -34,10 +34,13 @@ namespace CodeStorage {
     struct Storage;
 }
 
-class IPathPrinter {
+/// virtual interface for path tracers, optionally used by SymBackTrace
+class IPathTracer {
     public:
-        virtual ~IPathPrinter() { }
-        virtual void printPath() const = 0;
+        virtual ~IPathTracer() { }
+
+        /// print a path trace valid for the current call level
+        virtual void printPaths() const = 0;
 };
 
 /// backtrace management
@@ -103,15 +106,28 @@ class SymBackTrace {
         /// return the topmost function in the backtrace
         const CodeStorage::Fnc* topFnc() const;
 
+        /// return location of call of the topmost function in the backtrace
         LocationWriter topCallLoc() const;
 
+        /// return true, if there is @b any recursive call in the backtrace
         bool hasRecursiveCall() const;
 
+        /// ordered sequence of function IDs
         typedef std::vector<int /* uid */> TFncSeq;
+
+        /// return full sequence of all function calls, ordered chronologically
         TFncSeq &getFncSequence() const;
 
-        void pushPathPrinter(const IPathPrinter *);
-        void popPathPrinter(const IPathPrinter *);
+        /// register a path tracer associated with the topmost function call
+        void pushPathTracer(const IPathTracer *);
+
+        /// unregister the path tracer associated with the topmost function call
+        void popPathTracer(const IPathTracer *);
+
+        /**
+         * mark the topmost function call as @b optimized @b out, what basically
+         * means that there is not path tracer associated with the call
+         */
         void markTopCallAsOptimizedOut();
 
     private:

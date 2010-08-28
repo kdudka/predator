@@ -22,7 +22,8 @@
 
 /**
  * @file symcut.hh
- * @todo write some documentation of symcut.hh
+ * split/join algorithms operating on symbolic heap - splitHeapByCVars() and
+ * joinHeapsByCVars()
  */
 
 #include "symheap.hh"

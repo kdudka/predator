@@ -18,9 +18,9 @@
  *
  * - symbolic heap framework: SymBackTrace, SymProc, collectJunk()
  *
- * - symbolic state: SymState
+ * - symbolic state: SymState, SymStateMap
  *
- * - symbolic execution: SymExec, SymExecCore, handleBuiltIn()
+ * - symbolic execution: SymExec, SymExecCore, handleBuiltIn(), PathTracer
  *
  * - list segment abstraction: symabstract.hh, symseg.hh
  *

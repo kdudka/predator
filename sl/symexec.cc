@@ -147,13 +147,13 @@ class SymExecEngine {
             this->initEngine(src);
             if (params_.ptrace)
                 // register path printer
-                bt_.pushPathPrinter(&ptracer_);
+                bt_.pushPathTracer(&ptracer_);
         }
 
         ~SymExecEngine() {
             if (params_.ptrace)
                 // unregister path printer
-                bt_.popPathPrinter(&ptracer_);
+                bt_.popPathTracer(&ptracer_);
         }
 
     public:

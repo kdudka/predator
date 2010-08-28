@@ -23,7 +23,6 @@
 /**
  * @file clutil.hh
  * some generic utilities working on top of code_listener/CodeStorage
- * @todo API documentation
  */
 
 #include "config.h"
@@ -32,12 +31,20 @@
 
 #include <stack>
 
+/// return type of the @b target object that the pointer type can point to
 const struct cl_type* targetTypeOfPtr(const struct cl_type *clt);
 
+/**
+ * return true if there is any CL_ACCESSOR_REF in the given chain of accessors
+ * @note CL_ACCESSOR_REF accessors can't be chained with each other, as it makes
+ * semantically no sense
+ */
 bool seekRefAccessor(const struct cl_accessor *ac);
 
+/// return integral value from the integral constant given as operand
 int intCstFromOperand(const struct cl_operand *op);
 
+/// return unique ID of the variable/register given as operand
 int varIdFromOperand(const struct cl_operand *op, const char **pName = 0);
 
 // TODO: define TFieldIdxChain within CodeStorage to avoid the template arg

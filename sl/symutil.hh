@@ -90,6 +90,7 @@ void skipObj(const SymHeap &sh, TObjId *pObj, TFieldIdxChain icHead,
 
 typedef std::pair<TObjId, TObjId> TObjPair;
 
+#ifndef BUILDING_DOX
 // helper template for traverseSubObjs()
 template <class TItem> struct TraverseSubObjsHelper { };
 
@@ -116,8 +117,9 @@ template <> struct TraverseSubObjsHelper<TObjPair> {
         return item;
     }
 };
+#endif
 
-// take the given visitor through a composite object (or whatever you pass in)
+/// take the given visitor through a composite object (or whatever you pass in)
 template <class THeap, class TVisitor, class TItem = TObjId>
 bool /* complete */ traverseSubObjs(THeap &sh, TItem item, TVisitor &visitor,
                                     bool leavesOnly)
@@ -153,14 +155,16 @@ bool /* complete */ traverseSubObjs(THeap &sh, TItem item, TVisitor &visitor,
     return true;
 }
 
+#ifndef BUILDING_DOX
 template <class TData>
 struct SubTraversalStackItem {
     TData   data;
     int     nth;
     bool    last;
 };
+#endif
 
-// take the given visitor through a composite object (or whatever you pass in)
+/// take the given visitor through a composite object (or whatever you pass in)
 template <class THeap, class TVisitor, class TItem = TObjId>
 bool /* complete */ traverseSubObjsIc(THeap &sh, TItem item, TVisitor &visitor)
 {

@@ -32,6 +32,15 @@ namespace CodeStorage {
     struct Insn;
 }
 
+/**
+ * analyze the given @b call instruction and handle any recognized built-in
+ * function eventually.  There is nothing done if no built-in is recognized
+ * that case is signalized by the return value.
+ * @param dst where to store results of the execution of the built-in
+ * @param core an instance of SymExecCore used in read/write mode
+ * @param insn an instruction that should be analyzed and eventually executed
+ * @return return true if a built-in has been recognized; false otherwise
+ */
 bool handleBuiltIn(SymState                     &dst,
                    SymExecCore                  &core,
                    const CodeStorage::Insn      &insn);

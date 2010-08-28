@@ -22,7 +22,7 @@
 
 /**
  * @file sympath.hh
- * @todo some dox
+ * PathTracer - SymStateMap based implementation of the IPathTracer interface
  */
 
 #include "symbt.hh"
@@ -33,19 +33,26 @@ namespace CodeStorage {
     class Block;
 }
 
-class PathTracer: public IPathPrinter {
+/// SymStateMap based implementation of the IPathTracer interface
+class PathTracer: public IPathTracer {
     public:
+        /**
+         * @param smap instance of SymStateMap to read the paths from
+         * @attention the SymStateMap object has to stay valid (and allocated at
+         * the same address) until the destruction of PathTracer
+         */
         PathTracer(SymStateMap &smap):
             smap_(smap),
             block_(0)
         {
         }
 
+        /// set the basic block that is currently being executed by symexec
         void setBlock(const CodeStorage::Block *block) {
             block_ = block;
         }
 
-        virtual void printPath() const;
+        virtual void printPaths() const;
 
     private:
         SymStateMap                 &smap_;

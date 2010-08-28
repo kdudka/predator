@@ -32,23 +32,21 @@
 
 #include <boost/foreach.hpp>
 
+/// get location of the first (or last) insn with valid location info
 template <class TBlock>
 LocationWriter digBlockLocation(TBlock bb, bool backward)
 {
-    using CodeStorage::Insn;
-
     if (backward) {
         // pick up the location of the _last_ insn with valid location
-        BOOST_REVERSE_FOREACH(const Insn *insn, *bb) {
+        BOOST_REVERSE_FOREACH(const CodeStorage::Insn *insn, *bb) {
             const LocationWriter lw(&insn->loc);
             if (lw)
                 return lw;
         }
     }
-
     else {
         // pick up the location of the _first_ insn with valid location
-        BOOST_FOREACH(const Insn *insn, *bb) {
+        BOOST_FOREACH(const CodeStorage::Insn *insn, *bb) {
             const LocationWriter lw(&insn->loc);
             if (lw)
                 return lw;
@@ -59,6 +57,7 @@ LocationWriter digBlockLocation(TBlock bb, bool backward)
     return LocationWriter();
 }
 
+/// print one item of the path trace
 template <class TBlock>
 void printOneBlock(TBlock bb, int level, bool backward) {
     using std::string;
@@ -75,6 +74,7 @@ void printOneBlock(TBlock bb, int level, bool backward) {
             << name << suffix);
 }
 
+/// path DFS stack item
 struct PStackItem {
     const CodeStorage::Block    *block;
     SymStateMap::TContBlock     inbound;
@@ -88,9 +88,10 @@ struct PStackItem {
     }
 };
 
-void PathTracer::printPath() const {
+void PathTracer::printPaths() const {
     typedef const CodeStorage::Block *TBlock;
     if (!block_)
+        // no idea where to start, giving up...
         return;
 
     // first print the starting point
@@ -104,6 +105,7 @@ void PathTracer::printPath() const {
     std::stack<PStackItem> pstack;
     pstack.push(item);
 
+    // DFS loop
     while (!pstack.empty()) {
         PStackItem &top = pstack.top();
         const SymStateMap::TContBlock &inbound = top.inbound;
@@ -113,6 +115,7 @@ void PathTracer::printPath() const {
             continue;
         }
 
+        // do one step on the current level
         const unsigned level = pstack.size();
         const TBlock src = inbound[top.nth++];
 
@@ -130,6 +133,7 @@ void PathTracer::printPath() const {
         // print begin of the inbound block
         printOneBlock(src, (level << 1), /* backward */ false);
 
+        // nest
         const PStackItem next(smap_, src);
         pstack.push(next);
     }

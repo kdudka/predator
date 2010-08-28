@@ -146,6 +146,10 @@ class SymStateMarked: public SymState {
         std::vector<bool> done_;
 };
 
+/**
+ * higher-level container that maintains a SymStateMarked object per each basic
+ * block.  It's among other used by SymExecEngine and PathTracer classes.
+ */
 class SymStateMap {
     public:
         typedef std::vector<const CodeStorage::Block *>     TContBlock;
@@ -153,12 +157,29 @@ class SymStateMap {
         SymStateMap();
         ~SymStateMap();
 
+        /// state lookup, basically equal to std::map semantic
         SymStateMarked& operator[](const CodeStorage::Block *);
 
+        /**
+         * managed insertion of the state that keeps track of the relation among
+         * source and destination basic blocks
+         * @param dst @b destination basic block (where the insertion occurs)
+         * @param src @b source basic block (where the state has grown), may be
+         * zero when inserting an initial state to the entry block
+         * @param sh an instance of symbolic heap that should be inserted
+         */
         bool insert(const CodeStorage::Block                *dst,
                     const CodeStorage::Block                *src,
                     const SymHeap                           &sh);
 
+        /**
+         * returns all blocks that inserted something to the given state
+         * @param dst a container where the result should be stored to
+         * @param ofBlock the basic block we doing the query for
+         * @note This is an @b over @b approximation as it operates on the level
+         * of abstract states (sets of symbolic heaps).  It does not consider
+         * paths along individual symbolic heaps themselves.
+         */
         void gatherInboundEdges(TContBlock                  &dst,
                                 const CodeStorage::Block    *ofBlock)
             const;
