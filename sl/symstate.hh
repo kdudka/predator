@@ -29,6 +29,10 @@
 
 #include "symheap.hh"
 
+namespace CodeStorage {
+    class Block;
+}
+
 /**
  * symbolic state represented as a union of SymHeap objects (aka disjuncts)
  *
@@ -140,6 +144,35 @@ class SymStateMarked: public SymState {
 
     private:
         std::vector<bool> done_;
+};
+
+class SymStateMap {
+    public:
+        typedef std::vector<const CodeStorage::Block *>     TContBlock;
+
+        SymStateMap();
+        ~SymStateMap();
+
+        SymStateMarked& operator[](const CodeStorage::Block *);
+
+        bool insert(const CodeStorage::Block                *dst,
+                    const CodeStorage::Block                *src,
+                    const SymHeap                           &sh);
+
+        void gatherInboundEdges(TContBlock                  &dst,
+                                const CodeStorage::Block    *ofBlock)
+            const;
+
+    private:
+        /// object copying is @b not allowed
+        SymStateMap(const SymStateMap &);
+
+        /// object copying is @b not allowed
+        SymStateMap& operator=(const SymStateMap &);
+
+    private:
+        struct Private;
+        Private *d;
 };
 
 

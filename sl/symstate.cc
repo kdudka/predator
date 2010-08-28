@@ -409,4 +409,58 @@ void SymState::insert(const SymState &huni) {
     }
 }
 
-// vim: tw=80
+
+// /////////////////////////////////////////////////////////////////////////////
+// SymStateMap implementation
+struct SymStateMap::Private {
+    typedef const CodeStorage::Block *TBlock;
+
+    struct BlockState {
+        SymStateMarked                  state;
+        std::set<TBlock>                inbound;
+    };
+
+    std::map<TBlock, BlockState>        cont;
+};
+
+SymStateMap::SymStateMap():
+    d(new Private)
+{
+}
+
+SymStateMap::~SymStateMap() {
+    delete d;
+}
+
+SymStateMarked& SymStateMap::operator[](const CodeStorage::Block *bb) {
+    return d->cont[bb].state;
+}
+
+bool SymStateMap::insert(const CodeStorage::Block                *dst,
+                         const CodeStorage::Block                *src,
+                         const SymHeap                           &sh)
+{
+    // look for the _target_ block
+    Private::BlockState &ref = d->cont[dst];
+
+    // insert the give symolic heap
+    const unsigned last = ref.state.size();
+    ref.state.insert(sh);
+    const bool changed = (last != ref.state.size());
+
+    if (src)
+        // store inbound edge
+        ref.inbound.insert(src);
+
+    return changed;
+}
+
+void SymStateMap::gatherInboundEdges(TContBlock                  &dst,
+                                     const CodeStorage::Block    *ofBlock)
+    const
+{
+    // TODO
+    SE_TRAP;
+    (void) dst;
+    (void) ofBlock;
+}

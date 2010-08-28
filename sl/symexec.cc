@@ -154,18 +154,16 @@ class SymExecEngine {
         SymState*                   callResults();
 
     private:
-        typedef const CodeStorage::Block                   *TBlock;
-        typedef std::set<BlockPtr>                          TBlockSet;
-        typedef std::map<TBlock, SymStateMarked>            TStateMap;
+        typedef std::set<BlockPtr>      TBlockSet;
 
         const CodeStorage::Storage      &stor_;
         SymExecParams                   params_;
         const SymBackTrace              &bt_;
         SymState                        &dst_;
 
-        TStateMap                       stateMap_;
+        SymStateMap                     stateMap_;
         TBlockSet                       todo_;
-        TBlock                          block_;
+        const CodeStorage::Block        *block_;
         unsigned                        insnIdx_;
         unsigned                        heapIdx_;
         bool                            waiting_;
@@ -200,15 +198,14 @@ void SymExecEngine::initEngine(const SymHeap &init)
     CL_DEBUG_MSG(lw_, ">>> entering " << fncName << "()");
 
     // look for the entry block
-    TBlock entry = fnc->cfg.entry();
+    const CodeStorage::Block *entry = fnc->cfg.entry();
     if (!entry) {
         CL_ERROR_MSG(lw_, fncName << ": " << "entry block not found");
         return;
     }
 
     // insert initial state to the corresponding union
-    SymState &huni = stateMap_[entry];
-    huni.insert(init);
+    stateMap_.insert(entry, /* no inbound edge here */ 0, init);
 
     // schedule the entry block for processing
     todo_.insert(entry);
@@ -241,6 +238,8 @@ void SymExecEngine::execReturn() {
 void SymExecEngine::updateState(const CodeStorage::Block *ofBlock,
                                 TValueId valDst, TValueId valSrc)
 {
+    const std::string &name = ofBlock->name();
+
     // clone the current symbolic heap, as we are going to change it eventually
     SymHeap sh(localState_[heapIdx_]);
 
@@ -251,15 +250,8 @@ void SymExecEngine::updateState(const CodeStorage::Block *ofBlock,
     // time to consider abstraction
     abstractIfNeeded(sh);
 
-    // update *target* state
-    SymState &huni = stateMap_[ofBlock];
-    const size_t last = huni.size();
-    huni.insert(sh);
-
-    const std::string &name = ofBlock->name();
-
-    // check if anything has changed
-    if (huni.size() == last) {
+    // update _target_ state and check if anything has changed
+    if (!stateMap_.insert(ofBlock, block_, sh)) {
         CL_DEBUG_MSG(lw_, "--- block " << name << " left intact");
 
     } else {
