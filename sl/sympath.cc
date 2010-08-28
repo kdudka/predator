@@ -61,20 +61,30 @@ LocationWriter digBlockLocation(TBlock bb, bool backward)
 
 template <class TBlock>
 void printOneBlock(TBlock bb, int level, bool backward) {
+    using std::string;
+
     const LocationWriter lw = digBlockLocation(bb, backward);
-    const std::string &name = bb->name();
-    const std::string indent(level << 1, '-');
-    CL_NOTE_MSG(lw, "<" << indent << " state reachable from " << name);
+    const string &name = bb->name();
+    const string indent(level << 2, ' ');
+
+    string suffix;
+    if (!backward && (bb == bb->cfg()->entry()))
+        suffix = " [entry block]";
+
+    CL_NOTE_MSG(lw, indent << "<-- abstract state reachable from "
+            << name << suffix);
 }
 
 struct PStackItem {
     const CodeStorage::Block    *block;
-    unsigned                    nestLevel;
+    SymStateMap::TContBlock     inbound;
+    unsigned                    nth;
 
-    PStackItem(const CodeStorage::Block *block_, unsigned nestLevel_ = 0):
+    PStackItem(const SymStateMap &smap, const CodeStorage::Block *block_):
         block(block_),
-        nestLevel(nestLevel_)
+        nth(0)
     {
+        smap.gatherInboundEdges(inbound, block);
     }
 };
 
@@ -83,40 +93,44 @@ void PathTracer::printPath() const {
     if (!block_)
         return;
 
+    // first print the starting point
+    printOneBlock(block_, 0, /* backward */ false);
+
     // we use std::set to avoid an infinite recursion
     std::set<TBlock> done;
 
     // DFS stack
-    PStackItem item(block_);
+    const PStackItem item(smap_, block_);
     std::stack<PStackItem> pstack;
     pstack.push(item);
 
     while (!pstack.empty()) {
-        item = pstack.top();
-        pstack.pop();
+        PStackItem &top = pstack.top();
+        const SymStateMap::TContBlock &inbound = top.inbound;
+        if (inbound.size() == top.nth) {
+            // done at this level
+            pstack.pop();
+            continue;
+        }
 
-        TBlock bb = item.block;
+        const unsigned level = pstack.size();
+        const TBlock src = inbound[top.nth++];
 
-        const unsigned level = item.nestLevel;
-        if (level)
-            printOneBlock(bb, (level << 1)    , /* backward */ true);
+        // print end of the inbound block
+        printOneBlock(src, (level << 1) - 1, /* backward */ true);
 
-        // FIXME: this may be too chatty under certain circumstances
-        printOneBlock(bb, (level << 1) + 1, /* backward */ false);
-
-        // gather inbound edges
-        SymStateMap::TContBlock inbound;
-        smap_.gatherInboundEdges(inbound, bb);
-        BOOST_FOREACH(TBlock src, inbound) {
-            if (hasKey(done, src))
-                // already processed
-                continue;
+        // check if the path is already traversed
+        if (hasKey(done, src)) {
+            pstack.pop();
+            continue;
+        }
+        else
             done.insert(src);
 
-            // schedule for processing
-            item.block = src;
-            item.nestLevel = level + 1;
-            pstack.push(item);
-        }
+        // print begin of the inbound block
+        printOneBlock(src, (level << 1), /* backward */ false);
+
+        const PStackItem next(smap_, src);
+        pstack.push(next);
     }
 }

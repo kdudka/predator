@@ -400,6 +400,11 @@ class Block {
          */
         const Insn* operator[](unsigned idx) const { return insns_[idx];    }
 
+        /**
+         * return the ControlFlow object which the Block belongs to
+         */
+        const ControlFlow* cfg() const             { return cfg_;           }
+
     private:
         TList insns_;
         ControlFlow *cfg_;
