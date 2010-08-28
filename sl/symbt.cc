@@ -34,9 +34,21 @@
 #include <boost/tuple/tuple.hpp>
 
 struct SymBackTrace::Private {
-    typedef std::pair<const CodeStorage::Fnc *, LocationWriter>     TStackItem;
+    struct BtStackItem {
+        const CodeStorage::Fnc      &fnc;
+        const LocationWriter        lw;
+        bool                        optimizedOut;
+
+        BtStackItem(const CodeStorage::Fnc *fnc_, const LocationWriter &lw_):
+            fnc(*fnc_),
+            lw(lw_),
+            optimizedOut(false)
+        {
+        }
+    };
+
     typedef std::stack<const IPathPrinter *>                        TStackPP;
-    typedef std::stack<TStackItem>                                  TStack;
+    typedef std::stack<BtStackItem>                                 TStack;
     typedef std::map<const CodeStorage::Fnc *, int /* cnt */>       TMap;
 
     const CodeStorage::Storage      &stor;
@@ -61,8 +73,8 @@ const CodeStorage::Fnc* SymBackTrace::Private::fncOnTop() const {
         // empty stack, so there is no top
         return 0;
 
-    const TStackItem &top = this->btStack.top();
-    const CodeStorage::Fnc *fnc = top.first;
+    const BtStackItem &top = this->btStack.top();
+    const CodeStorage::Fnc *fnc = &top.fnc;
 
     // check bt integrity
     SE_BREAK_IF(!fnc);
@@ -82,7 +94,8 @@ const CodeStorage::Fnc* SymBackTrace::Private::fncById(int id) const {
 void SymBackTrace::Private::pushFnc(const CodeStorage::Fnc *fnc,
                                     const LocationWriter   &lw)
 {
-    push(this->btStack, fnc, lw);
+    const BtStackItem item(fnc, lw);
+    this->btStack.push(item);
     this->fncSeq.push_back(uidOf(*fnc));
 
     int &ref = this->nestMap[fnc];
@@ -140,23 +153,30 @@ const CodeStorage::Storage& SymBackTrace::stor() const {
 void SymBackTrace::printBackTrace() const {
     using namespace CodeStorage;
 
-    if (!d->ppStack.empty()) {
-        const IPathPrinter *pp = d->ppStack.top();
-        pp->printPath();
-    }
+    Private::TStackPP ppStack(d->ppStack);
+    const bool ptrace = !ppStack.empty();
 
     const Private::TStack &ref = d->btStack;
-    if (ref.size() < 2)
+    if (!ptrace && ref.size() < 2)
         return;
 
     Private::TStack bt(ref);
     while (!bt.empty()) {
-        const Fnc *btFnc;
-        LocationWriter btLw;
-        boost::tie(btFnc, btLw) = bt.top();
+        const Private::BtStackItem item = bt.top();
         bt.pop();
 
-        CL_NOTE_MSG(btLw, "from call of " << nameOf(*btFnc) << "()");
+        if (ptrace && !item.optimizedOut) {
+            // perform path tracing at the current level
+            SE_BREAK_IF(ppStack.empty());
+
+            const IPathPrinter *pp = ppStack.top();
+            ppStack.pop();
+            SE_BREAK_IF(!pp);
+
+            pp->printPath();
+        }
+
+        CL_NOTE_MSG(item.lw, "from call of " << nameOf(item.fnc) << "()");
     }
 }
 
@@ -202,8 +222,8 @@ LocationWriter SymBackTrace::topCallLoc() const {
         // empty stack, so there is no top
         return LocationWriter();
 
-    const Private::TStackItem &top = d->btStack.top();
-    return top.second;
+    const Private::BtStackItem &top = d->btStack.top();
+    return top.lw;
 }
 
 bool SymBackTrace::hasRecursiveCall() const {
@@ -229,7 +249,14 @@ void SymBackTrace::pushPathPrinter(const IPathPrinter *pp) {
 }
 
 void SymBackTrace::popPathPrinter(const IPathPrinter *pp) {
+    SE_BREAK_IF(d->ppStack.empty());
     SE_BREAK_IF(d->ppStack.top() != pp);
     (void) pp;
     d->ppStack.pop();
+}
+
+void SymBackTrace::markTopCallAsOptimizedOut() {
+    SE_BREAK_IF(d->btStack.empty());
+    Private::BtStackItem &ref = d->btStack.top();
+    ref.optimizedOut = true;
 }

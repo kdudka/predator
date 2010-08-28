@@ -998,6 +998,7 @@ void SymExec::Private::execLoop(const StackItem &item) {
         SymCallCtx &ctx = this->callCache.getCallCtx(entry, *fnc, insn);
         if (!ctx.needExec()) {
             // call cache hit
+            this->bt.markTopCallAsOptimizedOut();
             const LocationWriter lw(this->bt.topCallLoc());
             CL_DEBUG_MSG(lw, "(x) call of function optimized out: "
                     << nameOf(*fnc) << "()");
@@ -1050,6 +1051,7 @@ void SymExec::exec(const CodeStorage::Fnc &fnc, SymState &results) {
             CL_WARN_MSG(d->bt.topCallLoc(), "(x) root function optimized out: "
                     << nameOf(fnc) << "()");
 
+            d->bt.markTopCallAsOptimizedOut();
             ctx.flushCallResults(results);
             continue;
         }

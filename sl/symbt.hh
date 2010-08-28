@@ -112,6 +112,7 @@ class SymBackTrace {
 
         void pushPathPrinter(const IPathPrinter *);
         void popPathPrinter(const IPathPrinter *);
+        void markTopCallAsOptimizedOut();
 
     private:
         struct Private;
