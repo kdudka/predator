@@ -60,7 +60,7 @@ void parseConfigString(SymExecParams &sep, std::string cnf) {
     }
 
     if (string("ptrace") == cnf) {
-        CL_DEBUG("SymExec \"noplot mode\" requested");
+        CL_DEBUG("SymExec \"ptrace mode\" requested");
         sep.ptrace = true;
         return;
     }

@@ -413,11 +413,12 @@ void SymState::insert(const SymState &huni) {
 // /////////////////////////////////////////////////////////////////////////////
 // SymStateMap implementation
 struct SymStateMap::Private {
-    typedef const CodeStorage::Block *TBlock;
+    typedef const CodeStorage::Block    *TBlock;
+    typedef std::set<TBlock>            TInbound;
 
     struct BlockState {
         SymStateMarked                  state;
-        std::set<TBlock>                inbound;
+        TInbound                        inbound;
     };
 
     std::map<TBlock, BlockState>        cont;
@@ -459,8 +460,6 @@ void SymStateMap::gatherInboundEdges(TContBlock                  &dst,
                                      const CodeStorage::Block    *ofBlock)
     const
 {
-    // TODO
-    SE_TRAP;
-    (void) dst;
-    (void) ofBlock;
+    const Private::TInbound &inbound = d->cont[ofBlock].inbound;
+    std::copy(inbound.begin(), inbound.end(), std::back_inserter(dst));
 }
