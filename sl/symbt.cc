@@ -35,10 +35,12 @@
 
 struct SymBackTrace::Private {
     typedef std::pair<const CodeStorage::Fnc *, LocationWriter>     TStackItem;
+    typedef std::stack<const IPathPrinter *>                        TStackPP;
     typedef std::stack<TStackItem>                                  TStack;
     typedef std::map<const CodeStorage::Fnc *, int /* cnt */>       TMap;
 
     const CodeStorage::Storage      &stor;
+    TStackPP                        ppStack;
     TStack                          btStack;
     TMap                            nestMap;
     TFncSeq                         fncSeq;
@@ -138,6 +140,11 @@ const CodeStorage::Storage& SymBackTrace::stor() const {
 void SymBackTrace::printBackTrace() const {
     using namespace CodeStorage;
 
+    if (!d->ppStack.empty()) {
+        const IPathPrinter *pp = d->ppStack.top();
+        pp->printPath();
+    }
+
     const Private::TStack &ref = d->btStack;
     if (ref.size() < 2)
         return;
@@ -215,4 +222,14 @@ bool SymBackTrace::hasRecursiveCall() const {
 
 SymBackTrace::TFncSeq& SymBackTrace::getFncSequence() const {
     return d->fncSeq;
+}
+
+void SymBackTrace::pushPathPrinter(const IPathPrinter *pp) {
+    d->ppStack.push(pp);
+}
+
+void SymBackTrace::popPathPrinter(const IPathPrinter *pp) {
+    SE_BREAK_IF(d->ppStack.top() != pp);
+    (void) pp;
+    d->ppStack.pop();
 }

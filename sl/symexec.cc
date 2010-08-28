@@ -27,6 +27,7 @@
 #include "symabstract.hh"
 #include "symbt.hh"
 #include "symcall.hh"
+#include "sympath.hh"
 #include "symproc.hh"
 #include "symstate.hh"
 #include "symutil.hh"
@@ -130,12 +131,13 @@ bool operator<(const BlockPtr &a, const BlockPtr &b) {
 // SymExecEngine
 class SymExecEngine {
     public:
-        SymExecEngine(const SymExec &se, const SymBackTrace &bt,
+        SymExecEngine(const SymExec &se, SymBackTrace &bt,
                       const SymHeap &src, SymState &dst):
             stor_(se.stor()),
             params_(se.params()),
             bt_(bt),
             dst_(dst),
+            ptracer_(stateMap_),
             block_(0),
             insnIdx_(0),
             heapIdx_(0),
@@ -143,6 +145,15 @@ class SymExecEngine {
             endReached_(false)
         {
             this->initEngine(src);
+            if (params_.ptrace)
+                // register path printer
+                bt_.pushPathPrinter(&ptracer_);
+        }
+
+        ~SymExecEngine() {
+            if (params_.ptrace)
+                // unregister path printer
+                bt_.popPathPrinter(&ptracer_);
         }
 
     public:
@@ -158,10 +169,11 @@ class SymExecEngine {
 
         const CodeStorage::Storage      &stor_;
         SymExecParams                   params_;
-        const SymBackTrace              &bt_;
+        SymBackTrace                    &bt_;
         SymState                        &dst_;
 
         SymStateMap                     stateMap_;
+        PathTracer                      ptracer_;
         TBlockSet                       todo_;
         const CodeStorage::Block        *block_;
         unsigned                        insnIdx_;
@@ -777,9 +789,10 @@ bool /* complete */ SymExecEngine::run() {
         block_ = i->bb;
         todo_.erase(i);
 
-        // update location info
+        // update location info and ptrace
         const CodeStorage::Insn *first = block_->operator[](0);
         lw_ = &first->loc;
+        ptracer_.setBlock(block_);
 
         // enter the basic block
         const std::string &name = block_->name();

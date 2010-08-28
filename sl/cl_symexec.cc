@@ -38,6 +38,7 @@ extern "C" { int plugin_is_GPL_compatible; }
 
 namespace {
 
+// FIXME: the implementation is amusing
 void parseConfigString(SymExecParams &sep, std::string cnf) {
     using std::string;
     if (cnf.empty())
@@ -55,6 +56,12 @@ void parseConfigString(SymExecParams &sep, std::string cnf) {
     if (string("noplot") == cnf) {
         CL_DEBUG("SymExec \"noplot mode\" requested");
         sep.skipPlot = true;
+        return;
+    }
+
+    if (string("ptrace") == cnf) {
+        CL_DEBUG("SymExec \"noplot mode\" requested");
+        sep.ptrace = true;
         return;
     }
 

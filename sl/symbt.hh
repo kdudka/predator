@@ -34,6 +34,12 @@ namespace CodeStorage {
     struct Storage;
 }
 
+class IPathPrinter {
+    public:
+        virtual ~IPathPrinter() { }
+        virtual void printPath() const = 0;
+};
+
 /// backtrace management
 class SymBackTrace {
     public:
@@ -103,6 +109,9 @@ class SymBackTrace {
 
         typedef std::vector<int /* uid */> TFncSeq;
         TFncSeq &getFncSequence() const;
+
+        void pushPathPrinter(const IPathPrinter *);
+        void popPathPrinter(const IPathPrinter *);
 
     private:
         struct Private;
