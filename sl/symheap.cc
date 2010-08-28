@@ -683,7 +683,7 @@ void SymHeapCore::objDestroy(TObjId obj, TObjId kind) {
     }
 #endif
 
-    TValueId addr = d->objects[obj].address;
+    const TValueId addr = d->objects[obj].address;
     if (0 < addr)
         d->values.at(addr).target = kind;
 

@@ -29,7 +29,7 @@ class SymExecCore;
 class SymState;
 
 namespace CodeStorage {
-    class Insn;
+    struct Insn;
 }
 
 bool handleBuiltIn(SymState                     &dst,
