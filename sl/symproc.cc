@@ -1118,18 +1118,8 @@ struct OpHandler</* binary */ 2> {
     static TValueId handleOp(SymProc &proc, int iCode, const TValueId rhs[2],
                              const struct cl_type *clt[2 + /* dst type */ 1])
     {
-        SymHeap &heap = proc.heap_;
-        const struct cl_type *const cltA = clt[0];
-        const struct cl_type *const cltB = clt[1];
-        SE_BREAK_IF(!cltA || !cltB);
-
-        if ((CL_TYPE_PTR != cltA->code || CL_TYPE_PTR != cltB->code)
-                && *cltA != *cltB)
-        {
-            CL_ERROR_MSG(proc.lw_,
-                    "unsupported mixing of types for a binary operator");
-            return heap.valCreateUnknown(UV_UNKNOWN, cltA);
-        }
+        SE_BREAK_IF(!clt[0] || !clt[1] || !clt[2]);
+        SymHeap &sh = proc.heap_;
 
         const enum cl_binop_e code = static_cast<enum cl_binop_e>(iCode);
         switch (code) {
@@ -1139,16 +1129,12 @@ struct OpHandler</* binary */ 2> {
             case CL_BINOP_GT:
             case CL_BINOP_LE:
             case CL_BINOP_GE:
-                return handleOpCmp(heap, code, clt[2], cltA, rhs[0], rhs[1]);
-
-            case CL_BINOP_PLUS:
-            case CL_BINOP_MINUS:
-                CL_WARN_MSG(proc.lw_, "binary operator not implemented yet");
-                return heap.valCreateUnknown(UV_UNKNOWN, cltA);
+                SE_BREAK_IF(clt[/* src1 */ 0]->code != clt[/* src2 */ 1]->code);
+                return handleOpCmp(sh, code, clt[2], clt[0], rhs[0], rhs[1]);
 
             default:
-                SE_TRAP;
-                return VAL_INVALID;
+                CL_WARN_MSG(proc.lw_, "binary operator not implemented yet");
+                return sh.valCreateUnknown(UV_UNKNOWN, clt[/* dst */ 2]);
         }
     }
 };
