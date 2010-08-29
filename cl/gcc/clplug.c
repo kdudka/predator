@@ -711,6 +711,8 @@ static void handle_stmt_unop(gimple stmt, enum tree_code code,
     cli.data.insn_unop.src      = &src;
     read_gimple_location(&cli.loc, stmt);
 
+    enum cl_unop_e *ptype = &cli.data.insn_unop.code;
+
     if (code != TREE_CODE(src_tree)) {
         switch (code) {
             case CONVERT_EXPR:
@@ -718,9 +720,9 @@ static void handle_stmt_unop(gimple stmt, enum tree_code code,
             case VAR_DECL:
                 break;
 
-            case TRUTH_NOT_EXPR:
-                cli.data.insn_unop.code = CL_UNOP_TRUTH_NOT;
-                break;
+            case TRUTH_NOT_EXPR:        *ptype = CL_UNOP_TRUTH_NOT;     break;
+            case BIT_NOT_EXPR:          *ptype = CL_UNOP_BIT_NOT;       break;
+            case NEGATE_EXPR:           *ptype = CL_UNOP_MINUS;         break;
 
             default:
                 TRAP;

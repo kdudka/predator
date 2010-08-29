@@ -644,13 +644,21 @@ void ClPrettyPrint::printInsnUnop(const struct cl_insn *cli) {
     switch (code) {
         case CL_UNOP_TRUTH_NOT:
             out_ << SSD_INLINE_COLOR(C_YELLOW, "!");
-            // fall through!
+            break;
+
+        case CL_UNOP_BIT_NOT:
+            out_ << SSD_INLINE_COLOR(C_RED, "~");
+            break;
+
+        case CL_UNOP_MINUS:
+            out_ << SSD_INLINE_COLOR(C_RED, "-");
+            break;
 
         case CL_UNOP_ASSIGN:
-            this->printOperand(src);
             break;
     }
 
+    this->printOperand(src);
     out_ << std::endl;
 }
 

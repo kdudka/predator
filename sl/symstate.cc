@@ -194,6 +194,16 @@ namespace {
                     }
                     break;
 
+                case CL_TYPE_UNION:
+                    CL_WARN("CL_TYPE_UNION is not supported by SymState yet");
+                    break;
+
+                case CL_TYPE_CHAR:
+                case CL_TYPE_ARRAY:
+                case CL_TYPE_ENUM:
+                    // well, we don't support these types anyway yet...
+                    break;
+
                 case CL_TYPE_INT:
                     break;
 
@@ -254,7 +264,7 @@ void gatherRelatedValues(TDst &dst, const SymHeap &sh, TValueId ref) {
 
     // NOTE: beware of the std::cref(sh) usage here -- if you use just 'sh'
     //       instead of std::cref(sh), you decrease the over all performance
-    //       10x (!!!), no matter how aggressive optimization you pass to
+    //       10x (!!!), no matter how aggressive optimization flags you pass to
     //       the compiler in that case
     std::copy_if(tmp.begin(), tmp.end(), std::back_inserter(dst),
             bind(&SymHeapCore::usedByCount, std::cref(sh), _1));

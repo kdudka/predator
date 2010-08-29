@@ -59,6 +59,18 @@ bool initSingleGlVar(SymHeap &sh, TObjId obj) {
             sh.objSetValue(obj, VAL_FALSE);
             break;
 
+        case CL_TYPE_CHAR:
+            CL_WARN("CL_TYPE_CHAR is not supported by SymExec for now");
+            break;
+
+        case CL_TYPE_ARRAY:
+            CL_WARN("CL_TYPE_ARRAY is not supported by SymExec for now");
+            break;
+
+        case CL_TYPE_ENUM:
+            CL_WARN("CL_TYPE_ENUM is not supported by SymExec for now");
+            break;
+
         case CL_TYPE_STRUCT:
             // fall through!
 
@@ -394,6 +406,10 @@ void operandToStreamCstInt(std::ostream &str, const struct cl_operand &op) {
 
     const enum cl_type_e code = op.type->code;
     switch (code) {
+        case CL_TYPE_ENUM:
+            str << "(enum XXX)" << val;
+            break;
+
         case CL_TYPE_INT:
             str << "(int)" << val;
             break;
@@ -547,14 +563,15 @@ void unOpToStream(std::ostream &str, int subCode,
     operandToStream(str, opList[/* dst */ 0]);
     str << " = ";
 
+    // FIXME: copy/pasted from cl_pp.cc
     const enum cl_unop_e code = static_cast<enum cl_unop_e>(subCode);
     switch (code) {
         case CL_UNOP_ASSIGN:
             break;
 
-        case CL_UNOP_TRUTH_NOT:
-            str << "!";
-            break;
+        case CL_UNOP_TRUTH_NOT:     str << "!";     break;
+        case CL_UNOP_BIT_NOT:       str << "~";     break;
+        case CL_UNOP_MINUS:         str << "-";     break;
     }
 
     operandToStream(str, opList[/* src */ 1]);

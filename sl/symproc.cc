@@ -48,6 +48,7 @@ TValueId SymProc::heapValFromCst(const struct cl_operand &op) {
             isBool = true;
             break;
 
+        case CL_TYPE_ENUM:
         case CL_TYPE_INT:
         case CL_TYPE_PTR:
             break;
@@ -59,6 +60,9 @@ TValueId SymProc::heapValFromCst(const struct cl_operand &op) {
     const struct cl_cst &cst = op.data.cst;
     code = cst.code;
     switch (code) {
+        case CL_TYPE_ENUM:
+            // we don't have any handling for enums, let's treat it as int...
+
         case CL_TYPE_INT:
             if (isBool) {
                 return (cst.data.cst_int.value)

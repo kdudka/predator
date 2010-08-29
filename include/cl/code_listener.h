@@ -522,7 +522,17 @@ enum cl_unop_e {
     /**
      * truth not, in the C language: !
      */
-    CL_UNOP_TRUTH_NOT
+    CL_UNOP_TRUTH_NOT,
+
+    /**
+     * bitwise not, in the C language: ~
+     */
+    CL_UNOP_BIT_NOT,
+
+    /**
+     * unary minus
+     */
+    CL_UNOP_MINUS
 
     /* TODO */
 };

@@ -1221,48 +1221,29 @@ void SymHeapTyped::createSubs(TObjId obj) {
         todo.pop();
         SE_BREAK_IF(!clt);
 
-        const enum cl_type_e code = clt->code;
-        switch (code) {
-            case CL_TYPE_ARRAY:
-                CL_WARN("CL_TYPE_ARRAY is not supported by SymHeap for now");
-                break;
+        if (CL_TYPE_STRUCT != clt->code)
+            continue;
 
-            case CL_TYPE_CHAR:
-                CL_WARN("CL_TYPE_CHAR is not supported by SymHeap for now");
-                break;
+        const int cnt = clt->item_cnt;
+        SymHeapCore::objSetValue(obj, this->createCompValue(clt, obj));
 
-            case CL_TYPE_BOOL:
-            case CL_TYPE_INT:
-            case CL_TYPE_PTR:
-                break;
+        // keeping a reference at this point may cause headaches in case
+        // of reallocation
+        d->objects[obj].subObjs.resize(cnt);
+        for (int i = 0; i < cnt; ++i) {
+            const struct cl_type_item *item = clt->items + i;
+            const struct cl_type *subClt = item->type;
+            const TObjId subObj = this->createSubVar(subClt, obj);
+            d->objects[subObj].nthItem = i; // position in struct
+            d->objects[obj].subObjs[i] = subObj;
 
-            case CL_TYPE_STRUCT: {
-                const int cnt = clt->item_cnt;
-                SymHeapCore::objSetValue(obj, this->createCompValue(clt, obj));
-
-                // keeping a reference at this point may cause headaches in case
-                // of reallocation
-                d->objects[obj].subObjs.resize(cnt);
-                for (int i = 0; i < cnt; ++i) {
-                    const struct cl_type_item *item = clt->items + i;
-                    const struct cl_type *subClt = item->type;
-                    const TObjId subObj = this->createSubVar(subClt, obj);
-                    d->objects[subObj].nthItem = i; // position in struct
-                    d->objects[obj].subObjs[i] = subObj;
-
-                    if (!item->offset) {
-                        // declare explicit aliasing with parent object's addr
-                        SymHeapCore::addAlias(this->placedAt(obj),
-                                              this->placedAt(subObj));
-                    }
-
-                    push(todo, subObj, subClt);
-                }
-                break;
+            if (!item->offset) {
+                // declare explicit aliasing with parent object's addr
+                SymHeapCore::addAlias(this->placedAt(obj),
+                                      this->placedAt(subObj));
             }
 
-            default:
-                SE_TRAP;
+            push(todo, subObj, subClt);
         }
     }
 }
@@ -1515,11 +1496,17 @@ TObjId SymHeapTyped::objCreate(const struct cl_type *clt, CVar cVar) {
             case CL_TYPE_STRUCT:
                 break;
 
+            case CL_TYPE_CHAR:
+                CL_WARN("CL_TYPE_CHAR is not supported by SymHeap for now");
+                break;
+
             case CL_TYPE_ARRAY:
                 if (CL_TYPE_CHAR == clt->items[0].type->code)
                     // make it possible to at least ignore strings
                     break;
-                // fall thorough!
+
+                CL_WARN("CL_TYPE_ARRAY is not supported by SymHeap for now");
+                break;
 
             default:
                 // TODO: handle also other types somehow?
