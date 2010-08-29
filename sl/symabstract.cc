@@ -144,6 +144,10 @@ void considerFlatScan(SymHeap &sh, TObjId obj) {
 }
 
 void considerFlatScan(SymHeap &sh, TValueId val1, TValueId val2) {
+    if (val1 < 0 || val2 < 0)
+        // giving up
+        return;
+
     const EUnknownValue code1 = sh.valGetUnknown(val1);
     if (UV_KNOWN != code1 && UV_ABSTRACT != code1)
         // too fuzzy for us

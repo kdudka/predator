@@ -595,10 +595,11 @@ void binOpToStream(std::ostream &str, int subCode,
         case CL_BINOP_GE:               str << " >= ";          break;
         case CL_BINOP_PLUS:             str << " + ";           break;
         case CL_BINOP_MINUS:            str << " - ";           break;
+        case CL_BINOP_MULT:             str << " * ";           break;
         case CL_BINOP_POINTER_PLUS:     str << " (ptr +) ";     break;
-        case CL_BINOP_BIT_IOR:          str << "|";             break;
-        case CL_BINOP_BIT_AND:          str << "&";             break;
-        case CL_BINOP_BIT_XOR:          str << "^";             break;
+        case CL_BINOP_BIT_IOR:          str << " | ";           break;
+        case CL_BINOP_BIT_AND:          str << " & ";           break;
+        case CL_BINOP_BIT_XOR:          str << " ^ ";           break;
         default:
 #if SE_SELF_TEST
             SE_TRAP;

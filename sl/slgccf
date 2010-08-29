@@ -1,0 +1,4 @@
+#!/bin/sh
+self="`readlink -f "$0"`"
+self_dir="`dirname "$self"`"
+SL_OPTS=-fplugin-arg-libsl-symexec-args=fast "$self_dir/slgcc" "$@"

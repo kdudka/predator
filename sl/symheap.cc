@@ -926,7 +926,8 @@ namespace {
 }
 
 bool SymHeapCore::proveEq(bool *result, TValueId valA, TValueId valB) const {
-    if (VAL_INVALID == valA || VAL_INVALID == valB)
+    if (VAL_INVALID == valA || VAL_INVALID == valB
+            || VAL_DEREF_FAILED == valA || VAL_DEREF_FAILED == valB)
         // we can prove nothing for invalid values
         return false;
 
