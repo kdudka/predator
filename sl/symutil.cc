@@ -20,6 +20,7 @@
 #include "config.h"
 #include "symutil.hh"
 
+#include <cl/cl_msg.hh>
 #include <cl/storage.hh>
 
 #include "symheap.hh"
@@ -124,6 +125,11 @@ void getPtrValues(SymHeapCore::TContValue &dst, const SymHeap &heap,
                 }
                 break;
 
+            case CL_TYPE_UNION:
+                CL_WARN("CL_TYPE_UNION is not supported by getPtrValues() yet");
+                break;
+
+            case CL_TYPE_ENUM:
             case CL_TYPE_ARRAY:
             case CL_TYPE_CHAR:
             case CL_TYPE_BOOL:

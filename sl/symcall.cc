@@ -332,7 +332,14 @@ void SymCallCache::Private::setCallArgs(const CodeStorage::TOperandList &opList)
 {
     // get called fnc's args
     const CodeStorage::TArgByPos &args = this->fnc->args;
-    SE_BREAK_IF(args.size() + 2 != opList.size());
+    if (args.size() + 2 != opList.size()) {
+        CL_WARN_MSG(this->lw, "count of given arguments does not match "
+                    "function's declaration: " << nameOf(*this->fnc) << "()");
+
+        const LocationWriter lwDecl(&this->fnc->def.loc);
+        CL_NOTE_MSG(lwDecl, "functions with variable "
+                    "count of arguments are not supported yet");
+    }
 
     // wait, we're crossing stack frame boundaries here!  We need to use one
     // backtrace instance for source operands and another one for destination
@@ -343,8 +350,12 @@ void SymCallCache::Private::setCallArgs(const CodeStorage::TOperandList &opList)
     SymProc srcProc(*this->heap, &callerSiteBt);
 
     // set args' values
-    int pos = /* dst + fnc */ 2;
+    unsigned pos = /* dst + fnc */ 2;
     BOOST_FOREACH(int arg, args) {
+        if (opList.size() <= pos)
+            // giving up, perhaps a variable count of args?
+            break;
+
         const struct cl_operand &op = opList[pos++];
         srcProc.setLocation(this->lw);
         this->proc->setLocation(this->lw);
