@@ -1041,10 +1041,11 @@ TObjId subSeekByOffset(const SymHeap &sh, TObjId obj,
 TValueId handlePointerPlus(SymHeap &sh, const struct cl_type *clt,
                            TValueId ptr, const struct cl_operand &op)
 {
+    const struct cl_type *const cltPtr = clt;
+    const LocationWriter lw(&op.loc);
     if (CL_OPERAND_CST != op.code) {
-        const LocationWriter lw(&op.loc);
         CL_ERROR_MSG(lw, "pointer plus offset not known in compile-time");
-        return sh.valCreateUnknown(UV_UNKNOWN, clt);
+        return sh.valCreateUnknown(UV_UNKNOWN, cltPtr);
     }
 
     // jump to _target_ type
@@ -1064,6 +1065,12 @@ TValueId handlePointerPlus(SymHeap &sh, const struct cl_type *clt,
 
         off += cltParent->items[nth].offset;
         obj = parent;
+    }
+
+    const struct cl_type *cltRoot = sh.objType(obj);
+    if (!cltRoot || cltRoot->code != CL_TYPE_STRUCT) {
+        CL_ERROR_MSG(lw, "unsupported target type for pointer plus");
+        return sh.valCreateUnknown(UV_UNKNOWN, cltPtr);
     }
 
     if (off < 0) {
