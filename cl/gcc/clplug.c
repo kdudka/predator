@@ -400,6 +400,10 @@ static void read_specific_type(struct cl_type *clt, tree type)
             clt->code = CL_TYPE_ENUM;
             break;
 
+        case REAL_TYPE:
+            clt->code = CL_TYPE_REAL;
+            break;
+
         default:
             TRAP;
     };
@@ -724,12 +728,21 @@ static void handle_stmt_unop(gimple stmt, enum tree_code code,
             case BIT_NOT_EXPR:          *ptype = CL_UNOP_BIT_NOT;       break;
             case NEGATE_EXPR:           *ptype = CL_UNOP_MINUS;         break;
 
+#define SL_OP_UNHANDLED(what) \
+    case what: SL_WARN_UNHANDLED_GIMPLE(stmt, #what); \
+               cli.code = CL_INSN_NOP; \
+               break;
+
+            SL_OP_UNHANDLED(ABS_EXPR)
+            SL_OP_UNHANDLED(FLOAT_EXPR)
+
             default:
                 TRAP;
         }
     }
 
-    cl->insn(cl, &cli);
+    if (CL_INSN_NOP != cli.code)
+        cl->insn(cl, &cli);
     free_cl_operand_data(&src);
 }
 
@@ -775,16 +788,11 @@ static void handle_stmt_binop(gimple stmt, enum tree_code code,
         case BIT_XOR_EXPR:          *ptype = CL_BINOP_BIT_XOR;          break;
         case POINTER_PLUS_EXPR:     *ptype = CL_BINOP_POINTER_PLUS;     break;
 
-#define SL_BINOP_UNHANDLED(what) \
-    case what: SL_WARN_UNHANDLED_GIMPLE(stmt, #what); \
-               cli.code = CL_INSN_NOP; \
-               break;
-
-        SL_BINOP_UNHANDLED(EXACT_DIV_EXPR)
-        SL_BINOP_UNHANDLED(LSHIFT_EXPR)
-        SL_BINOP_UNHANDLED(RSHIFT_EXPR)
-        SL_BINOP_UNHANDLED(LROTATE_EXPR)
-        SL_BINOP_UNHANDLED(RROTATE_EXPR)
+        SL_OP_UNHANDLED(EXACT_DIV_EXPR)
+        SL_OP_UNHANDLED(LSHIFT_EXPR)
+        SL_OP_UNHANDLED(RSHIFT_EXPR)
+        SL_OP_UNHANDLED(LROTATE_EXPR)
+        SL_OP_UNHANDLED(RROTATE_EXPR)
 
         default:
             TRAP;

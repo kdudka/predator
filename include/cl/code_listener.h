@@ -170,6 +170,7 @@ enum cl_type_e {
     CL_TYPE_CHAR,
     CL_TYPE_BOOL,
     CL_TYPE_ENUM,
+    CL_TYPE_REAL,
 
     /**
      * used only be cl_cst

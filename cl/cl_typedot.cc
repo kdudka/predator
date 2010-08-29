@@ -360,6 +360,7 @@ void ClTypeDotGenerator::digOneType(const struct cl_type *type, TStack &st)
         case CL_TYPE_BOOL:
         case CL_TYPE_ENUM:
         case CL_TYPE_STRING:
+        case CL_TYPE_REAL:
             break;
     }
 }

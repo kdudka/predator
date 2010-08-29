@@ -76,7 +76,10 @@ bool initSingleGlVar(SymHeap &sh, TObjId obj) {
 
         default:
             // only a few types are supported in case of gl variables for now
+#if SE_SELF_TEST
             SE_TRAP;
+#endif
+            break;
     }
 
     return /* continue */ true;

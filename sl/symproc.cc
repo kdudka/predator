@@ -86,11 +86,10 @@ TValueId SymProc::heapValFromCst(const struct cl_operand &op) {
 
         case CL_TYPE_STRING:
             CL_WARN_MSG(lw_, "CL_TYPE_STRING not supported by SymProc");
-            return heap_.valCreateUnknown(UV_UNKNOWN, op.type);
+            // fall through!
 
         default:
-            SE_TRAP;
-            return VAL_INVALID;
+            return heap_.valCreateUnknown(UV_UNKNOWN, op.type);
     }
 }
 
@@ -989,10 +988,11 @@ TValueId handleOpCmp(THeap &heap, enum cl_binop_e code,
         case CL_TYPE_PTR:  return handleOpCmpPtr (heap, code, dstClt, v1, v2);
         case CL_TYPE_BOOL: return handleOpCmpBool(heap, code, dstClt, v1, v2);
         case CL_TYPE_INT:  return handleOpCmpInt (heap, code, dstClt, v1, v2);
+
         default:
-            // unexpected clt->code
-            SE_TRAP;
-            return VAL_INVALID;
+            // unsupported type
+            CL_WARN("binary operator not implemented yet");
+            return heap.valCreateUnknown(UV_UNKNOWN, dstClt);
     }
 }
 
@@ -1106,19 +1106,21 @@ struct OpHandler</* unary */ 1> {
     static TValueId handleOp(SymProc &proc, int iCode, const TValueId rhs[1],
                              const struct cl_type *clt[1 + /* dst type */ 1])
     {
+        SymHeap &sh = proc.heap_;
         TValueId val = rhs[0];
 
         const enum cl_unop_e code = static_cast<enum cl_unop_e>(iCode);
         switch (code) {
             case CL_UNOP_TRUTH_NOT:
-                handleUnopTruthNot(proc.heap_, val, clt[0]);
+                handleUnopTruthNot(sh, val, clt[0]);
                 // fall through!
 
             case CL_UNOP_ASSIGN:
                 break;
 
             default:
-                SE_TRAP;
+                CL_WARN_MSG(proc.lw_, "unary operator not implemented yet");
+                return sh.valCreateUnknown(UV_UNKNOWN, clt[/* dst */ 2]);
         }
 
         return val;

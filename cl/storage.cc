@@ -59,6 +59,7 @@ bool operator==(const struct cl_type &a, const struct cl_type &b) {
             case CL_TYPE_INT:
             case CL_TYPE_CHAR:
             case CL_TYPE_BOOL:
+            case CL_TYPE_REAL:
                 if (cltA->name && cltB->name && STREQ(cltA->name, cltB->name))
                     // FIXME: we simply ignore differences that gcc seems
                     //        important!

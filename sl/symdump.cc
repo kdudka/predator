@@ -56,6 +56,7 @@ void dump_clt_core(const struct cl_type *clt) {
         case CL_TYPE_UNION:     cout << "CL_TYPE_UNION"     ; break;
         case CL_TYPE_ENUM:      cout << "CL_TYPE_ENUM"      ; break;
         case CL_TYPE_INT:       cout << "CL_TYPE_INT"       ; break;
+        case CL_TYPE_REAL:      cout << "CL_TYPE_REAL"      ; break;
         case CL_TYPE_BOOL:      cout << "CL_TYPE_BOOL"      ; break;
         case CL_TYPE_CHAR:      cout << "CL_TYPE_CHAR"      ; break;
         case CL_TYPE_STRING:    cout << "CL_TYPE_STRING"    ; break;
