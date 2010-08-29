@@ -1120,7 +1120,7 @@ struct OpHandler</* unary */ 1> {
 
             default:
                 CL_WARN_MSG(proc.lw_, "unary operator not implemented yet");
-                return sh.valCreateUnknown(UV_UNKNOWN, clt[/* dst */ 2]);
+                return sh.valCreateUnknown(UV_UNKNOWN, clt[/* dst */ 1]);
         }
 
         return val;
