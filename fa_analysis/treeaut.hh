@@ -513,6 +513,108 @@ public:
 			}
 		}
 	}
+
+	template <class F>
+	static size_t computeProduct(const lt_cache_type& cache1, const lt_cache_type& cache2, F f, size_t stateOffset = 0) {
+		std::vector<std::pair<size_t, size_t> > stack;
+		boost::unordered_map<std::pair<size_t, size_t>, size_t> product;
+		for (typename lt_cache_type::const_iterator i = cache1.begin(); i != cache1.end(); ++i) {
+			if (!i->second.front()->_lhs->first.empty())
+				continue;
+			typename lt_cache_type::const_iterator j = cache2.find(i->first);
+			if (j == cache2.end())
+				continue;
+			for (typename std::vector<const TT<T>*>::const_iterator k = i->second.begin(); k != i->second.end(); ++k) {
+				for (typename std::vector<const TT<T>*>::const_iterator l = j->second.begin(); l != j->second.end(); ++l) {
+					std::pair<boost::unordered_map<std::pair<size_t, size_t>, size_t>::iterator, bool> p =
+						product.insert(make_pair(make_pair((*k)->_rhs, (*l)->_rhs), product.size() + stateOffset));
+					if (p.second) {
+						f(*k, *l, std::vector<size_t>(), p.first->second);
+						stack.push_back(p.first->first);
+					}
+				}
+			}
+		}
+		while (!stack.empty()) {
+			std::pair<size_t, size_t> s = stack.back();
+			stack.pop_back();
+			for (typename lt_cache_type::const_iterator i = cache1.begin(); i != cache1.end(); ++i) {
+				if (i->second.front()->_lhs->first.empty())
+					continue;
+				typename lt_cache_type::const_iterator j = cache2.find(i->first);
+				if (j == cache2.end())
+					continue;
+				for (typename std::vector<const TT<T>*>::const_iterator k = i->second.begin(); k != i->second.end(); ++k) {
+					for (typename std::vector<const TT<T>*>::const_iterator l = j->second.begin(); l != j->second.end(); ++l) {
+						assert((*k)->_lhs->first.size() == (*l)->_lhs->first.size());
+						std::vector<size_t> lhs; 
+						for (size_t m = 0; m < (*k)->_lhs->first.size(); ++m) {
+							boost::unordered_map<std::pair<size_t, size_t>, size_t>::iterator n = product.find(
+								make_pair((*k)->_lhs->first[m], (*l)->_lhs->first[m])
+							);
+							if (n == product.end())
+								break;
+							lhs.push_back(n->second);
+						}
+						if (lhs.size() < (*k)->_lhs->first.size())
+							continue;
+						std::pair<boost::unordered_map<std::pair<size_t, size_t>, size_t>::iterator, bool> p =
+							product.insert(make_pair(make_pair((*k)->_rhs, (*l)->_rhs), product.size() + stateOffset));
+						if (p.second) {
+							f(*k, *l, lhs, p.first->second);
+							stack.push_back(p.first->first);
+						}
+					}
+				}
+			}
+		}
+		return product.size();
+	}
+
+	struct IntersectF {
+
+		TA<T>& dst;
+		const TA<T>& src1;
+		const TA<T>& src2;
+
+		IntersectF(TA<T>& dst, const TA<T>& src1, const TA<T>& src2) : dst(dst), src1(src1), src2(src2) {}
+
+		void operator()(const TT<T>* t1, const TT<T>* t2, const std::vector<size_t>& lhs, size_t rhs) {
+			this->dst.addTransition(lhs, t1->_label, rhs);
+			if (this->src1.isFinalState(t1->_rhs) && this->src2.isFinalState(t2->_rhs))
+				this->dst.addFinalState(rhs);
+		}
+
+	};
+
+	static size_t intersection(TA<T>& dst, const TA<T>& src1, const TA<T>& src2, size_t stateOffset = 0) {
+		lt_cache_type cache1, cache2;
+		src1.buildLTCache(cache1);
+		src2.buildLTCache(cache2);
+		return TA<T>::computeProduct(cache1, cache2, TA<T>::IntersectF(dst, src1, src2), stateOffset);
+	}
+
+	struct PredicateF {
+
+		std::vector<size_t>& dst;
+		const TA<T>& predicate;
+
+		PredicateF(std::vector<size_t>& dst, const TA<T>& predicate) : dst(dst), predicate(predicate) {}
+
+		void operator()(const TT<T>* t1, const TT<T>* t2, const std::vector<size_t>& lhs, size_t rhs) {
+			if (predicate.isFinalState(t2->_rhs))
+				this->dst.push_back(t2->_rhs);
+		}
+
+	};
+
+	void intersectingStates(std::vector<size_t>& dst, const TA<T>& predicate) const {
+		lt_cache_type cache1, cache2;
+		this->buildLTCache(cache1);
+		predicate.buildLTCache(cache2);
+		TA<T>::computeProduct(cache1, cache2, TA<T>::PredicateF(dst, predicate));
+	}
+/*
 // TODO: get rid of the code dulication
 	void intersectingStates(std::vector<size_t>& dst, const TA<T>& predicate) const {
 		lt_cache_type cache1, cache2;
@@ -621,7 +723,7 @@ public:
 		}
 		return dst;
 	}
-	
+*/	
 	void heightAbstraction(std::vector<std::vector<bool> >& result, size_t height, const Index<size_t>& stateIndex) const {
 		std::vector<size_t> classIndex(stateIndex.size(), 0), newClassIndex(stateIndex.size());
 		boost::unordered_map<std::pair<T, std::vector<size_t> >, size_t> classes;
