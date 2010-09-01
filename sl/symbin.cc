@@ -211,6 +211,8 @@ bool handleBuiltIn(SymState                     &dst,
         return true;
     }
 
+    // TODO: automatic plot name generation when (name == NULL)
+    //       filename-lineno-serial.dot
     HANDLE_PLOT_CALL(___sl_plot,             callPlot(insn, sh)             );
     HANDLE_PLOT_CALL(___sl_plot_by_ptr,      callPlotByPtr(insn, core)      );
     HANDLE_PLOT_CALL(___sl_plot_stack_frame, callPlotStackFrame(insn, core) );
