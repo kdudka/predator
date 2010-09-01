@@ -1777,7 +1777,7 @@ void SymHeap::objSetAbstract(TObjId obj, EObjKind kind,
 }
 
 void SymHeap::objSetConcrete(TObjId obj) {
-    CL_DEBUG("SymHeap::objConcretize() is taking place...");
+    CL_DEBUG("SymHeap::objSetConcrete() is taking place...");
     Private::TObjMap::iterator iter = d->objMap.find(obj);
     SE_BREAK_IF(d->objMap.end() == iter);
 

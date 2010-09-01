@@ -59,7 +59,7 @@ LocationWriter digBlockLocation(TBlock bb, bool backward)
 
 /// print one item of the path trace
 template <class TBlock>
-void printOneBlock(TBlock bb, int level, bool backward) {
+void printOneBlock(TBlock bb, int level, bool backward, bool loop = false) {
     using std::string;
 
     const LocationWriter lw = digBlockLocation(bb, backward);
@@ -69,6 +69,9 @@ void printOneBlock(TBlock bb, int level, bool backward) {
     string suffix;
     if (!backward && (bb == bb->cfg()->entry()))
         suffix = " [entry block]";
+
+    if (loop)
+        suffix += " [loop]";
 
     CL_NOTE_MSG(lw, indent << "<-- abstract state reachable from "
             << name << suffix);
@@ -119,16 +122,18 @@ void PathTracer::printPaths() const {
         const unsigned level = pstack.size();
         const TBlock src = inbound[top.nth++];
 
-        // print end of the inbound block
-        printOneBlock(src, (level << 1) - 1, /* backward */ true);
-
         // check if the path is already traversed
-        if (hasKey(done, src)) {
+        const bool loop = hasKey(done, src);
+        if (!loop)
+            done.insert(src);
+
+        // print end of the inbound block
+        printOneBlock(src, (level << 1) - 1, /* backward */ true, loop);
+        if (loop) {
+            // duplicated node, we're done
             pstack.pop();
             continue;
         }
-        else
-            done.insert(src);
 
         // print begin of the inbound block
         printOneBlock(src, (level << 1), /* backward */ false);
