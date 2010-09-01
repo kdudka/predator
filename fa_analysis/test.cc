@@ -67,8 +67,8 @@ public:
 				size_t x;
 				src->addVar(dst, x);
 				assert(x == vars.size());
-				assert(vars.insert(std::make_pair(this->dstId, x)).second);
-				break;
+				bool b = vars.insert(std::make_pair(this->dstId, x)).second;
+				assert(b);
 			}
 			case rm_var: {
 				size_t x = Instr::findVarId(this->dstId, vars);
@@ -153,8 +153,7 @@ const char* Instr::op_code_names[] = {
 
 void sym_exec(std::vector<FAE*>& dst, std::map<std::string, size_t>& vars, const std::vector<FAE*>& src, const Instr& instr) {
 	for (std::vector<FAE*>::const_iterator i = src.begin(); i != src.end(); ++i)
-		instr.execute(dst, vars, *i);
-	
+		instr.execute(dst, vars, *i);	
 }
 
 int main(int argc, char* argv[]) {
