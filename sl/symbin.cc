@@ -38,17 +38,41 @@ bool chkVoidCall(const TOpList &opList)
 }
 
 template <int NTH, class TOpList>
-bool readPlotName(std::string *dst, const TOpList opList)
+bool readPlotName(std::string *dst, const TOpList opList,
+                  const LocationWriter &lw)
 {
     const cl_operand &op = opList[NTH + /* dst + fnc */ 2];
     if (CL_OPERAND_CST != op.code)
         return false;
 
     const cl_cst &cst = op.data.cst;
-    if (CL_TYPE_STRING != cst.code)
+    if (CL_TYPE_STRING == cst.code) {
+        // plot name given as string literal
+        *dst = cst.data.cst_string.value;
+        return true;
+    }
+
+    if (CL_TYPE_PTR != op.type->code
+            || CL_TYPE_INT != cst.code
+            || cst.data.cst_int.value)
+        // no match
         return false;
 
-    *dst = cst.data.cst_string.value;
+    // NULL given as plot name, we're asked to generate the name automagically
+    const Location &loc = (-1 == lw.loc.locLine)
+        ? lw.last
+        : lw.loc;
+
+    SE_BREAK_IF(-1 == loc.locLine || loc.locFile.empty());
+    if (-1 == loc.locLine) {
+        // sorry, no location info here
+        *dst = "anonplot";
+        return true;
+    }
+
+    std::ostringstream str;
+    str << loc.locFile << "-" << loc.locLine;
+    *dst = str.str();
     return true;
 }
 
@@ -78,7 +102,7 @@ bool readNameAndValue(std::string       *pName,
     if (!readHeapVal<0>(pValue, opList, proc))
         return false;
 
-    if (!readPlotName<1>(pName, opList))
+    if (!readPlotName<1>(pName, opList, proc.lw()))
         return false;
 
     return true;
@@ -119,17 +143,19 @@ void emitPlotError(const LocationWriter &lw, const std::string &plotName) {
         emitPlotError(lw, plotName);                                        \
 } while (0)
 
-template <class TInsn, class THeap>
-bool callPlot(const TInsn &insn, const THeap &sh) {
+template <class TInsn, class TProc>
+bool callPlot(const TInsn &insn, TProc &proc) {
     const CodeStorage::TOperandList &opList = insn.operands;
     const LocationWriter lw(&insn.loc);
 
     std::string plotName;
-    if (!chkVoidCall<1>(opList) || !readPlotName<0>(&plotName, opList)) {
+    if (!chkVoidCall<1>(opList)
+            || !readPlotName<0>(&plotName, opList, proc.lw())) {
         emitPrototypeError(lw, "___sl_plot");
         return false;
     }
 
+    const SymHeap &sh = proc.sh();
     DO_PLOT(plot(plotName));
     return true;
 }
@@ -176,7 +202,7 @@ bool callPlotStackFrame(const TInsn &insn, TProc &proc) {
         if (ep.skipPlot)                                                    \
             CL_DEBUG_MSG(lw, #name " skipped per user's request");          \
                                                                             \
-        else if (!(call))                                                   \
+        else if (!(call(insn, core)))                                       \
             return false;                                                   \
                                                                             \
         dst.insert(sh);                                                     \
@@ -211,11 +237,9 @@ bool handleBuiltIn(SymState                     &dst,
         return true;
     }
 
-    // TODO: automatic plot name generation when (name == NULL)
-    //       filename-lineno-serial.dot
-    HANDLE_PLOT_CALL(___sl_plot,             callPlot(insn, sh)             );
-    HANDLE_PLOT_CALL(___sl_plot_by_ptr,      callPlotByPtr(insn, core)      );
-    HANDLE_PLOT_CALL(___sl_plot_stack_frame, callPlotStackFrame(insn, core) );
+    HANDLE_PLOT_CALL(___sl_plot,             callPlot          );
+    HANDLE_PLOT_CALL(___sl_plot_by_ptr,      callPlotByPtr     );
+    HANDLE_PLOT_CALL(___sl_plot_stack_frame, callPlotStackFrame);
 
     // no built-in has been matched
     return false;

@@ -70,7 +70,7 @@ void chk_offval_handling()
     struct outer *d0 = ROOT(struct outer, m0, ptr);
     struct outer *d1 = ROOT(struct outer, m1, ptr);
     struct outer *same_d1 = ROOT(struct outer, m1, same_ptr);
-    ___sl_plot("test-0089-01");
+    ___sl_plot(NULL);
 
     // we are able to deduce this
     CHK_EQ(ptr, d0);
@@ -90,7 +90,7 @@ void chk_offval_handling()
 int main()
 {
     struct outer *data = create();
-    ___sl_plot_by_ptr(&data, "test-0089-00");
+    ___sl_plot_by_ptr(&data, NULL);
 
     // ==
     CHK_EQ(data,        &data->m0);
