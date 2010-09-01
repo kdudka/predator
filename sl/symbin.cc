@@ -28,6 +28,9 @@
 #include "symstate.hh"
 #include "util.hh"
 
+#include <cstring>
+#include <libgen.h>
+
 template <int N_ARGS, class TOpList>
 bool chkVoidCall(const TOpList &opList)
 {
@@ -70,9 +73,14 @@ bool readPlotName(std::string *dst, const TOpList opList,
         return true;
     }
 
+    char *dup = strdup(loc.locFile.c_str());
+    const char *fname = basename(dup);
+
     std::ostringstream str;
-    str << loc.locFile << "-" << loc.locLine;
+    str << fname << "-" << loc.locLine;
     *dst = str.str();
+
+    free(dup);
     return true;
 }
 
