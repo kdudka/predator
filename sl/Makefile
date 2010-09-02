@@ -40,7 +40,7 @@ version.h:
 
 clean:
 	rm -f version.h
-	$(MAKE) clean -C data
+	$(MAKE) clean -C data -f Makefile.in
 	if test -e ../sl_build/Makefile; then $(MAKE) clean -C ../sl_build; fi
 
 configure:
@@ -48,7 +48,7 @@ configure:
 
 distclean: clean
 	rm -rf ../sl_build
-	$(MAKE) distclean -C data
+	$(MAKE) distclean -C data -f Makefile.in
 
 distcheck: distclean
 	$(MAKE) check
