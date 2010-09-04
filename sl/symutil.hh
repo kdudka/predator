@@ -156,11 +156,10 @@ bool /* complete */ traverseSubObjs(THeap &sh, TItem item, TVisitor &visitor,
 }
 
 #ifndef BUILDING_DOX
-template <class TData>
+template <class TItem>
 struct SubTraversalStackItem {
-    TData   data;
-    int     nth;
-    bool    last;
+    TItem               item;
+    TFieldIdxChain      ic;
 };
 #endif
 
@@ -168,51 +167,44 @@ struct SubTraversalStackItem {
 template <class THeap, class TVisitor, class TItem = TObjId>
 bool /* complete */ traverseSubObjsIc(THeap &sh, TItem item, TVisitor &visitor)
 {
-    TFieldIdxChain ic;
-
     typedef SubTraversalStackItem<TItem> TStackItem;
     TStackItem si;
-    si.data = item;
-    si.nth  = -1;
-    si.last = false;
+    si.item = item;
+    si.ic.push_back(0);
 
     std::stack<TStackItem> todo;
     todo.push(si);
     while (!todo.empty()) {
-        si = todo.top();
-        todo.pop();
-        item = si.data;
+        TStackItem &si = todo.top();
+        SE_BREAK_IF(si.ic.empty());
 
         typedef TraverseSubObjsHelper<TItem> THelper;
-        const struct cl_type *clt = THelper::getItemClt(sh, item);
+        const struct cl_type *clt = THelper::getItemClt(sh, si.item);
         SE_BREAK_IF(!clt || clt->code != CL_TYPE_STRUCT);
 
-        if (-1 != si.nth)
-            // nest into structure
-            ic.push_back(si.nth);
-
-        for (int i = 0; i < clt->item_cnt; ++i) {
-            ic.push_back(i);
-
-            const TItem next = THelper::getNextItem(sh, item, i);
-            if (!/* continue */visitor(sh, next, ic))
-                return false;
-
-            ic.pop_back();
-
-            const struct cl_type *subClt = THelper::getItemClt(sh, next);
-            if (!subClt || subClt->code != CL_TYPE_STRUCT)
-                continue;
-
-            si.data = next;
-            si.nth  = i;
-            si.last = (0 == i);
-            todo.push(si);
+        typename TFieldIdxChain::reference nth = si.ic.back();
+        if (nth == clt->item_cnt) {
+            // done at this level
+            todo.pop();
+            continue;
         }
 
-        if (si.last)
-            // leave the structure
-            ic.pop_back();
+        TStackItem next = si;
+        next.item = THelper::getNextItem(sh, si.item, nth);
+        if (!/* continue */visitor(sh, next.item, si.ic))
+            return false;
+
+        const struct cl_type *cltNext = THelper::getItemClt(sh, next.item);
+        if (!cltNext || cltNext->code != CL_TYPE_STRUCT) {
+            // move to the next field at this level
+            ++nth;
+            continue;
+        }
+
+        // nest into a sub-object
+        next.ic.push_back(0);
+        todo.push(next);
+        ++nth;
     }
 
     // the traversal is done, without any interruption by visitor
