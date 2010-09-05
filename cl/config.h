@@ -42,6 +42,11 @@
  */
 #define CLD_BYPASS_USAGE_CHK            1
 
+/*
+ * if 1, suppress warnings about unhandled code constructs
+ */
+#define CLPLUG_SILENT                   0
+
 /**
  * type enumerator debug level; set to 0 to disable debugging
  */

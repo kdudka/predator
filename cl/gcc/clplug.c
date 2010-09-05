@@ -81,21 +81,27 @@ extern void print_gimple_stmt (FILE *, gimple, int, int);
 #define SL_LOG_FNC \
     SL_LOG ("%s", __FUNCTION__)
 
+#if CLPLUG_SILENT
+#   define SL_WARN_UNHANDLED(...)
+#   define SL_WARN_UNHANDLED_WITH_LOC(...)
+#else
 // TODO: replace with gcc native debugging infrastructure
-#define SL_WARN_UNHANDLED(what) \
-    fprintf(stderr, \
-            "%s:%d: warning: '%s' not handled in '%s' [internal location]\n", \
-            __FILE__, __LINE__, (what), __FUNCTION__)
+#   define SL_WARN_UNHANDLED(what)                                          \
+        fprintf(stderr, "%s:%d: warning: "                                  \
+                "'%s' not handled in '%s' [internal location]\n",           \
+                __FILE__, __LINE__, (what), __FUNCTION__)
 
 // TODO: replace with gcc native debugging infrastructure
-#define SL_WARN_UNHANDLED_WITH_LOC(loc, what) \
-    fprintf(stderr, "%s:%d:%d: warning: '%s' not handled\n" \
-            "%s:%d: note: raised from '%s' [internal location]\n", \
-            expand_location(loc).file, \
-            expand_location(loc).line, \
-            expand_location(loc).column, \
-            (what), \
-            __FILE__, __LINE__, __FUNCTION__)
+#   define SL_WARN_UNHANDLED_WITH_LOC(loc, what) \
+        fprintf(stderr, "%s:%d:%d: warning: '%s' not handled\n"             \
+                "%s:%d: note: raised from '%s' [internal location]\n",      \
+                expand_location(loc).file,                                  \
+                expand_location(loc).line,                                  \
+                expand_location(loc).column,                                \
+                (what),                                                     \
+                __FILE__, __LINE__, __FUNCTION__)
+
+#endif // CLPLUG_SILENT
 
 // TODO: replace with gcc native debugging infrastructure
 #define SL_WARN_UNHANDLED_GIMPLE(stmt, what) \
