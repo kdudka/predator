@@ -33,6 +33,7 @@
 extern "C" { int plugin_is_GPL_compatible; }
 
 enum EVarState {
+    VS_UNDEF,
     VS_UNKNOWN,
     VS_DEREF,
     VS_NULL,
@@ -51,7 +52,7 @@ struct VarState {
     LocationWriter      lw;
     int /* uid */       peer;
 
-    VarState(): code(VS_UNKNOWN) { }
+    VarState(): code(VS_UNDEF) { }
 };
 
 struct Data {
@@ -62,14 +63,15 @@ struct Data {
     TStateMap stateMap;
 };
 
-void handleVarDeref(Data::TState &state, const struct cl_operand &op) {
-    const LocationWriter lw(&op.loc);
-
+void handleVarDeref(Data::TState                        &state,
+                    const struct cl_operand             &op,
+                    LocationWriter                      lw)
+{
     const int uid = varIdFromOperand(&op);
     VarState &vs = state[uid];
     const EVarState code = vs.code;
     switch (code) {
-        case VS_UNKNOWN:
+        case VS_UNDEF:
             vs.code = VS_DEREF;
             vs.lw   = lw;
             // fall through!
@@ -79,7 +81,12 @@ void handleVarDeref(Data::TState &state, const struct cl_operand &op) {
 
         case VS_NULL:
             CL_ERROR_MSG(lw, "dereference of NULL value");
-            CL_ERROR_MSG(vs.lw, "NULL value comes from here");
+            CL_NOTE_MSG(vs.lw, "NULL value comes from here");
+            return;
+
+        case VS_MIGHT_BE_NULL:
+            CL_WARN_MSG(lw, "dereference of a value that might be NULL");
+            CL_NOTE_MSG(vs.lw, "the same value was compared with NULL here");
             return;
 
         default:
@@ -87,9 +94,9 @@ void handleVarDeref(Data::TState &state, const struct cl_operand &op) {
     }
 }
 
-void handleDerefs(Data::TState &state, const CodeStorage::TOperandList &opList)
+void handleDerefs(Data::TState &state, const CodeStorage::Insn *insn)
 {
-    BOOST_FOREACH(const struct cl_operand &op, opList) {
+    BOOST_FOREACH(const struct cl_operand &op, insn->operands) {
         const struct cl_accessor *ac = op.accessor;
         if (!ac || ac->code != CL_ACCESSOR_DEREF || seekRefAccessor(ac))
             continue;
@@ -99,7 +106,7 @@ void handleDerefs(Data::TState &state, const CodeStorage::TOperandList &opList)
             case CL_OPERAND_ARG:
             case CL_OPERAND_VAR:
             case CL_OPERAND_REG:
-                handleVarDeref(state, op);
+                handleVarDeref(state, op, &insn->loc);
                 return;
 
             default:
@@ -109,7 +116,7 @@ void handleDerefs(Data::TState &state, const CodeStorage::TOperandList &opList)
 }
 
 void handleInsnUnop(Data::TState &state, const CodeStorage::Insn *insn) {
-    handleDerefs(state, insn->operands);
+    handleDerefs(state, insn);
 
     const enum cl_unop_e code = static_cast<enum cl_unop_e>(insn->subCode);
     if (CL_UNOP_ASSIGN != code)
@@ -126,7 +133,7 @@ void handleInsnUnop(Data::TState &state, const CodeStorage::Insn *insn) {
     const struct cl_accessor *ac = src.accessor;
     if (seekRefAccessor(ac)) {
         vs.code = VS_NOT_NULL;
-        vs.lw   = &src.loc;
+        vs.lw   = &insn->loc;
         return;
     }
 
@@ -138,7 +145,7 @@ void handleInsnUnop(Data::TState &state, const CodeStorage::Insn *insn) {
     if (CL_OPERAND_CST == src.code) {
         SE_BREAK_IF(intCstFromOperand(&src));
         vs.code = VS_NULL;
-        vs.lw   = &dst.loc;
+        vs.lw   = &insn->loc;
         return;
     }
 
@@ -149,12 +156,11 @@ void handleInsnUnop(Data::TState &state, const CodeStorage::Insn *insn) {
 bool handleInsnCmpNull(Data::TState                 &state,
                        VarState                     &vsDst,
                        const struct cl_operand      *src,
+                       LocationWriter               lw,
                        bool                         neg)
 {
     if (src->accessor)
         return false;
-
-    const LocationWriter lw(&src->loc);
 
     const int uidSrc = varIdFromOperand(src);
     VarState &vsSrc = state[uidSrc];
@@ -167,7 +173,7 @@ bool handleInsnCmpNull(Data::TState                 &state,
         case VS_NOT_NULL:
             goto we_know;
 
-        case VS_UNKNOWN:
+        case VS_UNDEF:
             break;
 
         default:
@@ -240,7 +246,7 @@ void handleInsnBinop(Data::TState &state, const CodeStorage::Insn *insn) {
         src = &src1;
     }
 
-    if (handleInsnCmpNull(state, vs, src, (CL_BINOP_NE == code)))
+    if (handleInsnCmpNull(state, vs, src, &insn->loc, (CL_BINOP_NE == code)))
         return;
 
 who_knows:
@@ -267,12 +273,72 @@ void handleInsnNonTerm(Data::TState &state, const CodeStorage::Insn *insn) {
     }
 }
 
+bool mergeValues(VarState &dst, const VarState &src) {
+    if (VS_UNDEF == src.code || VS_MIGHT_BE_NULL == dst.code)
+        return false;
+
+    if (VS_UNDEF == dst.code) {
+        dst = src;
+        return true;
+    }
+
+    if (src.code == dst.code)
+        return false;
+
+    if (VS_NULL == src.code && VS_NOT_NULL == dst.code) {
+        dst.lw = src.lw;
+        dst.code = VS_MIGHT_BE_NULL;
+        return true;
+    }
+
+    if (VS_NOT_NULL == src.code && VS_NULL == dst.code) {
+        dst.code = VS_MIGHT_BE_NULL;
+        return true;
+    }
+
+    SE_TRAP;
+    return false;
+}
+
 bool updateState(Data                           &data,
                  const Data::TState             &state,
                  const CodeStorage::Block       *block)
 {
-    // TODO
-    return false;
+    typedef Data::TState TState;
+    Data::TState &dstState = data.stateMap[block];
+
+    bool changed = false;
+    BOOST_FOREACH(TState::const_reference item, state) {
+        if (mergeValues(dstState[item.first], item.second))
+            changed = true;
+    }
+
+    return changed;
+}
+
+void filterBranch(Data::TState &state, int uid, bool val) {
+    const VarState &vs = state[uid];
+    bool isNull;
+
+    const EVarState code = vs.code;
+    switch (code) {
+        case VS_NULL_IFF:
+            isNull = val;
+            break;
+
+        case VS_NOT_NULL_IFF:
+            isNull = !val;
+            break;
+
+        default:
+            SE_TRAP;
+    }
+
+    VarState &vsPeer = state[vs.peer];
+    vsPeer.lw = vs.lw;
+    vsPeer.code = (isNull)
+        ? VS_NULL
+        : VS_NOT_NULL;
 }
 
 bool handleInsnCondNondet(Data                              &data,
@@ -280,8 +346,18 @@ bool handleInsnCondNondet(Data                              &data,
                           const struct cl_operand           &cond,
                           const CodeStorage::TTargetList    &targets)
 {
-    // TODO
-    return false;
+    Data::TState stateThen(state);
+    Data::TState stateElse(state);
+
+    int uid = varIdFromOperand(&cond);
+    filterBranch(stateThen, uid, true);
+    filterBranch(stateElse, uid, false);
+
+    bool changed = updateState(data, stateThen, targets[0]);
+    if (updateState(data, stateElse, targets[1]))
+        changed = true;
+
+    return changed;
 }
 
 bool handleInsnCond(Data &data, const Data::TState &state,
@@ -346,8 +422,10 @@ void handleFnc(const CodeStorage::Fnc &fnc) {
     using namespace CodeStorage;
     Data data;
 
-    bool anyChange = false;
+    bool anyChange;
     do {
+        anyChange = false;
+
         BOOST_FOREACH(const Block *bb, fnc.cfg) {
             SE_BREAK_IF(!bb || !bb->size());
             const Insn *insn = bb->operator[](0);
@@ -357,6 +435,7 @@ void handleFnc(const CodeStorage::Fnc &fnc) {
             if (handleBlock(data, bb))
                 anyChange = true;
         }
+
     } while (anyChange);
 }
 
