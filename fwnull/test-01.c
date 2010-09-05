@@ -1,6 +1,13 @@
 #include <stdlib.h>
 
-void foo(void) {
+void test0(void) {
     void **x = NULL;
     *x = (void *)&x;
+}
+
+void test1(void **ptr) {
+    if (ptr)
+        test0();
+
+    *ptr = NULL;
 }
