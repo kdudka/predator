@@ -70,7 +70,13 @@ option(SL_DEBUG "Set to ON to enable debugging support" OFF)
 if(SL_DEBUG)
     add_definitions("-O0 -g")
 else()
-    add_definitions("-O3 -DNDEBUG")
+    add_definitions("-O3 -DNDEBUG -DSL_OPTIMIZED_BUILD")
+endif()
+
+option(SL_USE_INT3_AS_BRK
+       "Set to ON to use INT3 for breakpoints (SIGTRAP is used by default)" OFF)
+if(SL_USE_INT3_AS_BRK)
+    add_definitions("-DSL_USE_INT3_AS_BRK")
 endif()
 
 set(GCC45 "../gcc-install/bin/gcc"

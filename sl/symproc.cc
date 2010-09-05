@@ -21,8 +21,8 @@
 #include "symproc.hh"
 
 #include <cl/cl_msg.hh>
+#include <cl/clutil.hh>
 
-#include "clutil.hh"
 #include "symabstract.hh"
 #include "symbin.hh"
 #include "symbt.hh"

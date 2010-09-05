@@ -23,8 +23,8 @@
 #include <cl/cl_msg.hh>
 #include <cl/location.hh>
 #include <cl/storage.hh>
+#include <cl/clutil.hh>
 
-#include "clutil.hh"
 #include "symbt.hh"
 #include "symheap.hh"
 #include "symseg.hh"

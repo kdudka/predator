@@ -22,8 +22,8 @@
 
 #include <cl/cl_msg.hh>
 #include <cl/storage.hh>
+#include <cl/clutil.hh>
 
-#include "clutil.hh"
 #include "symabstract.hh"
 #include "symbt.hh"
 #include "symcall.hh"

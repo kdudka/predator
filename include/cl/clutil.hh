@@ -25,10 +25,9 @@
  * some generic utilities working on top of code_listener/CodeStorage
  */
 
-#include "config.h"
+#include "code_listener.h"
 
-#include <cl/code_listener.h>
-
+#include <cassert>
 #include <stack>
 
 /// return type of the @b target object that the pointer type can point to
@@ -59,7 +58,7 @@ template <class TFieldIdxChain, class TVisitor>
 bool /* complete */ traverseTypeIc(const struct cl_type *clt, TVisitor &visitor,
                                    bool digOnlyStructs = false)
 {
-    SE_BREAK_IF(!clt);
+    assert(clt);
 
     // initialize DFS
     typedef CltStackItem<TFieldIdxChain> TItem;

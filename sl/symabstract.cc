@@ -22,9 +22,9 @@
 #include "symabstract.hh"
 
 #include <cl/cl_msg.hh>
+#include <cl/clutil.hh>
 #include <cl/storage.hh>
 
-#include "clutil.hh"
 #include "symgc.hh"
 #include "symseg.hh"
 #include "symutil.hh"

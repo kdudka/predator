@@ -18,10 +18,10 @@
  */
 
 #include "config.h"
-#include "clutil.hh"
+#include <cl/clutil.hh>
 
 const struct cl_type* targetTypeOfPtr(const struct cl_type *clt) {
-    SE_BREAK_IF(!clt || clt->code != CL_TYPE_PTR || clt->item_cnt != 1);
+    assert(!clt || clt->code != CL_TYPE_PTR || clt->item_cnt != 1);
 
     clt = clt->items[/* target */ 0].type;
     SE_BREAK_IF(!clt);

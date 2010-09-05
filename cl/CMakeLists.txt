@@ -52,6 +52,7 @@ add_library(cl SHARED
     cld_uniregs.cc
     cld_univars.cc
     cld_unswitch.cc
+    clutil.cc
     code_listener.cc
     gcc/clplug.c
     location.cc
