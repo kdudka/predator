@@ -504,6 +504,11 @@ const char* nameOf(const Fnc &);
 int uidOf(const Fnc &);
 
 /**
+ * return true if the function is defined (means we have its CFG and the like)
+ */
+bool isDefined(const Fnc &);
+
+/**
  * lookup container for set of Fnc objects
  */
 class FncDb {

@@ -446,6 +446,10 @@ int uidOf(const Fnc &fnc) {
     return cst.data.cst_fnc.uid;
 }
 
+bool isDefined(const Fnc &fnc) {
+    return CL_OPERAND_CST == fnc.def.code
+        && !cstFromFnc(fnc).data.cst_fnc.is_extern;
+}
 
 // /////////////////////////////////////////////////////////////////////////////
 // FncDb implementation

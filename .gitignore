@@ -1,5 +1,6 @@
 cl_build/
 fa_analysis_build/
+fwnull_build/
 gcc
 gcc-4.5.0/
 gcc-4.5.0.tar.bz2

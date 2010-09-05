@@ -47,6 +47,7 @@ SVN             ?= svn#                     # use this to override svn(1)
 
 all: $(SSD_GIT) include/gcc/
 	$(MAKE) -C cl $@
+	$(MAKE) -C fwnull $@
 	$(MAKE) -C sl $@
 	$(MAKE) -C fa_analysis $@
 
@@ -61,7 +62,7 @@ clean:
 	rm -rf $(INVADER) $(SPARSE) $(SSD_GIT) $(GCC45_DIR)
 	rm -rf $(INVADER_DIR)
 	rm -rf $(GCC_BUILD)
-	rm -rf cl_build sl_build fa_analysis_build
+	rm -rf cl_build fwnull_build sl_build fa_analysis_build
 	$(MAKE) -C sl clean
 
 # wipe out all
@@ -71,11 +72,13 @@ distclean: clean
 
 check: include/gcc/
 	$(MAKE) -C cl $@
+	$(MAKE) -C fwnull $@
 	$(MAKE) -C sl $@
 	$(MAKE) -C fa_analysis $@
 
 distcheck: include/gcc/
 	$(MAKE) -C cl $@
+	$(MAKE) -C fwnull $@
 	$(MAKE) -C sl $@
 	$(MAKE) -C fa_analysis $@
 
