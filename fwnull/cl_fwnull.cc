@@ -120,7 +120,6 @@ void handleDerefs(Data::TState &state, const CodeStorage::Insn *insn)
 
         const enum cl_operand_e code = op.code;
         switch (code) {
-            case CL_OPERAND_ARG:
             case CL_OPERAND_VAR:
             case CL_OPERAND_REG:
                 handleVarDeref(state, op, &insn->loc);
@@ -141,11 +140,6 @@ void handleDerefs(Data::TState &state, const CodeStorage::Insn *insn)
 void handleInsnUnop(Data::TState &state, const CodeStorage::Insn *insn) {
     handleDerefs(state, insn);
 
-    const enum cl_unop_e code = static_cast<enum cl_unop_e>(insn->subCode);
-    if (CL_UNOP_ASSIGN != code)
-        // we're interested only in CL_UNOP_ASSIGN here
-        return;
-
     const struct cl_operand &dst = insn->operands[0];
     if (dst.accessor)
         // we're interested only in direct manipulation of variables here
@@ -154,6 +148,13 @@ void handleInsnUnop(Data::TState &state, const CodeStorage::Insn *insn) {
     // resolve state of the variable
     const int uid = varIdFromOperand(&dst);
     VarState &vs = state[uid];
+
+    const enum cl_unop_e code = static_cast<enum cl_unop_e>(insn->subCode);
+    if (CL_UNOP_ASSIGN != code) {
+        // we abstract out everything but CL_UNOP_ASSIGN
+        vs.code = VS_UNKNOWN;
+        return;
+    }
 
     // resolve source operand of the instruction
     const struct cl_operand &src = insn->operands[1];
@@ -319,6 +320,32 @@ who_knows:
 }
 
 /**
+ * process call instruction
+ * @param state state valid per current instruction
+ * @param insn instruction you want to process
+ */
+void handleInsnCall(Data::TState &state, const CodeStorage::Insn *insn) {
+    const struct cl_operand &dst = insn->operands[0];
+    if (dst.accessor)
+        // we're interested only in direct manipulation of variables here
+        return;
+
+    switch (dst.code) {
+        case CL_OPERAND_REG:
+        case CL_OPERAND_VAR:
+            break;
+
+        default:
+            return;
+    }
+
+    // abstract out the return value
+    const int uid = varIdFromOperand(&dst);
+    VarState &vs = state[uid];
+    vs.code = VS_UNKNOWN;
+}
+
+/**
  * process a nonterminal instruction
  * @param state state valid per current instruction
  * @param insn instruction you want to process
@@ -335,7 +362,7 @@ void handleInsnNonTerm(Data::TState &state, const CodeStorage::Insn *insn) {
             return;
 
         case CL_INSN_CALL:
-            // we're not interested in such instructions here
+            handleInsnCall(state, insn);
             break;
 
         default:
@@ -442,6 +469,7 @@ void replaceInBranch(Data::TState &state, int uid, bool val) {
 
         default:
             SE_TRAP;
+            return;
     }
 
     // update state of the pointer accordingly

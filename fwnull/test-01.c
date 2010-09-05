@@ -11,3 +11,10 @@ void test1(void **ptr) {
 
     *ptr = NULL;
 }
+
+void test2(void **ptr) {
+    *ptr = NULL;
+
+    if (ptr)
+        test0();
+}
