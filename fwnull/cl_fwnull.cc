@@ -174,8 +174,12 @@ void handleInsnUnop(Data::TState &state, const CodeStorage::Insn *insn) {
     }
 
     if (CL_OPERAND_CST == src.code) {
+        if (CL_TYPE_INT != src.data.cst.code || intCstFromOperand(&src)) {
+            vs.code = VS_UNKNOWN;
+            return;
+        }
+
         // looks like assignment of NULL to a variable
-        SE_BREAK_IF(intCstFromOperand(&src));
         vs.code = VS_NULL;
         vs.lw   = &insn->loc;
         return;
@@ -202,6 +206,10 @@ bool handleInsnCmpNull(Data::TState                 &state,
 {
     if (src->accessor)
         // we're interested only in direct manipulation of variables here
+        return false;
+
+    if (CL_TYPE_PTR != src->type->code)
+        // we're interested only in pointers comparison here
         return false;
 
     const int uidSrc = varIdFromOperand(src);
@@ -297,14 +305,14 @@ void handleInsnBinop(Data::TState &state, const CodeStorage::Insn *insn) {
         goto who_knows;
 
     if (CL_OPERAND_CST == src1.code) {
-        if (intCstFromOperand(&src1))
+        if (CL_TYPE_INT != src1.data.cst.code || intCstFromOperand(&src1))
             // not NULL, sorry
             goto who_knows;
 
         src = &src2;
     }
     else /* if (CL_OPERAND_CST == src2.code) */ {
-        if (intCstFromOperand(&src2))
+        if (CL_TYPE_INT != src2.data.cst.code || intCstFromOperand(&src2))
             // not NULL, sorry
             goto who_knows;
 

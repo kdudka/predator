@@ -165,6 +165,7 @@ void CldUnfoldSwitch::emitCase(int cst, struct cl_type *type, const char *label)
     val.scope                       = CL_SCOPE_BB;
     val.type                        = type;
     val.accessor                    = 0;
+    val.data.cst.code               = CL_TYPE_INT;
     val.data.cst.data.cst_int.value = cst;
 
     struct cl_insn cli;

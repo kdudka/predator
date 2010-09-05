@@ -18,3 +18,10 @@ void test2(void **ptr) {
     if (ptr)
         test0();
 }
+
+void test3(void **ptr) {
+    if (!ptr || !*ptr)
+        return;
+
+    *ptr = NULL;
+}

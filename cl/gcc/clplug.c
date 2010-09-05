@@ -504,6 +504,8 @@ static void read_operand_decl(struct cl_operand *op, tree t)
 
 static void read_raw_operand(struct cl_operand *op, tree t)
 {
+    op->code = CL_OPERAND_VOID;
+
     enum tree_code code = TREE_CODE(t);
     switch (code) {
         case VAR_DECL:
@@ -727,6 +729,7 @@ static void handle_stmt_unop(gimple stmt, enum tree_code code,
             case CONVERT_EXPR:
             case NOP_EXPR:
             case VAR_DECL:
+            case FIX_TRUNC_EXPR:
                 break;
 
             case TRUTH_NOT_EXPR:        *ptype = CL_UNOP_TRUTH_NOT;     break;
