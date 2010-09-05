@@ -387,6 +387,11 @@ void ClStorageBuilder::Private::digOperandCst(const struct cl_operand *op) {
     Fnc *fnc = stor.fncs[uid];
     fnc->stor = &stor;
 
+    // store fnc declaration if not already
+    struct cl_operand &def = fnc->def;
+    if (CL_OPERAND_VOID == def.code)
+        storeOperand(def, op);
+
     // select the appropriate name mapping by scope
     NameDb::TNameMap &nameMap = (CL_SCOPE_GLOBAL == scope)
         ? stor.fncNames.glNames

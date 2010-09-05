@@ -119,20 +119,6 @@ endmacro(test_sym_exec_regre)
 test_sym_exec_regre(".fast" "-fplugin-arg-libsl-symexec-args=fast")
 test_sym_exec_regre("" "")
 
-set(self_extra_opts
-    ${CFLAGS}
-    -I${sl_SOURCE_DIR}/..
-    -I${sl_SOURCE_DIR}/../gcc
-    -c ${sl_SOURCE_DIR}/slplug.c
-    -DPREDATOR
-    -fplugin=${sl_BINARY_DIR}/libsl.so
-    -fplugin-arg-libsl-dump-pp=/dev/null
-    -fplugin-arg-libsl-dump-types
-    -fplugin-arg-libsl-gen-dot=/dev/null
-    -fplugin-arg-libsl-type-dot=/dev/null
-    -fplugin-arg-libsl-verbose=15
-    -fplugin-arg-libsl-bypass-symexec)
-
 option(SL_TEST_VALGRIND "Set to ON to enable valgrind tests" OFF)
 if(SL_TEST_VALGRIND)
     test_sym_exec("valgrind-test" valgrind

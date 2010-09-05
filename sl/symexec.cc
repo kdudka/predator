@@ -934,7 +934,9 @@ const CodeStorage::Fnc* SymExec::Private::resolveCallInsn(
         goto fail;
     }
 
-    if (CL_OPERAND_VOID == fnc->def.code) {
+    if (CL_OPERAND_VOID == fnc->def.code
+            || fnc->def.data.cst.data.cst_fnc.is_extern)
+    {
         const struct cl_cst &cst = opFnc.data.cst;
         const char *name = cst.data.cst_fnc.name;
         SE_BREAK_IF(CL_TYPE_FNC != cst.code || !name);
