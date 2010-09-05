@@ -21,6 +21,7 @@
 
 #include <cl/easy.hh>
 #include <cl/cl_msg.hh>
+#include <cl/clutil.hh>
 #include <cl/location.hh>
 #include <cl/storage.hh>
 
@@ -33,12 +34,10 @@ extern "C" { int plugin_is_GPL_compatible; }
 
 enum EVarState {
     VS_UNKNOWN,
+    VS_DEREF,
     VS_NULL,
     VS_NOT_NULL,
-    VS_MIGHT_BE_NULL,
-
-    VS_FALSE,
-    VS_TRUE
+    VS_MIGHT_BE_NULL
 };
 
 struct VarState {
@@ -56,10 +55,94 @@ struct Data {
     TStateMap stateMap;
 };
 
+void handleVarDeref(Data::TState &state, const struct cl_operand &op) {
+    const LocationWriter lw(&op.loc);
+
+    const int uid = varIdFromOperand(&op);
+    VarState &vs = state[uid];
+    const EVarState code = vs.code;
+    switch (code) {
+        case VS_UNKNOWN:
+            vs.code = VS_DEREF;
+            vs.lw   = lw;
+            // fall through!
+
+        case VS_DEREF:
+            return;
+
+        case VS_NULL:
+            CL_ERROR_MSG(lw, "dereference of NULL value");
+            CL_ERROR_MSG(vs.lw, "NULL value comes from here");
+            return;
+
+        default:
+            SE_TRAP;
+    }
+}
+
+void handleDerefs(Data::TState &state, const CodeStorage::TOperandList &opList)
+{
+    BOOST_FOREACH(const struct cl_operand &op, opList) {
+        const struct cl_accessor *ac = op.accessor;
+        if (!ac || ac->code != CL_ACCESSOR_DEREF || seekRefAccessor(ac))
+            continue;
+
+        const enum cl_operand_e code = op.code;
+        switch (code) {
+            case CL_OPERAND_ARG:
+            case CL_OPERAND_VAR:
+            case CL_OPERAND_REG:
+                handleVarDeref(state, op);
+                return;
+
+            default:
+                SE_TRAP;
+        }
+    }
+}
+
 void handleInsnUnop(Data::TState &state, const CodeStorage::Insn *insn) {
+    handleDerefs(state, insn->operands);
+
+    const enum cl_unop_e code = static_cast<enum cl_unop_e>(insn->subCode);
+    if (CL_UNOP_ASSIGN != code)
+        return;
+
+    const struct cl_operand &dst = insn->operands[0];
+    if (dst.accessor)
+        return;
+
+    const int uid = varIdFromOperand(&dst);
+    VarState &vs = state[uid];
+
+    const struct cl_operand &src = insn->operands[1];
+    const struct cl_accessor *ac = src.accessor;
+    if (seekRefAccessor(ac)) {
+        vs.code = VS_NOT_NULL;
+        vs.lw   = &src.loc;
+        return;
+    }
+
+    if (ac) {
+        vs.code = VS_UNKNOWN;
+        return;
+    }
+
+    if (CL_OPERAND_CST == src.code) {
+        const int val = intCstFromOperand(&src);
+        SE_BREAK_IF(val);
+        vs.code = VS_NULL;
+        vs.lw   = &dst.loc;
+        return;
+    }
+
+    const int uidSrc = varIdFromOperand(&src);
+    vs = state[uidSrc];
 }
 
 void handleInsnBinop(Data::TState &state, const CodeStorage::Insn *insn) {
+    handleDerefs(state, insn->operands);
+    // TODO
 }
 
 void handleInsnNonTerm(Data::TState &state, const CodeStorage::Insn *insn) {

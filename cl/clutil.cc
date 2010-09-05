@@ -21,7 +21,7 @@
 #include <cl/clutil.hh>
 
 const struct cl_type* targetTypeOfPtr(const struct cl_type *clt) {
-    assert(!clt || clt->code != CL_TYPE_PTR || clt->item_cnt != 1);
+    SE_BREAK_IF(!clt || clt->code != CL_TYPE_PTR || clt->item_cnt != 1);
 
     clt = clt->items[/* target */ 0].type;
     SE_BREAK_IF(!clt);
@@ -43,7 +43,7 @@ bool seekRefAccessor(const struct cl_accessor *ac) {
 }
 
 int intCstFromOperand(const struct cl_operand *op) {
-    SE_BREAK_IF(CL_OPERAND_CST != op->code || CL_TYPE_INT != op->type->code);
+    SE_BREAK_IF(CL_OPERAND_CST != op->code);
 
     const struct cl_cst &cst = op->data.cst;
     SE_BREAK_IF(CL_TYPE_INT != cst.code);
