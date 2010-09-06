@@ -97,12 +97,12 @@ void handleVarDeref(Data::TState                        &state,
 
         case VS_NULL:
             CL_ERROR_MSG(lw, "dereference of NULL value");
-            CL_NOTE_MSG(vs.lw, "NULL value comes from here");
+            CL_NOTE_MSG(vs.lw, "the NULL value comes from here");
             return;
 
         case VS_NULL_DEDUCED:
             CL_ERROR_MSG(lw, "dereference of NULL value");
-            CL_NOTE_MSG(vs.lw, "condition seems to be used incorrectly");
+            CL_NOTE_MSG(vs.lw, "the condition seems to be used incorrectly");
 
         case VS_MIGHT_BE_NULL:
             CL_WARN_MSG(lw, "dereference of a value that might be NULL");
@@ -140,6 +140,48 @@ void handleDerefs(Data::TState &state, const CodeStorage::Insn *insn)
                 SE_TRAP;
         }
     }
+}
+
+/**
+ * merge values (used for Y nodes of CFG)
+ * @param dst destination state (used in read-write mode)
+ * @param src source state (used in read-only mode)
+ */
+bool mergeValues(VarState &dst, const VarState &src) {
+    if (VS_UNDEF == src.code || VS_MIGHT_BE_NULL == dst.code)
+        // nothing to propagate actually
+        return false;
+
+    if (src.code == dst.code)
+        // codes match already
+        return false;
+
+    if (VS_NULL_IFF == src.code || VS_NOT_NULL_IFF == src.code
+            || VS_NULL_IFF == dst.code || VS_NOT_NULL_IFF == dst.code)
+        // we use these only block-locally
+        return false;
+
+    if (VS_UNDEF == dst.code) {
+        // value not defined in the target block, let's start with the new one
+        dst = src;
+        return true;
+    }
+
+    if ((VS_NULL_DEDUCED == src.code && VS_NOT_NULL == dst.code)
+            || (VS_NOT_NULL == src.code && VS_NULL_DEDUCED == dst.code))
+        // merge NULL and not-NULL alternatives together
+    {
+        dst.code = VS_MIGHT_BE_NULL;
+        return true;
+    }
+
+    if (VS_UNKNOWN == dst.code)
+        // no news is good news
+        return false;
+
+    // let's over-approximate everything else
+    dst.code = VS_UNKNOWN;
+    return true;
 }
 
 /**
@@ -197,7 +239,7 @@ void handleInsnUnop(Data::TState &state, const CodeStorage::Insn *insn) {
 
     // single assignment ... let's just propagate the value
     const int uidSrc = varIdFromOperand(&src);
-    vs = state[uidSrc];
+    mergeValues(vs, state[uidSrc]);
 }
 
 /**
@@ -362,11 +404,44 @@ void handleInsnCall(Data::TState &state, const CodeStorage::Insn *insn) {
 }
 
 /**
+ * abstract out any reasoning in case of direct reference of an operand
+ * @param state state valid per current instruction
+ * @param opList list of operands to check for direct references
+ */
+void treatRefAsSideEffect(Data::TState                          &state,
+                          const CodeStorage::TOperandList       &opList)
+{
+    // for each operand
+    BOOST_FOREACH(const struct cl_operand &op, opList) {
+        switch (op.code) {
+            case CL_OPERAND_VAR:
+            case CL_OPERAND_REG:
+                break;
+
+            default:
+                // not a variable
+                continue;
+        }
+
+        const struct cl_accessor *ac = op.accessor;
+        if (!ac || ac->code != CL_ACCESSOR_REF)
+            // not a direct reference
+            continue;
+
+        // kill any up to now reasoning about the variable
+        const int uid = varIdFromOperand(&op);
+        state[uid].code = VS_UNKNOWN;
+    }
+}
+
+/**
  * process a nonterminal instruction
  * @param state state valid per current instruction
  * @param insn instruction you want to process
  */
-void handleInsnNonTerm(Data::TState &state, const CodeStorage::Insn *insn) {
+void handleInsnNonterm(Data::TState &state, const CodeStorage::Insn *insn) {
+    treatRefAsSideEffect(state, insn->operands);
+
     const enum cl_insn_e code = insn->code;
     switch (code) {
         case CL_INSN_UNOP:
@@ -384,48 +459,6 @@ void handleInsnNonTerm(Data::TState &state, const CodeStorage::Insn *insn) {
         default:
             SE_TRAP;
     }
-}
-
-/**
- * merge values (used for Y nodes of CFG)
- * @param dst destination state (used in read-write mode)
- * @param src source state (used in read-only mode)
- */
-bool mergeValues(VarState &dst, const VarState &src) {
-    if (VS_UNDEF == src.code || VS_MIGHT_BE_NULL == dst.code)
-        // nothing to propagate actually
-        return false;
-
-    if (src.code == dst.code)
-        // codes match already
-        return false;
-
-    if (VS_NULL_IFF == src.code || VS_NOT_NULL_IFF == src.code
-            || VS_NULL_IFF == dst.code || VS_NOT_NULL_IFF == dst.code)
-        // we use these only block-locally
-        return false;
-
-    if (VS_UNDEF == dst.code) {
-        // value not defined in the target block, let's start with the new one
-        dst = src;
-        return true;
-    }
-
-    if ((VS_NULL_DEDUCED == src.code && VS_NOT_NULL == dst.code)
-            || (VS_NOT_NULL == src.code && VS_NULL_DEDUCED == dst.code))
-        // merge NULL and not-NULL alternatives together
-    {
-        dst.code = VS_MIGHT_BE_NULL;
-        return true;
-    }
-
-    if (VS_UNKNOWN == dst.code)
-        // no news is good news
-        return false;
-
-    // let's over-approximate everything else
-    dst.code = VS_UNKNOWN;
-    return true;
 }
 
 /**
@@ -586,6 +619,7 @@ void handleInsnTerm(Data                            &data,
 }
 
 void handleBlock(Data &data, Data::TBlock bb) {
+    // go through the sequence of instructions of the current basic block
     Data::TState next = data.stateMap[bb];
     BOOST_FOREACH(const CodeStorage::Insn *insn, *bb) {
         if (cl_is_term_insn(insn->code))
@@ -594,7 +628,7 @@ void handleBlock(Data &data, Data::TBlock bb) {
 
         else
             // nonterminal instruction
-            handleInsnNonTerm(next, insn);
+            handleInsnNonterm(next, insn);
     }
 }
 
@@ -605,12 +639,14 @@ void handleFnc(const CodeStorage::Fnc &fnc) {
     Data::TSched &todo = data.todo;
     const ControlFlow &cfg = fnc.cfg;
 
+    // block-level scheduler
     todo.insert(cfg.entry());
     while (!todo.empty()) {
         Data::TSched::iterator i = todo.begin();
         Data::TBlock bb = *i;
         todo.erase(i);
 
+        // process one basic block
         SE_BREAK_IF(!bb || !bb->size());
         const Insn *insn = bb->operator[](0);
         const LocationWriter lw(&insn->loc);

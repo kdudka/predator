@@ -45,7 +45,7 @@
 /*
  * if 1, suppress warnings about unhandled code constructs
  */
-#define CLPLUG_SILENT                   0
+#define CLPLUG_SILENT                   1
 
 /**
  * type enumerator debug level; set to 0 to disable debugging
