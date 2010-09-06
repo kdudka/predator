@@ -25,6 +25,7 @@
 #include <cl/location.hh>
 #include <cl/storage.hh>
 
+#include <set>
 #include <map>
 
 #include <boost/foreach.hpp>
@@ -37,8 +38,10 @@ enum EVarState {
     VS_UNDEF,                   ///< value not assigned yet
     VS_UNKNOWN,                 ///< value has been abstracted out
     VS_DEREF,                   ///< value has been already dereferenced
-    VS_NULL,                    ///< value is guaranteed to be NULL
-    VS_NOT_NULL,                ///< value is guaranteed to be not-NULL
+    VS_NULL,                    ///< NULL value has been assigned
+    VS_NOT_NULL,                ///< not-NULL value has been assigned
+    VS_NULL_DEDUCED,            ///< value is guaranteed to be NULL
+    VS_NOT_NULL_DEDUCED,        ///< value is guaranteed to be not-NULL
     VS_MIGHT_BE_NULL,
 
     VS_FALSE,                   ///< value is 'false', valid only for booleans
@@ -60,10 +63,12 @@ struct VarState {
 /// state of computation at function level
 struct Data {
     typedef const CodeStorage::Block                   *TBlock;
+    typedef std::set<TBlock>                            TSched;
     typedef std::map<int /* var uid */, VarState>       TState;
     typedef std::map<TBlock, TState>                    TStateMap;
 
-    TStateMap stateMap;         ///< holds states of all vars per each block
+    TSched          todo;       ///< block scheduled for processing
+    TStateMap       stateMap;   ///< holds states of all vars per each block
 };
 
 /**
@@ -79,13 +84,14 @@ void handleVarDeref(Data::TState                        &state,
     VarState &vs = state[uid];
     const EVarState code = vs.code;
     switch (code) {
-        case VS_NOT_NULL:
         case VS_UNDEF:
         case VS_UNKNOWN:
             vs.code = VS_DEREF;
             vs.lw   = lw;
             // fall through!
 
+        case VS_NOT_NULL:
+        case VS_NOT_NULL_DEDUCED:
         case VS_DEREF:
             return;
 
@@ -93,6 +99,10 @@ void handleVarDeref(Data::TState                        &state,
             CL_ERROR_MSG(lw, "dereference of NULL value");
             CL_NOTE_MSG(vs.lw, "NULL value comes from here");
             return;
+
+        case VS_NULL_DEDUCED:
+            CL_ERROR_MSG(lw, "dereference of NULL value");
+            CL_NOTE_MSG(vs.lw, "condition seems to be used incorrectly");
 
         case VS_MIGHT_BE_NULL:
             CL_WARN_MSG(lw, "dereference of a value that might be NULL");
@@ -213,14 +223,16 @@ bool handleInsnCmpNull(Data::TState                 &state,
         return false;
 
     const int uidSrc = varIdFromOperand(src);
-    VarState &vsSrc = state[uidSrc];
+    const VarState &vsSrc = state[uidSrc];
     const EVarState code = vsSrc.code;
     switch (code) {
         case VS_NULL:
+        case VS_NULL_DEDUCED:
             neg = !neg;
             // fall through!
 
         case VS_NOT_NULL:
+        case VS_NOT_NULL_DEDUCED:
             goto we_know;
 
         case VS_UNDEF:
@@ -236,10 +248,6 @@ bool handleInsnCmpNull(Data::TState                 &state,
         default:
             SE_TRAP;
     }
-
-    // comparison with NULL implies that the value might be NULL
-    vsSrc.code = VS_MIGHT_BE_NULL;
-    vsSrc.lw   = lw;
 
     // now store the relation among the pointer and the result of the comparison
     vsDst.code = (neg)
@@ -392,7 +400,7 @@ bool mergeValues(VarState &dst, const VarState &src) {
         // codes match already
         return false;
 
-    if (VS_NULL_IFF == src.code || VS_NOT_NULL == src.code
+    if (VS_NULL_IFF == src.code || VS_NOT_NULL_IFF == src.code
             || VS_NULL_IFF == dst.code || VS_NOT_NULL_IFF == dst.code)
         // we use these only block-locally
         return false;
@@ -403,15 +411,10 @@ bool mergeValues(VarState &dst, const VarState &src) {
         return true;
     }
 
-    if (VS_NULL == src.code && VS_NOT_NULL == dst.code) {
+    if ((VS_NULL_DEDUCED == src.code && VS_NOT_NULL == dst.code)
+            || (VS_NOT_NULL == src.code && VS_NULL_DEDUCED == dst.code))
         // merge NULL and not-NULL alternatives together
-        dst.lw = src.lw;
-        dst.code = VS_MIGHT_BE_NULL;
-        return true;
-    }
-
-    if (VS_NOT_NULL == src.code && VS_NULL == dst.code) {
-        // merge not-NULL and NULL alternatives together
+    {
         dst.code = VS_MIGHT_BE_NULL;
         return true;
     }
@@ -432,7 +435,7 @@ bool mergeValues(VarState &dst, const VarState &src) {
  * @param block block that determines the target state that is about to be
  * updated
  */
-bool updateState(Data                           &data,
+void updateState(Data                           &data,
                  const Data::TState             &state,
                  const CodeStorage::Block       *block)
 {
@@ -447,18 +450,19 @@ bool updateState(Data                           &data,
             changed = true;
     }
 
-    // return true, if anything has been changed actually
-    return changed;
+    if (changed)
+        data.todo.insert(block);
 }
 
 /**
- * replace state of the branch-by variable by VS_NULL or VS_NOT_NULL
+ * replace state of the branch-by variable by VS_NULL_DEDUCED or
+ * VS_NOT_NULL_DEDUCED
  * @param state state valid per current instruction
  * @param uid CodeStorage uid of the branch-by variable
  * @param val true in 'then' branch, false in 'else' branch
  */
 void replaceInBranch(Data::TState &state, int uid, bool val) {
-    const VarState &vs = state[uid];
+    VarState &vs = state[uid];
     bool isNull;
 
     const EVarState code = vs.code;
@@ -480,12 +484,15 @@ void replaceInBranch(Data::TState &state, int uid, bool val) {
             return;
     }
 
+    // kill the pending condition predicate
+    vs.code = VS_UNDEF;
+
     // update state of the pointer accordingly
     VarState &vsPeer = state[vs.peer];
     vsPeer.lw = vs.lw;
     vsPeer.code = (isNull)
-        ? VS_NULL
-        : VS_NOT_NULL;
+        ? VS_NULL_DEDUCED
+        : VS_NOT_NULL_DEDUCED;
 }
 
 /**
@@ -495,7 +502,7 @@ void replaceInBranch(Data::TState &state, int uid, bool val) {
  * @param cond branch-by variable given as operand
  * @param targets then/else targets of the condition
  */
-bool handleInsnCondNondet(Data                              &data,
+void handleInsnCondNondet(Data                              &data,
                           const Data::TState                &state,
                           const struct cl_operand           &cond,
                           const CodeStorage::TTargetList    &targets)
@@ -510,12 +517,8 @@ bool handleInsnCondNondet(Data                              &data,
     replaceInBranch(stateElse, uid, false);
 
     // go to both targets and update the state there
-    bool changed = updateState(data, stateThen, targets[0]);
-    if (updateState(data, stateElse, targets[1]))
-        changed = true;
-
-    // return true if at least one target state has been modified
-    return changed;
+    updateState(data, stateThen, targets[0]);
+    updateState(data, stateElse, targets[1]);
 }
 
 /**
@@ -523,7 +526,7 @@ bool handleInsnCondNondet(Data                              &data,
  * @param state state valid per current instruction
  * @param insn conditional instruction you want to process
  */
-bool handleInsnCond(Data                                    &data,
+void handleInsnCond(Data                                    &data,
                     const Data::TState                      &state,
                     const CodeStorage::Insn                 *insn)
 {
@@ -538,13 +541,16 @@ bool handleInsnCond(Data                                    &data,
     const EVarState code = vs.code;
     switch (code) {
         case VS_TRUE:
-            return updateState(data, state, insn->targets[0]);
+            updateState(data, state, insn->targets[0]);
+            return;
 
         case VS_FALSE:
-            return updateState(data, state, insn->targets[1]);
+            updateState(data, state, insn->targets[1]);
+            return;
 
         default:
-            return handleInsnCondNondet(data, state, cond, insn->targets);
+            handleInsnCondNondet(data, state, cond, insn->targets);
+            return;
     }
 }
 
@@ -554,70 +560,63 @@ bool handleInsnCond(Data                                    &data,
  * @param state state valid per current instruction
  * @param insn instruction you want to process
  */
-bool handleInsnTerm(Data                            &data,
+void handleInsnTerm(Data                            &data,
                     const Data::TState              &state,
                     const CodeStorage::Insn         *insn)
 {
     const enum cl_insn_e code = insn->code;
     switch (code) {
         case CL_INSN_COND:
-            return handleInsnCond(data, state, insn);
+            handleInsnCond(data, state, insn);
+            return;
 
         case CL_INSN_JMP:
             // just update the target state and check if anything has changed
-            return updateState(data, state, insn->targets[0]);
+            updateState(data, state, insn->targets[0]);
+            return;
 
         case CL_INSN_RET:
         case CL_INSN_ABORT:
             // we're not interested in such instructions here
-            return false;
+            return;
 
         default:
             SE_TRAP;
-            return false;
     }
 }
 
-bool /* changed */ handleBlock(Data &data, Data::TBlock bb) {
-    bool anyChange = false;
-
+void handleBlock(Data &data, Data::TBlock bb) {
     Data::TState next = data.stateMap[bb];
     BOOST_FOREACH(const CodeStorage::Insn *insn, *bb) {
-        if (cl_is_term_insn(insn->code)) {
+        if (cl_is_term_insn(insn->code))
             // terminal instruction
-            if (handleInsnTerm(data, next, insn))
-                anyChange = true;
+            handleInsnTerm(data, next, insn);
 
-            continue;
-        }
-
-        // nonterminal instruction
-        handleInsnNonTerm(next, insn);
+        else
+            // nonterminal instruction
+            handleInsnNonTerm(next, insn);
     }
-
-    return anyChange;
 }
 
 void handleFnc(const CodeStorage::Fnc &fnc) {
     using namespace CodeStorage;
+
     Data data;
+    Data::TSched &todo = data.todo;
+    const ControlFlow &cfg = fnc.cfg;
 
-    bool anyChange;
-    do {
-        anyChange = false;
+    todo.insert(cfg.entry());
+    while (!todo.empty()) {
+        Data::TSched::iterator i = todo.begin();
+        Data::TBlock bb = *i;
+        todo.erase(i);
 
-        BOOST_FOREACH(const Block *bb, fnc.cfg) {
-            SE_BREAK_IF(!bb || !bb->size());
-            const Insn *insn = bb->operator[](0);
-            const LocationWriter lw(&insn->loc);
-            CL_DEBUG_MSG(lw, "analyzing block " << bb->name() << "...");
-
-            if (handleBlock(data, bb))
-                // schedule one more wheel and see if anything will be changed
-                anyChange = true;
-        }
-
-    } while (anyChange);
+        SE_BREAK_IF(!bb || !bb->size());
+        const Insn *insn = bb->operator[](0);
+        const LocationWriter lw(&insn->loc);
+        CL_DEBUG_MSG(lw, "analyzing block " << bb->name() << "...");
+        handleBlock(data, bb);
+    }
 }
 
 // /////////////////////////////////////////////////////////////////////////////
