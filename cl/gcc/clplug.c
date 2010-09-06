@@ -480,8 +480,8 @@ static void read_operand_decl(struct cl_operand *op, tree t)
     }
 
     if (!DECL_NAME(t))
-        // anonymous operand ... something went wrong
-        TRAP;
+        // FIXME: anonymous operand ... something went wrong
+        return;
 
     // read operand's name and scope
     const char *name = IDENTIFIER_POINTER(DECL_NAME(t));

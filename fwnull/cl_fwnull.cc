@@ -193,7 +193,7 @@ void handleInsnUnop(Data::TState &state, const CodeStorage::Insn *insn) {
     handleDerefs(state, insn);
 
     const struct cl_operand &dst = insn->operands[0];
-    if (dst.accessor)
+    if (CL_OPERAND_VOID == dst.code || dst.accessor)
         // we're interested only in direct manipulation of variables here
         return;
 
