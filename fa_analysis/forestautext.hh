@@ -582,7 +582,7 @@ protected:
 	}
 
 	// single accepting in, (single accepting out?)
-	void split(const TA<label_type>& src, size_t baseIndex, const std::vector<std::pair<size_t, size_t> >& splitPoints, std::vector<TA<label_type>*>& dst) {
+	void split(std::vector<TA<label_type>*>& dst, const TA<label_type>& src, size_t baseIndex, const std::vector<std::pair<size_t, size_t> >& splitPoints) {
 
 		TA<label_type>::td_cache_type cache;
 		src.buildTDCache(cache);
@@ -591,7 +591,8 @@ protected:
 
 		dst[baseIndex]->addFinalState(src.getFinalState());
 		for (size_t i = 0; i < splitPoints.size(); ++i) {
-			assert(splitMap.insert(std::make_pair(splitPoints[i].first, splitPoints[i].second)).second);
+			bool b = splitMap.insert(std::make_pair(splitPoints[i].first, splitPoints[i].second)).second;
+			assert(b);
 			dst[splitPoints[i].second]->addFinalState(splitPoints[i].first);
 		}
 
@@ -661,7 +662,7 @@ protected:
 		const TA<label_type>& src2;
 		boost::unordered_map<size_t, size_t> rootMap;
 		
-		IntersectAndRelabelSpecialF(FAE* fae, TA<label_type>& dst, const std::vector<size_t>& index, std::vector<std::pair<size_t, size_t> >& splitPoints, const TA<label_type>& src1, const TA<label_type>& src2, const NormInfo::RootInfo& rootInfo)
+		IntersectAndRelabelSpecialF(FAE* fae, TA<label_type>& dst, std::vector<std::pair<size_t, size_t> >& splitPoints, const std::vector<size_t>& index, const TA<label_type>& src1, const TA<label_type>& src2, const NormInfo::RootInfo& rootInfo)
 			: fae(fae), dst(dst), index(index), splitPoints(splitPoints), src1(src1), src2(src2) {
 			for (std::vector<std::pair<size_t, size_t> >::const_iterator i = rootInfo.mergedRoots.begin(); i != rootInfo.mergedRoots.end(); ++i)
 				assert(this->rootMap.insert(std::make_pair(i->second, i->first)).second);
@@ -683,17 +684,23 @@ protected:
 
 	};
 
-	void intersectAndDenormalize(const FAE* fae, const NormInfo& normInfo) {
-		assert(this->roots.size() == fae->roots.size());
-		assert(this->roots.size() == normInfo.data.size());
-		
+	// if true then dst represents a denormalized intersection of (this) and (fae)
+	bool intersectAndDenormalize(FAE*& dst, const FAE* fae, const NormInfo& normInfo) {
+		assert(fae->roots.size() == normInfo.data.size());
+		if (this->rootMap != fae->rootMap)
+			return false;
+
 		std::vector<size_t> index(normInfo.data.size());
 		for (size_t i = 0; i < normInfo.data.size(); ++i)
 			index[i] = normInfo.data[i].index;
-		
-		std::vector<TA<label_type>*> newRoots(normInfo.rootCount);
+
+		dst = new FAE(*this);
+		for (std::vector<TA<label_type>*>::iterator i = dst->roots.begin(); i != dst->roots.end(); ++i)
+			dst->taMan->release(*i);
+
+		dst->roots.resize(normInfo.rootCount);
 		for (size_t i = 0; i < normInfo.rootCount; ++i)
-			newRoots[i] = this->taMan->alloc();
+			dst->roots[i] = dst->taMan->alloc();
 
 		for (size_t i = 0; i < normInfo.data.size(); ++i) {
 			TA<label_type>::lt_cache_type cache1, cache2;
@@ -705,39 +712,40 @@ protected:
 					cache1,
 					cache2,
 					IntersectAndRelabelF(
-						this, *newRoots[index[i]], index, *this->roots[i], *fae->roots[i]
+						dst, *dst->roots[index[i]], index, *this->roots[i], *fae->roots[i]
 					),
-					this->nextState()
+					dst->nextState()
 				);
 			} else {
 				TA<label_type>* ta = this->taMan->alloc();
-				ta->addFinalState(this->roots[i]->getFinalState());
 				std::vector<std::pair<size_t, size_t> > splitPoints;
 				stateCount = TA<label_type>::computeProduct(
 					cache1,
 					cache2,
 					IntersectAndRelabelSpecialF(
-						this, *ta, index, splitPoints, *this->roots[i], *fae->roots[i], normInfo.data[i]
+						dst, *ta, splitPoints, index, *this->roots[i], *fae->roots[i], normInfo.data[i]
 					),
-					this->nextState()
+					dst->nextState()
 				);
-				this->split(*ta, index[i], splitPoints, newRoots);
-				this->taMan->release(ta);
+				dst->split(dst->roots, *ta, index[i], splitPoints);
+				dst->taMan->release(ta);
 			}
-			this->incrementStateOffset(stateCount);			
+			dst->incrementStateOffset(stateCount);
+			if (dst->roots[index[i]]->getFinalStates().empty()) {
+				delete dst;
+				return false;
+			}				
 		}
-		for (size_t i = 0; i < this->roots.size(); ++i) {
-			this->taMan->release(this->roots[i]);
-			this->roots[i] = newRoots[i];
-		}
-		this->rootMap = fae->rootMap;
+		dst->rootMap = fae->rootMap;
+		return true;
 	}
 
-	void abstract() {
-		for (size_t i = 0; i < this->roots.size(); ++i) {
-			TA<label_type>* ta = this->taMan->alloc();
+	void heightAbstraction(FAE*& dst, size_t height = 1) {
+		dst = new FAE(*this);
+		for (size_t i = 0; i < dst->roots.size(); ++i) {
+			dst->taMan->release(dst->roots[i]);
+			TA<label_type>* ta = dst->taMan->alloc();
 			this->roots[i]->minimized(*ta);
-			this->taMan->release(this->roots[i]);
 			Index<size_t> stateIndex;
 			ta->buildStateIndex(stateIndex);
 			std::vector<std::vector<bool> > rel(stateIndex.size(), std::vector<bool>(stateIndex.size(), false));
@@ -749,10 +757,9 @@ protected:
 						rel[j->second][k->second] = true;
 				}
 			}
-			ta->heightAbstraction(rel, 1, stateIndex);
-			this->roots[i] = this->taMan->alloc();
-			ta->collapsed(*this->roots[i], rel, stateIndex);
-			this->taMan->release(ta);
+			ta->heightAbstraction(rel, height, stateIndex);
+			dst->roots[i] = &ta->collapsed(*dst->taMan->alloc(), rel, stateIndex);
+			dst->taMan->release(ta);
 		}
 	}
 

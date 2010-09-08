@@ -160,6 +160,7 @@ public:
 
     typedef Cache<TT<T> > trans_cache_type;
 
+	// this is the place where transitions are stored
 	struct Backend {
 
 		typename TT<T>::lhs_cache_type lhsCache;

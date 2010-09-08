@@ -20,4 +20,22 @@
 #ifndef SYM_EXEC_H
 #define SYM_EXEC_H
 
+namespace CodeStorage {
+    struct Fnc;
+    struct Storage;
+}
+
+class SymExec {
+
+public:
+
+	SymExec(const CodeStorage::Storage &stor);
+
+private:
+
+	class Engine;
+	Engine *engine;
+
+};
+
 #endif
