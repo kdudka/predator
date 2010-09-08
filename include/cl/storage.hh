@@ -389,6 +389,18 @@ class Block {
         const_iterator end()                 const { return insns_.end();   }
 
         /**
+         * return the first instruction in the basic block
+         */
+        const Insn* front() const;
+
+        /*
+         * return the last instruction in the basic block
+         * @note This should be a @b terminal instruction once the CodeStorage
+         * model has been built.
+         */
+        const Insn* back() const;
+
+        /**
          * return count of instructions inside the basic block
          */
         size_t size()                        const { return insns_.size();  }

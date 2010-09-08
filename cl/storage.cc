@@ -357,14 +357,28 @@ void Block::append(const Insn *insn) {
     insns_.push_back(insn);
 }
 
-const TTargetList& Block::targets() const {
+const Insn* Block::front() const {
     if (insns_.empty())
         // Oops, we are asked for targets without any insn inside. We
         // can still return a reference to an empty vector in such
         // cases, but is it actually useful?
         TRAP;
 
-    const Insn *last = insns_[insns_.size() - 1];
+    return insns_.front();
+}
+
+const Insn* Block::back() const {
+    if (insns_.empty())
+        // Oops, we are asked for targets without any insn inside. We
+        // can still return a reference to an empty vector in such
+        // cases, but is it actually useful?
+        TRAP;
+
+    return insns_.back();
+}
+
+const TTargetList& Block::targets() const {
+    const Insn *last = this->back();
     if (!cl_is_term_insn(last->code))
         // no chance to get targets without any terminal insn
         TRAP;
