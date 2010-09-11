@@ -16,7 +16,7 @@ A: * GMP library (including the -devel stuff)
 
 Q: How can I compile gcc from the released tarball?
 A:
-    $ make build_gcc45
+    $ make build_gcc
 
 Q: What equipment do I need to compile the GCC plug-in?
 A: * CMake 2.8+
@@ -77,4 +77,4 @@ A:
 
 Q: How can I compile GCC from SVN sources?
 A:
-    $ make build_gcc
+    $ make build_gcc_svn

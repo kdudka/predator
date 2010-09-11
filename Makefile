@@ -15,8 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with predator.  If not, see <http://www.gnu.org/licenses/>.
 
-GCC45           ?= gcc-4.5.0.tar.bz2#       # released gcc 4.5
-GCC45_DIR       ?= gcc-4.5.0#               # unpackged release of gcc 4.5
+GCC45           ?= gcc-4.5.1.tar.bz2#       # released gcc 4.5.1
+GCC45_DIR       ?= gcc-4.5.1#               # unpackged release of gcc 4.5.1
 
 GCC_SRC         ?= gcc-src#                 # SVN working copy for gcc src
 GCC_BUILD       ?= gcc-build#               # working directory gcc build
@@ -41,7 +41,7 @@ GIT             ?= git#                     # use this to override git(1)
 SVN             ?= svn#                     # use this to override svn(1)
 
 .PHONY: all check clean distcheck distclean fetch unpack \
-	build_gcc build_gcc45 update_gcc update_gcc_src_only \
+	build_gcc build_gcc_svn update_gcc update_gcc_src_only \
 	build_inv \
 	api_cl api_sl api
 
@@ -116,12 +116,12 @@ build_inv: $(INVADER_DIR)
 	# TODO: make install
 
 # build gcc from the released tarball, instead of the SVN sources
-build_gcc45: $(GCC45_DIR)
+build_gcc: $(GCC45_DIR)
 	ln -fsvT $(GCC45_DIR) $(GCC_SRC)
-	$(MAKE) build_gcc
+	$(MAKE) build_gcc_svn
 
 # build gcc from sources
-build_gcc: $(GCC_SRC)
+build_gcc_svn: $(GCC_SRC)
 	@if test -d $(GCC_BUILD); then \
 			echo; \
 			echo "--- directory '$(GCC_BUILD)' exists"; \
@@ -151,7 +151,7 @@ update_gcc_src_only: $(GCC_SRC)
 
 # fetch up2date sources of gcc and rebuild it
 update_gcc: update_gcc_src_only
-	$(MAKE) build_gcc
+	$(MAKE) build_gcc_svn
 
 # fetch Invader tarball
 $(INVADER):
@@ -159,7 +159,7 @@ $(INVADER):
 
 # fetch released gcc 4.5
 $(GCC45):
-	$(CURL) -o $@ 'ftp://ftp.lip6.fr/pub/gcc/releases/gcc-4.5.0/gcc-4.5.0.tar.bz2'
+	$(CURL) -o $@ 'ftp://ftp.lip6.fr/pub/gcc/releases/gcc-4.5.1/gcc-4.5.1.tar.bz2'
 
 # initialize a local git repo for SPARSE
 $(SPARSE):
@@ -174,4 +174,4 @@ $(SSD_GIT):
 	$(GIT) clone http://dudka.no-ip.org/git/ssd.git $@
 
 include/gcc: gcc-install/lib/gcc
-	ln -fsvT ../gcc-install/lib/gcc/`ls gcc-install/lib/gcc/`/4.5.0/plugin/include include/gcc
+	cd include && ln -fsvT ../gcc-install/lib/gcc/`ls ../gcc-install/lib/gcc/`/4.[56]*/plugin/include gcc

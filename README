@@ -30,5 +30,5 @@ Useful targets of the root Makefile
 all                 run 'make' in cl, sl and fa_analysis (default)
 check               run 'make check' in cl, sl and fa_analysis
 distcheck           run 'make distcheck' in cl, sl and fa_analysis
-build_gcc45         build gcc from the released tarball
-build_gcc           build gcc from SVN sources (NOTE: this may take some time)
+build_gcc           build gcc from the released tarball
+build_gcc_svn       build gcc from SVN sources (NOTE: this may take some time)
