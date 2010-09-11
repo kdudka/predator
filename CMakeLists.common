@@ -79,5 +79,5 @@ if(SL_USE_INT3_AS_BRK)
     add_definitions("-DSL_USE_INT3_AS_BRK")
 endif()
 
-set(GCC45 "../gcc-install/bin/gcc"
-    CACHE STRING "gcc-4.5 executable")
+set(GCC_HOST "../gcc-install/bin/gcc"
+    CACHE STRING "host gcc executable")

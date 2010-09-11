@@ -69,12 +69,12 @@ macro(test_sym_exec label tool arg1 arg2)
             -fplugin-arg-libsl-verbose=1)
     endforeach()
 endmacro()
-test_sym_exec("simple-test" ${GCC45} "" "")
+test_sym_exec("simple-test" ${GCC_HOST} "" "")
 
 # FIXME: define this macro more generically, in particular the count of args
 macro(test_sym_exec_regre ext arg1)
     foreach (num ${examples})
-        set(cmd "${GCC45}")
+        set(cmd "${GCC_HOST}")
 
         # we use the following flag to avoid differences on 32bit vs 64bit archs
         # in the error output, which is checked for exact match
@@ -110,7 +110,7 @@ option(SL_TEST_VALGRIND "Set to ON to enable valgrind tests" OFF)
 if(SL_TEST_VALGRIND)
     test_sym_exec("valgrind-test" valgrind
         --error-exitcode=7
-        ${GCC45})
+        ${GCC_HOST})
 endif()
 
 add_test("headers_sanity-0" gcc -ansi -Wall -Wextra -Werror -pedantic

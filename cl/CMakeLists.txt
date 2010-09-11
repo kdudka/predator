@@ -67,7 +67,7 @@ target_link_libraries(cl
 add_library(cl_test SHARED cl_test.cc)
 target_link_libraries(cl_test cl)
 
-add_test("compile-self" ${GCC45}
+add_test("compile-self" ${GCC_HOST}
     ${CFLAGS}
     -I${cl_SOURCE_DIR}/../include
     -I${cl_SOURCE_DIR}/../include/gcc
@@ -76,7 +76,7 @@ add_test("compile-self" ${GCC45}
     -fplugin=${cl_BINARY_DIR}/libcl_test.so
     -fplugin-arg-libcl_test-bypass-symexec)
 
-set(cmd "${GCC45}")
+set(cmd "${GCC_HOST}")
 set(cmd "${cmd} -I${cl_SOURCE_DIR}/../include -I${cl_SOURCE_DIR}/../include/gcc")
 set(cmd "${cmd} -c ${cl_SOURCE_DIR}/gcc/clplug.c -o /dev/null")
 set(cmd "${cmd} -fplugin=${cl_BINARY_DIR}/libcl_test.so")
@@ -96,11 +96,11 @@ set(self_extra_opts
     -fplugin-arg-libcl_test-verbose=15
     -fplugin-arg-libcl_test-bypass-symexec)
 
-add_test("compile-self-extra" ${GCC45} ${self_extra_opts})
+add_test("compile-self-extra" ${GCC_HOST} ${self_extra_opts})
 add_test("compile-self-valgrind" valgrind
     --error-exitcode=7
     --suppressions=${cl_SOURCE_DIR}/gcc/gcc.valgrind
-    ${GCC45}
+    ${GCC_HOST}
     ${self_extra_opts})
 
 add_test("headers_sanity-0" gcc -ansi -Wall -Wextra -Werror -pedantic
