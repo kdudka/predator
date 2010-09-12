@@ -94,7 +94,7 @@ api: api_cl api_sl
 
 # unpack released gcc 4.5
 $(GCC45_DIR): $(GCC45)
-	tar xf $(GCC45)
+	test -d $(GCC45_DIR) || tar xf $(GCC45)
 
 # initialize a git repo for Invader and apply downstream patches
 $(INVADER_DIR): $(INVADER)
@@ -116,12 +116,18 @@ build_inv: $(INVADER_DIR)
 	# TODO: make install
 
 # build gcc from the released tarball, instead of the SVN sources
-build_gcc: $(GCC45_DIR)
-	ln -fsvT $(GCC45_DIR) $(GCC_SRC)
-	$(MAKE) build_gcc_svn
+$(GCC_SRC):
+	@if test -d $(GCC_SRC); then \
+			echo "--- keeping '$(GCC_SRC)' as is"; \
+		else \
+			set -x \
+			&& $(MAKE) $(GCC45_DIR) \
+			&& ln -fsvT $(GCC45_DIR) $(GCC_SRC) \
+			&& readlink -e $(GCC_SRC); \
+		fi
 
 # build gcc from sources
-build_gcc_svn: $(GCC_SRC)
+build_gcc: $(GCC_SRC)
 	@if test -d $(GCC_BUILD); then \
 			echo; \
 			echo "--- directory '$(GCC_BUILD)' exists"; \
@@ -135,6 +141,7 @@ build_gcc_svn: $(GCC_SRC)
 			&& cd $(GCC_BUILD) \
 			&& $$TOP_LEVEL/$(GCC_SRC)/configure \
 				--enable-languages=c++,c \
+				--disable-bootstrap \
 				--disable-multilib \
 				--prefix=$$TOP_LEVEL/$(GCC_INSTALL) \
 				--with-gmp=$(GMP_LIB) \
@@ -146,12 +153,14 @@ build_gcc_svn: $(GCC_SRC)
 	$(MAKE) include/gcc
 
 # updated SVN working directory of gcc
-update_gcc_src_only: $(GCC_SRC)
+update_gcc_src_only:
+	test -d $(GCC_SRC)
+	test -d $(GCC_SRC)/.svn
 	cd $(GCC_SRC) && $(SVN) up
 
 # fetch up2date sources of gcc and rebuild it
 update_gcc: update_gcc_src_only
-	$(MAKE) build_gcc_svn
+	$(MAKE) build_gcc
 
 # fetch Invader tarball
 $(INVADER):
@@ -166,8 +175,10 @@ $(SPARSE):
 	$(GIT) clone git://git.kernel.org/pub/scm/devel/sparse/chrisl/sparse.git $@
 
 # create SVN working copy for gcc sources
-$(GCC_SRC):
-	$(SVN) co svn://gcc.gnu.org/svn/gcc/trunk $@
+build_gcc_svn:
+	if test -e "$(GCC_SRC)"; then exit 1; fi
+	$(SVN) co svn://gcc.gnu.org/svn/gcc/trunk $(GCC_SRC)
+	$(MAKE) build_gcc
 
 # clone read-only git repo of SSD
 $(SSD_GIT):
