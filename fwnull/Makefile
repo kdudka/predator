@@ -18,8 +18,7 @@
 CMAKE           ?= cmake
 CTEST           ?= ctest
 
-.PHONY: all clean distclean \
-	distcheck \
+.PHONY: all clean distclean distcheck install \
 	version.h
 
 all: version.h ../cl_build/libcl.so
@@ -49,6 +48,9 @@ distclean: clean
 
 distcheck: distclean
 	$(MAKE) check
+
+install: all
+	$(MAKE) -C ../fwnull_build install
 
 ../cl_build/libcl.so:
 	$(MAKE) -C ../cl

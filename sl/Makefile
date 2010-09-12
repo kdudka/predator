@@ -18,8 +18,7 @@
 CMAKE           ?= cmake
 CTEST           ?= ctest
 
-.PHONY: all clean configure distclean \
-	distcheck \
+.PHONY: all clean configure distclean distcheck install \
 	version.h
 
 all: version.h ../cl_build/libcl.so configure
@@ -53,26 +52,8 @@ distclean: clean
 distcheck: distclean
 	$(MAKE) check
 
+install: all
+	$(MAKE) -C ../sl_build install
+
 ../cl_build/libcl.so:
 	$(MAKE) -C ../cl
-
-#pphtml: ../sl_build/libslplug.so ../ssd/util/faketty.so
-#	for i in $(DATASET); do \
-#		LC_ALL=C \
-#		LD_PRELOAD=../ssd/util/faketty.so FAKE_TTY=1,2 \
-#			$(GCC_INSTALL)/bin/gcc $(CFLAGS) $(PLUG_CFLAGS) \
-#				-fplugin=./slplug.so \
-#				-fplugin-arg-libslplug-dump-pp \
-#				-fplugin-arg-libslplug-dump-types \
-#				-Wno-error -c $$i \
-#				2>&1 \
-#			| ../ssd/util/eschtml \
-#			| ../ssd/util/tty2html \
-#			> $$i.pp.html; \
-#	done
-#
-#../ssd:
-#	$(MAKE) -C .. ssd
-#
-#../ssd/util/faketty.so: ../ssd/util/faketty.c
-#	$(MAKE) -C ../ssd/util

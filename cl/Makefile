@@ -18,8 +18,7 @@
 CMAKE           ?= cmake
 CTEST           ?= ctest
 
-.PHONY: all clean distclean \
-	distcheck \
+.PHONY: all clean distclean distcheck install \
 	version.h
 
 all: version.h ../ssd
@@ -47,6 +46,9 @@ distclean: clean
 
 distcheck: distclean
 	$(MAKE) check
+
+install: all
+	$(MAKE) -C ../cl_build install
 
 #../sparse:
 #	$(MAKE) -C .. sparse

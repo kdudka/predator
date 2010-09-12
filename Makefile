@@ -82,6 +82,11 @@ distcheck: include/gcc/
 	$(MAKE) -C sl $@
 	$(MAKE) -C fa_analysis $@
 
+install: include/gcc/
+	$(MAKE) -C cl $@
+	$(MAKE) -C fwnull $@
+	$(MAKE) -C sl $@
+
 api_cl:
 	$(MAKE) -C cl/api clean
 	$(MAKE) -C cl/api
