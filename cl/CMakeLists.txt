@@ -32,7 +32,7 @@ else()
 endif()
 
 # tweak include dirs, etc.
-add_definitions("-I../include -I../include/gcc -fPIC")
+add_definitions("-I../include -I../include/gcc -I../cl/gcc -fPIC")
 
 # libcl.so
 add_library(cl SHARED
@@ -71,13 +71,16 @@ add_test("compile-self" ${GCC_HOST}
     ${CFLAGS}
     -I${cl_SOURCE_DIR}/../include
     -I${cl_SOURCE_DIR}/../include/gcc
+    -I${cl_SOURCE_DIR}/gcc
     -c ${cl_SOURCE_DIR}/gcc/clplug.c
     -o /dev/null
     -fplugin=${cl_BINARY_DIR}/libcl_test.so
     -fplugin-arg-libcl_test-bypass-symexec)
 
 set(cmd "${GCC_HOST}")
-set(cmd "${cmd} -I${cl_SOURCE_DIR}/../include -I${cl_SOURCE_DIR}/../include/gcc")
+set(cmd "${cmd} -I${cl_SOURCE_DIR}/../include")
+set(cmd "${cmd} -I${cl_SOURCE_DIR}/../include/gcc")
+set(cmd "${cmd} -I${cl_SOURCE_DIR}/gcc")
 set(cmd "${cmd} -c ${cl_SOURCE_DIR}/gcc/clplug.c -o /dev/null")
 set(cmd "${cmd} -fplugin=${cl_BINARY_DIR}/libcl_test.so")
 set(cmd "${cmd} | diff -up ${cl_SOURCE_DIR}/cl_test.out -")
@@ -87,6 +90,7 @@ set(self_extra_opts
     ${CFLAGS}
     -I${cl_SOURCE_DIR}/../include
     -I${cl_SOURCE_DIR}/../include/gcc
+    -I${cl_SOURCE_DIR}/gcc
     -c ${cl_SOURCE_DIR}/gcc/clplug.c
     -fplugin=${cl_BINARY_DIR}/libcl_test.so
     -fplugin-arg-libcl_test-dump-pp=/dev/null
