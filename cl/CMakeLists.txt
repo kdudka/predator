@@ -68,7 +68,8 @@ add_library(cl_test SHARED cl_test.cc)
 target_link_libraries(cl_test cl)
 
 # make install
-install_targets(/lib cl)
+set_target_properties(cl PROPERTIES SOVERSION 0.0)
+install(TARGETS cl DESTINATION lib)
 install(DIRECTORY ../include/cl DESTINATION include)
 
 add_test("compile-self" ${GCC_HOST}

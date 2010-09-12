@@ -33,4 +33,4 @@ find_library(CL_LIB cl ../cl_build)
 target_link_libraries(fwnull ${CL_LIB})
 
 # make install
-install_targets(/lib fwnull)
+install(TARGETS fwnull DESTINATION lib)

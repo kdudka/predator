@@ -48,7 +48,7 @@ find_library(CL_LIB cl ../cl_build)
 target_link_libraries(sl ${CL_LIB})
 
 # make install
-install_targets(/lib sl)
+install(TARGETS sl DESTINATION lib)
 
 set(examples
     0001 0002 0003 0004 0005 0006 0007 0008 0009 0010
