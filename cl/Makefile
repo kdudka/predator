@@ -30,11 +30,13 @@ check: all
 	cd ../cl_build && $(CTEST) --output-on-failure
 
 version.h:
-	printf "#define CL_GIT_SHA1 \"%s\"\n" \
-		`git log -1 . | head -1 | cut -f2 -d" "` \
-		| tee $@.tmp \
-		&& install -m0644 -C -v $@.tmp $@ \
-		&& rm -f $@.tmp
+	@if test -d ../.git; then \
+		printf "#define CL_GIT_SHA1 \"%s\"\n" \
+			`git log -1 . | head -1 | cut -f2 -d" "` \
+			| tee $@.tmp \
+			&& install -m0644 -C -v $@.tmp $@ \
+			&& rm -f $@.tmp; \
+		fi
 
 clean:
 	rm -f version.h
