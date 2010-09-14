@@ -385,6 +385,8 @@ symplot tutorial
 
     test-0090.c - regression test focused on return values leaking memory
 
+    test-0091.c - anonymous union within a struct (minimal example)
+
 
 Tiny DLL library written on scratch
 ===================================

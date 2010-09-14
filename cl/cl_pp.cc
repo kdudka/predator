@@ -200,9 +200,8 @@ void ClPrettyPrint::printIntegralCst(const struct cl_operand *op) {
     enum cl_type_e code = type->code;
     switch (code) {
         case CL_TYPE_PTR:
-            if (op->data.cst.data.cst_int.value)
-                // TODO: implement generic pointer printing
-                TRAP;
+            // TODO: implement generic pointer printing
+            SE_BREAK_IF(op->data.cst.data.cst_int.value);
 
             SSD_COLORIZE(out_, C_WHITE) << "NULL";
             break;
