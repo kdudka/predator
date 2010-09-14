@@ -31711,8 +31711,6 @@ static int cdrom_read_cdda_bpc(struct cdrom_device_info *cdi, __u8 *ubuf,
    break;
   }
 
-  /* FIXME: code listener crashes on anonymous unions within a struct */
-#if 0
   rq->cmd[0] = 0xbe;
   rq->cmd[1] = 1 << 2;
   rq->cmd[2] = (lba >> 24) & 0xff;
@@ -31745,7 +31743,6 @@ static int cdrom_read_cdda_bpc(struct cdrom_device_info *cdi, __u8 *ubuf,
   nframes -= nr;
   lba += nr;
   ubuf += len;
-#endif
  }
 
  return ret;

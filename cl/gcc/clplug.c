@@ -567,19 +567,17 @@ static void chain_accessor(struct cl_accessor **ac, enum cl_type_e code)
     *ac = ac_new;
 }
 
-static int accessor_item_lookup(const struct cl_type *type, tree t)
+static int accessor_item_lookup(tree op, tree field)
 {
-    tree name = DECL_NAME(t);
-    if (NULL_TREE == name)
+    tree type = TREE_TYPE(op);
+    if (NULL_TREE == type)
         // decl omitted?
         TRAP;
 
-    const char *ident = IDENTIFIER_POINTER(name);
-    const struct cl_type_item *items = type->items;
-
+    tree t = TYPE_FIELDS(type);
     int i;
-    for (i = 0; i < type->item_cnt; ++i)
-        if (STREQ(ident, items[i].name))
+    for (i = 0; t; t = TREE_CHAIN(t), ++i)
+        if (t == field)
             return i;
 
     // not found
@@ -638,11 +636,12 @@ static void handle_accessor_indirect_ref(struct cl_accessor **ac, tree t)
 
 static void handle_accessor_component_ref(struct cl_accessor **ac, tree t)
 {
-    chain_accessor(ac, CL_ACCESSOR_ITEM);
+    tree op    = TREE_OPERAND(t, 0);
+    tree field = TREE_OPERAND(t, 1);
 
-    struct cl_type *type = operand_type_lookup(t);
-    (*ac)->type         = type;
-    (*ac)->data.item.id = accessor_item_lookup(type, TREE_OPERAND(t, 1));
+    chain_accessor(ac, CL_ACCESSOR_ITEM);
+    (*ac)->type         = operand_type_lookup(t);
+    (*ac)->data.item.id = accessor_item_lookup(op, field);
 }
 
 static bool handle_accessor(struct cl_accessor **ac, tree *pt)
