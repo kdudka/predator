@@ -47,6 +47,11 @@ add_library(sl SHARED
 find_library(CL_LIB cl ../cl_build)
 target_link_libraries(sl ${CL_LIB})
 
+# FIXME: this should go through pkg-config or something like that!
+target_link_libraries(sl
+    boost_iostreams
+    boost_system)
+
 # make install
 install(TARGETS sl DESTINATION lib)
 

@@ -18,6 +18,8 @@
  */
 
 #include "config.h"
+
+#define __CL_IN
 #include "cl_easy.hh"
 
 #include <cl/cl_msg.hh>

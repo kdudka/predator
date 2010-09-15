@@ -35,7 +35,7 @@ endif()
 add_definitions("-I../include -I../include/gcc -I../cl/gcc -fPIC")
 
 # libcl.so
-add_library(cl SHARED
+add_library(cl STATIC
     cl_chain.cc
     cl_dotgen.cc
     cl_easy.cc
@@ -68,7 +68,6 @@ add_library(cl_test SHARED cl_test.cc)
 target_link_libraries(cl_test cl)
 
 # make install
-set_target_properties(cl PROPERTIES SOVERSION 0.0)
 install(TARGETS cl DESTINATION lib)
 install(DIRECTORY ../include/cl DESTINATION include)
 

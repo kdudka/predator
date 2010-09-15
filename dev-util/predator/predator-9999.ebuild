@@ -4,8 +4,8 @@
 
 EAPI=3
 
-SHA1_LONG="5ddf882f1f9037b0d56d8eabb973a6cf7c645654"
-SHA1_SHORT="5ddf882"
+SHA1_LONG="912ba20e0b7e13a108bd63307b7f5e7ac8af3f8a"
+SHA1_SHORT="912ba20"
 GCC_HOST_VERSION="4.5.1"
 
 GCC_HOST="gcc-${GCC_HOST_VERSION}"
@@ -49,19 +49,13 @@ src_compile(){
 	ln -sfT "${GCC_HOST_INC}" include/gcc
 	readlink -e include/gcc || die "headers of ${GCC_HOST} not found"
 
-	# FIXME: we have to ignore LDFLAGS
-	einfo "compiling code listener..."
-	emake LDFLAGS= "CMAKE=cmake -D GCC_HOST=${GCC_HOST}" -C cl
-
-	# FIXME: we have to ignore LDFLAGS
-	einfo "compiling libfwnull.so..."
-	emake LDFLAGS= "CMAKE=cmake -D GCC_HOST=${GCC_HOST}" -C fwnull
+	emake "CMAKE=cmake -D GCC_HOST=${GCC_HOST} -D CMAKE_INSTALL_PREFIX=/usr"
 }
 
 src_test(){
 	einfo "running code listener's test-suite..."
 	cd "kdudka-${PN}-${SHA1_SHORT}"
-	emake check -C cl
+	emake check || die "failure detected by test-suite"
 }
 
 src_install(){

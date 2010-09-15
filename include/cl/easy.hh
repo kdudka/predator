@@ -26,4 +26,21 @@ namespace CodeStorage {
 
 extern void clEasyRun(CodeStorage::Storage &, const char *configString);
 
+/*
+ * FIXME: We use the following nonsense in order to keep the static linkage
+ *        working.  Moreover a function definition within a header is usually
+ *        a really bad idea.  Sooner or later, this should go away!
+ */
+extern "C" {
+    struct plugin_name;
+    struct plugin_gcc_version;
+    extern int plugin_init(struct plugin_name *, struct plugin_gcc_version *);
+
+#ifndef __CL_IN
+    void __cl_easy_stub(void) {
+        plugin_init((struct plugin_name *)0, (struct plugin_gcc_version *)0);
+    }
+#endif
+}
+
 #endif /* H_GUARD_EASY_H */
