@@ -468,6 +468,21 @@ void operandToStreamCst(std::ostream &str, const struct cl_operand &op) {
     }
 }
 
+const char* fieldName(const struct cl_accessor *ac) {
+    SE_BREAK_IF(!ac || ac->code != CL_ACCESSOR_ITEM);
+
+    const struct cl_type *clt = ac->type;
+    SE_BREAK_IF(!clt);
+
+    const int id = ac->data.item.id;
+    SE_BREAK_IF(clt->item_cnt <= id || id < 0);
+
+    const char *name = clt->items[id].name;
+    return (name)
+        ? name
+        : "<anon_item>";
+}
+
 void operandToStreamAcs(std::ostream &str, const struct cl_accessor *ac) {
     if (!ac)
         return;
@@ -477,7 +492,7 @@ void operandToStreamAcs(std::ostream &str, const struct cl_accessor *ac) {
             ac->next && ac->next->code == CL_ACCESSOR_ITEM)
     {
         ac = ac->next;
-        str << "->" << ac->type->items[ac->data.item.id].name;
+        str << "->" << fieldName(ac);
         ac = ac->next;
     }
 
@@ -489,7 +504,7 @@ void operandToStreamAcs(std::ostream &str, const struct cl_accessor *ac) {
                 break;
 
             case CL_ACCESSOR_ITEM:
-                str << "." << ac->type->items[ac->data.item.id].name;
+                str << "." << fieldName(ac);
                 break;
 
             case CL_ACCESSOR_REF:

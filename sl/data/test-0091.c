@@ -21,7 +21,7 @@ int main()
 
     ASSIGN_PTR_TO_SELF(s->p0);
     ASSIGN_PTR_TO_SELF(s->p1);
-    ASSIGN_PTR_TO_SELF(s->up1);
+    ASSIGN_PTR_TO_SELF(s->up0);
     ASSIGN_PTR_TO_SELF(s->up1);
 
     free(s);

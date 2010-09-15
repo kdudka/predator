@@ -156,6 +156,13 @@ void SymProc::heapObjHandleAccessorItem(TObjId *pObj,
         // nothing to do at this level, keep going...
         return;
 
+    const struct cl_type *clt = heap_.objType(*pObj);
+    if (clt && clt->code == CL_TYPE_UNION) {
+        // we don't have any sufficient handling of unions for now
+        *pObj = OBJ_UNKNOWN;
+        return;
+    }
+
     // access subObj
     const int id = ac->data.item.id;
     *pObj = heap_.subObj(*pObj, id);
