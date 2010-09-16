@@ -32,3 +32,8 @@ add_executable(fa_test test.cc)
 find_library(CL_LIB cl ../cl_build)
 target_link_libraries(fa_analysis fa ${CL_LIB})
 target_link_libraries(fa_test fa)
+
+# FIXME: this should go through pkg-config or something like that!
+target_link_libraries(fa_analysis
+    boost_iostreams
+    boost_system)

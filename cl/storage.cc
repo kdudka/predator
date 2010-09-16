@@ -359,9 +359,7 @@ void Block::append(const Insn *insn) {
 
 const Insn* Block::front() const {
     if (insns_.empty())
-        // Oops, we are asked for targets without any insn inside. We
-        // can still return a reference to an empty vector in such
-        // cases, but is it actually useful?
+        // no instructions here, sorry
         TRAP;
 
     return insns_.front();
@@ -369,9 +367,7 @@ const Insn* Block::front() const {
 
 const Insn* Block::back() const {
     if (insns_.empty())
-        // Oops, we are asked for targets without any insn inside. We
-        // can still return a reference to an empty vector in such
-        // cases, but is it actually useful?
+        // no instructions here, sorry
         TRAP;
 
     return insns_.back();
