@@ -1535,7 +1535,14 @@ int plugin_init (struct plugin_name_args *plugin_info,
     CL_LOG("now going to be loaded into gcc %s%s, built at %s",
            version->basever, version->devphase, version->datestamp);
 
-    // TODO: check for compatibility with particular gcc version here
+    // check for compatibility with host gcc's version
+    if (!plugin_default_version_check(version, &gcc_version)) {
+        fprintf(stderr, "%s: error: "
+                "host gcc's version mismatch, call-backs not registered!\n",
+                plugin_name);
+
+        return 0;
+    }
 
     // initialize code listener
     cl_global_init_defaults(NULL, verbose & CL_VERBOSE_PLUG);
