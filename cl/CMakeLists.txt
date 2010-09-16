@@ -79,7 +79,7 @@ add_test("compile-self" ${GCC_HOST}
     -c ${cl_SOURCE_DIR}/gcc/clplug.c
     -o /dev/null
     -fplugin=${cl_BINARY_DIR}/libcl_test.so
-    -fplugin-arg-libcl_test-bypass-symexec)
+    -fplugin-arg-libcl_test-dry-run)
 
 set(cmd "${GCC_HOST}")
 set(cmd "${cmd} -I${cl_SOURCE_DIR}/../include")
@@ -102,7 +102,7 @@ set(self_extra_opts
     -fplugin-arg-libcl_test-gen-dot=/dev/null
     -fplugin-arg-libcl_test-type-dot=/dev/null
     -fplugin-arg-libcl_test-verbose=15
-    -fplugin-arg-libcl_test-bypass-symexec)
+    -fplugin-arg-libcl_test-dry-run)
 
 add_test("compile-self-extra" ${GCC_HOST} ${self_extra_opts})
 add_test("compile-self-valgrind" valgrind

@@ -74,7 +74,7 @@ macro(test_sym_exec label tool arg1 arg2)
             -c ${sl_SOURCE_DIR}/data/test-${num}.c
             -DPREDATOR
             -fplugin=${sl_BINARY_DIR}/libsl.so
-            -fplugin-arg-libsl-symexec-args=noplot
+            -fplugin-arg-libsl-args=noplot
             -fplugin-arg-libsl-verbose=1)
     endforeach()
 endmacro()
@@ -112,7 +112,7 @@ macro(test_sym_exec_regre ext arg1)
     endforeach()
 endmacro(test_sym_exec_regre)
 
-test_sym_exec_regre(".fast" "-fplugin-arg-libsl-symexec-args=fast")
+test_sym_exec_regre(".fast" "-fplugin-arg-libsl-args=fast")
 test_sym_exec_regre("" "")
 
 option(SL_TEST_VALGRIND "Set to ON to enable valgrind tests" OFF)

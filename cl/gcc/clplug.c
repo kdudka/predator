@@ -45,6 +45,10 @@
 
 #include <stdarg.h>
 
+// required by realpath(3)
+#include <limits.h>
+#include <stdlib.h>
+
 #ifndef STREQ
 #   define STREQ(s1, s2) (0 == strcmp(s1, s2))
 #endif
@@ -117,34 +121,81 @@ static int verbose = 0;
 // plug-in meta-data according to gcc plug-in API
 // TODO: split also version of code_listener and version of peer
 static struct plugin_info cl_info = {
-    .version = "XXX [SHA1 " CL_GIT_SHA1 "]",
-    .help =    "XXX [SHA1 " CL_GIT_SHA1 "]\n"
+    .version = "%s [code listener SHA1 " CL_GIT_SHA1 "]",
+    .help    = "%s [code listener SHA1 " CL_GIT_SHA1 "]\n"
 "\n"
-"Usage: gcc -fplugin=XXX.so [OPTIONS] ...\n"
+"Usage: gcc -fplugin=%s.so [OPTIONS] ...\n"
 "\n"
-"// TODO: replace \"symexec\" by something more generic??\n"
 "OPTIONS:\n"
-"    -fplugin-arg-XXX-help\n"
-"    -fplugin-arg-XXX-version\n"
-"    -fplugin-arg-XXX-bypass-symexec                 do not run symexec\n"
-"    -fplugin-arg-XXX-dump-pp[=OUTPUT_FILE]          dump linearized code\n"
-"    -fplugin-arg-XXX-dump-types                     dump also type info\n"
-"    -fplugin-arg-XXX-gen-dot[=GLOBAL_CG_FILE]       generate CFGs\n"
-"    -fplugin-arg-XXX-symexec-args=SYMEXEC_ARGS      args given to symexec\n"
-"    -fplugin-arg-XXX-type-dot=TYPE_GRAPH_FILE       generate type graphs\n"
-"    -fplugin-arg-XXX-verbose[=VERBOSE_BITMASK]      turn on verbose mode\n"
-"\n"
-"//TODO: replace XXX by name of the shared library in run-time\n"
+"    -fplugin-arg-%s-help\n"
+"    -fplugin-arg-%s-version\n"
+"    -fplugin-arg-%s-args=PEER_ARGS                 args given to peer\n"
+"    -fplugin-arg-%s-dry-run                        do not call peer\n"
+"    -fplugin-arg-%s-dump-pp[=OUTPUT_FILE]          dump linearized code\n"
+"    -fplugin-arg-%s-dump-types                     dump also type info\n"
+"    -fplugin-arg-%s-gen-dot[=GLOBAL_CG_FILE]       generate CFGs\n"
+"    -fplugin-arg-%s-type-dot=TYPE_GRAPH_FILE       generate type graphs\n"
+"    -fplugin-arg-%s-verbose[=VERBOSE_BITMASK]      turn on verbose mode\n"
 "\n"
 "VERBOSE_BITMASK:\n"
-"    1          debug gcc plug-in API and code_listener\n"
+"    1          debug code listener and its peer\n"
 "    2          print location info using \"locator\" code listener\n"
 "    4          print each gimple statement before its processing\n"
 "    8          dump gcc tree of unhandled expressions\n"
-"\n"
-"SYMEXEC_ARGS:\n"
-"    fast       disable OOM simulation within symbolic execution of malloc()\n"
 };
+
+static void init_plugin_name(const struct plugin_name_args *info)
+{
+    if (!STREQ("[uninitialized]", plugin_name)) {
+        fprintf(stderr, "%s: error: "
+                "attempt to initialize code listener multiple times!\n",
+                info->full_name);
+        abort();
+    }
+
+    // initialize global plug-in name
+    plugin_name = realpath(info->full_name, NULL);
+    if (!plugin_name) {
+        fprintf(stderr, "%s: error: "
+                "failed to canonicalize plug-in name\n",
+                info->full_name);
+        abort();
+    }
+
+    // read plug-in base name
+    const char *name = info->base_name;
+    char *msg;
+
+    // substitute name in 'version' string
+    if (-1 == asprintf(&msg, cl_info.version, name))
+        // OOM
+        abort();
+    else
+        cl_info.version = msg;
+
+    // substitute name in 'help' string
+    // FIXME: error-prone approach, this should be automated somehow!
+    if (-1 == asprintf(&msg, cl_info.help,
+                       name, name, name, name,
+                       name, name, name, name,
+                       name, name, name))
+        // OOM
+        abort();
+    else
+        cl_info.help = msg;
+}
+
+static void free_plugin_name(void)
+{
+    // free version/help strings
+    free((char *) cl_info.version);
+    free((char *) cl_info.help);
+    memset(&cl_info, 0, sizeof cl_info);
+
+    // free plug-in name
+    free((char *) plugin_name);
+    plugin_name = NULL;
+}
 
 typedef htab_t type_db_t;
 
@@ -1273,7 +1324,7 @@ static unsigned int cl_pass_execute (void)
 // pass description according to <tree-pass.h> API
 static struct opt_pass cl_pass = {
     .type                       = GIMPLE_PASS,
-    .name                       = "slplug",
+    .name                       = "clplug",
     .gate                       = NULL,
     .execute                    = cl_pass_execute,
     .properties_required        = PROP_cfg | PROP_gimple_any,
@@ -1300,6 +1351,7 @@ static void cb_finish (void *gcc_data, void *user_data)
     type_db_destroy(type_db);
     cl->destroy(cl);
     cl_global_cleanup();
+    free_plugin_name();
 }
 
 // callback called on start of input file processing
@@ -1349,24 +1401,21 @@ struct cl_plug_options {
     bool                    dump_types;
     bool                    use_dotgen;
     bool                    use_pp;
-    bool                    use_symexec;
+    bool                    use_peer;
     bool                    use_typedot;
     const char              *gl_dot_file;
     const char              *pp_out_file;
-    const char              *symexec_args;
+    const char              *peer_args;
     const char              *type_dot_file;
 };
 
-static int slplug_init(const struct plugin_name_args *info,
+static int clplug_init(const struct plugin_name_args *info,
                        struct cl_plug_options *opt)
 {
     // initialize opt data
     memset (opt, 0, sizeof(*opt));
-    opt->use_symexec         = true;
-    opt->symexec_args        = "";
-
-    // initialize global plug-in name
-    plugin_name = info->full_name;
+    opt->use_peer         = true;
+    opt->peer_args        = "";
 
     // obtain arg list
     const int argc                      = info->argc;
@@ -1394,8 +1443,13 @@ static int slplug_init(const struct plugin_name_args *info,
             printf ("\n%s\n", cl_info.help);
             return EXIT_FAILURE;
 
-        } else if (STREQ(key, "bypass-symexec")) {
-            opt->use_symexec    = false;
+        } else if (STREQ(key, "args")) {
+            opt->peer_args = (value)
+                ? value
+                : "";
+
+        } else if (STREQ(key, "dry-run")) {
+            opt->use_peer       = false;
             // TODO: warn about ignoring extra value?
 
         } else if (STREQ(key, "dump-pp")) {
@@ -1410,11 +1464,6 @@ static int slplug_init(const struct plugin_name_args *info,
             opt->use_dotgen     = true;
             opt->gl_dot_file    = value;
 
-        } else if (STREQ(key, "symexec-args")) {
-            opt->symexec_args = (value)
-                ? value
-                : "";
-
         } else if (STREQ(key, "type-dot")) {
             if (value) {
                 opt->use_typedot    = true;
@@ -1427,7 +1476,8 @@ static int slplug_init(const struct plugin_name_args *info,
             }
 
         } else {
-            CL_WARN_UNHANDLED(key);
+            fprintf(stderr, "%s: error: unhandled plug-in argument: %s\n",
+                    plugin_name, key);
             return EXIT_FAILURE;
         }
     }
@@ -1463,7 +1513,7 @@ static bool cl_append_def_listener(struct cl_code_listener *chain,
                                    const char *listener, const char *args,
                                    const struct cl_plug_options *opt)
 {
-    const char *cld = (opt->use_symexec)
+    const char *cld = (opt->use_peer)
         ? "unfold_switch,unify_labels_gl"
         : "unify_labels_fnc,unify_regs,unify_vars";
 
@@ -1510,8 +1560,8 @@ create_cl_chain(const struct cl_plug_options *opt)
             && !cl_append_def_listener(chain, "typedot", opt->type_dot_file, opt))
         return NULL;
 
-    if (opt->use_symexec
-            && !cl_append_def_listener(chain, "easy", opt->symexec_args, opt))
+    if (opt->use_peer
+            && !cl_append_def_listener(chain, "easy", opt->peer_args, opt))
         return NULL;
 
     return chain;
@@ -1524,7 +1574,8 @@ int plugin_init (struct plugin_name_args *plugin_info,
     struct cl_plug_options opt;
 
     // global initialization
-    int rv = slplug_init(plugin_info, &opt);
+    init_plugin_name(plugin_info);
+    int rv = clplug_init(plugin_info, &opt);
     if (rv)
         return rv;
 
