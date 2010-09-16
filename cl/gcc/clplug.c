@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2009-2010 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -59,12 +59,12 @@
 extern void print_gimple_stmt (FILE *, gimple, int, int);
 
 // this should be using gcc's fancy_abort(), but it was actually not tested
-#define SL_ASSERT(expr) \
+#define CL_ASSERT(expr) \
     if (!(expr)) abort()
 
 // TODO: replace with gcc native debugging infrastructure
-#define SL_LOG(...) do { \
-    if (SL_VERBOSE_PLUG & verbose) { \
+#define CL_LOG(...) do { \
+    if (CL_VERBOSE_PLUG & verbose) { \
         fprintf (stderr, "%s: ", plugin_name); \
         fprintf (stderr, __VA_ARGS__); \
         fprintf (stderr, "\n"); \
@@ -72,17 +72,17 @@ extern void print_gimple_stmt (FILE *, gimple, int, int);
 } while (0)
 
 #if CLPLUG_SILENT
-#   define SL_WARN_UNHANDLED(...)
-#   define SL_WARN_UNHANDLED_WITH_LOC(...)
+#   define CL_WARN_UNHANDLED(...)
+#   define CL_WARN_UNHANDLED_WITH_LOC(...)
 #else
 // TODO: replace with gcc native debugging infrastructure
-#   define SL_WARN_UNHANDLED(what)                                          \
+#   define CL_WARN_UNHANDLED(what)                                          \
         fprintf(stderr, "%s:%d: warning: "                                  \
                 "'%s' not handled in '%s' [internal location]\n",           \
                 __FILE__, __LINE__, (what), __FUNCTION__)
 
 // TODO: replace with gcc native debugging infrastructure
-#   define SL_WARN_UNHANDLED_WITH_LOC(loc, what) \
+#   define CL_WARN_UNHANDLED_WITH_LOC(loc, what) \
         fprintf(stderr, "%s:%d:%d: warning: '%s' not handled\n"             \
                 "%s:%d: note: raised from '%s' [internal location]\n",      \
                 expand_location(loc).file,                                  \
@@ -94,13 +94,13 @@ extern void print_gimple_stmt (FILE *, gimple, int, int);
 #endif // CLPLUG_SILENT
 
 // TODO: replace with gcc native debugging infrastructure
-#define SL_WARN_UNHANDLED_GIMPLE(stmt, what) \
-    SL_WARN_UNHANDLED_WITH_LOC((stmt)->gsbase.location, what)
+#define CL_WARN_UNHANDLED_GIMPLE(stmt, what) \
+    CL_WARN_UNHANDLED_WITH_LOC((stmt)->gsbase.location, what)
 
 // TODO: replace with gcc native debugging infrastructure
-#define SL_WARN_UNHANDLED_EXPR(expr, what) do { \
-    SL_WARN_UNHANDLED_WITH_LOC(EXPR_LOCATION(expr), what); \
-    if (SL_VERBOSE_UNHANDLED_EXPR & verbose) \
+#define CL_WARN_UNHANDLED_EXPR(expr, what) do { \
+    CL_WARN_UNHANDLED_WITH_LOC(EXPR_LOCATION(expr), what); \
+    if (CL_VERBOSE_UNHANDLED_EXPR & verbose) \
         debug_tree(expr); \
 } while (0)
 
@@ -109,14 +109,14 @@ static const char *plugin_name = "[uninitialized]";
 
 // verbose bitmask
 static int verbose = 0;
-#define SL_VERBOSE_PLUG             (1 << 0)
-#define SL_VERBOSE_LOCATION         (1 << 1)
-#define SL_VERBOSE_GIMPLE           (1 << 2)
-#define SL_VERBOSE_UNHANDLED_EXPR   (1 << 3)
+#define CL_VERBOSE_PLUG             (1 << 0)
+#define CL_VERBOSE_LOCATION         (1 << 1)
+#define CL_VERBOSE_GIMPLE           (1 << 2)
+#define CL_VERBOSE_UNHANDLED_EXPR   (1 << 3)
 
 // plug-in meta-data according to gcc plug-in API
 // TODO: split also version of code_listener and version of peer
-static struct plugin_info sl_info = {
+static struct plugin_info cl_info = {
     .version = "XXX [SHA1 " CL_GIT_SHA1 "]",
     .help =    "XXX [SHA1 " CL_GIT_SHA1 "]\n"
 "\n"
@@ -175,7 +175,7 @@ static type_db_t type_db_create(void)
     type_db_t db = htab_create_alloc(/* FIXME: hardcoded for now */ 0x100,
                                      type_db_hash, type_db_eq, type_db_free,
                                      xcalloc, free);
-    SL_ASSERT(db);
+    CL_ASSERT(db);
     return db;
 }
 
@@ -195,7 +195,7 @@ static struct cl_type* type_db_lookup(type_db_t db, cl_type_uid_t uid)
 static void type_db_insert(type_db_t db, struct cl_type *type)
 {
     void **slot = htab_find_slot(db, type, INSERT);
-    SL_ASSERT(slot);
+    CL_ASSERT(slot);
     *slot = type;
 }
 
@@ -216,7 +216,7 @@ static void read_gimple_location(struct cl_location *loc, const_gimple g)
 static char* index_to_label (unsigned idx) {
     char *label;
     int rv = asprintf(&label, "%u:%u", DECL_UID(current_function_decl), idx);
-    SL_ASSERT(0 < rv);
+    CL_ASSERT(0 < rv);
     return label;
 }
 
@@ -532,11 +532,11 @@ static void read_raw_operand(struct cl_operand *op, tree t)
             break;
 
         case REAL_CST:
-            SL_WARN_UNHANDLED_EXPR(t, "REAL_CST");
+            CL_WARN_UNHANDLED_EXPR(t, "REAL_CST");
             break;
 
         case CONSTRUCTOR:
-            SL_WARN_UNHANDLED_EXPR(t, "CONSTRUCTOR");
+            CL_WARN_UNHANDLED_EXPR(t, "CONSTRUCTOR");
             break;
 
         default:
@@ -549,7 +549,7 @@ static void chain_accessor(struct cl_accessor **ac, enum cl_type_e code)
 {
     // create and initialize new item
     struct cl_accessor *ac_new = GGC_CNEW(struct cl_accessor);
-    SL_ASSERT(ac_new);
+    CL_ASSERT(ac_new);
     ac_new->code = code;
 
     // append new item to chain
@@ -611,7 +611,7 @@ static void handle_accessor_array_ref(struct cl_accessor **ac, tree t)
         TRAP;
 
     struct cl_operand *index = GGC_CNEW(struct cl_operand);
-    SL_ASSERT(index);
+    CL_ASSERT(index);
 
     // FIXME: unguarded recursion
     handle_operand(index, op1);
@@ -663,7 +663,7 @@ static bool handle_accessor(struct cl_accessor **ac, tree *pt)
             break;
 
         case BIT_FIELD_REF:
-            SL_WARN_UNHANDLED_EXPR(t, "BIT_FIELD_REF");
+            CL_WARN_UNHANDLED_EXPR(t, "BIT_FIELD_REF");
             break;
 
         default:
@@ -731,13 +731,13 @@ static void handle_stmt_unop(gimple stmt, enum tree_code code,
             case BIT_NOT_EXPR:          *ptype = CL_UNOP_BIT_NOT;       break;
             case NEGATE_EXPR:           *ptype = CL_UNOP_MINUS;         break;
 
-#define SL_OP_UNHANDLED(what) \
-    case what: SL_WARN_UNHANDLED_GIMPLE(stmt, #what); \
+#define CL_OP_UNHANDLED(what) \
+    case what: CL_WARN_UNHANDLED_GIMPLE(stmt, #what); \
                cli.code = CL_INSN_NOP; \
                break;
 
-            SL_OP_UNHANDLED(ABS_EXPR)
-            SL_OP_UNHANDLED(FLOAT_EXPR)
+            CL_OP_UNHANDLED(ABS_EXPR)
+            CL_OP_UNHANDLED(FLOAT_EXPR)
 
             default:
                 TRAP;
@@ -791,11 +791,11 @@ static void handle_stmt_binop(gimple stmt, enum tree_code code,
         case BIT_XOR_EXPR:          *ptype = CL_BINOP_BIT_XOR;          break;
         case POINTER_PLUS_EXPR:     *ptype = CL_BINOP_POINTER_PLUS;     break;
 
-        SL_OP_UNHANDLED(EXACT_DIV_EXPR)
-        SL_OP_UNHANDLED(LSHIFT_EXPR)
-        SL_OP_UNHANDLED(RSHIFT_EXPR)
-        SL_OP_UNHANDLED(LROTATE_EXPR)
-        SL_OP_UNHANDLED(RROTATE_EXPR)
+        CL_OP_UNHANDLED(EXACT_DIV_EXPR)
+        CL_OP_UNHANDLED(LSHIFT_EXPR)
+        CL_OP_UNHANDLED(RSHIFT_EXPR)
+        CL_OP_UNHANDLED(LROTATE_EXPR)
+        CL_OP_UNHANDLED(RROTATE_EXPR)
 
         default:
             TRAP;
@@ -1082,7 +1082,7 @@ static tree cb_walk_gimple_stmt (gimple_stmt_iterator *iter,
                                  struct walk_stmt_info *info)
 {
     gimple stmt = gsi_stmt (*iter);
-    bool show_gimple = SL_VERBOSE_GIMPLE & verbose;
+    bool show_gimple = CL_VERBOSE_GIMPLE & verbose;
 
     (void) subtree_done;
     (void) info;
@@ -1121,11 +1121,11 @@ static tree cb_walk_gimple_stmt (gimple_stmt_iterator *iter,
             break;
 
         case GIMPLE_ASM:
-            SL_WARN_UNHANDLED_GIMPLE(stmt, "GIMPLE_ASM");
+            CL_WARN_UNHANDLED_GIMPLE(stmt, "GIMPLE_ASM");
             break;
 
         case GIMPLE_PREDICT:
-            SL_WARN_UNHANDLED_GIMPLE(stmt, "GIMPLE_PREDICT");
+            CL_WARN_UNHANDLED_GIMPLE(stmt, "GIMPLE_PREDICT");
             break;
 
         default:
@@ -1172,7 +1172,7 @@ static void handle_fnc_bb (struct basic_block_def *bb)
     // go through the bb's content
     struct gimple_bb_info *gimple = bb->il.gimple;
     if (NULL == gimple) {
-        SL_WARN_UNHANDLED ("gimple not found");
+        CL_WARN_UNHANDLED ("gimple not found");
         TRAP;
         return;
     }
@@ -1242,7 +1242,7 @@ static void handle_fnc_decl (tree decl)
     // obtain CFG for current function
     struct function *def = DECL_STRUCT_FUNCTION (decl);
     if (!def || !def->cfg) {
-        SL_WARN_UNHANDLED ("CFG not found");
+        CL_WARN_UNHANDLED ("CFG not found");
         return;
     }
 
@@ -1254,15 +1254,15 @@ static void handle_fnc_decl (tree decl)
 }
 
 // callback of tree pass declared in <tree-pass.h>
-static unsigned int sl_pass_execute (void)
+static unsigned int cl_pass_execute (void)
 {
     if (!current_function_decl) {
-        SL_WARN_UNHANDLED ("NULL == current_function_decl");
+        CL_WARN_UNHANDLED ("NULL == current_function_decl");
         return 0;
     }
 
     if (FUNCTION_DECL != TREE_CODE (current_function_decl)) {
-        SL_WARN_UNHANDLED ("TREE_CODE (current_function_decl)");
+        CL_WARN_UNHANDLED ("TREE_CODE (current_function_decl)");
         return 0;
     }
 
@@ -1271,18 +1271,18 @@ static unsigned int sl_pass_execute (void)
 }
 
 // pass description according to <tree-pass.h> API
-static struct opt_pass sl_pass = {
+static struct opt_pass cl_pass = {
     .type                       = GIMPLE_PASS,
     .name                       = "slplug",
     .gate                       = NULL,
-    .execute                    = sl_pass_execute,
+    .execute                    = cl_pass_execute,
     .properties_required        = PROP_cfg | PROP_gimple_any,
     // ...
 };
 
 // definition of a new pass provided by the plug-in
-static struct register_pass_info sl_plugin_pass = {
-    .pass                       = &sl_pass,
+static struct register_pass_info cl_plugin_pass = {
+    .pass                       = &cl_pass,
 
     // cfg ... control_flow_graph
     .reference_pass_name        = "cfg",
@@ -1320,13 +1320,13 @@ static void cb_finish_unit (void *gcc_data, void *user_data)
 }
 
 // register callbacks for plug-in NAME
-static void sl_regcb (const char *name) {
+static void cl_regcb (const char *name) {
     // passing NULL as CALLBACK to register_callback stands for virtual callback
 
     // register new pass provided by the plug-in
     register_callback (name, PLUGIN_PASS_MANAGER_SETUP,
                        /* callback */   NULL,
-                       &sl_plugin_pass);
+                       &cl_plugin_pass);
 
     register_callback (name, PLUGIN_FINISH_UNIT,
                        cb_finish_unit,
@@ -1338,14 +1338,14 @@ static void sl_regcb (const char *name) {
 
     register_callback (name, PLUGIN_INFO,
                        /* callback */   NULL,
-                       &sl_info);
+                       &cl_info);
 
     register_callback (name, PLUGIN_START_UNIT,
                        cb_start_unit,
                        /* user_data */  NULL);
 }
 
-struct sl_plug_options {
+struct cl_plug_options {
     bool                    dump_types;
     bool                    use_dotgen;
     bool                    use_pp;
@@ -1358,7 +1358,7 @@ struct sl_plug_options {
 };
 
 static int slplug_init(const struct plugin_name_args *info,
-                       struct sl_plug_options *opt)
+                       struct cl_plug_options *opt)
 {
     // initialize opt data
     memset (opt, 0, sizeof(*opt));
@@ -1386,12 +1386,12 @@ static int slplug_init(const struct plugin_name_args *info,
 
         } else if (STREQ(key, "version")) {
             // do not use info->version yet
-            printf("\n%s\n", sl_info.version);
+            printf("\n%s\n", cl_info.version);
             return EXIT_FAILURE;
 
         } else if (STREQ(key, "help")) {
             // do not use info->help yet
-            printf ("\n%s\n", sl_info.help);
+            printf ("\n%s\n", cl_info.help);
             return EXIT_FAILURE;
 
         } else if (STREQ(key, "bypass-symexec")) {
@@ -1427,7 +1427,7 @@ static int slplug_init(const struct plugin_name_args *info,
             }
 
         } else {
-            SL_WARN_UNHANDLED(key);
+            CL_WARN_UNHANDLED(key);
             return EXIT_FAILURE;
         }
     }
@@ -1435,7 +1435,7 @@ static int slplug_init(const struct plugin_name_args *info,
     return EXIT_SUCCESS;
 }
 
-static bool sl_append_listener(struct cl_code_listener *chain,
+static bool cl_append_listener(struct cl_code_listener *chain,
                                const char *fmt, ...)
 {
     va_list ap;
@@ -1443,7 +1443,7 @@ static bool sl_append_listener(struct cl_code_listener *chain,
 
     char *config_string;
     int rv = vasprintf(&config_string, fmt, ap);
-    SL_ASSERT(0 < rv);
+    CL_ASSERT(0 < rv);
     va_end(ap);
 
     struct cl_code_listener *cl = cl_code_listener_create(config_string);
@@ -1459,29 +1459,29 @@ static bool sl_append_listener(struct cl_code_listener *chain,
     return true;
 }
 
-static bool sl_append_def_listener(struct cl_code_listener *chain,
+static bool cl_append_def_listener(struct cl_code_listener *chain,
                                    const char *listener, const char *args,
-                                   const struct sl_plug_options *opt)
+                                   const struct cl_plug_options *opt)
 {
     const char *cld = (opt->use_symexec)
         ? "unfold_switch,unify_labels_gl"
         : "unify_labels_fnc,unify_regs,unify_vars";
 
-    return sl_append_listener(chain,
+    return cl_append_listener(chain,
             "listener=\"%s\" listener_args=\"%s\" cld=\"%s\"",
             listener, args, cld);
 }
 
 static struct cl_code_listener*
-create_cl_chain(const struct sl_plug_options *opt)
+create_cl_chain(const struct cl_plug_options *opt)
 {
     struct cl_code_listener *chain = cl_chain_create();
     if (!chain)
         // error message already emitted
         return NULL;
 
-    if (SL_VERBOSE_LOCATION & verbose) {
-        if (!sl_append_listener(chain, "listener=\"locator\""))
+    if (CL_VERBOSE_LOCATION & verbose) {
+        if (!cl_append_listener(chain, "listener=\"locator\""))
             return NULL;
     }
 
@@ -1494,7 +1494,7 @@ create_cl_chain(const struct sl_plug_options *opt)
             ? opt->pp_out_file
             : "";
 
-        if (!sl_append_def_listener(chain, use_listener, out, opt))
+        if (!cl_append_def_listener(chain, use_listener, out, opt))
             return NULL;
     }
 
@@ -1502,16 +1502,16 @@ create_cl_chain(const struct sl_plug_options *opt)
         const char *gl_dot = (opt->gl_dot_file)
             ? opt->gl_dot_file
             : "";
-        if (!sl_append_def_listener(chain, "dotgen", gl_dot, opt))
+        if (!cl_append_def_listener(chain, "dotgen", gl_dot, opt))
             return NULL;
     }
 
     if (opt->use_typedot
-            && !sl_append_def_listener(chain, "typedot", opt->type_dot_file, opt))
+            && !cl_append_def_listener(chain, "typedot", opt->type_dot_file, opt))
         return NULL;
 
     if (opt->use_symexec
-            && !sl_append_def_listener(chain, "easy", opt->symexec_args, opt))
+            && !cl_append_def_listener(chain, "easy", opt->symexec_args, opt))
         return NULL;
 
     return chain;
@@ -1521,7 +1521,7 @@ create_cl_chain(const struct sl_plug_options *opt)
 int plugin_init (struct plugin_name_args *plugin_info,
                  struct plugin_gcc_version *version)
 {
-    struct sl_plug_options opt;
+    struct cl_plug_options opt;
 
     // global initialization
     int rv = slplug_init(plugin_info, &opt);
@@ -1529,26 +1529,26 @@ int plugin_init (struct plugin_name_args *plugin_info,
         return rv;
 
     // print something like "hello world!"
-    SL_LOG("initializing code listener [SHA1 %s]", CL_GIT_SHA1);
-    SL_LOG("plug-in is compiled against gcc %s%s, built at %s",
+    CL_LOG("initializing code listener [SHA1 %s]", CL_GIT_SHA1);
+    CL_LOG("plug-in is compiled against gcc %s%s, built at %s",
            gcc_version.basever, gcc_version.devphase, gcc_version.datestamp);
-    SL_LOG("now going to be loaded into gcc %s%s, built at %s",
+    CL_LOG("now going to be loaded into gcc %s%s, built at %s",
            version->basever, version->devphase, version->datestamp);
 
     // TODO: check for compatibility with particular gcc version here
 
     // initialize code listener
-    cl_global_init_defaults(NULL, verbose & SL_VERBOSE_PLUG);
+    cl_global_init_defaults(NULL, verbose & CL_VERBOSE_PLUG);
     cl = create_cl_chain(&opt);
-    SL_ASSERT(cl);
+    CL_ASSERT(cl);
 
     // initialize type database
     type_db = type_db_create();
-    SL_ASSERT(type_db);
+    CL_ASSERT(type_db);
 
     // try to register callbacks (and virtual callbacks)
-    sl_regcb (plugin_info->base_name);
-    SL_LOG("plug-in successfully initialized", plugin_info->version);
+    cl_regcb (plugin_info->base_name);
+    CL_LOG("plug-in successfully initialized");
 
     return 0;
 }
