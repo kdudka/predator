@@ -56,8 +56,3 @@
  * if 1, print progress of code_listener factory when running in verbose mode
  */
 #define DEBUG_CL_FACTORY                0
-
-/**
- * if 1, print gcc callbacks as they come when running in verbose mode
- */
-#define DEBUG_SLPLUG                    0
