@@ -393,7 +393,7 @@ class Block {
          */
         const Insn* front() const;
 
-        /*
+        /**
          * return the last instruction in the basic block
          * @note This should be a @b terminal instruction once the CodeStorage
          * model has been built.

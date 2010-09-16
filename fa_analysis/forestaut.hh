@@ -25,6 +25,7 @@
 #include <cassert>
 #include <ostream>
 
+#include "types.hh"
 #include "varinfo.hh"
 #include "treeaut.hh"
 #include "labman.hh"
@@ -40,11 +41,11 @@ public:
 		size_t type;
 		
 		union {
-			const std::vector<var_info>* data;
+			const std::vector<Data>* data;
 			const std::vector<const class Box*>* dataB;
 		};
 
-		label_type(const std::vector<var_info>* data) : type(0), data(data) {}
+		label_type(const std::vector<Data>* data) : type(0), data(data) {}
 		label_type(const std::vector<const class Box*>* dataB) : type(1), dataB(dataB) {}
 
 		friend size_t hash_value(const label_type& l) {
@@ -67,17 +68,17 @@ public:
 
 protected:
 
-	std::vector<var_info> variables;
+	std::vector<Data> variables;
 
 	std::vector<TA<label_type>*> roots;
 	
 	mutable TA<label_type>::Manager* taMan;
 
 public:
-
+/*
 	static const size_t varNull = (size_t)(-1);
 	static const size_t varUndef = (size_t)(-2);
-
+*/
 	FA(TA<label_type>::Manager& taMan) : taMan(&taMan) {}
 	
 	FA(const FA& src) : variables(src.variables), roots(src.roots), taMan(src.taMan) {

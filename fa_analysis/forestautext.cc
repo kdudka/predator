@@ -22,7 +22,7 @@
 std::ostream& operator<<(std::ostream& os, const FAE& fae) {
 	TA<FA::label_type>* ta = fae.taMan->alloc();
 	os << "variables:";
-	for (std::vector<var_info>::const_iterator i = fae.variables.begin(); i != fae.variables.end(); ++i)
+	for (std::vector<Data>::const_iterator i = fae.variables.begin(); i != fae.variables.end(); ++i)
 		os << ' ' << *i;
 	os << std::endl << "roots:" << std::endl;
 	for (size_t i = 0; i < fae.roots.size(); ++i) {

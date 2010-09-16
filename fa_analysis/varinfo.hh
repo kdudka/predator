@@ -28,20 +28,19 @@ using boost::hash_value;
 
 struct var_info {
 		
-	size_t index;
-	size_t offset;
+	size_t data;
+	int aux;
 
-	var_info(size_t index, size_t offset) : index(index), offset(offset) {}
-//	var_info(const var_info& x) : index(x.index), offset(x.offset) {}
+	var_info(size_t data, int aux) : data(data), aux(aux) {}
 
 	friend size_t hash_value(const var_info& v) {
-		return hash_value(v.index + v.offset);
+		return hash_value(v.data + v.aux);
 	}
 
 	bool operator==(const var_info& rhs) const {
-		return (this->index == rhs.index) && (this->offset == rhs.offset);
+		return (this->data == rhs.data) && (this->aux == rhs.aux);
 	}
-	
+/*	
 	friend std::ostream& operator<<(std::ostream& os, const var_info& x) {
 		os << "v:";
 		switch (x.index) {
@@ -50,7 +49,7 @@ struct var_info {
 			default: return os << x.index << '+' << x.offset;
 		}
 	}
-
+*/
 };
 
 #endif

@@ -24,18 +24,18 @@
 #include <utility>
 
 #include "cache.hh"
-#include "varinfo.hh"
+#include "types.hh"
 
 class LabMan {
 	
-	Cache<std::pair<size_t, std::vector<var_info> > > varStore;
+	Cache<std::pair<size_t, std::vector<Data> > > varStore;
 	Cache<std::vector<const class Box*> > boxStore;
 
 public:
 
 	LabMan() {}
 	
-	const std::vector<var_info>& lookup(const std::vector<var_info>& x, size_t arity) {
+	const std::vector<Data>& lookup(const std::vector<Data>& x, size_t arity) {
 		return this->varStore.lookup(std::make_pair(arity, x))->first.second;
 	}
 

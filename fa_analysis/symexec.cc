@@ -30,10 +30,25 @@
 #include "symexec.hh"
 
 using boost::unordered_map;
-
+/*
 class InternalCfg {
 
 public:
+
+	struct Ctx {
+
+		struct VarKey {
+			size_t callId;
+			size_t varId;
+		};
+
+		unordered_map<VarKey, size_t> vars;
+
+	public:
+
+		Ctx() {}
+
+	}
 
 	struct Op {
 	};
@@ -42,12 +57,15 @@ public:
 
 		// configuration obtained in forward run
 		TA<FA::label_type> fwdConf;
-		UFAE fwdConfWrapper;
 
-		// outstanding forest automata
+		// outstanding configurations
 		std::vector<FAE*> outConf;
 
-		std::vector<Trans*> transitions;
+		UFAE fwdConfWrapper;
+
+		Ctx* ctx;
+
+		CodeStorage::Block* block;
 
 		State(TA<FA::label_type>::Backend& taBackend, LabMan& labMan)
 			: fwdConf(taBackend), fwdConfWrapper(this->fwdConf, labMan) {}
@@ -56,7 +74,7 @@ public:
 			for (std::vector<FAE*>::iterator i = this->outConf.begin(); this->outConf.end(); ++i)
 				delete *i;
 		}
-	
+
 	};
 
 	struct Trans {
@@ -125,7 +143,6 @@ public:
 
 };
 
-
 // calling context
 struct SymLocation {
 
@@ -135,6 +152,44 @@ struct SymLocation {
 	SymLocation(size_t ctxId, CodeStorage::Isns* isns) : ctxId(ctxId), isns(isns) {}
 
 };
+*/
+struct SymCtx {
+
+	unordered_map<int, size_t> vars;
+
+	SymCtx() {}
+
+	void loadVars(const CodeStorage::TVarList& vars, FAE& fae) {
+	}
+
+};
+
+struct SymState {
+
+	// configuration obtained in forward run
+	TA<FA::label_type> fwdConf;
+
+	// outstanding configurations
+	std::vector<FAE*> outConf;
+
+	UFAE fwdConfWrapper;
+
+	SymCtx* ctx;
+
+	CodeStorage::Block* block;
+
+//	call isns -> nested call ctx ! ... >:)
+	unordered_map<CodeStorage::Isns*, SymCtx*> callCtxCache;
+
+	SymState(TA<FA::label_type>::Backend& taBackend, LabMan& labMan)
+		: fwdConf(taBackend), fwdConfWrapper(this->fwdConf, labMan) {}
+
+	~SymState() {
+		for (std::vector<FAE*>::iterator i = this->outConf.begin(); this->outConf.end(); ++i)
+			delete *i;
+	}
+
+};
 
 class SymExec::Engine {
 
@@ -142,53 +197,90 @@ class SymExec::Engine {
 
 	TA<FA::label_type>::Backend taBackend;
 
+	TA<FA::label_type> taMan;
 	LabMan labMan;
+	BoxManager boxMan;
+
+	std::list<SymCtx*> ctxStore;
+
+	// call ctx * call isns -> nested call ctx ! ... >:)
+	unordered_map<SymCtx*, CodeStorage::Isns*> ctxCache;
 
 	SymState* tmp;
 
-	typedef unordered_map<SymLocation, SymState*> state_store_type;
+	typedef unordered_map<std::pair<SymCtx*, CodeStorage::Block*>, SymState*> state_store_type;
 
 	state_store_type stateStore;
 
+	std::vector<SymState*> todo;
+
+	std::vector<SymOp*> trace;
+
 protected:
 
-	SymState* getState(const SymLocation& location) {
+	SymState* getState(const SymCtx* ctx, const CodeStorage::Block* block) {
 
 		std::pair<state_store_type::iterator, bool> p =
-			this->stateStore.insert(std::make_pair(location, this->tmp));
+			this->stateStore.insert(std::make_pair(std::make_pair(ctx, block), this->tmp));
 
-		if (p.second)
+		if (p.second) {
+			this->tmp->ctx = ctx;
+			this->tmp->block = block;
+			// construct new SymState
 			this->tmp = new SymState(this->taBackend, this->labMan);
+		}
 		
-		return p.first;
+		return p.first->second;
 
 	}
 
-	void buildInternalCfg(const CodeStorage::Fnc& main) {
-		
+	SymCtx* newCtx() {
+		this->ctxStore.push_back(new SymCtx());
+		return this->ctxStore.back();
+	}
+
+	void porcessState(SymState* state) {
 	}
 
 public:
 
-	Engine(const CodeStorage::Storage& stor) : stor(stor), tmp(new SymState(this->taBackend, this->labMan)) {}
+	Engine(const CodeStorage::Storage& stor)
+		: stor(stor), tmp(new SymState(this->taBackend, this->labMan)), boxMan(this->taMan, this->labMan) {}
 
 	~Engine() {
 		for (state_store_type::iterator i = this->stateStore.begin(); i != this->stateStore.end(); ++i)
 			delete i->second;
+		delete this->tmp;
 	}
 
 	void run(const CodeStorage::Fnc& main) {
 
-		std::vector<const CodeStorage::Block*> todo;
+		// create main context
+		SymCtx* mainCtx = this->newCtx();
+		
+		// create empty heap
+		FAE fae(this->taMan, this->labMan, this->boxMan);
 
-		todo.push_back(main.entry());
+		// load variables into the main context
+		mainCtx->loadVars(main.vars(), fae);
+
+		// create an initial state
+		SymState* init = this->getState(mainCtx, main.entry());
+
+		// push empty heap into initial state
+		init->outConf.push_back(new FAE(fae));
+
+		// schedule initial state for processing
+		this->todo.push_back(init);
 
 		while (!todo.empty()) {
+
+			SymState* state = this->todo.back();
+			this->todo.pop_back();
+			this->processState(state);
+			
 		}
 		
-	}
-
-	void mainLoop() {
 	}
 
 };

@@ -21,8 +21,10 @@
 
 const size_t Box::boxID;
 const size_t Box::selID;
-const size_t Box::refID;
+const size_t Box::dataID;
 
 const char* BoxManager::selPrefix = "sel";
 const char* BoxManager::refPrefix = "ref";
+const char* BoxManager::dataPrefix = "data";
 const char* BoxManager::nullStr = "null";
+const char* BoxManager::undefStr = "undef";

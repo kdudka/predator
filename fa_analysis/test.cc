@@ -23,7 +23,7 @@
 #include <string>
 
 #include "ufae.hh"
-
+/*
 class Instr {
 
 public:
@@ -155,11 +155,11 @@ void sym_exec(std::vector<FAE*>& dst, std::map<std::string, size_t>& vars, const
 	for (std::vector<FAE*>::const_iterator i = src.begin(); i != src.end(); ++i)
 		instr.execute(dst, vars, *i);	
 }
-
+*/
 int main(int argc, char* argv[]) {
 	
 	DEBUG_MSG("creating initial configuration ...");
-	
+/*	
 	TA<FA::label_type>::Backend backend;
 	TA<FA::label_type>::Manager taMan(backend);
 	LabMan labMan;
@@ -196,7 +196,7 @@ int main(int argc, char* argv[]) {
 	code.push_back(Instr(Instr::x_ass_y_next, "x", 0, "x"));	// x = x.next
 	code.push_back(Instr(Instr::x_next_ass_y, "y", 0, "z"));	// y.next = z
 	code.push_back(Instr(Instr::x_ass_y, "z", 0, "y"));			// z = x
-
+*/
 /*	code.push_back(Instr(Instr::x_ass_y_next, "x", 0, "y"));	// x.next(0) = y
 	code.push_back(Instr(Instr::del_x, "y"));
 	code.push_back(Instr(Instr::x_ass_y, "y", 0, "x"));
@@ -208,7 +208,7 @@ int main(int argc, char* argv[]) {
 	code.push_back(Instr(Instr::x_ass_y, "y", 0, "x"));
 	code.push_back(Instr(Instr::rm_var, "y"));
 	code.push_back(Instr(Instr::rm_var, "x"));*/
-
+/*
 	std::map<std::string, size_t> vars;
 
 	for (std::vector<Instr>::iterator i = code.begin(); i != code.end(); ++i) {
@@ -223,6 +223,7 @@ int main(int argc, char* argv[]) {
 			std::cout << **j;
 		}
 	}
+*/
 /*	
 	TA<FA::label_type> ta(backend), ta2(backend);
 	UFAE ufae(ta2, labMan);
@@ -253,12 +254,13 @@ int main(int argc, char* argv[]) {
 	
 	DEBUG_MSG(ta);
 */
+/*
 	DEBUG_MSG("cleanup");
 	
 	for (size_t i = 0; i < store.size(); ++i) {
 		for (size_t j = 0; j < store[i].size(); ++j)
 			delete store[i][j];
 	}
-	
+*/	
 	return 0;
 }
