@@ -17,6 +17,8 @@
  * along with predator.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+// see http://www.delorie.com/gnu/docs/gcc/gccint_31.html
+
 // this include has to be the first (according the gcc plug-in API)
 #include <gcc/gcc-plugin.h>
 #include <gcc/plugin-version.h>
@@ -1581,16 +1583,17 @@ int plugin_init (struct plugin_name_args *plugin_info,
 
     // print something like "hello world!"
     CL_LOG("initializing code listener [SHA1 %s]", CL_GIT_SHA1);
-    CL_LOG("plug-in is compiled against gcc %s%s, built at %s",
-           gcc_version.basever, gcc_version.devphase, gcc_version.datestamp);
-    CL_LOG("now going to be loaded into gcc %s%s, built at %s",
-           version->basever, version->devphase, version->datestamp);
+    CL_LOG("plug-in is compiled against gcc %s%s%s, built at %s, conf: %s",
+           gcc_version.basever, gcc_version.devphase, gcc_version.revision,
+           gcc_version.datestamp, gcc_version.configuration_arguments);
+    CL_LOG("now going to be loaded into gcc %s%s%s, built at %s, conf: %s",
+           version->basever, version->devphase, version->revision,
+           version->datestamp, version->configuration_arguments);
 
     // check for compatibility with host gcc's version
     if (!plugin_default_version_check(version, &gcc_version)) {
-        fprintf(stderr, "%s: error: "
-                "host gcc's version mismatch, call-backs not registered!\n",
-                plugin_name);
+        fprintf(stderr, "%s: error: host gcc's version/build mismatch"
+                ", call-backs not registered!\n", plugin_name);
 
         return 0;
     }
