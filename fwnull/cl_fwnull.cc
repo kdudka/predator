@@ -657,7 +657,7 @@ void handleFnc(const CodeStorage::Fnc &fnc) {
 
 // /////////////////////////////////////////////////////////////////////////////
 // see easy.hh for details
-void clEasyRun(CodeStorage::Storage &stor, const char *) {
+void clEasyRun(const CodeStorage::Storage &stor, const char *) {
     using namespace CodeStorage;
 
     BOOST_FOREACH(const Fnc *pFnc, stor.fncs) {

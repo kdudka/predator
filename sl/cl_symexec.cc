@@ -118,8 +118,6 @@ void execFnc(const CodeStorage::Fnc &fnc, const SymExecParams &ep,
     }
 }
 
-} // namespace
-
 template <class TDst>
 void gatherCaleeSet(TDst &dst, const CodeStorage::FncDb fncs) {
     using namespace CodeStorage;
@@ -155,29 +153,12 @@ void gatherCaleeSet(TDst &dst, const CodeStorage::FncDb fncs) {
     }
 }    
 
-// /////////////////////////////////////////////////////////////////////////////
-// see easy.hh for details
-void clEasyRun(CodeStorage::Storage &stor, const char *configString) {
+void execVirtualRoots(const CodeStorage::FncDb &fncs, const SymExecParams &ep) {
     using namespace CodeStorage;
-
-    // read parameters of symbolic execution
-    SymExecParams ep;
-    parseConfigString(ep, configString);
-
-    CL_DEBUG("looking for 'main()' at gl scope...");
-    const int uid = stor.fncNames.glNames["main"];
-    const Fnc *main = stor.fncs[uid];
-    if (main && isDefined(*main)) {
-        execFnc(*main, ep, /* lookForGlJunk */ true);
-        return;
-    }
-
-    // main not found, search call graph's root
-    CL_WARN("main() not defined at global scope");
     std::set<int /* uid */> callees;
-    gatherCaleeSet(callees, stor.fncs);
+    gatherCaleeSet(callees, fncs);
 
-    BOOST_FOREACH(const Fnc *pFnc, stor.fncs) {
+    BOOST_FOREACH(const Fnc *pFnc, fncs) {
         const Fnc &fnc = *pFnc;
         if (!isDefined(fnc) || hasKey(callees, uidOf(fnc)))
             continue;
@@ -189,4 +170,38 @@ void clEasyRun(CodeStorage::Storage &stor, const char *configString) {
         // perform symbolic execution for a virtual root
         execFnc(fnc, ep);
     }
+}
+
+} // namespace
+
+// /////////////////////////////////////////////////////////////////////////////
+// see easy.hh for details
+void clEasyRun(const CodeStorage::Storage &stor, const char *configString) {
+    using namespace CodeStorage;
+
+    // read parameters of symbolic execution
+    SymExecParams ep;
+    parseConfigString(ep, configString);
+
+    // look for main() by name
+    CL_DEBUG("looking for 'main()' at gl scope...");
+    const NameDb::TNameMap &glNames = stor.fncNames.glNames;
+    const NameDb::TNameMap::const_iterator iter = glNames.find("main");
+    if (glNames.end() == iter) {
+        CL_WARN("main() not found at global scope");
+        execVirtualRoots(stor.fncs, ep);
+        return;
+    }
+
+    // look for definition of main()
+    const FncDb &fncs = stor.fncs;
+    const Fnc *main = fncs[iter->second];
+    if (!main || !isDefined(*main)) {
+        CL_WARN("main() not defined");
+        execVirtualRoots(stor.fncs, ep);
+        return;
+    }
+
+    // just execute the main() function
+    execFnc(*main, ep, /* lookForGlJunk */ true);
 }

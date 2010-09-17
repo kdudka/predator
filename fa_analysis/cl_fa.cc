@@ -23,6 +23,6 @@
 // required by the gcc plug-in API
 extern "C" { int plugin_is_GPL_compatible; }
 
-void clEasyRun(CodeStorage::Storage &, const char *) {
+void clEasyRun(const CodeStorage::Storage &, const char *) {
     CL_ERROR("fa_analysis is not implemented yet");
 }

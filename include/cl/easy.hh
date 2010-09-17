@@ -24,7 +24,7 @@ namespace CodeStorage {
     struct Storage;
 }
 
-extern void clEasyRun(CodeStorage::Storage &, const char *configString);
+extern void clEasyRun(const CodeStorage::Storage &, const char *configString);
 
 /*
  * FIXME: We use the following nonsense in order to keep the static linkage

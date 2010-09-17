@@ -24,6 +24,6 @@
 // required by the gcc plug-in API
 extern "C" { int plugin_is_GPL_compatible; }
 
-void clEasyRun(CodeStorage::Storage &, const char *) {
+void clEasyRun(const CodeStorage::Storage &, const char *) {
     std::cout << "cl_test is up and running..." << std::endl;
 }

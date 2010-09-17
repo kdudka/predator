@@ -57,16 +57,15 @@ fetch: $(INVADER) $(SPARSE) $(SSD_GIT)
 # unpack Invader's sources
 unpack: $(INVADER_DIR) $(GCC45_DIR)
 
-# wipe out all, but gcc
 clean:
-	rm -rf $(INVADER) $(SPARSE) $(SSD_GIT) $(GCC45_DIR)
-	rm -rf $(INVADER_DIR)
-	rm -rf $(GCC_BUILD)
 	rm -rf cl_build fwnull_build sl_build fa_analysis_build
 	$(MAKE) -C sl clean
 
 # wipe out all
 distclean: clean
+	rm -rf $(INVADER) $(SPARSE) $(SSD_GIT) $(GCC45_DIR)
+	rm -rf $(INVADER_DIR)
+	rm -rf $(GCC_BUILD)
 	rm -rf gcc $(GCC_SRC) $(GCC_INSTALL)
 	$(MAKE) -C sl distclean
 
