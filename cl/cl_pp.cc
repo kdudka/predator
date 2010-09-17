@@ -28,6 +28,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <iomanip>
 #include <sys/stat.h>
 #include <sys/types.h>
 
@@ -197,13 +198,16 @@ void ClPrettyPrint::bb_open(
 
 void ClPrettyPrint::printIntegralCst(const struct cl_operand *op) {
     const struct cl_type *type = op->type;
+    const int value = op->data.cst.data.cst_int.value;
+
     enum cl_type_e code = type->code;
     switch (code) {
         case CL_TYPE_PTR:
-            // TODO: implement generic pointer printing
-            SE_BREAK_IF(op->data.cst.data.cst_int.value);
+            if (value)
+                SSD_COLORIZE(out_, C_LIGHT_RED) << "0x" << std::hex << value;
+            else
+                SSD_COLORIZE(out_, C_WHITE) << "NULL";
 
-            SSD_COLORIZE(out_, C_WHITE) << "NULL";
             break;
 
         case CL_TYPE_UNKNOWN:
@@ -211,19 +215,17 @@ void ClPrettyPrint::printIntegralCst(const struct cl_operand *op) {
             this->printVarType(op);
             // fall through!
 
-        case CL_TYPE_INT: {
-                int num = op->data.cst.data.cst_int.value;
-                if (num < 0)
+        case CL_TYPE_INT:
+                if (value < 0)
                     out_ << SSD_INLINE_COLOR(C_LIGHT_RED, "(");
 
-                SSD_COLORIZE(out_, C_WHITE) << op->data.cst.data.cst_int.value;
-                if (num < 0)
+                SSD_COLORIZE(out_, C_WHITE) << value;
+                if (value < 0)
                     out_ << SSD_INLINE_COLOR(C_LIGHT_RED, ")");
-            }
             break;
 
         case CL_TYPE_BOOL:
-            if (op->data.cst.data.cst_int.value)
+            if (value)
                 SSD_COLORIZE(out_, C_WHITE) << "true";
             else
                 SSD_COLORIZE(out_, C_WHITE) << "false";
@@ -233,7 +235,7 @@ void ClPrettyPrint::printIntegralCst(const struct cl_operand *op) {
             // TODO: quote special chars?
             SSD_COLORIZE(out_, C_WHITE)
                 << '\''
-                << static_cast<char>(op->data.cst.data.cst_int.value)
+                << static_cast<char>(value)
                 << '\'';
             break;
 
