@@ -28,6 +28,7 @@
 #include "symexec.hh"
 #include "symproc.hh"
 #include "symstate.hh"
+#include "util.hh"
 
 #include <string>
 
@@ -69,7 +70,7 @@ void parseConfigString(SymExecParams &sep, std::string cnf) {
     SE_TRAP;
 }
 
-void digGlJunk(CodeStorage::Storage &stor, SymHeap &heap) {
+void digGlJunk(const CodeStorage::Storage &stor, SymHeap &heap) {
     using namespace CodeStorage;
     SymBackTrace bt(stor);
     SymProc proc(heap, &bt);
@@ -90,30 +91,20 @@ void digGlJunk(CodeStorage::Storage &stor, SymHeap &heap) {
     }
 }
 
-} // namespace
-
-// /////////////////////////////////////////////////////////////////////////////
-// see easy.hh for details
-void clEasyRun(CodeStorage::Storage &stor, const char *configString) {
-    CL_DEBUG("looking for 'main()' at gl scope...");
-    const int uid = stor.fncNames.glNames["main"];
-    const CodeStorage::Fnc *main = stor.fncs[uid];
-    if (!main || CL_OPERAND_VOID == main->def.code) {
-        CL_ERROR("main() not declared at global scope");
-        return;
-    }
-
-    // lw points to declaration of main()
-    const LocationWriter lw(&main->def.loc);
-
-    // initialize SymExec
-    SymExecParams sep;
-    parseConfigString(sep, configString);
-    SymExec se(stor, sep);
+void execFnc(const CodeStorage::Fnc &fnc, const SymExecParams &ep,
+             bool lookForGlJunk = false)
+{
+    const CodeStorage::Storage &stor = *fnc.stor;
+    const LocationWriter lw(&fnc.def.loc);
+    CL_DEBUG_MSG(lw, "creating fresh initial state for "
+            << nameOf(fnc) << "()...");
+    SymExec se(stor, ep);
 
     // run the symbolic execution
     SymState results;
-    se.exec(*main, results);
+    se.exec(fnc, results);
+    if (!lookForGlJunk)
+        return;
 
     CL_DEBUG_MSG(lw, "(g) looking for gl junk...");
     int hCnt = 0;
@@ -124,5 +115,78 @@ void clEasyRun(CodeStorage::Storage &stor, const char *configString) {
         }
 
         digGlJunk(stor, heap);
+    }
+}
+
+} // namespace
+
+template <class TDst>
+void gatherCaleeSet(TDst &dst, const CodeStorage::FncDb fncs) {
+    using namespace CodeStorage;
+
+    // for each function
+    BOOST_FOREACH(const Fnc *pFnc, fncs) {
+        const Fnc &fnc = *pFnc;
+        if (!isDefined(fnc))
+            continue;
+
+        // for each BB
+        BOOST_FOREACH(const Block *bb, fnc.cfg) {
+
+            // for each instruction
+            BOOST_FOREACH(const Insn *insn, *bb) {
+
+                // for each operand
+                BOOST_FOREACH(const struct cl_operand &op, insn->operands) {
+                    if (CL_OPERAND_CST != op.code)
+                        // not a literal
+                        continue;
+
+                    const struct cl_cst &cst = op.data.cst;
+                    if (CL_TYPE_FNC != cst.code)
+                        // not a function
+                        continue;
+
+                    const int callee = cst.data.cst_fnc.uid;
+                    dst.insert(callee);
+                }
+            }
+        }
+    }
+}    
+
+// /////////////////////////////////////////////////////////////////////////////
+// see easy.hh for details
+void clEasyRun(CodeStorage::Storage &stor, const char *configString) {
+    using namespace CodeStorage;
+
+    // read parameters of symbolic execution
+    SymExecParams ep;
+    parseConfigString(ep, configString);
+
+    CL_DEBUG("looking for 'main()' at gl scope...");
+    const int uid = stor.fncNames.glNames["main"];
+    const Fnc *main = stor.fncs[uid];
+    if (main && isDefined(*main)) {
+        execFnc(*main, ep, /* lookForGlJunk */ true);
+        return;
+    }
+
+    // main not found, search call graph's root
+    CL_WARN("main() not defined at global scope");
+    std::set<int /* uid */> callees;
+    gatherCaleeSet(callees, stor.fncs);
+
+    BOOST_FOREACH(const Fnc *pFnc, stor.fncs) {
+        const Fnc &fnc = *pFnc;
+        if (!isDefined(fnc) || hasKey(callees, uidOf(fnc)))
+            continue;
+
+        const LocationWriter lw(&fnc.def.loc);
+        CL_DEBUG_MSG(lw, nameOf(fnc)
+                << "() is defined, but not called from anywhere");
+
+        // perform symbolic execution for a virtual root
+        execFnc(fnc, ep);
     }
 }
