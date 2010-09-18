@@ -151,7 +151,7 @@ void gatherCaleeSet(TDst &dst, const CodeStorage::FncDb fncs) {
             }
         }
     }
-}    
+}
 
 void execVirtualRoots(const CodeStorage::FncDb &fncs, const SymExecParams &ep) {
     using namespace CodeStorage;

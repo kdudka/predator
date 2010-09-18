@@ -332,13 +332,12 @@ void SymCallCache::Private::setCallArgs(const CodeStorage::TOperandList &opList)
 {
     // get called fnc's args
     const CodeStorage::TArgByPos &args = this->fnc->args;
-    if (args.size() + 2 != opList.size()) {
-        CL_WARN_MSG(this->lw, "count of given arguments does not match "
-                    "function's declaration: " << nameOf(*this->fnc) << "()");
+    if (args.size() + 2 < opList.size()) {
+        CL_DEBUG_MSG(this->lw,
+                "too many arguments given (vararg fnc involved?)");
 
         const LocationWriter lwDecl(&this->fnc->def.loc);
-        CL_NOTE_MSG(lwDecl, "functions with variable "
-                    "count of arguments are not supported yet");
+        CL_DEBUG_MSG(lwDecl, "note: fnc was declared here");
     }
 
     // wait, we're crossing stack frame boundaries here!  We need to use one
@@ -349,26 +348,41 @@ void SymCallCache::Private::setCallArgs(const CodeStorage::TOperandList &opList)
     callerSiteBt.popCall();
     SymProc srcProc(*this->heap, &callerSiteBt);
 
+    // initialize location info
+    srcProc.setLocation(this->lw);
+    this->proc->setLocation(this->lw);
+
     // set args' values
     unsigned pos = /* dst + fnc */ 2;
     BOOST_FOREACH(int arg, args) {
-        if (opList.size() <= pos)
-            // giving up, perhaps a variable count of args?
-            break;
-
-        const struct cl_operand &op = opList[pos++];
-        srcProc.setLocation(this->lw);
-        this->proc->setLocation(this->lw);
-
-        const TValueId val = srcProc.heapValFromOperand(op);
-        SE_BREAK_IF(VAL_INVALID == val);
 
         // cVar lookup
         const CVar cVar(arg, this->nestLevel);
         const TObjId lhs = this->heap->objByCVar(cVar);
         SE_BREAK_IF(OBJ_INVALID == lhs);
 
-        // set arg's value
+        if (opList.size() <= pos) {
+            // no value given for this arg
+            CL_DEBUG_MSG(this->lw,
+                    "missing argument being treated as unknown value");
+
+            // read the UV_UNINITIALIZED of lhs
+            TValueId val = this->heap->valueOf(lhs);
+            SE_BREAK_IF(UV_UNINITIALIZED != this->heap->valGetUnknown(val));
+
+            // change UV_UNINITIALIZED to UV_UNKNOWN in lhs
+            const struct cl_type *clt = this->heap->valType(val);
+            val = this->heap->valCreateUnknown(UV_UNKNOWN, clt);
+            this->proc->objSetValue(lhs, val);
+            continue;
+        }
+
+        // read the given argument's value
+        const struct cl_operand &op = opList[pos++];
+        const TValueId val = srcProc.heapValFromOperand(op);
+        SE_BREAK_IF(VAL_INVALID == val);
+
+        // set the value of lhs accordingly
         this->proc->objSetValue(lhs, val);
     }
 }
