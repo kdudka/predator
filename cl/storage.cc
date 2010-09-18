@@ -241,6 +241,7 @@ VarDb::VarDb():
 }
 
 VarDb::VarDb(const VarDb &ref):
+    vars_(ref.vars_),
     d(new Private(*ref.d))
 {
 }
@@ -250,6 +251,7 @@ VarDb::~VarDb() {
 }
 
 VarDb& VarDb::operator=(const VarDb &ref) {
+    vars_ = ref.vars_;
     delete d;
     d = new Private(*ref.d);
     return *this;
@@ -395,6 +397,7 @@ ControlFlow::ControlFlow():
 }
 
 ControlFlow::ControlFlow(const ControlFlow &ref):
+    bbs_(ref.bbs_),
     d(new Private(*ref.d))
 {
 }
@@ -404,6 +407,7 @@ ControlFlow::~ControlFlow() {
 }
 
 ControlFlow& ControlFlow::operator=(const ControlFlow &ref) {
+    bbs_ = ref.bbs_;
     delete d;
     d = new Private(*ref.d);
     return *this;
@@ -474,6 +478,7 @@ FncDb::FncDb():
 }
 
 FncDb::FncDb(const FncDb &ref):
+    fncs_(ref.fncs_),
     d(new Private(*ref.d))
 {
 }
@@ -483,6 +488,7 @@ FncDb::~FncDb() {
 }
 
 FncDb& FncDb::operator=(const FncDb &ref) {
+    fncs_ = ref.fncs_;
     delete d;
     d = new Private(*ref.d);
     return *this;

@@ -119,7 +119,7 @@ void execFnc(const CodeStorage::Fnc &fnc, const SymExecParams &ep,
 }
 
 template <class TDst>
-void gatherCaleeSet(TDst &dst, const CodeStorage::FncDb fncs) {
+void gatherCaleeSet(TDst &dst, const CodeStorage::FncDb &fncs) {
     using namespace CodeStorage;
 
     // for each function
