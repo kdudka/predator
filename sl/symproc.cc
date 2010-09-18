@@ -1046,10 +1046,10 @@ TObjId subSeekByOffset(const SymHeap &sh, TObjId obj,
 }
 
 TValueId handlePointerPlus(SymHeap &sh, const struct cl_type *clt,
-                           TValueId ptr, const struct cl_operand &op)
+                           TValueId ptr, const struct cl_operand &op,
+                           const LocationWriter lw)
 {
     const struct cl_type *const cltPtr = clt;
-    const LocationWriter lw(&op.loc);
     if (CL_OPERAND_CST != op.code) {
         CL_ERROR_MSG(lw, "pointer plus offset not known in compile-time");
         return sh.valCreateUnknown(UV_UNKNOWN, cltPtr);
@@ -1197,7 +1197,8 @@ void SymExecCore::execOp(const CodeStorage::Insn &insn) {
     {
         // handle pointer plus
         valResult = handlePointerPlus(heap_, clt[/* dst type */ ARITY],
-                                      rhs[0], opList[/* src2 */ 2]);
+                                      rhs[0], opList[/* src2 */ 2],
+                                      &insn.loc);
     }
     else
         // handle generic operator
