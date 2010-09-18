@@ -50,6 +50,8 @@ bool initSingleGlVar(SymHeap &sh, TObjId obj) {
 
     const enum cl_type_e code = clt->code;
     switch (code) {
+        case CL_TYPE_CHAR:
+        case CL_TYPE_ENUM:
         case CL_TYPE_INT:
         case CL_TYPE_PTR:
             sh.objSetValue(obj, VAL_NULL);
@@ -59,16 +61,8 @@ bool initSingleGlVar(SymHeap &sh, TObjId obj) {
             sh.objSetValue(obj, VAL_FALSE);
             break;
 
-        case CL_TYPE_CHAR:
-            CL_WARN("CL_TYPE_CHAR is not supported by SymExec for now");
-            break;
-
         case CL_TYPE_ARRAY:
-            CL_WARN("CL_TYPE_ARRAY is not supported by SymExec for now");
-            break;
-
-        case CL_TYPE_ENUM:
-            CL_WARN("CL_TYPE_ENUM is not supported by SymExec for now");
+            CL_DEBUG("CL_TYPE_ARRAY is not supported by SymExec for now");
             break;
 
         case CL_TYPE_STRUCT:

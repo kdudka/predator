@@ -1491,6 +1491,7 @@ TObjId SymHeapTyped::objCreate(const struct cl_type *clt, CVar cVar) {
     if(clt) {
         const enum cl_type_e code = clt->code;
         switch (code) {
+            case CL_TYPE_ENUM:
             case CL_TYPE_INT:
             case CL_TYPE_BOOL:
             case CL_TYPE_PTR:
