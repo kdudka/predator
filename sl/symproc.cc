@@ -449,8 +449,7 @@ int /* uid */ SymProc::fncFromOperand(const struct cl_operand &op) {
         // obtain the inner content of the custom value and check its type-info
         const struct cl_type *clt;
         const int uid = heap_.valGetCustom(&clt, val);
-        SE_BREAK_IF(-1 == uid);
-        SE_BREAK_IF(CL_TYPE_FNC != targetTypeOfPtr(clt)->code);
+        SE_BREAK_IF(-1 != uid && CL_TYPE_FNC != targetTypeOfPtr(clt)->code);
         return uid;
     }
 }

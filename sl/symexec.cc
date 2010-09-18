@@ -608,6 +608,8 @@ void binOpToStream(std::ostream &str, int subCode,
         case CL_BINOP_PLUS:             str << " + ";           break;
         case CL_BINOP_MINUS:            str << " - ";           break;
         case CL_BINOP_MULT:             str << " * ";           break;
+        case CL_BINOP_TRUNC_DIV:        str << " / ";           break;
+        case CL_BINOP_TRUNC_MOD:        str << " % ";           break;
         case CL_BINOP_POINTER_PLUS:     str << " (ptr +) ";     break;
         case CL_BINOP_BIT_IOR:          str << " | ";           break;
         case CL_BINOP_BIT_AND:          str << " & ";           break;
@@ -925,6 +927,7 @@ const CodeStorage::Fnc* SymExec::Private::resolveCallInsn(
         const CodeStorage::Insn     &insn,
         SymState                    &results)
 {
+    const CodeStorage::Fnc *fnc;
     const CodeStorage::TOperandList &opList = insn.operands;
     SE_BREAK_IF(CL_INSN_CALL != insn.code || opList.size() < 2);
 
@@ -934,8 +937,11 @@ const CodeStorage::Fnc* SymExec::Private::resolveCallInsn(
     proc.setLocation(lw);
     const struct cl_operand &opFnc = opList[/* fnc */ 1];
     const int uid = proc.fncFromOperand(opFnc);
-    const CodeStorage::Fnc *fnc = this->stor.fncs[uid];
-    SE_BREAK_IF(!fnc);
+    if (-1 == uid) {
+        SE_BREAK_IF(CL_OPERAND_CST == opFnc.code);
+        CL_ERROR_MSG(lw, "failed to resolve indirect function call");
+        goto fail;
+    }
 
     if (SE_MAX_CALL_DEPTH < this->bt.size()) {
         CL_ERROR_MSG(lw, "call depth exceeds SE_MAX_CALL_DEPTH"
@@ -943,6 +949,7 @@ const CodeStorage::Fnc* SymExec::Private::resolveCallInsn(
         goto fail;
     }
 
+    fnc = this->stor.fncs[uid];
     if (!isDefined(*fnc)) {
         const struct cl_cst &cst = opFnc.data.cst;
         const char *name = cst.data.cst_fnc.name;
