@@ -25,8 +25,8 @@
 
 #include <cl/code_listener.h>
 
-#include "../config.h"
-#include "../version.h"
+#include "config_cl.h"
+#include "version_cl.h"
 
 #include <gcc/coretypes.h>
 #include <gcc/diagnostic.h>

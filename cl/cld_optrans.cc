@@ -17,7 +17,7 @@
  * along with predator.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "config.h"
+#include "config_cl.h"
 #include "cld_optrans.hh"
 
 void CldOpTransBase::cloneAccessor(struct cl_operand *op) {

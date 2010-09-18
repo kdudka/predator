@@ -17,8 +17,8 @@
  * along with predator.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "config.h"
-#include "version.h"
+#include "config_cl.h"
+#include "version_cl.h"
 
 // see the comment in config.h for details
 const char *cl_git_sha1 = CL_GIT_SHA1;

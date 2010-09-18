@@ -17,7 +17,7 @@
  * along with predator.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "config.h"
+#include "config_cl.h"
 
 #define __CL_IN
 #include "cl_easy.hh"

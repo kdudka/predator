@@ -32,7 +32,7 @@ else()
 endif()
 
 # tweak include dirs, etc.
-add_definitions("-I../include -I../include/gcc -I../cl/gcc -fPIC")
+add_definitions("-I../include -I../include/gcc -I../cl -I../cl/gcc -fPIC")
 
 # libcl.so
 add_library(cl STATIC
@@ -73,6 +73,7 @@ install(DIRECTORY ../include/cl DESTINATION include)
 
 add_test("compile-self" ${GCC_HOST}
     ${CFLAGS}
+    -I${cl_SOURCE_DIR}
     -I${cl_SOURCE_DIR}/../include
     -I${cl_SOURCE_DIR}/../include/gcc
     -I${cl_SOURCE_DIR}/gcc
@@ -82,6 +83,7 @@ add_test("compile-self" ${GCC_HOST}
     -fplugin-arg-libcl_test-dry-run)
 
 set(cmd "${GCC_HOST}")
+set(cmd "${cmd} -I${cl_SOURCE_DIR}")
 set(cmd "${cmd} -I${cl_SOURCE_DIR}/../include")
 set(cmd "${cmd} -I${cl_SOURCE_DIR}/../include/gcc")
 set(cmd "${cmd} -I${cl_SOURCE_DIR}/gcc")
@@ -92,6 +94,7 @@ add_test("cl_test" sh -c "${cmd}")
 
 set(self_extra_opts
     ${CFLAGS}
+    -I${cl_SOURCE_DIR}
     -I${cl_SOURCE_DIR}/../include
     -I${cl_SOURCE_DIR}/../include/gcc
     -I${cl_SOURCE_DIR}/gcc
@@ -113,7 +116,7 @@ add_test("compile-self-valgrind" valgrind
 
 add_test("headers_sanity-0" gcc -ansi -Wall -Wextra -Werror -pedantic
     -o /dev/null
-    -c ${cl_SOURCE_DIR}/config.h)
+    -c ${cl_SOURCE_DIR}/config_cl.h)
 
 add_test("headers_sanity-1" gcc -ansi -Wall -Wextra -Werror -pedantic
     -o /dev/null

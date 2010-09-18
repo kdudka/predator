@@ -17,7 +17,7 @@
  * along with predator.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "config.h"
+#include "config_cl.h"
 #include <cl/clutil.hh>
 
 const struct cl_type* targetTypeOfPtr(const struct cl_type *clt) {

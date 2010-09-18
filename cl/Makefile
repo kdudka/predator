@@ -19,9 +19,9 @@ CMAKE           ?= cmake
 CTEST           ?= ctest
 
 .PHONY: all clean distclean distcheck install \
-	version.h
+	version_cl.h
 
-all: version.h ../ssd
+all: version_cl.h ../ssd
 	mkdir -p ../cl_build
 	cd ../cl_build && $(CMAKE) ../cl
 	$(MAKE) -C ../cl_build
@@ -29,7 +29,7 @@ all: version.h ../ssd
 check: all
 	cd ../cl_build && $(CTEST) --output-on-failure
 
-version.h:
+version_cl.h:
 	@if test -d ../.git; then \
 		printf "#define CL_GIT_SHA1 \"%s\"\n" \
 			`git log -1 . | head -1 | cut -f2 -d" "` \
@@ -39,7 +39,7 @@ version.h:
 		fi
 
 clean:
-	rm -f version.h
+	rm -f version_cl.h
 	rm -f gcc/*.dot
 	if test -e ../cl_build/Makefile; then $(MAKE) clean -C ../cl_build; fi
 
