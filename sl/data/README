@@ -408,6 +408,17 @@ Implementation of skip-list
 - no chance to analyse by Predator as we don't support arrays yet
 
 
+Other tests
+===========
+    test-0000.c - cl/gcc/clplug.c taken as a test case
+                - a bit hungry on include search paths
+                - it ends up on evaluating current_function_decl as NULL
+                - current_function_decl is a global variable, but it belongs to
+                  another module that is responsible for making it non-NULL
+
+                - we're probably not yeti ready for this one
+
+
 Known bugs
 ==========
     test-0051.c - handled fairly well as we are not able to learn such a shape

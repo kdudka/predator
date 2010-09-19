@@ -55,7 +55,13 @@ target_link_libraries(sl
 # make install
 install(TARGETS sl DESTINATION lib)
 
+# the following include dirs are needed to compile cl/gcc/clplug.c
+set(clplug_incs "-I${sl_SOURCE_DIR}/../cl" "-I${sl_SOURCE_DIR}/../cl/gcc")
+set(clplug_incs ${clplug_incs} "-I${sl_SOURCE_DIR}/../include")
+set(clplug_incs ${clplug_incs} "-I${sl_SOURCE_DIR}/../include/gcc")
+
 set(examples
+    0000
     0001 0002 0003 0004 0005 0006 0007 0008 0009 0010
     0011 0012 0013 0014 0015 0016 0017 0018 0019 0020
     0021 0022 0023 0024 0025 0026 0027 0028 0029 0030
@@ -72,7 +78,7 @@ macro(test_sym_exec label tool arg1 arg2)
     foreach (num ${examples})
         add_test("${label}___example-${num}" ${tool} ${arg1} ${arg2}
             -c ${sl_SOURCE_DIR}/data/test-${num}.c
-            -DPREDATOR
+            -DPREDATOR ${clplug_incs}
             -fplugin=${sl_BINARY_DIR}/libsl.so
             -fplugin-arg-libsl-args=noplot
             -fplugin-arg-libsl-verbose=1)
@@ -84,6 +90,11 @@ test_sym_exec("simple-test" ${GCC_HOST} "" "")
 macro(test_sym_exec_regre ext arg1)
     foreach (num ${examples})
         set(cmd "${GCC_HOST}")
+
+        # needed for test-0000
+        foreach (inc ${clplug_incs})
+            set(cmd "${cmd} ${inc}")
+        endforeach()
 
         # we use the following flag to avoid differences on 32bit vs 64bit archs
         # in the error output, which is checked for exact match

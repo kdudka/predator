@@ -22,19 +22,20 @@ gen(){
       test -n "$1" && printf "%s " "$1"
       $TIMEOUT ../gcc-install/bin/gcc \
         -m32 \
-        -c `readlink -f $i` \
+        -c $i \
+        -o /dev/null \
         -DPREDATOR \
+        -I../cl -I../cl/gcc -I../include -I../include/gcc \
         -fplugin=../sl_build/libsl.so $1 \
         2>&1 \
         | grep -v '\[internal location\]$' \
-        | sed s/`readlink -f data | sed 's/\\//\\\\\\//g'`\\/// \
-        | sed s/`readlink -f . | sed 's/\\//\\\\\\//g'`\\/// \
+        | sed 's|data/||' \
         > data/`basename $i .c`.err$2
       printf "\n"
     done
 }
 
 ticks &
-gen "-fplugin-arg-libsl-symexec-args=fast" .fast
+gen "-fplugin-arg-libsl-args=fast" .fast
 gen
 kill $!
