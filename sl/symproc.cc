@@ -1054,6 +1054,11 @@ TValueId handlePointerPlus(SymHeap &sh, const struct cl_type *clt,
         return sh.valCreateUnknown(UV_UNKNOWN, cltPtr);
     }
 
+    if (VAL_NULL == ptr) {
+        CL_DEBUG_MSG(lw, "pointer plus with NULL treated as unknown value");
+        return sh.valCreateUnknown(UV_UNKNOWN, cltPtr);
+    }
+
     // jump to _target_ type
     clt = targetTypeOfPtr(clt);
 

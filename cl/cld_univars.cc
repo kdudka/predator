@@ -17,7 +17,7 @@
  * along with predator.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "cld_uniregs.hh"
+#include "cld_univars.hh"
 #include "cld_optrans.hh"
 #include "relocator.hh"
 

@@ -416,7 +416,7 @@ Other tests
                 - current_function_decl is a global variable, but it belongs to
                   another module that is responsible for making it non-NULL
 
-                - we're probably not yeti ready for this one
+                - we're probably not yet ready for this one
 
 
 Known bugs
