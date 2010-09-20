@@ -454,7 +454,7 @@ bool SymStateMap::insert(const CodeStorage::Block                *dst,
     // look for the _target_ block
     Private::BlockState &ref = d->cont[dst];
 
-    // insert the give symolic heap
+    // insert the given symolic heap
     const unsigned last = ref.state.size();
     ref.state.insert(sh);
     const bool changed = (last != ref.state.size());

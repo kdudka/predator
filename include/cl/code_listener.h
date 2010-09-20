@@ -237,10 +237,10 @@ struct cl_type {
     /**
      * count of nested types
      *
-     * 0 for elementary types
-     * 1 for e.g. CL_TYPE_PTR and CL_TYPE_ARRAY
-     * n for e.g. CL_TYPE_STRUCT and CL_TYPE_UNION
-     * 0 < n for CL_TYPE_FNC
+     * - @b 0 for elementary types
+     * - @b 1 for e.g. CL_TYPE_PTR and CL_TYPE_ARRAY
+     * - @b n for e.g. CL_TYPE_STRUCT and CL_TYPE_UNION
+     * - 0 < @b n for CL_TYPE_FNC
      */
     int                                 item_cnt;
 
