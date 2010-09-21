@@ -65,6 +65,10 @@ bool initSingleGlVar(SymHeap &sh, TObjId obj) {
             CL_DEBUG("CL_TYPE_ARRAY is not supported by SymExec for now");
             break;
 
+        case CL_TYPE_UNION:
+            CL_DEBUG("CL_TYPE_UNION is not supported by SymExec for now");
+            break;
+
         case CL_TYPE_STRUCT:
             // fall through!
 
