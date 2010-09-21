@@ -973,7 +973,7 @@ fail:
         // set return value to unknown
         const TValueId val = heap.valCreateUnknown(UV_UNKNOWN, dst.type);
         const TObjId obj = proc.heapObjFromOperand(dst);
-        heap.objSetValue(obj, val);
+        proc.objSetValue(obj, val);
     }
 
     // call failed, so that we have exactly one resulting heap

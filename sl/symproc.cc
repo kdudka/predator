@@ -555,6 +555,7 @@ void SymProc::objSetValue(TObjId lhs, TValueId rhs) {
         return;
     }
 
+    // FIXME: this doesn't work well if we get UV_UNKNOWN of type CL_TYPE_STRUCT
     const TObjId rObj = heap_.valGetCompositeObj(rhs);
     if (OBJ_INVALID == rObj) {
         // non-composite value

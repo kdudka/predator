@@ -57,7 +57,10 @@
 
 // somewhere after 4.5.0, the GGC_CNEW somehow vanished
 #ifndef GGC_CNEW
-#   define GGC_CNEW(type) ggc_internal_cleared_alloc_stat(sizeof (type))
+// FIXME: we have been probably using GGC in a wrong way, it stopped working
+#   define GGC_CNEW(type) xcalloc(1, sizeof (type))
+#   undef GGC_RESIZEVEC
+#   define GGC_RESIZEVEC(type, ptr, cnt) xrealloc((ptr), sizeof(type) * (cnt))
 #endif
 
 // somewhere after 4.5.0, the declaration has been moved to

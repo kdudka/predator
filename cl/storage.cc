@@ -186,8 +186,8 @@ Var::Var(EVar code_, const struct cl_operand *op):
     }
 
     // dig type of variable
-    clt = digVarType(op);
-    if (!clt)
+    this->clt = digVarType(op);
+    if (!this->clt)
         TRAP;
 
     // check for eventual scope mismatch
