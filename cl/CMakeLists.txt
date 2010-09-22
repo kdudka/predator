@@ -44,7 +44,6 @@ add_library(cl STATIC
     cl_pp.cc
     cl_storage.cc
     cl_typedot.cc
-    cld_argsub.cc
     cld_intchk.cc
     cld_opchk.cc
     cld_optrans.cc

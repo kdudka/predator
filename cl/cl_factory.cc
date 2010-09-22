@@ -28,7 +28,6 @@
 #include "cl_pp.hh"
 #include "cl_typedot.hh"
 
-#include "cld_argsub.hh"
 #include "cld_intchk.hh"
 #include "cld_unilabel.hh"
 #include "cld_uniregs.hh"
@@ -234,7 +233,6 @@ CldChainFactory::CldChainFactory() {
     map_["unify_regs"]              = createCldUniRegs;
     map_["unify_vars"]              = createCldUniVars;
     map_["unfold_switch"]           = createCldUnfoldSwitch;
-    map_["arg_subst"]               = createCldArgSubst;
 }
 
 ICodeListener* CldChainFactory::create(const std::string &cldString,

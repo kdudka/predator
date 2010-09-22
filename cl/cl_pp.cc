@@ -431,10 +431,6 @@ void ClPrettyPrint::printNestedVar(const struct cl_operand *op) {
             SSD_COLORIZE(out_, C_LIGHT_BLUE) << "%r" << op->data.reg.id;
             break;
 
-        case CL_OPERAND_ARG:
-            SSD_COLORIZE(out_, C_LIGHT_GREEN) << "%arg" << op->data.arg.id;
-            break;
-
         default:
             CL_ERROR("internal error in " << __FUNCTION__);
             break;
@@ -547,7 +543,6 @@ void ClPrettyPrint::printOperand(const struct cl_operand *op) {
             this->printCst(op);
             break;
 
-        case CL_OPERAND_ARG:
         case CL_OPERAND_REG:
         case CL_OPERAND_VAR:
             this->printOperandVar(op);

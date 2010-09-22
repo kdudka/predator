@@ -385,13 +385,6 @@ enum cl_operand_e {
     CL_OPERAND_VAR,
 
     /**
-     * function argument. Addressed by argument ID. Currently used only by
-     * slsparse, but it's translated by "arg_subst" cl decorator to
-     * CL_OPERAND_VAR afterwards.
-     */
-    CL_OPERAND_ARG,
-
-    /**
      * intermediate code register. Addressed by register ID. Usually managed by
      * compiler only.
      */

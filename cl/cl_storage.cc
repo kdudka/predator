@@ -429,7 +429,6 @@ void ClStorageBuilder::Private::digOperand(const struct cl_operand *op) {
             break;
 
         case CL_OPERAND_VOID:
-        case CL_OPERAND_ARG:
             TRAP;
     }
 }
