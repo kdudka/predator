@@ -55,19 +55,17 @@
 #   define STREQ(s1, s2) (0 == strcmp(s1, s2))
 #endif
 
-// somewhere after 4.5.0, the GGC_CNEW somehow vanished
-#ifndef GGC_CNEW
-// FIXME: we have been probably using GGC in a wrong way, it stopped working
-#   define GGC_CNEW(type) xcalloc(1, sizeof (type))
-#   undef GGC_RESIZEVEC
-#   define GGC_RESIZEVEC(type, ptr, cnt) xrealloc((ptr), sizeof(type) * (cnt))
-#endif
+// our alternative to GGC_CNEW, used prior to gcc 4.6.x
+#define CL_ZNEW(type) xcalloc(1, sizeof(type))
+
+// our alternative to GGC_RESIZEVEC, used prior to gcc 4.6.x
+#define CL_RESIZEVEC(type, ptr, cnt) xrealloc((ptr), sizeof(type) * (cnt))
 
 // somewhere after 4.5.0, the declaration has been moved to
 // gimple-pretty-print.h, which is no longer available for public
 extern void print_gimple_stmt (FILE *, gimple, int, int);
 
-// this should be using gcc's fancy_abort(), but it was actually not tested
+// this in fact uses gcc's fancy_abort()
 #define CL_ASSERT(expr) \
     if (!(expr)) abort()
 
@@ -222,17 +220,18 @@ static int type_db_eq (const void *p1, const void *p2)
 
 static void type_db_free (void *p)
 {
-    // TODO
-    (void) p;
+    const struct cl_type *type = (const struct cl_type *) p;
+    if (type->item_cnt)
+        free(type->items);
+
+    free(p);
 }
 
 static type_db_t type_db_create(void)
 {
-    type_db_t db = htab_create_alloc(/* FIXME: hardcoded for now */ 0x100,
-                                     type_db_hash, type_db_eq, type_db_free,
-                                     xcalloc, free);
-    CL_ASSERT(db);
-    return db;
+    return htab_create_alloc(/* FIXME: hardcoded for now */ 0x100,
+                             type_db_hash, type_db_eq, type_db_free,
+                             xcalloc, free);
 }
 
 static void type_db_destroy(type_db_t db)
@@ -362,8 +361,8 @@ static void dig_record_type(struct cl_type *clt, tree t)
 {
     for (t = TYPE_FIELDS(t); t; t = TREE_CHAIN(t)) {
         // TODO: chunk allocation ?
-        clt->items = GGC_RESIZEVEC(struct cl_type_item, clt->items,
-                                   clt->item_cnt + 1);
+        clt->items = CL_RESIZEVEC(struct cl_type_item, clt->items,
+                                  clt->item_cnt + 1);
 
         struct cl_type_item *item = &clt->items[clt->item_cnt ++];
         item->type = /* recursion */ add_type_if_needed(t);
@@ -381,7 +380,7 @@ static void dig_fnc_type(struct cl_type *clt, tree t)
 {
     // dig return type
     clt->item_cnt = 1;
-    clt->items = GGC_RESIZEVEC(struct cl_type_item, 0, 1);
+    clt->items = CL_ZNEW(struct cl_type_item);
     struct cl_type_item *item = clt->items;
     item->type = add_type_if_needed(t);
     item->name = NULL;
@@ -393,8 +392,8 @@ static void dig_fnc_type(struct cl_type *clt, tree t)
             TRAP;
 
         // TODO: chunk allocation ?
-        clt->items = GGC_RESIZEVEC(struct cl_type_item, clt->items,
-                                   clt->item_cnt + 1);
+        clt->items = CL_RESIZEVEC(struct cl_type_item, clt->items,
+                                  clt->item_cnt + 1);
 
         struct cl_type_item *item = &clt->items[clt->item_cnt ++];
         item->type = /* recursion */ add_bare_type_if_needed(val);
@@ -413,7 +412,7 @@ static void read_specific_type(struct cl_type *clt, tree type)
         case POINTER_TYPE:
             clt->code = CL_TYPE_PTR;
             clt->item_cnt = 1;
-            clt->items = GGC_CNEW(struct cl_type_item);
+            clt->items = CL_ZNEW(struct cl_type_item);
             clt->items[0].type = /* recursion */ add_type_if_needed(type);
             break;
 
@@ -430,7 +429,7 @@ static void read_specific_type(struct cl_type *clt, tree type)
         case ARRAY_TYPE:
             clt->code = CL_TYPE_ARRAY;
             clt->item_cnt = get_fixed_array_size(type);
-            clt->items = GGC_CNEW(struct cl_type_item);
+            clt->items = CL_ZNEW(struct cl_type_item);
             clt->items[0].type = /* recursion */ add_type_if_needed(type);
             break;
 
@@ -476,7 +475,7 @@ static struct cl_type* add_bare_type_if_needed(tree type)
         return clt;
 
     // insert new type into hashtab
-    clt = GGC_CNEW(struct cl_type);
+    clt = CL_ZNEW(struct cl_type);
     clt->uid = uid;
     type_db_insert(type_db, clt);
 
@@ -605,7 +604,7 @@ static void read_raw_operand(struct cl_operand *op, tree t)
 static void chain_accessor(struct cl_accessor **ac, enum cl_type_e code)
 {
     // create and initialize new item
-    struct cl_accessor *ac_new = GGC_CNEW(struct cl_accessor);
+    struct cl_accessor *ac_new = CL_ZNEW(struct cl_accessor);
     CL_ASSERT(ac_new);
     ac_new->code = code;
 
@@ -667,7 +666,7 @@ static void handle_accessor_array_ref(struct cl_accessor **ac, tree t)
     if (!op1)
         TRAP;
 
-    struct cl_operand *index = GGC_CNEW(struct cl_operand);
+    struct cl_operand *index = CL_ZNEW(struct cl_operand);
     CL_ASSERT(index);
 
     // FIXME: unguarded recursion
@@ -733,8 +732,18 @@ static bool handle_accessor(struct cl_accessor **ac, tree *pt)
 
 static void free_cl_operand_data(struct cl_operand *op)
 {
-    // TODO
-    (void) op;
+    // free the chain of accessors
+    const struct cl_accessor *ac = op->accessor;
+    while (ac) {
+        const struct cl_accessor *next = ac->next;
+
+        if (CL_ACCESSOR_DEREF_ARRAY == ac->code)
+            // FIXME: unguarded recursion
+            free_cl_operand_data(ac->data.array.index);
+
+        free((void *) ac);
+        ac = next;
+    }
 }
 
 static void handle_operand(struct cl_operand *op, tree t)
@@ -1355,9 +1364,9 @@ static void cb_finish (void *gcc_data, void *user_data)
     (void) gcc_data;
     (void) user_data;
 
-    type_db_destroy(type_db);
     cl->destroy(cl);
     cl_global_cleanup();
+    type_db_destroy(type_db);
     free_plugin_name();
 }
 
