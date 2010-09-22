@@ -128,17 +128,8 @@ void handleDerefs(Data::TState &state, const CodeStorage::Insn *insn)
             // no dereference here
             continue;
 
-        const enum cl_operand_e code = op.code;
-        switch (code) {
-            case CL_OPERAND_VAR:
-            case CL_OPERAND_REG:
-                handleVarDeref(state, op, &insn->loc);
-                return;
-
-            default:
-                // we don't support dereference of literals and the like
-                SE_TRAP;
-        }
+        SE_BREAK_IF(CL_OPERAND_VAR != op.code);
+        handleVarDeref(state, op, &insn->loc);
     }
 }
 
@@ -388,14 +379,8 @@ void handleInsnCall(Data::TState &state, const CodeStorage::Insn *insn) {
         // we're interested only in direct manipulation of variables here
         return;
 
-    switch (dst.code) {
-        case CL_OPERAND_REG:
-        case CL_OPERAND_VAR:
-            break;
-
-        default:
-            return;
-    }
+    if (CL_OPERAND_VAR != dst.code)
+        return;
 
     // abstract out the return value
     const int uid = varIdFromOperand(&dst);
@@ -413,15 +398,9 @@ void treatRefAsSideEffect(Data::TState                          &state,
 {
     // for each operand
     BOOST_FOREACH(const struct cl_operand &op, opList) {
-        switch (op.code) {
-            case CL_OPERAND_VAR:
-            case CL_OPERAND_REG:
-                break;
-
-            default:
-                // not a variable
-                continue;
-        }
+        if (CL_OPERAND_VAR != op.code)
+            // not a variable
+            continue;
 
         const struct cl_accessor *ac = op.accessor;
         if (!ac || ac->code != CL_ACCESSOR_REF)

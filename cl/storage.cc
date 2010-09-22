@@ -171,19 +171,9 @@ Var::Var(EVar code_, const struct cl_operand *op):
     loc(op->loc),
     uid(op->data.var.id)
 {
-    switch (op->code) {
-        case CL_OPERAND_VAR:
-            if (op->data.var.name)
-                name = op->data.var.name;
-            // fall through!
-
-        case CL_OPERAND_REG:
-            break;
-
-        default:
-            // unexpected operand type
-            TRAP;
-    }
+    SE_BREAK_IF(CL_OPERAND_VAR != op->code);
+    if (op->data.var.name)
+        name = op->data.var.name;
 
     // dig type of variable
     this->clt = digVarType(op);

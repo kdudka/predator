@@ -417,7 +417,6 @@ TValueId SymProc::heapValFromOperand(const struct cl_operand &op) {
     const enum cl_operand_e code = op.code;
     switch (code) {
         case CL_OPERAND_VAR:
-        case CL_OPERAND_REG:
             return this->heapValFromObj(op);
 
         case CL_OPERAND_CST:

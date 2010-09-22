@@ -412,7 +412,7 @@ void ClPrettyPrint::printNestedVar(const struct cl_operand *op) {
     switch (op->code) {
         case CL_OPERAND_VAR:
             if (!op->data.var.name) {
-                CL_ERROR_MSG(LocationWriter(loc_), "anonymous variable");
+                SSD_COLORIZE(out_, C_LIGHT_BLUE) << "%r" << op->data.var.id;
                 break;
             }
             out_ << SSD_INLINE_COLOR(C_LIGHT_BLUE, "%m" << scopeFlag(op->scope))
@@ -425,10 +425,6 @@ void ClPrettyPrint::printNestedVar(const struct cl_operand *op) {
                 default:
                     out_ << SSD_INLINE_COLOR(C_LIGHT_BLUE, op->data.var.name);
             }
-            break;
-
-        case CL_OPERAND_REG:
-            SSD_COLORIZE(out_, C_LIGHT_BLUE) << "%r" << op->data.reg.id;
             break;
 
         default:
@@ -543,7 +539,6 @@ void ClPrettyPrint::printOperand(const struct cl_operand *op) {
             this->printCst(op);
             break;
 
-        case CL_OPERAND_REG:
         case CL_OPERAND_VAR:
             this->printOperandVar(op);
             break;

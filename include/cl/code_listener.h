@@ -380,15 +380,11 @@ enum cl_operand_e {
 
     /**
      * variable can represent a local/global program variable, or a function
-     * argument
+     * argument.  Each variable has its unique ID.  Optionally it has also some
+     * name, if the variable indeed exists in the analysed program (in contrast
+     * to artificial variables created by the compiler).
      */
-    CL_OPERAND_VAR,
-
-    /**
-     * intermediate code register. Addressed by register ID. Usually managed by
-     * compiler only.
-     */
-    CL_OPERAND_REG
+    CL_OPERAND_VAR
 };
 
 /**
@@ -432,16 +428,6 @@ struct cl_operand {
             const char                  *name;
             /* TODO: is_extern? */
         } var; /**< valid only for @b CL_OPERAND_VAR */
-
-        /* CL_OPERAND_ARG */
-        struct {
-            int                         id;
-        } arg; /**< valid only for @b CL_OPERAND_ARG */
-
-        /* CL_OPERAND_REG */
-        struct {
-            int                         id;
-        } reg; /**< valid only for @b CL_OPERAND_REG */
 
         /* CL_OPERAND_CST */
         struct cl_cst                   cst;

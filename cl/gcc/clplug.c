@@ -518,9 +518,10 @@ static void read_operand_decl(struct cl_operand *op, tree t)
 
     if (DECL_ARTIFICIAL(t)) {
         // emit as a register
-        op->code            = CL_OPERAND_REG;
-        op->data.reg.id     = DECL_UID(t);
-        op->scope           = /* make it possible to use unify_regs decorator */
+        op->code            = CL_OPERAND_VAR;
+        op->data.var.name   = NULL;
+        op->data.var.id     = DECL_UID(t);
+        op->scope           = /* make it possible to use unify_vars decorator */
                               CL_SCOPE_FUNCTION;
         return;
     }
@@ -973,7 +974,7 @@ static /* const */ struct cl_type builtin_bool_type = {
 };
 
 static /* XXX const */ struct cl_operand stmt_cond_fixed_reg = {
-    .code           = CL_OPERAND_REG,
+    .code           = CL_OPERAND_VAR,
     .loc = {
         .file       = NULL,
         .line       = -1
@@ -981,7 +982,8 @@ static /* XXX const */ struct cl_operand stmt_cond_fixed_reg = {
     .scope          = CL_SCOPE_FUNCTION,
     .type           = &builtin_bool_type,
     .data = {
-        .reg = {
+        .var = {
+            .name   = NULL,
             .id     = /* XXX */ 0x100000
         }
     }
@@ -1000,7 +1002,7 @@ static void handle_stmt_cond_br(gimple stmt, const char *then_label,
     cl->insn(cl, &cli);
 
     // XXX
-    stmt_cond_fixed_reg.data.reg.id ++;
+    stmt_cond_fixed_reg.data.var.id ++;
 }
 
 static void handle_stmt_cond(gimple stmt)
@@ -1520,7 +1522,7 @@ static bool cl_append_def_listener(struct cl_code_listener *chain,
 {
     const char *cld = (opt->use_peer)
         ? "unfold_switch,unify_labels_gl"
-        : "unify_labels_fnc,unify_regs,unify_vars";
+        : "unify_labels_fnc,unify_vars";
 
     return cl_append_listener(chain,
             "listener=\"%s\" listener_args=\"%s\" cld=\"%s\"",

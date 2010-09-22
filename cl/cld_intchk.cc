@@ -313,18 +313,18 @@ class CldRegUsageChk: public CldOpCheckerBase {
 
     protected:
         virtual void checkDstOperand(const struct cl_operand *op) {
-            if (CL_OPERAND_REG != op->code)
+            if (CL_OPERAND_VAR != op->code)
                 return;
 
-            int id = op->data.reg.id;
+            int id = op->data.var.id;
             usageChecker_.write(id, id, CldOpCheckerBase::lastLocation());
         }
 
         virtual void checkSrcOperand(const struct cl_operand *op) {
-            if (CL_OPERAND_REG != op->code)
+            if (CL_OPERAND_VAR != op->code)
                 return;
 
-            int id = op->data.reg.id;
+            int id = op->data.var.id;
             usageChecker_.read(id, id, CldOpCheckerBase::lastLocation());
         }
 

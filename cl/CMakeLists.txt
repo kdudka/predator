@@ -48,7 +48,6 @@ add_library(cl STATIC
     cld_opchk.cc
     cld_optrans.cc
     cld_unilabel.cc
-    cld_uniregs.cc
     cld_univars.cc
     cld_unswitch.cc
     clutil.cc

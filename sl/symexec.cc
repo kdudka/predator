@@ -558,7 +558,6 @@ void operandToStream(std::ostream &str, const struct cl_operand &op) {
             operandToStreamCst(str, op);
             break;
 
-        case CL_OPERAND_REG:
         case CL_OPERAND_VAR:
             operandToStreamVar(str, op);
             break;

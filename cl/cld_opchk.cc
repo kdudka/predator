@@ -36,7 +36,7 @@ void CldOpCheckerBase::handleArrayIdx(const struct cl_operand *op) {
             continue;
 
         struct cl_operand *idx = ac->data.array.index;
-        if (CL_OPERAND_REG == idx->code)
+        if (CL_OPERAND_VAR == idx->code)
             this->checkSrcOperand(idx);
     }
 }

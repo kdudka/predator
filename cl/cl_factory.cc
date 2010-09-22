@@ -30,7 +30,6 @@
 
 #include "cld_intchk.hh"
 #include "cld_unilabel.hh"
-#include "cld_uniregs.hh"
 #include "cld_univars.hh"
 #include "cld_unswitch.hh"
 
@@ -230,7 +229,6 @@ CldChainFactory::CldChainFactory() {
     map_["unify_labels_gl"]         = createCldUniLabelGl;
     map_["unify_labels_static"]     = createCldUniLabelStatic;
     map_["unify_labels_fnc"]        = createCldUniLabelFnc;
-    map_["unify_regs"]              = createCldUniRegs;
     map_["unify_vars"]              = createCldUniVars;
     map_["unfold_switch"]           = createCldUnfoldSwitch;
 }

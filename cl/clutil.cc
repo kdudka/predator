@@ -52,19 +52,9 @@ int intCstFromOperand(const struct cl_operand *op) {
 }
 
 int varIdFromOperand(const struct cl_operand *op, const char **pName) {
-    const enum cl_operand_e code = op->code;
-    switch (code) {
-        case CL_OPERAND_REG:
-            return op->data.reg.id;
+    SE_BREAK_IF(CL_OPERAND_VAR != op->code);
+    if (pName)
+        *pName = op->data.var.name;
 
-        case CL_OPERAND_VAR:
-            if (pName)
-                *pName = op->data.var.name;
-
-            return op->data.var.id;
-
-        default:
-            SE_TRAP;
-            return -1;
-    }
+    return op->data.var.id;
 }

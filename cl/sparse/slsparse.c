@@ -1135,22 +1135,12 @@ static struct cl_code_listener* create_cl_chain(void)
     }
 
     listener = cl_code_listener_create("listener=\"pp_with_types\" "
-            "cld=\"unify_labels_fnc,unify_regs,unify_vars\"");
+            "cld=\"unify_labels_fnc,unify_vars\"");
     if (!listener) {
         chain->destroy(chain);
         return NULL;
     }
     cl_chain_append(chain, listener);
-
-#if 0
-    listener = cl_code_listener_create("listener=\"dotgen\" "
-            "cld=\"unify_labels_fnc,unify_regs,unify_vars\"");
-    if (!listener) {
-        chain->destroy(chain);
-        return NULL;
-    }
-    cl_chain_append(chain, listener);
-#endif
 
     return chain;
 }

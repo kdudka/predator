@@ -578,13 +578,12 @@ void ClDotGenerator::insn_call_open(const struct cl_location *loc,
     std::ostringstream name;
     switch (fnc->code) {
         case CL_OPERAND_VAR:
-        case CL_OPERAND_REG:
             callType = ET_PTR_CALL;
 
-            if (CL_OPERAND_VAR == fnc->code)
+            if (fnc->data.var.name)
                 name << fnc->data.var.name;
             else
-                name << "%r" << fnc->data.reg.id;
+                name << "%r" << fnc->data.var.id;
 
             // TODO: handle accessor somehow
             break;

@@ -37,7 +37,9 @@ namespace {
      * @param str dst/src to call strdup(3) for
      */
     void dupString(const char *&str) {
-        str = strdup(str);
+        str = (str)
+            ? strdup(str)
+            : 0;
     }
 
     /**
@@ -314,9 +316,7 @@ void ClStorageBuilder::finalize() {
 }
 
 void ClStorageBuilder::Private::digOperandVar(const struct cl_operand *op) {
-    int id = (CL_OPERAND_REG == op->code)
-        ? op->data.reg.id
-        : op->data.var.id;
+    const int id = op->data.var.id;
 
     // mark as used in the current function
     this->fnc->vars.insert(id);
@@ -344,10 +344,7 @@ void ClStorageBuilder::Private::digOperandVar(const struct cl_operand *op) {
             EVar code = var.code;
             switch (code) {
                 case VAR_VOID:
-                    var = Var((CL_OPERAND_REG == op->code)
-                                  ? VAR_REG
-                                  : VAR_LC,
-                              op);
+                    var = Var(VAR_LC, op);
                 case VAR_FNC_ARG:
                     break;
                 case VAR_LC:
@@ -418,7 +415,6 @@ void ClStorageBuilder::Private::digOperand(const struct cl_operand *op) {
 
     enum cl_operand_e code = op->code;
     switch (code) {
-        case CL_OPERAND_REG:
         case CL_OPERAND_VAR:
             // store variable's metadata
             this->digOperandVar(op);

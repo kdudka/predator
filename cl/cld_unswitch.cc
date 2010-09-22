@@ -151,13 +151,14 @@ void CldUnfoldSwitch::emitCase(int cst, struct cl_type *type, const char *label)
     btype.size                      = /* FIXME */ sizeof(bool);
 
     struct cl_operand reg;
-    reg.code                        = CL_OPERAND_REG;
+    reg.code                        = CL_OPERAND_VAR;
     reg.loc.file                    = 0;
     reg.loc.line                    = -1;
     reg.scope                       = CL_SCOPE_FUNCTION;
     reg.type                        = &btype;
     reg.accessor                    = 0;
-    reg.data.reg.id                 = /* XXX */ 0x10000 + switchCnt_;
+    reg.data.var.name               = 0;
+    reg.data.var.id                 = /* XXX */ 0x10000 + switchCnt_;
 
     struct cl_operand val;
     val.code                        = CL_OPERAND_CST;
