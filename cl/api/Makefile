@@ -24,4 +24,4 @@ clean:
 	rm -rf html
 
 check_version:
-	$(MAKE) -C .. version.h
+	$(MAKE) -C .. version_cl.h

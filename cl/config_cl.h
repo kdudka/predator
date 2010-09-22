@@ -18,7 +18,7 @@
  */
 
 /**
- * @file config.h
+ * @file config_cl.h
  * various compile-time options
  */
 

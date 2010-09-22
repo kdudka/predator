@@ -8,7 +8,7 @@
 /**
  * @mainpage
  * @author Kamil Dudka <kdudka@redhat.com>
- * @version @include version.h
+ * @version @include version_cl.h
  * @note The @b up2date @b sources are available (among other ways) through
  * <A HREF="http://github.com/kdudka/predator"><B>github</B></A>.
  *

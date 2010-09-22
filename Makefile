@@ -40,61 +40,40 @@ CURL            ?= curl --location -v#      # URL grabber command-line
 GIT             ?= git#                     # use this to override git(1)
 SVN             ?= svn#                     # use this to override svn(1)
 
-.PHONY: all check clean distcheck distclean fetch unpack \
+DIRS_BUILD      ?= cl fwnull sl fa_analysis
+DIRS_INSTALL    ?= cl fwnull sl
+
+.PHONY: all check clean distcheck distclean api cl/api sl/api \
 	build_gcc build_gcc_svn update_gcc update_gcc_src_only \
-	build_inv \
-	api_cl api_sl api
+	build_inv
 
 all: $(SSD_GIT) include/gcc/
-	$(MAKE) -C cl $@
-	$(MAKE) -C fwnull $@
-	$(MAKE) -C sl $@
-	$(MAKE) -C fa_analysis $@
-
-# fetch all, but gcc
-fetch: $(INVADER) $(SPARSE) $(SSD_GIT)
-
-# unpack Invader's sources
-unpack: $(INVADER_DIR) $(GCC45_DIR)
-
-clean:
-	rm -rf cl_build fwnull_build sl_build fa_analysis_build
-	$(MAKE) -C sl clean
-
-# wipe out all
-distclean: clean
-	rm -rf $(INVADER) $(SPARSE) $(SSD_GIT) $(GCC45_DIR)
-	rm -rf $(INVADER_DIR)
-	rm -rf $(GCC_BUILD)
-	rm -rf gcc $(GCC_SRC) $(GCC_INSTALL)
-	$(MAKE) -C sl distclean
+	$(foreach dir, $(DIRS_BUILD), $(MAKE) -C $(dir) $@ &&) true
 
 check: include/gcc/
-	$(MAKE) -C cl $@
-	$(MAKE) -C fwnull $@
-	$(MAKE) -C sl $@
-	$(MAKE) -C fa_analysis $@
+	$(foreach dir, $(DIRS_BUILD), $(MAKE) -C $(dir) $@ &&) true
 
-distcheck: include/gcc/
-	$(MAKE) -C cl $@
-	$(MAKE) -C fwnull $@
-	$(MAKE) -C sl $@
-	$(MAKE) -C fa_analysis $@
+clean:
+	$(foreach dir, $(DIRS_BUILD), $(MAKE) -C $(dir) $@ &&) true
 
-install: include/gcc/
-	$(MAKE) -C cl $@
-	$(MAKE) -C fwnull $@
-	$(MAKE) -C sl $@
+distclean:
+	$(foreach dir, $(DIRS_BUILD), $(MAKE) -C $(dir) $@ &&) true
 
-api_cl:
+distcheck: $(SSD_GIT) include/gcc/
+	$(foreach dir, $(DIRS_BUILD), $(MAKE) -C $(dir) $@ &&) true
+
+install: $(SSD_GIT) include/gcc/
+	$(foreach dir, $(DIRS_INSTALL), $(MAKE) -C $(dir) $@ &&) true
+
+cl/api:
 	$(MAKE) -C cl/api clean
 	$(MAKE) -C cl/api
 
-api_sl:
+sl/api:
 	$(MAKE) -C sl/api clean
 	$(MAKE) -C sl/api
 
-api: api_cl api_sl
+api: cl/api sl/api
 
 # unpack released gcc 4.5
 $(GCC45_DIR): $(GCC45)
