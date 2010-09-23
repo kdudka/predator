@@ -113,6 +113,7 @@ extern void print_gimple_stmt (FILE *, gimple, int, int);
 
 // name of the plug-in given by gcc during initialization
 static const char *plugin_name = "[uninitialized]";
+static const char *plugin_name_alloc;
 
 // verbose bitmask
 static int verbose = 0;
@@ -157,13 +158,10 @@ static void init_plugin_name(const struct plugin_name_args *info)
     }
 
     // initialize global plug-in name
-    plugin_name = realpath(info->full_name, NULL);
-    if (!plugin_name) {
-        fprintf(stderr, "%s: error: "
-                "failed to canonicalize plug-in name\n",
-                info->full_name);
-        abort();
-    }
+    plugin_name = info->full_name;
+    plugin_name_alloc = realpath(plugin_name, NULL);
+    if (plugin_name_alloc)
+        plugin_name = plugin_name_alloc;
 
     // read plug-in base name
     const char *name = info->base_name;
@@ -196,8 +194,8 @@ static void free_plugin_name(void)
     memset(&cl_info, 0, sizeof cl_info);
 
     // free plug-in name
-    free((char *) plugin_name);
-    plugin_name = NULL;
+    free((char *) plugin_name_alloc);
+    plugin_name_alloc = NULL;
 }
 
 typedef htab_t type_db_t;

@@ -4,8 +4,8 @@
 
 EAPI=3
 
-SHA1_LONG="45d4f566050554d29023e1cae095296e33897d6e"
-SHA1_SHORT="45d4f56"
+SHA1_LONG="57e2659fe995671bc261cc4a6303e376c9efe2ae"
+SHA1_SHORT="57e2659"
 GCC_HOST_VERSION="4.5.1"
 
 GCC_HOST="gcc-${GCC_HOST_VERSION}"
@@ -36,7 +36,7 @@ src_unpack(){
 	curl -s "${SSD_SNAP}" | tar -vxz || die "unable to download ssd"
 
 	einfo "initializing git SHA1:"
-	echo "#define CL_GIT_SHA1 \"${SHA1_LONG}\"" | tee cl/version.h
+	echo "#define CL_GIT_SHA1 \"${SHA1_LONG}\"" | tee cl/version_cl.h
 	echo "#define SL_GIT_SHA1 \"${SHA1_LONG}\"" | tee sl/version.h
 	echo "#define FWNULL_GIT_SHA1 \"${SHA1_LONG}\"" | tee fwnull/version.h
 }
