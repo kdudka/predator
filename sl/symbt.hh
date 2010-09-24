@@ -124,12 +124,6 @@ class SymBackTrace {
         /// unregister the path tracer associated with the topmost function call
         void popPathTracer(const IPathTracer *);
 
-        /**
-         * mark the topmost function call as @b optimized @b out, what basically
-         * means that there is not path tracer associated with the call
-         */
-        void markTopCallAsOptimizedOut();
-
     private:
         struct Private;
         Private *d;

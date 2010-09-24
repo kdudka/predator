@@ -37,12 +37,10 @@ struct SymBackTrace::Private {
     struct BtStackItem {
         const CodeStorage::Fnc      &fnc;
         const LocationWriter        lw;
-        bool                        optimizedOut;
 
         BtStackItem(const CodeStorage::Fnc *fnc_, const LocationWriter &lw_):
             fnc(*fnc_),
-            lw(lw_),
-            optimizedOut(false)
+            lw(lw_)
         {
         }
     };
@@ -165,7 +163,7 @@ void SymBackTrace::printBackTrace() const {
         const Private::BtStackItem item = bt.top();
         bt.pop();
 
-        if (ptrace && !item.optimizedOut) {
+        if (ptrace) {
             // perform path tracing at the current level
             SE_BREAK_IF(ppStack.empty());
 
@@ -253,10 +251,4 @@ void SymBackTrace::popPathTracer(const IPathTracer *pp) {
     SE_BREAK_IF(d->ppStack.top() != pp);
     (void) pp;
     d->ppStack.pop();
-}
-
-void SymBackTrace::markTopCallAsOptimizedOut() {
-    SE_BREAK_IF(d->btStack.empty());
-    Private::BtStackItem &ref = d->btStack.top();
-    ref.optimizedOut = true;
 }
