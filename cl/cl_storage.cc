@@ -348,7 +348,6 @@ void ClStorageBuilder::Private::digOperandVar(const struct cl_operand *op) {
                 case VAR_FNC_ARG:
                     break;
                 case VAR_LC:
-                case VAR_REG:
                     if (id == var.uid)
                         break;
                 case VAR_GL:

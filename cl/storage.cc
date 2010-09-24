@@ -190,7 +190,6 @@ Var::Var(EVar code_, const struct cl_operand *op):
 
         case VAR_LC:
         case VAR_FNC_ARG:
-        case VAR_REG:
             if (CL_SCOPE_FUNCTION == op->scope)
                 break;
             // fall through!
@@ -204,7 +203,6 @@ bool isOnStack(const Var &var) {
     const EVar code = var.code;
     switch (code) {
         case VAR_FNC_ARG:
-        case VAR_REG:
         case VAR_LC:
             return true;
 

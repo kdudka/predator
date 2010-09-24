@@ -58,8 +58,7 @@ enum EVar {
     VAR_VOID,           ///< this should be used only internally
     VAR_GL,             ///< global (may be also static) variable
     VAR_LC,             ///< local variable (not valid beyond a function)
-    VAR_FNC_ARG,        ///< fnc argument (sort of local variable also)
-    VAR_REG             ///< intermediate code register (kind of local variable)
+    VAR_FNC_ARG         ///< fnc argument (sort of local variable also)
 };
 
 /**
@@ -82,7 +81,7 @@ struct Var {
     int                         uid;
 
     /**
-     * name of the variable, empty string for anonymous variables, e.g.\ VAR_REG
+     * name of the variable, empty string for anonymous variables
      */
     std::string                 name;
 
