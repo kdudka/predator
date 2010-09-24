@@ -31,10 +31,10 @@ struct Data {
 
 	typedef enum {
 		t_undef,
+		t_native_ptr,
 		t_void_ptr,
-		t_ptr,
-//		t_sel,
 		t_ref,
+//		t_sel,
 		t_int,
 		t_bool,
 		t_other
@@ -43,16 +43,16 @@ struct Data {
 	type_enum type;
 
 	union {
+		void*	d_native_ptr;
 		size_t	d_void_ptr;
 		struct {
 			size_t	root;
 			int		offset;			
-		}		d_ptr;
+		}		d_ref;
 /*		struct {
 			size_t	sel;
 			int		offset;			
 		}		d_sel;*/
-		size_t	d_ref;
 		int		d_int;
 		bool	d_bool;
 	};
@@ -63,6 +63,13 @@ struct Data {
 		return data;
 	}
 
+	static Data createNativePtr(void* ptr) {
+		Data data;
+		data.type = type_enum::t_native_ptr;
+		data.d_native_ptr = ptr;
+		return data;
+	}
+
 	static Data createVoidPtr(size_t size = 0) {
 		Data data;
 		data.type = type_enum::t_void_ptr;
@@ -70,18 +77,11 @@ struct Data {
 		return data;
 	}
 
-	static Data createPtr(size_t root, int offset) {
+	static Data createRef(size_t root, int offset = 0) {
 		Data data;
 		data.type = type_enum::t_ptr;
-		data.d_ptr.root = root;
-		data.d_ptr.offset = offset;
-		return data;
-	}
-
-	static Data createRef(size_t ref) {
-		Data data;
-		data.type = type_enum::t_ref;
-		data.d_ref= ref;
+		data.d_ref.root = root;
+		data.d_ref.offset = offset;
 		return data;
 	}
 
@@ -93,25 +93,28 @@ struct Data {
 		return this->type != type_enum::t_undef;
 	}
 
-	bool isPtr() const {
-		return this->type == type_enum::t_ptr;
+	bool isNativePtr() const {
+		return this->type == type_enum::t_native_ptr;
+	}
+
+	bool isNull() const {
+		return this->type == type_enum::t_void_ptr && this->d_void_ptr == 0;
 	}
 
 	bool isRef() const {
 		return this->type == type_enum::t_ref;
 	}
 
-	bool isRef(size_t ref) const {
-		return this->type == type_enum::t_ref && this->d_ref == ref;
+	bool isRef(size_t root) const {
+		return this->type == type_enum::t_ref && this->d_ref.root == root;
 	}
 
 	friend size_t hash_value(const Data& v) {
 		switch (v.type) {
 			case t_undef: return hash_value(v.type);
 			case t_void_ptr: return hash_value(v.type + v.d_void_ptr);
-			case t_ptr: return hash_value(v.type + v.d_ptr.root + v.d_ptr.offset);
+			case t_ref: return hash_value(v.type + v.d_ref.root + v.d_ref.offset);
 //			case t_sel: return hash_value(v.type + hash_value(v.d_sel));
-			case t_ref: return hash_value(v.type + v.d_ref);
 			case t_int: return hash_value(v.type + v.d_int);
 			case t_bool: return hash_value(v.type + v.d_bool);
 			default: return hash_value(v.type + v.d_void_ptr);
@@ -124,9 +127,8 @@ struct Data {
 		switch (this->type) {
 			case t_undef: return true;
 			case t_void_ptr: return this->d_void_ptr == rhs.d_void_ptr;
-			case t_ptr: return this->d_ptr.root == rhs.d_ptr.root && this->d_ptr.offset == rhs.d_ptr.offset;
+			case t_ref: return this->d_ref.root == rhs.d_ref.root && this->d_ref.offset == rhs.d_ref.offset;
 //			case t_sel: return this->d_sel == rhs.d_sel;
-			case t_ref: return this->d_ref == rhs.d_ref;
 			case t_int: return this->d_int == rhs.d_int;
 			case t_bool: return this->d_bool == rhs.d_bool;
 			default: return false;
@@ -137,9 +139,8 @@ struct Data {
 		switch (x.type) {
 			case t_undef: os << "(undef)"; break;
 			case t_void_ptr: os << "(void_ptr)" << x.d_void_ptr; break;
-			case t_ptr: os << "(ptr)" << x.d_ptr.root << '+' << x.d_ptr.offset; break;
+			case t_ref: os << "(ptr)" << x.d_ref.root << '+' << x.d_ref.offset; break;
 //			case t_sel: os << "(sel)" << x.d_sel.sel << '+' << x.d_sel.offset; break;
-			case t_ref: os << "(ref)" << x.d_ref; break;
 			case t_int: os << "(int)" << x.d_int; break;
 			case t_bool: os << "(bool)" << x.d_bool; break;
 			default: os << "(unknown)"; break;
@@ -150,9 +151,19 @@ struct Data {
 };
 
 struct SelData {
+
 	size_t	offset;
 	int		size;
 	int		aux;
+
+	static SelData create(size_t offset, int size, int aux) {
+		SelData selData;
+		selData.offset = offset;
+		selData.size = size;
+		selData.aux = aux;
+		return selData;
+	}
+	
 };
 
 /*

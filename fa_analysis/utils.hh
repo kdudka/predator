@@ -327,6 +327,13 @@ public:
 		return os << ']';
 	}
 
+	template <class T>
+	static void erase(T& x) {
+		for (T::iterator i = x.begin(); i != x.end(); ++i)
+			delete *i;
+		x.clear();
+	}
+
 };
 
 #endif

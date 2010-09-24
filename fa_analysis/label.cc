@@ -17,10 +17,28 @@
  * along with predator.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "forestaut.hh"
-#include "tatimint.hh"
+#include "label.hh"
+#include "box.hh"
 
-std::ostream& operator<<(std::ostream& os, const TA<FA::label_type>& ta) {
-	TAWriter<FA::label_type>(os).writeOne(ta);
-	return os;
+std::ostream& operator<<(std::ostream& os, const FA::label_type& label) {
+	os << '<';
+	switch (label.type) {
+		case 0: {
+			assert(!label.data->empty());
+			std::vector<Data>::const_iterator i = label.data->begin();
+			os << *i;
+			for (++i; i != label.data->end(); ++i)
+				os << ',' << *i;
+			break;
+		}
+		case 1: {
+			assert(!label.dataB->empty());
+			std::vector<const class Box*>::const_iterator i = label.dataB->begin();
+			os << **i;
+			for (++i; i != label.dataB->end(); ++i)
+				os << ',' << **i;
+			break;
+		}
+	}
+	return os << '>';
 }

@@ -43,7 +43,7 @@ public:
 		this->backend.addFinalState(0);
 	}
 
-	TA<FA::label_type>& fae2ta(TA<FA::label_type>& dst, Index<size_t>& index, const FAE& src) {
+	TA<FA::label_type>& fae2ta(TA<FA::label_type>& dst, Index<size_t>& index, const FAE& src) const {
 		vector<size_t> lhs;
 		for (vector<TA<FA::label_type>*>::const_iterator i = src.roots.begin(); i != src.roots.end(); ++i) {
 			TA<FA::label_type>::reduce(dst, **i, index, this->stateOffset, false);

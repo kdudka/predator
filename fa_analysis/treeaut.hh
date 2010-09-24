@@ -247,7 +247,7 @@ public:
 
 	typedef typename boost::unordered_map<size_t, std::vector<const TT<T>*> > bu_cache_type;
 
-	typedef boost::unordered_map<const T*, std::vector<const TT<T>*> > lt_cache_type;
+	typedef boost::unordered_map<T, std::vector<const TT<T>*> > lt_cache_type;
 //	typedef boost::unordered_map<size_t, lt_cache_type> slt_cache_type;
 
 public:
@@ -403,7 +403,7 @@ public:
 */	
 	void buildLTCache(lt_cache_type& cache) const {
 		for (typename set<typename trans_cache_type::value_type*>::const_iterator i = this->transitions.begin(); i != this->transitions.end(); ++i)
-			cache.insert(make_pair(&(*i)->first._label, std::vector<const TT<T>*>())).first->second.push_back(&(*i)->first);
+			cache.insert(make_pair((*i)->first._label, std::vector<const TT<T>*>())).first->second.push_back(&(*i)->first);
 	}
 
 	typename trans_cache_type::value_type* addTransition(const vector<size_t>& lhs, const T& label, size_t rhs) {
@@ -470,14 +470,14 @@ public:
 
 	bool isFinalState(size_t state) const { return (this->finalStates.find(state) != this->finalStates.end()); }
 	
-	const set<size_t>& getFinalStates() const { return this->finalStates; }
+	const std::set<size_t>& getFinalStates() const { return this->finalStates; }
 	
 	size_t getFinalState() const {
 		assert(this->finalStates.size() == 1);
 		return *this->finalStates.begin();
 	}
 	
-	const set<typename trans_cache_type::value_type*>& getTransitions() const { return this->transitions; }
+	const std::set<typename trans_cache_type::value_type*>& getTransitions() const { return this->transitions; }
 
 	void downwardTranslation(LTS& lts, const Index<size_t>& stateIndex, const Index<T>& labelIndex) const;
 	
@@ -616,6 +616,7 @@ public:
 		TA<T>::computeProduct(cache1, cache2, TA<T>::PredicateF(dst, predicate));
 	}
 
+	// currently erases '1' from the relation
 	void heightAbstraction(std::vector<std::vector<bool> >& result, size_t height, const Index<size_t>& stateIndex) const {
 		std::vector<size_t> classIndex(stateIndex.size(), 0), newClassIndex(stateIndex.size());
 		boost::unordered_map<std::pair<T, std::vector<size_t> >, size_t> classes;
@@ -625,8 +626,9 @@ public:
 				std::vector<size_t> tmp = itov(classIndex[stateIndex[(*i)->first._rhs]]);
 				for (std::vector<size_t>::const_iterator j = (*i)->first._lhs->first.begin(); j != (*i)->first._lhs->first.end(); ++j)
 					tmp.push_back(classIndex[stateIndex[*j]]);
-				newClassIndex[classIndex[stateIndex[(*i)->first._rhs]]] =
-					classes.insert(make_pair(make_pair((*i)->first._label, tmp), classes.size())).first->second;
+				newClassIndex[tmp[0]] = classes.insert(
+					std::make_pair(std::make_pair((*i)->first._label, tmp), classes.size())
+				).first->second;
 			}
 			std::swap(classIndex, newClassIndex);
 		}
