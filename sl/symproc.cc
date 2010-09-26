@@ -1201,8 +1201,7 @@ void SymExecCore::execOp(const CodeStorage::Insn &insn) {
     {
         // handle pointer plus
         valResult = handlePointerPlus(heap_, clt[/* dst type */ ARITY],
-                                      rhs[0], opList[/* src2 */ 2],
-                                      &insn.loc);
+                                      rhs[0], opList[/* src2 */ 2], &insn.loc);
     }
     else
         // handle generic operator

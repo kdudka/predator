@@ -14,21 +14,52 @@
  *
  * @remark
  *
- * - Documentation of code_listener.h might be a viable start. Reading this
- *   should be sufficient if you are going to write your own compiler plug-in
- *   or whatever to read the intermediate code from.
+ * - code listener API: code_listener.h
+ *      - struct cl_operand
+ *      - struct cl_type
+ *      - struct cl_accessor
  *
- * - If you want to write your own code listener, look at the ICodeListener
- *   interface. And if you need to write a new code listener decorator,
- *   ClDecoratorBase abstract class is the place to go.
+ * - code storage API: storage.hh
+ *      - CodeStorage::Storage
+ *      - CodeStorage::Fnc
+ *      - CodeStorage::ControlFlow
+ *      - CodeStorage::Block
+ *      - CodeStorage::Insn
+ *      - CodeStorage::Var
  *
- * - If you prefer to work with a traversable program model instead of callback
- *   sequence, you should start with CodeStorage namespace documentation, in
- *   particular the CodeStorage::Storage class.  Using this approach, all
- *   necessary data are gathered into on heap allocated object model and then
- *   available for various types of analysis.
+ * - listeners:
+ *      - cl_pp.hh
+ *      - cl_locator.hh
+ *      - cl_dotgen.hh
+ *      - cl_typedot.hh
+ *      - cl_storage.hh
+ *      - cl_easy.hh
  *
- * - If you are interested in participation on this project and don't know where
- *   to start, you can pick one of the outstanding <A
- *   HREF="todo.html"><B>todo-list</B></A> items.
+ * - decorators:
+ *      - cld_intchk.hh
+ *      - cld_unilabel.hh
+ *      - cld_univars.hh
+ *      - cld_unswitch.hh
+ *
+ * - error/warning messages: cl_msg.hh, location.hh,
+ *      - Location
+ *      - LocationWriter
+ *      - #CL_ERROR, #CL_ERROR_MSG
+ *      - #CL_WARN, #CL_WARN_MSG
+ *      - #CL_NOTE, #CL_NOTE_MSG
+ *      - #CL_DEBUG, #CL_DEBUG_MSG
+ *
+ * - other utilities: clutil.hh
+ *      - targetTypeOfPtr()
+ *      - seekRefAccessor()
+ *      - intCstFromOperand()
+ *      - varIdFromOperand()
+ *      - traverseTypeIc()
+ *
+ * - internals: cl.hh, cl_decorator.hh, cl_factory.hh
+ *      - ICodeListener
+ *      - ClDecoratorBase
+ *      - ClFactory
+ *
+ * - configuration: config_cl.h
  */
