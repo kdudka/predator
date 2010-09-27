@@ -19,6 +19,7 @@
 
 #include "types.hh"
 
+
 struct label_type {
 
 	size_t type;
@@ -45,7 +46,7 @@ struct label_type {
 
 	bool operator==(const label_type& rhs) const { return this->data == rhs.data; }
 
-	friend std::ostream& operator<<(std::ostream& os, const FA::label_type& label);
+	friend std::ostream& operator<<(std::ostream& os, const label_type& label);
 
 };
 

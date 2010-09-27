@@ -23,69 +23,101 @@
 #include <ostream>
 #include <cassert>
 
+#include <vector>
 #include <boost/unordered_map.hpp>
 
-using boost::hash_value;
+struct SelData {
+
+	size_t	offset;
+	int		size;
+	int		displ;
+
+	SelData(size_t offset, int size, int displ) : offset(offset), size(size), displ(displ) {}
+	
+};
 
 struct Data {
+
+	typedef std::pair<size_t, Data> item_info;
 
 	typedef enum {
 		t_undef,
 		t_native_ptr,
 		t_void_ptr,
 		t_ref,
-//		t_sel,
 		t_int,
 		t_bool,
+		t_struct,
 		t_other
 	} type_enum;
 
 	type_enum type;
+
+	int size;
 
 	union {
 		void*	d_native_ptr;
 		size_t	d_void_ptr;
 		struct {
 			size_t	root;
-			int		offset;			
+			int		displ;			
 		}		d_ref;
-/*		struct {
-			size_t	sel;
-			int		offset;			
-		}		d_sel;*/
 		int		d_int;
 		bool	d_bool;
+		std::vector<item_info>* d_struct;
 	};
 
-	static Data createUndef() {
-		Data data;
-		data.type = type_enum::t_undef;
-		return data;
+	Data(type_enum type = type_enum::t_undef) : type(type) {}
+
+	Data(const Data& data) : type(type), size(size) {
+		switch (data.type) {
+			case type_enum::t_void_ptr: this->d_void_ptr = data.d_void_ptr; break;
+			case type_enum::t_ref: this->d_ref.root = data.d_ref.root; this->d_ref.displ = data.d_ref.displ; break;
+			case type_enum::t_int: this->d_int = data.d_int; break;
+			case type_enum::t_bool: this->d_bool = data.d_bool; break;
+			case type_enum::t_struct: this->d_struct = new std::vector<item_info>(*data.d_struct); break;
+			default: break;
+		}
 	}
 
+	~Data() { this->clear(); }
+
+	static Data createUndef() { return Data(); }
+
 	static Data createNativePtr(void* ptr) {
-		Data data;
-		data.type = type_enum::t_native_ptr;
+		Data data(type_enum::t_native_ptr);
 		data.d_native_ptr = ptr;
 		return data;
 	}
 
+	static Data createRef(size_t root, int displ = 0) {
+		Data data(type_enum::t_ref);
+		data.d_ref.root = root;
+		data.d_ref.displ = displ;
+		return data;
+	}
+
+	static Data createStruct(const std::vector<item_info>& items = std::vector<item_info>()) {
+		Data data(type_enum::t_struct);
+		data.d_struct = new std::vector<item_info>(items);
+		return data;
+	}
+
 	static Data createVoidPtr(size_t size = 0) {
-		Data data;
-		data.type = type_enum::t_void_ptr;
+		Data data(type_enum::t_void_ptr);
 		data.d_void_ptr = size;
 		return data;
 	}
 
-	static Data createRef(size_t root, int offset = 0) {
-		Data data;
-		data.type = type_enum::t_ptr;
-		data.d_ref.root = root;
-		data.d_ref.offset = offset;
+	static Data createInt(int x) {
+		Data data(type_enum::t_int);
+		data.d_int = x;
 		return data;
 	}
 
 	void clear() {
+		if (this->type == type_enum::t_struct)
+			delete this->d_struct;
 		this->type = type_enum::t_undef;
 	}
 
@@ -109,15 +141,19 @@ struct Data {
 		return this->type == type_enum::t_ref && this->d_ref.root == root;
 	}
 
+	bool isStruct() const {
+		return this->type == type_enum::t_struct;
+	}
+
 	friend size_t hash_value(const Data& v) {
 		switch (v.type) {
-			case t_undef: return hash_value(v.type);
-			case t_void_ptr: return hash_value(v.type + v.d_void_ptr);
-			case t_ref: return hash_value(v.type + v.d_ref.root + v.d_ref.offset);
-//			case t_sel: return hash_value(v.type + hash_value(v.d_sel));
-			case t_int: return hash_value(v.type + v.d_int);
-			case t_bool: return hash_value(v.type + v.d_bool);
-			default: return hash_value(v.type + v.d_void_ptr);
+			case type_enum::t_undef: return boost::hash_value(v.type);
+			case type_enum::t_void_ptr: return boost::hash_value(v.type + v.d_void_ptr);
+			case type_enum::t_ref: return boost::hash_value(v.type + v.d_ref.root + v.d_ref.displ);
+			case type_enum::t_int: return boost::hash_value(v.type + v.d_int);
+			case type_enum::t_bool: return boost::hash_value(v.type + v.d_bool);
+			case type_enum::t_struct: return boost::hash_value(v.type + boost::hash_value(*v.d_struct));
+			default: return boost::hash_value(v.type + v.d_void_ptr);
 		}
 	}
 
@@ -125,45 +161,35 @@ struct Data {
 		if (this->type != rhs.type)
 			return false;
 		switch (this->type) {
-			case t_undef: return true;
-			case t_void_ptr: return this->d_void_ptr == rhs.d_void_ptr;
-			case t_ref: return this->d_ref.root == rhs.d_ref.root && this->d_ref.offset == rhs.d_ref.offset;
-//			case t_sel: return this->d_sel == rhs.d_sel;
-			case t_int: return this->d_int == rhs.d_int;
-			case t_bool: return this->d_bool == rhs.d_bool;
+			case type_enum::t_undef: return true;
+			case type_enum::t_void_ptr: return this->d_void_ptr == rhs.d_void_ptr;
+			case type_enum::t_ref: return this->d_ref.root == rhs.d_ref.root && this->d_ref.displ == rhs.d_ref.displ;
+			case type_enum::t_int: return this->d_int == rhs.d_int;
+			case type_enum::t_bool: return this->d_bool == rhs.d_bool;
+			case type_enum::t_struct: return *this->d_struct == *rhs.d_struct;
 			default: return false;
 		}
 	}
 
 	friend std::ostream& operator<<(std::ostream& os, const Data& x) {
+//		os << '[' << x.size << ']';
 		switch (x.type) {
-			case t_undef: os << "(undef)"; break;
-			case t_void_ptr: os << "(void_ptr)" << x.d_void_ptr; break;
-			case t_ref: os << "(ptr)" << x.d_ref.root << '+' << x.d_ref.offset; break;
-//			case t_sel: os << "(sel)" << x.d_sel.sel << '+' << x.d_sel.offset; break;
-			case t_int: os << "(int)" << x.d_int; break;
-			case t_bool: os << "(bool)" << x.d_bool; break;
+			case type_enum::t_undef: os << "(undef)"; break;
+			case type_enum::t_void_ptr: os << "(void_ptr)" << x.d_void_ptr; break;
+			case type_enum::t_ref: os << "(ref)" << x.d_ref.root << '+' << x.d_ref.displ; break;
+			case type_enum::t_int: os << "(int)" << x.d_int; break;
+			case type_enum::t_bool: os << "(bool)" << x.d_bool; break;
+			case type_enum::t_struct:
+				os << "(struct)[ ";
+				for (std::vector<item_info>::iterator i = x.d_struct->begin(); i != x.d_struct->end(); ++i)
+					os << '+' << i->first << ": " << i->second << ' ';
+				os << "]";
+				break;
 			default: os << "(unknown)"; break;
 		}
 		return os;
 	}
 
-};
-
-struct SelData {
-
-	size_t	offset;
-	int		size;
-	int		aux;
-
-	static SelData create(size_t offset, int size, int aux) {
-		SelData selData;
-		selData.offset = offset;
-		selData.size = size;
-		selData.aux = aux;
-		return selData;
-	}
-	
 };
 
 /*

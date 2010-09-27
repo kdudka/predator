@@ -20,6 +20,7 @@
 #include <vector>
 #include <boost/unordered_map.hpp>
 
+#include <cl/code_listener.h>
 #include <cl/cl_msg.hh>
 #include <cl/storage.hh>
 
@@ -29,23 +30,51 @@
 #include "ufae.hh"
 #include "symexec.hh"
 
+#define ABP_INDEX		0
+#define ABP_OFFSET		0
+#define CTX_INDEX		1
+#define CTX_OFFSET		sizeof(void*)
+#define FIXED_REG_COUNT	2
+
 using boost::unordered_map;
+using std::vector;
 
 struct NodeBuilder {
 
-	static void buildNode(vector<SelData>& nodeInfo, CodeStorage::cl_type* type, int offset = 0) {
+	static void buildNode(vector<SelData>& nodeInfo, const cl_type* type, int offset = 0) {
 		
 		assert(type->size > 0);
 
 		switch (type->code) {
+			case cl_type_e::CL_TYPE_STRUCT:
+				for (int i = 0; i < type->item_cnt; ++i)
+					NodeBuilder::buildNode(nodeInfo, type->items[i].type, offset + type->items[i].offset);
+				break;
 			case cl_type_e::CL_TYPE_PTR:
 			case cl_type_e::CL_TYPE_INT:
 			case cl_type_e::CL_TYPE_BOOL:
-				nodeInfo.push_back(SelData::create(offset, type->size, 0));
+			default:
+				nodeInfo.push_back(SelData(offset, type->size, 0));
 				break;
+//			case cl_type_e::CL_TYPE_UNION:
+		}
+
+	}
+
+	static void buildNode(vector<size_t>& nodeInfo, const cl_type* type, int offset = 0) {
+		
+		assert(type->size > 0);
+
+		switch (type->code) {
 			case cl_type_e::CL_TYPE_STRUCT:
 				for (int i = 0; i < type->item_cnt; ++i)
-					NodeBuilder::buildNode(nodeInfo, type->items[i]->type, offset + type->items[i]->offset);
+					NodeBuilder::buildNode(nodeInfo, type->items[i].type, offset + type->items[i].offset);
+				break;
+			case cl_type_e::CL_TYPE_PTR:
+			case cl_type_e::CL_TYPE_INT:
+			case cl_type_e::CL_TYPE_BOOL:
+			default:
+				nodeInfo.push_back(offset);
 				break;
 //			case cl_type_e::CL_TYPE_UNION:
 		}
@@ -55,17 +84,91 @@ struct NodeBuilder {
 };
 
 struct OperandInfo {
-	size_t root;
-	int offset;
-	bool ref;
-	const CodeStorage::cl_type* type;
-};
 
-#define ABP_INDEX		0
-#define ABP_OFFSET		0
-#define CTX_INDEX		1
-#define CTX_OFFSET		sizeof(void*)
-#define FIXED_REG_COUNT	2
+	bool deref;
+	Data data;
+	const cl_type* type;
+
+	const cl_accessor* parseItems(const cl_accessor* acc) {
+
+		while (acc && (acc->code == CL_ACCESSOR_ITEM)) {
+			this->data.d_ref.displ += acc->type->items[acc->data.item.id].offset;
+			this->type = acc->type;
+			acc = acc->next;
+		}
+
+		return acc;
+
+	}
+
+	const cl_accessor* parseRef(const cl_accessor* acc) {
+
+		if (acc && (acc->code == CL_ACCESSOR_REF)) {
+			this->deref = false;
+			this->type = acc->type;
+			acc = acc->next;
+		} else {
+			this->deref = true;
+		}
+
+		return acc;
+		
+	}
+
+	void parseVar(const FAE& fae, const cl_operand* op, size_t offset) {
+
+		this->data = Data::createRef(fae.varGet(ABP_INDEX).d_ref.root, (int)offset);
+		this->type = op->type;
+
+		const cl_accessor* acc = op->accessor;
+
+		if (acc && (acc->code == CL_ACCESSOR_DEREF)) {
+			
+			fae.nodeLookup(this->data.d_ref.root, this->data.d_ref.displ, this->data);
+			if (!this->data.isRef())
+				throw std::runtime_error("OperandInfo::parseVar(): dereferenced value is not a valid reference!");
+
+			this->type = acc->type;
+			acc = acc->next;
+
+		}
+
+		acc = this->parseItems(acc);
+		acc = this->parseRef(acc);
+		assert(acc == NULL);
+
+	}
+
+	void parseReg(const FAE& fae, const cl_operand* op, size_t index) {
+
+		// HACK: this is a bit ugly
+		this->data = Data::createRef(index);
+		this->type = op->type;
+
+		const cl_accessor* acc = op->accessor;
+
+		if (acc && (acc->code == CL_ACCESSOR_DEREF)) {
+
+			this->data = fae.varGet(this->data.d_ref.root);
+			if (!this->data.isRef())
+				throw std::runtime_error("OperandInfo::parseReg(): dereferenced value is not a valid reference!");
+
+			this->type = acc->type;
+			acc = this->parseItems(acc->next);
+			acc = this->parseRef(acc);
+
+		} else {
+
+			acc = this->parseItems(acc);
+			this->deref = false;
+
+		}
+
+		assert(acc == NULL);
+
+	}
+
+};
 
 struct SymCtx {
 
@@ -73,36 +176,38 @@ struct SymCtx {
 
 	vector<SelData> sfLayout;
 
-	unordered_map<int, size_t> varMap;
+	typedef unordered_map<int, std::pair<bool, size_t> > var_map_type;
+
+	var_map_type varMap;
 
 	size_t regCount;
 
 	SymCtx(const CodeStorage::Fnc& fnc) : fnc(fnc) {
 
 		// pointer to previous stack frame
-		this->sfLayout.push_back(SelData::create(ABP_OFFSET, sizeof(void*), 0));
+		this->sfLayout.push_back(SelData(ABP_OFFSET, sizeof(void*), 0));
 
 		// pointer to context info
-		this->sfLayout.push_back(SelData::create(CTX_OFFSET, sizeof(void*), 0));
+		this->sfLayout.push_back(SelData(CTX_OFFSET, sizeof(void*), 0));
 
 		size_t offset = 2*sizeof(void*);
 
 		for (CodeStorage::TVarList::const_iterator i = fnc.vars.begin(); i != fnc.vars.end(); ++i) {
 
-			const CodeStorage::Var& var = fnc.stor.vars[*i];
+			const CodeStorage::Var& var = fnc.stor->vars[*i];
 
 			switch (var.code) {
-
-				case EVAR::VAR_LC:
-					NodeBuilder::buildNode(this->sfLayout, var->type, offset);
-					this->varMap.insert(make_pair(var.uid, offset));
-					offset += var.clt->size;
+				case CodeStorage::EVar::VAR_LC:
+					if (var.name.empty()) {
+						this->varMap.insert(make_pair(var.uid, make_pair(false, this->regCount++)));
+					} else {
+						NodeBuilder::buildNode(this->sfLayout, var.clt, offset);
+						this->varMap.insert(make_pair(var.uid, make_pair(true, offset)));
+						offset += var.clt->size;
+					}
 					break;
-
-				case EVAR::VAR_REG:
-					this->varMap.insert(make_pair(var.uid, this->regCount++));
+				default:
 					break;
-
 			}
 			
 		}
@@ -121,13 +226,13 @@ struct SymCtx {
 
 		vector<pair<SelData, Data> > stackInfo;
 
-		for (vector<SelData>::iterator i = this->sfLayout.begin(); i != this->sfLayout.end(); ++i)
+		for (vector<SelData>::const_iterator i = this->sfLayout.begin(); i != this->sfLayout.end(); ++i)
 			stackInfo.push_back(make_pair(*i, Data::createUndef()));
 
 		FAE* tmp = new FAE(fae);
 
 		const Data& abp = tmp->varGet(ABP_INDEX);
-
+/*
 		switch (abp.type) {
 			// NULL
 			case Data::type_enum::t_void_ptr: assert(abp.d_void_ptr == 0); break;
@@ -136,12 +241,12 @@ struct SymCtx {
 			// :-(
 			default: assert(false);
 		}
-
+*/
 		stackInfo[0].second = abp;
-		stackInfo[1].second = Data::createNativePtr(this);
+		stackInfo[1].second = Data::createNativePtr((void*)this);
 
 		tmp->varSet(ABP_INDEX, Data::createRef(tmp->nodeCreate(stackInfo)));
-		tmp->varSet(CTX_INDEX, Data::createNativePtr(this));
+		tmp->varSet(CTX_INDEX, Data::createNativePtr((void*)this));
 		tmp->varPopulate(this->regCount);
 
 		dst.push_back(tmp);
@@ -155,15 +260,14 @@ struct SymCtx {
 		const Data& abp = tmp.varGet(ABP_INDEX);
 
 		assert(abp.isRef());
-		assert(abp.d_ref.offset == 0);
+		assert(abp.d_ref.displ == 0);
 		
-		const SelData* selInfo;
-		const Data* data;
+		Data data;
 
-		tmp.varDrop(this->regCount);
-		tmp.nodeLookup(abp.d_ref.root, ABP_OFFSET, selInfo, data);
+		tmp.varRemove(this->regCount);
+		tmp.nodeLookup(abp.d_ref.root, ABP_OFFSET, data);
 		tmp.unsafeNodeDelete(abp.d_ref.root);
-
+/*
 		switch (data.type) {
 			// NULL
 			case Data::type_enum::t_void_ptr: assert(data->d_void_ptr == 0); break;
@@ -172,12 +276,12 @@ struct SymCtx {
 			// :-(
 			default: assert(false);
 		}
+*/
+		tmp.varSet(ABP_INDEX, data);
 
-		tmp.varSet(ABP_INDEX, *data);
-
-		if (data->isRef()) {
-			tmp.nodeLookup(abp.d_ref.root, CTX_OFFSET, selInfo, data);
-			assert(data->isNativePtr());
+		if (data.isRef()) {
+			tmp.nodeLookup(abp.d_ref.root, CTX_OFFSET, data);
+			assert(data.isNativePtr());
 			tmp.varSet(CTX_INDEX, data);
 		} else {
 			tmp.varSet(CTX_INDEX, Data::createUndef());
@@ -187,49 +291,31 @@ struct SymCtx {
 		
 	}
 
-	void parseAccessorChain(OperandInfo& operandInfo, const FAE& fae, const CodeStorage::cl_operand* op) {
+	static Data extractNestedStruct(const Data& data, size_t base, const std::vector<size_t>& offsets) {
+		assert(data.isStruct());
+		std::map<size_t, const Data*> m;
+		for (std::vector<Data::item_info>::const_iterator i = data.d_struct->begin(); i != data.d_struct->end(); ++i)
+			m.insert(make_pair(i->first, &i->second));
+		Data tmp = Data::createStruct();
+		for (std::vector<size_t>::const_iterator i = offsets.begin(); i != offsets.end(); ++i) {
+			std::map<size_t, const Data*>::iterator j = m.find(*i + base);
+			if (j == m.end())
+				throw std::runtime_error("SymCtx::extractNestedStruct(): selectors mismatch!");
+			tmp.d_struct->push_back(make_pair(*i, *j->second));
+		}
+		return tmp;
+	}
 
-		unordered_map<int, size_t>::iterator i = this->varMap.find(op->var.id);
+	void parseOperand(OperandInfo& operandInfo, const FAE& fae, const cl_operand* op) {
+
+		var_map_type::iterator i = this->varMap.find(op->data.var.id);
 
 		assert(i != this->varMap.end());
 
-		op->code == CodeStorage::CL_OPERAND_REG
-
-		if (op->code == CodeStorage::CL_OPERAND_VAR || op->code == CodeStorage::CL_OPERAND_ARG);
-
-		operandInfo.root = ABP_INDEX;
-		operandInfo.offset = (int)i->second;
-		operandInfo.type = op.type;
-		operandInfo.ref = false;
-
-		const SelData* selAux;
-		const Data* aux;
-
-		CodeStorage::cl_accessor* accessor = op->accessor;
-
-		if (accessor && (accessor->code == CodeStorage::CL_ACCESSOR_DEREF)) {
-			fae.nodeLookup(root, (size_t)offset, selAux, aux);
-			if (!aux->isRef())
-				throw std::runtime_error("Dereferenced variable does not contain a valid reference!");
-			operandInfo.root = aux->d_ref.root;
-			operandInfo.offset = selAux->aux;
-			operandInfo.type = accessor->type;
-			accessor = accessor->next;
-		}
-
-		while (accessor && (accessor->code == CodeStorage::CL_ACCESSOR_ITEM)) {
-			operandInfo.offset += accessor->type->items[accessor->item.id]->offset;
-			operandInfo.type = accessor->type;
-			accessor = accessor->next;
-		}
-
-		if (accessor && (accessor->code == CodeStorage::CL_ACCESSOR_REF)) {
-			operandInfo.ref = true;
-			operandInfo.type = accessor->type;
-			accessor = accessor->next;
-		}
-
-		assert(accessor == NULL);			
+		if (i->first)
+			operandInfo.parseVar(fae, op, i->second.second);
+		else
+			operandInfo.parseReg(fae, op, i->second.second);
 
 	}
 
@@ -238,23 +324,24 @@ struct SymCtx {
 struct SymState {
 
 	// configuration obtained in forward run
-	TA<FA::label_type> fwdConf;
+	TA<label_type> fwdConf;
 
 	// outstanding configurations
 	vector<FAE*> outConf;
 
 	UFAE fwdConfWrapper;
 
-	SymCtx* ctx;
+	const SymCtx* ctx;
 
-	CodeStorage::Block* block;
+	const CodeStorage::Block* block;
 
-	SymState(TA<FA::label_type>::Backend& taBackend, LabMan& labMan)
+	SymState(TA<label_type>::Backend& taBackend, LabMan& labMan)
 		: fwdConf(taBackend), fwdConfWrapper(this->fwdConf, labMan) {}
 
 	~SymState() {
-		for (std::vector<FAE*>::iterator i = this->outConf.begin(); this->outConf.end(); ++i)
-			delete *i;
+		utils::erase(this->outConf);
+//		for (std::vector<FAE*>::iterator i = this->outConf.begin(); i != this->outConf.end(); ++i)
+//			delete *i;
 	}
 
 };
@@ -266,9 +353,8 @@ class SymExec::Engine {
 
 	const CodeStorage::Storage& stor;
 
-	TA<FA::label_type>::Backend taBackend;
-
-	TA<FA::label_type> taMan;
+	TA<label_type>::Backend taBackend;
+	TA<label_type>::Manager taMan;
 	LabMan labMan;
 	BoxManager boxMan;
 
@@ -277,10 +363,10 @@ class SymExec::Engine {
 	// call ctx * call isns -> nested call ctx ! ... >:)
 //	unordered_map<SymCtx*, CodeStorage::Isns*> ctxCache;
 
-	typedef unordered_map<CodeStorage::Fnc*, SymCtx*> ctx_store_type;
+	typedef unordered_map<const CodeStorage::Fnc*, SymCtx*> ctx_store_type;
 	ctx_store_type ctxStore;
 
-	typedef unordered_map<CodeStorage::Block*, SymState*> state_store_type;
+	typedef unordered_map<const CodeStorage::Block*, SymState*> state_store_type;
 	state_store_type stateStore;
 
 	std::vector<SymState*> todo;
@@ -309,7 +395,7 @@ protected:
 		s->block = block;
 		s->ctx = ctx;
 		
-		return this->stateStore.insert(block, s).first->second;
+		return this->stateStore.insert(make_pair(block, s)).first->second;
 
 	}
 
@@ -319,7 +405,7 @@ protected:
 
 		for (vector<FAE*>::const_iterator i = src.begin(); i != src.end(); ++i) {
 
-			TA<FA::label_type> ta(this->taBackend);
+			TA<label_type> ta(this->taBackend);
 			Index<size_t> index;
 
 			target->fwdConfWrapper.fae2ta(ta, index, **i);
@@ -328,7 +414,7 @@ protected:
 				target->outConf.push_back(*i);
 				changed = true;
 			} else {
-				this->fwdConfWrapper.join(ta, index);
+				target->fwdConfWrapper.join(ta, index);
 				delete *i;
 			}
 
@@ -339,14 +425,14 @@ protected:
 		
 	}
 
-	void processIsns(vector<FAE*> dst, SymState* state, const vector<FAE*> src, const CodeStorage::Isns* isns) {
+	void processIsns(vector<FAE*>& dst, SymState* state, const vector<FAE*> src, const CodeStorage::Insn* insn) {
 		
-		switch (isns->code) {
+		switch (insn->code) {
 
-			case cl_isns_e::CL_ISNS_UNOP:
+			case cl_insn_e::CL_INSN_UNOP:
 				break;
 
-			case cl_isns_e::CL_ISNS_BINOP:
+			case cl_insn_e::CL_INSN_BINOP:
 				break;
 
 			default: assert(false);
@@ -355,15 +441,15 @@ protected:
 				
 	}
 
-	void processTermIsns(SymState* state, const vector<FAE*> src, const CodeStorage::Isns* isns) {
+	void processTermIsns(SymState* state, const vector<FAE*> src, const CodeStorage::Insn* insn) {
 
-		switch (isns->code) {
+		switch (insn->code) {
 
-			case cl_isns_e::CL_ISNS_JMP:
-				this->stateUnion(this->getState(isns->targets[0], state->ctx), src);				
+			case cl_insn_e::CL_INSN_JMP:
+				this->stateUnion(this->getState(insn->targets[0], state->ctx), src);				
 				break;
 
-			case cl_isns_e::CL_ISNS_COND:
+			case cl_insn_e::CL_INSN_COND:
 				break;
 
 			default: assert(false);
@@ -383,7 +469,7 @@ protected:
 
 		CodeStorage::Block::const_iterator i = state->block->begin();
 
-		for(; (!cl_is_term_isns(*i); ++i) {
+		for(; !cl_is_term_insn((*i)->code); ++i) {
 
 			this->processIsns(dst, state, src, *i);
 
@@ -402,20 +488,20 @@ protected:
 public:
 
 	Engine(const CodeStorage::Storage& stor)
-		: stor(stor), boxMan(this->taMan, this->labMan) {}
+		: stor(stor), taMan(this->taBackend), boxMan(this->taMan, this->labMan) {}
 
 	~Engine() {
-		erase(this->statesStore);
-		erase(this->ctxStore);
+		utils::eraseMap(this->stateStore);
+		utils::eraseMap(this->ctxStore);
 	}
 
 	void run(const CodeStorage::Fnc& main) {
 
 		// create main context
-		SymCtx* mainCtx = this->getCtx(main);
+		SymCtx* mainCtx = this->getCtx(&main);
 		
 		// create an initial state
-		SymState* init = this->getState(main.entry(), mainCtx);
+		SymState* init = this->getState(main.cfg.entry(), mainCtx);
 
 		// create empty heap with no local variables
 		FAE fae(this->taMan, this->labMan, this->boxMan);

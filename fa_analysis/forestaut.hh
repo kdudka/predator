@@ -71,6 +71,6 @@ public:
 	
 };
 
-std::ostream& operator<<(std::ostream& os, const TA<FA::label_type>& ta);
+std::ostream& operator<<(std::ostream& os, const TA<label_type>& ta);
 
 #endif

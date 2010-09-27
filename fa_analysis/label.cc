@@ -20,7 +20,7 @@
 #include "label.hh"
 #include "box.hh"
 
-std::ostream& operator<<(std::ostream& os, const FA::label_type& label) {
+std::ostream& operator<<(std::ostream& os, const label_type& label) {
 	os << '<';
 	switch (label.type) {
 		case 0: {

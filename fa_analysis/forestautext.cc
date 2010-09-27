@@ -20,7 +20,7 @@
 #include "forestautext.hh"
 
 std::ostream& operator<<(std::ostream& os, const FAE& fae) {
-	TA<FA::label_type>* ta = fae.taMan->alloc();
+	TA<label_type>* ta = fae.taMan->alloc();
 	os << "variables:";
 	for (std::vector<Data>::const_iterator i = fae.variables.begin(); i != fae.variables.end(); ++i)
 		os << ' ' << *i;
@@ -32,8 +32,8 @@ std::ostream& operator<<(std::ostream& os, const FAE& fae) {
 			ss << fae.rootMap[i][j];
 		ta->clear();
 		fae.roots[i]->minimized(*ta);
-		TAWriter<FA::label_type>(os).writeOne(*ta, ss.str());
-//		TAWriter<FA::label_type>(os).writeOne(*fae.roots[i], ss.str());
+		TAWriter<label_type>(os).writeOne(*ta, ss.str());
+//		TAWriter<label_type>(os).writeOne(*fae.roots[i], ss.str());
 	}
 	fae.taMan->release(ta);
 	return os;

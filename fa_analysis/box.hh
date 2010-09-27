@@ -53,8 +53,8 @@ class Box : public FA {
 	std::string name;
 
 	union {
-		Data data;
-		SelData selInfo;
+		Data* data;
+		SelData* selInfo;
 	};
 
 	std::vector<std::pair<std::vector<size_t>, std::set<size_t> > > selCoverage;
@@ -87,12 +87,12 @@ public:
 	}
 
 	bool isSelector(size_t offset) const {
-		return this->type == Box::selID && this->selInfo.offset == offset;
+		return this->type == Box::selID && this->selInfo->offset == offset;
 	}
 
 	const SelData& getSelector() const {
 		assert(this->isSelector());
-		return this->selInfo;
+		return *this->selInfo;
 	}
 
 	bool isData() const {
@@ -102,13 +102,13 @@ public:
 	bool isData(const Data*& data) const {
 		if (this->type != Box::dataID)
 			return false;
-		data = &this->data;
+		data = this->data;
 		return true;
 	}
 
 	const Data& getData() const {
 		assert(this->isData());
-		return this->data;
+		return *this->data;
 	}
 /*
 	bool isReference() const {
@@ -206,26 +206,35 @@ public:
 
 protected:
 
-	Box(TA<FA::label_type>::Manager& taMan, const std::string& name)
+	Box(TA<label_type>::Manager& taMan, const std::string& name)
 	 : FA(taMan), type(Box::boxID), name(name) {}
 
-	Box(TA<FA::label_type>::Manager& taMan, const std::string& name, const SelData& selInfo)
-	 : FA(taMan), type(Box::selID), name(name), selInfo(selInfo) {
-		set<size_t> coverage;
+	Box(TA<label_type>::Manager& taMan, const std::string& name, const SelData& selInfo)
+	 : FA(taMan), type(Box::selID), name(name), selInfo(new SelData(selInfo)) {
+		std::set<size_t> coverage;
 		coverage.insert(selInfo.offset);
 		this->selCoverage.push_back(make_pair(itov(selInfo.offset), coverage));
 	}
 
-	Box(TA<FA::label_type>::Manager& taMan, const std::string& name, const Data& data)
-	 : FA(taMan), type(Box::dataID), name(name), data(data) {}
+	Box(TA<label_type>::Manager& taMan, const std::string& name, const Data& data)
+	 : FA(taMan), type(Box::dataID), name(name), data(new Data(data)) {}
 
 public:
 
-	static Box createBox(TA<FA::label_type>::Manager& taMan, const std::string& name) {
+	~Box() {
+		switch (this->type) {
+			case Box::selID: delete this->selInfo; break;
+			case Box::dataID: delete this->data; break;
+		}
+	}
+
+public:
+
+	static Box createBox(TA<label_type>::Manager& taMan, const std::string& name) {
 		return Box(taMan, name);
 	}
 
-	static Box createSelector(TA<FA::label_type>::Manager& taMan, const std::string& name, const SelData& selInfo) {
+	static Box createSelector(TA<label_type>::Manager& taMan, const std::string& name, const SelData& selInfo) {
 		return Box(taMan, name, selInfo);
 	}
 /*
@@ -239,7 +248,7 @@ public:
 		return Box(taMan, Box::refID, root, ss.str());
 	}
 */
-	static Box createData(TA<FA::label_type>::Manager& taMan, const std::string& name, const Data& data) {
+	static Box createData(TA<label_type>::Manager& taMan, const std::string& name, const Data& data) {
 		return Box(taMan, name, data);
 	}
 /*
@@ -272,7 +281,7 @@ public:
 
 class BoxManager {
 
-	mutable TA<FA::label_type>::Manager& taMan;
+	mutable TA<label_type>::Manager& taMan;
 	mutable LabMan& labMan;
 
 	boost::unordered_map<string, Box> boxIndex;
@@ -292,9 +301,7 @@ public:
 	// TODO: parse size and aux
 	static SelData getSelectorFromName(const std::string& name) {
 		assert(BoxManager::isSelectorName(name));
-		SelData data;
-		data.offset = atol(name.c_str() + strlen(selPrefix));
-		return data;
+		return SelData(atol(name.c_str() + strlen(selPrefix)), 0, 0);
 	}
 
 	static bool isReferenceName(const std::string& name) {
@@ -321,11 +328,11 @@ public:
 */
 public:
 
-	const Box& getSelector(const SelData& selInfo) {
+	const Box& getSelector(const SelData& sel) {
 		std::stringstream ss;
-		ss << selPrefix << '|' << selInfo.offset << '|' << selInfo.size << '|' << selInfo.aux;
+		ss << selPrefix << '|' << sel.offset << '|' << sel.size << '|' << sel.displ;
 		return this->boxIndex.insert(
-			make_pair(ss.str(), Box::createSelector(this->taMan, ss.str(), selInfo))
+			make_pair(ss.str(), Box::createSelector(this->taMan, ss.str(), sel))
 		).first->second;
 	}
 
@@ -366,21 +373,21 @@ protected:
 		TA<string>::Backend sBackend;
 		TA<string> sta(sBackend);
 
-		TA<FA::label_type>* ta = this->taMan.alloc();
+		TA<label_type>* ta = this->taMan.alloc();
 
 		string autName;
 
 		reader.readFirst(sta, autName);
 
 		this->translateRoot(*ta, sta, database);
-		box.variables.push_back(Data::createPtr(box.roots.size(), 0));
+		box.variables.push_back(Data::createRef(box.roots.size(), 0));
 		box.roots.push_back(ta);
 
 		while (reader.readNext(sta, autName)) {
 			ta = taMan.alloc();
 			this->translateRoot(*ta, sta, database);
 			if (memcmp(autName.c_str(), "in", 2) == 0)
-				box.variables.push_back(Data::createPtr(box.roots.size(), 0));
+				box.variables.push_back(Data::createRef(box.roots.size(), 0));
 			box.roots.push_back(ta);
 		}
 
@@ -390,7 +397,7 @@ protected:
 
 	}
 
-	void translateRoot(TA<FA::label_type>& dst, const TA<string>& src, const boost::unordered_map<string, string>& database) {
+	void translateRoot(TA<label_type>& dst, const TA<string>& src, const boost::unordered_map<string, string>& database) {
 		dst.clear();
 		for (TA<string>::iterator i = src.begin(); i != src.end(); ++i) {
 			vector<string> strs;
@@ -405,7 +412,7 @@ protected:
 
 public:
 
-	BoxManager(TA<FA::label_type>::Manager& taMan, LabMan& labMan) : taMan(taMan), labMan(labMan) {}
+	BoxManager(TA<label_type>::Manager& taMan, LabMan& labMan) : taMan(taMan), labMan(labMan) {}
 
 	void loadTemplates(const boost::unordered_map<string, string>& database) {
 		for (boost::unordered_map<string, string>::const_iterator i = database.begin(); i != database.end(); ++i)

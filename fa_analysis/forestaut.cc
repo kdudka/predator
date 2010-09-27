@@ -20,7 +20,7 @@
 #include "forestaut.hh"
 #include "tatimint.hh"
 
-std::ostream& operator<<(std::ostream& os, const TA<FA::label_type>& ta) {
-	TAWriter<FA::label_type>(os).writeOne(ta);
+std::ostream& operator<<(std::ostream& os, const TA<label_type>& ta) {
+	TAWriter<label_type>(os).writeOne(ta);
 	return os;
 }
