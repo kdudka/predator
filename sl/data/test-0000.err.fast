@@ -2,82 +2,86 @@
 <unknown file>:<unknown line>: warning: CL_TYPE_STRING not supported by SymProc
 <unknown file>:<unknown line>: warning: CL_TYPE_STRING not supported by SymProc
 <unknown file>:<unknown line>: warning: CL_TYPE_STRING not supported by SymProc
+<unknown file>:<unknown line>: warning: CL_TYPE_STRING not supported by SymProc
+<unknown file>:<unknown line>: warning: CL_TYPE_STRING not supported by SymProc
 test-0000.c:155:10: warning: ignoring call of undefined function: strcmp()
-test-0000.c:1647:21: note: from call of init_plugin_name()
-test-0000.c:1641:5: note: from call of plugin_init()
+test-0000.c:1686:21: note: from call of init_plugin_name()
+test-0000.c:1680:5: note: from call of plugin_init()
 test-0000.c:156:16: error: dereference of unknown value
-test-0000.c:1647:21: note: from call of init_plugin_name()
-test-0000.c:1641:5: note: from call of plugin_init()
+test-0000.c:1686:21: note: from call of init_plugin_name()
+test-0000.c:1680:5: note: from call of plugin_init()
 test-0000.c:156:16: warning: CL_TYPE_STRING not supported by SymProc
 test-0000.c:156:16: warning: ignoring call of undefined function: fprintf()
-test-0000.c:1647:21: note: from call of init_plugin_name()
-test-0000.c:1641:5: note: from call of plugin_init()
+test-0000.c:1686:21: note: from call of init_plugin_name()
+test-0000.c:1680:5: note: from call of plugin_init()
 test-0000.c:159:9: warning: ignoring call of undefined function: fancy_abort()
-test-0000.c:1647:21: note: from call of init_plugin_name()
-test-0000.c:1641:5: note: from call of plugin_init()
+test-0000.c:1686:21: note: from call of init_plugin_name()
+test-0000.c:1680:5: note: from call of plugin_init()
 test-0000.c:163:23: error: dereference of unknown value
-test-0000.c:1647:21: note: from call of init_plugin_name()
-test-0000.c:1641:5: note: from call of plugin_init()
+test-0000.c:1686:21: note: from call of init_plugin_name()
+test-0000.c:1680:5: note: from call of plugin_init()
 test-0000.c:164:33: warning: ignoring call of undefined function: realpath()
-test-0000.c:1647:21: note: from call of init_plugin_name()
-test-0000.c:1641:5: note: from call of plugin_init()
+test-0000.c:1686:21: note: from call of init_plugin_name()
+test-0000.c:1680:5: note: from call of plugin_init()
 test-0000.c:169:17: error: dereference of unknown value
-test-0000.c:1647:21: note: from call of init_plugin_name()
-test-0000.c:1641:5: note: from call of plugin_init()
+test-0000.c:1686:21: note: from call of init_plugin_name()
+test-0000.c:1680:5: note: from call of plugin_init()
 test-0000.c:169:17: error: dereference of unknown value
-test-0000.c:1647:21: note: from call of init_plugin_name()
-test-0000.c:1641:5: note: from call of plugin_init()
+test-0000.c:1686:21: note: from call of init_plugin_name()
+test-0000.c:1680:5: note: from call of plugin_init()
 test-0000.c:173:23: warning: ignoring call of undefined function: asprintf()
-test-0000.c:1647:21: note: from call of init_plugin_name()
-test-0000.c:1641:5: note: from call of plugin_init()
+test-0000.c:1686:21: note: from call of init_plugin_name()
+test-0000.c:1680:5: note: from call of plugin_init()
 test-0000.c:173:23: warning: ignoring call of undefined function: asprintf()
-test-0000.c:1647:21: note: from call of init_plugin_name()
-test-0000.c:1641:5: note: from call of plugin_init()
+test-0000.c:1686:21: note: from call of init_plugin_name()
+test-0000.c:1680:5: note: from call of plugin_init()
 test-0000.c:175:9: warning: ignoring call of undefined function: fancy_abort()
-test-0000.c:1647:21: note: from call of init_plugin_name()
-test-0000.c:1641:5: note: from call of plugin_init()
+test-0000.c:1686:21: note: from call of init_plugin_name()
+test-0000.c:1680:5: note: from call of plugin_init()
 test-0000.c:175:9: warning: ignoring call of undefined function: fancy_abort()
-test-0000.c:1647:21: note: from call of init_plugin_name()
-test-0000.c:1641:5: note: from call of plugin_init()
+test-0000.c:1686:21: note: from call of init_plugin_name()
+test-0000.c:1680:5: note: from call of plugin_init()
 test-0000.c:181:23: warning: ignoring call of undefined function: asprintf()
-test-0000.c:1647:21: note: from call of init_plugin_name()
-test-0000.c:1641:5: note: from call of plugin_init()
+test-0000.c:1686:21: note: from call of init_plugin_name()
+test-0000.c:1680:5: note: from call of plugin_init()
 test-0000.c:181:23: warning: ignoring call of undefined function: asprintf()
-test-0000.c:1647:21: note: from call of init_plugin_name()
-test-0000.c:1641:5: note: from call of plugin_init()
+test-0000.c:1686:21: note: from call of init_plugin_name()
+test-0000.c:1680:5: note: from call of plugin_init()
 test-0000.c:186:9: warning: ignoring call of undefined function: fancy_abort()
-test-0000.c:1647:21: note: from call of init_plugin_name()
-test-0000.c:1641:5: note: from call of plugin_init()
+test-0000.c:1686:21: note: from call of init_plugin_name()
+test-0000.c:1680:5: note: from call of plugin_init()
 test-0000.c:186:9: warning: ignoring call of undefined function: fancy_abort()
-test-0000.c:1647:21: note: from call of init_plugin_name()
-test-0000.c:1641:5: note: from call of plugin_init()
-test-0000.c:1486:12: warning: ignoring call of undefined function: memset()
-test-0000.c:1648:9: note: from call of clplug_init()
-test-0000.c:1641:5: note: from call of plugin_init()
-test-0000.c:1488:27: warning: CL_TYPE_STRING not supported by SymProc
-test-0000.c:1491:15: error: dereference of unknown value
-test-0000.c:1648:9: note: from call of clplug_init()
-test-0000.c:1641:5: note: from call of plugin_init()
-test-0000.c:1492:35: error: dereference of unknown value
-test-0000.c:1648:9: note: from call of clplug_init()
-test-0000.c:1641:5: note: from call of plugin_init()
-test-0000.c:1482:12: warning: end of function clplug_init() has not been reached
-test-0000.c:1648:9: note: from call of clplug_init()
-test-0000.c:1641:5: note: from call of plugin_init()
-test-0000.c:1486:12: warning: ignoring call of undefined function: memset()
-test-0000.c:1648:9: note: from call of clplug_init()
-test-0000.c:1641:5: note: from call of plugin_init()
-test-0000.c:1488:27: warning: CL_TYPE_STRING not supported by SymProc
-test-0000.c:1491:15: error: dereference of unknown value
-test-0000.c:1648:9: note: from call of clplug_init()
-test-0000.c:1641:5: note: from call of plugin_init()
-test-0000.c:1492:35: error: dereference of unknown value
-test-0000.c:1648:9: note: from call of clplug_init()
-test-0000.c:1641:5: note: from call of plugin_init()
-test-0000.c:1482:12: warning: end of function clplug_init() has not been reached
-test-0000.c:1648:9: note: from call of clplug_init()
-test-0000.c:1641:5: note: from call of plugin_init()
-test-0000.c:1641:5: warning: end of function plugin_init() has not been reached
+test-0000.c:1686:21: note: from call of init_plugin_name()
+test-0000.c:1680:5: note: from call of plugin_init()
+test-0000.c:1525:12: warning: ignoring call of undefined function: memset()
+test-0000.c:1687:9: note: from call of clplug_init()
+test-0000.c:1680:5: note: from call of plugin_init()
+test-0000.c:1527:27: warning: CL_TYPE_STRING not supported by SymProc
+test-0000.c:1530:15: error: dereference of unknown value
+test-0000.c:1687:9: note: from call of clplug_init()
+test-0000.c:1680:5: note: from call of plugin_init()
+test-0000.c:1531:35: error: dereference of unknown value
+test-0000.c:1687:9: note: from call of clplug_init()
+test-0000.c:1680:5: note: from call of plugin_init()
+test-0000.c:1521:12: warning: end of function clplug_init() has not been reached
+test-0000.c:1687:9: note: from call of clplug_init()
+test-0000.c:1680:5: note: from call of plugin_init()
+test-0000.c:1525:12: warning: ignoring call of undefined function: memset()
+test-0000.c:1687:9: note: from call of clplug_init()
+test-0000.c:1680:5: note: from call of plugin_init()
+test-0000.c:1527:27: warning: CL_TYPE_STRING not supported by SymProc
+test-0000.c:1530:15: error: dereference of unknown value
+test-0000.c:1687:9: note: from call of clplug_init()
+test-0000.c:1680:5: note: from call of plugin_init()
+test-0000.c:1531:35: error: dereference of unknown value
+test-0000.c:1687:9: note: from call of clplug_init()
+test-0000.c:1680:5: note: from call of plugin_init()
+test-0000.c:1521:12: warning: end of function clplug_init() has not been reached
+test-0000.c:1687:9: note: from call of clplug_init()
+test-0000.c:1680:5: note: from call of plugin_init()
+test-0000.c:1680:5: warning: end of function plugin_init() has not been reached
+<unknown file>:<unknown line>: warning: CL_TYPE_STRING not supported by SymProc
+<unknown file>:<unknown line>: warning: CL_TYPE_STRING not supported by SymProc
 <unknown file>:<unknown line>: warning: CL_TYPE_STRING not supported by SymProc
 <unknown file>:<unknown line>: warning: CL_TYPE_STRING not supported by SymProc
 <unknown file>:<unknown line>: warning: CL_TYPE_STRING not supported by SymProc
