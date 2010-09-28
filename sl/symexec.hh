@@ -56,7 +56,6 @@ class SymExec {
          * load the static info about the analyzed code
          * @param stor all-in-one static info about the analyzed code, see
          * @param params initialization parameters of the symbolic execution
-         * CodeStorage for details
          */
         SymExec(const CodeStorage::Storage &stor, const SymExecParams &params);
         ~SymExec();
