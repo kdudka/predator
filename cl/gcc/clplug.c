@@ -266,9 +266,12 @@ static void free_initial_tree(const struct cl_initializer *initial)
     struct cl_initializer **nested_initials = initial->data.nested_initials;
 
     int i;
-    for (i = 0; i < clt->item_cnt; ++i)
+    for (i = 0; i < clt->item_cnt; ++i) {
         // recursion
-        free_initial_tree(nested_initials[i]);
+        struct cl_initializer *ni = nested_initials[i];
+        free_initial_tree(ni);
+        free(ni);
+    }
 
     // free the array itself
     free(nested_initials);
