@@ -58,10 +58,6 @@ add_library(cl STATIC
     storage.cc
     version.c)
 
-target_link_libraries(cl
-    boost_iostreams
-    boost_system)
-
 add_library(cl_test SHARED cl_test.cc)
 target_link_libraries(cl_test cl)
 

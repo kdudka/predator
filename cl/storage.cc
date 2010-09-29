@@ -27,7 +27,6 @@
 #include <map>
 #include <stack>
 
-#include <boost/filesystem/path.hpp>
 #include <boost/tuple/tuple.hpp>
 
 bool operator==(const struct cl_type &a, const struct cl_type &b) {

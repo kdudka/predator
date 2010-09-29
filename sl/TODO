@@ -17,6 +17,8 @@ o  improve discovery algorithm for nested list segments (make it possible to
 o  get ready for hlist_head/hlist_node from <linux/list.h>, now we can handle
    only list_head based lists
 
+o  explicit isomorphism in symstate and cut-points based split/join algorithms
+
 o FIXME:
   - jonathan-DLL.c: announces junk, which should not appear.
 
