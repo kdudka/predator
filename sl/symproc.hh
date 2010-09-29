@@ -56,6 +56,9 @@ class SymProc {
         {
         }
 
+        // FIXME: class SymProc should not have any virtual methods
+        virtual ~SymProc() { }
+
         SymHeap&                    sh() { return heap_; }
         const SymBackTrace*         bt() { return bt_;   }
         const LocationWriter&       lw() { return lw_;   }
@@ -75,7 +78,7 @@ class SymProc {
         TObjId heapObjFromOperand(const struct cl_operand &op);
 
         /// obtain a heap value corresponding to the given operand
-        TValueId heapValFromOperand(const struct cl_operand &op);
+        virtual TValueId heapValFromOperand(const struct cl_operand &op);
 
         /// resolve Fnc uid from the given opreand, -1 if there is no such Fnc
         int /* uid */ fncFromOperand(const struct cl_operand &op);
@@ -118,10 +121,12 @@ class SymProc {
 
 struct SymExecCoreParams {
     bool fastMode;          ///< enable/disable OOM state simulation
+    bool invCompatMode;     ///< Invader compatibility mode
     bool skipPlot;          ///< simply ignore all ___sl_plot* calls
 
     SymExecCoreParams():
         fastMode(false),
+        invCompatMode(false),
         skipPlot(false)
     {
     }
@@ -157,6 +162,9 @@ class SymExecCore: public SymProc {
          * CL_INSN_CALL)
          */
         bool exec(SymState &dst, const CodeStorage::Insn &insn);
+
+        /// overridden in order to handle SymExecCoreParams::invCompatMode
+        virtual TValueId heapValFromOperand(const struct cl_operand &op);
 
     private:
         bool lhsFromOperand(TObjId *pObj, const struct cl_operand &op);
