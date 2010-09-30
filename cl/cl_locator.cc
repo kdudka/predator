@@ -92,7 +92,6 @@ class ClLocator: public ICodeListener {
 
 // /////////////////////////////////////////////////////////////////////////////
 // ClLocator implementation
-// TODO: remove idents of unused args
 ClLocator::ClLocator():
     out_(std::cout)
 {

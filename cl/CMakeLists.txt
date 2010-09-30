@@ -50,6 +50,7 @@ add_library(cl STATIC
     cld_unilabel.cc
     cld_univars.cc
     cld_unswitch.cc
+    cldebug.cc
     clutil.cc
     code_listener.cc
     gcc/clplug.c
