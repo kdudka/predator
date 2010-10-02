@@ -259,7 +259,6 @@ class SymExecEngine {
         void execCondInsn();
         void execTermInsn();
         bool execNontermInsn();
-        void echoInsn();
         bool execInsn();
         bool execBlock();
 };
@@ -452,17 +451,6 @@ bool /* handled */ SymExecEngine::execNontermInsn() {
     return core.exec(nextLocalState_, *insn);
 }
 
-void SymExecEngine::echoInsn() {
-    // dump the instruction to an output stream
-    const CodeStorage::Insn *insn = block_->operator[](insnIdx_);
-    std::ostringstream str;
-    insnToStream(str, *insn);
-
-    // serialize to string and print
-    std::string echo(str.str());
-    CL_DEBUG_MSG(lw_, "!!! executing insn #" << insnIdx_ << " ... " << echo);
-}
-
 bool /* complete */ SymExecEngine::execInsn() {
     const CodeStorage::Insn *insn = block_->operator[](insnIdx_);
 
@@ -470,9 +458,11 @@ bool /* complete */ SymExecEngine::execInsn() {
     const bool isTerm = cl_is_term_insn(insn->code);
 
     if (!heapIdx_) {
+        CL_DEBUG_MSG(lw_, "!!! executing insn #" << insnIdx_
+                << " ... " << (*insn));
+
         // let's begin with empty resulting heap union
         nextLocalState_.clear();
-        this->echoInsn();
     }
 
     // go through the remainder of symbolic heaps corresponding to localState_

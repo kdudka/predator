@@ -36,6 +36,7 @@ fi
 # run the gcc
 "$GCC" -c "$1" -o /dev/null -O0 -m32 \
     -DPREDATOR \
+    -I../cl -I../cl/gcc -I../include -I../include/gcc \
     -fplugin="$SL_PLUG" \
     -fplugin-arg-libsl-verbose="$SL_VERBOSE" \
     $SL_OPTS \
