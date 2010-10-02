@@ -23,8 +23,12 @@
 #include "cl_decorator.hh"
 #include "cld_unilabel.hh"
 
+#include <cstring>
 #include <sstream>
 #include <string>
+
+#define NULLIFY(what) \
+    memset(&(what), 0, sizeof (what))
 
 class CldUnfoldSwitch: public ClDecoratorBase {
     public:
@@ -151,25 +155,25 @@ void CldUnfoldSwitch::emitCase(int cst, struct cl_type *type, const char *label)
     btype.size                      = /* FIXME */ sizeof(bool);
 
     struct cl_operand reg;
+    NULLIFY(reg);
     reg.code                        = CL_OPERAND_VAR;
     reg.loc.file                    = 0;
     reg.loc.line                    = -1;
     reg.scope                       = CL_SCOPE_FUNCTION;
     reg.type                        = &btype;
-    reg.accessor                    = 0;
-    reg.data.var.name               = 0;
     reg.data.var.id                 = /* XXX */ 0x10000 + switchCnt_;
 
     struct cl_operand val;
+    NULLIFY(val);
     val.code                        = CL_OPERAND_CST;
     val.loc                         = loc_;
     val.scope                       = CL_SCOPE_BB;
     val.type                        = type;
-    val.accessor                    = 0;
     val.data.cst.code               = CL_TYPE_INT;
     val.data.cst.data.cst_int.value = cst;
 
     struct cl_insn cli;
+    NULLIFY(cli);
     cli.code                        = CL_INSN_BINOP;
     cli.loc                         = loc_;
     cli.data.insn_binop.code        = CL_BINOP_EQ;

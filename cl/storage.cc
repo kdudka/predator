@@ -168,7 +168,8 @@ Var::~Var() {
 Var::Var(EVar code_, const struct cl_operand *op):
     code(code_),
     loc(op->loc),
-    uid(op->data.var.id)
+    uid(op->data.var.id),
+    initial(op->data.var.initial)
 {
     SE_BREAK_IF(CL_OPERAND_VAR != op->code);
     if (op->data.var.name)

@@ -30,6 +30,7 @@ test -z "$SL_OPTS" && SL_OPTS="-fplugin-arg-libsl-dump-pp"
 
 # run the debugger
 eval "$GDB" --quiet --args "$CC1" "$1" \
+    -I../cl -I../cl/gcc -I../include -I../include/gcc \
     -DPREDATOR \
     -dumpbase test.c -quiet -o /dev/null \
     -m32 -O0 -Wall -Wextra \

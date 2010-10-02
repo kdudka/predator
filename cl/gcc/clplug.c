@@ -58,6 +58,8 @@
 // our alternative to GGC_CNEW, used prior to gcc 4.6.x
 #define CL_ZNEW(type) xcalloc(1, sizeof(type))
 
+#define CL_ZNEW_ARRAY(type, cnt) xcalloc(cnt, sizeof(type))
+
 // our alternative to GGC_RESIZEVEC, used prior to gcc 4.6.x
 #define CL_RESIZEVEC(type, ptr, cnt) xrealloc((ptr), sizeof(type) * (cnt))
 
@@ -518,7 +520,6 @@ static void read_operand_decl(struct cl_operand *op, tree t)
     if (DECL_ARTIFICIAL(t)) {
         // emit as a register
         op->code            = CL_OPERAND_VAR;
-        op->data.var.name   = NULL;
         op->data.var.id     = DECL_UID(t);
         op->scope           = /* make it possible to use unify_vars decorator */
                               CL_SCOPE_FUNCTION;
@@ -554,13 +555,82 @@ static void read_operand_decl(struct cl_operand *op, tree t)
     }
 }
 
-static void read_raw_operand(struct cl_operand *op, tree t)
+static int field_lookup(tree op, tree field)
+{
+    tree type = TREE_TYPE(op);
+    if (NULL_TREE == type)
+        // decl omitted?
+        TRAP;
+
+    tree t = TYPE_FIELDS(type);
+    int i;
+    for (i = 0; t; t = TREE_CHAIN(t), ++i)
+        if (t == field)
+            return i;
+
+    // not found
+    TRAP;
+    return -1;
+}
+
+static void handle_operand(struct cl_operand *op, tree t, bool dig_initials);
+
+static void read_initial(struct cl_initializer **pinit, tree ctor)
+{
+    if (NULL_TREE == ctor) {
+        // no constructor in here
+        *pinit = NULL;
+        return;
+    }
+
+    struct cl_initializer *initial = *pinit = CL_ZNEW(struct cl_initializer);
+    const struct cl_type *clt = initial->type = add_type_if_needed(ctor);
+
+    const enum tree_code code = TREE_CODE(ctor);
+    if (CONSTRUCTOR != code) {
+        // allocate a scalar initializer
+        initial->data.value = CL_ZNEW(struct cl_operand);
+
+        if (NOP_EXPR == code)
+            // skip NOP_EXPR
+            // TODO: consider also CONVERT_EXPR, VAR_DECL and FIX_TRUNC_EXPR
+            ctor = TREE_OPERAND(ctor, 0);
+
+        handle_operand(initial->data.value, ctor, /* dig_initials */ false);
+        return;
+    }
+
+    // allocate array of nested initializers
+    const int cnt = clt->item_cnt;
+    SE_BREAK_IF(cnt <= 0);
+    struct cl_initializer **vec = CL_ZNEW_ARRAY(struct cl_initializer *, cnt);
+    initial->data.nested_initials = vec;
+
+    unsigned idx;
+    tree field, val;
+    FOR_EACH_CONSTRUCTOR_ELT(CONSTRUCTOR_ELTS(ctor), idx, field, val) {
+        SE_BREAK_IF(cnt <= (int)idx);
+
+        // field lookup
+        const int nth = field_lookup(ctor, field);
+        SE_BREAK_IF(clt->items[nth].type != add_type_if_needed(field));
+
+        // FIXME: unguarded recursion
+        read_initial(vec + nth, val);
+    }
+}
+
+static void read_raw_operand(struct cl_operand *op, tree t, bool dig_initials)
 {
     op->code = CL_OPERAND_VOID;
 
     enum tree_code code = TREE_CODE(t);
     switch (code) {
         case VAR_DECL:
+            if (dig_initials)
+                read_initial(&op->data.var.initial, DECL_INITIAL(t));
+            // fall through!
+
         case PARM_DECL:
         case FUNCTION_DECL:
         case RESULT_DECL:
@@ -592,7 +662,8 @@ static void read_raw_operand(struct cl_operand *op, tree t)
             break;
 
         case CONSTRUCTOR:
-            CL_WARN_UNHANDLED_EXPR(t, "CONSTRUCTOR");
+            if (dig_initials)
+                read_initial(&op->data.var.initial, t);
             break;
 
         default:
@@ -600,7 +671,6 @@ static void read_raw_operand(struct cl_operand *op, tree t)
     }
 }
 
-// FIXME: check direction
 static void chain_accessor(struct cl_accessor **ac, enum cl_type_e code)
 {
     // create and initialize new item
@@ -611,24 +681,6 @@ static void chain_accessor(struct cl_accessor **ac, enum cl_type_e code)
     // append new item to chain
     ac_new->next = *ac;
     *ac = ac_new;
-}
-
-static int accessor_item_lookup(tree op, tree field)
-{
-    tree type = TREE_TYPE(op);
-    if (NULL_TREE == type)
-        // decl omitted?
-        TRAP;
-
-    tree t = TYPE_FIELDS(type);
-    int i;
-    for (i = 0; t; t = TREE_CHAIN(t), ++i)
-        if (t == field)
-            return i;
-
-    // not found
-    TRAP;
-    return -1;
 }
 
 static struct cl_type* operand_type_lookup(tree t)
@@ -642,8 +694,6 @@ static struct cl_type* operand_type_lookup(tree t)
 
     return add_type_if_needed(op0);
 }
-
-static void handle_operand(struct cl_operand *op, tree t);
 
 static void handle_accessor_addr_expr(struct cl_accessor **ac, tree t)
 {
@@ -670,7 +720,7 @@ static void handle_accessor_array_ref(struct cl_accessor **ac, tree t)
     CL_ASSERT(index);
 
     // FIXME: unguarded recursion
-    handle_operand(index, op1);
+    handle_operand(index, op1, /* dig_initials */ true);
     (*ac)->data.array.index = index;
 }
 
@@ -687,7 +737,7 @@ static void handle_accessor_component_ref(struct cl_accessor **ac, tree t)
 
     chain_accessor(ac, CL_ACCESSOR_ITEM);
     (*ac)->type         = operand_type_lookup(t);
-    (*ac)->data.item.id = accessor_item_lookup(op, field);
+    (*ac)->data.item.id = field_lookup(op, field);
 }
 
 static bool handle_accessor(struct cl_accessor **ac, tree *pt)
@@ -746,14 +796,10 @@ static void free_cl_operand_data(struct cl_operand *op)
     }
 }
 
-static void handle_operand(struct cl_operand *op, tree t)
+static void handle_operand(struct cl_operand *op, tree t, bool dig_initials)
 {
-    op->code            = CL_OPERAND_VOID;
-    op->loc.file        = NULL;
-    op->loc.line        = -1;
-    op->scope           = CL_SCOPE_GLOBAL;
-    op->type            = NULL;
-    op->accessor        = NULL;
+    memset(op, 0, sizeof *op);
+    op->loc.line = -1;
 
     if (!t)
         return;
@@ -762,19 +808,18 @@ static void handle_operand(struct cl_operand *op, tree t)
     op->type = add_type_if_needed(t);
 
     // read accessor
-    op->accessor = NULL;
     while (handle_accessor(&op->accessor, &t));
 
     if (NULL_TREE == t)
         TRAP;
-    read_raw_operand(op, t);
+    read_raw_operand(op, t, dig_initials);
 }
 
 static void handle_stmt_unop(gimple stmt, enum tree_code code,
-                              struct cl_operand *dst, tree src_tree)
+                             struct cl_operand *dst, tree src_tree)
 {
     struct cl_operand src;
-    handle_operand(&src, src_tree);
+    handle_operand(&src, src_tree, /* dig_initials */ true);
 
     struct cl_insn cli;
     cli.code                    = CL_INSN_UNOP;
@@ -822,8 +867,8 @@ static void handle_stmt_binop(gimple stmt, enum tree_code code,
     struct cl_operand src1;
     struct cl_operand src2;
 
-    handle_operand(&src1, src1_tree);
-    handle_operand(&src2, src2_tree);
+    handle_operand(&src1, src1_tree, /* dig_initials */ true);
+    handle_operand(&src2, src2_tree, /* dig_initials */ true);
 
     struct cl_insn cli;
     cli.code                    = CL_INSN_BINOP;
@@ -876,7 +921,7 @@ static void handle_stmt_binop(gimple stmt, enum tree_code code,
 static void handle_stmt_assign(gimple stmt)
 {
     struct cl_operand dst;
-    handle_operand(&dst, gimple_assign_lhs(stmt));
+    handle_operand(&dst, gimple_assign_lhs(stmt), /* dig_initials */ true);
 
     switch (gimple_num_ops(stmt)) {
         case 2:
@@ -906,7 +951,7 @@ static void handle_stmt_call_args(gimple stmt)
     int i;
     for (i = 0; i < argc; ++i) {
         struct cl_operand src;
-        handle_operand(&src, gimple_call_arg(stmt, i));
+        handle_operand(&src, gimple_call_arg(stmt, i), /* dig_initials */ true);
         cl->insn_call_arg(cl, i + 1, &src);
         free_cl_operand_data(&src);
     }
@@ -925,11 +970,11 @@ static void handle_stmt_call(gimple stmt)
 
     // lhs
     struct cl_operand dst;
-    handle_operand(&dst, gimple_call_lhs(stmt));
+    handle_operand(&dst, gimple_call_lhs(stmt), /* dig_initials */ true);
 
     // fnc is also operand (call through pointer, struct member, etc.)
     struct cl_operand fnc;
-    handle_operand(&fnc, op0);
+    handle_operand(&fnc, op0, /* dig_initials */ true);
 
     // emit CALL insn
     struct cl_location loc;
@@ -956,7 +1001,7 @@ static void handle_stmt_call(gimple stmt)
 static void handle_stmt_return(gimple stmt)
 {
     struct cl_operand src;
-    handle_operand(&src, gimple_return_retval(stmt));
+    handle_operand(&src, gimple_return_retval(stmt), /* dig_initials */ true);
 
     struct cl_insn cli;
     cli.code                    = CL_INSN_RET;
@@ -1093,7 +1138,7 @@ static unsigned find_case_label_target(gimple stmt, int label_decl_uid)
 static void handle_stmt_switch(gimple stmt)
 {
     struct cl_operand src;
-    handle_operand(&src, gimple_switch_index(stmt));
+    handle_operand(&src, gimple_switch_index(stmt), /* dig_initials */ true);
 
     // emit insn_switch_open
     struct cl_location loc;
@@ -1110,7 +1155,7 @@ static void handle_stmt_switch(gimple stmt)
         // lowest case value with same label
         struct cl_operand val_lo;
         tree case_low = CASE_LOW(case_decl);
-        handle_operand(&val_lo, case_low);
+        handle_operand(&val_lo, case_low, /* dig_initials */ true);
 
         // highest case value with same lable
         struct cl_operand val_hi;
@@ -1118,7 +1163,7 @@ static void handle_stmt_switch(gimple stmt)
         if (!case_high)
             // there is no range, only one value
             case_high = case_low;
-        handle_operand(&val_hi, case_high);
+        handle_operand(&val_hi, case_high, /* dig_initials */ true);
 
         // figure out where to jump in that case
         tree case_label = CASE_LABEL(case_decl);
@@ -1281,7 +1326,7 @@ static void handle_fnc_decl_arglist (tree args)
 
     while (args) {
         struct cl_operand arg_src;
-        handle_operand(&arg_src, args);
+        handle_operand(&arg_src, args, /* dig_initials */ true);
         arg_src.scope = CL_SCOPE_FUNCTION;
 
         cl->fnc_arg_decl(cl, ++argc, &arg_src);
@@ -1299,7 +1344,7 @@ static void handle_fnc_decl (tree decl)
 
     // emit fnc declaration
     struct cl_operand fnc;
-    handle_operand(&fnc, decl);
+    handle_operand(&fnc, decl, /* dig_initials */ true);
     cl->fnc_open(cl, &fnc);
 
     // emit arg declarations

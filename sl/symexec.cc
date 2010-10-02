@@ -41,71 +41,122 @@
 #include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
 
+typedef std::pair<TObjId, const cl_initializer *> TInitialItem;
+
+// specialization of TraverseSubObjsHelper suitable for gl initializers
+template <> struct TraverseSubObjsHelper<TInitialItem> {
+    static const struct cl_type* getItemClt(const SymHeap           &sh,
+                                            const TInitialItem      &item)
+    {
+        const struct cl_type *clt = sh.objType(item.first);
+        SE_BREAK_IF(item.second && item.second->type != clt);
+        return clt;
+    }
+
+    static TInitialItem getNextItem(const SymHeap                   &sh,
+                                    TInitialItem                    item,
+                                    int                             nth)
+    {
+        item.first = sh.subObj(item.first,  nth);
+
+        const struct cl_initializer *&initial = item.second;
+        if (initial)
+            initial = initial->data.nested_initials[nth];
+
+        return item;
+    }
+};
+
 // utilities
 namespace {
 
-// attempt to initialize a global/static variable
-bool initSingleGlVar(SymHeap &sh, TObjId obj) {
+// initialize a global/static variable
+bool initGlVar(SymHeap &sh, const TInitialItem &item) {
+    const TObjId obj = item.first;
     const struct cl_type *clt = sh.objType(obj);
     SE_BREAK_IF(!clt);
 
     const enum cl_type_e code = clt->code;
     switch (code) {
-        case CL_TYPE_CHAR:
-        case CL_TYPE_ENUM:
-        case CL_TYPE_INT:
-        case CL_TYPE_PTR:
-            sh.objSetValue(obj, VAL_NULL);
-            break;
-
-        case CL_TYPE_BOOL:
-            sh.objSetValue(obj, VAL_FALSE);
-            break;
-
         case CL_TYPE_ARRAY:
             CL_DEBUG("CL_TYPE_ARRAY is not supported by SymExec for now");
-            break;
+            return /* continue */ true;
 
         case CL_TYPE_UNION:
             CL_DEBUG("CL_TYPE_UNION is not supported by SymExec for now");
-            break;
+            return /* continue */ true;
 
         case CL_TYPE_STRUCT:
-            // fall through!
+            SE_TRAP;
 
         default:
-            // only a few types are supported in case of gl variables for now
-#if SE_SELF_TEST
-            SE_TRAP;
-#endif
             break;
     }
+
+    const struct cl_initializer *initial = item.second;
+    if (!initial) {
+        // no initializer given, we should nullify the variable
+        sh.objSetValue(obj, /* also equal to VAL_FALSE */ VAL_NULL);
+
+        return /* continue */ true;
+    }
+
+    // FIXME: we're asking for troubles this way
+    const CodeStorage::Storage *null = 0;
+    SymBackTrace dummyBt(*null);
+    SymProc proc(sh, &dummyBt);
+
+    // resolve initial value
+    const struct cl_operand *op = initial->data.value;
+    const TValueId val = proc.heapValFromOperand(*op);
+    CL_DEBUG("using explicit initializer: obj #"
+            << static_cast<int>(obj) << " <-- val #"
+            << static_cast<int>(val));
+
+    // set the initial value
+    SE_BREAK_IF(VAL_INVALID == val);
+    sh.objSetValue(obj, val);
 
     return /* continue */ true;
 }
 
-void createGlVar(SymHeap &sh, const CodeStorage::Var &var) {
-    // create the corresponding heap object
-    const struct cl_type *clt = var.clt;
-    const CVar cVar(var.uid, /* gl variable */ 0);
-    const TObjId obj = sh.objCreate(clt, cVar);
-
-    // now attempt to initialize the variable since it is a global/static var
-    if (CL_TYPE_STRUCT == clt->code)
-        traverseSubObjs(sh, obj, initSingleGlVar, /* leavesOnly */ true);
-    else
-        initSingleGlVar(sh, obj);
-}
-
-void createGlVars(SymHeap &heap, const CodeStorage::Storage &stor) {
+void createGlVars(SymHeap &sh, const CodeStorage::Storage &stor) {
     using namespace CodeStorage;
+
+    // first create all gl variables, without initializing anything
     BOOST_FOREACH(const Var &var, stor.vars) {
-        if (VAR_GL == var.code) {
-            const LocationWriter lw(&var.loc);
-            CL_DEBUG_MSG(lw, "(g) creating global variable: #" << var.uid
-                    << " (" << var.name << ")");
-            createGlVar(heap, var);
-        }
+        if (VAR_GL != var.code)
+            continue;
+
+        const LocationWriter lw(&var.loc);
+        CL_DEBUG_MSG(lw, "(g) creating global variable: #" << var.uid
+                << " (" << var.name << ")");
+
+        // create the corresponding heap object
+        const CVar cVar(var.uid, /* gl variable */ 0);
+        sh.objCreate(var.clt, cVar);
+    }
+
+    // now is the time to safely perform the initialization
+    BOOST_FOREACH(const Var &var, stor.vars) {
+        if (VAR_GL != var.code)
+            continue;
+
+        const LocationWriter lw(&var.loc);
+        CL_DEBUG_MSG(lw, "(g) initializing global variable: #" << var.uid
+                << " (" << var.name << ")");
+
+        // look for the corresponding heap object
+        const CVar cVar(var.uid, /* gl variable */ 0);
+        const TObjId obj = sh.objByCVar(cVar);
+        SE_BREAK_IF(obj <= 0);
+        const TInitialItem item(obj, var.initial);
+
+        // initialize a global/static variable
+        if (CL_TYPE_STRUCT == var.clt->code)
+            traverseSubObjs(sh, item, initGlVar, /* leavesOnly */ true);
+        else
+            initGlVar(sh, item);
     }
 }
 
