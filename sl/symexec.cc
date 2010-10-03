@@ -57,7 +57,7 @@ template <> struct TraverseSubObjsHelper<TInitialItem> {
                                     TInitialItem                    item,
                                     int                             nth)
     {
-        item.first = sh.subObj(item.first,  nth);
+        item.first = sh.subObj(item.first, nth);
 
         const struct cl_initializer *&initial = item.second;
         if (initial)
@@ -150,9 +150,9 @@ void createGlVars(SymHeap &sh, const CodeStorage::Storage &stor) {
         const CVar cVar(var.uid, /* gl variable */ 0);
         const TObjId obj = sh.objByCVar(cVar);
         SE_BREAK_IF(obj <= 0);
-        const TInitialItem item(obj, var.initial);
 
         // initialize a global/static variable
+        const TInitialItem item(obj, var.initial);
         if (CL_TYPE_STRUCT == var.clt->code)
             traverseSubObjs(sh, item, initGlVar, /* leavesOnly */ true);
         else
@@ -423,7 +423,7 @@ void SymExecEngine::execTermInsn() {
 
         case CL_INSN_JMP:
             if (1 == tlist.size()) {
-                this->updateState(tlist[0]);
+                this->updateState(tlist[/* target block */ 0]);
                 break;
             }
             // go through!
