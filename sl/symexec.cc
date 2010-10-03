@@ -49,7 +49,7 @@ template <> struct TraverseSubObjsHelper<TInitialItem> {
                                             const TInitialItem      &item)
     {
         const struct cl_type *clt = sh.objType(item.first);
-        SE_BREAK_IF(item.second && item.second->type != clt);
+        SE_BREAK_IF(item.second && (!clt || *clt != *item.second->type));
         return clt;
     }
 

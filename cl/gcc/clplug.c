@@ -583,8 +583,17 @@ static void read_initial(struct cl_initializer **pinit, tree ctor)
         return;
     }
 
-    struct cl_initializer *initial = *pinit = CL_ZNEW(struct cl_initializer);
-    const struct cl_type *clt = initial->type = add_type_if_needed(ctor);
+    // dig target type
+    struct cl_type *clt = add_type_if_needed(ctor);
+    if (CL_TYPE_ARRAY == clt->code) {
+        CL_WARN_UNHANDLED_EXPR(ctor, "array initializer");
+        return;
+    }
+
+    // allocate an initializer node
+    struct cl_initializer *initial = CL_ZNEW(struct cl_initializer);
+    initial->type = clt;
+    *pinit = initial;
 
     const enum tree_code code = TREE_CODE(ctor);
     if (CONSTRUCTOR != code) {
