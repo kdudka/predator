@@ -104,6 +104,7 @@ set(self_extra_opts
 
 add_test("compile-self-extra" ${GCC_HOST} ${self_extra_opts})
 add_test("compile-self-valgrind" valgrind
+    --trace-children=yes
     --error-exitcode=7
     --suppressions=${cl_SOURCE_DIR}/gcc/gcc.valgrind
     ${GCC_HOST}
