@@ -238,6 +238,7 @@ void ClDotGenerator::closeDot(std::ofstream &str) {
 
 ClDotGenerator::ClDotGenerator(const char *glDotFile):
     hasGlDotFile_(glDotFile && *glDotFile),
+    bbPos_(0),
     nodeType_(NT_PLAIN)
 {
     if (hasGlDotFile_) {
