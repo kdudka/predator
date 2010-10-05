@@ -415,19 +415,19 @@ namespace {
 void ClPrettyPrint::printNestedVar(const struct cl_operand *op) {
     switch (op->code) {
         case CL_OPERAND_VAR:
-            if (!op->data.var.name) {
-                SSD_COLORIZE(out_, C_LIGHT_BLUE) << "%r" << op->data.var.id;
+            if (!op->data.var->name) {
+                SSD_COLORIZE(out_, C_LIGHT_BLUE) << "%r" << op->data.var->uid;
                 break;
             }
             out_ << SSD_INLINE_COLOR(C_LIGHT_BLUE, "%m" << scopeFlag(op->scope))
-                << op->data.var.id << ":";
+                << op->data.var->uid << ":";
             switch (op->scope) {
                 case CL_SCOPE_GLOBAL:
                 case CL_SCOPE_STATIC:
-                    out_ << SSD_INLINE_COLOR(C_LIGHT_RED, op->data.var.name);
+                    out_ << SSD_INLINE_COLOR(C_LIGHT_RED, op->data.var->name);
                     break;
                 default:
-                    out_ << SSD_INLINE_COLOR(C_LIGHT_BLUE, op->data.var.name);
+                    out_ << SSD_INLINE_COLOR(C_LIGHT_BLUE, op->data.var->name);
             }
             break;
 

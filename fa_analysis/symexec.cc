@@ -22,6 +22,7 @@
 
 #include <cl/code_listener.h>
 #include <cl/cl_msg.hh>
+#include <cl/clutil.hh>
 #include <cl/storage.hh>
 
 #include "treeaut.hh"
@@ -308,7 +309,7 @@ struct SymCtx {
 
 	void parseOperand(OperandInfo& operandInfo, const FAE& fae, const cl_operand* op) {
 
-		var_map_type::iterator i = this->varMap.find(op->data.var.id);
+		var_map_type::iterator i = this->varMap.find(varIdFromOperand(op));
 
 		assert(i != this->varMap.end());
 

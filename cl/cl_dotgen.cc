@@ -581,10 +581,10 @@ void ClDotGenerator::insn_call_open(const struct cl_location *loc,
         case CL_OPERAND_VAR:
             callType = ET_PTR_CALL;
 
-            if (fnc->data.var.name)
-                name << fnc->data.var.name;
+            if (fnc->data.var->name)
+                name << fnc->data.var->name;
             else
-                name << "%r" << fnc->data.var.id;
+                name << "%r" << fnc->data.var->uid;
 
             // TODO: handle accessor somehow
             break;

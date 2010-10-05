@@ -316,7 +316,7 @@ class CldRegUsageChk: public CldOpCheckerBase {
             if (CL_OPERAND_VAR != op->code)
                 return;
 
-            int id = op->data.var.id;
+            int id = op->data.var->uid;
             usageChecker_.write(id, id, CldOpCheckerBase::lastLocation());
         }
 
@@ -324,7 +324,7 @@ class CldRegUsageChk: public CldOpCheckerBase {
             if (CL_OPERAND_VAR != op->code)
                 return;
 
-            int id = op->data.var.id;
+            int id = op->data.var->uid;
             usageChecker_.read(id, id, CldOpCheckerBase::lastLocation());
         }
 
@@ -351,8 +351,8 @@ class CldLcVarUsageChk: public CldOpCheckerBase {
             if (CL_OPERAND_VAR != op->code || CL_SCOPE_FUNCTION != op->scope)
                 return;
 
-            usageChecker_.write(op->data.var.id,
-                                std::string("'") + op->data.var.name +"'",
+            usageChecker_.write(op->data.var->uid,
+                                std::string("'") + op->data.var->name +"'",
                                 CldOpCheckerBase::lastLocation());
         }
 
@@ -360,8 +360,8 @@ class CldLcVarUsageChk: public CldOpCheckerBase {
             if (CL_OPERAND_VAR != op->code || CL_SCOPE_FUNCTION != op->scope)
                 return;
 
-            usageChecker_.read(op->data.var.id,
-                               std::string("'") + op->data.var.name +"'",
+            usageChecker_.read(op->data.var->uid,
+                               std::string("'") + op->data.var->name +"'",
                                CldOpCheckerBase::lastLocation());
         }
 

@@ -151,11 +151,6 @@ enum cl_scope_e {
 };
 
 /**
- * type's unique ID
- */
-typedef int cl_type_uid_t;
-
-/**
  * basic type enumeration
  */
 enum cl_type_e {
@@ -207,7 +202,7 @@ struct cl_type {
     /**
      * type's unique ID
      */
-    cl_type_uid_t                       uid;
+    int                                 uid;
 
     /**
      * kind of type (enumeration)
@@ -392,7 +387,7 @@ struct cl_var {
     /**
      * unique ID, given by compiler (or any cl decorator on the way from there)
      */
-    int                                 id;
+    int                                 uid;
 
     /**
      * name of the variable, valid only for program variables (NULL for
@@ -469,7 +464,7 @@ struct cl_operand {
         /**
          * valid only for @b CL_OPERAND_VAR
          */
-        struct cl_var                   var;
+        struct cl_var                   *var;
 
         /**
          * valid only for @b CL_OPERAND_CST

@@ -591,11 +591,11 @@ void SymProc::objDestroy(TObjId obj) {
 // /////////////////////////////////////////////////////////////////////////////
 // SymExecCore implementation
 TValueId SymExecCore::heapValFromOperand(const struct cl_operand &op) {
-    const char *name = op.data.var.name;
+    const char *name;
     if (!ep_.invCompatMode)
         goto no_nasty_assumptions;
 
-    if (CL_OPERAND_VAR != op.code || !name)
+    if (CL_OPERAND_VAR != op.code || !(name = op.data.var->name))
         goto no_nasty_assumptions;
     
     if (STREQ(name, "nondet") || STREQ(name, "__nondet")) {

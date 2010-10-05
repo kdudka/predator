@@ -81,9 +81,12 @@ namespace {
     void handleOperandStrings(TFnc fnc, struct cl_operand *op) {
         enum cl_operand_e code = op->code;
         switch (code) {
+            // TODO
+#if 0
             case CL_OPERAND_VAR:
                 fnc(op->data.var.name);
                 break;
+#endif
 
             case CL_OPERAND_CST:
                 handleCstStrings(fnc, op->data.cst);
@@ -342,7 +345,7 @@ void ClStorageBuilder::Private::digInitial(const struct cl_initializer *initial)
 }
 
 void ClStorageBuilder::Private::digOperandVar(const struct cl_operand *op) {
-    const int id = op->data.var.id;
+    const int id = op->data.var->uid;
 
     // do process each variable only once
     if (hasKey(this->varsDone, id))
@@ -392,7 +395,7 @@ void ClStorageBuilder::Private::digOperandVar(const struct cl_operand *op) {
             TRAP;
     }
 
-    this->digInitial(op->data.var.initial);
+    this->digInitial(op->data.var->initial);
 }
 
 void ClStorageBuilder::Private::digOperandCst(const struct cl_operand *op) {
@@ -537,7 +540,7 @@ void ClStorageBuilder::fnc_arg_decl(int pos, const struct cl_operand *op) {
     if (CL_OPERAND_VAR != op->code)
         TRAP;
 
-    const int uid = op->data.var.id;
+    const int uid = op->data.var->uid;
     Fnc &fnc = *(d->fnc);
     Var &var = d->stor.vars[uid];
     d->fnc->vars.insert(uid);

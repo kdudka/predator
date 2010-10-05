@@ -201,9 +201,11 @@ static void free_plugin_name(void)
 }
 
 typedef htab_t type_db_t;
+typedef htab_t var_db_t;
 
 static struct cl_code_listener *cl = NULL;
 static type_db_t type_db = NULL;
+static var_db_t var_db = NULL;
 
 static hashval_t type_db_hash (const void *p)
 {
@@ -211,11 +213,24 @@ static hashval_t type_db_hash (const void *p)
     return type->uid;
 }
 
+static hashval_t var_db_hash (const void *p)
+{
+    const struct cl_var *var = (const struct cl_var *) p;
+    return var->uid;
+}
+
 static int type_db_eq (const void *p1, const void *p2)
 {
     const struct cl_type *type1 = (const struct cl_type *) p1;
     const struct cl_type *type2 = (const struct cl_type *) p2;
     return type1->uid == type2->uid;
+}
+
+static int var_db_eq (const void *p1, const void *p2)
+{
+    const struct cl_var *var1 = (const struct cl_var *) p1;
+    const struct cl_var *var2 = (const struct cl_var *) p2;
+    return var1->uid == var2->uid;
 }
 
 static void type_db_free (void *p)
@@ -227,10 +242,23 @@ static void type_db_free (void *p)
     free(p);
 }
 
+static void var_db_free (void *p)
+{
+    // TODO
+    (void) p;
+}
+
 static type_db_t type_db_create(void)
 {
     return htab_create_alloc(/* FIXME: hardcoded for now */ 0x100,
                              type_db_hash, type_db_eq, type_db_free,
+                             xcalloc, free);
+}
+
+static var_db_t var_db_create(void)
+{
+    return htab_create_alloc(/* FIXME: hardcoded for now */ 0x100,
+                             var_db_hash, var_db_eq, var_db_free,
                              xcalloc, free);
 }
 
@@ -239,7 +267,12 @@ static void type_db_destroy(type_db_t db)
     htab_delete(db);
 }
 
-static struct cl_type* type_db_lookup(type_db_t db, cl_type_uid_t uid)
+static void var_db_destroy(var_db_t db)
+{
+    htab_delete(db);
+}
+
+static struct cl_type* type_db_lookup(type_db_t db, int uid)
 {
     struct cl_type type;
     type.uid = uid;
@@ -247,11 +280,26 @@ static struct cl_type* type_db_lookup(type_db_t db, cl_type_uid_t uid)
     return htab_find(db, &type);
 }
 
+static struct cl_var* var_db_lookup(var_db_t db, int uid)
+{
+    struct cl_var var;
+    var.uid = uid;
+
+    return htab_find(db, &var);
+}
+
 static void type_db_insert(type_db_t db, struct cl_type *type)
 {
     void **slot = htab_find_slot(db, type, INSERT);
     CL_ASSERT(slot);
     *slot = type;
+}
+
+static void var_db_insert(var_db_t db, struct cl_var *var)
+{
+    void **slot = htab_find_slot(db, var, INSERT);
+    CL_ASSERT(slot);
+    *slot = var;
 }
 
 static void read_gcc_location(struct cl_location *loc, location_t gcc_loc)
@@ -468,7 +516,7 @@ static void read_specific_type(struct cl_type *clt, tree type)
 static struct cl_type* add_bare_type_if_needed(tree type)
 {
     // hashtab lookup
-    cl_type_uid_t uid = TYPE_UID(type);
+    const int uid = TYPE_UID(type);
     struct cl_type *clt = type_db_lookup(type_db, uid);
     if (clt)
         // type already hashed
@@ -512,47 +560,12 @@ static enum cl_scope_e get_decl_scope(tree t)
         : CL_SCOPE_STATIC;
 }
 
-static void read_operand_decl(struct cl_operand *op, tree t)
+static const char* get_decl_name(tree t)
 {
-    enum tree_code code = TREE_CODE(t);
-    read_gcc_location(&op->loc, DECL_SOURCE_LOCATION(t));
-
-    if (DECL_ARTIFICIAL(t)) {
-        // emit as a register
-        op->code            = CL_OPERAND_VAR;
-        op->data.var.id     = DECL_UID(t);
-        op->scope           = CL_SCOPE_FUNCTION;
-
-        return;
-    }
-
-    if (!DECL_NAME(t))
-        // FIXME: anonymous operand ... something went wrong
-        return;
-
-    // read operand's name and scope
-    const char *name = IDENTIFIER_POINTER(DECL_NAME(t));
-    op->scope = get_decl_scope(t);
-
-    switch (code) {
-        case FUNCTION_DECL:
-            op->code                            = CL_OPERAND_CST;
-            op->data.cst.code                   = CL_TYPE_FNC;
-            op->data.cst.data.cst_fnc.name      = name;
-            op->data.cst.data.cst_fnc.is_extern = DECL_EXTERNAL(t);
-            op->data.cst.data.cst_fnc.uid       = DECL_UID(t);
-            break;
-
-        case PARM_DECL:
-        case VAR_DECL:
-            op->code                            = CL_OPERAND_VAR;
-            op->data.var.id                     = DECL_UID(t);
-            op->data.var.name                   = name;
-            break;
-
-        default:
-            TRAP;
-    }
+    tree name = DECL_NAME(t);
+    return (name)
+        ? IDENTIFIER_POINTER(name)
+        : NULL;
 }
 
 static int field_lookup(tree op, tree field)
@@ -573,7 +586,7 @@ static int field_lookup(tree op, tree field)
     return -1;
 }
 
-static void handle_operand(struct cl_operand *op, tree t, bool dig_initials);
+static void handle_operand(struct cl_operand *op, tree t);
 
 static void read_initial(struct cl_initializer **pinit, tree ctor)
 {
@@ -605,7 +618,7 @@ static void read_initial(struct cl_initializer **pinit, tree ctor)
             // TODO: consider also CONVERT_EXPR, VAR_DECL and FIX_TRUNC_EXPR
             ctor = TREE_OPERAND(ctor, 0);
 
-        handle_operand(initial->data.value, ctor, /* dig_initials */ false);
+        handle_operand(initial->data.value, ctor);
         return;
     }
 
@@ -629,21 +642,51 @@ static void read_initial(struct cl_initializer **pinit, tree ctor)
     }
 }
 
-static void read_raw_operand(struct cl_operand *op, tree t, bool dig_initials)
+static struct cl_var* add_var_if_needed(tree t)
+{
+    // hash table lookup
+    const int uid = DECL_UID(t);
+    struct cl_var *var = var_db_lookup(var_db, uid);
+    if (var)
+        // var already hashed
+        return var;
+
+    // insert a new var into hash table
+    var = CL_ZNEW(struct cl_var);
+    var->uid = uid;
+    var_db_insert(var_db, var);
+
+    // read name and initializer
+    var->name = get_decl_name(t);
+    if (VAR_DECL == TREE_CODE(t))
+        read_initial(&var->initial, DECL_INITIAL(t));
+
+    return var;
+}
+
+static void read_raw_operand(struct cl_operand *op, tree t)
 {
     op->code = CL_OPERAND_VOID;
 
     enum tree_code code = TREE_CODE(t);
     switch (code) {
         case VAR_DECL:
-            if (dig_initials)
-                read_initial(&op->data.var.initial, DECL_INITIAL(t));
-            // fall through!
-
         case PARM_DECL:
-        case FUNCTION_DECL:
         case RESULT_DECL:
-            read_operand_decl(op, t);
+            read_gcc_location(&op->loc, DECL_SOURCE_LOCATION(t));
+            op->code                            = CL_OPERAND_VAR;
+            op->scope                           = get_decl_scope(t);
+            op->data.var                        = add_var_if_needed(t);
+            break;
+
+        case FUNCTION_DECL:
+            read_gcc_location(&op->loc, DECL_SOURCE_LOCATION(t));
+            op->code                            = CL_OPERAND_CST;
+            op->scope                           = get_decl_scope(t);
+            op->data.cst.code                   = CL_TYPE_FNC;
+            op->data.cst.data.cst_fnc.name      = get_decl_name(t);
+            op->data.cst.data.cst_fnc.is_extern = DECL_EXTERNAL(t);
+            op->data.cst.data.cst_fnc.uid       = DECL_UID(t);
             break;
 
         case INTEGER_CST:
@@ -671,8 +714,7 @@ static void read_raw_operand(struct cl_operand *op, tree t, bool dig_initials)
             break;
 
         case CONSTRUCTOR:
-            if (dig_initials)
-                read_initial(&op->data.var.initial, t);
+            CL_WARN_UNHANDLED_EXPR(t, "CONSTRUCTOR");
             break;
 
         default:
@@ -728,8 +770,8 @@ static void handle_accessor_array_ref(struct cl_accessor **ac, tree t)
     struct cl_operand *index = CL_ZNEW(struct cl_operand);
     CL_ASSERT(index);
 
-    // FIXME: unguarded recursion
-    handle_operand(index, op1, /* dig_initials */ true);
+    // possible recursion
+    handle_operand(index, op1);
     (*ac)->data.array.index = index;
 }
 
@@ -805,7 +847,7 @@ static void free_cl_operand_data(struct cl_operand *op)
     }
 }
 
-static void handle_operand(struct cl_operand *op, tree t, bool dig_initials)
+static void handle_operand(struct cl_operand *op, tree t)
 {
     memset(op, 0, sizeof *op);
     op->loc.line = -1;
@@ -821,14 +863,14 @@ static void handle_operand(struct cl_operand *op, tree t, bool dig_initials)
 
     if (NULL_TREE == t)
         TRAP;
-    read_raw_operand(op, t, dig_initials);
+    read_raw_operand(op, t);
 }
 
 static void handle_stmt_unop(gimple stmt, enum tree_code code,
                              struct cl_operand *dst, tree src_tree)
 {
     struct cl_operand src;
-    handle_operand(&src, src_tree, /* dig_initials */ true);
+    handle_operand(&src, src_tree);
 
     struct cl_insn cli;
     cli.code                    = CL_INSN_UNOP;
@@ -876,8 +918,8 @@ static void handle_stmt_binop(gimple stmt, enum tree_code code,
     struct cl_operand src1;
     struct cl_operand src2;
 
-    handle_operand(&src1, src1_tree, /* dig_initials */ true);
-    handle_operand(&src2, src2_tree, /* dig_initials */ true);
+    handle_operand(&src1, src1_tree);
+    handle_operand(&src2, src2_tree);
 
     struct cl_insn cli;
     cli.code                    = CL_INSN_BINOP;
@@ -930,7 +972,7 @@ static void handle_stmt_binop(gimple stmt, enum tree_code code,
 static void handle_stmt_assign(gimple stmt)
 {
     struct cl_operand dst;
-    handle_operand(&dst, gimple_assign_lhs(stmt), /* dig_initials */ true);
+    handle_operand(&dst, gimple_assign_lhs(stmt));
 
     switch (gimple_num_ops(stmt)) {
         case 2:
@@ -960,7 +1002,7 @@ static void handle_stmt_call_args(gimple stmt)
     int i;
     for (i = 0; i < argc; ++i) {
         struct cl_operand src;
-        handle_operand(&src, gimple_call_arg(stmt, i), /* dig_initials */ true);
+        handle_operand(&src, gimple_call_arg(stmt, i));
         cl->insn_call_arg(cl, i + 1, &src);
         free_cl_operand_data(&src);
     }
@@ -979,11 +1021,11 @@ static void handle_stmt_call(gimple stmt)
 
     // lhs
     struct cl_operand dst;
-    handle_operand(&dst, gimple_call_lhs(stmt), /* dig_initials */ true);
+    handle_operand(&dst, gimple_call_lhs(stmt));
 
     // fnc is also operand (call through pointer, struct member, etc.)
     struct cl_operand fnc;
-    handle_operand(&fnc, op0, /* dig_initials */ true);
+    handle_operand(&fnc, op0);
 
     // emit CALL insn
     struct cl_location loc;
@@ -1010,7 +1052,7 @@ static void handle_stmt_call(gimple stmt)
 static void handle_stmt_return(gimple stmt)
 {
     struct cl_operand src;
-    handle_operand(&src, gimple_return_retval(stmt), /* dig_initials */ true);
+    handle_operand(&src, gimple_return_retval(stmt));
 
     struct cl_insn cli;
     cli.code                    = CL_INSN_RET;
@@ -1036,36 +1078,38 @@ static /* const */ struct cl_type builtin_bool_type = {
     .size           = /* FIXME */ sizeof(bool)
 };
 
-static /* XXX const */ struct cl_operand stmt_cond_fixed_reg = {
-    .code           = CL_OPERAND_VAR,
-    .loc = {
-        .file       = NULL,
-        .line       = -1
-    },
-    .scope          = CL_SCOPE_FUNCTION,
-    .type           = &builtin_bool_type,
-    .data = {
-        .var = {
-            .name   = NULL,
-            .id     = /* XXX */ 0x100000
-        }
-    }
-};
-
 static void handle_stmt_cond_br(gimple stmt, const char *then_label,
                                 const char *else_label)
 {
+    static int last_reg_uid = /* XXX */ 0x100000;
+
+    struct cl_var *var = CL_ZNEW(struct cl_var);
+    var->uid = ++last_reg_uid;
+    var_db_insert(var_db, var);
+
+    struct cl_operand dst;
+    memset(&dst, 0, sizeof dst);
+    read_gimple_location(&dst.loc, stmt);
+
+    dst.code            = CL_OPERAND_VAR;
+    dst.scope           = CL_SCOPE_FUNCTION;
+    dst.type            = &builtin_bool_type;
+    dst.data.var        = var;
+
+    handle_stmt_binop(stmt,
+            gimple_cond_code(stmt),
+            &dst,
+            gimple_cond_lhs(stmt),
+            gimple_cond_rhs(stmt));
+
     struct cl_insn cli;
     cli.code                        = CL_INSN_COND;
-    cli.data.insn_cond.src          = &stmt_cond_fixed_reg;
+    cli.data.insn_cond.src          = &dst;
     cli.data.insn_cond.then_label   = then_label;
     cli.data.insn_cond.else_label   = else_label;
 
     read_gimple_location(&cli.loc, stmt);
     cl->insn(cl, &cli);
-
-    // XXX
-    stmt_cond_fixed_reg.data.var.id ++;
 }
 
 static void handle_stmt_cond(gimple stmt)
@@ -1091,12 +1135,6 @@ static void handle_stmt_cond(gimple stmt)
 
     if (!label_true || !label_false)
         TRAP;
-
-    handle_stmt_binop(stmt,
-            gimple_cond_code(stmt),
-            &stmt_cond_fixed_reg,
-            gimple_cond_lhs(stmt),
-            gimple_cond_rhs(stmt));
 
     handle_stmt_cond_br(stmt, label_true, label_false);
     free(label_true);
@@ -1147,7 +1185,7 @@ static unsigned find_case_label_target(gimple stmt, int label_decl_uid)
 static void handle_stmt_switch(gimple stmt)
 {
     struct cl_operand src;
-    handle_operand(&src, gimple_switch_index(stmt), /* dig_initials */ true);
+    handle_operand(&src, gimple_switch_index(stmt));
 
     // emit insn_switch_open
     struct cl_location loc;
@@ -1164,7 +1202,7 @@ static void handle_stmt_switch(gimple stmt)
         // lowest case value with same label
         struct cl_operand val_lo;
         tree case_low = CASE_LOW(case_decl);
-        handle_operand(&val_lo, case_low, /* dig_initials */ true);
+        handle_operand(&val_lo, case_low);
 
         // highest case value with same lable
         struct cl_operand val_hi;
@@ -1172,7 +1210,7 @@ static void handle_stmt_switch(gimple stmt)
         if (!case_high)
             // there is no range, only one value
             case_high = case_low;
-        handle_operand(&val_hi, case_high, /* dig_initials */ true);
+        handle_operand(&val_hi, case_high);
 
         // figure out where to jump in that case
         tree case_label = CASE_LABEL(case_decl);
@@ -1335,7 +1373,7 @@ static void handle_fnc_decl_arglist (tree args)
 
     while (args) {
         struct cl_operand arg_src;
-        handle_operand(&arg_src, args, /* dig_initials */ true);
+        handle_operand(&arg_src, args);
         arg_src.scope = CL_SCOPE_FUNCTION;
 
         cl->fnc_arg_decl(cl, ++argc, &arg_src);
@@ -1353,7 +1391,7 @@ static void handle_fnc_decl (tree decl)
 
     // emit fnc declaration
     struct cl_operand fnc;
-    handle_operand(&fnc, decl, /* dig_initials */ true);
+    handle_operand(&fnc, decl);
     cl->fnc_open(cl, &fnc);
 
     // emit arg declarations
@@ -1420,6 +1458,7 @@ static void cb_finish (void *gcc_data, void *user_data)
 
     cl->destroy(cl);
     cl_global_cleanup();
+    var_db_destroy(var_db);
     type_db_destroy(type_db);
     free_plugin_name();
 }
@@ -1671,9 +1710,10 @@ int plugin_init (struct plugin_name_args *plugin_info,
     cl = create_cl_chain(&opt);
     CL_ASSERT(cl);
 
-    // initialize type database
+    // initialize type database and var database
     type_db = type_db_create();
-    CL_ASSERT(type_db);
+    var_db = var_db_create();
+    CL_ASSERT(type_db && var_db);
 
     // try to register callbacks (and virtual callbacks)
     cl_regcb (plugin_info->base_name);
