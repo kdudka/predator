@@ -521,8 +521,8 @@ static void read_operand_decl(struct cl_operand *op, tree t)
         // emit as a register
         op->code            = CL_OPERAND_VAR;
         op->data.var.id     = DECL_UID(t);
-        op->scope           = /* make it possible to use unify_vars decorator */
-                              CL_SCOPE_FUNCTION;
+        op->scope           = CL_SCOPE_FUNCTION;
+
         return;
     }
 
@@ -1585,7 +1585,7 @@ static bool cl_append_def_listener(struct cl_code_listener *chain,
 {
     const char *cld = (opt->use_peer)
         ? "unfold_switch,unify_labels_gl"
-        : "unify_labels_fnc,unify_vars";
+        : "unify_labels_fnc";
 
     return cl_append_listener(chain,
             "listener=\"%s\" listener_args=\"%s\" cld=\"%s\"",

@@ -46,9 +46,7 @@ add_library(cl STATIC
     cl_typedot.cc
     cld_intchk.cc
     cld_opchk.cc
-    cld_optrans.cc
     cld_unilabel.cc
-    cld_univars.cc
     cld_unswitch.cc
     cldebug.cc
     clutil.cc
@@ -106,7 +104,6 @@ add_test("compile-self-extra" ${GCC_HOST} ${self_extra_opts})
 add_test("compile-self-valgrind" valgrind
     --trace-children=yes
     --error-exitcode=7
-    --suppressions=${cl_SOURCE_DIR}/gcc/gcc.valgrind
     ${GCC_HOST}
     ${self_extra_opts})
 
