@@ -38,7 +38,6 @@
  * - decorators:
  *      - cld_intchk.hh
  *      - cld_unilabel.hh
- *      - cld_univars.hh
  *      - cld_unswitch.hh
  *
  * - error/warning messages: cl_msg.hh, location.hh,

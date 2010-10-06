@@ -242,10 +242,43 @@ static void type_db_free (void *p)
     free(p);
 }
 
+static void free_initial_tree(const struct cl_initializer *initial)
+{
+    if (!initial)
+        // nothing to free here
+        return;
+
+    const struct cl_type *clt = initial->type;
+    const enum cl_type_e code = clt->code;
+    switch (code) {
+        case CL_TYPE_STRUCT:
+        case CL_TYPE_UNION:
+        case CL_TYPE_ARRAY:
+            break;
+
+        default:
+            // free value of a scalar initializer
+            free(initial->data.value);
+            return;
+    }
+
+    // destroy nested initalizers
+    struct cl_initializer **nested_initials = initial->data.nested_initials;
+
+    int i;
+    for (i = 0; i < clt->item_cnt; ++i)
+        // recursion
+        free_initial_tree(nested_initials[i]);
+
+    // free the array itself
+    free(nested_initials);
+}
+
 static void var_db_free (void *p)
 {
-    // TODO
-    (void) p;
+    const struct cl_var *var = (const struct cl_var *) p;
+    free_initial_tree(var->initial);
+    free(p);
 }
 
 static type_db_t type_db_create(void)
