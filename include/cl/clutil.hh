@@ -28,6 +28,7 @@
 #include "code_listener.h"
 
 #include <cassert>
+#include <set>
 #include <stack>
 
 /// return type of the @b target object that the pointer type can point to
@@ -60,6 +61,10 @@ bool /* complete */ traverseTypeIc(const struct cl_type *clt, TVisitor &visitor,
 {
     assert(clt);
 
+    // we use std::set to avoid an infinite loop
+    std::set<int /* uid */> done;
+    done.insert(clt->uid);
+
     // initialize DFS
     typedef CltStackItem<TFieldIdxChain> TItem;
     TItem si;
@@ -73,7 +78,7 @@ bool /* complete */ traverseTypeIc(const struct cl_type *clt, TVisitor &visitor,
         TItem &si = todo.top();
         SE_BREAK_IF(si.ic.empty());
 
-        typename TFieldIdxChain::reference &nth = si.ic.back();
+        typename TFieldIdxChain::reference nth = si.ic.back();
         if (nth == si.clt->item_cnt) {
             // done at this level
             todo.pop();
@@ -97,12 +102,17 @@ bool /* complete */ traverseTypeIc(const struct cl_type *clt, TVisitor &visitor,
             continue;
         }
 
-        // nest into sub-type
-        TItem next;
-        next.clt = item->type;
-        next.ic = si.ic;
-        next.ic.push_back(0);
-        todo.push(next);
+        const int uid = item->type->uid;
+        if (done.end() == done.find(uid)) {
+            done.insert(uid);
+
+            // nest into sub-type
+            TItem next;
+            next.clt = item->type;
+            next.ic = si.ic;
+            next.ic.push_back(0);
+            todo.push(next);
+        }
 
         // move to the next at this level
         ++nth;
