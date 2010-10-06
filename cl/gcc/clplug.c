@@ -567,11 +567,11 @@ static struct cl_type* add_bare_type_if_needed(tree type)
     // read type (recursively if needed)
     read_base_type(clt, type);
     read_specific_type(clt, type);
-
+#if 0
     // extra hooks follow
     if (clt->code == CL_TYPE_INT && clt->name && STREQ("char", clt->name))
         clt->code = CL_TYPE_CHAR;
-
+#endif
     return clt;
 }
 
