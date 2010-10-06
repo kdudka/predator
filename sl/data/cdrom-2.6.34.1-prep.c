@@ -9,7 +9,6 @@
 //# 9 "include/linux/module.h"
 //# 1 "include/linux/list.h" 1
 
-int nondet;
 
 
 //# 1 "include/linux/stddef.h" 1
@@ -33242,15 +33241,18 @@ static const char __mod_license3676[] __attribute__((__used__)) __attribute__((s
 
 
 
-/* added driver - inspired by invader example */
+/* added driver - inspired by invader cdrom.c example */
+
+int nondet;
+int get_nondet_int(void) { int a; return a; }
+void *get_nondet_ptr(void) { void *a; return a; }
 
 int printk(const char *format, ...) { int a; return a; }
 void *memcpy(void *to, const void *from, size_t len) { void *a; return a; }
 // void *malloc(size_t len) { void *a; return a; }
 // void free(void *p) { }
 
-int get_nondet_int(void) { int a; return a; }
-
+// TODO: add deteils
 struct cdrom_device_info *HsCreateCdromDeviceInfo(void)
 {
  struct cdrom_device_info *cdi;
@@ -33298,7 +33300,6 @@ int main_sub(void)
     unsigned int cmd;
     unsigned long arg;
     struct cdrom_device_info *cdi;
-    struct media_event_desc *med;
     struct file *fp;
     struct inode *ip;
     struct block_device *bdev;
@@ -33320,6 +33321,7 @@ int main_sub(void)
 
     while ((&nondet > 0)) {
         if ((&nondet > 0)) {
+            struct media_event_desc *med;
             med = get_nondet_ptr();
             tmp = cdrom_get_media_event(cdi, med);
         } else if ((&nondet > 0)) {
@@ -33339,17 +33341,13 @@ int main_sub(void)
             cmd = get_nondet_int();
             arg = get_nondet_int();
             tmp = cdrom_ioctl(cdi, bdev, (fmode_t)0, cmd, arg);
-            free(ip->i_bdev);
+            free(bdev);
         } else if ((&nondet > 0)) {
             tmp = cdrom_media_changed(cdi);
         }
     }
 
-    /*tmp = */ unregister_cdrom(cdi);
-    if (tmp == 0) {
-        HsFreeCdromDeviceInfo(cdi);
-        return tmp;
-    }
+    unregister_cdrom(cdi);
     cdrom_exit();
     return (0);
 }
