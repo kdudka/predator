@@ -21,6 +21,7 @@
 #include "symdump.hh"
 
 #include <cl/code_listener.h>
+#include <cl/cldebug.hh>
 #include <cl/clutil.hh>
 
 #include "symheap.hh"
@@ -36,109 +37,15 @@ const int have_symdump = 1;
 using std::cout;
 
 namespace {
-TObjId /* pointsTo */ dump_value_core(const SymHeap &heap, TValueId value);
-
-void dump_clt_core(const struct cl_type *clt) {
-    cout << "*((const struct cl_type *)"
-        << static_cast<const void *>(clt)
-        << ")";
-    if (!clt)
-        return;
-
-    cout << " (#" << clt->uid << ", code = ";
-    switch (clt->code) {
-        case CL_TYPE_UNKNOWN:   cout << "CL_TYPE_UNKNOWN"   ; break;
-        case CL_TYPE_VOID:      cout << "CL_TYPE_VOID"      ; break;
-        case CL_TYPE_FNC:       cout << "CL_TYPE_FNC"       ; break;
-        case CL_TYPE_PTR:       cout << "CL_TYPE_PTR"       ; break;
-        case CL_TYPE_ARRAY:     cout << "CL_TYPE_ARRAY"     ; break;
-        case CL_TYPE_STRUCT:    cout << "CL_TYPE_STRUCT"    ; break;
-        case CL_TYPE_UNION:     cout << "CL_TYPE_UNION"     ; break;
-        case CL_TYPE_ENUM:      cout << "CL_TYPE_ENUM"      ; break;
-        case CL_TYPE_INT:       cout << "CL_TYPE_INT"       ; break;
-        case CL_TYPE_REAL:      cout << "CL_TYPE_REAL"      ; break;
-        case CL_TYPE_BOOL:      cout << "CL_TYPE_BOOL"      ; break;
-        case CL_TYPE_CHAR:      cout << "CL_TYPE_CHAR"      ; break;
-        case CL_TYPE_STRING:    cout << "CL_TYPE_STRING"    ; break;
-    }
-    cout << ")";
-}
-
-} // namespace
-
-bool dump_clt_visitor(TFieldIdxChain ic, const struct cl_type_item *item) {
-    // indent regarding the current nest level
-    const unsigned nestLevel = ic.size();
-    const std::string indent(nestLevel << 2, ' ');
-    cout << indent;
-
-    // print field name if any
-    const char *name = item->name;
-    if (name)
-        cout << "." << name << " = ";
-
-    // print type at the current level
-    const struct cl_type *clt = item->type;
-    SE_BREAK_IF(!clt);
-    dump_clt_core(clt);
-    cout << "\n";
-
-    return /* continue */ true;
+    TObjId /* pointsTo */ dump_value_core(const SymHeap &heap, TValueId value);
 }
 
 void dump_clt(const struct cl_type *clt) {
-    if (!clt) {
-        cout << "NULL\n";
-        return;
-    }
-
-    // print type at the current level
-    dump_clt_core(clt);
-    cout << "\n";
-
-    // go through the type recursively
-    traverseTypeIc<TFieldIdxChain>(clt, dump_clt_visitor);
+    cltToStream(cout, clt, /* oneline */ false);
 }
 
 void dump_ac(const struct cl_accessor *ac) {
-    if (!ac)
-        cout << "(empty)\n";
-
-    for (int i = 0; ac; ac = ac->next, ++i) {
-        cout << i << ". ";
-        const struct cl_type *clt = ac->type;
-
-        const enum cl_accessor_e code = ac->code;
-        switch (code) {
-            case CL_ACCESSOR_REF:
-                cout << "CL_ACCESSOR_REF:";
-                break;
-
-            case CL_ACCESSOR_DEREF:
-                cout << "CL_ACCESSOR_DEREF:";
-                break;
-
-            case CL_ACCESSOR_ITEM: {
-                const struct cl_type_item *item = clt->items + ac->data.item.id;
-                cout << "CL_ACCESSOR_ITEM: [+"
-                    << item->offset << "]";
-                const char *name = item->name;
-                if (name)
-                    cout << " ." << name;
-                cout << ",";
-                break;
-            }
-
-            case CL_ACCESSOR_DEREF_ARRAY:
-                cout << "CL_ACCESSOR_DEREF_ARRAY: ["
-                    << ac->data.array.index << "],";
-                break;
-        }
-
-        cout << " clt = ";
-        dump_clt(clt);
-        cout << "\n";
-    }
+    acToStream(cout, ac, /* oneline */ false);
 }
 
 namespace {
@@ -237,11 +144,8 @@ void dump_obj(const SymHeap &heap, TObjId obj) {
     }
 
     const struct cl_type *clt = heap.objType(obj);
-    if (clt) {
-        cout << "    clt       = ";
-        dump_clt_core(clt);
-        cout << "\n";
-    }
+    if (clt)
+        cout << "    clt       = " << (*clt) << "\n";
 
     CVar cVar;
     if (heap.cVar(&cVar, obj)) {
@@ -264,10 +168,9 @@ void dump_obj(const SymHeap &heap, TObjId obj) {
     else if (0 < value) {
         cout << "    value     = /* value */ #" << value;
         const struct cl_type *cltVal = heap.valType(value);
-        if (cltVal) {
-            cout << ", clt = ";
-            dump_clt_core(cltVal);
-        }
+        if (cltVal)
+            cout << ", clt = " << (*cltVal);
+
         cout << "\n";
     }
 
@@ -286,10 +189,9 @@ void dump_obj(const SymHeap &heap, TObjId obj) {
             if (name)
                 cout << ", \"" << name << "\"";
             const struct cl_type *subClt = clt->items[i].type;
-            if (subClt) {
-                cout << ", clt = ";
-                dump_clt_core(subClt);
-            }
+            if (subClt)
+                cout << ", clt = " << (*clt);
+
             cout << ", val = " << heap.valueOf(sub) << "\n";
         }
     }
@@ -385,11 +287,8 @@ TObjId /* pointsTo */ dump_value_core(const SymHeap &heap, TValueId value)
     }
 
     const struct cl_type *clt = heap.valType(value);
-    if (clt) {
-        cout << "    clt       = ";
-        dump_clt_core(clt);
-        cout << "\n";
-    }
+    if (clt)
+        cout << "    clt       = " << (*clt) << "\n";
 
     const EUnknownValue code = heap.valGetUnknown(value);
     switch (code) {
@@ -414,10 +313,9 @@ TObjId /* pointsTo */ dump_value_core(const SymHeap &heap, TValueId value)
     const int custom = heap.valGetCustom(&cltCustom, value);
     if (-1 != custom) {
         cout << "    cVal      = /* custom value */ #" << custom;
-        if (cltCustom) {
-            cout << ", clt = ";
-            dump_clt_core(clt);
-        }
+        if (cltCustom)
+            cout << ", clt = " << (*clt);
+
         cout << "\n";
         return OBJ_INVALID;
     }
