@@ -512,9 +512,10 @@ static void read_specific_type(struct cl_type *clt, tree type)
 
         case ARRAY_TYPE:
             clt->code = CL_TYPE_ARRAY;
-            clt->item_cnt = get_fixed_array_size(type);
+            clt->item_cnt = 1;
             clt->items = CL_ZNEW(struct cl_type_item);
             clt->items[0].type = /* recursion */ add_type_if_needed(type);
+            clt->array_size = get_fixed_array_size(type);
             break;
 
         case FUNCTION_TYPE:
