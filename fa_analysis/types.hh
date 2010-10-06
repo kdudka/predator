@@ -67,10 +67,11 @@ struct Data {
 		std::vector<item_info>* d_struct;
 	};
 
-	Data(type_enum type = type_enum::t_undef) : type(type) {}
+	Data(type_enum type = type_enum::t_undef) : type(type), size(0) {}
 
-	Data(const Data& data) : type(type), size(size) {
+	Data(const Data& data) : type(data.type), size(data.size) {
 		switch (data.type) {
+			case type_enum::t_native_ptr: this->d_native_ptr = data.d_native_ptr; break;
 			case type_enum::t_void_ptr: this->d_void_ptr = data.d_void_ptr; break;
 			case type_enum::t_ref: this->d_ref.root = data.d_ref.root; this->d_ref.displ = data.d_ref.displ; break;
 			case type_enum::t_int: this->d_int = data.d_int; break;
@@ -81,6 +82,22 @@ struct Data {
 	}
 
 	~Data() { this->clear(); }
+
+	Data& operator=(const Data& rhs) {
+		this->clear();
+		this->type = rhs.type;
+		this->size = rhs.size;
+		switch (rhs.type) {
+			case type_enum::t_native_ptr: this->d_native_ptr = rhs.d_native_ptr; break;
+			case type_enum::t_void_ptr: this->d_void_ptr = rhs.d_void_ptr; break;
+			case type_enum::t_ref: this->d_ref.root = rhs.d_ref.root; this->d_ref.displ = rhs.d_ref.displ; break;
+			case type_enum::t_int: this->d_int = rhs.d_int; break;
+			case type_enum::t_bool: this->d_bool = rhs.d_bool; break;
+			case type_enum::t_struct: this->d_struct = new std::vector<item_info>(*rhs.d_struct); break;
+			default: break;
+		}
+		return *this;
+	}
 
 	static Data createUndef() { return Data(); }
 
@@ -115,6 +132,12 @@ struct Data {
 		return data;
 	}
 
+	static Data createBool(bool x) {
+		Data data(type_enum::t_bool);
+		data.d_bool = x;
+		return data;
+	}
+
 	void clear() {
 		if (this->type == type_enum::t_struct)
 			delete this->d_struct;
@@ -127,6 +150,10 @@ struct Data {
 
 	bool isNativePtr() const {
 		return this->type == type_enum::t_native_ptr;
+	}
+
+	bool isVoidPtr() const {
+		return this->type == type_enum::t_void_ptr;
 	}
 
 	bool isNull() const {
@@ -145,9 +172,18 @@ struct Data {
 		return this->type == type_enum::t_struct;
 	}
 
+	bool isBool() const {
+		return this->type == type_enum::t_bool;
+	}
+
+	bool isInt() const {
+		return this->type == type_enum::t_int;
+	}
+
 	friend size_t hash_value(const Data& v) {
 		switch (v.type) {
 			case type_enum::t_undef: return boost::hash_value(v.type);
+			case type_enum::t_native_ptr: return boost::hash_value(v.type + boost::hash_value(v.d_native_ptr));
 			case type_enum::t_void_ptr: return boost::hash_value(v.type + v.d_void_ptr);
 			case type_enum::t_ref: return boost::hash_value(v.type + v.d_ref.root + v.d_ref.displ);
 			case type_enum::t_int: return boost::hash_value(v.type + v.d_int);
@@ -161,8 +197,9 @@ struct Data {
 		if (this->type != rhs.type)
 			return false;
 		switch (this->type) {
-			case type_enum::t_undef: return true;
+			case type_enum::t_undef: return false;
 			case type_enum::t_void_ptr: return this->d_void_ptr == rhs.d_void_ptr;
+			case type_enum::t_native_ptr: return this->d_native_ptr == rhs.d_native_ptr;
 			case type_enum::t_ref: return this->d_ref.root == rhs.d_ref.root && this->d_ref.displ == rhs.d_ref.displ;
 			case type_enum::t_int: return this->d_int == rhs.d_int;
 			case type_enum::t_bool: return this->d_bool == rhs.d_bool;
@@ -175,6 +212,7 @@ struct Data {
 //		os << '[' << x.size << ']';
 		switch (x.type) {
 			case type_enum::t_undef: os << "(undef)"; break;
+			case type_enum::t_native_ptr: os << "(native_ptr)" << x.d_native_ptr; break;
 			case type_enum::t_void_ptr: os << "(void_ptr)" << x.d_void_ptr; break;
 			case type_enum::t_ref: os << "(ref)" << x.d_ref.root << '+' << x.d_ref.displ; break;
 			case type_enum::t_int: os << "(int)" << x.d_int; break;

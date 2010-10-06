@@ -45,10 +45,12 @@ std::vector<T> itov(const T &item) {
 
 template <class T>
 struct Index {
+
+	typedef typename boost::unordered_map<T, size_t> map_type;
 	
-	std::map<T, size_t> map;
+	map_type map;
 	
-	typedef typename std::map<T, size_t>::const_iterator iterator;
+	typedef typename map_type::const_iterator iterator;
 	
 	typename Index<T>::iterator begin() const {
 		return this->map.begin();
@@ -75,7 +77,7 @@ struct Index {
 	}
 	
 	size_t translate(const T& x) const {
-		typename std::map<T, size_t>::const_iterator i = this->map.find(x);
+		typename map_type::const_iterator i = this->map.find(x);
 		if (i == this->map.end())
 			throw std::runtime_error("Indexer::translate() : lookup failed");
 		return i->second;
@@ -104,7 +106,7 @@ struct Index {
 
 	friend std::ostream& operator<<(std::ostream& os, const Index<T>& x) {
 		os << '[';
-		for (typename std::map<T, size_t>::const_iterator i = x.begin(); i != x.end(); ++i)
+		for (typename map_type::const_iterator i = x.begin(); i != x.end(); ++i)
 			os << '(' << i->first << ',' << i->second << ')';
 		return os << ']';
 	}
@@ -122,14 +124,14 @@ struct FullIndex : public Index<T> {
 	}
 
 	size_t add(const T& x) {
-		std::pair<typename std::map<T, size_t>::iterator, bool> y = this->map.insert(make_pair(x, this->map.size()));
+		std::pair<typename Index<T>::map_type::iterator, bool> y = this->map.insert(make_pair(x, this->map.size()));
 		if (y.second)
 			this->index.push_back(x);
 		return y.first->second;
 	}
 
 	size_t translateOTF(const T& x) {
-		std::pair<typename std::map<T, size_t>::iterator, bool> y = this->map.insert(make_pair(x, this->map.size()));
+		std::pair<typename Index<T>::map_type::iterator, bool> y = this->map.insert(make_pair(x, this->map.size()));
 		if (y.second)
 			this->index.push_back(x);
 		return y.first->second;
@@ -154,6 +156,23 @@ public:
 	}
 	void release() {
 		this->obj = NULL;
+	}
+};
+
+template <class T>
+class ContainerGuard {
+	T* _cont;
+public:
+	ContainerGuard(T& cont) : _cont(&cont) {}
+	~ContainerGuard() {
+		if (this->_cont) {
+			for (typename T::iterator i = this->_cont->begin(); i != this->_cont->end(); ++i)
+				delete *i;
+			this->_cont->clear();
+		}
+	}
+	void release() {
+		this->_cont = NULL;
 	}
 };
 

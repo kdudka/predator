@@ -1,0 +1,38 @@
+#!/bin/bash
+if test -z "$1" || test ! -e "$1"; then
+    echo Usage: $0 foo.c
+    exit 1
+fi
+
+# basic setup
+set -x
+FA_BUILD=../fa_analysis_build
+FA_PLUG="$FA_BUILD/libfa_analysis.so"
+CC1="../gcc-install/libexec/gcc/`ls ../gcc-install/lib/gcc/`/4.[56]*/cc1"
+
+# initial checks
+eval test -x "$CC1"             || exit 1
+test -d "$FA_BUILD"             || exit 1
+test -f "$FA_BUILD/Makefile"    || exit 1
+
+# attempt to make
+make -C "$FA_BUILD"             || exit 1
+test -x "$FA_PLUG"              || exit 1
+
+# use gdb by default
+test -z "$GDB" && GDB=gdb
+
+# use verbose level 1 by default
+test -z "$FA_VERBOSE" && FA_VERBOSE=1
+
+# use pp code listener by default
+test -z "$FA_OPTS" && FA_OPTS="-fplugin-arg-libfa_analysis-dump-pp"
+
+# run the debugger
+eval "$GDB" --quiet --args "$CC1" "$1" \
+    -DALIEN \
+    -dumpbase test.c -quiet -o /dev/null \
+    -m32 -O0 -Wall -Wextra \
+    -fplugin="$FA_PLUG" \
+    -fplugin-arg-libfa_analysis-verbose="$FA_VERBOSE" \
+    $FA_OPTS

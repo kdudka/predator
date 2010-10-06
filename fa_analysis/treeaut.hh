@@ -626,7 +626,7 @@ public:
 				std::vector<size_t> tmp = itov(classIndex[stateIndex[(*i)->first._rhs]]);
 				for (std::vector<size_t>::const_iterator j = (*i)->first._lhs->first.begin(); j != (*i)->first._lhs->first.end(); ++j)
 					tmp.push_back(classIndex[stateIndex[*j]]);
-				newClassIndex[tmp[0]] = classes.insert(
+				newClassIndex[stateIndex[(*i)->first._rhs]] = classes.insert(
 					std::make_pair(std::make_pair((*i)->first._label, tmp), classes.size())
 				).first->second;
 			}
@@ -635,8 +635,8 @@ public:
 		for (size_t i = 0; i < result.size(); ++i) {
 			for (size_t j = 0; j < i; ++j) {
 				if (classIndex[i] != classIndex[j]) {
-					result[i][j] = 0;
-					result[j][i] = 0;
+					result[i][j] = false;
+					result[j][i] = false;
 				}
 			}
 		}
@@ -864,6 +864,7 @@ public:
 		}
 	
 		TA<T>* clone(TA<T>* src, bool copyFinalStates = true) {
+			assert(src);
 			assert(src->backend == &this->backend);
 			return this->taCache.lookup(new TA<T>(*src, copyFinalStates))->first;
 		}

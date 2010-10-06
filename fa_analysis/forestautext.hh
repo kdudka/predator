@@ -533,7 +533,7 @@ public:
 		size_t offset = 0;
 		for (std::vector<size_t>::iterator i = order.begin(); i < order.end(); ++i) {
 			if (marked[*i]) {
-				newRoots.push_back(this->roots[*i]);
+				newRoots.push_back(this->taMan->addRef(this->roots[*i]));
 				newRootMap.push_back(this->rootMap[*i]);
 				index[*i] = offset++;
 				normInfo.addRoot(*i);
@@ -551,7 +551,7 @@ public:
 			if (*i)
 				this->taMan->release(*i);
 		}
-		this->roots.resize(offset);
+		this->roots.resize(offset, NULL);
 		this->rootMap.resize(offset);
 		for (size_t i = 0; i < this->roots.size(); ++i) {
 			this->roots[i] = this->relabelReferences(newRoots[i], index);
@@ -729,12 +729,11 @@ public:
 		return dst;
 	}
 
-	FAE* heightAbstraction(size_t height = 1) {
-		FAE* dst = new FAE(*this);
-		for (size_t i = 0; i < dst->roots.size(); ++i) {
-			dst->taMan->release(dst->roots[i]);
-			TA<label_type>* ta = dst->taMan->alloc();
+	void heightAbstraction(size_t height = 1) {
+		for (size_t i = 0; i < this->roots.size(); ++i) {
+			TA<label_type>* ta = this->taMan->alloc();
 			this->roots[i]->minimized(*ta);
+			this->taMan->release(this->roots[i]);
 			Index<size_t> stateIndex;
 			ta->buildStateIndex(stateIndex);
 			std::vector<std::vector<bool> > rel(stateIndex.size(), std::vector<bool>(stateIndex.size(), false));
@@ -747,10 +746,9 @@ public:
 				}
 			}
 			ta->heightAbstraction(rel, height, stateIndex);
-			dst->roots[i] = &ta->collapsed(*dst->taMan->alloc(), rel, stateIndex);
-			dst->taMan->release(ta);
+			this->roots[i] = &ta->collapsed(*this->taMan->alloc(), rel, stateIndex);
+			this->taMan->release(ta);
 		}
-		return dst;
 	}
 
 	void decomposeAtRoot(vector<FAE*>& dst, size_t root, const vector<const Box*>& boxes) const {
@@ -770,9 +768,9 @@ public:
 	struct IsolateSetF {
 		std::set<size_t> s;
 		
-		IsolateSetF(const std::vector<size_t>& v) {
+		IsolateSetF(const std::vector<size_t>& v, size_t offset = 0) {
 			for (std::vector<size_t>::const_iterator i = v.begin(); i != v.end(); ++i)
-				this->s.insert(*i);
+				this->s.insert(*i + offset);
 		}
 		
 		bool operator()(const Box* box) const {

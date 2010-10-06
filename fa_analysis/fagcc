@@ -1,0 +1,51 @@
+#!/bin/bash
+if test -z "$1" || test ! -e "$1"; then
+    echo Usage: $0 foo.c
+    exit 1
+fi
+
+self="`readlink -f "$0"`"
+topdir="`dirname "$self"`/.."
+
+# basic setup
+FA_BUILD="$topdir/fa_analysis_build"
+FA_PLUG="$FA_BUILD/libfa_analysis.so"
+GCC="$topdir/gcc-install/bin/gcc"
+
+# initial checks
+test -x "$GCC"                              || exit 1
+
+# attempt to make
+make -s $MAKEOPTS -C "$topdir/sl"           || exit 1
+test -x "$FA_PLUG"                          || exit 1
+
+# use verbose level 0 by default
+test -z "$FA_VERBOSE" && FA_VERBOSE=0
+
+# use pp code listener by default
+test -z "$FA_OPTS" && SL_OPTS="-fplugin-arg-liba_analysi-dump-pp"
+
+# use chromium as default SVG_VIEWER
+test -z "$SVG_VIEWER" && SVG_VIEWER=chromium
+
+if test x1 = "x$FA_PLOT"; then
+    # wipe all .dot and .svg
+    rm -f *.dot *.svg
+fi
+
+# run the gcc
+"$GCC" -c "$1" -o /dev/null -O0 -m32 \
+    -DALIEN \
+    -fplugin="$FA_PLUG" \
+    -fplugin-arg-libfa_analysis-verbose="$FA_VERBOSE" \
+    $FA_OPTS \
+    #|| exit $?
+
+if test x1 = "x$FA_PLOT"; then
+    # visualize graphs
+    printf "graph visualization in progress ... "
+    make $MAKEOPTS -s -f "$topdir/sl/data/Makefile" TIMEOUT="timeout 2" \
+        || exit $?
+    printf "done\n"
+    "$SVG_VIEWER" *.svg
+fi

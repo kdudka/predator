@@ -22,7 +22,7 @@ include("../CMakeLists.common")
 add_definitions("-I../include -g -DDEBUG")
 
 # libfa.a
-add_library(fa treeaut.cc timbuk.cc box.cc forestaut.cc forestautext.cc ufae.cc symexec.cc)
+add_library(fa treeaut.cc timbuk.cc box.cc forestaut.cc forestautext.cc ufae.cc symexec.cc label.cc)
 # libfa_analysis.so
 add_library(fa_analysis SHARED cl_fa.cc)
 # test

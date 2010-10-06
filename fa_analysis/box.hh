@@ -221,11 +221,30 @@ protected:
 
 public:
 
+	Box(const Box& b) : FA(b), type(b.type), name(b.name), selCoverage(b.selCoverage) {
+		switch (this->type) {
+			case Box::selID: this->selInfo = new SelData(*b.selInfo); break;
+			case Box::dataID: this->data = new Data(*b.data); break;
+		}
+	}
+
 	~Box() {
 		switch (this->type) {
 			case Box::selID: delete this->selInfo; break;
 			case Box::dataID: delete this->data; break;
 		}
+	}
+
+	Box& operator=(const Box& b) {
+		((FA*)this)->operator=(b);
+		this->type = b.type;
+		this->name = b.name;
+		this->selCoverage = b.selCoverage;
+		switch (this->type) {
+			case Box::selID: this->selInfo = new SelData(*b.selInfo); break;
+			case Box::dataID: this->data = new Data(*b.data); break;
+		}
+		return *this;
 	}
 
 public:

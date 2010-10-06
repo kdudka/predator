@@ -17,8 +17,10 @@
  * along with predator.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "types.hh"
+#ifndef LABEL_H
+#define LABEL_H
 
+#include "types.hh"
 
 struct label_type {
 
@@ -33,7 +35,8 @@ struct label_type {
 	label_type(const std::vector<const class Box*>* dataB) : type(1), dataB(dataB) {}
 
 	friend size_t hash_value(const label_type& l) {
-		return hash_value(l.data);
+		using namespace boost;
+		return hash_value(hash_value(l.type) + hash_value(l.data));
 	}
 
 	const class Box& head() const {
@@ -50,3 +53,4 @@ struct label_type {
 
 };
 
+#endif

@@ -30,6 +30,9 @@ class SymExec {
 public:
 
 	SymExec(const CodeStorage::Storage &stor);
+	~SymExec();
+
+	void run(const CodeStorage::Fnc& main);
 
 private:
 
