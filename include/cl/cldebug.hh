@@ -22,14 +22,30 @@
 
 #include <iostream>
 
+struct cl_accessor;
 struct cl_operand;
+struct cl_type;
 
 namespace CodeStorage {
     struct Insn;
 }
 
+void cltToStream(std::ostream &str, const struct cl_type *clt, bool oneline);
+void acToStream(std::ostream &str, const struct cl_accessor *ac, bool oneline);
 void operandToStream(std::ostream &str, const struct cl_operand &op);
 void insnToStream(std::ostream &str, const CodeStorage::Insn &insn);
+
+inline std::ostream& operator<<(std::ostream &str, const struct cl_type &clt)
+{
+    cltToStream(str, &clt, /* oneline */ true);
+    return str;
+}
+
+inline std::ostream& operator<<(std::ostream &str, const struct cl_accessor &ac)
+{
+    acToStream(str, &ac, /* oneline */ true);
+    return str;
+}
 
 inline std::ostream& operator<<(std::ostream &str, const struct cl_operand &op)
 {

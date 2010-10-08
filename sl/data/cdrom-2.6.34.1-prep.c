@@ -1,28 +1,28 @@
-# 1 "drivers/cdrom/cdrom.c"
-# 1 "<built-in>"
-# 1 "<command-line>"
-# 1 "./include/linux/autoconf.h" 1
-# 1 "<command-line>" 2
-# 1 "drivers/cdrom/cdrom.c"
-# 266 "drivers/cdrom/cdrom.c"
-# 1 "include/linux/module.h" 1
-# 9 "include/linux/module.h"
-# 1 "include/linux/list.h" 1
+//# 1 "drivers/cdrom/cdrom.c"
+//# 1 "<built-in>"
+//# 1 "<command-line>"
+//# 1 "./include/linux/autoconf.h" 1
+//# 1 "<command-line>" 2
+//# 1 "drivers/cdrom/cdrom.c"
+//# 266 "drivers/cdrom/cdrom.c"
+//# 1 "include/linux/module.h" 1
+//# 9 "include/linux/module.h"
+//# 1 "include/linux/list.h" 1
 
 
 
-# 1 "include/linux/stddef.h" 1
+//# 1 "include/linux/stddef.h" 1
 
 
 
-# 1 "include/linux/compiler.h" 1
-# 40 "include/linux/compiler.h"
-# 1 "include/linux/compiler-gcc.h" 1
-# 86 "include/linux/compiler-gcc.h"
-# 1 "include/linux/compiler-gcc4.h" 1
-# 86 "include/linux/compiler-gcc.h" 2
-# 41 "include/linux/compiler.h" 2
-# 58 "include/linux/compiler.h"
+//# 1 "include/linux/compiler.h" 1
+//# 40 "include/linux/compiler.h"
+//# 1 "include/linux/compiler-gcc.h" 1
+//# 86 "include/linux/compiler-gcc.h"
+//# 1 "include/linux/compiler-gcc4.h" 1
+//# 86 "include/linux/compiler-gcc.h" 2
+//# 41 "include/linux/compiler.h" 2
+//# 58 "include/linux/compiler.h"
 struct ftrace_branch_data {
  const char *func;
  const char *file;
@@ -39,41 +39,41 @@ struct ftrace_branch_data {
   unsigned long miss_hit[2];
  };
 };
-# 5 "include/linux/stddef.h" 2
-# 15 "include/linux/stddef.h"
+//# 5 "include/linux/stddef.h" 2
+//# 15 "include/linux/stddef.h"
 enum {
  false = 0,
  true = 1
 };
-# 5 "include/linux/list.h" 2
-# 1 "include/linux/poison.h" 1
-# 6 "include/linux/list.h" 2
-# 1 "include/linux/prefetch.h" 1
-# 13 "include/linux/prefetch.h"
-# 1 "include/linux/types.h" 1
+//# 5 "include/linux/list.h" 2
+//# 1 "include/linux/poison.h" 1
+//# 6 "include/linux/list.h" 2
+//# 1 "include/linux/prefetch.h" 1
+//# 13 "include/linux/prefetch.h"
+//# 1 "include/linux/types.h" 1
 
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/types.h" 1
-
-
-
-
-
-# 1 "include/asm-generic/types.h" 1
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/types.h" 1
 
 
 
 
 
+//# 1 "include/asm-generic/types.h" 1
 
-# 1 "include/asm-generic/int-ll64.h" 1
-# 11 "include/asm-generic/int-ll64.h"
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bitsperlong.h" 1
-# 10 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bitsperlong.h"
-# 1 "include/asm-generic/bitsperlong.h" 1
-# 11 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bitsperlong.h" 2
-# 12 "include/asm-generic/int-ll64.h" 2
+
+
+
+
+
+//# 1 "include/asm-generic/int-ll64.h" 1
+//# 11 "include/asm-generic/int-ll64.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bitsperlong.h" 1
+//# 10 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bitsperlong.h"
+//# 1 "include/asm-generic/bitsperlong.h" 1
+//# 11 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bitsperlong.h" 2
+//# 12 "include/asm-generic/int-ll64.h" 2
 
 
 
@@ -93,7 +93,7 @@ typedef unsigned int __u32;
 
 __extension__ typedef __signed__ long long __s64;
 __extension__ typedef unsigned long long __u64;
-# 42 "include/asm-generic/int-ll64.h"
+//# 42 "include/asm-generic/int-ll64.h"
 typedef signed char s8;
 typedef unsigned char u8;
 
@@ -105,12 +105,12 @@ typedef unsigned int u32;
 
 typedef signed long long s64;
 typedef unsigned long long u64;
-# 8 "include/asm-generic/types.h" 2
+//# 8 "include/asm-generic/types.h" 2
 
 
 
 typedef unsigned short umode_t;
-# 7 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/types.h" 2
+//# 7 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/types.h" 2
 
 
 
@@ -119,10 +119,10 @@ typedef u64 dma64_addr_t;
 
 
 typedef u64 dma_addr_t;
-# 5 "include/linux/types.h" 2
-# 14 "include/linux/types.h"
-# 1 "include/linux/posix_types.h" 1
-# 36 "include/linux/posix_types.h"
+//# 5 "include/linux/types.h" 2
+//# 14 "include/linux/types.h"
+//# 1 "include/linux/posix_types.h" 1
+//# 36 "include/linux/posix_types.h"
 typedef struct {
  unsigned long fds_bits [(1024/(8 * sizeof(unsigned long)))];
 } __kernel_fd_set;
@@ -134,13 +134,13 @@ typedef void (*__kernel_sighandler_t)(int);
 typedef int __kernel_key_t;
 typedef int __kernel_mqd_t;
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/posix_types.h" 1
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/posix_types.h" 1
 
 
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/posix_types_64.h" 1
-# 10 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/posix_types_64.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/posix_types_64.h" 1
+//# 10 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/posix_types_64.h"
 typedef unsigned long __kernel_ino_t;
 typedef unsigned int __kernel_mode_t;
 typedef unsigned long __kernel_nlink_t;
@@ -247,9 +247,9 @@ static inline __attribute__((always_inline)) void __FD_ZERO(__kernel_fd_set *p)
   tmp++;
  }
 }
-# 6 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/posix_types.h" 2
-# 48 "include/linux/posix_types.h" 2
-# 15 "include/linux/types.h" 2
+//# 6 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/posix_types.h" 2
+//# 48 "include/linux/posix_types.h" 2
+//# 15 "include/linux/types.h" 2
 
 
 
@@ -286,7 +286,7 @@ typedef __kernel_old_gid_t old_gid_t;
 
 
 typedef __kernel_loff_t loff_t;
-# 59 "include/linux/types.h"
+//# 59 "include/linux/types.h"
 typedef __kernel_size_t size_t;
 
 
@@ -347,10 +347,10 @@ typedef __u32 uint32_t;
 typedef __u64 uint64_t;
 typedef __u64 u_int64_t;
 typedef __s64 int64_t;
-# 138 "include/linux/types.h"
+//# 138 "include/linux/types.h"
 typedef unsigned long sector_t;
 typedef unsigned long blkcnt_t;
-# 168 "include/linux/types.h"
+//# 168 "include/linux/types.h"
 typedef __u16 __le16;
 typedef __u16 __be16;
 typedef __u32 __le32;
@@ -389,20 +389,20 @@ struct ustat {
  char f_fname[6];
  char f_fpack[6];
 };
-# 14 "include/linux/prefetch.h" 2
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/processor.h" 1
+//# 14 "include/linux/prefetch.h" 2
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/processor.h" 1
 
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/processor-flags.h" 1
-# 5 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/processor.h" 2
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/processor-flags.h" 1
+//# 5 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/processor.h" 2
 
 
 struct task_struct;
 struct mm_struct;
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/vm86.h" 1
-# 62 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/vm86.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/vm86.h" 1
+//# 62 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/vm86.h"
 struct vm86_regs {
 
 
@@ -471,13 +471,13 @@ struct vm86plus_struct {
 
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/ptrace.h" 1
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/ptrace.h" 1
 
 
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/ptrace-abi.h" 1
-# 89 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/ptrace-abi.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/ptrace-abi.h" 1
+//# 89 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/ptrace-abi.h"
 struct ptrace_bts_config {
 
  __u32 size;
@@ -488,34 +488,34 @@ struct ptrace_bts_config {
 
  __u32 bts_size;
 };
-# 6 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/ptrace.h" 2
+//# 6 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/ptrace.h" 2
 
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/segment.h" 1
-# 146 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/segment.h"
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/cache.h" 1
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/segment.h" 1
+//# 146 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/segment.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/cache.h" 1
 
 
 
-# 1 "include/linux/linkage.h" 1
+//# 1 "include/linux/linkage.h" 1
 
 
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/linkage.h" 1
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/linkage.h" 1
 
 
 
-# 1 "include/linux/stringify.h" 1
-# 5 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/linkage.h" 2
-# 6 "include/linux/linkage.h" 2
-# 5 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/cache.h" 2
-# 147 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/segment.h" 2
-# 212 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/segment.h"
+//# 1 "include/linux/stringify.h" 1
+//# 5 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/linkage.h" 2
+//# 6 "include/linux/linkage.h" 2
+//# 5 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/cache.h" 2
+//# 147 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/segment.h" 2
+//# 212 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/segment.h"
 extern const char early_idt_handlers[32][10];
-# 10 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/ptrace.h" 2
-# 98 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/ptrace.h"
+//# 10 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/ptrace.h" 2
+//# 98 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/ptrace.h"
 struct pt_regs {
  unsigned long r15;
  unsigned long r14;
@@ -550,8 +550,8 @@ struct pt_regs {
 
 
 
-# 1 "include/linux/init.h" 1
-# 131 "include/linux/init.h"
+//# 1 "include/linux/init.h" 1
+//# 131 "include/linux/init.h"
 typedef int (*initcall_t)(void);
 typedef void (*exitcall_t)(void);
 
@@ -572,7 +572,7 @@ void setup_arch(char **);
 void prepare_namespace(void);
 
 extern void (*late_time_init)(void);
-# 133 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/ptrace.h" 2
+//# 133 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/ptrace.h" 2
 
 struct cpuinfo_x86;
 struct task_struct;
@@ -592,7 +592,7 @@ static inline __attribute__((always_inline)) unsigned long regs_return_value(str
 {
  return regs->ax;
 }
-# 160 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/ptrace.h"
+//# 160 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/ptrace.h"
 static inline __attribute__((always_inline)) int user_mode(struct pt_regs *regs)
 {
 
@@ -620,7 +620,7 @@ static inline __attribute__((always_inline)) int v8086_mode(struct pt_regs *regs
  return 0;
 
 }
-# 195 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/ptrace.h"
+//# 195 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/ptrace.h"
 static inline __attribute__((always_inline)) unsigned long kernel_stack_pointer(struct pt_regs *regs)
 {
 
@@ -664,8 +664,8 @@ extern int do_get_thread_area(struct task_struct *p, int idx,
          struct user_desc *info);
 extern int do_set_thread_area(struct task_struct *p, int idx,
          struct user_desc *info, int can_allocate);
-# 131 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/vm86.h" 2
-# 141 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/vm86.h"
+//# 131 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/vm86.h" 2
+//# 141 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/vm86.h"
 struct kernel_vm86_regs {
 
 
@@ -682,7 +682,7 @@ struct kernel_vm86_regs {
 
 struct kernel_vm86_struct {
  struct kernel_vm86_regs regs;
-# 166 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/vm86.h"
+//# 166 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/vm86.h"
  unsigned long flags;
  unsigned long screen_bitmap;
  unsigned long cpu_type;
@@ -690,16 +690,16 @@ struct kernel_vm86_struct {
  struct revectored_struct int21_revectored;
  struct vm86plus_info_struct vm86plus;
  struct pt_regs *regs32;
-# 183 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/vm86.h"
+//# 183 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/vm86.h"
 };
-# 199 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/vm86.h"
+//# 199 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/vm86.h"
 static inline __attribute__((always_inline)) int handle_vm86_trap(struct kernel_vm86_regs *a, long b, int c)
 {
  return 0;
 }
-# 11 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/processor.h" 2
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/math_emu.h" 1
-# 11 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/math_emu.h"
+//# 11 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/processor.h" 2
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/math_emu.h" 1
+//# 11 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/math_emu.h"
 struct math_emu_info {
  long ___orig_eip;
  union {
@@ -707,11 +707,11 @@ struct math_emu_info {
   struct kernel_vm86_regs *vm86;
  };
 };
-# 12 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/processor.h" 2
+//# 12 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/processor.h" 2
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/sigcontext.h" 1
-# 23 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/sigcontext.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/sigcontext.h" 1
+//# 23 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/sigcontext.h"
 struct _fpx_sw_bytes {
  __u32 magic1;
  __u32 extended_size;
@@ -729,7 +729,7 @@ struct _fpx_sw_bytes {
 
  __u32 padding[7];
 };
-# 169 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/sigcontext.h"
+//# 169 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/sigcontext.h"
 struct _fpstate {
  __u16 cwd;
  __u16 swd;
@@ -778,11 +778,11 @@ struct sigcontext {
  unsigned long trapno;
  unsigned long oldmask;
  unsigned long cr2;
-# 225 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/sigcontext.h"
+//# 225 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/sigcontext.h"
  void *fpstate;
  unsigned long reserved1[8];
 };
-# 266 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/sigcontext.h"
+//# 266 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/sigcontext.h"
 struct _xsave_hdr {
  __u64 xstate_bv;
  __u64 reserved1[2];
@@ -806,56 +806,56 @@ struct _xstate {
  struct _ymmh_state ymmh;
 
 };
-# 15 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/processor.h" 2
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/current.h" 1
+//# 15 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/processor.h" 2
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/current.h" 1
 
 
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/percpu.h" 1
-# 45 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/percpu.h"
-# 1 "include/linux/kernel.h" 1
-# 10 "include/linux/kernel.h"
-# 1 "/usr/lib/gcc/x86_64-linux-gnu/4.3.2/include/stdarg.h" 1 3 4
-# 43 "/usr/lib/gcc/x86_64-linux-gnu/4.3.2/include/stdarg.h" 3 4
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/percpu.h" 1
+//# 45 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/percpu.h"
+//# 1 "include/linux/kernel.h" 1
+//# 10 "include/linux/kernel.h"
+//# 1 "/usr/lib/gcc/x86_64-linux-gnu/4.3.2/include/stdarg.h" 1 3 4
+//# 43 "/usr/lib/gcc/x86_64-linux-gnu/4.3.2/include/stdarg.h" 3 4
 typedef __builtin_va_list __gnuc_va_list;
-# 105 "/usr/lib/gcc/x86_64-linux-gnu/4.3.2/include/stdarg.h" 3 4
+//# 105 "/usr/lib/gcc/x86_64-linux-gnu/4.3.2/include/stdarg.h" 3 4
 typedef __gnuc_va_list va_list;
-# 11 "include/linux/kernel.h" 2
+//# 11 "include/linux/kernel.h" 2
 
 
 
 
-# 1 "include/linux/bitops.h" 1
-# 17 "include/linux/bitops.h"
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bitops.h" 1
-# 16 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bitops.h"
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/alternative.h" 1
-
-
-
-
-
-
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/asm.h" 1
-# 8 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/alternative.h" 2
-# 43 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/alternative.h"
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/cpufeature.h" 1
+//# 1 "include/linux/bitops.h" 1
+//# 17 "include/linux/bitops.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bitops.h" 1
+//# 16 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bitops.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/alternative.h" 1
 
 
 
 
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/required-features.h" 1
-# 8 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/cpufeature.h" 2
-# 173 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/cpufeature.h"
-# 1 "include/linux/bitops.h" 1
-# 174 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/cpufeature.h" 2
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/asm.h" 1
+//# 8 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/alternative.h" 2
+//# 43 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/alternative.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/cpufeature.h" 1
+
+
+
+
+
+
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/required-features.h" 1
+//# 8 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/cpufeature.h" 2
+//# 173 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/cpufeature.h"
+//# 1 "include/linux/bitops.h" 1
+//# 174 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/cpufeature.h" 2
 
 extern const char * const x86_cap_flags[9*32];
 extern const char * const x86_power_flags[32];
-# 44 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/alternative.h" 2
+//# 44 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/alternative.h" 2
 
 struct alt_instr {
  u8 *instr;
@@ -880,15 +880,15 @@ extern void alternatives_smp_module_add(struct module *mod, char *name,
      void *text, void *text_end);
 extern void alternatives_smp_module_del(struct module *mod);
 extern void alternatives_smp_switch(int smp);
-# 133 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/alternative.h"
+//# 133 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/alternative.h"
 struct paravirt_patch_site;
 
 void apply_paravirt(struct paravirt_patch_site *start,
       struct paravirt_patch_site *end);
-# 161 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/alternative.h"
+//# 161 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/alternative.h"
 extern void *text_poke(void *addr, const void *opcode, size_t len);
-# 17 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bitops.h" 2
-# 59 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bitops.h"
+//# 17 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bitops.h" 2
+//# 59 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bitops.h"
 static inline __attribute__((always_inline)) __attribute__((always_inline)) void
 set_bit(unsigned int nr, volatile unsigned long *addr)
 {
@@ -902,12 +902,12 @@ set_bit(unsigned int nr, volatile unsigned long *addr)
    : "+m" (*(volatile long *) (addr)) : "Ir" (nr) : "memory");
  }
 }
-# 82 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bitops.h"
+//# 82 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bitops.h"
 static inline __attribute__((always_inline)) void __set_bit(int nr, volatile unsigned long *addr)
 {
  asm volatile("bts %1,%0" : "+m" (*(volatile long *) (addr)) : "Ir" (nr) : "memory");
 }
-# 97 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bitops.h"
+//# 97 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bitops.h"
 static inline __attribute__((always_inline)) __attribute__((always_inline)) void
 clear_bit(int nr, volatile unsigned long *addr)
 {
@@ -921,7 +921,7 @@ clear_bit(int nr, volatile unsigned long *addr)
    : "Ir" (nr));
  }
 }
-# 119 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bitops.h"
+//# 119 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bitops.h"
 static inline __attribute__((always_inline)) void clear_bit_unlock(unsigned nr, volatile unsigned long *addr)
 {
  __asm__ __volatile__("": : :"memory");
@@ -932,18 +932,18 @@ static inline __attribute__((always_inline)) void __clear_bit(int nr, volatile u
 {
  asm volatile("btr %1,%0" : "+m" (*(volatile long *) (addr)) : "Ir" (nr));
 }
-# 142 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bitops.h"
+//# 142 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bitops.h"
 static inline __attribute__((always_inline)) void __clear_bit_unlock(unsigned nr, volatile unsigned long *addr)
 {
  __asm__ __volatile__("": : :"memory");
  __clear_bit(nr, addr);
 }
-# 160 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bitops.h"
+//# 160 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bitops.h"
 static inline __attribute__((always_inline)) void __change_bit(int nr, volatile unsigned long *addr)
 {
  asm volatile("btc %1,%0" : "+m" (*(volatile long *) (addr)) : "Ir" (nr));
 }
-# 174 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bitops.h"
+//# 174 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bitops.h"
 static inline __attribute__((always_inline)) void change_bit(int nr, volatile unsigned long *addr)
 {
  if ((__builtin_constant_p(nr))) {
@@ -956,7 +956,7 @@ static inline __attribute__((always_inline)) void change_bit(int nr, volatile un
    : "Ir" (nr));
  }
 }
-# 195 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bitops.h"
+//# 195 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bitops.h"
 static inline __attribute__((always_inline)) int test_and_set_bit(int nr, volatile unsigned long *addr)
 {
  int oldbit;
@@ -966,13 +966,13 @@ static inline __attribute__((always_inline)) int test_and_set_bit(int nr, volati
 
  return oldbit;
 }
-# 212 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bitops.h"
+//# 212 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bitops.h"
 static inline __attribute__((always_inline)) __attribute__((always_inline)) int
 test_and_set_bit_lock(int nr, volatile unsigned long *addr)
 {
  return test_and_set_bit(nr, addr);
 }
-# 227 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bitops.h"
+//# 227 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bitops.h"
 static inline __attribute__((always_inline)) int __test_and_set_bit(int nr, volatile unsigned long *addr)
 {
  int oldbit;
@@ -983,7 +983,7 @@ static inline __attribute__((always_inline)) int __test_and_set_bit(int nr, vola
      : "Ir" (nr));
  return oldbit;
 }
-# 246 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bitops.h"
+//# 246 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bitops.h"
 static inline __attribute__((always_inline)) int test_and_clear_bit(int nr, volatile unsigned long *addr)
 {
  int oldbit;
@@ -994,7 +994,7 @@ static inline __attribute__((always_inline)) int test_and_clear_bit(int nr, vola
 
  return oldbit;
 }
-# 266 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bitops.h"
+//# 266 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bitops.h"
 static inline __attribute__((always_inline)) int __test_and_clear_bit(int nr, volatile unsigned long *addr)
 {
  int oldbit;
@@ -1018,7 +1018,7 @@ static inline __attribute__((always_inline)) int __test_and_change_bit(int nr, v
 
  return oldbit;
 }
-# 298 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bitops.h"
+//# 298 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bitops.h"
 static inline __attribute__((always_inline)) int test_and_change_bit(int nr, volatile unsigned long *addr)
 {
  int oldbit;
@@ -1047,7 +1047,7 @@ static inline __attribute__((always_inline)) int variable_test_bit(int nr, volat
 
  return oldbit;
 }
-# 347 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bitops.h"
+//# 347 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bitops.h"
 static inline __attribute__((always_inline)) unsigned long __ffs(unsigned long word)
 {
  asm("bsf %1,%0"
@@ -1083,7 +1083,7 @@ static inline __attribute__((always_inline)) unsigned long __fls(unsigned long w
      : "rm" (word));
  return word;
 }
-# 395 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bitops.h"
+//# 395 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bitops.h"
 static inline __attribute__((always_inline)) int ffs(int x)
 {
  int r;
@@ -1099,7 +1099,7 @@ static inline __attribute__((always_inline)) int ffs(int x)
 
  return r + 1;
 }
-# 422 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bitops.h"
+//# 422 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bitops.h"
 static inline __attribute__((always_inline)) int fls(int x)
 {
  int r;
@@ -1121,21 +1121,21 @@ static inline __attribute__((always_inline)) int fls(int x)
 
 
 
-# 1 "include/asm-generic/bitops/sched.h" 1
-# 12 "include/asm-generic/bitops/sched.h"
+//# 1 "include/asm-generic/bitops/sched.h" 1
+//# 12 "include/asm-generic/bitops/sched.h"
 static inline __attribute__((always_inline)) int sched_find_first_bit(const unsigned long *b)
 {
 
  if (b[0])
   return __ffs(b[0]);
  return __ffs(b[1]) + 64;
-# 29 "include/asm-generic/bitops/sched.h"
+//# 29 "include/asm-generic/bitops/sched.h"
 }
-# 444 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bitops.h" 2
+//# 444 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bitops.h" 2
 
 
 
-# 1 "include/asm-generic/bitops/hweight.h" 1
+//# 1 "include/asm-generic/bitops/hweight.h" 1
 
 
 
@@ -1145,44 +1145,44 @@ extern unsigned int hweight32(unsigned int w);
 extern unsigned int hweight16(unsigned int w);
 extern unsigned int hweight8(unsigned int w);
 extern unsigned long hweight64(__u64 w);
-# 448 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bitops.h" 2
+//# 448 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bitops.h" 2
 
 
 
-# 1 "include/asm-generic/bitops/fls64.h" 1
-# 26 "include/asm-generic/bitops/fls64.h"
+//# 1 "include/asm-generic/bitops/fls64.h" 1
+//# 26 "include/asm-generic/bitops/fls64.h"
 static inline __attribute__((always_inline)) __attribute__((always_inline)) int fls64(__u64 x)
 {
  if (x == 0)
   return 0;
  return __fls(x) + 1;
 }
-# 452 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bitops.h" 2
+//# 452 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bitops.h" 2
 
 
 
-# 1 "include/asm-generic/bitops/ext2-non-atomic.h" 1
+//# 1 "include/asm-generic/bitops/ext2-non-atomic.h" 1
 
 
 
-# 1 "include/asm-generic/bitops/le.h" 1
-
-
-
-
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/byteorder.h" 1
-
-
-
-# 1 "include/linux/byteorder/little_endian.h" 1
-# 12 "include/linux/byteorder/little_endian.h"
-# 1 "include/linux/swab.h" 1
+//# 1 "include/asm-generic/bitops/le.h" 1
 
 
 
 
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/byteorder.h" 1
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/swab.h" 1
+
+
+//# 1 "include/linux/byteorder/little_endian.h" 1
+//# 12 "include/linux/byteorder/little_endian.h"
+//# 1 "include/linux/swab.h" 1
+
+
+
+
+
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/swab.h" 1
 
 
 
@@ -1191,7 +1191,7 @@ static inline __attribute__((always_inline)) __attribute__((always_inline)) int 
 
 static inline __attribute__((always_inline)) __attribute__((__const__)) __u32 __arch_swab32(__u32 val)
 {
-# 21 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/swab.h"
+//# 21 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/swab.h"
  asm("bswapl %0"
      : "=r" (val)
      : "0" (val));
@@ -1202,15 +1202,15 @@ static inline __attribute__((always_inline)) __attribute__((__const__)) __u32 __
 
 static inline __attribute__((always_inline)) __attribute__((__const__)) __u64 __arch_swab64(__u64 val)
 {
-# 53 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/swab.h"
+//# 53 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/swab.h"
  asm("bswapq %0"
      : "=r" (val)
      : "0" (val));
  return val;
 
 }
-# 7 "include/linux/swab.h" 2
-# 46 "include/linux/swab.h"
+//# 7 "include/linux/swab.h" 2
+//# 46 "include/linux/swab.h"
 static inline __attribute__((always_inline)) __attribute__((__const__)) __u16 __fswab16(__u16 val)
 {
 
@@ -1259,7 +1259,7 @@ static inline __attribute__((always_inline)) __attribute__((__const__)) __u32 __
  return ((__u32)( (((__u32)(val) & (__u32)0x00ff00ffUL) << 8) | (((__u32)(val) & (__u32)0xff00ff00UL) >> 8)));
 
 }
-# 148 "include/linux/swab.h"
+//# 148 "include/linux/swab.h"
 static inline __attribute__((always_inline)) __u16 __swab16p(const __u16 *p)
 {
 
@@ -1392,8 +1392,8 @@ static inline __attribute__((always_inline)) void __swahb32s(__u32 *p)
  *p = __swahb32p(p);
 
 }
-# 13 "include/linux/byteorder/little_endian.h" 2
-# 43 "include/linux/byteorder/little_endian.h"
+//# 13 "include/linux/byteorder/little_endian.h" 2
+//# 43 "include/linux/byteorder/little_endian.h"
 static inline __attribute__((always_inline)) __le64 __cpu_to_le64p(const __u64 *p)
 {
  return ( __le64)*p;
@@ -1442,9 +1442,9 @@ static inline __attribute__((always_inline)) __u16 __be16_to_cpup(const __be16 *
 {
  return __swab16p((__u16 *)p);
 }
-# 105 "include/linux/byteorder/little_endian.h"
-# 1 "include/linux/byteorder/generic.h" 1
-# 143 "include/linux/byteorder/generic.h"
+//# 105 "include/linux/byteorder/little_endian.h"
+//# 1 "include/linux/byteorder/generic.h" 1
+//# 143 "include/linux/byteorder/generic.h"
 static inline __attribute__((always_inline)) void le16_add_cpu(__le16 *var, u16 val)
 {
  *var = (( __le16)(__u16)((( __u16)(__le16)(*var)) + val));
@@ -1474,20 +1474,20 @@ static inline __attribute__((always_inline)) void be64_add_cpu(__be64 *var, u64 
 {
  *var = (( __be64)(__builtin_constant_p((__u64)(((__builtin_constant_p((__u64)(( __u64)(__be64)(*var))) ? ((__u64)( (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x00000000000000ffULL) << 56) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x000000000000ff00ULL) << 40) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x0000000000ff0000ULL) << 24) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x00000000ff000000ULL) << 8) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x000000ff00000000ULL) >> 8) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x0000ff0000000000ULL) >> 24) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x00ff000000000000ULL) >> 40) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0xff00000000000000ULL) >> 56))) : __fswab64(( __u64)(__be64)(*var))) + val))) ? ((__u64)( (((__u64)(((__builtin_constant_p((__u64)(( __u64)(__be64)(*var))) ? ((__u64)( (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x00000000000000ffULL) << 56) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x000000000000ff00ULL) << 40) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x0000000000ff0000ULL) << 24) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x00000000ff000000ULL) << 8) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x000000ff00000000ULL) >> 8) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x0000ff0000000000ULL) >> 24) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x00ff000000000000ULL) >> 40) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0xff00000000000000ULL) >> 56))) : __fswab64(( __u64)(__be64)(*var))) + val)) & (__u64)0x00000000000000ffULL) << 56) | (((__u64)(((__builtin_constant_p((__u64)(( __u64)(__be64)(*var))) ? ((__u64)( (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x00000000000000ffULL) << 56) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x000000000000ff00ULL) << 40) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x0000000000ff0000ULL) << 24) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x00000000ff000000ULL) << 8) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x000000ff00000000ULL) >> 8) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x0000ff0000000000ULL) >> 24) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x00ff000000000000ULL) >> 40) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0xff00000000000000ULL) >> 56))) : __fswab64(( __u64)(__be64)(*var))) + val)) & (__u64)0x000000000000ff00ULL) << 40) | (((__u64)(((__builtin_constant_p((__u64)(( __u64)(__be64)(*var))) ? ((__u64)( (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x00000000000000ffULL) << 56) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x000000000000ff00ULL) << 40) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x0000000000ff0000ULL) << 24) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x00000000ff000000ULL) << 8) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x000000ff00000000ULL) >> 8) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x0000ff0000000000ULL) >> 24) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x00ff000000000000ULL) >> 40) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0xff00000000000000ULL) >> 56))) : __fswab64(( __u64)(__be64)(*var))) + val)) & (__u64)0x0000000000ff0000ULL) << 24) | (((__u64)(((__builtin_constant_p((__u64)(( __u64)(__be64)(*var))) ? ((__u64)( (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x00000000000000ffULL) << 56) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x000000000000ff00ULL) << 40) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x0000000000ff0000ULL) << 24) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x00000000ff000000ULL) << 8) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x000000ff00000000ULL) >> 8) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x0000ff0000000000ULL) >> 24) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x00ff000000000000ULL) >> 40) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0xff00000000000000ULL) >> 56))) : __fswab64(( __u64)(__be64)(*var))) + val)) & (__u64)0x00000000ff000000ULL) << 8) | (((__u64)(((__builtin_constant_p((__u64)(( __u64)(__be64)(*var))) ? ((__u64)( (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x00000000000000ffULL) << 56) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x000000000000ff00ULL) << 40) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x0000000000ff0000ULL) << 24) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x00000000ff000000ULL) << 8) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x000000ff00000000ULL) >> 8) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x0000ff0000000000ULL) >> 24) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x00ff000000000000ULL) >> 40) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0xff00000000000000ULL) >> 56))) : __fswab64(( __u64)(__be64)(*var))) + val)) & (__u64)0x000000ff00000000ULL) >> 8) | (((__u64)(((__builtin_constant_p((__u64)(( __u64)(__be64)(*var))) ? ((__u64)( (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x00000000000000ffULL) << 56) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x000000000000ff00ULL) << 40) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x0000000000ff0000ULL) << 24) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x00000000ff000000ULL) << 8) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x000000ff00000000ULL) >> 8) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x0000ff0000000000ULL) >> 24) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x00ff000000000000ULL) >> 40) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0xff00000000000000ULL) >> 56))) : __fswab64(( __u64)(__be64)(*var))) + val)) & (__u64)0x0000ff0000000000ULL) >> 24) | (((__u64)(((__builtin_constant_p((__u64)(( __u64)(__be64)(*var))) ? ((__u64)( (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x00000000000000ffULL) << 56) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x000000000000ff00ULL) << 40) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x0000000000ff0000ULL) << 24) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x00000000ff000000ULL) << 8) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x000000ff00000000ULL) >> 8) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x0000ff0000000000ULL) >> 24) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x00ff000000000000ULL) >> 40) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0xff00000000000000ULL) >> 56))) : __fswab64(( __u64)(__be64)(*var))) + val)) & (__u64)0x00ff000000000000ULL) >> 40) | (((__u64)(((__builtin_constant_p((__u64)(( __u64)(__be64)(*var))) ? ((__u64)( (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x00000000000000ffULL) << 56) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x000000000000ff00ULL) << 40) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x0000000000ff0000ULL) << 24) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x00000000ff000000ULL) << 8) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x000000ff00000000ULL) >> 8) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x0000ff0000000000ULL) >> 24) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x00ff000000000000ULL) >> 40) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0xff00000000000000ULL) >> 56))) : __fswab64(( __u64)(__be64)(*var))) + val)) & (__u64)0xff00000000000000ULL) >> 56))) : __fswab64(((__builtin_constant_p((__u64)(( __u64)(__be64)(*var))) ? ((__u64)( (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x00000000000000ffULL) << 56) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x000000000000ff00ULL) << 40) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x0000000000ff0000ULL) << 24) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x00000000ff000000ULL) << 8) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x000000ff00000000ULL) >> 8) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x0000ff0000000000ULL) >> 24) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0x00ff000000000000ULL) >> 40) | (((__u64)(( __u64)(__be64)(*var)) & (__u64)0xff00000000000000ULL) >> 56))) : __fswab64(( __u64)(__be64)(*var))) + val))));
 }
-# 106 "include/linux/byteorder/little_endian.h" 2
-# 5 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/byteorder.h" 2
-# 6 "include/asm-generic/bitops/le.h" 2
-# 5 "include/asm-generic/bitops/ext2-non-atomic.h" 2
-# 456 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bitops.h" 2
+//# 106 "include/linux/byteorder/little_endian.h" 2
+//# 5 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/byteorder.h" 2
+//# 6 "include/asm-generic/bitops/le.h" 2
+//# 5 "include/asm-generic/bitops/ext2-non-atomic.h" 2
+//# 456 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bitops.h" 2
 
 
 
 
 
 
-# 1 "include/asm-generic/bitops/minix.h" 1
-# 463 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bitops.h" 2
-# 18 "include/linux/bitops.h" 2
+//# 1 "include/asm-generic/bitops/minix.h" 1
+//# 463 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bitops.h" 2
+//# 18 "include/linux/bitops.h" 2
 
 
 
@@ -1584,7 +1584,7 @@ static inline __attribute__((always_inline)) unsigned fls_long(unsigned long l)
   return fls(l);
  return fls64(l);
 }
-# 123 "include/linux/bitops.h"
+//# 123 "include/linux/bitops.h"
 static inline __attribute__((always_inline)) unsigned long __ffs64(u64 word)
 {
 
@@ -1595,28 +1595,28 @@ static inline __attribute__((always_inline)) unsigned long __ffs64(u64 word)
 
  return __ffs((unsigned long)word);
 }
-# 144 "include/linux/bitops.h"
+//# 144 "include/linux/bitops.h"
 extern unsigned long find_first_bit(const unsigned long *addr,
         unsigned long size);
-# 154 "include/linux/bitops.h"
+//# 154 "include/linux/bitops.h"
 extern unsigned long find_first_zero_bit(const unsigned long *addr,
       unsigned long size);
-# 166 "include/linux/bitops.h"
+//# 166 "include/linux/bitops.h"
 extern unsigned long find_last_bit(const unsigned long *addr,
        unsigned long size);
-# 178 "include/linux/bitops.h"
+//# 178 "include/linux/bitops.h"
 extern unsigned long find_next_bit(const unsigned long *addr,
        unsigned long size, unsigned long offset);
-# 188 "include/linux/bitops.h"
+//# 188 "include/linux/bitops.h"
 extern unsigned long find_next_zero_bit(const unsigned long *addr,
      unsigned long size,
      unsigned long offset);
-# 16 "include/linux/kernel.h" 2
-# 1 "include/linux/log2.h" 1
-# 21 "include/linux/log2.h"
+//# 16 "include/linux/kernel.h" 2
+//# 1 "include/linux/log2.h" 1
+//# 21 "include/linux/log2.h"
 extern __attribute__((const, noreturn))
 int ____ilog2_NaN(void);
-# 31 "include/linux/log2.h"
+//# 31 "include/linux/log2.h"
 static inline __attribute__((always_inline)) __attribute__((const))
 int __ilog2_u32(u32 n)
 {
@@ -1660,21 +1660,21 @@ unsigned long __rounddown_pow_of_two(unsigned long n)
 {
  return 1UL << (fls_long(n) - 1);
 }
-# 17 "include/linux/kernel.h" 2
-# 1 "include/linux/typecheck.h" 1
-# 18 "include/linux/kernel.h" 2
-# 1 "include/linux/ratelimit.h" 1
+//# 17 "include/linux/kernel.h" 2
+//# 1 "include/linux/typecheck.h" 1
+//# 18 "include/linux/kernel.h" 2
+//# 1 "include/linux/ratelimit.h" 1
 
 
-# 1 "include/linux/param.h" 1
+//# 1 "include/linux/param.h" 1
 
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/param.h" 1
-# 1 "include/asm-generic/param.h" 1
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/param.h" 2
-# 5 "include/linux/param.h" 2
-# 4 "include/linux/ratelimit.h" 2
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/param.h" 1
+//# 1 "include/asm-generic/param.h" 1
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/param.h" 2
+//# 5 "include/linux/param.h" 2
+//# 4 "include/linux/ratelimit.h" 2
 
 
 
@@ -1691,8 +1691,8 @@ struct ratelimit_state {
 
 
 extern int __ratelimit(struct ratelimit_state *rs);
-# 19 "include/linux/kernel.h" 2
-# 1 "include/linux/dynamic_debug.h" 1
+//# 19 "include/linux/kernel.h" 2
+//# 1 "include/linux/dynamic_debug.h" 1
 
 
 
@@ -1733,17 +1733,17 @@ struct _ddebug {
 
 int ddebug_add_module(struct _ddebug *tab, unsigned int n,
     const char *modname);
-# 79 "include/linux/dynamic_debug.h"
+//# 79 "include/linux/dynamic_debug.h"
 static inline __attribute__((always_inline)) int ddebug_remove_module(char *mod)
 {
  return 0;
 }
-# 20 "include/linux/kernel.h" 2
+//# 20 "include/linux/kernel.h" 2
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bug.h" 1
-# 38 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bug.h"
-# 1 "include/asm-generic/bug.h" 1
-# 10 "include/asm-generic/bug.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bug.h" 1
+//# 38 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bug.h"
+//# 1 "include/asm-generic/bug.h" 1
+//# 10 "include/asm-generic/bug.h"
 struct bug_entry {
 
 
@@ -1760,16 +1760,16 @@ struct bug_entry {
 
  unsigned short flags;
 };
-# 61 "include/asm-generic/bug.h"
+//# 61 "include/asm-generic/bug.h"
 extern void warn_slowpath_fmt(const char *file, const int line,
   const char *fmt, ...) __attribute__((format(printf, 3, 4)));
 extern void warn_slowpath_null(const char *file, const int line);
-# 39 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bug.h" 2
-# 22 "include/linux/kernel.h" 2
+//# 39 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bug.h" 2
+//# 22 "include/linux/kernel.h" 2
 
 extern const char linux_banner[];
 extern const char linux_proc_banner[];
-# 109 "include/linux/kernel.h"
+//# 109 "include/linux/kernel.h"
 extern int console_printk[];
 
 
@@ -1780,9 +1780,9 @@ extern int console_printk[];
 struct completion;
 struct pt_regs;
 struct user;
-# 142 "include/linux/kernel.h"
+//# 142 "include/linux/kernel.h"
   static inline __attribute__((always_inline)) void __might_sleep(char *file, int line, int preempt_offset) { }
-# 156 "include/linux/kernel.h"
+//# 156 "include/linux/kernel.h"
 static inline __attribute__((always_inline)) void might_fault(void)
 {
  do { do { } while (0); } while (0);
@@ -1840,7 +1840,7 @@ extern int func_ptr_is_kernel_text(void *ptr);
 
 struct pid;
 extern struct pid *session_of_pgrp(struct pid *pgrp);
-# 239 "include/linux/kernel.h"
+//# 239 "include/linux/kernel.h"
  int vprintk(const char *fmt, va_list args)
  __attribute__ ((format (printf, 1, 0)));
  int printk(const char * fmt, ...)
@@ -1852,9 +1852,9 @@ extern bool printk_timed_ratelimit(unsigned long *caller_jiffies,
        unsigned int interval_msec);
 
 extern int printk_delay_msec;
-# 263 "include/linux/kernel.h"
+//# 263 "include/linux/kernel.h"
 void log_buf_kexec_setup(void);
-# 284 "include/linux/kernel.h"
+//# 284 "include/linux/kernel.h"
 extern int printk_needs_cpu(int cpu);
 extern void printk_tick(void);
 
@@ -1896,7 +1896,7 @@ extern enum system_states {
  SYSTEM_RESTART,
  SYSTEM_SUSPEND_DISK,
 } system_state;
-# 338 "include/linux/kernel.h"
+//# 338 "include/linux/kernel.h"
 extern void dump_stack(void) __attribute__((__cold__));
 
 enum {
@@ -1923,7 +1923,7 @@ static inline __attribute__((always_inline)) char *pack_hex_byte(char *buf, u8 b
  *buf++ = hex_asc[((byte) & 0x0f)];
  return buf;
 }
-# 429 "include/linux/kernel.h"
+//# 429 "include/linux/kernel.h"
 void tracing_on(void);
 void tracing_off(void);
 
@@ -1947,7 +1947,7 @@ static inline __attribute__((always_inline)) void __attribute__ ((format (printf
 ____trace_printk_check_format(const char *fmt, ...)
 {
 }
-# 488 "include/linux/kernel.h"
+//# 488 "include/linux/kernel.h"
 extern int
 __trace_bprintk(unsigned long ip, const char *fmt, ...)
  __attribute__ ((format (printf, 2, 3)));
@@ -1955,7 +1955,7 @@ __trace_bprintk(unsigned long ip, const char *fmt, ...)
 extern int
 __trace_printk(unsigned long ip, const char *fmt, ...)
  __attribute__ ((format (printf, 2, 3)));
-# 513 "include/linux/kernel.h"
+//# 513 "include/linux/kernel.h"
 extern int
 __ftrace_vbprintk(unsigned long ip, const char *fmt, va_list ap);
 
@@ -1963,10 +1963,10 @@ extern int
 __ftrace_vprintk(unsigned long ip, const char *fmt, va_list ap);
 
 extern void ftrace_dump(void);
-# 657 "include/linux/kernel.h"
+//# 657 "include/linux/kernel.h"
 struct sysinfo;
 extern int do_sysinfo(struct sysinfo *info);
-# 669 "include/linux/kernel.h"
+//# 669 "include/linux/kernel.h"
 struct sysinfo {
  long uptime;
  unsigned long loads[3];
@@ -1983,28 +1983,28 @@ struct sysinfo {
  unsigned int mem_unit;
  char _f[20-2*sizeof(long)-sizeof(int)];
 };
-# 46 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/percpu.h" 2
-# 73 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/percpu.h"
+//# 46 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/percpu.h" 2
+//# 73 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/percpu.h"
 extern void __bad_percpu_size(void);
-# 166 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/percpu.h"
-# 1 "include/asm-generic/percpu.h" 1
+//# 166 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/percpu.h"
+//# 1 "include/asm-generic/percpu.h" 1
 
 
 
 
-# 1 "include/linux/threads.h" 1
-# 6 "include/asm-generic/percpu.h" 2
-# 1 "include/linux/percpu-defs.h" 1
-# 7 "include/asm-generic/percpu.h" 2
-# 18 "include/asm-generic/percpu.h"
+//# 1 "include/linux/threads.h" 1
+//# 6 "include/asm-generic/percpu.h" 2
+//# 1 "include/linux/percpu-defs.h" 1
+//# 7 "include/asm-generic/percpu.h" 2
+//# 18 "include/asm-generic/percpu.h"
 extern unsigned long __per_cpu_offset[32];
-# 61 "include/asm-generic/percpu.h"
+//# 61 "include/asm-generic/percpu.h"
 extern void setup_per_cpu_areas(void);
-# 167 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/percpu.h" 2
+//# 167 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/percpu.h" 2
 
 
 extern __attribute__((section(".data.percpu" ""))) __typeof__(unsigned long) per_cpu__this_cpu_off;
-# 6 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/current.h" 2
+//# 6 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/current.h" 2
 
 
 struct task_struct;
@@ -2015,26 +2015,26 @@ static inline __attribute__((always_inline)) __attribute__((always_inline)) stru
 {
  return ({ typeof(per_cpu__current_task) ret__; switch (sizeof(per_cpu__current_task)) { case 1: asm("mov" "b ""%%""gs"":%P" "1"",%0" : "=q" (ret__) : "p" (&per_cpu__current_task)); break; case 2: asm("mov" "w ""%%""gs"":%P" "1"",%0" : "=r" (ret__) : "p" (&per_cpu__current_task)); break; case 4: asm("mov" "l ""%%""gs"":%P" "1"",%0" : "=r" (ret__) : "p" (&per_cpu__current_task)); break; case 8: asm("mov" "q ""%%""gs"":%P" "1"",%0" : "=r" (ret__) : "p" (&per_cpu__current_task)); break; default: __bad_percpu_size(); } ret__; });
 }
-# 16 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/processor.h" 2
+//# 16 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/processor.h" 2
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/system.h" 1
-
-
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/system.h" 1
 
 
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/cmpxchg.h" 1
+
+
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/cmpxchg.h" 1
 
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/cmpxchg_64.h" 1
-# 11 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/cmpxchg_64.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/cmpxchg_64.h" 1
+//# 11 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/cmpxchg_64.h"
 static inline __attribute__((always_inline)) void set_64bit(volatile unsigned long *ptr, unsigned long val)
 {
  *ptr = val;
 }
-# 23 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/cmpxchg_64.h"
+//# 23 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/cmpxchg_64.h"
 static inline __attribute__((always_inline)) unsigned long __xchg(unsigned long x, volatile void *ptr,
        int size)
 {
@@ -2066,7 +2066,7 @@ static inline __attribute__((always_inline)) unsigned long __xchg(unsigned long 
  }
  return x;
 }
-# 63 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/cmpxchg_64.h"
+//# 63 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/cmpxchg_64.h"
 static inline __attribute__((always_inline)) unsigned long __cmpxchg(volatile void *ptr, unsigned long old,
           unsigned long new, int size)
 {
@@ -2166,16 +2166,16 @@ static inline __attribute__((always_inline)) unsigned long __cmpxchg_local(volat
  }
  return old;
 }
-# 5 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/cmpxchg.h" 2
-# 8 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/system.h" 2
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/nops.h" 1
-# 9 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/system.h" 2
+//# 5 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/cmpxchg.h" 2
+//# 8 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/system.h" 2
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/nops.h" 1
+//# 9 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/system.h" 2
 
 
-# 1 "include/linux/irqflags.h" 1
-# 57 "include/linux/irqflags.h"
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/irqflags.h" 1
-# 11 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/irqflags.h"
+//# 1 "include/linux/irqflags.h" 1
+//# 57 "include/linux/irqflags.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/irqflags.h" 1
+//# 11 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/irqflags.h"
 static inline __attribute__((always_inline)) unsigned long native_save_fl(void)
 {
  unsigned long flags;
@@ -2225,23 +2225,23 @@ static inline __attribute__((always_inline)) void native_halt(void)
 
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/paravirt.h" 1
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/paravirt.h" 1
 
 
 
 
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable_types.h" 1
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable_types.h" 1
 
 
 
-# 1 "include/linux/const.h" 1
-# 5 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable_types.h" 2
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/page_types.h" 1
-# 36 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/page_types.h"
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/page_64_types.h" 1
-# 54 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/page_64_types.h"
+//# 1 "include/linux/const.h" 1
+//# 5 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable_types.h" 2
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/page_types.h" 1
+//# 36 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/page_types.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/page_64_types.h" 1
+//# 54 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/page_64_types.h"
 void clear_page(void *page);
 void copy_page(void *to, void *from);
 
@@ -2256,7 +2256,7 @@ extern unsigned long __phys_addr(unsigned long);
 
 extern void init_extra_mapping_uc(unsigned long phys, unsigned long size);
 extern void init_extra_mapping_wb(unsigned long phys, unsigned long size);
-# 37 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/page_types.h" 2
+//# 37 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/page_types.h" 2
 
 
 
@@ -2274,10 +2274,10 @@ extern unsigned long init_memory_mapping(unsigned long start,
 
 extern void initmem_init(unsigned long start_pfn, unsigned long end_pfn);
 extern void free_initmem(void);
-# 6 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable_types.h" 2
-# 174 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable_types.h"
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable_64_types.h" 1
-# 10 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable_64_types.h"
+//# 6 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable_types.h" 2
+//# 174 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable_types.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable_64_types.h" 1
+//# 10 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable_64_types.h"
 typedef unsigned long pteval_t;
 typedef unsigned long pmdval_t;
 typedef unsigned long pudval_t;
@@ -2285,8 +2285,8 @@ typedef unsigned long pgdval_t;
 typedef unsigned long pgprotval_t;
 
 typedef struct { pteval_t pte; } pte_t;
-# 175 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable_types.h" 2
-# 187 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable_types.h"
+//# 175 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable_types.h" 2
+//# 187 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable_types.h"
 typedef struct pgprot { pgprotval_t pgprot; } pgprot_t;
 
 typedef struct { pgdval_t pgd; } pgd_t;
@@ -2318,7 +2318,7 @@ static inline __attribute__((always_inline)) pudval_t native_pud_val(pud_t pud)
 {
  return pud.pud;
 }
-# 228 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable_types.h"
+//# 228 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable_types.h"
 typedef struct { pmdval_t pmd; } pmd_t;
 
 static inline __attribute__((always_inline)) pmd_t native_make_pmd(pmdval_t val)
@@ -2330,7 +2330,7 @@ static inline __attribute__((always_inline)) pmdval_t native_pmd_val(pmd_t pmd)
 {
  return pmd.pmd;
 }
-# 248 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable_types.h"
+//# 248 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable_types.h"
 static inline __attribute__((always_inline)) pudval_t pud_flags(pud_t pud)
 {
  return native_pud_val(pud) & (~((pteval_t)(((signed long)(~(((1UL) << 12)-1))) & ((phys_addr_t)(1ULL << 46) - 1))));
@@ -2381,7 +2381,7 @@ int phys_mem_access_prot_allowed(struct file *file, unsigned long pfn,
 
 
 void set_pte_vaddr(unsigned long vaddr, pte_t pte);
-# 307 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable_types.h"
+//# 307 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable_types.h"
 struct seq_file;
 extern void arch_report_meminfo(struct seq_file *m);
 
@@ -2395,15 +2395,15 @@ enum {
 
 
 extern void update_page_count(int level, unsigned long pages);
-# 330 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable_types.h"
+//# 330 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable_types.h"
 extern pte_t *lookup_address(unsigned long address, unsigned int *level);
-# 8 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/paravirt.h" 2
+//# 8 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/paravirt.h" 2
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/paravirt_types.h" 1
-# 42 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/paravirt_types.h"
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/desc_defs.h" 1
-# 22 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/desc_defs.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/paravirt_types.h" 1
+//# 42 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/paravirt_types.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/desc_defs.h" 1
+//# 22 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/desc_defs.h"
 struct desc_struct {
  union {
   struct {
@@ -2466,13 +2466,13 @@ struct ldttss_desc64 {
 typedef struct gate_struct64 gate_desc;
 typedef struct ldttss_desc64 ldt_desc;
 typedef struct ldttss_desc64 tss_desc;
-# 94 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/desc_defs.h"
+//# 94 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/desc_defs.h"
 struct desc_ptr {
  unsigned short size;
  unsigned long address;
 } __attribute__((packed)) ;
-# 43 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/paravirt_types.h" 2
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/kmap_types.h" 1
+//# 43 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/paravirt_types.h" 2
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/kmap_types.h" 1
 
 
 
@@ -2480,8 +2480,8 @@ struct desc_ptr {
 
 
 
-# 1 "include/asm-generic/kmap_types.h" 1
-# 10 "include/asm-generic/kmap_types.h"
+//# 1 "include/asm-generic/kmap_types.h" 1
+//# 10 "include/asm-generic/kmap_types.h"
 enum km_type {
  KM_BOUNCE_READ,
  KM_SKB_SUNRPC_DATA,
@@ -2505,8 +2505,8 @@ enum km_type {
  KM_NMI_PTE,
  KM_TYPE_NR
 };
-# 9 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/kmap_types.h" 2
-# 44 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/paravirt_types.h" 2
+//# 9 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/kmap_types.h" 2
+//# 44 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/paravirt_types.h" 2
 
 struct page;
 struct thread_struct;
@@ -2534,7 +2534,7 @@ struct pv_info {
 };
 
 struct pv_init_ops {
-# 79 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/paravirt_types.h"
+//# 79 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/paravirt_types.h"
  unsigned (*patch)(u8 type, u16 clobber, void *insnbuf,
      unsigned long addr, unsigned len);
 };
@@ -2648,7 +2648,7 @@ struct pv_cpu_ops {
 };
 
 struct pv_irq_ops {
-# 201 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/paravirt_types.h"
+//# 201 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/paravirt_types.h"
  struct paravirt_callee_save save_fl;
  struct paravirt_callee_save restore_fl;
  struct paravirt_callee_save irq_disable;
@@ -2732,7 +2732,7 @@ struct pv_mmu_ops {
 
  struct paravirt_callee_save pgd_val;
  struct paravirt_callee_save make_pgd;
-# 294 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/paravirt_types.h"
+//# 294 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/paravirt_types.h"
  void (*set_pud)(pud_t *pudp, pud_t pudval);
 
  struct paravirt_callee_save pmd_val;
@@ -2791,7 +2791,7 @@ extern struct pv_irq_ops pv_irq_ops;
 extern struct pv_apic_ops pv_apic_ops;
 extern struct pv_mmu_ops pv_mmu_ops;
 extern struct pv_lock_ops pv_lock_ops;
-# 385 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/paravirt_types.h"
+//# 385 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/paravirt_types.h"
 unsigned paravirt_patch_nop(void);
 unsigned paravirt_patch_ident_32(void *insnbuf, unsigned len);
 unsigned paravirt_patch_ident_64(void *insnbuf, unsigned len);
@@ -2812,7 +2812,7 @@ unsigned native_patch(u8 type, u16 clobbers, void *ibuf,
         unsigned long addr, unsigned len);
 
 int paravirt_disable_iospace(void);
-# 663 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/paravirt_types.h"
+//# 663 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/paravirt_types.h"
 enum paravirt_lazy_mode {
  PARAVIRT_LAZY_NONE,
  PARAVIRT_LAZY_MMU,
@@ -2842,13 +2842,13 @@ struct paravirt_patch_site {
 
 extern struct paravirt_patch_site __parainstructions[],
  __parainstructions_end[];
-# 11 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/paravirt.h" 2
+//# 11 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/paravirt.h" 2
 
 
 
-# 1 "include/linux/cpumask.h" 1
-# 11 "include/linux/cpumask.h"
-# 1 "include/linux/bitmap.h" 1
+//# 1 "include/linux/cpumask.h" 1
+//# 11 "include/linux/cpumask.h"
+//# 1 "include/linux/bitmap.h" 1
 
 
 
@@ -2856,20 +2856,20 @@ extern struct paravirt_patch_site __parainstructions[],
 
 
 
-# 1 "include/linux/string.h" 1
-# 15 "include/linux/string.h"
+//# 1 "include/linux/string.h" 1
+//# 15 "include/linux/string.h"
 extern char *strndup_user(const char *, long);
 extern void *memdup_user(const void *, size_t);
 
 
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/string.h" 1
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/string.h" 1
 
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/string_64.h" 1
-# 9 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/string_64.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/string_64.h" 1
+//# 9 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/string_64.h"
 static inline __attribute__((always_inline)) __attribute__((always_inline)) void *__inline_memcpy(void *to, const void *from, size_t n)
 {
  unsigned long d0, d1, d2;
@@ -2894,7 +2894,7 @@ static inline __attribute__((always_inline)) __attribute__((always_inline)) void
 
 
 extern void *memcpy(void *to, const void *from, size_t len);
-# 55 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/string_64.h"
+//# 55 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/string_64.h"
 void *memset(void *s, int c, size_t n);
 
 
@@ -2905,8 +2905,8 @@ size_t strlen(const char *s);
 char *strcpy(char *dest, const char *src);
 char *strcat(char *dest, const char *src);
 int strcmp(const char *cs, const char *ct);
-# 5 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/string.h" 2
-# 22 "include/linux/string.h" 2
+//# 5 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/string.h" 2
+//# 22 "include/linux/string.h" 2
 
 
 extern char * strcpy(char *,const char *);
@@ -2971,7 +2971,7 @@ extern __kernel_size_t strspn(const char *,const char *);
 
 
 extern __kernel_size_t strcspn(const char *,const char *);
-# 98 "include/linux/string.h"
+//# 98 "include/linux/string.h"
 extern void * memscan(void *,int,__kernel_size_t);
 
 
@@ -3008,8 +3008,8 @@ static inline __attribute__((always_inline)) bool strstarts(const char *str, con
 {
  return strncmp(str, prefix, strlen(prefix)) == 0;
 }
-# 9 "include/linux/bitmap.h" 2
-# 87 "include/linux/bitmap.h"
+//# 9 "include/linux/bitmap.h" 2
+//# 87 "include/linux/bitmap.h"
 extern int __bitmap_empty(const unsigned long *bitmap, int bits);
 extern int __bitmap_full(const unsigned long *bitmap, int bits);
 extern int __bitmap_equal(const unsigned long *bitmap1,
@@ -3056,7 +3056,7 @@ extern int bitmap_find_free_region(unsigned long *bitmap, int bits, int order);
 extern void bitmap_release_region(unsigned long *bitmap, int pos, int order);
 extern int bitmap_allocate_region(unsigned long *bitmap, int pos, int order);
 extern void bitmap_copy_le(void *dst, const unsigned long *src, int nbits);
-# 143 "include/linux/bitmap.h"
+//# 143 "include/linux/bitmap.h"
 static inline __attribute__((always_inline)) void bitmap_zero(unsigned long *dst, int nbits)
 {
  if ((__builtin_constant_p(nbits) && (nbits) <= 64))
@@ -3204,17 +3204,17 @@ static inline __attribute__((always_inline)) int bitmap_parse(const char *buf, u
 {
  return __bitmap_parse(buf, buflen, 0, maskp, nmaskbits);
 }
-# 12 "include/linux/cpumask.h" 2
+//# 12 "include/linux/cpumask.h" 2
 
 typedef struct cpumask { unsigned long bits[(((32) + (8 * sizeof(long)) - 1) / (8 * sizeof(long)))]; } cpumask_t;
-# 27 "include/linux/cpumask.h"
+//# 27 "include/linux/cpumask.h"
 extern int nr_cpu_ids;
-# 78 "include/linux/cpumask.h"
+//# 78 "include/linux/cpumask.h"
 extern const struct cpumask *const cpu_possible_mask;
 extern const struct cpumask *const cpu_online_mask;
 extern const struct cpumask *const cpu_present_mask;
 extern const struct cpumask *const cpu_active_mask;
-# 102 "include/linux/cpumask.h"
+//# 102 "include/linux/cpumask.h"
 static inline __attribute__((always_inline)) unsigned int cpumask_check(unsigned int cpu)
 {
 
@@ -3222,12 +3222,12 @@ static inline __attribute__((always_inline)) unsigned int cpumask_check(unsigned
 
  return cpu;
 }
-# 153 "include/linux/cpumask.h"
+//# 153 "include/linux/cpumask.h"
 static inline __attribute__((always_inline)) unsigned int cpumask_first(const struct cpumask *srcp)
 {
  return find_first_bit(((srcp)->bits), 32);
 }
-# 165 "include/linux/cpumask.h"
+//# 165 "include/linux/cpumask.h"
 static inline __attribute__((always_inline)) unsigned int cpumask_next(int n, const struct cpumask *srcp)
 {
 
@@ -3235,7 +3235,7 @@ static inline __attribute__((always_inline)) unsigned int cpumask_next(int n, co
   cpumask_check(n);
  return find_next_bit(((srcp)->bits), 32, n+1);
 }
-# 180 "include/linux/cpumask.h"
+//# 180 "include/linux/cpumask.h"
 static inline __attribute__((always_inline)) unsigned int cpumask_next_zero(int n, const struct cpumask *srcp)
 {
 
@@ -3246,7 +3246,7 @@ static inline __attribute__((always_inline)) unsigned int cpumask_next_zero(int 
 
 int cpumask_next_and(int n, const struct cpumask *, const struct cpumask *);
 int cpumask_any_but(const struct cpumask *mask, unsigned int cpu);
-# 238 "include/linux/cpumask.h"
+//# 238 "include/linux/cpumask.h"
 static inline __attribute__((always_inline)) void cpumask_set_cpu(unsigned int cpu, struct cpumask *dstp)
 {
  set_bit(cpumask_check(cpu), ((dstp)->bits));
@@ -3261,12 +3261,12 @@ static inline __attribute__((always_inline)) void cpumask_clear_cpu(int cpu, str
 {
  clear_bit(cpumask_check(cpu), ((dstp)->bits));
 }
-# 270 "include/linux/cpumask.h"
+//# 270 "include/linux/cpumask.h"
 static inline __attribute__((always_inline)) int cpumask_test_and_set_cpu(int cpu, struct cpumask *cpumask)
 {
  return test_and_set_bit(cpumask_check(cpu), ((cpumask)->bits));
 }
-# 282 "include/linux/cpumask.h"
+//# 282 "include/linux/cpumask.h"
 static inline __attribute__((always_inline)) int cpumask_test_and_clear_cpu(int cpu, struct cpumask *cpumask)
 {
  return test_and_clear_bit(cpumask_check(cpu), ((cpumask)->bits));
@@ -3456,26 +3456,26 @@ static inline __attribute__((always_inline)) void cpumask_copy(struct cpumask *d
 {
  bitmap_copy(((dstp)->bits), ((srcp)->bits), 32);
 }
-# 513 "include/linux/cpumask.h"
+//# 513 "include/linux/cpumask.h"
 static inline __attribute__((always_inline)) int cpumask_scnprintf(char *buf, int len,
         const struct cpumask *srcp)
 {
  return bitmap_scnprintf(buf, len, ((srcp)->bits), 32);
 }
-# 527 "include/linux/cpumask.h"
+//# 527 "include/linux/cpumask.h"
 static inline __attribute__((always_inline)) int cpumask_parse_user(const char *buf, int len,
          struct cpumask *dstp)
 {
  return bitmap_parse_user(buf, len, ((dstp)->bits), 32);
 }
-# 542 "include/linux/cpumask.h"
+//# 542 "include/linux/cpumask.h"
 static inline __attribute__((always_inline)) int cpulist_scnprintf(char *buf, int len,
         const struct cpumask *srcp)
 {
  return bitmap_scnlistprintf(buf, len, ((srcp)->bits),
         32);
 }
-# 557 "include/linux/cpumask.h"
+//# 557 "include/linux/cpumask.h"
 static inline __attribute__((always_inline)) int cpulist_parse(const char *buf, struct cpumask *dstp)
 {
  return bitmap_parselist(buf, ((dstp)->bits), 32);
@@ -3492,7 +3492,7 @@ static inline __attribute__((always_inline)) size_t cpumask_size(void)
 
  return (((32) + (8 * sizeof(long)) - 1) / (8 * sizeof(long))) * sizeof(long);
 }
-# 602 "include/linux/cpumask.h"
+//# 602 "include/linux/cpumask.h"
 typedef struct cpumask cpumask_var_t[1];
 
 static inline __attribute__((always_inline)) bool alloc_cpumask_var(cpumask_var_t *mask, gfp_t flags)
@@ -3535,7 +3535,7 @@ static inline __attribute__((always_inline)) void free_bootmem_cpumask_var(cpuma
 
 
 extern const unsigned long cpu_all_bits[(((32) + (8 * sizeof(long)) - 1) / (8 * sizeof(long)))];
-# 654 "include/linux/cpumask.h"
+//# 654 "include/linux/cpumask.h"
 void set_cpu_possible(unsigned int cpu, bool possible);
 void set_cpu_present(unsigned int cpu, bool present);
 void set_cpu_online(unsigned int cpu, bool online);
@@ -3543,12 +3543,12 @@ void set_cpu_active(unsigned int cpu, bool active);
 void init_cpu_present(const struct cpumask *src);
 void init_cpu_possible(const struct cpumask *src);
 void init_cpu_online(const struct cpumask *src);
-# 676 "include/linux/cpumask.h"
+//# 676 "include/linux/cpumask.h"
 static inline __attribute__((always_inline)) int __check_is_bitmap(const unsigned long *bitmap)
 {
  return 1;
 }
-# 688 "include/linux/cpumask.h"
+//# 688 "include/linux/cpumask.h"
 extern const unsigned long
  cpu_bit_bitmap[64 +1][(((32) + (8 * sizeof(long)) - 1) / (8 * sizeof(long)))];
 
@@ -3558,11 +3558,11 @@ static inline __attribute__((always_inline)) const struct cpumask *get_cpu_mask(
  p -= cpu / 64;
  return ((struct cpumask *)(1 ? (p) : (void *)sizeof(__check_is_bitmap(p))));
 }
-# 765 "include/linux/cpumask.h"
+//# 765 "include/linux/cpumask.h"
 int __first_cpu(const cpumask_t *srcp);
 int __next_cpu(int n, const cpumask_t *srcp);
 int __any_online_cpu(const cpumask_t *mask);
-# 795 "include/linux/cpumask.h"
+//# 795 "include/linux/cpumask.h"
 static inline __attribute__((always_inline)) void __cpu_set(int cpu, volatile cpumask_t *dstp)
 {
  set_bit(cpu, dstp->bits);
@@ -3664,7 +3664,7 @@ static inline __attribute__((always_inline)) void __cpus_shift_left(cpumask_t *d
 {
  bitmap_shift_left(dstp->bits, srcp->bits, n, nbits);
 }
-# 15 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/paravirt.h" 2
+//# 15 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/paravirt.h" 2
 
 static inline __attribute__((always_inline)) int paravirt_enabled(void)
 {
@@ -3794,7 +3794,7 @@ static inline __attribute__((always_inline)) int paravirt_wrmsr_regs(u32 *regs)
 {
  return ({ int __ret; unsigned long __edi = __edi, __esi = __esi, __edx = __edx, __ecx = __ecx, __eax = __eax; ((void)pv_cpu_ops.wrmsr_regs); if (sizeof(int) > sizeof(unsigned long)) { asm volatile("" "771:\n\t" "call *%c[paravirt_opptr];" "\n" "772:\n" ".pushsection .parainstructions,\"a\"\n" " " ".balign 8" " " "\n" " " ".quad" " " " 771b\n" "  .byte " "%c[paravirt_typenum]" "\n" "  .byte 772b-771b\n" "  .short " "%c[paravirt_clobber]" "\n" ".popsection\n" "" : "=D" (__edi), "=S" (__esi), "=d" (__edx), "=c" (__ecx), "=a" (__eax) : [paravirt_typenum] "i" ((__builtin_offsetof(struct paravirt_patch_template,pv_cpu_ops.wrmsr_regs) / sizeof(void *))), [paravirt_opptr] "i" (&(pv_cpu_ops.wrmsr_regs)), [paravirt_clobber] "i" (((1 << 9) - 1)), "D" ((unsigned long)(regs)) : "memory", "cc" , "r8", "r9", "r10", "r11"); __ret = (int)((((u64)__edx) << 32) | __eax); } else { asm volatile("" "771:\n\t" "call *%c[paravirt_opptr];" "\n" "772:\n" ".pushsection .parainstructions,\"a\"\n" " " ".balign 8" " " "\n" " " ".quad" " " " 771b\n" "  .byte " "%c[paravirt_typenum]" "\n" "  .byte 772b-771b\n" "  .short " "%c[paravirt_clobber]" "\n" ".popsection\n" "" : "=D" (__edi), "=S" (__esi), "=d" (__edx), "=c" (__ecx), "=a" (__eax) : [paravirt_typenum] "i" ((__builtin_offsetof(struct paravirt_patch_template,pv_cpu_ops.wrmsr_regs) / sizeof(void *))), [paravirt_opptr] "i" (&(pv_cpu_ops.wrmsr_regs)), [paravirt_clobber] "i" (((1 << 9) - 1)), "D" ((unsigned long)(regs)) : "memory", "cc" , "r8", "r9", "r10", "r11"); __ret = (int)__eax; } __ret; });
 }
-# 181 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/paravirt.h"
+//# 181 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/paravirt.h"
 static inline __attribute__((always_inline)) int rdmsrl_safe(unsigned msr, unsigned long long *p)
 {
  int err;
@@ -3833,7 +3833,7 @@ static inline __attribute__((always_inline)) u64 paravirt_read_tsc(void)
 {
  return ({ u64 __ret; unsigned long __edi = __edi, __esi = __esi, __edx = __edx, __ecx = __ecx, __eax = __eax; ((void)pv_cpu_ops.read_tsc); if (sizeof(u64) > sizeof(unsigned long)) { asm volatile("" "771:\n\t" "call *%c[paravirt_opptr];" "\n" "772:\n" ".pushsection .parainstructions,\"a\"\n" " " ".balign 8" " " "\n" " " ".quad" " " " 771b\n" "  .byte " "%c[paravirt_typenum]" "\n" "  .byte 772b-771b\n" "  .short " "%c[paravirt_clobber]" "\n" ".popsection\n" "" : "=D" (__edi), "=S" (__esi), "=d" (__edx), "=c" (__ecx), "=a" (__eax) : [paravirt_typenum] "i" ((__builtin_offsetof(struct paravirt_patch_template,pv_cpu_ops.read_tsc) / sizeof(void *))), [paravirt_opptr] "i" (&(pv_cpu_ops.read_tsc)), [paravirt_clobber] "i" (((1 << 9) - 1)) : "memory", "cc" , "r8", "r9", "r10", "r11"); __ret = (u64)((((u64)__edx) << 32) | __eax); } else { asm volatile("" "771:\n\t" "call *%c[paravirt_opptr];" "\n" "772:\n" ".pushsection .parainstructions,\"a\"\n" " " ".balign 8" " " "\n" " " ".quad" " " " 771b\n" "  .byte " "%c[paravirt_typenum]" "\n" "  .byte 772b-771b\n" "  .short " "%c[paravirt_clobber]" "\n" ".popsection\n" "" : "=D" (__edi), "=S" (__esi), "=d" (__edx), "=c" (__ecx), "=a" (__eax) : [paravirt_typenum] "i" ((__builtin_offsetof(struct paravirt_patch_template,pv_cpu_ops.read_tsc) / sizeof(void *))), [paravirt_opptr] "i" (&(pv_cpu_ops.read_tsc)), [paravirt_clobber] "i" (((1 << 9) - 1)) : "memory", "cc" , "r8", "r9", "r10", "r11"); __ret = (u64)__eax; } __ret; });
 }
-# 228 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/paravirt.h"
+//# 228 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/paravirt.h"
 static inline __attribute__((always_inline)) unsigned long long paravirt_sched_clock(void)
 {
  return ({ unsigned long long __ret; unsigned long __edi = __edi, __esi = __esi, __edx = __edx, __ecx = __ecx, __eax = __eax; ((void)pv_time_ops.sched_clock); if (sizeof(unsigned long long) > sizeof(unsigned long)) { asm volatile("" "771:\n\t" "call *%c[paravirt_opptr];" "\n" "772:\n" ".pushsection .parainstructions,\"a\"\n" " " ".balign 8" " " "\n" " " ".quad" " " " 771b\n" "  .byte " "%c[paravirt_typenum]" "\n" "  .byte 772b-771b\n" "  .short " "%c[paravirt_clobber]" "\n" ".popsection\n" "" : "=D" (__edi), "=S" (__esi), "=d" (__edx), "=c" (__ecx), "=a" (__eax) : [paravirt_typenum] "i" ((__builtin_offsetof(struct paravirt_patch_template,pv_time_ops.sched_clock) / sizeof(void *))), [paravirt_opptr] "i" (&(pv_time_ops.sched_clock)), [paravirt_clobber] "i" (((1 << 9) - 1)) : "memory", "cc" , "r8", "r9", "r10", "r11"); __ret = (unsigned long long)((((u64)__edx) << 32) | __eax); } else { asm volatile("" "771:\n\t" "call *%c[paravirt_opptr];" "\n" "772:\n" ".pushsection .parainstructions,\"a\"\n" " " ".balign 8" " " "\n" " " ".quad" " " " 771b\n" "  .byte " "%c[paravirt_typenum]" "\n" "  .byte 772b-771b\n" "  .short " "%c[paravirt_clobber]" "\n" ".popsection\n" "" : "=D" (__edi), "=S" (__esi), "=d" (__edx), "=c" (__ecx), "=a" (__eax) : [paravirt_typenum] "i" ((__builtin_offsetof(struct paravirt_patch_template,pv_time_ops.sched_clock) / sizeof(void *))), [paravirt_opptr] "i" (&(pv_time_ops.sched_clock)), [paravirt_clobber] "i" (((1 << 9) - 1)) : "memory", "cc" , "r8", "r9", "r10", "r11"); __ret = (unsigned long long)__eax; } __ret; });
@@ -3843,12 +3843,12 @@ static inline __attribute__((always_inline)) unsigned long long paravirt_read_pm
 {
  return ({ u64 __ret; unsigned long __edi = __edi, __esi = __esi, __edx = __edx, __ecx = __ecx, __eax = __eax; ((void)pv_cpu_ops.read_pmc); if (sizeof(u64) > sizeof(unsigned long)) { asm volatile("" "771:\n\t" "call *%c[paravirt_opptr];" "\n" "772:\n" ".pushsection .parainstructions,\"a\"\n" " " ".balign 8" " " "\n" " " ".quad" " " " 771b\n" "  .byte " "%c[paravirt_typenum]" "\n" "  .byte 772b-771b\n" "  .short " "%c[paravirt_clobber]" "\n" ".popsection\n" "" : "=D" (__edi), "=S" (__esi), "=d" (__edx), "=c" (__ecx), "=a" (__eax) : [paravirt_typenum] "i" ((__builtin_offsetof(struct paravirt_patch_template,pv_cpu_ops.read_pmc) / sizeof(void *))), [paravirt_opptr] "i" (&(pv_cpu_ops.read_pmc)), [paravirt_clobber] "i" (((1 << 9) - 1)), "D" ((unsigned long)(counter)) : "memory", "cc" , "r8", "r9", "r10", "r11"); __ret = (u64)((((u64)__edx) << 32) | __eax); } else { asm volatile("" "771:\n\t" "call *%c[paravirt_opptr];" "\n" "772:\n" ".pushsection .parainstructions,\"a\"\n" " " ".balign 8" " " "\n" " " ".quad" " " " 771b\n" "  .byte " "%c[paravirt_typenum]" "\n" "  .byte 772b-771b\n" "  .short " "%c[paravirt_clobber]" "\n" ".popsection\n" "" : "=D" (__edi), "=S" (__esi), "=d" (__edx), "=c" (__ecx), "=a" (__eax) : [paravirt_typenum] "i" ((__builtin_offsetof(struct paravirt_patch_template,pv_cpu_ops.read_pmc) / sizeof(void *))), [paravirt_opptr] "i" (&(pv_cpu_ops.read_pmc)), [paravirt_clobber] "i" (((1 << 9) - 1)), "D" ((unsigned long)(counter)) : "memory", "cc" , "r8", "r9", "r10", "r11"); __ret = (u64)__eax; } __ret; });
 }
-# 245 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/paravirt.h"
+//# 245 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/paravirt.h"
 static inline __attribute__((always_inline)) unsigned long long paravirt_rdtscp(unsigned int *aux)
 {
  return ({ u64 __ret; unsigned long __edi = __edi, __esi = __esi, __edx = __edx, __ecx = __ecx, __eax = __eax; ((void)pv_cpu_ops.read_tscp); if (sizeof(u64) > sizeof(unsigned long)) { asm volatile("" "771:\n\t" "call *%c[paravirt_opptr];" "\n" "772:\n" ".pushsection .parainstructions,\"a\"\n" " " ".balign 8" " " "\n" " " ".quad" " " " 771b\n" "  .byte " "%c[paravirt_typenum]" "\n" "  .byte 772b-771b\n" "  .short " "%c[paravirt_clobber]" "\n" ".popsection\n" "" : "=D" (__edi), "=S" (__esi), "=d" (__edx), "=c" (__ecx), "=a" (__eax) : [paravirt_typenum] "i" ((__builtin_offsetof(struct paravirt_patch_template,pv_cpu_ops.read_tscp) / sizeof(void *))), [paravirt_opptr] "i" (&(pv_cpu_ops.read_tscp)), [paravirt_clobber] "i" (((1 << 9) - 1)), "D" ((unsigned long)(aux)) : "memory", "cc" , "r8", "r9", "r10", "r11"); __ret = (u64)((((u64)__edx) << 32) | __eax); } else { asm volatile("" "771:\n\t" "call *%c[paravirt_opptr];" "\n" "772:\n" ".pushsection .parainstructions,\"a\"\n" " " ".balign 8" " " "\n" " " ".quad" " " " 771b\n" "  .byte " "%c[paravirt_typenum]" "\n" "  .byte 772b-771b\n" "  .short " "%c[paravirt_clobber]" "\n" ".popsection\n" "" : "=D" (__edi), "=S" (__esi), "=d" (__edx), "=c" (__ecx), "=a" (__eax) : [paravirt_typenum] "i" ((__builtin_offsetof(struct paravirt_patch_template,pv_cpu_ops.read_tscp) / sizeof(void *))), [paravirt_opptr] "i" (&(pv_cpu_ops.read_tscp)), [paravirt_clobber] "i" (((1 << 9) - 1)), "D" ((unsigned long)(aux)) : "memory", "cc" , "r8", "r9", "r10", "r11"); __ret = (u64)__eax; } __ret; });
 }
-# 266 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/paravirt.h"
+//# 266 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/paravirt.h"
 static inline __attribute__((always_inline)) void paravirt_alloc_ldt(struct desc_struct *ldt, unsigned entries)
 {
  ({ unsigned long __edi = __edi, __esi = __esi, __edx = __edx, __ecx = __ecx, __eax = __eax; ((void)pv_cpu_ops.alloc_ldt); asm volatile("" "771:\n\t" "call *%c[paravirt_opptr];" "\n" "772:\n" ".pushsection .parainstructions,\"a\"\n" " " ".balign 8" " " "\n" " " ".quad" " " " 771b\n" "  .byte " "%c[paravirt_typenum]" "\n" "  .byte 772b-771b\n" "  .short " "%c[paravirt_clobber]" "\n" ".popsection\n" "" : "=D" (__edi), "=S" (__esi), "=d" (__edx), "=c" (__ecx) : [paravirt_typenum] "i" ((__builtin_offsetof(struct paravirt_patch_template,pv_cpu_ops.alloc_ldt) / sizeof(void *))), [paravirt_opptr] "i" (&(pv_cpu_ops.alloc_ldt)), [paravirt_clobber] "i" (((1 << 9) - 1)), "D" ((unsigned long)(ldt)), "S" ((unsigned long)(entries)) : "memory", "cc" , "rax", "r8", "r9", "r10", "r11"); });
@@ -4020,7 +4020,7 @@ static inline __attribute__((always_inline)) void paravirt_release_pud(unsigned 
 {
  ({ unsigned long __edi = __edi, __esi = __esi, __edx = __edx, __ecx = __ecx, __eax = __eax; ((void)pv_mmu_ops.release_pud); asm volatile("" "771:\n\t" "call *%c[paravirt_opptr];" "\n" "772:\n" ".pushsection .parainstructions,\"a\"\n" " " ".balign 8" " " "\n" " " ".quad" " " " 771b\n" "  .byte " "%c[paravirt_typenum]" "\n" "  .byte 772b-771b\n" "  .short " "%c[paravirt_clobber]" "\n" ".popsection\n" "" : "=D" (__edi), "=S" (__esi), "=d" (__edx), "=c" (__ecx) : [paravirt_typenum] "i" ((__builtin_offsetof(struct paravirt_patch_template,pv_mmu_ops.release_pud) / sizeof(void *))), [paravirt_opptr] "i" (&(pv_mmu_ops.release_pud)), [paravirt_clobber] "i" (((1 << 9) - 1)), "D" ((unsigned long)(pfn)) : "memory", "cc" , "rax", "r8", "r9", "r10", "r11"); });
 }
-# 447 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/paravirt.h"
+//# 447 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/paravirt.h"
 static inline __attribute__((always_inline)) void pte_update(struct mm_struct *mm, unsigned long addr,
          pte_t *ptep)
 {
@@ -4234,7 +4234,7 @@ static inline __attribute__((always_inline)) void pud_clear(pud_t *pudp)
 {
  set_pud(pudp, __pud(0));
 }
-# 685 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/paravirt.h"
+//# 685 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/paravirt.h"
 static inline __attribute__((always_inline)) void set_pte_atomic(pte_t *ptep, pte_t pte)
 {
  set_pte(ptep, pte);
@@ -4281,7 +4281,7 @@ static inline __attribute__((always_inline)) void __set_fixmap(unsigned idx,
 {
  pv_mmu_ops.set_fixmap(idx, phys, flags);
 }
-# 841 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/paravirt.h"
+//# 841 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/paravirt.h"
 static inline __attribute__((always_inline)) unsigned long __raw_local_save_flags(void)
 {
  return ({ unsigned long __ret; unsigned long __edi = __edi, __esi = __esi, __edx = __edx, __ecx = __ecx, __eax = __eax; ((void)pv_irq_ops.save_fl.func); if (sizeof(unsigned long) > sizeof(unsigned long)) { asm volatile("" "771:\n\t" "call *%c[paravirt_opptr];" "\n" "772:\n" ".pushsection .parainstructions,\"a\"\n" " " ".balign 8" " " "\n" " " ".quad" " " " 771b\n" "  .byte " "%c[paravirt_typenum]" "\n" "  .byte 772b-771b\n" "  .short " "%c[paravirt_clobber]" "\n" ".popsection\n" "" : "=a" (__eax) : [paravirt_typenum] "i" ((__builtin_offsetof(struct paravirt_patch_template,pv_irq_ops.save_fl.func) / sizeof(void *))), [paravirt_opptr] "i" (&(pv_irq_ops.save_fl.func)), [paravirt_clobber] "i" (((1 << 0))) : "memory", "cc" ); __ret = (unsigned long)((((u64)__edx) << 32) | __eax); } else { asm volatile("" "771:\n\t" "call *%c[paravirt_opptr];" "\n" "772:\n" ".pushsection .parainstructions,\"a\"\n" " " ".balign 8" " " "\n" " " ".quad" " " " 771b\n" "  .byte " "%c[paravirt_typenum]" "\n" "  .byte 772b-771b\n" "  .short " "%c[paravirt_clobber]" "\n" ".popsection\n" "" : "=a" (__eax) : [paravirt_typenum] "i" ((__builtin_offsetof(struct paravirt_patch_template,pv_irq_ops.save_fl.func) / sizeof(void *))), [paravirt_opptr] "i" (&(pv_irq_ops.save_fl.func)), [paravirt_clobber] "i" (((1 << 0))) : "memory", "cc" ); __ret = (unsigned long)__eax; } __ret; });
@@ -4310,10 +4310,10 @@ static inline __attribute__((always_inline)) unsigned long __raw_local_irq_save(
  raw_local_irq_disable();
  return f;
 }
-# 886 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/paravirt.h"
+//# 886 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/paravirt.h"
 extern void default_banner(void);
-# 61 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/irqflags.h" 2
-# 162 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/irqflags.h"
+//# 61 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/irqflags.h" 2
+//# 162 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/irqflags.h"
 static inline __attribute__((always_inline)) int raw_irqs_disabled_flags(unsigned long flags)
 {
  return !(flags & 0x00000200);
@@ -4325,18 +4325,18 @@ static inline __attribute__((always_inline)) int raw_irqs_disabled(void)
 
  return raw_irqs_disabled_flags(flags);
 }
-# 58 "include/linux/irqflags.h" 2
-# 12 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/system.h" 2
-# 20 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/system.h"
+//# 58 "include/linux/irqflags.h" 2
+//# 12 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/system.h" 2
+//# 20 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/system.h"
 struct task_struct;
 struct task_struct *__switch_to(struct task_struct *prev,
     struct task_struct *next);
 struct tss_struct;
 void __switch_to_xtra(struct task_struct *prev_p, struct task_struct *next_p,
         struct tss_struct *tss);
-# 154 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/system.h"
+//# 154 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/system.h"
 extern void native_load_gs_index(unsigned);
-# 199 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/system.h"
+//# 199 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/system.h"
 static inline __attribute__((always_inline)) unsigned long get_limit(unsigned long segment)
 {
  unsigned long __limit;
@@ -4348,7 +4348,7 @@ static inline __attribute__((always_inline)) void native_clts(void)
 {
  asm volatile("clts");
 }
-# 218 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/system.h"
+//# 218 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/system.h"
 static unsigned long __force_order;
 
 static inline __attribute__((always_inline)) unsigned long native_read_cr0(void)
@@ -4397,7 +4397,7 @@ static inline __attribute__((always_inline)) unsigned long native_read_cr4(void)
 static inline __attribute__((always_inline)) unsigned long native_read_cr4_safe(void)
 {
  unsigned long val;
-# 274 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/system.h"
+//# 274 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/system.h"
  val = native_read_cr4();
 
  return val;
@@ -4426,7 +4426,7 @@ static inline __attribute__((always_inline)) void native_wbinvd(void)
 {
  asm volatile("wbinvd": : :"memory");
 }
-# 331 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/system.h"
+//# 331 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/system.h"
 static inline __attribute__((always_inline)) void clflush(volatile void *__p)
 {
  asm volatile("clflush %0" : "+m" (*(volatile char *)__p));
@@ -4445,17 +4445,17 @@ extern void free_init_pages(char *what, unsigned long begin, unsigned long end);
 void default_idle(void);
 
 void stop_this_cpu(void *dummy);
-# 452 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/system.h"
+//# 452 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/system.h"
 static inline __attribute__((always_inline)) void rdtsc_barrier(void)
 {
  asm volatile ("661:\n\t" ".byte 0x66,0x66,0x90\n" "\n662:\n" ".section .altinstructions,\"a\"\n" " " ".balign 8" " " "\n" " " ".quad" " " "661b\n" " " ".quad" " " "663f\n" "	 .byte " "(3*32+17)" "\n" "	 .byte 662b-661b\n" "	 .byte 664f-663f\n" ".previous\n" ".section .altinstr_replacement, \"ax\"\n" "663:\n\t" "mfence" "\n664:\n" ".previous" : : : "memory");
  asm volatile ("661:\n\t" ".byte 0x66,0x66,0x90\n" "\n662:\n" ".section .altinstructions,\"a\"\n" " " ".balign 8" " " "\n" " " ".quad" " " "661b\n" " " ".quad" " " "663f\n" "	 .byte " "(3*32+18)" "\n" "	 .byte 662b-661b\n" "	 .byte 664f-663f\n" ".previous\n" ".section .altinstr_replacement, \"ax\"\n" "663:\n\t" "lfence" "\n664:\n" ".previous" : : : "memory");
 }
-# 18 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/processor.h" 2
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/page.h" 1
-# 11 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/page.h"
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/page_64.h" 1
-# 12 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/page.h" 2
+//# 18 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/processor.h" 2
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/page.h" 1
+//# 11 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/page.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/page_64.h" 1
+//# 12 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/page.h" 2
 
 
 
@@ -4475,16 +4475,16 @@ static inline __attribute__((always_inline)) void copy_user_page(void *to, void 
 {
  copy_page(to, from);
 }
-# 53 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/page.h"
+//# 53 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/page.h"
 extern bool __virt_addr_valid(unsigned long kaddr);
 
 
 
 
-# 1 "include/asm-generic/memory_model.h" 1
-# 59 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/page.h" 2
-# 1 "include/asm-generic/getorder.h" 1
-# 9 "include/asm-generic/getorder.h"
+//# 1 "include/asm-generic/memory_model.h" 1
+//# 59 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/page.h" 2
+//# 1 "include/asm-generic/getorder.h" 1
+//# 9 "include/asm-generic/getorder.h"
 static inline __attribute__((always_inline)) __attribute__((__const__)) int get_order(unsigned long size)
 {
  int order;
@@ -4497,31 +4497,31 @@ static inline __attribute__((always_inline)) __attribute__((__const__)) int get_
  } while (size);
  return order;
 }
-# 60 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/page.h" 2
-# 19 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/processor.h" 2
+//# 60 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/page.h" 2
+//# 19 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/processor.h" 2
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/msr.h" 1
-
-
-
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/msr-index.h" 1
-# 5 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/msr.h" 2
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/msr.h" 1
 
 
 
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/msr-index.h" 1
+//# 5 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/msr.h" 2
 
-# 1 "include/linux/ioctl.h" 1
 
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/ioctl.h" 1
-# 1 "include/asm-generic/ioctl.h" 1
-# 73 "include/asm-generic/ioctl.h"
+//# 1 "include/linux/ioctl.h" 1
+
+
+
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/ioctl.h" 1
+//# 1 "include/asm-generic/ioctl.h" 1
+//# 73 "include/asm-generic/ioctl.h"
 extern unsigned int __invalid_size_argument_for_IOC;
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/ioctl.h" 2
-# 5 "include/linux/ioctl.h" 2
-# 10 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/msr.h" 2
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/ioctl.h" 2
+//# 5 "include/linux/ioctl.h" 2
+//# 10 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/msr.h" 2
 
 
 
@@ -4529,16 +4529,16 @@ extern unsigned int __invalid_size_argument_for_IOC;
 
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/errno.h" 1
-# 1 "include/asm-generic/errno.h" 1
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/errno.h" 1
+//# 1 "include/asm-generic/errno.h" 1
 
 
 
-# 1 "include/asm-generic/errno-base.h" 1
-# 5 "include/asm-generic/errno.h" 2
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/errno.h" 2
-# 18 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/msr.h" 2
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/cpumask.h" 1
+//# 1 "include/asm-generic/errno-base.h" 1
+//# 5 "include/asm-generic/errno.h" 2
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/errno.h" 2
+//# 18 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/msr.h" 2
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/cpumask.h" 1
 
 
 
@@ -4550,7 +4550,7 @@ extern cpumask_var_t cpu_initialized_mask;
 extern cpumask_var_t cpu_sibling_setup_mask;
 
 extern void setup_cpu_local_masks(void);
-# 19 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/msr.h" 2
+//# 19 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/msr.h" 2
 
 struct msr {
  union {
@@ -4569,7 +4569,7 @@ static inline __attribute__((always_inline)) unsigned long long native_read_tscp
        : "=a" (low), "=d" (high), "=c" (*aux));
  return low | ((u64)high << 32);
 }
-# 56 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/msr.h"
+//# 56 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/msr.h"
 static inline __attribute__((always_inline)) unsigned long long native_read_msr(unsigned int msr)
 {
  unsigned low, high;
@@ -4639,7 +4639,7 @@ static inline __attribute__((always_inline)) unsigned long long native_read_pmc(
  asm volatile("rdpmc" : "=a" (low), "=d" (high) : "c" (counter));
  return ((low) | ((u64)(high) << 32));
 }
-# 248 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/msr.h"
+//# 248 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/msr.h"
 int rdmsr_on_cpu(unsigned int cpu, u32 msr_no, u32 *l, u32 *h);
 int wrmsr_on_cpu(unsigned int cpu, u32 msr_no, u32 l, u32 h);
 void rdmsr_on_cpus(const cpumask_t *mask, u32 msr_no, struct msr *msrs);
@@ -4648,20 +4648,20 @@ int rdmsr_safe_on_cpu(unsigned int cpu, u32 msr_no, u32 *l, u32 *h);
 int wrmsr_safe_on_cpu(unsigned int cpu, u32 msr_no, u32 l, u32 h);
 int rdmsr_safe_regs_on_cpu(unsigned int cpu, u32 regs[8]);
 int wrmsr_safe_regs_on_cpu(unsigned int cpu, u32 regs[8]);
-# 22 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/processor.h" 2
+//# 22 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/processor.h" 2
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/ds.h" 1
-# 28 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/ds.h"
-# 1 "include/linux/err.h" 1
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/ds.h" 1
+//# 28 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/ds.h"
+//# 1 "include/linux/err.h" 1
 
 
 
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/errno.h" 1
-# 7 "include/linux/err.h" 2
-# 22 "include/linux/err.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/errno.h" 1
+//# 7 "include/linux/err.h" 2
+//# 22 "include/linux/err.h"
 static inline __attribute__((always_inline)) void *ERR_PTR(long error)
 {
  return (void *) error;
@@ -4676,29 +4676,29 @@ static inline __attribute__((always_inline)) long IS_ERR(const void *ptr)
 {
  return __builtin_expect(!!(((unsigned long)ptr) >= (unsigned long)-4095), 0);
 }
-# 44 "include/linux/err.h"
+//# 44 "include/linux/err.h"
 static inline __attribute__((always_inline)) void *ERR_CAST(const void *ptr)
 {
 
  return (void *) ptr;
 }
-# 29 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/ds.h" 2
-# 296 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/ds.h"
+//# 29 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/ds.h" 2
+//# 296 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/ds.h"
 struct cpuinfo_x86;
 static inline __attribute__((always_inline)) void __attribute__ ((__section__(".cpuinit.text"))) __attribute__((__cold__)) ds_init_intel(struct cpuinfo_x86 *ignored) {}
 static inline __attribute__((always_inline)) void ds_switch_to(struct task_struct *prev,
     struct task_struct *next) {}
-# 25 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/processor.h" 2
+//# 25 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/processor.h" 2
 
-# 1 "include/linux/personality.h" 1
-# 10 "include/linux/personality.h"
+//# 1 "include/linux/personality.h" 1
+//# 10 "include/linux/personality.h"
 struct exec_domain;
 struct pt_regs;
 
 extern int register_exec_domain(struct exec_domain *);
 extern int unregister_exec_domain(struct exec_domain *);
 extern int __set_personality(unsigned long);
-# 24 "include/linux/personality.h"
+//# 24 "include/linux/personality.h"
 enum {
  ADDR_NO_RANDOMIZE = 0x0040000,
  FDPIC_FUNCPTRS = 0x0080000,
@@ -4713,7 +4713,7 @@ enum {
  STICKY_TIMEOUTS = 0x4000000,
  ADDR_LIMIT_3GB = 0x8000000,
 };
-# 54 "include/linux/personality.h"
+//# 54 "include/linux/personality.h"
 enum {
  PER_LINUX = 0x0000,
  PER_LINUX_32BIT = 0x0000 | ADDR_LIMIT_32BIT,
@@ -4740,7 +4740,7 @@ enum {
  PER_HPUX = 0x0010,
  PER_MASK = 0x00ff,
 };
-# 89 "include/linux/personality.h"
+//# 89 "include/linux/personality.h"
 typedef void (*handler_t)(int, struct pt_regs *);
 
 struct exec_domain {
@@ -4757,22 +4757,22 @@ struct exec_domain {
  struct module *module;
  struct exec_domain *next;
 };
-# 27 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/processor.h" 2
+//# 27 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/processor.h" 2
 
-# 1 "include/linux/cache.h" 1
-# 29 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/processor.h" 2
+//# 1 "include/linux/cache.h" 1
+//# 29 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/processor.h" 2
 
-# 1 "include/linux/math64.h" 1
-
-
+//# 1 "include/linux/math64.h" 1
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/div64.h" 1
-# 57 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/div64.h"
-# 1 "include/asm-generic/div64.h" 1
-# 58 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/div64.h" 2
-# 6 "include/linux/math64.h" 2
-# 15 "include/linux/math64.h"
+
+
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/div64.h" 1
+//# 57 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/div64.h"
+//# 1 "include/asm-generic/div64.h" 1
+//# 58 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/div64.h" 2
+//# 6 "include/linux/math64.h" 2
+//# 15 "include/linux/math64.h"
 static inline __attribute__((always_inline)) u64 div_u64_rem(u64 dividend, u32 divisor, u32 *remainder)
 {
  *remainder = dividend % divisor;
@@ -4795,7 +4795,7 @@ static inline __attribute__((always_inline)) u64 div64_u64(u64 dividend, u64 div
 {
  return dividend / divisor;
 }
-# 66 "include/linux/math64.h"
+//# 66 "include/linux/math64.h"
 static inline __attribute__((always_inline)) u64 div_u64(u64 dividend, u32 divisor)
 {
  u32 remainder;
@@ -4834,7 +4834,7 @@ __iter_div_u64_rem(u64 dividend, u32 divisor, u64 *remainder)
 
  return ret;
 }
-# 31 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/processor.h" 2
+//# 31 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/processor.h" 2
 
 
 
@@ -4849,13 +4849,13 @@ static inline __attribute__((always_inline)) void *current_text_addr(void)
 
  return pc;
 }
-# 60 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/processor.h"
+//# 60 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/processor.h"
 struct cpuinfo_x86 {
  __u8 x86;
  __u8 x86_vendor;
  __u8 x86_model;
  __u8 x86_mask;
-# 78 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/processor.h"
+//# 78 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/processor.h"
  int x86_tlbsize;
 
  __u8 x86_virt_bits;
@@ -4895,7 +4895,7 @@ struct cpuinfo_x86 {
 
  unsigned int x86_hyper_vendor;
 } __attribute__((__aligned__((1 << (6)))));
-# 135 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/processor.h"
+//# 135 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/processor.h"
 extern struct cpuinfo_x86 boot_cpu_data;
 extern struct cpuinfo_x86 new_cpu_data;
 
@@ -4956,7 +4956,7 @@ static inline __attribute__((always_inline)) void load_cr3(pgd_t *pgdir)
 {
  write_cr3(__phys_addr((unsigned long)(pgdir)));
 }
-# 230 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/processor.h"
+//# 230 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/processor.h"
 struct x86_hw_tss {
  u32 reserved1;
  u64 sp0;
@@ -4970,7 +4970,7 @@ struct x86_hw_tss {
  u16 io_bitmap_base;
 
 } __attribute__((packed)) __attribute__((__aligned__((1 << (6)))));
-# 254 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/processor.h"
+//# 254 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/processor.h"
 struct tss_struct {
 
 
@@ -5122,7 +5122,7 @@ extern __attribute__((section(".data.percpu" ""))) __typeof__(char *) per_cpu__i
 extern __attribute__((section(".data.percpu" ""))) __typeof__(unsigned int) per_cpu__irq_count;
 extern unsigned long kernel_eflags;
 extern void ignore_sysret(void);
-# 421 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/processor.h"
+//# 421 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/processor.h"
 extern unsigned int xstate_size;
 extern void free_thread_xstate(struct task_struct *);
 extern struct kmem_cache *task_xstate_cachep;
@@ -5161,7 +5161,7 @@ struct thread_struct {
  unsigned long error_code;
 
  union thread_xstate *xstate;
-# 470 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/processor.h"
+//# 470 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/processor.h"
  unsigned long *io_bitmap_ptr;
  unsigned long iopl;
 
@@ -5232,7 +5232,7 @@ static inline __attribute__((always_inline)) void native_set_debugreg(int regno,
 
 static inline __attribute__((always_inline)) void native_set_iopl_mask(unsigned mask)
 {
-# 552 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/processor.h"
+//# 552 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/processor.h"
 }
 
 static inline __attribute__((always_inline)) void
@@ -5254,7 +5254,7 @@ static inline __attribute__((always_inline)) void native_swapgs(void)
  asm volatile("swapgs" ::: "memory");
 
 }
-# 603 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/processor.h"
+//# 603 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/processor.h"
 extern unsigned long mmu_cr4_features;
 
 static inline __attribute__((always_inline)) void set_in_cr4(unsigned long mask)
@@ -5373,7 +5373,7 @@ static inline __attribute__((always_inline)) void cpu_relax(void)
 static inline __attribute__((always_inline)) void sync_core(void)
 {
  int tmp;
-# 732 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/processor.h"
+//# 732 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/processor.h"
   asm volatile("cpuid" : "=a" (tmp) : "0" (1)
         : "ebx", "ecx", "edx", "memory");
 }
@@ -5409,7 +5409,7 @@ extern void init_c1e_mask(void);
 extern unsigned long boot_option_idle_override;
 extern unsigned long idle_halt;
 extern unsigned long idle_nomwait;
-# 780 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/processor.h"
+//# 780 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/processor.h"
 static inline __attribute__((always_inline)) void wbinvd_halt(void)
 {
  asm volatile("mfence":::"memory");
@@ -5494,7 +5494,7 @@ extern int bootloader_type;
 extern int bootloader_version;
 
 extern char ignore_fpu_irq;
-# 882 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/processor.h"
+//# 882 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/processor.h"
 static inline __attribute__((always_inline)) void prefetch(const void *x)
 {
  asm volatile ("661:\n\t" "prefetcht0 (%1)" "\n662:\n" ".section .altinstructions,\"a\"\n" " " ".balign 8" " " "\n" " " ".quad" " " "661b\n" " " ".quad" " " "663f\n" "	 .byte " "(0*32+25)" "\n" "	 .byte 662b-661b\n" "	 .byte 664f-663f\n" ".previous\n" ".section .altinstr_replacement, \"ax\"\n" "663:\n\t" "prefetchnta (%1)" "\n664:\n" ".previous" : : "i" (0), "r" (x));
@@ -5520,13 +5520,13 @@ static inline __attribute__((always_inline)) void spin_lock_prefetch(const void 
 {
  prefetchw(x);
 }
-# 1003 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/processor.h"
+//# 1003 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/processor.h"
 extern unsigned long KSTK_ESP(struct task_struct *task);
 
 
 extern void start_thread(struct pt_regs *regs, unsigned long new_ip,
             unsigned long new_sp);
-# 1021 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/processor.h"
+//# 1021 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/processor.h"
 extern int get_tsc_mode(unsigned long adr);
 extern int set_tsc_mode(unsigned int val);
 
@@ -5560,8 +5560,8 @@ unsigned long calc_aperfmperf_ratio(struct aperfmperf *old,
 
  return ratio;
 }
-# 15 "include/linux/prefetch.h" 2
-# 53 "include/linux/prefetch.h"
+//# 15 "include/linux/prefetch.h" 2
+//# 53 "include/linux/prefetch.h"
 static inline __attribute__((always_inline)) void prefetch_range(void *addr, size_t len)
 {
 
@@ -5572,8 +5572,8 @@ static inline __attribute__((always_inline)) void prefetch_range(void *addr, siz
 
 
 }
-# 7 "include/linux/list.h" 2
-# 19 "include/linux/list.h"
+//# 7 "include/linux/list.h" 2
+//# 19 "include/linux/list.h"
 struct list_head {
  struct list_head *next, *prev;
 };
@@ -5588,7 +5588,7 @@ static inline __attribute__((always_inline)) void INIT_LIST_HEAD(struct list_hea
  list->next = list;
  list->prev = list;
 }
-# 41 "include/linux/list.h"
+//# 41 "include/linux/list.h"
 static inline __attribute__((always_inline)) void __list_add(struct list_head *new,
          struct list_head *prev,
          struct list_head *next)
@@ -5598,30 +5598,30 @@ static inline __attribute__((always_inline)) void __list_add(struct list_head *n
  new->prev = prev;
  prev->next = new;
 }
-# 64 "include/linux/list.h"
+//# 64 "include/linux/list.h"
 static inline __attribute__((always_inline)) void list_add(struct list_head *new, struct list_head *head)
 {
  __list_add(new, head, head->next);
 }
-# 78 "include/linux/list.h"
+//# 78 "include/linux/list.h"
 static inline __attribute__((always_inline)) void list_add_tail(struct list_head *new, struct list_head *head)
 {
  __list_add(new, head->prev, head);
 }
-# 90 "include/linux/list.h"
+//# 90 "include/linux/list.h"
 static inline __attribute__((always_inline)) void __list_del(struct list_head * prev, struct list_head * next)
 {
  next->prev = prev;
  prev->next = next;
 }
-# 103 "include/linux/list.h"
+//# 103 "include/linux/list.h"
 static inline __attribute__((always_inline)) void list_del(struct list_head *entry)
 {
  __list_del(entry->prev, entry->next);
  entry->next = ((void *) 0x00100100);
  entry->prev = ((void *) 0x00200200);
 }
-# 120 "include/linux/list.h"
+//# 120 "include/linux/list.h"
 static inline __attribute__((always_inline)) void list_replace(struct list_head *old,
     struct list_head *new)
 {
@@ -5690,7 +5690,7 @@ static inline __attribute__((always_inline)) int list_empty(const struct list_he
 {
  return head->next == head;
 }
-# 202 "include/linux/list.h"
+//# 202 "include/linux/list.h"
 static inline __attribute__((always_inline)) int list_empty_careful(const struct list_head *head)
 {
  struct list_head *next = head->next;
@@ -5717,7 +5717,7 @@ static inline __attribute__((always_inline)) void __list_cut_position(struct lis
  head->next = new_first;
  new_first->prev = head;
 }
-# 243 "include/linux/list.h"
+//# 243 "include/linux/list.h"
 static inline __attribute__((always_inline)) void list_cut_position(struct list_head *list,
   struct list_head *head, struct list_head *entry)
 {
@@ -5769,7 +5769,7 @@ static inline __attribute__((always_inline)) void list_splice_tail(struct list_h
  if (!list_empty(list))
   __list_splice(list, head->prev, head);
 }
-# 302 "include/linux/list.h"
+//# 302 "include/linux/list.h"
 static inline __attribute__((always_inline)) void list_splice_init(struct list_head *list,
         struct list_head *head)
 {
@@ -5778,7 +5778,7 @@ static inline __attribute__((always_inline)) void list_splice_init(struct list_h
   INIT_LIST_HEAD(list);
  }
 }
-# 319 "include/linux/list.h"
+//# 319 "include/linux/list.h"
 static inline __attribute__((always_inline)) void list_splice_tail_init(struct list_head *list,
       struct list_head *head)
 {
@@ -5787,7 +5787,7 @@ static inline __attribute__((always_inline)) void list_splice_tail_init(struct l
   INIT_LIST_HEAD(list);
  }
 }
-# 540 "include/linux/list.h"
+//# 540 "include/linux/list.h"
 struct hlist_head {
  struct hlist_node *first;
 };
@@ -5882,15 +5882,15 @@ static inline __attribute__((always_inline)) void hlist_move_list(struct hlist_h
   new->first->pprev = &new->first;
  old->first = ((void *)0);
 }
-# 10 "include/linux/module.h" 2
-# 1 "include/linux/stat.h" 1
+//# 10 "include/linux/module.h" 2
+//# 1 "include/linux/stat.h" 1
 
 
 
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/stat.h" 1
-# 68 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/stat.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/stat.h" 1
+//# 68 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/stat.h"
 struct stat {
  unsigned long st_dev;
  unsigned long st_ino;
@@ -5936,9 +5936,9 @@ struct __old_kernel_stat {
  unsigned int st_ctime;
 
 };
-# 7 "include/linux/stat.h" 2
-# 60 "include/linux/stat.h"
-# 1 "include/linux/time.h" 1
+//# 7 "include/linux/stat.h" 2
+//# 60 "include/linux/stat.h"
+//# 1 "include/linux/time.h" 1
 
 
 
@@ -5946,14 +5946,14 @@ struct __old_kernel_stat {
 
 
 
-# 1 "include/linux/seqlock.h" 1
-# 29 "include/linux/seqlock.h"
-# 1 "include/linux/spinlock.h" 1
-# 50 "include/linux/spinlock.h"
-# 1 "include/linux/preempt.h" 1
-# 9 "include/linux/preempt.h"
-# 1 "include/linux/thread_info.h" 1
-# 12 "include/linux/thread_info.h"
+//# 1 "include/linux/seqlock.h" 1
+//# 29 "include/linux/seqlock.h"
+//# 1 "include/linux/spinlock.h" 1
+//# 50 "include/linux/spinlock.h"
+//# 1 "include/linux/preempt.h" 1
+//# 9 "include/linux/preempt.h"
+//# 1 "include/linux/thread_info.h" 1
+//# 12 "include/linux/thread_info.h"
 struct timespec;
 struct compat_timespec;
 
@@ -5998,50 +5998,50 @@ struct restart_block {
 extern long do_no_restart_syscall(struct restart_block *parm);
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/thread_info.h" 1
-# 20 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/thread_info.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/thread_info.h" 1
+//# 20 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/thread_info.h"
 struct task_struct;
 struct exec_domain;
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/ftrace.h" 1
-# 24 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/thread_info.h" 2
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic.h" 1
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/ftrace.h" 1
+//# 24 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/thread_info.h" 2
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic.h" 1
 
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic_64.h" 1
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic_64.h" 1
 
 
 
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/cmpxchg.h" 1
-# 7 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic_64.h" 2
-# 21 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic_64.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/cmpxchg.h" 1
+//# 7 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic_64.h" 2
+//# 21 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic_64.h"
 static inline __attribute__((always_inline)) int atomic_read(const atomic_t *v)
 {
  return v->counter;
 }
-# 33 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic_64.h"
+//# 33 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic_64.h"
 static inline __attribute__((always_inline)) void atomic_set(atomic_t *v, int i)
 {
  v->counter = i;
 }
-# 45 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic_64.h"
+//# 45 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic_64.h"
 static inline __attribute__((always_inline)) void atomic_add(int i, atomic_t *v)
 {
  asm volatile(".section .smp_locks,\"a\"\n" " " ".balign 8" " " "\n" " " ".quad" " " "661f\n" ".previous\n" "661:\n\tlock; " "addl %1,%0"
        : "=m" (v->counter)
        : "ir" (i), "m" (v->counter));
 }
-# 59 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic_64.h"
+//# 59 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic_64.h"
 static inline __attribute__((always_inline)) void atomic_sub(int i, atomic_t *v)
 {
  asm volatile(".section .smp_locks,\"a\"\n" " " ".balign 8" " " "\n" " " ".quad" " " "661f\n" ".previous\n" "661:\n\tlock; " "subl %1,%0"
        : "=m" (v->counter)
        : "ir" (i), "m" (v->counter));
 }
-# 75 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic_64.h"
+//# 75 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic_64.h"
 static inline __attribute__((always_inline)) int atomic_sub_and_test(int i, atomic_t *v)
 {
  unsigned char c;
@@ -6077,7 +6077,7 @@ static inline __attribute__((always_inline)) void atomic_dec(atomic_t *v)
        : "=m" (v->counter)
        : "m" (v->counter));
 }
-# 119 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic_64.h"
+//# 119 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic_64.h"
 static inline __attribute__((always_inline)) int atomic_dec_and_test(atomic_t *v)
 {
  unsigned char c;
@@ -6087,7 +6087,7 @@ static inline __attribute__((always_inline)) int atomic_dec_and_test(atomic_t *v
        : "m" (v->counter) : "memory");
  return c != 0;
 }
-# 137 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic_64.h"
+//# 137 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic_64.h"
 static inline __attribute__((always_inline)) int atomic_inc_and_test(atomic_t *v)
 {
  unsigned char c;
@@ -6097,7 +6097,7 @@ static inline __attribute__((always_inline)) int atomic_inc_and_test(atomic_t *v
        : "m" (v->counter) : "memory");
  return c != 0;
 }
-# 156 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic_64.h"
+//# 156 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic_64.h"
 static inline __attribute__((always_inline)) int atomic_add_negative(int i, atomic_t *v)
 {
  unsigned char c;
@@ -6107,7 +6107,7 @@ static inline __attribute__((always_inline)) int atomic_add_negative(int i, atom
        : "ir" (i), "m" (v->counter) : "memory");
  return c;
 }
-# 173 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic_64.h"
+//# 173 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic_64.h"
 static inline __attribute__((always_inline)) int atomic_add_return(int i, atomic_t *v)
 {
  int __i = i;
@@ -6121,31 +6121,31 @@ static inline __attribute__((always_inline)) int atomic_sub_return(int i, atomic
 {
  return atomic_add_return(-i, v);
 }
-# 201 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic_64.h"
+//# 201 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic_64.h"
 static inline __attribute__((always_inline)) long atomic64_read(const atomic64_t *v)
 {
  return v->counter;
 }
-# 213 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic_64.h"
+//# 213 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic_64.h"
 static inline __attribute__((always_inline)) void atomic64_set(atomic64_t *v, long i)
 {
  v->counter = i;
 }
-# 225 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic_64.h"
+//# 225 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic_64.h"
 static inline __attribute__((always_inline)) void atomic64_add(long i, atomic64_t *v)
 {
  asm volatile(".section .smp_locks,\"a\"\n" " " ".balign 8" " " "\n" " " ".quad" " " "661f\n" ".previous\n" "661:\n\tlock; " "addq %1,%0"
        : "=m" (v->counter)
        : "er" (i), "m" (v->counter));
 }
-# 239 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic_64.h"
+//# 239 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic_64.h"
 static inline __attribute__((always_inline)) void atomic64_sub(long i, atomic64_t *v)
 {
  asm volatile(".section .smp_locks,\"a\"\n" " " ".balign 8" " " "\n" " " ".quad" " " "661f\n" ".previous\n" "661:\n\tlock; " "subq %1,%0"
        : "=m" (v->counter)
        : "er" (i), "m" (v->counter));
 }
-# 255 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic_64.h"
+//# 255 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic_64.h"
 static inline __attribute__((always_inline)) int atomic64_sub_and_test(long i, atomic64_t *v)
 {
  unsigned char c;
@@ -6181,7 +6181,7 @@ static inline __attribute__((always_inline)) void atomic64_dec(atomic64_t *v)
        : "=m" (v->counter)
        : "m" (v->counter));
 }
-# 299 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic_64.h"
+//# 299 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic_64.h"
 static inline __attribute__((always_inline)) int atomic64_dec_and_test(atomic64_t *v)
 {
  unsigned char c;
@@ -6191,7 +6191,7 @@ static inline __attribute__((always_inline)) int atomic64_dec_and_test(atomic64_
        : "m" (v->counter) : "memory");
  return c != 0;
 }
-# 317 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic_64.h"
+//# 317 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic_64.h"
 static inline __attribute__((always_inline)) int atomic64_inc_and_test(atomic64_t *v)
 {
  unsigned char c;
@@ -6201,7 +6201,7 @@ static inline __attribute__((always_inline)) int atomic64_inc_and_test(atomic64_
        : "m" (v->counter) : "memory");
  return c != 0;
 }
-# 336 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic_64.h"
+//# 336 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic_64.h"
 static inline __attribute__((always_inline)) int atomic64_add_negative(long i, atomic64_t *v)
 {
  unsigned char c;
@@ -6211,7 +6211,7 @@ static inline __attribute__((always_inline)) int atomic64_add_negative(long i, a
        : "er" (i), "m" (v->counter) : "memory");
  return c;
 }
-# 353 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic_64.h"
+//# 353 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic_64.h"
 static inline __attribute__((always_inline)) long atomic64_add_return(long i, atomic64_t *v)
 {
  long __i = i;
@@ -6248,7 +6248,7 @@ static inline __attribute__((always_inline)) long atomic_xchg(atomic_t *v, int n
 {
  return ((__typeof__(*(&v->counter)))__xchg((unsigned long)(new), (&v->counter), sizeof(*(&v->counter))));
 }
-# 399 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic_64.h"
+//# 399 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic_64.h"
 static inline __attribute__((always_inline)) int atomic_add_unless(atomic_t *v, int a, int u)
 {
  int c, old;
@@ -6263,7 +6263,7 @@ static inline __attribute__((always_inline)) int atomic_add_unless(atomic_t *v, 
  }
  return c != (u);
 }
-# 425 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic_64.h"
+//# 425 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic_64.h"
 static inline __attribute__((always_inline)) int atomic64_add_unless(atomic64_t *v, long a, long u)
 {
  long c, old;
@@ -6278,20 +6278,20 @@ static inline __attribute__((always_inline)) int atomic64_add_unless(atomic64_t 
  }
  return c != (u);
 }
-# 447 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic_64.h"
+//# 447 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic_64.h"
 static inline __attribute__((always_inline)) short int atomic_inc_short(short int *v)
 {
  asm(".section .smp_locks,\"a\"\n" " " ".balign 8" " " "\n" " " ".quad" " " "661f\n" ".previous\n" "661:\n\tlock; " "addw $1, %0" : "+m" (*v));
  return *v;
 }
-# 461 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic_64.h"
+//# 461 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic_64.h"
 static inline __attribute__((always_inline)) void atomic_or_long(unsigned long *v1, unsigned long v2)
 {
  asm(".section .smp_locks,\"a\"\n" " " ".balign 8" " " "\n" " " ".quad" " " "661f\n" ".previous\n" "661:\n\tlock; " "orq %1, %0" : "+m" (*v1) : "r" (v2));
 }
-# 484 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic_64.h"
-# 1 "include/asm-generic/atomic-long.h" 1
-# 23 "include/asm-generic/atomic-long.h"
+//# 484 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic_64.h"
+//# 1 "include/asm-generic/atomic-long.h" 1
+//# 23 "include/asm-generic/atomic-long.h"
 typedef atomic64_t atomic_long_t;
 
 
@@ -6400,9 +6400,9 @@ static inline __attribute__((always_inline)) long atomic_long_add_unless(atomic_
 
  return (long)atomic64_add_unless(v, a, u);
 }
-# 485 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic_64.h" 2
-# 5 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic.h" 2
-# 25 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/thread_info.h" 2
+//# 485 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic_64.h" 2
+//# 5 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic.h" 2
+//# 25 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/thread_info.h" 2
 
 struct thread_info {
  struct task_struct *task;
@@ -6423,7 +6423,7 @@ struct thread_info {
 
  int uaccess_err;
 };
-# 212 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/thread_info.h"
+//# 212 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/thread_info.h"
 extern __attribute__((section(".data.percpu" ""))) __typeof__(unsigned long) per_cpu__kernel_stack;
 
 static inline __attribute__((always_inline)) struct thread_info *current_thread_info(void)
@@ -6433,7 +6433,7 @@ static inline __attribute__((always_inline)) struct thread_info *current_thread_
         (5*8) - (((1UL) << 12) << 1));
  return ti;
 }
-# 252 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/thread_info.h"
+//# 252 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/thread_info.h"
 static inline __attribute__((always_inline)) void set_restore_sigmask(void)
 {
  struct thread_info *ti = current_thread_info();
@@ -6446,8 +6446,8 @@ static inline __attribute__((always_inline)) void set_restore_sigmask(void)
 extern void arch_task_cache_init(void);
 extern void free_thread_info(struct thread_info *ti);
 extern int arch_dup_task_struct(struct task_struct *dst, struct task_struct *src);
-# 57 "include/linux/thread_info.h" 2
-# 65 "include/linux/thread_info.h"
+//# 57 "include/linux/thread_info.h" 2
+//# 65 "include/linux/thread_info.h"
 static inline __attribute__((always_inline)) void set_ti_thread_flag(struct thread_info *ti, int flag)
 {
  set_bit(flag, (unsigned long *)&ti->flags);
@@ -6472,14 +6472,14 @@ static inline __attribute__((always_inline)) int test_ti_thread_flag(struct thre
 {
  return (__builtin_constant_p((flag)) ? constant_test_bit((flag), ((unsigned long *)&ti->flags)) : variable_test_bit((flag), ((unsigned long *)&ti->flags)));
 }
-# 10 "include/linux/preempt.h" 2
-# 51 "include/linux/spinlock.h" 2
+//# 10 "include/linux/preempt.h" 2
+//# 51 "include/linux/spinlock.h" 2
 
 
 
 
 
-# 1 "include/linux/bottom_half.h" 1
+//# 1 "include/linux/bottom_half.h" 1
 
 
 
@@ -6487,11 +6487,11 @@ extern void local_bh_disable(void);
 extern void _local_bh_enable(void);
 extern void local_bh_enable(void);
 extern void local_bh_enable_ip(unsigned long ip);
-# 57 "include/linux/spinlock.h" 2
-# 80 "include/linux/spinlock.h"
-# 1 "include/linux/spinlock_types.h" 1
-# 13 "include/linux/spinlock_types.h"
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/spinlock_types.h" 1
+//# 57 "include/linux/spinlock.h" 2
+//# 80 "include/linux/spinlock.h"
+//# 1 "include/linux/spinlock_types.h" 1
+//# 13 "include/linux/spinlock_types.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/spinlock_types.h" 1
 
 
 
@@ -6508,16 +6508,16 @@ typedef struct raw_spinlock {
 typedef struct {
  unsigned int lock;
 } raw_rwlock_t;
-# 14 "include/linux/spinlock_types.h" 2
+//# 14 "include/linux/spinlock_types.h" 2
 
 
 
 
-# 1 "include/linux/lockdep.h" 1
-# 12 "include/linux/lockdep.h"
+//# 1 "include/linux/lockdep.h" 1
+//# 12 "include/linux/lockdep.h"
 struct task_struct;
 struct lockdep_map;
-# 328 "include/linux/lockdep.h"
+//# 328 "include/linux/lockdep.h"
 static inline __attribute__((always_inline)) void lockdep_off(void)
 {
 }
@@ -6525,11 +6525,11 @@ static inline __attribute__((always_inline)) void lockdep_off(void)
 static inline __attribute__((always_inline)) void lockdep_on(void)
 {
 }
-# 366 "include/linux/lockdep.h"
+//# 366 "include/linux/lockdep.h"
 struct lock_class_key { };
-# 416 "include/linux/lockdep.h"
+//# 416 "include/linux/lockdep.h"
 extern void early_init_irq_lock_class(void);
-# 428 "include/linux/lockdep.h"
+//# 428 "include/linux/lockdep.h"
 static inline __attribute__((always_inline)) void early_boot_irqs_off(void)
 {
 }
@@ -6539,20 +6539,20 @@ static inline __attribute__((always_inline)) void early_boot_irqs_on(void)
 static inline __attribute__((always_inline)) void print_irqtrace_events(struct task_struct *curr)
 {
 }
-# 19 "include/linux/spinlock_types.h" 2
+//# 19 "include/linux/spinlock_types.h" 2
 
 typedef struct {
  raw_spinlock_t raw_lock;
-# 32 "include/linux/spinlock_types.h"
+//# 32 "include/linux/spinlock_types.h"
 } spinlock_t;
 
 
 
 typedef struct {
  raw_rwlock_t raw_lock;
-# 48 "include/linux/spinlock_types.h"
+//# 48 "include/linux/spinlock_types.h"
 } rwlock_t;
-# 81 "include/linux/spinlock.h" 2
+//# 81 "include/linux/spinlock.h" 2
 
 extern int __attribute__((section(".spinlock.text"))) generic__raw_read_trylock(raw_rwlock_t *lock);
 
@@ -6560,15 +6560,15 @@ extern int __attribute__((section(".spinlock.text"))) generic__raw_read_trylock(
 
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/spinlock.h" 1
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/spinlock.h" 1
 
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic.h" 1
-# 5 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/spinlock.h" 2
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/rwlock.h" 1
-# 6 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/spinlock.h" 2
-# 61 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/spinlock.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic.h" 1
+//# 5 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/spinlock.h" 2
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/rwlock.h" 1
+//# 6 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/spinlock.h" 2
+//# 61 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/spinlock.h"
 static inline __attribute__((always_inline)) __attribute__((always_inline)) void __ticket_spin_lock(raw_spinlock_t *lock)
 {
  short inc = 0x0100;
@@ -6614,7 +6614,7 @@ static inline __attribute__((always_inline)) __attribute__((always_inline)) void
        :
        : "memory", "cc");
 }
-# 161 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/spinlock.h"
+//# 161 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/spinlock.h"
 static inline __attribute__((always_inline)) int __ticket_spin_is_locked(raw_spinlock_t *lock)
 {
  int tmp = (*(volatile typeof(lock->slock) *)&(lock->slock));
@@ -6670,7 +6670,7 @@ static inline __attribute__((always_inline)) void __raw_spin_unlock_wait(raw_spi
  while (__raw_spin_is_locked(lock))
   cpu_relax();
 }
-# 235 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/spinlock.h"
+//# 235 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/spinlock.h"
 static inline __attribute__((always_inline)) int __raw_read_can_lock(raw_rwlock_t *lock)
 {
  return (int)(lock)->lock > 0;
@@ -6733,17 +6733,17 @@ static inline __attribute__((always_inline)) void __raw_write_unlock(raw_rwlock_
  asm volatile(".section .smp_locks,\"a\"\n" " " ".balign 8" " " "\n" " " ".quad" " " "661f\n" ".previous\n" "661:\n\tlock; " "addl %1, %0"
        : "+m" (rw->lock) : "i" (0x01000000) : "memory");
 }
-# 306 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/spinlock.h"
+//# 306 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/spinlock.h"
 static inline __attribute__((always_inline)) void smp_mb__after_lock(void) { }
-# 89 "include/linux/spinlock.h" 2
-# 321 "include/linux/spinlock.h"
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic.h" 1
-# 322 "include/linux/spinlock.h" 2
-# 330 "include/linux/spinlock.h"
+//# 89 "include/linux/spinlock.h" 2
+//# 321 "include/linux/spinlock.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic.h" 1
+//# 322 "include/linux/spinlock.h" 2
+//# 330 "include/linux/spinlock.h"
 extern int _atomic_dec_and_lock(atomic_t *atomic, spinlock_t *lock);
-# 344 "include/linux/spinlock.h"
-# 1 "include/linux/spinlock_api_smp.h" 1
-# 18 "include/linux/spinlock_api_smp.h"
+//# 344 "include/linux/spinlock.h"
+//# 1 "include/linux/spinlock_api_smp.h" 1
+//# 18 "include/linux/spinlock_api_smp.h"
 int in_lock_functions(unsigned long addr);
 
 
@@ -6788,7 +6788,7 @@ void __attribute__((section(".spinlock.text"))) _read_unlock_irqrestore(rwlock_t
        ;
 void __attribute__((section(".spinlock.text"))) _write_unlock_irqrestore(rwlock_t *lock, unsigned long flags)
        ;
-# 194 "include/linux/spinlock_api_smp.h"
+//# 194 "include/linux/spinlock_api_smp.h"
 static inline __attribute__((always_inline)) int __spin_trylock(spinlock_t *lock)
 {
  do { } while (0);
@@ -6821,7 +6821,7 @@ static inline __attribute__((always_inline)) int __write_trylock(rwlock_t *lock)
  do { } while (0);
  return 0;
 }
-# 234 "include/linux/spinlock_api_smp.h"
+//# 234 "include/linux/spinlock_api_smp.h"
 static inline __attribute__((always_inline)) void __read_lock(rwlock_t *lock)
 {
  do { } while (0);
@@ -6836,7 +6836,7 @@ static inline __attribute__((always_inline)) unsigned long __spin_lock_irqsave(s
  do { ({ unsigned long __dummy; typeof(flags) __dummy2; (void)(&__dummy == &__dummy2); 1; }); do { (flags) = __raw_local_irq_save(); } while (0); do { } while (0); } while (0);
  do { } while (0);
  do { } while (0);
-# 256 "include/linux/spinlock_api_smp.h"
+//# 256 "include/linux/spinlock_api_smp.h"
  __raw_spin_lock_flags(&(lock)->raw_lock, *(&flags));
 
  return flags;
@@ -7037,15 +7037,15 @@ static inline __attribute__((always_inline)) int __spin_trylock_bh(spinlock_t *l
  local_bh_enable_ip((unsigned long)__builtin_return_address(0));
  return 0;
 }
-# 345 "include/linux/spinlock.h" 2
-# 30 "include/linux/seqlock.h" 2
+//# 345 "include/linux/spinlock.h" 2
+//# 30 "include/linux/seqlock.h" 2
 
 
 typedef struct {
  unsigned sequence;
  spinlock_t lock;
 } seqlock_t;
-# 60 "include/linux/seqlock.h"
+//# 60 "include/linux/seqlock.h"
 static inline __attribute__((always_inline)) void write_seqlock(seqlock_t *sl)
 {
  _spin_lock(&sl->lock);
@@ -7098,7 +7098,7 @@ static inline __attribute__((always_inline)) __attribute__((always_inline)) int 
 
  return (sl->sequence != start);
 }
-# 121 "include/linux/seqlock.h"
+//# 121 "include/linux/seqlock.h"
 typedef struct seqcount {
  unsigned sequence;
 } seqcount_t;
@@ -7147,7 +7147,7 @@ static inline __attribute__((always_inline)) void write_seqcount_end(seqcount_t 
  __asm__ __volatile__("": : :"memory");
  s->sequence++;
 }
-# 9 "include/linux/time.h" 2
+//# 9 "include/linux/time.h" 2
 
 
 
@@ -7172,7 +7172,7 @@ struct timezone {
 
 
 extern struct timezone sys_tz;
-# 45 "include/linux/time.h"
+//# 45 "include/linux/time.h"
 static inline __attribute__((always_inline)) int timespec_equal(const struct timespec *a,
                                  const struct timespec *b)
 {
@@ -7243,7 +7243,7 @@ unsigned long get_seconds(void);
 struct timespec current_kernel_time(void);
 struct timespec __current_kernel_time(void);
 struct timespec get_monotonic_coarse(void);
-# 131 "include/linux/time.h"
+//# 131 "include/linux/time.h"
 static inline __attribute__((always_inline)) u32 arch_gettimeoffset(void) { return 0; }
 
 
@@ -7298,12 +7298,12 @@ struct tm {
 };
 
 void time_to_tm(time_t totalsecs, int offset, struct tm *result);
-# 193 "include/linux/time.h"
+//# 193 "include/linux/time.h"
 static inline __attribute__((always_inline)) s64 timespec_to_ns(const struct timespec *ts)
 {
  return ((s64) ts->tv_sec * 1000000000L) + ts->tv_nsec;
 }
-# 205 "include/linux/time.h"
+//# 205 "include/linux/time.h"
 static inline __attribute__((always_inline)) s64 timeval_to_ns(const struct timeval *tv)
 {
  return ((s64) tv->tv_sec * 1000000000L) +
@@ -7325,13 +7325,13 @@ extern struct timespec ns_to_timespec(const s64 nsec);
 
 
 extern struct timeval ns_to_timeval(const s64 nsec);
-# 235 "include/linux/time.h"
+//# 235 "include/linux/time.h"
 static inline __attribute__((always_inline)) __attribute__((always_inline)) void timespec_add_ns(struct timespec *a, u64 ns)
 {
  a->tv_sec += __iter_div_u64_rem(a->tv_nsec + ns, 1000000000L, &ns);
  a->tv_nsec = ns;
 }
-# 258 "include/linux/time.h"
+//# 258 "include/linux/time.h"
 struct itimerspec {
  struct timespec it_interval;
  struct timespec it_value;
@@ -7341,7 +7341,7 @@ struct itimerval {
  struct timeval it_interval;
  struct timeval it_value;
 };
-# 61 "include/linux/stat.h" 2
+//# 61 "include/linux/stat.h" 2
 
 struct kstat {
  u64 ino;
@@ -7358,19 +7358,19 @@ struct kstat {
  unsigned long blksize;
  unsigned long long blocks;
 };
-# 11 "include/linux/module.h" 2
+//# 11 "include/linux/module.h" 2
 
 
-# 1 "include/linux/kmod.h" 1
-# 22 "include/linux/kmod.h"
-# 1 "include/linux/gfp.h" 1
+//# 1 "include/linux/kmod.h" 1
+//# 22 "include/linux/kmod.h"
+//# 1 "include/linux/gfp.h" 1
 
 
 
-# 1 "include/linux/mmzone.h" 1
-# 9 "include/linux/mmzone.h"
-# 1 "include/linux/wait.h" 1
-# 28 "include/linux/wait.h"
+//# 1 "include/linux/mmzone.h" 1
+//# 9 "include/linux/mmzone.h"
+//# 1 "include/linux/wait.h" 1
+//# 28 "include/linux/wait.h"
 typedef struct __wait_queue wait_queue_t;
 typedef int (*wait_queue_func_t)(wait_queue_t *wait, unsigned mode, int flags, void *key);
 int default_wake_function(wait_queue_t *wait, unsigned mode, int flags, void *key);
@@ -7400,9 +7400,9 @@ struct __wait_queue_head {
 typedef struct __wait_queue_head wait_queue_head_t;
 
 struct task_struct;
-# 80 "include/linux/wait.h"
+//# 80 "include/linux/wait.h"
 extern void __init_waitqueue_head(wait_queue_head_t *q, struct lock_class_key *);
-# 98 "include/linux/wait.h"
+//# 98 "include/linux/wait.h"
 static inline __attribute__((always_inline)) void init_waitqueue_entry(wait_queue_t *q, struct task_struct *p)
 {
  q->flags = 0;
@@ -7460,7 +7460,7 @@ void wake_up_bit(void *, int);
 int out_of_line_wait_on_bit(void *, int, int (*)(void *), unsigned);
 int out_of_line_wait_on_bit_lock(void *, int, int (*)(void *), unsigned);
 wait_queue_head_t *bit_waitqueue(void *, int);
-# 409 "include/linux/wait.h"
+//# 409 "include/linux/wait.h"
 static inline __attribute__((always_inline)) void add_wait_queue_exclusive_locked(wait_queue_head_t *q,
          wait_queue_t * wait)
 {
@@ -7499,7 +7499,7 @@ void abort_exclusive_wait(wait_queue_head_t *q, wait_queue_t *wait,
    unsigned int mode, void *key);
 int autoremove_wake_function(wait_queue_t *wait, unsigned mode, int sync, void *key);
 int wake_bit_function(wait_queue_t *wait, unsigned mode, int sync, void *key);
-# 489 "include/linux/wait.h"
+//# 489 "include/linux/wait.h"
 static inline __attribute__((always_inline)) int wait_on_bit(void *word, int bit,
     int (*action)(void *), unsigned mode)
 {
@@ -7507,7 +7507,7 @@ static inline __attribute__((always_inline)) int wait_on_bit(void *word, int bit
   return 0;
  return out_of_line_wait_on_bit(word, bit, action, mode);
 }
-# 513 "include/linux/wait.h"
+//# 513 "include/linux/wait.h"
 static inline __attribute__((always_inline)) int wait_on_bit_lock(void *word, int bit,
     int (*action)(void *), unsigned mode)
 {
@@ -7515,16 +7515,16 @@ static inline __attribute__((always_inline)) int wait_on_bit_lock(void *word, in
   return 0;
  return out_of_line_wait_on_bit_lock(word, bit, action, mode);
 }
-# 10 "include/linux/mmzone.h" 2
+//# 10 "include/linux/mmzone.h" 2
 
 
 
-# 1 "include/linux/numa.h" 1
-# 14 "include/linux/mmzone.h" 2
+//# 1 "include/linux/numa.h" 1
+//# 14 "include/linux/mmzone.h" 2
 
 
-# 1 "include/linux/nodemask.h" 1
-# 98 "include/linux/nodemask.h"
+//# 1 "include/linux/nodemask.h" 1
+//# 98 "include/linux/nodemask.h"
 typedef struct { unsigned long bits[((((1 << 6)) + (8 * sizeof(long)) - 1) / (8 * sizeof(long)))]; } nodemask_t;
 extern nodemask_t _unused_nodemask_arg_;
 
@@ -7674,13 +7674,13 @@ static inline __attribute__((always_inline)) int __next_node(int n, const nodema
 {
  return ({ int __min1 = ((1 << 6)); int __min2 = (find_next_bit(srcp->bits, (1 << 6), n+1)); __min1 < __min2 ? __min1: __min2; });
 }
-# 261 "include/linux/nodemask.h"
+//# 261 "include/linux/nodemask.h"
 static inline __attribute__((always_inline)) int __first_unset_node(const nodemask_t *maskp)
 {
  return ({ int __min1 = ((1 << 6)); int __min2 = (find_first_zero_bit(maskp->bits, (1 << 6))); __min1 < __min2 ? __min1: __min2; });
 
 }
-# 295 "include/linux/nodemask.h"
+//# 295 "include/linux/nodemask.h"
 static inline __attribute__((always_inline)) int __nodemask_scnprintf(char *buf, int len,
      const nodemask_t *srcp, int nbits)
 {
@@ -7740,7 +7740,7 @@ static inline __attribute__((always_inline)) void __nodes_fold(nodemask_t *dstp,
 {
  bitmap_fold(dstp->bits, origp->bits, sz, nbits);
 }
-# 369 "include/linux/nodemask.h"
+//# 369 "include/linux/nodemask.h"
 enum node_states {
  N_POSSIBLE,
  N_ONLINE,
@@ -7802,21 +7802,21 @@ static inline __attribute__((always_inline)) void node_set_offline(int nid)
  node_clear_state(nid, N_ONLINE);
  nr_online_nodes = num_node_state(N_ONLINE);
 }
-# 495 "include/linux/nodemask.h"
+//# 495 "include/linux/nodemask.h"
 struct nodemask_scratch {
  nodemask_t mask1;
  nodemask_t mask2;
 };
-# 17 "include/linux/mmzone.h" 2
-# 1 "include/linux/pageblock-flags.h" 1
-# 29 "include/linux/pageblock-flags.h"
+//# 17 "include/linux/mmzone.h" 2
+//# 1 "include/linux/pageblock-flags.h" 1
+//# 29 "include/linux/pageblock-flags.h"
 enum pageblock_bits {
  PB_migrate,
  PB_migrate_end = PB_migrate + 3 - 1,
 
  NR_PAGEBLOCK_BITS
 };
-# 60 "include/linux/pageblock-flags.h"
+//# 60 "include/linux/pageblock-flags.h"
 struct page;
 
 
@@ -7824,12 +7824,12 @@ unsigned long get_pageblock_flags_group(struct page *page,
      int start_bitidx, int end_bitidx);
 void set_pageblock_flags_group(struct page *page, unsigned long flags,
      int start_bitidx, int end_bitidx);
-# 18 "include/linux/mmzone.h" 2
-# 1 "include/linux/bounds.h" 1
-# 19 "include/linux/mmzone.h" 2
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic.h" 1
-# 20 "include/linux/mmzone.h" 2
-# 50 "include/linux/mmzone.h"
+//# 18 "include/linux/mmzone.h" 2
+//# 1 "include/linux/bounds.h" 1
+//# 19 "include/linux/mmzone.h" 2
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic.h" 1
+//# 20 "include/linux/mmzone.h" 2
+//# 50 "include/linux/mmzone.h"
 extern int page_group_by_mobility_disabled;
 
 static inline __attribute__((always_inline)) int get_pageblock_migratetype(struct page *page)
@@ -7843,7 +7843,7 @@ struct free_area {
 };
 
 struct pglist_data;
-# 71 "include/linux/mmzone.h"
+//# 71 "include/linux/mmzone.h"
 struct zone_padding {
  char x[0];
 } __attribute__((__aligned__(1 << ((6)))));
@@ -7889,7 +7889,7 @@ enum zone_stat_item {
  NUMA_OTHER,
 
  NR_VM_ZONE_STAT_ITEMS };
-# 130 "include/linux/mmzone.h"
+//# 130 "include/linux/mmzone.h"
 enum lru_list {
  LRU_INACTIVE_ANON = 0,
  LRU_ACTIVE_ANON = 0 + 1,
@@ -7948,9 +7948,9 @@ struct per_cpu_pageset {
  s8 vm_stat_diff[NR_VM_ZONE_STAT_ITEMS];
 
 } __attribute__((__aligned__((1 << (6)))));
-# 197 "include/linux/mmzone.h"
+//# 197 "include/linux/mmzone.h"
 enum zone_type {
-# 217 "include/linux/mmzone.h"
+//# 217 "include/linux/mmzone.h"
  ZONE_DMA,
 
 
@@ -7967,13 +7967,13 @@ enum zone_type {
 
 
  ZONE_NORMAL,
-# 244 "include/linux/mmzone.h"
+//# 244 "include/linux/mmzone.h"
  ZONE_MOVABLE,
  __MAX_NR_ZONES
 };
-# 268 "include/linux/mmzone.h"
+//# 268 "include/linux/mmzone.h"
 struct zone_reclaim_stat {
-# 277 "include/linux/mmzone.h"
+//# 277 "include/linux/mmzone.h"
  unsigned long recent_rotated[2];
  unsigned long recent_scanned[2];
 
@@ -7988,7 +7988,7 @@ struct zone {
 
 
  unsigned long watermark[NR_WMARK];
-# 300 "include/linux/mmzone.h"
+//# 300 "include/linux/mmzone.h"
  unsigned long lowmem_reserve[4];
 
 
@@ -8011,7 +8011,7 @@ struct zone {
 
 
  struct free_area free_area[11];
-# 332 "include/linux/mmzone.h"
+//# 332 "include/linux/mmzone.h"
  struct zone_padding _pad1_;
 
 
@@ -8027,7 +8027,7 @@ struct zone {
 
 
  atomic_long_t vm_stat[NR_VM_ZONE_STAT_ITEMS];
-# 361 "include/linux/mmzone.h"
+//# 361 "include/linux/mmzone.h"
  int prev_priority;
 
 
@@ -8038,7 +8038,7 @@ struct zone {
 
 
  struct zone_padding _pad2_;
-# 397 "include/linux/mmzone.h"
+//# 397 "include/linux/mmzone.h"
  wait_queue_head_t * wait_table;
  unsigned long wait_table_hash_nr_entries;
  unsigned long wait_table_bits;
@@ -8049,7 +8049,7 @@ struct zone {
  struct pglist_data *zone_pgdat;
 
  unsigned long zone_start_pfn;
-# 418 "include/linux/mmzone.h"
+//# 418 "include/linux/mmzone.h"
  unsigned long spanned_pages;
  unsigned long present_pages;
 
@@ -8094,18 +8094,18 @@ static inline __attribute__((always_inline)) int zone_is_oom_locked(const struct
 {
  return (__builtin_constant_p((ZONE_OOM_LOCKED)) ? constant_test_bit((ZONE_OOM_LOCKED), (&zone->flags)) : variable_test_bit((ZONE_OOM_LOCKED), (&zone->flags)));
 }
-# 544 "include/linux/mmzone.h"
+//# 544 "include/linux/mmzone.h"
 struct zonelist_cache {
  unsigned short z_to_n[((1 << 6) * 4)];
  unsigned long fullzones[(((((1 << 6) * 4)) + (8 * sizeof(long)) - 1) / (8 * sizeof(long)))];
  unsigned long last_full_zap;
 };
-# 558 "include/linux/mmzone.h"
+//# 558 "include/linux/mmzone.h"
 struct zoneref {
  struct zone *zone;
  int zone_idx;
 };
-# 580 "include/linux/mmzone.h"
+//# 580 "include/linux/mmzone.h"
 struct zonelist {
  struct zonelist_cache *zlcache_ptr;
  struct zoneref _zonerefs[((1 << 6) * 4) + 1];
@@ -8125,7 +8125,7 @@ struct node_active_region {
 
 
 extern struct page *mem_map;
-# 612 "include/linux/mmzone.h"
+//# 612 "include/linux/mmzone.h"
 struct bootmem_data;
 typedef struct pglist_data {
  struct zone node_zones[4];
@@ -8138,7 +8138,7 @@ typedef struct pglist_data {
 
 
  struct bootmem_data *bdata;
-# 634 "include/linux/mmzone.h"
+//# 634 "include/linux/mmzone.h"
  unsigned long node_start_pfn;
  unsigned long node_present_pages;
  unsigned long node_spanned_pages;
@@ -8148,28 +8148,28 @@ typedef struct pglist_data {
  struct task_struct *kswapd;
  int kswapd_max_order;
 } pg_data_t;
-# 653 "include/linux/mmzone.h"
-# 1 "include/linux/memory_hotplug.h" 1
+//# 653 "include/linux/mmzone.h"
+//# 1 "include/linux/memory_hotplug.h" 1
 
 
 
-# 1 "include/linux/mmzone.h" 1
-# 5 "include/linux/memory_hotplug.h" 2
+//# 1 "include/linux/mmzone.h" 1
+//# 5 "include/linux/memory_hotplug.h" 2
 
-# 1 "include/linux/notifier.h" 1
-# 12 "include/linux/notifier.h"
-# 1 "include/linux/errno.h" 1
+//# 1 "include/linux/notifier.h" 1
+//# 12 "include/linux/notifier.h"
+//# 1 "include/linux/errno.h" 1
 
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/errno.h" 1
-# 5 "include/linux/errno.h" 2
-# 13 "include/linux/notifier.h" 2
-# 1 "include/linux/mutex.h" 1
-# 18 "include/linux/mutex.h"
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic.h" 1
-# 19 "include/linux/mutex.h" 2
-# 48 "include/linux/mutex.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/errno.h" 1
+//# 5 "include/linux/errno.h" 2
+//# 13 "include/linux/notifier.h" 2
+//# 1 "include/linux/mutex.h" 1
+//# 18 "include/linux/mutex.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic.h" 1
+//# 19 "include/linux/mutex.h" 2
+//# 48 "include/linux/mutex.h"
 struct mutex {
 
  atomic_t count;
@@ -8177,7 +8177,7 @@ struct mutex {
  struct list_head wait_list;
 
  struct thread_info *owner;
-# 63 "include/linux/mutex.h"
+//# 63 "include/linux/mutex.h"
 };
 
 
@@ -8191,7 +8191,7 @@ struct mutex_waiter {
 
 
 };
-# 107 "include/linux/mutex.h"
+//# 107 "include/linux/mutex.h"
 extern void __mutex_init(struct mutex *lock, const char *name,
     struct lock_class_key *key);
 
@@ -8205,27 +8205,27 @@ static inline __attribute__((always_inline)) int mutex_is_locked(struct mutex *l
 {
  return atomic_read(&lock->count) != 1;
 }
-# 136 "include/linux/mutex.h"
+//# 136 "include/linux/mutex.h"
 extern void mutex_lock(struct mutex *lock);
 extern int __attribute__((warn_unused_result)) mutex_lock_interruptible(struct mutex *lock);
 extern int __attribute__((warn_unused_result)) mutex_lock_killable(struct mutex *lock);
-# 151 "include/linux/mutex.h"
+//# 151 "include/linux/mutex.h"
 extern int mutex_trylock(struct mutex *lock);
 extern void mutex_unlock(struct mutex *lock);
 extern int atomic_dec_and_mutex_lock(atomic_t *cnt, struct mutex *lock);
-# 14 "include/linux/notifier.h" 2
-# 1 "include/linux/rwsem.h" 1
-# 15 "include/linux/rwsem.h"
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic.h" 1
-# 16 "include/linux/rwsem.h" 2
+//# 14 "include/linux/notifier.h" 2
+//# 1 "include/linux/rwsem.h" 1
+//# 15 "include/linux/rwsem.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic.h" 1
+//# 16 "include/linux/rwsem.h" 2
 
 struct rw_semaphore;
 
 
-# 1 "include/linux/rwsem-spinlock.h" 1
-# 22 "include/linux/rwsem-spinlock.h"
+//# 1 "include/linux/rwsem-spinlock.h" 1
+//# 22 "include/linux/rwsem-spinlock.h"
 struct rwsem_waiter;
-# 31 "include/linux/rwsem-spinlock.h"
+//# 31 "include/linux/rwsem-spinlock.h"
 struct rw_semaphore {
  __s32 activity;
  spinlock_t wait_lock;
@@ -8234,10 +8234,10 @@ struct rw_semaphore {
 
 
 };
-# 53 "include/linux/rwsem-spinlock.h"
+//# 53 "include/linux/rwsem-spinlock.h"
 extern void __init_rwsem(struct rw_semaphore *sem, const char *name,
     struct lock_class_key *key);
-# 63 "include/linux/rwsem-spinlock.h"
+//# 63 "include/linux/rwsem-spinlock.h"
 extern void __down_read(struct rw_semaphore *sem);
 extern int __down_read_trylock(struct rw_semaphore *sem);
 extern void __down_write(struct rw_semaphore *sem);
@@ -8251,7 +8251,7 @@ static inline __attribute__((always_inline)) int rwsem_is_locked(struct rw_semap
 {
  return (sem->activity != 0);
 }
-# 21 "include/linux/rwsem.h" 2
+//# 21 "include/linux/rwsem.h" 2
 
 
 
@@ -8290,9 +8290,9 @@ extern void up_write(struct rw_semaphore *sem);
 
 
 extern void downgrade_write(struct rw_semaphore *sem);
-# 15 "include/linux/notifier.h" 2
-# 1 "include/linux/srcu.h" 1
-# 30 "include/linux/srcu.h"
+//# 15 "include/linux/notifier.h" 2
+//# 1 "include/linux/srcu.h" 1
+//# 30 "include/linux/srcu.h"
 struct srcu_struct_array {
  int c[2];
 };
@@ -8315,8 +8315,8 @@ int srcu_read_lock(struct srcu_struct *sp) ;
 void srcu_read_unlock(struct srcu_struct *sp, int idx) ;
 void synchronize_srcu(struct srcu_struct *sp);
 long srcu_batches_completed(struct srcu_struct *sp);
-# 16 "include/linux/notifier.h" 2
-# 50 "include/linux/notifier.h"
+//# 16 "include/linux/notifier.h" 2
+//# 50 "include/linux/notifier.h"
 struct notifier_block {
  int (*notifier_call)(struct notifier_block *, unsigned long, void *);
  struct notifier_block *next;
@@ -8342,9 +8342,9 @@ struct srcu_notifier_head {
  struct srcu_struct srcu;
  struct notifier_block *head;
 };
-# 89 "include/linux/notifier.h"
+//# 89 "include/linux/notifier.h"
 extern void srcu_init_notifier_head(struct srcu_notifier_head *nh);
-# 115 "include/linux/notifier.h"
+//# 115 "include/linux/notifier.h"
 extern int atomic_notifier_chain_register(struct atomic_notifier_head *nh,
   struct notifier_block *nb);
 extern int blocking_notifier_chain_register(struct blocking_notifier_head *nh,
@@ -8383,7 +8383,7 @@ extern int srcu_notifier_call_chain(struct srcu_notifier_head *nh,
   unsigned long val, void *v);
 extern int __srcu_notifier_call_chain(struct srcu_notifier_head *nh,
  unsigned long val, void *v, int nr_to_call, int *nr_calls);
-# 165 "include/linux/notifier.h"
+//# 165 "include/linux/notifier.h"
 static inline __attribute__((always_inline)) int notifier_from_errno(int err)
 {
  return 0x8000 | (0x0001 - err);
@@ -8395,15 +8395,15 @@ static inline __attribute__((always_inline)) int notifier_to_errno(int ret)
  ret &= ~0x8000;
  return ret > 0x0001 ? 0x0001 - ret : 0;
 }
-# 261 "include/linux/notifier.h"
+//# 261 "include/linux/notifier.h"
 extern struct blocking_notifier_head reboot_notifier_list;
-# 7 "include/linux/memory_hotplug.h" 2
+//# 7 "include/linux/memory_hotplug.h" 2
 
 struct page;
 struct zone;
 struct pglist_data;
 struct mem_section;
-# 165 "include/linux/memory_hotplug.h"
+//# 165 "include/linux/memory_hotplug.h"
 static inline __attribute__((always_inline)) void pgdat_resize_lock(struct pglist_data *p, unsigned long *f) {}
 static inline __attribute__((always_inline)) void pgdat_resize_unlock(struct pglist_data *p, unsigned long *f) {}
 static inline __attribute__((always_inline)) void pgdat_resize_init(struct pglist_data *pgdat) {}
@@ -8430,7 +8430,7 @@ static inline __attribute__((always_inline)) int mhp_notimplemented(const char *
 static inline __attribute__((always_inline)) void register_page_bootmem_info_node(struct pglist_data *pgdat)
 {
 }
-# 199 "include/linux/memory_hotplug.h"
+//# 199 "include/linux/memory_hotplug.h"
 static inline __attribute__((always_inline)) int is_mem_section_removable(unsigned long pfn,
      unsigned long nr_pages)
 {
@@ -8446,7 +8446,7 @@ extern int sparse_add_one_section(struct zone *zone, unsigned long start_pfn,
 extern void sparse_remove_one_section(struct zone *zone, struct mem_section *ms);
 extern struct page *sparse_decode_mem_map(unsigned long coded_mem_map,
        unsigned long pnum);
-# 654 "include/linux/mmzone.h" 2
+//# 654 "include/linux/mmzone.h" 2
 
 void get_zone_counts(unsigned long *active, unsigned long *inactive,
    unsigned long *free);
@@ -8464,7 +8464,7 @@ extern int init_currently_empty_zone(struct zone *zone, unsigned long start_pfn,
 
 
 void memory_present(int nid, unsigned long start, unsigned long end);
-# 684 "include/linux/mmzone.h"
+//# 684 "include/linux/mmzone.h"
 static inline __attribute__((always_inline)) int populated_zone(struct zone *zone)
 {
  return (!!zone->present_pages);
@@ -8554,31 +8554,31 @@ int sysctl_min_slab_ratio_sysctl_handler(struct ctl_table *, int,
 extern int numa_zonelist_order_handler(struct ctl_table *, int,
    void *, size_t *, loff_t *);
 extern char numa_zonelist_order[];
-# 783 "include/linux/mmzone.h"
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/mmzone.h" 1
+//# 783 "include/linux/mmzone.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/mmzone.h" 1
 
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/mmzone_64.h" 1
-# 10 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/mmzone_64.h"
-# 1 "include/linux/mmdebug.h" 1
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/mmzone_64.h" 1
+//# 10 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/mmzone_64.h"
+//# 1 "include/linux/mmdebug.h" 1
 
 
 
-# 1 "include/linux/autoconf.h" 1
-# 5 "include/linux/mmdebug.h" 2
-# 11 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/mmzone_64.h" 2
+//# 1 "include/linux/autoconf.h" 1
+//# 5 "include/linux/mmdebug.h" 2
+//# 11 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/mmzone_64.h" 2
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/smp.h" 1
-# 12 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/smp.h"
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/mpspec.h" 1
-
-
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/smp.h" 1
+//# 12 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/smp.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/mpspec.h" 1
 
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/mpspec_def.h" 1
-# 28 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/mpspec_def.h"
+
+
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/mpspec_def.h" 1
+//# 28 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/mpspec_def.h"
 struct mpf_intel {
  char signature[4];
  unsigned int physptr;
@@ -8607,7 +8607,7 @@ struct mpc_table {
  unsigned int lapic;
  unsigned int reserved;
 };
-# 74 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/mpspec_def.h"
+//# 74 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/mpspec_def.h"
 struct mpc_cpu {
  unsigned char type;
  unsigned char apicid;
@@ -8623,7 +8623,7 @@ struct mpc_bus {
  unsigned char busid;
  unsigned char bustype[6];
 };
-# 112 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/mpspec_def.h"
+//# 112 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/mpspec_def.h"
 struct mpc_ioapic {
  unsigned char type;
  unsigned char apicid;
@@ -8674,26 +8674,26 @@ struct mpc_oemtable {
  char checksum;
  char mpc[8];
 };
-# 175 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/mpspec_def.h"
+//# 175 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/mpspec_def.h"
 enum mp_bustype {
  MP_BUS_ISA = 1,
  MP_BUS_EISA,
  MP_BUS_PCI,
  MP_BUS_MCA,
 };
-# 7 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/mpspec.h" 2
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/x86_init.h" 1
+//# 7 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/mpspec.h" 2
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/x86_init.h" 1
 
 
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bootparam.h" 1
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bootparam.h" 1
 
 
 
 
-# 1 "include/linux/screen_info.h" 1
-# 10 "include/linux/screen_info.h"
+//# 1 "include/linux/screen_info.h" 1
+//# 10 "include/linux/screen_info.h"
 struct screen_info {
  __u8 orig_x;
  __u8 orig_y;
@@ -8731,11 +8731,11 @@ struct screen_info {
  __u32 capabilities;
  __u8 _reserved[6];
 } __attribute__((packed));
-# 69 "include/linux/screen_info.h"
+//# 69 "include/linux/screen_info.h"
 extern struct screen_info screen_info;
-# 6 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bootparam.h" 2
-# 1 "include/linux/apm_bios.h" 1
-# 21 "include/linux/apm_bios.h"
+//# 6 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bootparam.h" 2
+//# 1 "include/linux/apm_bios.h" 1
+//# 21 "include/linux/apm_bios.h"
 typedef unsigned short apm_event_t;
 typedef unsigned short apm_eventinfo_t;
 
@@ -8750,7 +8750,7 @@ struct apm_bios_info {
  __u16 cseg_16_len;
  __u16 dseg_len;
 };
-# 52 "include/linux/apm_bios.h"
+//# 52 "include/linux/apm_bios.h"
 struct apm_info {
  struct apm_bios_info bios;
  unsigned short connection_version;
@@ -8761,11 +8761,11 @@ struct apm_info {
  int realmode_power_off;
  int disabled;
 };
-# 111 "include/linux/apm_bios.h"
+//# 111 "include/linux/apm_bios.h"
 extern struct apm_info apm_info;
-# 7 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bootparam.h" 2
-# 1 "include/linux/edd.h" 1
-# 71 "include/linux/edd.h"
+//# 7 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bootparam.h" 2
+//# 1 "include/linux/edd.h" 1
+//# 71 "include/linux/edd.h"
 struct edd_device_params {
  __u16 length;
  __u16 info_flags;
@@ -8886,9 +8886,9 @@ struct edd {
 
 
 extern struct edd edd;
-# 8 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bootparam.h" 2
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/e820.h" 1
-# 53 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/e820.h"
+//# 8 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bootparam.h" 2
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/e820.h" 1
+//# 53 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/e820.h"
 struct e820entry {
  __u64 addr;
  __u64 size;
@@ -8926,7 +8926,7 @@ extern void parse_e820_ext(struct setup_data *data, unsigned long pa_data);
 
 
 extern void e820_mark_nosave_regions(unsigned long limit_pfn);
-# 99 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/e820.h"
+//# 99 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/e820.h"
 static inline __attribute__((always_inline)) void early_memtest(unsigned long start, unsigned long end)
 {
 }
@@ -8957,9 +8957,9 @@ extern void e820_reserve_resources(void);
 extern void e820_reserve_resources_late(void);
 extern void setup_memory_map(void);
 extern char *default_machine_specific_memory_setup(void);
-# 140 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/e820.h"
-# 1 "include/linux/ioport.h" 1
-# 18 "include/linux/ioport.h"
+//# 140 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/e820.h"
+//# 1 "include/linux/ioport.h" 1
+//# 18 "include/linux/ioport.h"
 struct resource {
  resource_size_t start;
  resource_size_t end;
@@ -8973,7 +8973,7 @@ struct resource_list {
  struct resource *res;
  struct pci_dev *dev;
 };
-# 110 "include/linux/ioport.h"
+//# 110 "include/linux/ioport.h"
 extern struct resource ioport_resource;
 extern struct resource iomem_resource;
 
@@ -9001,7 +9001,7 @@ static inline __attribute__((always_inline)) unsigned long resource_type(struct 
 {
  return res->flags & 0x00000f00;
 }
-# 146 "include/linux/ioport.h"
+//# 146 "include/linux/ioport.h"
 extern struct resource * __request_region(struct resource *,
      resource_size_t start,
      resource_size_t n,
@@ -9046,10 +9046,10 @@ extern int iomem_is_exclusive(u64 addr);
 extern int
 walk_system_ram_range(unsigned long start_pfn, unsigned long nr_pages,
   void *arg, int (*func)(unsigned long, unsigned long, void *));
-# 141 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/e820.h" 2
-# 9 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bootparam.h" 2
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/ist.h" 1
-# 22 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/ist.h"
+//# 141 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/e820.h" 2
+//# 9 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bootparam.h" 2
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/ist.h" 1
+//# 22 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/ist.h"
 struct ist_info {
  __u32 signature;
  __u32 command;
@@ -9060,8 +9060,8 @@ struct ist_info {
 
 
 extern struct ist_info ist_info;
-# 10 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bootparam.h" 2
-# 1 "include/video/edid.h" 1
+//# 10 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bootparam.h" 2
+//# 1 "include/video/edid.h" 1
 
 
 
@@ -9073,7 +9073,7 @@ struct edid_info {
 
 
 extern struct edid_info edid_info;
-# 11 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bootparam.h" 2
+//# 11 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/bootparam.h" 2
 
 
 
@@ -9183,12 +9183,12 @@ enum {
  X86_SUBARCH_MRST,
  X86_NR_SUBARCHS,
 };
-# 6 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/x86_init.h" 2
+//# 6 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/x86_init.h" 2
 
 struct mpc_bus;
 struct mpc_cpu;
 struct mpc_table;
-# 22 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/x86_init.h"
+//# 22 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/x86_init.h"
 struct x86_init_mpparse {
  void (*mpc_record)(unsigned int mode);
  void (*setup_ioapic_ids)(void);
@@ -9199,13 +9199,13 @@ struct x86_init_mpparse {
  void (*find_smp_config)(unsigned int reserve);
  void (*get_smp_config)(unsigned int early);
 };
-# 41 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/x86_init.h"
+//# 41 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/x86_init.h"
 struct x86_init_resources {
  void (*probe_roms)(void);
  void (*reserve_resources)(void);
  char *(*memory_setup)(void);
 };
-# 54 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/x86_init.h"
+//# 54 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/x86_init.h"
 struct x86_init_irqs {
  void (*pre_vector_init)(void);
  void (*intr_init)(void);
@@ -9231,7 +9231,7 @@ struct x86_init_paging {
  void (*pagetable_setup_start)(pgd_t *base);
  void (*pagetable_setup_done)(pgd_t *base);
 };
-# 87 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/x86_init.h"
+//# 87 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/x86_init.h"
 struct x86_init_timers {
  void (*setup_percpu_clockev)(void);
  void (*tsc_pre_init)(void);
@@ -9277,11 +9277,11 @@ extern struct x86_platform_ops x86_platform;
 
 extern void x86_init_noop(void);
 extern void x86_init_uint_noop(unsigned int unused);
-# 8 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/mpspec.h" 2
+//# 8 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/mpspec.h" 2
 
 extern int apic_version[255];
 extern int pic_mode;
-# 49 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/mpspec.h"
+//# 49 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/mpspec.h"
 extern unsigned long mp_bus_not_pci[(((256) + (8 * sizeof(long)) - 1) / (8 * sizeof(long)))];
 
 extern unsigned int boot_cpu_physical_apicid;
@@ -9327,7 +9327,7 @@ extern void default_mpc_oem_bus_info(struct mpc_bus *m, char *str);
 
 extern void default_find_smp_config(unsigned int reserve);
 extern void default_get_smp_config(unsigned int early);
-# 104 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/mpspec.h"
+//# 104 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/mpspec.h"
 void __attribute__ ((__section__(".cpuinit.text"))) __attribute__((__cold__)) generic_processor_info(int apicid, int version);
 
 extern void mp_register_ioapic(int id, u32 address, u32 gsi_base);
@@ -9341,13 +9341,13 @@ extern int acpi_probe_gsi(void);
 
 extern int mp_find_ioapic(int gsi);
 extern int mp_find_ioapic_pin(int ioapic, int gsi);
-# 127 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/mpspec.h"
+//# 127 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/mpspec.h"
 struct physid_mask {
  unsigned long mask[(((255) + (8 * sizeof(long)) - 1) / (8 * sizeof(long)))];
 };
 
 typedef struct physid_mask physid_mask_t;
-# 183 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/mpspec.h"
+//# 183 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/mpspec.h"
 static inline __attribute__((always_inline)) void physid_set_mask_of_physid(int physid, physid_mask_t *map)
 {
  bitmap_zero((*map).mask, 255);
@@ -9362,18 +9362,18 @@ extern physid_mask_t phys_cpu_present_map;
 extern int generic_mps_oem_check(struct mpc_table *, char *, char *);
 
 extern int default_acpi_madt_oem_check(char *, char *);
-# 13 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/smp.h" 2
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/apic.h" 1
+//# 13 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/smp.h" 2
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/apic.h" 1
 
 
 
 
-# 1 "include/linux/delay.h" 1
-# 12 "include/linux/delay.h"
+//# 1 "include/linux/delay.h" 1
+//# 12 "include/linux/delay.h"
 extern unsigned long loops_per_jiffy;
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/delay.h" 1
-# 11 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/delay.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/delay.h" 1
+//# 11 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/delay.h"
 extern void __bad_udelay(void);
 extern void __bad_ndelay(void);
 
@@ -9381,10 +9381,10 @@ extern void __udelay(unsigned long usecs);
 extern void __ndelay(unsigned long nsecs);
 extern void __const_udelay(unsigned long xloops);
 extern void __delay(unsigned long loops);
-# 29 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/delay.h"
+//# 29 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/delay.h"
 void use_tsc_delay(void);
-# 15 "include/linux/delay.h" 2
-# 44 "include/linux/delay.h"
+//# 15 "include/linux/delay.h" 2
+//# 44 "include/linux/delay.h"
 extern unsigned long lpj_fine;
 void calibrate_delay(void);
 void msleep(unsigned int msecs);
@@ -9394,10 +9394,10 @@ static inline __attribute__((always_inline)) void ssleep(unsigned int seconds)
 {
  msleep(seconds * 1000);
 }
-# 6 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/apic.h" 2
-# 1 "include/linux/pm.h" 1
-# 25 "include/linux/pm.h"
-# 1 "include/linux/workqueue.h" 1
+//# 6 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/apic.h" 2
+//# 1 "include/linux/pm.h" 1
+//# 25 "include/linux/pm.h"
+//# 1 "include/linux/workqueue.h" 1
 
 
 
@@ -9405,14 +9405,14 @@ static inline __attribute__((always_inline)) void ssleep(unsigned int seconds)
 
 
 
-# 1 "include/linux/timer.h" 1
+//# 1 "include/linux/timer.h" 1
 
 
 
 
-# 1 "include/linux/ktime.h" 1
-# 25 "include/linux/ktime.h"
-# 1 "include/linux/jiffies.h" 1
+//# 1 "include/linux/ktime.h" 1
+//# 25 "include/linux/ktime.h"
+//# 1 "include/linux/jiffies.h" 1
 
 
 
@@ -9420,8 +9420,8 @@ static inline __attribute__((always_inline)) void ssleep(unsigned int seconds)
 
 
 
-# 1 "include/linux/timex.h" 1
-# 64 "include/linux/timex.h"
+//# 1 "include/linux/timex.h" 1
+//# 64 "include/linux/timex.h"
 struct timex {
  unsigned int modes;
  long offset;
@@ -9452,14 +9452,14 @@ struct timex {
  int :32; int :32; int :32; int :32;
  int :32; int :32; int :32;
 };
-# 170 "include/linux/timex.h"
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/timex.h" 1
+//# 170 "include/linux/timex.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/timex.h" 1
 
 
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/tsc.h" 1
-# 15 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/tsc.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/tsc.h" 1
+//# 15 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/tsc.h"
 typedef unsigned long long cycles_t;
 
 extern unsigned int cpu_khz;
@@ -9482,7 +9482,7 @@ static inline __attribute__((always_inline)) cycles_t get_cycles(void)
 
 static inline __attribute__((always_inline)) __attribute__((always_inline)) cycles_t vget_cycles(void)
 {
-# 45 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/tsc.h"
+//# 45 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/tsc.h"
  return (cycles_t)__native_read_tsc();
 }
 
@@ -9500,9 +9500,9 @@ extern void check_tsc_sync_source(int cpu);
 extern void check_tsc_sync_target(void);
 
 extern int notsc_setup(char *);
-# 6 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/timex.h" 2
-# 171 "include/linux/timex.h" 2
-# 230 "include/linux/timex.h"
+//# 6 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/timex.h" 2
+//# 171 "include/linux/timex.h" 2
+//# 230 "include/linux/timex.h"
 extern unsigned long tick_usec;
 extern unsigned long tick_nsec;
 extern int tickadj;
@@ -9527,7 +9527,7 @@ static inline __attribute__((always_inline)) int ntp_synced(void)
 {
  return !(time_status & 0x0040);
 }
-# 272 "include/linux/timex.h"
+//# 272 "include/linux/timex.h"
 extern u64 tick_length;
 
 extern void second_overflow(void);
@@ -9538,10 +9538,10 @@ extern int do_adjtimex(struct timex *);
 
 
 int read_current_timer(unsigned long *timer_val);
-# 9 "include/linux/jiffies.h" 2
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/param.h" 1
-# 10 "include/linux/jiffies.h" 2
-# 81 "include/linux/jiffies.h"
+//# 9 "include/linux/jiffies.h" 2
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/param.h" 1
+//# 10 "include/linux/jiffies.h" 2
+//# 81 "include/linux/jiffies.h"
 extern u64 __attribute__((section(".data"))) jiffies_64;
 extern unsigned long volatile __attribute__((section(".data"))) jiffies;
 
@@ -9552,9 +9552,9 @@ static inline __attribute__((always_inline)) u64 get_jiffies_64(void)
 {
  return (u64)jiffies;
 }
-# 183 "include/linux/jiffies.h"
+//# 183 "include/linux/jiffies.h"
 extern unsigned long preset_lpj;
-# 296 "include/linux/jiffies.h"
+//# 296 "include/linux/jiffies.h"
 extern unsigned int jiffies_to_msecs(const unsigned long j);
 extern unsigned int jiffies_to_usecs(const unsigned long j);
 extern unsigned long msecs_to_jiffies(const unsigned int m);
@@ -9569,15 +9569,15 @@ extern clock_t jiffies_to_clock_t(long x);
 extern unsigned long clock_t_to_jiffies(unsigned long x);
 extern u64 jiffies_64_to_clock_t(u64 x);
 extern u64 nsec_to_clock_t(u64 x);
-# 26 "include/linux/ktime.h" 2
-# 46 "include/linux/ktime.h"
+//# 26 "include/linux/ktime.h" 2
+//# 46 "include/linux/ktime.h"
 union ktime {
  s64 tv64;
-# 57 "include/linux/ktime.h"
+//# 57 "include/linux/ktime.h"
 };
 
 typedef union ktime ktime_t;
-# 81 "include/linux/ktime.h"
+//# 81 "include/linux/ktime.h"
 static inline __attribute__((always_inline)) ktime_t ktime_set(const long secs, const unsigned long nsecs)
 {
 
@@ -9586,7 +9586,7 @@ static inline __attribute__((always_inline)) ktime_t ktime_set(const long secs, 
 
  return (ktime_t) { .tv64 = (s64)secs * 1000000000L + (s64)nsecs };
 }
-# 113 "include/linux/ktime.h"
+//# 113 "include/linux/ktime.h"
 static inline __attribute__((always_inline)) ktime_t timespec_to_ktime(struct timespec ts)
 {
  return ktime_set(ts.tv_sec, ts.tv_nsec);
@@ -9597,7 +9597,7 @@ static inline __attribute__((always_inline)) ktime_t timeval_to_ktime(struct tim
 {
  return ktime_set(tv.tv_sec, tv.tv_usec * 1000L);
 }
-# 287 "include/linux/ktime.h"
+//# 287 "include/linux/ktime.h"
 static inline __attribute__((always_inline)) int ktime_equal(const ktime_t cmp1, const ktime_t cmp2)
 {
  return cmp1.tv64 == cmp2.tv64;
@@ -9625,7 +9625,7 @@ static inline __attribute__((always_inline)) ktime_t ktime_sub_us(const ktime_t 
 }
 
 extern ktime_t ktime_add_safe(const ktime_t lhs, const ktime_t rhs);
-# 325 "include/linux/ktime.h"
+//# 325 "include/linux/ktime.h"
 extern void ktime_get_ts(struct timespec *ts);
 
 
@@ -9636,9 +9636,9 @@ static inline __attribute__((always_inline)) ktime_t ns_to_ktime(u64 ns)
  static const ktime_t ktime_zero = { .tv64 = 0 };
  return ({ (ktime_t){ .tv64 = (ktime_zero).tv64 + (ns) }; });
 }
-# 6 "include/linux/timer.h" 2
+//# 6 "include/linux/timer.h" 2
 
-# 1 "include/linux/debugobjects.h" 1
+//# 1 "include/linux/debugobjects.h" 1
 
 
 
@@ -9656,14 +9656,14 @@ enum debug_obj_state {
 };
 
 struct debug_obj_descr;
-# 26 "include/linux/debugobjects.h"
+//# 26 "include/linux/debugobjects.h"
 struct debug_obj {
  struct hlist_node node;
  enum debug_obj_state state;
  void *object;
  struct debug_obj_descr *descr;
 };
-# 45 "include/linux/debugobjects.h"
+//# 45 "include/linux/debugobjects.h"
 struct debug_obj_descr {
  const char *name;
 
@@ -9672,7 +9672,7 @@ struct debug_obj_descr {
  int (*fixup_destroy) (void *addr, enum debug_obj_state state);
  int (*fixup_free) (void *addr, enum debug_obj_state state);
 };
-# 66 "include/linux/debugobjects.h"
+//# 66 "include/linux/debugobjects.h"
 static inline __attribute__((always_inline)) void
 debug_object_init (void *addr, struct debug_obj_descr *descr) { }
 static inline __attribute__((always_inline)) void
@@ -9695,7 +9695,7 @@ static inline __attribute__((always_inline)) void debug_objects_mem_init(void) {
 
 static inline __attribute__((always_inline)) void
 debug_check_no_obj_freed(const void *address, unsigned long size) { }
-# 8 "include/linux/timer.h" 2
+//# 8 "include/linux/timer.h" 2
 
 
 struct tvec_base;
@@ -9719,14 +9719,14 @@ struct timer_list {
 };
 
 extern struct tvec_base boot_tvec_bases;
-# 59 "include/linux/timer.h"
+//# 59 "include/linux/timer.h"
 void init_timer_key(struct timer_list *timer,
       const char *name,
       struct lock_class_key *key);
 void init_timer_deferrable_key(struct timer_list *timer,
           const char *name,
           struct lock_class_key *key);
-# 116 "include/linux/timer.h"
+//# 116 "include/linux/timer.h"
 static inline __attribute__((always_inline)) void destroy_timer_on_stack(struct timer_list *timer) { }
 static inline __attribute__((always_inline)) void init_timer_on_stack_key(struct timer_list *timer,
         const char *name,
@@ -9757,7 +9757,7 @@ static inline __attribute__((always_inline)) void setup_timer_on_stack_key(struc
  timer->data = data;
  init_timer_on_stack_key(timer, name, key);
 }
-# 157 "include/linux/timer.h"
+//# 157 "include/linux/timer.h"
 static inline __attribute__((always_inline)) int timer_pending(const struct timer_list * timer)
 {
  return timer->entry.next != ((void *)0);
@@ -9768,7 +9768,7 @@ extern int del_timer(struct timer_list * timer);
 extern int mod_timer(struct timer_list *timer, unsigned long expires);
 extern int mod_timer_pending(struct timer_list *timer, unsigned long expires);
 extern int mod_timer_pinned(struct timer_list *timer, unsigned long expires);
-# 181 "include/linux/timer.h"
+//# 181 "include/linux/timer.h"
 extern unsigned long get_next_timer_interrupt(unsigned long now);
 
 
@@ -9800,7 +9800,7 @@ static inline __attribute__((always_inline)) void timer_stats_timer_clear_start_
 {
  timer->start_site = ((void *)0);
 }
-# 226 "include/linux/timer.h"
+//# 226 "include/linux/timer.h"
 extern void add_timer(struct timer_list *timer);
 
 
@@ -9827,12 +9827,12 @@ unsigned long __round_jiffies_up(unsigned long j, int cpu);
 unsigned long __round_jiffies_up_relative(unsigned long j, int cpu);
 unsigned long round_jiffies_up(unsigned long j);
 unsigned long round_jiffies_up_relative(unsigned long j);
-# 9 "include/linux/workqueue.h" 2
+//# 9 "include/linux/workqueue.h" 2
 
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic.h" 1
-# 13 "include/linux/workqueue.h" 2
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic.h" 1
+//# 13 "include/linux/workqueue.h" 2
 
 struct workqueue_struct;
 
@@ -9872,12 +9872,12 @@ static inline __attribute__((always_inline)) struct delayed_work *to_delayed_wor
 struct execute_work {
  struct work_struct work;
 };
-# 167 "include/linux/workqueue.h"
+//# 167 "include/linux/workqueue.h"
 extern struct workqueue_struct *
 __create_workqueue_key(const char *name, int singlethread,
          int freezeable, int rt, struct lock_class_key *key,
          const char *lock_name);
-# 198 "include/linux/workqueue.h"
+//# 198 "include/linux/workqueue.h"
 extern void destroy_workqueue(struct workqueue_struct *wq);
 
 extern int queue_work(struct workqueue_struct *wq, struct work_struct *work);
@@ -9963,7 +9963,7 @@ void cancel_rearming_delayed_work(struct delayed_work *work)
 
 
 long work_on_cpu(unsigned int cpu, long (*fn)(void *), void *arg);
-# 26 "include/linux/pm.h" 2
+//# 26 "include/linux/pm.h" 2
 
 
 
@@ -9984,7 +9984,7 @@ struct device;
 typedef struct pm_message {
  int event;
 } pm_message_t;
-# 196 "include/linux/pm.h"
+//# 196 "include/linux/pm.h"
 struct dev_pm_ops {
  int (*prepare)(struct device *dev);
  void (*complete)(struct device *dev);
@@ -10004,7 +10004,7 @@ struct dev_pm_ops {
  int (*runtime_resume)(struct device *dev);
  int (*runtime_idle)(struct device *dev);
 };
-# 351 "include/linux/pm.h"
+//# 351 "include/linux/pm.h"
 enum dpm_state {
  DPM_INVALID,
  DPM_ON,
@@ -10014,14 +10014,14 @@ enum dpm_state {
  DPM_OFF,
  DPM_OFF_IRQ,
 };
-# 384 "include/linux/pm.h"
+//# 384 "include/linux/pm.h"
 enum rpm_status {
  RPM_ACTIVE = 0,
  RPM_RESUMING,
  RPM_SUSPENDED,
  RPM_SUSPENDING,
 };
-# 403 "include/linux/pm.h"
+//# 403 "include/linux/pm.h"
 enum rpm_request {
  RPM_REQ_NONE = 0,
  RPM_REQ_IDLE,
@@ -10036,9 +10036,9 @@ struct dev_pm_info {
  enum dpm_state status;
 
  struct list_head entry;
-# 435 "include/linux/pm.h"
+//# 435 "include/linux/pm.h"
 };
-# 492 "include/linux/pm.h"
+//# 492 "include/linux/pm.h"
 extern void device_pm_lock(void);
 extern int sysdev_resume(void);
 extern void dpm_resume_noirq(pm_message_t state);
@@ -10050,7 +10050,7 @@ extern int dpm_suspend_noirq(pm_message_t state);
 extern int dpm_suspend_start(pm_message_t state);
 
 extern void __suspend_report_result(const char *function, void *fn, int ret);
-# 524 "include/linux/pm.h"
+//# 524 "include/linux/pm.h"
 enum dpm_order {
  DPM_ORDER_NONE,
  DPM_ORDER_DEV_AFTER_PARENT,
@@ -10063,13 +10063,13 @@ enum dpm_order {
 
 
 extern unsigned int pm_flags;
-# 7 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/apic.h" 2
+//# 7 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/apic.h" 2
 
 
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/apicdef.h" 1
-# 166 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/apicdef.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/apicdef.h" 1
+//# 166 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/apicdef.h"
 struct local_apic {
 
         struct { unsigned int __reserved[4]; } __reserved_01;
@@ -10317,21 +10317,21 @@ struct local_apic {
         struct { unsigned int __reserved[4]; } __reserved_20;
 
 } __attribute__ ((packed));
-# 12 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/apic.h" 2
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic.h" 1
-# 13 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/apic.h" 2
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/fixmap.h" 1
-# 19 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/fixmap.h"
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/acpi.h" 1
-# 26 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/acpi.h"
-# 1 "include/acpi/pdc_intel.h" 1
-# 27 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/acpi.h" 2
+//# 12 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/apic.h" 2
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic.h" 1
+//# 13 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/apic.h" 2
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/fixmap.h" 1
+//# 19 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/fixmap.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/acpi.h" 1
+//# 26 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/acpi.h"
+//# 1 "include/acpi/pdc_intel.h" 1
+//# 27 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/acpi.h" 2
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/numa.h" 1
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/numa.h" 1
 
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/numa_64.h" 1
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/numa_64.h" 1
 
 
 
@@ -10356,17 +10356,17 @@ extern s16 apicid_to_node[32768];
 extern unsigned long numa_free_all_bootmem(void);
 extern void setup_node_bootmem(int nodeid, unsigned long start,
           unsigned long end);
-# 34 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/numa_64.h"
+//# 34 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/numa_64.h"
 extern void __attribute__ ((__section__(".init.text"))) __attribute__((__cold__)) __attribute__((no_instrument_function)) init_cpu_to_node(void);
 extern void __attribute__ ((__section__(".cpuinit.text"))) __attribute__((__cold__)) numa_set_node(int cpu, int node);
 extern void __attribute__ ((__section__(".cpuinit.text"))) __attribute__((__cold__)) numa_clear_node(int cpu);
 extern void __attribute__ ((__section__(".cpuinit.text"))) __attribute__((__cold__)) numa_add_cpu(int cpu);
 extern void __attribute__ ((__section__(".cpuinit.text"))) __attribute__((__cold__)) numa_remove_cpu(int cpu);
-# 5 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/numa.h" 2
-# 29 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/acpi.h" 2
+//# 5 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/numa.h" 2
+//# 29 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/acpi.h" 2
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/mmu.h" 1
-# 11 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/mmu.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/mmu.h" 1
+//# 11 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/mmu.h"
 typedef struct {
  void *ldt;
  int size;
@@ -10376,11 +10376,11 @@ typedef struct {
 
 
 void leave_mm(int cpu);
-# 31 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/acpi.h" 2
-# 57 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/acpi.h"
+//# 31 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/acpi.h" 2
+//# 57 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/acpi.h"
 int __acpi_acquire_global_lock(unsigned int *lock);
 int __acpi_release_global_lock(unsigned int *lock);
-# 83 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/acpi.h"
+//# 83 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/acpi.h"
 extern int acpi_lapic;
 extern int acpi_ioapic;
 extern int acpi_noirq;
@@ -10442,7 +10442,7 @@ static inline __attribute__((always_inline)) unsigned int acpi_processor_cstate_
  else
   return max_cstate;
 }
-# 157 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/acpi.h"
+//# 157 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/acpi.h"
 struct bootnode;
 
 
@@ -10451,14 +10451,14 @@ extern int acpi_scan_nodes(unsigned long start, unsigned long end);
 
 extern void acpi_fake_nodes(const struct bootnode *fake_nodes,
        int num_nodes);
-# 20 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/fixmap.h" 2
+//# 20 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/fixmap.h" 2
 
 
 
 
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/vsyscall.h" 1
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/vsyscall.h" 1
 
 
 
@@ -10467,7 +10467,7 @@ enum vsyscall_num {
  __NR_vtime,
  __NR_vgetcpu,
 };
-# 33 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/vsyscall.h"
+//# 33 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/vsyscall.h"
 extern int __vgetcpu_mode;
 extern volatile unsigned long __jiffies;
 
@@ -10476,8 +10476,8 @@ extern int vgetcpu_mode;
 extern struct timezone sys_tz;
 
 extern void map_vsyscall(void);
-# 27 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/fixmap.h" 2
-# 73 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/fixmap.h"
+//# 27 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/fixmap.h" 2
+//# 73 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/fixmap.h"
 enum fixed_addresses {
 
 
@@ -10496,17 +10496,17 @@ enum fixed_addresses {
 
  FIX_IO_APIC_BASE_0,
  FIX_IO_APIC_BASE_END = FIX_IO_APIC_BASE_0 + 128 - 1,
-# 112 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/fixmap.h"
+//# 112 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/fixmap.h"
  FIX_PARAVIRT_BOOTMAP,
 
  FIX_TEXT_POKE1,
  FIX_TEXT_POKE0,
  __end_of_permanent_fixed_addresses,
-# 126 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/fixmap.h"
+//# 126 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/fixmap.h"
  FIX_BTMAP_END = __end_of_permanent_fixed_addresses + 256 -
    (__end_of_permanent_fixed_addresses & 255),
  FIX_BTMAP_BEGIN = FIX_BTMAP_END + 64*4 - 1,
-# 138 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/fixmap.h"
+//# 138 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/fixmap.h"
  __end_of_fixed_addresses
 };
 
@@ -10527,7 +10527,7 @@ extern pte_t *pkmap_page_table;
 void __native_set_fixmap(enum fixed_addresses idx, pte_t pte);
 void native_set_fixmap(enum fixed_addresses idx,
          phys_addr_t phys, pgprot_t flags);
-# 182 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/fixmap.h"
+//# 182 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/fixmap.h"
 extern void __this_fixmap_does_not_exist(void);
 
 
@@ -10537,7 +10537,7 @@ extern void __this_fixmap_does_not_exist(void);
 
 static inline __attribute__((always_inline)) __attribute__((always_inline)) unsigned long fix_to_virt(const unsigned int idx)
 {
-# 200 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/fixmap.h"
+//# 200 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/fixmap.h"
  if (idx >= __end_of_fixed_addresses)
   __this_fixmap_does_not_exist();
 
@@ -10549,8 +10549,8 @@ static inline __attribute__((always_inline)) unsigned long virt_to_fix(const uns
  do { if (__builtin_expect(!!(vaddr >= ((-2UL << 20)-((1UL) << 12)) || vaddr < (((-2UL << 20)-((1UL) << 12)) - (__end_of_permanent_fixed_addresses << 12))), 0)) do { asm volatile("1:\tud2\n" ".pushsection __bug_table,\"a\"\n" "2:\t.long 1b - 2b, %c0 - 2b\n" "\t.word %c1, 0\n" "\t.org 2b+%c2\n" ".popsection" : : "i" ("/home/peringer/local/linux-2.6.32/arch/x86/include/asm/fixmap.h"), "i" (208), "i" (sizeof(struct bug_entry))); for (;;) ; } while (0); } while(0);
  return ((((-2UL << 20)-((1UL) << 12)) - ((vaddr)&(~(((1UL) << 12)-1)))) >> 12);
 }
-# 14 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/apic.h" 2
-# 42 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/apic.h"
+//# 14 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/apic.h" 2
+//# 42 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/apic.h"
 static inline __attribute__((always_inline)) void generic_apic_probe(void)
 {
 }
@@ -10576,12 +10576,12 @@ static inline __attribute__((always_inline)) void default_inquire_remote_apic(in
  if (apic_verbosity >= 2)
   __inquire_remote_apic(apicid);
 }
-# 76 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/apic.h"
+//# 76 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/apic.h"
 static inline __attribute__((always_inline)) bool apic_from_smp_config(void)
 {
  return smp_found_config && !disable_apic;
 }
-# 89 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/apic.h"
+//# 89 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/apic.h"
 extern int is_vsmp_box(void);
 
 
@@ -10614,7 +10614,7 @@ extern void native_apic_icr_write(u32 low, u32 id);
 extern u64 native_apic_icr_read(void);
 
 extern int x2apic_mode;
-# 201 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/apic.h"
+//# 201 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/apic.h"
 static inline __attribute__((always_inline)) void check_x2apic(void)
 {
 }
@@ -10671,7 +10671,7 @@ extern int apic_is_clustered_box(void);
 
 extern u8 setup_APIC_eilvt_mce(u8 vector, u8 msg_type, u8 mask);
 extern u8 setup_APIC_eilvt_ibs(u8 vector, u8 msg_type, u8 mask);
-# 285 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/apic.h"
+//# 285 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/apic.h"
 struct apic {
  char *name;
 
@@ -10816,7 +10816,7 @@ static inline __attribute__((always_inline)) unsigned default_get_apic_id(unsign
  else
   return (x >> 24) & 0x0F;
 }
-# 437 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/apic.h"
+//# 437 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/apic.h"
 extern struct apic apic_flat;
 extern struct apic apic_physflat;
 extern struct apic apic_x2apic_cluster;
@@ -10844,8 +10844,8 @@ extern void generic_bigsmp_probe(void);
 
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/smp.h" 1
-# 465 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/apic.h" 2
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/smp.h" 1
+//# 465 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/apic.h" 2
 
 
 
@@ -10871,7 +10871,7 @@ static inline __attribute__((always_inline)) unsigned int read_apic_id(void)
 }
 
 extern void default_setup_apic_routing(void);
-# 518 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/apic.h"
+//# 518 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/apic.h"
 static inline __attribute__((always_inline)) unsigned int
 default_cpu_mask_to_apicid(const struct cpumask *cpumask)
 {
@@ -10923,7 +10923,7 @@ __default_check_phys_apicid_present(int phys_apicid)
 {
  return (__builtin_constant_p((phys_apicid)) ? constant_test_bit((phys_apicid), ((phys_cpu_present_map).mask)) : variable_test_bit((phys_apicid), ((phys_cpu_present_map).mask)));
 }
-# 582 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/apic.h"
+//# 582 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/apic.h"
 extern int default_cpu_present_to_apicid(int mps_cpu);
 extern int default_check_phys_apicid_present(int phys_apicid);
 
@@ -10932,23 +10932,23 @@ static inline __attribute__((always_inline)) physid_mask_t default_apicid_to_cpu
 {
  return ({ physid_mask_t __physid_mask = { {[0 ... (((255) + (8 * sizeof(long)) - 1) / (8 * sizeof(long)))-1] = 0UL} }; set_bit(phys_apicid, (__physid_mask).mask); __physid_mask; });
 }
-# 14 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/smp.h" 2
+//# 14 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/smp.h" 2
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/io_apic.h" 1
-
-
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/io_apic.h" 1
 
 
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/irq_vectors.h" 1
-# 138 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/irq_vectors.h"
+
+
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/irq_vectors.h" 1
+//# 138 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/irq_vectors.h"
 static inline __attribute__((always_inline)) int invalid_vm86_irq(int irq)
 {
  return irq < 3 || irq > 15;
 }
-# 8 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/io_apic.h" 2
-# 27 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/io_apic.h"
+//# 8 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/io_apic.h" 2
+//# 27 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/io_apic.h"
 union IO_APIC_reg_00 {
  u32 raw;
  struct {
@@ -11069,7 +11069,7 @@ extern int noioapicreroute;
 extern int timer_through_8259;
 
 extern void io_apic_disable_legacy(void);
-# 155 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/io_apic.h"
+//# 155 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/io_apic.h"
 extern u8 io_apic_unique_id(u8 id);
 extern int io_apic_get_unique_id(int ioapic, int apic_id);
 extern int io_apic_get_version(int ioapic);
@@ -11106,7 +11106,7 @@ extern struct mp_ioapic_gsi mp_gsi_routing[];
 int mp_find_ioapic(int gsi);
 int mp_find_ioapic_pin(int ioapic, int gsi);
 void __attribute__ ((__section__(".init.text"))) __attribute__((__cold__)) __attribute__((no_instrument_function)) mp_register_ioapic(int id, u32 address, u32 gsi_base);
-# 16 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/smp.h" 2
+//# 16 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/smp.h" 2
 
 
 
@@ -11244,9 +11244,9 @@ static inline __attribute__((always_inline)) int num_booting_cpus(void)
 
 
 extern unsigned disabled_cpus __attribute__ ((__section__(".cpuinit.data")));
-# 187 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/smp.h"
+//# 187 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/smp.h"
 extern int hard_smp_processor_id(void);
-# 13 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/mmzone_64.h" 2
+//# 13 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/mmzone_64.h" 2
 
 
 struct memnode {
@@ -11270,15 +11270,15 @@ static inline __attribute__((always_inline)) __attribute__((pure)) int phys_to_n
  do { } while (0);
  return nid;
 }
-# 5 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/mmzone.h" 2
-# 784 "include/linux/mmzone.h" 2
+//# 5 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/mmzone.h" 2
+//# 784 "include/linux/mmzone.h" 2
 
 
 
 extern struct pglist_data *first_online_pgdat(void);
 extern struct pglist_data *next_online_pgdat(struct pglist_data *pgdat);
 extern struct zone *next_zone(struct zone *zone);
-# 819 "include/linux/mmzone.h"
+//# 819 "include/linux/mmzone.h"
 static inline __attribute__((always_inline)) struct zone *zonelist_zone(struct zoneref *zoneref)
 {
  return zoneref->zone;
@@ -11298,12 +11298,12 @@ static inline __attribute__((always_inline)) int zonelist_node_idx(struct zonere
 
 
 }
-# 852 "include/linux/mmzone.h"
+//# 852 "include/linux/mmzone.h"
 struct zoneref *next_zones_zonelist(struct zoneref *z,
      enum zone_type highest_zoneidx,
      nodemask_t *nodes,
      struct zone **zone);
-# 869 "include/linux/mmzone.h"
+//# 869 "include/linux/mmzone.h"
 static inline __attribute__((always_inline)) struct zoneref *first_zones_zonelist(struct zonelist *zonelist,
      enum zone_type highest_zoneidx,
      nodemask_t *nodes,
@@ -11312,21 +11312,21 @@ static inline __attribute__((always_inline)) struct zoneref *first_zones_zonelis
  return next_zones_zonelist(zonelist->_zonerefs, highest_zoneidx, nodes,
         zone);
 }
-# 907 "include/linux/mmzone.h"
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/sparsemem.h" 1
-# 908 "include/linux/mmzone.h" 2
-# 950 "include/linux/mmzone.h"
+//# 907 "include/linux/mmzone.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/sparsemem.h" 1
+//# 908 "include/linux/mmzone.h" 2
+//# 950 "include/linux/mmzone.h"
 struct page;
 struct page_cgroup;
 struct mem_section {
-# 965 "include/linux/mmzone.h"
+//# 965 "include/linux/mmzone.h"
  unsigned long section_mem_map;
 
 
  unsigned long *pageblock_flags;
-# 977 "include/linux/mmzone.h"
+//# 977 "include/linux/mmzone.h"
 };
-# 990 "include/linux/mmzone.h"
+//# 990 "include/linux/mmzone.h"
 extern struct mem_section *mem_section[((1UL << (46 - 27)) / (((1UL) << 12) / sizeof (struct mem_section)))];
 
 
@@ -11340,7 +11340,7 @@ static inline __attribute__((always_inline)) struct mem_section *__nr_to_section
 }
 extern int __section_nr(struct mem_section* ms);
 extern unsigned long usemap_size(void);
-# 1015 "include/linux/mmzone.h"
+//# 1015 "include/linux/mmzone.h"
 static inline __attribute__((always_inline)) struct page *__section_mem_map_addr(struct mem_section *section)
 {
  unsigned long map = section->section_mem_map;
@@ -11386,7 +11386,7 @@ static inline __attribute__((always_inline)) int pfn_present(unsigned long pfn)
   return 0;
  return present_section(__nr_to_section(((pfn) >> (27 - 12))));
 }
-# 1077 "include/linux/mmzone.h"
+//# 1077 "include/linux/mmzone.h"
 void sparse_init(void);
 
 
@@ -11395,22 +11395,22 @@ void sparse_init(void);
 
 
 bool early_pfn_in_nid(unsigned long pfn, int nid);
-# 1093 "include/linux/mmzone.h"
+//# 1093 "include/linux/mmzone.h"
 void memory_present(int nid, unsigned long start, unsigned long end);
 unsigned long __attribute__ ((__section__(".init.text"))) __attribute__((__cold__)) __attribute__((no_instrument_function)) node_memmap_size_bytes(int, unsigned long, unsigned long);
-# 1127 "include/linux/mmzone.h"
+//# 1127 "include/linux/mmzone.h"
 static inline __attribute__((always_inline)) int memmap_valid_within(unsigned long pfn,
      struct page *page, struct zone *zone)
 {
  return 1;
 }
-# 5 "include/linux/gfp.h" 2
+//# 5 "include/linux/gfp.h" 2
 
 
-# 1 "include/linux/topology.h" 1
-# 33 "include/linux/topology.h"
-# 1 "include/linux/smp.h" 1
-# 14 "include/linux/smp.h"
+//# 1 "include/linux/topology.h" 1
+//# 33 "include/linux/topology.h"
+//# 1 "include/linux/smp.h" 1
+//# 14 "include/linux/smp.h"
 extern void cpu_idle(void);
 
 struct call_single_data {
@@ -11426,7 +11426,7 @@ extern unsigned int total_cpus;
 
 int smp_call_function_single(int cpuid, void (*func) (void *info), void *info,
     int wait);
-# 46 "include/linux/smp.h"
+//# 46 "include/linux/smp.h"
 extern void smp_send_stop(void);
 
 
@@ -11476,22 +11476,22 @@ void ipi_call_unlock_irq(void);
 
 
 int on_each_cpu(void (*func) (void *info), void *info, int wait);
-# 110 "include/linux/smp.h"
+//# 110 "include/linux/smp.h"
 void smp_prepare_boot_cpu(void);
 
 extern unsigned int setup_max_cpus;
-# 174 "include/linux/smp.h"
+//# 174 "include/linux/smp.h"
 extern void arch_disable_smp_support(void);
 
 void smp_setup_processor_id(void);
-# 34 "include/linux/topology.h" 2
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/topology.h" 1
-# 60 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/topology.h"
+//# 34 "include/linux/topology.h" 2
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/topology.h" 1
+//# 60 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/topology.h"
 extern __attribute__((section(".data.percpu" ""))) __typeof__(int) per_cpu__x86_cpu_to_node_map; extern __typeof__(int) *x86_cpu_to_node_map_early_ptr; extern __typeof__(int) x86_cpu_to_node_map_early_map[];
 
 
 extern __attribute__((section(".data.percpu" ""))) __typeof__(int) per_cpu__node_number;
-# 73 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/topology.h"
+//# 73 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/topology.h"
 static inline __attribute__((always_inline)) int cpu_to_node(int cpu)
 {
  return (*({ unsigned long __ptr; __asm__ ("" : "=r"(__ptr) : "0"((&per_cpu__x86_cpu_to_node_map))); (typeof((&per_cpu__x86_cpu_to_node_map))) (__ptr + (((__per_cpu_offset[cpu])))); }));
@@ -11521,31 +11521,31 @@ static inline __attribute__((always_inline)) const struct cpumask *cpumask_of_no
 
 
 extern void setup_node_to_cpumask_map(void);
-# 158 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/topology.h"
+//# 158 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/topology.h"
 extern int __node_distance(int, int);
-# 178 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/topology.h"
-# 1 "include/asm-generic/topology.h" 1
-# 179 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/topology.h" 2
+//# 178 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/topology.h"
+//# 1 "include/asm-generic/topology.h" 1
+//# 179 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/topology.h" 2
 
 extern const struct cpumask *cpu_coregroup_mask(int cpu);
-# 192 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/topology.h"
+//# 192 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/topology.h"
 static inline __attribute__((always_inline)) void arch_fix_phys_package_id(int num, u32 slot)
 {
 }
 
 struct pci_bus;
 void x86_pci_root_bus_res_quirks(struct pci_bus *b);
-# 206 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/topology.h"
+//# 206 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/topology.h"
 extern int get_mp_bus_to_node(int busnum);
 extern void set_mp_bus_to_node(int busnum, int node);
-# 35 "include/linux/topology.h" 2
-# 48 "include/linux/topology.h"
+//# 35 "include/linux/topology.h" 2
+//# 48 "include/linux/topology.h"
 int arch_update_cpu_topology(void);
-# 8 "include/linux/gfp.h" 2
+//# 8 "include/linux/gfp.h" 2
 
 
 struct vm_area_struct;
-# 119 "include/linux/gfp.h"
+//# 119 "include/linux/gfp.h"
 static inline __attribute__((always_inline)) int allocflags_to_migratetype(gfp_t gfp_flags)
 {
  ({ int __ret_warn_on = !!((gfp_flags & ((( gfp_t)0x80000u)|(( gfp_t)0x08u))) == ((( gfp_t)0x80000u)|(( gfp_t)0x08u))); if (__builtin_expect(!!(__ret_warn_on), 0)) warn_slowpath_null("include/linux/gfp.h", 121); __builtin_expect(!!(__ret_warn_on), 0); });
@@ -11557,7 +11557,7 @@ static inline __attribute__((always_inline)) int allocflags_to_migratetype(gfp_t
  return (((gfp_flags & (( gfp_t)0x08u)) != 0) << 1) |
   ((gfp_flags & (( gfp_t)0x80000u)) != 0);
 }
-# 214 "include/linux/gfp.h"
+//# 214 "include/linux/gfp.h"
 static inline __attribute__((always_inline)) enum zone_type gfp_zone(gfp_t flags)
 {
  enum zone_type z;
@@ -11575,7 +11575,7 @@ static inline __attribute__((always_inline)) enum zone_type gfp_zone(gfp_t flags
  }
  return z;
 }
-# 239 "include/linux/gfp.h"
+//# 239 "include/linux/gfp.h"
 static inline __attribute__((always_inline)) int gfp_zonelist(gfp_t flags)
 {
  if (1 && __builtin_expect(!!(flags & (( gfp_t)0x40000u)), 0))
@@ -11583,7 +11583,7 @@ static inline __attribute__((always_inline)) int gfp_zonelist(gfp_t flags)
 
  return 0;
 }
-# 256 "include/linux/gfp.h"
+//# 256 "include/linux/gfp.h"
 static inline __attribute__((always_inline)) struct zonelist *node_zonelist(int nid, gfp_t flags)
 {
  return (node_data[nid])->node_zonelists + gfp_zonelist(flags);
@@ -11672,10 +11672,10 @@ static inline __attribute__((always_inline)) void set_gfp_allowed_mask(gfp_t mas
 {
  gfp_allowed_mask = mask;
 }
-# 23 "include/linux/kmod.h" 2
-# 32 "include/linux/kmod.h"
+//# 23 "include/linux/kmod.h" 2
+//# 32 "include/linux/kmod.h"
 extern int __request_module(bool wait, const char *name, ...) __attribute__((format(printf, 2, 3)));
-# 45 "include/linux/kmod.h"
+//# 45 "include/linux/kmod.h"
 struct key;
 struct file;
 struct subprocess_info;
@@ -11740,23 +11740,23 @@ extern int call_usermodehelper_pipe(char *path, char *argv[], char *envp[],
 
 extern int usermodehelper_disable(void);
 extern void usermodehelper_enable(void);
-# 14 "include/linux/module.h" 2
-# 1 "include/linux/elf.h" 1
+//# 14 "include/linux/module.h" 2
+//# 1 "include/linux/elf.h" 1
 
 
 
 
-# 1 "include/linux/elf-em.h" 1
-# 6 "include/linux/elf.h" 2
+//# 1 "include/linux/elf-em.h" 1
+//# 6 "include/linux/elf.h" 2
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/elf.h" 1
-# 9 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/elf.h"
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/user.h" 1
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/elf.h" 1
+//# 9 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/elf.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/user.h" 1
 
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/user_64.h" 1
-# 50 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/user_64.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/user_64.h" 1
+//# 50 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/user_64.h"
 struct user_i387_struct {
  unsigned short cwd;
  unsigned short swd;
@@ -11839,10 +11839,10 @@ struct user {
   unsigned long error_code;
   unsigned long fault_address;
 };
-# 5 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/user.h" 2
-# 10 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/elf.h" 2
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/auxvec.h" 1
-# 11 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/elf.h" 2
+//# 5 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/user.h" 2
+//# 10 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/elf.h" 2
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/auxvec.h" 1
+//# 11 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/elf.h" 2
 
 typedef unsigned long elf_greg_t;
 
@@ -11850,16 +11850,16 @@ typedef unsigned long elf_greg_t;
 typedef elf_greg_t elf_gregset_t[(sizeof(struct user_regs_struct) / sizeof(elf_greg_t))];
 
 typedef struct user_i387_struct elf_fpregset_t;
-# 75 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/elf.h"
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/vdso.h" 1
+//# 75 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/elf.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/vdso.h" 1
 
 
 
 
 extern const char VDSO64_PRELINK[];
-# 19 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/vdso.h"
+//# 19 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/vdso.h"
 extern const char VDSO32_PRELINK[];
-# 36 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/vdso.h"
+//# 36 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/vdso.h"
 extern void __kernel_sigreturn;
 extern void __kernel_rt_sigreturn;
 
@@ -11870,10 +11870,10 @@ extern void __kernel_rt_sigreturn;
 extern const char vdso32_int80_start, vdso32_int80_end;
 extern const char vdso32_syscall_start, vdso32_syscall_end;
 extern const char vdso32_sysenter_start, vdso32_sysenter_end;
-# 76 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/elf.h" 2
+//# 76 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/elf.h" 2
 
 extern unsigned int vdso_enabled;
-# 160 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/elf.h"
+//# 160 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/elf.h"
 static inline __attribute__((always_inline)) void start_ia32_thread(struct pt_regs *regs, u32 ip, u32 sp)
 {
  asm volatile("\n" "1:\t" "movl %k0,%%" "fs" "\n" "2:\n" ".section .fixup,\"ax\"\n" "3:\t" "movl %k1, %%" "fs" "\n\t" "jmp 2b\n" ".previous\n" " .section __ex_table,\"a\"\n" " " ".balign 8" " " "\n" " " ".quad" " " "1b" "," "3b" "\n" " .previous\n" : :"r" (0), "r" (0) : "memory");
@@ -11898,13 +11898,13 @@ static inline __attribute__((always_inline)) void elf_common_init(struct thread_
  t->fsindex = t->gsindex = 0;
  t->ds = t->es = ds;
 }
-# 251 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/elf.h"
+//# 251 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/elf.h"
 extern void set_personality_64bit(void);
 extern unsigned int sysctl_vsyscall32;
 extern int force_personality32;
-# 290 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/elf.h"
+//# 290 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/elf.h"
 struct task_struct;
-# 337 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/elf.h"
+//# 337 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/elf.h"
 struct linux_binprm;
 
 
@@ -11915,11 +11915,11 @@ extern int syscall32_setup_pages(struct linux_binprm *, int exstack);
 
 
 extern unsigned long arch_randomize_brk(struct mm_struct *mm);
-# 8 "include/linux/elf.h" 2
+//# 8 "include/linux/elf.h" 2
 
 
 struct file;
-# 20 "include/linux/elf.h"
+//# 20 "include/linux/elf.h"
 typedef __u32 Elf32_Addr;
 typedef __u16 Elf32_Half;
 typedef __u32 Elf32_Off;
@@ -11935,7 +11935,7 @@ typedef __s32 Elf64_Sword;
 typedef __u32 Elf64_Word;
 typedef __u64 Elf64_Xword;
 typedef __s64 Elf64_Sxword;
-# 127 "include/linux/elf.h"
+//# 127 "include/linux/elf.h"
 typedef struct dynamic{
   Elf32_Sword d_tag;
   union{
@@ -11951,7 +11951,7 @@ typedef struct {
     Elf64_Addr d_ptr;
   } d_un;
 } Elf64_Dyn;
-# 150 "include/linux/elf.h"
+//# 150 "include/linux/elf.h"
 typedef struct elf32_rel {
   Elf32_Addr r_offset;
   Elf32_Word r_info;
@@ -12056,7 +12056,7 @@ typedef struct elf64_phdr {
   Elf64_Xword p_memsz;
   Elf64_Xword p_align;
 } Elf64_Phdr;
-# 289 "include/linux/elf.h"
+//# 289 "include/linux/elf.h"
 typedef struct {
   Elf32_Word sh_name;
   Elf32_Word sh_type;
@@ -12082,7 +12082,7 @@ typedef struct elf64_shdr {
   Elf64_Xword sh_addralign;
   Elf64_Xword sh_entsize;
 } Elf64_Shdr;
-# 368 "include/linux/elf.h"
+//# 368 "include/linux/elf.h"
 typedef struct elf32_note {
   Elf32_Word n_namesz;
   Elf32_Word n_descsz;
@@ -12095,20 +12095,20 @@ typedef struct elf64_note {
   Elf64_Word n_descsz;
   Elf64_Word n_type;
 } Elf64_Nhdr;
-# 392 "include/linux/elf.h"
+//# 392 "include/linux/elf.h"
 extern Elf64_Dyn _DYNAMIC [];
-# 402 "include/linux/elf.h"
+//# 402 "include/linux/elf.h"
 static inline __attribute__((always_inline)) int elf_coredump_extra_notes_size(void) { return 0; }
 static inline __attribute__((always_inline)) int elf_coredump_extra_notes_write(struct file *file,
    loff_t *foffset) { return 0; }
-# 15 "include/linux/module.h" 2
+//# 15 "include/linux/module.h" 2
 
-# 1 "include/linux/kobject.h" 1
-# 21 "include/linux/kobject.h"
-# 1 "include/linux/sysfs.h" 1
-# 18 "include/linux/sysfs.h"
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic.h" 1
-# 19 "include/linux/sysfs.h" 2
+//# 1 "include/linux/kobject.h" 1
+//# 21 "include/linux/kobject.h"
+//# 1 "include/linux/sysfs.h" 1
+//# 18 "include/linux/sysfs.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic.h" 1
+//# 19 "include/linux/sysfs.h" 2
 
 struct kobject;
 struct module;
@@ -12130,7 +12130,7 @@ struct attribute_group {
            struct attribute *, int);
  struct attribute **attrs;
 };
-# 63 "include/linux/sysfs.h"
+//# 63 "include/linux/sysfs.h"
 struct vm_area_struct;
 
 struct bin_attribute {
@@ -12199,11 +12199,11 @@ struct sysfs_dirent *sysfs_get(struct sysfs_dirent *sd);
 void sysfs_put(struct sysfs_dirent *sd);
 void sysfs_printk_last_file(void);
 int __attribute__((warn_unused_result)) sysfs_init(void);
-# 22 "include/linux/kobject.h" 2
+//# 22 "include/linux/kobject.h" 2
 
 
-# 1 "include/linux/kref.h" 1
-# 20 "include/linux/kref.h"
+//# 1 "include/linux/kref.h" 1
+//# 20 "include/linux/kref.h"
 struct kref {
  atomic_t refcount;
 };
@@ -12212,11 +12212,11 @@ void kref_set(struct kref *kref, int num);
 void kref_init(struct kref *kref);
 void kref_get(struct kref *kref);
 int kref_put(struct kref *kref, void (*release) (struct kref *kref));
-# 25 "include/linux/kobject.h" 2
+//# 25 "include/linux/kobject.h" 2
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic.h" 1
-# 28 "include/linux/kobject.h" 2
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic.h" 1
+//# 28 "include/linux/kobject.h" 2
 
 
 
@@ -12227,7 +12227,7 @@ extern char uevent_helper[];
 
 
 extern u64 uevent_seqnum;
-# 49 "include/linux/kobject.h"
+//# 49 "include/linux/kobject.h"
 enum kobject_action {
  KOBJ_ADD,
  KOBJ_REMOVE,
@@ -12315,7 +12315,7 @@ struct kobj_attribute {
 };
 
 extern struct sysfs_ops kobj_sysfs_ops;
-# 154 "include/linux/kobject.h"
+//# 154 "include/linux/kobject.h"
 struct kset {
  struct list_head list;
  spinlock_t list_lock;
@@ -12373,9 +12373,9 @@ int add_uevent_var(struct kobj_uevent_env *env, const char *format, ...)
 
 int kobject_action_type(const char *buf, size_t count,
    enum kobject_action *type);
-# 17 "include/linux/module.h" 2
-# 1 "include/linux/moduleparam.h" 1
-# 32 "include/linux/moduleparam.h"
+//# 17 "include/linux/module.h" 2
+//# 1 "include/linux/moduleparam.h" 1
+//# 32 "include/linux/moduleparam.h"
 struct kernel_param;
 
 
@@ -12415,7 +12415,7 @@ struct kparam_array
  unsigned int elemsize;
  void *elem;
 };
-# 143 "include/linux/moduleparam.h"
+//# 143 "include/linux/moduleparam.h"
 extern int parse_args(const char *name,
         char *args,
         struct kernel_param *params,
@@ -12425,7 +12425,7 @@ extern int parse_args(const char *name,
 
 
 extern void destroy_params(const struct kernel_param *params, unsigned num);
-# 165 "include/linux/moduleparam.h"
+//# 165 "include/linux/moduleparam.h"
 extern int param_set_byte(const char *val, struct kernel_param *kp);
 extern int param_get_byte(char *buffer, struct kernel_param *kp);
 
@@ -12461,10 +12461,10 @@ extern int param_get_charp(char *buffer, struct kernel_param *kp);
 
 extern int param_set_bool(const char *val, struct kernel_param *kp);
 extern int param_get_bool(char *buffer, struct kernel_param *kp);
-# 208 "include/linux/moduleparam.h"
+//# 208 "include/linux/moduleparam.h"
 extern int param_set_invbool(const char *val, struct kernel_param *kp);
 extern int param_get_invbool(char *buffer, struct kernel_param *kp);
-# 226 "include/linux/moduleparam.h"
+//# 226 "include/linux/moduleparam.h"
 extern int param_array_set(const char *val, struct kernel_param *kp);
 extern int param_array_get(char *buffer, struct kernel_param *kp);
 
@@ -12481,18 +12481,18 @@ extern int module_param_sysfs_setup(struct module *mod,
         unsigned int num_params);
 
 extern void module_param_sysfs_remove(struct module *mod);
-# 18 "include/linux/module.h" 2
-# 1 "include/linux/tracepoint.h" 1
-# 18 "include/linux/tracepoint.h"
-# 1 "include/linux/rcupdate.h" 1
-# 42 "include/linux/rcupdate.h"
-# 1 "include/linux/completion.h" 1
-# 25 "include/linux/completion.h"
+//# 18 "include/linux/module.h" 2
+//# 1 "include/linux/tracepoint.h" 1
+//# 18 "include/linux/tracepoint.h"
+//# 1 "include/linux/rcupdate.h" 1
+//# 42 "include/linux/rcupdate.h"
+//# 1 "include/linux/completion.h" 1
+//# 25 "include/linux/completion.h"
 struct completion {
  unsigned int done;
  wait_queue_head_t wait;
 };
-# 73 "include/linux/completion.h"
+//# 73 "include/linux/completion.h"
 static inline __attribute__((always_inline)) void init_completion(struct completion *x)
 {
  x->done = 0;
@@ -12511,7 +12511,7 @@ extern bool completion_done(struct completion *x);
 
 extern void complete(struct completion *);
 extern void complete_all(struct completion *);
-# 43 "include/linux/rcupdate.h" 2
+//# 43 "include/linux/rcupdate.h" 2
 
 
 
@@ -12544,8 +12544,8 @@ extern int rcu_needs_cpu(int cpu);
 extern int rcu_scheduler_active;
 
 
-# 1 "include/linux/rcutree.h" 1
-# 33 "include/linux/rcutree.h"
+//# 1 "include/linux/rcutree.h" 1
+//# 33 "include/linux/rcutree.h"
 struct notifier_block;
 
 extern void rcu_sched_qs(int cpu);
@@ -12554,7 +12554,7 @@ extern int rcu_cpu_notify(struct notifier_block *self,
      unsigned long action, void *hcpu);
 extern int rcu_needs_cpu(int cpu);
 extern int rcu_expedited_torture_stats(char *page);
-# 50 "include/linux/rcutree.h"
+//# 50 "include/linux/rcutree.h"
 static inline __attribute__((always_inline)) void __rcu_read_lock(void)
 {
  do { } while (0);
@@ -12601,27 +12601,27 @@ extern long rcu_batches_completed_sched(void);
 
 void rcu_enter_nohz(void);
 void rcu_exit_nohz(void);
-# 106 "include/linux/rcutree.h"
+//# 106 "include/linux/rcutree.h"
 static inline __attribute__((always_inline)) int rcu_blocking_is_gp(void)
 {
  return cpumask_weight(cpu_online_mask) == 1;
 }
-# 76 "include/linux/rcupdate.h" 2
-# 125 "include/linux/rcupdate.h"
+//# 76 "include/linux/rcupdate.h" 2
+//# 125 "include/linux/rcupdate.h"
 static inline __attribute__((always_inline)) void rcu_read_lock(void)
 {
  __rcu_read_lock();
  (void)0;
  do { } while (0);
 }
-# 147 "include/linux/rcupdate.h"
+//# 147 "include/linux/rcupdate.h"
 static inline __attribute__((always_inline)) void rcu_read_unlock(void)
 {
  do { } while (0);
  (void)0;
  __rcu_read_unlock();
 }
-# 165 "include/linux/rcupdate.h"
+//# 165 "include/linux/rcupdate.h"
 static inline __attribute__((always_inline)) void rcu_read_lock_bh(void)
 {
  __rcu_read_lock_bh();
@@ -12640,7 +12640,7 @@ static inline __attribute__((always_inline)) void rcu_read_unlock_bh(void)
  (void)0;
  __rcu_read_unlock_bh();
 }
-# 193 "include/linux/rcupdate.h"
+//# 193 "include/linux/rcupdate.h"
 static inline __attribute__((always_inline)) void rcu_read_lock_sched(void)
 {
  do { } while (0);
@@ -12673,20 +12673,20 @@ static inline __attribute__((always_inline)) __attribute__((no_instrument_functi
  (void)0;
  do { } while (0);
 }
-# 266 "include/linux/rcupdate.h"
+//# 266 "include/linux/rcupdate.h"
 struct rcu_synchronize {
  struct rcu_head head;
  struct completion completion;
 };
 
 extern void wakeme_after_rcu(struct rcu_head *head);
-# 284 "include/linux/rcupdate.h"
+//# 284 "include/linux/rcupdate.h"
 extern void call_rcu(struct rcu_head *head,
          void (*func)(struct rcu_head *head));
-# 305 "include/linux/rcupdate.h"
+//# 305 "include/linux/rcupdate.h"
 extern void call_rcu_bh(struct rcu_head *head,
    void (*func)(struct rcu_head *head));
-# 19 "include/linux/tracepoint.h" 2
+//# 19 "include/linux/tracepoint.h" 2
 
 struct module;
 struct tracepoint;
@@ -12698,10 +12698,10 @@ struct tracepoint {
  void (*unregfunc)(void);
  void **funcs;
 } __attribute__((aligned(32)));
-# 99 "include/linux/tracepoint.h"
+//# 99 "include/linux/tracepoint.h"
 extern void tracepoint_update_probe_range(struct tracepoint *begin,
  struct tracepoint *end);
-# 132 "include/linux/tracepoint.h"
+//# 132 "include/linux/tracepoint.h"
 extern int tracepoint_probe_register(const char *name, void *probe);
 
 
@@ -12735,19 +12735,19 @@ static inline __attribute__((always_inline)) void tracepoint_synchronize_unregis
 {
  synchronize_sched();
 }
-# 19 "include/linux/module.h" 2
+//# 19 "include/linux/module.h" 2
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/local.h" 1
-
-
-
-# 1 "include/linux/percpu.h" 1
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/local.h" 1
 
 
 
+//# 1 "include/linux/percpu.h" 1
 
-# 1 "include/linux/slab.h" 1
-# 93 "include/linux/slab.h"
+
+
+
+//# 1 "include/linux/slab.h" 1
+//# 93 "include/linux/slab.h"
 void __attribute__ ((__section__(".init.text"))) __attribute__((__cold__)) __attribute__((no_instrument_function)) kmem_cache_init(void);
 int slab_is_available(void);
 
@@ -12760,18 +12760,18 @@ void kmem_cache_free(struct kmem_cache *, void *);
 unsigned int kmem_cache_size(struct kmem_cache *);
 const char *kmem_cache_name(struct kmem_cache *);
 int kmem_ptr_validate(struct kmem_cache *cachep, const void *ptr);
-# 136 "include/linux/slab.h"
+//# 136 "include/linux/slab.h"
 void * __attribute__((warn_unused_result)) __krealloc(const void *, size_t, gfp_t);
 void * __attribute__((warn_unused_result)) krealloc(const void *, size_t, gfp_t);
 void kfree(const void *);
 void kzfree(const void *);
 size_t ksize(const void *);
-# 166 "include/linux/slab.h"
-# 1 "include/linux/slab_def.h" 1
-# 17 "include/linux/slab_def.h"
-# 1 "include/linux/kmemtrace.h" 1
-# 12 "include/linux/kmemtrace.h"
-# 1 "include/trace/events/kmem.h" 1
+//# 166 "include/linux/slab.h"
+//# 1 "include/linux/slab_def.h" 1
+//# 17 "include/linux/slab_def.h"
+//# 1 "include/linux/kmemtrace.h" 1
+//# 12 "include/linux/kmemtrace.h"
+//# 1 "include/trace/events/kmem.h" 1
 
 
 
@@ -12779,36 +12779,36 @@ size_t ksize(const void *);
 
 
 
-# 1 "include/linux/tracepoint.h" 1
-# 9 "include/trace/events/kmem.h" 2
-# 47 "include/trace/events/kmem.h"
+//# 1 "include/linux/tracepoint.h" 1
+//# 9 "include/trace/events/kmem.h" 2
+//# 47 "include/trace/events/kmem.h"
 extern struct tracepoint __tracepoint_kmalloc; static inline __attribute__((always_inline)) void trace_kmalloc(unsigned long call_site, const void *ptr, size_t bytes_req, size_t bytes_alloc, gfp_t gfp_flags) { if (__builtin_expect(!!(__tracepoint_kmalloc.state), 0)) do { void **it_func; rcu_read_lock_sched_notrace(); it_func = ({ typeof((&__tracepoint_kmalloc)->funcs) _________p1 = (*(volatile typeof((&__tracepoint_kmalloc)->funcs) *)&((&__tracepoint_kmalloc)->funcs)); do { } while (0); (_________p1); }); if (it_func) { do { ((void(*)(unsigned long call_site, const void *ptr, size_t bytes_req, size_t bytes_alloc, gfp_t gfp_flags))(*it_func))(call_site, ptr, bytes_req, bytes_alloc, gfp_flags); } while (*(++it_func)); } rcu_read_unlock_sched_notrace(); } while (0); } static inline __attribute__((always_inline)) int register_trace_kmalloc(void (*probe)(unsigned long call_site, const void *ptr, size_t bytes_req, size_t bytes_alloc, gfp_t gfp_flags)) { return tracepoint_probe_register("kmalloc", (void *)probe); } static inline __attribute__((always_inline)) int unregister_trace_kmalloc(void (*probe)(unsigned long call_site, const void *ptr, size_t bytes_req, size_t bytes_alloc, gfp_t gfp_flags)) { return tracepoint_probe_unregister("kmalloc", (void *)probe); };
-# 81 "include/trace/events/kmem.h"
+//# 81 "include/trace/events/kmem.h"
 extern struct tracepoint __tracepoint_kmem_cache_alloc; static inline __attribute__((always_inline)) void trace_kmem_cache_alloc(unsigned long call_site, const void *ptr, size_t bytes_req, size_t bytes_alloc, gfp_t gfp_flags) { if (__builtin_expect(!!(__tracepoint_kmem_cache_alloc.state), 0)) do { void **it_func; rcu_read_lock_sched_notrace(); it_func = ({ typeof((&__tracepoint_kmem_cache_alloc)->funcs) _________p1 = (*(volatile typeof((&__tracepoint_kmem_cache_alloc)->funcs) *)&((&__tracepoint_kmem_cache_alloc)->funcs)); do { } while (0); (_________p1); }); if (it_func) { do { ((void(*)(unsigned long call_site, const void *ptr, size_t bytes_req, size_t bytes_alloc, gfp_t gfp_flags))(*it_func))(call_site, ptr, bytes_req, bytes_alloc, gfp_flags); } while (*(++it_func)); } rcu_read_unlock_sched_notrace(); } while (0); } static inline __attribute__((always_inline)) int register_trace_kmem_cache_alloc(void (*probe)(unsigned long call_site, const void *ptr, size_t bytes_req, size_t bytes_alloc, gfp_t gfp_flags)) { return tracepoint_probe_register("kmem_cache_alloc", (void *)probe); } static inline __attribute__((always_inline)) int unregister_trace_kmem_cache_alloc(void (*probe)(unsigned long call_site, const void *ptr, size_t bytes_req, size_t bytes_alloc, gfp_t gfp_flags)) { return tracepoint_probe_unregister("kmem_cache_alloc", (void *)probe); };
-# 115 "include/trace/events/kmem.h"
+//# 115 "include/trace/events/kmem.h"
 extern struct tracepoint __tracepoint_kmalloc_node; static inline __attribute__((always_inline)) void trace_kmalloc_node(unsigned long call_site, const void *ptr, size_t bytes_req, size_t bytes_alloc, gfp_t gfp_flags, int node) { if (__builtin_expect(!!(__tracepoint_kmalloc_node.state), 0)) do { void **it_func; rcu_read_lock_sched_notrace(); it_func = ({ typeof((&__tracepoint_kmalloc_node)->funcs) _________p1 = (*(volatile typeof((&__tracepoint_kmalloc_node)->funcs) *)&((&__tracepoint_kmalloc_node)->funcs)); do { } while (0); (_________p1); }); if (it_func) { do { ((void(*)(unsigned long call_site, const void *ptr, size_t bytes_req, size_t bytes_alloc, gfp_t gfp_flags, int node))(*it_func))(call_site, ptr, bytes_req, bytes_alloc, gfp_flags, node); } while (*(++it_func)); } rcu_read_unlock_sched_notrace(); } while (0); } static inline __attribute__((always_inline)) int register_trace_kmalloc_node(void (*probe)(unsigned long call_site, const void *ptr, size_t bytes_req, size_t bytes_alloc, gfp_t gfp_flags, int node)) { return tracepoint_probe_register("kmalloc_node", (void *)probe); } static inline __attribute__((always_inline)) int unregister_trace_kmalloc_node(void (*probe)(unsigned long call_site, const void *ptr, size_t bytes_req, size_t bytes_alloc, gfp_t gfp_flags, int node)) { return tracepoint_probe_unregister("kmalloc_node", (void *)probe); };
-# 153 "include/trace/events/kmem.h"
+//# 153 "include/trace/events/kmem.h"
 extern struct tracepoint __tracepoint_kmem_cache_alloc_node; static inline __attribute__((always_inline)) void trace_kmem_cache_alloc_node(unsigned long call_site, const void *ptr, size_t bytes_req, size_t bytes_alloc, gfp_t gfp_flags, int node) { if (__builtin_expect(!!(__tracepoint_kmem_cache_alloc_node.state), 0)) do { void **it_func; rcu_read_lock_sched_notrace(); it_func = ({ typeof((&__tracepoint_kmem_cache_alloc_node)->funcs) _________p1 = (*(volatile typeof((&__tracepoint_kmem_cache_alloc_node)->funcs) *)&((&__tracepoint_kmem_cache_alloc_node)->funcs)); do { } while (0); (_________p1); }); if (it_func) { do { ((void(*)(unsigned long call_site, const void *ptr, size_t bytes_req, size_t bytes_alloc, gfp_t gfp_flags, int node))(*it_func))(call_site, ptr, bytes_req, bytes_alloc, gfp_flags, node); } while (*(++it_func)); } rcu_read_unlock_sched_notrace(); } while (0); } static inline __attribute__((always_inline)) int register_trace_kmem_cache_alloc_node(void (*probe)(unsigned long call_site, const void *ptr, size_t bytes_req, size_t bytes_alloc, gfp_t gfp_flags, int node)) { return tracepoint_probe_register("kmem_cache_alloc_node", (void *)probe); } static inline __attribute__((always_inline)) int unregister_trace_kmem_cache_alloc_node(void (*probe)(unsigned long call_site, const void *ptr, size_t bytes_req, size_t bytes_alloc, gfp_t gfp_flags, int node)) { return tracepoint_probe_unregister("kmem_cache_alloc_node", (void *)probe); };
-# 191 "include/trace/events/kmem.h"
+//# 191 "include/trace/events/kmem.h"
 extern struct tracepoint __tracepoint_kfree; static inline __attribute__((always_inline)) void trace_kfree(unsigned long call_site, const void *ptr) { if (__builtin_expect(!!(__tracepoint_kfree.state), 0)) do { void **it_func; rcu_read_lock_sched_notrace(); it_func = ({ typeof((&__tracepoint_kfree)->funcs) _________p1 = (*(volatile typeof((&__tracepoint_kfree)->funcs) *)&((&__tracepoint_kfree)->funcs)); do { } while (0); (_________p1); }); if (it_func) { do { ((void(*)(unsigned long call_site, const void *ptr))(*it_func))(call_site, ptr); } while (*(++it_func)); } rcu_read_unlock_sched_notrace(); } while (0); } static inline __attribute__((always_inline)) int register_trace_kfree(void (*probe)(unsigned long call_site, const void *ptr)) { return tracepoint_probe_register("kfree", (void *)probe); } static inline __attribute__((always_inline)) int unregister_trace_kfree(void (*probe)(unsigned long call_site, const void *ptr)) { return tracepoint_probe_unregister("kfree", (void *)probe); };
-# 210 "include/trace/events/kmem.h"
+//# 210 "include/trace/events/kmem.h"
 extern struct tracepoint __tracepoint_kmem_cache_free; static inline __attribute__((always_inline)) void trace_kmem_cache_free(unsigned long call_site, const void *ptr) { if (__builtin_expect(!!(__tracepoint_kmem_cache_free.state), 0)) do { void **it_func; rcu_read_lock_sched_notrace(); it_func = ({ typeof((&__tracepoint_kmem_cache_free)->funcs) _________p1 = (*(volatile typeof((&__tracepoint_kmem_cache_free)->funcs) *)&((&__tracepoint_kmem_cache_free)->funcs)); do { } while (0); (_________p1); }); if (it_func) { do { ((void(*)(unsigned long call_site, const void *ptr))(*it_func))(call_site, ptr); } while (*(++it_func)); } rcu_read_unlock_sched_notrace(); } while (0); } static inline __attribute__((always_inline)) int register_trace_kmem_cache_free(void (*probe)(unsigned long call_site, const void *ptr)) { return tracepoint_probe_register("kmem_cache_free", (void *)probe); } static inline __attribute__((always_inline)) int unregister_trace_kmem_cache_free(void (*probe)(unsigned long call_site, const void *ptr)) { return tracepoint_probe_unregister("kmem_cache_free", (void *)probe); };
-# 229 "include/trace/events/kmem.h"
+//# 229 "include/trace/events/kmem.h"
 extern struct tracepoint __tracepoint_mm_page_free_direct; static inline __attribute__((always_inline)) void trace_mm_page_free_direct(struct page *page, unsigned int order) { if (__builtin_expect(!!(__tracepoint_mm_page_free_direct.state), 0)) do { void **it_func; rcu_read_lock_sched_notrace(); it_func = ({ typeof((&__tracepoint_mm_page_free_direct)->funcs) _________p1 = (*(volatile typeof((&__tracepoint_mm_page_free_direct)->funcs) *)&((&__tracepoint_mm_page_free_direct)->funcs)); do { } while (0); (_________p1); }); if (it_func) { do { ((void(*)(struct page *page, unsigned int order))(*it_func))(page, order); } while (*(++it_func)); } rcu_read_unlock_sched_notrace(); } while (0); } static inline __attribute__((always_inline)) int register_trace_mm_page_free_direct(void (*probe)(struct page *page, unsigned int order)) { return tracepoint_probe_register("mm_page_free_direct", (void *)probe); } static inline __attribute__((always_inline)) int unregister_trace_mm_page_free_direct(void (*probe)(struct page *page, unsigned int order)) { return tracepoint_probe_unregister("mm_page_free_direct", (void *)probe); };
-# 251 "include/trace/events/kmem.h"
+//# 251 "include/trace/events/kmem.h"
 extern struct tracepoint __tracepoint_mm_pagevec_free; static inline __attribute__((always_inline)) void trace_mm_pagevec_free(struct page *page, int cold) { if (__builtin_expect(!!(__tracepoint_mm_pagevec_free.state), 0)) do { void **it_func; rcu_read_lock_sched_notrace(); it_func = ({ typeof((&__tracepoint_mm_pagevec_free)->funcs) _________p1 = (*(volatile typeof((&__tracepoint_mm_pagevec_free)->funcs) *)&((&__tracepoint_mm_pagevec_free)->funcs)); do { } while (0); (_________p1); }); if (it_func) { do { ((void(*)(struct page *page, int cold))(*it_func))(page, cold); } while (*(++it_func)); } rcu_read_unlock_sched_notrace(); } while (0); } static inline __attribute__((always_inline)) int register_trace_mm_pagevec_free(void (*probe)(struct page *page, int cold)) { return tracepoint_probe_register("mm_pagevec_free", (void *)probe); } static inline __attribute__((always_inline)) int unregister_trace_mm_pagevec_free(void (*probe)(struct page *page, int cold)) { return tracepoint_probe_unregister("mm_pagevec_free", (void *)probe); };
-# 273 "include/trace/events/kmem.h"
+//# 273 "include/trace/events/kmem.h"
 extern struct tracepoint __tracepoint_mm_page_alloc; static inline __attribute__((always_inline)) void trace_mm_page_alloc(struct page *page, unsigned int order, gfp_t gfp_flags, int migratetype) { if (__builtin_expect(!!(__tracepoint_mm_page_alloc.state), 0)) do { void **it_func; rcu_read_lock_sched_notrace(); it_func = ({ typeof((&__tracepoint_mm_page_alloc)->funcs) _________p1 = (*(volatile typeof((&__tracepoint_mm_page_alloc)->funcs) *)&((&__tracepoint_mm_page_alloc)->funcs)); do { } while (0); (_________p1); }); if (it_func) { do { ((void(*)(struct page *page, unsigned int order, gfp_t gfp_flags, int migratetype))(*it_func))(page, order, gfp_flags, migratetype); } while (*(++it_func)); } rcu_read_unlock_sched_notrace(); } while (0); } static inline __attribute__((always_inline)) int register_trace_mm_page_alloc(void (*probe)(struct page *page, unsigned int order, gfp_t gfp_flags, int migratetype)) { return tracepoint_probe_register("mm_page_alloc", (void *)probe); } static inline __attribute__((always_inline)) int unregister_trace_mm_page_alloc(void (*probe)(struct page *page, unsigned int order, gfp_t gfp_flags, int migratetype)) { return tracepoint_probe_unregister("mm_page_alloc", (void *)probe); };
-# 302 "include/trace/events/kmem.h"
+//# 302 "include/trace/events/kmem.h"
 extern struct tracepoint __tracepoint_mm_page_alloc_zone_locked; static inline __attribute__((always_inline)) void trace_mm_page_alloc_zone_locked(struct page *page, unsigned int order, int migratetype) { if (__builtin_expect(!!(__tracepoint_mm_page_alloc_zone_locked.state), 0)) do { void **it_func; rcu_read_lock_sched_notrace(); it_func = ({ typeof((&__tracepoint_mm_page_alloc_zone_locked)->funcs) _________p1 = (*(volatile typeof((&__tracepoint_mm_page_alloc_zone_locked)->funcs) *)&((&__tracepoint_mm_page_alloc_zone_locked)->funcs)); do { } while (0); (_________p1); }); if (it_func) { do { ((void(*)(struct page *page, unsigned int order, int migratetype))(*it_func))(page, order, migratetype); } while (*(++it_func)); } rcu_read_unlock_sched_notrace(); } while (0); } static inline __attribute__((always_inline)) int register_trace_mm_page_alloc_zone_locked(void (*probe)(struct page *page, unsigned int order, int migratetype)) { return tracepoint_probe_register("mm_page_alloc_zone_locked", (void *)probe); } static inline __attribute__((always_inline)) int unregister_trace_mm_page_alloc_zone_locked(void (*probe)(struct page *page, unsigned int order, int migratetype)) { return tracepoint_probe_unregister("mm_page_alloc_zone_locked", (void *)probe); };
-# 328 "include/trace/events/kmem.h"
+//# 328 "include/trace/events/kmem.h"
 extern struct tracepoint __tracepoint_mm_page_pcpu_drain; static inline __attribute__((always_inline)) void trace_mm_page_pcpu_drain(struct page *page, int order, int migratetype) { if (__builtin_expect(!!(__tracepoint_mm_page_pcpu_drain.state), 0)) do { void **it_func; rcu_read_lock_sched_notrace(); it_func = ({ typeof((&__tracepoint_mm_page_pcpu_drain)->funcs) _________p1 = (*(volatile typeof((&__tracepoint_mm_page_pcpu_drain)->funcs) *)&((&__tracepoint_mm_page_pcpu_drain)->funcs)); do { } while (0); (_________p1); }); if (it_func) { do { ((void(*)(struct page *page, int order, int migratetype))(*it_func))(page, order, migratetype); } while (*(++it_func)); } rcu_read_unlock_sched_notrace(); } while (0); } static inline __attribute__((always_inline)) int register_trace_mm_page_pcpu_drain(void (*probe)(struct page *page, int order, int migratetype)) { return tracepoint_probe_register("mm_page_pcpu_drain", (void *)probe); } static inline __attribute__((always_inline)) int unregister_trace_mm_page_pcpu_drain(void (*probe)(struct page *page, int order, int migratetype)) { return tracepoint_probe_unregister("mm_page_pcpu_drain", (void *)probe); };
-# 353 "include/trace/events/kmem.h"
+//# 353 "include/trace/events/kmem.h"
 extern struct tracepoint __tracepoint_mm_page_alloc_extfrag; static inline __attribute__((always_inline)) void trace_mm_page_alloc_extfrag(struct page *page, int alloc_order, int fallback_order, int alloc_migratetype, int fallback_migratetype) { if (__builtin_expect(!!(__tracepoint_mm_page_alloc_extfrag.state), 0)) do { void **it_func; rcu_read_lock_sched_notrace(); it_func = ({ typeof((&__tracepoint_mm_page_alloc_extfrag)->funcs) _________p1 = (*(volatile typeof((&__tracepoint_mm_page_alloc_extfrag)->funcs) *)&((&__tracepoint_mm_page_alloc_extfrag)->funcs)); do { } while (0); (_________p1); }); if (it_func) { do { ((void(*)(struct page *page, int alloc_order, int fallback_order, int alloc_migratetype, int fallback_migratetype))(*it_func))(page, alloc_order, fallback_order, alloc_migratetype, fallback_migratetype); } while (*(++it_func)); } rcu_read_unlock_sched_notrace(); } while (0); } static inline __attribute__((always_inline)) int register_trace_mm_page_alloc_extfrag(void (*probe)(struct page *page, int alloc_order, int fallback_order, int alloc_migratetype, int fallback_migratetype)) { return tracepoint_probe_register("mm_page_alloc_extfrag", (void *)probe); } static inline __attribute__((always_inline)) int unregister_trace_mm_page_alloc_extfrag(void (*probe)(struct page *page, int alloc_order, int fallback_order, int alloc_migratetype, int fallback_migratetype)) { return tracepoint_probe_unregister("mm_page_alloc_extfrag", (void *)probe); };
-# 394 "include/trace/events/kmem.h"
-# 1 "include/trace/define_trace.h" 1
-# 394 "include/trace/events/kmem.h" 2
-# 13 "include/linux/kmemtrace.h" 2
+//# 394 "include/trace/events/kmem.h"
+//# 1 "include/trace/define_trace.h" 1
+//# 394 "include/trace/events/kmem.h" 2
+//# 13 "include/linux/kmemtrace.h" 2
 
 
 
@@ -12816,7 +12816,7 @@ extern struct tracepoint __tracepoint_mm_page_alloc_extfrag; static inline __att
 static inline __attribute__((always_inline)) void kmemtrace_init(void)
 {
 }
-# 18 "include/linux/slab_def.h" 2
+//# 18 "include/linux/slab_def.h" 2
 
 
 
@@ -12858,7 +12858,7 @@ struct kmem_cache {
 
  const char *name;
  struct list_head next;
-# 94 "include/linux/slab_def.h"
+//# 94 "include/linux/slab_def.h"
  struct kmem_list3 *nodelists[(1 << 6)];
 
 
@@ -12909,7 +12909,7 @@ static inline __attribute__((always_inline)) __attribute__((always_inline)) void
 
 
 
-# 1 "include/linux/kmalloc_sizes.h" 1
+//# 1 "include/linux/kmalloc_sizes.h" 1
 
  if (size <= 32) goto found; else i++;
 
@@ -12945,7 +12945,7 @@ static inline __attribute__((always_inline)) __attribute__((always_inline)) void
 
 
  if (size <= 4194304) goto found; else i++;
-# 145 "include/linux/slab_def.h" 2
+//# 145 "include/linux/slab_def.h" 2
 
   return ((void *)0);
 found:
@@ -13000,7 +13000,7 @@ static inline __attribute__((always_inline)) __attribute__((always_inline)) void
 
 
 
-# 1 "include/linux/kmalloc_sizes.h" 1
+//# 1 "include/linux/kmalloc_sizes.h" 1
 
  if (size <= 32) goto found; else i++;
 
@@ -13036,7 +13036,7 @@ static inline __attribute__((always_inline)) __attribute__((always_inline)) void
 
 
  if (size <= 4194304) goto found; else i++;
-# 200 "include/linux/slab_def.h" 2
+//# 200 "include/linux/slab_def.h" 2
 
   return ((void *)0);
 found:
@@ -13057,15 +13057,15 @@ found:
  }
  return __kmalloc_node(size, flags, node);
 }
-# 167 "include/linux/slab.h" 2
-# 220 "include/linux/slab.h"
+//# 167 "include/linux/slab.h" 2
+//# 220 "include/linux/slab.h"
 static inline __attribute__((always_inline)) void *kcalloc(size_t n, size_t size, gfp_t flags)
 {
  if (size != 0 && n > (~0UL) / size)
   return ((void *)0);
  return __kmalloc(n * size, flags | (( gfp_t)0x8000u));
 }
-# 303 "include/linux/slab.h"
+//# 303 "include/linux/slab.h"
 static inline __attribute__((always_inline)) void *kmem_cache_zalloc(struct kmem_cache *k, gfp_t flags)
 {
  return kmem_cache_alloc(k, flags | (( gfp_t)0x8000u));
@@ -13093,12 +13093,12 @@ static inline __attribute__((always_inline)) void *kzalloc_node(size_t size, gfp
 }
 
 void __attribute__ ((__section__(".init.text"))) __attribute__((__cold__)) __attribute__((no_instrument_function)) kmem_cache_init_late(void);
-# 6 "include/linux/percpu.h" 2
+//# 6 "include/linux/percpu.h" 2
 
 
-# 1 "include/linux/pfn.h" 1
-# 9 "include/linux/percpu.h" 2
-# 59 "include/linux/percpu.h"
+//# 1 "include/linux/pfn.h" 1
+//# 9 "include/linux/percpu.h" 2
+//# 59 "include/linux/percpu.h"
 extern void *pcpu_base_addr;
 extern const unsigned long *pcpu_unit_offsets;
 
@@ -13163,16 +13163,16 @@ extern int __attribute__ ((__section__(".init.text"))) __attribute__((__cold__))
     pcpu_fc_alloc_fn_t alloc_fn,
     pcpu_fc_free_fn_t free_fn,
     pcpu_fc_populate_pte_fn_t populate_pte_fn);
-# 132 "include/linux/percpu.h"
+//# 132 "include/linux/percpu.h"
 extern void *__alloc_reserved_percpu(size_t size, size_t align);
-# 155 "include/linux/percpu.h"
+//# 155 "include/linux/percpu.h"
 extern void *__alloc_percpu(size_t size, size_t align);
 extern void free_percpu(void *__pdata);
-# 5 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/local.h" 2
+//# 5 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/local.h" 2
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic.h" 1
-# 8 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/local.h" 2
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic.h" 1
+//# 8 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/local.h" 2
 
 
 typedef struct {
@@ -13209,7 +13209,7 @@ static inline __attribute__((always_inline)) void local_sub(long i, local_t *l)
        : "+m" (l->a.counter)
        : "ir" (i));
 }
-# 54 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/local.h"
+//# 54 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/local.h"
 static inline __attribute__((always_inline)) int local_sub_and_test(long i, local_t *l)
 {
  unsigned char c;
@@ -13219,7 +13219,7 @@ static inline __attribute__((always_inline)) int local_sub_and_test(long i, loca
        : "ir" (i) : "memory");
  return c;
 }
-# 72 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/local.h"
+//# 72 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/local.h"
 static inline __attribute__((always_inline)) int local_dec_and_test(local_t *l)
 {
  unsigned char c;
@@ -13229,7 +13229,7 @@ static inline __attribute__((always_inline)) int local_dec_and_test(local_t *l)
        : : "memory");
  return c != 0;
 }
-# 90 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/local.h"
+//# 90 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/local.h"
 static inline __attribute__((always_inline)) int local_inc_and_test(local_t *l)
 {
  unsigned char c;
@@ -13239,7 +13239,7 @@ static inline __attribute__((always_inline)) int local_inc_and_test(local_t *l)
        : : "memory");
  return c != 0;
 }
-# 109 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/local.h"
+//# 109 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/local.h"
 static inline __attribute__((always_inline)) int local_add_negative(long i, local_t *l)
 {
  unsigned char c;
@@ -13249,7 +13249,7 @@ static inline __attribute__((always_inline)) int local_add_negative(long i, loca
        : "ir" (i) : "memory");
  return c;
 }
-# 126 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/local.h"
+//# 126 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/local.h"
 static inline __attribute__((always_inline)) long local_add_return(long i, local_t *l)
 {
  long __i;
@@ -13264,19 +13264,19 @@ static inline __attribute__((always_inline)) long local_add_return(long i, local
        : "+r" (i), "+m" (l->a.counter)
        : : "memory");
  return i + __i;
-# 149 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/local.h"
+//# 149 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/local.h"
 }
 
 static inline __attribute__((always_inline)) long local_sub_return(long i, local_t *l)
 {
  return local_add_return(-i, l);
 }
-# 21 "include/linux/module.h" 2
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/module.h" 1
+//# 21 "include/linux/module.h" 2
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/module.h" 1
 
 
 
-# 1 "include/asm-generic/module.h" 1
+//# 1 "include/asm-generic/module.h" 1
 
 
 
@@ -13287,18 +13287,18 @@ static inline __attribute__((always_inline)) long local_sub_return(long i, local
 struct mod_arch_specific
 {
 };
-# 5 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/module.h" 2
-# 22 "include/linux/module.h" 2
+//# 5 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/module.h" 2
+//# 22 "include/linux/module.h" 2
 
-# 1 "include/trace/events/module.h" 1
-
-
+//# 1 "include/trace/events/module.h" 1
 
 
 
 
-# 1 "include/linux/tracepoint.h" 1
-# 8 "include/trace/events/module.h" 2
+
+
+//# 1 "include/linux/tracepoint.h" 1
+//# 8 "include/trace/events/module.h" 2
 
 
 
@@ -13310,19 +13310,19 @@ struct module;
 
 
 extern struct tracepoint __tracepoint_module_load; static inline __attribute__((always_inline)) void trace_module_load(struct module *mod) { if (__builtin_expect(!!(__tracepoint_module_load.state), 0)) do { void **it_func; rcu_read_lock_sched_notrace(); it_func = ({ typeof((&__tracepoint_module_load)->funcs) _________p1 = (*(volatile typeof((&__tracepoint_module_load)->funcs) *)&((&__tracepoint_module_load)->funcs)); do { } while (0); (_________p1); }); if (it_func) { do { ((void(*)(struct module *mod))(*it_func))(mod); } while (*(++it_func)); } rcu_read_unlock_sched_notrace(); } while (0); } static inline __attribute__((always_inline)) int register_trace_module_load(void (*probe)(struct module *mod)) { return tracepoint_probe_register("module_load", (void *)probe); } static inline __attribute__((always_inline)) int unregister_trace_module_load(void (*probe)(struct module *mod)) { return tracepoint_probe_unregister("module_load", (void *)probe); };
-# 37 "include/trace/events/module.h"
+//# 37 "include/trace/events/module.h"
 extern struct tracepoint __tracepoint_module_free; static inline __attribute__((always_inline)) void trace_module_free(struct module *mod) { if (__builtin_expect(!!(__tracepoint_module_free.state), 0)) do { void **it_func; rcu_read_lock_sched_notrace(); it_func = ({ typeof((&__tracepoint_module_free)->funcs) _________p1 = (*(volatile typeof((&__tracepoint_module_free)->funcs) *)&((&__tracepoint_module_free)->funcs)); do { } while (0); (_________p1); }); if (it_func) { do { ((void(*)(struct module *mod))(*it_func))(mod); } while (*(++it_func)); } rcu_read_unlock_sched_notrace(); } while (0); } static inline __attribute__((always_inline)) int register_trace_module_free(void (*probe)(struct module *mod)) { return tracepoint_probe_register("module_free", (void *)probe); } static inline __attribute__((always_inline)) int unregister_trace_module_free(void (*probe)(struct module *mod)) { return tracepoint_probe_unregister("module_free", (void *)probe); };
-# 54 "include/trace/events/module.h"
+//# 54 "include/trace/events/module.h"
 extern struct tracepoint __tracepoint_module_get; static inline __attribute__((always_inline)) void trace_module_get(struct module *mod, unsigned long ip, int refcnt) { if (__builtin_expect(!!(__tracepoint_module_get.state), 0)) do { void **it_func; rcu_read_lock_sched_notrace(); it_func = ({ typeof((&__tracepoint_module_get)->funcs) _________p1 = (*(volatile typeof((&__tracepoint_module_get)->funcs) *)&((&__tracepoint_module_get)->funcs)); do { } while (0); (_________p1); }); if (it_func) { do { ((void(*)(struct module *mod, unsigned long ip, int refcnt))(*it_func))(mod, ip, refcnt); } while (*(++it_func)); } rcu_read_unlock_sched_notrace(); } while (0); } static inline __attribute__((always_inline)) int register_trace_module_get(void (*probe)(struct module *mod, unsigned long ip, int refcnt)) { return tracepoint_probe_register("module_get", (void *)probe); } static inline __attribute__((always_inline)) int unregister_trace_module_get(void (*probe)(struct module *mod, unsigned long ip, int refcnt)) { return tracepoint_probe_unregister("module_get", (void *)probe); };
-# 76 "include/trace/events/module.h"
+//# 76 "include/trace/events/module.h"
 extern struct tracepoint __tracepoint_module_put; static inline __attribute__((always_inline)) void trace_module_put(struct module *mod, unsigned long ip, int refcnt) { if (__builtin_expect(!!(__tracepoint_module_put.state), 0)) do { void **it_func; rcu_read_lock_sched_notrace(); it_func = ({ typeof((&__tracepoint_module_put)->funcs) _________p1 = (*(volatile typeof((&__tracepoint_module_put)->funcs) *)&((&__tracepoint_module_put)->funcs)); do { } while (0); (_________p1); }); if (it_func) { do { ((void(*)(struct module *mod, unsigned long ip, int refcnt))(*it_func))(mod, ip, refcnt); } while (*(++it_func)); } rcu_read_unlock_sched_notrace(); } while (0); } static inline __attribute__((always_inline)) int register_trace_module_put(void (*probe)(struct module *mod, unsigned long ip, int refcnt)) { return tracepoint_probe_register("module_put", (void *)probe); } static inline __attribute__((always_inline)) int unregister_trace_module_put(void (*probe)(struct module *mod, unsigned long ip, int refcnt)) { return tracepoint_probe_unregister("module_put", (void *)probe); };
-# 98 "include/trace/events/module.h"
+//# 98 "include/trace/events/module.h"
 extern struct tracepoint __tracepoint_module_request; static inline __attribute__((always_inline)) void trace_module_request(char *name, bool wait, unsigned long ip) { if (__builtin_expect(!!(__tracepoint_module_request.state), 0)) do { void **it_func; rcu_read_lock_sched_notrace(); it_func = ({ typeof((&__tracepoint_module_request)->funcs) _________p1 = (*(volatile typeof((&__tracepoint_module_request)->funcs) *)&((&__tracepoint_module_request)->funcs)); do { } while (0); (_________p1); }); if (it_func) { do { ((void(*)(char *name, bool wait, unsigned long ip))(*it_func))(name, wait, ip); } while (*(++it_func)); } rcu_read_unlock_sched_notrace(); } while (0); } static inline __attribute__((always_inline)) int register_trace_module_request(void (*probe)(char *name, bool wait, unsigned long ip)) { return tracepoint_probe_register("module_request", (void *)probe); } static inline __attribute__((always_inline)) int unregister_trace_module_request(void (*probe)(char *name, bool wait, unsigned long ip)) { return tracepoint_probe_unregister("module_request", (void *)probe); };
-# 125 "include/trace/events/module.h"
-# 1 "include/trace/define_trace.h" 1
-# 126 "include/trace/events/module.h" 2
-# 24 "include/linux/module.h" 2
-# 35 "include/linux/module.h"
+//# 125 "include/trace/events/module.h"
+//# 1 "include/trace/define_trace.h" 1
+//# 126 "include/trace/events/module.h" 2
+//# 24 "include/linux/module.h" 2
+//# 35 "include/linux/module.h"
 struct kernel_symbol
 {
  unsigned long value;
@@ -13377,7 +13377,7 @@ void trim_init_extable(struct module *m);
 
 
 extern struct module __this_module;
-# 170 "include/linux/module.h"
+//# 170 "include/linux/module.h"
 const struct exception_table_entry *search_exception_tables(unsigned long add);
 
 struct notifier_block;
@@ -13387,7 +13387,7 @@ struct notifier_block;
 
 void *__symbol_get(const char *symbol);
 void *__symbol_get_gpl(const char *symbol);
-# 227 "include/linux/module.h"
+//# 227 "include/linux/module.h"
 enum module_state
 {
  MODULE_STATE_LIVE,
@@ -13472,7 +13472,7 @@ struct module
  unsigned num_bugs;
  struct list_head bug_list;
  struct bug_entry *bug_table;
-# 319 "include/linux/module.h"
+//# 319 "include/linux/module.h"
  Elf64_Sym *symtab, *core_symtab;
  unsigned int num_symtab, core_num_syms;
  char *strtab, *core_strtab;
@@ -13502,7 +13502,7 @@ struct module
 
  struct ftrace_event_call *trace_events;
  unsigned int num_trace_events;
-# 356 "include/linux/module.h"
+//# 356 "include/linux/module.h"
  struct list_head modules_which_use_me;
 
 
@@ -13643,9 +13643,9 @@ static inline __attribute__((always_inline)) int try_module_get(struct module *m
 }
 
 extern void module_put(struct module *module);
-# 512 "include/linux/module.h"
+//# 512 "include/linux/module.h"
 int use_module(struct module *a, struct module *b);
-# 524 "include/linux/module.h"
+//# 524 "include/linux/module.h"
 const char *module_address_lookup(unsigned long addr,
        unsigned long *symbolsize,
        unsigned long *offset,
@@ -13664,7 +13664,7 @@ extern void print_modules(void);
 
 extern void module_update_tracepoints(void);
 extern int module_get_iter_tracepoints(struct tracepoint_iter *iter);
-# 665 "include/linux/module.h"
+//# 665 "include/linux/module.h"
 struct device_driver;
 
 struct module;
@@ -13679,16 +13679,16 @@ int mod_sysfs_setup(struct module *mod,
       unsigned int num_params);
 int module_add_modinfo_attrs(struct module *mod);
 void module_remove_modinfo_attrs(struct module *mod);
-# 712 "include/linux/module.h"
+//# 712 "include/linux/module.h"
 int module_bug_finalize(const Elf64_Ehdr *, const Elf64_Shdr *,
     struct module *);
 void module_bug_cleanup(struct module *);
-# 267 "drivers/cdrom/cdrom.c" 2
-# 1 "include/linux/fs.h" 1
-# 9 "include/linux/fs.h"
-# 1 "include/linux/limits.h" 1
-# 10 "include/linux/fs.h" 2
-# 35 "include/linux/fs.h"
+//# 267 "drivers/cdrom/cdrom.c" 2
+//# 1 "include/linux/fs.h" 1
+//# 9 "include/linux/fs.h"
+//# 1 "include/linux/limits.h" 1
+//# 10 "include/linux/fs.h" 2
+//# 35 "include/linux/fs.h"
 struct files_stat_struct {
  int nr_files;
  int nr_free_files;
@@ -13700,9 +13700,9 @@ struct inodes_stat_t {
  int nr_unused;
  int dummy[5];
 };
-# 365 "include/linux/fs.h"
-# 1 "include/linux/kdev_t.h" 1
-# 21 "include/linux/kdev_t.h"
+//# 365 "include/linux/fs.h"
+//# 1 "include/linux/kdev_t.h" 1
+//# 21 "include/linux/kdev_t.h"
 static inline __attribute__((always_inline)) int old_valid_dev(dev_t dev)
 {
  return ((unsigned int) ((dev) >> 20)) < 256 && ((unsigned int) ((dev) & ((1U << 20) - 1))) < 256;
@@ -13771,16 +13771,16 @@ static inline __attribute__((always_inline)) unsigned sysv_minor(u32 dev)
 {
  return dev & 0x3ffff;
 }
-# 366 "include/linux/fs.h" 2
-# 1 "include/linux/dcache.h" 1
+//# 366 "include/linux/fs.h" 2
+//# 1 "include/linux/dcache.h" 1
 
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic.h" 1
-# 5 "include/linux/dcache.h" 2
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic.h" 1
+//# 5 "include/linux/dcache.h" 2
 
-# 1 "include/linux/rculist.h" 1
-# 18 "include/linux/rculist.h"
+//# 1 "include/linux/rculist.h" 1
+//# 18 "include/linux/rculist.h"
 static inline __attribute__((always_inline)) void __list_add_rcu(struct list_head *new,
   struct list_head *prev, struct list_head *next)
 {
@@ -13789,24 +13789,24 @@ static inline __attribute__((always_inline)) void __list_add_rcu(struct list_hea
  ({ if (!__builtin_constant_p(new) || ((new) != ((void *)0))) __asm__ __volatile__("": : :"memory"); (prev->next) = (new); });
  next->prev = new;
 }
-# 43 "include/linux/rculist.h"
+//# 43 "include/linux/rculist.h"
 static inline __attribute__((always_inline)) void list_add_rcu(struct list_head *new, struct list_head *head)
 {
  __list_add_rcu(new, head, head->next);
 }
-# 64 "include/linux/rculist.h"
+//# 64 "include/linux/rculist.h"
 static inline __attribute__((always_inline)) void list_add_tail_rcu(struct list_head *new,
      struct list_head *head)
 {
  __list_add_rcu(new, head->prev, head);
 }
-# 94 "include/linux/rculist.h"
+//# 94 "include/linux/rculist.h"
 static inline __attribute__((always_inline)) void list_del_rcu(struct list_head *entry)
 {
  __list_del(entry->prev, entry->next);
  entry->prev = ((void *) 0x00200200);
 }
-# 120 "include/linux/rculist.h"
+//# 120 "include/linux/rculist.h"
 static inline __attribute__((always_inline)) void hlist_del_init_rcu(struct hlist_node *n)
 {
  if (!hlist_unhashed(n)) {
@@ -13814,7 +13814,7 @@ static inline __attribute__((always_inline)) void hlist_del_init_rcu(struct hlis
   n->pprev = ((void *)0);
  }
 }
-# 136 "include/linux/rculist.h"
+//# 136 "include/linux/rculist.h"
 static inline __attribute__((always_inline)) void list_replace_rcu(struct list_head *old,
     struct list_head *new)
 {
@@ -13824,7 +13824,7 @@ static inline __attribute__((always_inline)) void list_replace_rcu(struct list_h
  new->next->prev = new;
  old->prev = ((void *) 0x00200200);
 }
-# 163 "include/linux/rculist.h"
+//# 163 "include/linux/rculist.h"
 static inline __attribute__((always_inline)) void list_splice_init_rcu(struct list_head *list,
      struct list_head *head,
      void (*sync)(void))
@@ -13839,21 +13839,21 @@ static inline __attribute__((always_inline)) void list_splice_init_rcu(struct li
 
 
  INIT_LIST_HEAD(list);
-# 185 "include/linux/rculist.h"
+//# 185 "include/linux/rculist.h"
  sync();
-# 195 "include/linux/rculist.h"
+//# 195 "include/linux/rculist.h"
  last->next = at;
  ({ if (!__builtin_constant_p(first) || ((first) != ((void *)0))) __asm__ __volatile__("": : :"memory"); (head->next) = (first); });
  first->prev = head;
  at->prev = last;
 }
-# 283 "include/linux/rculist.h"
+//# 283 "include/linux/rculist.h"
 static inline __attribute__((always_inline)) void hlist_del_rcu(struct hlist_node *n)
 {
  __hlist_del(n);
  n->pprev = ((void *) 0x00200200);
 }
-# 296 "include/linux/rculist.h"
+//# 296 "include/linux/rculist.h"
 static inline __attribute__((always_inline)) void hlist_replace_rcu(struct hlist_node *old,
      struct hlist_node *new)
 {
@@ -13866,7 +13866,7 @@ static inline __attribute__((always_inline)) void hlist_replace_rcu(struct hlist
   new->next->pprev = &new->next;
  old->pprev = ((void *) 0x00200200);
 }
-# 328 "include/linux/rculist.h"
+//# 328 "include/linux/rculist.h"
 static inline __attribute__((always_inline)) void hlist_add_head_rcu(struct hlist_node *n,
      struct hlist_head *h)
 {
@@ -13878,7 +13878,7 @@ static inline __attribute__((always_inline)) void hlist_add_head_rcu(struct hlis
  if (first)
   first->pprev = &n->next;
 }
-# 358 "include/linux/rculist.h"
+//# 358 "include/linux/rculist.h"
 static inline __attribute__((always_inline)) void hlist_add_before_rcu(struct hlist_node *n,
      struct hlist_node *next)
 {
@@ -13887,7 +13887,7 @@ static inline __attribute__((always_inline)) void hlist_add_before_rcu(struct hl
  ({ if (!__builtin_constant_p(n) || ((n) != ((void *)0))) __asm__ __volatile__("": : :"memory"); (*(n->pprev)) = (n); });
  next->pprev = &n->next;
 }
-# 385 "include/linux/rculist.h"
+//# 385 "include/linux/rculist.h"
 static inline __attribute__((always_inline)) void hlist_add_after_rcu(struct hlist_node *prev,
            struct hlist_node *n)
 {
@@ -13897,7 +13897,7 @@ static inline __attribute__((always_inline)) void hlist_add_after_rcu(struct hli
  if (n->next)
   n->next->pprev = &n->next;
 }
-# 7 "include/linux/dcache.h" 2
+//# 7 "include/linux/dcache.h" 2
 
 
 
@@ -13905,7 +13905,7 @@ static inline __attribute__((always_inline)) void hlist_add_after_rcu(struct hli
 struct nameidata;
 struct path;
 struct vfsmount;
-# 33 "include/linux/dcache.h"
+//# 33 "include/linux/dcache.h"
 struct qstr {
  unsigned int hash;
  unsigned int len;
@@ -13950,7 +13950,7 @@ full_name_hash(const unsigned char *name, unsigned int len)
   hash = partial_name_hash(*name++, hash);
  return end_name_hash(hash);
 }
-# 89 "include/linux/dcache.h"
+//# 89 "include/linux/dcache.h"
 struct dentry {
  atomic_t d_count;
  unsigned int d_flags;
@@ -14005,10 +14005,10 @@ struct dentry_operations {
  void (*d_iput)(struct dentry *, struct inode *);
  char *(*d_dname)(struct dentry *, char *, int);
 };
-# 189 "include/linux/dcache.h"
+//# 189 "include/linux/dcache.h"
 extern spinlock_t dcache_lock;
 extern seqlock_t rename_lock;
-# 208 "include/linux/dcache.h"
+//# 208 "include/linux/dcache.h"
 static inline __attribute__((always_inline)) void __d_drop(struct dentry *dentry)
 {
  if (!(dentry->d_flags & 0x0010)) {
@@ -14065,13 +14065,13 @@ extern int have_submounts(struct dentry *);
 
 
 extern void d_rehash(struct dentry *);
-# 274 "include/linux/dcache.h"
+//# 274 "include/linux/dcache.h"
 static inline __attribute__((always_inline)) void d_add(struct dentry *entry, struct inode *inode)
 {
  d_instantiate(entry, inode);
  d_rehash(entry);
 }
-# 288 "include/linux/dcache.h"
+//# 288 "include/linux/dcache.h"
 static inline __attribute__((always_inline)) struct dentry *d_add_unique(struct dentry *entry, struct inode *inode)
 {
  struct dentry *res;
@@ -14101,7 +14101,7 @@ extern char *dynamic_dname(struct dentry *, char *, int, const char *, ...);
 extern char *__d_path(const struct path *path, struct path *root, char *, int);
 extern char *d_path(const struct path *, char *, int);
 extern char *dentry_path(struct dentry *, char *, int);
-# 333 "include/linux/dcache.h"
+//# 333 "include/linux/dcache.h"
 static inline __attribute__((always_inline)) struct dentry *dget(struct dentry *dentry)
 {
  if (dentry) {
@@ -14112,7 +14112,7 @@ static inline __attribute__((always_inline)) struct dentry *dget(struct dentry *
 }
 
 extern struct dentry * dget_locked(struct dentry *);
-# 351 "include/linux/dcache.h"
+//# 351 "include/linux/dcache.h"
 static inline __attribute__((always_inline)) int d_unhashed(struct dentry *dentry)
 {
  return (dentry->d_flags & 0x0010);
@@ -14144,8 +14144,8 @@ extern struct vfsmount *lookup_mnt(struct path *);
 extern struct dentry *lookup_create(struct nameidata *nd, int is_dir);
 
 extern int sysctl_vfs_cache_pressure;
-# 367 "include/linux/fs.h" 2
-# 1 "include/linux/path.h" 1
+//# 367 "include/linux/fs.h" 2
+//# 1 "include/linux/path.h" 1
 
 
 
@@ -14159,13 +14159,13 @@ struct path {
 
 extern void path_get(struct path *);
 extern void path_put(struct path *);
-# 368 "include/linux/fs.h" 2
+//# 368 "include/linux/fs.h" 2
 
 
 
 
-# 1 "include/linux/radix-tree.h" 1
-# 41 "include/linux/radix-tree.h"
+//# 1 "include/linux/radix-tree.h" 1
+//# 41 "include/linux/radix-tree.h"
 static inline __attribute__((always_inline)) void *radix_tree_ptr_to_indirect(void *ptr)
 {
  return (void *)((unsigned long)ptr | 1);
@@ -14191,7 +14191,7 @@ struct radix_tree_root {
  gfp_t gfp_mask;
  struct radix_tree_node *rnode;
 };
-# 137 "include/linux/radix-tree.h"
+//# 137 "include/linux/radix-tree.h"
 static inline __attribute__((always_inline)) void *radix_tree_deref_slot(void **pslot)
 {
  void *ret = ({ typeof(*pslot) _________p1 = (*(volatile typeof(*pslot) *)&(*pslot)); do { } while (0); (_________p1); });
@@ -14199,7 +14199,7 @@ static inline __attribute__((always_inline)) void *radix_tree_deref_slot(void **
   ret = ((void *)-1UL);
  return ret;
 }
-# 152 "include/linux/radix-tree.h"
+//# 152 "include/linux/radix-tree.h"
 static inline __attribute__((always_inline)) void radix_tree_replace_slot(void **pslot, void *item)
 {
  do { if (__builtin_expect(!!(radix_tree_is_indirect_ptr(item)), 0)) do { asm volatile("1:\tud2\n" ".pushsection __bug_table,\"a\"\n" "2:\t.long 1b - 2b, %c0 - 2b\n" "\t.word %c1, 0\n" "\t.org 2b+%c2\n" ".popsection" : : "i" ("include/linux/radix-tree.h"), "i" (154), "i" (sizeof(struct bug_entry))); for (;;) ; } while (0); } while(0);
@@ -14242,9 +14242,9 @@ static inline __attribute__((always_inline)) void radix_tree_preload_end(void)
 {
  do { } while (0);
 }
-# 373 "include/linux/fs.h" 2
-# 1 "include/linux/prio_tree.h" 1
-# 14 "include/linux/prio_tree.h"
+//# 373 "include/linux/fs.h" 2
+//# 1 "include/linux/prio_tree.h" 1
+//# 14 "include/linux/prio_tree.h"
 struct raw_prio_tree_node {
  struct prio_tree_node *left;
  struct prio_tree_node *right;
@@ -14288,7 +14288,7 @@ static inline __attribute__((always_inline)) void prio_tree_iter_init(struct pri
  iter->h_index = h_index;
  iter->cur = ((void *)0);
 }
-# 84 "include/linux/prio_tree.h"
+//# 84 "include/linux/prio_tree.h"
 static inline __attribute__((always_inline)) int prio_tree_empty(const struct prio_tree_root *root)
 {
  return root->prio_tree_node == ((void *)0);
@@ -14316,9 +14316,9 @@ struct prio_tree_node *prio_tree_insert(struct prio_tree_root *root,
                 struct prio_tree_node *node);
 void prio_tree_remove(struct prio_tree_root *root, struct prio_tree_node *node);
 struct prio_tree_node *prio_tree_next(struct prio_tree_iter *iter);
-# 374 "include/linux/fs.h" 2
+//# 374 "include/linux/fs.h" 2
 
-# 1 "include/linux/pid.h" 1
+//# 1 "include/linux/pid.h" 1
 
 
 
@@ -14331,7 +14331,7 @@ enum pid_type
  PIDTYPE_SID,
  PIDTYPE_MAX
 };
-# 50 "include/linux/pid.h"
+//# 50 "include/linux/pid.h"
 struct upid {
 
  int nr;
@@ -14384,7 +14384,7 @@ extern void transfer_pid(struct task_struct *old, struct task_struct *new,
 
 struct pid_namespace;
 extern struct pid_namespace init_pid_ns;
-# 112 "include/linux/pid.h"
+//# 112 "include/linux/pid.h"
 extern struct pid *find_pid_ns(int nr, struct pid_namespace *ns);
 extern struct pid *find_vpid(int nr);
 
@@ -14397,7 +14397,7 @@ int next_pidmap(struct pid_namespace *pid_ns, int last);
 
 extern struct pid *alloc_pid(struct pid_namespace *ns);
 extern void free_pid(struct pid *pid);
-# 135 "include/linux/pid.h"
+//# 135 "include/linux/pid.h"
 static inline __attribute__((always_inline)) struct pid_namespace *ns_of_pid(struct pid *pid)
 {
  struct pid_namespace *ns = ((void *)0);
@@ -14405,7 +14405,7 @@ static inline __attribute__((always_inline)) struct pid_namespace *ns_of_pid(str
   ns = pid->numbers[pid->level].ns;
  return ns;
 }
-# 154 "include/linux/pid.h"
+//# 154 "include/linux/pid.h"
 static inline __attribute__((always_inline)) pid_t pid_nr(struct pid *pid)
 {
  pid_t nr = 0;
@@ -14416,12 +14416,12 @@ static inline __attribute__((always_inline)) pid_t pid_nr(struct pid *pid)
 
 pid_t pid_nr_ns(struct pid *pid, struct pid_namespace *ns);
 pid_t pid_vnr(struct pid *pid);
-# 376 "include/linux/fs.h" 2
+//# 376 "include/linux/fs.h" 2
 
-# 1 "include/linux/capability.h" 1
-# 18 "include/linux/capability.h"
+//# 1 "include/linux/capability.h" 1
+//# 18 "include/linux/capability.h"
 struct task_struct;
-# 40 "include/linux/capability.h"
+//# 40 "include/linux/capability.h"
 typedef struct __user_cap_header_struct {
  __u32 version;
  int pid;
@@ -14432,7 +14432,7 @@ typedef struct __user_cap_data_struct {
         __u32 permitted;
         __u32 inheritable;
 } *cap_user_data_t;
-# 72 "include/linux/capability.h"
+//# 72 "include/linux/capability.h"
 struct vfs_cap_data {
  __le32 magic_etc;
  struct {
@@ -14440,7 +14440,7 @@ struct vfs_cap_data {
   __le32 inheritable;
  } data[2];
 };
-# 96 "include/linux/capability.h"
+//# 96 "include/linux/capability.h"
 extern int file_caps_enabled;
 
 
@@ -14454,7 +14454,7 @@ struct cpu_vfs_cap_data {
  kernel_cap_t permitted;
  kernel_cap_t inheritable;
 };
-# 444 "include/linux/capability.h"
+//# 444 "include/linux/capability.h"
 static inline __attribute__((always_inline)) kernel_cap_t cap_combine(const kernel_cap_t a,
            const kernel_cap_t b)
 {
@@ -14495,7 +14495,7 @@ static inline __attribute__((always_inline)) int cap_isclear(const kernel_cap_t 
  }
  return 1;
 }
-# 492 "include/linux/capability.h"
+//# 492 "include/linux/capability.h"
 static inline __attribute__((always_inline)) int cap_issubset(const kernel_cap_t a, const kernel_cap_t set)
 {
  kernel_cap_t dest;
@@ -14542,21 +14542,21 @@ static inline __attribute__((always_inline)) kernel_cap_t cap_raise_nfsd_set(con
 extern const kernel_cap_t __cap_empty_set;
 extern const kernel_cap_t __cap_full_set;
 extern const kernel_cap_t __cap_init_eff_set;
-# 565 "include/linux/capability.h"
+//# 565 "include/linux/capability.h"
 extern int capable(int cap);
 
 
 struct dentry;
 extern int get_vfs_caps_from_disk(const struct dentry *dentry, struct cpu_vfs_cap_data *cpu_caps);
-# 378 "include/linux/fs.h" 2
-# 1 "include/linux/semaphore.h" 1
-# 16 "include/linux/semaphore.h"
+//# 378 "include/linux/fs.h" 2
+//# 1 "include/linux/semaphore.h" 1
+//# 16 "include/linux/semaphore.h"
 struct semaphore {
  spinlock_t lock;
  unsigned int count;
  struct list_head wait_list;
 };
-# 32 "include/linux/semaphore.h"
+//# 32 "include/linux/semaphore.h"
 static inline __attribute__((always_inline)) void sema_init(struct semaphore *sem, int val)
 {
  static struct lock_class_key __key;
@@ -14573,9 +14573,9 @@ extern int __attribute__((warn_unused_result)) down_killable(struct semaphore *s
 extern int __attribute__((warn_unused_result)) down_trylock(struct semaphore *sem);
 extern int __attribute__((warn_unused_result)) down_timeout(struct semaphore *sem, long jiffies);
 extern void up(struct semaphore *sem);
-# 379 "include/linux/fs.h" 2
-# 1 "include/linux/fiemap.h" 1
-# 16 "include/linux/fiemap.h"
+//# 379 "include/linux/fs.h" 2
+//# 1 "include/linux/fiemap.h" 1
+//# 16 "include/linux/fiemap.h"
 struct fiemap_extent {
  __u64 fe_logical;
 
@@ -14598,10 +14598,10 @@ struct fiemap {
  __u32 fm_reserved;
  struct fiemap_extent fm_extents[0];
 };
-# 380 "include/linux/fs.h" 2
+//# 380 "include/linux/fs.h" 2
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic.h" 1
-# 382 "include/linux/fs.h" 2
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic.h" 1
+//# 382 "include/linux/fs.h" 2
 
 
 struct export_operations;
@@ -14634,7 +14634,7 @@ typedef int (get_block_t)(struct inode *inode, sector_t iblock,
    struct buffer_head *bh_result, int create);
 typedef void (dio_iodone_t)(struct kiocb *iocb, loff_t offset,
    ssize_t bytes, void *private);
-# 446 "include/linux/fs.h"
+//# 446 "include/linux/fs.h"
 struct iattr {
  unsigned int ia_valid;
  umode_t ia_mode;
@@ -14656,8 +14656,8 @@ struct iattr {
 
 
 
-# 1 "include/linux/quota.h" 1
-# 86 "include/linux/quota.h"
+//# 1 "include/linux/quota.h" 1
+//# 86 "include/linux/quota.h"
 enum {
  QIF_BLIMITS_B = 0,
  QIF_SPACE_B,
@@ -14666,7 +14666,7 @@ enum {
  QIF_BTIME_B,
  QIF_ITIME_B,
 };
-# 106 "include/linux/quota.h"
+//# 106 "include/linux/quota.h"
 struct if_dqblk {
  __u64 dqb_bhardlimit;
  __u64 dqb_bsoftlimit;
@@ -14678,14 +14678,14 @@ struct if_dqblk {
  __u64 dqb_itime;
  __u32 dqb_valid;
 };
-# 127 "include/linux/quota.h"
+//# 127 "include/linux/quota.h"
 struct if_dqinfo {
  __u64 dqi_bgrace;
  __u64 dqi_igrace;
  __u32 dqi_flags;
  __u32 dqi_valid;
 };
-# 149 "include/linux/quota.h"
+//# 149 "include/linux/quota.h"
 enum {
  QUOTA_NL_C_UNSPEC,
  QUOTA_NL_C_WARNING,
@@ -14703,9 +14703,9 @@ enum {
  QUOTA_NL_A_CAUSED_ID,
  __QUOTA_NL_A_MAX,
 };
-# 176 "include/linux/quota.h"
-# 1 "include/linux/dqblk_xfs.h" 1
-# 50 "include/linux/dqblk_xfs.h"
+//# 176 "include/linux/quota.h"
+//# 1 "include/linux/dqblk_xfs.h" 1
+//# 50 "include/linux/dqblk_xfs.h"
 typedef struct fs_disk_quota {
  __s8 d_version;
  __s8 d_flags;
@@ -14731,7 +14731,7 @@ typedef struct fs_disk_quota {
  __s16 d_padding3;
  char d_padding4[8];
 } fs_disk_quota_t;
-# 137 "include/linux/dqblk_xfs.h"
+//# 137 "include/linux/dqblk_xfs.h"
 typedef struct fs_qfilestat {
  __u64 qfs_ino;
  __u64 qfs_nblks;
@@ -14751,10 +14751,10 @@ typedef struct fs_quota_stat {
  __u16 qs_bwarnlimit;
  __u16 qs_iwarnlimit;
 } fs_quota_stat_t;
-# 177 "include/linux/quota.h" 2
-# 1 "include/linux/dqblk_v1.h" 1
-# 178 "include/linux/quota.h" 2
-# 1 "include/linux/dqblk_v2.h" 1
+//# 177 "include/linux/quota.h" 2
+//# 1 "include/linux/dqblk_v1.h" 1
+//# 178 "include/linux/quota.h" 2
+//# 1 "include/linux/dqblk_v2.h" 1
 
 
 
@@ -14762,8 +14762,8 @@ typedef struct fs_quota_stat {
 
 
 
-# 1 "include/linux/dqblk_qtree.h" 1
-# 17 "include/linux/dqblk_qtree.h"
+//# 1 "include/linux/dqblk_qtree.h" 1
+//# 17 "include/linux/dqblk_qtree.h"
 struct dquot;
 
 
@@ -14802,17 +14802,17 @@ static inline __attribute__((always_inline)) int qtree_depth(struct qtree_mem_dq
   entries *= epb;
  return i;
 }
-# 9 "include/linux/dqblk_v2.h" 2
-# 179 "include/linux/quota.h" 2
+//# 9 "include/linux/dqblk_v2.h" 2
+//# 179 "include/linux/quota.h" 2
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic.h" 1
-# 181 "include/linux/quota.h" 2
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic.h" 1
+//# 181 "include/linux/quota.h" 2
 
 typedef __kernel_uid32_t qid_t;
 typedef long long qsize_t;
 
 extern spinlock_t dq_data_lock;
-# 197 "include/linux/quota.h"
+//# 197 "include/linux/quota.h"
 struct mem_dqblk {
  qsize_t dqb_bhardlimit;
  qsize_t dqb_bsoftlimit;
@@ -14867,7 +14867,7 @@ struct dqstats {
 };
 
 extern struct dqstats dqstats;
-# 264 "include/linux/quota.h"
+//# 264 "include/linux/quota.h"
 struct dquot {
  struct hlist_node dq_hash;
  struct list_head dq_inuse;
@@ -14955,7 +14955,7 @@ enum {
 
  _DQUOT_STATE_FLAGS
 };
-# 365 "include/linux/quota.h"
+//# 365 "include/linux/quota.h"
 static inline __attribute__((always_inline)) unsigned int dquot_state_flag(unsigned int flags, int type)
 {
  if (type == 0)
@@ -14987,13 +14987,13 @@ struct quota_module_name {
  int qm_fmt_id;
  char *qm_mod_name;
 };
-# 468 "include/linux/fs.h" 2
-# 495 "include/linux/fs.h"
+//# 468 "include/linux/fs.h" 2
+//# 495 "include/linux/fs.h"
 enum positive_aop_returns {
  AOP_WRITEPAGE_ACTIVATE = 0x80000,
  AOP_TRUNCATED_PAGE = 0x80001,
 };
-# 509 "include/linux/fs.h"
+//# 509 "include/linux/fs.h"
 struct page;
 struct address_space;
 struct writeback_control;
@@ -15029,7 +15029,7 @@ static inline __attribute__((always_inline)) size_t iov_iter_count(struct iov_it
 {
  return i->count;
 }
-# 554 "include/linux/fs.h"
+//# 554 "include/linux/fs.h"
 typedef struct {
  size_t written;
  size_t count;
@@ -15151,7 +15151,7 @@ struct block_device {
 
  struct mutex bd_fsfreeze_mutex;
 };
-# 683 "include/linux/fs.h"
+//# 683 "include/linux/fs.h"
 int mapping_tagged(struct address_space *mapping, int tag);
 
 
@@ -15173,7 +15173,7 @@ static inline __attribute__((always_inline)) int mapping_writably_mapped(struct 
 {
  return mapping->i_mmap_writable != 0;
 }
-# 716 "include/linux/fs.h"
+//# 716 "include/linux/fs.h"
 struct posix_acl;
 
 
@@ -15246,7 +15246,7 @@ struct inode {
 
  void *i_private;
 };
-# 800 "include/linux/fs.h"
+//# 800 "include/linux/fs.h"
 enum inode_i_mutex_lock_class
 {
  I_MUTEX_NORMAL,
@@ -15255,10 +15255,10 @@ enum inode_i_mutex_lock_class
  I_MUTEX_XATTR,
  I_MUTEX_QUOTA
 };
-# 819 "include/linux/fs.h"
+//# 819 "include/linux/fs.h"
 static inline __attribute__((always_inline)) loff_t i_size_read(const struct inode *inode)
 {
-# 838 "include/linux/fs.h"
+//# 838 "include/linux/fs.h"
  return inode->i_size;
 
 }
@@ -15270,7 +15270,7 @@ static inline __attribute__((always_inline)) loff_t i_size_read(const struct ino
 
 static inline __attribute__((always_inline)) void i_size_write(struct inode *inode, loff_t i_size)
 {
-# 858 "include/linux/fs.h"
+//# 858 "include/linux/fs.h"
  inode->i_size = i_size;
 
 }
@@ -15360,7 +15360,7 @@ struct file {
 
 };
 extern spinlock_t files_lock;
-# 986 "include/linux/fs.h"
+//# 986 "include/linux/fs.h"
 static inline __attribute__((always_inline)) void file_take_write(struct file *filp) {}
 static inline __attribute__((always_inline)) void file_release_write(struct file *filp) {}
 static inline __attribute__((always_inline)) void file_reset_write(struct file *filp) {}
@@ -15369,7 +15369,7 @@ static inline __attribute__((always_inline)) int file_check_writeable(struct fil
 {
  return 0;
 }
-# 1027 "include/linux/fs.h"
+//# 1027 "include/linux/fs.h"
 typedef struct files_struct *fl_owner_t;
 
 struct file_lock_operations {
@@ -15397,14 +15397,14 @@ void locks_end_grace(struct lock_manager *);
 int locks_in_grace(void);
 
 
-# 1 "include/linux/nfs_fs_i.h" 1
+//# 1 "include/linux/nfs_fs_i.h" 1
 
 
 
 
 
-# 1 "include/linux/nfs.h" 1
-# 40 "include/linux/nfs.h"
+//# 1 "include/linux/nfs.h" 1
+//# 40 "include/linux/nfs.h"
  enum nfs_stat {
  NFS_OK = 0,
  NFSERR_PERM = 1,
@@ -15495,8 +15495,8 @@ enum nfs_ftype {
 };
 
 
-# 1 "include/linux/sunrpc/msg_prot.h" 1
-# 18 "include/linux/sunrpc/msg_prot.h"
+//# 1 "include/linux/sunrpc/msg_prot.h" 1
+//# 18 "include/linux/sunrpc/msg_prot.h"
 typedef u32 rpc_authflavor_t;
 
 enum rpc_auth_flavors {
@@ -15559,16 +15559,16 @@ enum rpc_auth_stat {
  RPCSEC_GSS_CREDPROBLEM = 13,
  RPCSEC_GSS_CTXPROBLEM = 14
 };
-# 102 "include/linux/sunrpc/msg_prot.h"
+//# 102 "include/linux/sunrpc/msg_prot.h"
 typedef __be32 rpc_fraghdr;
-# 193 "include/linux/sunrpc/msg_prot.h"
-# 1 "include/linux/inet.h" 1
-# 54 "include/linux/inet.h"
+//# 193 "include/linux/sunrpc/msg_prot.h"
+//# 1 "include/linux/inet.h" 1
+//# 54 "include/linux/inet.h"
 extern __be32 in_aton(const char *str);
 extern int in4_pton(const char *src, int srclen, u8 *dst, int delim, const char **end);
 extern int in6_pton(const char *src, int srclen, u8 *dst, int delim, const char **end);
-# 194 "include/linux/sunrpc/msg_prot.h" 2
-# 131 "include/linux/nfs.h" 2
+//# 194 "include/linux/sunrpc/msg_prot.h" 2
+//# 131 "include/linux/nfs.h" 2
 
 
 
@@ -15594,13 +15594,13 @@ static inline __attribute__((always_inline)) void nfs_copy_fh(struct nfs_fh *tar
  target->size = source->size;
  memcpy(target->data, source->data, source->size);
 }
-# 165 "include/linux/nfs.h"
+//# 165 "include/linux/nfs.h"
 enum nfs3_stable_how {
  NFS_UNSTABLE = 0,
  NFS_DATA_SYNC = 1,
  NFS_FILE_SYNC = 2
 };
-# 7 "include/linux/nfs_fs_i.h" 2
+//# 7 "include/linux/nfs_fs_i.h" 2
 
 struct nlm_lockowner;
 
@@ -15617,7 +15617,7 @@ struct nfs4_lock_state;
 struct nfs4_lock_info {
  struct nfs4_lock_state *owner;
 };
-# 1055 "include/linux/fs.h" 2
+//# 1055 "include/linux/fs.h" 2
 
 struct file_lock {
  struct file_lock *fl_next;
@@ -15647,19 +15647,19 @@ struct file_lock {
   } afs;
  } fl_u;
 };
-# 1092 "include/linux/fs.h"
-# 1 "include/linux/fcntl.h" 1
+//# 1092 "include/linux/fs.h"
+//# 1 "include/linux/fcntl.h" 1
 
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/fcntl.h" 1
-# 1 "include/asm-generic/fcntl.h" 1
-# 94 "include/asm-generic/fcntl.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/fcntl.h" 1
+//# 1 "include/asm-generic/fcntl.h" 1
+//# 94 "include/asm-generic/fcntl.h"
 struct f_owner_ex {
  int type;
  pid_t pid;
 };
-# 139 "include/asm-generic/fcntl.h"
+//# 139 "include/asm-generic/fcntl.h"
 struct flock {
  short l_type;
  short l_whence;
@@ -15668,9 +15668,9 @@ struct flock {
  __kernel_pid_t l_pid;
 
 };
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/fcntl.h" 2
-# 5 "include/linux/fcntl.h" 2
-# 1093 "include/linux/fs.h" 2
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/fcntl.h" 2
+//# 5 "include/linux/fcntl.h" 2
+//# 1093 "include/linux/fs.h" 2
 
 extern void send_sigio(struct fown_struct *fown, int fd, int band);
 
@@ -15714,7 +15714,7 @@ extern int vfs_setlease(struct file *, long, struct file_lock **);
 extern int lease_modify(struct file_lock **, int);
 extern int lock_may_read(struct inode *, loff_t start, unsigned long count);
 extern int lock_may_write(struct inode *, loff_t start, unsigned long count);
-# 1281 "include/linux/fs.h"
+//# 1281 "include/linux/fs.h"
 struct fasync_struct {
  int magic;
  int fa_fd;
@@ -15736,7 +15736,7 @@ extern int f_setown(struct file *filp, unsigned long arg, int force);
 extern void f_delown(struct file *filp);
 extern pid_t f_getown(struct file *filp);
 extern int send_sigurg(struct fown_struct *fown);
-# 1311 "include/linux/fs.h"
+//# 1311 "include/linux/fs.h"
 extern struct list_head super_blocks;
 extern spinlock_t sb_lock;
 
@@ -15821,7 +15821,7 @@ enum {
  SB_FREEZE_WRITE = 1,
  SB_FREEZE_TRANS = 2,
 };
-# 1407 "include/linux/fs.h"
+//# 1407 "include/linux/fs.h"
 extern void lock_super(struct super_block *);
 extern void unlock_super(struct super_block *);
 
@@ -15860,10 +15860,10 @@ struct fiemap_extent_info {
 int fiemap_fill_next_extent(struct fiemap_extent_info *info, u64 logical,
        u64 phys, u64 len, u32 flags);
 int fiemap_check_flags(struct fiemap_extent_info *fieinfo, u32 fs_flags);
-# 1468 "include/linux/fs.h"
+//# 1468 "include/linux/fs.h"
 typedef int (*filldir_t)(void *, const char *, int, loff_t, u64, unsigned);
 struct block_device_operations;
-# 1482 "include/linux/fs.h"
+//# 1482 "include/linux/fs.h"
 struct file_operations {
  struct module *owner;
  loff_t (*llseek) (struct file *, loff_t, int);
@@ -15963,7 +15963,7 @@ struct super_operations {
 
  int (*bdev_try_to_free_page)(struct super_block*, struct page*, gfp_t);
 };
-# 1649 "include/linux/fs.h"
+//# 1649 "include/linux/fs.h"
 extern void __mark_inode_dirty(struct inode *, int);
 static inline __attribute__((always_inline)) void mark_inode_dirty(struct inode *inode)
 {
@@ -15974,7 +15974,7 @@ static inline __attribute__((always_inline)) void mark_inode_dirty_sync(struct i
 {
  __mark_inode_dirty(inode, 1);
 }
-# 1668 "include/linux/fs.h"
+//# 1668 "include/linux/fs.h"
 static inline __attribute__((always_inline)) void inc_nlink(struct inode *inode)
 {
  inode->i_nlink++;
@@ -15985,12 +15985,12 @@ static inline __attribute__((always_inline)) void inode_inc_link_count(struct in
  inc_nlink(inode);
  mark_inode_dirty(inode);
 }
-# 1690 "include/linux/fs.h"
+//# 1690 "include/linux/fs.h"
 static inline __attribute__((always_inline)) void drop_nlink(struct inode *inode)
 {
  inode->i_nlink--;
 }
-# 1703 "include/linux/fs.h"
+//# 1703 "include/linux/fs.h"
 static inline __attribute__((always_inline)) void clear_nlink(struct inode *inode)
 {
  inode->i_nlink = 0;
@@ -16001,7 +16001,7 @@ static inline __attribute__((always_inline)) void inode_dec_link_count(struct in
  drop_nlink(inode);
  mark_inode_dirty(inode);
 }
-# 1722 "include/linux/fs.h"
+//# 1722 "include/linux/fs.h"
 static inline __attribute__((always_inline)) void inode_inc_iversion(struct inode *inode)
 {
        _spin_lock(&inode->i_lock);
@@ -16149,7 +16149,7 @@ static inline __attribute__((always_inline)) int break_lease(struct inode *inode
   return __break_lease(inode, mode);
  return 0;
 }
-# 1912 "include/linux/fs.h"
+//# 1912 "include/linux/fs.h"
 extern int do_truncate(struct dentry *, loff_t start, unsigned int time_attrs,
          struct file *filp);
 extern int do_fallocate(struct file *file, int mode, loff_t offset,
@@ -16196,7 +16196,7 @@ extern struct super_block *freeze_bdev(struct block_device *);
 extern void emergency_thaw_all(void);
 extern int thaw_bdev(struct block_device *bdev, struct super_block *sb);
 extern int fsync_bdev(struct block_device *);
-# 1973 "include/linux/fs.h"
+//# 1973 "include/linux/fs.h"
 extern int sync_filesystem(struct super_block *);
 extern const struct file_operations def_blk_fops;
 extern const struct file_operations def_chr_fops;
@@ -16213,7 +16213,7 @@ extern void bd_release(struct block_device *);
 
 extern int bd_claim_by_disk(struct block_device *, void *, struct gendisk *);
 extern void bd_release_from_disk(struct block_device *, struct gendisk *);
-# 1997 "include/linux/fs.h"
+//# 1997 "include/linux/fs.h"
 extern int alloc_chrdev_region(dev_t *, unsigned, unsigned, const char *);
 extern int register_chrdev_region(dev_t, unsigned, const char *);
 extern int __register_chrdev(unsigned int major, unsigned int baseminor,
@@ -16263,7 +16263,7 @@ extern const struct file_operations write_pipefifo_fops;
 extern const struct file_operations rdwr_pipefifo_fops;
 
 extern int fs_may_remount_ro(struct super_block *);
-# 2058 "include/linux/fs.h"
+//# 2058 "include/linux/fs.h"
 extern void check_disk_size_change(struct gendisk *disk,
        struct block_device *bdev);
 extern int revalidate_disk(struct gendisk *);
@@ -16452,7 +16452,7 @@ extern loff_t generic_file_llseek_unlocked(struct file *file, loff_t offset,
    int origin);
 extern int generic_file_open(struct inode * inode, struct file * filp);
 extern int nonseekable_open(struct inode * inode, struct file * filp);
-# 2255 "include/linux/fs.h"
+//# 2255 "include/linux/fs.h"
 static inline __attribute__((always_inline)) int xip_truncate_page(struct address_space *mapping, loff_t from)
 {
  return 0;
@@ -16628,7 +16628,7 @@ ssize_t simple_transaction_read(struct file *file, char *buf,
 int simple_transaction_release(struct inode *inode, struct file *file);
 
 void simple_transaction_set(struct file *file, size_t n);
-# 2461 "include/linux/fs.h"
+//# 2461 "include/linux/fs.h"
 static inline __attribute__((always_inline)) void __attribute__((format(printf, 1, 2)))
 __simple_attr_check_format(const char *fmt, ...)
 {
@@ -16649,20 +16649,20 @@ int proc_nr_files(struct ctl_table *table, int write,
     void *buffer, size_t *lenp, loff_t *ppos);
 
 int __attribute__ ((__section__(".init.text"))) __attribute__((__cold__)) __attribute__((no_instrument_function)) get_filesystem_list(char *buf);
-# 268 "drivers/cdrom/cdrom.c" 2
-# 1 "include/linux/buffer_head.h" 1
-# 13 "include/linux/buffer_head.h"
-# 1 "include/linux/pagemap.h" 1
+//# 268 "drivers/cdrom/cdrom.c" 2
+//# 1 "include/linux/buffer_head.h" 1
+//# 13 "include/linux/buffer_head.h"
+//# 1 "include/linux/pagemap.h" 1
 
 
 
 
 
 
-# 1 "include/linux/mm.h" 1
-# 11 "include/linux/mm.h"
-# 1 "include/linux/rbtree.h" 1
-# 100 "include/linux/rbtree.h"
+//# 1 "include/linux/mm.h" 1
+//# 11 "include/linux/mm.h"
+//# 1 "include/linux/rbtree.h" 1
+//# 100 "include/linux/rbtree.h"
 struct rb_node
 {
  unsigned long rb_parent_color;
@@ -16677,7 +16677,7 @@ struct rb_root
 {
  struct rb_node *rb_node;
 };
-# 123 "include/linux/rbtree.h"
+//# 123 "include/linux/rbtree.h"
 static inline __attribute__((always_inline)) void rb_set_parent(struct rb_node *rb, struct rb_node *p)
 {
  rb->rb_parent_color = (rb->rb_parent_color & 3) | (unsigned long)p;
@@ -16686,7 +16686,7 @@ static inline __attribute__((always_inline)) void rb_set_color(struct rb_node *r
 {
  rb->rb_parent_color = (rb->rb_parent_color & ~1) | color;
 }
-# 139 "include/linux/rbtree.h"
+//# 139 "include/linux/rbtree.h"
 extern void rb_insert_color(struct rb_node *, struct rb_root *);
 extern void rb_erase(struct rb_node *, struct rb_root *);
 
@@ -16708,15 +16708,15 @@ static inline __attribute__((always_inline)) void rb_link_node(struct rb_node * 
 
  *rb_link = node;
 }
-# 12 "include/linux/mm.h" 2
+//# 12 "include/linux/mm.h" 2
 
-# 1 "include/linux/debug_locks.h" 1
-
-
+//# 1 "include/linux/debug_locks.h" 1
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic.h" 1
-# 6 "include/linux/debug_locks.h" 2
+
+
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic.h" 1
+//# 6 "include/linux/debug_locks.h" 2
 
 
 struct task_struct;
@@ -16734,9 +16734,9 @@ static inline __attribute__((always_inline)) int __debug_locks_off(void)
 
 
 extern int debug_locks_off(void);
-# 48 "include/linux/debug_locks.h"
+//# 48 "include/linux/debug_locks.h"
 struct task_struct;
-# 57 "include/linux/debug_locks.h"
+//# 57 "include/linux/debug_locks.h"
 static inline __attribute__((always_inline)) void debug_show_all_locks(void)
 {
 }
@@ -16758,28 +16758,28 @@ static inline __attribute__((always_inline)) void
 debug_check_no_locks_held(struct task_struct *task)
 {
 }
-# 14 "include/linux/mm.h" 2
-# 1 "include/linux/mm_types.h" 1
+//# 14 "include/linux/mm.h" 2
+//# 1 "include/linux/mm_types.h" 1
 
 
 
-# 1 "include/linux/auxvec.h" 1
-# 5 "include/linux/mm_types.h" 2
-# 14 "include/linux/mm_types.h"
-# 1 "include/linux/page-debug-flags.h" 1
-# 14 "include/linux/page-debug-flags.h"
+//# 1 "include/linux/auxvec.h" 1
+//# 5 "include/linux/mm_types.h" 2
+//# 14 "include/linux/mm_types.h"
+//# 1 "include/linux/page-debug-flags.h" 1
+//# 14 "include/linux/page-debug-flags.h"
 enum page_debug_flags {
  PAGE_DEBUG_FLAG_POISON,
 };
-# 15 "include/linux/mm_types.h" 2
-# 23 "include/linux/mm_types.h"
+//# 15 "include/linux/mm_types.h" 2
+//# 23 "include/linux/mm_types.h"
 struct address_space;
 
 
 
 
 typedef atomic_long_t mm_counter_t;
-# 40 "include/linux/mm_types.h"
+//# 40 "include/linux/mm_types.h"
 struct page {
  unsigned long flags;
 
@@ -16822,7 +16822,7 @@ struct page {
   void *freelist;
  };
  struct list_head lru;
-# 109 "include/linux/mm_types.h"
+//# 109 "include/linux/mm_types.h"
 };
 
 
@@ -16963,7 +16963,7 @@ struct mm_struct {
 
 
  mm_context_t context;
-# 257 "include/linux/mm_types.h"
+//# 257 "include/linux/mm_types.h"
  unsigned int faultstamp;
  unsigned int token_priority;
  unsigned int last_interval;
@@ -16974,7 +16974,7 @@ struct mm_struct {
 
  spinlock_t ioctx_lock;
  struct hlist_head ioctx_list;
-# 284 "include/linux/mm_types.h"
+//# 284 "include/linux/mm_types.h"
  struct file *exe_file;
  unsigned long num_exe_file_vmas;
 
@@ -16982,7 +16982,7 @@ struct mm_struct {
 
 
 };
-# 15 "include/linux/mm.h" 2
+//# 15 "include/linux/mm.h" 2
 
 struct mempolicy;
 struct anon_vma;
@@ -17007,14 +17007,14 @@ extern int sysctl_legacy_va_layout;
 
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable.h" 1
-# 23 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable.h" 1
+//# 23 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable.h"
 extern unsigned long empty_zero_page[((1UL) << 12) / sizeof(unsigned long)];
 
 
 extern spinlock_t pgd_lock;
 extern struct list_head pgd_list;
-# 83 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable.h"
+//# 83 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable.h"
 static inline __attribute__((always_inline)) int pte_dirty(pte_t pte)
 {
  return pte_flags(pte) & (((pteval_t)(1)) << 6);
@@ -17233,14 +17233,14 @@ pte_t *populate_extra_pte(unsigned long vaddr);
 
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable_64.h" 1
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable_64.h" 1
 
 
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable_64_types.h" 1
-# 6 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable_64.h" 2
-# 17 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable_64.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable_64_types.h" 1
+//# 6 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable_64.h" 2
+//# 17 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable_64.h"
 extern pud_t level3_kernel_pgt[512];
 extern pud_t level3_ident_pgt[512];
 extern pmd_t level2_kernel_pgt[512];
@@ -17251,7 +17251,7 @@ extern pgd_t init_level4_pgt[];
 
 
 extern void paging_init(void);
-# 41 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable_64.h"
+//# 41 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable_64.h"
 struct mm_struct;
 
 void set_pte_vaddr_pud(pud_t *pud_page, unsigned long vaddr, pte_t new_pte);
@@ -17315,12 +17315,12 @@ static inline __attribute__((always_inline)) void native_pgd_clear(pgd_t *pgd)
 {
  native_set_pgd(pgd, native_make_pgd(0));
 }
-# 113 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable_64.h"
+//# 113 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable_64.h"
 static inline __attribute__((always_inline)) int pgd_large(pgd_t pgd) { return 0; }
-# 154 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable_64.h"
+//# 154 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable_64.h"
 extern int kern_addr_valid(unsigned long addr);
 extern void cleanup_highmap(void);
-# 302 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable.h" 2
+//# 302 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable.h" 2
 
 
 
@@ -17363,12 +17363,12 @@ static inline __attribute__((always_inline)) unsigned long pmd_page_vaddr(pmd_t 
 {
  return (unsigned long)((void *)((unsigned long)(pmd_val(pmd) & ((pteval_t)(((signed long)(~(((1UL) << 12)-1))) & ((phys_addr_t)(1ULL << 46) - 1))))+((unsigned long)(0xffff880000000000UL))));
 }
-# 357 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable.h"
+//# 357 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable.h"
 static inline __attribute__((always_inline)) unsigned long pmd_index(unsigned long address)
 {
  return (address >> 21) & (512 - 1);
 }
-# 377 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable.h"
+//# 377 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable.h"
 static inline __attribute__((always_inline)) unsigned long pte_index(unsigned long address)
 {
  return (address >> 12) & (512 - 1);
@@ -17407,7 +17407,7 @@ static inline __attribute__((always_inline)) unsigned long pud_page_vaddr(pud_t 
 {
  return (unsigned long)((void *)((unsigned long)((unsigned long)pud_val(pud) & ((pteval_t)(((signed long)(~(((1UL) << 12)-1))) & ((phys_addr_t)(1ULL << 46) - 1))))+((unsigned long)(0xffff880000000000UL))));
 }
-# 423 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable.h"
+//# 423 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable.h"
 static inline __attribute__((always_inline)) pmd_t *pmd_offset(pud_t *pud, unsigned long address)
 {
  return (pmd_t *)pud_page_vaddr(*pud) + pmd_index(address);
@@ -17423,7 +17423,7 @@ static inline __attribute__((always_inline)) int pud_bad(pud_t pud)
 {
  return (pud_flags(pud) & ~(((((pteval_t)(1)) << 0) | (((pteval_t)(1)) << 1) | (((pteval_t)(1)) << 5) | (((pteval_t)(1)) << 6)) | (((pteval_t)(1)) << 2))) != 0;
 }
-# 446 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable.h"
+//# 446 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable.h"
 static inline __attribute__((always_inline)) int pgd_present(pgd_t pgd)
 {
  return pgd_flags(pgd) & (((pteval_t)(1)) << 0);
@@ -17433,7 +17433,7 @@ static inline __attribute__((always_inline)) unsigned long pgd_page_vaddr(pgd_t 
 {
  return (unsigned long)((void *)((unsigned long)((unsigned long)pgd_val(pgd) & ((pteval_t)(((signed long)(~(((1UL) << 12)-1))) & ((phys_addr_t)(1ULL << 46) - 1))))+((unsigned long)(0xffff880000000000UL))));
 }
-# 463 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable.h"
+//# 463 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable.h"
 static inline __attribute__((always_inline)) unsigned long pud_index(unsigned long address)
 {
  return (address >> 30) & (512 - 1);
@@ -17453,7 +17453,7 @@ static inline __attribute__((always_inline)) int pgd_none(pgd_t pgd)
 {
  return !native_pgd_val(pgd);
 }
-# 511 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable.h"
+//# 511 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable.h"
 extern int direct_gbpages;
 
 
@@ -17471,7 +17471,7 @@ static inline __attribute__((always_inline)) void native_set_pte_at(struct mm_st
 {
  native_set_pte(ptep, pte);
 }
-# 554 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable.h"
+//# 554 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable.h"
 struct vm_area_struct;
 
 
@@ -17521,15 +17521,15 @@ static inline __attribute__((always_inline)) void ptep_set_wrprotect(struct mm_s
  clear_bit(1, (unsigned long *)&ptep->pte);
  pte_update(mm, addr, ptep);
 }
-# 614 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable.h"
+//# 614 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable.h"
 static inline __attribute__((always_inline)) void clone_pgd_range(pgd_t *dst, pgd_t *src, int count)
 {
        memcpy(dst, src, count * sizeof(pgd_t));
 }
 
 
-# 1 "include/asm-generic/pgtable.h" 1
-# 170 "include/asm-generic/pgtable.h"
+//# 1 "include/asm-generic/pgtable.h" 1
+//# 170 "include/asm-generic/pgtable.h"
 void pgd_clear_bad(pgd_t *);
 void pud_clear_bad(pud_t *);
 void pmd_clear_bad(pmd_t *);
@@ -17589,19 +17589,19 @@ static inline __attribute__((always_inline)) void __ptep_modify_prot_commit(stru
 
  set_pte_at(mm, addr, ptep, pte);
 }
-# 340 "include/asm-generic/pgtable.h"
+//# 340 "include/asm-generic/pgtable.h"
 extern int track_pfn_vma_new(struct vm_area_struct *vma, pgprot_t *prot,
     unsigned long pfn, unsigned long size);
 extern int track_pfn_vma_copy(struct vm_area_struct *vma);
 extern void untrack_pfn_vma(struct vm_area_struct *vma, unsigned long pfn,
     unsigned long size);
-# 621 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable.h" 2
-# 40 "include/linux/mm.h" 2
-# 56 "include/linux/mm.h"
+//# 621 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/pgtable.h" 2
+//# 40 "include/linux/mm.h" 2
+//# 56 "include/linux/mm.h"
 extern struct kmem_cache *vm_area_cachep;
-# 134 "include/linux/mm.h"
+//# 134 "include/linux/mm.h"
 extern pgprot_t protection_map[16];
-# 148 "include/linux/mm.h"
+//# 148 "include/linux/mm.h"
 static inline __attribute__((always_inline)) int is_linear_pfn_mapping(struct vm_area_struct *vma)
 {
  return (vma->vm_flags & 0x40000000);
@@ -17611,7 +17611,7 @@ static inline __attribute__((always_inline)) int is_pfn_mapping(struct vm_area_s
 {
  return (vma->vm_flags & 0x00000400);
 }
-# 167 "include/linux/mm.h"
+//# 167 "include/linux/mm.h"
 struct vm_fault {
  unsigned int flags;
  unsigned long pgoff;
@@ -17643,9 +17643,9 @@ struct vm_operations_struct {
 
  int (*access)(struct vm_area_struct *vma, unsigned long addr,
         void *buf, int len, int write);
-# 206 "include/linux/mm.h"
+//# 206 "include/linux/mm.h"
  int (*set_policy)(struct vm_area_struct *vma, struct mempolicy *new);
-# 218 "include/linux/mm.h"
+//# 218 "include/linux/mm.h"
  struct mempolicy *(*get_policy)(struct vm_area_struct *vma,
      unsigned long addr);
  int (*migrate)(struct vm_area_struct *vma, const nodemask_t *from,
@@ -17655,9 +17655,9 @@ struct vm_operations_struct {
 
 struct mmu_gather;
 struct inode;
-# 235 "include/linux/mm.h"
-# 1 "include/linux/page-flags.h" 1
-# 75 "include/linux/page-flags.h"
+//# 235 "include/linux/mm.h"
+//# 1 "include/linux/page-flags.h" 1
+//# 75 "include/linux/page-flags.h"
 enum pageflags {
  PG_locked,
  PG_error,
@@ -17716,7 +17716,7 @@ enum pageflags {
  PG_slub_frozen = PG_active,
  PG_slub_debug = PG_error,
 };
-# 199 "include/linux/page-flags.h"
+//# 199 "include/linux/page-flags.h"
 struct page;
 
 static inline __attribute__((always_inline)) int PageLocked(struct page *page) { return (__builtin_constant_p((PG_locked)) ? constant_test_bit((PG_locked), (&page->flags)) : variable_test_bit((PG_locked), (&page->flags))); } static inline __attribute__((always_inline)) int TestSetPageLocked(struct page *page) { return test_and_set_bit(PG_locked, &page->flags); }
@@ -17759,7 +17759,7 @@ static inline __attribute__((always_inline)) int PageMappedToDisk(struct page *p
 
 static inline __attribute__((always_inline)) int PageReclaim(struct page *page) { return (__builtin_constant_p((PG_reclaim)) ? constant_test_bit((PG_reclaim), (&page->flags)) : variable_test_bit((PG_reclaim), (&page->flags))); } static inline __attribute__((always_inline)) void SetPageReclaim(struct page *page) { set_bit(PG_reclaim, &page->flags); } static inline __attribute__((always_inline)) void ClearPageReclaim(struct page *page) { clear_bit(PG_reclaim, &page->flags); } static inline __attribute__((always_inline)) int TestClearPageReclaim(struct page *page) { return test_and_clear_bit(PG_reclaim, &page->flags); }
 static inline __attribute__((always_inline)) int PageReadahead(struct page *page) { return (__builtin_constant_p((PG_reclaim)) ? constant_test_bit((PG_reclaim), (&page->flags)) : variable_test_bit((PG_reclaim), (&page->flags))); } static inline __attribute__((always_inline)) void SetPageReadahead(struct page *page) { set_bit(PG_reclaim, &page->flags); } static inline __attribute__((always_inline)) void ClearPageReadahead(struct page *page) { clear_bit(PG_reclaim, &page->flags); }
-# 249 "include/linux/page-flags.h"
+//# 249 "include/linux/page-flags.h"
 static inline __attribute__((always_inline)) int PageHighMem(struct page *page) { return 0; }
 
 
@@ -17777,7 +17777,7 @@ static inline __attribute__((always_inline)) int PageUnevictable(struct page *pa
 
 static inline __attribute__((always_inline)) int PageMlocked(struct page *page) { return (__builtin_constant_p((PG_mlocked)) ? constant_test_bit((PG_mlocked), (&page->flags)) : variable_test_bit((PG_mlocked), (&page->flags))); } static inline __attribute__((always_inline)) void SetPageMlocked(struct page *page) { set_bit(PG_mlocked, &page->flags); } static inline __attribute__((always_inline)) void ClearPageMlocked(struct page *page) { clear_bit(PG_mlocked, &page->flags); } static inline __attribute__((always_inline)) void __ClearPageMlocked(struct page *page) { __clear_bit(PG_mlocked, &page->flags); }
  static inline __attribute__((always_inline)) int TestSetPageMlocked(struct page *page) { return test_and_set_bit(PG_mlocked, &page->flags); } static inline __attribute__((always_inline)) int TestClearPageMlocked(struct page *page) { return test_and_clear_bit(PG_mlocked, &page->flags); } static inline __attribute__((always_inline)) int __TestClearPageMlocked(struct page *page) { return __test_and_clear_bit(PG_mlocked, &page->flags); }
-# 275 "include/linux/page-flags.h"
+//# 275 "include/linux/page-flags.h"
 static inline __attribute__((always_inline)) int PageUncached(struct page *page) { return 0; }
 
 
@@ -17793,7 +17793,7 @@ static inline __attribute__((always_inline)) int PageHWPoison(struct page *page)
 static inline __attribute__((always_inline)) int PageUptodate(struct page *page)
 {
  int ret = (__builtin_constant_p((PG_uptodate)) ? constant_test_bit((PG_uptodate), (&(page)->flags)) : variable_test_bit((PG_uptodate), (&(page)->flags)));
-# 299 "include/linux/page-flags.h"
+//# 299 "include/linux/page-flags.h"
  if (ret)
   __asm__ __volatile__("": : :"memory");
 
@@ -17808,7 +17808,7 @@ static inline __attribute__((always_inline)) void __SetPageUptodate(struct page 
 
 static inline __attribute__((always_inline)) void SetPageUptodate(struct page *page)
 {
-# 325 "include/linux/page-flags.h"
+//# 325 "include/linux/page-flags.h"
  __asm__ __volatile__("": : :"memory");
  set_bit(PG_uptodate, &(page)->flags);
 
@@ -17825,7 +17825,7 @@ static inline __attribute__((always_inline)) void set_page_writeback(struct page
 {
  test_set_page_writeback(page);
 }
-# 349 "include/linux/page-flags.h"
+//# 349 "include/linux/page-flags.h"
 static inline __attribute__((always_inline)) int PageHead(struct page *page) { return (__builtin_constant_p((PG_head)) ? constant_test_bit((PG_head), (&page->flags)) : variable_test_bit((PG_head), (&page->flags))); } static inline __attribute__((always_inline)) void __SetPageHead(struct page *page) { __set_bit(PG_head, &page->flags); } static inline __attribute__((always_inline)) void __ClearPageHead(struct page *page) { __clear_bit(PG_head, &page->flags); }
 static inline __attribute__((always_inline)) int PageTail(struct page *page) { return (__builtin_constant_p((PG_tail)) ? constant_test_bit((PG_tail), (&page->flags)) : variable_test_bit((PG_tail), (&page->flags))); } static inline __attribute__((always_inline)) void __SetPageTail(struct page *page) { __set_bit(PG_tail, &page->flags); } static inline __attribute__((always_inline)) void __ClearPageTail(struct page *page) { __clear_bit(PG_tail, &page->flags); }
 
@@ -17834,13 +17834,13 @@ static inline __attribute__((always_inline)) int PageCompound(struct page *page)
  return page->flags & ((1L << PG_head) | (1L << PG_tail));
 
 }
-# 429 "include/linux/page-flags.h"
+//# 429 "include/linux/page-flags.h"
 static inline __attribute__((always_inline)) int page_has_private(struct page *page)
 {
  return !!(page->flags & (1 << PG_private | 1 << PG_private_2));
 }
-# 236 "include/linux/mm.h" 2
-# 253 "include/linux/mm.h"
+//# 236 "include/linux/mm.h" 2
+//# 253 "include/linux/mm.h"
 static inline __attribute__((always_inline)) int put_page_testzero(struct page *page)
 {
  do { } while (0);
@@ -17953,12 +17953,12 @@ static inline __attribute__((always_inline)) void set_compound_order(struct page
 {
  page[1].lru.prev = (void *)order;
 }
-# 511 "include/linux/mm.h"
+//# 511 "include/linux/mm.h"
 static inline __attribute__((always_inline)) enum zone_type page_zonenum(struct page *page)
 {
  return (page->flags >> (((((sizeof(unsigned long)*8) - 0) - 6) - 2) * (2 != 0))) & ((1UL << 2) - 1);
 }
-# 524 "include/linux/mm.h"
+//# 524 "include/linux/mm.h"
 static inline __attribute__((always_inline)) int page_zone_id(struct page *page)
 {
  return (page->flags >> ((((((sizeof(unsigned long)*8) - 0) - 6) < ((((sizeof(unsigned long)*8) - 0) - 6) - 2))? (((sizeof(unsigned long)*8) - 0) - 6) : ((((sizeof(unsigned long)*8) - 0) - 6) - 2)) * ((6 + 2) != 0))) & ((1UL << (6 + 2)) - 1);
@@ -17986,7 +17986,7 @@ static inline __attribute__((always_inline)) struct zone *page_zone(struct page 
 {
  return &(node_data[page_to_nid(page)])->node_zones[page_zonenum(page)];
 }
-# 559 "include/linux/mm.h"
+//# 559 "include/linux/mm.h"
 static inline __attribute__((always_inline)) void set_page_zone(struct page *page, enum zone_type zone)
 {
  page->flags &= ~(((1UL << 2) - 1) << (((((sizeof(unsigned long)*8) - 0) - 6) - 2) * (2 != 0)));
@@ -18016,18 +18016,18 @@ static inline __attribute__((always_inline)) void set_page_links(struct page *pa
 
 
 
-# 1 "include/linux/vmstat.h" 1
+//# 1 "include/linux/vmstat.h" 1
 
 
 
 
 
-# 1 "include/linux/mm.h" 1
-# 7 "include/linux/vmstat.h" 2
+//# 1 "include/linux/mm.h" 1
+//# 7 "include/linux/vmstat.h" 2
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic.h" 1
-# 9 "include/linux/vmstat.h" 2
-# 31 "include/linux/vmstat.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic.h" 1
+//# 9 "include/linux/vmstat.h" 2
+//# 31 "include/linux/vmstat.h"
 enum vm_event_item { PGPGIN, PGPGOUT, PSWPIN, PSWPOUT,
   PGALLOC_DMA, PGALLOC_DMA32, PGALLOC_NORMAL , PGALLOC_MOVABLE,
   PGFREE, PGACTIVATE, PGDEACTIVATE,
@@ -18056,7 +18056,7 @@ enum vm_event_item { PGPGIN, PGPGOUT, PSWPIN, PSWPOUT,
 };
 
 extern int sysctl_stat_interval;
-# 71 "include/linux/vmstat.h"
+//# 71 "include/linux/vmstat.h"
 struct vm_event_state {
  unsigned long event[NR_VM_EVENT_ITEMS];
 };
@@ -18088,7 +18088,7 @@ static inline __attribute__((always_inline)) void count_vm_events(enum vm_event_
 extern void all_vm_events(unsigned long *);
 
 extern void vm_events_fold_cpu(int cpu);
-# 139 "include/linux/vmstat.h"
+//# 139 "include/linux/vmstat.h"
 extern atomic_long_t vm_stat[NR_VM_ZONE_STAT_ITEMS];
 
 static inline __attribute__((always_inline)) void zone_page_state_add(long x, struct zone *zone,
@@ -18148,7 +18148,7 @@ static inline __attribute__((always_inline)) unsigned long node_page_state(int n
 }
 
 extern void zone_statistics(struct zone *, struct zone *);
-# 209 "include/linux/vmstat.h"
+//# 209 "include/linux/vmstat.h"
 static inline __attribute__((always_inline)) void zap_zone_vm_stats(struct zone *zone)
 {
  memset(zone->vm_stat, 0, sizeof(zone->vm_stat));
@@ -18171,13 +18171,13 @@ extern void dec_zone_state(struct zone *, enum zone_stat_item);
 extern void __dec_zone_state(struct zone *, enum zone_stat_item);
 
 void refresh_cpu_vm_stats(int);
-# 589 "include/linux/mm.h" 2
+//# 589 "include/linux/mm.h" 2
 
 static inline __attribute__((always_inline)) __attribute__((always_inline)) void *lowmem_page_address(struct page *page)
 {
  return ((void *)((unsigned long)((unsigned long)((page) - ((struct page *)(0xffffea0000000000UL))) << 12)+((unsigned long)(0xffff880000000000UL))));
 }
-# 631 "include/linux/mm.h"
+//# 631 "include/linux/mm.h"
 extern struct address_space swapper_space;
 static inline __attribute__((always_inline)) struct address_space *page_mapping(struct page *page)
 {
@@ -18232,7 +18232,7 @@ static inline __attribute__((always_inline)) int page_mapped(struct page *page)
 {
  return atomic_read(&(page)->_mapcount) >= 0;
 }
-# 708 "include/linux/mm.h"
+//# 708 "include/linux/mm.h"
 extern void pagefault_out_of_memory(void);
 
 
@@ -18242,7 +18242,7 @@ extern void show_free_areas(void);
 int shmem_lock(struct file *file, int lock, struct user_struct *user);
 struct file *shmem_file_setup(const char *name, loff_t size, unsigned long flags);
 int shmem_zero_setup(struct vm_area_struct *);
-# 726 "include/linux/mm.h"
+//# 726 "include/linux/mm.h"
 extern int can_do_mlock(void);
 extern int user_shm_lock(size_t, struct user_struct *);
 extern void user_shm_unlock(size_t, struct user_struct *);
@@ -18270,7 +18270,7 @@ unsigned long unmap_vmas(struct mmu_gather **tlb,
   struct vm_area_struct *start_vma, unsigned long start_addr,
   unsigned long end_addr, unsigned long *nr_accounted,
   struct zap_details *);
-# 764 "include/linux/mm.h"
+//# 764 "include/linux/mm.h"
 struct mm_walk {
  int (*pgd_entry)(pgd_t *, unsigned long, unsigned long, struct mm_walk *);
  int (*pud_entry)(pud_t *, unsigned long, unsigned long, struct mm_walk *);
@@ -18314,7 +18314,7 @@ int invalidate_inode_page(struct page *page);
 
 extern int handle_mm_fault(struct mm_struct *mm, struct vm_area_struct *vma,
    unsigned long address, unsigned int flags);
-# 818 "include/linux/mm.h"
+//# 818 "include/linux/mm.h"
 extern int make_pages_present(unsigned long addr, unsigned long end);
 extern int access_process_vm(struct task_struct *tsk, unsigned long addr, void *buf, int len, int write);
 
@@ -18352,7 +18352,7 @@ extern int mprotect_fixup(struct vm_area_struct *vma,
 
 int __get_user_pages_fast(unsigned long start, int nr_pages, int write,
      struct page **pages);
-# 871 "include/linux/mm.h"
+//# 871 "include/linux/mm.h"
 struct shrinker {
  int (*shrink)(int nr_to_scan, gfp_t gfp_mask);
  int seeks;
@@ -18368,9 +18368,9 @@ extern void unregister_shrinker(struct shrinker *);
 int vma_wants_writenotify(struct vm_area_struct *vma);
 
 extern pte_t *get_locked_pte(struct mm_struct *mm, unsigned long addr, spinlock_t **ptl);
-# 894 "include/linux/mm.h"
+//# 894 "include/linux/mm.h"
 int __pud_alloc(struct mm_struct *mm, pgd_t *pgd, unsigned long address);
-# 904 "include/linux/mm.h"
+//# 904 "include/linux/mm.h"
 int __pmd_alloc(struct mm_struct *mm, pud_t *pud, unsigned long address);
 
 
@@ -18393,7 +18393,7 @@ static inline __attribute__((always_inline)) pmd_t *pmd_alloc(struct mm_struct *
  return (__builtin_expect(!!(pud_none(*pud)), 0) && __pmd_alloc(mm, pud, address))?
   ((void *)0): pmd_offset(pud, address);
 }
-# 950 "include/linux/mm.h"
+//# 950 "include/linux/mm.h"
 static inline __attribute__((always_inline)) void pgtable_page_ctor(struct page *page)
 {
  do { do { *(&((page)->ptl)) = (spinlock_t) { .raw_lock = { 0 }, }; } while (0); } while (0);
@@ -18405,11 +18405,11 @@ static inline __attribute__((always_inline)) void pgtable_page_dtor(struct page 
  ((page)->mapping = ((void *)0));
  dec_zone_page_state(page, NR_PAGETABLE);
 }
-# 988 "include/linux/mm.h"
+//# 988 "include/linux/mm.h"
 extern void free_area_init(unsigned long * zones_size);
 extern void free_area_init_node(int nid, unsigned long * zones_size,
   unsigned long zone_start_pfn, unsigned long *zholes_size);
-# 1019 "include/linux/mm.h"
+//# 1019 "include/linux/mm.h"
 extern void free_area_init_nodes(unsigned long *max_zone_pfn);
 extern void add_active_range(unsigned int nid, unsigned long start_pfn,
      unsigned long end_pfn);
@@ -18426,7 +18426,7 @@ extern void free_bootmem_with_active_regions(int nid,
 typedef int (*work_fn_t)(unsigned long, unsigned long, void *);
 extern void work_with_active_regions(int nid, work_fn_t work_fn, void *data);
 extern void sparse_memory_present_with_active_regions(int nid);
-# 1045 "include/linux/mm.h"
+//# 1045 "include/linux/mm.h"
 extern int __attribute__ ((__section__(".meminit.text"))) __attribute__((__cold__)) early_pfn_to_nid(unsigned long pfn);
 
 
@@ -18501,7 +18501,7 @@ extern void mm_drop_all_locks(struct mm_struct *mm);
 
 extern void added_exe_file_vma(struct mm_struct *mm);
 extern void removed_exe_file_vma(struct mm_struct *mm);
-# 1127 "include/linux/mm.h"
+//# 1127 "include/linux/mm.h"
 extern int may_expand_vm(struct mm_struct *mm, unsigned long npages);
 extern int install_special_mapping(struct mm_struct *mm,
        unsigned long addr, unsigned long len,
@@ -18625,7 +18625,7 @@ extern int apply_to_page_range(struct mm_struct *mm, unsigned long address,
 
 
 void vm_stat_account(struct mm_struct *, unsigned long, struct file *, long);
-# 1270 "include/linux/mm.h"
+//# 1270 "include/linux/mm.h"
 static inline __attribute__((always_inline)) void
 kernel_map_pages(struct page *page, int numpages, int enable) {}
 static inline __attribute__((always_inline)) void enable_debug_pagealloc(void)
@@ -18680,34 +18680,34 @@ extern int __memory_failure(unsigned long pfn, int trapno, int ref);
 extern int sysctl_memory_failure_early_kill;
 extern int sysctl_memory_failure_recovery;
 extern atomic_long_t mce_bad_pages;
-# 8 "include/linux/pagemap.h" 2
+//# 8 "include/linux/pagemap.h" 2
 
 
-# 1 "include/linux/highmem.h" 1
-
-
-
-
-
-# 1 "include/linux/uaccess.h" 1
+//# 1 "include/linux/highmem.h" 1
 
 
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/uaccess.h" 1
-# 95 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/uaccess.h"
+
+//# 1 "include/linux/uaccess.h" 1
+
+
+
+
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/uaccess.h" 1
+//# 95 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/uaccess.h"
 struct exception_table_entry {
  unsigned long insn, fixup;
 };
 
 extern int fixup_exception(struct pt_regs *regs);
-# 116 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/uaccess.h"
+//# 116 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/uaccess.h"
 extern int __get_user_1(void);
 extern int __get_user_2(void);
 extern int __get_user_4(void);
 extern int __get_user_8(void);
 extern int __get_user_bad(void);
-# 221 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/uaccess.h"
+//# 221 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/uaccess.h"
 extern void __put_user_bad(void);
 
 
@@ -18718,11 +18718,11 @@ extern void __put_user_1(void);
 extern void __put_user_2(void);
 extern void __put_user_4(void);
 extern void __put_user_8(void);
-# 432 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/uaccess.h"
+//# 432 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/uaccess.h"
 struct __large_struct { unsigned long buf[100]; };
-# 574 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/uaccess.h"
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/uaccess_64.h" 1
-# 18 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/uaccess_64.h"
+//# 574 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/uaccess.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/uaccess_64.h" 1
+//# 18 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/uaccess_64.h"
 __attribute__((warn_unused_result)) unsigned long
 copy_user_generic(void *to, const void *from, unsigned len);
 
@@ -18912,9 +18912,9 @@ __copy_from_user_inatomic_nocache(void *dst, const void *src,
 
 unsigned long
 copy_user_handle_tail(char *to, char *from, unsigned len, unsigned zerorest);
-# 575 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/uaccess.h" 2
-# 6 "include/linux/uaccess.h" 2
-# 16 "include/linux/uaccess.h"
+//# 575 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/uaccess.h" 2
+//# 6 "include/linux/uaccess.h" 2
+//# 16 "include/linux/uaccess.h"
 static inline __attribute__((always_inline)) void pagefault_disable(void)
 {
  do { (current_thread_info()->preempt_count) += (1); } while (0);
@@ -18939,13 +18939,13 @@ static inline __attribute__((always_inline)) void pagefault_enable(void)
  __asm__ __volatile__("": : :"memory");
  do { } while (0);
 }
-# 96 "include/linux/uaccess.h"
+//# 96 "include/linux/uaccess.h"
 extern long probe_kernel_read(void *dst, void *src, size_t size);
-# 107 "include/linux/uaccess.h"
+//# 107 "include/linux/uaccess.h"
 extern long probe_kernel_write(void *dst, void *src, size_t size);
-# 7 "include/linux/highmem.h" 2
+//# 7 "include/linux/highmem.h" 2
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/cacheflush.h" 1
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/cacheflush.h" 1
 
 
 
@@ -18993,10 +18993,10 @@ static inline __attribute__((always_inline)) void copy_from_user_page(struct vm_
 
 
 static inline __attribute__((always_inline)) int PageWC(struct page *page) { return (__builtin_constant_p((PG_arch_1)) ? constant_test_bit((PG_arch_1), (&page->flags)) : variable_test_bit((PG_arch_1), (&page->flags))); } static inline __attribute__((always_inline)) void SetPageWC(struct page *page) { set_bit(PG_arch_1, &page->flags); } static inline __attribute__((always_inline)) void ClearPageWC(struct page *page) { clear_bit(PG_arch_1, &page->flags); }
-# 95 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/cacheflush.h"
+//# 95 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/cacheflush.h"
 static inline __attribute__((always_inline)) unsigned long get_page_memtype(struct page *pg) { return -1; }
 static inline __attribute__((always_inline)) void set_page_memtype(struct page *pg, unsigned long memtype) { }
-# 127 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/cacheflush.h"
+//# 127 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/cacheflush.h"
 int _set_memory_uc(unsigned long addr, int numpages);
 int _set_memory_wc(unsigned long addr, int numpages);
 int _set_memory_wb(unsigned long addr, int numpages);
@@ -19015,7 +19015,7 @@ int set_memory_array_wb(unsigned long *addr, int addrinarray);
 
 int set_pages_array_uc(struct page **pages, int addrinarray);
 int set_pages_array_wb(struct page **pages, int addrinarray);
-# 166 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/cacheflush.h"
+//# 166 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/cacheflush.h"
 int set_pages_uc(struct page *page, int numpages);
 int set_pages_wb(struct page *page, int numpages);
 int set_pages_x(struct page *page, int numpages);
@@ -19043,7 +19043,7 @@ static inline __attribute__((always_inline)) int rodata_test(void)
 {
  return 0;
 }
-# 9 "include/linux/highmem.h" 2
+//# 9 "include/linux/highmem.h" 2
 
 
 static inline __attribute__((always_inline)) void flush_anon_page(struct vm_area_struct *vma, struct page *page, unsigned long vmaddr)
@@ -19055,11 +19055,11 @@ static inline __attribute__((always_inline)) void flush_anon_page(struct vm_area
 static inline __attribute__((always_inline)) void flush_kernel_dcache_page(struct page *page)
 {
 }
-# 30 "include/linux/highmem.h"
+//# 30 "include/linux/highmem.h"
 static inline __attribute__((always_inline)) void debug_kmap_atomic(enum km_type type)
 {
 }
-# 47 "include/linux/highmem.h"
+//# 47 "include/linux/highmem.h"
 static inline __attribute__((always_inline)) unsigned int nr_free_highpages(void) { return 0; }
 
 
@@ -19080,14 +19080,14 @@ static inline __attribute__((always_inline)) void *kmap_atomic(struct page *page
  pagefault_disable();
  return lowmem_page_address(page);
 }
-# 80 "include/linux/highmem.h"
+//# 80 "include/linux/highmem.h"
 static inline __attribute__((always_inline)) void clear_user_highpage(struct page *page, unsigned long vaddr)
 {
  void *addr = kmap_atomic(page, KM_USER0);
  clear_user_page(addr, vaddr, page);
  do { pagefault_enable(); } while (0);
 }
-# 126 "include/linux/highmem.h"
+//# 126 "include/linux/highmem.h"
 static inline __attribute__((always_inline)) struct page *
 alloc_zeroed_user_highpage_movable(struct vm_area_struct *vma,
      unsigned long vaddr)
@@ -19164,27 +19164,27 @@ static inline __attribute__((always_inline)) void copy_highpage(struct page *to,
  do { pagefault_enable(); } while (0);
  do { pagefault_enable(); } while (0);
 }
-# 11 "include/linux/pagemap.h" 2
+//# 11 "include/linux/pagemap.h" 2
 
 
 
 
-# 1 "include/linux/hardirq.h" 1
-# 9 "include/linux/hardirq.h"
-# 1 "include/linux/ftrace_irq.h" 1
-# 9 "include/linux/ftrace_irq.h"
+//# 1 "include/linux/hardirq.h" 1
+//# 9 "include/linux/hardirq.h"
+//# 1 "include/linux/ftrace_irq.h" 1
+//# 9 "include/linux/ftrace_irq.h"
 static inline __attribute__((always_inline)) void ftrace_nmi_enter(void) { }
 static inline __attribute__((always_inline)) void ftrace_nmi_exit(void) { }
-# 10 "include/linux/hardirq.h" 2
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/hardirq.h" 1
+//# 10 "include/linux/hardirq.h" 2
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/hardirq.h" 1
 
 
 
 
-# 1 "include/linux/irq.h" 1
-# 21 "include/linux/irq.h"
-# 1 "include/linux/irqreturn.h" 1
-# 10 "include/linux/irqreturn.h"
+//# 1 "include/linux/irq.h" 1
+//# 21 "include/linux/irq.h"
+//# 1 "include/linux/irqreturn.h" 1
+//# 10 "include/linux/irqreturn.h"
 enum irqreturn {
  IRQ_NONE,
  IRQ_HANDLED,
@@ -19192,23 +19192,23 @@ enum irqreturn {
 };
 
 typedef enum irqreturn irqreturn_t;
-# 22 "include/linux/irq.h" 2
-# 1 "include/linux/irqnr.h" 1
-# 26 "include/linux/irqnr.h"
+//# 22 "include/linux/irq.h" 2
+//# 1 "include/linux/irqnr.h" 1
+//# 26 "include/linux/irqnr.h"
 extern int nr_irqs;
 extern struct irq_desc *irq_to_desc(unsigned int irq);
-# 23 "include/linux/irq.h" 2
+//# 23 "include/linux/irq.h" 2
 
 
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/irq.h" 1
-# 13 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/irq.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/irq.h" 1
+//# 13 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/irq.h"
 static inline __attribute__((always_inline)) int irq_canonicalize(int irq)
 {
  return ((irq == 2) ? 9 : irq);
 }
-# 36 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/irq.h"
+//# 36 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/irq.h"
 extern void fixup_irqs(void);
 
 
@@ -19223,10 +19223,10 @@ extern unsigned long used_vectors[(((256) + (8 * sizeof(long)) - 1) / (8 * sizeo
 extern int vector_used_by_percpu_irq(unsigned int vector);
 
 extern void init_ISA_irqs(void);
-# 28 "include/linux/irq.h" 2
+//# 28 "include/linux/irq.h" 2
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/irq_regs.h" 1
-# 14 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/irq_regs.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/irq_regs.h" 1
+//# 14 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/irq_regs.h"
 extern __attribute__((section(".data.percpu" ""))) __typeof__(struct pt_regs *) per_cpu__irq_regs;
 
 static inline __attribute__((always_inline)) struct pt_regs *get_irq_regs(void)
@@ -19243,15 +19243,15 @@ static inline __attribute__((always_inline)) struct pt_regs *set_irq_regs(struct
 
  return old_regs;
 }
-# 30 "include/linux/irq.h" 2
+//# 30 "include/linux/irq.h" 2
 
 struct irq_desc;
 typedef void (*irq_flow_handler_t)(unsigned int irq,
          struct irq_desc *desc);
-# 83 "include/linux/irq.h"
+//# 83 "include/linux/irq.h"
 struct proc_dir_entry;
 struct msi_desc;
-# 111 "include/linux/irq.h"
+//# 111 "include/linux/irq.h"
 struct irq_chip {
  const char *name;
  unsigned int (*startup)(unsigned int irq);
@@ -19274,13 +19274,13 @@ struct irq_chip {
 
  void (*bus_lock)(unsigned int irq);
  void (*bus_sync_unlock)(unsigned int irq);
-# 142 "include/linux/irq.h"
+//# 142 "include/linux/irq.h"
  const char *typename;
 };
 
 struct timer_rand_state;
 struct irq_2_iommu;
-# 175 "include/linux/irq.h"
+//# 175 "include/linux/irq.h"
 struct irq_desc {
  unsigned int irq;
  struct timer_rand_state *timer_rand_state;
@@ -19339,12 +19339,12 @@ extern struct irq_desc *irq_to_desc_alloc_node(unsigned int irq, int node);
 
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/hw_irq.h" 1
-# 21 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/hw_irq.h"
-# 1 "include/linux/profile.h" 1
-# 9 "include/linux/profile.h"
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/errno.h" 1
-# 10 "include/linux/profile.h" 2
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/hw_irq.h" 1
+//# 21 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/hw_irq.h"
+//# 1 "include/linux/profile.h" 1
+//# 9 "include/linux/profile.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/errno.h" 1
+//# 10 "include/linux/profile.h" 2
 
 
 
@@ -19358,7 +19358,7 @@ struct notifier_block;
 
 void create_prof_cpu_mask(struct proc_dir_entry *de);
 int create_proc_profile(void);
-# 34 "include/linux/profile.h"
+//# 34 "include/linux/profile.h"
 enum profile_type {
  PROFILE_TASK_EXIT,
  PROFILE_MUNMAP
@@ -19414,17 +19414,17 @@ int register_timer_hook(int (*hook)(struct pt_regs *));
 void unregister_timer_hook(int (*hook)(struct pt_regs *));
 
 struct pt_regs;
-# 22 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/hw_irq.h" 2
+//# 22 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/hw_irq.h" 2
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic.h" 1
-# 25 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/hw_irq.h" 2
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic.h" 1
+//# 25 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/hw_irq.h" 2
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/sections.h" 1
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/sections.h" 1
 
 
 
-# 1 "include/asm-generic/sections.h" 1
+//# 1 "include/asm-generic/sections.h" 1
 
 
 
@@ -19443,7 +19443,7 @@ extern char __start_rodata[], __end_rodata[];
 
 
 extern char __ctors_start[], __ctors_end[];
-# 29 "include/asm-generic/sections.h"
+//# 29 "include/asm-generic/sections.h"
 static inline __attribute__((always_inline)) int arch_is_kernel_text(unsigned long addr)
 {
  return 0;
@@ -19455,10 +19455,10 @@ static inline __attribute__((always_inline)) int arch_is_kernel_data(unsigned lo
 {
  return 0;
 }
-# 5 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/sections.h" 2
+//# 5 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/sections.h" 2
 
 extern char __brk_base[], __brk_limit[];
-# 27 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/hw_irq.h" 2
+//# 27 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/hw_irq.h" 2
 
 
 extern void apic_timer_interrupt(void);
@@ -19561,7 +19561,7 @@ extern __attribute__((section(".data.percpu" ""))) __typeof__(vector_irq_t) per_
 extern void lock_vector_lock(void);
 extern void unlock_vector_lock(void);
 extern void __setup_vector_irq(int cpu);
-# 234 "include/linux/irq.h" 2
+//# 234 "include/linux/irq.h" 2
 
 extern int setup_irq(unsigned int irq, struct irqaction *new);
 extern void remove_irq(unsigned int irq, struct irqaction *act);
@@ -19574,7 +19574,7 @@ extern void remove_irq(unsigned int irq, struct irqaction *act);
 
 void move_native_irq(int irq);
 void move_masked_irq(int irq);
-# 270 "include/linux/irq.h"
+//# 270 "include/linux/irq.h"
 extern int no_irq_affinity;
 
 static inline __attribute__((always_inline)) int irq_balancing_disabled(unsigned int irq)
@@ -19599,7 +19599,7 @@ extern void handle_simple_irq(unsigned int irq, struct irq_desc *desc);
 extern void handle_percpu_irq(unsigned int irq, struct irq_desc *desc);
 extern void handle_bad_irq(unsigned int irq, struct irq_desc *desc);
 extern void handle_nested_irq(unsigned int irq);
-# 308 "include/linux/irq.h"
+//# 308 "include/linux/irq.h"
 static inline __attribute__((always_inline)) void generic_handle_irq_desc(unsigned int irq, struct irq_desc *desc)
 {
 
@@ -19703,7 +19703,7 @@ extern int set_irq_data(unsigned int irq, void *data);
 extern int set_irq_chip_data(unsigned int irq, void *data);
 extern int set_irq_type(unsigned int irq, unsigned int type);
 extern int set_irq_msi(unsigned int irq, struct msi_desc *entry);
-# 436 "include/linux/irq.h"
+//# 436 "include/linux/irq.h"
 static inline __attribute__((always_inline)) bool alloc_desc_masks(struct irq_desc *desc, int node,
        bool boot)
 {
@@ -19711,7 +19711,7 @@ static inline __attribute__((always_inline)) bool alloc_desc_masks(struct irq_de
 
  if (boot)
   gfp = (((( gfp_t)0x20u)) & ~(( gfp_t)0x20u));
-# 455 "include/linux/irq.h"
+//# 455 "include/linux/irq.h"
  return true;
 }
 
@@ -19722,7 +19722,7 @@ static inline __attribute__((always_inline)) void init_desc_masks(struct irq_des
  cpumask_clear(desc->pending_mask);
 
 }
-# 476 "include/linux/irq.h"
+//# 476 "include/linux/irq.h"
 static inline __attribute__((always_inline)) void init_copy_desc_masks(struct irq_desc *old_desc,
      struct irq_desc *new_desc)
 {
@@ -19744,7 +19744,7 @@ static inline __attribute__((always_inline)) void free_desc_masks(struct irq_des
  free_cpumask_var(old_desc->pending_mask);
 
 }
-# 6 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/hardirq.h" 2
+//# 6 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/hardirq.h" 2
 
 typedef struct {
  unsigned int __softirq_pending;
@@ -19771,15 +19771,15 @@ typedef struct {
 } __attribute__((__aligned__((1 << (6))))) irq_cpustat_t;
 
 extern __attribute__((section(".data.percpu" ""))) __typeof__(irq_cpustat_t) per_cpu__irq_stat __attribute__((__aligned__((1 << (6)))));
-# 47 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/hardirq.h"
+//# 47 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/hardirq.h"
 extern void ack_bad_irq(unsigned int irq);
 
 extern u64 arch_irq_stat_cpu(unsigned int cpu);
 
 
 extern u64 arch_irq_stat(void);
-# 11 "include/linux/hardirq.h" 2
-# 128 "include/linux/hardirq.h"
+//# 11 "include/linux/hardirq.h" 2
+//# 128 "include/linux/hardirq.h"
 extern void synchronize_irq(unsigned int irq);
 
 
@@ -19798,11 +19798,11 @@ extern void rcu_irq_enter(void);
 extern void rcu_irq_exit(void);
 extern void rcu_nmi_enter(void);
 extern void rcu_nmi_exit(void);
-# 169 "include/linux/hardirq.h"
+//# 169 "include/linux/hardirq.h"
 extern void irq_enter(void);
-# 184 "include/linux/hardirq.h"
+//# 184 "include/linux/hardirq.h"
 extern void irq_exit(void);
-# 16 "include/linux/pagemap.h" 2
+//# 16 "include/linux/pagemap.h" 2
 
 
 
@@ -19856,13 +19856,13 @@ static inline __attribute__((always_inline)) void mapping_set_gfp_mask(struct ad
  m->flags = (m->flags & ~( unsigned long)(( gfp_t)((1 << 22) - 1))) |
     ( unsigned long)mask;
 }
-# 85 "include/linux/pagemap.h"
+//# 85 "include/linux/pagemap.h"
 void release_pages(struct page **pages, int nr, int cold);
-# 131 "include/linux/pagemap.h"
+//# 131 "include/linux/pagemap.h"
 static inline __attribute__((always_inline)) int page_cache_get_speculative(struct page *page)
 {
  do { } while (0);
-# 152 "include/linux/pagemap.h"
+//# 152 "include/linux/pagemap.h"
  if (__builtin_expect(!!(!get_page_unless_zero(page)), 0)) {
 
 
@@ -19883,7 +19883,7 @@ static inline __attribute__((always_inline)) int page_cache_get_speculative(stru
 static inline __attribute__((always_inline)) int page_cache_add_speculative(struct page *page, int count)
 {
  do { } while (0);
-# 181 "include/linux/pagemap.h"
+//# 181 "include/linux/pagemap.h"
  if (__builtin_expect(!!(!atomic_add_unless(&page->_count, count, 0)), 0))
   return 0;
 
@@ -20052,7 +20052,7 @@ static inline __attribute__((always_inline)) void lock_page_nosync(struct page *
 
 
 extern void wait_on_page_bit(struct page *page, int bit_nr);
-# 357 "include/linux/pagemap.h"
+//# 357 "include/linux/pagemap.h"
 static inline __attribute__((always_inline)) void wait_on_page_locked(struct page *page)
 {
  if (PageLocked(page))
@@ -20148,10 +20148,10 @@ static inline __attribute__((always_inline)) int add_to_page_cache(struct page *
   __clear_page_locked(page);
  return error;
 }
-# 14 "include/linux/buffer_head.h" 2
+//# 14 "include/linux/buffer_head.h" 2
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic.h" 1
-# 16 "include/linux/buffer_head.h" 2
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic.h" 1
+//# 16 "include/linux/buffer_head.h" 2
 
 
 
@@ -20187,7 +20187,7 @@ struct page;
 struct buffer_head;
 struct address_space;
 typedef void (bh_end_io_t)(struct buffer_head *bh, int uptodate);
-# 61 "include/linux/buffer_head.h"
+//# 61 "include/linux/buffer_head.h"
 struct buffer_head {
  unsigned long b_state;
  struct buffer_head *b_this_page;
@@ -20205,7 +20205,7 @@ struct buffer_head {
 
  atomic_t b_count;
 };
-# 115 "include/linux/buffer_head.h"
+//# 115 "include/linux/buffer_head.h"
 static inline __attribute__((always_inline)) void set_buffer_uptodate(struct buffer_head *bh) { set_bit(BH_Uptodate, &(bh)->b_state); } static inline __attribute__((always_inline)) void clear_buffer_uptodate(struct buffer_head *bh) { clear_bit(BH_Uptodate, &(bh)->b_state); } static inline __attribute__((always_inline)) int buffer_uptodate(const struct buffer_head *bh) { return (__builtin_constant_p((BH_Uptodate)) ? constant_test_bit((BH_Uptodate), (&(bh)->b_state)) : variable_test_bit((BH_Uptodate), (&(bh)->b_state))); }
 static inline __attribute__((always_inline)) void set_buffer_dirty(struct buffer_head *bh) { set_bit(BH_Dirty, &(bh)->b_state); } static inline __attribute__((always_inline)) void clear_buffer_dirty(struct buffer_head *bh) { clear_bit(BH_Dirty, &(bh)->b_state); } static inline __attribute__((always_inline)) int buffer_dirty(const struct buffer_head *bh) { return (__builtin_constant_p((BH_Dirty)) ? constant_test_bit((BH_Dirty), (&(bh)->b_state)) : variable_test_bit((BH_Dirty), (&(bh)->b_state))); }
 static inline __attribute__((always_inline)) int test_set_buffer_dirty(struct buffer_head *bh) { return test_and_set_bit(BH_Dirty, &(bh)->b_state); } static inline __attribute__((always_inline)) int test_clear_buffer_dirty(struct buffer_head *bh) { return test_and_clear_bit(BH_Dirty, &(bh)->b_state); }
@@ -20222,7 +20222,7 @@ static inline __attribute__((always_inline)) void set_buffer_write_io_error(stru
 static inline __attribute__((always_inline)) void set_buffer_ordered(struct buffer_head *bh) { set_bit(BH_Ordered, &(bh)->b_state); } static inline __attribute__((always_inline)) void clear_buffer_ordered(struct buffer_head *bh) { clear_bit(BH_Ordered, &(bh)->b_state); } static inline __attribute__((always_inline)) int buffer_ordered(const struct buffer_head *bh) { return (__builtin_constant_p((BH_Ordered)) ? constant_test_bit((BH_Ordered), (&(bh)->b_state)) : variable_test_bit((BH_Ordered), (&(bh)->b_state))); }
 static inline __attribute__((always_inline)) void set_buffer_eopnotsupp(struct buffer_head *bh) { set_bit(BH_Eopnotsupp, &(bh)->b_state); } static inline __attribute__((always_inline)) void clear_buffer_eopnotsupp(struct buffer_head *bh) { clear_bit(BH_Eopnotsupp, &(bh)->b_state); } static inline __attribute__((always_inline)) int buffer_eopnotsupp(const struct buffer_head *bh) { return (__builtin_constant_p((BH_Eopnotsupp)) ? constant_test_bit((BH_Eopnotsupp), (&(bh)->b_state)) : variable_test_bit((BH_Eopnotsupp), (&(bh)->b_state))); }
 static inline __attribute__((always_inline)) void set_buffer_unwritten(struct buffer_head *bh) { set_bit(BH_Unwritten, &(bh)->b_state); } static inline __attribute__((always_inline)) void clear_buffer_unwritten(struct buffer_head *bh) { clear_bit(BH_Unwritten, &(bh)->b_state); } static inline __attribute__((always_inline)) int buffer_unwritten(const struct buffer_head *bh) { return (__builtin_constant_p((BH_Unwritten)) ? constant_test_bit((BH_Unwritten), (&(bh)->b_state)) : variable_test_bit((BH_Unwritten), (&(bh)->b_state))); }
-# 147 "include/linux/buffer_head.h"
+//# 147 "include/linux/buffer_head.h"
 void mark_buffer_dirty(struct buffer_head *bh);
 void init_buffer(struct buffer_head *, bh_end_io_t *, void *);
 void set_bh_page(struct buffer_head *bh,
@@ -20409,16 +20409,16 @@ static inline __attribute__((always_inline)) void lock_buffer(struct buffer_head
 }
 
 extern int __set_page_dirty_buffers(struct page *page);
-# 269 "drivers/cdrom/cdrom.c" 2
-# 1 "include/linux/major.h" 1
-# 270 "drivers/cdrom/cdrom.c" 2
+//# 269 "drivers/cdrom/cdrom.c" 2
+//# 1 "include/linux/major.h" 1
+//# 270 "drivers/cdrom/cdrom.c" 2
 
 
 
 
 
-# 1 "include/linux/cdrom.h" 1
-# 154 "include/linux/cdrom.h"
+//# 1 "include/linux/cdrom.h" 1
+//# 154 "include/linux/cdrom.h"
 struct cdrom_msf0
 {
  __u8 minute;
@@ -20537,7 +20537,7 @@ struct cdrom_blk
  unsigned from;
  unsigned short len;
 };
-# 281 "include/linux/cdrom.h"
+//# 281 "include/linux/cdrom.h"
 struct cdrom_generic_command
 {
  unsigned char cmd[12];
@@ -20550,7 +20550,7 @@ struct cdrom_generic_command
  int timeout;
  void *reserved[1];
 };
-# 526 "include/linux/cdrom.h"
+//# 526 "include/linux/cdrom.h"
 struct dvd_layer {
  __u8 book_version : 4;
  __u8 book_type : 4;
@@ -20614,7 +20614,7 @@ typedef union {
  struct dvd_bca bca;
  struct dvd_manufact manufact;
 } dvd_struct;
-# 613 "include/linux/cdrom.h"
+//# 613 "include/linux/cdrom.h"
 typedef __u8 dvd_key[5];
 typedef __u8 dvd_challenge[10];
 
@@ -20643,7 +20643,7 @@ struct dvd_lu_send_challenge {
 
  dvd_challenge chal;
 };
-# 652 "include/linux/cdrom.h"
+//# 652 "include/linux/cdrom.h"
 struct dvd_lu_send_title_key {
  __u8 type;
  unsigned agid : 2;
@@ -20718,7 +20718,7 @@ struct request_sense {
  __u8 sks[3];
  __u8 asb[46];
 };
-# 755 "include/linux/cdrom.h"
+//# 755 "include/linux/cdrom.h"
 struct mrw_feature_desc {
  __be16 feature_code;
 
@@ -20792,7 +20792,7 @@ typedef struct {
  __u8 n_sessions_lsb;
  __u8 first_track_lsb;
  __u8 last_track_lsb;
-# 836 "include/linux/cdrom.h"
+//# 836 "include/linux/cdrom.h"
  __u8 mrw_status : 2;
  __u8 dbit : 1;
         __u8 reserved2 : 2;
@@ -20817,7 +20817,7 @@ typedef struct {
  __u8 track_lsb;
  __u8 session_lsb;
  __u8 reserved1;
-# 874 "include/linux/cdrom.h"
+//# 874 "include/linux/cdrom.h"
         __u8 track_mode : 4;
         __u8 copy : 1;
         __u8 damage : 1;
@@ -20857,10 +20857,10 @@ struct mode_page_header {
 
 
 
-# 1 "include/linux/device.h" 1
-# 18 "include/linux/device.h"
-# 1 "include/linux/klist.h" 1
-# 19 "include/linux/klist.h"
+//# 1 "include/linux/device.h" 1
+//# 18 "include/linux/device.h"
+//# 1 "include/linux/klist.h" 1
+//# 19 "include/linux/klist.h"
 struct klist_node;
 struct klist {
  spinlock_t k_lock;
@@ -20868,7 +20868,7 @@ struct klist {
  void (*get)(struct klist_node *);
  void (*put)(struct klist_node *);
 } __attribute__ ((aligned (4)));
-# 36 "include/linux/klist.h"
+//# 36 "include/linux/klist.h"
 extern void klist_init(struct klist *k, void (*get)(struct klist_node *),
          void (*put)(struct klist_node *));
 
@@ -20900,7 +20900,7 @@ extern void klist_iter_init_node(struct klist *k, struct klist_iter *i,
      struct klist_node *n);
 extern void klist_iter_exit(struct klist_iter *i);
 extern struct klist_node *klist_next(struct klist_iter *i);
-# 19 "include/linux/device.h" 2
+//# 19 "include/linux/device.h" 2
 
 
 
@@ -20908,9 +20908,9 @@ extern struct klist_node *klist_next(struct klist_iter *i);
 
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic.h" 1
-# 27 "include/linux/device.h" 2
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/device.h" 1
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic.h" 1
+//# 27 "include/linux/device.h" 2
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/device.h" 1
 
 
 
@@ -20928,7 +20928,7 @@ struct dma_map_ops *dma_ops;
 
 struct pdev_archdata {
 };
-# 28 "include/linux/device.h" 2
+//# 28 "include/linux/device.h" 2
 
 struct device;
 struct device_private;
@@ -21007,7 +21007,7 @@ extern int bus_register_notifier(struct bus_type *bus,
      struct notifier_block *nb);
 extern int bus_unregister_notifier(struct bus_type *bus,
        struct notifier_block *nb);
-# 119 "include/linux/device.h"
+//# 119 "include/linux/device.h"
 extern struct kset *bus_get_kset(struct bus_type *bus);
 extern struct klist *bus_get_device_klist(struct bus_type *bus);
 
@@ -21110,7 +21110,7 @@ extern struct kobject *sysfs_dev_char_kobj;
 extern int __attribute__((warn_unused_result)) __class_register(struct class *class,
       struct lock_class_key *key);
 extern void class_unregister(struct class *class);
-# 230 "include/linux/device.h"
+//# 230 "include/linux/device.h"
 struct class_compat;
 struct class_compat *class_compat_register(const char *name);
 void class_compat_unregister(struct class_compat *cls);
@@ -21162,7 +21162,7 @@ extern struct class * __attribute__((warn_unused_result)) __class_create(struct 
         const char *name,
         struct lock_class_key *key);
 extern void class_destroy(struct class *cls);
-# 299 "include/linux/device.h"
+//# 299 "include/linux/device.h"
 struct device_type {
  const char *name;
  const struct attribute_group **groups;
@@ -21295,8 +21295,8 @@ struct device {
 };
 
 
-# 1 "include/linux/pm_wakeup.h" 1
-# 33 "include/linux/pm_wakeup.h"
+//# 1 "include/linux/pm_wakeup.h" 1
+//# 33 "include/linux/pm_wakeup.h"
 static inline __attribute__((always_inline)) void device_init_wakeup(struct device *dev, int val)
 {
  dev->power.can_wakeup = dev->power.should_wakeup = !!val;
@@ -21321,7 +21321,7 @@ static inline __attribute__((always_inline)) int device_may_wakeup(struct device
 {
  return dev->power.can_wakeup && dev->power.should_wakeup;
 }
-# 432 "include/linux/device.h" 2
+//# 432 "include/linux/device.h" 2
 
 static inline __attribute__((always_inline)) const char *dev_name(const struct device *dev)
 {
@@ -21340,7 +21340,7 @@ static inline __attribute__((always_inline)) void set_dev_node(struct device *de
 {
  dev->numa_node = node;
 }
-# 460 "include/linux/device.h"
+//# 460 "include/linux/device.h"
 static inline __attribute__((always_inline)) unsigned int dev_get_uevent_suppress(const struct device *dev)
 {
  return dev->kobj.uevent_suppress;
@@ -21457,7 +21457,7 @@ extern void sysdev_shutdown(void);
 
 
 extern const char *dev_driver_string(const struct device *dev);
-# 914 "include/linux/cdrom.h" 2
+//# 914 "include/linux/cdrom.h" 2
 
 
 struct packet_command
@@ -21472,7 +21472,7 @@ struct packet_command
  int timeout;
  void *reserved[1];
 };
-# 937 "include/linux/cdrom.h"
+//# 937 "include/linux/cdrom.h"
 struct cdrom_device_info {
  struct cdrom_device_ops *ops;
  struct list_head list;
@@ -21559,7 +21559,7 @@ extern void init_cdrom_command(struct packet_command *cgc,
 
 
 struct cdrom_mechstat_header {
-# 1031 "include/linux/cdrom.h"
+//# 1031 "include/linux/cdrom.h"
  __u8 curslot : 5;
  __u8 changer_state : 2;
  __u8 fault : 1;
@@ -21599,7 +21599,7 @@ typedef enum {
 } mechtype_t;
 
 typedef struct {
-# 1087 "include/linux/cdrom.h"
+//# 1087 "include/linux/cdrom.h"
  __u8 page_code : 6;
  __u8 reserved1 : 1;
  __u8 ps : 1;
@@ -21719,9 +21719,9 @@ static inline __attribute__((always_inline)) int msf_to_lba(u8 m, u8 s, u8 f)
 {
  return (((m * 60) + s) * 75 + f) - 150;
 }
-# 276 "drivers/cdrom/cdrom.c" 2
-# 1 "include/linux/sysctl.h" 1
-# 32 "include/linux/sysctl.h"
+//# 276 "drivers/cdrom/cdrom.c" 2
+//# 1 "include/linux/sysctl.h" 1
+//# 32 "include/linux/sysctl.h"
 struct completion;
 
 
@@ -21738,7 +21738,7 @@ struct __sysctl_args {
  size_t newlen;
  unsigned long __unused[4];
 };
-# 59 "include/linux/sysctl.h"
+//# 59 "include/linux/sysctl.h"
 enum
 {
  CTL_KERN=1,
@@ -22688,7 +22688,7 @@ extern ctl_handler sysctl_string;
 extern ctl_handler sysctl_intvec;
 extern ctl_handler sysctl_jiffies;
 extern ctl_handler sysctl_ms_jiffies;
-# 1051 "include/linux/sysctl.h"
+//# 1051 "include/linux/sysctl.h"
 struct ctl_table
 {
  int ctl_name;
@@ -22746,27 +22746,27 @@ struct ctl_table_header *register_sysctl_paths(const struct ctl_path *path,
 
 void unregister_sysctl_table(struct ctl_table_header * table);
 int sysctl_check_table(struct nsproxy *namespaces, struct ctl_table *table);
-# 277 "drivers/cdrom/cdrom.c" 2
-# 1 "include/linux/proc_fs.h" 1
+//# 277 "drivers/cdrom/cdrom.c" 2
+//# 1 "include/linux/proc_fs.h" 1
 
 
 
 
 
 
-# 1 "include/linux/magic.h" 1
-# 8 "include/linux/proc_fs.h" 2
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic.h" 1
-# 9 "include/linux/proc_fs.h" 2
+//# 1 "include/linux/magic.h" 1
+//# 8 "include/linux/proc_fs.h" 2
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic.h" 1
+//# 9 "include/linux/proc_fs.h" 2
 
 struct net;
 struct completion;
 struct mm_struct;
-# 30 "include/linux/proc_fs.h"
+//# 30 "include/linux/proc_fs.h"
 enum {
  PROC_ROOT_INO = 1,
 };
-# 46 "include/linux/proc_fs.h"
+//# 46 "include/linux/proc_fs.h"
 typedef int (read_proc_t)(char *page, char **start, off_t off,
      int count, int *eof, void *data);
 typedef int (write_proc_t)(struct file *file, const char *buffer,
@@ -22782,7 +22782,7 @@ struct proc_dir_entry {
  gid_t gid;
  loff_t size;
  const struct inode_operations *proc_iops;
-# 69 "include/linux/proc_fs.h"
+//# 69 "include/linux/proc_fs.h"
  const struct file_operations *proc_fops;
  struct proc_dir_entry *next, *parent, *subdir;
  void *data;
@@ -22843,7 +22843,7 @@ struct tty_driver;
 extern void proc_tty_init(void);
 extern void proc_tty_register_driver(struct tty_driver *driver);
 extern void proc_tty_unregister_driver(struct tty_driver *driver);
-# 146 "include/linux/proc_fs.h"
+//# 146 "include/linux/proc_fs.h"
 extern struct proc_dir_entry *proc_symlink(const char *,
   struct proc_dir_entry *, const char *);
 extern struct proc_dir_entry *proc_mkdir(const char *,struct proc_dir_entry *);
@@ -22879,7 +22879,7 @@ extern struct proc_dir_entry *proc_net_mkdir(struct net *net, const char *name,
 extern void set_mm_exe_file(struct mm_struct *mm, struct file *new_exe_file);
 extern struct file *get_mm_exe_file(struct mm_struct *mm);
 extern void dup_mm_exe_file(struct mm_struct *oldmm, struct mm_struct *newmm);
-# 250 "include/linux/proc_fs.h"
+//# 250 "include/linux/proc_fs.h"
 extern void kclist_add(struct kcore_list *, void *, size_t, int type);
 
 
@@ -22926,16 +22926,16 @@ struct proc_maps_private {
  struct vm_area_struct *tail_vma;
 
 };
-# 278 "drivers/cdrom/cdrom.c" 2
-# 1 "include/linux/blkpg.h" 1
-# 33 "include/linux/blkpg.h"
+//# 278 "drivers/cdrom/cdrom.c" 2
+//# 1 "include/linux/blkpg.h" 1
+//# 33 "include/linux/blkpg.h"
 struct blkpg_ioctl_arg {
         int op;
         int flags;
         int datalen;
         void *data;
 };
-# 49 "include/linux/blkpg.h"
+//# 49 "include/linux/blkpg.h"
 struct blkpg_partition {
  long long start;
  long long length;
@@ -22944,26 +22944,26 @@ struct blkpg_partition {
 
  char volname[64];
 };
-# 279 "drivers/cdrom/cdrom.c" 2
+//# 279 "drivers/cdrom/cdrom.c" 2
 
 
-# 1 "include/linux/blkdev.h" 1
+//# 1 "include/linux/blkdev.h" 1
 
 
 
 
 
-# 1 "include/linux/sched.h" 1
-# 46 "include/linux/sched.h"
+//# 1 "include/linux/sched.h" 1
+//# 46 "include/linux/sched.h"
 struct sched_param {
  int sched_priority;
 };
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/param.h" 1
-# 51 "include/linux/sched.h" 2
-# 68 "include/linux/sched.h"
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/cputime.h" 1
-# 1 "include/asm-generic/cputime.h" 1
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/param.h" 1
+//# 51 "include/linux/sched.h" 2
+//# 68 "include/linux/sched.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/cputime.h" 1
+//# 1 "include/asm-generic/cputime.h" 1
 
 
 
@@ -22971,18 +22971,18 @@ struct sched_param {
 
 
 typedef unsigned long cputime_t;
-# 25 "include/asm-generic/cputime.h"
+//# 25 "include/asm-generic/cputime.h"
 typedef u64 cputime64_t;
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/cputime.h" 2
-# 69 "include/linux/sched.h" 2
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/cputime.h" 2
+//# 69 "include/linux/sched.h" 2
 
 
-# 1 "include/linux/sem.h" 1
+//# 1 "include/linux/sem.h" 1
 
 
 
-# 1 "include/linux/ipc.h" 1
-# 9 "include/linux/ipc.h"
+//# 1 "include/linux/ipc.h" 1
+//# 9 "include/linux/ipc.h"
 struct ipc_perm
 {
  __kernel_key_t key;
@@ -22995,9 +22995,9 @@ struct ipc_perm
 };
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/ipcbuf.h" 1
-# 1 "include/asm-generic/ipcbuf.h" 1
-# 19 "include/asm-generic/ipcbuf.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/ipcbuf.h" 1
+//# 1 "include/asm-generic/ipcbuf.h" 1
+//# 19 "include/asm-generic/ipcbuf.h"
 struct ipc64_perm {
  __kernel_key_t key;
  __kernel_uid32_t uid;
@@ -23012,14 +23012,14 @@ struct ipc64_perm {
  unsigned long __unused1;
  unsigned long __unused2;
 };
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/ipcbuf.h" 2
-# 22 "include/linux/ipc.h" 2
-# 57 "include/linux/ipc.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/ipcbuf.h" 2
+//# 22 "include/linux/ipc.h" 2
+//# 57 "include/linux/ipc.h"
 struct ipc_kludge {
  struct msgbuf *msgp;
  long msgtyp;
 };
-# 86 "include/linux/ipc.h"
+//# 86 "include/linux/ipc.h"
 struct kern_ipc_perm
 {
  spinlock_t lock;
@@ -23034,8 +23034,8 @@ struct kern_ipc_perm
  unsigned long seq;
  void *security;
 };
-# 5 "include/linux/sem.h" 2
-# 23 "include/linux/sem.h"
+//# 5 "include/linux/sem.h" 2
+//# 23 "include/linux/sem.h"
 struct semid_ds {
  struct ipc_perm sem_perm;
  __kernel_time_t sem_otime;
@@ -23048,8 +23048,8 @@ struct semid_ds {
 };
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/sembuf.h" 1
-# 13 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/sembuf.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/sembuf.h" 1
+//# 13 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/sembuf.h"
 struct semid64_ds {
  struct ipc64_perm sem_perm;
  __kernel_time_t sem_otime;
@@ -23060,7 +23060,7 @@ struct semid64_ds {
  unsigned long __unused3;
  unsigned long __unused4;
 };
-# 36 "include/linux/sem.h" 2
+//# 36 "include/linux/sem.h" 2
 
 
 struct sembuf {
@@ -23090,9 +23090,9 @@ struct seminfo {
  int semvmx;
  int semaem;
 };
-# 80 "include/linux/sem.h"
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic.h" 1
-# 81 "include/linux/sem.h" 2
+//# 80 "include/linux/sem.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic.h" 1
+//# 81 "include/linux/sem.h" 2
 
 
 struct task_struct;
@@ -23156,35 +23156,35 @@ struct sysv_sem {
 
 extern int copy_semundo(unsigned long clone_flags, struct task_struct *tsk);
 extern void exit_sem(struct task_struct *tsk);
-# 72 "include/linux/sched.h" 2
-# 1 "include/linux/signal.h" 1
+//# 72 "include/linux/sched.h" 2
+//# 1 "include/linux/signal.h" 1
 
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/signal.h" 1
-# 10 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/signal.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/signal.h" 1
+//# 10 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/signal.h"
 struct siginfo;
-# 28 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/signal.h"
+//# 28 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/signal.h"
 typedef unsigned long old_sigset_t;
 
 typedef struct {
  unsigned long sig[(64 / 64)];
 } sigset_t;
-# 120 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/signal.h"
-# 1 "include/asm-generic/signal-defs.h" 1
-# 17 "include/asm-generic/signal-defs.h"
+//# 120 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/signal.h"
+//# 1 "include/asm-generic/signal-defs.h" 1
+//# 17 "include/asm-generic/signal-defs.h"
 typedef void __signalfn_t(int);
 typedef __signalfn_t *__sighandler_t;
 
 typedef void __restorefn_t(void);
 typedef __restorefn_t *__sigrestore_t;
-# 121 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/signal.h" 2
+//# 121 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/signal.h" 2
 
 
 
 
 extern void do_notify_resume(struct pt_regs *, void *, __u32);
-# 167 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/signal.h"
+//# 167 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/signal.h"
 struct sigaction {
  __sighandler_t sa_handler;
  unsigned long sa_flags;
@@ -23203,8 +23203,8 @@ typedef struct sigaltstack {
  int ss_flags;
  size_t ss_size;
 } stack_t;
-# 5 "include/linux/signal.h" 2
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/siginfo.h" 1
+//# 5 "include/linux/signal.h" 2
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/siginfo.h" 1
 
 
 
@@ -23212,7 +23212,7 @@ typedef struct sigaltstack {
 
 
 
-# 1 "include/asm-generic/siginfo.h" 1
+//# 1 "include/asm-generic/siginfo.h" 1
 
 
 
@@ -23223,7 +23223,7 @@ typedef union sigval {
  int sival_int;
  void *sival_ptr;
 } sigval_t;
-# 40 "include/asm-generic/siginfo.h"
+//# 40 "include/asm-generic/siginfo.h"
 typedef struct siginfo {
  int si_signo;
  int si_errno;
@@ -23279,7 +23279,7 @@ typedef struct siginfo {
   } _sigpoll;
  } _sifields;
 } siginfo_t;
-# 259 "include/asm-generic/siginfo.h"
+//# 259 "include/asm-generic/siginfo.h"
 typedef struct sigevent {
  sigval_t sigev_value;
  int sigev_signo;
@@ -23320,9 +23320,9 @@ static inline __attribute__((always_inline)) void copy_siginfo(struct siginfo *t
 
 
 extern int copy_siginfo_to_user(struct siginfo *to, struct siginfo *from);
-# 9 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/siginfo.h" 2
-# 6 "include/linux/signal.h" 2
-# 14 "include/linux/signal.h"
+//# 9 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/siginfo.h" 2
+//# 6 "include/linux/signal.h" 2
+//# 14 "include/linux/signal.h"
 struct sigqueue {
  struct list_head list;
  int flags;
@@ -23337,7 +23337,7 @@ struct sigpending {
  struct list_head list;
  sigset_t signal;
 };
-# 38 "include/linux/signal.h"
+//# 38 "include/linux/signal.h"
 static inline __attribute__((always_inline)) void sigaddset(sigset_t *set, int _sig)
 {
  unsigned long sig = _sig - 1;
@@ -23388,7 +23388,7 @@ static inline __attribute__((always_inline)) int sigisemptyset(sigset_t *set)
   return 0;
  }
 }
-# 119 "include/linux/signal.h"
+//# 119 "include/linux/signal.h"
 static inline __attribute__((always_inline)) void sigorsets(sigset_t *r, const sigset_t *a, const sigset_t *b) { extern void _NSIG_WORDS_is_unsupported_size(void); unsigned long a0, a1, a2, a3, b0, b1, b2, b3; switch ((64 / 64)) { case 4: a3 = a->sig[3]; a2 = a->sig[2]; b3 = b->sig[3]; b2 = b->sig[2]; r->sig[3] = ((a3) | (b3)); r->sig[2] = ((a2) | (b2)); case 2: a1 = a->sig[1]; b1 = b->sig[1]; r->sig[1] = ((a1) | (b1)); case 1: a0 = a->sig[0]; b0 = b->sig[0]; r->sig[0] = ((a0) | (b0)); break; default: _NSIG_WORDS_is_unsupported_size(); } }
 
 
@@ -23396,7 +23396,7 @@ static inline __attribute__((always_inline)) void sigandsets(sigset_t *r, const 
 
 
 static inline __attribute__((always_inline)) void signandsets(sigset_t *r, const sigset_t *a, const sigset_t *b) { extern void _NSIG_WORDS_is_unsupported_size(void); unsigned long a0, a1, a2, a3, b0, b1, b2, b3; switch ((64 / 64)) { case 4: a3 = a->sig[3]; a2 = a->sig[2]; b3 = b->sig[3]; b2 = b->sig[2]; r->sig[3] = ((a3) & ~(b3)); r->sig[2] = ((a2) & ~(b2)); case 2: a1 = a->sig[1]; b1 = b->sig[1]; r->sig[1] = ((a1) & ~(b1)); case 1: a0 = a->sig[0]; b0 = b->sig[0]; r->sig[0] = ((a0) & ~(b0)); break; default: _NSIG_WORDS_is_unsupported_size(); } }
-# 149 "include/linux/signal.h"
+//# 149 "include/linux/signal.h"
 static inline __attribute__((always_inline)) void signotset(sigset_t *set) { extern void _NSIG_WORDS_is_unsupported_size(void); switch ((64 / 64)) { case 4: set->sig[3] = (~(set->sig[3])); set->sig[2] = (~(set->sig[2])); case 2: set->sig[1] = (~(set->sig[1])); case 1: set->sig[0] = (~(set->sig[0])); break; default: _NSIG_WORDS_is_unsupported_size(); } }
 
 
@@ -23501,19 +23501,19 @@ extern void exit_signals(struct task_struct *tsk);
 extern struct kmem_cache *sighand_cachep;
 
 int unhandled_signal(struct task_struct *tsk, int sig);
-# 377 "include/linux/signal.h"
+//# 377 "include/linux/signal.h"
 void signals_init(void);
-# 73 "include/linux/sched.h" 2
+//# 73 "include/linux/sched.h" 2
 
 
 
 
 
 
-# 1 "include/linux/proportions.h" 1
-# 12 "include/linux/proportions.h"
-# 1 "include/linux/percpu_counter.h" 1
-# 18 "include/linux/percpu_counter.h"
+//# 1 "include/linux/proportions.h" 1
+//# 12 "include/linux/proportions.h"
+//# 1 "include/linux/percpu_counter.h" 1
+//# 18 "include/linux/percpu_counter.h"
 struct percpu_counter {
  spinlock_t lock;
  s64 count;
@@ -23527,7 +23527,7 @@ extern int percpu_counter_batch;
 
 int __percpu_counter_init(struct percpu_counter *fbc, s64 amount,
      struct lock_class_key *key);
-# 39 "include/linux/percpu_counter.h"
+//# 39 "include/linux/percpu_counter.h"
 void percpu_counter_destroy(struct percpu_counter *fbc);
 void percpu_counter_set(struct percpu_counter *fbc, s64 amount);
 void __percpu_counter_add(struct percpu_counter *fbc, s64 amount, s32 batch);
@@ -23568,7 +23568,7 @@ static inline __attribute__((always_inline)) s64 percpu_counter_read_positive(st
   return ret;
  return 1;
 }
-# 134 "include/linux/percpu_counter.h"
+//# 134 "include/linux/percpu_counter.h"
 static inline __attribute__((always_inline)) void percpu_counter_inc(struct percpu_counter *fbc)
 {
  percpu_counter_add(fbc, 1);
@@ -23583,7 +23583,7 @@ static inline __attribute__((always_inline)) void percpu_counter_sub(struct perc
 {
  percpu_counter_add(fbc, -amount);
 }
-# 13 "include/linux/proportions.h" 2
+//# 13 "include/linux/proportions.h" 2
 
 
 
@@ -23650,7 +23650,7 @@ void prop_inc_percpu(struct prop_descriptor *pd, struct prop_local_percpu *pl)
  __prop_inc_percpu(pd, pl);
  do { ({ unsigned long __dummy; typeof(flags) __dummy2; (void)(&__dummy == &__dummy2); 1; }); if (raw_irqs_disabled_flags(flags)) { raw_local_irq_restore(flags); do { } while (0); } else { do { } while (0); raw_local_irq_restore(flags); } } while (0);
 }
-# 89 "include/linux/proportions.h"
+//# 89 "include/linux/proportions.h"
 void __prop_inc_percpu_max(struct prop_descriptor *pd,
       struct prop_local_percpu *pl, long frac);
 
@@ -23693,8 +23693,8 @@ void prop_inc_single(struct prop_descriptor *pd, struct prop_local_single *pl)
  __prop_inc_single(pd, pl);
  do { ({ unsigned long __dummy; typeof(flags) __dummy2; (void)(&__dummy == &__dummy2); 1; }); if (raw_irqs_disabled_flags(flags)) { raw_local_irq_restore(flags); do { } while (0); } else { do { } while (0); raw_local_irq_restore(flags); } } while (0);
 }
-# 80 "include/linux/sched.h" 2
-# 1 "include/linux/seccomp.h" 1
+//# 80 "include/linux/sched.h" 2
+//# 1 "include/linux/seccomp.h" 1
 
 
 
@@ -23702,28 +23702,28 @@ void prop_inc_single(struct prop_descriptor *pd, struct prop_local_single *pl)
 
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/seccomp.h" 1
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/seccomp.h" 1
 
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/seccomp_64.h" 1
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/seccomp_64.h" 1
 
 
 
-# 1 "include/linux/unistd.h" 1
+//# 1 "include/linux/unistd.h" 1
 
 
 
 
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/unistd.h" 1
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/unistd.h" 1
 
 
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/unistd_64.h" 1
-# 16 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/unistd_64.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/unistd_64.h" 1
+//# 16 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/unistd_64.h"
 
 
 
@@ -24372,16 +24372,16 @@ void prop_inc_single(struct prop_descriptor *pd, struct prop_local_single *pl)
 
 
 
-# 693 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/unistd_64.h"
-# 1 "include/asm/asm-offsets.h" 1
-# 694 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/unistd_64.h" 2
-# 6 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/unistd.h" 2
-# 8 "include/linux/unistd.h" 2
-# 5 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/seccomp_64.h" 2
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/ia32_unistd.h" 1
-# 6 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/seccomp_64.h" 2
-# 5 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/seccomp.h" 2
-# 9 "include/linux/seccomp.h" 2
+//# 693 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/unistd_64.h"
+//# 1 "include/asm/asm-offsets.h" 1
+//# 694 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/unistd_64.h" 2
+//# 6 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/unistd.h" 2
+//# 8 "include/linux/unistd.h" 2
+//# 5 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/seccomp_64.h" 2
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/ia32_unistd.h" 1
+//# 6 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/seccomp_64.h" 2
+//# 5 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/seccomp.h" 2
+//# 9 "include/linux/seccomp.h" 2
 
 typedef struct { int mode; } seccomp_t;
 
@@ -24394,13 +24394,13 @@ static inline __attribute__((always_inline)) void secure_computing(int this_sysc
 
 extern long prctl_get_seccomp(void);
 extern long prctl_set_seccomp(unsigned long);
-# 81 "include/linux/sched.h" 2
+//# 81 "include/linux/sched.h" 2
 
 
-# 1 "include/linux/rtmutex.h" 1
-# 16 "include/linux/rtmutex.h"
-# 1 "include/linux/plist.h" 1
-# 80 "include/linux/plist.h"
+//# 1 "include/linux/rtmutex.h" 1
+//# 16 "include/linux/rtmutex.h"
+//# 1 "include/linux/plist.h" 1
+//# 80 "include/linux/plist.h"
 struct plist_head {
  struct list_head prio_list;
  struct list_head node_list;
@@ -24413,7 +24413,7 @@ struct plist_node {
  int prio;
  struct plist_head plist;
 };
-# 130 "include/linux/plist.h"
+//# 130 "include/linux/plist.h"
 static inline __attribute__((always_inline)) void
 plist_head_init(struct plist_head *head, spinlock_t *lock)
 {
@@ -24437,7 +24437,7 @@ static inline __attribute__((always_inline)) void plist_node_init(struct plist_n
 
 extern void plist_add(struct plist_node *node, struct plist_head *head);
 extern void plist_del(struct plist_node *node, struct plist_head *head);
-# 198 "include/linux/plist.h"
+//# 198 "include/linux/plist.h"
 static inline __attribute__((always_inline)) int plist_head_empty(const struct plist_head *head)
 {
  return list_empty(&head->node_list);
@@ -24451,14 +24451,14 @@ static inline __attribute__((always_inline)) int plist_node_empty(const struct p
 {
  return plist_head_empty(&node->plist);
 }
-# 237 "include/linux/plist.h"
+//# 237 "include/linux/plist.h"
 static inline __attribute__((always_inline)) struct plist_node* plist_first(const struct plist_head *head)
 {
  return ({ const typeof( ((struct plist_node *)0)->plist.node_list ) *__mptr = (head->node_list.next); (struct plist_node *)( (char *)__mptr - __builtin_offsetof(struct plist_node,plist.node_list) );});
 
 }
-# 17 "include/linux/rtmutex.h" 2
-# 26 "include/linux/rtmutex.h"
+//# 17 "include/linux/rtmutex.h" 2
+//# 26 "include/linux/rtmutex.h"
 struct rt_mutex {
  spinlock_t wait_lock;
  struct plist_head wait_list;
@@ -24484,7 +24484,7 @@ struct hrtimer_sleeper;
  {
  return 0;
  }
-# 80 "include/linux/rtmutex.h"
+//# 80 "include/linux/rtmutex.h"
 static inline __attribute__((always_inline)) int rt_mutex_is_locked(struct rt_mutex *lock)
 {
  return lock->owner != ((void *)0);
@@ -24503,18 +24503,18 @@ extern int rt_mutex_timed_lock(struct rt_mutex *lock,
 extern int rt_mutex_trylock(struct rt_mutex *lock);
 
 extern void rt_mutex_unlock(struct rt_mutex *lock);
-# 84 "include/linux/sched.h" 2
+//# 84 "include/linux/sched.h" 2
 
 
 
-# 1 "include/linux/resource.h" 1
+//# 1 "include/linux/resource.h" 1
 
 
 
 
 
 struct task_struct;
-# 24 "include/linux/resource.h"
+//# 24 "include/linux/resource.h"
 struct rusage {
  struct timeval ru_utime;
  struct timeval ru_stime;
@@ -24538,17 +24538,17 @@ struct rlimit {
  unsigned long rlim_cur;
  unsigned long rlim_max;
 };
-# 71 "include/linux/resource.h"
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/resource.h" 1
-# 1 "include/asm-generic/resource.h" 1
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/resource.h" 2
-# 72 "include/linux/resource.h" 2
+//# 71 "include/linux/resource.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/resource.h" 1
+//# 1 "include/asm-generic/resource.h" 1
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/resource.h" 2
+//# 72 "include/linux/resource.h" 2
 
 int getrusage(struct task_struct *p, int who, struct rusage *ru);
-# 88 "include/linux/sched.h" 2
+//# 88 "include/linux/sched.h" 2
 
-# 1 "include/linux/hrtimer.h" 1
-# 27 "include/linux/hrtimer.h"
+//# 1 "include/linux/hrtimer.h" 1
+//# 27 "include/linux/hrtimer.h"
 struct hrtimer_clock_base;
 struct hrtimer_cpu_base;
 
@@ -24570,7 +24570,7 @@ enum hrtimer_restart {
  HRTIMER_NORESTART,
  HRTIMER_RESTART,
 };
-# 103 "include/linux/hrtimer.h"
+//# 103 "include/linux/hrtimer.h"
 struct hrtimer {
  struct rb_node node;
  ktime_t _expires;
@@ -24584,12 +24584,12 @@ struct hrtimer {
  char start_comm[16];
 
 };
-# 124 "include/linux/hrtimer.h"
+//# 124 "include/linux/hrtimer.h"
 struct hrtimer_sleeper {
  struct hrtimer timer;
  struct task_struct *task;
 };
-# 141 "include/linux/hrtimer.h"
+//# 141 "include/linux/hrtimer.h"
 struct hrtimer_clock_base {
  struct hrtimer_cpu_base *cpu_base;
  clockid_t index;
@@ -24602,7 +24602,7 @@ struct hrtimer_clock_base {
  ktime_t offset;
 
 };
-# 170 "include/linux/hrtimer.h"
+//# 170 "include/linux/hrtimer.h"
 struct hrtimer_cpu_base {
  spinlock_t lock;
  struct hrtimer_clock_base clock_base[2];
@@ -24699,7 +24699,7 @@ static inline __attribute__((always_inline)) int hrtimer_is_hres_active(struct h
 }
 
 extern void hrtimer_peek_ahead_timers(void);
-# 308 "include/linux/hrtimer.h"
+//# 308 "include/linux/hrtimer.h"
 extern ktime_t ktime_get(void);
 extern ktime_t ktime_get_real(void);
 
@@ -24820,7 +24820,7 @@ extern void hrtimer_run_pending(void);
 
 
 extern void __attribute__ ((__section__(".init.text"))) __attribute__((__cold__)) __attribute__((no_instrument_function)) hrtimers_init(void);
-# 436 "include/linux/hrtimer.h"
+//# 436 "include/linux/hrtimer.h"
 extern void sysrq_timer_list_show(void);
 
 
@@ -24854,9 +24854,9 @@ static inline __attribute__((always_inline)) void timer_stats_hrtimer_clear_star
 {
  timer->start_site = ((void *)0);
 }
-# 90 "include/linux/sched.h" 2
-# 1 "include/linux/task_io_accounting.h" 1
-# 11 "include/linux/task_io_accounting.h"
+//# 90 "include/linux/sched.h" 2
+//# 1 "include/linux/task_io_accounting.h" 1
+//# 11 "include/linux/task_io_accounting.h"
 struct task_io_accounting {
 
 
@@ -24881,14 +24881,14 @@ struct task_io_accounting {
 
 
  u64 write_bytes;
-# 43 "include/linux/task_io_accounting.h"
+//# 43 "include/linux/task_io_accounting.h"
  u64 cancelled_write_bytes;
 
 };
-# 91 "include/linux/sched.h" 2
+//# 91 "include/linux/sched.h" 2
 
-# 1 "include/linux/latencytop.h" 1
-# 41 "include/linux/latencytop.h"
+//# 1 "include/linux/latencytop.h" 1
+//# 41 "include/linux/latencytop.h"
 static inline __attribute__((always_inline)) void
 account_scheduler_latency(struct task_struct *task, int usecs, int inter)
 {
@@ -24897,13 +24897,13 @@ account_scheduler_latency(struct task_struct *task, int usecs, int inter)
 static inline __attribute__((always_inline)) void clear_all_latency_tracing(struct task_struct *p)
 {
 }
-# 93 "include/linux/sched.h" 2
-# 1 "include/linux/cred.h" 1
-# 17 "include/linux/cred.h"
-# 1 "include/linux/key.h" 1
-# 24 "include/linux/key.h"
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic.h" 1
-# 25 "include/linux/key.h" 2
+//# 93 "include/linux/sched.h" 2
+//# 1 "include/linux/cred.h" 1
+//# 17 "include/linux/cred.h"
+//# 1 "include/linux/key.h" 1
+//# 24 "include/linux/key.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic.h" 1
+//# 25 "include/linux/key.h" 2
 
 
 
@@ -24914,7 +24914,7 @@ typedef int32_t key_serial_t;
 typedef uint32_t key_perm_t;
 
 struct key;
-# 74 "include/linux/key.h"
+//# 74 "include/linux/key.h"
 struct seq_file;
 struct user_struct;
 struct signal_struct;
@@ -24924,7 +24924,7 @@ struct key_type;
 struct key_owner;
 struct keyring_list;
 struct keyring_name;
-# 98 "include/linux/key.h"
+//# 98 "include/linux/key.h"
 typedef struct __key_reference_with_attributes *key_ref_t;
 
 static inline __attribute__((always_inline)) key_ref_t make_key_ref(const struct key *key,
@@ -24942,7 +24942,7 @@ static inline __attribute__((always_inline)) unsigned long is_key_possessed(cons
 {
  return (unsigned long) key_ref & 1UL;
 }
-# 124 "include/linux/key.h"
+//# 124 "include/linux/key.h"
 struct key {
  atomic_t usage;
  key_serial_t serial;
@@ -24960,9 +24960,9 @@ struct key {
  key_perm_t perm;
  unsigned short quotalen;
  unsigned short datalen;
-# 151 "include/linux/key.h"
+//# 151 "include/linux/key.h"
  unsigned long flags;
-# 164 "include/linux/key.h"
+//# 164 "include/linux/key.h"
  char *description;
 
 
@@ -25089,28 +25089,28 @@ extern int install_thread_keyring_to_cred(struct cred *cred);
 extern void key_fsuid_changed(struct task_struct *tsk);
 extern void key_fsgid_changed(struct task_struct *tsk);
 extern void key_init(void);
-# 18 "include/linux/cred.h" 2
-# 1 "include/linux/selinux.h" 1
-# 17 "include/linux/selinux.h"
+//# 18 "include/linux/cred.h" 2
+//# 1 "include/linux/selinux.h" 1
+//# 17 "include/linux/selinux.h"
 struct selinux_audit_rule;
 struct audit_context;
 struct kern_ipc_perm;
-# 32 "include/linux/selinux.h"
+//# 32 "include/linux/selinux.h"
 int selinux_string_to_sid(char *str, u32 *sid);
-# 43 "include/linux/selinux.h"
+//# 43 "include/linux/selinux.h"
 int selinux_secmark_relabel_packet_permission(u32 sid);
-# 53 "include/linux/selinux.h"
+//# 53 "include/linux/selinux.h"
 void selinux_secmark_refcount_inc(void);
-# 63 "include/linux/selinux.h"
+//# 63 "include/linux/selinux.h"
 void selinux_secmark_refcount_dec(void);
 
 
 
 
 bool selinux_is_enabled(void);
-# 19 "include/linux/cred.h" 2
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic.h" 1
-# 20 "include/linux/cred.h" 2
+//# 19 "include/linux/cred.h" 2
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic.h" 1
+//# 20 "include/linux/cred.h" 2
 
 struct user_struct;
 struct cred;
@@ -25129,13 +25129,13 @@ struct group_info {
  gid_t small_block[32];
  gid_t *blocks[0];
 };
-# 48 "include/linux/cred.h"
+//# 48 "include/linux/cred.h"
 static inline __attribute__((always_inline)) struct group_info *get_group_info(struct group_info *gi)
 {
  atomic_inc(&gi->usage);
  return gi;
 }
-# 64 "include/linux/cred.h"
+//# 64 "include/linux/cred.h"
 extern struct group_info *groups_alloc(int);
 extern struct group_info init_groups;
 extern void groups_free(struct group_info *);
@@ -25163,7 +25163,7 @@ struct thread_group_cred {
  struct key *process_keyring;
  struct rcu_head rcu;
 };
-# 116 "include/linux/cred.h"
+//# 116 "include/linux/cred.h"
 struct cred {
  atomic_t usage;
 
@@ -25218,7 +25218,7 @@ extern int set_security_override(struct cred *, u32);
 extern int set_security_override_from_ctx(struct cred *, const char *);
 extern int set_create_files_as(struct cred *, struct inode *);
 extern void __attribute__ ((__section__(".init.text"))) __attribute__((__cold__)) __attribute__((no_instrument_function)) cred_init(void);
-# 200 "include/linux/cred.h"
+//# 200 "include/linux/cred.h"
 static inline __attribute__((always_inline)) void validate_creds(const struct cred *cred)
 {
 }
@@ -25228,20 +25228,20 @@ static inline __attribute__((always_inline)) void validate_creds_for_do_exit(str
 static inline __attribute__((always_inline)) void validate_process_creds(void)
 {
 }
-# 218 "include/linux/cred.h"
+//# 218 "include/linux/cred.h"
 static inline __attribute__((always_inline)) struct cred *get_new_cred(struct cred *cred)
 {
  atomic_inc(&cred->usage);
  return cred;
 }
-# 237 "include/linux/cred.h"
+//# 237 "include/linux/cred.h"
 static inline __attribute__((always_inline)) const struct cred *get_cred(const struct cred *cred)
 {
  struct cred *nonconst_cred = (struct cred *) cred;
  validate_creds(cred);
  return get_new_cred(nonconst_cred);
 }
-# 255 "include/linux/cred.h"
+//# 255 "include/linux/cred.h"
 static inline __attribute__((always_inline)) void put_cred(const struct cred *_cred)
 {
  struct cred *cred = (struct cred *) _cred;
@@ -25250,7 +25250,7 @@ static inline __attribute__((always_inline)) void put_cred(const struct cred *_c
  if (atomic_dec_and_test(&(cred)->usage))
   __put_cred(cred);
 }
-# 94 "include/linux/sched.h" 2
+//# 94 "include/linux/sched.h" 2
 
 
 
@@ -25261,10 +25261,10 @@ struct bio;
 struct fs_struct;
 struct bts_context;
 struct perf_event_context;
-# 121 "include/linux/sched.h"
+//# 121 "include/linux/sched.h"
 extern unsigned long avenrun[];
 extern void get_avenrun(unsigned long *loads, unsigned long offset, int shift);
-# 136 "include/linux/sched.h"
+//# 136 "include/linux/sched.h"
 extern unsigned long total_forks;
 extern int nr_threads;
 extern __attribute__((section(".data.percpu" ""))) __typeof__(unsigned long) per_cpu__process_counts;
@@ -25289,9 +25289,9 @@ extern void proc_sched_show_task(struct task_struct *p, struct seq_file *m);
 extern void proc_sched_set_task(struct task_struct *p);
 extern void
 print_cfs_rq(struct seq_file *m, int cpu, struct cfs_rq *cfs_rq);
-# 174 "include/linux/sched.h"
+//# 174 "include/linux/sched.h"
 extern unsigned long long time_sync_thresh;
-# 253 "include/linux/sched.h"
+//# 253 "include/linux/sched.h"
 extern rwlock_t tasklist_lock;
 extern spinlock_t mmlist_lock;
 
@@ -25310,7 +25310,7 @@ extern cpumask_var_t nohz_cpu_mask;
 
 extern int select_nohz_load_balancer(int cpu);
 extern int get_nohz_load_balancer(void);
-# 281 "include/linux/sched.h"
+//# 281 "include/linux/sched.h"
 extern void show_state_filter(unsigned long state_filter);
 
 static inline __attribute__((always_inline)) void show_state(void)
@@ -25346,7 +25346,7 @@ extern int proc_dosoftlockup_thresh(struct ctl_table *table, int write,
         size_t *lenp, loff_t *ppos);
 extern unsigned int softlockup_panic;
 extern int softlockup_thresh;
-# 329 "include/linux/sched.h"
+//# 329 "include/linux/sched.h"
 extern unsigned int sysctl_hung_task_panic;
 extern unsigned long sysctl_hung_task_check_count;
 extern unsigned long sysctl_hung_task_timeout_secs;
@@ -25376,17 +25376,17 @@ extern int mutex_spin_on_owner(struct mutex *lock, struct thread_info *owner);
 
 struct nsproxy;
 struct user_namespace;
-# 374 "include/linux/sched.h"
+//# 374 "include/linux/sched.h"
 extern int sysctl_max_map_count;
 
-# 1 "include/linux/aio.h" 1
+//# 1 "include/linux/aio.h" 1
 
 
 
 
 
-# 1 "include/linux/aio_abi.h" 1
-# 33 "include/linux/aio_abi.h"
+//# 1 "include/linux/aio_abi.h" 1
+//# 33 "include/linux/aio_abi.h"
 typedef unsigned long aio_context_t;
 
 enum {
@@ -25402,14 +25402,14 @@ enum {
  IOCB_CMD_PREADV = 7,
  IOCB_CMD_PWRITEV = 8,
 };
-# 58 "include/linux/aio_abi.h"
+//# 58 "include/linux/aio_abi.h"
 struct io_event {
  __u64 data;
  __u64 obj;
  __s64 res;
  __s64 res2;
 };
-# 79 "include/linux/aio_abi.h"
+//# 79 "include/linux/aio_abi.h"
 struct iocb {
 
  __u64 aio_data;
@@ -25437,20 +25437,20 @@ struct iocb {
 
  __u32 aio_resfd;
 };
-# 7 "include/linux/aio.h" 2
-# 1 "include/linux/uio.h" 1
-# 16 "include/linux/uio.h"
+//# 7 "include/linux/aio.h" 2
+//# 1 "include/linux/uio.h" 1
+//# 16 "include/linux/uio.h"
 struct iovec
 {
  void *iov_base;
  __kernel_size_t iov_len;
 };
-# 31 "include/linux/uio.h"
+//# 31 "include/linux/uio.h"
 struct kvec {
  void *iov_base;
  size_t iov_len;
 };
-# 43 "include/linux/uio.h"
+//# 43 "include/linux/uio.h"
 static inline __attribute__((always_inline)) size_t iov_length(const struct iovec *iov, unsigned long nr_segs)
 {
  unsigned long seg;
@@ -25462,17 +25462,17 @@ static inline __attribute__((always_inline)) size_t iov_length(const struct iove
 }
 
 unsigned long iov_shorten(struct iovec *iov, unsigned long nr_segs, size_t to);
-# 8 "include/linux/aio.h" 2
+//# 8 "include/linux/aio.h" 2
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic.h" 1
-# 11 "include/linux/aio.h" 2
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic.h" 1
+//# 11 "include/linux/aio.h" 2
 
 
 
 
 struct kioctx;
-# 87 "include/linux/aio.h"
+//# 87 "include/linux/aio.h"
 struct kiocb {
  struct list_head ki_run_list;
  unsigned long ki_flags;
@@ -25514,7 +25514,7 @@ struct kiocb {
 
  struct eventfd_ctx *ki_eventfd;
 };
-# 149 "include/linux/aio.h"
+//# 149 "include/linux/aio.h"
 struct aio_ring {
  unsigned id;
  unsigned nr;
@@ -25583,7 +25583,7 @@ extern void kick_iocb(struct kiocb *iocb);
 extern int aio_complete(struct kiocb *iocb, long res, long res2);
 struct mm_struct;
 extern void exit_aio(struct mm_struct *mm);
-# 228 "include/linux/aio.h"
+//# 228 "include/linux/aio.h"
 static inline __attribute__((always_inline)) struct kiocb *list_kiocb(struct list_head *h)
 {
  return ({ const typeof( ((struct kiocb *)0)->ki_list ) *__mptr = (h); (struct kiocb *)( (char *)__mptr - __builtin_offsetof(struct kiocb,ki_list) );});
@@ -25592,7 +25592,7 @@ static inline __attribute__((always_inline)) struct kiocb *list_kiocb(struct lis
 
 extern unsigned long aio_nr;
 extern unsigned long aio_max_nr;
-# 377 "include/linux/sched.h" 2
+//# 377 "include/linux/sched.h" 2
 
 extern unsigned long
 arch_get_unmapped_area(struct file *, unsigned long, unsigned long,
@@ -25603,7 +25603,7 @@ arch_get_unmapped_area_topdown(struct file *filp, unsigned long addr,
      unsigned long flags);
 extern void arch_unmap_area(struct mm_struct *, unsigned long);
 extern void arch_unmap_area_topdown(struct mm_struct *, unsigned long);
-# 424 "include/linux/sched.h"
+//# 424 "include/linux/sched.h"
 static inline __attribute__((always_inline)) unsigned long get_mm_hiwater_rss(struct mm_struct *mm)
 {
  return ({ typeof(mm->hiwater_rss) _max1 = (mm->hiwater_rss); typeof((((unsigned long)atomic_long_read(&(mm)->_file_rss)) + ((unsigned long)atomic_long_read(&(mm)->_anon_rss)))) _max2 = ((((unsigned long)atomic_long_read(&(mm)->_file_rss)) + ((unsigned long)atomic_long_read(&(mm)->_anon_rss)))); (void) (&_max1 == &_max2); _max1 > _max2 ? _max1 : _max2; });
@@ -25625,7 +25625,7 @@ static inline __attribute__((always_inline)) unsigned long get_mm_hiwater_vm(str
 
 extern void set_dumpable(struct mm_struct *mm, int value);
 extern int get_dumpable(struct mm_struct *mm);
-# 481 "include/linux/sched.h"
+//# 481 "include/linux/sched.h"
 struct sighand_struct {
  atomic_t count;
  struct k_sigaction action[64];
@@ -25647,19 +25647,19 @@ struct cpu_itimer {
  u32 error;
  u32 incr_error;
 };
-# 514 "include/linux/sched.h"
+//# 514 "include/linux/sched.h"
 struct task_cputime {
  cputime_t utime;
  cputime_t stime;
  unsigned long long sum_exec_runtime;
 };
-# 550 "include/linux/sched.h"
+//# 550 "include/linux/sched.h"
 struct thread_group_cputimer {
  struct task_cputime cputime;
  int running;
  spinlock_t lock;
 };
-# 563 "include/linux/sched.h"
+//# 563 "include/linux/sched.h"
 struct signal_struct {
  atomic_t count;
  atomic_t live;
@@ -25741,7 +25741,7 @@ struct signal_struct {
 
 
  unsigned long long sum_sched_runtime;
-# 654 "include/linux/sched.h"
+//# 654 "include/linux/sched.h"
  struct rlimit rlim[16];
 
 
@@ -25757,7 +25757,7 @@ struct signal_struct {
 
  int oom_adj;
 };
-# 692 "include/linux/sched.h"
+//# 692 "include/linux/sched.h"
 static inline __attribute__((always_inline)) int signal_group_exit(const struct signal_struct *sig)
 {
  return (sig->flags & 0x00000008) ||
@@ -25794,7 +25794,7 @@ struct user_struct {
  struct hlist_node uidhash_node;
  uid_t uid;
  struct user_namespace *user_ns;
-# 738 "include/linux/sched.h"
+//# 738 "include/linux/sched.h"
  atomic_long_t locked_vm;
 
 };
@@ -25830,7 +25830,7 @@ struct sched_info {
 struct task_delay_info {
  spinlock_t lock;
  unsigned int flags;
-# 789 "include/linux/sched.h"
+//# 789 "include/linux/sched.h"
  struct timespec blkio_start, blkio_end;
  u64 blkio_delay;
  u64 swapin_delay;
@@ -25863,7 +25863,7 @@ enum cpu_idle_type {
  CPU_NEWLY_IDLE,
  CPU_MAX_IDLE_TYPES
 };
-# 849 "include/linux/sched.h"
+//# 849 "include/linux/sched.h"
 enum powersavings_balance_level {
  POWERSAVINGS_BALANCE_NONE = 0,
  POWERSAVINGS_BALANCE_BASIC,
@@ -25915,7 +25915,7 @@ struct sched_group {
 
 
  unsigned int cpu_power;
-# 911 "include/linux/sched.h"
+//# 911 "include/linux/sched.h"
  unsigned long cpumask[0];
 };
 
@@ -25967,9 +25967,9 @@ struct sched_domain {
  unsigned int nr_balance_failed;
 
  u64 last_update;
-# 995 "include/linux/sched.h"
+//# 995 "include/linux/sched.h"
  char *name;
-# 1008 "include/linux/sched.h"
+//# 1008 "include/linux/sched.h"
  unsigned long span[0];
 };
 
@@ -25992,7 +25992,7 @@ static inline __attribute__((always_inline)) int test_sd_parent(struct sched_dom
 
 unsigned long default_scale_freq_power(struct sched_domain *sd, int cpu);
 unsigned long default_scale_smt_power(struct sched_domain *sd, int cpu);
-# 1043 "include/linux/sched.h"
+//# 1043 "include/linux/sched.h"
 struct io_context;
 
 
@@ -26071,7 +26071,7 @@ struct sched_class {
 struct load_weight {
  unsigned long weight, inv_weight;
 };
-# 1132 "include/linux/sched.h"
+//# 1132 "include/linux/sched.h"
 struct sched_entity {
  struct load_weight load;
  struct rb_node run_node;
@@ -26092,7 +26092,7 @@ struct sched_entity {
  u64 avg_wakeup;
 
  u64 avg_running;
-# 1189 "include/linux/sched.h"
+//# 1189 "include/linux/sched.h"
  struct sched_entity *parent;
 
  struct cfs_rq *cfs_rq;
@@ -26139,7 +26139,7 @@ struct task_struct {
  const struct sched_class *sched_class;
  struct sched_entity se;
  struct sched_rt_entity rt;
-# 1249 "include/linux/sched.h"
+//# 1249 "include/linux/sched.h"
  unsigned char fpu_counter;
 
  unsigned int btrace_seq;
@@ -26147,7 +26147,7 @@ struct task_struct {
 
  unsigned int policy;
  cpumask_t cpus_allowed;
-# 1265 "include/linux/sched.h"
+//# 1265 "include/linux/sched.h"
  struct sched_info sched_info;
 
 
@@ -26173,7 +26173,7 @@ struct task_struct {
 
  pid_t pid;
  pid_t tgid;
-# 1301 "include/linux/sched.h"
+//# 1301 "include/linux/sched.h"
  struct task_struct *real_parent;
  struct task_struct *parent;
 
@@ -26289,7 +26289,7 @@ struct task_struct {
  struct plist_head pi_waiters;
 
  struct rt_mutex_waiter *pi_blocked_on;
-# 1447 "include/linux/sched.h"
+//# 1447 "include/linux/sched.h"
  void *journal_info;
 
 
@@ -26351,19 +26351,19 @@ struct task_struct {
 
 
  struct prop_local_single dirties;
-# 1516 "include/linux/sched.h"
+//# 1516 "include/linux/sched.h"
  unsigned long timer_slack_ns;
  unsigned long default_timer_slack_ns;
 
  struct list_head *scm_work_list;
-# 1537 "include/linux/sched.h"
+//# 1537 "include/linux/sched.h"
  unsigned long trace;
 
  unsigned long trace_recursion;
 
  unsigned long stack_start;
 };
-# 1566 "include/linux/sched.h"
+//# 1566 "include/linux/sched.h"
 static inline __attribute__((always_inline)) int rt_prio(int prio)
 {
  if (__builtin_expect(!!(prio < 100), 0))
@@ -26402,7 +26402,7 @@ static inline __attribute__((always_inline)) struct pid *task_session(struct tas
 }
 
 struct pid_namespace;
-# 1618 "include/linux/sched.h"
+//# 1618 "include/linux/sched.h"
 pid_t __task_pid_nr_ns(struct task_struct *task, enum pid_type type,
    struct pid_namespace *ns);
 
@@ -26464,7 +26464,7 @@ static inline __attribute__((always_inline)) pid_t task_pgrp_nr(struct task_stru
 {
  return task_pgrp_nr_ns(tsk, &init_pid_ns);
 }
-# 1688 "include/linux/sched.h"
+//# 1688 "include/linux/sched.h"
 static inline __attribute__((always_inline)) int pid_alive(struct task_struct *p)
 {
  return p->pids[PIDTYPE_PID].pid != ((void *)0);
@@ -26503,7 +26503,7 @@ static inline __attribute__((always_inline)) void put_task_struct(struct task_st
 extern cputime_t task_utime(struct task_struct *p);
 extern cputime_t task_stime(struct task_struct *p);
 extern cputime_t task_gtime(struct task_struct *p);
-# 1803 "include/linux/sched.h"
+//# 1803 "include/linux/sched.h"
 static inline __attribute__((always_inline)) void rcu_copy_process(struct task_struct *p)
 {
 }
@@ -26513,12 +26513,12 @@ static inline __attribute__((always_inline)) void rcu_copy_process(struct task_s
 
 extern int set_cpus_allowed_ptr(struct task_struct *p,
     const struct cpumask *new_mask);
-# 1823 "include/linux/sched.h"
+//# 1823 "include/linux/sched.h"
 static inline __attribute__((always_inline)) int set_cpus_allowed(struct task_struct *p, cpumask_t new_mask)
 {
  return set_cpus_allowed_ptr(p, &new_mask);
 }
-# 1836 "include/linux/sched.h"
+//# 1836 "include/linux/sched.h"
 extern int sched_clock_stable;
 
 
@@ -26526,7 +26526,7 @@ extern unsigned long long sched_clock(void);
 
 extern void sched_clock_init(void);
 extern u64 sched_clock_cpu(int cpu);
-# 1857 "include/linux/sched.h"
+//# 1857 "include/linux/sched.h"
 extern void sched_clock_tick(void);
 extern void sched_clock_idle_sleep_event(void);
 extern void sched_clock_idle_wakeup_event(u64 delta_ns);
@@ -26607,7 +26607,7 @@ extern unsigned int sysctl_sched_compat_yield;
 extern int rt_mutex_getprio(struct task_struct *p);
 extern void rt_mutex_setprio(struct task_struct *p, int prio);
 extern void rt_mutex_adjust_pi(struct task_struct *p);
-# 1945 "include/linux/sched.h"
+//# 1945 "include/linux/sched.h"
 extern void set_user_nice(struct task_struct *p, long nice);
 extern int task_prio(const struct task_struct *p);
 extern int task_nice(const struct task_struct *p);
@@ -26649,7 +26649,7 @@ extern struct task_struct init_task;
 extern struct mm_struct init_mm;
 
 extern struct pid_namespace init_pid_ns;
-# 1998 "include/linux/sched.h"
+//# 1998 "include/linux/sched.h"
 extern struct task_struct *find_task_by_vpid(pid_t nr);
 extern struct task_struct *find_task_by_pid_ns(pid_t nr,
   struct pid_namespace *ns);
@@ -26804,9 +26804,9 @@ extern char *get_task_comm(char *to, struct task_struct *tsk);
 
 extern void wait_task_context_switch(struct task_struct *p);
 extern unsigned long wait_task_inactive(struct task_struct *, long match_state);
-# 2167 "include/linux/sched.h"
+//# 2167 "include/linux/sched.h"
 extern bool current_is_single_threaded(void);
-# 2188 "include/linux/sched.h"
+//# 2188 "include/linux/sched.h"
 static inline __attribute__((always_inline)) int has_group_leader_pid(struct task_struct *p)
 {
  return p->pid == p->tgid;
@@ -26836,7 +26836,7 @@ static inline __attribute__((always_inline)) int task_detached(struct task_struc
 {
  return p->exit_signal == -1;
 }
-# 2228 "include/linux/sched.h"
+//# 2228 "include/linux/sched.h"
 static inline __attribute__((always_inline)) void task_lock(struct task_struct *p)
 {
  _spin_lock(&p->alloc_lock);
@@ -26882,7 +26882,7 @@ static inline __attribute__((always_inline)) int object_is_on_stack(void *obj)
 }
 
 extern void thread_info_cache_init(void);
-# 2290 "include/linux/sched.h"
+//# 2290 "include/linux/sched.h"
 static inline __attribute__((always_inline)) void set_tsk_thread_flag(struct task_struct *tsk, int flag)
 {
  set_ti_thread_flag(((struct thread_info *)(tsk)->stack), flag);
@@ -26958,7 +26958,7 @@ static inline __attribute__((always_inline)) int need_resched(void)
 {
  return __builtin_expect(!!(test_ti_thread_flag(current_thread_info(), 3)), 0);
 }
-# 2373 "include/linux/sched.h"
+//# 2373 "include/linux/sched.h"
 extern int _cond_resched(void);
 
 
@@ -26967,9 +26967,9 @@ extern int _cond_resched(void);
 
 
 extern int __cond_resched_lock(spinlock_t *lock);
-# 2393 "include/linux/sched.h"
+//# 2393 "include/linux/sched.h"
 extern int __cond_resched_softirq(void);
-# 2405 "include/linux/sched.h"
+//# 2405 "include/linux/sched.h"
 static inline __attribute__((always_inline)) int spin_needbreak(spinlock_t *lock)
 {
 
@@ -27018,14 +27018,14 @@ static inline __attribute__((always_inline)) unsigned int task_cpu(const struct 
 }
 
 extern void set_task_cpu(struct task_struct *p, unsigned int cpu);
-# 2467 "include/linux/sched.h"
+//# 2467 "include/linux/sched.h"
 extern void arch_pick_mmap_layout(struct mm_struct *mm);
 
 
 extern void
 __trace_special(void *__tr, void *__data,
   unsigned long arg1, unsigned long arg2, unsigned long arg3);
-# 2481 "include/linux/sched.h"
+//# 2481 "include/linux/sched.h"
 extern long sched_setaffinity(pid_t pid, const struct cpumask *new_mask);
 extern long sched_getaffinity(pid_t pid, struct cpumask *mask);
 
@@ -27045,7 +27045,7 @@ extern void sched_move_task(struct task_struct *tsk);
 
 extern int sched_group_set_shares(struct task_group *tg, unsigned long shares);
 extern unsigned long sched_group_shares(struct task_group *tg);
-# 2512 "include/linux/sched.h"
+//# 2512 "include/linux/sched.h"
 extern int task_can_switch_user(struct user_struct *up,
      struct task_struct *tsk);
 
@@ -27069,7 +27069,7 @@ static inline __attribute__((always_inline)) void inc_syscw(struct task_struct *
 {
  tsk->ioac.syscw++;
 }
-# 2560 "include/linux/sched.h"
+//# 2560 "include/linux/sched.h"
 extern void task_oncpu_function_call(struct task_struct *p,
          void (*func) (void *info), void *info);
 
@@ -27085,10 +27085,10 @@ static inline __attribute__((always_inline)) void mm_update_next_owner(struct mm
 static inline __attribute__((always_inline)) void mm_init_owner(struct mm_struct *mm, struct task_struct *p)
 {
 }
-# 7 "include/linux/blkdev.h" 2
+//# 7 "include/linux/blkdev.h" 2
 
-# 1 "include/linux/genhd.h" 1
-# 24 "include/linux/genhd.h"
+//# 1 "include/linux/genhd.h" 1
+//# 24 "include/linux/genhd.h"
 extern struct device_type part_type;
 extern struct kobject *block_depr;
 extern struct class block_class;
@@ -27122,7 +27122,7 @@ enum {
  MINIX_PARTITION = 0x81,
  UNIXWARE_PARTITION = 0x63,
 };
-# 68 "include/linux/genhd.h"
+//# 68 "include/linux/genhd.h"
 struct partition {
  unsigned char boot_ind;
  unsigned char head;
@@ -27164,7 +27164,7 @@ struct hd_struct {
 
  struct rcu_head rcu_head;
 };
-# 122 "include/linux/genhd.h"
+//# 122 "include/linux/genhd.h"
 struct blk_scsi_cmd_filter {
  unsigned long read_ok[((256) / (sizeof(long) * 8))];
  unsigned long write_ok[((256) / (sizeof(long) * 8))];
@@ -27255,7 +27255,7 @@ static inline __attribute__((always_inline)) void disk_put_part(struct hd_struct
  if (__builtin_expect(!!(part), 1))
   put_device((&((part)->__dev)));
 }
-# 221 "include/linux/genhd.h"
+//# 221 "include/linux/genhd.h"
 struct disk_part_iter {
  struct gendisk *disk;
  struct hd_struct *part;
@@ -27270,7 +27270,7 @@ extern void disk_part_iter_exit(struct disk_part_iter *piter);
 
 extern struct hd_struct *disk_map_sector_rcu(struct gendisk *disk,
           sector_t sector);
-# 264 "include/linux/genhd.h"
+//# 264 "include/linux/genhd.h"
 static inline __attribute__((always_inline)) void part_stat_set_all(struct hd_struct *part, int value)
 {
  int i;
@@ -27292,7 +27292,7 @@ static inline __attribute__((always_inline)) void free_part_stats(struct hd_stru
 {
  free_percpu(part->dkstats);
 }
-# 325 "include/linux/genhd.h"
+//# 325 "include/linux/genhd.h"
 static inline __attribute__((always_inline)) void part_inc_in_flight(struct hd_struct *part, int rw)
 {
  part->in_flight[rw]++;
@@ -27372,7 +27372,7 @@ struct solaris_x86_vtoc {
  unsigned int timestamp[16];
  char v_asciilabel[128];
 };
-# 419 "include/linux/genhd.h"
+//# 419 "include/linux/genhd.h"
 struct bsd_disklabel {
  __le32 d_magic;
  __s16 d_type;
@@ -27415,7 +27415,7 @@ struct bsd_disklabel {
   __le16 p_cpg;
  } d_partitions[16];
 };
-# 475 "include/linux/genhd.h"
+//# 475 "include/linux/genhd.h"
 struct unixware_slice {
  __le16 s_label;
  __le16 s_flags;
@@ -27456,7 +27456,7 @@ struct unixware_disklabel {
  } vtoc;
 
 };
-# 526 "include/linux/genhd.h"
+//# 526 "include/linux/genhd.h"
 extern int blk_alloc_devt(struct hd_struct *part, dev_t *devt);
 extern void blk_free_devt(dev_t devt);
 extern dev_t blk_lookup_devt(const char *name, int partno);
@@ -27487,15 +27487,15 @@ extern ssize_t part_stat_show(struct device *dev,
          struct device_attribute *attr, char *buf);
 extern ssize_t part_inflight_show(struct device *dev,
          struct device_attribute *attr, char *buf);
-# 9 "include/linux/blkdev.h" 2
+//# 9 "include/linux/blkdev.h" 2
 
 
 
 
-# 1 "include/linux/backing-dev.h" 1
-# 17 "include/linux/backing-dev.h"
-# 1 "include/linux/writeback.h" 1
-# 10 "include/linux/writeback.h"
+//# 1 "include/linux/backing-dev.h" 1
+//# 17 "include/linux/backing-dev.h"
+//# 1 "include/linux/writeback.h" 1
+//# 10 "include/linux/writeback.h"
 struct backing_dev_info;
 
 extern spinlock_t inode_lock;
@@ -27541,7 +27541,7 @@ struct writeback_control {
  unsigned for_reclaim:1;
  unsigned range_cyclic:1;
  unsigned more_io:1;
-# 63 "include/linux/writeback.h"
+//# 63 "include/linux/writeback.h"
  unsigned no_nrwrite_index_update:1;
 };
 
@@ -27635,9 +27635,9 @@ void writeback_set_ratelimit(void);
 
 
 extern int nr_pdflush_threads;
-# 18 "include/linux/backing-dev.h" 2
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic.h" 1
-# 19 "include/linux/backing-dev.h" 2
+//# 18 "include/linux/backing-dev.h" 2
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/atomic.h" 1
+//# 19 "include/linux/backing-dev.h" 2
 
 struct page;
 struct device;
@@ -27817,7 +27817,7 @@ static inline __attribute__((always_inline)) unsigned long bdi_stat_error(struct
 
 int bdi_set_min_ratio(struct backing_dev_info *bdi, unsigned int min_ratio);
 int bdi_set_max_ratio(struct backing_dev_info *bdi, unsigned int max_ratio);
-# 248 "include/linux/backing-dev.h"
+//# 248 "include/linux/backing-dev.h"
 extern struct backing_dev_info default_backing_dev_info;
 void default_unplug_io_fn(struct backing_dev_info *bdi, struct page *page);
 
@@ -27903,10 +27903,10 @@ static inline __attribute__((always_inline)) int bdi_sched_wait(void *word)
  schedule();
  return 0;
 }
-# 14 "include/linux/blkdev.h" 2
+//# 14 "include/linux/blkdev.h" 2
 
-# 1 "include/linux/mempool.h" 1
-# 9 "include/linux/mempool.h"
+//# 1 "include/linux/mempool.h" 1
+//# 9 "include/linux/mempool.h"
 struct kmem_cache;
 
 typedef void * (mempool_alloc_t)(gfp_t gfp_mask, void *pool_data);
@@ -27970,16 +27970,16 @@ static inline __attribute__((always_inline)) mempool_t *mempool_create_page_pool
  return mempool_create(min_nr, mempool_alloc_pages, mempool_free_pages,
          (void *)(long)order);
 }
-# 16 "include/linux/blkdev.h" 2
-# 1 "include/linux/bio.h" 1
-# 25 "include/linux/bio.h"
-# 1 "include/linux/ioprio.h" 1
+//# 16 "include/linux/blkdev.h" 2
+//# 1 "include/linux/bio.h" 1
+//# 25 "include/linux/bio.h"
+//# 1 "include/linux/ioprio.h" 1
 
 
 
 
-# 1 "include/linux/iocontext.h" 1
-# 10 "include/linux/iocontext.h"
+//# 1 "include/linux/iocontext.h" 1
+//# 10 "include/linux/iocontext.h"
 struct as_io_context {
  spinlock_t lock;
 
@@ -28078,8 +28078,8 @@ void exit_io_context(void);
 struct io_context *get_io_context(gfp_t gfp_flags, int node);
 struct io_context *alloc_io_context(gfp_t gfp_flags, int node);
 void copy_io_context(struct io_context **pdst, struct io_context **psrc);
-# 6 "include/linux/ioprio.h" 2
-# 26 "include/linux/ioprio.h"
+//# 6 "include/linux/ioprio.h" 2
+//# 26 "include/linux/ioprio.h"
 enum {
  IOPRIO_CLASS_NONE,
  IOPRIO_CLASS_RT,
@@ -28144,12 +28144,12 @@ static inline __attribute__((always_inline)) int task_nice_ioclass(struct task_s
 extern int ioprio_best(unsigned short aprio, unsigned short bprio);
 
 extern int set_task_ioprio(struct task_struct *task, int ioprio);
-# 26 "include/linux/bio.h" 2
+//# 26 "include/linux/bio.h" 2
 
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/io.h" 1
-# 20 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/io.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/io.h" 1
+//# 20 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/io.h"
 static inline __attribute__((always_inline)) unsigned char readb(const volatile void *addr) { unsigned char ret; asm volatile("mov" "b" " %1,%0":"=q" (ret) :"m" (*(volatile unsigned char *)addr) :"memory"); return ret; }
 static inline __attribute__((always_inline)) unsigned short readw(const volatile void *addr) { unsigned short ret; asm volatile("mov" "w" " %1,%0":"=r" (ret) :"m" (*(volatile unsigned short *)addr) :"memory"); return ret; }
 static inline __attribute__((always_inline)) unsigned int readl(const volatile void *addr) { unsigned int ret; asm volatile("mov" "l" " %1,%0":"=r" (ret) :"m" (*(volatile unsigned int *)addr) :"memory"); return ret; }
@@ -28165,25 +28165,25 @@ static inline __attribute__((always_inline)) void writel(unsigned int val, volat
 static inline __attribute__((always_inline)) void __writeb(unsigned char val, volatile void *addr) { asm volatile("mov" "b" " %0,%1": :"q" (val), "m" (*(volatile unsigned char *)addr) ); }
 static inline __attribute__((always_inline)) void __writew(unsigned short val, volatile void *addr) { asm volatile("mov" "w" " %0,%1": :"r" (val), "m" (*(volatile unsigned short *)addr) ); }
 static inline __attribute__((always_inline)) void __writel(unsigned int val, volatile void *addr) { asm volatile("mov" "l" " %0,%1": :"r" (val), "m" (*(volatile unsigned int *)addr) ); }
-# 51 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/io.h"
+//# 51 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/io.h"
 static inline __attribute__((always_inline)) unsigned long readq(const volatile void *addr) { unsigned long ret; asm volatile("mov" "q" " %1,%0":"=r" (ret) :"m" (*(volatile unsigned long *)addr) :"memory"); return ret; }
 static inline __attribute__((always_inline)) void writeq(unsigned long val, volatile void *addr) { asm volatile("mov" "q" " %0,%1": :"r" (val), "m" (*(volatile unsigned long *)addr) :"memory"); }
-# 97 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/io.h"
+//# 97 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/io.h"
 static inline __attribute__((always_inline)) phys_addr_t virt_to_phys(volatile void *address)
 {
  return __phys_addr((unsigned long)(address));
 }
-# 115 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/io.h"
+//# 115 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/io.h"
 static inline __attribute__((always_inline)) void *phys_to_virt(phys_addr_t address)
 {
  return ((void *)((unsigned long)(address)+((unsigned long)(0xffff880000000000UL))));
 }
-# 130 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/io.h"
+//# 130 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/io.h"
 static inline __attribute__((always_inline)) unsigned int isa_virt_to_bus(volatile void *address)
 {
  return (unsigned int)virt_to_phys(address);
 }
-# 160 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/io.h"
+//# 160 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/io.h"
 extern void *ioremap_nocache(resource_size_t offset, unsigned long size);
 extern void *ioremap_cache(resource_size_t offset, unsigned long size);
 extern void *ioremap_prot(resource_size_t offset, unsigned long size,
@@ -28203,13 +28203,13 @@ extern void iounmap(volatile void *addr);
 
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/io_64.h" 1
-# 38 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/io_64.h"
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/io_64.h" 1
+//# 38 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/io_64.h"
 extern void native_io_delay(void);
 
 extern int io_delay_type;
 extern void io_delay_init(void);
-# 118 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/io_64.h"
+//# 118 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/io_64.h"
 static inline __attribute__((always_inline)) unsigned char inb(unsigned short port) { unsigned char _v; asm volatile ("in" "b" " %" "w" "1,%" "" "0" : "=a" (_v) : "Nd" (port)); return _v; } static inline __attribute__((always_inline)) unsigned char inb_p(unsigned short port) { unsigned char _v; asm volatile ("in" "b" " %" "w" "1,%" "" "0" : "=a" (_v) : "Nd" (port)); slow_down_io(); return _v; }
 
 
@@ -28233,7 +28233,7 @@ static inline __attribute__((always_inline)) void outsl(unsigned short port, con
 
 
 
-# 1 "include/linux/vmalloc.h" 1
+//# 1 "include/linux/vmalloc.h" 1
 
 
 
@@ -28242,7 +28242,7 @@ static inline __attribute__((always_inline)) void outsl(unsigned short port, con
 
 
 struct vm_area_struct;
-# 26 "include/linux/vmalloc.h"
+//# 26 "include/linux/vmalloc.h"
 struct vm_struct {
  struct vm_struct *next;
  void *addr;
@@ -28340,10 +28340,10 @@ struct vm_struct **pcpu_get_vm_areas(const unsigned long *offsets,
          size_t align, gfp_t gfp_mask);
 
 void pcpu_free_vm_areas(struct vm_struct **vms, int nr_vms);
-# 142 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/io_64.h" 2
+//# 142 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/io_64.h" 2
 
-# 1 "include/asm-generic/iomap.h" 1
-# 28 "include/asm-generic/iomap.h"
+//# 1 "include/asm-generic/iomap.h" 1
+//# 28 "include/asm-generic/iomap.h"
 extern unsigned int ioread8(void *);
 extern unsigned int ioread16(void *);
 extern unsigned int ioread16be(void *);
@@ -28355,7 +28355,7 @@ extern void iowrite16(u16, void *);
 extern void iowrite16be(u16, void *);
 extern void iowrite32(u32, void *);
 extern void iowrite32be(u32, void *);
-# 51 "include/asm-generic/iomap.h"
+//# 51 "include/asm-generic/iomap.h"
 extern void ioread8_rep(void *port, void *buf, unsigned long count);
 extern void ioread16_rep(void *port, void *buf, unsigned long count);
 extern void ioread32_rep(void *port, void *buf, unsigned long count);
@@ -28376,7 +28376,7 @@ extern void ioport_unmap(void *);
 struct pci_dev;
 extern void *pci_iomap(struct pci_dev *dev, int bar, unsigned long max);
 extern void pci_iounmap(struct pci_dev *dev, void *);
-# 144 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/io_64.h" 2
+//# 144 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/io_64.h" 2
 
 void __memcpy_fromio(void *, unsigned long, unsigned);
 void __memcpy_toio(unsigned long, const void *, unsigned);
@@ -28394,7 +28394,7 @@ static inline __attribute__((always_inline)) void memcpy_toio(volatile void *to,
 }
 
 void memset_io(volatile void *a, int b, size_t c);
-# 180 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/io.h" 2
+//# 180 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/io.h" 2
 
 
 extern void *xlate_dev_mem_ptr(unsigned long phys);
@@ -28416,8 +28416,8 @@ extern void *early_ioremap(resource_size_t phys_addr,
 extern void *early_memremap(resource_size_t phys_addr,
         unsigned long size);
 extern void early_iounmap(void *addr, unsigned long size);
-# 30 "include/linux/bio.h" 2
-# 46 "include/linux/bio.h"
+//# 30 "include/linux/bio.h" 2
+//# 46 "include/linux/bio.h"
 struct bio_vec {
  struct page *bv_page;
  unsigned int bv_len;
@@ -28485,7 +28485,7 @@ struct bio {
 
  struct bio_vec bi_inline_vecs[0];
 };
-# 165 "include/linux/bio.h"
+//# 165 "include/linux/bio.h"
 enum bio_rw_flags {
  BIO_RW,
  BIO_RW_FAILFAST_DEV,
@@ -28511,7 +28511,7 @@ static inline __attribute__((always_inline)) bool bio_rw_flagged(struct bio *bio
 {
  return (bio->bi_rw & (1 << flag)) != 0;
 }
-# 216 "include/linux/bio.h"
+//# 216 "include/linux/bio.h"
 static inline __attribute__((always_inline)) unsigned int bio_cur_bytes(struct bio *bio)
 {
  if (bio->bi_vcnt)
@@ -28532,7 +28532,7 @@ static inline __attribute__((always_inline)) int bio_has_allocated_vec(struct bi
 {
  return bio->bi_io_vec && bio->bi_io_vec != bio->bi_inline_vecs;
 }
-# 344 "include/linux/bio.h"
+//# 344 "include/linux/bio.h"
 struct bio_pair {
  struct bio bio1, bio2;
  struct bio_vec bv1, bv2;
@@ -28601,7 +28601,7 @@ static inline __attribute__((always_inline)) void bio_set_completion_cpu(struct 
 {
  bio->bi_comp_cpu = cpu;
 }
-# 423 "include/linux/bio.h"
+//# 423 "include/linux/bio.h"
 struct bio_set {
  struct kmem_cache *bio_slab;
  unsigned int front_pad;
@@ -28621,18 +28621,18 @@ struct biovec_slab {
 
 extern struct bio_set *fs_bio_set;
 extern struct biovec_slab bvec_slabs[6] __attribute__((__section__(".data.read_mostly")));
-# 487 "include/linux/bio.h"
+//# 487 "include/linux/bio.h"
 static inline __attribute__((always_inline)) char *__bio_kmap_irq(struct bio *bio, unsigned short idx,
        unsigned long *flags)
 {
  return (lowmem_page_address(((&((bio)->bi_io_vec[(idx)])))->bv_page) + ((&((bio)->bi_io_vec[(idx)])))->bv_offset);
 }
-# 501 "include/linux/bio.h"
+//# 501 "include/linux/bio.h"
 static inline __attribute__((always_inline)) int bio_has_data(struct bio *bio)
 {
  return bio && bio->bi_io_vec != ((void *)0);
 }
-# 513 "include/linux/bio.h"
+//# 513 "include/linux/bio.h"
 struct bio_list {
  struct bio *head;
  struct bio *tail;
@@ -28739,12 +28739,12 @@ static inline __attribute__((always_inline)) struct bio *bio_list_get(struct bio
 
  return bio;
 }
-# 17 "include/linux/blkdev.h" 2
+//# 17 "include/linux/blkdev.h" 2
 
 
 
-# 1 "include/linux/bsg.h" 1
-# 20 "include/linux/bsg.h"
+//# 1 "include/linux/bsg.h" 1
+//# 20 "include/linux/bsg.h"
 struct sg_io_v4 {
  __s32 guard;
  __u32 protocol;
@@ -28805,16 +28805,16 @@ extern int bsg_register_queue(struct request_queue *q,
          struct device *parent, const char *name,
          void (*release)(struct device *));
 extern void bsg_unregister_queue(struct request_queue *);
-# 21 "include/linux/blkdev.h" 2
+//# 21 "include/linux/blkdev.h" 2
 
 
-# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/scatterlist.h" 1
+//# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/scatterlist.h" 1
 
 
 
 
 
-# 1 "include/asm-generic/scatterlist.h" 1
+//# 1 "include/asm-generic/scatterlist.h" 1
 
 
 
@@ -28830,8 +28830,8 @@ struct scatterlist {
  dma_addr_t dma_address;
  unsigned int dma_length;
 };
-# 7 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/scatterlist.h" 2
-# 24 "include/linux/blkdev.h" 2
+//# 7 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/scatterlist.h" 2
+//# 24 "include/linux/blkdev.h" 2
 
 struct scsi_ioctl_command;
 
@@ -28880,7 +28880,7 @@ enum rq_cmd_type_bits {
  REQ_TYPE_ATA_TASKFILE,
  REQ_TYPE_ATA_PC,
 };
-# 82 "include/linux/blkdev.h"
+//# 82 "include/linux/blkdev.h"
 enum {
  REQ_LB_OP_EJECT = 0x40,
  REQ_LB_OP_FLUSH = 0x41,
@@ -28919,7 +28919,7 @@ enum rq_flag_bits {
  __REQ_MIXED_MERGE,
  __REQ_NR_BITS,
 };
-# 158 "include/linux/blkdev.h"
+//# 158 "include/linux/blkdev.h"
 struct request {
  struct list_head queuelist;
  struct call_single_data csd;
@@ -29019,7 +29019,7 @@ struct request_pm_state
  void* data;
 };
 
-# 1 "include/linux/elevator.h" 1
+//# 1 "include/linux/elevator.h" 1
 
 
 
@@ -29166,13 +29166,13 @@ extern struct request *elv_rb_latter_request(struct request_queue *, struct requ
 extern struct request *elv_rb_add(struct rb_root *, struct request *);
 extern void elv_rb_del(struct rb_root *, struct request *);
 extern struct request *elv_rb_find(struct rb_root *, sector_t);
-# 166 "include/linux/elevator.h"
+//# 166 "include/linux/elevator.h"
 enum {
  ELV_MQUEUE_MAY,
  ELV_MQUEUE_NO,
  ELV_MQUEUE_MUST,
 };
-# 258 "include/linux/blkdev.h" 2
+//# 258 "include/linux/blkdev.h" 2
 
 typedef void (request_fn_proc) (struct request_queue *q);
 typedef int (make_request_fn) (struct request_queue *q, struct bio *bio);
@@ -29357,7 +29357,7 @@ struct request_queue
  struct bsg_class_device bsg_dev;
 
 };
-# 468 "include/linux/blkdev.h"
+//# 468 "include/linux/blkdev.h"
 static inline __attribute__((always_inline)) int queue_is_locked(struct request_queue *q)
 {
 
@@ -29424,7 +29424,7 @@ static inline __attribute__((always_inline)) void queue_flag_clear(unsigned int 
 }
 
 enum {
-# 545 "include/linux/blkdev.h"
+//# 545 "include/linux/blkdev.h"
  QUEUE_ORDERED_BY_DRAIN = 0x01,
  QUEUE_ORDERED_BY_TAG = 0x02,
  QUEUE_ORDERED_DO_PREFLUSH = 0x10,
@@ -29462,7 +29462,7 @@ enum {
  QUEUE_ORDSEQ_POSTFLUSH = 0x10,
  QUEUE_ORDSEQ_DONE = 0x20,
 };
-# 633 "include/linux/blkdev.h"
+//# 633 "include/linux/blkdev.h"
 static inline __attribute__((always_inline)) bool rw_is_sync(unsigned int rw_flags)
 {
  return !(rw_flags & (1 << __REQ_RW)) || (rw_flags & (1 << __REQ_RW_SYNC));
@@ -29498,12 +29498,12 @@ static inline __attribute__((always_inline)) void blk_clear_queue_full(struct re
  else
   queue_flag_clear(4, q);
 }
-# 687 "include/linux/blkdev.h"
+//# 687 "include/linux/blkdev.h"
 extern unsigned long blk_max_low_pfn, blk_max_pfn;
-# 712 "include/linux/blkdev.h"
+//# 712 "include/linux/blkdev.h"
 extern int init_emergency_isa_pool(void);
 extern void blk_queue_bounce(struct request_queue *q, struct bio **bio);
-# 724 "include/linux/blkdev.h"
+//# 724 "include/linux/blkdev.h"
 struct rq_map_data {
  struct page **pages;
  int page_order;
@@ -29517,7 +29517,7 @@ struct req_iterator {
  int i;
  struct bio *bio;
 };
-# 752 "include/linux/blkdev.h"
+//# 752 "include/linux/blkdev.h"
 extern int blk_register_queue(struct gendisk *disk);
 extern void blk_unregister_queue(struct gendisk *disk);
 extern void register_disk(struct gendisk *dev);
@@ -29604,7 +29604,7 @@ static inline __attribute__((always_inline)) void blk_run_address_space(struct a
  if (mapping)
   blk_run_backing_dev(mapping->backing_dev_info, ((void *)0));
 }
-# 848 "include/linux/blkdev.h"
+//# 848 "include/linux/blkdev.h"
 static inline __attribute__((always_inline)) sector_t blk_rq_pos(const struct request *rq)
 {
  return rq->__sector;
@@ -29643,7 +29643,7 @@ static inline __attribute__((always_inline)) unsigned int blk_rq_err_sectors(con
 extern struct request *blk_peek_request(struct request_queue *q);
 extern void blk_start_request(struct request *rq);
 extern struct request *blk_fetch_request(struct request_queue *q);
-# 900 "include/linux/blkdev.h"
+//# 900 "include/linux/blkdev.h"
 extern bool blk_update_request(struct request *rq, int error,
           unsigned int nr_bytes);
 extern bool blk_end_request(struct request *rq, int error,
@@ -29761,7 +29761,7 @@ static inline __attribute__((always_inline)) int sb_issue_discard(struct super_b
 }
 
 extern int blk_verify_command(unsigned char *cmd, fmode_t has_write_perm);
-# 1029 "include/linux/blkdev.h"
+//# 1029 "include/linux/blkdev.h"
 static inline __attribute__((always_inline)) unsigned long queue_bounce_pfn(struct request_queue *q)
 {
  return q->limits.bounce_pfn;
@@ -29909,7 +29909,7 @@ static inline __attribute__((always_inline)) void put_dev_sector(Sector p)
 
 struct work_struct;
 int kblockd_schedule_work(struct request_queue *q, struct work_struct *work);
-# 1255 "include/linux/blkdev.h"
+//# 1255 "include/linux/blkdev.h"
 struct block_device_operations {
  int (*open) (struct block_device *, fmode_t);
  int (*release) (struct gendisk *, fmode_t);
@@ -29928,8 +29928,8 @@ struct block_device_operations {
 
 extern int __blkdev_driver_ioctl(struct block_device *, fmode_t, unsigned int,
      unsigned long);
-# 282 "drivers/cdrom/cdrom.c" 2
-# 1 "include/linux/times.h" 1
+//# 282 "drivers/cdrom/cdrom.c" 2
+//# 1 "include/linux/times.h" 1
 
 
 
@@ -29941,7 +29941,7 @@ struct tms {
  __kernel_clock_t tms_cutime;
  __kernel_clock_t tms_cstime;
 };
-# 283 "drivers/cdrom/cdrom.c" 2
+//# 283 "drivers/cdrom/cdrom.c" 2
 
 
 
@@ -29974,7 +29974,7 @@ static const char *mrw_format_status[] = {
 };
 
 static const char *mrw_address_space[] = { "DMA", "GAA" };
-# 347 "drivers/cdrom/cdrom.c"
+//# 347 "drivers/cdrom/cdrom.c"
 static int open_for_data(struct cdrom_device_info * cdi);
 static int check_for_audio_disc(struct cdrom_device_info * cdi,
     struct cdrom_device_ops * cdo);
@@ -30007,7 +30007,7 @@ static int cdrom_dummy_generic_packet(struct cdrom_device_info *cdi,
  cgc->stat = -5;
  return -5;
 }
-# 387 "drivers/cdrom/cdrom.c"
+//# 387 "drivers/cdrom/cdrom.c"
 int register_cdrom(struct cdrom_device_info *cdi)
 {
  static char banner_printed;
@@ -30094,7 +30094,7 @@ int cdrom_get_media_event(struct cdrom_device_info *cdi,
  cgc.cmd[8] = sizeof(buffer);
  cgc.quiet = 1;
 
- if (cdi->ops->generic_packet(cdi, &cgc))
+ if (cdi->ops->generic_packet(cdi, &cgc))            /* 473 error */
   return 1;
 
  if ((__builtin_constant_p((__u16)(( __u16)(__be16)(eh->data_len))) ? ((__u16)( (((__u16)(( __u16)(__be16)(eh->data_len)) & (__u16)0x00ffU) << 8) | (((__u16)(( __u16)(__be16)(eh->data_len)) & (__u16)0xff00U) >> 8))) : __fswab16(( __u16)(__be16)(eh->data_len))) < sizeof(*med))
@@ -30396,7 +30396,7 @@ static int cdrom_mrw_open_write(struct cdrom_device_info *cdi)
 
  if (!di.erasable)
   return 1;
-# 783 "drivers/cdrom/cdrom.c"
+//# 783 "drivers/cdrom/cdrom.c"
  ret = 0;
  printk("<6>" "cdrom open: mrw_status '%s'\n",
    mrw_format_status[di.mrw_status]);
@@ -30581,7 +30581,7 @@ static int cdrom_close_write(struct cdrom_device_info *cdi)
  return 0;
 
 }
-# 976 "drivers/cdrom/cdrom.c"
+//# 976 "drivers/cdrom/cdrom.c"
 int cdrom_open(struct cdrom_device_info *cdi, struct block_device *bdev, fmode_t mode)
 {
  int ret;
@@ -31075,7 +31075,7 @@ static void cdrom_count_tracks(struct cdrom_device_info *cdi, tracktype* tracks)
 
 
 }
-# 1486 "drivers/cdrom/cdrom.c"
+//# 1486 "drivers/cdrom/cdrom.c"
 static
 void sanitize_format(union cdrom_addr *addr,
        u_char * curr, u_char requested)
@@ -32052,7 +32052,7 @@ static int cdrom_ioctl_drive_status(struct cdrom_device_info *cdi,
   return -22;
  return cdrom_slot_status(cdi, arg);
 }
-# 2480 "drivers/cdrom/cdrom.c"
+//# 2480 "drivers/cdrom/cdrom.c"
 static int cdrom_ioctl_disc_status(struct cdrom_device_info *cdi)
 {
  tracktype tracks;
@@ -33127,7 +33127,7 @@ static int cdrom_sysctl_handler(ctl_table *ctl, int write,
 }
 
 
-static ctl_table cdrom_table[] = {
+static ctl_table cdrom_table[] = {                  // ***** static arrays
  {
   .procname = "info",
   .data = &cdrom_sysctl_settings.info,
@@ -33221,7 +33221,7 @@ static void cdrom_sysctl_unregister(void)
  if (cdrom_sysctl_header)
   unregister_sysctl_table(cdrom_sysctl_header);
 }
-# 3661 "drivers/cdrom/cdrom.c"
+//# 3661 "drivers/cdrom/cdrom.c"
 static int __attribute__ ((__section__(".init.text"))) __attribute__((__cold__)) __attribute__((no_instrument_function)) cdrom_init(void)
 {
  cdrom_sysctl_register();
@@ -33238,3 +33238,121 @@ static void __attribute__ ((__section__(".exit.text"))) __attribute__((__cold__)
 static inline __attribute__((always_inline)) initcall_t __inittest(void) { return cdrom_init; } int init_module(void) __attribute__((alias("cdrom_init")));;
 static inline __attribute__((always_inline)) exitcall_t __exittest(void) { return cdrom_exit; } void cleanup_module(void) __attribute__((alias("cdrom_exit")));;
 static const char __mod_license3676[] __attribute__((__used__)) __attribute__((section(".modinfo"),unused)) = "license" "=" "GPL";
+
+
+
+/* added driver - inspired by invader cdrom.c example */
+
+int nondet;
+int get_nondet_int(void) { int a; return a; }
+void *get_nondet_ptr(void) { void *a; return a; }
+
+int printk(const char *format, ...) { int a; return a; }
+void *memcpy(void *to, const void *from, size_t len) { void *a; return a; }
+// void *malloc(size_t len) { void *a; return a; }
+// void free(void *p) { }
+
+// TODO: add deteils
+struct cdrom_device_info *HsCreateCdromDeviceInfo(void)
+{
+ struct cdrom_device_info *cdi;
+
+ cdi = (struct cdrom_device_info *)malloc(sizeof(struct cdrom_device_info));
+ cdi->ops = (struct cdrom_device_ops *)malloc(sizeof(struct cdrom_device_ops));
+ cdi->disk = (struct gendisk *)malloc(sizeof(struct gendisk));
+ cdi->disk->queue = (struct request_queue *)malloc(sizeof(struct request_queue));
+ cdi->disk->queue->boundary_rq = (struct request *)malloc(sizeof(struct request));
+ cdi->disk->queue->boundary_rq->sense = (struct request_sense *)malloc(sizeof(struct request_sense));
+
+ cdi->ops->generic_packet = 0;
+
+ return cdi;
+}
+
+void HsFreeCdromDeviceInfo(struct cdrom_device_info *cdi)
+{
+ free(cdi->disk->queue->boundary_rq->sense);
+ free(cdi->disk->queue->boundary_rq);
+ free(cdi->disk->queue);
+ free(cdi->disk);
+ free(cdi->ops);
+ free(cdi);
+
+ return;
+}
+
+void HsInitialize(void)
+{
+    struct ctl_table *tbl;
+
+    while ((&nondet > 0)) {
+        struct cdrom_device_info *cdi;
+        cdi = HsCreateCdromDeviceInfo();
+        register_cdrom(cdi);
+    }
+    return;
+}
+
+int main_sub(void)
+{
+    int tmp;
+    int size;
+    unsigned int cmd;
+    unsigned long arg;
+    struct cdrom_device_info *cdi;
+    struct file *fp;
+    struct inode *ip;
+    struct block_device *bdev;
+
+    long *next_writable;
+
+    HsInitialize();
+
+    tmp = cdrom_init();
+    if (tmp != 0)
+        return (tmp);
+
+    cdi = HsCreateCdromDeviceInfo();
+    tmp = register_cdrom(cdi);
+    if (tmp != 0) {
+        HsFreeCdromDeviceInfo(cdi);
+        return (tmp);
+    }
+
+    while ((&nondet > 0)) {
+        if ((&nondet > 0)) {
+            struct media_event_desc *med;
+            med = get_nondet_ptr();
+            tmp = cdrom_get_media_event(cdi, med);
+        } else if ((&nondet > 0)) {
+            bdev = (struct block_device *) malloc(sizeof(struct block_device));
+            cdrom_open(cdi, bdev, (fmode_t)0);
+            free(bdev);
+        } else if ((&nondet > 0)) {
+            cdrom_release(cdi, (fmode_t)0);
+        } else if ((&nondet > 0)) {
+            tmp = cdrom_number_of_slots(cdi);
+        } else if ((&nondet > 0)) {
+            cmd = get_nondet_int();
+            arg = get_nondet_int();
+            tmp = mmc_ioctl(cdi, cmd, arg);
+        } else if ((&nondet > 0)) {
+            bdev = (struct block_device *) malloc(sizeof(struct block_device));
+            cmd = get_nondet_int();
+            arg = get_nondet_int();
+            tmp = cdrom_ioctl(cdi, bdev, (fmode_t)0, cmd, arg);
+            free(bdev);
+        } else if ((&nondet > 0)) {
+            tmp = cdrom_media_changed(cdi);
+        }
+    }
+
+    unregister_cdrom(cdi);
+    cdrom_exit();
+    return (0);
+}
+
+int main()
+{
+    return main_sub();
+}

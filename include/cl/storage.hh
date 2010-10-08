@@ -187,6 +187,18 @@ class TypeDb {
          */
         const struct cl_type* operator[](int) const;
 
+        /**
+         * value of sizeof(void (*)()) in the analysed program, -1 if such
+         * information is not available
+         */
+        int codePtrSizeof() const;
+
+        /**
+         * value of sizeof(void *) in the analysed program, -1 if such
+         * information is not available
+         */
+        int dataPtrSizeof() const;
+
     private:
         /// @b not allowed to be copied
         TypeDb(const TypeDb &);

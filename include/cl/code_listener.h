@@ -162,7 +162,7 @@ enum cl_type_e {
     CL_TYPE_ARRAY,
     CL_TYPE_FNC,
     CL_TYPE_INT,
-    CL_TYPE_CHAR,
+    CL_TYPE_CHAR, /**< not used by the gcc plug-in at the moment */
     CL_TYPE_BOOL,
     CL_TYPE_ENUM,
     CL_TYPE_REAL,
@@ -243,6 +243,11 @@ struct cl_type {
      * array of nested types. Its size is exactly item_cnt.
      */
     struct cl_type_item                 *items;
+
+    /**
+     * valid only for @b CL_TYPE_ARRAY
+     */
+    int                                 array_size;
 };
 
 /**

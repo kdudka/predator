@@ -24,6 +24,135 @@
 
 namespace {
 
+void cltToStreamCore(std::ostream &out, const struct cl_type *clt) {
+    out << "*((const struct cl_type *)"
+        << static_cast<const void *>(clt)
+        << ")";
+    if (!clt)
+        return;
+
+    out << " (#" << clt->uid << ", code = ";
+    switch (clt->code) {
+        case CL_TYPE_UNKNOWN:    out << "CL_TYPE_UNKNOWN"   ; break;
+        case CL_TYPE_VOID:       out << "CL_TYPE_VOID"      ; break;
+        case CL_TYPE_FNC:        out << "CL_TYPE_FNC"       ; break;
+        case CL_TYPE_PTR:        out << "CL_TYPE_PTR"       ; break;
+        case CL_TYPE_ARRAY:      out << "CL_TYPE_ARRAY"     ; break;
+        case CL_TYPE_STRUCT:     out << "CL_TYPE_STRUCT"    ; break;
+        case CL_TYPE_UNION:      out << "CL_TYPE_UNION"     ; break;
+        case CL_TYPE_ENUM:       out << "CL_TYPE_ENUM"      ; break;
+        case CL_TYPE_INT:        out << "CL_TYPE_INT"       ; break;
+        case CL_TYPE_REAL:       out << "CL_TYPE_REAL"      ; break;
+        case CL_TYPE_BOOL:       out << "CL_TYPE_BOOL"      ; break;
+        case CL_TYPE_CHAR:       out << "CL_TYPE_CHAR"      ; break;
+        case CL_TYPE_STRING:     out << "CL_TYPE_STRING"    ; break;
+    }
+    out << ")";
+}
+
+} // namespace
+
+typedef std::vector<int /* nth */> TFieldIdxChain;
+
+class DumpCltVisitor {
+    private:
+        std::ostream &out_;
+
+    public:
+        DumpCltVisitor(std::ostream &out): out_(out) { }
+
+        bool operator()(TFieldIdxChain ic, const struct cl_type_item *item)
+            const
+        {
+            // indent regarding the current nest level
+            const unsigned nestLevel = ic.size();
+            const std::string indent(nestLevel << 2, ' ');
+            out_ << indent;
+
+            // print field name if any
+            const char *name = item->name;
+            if (name)
+                out_ << "." << name << " = ";
+
+            // print type at the current level
+            const struct cl_type *clt = item->type;
+            SE_BREAK_IF(!clt);
+            cltToStreamCore(out_, clt);
+            out_ << "\n";
+
+            return /* continue */ true;
+        }
+};
+
+void cltToStream(std::ostream &out, const struct cl_type *clt, bool oneline) {
+    if (oneline) {
+        cltToStreamCore(out, clt);
+        return;
+    }
+
+    if (!clt) {
+        out << "NULL\n";
+        return;
+    }
+
+    // print type at the current level
+    cltToStreamCore(out, clt);
+    out << "\n";
+
+    // go through the type recursively
+    const DumpCltVisitor visitor(out);
+    traverseTypeIc<TFieldIdxChain>(clt, visitor);
+}
+
+void acToStream(std::ostream &out, const struct cl_accessor *ac, bool oneline) {
+    if (!ac) {
+        out << "(empty)";
+        if (!oneline)
+            out << "\n";
+    }
+
+    for (int i = 0; ac; ac = ac->next, ++i) {
+        out << i << ". ";
+        const struct cl_type *clt = ac->type;
+
+        const enum cl_accessor_e code = ac->code;
+        switch (code) {
+            case CL_ACCESSOR_REF:
+                out << "CL_ACCESSOR_REF:";
+                break;
+
+            case CL_ACCESSOR_DEREF:
+                out << "CL_ACCESSOR_DEREF:";
+                break;
+
+            case CL_ACCESSOR_ITEM: {
+                const struct cl_type_item *item = clt->items + ac->data.item.id;
+                out << "CL_ACCESSOR_ITEM: [+"
+                    << item->offset << "]";
+                const char *name = item->name;
+                if (name)
+                    out << " ." << name;
+                out << ",";
+                break;
+            }
+
+            case CL_ACCESSOR_DEREF_ARRAY:
+                out << "CL_ACCESSOR_DEREF_ARRAY: ["
+                    << ac->data.array.index << "],";
+                break;
+        }
+
+        out << " clt = ";
+        cltToStream(out, clt, oneline);
+        if (oneline)
+            out << "; ";
+        else
+            out << "\n";
+    }
+}
+
+namespace {
+
 void operandToStreamCstInt(std::ostream &str, const struct cl_operand &op) {
     const struct cl_cst &cst = op.data.cst;
     const int val = cst.data.cst_int.value;

@@ -266,9 +266,12 @@ static void free_initial_tree(const struct cl_initializer *initial)
     struct cl_initializer **nested_initials = initial->data.nested_initials;
 
     int i;
-    for (i = 0; i < clt->item_cnt; ++i)
+    for (i = 0; i < clt->item_cnt; ++i) {
         // recursion
-        free_initial_tree(nested_initials[i]);
+        struct cl_initializer *ni = nested_initials[i];
+        free_initial_tree(ni);
+        free(ni);
+    }
 
     // free the array itself
     free(nested_initials);
@@ -509,9 +512,10 @@ static void read_specific_type(struct cl_type *clt, tree type)
 
         case ARRAY_TYPE:
             clt->code = CL_TYPE_ARRAY;
-            clt->item_cnt = get_fixed_array_size(type);
+            clt->item_cnt = 1;
             clt->items = CL_ZNEW(struct cl_type_item);
             clt->items[0].type = /* recursion */ add_type_if_needed(type);
+            clt->array_size = get_fixed_array_size(type);
             break;
 
         case FUNCTION_TYPE:
@@ -563,11 +567,11 @@ static struct cl_type* add_bare_type_if_needed(tree type)
     // read type (recursively if needed)
     read_base_type(clt, type);
     read_specific_type(clt, type);
-
+#if 0
     // extra hooks follow
     if (clt->code == CL_TYPE_INT && clt->name && STREQ("char", clt->name))
         clt->code = CL_TYPE_CHAR;
-
+#endif
     return clt;
 }
 
