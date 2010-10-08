@@ -76,6 +76,7 @@ macro(test_sym_exec label tool arg1 arg2 arg3)
             -DPREDATOR ${clplug_incs}
             -fplugin=${sl_BINARY_DIR}/libsl.so
             -fplugin-arg-libsl-args=noplot
+            -fplugin-arg-libsl-preserve-ec
             -fplugin-arg-libsl-verbose=1)
     endforeach()
 endmacro()
@@ -97,6 +98,7 @@ macro(test_sym_exec_regre ext arg1)
 
         set(cmd "${cmd} -c ${sl_SOURCE_DIR}/data/test-${num}.c")
         set(cmd "${cmd} -DPREDATOR -fplugin=${sl_BINARY_DIR}/libsl.so ${arg1}")
+        set(cmd "${cmd} -fplugin-arg-libsl-preserve-ec")
         set(cmd "${cmd} 2>&1")
 
         # FIXME: the following line significantly decreases coverage of the test
