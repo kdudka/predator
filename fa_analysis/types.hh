@@ -42,6 +42,7 @@ struct Data {
 
 	typedef enum {
 		t_undef,
+		t_unknw,
 		t_native_ptr,
 		t_void_ptr,
 		t_ref,
@@ -101,6 +102,8 @@ struct Data {
 
 	static Data createUndef() { return Data(); }
 
+	static Data createUnknw() { return Data(type_enum::t_unknw); }
+
 	static Data createNativePtr(void* ptr) {
 		Data data(type_enum::t_native_ptr);
 		data.d_native_ptr = ptr;
@@ -148,6 +151,10 @@ struct Data {
 		return this->type != type_enum::t_undef;
 	}
 
+	bool isUnknw() const {
+		return this->type == type_enum::t_unknw;
+	}
+
 	bool isNativePtr() const {
 		return this->type == type_enum::t_native_ptr;
 	}
@@ -182,7 +189,8 @@ struct Data {
 
 	friend size_t hash_value(const Data& v) {
 		switch (v.type) {
-			case type_enum::t_undef: return boost::hash_value(v.type);
+			case type_enum::t_undef:
+			case type_enum::t_unknw: return boost::hash_value(v.type);
 			case type_enum::t_native_ptr: return boost::hash_value(v.type + boost::hash_value(v.d_native_ptr));
 			case type_enum::t_void_ptr: return boost::hash_value(v.type + v.d_void_ptr);
 			case type_enum::t_ref: return boost::hash_value(v.type + v.d_ref.root + v.d_ref.displ);
@@ -197,7 +205,8 @@ struct Data {
 		if (this->type != rhs.type)
 			return false;
 		switch (this->type) {
-			case type_enum::t_undef: return false;
+			case type_enum::t_undef:
+			case type_enum::t_unknw: return true;
 			case type_enum::t_void_ptr: return this->d_void_ptr == rhs.d_void_ptr;
 			case type_enum::t_native_ptr: return this->d_native_ptr == rhs.d_native_ptr;
 			case type_enum::t_ref: return this->d_ref.root == rhs.d_ref.root && this->d_ref.displ == rhs.d_ref.displ;
@@ -212,6 +221,7 @@ struct Data {
 //		os << '[' << x.size << ']';
 		switch (x.type) {
 			case type_enum::t_undef: os << "(undef)"; break;
+			case type_enum::t_unknw: os << "(unknw)"; break;
 			case type_enum::t_native_ptr: os << "(native_ptr)" << x.d_native_ptr; break;
 			case type_enum::t_void_ptr: os << "(void_ptr)" << x.d_void_ptr; break;
 			case type_enum::t_ref: os << "(ref)" << x.d_ref.root << '+' << x.d_ref.displ; break;
@@ -223,7 +233,7 @@ struct Data {
 					os << '+' << i->first << ": " << i->second << ' ';
 				os << "]";
 				break;
-			default: os << "(unknown)"; break;
+			default: os << "(other)"; break;
 		}
 		return os;
 	}

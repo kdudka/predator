@@ -47,11 +47,6 @@ add_library(sl SHARED
 find_library(CL_LIB cl ../cl_build)
 target_link_libraries(sl ${CL_LIB})
 
-# FIXME: this should go through pkg-config or something like that!
-target_link_libraries(sl
-    boost_iostreams
-    boost_system)
-
 # make install
 install(TARGETS sl DESTINATION lib)
 
@@ -71,12 +66,12 @@ set(examples
     0061 0062 0063 0064 0065 0066 0067 0068 0069 0070
     0071 0072 0073 0074 0075 0076 0077 0078 0079 0080
     0081 0082 0083 0084 0085 0086 0087 0088 0089 0090
-    0091)
+    0091 0092)
 
 # FIXME: define this macro more generically, in particular the count of args
-macro(test_sym_exec label tool arg1 arg2)
+macro(test_sym_exec label tool arg1 arg2 arg3)
     foreach (num ${examples})
-        add_test("${label}___example-${num}" ${tool} ${arg1} ${arg2}
+        add_test("${label}___example-${num}" ${tool} ${arg1} ${arg2} ${arg3}
             -c ${sl_SOURCE_DIR}/data/test-${num}.c
             -DPREDATOR ${clplug_incs}
             -fplugin=${sl_BINARY_DIR}/libsl.so
@@ -84,7 +79,7 @@ macro(test_sym_exec label tool arg1 arg2)
             -fplugin-arg-libsl-verbose=1)
     endforeach()
 endmacro()
-test_sym_exec("simple-test" ${GCC_HOST} "" "")
+test_sym_exec("simple-test" ${GCC_HOST} "" "" "")
 
 # FIXME: define this macro more generically, in particular the count of args
 macro(test_sym_exec_regre ext arg1)
@@ -129,6 +124,7 @@ test_sym_exec_regre("" "")
 option(SL_TEST_VALGRIND "Set to ON to enable valgrind tests" OFF)
 if(SL_TEST_VALGRIND)
     test_sym_exec("valgrind-test" valgrind
+        --trace-children=yes
         --error-exitcode=7
         ${GCC_HOST})
 endif()

@@ -32,10 +32,5 @@ add_library(fwnull SHARED
 find_library(CL_LIB cl ../cl_build)
 target_link_libraries(fwnull ${CL_LIB})
 
-# FIXME: this should go through pkg-config or something like that!
-target_link_libraries(fwnull
-    boost_iostreams
-    boost_system)
-
 # make install
 install(TARGETS fwnull DESTINATION lib)

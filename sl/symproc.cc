@@ -590,6 +590,29 @@ void SymProc::objDestroy(TObjId obj) {
 
 // /////////////////////////////////////////////////////////////////////////////
 // SymExecCore implementation
+TValueId SymExecCore::heapValFromOperand(const struct cl_operand &op) {
+    const char *name;
+    if (!ep_.invCompatMode)
+        goto no_nasty_assumptions;
+
+    if (CL_OPERAND_VAR != op.code || !(name = op.data.var->name))
+        goto no_nasty_assumptions;
+    
+    if (STREQ(name, "nondet") || STREQ(name, "__nondet")) {
+        CL_WARN_MSG(lw_, "value of '" << name << "' treated as unknown, "
+                         "using a nasty assumption!");
+
+        // &nondet and __nodet should pass this check (ugly)
+        SE_BREAK_IF(op.accessor && op.accessor->code != CL_ACCESSOR_REF);
+
+        return heap_.valCreateUnknown(UV_UNKNOWN,
+                                      /* not always correct */ op.type);
+    }
+
+no_nasty_assumptions:
+    return SymProc::heapValFromOperand(op);
+}
+
 bool SymExecCore::lhsFromOperand(TObjId *pObj, const struct cl_operand &op) {
     *pObj = this->heapObjFromOperand(op);
     switch (*pObj) {

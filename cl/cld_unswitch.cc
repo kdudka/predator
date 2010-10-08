@@ -23,8 +23,15 @@
 #include "cl_decorator.hh"
 #include "cld_unilabel.hh"
 
+#include <cstring>
 #include <sstream>
 #include <string>
+#include <vector>
+
+#include <boost/foreach.hpp>
+
+#define NULLIFY(what) \
+    memset(&(what), 0, sizeof (what))
 
 class CldUnfoldSwitch: public ClDecoratorBase {
     public:
@@ -34,6 +41,8 @@ class CldUnfoldSwitch: public ClDecoratorBase {
             switchCnt_(0)
         {
         }
+
+        virtual ~CldUnfoldSwitch();
 
         virtual void insn_switch_open(
             const struct cl_location *,
@@ -79,15 +88,24 @@ class CldUnfoldSwitch: public ClDecoratorBase {
         std::string         defLabel_;
         struct cl_location  defLoc_;
 
+        std::vector<struct cl_var *>    ptrs_;
+
     private:
         static int getCaseVal(const struct cl_operand *);
         void cloneSwitchSrc(const struct cl_operand *);
         void freeClonedSwitchSrc();
+        struct cl_var* acquireClVar();
         void emitCase(int, struct cl_type *, const char *);
         void emitDefault();
 };
 
 using std::string;
+
+CldUnfoldSwitch::~CldUnfoldSwitch() {
+    BOOST_FOREACH(struct cl_var *clv, ptrs_) {
+        delete clv;
+    }
+}
 
 int CldUnfoldSwitch::getCaseVal(const struct cl_operand *op) {
     if (!op || !op->type)
@@ -139,10 +157,19 @@ void CldUnfoldSwitch::freeClonedSwitchSrc() {
     }
 }
 
+struct cl_var* CldUnfoldSwitch::acquireClVar() {
+    struct cl_var *clv = new struct cl_var;
+    memset(clv, 0, sizeof *clv);
+    clv->uid = /* XXX */ 0x400000 + switchCnt_;
+
+    ptrs_.push_back(clv);
+    return clv;
+}
+
 void CldUnfoldSwitch::emitCase(int cst, struct cl_type *type, const char *label)
 {
     static struct cl_type btype;
-    btype.uid                       = /* FIXME */ 0x100000;
+    btype.uid                       = /* FIXME */ 0x200000;
     btype.code                      = CL_TYPE_BOOL;
     btype.loc.file                  = 0;
     btype.loc.line                  = -1;
@@ -151,25 +178,25 @@ void CldUnfoldSwitch::emitCase(int cst, struct cl_type *type, const char *label)
     btype.size                      = /* FIXME */ sizeof(bool);
 
     struct cl_operand reg;
+    NULLIFY(reg);
     reg.code                        = CL_OPERAND_VAR;
     reg.loc.file                    = 0;
     reg.loc.line                    = -1;
     reg.scope                       = CL_SCOPE_FUNCTION;
     reg.type                        = &btype;
-    reg.accessor                    = 0;
-    reg.data.var.name               = 0;
-    reg.data.var.id                 = /* XXX */ 0x10000 + switchCnt_;
+    reg.data.var                    = this->acquireClVar();
 
     struct cl_operand val;
+    NULLIFY(val);
     val.code                        = CL_OPERAND_CST;
     val.loc                         = loc_;
     val.scope                       = CL_SCOPE_BB;
     val.type                        = type;
-    val.accessor                    = 0;
     val.data.cst.code               = CL_TYPE_INT;
     val.data.cst.data.cst_int.value = cst;
 
     struct cl_insn cli;
+    NULLIFY(cli);
     cli.code                        = CL_INSN_BINOP;
     cli.loc                         = loc_;
     cli.data.insn_binop.code        = CL_BINOP_EQ;

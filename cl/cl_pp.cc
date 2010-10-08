@@ -26,19 +26,15 @@
 #include "cl.hh"
 #include "ssd.h"
 
-#include <errno.h>
-#include <fcntl.h>
+#include <fstream>
 #include <iomanip>
-#include <sys/stat.h>
-#include <sys/types.h>
-
-#include <boost/iostreams/device/file_descriptor.hpp>
-#include <boost/iostreams/stream.hpp>
-#include <boost/system/system_error.hpp>
+#include <iostream>
+#include <unistd.h>
 
 class ClPrettyPrint: public ICodeListener {
     public:
-        ClPrettyPrint(int fd_out, bool close_on_exit, bool showTypes);
+        ClPrettyPrint(bool showTypes);
+        ClPrettyPrint(const char *fileName, bool showTypes);
         virtual ~ClPrettyPrint();
 
         virtual void file_open(
@@ -87,11 +83,9 @@ class ClPrettyPrint: public ICodeListener {
         virtual void finalize() { }
 
     private:
-        typedef boost::iostreams::file_descriptor_sink  TSink;
-        typedef boost::iostreams::stream<TSink>         TStream;
-
-        TSink                   sink_;
-        TStream                 out_;
+        const char              *fname_;
+        std::fstream            fstr_;
+        std::ostream            &out_;
         Location                loc_;
         std::string             fnc_;
         bool                    showTypes_;
@@ -121,20 +115,30 @@ using std::string;
 
 // /////////////////////////////////////////////////////////////////////////////
 // ClPrettyPrint implementation
-ClPrettyPrint::ClPrettyPrint(int fd_out, bool close_on_exit, bool showTypes):
-    sink_(fd_out, close_on_exit),
-    out_(sink_),
+ClPrettyPrint::ClPrettyPrint(bool showTypes):
+    fname_(0),
+    out_(std::cout),
     showTypes_(showTypes),
     printingArgDecls_(false)
 {
-    // FIXME: double check this
-    out_.set_auto_close(close_on_exit);
-
     // FIXME: static variable
-    ColorConsole::enableForTerm(fd_out);
+    ColorConsole::enableForTerm(STDOUT_FILENO);
+}
+
+ClPrettyPrint::ClPrettyPrint(const char *fileName, bool showTypes):
+    fname_(fileName),
+    fstr_(fileName, std::fstream::out),
+    out_(fstr_),
+    showTypes_(showTypes),
+    printingArgDecls_(false)
+{
+    if (!fstr_)
+        CL_ERROR("unable to create file '" << fileName << "'");
 }
 
 ClPrettyPrint::~ClPrettyPrint() {
+    if (fname_)
+        fstr_.close();
 }
 
 void ClPrettyPrint::file_open(
@@ -411,19 +415,19 @@ namespace {
 void ClPrettyPrint::printNestedVar(const struct cl_operand *op) {
     switch (op->code) {
         case CL_OPERAND_VAR:
-            if (!op->data.var.name) {
-                SSD_COLORIZE(out_, C_LIGHT_BLUE) << "%r" << op->data.var.id;
+            if (!op->data.var->name) {
+                SSD_COLORIZE(out_, C_LIGHT_BLUE) << "%r" << op->data.var->uid;
                 break;
             }
             out_ << SSD_INLINE_COLOR(C_LIGHT_BLUE, "%m" << scopeFlag(op->scope))
-                << op->data.var.id << ":";
+                << op->data.var->uid << ":";
             switch (op->scope) {
                 case CL_SCOPE_GLOBAL:
                 case CL_SCOPE_STATIC:
-                    out_ << SSD_INLINE_COLOR(C_LIGHT_RED, op->data.var.name);
+                    out_ << SSD_INLINE_COLOR(C_LIGHT_RED, op->data.var->name);
                     break;
                 default:
-                    out_ << SSD_INLINE_COLOR(C_LIGHT_BLUE, op->data.var.name);
+                    out_ << SSD_INLINE_COLOR(C_LIGHT_BLUE, op->data.var->name);
             }
             break;
 
@@ -883,25 +887,8 @@ void ClPrettyPrint::insn_switch_close()
 // /////////////////////////////////////////////////////////////////////////////
 // public interface, see cl_pp.hh for more details
 ICodeListener* createClPrettyPrint(const char *args, bool showTypes) {
-    // write to stdout by default
-    int fd = STDOUT_FILENO;
-
     // check whether a file name is given
-    const bool openFile = args && *args;
-    if (openFile) {
-        // write to file requested
-        fd = open(/* file name is the only arg for now */ args,
-                  O_WRONLY | O_CREAT,
-                  /* mode */ 0644);
-        if (fd < 0) {
-            using namespace boost::system;
-            CL_ERROR("unable to create file '" << args << "'");
-            errc::errc_t ec = static_cast<errc::errc_t>(errno);
-            system_error err(errc::make_error_code(ec));
-            CL_NOTE("got system error '" << err.what() << "'");
-            return 0;
-        }
-    }
-
-    return new ClPrettyPrint(fd, openFile, showTypes);
+    return (args && *args)
+        ? new ClPrettyPrint(/* file name */ args, showTypes)
+        : new ClPrettyPrint(showTypes);
 }

@@ -25,6 +25,7 @@
 #include "util.hh"
 
 #include <cstring>
+#include <set>
 #include <stack>
 
 #include <boost/foreach.hpp>
@@ -80,9 +81,12 @@ namespace {
     void handleOperandStrings(TFnc fnc, struct cl_operand *op) {
         enum cl_operand_e code = op->code;
         switch (code) {
+            // TODO
+#if 0
             case CL_OPERAND_VAR:
                 fnc(op->data.var.name);
                 break;
+#endif
 
             case CL_OPERAND_CST:
                 handleCstStrings(fnc, op->data.cst);
@@ -286,6 +290,8 @@ struct ClStorageBuilder::Private {
     Block       *bb;
     Insn        *insn;
 
+    std::set<int /* uid */>     varsDone;
+
     Private():
         file(0),
         fnc(0),
@@ -294,6 +300,7 @@ struct ClStorageBuilder::Private {
     {
     }
 
+    void digInitial(const struct cl_initializer *initial);
     void digOperandVar(const struct cl_operand *);
     void digOperandCst(const struct cl_operand *);
     void digOperand(const struct cl_operand *);
@@ -315,8 +322,36 @@ void ClStorageBuilder::finalize() {
     this->run(d->stor);
 }
 
+void ClStorageBuilder::Private::digInitial(const struct cl_initializer *initial)
+{
+    if (!initial)
+        return;
+
+    const struct cl_type *clt = initial->type;
+    const enum cl_type_e code = clt->code;
+    switch (code) {
+        case CL_TYPE_STRUCT:
+        case CL_TYPE_UNION:
+            for (int i = 0; i < clt->item_cnt; ++i) {
+                // FIXME: avoid recursion
+                this->digInitial(initial->data.nested_initials[i]);
+            }
+            break;
+
+        default:
+            // FIXME: avoid recursion
+            this->digOperand(initial->data.value);
+    }
+}
+
 void ClStorageBuilder::Private::digOperandVar(const struct cl_operand *op) {
-    const int id = op->data.var.id;
+    const int id = op->data.var->uid;
+
+    // do process each variable only once
+    if (hasKey(this->varsDone, id))
+        return;
+    else
+        this->varsDone.insert(id);
 
     // mark as used in the current function
     this->fnc->vars.insert(id);
@@ -359,6 +394,8 @@ void ClStorageBuilder::Private::digOperandVar(const struct cl_operand *op) {
         case CL_SCOPE_BB:
             TRAP;
     }
+
+    this->digInitial(op->data.var->initial);
 }
 
 void ClStorageBuilder::Private::digOperandCst(const struct cl_operand *op) {
@@ -503,7 +540,7 @@ void ClStorageBuilder::fnc_arg_decl(int pos, const struct cl_operand *op) {
     if (CL_OPERAND_VAR != op->code)
         TRAP;
 
-    const int uid = op->data.var.id;
+    const int uid = op->data.var->uid;
     Fnc &fnc = *(d->fnc);
     Var &var = d->stor.vars[uid];
     d->fnc->vars.insert(uid);

@@ -34,11 +34,13 @@ namespace CodeStorage {
 
 struct SymExecParams {
     bool fastMode;          ///< enable/disable the @b fast @b mode
+    bool invCompatMode;     ///< Invader compatibility mode
     bool skipPlot;          ///< simply ignore all ___sl_plot* calls
     bool ptrace;            ///< enable path tracing (a bit chatty)
 
     SymExecParams():
         fastMode(false),
+        invCompatMode(false),
         skipPlot(false),
         ptrace(false)
     {
@@ -56,7 +58,6 @@ class SymExec {
          * load the static info about the analyzed code
          * @param stor all-in-one static info about the analyzed code, see
          * @param params initialization parameters of the symbolic execution
-         * CodeStorage for details
          */
         SymExec(const CodeStorage::Storage &stor, const SymExecParams &params);
         ~SymExec();

@@ -387,6 +387,8 @@ symplot tutorial
 
     test-0091.c - anonymous union within a struct (minimal example)
 
+    test-0092.c - regression test focused on global variable initializers
+
 
 Tiny DLL library written on scratch
 ===================================

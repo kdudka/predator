@@ -27,7 +27,6 @@
 #include <map>
 #include <stack>
 
-#include <boost/filesystem/path.hpp>
 #include <boost/tuple/tuple.hpp>
 
 bool operator==(const struct cl_type &a, const struct cl_type &b) {
@@ -169,11 +168,12 @@ Var::~Var() {
 Var::Var(EVar code_, const struct cl_operand *op):
     code(code_),
     loc(op->loc),
-    uid(op->data.var.id)
+    uid(op->data.var->uid),
+    initial(op->data.var->initial)
 {
     SE_BREAK_IF(CL_OPERAND_VAR != op->code);
-    if (op->data.var.name)
-        name = op->data.var.name;
+    if (op->data.var->name)
+        name = op->data.var->name;
 
     // dig type of variable
     this->clt = digVarType(op);
@@ -257,7 +257,7 @@ const Var& VarDb::operator[](int uid) const {
 // /////////////////////////////////////////////////////////////////////////////
 // TypeDb implementation
 struct TypeDb::Private {
-    typedef std::map<cl_type_uid_t, const struct cl_type *> TMap;
+    typedef std::map<int, const struct cl_type *> TMap;
     TMap db;
 };
 
@@ -275,7 +275,7 @@ bool TypeDb::insert(const struct cl_type *clt) {
         CL_DEBUG("TypeDb::insert() got a NULL pointer");
         return false;
     }
-    cl_type_uid_t uid = clt->uid;
+    const int uid = clt->uid;
 
     typedef Private::TMap TDb;
     TDb &db = d->db;

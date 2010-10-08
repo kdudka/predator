@@ -22,6 +22,7 @@
 
 #include <cl/cl_msg.hh>
 #include <cl/storage.hh>
+#include <cl/cldebug.hh>
 #include <cl/clutil.hh>
 
 #include "symabstract.hh"
@@ -40,71 +41,122 @@
 #include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
 
+typedef std::pair<TObjId, const cl_initializer *> TInitialItem;
+
+// specialization of TraverseSubObjsHelper suitable for gl initializers
+template <> struct TraverseSubObjsHelper<TInitialItem> {
+    static const struct cl_type* getItemClt(const SymHeap           &sh,
+                                            const TInitialItem      &item)
+    {
+        const struct cl_type *clt = sh.objType(item.first);
+        SE_BREAK_IF(item.second && (!clt || *clt != *item.second->type));
+        return clt;
+    }
+
+    static TInitialItem getNextItem(const SymHeap                   &sh,
+                                    TInitialItem                    item,
+                                    int                             nth)
+    {
+        item.first = sh.subObj(item.first, nth);
+
+        const struct cl_initializer *&initial = item.second;
+        if (initial)
+            initial = initial->data.nested_initials[nth];
+
+        return item;
+    }
+};
+
 // utilities
 namespace {
 
-// attempt to initialize a global/static variable
-bool initSingleGlVar(SymHeap &sh, TObjId obj) {
+// initialize a global/static variable
+bool initGlVar(SymHeap &sh, const TInitialItem &item) {
+    const TObjId obj = item.first;
     const struct cl_type *clt = sh.objType(obj);
     SE_BREAK_IF(!clt);
 
     const enum cl_type_e code = clt->code;
     switch (code) {
-        case CL_TYPE_CHAR:
-        case CL_TYPE_ENUM:
-        case CL_TYPE_INT:
-        case CL_TYPE_PTR:
-            sh.objSetValue(obj, VAL_NULL);
-            break;
-
-        case CL_TYPE_BOOL:
-            sh.objSetValue(obj, VAL_FALSE);
-            break;
-
         case CL_TYPE_ARRAY:
             CL_DEBUG("CL_TYPE_ARRAY is not supported by SymExec for now");
-            break;
+            return /* continue */ true;
 
         case CL_TYPE_UNION:
             CL_DEBUG("CL_TYPE_UNION is not supported by SymExec for now");
-            break;
+            return /* continue */ true;
 
         case CL_TYPE_STRUCT:
-            // fall through!
+            SE_TRAP;
 
         default:
-            // only a few types are supported in case of gl variables for now
-#if SE_SELF_TEST
-            SE_TRAP;
-#endif
             break;
     }
+
+    const struct cl_initializer *initial = item.second;
+    if (!initial) {
+        // no initializer given, we should nullify the variable
+        sh.objSetValue(obj, /* also equal to VAL_FALSE */ VAL_NULL);
+
+        return /* continue */ true;
+    }
+
+    // FIXME: we're asking for troubles this way
+    const CodeStorage::Storage *null = 0;
+    SymBackTrace dummyBt(*null);
+    SymProc proc(sh, &dummyBt);
+
+    // resolve initial value
+    const struct cl_operand *op = initial->data.value;
+    const TValueId val = proc.heapValFromOperand(*op);
+    CL_DEBUG("using explicit initializer: obj #"
+            << static_cast<int>(obj) << " <-- val #"
+            << static_cast<int>(val));
+
+    // set the initial value
+    SE_BREAK_IF(VAL_INVALID == val);
+    sh.objSetValue(obj, val);
 
     return /* continue */ true;
 }
 
-void createGlVar(SymHeap &sh, const CodeStorage::Var &var) {
-    // create the corresponding heap object
-    const struct cl_type *clt = var.clt;
-    const CVar cVar(var.uid, /* gl variable */ 0);
-    const TObjId obj = sh.objCreate(clt, cVar);
-
-    // now attempt to initialize the variable since it is a global/static var
-    if (CL_TYPE_STRUCT == clt->code)
-        traverseSubObjs(sh, obj, initSingleGlVar, /* leavesOnly */ true);
-    else
-        initSingleGlVar(sh, obj);
-}
-
-void createGlVars(SymHeap &heap, const CodeStorage::Storage &stor) {
+void createGlVars(SymHeap &sh, const CodeStorage::Storage &stor) {
     using namespace CodeStorage;
+
+    // first create all gl variables, without initializing anything
     BOOST_FOREACH(const Var &var, stor.vars) {
-        if (VAR_GL == var.code) {
-            const LocationWriter lw(&var.loc);
-            CL_DEBUG_MSG(lw, "(g) creating global variable: #" << var.uid
-                    << " (" << var.name << ")");
-            createGlVar(heap, var);
-        }
+        if (VAR_GL != var.code)
+            continue;
+
+        const LocationWriter lw(&var.loc);
+        CL_DEBUG_MSG(lw, "(g) creating global variable: #" << var.uid
+                << " (" << var.name << ")");
+
+        // create the corresponding heap object
+        const CVar cVar(var.uid, /* gl variable */ 0);
+        sh.objCreate(var.clt, cVar);
+    }
+
+    // now is the time to safely perform the initialization
+    BOOST_FOREACH(const Var &var, stor.vars) {
+        if (VAR_GL != var.code)
+            continue;
+
+        const LocationWriter lw(&var.loc);
+        CL_DEBUG_MSG(lw, "(g) initializing global variable: #" << var.uid
+                << " (" << var.name << ")");
+
+        // look for the corresponding heap object
+        const CVar cVar(var.uid, /* gl variable */ 0);
+        const TObjId obj = sh.objByCVar(cVar);
+        SE_BREAK_IF(obj <= 0);
+
+        // initialize a global/static variable
+        const TInitialItem item(obj, var.initial);
+        if (CL_TYPE_STRUCT == var.clt->code)
+            traverseSubObjs(sh, item, initGlVar, /* leavesOnly */ true);
+        else
+            initGlVar(sh, item);
     }
 }
 
@@ -207,7 +259,6 @@ class SymExecEngine {
         void execCondInsn();
         void execTermInsn();
         bool execNontermInsn();
-        void echoInsn();
         bool execInsn();
         bool execBlock();
 };
@@ -372,7 +423,7 @@ void SymExecEngine::execTermInsn() {
 
         case CL_INSN_JMP:
             if (1 == tlist.size()) {
-                this->updateState(tlist[0]);
+                this->updateState(tlist[/* target block */ 0]);
                 break;
             }
             // go through!
@@ -387,8 +438,9 @@ bool /* handled */ SymExecEngine::execNontermInsn() {
 
     // set some properties of the execution
     SymExecCoreParams ep;
-    ep.fastMode = params_.fastMode;
-    ep.skipPlot = params_.skipPlot;
+    ep.fastMode         = params_.fastMode;
+    ep.invCompatMode    = params_.invCompatMode;
+    ep.skipPlot         = params_.skipPlot;
 
     // working area for non-terminal instructions
     SymHeap workingHeap(localState_[heapIdx_]);
@@ -399,315 +451,6 @@ bool /* handled */ SymExecEngine::execNontermInsn() {
     return core.exec(nextLocalState_, *insn);
 }
 
-namespace {
-
-void operandToStreamCstInt(std::ostream &str, const struct cl_operand &op) {
-    const struct cl_cst &cst = op.data.cst;
-    const int val = cst.data.cst_int.value;
-
-    const enum cl_type_e code = op.type->code;
-    switch (code) {
-        case CL_TYPE_ENUM:
-            str << "(enum XXX)" << val;
-            break;
-
-        case CL_TYPE_INT:
-            str << "(int)" << val;
-            break;
-
-        case CL_TYPE_BOOL:
-            str << (val ? "true" : "false");
-            break;
-
-        case CL_TYPE_PTR:
-            if (!val) {
-                str << "NULL";
-                break;
-            }
-            // fall through!
-
-        default:
-#if SE_SELF_TEST
-            SE_TRAP;
-#endif
-            break;
-    }
-}
-
-void operandToStreamCst(std::ostream &str, const struct cl_operand &op) {
-    const struct cl_cst &cst = op.data.cst;
-    const enum cl_type_e code = cst.code;
-    switch (code) {
-        case CL_TYPE_INT:
-            operandToStreamCstInt(str, op);
-            break;
-
-        case CL_TYPE_FNC: {
-            const char *name = cst.data.cst_fnc.name;
-            SE_BREAK_IF(!name);
-
-            str << name;
-            break;
-        }
-
-        case CL_TYPE_STRING: {
-            const char *text = cst.data.cst_string.value;
-            SE_BREAK_IF(!text);
-
-            str << "\"" << text << "\"";
-            break;
-        }
-
-        default:
-#if SE_SELF_TEST
-            SE_TRAP;
-#endif
-            break;
-    }
-}
-
-const char* fieldName(const struct cl_accessor *ac) {
-    SE_BREAK_IF(!ac || ac->code != CL_ACCESSOR_ITEM);
-
-    const struct cl_type *clt = ac->type;
-    SE_BREAK_IF(!clt);
-
-    const int id = ac->data.item.id;
-    SE_BREAK_IF(clt->item_cnt <= id || id < 0);
-
-    const char *name = clt->items[id].name;
-    return (name)
-        ? name
-        : "<anon_item>";
-}
-
-void operandToStreamAcs(std::ostream &str, const struct cl_accessor *ac) {
-    if (!ac)
-        return;
-
-    // FIXME: copy/pasted from cl_pp.cc
-    if (ac && ac->code == CL_ACCESSOR_DEREF &&
-            ac->next && ac->next->code == CL_ACCESSOR_ITEM)
-    {
-        ac = ac->next;
-        str << "->" << fieldName(ac);
-        ac = ac->next;
-    }
-
-    for (; ac; ac = ac->next) {
-        enum cl_accessor_e code = ac->code;
-        switch (code) {
-            case CL_ACCESSOR_DEREF_ARRAY:
-                str << " [...]";
-                break;
-
-            case CL_ACCESSOR_ITEM:
-                str << "." << fieldName(ac);
-                break;
-
-            case CL_ACCESSOR_REF:
-                if (!ac->next)
-                    // already handled
-                    break;
-                // fall through!
-
-            default:
-#if SE_SELF_TEST
-                SE_TRAP;
-#endif
-                break;
-        }
-    }
-}
-
-void operandToStreamVar(std::ostream &str, const struct cl_operand &op) {
-    const struct cl_accessor *ac = op.accessor;
-
-    // FIXME: copy/pasted from cl_pp.cc
-    const struct cl_accessor *is_ref = ac;
-    while (is_ref && (is_ref->next || is_ref->code != CL_ACCESSOR_REF))
-        is_ref = is_ref->next;
-    if (is_ref)
-        str << "&";
-
-    if (ac && ac->code == CL_ACCESSOR_DEREF &&
-            (!ac->next || ac->next->code != CL_ACCESSOR_ITEM))
-    {
-        str << "*";
-        ac = ac->next;
-    }
-
-    // obtain var ID and name (if any)
-    const char *name = NULL;
-    const int uid = varIdFromOperand(&op, &name);
-
-    // print var itself
-    str << "#" << uid;
-    if (name)
-        str << ":" << name;
-
-    // print all accessors excecpt CL_ACCESSOR_REF, which shloud have been
-    // already handled
-    operandToStreamAcs(str, ac);
-}
-
-void operandToStream(std::ostream &str, const struct cl_operand &op) {
-    const enum cl_operand_e code = op.code;
-    switch (code) {
-        case CL_OPERAND_CST:
-            operandToStreamCst(str, op);
-            break;
-
-        case CL_OPERAND_VAR:
-            operandToStreamVar(str, op);
-            break;
-
-        case CL_OPERAND_VOID:
-            // this should have been handled elsewhere
-        default:
-#if SE_SELF_TEST
-            SE_TRAP;
-#endif
-            break;
-    }
-}
-
-void unOpToStream(std::ostream &str, int subCode,
-                  const CodeStorage::TOperandList &opList)
-{
-    operandToStream(str, opList[/* dst */ 0]);
-    str << " = ";
-
-    // FIXME: copy/pasted from cl_pp.cc
-    const enum cl_unop_e code = static_cast<enum cl_unop_e>(subCode);
-    switch (code) {
-        case CL_UNOP_ASSIGN:
-            break;
-
-        case CL_UNOP_TRUTH_NOT:     str << "!";     break;
-        case CL_UNOP_BIT_NOT:       str << "~";     break;
-        case CL_UNOP_MINUS:         str << "-";     break;
-    }
-
-    operandToStream(str, opList[/* src */ 1]);
-}
-
-void binOpToStream(std::ostream &str, int subCode,
-                   const CodeStorage::TOperandList &opList)
-{
-    const enum cl_binop_e code = static_cast<enum cl_binop_e>(subCode);
-    operandToStream(str, opList[/* dst */ 0]);
-    str << " = (";
-    operandToStream(str, opList[/* src1 */ 1]);
-
-    // TODO: move this to cl API (or clutil)
-    switch (code) {
-        case CL_BINOP_EQ:               str << " == ";          break;
-        case CL_BINOP_NE:               str << " != ";          break;
-        case CL_BINOP_LT:               str << " < ";           break;
-        case CL_BINOP_GT:               str << " > ";           break;
-        case CL_BINOP_LE:               str << " <= ";          break;
-        case CL_BINOP_GE:               str << " >= ";          break;
-        case CL_BINOP_PLUS:             str << " + ";           break;
-        case CL_BINOP_MINUS:            str << " - ";           break;
-        case CL_BINOP_MULT:             str << " * ";           break;
-        case CL_BINOP_TRUNC_DIV:        str << " / ";           break;
-        case CL_BINOP_TRUNC_MOD:        str << " % ";           break;
-        case CL_BINOP_POINTER_PLUS:     str << " (ptr +) ";     break;
-        case CL_BINOP_BIT_IOR:          str << " | ";           break;
-        case CL_BINOP_BIT_AND:          str << " & ";           break;
-        case CL_BINOP_BIT_XOR:          str << " ^ ";           break;
-        default:
-#if SE_SELF_TEST
-            SE_TRAP;
-#endif
-            break;
-    }
-
-    operandToStream(str, opList[/* src2 */ 2]);
-    str << ")";
-}
-
-void callToStream(std::ostream &str, const CodeStorage::TOperandList &opList) {
-    const struct cl_operand &dst = opList[/* dst */ 0];
-    if (CL_OPERAND_VOID != dst.code) {
-        operandToStream(str, dst);
-        str << " = ";
-    }
-    operandToStream(str, opList[/* fnc */ 1]);
-    str << " (";
-    for (unsigned i = /* dst + fnc */ 2; i < opList.size(); ++i)
-    {
-        if (2 < i)
-            str << ", ";
-
-        operandToStream(str, opList[i]);
-    }
-    str << ")";
-}
-
-void retToStream(std::ostream &str, const struct cl_operand &src) {
-    str << "return";
-
-    if (CL_OPERAND_VOID == src.code)
-        return;
-
-    str << " ";
-    operandToStream(str, src);
-}
-
-} // namespace
-
-void SymExecEngine::echoInsn() {
-    const CodeStorage::Insn *insn = block_->operator[](insnIdx_);
-    const CodeStorage::TOperandList &opList = insn->operands;
-    const CodeStorage::TTargetList &tList = insn->targets;
-    std::ostringstream str;
-
-    const enum cl_insn_e code = insn->code;
-    switch (code) {
-        case CL_INSN_UNOP:
-            unOpToStream(str, insn->subCode, opList);
-            break;
-
-        case CL_INSN_BINOP:
-            binOpToStream(str, insn->subCode, opList);
-            break;
-
-        case CL_INSN_CALL:
-            callToStream(str, opList);
-            break;
-
-        case CL_INSN_RET:
-            retToStream(str, opList[/* src */ 0]);
-            break;
-
-        case CL_INSN_COND:
-            str << "if (";
-            operandToStream(str, opList[/* src */ 0]);
-            str << ") goto " << tList[/* then label */ 0]->name();
-            str <<  " else " << tList[/* else label */ 1]->name();
-            break;
-
-        case CL_INSN_JMP:
-            str << "goto " << tList[/* target */ 0]->name();
-            break;
-
-        case CL_INSN_ABORT:
-            str << "abort";
-            break;
-
-        default:
-#if SE_SELF_TEST
-            SE_TRAP;
-#endif
-            break;
-    }
-
-    std::string echo(str.str());
-    CL_DEBUG_MSG(lw_, "!!! executing insn #" << insnIdx_ << " ... " << echo);
-}
-
 bool /* complete */ SymExecEngine::execInsn() {
     const CodeStorage::Insn *insn = block_->operator[](insnIdx_);
 
@@ -715,9 +458,11 @@ bool /* complete */ SymExecEngine::execInsn() {
     const bool isTerm = cl_is_term_insn(insn->code);
 
     if (!heapIdx_) {
+        CL_DEBUG_MSG(lw_, "!!! executing insn #" << insnIdx_
+                << " ... " << (*insn));
+
         // let's begin with empty resulting heap union
         nextLocalState_.clear();
-        this->echoInsn();
     }
 
     // go through the remainder of symbolic heaps corresponding to localState_

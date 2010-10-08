@@ -54,7 +54,7 @@ int intCstFromOperand(const struct cl_operand *op) {
 int varIdFromOperand(const struct cl_operand *op, const char **pName) {
     SE_BREAK_IF(CL_OPERAND_VAR != op->code);
     if (pName)
-        *pName = op->data.var.name;
+        *pName = op->data.var->name;
 
-    return op->data.var.id;
+    return op->data.var->uid;
 }

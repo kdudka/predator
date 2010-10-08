@@ -23,7 +23,7 @@ test -x "$FA_PLUG"                          || exit 1
 test -z "$FA_VERBOSE" && FA_VERBOSE=0
 
 # use pp code listener by default
-test -z "$FA_OPTS" && SL_OPTS="-fplugin-arg-liba_analysi-dump-pp"
+test -z "$FA_OPTS" && FA_OPTS="-fplugin-arg-libfa_analysis-dump-pp"
 
 # use chromium as default SVG_VIEWER
 test -z "$SVG_VIEWER" && SVG_VIEWER=chromium

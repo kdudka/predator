@@ -23,12 +23,11 @@
 
 #include "cl.hh"
 
-#include <boost/iostreams/device/file_descriptor.hpp>
-#include <boost/iostreams/stream.hpp>
+#include <iostream>
 
 class ClLocator: public ICodeListener {
     public:
-        ClLocator(int fd_out);
+        ClLocator();
 
         virtual void file_open(const char *file_name) {
             lastLoc_.currentFile = file_name;
@@ -84,11 +83,7 @@ class ClLocator: public ICodeListener {
         virtual void finalize() { }
 
     private:
-        typedef boost::iostreams::file_descriptor_sink  TSink;
-        typedef boost::iostreams::stream<TSink>         TStream;
-
-        TSink                   sink_;
-        TStream                 out_;
+        std::ostream            &out_;
         Location                lastLoc_;
 
     private:
@@ -97,10 +92,8 @@ class ClLocator: public ICodeListener {
 
 // /////////////////////////////////////////////////////////////////////////////
 // ClLocator implementation
-// TODO: remove idents of unused args
-ClLocator::ClLocator(int fd_out):
-    sink_(fd_out),
-    out_(sink_)
+ClLocator::ClLocator():
+    out_(std::cout)
 {
 }
 
@@ -113,6 +106,5 @@ void ClLocator::printLocation(const struct cl_location *loc) {
 // /////////////////////////////////////////////////////////////////////////////
 // public interface, see cl_locator.hh for more details
 ICodeListener* createClLocator(const char *) {
-    // TODO: open a file with open(2) if a file name is given in ARGS
-    return new ClLocator(STDOUT_FILENO);
+    return new ClLocator;
 }

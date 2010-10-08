@@ -151,11 +151,6 @@ enum cl_scope_e {
 };
 
 /**
- * type's unique ID
- */
-typedef int cl_type_uid_t;
-
-/**
  * basic type enumeration
  */
 enum cl_type_e {
@@ -207,7 +202,7 @@ struct cl_type {
     /**
      * type's unique ID
      */
-    cl_type_uid_t                       uid;
+    int                                 uid;
 
     /**
      * kind of type (enumeration)
@@ -321,6 +316,28 @@ struct cl_accessor {
 };
 
 /**
+ * initializer, used only for global/static variables
+ */
+struct cl_initializer {
+    /**
+     * reference to type which the initializer is used for
+     */
+    struct cl_type                      *type;
+
+    union {
+        /**
+         * value of a scalar initializer
+         */
+        struct cl_operand               *value;
+
+        /**
+         * array of nested initializers. Its size is exactly type->item_cnt.
+         */
+        struct cl_initializer           **nested_initials;
+    } data;
+};
+
+/**
  * constant, in the C language terminology: literal
  */
 struct cl_cst {
@@ -361,6 +378,29 @@ struct cl_cst {
             const char                  *value;
         } cst_string; /**< valid only for @b CL_TYPE_STRING */
     } data;
+};
+
+/**
+ * variable (local, global, fnc argument, register, etc.)
+ */
+struct cl_var {
+    /**
+     * unique ID, given by compiler (or any cl decorator on the way from there)
+     */
+    int                                 uid;
+
+    /**
+     * name of the variable, valid only for program variables (NULL for
+     * artificial variables, created by compiler)
+     */
+    const char                          *name;
+
+    /**
+     * initializer, used only for global/static variables; NULL if not present
+     */
+    struct cl_initializer               *initial;
+
+    /* TODO: is_extern? */
 };
 
 /**
@@ -421,17 +461,15 @@ struct cl_operand {
      * per operand type specific data
      */
     union {
+        /**
+         * valid only for @b CL_OPERAND_VAR
+         */
+        struct cl_var                   *var;
 
-        /* CL_OPERAND_VAR */
-        struct {
-            int                         id;
-            const char                  *name;
-            /* TODO: is_extern? */
-        } var; /**< valid only for @b CL_OPERAND_VAR */
-
-        /* CL_OPERAND_CST */
+        /**
+         * valid only for @b CL_OPERAND_CST
+         */
         struct cl_cst                   cst;
-        /**< valid only for @b CL_OPERAND_CST */
     } data;
 };
 

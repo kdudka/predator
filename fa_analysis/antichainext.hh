@@ -219,8 +219,8 @@ public:
 		size_t iter = 0;
 		while (antichain.nextElement(el)) {
 
-			std::cout << iter++ << ": ";
-			antichain.printStatus();
+//			std::cout << iter++ << ": ";
+//			antichain.printStatus();
 		
 			// Post(Processed)
 			post.clear();
@@ -242,11 +242,11 @@ public:
 								antichain.simInsert(newEl, isAccepting, (*k)->first._rhs, c);
 						}
 						if (isAccepting) {
-							std::cout << "accepting\n";
+//							std::cout << "accepting\n";
 							return false;
 						}
 						if (newEl.second.empty()) {
-							std::cout << "empty\n";
+//							std::cout << "empty\n";
 							return false;
 						}
 						// cross-automata check

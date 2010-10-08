@@ -22,7 +22,8 @@
 
 #include <cl/code_listener.h>
 #include <cl/cl_msg.hh>
-#include <cl/cl_debug.hh>
+#include <cl/cldebug.hh>
+#include <cl/clutil.hh>
 #include <cl/storage.hh>
 
 #include "treeaut.hh"
@@ -90,21 +91,28 @@ struct NodeBuilder {
 
 };
 
-typedef enum { safe_ref, ref, reg, value } o_flag_e;
+typedef enum { safe_ref, ref, reg, val } o_flag_e;
 
 struct OperandInfo {
 
 	o_flag_e flag;
-
-	bool deref;
 	Data data;
 	const cl_type* type;
+
+	friend std::ostream& operator<<(std::ostream& os, const OperandInfo& oi) {
+		switch (oi.flag) {
+			case o_flag_e::ref: os << "(ref)" << oi.data.d_ref.root << '+' << oi.data.d_ref.displ; break;
+			case o_flag_e::safe_ref: os << "(safe_ref)" << oi.data.d_ref.root << '+' << oi.data.d_ref.displ; break;
+			case o_flag_e::reg: os << "(reg)" << oi.data.d_ref.root << '+' << oi.data.d_ref.displ; break;
+			case o_flag_e::val: os << "(val)" << oi.data; break;
+		}
+		return os;
+	}
 
 	const cl_accessor* parseItems(const cl_accessor* acc) {
 
 		while (acc && (acc->code == CL_ACCESSOR_ITEM)) {
 			this->data.d_ref.displ += acc->type->items[acc->data.item.id].offset;
-			this->type = acc->type;
 			acc = acc->next;
 		}
 
@@ -117,8 +125,7 @@ struct OperandInfo {
 		assert((this->flag == o_flag_e::ref) || (this->flag == o_flag_e::safe_ref));
 
 		if (acc && (acc->code == CL_ACCESSOR_REF)) {
-			this->flag = o_flag_e::value;
-			this->type = acc->type;
+			this->flag = o_flag_e::val;
 			acc = acc->next;
 		} 
 
@@ -128,7 +135,7 @@ struct OperandInfo {
 
 	void parseCst(const cl_operand* op) {
 		
-		this->flag = o_flag_e::value;
+		this->flag = o_flag_e::val;
 		this->type = op->type;
 
 		switch (op->data.cst.code) {
@@ -156,7 +163,6 @@ struct OperandInfo {
 				throw std::runtime_error("OperandInfo::parseVar(): dereferenced value is not a valid reference!");
 
 			this->flag = o_flag_e::ref;
-			this->type = acc->type;
 			acc = acc->next;
 
 		}
@@ -182,7 +188,6 @@ struct OperandInfo {
 				throw std::runtime_error("OperandInfo::parseReg(): dereferenced value is not a valid reference!");
 
 			this->flag = o_flag_e::ref;
-			this->type = acc->type;
 			acc = this->parseItems(acc->next);
 			acc = this->parseRef(acc);
 
@@ -278,7 +283,7 @@ struct SymCtx {
 			switch (var.code) {
 				case CodeStorage::EVar::VAR_LC:
 					if (var.name.empty()) {
-						this->varMap.insert(make_pair(var.uid, make_pair(false, this->regCount++)));
+						this->varMap.insert(make_pair(var.uid, make_pair(false, FIXED_REG_COUNT + this->regCount++)));
 					} else {
 						NodeBuilder::buildNode(this->sfLayout, var.clt, offset);
 						this->varMap.insert(make_pair(var.uid, make_pair(true, offset)));
@@ -296,15 +301,13 @@ struct SymCtx {
 	static void init(FAE& fae) {
 		assert(fae.varCount() == 0);
 		// create ABP and CTX registers
-		fae.varPopulate((size_t)3);
-		fae.varSet(ABP_INDEX, Data::createVoidPtr(0));
+		fae.varPopulate(FIXED_REG_COUNT);
+		fae.varSet(ABP_INDEX, Data::createInt(0));
 		fae.varSet(RET_INDEX, Data::createUndef());
 		fae.varSet(IAX_INDEX, Data::createUndef());
 	}
 
 	void createStackFrame(vector<FAE*>& dst, const FAE& fae) const {
-
-	    CL_DEBUG("entering stack frame: " << CodeStorage::nameOf(this->fnc));
 
 		vector<pair<SelData, Data> > stackInfo;
 
@@ -314,7 +317,7 @@ struct SymCtx {
 		FAE* tmp = new FAE(fae);
 
 		stackInfo[0].second = tmp->varGet(ABP_INDEX);
-		stackInfo[1].second = Data::createNativePtr((void*)this);
+		stackInfo[1].second = Data::createNativePtr(NULL);
 
 		tmp->varSet(ABP_INDEX, Data::createRef(tmp->nodeCreate(stackInfo)));
 		// TODO: ...
@@ -326,7 +329,7 @@ struct SymCtx {
 		
 	}
 
-	void destroyStackFrame(vector<FAE*> dst, const FAE& fae) const {
+	void destroyStackFrame(vector<FAE*>& dst, const FAE& fae) const {
 
 		FAE tmp(fae);
 
@@ -342,15 +345,15 @@ struct SymCtx {
 		tmp.unsafeNodeDelete(abp.d_ref.root);
 		tmp.varSet(ABP_INDEX, data);
 
-		if (data.isRef()) {
+		if (abp.isRef()) {
 			tmp.nodeLookup(abp.d_ref.root, RET_OFFSET, data);
 			assert(data.isNativePtr());
 			tmp.varSet(RET_INDEX, data);
+			tmp.isolateAtRoot(dst, abp.d_ref.root, FAE::IsolateAllF());
 		} else {
 			tmp.varSet(RET_INDEX, Data::createUndef());
+			dst.push_back(new FAE(tmp));
 		}
-
-		tmp.isolateAtRoot(dst, abp.d_ref.root, FAE::IsolateAllF());
 		
 	}
 
@@ -358,7 +361,7 @@ struct SymCtx {
 
 		switch (op->code) {
 			case cl_operand_e::CL_OPERAND_VAR: {
-				var_map_type::const_iterator i = this->varMap.find(op->data.var.id);
+				var_map_type::const_iterator i = this->varMap.find(varIdFromOperand(op));
 				assert(i != this->varMap.end());
 				switch (i->second.first) {
 					case true: operandInfo.parseVar(fae, op, i->second.second); break;
@@ -376,6 +379,8 @@ struct SymCtx {
 	}
 /*
 	static SymCtx* extractCtx(const FAE& fae) {
+
+		var_map_type::iterator i = this->varMap.find(varIdFromOperand(op));
 
 		const Data& abp = fae.varGet(CTX_INDEX);
 
@@ -415,7 +420,7 @@ struct SymState {
 struct SymOp {
 };
 
-typedef enum { biNone, biMalloc, biFree } builtin_e;
+typedef enum { biNone, biMalloc, biFree, biNondet } builtin_e;
 
 struct BuiltinTable {
 
@@ -426,6 +431,7 @@ public:
 	BuiltinTable() {
 		this->_table["malloc"] = builtin_e::biMalloc;
 		this->_table["free"] = builtin_e::biFree;
+		this->_table["__nondet"] = builtin_e::biNondet;
 	}
 
 	builtin_e operator[](const string& key) {
@@ -494,20 +500,34 @@ protected:
 
 			FAE::NormInfo normInfo;
 
-			src.back()->normalize(normInfo);
+			std::vector<size_t> tmp;
+			src.back()->getNearbyReferences(src.back()->varGet(ABP_INDEX).d_ref.root, tmp);
+			src.back()->normalize(normInfo, tmp);
 			src.back()->heightAbstraction();
 
 			TA<label_type> ta(this->taBackend);
 			Index<size_t> index;
 
 			target->fwdConfWrapper.fae2ta(ta, index, *src.back());
+/*
+			TA<label_type> min(this->taBackend);
 
-			if (TA<label_type>::subseteq(target->fwdConf, ta)) {
-				target->outConf.push_back(src.back());
-				changed = true;
-			} else {
-				target->fwdConfWrapper.join(ta, index);
+			ta.minimized(min);
+
+			CL_DEBUG("challenge:" << std::endl << min);
+
+			min.clear();
+
+			target->fwdConf.minimized(min);
+			
+			CL_DEBUG("response:" << std::endl << min);
+*/
+			if (TA<label_type>::subseteq(ta, target->fwdConf)) {
 				delete src.back();
+			} else {
+				target->outConf.push_back(src.back());
+				target->fwdConfWrapper.join(ta, index);
+				changed = true;
 			}
 
 			src.pop_back();
@@ -552,16 +572,18 @@ protected:
 				else
 					data = fae.varGet(oi.data.d_ref.root);
 				break;
-			case o_flag_e::value:
+			case o_flag_e::val:
 				data = oi.data;
 				break;
 			default:
 				assert(false);
 		}
+		CL_DEBUG("read: " << oi << " -> " << data);
 		return data;
 	}
 
 	void writeData(FAE& fae, const OperandInfo& oi, const Data& in, Data& out) {
+		CL_DEBUG("write: " << oi << " -> " << in);
 		switch (oi.flag) {
 			case o_flag_e::ref:
 			case o_flag_e::safe_ref:
@@ -590,37 +612,30 @@ protected:
 		state->ctx->parseOperand(dst, fae, &insn->operands[0]);
 		state->ctx->parseOperand(src, fae, &insn->operands[1]);
 
-		assert(*(src.type) == *(dst.type));
-		assert(OperandInfo::isLValue(dst.flag));
+		assert(src.type->code == dst.type->code);
 
-		if (src.type->code == cl_type_e::CL_TYPE_PTR && src.data.isVoidPtr()) {
-			assert(dst.type->items[0].type->size == (int)src.data.d_void_ptr);
-			vector<FAE*> tmp;
-			ContainerGuard<vector<FAE*> > g(tmp);
-			if (dst.flag == o_flag_e::ref) {
-				fae.isolateAtRoot(tmp, dst.data.d_ref.root, FAE::IsolateOneF(dst.data.d_ref.displ));
-			} else {
-				tmp.push_back(new FAE(fae));
-			}
+		if (
+			src.type->code == cl_type_e::CL_TYPE_PTR &&
+			src.type->items[0].type->code == cl_type_e::CL_TYPE_VOID &&
+			dst.type->items[0].type->code != cl_type_e::CL_TYPE_VOID
+		) {
+			vector<FAE*> tmp, tmp2;
+			ContainerGuard<vector<FAE*> > f(tmp), g(tmp2);
+			this->isolateIfNeeded(tmp, itov((FAE*)&fae), src, itov((size_t)0));
+			this->isolateIfNeeded(tmp2, tmp, dst, itov((size_t)0));
 			vector<SelData> sels;
 			NodeBuilder::buildNode(sels, dst.type->items[0].type);
-			for (vector<FAE*>::iterator i = tmp.begin(); i != tmp.end(); ++i) {
-				Data data = Data::createRef((*i)->nodeCreate(sels)), out;
-				switch (dst.flag) {
-					case o_flag_e::ref:
-					case o_flag_e::safe_ref:
-						(*i)->nodeModify(dst.data.d_ref.root, dst.data.d_ref.displ, data, out);
-						break;
-					case o_flag_e::reg:
-						(*i)->varSet(dst.data.d_ref.root, data);
-						break;
-					default:
-						assert(false);					
-				}
+			for (vector<FAE*>::iterator i = tmp2.begin(); i != tmp2.end(); ++i) {
+				Data data = this->readData(**i, src, itov((size_t)0)); 
+				assert(dst.type->items[0].type->size == (int)data.d_void_ptr);
+				Data data2 = Data::createRef((*i)->nodeCreate(sels)), out;
+				this->writeData(**i, dst, data2, out);
 			}
-			this->enqueueNextInsn(state, tmp);
+			this->enqueueNextInsn(state, tmp2);
 			return;
 		}
+
+		assert(*(src.type) == *(dst.type));
 
 		vector<size_t> offs;
 		NodeBuilder::buildNode(offs, src.type);
@@ -636,11 +651,21 @@ protected:
 			this->writeData(**i, dst, data, dataOut);
 		}
 
+		g.release();
+
 		this->enqueueNextInsn(state, tmp2);
 		
 	}
 
-	void execCmp(SymState* state, const FAE& fae, const CodeStorage::Insn* insn, bool neg) {
+	static void dataEq(const Data& x, const Data& y, bool neg, vector<Data>& res) {
+		if (x.isUnknw() || y.isUnknw()) {
+			res.push_back(Data::createBool(false));
+			res.push_back(Data::createBool(true));
+		} else
+			res.push_back(Data::createBool((x == y) != neg));
+	}
+
+	void execEq(SymState* state, const FAE& fae, const CodeStorage::Insn* insn, bool neg) {
 		OperandInfo dst, src1, src2;
 		state->ctx->parseOperand(dst, fae, &insn->operands[0]);
 		state->ctx->parseOperand(src1, fae, &insn->operands[1]);
@@ -649,6 +674,47 @@ protected:
 		assert(*src1.type == *src2.type);
 		assert(OperandInfo::isLValue(dst.flag));
 		assert(dst.type->code == cl_type_e::CL_TYPE_BOOL);
+
+		vector<size_t> offs1;
+		NodeBuilder::buildNode(offs1, src1.type);
+
+		vector<size_t> offs2;
+		NodeBuilder::buildNode(offs2, src2.type);
+
+		vector<FAE*> tmp, tmp2, tmp3, tmp4;
+		ContainerGuard<vector<FAE*> > f(tmp), g(tmp2), h(tmp3), k(tmp4);
+
+		this->isolateIfNeeded(tmp, itov((FAE*)&fae), src1, offs1);
+		this->isolateIfNeeded(tmp2, tmp, src2, offs2); 
+		this->isolateIfNeeded(tmp3, tmp2, dst, itov((size_t)0));
+
+		for (vector<FAE*>::iterator i = tmp3.begin(); i != tmp3.end(); ++i) {
+			Data data1 = this->readData(**i, src1, offs1);
+			Data data2 = this->readData(**i, src2, offs2);
+			vector<Data> res;
+			Engine::dataEq(data1, data2, neg, res);
+			Data dataOut;
+			for (vector<Data>::iterator j = res.begin(); j != res.end(); ++j) {
+				tmp4.push_back(new FAE(**i));
+				this->writeData(*tmp4.back(), dst, *j, dataOut);
+			}
+		}
+
+		k.release();
+
+		this->enqueueNextInsn(state, tmp4);
+		
+	}
+
+	void execPlus(SymState* state, const FAE& fae, const CodeStorage::Insn* insn) {
+		OperandInfo dst, src1, src2;
+		state->ctx->parseOperand(dst, fae, &insn->operands[0]);
+		state->ctx->parseOperand(src1, fae, &insn->operands[1]);
+		state->ctx->parseOperand(src2, fae, &insn->operands[2]);
+
+		assert(dst.type->code == cl_type_e::CL_TYPE_INT);
+		assert(src1.type->code == cl_type_e::CL_TYPE_INT);
+		assert(src2.type->code == cl_type_e::CL_TYPE_INT);
 
 		vector<size_t> offs1;
 		NodeBuilder::buildNode(offs1, src1.type);
@@ -666,58 +732,84 @@ protected:
 		for (vector<FAE*>::iterator i = tmp3.begin(); i != tmp3.end(); ++i) {
 			Data data1 = this->readData(**i, src1, offs1);
 			Data data2 = this->readData(**i, src2, offs2);
-			Data res = Data::createBool((data1 == data2) != neg), dataOut;
+			assert(data1.isInt() && data2.isInt());
+			Data res = Data::createInt((data1.d_int + data2.d_int > 0)?(1):(0)), dataOut;
 			this->writeData(**i, dst, res, dataOut);
 		}
 
-		this->enqueueNextInsn(state, tmp2);
+		h.release();
+
+		this->enqueueNextInsn(state, tmp3);
 		
 	}
 
 	void execMalloc(SymState* state, const FAE& fae, const CodeStorage::Insn* insn) {
 		OperandInfo dst, src;
 		state->ctx->parseOperand(dst, fae, &insn->operands[0]);
-		assert(dst.flag == o_flag_e::reg);
 		state->ctx->parseOperand(src, fae, &insn->operands[2]);
 		assert(src.type->code == cl_type_e::CL_TYPE_INT);
 
-		vector<FAE*> tmp;
-		ContainerGuard<vector<FAE*> > g(tmp);
+		vector<FAE*> tmp, tmp2;
+		ContainerGuard<vector<FAE*> > f(tmp), g(tmp2);
 
-		if (src.flag == o_flag_e::ref) {
-			fae.isolateAtRoot(tmp, src.data.d_ref.root, FAE::IsolateOneF(src.data.d_ref.displ));
-		} else {
-			tmp.push_back(new FAE(fae));
+		this->isolateIfNeeded(tmp, itov((FAE*)&fae), src, itov((size_t)0));
+		this->isolateIfNeeded(tmp2, tmp, dst, itov((size_t)0));
+
+		for (vector<FAE*>::iterator i = tmp2.begin(); i != tmp2.end(); ++i) {
+			Data data = this->readData(**i, src, itov((size_t)0)), out;
+			assert(data.isInt());
+			this->writeData(**i, dst, Data::createVoidPtr(data.d_int), out);
 		}
 
-		for (vector<FAE*>::iterator i = tmp.begin(); i != tmp.end(); ++i) {
-			if (OperandInfo::isRef(src.flag))
-				(*i)->nodeLookup(src.data.d_ref.root, src.data.d_ref.displ, src.data);
-			assert(src.data.isInt());
-			(*i)->varSet(dst.data.d_ref.root, Data::createVoidPtr(src.data.d_int));
-		}
+		g.release();
 
-		this->enqueueNextInsn(state, tmp);
+		this->enqueueNextInsn(state, tmp2);
 	
 	}
 
 	void execFree(SymState* state, const FAE& fae, const CodeStorage::Insn* insn) {
 
+		OperandInfo src;
+		state->ctx->parseOperand(src, fae, &insn->operands[2]);
+
+		vector<FAE*> tmp, tmp2;
+		ContainerGuard<vector<FAE*> > f(tmp), g(tmp2);
+
+		this->isolateIfNeeded(tmp, itov((FAE*)&fae), src, itov((size_t)0));
+
+		for (vector<FAE*>::iterator i = tmp.begin(); i != tmp.end(); ++i) {
+			Data data = this->readData(**i, src, itov((size_t)0));
+			assert(data.isRef() && (data.d_ref.displ == 0));
+			size_t start = tmp2. size();
+			(*i)->isolateAtRoot(tmp2, data.d_ref.root, FAE::IsolateAllF());
+			for (size_t j = start; j < tmp2.size(); ++j)
+				tmp2[j]->nodeDelete(data.d_ref.root);
+		}
+
+		g.release();
+
+		this->enqueueNextInsn(state, tmp2);
+		
+	}
+
+	void execNondet(SymState* state, const FAE& fae, const CodeStorage::Insn* insn) {
 		OperandInfo dst;
-		state->ctx->parseOperand(dst, fae, &insn->operands[2]);
-		assert(dst.flag == o_flag_e::ref);
-		assert(dst.data.d_ref.displ == 0);
+		state->ctx->parseOperand(dst, fae, &insn->operands[0]);
 
 		vector<FAE*> tmp;
-		ContainerGuard<vector<FAE*> > g(tmp);
+		ContainerGuard<vector<FAE*> > f(tmp);
 
-		fae.isolateAtRoot(tmp, dst.data.d_ref.root, FAE::IsolateAllF());
+		this->isolateIfNeeded(tmp, itov((FAE*)&fae), dst, itov((size_t)0));
 
-		for (vector<FAE*>::iterator i = tmp.begin(); i != tmp.end(); ++i)
-			(*i)->nodeDelete(dst.data.d_ref.root);
+		for (vector<FAE*>::iterator i = tmp.begin(); i != tmp.end(); ++i) {
+			Data out;
+			this->writeData(**i, dst, Data::createUnknw(), out);
+		}
+
+		f.release();
 
 		this->enqueueNextInsn(state, tmp);
-		
+	
 	}
 
 	void execJmp(SymState* state, const FAE& fae, const CodeStorage::Insn* insn) {
@@ -750,11 +842,24 @@ protected:
 				tmp3.push_back(*i);
 		}
 
-		tmp.clear();
+		g.release();
 
 		this->stateUnion(this->getState(insn->targets[0]->begin(), state->ctx), tmp2);
 		this->stateUnion(this->getState(insn->targets[1]->begin(), state->ctx), tmp3);
 
+	}
+
+
+	void execRet(SymState* state, const FAE& fae, const CodeStorage::Insn* insn) {
+
+		vector<FAE*> tmp;
+		ContainerGuard<vector<FAE*> > f(tmp);
+
+		state->ctx->destroyStackFrame(tmp, fae);
+
+		for (vector<FAE*>::iterator i = tmp.begin(); i != tmp.end(); ++i)
+			(*i)->check();
+		
 	}
 
 	void execInsn(SymState* state, const FAE& fae, const CodeStorage::Insn* insn) {
@@ -774,10 +879,13 @@ protected:
 			case cl_insn_e::CL_INSN_BINOP:
 				switch (insn->subCode) {
 					case cl_binop_e::CL_BINOP_EQ:
-						this->execCmp(state, fae, insn, false);
+						this->execEq(state, fae, insn, false);
 						break;
 					case cl_binop_e::CL_BINOP_NE:
-						this->execCmp(state, fae, insn, true);
+						this->execEq(state, fae, insn, true);
+						break;
+					case cl_binop_e::CL_BINOP_PLUS:
+						this->execPlus(state, fae, insn);
 						break;
 					default:
 						assert(false);
@@ -794,9 +902,16 @@ protected:
 					case builtin_e::biFree:
 						this->execFree(state, fae, insn);
 						break;
+					case builtin_e::biNondet:
+						this->execNondet(state, fae, insn);
+						break;
 					default:
 						assert(false);
 				}
+				break;
+
+			case cl_insn_e::CL_INSN_RET:
+				this->execRet(state, fae, insn);
 				break;
 
 			case cl_insn_e::CL_INSN_JMP:
@@ -827,9 +942,25 @@ protected:
 
 			assert(*i);
 
-			CL_DEBUG(std::endl << **i << std::endl);
+			const cl_location* loc = &(*state->insn)->loc;
 
-			this->execInsn(state, **i, *state->insn);
+			CL_DEBUG("configuration: " << std::endl << **i << std::endl);
+			if (loc->file)
+				CL_DEBUG(loc->file << ':' << loc->line << ": " << **state->insn);
+			else
+				CL_DEBUG("<unknown location>: " << **state->insn);
+
+			try {
+				
+				this->execInsn(state, **i, *state->insn);
+
+			} catch (...) {
+				if (loc->file)
+					CL_DEBUG(loc->file << ':' << loc->line << ": ");
+				else
+					CL_DEBUG("<unknown location>: ");
+				throw;
+			}
 
 		}
 
@@ -869,6 +1000,10 @@ public:
 		// enter main stack frame
 		mainCtx->createStackFrame(init->outConf, fae);
 
+	    CL_DEBUG("initial state dump ...");
+		for (std::vector<FAE*>::iterator i = init->outConf.begin(); i != init->outConf.end(); ++i)
+			CL_DEBUG(std::endl << **i);
+
 	    CL_DEBUG("sheduling initial state ...");
 		// schedule initial state for processing
 		this->todo.push_back(init);
@@ -878,9 +1013,6 @@ public:
 			while (!todo.empty()) {
 
 				SymState* state = this->todo.back();
-
-				CL_DEBUG("executing location : " << **state->insn);
-
 				this->todo.pop_back();
 				this->processState(state);
 

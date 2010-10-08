@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2010 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -17,20 +17,30 @@
  * along with predator.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef H_GUARD_CLD_UNIVARS_H
-#define H_GUARD_CLD_UNIVARS_H
+#ifndef H_GUARD_CLDEBUG_H
+#define H_GUARD_CLDEBUG_H
 
-/**
- * @file cld_univars.hh
- * constructor createCldUniVars() of the @b "unify_vars" decorator
- */
+#include <iostream>
 
-class ICodeListener;
+struct cl_operand;
 
-/**
- * create code listener decorator for unification of variables
- * @return on heap allocated instance of ICodeListener object
- */
-ICodeListener* createCldUniVars(ICodeListener *);
+namespace CodeStorage {
+    struct Insn;
+}
 
-#endif /* H_GUARD_CLD_UNIVARS_H */
+void operandToStream(std::ostream &str, const struct cl_operand &op);
+void insnToStream(std::ostream &str, const CodeStorage::Insn &insn);
+
+inline std::ostream& operator<<(std::ostream &str, const struct cl_operand &op)
+{
+    operandToStream(str, op);
+    return str;
+}
+
+inline std::ostream& operator<<(std::ostream &str, const CodeStorage::Insn &in)
+{
+    insnToStream(str, in);
+    return str;
+}
+
+#endif /* H_GUARD_CLDEBUG_H */

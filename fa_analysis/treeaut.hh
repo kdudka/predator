@@ -332,6 +332,8 @@ public:
 				index.add(*j);
 			index.add((*i)->first._rhs);
 		}
+		for (set<size_t>::const_iterator i = this->finalStates.begin(); i != this->finalStates.end(); ++i)
+			index.add(*i);
 	}
 
 	void buildSortedStateIndex(Index<size_t>& index) const {
@@ -341,6 +343,7 @@ public:
 				s.insert(*j);
 			s.insert((*i)->first._rhs);
 		}
+		s.insert(this->finalStates.begin(), this->finalStates.end());
 		for (std::set<size_t>::iterator i = s.begin(); i != s.end(); ++i)
 			index.add(*i);
 	}

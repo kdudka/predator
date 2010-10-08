@@ -86,6 +86,11 @@ struct Var {
     std::string                 name;
 
     /**
+     * initializer (optional)
+     */
+    const struct cl_initializer *initial;
+
+    /**
      * dummy constructor
      * @note known to be useful for internal purposes only
      */

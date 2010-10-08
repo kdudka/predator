@@ -1,6 +1,4 @@
 critical
-* prevent merging of roots in active stack record
-* (prevent abstraction of leaves?)
 
 medium
 * cache data outside Box

@@ -58,6 +58,8 @@
 // our alternative to GGC_CNEW, used prior to gcc 4.6.x
 #define CL_ZNEW(type) xcalloc(1, sizeof(type))
 
+#define CL_ZNEW_ARRAY(type, cnt) xcalloc(cnt, sizeof(type))
+
 // our alternative to GGC_RESIZEVEC, used prior to gcc 4.6.x
 #define CL_RESIZEVEC(type, ptr, cnt) xrealloc((ptr), sizeof(type) * (cnt))
 
@@ -199,9 +201,11 @@ static void free_plugin_name(void)
 }
 
 typedef htab_t type_db_t;
+typedef htab_t var_db_t;
 
 static struct cl_code_listener *cl = NULL;
 static type_db_t type_db = NULL;
+static var_db_t var_db = NULL;
 
 static hashval_t type_db_hash (const void *p)
 {
@@ -209,11 +213,24 @@ static hashval_t type_db_hash (const void *p)
     return type->uid;
 }
 
+static hashval_t var_db_hash (const void *p)
+{
+    const struct cl_var *var = (const struct cl_var *) p;
+    return var->uid;
+}
+
 static int type_db_eq (const void *p1, const void *p2)
 {
     const struct cl_type *type1 = (const struct cl_type *) p1;
     const struct cl_type *type2 = (const struct cl_type *) p2;
     return type1->uid == type2->uid;
+}
+
+static int var_db_eq (const void *p1, const void *p2)
+{
+    const struct cl_var *var1 = (const struct cl_var *) p1;
+    const struct cl_var *var2 = (const struct cl_var *) p2;
+    return var1->uid == var2->uid;
 }
 
 static void type_db_free (void *p)
@@ -225,10 +242,56 @@ static void type_db_free (void *p)
     free(p);
 }
 
+static void free_initial_tree(const struct cl_initializer *initial)
+{
+    if (!initial)
+        // nothing to free here
+        return;
+
+    const struct cl_type *clt = initial->type;
+    const enum cl_type_e code = clt->code;
+    switch (code) {
+        case CL_TYPE_STRUCT:
+        case CL_TYPE_UNION:
+        case CL_TYPE_ARRAY:
+            break;
+
+        default:
+            // free value of a scalar initializer
+            free(initial->data.value);
+            return;
+    }
+
+    // destroy nested initalizers
+    struct cl_initializer **nested_initials = initial->data.nested_initials;
+
+    int i;
+    for (i = 0; i < clt->item_cnt; ++i)
+        // recursion
+        free_initial_tree(nested_initials[i]);
+
+    // free the array itself
+    free(nested_initials);
+}
+
+static void var_db_free (void *p)
+{
+    const struct cl_var *var = (const struct cl_var *) p;
+    free_initial_tree(var->initial);
+    free(p);
+}
+
 static type_db_t type_db_create(void)
 {
     return htab_create_alloc(/* FIXME: hardcoded for now */ 0x100,
                              type_db_hash, type_db_eq, type_db_free,
+                             xcalloc, free);
+}
+
+static var_db_t var_db_create(void)
+{
+    return htab_create_alloc(/* FIXME: hardcoded for now */ 0x100,
+                             var_db_hash, var_db_eq, var_db_free,
                              xcalloc, free);
 }
 
@@ -237,7 +300,12 @@ static void type_db_destroy(type_db_t db)
     htab_delete(db);
 }
 
-static struct cl_type* type_db_lookup(type_db_t db, cl_type_uid_t uid)
+static void var_db_destroy(var_db_t db)
+{
+    htab_delete(db);
+}
+
+static struct cl_type* type_db_lookup(type_db_t db, int uid)
 {
     struct cl_type type;
     type.uid = uid;
@@ -245,11 +313,26 @@ static struct cl_type* type_db_lookup(type_db_t db, cl_type_uid_t uid)
     return htab_find(db, &type);
 }
 
+static struct cl_var* var_db_lookup(var_db_t db, int uid)
+{
+    struct cl_var var;
+    var.uid = uid;
+
+    return htab_find(db, &var);
+}
+
 static void type_db_insert(type_db_t db, struct cl_type *type)
 {
     void **slot = htab_find_slot(db, type, INSERT);
     CL_ASSERT(slot);
     *slot = type;
+}
+
+static void var_db_insert(var_db_t db, struct cl_var *var)
+{
+    void **slot = htab_find_slot(db, var, INSERT);
+    CL_ASSERT(slot);
+    *slot = var;
 }
 
 static void read_gcc_location(struct cl_location *loc, location_t gcc_loc)
@@ -466,7 +549,7 @@ static void read_specific_type(struct cl_type *clt, tree type)
 static struct cl_type* add_bare_type_if_needed(tree type)
 {
     // hashtab lookup
-    cl_type_uid_t uid = TYPE_UID(type);
+    const int uid = TYPE_UID(type);
     struct cl_type *clt = type_db_lookup(type_db, uid);
     if (clt)
         // type already hashed
@@ -498,6 +581,8 @@ static enum cl_scope_e get_decl_scope(tree t)
                 return CL_SCOPE_FUNCTION;
 
             case TRANSLATION_UNIT_DECL:
+                break;
+
             default:
                 TRAP;
         }
@@ -508,48 +593,108 @@ static enum cl_scope_e get_decl_scope(tree t)
         : CL_SCOPE_STATIC;
 }
 
-static void read_operand_decl(struct cl_operand *op, tree t)
+static const char* get_decl_name(tree t)
 {
-    enum tree_code code = TREE_CODE(t);
-    read_gcc_location(&op->loc, DECL_SOURCE_LOCATION(t));
+    tree name = DECL_NAME(t);
+    return (name)
+        ? IDENTIFIER_POINTER(name)
+        : NULL;
+}
 
-    if (DECL_ARTIFICIAL(t)) {
-        // emit as a register
-        op->code            = CL_OPERAND_VAR;
-        op->data.var.name   = NULL;
-        op->data.var.id     = DECL_UID(t);
-        op->scope           = /* make it possible to use unify_vars decorator */
-                              CL_SCOPE_FUNCTION;
+static int field_lookup(tree op, tree field)
+{
+    tree type = TREE_TYPE(op);
+    if (NULL_TREE == type)
+        // decl omitted?
+        TRAP;
+
+    tree t = TYPE_FIELDS(type);
+    int i;
+    for (i = 0; t; t = TREE_CHAIN(t), ++i)
+        if (t == field)
+            return i;
+
+    // not found
+    TRAP;
+    return -1;
+}
+
+static void handle_operand(struct cl_operand *op, tree t);
+
+static void read_initial(struct cl_initializer **pinit, tree ctor)
+{
+    if (NULL_TREE == ctor) {
+        // no constructor in here
+        *pinit = NULL;
         return;
     }
 
-    if (!DECL_NAME(t))
-        // FIXME: anonymous operand ... something went wrong
+    // dig target type
+    struct cl_type *clt = add_type_if_needed(ctor);
+    if (CL_TYPE_ARRAY == clt->code) {
+        CL_WARN_UNHANDLED_EXPR(ctor, "array initializer");
         return;
-
-    // read operand's name and scope
-    const char *name = IDENTIFIER_POINTER(DECL_NAME(t));
-    op->scope = get_decl_scope(t);
-
-    switch (code) {
-        case FUNCTION_DECL:
-            op->code                            = CL_OPERAND_CST;
-            op->data.cst.code                   = CL_TYPE_FNC;
-            op->data.cst.data.cst_fnc.name      = name;
-            op->data.cst.data.cst_fnc.is_extern = DECL_EXTERNAL(t);
-            op->data.cst.data.cst_fnc.uid       = DECL_UID(t);
-            break;
-
-        case PARM_DECL:
-        case VAR_DECL:
-            op->code                            = CL_OPERAND_VAR;
-            op->data.var.id                     = DECL_UID(t);
-            op->data.var.name                   = name;
-            break;
-
-        default:
-            TRAP;
     }
+
+    // allocate an initializer node
+    struct cl_initializer *initial = CL_ZNEW(struct cl_initializer);
+    initial->type = clt;
+    *pinit = initial;
+
+    const enum tree_code code = TREE_CODE(ctor);
+    if (CONSTRUCTOR != code) {
+        // allocate a scalar initializer
+        initial->data.value = CL_ZNEW(struct cl_operand);
+
+        if (NOP_EXPR == code)
+            // skip NOP_EXPR
+            // TODO: consider also CONVERT_EXPR, VAR_DECL and FIX_TRUNC_EXPR
+            ctor = TREE_OPERAND(ctor, 0);
+
+        handle_operand(initial->data.value, ctor);
+        return;
+    }
+
+    // allocate array of nested initializers
+    const int cnt = clt->item_cnt;
+    SE_BREAK_IF(cnt <= 0);
+    struct cl_initializer **vec = CL_ZNEW_ARRAY(struct cl_initializer *, cnt);
+    initial->data.nested_initials = vec;
+
+    unsigned idx;
+    tree field, val;
+    FOR_EACH_CONSTRUCTOR_ELT(CONSTRUCTOR_ELTS(ctor), idx, field, val) {
+        SE_BREAK_IF(cnt <= (int)idx);
+
+        // field lookup
+        const int nth = field_lookup(ctor, field);
+        SE_BREAK_IF(clt->items[nth].type != add_type_if_needed(field));
+
+        // FIXME: unguarded recursion
+        read_initial(vec + nth, val);
+    }
+}
+
+static struct cl_var* add_var_if_needed(tree t)
+{
+    // hash table lookup
+    const int uid = DECL_UID(t);
+    struct cl_var *var = var_db_lookup(var_db, uid);
+    if (var)
+        // var already hashed
+        return var;
+
+    // insert a new var into hash table
+    var = CL_ZNEW(struct cl_var);
+    var->uid = uid;
+    var_db_insert(var_db, var);
+
+    // read name and initializer
+    var->name = get_decl_name(t);
+    if (VAR_DECL == TREE_CODE(t))
+        read_initial(&var->initial, DECL_INITIAL(t));
+
+    return var;
 }
 
 static void read_raw_operand(struct cl_operand *op, tree t)
@@ -560,9 +705,21 @@ static void read_raw_operand(struct cl_operand *op, tree t)
     switch (code) {
         case VAR_DECL:
         case PARM_DECL:
-        case FUNCTION_DECL:
         case RESULT_DECL:
-            read_operand_decl(op, t);
+            read_gcc_location(&op->loc, DECL_SOURCE_LOCATION(t));
+            op->code                            = CL_OPERAND_VAR;
+            op->scope                           = get_decl_scope(t);
+            op->data.var                        = add_var_if_needed(t);
+            break;
+
+        case FUNCTION_DECL:
+            read_gcc_location(&op->loc, DECL_SOURCE_LOCATION(t));
+            op->code                            = CL_OPERAND_CST;
+            op->scope                           = get_decl_scope(t);
+            op->data.cst.code                   = CL_TYPE_FNC;
+            op->data.cst.data.cst_fnc.name      = get_decl_name(t);
+            op->data.cst.data.cst_fnc.is_extern = DECL_EXTERNAL(t);
+            op->data.cst.data.cst_fnc.uid       = DECL_UID(t);
             break;
 
         case INTEGER_CST:
@@ -598,7 +755,6 @@ static void read_raw_operand(struct cl_operand *op, tree t)
     }
 }
 
-// FIXME: check direction
 static void chain_accessor(struct cl_accessor **ac, enum cl_type_e code)
 {
     // create and initialize new item
@@ -609,24 +765,6 @@ static void chain_accessor(struct cl_accessor **ac, enum cl_type_e code)
     // append new item to chain
     ac_new->next = *ac;
     *ac = ac_new;
-}
-
-static int accessor_item_lookup(tree op, tree field)
-{
-    tree type = TREE_TYPE(op);
-    if (NULL_TREE == type)
-        // decl omitted?
-        TRAP;
-
-    tree t = TYPE_FIELDS(type);
-    int i;
-    for (i = 0; t; t = TREE_CHAIN(t), ++i)
-        if (t == field)
-            return i;
-
-    // not found
-    TRAP;
-    return -1;
 }
 
 static struct cl_type* operand_type_lookup(tree t)
@@ -640,8 +778,6 @@ static struct cl_type* operand_type_lookup(tree t)
 
     return add_type_if_needed(op0);
 }
-
-static void handle_operand(struct cl_operand *op, tree t);
 
 static void handle_accessor_addr_expr(struct cl_accessor **ac, tree t)
 {
@@ -667,7 +803,7 @@ static void handle_accessor_array_ref(struct cl_accessor **ac, tree t)
     struct cl_operand *index = CL_ZNEW(struct cl_operand);
     CL_ASSERT(index);
 
-    // FIXME: unguarded recursion
+    // possible recursion
     handle_operand(index, op1);
     (*ac)->data.array.index = index;
 }
@@ -685,7 +821,7 @@ static void handle_accessor_component_ref(struct cl_accessor **ac, tree t)
 
     chain_accessor(ac, CL_ACCESSOR_ITEM);
     (*ac)->type         = operand_type_lookup(t);
-    (*ac)->data.item.id = accessor_item_lookup(op, field);
+    (*ac)->data.item.id = field_lookup(op, field);
 }
 
 static bool handle_accessor(struct cl_accessor **ac, tree *pt)
@@ -746,12 +882,8 @@ static void free_cl_operand_data(struct cl_operand *op)
 
 static void handle_operand(struct cl_operand *op, tree t)
 {
-    op->code            = CL_OPERAND_VOID;
-    op->loc.file        = NULL;
-    op->loc.line        = -1;
-    op->scope           = CL_SCOPE_GLOBAL;
-    op->type            = NULL;
-    op->accessor        = NULL;
+    memset(op, 0, sizeof *op);
+    op->loc.line = -1;
 
     if (!t)
         return;
@@ -760,7 +892,6 @@ static void handle_operand(struct cl_operand *op, tree t)
     op->type = add_type_if_needed(t);
 
     // read accessor
-    op->accessor = NULL;
     while (handle_accessor(&op->accessor, &t));
 
     if (NULL_TREE == t)
@@ -769,7 +900,7 @@ static void handle_operand(struct cl_operand *op, tree t)
 }
 
 static void handle_stmt_unop(gimple stmt, enum tree_code code,
-                              struct cl_operand *dst, tree src_tree)
+                             struct cl_operand *dst, tree src_tree)
 {
     struct cl_operand src;
     handle_operand(&src, src_tree);
@@ -980,36 +1111,38 @@ static /* const */ struct cl_type builtin_bool_type = {
     .size           = /* FIXME */ sizeof(bool)
 };
 
-static /* XXX const */ struct cl_operand stmt_cond_fixed_reg = {
-    .code           = CL_OPERAND_VAR,
-    .loc = {
-        .file       = NULL,
-        .line       = -1
-    },
-    .scope          = CL_SCOPE_FUNCTION,
-    .type           = &builtin_bool_type,
-    .data = {
-        .var = {
-            .name   = NULL,
-            .id     = /* XXX */ 0x100000
-        }
-    }
-};
-
 static void handle_stmt_cond_br(gimple stmt, const char *then_label,
                                 const char *else_label)
 {
+    static int last_reg_uid = /* XXX */ 0x100000;
+
+    struct cl_var *var = CL_ZNEW(struct cl_var);
+    var->uid = ++last_reg_uid;
+    var_db_insert(var_db, var);
+
+    struct cl_operand dst;
+    memset(&dst, 0, sizeof dst);
+    read_gimple_location(&dst.loc, stmt);
+
+    dst.code            = CL_OPERAND_VAR;
+    dst.scope           = CL_SCOPE_FUNCTION;
+    dst.type            = &builtin_bool_type;
+    dst.data.var        = var;
+
+    handle_stmt_binop(stmt,
+            gimple_cond_code(stmt),
+            &dst,
+            gimple_cond_lhs(stmt),
+            gimple_cond_rhs(stmt));
+
     struct cl_insn cli;
     cli.code                        = CL_INSN_COND;
-    cli.data.insn_cond.src          = &stmt_cond_fixed_reg;
+    cli.data.insn_cond.src          = &dst;
     cli.data.insn_cond.then_label   = then_label;
     cli.data.insn_cond.else_label   = else_label;
 
     read_gimple_location(&cli.loc, stmt);
     cl->insn(cl, &cli);
-
-    // XXX
-    stmt_cond_fixed_reg.data.var.id ++;
 }
 
 static void handle_stmt_cond(gimple stmt)
@@ -1035,12 +1168,6 @@ static void handle_stmt_cond(gimple stmt)
 
     if (!label_true || !label_false)
         TRAP;
-
-    handle_stmt_binop(stmt,
-            gimple_cond_code(stmt),
-            &stmt_cond_fixed_reg,
-            gimple_cond_lhs(stmt),
-            gimple_cond_rhs(stmt));
 
     handle_stmt_cond_br(stmt, label_true, label_false);
     free(label_true);
@@ -1364,6 +1491,7 @@ static void cb_finish (void *gcc_data, void *user_data)
 
     cl->destroy(cl);
     cl_global_cleanup();
+    var_db_destroy(var_db);
     type_db_destroy(type_db);
     free_plugin_name();
 }
@@ -1529,7 +1657,7 @@ static bool cl_append_def_listener(struct cl_code_listener *chain,
 {
     const char *cld = (opt->use_peer)
         ? "unfold_switch,unify_labels_gl"
-        : "unify_labels_fnc,unify_vars";
+        : "unify_labels_fnc";
 
     return cl_append_listener(chain,
             "listener=\"%s\" listener_args=\"%s\" cld=\"%s\"",
@@ -1615,9 +1743,10 @@ int plugin_init (struct plugin_name_args *plugin_info,
     cl = create_cl_chain(&opt);
     CL_ASSERT(cl);
 
-    // initialize type database
+    // initialize type database and var database
     type_db = type_db_create();
-    CL_ASSERT(type_db);
+    var_db = var_db_create();
+    CL_ASSERT(type_db && var_db);
 
     // try to register callbacks (and virtual callbacks)
     cl_regcb (plugin_info->base_name);
