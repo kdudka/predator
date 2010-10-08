@@ -259,6 +259,18 @@ const Var& VarDb::operator[](int uid) const {
 struct TypeDb::Private {
     typedef std::map<int, const struct cl_type *> TMap;
     TMap db;
+
+    int codePtrSizeof;
+    int dataPtrSizeof;
+
+    Private():
+        codePtrSizeof(-1),
+        dataPtrSizeof(-1)
+    {
+    }
+
+    void updatePtrSizeof(int size, int *pField);
+    void digPtrSizeof(const struct cl_type *);
 };
 
 TypeDb::TypeDb():
@@ -268,6 +280,25 @@ TypeDb::TypeDb():
 
 TypeDb::~TypeDb() {
     delete d;
+}
+
+void TypeDb::Private::updatePtrSizeof(int size, int *pField) {
+    SE_BREAK_IF(size <= 0);
+    if (-1 != *pField)
+        return;
+
+    *pField = size;
+}
+
+void TypeDb::Private::digPtrSizeof(const struct cl_type *clt) {
+    if (CL_TYPE_PTR != clt->code)
+        return;
+
+    SE_BREAK_IF(1 != clt->item_cnt);
+    const struct cl_type *next = clt->items[0].type;
+    this->updatePtrSizeof(clt->size, (CL_TYPE_FNC == next->code)
+            ? &this->codePtrSizeof
+            : &this->dataPtrSizeof);
 }
 
 bool TypeDb::insert(const struct cl_type *clt) {
@@ -285,7 +316,16 @@ bool TypeDb::insert(const struct cl_type *clt) {
 
     // insert type into db
     db[uid] = clt;
+    d->digPtrSizeof(clt);
     return true;
+}
+
+int TypeDb::codePtrSizeof() const {
+    return d->codePtrSizeof;
+}
+
+int TypeDb::dataPtrSizeof() const {
+    return d->dataPtrSizeof;
 }
 
 void readTypeTree(TypeDb &db, const struct cl_type *clt) {
