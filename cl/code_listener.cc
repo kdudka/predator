@@ -265,15 +265,15 @@ static void cl_wrap_insn_switch_close(
     CL_WRAP(insn_switch_close);
 }
 
+static void cl_wrap_acknowledge(
+            struct cl_code_listener *self)
+{
+    CL_WRAP(acknowledge);
+}
+
 static void cl_wrap_destroy(struct cl_code_listener *self)
 {
     ICodeListener *cl = static_cast<ICodeListener *>(self->data);
-    try {
-        cl->finalize();
-    }
-    catch (...) {
-        CL_DIE("uncaught exception in ICodeListener::finalize()");
-    }
     delete cl;
     delete self;
 }
@@ -297,6 +297,7 @@ struct cl_code_listener* cl_create_listener_wrap(ICodeListener *listener)
     wrap->insn_switch_open  = cl_wrap_insn_switch_open;
     wrap->insn_switch_case  = cl_wrap_insn_switch_case;
     wrap->insn_switch_close = cl_wrap_insn_switch_close;
+    wrap->acknowledge       = cl_wrap_acknowledge;
     wrap->destroy           = cl_wrap_destroy;
 
     return wrap;

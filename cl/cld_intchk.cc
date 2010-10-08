@@ -170,10 +170,10 @@ class CldCbSeqChk: public ClDecoratorBase {
             ClDecoratorBase::insn_switch_close();
         }
 
-        virtual void finalize()
+        virtual void acknowledge()
         {
-            this->setState(S_DONE);
-            ClDecoratorBase::finalize();
+            this->setState(S_ACKNOWLEDGE);
+            ClDecoratorBase::acknowledge();
         }
 
     private:
@@ -185,7 +185,7 @@ class CldCbSeqChk: public ClDecoratorBase {
             S_BLOCK_LEVEL,
             S_INSN_CALL,
             S_INSN_SWITCH,
-            S_DONE,
+            S_ACKNOWLEDGE,
             S_DESTROYED
         };
 
@@ -387,7 +387,7 @@ const char* CldCbSeqChk::toString(EState state) {
         CASE_TO_STRING(S_BLOCK_LEVEL)
         CASE_TO_STRING(S_INSN_CALL)
         CASE_TO_STRING(S_INSN_SWITCH)
-        CASE_TO_STRING(S_DONE)
+        CASE_TO_STRING(S_ACKNOWLEDGE)
         CASE_TO_STRING(S_DESTROYED)
         default:
             CL_DIE("CldCbSeqChk::toString");
@@ -409,7 +409,7 @@ void CldCbSeqChk::setState(EState newState) {
         case S_INIT:
             switch (newState) {
                 case S_FILE_LEVEL:
-                case S_DONE:
+                case S_ACKNOWLEDGE:
                     break;
                 default:
                     this->emitUnexpected(newState);
@@ -455,7 +455,7 @@ void CldCbSeqChk::setState(EState newState) {
             this->emitUnexpected(newState);
             break;
 
-        case S_DONE:
+        case S_ACKNOWLEDGE:
             if (S_DESTROYED != newState)
                 this->emitUnexpected(newState);
             break;

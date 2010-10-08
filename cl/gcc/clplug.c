@@ -1506,10 +1506,10 @@ static void cb_finish (void *gcc_data, void *user_data)
         fprintf(stderr, "%s: warning: some errors already detected, "
                         "additional passes will be skipped\n", plugin_name);
     else
-        // FIXME: this is simply wrong!
-        //        We need to split this into two separate callbacks...
-        cl->destroy(cl);
+        // this should trigger the code listener peer (if any)
+        cl->acknowledge(cl);
 
+    cl->destroy(cl);
     cl_global_cleanup();
     var_db_destroy(var_db);
     type_db_destroy(type_db);

@@ -318,7 +318,7 @@ ClStorageBuilder::~ClStorageBuilder() {
     delete d;
 }
 
-void ClStorageBuilder::finalize() {
+void ClStorageBuilder::acknowledge() {
     this->run(d->stor);
 }
 

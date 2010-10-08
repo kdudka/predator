@@ -656,7 +656,7 @@ struct cl_insn {
  * @verbatim
  * It accepts a context-free language defined by substitution to regex:
  *
- *     (file_open FILE_CONTENT file_close)* destroy
+ *     (file_open FILE_CONTENT file_close)* acknowledge destroy
  *
  *
  * FILE_CONTENT is defined by substitution to regex:
@@ -824,6 +824,13 @@ struct cl_code_listener {
      * @param self Pointer to cl_code_listener object.
      */
     void (*insn_switch_close)(
+            struct cl_code_listener     *self);
+
+    /**
+     * acknowledge that all regular callbacks have been sent and are supposed
+     * to be valid.
+     */
+    void (*acknowledge)(
             struct cl_code_listener     *self);
 
     /**

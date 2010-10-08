@@ -125,8 +125,8 @@ class ClDecoratorBase: public ICodeListener {
             slave_->insn_switch_close();
         }
 
-        virtual void finalize() {
-            slave_->finalize();
+        virtual void acknowledge() {
+            slave_->acknowledge();
         }
 
     protected:

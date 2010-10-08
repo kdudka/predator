@@ -81,7 +81,7 @@ class ClDotGenerator: public ICodeListener {
 
         virtual void insn_switch_close();
 
-        virtual void finalize();
+        virtual void acknowledge();
 
     private:
         bool                    hasGlDotFile_;
@@ -248,12 +248,12 @@ ClDotGenerator::ClDotGenerator(const char *glDotFile):
 }
 
 ClDotGenerator::~ClDotGenerator() {
-    // do cleanup in finalize()
-}
-
-void ClDotGenerator::finalize() {
     if (hasGlDotFile_)
         this->closeDot(glOut_);
+}
+
+void ClDotGenerator::acknowledge() {
+    // we haven't been waiting for acknowledge anyway, sorry...
 }
 
 void ClDotGenerator::gobbleEdge(std::string dst, EdgeType type) {

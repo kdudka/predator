@@ -106,10 +106,8 @@ class ICodeListener {
         virtual void insn_switch_close()
             = 0;
 
-        /**
-         * this method is called before the listener object is destroyed
-         */
-        virtual void finalize()
+        /// See cl_code_listener::acknowledge
+        virtual void acknowledge()
             = 0;
 };
 

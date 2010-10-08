@@ -91,7 +91,7 @@ class ClStorageBuilder: public ICodeListener {
 
         virtual void insn_switch_close();
 
-        virtual void finalize();
+        virtual void acknowledge();
 
     private:
         struct Private;

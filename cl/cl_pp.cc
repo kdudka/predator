@@ -80,7 +80,7 @@ class ClPrettyPrint: public ICodeListener {
 
         virtual void insn_switch_close();
 
-        virtual void finalize() { }
+        virtual void acknowledge() { }
 
     private:
         const char              *fname_;
