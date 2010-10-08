@@ -338,6 +338,11 @@ static void var_db_insert(var_db_t db, struct cl_var *var)
     *slot = var;
 }
 
+static bool error_detected(void)
+{
+    return global_dc && global_dc->diagnostic_count[DK_ERROR];
+}
+
 static void read_gcc_location(struct cl_location *loc, location_t gcc_loc)
 {
     expanded_location exp_loc = expand_location(gcc_loc);
@@ -1452,6 +1457,10 @@ static void handle_fnc_decl (tree decl)
 // callback of tree pass declared in <tree-pass.h>
 static unsigned int cl_pass_execute (void)
 {
+    if (error_detected())
+        // we're already on the error path
+        return 0;
+
     if (!current_function_decl) {
         CL_WARN_UNHANDLED ("NULL == current_function_decl");
         return 0;
@@ -1493,7 +1502,14 @@ static void cb_finish (void *gcc_data, void *user_data)
     (void) gcc_data;
     (void) user_data;
 
-    cl->destroy(cl);
+    if (error_detected())
+        fprintf(stderr, "%s: warning: some errors already detected, "
+                        "additional passes will be skipped\n", plugin_name);
+    else
+        // FIXME: this is simply wrong!
+        //        We need to split this into two separate callbacks...
+        cl->destroy(cl);
+
     cl_global_cleanup();
     var_db_destroy(var_db);
     type_db_destroy(type_db);

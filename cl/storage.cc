@@ -284,9 +284,7 @@ TypeDb::~TypeDb() {
 
 void TypeDb::Private::updatePtrSizeof(int size, int *pField) {
     SE_BREAK_IF(size <= 0);
-    if (-1 != *pField)
-        return;
-
+    SE_BREAK_IF(-1 != *pField && *pField != size);
     *pField = size;
 }
 
