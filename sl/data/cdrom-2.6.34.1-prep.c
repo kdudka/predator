@@ -389,6 +389,22 @@ struct ustat {
  char f_fname[6];
  char f_fpack[6];
 };
+
+//# XXX "added manually to silence gcc warnings" XXX
+/* Allocate SIZE bytes of memory.  */
+extern void *malloc (size_t __size)
+    __attribute__ ((__nothrow__))
+    __attribute__ ((__malloc__));
+
+/* Free a block allocated by `malloc', `realloc' or `calloc'.  */
+extern void free (void *__ptr)
+    __attribute__ ((__nothrow__));
+
+/* Abort execution and generate a core-dump.  */
+extern void abort (void)
+    __attribute__ ((__nothrow__))
+    __attribute__ ((__noreturn__));
+
 //# 14 "include/linux/prefetch.h" 2
 //# 1 "/home/peringer/local/linux-2.6.32/arch/x86/include/asm/processor.h" 1
 
@@ -17047,7 +17063,7 @@ static inline __attribute__((always_inline)) int pte_global(pte_t pte)
 
 static inline __attribute__((always_inline)) int pte_exec(pte_t pte)
 {
- return !(pte_flags(pte) & (((pteval_t)(1)) << 63));
+ return !(pte_flags(pte) & (((pteval_t)(1)) << /* XXX: 63 was out of range on 32bit */ 31));
 }
 
 static inline __attribute__((always_inline)) int pte_special(pte_t pte)
@@ -17104,7 +17120,7 @@ static inline __attribute__((always_inline)) pte_t pte_wrprotect(pte_t pte)
 
 static inline __attribute__((always_inline)) pte_t pte_mkexec(pte_t pte)
 {
- return pte_clear_flags(pte, (((pteval_t)(1)) << 63));
+ return pte_clear_flags(pte, (((pteval_t)(1)) << /* XXX: 63 was out of range on 32bit */ 31));
 }
 
 static inline __attribute__((always_inline)) pte_t pte_mkdirty(pte_t pte)
@@ -33252,17 +33268,24 @@ void *memcpy(void *to, const void *from, size_t len) { void *a; return a; }
 // void *malloc(size_t len) { void *a; return a; }
 // void free(void *p) { }
 
+#define NEW(type) (type *) ({           \
+    void *ptr = malloc(sizeof(type));   \
+    if (!ptr)                           \
+        abort();                        \
+    (type *) ptr;                       \
+});
+
 // TODO: add deteils
 struct cdrom_device_info *HsCreateCdromDeviceInfo(void)
 {
  struct cdrom_device_info *cdi;
 
- cdi = (struct cdrom_device_info *)malloc(sizeof(struct cdrom_device_info));
- cdi->ops = (struct cdrom_device_ops *)malloc(sizeof(struct cdrom_device_ops));
- cdi->disk = (struct gendisk *)malloc(sizeof(struct gendisk));
- cdi->disk->queue = (struct request_queue *)malloc(sizeof(struct request_queue));
- cdi->disk->queue->boundary_rq = (struct request *)malloc(sizeof(struct request));
- cdi->disk->queue->boundary_rq->sense = (struct request_sense *)malloc(sizeof(struct request_sense));
+ cdi = NEW(struct cdrom_device_info);
+ cdi->ops = NEW(struct cdrom_device_ops);
+ cdi->disk = NEW(struct gendisk);
+ cdi->disk->queue = NEW(struct request_queue);
+ cdi->disk->queue->boundary_rq = NEW(struct request);
+ cdi->disk->queue->boundary_rq->sense = NEW(struct request_sense);
 
  cdi->ops->generic_packet = 0;
 
@@ -33325,7 +33348,7 @@ int main_sub(void)
             med = get_nondet_ptr();
             tmp = cdrom_get_media_event(cdi, med);
         } else if ((&nondet > 0)) {
-            bdev = (struct block_device *) malloc(sizeof(struct block_device));
+            bdev = NEW(struct block_device);
             cdrom_open(cdi, bdev, (fmode_t)0);
             free(bdev);
         } else if ((&nondet > 0)) {
@@ -33337,7 +33360,7 @@ int main_sub(void)
             arg = get_nondet_int();
             tmp = mmc_ioctl(cdi, cmd, arg);
         } else if ((&nondet > 0)) {
-            bdev = (struct block_device *) malloc(sizeof(struct block_device));
+            bdev = NEW(struct block_device);
             cmd = get_nondet_int();
             arg = get_nondet_int();
             tmp = cdrom_ioctl(cdi, bdev, (fmode_t)0, cmd, arg);
