@@ -72,7 +72,7 @@ void digPointingObjects(TWL &wl, const SymHeap &sh, TValueId val) {
 
 #if GC_ADMIT_LINUX_LISTS
     const TObjId root = objRoot(sh, sh.pointsTo(val));
-    if (0 < root && objIsStruct(sh, root)) {
+    if (0 < root && isComposite(sh.objType(root))) {
         const WLWrap<TWL> visitor(wl);
         traverseSubObjs(sh, root, visitor, /* leavesOnly */ false);
     }

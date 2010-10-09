@@ -156,13 +156,6 @@ void SymProc::heapObjHandleAccessorItem(TObjId *pObj,
         // nothing to do at this level, keep going...
         return;
 
-    const struct cl_type *clt = heap_.objType(*pObj);
-    if (clt && clt->code == CL_TYPE_UNION) {
-        // we don't have any sufficient handling of unions for now
-        *pObj = OBJ_UNKNOWN;
-        return;
-    }
-
     // access subObj
     const int id = ac->data.item.id;
     *pObj = heap_.subObj(*pObj, id);
@@ -522,6 +515,33 @@ class ValueWriter {
         }
 };
 
+class UnionInvalidator {
+    private:
+        SymProc             &proc_;
+        const TObjId        preserverSubtree_;
+
+    public:
+        UnionInvalidator(SymProc *proc, TObjId preserverSubtree):
+            proc_(*proc),
+            preserverSubtree_(preserverSubtree)
+        {
+        }
+
+        bool operator()(SymHeap &sh, TObjId sub) {
+            // first ensure we don't overwrite something we don't want to
+            TObjId obj = sub;
+            do {
+                if (preserverSubtree_ == obj)
+                    return /* continue */ true;
+            }
+            while (OBJ_INVALID != (obj = sh.objParent(obj)));
+
+            const TValueId val = sh.valCreateUnknown(UV_UNKNOWN, /* clt */ 0);
+            proc_.heapSetSingleVal(sub, val);
+            return /* continue */ true;
+        }
+};
+
 class ValueMirror {
     private:
         SymProc &proc_;
@@ -539,6 +559,24 @@ class ValueMirror {
 };
 
 void SymProc::objSetValue(TObjId lhs, TValueId rhs) {
+    // first seek the outer most surrounding union on the way to root (if any)
+    TObjId parent, obj = lhs;
+    TObjId up = OBJ_INVALID, preserveSubtree;
+    for (; OBJ_INVALID != (parent = heap_.objParent(obj)); obj = parent) {
+        const struct cl_type *clt = heap_.objType(parent);
+        if (!clt || clt->code != CL_TYPE_UNION)
+            continue;
+
+        up = parent;
+        preserveSubtree = obj;
+    }
+
+    if (OBJ_INVALID != up) {
+        // invalidate all siblings within the outer most surrounding union
+        UnionInvalidator writer(this, preserveSubtree);
+        traverseSubObjs(heap_, up, writer, /* leavesOnly */ true);
+    }
+
     // FIXME: handle some other special values also this way?
     if (VAL_DEREF_FAILED == rhs) {
         // we're already on an error path

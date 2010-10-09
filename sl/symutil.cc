@@ -117,16 +117,13 @@ void getPtrValues(SymHeapCore::TContValue &dst, const SymHeap &heap,
             }
 
             case CL_TYPE_STRUCT:
+            case CL_TYPE_UNION:
                 for (int i = 0; i < clt->item_cnt; ++i) {
                     const TObjId subObj = heap.subObj(obj, i);
                     SE_BREAK_IF(subObj < 0);
 
                     todo.push(subObj);
                 }
-                break;
-
-            case CL_TYPE_UNION:
-                CL_WARN("CL_TYPE_UNION is not supported by getPtrValues() yet");
                 break;
 
             case CL_TYPE_ENUM:

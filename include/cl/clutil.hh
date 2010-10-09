@@ -34,6 +34,20 @@
 /// return type of the @b target object that the pointer type can point to
 const struct cl_type* targetTypeOfPtr(const struct cl_type *clt);
 
+inline bool isComposite(const struct cl_type *clt) {
+    if (!clt)
+        return false;
+
+    switch (clt->code) {
+        case CL_TYPE_STRUCT:
+        case CL_TYPE_UNION:
+            return true;
+
+        default:
+            return false;
+    }
+}
+
 /**
  * return true if there is any CL_ACCESSOR_REF in the given chain of accessors
  * @note CL_ACCESSOR_REF accessors can't be chained with each other, as it makes
@@ -57,7 +71,7 @@ struct CltStackItem {
 // take the given visitor through a composite type (or whatever you pass in)
 template <class TFieldIdxChain, class TVisitor>
 bool /* complete */ traverseTypeIc(const struct cl_type *clt, TVisitor &visitor,
-                                   bool digOnlyStructs = false)
+                                   bool digOnlyComposite = false)
 {
     assert(clt);
 
@@ -85,8 +99,8 @@ bool /* complete */ traverseTypeIc(const struct cl_type *clt, TVisitor &visitor,
             continue;
         }
 
-        if (digOnlyStructs && CL_TYPE_STRUCT != si.clt->code) {
-            // caller is interested only in CL_TYPE_STRUCT, skip this
+        if (digOnlyComposite && !isComposite(si.clt)) {
+            // caller is interested only in composite types, skip this
             ++nth;
             continue;
         }

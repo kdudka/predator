@@ -24,6 +24,7 @@
 #include "symplot.hh"
 
 #include <cl/cl_msg.hh>
+#include <cl/clutil.hh>
 #include <cl/code_listener.h>
 #include <cl/storage.hh>
 
@@ -104,7 +105,7 @@ void digSubObjs(DeepCopyData &dc, TObjId objSrc, TObjId objDst)
             // anonymous object of known size
             continue;
 
-        if (CL_TYPE_STRUCT != cltSrc->code)
+        if (!isComposite(cltSrc))
             // we should be set up
             continue;
 

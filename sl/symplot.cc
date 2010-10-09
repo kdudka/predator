@@ -132,6 +132,7 @@ struct SymPlot::Private {
 
     bool digFieldName(std::string &dst, TObjId obj);
     void plotNodeObj(TObjId obj);
+    void plotNodeObjAnon(TObjId obj);
     void plotNodeValue(TValueId val, enum cl_type_e code, const char *label);
     void plotNodeAux(int src, enum cl_type_e code, const char *label);
     void plotNeqZero(TValueId val);
@@ -227,7 +228,7 @@ namespace {
             case CL_TYPE_PTR:       return "blue";
             case CL_TYPE_FNC:       return "green";
             case CL_TYPE_STRUCT:    return "black";
-            case CL_TYPE_UNION:     return "gray";
+            case CL_TYPE_UNION:     return "red";
             case CL_TYPE_ARRAY:     return "gray";
             case CL_TYPE_STRING:    return "gray";
             case CL_TYPE_CHAR:      return "gray";
@@ -247,7 +248,7 @@ bool SymPlot::Private::digFieldName(std::string &dst, TObjId obj) {
         return false;
 
     const struct cl_type *clt = this->heap->objType(parent);
-    SE_BREAK_IF(!clt || clt->code != CL_TYPE_STRUCT);
+    SE_BREAK_IF(!clt || !isComposite(clt));
 
     const char *name = clt->items[nth].name;
     if (!name)
@@ -261,9 +262,9 @@ bool SymPlot::Private::digFieldName(std::string &dst, TObjId obj) {
 void SymPlot::Private::plotNodeObj(TObjId obj) {
     SE_BREAK_IF(obj <= 0);
     const struct cl_type *clt = this->heap->objType(obj);
-
-    SE_BREAK_IF(!clt);
-    const enum cl_type_e code = clt->code;
+    const enum cl_type_e code = (clt)
+        ? clt->code
+        : CL_TYPE_UNKNOWN;
 
     this->dotStream << "\t" << SL_QUOTE(obj);
     this->dotStream << " [shape=box";
@@ -311,6 +312,16 @@ void SymPlot::Private::plotNodeObj(TObjId obj) {
         this->dotStream << " ." << filedName;
 
     this->dotStream << "\"];" << std::endl;
+}
+
+void SymPlot::Private::plotNodeObjAnon(TObjId obj) {
+    const int size = this->heap->objSizeOfAnon(obj);
+    SE_BREAK_IF(size <= 0);
+
+    this->dotStream << "\t" << SL_QUOTE(obj)
+        << " [shape=box, color=red, fontcolor=red"
+        << ", label=\"RAW " << size << "B\"];"
+        << std::endl;
 }
 
 void SymPlot::Private::plotNodeValue(TValueId val, enum cl_type_e code,
@@ -772,7 +783,7 @@ void ObjectDigger::operate(TFieldIdxChain ic, const struct cl_type *clt) {
     // first close all pending clusters
     this->setupNestLevel(ic.size());
 
-    if (CL_TYPE_STRUCT != clt->code) {
+    if (!isComposite(clt)) {
         self_->plotNodeObj(obj);
 
         TValueId value;
@@ -793,9 +804,8 @@ void ObjectDigger::operate(TFieldIdxChain ic, const struct cl_type *clt) {
     for (int i = 0; i < clt->item_cnt; ++i) {
         const TObjId sub = self_->heap->subObj(obj, i);
         const struct cl_type *subClt = self_->heap->objType(sub);
-        if (!subClt || (subClt->code == CL_TYPE_STRUCT
-                    && !subClt->item_cnt))
-            // skip empty structures
+        if (!subClt || (isComposite(subClt) && !subClt->item_cnt))
+            // skip empty structures/unions
             continue;
 
         if (!hasKey(self_->objDone, sub))
@@ -804,8 +814,13 @@ void ObjectDigger::operate(TFieldIdxChain ic, const struct cl_type *clt) {
 }
 
 void SymPlot::Private::digObjCore(TObjId obj) {
-    ObjectDigger visitor(this, obj);
     const struct cl_type *clt = this->heap->objType(obj);
+    if (!clt) {
+        this->plotNodeObjAnon(obj);
+        return;
+    }
+
+    ObjectDigger visitor(this, obj);
     traverseTypeIc<TFieldIdxChain>(clt, visitor, /* digOnlyStructs */ true);
 }
 

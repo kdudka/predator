@@ -1,0 +1,4 @@
+test-0093.c:111:9: error: free() called on unknown value
+test-0093.c:121:20: note: from call of misuse_of_union()
+test-0093.c:115:5: note: from call of main()
+test-0093.c:78:1: warning: killing junk

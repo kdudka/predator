@@ -117,6 +117,7 @@ class SymProc {
         // internal helpers of SymProc::objSetValue()
         friend class ValueWriter;
         friend class ValueMirror;
+        friend class UnionInvalidator;
 };
 
 struct SymExecCoreParams {

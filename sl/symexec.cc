@@ -83,9 +83,6 @@ bool initGlVar(SymHeap &sh, const TInitialItem &item) {
             return /* continue */ true;
 
         case CL_TYPE_UNION:
-            CL_DEBUG("CL_TYPE_UNION is not supported by SymExec for now");
-            return /* continue */ true;
-
         case CL_TYPE_STRUCT:
             SE_TRAP;
 
@@ -153,7 +150,7 @@ void createGlVars(SymHeap &sh, const CodeStorage::Storage &stor) {
 
         // initialize a global/static variable
         const TInitialItem item(obj, var.initial);
-        if (CL_TYPE_STRUCT == var.clt->code)
+        if (isComposite(var.clt))
             traverseSubObjs(sh, item, initGlVar, /* leavesOnly */ true);
         else
             initGlVar(sh, item);

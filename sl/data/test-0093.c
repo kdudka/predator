@@ -96,10 +96,29 @@ void test(void)
     while(pop(&data, &gl_stack));
 }
 
+void misuse_of_union(void)
+{
+    // should be OK
+    gl_stack.data.p1 = &gl_stack.data.p0;
+    ___sl_plot_by_ptr(&gl_stack, NULL);
+
+    // ugly, but we should be silent for now
+    gl_stack.data.p0 = gl_stack.head;
+    ___sl_plot_by_ptr(&gl_stack, NULL);
+
+    // although this works, we should give it no go!
+    gl_stack.data.p0 = malloc(80);
+    free(gl_stack.head);
+    ___sl_plot_by_ptr(&gl_stack, NULL);
+}
+
 int main()
 {
     test();
     test();
     test();
+
+    misuse_of_union();
+
     return EXIT_SUCCESS;
 }

@@ -185,6 +185,7 @@ namespace {
                 }
 
                 case CL_TYPE_STRUCT:
+                case CL_TYPE_UNION:
                     for (int i = 0; i < clt->item_cnt; ++i) {
                         const TObjId sub1 = heap1.subObj(o1, i);
                         const TObjId sub2 = heap2.subObj(o2, i);
@@ -192,10 +193,6 @@ namespace {
 
                         push(todo, sub1, sub2);
                     }
-                    break;
-
-                case CL_TYPE_UNION:
-                    CL_WARN("CL_TYPE_UNION is not supported by SymState yet");
                     break;
 
                 case CL_TYPE_CHAR:

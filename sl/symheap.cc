@@ -22,6 +22,7 @@
 #include "symheap.hh"
 
 #include <cl/cl_msg.hh>
+#include <cl/clutil.hh>
 #include <cl/code_listener.h>
 
 #include "symabstract.hh"
@@ -1222,7 +1223,7 @@ void SymHeapTyped::createSubs(TObjId obj) {
         todo.pop();
         SE_BREAK_IF(!clt);
 
-        if (CL_TYPE_STRUCT != clt->code)
+        if (!isComposite(clt))
             continue;
 
         const int cnt = clt->item_cnt;
@@ -1314,6 +1315,7 @@ TObjId SymHeapTyped::objDup(TObjId obj) {
     const Private::Object &ref = d->objects[obj];
     if (ref.clt && ref.clt->code == CL_TYPE_STRUCT && -1 == ref.parent)
         // if the original was a root object, the new one must also be
+        // FIXME: should we care about CL_TYPE_UNION here?
         d->roots.push_back(image);
 
     return image;
@@ -1487,35 +1489,6 @@ TObjId SymHeapTyped::objParent(TObjId obj, int *nth) const {
 }
 
 TObjId SymHeapTyped::objCreate(const struct cl_type *clt, CVar cVar) {
-#if SE_SELF_TEST
-    if(clt) {
-        const enum cl_type_e code = clt->code;
-        switch (code) {
-            case CL_TYPE_ENUM:
-            case CL_TYPE_INT:
-            case CL_TYPE_BOOL:
-            case CL_TYPE_PTR:
-            case CL_TYPE_STRUCT:
-                break;
-
-            case CL_TYPE_CHAR:
-                CL_WARN("CL_TYPE_CHAR is not supported by SymHeap for now");
-                break;
-
-            case CL_TYPE_ARRAY:
-                if (CL_TYPE_CHAR == clt->items[0].type->code)
-                    // make it possible to at least ignore strings
-                    break;
-
-                CL_WARN("CL_TYPE_ARRAY is not supported by SymHeap for now");
-                break;
-
-            default:
-                // TODO: handle also other types somehow?
-                SE_TRAP;
-        }
-    }
-#endif
     const TObjId obj = SymHeapCore::objCreate();
     if (OBJ_INVALID == obj)
         return OBJ_INVALID;
@@ -1523,9 +1496,10 @@ TObjId SymHeapTyped::objCreate(const struct cl_type *clt, CVar cVar) {
     Private::Object &ref = d->objects[obj];
     ref.clt     = clt;
     ref.cVar    = cVar;
-    if(clt) {
+    if (clt) {
         this->createSubs(obj);
         if (CL_TYPE_STRUCT == clt->code)
+            // FIXME: should we care about CL_TYPE_UNION here?
             d->roots.push_back(obj);
     }
 
@@ -1564,6 +1538,7 @@ void SymHeapTyped::objDefineType(TObjId obj, const struct cl_type *clt) {
     ref.clt = clt;
     this->createSubs(obj);
     if (CL_TYPE_STRUCT == clt->code)
+        // FIXME: should we care about CL_TYPE_UNION here?
         d->roots.push_back(obj);
 
     if (OBJ_RETURN == obj)
