@@ -410,6 +410,7 @@ void CldCbSeqChk::setState(EState newState) {
             switch (newState) {
                 case S_FILE_LEVEL:
                 case S_ACKNOWLEDGE:
+                case S_DESTROYED:
                     break;
                 default:
                     this->emitUnexpected(newState);
@@ -420,6 +421,7 @@ void CldCbSeqChk::setState(EState newState) {
             switch (newState) {
                 case S_INIT:
                 case S_FNC_DECL:
+                case S_DESTROYED:
                     break;
                 default:
                     this->emitUnexpected(newState);

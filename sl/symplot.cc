@@ -250,7 +250,9 @@ bool SymPlot::Private::digFieldName(std::string &dst, TObjId obj) {
     SE_BREAK_IF(!clt || clt->code != CL_TYPE_STRUCT);
 
     const char *name = clt->items[nth].name;
-    SE_BREAK_IF(!name);
+    if (!name)
+        // anonymous unions involved?
+        return false;
 
     dst = name;
     return true;

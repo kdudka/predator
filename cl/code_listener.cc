@@ -316,6 +316,6 @@ struct cl_code_listener* cl_code_listener_create(const char *config_string)
         return cl_create_listener_wrap(listener);
     }
     catch (...) {
-        CL_DIE("uncaught exception in cl_writer_create");
+        CL_DIE("uncaught exception in cl_code_listener_create()");
     }
 }
