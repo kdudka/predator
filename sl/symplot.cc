@@ -572,6 +572,9 @@ void SymPlot::Private::openCluster(TObjId obj) {
     const char *color = "", *pw = "";
 #endif
 
+    const struct cl_type *clt = this->heap->objType(obj);
+    SE_BREAK_IF(!clt);
+
     const EObjKind kind = this->heap->objKind(obj);
     if (OK_CONCRETE !=kind && !this->heap->objShared(obj))
         label = "[prototype] ";
@@ -579,7 +582,9 @@ void SymPlot::Private::openCluster(TObjId obj) {
     switch (kind) {
         case OK_CONCRETE:
         case OK_PART:
-            color = "black";
+            color = (CL_TYPE_UNION == clt->code)
+                ? "red"
+                : "black";
             pw = "1.0";
             break;
 
