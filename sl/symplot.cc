@@ -696,15 +696,15 @@ bool SymPlot::Private::resolveValueOf(TValueId *pDst, TObjId obj) {
             break;
     }
 
-    if (this->handleCustomValue(value))
-        return false;
-
     *pDst = value;
     return true;
 }
 
 bool SymPlot::Private::resolvePointsTo(TObjId *pDst, TValueId value) {
     if (this->handleUnknownValue(value))
+        return false;
+
+    if (this->handleCustomValue(value))
         return false;
 
     const TObjId obj = this->heap->pointsTo(value);
