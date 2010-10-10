@@ -1590,10 +1590,14 @@ TValueId SymHeapTyped::valCreateCustom(const struct cl_type *clt, int cVal) {
         if (VAL_INVALID == val)
             return VAL_INVALID;
 
+        // initialize heap value
         Private::Value &ref = d->values[val];
         ref.clt         = clt;
         ref.isCustom    = true;
         ref.customData  = cVal;
+
+        // store cVal --> val mapping
+        d->cValueMap[cVal] = val;
 
         return val;
     }
