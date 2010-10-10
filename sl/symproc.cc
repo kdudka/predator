@@ -559,22 +559,16 @@ class ValueMirror {
 };
 
 void SymProc::objSetValue(TObjId lhs, TValueId rhs) {
-    // first seek the outer most surrounding union on the way to root (if any)
+    // seek all surrounding unions on the way to root (if any)
     TObjId parent, obj = lhs;
-    TObjId up = OBJ_INVALID, preserveSubtree;
     for (; OBJ_INVALID != (parent = heap_.objParent(obj)); obj = parent) {
         const struct cl_type *clt = heap_.objType(parent);
         if (!clt || clt->code != CL_TYPE_UNION)
             continue;
 
-        up = parent;
-        preserveSubtree = obj;
-    }
-
-    if (OBJ_INVALID != up) {
-        // invalidate all siblings within the outer most surrounding union
-        UnionInvalidator writer(this, preserveSubtree);
-        traverseSubObjs(heap_, up, writer, /* leavesOnly */ true);
+        // invalidate all siblings within the surrounding union
+        UnionInvalidator visitor(this, obj);
+        traverseSubObjs(heap_, parent, visitor, /* leavesOnly */ true);
     }
 
     // FIXME: handle some other special values also this way?
