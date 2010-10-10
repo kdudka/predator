@@ -785,10 +785,6 @@ static void read_raw_operand(struct cl_operand *op, tree t)
             CL_WARN_UNHANDLED_EXPR(t, "REAL_CST");
             break;
 
-        case CONSTRUCTOR:
-            CL_WARN_UNHANDLED_EXPR(t, "CONSTRUCTOR");
-            break;
-
         default:
             TRAP;
     }
@@ -941,6 +937,15 @@ static void handle_operand(struct cl_operand *op, tree t)
 static void handle_stmt_unop(gimple stmt, enum tree_code code,
                              struct cl_operand *dst, tree src_tree)
 {
+    if (CONSTRUCTOR == TREE_CODE(src_tree)) {
+        SE_BREAK_IF(dst->code != CL_OPERAND_VAR);
+        struct cl_initializer **pinit = &dst->data.var->initial;
+        if (!*pinit)
+            read_initial(pinit, src_tree);
+
+        return;
+    }
+
     struct cl_operand src;
     handle_operand(&src, src_tree);
 
@@ -953,6 +958,7 @@ static void handle_stmt_unop(gimple stmt, enum tree_code code,
 
     enum cl_unop_e *ptype = &cli.data.insn_unop.code;
 
+    // TODO: check validity/usefulness of the following condition
     if (code != TREE_CODE(src_tree)) {
         switch (code) {
             case CONVERT_EXPR:

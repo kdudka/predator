@@ -35,6 +35,10 @@
 
 #include <stack>
 
+namespace CodeStorage {
+    struct Var;
+}
+
 TObjId subObjByChain(const SymHeap &sh, TObjId obj, TFieldIdxChain ic);
 TObjId subObjByInvChain(const SymHeap &sh, TObjId obj, TFieldIdxChain ic);
 
@@ -77,6 +81,10 @@ void objReplace(SymHeap &sh, TObjId oldObj, TObjId newObj);
 
 void skipObj(const SymHeap &sh, TObjId *pObj, TFieldIdxChain icHead,
              TFieldIdxChain icNext);
+
+void initVariable(SymHeap                       &sh,
+                  TObjId                        obj,
+                  const CodeStorage::Var        &var);
 
 typedef std::pair<TObjId, TObjId> TObjPair;
 

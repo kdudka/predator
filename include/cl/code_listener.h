@@ -321,7 +321,7 @@ struct cl_accessor {
 };
 
 /**
- * initializer, used only for global/static variables
+ * initializer, used mainly for global/static variables
  */
 struct cl_initializer {
     /**

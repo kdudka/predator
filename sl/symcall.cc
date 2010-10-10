@@ -29,6 +29,7 @@
 #include "symheap.hh"
 #include "symproc.hh"
 #include "symstate.hh"
+#include "symutil.hh"
 
 #include <vector>
 
@@ -323,7 +324,18 @@ void SymCallCache::Private::createStackFrame(SymHeap::TContCVar &cVars) {
             cVars.push_back(cv);
 
             // now create the SymHeap object
-            this->heap->objCreate(var.clt, cv);
+            const TObjId obj = this->heap->objCreate(var.clt, cv);
+
+            // FIXME: this is not going to work well, if the initializers depend
+            // on stack variables that are not yet created;  we should probably
+            // do it the same way how global variables are created/initialized
+            if (var.initial) {
+                CL_DEBUG_MSG(lw, "--- initializing stack variable: #" << var.uid
+                        << " (" << var.name << ")" );
+
+                // reflect the given initializer
+                initVariable(*this->heap, obj, var);
+            }
         }
     }
 }
