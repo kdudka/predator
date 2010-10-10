@@ -184,7 +184,7 @@ static void init_plugin_name(const struct plugin_name_args *info)
     if (-1 == asprintf(&msg, cl_info.help,
                        name, name, name, name,
                        name, name, name, name,
-                       name, name, name))
+                       name, name, name, name))
         // OOM
         abort();
     else
@@ -608,6 +608,10 @@ static struct cl_type* add_bare_type_if_needed(tree type)
 
 static enum cl_scope_e get_decl_scope(tree t)
 {
+    if (VAR_DECL == TREE_CODE(t) && TREE_STATIC(t))
+        // treat static variables as static, no matter where they're declared
+        return CL_SCOPE_STATIC;
+
     tree ctx = DECL_CONTEXT(t);
     if (ctx) {
         enum tree_code code = TREE_CODE(ctx);
