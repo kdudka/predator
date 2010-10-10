@@ -33268,7 +33268,7 @@ void *memcpy(void *to, const void *from, size_t len) { void *a; return a; }
 // void *malloc(size_t len) { void *a; return a; }
 // void free(void *p) { }
 
-#define NEW(type) (type *) ({           \
+#define NEW(type) ({                    \
     void *ptr = malloc(sizeof(type));   \
     if (!ptr)                           \
         abort();                        \

@@ -392,6 +392,9 @@ symplot tutorial
     test-0093.c - regression test focused on handling of unions
                 - also plots some heap graphs of them
 
+    test-0094.c - regression test focused on named/anonymous struct/unions
+                  and handling of function pointers (heap graph available)
+
 
 Tiny DLL library written on scratch
 ===================================
