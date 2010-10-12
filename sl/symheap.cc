@@ -241,6 +241,10 @@ class NeqDb {
         friend void SymHeapCore::copyRelevantPreds(SymHeapCore &dst,
                                                    const SymHeapCore::TValMap &)
                                                    const;
+
+        friend bool SymHeapCore::matchPreds(const SymHeapCore &,
+                                            const SymHeapCore::TValMap &)
+                                            const;
 };
 
 class EqIfDb {
@@ -304,6 +308,10 @@ class EqIfDb {
         friend void SymHeapCore::copyRelevantPreds(SymHeapCore &dst,
                                                    const SymHeapCore::TValMap &)
                                                    const;
+
+        friend bool SymHeapCore::matchPreds(const SymHeapCore &,
+                                            const SymHeapCore::TValMap &)
+                                            const;
 };
 
 template <class TDst2>
@@ -1044,6 +1052,60 @@ void SymHeapCore::copyRelevantPreds(SymHeapCore &dst, const TValMap &valMap)
             copyRelevantEqIf(dst, pred, valMap);
         }
     }
+}
+
+bool SymHeapCore::matchPreds(const SymHeapCore &ref, const TValMap &valMap)
+    const
+{
+    // go through NeqDb
+    BOOST_FOREACH(const NeqDb::TItem &item, d->neqDb.cont_) {
+        TValueId valLt = item.first;
+        TValueId valGt = item.second;
+        if (!valMapLookup(valMap, &valLt) || !valMapLookup(valMap, &valGt))
+            // seems like a dangling predicate, which we are not interested in
+            continue;
+
+        if (!ref.d->neqDb.areNeq(valLt, valGt))
+            // Neq predicate not matched
+            return false;
+    }
+
+    // go through EqIfDb
+    BOOST_FOREACH(EqIfDb::TMap::const_reference item, d->eqIfDb.cont_) {
+        const EqIfDb::TSet &line = item.second;
+        BOOST_FOREACH(const EqIfDb::TPred &pred, line) {
+            TValueId valCond, valLt, valGt; bool neg;
+            boost::tie(valCond, valLt, valGt, neg) = pred;
+
+            if (!valMapLookup(valMap, &valCond)
+                    || !valMapLookup(valMap, &valLt)
+                    || !valMapLookup(valMap, &valGt))
+                // seems like a dangling predicate, which we are not interested in
+                continue;
+
+            const EqIfDb::TMap &peer = ref.d->eqIfDb.cont_;
+            EqIfDb::TMap::const_iterator iter = peer.find(valCond);
+            if (peer.end() == iter)
+                // EqIf predicate not found
+                return false;
+
+            BOOST_FOREACH(const EqIfDb::TPred &peerPred, iter->second) {
+                if (peerPred.get</* valCond */ 0>() == valCond
+                        && peerPred.get</* valLt */ 1>() == valLt
+                        && peerPred.get</* valGt */ 2>() == valGt
+                        && peerPred.get</* neg */3>() == neg)
+                    goto eqif_matched;
+            }
+
+            // no matching EqIf predicate found
+            return false;
+        }
+
+eqif_matched:
+        (void) 0;
+    }
+
+    return true;
 }
 
 // /////////////////////////////////////////////////////////////////////////////

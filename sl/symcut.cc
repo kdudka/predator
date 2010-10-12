@@ -290,8 +290,8 @@ TValueId handleValue(DeepCopyData &dc, TValueId valSrc) {
     SE_BREAK_IF(OBJ_INVALID == targetSrc);
 
     if (targetSrc < 0) {
-#if SE_SELF_TEST
         // special handling for OBJ_DELETED/OBJ_LOST
+#if SE_SELF_TEST
         switch (targetSrc) {
             case OBJ_DELETED:
             case OBJ_LOST:

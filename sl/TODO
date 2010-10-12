@@ -2,9 +2,6 @@ o  join of states ... example:
    - input: empty | 1 node | SLS 0+ | SLS 1+
    - output: SLS 0+
 
-o  symstate: proper comparison of Neq and EqIf predicates (it will require to
-   extend the interface of SymHeap if we want to do it enough efficiently)
-
 o  improve discovery algorithm for nested list segments (make it possible to
    link the nested list through the higher-level list) and maybe improve the
    representation of segments, in order to reflect that fact

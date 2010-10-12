@@ -954,7 +954,7 @@ bool SymPlot::plot(const std::string &name) {
     if (!d->openDotFile(name))
         return false;
 
-    // go through all stack variables
+    // go through all program variables
     SymHeap::TContCVar cVars;
     d->heap->gatherCVars(cVars);
     BOOST_FOREACH(CVar cv, cVars) {
