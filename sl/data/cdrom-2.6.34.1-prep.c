@@ -30040,6 +30040,8 @@ int register_cdrom(struct cdrom_device_info *cdi)
   cdrom_sysctl_register();
  }
 
+ // the following block causes our analysis to explode
+#if 0
  if (cdo->drive_status == ((void *)0)) *change_capability &= ~(0x800);
  if (cdo->media_changed == ((void *)0)) *change_capability &= ~(0x80);
  if (cdo->tray_move == ((void *)0)) *change_capability &= ~(0x1 | 0x2);
@@ -30049,10 +30051,13 @@ int register_cdrom(struct cdrom_device_info *cdi)
  if (cdo->get_mcn == ((void *)0)) *change_capability &= ~(0x40);
  if (cdo->reset == ((void *)0)) *change_capability &= ~(0x200);
  if (cdo->generic_packet == ((void *)0)) *change_capability &= ~(0x1000);
+#endif
  cdi->mc_flags = 0;
  cdo->n_minors = 0;
         cdi->options = 0x4;
 
+ // the following block causes our analysis to explode
+#if 0
  if (autoclose==1 && (cdi->ops->capability & ~cdi->mask & (0x1)))
   cdi->options |= (int) 0x1;
  if (autoeject==1 && (cdi->ops->capability & ~cdi->mask & (0x2)))
@@ -30061,6 +30066,7 @@ int register_cdrom(struct cdrom_device_info *cdi)
   cdi->options |= (int) 0x8;
  if (check_media_type==1)
   cdi->options |= (int) 0x10;
+#endif
 
  if ((cdi->ops->capability & ~cdi->mask & (0x100000)))
   cdi->exit = cdrom_mrw_exit;
