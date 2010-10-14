@@ -33,6 +33,11 @@
 #define CL_DEBUG_CLD                    0
 
 /**
+ * if 1, filter out repeated error/warning messages (sort of 2>&1 | uniq)
+ */
+#define CL_MSG_SQUEEZE_REPEATS          1
+
+/**
  * if 1, use ugly temporary workaround for missing type info of sparse args
  */
 #define CLD_ARG_SUBST_KEEP_TYPE_REF     1

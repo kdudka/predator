@@ -18,9 +18,7 @@ test-0009.c:12:12: note: allocated: 1 bytes
 test-0009.c:12:12: note:  expected: 4 bytes
 test-0009.c:12:12: warning: killing junk
 test-0009.c:9:11: warning: killing junk
-test-0009.c:9:11: warning: killing junk
 test-0009.c:12:12: warning: killing junk
-test-0009.c:6:12: warning: killing junk
 test-0009.c:6:12: warning: killing junk
 test-0009.c:12:12: warning: killing junk
 test-0009.c:6:12: warning: killing junk

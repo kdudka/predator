@@ -1,9 +1,4 @@
 <unknown file>:<unknown line>: warning: CL_TYPE_STRING not supported by SymProc
-<unknown file>:<unknown line>: warning: CL_TYPE_STRING not supported by SymProc
-<unknown file>:<unknown line>: warning: CL_TYPE_STRING not supported by SymProc
-<unknown file>:<unknown line>: warning: CL_TYPE_STRING not supported by SymProc
-<unknown file>:<unknown line>: warning: CL_TYPE_STRING not supported by SymProc
-<unknown file>:<unknown line>: warning: CL_TYPE_STRING not supported by SymProc
 test-0000.c:157:10: warning: ignoring call of undefined function: strcmp()
 test-0000.c:1792:21: note: from call of init_plugin_name()
 test-0000.c:1786:5: note: from call of plugin_init()
@@ -81,36 +76,15 @@ test-0000.c:1793:9: note: from call of clplug_init()
 test-0000.c:1786:5: note: from call of plugin_init()
 test-0000.c:1786:5: warning: end of function plugin_init() has not been reached
 <unknown file>:<unknown line>: warning: CL_TYPE_STRING not supported by SymProc
-<unknown file>:<unknown line>: warning: CL_TYPE_STRING not supported by SymProc
-<unknown file>:<unknown line>: warning: CL_TYPE_STRING not supported by SymProc
-<unknown file>:<unknown line>: warning: CL_TYPE_STRING not supported by SymProc
-<unknown file>:<unknown line>: warning: CL_TYPE_STRING not supported by SymProc
-<unknown file>:<unknown line>: warning: CL_TYPE_STRING not supported by SymProc
-<unknown file>:<unknown line>: warning: CL_TYPE_STRING not supported by SymProc
-<unknown file>:<unknown line>: warning: CL_TYPE_STRING not supported by SymProc
-<unknown file>:<unknown line>: warning: CL_TYPE_STRING not supported by SymProc
-<unknown file>:<unknown line>: warning: CL_TYPE_STRING not supported by SymProc
-<unknown file>:<unknown line>: warning: CL_TYPE_STRING not supported by SymProc
-<unknown file>:<unknown line>: warning: CL_TYPE_STRING not supported by SymProc
 test-0000.c:218:12: warning: CL_TYPE_STRING not supported by SymProc
 test-0000.c:218:12: warning: ignoring call of undefined function: fprintf()
 test-0000.c:223:20: note: from call of trivial_printer()
 test-0000.c:221:13: note: from call of cl_warn()
 test-0000.c:224:5: warning: binary operator not implemented yet
 <unknown file>:<unknown line>: warning: CL_TYPE_STRING not supported by SymProc
-<unknown file>:<unknown line>: warning: CL_TYPE_STRING not supported by SymProc
-<unknown file>:<unknown line>: warning: CL_TYPE_STRING not supported by SymProc
-<unknown file>:<unknown line>: warning: CL_TYPE_STRING not supported by SymProc
-<unknown file>:<unknown line>: warning: CL_TYPE_STRING not supported by SymProc
-<unknown file>:<unknown line>: warning: CL_TYPE_STRING not supported by SymProc
 test-0000.c:218:12: warning: CL_TYPE_STRING not supported by SymProc
 test-0000.c:218:12: warning: ignoring call of undefined function: fprintf()
 test-0000.c:229:20: note: from call of trivial_printer()
 test-0000.c:227:13: note: from call of cl_error()
 test-0000.c:230:5: warning: binary operator not implemented yet
-<unknown file>:<unknown line>: warning: CL_TYPE_STRING not supported by SymProc
-<unknown file>:<unknown line>: warning: CL_TYPE_STRING not supported by SymProc
-<unknown file>:<unknown line>: warning: CL_TYPE_STRING not supported by SymProc
-<unknown file>:<unknown line>: warning: CL_TYPE_STRING not supported by SymProc
-<unknown file>:<unknown line>: warning: CL_TYPE_STRING not supported by SymProc
 <unknown file>:<unknown line>: warning: CL_TYPE_STRING not supported by SymProc

@@ -2,8 +2,3 @@ test-0064.c:45:20: warning: binary operator not implemented yet
 test-0064.c:67:20: warning: binary operator not implemented yet
 test-0064.c:45:20: warning: binary operator not implemented yet
 test-0064.c:87:9: warning: killing junk
-test-0064.c:87:9: warning: killing junk
-test-0064.c:87:9: warning: killing junk
-test-0064.c:87:9: warning: killing junk
-test-0064.c:87:9: warning: killing junk
-test-0064.c:87:9: warning: killing junk
