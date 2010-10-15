@@ -44,11 +44,11 @@ add_library(cl STATIC
     cl_pp.cc
     cl_storage.cc
     cl_typedot.cc
-    cld_intchk.cc
-    cld_opchk.cc
-    cld_unilabel.cc
-    cld_unswitch.cc
     cldebug.cc
+    clf_intchk.cc
+    clf_opchk.cc
+    clf_unilabel.cc
+    clf_unswitch.cc
     clutil.cc
     code_listener.cc
     gcc/clplug.c

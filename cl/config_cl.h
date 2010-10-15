@@ -28,9 +28,9 @@
 #define TRAP SE_TRAP
 
 /**
- * if 1, check each code_listener decorator by the integrity checker
+ * if 1, check each code_listener filter by the integrity checker
  */
-#define CL_DEBUG_CLD                    0
+#define CL_DEBUG_CLF                    0
 
 /**
  * if 1, filter out repeated error/warning messages (sort of 2>&1 | uniq)
@@ -40,12 +40,12 @@
 /**
  * if 1, use ugly temporary workaround for missing type info of sparse args
  */
-#define CLD_ARG_SUBST_KEEP_TYPE_REF     1
+#define CLF_ARG_SUBST_KEEP_TYPE_REF     1
 
 /**
  * if 1, do not check for unused local variables and registers
  */
-#define CLD_BYPASS_USAGE_CHK            1
+#define CLF_BYPASS_USAGE_CHK            1
 
 /**
  * if 1, suppress warnings about unhandled code constructs

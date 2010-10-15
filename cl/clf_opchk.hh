@@ -17,15 +17,15 @@
  * along with predator.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef H_GUARD_CLD_OPCHK_H
-#define H_GUARD_CLD_OPCHK_H
+#ifndef H_GUARD_CLF_OPCHK_H
+#define H_GUARD_CLF_OPCHK_H
 
-#include "cl_decorator.hh"
+#include "cl_filter.hh"
 #include <cl/location.hh>
 
-class CldOpCheckerBase: public ClDecoratorBase {
+class ClfOpCheckerBase: public ClFilterBase {
     public:
-        CldOpCheckerBase(ICodeListener *slave);
+        ClfOpCheckerBase(ICodeListener *slave);
 
     protected:
         const Location& lastLocation() const {
@@ -48,14 +48,14 @@ class CldOpCheckerBase: public ClDecoratorBase {
             const char              *file_name)
         {
             loc_.currentFile = file_name;
-            ClDecoratorBase::file_open(file_name);
+            ClFilterBase::file_open(file_name);
         }
 
         virtual void fnc_open(
             const struct cl_operand *fnc)
         {
             loc_ = &fnc->loc;
-            ClDecoratorBase::fnc_open(fnc);
+            ClFilterBase::fnc_open(fnc);
         }
 
         virtual void fnc_arg_decl(
@@ -63,7 +63,7 @@ class CldOpCheckerBase: public ClDecoratorBase {
             const struct cl_operand *arg_src)
         {
             this->handleDstSrc(arg_src);
-            ClDecoratorBase::fnc_arg_decl(arg_id, arg_src);
+            ClFilterBase::fnc_arg_decl(arg_id, arg_src);
         }
 
         virtual void insn(
@@ -95,7 +95,7 @@ class CldOpCheckerBase: public ClDecoratorBase {
                     break;
             }
 
-            ClDecoratorBase::insn(cli);
+            ClFilterBase::insn(cli);
         }
 
         virtual void insn_call_open(
@@ -106,7 +106,7 @@ class CldOpCheckerBase: public ClDecoratorBase {
             loc_ = loc;
             this->handleDstSrc(dst);
             this->handleSrc(fnc);
-            ClDecoratorBase::insn_call_open(loc, dst, fnc);
+            ClFilterBase::insn_call_open(loc, dst, fnc);
         }
 
         virtual void insn_call_arg(
@@ -114,7 +114,7 @@ class CldOpCheckerBase: public ClDecoratorBase {
             const struct cl_operand *arg_src)
         {
             this->handleSrc(arg_src);
-            ClDecoratorBase::insn_call_arg(arg_id, arg_src);
+            ClFilterBase::insn_call_arg(arg_id, arg_src);
         }
 
         virtual void insn_switch_open(
@@ -123,7 +123,7 @@ class CldOpCheckerBase: public ClDecoratorBase {
         {
             loc_ = loc;
             this->handleSrc(src);
-            ClDecoratorBase::insn_switch_open(loc, src);
+            ClFilterBase::insn_switch_open(loc, src);
         }
 
     private:
@@ -135,4 +135,4 @@ class CldOpCheckerBase: public ClDecoratorBase {
         void handleDstSrc(const struct cl_operand *);
 };
 
-#endif /* H_GUARD_CLD_OPCHK_H */
+#endif /* H_GUARD_CLF_OPCHK_H */

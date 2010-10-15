@@ -17,24 +17,25 @@
  * along with predator.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef H_GUARD_CLD_INTCHK_H
-#define H_GUARD_CLD_INTCHK_H
+#ifndef H_GUARD_CLF_UNILABEL_H
+#define H_GUARD_CLF_UNILABEL_H
 
 /**
- * @file cld_intchk.hh
- * constructor createCldIntegrityChk() - of the integrity checker decorator
+ * @file clf_unilabel.hh
+ * constructor createClfUniLabel() - of the @b "unify_labels_*" filters
  */
+
+#include <cl/code_listener.h>
 
 class ICodeListener;
 
 /**
- * create code listener integrity checker decorator
- *
- * see the ClFactory class and config.h::DEBUG_CL_FACTORY and
- * config.h::CL_DEBUG_CLD macros
+ * create code listener filter for label unification
+ * @param scope unification level - CL_SCOPE_GLOBAL, CL_SCOPE_STATIC or
+ * CL_SCOPE_FUNCTION
  *
  * @return on heap allocated instance of ICodeListener object
  */
-ICodeListener* createCldIntegrityChk(ICodeListener *);
+ICodeListener* createClfUniLabel(ICodeListener *, cl_scope_e scope);
 
-#endif /* H_GUARD_CLD_INTCHK_H */
+#endif /* H_GUARD_CLF_UNILABEL_H */

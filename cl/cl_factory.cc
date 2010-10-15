@@ -28,9 +28,9 @@
 #include "cl_pp.hh"
 #include "cl_typedot.hh"
 
-#include "cld_intchk.hh"
-#include "cld_unilabel.hh"
-#include "cld_unswitch.hh"
+#include "clf_intchk.hh"
+#include "clf_unilabel.hh"
+#include "clf_unswitch.hh"
 
 #include "util.hh"
 
@@ -39,8 +39,8 @@
 #include <string>
 #include <vector>
 
-#ifndef CL_DEBUG_CLD
-#   define CL_DEBUG_CLD 0
+#ifndef CL_DEBUG_CLF
+#   define CL_DEBUG_CLF 0
 #endif
 
 #ifndef DEBUG_CL_FACTORY
@@ -63,30 +63,30 @@ namespace {
         return isspace(static_cast<unsigned char>(c));
     }
 
-    bool parseCldString(TStringList &dst, const string &cldString) {
+    bool parseClfString(TStringList &dst, const string &clfString) {
         enum {
             S_INIT,
-            S_READING_CLD,
+            S_READING_CLF,
             S_READING_COMMA
         } state = S_INIT;
 
-        string cld;
-        for (const char *s = cldString.c_str(); *s; ++s) {
+        string clf;
+        for (const char *s = clfString.c_str(); *s; ++s) {
             switch (state) {
                 case S_INIT:
                     if (isspaceWrap(*s))
                         break;
 
-                    state = S_READING_CLD;
+                    state = S_READING_CLF;
                     // go through!!
 
-                case S_READING_CLD:
+                case S_READING_CLF:
                     if ((',' == *s) || isspaceWrap(*s)) {
-                        if (cld.empty())
+                        if (clf.empty())
                             return false;
 
-                        dst.push_back(cld);
-                        cld.clear();
+                        dst.push_back(clf);
+                        clf.clear();
                     }
 
                     if (isspaceWrap(*s))
@@ -94,7 +94,7 @@ namespace {
                     else if (',' == *s)
                         state = S_INIT;
                     else
-                        cld.push_back(*s);
+                        clf.push_back(*s);
                     break;
 
                 case S_READING_COMMA:
@@ -108,8 +108,8 @@ namespace {
             }
         }
 
-        if (!cld.empty())
-            dst.push_back(cld);
+        if (!clf.empty())
+            dst.push_back(clf);
 
         return true;
     }
@@ -196,10 +196,10 @@ namespace {
     }
 }
 
-class CldChainFactory {
+class ClfChainFactory {
     public:
-        CldChainFactory();
-        ICodeListener* create(const std::string &cldString,
+        ClfChainFactory();
+        ICodeListener* create(const std::string &clfString,
                               ICodeListener *slave);
 
     private:
@@ -209,59 +209,59 @@ class CldChainFactory {
 };
 
 // /////////////////////////////////////////////////////////////////////////////
-// CldChainFactory implementation
+// ClfChainFactory implementation
 namespace {
-    ICodeListener* createCldUniLabelGl(ICodeListener *slave) {
-        return createCldUniLabel(slave, CL_SCOPE_GLOBAL);
+    ICodeListener* createClfUniLabelGl(ICodeListener *slave) {
+        return createClfUniLabel(slave, CL_SCOPE_GLOBAL);
     }
 
-    ICodeListener* createCldUniLabelStatic(ICodeListener *slave) {
-        return createCldUniLabel(slave, CL_SCOPE_STATIC);
+    ICodeListener* createClfUniLabelStatic(ICodeListener *slave) {
+        return createClfUniLabel(slave, CL_SCOPE_STATIC);
     }
 
-    ICodeListener* createCldUniLabelFnc(ICodeListener *slave) {
-        return createCldUniLabel(slave, CL_SCOPE_FUNCTION);
+    ICodeListener* createClfUniLabelFnc(ICodeListener *slave) {
+        return createClfUniLabel(slave, CL_SCOPE_FUNCTION);
     }
 }
 
-CldChainFactory::CldChainFactory() {
-    map_["unify_labels_gl"]         = createCldUniLabelGl;
-    map_["unify_labels_static"]     = createCldUniLabelStatic;
-    map_["unify_labels_fnc"]        = createCldUniLabelFnc;
-    map_["unfold_switch"]           = createCldUnfoldSwitch;
+ClfChainFactory::ClfChainFactory() {
+    map_["unify_labels_gl"]         = createClfUniLabelGl;
+    map_["unify_labels_static"]     = createClfUniLabelStatic;
+    map_["unify_labels_fnc"]        = createClfUniLabelFnc;
+    map_["unfold_switch"]           = createClfUnfoldSwitch;
 }
 
-ICodeListener* CldChainFactory::create(const std::string &cldString,
+ICodeListener* ClfChainFactory::create(const std::string &clfString,
                                        ICodeListener *slave)
 {
-    CL_FACTORY_DEBUG("CldChainFactory: cldString: " << cldString);
-    TStringList cldList;
-    if (!parseCldString(cldList, cldString)) {
-        CL_ERROR("ivalid cld= option");
+    CL_FACTORY_DEBUG("ClfChainFactory: clfString: " << clfString);
+    TStringList clfList;
+    if (!parseClfString(clfList, clfString)) {
+        CL_ERROR("ivalid clf= option");
         return 0;
     }
 
     ICodeListener *chain = slave;
 
     TStringList::reverse_iterator i;
-    for (i = cldList.rbegin(); chain && (i != cldList.rend()); ++i) {
-        const string &cld = *i;
-        CL_FACTORY_DEBUG("CldChainFactory: looking for decorator: " << cld);
-        TMap::iterator i = map_.find(cld);
+    for (i = clfList.rbegin(); chain && (i != clfList.rend()); ++i) {
+        const string &clf = *i;
+        CL_FACTORY_DEBUG("ClfChainFactory: looking for filter: " << clf);
+        TMap::iterator i = map_.find(clf);
         if (i == map_.end()) {
-            CL_ERROR("code_listener decorator not found: " << cld);
+            CL_ERROR("code_listener filter not found: " << clf);
             return 0;
         }
 
         chain = (i->second)(chain);
         if (chain)
-            CL_FACTORY_DEBUG("CldChainFactory: decorator '" << cld
+            CL_FACTORY_DEBUG("ClfChainFactory: filter '" << clf
                     << "' created successfully");
 
-#if CL_DEBUG_CLD
-        chain = createCldIntegrityChk(chain);
+#if CL_DEBUG_CLF
+        chain = createClfIntegrityChk(chain);
         if (chain)
-            CL_FACTORY_DEBUG("CldChainFactory: integrity checker for '" << cld
+            CL_FACTORY_DEBUG("ClfChainFactory: integrity checker for '" << clf
                     << "' created successfully");
         else
             return 0;
@@ -288,7 +288,7 @@ struct ClFactory::Private {
     typedef std::map<string, TCreateFnc>                TMap;
 
     TMap                            map;
-    CldChainFactory                 cldFactory;
+    ClfChainFactory                 clfFactory;
 };
 
 ClFactory::ClFactory():
@@ -336,16 +336,16 @@ ICodeListener* ClFactory::create(const char *config_string) {
     if (!cl)
         return 0;
 
-    cl = createCldIntegrityChk(cl);
+    cl = createClfIntegrityChk(cl);
     if (cl) {
         CL_FACTORY_DEBUG(
-                "ClFactory: createCldIntegrityChk() completed successfully");
+                "ClFactory: createClfIntegrityChk() completed successfully");
     } else {
         return 0;
     }
 
-    if (hasKey(args, "cld"))
-        cl = d->cldFactory.create(args["cld"], cl);
+    if (hasKey(args, "clf"))
+        cl = d->clfFactory.create(args["clf"], cl);
 
     return cl;
 }

@@ -18,10 +18,10 @@
  */
 
 #include "config_cl.h"
-#include "cld_unswitch.hh"
+#include "clf_unswitch.hh"
 
-#include "cl_decorator.hh"
-#include "cld_unilabel.hh"
+#include "cl_filter.hh"
+#include "clf_unilabel.hh"
 
 #include <cstring>
 #include <sstream>
@@ -33,16 +33,16 @@
 #define NULLIFY(what) \
     memset(&(what), 0, sizeof (what))
 
-class CldUnfoldSwitch: public ClDecoratorBase {
+class ClfUnfoldSwitch: public ClFilterBase {
     public:
-        CldUnfoldSwitch(ICodeListener *slave):
-            ClDecoratorBase(slave),
+        ClfUnfoldSwitch(ICodeListener *slave):
+            ClFilterBase(slave),
             casePerSwitchCnt_(0),
             switchCnt_(0)
         {
         }
 
-        virtual ~CldUnfoldSwitch();
+        virtual ~ClfUnfoldSwitch();
 
         virtual void insn_switch_open(
             const struct cl_location *,
@@ -67,8 +67,8 @@ class CldUnfoldSwitch: public ClDecoratorBase {
 
             loc_ = *loc;
 
-            const int lo = CldUnfoldSwitch::getCaseVal(val_lo);
-            const int hi = CldUnfoldSwitch::getCaseVal(val_hi);
+            const int lo = ClfUnfoldSwitch::getCaseVal(val_lo);
+            const int hi = ClfUnfoldSwitch::getCaseVal(val_hi);
             for (int i = lo; i <= hi; ++i)
                 this->emitCase(i, val_lo->type, label);
         }
@@ -101,13 +101,13 @@ class CldUnfoldSwitch: public ClDecoratorBase {
 
 using std::string;
 
-CldUnfoldSwitch::~CldUnfoldSwitch() {
+ClfUnfoldSwitch::~ClfUnfoldSwitch() {
     BOOST_FOREACH(struct cl_var *clv, ptrs_) {
         delete clv;
     }
 }
 
-int CldUnfoldSwitch::getCaseVal(const struct cl_operand *op) {
+int ClfUnfoldSwitch::getCaseVal(const struct cl_operand *op) {
     if (!op || !op->type)
         TRAP;
 
@@ -124,9 +124,9 @@ int CldUnfoldSwitch::getCaseVal(const struct cl_operand *op) {
     return op->data.cst.data.cst_int.value;
 }
 
-// FIXME: duplicated code from cld_uniregs.cc
+// FIXME: duplicated code from clf_uniregs.cc
 // TODO: implement shared module providing this
-void CldUnfoldSwitch::cloneSwitchSrc(const struct cl_operand *op) {
+void ClfUnfoldSwitch::cloneSwitchSrc(const struct cl_operand *op) {
     if (!op)
         TRAP;
 
@@ -143,9 +143,9 @@ void CldUnfoldSwitch::cloneSwitchSrc(const struct cl_operand *op) {
     }
 }
 
-// FIXME: duplicated code from cld_uniregs.cc
+// FIXME: duplicated code from clf_uniregs.cc
 // TODO: implement shared module providing this
-void CldUnfoldSwitch::freeClonedSwitchSrc() {
+void ClfUnfoldSwitch::freeClonedSwitchSrc() {
     struct cl_accessor *ac = src_.accessor;
     while (ac) {
         struct cl_accessor *next = ac->next;
@@ -157,7 +157,7 @@ void CldUnfoldSwitch::freeClonedSwitchSrc() {
     }
 }
 
-struct cl_var* CldUnfoldSwitch::acquireClVar() {
+struct cl_var* ClfUnfoldSwitch::acquireClVar() {
     struct cl_var *clv = new struct cl_var;
     memset(clv, 0, sizeof *clv);
     clv->uid = /* XXX */ 0x400000 + switchCnt_;
@@ -166,7 +166,7 @@ struct cl_var* CldUnfoldSwitch::acquireClVar() {
     return clv;
 }
 
-void CldUnfoldSwitch::emitCase(int cst, struct cl_type *type, const char *label)
+void ClfUnfoldSwitch::emitCase(int cst, struct cl_type *type, const char *label)
 {
     static struct cl_type btype;
     btype.uid                       = /* FIXME */ 0x200000;
@@ -203,7 +203,7 @@ void CldUnfoldSwitch::emitCase(int cst, struct cl_type *type, const char *label)
     cli.data.insn_binop.dst         = &reg;
     cli.data.insn_binop.src1        = &src_;
     cli.data.insn_binop.src2        = &val;
-    ClDecoratorBase::insn(&cli);
+    ClFilterBase::insn(&cli);
 
     std::ostringstream str;
     str << "switch_" << switchCnt_
@@ -217,12 +217,12 @@ void CldUnfoldSwitch::emitCase(int cst, struct cl_type *type, const char *label)
     cli.data.insn_cond.src          = &reg;
     cli.data.insn_cond.then_label   = label;
     cli.data.insn_cond.else_label   = aux_label;
-    ClDecoratorBase::insn(&cli);
+    ClFilterBase::insn(&cli);
 
-    ClDecoratorBase::bb_open(aux_label);
+    ClFilterBase::bb_open(aux_label);
 }
 
-void CldUnfoldSwitch::emitDefault() {
+void ClfUnfoldSwitch::emitDefault() {
     if (defLabel_.empty())
         TRAP;
 
@@ -230,15 +230,15 @@ void CldUnfoldSwitch::emitDefault() {
     cli.code                = CL_INSN_JMP;
     cli.loc                 = defLoc_;
     cli.data.insn_jmp.label = defLabel_.c_str();
-    ClDecoratorBase::insn(&cli);
+    ClFilterBase::insn(&cli);
 
     defLabel_.clear();
 }
 
 // /////////////////////////////////////////////////////////////////////////////
-// public interface, see cld_unswitch.hh for more details
-ICodeListener* createCldUnfoldSwitch(ICodeListener *slave) {
-    return createCldUniLabel(new CldUnfoldSwitch(
-            createCldUniLabel(slave, CL_SCOPE_GLOBAL)),
+// public interface, see clf_unswitch.hh for more details
+ICodeListener* createClfUnfoldSwitch(ICodeListener *slave) {
+    return createClfUniLabel(new ClfUnfoldSwitch(
+            createClfUniLabel(slave, CL_SCOPE_GLOBAL)),
             CL_SCOPE_GLOBAL);
 }

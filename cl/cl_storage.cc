@@ -488,7 +488,7 @@ void ClStorageBuilder::Private::closeInsn() {
     }
 
     // let it honestly crash if callback sequence is incorrect since this should
-    // be already caught by CldCbSeqChk cl decorator
+    // be already caught by ClfCbSeqChk cl filter
     insn = 0;
 }
 
@@ -501,7 +501,7 @@ void ClStorageBuilder::file_open(const char *fileName) {
 
 void ClStorageBuilder::file_close() {
     // let it honestly crash if callback sequence is incorrect since this should
-    // be already caught by CldCbSeqChk cl decorator
+    // be already caught by ClfCbSeqChk cl filter
     d->file = 0;
 }
 
@@ -532,7 +532,7 @@ void ClStorageBuilder::fnc_open(const struct cl_operand *op) {
     d->digOperand(&def);
 
     // let it honestly crash if callback sequence is incorrect since this should
-    // be already caught by CldCbSeqChk cl decorator
+    // be already caught by ClfCbSeqChk cl filter
     d->bb = 0;
 }
 
@@ -557,7 +557,7 @@ void ClStorageBuilder::fnc_arg_decl(int pos, const struct cl_operand *op) {
 
 void ClStorageBuilder::fnc_close() {
     // let it honestly crash if callback sequence is incorrect since this should
-    // be already caught by CldCbSeqChk cl decorator
+    // be already caught by ClfCbSeqChk cl filter
     d->fnc = 0;
 }
 

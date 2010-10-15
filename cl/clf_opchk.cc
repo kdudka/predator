@@ -17,16 +17,16 @@
  * along with predator.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "cld_opchk.hh"
+#include "clf_opchk.hh"
 
 // /////////////////////////////////////////////////////////////////////////////
-// CldOpCheckerBase implementation
-CldOpCheckerBase::CldOpCheckerBase(ICodeListener *slave):
-    ClDecoratorBase(slave)
+// ClfOpCheckerBase implementation
+ClfOpCheckerBase::ClfOpCheckerBase(ICodeListener *slave):
+    ClFilterBase(slave)
 {
 }
 
-void CldOpCheckerBase::handleArrayIdx(const struct cl_operand *op) {
+void ClfOpCheckerBase::handleArrayIdx(const struct cl_operand *op) {
     if (CL_OPERAND_VOID == op->code)
         return;
 
@@ -41,7 +41,7 @@ void CldOpCheckerBase::handleArrayIdx(const struct cl_operand *op) {
     }
 }
 
-void CldOpCheckerBase::handleSrc(const struct cl_operand *op) {
+void ClfOpCheckerBase::handleSrc(const struct cl_operand *op) {
     if (CL_OPERAND_VOID == op->code)
         return;
 
@@ -60,7 +60,7 @@ void CldOpCheckerBase::handleSrc(const struct cl_operand *op) {
     this->handleArrayIdx(op);
 }
 
-void CldOpCheckerBase::handleDstSrc(const struct cl_operand *op) {
+void ClfOpCheckerBase::handleDstSrc(const struct cl_operand *op) {
     if (CL_OPERAND_VOID == op->code)
         return;
 
