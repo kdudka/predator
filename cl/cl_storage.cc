@@ -658,23 +658,28 @@ void ClStorageBuilder::insn_switch_case(
 
     const int lo = cst_lo.data.cst_int.value;
     const int hi = cst_hi.data.cst_int.value;
-    if (lo != hi)
-        // case range not supported for now
-        TRAP;
+    SE_BREAK_IF(hi < lo);
 
-    unsigned idx = targets.size();
     TOperandList &operands = d->insn->operands;
-    if (operands.size() != idx)
-        // something went wrong, offset detected
-        TRAP;
+    struct cl_operand val = *val_lo;
 
-    // store case value
-    operands.resize(idx + 1);
-    storeOperand(operands[idx], val_lo);
+    // FIXME: case ranges has not been tested yet
+    for (int i = lo; i <= hi; ++i) {
+        val.data.cst.data.cst_int.value = i;
 
-    // store case target
-    targets.resize(idx + 1);
-    targets[idx] = cfg[label];
+        const unsigned idx = targets.size();
+        if (operands.size() != idx)
+            // something went wrong, offset detected
+            TRAP;
+
+        // store case value
+        operands.resize(idx + 1);
+        storeOperand(operands[idx], &val);
+
+        // store case target
+        targets.resize(idx + 1);
+        targets[idx] = cfg[label];
+    }
 }
 
 void ClStorageBuilder::insn_switch_close() {

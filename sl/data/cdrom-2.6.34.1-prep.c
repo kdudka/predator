@@ -8222,12 +8222,12 @@ static inline __attribute__((always_inline)) int mutex_is_locked(struct mutex *l
  return atomic_read(&lock->count) != 1;
 }
 //# 136 "include/linux/mutex.h"
-extern void mutex_lock(struct mutex *lock);
+inline void mutex_lock(struct mutex *lock) { /* XXX */ (void) lock; }
 extern int __attribute__((warn_unused_result)) mutex_lock_interruptible(struct mutex *lock);
 extern int __attribute__((warn_unused_result)) mutex_lock_killable(struct mutex *lock);
 //# 151 "include/linux/mutex.h"
 extern int mutex_trylock(struct mutex *lock);
-extern void mutex_unlock(struct mutex *lock);
+inline void mutex_unlock(struct mutex *lock) { /* XXX */ (void) lock; }
 extern int atomic_dec_and_mutex_lock(atomic_t *cnt, struct mutex *lock);
 //# 14 "include/linux/notifier.h" 2
 //# 1 "include/linux/rwsem.h" 1
