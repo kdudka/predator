@@ -37,10 +37,6 @@
 #include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
 
-#ifndef GC_ADMIT_LINUX_LISTS
-#   define GC_ADMIT_LINUX_LISTS 0
-#endif
-
 #ifndef SE_DISABLE_DLS
 #   define SE_DISABLE_DLS 0
 #endif
@@ -71,9 +67,6 @@ static struct AbstractionThreshold dlsThreshold = {
 };
 
 namespace {
-
-// we use a controlled recursion of depth 1
-void flatScan(SymHeap &sh, EObjKind kind, TObjId obj);
 
 bool doesAnyonePointToInsideVisitor(const SymHeap &sh, TObjId sub) {
     const TValueId subAddr = sh.placedAt(sub);
@@ -119,55 +112,6 @@ TValueId /* addr */ segClone(SymHeap &sh, TValueId atAddr) {
     return sh.placedAt(dupSeg);
 }
 
-void considerFlatScan(SymHeap &sh, TObjId obj) {
-    const TValueId addr = sh.placedAt(obj);
-    const unsigned cnt = sh.usedByCount(addr);
-    switch (cnt) {
-        case 0:
-#if GC_ADMIT_LINUX_LISTS
-            if (!doesAnyonePointToInside(sh, obj))
-#endif
-                CL_WARN("considerFlatScan() encountered an unused root "
-                        "object #" << obj);
-            break;
-
-        case 1:
-            // we use a controlled recursion of depth 1
-            flatScan(sh, OK_SLS, obj);
-            break;
-
-        case 2:
-            // we use a controlled recursion of depth 1
-            flatScan(sh, OK_DLS, obj);
-            break;
-    }
-}
-
-void considerFlatScan(SymHeap &sh, TValueId val1, TValueId val2) {
-    if (val1 < 0 || val2 < 0)
-        // giving up
-        return;
-
-    const EUnknownValue code1 = sh.valGetUnknown(val1);
-    if (UV_KNOWN != code1 && UV_ABSTRACT != code1)
-        // too fuzzy for us
-        return;
-
-    const EUnknownValue code2 = sh.valGetUnknown(val2);
-    if (UV_KNOWN != code2 && UV_ABSTRACT != code2)
-        // too fuzzy for us
-        return;
-
-    const TObjId o1 = sh.pointsTo(val1);
-    const TObjId o2 = sh.pointsTo(val2);
-    if (o1 <= 0 || o2 <= 0)
-        // there is no valid target --> nothing to abstract actually
-        return;
-
-    considerFlatScan(sh, o1);
-    considerFlatScan(sh, o2);
-}
-
 template <class TIgnoreList>
 void buildIgnoreList(const SymHeap &sh, TObjId obj, TIgnoreList &ignoreList) {
     TObjId tmp;
@@ -204,6 +148,8 @@ struct DataMatchVisitor {
         // first compare value IDs
         const TValueId v1 = sh.valueOf(o1);
         const TValueId v2 = sh.valueOf(item.second);
+
+        // FIXME: utilize the prover instead?
         if (v1 == v2)
             return /* continue */ true;
 
@@ -219,6 +165,7 @@ struct DataMatchVisitor {
         switch (code) {
             case UV_UNINITIALIZED:
                 // basically the asme as UV_KNOWN
+                // FIXME: not really;  we should treat it rather as UV_UNKNOWN
             case UV_KNOWN:
                 // known values have to match
                 return false;
@@ -401,13 +348,6 @@ struct ValueAbstractor {
             // values are equal
             return /* continue */ true;
 
-        if (!this->flatScan) {
-            // prepare any nested abstractions for collapsing eventually
-            considerFlatScan(sh, valSrc, valDst);
-            valSrc = sh.valueOf(src);
-            valDst = sh.valueOf(dst);
-        }
-
         // create a new unknown value as a placeholder
         const TValueId valNew = mergeValues(sh, valSrc, valDst,
                                             this->srcIsDlSeg, this->dstIsDlSeg);
@@ -563,104 +503,6 @@ class ProbeVisitor {
     }
 };
 
-template <class TDst>
-class ProbeVisitorTopLevel {
-    private:
-        TDst        &heads_;
-        EObjKind    kind_;
-
-    public:
-        ProbeVisitorTopLevel(TDst &heads, EObjKind kind):
-            heads_(heads),
-            kind_(kind)
-        {
-        }
-
-        bool operator()(const SymHeap &sh, TObjId sub, TFieldIdxChain ic) {
-            const TValueId addr = sh.placedAt(sub);
-            if (sh.usedByCount(addr) != static_cast<unsigned>(kind_))
-                return /* continue */ true;
-
-            const struct cl_type *clt = sh.objType(sub);
-            if (!clt || clt->code != CL_TYPE_STRUCT)
-                return /* continue */ true;
-
-            if (doesAnyonePointToInside(sh, sub))
-                return /* continue */ true;
-
-            const ProbeVisitor visitor(sh, sub, kind_);
-            if (traverseSubObjs(sh, sub, visitor, /* leavesOnly */ true))
-                return /* continue */ true;
-
-            heads_.push_back(ic);
-            return /* continue */ true;
-        }
-};
-
-template <class TDst>
-void probe(TDst &heads, const SymHeap &sh, TObjId obj, EObjKind kind) {
-    // create low level visitor
-    ProbeVisitorTopLevel<TDst> visitor(heads, kind);
-
-    // try to treat the root as list head (regular lists)
-    visitor(sh, obj, /* use the root */ TFieldIdxChain());
-
-    // try to look for alternative list heads (Linux lists)
-    traverseSubObjsIc(sh, obj, visitor);
-}
-
-template <class TDst>
-class SelectorFinder {
-    private:
-        TDst                    &dst_;
-        const struct cl_type    *clt_;
-        const ProbeVisitor      visitor_;
-        const EObjKind          kind_;
-
-    public:
-        SelectorFinder(TDst &dst, const SymHeap &sh, TObjId root, EObjKind kind)
-            :
-            dst_(dst),
-            clt_(sh.objType(root)),
-            visitor_(sh, root, kind),
-            kind_(kind)
-        {
-        }
-
-        bool operator()(const SymHeap &sh, TObjId sub, TFieldIdxChain ic) {
-            const struct cl_type *subClt = sh.objType(sub);
-            const bool backLinkCandidate = (VAL_NULL == sh.valueOf(sub)
-                    && subClt && subClt->code == CL_TYPE_PTR
-                    && *targetTypeOfPtr(subClt) == *clt_);
-
-            if (backLinkCandidate || !visitor_(sh, sub))
-                // great, we have a candidate
-                dst_.push_back(ic);
-
-            return /* continue */ true;
-        }
-};
-
-template <class TDst>
-void digAnyListSelectors(TDst &dst, const SymHeap &sh, TObjId obj,
-                         EObjKind kind, TFieldIdxChain icHead)
-{
-    // jump to list head
-    obj = subObjByChain(sh, obj, icHead);
-
-    // start with the head, going down the line
-    std::vector<TFieldIdxChain> tmp;
-    SelectorFinder<TDst> visitor(tmp, sh, obj, kind);
-    traverseSubObjsIc(sh, obj, visitor);
-
-    // now merge it together
-    BOOST_FOREACH(const TFieldIdxChain &ic, tmp) {
-        TFieldIdxChain icTmp(icHead);
-        std::copy(ic.begin(), ic.end(), std::back_inserter(icTmp));
-        dst.push_back(icTmp);
-    }
-}
-
 // FIXME: this function tends to be crowded
 // TODO: split it somehow to some more dedicated functions
 unsigned /* len */ segDiscover(const SymHeap &sh, TObjId entry, EObjKind kind,
@@ -736,81 +578,6 @@ unsigned /* len */ segDiscover(const SymHeap &sh, TObjId entry, EObjKind kind,
 
     // each DLS consists of two nodes
     return rawPathLen - dlSegsOnPath;
-}
-
-template <class TSelectorList>
-unsigned segDiscoverAll(const SymHeap &sh, const TObjId entry, EObjKind kind,
-                        const TSelectorList &selectors, TFieldIdxChain icHead,
-                        TFieldIdxChain *icNext, TFieldIdxChain *icPrev)
-{
-    // check count of the selectors
-    const unsigned cnt = selectors.size();
-    CL_DEBUG("    --> found " << cnt << " list selector candidate(s)");
-    if (!cnt)
-        // why are we called actually?
-        SE_TRAP;
-
-    unsigned prevMax = cnt;
-    switch (kind) {
-        case OK_CONCRETE:
-        case OK_HEAD:
-        case OK_PART:
-            // invalid call of segDiscoverAll()
-            SE_TRAP;
-
-        case OK_SLS:
-            // just choose one selector
-            prevMax = /* dummy value */ 1;
-            break;
-
-        case OK_DLS:
-            // we need at least 2 selectors for DLS abstraction
-            if (cnt < 2)
-                return /* found nothing */ 0;
-    }
-
-    // if (2 < cnt), try all possible combinations in case of DLS
-    // NOTE: This may take some time...
-#if SE_SELF_TEST
-    unsigned bestLen = 0, bestNext, bestPrev;
-#else
-    unsigned bestLen = 0, bestNext = 0, bestPrev = 0;
-#endif
-    for (unsigned next = 0; next < cnt; ++next) {
-        for (unsigned prev = 0; prev < prevMax; ++prev) {
-            if (OK_DLS == kind && next == prev)
-                // we need two _distinct_ selectors for a DLS
-                continue;
-
-            // gather segment binding fields
-            SegBindingFields bf;
-            bf.head = icHead;
-            bf.next = selectors[next];
-            bf.peer = selectors[prev];
-
-            // run discover for the current combination
-            const unsigned len = segDiscover(sh, entry, kind, bf);
-            if (!len)
-                continue;
-
-            CL_DEBUG("        --> found segment of length " << len);
-            if (bestLen < len) {
-                bestLen = len;
-                bestNext = next;
-                bestPrev = prev;
-            }
-        }
-    }
-
-    if (!bestLen) {
-        CL_DEBUG("        <-- no segment found");
-        return /* not found */ 0;
-    }
-
-    // something found
-    *icNext = selectors[bestNext];
-    *icPrev = selectors[bestPrev];
-    return bestLen;
 }
 
 void slSegCreateIfNeeded(SymHeap &sh, TObjId obj, const SegBindingFields &bf) {
@@ -1091,142 +858,211 @@ bool considerSegAbstraction(SymHeap &sh, TObjId obj, EObjKind kind,
     }
 }
 
-template <class TCont, class TContHeads>
-bool considerAbstraction(SymHeap &sh, EObjKind kind, TCont entries,
-                         TContHeads heads, bool flatScan = false)
+bool considerAbstraction(SymHeap                    &sh,
+                         const TObjId               entry,
+                         const SegBindingFields     &bf,
+                         const unsigned             len)
 {
-    switch (kind) {
-        case OK_CONCRETE:
-        case OK_HEAD:
-        case OK_PART:
-            // invalid call of considerAbstraction()
-            SE_TRAP;
+    const EObjKind kind = (bf.peer.empty())
+        ? OK_SLS
+        : OK_DLS;
 
-        case OK_SLS:
-            CL_DEBUG("--> considering SLS abstraction...");
-            break;
+    return considerSegAbstraction(sh, entry, kind, bf, len, /* XXX */ false);
+}
 
-        case OK_DLS:
-            CL_DEBUG("--> considering DLS abstraction...");
-            break;
+bool digSegmentHead(TFieldIdxChain          &dst,
+                    const SymHeap           &sh,
+                    const struct cl_type    *cltRoot,
+                    TObjId                  obj)
+{
+    TFieldIdxChain invIc;
+    while (*cltRoot != *sh.objType(obj)) {
+        int nth;
+        obj = sh.objParent(obj, &nth);
+        if (OBJ_INVALID == obj)
+            // head not found;
+            return false;
+
+        invIc.push_back(nth);
     }
 
-    // go through all candidates and find the best possible abstraction
-    SegBindingFields bestBf;
-#if SE_SELF_TEST
-    TObjId bestEntry;
-#else
-    TObjId bestEntry = OBJ_INVALID;
+    // head found, now reverse the index chain (if any)
+    dst.clear();
+    std::copy(invIc.rbegin(), invIc.rend(), std::back_inserter(dst));
+    return true;
+}
+
+struct PtrFinder {
+    TObjId              target;
+    TFieldIdxChain      icFound;
+
+    bool operator()(const SymHeap &sh, TObjId sub, TFieldIdxChain ic) {
+        const TValueId val = sh.valueOf(sub);
+        if (val <= 0)
+            return /* continue */ true;
+
+        const TObjId obj = sh.pointsTo(val);
+        if (obj != target)
+            return /* continue */ true;
+
+        // target found!
+        icFound = ic;
+        return /* break */ false;
+    }
+};
+
+void digBackLink(SegBindingFields           &bf,
+                 const SymHeap              &sh,
+                 const TObjId               next,
+                 TObjId                     root)
+{
+    PtrFinder visitor;
+    visitor.target = /* head */ subObjByChain(sh, root, bf.head);
+    if (traverseSubObjsIc(sh, next, visitor))
+        // not found
+        return;
+
+    // join the idx chain with head
+    const TFieldIdxChain &fromHeadToBack = visitor.icFound;
+    bf.peer = bf.head;
+    std::copy(fromHeadToBack.begin(),
+              fromHeadToBack.end(),
+              std::back_inserter(bf.peer));
+}
+
+typedef std::vector<SegBindingFields> TBindingCandidateList;
+
+class ProbeEntryVisitor {
+    private:
+        TBindingCandidateList   &dst_;
+        const TObjId            root_;
+        const struct cl_type    *clt_;
+
+    public:
+        ProbeEntryVisitor(TBindingCandidateList         &dst,
+                          const SymHeap                 &sh,
+                          const TObjId                  root):
+            dst_(dst),
+            root_(root),
+            clt_(sh.objType(root))
+        {
+            SE_BREAK_IF(!clt_);
+        }
+
+        bool operator()(const SymHeap &sh, TObjId sub, TFieldIdxChain ic) const
+        {
+            const TValueId val = sh.valueOf(sub);
+            if (val <= 0)
+                return /* continue */ true;
+
+            const TObjId next = sh.pointsTo(val);
+            if (next <= 0)
+                return /* continue */ true;
+
+            SegBindingFields bf;
+            if (!digSegmentHead(bf.head, sh, clt_, next))
+                return /* continue */ true;
+
+            // entry candidate found, check the back-link in case of DLL
+            bf.next = ic;
+#if !SE_DISABLE_DLS
+            digBackLink(bf, sh, next, root_);
 #endif
-    unsigned bestLen = 0;
 
-    // check how many candidates did we get
-    const unsigned cnt = entries.size();
-    SE_BREAK_IF(heads.size() != cnt);
+#if SE_DISABLE_SLS
+            // allow only DLS abstraction
+            if (bf.peer.empty())
+                return /* continue */ true;
+#endif
 
-    for (unsigned i = 0; i < cnt; ++i) {
-        const TObjId obj = entries[i];
-        const TFieldIdxChain icHead = heads[i];
+            // append a candidate
+            dst_.push_back(bf);
+            return /* continue */ true;
+        }
+};
 
-        // gather suitable selectors
-        std::vector<TFieldIdxChain> selectors;
-        digAnyListSelectors(selectors, sh, obj, kind, icHead);
+struct SegCandidate {
+    TObjId                      entry;
+    TBindingCandidateList       bfs;
+};
 
-        // run the LS discovering process
-        SegBindingFields bf;
-        bf.head = icHead;
-        const unsigned len = segDiscoverAll(sh, obj, kind, selectors,
-                                            icHead, &bf.next, &bf.peer);
+unsigned /* len */ segDiscover(const SymHeap            &sh,
+                               const TObjId             entry,
+                               const SegBindingFields   &bf)
+{
+    const EObjKind kind = (bf.peer.empty())
+        ? OK_SLS
+        : OK_DLS;
 
-        if (len <= bestLen)
-            continue;
+    return segDiscover(sh, entry, kind, bf);
+}
 
-        bestLen     = len;
-        bestEntry   = obj;
-        bestBf      = bf;
+typedef std::vector<SegCandidate> TSegCandidateList;
+
+bool performBestAbstraction(SymHeap &sh, const TSegCandidateList &candidates)
+{
+    const unsigned cnt = candidates.size();
+    if (!cnt)
+        // no candidates given
+        return false;
+
+    CL_DEBUG("AAA initiating segment discovery, "
+            << cnt << " binding candidate(s) given");
+
+    unsigned bestLen = 0, bestIdx;
+    SegBindingFields bestBinding;
+    for (unsigned idx = 0; idx < cnt; ++idx) {
+        const SegCandidate &segc = candidates[idx];
+        BOOST_FOREACH(const SegBindingFields &bf, segc.bfs) {
+            const unsigned len = segDiscover(sh, segc.entry, bf);
+            if (len <= bestLen)
+                continue;
+
+            bestIdx = idx;
+            bestLen = len;
+            bestBinding = bf;
+        }
     }
+
     if (!bestLen) {
-        CL_DEBUG("<-- nothing useful found");
+        CL_DEBUG("    <-- no segment found");
         return false;
     }
 
-    // consider abstraction threshold and trigger the abstraction eventually
-    return considerSegAbstraction(sh, bestEntry, kind, bestBf, bestLen,
-                                  flatScan);
-}
-
-void flatScan(SymHeap &sh, EObjKind kind, TObjId obj) {
-    std::vector<TFieldIdxChain> heads;
-    probe(heads, sh, obj, kind);
-
-    SymHeapCore::TContObj cont;
-    BOOST_FOREACH(const TFieldIdxChain icHead, heads) {
-        cont.push_back(obj);
-    }
-
-    considerAbstraction(sh, kind, cont, heads, /* flatScan */ true);
-}
-
-template <class TDst>
-void digAnyListHeads(TDst &heads, const SymHeap &sh, TObjId obj,
-                     EObjKind kind)
-{
-    if (sh.cVar(0, obj))
-        // skip static/automatic objects
-        return;
-
-    const TValueId addr = sh.placedAt(obj);
-    if (VAL_INVALID == addr)
-        return;
-
-    probe(heads, sh, obj, kind);
+    const SegCandidate &segc = candidates[bestIdx];
+    return considerAbstraction(sh, segc.entry, bestBinding, bestLen);
 }
 
 bool abstractIfNeededCore(SymHeap &sh) {
-    SymHeapCore::TContObj slSegEntries;
-    SymHeapCore::TContObj dlSegEntries;
+    TSegCandidateList candidates;
 
-    std::vector<TFieldIdxChain> slSegHeads;
-    std::vector<TFieldIdxChain> dlSegHeads;
-
-    // collect all possible SLS/DLS entries
+    // go through all potential segment entries
     SymHeapCore::TContObj roots;
     sh.gatherRootObjs(roots);
     BOOST_FOREACH(const TObjId obj, roots) {
-        // look for SLS heads
-        std::vector<TFieldIdxChain> heads;
-        (void) heads;
+        if (sh.cVar(0, obj))
+            // skip static/automatic objects
+            continue;
 
-#if !SE_DISABLE_SLS
-        digAnyListHeads(heads, sh, obj, OK_SLS);
-        BOOST_FOREACH(const TFieldIdxChain icHead, heads) {
-            slSegEntries.push_back(obj);
-            slSegHeads.push_back(icHead);
-        }
+        const TValueId addr = sh.placedAt(obj);
+        if (VAL_INVALID == addr)
+            // no valid object anyway
+            continue;
 
-        // look for DLS heads
-        heads.clear();
-#endif
-#if !SE_DISABLE_DLS
-        digAnyListHeads(heads, sh, obj, OK_DLS);
-        BOOST_FOREACH(const TFieldIdxChain icHead, heads) {
-            dlSegEntries.push_back(obj);
-            dlSegHeads.push_back(icHead);
-        }
-#endif
+        // use ProbeEntryVisitor visitor to validate the potential segment entry
+        SegCandidate segc;
+        const ProbeEntryVisitor visitor(segc.bfs, sh, obj);
+        traverseSubObjsIc(sh, obj, visitor);
+        if (segc.bfs.empty())
+            // found nothing
+            continue;
+
+        // append a segment candidate
+        segc.entry = obj;
+        candidates.push_back(segc);
     }
 
-    // TODO: check if the order of following two steps is anyhow important
-    if (!slSegEntries.empty()
-            && considerAbstraction(sh, OK_SLS, slSegEntries, slSegHeads))
-        return true;
-
-    if (!dlSegEntries.empty()
-            && considerAbstraction(sh, OK_DLS, dlSegEntries, dlSegHeads))
-        return true;
-
-    // no hit
-    return false;
+    return performBestAbstraction(sh, candidates);
 }
 
 void segReplaceRefs(SymHeap &sh, TValueId valOld, TValueId valNew) {
