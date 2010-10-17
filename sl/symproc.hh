@@ -179,8 +179,9 @@ class SymExecCore: public SymProc {
         void execFree(const CodeStorage::TOperandList &opList);
         bool execCall(SymState &dst, const CodeStorage::Insn &insn);
 
+        template <class TOpList, class TDerefs>
         bool concretizeLoop(SymState &dst, const CodeStorage::Insn &insn,
-                            const struct cl_operand &src);
+                            const TOpList &opList, const TDerefs &derefs);
 
         bool concretizeIfNeeded(SymState &dst, const CodeStorage::Insn &insn);
         bool execCore(SymState &dst, const CodeStorage::Insn &insn);

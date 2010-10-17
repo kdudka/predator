@@ -1266,9 +1266,11 @@ void SymExecCore::execOp(const CodeStorage::Insn &insn) {
     this->objSetValue(varLhs, valResult);
 }
 
+template <class TOpList, class TDerefs>
 bool SymExecCore::concretizeLoop(SymState                       &dst,
                                  const CodeStorage::Insn        &insn,
-                                 const struct cl_operand        &op)
+                                 const TOpList                  &opList,
+                                 const TDerefs                  &derefs)
 {
     bool hit = false;
 
@@ -1279,12 +1281,20 @@ bool SymExecCore::concretizeLoop(SymState                       &dst,
         SymExecCore core(sh, bt_, ep_);
         core.setLocation(lw_);
 
-        // we expect a pointer at this point
-        const TObjId ptr = varFromOperand(op, sh, bt_);
-        const TValueId val = sh.valueOf(ptr);
-        if (0 < val && UV_ABSTRACT == sh.valGetUnknown(val)) {
-            hit = true;
-            concretizeObj(sh, val, todo);
+        // TODO: implement full version of the alg (complexity m*n)
+        bool hitLocal = false;
+        BOOST_FOREACH(unsigned idx, derefs) {
+            const struct cl_operand &op = opList.at(idx);
+
+            // we expect a pointer at this point
+            const TObjId ptr = varFromOperand(op, sh, bt_);
+            const TValueId val = sh.valueOf(ptr);
+            if (0 < val && UV_ABSTRACT == sh.valGetUnknown(val)) {
+                SE_BREAK_IF(hitLocal);
+                hit = true;
+                hitLocal = true;
+                concretizeObj(sh, val, todo);
+            }
         }
 
         // process the current heap and move to the next one (if any)
@@ -1322,22 +1332,18 @@ bool SymExecCore::concretizeIfNeeded(SymState                   &results,
         // neither dereference, nor free()
         return false;
 
-    bool hitDeref = false;
-    bool hitConcretize = false;
-    BOOST_FOREACH(const struct cl_operand &op, insn.operands) {
-        if (!checkForDeref(op, insn))
-            continue;
+    // first look for dereferences
+    std::vector<unsigned /* idx */> derefs;
+    const CodeStorage::TOperandList &opList = insn.operands;
+    for (unsigned idx = 0; idx < opList.size(); ++idx)
+        if (checkForDeref(opList[idx], insn))
+            derefs.push_back(idx);
 
-        hitDeref = true;
-
-        if (hitConcretize)
-            // FIXME: are we ready for two dereferences within one insn?
-            SE_TRAP;
-
-        hitConcretize = this->concretizeLoop(results, insn, op);
-    }
-    if (hitDeref)
+    if (!derefs.empty()) {
+        // handle dereferences
+        this->concretizeLoop(results, insn, opList, derefs);
         return true;
+    }
 
     const enum cl_insn_e code = insn.code;
     const struct cl_operand &src = insn.operands[/* src */ 1];
@@ -1349,7 +1355,8 @@ bool SymExecCore::concretizeIfNeeded(SymState                   &results,
         return false;
 
     // assume call of free()
-    this->concretizeLoop(results, insn, insn.operands[/* addr */ 2]);
+    derefs.push_back(/* addr */ 2);
+    this->concretizeLoop(results, insn, opList, derefs);
     return true;
 }
 
