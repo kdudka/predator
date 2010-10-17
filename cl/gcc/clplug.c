@@ -1728,13 +1728,13 @@ static bool cl_append_def_listener(struct cl_code_listener *chain,
                                    const char *listener, const char *args,
                                    const struct cl_plug_options *opt)
 {
-    const char *cld = (opt->use_peer)
+    const char *clf = (opt->use_peer)
         ? "unfold_switch,unify_labels_gl"
         : "unify_labels_fnc";
 
     return cl_append_listener(chain,
-            "listener=\"%s\" listener_args=\"%s\" cld=\"%s\"",
-            listener, args, cld);
+            "listener=\"%s\" listener_args=\"%s\" clf=\"%s\"",
+            listener, args, clf);
 }
 
 static struct cl_code_listener*
