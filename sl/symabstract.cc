@@ -54,16 +54,16 @@ struct AbstractionThreshold {
 
 /// abstraction trigger threshold for SLS
 static struct AbstractionThreshold slsThreshold = {
-    /* sparePrefix */ 1,
+    /* sparePrefix */ 0,
     /* innerSegLen */ 1,
     /* spareSuffix */ 0
 };
 
 /// abstraction trigger threshold for DLS
 static struct AbstractionThreshold dlsThreshold = {
-    /* sparePrefix */ 1,
+    /* sparePrefix */ 0,
     /* innerSegLen */ 1,
-    /* spareSuffix */ 1
+    /* spareSuffix */ 0
 };
 
 namespace {
@@ -149,8 +149,8 @@ struct DataMatchVisitor {
         const TValueId v1 = sh.valueOf(o1);
         const TValueId v2 = sh.valueOf(item.second);
 
-        // FIXME: utilize the prover instead?
-        if (v1 == v2)
+        bool eq;
+        if (sh.proveEq(&eq, v1, v2) && eq)
             return /* continue */ true;
 
         // special values have to match
@@ -163,13 +163,11 @@ struct DataMatchVisitor {
             return /* mismatch */ false;
 
         switch (code) {
-            case UV_UNINITIALIZED:
-                // basically the asme as UV_KNOWN
-                // FIXME: not really;  we should treat it rather as UV_UNKNOWN
             case UV_KNOWN:
                 // known values have to match
                 return false;
 
+            case UV_UNINITIALIZED:
             case UV_UNKNOWN:
                 // safe to keep UV_UNKNOWN values as they are
                 return true;
@@ -863,11 +861,146 @@ bool considerAbstraction(SymHeap                    &sh,
                          const SegBindingFields     &bf,
                          const unsigned             len)
 {
+    // TODO
     const EObjKind kind = (bf.peer.empty())
         ? OK_SLS
         : OK_DLS;
 
     return considerSegAbstraction(sh, entry, kind, bf, len, /* XXX */ false);
+}
+
+bool matchSegBinding(const SymHeap              &sh,
+                     const TObjId               obj,
+                     const SegBindingFields     &bf)
+{
+    const EObjKind kind = sh.objKind(obj);
+    switch (kind) {
+        case OK_CONCRETE:
+            // nothing to match actually
+            return true;
+
+        default:
+            // TODO
+            (void) bf;
+            SE_TRAP;
+            return false;
+    }
+}
+
+TObjId jumpToNextObj(const SymHeap              &sh,
+                     const TObjId               obj,
+                     const SegBindingFields     &bf)
+{
+    const struct cl_type *clt = sh.objType(obj);
+    const TObjId nextPtr = subObjByChain(sh, obj, bf.next);
+    SE_BREAK_IF(nextPtr <= 0);
+
+    const TObjId nextHead = sh.pointsTo(sh.valueOf(nextPtr));
+    if (nextHead <= 0)
+        // no head pointed by nextPtr
+        return OBJ_INVALID;
+
+    const TObjId next = subObjByInvChain(sh, nextHead, bf.head);
+    if (next <= 0)
+        // no suitable next object
+        return OBJ_INVALID;
+
+    const struct cl_type *cltNext = sh.objType(next);
+    if (!cltNext || *cltNext != *clt)
+        // type mismatch
+        return OBJ_INVALID;
+
+    if (!matchSegBinding(sh, next, bf))
+        // binding mismatch
+        return OBJ_INVALID;
+
+    if (!bf.peer.empty())
+        // check DLS back-link
+        SE_TRAP;
+
+    if (OK_DLS == sh.objKind(next))
+        // jump to peer in case of DLS
+        return dlSegPeer(sh, next);
+
+    return next;
+}
+
+bool validatePointingObjects(const SymHeap              &sh,
+                             const SegBindingFields     &bf,
+                             const TObjId               obj,
+                             const TObjId               prev,
+                             const TObjId               next)
+{
+    // TODO: validate all pointers at and/or inside the object properly
+    const TObjId head = subObjByChain(sh, obj, bf.head);
+    if (doesAnyonePointToInsideVisitor(sh, head)) {
+        CL_WARN("doesAnyonePointToInsideVisitor() is too strict for us!");
+        return false;
+    }
+
+    // TODO: replace the following nonsense
+    return (1U == sh.usedByCount(sh.placedAt(obj)));
+}
+
+bool matchData(const SymHeap                &sh,
+               const SegBindingFields       &bf,
+               const TObjId                 o1,
+               const TObjId                 o2)
+{
+    DataMatchVisitor visitor;
+    const TObjId nextPtr = subObjByChain(sh, o1, bf.next);
+    visitor.ignoreList.insert(nextPtr);
+
+    if (!bf.peer.empty()) {
+        const TObjId prevPtr = subObjByChain(sh, o2, bf.peer);
+        visitor.ignoreList.insert(prevPtr);
+    }
+
+    const TObjPair item(o1, o2);
+    return traverseSubObjs(sh, item, visitor, /* leavesOnly */ true);
+}
+
+unsigned /* len */ segDiscover(const SymHeap            &sh,
+                               const TObjId             entry,
+                               const SegBindingFields   &bf)
+{
+    const bool isDls = !bf.peer.empty();
+
+    std::set<TObjId> path;
+    TObjId from = entry;
+    TObjId obj = jumpToNextObj(sh, entry, bf);
+
+    while (OBJ_INVALID != obj && !hasKey(path, obj)) {
+        // compare the data (FIXME: not tested)
+        if (!matchData(sh, bf, from, obj)) {
+            CL_WARN("DataMatchVisitor refuses to create a segment!");
+            break;
+        }
+
+        TObjId next = OBJ_INVALID;
+        if (isDls) {
+            // look ahead in case of DLS
+            next = jumpToNextObj(sh, obj, bf);
+            path.insert(obj);
+        }
+
+        if (!validatePointingObjects(sh, bf, obj, from, next))
+            // somene points to inside who should not
+            break;
+
+        from = obj;
+        if (isDls)
+            // just move the cursor in case of DLS
+            obj = next;
+
+        else {
+            // enlarge the path in case of SLS now
+            path.insert(obj);
+            obj = jumpToNextObj(sh, obj, bf);
+        }
+    }
+
+    return path.size();
 }
 
 bool digSegmentHead(TFieldIdxChain          &dst,
@@ -986,17 +1119,6 @@ struct SegCandidate {
     TBindingCandidateList       bfs;
 };
 
-unsigned /* len */ segDiscover(const SymHeap            &sh,
-                               const TObjId             entry,
-                               const SegBindingFields   &bf)
-{
-    const EObjKind kind = (bf.peer.empty())
-        ? OK_SLS
-        : OK_DLS;
-
-    return segDiscover(sh, entry, kind, bf);
-}
-
 typedef std::vector<SegCandidate> TSegCandidateList;
 
 bool performBestAbstraction(SymHeap &sh, const TSegCandidateList &candidates)
@@ -1006,18 +1128,22 @@ bool performBestAbstraction(SymHeap &sh, const TSegCandidateList &candidates)
         // no candidates given
         return false;
 
-    CL_DEBUG("AAA initiating segment discovery, "
-            << cnt << " binding candidate(s) given");
+    CL_DEBUG("--> initiating segment discovery, "
+            << cnt << " entry candidate(s) given");
 
+    // go through entry candidates
     unsigned bestLen = 0, bestIdx;
     SegBindingFields bestBinding;
     for (unsigned idx = 0; idx < cnt; ++idx) {
+
+        // go through binding candidates
         const SegCandidate &segc = candidates[idx];
         BOOST_FOREACH(const SegBindingFields &bf, segc.bfs) {
             const unsigned len = segDiscover(sh, segc.entry, bf);
             if (len <= bestLen)
                 continue;
 
+            // update best candidate
             bestIdx = idx;
             bestLen = len;
             bestBinding = bf;
@@ -1029,6 +1155,7 @@ bool performBestAbstraction(SymHeap &sh, const TSegCandidateList &candidates)
         return false;
     }
 
+    // pick up the best candidate
     const SegCandidate &segc = candidates[bestIdx];
     return considerAbstraction(sh, segc.entry, bestBinding, bestLen);
 }
