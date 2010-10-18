@@ -27,6 +27,7 @@ gen(){
         -DPREDATOR \
         -I../cl -I../cl/gcc -I../include -I../include/gcc \
         -fplugin=../sl_build/libsl.so $1 \
+        -fplugin-arg-libsl-preserve-ec \
         2>&1 \
         | grep -v '\[internal location\]$' \
         | sed 's|data/||' \

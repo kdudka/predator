@@ -17,25 +17,21 @@
  * along with predator.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef H_GUARD_CLD_UNILABEL_H
-#define H_GUARD_CLD_UNILABEL_H
+#ifndef H_GUARD_CLF_UNSWITCH_H
+#define H_GUARD_CLF_UNSWITCH_H
 
 /**
- * @file cld_unilabel.hh
- * constructor createCldUniLabel() - of the @b "unify_labels_*" decorators
+ * @file clf_unswitch.hh
+ * constructor createClfUnfoldSwitch() - of the @b "unifold_switch" filter
  */
-
-#include <cl/code_listener.h>
 
 class ICodeListener;
 
 /**
- * create code listener decorator for label unification
- * @param scope unification level - CL_SCOPE_GLOBAL, CL_SCOPE_STATIC or
- * CL_SCOPE_FUNCTION
- *
+ * create a code listener filter which converts all CL_INSN_SWITCH to
+ * a sequence of CL_INSN_COND instructions.
  * @return on heap allocated instance of ICodeListener object
  */
-ICodeListener* createCldUniLabel(ICodeListener *, cl_scope_e scope);
+ICodeListener* createClfUnfoldSwitch(ICodeListener *);
 
-#endif /* H_GUARD_CLD_UNILABEL_H */
+#endif /* H_GUARD_CLF_UNSWITCH_H */

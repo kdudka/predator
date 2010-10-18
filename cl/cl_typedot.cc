@@ -131,7 +131,7 @@ class ClTypeDotGenerator: public ICodeListener {
 
         virtual void insn_switch_close() { }
 
-        virtual void finalize();
+        virtual void acknowledge();
 
     private:
         typedef std::stack<const struct cl_type *> TStack;
@@ -210,15 +210,15 @@ ClTypeDotGenerator::ClTypeDotGenerator(const char *glDotFile)
 }
 
 ClTypeDotGenerator::~ClTypeDotGenerator() {
-    // do cleanup in finalize()
-}
-
-void ClTypeDotGenerator::finalize() {
     glOut_ << "}" << std::endl;
     if (!glOut_) {
         CL_WARN("error detected while closing a file");
     }
     glOut_.close();
+}
+
+void ClTypeDotGenerator::acknowledge() {
+    // we haven't been waiting for acknowledge anyway, sorry...
 }
 
 namespace {

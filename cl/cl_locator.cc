@@ -80,7 +80,7 @@ class ClLocator: public ICodeListener {
 
         virtual void insn_switch_close() { }
 
-        virtual void finalize() { }
+        virtual void acknowledge() { }
 
     private:
         std::ostream            &out_;

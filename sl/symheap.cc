@@ -22,6 +22,7 @@
 #include "symheap.hh"
 
 #include <cl/cl_msg.hh>
+#include <cl/clutil.hh>
 #include <cl/code_listener.h>
 
 #include "symabstract.hh"
@@ -240,6 +241,10 @@ class NeqDb {
         friend void SymHeapCore::copyRelevantPreds(SymHeapCore &dst,
                                                    const SymHeapCore::TValMap &)
                                                    const;
+
+        friend bool SymHeapCore::matchPreds(const SymHeapCore &,
+                                            const SymHeapCore::TValMap &)
+                                            const;
 };
 
 class EqIfDb {
@@ -303,6 +308,10 @@ class EqIfDb {
         friend void SymHeapCore::copyRelevantPreds(SymHeapCore &dst,
                                                    const SymHeapCore::TValMap &)
                                                    const;
+
+        friend bool SymHeapCore::matchPreds(const SymHeapCore &,
+                                            const SymHeapCore::TValMap &)
+                                            const;
 };
 
 template <class TDst2>
@@ -1045,6 +1054,60 @@ void SymHeapCore::copyRelevantPreds(SymHeapCore &dst, const TValMap &valMap)
     }
 }
 
+bool SymHeapCore::matchPreds(const SymHeapCore &ref, const TValMap &valMap)
+    const
+{
+    // go through NeqDb
+    BOOST_FOREACH(const NeqDb::TItem &item, d->neqDb.cont_) {
+        TValueId valLt = item.first;
+        TValueId valGt = item.second;
+        if (!valMapLookup(valMap, &valLt) || !valMapLookup(valMap, &valGt))
+            // seems like a dangling predicate, which we are not interested in
+            continue;
+
+        if (!ref.d->neqDb.areNeq(valLt, valGt))
+            // Neq predicate not matched
+            return false;
+    }
+
+    // go through EqIfDb
+    BOOST_FOREACH(EqIfDb::TMap::const_reference item, d->eqIfDb.cont_) {
+        const EqIfDb::TSet &line = item.second;
+        BOOST_FOREACH(const EqIfDb::TPred &pred, line) {
+            TValueId valCond, valLt, valGt; bool neg;
+            boost::tie(valCond, valLt, valGt, neg) = pred;
+
+            if (!valMapLookup(valMap, &valCond)
+                    || !valMapLookup(valMap, &valLt)
+                    || !valMapLookup(valMap, &valGt))
+                // seems like a dangling predicate, which we are not interested in
+                continue;
+
+            const EqIfDb::TMap &peer = ref.d->eqIfDb.cont_;
+            EqIfDb::TMap::const_iterator iter = peer.find(valCond);
+            if (peer.end() == iter)
+                // EqIf predicate not found
+                return false;
+
+            BOOST_FOREACH(const EqIfDb::TPred &peerPred, iter->second) {
+                if (peerPred.get</* valCond */ 0>() == valCond
+                        && peerPred.get</* valLt */ 1>() == valLt
+                        && peerPred.get</* valGt */ 2>() == valGt
+                        && peerPred.get</* neg */3>() == neg)
+                    goto eqif_matched;
+            }
+
+            // no matching EqIf predicate found
+            return false;
+        }
+
+eqif_matched:
+        (void) 0;
+    }
+
+    return true;
+}
+
 // /////////////////////////////////////////////////////////////////////////////
 // CVar lookup container
 class CVarMap {
@@ -1222,7 +1285,7 @@ void SymHeapTyped::createSubs(TObjId obj) {
         todo.pop();
         SE_BREAK_IF(!clt);
 
-        if (CL_TYPE_STRUCT != clt->code)
+        if (!isComposite(clt))
             continue;
 
         const int cnt = clt->item_cnt;
@@ -1314,6 +1377,7 @@ TObjId SymHeapTyped::objDup(TObjId obj) {
     const Private::Object &ref = d->objects[obj];
     if (ref.clt && ref.clt->code == CL_TYPE_STRUCT && -1 == ref.parent)
         // if the original was a root object, the new one must also be
+        // FIXME: should we care about CL_TYPE_UNION here?
         d->roots.push_back(image);
 
     return image;
@@ -1487,35 +1551,6 @@ TObjId SymHeapTyped::objParent(TObjId obj, int *nth) const {
 }
 
 TObjId SymHeapTyped::objCreate(const struct cl_type *clt, CVar cVar) {
-#if SE_SELF_TEST
-    if(clt) {
-        const enum cl_type_e code = clt->code;
-        switch (code) {
-            case CL_TYPE_ENUM:
-            case CL_TYPE_INT:
-            case CL_TYPE_BOOL:
-            case CL_TYPE_PTR:
-            case CL_TYPE_STRUCT:
-                break;
-
-            case CL_TYPE_CHAR:
-                CL_WARN("CL_TYPE_CHAR is not supported by SymHeap for now");
-                break;
-
-            case CL_TYPE_ARRAY:
-                if (CL_TYPE_CHAR == clt->items[0].type->code)
-                    // make it possible to at least ignore strings
-                    break;
-
-                CL_WARN("CL_TYPE_ARRAY is not supported by SymHeap for now");
-                break;
-
-            default:
-                // TODO: handle also other types somehow?
-                SE_TRAP;
-        }
-    }
-#endif
     const TObjId obj = SymHeapCore::objCreate();
     if (OBJ_INVALID == obj)
         return OBJ_INVALID;
@@ -1523,9 +1558,10 @@ TObjId SymHeapTyped::objCreate(const struct cl_type *clt, CVar cVar) {
     Private::Object &ref = d->objects[obj];
     ref.clt     = clt;
     ref.cVar    = cVar;
-    if(clt) {
+    if (clt) {
         this->createSubs(obj);
         if (CL_TYPE_STRUCT == clt->code)
+            // FIXME: should we care about CL_TYPE_UNION here?
             d->roots.push_back(obj);
     }
 
@@ -1564,6 +1600,7 @@ void SymHeapTyped::objDefineType(TObjId obj, const struct cl_type *clt) {
     ref.clt = clt;
     this->createSubs(obj);
     if (CL_TYPE_STRUCT == clt->code)
+        // FIXME: should we care about CL_TYPE_UNION here?
         d->roots.push_back(obj);
 
     if (OBJ_RETURN == obj)
@@ -1615,10 +1652,14 @@ TValueId SymHeapTyped::valCreateCustom(const struct cl_type *clt, int cVal) {
         if (VAL_INVALID == val)
             return VAL_INVALID;
 
+        // initialize heap value
         Private::Value &ref = d->values[val];
         ref.clt         = clt;
         ref.isCustom    = true;
         ref.customData  = cVal;
+
+        // store cVal --> val mapping
+        d->cValueMap[cVal] = val;
 
         return val;
     }

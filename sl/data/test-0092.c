@@ -62,5 +62,7 @@ int main()
         // this should not happen as long as gl initializers work
         main();
 
+    ___sl_plot(NULL);
+
     return !!foo(&local);
 }

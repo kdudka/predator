@@ -39,6 +39,7 @@
 #include <gcc/function.h>
 #include <gcc/gimple.h>
 #include <gcc/input.h>
+#include <gcc/toplev.h>
 #include <gcc/tree-pass.h>
 
 #ifndef _GNU_SOURCE
@@ -71,42 +72,43 @@ extern void print_gimple_stmt (FILE *, gimple, int, int);
 #define CL_ASSERT(expr) \
     if (!(expr)) abort()
 
-// TODO: replace with gcc native debugging infrastructure
-#define CL_LOG(...) do { \
-    if (CL_VERBOSE_PLUG & verbose) { \
-        fprintf (stderr, "%s: ", plugin_name); \
-        fprintf (stderr, __VA_ARGS__); \
-        fprintf (stderr, "\n"); \
-    } \
+// low-level strictly local error/warning emitter
+#define CL_PRINT(what, ...) do {                                            \
+    fprintf (stderr, "%s: %s: ", plugin_name, (what));                      \
+    fprintf (stderr, __VA_ARGS__);                                          \
+    fprintf (stderr, "\n");                                                 \
+} while (0)
+
+#define CL_ERROR(...)   CL_PRINT("error",   __VA_ARGS__)
+#define CL_WARN(...)    CL_PRINT("warning", __VA_ARGS__)
+
+#define CL_DEBUG(...) do {                                                  \
+    if (CL_VERBOSE_PLUG & verbose)                                          \
+        CL_PRINT("debug", __VA_ARGS__);                                     \
 } while (0)
 
 #if CLPLUG_SILENT
 #   define CL_WARN_UNHANDLED(...)
 #   define CL_WARN_UNHANDLED_WITH_LOC(...)
 #else
-// TODO: replace with gcc native debugging infrastructure
 #   define CL_WARN_UNHANDLED(what)                                          \
         fprintf(stderr, "%s:%d: warning: "                                  \
                 "'%s' not handled in '%s' [internal location]\n",           \
                 __FILE__, __LINE__, (what), __FUNCTION__)
 
-// TODO: replace with gcc native debugging infrastructure
-#   define CL_WARN_UNHANDLED_WITH_LOC(loc, what) \
-        fprintf(stderr, "%s:%d:%d: warning: '%s' not handled\n"             \
+// experimental use of warning_at()
+#   define CL_WARN_UNHANDLED_WITH_LOC(loc, ...) do {                        \
+        warning_at((loc), 0, __VA_ARGS__);                                  \
+        fprintf(stderr,                                                     \
                 "%s:%d: note: raised from '%s' [internal location]\n",      \
-                expand_location(loc).file,                                  \
-                expand_location(loc).line,                                  \
-                expand_location(loc).column,                                \
-                (what),                                                     \
-                __FILE__, __LINE__, __FUNCTION__)
+                __FILE__, __LINE__, __FUNCTION__);                          \
+    } while (0)
 
 #endif // CLPLUG_SILENT
 
-// TODO: replace with gcc native debugging infrastructure
 #define CL_WARN_UNHANDLED_GIMPLE(stmt, what) \
     CL_WARN_UNHANDLED_WITH_LOC((stmt)->gsbase.location, what)
 
-// TODO: replace with gcc native debugging infrastructure
 #define CL_WARN_UNHANDLED_EXPR(expr, what) do { \
     CL_WARN_UNHANDLED_WITH_LOC(EXPR_LOCATION(expr), what); \
     if (CL_VERBOSE_UNHANDLED_EXPR & verbose) \
@@ -125,7 +127,6 @@ static int verbose = 0;
 #define CL_VERBOSE_UNHANDLED_EXPR   (1 << 3)
 
 // plug-in meta-data according to gcc plug-in API
-// TODO: split also version of code_listener and version of peer
 static struct plugin_info cl_info = {
     .version = "%s [code listener SHA1 " CL_GIT_SHA1 "]",
     .help    = "%s [code listener SHA1 " CL_GIT_SHA1 "]\n"
@@ -140,6 +141,7 @@ static struct plugin_info cl_info = {
 "    -fplugin-arg-%s-dump-pp[=OUTPUT_FILE]          dump linearized code\n"
 "    -fplugin-arg-%s-dump-types                     dump also type info\n"
 "    -fplugin-arg-%s-gen-dot[=GLOBAL_CG_FILE]       generate CFGs\n"
+"    -fplugin-arg-%s-preserve-ec                    do not affect exit code\n"
 "    -fplugin-arg-%s-type-dot=TYPE_GRAPH_FILE       generate type graphs\n"
 "    -fplugin-arg-%s-verbose[=VERBOSE_BITMASK]      turn on verbose mode\n"
 "\n"
@@ -153,6 +155,7 @@ static struct plugin_info cl_info = {
 static void init_plugin_name(const struct plugin_name_args *info)
 {
     if (!STREQ("[uninitialized]", plugin_name)) {
+        // do not use CL_ERROR here, as plugin_name may be misleading
         fprintf(stderr, "%s: error: "
                 "attempt to initialize code listener multiple times!\n",
                 info->full_name);
@@ -181,7 +184,7 @@ static void init_plugin_name(const struct plugin_name_args *info)
     if (-1 == asprintf(&msg, cl_info.help,
                        name, name, name, name,
                        name, name, name, name,
-                       name, name, name))
+                       name, name, name, name))
         // OOM
         abort();
     else
@@ -198,6 +201,33 @@ static void free_plugin_name(void)
     // free plug-in name
     free((char *) plugin_name_alloc);
     plugin_name_alloc = NULL;
+}
+
+// FIXME: suboptimal interface of CL messaging
+static bool preserve_ec;
+static int cnt_errors;
+static int cnt_warnings;
+
+static void dummy_printer(const char *msg)
+{
+    (void) msg;
+}
+
+static void trivial_printer(const char *msg)
+{
+    fprintf(stderr, "%s\n", msg);
+}
+
+static void cl_warn(const char *msg)
+{
+    trivial_printer(msg);
+    ++cnt_warnings;
+}
+
+static void cl_error(const char *msg)
+{
+    trivial_printer(msg);
+    ++cnt_errors;
 }
 
 typedef htab_t type_db_t;
@@ -336,6 +366,11 @@ static void var_db_insert(var_db_t db, struct cl_var *var)
     void **slot = htab_find_slot(db, var, INSERT);
     CL_ASSERT(slot);
     *slot = var;
+}
+
+static bool error_detected(void)
+{
+    return global_dc && global_dc->diagnostic_count[DK_ERROR];
 }
 
 static void read_gcc_location(struct cl_location *loc, location_t gcc_loc)
@@ -567,16 +602,16 @@ static struct cl_type* add_bare_type_if_needed(tree type)
     // read type (recursively if needed)
     read_base_type(clt, type);
     read_specific_type(clt, type);
-#if 0
-    // extra hooks follow
-    if (clt->code == CL_TYPE_INT && clt->name && STREQ("char", clt->name))
-        clt->code = CL_TYPE_CHAR;
-#endif
+
     return clt;
 }
 
 static enum cl_scope_e get_decl_scope(tree t)
 {
+    if (VAR_DECL == TREE_CODE(t) && TREE_STATIC(t))
+        // treat static variables as static, no matter where they're declared
+        return CL_SCOPE_STATIC;
+
     tree ctx = DECL_CONTEXT(t);
     if (ctx) {
         enum tree_code code = TREE_CODE(ctx);
@@ -750,10 +785,6 @@ static void read_raw_operand(struct cl_operand *op, tree t)
             CL_WARN_UNHANDLED_EXPR(t, "REAL_CST");
             break;
 
-        case CONSTRUCTOR:
-            CL_WARN_UNHANDLED_EXPR(t, "CONSTRUCTOR");
-            break;
-
         default:
             TRAP;
     }
@@ -906,6 +937,15 @@ static void handle_operand(struct cl_operand *op, tree t)
 static void handle_stmt_unop(gimple stmt, enum tree_code code,
                              struct cl_operand *dst, tree src_tree)
 {
+    if (CONSTRUCTOR == TREE_CODE(src_tree)) {
+        SE_BREAK_IF(dst->code != CL_OPERAND_VAR);
+        struct cl_initializer **pinit = &dst->data.var->initial;
+        if (!*pinit)
+            read_initial(pinit, src_tree);
+
+        return;
+    }
+
     struct cl_operand src;
     handle_operand(&src, src_tree);
 
@@ -918,6 +958,7 @@ static void handle_stmt_unop(gimple stmt, enum tree_code code,
 
     enum cl_unop_e *ptype = &cli.data.insn_unop.code;
 
+    // TODO: check validity/usefulness of the following condition
     if (code != TREE_CODE(src_tree)) {
         switch (code) {
             case CONVERT_EXPR:
@@ -1452,6 +1493,10 @@ static void handle_fnc_decl (tree decl)
 // callback of tree pass declared in <tree-pass.h>
 static unsigned int cl_pass_execute (void)
 {
+    if (error_detected())
+        // we're already on the error path
+        return 0;
+
     if (!current_function_decl) {
         CL_WARN_UNHANDLED ("NULL == current_function_decl");
         return 0;
@@ -1493,6 +1538,28 @@ static void cb_finish (void *gcc_data, void *user_data)
     (void) gcc_data;
     (void) user_data;
 
+    if (error_detected())
+        CL_WARN("some errors already detected, "
+                "additional passes will be skipped");
+    else
+        // this should trigger the code listener peer (if any)
+        cl->acknowledge(cl);
+
+    // FIXME: suboptimal interface of CL messaging
+    if (!preserve_ec) {
+        if (cnt_errors) {
+            // this causes non-zero exit code of gcc
+            error_at(input_location,
+                     "%s has detected some errors", plugin_name);
+        }
+        else if (cnt_warnings) {
+            // this causes non-zero exit code of gcc in case of -Werror
+            warning_at(input_location, 0,
+                       "%s has reported some warnings", plugin_name);
+        }
+    }
+
+    // final cleanup
     cl->destroy(cl);
     cl_global_cleanup();
     var_db_destroy(var_db);
@@ -1610,20 +1677,22 @@ static int clplug_init(const struct plugin_name_args *info,
             opt->use_dotgen     = true;
             opt->gl_dot_file    = value;
 
+        } else if (STREQ(key, "preserve-ec")) {
+            // FIXME: do not use gl variable, use the pointer user_data instead
+            preserve_ec = true;
+            // TODO: warn about ignoring extra value?
+
         } else if (STREQ(key, "type-dot")) {
             if (value) {
                 opt->use_typedot    = true;
                 opt->type_dot_file  = value;
             } else {
-                fprintf(stderr, "%s: error: "
-                        "mandatory value omitted for type-dot\n",
-                        plugin_name);
+                CL_ERROR("mandatory value omitted for type-dot");
                 return EXIT_FAILURE;
             }
 
         } else {
-            fprintf(stderr, "%s: error: unhandled plug-in argument: %s\n",
-                    plugin_name, key);
+            CL_ERROR("unhandled plug-in argument: %s", key);
             return EXIT_FAILURE;
         }
     }
@@ -1659,13 +1728,13 @@ static bool cl_append_def_listener(struct cl_code_listener *chain,
                                    const char *listener, const char *args,
                                    const struct cl_plug_options *opt)
 {
-    const char *cld = (opt->use_peer)
+    const char *clf = (opt->use_peer)
         ? "unfold_switch,unify_labels_gl"
         : "unify_labels_fnc";
 
     return cl_append_listener(chain,
-            "listener=\"%s\" listener_args=\"%s\" cld=\"%s\"",
-            listener, args, cld);
+            "listener=\"%s\" listener_args=\"%s\" clf=\"%s\"",
+            listener, args, clf);
 }
 
 static struct cl_code_listener*
@@ -1726,24 +1795,35 @@ int plugin_init (struct plugin_name_args *plugin_info,
         return rv;
 
     // print something like "hello world!"
-    CL_LOG("initializing code listener [SHA1 %s]", CL_GIT_SHA1);
-    CL_LOG("plug-in is compiled against gcc %s%s%s, built at %s, conf: %s",
+    CL_DEBUG("initializing code listener [SHA1 %s]", CL_GIT_SHA1);
+    CL_DEBUG("plug-in is compiled against gcc %s%s%s, built at %s, conf: %s",
            gcc_version.basever, gcc_version.devphase, gcc_version.revision,
            gcc_version.datestamp, gcc_version.configuration_arguments);
-    CL_LOG("now going to be loaded into gcc %s%s%s, built at %s, conf: %s",
+    CL_DEBUG("now going to be loaded into gcc %s%s%s, built at %s, conf: %s",
            version->basever, version->devphase, version->revision,
            version->datestamp, version->configuration_arguments);
 
     // check for compatibility with host gcc's version
     if (!plugin_default_version_check(version, &gcc_version)) {
-        fprintf(stderr, "%s: error: host gcc's version/build mismatch"
-                ", call-backs not registered!\n", plugin_name);
+        CL_ERROR("error: host gcc's version/build mismatch"
+                 ", call-backs not registered!");
 
         return 0;
     }
 
     // initialize code listener
-    cl_global_init_defaults(NULL, verbose & CL_VERBOSE_PLUG);
+    static struct cl_init_data init = {
+        .debug = dummy_printer,
+        .warn  = cl_warn,
+        .error = cl_error,
+        .note  = trivial_printer,
+        .die   = trivial_printer
+    };
+
+    if (verbose & CL_VERBOSE_PLUG)
+        init.debug = trivial_printer;
+
+    cl_global_init(&init);
     cl = create_cl_chain(&opt);
     CL_ASSERT(cl);
 
@@ -1754,7 +1834,7 @@ int plugin_init (struct plugin_name_args *plugin_info,
 
     // try to register callbacks (and virtual callbacks)
     cl_regcb (plugin_info->base_name);
-    CL_LOG("plug-in successfully initialized");
+    CL_DEBUG("plug-in successfully initialized");
 
     return 0;
 }

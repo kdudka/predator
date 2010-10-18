@@ -1,7 +1,5 @@
 test-0051.c:32:20: warning: binary operator not implemented yet
 test-0051.c:32:20: warning: binary operator not implemented yet
-test-0051.c:32:20: warning: binary operator not implemented yet
-test-0051.c:32:20: warning: binary operator not implemented yet
 test-0051.c:50:13: error: free() called on unknown value
 test-0051.c:61:16: note: from call of destroy_sll()
 test-0051.c:56:5: note: from call of main()

@@ -66,7 +66,7 @@ set(examples
     0061 0062 0063 0064 0065 0066 0067 0068 0069 0070
     0071 0072 0073 0074 0075 0076 0077 0078 0079 0080
     0081 0082 0083 0084 0085 0086 0087 0088 0089 0090
-    0091 0092)
+    0091 0092 0093 0094 0095)
 
 # FIXME: define this macro more generically, in particular the count of args
 macro(test_sym_exec label tool arg1 arg2 arg3)
@@ -76,6 +76,7 @@ macro(test_sym_exec label tool arg1 arg2 arg3)
             -DPREDATOR ${clplug_incs}
             -fplugin=${sl_BINARY_DIR}/libsl.so
             -fplugin-arg-libsl-args=noplot
+            -fplugin-arg-libsl-preserve-ec
             -fplugin-arg-libsl-verbose=1)
     endforeach()
 endmacro()
@@ -97,6 +98,7 @@ macro(test_sym_exec_regre ext arg1)
 
         set(cmd "${cmd} -c ${sl_SOURCE_DIR}/data/test-${num}.c")
         set(cmd "${cmd} -DPREDATOR -fplugin=${sl_BINARY_DIR}/libsl.so ${arg1}")
+        set(cmd "${cmd} -fplugin-arg-libsl-preserve-ec")
         set(cmd "${cmd} 2>&1")
 
         # FIXME: the following line significantly decreases coverage of the test

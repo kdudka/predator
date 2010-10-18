@@ -17,24 +17,24 @@
  * along with predator.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "cld_unilabel.hh"
+#include "clf_unilabel.hh"
 
 #include <cl/cl_msg.hh>
 
-#include "cl_decorator.hh"
+#include "cl_filter.hh"
 
 #include <map>
 #include <sstream>
 #include <string>
 
-class CldUniLabel: public ClDecoratorBase {
+class ClfUniLabel: public ClFilterBase {
     public:
-        CldUniLabel(ICodeListener *slave, cl_scope_e scope);
+        ClfUniLabel(ICodeListener *slave, cl_scope_e scope);
 
         virtual void file_open(const char *file_name) {
             if (CL_SCOPE_STATIC == scope_)
                 this->reset();
-            ClDecoratorBase::file_open(file_name);
+            ClFilterBase::file_open(file_name);
         }
 
         virtual void fnc_open(
@@ -42,14 +42,14 @@ class CldUniLabel: public ClDecoratorBase {
         {
             if (CL_SCOPE_FUNCTION == scope_)
                 this->reset();
-            ClDecoratorBase::fnc_open(fnc);
+            ClFilterBase::fnc_open(fnc);
         }
 
         virtual void bb_open(
             const char              *bb_name)
         {
             std::string resolved(this->resolveLabel(bb_name));
-            ClDecoratorBase::bb_open(resolved.c_str());
+            ClFilterBase::bb_open(resolved.c_str());
         }
 
         virtual void insn(
@@ -62,7 +62,7 @@ class CldUniLabel: public ClDecoratorBase {
                                     cli->data.insn_jmp.label));
 
                         local_cli.data.insn_jmp.label = resolved.c_str();
-                        ClDecoratorBase::insn(&local_cli);
+                        ClFilterBase::insn(&local_cli);
                     }
                     break;
 
@@ -75,12 +75,12 @@ class CldUniLabel: public ClDecoratorBase {
 
                         local_cli.data.insn_cond.then_label = resolved1.c_str();
                         local_cli.data.insn_cond.else_label = resolved2.c_str();
-                        ClDecoratorBase::insn(&local_cli);
+                        ClFilterBase::insn(&local_cli);
                     }
                     break;
 
                 default:
-                    ClDecoratorBase::insn(cli);
+                    ClFilterBase::insn(cli);
                     break;
             }
         }
@@ -92,7 +92,7 @@ class CldUniLabel: public ClDecoratorBase {
             const char              *label)
         {
             std::string resolved(this->resolveLabel(label));
-            ClDecoratorBase::insn_switch_case(loc, val_lo, val_hi,
+            ClFilterBase::insn_switch_case(loc, val_lo, val_hi,
                     resolved.c_str());
         }
 
@@ -110,8 +110,8 @@ class CldUniLabel: public ClDecoratorBase {
         void reset();
 };
 
-CldUniLabel::CldUniLabel(ICodeListener *slave, cl_scope_e scope):
-    ClDecoratorBase(slave),
+ClfUniLabel::ClfUniLabel(ICodeListener *slave, cl_scope_e scope):
+    ClFilterBase(slave),
     scope_(scope),
     last_(0)
 {
@@ -122,17 +122,17 @@ CldUniLabel::CldUniLabel(ICodeListener *slave, cl_scope_e scope):
             break;
 
         default:
-            CL_DIE("invalid scope for CldUniLabel decorator");
+            CL_DIE("invalid scope for ClfUniLabel filter");
     }
 }
 
-std::string CldUniLabel::resolveLabel(const char *label) {
+std::string ClfUniLabel::resolveLabel(const char *label) {
     std::ostringstream str;
     str << "L" << this->labelLookup(label);
     return str.str();
 }
 
-int CldUniLabel::labelLookup(const char *label) {
+int ClfUniLabel::labelLookup(const char *label) {
     std::string str(label);
 
     TMap::iterator i = map_.find(str);
@@ -143,13 +143,13 @@ int CldUniLabel::labelLookup(const char *label) {
     return last_;
 }
 
-void CldUniLabel::reset() {
+void ClfUniLabel::reset() {
     map_.clear();
     last_ = 0;
 }
 
 // /////////////////////////////////////////////////////////////////////////////
-// public interface, see cld_unilabel.hh for more details
-ICodeListener* createCldUniLabel(ICodeListener *slave, cl_scope_e scope) {
-    return new CldUniLabel(slave, scope);
+// public interface, see clf_unilabel.hh for more details
+ICodeListener* createClfUniLabel(ICodeListener *slave, cl_scope_e scope) {
+    return new ClfUniLabel(slave, scope);
 }

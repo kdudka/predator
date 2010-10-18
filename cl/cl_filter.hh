@@ -17,33 +17,33 @@
  * along with predator.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef H_GUARD_CL_DECORATOR_H
-#define H_GUARD_CL_DECORATOR_H
+#ifndef H_GUARD_CL_FILTER_H
+#define H_GUARD_CL_FILTER_H
 
 /**
- * @file cl_decorator.hh
- * ClDecoratorBase - base class for all code listener @b decorators
+ * @file cl_filter.hh
+ * ClFilterBase - base class for all code listener @b filters
  */
 
 #include "cl.hh"
 
 /**
- * base class for all ICodeListener decorators
+ * base class for all ICodeListener filters
  *
  * The class itself can't be instantiated.  You always need to inherit the
  * class.  The only thing which has to be implemented in the derived class is
  * a constructor, which calls the parent constructor with an instance of
  * ICodeListener as the argument.  All other methods which are not overridden
  * will be forwarded to that instance of ICodeListener.
- * @note design pattern @b decorator
+ * @note design pattern @b filter
  */
-class ClDecoratorBase: public ICodeListener {
+class ClFilterBase: public ICodeListener {
     public:
         /**
          * @attention the slave ICodeListener will be deleted automatically on
          * the object's destruction
          */
-        virtual ~ClDecoratorBase() {
+        virtual ~ClFilterBase() {
             delete slave_;
         }
 
@@ -125,17 +125,17 @@ class ClDecoratorBase: public ICodeListener {
             slave_->insn_switch_close();
         }
 
-        virtual void finalize() {
-            slave_->finalize();
+        virtual void acknowledge() {
+            slave_->acknowledge();
         }
 
     protected:
         /**
          * @param slave An instance of ICodeListener.  All methods which are not
          * overridden in the derived class will be forwarded to this instance.
-         * @copydoc ~ClDecoratorBase()
+         * @copydoc ~ClFilterBase()
          */
-        ClDecoratorBase(ICodeListener *slave):
+        ClFilterBase(ICodeListener *slave):
             slave_(slave)
         {
         }
@@ -144,4 +144,4 @@ class ClDecoratorBase: public ICodeListener {
         ICodeListener *slave_;
 };
 
-#endif /* H_GUARD_CL_DECORATOR_H */
+#endif /* H_GUARD_CL_FILTER_H */

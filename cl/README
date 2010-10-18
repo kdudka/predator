@@ -10,6 +10,6 @@ Makefile.chk        checks whether all headers are self-compilable
 code_listener.h     code_listener interface, useful for writing plug-ins, etc.
 config.h            various compile-time configuration (debugging options, ...)
 cl*                 code_listener related source codes
-cld_*               code_listener decorators
+clf_*               code_listener filters
 gcc/clplug.c        gcc front-end for code listener
 sparse/*            sparse front-end for code listener

@@ -24,6 +24,7 @@
 #include "symplot.hh"
 
 #include <cl/cl_msg.hh>
+#include <cl/clutil.hh>
 #include <cl/code_listener.h>
 #include <cl/storage.hh>
 
@@ -104,7 +105,7 @@ void digSubObjs(DeepCopyData &dc, TObjId objSrc, TObjId objDst)
             // anonymous object of known size
             continue;
 
-        if (CL_TYPE_STRUCT != cltSrc->code)
+        if (!isComposite(cltSrc))
             // we should be set up
             continue;
 
@@ -289,8 +290,8 @@ TValueId handleValue(DeepCopyData &dc, TValueId valSrc) {
     SE_BREAK_IF(OBJ_INVALID == targetSrc);
 
     if (targetSrc < 0) {
-#if SE_SELF_TEST
         // special handling for OBJ_DELETED/OBJ_LOST
+#if SE_SELF_TEST
         switch (targetSrc) {
             case OBJ_DELETED:
             case OBJ_LOST:

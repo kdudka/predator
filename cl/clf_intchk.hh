@@ -17,21 +17,24 @@
  * along with predator.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef H_GUARD_CLD_UNSWITCH_H
-#define H_GUARD_CLD_UNSWITCH_H
+#ifndef H_GUARD_CLF_INTCHK_H
+#define H_GUARD_CLF_INTCHK_H
 
 /**
- * @file cld_unswitch.hh
- * constructor createCldUnfoldSwitch() - of the @b "unifold_switch" decorator
+ * @file clf_intchk.hh
+ * constructor createClfIntegrityChk() - of the integrity checker filter
  */
 
 class ICodeListener;
 
 /**
- * create a code listener decorator which converts all CL_INSN_SWITCH to
- * a sequence of CL_INSN_COND instructions.
+ * create code listener integrity checker filter
+ *
+ * see the ClFactory class and config.h::DEBUG_CL_FACTORY and
+ * config.h::CL_DEBUG_CLF macros
+ *
  * @return on heap allocated instance of ICodeListener object
  */
-ICodeListener* createCldUnfoldSwitch(ICodeListener *);
+ICodeListener* createClfIntegrityChk(ICodeListener *);
 
-#endif /* H_GUARD_CLD_UNSWITCH_H */
+#endif /* H_GUARD_CLF_INTCHK_H */

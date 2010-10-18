@@ -18,23 +18,23 @@
  */
 
 #include "config_cl.h"
-#include "cld_intchk.hh"
+#include "clf_intchk.hh"
 
-#include "cl_decorator.hh"
-#include "cld_opchk.hh"
+#include "cl_filter.hh"
+#include "clf_opchk.hh"
 #include "usagechk.hh"
 
 #include <map>
 #include <string>
 
-#ifndef CLD_BYPASS_USAGE_CHK
-#   define CLD_BYPASS_USAGE_CHK 0
+#ifndef CLF_BYPASS_USAGE_CHK
+#   define CLF_BYPASS_USAGE_CHK 0
 #endif
 
-class CldCbSeqChk: public ClDecoratorBase {
+class ClfCbSeqChk: public ClFilterBase {
     public:
-        CldCbSeqChk(ICodeListener *slave);
-        virtual ~CldCbSeqChk() {
+        ClfCbSeqChk(ICodeListener *slave);
+        virtual ~ClfCbSeqChk() {
             this->setState(S_DESTROYED);
         }
 
@@ -43,12 +43,12 @@ class CldCbSeqChk: public ClDecoratorBase {
         {
             loc_.currentFile = file_name;
             this->setState(S_FILE_LEVEL);
-            ClDecoratorBase::file_open(file_name);
+            ClFilterBase::file_open(file_name);
         }
 
         virtual void file_close() {
             this->setState(S_INIT);
-            ClDecoratorBase::file_close();
+            ClFilterBase::file_close();
         }
 
         virtual void fnc_open(
@@ -56,7 +56,7 @@ class CldCbSeqChk: public ClDecoratorBase {
         {
             loc_ = &fnc->loc;
             this->setState(S_FNC_DECL);
-            ClDecoratorBase::fnc_open(fnc);
+            ClFilterBase::fnc_open(fnc);
         }
 
         virtual void fnc_arg_decl(
@@ -64,19 +64,19 @@ class CldCbSeqChk: public ClDecoratorBase {
             const struct cl_operand *arg_src)
         {
             this->chkArgDecl();
-            ClDecoratorBase::fnc_arg_decl(arg_id, arg_src);
+            ClFilterBase::fnc_arg_decl(arg_id, arg_src);
         }
 
         virtual void fnc_close() {
             this->setState(S_FILE_LEVEL);
-            ClDecoratorBase::fnc_close();
+            ClFilterBase::fnc_close();
         }
 
         virtual void bb_open(
             const char              *bb_name)
         {
             this->setState(S_BLOCK_LEVEL);
-            ClDecoratorBase::bb_open(bb_name);
+            ClFilterBase::bb_open(bb_name);
         }
 
         virtual void insn(
@@ -118,7 +118,7 @@ class CldCbSeqChk: public ClDecoratorBase {
                     TRAP;
             }
 
-            ClDecoratorBase::insn(cli);
+            ClFilterBase::insn(cli);
         }
 
         virtual void insn_call_open(
@@ -128,7 +128,7 @@ class CldCbSeqChk: public ClDecoratorBase {
         {
             loc_ = loc;
             this->setState(S_INSN_CALL);
-            ClDecoratorBase::insn_call_open(loc, dst, fnc);
+            ClFilterBase::insn_call_open(loc, dst, fnc);
         }
 
         virtual void insn_call_arg(
@@ -136,12 +136,12 @@ class CldCbSeqChk: public ClDecoratorBase {
             const struct cl_operand *arg_src)
         {
             this->chkInsnCallArg();
-            ClDecoratorBase::insn_call_arg(arg_id, arg_src);
+            ClFilterBase::insn_call_arg(arg_id, arg_src);
         }
 
         virtual void insn_call_close() {
             this->setCallClose();
-            ClDecoratorBase::insn_call_close();
+            ClFilterBase::insn_call_close();
         }
 
         virtual void insn_switch_open(
@@ -150,7 +150,7 @@ class CldCbSeqChk: public ClDecoratorBase {
         {
             loc_ = loc;
             this->setState(S_INSN_SWITCH);
-            ClDecoratorBase::insn_switch_open(loc, src);
+            ClFilterBase::insn_switch_open(loc, src);
         }
 
         virtual void insn_switch_case(
@@ -161,19 +161,19 @@ class CldCbSeqChk: public ClDecoratorBase {
         {
             loc_ = loc;
             this->chkInsnSwitchCase();
-            ClDecoratorBase::insn_switch_case(loc, val_lo, val_hi, label);
+            ClFilterBase::insn_switch_case(loc, val_lo, val_hi, label);
         }
 
         virtual void insn_switch_close()
         {
             this->setSwitchClose();
-            ClDecoratorBase::insn_switch_close();
+            ClFilterBase::insn_switch_close();
         }
 
-        virtual void finalize()
+        virtual void acknowledge()
         {
-            this->setState(S_DONE);
-            ClDecoratorBase::finalize();
+            this->setState(S_ACKNOWLEDGE);
+            ClFilterBase::acknowledge();
         }
 
     private:
@@ -185,7 +185,7 @@ class CldCbSeqChk: public ClDecoratorBase {
             S_BLOCK_LEVEL,
             S_INSN_CALL,
             S_INSN_SWITCH,
-            S_DONE,
+            S_ACKNOWLEDGE,
             S_DESTROYED
         };
 
@@ -212,15 +212,15 @@ class CldCbSeqChk: public ClDecoratorBase {
         void setSwitchClose();
 };
 
-class CldLabelChk: public ClDecoratorBase {
+class ClfLabelChk: public ClFilterBase {
     public:
-        CldLabelChk(ICodeListener *slave);
+        ClfLabelChk(ICodeListener *slave);
 
         virtual void file_open(
             const char              *file_name)
         {
             loc_.currentFile = file_name;
-            ClDecoratorBase::file_open(file_name);
+            ClFilterBase::file_open(file_name);
         }
 
         virtual void fnc_open(
@@ -228,19 +228,19 @@ class CldLabelChk: public ClDecoratorBase {
         {
             loc_ = &fnc->loc;
             this->reset();
-            ClDecoratorBase::fnc_open(fnc);
+            ClFilterBase::fnc_open(fnc);
         }
 
         virtual void fnc_close() {
             this->emitWarnings();
-            ClDecoratorBase::fnc_close();
+            ClFilterBase::fnc_close();
         }
 
         virtual void bb_open(
             const char              *bb_name)
         {
             this->defineLabel(bb_name);
-            ClDecoratorBase::bb_open(bb_name);
+            ClFilterBase::bb_open(bb_name);
         }
 
         virtual void insn(
@@ -262,7 +262,7 @@ class CldLabelChk: public ClDecoratorBase {
                     break;
             }
 
-            ClDecoratorBase::insn(cli);
+            ClFilterBase::insn(cli);
         }
 
         virtual void insn_switch_case(
@@ -273,7 +273,7 @@ class CldLabelChk: public ClDecoratorBase {
         {
             loc_ = loc;
             this->reqLabel(label);
-            ClDecoratorBase::insn_switch_case(loc, val_lo, val_hi, label);
+            ClFilterBase::insn_switch_case(loc, val_lo, val_hi, label);
         }
 
     private:
@@ -297,18 +297,18 @@ class CldLabelChk: public ClDecoratorBase {
         void emitWarnings();
 };
 
-class CldRegUsageChk: public CldOpCheckerBase {
+class ClfRegUsageChk: public ClfOpCheckerBase {
     public:
-        CldRegUsageChk(ICodeListener *slave):
-            CldOpCheckerBase(slave),
+        ClfRegUsageChk(ICodeListener *slave):
+            ClfOpCheckerBase(slave),
             usageChecker_("register %r")
         {
         }
 
         virtual void fnc_close() {
-            usageChecker_.emitPendingMessages(CldOpCheckerBase::lastLocation());
+            usageChecker_.emitPendingMessages(ClfOpCheckerBase::lastLocation());
             usageChecker_.reset();
-            CldOpCheckerBase::fnc_close();
+            ClfOpCheckerBase::fnc_close();
         }
 
     protected:
@@ -317,7 +317,7 @@ class CldRegUsageChk: public CldOpCheckerBase {
                 return;
 
             int id = op->data.var->uid;
-            usageChecker_.write(id, id, CldOpCheckerBase::lastLocation());
+            usageChecker_.write(id, id, ClfOpCheckerBase::lastLocation());
         }
 
         virtual void checkSrcOperand(const struct cl_operand *op) {
@@ -325,25 +325,25 @@ class CldRegUsageChk: public CldOpCheckerBase {
                 return;
 
             int id = op->data.var->uid;
-            usageChecker_.read(id, id, CldOpCheckerBase::lastLocation());
+            usageChecker_.read(id, id, ClfOpCheckerBase::lastLocation());
         }
 
     private:
         UsageChecker<int, int> usageChecker_;
 };
 
-class CldLcVarUsageChk: public CldOpCheckerBase {
+class ClfLcVarUsageChk: public ClfOpCheckerBase {
     public:
-        CldLcVarUsageChk(ICodeListener *slave):
-            CldOpCheckerBase(slave),
+        ClfLcVarUsageChk(ICodeListener *slave):
+            ClfOpCheckerBase(slave),
             usageChecker_("local variable ")
         {
         }
 
         virtual void fnc_close() {
-            usageChecker_.emitPendingMessages(CldOpCheckerBase::lastLocation());
+            usageChecker_.emitPendingMessages(ClfOpCheckerBase::lastLocation());
             usageChecker_.reset();
-            CldOpCheckerBase::fnc_close();
+            ClfOpCheckerBase::fnc_close();
         }
 
     protected:
@@ -353,7 +353,7 @@ class CldLcVarUsageChk: public CldOpCheckerBase {
 
             usageChecker_.write(op->data.var->uid,
                                 std::string("'") + op->data.var->name +"'",
-                                CldOpCheckerBase::lastLocation());
+                                ClfOpCheckerBase::lastLocation());
         }
 
         virtual void checkSrcOperand(const struct cl_operand *op) {
@@ -362,7 +362,7 @@ class CldLcVarUsageChk: public CldOpCheckerBase {
 
             usageChecker_.read(op->data.var->uid,
                                std::string("'") + op->data.var->name +"'",
-                               CldOpCheckerBase::lastLocation());
+                               ClfOpCheckerBase::lastLocation());
         }
 
     private:
@@ -370,14 +370,14 @@ class CldLcVarUsageChk: public CldOpCheckerBase {
 };
 
 // /////////////////////////////////////////////////////////////////////////////
-// CldCbSeqChk implementation
-CldCbSeqChk::CldCbSeqChk(ICodeListener *slave):
-    ClDecoratorBase(slave),
+// ClfCbSeqChk implementation
+ClfCbSeqChk::ClfCbSeqChk(ICodeListener *slave):
+    ClFilterBase(slave),
     state_(S_INIT)
 {
 }
 
-const char* CldCbSeqChk::toString(EState state) {
+const char* ClfCbSeqChk::toString(EState state) {
 #define CASE_TO_STRING(state) case state: return #state;
     switch (state) {
         CASE_TO_STRING(S_INIT)
@@ -387,29 +387,30 @@ const char* CldCbSeqChk::toString(EState state) {
         CASE_TO_STRING(S_BLOCK_LEVEL)
         CASE_TO_STRING(S_INSN_CALL)
         CASE_TO_STRING(S_INSN_SWITCH)
-        CASE_TO_STRING(S_DONE)
+        CASE_TO_STRING(S_ACKNOWLEDGE)
         CASE_TO_STRING(S_DESTROYED)
         default:
-            CL_DIE("CldCbSeqChk::toString");
+            CL_DIE("ClfCbSeqChk::toString");
             return NULL;
     }
 }
 
-void CldCbSeqChk::emitUnexpected(const char *what) {
+void ClfCbSeqChk::emitUnexpected(const char *what) {
     CL_ERROR_MSG(LocationWriter(0, &loc_), "unexpected callback in state "
             << toString(state_) << " (" << what << ")");
 }
 
-void CldCbSeqChk::emitUnexpected(EState state) {
+void ClfCbSeqChk::emitUnexpected(EState state) {
     this->emitUnexpected(toString(state));
 }
 
-void CldCbSeqChk::setState(EState newState) {
+void ClfCbSeqChk::setState(EState newState) {
     switch (state_) {
         case S_INIT:
             switch (newState) {
                 case S_FILE_LEVEL:
-                case S_DONE:
+                case S_ACKNOWLEDGE:
+                case S_DESTROYED:
                     break;
                 default:
                     this->emitUnexpected(newState);
@@ -420,6 +421,7 @@ void CldCbSeqChk::setState(EState newState) {
             switch (newState) {
                 case S_INIT:
                 case S_FNC_DECL:
+                case S_DESTROYED:
                     break;
                 default:
                     this->emitUnexpected(newState);
@@ -455,7 +457,7 @@ void CldCbSeqChk::setState(EState newState) {
             this->emitUnexpected(newState);
             break;
 
-        case S_DONE:
+        case S_ACKNOWLEDGE:
             if (S_DESTROYED != newState)
                 this->emitUnexpected(newState);
             break;
@@ -469,17 +471,17 @@ void CldCbSeqChk::setState(EState newState) {
     state_ = newState;
 }
 
-void CldCbSeqChk::chkArgDecl() {
+void ClfCbSeqChk::chkArgDecl() {
     if (S_FNC_DECL != state_)
         this->emitUnexpected("fnc_arg_decl");
 }
 
-void CldCbSeqChk::chkInsnNop() {
+void ClfCbSeqChk::chkInsnNop() {
     if (S_BLOCK_LEVEL != state_)
         this->emitUnexpected("CL_INSN_NOP");
 }
 
-void CldCbSeqChk::chkInsnJmp() {
+void ClfCbSeqChk::chkInsnJmp() {
     switch (state_) {
         case S_FNC_DECL:
         case S_BLOCK_LEVEL:
@@ -492,55 +494,55 @@ void CldCbSeqChk::chkInsnJmp() {
     state_ = S_FNC_BODY;
 }
 
-void CldCbSeqChk::chkInsnCond() {
+void ClfCbSeqChk::chkInsnCond() {
     if (S_BLOCK_LEVEL != state_)
         this->emitUnexpected("CL_INSN_COND");
 
     state_ = S_FNC_BODY;
 }
 
-void CldCbSeqChk::chkInsnRet() {
+void ClfCbSeqChk::chkInsnRet() {
     if (S_BLOCK_LEVEL != state_)
         this->emitUnexpected("CL_INSN_RET");
 
     state_ = S_FNC_BODY;
 }
 
-void CldCbSeqChk::chkInsnAbort() {
+void ClfCbSeqChk::chkInsnAbort() {
     if (S_BLOCK_LEVEL != state_)
         this->emitUnexpected("CL_INSN_ABORT");
 
     state_ = S_FNC_BODY;
 }
 
-void CldCbSeqChk::chkInsnUnop() {
+void ClfCbSeqChk::chkInsnUnop() {
     if (S_BLOCK_LEVEL != state_)
         this->emitUnexpected("CL_INSN_UNOP");
 }
 
-void CldCbSeqChk::chkInsnBinop() {
+void ClfCbSeqChk::chkInsnBinop() {
     if (S_BLOCK_LEVEL != state_)
         this->emitUnexpected("CL_INSN_BINOP");
 }
 
-void CldCbSeqChk::chkInsnCallArg() {
+void ClfCbSeqChk::chkInsnCallArg() {
     if (S_INSN_CALL != state_)
         this->emitUnexpected("insn_call_arg");
 }
 
-void CldCbSeqChk::setCallClose() {
+void ClfCbSeqChk::setCallClose() {
     if (S_INSN_CALL != state_)
         this->emitUnexpected("insn_call_close");
 
     state_ = S_BLOCK_LEVEL;
 }
 
-void CldCbSeqChk::chkInsnSwitchCase() {
+void ClfCbSeqChk::chkInsnSwitchCase() {
     if (S_INSN_SWITCH != state_)
         this->emitUnexpected("insn_switch_case");
 }
 
-void CldCbSeqChk::setSwitchClose() {
+void ClfCbSeqChk::setSwitchClose() {
     if (S_INSN_SWITCH != state_)
         this->emitUnexpected("insn_switch_close");
 
@@ -549,17 +551,17 @@ void CldCbSeqChk::setSwitchClose() {
 
 
 // /////////////////////////////////////////////////////////////////////////////
-// CldLabelChk implementation
-CldLabelChk::CldLabelChk(ICodeListener *slave):
-    ClDecoratorBase(slave)
+// ClfLabelChk implementation
+ClfLabelChk::ClfLabelChk(ICodeListener *slave):
+    ClFilterBase(slave)
 {
 }
 
-void CldLabelChk::reset() {
+void ClfLabelChk::reset() {
     map_.clear();
 }
 
-void CldLabelChk::defineLabel(const char *label) {
+void ClfLabelChk::defineLabel(const char *label) {
     LabelState &ls = map_[label];
     if (ls.defined) {
         CL_ERROR_MSG(LocationWriter(loc_), "redefinition of label '"
@@ -571,14 +573,14 @@ void CldLabelChk::defineLabel(const char *label) {
         ls.loc = loc_;
 }
 
-void CldLabelChk::reqLabel(const char *label) {
+void ClfLabelChk::reqLabel(const char *label) {
     LabelState &ls = map_[label];
     ls.reachable = true;
     if (ls.loc.locLine < 0)
         ls.loc = loc_;
 }
 
-void CldLabelChk::emitWarnings() {
+void ClfLabelChk::emitWarnings() {
     TMap::iterator i;
     for (i = map_.begin(); i != map_.end(); ++i) {
         const std::string label = i->first;
@@ -595,21 +597,21 @@ void CldLabelChk::emitWarnings() {
 
 namespace {
     ICodeListener* usageChk(ICodeListener *slave) {
-#if CLD_BYPASS_USAGE_CHK
+#if CLF_BYPASS_USAGE_CHK
         return slave;
 #else
         return
-            new CldLcVarUsageChk(
-            new CldRegUsageChk(slave));
+            new ClfLcVarUsageChk(
+            new ClfRegUsageChk(slave));
 #endif
     }
 } // namespace
 
 
 // /////////////////////////////////////////////////////////////////////////////
-// public interface, see cld_intchk.hh for more details
-ICodeListener* createCldIntegrityChk(ICodeListener *slave) {
+// public interface, see clf_intchk.hh for more details
+ICodeListener* createClfIntegrityChk(ICodeListener *slave) {
     return usageChk(
-        new CldLabelChk(
-        new CldCbSeqChk(slave)));
+        new ClfLabelChk(
+        new ClfCbSeqChk(slave)));
 }

@@ -29,10 +29,15 @@
 #include "config.h"
 
 #include <cl/code_listener.h>
+#include <cl/clutil.hh>
 
 #include "symheap.hh"
 
 #include <stack>
+
+namespace CodeStorage {
+    struct Var;
+}
 
 TObjId subObjByChain(const SymHeap &sh, TObjId obj, TFieldIdxChain ic);
 TObjId subObjByInvChain(const SymHeap &sh, TObjId obj, TFieldIdxChain ic);
@@ -47,17 +52,6 @@ inline TObjId /* root */ objRoot(const SymHeap &sh, TObjId obj) {
         root = obj;
 
     return root;
-}
-
-
-inline bool objIsStruct(const SymHeap &sh, TObjId obj) {
-    if (obj < 0)
-        // an invalid object can't be CL_TYPE_STRUCT
-        return false;
-
-    const struct cl_type *clt = sh.objType(obj);
-    return clt
-        && clt->code == CL_TYPE_STRUCT;
 }
 
 /// return offset of an object within another object;  -1 if not found
@@ -87,6 +81,10 @@ void objReplace(SymHeap &sh, TObjId oldObj, TObjId newObj);
 
 void skipObj(const SymHeap &sh, TObjId *pObj, TFieldIdxChain icHead,
              TFieldIdxChain icNext);
+
+void initVariable(SymHeap                       &sh,
+                  TObjId                        obj,
+                  const CodeStorage::Var        &var);
 
 typedef std::pair<TObjId, TObjId> TObjPair;
 
@@ -132,13 +130,13 @@ bool /* complete */ traverseSubObjs(THeap &sh, TItem item, TVisitor &visitor,
 
         typedef TraverseSubObjsHelper<TItem> THelper;
         const struct cl_type *clt = THelper::getItemClt(sh, item);
-        SE_BREAK_IF(!clt || clt->code != CL_TYPE_STRUCT);
+        SE_BREAK_IF(!clt || !isComposite(clt));
 
         for (int i = 0; i < clt->item_cnt; ++i) {
             const TItem next = THelper::getNextItem(sh, item, i);
 
             const struct cl_type *subClt = THelper::getItemClt(sh, next);
-            if (subClt && subClt->code == CL_TYPE_STRUCT) {
+            if (subClt && isComposite(subClt)) {
                 todo.push(next);
 
                 if (leavesOnly)
@@ -180,7 +178,7 @@ bool /* complete */ traverseSubObjsIc(THeap &sh, TItem item, TVisitor &visitor)
 
         typedef TraverseSubObjsHelper<TItem> THelper;
         const struct cl_type *clt = THelper::getItemClt(sh, si.item);
-        SE_BREAK_IF(!clt || clt->code != CL_TYPE_STRUCT);
+        SE_BREAK_IF(!clt || !isComposite(clt));
 
         typename TFieldIdxChain::reference nth = si.ic.back();
         if (nth == clt->item_cnt) {
@@ -195,7 +193,7 @@ bool /* complete */ traverseSubObjsIc(THeap &sh, TItem item, TVisitor &visitor)
             return false;
 
         const struct cl_type *cltNext = THelper::getItemClt(sh, next.item);
-        if (!cltNext || cltNext->code != CL_TYPE_STRUCT) {
+        if (!cltNext || !isComposite(cltNext)) {
             // move to the next field at this level
             ++nth;
             continue;

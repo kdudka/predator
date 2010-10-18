@@ -17,6 +17,7 @@
  * along with predator.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "config_cl.h"
 #include <cl/code_listener.h>
 #include <cl/cl_msg.hh>
 
@@ -29,6 +30,19 @@
 #include <cstring>
 
 #include <unistd.h>
+
+#if CL_MSG_SQUEEZE_REPEATS
+    static std::string last_msg;
+
+#   define CHK_LAST(text, filter) do {              \
+       if ((filter) && !last_msg.compare(text))     \
+           return;                                  \
+       last_msg = (text);                           \
+    } while (0)
+
+#else // CL_MSG_SQUEEZE_REPEATS
+#   define CHK_LAST(text, filter) do { } while (0)
+#endif
 
 static const char *app_name = "<cl uninitialized>";
 static bool app_name_allocated = false;
@@ -66,16 +80,19 @@ void cl_debug(const char *msg)
 
 void cl_warn(const char *msg)
 {
+    CHK_LAST(msg, /* filter */ true);
     init_data.warn(msg);
 }
 
 void cl_error(const char *msg)
 {
+    CHK_LAST(msg, /* filter */ true);
     init_data.error(msg);
 }
 
 void cl_note(const char *msg)
 {
+    CHK_LAST(msg, /* filter */ false);
     init_data.note(msg);
 }
 
@@ -265,15 +282,15 @@ static void cl_wrap_insn_switch_close(
     CL_WRAP(insn_switch_close);
 }
 
+static void cl_wrap_acknowledge(
+            struct cl_code_listener *self)
+{
+    CL_WRAP(acknowledge);
+}
+
 static void cl_wrap_destroy(struct cl_code_listener *self)
 {
     ICodeListener *cl = static_cast<ICodeListener *>(self->data);
-    try {
-        cl->finalize();
-    }
-    catch (...) {
-        CL_DIE("uncaught exception in ICodeListener::finalize()");
-    }
     delete cl;
     delete self;
 }
@@ -297,6 +314,7 @@ struct cl_code_listener* cl_create_listener_wrap(ICodeListener *listener)
     wrap->insn_switch_open  = cl_wrap_insn_switch_open;
     wrap->insn_switch_case  = cl_wrap_insn_switch_case;
     wrap->insn_switch_close = cl_wrap_insn_switch_close;
+    wrap->acknowledge       = cl_wrap_acknowledge;
     wrap->destroy           = cl_wrap_destroy;
 
     return wrap;
@@ -315,6 +333,6 @@ struct cl_code_listener* cl_code_listener_create(const char *config_string)
         return cl_create_listener_wrap(listener);
     }
     catch (...) {
-        CL_DIE("uncaught exception in cl_writer_create");
+        CL_DIE("uncaught exception in cl_code_listener_create()");
     }
 }

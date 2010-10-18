@@ -23,7 +23,9 @@
 #include <cl/cl_msg.hh>
 #include <cl/storage.hh>
 
+#include "symbt.hh"
 #include "symheap.hh"
+#include "symproc.hh"
 
 #include <stack>
 
@@ -117,16 +119,13 @@ void getPtrValues(SymHeapCore::TContValue &dst, const SymHeap &heap,
             }
 
             case CL_TYPE_STRUCT:
+            case CL_TYPE_UNION:
                 for (int i = 0; i < clt->item_cnt; ++i) {
                     const TObjId subObj = heap.subObj(obj, i);
                     SE_BREAK_IF(subObj < 0);
 
                     todo.push(subObj);
                 }
-                break;
-
-            case CL_TYPE_UNION:
-                CL_WARN("CL_TYPE_UNION is not supported by getPtrValues() yet");
                 break;
 
             case CL_TYPE_ENUM:
@@ -173,4 +172,87 @@ void skipObj(const SymHeap &sh, TObjId *pObj, TFieldIdxChain icHead,
 
     // move to the next object
     *pObj = objNext;
+}
+
+typedef std::pair<TObjId, const cl_initializer *> TInitialItem;
+
+// specialization of TraverseSubObjsHelper suitable for gl initializers
+template <> struct TraverseSubObjsHelper<TInitialItem> {
+    static const struct cl_type* getItemClt(const SymHeap           &sh,
+                                            const TInitialItem      &item)
+    {
+        const struct cl_type *clt = sh.objType(item.first);
+        SE_BREAK_IF(item.second && (!clt || *clt != *item.second->type));
+        return clt;
+    }
+
+    static TInitialItem getNextItem(const SymHeap                   &sh,
+                                    TInitialItem                    item,
+                                    int                             nth)
+    {
+        item.first = sh.subObj(item.first, nth);
+
+        const struct cl_initializer *&initial = item.second;
+        if (initial)
+            initial = initial->data.nested_initials[nth];
+
+        return item;
+    }
+};
+
+bool initSingleVariable(SymHeap &sh, const TInitialItem &item) {
+    const TObjId obj = item.first;
+    const struct cl_type *clt = sh.objType(obj);
+    SE_BREAK_IF(!clt);
+
+    const enum cl_type_e code = clt->code;
+    switch (code) {
+        case CL_TYPE_ARRAY:
+            CL_DEBUG("CL_TYPE_ARRAY is not supported by VarInitializer");
+            return /* continue */ true;
+
+        case CL_TYPE_UNION:
+        case CL_TYPE_STRUCT:
+            SE_TRAP;
+
+        default:
+            break;
+    }
+
+    const struct cl_initializer *initial = item.second;
+    if (!initial) {
+        // no initializer given, nullify the variable
+        sh.objSetValue(obj, /* also equal to VAL_FALSE */ VAL_NULL);
+        return /* continue */ true;
+    }
+
+    // FIXME: we're asking for troubles this way
+    const CodeStorage::Storage *null = 0;
+    SymBackTrace dummyBt(*null);
+    SymProc proc(sh, &dummyBt);
+
+    // resolve initial value
+    const struct cl_operand *op = initial->data.value;
+    const TValueId val = proc.heapValFromOperand(*op);
+    CL_DEBUG("using explicit initializer: obj #"
+            << static_cast<int>(obj) << " <-- val #"
+            << static_cast<int>(val));
+
+    // set the initial value
+    SE_BREAK_IF(VAL_INVALID == val);
+    sh.objSetValue(obj, val);
+
+    return /* continue */ true;
+}
+
+void initVariable(SymHeap                       &sh,
+                  TObjId                        obj,
+                  const CodeStorage::Var        &var)
+{
+    const TInitialItem item(obj, var.initial);
+
+    if (isComposite(var.clt))
+        traverseSubObjs(sh, item, initSingleVariable, /* leavesOnly */ true);
+    else
+        initSingleVariable(sh, item);
 }

@@ -185,6 +185,7 @@ namespace {
                 }
 
                 case CL_TYPE_STRUCT:
+                case CL_TYPE_UNION:
                     for (int i = 0; i < clt->item_cnt; ++i) {
                         const TObjId sub1 = heap1.subObj(o1, i);
                         const TObjId sub2 = heap2.subObj(o2, i);
@@ -192,10 +193,6 @@ namespace {
 
                         push(todo, sub1, sub2);
                     }
-                    break;
-
-                case CL_TYPE_UNION:
-                    CL_WARN("CL_TYPE_UNION is not supported by SymState yet");
                     break;
 
                 case CL_TYPE_CHAR:
@@ -254,53 +251,6 @@ bool cmpAbstractObjects(TWL &wl, const SymHeap &sh1, const SymHeap &sh2,
     return true;
 }
 
-// wrapper on top of SymHeapCore::gatherRelatedValues() that filters out
-// unused values
-template <class TDst>
-void gatherRelatedValues(TDst &dst, const SymHeap &sh, TValueId ref) {
-    using namespace boost::lambda;
-
-    TDst tmp;
-    sh.gatherRelatedValues(tmp, ref);
-
-    // NOTE: beware of the std::cref(sh) usage here -- if you use just 'sh'
-    //       instead of std::cref(sh), you decrease the over all performance
-    //       10x (!!!), no matter how aggressive optimization flags you pass to
-    //       the compiler in that case
-    std::copy_if(tmp.begin(), tmp.end(), std::back_inserter(dst),
-            bind(&SymHeapCore::usedByCount, std::cref(sh), _1));
-}
-
-template <class TWL, class TSubst>
-bool matchPreds(TWL             &wl,
-                TSubst          &valSubst,
-                const SymHeap   &sh1,
-                const SymHeap   &sh2,
-                TValueId        v1,
-                TValueId        v2)
-{
-    SymHeap::TContValue rel1, rel2;
-    gatherRelatedValues(rel1, sh1, v1);
-    gatherRelatedValues(rel2, sh2, v2);
-
-    const unsigned cnt = rel1.size();
-    if (rel2.size() != cnt)
-        return false;
-
-    // We will probably need to extend the interface of SymHeap in order
-    // to compare predicates enough efficiently...
-#if 0
-    // TODO
-    if (cnt)
-        TRAP;
-#else
-    (void) wl;
-    (void) valSubst;
-#endif
-
-    return true;
-}
-
 template <class TWL, class TSubst>
 bool dfsCmp(TWL             &wl,
             TSubst          &valSubst,
@@ -315,10 +265,6 @@ bool dfsCmp(TWL             &wl,
 
         if (!matchValues(valSubst, heap1, heap2, value1, value2))
             // value mismatch
-            return false;
-
-        if (!matchPreds(wl, valSubst, heap1, heap2, value1, value2))
-            // predicate mismatch
             return false;
 
         if (skipValue(heap1, value1))
@@ -350,6 +296,12 @@ bool dfsCmp(TWL             &wl,
         // schedule values for next wheel
         wl.schedule(value1, value2);
     }
+
+    // finally match heap predicates
+    if (!heap1.matchPreds(heap2, valSubst[/* ltr */ 0]))
+        return false;
+    if (!heap2.matchPreds(heap1, valSubst[/* rtl */ 1]))
+        return false;
 
     // heaps are equal (isomorphism)
     return true;
