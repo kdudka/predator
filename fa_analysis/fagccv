@@ -16,7 +16,7 @@ GCC="$topdir/gcc-install/bin/gcc"
 test -x "$GCC"                              || exit 1
 
 # attempt to make
-make -s $MAKEOPTS -C "$topdir/sl"           || exit 1
+make -s $MAKEOPTS -C "$topdir/fa_analysis"  || exit 1
 test -x "$FA_PLUG"                          || exit 1
 
 # use verbose level 0 by default

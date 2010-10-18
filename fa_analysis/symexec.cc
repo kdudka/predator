@@ -17,6 +17,7 @@
  * along with predator.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <sstream>
 #include <vector>
 #include <boost/unordered_map.hpp>
 
@@ -31,376 +32,73 @@
 #include "forestautext.hh"
 #include "ufae.hh"
 #include "symexec.hh"
-
-// abstract base pointer
-#define ABP_INDEX		0
-#define ABP_OFFSET		0
-// 'return address'
-#define RET_INDEX		1
-#define RET_OFFSET		sizeof(void*)
-// index of register with return value
-#define IAX_INDEX		2
-#define IAX_OFFSET		2*sizeof(void*)
-
-#define FIXED_REG_COUNT	3
+#include "nodebuilder.hh"
+#include "operandinfo.hh"
+#include "symctx.hh"
 
 using boost::unordered_map;
 using std::vector;
 
-struct NodeBuilder {
+struct FAEContainer {
 
-	static void buildNode(vector<SelData>& nodeInfo, const cl_type* type, int offset = 0) {
-		
-		assert(type->size > 0);
-
-		switch (type->code) {
-			case cl_type_e::CL_TYPE_STRUCT:
-				for (int i = 0; i < type->item_cnt; ++i)
-					NodeBuilder::buildNode(nodeInfo, type->items[i].type, offset + type->items[i].offset);
-				break;
-			case cl_type_e::CL_TYPE_PTR:
-			case cl_type_e::CL_TYPE_INT:
-			case cl_type_e::CL_TYPE_BOOL:
-			default:
-				nodeInfo.push_back(SelData(offset, type->size, 0));
-				break;
-//			case cl_type_e::CL_TYPE_UNION:
-		}
-
+	std::vector<FAE*> conf;
+	
+	FAEContainer() {}
+	FAEContainer(const FAE& fae) {
+		this->conf.push_back(new FAE(fae));
 	}
 
-	static void buildNode(vector<size_t>& nodeInfo, const cl_type* type, int offset = 0) {
-		
-		assert(type->size > 0);
-
-		switch (type->code) {
-			case cl_type_e::CL_TYPE_STRUCT:
-				for (int i = 0; i < type->item_cnt; ++i)
-					NodeBuilder::buildNode(nodeInfo, type->items[i].type, offset + type->items[i].offset);
-				break;
-			case cl_type_e::CL_TYPE_PTR:
-			case cl_type_e::CL_TYPE_INT:
-			case cl_type_e::CL_TYPE_BOOL:
-			default:
-				nodeInfo.push_back(offset);
-				break;
-//			case cl_type_e::CL_TYPE_UNION:
-		}
-
+	~FAEContainer() {
+		utils::erase(this->conf);
 	}
+
+	template <class F>
+	void apply(F f) {
+		for (std::vector<FAE*>::iterator i = this->conf.begin(); i != this->conf.end(); ++i)
+			f(**i);
+	}
+
+	template <class F>
+	void forAll(F f) {
+		std::vector<FAE*> tmp;
+		ContainerGuard<FAE*> g(tmp);
+		for (std::vector<FAE*>::iterator i = this->conf.begin(); i != this->conf.end(); ++i)
+			f(tmp, *((const FAE*)*i));
+		std::swap(this->conf, tmp);
+	}
+	
+	template <class F>
+	void forAll(FAEContainer& dst, F f) {
+		for (std::vector<FAE*>::iterator i = this->conf.begin(); i != this->conf.end(); ++i)
+			f(dst.conf, *((const FAE*)*i));
+	}
+
+protected:
+
+	FAEContainer(const FAEContainer&) {}
 
 };
 
-typedef enum { safe_ref, ref, reg, val } o_flag_e;
-
-struct OperandInfo {
-
-	o_flag_e flag;
-	Data data;
-	const cl_type* type;
-
-	friend std::ostream& operator<<(std::ostream& os, const OperandInfo& oi) {
-		switch (oi.flag) {
-			case o_flag_e::ref: os << "(ref)" << oi.data.d_ref.root << '+' << oi.data.d_ref.displ; break;
-			case o_flag_e::safe_ref: os << "(safe_ref)" << oi.data.d_ref.root << '+' << oi.data.d_ref.displ; break;
-			case o_flag_e::reg: os << "(reg)" << oi.data.d_ref.root << '+' << oi.data.d_ref.displ; break;
-			case o_flag_e::val: os << "(val)" << oi.data; break;
-		}
-		return os;
+void dumpOperandTypes(std::ostream& os, const cl_operand* op) {
+	os << "operand:" << std::endl;
+	cltToStream(os, op->type, false);
+	os << "accessors:" << std::endl;
+	const cl_accessor* acc = op->accessor;
+	while (acc) {
+		cltToStream(os, acc->type, false);
+		acc = acc->next;
 	}
-
-	const cl_accessor* parseItems(const cl_accessor* acc) {
-
-		while (acc && (acc->code == CL_ACCESSOR_ITEM)) {
-			this->data.d_ref.displ += acc->type->items[acc->data.item.id].offset;
-			acc = acc->next;
-		}
-
-		return acc;
-
-	}
-
-	const cl_accessor* parseRef(const cl_accessor* acc) {
-
-		assert((this->flag == o_flag_e::ref) || (this->flag == o_flag_e::safe_ref));
-
-		if (acc && (acc->code == CL_ACCESSOR_REF)) {
-			this->flag = o_flag_e::val;
-			acc = acc->next;
-		} 
-
-		return acc;
-		
-	}
-
-	void parseCst(const cl_operand* op) {
-		
-		this->flag = o_flag_e::val;
-		this->type = op->type;
-
-		switch (op->data.cst.code) {
-			case cl_type_e::CL_TYPE_INT:
-				this->data = Data::createInt(op->data.cst.data.cst_int.value);
-				break;
-			default:
-				assert(false);
-		}
-
-	}
-
-	void parseVar(const FAE& fae, const cl_operand* op, size_t offset) {
-
-		this->data = Data::createRef(fae.varGet(ABP_INDEX).d_ref.root, (int)offset);
-		this->flag = o_flag_e::safe_ref;
-		this->type = op->type;
-
-		const cl_accessor* acc = op->accessor;
-
-		if (acc && (acc->code == CL_ACCESSOR_DEREF)) {
-			
-			fae.nodeLookup(this->data.d_ref.root, this->data.d_ref.displ, this->data);
-			if (!this->data.isRef())
-				throw std::runtime_error("OperandInfo::parseVar(): dereferenced value is not a valid reference!");
-
-			this->flag = o_flag_e::ref;
-			acc = acc->next;
-
-		}
-
-		acc = this->parseItems(acc);
-		acc = this->parseRef(acc);
-		assert(acc == NULL);
-
-	}
-
-	void parseReg(const FAE& fae, const cl_operand* op, size_t index) {
-
-		// HACK: this is a bit ugly
-		this->data = Data::createRef(index);
-		this->type = op->type;
-
-		const cl_accessor* acc = op->accessor;
-
-		if (acc && (acc->code == CL_ACCESSOR_DEREF)) {
-
-			this->data = fae.varGet(this->data.d_ref.root);
-			if (!this->data.isRef())
-				throw std::runtime_error("OperandInfo::parseReg(): dereferenced value is not a valid reference!");
-
-			this->flag = o_flag_e::ref;
-			acc = this->parseItems(acc->next);
-			acc = this->parseRef(acc);
-
-		} else {
-
-			this->flag = o_flag_e::reg;
-			acc = this->parseItems(acc);
-
-		}
-
-		assert(acc == NULL);
-
-	}
-
-	static bool isRef(o_flag_e flag) {
-
-		return flag == o_flag_e::ref || flag == o_flag_e::safe_ref;
-
-	}
-
-	static bool isLValue(o_flag_e flag) {
-
-		return flag == o_flag_e::ref || flag == o_flag_e::safe_ref || flag == o_flag_e::reg;
-
-	}
-
-	static Data extractNestedStruct(const Data& data, size_t base, const std::vector<size_t>& offsets) {
-		assert(data.isStruct());
-		std::map<size_t, const Data*> m;
-		for (std::vector<Data::item_info>::const_iterator i = data.d_struct->begin(); i != data.d_struct->end(); ++i)
-			m.insert(make_pair(i->first, &i->second));
-		Data tmp = Data::createStruct();
-		for (std::vector<size_t>::const_iterator i = offsets.begin(); i != offsets.end(); ++i) {
-			std::map<size_t, const Data*>::iterator j = m.find(*i + base);
-			if (j == m.end())
-				throw std::runtime_error("OperandInfo::extractNestedStruct(): selectors mismatch!");
-			tmp.d_struct->push_back(make_pair(*i, *j->second));
-		}
-		return tmp;
-	}
-
-	static void modifyNestedStruct(Data& dst, size_t base, const Data& src) {
-		assert(dst.isStruct());
-		assert(src.isStruct());
-		std::map<size_t, const Data*> m;
-		for (std::vector<Data::item_info>::const_iterator i = src.d_struct->begin(); i != src.d_struct->end(); ++i)
-			m.insert(make_pair(base + i->first, &i->second));
-		Data tmp = Data::createStruct();
-		size_t matched = 0;
-		for (std::vector<Data::item_info>::iterator i = dst.d_struct->begin(); i != dst.d_struct->end(); ++i) {
-			std::map<size_t, const Data*>::iterator j = m.find(i->first);
-			if (j != m.end()) {
-				i->second = *j->second;
-				++matched;
-			}
-		}
-		if (matched != src.d_struct->size())
-			throw std::runtime_error("OperandInfo::modifyNestedStruct(): selectors mismatch!");
-	}
-
-};
-
-struct SymCtx {
-
-	const CodeStorage::Fnc& fnc;
-
-	vector<SelData> sfLayout;
-
-	// uid -> stack x offset/index
-	typedef unordered_map<int, std::pair<bool, size_t> > var_map_type;
-
-	var_map_type varMap;
-
-	size_t regCount;
-
-	SymCtx(const CodeStorage::Fnc& fnc) : fnc(fnc), regCount(0) {
-
-		// pointer to previous stack frame
-		this->sfLayout.push_back(SelData(ABP_OFFSET, sizeof(void*), 0));
-
-		// pointer to context info
-		this->sfLayout.push_back(SelData(RET_OFFSET, sizeof(void*), 0));
-
-		// pointer to context info
-		this->sfLayout.push_back(SelData(IAX_OFFSET, sizeof(size_t), 0));
-
-		size_t offset = 2*sizeof(void*) + sizeof(size_t);
-
-		for (CodeStorage::TVarList::const_iterator i = fnc.vars.begin(); i != fnc.vars.end(); ++i) {
-
-			const CodeStorage::Var& var = fnc.stor->vars[*i];
-
-			switch (var.code) {
-				case CodeStorage::EVar::VAR_LC:
-					if (var.name.empty()) {
-						this->varMap.insert(make_pair(var.uid, make_pair(false, FIXED_REG_COUNT + this->regCount++)));
-					} else {
-						NodeBuilder::buildNode(this->sfLayout, var.clt, offset);
-						this->varMap.insert(make_pair(var.uid, make_pair(true, offset)));
-						offset += var.clt->size;
-					}
-					break;
-				default:
-					break;
-			}
-			
-		}
-
-	}
-
-	static void init(FAE& fae) {
-		assert(fae.varCount() == 0);
-		// create ABP and CTX registers
-		fae.varPopulate(FIXED_REG_COUNT);
-		fae.varSet(ABP_INDEX, Data::createInt(0));
-		fae.varSet(RET_INDEX, Data::createUndef());
-		fae.varSet(IAX_INDEX, Data::createUndef());
-	}
-
-	void createStackFrame(vector<FAE*>& dst, const FAE& fae) const {
-
-		vector<pair<SelData, Data> > stackInfo;
-
-		for (vector<SelData>::const_iterator i = this->sfLayout.begin(); i != this->sfLayout.end(); ++i)
-			stackInfo.push_back(make_pair(*i, Data::createUndef()));
-
-		FAE* tmp = new FAE(fae);
-
-		stackInfo[0].second = tmp->varGet(ABP_INDEX);
-		stackInfo[1].second = Data::createNativePtr(NULL);
-
-		tmp->varSet(ABP_INDEX, Data::createRef(tmp->nodeCreate(stackInfo)));
-		// TODO: ...
-		tmp->varSet(RET_INDEX, Data::createNativePtr(NULL));
-		tmp->varSet(IAX_INDEX, Data::createInt(0));
-		tmp->varPopulate(this->regCount);
-
-		dst.push_back(tmp);
-		
-	}
-
-	void destroyStackFrame(vector<FAE*>& dst, const FAE& fae) const {
-
-		FAE tmp(fae);
-
-		const Data& abp = tmp.varGet(ABP_INDEX);
-
-		assert(abp.isRef());
-		assert(abp.d_ref.displ == 0);
-		
-		Data data;
-
-		tmp.varRemove(this->regCount);
-		tmp.nodeLookup(abp.d_ref.root, ABP_OFFSET, data);
-		tmp.unsafeNodeDelete(abp.d_ref.root);
-		tmp.varSet(ABP_INDEX, data);
-
-		if (abp.isRef()) {
-			tmp.nodeLookup(abp.d_ref.root, RET_OFFSET, data);
-			assert(data.isNativePtr());
-			tmp.varSet(RET_INDEX, data);
-			tmp.isolateAtRoot(dst, abp.d_ref.root, FAE::IsolateAllF());
-		} else {
-			tmp.varSet(RET_INDEX, Data::createUndef());
-			dst.push_back(new FAE(tmp));
-		}
-		
-	}
-
-	void parseOperand(OperandInfo& operandInfo, const FAE& fae, const cl_operand* op) const {
-
-		switch (op->code) {
-			case cl_operand_e::CL_OPERAND_VAR: {
-				var_map_type::const_iterator i = this->varMap.find(varIdFromOperand(op));
-				assert(i != this->varMap.end());
-				switch (i->second.first) {
-					case true: operandInfo.parseVar(fae, op, i->second.second); break;
-					case false: operandInfo.parseReg(fae, op, i->second.second); break;
-				}
-				break;
-			}
-			case cl_operand_e::CL_OPERAND_CST:
-				operandInfo.parseCst(op);
-				break;
-			default:
-				assert(false);
-		}
-
-	}
-/*
-	static SymCtx* extractCtx(const FAE& fae) {
-
-		var_map_type::iterator i = this->varMap.find(varIdFromOperand(op));
-
-		const Data& abp = fae.varGet(CTX_INDEX);
-
-		assert(abp.isNativePtr());
-
-		return (SymCtx*)abp.d_native_ptr;
-		
-	}
-*/
-};
+}
 
 struct SymState {
 
 	// configuration obtained in forward run
 	TA<label_type> fwdConf;
 
-	// outstanding configurations
-	vector<FAE*> outConf;
-
 	UFAE fwdConfWrapper;
+
+	// outstanding configurations
+	std::vector<FAE*> outConf;
 
 	const SymCtx* ctx;
 
@@ -415,11 +113,139 @@ struct SymState {
 //			delete *i;
 	}
 
+	FAE* next() {
+		if (this->outConf.empty())
+			return NULL;
+		FAE* fae = this->outConf.back();
+		this->outConf.pop_back();
+		return fae;
+	}
+
+	void prepareOperand(vector<FAE*>& dst, const vector<FAE*>& src, const cl_operand& op) {
+		vector<size_t> offs;
+		NodeBuilder::buildNode(offs, op.type);
+		OperandInfo oi;
+		for (vector<FAE*>::const_iterator i = src.begin(); i != src.end(); ++i) {
+			this->ctx->parseOperand(oi, **i, &op);
+			if (oi.flag == o_flag_e::ref)
+				(*i)->isolateAtRoot(dst, oi.data.d_ref.root, FAE::IsolateSetF(offs, oi.data.d_ref.displ));
+			else
+				dst.push_back(new FAE(**i));
+		}
+	}
+
+	bool enqueue(const FAE& fae) {
+
+		TA<label_type> ta(*this->fwdConf.backend);
+		Index<size_t> index;
+
+		this->fwdConfWrapper.fae2ta(ta, index, fae);
+/*
+		TA<label_type> min(*this->fwdConf.backend);
+
+		ta.minimized(min);
+
+		CL_DEBUG("challenge:" << std::endl << min);
+
+		min.clear();
+
+		this->fwdConf.minimized(min);
+			
+		CL_DEBUG("response:" << std::endl << min);
+*/
+		if (TA<label_type>::subseteq(ta, this->fwdConf))
+			return false;
+
+		this->fwdConfWrapper.join(ta, index);
+
+		vector<FAE*> tmp1, tmp2;
+		ContainerGuard<vector<FAE*> > g1(tmp1), g2(tmp2);
+		tmp1.push_back(new FAE(fae));
+		for (vector<cl_operand>::const_iterator i = (*this->insn)->operands.begin(); i != (*this->insn)->operands.end(); ++i) {
+			if (i->code != cl_operand_e::CL_OPERAND_VAR)
+				continue;
+			this->prepareOperand(tmp2, tmp1, *i);
+			utils::erase(tmp1);
+			std::swap(tmp1, tmp2);
+		}
+		this->outConf.insert(this->outConf.end(), tmp1.begin(), tmp1.end());
+		g1.release();		
+		
+		return true;
+
+	}
+
 };
 
 struct SymOp {
-};
 
+	SymState* src;
+	SymState* dst;
+	
+
+};
+/*
+struct TraceRecorder {
+
+	std::vector<SymOp> trace;
+
+	TraceRecorder() {
+	}
+
+	template <class F>
+	void isolateAtRoot(std::vector<FAE*>& dst, size_t root, F f) {
+	}
+
+	void heightAbstraction(size_t height = 1) {
+	}
+
+	void normalize(FAE::NormInfo& normInfo, const std::vector<size_t>& forbidden = std::vector<size_t>()) {
+	}
+
+	size_t varCount() const {
+	}
+
+	size_t varAdd(const Data& data) {
+	}
+
+	void varPopulate(size_t count) {
+	}
+
+	void varRemove(size_t count) {
+	}
+
+	const Data& varGet(size_t id) const {
+	}
+
+	void varSet(size_t id, const Data& data) {
+	}
+
+	size_t nodeCreate(const std::vector<std::pair<SelData, Data> >& nodeInfo) {
+	}
+
+	size_t nodeCreate(const std::vector<SelData>& nodeInfo) {
+	}
+
+	void nodeDelete(size_t root) {
+	}
+
+	void unsafeNodeDelete(size_t root) {
+	}
+
+	void nodeLookup(size_t root, size_t offset, Data& data) const {
+	}	
+
+	void nodeLookupMultiple(size_t root, size_t base, const std::vector<size_t>& offsets, Data& data) const {
+	}	
+
+	void nodeModify(size_t root, size_t offset, const Data& in, Data& out) {
+	}	
+
+	void nodeModifyMultiple(size_t root, size_t offset, const Data& in, Data& out) {
+	}	
+	
+};
+*/
 typedef enum { biNone, biMalloc, biFree, biNondet } builtin_e;
 
 struct BuiltinTable {
@@ -452,11 +278,6 @@ class SymExec::Engine {
 	LabMan labMan;
 	BoxManager boxMan;
 
-//	std::list<SymCtx*> ctxStore;
-
-	// call ctx * call isns -> nested call ctx ! ... >:)
-//	unordered_map<SymCtx*, CodeStorage::Isns*> ctxCache;
-
 	typedef unordered_map<const CodeStorage::Fnc*, SymCtx*> ctx_store_type;
 	ctx_store_type ctxStore;
 
@@ -464,7 +285,6 @@ class SymExec::Engine {
 	state_store_type stateStore;
 
 	std::vector<SymState*> todo;
-	std::vector<SymOp*> trace;
 
 protected:
 
@@ -492,59 +312,26 @@ protected:
 
 	}
 
-	void stateUnion(SymState* target, vector<FAE*>& src) {
+	void stateUnion(SymState* target, FAE& fae) {
 
-		bool changed = false;
+		FAE::NormInfo normInfo;
 
-		while (!src.empty()) {
+		std::vector<size_t> tmp;
+		fae.getNearbyReferences(fae.varGet(ABP_INDEX).d_ref.root, tmp);
+		fae.normalize(normInfo, tmp);
+		fae.heightAbstraction();
 
-			FAE::NormInfo normInfo;
-
-			std::vector<size_t> tmp;
-			src.back()->getNearbyReferences(src.back()->varGet(ABP_INDEX).d_ref.root, tmp);
-			src.back()->normalize(normInfo, tmp);
-			src.back()->heightAbstraction();
-
-			TA<label_type> ta(this->taBackend);
-			Index<size_t> index;
-
-			target->fwdConfWrapper.fae2ta(ta, index, *src.back());
-/*
-			TA<label_type> min(this->taBackend);
-
-			ta.minimized(min);
-
-			CL_DEBUG("challenge:" << std::endl << min);
-
-			min.clear();
-
-			target->fwdConf.minimized(min);
-			
-			CL_DEBUG("response:" << std::endl << min);
-*/
-			if (TA<label_type>::subseteq(ta, target->fwdConf)) {
-				delete src.back();
-			} else {
-				target->outConf.push_back(src.back());
-				target->fwdConfWrapper.join(ta, index);
-				changed = true;
-			}
-
-			src.pop_back();
-
-		}
-
-		if (changed)
+		if (target->enqueue(fae))
 			this->todo.push_back(target);
 		
 	}
 
-	void enqueueNextInsn(SymState* state, vector<FAE*>& src) {
+	void enqueueNextInsn(SymState* state, FAE& src) {
 
 		this->stateUnion(this->getState(state->insn + 1, state->ctx), src);
 		
 	}
-
+/*
 	void isolateIfNeeded(vector<FAE*>& dst, const vector<FAE*>& src, const OperandInfo& oi, const vector<size_t>& offs) {
 
 		for (vector<FAE*>::const_iterator i = src.begin(); i != src.end(); ++i) {
@@ -555,7 +342,7 @@ protected:
 		}
 
 	}
-
+*/
 	Data readData(const FAE& fae, const OperandInfo& oi, const vector<size_t>& offs) {
 		Data data;
 		switch (oi.flag) {
@@ -583,7 +370,7 @@ protected:
 	}
 
 	void writeData(FAE& fae, const OperandInfo& oi, const Data& in, Data& out) {
-		CL_DEBUG("write: " << oi << " -> " << in);
+		CL_DEBUG("write: " << in << " -> " << oi);
 		switch (oi.flag) {
 			case o_flag_e::ref:
 			case o_flag_e::safe_ref:
@@ -607,7 +394,8 @@ protected:
 		}
 	}
 
-	void execAssignment(SymState* state, const FAE& fae, const CodeStorage::Insn* insn) {
+	void execAssignment(SymState* state, FAE& fae, const CodeStorage::Insn* insn) {
+
 		OperandInfo dst, src;
 		state->ctx->parseOperand(dst, fae, &insn->operands[0]);
 		state->ctx->parseOperand(src, fae, &insn->operands[1]);
@@ -619,41 +407,29 @@ protected:
 			src.type->items[0].type->code == cl_type_e::CL_TYPE_VOID &&
 			dst.type->items[0].type->code != cl_type_e::CL_TYPE_VOID
 		) {
-			vector<FAE*> tmp, tmp2;
-			ContainerGuard<vector<FAE*> > f(tmp), g(tmp2);
-			this->isolateIfNeeded(tmp, itov((FAE*)&fae), src, itov((size_t)0));
-			this->isolateIfNeeded(tmp2, tmp, dst, itov((size_t)0));
 			vector<SelData> sels;
 			NodeBuilder::buildNode(sels, dst.type->items[0].type);
-			for (vector<FAE*>::iterator i = tmp2.begin(); i != tmp2.end(); ++i) {
-				Data data = this->readData(**i, src, itov((size_t)0)); 
-				assert(dst.type->items[0].type->size == (int)data.d_void_ptr);
-				Data data2 = Data::createRef((*i)->nodeCreate(sels)), out;
-				this->writeData(**i, dst, data2, out);
-			}
-			this->enqueueNextInsn(state, tmp2);
+			Data data = this->readData(fae, src, itov((size_t)0));
+			if (dst.type->items[0].type->size != (int)data.d_void_ptr)
+				throw runtime_error("Engine::execAssignment(): size of allocated block doesn't correspond to the size of the destination!");
+			Data data2 = Data::createRef(fae.nodeCreate(sels)), out;
+			this->writeData(fae, dst, data2, out);
+			this->enqueueNextInsn(state, fae);
 			return;
 		}
-
+/*
+		dumpOperandTypes(std::cerr, &insn->operands[0]);
+		dumpOperandTypes(std::cerr, &insn->operands[1]);
+*/
 		assert(*(src.type) == *(dst.type));
 
 		vector<size_t> offs;
 		NodeBuilder::buildNode(offs, src.type);
 
-		vector<FAE*> tmp, tmp2;
-		ContainerGuard<vector<FAE*> > f(tmp), g(tmp2);
+		Data data = this->readData(fae, src, offs), dataOut;
+		this->writeData(fae, dst, data, dataOut);
 
-		this->isolateIfNeeded(tmp, itov((FAE*)&fae), src, offs);
-		this->isolateIfNeeded(tmp2, tmp, dst, offs);
-
-		for (vector<FAE*>::iterator i = tmp2.begin(); i != tmp2.end(); ++i) {
-			Data data = this->readData(**i, src, offs), dataOut;
-			this->writeData(**i, dst, data, dataOut);
-		}
-
-		g.release();
-
-		this->enqueueNextInsn(state, tmp2);
+		this->enqueueNextInsn(state, fae);
 		
 	}
 
@@ -666,6 +442,7 @@ protected:
 	}
 
 	void execEq(SymState* state, const FAE& fae, const CodeStorage::Insn* insn, bool neg) {
+
 		OperandInfo dst, src1, src2;
 		state->ctx->parseOperand(dst, fae, &insn->operands[0]);
 		state->ctx->parseOperand(src1, fae, &insn->operands[1]);
@@ -681,32 +458,21 @@ protected:
 		vector<size_t> offs2;
 		NodeBuilder::buildNode(offs2, src2.type);
 
-		vector<FAE*> tmp, tmp2, tmp3, tmp4;
-		ContainerGuard<vector<FAE*> > f(tmp), g(tmp2), h(tmp3), k(tmp4);
-
-		this->isolateIfNeeded(tmp, itov((FAE*)&fae), src1, offs1);
-		this->isolateIfNeeded(tmp2, tmp, src2, offs2); 
-		this->isolateIfNeeded(tmp3, tmp2, dst, itov((size_t)0));
-
-		for (vector<FAE*>::iterator i = tmp3.begin(); i != tmp3.end(); ++i) {
-			Data data1 = this->readData(**i, src1, offs1);
-			Data data2 = this->readData(**i, src2, offs2);
-			vector<Data> res;
-			Engine::dataEq(data1, data2, neg, res);
-			Data dataOut;
-			for (vector<Data>::iterator j = res.begin(); j != res.end(); ++j) {
-				tmp4.push_back(new FAE(**i));
-				this->writeData(*tmp4.back(), dst, *j, dataOut);
-			}
+		Data data1 = this->readData(fae, src1, offs1);
+		Data data2 = this->readData(fae, src2, offs2);
+		vector<Data> res;
+		Engine::dataEq(data1, data2, neg, res);
+		Data dataOut;
+		for (vector<Data>::iterator j = res.begin(); j != res.end(); ++j) {
+			FAE tmp(fae);
+			this->writeData(tmp, dst, *j, dataOut);
+			this->enqueueNextInsn(state, tmp);
 		}
 
-		k.release();
-
-		this->enqueueNextInsn(state, tmp4);
-		
 	}
 
-	void execPlus(SymState* state, const FAE& fae, const CodeStorage::Insn* insn) {
+	void execPlus(SymState* state, FAE& fae, const CodeStorage::Insn* insn) {
+
 		OperandInfo dst, src1, src2;
 		state->ctx->parseOperand(dst, fae, &insn->operands[0]);
 		state->ctx->parseOperand(src1, fae, &insn->operands[1]);
@@ -722,138 +488,94 @@ protected:
 		vector<size_t> offs2;
 		NodeBuilder::buildNode(offs2, src2.type);
 
-		vector<FAE*> tmp, tmp2, tmp3;
-		ContainerGuard<vector<FAE*> > f(tmp), g(tmp2), h(tmp3);
+		Data data1 = this->readData(fae, src1, offs1);
+		Data data2 = this->readData(fae, src2, offs2);
+		assert(data1.isInt() && data2.isInt());
+		Data res = Data::createInt((data1.d_int + data2.d_int > 0)?(1):(0)), dataOut;
+		this->writeData(fae, dst, res, dataOut);
 
-		this->isolateIfNeeded(tmp, itov((FAE*)&fae), src1, offs1);
-		this->isolateIfNeeded(tmp2, tmp, src2, offs2); 
-		this->isolateIfNeeded(tmp3, tmp2, dst, itov((size_t)0));
-
-		for (vector<FAE*>::iterator i = tmp3.begin(); i != tmp3.end(); ++i) {
-			Data data1 = this->readData(**i, src1, offs1);
-			Data data2 = this->readData(**i, src2, offs2);
-			assert(data1.isInt() && data2.isInt());
-			Data res = Data::createInt((data1.d_int + data2.d_int > 0)?(1):(0)), dataOut;
-			this->writeData(**i, dst, res, dataOut);
-		}
-
-		h.release();
-
-		this->enqueueNextInsn(state, tmp3);
+		this->enqueueNextInsn(state, fae);
 		
 	}
 
-	void execMalloc(SymState* state, const FAE& fae, const CodeStorage::Insn* insn) {
+	void execMalloc(SymState* state, FAE& fae, const CodeStorage::Insn* insn) {
+
 		OperandInfo dst, src;
 		state->ctx->parseOperand(dst, fae, &insn->operands[0]);
 		state->ctx->parseOperand(src, fae, &insn->operands[2]);
 		assert(src.type->code == cl_type_e::CL_TYPE_INT);
 
-		vector<FAE*> tmp, tmp2;
-		ContainerGuard<vector<FAE*> > f(tmp), g(tmp2);
+		Data data = this->readData(fae, src, itov((size_t)0)), out;
+		assert(data.isInt());
+		this->writeData(fae, dst, Data::createVoidPtr(data.d_int), out);
 
-		this->isolateIfNeeded(tmp, itov((FAE*)&fae), src, itov((size_t)0));
-		this->isolateIfNeeded(tmp2, tmp, dst, itov((size_t)0));
-
-		for (vector<FAE*>::iterator i = tmp2.begin(); i != tmp2.end(); ++i) {
-			Data data = this->readData(**i, src, itov((size_t)0)), out;
-			assert(data.isInt());
-			this->writeData(**i, dst, Data::createVoidPtr(data.d_int), out);
-		}
-
-		g.release();
-
-		this->enqueueNextInsn(state, tmp2);
+		this->enqueueNextInsn(state, fae);
 	
 	}
 
-	void execFree(SymState* state, const FAE& fae, const CodeStorage::Insn* insn) {
+	void execFree(SymState* state, FAE& fae, const CodeStorage::Insn* insn) {
 
 		OperandInfo src;
 		state->ctx->parseOperand(src, fae, &insn->operands[2]);
-
-		vector<FAE*> tmp, tmp2;
-		ContainerGuard<vector<FAE*> > f(tmp), g(tmp2);
-
-		this->isolateIfNeeded(tmp, itov((FAE*)&fae), src, itov((size_t)0));
-
-		for (vector<FAE*>::iterator i = tmp.begin(); i != tmp.end(); ++i) {
-			Data data = this->readData(**i, src, itov((size_t)0));
-			assert(data.isRef() && (data.d_ref.displ == 0));
-			size_t start = tmp2. size();
-			(*i)->isolateAtRoot(tmp2, data.d_ref.root, FAE::IsolateAllF());
-			for (size_t j = start; j < tmp2.size(); ++j)
-				tmp2[j]->nodeDelete(data.d_ref.root);
+		Data data = this->readData(fae, src, itov((size_t)0));
+		if (!data.isRef()) {
+			std::stringstream ss;
+			ss << "Engine::execFree(): attempt to release an unsiutable value - " << data << '!';
+			throw std::runtime_error(ss.str());
 		}
-
-		g.release();
-
-		this->enqueueNextInsn(state, tmp2);
+		if (data.d_ref.displ != 0) {
+			std::stringstream ss;
+			ss << "Engine::execFree(): attempt to release a reference not pointing at the beginning of an allocated block - " << data << '!';
+			throw runtime_error(ss.str());
+		}
+		vector<FAE*> tmp;
+		ContainerGuard<vector<FAE*> > g(tmp);
+		fae.isolateAtRoot(tmp, data.d_ref.root, FAE::IsolateAllF());
+		for (vector<FAE*>::iterator j = tmp.begin(); j != tmp.end(); ++j) {
+			(*j)->nodeDelete(data.d_ref.root);
+			this->enqueueNextInsn(state, **j);
+		}
 		
 	}
 
-	void execNondet(SymState* state, const FAE& fae, const CodeStorage::Insn* insn) {
+	void execNondet(SymState* state, FAE& fae, const CodeStorage::Insn* insn) {
+
 		OperandInfo dst;
 		state->ctx->parseOperand(dst, fae, &insn->operands[0]);
 
-		vector<FAE*> tmp;
-		ContainerGuard<vector<FAE*> > f(tmp);
-
-		this->isolateIfNeeded(tmp, itov((FAE*)&fae), dst, itov((size_t)0));
-
-		for (vector<FAE*>::iterator i = tmp.begin(); i != tmp.end(); ++i) {
-			Data out;
-			this->writeData(**i, dst, Data::createUnknw(), out);
-		}
-
-		f.release();
-
-		this->enqueueNextInsn(state, tmp);
-	
-	}
-
-	void execJmp(SymState* state, const FAE& fae, const CodeStorage::Insn* insn) {
-
-		vector<FAE*> tmp = itov(new FAE(fae));
-
-		this->stateUnion(this->getState(insn->targets[0]->begin(), state->ctx), tmp);
+		Data out;
+		this->writeData(fae, dst, Data::createUnknw(), out);
+		this->enqueueNextInsn(state, fae);
 
 	}
 
-	void execCond(SymState* state, const FAE& fae, const CodeStorage::Insn* insn) {
+	void execJmp(SymState* state, FAE& fae, const CodeStorage::Insn* insn) {
+
+		this->stateUnion(this->getState(insn->targets[0]->begin(), state->ctx), fae);
+
+	}
+
+	void execCond(SymState* state, FAE& fae, const CodeStorage::Insn* insn) {
 
 		OperandInfo src;
 		state->ctx->parseOperand(src, fae, &insn->operands[0]);
 
 		assert(src.type->code == cl_type_e::CL_TYPE_BOOL);
 
-		vector<FAE*> tmp, tmp2, tmp3;
-		ContainerGuard<vector<FAE*> > g(tmp);
+		Data data = this->readData(fae, src, itov((size_t)0));
 
-		this->isolateIfNeeded(tmp, itov((FAE*)&fae), src, itov((size_t)0));
+		if (!data.isBool())
+			throw runtime_error("Engine::execCond(): non boolean condition argument!");
 
-		for (vector<FAE*>::iterator i = tmp.begin(); i != tmp.end(); ++i) {
-			Data data = this->readData(**i, src, itov((size_t)0));
-			if (!data.isBool())
-				throw runtime_error("Engine::execCond(): non boolean condition argument!");
-			if (data.d_bool)
-				tmp2.push_back(*i);
-			else
-				tmp3.push_back(*i);
-		}
-
-		g.release();
-
-		this->stateUnion(this->getState(insn->targets[0]->begin(), state->ctx), tmp2);
-		this->stateUnion(this->getState(insn->targets[1]->begin(), state->ctx), tmp3);
+		this->stateUnion(this->getState(insn->targets[((data.d_bool))?(0):(1)]->begin(), state->ctx), fae);
 
 	}
 
 
-	void execRet(SymState* state, const FAE& fae, const CodeStorage::Insn* insn) {
+	void execRet(SymState* state, FAE& fae, const CodeStorage::Insn* insn) {
 
 		vector<FAE*> tmp;
-		ContainerGuard<vector<FAE*> > f(tmp);
+		ContainerGuard<vector<FAE*> > g(tmp);
 
 		state->ctx->destroyStackFrame(tmp, fae);
 
@@ -862,7 +584,7 @@ protected:
 		
 	}
 
-	void execInsn(SymState* state, const FAE& fae, const CodeStorage::Insn* insn) {
+	void execInsn(SymState* state, FAE& fae, const CodeStorage::Insn* insn) {
 		
 		switch (insn->code) {
 
@@ -929,42 +651,43 @@ protected:
 				
 	}
 
-	void processState(SymState* state) {
+	void processState() {
 
-		if (state->outConf.empty())
+		SymState* state = this->todo.back();
+
+		FAE* src = state->next();
+
+		if (!src) {
+			this->todo.pop_back();
 			return;
-
-		vector<FAE*> src;
-
-		std::swap(src, state->outConf);
-
-		for (vector<FAE*>::iterator i = src.begin(); i != src.end(); ++i) {
-
-			assert(*i);
-
-			const cl_location* loc = &(*state->insn)->loc;
-
-			CL_DEBUG("configuration: " << std::endl << **i << std::endl);
-			if (loc->file)
-				CL_DEBUG(loc->file << ':' << loc->line << ": " << **state->insn);
-			else
-				CL_DEBUG("<unknown location>: " << **state->insn);
-
-			try {
-				
-				this->execInsn(state, **i, *state->insn);
-
-			} catch (...) {
-				if (loc->file)
-					CL_DEBUG(loc->file << ':' << loc->line << ": ");
-				else
-					CL_DEBUG("<unknown location>: ");
-				throw;
-			}
-
 		}
 
-		utils::erase(src);
+		Guard<FAE> g(src);
+
+		const cl_location* loc = &(*state->insn)->loc;
+
+		CL_DEBUG("context:");
+
+		state->ctx->dumpContext(*src);
+		
+		CL_DEBUG("configuration: " << std::endl << *src << std::endl);
+
+		if (loc->file)
+			CL_DEBUG(loc->file << ':' << loc->line << ": " << **state->insn);
+		else
+			CL_DEBUG("<unknown location>: " << **state->insn);
+
+		try {
+				
+			this->execInsn(state, *src, *state->insn);
+
+		} catch (...) {
+			if (loc->file)
+				CL_DEBUG(loc->file << ':' << loc->line << ": ");
+			else
+				CL_DEBUG("<unknown location>: ");
+			throw;
+		}
 			
 	}
 
@@ -1010,13 +733,8 @@ public:
 
 		try {
 
-			while (!todo.empty()) {
-
-				SymState* state = this->todo.back();
-				this->todo.pop_back();
-				this->processState(state);
-
-			}
+			while (!todo.empty())
+				this->processState();
 
 		} catch (std::exception& e) {
 			CL_DEBUG(e.what());

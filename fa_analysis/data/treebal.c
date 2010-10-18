@@ -1,31 +1,78 @@
 #include <stdlib.h>
 
 int main() {
-    struct T {
-        struct T* next;
+
+    struct TreeNode {
+        struct TreeNode* left;
+        struct TreeNode* right;
     };
 
-    struct T* x = NULL;
-    struct T* y = NULL;
+    struct StackItem {
+        struct StackItem* next;
+	struct TreeNode* node;
+    };
 
-    while (__nondet()) {
-        y = malloc(sizeof(*y));
-        y->next = x;
-        x = y;
+    struct TreeNode* root = malloc(sizeof(*root)), *n, *nt;
+    root->left = NULL;
+    root->right = NULL;
+
+    struct StackItem* s = malloc(sizeof(*s)), *st;
+    s->next = NULL;
+    s->node = root;
+
+    while (s != NULL) {
+        st = s;
+        s = s->next;
+	n = st->node;
+	free(st);
+	free(st);
+        if (__nondet()) {
+	    nt = malloc(sizeof(*nt));
+	    nt->left = NULL;
+	    nt->right = NULL;
+    	    n->left = nt;
+	    st = malloc(sizeof(*st));
+	    st->next = s;
+	    st->node = nt;
+	    s = st;
+	}
+        if (__nondet()) {
+	    nt = malloc(sizeof(*nt));
+	    nt->left = NULL;
+	    nt->right = NULL;
+    	    n->right = nt;
+	    st = malloc(sizeof(*st));
+	    st->next = s;
+	    st->node = nt;
+	    s = st;
+	}
     }
 
-    struct T* z = NULL;
-    while (x != NULL) {
-        y = x;
-        x = x->next;
-        y->next = z;
-        z = y;
-    }
+    n = NULL;
+    nt = NULL;
 
-    while (y != NULL) {
-        x = y;
-        y = y->next;
-        free(x);
+    s = malloc(sizeof(*s));
+    s->next = NULL;
+    s->node = root;
+
+    while (s != NULL) {
+        st = s;
+        s = s->next;
+	n = st->node;
+	free(st);
+	if (n->left) {
+	    st = malloc(sizeof(*st));
+	    st->next = s;
+	    st->node = n->left;
+	    s = st;
+	}
+	if (n->right) {
+	    st = malloc(sizeof(*st));
+	    st->next = s;
+	    st->node = n->right;
+	    s = st;
+	}
+	free(n);
     }
 
     return 0;

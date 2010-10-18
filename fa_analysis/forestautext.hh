@@ -238,9 +238,15 @@ protected:
 		vector<size_t> res;
 		vector<size_t>::iterator i = std::find(dst.begin(), dst.end(), ref);
 		assert(i != dst.end());
-		std::copy(dst.begin(), i, res.end());
-		std::copy(src.begin(), src.end(), res.end());
-		std::copy(i + 1, dst.end(), res.end());
+//		std::copy(dst.begin(), i, res.end());
+//		std::copy(src.begin(), src.end(), res.end());
+//		std::copy(i + 1, dst.end(), res.end());
+		for (std::vector<size_t>::const_iterator j = dst.begin(); j != i; ++j)
+			res.push_back(*j);
+		for (std::vector<size_t>::const_iterator j = src.begin(); j != src.end(); ++j)
+			res.push_back(*j);
+		for (std::vector<size_t>::const_iterator j = i + 1; j != dst.end(); ++j)
+			res.push_back(*j);
 		FAE::removeMultOcc(res);
 		std::swap(dst, res);
 	}
