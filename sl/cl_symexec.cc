@@ -25,6 +25,7 @@
 #include <cl/storage.hh>
 
 #include "symbt.hh"
+#include "symdump.hh"
 #include "symexec.hh"
 #include "symproc.hh"
 #include "symstate.hh"
@@ -187,6 +188,9 @@ void execVirtualRoots(const CodeStorage::FncDb &fncs, const SymExecParams &ep) {
 // see easy.hh for details
 void clEasyRun(const CodeStorage::Storage &stor, const char *configString) {
     using namespace CodeStorage;
+
+    // for debugging purposes only (TODO: #ifdef)
+    dump_plot_set_stor(stor);
 
     // read parameters of symbolic execution
     SymExecParams ep;

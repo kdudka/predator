@@ -25,14 +25,13 @@
 #include <cl/clutil.hh>
 
 #include "symheap.hh"
+#include "symplot.hh"
 #include "symutil.hh"
 
 #include <iostream>
 #include <stack>
 
 #include <boost/foreach.hpp>
-
-const int have_symdump = 1;
 
 using std::cout;
 
@@ -387,4 +386,36 @@ void dump_id(const SymHeap &heap, int id) {
     else
         // assume value ID
         dump_value(heap, static_cast<TValueId>(id));
+}
+
+static const CodeStorage::Storage *glStorPtr;
+
+void dump_plot_set_stor(const CodeStorage::Storage &stor) {
+    ::glStorPtr = &stor;
+}
+
+void dump_plot(const SymHeapCore *core) {
+    if (!core) {
+        cout << "dump_plot: error: got a NULL pointer\n";
+        return;
+    }
+
+    const SymHeap *heap = dynamic_cast<const SymHeap *>(core);
+    if (!heap) {
+        cout << "dump_plot: error: failed to downcast SymHeapCore to SymHeap\n";
+        return;
+    }
+
+    // create an instance of SymPlot
+    const CodeStorage::Storage &stor = *::glStorPtr;
+    const SymHeap &sh = *heap;
+    SymPlot plotter(stor, sh);
+
+    // attempt to plot heap
+    if (!plotter.plot("symdump"))
+        cout << "dump_plot: warning: call of SymPlot::plot() has failed\n";
+}
+
+void dump_plot(const SymHeapCore &sh) {
+    dump_plot(&sh);
 }

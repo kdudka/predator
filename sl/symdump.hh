@@ -29,11 +29,17 @@
 
 #include "symheap.hh"
 
-/// an internal constant, statically initialized to 1
-extern const int have_symdump;
-
 struct cl_type;
 class SymHeap;
+
+#ifndef BUILDING_DOX
+    namespace CodeStorage {
+        struct Storage;
+    }
+
+    // for internal use only
+    void dump_plot_set_stor(const CodeStorage::Storage &);
+#endif
 
 /// dump @b type-info given as clt
 void dump_clt(const struct cl_type *clt);
@@ -64,5 +70,11 @@ void dump_heap(const SymHeap &heap);
 
 /// dump any @b existing @b positive ID as either heap object or a heap value
 void dump_id(const SymHeap &heap, int id);
+
+/// plot the given heap to file "symdump-NNNN.dot"
+void dump_plot(const SymHeapCore *sh);
+
+/// plot the given heap to file "symdump-NNNN.dot"
+void dump_plot(const SymHeapCore &sh);
 
 #endif /* H_GUARD_SYM_DUMP_H */
