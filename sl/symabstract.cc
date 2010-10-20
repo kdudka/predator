@@ -31,19 +31,50 @@
 #include "util.hh"
 
 #include <algorithm>                // for std::copy()
+#include <iomanip>
 #include <set>
+#include <sstream>
 #include <stack>
 
 #include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
 
-#ifndef SE_DISABLE_DLS
-#   define SE_DISABLE_DLS 0
-#endif
+#if DEBUG_SYMABSTRACT
+#   include "symdump.hh"
+namespace {
+    static int cntAbstraction;
+    static int cntAbstractionStep;
+    static std::string abstractionName;
 
-#ifndef SE_DISABLE_SLS
-#   define SE_DISABLE_SLS 0
-#endif
+    void debugPlotInit(std::string name) {
+        ++::cntAbstraction;
+        ::cntAbstractionStep = 0;
+        ::abstractionName = name;
+    }
+
+    std::string debugPlotName() {
+        std::ostringstream str;
+
+#define FIXW(w) std::fixed << std::setfill('0') << std::setw(w)
+        str << "symabstract-" << FIXW(4) << ::cntAbstraction
+            << "-" << ::abstractionName
+            << "-" << FIXW(4) << (++::cntAbstractionStep);
+
+        return str.str();
+    }
+
+    void debugPlot(const SymHeap &sh) {
+        std::string name = debugPlotName();
+        dump_plot(sh, name.c_str());
+    }
+} // namespace
+
+#else // DEBUG_SYMABSTRACT
+namespace {
+    void debugPlotInit(std::string) { }
+    void debugPlot(const SymHeap &) { }
+}
+#endif // DEBUG_SYMABSTRACT
 
 /// common configuration template for abstraction triggering
 struct AbstractionThreshold {
@@ -624,7 +655,7 @@ void dlSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf,
 }
 
 bool considerSegAbstraction(SymHeap &sh, TObjId obj, EObjKind kind,
-                            const SegBindingFields &bf, unsigned lenTotal,
+                            const SegBindingFields &bf, unsigned len,
                             bool flatScan)
 {
     // select the appropriate threshold for the given type of abstraction
@@ -648,35 +679,23 @@ bool considerSegAbstraction(SymHeap &sh, TObjId obj, EObjKind kind,
 
     // check whether the threshold is satisfied or not
     unsigned threshold = at.sparePrefix + at.innerSegLen + at.spareSuffix;
-    if (flatScan) {
-        CL_DEBUG("    FFF ignoring threshold cfg during flat scan!");
-        threshold = 1;
-    }
-
-    if (lenTotal < threshold) {
-        CL_DEBUG("<-- length (" << lenTotal
+    if (len < threshold) {
+        CL_DEBUG("<-- length (" << len
                 << ") of the longest segment is under the threshold ("
                 << threshold << ")");
         return false;
     }
 
-    int len = lenTotal;
-    if (!flatScan) {
-        CL_DEBUG("    --- length of the longest segment is " << lenTotal
-                << ", prefix=" << at.sparePrefix
-                << ", suffix=" << at.spareSuffix);
-
-        // handle sparePrefix/spareSuffix
-        len = lenTotal - at.sparePrefix - at.spareSuffix;
-        for (unsigned i = 0; i < at.sparePrefix; ++i)
-            skipObj(sh, &obj, bf.head, bf.next);
-    }
-
     if (OK_SLS == kind) {
         // perform SLS abstraction!
         CL_DEBUG("    AAA initiating SLS abstraction of length " << len);
-        for (int i = 0; i < len; ++i)
+        debugPlotInit("SLS");
+        debugPlot(sh);
+
+        for (unsigned i = 0; i < len; ++i) {
             slSegAbstractionStep(sh, &obj, bf, flatScan);
+            debugPlot(sh);
+        }
 
         CL_DEBUG("<-- successfully abstracted SLS");
         return true;
@@ -684,8 +703,13 @@ bool considerSegAbstraction(SymHeap &sh, TObjId obj, EObjKind kind,
     else {
         // perform DLS abstraction!
         CL_DEBUG("    AAA initiating DLS abstraction of length " << len);
-        for (int i = 0; i < len; ++i)
+        debugPlotInit("DLS");
+        debugPlot(sh);
+
+        for (unsigned i = 0; i < len; ++i) {
             dlSegAbstractionStep(sh, &obj, bf, flatScan);
+            debugPlot(sh);
+        }
 
         CL_DEBUG("<-- successfully abstracted DLS");
         return true;

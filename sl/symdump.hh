@@ -77,4 +77,7 @@ void dump_plot(const SymHeapCore *sh);
 /// plot the given heap to file "symdump-NNNN.dot"
 void dump_plot(const SymHeapCore &sh);
 
+/// plot the given heap to file "NAME-NNNN.dot"
+void dump_plot(const SymHeapCore &sh, const char *name);
+
 #endif /* H_GUARD_SYM_DUMP_H */

@@ -394,7 +394,7 @@ void dump_plot_set_stor(const CodeStorage::Storage &stor) {
     ::glStorPtr = &stor;
 }
 
-void dump_plot(const SymHeapCore *core) {
+void dump_plot_core(const SymHeapCore *core, const char *name) {
     if (!core) {
         cout << "dump_plot: error: got a NULL pointer\n";
         return;
@@ -412,8 +412,16 @@ void dump_plot(const SymHeapCore *core) {
     SymPlot plotter(stor, sh);
 
     // attempt to plot heap
-    if (!plotter.plot("symdump"))
+    if (!plotter.plot(name))
         cout << "dump_plot: warning: call of SymPlot::plot() has failed\n";
+}
+
+void dump_plot(const SymHeapCore *sh) {
+    dump_plot_core(sh, "symdump");
+}
+
+void dump_plot(const SymHeapCore &sh, const char *name) {
+    dump_plot_core(&sh, name);
 }
 
 void dump_plot(const SymHeapCore &sh) {

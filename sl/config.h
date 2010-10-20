@@ -31,6 +31,11 @@
 #define DEBUG_SE_STACK_FRAME                0
 
 /**
+ * if 1, plot each abstraction step into a separate heap graph
+ */
+#define DEBUG_SYMABSTRACT                   1
+
+/**
  * if 1, the symcut module prints some extra debugging info
  */
 #define DEBUG_SYMCUT                        0
