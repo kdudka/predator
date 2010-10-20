@@ -445,58 +445,47 @@ void duplicateUnknownValues(SymHeap &sh, TObjId obj) {
     traverseSubObjs(sh, obj, visitor, /* leavesOnly */ true);
 }
 
-void slSegCreateIfNeeded(SymHeap &sh, TObjId obj, const SegBindingFields &bf) {
-    const EObjKind kind = sh.objKind(obj);
-    switch (kind) {
-        case OK_SLS:
-            // already abstract, check the next pointer
-            if (sh.objBinding(obj) == bf)
-                // all OK
-                return;
-            // fall through!
-
-        default:
-            SE_TRAP;
-            // fall through!
-
-        case OK_CONCRETE:
-            break;
-    }
-
-    // abstract a concrete object
-    sh.objSetAbstract(obj, OK_SLS, bf);
-
-    // we're constructing the abstract object from a concrete one
-    // --> it implies non-empty LS at this point
-    const TValueId headAddr = segHeadAddr(sh, obj);
-    const TValueId valNext = sh.valueOf(subObjByChain(sh, obj, bf.next));
-    sh.neqOp(SymHeap::NEQ_ADD, headAddr, valNext);
-}
-
 void slSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf,
                           bool flatScan)
 {
-    const TObjId objPtrNext = subObjByChain(sh, *pObj, bf.next);
+    const TObjId obj = *pObj;
+    const TObjId objPtrNext = subObjByChain(sh, obj, bf.next);
     const TValueId valNext = sh.valueOf(objPtrNext);
 
-    // check for a failure of segDiscover()
+    // check for a failure of segDiscover() -- FIXME: too strict
     SE_BREAK_IF(valNext <= 0 || 1 != sh.usedByCount(valNext));
 
-    // make sure the next object is abstract
+    // jump to the next object
     const TObjId objNext = subObjByInvChain(sh, sh.pointsTo(valNext), bf.head);
-    slSegCreateIfNeeded(sh, objNext, bf);
-    SE_BREAK_IF(OK_SLS != sh.objKind(objNext));
+    const EObjKind kindNext = sh.objKind(objNext);
+    SE_BREAK_IF(OK_SLS == kindNext && bf != sh.objBinding(objNext));
+
+    // check if at least one object is concrete
+    const bool ne = (OK_CONCRETE == sh.objKind(obj) || OK_CONCRETE == kindNext);
+
+    if (OK_CONCRETE == kindNext)
+        // abstract the _next_ object
+        sh.objSetAbstract(objNext, OK_SLS, bf);
 
     // merge data
-    abstractNonMatchingValues(sh, *pObj, objNext, flatScan);
+    SE_BREAK_IF(OK_SLS != sh.objKind(objNext));
+    abstractNonMatchingValues(sh, obj, objNext, flatScan);
 
     // replace all references to 'head'
     const TFieldIdxChain icHead = sh.objBinding(objNext).head;
-    const TObjId head = subObjByChain(sh, *pObj, icHead);
+    const TObjId head = subObjByChain(sh, obj, icHead);
     sh.valReplace(sh.placedAt(head), segHeadAddr(sh, objNext));
 
     // replace self by the next object
-    objReplace(sh, *pObj, objNext);
+    objReplace(sh, obj, objNext);
+
+    if (ne) {
+        // we're constructing the abstract object from a concrete one
+        // --> it implies non-empty LS at this point
+        const TValueId headAddr = segHeadAddr(sh, objNext);
+        const TObjId nextPtr = subObjByChain(sh, objNext, bf.next);
+        sh.neqOp(SymHeap::NEQ_ADD, headAddr, sh.valueOf(nextPtr));
+    }
 
     // move to the next object
     *pObj = objNext;
