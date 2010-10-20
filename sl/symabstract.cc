@@ -97,13 +97,17 @@ static struct AbstractionThreshold dlsThreshold = {
     /* spareSuffix */ 0
 };
 
-void dlSegHandleCrossNeq(SymHeap &sh, TObjId dls, SymHeap::ENeqOp op) {
-    const TObjId peer = dlSegPeer(sh, dls);
+void segHandleNeq(SymHeap &sh, TObjId seg, TObjId peer, SymHeap::ENeqOp op) {
     const TObjId next = nextPtrFromSeg(sh, peer);
     const TValueId valNext = sh.valueOf(next);
 
-    const TValueId headAddr = segHeadAddr(sh, dls);
+    const TValueId headAddr = segHeadAddr(sh, seg);
     sh.neqOp(op, headAddr, valNext);
+}
+
+void dlSegHandleCrossNeq(SymHeap &sh, TObjId dls, SymHeap::ENeqOp op) {
+    const TObjId peer = dlSegPeer(sh, dls);
+    segHandleNeq(sh, dls, peer, op);
 }
 
 TValueId /* addr */ segClone(SymHeap &sh, TValueId atAddr) {
@@ -449,6 +453,8 @@ void slSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf,
                           bool flatScan)
 {
     const TObjId obj = *pObj;
+    const EObjKind kind = sh.objKind(obj);
+
     const TObjId objPtrNext = subObjByChain(sh, obj, bf.next);
     const TValueId valNext = sh.valueOf(objPtrNext);
 
@@ -461,7 +467,8 @@ void slSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf,
     SE_BREAK_IF(OK_SLS == kindNext && bf != sh.objBinding(objNext));
 
     // check if at least one object is concrete
-    const bool ne = (OK_CONCRETE == sh.objKind(obj) || OK_CONCRETE == kindNext);
+    // FIXME: more precise would be to check also the already defined Neq preds
+    const bool ne = (OK_CONCRETE == kind || OK_CONCRETE == kindNext);
 
     if (OK_CONCRETE == kindNext)
         // abstract the _next_ object
@@ -479,13 +486,10 @@ void slSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf,
     // replace self by the next object
     objReplace(sh, obj, objNext);
 
-    if (ne) {
+    if (ne)
         // we're constructing the abstract object from a concrete one
         // --> it implies non-empty LS at this point
-        const TValueId headAddr = segHeadAddr(sh, objNext);
-        const TObjId nextPtr = subObjByChain(sh, objNext, bf.next);
-        sh.neqOp(SymHeap::NEQ_ADD, headAddr, sh.valueOf(nextPtr));
-    }
+        segHandleNeq(sh, objNext, objNext, SymHeap::NEQ_ADD);
 
     // move to the next object
     *pObj = objNext;
@@ -978,7 +982,7 @@ bool digSegmentHead(TFieldIdxChain          &dst,
         int nth;
         obj = sh.objParent(obj, &nth);
         if (OBJ_INVALID == obj)
-            // head not found;
+            // head not found
             return false;
 
         invIc.push_back(nth);
@@ -1228,6 +1232,9 @@ void segReplaceRefs(SymHeap &sh, TValueId valOld, TValueId valNew) {
 }
 
 bool dlSegReplaceByConcrete(SymHeap &sh, TObjId obj, TObjId peer) {
+    debugPlotInit("dlSegReplaceByConcrete");
+    debugPlot(sh);
+
     // first kill any related Neq predicates, we're going to concretize anyway
     dlSegHandleCrossNeq(sh, obj, SymHeap::NEQ_DEL);
 
@@ -1247,10 +1254,14 @@ bool dlSegReplaceByConcrete(SymHeap &sh, TObjId obj, TObjId peer) {
     sh.objSetConcrete(obj);
 
     // this can't fail (at least I hope so...)
+    debugPlot(sh);
     return true;
 }
 
 void spliceOutListSegmentCore(SymHeap &sh, TObjId obj, TObjId peer) {
+    debugPlotInit("spliceOutListSegmentCore");
+    debugPlot(sh);
+
     const TObjId next = nextPtrFromSeg(sh, peer);
     const TValueId valNext = sh.valueOf(next);
 
@@ -1265,6 +1276,8 @@ void spliceOutListSegmentCore(SymHeap &sh, TObjId obj, TObjId peer) {
     // destroy self
     segReplaceRefs(sh, segHeadAddr(sh, obj), valNext);
     sh.objDestroy(obj);
+
+    debugPlot(sh);
 }
 
 void spliceOutSegmentIfNeeded(SymHeap &sh, TObjId ao, TObjId peer,
@@ -1278,7 +1291,10 @@ void spliceOutSegmentIfNeeded(SymHeap &sh, TObjId ao, TObjId peer,
         const TValueId nextVal = sh.valueOf(next);
         const TValueId headAddr = segHeadAddr(sh, ao);
 
+        debugPlotInit("spliceOutSegmentIfNeeded");
+        debugPlot(sh);
         sh.neqOp(SymHeap::NEQ_DEL, headAddr, nextVal); 
+        debugPlot(sh);
         return;
     }
 
@@ -1327,6 +1343,9 @@ void concretizeObj(SymHeap &sh, TValueId addr, TSymHeapList &todo) {
     // handle the possibly empty variant (if exists)
     spliceOutSegmentIfNeeded(sh, obj, peer, todo);
 
+    debugPlotInit("concretizeObj");
+    debugPlot(sh);
+
     // duplicate self as abstract object
     const TObjId aoDup = sh.objDup(obj);
     const TValueId aoDupHeadAddr = segHeadAddr(sh, aoDup);
@@ -1354,6 +1373,8 @@ void concretizeObj(SymHeap &sh, TValueId addr, TSymHeapList &todo) {
         const TValueId headAddr = sh.placedAt(subObjByChain(sh, obj, bf.head));
         sh.objSetValue(backLink, headAddr);
     }
+
+    debugPlot(sh);
 }
 
 bool spliceOutListSegment(SymHeap &sh, TValueId atAddr, TValueId pointingTo)

@@ -1,1 +1,15 @@
 test-0052.c:56:20: warning: binary operator not implemented yet
+test-0052.c:68:15: error: dereference of already deleted heap object
+test-0052.c:87:34: note: from call of create_sll()
+test-0052.c:85:5: note: from call of main()
+test-0052.c:56:20: warning: binary operator not implemented yet
+test-0052.c:62:22: warning: killing junk
+test-0052.c:87:34: note: from call of create_sll()
+test-0052.c:85:5: note: from call of main()
+test-0052.c:68:15: error: dereference of already deleted heap object
+test-0052.c:87:34: note: from call of create_sll()
+test-0052.c:85:5: note: from call of main()
+test-0052.c:56:20: warning: binary operator not implemented yet
+test-0052.c:62:22: warning: killing junk
+test-0052.c:87:34: note: from call of create_sll()
+test-0052.c:85:5: note: from call of main()

@@ -31,7 +31,7 @@
 #define DEBUG_SE_STACK_FRAME                0
 
 /**
- * if 1, plot each abstraction step into a separate heap graph
+ * if 1, plot each abstraction/concretization step to a separate heap graph
  */
 #define DEBUG_SYMABSTRACT                   1
 
