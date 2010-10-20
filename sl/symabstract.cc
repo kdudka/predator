@@ -42,7 +42,7 @@
 #if DEBUG_SYMABSTRACT
 #   include "symdump.hh"
 namespace {
-    static int cntAbstraction;
+    static int cntAbstraction = -1;
     static int cntAbstractionStep;
     static std::string abstractionName;
 
@@ -58,7 +58,7 @@ namespace {
 #define FIXW(w) std::fixed << std::setfill('0') << std::setw(w)
         str << "symabstract-" << FIXW(4) << ::cntAbstraction
             << "-" << ::abstractionName
-            << "-" << FIXW(4) << (++::cntAbstractionStep);
+            << "-" << FIXW(4) << (::cntAbstractionStep++);
 
         return str.str();
     }
@@ -790,6 +790,7 @@ bool preserveHeadPtr(const SymHeap                &sh,
 
 TObjId jumpToNextObj(const SymHeap              &sh,
                      const SegBindingFields     &bf,
+                     std::set<TObjId>           &open,
                      TObjId                     obj)
 {
     if (OK_DLS == sh.objKind(obj))
@@ -833,9 +834,11 @@ TObjId jumpToNextObj(const SymHeap              &sh,
             return OBJ_INVALID;
     }
 
-    if (OK_DLS == sh.objKind(next))
+    if (OK_DLS == sh.objKind(next)) {
         // jump to peer in case of DLS
+        open.insert(next);
         return dlSegPeer(sh, next);
+    }
 
     return next;
 }
@@ -922,8 +925,8 @@ unsigned /* len */ segDiscover(const SymHeap            &sh,
         return 0;
 
     // we use std::set to detect loops
-    std::set<TObjId> path, skipped;
-    skipped.insert(entry);
+    std::set<TObjId> path, open;
+    open.insert(entry);
     TObjId prev = entry;
 
     const bool isDls = !bf.peer.empty();
@@ -933,16 +936,18 @@ unsigned /* len */ segDiscover(const SymHeap            &sh,
         TObjId prev = sh.pointsTo(sh.valueOf(prevPtr));
         prev = subObjByInvChain(sh, prev, bf.head);
         if (0 < prev) {
-            skipped.insert(prev);
+            open.insert(prev);
             if (OK_DLS == sh.objKind(prev))
-                skipped.insert(dlSegPeer(sh, prev));
+                open.insert(dlSegPeer(sh, prev));
         }
     }
 
-    TObjId obj = jumpToNextObj(sh, bf, entry);
-    if (entry == obj)
+    TObjId obj = jumpToNextObj(sh, bf, open, entry);
+    if (hasKey(open, obj))
         // loop detected
         return 0;
+    else
+        open.insert(obj);
 
     while (OBJ_INVALID != obj) {
         // compare the data
@@ -952,8 +957,8 @@ unsigned /* len */ segDiscover(const SymHeap            &sh,
         }
 
         // look ahead
-        TObjId next = jumpToNextObj(sh, bf, obj);
-        if (hasKey(path, next) || hasKey(skipped, next))
+        TObjId next = jumpToNextObj(sh, bf, open, obj);
+        if (hasKey(path, next) || hasKey(open, next))
             // loop detected
             break;
 

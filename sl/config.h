@@ -48,7 +48,7 @@
 /**
  * if 1, define TObjId and TValueId is integers (makes debugging easier)
  */
-#define DEBUG_SYMID_FORCE_INT               0
+#define DEBUG_SYMID_FORCE_INT               1
 
 /**
  * if 1, SymHeapCore leaves a debug message when a value became unused
@@ -97,3 +97,8 @@
  * been plotted
  */
 #define SYMPLOT_STOP_AFTER_N_STATES         0x40
+
+#if 0
+#define SYMPLOT_STOP_CONDITION(name) \
+    (!(name).compare("symabstract-0003-DLS-0001-0000"))
+#endif

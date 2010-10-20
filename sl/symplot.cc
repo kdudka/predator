@@ -98,6 +98,12 @@ std::string PlotEnumerator::decorate(std::string name) {
     // merge name with ID
     name += "-";
     name += str.str();
+
+#ifdef SYMPLOT_STOP_CONDITION
+    if (SYMPLOT_STOP_CONDITION(name))
+        SE_TRAP;
+#endif
+
     return name;
 }
 
