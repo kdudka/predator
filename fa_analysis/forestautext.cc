@@ -21,21 +21,26 @@
 
 std::ostream& operator<<(std::ostream& os, const FAE& fae) {
 //	TA<label_type>* ta = fae.taMan->alloc();
-	os << "variables:";
+	os << "vars";
 	for (std::vector<Data>::const_iterator i = fae.variables.begin(); i != fae.variables.end(); ++i)
 		os << ' ' << *i;
-	os << std::endl << "roots:" << std::endl;
+	os << std::endl;
 	for (size_t i = 0; i < fae.roots.size(); ++i) {
 		if (!fae.roots[i])
 			continue;
-		std::ostringstream ss;
-		ss << "root" << i << '_';
+		os << "===" << std::endl << "root " << i << " o=[";
 		for (size_t j = 0; j < fae.rootMap[i].size(); ++j)
-			ss << fae.rootMap[i][j];
+			os << fae.rootMap[i][j];
+		os << ']';
+		TAWriter<label_type> writer(os);
+		for (std::set<size_t>::iterator j = fae.roots[i]->getFinalStates().begin(); j != fae.roots[i]->getFinalStates().end(); ++j)
+			writer.writeState(*j);
+		writer.endl();
+		writer.writeTransitions(*fae.roots[i]);
 //		ta->clear();
 //		fae.roots[i]->minimized(*ta);
 //		TAWriter<label_type>(os).writeOne(*ta, ss.str());
-		TAWriter<label_type>(os).writeOne(*fae.roots[i], ss.str());
+//		TAWriter<label_type>(os).writeOne(*fae.roots[i], ss.str());
 	}
 //	fae.taMan->release(ta);
 	return os;

@@ -140,6 +140,15 @@ public:
 
 	TAWriter(std::ostream& output) : TimbukWriter(output) {}
 
+	void writeTransitions(const TA<T>& aut) {
+		for (typename TA<T>::iterator i = aut.begin(); i != aut.end(); ++i) {
+			std::ostringstream ss;
+			ss << i->label();
+			this->writeTransition(i->lhs(), ss.str(), i->rhs());
+			this->endl();
+		}
+	}
+
 	void writeOne(const TA<T>& aut, const string& name = "TreeAutomaton") {
 		map<string, size_t> labels;
 		set<size_t> states;
@@ -154,20 +163,19 @@ public:
 		this->startAlphabet();
 		for (map<string, size_t>::iterator i = labels.begin(); i != labels.end(); ++i)
 			this->writeLabel(i->first, i->second);
+		this->endl();
 		this->newModel(name);
 		this->startStates();
 		for (set<size_t>::iterator i = states.begin(); i != states.end(); ++i)
 			this->writeState(*i);
+		this->endl();
 		this->startFinalStates();
 		for (set<size_t>::iterator i = aut.getFinalStates().begin(); i != aut.getFinalStates().end(); ++i)
 			this->writeState(*i);
+		this->endl();
 		this->startTransitions();
-		for (typename TA<T>::iterator i = aut.begin(); i != aut.end(); ++i) {
-			std::ostringstream ss;
-			ss << i->label();
-			this->writeTransition(i->lhs(), ss.str(), i->rhs());
-		}
-		this->terminate();
+		this->endl();
+		this->writeTransitions(aut);
 	}
 	
 };

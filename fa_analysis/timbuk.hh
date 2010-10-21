@@ -439,11 +439,11 @@ public:
 	}
 	
 	void newModel(const std::string& name) {
-		this->out << std::endl << "Automaton " << name;
+		this->out << "Automaton " << name;
 	}
 	
 	void startStates() {
-		this->out << std::endl << "States";
+		this->out << "States";
 	}
 	
 	void writeState(size_t state) {
@@ -455,15 +455,15 @@ public:
 	}
 	
 	void startFinalStates() {
-		this->out << std::endl << "Final States";
+		this->out << "Final States";
 	}
 	
 	void startTransitions() {
-		this->out << std::endl << "Transitions";
+		this->out << "Transitions";
 	}
 	
 	void writeTransition(const std::vector<size_t>& lhs, size_t label, size_t rhs) {
-		this->out << std::endl << 'l' << label << '(';
+		this->out << 'l' << label << '(';
 		if (lhs.size() > 0) {
 			this->out << 's' << lhs[0];
 			for (size_t i = 1; i < lhs.size(); ++i)
@@ -473,7 +473,7 @@ public:
 	}
 
 	void writeTransition(const std::vector<size_t>& lhs, const std::string& label, size_t rhs) {
-		this->out << std::endl << label << '(';
+		this->out << label << '(';
 		if (lhs.size() > 0) {
 			this->out << 'q' << lhs[0];
 			for (size_t i = 1; i < lhs.size(); ++i)
@@ -483,7 +483,7 @@ public:
 	}
 
 	void writeTransition(const std::vector<string>& lhs, const std::string& label, const std::string& rhs) {
-		this->out << std::endl << label << '(';
+		this->out << label << '(';
 		if (lhs.size() > 0) {
 			this->out << lhs[0];
 			for (size_t i = 1; i < lhs.size(); ++i)
@@ -492,7 +492,7 @@ public:
 		this->out << ")->" << rhs;
 	}
 	
-	void terminate() {
+	void endl() {
 		this->out << std::endl;
 	}
 

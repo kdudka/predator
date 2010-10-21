@@ -321,8 +321,13 @@ protected:
 		fae.normalize(normInfo, tmp);
 		fae.heightAbstraction();
 
-		if (target->enqueue(fae))
+		if (target->enqueue(fae)) {
+			CL_DEBUG("enqueued:");
+			target->ctx->dumpContext(fae);
+			CL_DEBUG(std::endl << fae);
 			this->todo.push_back(target);
+		} else
+			CL_DEBUG("hit");
 		
 	}
 
@@ -402,32 +407,26 @@ protected:
 
 		assert(src.type->code == dst.type->code);
 
+		Data dataOut;
+
 		if (
 			src.type->code == cl_type_e::CL_TYPE_PTR &&
 			src.type->items[0].type->code == cl_type_e::CL_TYPE_VOID &&
 			dst.type->items[0].type->code != cl_type_e::CL_TYPE_VOID
 		) {
-			vector<SelData> sels;
-			NodeBuilder::buildNode(sels, dst.type->items[0].type);
 			Data data = this->readData(fae, src, itov((size_t)0));
+			assert(data.isVoidPtr());
 			if (dst.type->items[0].type->size != (int)data.d_void_ptr)
 				throw runtime_error("Engine::execAssignment(): size of allocated block doesn't correspond to the size of the destination!");
-			Data data2 = Data::createRef(fae.nodeCreate(sels)), out;
-			this->writeData(fae, dst, data2, out);
-			this->enqueueNextInsn(state, fae);
-			return;
+			vector<SelData> sels;
+			NodeBuilder::buildNode(sels, dst.type->items[0].type);
+			this->writeData(fae, dst, Data::createRef(fae.nodeCreate(sels)), dataOut);
+		} else {
+			assert(*(src.type) == *(dst.type));
+			vector<size_t> offs;
+			NodeBuilder::buildNode(offs, src.type);
+			this->writeData(fae, dst, this->readData(fae, src, offs), dataOut);
 		}
-/*
-		dumpOperandTypes(std::cerr, &insn->operands[0]);
-		dumpOperandTypes(std::cerr, &insn->operands[1]);
-*/
-		assert(*(src.type) == *(dst.type));
-
-		vector<size_t> offs;
-		NodeBuilder::buildNode(offs, src.type);
-
-		Data data = this->readData(fae, src, offs), dataOut;
-		this->writeData(fae, dst, data, dataOut);
 
 		this->enqueueNextInsn(state, fae);
 		
@@ -482,10 +481,8 @@ protected:
 		assert(src1.type->code == cl_type_e::CL_TYPE_INT);
 		assert(src2.type->code == cl_type_e::CL_TYPE_INT);
 
-		vector<size_t> offs1;
+		vector<size_t> offs1, offs2;
 		NodeBuilder::buildNode(offs1, src1.type);
-
-		vector<size_t> offs2;
 		NodeBuilder::buildNode(offs2, src2.type);
 
 		Data data1 = this->readData(fae, src1, offs1);
@@ -666,11 +663,11 @@ protected:
 
 		const cl_location* loc = &(*state->insn)->loc;
 
-		CL_DEBUG("context:");
+		CL_DEBUG("processing:");
 
 		state->ctx->dumpContext(*src);
 		
-		CL_DEBUG("configuration: " << std::endl << *src << std::endl);
+		CL_DEBUG(std::endl << *src);
 
 		if (loc->file)
 			CL_DEBUG(loc->file << ':' << loc->line << ": " << **state->insn);

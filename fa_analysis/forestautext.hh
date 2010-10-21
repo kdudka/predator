@@ -360,6 +360,7 @@ protected:
 			}
 			ta->addTransition(*i);
 		}
+//		std::cerr << joinState << std::endl;
 		assert(joinState != (size_t)(-1));
 		// avoid screwing up things
 		src->unfoldAtRoot(*ta, joinState, false);
@@ -505,7 +506,7 @@ protected:
 		}
 	}
 
-	void checkGarbage(const std::vector<bool>& visited) const {
+	void checkGarbage(const std::vector<bool>& visited) {
 		for (size_t i = 0; i < this->roots.size(); ++i) {
 			if (!visited[i] && (this->roots[i] != NULL)) {
 				std::cerr << "the root " << i << " is not referenced anymore ... " << std::endl;
@@ -555,12 +556,41 @@ public:
 	};
 
 	// check consistency
-	void check() const {
+	void check() {
 		// compute reachable roots
 		std::vector<bool> visited(this->roots.size(), false);
 		this->traverse(visited);
 		// check garbage
 		this->checkGarbage(visited);
+	}
+/*
+	struct NormState {
+		size_t							offset;
+		std::vector<size_t>				index;
+		std::vector<bool>				normalized;
+		std::vector<TA<label_type>*>	newRoots;
+		std::vector<vector<size_t> >	newRootMap;
+	};
+*/
+	void normalizeRoot(NormInfo& normInfo, std::vector<bool>& normalized, size_t root, const std::vector<bool>& marked) {
+		if (normalized[root])
+			return;
+		normalized[root] = true;
+		std::vector<size_t> tmp = this->rootMap[root];
+		for (std::vector<size_t>::iterator i = tmp.begin(); i != tmp.end(); ++i) {
+			this->normalizeRoot(normInfo, normalized, *i, marked);
+			if (!marked[*i]) {
+//				std::cerr << "merging " << *i << " into " << root << std::endl;
+				size_t refState;
+				TA<label_type>* ta = this->mergeRoot(this->roots[root], *i, this->roots[*i], refState);
+				FAE::updateRoot(this->roots[root], *this->taMan, ta);
+				FAE::updateRoot(this->roots[*i], *this->taMan, NULL);
+				FAE::updateMap(this->rootMap[root], *i, this->rootMap[*i]);
+//				normInfo.addMergedRoot(*i, refState);
+			} else {
+//				normInfo.addRoot(*i);
+			}
+		}
 	}
 
 	// normalize representation
@@ -576,36 +606,27 @@ public:
 			marked[*i] = true;
 		// reindex roots
 		std::vector<size_t> index(this->roots.size(), (size_t)(-1));
+		std::vector<bool> normalized(this->roots.size(), false);
 		std::vector<TA<label_type>*> newRoots;
 		std::vector<vector<size_t> > newRootMap;
 		size_t offset = 0;
 		for (std::vector<size_t>::iterator i = order.begin(); i < order.end(); ++i) {
-			if (marked[*i]) {
-				newRoots.push_back(this->taMan->addRef(this->roots[*i]));
-				newRootMap.push_back(this->rootMap[*i]);
-				index[*i] = offset++;
-				normInfo.addRoot(*i);
-			} else {
-				assert(newRoots.size());
-				size_t refState;
-				FAE::updateRoot(newRoots.back(), *this->taMan, this->mergeRoot(newRoots.back(), *i, this->roots[*i], refState));
-				FAE::updateMap(newRootMap.back(), *i, this->rootMap[*i]);
-				normInfo.addMergedRoot(*i, refState);
-			}
+			this->normalizeRoot(normInfo, normalized, *i, marked);
+			assert(marked[*i] || (this->roots[*i] == NULL));
+			if (!marked[*i])
+				continue;
+			newRoots.push_back(this->roots[*i]);
+			newRootMap.push_back(this->rootMap[*i]);
+			index[*i] = offset++;
+//			normInfo.addRoot(*i);
 		}
 		normInfo.rootCount = this->roots.size();
 		// update representation
-		for (vector<TA<label_type>*>::iterator i = this->roots.begin(); i != this->roots.end(); ++i) {
-			if (*i)
-				this->taMan->release(*i);
-		}
-		this->roots.resize(offset, NULL);
-		this->rootMap.resize(offset);
+		this->roots = newRoots;
+		this->rootMap = newRootMap;
 		for (size_t i = 0; i < this->roots.size(); ++i) {
-			this->roots[i] = this->relabelReferences(newRoots[i], index);
-			this->taMan->release(newRoots[i]);
-			FAE::renameVector(newRootMap[i], index);
-			this->rootMap[i] = newRootMap[i];
+			FAE::updateRoot(this->roots[i], *this->taMan, this->relabelReferences(this->roots[i], index));
+			FAE::renameVector(this->rootMap[i], index);
 		}
 		// update variables
 		for (std::vector<Data>::iterator i = this->variables.begin(); i != this->variables.end(); ++i) {
@@ -968,7 +989,9 @@ public:
 		if (!found)
 			throw runtime_error("FAE::nodeModify(): selector not found!");
 		FAE::reorderBoxes(label, lhs);
-		dst.addTransition(lhs, &this->labMan->lookup(label), transition.rhs());
+		size_t state = this->freshState();
+		dst.addFinalState(state);
+		dst.addTransition(lhs, &this->labMan->lookup(label), state);
 	}
 
 	void transitionModify(TA<label_type>& dst, const TT<label_type>& transition, size_t base, const std::map<size_t, Data>& in, Data& out) {
@@ -1000,10 +1023,20 @@ public:
 		if (out.d_struct->size() != in.size())
 			throw runtime_error("FAE::nodeModify(): selectors missmatch!");
 		FAE::reorderBoxes(label, lhs);
-		dst.addTransition(lhs, &this->labMan->lookup(label), transition.rhs());
+		size_t state = this->freshState();
+		dst.addFinalState(state);
+		dst.addTransition(lhs, &this->labMan->lookup(label), state);
 	}
 
 public:
+
+	bool selfCheck() {
+		for (size_t i = 0; i < this->roots.size(); ++i) {
+			if (!this->taMan->isAlive(this->roots[i]))
+				return false;
+		}
+		return true;
+	}
 
 	/* execution bits */
 
@@ -1143,13 +1176,11 @@ public:
 		assert(root < this->roots.size());
 		assert(this->roots[root]);
 		TA<label_type>* ta = this->taMan->alloc();
-		ta->addFinalState(this->roots[root]->getFinalState());
 		for (TA<label_type>::iterator i = this->roots[root]->begin(); i != this->roots[root]->end(); ++i) {
+			ta->addTransition(*i);
 			if (i->rhs() == this->roots[root]->getFinalState()) {
 				// only one accepting rule is exppected
 				this->transitionModify(*ta, *i, offset, in, out);
-			} else {
-				ta->addTransition(*i);
 			}
 		}
 		FAE::updateRoot(this->roots[root], *this->taMan, ta);
@@ -1166,13 +1197,11 @@ public:
 		for (std::vector<Data::item_info>::const_iterator i = in.d_struct->begin(); i != in.d_struct->end(); ++i)
 			m.insert(std::make_pair(i->first + offset, i->second));
 		TA<label_type>* ta = this->taMan->alloc();
-		ta->addFinalState(this->roots[root]->getFinalState());
 		for (TA<label_type>::iterator i = this->roots[root]->begin(); i != this->roots[root]->end(); ++i) {
+			ta->addTransition(*i);
 			if (i->rhs() == this->roots[root]->getFinalState()) {
 				// only one accepting rule is exppected
 				this->transitionModify(*ta, *i, offset, m, out);
-			} else {
-				ta->addTransition(*i);
 			}
 		}
 		FAE::updateRoot(this->roots[root], *this->taMan, ta);

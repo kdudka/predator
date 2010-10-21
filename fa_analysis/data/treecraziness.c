@@ -16,22 +16,6 @@ int main() {
     root->left = NULL;
     root->right = NULL;
 
-    while (__nondet()) {
-        n = root;
-	while (n->left) {
-	    if (__nondet())
-		n = n->left;
-	    else
-		n = n->right;
-	}
-	n->left = malloc(sizeof(*n));
-	n->left->left = NULL;
-	n->left->right = NULL;
-	n->right = malloc(sizeof(*n));
-	n->right->left = NULL;
-	n->right->right = NULL;
-    }
-/*
     struct StackItem* s = malloc(sizeof(*s)), *st;
     s->next = NULL;
     s->node = root;
@@ -62,11 +46,11 @@ int main() {
 	    s = st;
 	}
     }
-*/
+
     n = NULL;
     nt = NULL;
 
-    struct StackItem* s = malloc(sizeof(*s)), * st;
+    s = malloc(sizeof(*s));
     s->next = NULL;
     s->node = root;
 
