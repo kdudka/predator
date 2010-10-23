@@ -1883,12 +1883,12 @@ void SymHeap::neqOp(ENeqOp op, TValueId valA, TValueId valB) {
         this->dlSegCrossNeqOp(op, valA);
     }
     else {
-        if (haveDlSeg(*this, valA, valB)) {
+        if (haveSeg(*this, valA, valB, OK_DLS)) {
             this->dlSegCrossNeqOp(op, valA);
             return;
         }
 
-        if (haveDlSeg(*this, valB, valA)) {
+        if (haveSeg(*this, valB, valA, OK_DLS)) {
             this->dlSegCrossNeqOp(op, valB);
             return;
         }

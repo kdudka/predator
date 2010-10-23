@@ -127,24 +127,27 @@ void segDestroy(SymHeap &sh, TObjId seg) {
     }
 }
 
-
-bool haveDlSeg(const SymHeap &sh, TValueId atAddr, TValueId pointingTo) {
+bool haveSeg(const SymHeap &sh, TValueId atAddr, TValueId pointingTo,
+             const EObjKind kind)
+{
     if (UV_ABSTRACT != sh.valGetUnknown(atAddr))
         // not an abstract object
         return false;
 
-    const TObjId seg = objRoot(sh, sh.pointsTo(atAddr));
-    if (OK_DLS != sh.objKind(seg))
-        // not a DLS
+    TObjId seg = objRoot(sh, sh.pointsTo(atAddr));
+    if (kind != sh.objKind(seg))
+        // kind mismatch
         return false;
 
-    const TObjId peer = dlSegPeer(sh, seg);
-    if (OK_DLS != sh.objKind(peer))
-        // invalid peer
-        return false;
+    if (OK_DLS == kind) {
+        seg = dlSegPeer(sh, seg);
+        if (OK_DLS != sh.objKind(seg))
+            // invalid peer
+            return false;
+    }
 
     // compare the end-points
-    const TObjId nextPtr = nextPtrFromSeg(sh, peer);
+    const TObjId nextPtr = nextPtrFromSeg(sh, seg);
     const TValueId valNext = sh.valueOf(nextPtr);
     return (valNext == pointingTo);
 }

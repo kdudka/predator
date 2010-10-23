@@ -30,13 +30,14 @@
 #include "symutil.hh"
 
 /**
- * return true if there is a DLS (Doubly-linked List Segment) among the given
- * pair of values
+ * return true if there is a list segment among the given pair of values
  * @param sh an instance of symbolic heap
  * @param atAddr address of the heap object for consideration
  * @param pointingTo target address of the given potential list segment
+ * @param kind kind of list segment to look for
  */
-bool haveDlSeg(const SymHeap &sh, TValueId atAddr, TValueId pointingTo);
+bool haveSeg(const SymHeap &sh, TValueId atAddr, TValueId pointingTo,
+             const EObjKind kind);
 
 /**
  * return true if there is a DLS (Doubly-linked List Segment) among the given

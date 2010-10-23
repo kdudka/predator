@@ -783,7 +783,7 @@ bool preserveHeadPtr(const SymHeap                &sh,
 
 TObjId jumpToNextObj(const SymHeap              &sh,
                      const SegBindingFields     &bf,
-                     std::set<TObjId>           &open,
+                     std::set<TObjId>           &haveSeen,
                      TObjId                     obj)
 {
     if (OK_DLS == sh.objKind(obj))
@@ -829,7 +829,7 @@ TObjId jumpToNextObj(const SymHeap              &sh,
 
     if (OK_DLS == sh.objKind(next)) {
         // jump to peer in case of DLS
-        open.insert(next);
+        haveSeen.insert(next);
         return dlSegPeer(sh, next);
     }
 
@@ -909,6 +909,14 @@ bool matchData(const SymHeap                &sh,
     return traverseSubObjs(sh, item, visitor, /* leavesOnly */ true);
 }
 
+bool slSegAvoidSelfCycle(const SymHeap &sh, const TObjId o1, const TObjId o2) {
+    const TValueId v1 = sh.placedAt(o1);
+    const TValueId v2 = sh.placedAt(o2);
+
+    return haveSeg(sh, v1, v2, OK_SLS)
+        || haveSeg(sh, v2, v1, OK_SLS);
+}
+
 unsigned /* len */ segDiscover(const SymHeap            &sh,
                                const SegBindingFields   &bf,
                                const TObjId             entry)
@@ -918,8 +926,8 @@ unsigned /* len */ segDiscover(const SymHeap            &sh,
         return 0;
 
     // we use std::set to detect loops
-    std::set<TObjId> path, open;
-    open.insert(entry);
+    std::set<TObjId> haveSeen;
+    haveSeen.insert(entry);
     TObjId prev = entry;
 
     const bool isDls = !bf.peer.empty();
@@ -929,18 +937,20 @@ unsigned /* len */ segDiscover(const SymHeap            &sh,
         TObjId prev = sh.pointsTo(sh.valueOf(prevPtr));
         prev = subObjByInvChain(sh, prev, bf.head);
         if (0 < prev) {
-            open.insert(prev);
+            haveSeen.insert(prev);
             if (OK_DLS == sh.objKind(prev))
-                open.insert(dlSegPeer(sh, prev));
+                haveSeen.insert(dlSegPeer(sh, prev));
         }
     }
 
-    TObjId obj = jumpToNextObj(sh, bf, open, entry);
-    if (hasKey(open, obj))
+    TObjId obj = jumpToNextObj(sh, bf, haveSeen, entry);
+    if (hasKey(haveSeen, obj))
         // loop detected
         return 0;
     else
-        open.insert(obj);
+        haveSeen.insert(obj);
+
+    std::vector<TObjId> path;
 
     while (OBJ_INVALID != obj) {
         // compare the data
@@ -950,24 +960,32 @@ unsigned /* len */ segDiscover(const SymHeap            &sh,
         }
 
         // look ahead
-        TObjId next = jumpToNextObj(sh, bf, open, obj);
-        if (hasKey(path, next) || hasKey(open, next))
+        TObjId next = jumpToNextObj(sh, bf, haveSeen, obj);
+        if (hasKey(haveSeen, next))
             // loop detected
             break;
 
         if (isDls)
-            path.insert(obj);
+            path.push_back(obj);
 
         if (!validatePointingObjects(sh, bf, obj, prev, next))
             // someone points to inside who should not
             break;
 
         if (!isDls)
-            path.insert(obj);
+            path.push_back(obj);
 
         prev = obj;
         obj = next;
     }
+
+    if (path.empty())
+        // found nothing
+        return 0;
+
+    if (slSegAvoidSelfCycle(sh, entry, path.back()))
+        // avoid creating self-cycle of two SLS segments
+        return path.size() - 1;
 
     return path.size();
 }
