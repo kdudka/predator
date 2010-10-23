@@ -26,6 +26,7 @@
 #include <cl/code_listener.h>
 
 #include "symabstract.hh"
+#include "symdump.hh"
 #include "symseg.hh"
 #include "symutil.hh"
 #include "util.hh"
@@ -800,6 +801,12 @@ void SymHeapCore::valReplaceUnknown(TValueId val, TValueId replaceBy) {
         if (!this->valReplaceUnknownImpl(val, replaceBy)) {
             CL_WARN("overridden implementation valReplaceUnknownImpl() failed"
                     ", has to over-approximate...");
+#if SE_SELF_TEST
+            CL_NOTE("val #" << val
+                    << " should have been replaced by #" << replaceBy);
+            CL_NOTE("attempt to plot heap...");
+            dump_plot(*this, "valReplaceUnknownImpl-failed");
+#endif
             continue;
         }
 
@@ -1904,8 +1911,6 @@ bool SymHeap::proveEq(bool *result, TValueId valA, TValueId valB) const {
 
     // having the values always in the same order leads to simpler code
     sortValues(valA, valB);
-    if (VAL_NULL != valA)
-        return false;
 
     EUnknownValue code = this->valGetUnknown(valB);
     if (UV_ABSTRACT != code)
@@ -1936,10 +1941,15 @@ bool SymHeap::proveEq(bool *result, TValueId valA, TValueId valB) const {
             }
             // fall through!
 
-        case UV_KNOWN:
-            // prove done
+        case UV_KNOWN: {
+            // FIXME: unguarded recursion
+            bool eq;
+            if (!this->proveEq(&eq, valA, valNext) || eq)
+                return false;
+
             *result = false;
             return true;
+        }
 
         default:
             return false;
