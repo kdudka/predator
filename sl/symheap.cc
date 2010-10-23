@@ -730,29 +730,34 @@ TValueId SymHeapCore::valDuplicateUnknown(TValueId val) {
     return valNew;
 }
 
-/// change value of all variables with value _val to (fresh) _newval
-void SymHeapCore::valReplace(TValueId _val, TValueId _newval) {
-    // assert usedByCount(_newval)==0
-    if(usedByCount(_newval)>0) {
-        // _newval is not fresh
-        // FIXME: needs EQ/NEQ update? **** (I do not know)
-    }
-
-    // TODO: can be optimized using move of usedBy container and patch of object
-    // values
-
-    // collect objects having the value _val
+/// change value of all variables with value val to (fresh) newval
+void SymHeapCore::valReplace(TValueId val, TValueId newVal) {
+    // collect objects having the value val
     TContObj rlist;
-    this->usedBy(rlist, _val);
+    this->usedBy(rlist, val);
 
-    // go through the list and replace the value by _newval
+    // go through the list and replace the value by newval
     BOOST_FOREACH(const TObjId obj, rlist) {
-        this->objSetValue(obj, _newval);
+        this->objSetValue(obj, newVal);
     }
-    // FIXME: solve possible problem with EQ/NEQ database records?
-    //        old: any RELOP _val --> new: any !RELOP _newval ?
-    // how about (in-place) change from struct to abstract segment?
-    SymHeapCore::neqOp(NEQ_DEL, _val, _newval);
+
+    // kill Neq predicate among the pair of values (if any)
+    SymHeapCore::neqOp(NEQ_DEL, val, newVal);
+
+    // reflect the change in NeqDb
+    TContValue neqs;
+    d->neqDb.gatherRelatedValues(neqs, val);
+    BOOST_FOREACH(const TValueId neq, neqs) {
+        d->neqDb.del(val, neq);
+        d->neqDb.add(newVal, neq);
+    }
+#if SE_SELF_TEST
+    // make sure we didn't create any dangling predicates
+    TContValue related;
+    this->gatherRelatedValues(related, val);
+    if (!related.empty())
+        SE_TRAP;
+#endif
 }
 
 void SymHeapCore::addAlias(TValueId v1, TValueId v2) {
@@ -1921,15 +1926,20 @@ bool SymHeap::proveEq(bool *result, TValueId valA, TValueId valB) const {
 
     code = this->valGetUnknown(valNext);
     switch (code) {
+        case UV_ABSTRACT:
+            if (valA != VAL_NULL
+                    || !segNotEmpty(*this, this->pointsTo(valNext)))
+            {
+                CL_WARN("SymHeap::proveEq() "
+                        "does not see through a chain of segments");
+                return false;
+            }
+            // fall through!
+
         case UV_KNOWN:
             // prove done
             *result = false;
             return true;
-
-        case UV_ABSTRACT:
-            CL_WARN("SymHeap::proveEq() "
-                    "does not see through a chain of segments");
-            return false;
 
         default:
             return false;
