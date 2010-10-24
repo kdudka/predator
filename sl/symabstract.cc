@@ -786,9 +786,11 @@ TObjId jumpToNextObj(const SymHeap              &sh,
                      std::set<TObjId>           &haveSeen,
                      TObjId                     obj)
 {
-    if (OK_DLS == sh.objKind(obj))
+    if (OK_DLS == sh.objKind(obj)) {
         // jump to peer in case of DLS
         obj = dlSegPeer(sh, obj);
+        haveSeen.insert(obj);
+    }
 
     const struct cl_type *clt = sh.objType(obj);
     const TObjId nextPtr = subObjByChain(sh, obj, bf.next);
@@ -825,12 +827,6 @@ TObjId jumpToNextObj(const SymHeap              &sh,
         if (sh.valueOf(prevPtr) != sh.placedAt(head))
             // DLS back-link mismatch
             return OBJ_INVALID;
-    }
-
-    if (OK_DLS == sh.objKind(next)) {
-        // jump to peer in case of DLS
-        haveSeen.insert(next);
-        return dlSegPeer(sh, next);
     }
 
     return next;
@@ -872,9 +868,15 @@ bool validateSinglePointingObject(const SymHeap             &sh,
 bool validatePointingObjects(const SymHeap              &sh,
                              const SegBindingFields     &bf,
                              const TObjId               root,
-                             const TObjId               prev,
-                             const TObjId               next)
+                             TObjId                     prev,
+                             TObjId                     next)
 {
+    // jump to peer in case of DLS
+    if (OK_DLS == sh.objKind(prev))
+        prev = dlSegPeer(sh, prev);
+    if (OK_DLS == sh.objKind(next))
+        next = dlSegPeer(sh, next);
+
     // collect all object pointing at/inside the object
     SymHeap::TContObj refs;
     const PointingObjectsFinder visitor(refs);
@@ -964,17 +966,15 @@ unsigned /* len */ segDiscover(const SymHeap            &sh,
         if (hasKey(haveSeen, next))
             // loop detected
             break;
-
-        if (isDls)
-            path.push_back(obj);
+        else
+            haveSeen.insert(next);
 
         if (!validatePointingObjects(sh, bf, obj, prev, next))
             // someone points to inside who should not
             break;
 
-        if (!isDls)
-            path.push_back(obj);
-
+        // enlarge the path by one
+        path.push_back(obj);
         prev = obj;
         obj = next;
     }
@@ -1142,7 +1142,7 @@ bool performBestAbstraction(SymHeap &sh, const TSegCandidateList &candidates)
     }
 
     if (!bestLen) {
-        CL_DEBUG("<-- no segment found");
+        CL_DEBUG("<-- no new segment found");
         return false;
     }
 
