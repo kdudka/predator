@@ -134,6 +134,35 @@ struct SymState {
 		}
 	}
 
+	void prepareOperands(vector<FAE*>& dst, const FAE& fae) {
+		vector<FAE*> tmp1, tmp2;
+		ContainerGuard<vector<FAE*> > g1(tmp1), g2(tmp2);
+		tmp1.push_back(new FAE(fae));
+		for (vector<cl_operand>::const_iterator i = (*this->insn)->operands.begin(); i != (*this->insn)->operands.end(); ++i) {
+			if (i->code != cl_operand_e::CL_OPERAND_VAR)
+				continue;
+			this->prepareOperand(tmp2, tmp1, *i);
+			utils::erase(tmp1);
+			std::swap(tmp1, tmp2);
+		}
+		dst.insert(dst.end(), tmp1.begin(), tmp1.end());
+		g1.release();		
+	}
+
+	// carefull
+	void finalizeOperands(FAE& fae) {
+		OperandInfo oi;
+		for (vector<cl_operand>::const_iterator i = (*this->insn)->operands.begin(); i != (*this->insn)->operands.end(); ++i) {
+			if (i == (*this->insn)->operands.begin())
+				continue;
+			if (i->code != cl_operand_e::CL_OPERAND_VAR)
+				continue;
+			this->ctx->parseOperand(oi, fae, &*i);
+			if (oi.flag == o_flag_e::reg)
+				fae.varSet(oi.data.d_ref.root, Data::createUndef());
+		}
+	}
+
 	bool enqueue(const FAE& fae) {
 
 		TA<label_type> ta(*this->fwdConf.backend);
@@ -157,19 +186,7 @@ struct SymState {
 			return false;
 
 		this->fwdConfWrapper.join(ta, index);
-
-		vector<FAE*> tmp1, tmp2;
-		ContainerGuard<vector<FAE*> > g1(tmp1), g2(tmp2);
-		tmp1.push_back(new FAE(fae));
-		for (vector<cl_operand>::const_iterator i = (*this->insn)->operands.begin(); i != (*this->insn)->operands.end(); ++i) {
-			if (i->code != cl_operand_e::CL_OPERAND_VAR)
-				continue;
-			this->prepareOperand(tmp2, tmp1, *i);
-			utils::erase(tmp1);
-			std::swap(tmp1, tmp2);
-		}
-		this->outConf.insert(this->outConf.end(), tmp1.begin(), tmp1.end());
-		g1.release();		
+		this->prepareOperands(this->outConf, fae);
 		
 		return true;
 
@@ -312,14 +329,16 @@ protected:
 
 	}
 
-	void stateUnion(SymState* target, FAE& fae) {
+	void stateUnion(SymState* target, FAE& fae, bool tryAbstraction = false) {
 
 		FAE::NormInfo normInfo;
 
 		std::vector<size_t> tmp;
 		fae.getNearbyReferences(fae.varGet(ABP_INDEX).d_ref.root, tmp);
 		fae.normalize(normInfo, tmp);
-		fae.heightAbstraction();
+
+		if (tryAbstraction)
+			fae.heightAbstraction();
 
 		if (target->enqueue(fae)) {
 			CL_DEBUG("enqueued:");
@@ -333,21 +352,12 @@ protected:
 
 	void enqueueNextInsn(SymState* state, FAE& src) {
 
+		state->finalizeOperands(src);
+
 		this->stateUnion(this->getState(state->insn + 1, state->ctx), src);
 		
 	}
-/*
-	void isolateIfNeeded(vector<FAE*>& dst, const vector<FAE*>& src, const OperandInfo& oi, const vector<size_t>& offs) {
 
-		for (vector<FAE*>::const_iterator i = src.begin(); i != src.end(); ++i) {
-			if (oi.flag == o_flag_e::ref)
-				(*i)->isolateAtRoot(dst, oi.data.d_ref.root, FAE::IsolateSetF(offs, oi.data.d_ref.displ));
-			else
-				dst.push_back(new FAE(**i));
-		}
-
-	}
-*/
 	Data readData(const FAE& fae, const OperandInfo& oi, const vector<size_t>& offs) {
 		Data data;
 		switch (oi.flag) {
@@ -518,7 +528,7 @@ protected:
 		if (!data.isRef()) {
 			std::stringstream ss;
 			ss << "Engine::execFree(): attempt to release an unsiutable value - " << data << '!';
-			throw std::runtime_error(ss.str());
+			throw runtime_error(ss.str());
 		}
 		if (data.d_ref.displ != 0) {
 			std::stringstream ss;
@@ -548,7 +558,7 @@ protected:
 
 	void execJmp(SymState* state, FAE& fae, const CodeStorage::Insn* insn) {
 
-		this->stateUnion(this->getState(insn->targets[0]->begin(), state->ctx), fae);
+		this->stateUnion(this->getState(insn->targets[0]->begin(), state->ctx), fae, true);
 
 	}
 
@@ -564,7 +574,7 @@ protected:
 		if (!data.isBool())
 			throw runtime_error("Engine::execCond(): non boolean condition argument!");
 
-		this->stateUnion(this->getState(insn->targets[((data.d_bool))?(0):(1)]->begin(), state->ctx), fae);
+		this->stateUnion(this->getState(insn->targets[((data.d_bool))?(0):(1)]->begin(), state->ctx), fae, true);
 
 	}
 
