@@ -780,58 +780,6 @@ bool preserveHeadPtr(const SymHeap                &sh,
     return false;
 }
 
-
-TObjId jumpToNextObj(const SymHeap              &sh,
-                     const SegBindingFields     &bf,
-                     std::set<TObjId>           &haveSeen,
-                     TObjId                     obj)
-{
-    if (OK_DLS == sh.objKind(obj)) {
-        // jump to peer in case of DLS
-        obj = dlSegPeer(sh, obj);
-        haveSeen.insert(obj);
-    }
-
-    const struct cl_type *clt = sh.objType(obj);
-    const TObjId nextPtr = subObjByChain(sh, obj, bf.next);
-    SE_BREAK_IF(nextPtr <= 0);
-
-    const TObjId nextHead = sh.pointsTo(sh.valueOf(nextPtr));
-    if (nextHead <= 0)
-        // no head pointed by nextPtr
-        return OBJ_INVALID;
-
-    const TObjId next = subObjByInvChain(sh, nextHead, bf.head);
-    if (next <= 0)
-        // no suitable next object
-        return OBJ_INVALID;
-
-    const struct cl_type *cltNext = sh.objType(next);
-    if (!cltNext || *cltNext != *clt)
-        // type mismatch
-        return OBJ_INVALID;
-
-    if (!matchSegBinding(sh, next, bf))
-        // binding mismatch
-        return OBJ_INVALID;
-
-    if (preserveHeadPtr(sh, bf, next))
-        // special quirk for head pointers
-        return OBJ_INVALID;
-
-    const bool isDls = !bf.peer.empty();
-    if (isDls) {
-        // check DLS back-link
-        const TObjId prevPtr = subObjByChain(sh, next, bf.peer);
-        const TObjId head = subObjByChain(sh, obj, bf.head);
-        if (sh.valueOf(prevPtr) != sh.placedAt(head))
-            // DLS back-link mismatch
-            return OBJ_INVALID;
-    }
-
-    return next;
-}
-
 class PointingObjectsFinder {
     SymHeap::TContObj &dst_;
 
@@ -891,6 +839,63 @@ bool validatePointingObjects(const SymHeap              &sh,
 
     // no problems encountered
     return true;
+}
+
+TObjId jumpToNextObj(const SymHeap              &sh,
+                     const SegBindingFields     &bf,
+                     std::set<TObjId>           &haveSeen,
+                     TObjId                     obj)
+{
+    const bool dlSegOnPath = (OK_DLS == sh.objKind(obj));
+    if (dlSegOnPath) {
+        // jump to peer in case of DLS
+        obj = dlSegPeer(sh, obj);
+        haveSeen.insert(obj);
+    }
+
+    const struct cl_type *clt = sh.objType(obj);
+    const TObjId nextPtr = subObjByChain(sh, obj, bf.next);
+    SE_BREAK_IF(nextPtr <= 0);
+
+    const TObjId nextHead = sh.pointsTo(sh.valueOf(nextPtr));
+    if (nextHead <= 0)
+        // no head pointed by nextPtr
+        return OBJ_INVALID;
+
+    const TObjId next = subObjByInvChain(sh, nextHead, bf.head);
+    if (next <= 0)
+        // no suitable next object
+        return OBJ_INVALID;
+
+    const struct cl_type *cltNext = sh.objType(next);
+    if (!cltNext || *cltNext != *clt)
+        // type mismatch
+        return OBJ_INVALID;
+
+    if (!matchSegBinding(sh, next, bf))
+        // binding mismatch
+        return OBJ_INVALID;
+
+    if (preserveHeadPtr(sh, bf, next))
+        // special quirk for head pointers
+        return OBJ_INVALID;
+
+    const bool isDls = !bf.peer.empty();
+    if (isDls) {
+        // check DLS back-link
+        const TObjId prevPtr = subObjByChain(sh, next, bf.peer);
+        const TObjId head = subObjByChain(sh, obj, bf.head);
+        if (sh.valueOf(prevPtr) != sh.placedAt(head))
+            // DLS back-link mismatch
+            return OBJ_INVALID;
+    }
+
+    if (dlSegOnPath
+            && !validatePointingObjects(sh, bf, obj, /* prev */ obj, next))
+        // never step over a peer object that is pointed from outside!
+        return OBJ_INVALID;
+
+    return next;
 }
 
 bool matchData(const SymHeap                &sh,
