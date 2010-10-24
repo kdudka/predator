@@ -51,6 +51,9 @@ bool haveDlSegAt(const SymHeap &sh, TValueId atAddr, TValueId peerAddr);
 /// return 'next' pointer of the given list segment as a heap object
 TObjId nextPtrFromSeg(const SymHeap &sh, TObjId seg);
 
+/// return 'peer' pointer of the given DLS
+TObjId peerPtrFromSeg(const SymHeap &sh, TObjId seg);
+
 /// return DLS peer object of the given DLS
 TObjId dlSegPeer(const SymHeap &sh, TObjId dls);
 

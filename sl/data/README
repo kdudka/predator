@@ -2,8 +2,6 @@ SLS abstraction
 ===============
     test-0001.c - infinite loop creating a SLL
                 - it plots a heap graph per each iteration
-                - OOM state is properly handled, so that "fast" mode makes no
-                  difference
 
                 - thanks to the SLS abstraction, the program reaches its end
                   during the symbolic execution (though it can't happen in real

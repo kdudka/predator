@@ -31,6 +31,13 @@ TObjId nextPtrFromSeg(const SymHeap &sh, TObjId seg) {
     return subObjByChain(sh, seg, icNext);
 }
 
+TObjId peerPtrFromSeg(const SymHeap &sh, TObjId seg) {
+    SE_BREAK_IF(OK_DLS != sh.objKind(seg));
+
+    const TFieldIdxChain icPeer = sh.objBinding(seg).peer;
+    return subObjByChain(sh, seg, icPeer);
+}
+
 TObjId dlSegPeer(const SymHeap &sh, TObjId dls) {
     // validate call of dlSegPeer()
     const TObjId root = objRoot(sh, dls);

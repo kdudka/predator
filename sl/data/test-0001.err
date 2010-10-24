@@ -2,7 +2,3 @@ test-0001.c:10:15: warning: killing junk
 test-0001.c:16:19: warning: killing junk
 test-0001.c:10:15: warning: killing junk
 test-0001.c:16:19: warning: killing junk
-test-0001.c:10:15: warning: killing junk
-test-0001.c:16:19: warning: killing junk
-test-0001.c:10:15: warning: killing junk
-test-0001.c:16:19: warning: killing junk

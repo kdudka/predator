@@ -822,11 +822,14 @@ bool validatePointingObjects(const SymHeap              &sh,
                              TObjId                     prev,
                              TObjId                     next)
 {
-    // jump to peer in case of DLS
+    TObjId peerPtr = OBJ_INVALID;
+    if (OK_DLS == sh.objKind(root))
+        // retrieve peer's pointer to this object (if any)
+        peerPtr = peerPtrFromSeg(sh, dlSegPeer(sh, root));
+
     if (OK_DLS == sh.objKind(prev))
+        // jump to peer in case of DLS
         prev = dlSegPeer(sh, prev);
-    if (OK_DLS == sh.objKind(next))
-        next = dlSegPeer(sh, next);
 
     // collect all object pointing at/inside the object
     SymHeap::TContObj refs;
@@ -835,9 +838,15 @@ bool validatePointingObjects(const SymHeap              &sh,
     traverseSubObjs(sh, root, visitor, /* leavesOnly */ false);
 
     BOOST_FOREACH(const TObjId obj, refs) {
-        if (!validateSinglePointingObject(sh, bf, obj, prev, next))
-            // someone points at/inside who should not
-            return false;
+        if (validateSinglePointingObject(sh, bf, obj, prev, next))
+            continue;
+
+        SE_BREAK_IF(OBJ_INVALID == obj);
+        if (obj == peerPtr)
+            continue;
+
+        // someone points at/inside who should not
+        return false;
     }
 
     // no problems encountered
