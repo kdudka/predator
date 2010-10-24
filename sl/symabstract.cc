@@ -160,6 +160,8 @@ void buildIgnoreList(const SymHeap &sh, TObjId obj, TIgnoreList &ignoreList) {
     }
 }
 
+bool segEqual(const SymHeap &sh, TValueId v1, TValueId v2);
+
 struct DataMatchVisitor {
     std::set<TObjId> ignoreList;
 
@@ -196,7 +198,8 @@ struct DataMatchVisitor {
                 return true;
 
             case UV_ABSTRACT:
-                SE_TRAP;
+                // FIXME: unguarded recursion!
+                return segEqual(sh, v1, v2);
         }
         return /* mismatch */ false;
     }
