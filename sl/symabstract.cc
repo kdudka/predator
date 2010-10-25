@@ -152,6 +152,9 @@ TValueId /* addr */ segClone(SymHeap &sh, TValueId atAddr) {
     const TObjId seg = sh.pointsTo(atAddr);
     const TObjId dupSeg = sh.objDup(seg);
 
+    // read lower bound estimation of seg length
+    const unsigned len = segMinLength(sh, seg);
+
     if (OK_DLS == sh.objKind(seg)) {
         // we need to clone the peer as well
         const TObjId peer = dlSegPeer(sh, seg);
@@ -169,6 +172,10 @@ TValueId /* addr */ segClone(SymHeap &sh, TValueId atAddr) {
         sh.objSetValue(ppSeg, sh.placedAt(dupPeer));
         sh.objSetValue(ppPeer, sh.placedAt(dupSeg));
     }
+
+    if (len)
+        // restore lower bound estimation of segment length
+        segSetMinLength(sh, dupSeg, len);
 
     return sh.placedAt(dupSeg);
 }
@@ -365,30 +372,37 @@ TValueId mergeValues(SymHeap &sh, TValueId v1, TValueId v2,
         ? code1
         : UV_UNKNOWN;
 
-    if (UV_ABSTRACT == code) {
-        CL_WARN("support for nested segments is not well tested yet");
-        if (segEqual(sh, v1, v2)
-                && segMayBePrototype(sh, v1, srcRefByDls)
-                && segMayBePrototype(sh, v2, dstRefByDls))
-        {
-            // TODO: handle Neq predicates properly while merging prototypes
+    if (UV_ABSTRACT != code)
+        return sh.valCreateUnknown(code, clt);
 
-            // by merging the values, we drop the last reference;  destroy the seg
-            const TObjId seg1 = sh.pointsTo(v1);
-            segDestroy(sh, seg1);
+    if (!segEqual(sh, v1, v2)
+            || !segMayBePrototype(sh, v1, srcRefByDls)
+            || !segMayBePrototype(sh, v2, dstRefByDls))
+        // no chance to create a prototype object
+        return sh.valCreateUnknown(UV_UNKNOWN, clt);
 
-            // duplicate the nested abstract object on call of concretizeObj()
-            const TObjId seg2 = sh.pointsTo(v2);
-            sh.objSetShared(seg2, false);
+    // read lower bound estimation of seg1 length
+    const TObjId seg1 = sh.pointsTo(v1);
+    const unsigned len1 = segMinLength(sh, seg1);
 
-            return v2;
-        }
-        else
-            // segments are not equal, no chance to merge them
-            code = UV_UNKNOWN;
-    }
+    // by merging the values, we drop the last reference;  destroy the seg
+    segSetMinLength(sh, seg1, /* LS 0+ */ 0);
+    segDestroy(sh, seg1);
 
-    return sh.valCreateUnknown(code, clt);
+    // read lower bound estimation of seg2 length
+    const TObjId seg2 = sh.pointsTo(v2);
+    const unsigned len2 = segMinLength(sh, seg2);
+    segSetMinLength(sh, seg2, /* LS 0+ */ 0);
+
+    // duplicate the nested abstract object on call of concretizeObj()
+    sh.objSetShared(seg2, false);
+
+    // revalidate the lower bound estimation of segment length
+    segSetMinLength(sh, seg2, (len1 < len2)
+            ? len1
+            : len2);
+
+    return v2;
 }
 
 // visitor
