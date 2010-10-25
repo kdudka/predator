@@ -105,9 +105,47 @@ void segHandleNeq(SymHeap &sh, TObjId seg, TObjId peer, SymHeap::ENeqOp op) {
     sh.neqOp(op, headAddr, valNext);
 }
 
-void dlSegHandleCrossNeq(SymHeap &sh, TObjId dls, SymHeap::ENeqOp op) {
+void dlSegSetMinLength(SymHeap &sh, TObjId dls, unsigned len) {
     const TObjId peer = dlSegPeer(sh, dls);
-    segHandleNeq(sh, dls, peer, op);
+    switch (len) {
+        case 0:
+            segHandleNeq(sh, dls, peer, SymHeap::NEQ_DEL);
+            return;
+
+        case 1:
+            segHandleNeq(sh, dls, peer, SymHeap::NEQ_ADD);
+            return;
+
+        case 2:
+        default:
+            break;
+    }
+
+    // let it be DLS 2+
+    const TValueId a1 = segHeadAddr(sh, dls);
+    const TValueId a2 = segHeadAddr(sh, peer);
+    sh.neqOp(SymHeap::NEQ_ADD, a1, a2);
+}
+
+void segSetMinLength(SymHeap &sh, TObjId seg, unsigned len) {
+    const EObjKind kind = sh.objKind(seg);
+    switch (kind) {
+        case OK_SLS:
+            segHandleNeq(sh, seg, seg, (len)
+                    ? SymHeap::NEQ_ADD
+                    : SymHeap::NEQ_DEL);
+            break;
+
+        case OK_DLS:
+            dlSegSetMinLength(sh, seg, len);
+            break;
+
+        default:
+#if SE_SELF_TEST
+            SE_TRAP;
+#endif
+            break;
+    }
 }
 
 TValueId /* addr */ segClone(SymHeap &sh, TValueId atAddr) {
@@ -333,6 +371,8 @@ TValueId mergeValues(SymHeap &sh, TValueId v1, TValueId v2,
                 && segMayBePrototype(sh, v1, srcRefByDls)
                 && segMayBePrototype(sh, v2, dstRefByDls))
         {
+            // TODO: handle Neq predicates properly while merging prototypes
+
             // by merging the values, we drop the last reference;  destroy the seg
             const TObjId seg1 = sh.pointsTo(v1);
             segDestroy(sh, seg1);
@@ -492,7 +532,7 @@ void slSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf,
     if (ne)
         // we're constructing the abstract object from a concrete one
         // --> it implies non-empty LS at this point
-        segHandleNeq(sh, objNext, objNext, SymHeap::NEQ_ADD);
+        segSetMinLength(sh, objNext, /* SLS 1+ */ 1);
 
     // move to the next object
     *pObj = objNext;
@@ -515,9 +555,7 @@ void dlSegCreate(SymHeap &sh, TObjId o1, TObjId o2, SegBindingFields bf,
                               /* fresh */ true);
 
     // a just created DLS is said to be 2+
-    const TValueId a1 = segHeadAddr(sh, o1);
-    const TValueId a2 = segHeadAddr(sh, o2);
-    sh.neqOp(SymHeap::NEQ_ADD, a1, a2);
+    dlSegSetMinLength(sh, o1, /* DLS 2+ */ 2);
 }
 
 void dlSegGobble(SymHeap &sh, TObjId dls, TObjId var, bool backward,
@@ -525,9 +563,9 @@ void dlSegGobble(SymHeap &sh, TObjId dls, TObjId var, bool backward,
 {
     SE_BREAK_IF(OK_DLS != sh.objKind(dls) || OK_CONCRETE != sh.objKind(var));
 
-    // kill Neq if any
-    // TODO: we may distinguish among 1+/2+ at this point
-    dlSegHandleCrossNeq(sh, dls, SymHeap::NEQ_DEL);
+    // handle DLS Neq predicates
+    const unsigned len = dlSegMinLength(sh, dls) + /* OK_CONCRETE */ 1;
+    dlSegSetMinLength(sh, dls, /* DLS 0+ */ 0);
 
     if (!backward)
         // jump to peer
@@ -547,19 +585,15 @@ void dlSegGobble(SymHeap &sh, TObjId dls, TObjId var, bool backward,
     sh.valReplace(sh.placedAt(varHead), segHeadAddr(sh, dls));
     objReplace(sh, var, dls);
 
-    // we've just added an object, the DLS can't be empty
-    dlSegHandleCrossNeq(sh, dls, SymHeap::NEQ_ADD);
+    // handle DLS Neq predicates
+    dlSegSetMinLength(sh, dls, len);
 }
 
 void dlSegMerge(SymHeap &sh, TObjId seg1, TObjId seg2, bool flatScan) {
-    // the resulting DLS will be non-empty as long as at least one of the given
-    // DLS is non-empty
-    const bool ne = dlSegNotEmpty(sh, seg1) || dlSegNotEmpty(sh, seg2);
-    if (ne) {
-        // TODO: we may distinguish among 1+/2+ at this point
-        dlSegHandleCrossNeq(sh, seg1, SymHeap::NEQ_DEL);
-        dlSegHandleCrossNeq(sh, seg2, SymHeap::NEQ_DEL);
-    }
+    // handle DLS Neq predicates
+    const unsigned len = dlSegMinLength(sh, seg1) + dlSegMinLength(sh, seg2);
+    dlSegSetMinLength(sh, seg1, /* DLS 0+ */ 0);
+    dlSegSetMinLength(sh, seg2, /* DLS 0+ */ 0);
 
     // check for a failure of segDiscover()
     SE_BREAK_IF(sh.objBinding(seg1) != sh.objBinding(seg2));
@@ -589,9 +623,9 @@ void dlSegMerge(SymHeap &sh, TObjId seg1, TObjId seg2, bool flatScan) {
     objReplace(sh,  seg1,  seg2);
     objReplace(sh, peer1, peer2);
 
-    if (ne)
-        // non-empty DLS
-        dlSegHandleCrossNeq(sh, seg2, SymHeap::NEQ_ADD);
+    if (len)
+        // handle DLS Neq predicates
+        dlSegSetMinLength(sh, seg2, len);
 }
 
 void dlSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf,
@@ -646,7 +680,7 @@ void dlSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf,
 
 #if SE_SELF_TEST
     // just check if the Neq predicates work well so far
-    dlSegNotEmpty(sh, o2);
+    dlSegMinLength(sh, o2);
 #endif
 }
 
@@ -809,7 +843,6 @@ bool validateSinglePointingObject(const SymHeap             &sh,
 
     const bool isDls = !bf.peer.empty();
     if (isDls && obj == subObjByChain(sh, next, bf.peer))
-        // FIXME: not tested
         return true;
 
     // TODO
@@ -1271,7 +1304,7 @@ bool dlSegReplaceByConcrete(SymHeap &sh, TObjId obj, TObjId peer) {
     debugPlot(sh);
 
     // first kill any related Neq predicates, we're going to concretize anyway
-    dlSegHandleCrossNeq(sh, obj, SymHeap::NEQ_DEL);
+    dlSegSetMinLength(sh, obj, /* DLS 0+ */ 0);
 
     // take the value of 'next' pointer from peer
     const TFieldIdxChain icPeer = sh.objBinding(obj).peer;
@@ -1315,28 +1348,26 @@ void spliceOutListSegmentCore(SymHeap &sh, TObjId obj, TObjId peer) {
     debugPlot(sh);
 }
 
-void spliceOutSegmentIfNeeded(SymHeap &sh, TObjId ao, TObjId peer,
-                              TSymHeapList &todo)
+unsigned /* len */ spliceOutSegmentIfNeeded(SymHeap &sh, TObjId ao, TObjId peer,
+                                            TSymHeapList &todo)
 {
-    // check if the LS may be empty
-    if (segNotEmpty(sh, ao)) {
-        // the segment was _guaranteed_ to be non-empty now, but the
-        // concretization makes it _possibly_ empty --> remove the Neq predicate 
-        const TObjId next = nextPtrFromSeg(sh, peer);
-        const TValueId nextVal = sh.valueOf(next);
-        const TValueId headAddr = segHeadAddr(sh, ao);
-
+    const unsigned len = segMinLength(sh, ao);
+    if (len) {
         debugPlotInit("spliceOutSegmentIfNeeded");
         debugPlot(sh);
-        sh.neqOp(SymHeap::NEQ_DEL, headAddr, nextVal); 
+
+        // drop any existing Neq predicates
+        segSetMinLength(sh, ao, 0);
+
         debugPlot(sh);
-        return;
+        return len - 1;
     }
 
     // possibly empty LS
     SymHeap sh0(sh);
     spliceOutListSegmentCore(sh0, ao, peer);
     todo.push_back(sh0);
+    return /* LS 0+ */ 0;
 }
 
 void abstractIfNeeded(SymHeap &sh) {
@@ -1376,7 +1407,7 @@ void concretizeObj(SymHeap &sh, TValueId addr, TSymHeapList &todo) {
     }
 
     // handle the possibly empty variant (if exists)
-    spliceOutSegmentIfNeeded(sh, obj, peer, todo);
+    const unsigned lenRemains = spliceOutSegmentIfNeeded(sh, obj, peer, todo);
 
     debugPlotInit("concretizeObj");
     debugPlot(sh);
@@ -1408,6 +1439,8 @@ void concretizeObj(SymHeap &sh, TValueId addr, TSymHeapList &todo) {
         const TValueId headAddr = sh.placedAt(subObjByChain(sh, obj, bf.head));
         sh.objSetValue(backLink, headAddr);
     }
+
+    segSetMinLength(sh, aoDup, lenRemains);
 
     debugPlot(sh);
 }

@@ -57,11 +57,11 @@ TObjId peerPtrFromSeg(const SymHeap &sh, TObjId seg);
 /// return DLS peer object of the given DLS
 TObjId dlSegPeer(const SymHeap &sh, TObjId dls);
 
-/// return true if the given DLS is @b guaranteed to be non-empty
-bool dlSegNotEmpty(const SymHeap &sh, TObjId dls);
+/// return lower estimation of DLS length
+unsigned dlSegMinLength(const SymHeap &sh, TObjId dls);
 
-/// return true if the given list segment is @b guaranteed to be non-empty
-bool segNotEmpty(const SymHeap &sh, TObjId seg);
+/// return lower estimation of segment length
+unsigned segMinLength(const SymHeap &sh, TObjId seg);
 
 /// destroy the given list segment object (including DLS peer in case of DLS)
 void segDestroy(SymHeap &sh, TObjId seg);

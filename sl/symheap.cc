@@ -1912,6 +1912,10 @@ bool SymHeap::proveEq(bool *result, TValueId valA, TValueId valB) const {
     // having the values always in the same order leads to simpler code
     sortValues(valA, valB);
 
+    if (UV_ABSTRACT == this->valGetUnknown(valA))
+        // this is not going to work well for a pair abstract objects
+        return false;
+
     EUnknownValue code = this->valGetUnknown(valB);
     if (UV_ABSTRACT != code)
         // we are interested only in abstract objects here
@@ -1933,7 +1937,7 @@ bool SymHeap::proveEq(bool *result, TValueId valA, TValueId valB) const {
     switch (code) {
         case UV_ABSTRACT:
             if (valA != VAL_NULL
-                    || !segNotEmpty(*this, this->pointsTo(valNext)))
+                    || !segMinLength(*this, this->pointsTo(valNext)))
             {
                 CL_WARN("SymHeap::proveEq() "
                         "does not see through a chain of segments");

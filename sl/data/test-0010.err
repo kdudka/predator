@@ -13,9 +13,21 @@ test-0010.c:53:5: note: from call of main()
 test-0010.c:48:13: warning: killing junk
 test-0010.c:73:27: note: from call of destroy_cyclic_sll()
 test-0010.c:53:5: note: from call of main()
+test-0010.c:42:25: warning: killing junk
+test-0010.c:73:27: note: from call of destroy_cyclic_sll()
+test-0010.c:53:5: note: from call of main()
 test-0010.c:48:13: warning: killing junk
 test-0010.c:73:27: note: from call of destroy_cyclic_sll()
 test-0010.c:53:5: note: from call of main()
 test-0010.c:48:13: warning: killing junk
+test-0010.c:73:27: note: from call of destroy_cyclic_sll()
+test-0010.c:53:5: note: from call of main()
+test-0010.c:48:13: warning: killing junk
+test-0010.c:73:27: note: from call of destroy_cyclic_sll()
+test-0010.c:53:5: note: from call of main()
+test-0010.c:48:13: warning: killing junk
+test-0010.c:73:27: note: from call of destroy_cyclic_sll()
+test-0010.c:53:5: note: from call of main()
+test-0010.c:42:25: warning: killing junk
 test-0010.c:73:27: note: from call of destroy_cyclic_sll()
 test-0010.c:53:5: note: from call of main()
