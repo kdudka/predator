@@ -867,7 +867,8 @@ bool validatePointingObjects(const SymHeap              &sh,
                              const SegBindingFields     &bf,
                              const TObjId               root,
                              TObjId                     prev,
-                             TObjId                     next)
+                             TObjId                     next,
+                             const bool                 toInsideOnly = false)
 {
     TObjId peerPtr = OBJ_INVALID;
     if (OK_DLS == sh.objKind(root))
@@ -881,7 +882,10 @@ bool validatePointingObjects(const SymHeap              &sh,
     // collect all object pointing at/inside the object
     SymHeap::TContObj refs;
     const PointingObjectsFinder visitor(refs);
-    visitor(sh, root);
+
+    if (!toInsideOnly)
+        visitor(sh, root);
+
     traverseSubObjs(sh, root, visitor, /* leavesOnly */ false);
 
     BOOST_FOREACH(const TObjId obj, refs) {
@@ -1015,6 +1019,11 @@ unsigned /* len */ segDiscover(const SymHeap            &sh,
         return 0;
     else
         haveSeen.insert(obj);
+
+    if (!validatePointingObjects(sh, bf, entry, OBJ_INVALID, obj,
+                                 /* toInsideOnly */ true))
+        // invalid entry
+        return 0;
 
     std::vector<TObjId> path;
 
