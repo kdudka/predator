@@ -206,6 +206,16 @@ void buildIgnoreList(const SymHeap &sh, TObjId obj, TIgnoreList &ignoreList) {
 }
 
 bool segEqual(const SymHeap &sh, TValueId v1, TValueId v2);
+bool segMayBePrototype(const SymHeap &sh, const TValueId segAt);
+
+bool segConsiderPrototype(const SymHeap     &sh,
+                          const TValueId    v1,
+                          const TValueId    v2)
+{
+    return segEqual(sh, v1, v2)
+        && segMayBePrototype(sh, v1)
+        && segMayBePrototype(sh, v2);
+}
 
 struct DataMatchVisitor {
     std::set<TObjId> ignoreList;
@@ -244,7 +254,7 @@ struct DataMatchVisitor {
 
             case UV_ABSTRACT:
                 // FIXME: unguarded recursion!
-                return segEqual(sh, v1, v2);
+                return segConsiderPrototype(sh, v1, v2);
         }
         return /* mismatch */ false;
     }
@@ -296,11 +306,11 @@ bool segEqual(const SymHeap &sh, TValueId v1, TValueId v2) {
     return traverseSubObjs(sh, item, visitor, /* leavesOnly */ true);
 }
 
-bool segMayBePrototype(const SymHeap &sh, const TValueId segAt, bool refByDls) {
+// TODO: rewrite the following nonsense!
+bool segMayBePrototype(const SymHeap &sh, const TValueId segAt) {
     const TObjId seg = sh.pointsTo(segAt);
-    TObjId peer = seg;
-    TObjId nextPtr;
-    TValueId addr;
+    const TValueId headAddr = segHeadAddr(sh, seg);
+    const TValueId valNext = sh.valueOf(nextPtrFromSeg(sh, seg));
 
     const EObjKind kind = sh.objKind(seg);
     switch (kind) {
@@ -312,43 +322,59 @@ bool segMayBePrototype(const SymHeap &sh, const TValueId segAt, bool refByDls) {
             return false;
 
         case OK_SLS:
-            if ((1U + refByDls) != sh.usedByCount(segAt)) {
-                CL_WARN("head is referenced, refusing SLS as prototype");
+            if (VAL_NULL != valNext)
                 return false;
-            }
-            break;
+
+            if (1U != sh.usedByCount(headAddr))
+                return false;
+
+            // TODO
+            return true;
 
         case OK_DLS:
-            if ((2U + refByDls) != sh.usedByCount(segAt)) {
-                CL_WARN("head is referenced, refusing DLS as prototype");
-                return false;
-            }
-            peer = dlSegPeer(sh, seg);
-            addr = sh.placedAt(peer);
-            if (1 != sh.usedByCount(addr)) {
-                CL_WARN("tail is referenced, refusing DLS as prototype");
-                return false;
-            }
-            nextPtr = nextPtrFromSeg(sh, peer);
-            if (VAL_NULL != sh.valueOf(nextPtr)) {
-                CL_WARN("next-link is not NULL, refusing DLS as prototype");
-                return false;
-            }
             break;
     }
 
-    nextPtr = nextPtrFromSeg(sh, seg);
-    if (VAL_NULL != sh.valueOf(nextPtr)) {
-        CL_WARN("out-link is not NULL, refusing segment as prototype");
+    const TObjId peer = dlSegPeer(sh, seg);
+    const TValueId valPrev = sh.valueOf(nextPtrFromSeg(sh, peer));
+    if (VAL_NULL != valNext || VAL_NULL != valPrev)
         return false;
+
+    const TValueId peerAddr = segHeadAddr(sh, peer);
+    if (1U != sh.usedByCount(peerAddr))
+        return false;
+
+    SymHeap::TContObj refs;
+    sh.usedBy(refs, headAddr);
+
+    const TObjId peerPtr = peerPtrFromSeg(sh, peer);
+    TObjId pointedFrom = OBJ_INVALID;
+
+    BOOST_FOREACH(const TObjId ref, refs) {
+        if (ref == peerPtr)
+            continue;
+
+        const TObjId root = objRoot(sh, ref);
+
+        if (OBJ_INVALID == pointedFrom) {
+            pointedFrom = root;
+            continue;
+        }
+
+        if (OK_DLS != sh.objKind(pointedFrom))
+            return false;
+
+        if (root == dlSegPeer(sh, pointedFrom))
+            continue;
+
+        SE_TRAP;
     }
 
+    // TODO
     return true;
 }
 
-TValueId mergeValues(SymHeap &sh, TValueId v1, TValueId v2,
-                     bool srcRefByDls, bool dstRefByDls)
-{
+TValueId mergeValues(SymHeap &sh, TValueId v1, TValueId v2) {
     if (v1 == v2)
         return v1;
 
@@ -375,11 +401,14 @@ TValueId mergeValues(SymHeap &sh, TValueId v1, TValueId v2,
     if (UV_ABSTRACT != code)
         return sh.valCreateUnknown(code, clt);
 
-    if (!segEqual(sh, v1, v2)
-            || !segMayBePrototype(sh, v1, srcRefByDls)
-            || !segMayBePrototype(sh, v2, dstRefByDls))
-        // no chance to create a prototype object
+    if (!segConsiderPrototype(sh, v1, v2)) {
+        // no chance to create a prototype object - failure of segDiscover()
+        // or DataMatchVisitor?
+#if SE_SELF_TEST
+        SE_TRAP;
+#endif
         return sh.valCreateUnknown(UV_UNKNOWN, clt);
+    }
 
     // read lower bound estimation of seg1 length
     const TObjId seg1 = sh.pointsTo(v1);
@@ -408,8 +437,6 @@ TValueId mergeValues(SymHeap &sh, TValueId v1, TValueId v2,
 // visitor
 struct ValueAbstractor {
     std::set<TObjId>    ignoreList;
-    bool                srcIsDlSeg;
-    bool                dstIsDlSeg;
     bool                bidir;
 
     bool operator()(SymHeap &sh, TObjPair item) const {
@@ -425,9 +452,8 @@ struct ValueAbstractor {
             // values are equal
             return /* continue */ true;
 
-        // create a new unknown value as a placeholder
-        const TValueId valNew = mergeValues(sh, valSrc, valDst,
-                                            this->srcIsDlSeg, this->dstIsDlSeg);
+        // merge values
+        const TValueId valNew = mergeValues(sh, valSrc, valDst);
         sh.objSetValue(dst, valNew);
         if (this->bidir)
             sh.objSetValue(src, valNew);
@@ -481,12 +507,9 @@ struct UnknownValuesDuplicator {
 
 // when abstracting an object, we need to abstract all non-matching values in
 void abstractNonMatchingValues(SymHeap &sh, TObjId src, TObjId dst,
-                               bool bidir = false,
-                               bool fresh = false)
+                               bool bidir = false)
 {
     ValueAbstractor visitor;
-    visitor.srcIsDlSeg  = (!fresh && OK_DLS == sh.objKind(src));
-    visitor.dstIsDlSeg  = (!fresh && OK_DLS == sh.objKind(dst));
     visitor.bidir       = bidir;
     buildIgnoreList(sh, dst, visitor.ignoreList);
 
@@ -560,9 +583,7 @@ void dlSegCreate(SymHeap &sh, TObjId o1, TObjId o2, SegBindingFields bf) {
     sh.objSetAbstract(o2, OK_DLS, bf);
 
     // introduce some UV_UNKNOWN values if necessary
-    abstractNonMatchingValues(sh, o1, o2,
-                              /* bidir */ true,
-                              /* fresh */ true);
+    abstractNonMatchingValues(sh, o1, o2, /* bidir */ true);
 
     // a just created DLS is said to be 2+
     dlSegSetMinLength(sh, o1, /* DLS 2+ */ 2);
@@ -1126,6 +1147,10 @@ class ProbeEntryVisitor {
             if (next <= 0)
                 return /* continue */ true;
 
+            if (!isComposite(sh.objType(next)))
+                // we take only composite types in case of segment head for now
+                return /* continue */ true;
+
             SegBindingFields bf;
             if (!digSegmentHead(bf.head, sh, clt_, next))
                 return /* continue */ true;
@@ -1166,8 +1191,10 @@ bool performBestAbstraction(SymHeap &sh, const TSegCandidateList &candidates)
             << cnt << " entry candidate(s) given");
 
     // go through entry candidates
-    unsigned bestLen = 0, bestIdx;
-    SegBindingFields bestBinding;
+    unsigned            bestLen = 0;
+    unsigned            bestIdx = 0;
+    SegBindingFields    bestBinding;
+
     for (unsigned idx = 0; idx < cnt; ++idx) {
 
         // go through binding candidates

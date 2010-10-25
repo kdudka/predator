@@ -33,7 +33,7 @@
 /**
  * if 1, plot each abstraction/concretization step to a separate heap graph
  */
-#define DEBUG_SYMABSTRACT                   1
+#define DEBUG_SYMABSTRACT                   0
 
 /**
  * if 1, the symcut module prints some extra debugging info
@@ -48,7 +48,7 @@
 /**
  * if 1, define TObjId and TValueId is integers (makes debugging easier)
  */
-#define DEBUG_SYMID_FORCE_INT               1
+#define DEBUG_SYMID_FORCE_INT               0
 
 /**
  * if 1, SymHeapCore leaves a debug message when a value became unused
