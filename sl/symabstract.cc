@@ -410,7 +410,6 @@ struct ValueAbstractor {
     std::set<TObjId>    ignoreList;
     bool                srcIsDlSeg;
     bool                dstIsDlSeg;
-    bool                flatScan;
     bool                bidir;
 
     bool operator()(SymHeap &sh, TObjPair item) const {
@@ -482,13 +481,12 @@ struct UnknownValuesDuplicator {
 
 // when abstracting an object, we need to abstract all non-matching values in
 void abstractNonMatchingValues(SymHeap &sh, TObjId src, TObjId dst,
-                               bool flatScan, bool bidir = false,
+                               bool bidir = false,
                                bool fresh = false)
 {
     ValueAbstractor visitor;
     visitor.srcIsDlSeg  = (!fresh && OK_DLS == sh.objKind(src));
     visitor.dstIsDlSeg  = (!fresh && OK_DLS == sh.objKind(dst));
-    visitor.flatScan    = flatScan;
     visitor.bidir       = bidir;
     buildIgnoreList(sh, dst, visitor.ignoreList);
 
@@ -506,8 +504,7 @@ void duplicateUnknownValues(SymHeap &sh, TObjId obj) {
     traverseSubObjs(sh, obj, visitor, /* leavesOnly */ true);
 }
 
-void slSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf,
-                          bool flatScan)
+void slSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf)
 {
     const TObjId obj = *pObj;
     const EObjKind kind = sh.objKind(obj);
@@ -533,7 +530,7 @@ void slSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf,
 
     // merge data
     SE_BREAK_IF(OK_SLS != sh.objKind(objNext));
-    abstractNonMatchingValues(sh, obj, objNext, flatScan);
+    abstractNonMatchingValues(sh, obj, objNext);
 
     // replace all references to 'head'
     const TFieldIdxChain icHead = sh.objBinding(objNext).head;
@@ -552,9 +549,7 @@ void slSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf,
     *pObj = objNext;
 }
 
-void dlSegCreate(SymHeap &sh, TObjId o1, TObjId o2, SegBindingFields bf,
-                 bool flatScan)
-{
+void dlSegCreate(SymHeap &sh, TObjId o1, TObjId o2, SegBindingFields bf) {
     // validate call of dlSegCreate()
     SE_BREAK_IF(OK_CONCRETE != sh.objKind(o1) || OK_CONCRETE != sh.objKind(o2));
 
@@ -565,16 +560,15 @@ void dlSegCreate(SymHeap &sh, TObjId o1, TObjId o2, SegBindingFields bf,
     sh.objSetAbstract(o2, OK_DLS, bf);
 
     // introduce some UV_UNKNOWN values if necessary
-    abstractNonMatchingValues(sh, o1, o2, flatScan, /* bidir */ true,
+    abstractNonMatchingValues(sh, o1, o2,
+                              /* bidir */ true,
                               /* fresh */ true);
 
     // a just created DLS is said to be 2+
     dlSegSetMinLength(sh, o1, /* DLS 2+ */ 2);
 }
 
-void dlSegGobble(SymHeap &sh, TObjId dls, TObjId var, bool backward,
-                 bool flatScan)
-{
+void dlSegGobble(SymHeap &sh, TObjId dls, TObjId var, bool backward) {
     SE_BREAK_IF(OK_DLS != sh.objKind(dls) || OK_CONCRETE != sh.objKind(var));
 
     // handle DLS Neq predicates
@@ -586,7 +580,7 @@ void dlSegGobble(SymHeap &sh, TObjId dls, TObjId var, bool backward,
         dls = dlSegPeer(sh, dls);
 
     // introduce some UV_UNKNOWN values if necessary
-    abstractNonMatchingValues(sh, var, dls, flatScan);
+    abstractNonMatchingValues(sh, var, dls);
 
     // store the pointer DLS -> VAR
     const SegBindingFields &bf = sh.objBinding(dls);
@@ -603,7 +597,7 @@ void dlSegGobble(SymHeap &sh, TObjId dls, TObjId var, bool backward,
     dlSegSetMinLength(sh, dls, len);
 }
 
-void dlSegMerge(SymHeap &sh, TObjId seg1, TObjId seg2, bool flatScan) {
+void dlSegMerge(SymHeap &sh, TObjId seg1, TObjId seg2) {
     // handle DLS Neq predicates
     const unsigned len = dlSegMinLength(sh, seg1) + dlSegMinLength(sh, seg2);
     dlSegSetMinLength(sh, seg1, /* DLS 0+ */ 0);
@@ -622,8 +616,8 @@ void dlSegMerge(SymHeap &sh, TObjId seg1, TObjId seg2, bool flatScan) {
     const TObjId peer2 = dlSegPeer(sh, seg2);
 
     // introduce some UV_UNKNOWN values if necessary
-    abstractNonMatchingValues(sh,  seg1,  seg2, flatScan, /* bidir */ true);
-    abstractNonMatchingValues(sh, peer1, peer2, flatScan, /* bidir */ true);
+    abstractNonMatchingValues(sh,  seg1,  seg2, /* bidir */ true);
+    abstractNonMatchingValues(sh, peer1, peer2, /* bidir */ true);
 
     // preserve backLink
     const TValueId valNext2 = sh.valueOf(nextPtrFromSeg(sh, seg1));
@@ -642,8 +636,7 @@ void dlSegMerge(SymHeap &sh, TObjId seg1, TObjId seg2, bool flatScan) {
         dlSegSetMinLength(sh, seg2, len);
 }
 
-void dlSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf,
-                          bool flatScan)
+void dlSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf)
 {
     // the first object is clear
     const TObjId o1 = *pObj;
@@ -667,12 +660,12 @@ void dlSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf,
             skipObj(sh, &o2, sh.objBinding(o2).head, sh.objBinding(o2).next);
             if (OK_CONCRETE == sh.objKind(o2)) {
                 // DLS + VAR
-                dlSegGobble(sh, o1, o2, /* backward */ false, flatScan);
+                dlSegGobble(sh, o1, o2, /* backward */ false);
                 return;
             }
 
             // DLS + DLS
-            dlSegMerge(sh, o1, o2, flatScan);
+            dlSegMerge(sh, o1, o2);
             break;
 
         case OK_CONCRETE:
@@ -680,12 +673,12 @@ void dlSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf,
             skipObj(sh, &o2, bf.head, bf.next);
             if (OK_CONCRETE == sh.objKind(o2)) {
                 // VAR + VAR
-                dlSegCreate(sh, o1, o2, bf, flatScan);
+                dlSegCreate(sh, o1, o2, bf);
                 return;
             }
 
             // VAR + DLS
-            dlSegGobble(sh, o2, o1, /* backward */ true, flatScan);
+            dlSegGobble(sh, o2, o1, /* backward */ true);
             break;
     }
 
@@ -698,28 +691,15 @@ void dlSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf,
 #endif
 }
 
-bool considerSegAbstraction(SymHeap &sh, TObjId obj, EObjKind kind,
-                            const SegBindingFields &bf, unsigned len,
-                            bool flatScan)
+bool considerAbstraction(SymHeap                    &sh,
+                         const SegBindingFields     &bf,
+                         const TObjId               entry,
+                         const unsigned             len)
 {
-    // select the appropriate threshold for the given type of abstraction
-    AbstractionThreshold at = slsThreshold;
-    switch (kind) {
-        case OK_CONCRETE:
-        case OK_HEAD:
-        case OK_PART:
-            // invalid call of considerSegAbstraction()
-            SE_TRAP;
-            return false;
-
-        case OK_SLS:
-            // at == slsThreshold
-            break;
-
-        case OK_DLS:
-            at = dlsThreshold;
-            break;
-    }
+    const bool isSls = bf.peer.empty();
+    const AbstractionThreshold &at = (isSls)
+        ? slsThreshold
+        : dlsThreshold;
 
     // check whether the threshold is satisfied or not
     unsigned threshold = at.sparePrefix + at.innerSegLen + at.spareSuffix;
@@ -730,14 +710,17 @@ bool considerSegAbstraction(SymHeap &sh, TObjId obj, EObjKind kind,
         return false;
     }
 
-    if (OK_SLS == kind) {
+    // cursor
+    TObjId obj = entry;
+
+    if (isSls) {
         // perform SLS abstraction!
         CL_DEBUG("    AAA initiating SLS abstraction of length " << len);
         debugPlotInit("SLS");
         debugPlot(sh);
 
         for (unsigned i = 0; i < len; ++i) {
-            slSegAbstractionStep(sh, &obj, bf, flatScan);
+            slSegAbstractionStep(sh, &obj, bf);
             debugPlot(sh);
         }
 
@@ -751,26 +734,13 @@ bool considerSegAbstraction(SymHeap &sh, TObjId obj, EObjKind kind,
         debugPlot(sh);
 
         for (unsigned i = 0; i < len; ++i) {
-            dlSegAbstractionStep(sh, &obj, bf, flatScan);
+            dlSegAbstractionStep(sh, &obj, bf);
             debugPlot(sh);
         }
 
         CL_DEBUG("<-- successfully abstracted DLS");
         return true;
     }
-}
-
-bool considerAbstraction(SymHeap                    &sh,
-                         const TObjId               entry,
-                         const SegBindingFields     &bf,
-                         const unsigned             len)
-{
-    // TODO
-    const EObjKind kind = (bf.peer.empty())
-        ? OK_SLS
-        : OK_DLS;
-
-    return considerSegAbstraction(sh, entry, kind, bf, len, /* XXX */ false);
 }
 
 bool matchSegBinding(const SymHeap              &sh,
@@ -1221,7 +1191,7 @@ bool performBestAbstraction(SymHeap &sh, const TSegCandidateList &candidates)
 
     // pick up the best candidate
     const SegCandidate &segc = candidates[bestIdx];
-    return considerAbstraction(sh, segc.entry, bestBinding, bestLen);
+    return considerAbstraction(sh, bestBinding, segc.entry, bestLen);
 }
 
 bool abstractIfNeededCore(SymHeap &sh) {
