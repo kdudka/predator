@@ -36,9 +36,9 @@
  *      - cl_easy.hh
  *
  * - decorators:
- *      - cld_intchk.hh
- *      - cld_unilabel.hh
- *      - cld_unswitch.hh
+ *      - clf_intchk.hh
+ *      - clf_unilabel.hh
+ *      - clf_unswitch.hh
  *
  * - error/warning messages: cl_msg.hh, location.hh,
  *      - Location
