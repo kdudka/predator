@@ -41,6 +41,7 @@
 
 #if DEBUG_SYMABSTRACT
 #   include "symdump.hh"
+#   define FIXW(w) std::fixed << std::setfill('0') << std::setw(w)
 namespace {
     static int cntAbstraction = -1;
     static int cntAbstractionStep;
@@ -55,7 +56,6 @@ namespace {
     std::string debugPlotName() {
         std::ostringstream str;
 
-#define FIXW(w) std::fixed << std::setfill('0') << std::setw(w)
         str << "symabstract-" << FIXW(4) << ::cntAbstraction
             << "-" << ::abstractionName
             << "-" << FIXW(4) << (::cntAbstractionStep++);
@@ -459,9 +459,13 @@ struct ValueAbstractor {
             sh.objSetValue(src, valNew);
 
         // if the last reference is gone, we have a problem
-        if (collectJunk(sh, valDst))
+        if (collectJunk(sh, valDst)) {
             CL_ERROR("junk detected during abstraction"
                     ", the analysis is no more sound!");
+#if SE_SELF_TEST
+            SE_TRAP;
+#endif
+        }
 
         return /* continue */ true;
     }
@@ -530,8 +534,6 @@ void duplicateUnknownValues(SymHeap &sh, TObjId obj) {
 void slSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf)
 {
     const TObjId obj = *pObj;
-    const EObjKind kind = sh.objKind(obj);
-
     const TObjId objPtrNext = subObjByChain(sh, obj, bf.next);
     const TValueId valNext = sh.valueOf(objPtrNext);
 
@@ -543,13 +545,35 @@ void slSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf)
     const EObjKind kindNext = sh.objKind(objNext);
     SE_BREAK_IF(OK_SLS == kindNext && bf != sh.objBinding(objNext));
 
-    // check if at least one object is concrete
-    // FIXME: more precise would be to check also the already defined Neq preds
-    const bool ne = (OK_CONCRETE == kind || OK_CONCRETE == kindNext);
+    // accumulate resulting segment's minimal length
+    unsigned len = 0;
+    const EObjKind kind = sh.objKind(obj);
+    switch (kind) {
+        case OK_CONCRETE:
+            len = 1;
+            break;
 
-    if (OK_CONCRETE == kindNext)
+        case OK_SLS:
+            len = segMinLength(sh, obj);
+            break;
+
+        default:
+#if SE_SELF_TEST
+            SE_TRAP;
+#endif
+            break;
+    }
+
+    if (OK_CONCRETE == kindNext) {
         // abstract the _next_ object
         sh.objSetAbstract(objNext, OK_SLS, bf);
+
+        // accumulate resulting segment's minimal length
+        ++len;
+    }
+    else
+        // accumulate resulting segment's minimal length
+        len += segMinLength(sh, objNext);
 
     // merge data
     SE_BREAK_IF(OK_SLS != sh.objKind(objNext));
@@ -563,10 +587,9 @@ void slSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf)
     // replace self by the next object
     objReplace(sh, obj, objNext);
 
-    if (ne)
-        // we're constructing the abstract object from a concrete one
-        // --> it implies non-empty LS at this point
-        segSetMinLength(sh, objNext, /* SLS 1+ */ 1);
+    if (len)
+        // initialize resulting segment's minimal length
+        segSetMinLength(sh, objNext, len);
 
     // move to the next object
     *pObj = objNext;
@@ -723,7 +746,7 @@ bool considerAbstraction(SymHeap                    &sh,
         : dlsThreshold;
 
     // check whether the threshold is satisfied or not
-    unsigned threshold = at.sparePrefix + at.innerSegLen + at.spareSuffix;
+    const unsigned threshold = at.sparePrefix + at.innerSegLen + at.spareSuffix;
     if (len < threshold) {
         CL_DEBUG("<-- length (" << len
                 << ") of the longest segment is under the threshold ("
@@ -787,7 +810,6 @@ bool matchSegBinding(const SymHeap              &sh,
                 && (bf.peer == bfDiscover.next);
 
         default:
-            // TODO
             SE_TRAP;
             return false;
     }
@@ -930,10 +952,6 @@ TObjId jumpToNextObj(const SymHeap              &sh,
         // binding mismatch
         return OBJ_INVALID;
 
-    if (preserveHeadPtr(sh, bf, next))
-        // special quirk for head pointers
-        return OBJ_INVALID;
-
     const bool isDls = !bf.peer.empty();
     if (isDls) {
         // check DLS back-link
@@ -1005,33 +1023,29 @@ unsigned /* len */ segDiscover(const SymHeap            &sh,
     }
 
     TObjId obj = jumpToNextObj(sh, bf, haveSeen, entry);
-    if (hasKey(haveSeen, obj))
+    if (!insertOnce(haveSeen, obj))
         // loop detected
         return 0;
-    else
-        haveSeen.insert(obj);
 
     if (!validatePointingObjects(sh, bf, entry, OBJ_INVALID, obj,
                                  /* toInsideOnly */ true))
         // invalid entry
         return 0;
 
+    // main loop of segDiscover()
     std::vector<TObjId> path;
-
     while (OBJ_INVALID != obj) {
         // compare the data
         if (!matchData(sh, bf, prev, obj)) {
-            CL_DEBUG("DataMatchVisitor refuses to create a segment!");
+            CL_DEBUG("    DataMatchVisitor refuses to create a segment!");
             break;
         }
 
         // look ahead
         TObjId next = jumpToNextObj(sh, bf, haveSeen, obj);
-        if (hasKey(haveSeen, next))
+        if (!insertOnce(haveSeen, next))
             // loop detected
             break;
-        else
-            haveSeen.insert(next);
 
         if (!validatePointingObjects(sh, bf, obj, prev, next))
             // someone points to inside who should not
@@ -1300,9 +1314,6 @@ void segReplaceRefs(SymHeap &sh, TValueId valOld, TValueId valNew) {
         else {
             // attempt to create a virtual object
             const int off = subOffsetIn(sh, objOld, headOld);
-            CL_DEBUG("segReplaceRefs() attempts to create a virtual object"
-                    ", offset=" << off);
-
             const SymHeapCore::TOffVal ov(valNew, -off);
             valNew = sh.valCreateByOffset(ov);
         }

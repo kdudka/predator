@@ -51,6 +51,15 @@ bool hasKey(const TCont *cont, const typename TCont::key_type &key) {
     return hasKey(*cont, key);
 }
 
+template <typename TCont>
+bool insertOnce(TCont &cont, const typename TCont::key_type &key) {
+    if (hasKey(cont, key))
+        return false;
+
+    cont.insert(key);
+    return true;
+}
+
 template <class TStack, class TFirst, class TSecond>
 void push(TStack &dst, const TFirst &first, const TSecond &second)
 {
