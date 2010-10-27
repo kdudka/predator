@@ -148,8 +148,7 @@ void segSetMinLength(SymHeap &sh, TObjId seg, unsigned len) {
     }
 }
 
-TValueId /* addr */ segClone(SymHeap &sh, TValueId atAddr) {
-    const TObjId seg = sh.pointsTo(atAddr);
+TObjId segClone(SymHeap &sh, const TObjId seg) {
     const TObjId dupSeg = sh.objDup(seg);
 
     // read lower bound estimation of seg length
@@ -177,7 +176,19 @@ TValueId /* addr */ segClone(SymHeap &sh, TValueId atAddr) {
         // restore lower bound estimation of segment length
         segSetMinLength(sh, dupSeg, len);
 
-    return sh.placedAt(dupSeg);
+    return dupSeg;
+}
+
+TValueId /* addr */ segCloneIfNeeded(SymHeap &sh, TValueId atAddr) {
+    const TObjId seg = sh.pointsTo(atAddr);
+    if (sh.objShared(seg))
+        // object is shared, nothing to clone here
+        return VAL_INVALID;
+
+    // once the object is cloned, it's no longer a prototype object
+    const TObjId dup = segClone(sh, seg);
+    sh.objSetShared(dup, true);
+    return sh.placedAt(dup);
 }
 
 template <class TIgnoreList>
@@ -492,9 +503,7 @@ struct UnknownValuesDuplicator {
                 break;
 
             case UV_ABSTRACT:
-                if (!sh.objShared(sh.pointsTo(valOld)))
-                    // we need to clone nested list segments
-                    valNew = segClone(sh, valOld);
+                valNew = segCloneIfNeeded(sh, valOld);
                 break;
 
             default:
