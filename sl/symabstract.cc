@@ -747,7 +747,7 @@ void dlSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf)
 bool considerAbstraction(SymHeap                    &sh,
                          const SegBindingFields     &bf,
                          const TObjId               entry,
-                         const unsigned             len)
+                         const unsigned             lenTotal)
 {
     const bool isSls = bf.peer.empty();
     const AbstractionThreshold &at = (isSls)
@@ -756,15 +756,24 @@ bool considerAbstraction(SymHeap                    &sh,
 
     // check whether the threshold is satisfied or not
     const unsigned threshold = at.sparePrefix + at.innerSegLen + at.spareSuffix;
-    if (len < threshold) {
-        CL_DEBUG("<-- length (" << len
+    if (lenTotal < threshold) {
+        CL_DEBUG("<-- length (" << lenTotal
                 << ") of the longest segment is under the threshold ("
                 << threshold << ")");
         return false;
     }
 
+    CL_DEBUG("    --- length of the longest segment is " << lenTotal
+            << ", prefix=" << at.sparePrefix
+            << ", suffix=" << at.spareSuffix);
+
     // cursor
     TObjId obj = entry;
+
+    // handle sparePrefix/spareSuffix
+    int len = lenTotal - at.sparePrefix - at.spareSuffix;
+    for (unsigned i = 0; i < at.sparePrefix; ++i)
+        skipObj(sh, &obj, bf.head, bf.next);
 
     if (isSls) {
         // perform SLS abstraction!
@@ -772,7 +781,7 @@ bool considerAbstraction(SymHeap                    &sh,
         debugPlotInit("SLS");
         debugPlot(sh);
 
-        for (unsigned i = 0; i < len; ++i) {
+        for (int i = 0; i < len; ++i) {
             slSegAbstractionStep(sh, &obj, bf);
             debugPlot(sh);
         }
@@ -786,7 +795,7 @@ bool considerAbstraction(SymHeap                    &sh,
         debugPlotInit("DLS");
         debugPlot(sh);
 
-        for (unsigned i = 0; i < len; ++i) {
+        for (int i = 0; i < len; ++i) {
             dlSegAbstractionStep(sh, &obj, bf);
             debugPlot(sh);
         }
