@@ -1904,7 +1904,6 @@ void SymHeap::neqOp(ENeqOp op, TValueId valA, TValueId valB) {
     SymHeapTyped::neqOp(op, valA, valB);
 }
 
-// TODO: check if the implementation is ready for Linux lists
 bool SymHeap::proveEq(bool *result, TValueId valA, TValueId valB) const {
     if (SymHeapTyped::proveEq(result, valA, valB))
         return true;
@@ -1921,7 +1920,10 @@ bool SymHeap::proveEq(bool *result, TValueId valA, TValueId valB) const {
         // we are interested only in abstract objects here
         return false;
 
+    // resolve list segment root
     TObjId obj = this->pointsTo(valB);
+    obj = subObjByInvChain(*this, obj, this->objBinding(obj).head);
+
     if (OK_DLS == this->objKind(obj))
         // jump to peer in case of DLS
         obj = dlSegPeer(*this, obj);

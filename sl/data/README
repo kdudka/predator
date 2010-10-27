@@ -176,6 +176,8 @@ Linux lists
 
     test-0089.c - regression test focused on off-values, address aliasing, etc.
 
+    test-0096.c - tiny modification of test-0087 that operates on infinite list
+
 
 Show-case
 =========

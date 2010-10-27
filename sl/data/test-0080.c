@@ -46,12 +46,15 @@ void traverse(struct list_head *head)
 int main()
 {
     struct list_head my_list = { &(my_list) };
+    int i;
 
     append_one(&my_list);
     append_one(&my_list);
     append_one(&my_list);
     append_one(&my_list);
     append_one(&my_list);
+    for (i = 1; i; ++i)
+        append_one(&my_list);
 
     traverse(&my_list);
 

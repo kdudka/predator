@@ -136,17 +136,16 @@ namespace {
     }
 
     template<class THeap>
-    bool isComposite(const THeap &heap1, const THeap &heap2,
+    bool chkComposite(bool *pDst, const THeap &heap1, const THeap &heap2,
                      TValueId value1, TValueId value2)
     {
-        const TObjId cObj1 = heap1.valGetCompositeObj(value1);
-        const TObjId cObj2 = heap2.valGetCompositeObj(value2);
-        if (OBJ_INVALID == cObj1 && OBJ_INVALID == cObj2)
+        const bool isComp1 = (OBJ_INVALID != heap1.valGetCompositeObj(value1));
+        const bool isComp2 = (OBJ_INVALID != heap2.valGetCompositeObj(value2));
+        if (isComp1 != isComp2)
+            // scalar vs. composite objects, the heaps can't be equal
             return false;
 
-        // types has to match (scalar vs. composite can't be compared)
-        SE_BREAK_IF(OBJ_INVALID == cObj1 || OBJ_INVALID == cObj2);
-
+        *pDst = isComp1;
         return true;
     }
 
@@ -156,8 +155,7 @@ namespace {
     {
         const TObjId cObj1 = heap1.valGetCompositeObj(value1);
         const TObjId cObj2 = heap2.valGetCompositeObj(value2);
-        // cObj1 and cObj2 are supposed to be valid at this point, see
-        // isComposite()
+        // cObj1 and cObj2 are supposed to be valid at this point
 
         typedef std::pair<TObjId, TObjId> TItem;
         std::stack<TItem> todo;
@@ -271,9 +269,16 @@ bool dfsCmp(TWL             &wl,
             // no need for next wheel
             continue;
 
-        if (isComposite(heap1, heap2, value1, value2)) {
+        bool isComposite;
+        if (!chkComposite(&isComposite, heap1, heap2, value1, value2))
+            // scalar vs. composite objects, the heaps can't be equal
+            return false;
+
+        if (isComposite) {
+            // got pair of composite objects
+
             if (!digComposite(wl, heap1, heap2, value1, value2))
-                // object type mismatch (something nasty in the analyzed code)
+                // scalar vs. composite objects, the heaps can't be equal
                 return false;
 
             // compare composite objects recursively

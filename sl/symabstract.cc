@@ -935,6 +935,44 @@ bool validatePointingObjects(const SymHeap              &sh,
     return true;
 }
 
+bool validateSegEntry(const SymHeap              &sh,
+                      const SegBindingFields     &bf,
+                      const TObjId               entry,
+                      TObjId                     next)
+{
+    const TFieldIdxChain &icHead = bf.head;
+    if (icHead.empty()) {
+        // no Linux lists involved
+        return validatePointingObjects(sh, bf, entry, OBJ_INVALID, next,
+                                       /* toInsideOnly */ true);
+    }
+
+    // jump to the head sub-object
+    const TObjId head = subObjByChain(sh, entry, icHead);
+    SE_BREAK_IF(entry == head || head <= 0);
+
+    // FIXME: this is too strict for the _hlist_ variant of Linux lists
+    if (!validatePointingObjects(sh, bf, head, OBJ_INVALID, next,
+                                 /* toInsideOnly */ true))
+        return false;
+
+    // now check that nothing but head is pointed from outside
+    // FIXME: suboptimal due to performance
+    SymHeap::TContObj refsAll, refsHead;
+    const PointingObjectsFinder visAll(refsAll), visHead(refsHead);
+
+    // gather all pointers at entry/head
+    visAll(sh, entry);
+    visHead(sh, head);
+
+    // gather all pointers inside entry/head
+    traverseSubObjs(sh, head, visHead, /* leavesOnly */ false);
+    traverseSubObjs(sh, entry, visAll, /* leavesOnly */ false);
+
+    // finally compare the sets
+    return (refsAll.size() == refsHead.size());
+}
+
 TObjId jumpToNextObj(const SymHeap              &sh,
                      const SegBindingFields     &bf,
                      std::set<TObjId>           &haveSeen,
@@ -1045,8 +1083,7 @@ unsigned /* len */ segDiscover(const SymHeap            &sh,
         // loop detected
         return 0;
 
-    if (!validatePointingObjects(sh, bf, entry, OBJ_INVALID, obj,
-                                 /* toInsideOnly */ true))
+    if (!validateSegEntry(sh, bf, entry, obj))
         // invalid entry
         return 0;
 
@@ -1430,11 +1467,9 @@ void abstractIfNeeded(SymHeap &sh) {
 
 void concretizeObj(SymHeap &sh, TValueId addr, TSymHeapList &todo) {
     TObjId obj = sh.pointsTo(addr);
-
-    if (OK_HEAD == sh.objKind(obj)) {
-        CL_WARN("concretization of Linux lists is not stable yet");
+    if (OK_HEAD == sh.objKind(obj))
         obj = objRoot(sh, obj);
-    }
+
     TObjId peer = obj;
 
     // branch by SLS/DLS
