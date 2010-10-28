@@ -427,13 +427,3 @@ Other tests
                   another module that is responsible for making it non-NULL
 
                 - we're probably not yet ready for this one
-
-
-Known bugs
-==========
-    test-0051.c - handled fairly well as we are not able to learn such a shape
-                - but we should probably not allow the abstraction at all here
-                - it should be pretty easy to fix
-                - we just need to utilize the DataMatchVisitor even during
-                  segment discovery process (it's too late for that when the
-                  segment is already being constructed)

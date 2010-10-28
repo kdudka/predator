@@ -228,8 +228,13 @@ bool segConsiderPrototype(const SymHeap     &sh,
         && segMayBePrototype(sh, v2);
 }
 
+typedef SymHeap::TContValue TProtoAddrs[2];
+
 struct DataMatchVisitor {
     std::set<TObjId> ignoreList;
+    TProtoAddrs *protoAddrs;
+
+    DataMatchVisitor(): protoAddrs(0) { }
 
     bool operator()(const SymHeap &sh, TObjPair item) const {
         const TObjId o1 = item.first;
@@ -265,30 +270,53 @@ struct DataMatchVisitor {
 
             case UV_ABSTRACT:
                 // FIXME: unguarded recursion!
-                return segConsiderPrototype(sh, v1, v2);
+                if (!segConsiderPrototype(sh, v1, v2))
+                    break;
+
+                if (protoAddrs) {
+                    // FIXME: what about shared prototypes at this point?
+                    (*protoAddrs)[0].push_back(v1);
+                    (*protoAddrs)[1].push_back(v2);
+                }
+
+                return true;
         }
         return /* mismatch */ false;
     }
 };
 
 bool segEqual(const SymHeap &sh, TValueId v1, TValueId v2) {
-    const TObjId o1 = sh.pointsTo(v1);
-    const TObjId o2 = sh.pointsTo(v2);
+    TObjId o1 = sh.pointsTo(v1);
+    TObjId o2 = sh.pointsTo(v2);
     SE_BREAK_IF(o1 <= 0 || o2 <= 0);
 
-    const EObjKind kind = sh.objKind(o1);
+    EObjKind kind = sh.objKind(o1);
     if (sh.objKind(o2) != kind)
+        return false;
+
+    if (OK_HEAD == kind) {
+        // jump to root, which should be a segment
+        o1 = objRoot(sh, o1);
+        o2 = objRoot(sh, o2);
+        SE_BREAK_IF(o1 <= 0 || o2 <= 0);
+        SE_BREAK_IF(OK_SLS != sh.objKind(o1) && OK_DLS != sh.objKind(o1));
+        SE_BREAK_IF(OK_SLS != sh.objKind(o2) && OK_DLS != sh.objKind(o2));
+
+        kind = sh.objKind(o1);
+        if (sh.objKind(o2) != kind)
+            return false;
+    }
+
+    const struct cl_type *clt1 = sh.objType(o1);
+    const struct cl_type *clt2 = sh.objType(o2);
+    SE_BREAK_IF(!clt1 || !clt2);
+    if (*clt1 != *clt2)
+        // type mismatch
         return false;
 
     TObjId peer1 = o1;
     TObjId peer2 = o2;
     switch (kind) {
-        case OK_CONCRETE:
-        case OK_HEAD:
-        case OK_PART:
-            // invalid call of segEqual()
-            SE_TRAP;
-
         case OK_DLS:
             if (sh.objBinding(o1).peer != sh.objBinding(o2).peer)
                 // 'peer' selector mismatch
@@ -302,6 +330,14 @@ bool segEqual(const SymHeap &sh, TValueId v1, TValueId v2) {
             if (sh.objBinding(o1).next != sh.objBinding(o2).next)
                 // 'next' selector mismatch
                 return false;
+
+            break;
+
+        default:
+#if SE_SELF_TEST
+            SE_TRAP;
+#endif
+            return false;
     }
 
     // so far equal, now compare the 'next' values
@@ -1029,11 +1065,14 @@ TObjId jumpToNextObj(const SymHeap              &sh,
 bool matchData(const SymHeap                &sh,
                const SegBindingFields       &bf,
                const TObjId                 o1,
-               const TObjId                 o2)
+               const TObjId                 o2,
+               TProtoAddrs                  *protoAddrs)
 {
-    DataMatchVisitor visitor;
     const TObjId nextPtr = subObjByChain(sh, o1, bf.next);
+
+    DataMatchVisitor visitor;
     visitor.ignoreList.insert(nextPtr);
+    visitor.protoAddrs = protoAddrs;
 
     if (!bf.peer.empty()) {
         const TObjId prevPtr = subObjByChain(sh, o1, bf.peer);
@@ -1083,18 +1122,19 @@ unsigned /* len */ segDiscover(const SymHeap            &sh,
         // loop detected
         return 0;
 
-    if (!validateSegEntry(sh, bf, entry, obj))
-        // invalid entry
-        return 0;
-
     // main loop of segDiscover()
     std::vector<TObjId> path;
     while (OBJ_INVALID != obj) {
         // compare the data
-        if (!matchData(sh, bf, prev, obj)) {
+        TProtoAddrs protoAddrs;
+        if (!matchData(sh, bf, prev, obj, &protoAddrs)) {
             CL_DEBUG("    DataMatchVisitor refuses to create a segment!");
             break;
         }
+
+        if (prev == entry && !validateSegEntry(sh, bf, entry, obj))
+            // invalid entry
+            break;
 
         // look ahead
         TObjId next = jumpToNextObj(sh, bf, haveSeen, obj);

@@ -245,6 +245,14 @@ bool handleBuiltIn(SymState                     &dst,
         return true;
     }
 
+    if (STREQ(fncName, "___sl_break")) {
+        CL_WARN_MSG(lw, "___sl_break() reached, stopping per user's request");
+        dst.insert(sh);
+
+        SE_TRAP;
+        return true;
+    }
+
     HANDLE_PLOT_CALL(___sl_plot,             callPlot          );
     HANDLE_PLOT_CALL(___sl_plot_by_ptr,      callPlotByPtr     );
     HANDLE_PLOT_CALL(___sl_plot_stack_frame, callPlotStackFrame);
