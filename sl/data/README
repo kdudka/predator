@@ -183,6 +183,9 @@ Linux lists
 
     test-0098.c - alternation of test-0097 with two independent nested lists
 
+    test-0099.c - extension of test-0097, added two-level list destruction
+                  (implies concretization at both levels)
+
 
 Show-case
 =========

@@ -31,14 +31,11 @@
 #include "symutil.hh"
 #include "util.hh"
 
-#include <algorithm>                // for std::copy()
 #include <iomanip>
 #include <set>
 #include <sstream>
-#include <stack>
 
 #include <boost/foreach.hpp>
-#include <boost/tuple/tuple.hpp>
 
 #if DEBUG_SYMABSTRACT
 #   include "symdump.hh"
@@ -156,9 +153,6 @@ void segSetMinLength(SymHeap &sh, TObjId seg, unsigned len) {
 TObjId segClone(SymHeap &sh, const TObjId seg) {
     const TObjId dupSeg = sh.objDup(seg);
 
-    // read lower bound estimation of seg length
-    const unsigned len = segMinLength(sh, seg);
-
     if (OK_DLS == sh.objKind(seg)) {
         // we need to clone the peer as well
         const TObjId peer = dlSegPeer(sh, seg);
@@ -173,26 +167,92 @@ TObjId segClone(SymHeap &sh, const TObjId seg) {
         const TObjId ppPeer = subObjByChain(sh, dupPeer, icpPeer);
 
         // now cross the 'peer' pointers
-        sh.objSetValue(ppSeg, sh.placedAt(dupPeer));
-        sh.objSetValue(ppPeer, sh.placedAt(dupSeg));
+        sh.objSetValue(ppSeg, segHeadAddr(sh, dupPeer));
+        sh.objSetValue(ppPeer, segHeadAddr(sh, dupSeg));
     }
-
-    if (len)
-        // restore lower bound estimation of segment length
-        segSetMinLength(sh, dupSeg, len);
 
     return dupSeg;
 }
 
-TValueId /* addr */ segCloneIfNeeded(SymHeap &sh, TValueId atAddr) {
-    const TObjId seg = sh.pointsTo(atAddr);
+void redirectInboundEdges(
+        SymHeap                 &sh,
+        const TObjId            pointingFrom,
+        const TObjId            pointingTo,
+        const TObjId            redirectTo)
+{
+    // go through all objects pointing at/inside pointingTo
+    SymHeap::TContObj refs;
+    gatherPointingObjects(sh, refs, pointingTo, /* toInsideOnly */ false);
+    BOOST_FOREACH(const TObjId obj, refs) {
+        if (pointingFrom != objRoot(sh, obj))
+            // pointed from elsewhere, keep going
+            continue;
+
+        TObjId parent = sh.pointsTo(sh.valueOf(obj));
+        SE_BREAK_IF(parent <= 0);
+
+        // seek obj's root
+        int nth;
+        TFieldIdxChain invIc;
+        while (OBJ_INVALID != (parent = sh.objParent(parent, &nth)))
+            invIc.push_back(nth);
+
+        // now take the selector chain reversely
+        TObjId target = redirectTo;
+        BOOST_REVERSE_FOREACH(int nth, invIc) {
+            target = sh.subObj(target, nth);
+            SE_BREAK_IF(OBJ_INVALID == target);
+        }
+
+        // redirect!
+        sh.objSetValue(obj, sh.placedAt(target));
+    }
+}
+
+TValueId /* addr */ segCloneIfNeeded(
+        SymHeap                 &sh,
+        const TObjId            rootDst,
+        const TObjId            rootSrc,
+        const TValueId          atAddr)
+{
+    TObjId seg = sh.pointsTo(atAddr);
+    const bool isHead = (OK_HEAD == sh.objKind(seg));
+    if (isHead)
+        // jump to root
+        seg = objRoot(sh, seg);
+
     if (sh.objShared(seg))
         // object is shared, nothing to clone here
         return VAL_INVALID;
 
+    // read lower bound estimation of seg length
+    const unsigned len = segMinLength(sh, seg);
+    segSetMinLength(sh, seg, /* LS 0+ */ 0);
+
     // once the object is cloned, it's no longer a prototype object
-    const TObjId dup = segClone(sh, seg);
+    TObjId dup = segClone(sh, seg);
     segSetShared(sh, dup, true);
+
+    // redirect all edges to the right direction
+    redirectInboundEdges(sh, rootDst, seg, dup);
+    redirectInboundEdges(sh, seg, rootDst, rootSrc);
+
+    if (OK_DLS == sh.objKind(seg)) {
+        const TObjId peer = dlSegPeer(sh, seg);
+        redirectInboundEdges(sh, rootDst, peer, dlSegPeer(sh, dup));
+        redirectInboundEdges(sh, peer, rootDst, rootSrc);
+    }
+
+    if (len) {
+        // restore lower bound estimation of segment length
+        segSetMinLength(sh, seg, len);
+        segSetMinLength(sh, dup, len);
+    }
+
+    if (isHead)
+        // jump back to head
+        dup = segHead(sh, dup);
+
     return sh.placedAt(dup);
 }
 
@@ -314,6 +374,8 @@ struct ValueAbstractor {
 // visitor
 struct UnknownValuesDuplicator {
     std::set<TObjId> ignoreList;
+    TObjId rootDst;
+    TObjId rootSrc;
 
     bool operator()(SymHeap &sh, TObjId obj) const {
         if (hasKey(ignoreList, obj))
@@ -332,7 +394,7 @@ struct UnknownValuesDuplicator {
                 break;
 
             case UV_ABSTRACT:
-                valNew = segCloneIfNeeded(sh, valOld);
+                valNew = segCloneIfNeeded(sh, rootDst, rootSrc, valOld);
                 break;
 
             default:
@@ -361,8 +423,10 @@ void abstractNonMatchingValues(SymHeap &sh, TObjId src, TObjId dst,
 }
 
 // when concretizing an object, we need to duplicate all _unknown_ values
-void duplicateUnknownValues(SymHeap &sh, TObjId obj) {
+void duplicateUnknownValues(SymHeap &sh, TObjId obj, TObjId dup) {
     UnknownValuesDuplicator visitor;
+    visitor.rootDst = obj;
+    visitor.rootSrc = dup;
     buildIgnoreList(sh, obj, visitor.ignoreList);
 
     // traverse all sub-objects
@@ -829,7 +893,7 @@ void concretizeObj(SymHeap &sh, TValueId addr, TSymHeapList &todo) {
     }
 
     // duplicate all unknown values, to keep the prover working
-    duplicateUnknownValues(sh, obj);
+    duplicateUnknownValues(sh, obj, aoDup);
 
     // concretize self and recover the list
     const TObjId ptrNext = subObjByChain(sh, obj, (OK_SLS == kind)

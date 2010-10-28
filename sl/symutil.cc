@@ -256,3 +256,33 @@ void initVariable(SymHeap                       &sh,
     else
         initSingleVariable(sh, item);
 }
+
+class PointingObjectsFinder {
+    SymHeap::TContObj &dst_;
+
+    public:
+        PointingObjectsFinder(SymHeap::TContObj &dst): dst_(dst) { }
+
+        bool operator()(const SymHeap &sh, TObjId obj) const {
+            const TValueId addr = sh.placedAt(obj);
+            SE_BREAK_IF(addr <= 0);
+
+            sh.usedBy(dst_, addr);
+            return /* continue */ true;
+        }
+};
+
+void gatherPointingObjects(const SymHeap            &sh,
+                           SymHeap::TContObj        &dst,
+                           const TObjId             root,
+                           bool                     toInsideOnly)
+{
+    const PointingObjectsFinder visitor(dst);
+
+    if (!toInsideOnly)
+        visitor(sh, root);
+
+    traverseSubObjs(sh, root, visitor, /* leavesOnly */ false);
+}
+
+

@@ -209,4 +209,9 @@ bool /* complete */ traverseSubObjsIc(THeap &sh, TItem item, TVisitor &visitor)
     return true;
 }
 
+void gatherPointingObjects(const SymHeap            &sh,
+                           SymHeap::TContObj        &dst,
+                           const TObjId             root,
+                           bool                     toInsideOnly);
+
 #endif /* H_GUARD_SYMUTIL_H */

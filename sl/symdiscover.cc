@@ -29,7 +29,6 @@
 #include "util.hh"
 
 #include <algorithm>                // for std::copy()
-#include <iomanip>
 #include <set>
 
 #include <boost/foreach.hpp>
@@ -131,8 +130,7 @@ bool validateUpLink(const SymHeap       &sh,
             break;
     }
 
-    CL_WARN("validateUpLink() matched an up-link, "
-            "but concretization of up-links is not yet implemented!");
+    CL_DEBUG("validateUpLink() has successfully validated an up-link!");
     return true;
 }
 
@@ -189,34 +187,6 @@ bool segEqual(const SymHeap     &sh,
     buildIgnoreList(sh, o1, visitor.ignoreList);
     const TObjPair item(o1, o2);
     return traverseSubObjs(sh, item, visitor, /* leavesOnly */ true);
-}
-
-class PointingObjectsFinder {
-    SymHeap::TContObj &dst_;
-
-    public:
-        PointingObjectsFinder(SymHeap::TContObj &dst): dst_(dst) { }
-
-        bool operator()(const SymHeap &sh, TObjId obj) const {
-            const TValueId addr = sh.placedAt(obj);
-            SE_BREAK_IF(addr <= 0);
-
-            sh.usedBy(dst_, addr);
-            return /* continue */ true;
-        }
-};
-
-void gatherPointingObjects(const SymHeap            &sh,
-                           SymHeap::TContObj        &dst,
-                           const TObjId             root,
-                           bool                     toInsideOnly)
-{
-    const PointingObjectsFinder visitor(dst);
-
-    if (!toInsideOnly)
-        visitor(sh, root);
-
-    traverseSubObjs(sh, root, visitor, /* leavesOnly */ false);
 }
 
 bool segMayBePrototype(const SymHeap        &sh,
@@ -439,15 +409,8 @@ bool validateSegEntry(const SymHeap              &sh,
     // now check that nothing but head is pointed from outside
     // FIXME: suboptimal due to performance
     SymHeap::TContObj refsAll, refsHead;
-    const PointingObjectsFinder visAll(refsAll), visHead(refsHead);
-
-    // gather all pointers at entry/head
-    visAll(sh, entry);
-    visHead(sh, head);
-
-    // gather all pointers inside entry/head
-    traverseSubObjs(sh, head, visHead, /* leavesOnly */ false);
-    traverseSubObjs(sh, entry, visAll, /* leavesOnly */ false);
+    gatherPointingObjects(sh, refsAll, entry, /* toInsideOnly */ false);
+    gatherPointingObjects(sh, refsHead, head, /* toInsideOnly */ false);
 
     // finally compare the sets
     return (refsAll.size() == refsHead.size());
