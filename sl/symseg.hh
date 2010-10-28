@@ -63,6 +63,9 @@ unsigned dlSegMinLength(const SymHeap &sh, TObjId dls);
 /// return lower estimation of segment length
 unsigned segMinLength(const SymHeap &sh, TObjId seg);
 
+/// same as SymHeap::objSetShared(), but takes care of DLS peers
+void segSetShared(SymHeap &sh, TObjId seg, bool shared);
+
 /// destroy the given list segment object (including DLS peer in case of DLS)
 void segDestroy(SymHeap &sh, TObjId seg);
 

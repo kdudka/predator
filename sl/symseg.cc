@@ -24,6 +24,10 @@
 #include "symutil.hh"
 
 TObjId nextPtrFromSeg(const SymHeap &sh, TObjId seg) {
+    if (OK_HEAD == sh.objKind(seg))
+        // jump to root
+        seg = objRoot(sh, seg);
+
     // validate call of nextPtrFromSeg()
     SE_BREAK_IF(OK_CONCRETE == sh.objKind(seg));
 
@@ -99,13 +103,15 @@ unsigned segMinLength(const SymHeap &sh, TObjId seg) {
     const EObjKind kind = sh.objKind(seg);
     switch (kind) {
         case OK_CONCRETE:
-        case OK_HEAD:
         case OK_PART:
-            // invalid call of segNotEmpty()
             SE_TRAP;
 
         case OK_SLS:
             break;
+
+        case OK_HEAD:
+            seg = objRoot(sh, seg);
+            // fall through!
 
         case OK_DLS:
             return dlSegMinLength(sh, seg);
@@ -117,14 +123,41 @@ unsigned segMinLength(const SymHeap &sh, TObjId seg) {
     return static_cast<unsigned>(segProveNeq(sh, headAddr, nextVal));
 }
 
+void segSetShared(SymHeap &sh, TObjId seg, bool shared) {
+    EObjKind kind = sh.objKind(seg);
+    if (OK_HEAD == kind) {
+        seg = objRoot(sh, seg);
+        kind = sh.objKind(seg);
+    }
+
+    switch (kind) {
+        case OK_DLS:
+            sh.objSetShared(dlSegPeer(sh, seg), shared);
+            // fall through
+
+        case OK_SLS:
+            sh.objSetShared(seg, shared);
+            break;
+
+        default:
+#if SE_SELF_TEST
+            SE_TRAP;
+#endif
+            break;
+    }
+}
+
 void segDestroy(SymHeap &sh, TObjId seg) {
     const EObjKind kind = sh.objKind(seg);
     switch (kind) {
         case OK_CONCRETE:
-        case OK_HEAD:
         case OK_PART:
             // invalid call of segDestroy()
             SE_TRAP;
+
+        case OK_HEAD:
+            seg = objRoot(sh, seg);
+            // fall through!
 
         case OK_DLS:
             sh.objDestroy(dlSegPeer(sh, seg));

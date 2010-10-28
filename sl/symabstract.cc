@@ -136,6 +136,10 @@ void segSetMinLength(SymHeap &sh, TObjId seg, unsigned len) {
                     : SymHeap::NEQ_DEL);
             break;
 
+        case OK_HEAD:
+            seg = objRoot(sh, seg);
+            // fall through!
+
         case OK_DLS:
             dlSegSetMinLength(sh, seg, len);
             break;
@@ -187,7 +191,7 @@ TValueId /* addr */ segCloneIfNeeded(SymHeap &sh, TValueId atAddr) {
 
     // once the object is cloned, it's no longer a prototype object
     const TObjId dup = segClone(sh, seg);
-    sh.objSetShared(dup, true);
+    segSetShared(sh, dup, true);
     return sh.placedAt(dup);
 }
 
@@ -519,6 +523,12 @@ TValueId mergeValues(SymHeap            &sh,
     if (UV_ABSTRACT != code)
         return sh.valCreateUnknown(code, clt);
 
+    if (OBJ_DELETED == sh.pointsTo(v1)
+            && OK_DLS == sh.objKind(objRoot(sh, sh.pointsTo(v2))))
+        // this is tricky, we've already deleted the peer of nested Linux DLS,
+        // as part of a precedent merge, we should keep going...
+        return v2;
+
     if (!segConsiderPrototype(sh, roots, v1, v2)) {
         // no chance to create a prototype object - failure of segDiscover()
         // or DataMatchVisitor?
@@ -529,7 +539,7 @@ TValueId mergeValues(SymHeap            &sh,
     }
 
     // read lower bound estimation of seg1 length
-    const TObjId seg1 = sh.pointsTo(v1);
+    const TObjId seg1 = objRoot(sh, sh.pointsTo(v1));
     const unsigned len1 = segMinLength(sh, seg1);
 
     // by merging the values, we drop the last reference;  destroy the seg
@@ -537,12 +547,12 @@ TValueId mergeValues(SymHeap            &sh,
     segDestroy(sh, seg1);
 
     // read lower bound estimation of seg2 length
-    const TObjId seg2 = sh.pointsTo(v2);
+    const TObjId seg2 = objRoot(sh, sh.pointsTo(v2));
     const unsigned len2 = segMinLength(sh, seg2);
     segSetMinLength(sh, seg2, /* LS 0+ */ 0);
 
     // duplicate the nested abstract object on call of concretizeObj()
-    sh.objSetShared(seg2, false);
+    segSetShared(sh, seg2, false);
 
     // revalidate the lower bound estimation of segment length
     segSetMinLength(sh, seg2, (len1 < len2)
@@ -997,12 +1007,13 @@ bool validatePointingObjects(const SymHeap              &sh,
                              const TObjId               root,
                              TObjId                     prev,
                              TObjId                     next,
+                             const SymHeap::TContValue  &protoAddrs,
                              const bool                 toInsideOnly = false)
 {
-    TObjId peerPtr = OBJ_INVALID;
+    std::set<TObjId> allowedReferers;
     if (OK_DLS == sh.objKind(root))
         // retrieve peer's pointer to this object (if any)
-        peerPtr = peerPtrFromSeg(sh, dlSegPeer(sh, root));
+        allowedReferers.insert(peerPtrFromSeg(sh, dlSegPeer(sh, root)));
 
     if (OK_DLS == sh.objKind(prev))
         // jump to peer in case of DLS
@@ -1012,12 +1023,18 @@ bool validatePointingObjects(const SymHeap              &sh,
     SymHeap::TContObj refs;
     gatherPointingObjects(sh, refs, root, toInsideOnly);
 
+    // consider also up-links from nested prototypes
+    BOOST_FOREACH(const TValueId protoAt, protoAddrs) {
+        const TObjId seg = sh.pointsTo(protoAt);
+        const TObjId next = nextPtrFromSeg(sh, seg);
+        allowedReferers.insert(next);
+    }
+
     BOOST_FOREACH(const TObjId obj, refs) {
         if (validateSinglePointingObject(sh, bf, obj, prev, next))
             continue;
 
-        SE_BREAK_IF(OBJ_INVALID == obj);
-        if (obj == peerPtr)
+        if (hasKey(allowedReferers, obj))
             continue;
 
         // someone points at/inside who should not
@@ -1031,13 +1048,14 @@ bool validatePointingObjects(const SymHeap              &sh,
 bool validateSegEntry(const SymHeap              &sh,
                       const SegBindingFields     &bf,
                       const TObjId               entry,
-                      TObjId                     next)
+                      TObjId                     next,
+                      const SymHeap::TContValue  &protoAddrs)
 {
     const TFieldIdxChain &icHead = bf.head;
     if (icHead.empty()) {
         // no Linux lists involved
         return validatePointingObjects(sh, bf, entry, OBJ_INVALID, next,
-                                       /* toInsideOnly */ true);
+                                       protoAddrs, /* toInsideOnly */ true);
     }
 
     // jump to the head sub-object
@@ -1046,6 +1064,7 @@ bool validateSegEntry(const SymHeap              &sh,
 
     // FIXME: this is too strict for the _hlist_ variant of Linux lists
     if (!validatePointingObjects(sh, bf, head, OBJ_INVALID, next,
+                                 /* TODO */ SymHeap::TContValue(),
                                  /* toInsideOnly */ true))
         return false;
 
@@ -1112,7 +1131,8 @@ TObjId jumpToNextObj(const SymHeap              &sh,
     }
 
     if (dlSegOnPath
-            && !validatePointingObjects(sh, bf, obj, /* prev */ obj, next))
+            && !validatePointingObjects(sh, bf, obj, /* prev */ obj, next,
+                                        /* TODO */ SymHeap::TContValue()))
         // never step over a peer object that is pointed from outside!
         return OBJ_INVALID;
 
@@ -1189,7 +1209,8 @@ unsigned /* len */ segDiscover(const SymHeap            &sh,
             break;
         }
 
-        if (prev == entry && !validateSegEntry(sh, bf, entry, obj))
+        if (prev == entry
+                && !validateSegEntry(sh, bf, entry, obj, protoAddrs[0]))
             // invalid entry
             break;
 
@@ -1199,7 +1220,7 @@ unsigned /* len */ segDiscover(const SymHeap            &sh,
             // loop detected
             break;
 
-        if (!validatePointingObjects(sh, bf, obj, prev, next))
+        if (!validatePointingObjects(sh, bf, obj, prev, next, protoAddrs[1]))
             // someone points to inside who should not
             break;
 

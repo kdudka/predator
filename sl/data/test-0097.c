@@ -132,14 +132,12 @@ struct master_item* create_sll_of_dll(void *end)
 {
     struct master_item *sll = create_sll_item(end);
     sll = create_sll_item(sll);
-#if 0
     sll = create_sll_item(sll);
 
     // NOTE: running this on bare metal may cause the machine to swap a bit
     int i;
     for (i = 1; i; ++i)
         sll = create_sll_item(sll);
-#endif
 
     // the return will trigger further abstraction (stack frame destruction)
     return sll;
@@ -149,6 +147,6 @@ int main()
 {
     struct master_item *sll = create_sll_of_dll(NULL);
     ___sl_plot_by_ptr(&sll, NULL);
-    ___sl_break();
+    //___sl_break();
     return 0;
 }
