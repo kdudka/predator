@@ -216,25 +216,69 @@ void buildIgnoreList(const SymHeap &sh, TObjId obj, TIgnoreList &ignoreList) {
     }
 }
 
-bool segEqual(const SymHeap &sh, TValueId v1, TValueId v2);
-bool segMayBePrototype(const SymHeap &sh, const TValueId segAt);
+bool segEqual(const SymHeap     &sh,
+              const TObjPair    &roots,
+              const EObjKind    kind,
+              const TObjId      o1,
+              const TObjId      o2);
+
+bool segMayBePrototype(const SymHeap        &sh,
+                       const EObjKind       kind,
+                       const TObjId         seg,
+                       const TObjId         upSeg);
 
 bool segConsiderPrototype(const SymHeap     &sh,
+                          const TObjPair    &roots,
                           const TValueId    v1,
                           const TValueId    v2)
 {
-    return segEqual(sh, v1, v2)
-        && segMayBePrototype(sh, v1)
-        && segMayBePrototype(sh, v2);
+    TObjId o1 = sh.pointsTo(v1);
+    TObjId o2 = sh.pointsTo(v2);
+    SE_BREAK_IF(o1 <= 0 || o2 <= 0);
+
+    EObjKind kind = sh.objKind(o1);
+    if (sh.objKind(o2) != kind)
+        // object kind mismatch
+        return false;
+
+    if (OK_HEAD == kind) {
+        // jump to root, which should be a segment
+        o1 = objRoot(sh, o1);
+        o2 = objRoot(sh, o2);
+        SE_BREAK_IF(o1 <= 0 || o2 <= 0);
+        SE_BREAK_IF(OK_SLS != sh.objKind(o1) && OK_DLS != sh.objKind(o1));
+        SE_BREAK_IF(OK_SLS != sh.objKind(o2) && OK_DLS != sh.objKind(o2));
+
+        kind = sh.objKind(o1);
+        if (sh.objKind(o2) != kind)
+            // object kind mismatch
+            return false;
+    }
+
+    const struct cl_type *clt1 = sh.objType(o1);
+    const struct cl_type *clt2 = sh.objType(o2);
+    SE_BREAK_IF(!clt1 || !clt2);
+    if (*clt1 != *clt2)
+        // type mismatch
+        return false;
+
+    return segEqual(sh, roots, kind, o1, o2)
+        && segMayBePrototype(sh, kind, o1, roots.first)
+        && segMayBePrototype(sh, kind, o2, roots.second);
 }
 
 typedef SymHeap::TContValue TProtoAddrs[2];
 
 struct DataMatchVisitor {
-    std::set<TObjId> ignoreList;
-    TProtoAddrs *protoAddrs;
+    std::set<TObjId>    ignoreList;
+    TProtoAddrs         *protoAddrs;
+    TObjPair            roots_;
 
-    DataMatchVisitor(): protoAddrs(0) { }
+    DataMatchVisitor(TObjId o1, TObjId o2):
+        protoAddrs(0),
+        roots_(o1, o2)
+    {
+    }
 
     bool operator()(const SymHeap &sh, TObjPair item) const {
         const TObjId o1 = item.first;
@@ -270,7 +314,7 @@ struct DataMatchVisitor {
 
             case UV_ABSTRACT:
                 // FIXME: unguarded recursion!
-                if (!segConsiderPrototype(sh, v1, v2))
+                if (!segConsiderPrototype(sh, roots_, v1, v2))
                     break;
 
                 if (protoAddrs) {
@@ -285,143 +329,170 @@ struct DataMatchVisitor {
     }
 };
 
-bool segEqual(const SymHeap &sh, TValueId v1, TValueId v2) {
-    TObjId o1 = sh.pointsTo(v1);
-    TObjId o2 = sh.pointsTo(v2);
-    SE_BREAK_IF(o1 <= 0 || o2 <= 0);
+bool validateUpLink(const SymHeap       &sh,
+                    const TObjPair      &roots,
+                    const TValueId      valNext1,
+                    const TValueId      valNext2)
+{
+    const TObjId root1 = roots.first;
+    const TObjId root2 = roots.second;
+    SE_BREAK_IF(root1 <= 0 || root2 <= 0);
 
-    EObjKind kind = sh.objKind(o1);
-    if (sh.objKind(o2) != kind)
+    TObjId o1 = sh.pointsTo(valNext1);
+    TObjId o2 = sh.pointsTo(valNext2);
+    if (o1 <= 0 || o2 <= 0)
+        // non starter
         return false;
 
-    if (OK_HEAD == kind) {
-        // jump to root, which should be a segment
-        o1 = objRoot(sh, o1);
-        o2 = objRoot(sh, o2);
-        SE_BREAK_IF(o1 <= 0 || o2 <= 0);
-        SE_BREAK_IF(OK_SLS != sh.objKind(o1) && OK_DLS != sh.objKind(o1));
-        SE_BREAK_IF(OK_SLS != sh.objKind(o2) && OK_DLS != sh.objKind(o2));
+    for (;;) {
+        int nth1, nth2;
+        o1 = sh.objParent(o1, &nth1);
+        o2 = sh.objParent(o2, &nth2);
 
-        kind = sh.objKind(o1);
-        if (sh.objKind(o2) != kind)
+        if (OBJ_INVALID == o1 || OBJ_INVALID == o2)
+            // root mismatch
             return false;
-    }
 
-    const struct cl_type *clt1 = sh.objType(o1);
-    const struct cl_type *clt2 = sh.objType(o2);
-    SE_BREAK_IF(!clt1 || !clt2);
-    if (*clt1 != *clt2)
-        // type mismatch
-        return false;
+        if (nth1 != nth2)
+            // selector mismatch
+            return false;
 
-    TObjId peer1 = o1;
-    TObjId peer2 = o2;
-    switch (kind) {
-        case OK_DLS:
-            if (sh.objBinding(o1).peer != sh.objBinding(o2).peer)
-                // 'peer' selector mismatch
-                return false;
-
-            peer1 = dlSegPeer(sh, o1);
-            peer2 = dlSegPeer(sh, o2);
-            // fall through!
-
-        case OK_SLS:
-            if (sh.objBinding(o1).next != sh.objBinding(o2).next)
-                // 'next' selector mismatch
-                return false;
-
+        if (root1 == o1 && root2 == o2)
+            // uplink validated!
             break;
-
-        default:
-#if SE_SELF_TEST
-            SE_TRAP;
-#endif
-            return false;
     }
 
-    // so far equal, now compare the 'next' values
-    const TObjId next1 = nextPtrFromSeg(sh, peer1);
-    const TObjId next2 = nextPtrFromSeg(sh, peer2);
-    if (sh.valueOf(next1) != sh.valueOf(next2))
+    CL_WARN("validateUpLink() matched an up-link, "
+            "but concretization of up-links is not yet implemented!");
+    return true;
+}
+
+bool segMatchNextValues(const SymHeap     &sh,
+                        const TObjPair    &roots,
+                        const TObjId      seg1,
+                        const TObjId      seg2)
+{
+    const TValueId v1 = sh.valueOf(nextPtrFromSeg(sh, seg1));
+    const TValueId v2 = sh.valueOf(nextPtrFromSeg(sh, seg2));
+    if (VAL_NULL == v1 && VAL_NULL == v2)
+        // both values are NULL
+        return true;
+
+    if (validateUpLink(sh, roots, v1, v2))
+        // valid uplink found
+        return true;
+
+    // TODO
+    return false;
+}
+
+bool segEqual(const SymHeap     &sh,
+              const TObjPair    &roots,
+              const EObjKind    kind,
+              const TObjId      o1,
+              const TObjId      o2)
+{
+    const bool isDls = (OK_DLS == kind);
+    SE_BREAK_IF(!isDls && OK_SLS != kind);
+
+    if (sh.objBinding(o1).next != sh.objBinding(o2).next)
+        // 'next' selector mismatch
         return false;
+
+    if (sh.objBinding(o1).peer != sh.objBinding(o2).peer)
+        // 'peer' selector mismatch
+        return false;
+
+    if (!segMatchNextValues(sh, roots, o1, o2))
+        // end-point value mismatch
+        return false;
+
+    if (isDls) {
+        const TObjId peer1 = dlSegPeer(sh, o1);
+        const TObjId peer2 = dlSegPeer(sh, o2);
+        if (!segMatchNextValues(sh, roots, peer1, peer2))
+            // end-point value mismatch
+            return false;
+    }
 
     // compare the data
-    DataMatchVisitor visitor;
+    DataMatchVisitor visitor(o1, o2);
     buildIgnoreList(sh, o1, visitor.ignoreList);
     const TObjPair item(o1, o2);
     return traverseSubObjs(sh, item, visitor, /* leavesOnly */ true);
 }
 
-// TODO: rewrite the following nonsense!
-bool segMayBePrototype(const SymHeap &sh, const TValueId segAt) {
-    const TObjId seg = sh.pointsTo(segAt);
-    const TValueId headAddr = segHeadAddr(sh, seg);
-    const TValueId valNext = sh.valueOf(nextPtrFromSeg(sh, seg));
+class PointingObjectsFinder {
+    SymHeap::TContObj &dst_;
 
-    const EObjKind kind = sh.objKind(seg);
-    switch (kind) {
-        case OK_CONCRETE:
-        case OK_HEAD:
-        case OK_PART:
-            // concrete objects are not supported as prototypes now
-            SE_TRAP;
-            return false;
+    public:
+        PointingObjectsFinder(SymHeap::TContObj &dst): dst_(dst) { }
 
-        case OK_SLS:
-            if (VAL_NULL != valNext)
-                return false;
+        bool operator()(const SymHeap &sh, TObjId obj) const {
+            const TValueId addr = sh.placedAt(obj);
+            SE_BREAK_IF(addr <= 0);
 
-            if (1U != sh.usedByCount(headAddr))
-                return false;
-
-            // TODO
-            return true;
-
-        case OK_DLS:
-            break;
-    }
-
-    const TObjId peer = dlSegPeer(sh, seg);
-    const TValueId valPrev = sh.valueOf(nextPtrFromSeg(sh, peer));
-    if (VAL_NULL != valNext || VAL_NULL != valPrev)
-        return false;
-
-    const TValueId peerAddr = segHeadAddr(sh, peer);
-    if (1U != sh.usedByCount(peerAddr))
-        return false;
-
-    SymHeap::TContObj refs;
-    sh.usedBy(refs, headAddr);
-
-    const TObjId peerPtr = peerPtrFromSeg(sh, peer);
-    TObjId pointedFrom = OBJ_INVALID;
-
-    BOOST_FOREACH(const TObjId ref, refs) {
-        if (ref == peerPtr)
-            continue;
-
-        const TObjId root = objRoot(sh, ref);
-
-        if (OBJ_INVALID == pointedFrom) {
-            pointedFrom = root;
-            continue;
+            sh.usedBy(dst_, addr);
+            return /* continue */ true;
         }
+};
 
-        if (OK_DLS != sh.objKind(pointedFrom))
+void gatherPointingObjects(const SymHeap            &sh,
+                           SymHeap::TContObj        &dst,
+                           const TObjId             root,
+                           bool                     toInsideOnly)
+{
+    const PointingObjectsFinder visitor(dst);
+
+    if (!toInsideOnly)
+        visitor(sh, root);
+
+    traverseSubObjs(sh, root, visitor, /* leavesOnly */ false);
+}
+
+bool segMayBePrototype(const SymHeap        &sh,
+                       const EObjKind       kind,
+                       const TObjId         seg,
+                       const TObjId         upSeg)
+{
+    SE_BREAK_IF(OK_DLS != kind && OK_SLS != kind);
+    const TObjId peer = (OK_DLS == kind)
+        ? dlSegPeer(sh, seg)
+        : static_cast<TObjId>(OBJ_INVALID);
+
+    // gather pointing objects
+    SymHeap::TContObj refs;
+    gatherPointingObjects(sh, refs, seg, /* toInsideOnly */ false);
+    if (OBJ_INVALID != peer)
+        gatherPointingObjects(sh, refs, peer, /* toInsideOnly */ false);
+
+    // declare set of allowed pointing objects
+    std::set<TObjId> allowedRoots;
+    allowedRoots.insert(seg);
+    allowedRoots.insert(upSeg);
+    if (OBJ_INVALID != peer)
+        allowedRoots.insert(peer);
+
+    // wait, upSeg can already be a segment at this point!
+    if (OK_DLS == sh.objKind(upSeg))
+        allowedRoots.insert(dlSegPeer(sh, upSeg));
+
+    // go through all pointing objects and validate them
+    BOOST_FOREACH(const TObjId obj, refs) {
+        const TObjId root = objRoot(sh, obj);
+        if (!hasKey(allowedRoots, root))
             return false;
-
-        if (root == dlSegPeer(sh, pointedFrom))
-            continue;
-
-        SE_TRAP;
     }
 
-    // TODO
+    // no intruder found!
     return true;
 }
 
-TValueId mergeValues(SymHeap &sh, TValueId v1, TValueId v2) {
+TValueId mergeValues(SymHeap            &sh,
+                     const TObjPair     &roots,
+                     const TValueId     v1,
+                     const TValueId     v2)
+{
     if (v1 == v2)
         return v1;
 
@@ -448,7 +519,7 @@ TValueId mergeValues(SymHeap &sh, TValueId v1, TValueId v2) {
     if (UV_ABSTRACT != code)
         return sh.valCreateUnknown(code, clt);
 
-    if (!segConsiderPrototype(sh, v1, v2)) {
+    if (!segConsiderPrototype(sh, roots, v1, v2)) {
         // no chance to create a prototype object - failure of segDiscover()
         // or DataMatchVisitor?
 #if SE_SELF_TEST
@@ -485,6 +556,12 @@ TValueId mergeValues(SymHeap &sh, TValueId v1, TValueId v2) {
 struct ValueAbstractor {
     std::set<TObjId>    ignoreList;
     bool                bidir;
+    TObjPair            roots_;
+
+    ValueAbstractor(TObjId o1, TObjId o2):
+        roots_(o1, o2)
+    {
+    }
 
     bool operator()(SymHeap &sh, TObjPair item) const {
         const TObjId src = item.first;
@@ -500,7 +577,7 @@ struct ValueAbstractor {
             return /* continue */ true;
 
         // merge values
-        const TValueId valNew = mergeValues(sh, valSrc, valDst);
+        const TValueId valNew = mergeValues(sh, roots_, valSrc, valDst);
         sh.objSetValue(dst, valNew);
         if (this->bidir)
             sh.objSetValue(src, valNew);
@@ -558,7 +635,7 @@ struct UnknownValuesDuplicator {
 void abstractNonMatchingValues(SymHeap &sh, TObjId src, TObjId dst,
                                bool bidir = false)
 {
-    ValueAbstractor visitor;
+    ValueAbstractor visitor(src, dst);
     visitor.bidir       = bidir;
     buildIgnoreList(sh, dst, visitor.ignoreList);
 
@@ -898,21 +975,6 @@ bool preserveHeadPtr(const SymHeap                &sh,
     return false;
 }
 
-class PointingObjectsFinder {
-    SymHeap::TContObj &dst_;
-
-    public:
-        PointingObjectsFinder(SymHeap::TContObj &dst): dst_(dst) { }
-
-        bool operator()(const SymHeap &sh, TObjId obj) const {
-            const TValueId addr = sh.placedAt(obj);
-            SE_BREAK_IF(addr <= 0);
-
-            sh.usedBy(dst_, addr);
-            return /* continue */ true;
-        }
-};
-
 bool validateSinglePointingObject(const SymHeap             &sh,
                                   const SegBindingFields    &bf,
                                   const TObjId              obj,
@@ -948,12 +1010,7 @@ bool validatePointingObjects(const SymHeap              &sh,
 
     // collect all object pointing at/inside the object
     SymHeap::TContObj refs;
-    const PointingObjectsFinder visitor(refs);
-
-    if (!toInsideOnly)
-        visitor(sh, root);
-
-    traverseSubObjs(sh, root, visitor, /* leavesOnly */ false);
+    gatherPointingObjects(sh, refs, root, toInsideOnly);
 
     BOOST_FOREACH(const TObjId obj, refs) {
         if (validateSinglePointingObject(sh, bf, obj, prev, next))
@@ -1070,7 +1127,7 @@ bool matchData(const SymHeap                &sh,
 {
     const TObjId nextPtr = subObjByChain(sh, o1, bf.next);
 
-    DataMatchVisitor visitor;
+    DataMatchVisitor visitor(o1, o2);
     visitor.ignoreList.insert(nextPtr);
     visitor.protoAddrs = protoAddrs;
 
