@@ -220,56 +220,10 @@ void buildIgnoreList(const SymHeap &sh, TObjId obj, TIgnoreList &ignoreList) {
     }
 }
 
-bool segEqual(const SymHeap     &sh,
-              const TObjPair    &roots,
-              const EObjKind    kind,
-              const TObjId      o1,
-              const TObjId      o2);
-
-bool segMayBePrototype(const SymHeap        &sh,
-                       const EObjKind       kind,
-                       const TObjId         seg,
-                       const TObjId         upSeg);
-
 bool segConsiderPrototype(const SymHeap     &sh,
                           const TObjPair    &roots,
                           const TValueId    v1,
-                          const TValueId    v2)
-{
-    TObjId o1 = sh.pointsTo(v1);
-    TObjId o2 = sh.pointsTo(v2);
-    SE_BREAK_IF(o1 <= 0 || o2 <= 0);
-
-    EObjKind kind = sh.objKind(o1);
-    if (sh.objKind(o2) != kind)
-        // object kind mismatch
-        return false;
-
-    if (OK_HEAD == kind) {
-        // jump to root, which should be a segment
-        o1 = objRoot(sh, o1);
-        o2 = objRoot(sh, o2);
-        SE_BREAK_IF(o1 <= 0 || o2 <= 0);
-        SE_BREAK_IF(OK_SLS != sh.objKind(o1) && OK_DLS != sh.objKind(o1));
-        SE_BREAK_IF(OK_SLS != sh.objKind(o2) && OK_DLS != sh.objKind(o2));
-
-        kind = sh.objKind(o1);
-        if (sh.objKind(o2) != kind)
-            // object kind mismatch
-            return false;
-    }
-
-    const struct cl_type *clt1 = sh.objType(o1);
-    const struct cl_type *clt2 = sh.objType(o2);
-    SE_BREAK_IF(!clt1 || !clt2);
-    if (*clt1 != *clt2)
-        // type mismatch
-        return false;
-
-    return segEqual(sh, roots, kind, o1, o2)
-        && segMayBePrototype(sh, kind, o1, roots.first)
-        && segMayBePrototype(sh, kind, o2, roots.second);
-}
+                          const TValueId    v2);
 
 typedef SymHeap::TContValue TProtoAddrs[2];
 
@@ -492,6 +446,84 @@ bool segMayBePrototype(const SymHeap        &sh,
     return true;
 }
 
+bool segConsiderPrototype(const SymHeap     &sh,
+                          const TObjPair    &roots,
+                          const TValueId    v1,
+                          const TValueId    v2)
+{
+    TObjId o1 = sh.pointsTo(v1);
+    TObjId o2 = sh.pointsTo(v2);
+    SE_BREAK_IF(o1 <= 0 || o2 <= 0);
+
+    EObjKind kind = sh.objKind(o1);
+    if (sh.objKind(o2) != kind)
+        // object kind mismatch
+        return false;
+
+    if (OK_HEAD == kind) {
+        // jump to root, which should be a segment
+        o1 = objRoot(sh, o1);
+        o2 = objRoot(sh, o2);
+        SE_BREAK_IF(o1 <= 0 || o2 <= 0);
+        SE_BREAK_IF(OK_SLS != sh.objKind(o1) && OK_DLS != sh.objKind(o1));
+        SE_BREAK_IF(OK_SLS != sh.objKind(o2) && OK_DLS != sh.objKind(o2));
+
+        kind = sh.objKind(o1);
+        if (sh.objKind(o2) != kind)
+            // object kind mismatch
+            return false;
+    }
+
+    const struct cl_type *clt1 = sh.objType(o1);
+    const struct cl_type *clt2 = sh.objType(o2);
+    SE_BREAK_IF(!clt1 || !clt2);
+    if (*clt1 != *clt2)
+        // type mismatch
+        return false;
+
+    return segEqual(sh, roots, kind, o1, o2)
+        && segMayBePrototype(sh, kind, o1, roots.first)
+        && segMayBePrototype(sh, kind, o2, roots.second);
+}
+
+TValueId mergeAbstractValues(SymHeap            &sh,
+                             const TObjPair     &roots,
+                             const TValueId     v1,
+                             const TValueId     v2)
+{
+    if (OBJ_DELETED == sh.pointsTo(v1)
+            && OK_DLS == sh.objKind(objRoot(sh, sh.pointsTo(v2))))
+        // this is tricky, we've already deleted the peer of nested Linux DLS,
+        // as part of a precedent merge, we should keep going...
+        return v2;
+
+    SE_BREAK_IF(!segConsiderPrototype(sh, roots, v1, v2));
+    (void) roots;
+
+    // read lower bound estimation of seg1 length
+    const TObjId seg1 = objRoot(sh, sh.pointsTo(v1));
+    const unsigned len1 = segMinLength(sh, seg1);
+
+    // by merging the values, we drop the last reference;  destroy the seg
+    segSetMinLength(sh, seg1, /* LS 0+ */ 0);
+    segDestroy(sh, seg1);
+
+    // read lower bound estimation of seg2 length
+    const TObjId seg2 = objRoot(sh, sh.pointsTo(v2));
+    const unsigned len2 = segMinLength(sh, seg2);
+    segSetMinLength(sh, seg2, /* LS 0+ */ 0);
+
+    // duplicate the nested abstract object on call of concretizeObj()
+    segSetShared(sh, seg2, false);
+
+    // revalidate the lower bound estimation of segment length
+    segSetMinLength(sh, seg2, (len1 < len2)
+            ? len1
+            : len2);
+
+    return v2;
+}
+
 TValueId mergeValues(SymHeap            &sh,
                      const TObjPair     &roots,
                      const TValueId     v1,
@@ -520,46 +552,10 @@ TValueId mergeValues(SymHeap            &sh,
         ? code1
         : UV_UNKNOWN;
 
-    if (UV_ABSTRACT != code)
-        return sh.valCreateUnknown(code, clt);
+    if (UV_ABSTRACT == code)
+        return mergeAbstractValues(sh, roots, v1, v2);
 
-    if (OBJ_DELETED == sh.pointsTo(v1)
-            && OK_DLS == sh.objKind(objRoot(sh, sh.pointsTo(v2))))
-        // this is tricky, we've already deleted the peer of nested Linux DLS,
-        // as part of a precedent merge, we should keep going...
-        return v2;
-
-    if (!segConsiderPrototype(sh, roots, v1, v2)) {
-        // no chance to create a prototype object - failure of segDiscover()
-        // or DataMatchVisitor?
-#if SE_SELF_TEST
-        SE_TRAP;
-#endif
-        return sh.valCreateUnknown(UV_UNKNOWN, clt);
-    }
-
-    // read lower bound estimation of seg1 length
-    const TObjId seg1 = objRoot(sh, sh.pointsTo(v1));
-    const unsigned len1 = segMinLength(sh, seg1);
-
-    // by merging the values, we drop the last reference;  destroy the seg
-    segSetMinLength(sh, seg1, /* LS 0+ */ 0);
-    segDestroy(sh, seg1);
-
-    // read lower bound estimation of seg2 length
-    const TObjId seg2 = objRoot(sh, sh.pointsTo(v2));
-    const unsigned len2 = segMinLength(sh, seg2);
-    segSetMinLength(sh, seg2, /* LS 0+ */ 0);
-
-    // duplicate the nested abstract object on call of concretizeObj()
-    segSetShared(sh, seg2, false);
-
-    // revalidate the lower bound estimation of segment length
-    segSetMinLength(sh, seg2, (len1 < len2)
-            ? len1
-            : len2);
-
-    return v2;
+    return sh.valCreateUnknown(code, clt);
 }
 
 // visitor
@@ -966,11 +962,6 @@ bool preserveHeadPtr(const SymHeap                &sh,
         // no valid address anyway
         return false;
 
-    // FIXME: should we utilize the prover instead?
-    if (valPrev == valNext)
-        // keep DLS Neq predicates going
-        return true;
-
     const TValueId addrHead = sh.placedAt(subObjByChain(sh, obj, bf.head));
     if (valPrev == addrHead || valNext == addrHead)
         // head pointer detected
@@ -1006,7 +997,7 @@ bool validatePointingObjects(const SymHeap              &sh,
                              const SegBindingFields     &bf,
                              const TObjId               root,
                              TObjId                     prev,
-                             TObjId                     next,
+                             const TObjId               next,
                              const SymHeap::TContValue  &protoAddrs,
                              const bool                 toInsideOnly = false)
 {
@@ -1026,8 +1017,8 @@ bool validatePointingObjects(const SymHeap              &sh,
     // consider also up-links from nested prototypes
     BOOST_FOREACH(const TValueId protoAt, protoAddrs) {
         const TObjId seg = sh.pointsTo(protoAt);
-        const TObjId next = nextPtrFromSeg(sh, seg);
-        allowedReferers.insert(next);
+        const TObjId nextPtr = nextPtrFromSeg(sh, seg);
+        allowedReferers.insert(nextPtr);
     }
 
     BOOST_FOREACH(const TObjId obj, refs) {
@@ -1048,7 +1039,7 @@ bool validatePointingObjects(const SymHeap              &sh,
 bool validateSegEntry(const SymHeap              &sh,
                       const SegBindingFields     &bf,
                       const TObjId               entry,
-                      TObjId                     next,
+                      const TObjId               next,
                       const SymHeap::TContValue  &protoAddrs)
 {
     const TFieldIdxChain &icHead = bf.head;
