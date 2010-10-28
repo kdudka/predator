@@ -90,4 +90,29 @@ inline TValueId segHeadAddr(const SymHeap &sh, TObjId seg) {
     return sh.placedAt(head);
 }
 
+template <class TIgnoreList>
+void buildIgnoreList(const SymHeap &sh, TObjId obj, TIgnoreList &ignoreList) {
+    TObjId tmp;
+
+    const EObjKind kind = sh.objKind(obj);
+    switch (kind) {
+        case OK_CONCRETE:
+        case OK_HEAD:
+        case OK_PART:
+            // invalid call of buildIgnoreList()
+            SE_TRAP;
+
+        case OK_DLS:
+            // preserve 'peer' field
+            tmp = subObjByChain(sh, obj, sh.objBinding(obj).peer);
+            ignoreList.insert(tmp);
+            // fall through!
+
+        case OK_SLS:
+            // preserve 'next' field
+            tmp = subObjByChain(sh, obj, sh.objBinding(obj).next);
+            ignoreList.insert(tmp);
+    }
+}
+
 #endif /* H_GUARD_SYMSEG_H */
