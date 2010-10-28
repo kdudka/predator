@@ -178,6 +178,11 @@ Linux lists
 
     test-0096.c - tiny modification of test-0087 that operates on infinite list
 
+    test-0097.c - Linux like doubly-linked lists nested into plain SLS
+                - only abstraction here, no concretization
+
+    test-0098.c - alternation of test-0097 with two independent nested lists
+
 
 Show-case
 =========
