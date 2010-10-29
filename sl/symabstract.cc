@@ -637,6 +637,16 @@ void dlSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf)
 #endif
 }
 
+void segAbstractionStep(SymHeap                     &sh,
+                        const SegBindingFields      &bf,
+                        TObjId                      *pObj)
+{
+    if (bf.peer.empty())
+        slSegAbstractionStep(sh, pObj, bf);
+    else
+        dlSegAbstractionStep(sh, pObj, bf);
+}
+
 bool considerAbstraction(SymHeap                    &sh,
                          const SegBindingFields     &bf,
                          const TObjId               entry,
@@ -668,34 +678,22 @@ bool considerAbstraction(SymHeap                    &sh,
     for (unsigned i = 0; i < at.sparePrefix; ++i)
         skipObj(sh, &obj, bf.head, bf.next);
 
-    if (isSls) {
-        // perform SLS abstraction!
-        CL_DEBUG("    AAA initiating SLS abstraction of length " << len);
-        debugPlotInit("SLS");
+    const char *name = (isSls)
+        ? "SLS"
+        : "DLS";
+    CL_DEBUG("    AAA initiating " << name
+             << " abstraction of length " << len);
+
+    debugPlotInit(name);
+    debugPlot(sh);
+
+    for (int i = 0; i < len; ++i) {
+        segAbstractionStep(sh, bf, &obj);
         debugPlot(sh);
-
-        for (int i = 0; i < len; ++i) {
-            slSegAbstractionStep(sh, &obj, bf);
-            debugPlot(sh);
-        }
-
-        CL_DEBUG("<-- successfully abstracted SLS");
-        return true;
     }
-    else {
-        // perform DLS abstraction!
-        CL_DEBUG("    AAA initiating DLS abstraction of length " << len);
-        debugPlotInit("DLS");
-        debugPlot(sh);
 
-        for (int i = 0; i < len; ++i) {
-            dlSegAbstractionStep(sh, &obj, bf);
-            debugPlot(sh);
-        }
-
-        CL_DEBUG("<-- successfully abstracted DLS");
-        return true;
-    }
+    CL_DEBUG("<-- successfully abstracted " << name);
+    return true;
 }
 
 void segReplaceRefs(SymHeap &sh, TValueId valOld, TValueId valNew) {
@@ -834,8 +832,8 @@ unsigned /* len */ spliceOutSegmentIfNeeded(SymHeap &sh, TObjId ao, TObjId peer,
 
 void abstractIfNeeded(SymHeap &sh) {
 #if SE_DISABLE_SLS && SE_DISABLE_DLS
-    (void) sh;
-#else
+    return;
+#endif
     SegBindingFields    bf;
     TObjId              entry;
     unsigned            len;
@@ -848,7 +846,6 @@ void abstractIfNeeded(SymHeap &sh) {
         // some part of the symbolic heap has just been successfully abstracted,
         // let's look if there remains anything else suitable for abstraction
     }
-#endif
 }
 
 void concretizeObj(SymHeap &sh, TValueId addr, TSymHeapList &todo) {

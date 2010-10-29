@@ -357,7 +357,7 @@ bool validatePointingObjects(const SymHeap              &sh,
         // jump to peer in case of DLS
         prev = dlSegPeer(sh, prev);
 
-    // collect all object pointing at/inside the object
+    // collect all objects pointing at/inside the object
     SymHeap::TContObj refs;
     gatherPointingObjects(sh, refs, root, toInsideOnly);
 

@@ -38,16 +38,16 @@ bool segConsiderPrototype(
 #endif
 
 /**
- * Take the given symbolic heap and look there for the best possible
- * abstraction.  If nothing is found, zero is returned.  Otherwise it return
- * total length of the best possible abstraction.  In that case, *bf is set to
- * the corresponding binding fields (head, next, peer) and *entry is set to the
- * corresponding starting point of the possible abstraction.
+ * Take the given symbolic heap and look for the best possible abstraction in
+ * there.  If nothing is found, zero is returned.  Otherwise it returns total
+ * length of the best possible abstraction.  In that case, *bf is set to the
+ * corresponding binding fields (head, next, peer) and *entry is set to the
+ * corresponding starting point of the abstraction.
  *
- * In case of success (non-zero return value), you can determine the type of
- * the detected possible abstraction by *bf.  If bf->peer is empty, it means a
- * SLS abstraction;  DLS otherwise.  If bf->head is empty, it means a regular
- * list segment abstraction;  Linux list segment otherwise.
+ * In case of success (non-zero return value), you can determine the type of the
+ * detected abstraction by *bf.  If bf->peer is empty, it means a SLS
+ * abstraction;  DLS otherwise.  If bf->head is empty, it means a regular list
+ * segment abstraction;  Linux list segment otherwise.
  *
  * In case of failure (zero return value), *bf and *entry are not touched at
  * all.
