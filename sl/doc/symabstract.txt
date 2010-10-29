@@ -1,0 +1,241 @@
+symabstract - public interface
+==============================
+
+
+abstractIfNeeded()
+------------------
+- given a symbolic heap, it performs all possible abstractions which are
+  considered useful
+
+- currently we support only various kinds of list segments (approach heavily
+  used in separation logic related work)
+
+
+concretizeObj()
+---------------
+- given an abstract object, it materializes a concrete one according to the
+  shape that the original (abstract) object has been representing
+
+- if the result of the operation is ambiguous, all possibilities are considered
+  one by one -- the first result is always returned as modification of the given
+  heap, the others are eventually scheduled for additional processing elsewhere
+
+
+spliceOutListSegment()
+----------------------
+- given two distinct values, where the first one has to be abstract, it assumes
+  that both of them actually represent the same heap object, and that fact is
+  to be reflected in the given symbolic heap
+
+- the consequence of the operation is usually removal of a list segment and
+  direct cross-connection of its neighbours in the row, a.k.a. splice-out
+
+- the operation may fail in case the values are not known to be directly
+  related, and the caller should survive it
+
+
+How the abstraction is done
+===========================
+- algorithm
+    1. Using the 'symdiscover' module, search the given symbolic heap for the
+       best possible abstraction.  If there is no such abstraction, finish.
+
+    2. Compare length of the best possible abstraction with a threshold.  If the
+       length is under the threshold, finish.
+
+    3. For an abstraction of length N, perform N abstraction steps (assuming
+       there is no spare prefix/postfix configured).
+
+    4. Jump back to point 1.
+
+
+Abstraction step for SLS
+------------------------
+- we have only one procedure performing abstraction step in case of SLS, named
+  slSegAbstractionStep()
+
+- the operation is consuming, which means that exactly one heap object
+  disappears in one step
+
+- input:
+    - symbolic heap
+    - entry object (an object that is about to be abstracted out)
+    - head selector (empty for regular lists)
+    - next selector
+
+- output:
+    - symbolic heap (desired modification of the given one)
+    - next object
+
+- algorithm:
+    1. Using the entry point and the 'next' and 'head' selectors, jump to the
+       next object.
+
+    2. Compute the resulting segment's length (lower bound) as sum of the length
+       of the entry object and the next object.
+
+    3. Mark the _next_ object as abstract _if not already_.
+
+    4. Merge all data of the entry object into data of the _next_ object.
+       NOTE: At this point we already know that such an abstraction is possible,
+       see symdiscover for details.
+
+    5. Take all pointers to the _entry_ object and redirect them to the _next_
+       object.  This affects only pointers to head (to root in case of regular
+       lists), no other pointers to inside are allowed anyway.
+
+    6. Replace the _entry_ object by the next object.
+
+    7. Apply the computed segment length on the resulting list segment.
+
+    8. Return the resulting list segment as the 'next' object.
+
+
+Abstraction steps for DLS
+-------------------------
+- we have 3 distinct variants of DLS abstraction step
+- each variant of the step results into a DLS pair
+
+    dlSegCreate() - takes two concrete objects
+
+    dlSegGobble() - takes a DLS pair and a concrete object
+
+    dlSegMerge() - takes two DLS pairs
+
+
+dlSegCreate()
+-------------
+- input:
+    - two concrete heap objects (o1, o2)
+    - next and prev selectors
+
+- algorithm:
+    1. Mark the object o1 as part of DLS, using the given 'head' selector, and
+       using 'prev' selector as 'next' binding field and 'next' selector as
+       'peer' binding field.
+
+    2. Mark the object o2 as part of DLS, using the given 'head' selector, and
+       using 'next' selector as 'next' binding field and 'prev' selector as
+       'peer' binding field.
+
+    3. Merge all data of both objects bi-directionally.  Thanks to symdiscover,
+       we already know the abstraction is possible and safe.
+
+    4. Set length (lower bound) of the just created DLS to 2.
+
+
+dlSegGobble()
+-------------
+- input:
+    - a half of DLS (denoted 'dls')
+    - a concrete heap object (denoted 'var')
+    - 'backward' flag
+      (if true, 'var' appears before 'dls' on the abstraction path)
+
+- algorithm:
+    1. Compute the resulting segment's length (lower bound) as length of 'dls',
+       increased by one.  Then set the length of 'dls' temporarily to zero.
+
+    2. If the 'backward' flag is set, assign the peer of 'dls' to 'dls'.
+
+    3. Merge all data of 'var' into data of 'dls'.  NOTE: At this point we
+       already know that such an abstraction is possible, see symdiscover for
+       details.
+
+    4. Using the binding fields associated with 'dls', take value of the next
+       pointer in 'var' and assign it to the next pointer in 'dls'.
+
+    5. Replace the object 'var' by the object 'dls'.
+
+    6. Set length (lower bound) of 'dls' to the value computed in the step 1.
+
+
+dlSegMerge()
+------------
+- input:
+    - a half of a DLS (denoted seg1)
+    - a half of another DLS (denoted seg2)
+
+- algorithm:
+    1. Compute the resulting segment's length (lower bound) as sum of length
+       of 'seg1' and 'seg2'.  Then temporarily reset both lengths to zero.
+
+    2. Using the binding fields associated with 'seg1' and 'seg2', jump to their
+       peer objects and denote them 'peer1' and 'peer2'.
+
+    3. Merge all data of 'seg1' and 'seg2' bi-directionally.  Thanks to
+       symdiscover, we already know the abstraction is possible and safe.
+
+    4. Merge all data of 'peer1' and 'peer2' bi-directionally.  Thanks to
+       symdiscover, we already know the abstraction is possible and safe.
+
+    5. Take the value of next pointer of 'seg1' (back-link actually) and assign
+       it to the next pointer of 'seg2'.
+
+    6. Replace all references to head of 'seg1' by address of 'seg2'.
+
+    7. Replace all references to head of 'peer1' by address of 'peer2'.
+
+    8. Replace the abstract heap object 'seg1' by 'seg2'.
+
+    9. Replace the abstract heap object 'peer1' by 'peer2'.
+
+    10. Set length (lower bound) of 'dls' to the value computed in the step 1.
+
+
+How data is merged during an abstraction step
+---------------------------------------------
+- input:
+    - a heap object denoted 'src'
+    - a heap object denoted 'dst'
+    - a 'bi-directional' flag
+
+- algorithm:
+    1. Traverse synchronously heap objects 'src' and 'dst' and for each pair
+       of scalar sub-objects, denoted 'objSrc' and 'objDst', do:
+
+        a) Read values 'valSrc' and 'valDst' of the corresponding scalar
+           sub-objects of 'objSrc' and 'objDst'.
+
+        b) Use the symbolic heap prover to compare the values.  If the values
+           are equal with each other, continue with the next pair of scalar
+           sub-objects from step 1.
+
+        c) Call mergeValues(valSrc, valDst), denote its result as 'val'.
+
+        d) Set the value of 'objDst' to 'val'.
+
+        e) If the flag 'bi-directional' is enabled, set the value of 'objSrc'
+           to 'val'.
+
+        f) Continue with the next pair of scalar sub-objects from step 1.
+
+
+mergeValues()
+-------------
+- input:
+    - a heap value denoted 'valSrc'
+    - a heap value denoted 'valDst'
+
+- output:
+    - a heap value denoted 'val'
+
+- algorithm:
+    1. If at least one of the values does _not_ point to a list segment, return
+       a newly created unknown valuea as 'val'.
+
+    2. Otherwise the values point to a pair of _compatible_ list segments, since
+       it was a necessary precondition for allowing the abstraction step.  Let's
+       denote the segments 'seg1' and 'seg2'.
+
+    3. Compute the resulting prototype's length (lower bound) as minimum
+       of lengths of 'seg1' and 'seg2'.  Reset both lengths to zero temporarily.
+
+    4. Destroy the list segment 'seg1'.
+
+    5. Mark the list segment 'seg2' as prototype.
+
+    6. Apply the computed minimal length on 'seg2'.
+
+    7. Return the address of 'seg2' head (root in case of regular list)
+       as 'val'.
