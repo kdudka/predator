@@ -33,8 +33,6 @@
 
 #include <boost/foreach.hpp>
 
-namespace {
-
 typedef SymHeap::TContValue TProtoAddrs[2];
 
 struct DataMatchVisitor {
@@ -227,8 +225,6 @@ bool segMayBePrototype(const SymHeap        &sh,
     return true;
 }
 
-} // namespace
-
 bool segConsiderPrototype(const SymHeap     &sh,
                           const TObjPair    &roots,
                           const TValueId    v1,
@@ -268,8 +264,6 @@ bool segConsiderPrototype(const SymHeap     &sh,
         && segMayBePrototype(sh, kind, o1, roots.first)
         && segMayBePrototype(sh, kind, o2, roots.second);
 }
-
-namespace {
 
 bool matchSegBinding(const SymHeap              &sh,
                      const TObjId               obj,
@@ -368,11 +362,16 @@ bool validatePointingObjects(const SymHeap              &sh,
         allowedReferers.insert(nextPtr);
     }
 
+    const TValueId headAddr = sh.placedAt(subObjByChain(sh, root, bf.head));
+
     BOOST_FOREACH(const TObjId obj, refs) {
         if (validateSinglePointingObject(sh, bf, obj, prev, next))
             continue;
 
         if (hasKey(allowedReferers, obj))
+            continue;
+
+        if (toInsideOnly && sh.valueOf(obj) == headAddr)
             continue;
 
         // someone points at/inside who should not
@@ -389,31 +388,8 @@ bool validateSegEntry(const SymHeap              &sh,
                       const TObjId               next,
                       const SymHeap::TContValue  &protoAddrs)
 {
-    const TFieldIdxChain &icHead = bf.head;
-    if (icHead.empty()) {
-        // no Linux lists involved
-        return validatePointingObjects(sh, bf, entry, OBJ_INVALID, next,
-                                       protoAddrs, /* toInsideOnly */ true);
-    }
-
-    // jump to the head sub-object
-    const TObjId head = subObjByChain(sh, entry, icHead);
-    SE_BREAK_IF(entry == head || head <= 0);
-
-    // FIXME: this is too strict for the _hlist_ variant of Linux lists
-    if (!validatePointingObjects(sh, bf, head, OBJ_INVALID, next,
-                                 /* TODO */ SymHeap::TContValue(),
-                                 /* toInsideOnly */ true))
-        return false;
-
-    // now check that nothing but head is pointed from outside
-    // FIXME: suboptimal due to performance
-    SymHeap::TContObj refsAll, refsHead;
-    gatherPointingObjects(sh, refsAll, entry, /* toInsideOnly */ false);
-    gatherPointingObjects(sh, refsHead, head, /* toInsideOnly */ false);
-
-    // finally compare the sets
-    return (refsAll.size() == refsHead.size());
+    return validatePointingObjects(sh, bf, entry, OBJ_INVALID, next,
+                                   protoAddrs, /* toInsideOnly */ true);
 }
 
 TObjId jumpToNextObj(const SymHeap              &sh,
@@ -743,8 +719,6 @@ unsigned /* len */ selectBestAbstraction(
     *entry = candidates[bestIdx].entry;
     return bestLen;
 }
-
-} // namespace
 
 unsigned /* len */ discoverBestAbstraction(
         const SymHeap       &sh,
