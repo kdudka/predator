@@ -190,6 +190,10 @@ Linux lists
 
     test-0101.c - Linux SLS with nested Linux DLSs, all properly destroyed
 
+    test-0103.c - alternation of test-0101 with some additional concretization
+                - regression test focused on handling of segment Neq predicates
+                - some hidden memory leaks in there
+
 
 Show-case
 =========

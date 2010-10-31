@@ -2,36 +2,12 @@ o  join of states ... example:
    - input: empty | 1 node | SLS 0+ | SLS 1+
    - output: SLS 0+
 
-o  improve discovery algorithm for nested list segments (make it possible to
-   link the nested list through the higher-level list) and maybe improve the
-   representation of segments, in order to reflect that fact
-
 o  get ready for hlist_head/hlist_node from <linux/list.h>, now we can handle
    only list_head based lists
 
 o  explicit isomorphism in symstate and cut-points based split/join algorithms
 
-o FIXME:
-  - jonathan-DLL.c: announces junk, which should not appear.
-
-    kdudka: Nope, the result is more perfect than one would expect to get.  We
-    should probably give no go to all examples like that by default.  It
-    completely ignores the OOM state.  The first reported error is 'dereference
-    of NULL value', which really happens as soon as OOM shows up.  The detected
-    junk is only a consequence of the _broken_ example.  Once it's not able to
-    build the list (we have no allocated memory to store the pointer to), it
-    _has_ to leak, as long as we allow the recovery of the invalid dereference
-    that happened a while before.
-
-    However, we already have a way to ignore the OOM state, if the user really
-    wish to do so.  Please consider running the plug-in with the following
-    option: -fplugin-arg-libsl-symexec-args=fast
-
-  - jonathan-skip-list.c: no way for us to manage, but the tool completely crashes,
-    which should not happen (dealing with structures such as skip lists is 
-    a challenge---of course, the solution should be reasonably general).
-
-    kdudka: s/completely crashes/jumps to a debugger/
-
-    It's easy for us to place there some fancy error message instead of the
-    breakpoint, however not that easy to handle the test-case properly :-/
+o  We should be able to cover small lists (of length 0 or 1) by a compatible
+   list segment prototype while analyzing the data of a segment candidate.
+   First we need to extend DataMatchVisitor, in order allow such abstraction.
+   Then we can hook it somewhere in mergeValues().

@@ -1,0 +1,14 @@
+test-0103.c:119:20: warning: binary operator not implemented yet
+test-0103.c:139:20: warning: binary operator not implemented yet
+test-0103.c:149:9: warning: killing junk
+test-0103.c:157:15: note: from call of create_top()
+test-0103.c:153:5: note: from call of main()
+test-0103.c:149:9: warning: killing junk
+test-0103.c:157:15: note: from call of create_top()
+test-0103.c:153:5: note: from call of main()
+test-0103.c:150:9: warning: killing junk
+test-0103.c:157:15: note: from call of create_top()
+test-0103.c:153:5: note: from call of main()
+test-0103.c:150:9: warning: killing junk
+test-0103.c:157:15: note: from call of create_top()
+test-0103.c:153:5: note: from call of main()

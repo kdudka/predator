@@ -64,11 +64,20 @@ struct DataMatchVisitor {
             return /* mismatch */ false;
 
         // compare _unknown_ value codes
-        const EUnknownValue code = sh.valGetUnknown(v1);
-        if (code != sh.valGetUnknown(v2))
+        const EUnknownValue code1 = sh.valGetUnknown(v1);
+        const EUnknownValue code2 = sh.valGetUnknown(v2);
+
+        // TODO: In case we have a list segment vs. a small compatible list,
+        //       we can cover both by a list segment with the appropriate length
+        const bool isAbstract1 = (UV_ABSTRACT == code1);
+        const bool isAbstract2 = (UV_ABSTRACT == code2);
+        if (isAbstract1 != isAbstract2)
+            CL_DEBUG("DataMatchVisitor might be improved...");
+
+        if (code1 != code2)
             return /* mismatch */ false;
 
-        switch (code) {
+        switch (code1) {
             case UV_KNOWN:
                 // known values have to match
                 return false;
@@ -104,6 +113,14 @@ bool validateUpLink(const SymHeap       &sh,
     const TObjId root2 = roots.second;
     SE_BREAK_IF(root1 <= 0 || root2 <= 0);
 
+    TObjId peer1 = OBJ_INVALID;
+    if (OK_DLS == sh.objKind(root1))
+        peer1 = dlSegPeer(sh, root1);
+
+    TObjId peer2 = OBJ_INVALID;
+    if (OK_DLS == sh.objKind(root2))
+        peer2 = dlSegPeer(sh, root2);
+
     TObjId o1 = sh.pointsTo(valNext1);
     TObjId o2 = sh.pointsTo(valNext2);
     if (o1 <= 0 || o2 <= 0)
@@ -123,7 +140,8 @@ bool validateUpLink(const SymHeap       &sh,
             // selector mismatch
             return false;
 
-        if (root1 == o1 && root2 == o2)
+        if ((root1 == o1 || peer1 == o1)
+                && (root2 == o2 || peer2 == o2))
             // uplink validated!
             break;
     }

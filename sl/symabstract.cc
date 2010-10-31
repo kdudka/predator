@@ -219,7 +219,7 @@ void detachClonedPrototype(
     const bool isRootDls = (OK_DLS == sh.objKind(rootDst));
     SE_BREAK_IF(isRootDls && (OK_DLS != sh.objKind(rootSrc)));
 
-    TObjId rootSrcPeer;
+    TObjId rootSrcPeer = OBJ_INVALID;
     if (isRootDls) {
         rootSrcPeer = dlSegPeer(sh, rootSrc);
         SE_BREAK_IF(dlSegPeer(sh, rootDst) != rootSrcPeer);
@@ -326,17 +326,8 @@ TValueId mergeValues(SymHeap            &sh,
     if (v1 == v2)
         return v1;
 
-    // attempt to dig some type-info for the new unknown value
-    const struct cl_type *clt1 = sh.valType(v1);
-    const struct cl_type *clt2 = sh.valType(v2);
-
-    // should be safe to ignore
-    SE_BREAK_IF(clt1 && clt2 && clt1 != clt2);
-
-    // if we know type of at least one of the values, use it
-    const struct cl_type *clt = (clt1)
-        ? clt1
-        : clt2;
+    // TODO: some quirk for small lists (of length 0 or 1) at this point;  but
+    //       we need to improve symdiscover to detect them first...
 
     // if the types of _unknown_ values are compatible, it should be safe to
     // pass it through;  UV_UNKNOWN otherwise
@@ -347,8 +338,19 @@ TValueId mergeValues(SymHeap            &sh,
         : UV_UNKNOWN;
 
     if (UV_ABSTRACT == code)
+        // create or update a prototype list segment
         return mergeAbstractValues(sh, roots, v1, v2);
 
+    // attempt to dig some type-info for the new unknown value
+    const struct cl_type *clt1 = sh.valType(v1);
+    const struct cl_type *clt2 = sh.valType(v2);
+
+    // if both values are of the same type, pass the type into the result
+    const struct cl_type *clt = (clt1 && clt2 && *clt1 == *clt2)
+        ? clt1
+        : /* type-info is either unknown, or incompatible */ 0;
+
+    // introduce a new unknown value, representing the join of v1 and v2
     return sh.valCreateUnknown(code, clt);
 }
 

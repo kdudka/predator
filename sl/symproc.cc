@@ -1154,10 +1154,10 @@ TValueId handlePointerPlus(SymHeap &sh, const struct cl_type *clt,
 
     // get the final address and check type compatibility
     const TValueId addr = sh.placedAt(obj);
-#if SE_SELF_TEST
     const struct cl_type *cltDst = sh.valType(addr);
-    SE_BREAK_IF(!cltDst || *cltDst != *clt);
-#endif
+    if (!cltDst || *cltDst != *clt)
+        CL_DEBUG_MSG(lw, "dangerous assignment of pointer plus' result");
+
     return addr;
 }
 
