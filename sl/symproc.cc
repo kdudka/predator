@@ -254,6 +254,8 @@ void SymProc::resolveAliasing(TValueId *pVal, const struct cl_type *cltTarget,
             CL_ERROR_MSG(lw_,
                     "type of the pointer being dereferenced does not match "
                     "type of the target object");
+
+            bt_->printBackTrace();
         }
 
         return;

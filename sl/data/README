@@ -220,6 +220,16 @@ Show-case
                     test-0077.c:46:18: error: dereference of unknown value
                     test-0077.c:48:18: error: dereference of unknown value
 
+    test-0102.c - a Linux DLS with two nested independent Linux DLSs
+                - while destroying the whole data structure, we forgot
+                  to destroy one of the sub-lits
+
+                - Predator shows us where the call of a destructor belongs:
+
+                    test-0102.c:84:13: warning: killing junk
+                    test-0102.c:148:16: note: from call of destroy_top()
+                    test-0102.c:141:5: note: from call of main()
+
 
 Call cache
 ==========
