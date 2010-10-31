@@ -209,6 +209,37 @@ void redirectInboundEdges(
     }
 }
 
+void detachClonedPrototype(
+        SymHeap                 &sh,
+        const TObjId            proto,
+        const TObjId            clone,
+        const TObjId            rootDst,
+        const TObjId            rootSrc)
+{
+    const bool isRootDls = (OK_DLS == sh.objKind(rootDst));
+    SE_BREAK_IF(isRootDls && (OK_DLS != sh.objKind(rootSrc)));
+
+    TObjId rootSrcPeer;
+    if (isRootDls) {
+        rootSrcPeer = dlSegPeer(sh, rootSrc);
+        SE_BREAK_IF(dlSegPeer(sh, rootDst) != rootSrcPeer);
+    }
+
+    redirectInboundEdges(sh, rootDst, proto, clone);
+    redirectInboundEdges(sh, proto, rootDst, rootSrc);
+    if (isRootDls)
+        redirectInboundEdges(sh, clone, rootSrcPeer, rootDst);
+
+    if (OK_DLS == sh.objKind(proto)) {
+        const TObjId protoPeer = dlSegPeer(sh, proto);
+        const TObjId clonePeer = dlSegPeer(sh, clone);
+        redirectInboundEdges(sh, rootDst, protoPeer, clonePeer);
+        redirectInboundEdges(sh, protoPeer, rootDst, rootSrc);
+        if (isRootDls)
+            redirectInboundEdges(sh, clonePeer, rootSrcPeer, rootDst);
+    }
+}
+
 TValueId /* addr */ segCloneIfNeeded(
         SymHeap                 &sh,
         const TObjId            rootDst,
@@ -234,14 +265,7 @@ TValueId /* addr */ segCloneIfNeeded(
     segSetShared(sh, dup, true);
 
     // redirect all edges to the right direction
-    redirectInboundEdges(sh, rootDst, seg, dup);
-    redirectInboundEdges(sh, seg, rootDst, rootSrc);
-
-    if (OK_DLS == sh.objKind(seg)) {
-        const TObjId peer = dlSegPeer(sh, seg);
-        redirectInboundEdges(sh, rootDst, peer, dlSegPeer(sh, dup));
-        redirectInboundEdges(sh, peer, rootDst, rootSrc);
-    }
+    detachClonedPrototype(sh, seg, dup, rootDst, rootSrc);
 
     if (len) {
         // restore lower bound estimation of segment length

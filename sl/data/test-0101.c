@@ -39,18 +39,30 @@ static inline void list_add_tail(struct list_head *new, struct list_head *head)
     __list_add(new, head->prev, head);
 }
 
+struct list_head_s {
+    struct list_head_s *next;
+};
+
+static void list_add_tail_s(struct list_head_s *new, struct list_head_s *head)
+{
+    new->next = head->next;
+    head->next = new;
+}
+
 struct top_list {
     struct list_head    link;
-    struct list_head    sub;
+    struct list_head_s  sub;
 };
 
 struct sub_list {
     int                 number;
-    struct list_head    link;
+    struct list_head_s  link;
 };
 
-void destroy_sub(struct list_head *head)
+void destroy_sub(struct list_head_s *head)
 {
+    ___sl_plot_by_ptr(&head, NULL);
+
     struct sub_list *now = (struct sub_list *)(
             (char *)head->next - __builtin_offsetof (struct sub_list, link)
             );
@@ -80,7 +92,7 @@ void destroy_top(struct list_head *head)
     }
 }
 
-void insert_sub(struct list_head *head)
+void insert_sub(struct list_head_s *head)
 {
     struct sub_list *sub = malloc(sizeof(*sub));
     if (!sub)
@@ -88,7 +100,7 @@ void insert_sub(struct list_head *head)
 
     sub->number = 0;
 
-    list_add_tail(&sub->link, head);
+    list_add_tail_s(&sub->link, head);
 }
 
 void insert_top(struct list_head *head)
@@ -97,7 +109,6 @@ void insert_top(struct list_head *head)
     if (!top)
         abort();
 
-    top->sub.prev = &top->sub;
     top->sub.next = &top->sub;
 
     insert_sub(&top->sub);
@@ -133,6 +144,7 @@ int main()
     create_top(&top);
 
     ___sl_plot(NULL);
+
     destroy_top(&top);
 
     return 0;

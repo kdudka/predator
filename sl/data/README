@@ -186,6 +186,10 @@ Linux lists
     test-0099.c - extension of test-0097, added two-level list destruction
                   (implies concretization at both levels)
 
+    test-0100.c - Linux DLS with nested Linux DLSs, all properly destroyed
+
+    test-0101.c - Linux SLS with nested Linux DLSs, all properly destroyed
+
 
 Show-case
 =========
