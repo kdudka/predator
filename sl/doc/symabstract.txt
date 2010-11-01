@@ -68,10 +68,10 @@ Abstraction step for SLS
     - next object
 
 - algorithm:
-    1. Using the entry point and the 'next' and 'head' selectors, jump to the
+    1. Using the entry object and the 'next' and 'head' selectors, jump to the
        next object.
 
-    2. Compute the resulting segment's length (lower bound) as sum of the length
+    2. Compute the resulting segment's length (lower bound) as sum of length
        of the entry object and the next object.
 
     3. Mark the _next_ object as abstract _if not already_.

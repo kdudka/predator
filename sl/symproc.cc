@@ -1118,14 +1118,16 @@ TValueId handlePointerPlus(SymHeap &sh, const struct cl_type *clt,
 
     // jump to _target_ type
     clt = targetTypeOfPtr(clt);
+    const TObjId target = sh.pointsTo(ptr);
 
     // read integral offset
-    int off = intCstFromOperand(&op);
-    CL_DEBUG("handlePointerPlus(): " << off << "b offset requested");
+    const int offRequested = intCstFromOperand(&op);
+    CL_DEBUG("handlePointerPlus(): " << offRequested << "b offset requested");
 
     // seek root object while cumulating the offset
-    TObjId obj = sh.pointsTo(ptr);
+    TObjId obj = target;
     TObjId parent;
+    int off = offRequested;
     int nth;
     while (OBJ_INVALID != (parent = sh.objParent(obj, &nth))) {
         const struct cl_type *cltParent = sh.objType(parent);
@@ -1148,9 +1150,12 @@ TValueId handlePointerPlus(SymHeap &sh, const struct cl_type *clt,
     }
 
     obj = subSeekByOffset(sh, obj, clt, off);
-    if (obj <= 0)
-        // TODO: create an unknown value?
-        SE_TRAP;
+    if (obj <= 0) {
+        // fall-back to off-value, but now related to the original target,
+        // instead of root
+        const SymHeapCore::TOffVal ov(sh.placedAt(target), offRequested);
+        return sh.valCreateByOffset(ov);
+    }
 
     // get the final address and check type compatibility
     const TValueId addr = sh.placedAt(obj);
