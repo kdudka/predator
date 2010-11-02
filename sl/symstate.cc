@@ -157,9 +157,15 @@ namespace {
         const TObjId cObj2 = heap2.valGetCompositeObj(value2);
         // cObj1 and cObj2 are supposed to be valid at this point
 
+        // we _have_ to jump to the roots at this point as long as we admit
+        // to see through multi-level Linux lists
+        const TObjId root1 = objRoot(heap1, cObj1);
+        const TObjId root2 = objRoot(heap1, cObj2);
+        SE_BREAK_IF(OBJ_INVALID == root1 || OBJ_INVALID == root2);
+
         typedef std::pair<TObjId, TObjId> TItem;
         std::stack<TItem> todo;
-        push(todo, cObj1, cObj2);
+        push(todo, root1, root2);
         while (!todo.empty()) {
             TObjId o1, o2;
             boost::tie(o1, o2) = todo.top();

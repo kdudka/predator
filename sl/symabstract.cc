@@ -609,7 +609,7 @@ void dlSegMerge(SymHeap &sh, TObjId seg1, TObjId seg2) {
 #if SE_SELF_TEST
     const TObjId nextPtr = nextPtrFromSeg(sh, peer1);
     const TValueId valNext = sh.valueOf(nextPtr);
-    SE_BREAK_IF(valNext != sh.placedAt(seg2));
+    SE_BREAK_IF(valNext != segHeadAddr(sh, seg2));
 #endif
 
     const TObjId peer2 = dlSegPeer(sh, seg2);
