@@ -278,24 +278,24 @@ void SymExecEngine::execCondInsn() {
     proc.setLocation(lw_);
 
     const TValueId val = proc.heapValFromOperand(oplist[0]);
-    switch (val) {
-        case VAL_TRUE:
+    if (VAL_DEREF_FAILED == val) {
+        // error should have been already emitted
+        CL_DEBUG_MSG(lw_, "ignored VAL_DEREF_FAILED");
+        return;
+    }
+
+    bool eq;
+    if (heap.proveEq(&eq, val, VAL_FALSE)) {
+        if (!eq) {
             CL_DEBUG_MSG(lw_, ".T. CL_INSN_COND got VAL_TRUE");
             this->updateState(tlist[/* then label */ 0]);
             return;
-
-        case VAL_FALSE:
+        }
+        else {
             CL_DEBUG_MSG(lw_, ".F. CL_INSN_COND got VAL_FALSE");
             this->updateState(tlist[/* else label */ 1]);
             return;
-
-        case VAL_DEREF_FAILED:
-            // error should have been already emitted
-            CL_DEBUG_MSG(lw_, "ignored VAL_DEREF_FAILED");
-            return;
-
-        default:
-            break;
+        }
     }
 
     // operand value is unknown, go to both targets
