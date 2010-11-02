@@ -318,6 +318,21 @@ TValueId mergeAbstractValues(SymHeap            &sh,
     return v2;
 }
 
+bool matchSelfPointers(
+        SymHeap                 &sh,
+        const TObjPair          &roots,
+        const TValueId          v1,
+        const TValueId          v2)
+{
+    const TObjId o1 = sh.pointsTo(v1);
+    const TObjId o2 = sh.pointsTo(v2);
+    if (o1 <= 0 || o2 <= 0)
+        return false;
+
+    return (roots.first  == objRoot(sh, o1))
+        && (roots.second == objRoot(sh, o2));
+}
+
 TValueId mergeValues(SymHeap            &sh,
                      const TObjPair     &roots,
                      const TValueId     v1,
@@ -325,6 +340,11 @@ TValueId mergeValues(SymHeap            &sh,
 {
     if (v1 == v2)
         return v1;
+
+    if (matchSelfPointers(sh, roots, v1, v2))
+        // it is safe to keep these values as they are, as we know how to
+        // perform their concretization later on
+        return VAL_INVALID;
 
     // TODO: some quirk for small lists (of length 0 or 1) at this point;  but
     //       we need to improve symdiscover to detect them first...
@@ -380,6 +400,9 @@ struct ValueAbstractor {
 
         // merge values
         const TValueId valNew = mergeValues(sh, roots_, valSrc, valDst);
+        if (VAL_INVALID == valNew)
+            return /* continue */ true;
+
         sh.objSetValue(dst, valNew);
         if (this->bidir)
             sh.objSetValue(src, valNew);
@@ -457,6 +480,10 @@ void duplicateUnknownValues(SymHeap &sh, TObjId obj, TObjId dup) {
 
     // traverse all sub-objects
     traverseSubObjs(sh, obj, visitor, /* leavesOnly */ true);
+
+    // if there was "a pointer to self", it should remain "a pointer to self";
+    // however "self" has been changed, so that a redirection is necessary
+    redirectInboundEdges(sh, dup, obj, dup);
 }
 
 void slSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf)

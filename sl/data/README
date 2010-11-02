@@ -194,6 +194,10 @@ Linux lists
                 - regression test focused on handling of segment Neq predicates
                 - some hidden memory leaks in there
 
+    test-0104.c - Linux DLS with nested _empty_ Linux DLLs
+                - a simplification of test-0100, which has been, surprisingly,
+                  harder to analyse for us
+
 
 Show-case
 =========

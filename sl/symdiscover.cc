@@ -33,77 +33,6 @@
 
 #include <boost/foreach.hpp>
 
-typedef SymHeap::TContValue TProtoAddrs[2];
-
-struct DataMatchVisitor {
-    std::set<TObjId>    ignoreList;
-    TProtoAddrs         *protoAddrs;
-    TObjPair            roots_;
-
-    DataMatchVisitor(TObjId o1, TObjId o2):
-        protoAddrs(0),
-        roots_(o1, o2)
-    {
-    }
-
-    bool operator()(const SymHeap &sh, TObjPair item) const {
-        const TObjId o1 = item.first;
-        if (hasKey(ignoreList, o1))
-            return /* continue */ true;
-
-        // first compare value IDs
-        const TValueId v1 = sh.valueOf(o1);
-        const TValueId v2 = sh.valueOf(item.second);
-
-        bool eq;
-        if (sh.proveEq(&eq, v1, v2) && eq)
-            return /* continue */ true;
-
-        // special values have to match
-        if (v1 <= 0 || v2 <= 0)
-            return /* mismatch */ false;
-
-        // compare _unknown_ value codes
-        const EUnknownValue code1 = sh.valGetUnknown(v1);
-        const EUnknownValue code2 = sh.valGetUnknown(v2);
-
-        // TODO: In case we have a list segment vs. a small compatible list,
-        //       we can cover both by a list segment with the appropriate length
-        const bool isAbstract1 = (UV_ABSTRACT == code1);
-        const bool isAbstract2 = (UV_ABSTRACT == code2);
-        if (isAbstract1 != isAbstract2)
-            CL_DEBUG("DataMatchVisitor might be improved...");
-
-        if (code1 != code2)
-            return /* mismatch */ false;
-
-        switch (code1) {
-            case UV_KNOWN:
-                // known values have to match
-                return false;
-
-            case UV_UNINITIALIZED:
-            case UV_UNKNOWN:
-                // safe to keep UV_UNKNOWN values as they are
-                return true;
-
-            case UV_ABSTRACT:
-                // FIXME: unguarded recursion!
-                if (!segConsiderPrototype(sh, roots_, v1, v2))
-                    break;
-
-                if (protoAddrs) {
-                    // FIXME: what about shared prototypes at this point?
-                    (*protoAddrs)[0].push_back(v1);
-                    (*protoAddrs)[1].push_back(v2);
-                }
-
-                return true;
-        }
-        return /* mismatch */ false;
-    }
-};
-
 bool validateUpLink(const SymHeap       &sh,
                     const TObjPair      &roots,
                     const TValueId      valNext1,
@@ -149,6 +78,80 @@ bool validateUpLink(const SymHeap       &sh,
     CL_DEBUG("validateUpLink() has successfully validated an up-link!");
     return true;
 }
+
+typedef SymHeap::TContValue TProtoAddrs[2];
+
+struct DataMatchVisitor {
+    std::set<TObjId>    ignoreList;
+    TProtoAddrs         *protoAddrs;
+    TObjPair            roots_;
+
+    DataMatchVisitor(TObjId o1, TObjId o2):
+        protoAddrs(0),
+        roots_(o1, o2)
+    {
+    }
+
+    bool operator()(const SymHeap &sh, TObjPair item) const {
+        const TObjId o1 = item.first;
+        if (hasKey(ignoreList, o1))
+            return /* continue */ true;
+
+        // first compare value IDs
+        const TValueId v1 = sh.valueOf(o1);
+        const TValueId v2 = sh.valueOf(item.second);
+
+        bool eq;
+        if (sh.proveEq(&eq, v1, v2) && eq)
+            return /* continue */ true;
+
+        // special values have to match
+        if (v1 <= 0 || v2 <= 0)
+            return /* mismatch */ false;
+
+        if (validateUpLink(sh, roots_, v1, v2))
+            return /* continue */ true;
+
+        // compare _unknown_ value codes
+        const EUnknownValue code1 = sh.valGetUnknown(v1);
+        const EUnknownValue code2 = sh.valGetUnknown(v2);
+
+        // TODO: In case we have a list segment vs. a small compatible list,
+        //       we can cover both by a list segment with the appropriate length
+        const bool isAbstract1 = (UV_ABSTRACT == code1);
+        const bool isAbstract2 = (UV_ABSTRACT == code2);
+        if (isAbstract1 != isAbstract2)
+            CL_DEBUG("DataMatchVisitor might be improved...");
+
+        if (code1 != code2)
+            return /* mismatch */ false;
+
+        switch (code1) {
+            case UV_KNOWN:
+                // known values have to match
+                return false;
+
+            case UV_UNINITIALIZED:
+            case UV_UNKNOWN:
+                // safe to keep UV_UNKNOWN values as they are
+                return true;
+
+            case UV_ABSTRACT:
+                // FIXME: unguarded recursion!
+                if (!segConsiderPrototype(sh, roots_, v1, v2))
+                    break;
+
+                if (protoAddrs) {
+                    // FIXME: what about shared prototypes at this point?
+                    (*protoAddrs)[0].push_back(v1);
+                    (*protoAddrs)[1].push_back(v2);
+                }
+
+                return true;
+        }
+        return /* mismatch */ false;
+    }
+};
 
 bool segMatchNextValues(const SymHeap     &sh,
                         const TObjPair    &roots,
@@ -335,23 +338,6 @@ bool preserveHeadPtr(const SymHeap                &sh,
     return false;
 }
 
-bool validateSinglePointingObject(const SymHeap             &sh,
-                                  const SegBindingFields    &bf,
-                                  const TObjId              obj,
-                                  const TObjId              prev,
-                                  const TObjId              next)
-{
-    if (obj == subObjByChain(sh, prev, bf.next))
-        return true;
-
-    const bool isDls = !bf.peer.empty();
-    if (isDls && obj == subObjByChain(sh, next, bf.peer))
-        return true;
-
-    // TODO
-    return false;
-}
-
 bool validatePointingObjects(const SymHeap              &sh,
                              const SegBindingFields     &bf,
                              const TObjId               root,
@@ -360,6 +346,7 @@ bool validatePointingObjects(const SymHeap              &sh,
                              const SymHeap::TContValue  &protoAddrs,
                              const bool                 toInsideOnly = false)
 {
+    const bool isDls = !bf.peer.empty();
     std::set<TObjId> allowedReferers;
     if (OK_DLS == sh.objKind(root))
         // retrieve peer's pointer to this object (if any)
@@ -380,16 +367,35 @@ bool validatePointingObjects(const SymHeap              &sh,
         allowedReferers.insert(nextPtr);
     }
 
+    // please do not validate the binding pointers as data pointers;  otherwise
+    // we might mistakenly abstract SLL with head-pointers of length 2 as DLS!!
+    std::set<TObjId> blackList;
+    blackList.insert(subObjByChain(sh, root, bf.next));
+    if (isDls)
+        blackList.insert(subObjByChain(sh, root, bf.peer));
+
     const TValueId headAddr = sh.placedAt(subObjByChain(sh, root, bf.head));
 
     BOOST_FOREACH(const TObjId obj, refs) {
-        if (validateSinglePointingObject(sh, bf, obj, prev, next))
+        if (hasKey(blackList, obj))
+            return false;
+
+        if (obj == subObjByChain(sh, prev, bf.next))
+            continue;
+
+        if (isDls && obj == subObjByChain(sh, next, bf.peer))
             continue;
 
         if (hasKey(allowedReferers, obj))
             continue;
 
         if (toInsideOnly && sh.valueOf(obj) == headAddr)
+            continue;
+
+        if (root == objRoot(sh, obj))
+            // we allow pointers to self at this point, but we require them to
+            // be absolutely uniform along the abstraction path -- matchData()
+            // should later take care of that
             continue;
 
         // someone points at/inside who should not
