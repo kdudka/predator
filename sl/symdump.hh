@@ -69,7 +69,10 @@ void dump_cvar(const SymHeap &heap, int cVar);
 void dump_heap(const SymHeap &heap);
 
 /// dump any @b existing @b positive ID as either heap object or a heap value
-void dump_id(const SymHeap &heap, int id);
+void dump_id(const SymHeapCore *heap, int id);
+
+/// dump any @b existing @b positive ID as either heap object or a heap value
+void dump_id(const SymHeapCore &heap, int id);
 
 /// plot the given heap to file "symdump-NNNN.dot"
 void dump_plot(const SymHeapCore *sh);

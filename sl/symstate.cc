@@ -23,24 +23,70 @@
 #include <cl/cl_msg.hh>
 #include <cl/code_listener.h>
 
-#include "util.hh"
+#include "symdump.hh"
 #include "symutil.hh"
+#include "util.hh"
 #include "worklist.hh"
 
 #include <algorithm>            // for std::copy_if
-#include <functional>           // for std::bind
 #include <iomanip>
 #include <map>
 #include <stack>
 
 #include <boost/foreach.hpp>
 #include <boost/lambda/lambda.hpp>
-#include <boost/lambda/bind.hpp>
 #include <boost/tuple/tuple.hpp>
+
+#define SS_DEBUG(...) do {                                                  \
+    if (::debugSymState)                                                    \
+        CL_DEBUG("SymState: " << __VA_ARGS__);                              \
+} while (0)
+
+#define SS_DUMP_ID(sh, id) \
+    "dump_id((SymHeap *)" << &(sh) << ", " << (id) << ")"
+
+#define SS_DUMP_V1_V2(sh1, sh2, v1, v2)                                     \
+    ", v1 = " << SS_DUMP_ID(sh1, v1) <<                                     \
+    ", v2 = " << SS_DUMP_ID(sh2, v2)
+
+#define SS_DEBUG_VAL_SCHEDULE(who, sh1, sh2, v1, v2)                        \
+    SS_DEBUG("+++ " << who                                                  \
+            << SS_DUMP_V1_V2(sh1, sh2, v1, v2))
+
+#define SS_DEBUG_VAL_MISMATCH(...)                                          \
+    SS_DEBUG("<-- "                                                         \
+            << __VA_ARGS__                                                  \
+            << SS_DUMP_V1_V2(heap1, heap2, value1, value2))
+
+#define FIXW(w) std::fixed << std::setfill('0') << std::setw(w)
+
+// set to 'true' if you wonder why SymState matches states as it does (noisy)
+static bool debugSymState = static_cast<bool>(DEBUG_SYMSTATE);
+static bool debugSymStateBySymPlot;
+
+void enableSymStateDebug(void) {
+    debugSymState = true;
+    debugSymStateBySymPlot = true;
+}
+
+static int cntLookups = -1;
+
+void debugPlot(int idx, const SymHeap &sh) {
+    if (!::debugSymStateBySymPlot)
+        return;
+
+    std::ostringstream str;
+    str << "symstate-loookup-" << FIXW(6) << ::cntLookups
+        << "-" << FIXW(4) << (idx);
+
+    dump_plot(sh, str.str().c_str());
+}
 
 // /////////////////////////////////////////////////////////////////////////////
 // SymState implementation
+#if 0
 namespace {
+#endif
     bool checkNonPosValues(int a, int b) {
         if (0 < a && 0 < b)
             // we'll need to properly compare positive values
@@ -178,13 +224,16 @@ namespace {
 
             const enum cl_type_e code = (clt)
                 ? clt->code
-                : /* anonymous object of known size */ CL_TYPE_PTR;     // segments?
+                : /* anonymous object of known size */ CL_TYPE_PTR;
 
             switch (code) {
                 case CL_TYPE_PTR: {
                     const TValueId val1 = heap1.valueOf(o1);
                     const TValueId val2 = heap2.valueOf(o2);
-                    wl.schedule(val1, val2);
+                    if (wl.schedule(val1, val2))
+                        SS_DEBUG_VAL_SCHEDULE("digComposite("
+                                              << o1 << ", " << o2 << ")",
+                                              heap1, heap2, val1, val2);
                     break;
                 }
 
@@ -220,8 +269,9 @@ namespace {
         }
         return true;
     }
-
+#if 0
 } // namespace 
+#endif
 
 template <class TWL>
 bool cmpAbstractObjects(TWL &wl, const SymHeap &sh1, const SymHeap &sh2,
@@ -251,7 +301,10 @@ bool cmpAbstractObjects(TWL &wl, const SymHeap &sh1, const SymHeap &sh2,
     // schedule roots for the next wheel
     const TValueId v1 = sh1.placedAt(o1);
     const TValueId v2 = sh2.placedAt(o2);
-    wl.schedule(v1, v2);
+    if (wl.schedule(v1, v2))
+        SS_DEBUG_VAL_SCHEDULE("cmpAbstractObjects (" << o1 << ", " << o2 << ")",
+                              sh1, sh2, v1, v2);
+
     return true;
 }
 
@@ -267,25 +320,28 @@ bool dfsCmp(TWL             &wl,
         TValueId value1, value2;
         boost::tie(value1, value2) = item;
 
-        if (!matchValues(valSubst, heap1, heap2, value1, value2))
-            // value mismatch
+        if (!matchValues(valSubst, heap1, heap2, value1, value2)) {
+            SS_DEBUG_VAL_MISMATCH("value mismatch");
             return false;
+        }
 
         if (skipValue(heap1, value1))
             // no need for next wheel
             continue;
 
         bool isComposite;
-        if (!chkComposite(&isComposite, heap1, heap2, value1, value2))
-            // scalar vs. composite objects, the heaps can't be equal
+        if (!chkComposite(&isComposite, heap1, heap2, value1, value2)) {
+            SS_DEBUG_VAL_MISMATCH("scalar vs. composite target");
             return false;
+        }
 
         if (isComposite) {
             // got pair of composite objects
 
-            if (!digComposite(wl, heap1, heap2, value1, value2))
-                // scalar vs. composite objects, the heaps can't be equal
+            if (!digComposite(wl, heap1, heap2, value1, value2)) {
+                SS_DEBUG_VAL_MISMATCH("object composition mismatch");
                 return false;
+            }
 
             // compare composite objects recursively
             continue;
@@ -293,26 +349,32 @@ bool dfsCmp(TWL             &wl,
 
         const TObjId obj1 = heap1.pointsTo(value1);
         const TObjId obj2 = heap2.pointsTo(value2);
-        if (checkNonPosValues(obj1, obj2))
-            // variable mismatch
+        if (checkNonPosValues(obj1, obj2)) {
+            SS_DEBUG("non-matched targets");
             return false;
+        }
 
-        if (!cmpAbstractObjects(wl, heap1, heap2, obj1, obj2))
-            // abstract objects are not equeal
+        if (!cmpAbstractObjects(wl, heap1, heap2, obj1, obj2)) {
+            SS_DEBUG_VAL_MISMATCH("incompatible abstract objects");
             return false;
+        }
 
         value1 = heap1.valueOf(obj1);
         value2 = heap2.valueOf(obj2);
 
         // schedule values for next wheel
-        wl.schedule(value1, value2);
+        if (wl.schedule(value1, value2))
+            SS_DEBUG_VAL_SCHEDULE("dfsCmp (" << obj1 << ", " << obj2 << ")",
+                                  heap1, heap2, value1, value2);
     }
 
     // finally match heap predicates
-    if (!heap1.matchPreds(heap2, valSubst[/* ltr */ 0]))
+    if (!heap1.matchPreds(heap2, valSubst[/* ltr */ 0])
+            || !heap2.matchPreds(heap1, valSubst[/* rtl */ 1]))
+    {
+        SS_DEBUG("<-- failed to match heap predicates");
         return false;
-    if (!heap2.matchPreds(heap1, valSubst[/* rtl */ 1]))
-        return false;
+    }
 
     // heaps are equal (isomorphism)
     return true;
@@ -331,10 +393,10 @@ bool operator== (const SymHeap &heap1, const SymHeap &heap2) {
     SymHeap::TContCVar cVars1, cVars2;
     heap1.gatherCVars(cVars1);
     heap1.gatherCVars(cVars2);
-    if (cVars1.size() != cVars2.size())
-        // different count of program variables
-        // --> no chance the heaps are equal up to isomorphism
+    if (cVars1.size() != cVars2.size()) {
+        SS_DEBUG("<-- different count of program variables");
         return false;
+    }
 
     // merge cVars
     std::set<CVar> all;
@@ -344,16 +406,19 @@ bool operator== (const SymHeap &heap1, const SymHeap &heap2) {
     BOOST_FOREACH(CVar cv, all) {
         const TObjId var1 = heap1.objByCVar(cv);
         const TObjId var2 = heap2.objByCVar(cv);
-        if (var1 < 0 || var2 < 0)
-            // static variable mismatch
+        if (var1 < 0 || var2 < 0) {
+            SS_DEBUG("<-- static variable mismatch");
             return false;
+        }
 
         // retrieve values of static variables
         const TValueId value1 = heap1.valueOf(var1);
         const TValueId value2 = heap2.valueOf(var2);
 
         // schedule for DFS
-        wl.schedule(value1, value2);
+        if (wl.schedule(value1, value2))
+            SS_DEBUG_VAL_SCHEDULE("cVar(" << cv.uid << ")",
+                                  heap1, heap2, value1, value2);
     }
 
     // run DFS
@@ -361,13 +426,24 @@ bool operator== (const SymHeap &heap1, const SymHeap &heap2) {
 }
 
 int SymState::lookup(const SymHeap &heap) const {
+    ++::cntLookups;
     const int cnt = this->size();
+    SS_DEBUG(">>> lookup() starts, cnt = " << cnt);
+    debugPlot(0, heap);
+
     for(int idx = 0; idx < cnt; ++idx) {
-        if (heap == heaps_[idx])
+        const int nth = idx + 1;
+        SS_DEBUG("--> lookup() tries sh #" << nth << ", cnt = " << cnt);
+        debugPlot(nth, heaps_[idx]);
+
+        if (heap == heaps_[idx]) {
+            SS_DEBUG("<<< lookup() returns sh #" << nth << ", cnt = " << cnt);
             return idx;
+        }
     }
 
     // not found
+    SS_DEBUG("<<< lookup() failed, cnt = " << cnt);
     return -1;
 }
 
@@ -418,7 +494,7 @@ bool SymStateMap::insert(const CodeStorage::Block                *dst,
     // look for the _target_ block
     Private::BlockState &ref = d->cont[dst];
 
-    // insert the given symolic heap
+    // insert the given symbolic heap
     const unsigned last = ref.state.size();
     ref.state.insert(sh);
     const bool changed = (last != ref.state.size());

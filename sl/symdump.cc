@@ -372,13 +372,25 @@ void dump_heap(const SymHeap &heap) {
     }
 }
 
-void dump_id(const SymHeap &heap, int id) {
+void dump_id(const SymHeapCore *core, int id) {
+    if (!core) {
+        cout << "dump_plot: error: got a NULL pointer\n";
+        return;
+    }
+
+    const SymHeap *sh = dynamic_cast<const SymHeap *>(core);
+    if (!sh) {
+        cout << "dump_plot: error: failed to downcast SymHeapCore to SymHeap\n";
+        return;
+    }
+
     cout << "dump_id(#" << id << ")\n";
     if (id <= 0) {
         cout << "    error: given ID is not a positive number\n";
         return;
     }
 
+    const SymHeap &heap = *sh;
     if (isObject(heap, id))
         // assume object ID
         dump_obj(heap, static_cast<TObjId>(id));
@@ -386,6 +398,10 @@ void dump_id(const SymHeap &heap, int id) {
     else
         // assume value ID
         dump_value(heap, static_cast<TValueId>(id));
+}
+
+void dump_id(const SymHeapCore &core, int id) {
+    dump_id(&core, id);
 }
 
 static const CodeStorage::Storage *glStorPtr;
