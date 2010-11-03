@@ -206,7 +206,7 @@ namespace {
         // we _have_ to jump to the roots at this point as long as we admit
         // to see through multi-level Linux lists
         const TObjId root1 = objRoot(heap1, cObj1);
-        const TObjId root2 = objRoot(heap1, cObj2);
+        const TObjId root2 = objRoot(heap2, cObj2);
         SE_BREAK_IF(OBJ_INVALID == root1 || OBJ_INVALID == root2);
 
         typedef std::pair<TObjId, TObjId> TItem;
