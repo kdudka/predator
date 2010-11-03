@@ -1,0 +1,55 @@
+#!/bin/sh
+LOG="`mktemp`"
+BT="`mktemp`"
+
+# run 'slgccv' as usual and redirect its output
+anal(){
+    self="`readlink -f "$0"`"
+    self_dir="`dirname "$self"`"
+    "$self_dir/slgccv" "$@" \
+        2>&1 \
+        | tee "$LOG"
+}
+
+# filter '>>> entering' and '<<< leaving' with forced line buffering
+filter(){
+    stdbuf --output=L \
+        grep ': debug: [<>]* .*()$'
+}
+
+# monitor the current backtrace, extended by time-stamps
+monitor(){
+    while read line; do
+        if echo "$line" | grep '>>>'; then
+            # append a new item to the backtrace
+            printf "%s\t%s\n" \
+                "`date`" "$line" \
+                >> "$BT";
+
+        elif echo "$line" | grep '<<<'; then
+            # remove the last item from the backtrace
+            sed -i \$d "$BT"
+        fi
+
+        # first show some memory statistics on a blank screen
+        clear
+        free -om
+        echo
+
+        # then append the current backtrace
+        cat "$BT"
+    done
+}
+
+clear
+echo "parsing verbose output of slgccv..."
+
+# just connect the above together by pipes
+time anal "$@" \
+    | filter \
+    | monitor
+
+# final cleanup and report
+rm -f "$BT"
+echo
+echo "--- log saved as \"$LOG\""
