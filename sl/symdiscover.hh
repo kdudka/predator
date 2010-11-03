@@ -37,6 +37,16 @@ bool segConsiderPrototype(
         const TValueId          v2);
 #endif
 
+#ifndef BUILDING_DOX
+// exported only for debugging purposes
+bool segMatchSmallList(
+        const SymHeap           &sh,
+        const TObjId            segUp,
+        const TObjId            conUp,
+        const TValueId          segVal,
+        const TValueId          conVal);
+#endif
+
 /**
  * Take the given symbolic heap and look for the best possible abstraction in
  * there.  If nothing is found, zero is returned.  Otherwise it returns total

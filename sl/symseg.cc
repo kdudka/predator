@@ -212,3 +212,37 @@ bool haveDlSegAt(const SymHeap &sh, TValueId atAddr, TValueId peerAddr) {
     // compare the end-points
     return (segHeadAddr(sh, peer) == peerAddr);
 }
+
+// works, but not used for now
+#if 0
+namespace {
+void dropHeadIc(
+        TFieldIdxChain          &dst,
+        const TFieldIdxChain    &icSrc,
+        const TFieldIdxChain    &icHead)
+{
+    const unsigned cnt = icSrc.size();
+    const unsigned cntHead = icHead.size();
+    for (unsigned i = 0; i < cnt; ++i) {
+        if (i < cntHead) {
+            SE_BREAK_IF(icHead[i] != icSrc[i]);
+            continue;
+        }
+
+        dst.push_back(icSrc[i]);
+    }
+}
+} // namespace
+
+TFieldIdxChain nextByHead(const SegBindingFields &bf) {
+    TFieldIdxChain dst;
+    dropHeadIc(dst, bf.next, bf.head);
+    return dst;
+}
+
+TFieldIdxChain peerByHead(const SegBindingFields &bf) {
+    TFieldIdxChain dst;
+    dropHeadIc(dst, bf.peer, bf.head);
+    return dst;
+}
+#endif

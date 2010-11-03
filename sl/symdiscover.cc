@@ -79,6 +79,23 @@ bool validateUpLink(const SymHeap       &sh,
     return true;
 }
 
+// TODO: extend this for lists of length 1 and 2, now we support only empty ones
+bool segMatchSmallList(
+        const SymHeap           &sh,
+        const TObjId            segUp,
+        const TObjId            conUp,
+        const TValueId          segVal,
+        const TValueId          conVal)
+{
+    TObjId seg = objRoot(sh, sh.pointsTo(segVal));
+    if (OK_DLS == sh.objKind(seg))
+        seg = dlSegPeer(sh, seg);
+
+    const TObjPair roots(segUp, conUp);
+    const TValueId valNext = sh.valueOf(nextPtrFromSeg(sh, seg));
+    return validateUpLink(sh, roots, valNext, conVal);
+}
+
 typedef SymHeap::TContValue TProtoAddrs[2];
 
 struct DataMatchVisitor {
@@ -116,12 +133,16 @@ struct DataMatchVisitor {
         const EUnknownValue code1 = sh.valGetUnknown(v1);
         const EUnknownValue code2 = sh.valGetUnknown(v2);
 
-        // TODO: In case we have a list segment vs. a small compatible list,
-        //       we can cover both by a list segment with the appropriate length
         const bool isAbstract1 = (UV_ABSTRACT == code1);
         const bool isAbstract2 = (UV_ABSTRACT == code2);
-        if (isAbstract1 != isAbstract2)
-            CL_DEBUG("DataMatchVisitor might be improved...");
+        if (isAbstract1 != isAbstract2 && segMatchSmallList(sh,
+                    (isAbstract1) ? roots_.first : roots_.second,
+                    (isAbstract2) ? roots_.first : roots_.second,
+                    (isAbstract1) ? v1 : v2,
+                    (isAbstract2) ? v1 : v2))
+            // in case we have a list segment vs. a small compatible list, we
+            // can cover both by a list segment with the appropriate length
+            goto proto_found;
 
         if (code1 != code2)
             return /* mismatch */ false;
@@ -139,17 +160,17 @@ struct DataMatchVisitor {
             case UV_ABSTRACT:
                 // FIXME: unguarded recursion!
                 if (!segConsiderPrototype(sh, roots_, v1, v2))
-                    break;
-
-                if (protoAddrs) {
-                    // FIXME: what about shared prototypes at this point?
-                    (*protoAddrs)[0].push_back(v1);
-                    (*protoAddrs)[1].push_back(v2);
-                }
-
-                return true;
+                    return /* mismatch */ false;
         }
-        return /* mismatch */ false;
+
+proto_found:
+        if (protoAddrs) {
+            // FIXME: what about shared prototypes at this point?
+            (*protoAddrs)[0].push_back(v1);
+            (*protoAddrs)[1].push_back(v2);
+        }
+
+        return /* continue */ true;
     }
 };
 
@@ -362,9 +383,17 @@ bool validatePointingObjects(const SymHeap              &sh,
 
     // consider also up-links from nested prototypes
     BOOST_FOREACH(const TValueId protoAt, protoAddrs) {
-        const TObjId seg = sh.pointsTo(protoAt);
-        const TObjId nextPtr = nextPtrFromSeg(sh, seg);
-        allowedReferers.insert(nextPtr);
+        const TObjId obj = sh.pointsTo(protoAt);
+        if (OK_CONCRETE == sh.objKind(obj)) {
+            // assume a standalone segment head embedded into another segment
+            SymHeap::TContObj protoRefs;
+            sh.usedBy(protoRefs, protoAt);
+            std::copy(protoRefs.begin(), protoRefs.end(),
+                      std::inserter(allowedReferers, allowedReferers.begin()));
+        } else {
+            const TObjId nextPtr = nextPtrFromSeg(sh, obj);
+            allowedReferers.insert(nextPtr);
+        }
     }
 
     // please do not validate the binding pointers as data pointers;  otherwise

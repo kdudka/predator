@@ -198,6 +198,11 @@ Linux lists
                 - a simplification of test-0100, which has been, surprisingly,
                   harder to analyse for us
 
+    test-0105.c - Linux DLS with nested 0+ Linux DLS
+                - a bit time consuming test-case for now
+                - we should probably handle cases like this one somehow more
+                  generically
+
 
 Show-case
 =========

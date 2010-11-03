@@ -48,6 +48,9 @@ bool haveSeg(const SymHeap &sh, TValueId atAddr, TValueId pointingTo,
  */
 bool haveDlSegAt(const SymHeap &sh, TValueId atAddr, TValueId peerAddr);
 
+TFieldIdxChain nextByHead(const SegBindingFields &bf);
+TFieldIdxChain peerByHead(const SegBindingFields &bf);
+
 /// return 'next' pointer of the given list segment as a heap object
 TObjId nextPtrFromSeg(const SymHeap &sh, TObjId seg);
 

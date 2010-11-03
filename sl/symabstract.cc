@@ -333,6 +333,46 @@ bool matchSelfPointers(
         && (roots.second == objRoot(sh, o2));
 }
 
+// TODO: extend this for lists of length 1 and 2, now we support only empty ones
+TValueId mergeSmallList(
+        SymHeap                 &sh,
+        const TObjPair          &roots,
+        const TValueId          v1,
+        const TValueId          v2)
+{
+    const bool isAbstract1 = (UV_ABSTRACT == sh.valGetUnknown(v1));
+
+    const TValueId segAt = (isAbstract1) ? v1 : v2;
+    const TObjId seg = objRoot(sh, sh.pointsTo(segAt));
+#if SE_SELF_TEST
+    const bool isAbstract2 = (UV_ABSTRACT == sh.valGetUnknown(v2));
+    SE_BREAK_IF(isAbstract1 == isAbstract2);
+
+    const TValueId conAt = (isAbstract2) ? v1 : v2;
+    const TObjId segUp = (isAbstract1) ? roots.first : roots.second;
+    const TObjId conUp = (isAbstract2) ? roots.first : roots.second;
+
+    const TValueId peerAt = (OK_DLS == sh.objKind(seg))
+        ? segHeadAddr(sh, (dlSegPeer(sh, seg)))
+        : static_cast<TValueId>(VAL_INVALID);
+
+    SE_BREAK_IF(!segMatchSmallList(sh, segUp, conUp, segAt, conAt)
+             && !segMatchSmallList(sh, segUp, conUp, peerAt, conAt));
+#endif
+
+    // a list segment merged with an empty list results into a list segment 0+
+    segSetMinLength(sh, seg, /* LS 0+ */ 0);
+
+    // duplicate the nested abstract object on call of concretizeObj()
+    segSetShared(sh, seg, false);
+
+    if (isAbstract1)
+        // FIXME: do we need some handling for DLS peers at this point?
+        redirectInboundEdges(sh, seg, roots.first, roots.second);
+
+    return segAt;
+}
+
 TValueId mergeValues(SymHeap            &sh,
                      const TObjPair     &roots,
                      const TValueId     v1,
@@ -346,13 +386,16 @@ TValueId mergeValues(SymHeap            &sh,
         // perform their concretization later on
         return VAL_INVALID;
 
-    // TODO: some quirk for small lists (of length 0 or 1) at this point;  but
-    //       we need to improve symdiscover to detect them first...
-
     // if the types of _unknown_ values are compatible, it should be safe to
     // pass it through;  UV_UNKNOWN otherwise
     const EUnknownValue code1 = sh.valGetUnknown(v1);
     const EUnknownValue code2 = sh.valGetUnknown(v2);
+    const bool isAbstract1 = (UV_ABSTRACT == code1);
+    const bool isAbstract2 = (UV_ABSTRACT == code2);
+    if (isAbstract1 != isAbstract2)
+        // a quirk for small lists (of length 0 or 1)
+        return mergeSmallList(sh, roots, v1, v2);
+
     EUnknownValue code = (code1 != UV_KNOWN && code1 == code2)
         ? code1
         : UV_UNKNOWN;
@@ -391,7 +434,7 @@ struct ValueAbstractor {
         if (hasKey(ignoreList, dst))
             return /* continue */ true;
 
-        TValueId valSrc = sh.valueOf(item.first);
+        TValueId valSrc = sh.valueOf(src);
         TValueId valDst = sh.valueOf(dst);
         bool eq;
         if (sh.proveEq(&eq, valSrc, valDst) && eq)
@@ -486,6 +529,47 @@ void duplicateUnknownValues(SymHeap &sh, TObjId obj, TObjId dup) {
     redirectInboundEdges(sh, dup, obj, dup);
 }
 
+struct ValueSynchronizer {
+    std::set<TObjId>    ignoreList;
+
+    bool operator()(SymHeap &sh, TObjPair item) const {
+        const TObjId src = item.first;
+        const TObjId dst = item.second;
+        if (hasKey(ignoreList, src))
+            return /* continue */ true;
+
+        // store value of 'src' into 'dst'
+        TValueId valSrc = sh.valueOf(src);
+        TValueId valDst = sh.valueOf(dst);
+        sh.objSetValue(dst, valSrc);
+
+        // if the last reference is gone, we have a problem
+        if (collectJunk(sh, valDst)) {
+            CL_ERROR("junk detected by ValueSynchronizer");
+#if SE_SELF_TEST
+            SE_TRAP;
+#endif
+        }
+
+        return /* continue */ true;
+    }
+};
+
+void dlSegSyncPeerData(SymHeap &sh, const TObjId dls) {
+    const TObjId peer = dlSegPeer(sh, dls);
+    ValueSynchronizer visitor;
+    buildIgnoreList(sh, dls, visitor.ignoreList);
+
+    // if there was "a pointer to self", it should remain "a pointer to self";
+    SymHeap::TContObj refs;
+    gatherPointingObjects(sh, refs, dls, /* toInsideOnly */ false);
+    std::copy(refs.begin(), refs.end(),
+              std::inserter(visitor.ignoreList, visitor.ignoreList.begin()));
+
+    const TObjPair item(dls, peer);
+    traverseSubObjs(sh, item, visitor, /* leavesOnly */ true);
+}
+
 void slSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf)
 {
     const TObjId obj = *pObj;
@@ -565,6 +649,8 @@ void dlSegCreate(SymHeap &sh, TObjId o1, TObjId o2, SegBindingFields bf) {
 
     // a just created DLS is said to be 2+
     dlSegSetMinLength(sh, o1, /* DLS 2+ */ 2);
+
+    dlSegSyncPeerData(sh, o1);
 }
 
 void dlSegGobble(SymHeap &sh, TObjId dls, TObjId var, bool backward) {
@@ -594,6 +680,8 @@ void dlSegGobble(SymHeap &sh, TObjId dls, TObjId var, bool backward) {
 
     // handle DLS Neq predicates
     dlSegSetMinLength(sh, dls, len);
+
+    dlSegSyncPeerData(sh, dls);
 }
 
 void dlSegMerge(SymHeap &sh, TObjId seg1, TObjId seg2) {
@@ -633,6 +721,8 @@ void dlSegMerge(SymHeap &sh, TObjId seg1, TObjId seg2) {
     if (len)
         // handle DLS Neq predicates
         dlSegSetMinLength(sh, seg2, len);
+
+    dlSegSyncPeerData(sh, seg2);
 }
 
 void dlSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf)
