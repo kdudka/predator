@@ -33314,7 +33314,7 @@ void HsInitialize(void)
 {
     struct ctl_table *tbl;
 
-    while ((&nondet > 0)) {
+    while (nondet) {
         struct cdrom_device_info *cdi;
         cdi = HsCreateCdromDeviceInfo();
         register_cdrom(cdi);

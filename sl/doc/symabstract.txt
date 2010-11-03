@@ -94,13 +94,13 @@ Abstraction step for SLS
 Abstraction steps for DLS
 -------------------------
 - we have 3 distinct variants of DLS abstraction step
-- each variant of the step results into a DLS pair
+- each variant of the step results into a DLS
 
     dlSegCreate() - takes two concrete objects
 
-    dlSegGobble() - takes a DLS pair and a concrete object
+    dlSegGobble() - takes a DLS and a concrete object
 
-    dlSegMerge() - takes two DLS pairs
+    dlSegMerge() - takes two DLSs
 
 
 dlSegCreate()

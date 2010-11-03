@@ -11,3 +11,7 @@ o  We should be able to cover small lists (of length 0 or 1) by a compatible
    list segment prototype while analyzing the data of a segment candidate.
    First we need to extend DataMatchVisitor, in order allow such abstraction.
    Then we can hook it somewhere in mergeValues().
+
+o  canonical representation of Linux DLSs nested into Linux DLSs
+
+o  make some driver analysis run
