@@ -53,6 +53,10 @@
     SS_DEBUG("+++ " << who                                                  \
             << SS_DUMP_V1_V2(sh1, sh2, v1, v2))
 
+#define SS_DEBUG_VAL_SCHEDULE_BY(who, o1, o2, sh1, sh2, v1, v2)             \
+    SS_DEBUG_VAL_SCHEDULE(who << "(" << o1 << ", " << o2 << ")",            \
+                          sh1, sh2, v1, v2)
+
 #define SS_DEBUG_VAL_MISMATCH(...)                                          \
     SS_DEBUG("<-- "                                                         \
             << __VA_ARGS__                                                  \
@@ -231,8 +235,7 @@ namespace {
                     const TValueId val1 = heap1.valueOf(o1);
                     const TValueId val2 = heap2.valueOf(o2);
                     if (wl.schedule(val1, val2))
-                        SS_DEBUG_VAL_SCHEDULE("digComposite("
-                                              << o1 << ", " << o2 << ")",
+                        SS_DEBUG_VAL_SCHEDULE_BY("digComposite", o1, o2,
                                               heap1, heap2, val1, val2);
                     break;
                 }
@@ -302,8 +305,8 @@ bool cmpAbstractObjects(TWL &wl, const SymHeap &sh1, const SymHeap &sh2,
     const TValueId v1 = sh1.placedAt(o1);
     const TValueId v2 = sh2.placedAt(o2);
     if (wl.schedule(v1, v2))
-        SS_DEBUG_VAL_SCHEDULE("cmpAbstractObjects (" << o1 << ", " << o2 << ")",
-                              sh1, sh2, v1, v2);
+        SS_DEBUG_VAL_SCHEDULE_BY("cmpAbstractObjects", o1, o2,
+                                 sh1, sh2, v1, v2);
 
     return true;
 }
@@ -364,8 +367,8 @@ bool dfsCmp(TWL             &wl,
 
         // schedule values for next wheel
         if (wl.schedule(value1, value2))
-            SS_DEBUG_VAL_SCHEDULE("dfsCmp (" << obj1 << ", " << obj2 << ")",
-                                  heap1, heap2, value1, value2);
+            SS_DEBUG_VAL_SCHEDULE_BY("dfsCmp", obj1, obj2,
+                                     heap1, heap2, value1, value2);
     }
 
     // finally match heap predicates
@@ -415,6 +418,12 @@ bool operator== (const SymHeap &heap1, const SymHeap &heap2) {
         const TValueId value1 = heap1.valueOf(var1);
         const TValueId value2 = heap2.valueOf(var2);
 
+        // optimization
+        if (!matchValues(valSubst, heap1, heap2, value1, value2)) {
+            SS_DEBUG_VAL_MISMATCH("value mismatch");
+            return false;
+        }
+
         // schedule for DFS
         if (wl.schedule(value1, value2))
             SS_DEBUG_VAL_SCHEDULE("cVar(" << cv.uid << ")",
@@ -426,8 +435,12 @@ bool operator== (const SymHeap &heap1, const SymHeap &heap2) {
 }
 
 int SymState::lookup(const SymHeap &heap) const {
-    ++::cntLookups;
     const int cnt = this->size();
+    if (!cnt)
+        // empty state --> not found
+        return -1;
+
+    ++::cntLookups;
     SS_DEBUG(">>> lookup() starts, cnt = " << cnt);
     debugPlot(0, heap);
 
