@@ -151,6 +151,10 @@ struct Data {
 		return this->type != type_enum::t_undef;
 	}
 
+	bool isUndef() const {
+		return this->type == type_enum::t_undef;
+	}
+
 	bool isUnknw() const {
 		return this->type == type_enum::t_unknw;
 	}

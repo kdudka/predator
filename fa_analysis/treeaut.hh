@@ -261,8 +261,16 @@ public:
 	size_t next_state;
 	size_t maxRank;
 
-	set<typename trans_cache_type::value_type*> transitions;
-	set<size_t> finalStates;
+	struct CmpF {
+		bool operator()(typename trans_cache_type::value_type* lhs, typename trans_cache_type::value_type* rhs) {
+			return lhs->first < rhs->first;
+		}
+	};
+
+	typedef std::set<typename trans_cache_type::value_type*, CmpF> trans_set_type;
+
+	trans_set_type transitions;
+	std::set<size_t> finalStates;
 	
 //	std::map<const std::vector<int>*, int> lhsMap;
 
@@ -480,7 +488,7 @@ public:
 		return *this->finalStates.begin();
 	}
 	
-	const std::set<typename trans_cache_type::value_type*>& getTransitions() const { return this->transitions; }
+	const trans_set_type& getTransitions() const { return this->transitions; }
 
 	void downwardTranslation(LTS& lts, const Index<size_t>& stateIndex, const Index<T>& labelIndex) const;
 	
@@ -618,7 +626,7 @@ public:
 		predicate.buildLTCache(cache2);
 		TA<T>::computeProduct(cache1, cache2, TA<T>::PredicateF(dst, predicate));
 	}
-
+/*
 	// currently erases '1' from the relation
 	void heightAbstraction(std::vector<std::vector<bool> >& result, size_t height, const Index<size_t>& stateIndex) const {
 		std::vector<size_t> classIndex(stateIndex.size(), 0), newClassIndex(stateIndex.size());
@@ -643,6 +651,110 @@ public:
 				}
 			}
 		}
+	}
+*/
+	static bool transMatch(const TT<T>* t1, const TT<T>* t2, std::vector<std::vector<bool> >& mat, const Index<size_t>& stateIndex) {
+
+		if (t1->_label != t2->_label)
+			return false;
+
+		bool match = true;
+		for (size_t m = 0; m < t1->_lhs->first.size(); ++m) {
+			if (!mat[stateIndex[t1->_lhs->first[m]]][stateIndex[t2->_lhs->first[m]]]) {
+				match = false;
+				break;
+			}
+		}
+		return match;
+
+	}
+
+	// currently erases '1' from the relation
+	void heightAbstraction(std::vector<std::vector<bool> >& result, size_t height, const Index<size_t>& stateIndex) const {
+
+		td_cache_type cache;
+		this->buildTDCache(cache);
+
+		std::vector<std::vector<bool> > tmp;
+
+		for (Index<size_t>::iterator i = stateIndex.begin(); i != stateIndex.end(); ++i)
+			std::cerr << i->first << ':' << i->second << ' ';
+		std::cerr << std::endl;
+
+		while (height--) {
+
+			tmp = result;
+
+			for (size_t i = 0; i < tmp.size(); ++i) {
+				for (size_t j = 0; j < tmp[i].size(); ++j) {
+					std::cerr << tmp[i][j];
+				}
+				std::cerr << std::endl;
+			}
+
+			for (Index<size_t>::iterator i = stateIndex.begin(); i != stateIndex.end(); ++i) {
+
+				size_t state1 = i->second;
+
+				typename td_cache_type::iterator j = cache.insert(
+					std::make_pair(i->first, std::vector<const TT<T>*>())
+				).first;
+
+				for (Index<size_t>::iterator k = stateIndex.begin(); k != stateIndex.end(); ++k) {
+
+					size_t state2 = k->second;
+
+					if ((state1 == state2) || !tmp[state1][state2])
+						continue;
+//std::cerr << i->second << " <- " << k->second << " (" << tmp[state1][state2] << ')' << std::endl;					
+					typename td_cache_type::iterator l = cache.insert(
+						std::make_pair(k->first, std::vector<const TT<T>*>())
+					).first;
+
+					bool match = false;
+
+					for (typename std::vector<const TT<T>*>::const_iterator m = j->second.begin(); m != j->second.end(); ++m) {
+//std::cerr << "challenge: " << **m << std::endl;
+						for (typename std::vector<const TT<T>*>::const_iterator n = l->second.begin(); n != l->second.end(); ++n) {
+
+							if (TA<T>::transMatch(*m, *n, tmp, stateIndex)) {
+//std::cerr << "response: " << **n << std::endl;
+								match = true;
+								break;
+							}
+
+						}
+
+						if (match)
+							break;
+
+					}
+
+					if (!match)
+						result[state1][state2] = false;
+
+				}
+
+			}
+
+		}
+
+		for (size_t i = 0; i < result.size(); ++i) {
+			for (size_t j = 0; j < i; ++j) {
+				if (!result[i][j])
+					result[j][i] = false;
+				if (!result[j][i])
+					result[i][j] = false;
+			}
+		}
+
+		for (size_t i = 0; i < result.size(); ++i) {
+			for (size_t j = 0; j < result[i].size(); ++j) {
+				std::cerr << result[i][j];
+			}
+			std::cerr << std::endl;
+		}
+
 	}
 
 	void predicateAbstraction(std::vector<std::vector<bool> >& result, const TA<T>& predicate, const Index<size_t>& stateIndex) const {
@@ -831,6 +943,7 @@ public:
 			dst.addFinalState(newState);
 		return dst;
 	}
+
 /*	
 	TA<T>& unfoldAtLeaf(TA<T>& dst, size_t selector) const {
 		// TODO:
@@ -893,6 +1006,10 @@ public:
 
 		bool isAlive(TA<T>* x) {
 			return this->taCache.find(x) != NULL;			
+		}
+
+		typename TA<T>::Backend& getBackend() {
+			return this->backend;
 		}
 	
 	};

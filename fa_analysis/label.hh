@@ -49,6 +49,8 @@ struct label_type {
 
 	bool operator==(const label_type& rhs) const { return this->data == rhs.data; }
 
+	bool operator!=(const label_type& rhs) const { return this->data != rhs.data; }
+
 	friend std::ostream& operator<<(std::ostream& os, const label_type& label);
 
 };

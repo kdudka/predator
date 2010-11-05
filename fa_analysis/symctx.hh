@@ -20,17 +20,40 @@
 #ifndef SYM_CTX_H
 #define SYM_CTX_H
 
+#include <vector>
+
 #include <boost/unordered_map.hpp>
 
 #include <cl/code_listener.h>
 #include <cl/cldebug.hh>
 #include <cl/storage.hh>
+#include <cl/clutil.hh>
+#include <cl/cl_msg.hh>
 
 #include "regdef.hh"
 #include "types.hh"
 #include "operandinfo.hh"
 
+#define ABP_OFFSET		0
+#define ABP_SIZE		SymCtx::size_of_data
+#define IP_OFFSET		(ABP_OFFSET + ABP_SIZE)
+#define IP_SIZE			SymCtx::size_of_code
+
 struct SymCtx {
+
+	// must be initialized externally!
+	static int size_of_data;
+	static int size_of_code;
+
+	// initialize size_of_void
+	static void initCtx(const CodeStorage::Storage& stor) {
+		size_of_code = stor.types.codePtrSizeof();
+		if (size_of_code == -1)
+			size_of_code = sizeof(void(*)());
+		size_of_data = stor.types.dataPtrSizeof();
+		if (size_of_data == -1)
+			size_of_data = sizeof(void*);
+	}
 
 	const CodeStorage::Fnc& fnc;
 
@@ -46,15 +69,12 @@ struct SymCtx {
 	SymCtx(const CodeStorage::Fnc& fnc) : fnc(fnc), regCount(0) {
 
 		// pointer to previous stack frame
-		this->sfLayout.push_back(SelData(ABP_OFFSET, sizeof(void*), 0));
+		this->sfLayout.push_back(SelData(ABP_OFFSET, ABP_SIZE, 0));
 
 		// pointer to context info
-		this->sfLayout.push_back(SelData(RET_OFFSET, sizeof(void*), 0));
+		this->sfLayout.push_back(SelData(IP_OFFSET, IP_SIZE, 0));
 
-		// pointer to context info
-		this->sfLayout.push_back(SelData(AAX_OFFSET, sizeof(size_t), 0));
-
-		size_t offset = 2*sizeof(void*) + sizeof(size_t);
+		size_t offset = ABP_SIZE + IP_SIZE;
 
 		for (CodeStorage::TVarList::const_iterator i = fnc.vars.begin(); i != fnc.vars.end(); ++i) {
 
@@ -95,11 +115,10 @@ struct SymCtx {
 */
 	static void init(FAE& fae) {
 		assert(fae.varCount() == 0);
-		// create ABP and CTX registers
+		// create ABP and RET registers
 		fae.varPopulate(FIXED_REG_COUNT);
 		fae.varSet(ABP_INDEX, Data::createInt(0));
-		fae.varSet(RET_INDEX, Data::createUndef());
-		fae.varSet(AAX_INDEX, Data::createUndef());
+		fae.varSet(IP_INDEX, Data::createUndef());
 	}
 /*
 	struct StackFrameCreateF {
@@ -133,54 +152,47 @@ struct SymCtx {
 
 	};
 */
-	void createStackFrame(vector<FAE*>& dst, const FAE& fae) const {
+	void createStackFrame(FAE& fae, struct SymState* target) const {
 
 		std::vector<pair<SelData, Data> > stackInfo;
 
 		for (vector<SelData>::const_iterator i = this->sfLayout.begin(); i != this->sfLayout.end(); ++i)
 			stackInfo.push_back(make_pair(*i, Data::createUndef()));
 
-		FAE* tmp = new FAE(fae);
+		stackInfo[0].second = fae.varGet(ABP_INDEX);
+		stackInfo[1].second = fae.varGet(IP_INDEX);
 
-		stackInfo[0].second = tmp->varGet(ABP_INDEX);
-		stackInfo[1].second = Data::createNativePtr(NULL);
+		fae.varSet(ABP_INDEX, Data::createRef(fae.nodeCreate(stackInfo)));
+		fae.varSet(IP_INDEX, Data::createNativePtr((void*)target));
+		fae.varPopulate(this->regCount);
 
-		tmp->varSet(ABP_INDEX, Data::createRef(tmp->nodeCreate(stackInfo)));
-		// TODO: ...
-
-		tmp->varSet(RET_INDEX, Data::createNativePtr(NULL));
-		tmp->varSet(AAX_INDEX, Data::createInt(0));
-		tmp->varPopulate(this->regCount);
-
-		dst.push_back(tmp);
-		
 	}
+	
+	// if true then do fae.isolateAtRoot(dst, <ABP>.d_ref.root, FAE::IsolateAllF()) in the next step
+	bool destroyStackFrame(FAE& fae) const {
 
-	void destroyStackFrame(vector<FAE*>& dst, const FAE& fae) const {
-
-		FAE tmp(fae);
-
-		const Data& abp = tmp.varGet(ABP_INDEX);
+		const Data& abp = fae.varGet(ABP_INDEX);
 
 		assert(abp.isRef());
 		assert(abp.d_ref.displ == 0);
 		
 		Data data;
 
-		tmp.varRemove(this->regCount);
-		tmp.nodeLookup(abp.d_ref.root, ABP_OFFSET, data);
-		tmp.unsafeNodeDelete(abp.d_ref.root);
-		tmp.varSet(ABP_INDEX, data);
+		fae.varRemove(this->regCount);
+		fae.nodeLookup(abp.d_ref.root, ABP_OFFSET, data);
+		fae.unsafeNodeDelete(abp.d_ref.root);
+		fae.varSet(ABP_INDEX, data);
 
-		if (abp.isRef()) {
-			tmp.nodeLookup(abp.d_ref.root, RET_OFFSET, data);
-			assert(data.isNativePtr());
-			tmp.varSet(RET_INDEX, data);
-			tmp.isolateAtRoot(dst, abp.d_ref.root, FAE::IsolateAllF());
-		} else {
-			tmp.varSet(RET_INDEX, Data::createUndef());
-			dst.push_back(new FAE(tmp));
+		if (!abp.isRef()) {
+			fae.varSet(IP_INDEX, Data::createUndef());
+			return false;
 		}
+
+		fae.nodeLookup(abp.d_ref.root, IP_OFFSET, data);
+		assert(data.isNativePtr());
+		fae.varSet(IP_INDEX, data);
+
+		return true;
 		
 	}
 
@@ -205,19 +217,30 @@ struct SymCtx {
 
 	}
 
+	bool isReg(const cl_operand* op, size_t& id) const {
+		if (op->code != cl_operand_e::CL_OPERAND_VAR)
+			return false;
+		var_map_type::const_iterator i = this->varMap.find(varIdFromOperand(op));
+		assert(i != this->varMap.end());
+		if (i->second.first)
+			return false;
+		id = i->second.second;
+		return true;
+	}
+
 	void dumpContext(const FAE& fae) const {
 
-		vector<size_t> offs;
+		std::vector<size_t> offs;
 
-		for (vector<SelData>::const_iterator i = this->sfLayout.begin(); i != this->sfLayout.end(); ++i)
+		for (std::vector<SelData>::const_iterator i = this->sfLayout.begin(); i != this->sfLayout.end(); ++i)
 			offs.push_back((*i).offset);
 
 		Data data;
 
 		fae.nodeLookupMultiple(fae.varGet(ABP_INDEX).d_ref.root, 0, offs, data);
 
-		unordered_map<size_t, Data> tmp;
-		for (vector<Data::item_info>::const_iterator i = data.d_struct->begin(); i != data.d_struct->end(); ++i)
+		boost::unordered_map<size_t, Data> tmp;
+		for (std::vector<Data::item_info>::const_iterator i = data.d_struct->begin(); i != data.d_struct->end(); ++i)
 			tmp.insert(make_pair(i->first, i->second));
 
 		for (CodeStorage::TVarList::const_iterator i = this->fnc.vars.begin(); i != this->fnc.vars.end(); ++i) {

@@ -27,6 +27,8 @@
 #include <cl/code_listener.h>
 
 #include "regdef.hh"
+#include "forestautext.hh"
+#include "nodebuilder.hh"
 
 typedef enum { safe_ref, ref, reg, val } o_flag_e;
 

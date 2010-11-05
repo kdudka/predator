@@ -354,6 +354,13 @@ public:
 	}
 
 	template <class T>
+	static void eraseMapFirst(T& x) {
+		for (typename T::iterator i = x.begin(); i != x.end(); ++i)
+			delete i->first;
+		x.clear();
+	}
+
+	template <class T>
 	static void eraseMap(T& x) {
 		for (typename T::iterator i = x.begin(); i != x.end(); ++i)
 			delete i->second;

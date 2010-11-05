@@ -17,14 +17,7 @@
  * along with predator.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef REG_DEF_H
-#define REG_DEF_H
+#include "symctx.hh"
 
-// abstract base pointer
-#define ABP_INDEX		0
-// 'return address'
-#define IP_INDEX		1
-
-#define FIXED_REG_COUNT	2
-
-#endif
+int SymCtx::size_of_data;
+int SymCtx::size_of_code;

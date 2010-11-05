@@ -17,11 +17,15 @@
  * along with predator.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <iostream>
+#include <stdexcept>
+
 #include <cl/easy.hh>
 #include <cl/cl_msg.hh>
 #include <cl/location.hh>
 #include <cl/storage.hh>
 
+#include "symctx.hh"
 #include "symexec.hh"
 
 // required by the gcc plug-in API
@@ -40,6 +44,9 @@ void clEasyRun(const CodeStorage::Storage& stor, const char* configString) {
         return;
     }
 
+	// initialize context
+	SymCtx::initCtx(stor);
+
     // look for definition of main()
     const FncDb &fncs = stor.fncs;
     const Fnc *main = fncs[iter->second];
@@ -49,6 +56,10 @@ void clEasyRun(const CodeStorage::Storage& stor, const char* configString) {
     }
 
     CL_DEBUG("starting verification stuff ...");
-	SymExec(stor).run(*main);
+    try {
+		SymExec(stor).run(*main);
+	} catch (const std::exception& e) {
+		std::cerr << e.what() << std::endl;
+	}
 
 }

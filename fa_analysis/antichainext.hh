@@ -177,7 +177,7 @@ public:
 		antichain.initIndex(cSize - countB, countB);
 		vector<typename TA<T>::trans_cache_type::value_type*> aLeaves;
 		unordered_map<T, vector<typename TA<T>::trans_cache_type::value_type*> > bTrans, bLeaves;
-		for (typename set<typename TA<T>::trans_cache_type::value_type*>::const_iterator i = c.transitions.begin(); i != c.transitions.end(); ++i) {
+		for (typename TA<T>::trans_set_type::const_iterator i = c.transitions.begin(); i != c.transitions.end(); ++i) {
 			size_t arity = (*i)->first._lhs->first.size();
 			if ((*i)->first._rhs >= countB) {
 				if (arity == 0) {

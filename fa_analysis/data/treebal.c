@@ -12,61 +12,33 @@ int main() {
 	struct TreeNode* node;
     };
 
-    struct TreeNode* root = malloc(sizeof(*root)), *n, *nt;
+    struct TreeNode* root = malloc(sizeof(*root)), *n;
     root->left = NULL;
     root->right = NULL;
 
     while (__nondet()) {
         n = root;
-	while (n->left) {
+	while (n->left && n->right) {
 	    if (__nondet())
 		n = n->left;
 	    else
 		n = n->right;
 	}
-	n->left = malloc(sizeof(*n));
-	n->left->left = NULL;
-	n->left->right = NULL;
-	n->right = malloc(sizeof(*n));
-	n->right->left = NULL;
-	n->right->right = NULL;
+	if (!n->left && __nondet()) {
+		n->left = malloc(sizeof(*n));
+		n->left->left = NULL;
+		n->left->right = NULL;
+	}
+	if (!n->right && __nondet()) {
+		n->right = malloc(sizeof(*n));
+		n->right->left = NULL;
+		n->right->right = NULL;
+	}
     }
-/*
-    struct StackItem* s = malloc(sizeof(*s)), *st;
-    s->next = NULL;
-    s->node = root;
 
-    while (s != NULL) {
-        st = s;
-        s = s->next;
-	n = st->node;
-	free(st);
-        if (__nondet()) {
-	    nt = malloc(sizeof(*nt));
-	    nt->left = NULL;
-	    nt->right = NULL;
-    	    n->left = nt;
-	    st = malloc(sizeof(*st));
-	    st->next = s;
-	    st->node = nt;
-	    s = st;
-	}
-        if (__nondet()) {
-	    nt = malloc(sizeof(*nt));
-	    nt->left = NULL;
-	    nt->right = NULL;
-    	    n->right = nt;
-	    st = malloc(sizeof(*st));
-	    st->next = s;
-	    st->node = nt;
-	    s = st;
-	}
-    }
-*/
     n = NULL;
-    nt = NULL;
 
-    struct StackItem* s = malloc(sizeof(*s)), * st;
+    struct StackItem* s = malloc(sizeof(*s)), *st;
     s->next = NULL;
     s->node = root;
 

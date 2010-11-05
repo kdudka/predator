@@ -19,6 +19,8 @@
 
 #include <sstream>
 #include <vector>
+#include <list>
+#include <boost/unordered_set.hpp>
 #include <boost/unordered_map.hpp>
 
 #include <cl/code_listener.h>
@@ -31,14 +33,18 @@
 #include "forestaut.hh"
 #include "forestautext.hh"
 #include "ufae.hh"
-#include "symexec.hh"
-#include "nodebuilder.hh"
 #include "operandinfo.hh"
 #include "symctx.hh"
+#include "symstate.hh"
+#include "loopanalyser.hh"
 
+#include "symexec.hh"
+
+using boost::unordered_set;
 using boost::unordered_map;
 using std::vector;
-
+using std::list;
+/*
 struct FAEContainer {
 
 	std::vector<FAE*> conf;
@@ -78,7 +84,7 @@ protected:
 	FAEContainer(const FAEContainer&) {}
 
 };
-
+*/
 void dumpOperandTypes(std::ostream& os, const cl_operand* op) {
 	os << "operand:" << std::endl;
 	cltToStream(os, op->type, false);
@@ -90,179 +96,69 @@ void dumpOperandTypes(std::ostream& os, const cl_operand* op) {
 	}
 }
 
-struct SymState {
-
-	// configuration obtained in forward run
-	TA<label_type> fwdConf;
-
-	UFAE fwdConfWrapper;
-
-	// outstanding configurations
-	std::vector<FAE*> outConf;
-
-	const SymCtx* ctx;
-
-	CodeStorage::Block::const_iterator insn;
-
-	SymState(TA<label_type>::Backend& taBackend, LabMan& labMan)
-		: fwdConf(taBackend), fwdConfWrapper(this->fwdConf, labMan) {}
-
-	~SymState() {
-		utils::erase(this->outConf);
-//		for (std::vector<FAE*>::iterator i = this->outConf.begin(); i != this->outConf.end(); ++i)
-//			delete *i;
-	}
-
-	FAE* next() {
-		if (this->outConf.empty())
-			return NULL;
-		FAE* fae = this->outConf.back();
-		this->outConf.pop_back();
-		return fae;
-	}
-
-	void prepareOperand(vector<FAE*>& dst, const vector<FAE*>& src, const cl_operand& op) {
-		vector<size_t> offs;
-		NodeBuilder::buildNode(offs, op.type);
-		OperandInfo oi;
-		for (vector<FAE*>::const_iterator i = src.begin(); i != src.end(); ++i) {
-			this->ctx->parseOperand(oi, **i, &op);
-			if (oi.flag == o_flag_e::ref)
-				(*i)->isolateAtRoot(dst, oi.data.d_ref.root, FAE::IsolateSetF(offs, oi.data.d_ref.displ));
-			else
-				dst.push_back(new FAE(**i));
-		}
-	}
-
-	void prepareOperands(vector<FAE*>& dst, const FAE& fae) {
-		vector<FAE*> tmp1, tmp2;
-		ContainerGuard<vector<FAE*> > g1(tmp1), g2(tmp2);
-		tmp1.push_back(new FAE(fae));
-		for (vector<cl_operand>::const_iterator i = (*this->insn)->operands.begin(); i != (*this->insn)->operands.end(); ++i) {
-			if (i->code != cl_operand_e::CL_OPERAND_VAR)
-				continue;
-			this->prepareOperand(tmp2, tmp1, *i);
-			utils::erase(tmp1);
-			std::swap(tmp1, tmp2);
-		}
-		dst.insert(dst.end(), tmp1.begin(), tmp1.end());
-		g1.release();		
-	}
-
-	// carefull
-	void finalizeOperands(FAE& fae) {
-		OperandInfo oi;
-		for (vector<cl_operand>::const_iterator i = (*this->insn)->operands.begin(); i != (*this->insn)->operands.end(); ++i) {
-			if (i == (*this->insn)->operands.begin())
-				continue;
-			if (i->code != cl_operand_e::CL_OPERAND_VAR)
-				continue;
-			this->ctx->parseOperand(oi, fae, &*i);
-			if (oi.flag == o_flag_e::reg)
-				fae.varSet(oi.data.d_ref.root, Data::createUndef());
-		}
-	}
-
-	bool enqueue(const FAE& fae) {
-
-		TA<label_type> ta(*this->fwdConf.backend);
-		Index<size_t> index;
-
-		this->fwdConfWrapper.fae2ta(ta, index, fae);
-/*
-		TA<label_type> min(*this->fwdConf.backend);
-
-		ta.minimized(min);
-
-		CL_DEBUG("challenge:" << std::endl << min);
-
-		min.clear();
-
-		this->fwdConf.minimized(min);
-			
-		CL_DEBUG("response:" << std::endl << min);
-*/
-		if (TA<label_type>::subseteq(ta, this->fwdConf))
-			return false;
-
-		this->fwdConfWrapper.join(ta, index);
-		this->prepareOperands(this->outConf, fae);
-		
-		return true;
-
-	}
-
-};
+void dumpLocation(const cl_location* loc) {
+	if (loc->file)
+		CL_DEBUG(loc->file << ':' << loc->line << ": ");
+	else
+		CL_DEBUG("<unknown location>: ");
+}
 
 struct SymOp {
 
 	SymState* src;
 	SymState* dst;
-	
 
 };
-/*
+
+
 struct TraceRecorder {
 
-	std::vector<SymOp> trace;
+	struct Item {
+
+		Item* parent;
+		const FAE* fae;
+		const CodeStorage::Insn* insn;
+		vector<Item*> children;
+
+		Item(Item* parent, const FAE* fae, const CodeStorage::Insn* insn)
+			: parent(parent), fae(fae), insn(insn) {
+			if (parent)
+				parent->children.push_back(this);
+		}
+
+	};
+
+	unordered_map<const FAE*, Item*> confMap;
 
 	TraceRecorder() {
 	}
 
-	template <class F>
-	void isolateAtRoot(std::vector<FAE*>& dst, size_t root, F f) {
+	~TraceRecorder() { this->clear(); }
+
+	void clear() {
+		utils::eraseMap(this->confMap);
 	}
 
-	void heightAbstraction(size_t height = 1) {
+	void init(const FAE* fae) {
+		this->clear();
+		Item* item = new Item(NULL, fae, NULL);
+		this->confMap.insert(make_pair(fae, item));
 	}
 
-	void normalize(FAE::NormInfo& normInfo, const std::vector<size_t>& forbidden = std::vector<size_t>()) {
+	Item* find(const FAE* fae) {
+		unordered_map<const FAE*, Item*>::iterator i = this->confMap.find(fae);
+		assert(i != this->confMap.end());
+		return i->second;
 	}
 
-	size_t varCount() const {
+	void add(const FAE* parent, const FAE* fae, const CodeStorage::Insn* insn) {
+		this->confMap.insert(
+			make_pair(fae, new Item(this->find(parent), fae, insn))
+		);
 	}
-
-	size_t varAdd(const Data& data) {
-	}
-
-	void varPopulate(size_t count) {
-	}
-
-	void varRemove(size_t count) {
-	}
-
-	const Data& varGet(size_t id) const {
-	}
-
-	void varSet(size_t id, const Data& data) {
-	}
-
-	size_t nodeCreate(const std::vector<std::pair<SelData, Data> >& nodeInfo) {
-	}
-
-	size_t nodeCreate(const std::vector<SelData>& nodeInfo) {
-	}
-
-	void nodeDelete(size_t root) {
-	}
-
-	void unsafeNodeDelete(size_t root) {
-	}
-
-	void nodeLookup(size_t root, size_t offset, Data& data) const {
-	}	
-
-	void nodeLookupMultiple(size_t root, size_t base, const std::vector<size_t>& offsets, Data& data) const {
-	}	
-
-	void nodeModify(size_t root, size_t offset, const Data& in, Data& out) {
-	}	
-
-	void nodeModifyMultiple(size_t root, size_t offset, const Data& in, Data& out) {
-	}	
 	
 };
-*/
+
 typedef enum { biNone, biMalloc, biFree, biNondet } builtin_e;
 
 struct BuiltinTable {
@@ -284,11 +180,15 @@ public:
 
 };
 
+#define STATE_FROM_FAE(fae) ((SymState*)(assert((fae).varGet(IP_INDEX).isNativePtr()), (fae).varGet(IP_INDEX).d_native_ptr))
+
 class SymExec::Engine {
 
 	static BuiltinTable builtins;
 
 	const CodeStorage::Storage& stor;
+
+	LoopAnalyser loopAnalyser;
 
 	TA<label_type>::Backend taBackend;
 	TA<label_type>::Manager taMan;
@@ -301,7 +201,12 @@ class SymExec::Engine {
 	typedef unordered_map<const CodeStorage::Insn*, SymState*> state_store_type;
 	state_store_type stateStore;
 
-	std::vector<SymState*> todo;
+	std::list<const FAE*> queue;
+
+	const FAE* currentConf;
+	const CodeStorage::Insn* currentInsn;
+	
+	TraceRecorder traceRecorder;
 
 protected:
 
@@ -315,6 +220,14 @@ protected:
 
 	}
 
+	SymState* findState(const CodeStorage::Insn* insn) {
+
+		state_store_type::iterator i = this->stateStore.find(insn);
+		assert(i != this->stateStore.end());
+		return i->second;
+
+	}
+
 	SymState* getState(const CodeStorage::Block::const_iterator& insn, const SymCtx* ctx) {
 
 		state_store_type::iterator i = this->stateStore.find(*insn);
@@ -324,30 +237,37 @@ protected:
 		SymState* s = new SymState(this->taBackend, this->labMan);
 		s->insn = insn;
 		s->ctx = ctx;
+		s->entryPoint = this->loopAnalyser.isEntryPoint(*insn);
 		
 		return this->stateStore.insert(make_pair(*insn, s)).first->second;
 
 	}
 
-	void stateUnion(SymState* target, FAE& fae, bool tryAbstraction = false) {
+	void stateUnion(SymState* target, FAE& fae) {
+
+		fae.varSet(IP_INDEX, Data::createNativePtr((void*)target));
 
 		FAE::NormInfo normInfo;
 
 		std::vector<size_t> tmp;
+
 		fae.getNearbyReferences(fae.varGet(ABP_INDEX).d_ref.root, tmp);
 		fae.normalize(normInfo, tmp);
 
-		if (tryAbstraction)
-			fae.heightAbstraction();
+		if (target->entryPoint)
+			fae.heightAbstraction(1);
 
-		if (target->enqueue(fae)) {
-			CL_DEBUG("enqueued:");
-			target->ctx->dumpContext(fae);
-			CL_DEBUG(std::endl << fae);
-			this->todo.push_back(target);
-		} else
-			CL_DEBUG("hit");
-		
+//		CL_DEBUG("after abstraction: " << std::endl << fae);
+
+		size_t l = this->queue.size();
+
+		if (target->enqueue(this->queue, fae)) {
+			int i = this->queue.size() - l;
+			for (std::list<const FAE*>::reverse_iterator j = this->queue.rbegin(); i > 0; --i, ++j)
+				this->traceRecorder.add(this->currentConf, *j, this->currentInsn);
+		}
+		else CL_DEBUG("hit");
+
 	}
 
 	void enqueueNextInsn(SymState* state, FAE& src) {
@@ -443,7 +363,7 @@ protected:
 	}
 
 	static void dataEq(const Data& x, const Data& y, bool neg, vector<Data>& res) {
-		if (x.isUnknw() || y.isUnknw()) {
+		if ((x.isUnknw() || x.isUndef()) || (y.isUnknw() || y.isUndef())) {
 			res.push_back(Data::createBool(false));
 			res.push_back(Data::createBool(true));
 		} else
@@ -558,7 +478,9 @@ protected:
 
 	void execJmp(SymState* state, FAE& fae, const CodeStorage::Insn* insn) {
 
-		this->stateUnion(this->getState(insn->targets[0]->begin(), state->ctx), fae, true);
+		state->finalizeOperands(fae);
+
+		this->stateUnion(this->getState(insn->targets[0]->begin(), state->ctx), fae);
 
 	}
 
@@ -574,7 +496,9 @@ protected:
 		if (!data.isBool())
 			throw runtime_error("Engine::execCond(): non boolean condition argument!");
 
-		this->stateUnion(this->getState(insn->targets[((data.d_bool))?(0):(1)]->begin(), state->ctx), fae, true);
+		state->finalizeOperands(fae);
+
+		this->stateUnion(this->getState(insn->targets[((data.d_bool))?(0):(1)]->begin(), state->ctx), fae);
 
 	}
 
@@ -584,15 +508,17 @@ protected:
 		vector<FAE*> tmp;
 		ContainerGuard<vector<FAE*> > g(tmp);
 
-		state->ctx->destroyStackFrame(tmp, fae);
+		assert(!state->ctx->destroyStackFrame(fae));
 
 		for (vector<FAE*>::iterator i = tmp.begin(); i != tmp.end(); ++i)
 			(*i)->check();
 		
 	}
 
-	void execInsn(SymState* state, FAE& fae, const CodeStorage::Insn* insn) {
-		
+	void execInsn(SymState* state, FAE& fae) {
+
+		const CodeStorage::Insn* insn = *state->insn;
+
 		switch (insn->code) {
 
 			case cl_insn_e::CL_INSN_UNOP:
@@ -658,44 +584,60 @@ protected:
 				
 	}
 
-	void processState() {
+	void processState(const FAE* fae) {
 
-		SymState* state = this->todo.back();
+		assert(fae);
 
-		FAE* src = state->next();
+		SymState* state = STATE_FROM_FAE(*fae);
 
-		if (!src) {
-			this->todo.pop_back();
-			return;
-		}
+		this->currentInsn = *state->insn;
 
-		Guard<FAE> g(src);
+		state->confMap[fae] = this->queue.end();
 
 		const cl_location* loc = &(*state->insn)->loc;
 
-		CL_DEBUG("processing:");
+		CL_DEBUG("processing " << fae);
 
-		state->ctx->dumpContext(*src);
+		state->ctx->dumpContext(*fae);
 		
-		CL_DEBUG(std::endl << *src);
+		CL_DEBUG(std::endl << *fae);
 
-		if (loc->file)
-			CL_DEBUG(loc->file << ':' << loc->line << ": " << **state->insn);
-		else
-			CL_DEBUG("<unknown location>: " << **state->insn);
+		dumpLocation(loc);
 
 		try {
-				
-			this->execInsn(state, *src, *state->insn);
 
-		} catch (...) {
-			if (loc->file)
-				CL_DEBUG(loc->file << ':' << loc->line << ": ");
-			else
-				CL_DEBUG("<unknown location>: ");
-			throw;
-		}
+			FAE tmp(*fae);
+
+			this->execInsn(state, tmp);
+
+		} catch (const std::exception& e) {
+
+			CL_DEBUG("reconstructing abstract trace ...");
+
+			vector<pair<const FAE*, const CodeStorage::Insn*> > trace;
+
+			const TraceRecorder::Item* item = this->traceRecorder.find(this->currentConf);
 			
+			while (item) {
+				trace.push_back(make_pair(item->fae, item->insn));
+				item = item->parent;
+			}
+
+			CL_DEBUG("trace:");
+
+			for (vector<pair<const FAE*, const CodeStorage::Insn*> >::reverse_iterator i = trace.rbegin(); i != trace.rend(); ++i) {
+				STATE_FROM_FAE(*i->first)->ctx->dumpContext(*i->first);
+				if (i->second)
+					CL_DEBUG(*(i->second));
+				CL_DEBUG(std::endl << *(i->first));
+			}
+
+			CL_DEBUG(*this->currentInsn);
+
+			throw;
+
+		}
+
 	}
 
 public:
@@ -710,10 +652,14 @@ public:
 
 	void run(const CodeStorage::Fnc& main) {
 
+	    CL_DEBUG("calculating loop entry points ...");
+		// compute loop entry points
+		this->loopAnalyser.init(main.cfg.entry());
+		
 	    CL_DEBUG("creating main context ...");
 		// create main context
 		SymCtx* mainCtx = this->getCtx(&main);
-		
+
 	    CL_DEBUG("creating initial state ...");
 		// create an initial state
 		SymState* init = this->getState(main.cfg.entry()->begin(), mainCtx);
@@ -728,20 +674,29 @@ public:
 
 	    CL_DEBUG("entering main stack frame ...");
 		// enter main stack frame
-		mainCtx->createStackFrame(init->outConf, fae);
-
+		mainCtx->createStackFrame(fae, init);
+/*
 	    CL_DEBUG("initial state dump ...");
-		for (std::vector<FAE*>::iterator i = init->outConf.begin(); i != init->outConf.end(); ++i)
+		for (std::vector<FAE*>::iterator i = init->outConf.begin(); i != init->outConf.end(); ++i) {
 			CL_DEBUG(std::endl << **i);
-
+			this->confBuffer.push_back(new FAE(**i));
+			this->confDict[*i] = this->confBuffer.back();
+		}
+*/
 	    CL_DEBUG("sheduling initial state ...");
 		// schedule initial state for processing
-		this->todo.push_back(init);
+//		this->todo.push_back(init);
+		init->enqueue(this->queue, fae);
+
+		this->traceRecorder.init(this->queue.front());
 
 		try {
 
-			while (!todo.empty())
-				this->processState();
+			while (!this->queue.empty()) {
+				this->currentConf = this->queue.front();
+				this->queue.pop_front();
+				this->processState(this->currentConf);
+			}
 
 		} catch (std::exception& e) {
 			CL_DEBUG(e.what());

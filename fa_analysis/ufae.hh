@@ -43,6 +43,8 @@ public:
 		this->backend.addFinalState(0);
 	}
 
+	void clear() { this->stateOffset = 1; }
+
 	TA<label_type>& fae2ta(TA<label_type>& dst, Index<size_t>& index, const FAE& src) const {
 		vector<size_t> lhs;
 		for (vector<TA<label_type>*>::const_iterator i = src.roots.begin(); i != src.roots.end(); ++i) {
@@ -56,6 +58,10 @@ public:
 
 	void join(const TA<label_type>& src, const Index<size_t>& index) {
 		TA<label_type>::disjointUnion(this->backend, src, false);
+		this->stateOffset += index.size();
+	}
+
+	void adjust(const Index<size_t>& index) {
 		this->stateOffset += index.size();
 	}
 
