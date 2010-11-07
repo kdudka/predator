@@ -46,7 +46,7 @@ typedef std::pair<TValueId, TValueId>                       TValPair;
 class ISubMatchVisitor {
     public:
         virtual ~ISubMatchVisitor() { }
-        virtual bool considerVisiting(TValPair vp);
+        virtual bool considerVisiting(TValPair vp) = 0;
 };
 
 typedef std::vector<TValPair>                               TValPairList;

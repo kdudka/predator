@@ -24,6 +24,7 @@
 #include <cl/clutil.hh>
 #include <cl/storage.hh>
 
+#include "symcmp.hh"
 #include "symseg.hh"
 #include "symutil.hh"
 #include "util.hh"
@@ -79,6 +80,96 @@ bool validateUpLink(const SymHeap       &sh,
     return true;
 }
 
+typedef SymHeap::TContValue TProtoAddrs[2];
+
+class NonSegPrototypeFinder: public ISubMatchVisitor {
+    private:
+        const SymHeap           &sh_;
+        const TObjPair          &roots_;
+        bool                    ok_;
+        TProtoAddrs             protoAddrs_;
+
+    public:
+        NonSegPrototypeFinder(const SymHeap &sh, const TObjPair &roots):
+            sh_(sh),
+            roots_(roots),
+            ok_(true)
+        {
+        }
+
+        bool result(void)                   const { return ok_; }
+
+        const TProtoAddrs& protoAddrs()     const { return protoAddrs_; }
+
+        virtual bool considerVisiting(TValPair vp) {
+            const TValueId v1 = vp.first;
+            const TValueId v2 = vp.second;
+
+            const TObjId o1 = sh_.pointsTo(v1);
+            const TObjId o2 = sh_.pointsTo(v2);
+            if (o1 <= 0 || o2 <= 0)
+                // no valid objects anyway, keep going...
+                return true;
+
+            if (!ok_)
+                // FIXME: suboptimal interface of ISubMatchVisitor
+                return false;
+
+            const bool rootOk1 = (objRoot(sh_, o1) == roots_.first);
+            const bool rootOk2 = (objRoot(sh_, o2) == roots_.second);
+            if (rootOk1 != rootOk2) {
+                // up-link candidate mismatch
+                ok_ = false;
+                return false;
+            }
+
+            if (!rootOk1)
+                // keep searching
+                return true;
+
+            if ((ok_ = validateUpLink(sh_, roots_, v1, v2))) {
+                // up-link validated
+                protoAddrs_[0].push_back(v1);
+                protoAddrs_[1].push_back(v2);
+            }
+
+            // never step over roots_
+            return false;
+        }
+};
+
+// FIXME: protoAddrs is a bit misleading identifier in this context
+bool considerNonSegPrototype(
+        const SymHeap           &sh,
+        const TObjPair          &roots,
+        const TValueId          v1,
+        const TValueId          v2,
+        TProtoAddrs             *protoAddrs)
+{
+    CL_DEBUG("considerNonSegPrototype() called...");
+    SE_BREAK_IF(v1 <= 0 || v2 <= 0);
+
+    // declare starting points
+    TValPairList startingPoints(1, TValPair(v1, v2));
+
+    // initialize visitor
+    NonSegPrototypeFinder visitor(sh, roots);
+
+    // traverse pointed sub-heaps
+    if (!matchSubHeaps(sh, startingPoints, &visitor) || !visitor.result())
+        return false;
+
+    if (protoAddrs) {
+        const TProtoAddrs &src = visitor.protoAddrs();
+        TProtoAddrs &dst = *protoAddrs;
+        std::copy(src[0].begin(), src[0].end(), std::back_inserter(dst[0]));
+        std::copy(src[1].begin(), src[1].end(), std::back_inserter(dst[1]));
+    }
+
+    CL_WARN("considerNonSegPrototype() has succeeded!");
+    return true;
+}
+
 // TODO: extend this for lists of length 1 and 2, now we support only empty ones
 bool segMatchSmallList(
         const SymHeap           &sh,
@@ -95,8 +186,6 @@ bool segMatchSmallList(
     const TValueId valNext = sh.valueOf(nextPtrFromSeg(sh, seg));
     return validateUpLink(sh, roots, valNext, conVal);
 }
-
-typedef SymHeap::TContValue TProtoAddrs[2];
 
 struct DataMatchVisitor {
     std::set<TObjId>    ignoreList;
@@ -149,8 +238,7 @@ struct DataMatchVisitor {
 
         switch (code1) {
             case UV_KNOWN:
-                // known values have to match
-                return false;
+                return considerNonSegPrototype(sh, roots_, v1, v2, protoAddrs);
 
             case UV_UNINITIALIZED:
             case UV_UNKNOWN:

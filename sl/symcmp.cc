@@ -431,6 +431,25 @@ class CustomWorkList: public WorkList<TItem> {
         }
 };
 
+bool matchCVars(const SymHeap &sh, const TValMap &valMap) {
+    BOOST_FOREACH(TValMap::const_reference vp, valMap) {
+        const TObjId o1 = sh.pointsTo(vp.first);
+        const TObjId o2 = sh.pointsTo(vp.second);
+        if (o1 <= 0)
+            continue;
+
+        SE_BREAK_IF(o2 <= 0);
+
+        CVar cv1, cv2;
+        const bool isCVar1 = sh.cVar(&cv1, o1);
+        const bool isCVar2 = sh.cVar(&cv2, o2);
+        if (isCVar1 != isCVar2 || cv1 != cv2)
+            return false;
+    }
+
+    return true;
+}
+
 bool matchSubHeaps(
         const SymHeap           &sh,
         const TValPairList      &startingPoints,
@@ -452,5 +471,9 @@ bool matchSubHeaps(
     }
 
     // run DFS
-    return dfsCmp(wl, valMapping, sh, sh);
+    if (!dfsCmp(wl, valMapping, sh, sh))
+        return false;
+
+    // FIXME: too late (significant performance waste)
+    return matchCVars(sh, valMapping[0]);
 }
