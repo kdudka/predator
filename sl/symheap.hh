@@ -340,6 +340,21 @@ struct CVar {
     }
 };
 
+inline bool operator==(const CVar &a, const CVar &b) {
+    if (a.uid != b.uid)
+        return false;
+
+    if (-1 == a.uid)
+        // do not match .inst when a.uid == -1 == b.uid
+        return true;
+
+    return a.inst == b.inst;
+}
+
+inline bool operator!=(const CVar &a, const CVar &b) {
+    return !operator==(a, b);
+}
+
 /**
  * lexicographical comparison of CVar objects
  * @note we need it in order to place the objects into ordered containers

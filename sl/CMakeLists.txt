@@ -30,6 +30,7 @@ add_library(sl SHARED
     symbin.cc
     symbt.cc
     symcall.cc
+    symcmp.cc
     symcut.cc
     symdiscover.cc
     symdump.cc

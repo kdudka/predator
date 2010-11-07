@@ -36,6 +36,11 @@
 #define DEBUG_SYMABSTRACT                   0
 
 /**
+ * if 1, symcmp prints some extra debugging info (very noisy)
+ */
+#define DEBUG_SYMCMP                        0
+
+/**
  * if 1, the symcut module prints some extra debugging info
  */
 #define DEBUG_SYMCUT                        0
@@ -51,7 +56,7 @@
 #define DEBUG_SYMID_FORCE_INT               0
 
 /**
- * if 1, SymState prints some extra debugging info (very noisy)
+ * if 1, SymState plots heap graphs per each heap comparison (expensive)
  */
 #define DEBUG_SYMSTATE                      0
 
