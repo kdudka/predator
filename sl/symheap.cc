@@ -599,7 +599,7 @@ TValueId SymHeapCore::valCreate(EUnknownValue code, TObjId target) {
     Private::Value &ref = d->values[val];
     ref.code = code;
     if (UV_KNOWN == code || UV_ABSTRACT == code)
-        // ignore target for unknown values, they should be not followed anyhow
+        // ignore target for unknown values, they should not be followed anyhow
         ref.target = target;
 
     // we've just created a new value, let's notify posterity

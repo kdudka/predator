@@ -95,7 +95,7 @@
 /**
  * maximal call depth
  */
-#define SE_MAX_CALL_DEPTH                   0x100
+#define SE_MAX_CALL_DEPTH                   0x40
 
 /**
  * if more than zero, jump to debugger as soon as N graph of the same name has
