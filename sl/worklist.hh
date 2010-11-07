@@ -33,7 +33,7 @@ class WorkList {
 
     private:
         std::stack<T> todo;
-        std::set<T>   done;
+        std::set<T>   done; // FIXME: misleading identifier
 
     public:
         WorkList() { }

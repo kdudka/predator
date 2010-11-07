@@ -27,6 +27,7 @@
 
 #include "symid.hh"
 #include <map>
+#include <vector>
 
 class SymHeap;
 
@@ -39,5 +40,20 @@ bool areEqual(
         const SymHeap           &sh2,
         TValMap                 *srcToDst = 0,
         TValMap                 *dstToSrc = 0);
+
+typedef std::pair<TValueId, TValueId>                       TValPair;
+
+class ISubMatchVisitor {
+    public:
+        virtual ~ISubMatchVisitor() { }
+        virtual bool considerVisiting(TValPair vp);
+};
+
+typedef std::vector<TValPair>                               TValPairList;
+
+bool matchSubHeaps(
+        const SymHeap           &sh,
+        const TValPairList      &startingPoints,
+        ISubMatchVisitor        *visitor = 0);
 
 #endif /* H_GUARD_SYM_CMP_H */

@@ -339,8 +339,7 @@ bool areEqual(
     SE_BREAK_IF(dstToSrc && !dstToSrc->empty());
 
     // DFS stack
-    typedef std::pair<TValueId, TValueId> TValuePair;
-    WorkList<TValuePair> wl;
+    WorkList<TValPair> wl;
 
     // value substitution (isomorphism)
     TValMap valMapping[/* left-to-right + right-to-left */ 2];
@@ -387,4 +386,71 @@ bool areEqual(
 
     // match!
     return true;
+}
+
+template <class TItem, class TVisitor>
+class CustomWorkList: public WorkList<TItem> {
+    private:
+        typedef WorkList<TItem> TBase;
+        const SymHeap           &sh_;
+        TVisitor                *visitor_;
+        std::set<TItem>         haveSeen_;
+
+    public:
+        CustomWorkList(const SymHeap &sh, TVisitor *visitor):
+            sh_(sh),
+            visitor_(visitor)
+        {
+        }
+
+        bool schedule(const TItem &vp) {
+            if (!visitor_)
+                // no visitor anyway, keep going
+                return TBase::schedule(vp);
+
+            if (!insertOnce(haveSeen_, vp))
+                // already seen by visitor
+                return false;
+
+            SC_DEBUG("CustomWorkList::schedule() calls visitor"
+                     << SC_DUMP_V1_V2(sh_, sh_, vp.first, vp.second));
+
+            if (!visitor_->considerVisiting(vp))
+                // schedule canceled by the visitor
+                return false;
+
+            const bool rv = TBase::schedule(vp);
+            SE_BREAK_IF(!rv);
+            return rv;
+        }
+
+        // FIXME: there is no TBase::schedule() virtual method --> subtle
+        bool schedule(const TValueId v1, const TValueId v2) {
+            const TValPair vp(v1, v2);
+            return this->schedule(vp);
+        }
+};
+
+bool matchSubHeaps(
+        const SymHeap           &sh,
+        const TValPairList      &startingPoints,
+        ISubMatchVisitor        *visitor)
+{
+    // DFS stack
+    typedef CustomWorkList<TValPair, ISubMatchVisitor>      TWorkList;
+    TWorkList wl(sh, visitor);
+
+    // value substitution (isomorphism)
+    TValMap valMapping[/* left-to-right + right-to-left */ 2];
+
+    BOOST_FOREACH(const TValPair &vp, startingPoints) {
+        // FIXME: it's not clear from the dox, if startingPoints should be also
+        //        given to the visitor, or not (but they _should_)
+        if (wl.schedule(vp))
+            SC_DEBUG("matchSubHeaps() picks up a starting point"
+                     << SC_DUMP_V1_V2(sh, sh, vp.first, vp.second));
+    }
+
+    // run DFS
+    return dfsCmp(wl, valMapping, sh, sh);
 }
