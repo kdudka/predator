@@ -70,7 +70,7 @@ bool checkNonPosValues(int a, int b) {
 }
 
 template <class TMapping>
-bool matchValues(
+bool matchPlainValues(
         TMapping                valMapping[2],
         const TValueId          v1,
         const TValueId          v2)
@@ -105,90 +105,78 @@ bool matchValues(
 
 template <class TMapping>
 bool matchValues(
+        bool                    *follow,
         TMapping                &valMapping,
         const SymHeap           &sh1,
         const SymHeap           &sh2,
         const TValueId          v1,
         const TValueId          v2)
 {
-    if (v1 <= 0 || v2 <= 0)
-        // this can't be a pair of custom or unknown values
-        return matchValues(valMapping, v1, v2);
+    *follow = false;
+    if (!matchPlainValues(valMapping, v1, v2))
+        return false;
 
-    // do we know the values?
-    const EUnknownValue code1 = sh1.valGetUnknown(v1);
-    const EUnknownValue code2 = sh2.valGetUnknown(v2);
-    if (code1 != code2)
+    // check for special values
+    const bool isSpecial = (v1 <= 0);
+    SE_BREAK_IF(isSpecial && 0 < v2);
+    if (isSpecial)
+        return true;
+
+    // check for unknown values
+    const EUnknownValue code = sh1.valGetUnknown(v1);
+    if (code != sh2.valGetUnknown(v2))
         // mismatch in kind of unknown values
         return false;
 
-    // FIXME: should we check also the target type-info?
-    const int cVal1 = sh1.valGetCustom(0, v1);
-    const int cVal2 = sh2.valGetCustom(0, v2);
-    if (OBJ_INVALID == cVal1 && OBJ_INVALID == cVal2)
-        // this can't be a pair of custom values
-        return matchValues(valMapping, v1, v2);
-
-    // custom and non-custom values can't to be compared
-    SE_BREAK_IF(OBJ_INVALID == cVal1 || OBJ_INVALID == cVal2);
-
-    // match custom values
-    return (cVal1 == cVal2);
-}
-
-bool skipValue(const SymHeap &sh, const TValueId val) {
-    if (OBJ_INVALID != sh.valGetCompositeObj(val))
-        // compare composite objects recursively
-        return false;
-
-    if (val <= 0)
-        // no need for next wheel (special values already handled)
-        return true;
-
-    if (-1 != sh.valGetCustom(0, val))
-        // don't follow fnc pointers (and other custom values) by pointsTo()
-        return true;
-
-    const EUnknownValue code = sh.valGetUnknown(val);
     switch (code) {
         case UV_KNOWN:
         case UV_ABSTRACT:
-            return false;
+            break;
 
-        default:
-            // don't follow uknown values
+        case UV_UNKNOWN:
+        case UV_UNINITIALIZED:
+            // do not follow unknown values
             return true;
     }
-}
 
-bool chkComposite(
-        bool                    *pDst,
-        const SymHeap           &sh1,
-        const SymHeap           &sh2,
-        const TValueId          v1,
-        const TValueId          v2)
-{
-    const bool isComp1 = (OBJ_INVALID != sh1.valGetCompositeObj(v1));
-    const bool isComp2 = (OBJ_INVALID != sh2.valGetCompositeObj(v2));
-    if (isComp1 != isComp2)
-        // scalar vs. composite objects, the heaps can't be equal
+    // check custom values state
+    const int cVal1 = sh1.valGetCustom(/* TODO */ 0, v1);
+    const int cVal2 = sh2.valGetCustom(/* TODO */ 0, v2);
+    if ((OBJ_INVALID == cVal1) != (OBJ_INVALID == cVal2))
         return false;
 
-    *pDst = isComp1;
+    if (OBJ_INVALID != cVal1)
+        // pair of custom values
+        return (cVal1 == cVal2);
+
+    // follow all other values
+    *follow = true;
     return true;
 }
 
 template<class TWorkList>
 bool digComposite(
+        bool                    *isComp,
         TWorkList               &wl,
         const SymHeap           &sh1,
         const SymHeap           &sh2,
         const TValueId          v1,
         const TValueId          v2)
 {
+    *isComp = false;
     const TObjId cObj1 = sh1.valGetCompositeObj(v1);
     const TObjId cObj2 = sh2.valGetCompositeObj(v2);
-    // cObj1 and cObj2 are supposed to be valid at this point
+
+    const bool isComp1 = (OBJ_INVALID != sh1.valGetCompositeObj(v1));
+    const bool isComp2 = (OBJ_INVALID != sh2.valGetCompositeObj(v2));
+    if (isComp1 != isComp2)
+        // scalar vs. composite objects, the heaps can't be equal
+        return false;
+
+    if (isComp1)
+        *isComp = true;
+    else
+        return true;
 
     // we _have_ to jump to the roots at this point as long as we admit
     // to see through multi-level Linux lists
@@ -256,9 +244,7 @@ bool digComposite(
     return true;
 }
 
-template <class TWorkList>
 bool cmpAbstractObjects(
-        TWorkList               &wl,
         const SymHeap           &sh1,
         const SymHeap           &sh2,
         TObjId                  o1,
@@ -274,25 +260,9 @@ bool cmpAbstractObjects(
         return true;
 
     // compare binding fields
-    const SegBindingFields bf = sh1.objBinding(o1);
-    if (sh2.objBinding(o2) != bf)
-        return false;
-
-    if (OK_HEAD != kind)
-        return true;
-
-    // jump to root objects
-    o1 = subObjByInvChain(sh1, o1, bf.head);
-    o2 = subObjByInvChain(sh2, o2, bf.head);
-
-    // schedule roots for the next wheel
-    const TValueId v1 = sh1.placedAt(o1);
-    const TValueId v2 = sh2.placedAt(o2);
-    if (wl.schedule(v1, v2))
-        SC_DEBUG_VAL_SCHEDULE_BY("cmpAbstractObjects", o1, o2,
-                                 sh1, sh2, v1, v2);
-
-    return true;
+    const SegBindingFields bf1 = sh1.objBinding(o1);
+    const SegBindingFields bf2 = sh2.objBinding(o2);
+    return (bf1 == bf2);
 }
 
 template <class TWorkList, class TMapping>
@@ -308,32 +278,24 @@ bool dfsCmp(
         TValueId v1, v2;
         boost::tie(v1, v2) = item;
 
-        if (!matchValues(valMapping, sh1, sh2, v1, v2)) {
+        bool follow;
+        if (!matchValues(&follow, valMapping, sh1, sh2, v1, v2)) {
             SC_DEBUG_VAL_MISMATCH("value mismatch");
             return false;
         }
 
-        if (skipValue(sh1, v1))
+        if (!follow)
             // no need for next wheel
             continue;
 
-        bool isComposite;
-        if (!chkComposite(&isComposite, sh1, sh2, v1, v2)) {
-            SC_DEBUG_VAL_MISMATCH("scalar vs. composite target");
+        bool isComp;
+        if (!digComposite(&isComp, wl, sh1, sh2, v1, v2)) {
+            SC_DEBUG_VAL_MISMATCH("object composition mismatch");
             return false;
         }
 
-        if (isComposite) {
-            // got pair of composite objects
-
-            if (!digComposite(wl, sh1, sh2, v1, v2)) {
-                SC_DEBUG_VAL_MISMATCH("object composition mismatch");
-                return false;
-            }
-
-            // compare composite objects recursively
+        if (isComp)
             continue;
-        }
 
         const TObjId obj1 = sh1.pointsTo(v1);
         const TObjId obj2 = sh2.pointsTo(v2);
@@ -342,7 +304,7 @@ bool dfsCmp(
             return false;
         }
 
-        if (!cmpAbstractObjects(wl, sh1, sh2, obj1, obj2)) {
+        if (!cmpAbstractObjects(sh1, sh2, obj1, obj2)) {
             SC_DEBUG_VAL_MISMATCH("incompatible abstract objects");
             return false;
         }
@@ -402,13 +364,14 @@ bool areEqual(
         const TValueId v2 = sh2.valueOf(o2);
 
         // optimization
-        if (!matchValues(valMapping, sh1, sh2, v1, v2)) {
+        bool follow;
+        if (!matchValues(&follow, valMapping, sh1, sh2, v1, v2)) {
             SC_DEBUG_VAL_MISMATCH("value mismatch");
             return false;
         }
 
         // schedule for DFS
-        if (wl.schedule(v1, v2))
+        if (follow && wl.schedule(v1, v2))
             SC_DEBUG_VAL_SCHEDULE("cVar(" << cv.uid << ")", sh1, sh2, v1, v2);
     }
 
