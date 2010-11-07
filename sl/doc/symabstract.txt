@@ -183,6 +183,29 @@ dlSegMerge()
     10. Set length (lower bound) of 'dls' to the value computed in the step 1.
 
 
+Minimal segment length
+----------------------
+- by default, length of each segment is 0+, which means we can see through it
+- we use Neq (non-equal) predicates to express non-zero minimal segment length
+- given a SLS(headAddr, valNext), we can define SLS 1+ by introducing
+  the following predicate:
+
+        Neq(headAddr, valNext)
+
+- given a DLS(headAddr1, headAddr2, valNext1, valNext2), we can define:
+    1) DLS 1+ by introducing the following predicates:
+
+        Neq(headAddr1, valNext2)
+        Neq(headAddr2, valNext1)
+
+    2) DLS 2+ by introducing the following predicates:
+
+        Neq(headAddr1, valNext2)
+        Neq(headAddr2, valNext1)
+
+        Neq(headAddr1, headAddr2)
+
+
 How data is merged during an abstraction step
 ---------------------------------------------
 - input:

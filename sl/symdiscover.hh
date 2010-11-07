@@ -35,9 +35,7 @@ bool segConsiderPrototype(
         const TObjPair          &roots,
         const TValueId          v1,
         const TValueId          v2);
-#endif
 
-#ifndef BUILDING_DOX
 // exported only for debugging purposes
 bool segMatchSmallList(
         const SymHeap           &sh,

@@ -492,7 +492,7 @@ bool /* complete */ SymExecEngine::run() {
         block_ = i->bb;
         todo_.erase(i);
 
-        // update location info and ptrace
+        // update location info and ptracer
         const CodeStorage::Insn *first = block_->operator[](0);
         lw_ = &first->loc;
         ptracer_.setBlock(block_);
@@ -503,7 +503,7 @@ bool /* complete */ SymExecEngine::run() {
         insnIdx_ = 0;
         heapIdx_ = 0;
 
-        // process the basic block until the first function call
+        // process the basic block till the first function call
         if (!this->execBlock())
             // function call reached, suspend the execution for now
             return false;
