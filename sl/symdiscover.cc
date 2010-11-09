@@ -80,14 +80,12 @@ bool validateUpLink(const SymHeap       &sh,
     return true;
 }
 
-typedef SymHeap::TContValue TProtoAddrs[2];
-
 class NonSegPrototypeFinder: public ISubMatchVisitor {
     private:
         const SymHeap           &sh_;
         const TObjPair          &roots_;
         bool                    ok_;
-        TProtoAddrs             protoAddrs_;
+        std::set<TObjPair>      protoRoots_;
 
     public:
         NonSegPrototypeFinder(const SymHeap &sh, const TObjPair &roots):
@@ -97,9 +95,9 @@ class NonSegPrototypeFinder: public ISubMatchVisitor {
         {
         }
 
-        bool result(void)                   const { return ok_; }
+        bool result(void) const { return ok_; }
 
-        const TProtoAddrs& protoAddrs()     const { return protoAddrs_; }
+        const std::set<TObjPair>& protoRoots() const { return protoRoots_; }
 
         virtual bool considerVisiting(TValPair vp) {
             const TValueId v1 = vp.first;
@@ -115,8 +113,22 @@ class NonSegPrototypeFinder: public ISubMatchVisitor {
                 // FIXME: suboptimal interface of ISubMatchVisitor
                 return false;
 
-            const bool rootOk1 = (objRoot(sh_, o1) == roots_.first);
-            const bool rootOk2 = (objRoot(sh_, o2) == roots_.second);
+            const TObjId root1 = objRoot(sh_, o1);
+            const TObjId root2 = objRoot(sh_, o2);
+
+            bool eq;
+            if (!sh_.proveEq(&eq, v1, v2) || !eq) {
+                // FIXME: At this point, we _have_ to check if we are able to
+                //        establish a prototype object for (v1, v2).  If we
+                //        later realize that we don't know how to create the
+                //        prototype, it will be simply too late to do anything!
+                SE_BREAK_IF(root1 <= 0 || root2 <= 0);
+                const TObjPair proto(root1, root2);
+                protoRoots_.insert(proto);
+            }
+
+            const bool rootOk1 = (root1 == roots_.first);
+            const bool rootOk2 = (root2 == roots_.second);
             if (rootOk1 != rootOk2) {
                 // up-link candidate mismatch
                 ok_ = false;
@@ -127,24 +139,19 @@ class NonSegPrototypeFinder: public ISubMatchVisitor {
                 // keep searching
                 return true;
 
-            if ((ok_ = validateUpLink(sh_, roots_, v1, v2))) {
-                // up-link validated
-                protoAddrs_[0].push_back(v1);
-                protoAddrs_[1].push_back(v2);
-            }
+            ok_ = validateUpLink(sh_, roots_, v1, v2);
 
             // never step over roots_
             return false;
         }
 };
 
-// FIXME: protoAddrs is a bit misleading identifier in this context
 bool considerNonSegPrototype(
         const SymHeap           &sh,
         const TObjPair          &roots,
         const TValueId          v1,
         const TValueId          v2,
-        TProtoAddrs             *protoAddrs)
+        TProtoRoots             *protoRoots)
 {
     CL_DEBUG("considerNonSegPrototype() called...");
     SE_BREAK_IF(v1 <= 0 || v2 <= 0);
@@ -159,14 +166,16 @@ bool considerNonSegPrototype(
     if (!matchSubHeaps(sh, startingPoints, &visitor) || !visitor.result())
         return false;
 
-    if (protoAddrs) {
-        const TProtoAddrs &src = visitor.protoAddrs();
-        TProtoAddrs &dst = *protoAddrs;
-        std::copy(src[0].begin(), src[0].end(), std::back_inserter(dst[0]));
-        std::copy(src[1].begin(), src[1].end(), std::back_inserter(dst[1]));
+    CL_WARN("considerNonSegPrototype() has succeeded!");
+    if (protoRoots) {
+        // dump prototype adresses
+        TProtoRoots &dst = *protoRoots;
+        BOOST_FOREACH(const TObjPair &proto, visitor.protoRoots()) {
+            dst[0].push_back(proto.first);
+            dst[1].push_back(proto.second);
+        }
     }
 
-    CL_WARN("considerNonSegPrototype() has succeeded!");
     return true;
 }
 
@@ -187,13 +196,15 @@ bool segMatchSmallList(
     return validateUpLink(sh, roots, valNext, conVal);
 }
 
+// TODO: I don't think we need separate handling for segment and non-segment
+//       prototypes, we should merge those routines together at some point!
 struct DataMatchVisitor {
     std::set<TObjId>    ignoreList;
-    TProtoAddrs         *protoAddrs;
+    TProtoRoots         *protoRoots;
     TObjPair            roots_;
 
     DataMatchVisitor(TObjId o1, TObjId o2):
-        protoAddrs(0),
+        protoRoots(0),
         roots_(o1, o2)
     {
     }
@@ -238,7 +249,7 @@ struct DataMatchVisitor {
 
         switch (code1) {
             case UV_KNOWN:
-                return considerNonSegPrototype(sh, roots_, v1, v2, protoAddrs);
+                return considerNonSegPrototype(sh, roots_, v1, v2, protoRoots);
 
             case UV_UNINITIALIZED:
             case UV_UNKNOWN:
@@ -252,10 +263,10 @@ struct DataMatchVisitor {
         }
 
 proto_found:
-        if (protoAddrs) {
+        if (protoRoots) {
             // FIXME: what about shared prototypes at this point?
-            (*protoAddrs)[0].push_back(v1);
-            (*protoAddrs)[1].push_back(v2);
+            (*protoRoots)[0].push_back(objRoot(sh, sh.pointsTo(v1)));
+            (*protoRoots)[1].push_back(objRoot(sh, sh.pointsTo(v2)));
         }
 
         return /* continue */ true;
@@ -447,42 +458,38 @@ bool preserveHeadPtr(const SymHeap                &sh,
     return false;
 }
 
-bool validatePointingObjects(const SymHeap              &sh,
-                             const SegBindingFields     &bf,
-                             const TObjId               root,
-                             TObjId                     prev,
-                             const TObjId               next,
-                             const SymHeap::TContValue  &protoAddrs,
-                             const bool                 toInsideOnly = false)
+// TODO: rewrite, simplify, and make it easier to follow
+bool validatePointingObjectsCore(
+        const SymHeap               &sh,
+        const SegBindingFields      &bf,
+        const TObjId                root,
+        TObjId                      prev,
+        const TObjId                next,
+        const SymHeap::TContObj     &protoRoots,
+        const bool                  toInsideOnly)
 {
     const bool isDls = !bf.peer.empty();
     std::set<TObjId> allowedReferers;
     if (OK_DLS == sh.objKind(root))
         // retrieve peer's pointer to this object (if any)
-        allowedReferers.insert(peerPtrFromSeg(sh, dlSegPeer(sh, root)));
+        allowedReferers.insert(dlSegPeer(sh, root));
 
     if (OK_DLS == sh.objKind(prev))
         // jump to peer in case of DLS
         prev = dlSegPeer(sh, prev);
+
+    // we allow pointers to self at this point, but we require them to be
+    // absolutely uniform along the abstraction path -- matchData() should
+    // later take care of that
+    allowedReferers.insert(root);
 
     // collect all objects pointing at/inside the object
     SymHeap::TContObj refs;
     gatherPointingObjects(sh, refs, root, toInsideOnly);
 
     // consider also up-links from nested prototypes
-    BOOST_FOREACH(const TValueId protoAt, protoAddrs) {
-        const TObjId obj = sh.pointsTo(protoAt);
-        if (OK_CONCRETE == sh.objKind(obj)) {
-            // assume a standalone segment head embedded into another segment
-            SymHeap::TContObj protoRefs;
-            sh.usedBy(protoRefs, protoAt);
-            std::copy(protoRefs.begin(), protoRefs.end(),
-                      std::inserter(allowedReferers, allowedReferers.begin()));
-        } else {
-            const TObjId nextPtr = nextPtrFromSeg(sh, obj);
-            allowedReferers.insert(nextPtr);
-        }
-    }
+    std::copy(protoRoots.begin(), protoRoots.end(),
+              std::inserter(allowedReferers, allowedReferers.begin()));
 
     // please do not validate the binding pointers as data pointers;  otherwise
     // we might mistakenly abstract SLL with head-pointers of length 2 as DLS!!
@@ -493,6 +500,7 @@ bool validatePointingObjects(const SymHeap              &sh,
 
     const TValueId headAddr = sh.placedAt(subObjByChain(sh, root, bf.head));
 
+    // TODO: move subObjByChain() calls out of the loop
     BOOST_FOREACH(const TObjId obj, refs) {
         if (hasKey(blackList, obj))
             return false;
@@ -503,16 +511,10 @@ bool validatePointingObjects(const SymHeap              &sh,
         if (isDls && obj == subObjByChain(sh, next, bf.peer))
             continue;
 
-        if (hasKey(allowedReferers, obj))
-            continue;
-
         if (toInsideOnly && sh.valueOf(obj) == headAddr)
             continue;
 
-        if (root == objRoot(sh, obj))
-            // we allow pointers to self at this point, but we require them to
-            // be absolutely uniform along the abstraction path -- matchData()
-            // should later take care of that
+        if (hasKey(allowedReferers, objRoot(sh, obj)))
             continue;
 
         // someone points at/inside who should not
@@ -523,14 +525,49 @@ bool validatePointingObjects(const SymHeap              &sh,
     return true;
 }
 
+// FIXME: suboptimal implementation
+bool validatePointingObjects(
+        const SymHeap               &sh,
+        const SegBindingFields      &bf,
+        const TObjId                root,
+        TObjId                      prev,
+        const TObjId                next,
+        SymHeap::TContObj           protoRoots,
+        const bool                  toInsideOnly = false)
+{
+    // first validate 'root' itself
+    if (!validatePointingObjectsCore(sh, bf, root, prev, next,
+                                     protoRoots, toInsideOnly))
+        return false;
+
+    // then validate all prototypes
+    TObjId peer = OBJ_INVALID;
+    protoRoots.push_back(root);
+    if (OK_DLS == sh.objKind(root))
+        protoRoots.push_back((peer = dlSegPeer(sh, root)));
+
+    BOOST_FOREACH(const TObjId proto, protoRoots) {
+        if (proto == root || proto == peer)
+            continue;
+
+        if (!validatePointingObjectsCore(sh, bf, proto, OBJ_INVALID,
+                                         OBJ_INVALID, protoRoots,
+                                         /* toInsideOnly */ false))
+            return false;
+    }
+
+    // all OK!
+    return true;
+}
+
 bool validateSegEntry(const SymHeap              &sh,
                       const SegBindingFields     &bf,
                       const TObjId               entry,
                       const TObjId               next,
-                      const SymHeap::TContValue  &protoAddrs)
+                      const SymHeap::TContObj    &protoRoots)
 {
     return validatePointingObjects(sh, bf, entry, OBJ_INVALID, next,
-                                   protoAddrs, /* toInsideOnly */ true);
+                                   protoRoots, /* toInsideOnly */ true);
 }
 
 TObjId jumpToNextObj(const SymHeap              &sh,
@@ -580,7 +617,7 @@ TObjId jumpToNextObj(const SymHeap              &sh,
 
     if (dlSegOnPath
             && !validatePointingObjects(sh, bf, obj, /* prev */ obj, next,
-                                        /* TODO */ SymHeap::TContValue()))
+                                        /* TODO */ SymHeap::TContObj()))
         // never step over a peer object that is pointed from outside!
         return OBJ_INVALID;
 
@@ -591,13 +628,13 @@ bool matchData(const SymHeap                &sh,
                const SegBindingFields       &bf,
                const TObjId                 o1,
                const TObjId                 o2,
-               TProtoAddrs                  *protoAddrs)
+               TProtoRoots                  *protoRoots)
 {
     const TObjId nextPtr = subObjByChain(sh, o1, bf.next);
 
     DataMatchVisitor visitor(o1, o2);
     visitor.ignoreList.insert(nextPtr);
-    visitor.protoAddrs = protoAddrs;
+    visitor.protoRoots = protoRoots;
 
     if (!bf.peer.empty()) {
         const TObjId prevPtr = subObjByChain(sh, o1, bf.peer);
@@ -651,14 +688,14 @@ unsigned /* len */ segDiscover(const SymHeap            &sh,
     std::vector<TObjId> path;
     while (OBJ_INVALID != obj) {
         // compare the data
-        TProtoAddrs protoAddrs;
-        if (!matchData(sh, bf, prev, obj, &protoAddrs)) {
+        TProtoRoots protoRoots;
+        if (!matchData(sh, bf, prev, obj, &protoRoots)) {
             CL_DEBUG("    DataMatchVisitor refuses to create a segment!");
             break;
         }
 
         if (prev == entry
-                && !validateSegEntry(sh, bf, entry, obj, protoAddrs[0]))
+                && !validateSegEntry(sh, bf, entry, obj, protoRoots[0]))
             // invalid entry
             break;
 
@@ -668,7 +705,7 @@ unsigned /* len */ segDiscover(const SymHeap            &sh,
             // loop detected
             break;
 
-        if (!validatePointingObjects(sh, bf, obj, prev, next, protoAddrs[1]))
+        if (!validatePointingObjects(sh, bf, obj, prev, next, protoRoots[1]))
             // someone points to inside who should not
             break;
 

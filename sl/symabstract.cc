@@ -396,13 +396,23 @@ TValueId mergeValues(SymHeap            &sh,
         // a quirk for small lists (of length 0 or 1)
         return mergeSmallList(sh, roots, v1, v2);
 
-    EUnknownValue code = (code1 != UV_KNOWN && code1 == code2)
+    EUnknownValue code = (code1 == code2)
         ? code1
         : UV_UNKNOWN;
 
     if (UV_ABSTRACT == code)
         // create or update a prototype list segment
         return mergeAbstractValues(sh, roots, v1, v2);
+
+    if (UV_KNOWN == code) {
+        if (considerNonSegPrototype(sh, roots, v1, v2, /* TODO */ 0)) {
+            CL_ERROR("symdiscover fells like creating a non-segment prototype, "
+                     "but symabstract is not enough implemented for this yet");
+            SE_TRAP;
+        }
+
+        code = UV_UNKNOWN;
+    }
 
     // attempt to dig some type-info for the new unknown value
     const struct cl_type *clt1 = sh.valType(v1);
