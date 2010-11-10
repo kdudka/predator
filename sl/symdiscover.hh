@@ -30,13 +30,6 @@
 
 #ifndef BUILDING_DOX
 // exported only for debugging purposes
-bool segConsiderPrototype(
-        const SymHeap           &sh,
-        const TObjPair          &roots,
-        const TValueId          v1,
-        const TValueId          v2);
-
-// exported only for debugging purposes
 bool segMatchSmallList(
         const SymHeap           &sh,
         const TObjId            segUp,
@@ -48,7 +41,7 @@ bool segMatchSmallList(
 typedef SymHeap::TContObj TProtoRoots[2];
 
 // experimental, will be documented later eventually
-bool considerNonSegPrototype(
+bool considerGenericPrototype(
         const SymHeap           &sh,
         const TObjPair          &roots,
         const TValueId          v1,

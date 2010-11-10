@@ -80,7 +80,7 @@ bool validateUpLink(const SymHeap       &sh,
     return true;
 }
 
-class NonSegPrototypeFinder: public ISubMatchVisitor {
+class GenericPrototypeFinder: public ISubMatchVisitor {
     private:
         const SymHeap           &sh_;
         const TObjPair          &roots_;
@@ -88,7 +88,7 @@ class NonSegPrototypeFinder: public ISubMatchVisitor {
         std::set<TObjPair>      protoRoots_;
 
     public:
-        NonSegPrototypeFinder(const SymHeap &sh, const TObjPair &roots):
+        GenericPrototypeFinder(const SymHeap &sh, const TObjPair &roots):
             sh_(sh),
             roots_(roots),
             ok_(true)
@@ -159,27 +159,27 @@ class NonSegPrototypeFinder: public ISubMatchVisitor {
         }
 };
 
-bool considerNonSegPrototype(
+bool considerGenericPrototype(
         const SymHeap           &sh,
         const TObjPair          &roots,
         const TValueId          v1,
         const TValueId          v2,
         TProtoRoots             *protoRoots)
 {
-    CL_DEBUG("considerNonSegPrototype() called...");
+    CL_DEBUG("considerGenericPrototype() called...");
     SE_BREAK_IF(v1 <= 0 || v2 <= 0);
 
     // declare starting points
     TValPairList startingPoints(1, TValPair(v1, v2));
 
     // initialize visitor
-    NonSegPrototypeFinder visitor(sh, roots);
+    GenericPrototypeFinder visitor(sh, roots);
 
     // traverse pointed sub-heaps
     if (!matchSubHeaps(sh, startingPoints, &visitor) || !visitor.result())
         return false;
 
-    CL_DEBUG("considerNonSegPrototype() has succeeded!");
+    CL_DEBUG("considerGenericPrototype() has succeeded!");
     if (protoRoots) {
         // dump prototype adresses
         TProtoRoots &dst = *protoRoots;
@@ -253,171 +253,35 @@ struct DataMatchVisitor {
                     (isAbstract2) ? roots_.first : roots_.second,
                     (isAbstract1) ? v1 : v2,
                     (isAbstract2) ? v1 : v2))
+        {
             // in case we have a list segment vs. a small compatible list, we
             // can cover both by a list segment with the appropriate length
-            goto proto_found;
+            if (protoRoots) {
+                (*protoRoots)[0].push_back(objRoot(sh, sh.pointsTo(v1)));
+                (*protoRoots)[1].push_back(objRoot(sh, sh.pointsTo(v2)));
+            }
+
+            return /* continue */ true;
+        }
 
         if (code1 != code2)
             return /* mismatch */ false;
 
         switch (code1) {
-            case UV_KNOWN:
-                return considerNonSegPrototype(sh, roots_, v1, v2, protoRoots);
-
             case UV_UNINITIALIZED:
             case UV_UNKNOWN:
-                // safe to keep UV_UNKNOWN values as they are
-                return true;
+                // safe to keep unknown values as they are, they will be
+                // duplicated on concretization anyway
+                return /* continue */ true;
 
+            case UV_KNOWN:
             case UV_ABSTRACT:
-                // FIXME: unguarded recursion!
-                if (!segConsiderPrototype(sh, roots_, v1, v2))
-                    return /* mismatch */ false;
+                break;
         }
 
-proto_found:
-        if (protoRoots) {
-            // FIXME: what about shared prototypes at this point?
-            (*protoRoots)[0].push_back(objRoot(sh, sh.pointsTo(v1)));
-            (*protoRoots)[1].push_back(objRoot(sh, sh.pointsTo(v2)));
-        }
-
-        return /* continue */ true;
+        return considerGenericPrototype(sh, roots_, v1, v2, protoRoots);
     }
 };
-
-bool segMatchNextValues(const SymHeap     &sh,
-                        const TObjPair    &roots,
-                        const TObjId      seg1,
-                        const TObjId      seg2)
-{
-    const TValueId v1 = sh.valueOf(nextPtrFromSeg(sh, seg1));
-    const TValueId v2 = sh.valueOf(nextPtrFromSeg(sh, seg2));
-    if (VAL_NULL == v1 && VAL_NULL == v2)
-        // both values are NULL
-        return true;
-
-    if (validateUpLink(sh, roots, v1, v2))
-        // valid uplink found
-        return true;
-
-    // TODO
-    return false;
-}
-
-bool segEqual(const SymHeap     &sh,
-              const TObjPair    &roots,
-              const EObjKind    kind,
-              const TObjId      o1,
-              const TObjId      o2)
-{
-    const bool isDls = (OK_DLS == kind);
-    SE_BREAK_IF(!isDls && OK_SLS != kind);
-
-    if (sh.objBinding(o1).next != sh.objBinding(o2).next)
-        // 'next' selector mismatch
-        return false;
-
-    if (sh.objBinding(o1).peer != sh.objBinding(o2).peer)
-        // 'peer' selector mismatch
-        return false;
-
-    if (!segMatchNextValues(sh, roots, o1, o2))
-        // end-point value mismatch
-        return false;
-
-    if (isDls) {
-        const TObjId peer1 = dlSegPeer(sh, o1);
-        const TObjId peer2 = dlSegPeer(sh, o2);
-        if (!segMatchNextValues(sh, roots, peer1, peer2))
-            // end-point value mismatch
-            return false;
-    }
-
-    // compare the data
-    DataMatchVisitor visitor(o1, o2);
-    buildIgnoreList(sh, o1, visitor.ignoreList);
-    const TObjPair item(o1, o2);
-    return traverseSubObjs(sh, item, visitor, /* leavesOnly */ true);
-}
-
-bool segMayBePrototype(const SymHeap        &sh,
-                       const EObjKind       kind,
-                       const TObjId         seg,
-                       const TObjId         upSeg)
-{
-    SE_BREAK_IF(OK_DLS != kind && OK_SLS != kind);
-    const TObjId peer = (OK_DLS == kind)
-        ? dlSegPeer(sh, seg)
-        : static_cast<TObjId>(OBJ_INVALID);
-
-    // gather pointing objects
-    SymHeap::TContObj refs;
-    gatherPointingObjects(sh, refs, seg, /* toInsideOnly */ false);
-    if (OBJ_INVALID != peer)
-        gatherPointingObjects(sh, refs, peer, /* toInsideOnly */ false);
-
-    // declare set of allowed pointing objects
-    std::set<TObjId> allowedRoots;
-    allowedRoots.insert(seg);
-    allowedRoots.insert(upSeg);
-    if (OBJ_INVALID != peer)
-        allowedRoots.insert(peer);
-
-    // wait, upSeg can already be a segment at this point!
-    if (OK_DLS == sh.objKind(upSeg))
-        allowedRoots.insert(dlSegPeer(sh, upSeg));
-
-    // go through all pointing objects and validate them
-    BOOST_FOREACH(const TObjId obj, refs) {
-        const TObjId root = objRoot(sh, obj);
-        if (!hasKey(allowedRoots, root))
-            return false;
-    }
-
-    // no intruder found!
-    return true;
-}
-
-bool segConsiderPrototype(const SymHeap     &sh,
-                          const TObjPair    &roots,
-                          const TValueId    v1,
-                          const TValueId    v2)
-{
-    TObjId o1 = sh.pointsTo(v1);
-    TObjId o2 = sh.pointsTo(v2);
-    SE_BREAK_IF(o1 <= 0 || o2 <= 0);
-
-    EObjKind kind = sh.objKind(o1);
-    if (sh.objKind(o2) != kind)
-        // object kind mismatch
-        return false;
-
-    if (OK_HEAD == kind) {
-        // jump to root, which should be a segment
-        o1 = objRoot(sh, o1);
-        o2 = objRoot(sh, o2);
-        SE_BREAK_IF(o1 <= 0 || o2 <= 0);
-        SE_BREAK_IF(OK_SLS != sh.objKind(o1) && OK_DLS != sh.objKind(o1));
-        SE_BREAK_IF(OK_SLS != sh.objKind(o2) && OK_DLS != sh.objKind(o2));
-
-        kind = sh.objKind(o1);
-        if (sh.objKind(o2) != kind)
-            // object kind mismatch
-            return false;
-    }
-
-    const struct cl_type *clt1 = sh.objType(o1);
-    const struct cl_type *clt2 = sh.objType(o2);
-    SE_BREAK_IF(!clt1 || !clt2);
-    if (*clt1 != *clt2)
-        // type mismatch
-        return false;
-
-    return segEqual(sh, roots, kind, o1, o2)
-        && segMayBePrototype(sh, kind, o1, roots.first)
-        && segMayBePrototype(sh, kind, o2, roots.second);
-}
 
 bool matchSegBinding(const SymHeap              &sh,
                      const TObjId               obj,

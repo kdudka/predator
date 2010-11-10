@@ -353,7 +353,6 @@ TValueId /* addr */ segCloneIfNeeded(
 }
 
 TValueId mergeAbstractValues(SymHeap            &sh,
-                             const TObjPair     &roots,
                              const TValueId     v1,
                              const TValueId     v2)
 {
@@ -362,9 +361,6 @@ TValueId mergeAbstractValues(SymHeap            &sh,
         // this is tricky, we've already deleted the peer of nested Linux DLS,
         // as part of a precedent merge, we should keep going...
         return v2;
-
-    SE_BREAK_IF(!segConsiderPrototype(sh, roots, v1, v2));
-    (void) roots;
 
     // read lower bound estimation of seg1 length
     const TObjId seg1 = objRoot(sh, sh.pointsTo(v1));
@@ -498,11 +494,11 @@ TValueId mergeValues(
 
     if (UV_ABSTRACT == code)
         // create or update a prototype list segment
-        return mergeAbstractValues(sh, roots, v1, v2);
+        return mergeAbstractValues(sh, v1, v2);
 
     if (UV_KNOWN == code) {
         TProtoRoots protoRoots;
-        if (considerNonSegPrototype(sh, roots, v1, v2, &protoRoots))
+        if (considerGenericPrototype(sh, roots, v1, v2, &protoRoots))
             return createGenericPrototype(sh, src, v1, v2, protoRoots[1]);
 
         code = UV_UNKNOWN;
