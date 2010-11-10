@@ -378,10 +378,9 @@ TValueId createGenericPrototype(
         const TObjId                src,
         const TValueId              v1,
         const TValueId              v2,
-        const TProtoRoots           &protoRoots)
+        const SymHeap::TContObj     &protoRoots)
 {
-    CL_ERROR("symdiscover feels like creating a non-segment prototype, "
-             "but symabstract is not enough implemented for this yet");
+    CL_DEBUG("createGenericPrototype() got " << protoRoots.size() << "roots");
 
     sh.objSetValue(src, v2);
     if (collectJunk(sh, v1))
@@ -389,7 +388,7 @@ TValueId createGenericPrototype(
     else
         return v2;
 
-    BOOST_FOREACH(const TObjId proto, protoRoots[1]) {
+    BOOST_FOREACH(const TObjId proto, protoRoots) {
         sh.objSetProto(proto, true);
     }
 
@@ -432,7 +431,7 @@ TValueId mergeValues(
     if (UV_KNOWN == code) {
         TProtoRoots protoRoots;
         if (considerNonSegPrototype(sh, roots, v1, v2, &protoRoots))
-            return createGenericPrototype(sh, src, v1, v2, protoRoots);
+            return createGenericPrototype(sh, src, v1, v2, protoRoots[1]);
 
         code = UV_UNKNOWN;
     }
@@ -516,6 +515,12 @@ struct UnknownValuesDuplicator {
         const EUnknownValue code = sh.valGetUnknown(valOld);
         switch (code) {
             case UV_KNOWN:
+                if (sh.objIsProto(sh.pointsTo(valOld))) {
+                    CL_ERROR("concretization of non-segment prototypes is not"
+                             "implemented yet");
+                    SE_TRAP;
+                }
+
                 // we can keep known values as they are (shared data)
                 break;
 
