@@ -572,6 +572,9 @@ void SymPlot::Private::digNext(TObjId obj) {
 
 void SymPlot::Private::openCluster(TObjId obj) {
     std::string label;
+    if (this->heap->objIsProto(obj))
+        label = "[prototype] ";
+
 #if SE_SELF_TEST
     const char *color, *pw;
 #else
@@ -582,9 +585,6 @@ void SymPlot::Private::openCluster(TObjId obj) {
     SE_BREAK_IF(!clt);
 
     const EObjKind kind = this->heap->objKind(obj);
-    if (OK_CONCRETE !=kind && !this->heap->objShared(obj))
-        label = "[prototype] ";
-
     switch (kind) {
         case OK_CONCRETE:
         case OK_PART:
@@ -848,9 +848,9 @@ void SymPlot::Private::digObj(TObjId obj) {
     const TObjId peer = dlSegPeer(*this->heap, obj);
     SE_BREAK_IF(peer <= 0);
 
-    const char *label = (this->heap->objShared(obj))
-        ? "DLS"
-        : "[prototype] DLS";
+    const char *label = (this->heap->objIsProto(obj))
+        ? "[prototype] DLS"
+        : "DLS";
 
     // open a cluster
     this->dotStream

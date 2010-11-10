@@ -575,6 +575,19 @@ class SymHeapTyped: public SymHeapCore {
          */
         int valGetCustom(const struct cl_type **pClt, TValueId val) const;
 
+        /**
+         * true, if the given object should be cloned on concretization of the
+         * parent object
+         */
+        bool objIsProto(TObjId obj) const;
+
+        /**
+         * set it to true, if the given @b root object should be cloned on
+         * concretization of the parent object.  By default, all nested objects
+         * are shared.
+         */
+        void objSetProto(TObjId obj, bool isProto);
+
     protected:
         virtual void notifyResize(bool valOnly);
 
@@ -658,18 +671,6 @@ class SymHeap: public SymHeapTyped {
          * return the binding fields for the given @b abstract object
          */
         const SegBindingFields& objBinding(TObjId obj) const;
-
-        /**
-         * true, if the @b abstract object is shared (default); it has to be
-         * duplicated on call of concretizeObj() otherwise
-         */
-        bool objShared(TObjId obj) const;
-
-        /**
-         * set it to zero, if the object should be duplicated on call of
-         * concretizeObj().  By default, all nested abstractions are shared.
-         */
-        void objSetShared(TObjId obj, bool shared);
 
     public:
         /**

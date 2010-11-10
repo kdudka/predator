@@ -46,7 +46,7 @@ bool isHeapObject(const SymHeap &heap, TObjId obj);
 
 void digRootObject(const SymHeap &heap, TValueId *pValue);
 
-inline TObjId /* root */ objRoot(const SymHeap &sh, TObjId obj) {
+inline TObjId /* root */ objRoot(const SymHeapTyped &sh, TObjId obj) {
     TObjId root = obj;
     while (OBJ_INVALID != (obj = sh.objParent(root)))
         root = obj;

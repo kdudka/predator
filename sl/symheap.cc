@@ -1204,14 +1204,14 @@ struct SymHeapTyped::Private {
         int                         nthItem; // -1  OR  0 .. parent.item_cnt-1
         TObjId                      parent;
         TContObj                    subObjs;
-        bool                        dummy;
+        bool                        isProto;
 
         Object():
             clt(0),
             cbSize(0),
             nthItem(-1),
             parent(OBJ_INVALID),
-            dummy(false)
+            isProto(false)
         {
         }
     };
@@ -1708,15 +1708,36 @@ int SymHeapTyped::valGetCustom(const struct cl_type **pClt, TValueId val) const
     return ref.customData;
 }
 
+bool SymHeapTyped::objIsProto(TObjId obj) const {
+    if (obj <= 0)
+        // not a prototype for sure
+        return false;
+
+    // jump to root
+    obj = objRoot(*this, obj);
+
+    SE_BREAK_IF(this->lastObjId() < obj || obj < 0);
+    return d->objects[obj].isProto;
+}
+
+void SymHeapTyped::objSetProto(TObjId obj, bool isProto) {
+    SE_BREAK_IF(this->lastObjId() < obj || obj < 0);
+    Private::Object &ref = d->objects[obj];
+
+    // this method is supposed to be called only on root objects
+    SE_BREAK_IF(-1 != ref.parent);
+
+    ref.isProto = isProto;
+}
+
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of SymHeap
 struct SymHeap::Private {
     struct ObjectEx {
         EObjKind            kind;
         SegBindingFields    bf;
-        bool                shared;
 
-        ObjectEx(): kind(OK_CONCRETE), shared(true) { }
+        ObjectEx(): kind(OK_CONCRETE) { }
     };
 
     typedef std::map<TObjId, ObjectEx> TObjMap;
@@ -1786,22 +1807,6 @@ const SegBindingFields& SymHeap::objBinding(TObjId obj) const {
     SE_BREAK_IF(d->objMap.end() == iter);
 
     return iter->second.bf;
-}
-
-bool SymHeap::objShared(TObjId obj) const {
-    const TObjId root = objRoot(*this, obj);
-
-    Private::TObjMap::iterator iter = d->objMap.find(root);
-    SE_BREAK_IF(d->objMap.end() == iter);
-
-    return iter->second.shared;
-}
-
-void SymHeap::objSetShared(TObjId obj, bool shared) {
-    Private::TObjMap::iterator iter = d->objMap.find(obj);
-    SE_BREAK_IF(d->objMap.end() == iter);
-
-    iter->second.shared = shared;
 }
 
 void SymHeap::objSetAbstract(TObjId obj, EObjKind kind,

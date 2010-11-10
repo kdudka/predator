@@ -222,13 +222,13 @@ void dump_obj(const SymHeap &heap, TObjId obj) {
             cout << "XXX\n";
     }
 
-    if (OK_CONCRETE != kind && OK_HEAD != kind && OK_PART != kind) {
-        cout << "    shared    = ";
-        if (heap.objShared(obj))
-            cout << "true\n";
-        else
-            cout << "false\n";
+    cout << "    isProto   = ";
+    if (heap.objIsProto(obj))
+        cout << "true\n";
+    else
+        cout << "false\n";
 
+    if (OK_CONCRETE != kind && OK_HEAD != kind && OK_PART != kind) {
         cout << "    next      = ";
         const TFieldIdxChain icNext = heap.objBinding(obj).next;
         const TObjId nextPtr = subObjByChain(heap, obj, icNext);

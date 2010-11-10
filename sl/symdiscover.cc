@@ -115,6 +115,20 @@ class NonSegPrototypeFinder: public ISubMatchVisitor {
 
             const TObjId root1 = objRoot(sh_, o1);
             const TObjId root2 = objRoot(sh_, o2);
+            const bool rootOk1 = (root1 == roots_.first);
+            const bool rootOk2 = (root2 == roots_.second);
+            if (rootOk1 != rootOk2) {
+                // up-link candidate mismatch
+                ok_ = false;
+                return false;
+            }
+
+            if (rootOk1) {
+                ok_ = validateUpLink(sh_, roots_, v1, v2);
+
+                // never step over roots_
+                return false;
+            }
 
             bool eq;
             if (!sh_.proveEq(&eq, v1, v2) || !eq) {
@@ -127,22 +141,8 @@ class NonSegPrototypeFinder: public ISubMatchVisitor {
                 protoRoots_.insert(proto);
             }
 
-            const bool rootOk1 = (root1 == roots_.first);
-            const bool rootOk2 = (root2 == roots_.second);
-            if (rootOk1 != rootOk2) {
-                // up-link candidate mismatch
-                ok_ = false;
-                return false;
-            }
-
-            if (!rootOk1)
-                // keep searching
-                return true;
-
-            ok_ = validateUpLink(sh_, roots_, v1, v2);
-
-            // never step over roots_
-            return false;
+            // keep searching
+            return true;
         }
 };
 
@@ -166,7 +166,7 @@ bool considerNonSegPrototype(
     if (!matchSubHeaps(sh, startingPoints, &visitor) || !visitor.result())
         return false;
 
-    CL_WARN("considerNonSegPrototype() has succeeded!");
+    CL_DEBUG("considerNonSegPrototype() has succeeded!");
     if (protoRoots) {
         // dump prototype adresses
         TProtoRoots &dst = *protoRoots;

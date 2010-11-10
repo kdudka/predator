@@ -252,7 +252,7 @@ TValueId /* addr */ segCloneIfNeeded(
         // jump to root
         seg = objRoot(sh, seg);
 
-    if (sh.objShared(seg))
+    if (!sh.objIsProto(seg))
         // object is shared, nothing to clone here
         return VAL_INVALID;
 
@@ -262,7 +262,7 @@ TValueId /* addr */ segCloneIfNeeded(
 
     // once the object is cloned, it's no longer a prototype object
     TObjId dup = segClone(sh, seg);
-    segSetShared(sh, dup, true);
+    segSetProto(sh, dup, false);
 
     // redirect all edges to the right direction
     detachClonedPrototype(sh, seg, dup, rootDst, rootSrc);
@@ -308,7 +308,7 @@ TValueId mergeAbstractValues(SymHeap            &sh,
     segSetMinLength(sh, seg2, /* LS 0+ */ 0);
 
     // duplicate the nested abstract object on call of concretizeObj()
-    segSetShared(sh, seg2, false);
+    segSetProto(sh, seg2, true);
 
     // revalidate the lower bound estimation of segment length
     segSetMinLength(sh, seg2, (len1 < len2)
@@ -364,7 +364,7 @@ TValueId mergeSmallList(
     segSetMinLength(sh, seg, /* LS 0+ */ 0);
 
     // duplicate the nested abstract object on call of concretizeObj()
-    segSetShared(sh, seg, false);
+    segSetProto(sh, seg, true);
 
     if (isAbstract1)
         // FIXME: do we need some handling for DLS peers at this point?
@@ -373,10 +373,35 @@ TValueId mergeSmallList(
     return segAt;
 }
 
-TValueId mergeValues(SymHeap            &sh,
-                     const TObjPair     &roots,
-                     const TValueId     v1,
-                     const TValueId     v2)
+TValueId createGenericPrototype(
+        SymHeap                     &sh,
+        const TObjId                src,
+        const TValueId              v1,
+        const TValueId              v2,
+        const TProtoRoots           &protoRoots)
+{
+    CL_ERROR("symdiscover feels like creating a non-segment prototype, "
+             "but symabstract is not enough implemented for this yet");
+
+    sh.objSetValue(src, v2);
+    if (collectJunk(sh, v1))
+        CL_DEBUG("createGenericPrototype() has dropped some part of the heap");
+    else
+        return v2;
+
+    BOOST_FOREACH(const TObjId proto, protoRoots[1]) {
+        sh.objSetProto(proto, true);
+    }
+
+    return v2;
+}
+
+TValueId mergeValues(
+        SymHeap                     &sh,
+        const TObjPair              &roots,
+        const TValueId              v1,
+        const TValueId              v2,
+        const TObjId    /* XXX */   src)
 {
     if (v1 == v2)
         return v1;
@@ -405,11 +430,9 @@ TValueId mergeValues(SymHeap            &sh,
         return mergeAbstractValues(sh, roots, v1, v2);
 
     if (UV_KNOWN == code) {
-        if (considerNonSegPrototype(sh, roots, v1, v2, /* TODO */ 0)) {
-            CL_ERROR("symdiscover fells like creating a non-segment prototype, "
-                     "but symabstract is not enough implemented for this yet");
-            SE_TRAP;
-        }
+        TProtoRoots protoRoots;
+        if (considerNonSegPrototype(sh, roots, v1, v2, &protoRoots))
+            return createGenericPrototype(sh, src, v1, v2, protoRoots);
 
         code = UV_UNKNOWN;
     }
@@ -452,7 +475,8 @@ struct ValueAbstractor {
             return /* continue */ true;
 
         // merge values
-        const TValueId valNew = mergeValues(sh, roots_, valSrc, valDst);
+        const TValueId valNew = mergeValues(sh, roots_, valSrc, valDst,
+                                            /* XXX */ src);
         if (VAL_INVALID == valNew)
             return /* continue */ true;
 

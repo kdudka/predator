@@ -123,7 +123,7 @@ unsigned segMinLength(const SymHeap &sh, TObjId seg) {
     return static_cast<unsigned>(segProveNeq(sh, headAddr, nextVal));
 }
 
-void segSetShared(SymHeap &sh, TObjId seg, bool shared) {
+void segSetProto(SymHeap &sh, TObjId seg, bool isProto) {
     EObjKind kind = sh.objKind(seg);
     if (OK_HEAD == kind) {
         seg = objRoot(sh, seg);
@@ -132,11 +132,11 @@ void segSetShared(SymHeap &sh, TObjId seg, bool shared) {
 
     switch (kind) {
         case OK_DLS:
-            sh.objSetShared(dlSegPeer(sh, seg), shared);
+            sh.objSetProto(dlSegPeer(sh, seg), isProto);
             // fall through
 
         case OK_SLS:
-            sh.objSetShared(seg, shared);
+            sh.objSetProto(seg, isProto);
             break;
 
         default:

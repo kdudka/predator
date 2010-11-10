@@ -177,8 +177,8 @@ TObjId addObjectIfNeeded(DeepCopyData &dc, TObjId objSrc) {
             SegBindingFields segBinding = src.objBinding(rootSrc);
             dst.objSetAbstract(rootDst, kind, segBinding);
 
-            const bool shared = src.objShared(rootSrc);
-            dst.objSetShared(rootDst, shared);
+            const bool isProto = src.objIsProto(rootSrc);
+            dst.objSetProto(rootDst, isProto);
         }
         // fall through!
 
