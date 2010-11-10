@@ -97,7 +97,7 @@ class GenericPrototypeFinder: public ISubMatchVisitor {
 
         bool result(void) const { return ok_; }
 
-        const std::set<TObjPair>& protoRoots() const { return protoRoots_; }
+        const std::set<TObjPair>& protoRoots(void) const { return protoRoots_; }
 
         virtual bool considerVisiting(TValPair vp) {
             const TValueId v1 = vp.first;
@@ -270,8 +270,8 @@ struct DataMatchVisitor {
         switch (code1) {
             case UV_UNINITIALIZED:
             case UV_UNKNOWN:
-                // safe to keep unknown values as they are, they will be
-                // duplicated on concretization anyway
+                // we don't require unkown values to match
+                // FIXME: what about Neq predicates with foreign values???
                 return /* continue */ true;
 
             case UV_KNOWN:

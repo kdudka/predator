@@ -352,38 +352,43 @@ TValueId /* addr */ segCloneIfNeeded(
     return sh.placedAt(dup);
 }
 
-TValueId mergeAbstractValues(SymHeap            &sh,
-                             const TValueId     v1,
-                             const TValueId     v2)
+// FIXME: not covered by any automatic test-case yet!
+void segMergeLengths(
+        SymHeap             &sh,
+        const TObjId        seg1,
+        const TObjId        seg2)
 {
-    if (OBJ_DELETED == sh.pointsTo(v1)
-            && OK_DLS == sh.objKind(objRoot(sh, sh.pointsTo(v2))))
-        // this is tricky, we've already deleted the peer of nested Linux DLS,
-        // as part of a precedent merge, we should keep going...
-        return v2;
+    const EObjKind kind = sh.objKind(seg1);
+    SE_BREAK_IF(kind != sh.objKind(seg2));
+    switch (kind) {
+        case OK_CONCRETE:
+            // not a segment
+            return;
 
-    // read lower bound estimation of seg1 length
-    const TObjId seg1 = objRoot(sh, sh.pointsTo(v1));
+        case OK_HEAD:
+        case OK_PART:
+#if SE_SELF_TEST
+            SE_TRAP;
+#endif
+            break;
+
+        case OK_SLS:
+        case OK_DLS:
+            break;
+    }
+
+    // read lower bound estimation of seg1 length and reset it to zero
     const unsigned len1 = segMinLength(sh, seg1);
-
-    // by merging the values, we drop the last reference;  destroy the seg
     segSetMinLength(sh, seg1, /* LS 0+ */ 0);
-    segDestroy(sh, seg1);
 
-    // read lower bound estimation of seg2 length
-    const TObjId seg2 = objRoot(sh, sh.pointsTo(v2));
+    // read lower bound estimation of seg2 length and reset it to zero
     const unsigned len2 = segMinLength(sh, seg2);
     segSetMinLength(sh, seg2, /* LS 0+ */ 0);
 
-    // duplicate the nested abstract object on call of concretizeObj()
-    segSetProto(sh, seg2, true);
-
-    // revalidate the lower bound estimation of segment length
-    segSetMinLength(sh, seg2, (len1 < len2)
-            ? len1
-            : len2);
-
-    return v2;
+    // put the minimum of both lengths back to both segments
+    const unsigned min = (len1 < len2) ? len1 : len2;
+    segSetMinLength(sh, seg1, min);
+    segSetMinLength(sh, seg2, min);
 }
 
 bool matchSelfPointers(
@@ -446,9 +451,16 @@ TValueId createGenericPrototype(
         const TObjId                src,
         const TValueId              v1,
         const TValueId              v2,
-        const SymHeap::TContObj     &protoRoots)
+        const TProtoRoots           &protoRoots)
 {
-    CL_DEBUG("createGenericPrototype() got " << protoRoots.size() << "roots");
+    const unsigned cnt = protoRoots[0].size();
+    CL_DEBUG("createGenericPrototype() got " << cnt << "roots");
+    SE_BREAK_IF(cnt != protoRoots[1].size());
+
+    // NOTE: we may perform the length merge more times than actually necessary,
+    // but it's harmless and still better then omitting it by accident
+    for (unsigned i = 0; i < cnt; ++i)
+        segMergeLengths(sh, protoRoots[0][i], protoRoots[1][i]);
 
     sh.objSetValue(src, v2);
     if (collectJunk(sh, v1))
@@ -456,9 +468,8 @@ TValueId createGenericPrototype(
     else
         return v2;
 
-    BOOST_FOREACH(const TObjId proto, protoRoots) {
-        sh.objSetProto(proto, true);
-    }
+    for (unsigned i = 0; i < cnt; ++i)
+        sh.objSetProto(protoRoots[1][i], true);
 
     return v2;
 }
@@ -492,17 +503,25 @@ TValueId mergeValues(
         ? code1
         : UV_UNKNOWN;
 
-    if (UV_ABSTRACT == code)
-        // create or update a prototype list segment
-        return mergeAbstractValues(sh, v1, v2);
+    TProtoRoots protoRoots;
 
-    if (UV_KNOWN == code) {
-        TProtoRoots protoRoots;
-        if (considerGenericPrototype(sh, roots, v1, v2, &protoRoots))
-            return createGenericPrototype(sh, src, v1, v2, protoRoots[1]);
+    switch (code) {
+        case UV_UNKNOWN:
+        case UV_UNINITIALIZED:
+            // safe to keep unknown values as they are, they will be duplicated
+            // on concretization anyway
+            break;
 
-        code = UV_UNKNOWN;
+        case UV_KNOWN:
+        case UV_ABSTRACT:
+            if (considerGenericPrototype(sh, roots, v1, v2, &protoRoots))
+                return createGenericPrototype(sh, src, v1, v2, protoRoots);
     }
+
+    if (UV_KNOWN == code)
+        // if we merge two distinct known values into one, it becomes more an
+        // unknown value
+        code = UV_UNKNOWN;
 
     // attempt to dig some type-info for the new unknown value
     const struct cl_type *clt1 = sh.valType(v1);
