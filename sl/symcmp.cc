@@ -250,9 +250,12 @@ bool cmpAbstractObjects(
         TObjId                  o1,
         TObjId                  o2)
 {
+    // TODO
+#if 0
     if (sh1.objIsProto(o1) != sh2.objIsProto(o2))
         // prototype vs. shared object
         return false;
+#endif
 
     const EObjKind kind = sh1.objKind(o1);
     if (sh2.objKind(o2) != kind)

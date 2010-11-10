@@ -115,8 +115,19 @@ class NonSegPrototypeFinder: public ISubMatchVisitor {
 
             const TObjId root1 = objRoot(sh_, o1);
             const TObjId root2 = objRoot(sh_, o2);
-            const bool rootOk1 = (root1 == roots_.first);
-            const bool rootOk2 = (root2 == roots_.second);
+            const TObjId up1 = roots_.first;
+            const TObjId up2 = roots_.second;
+
+            TObjId peerUp1 = OBJ_INVALID;
+            if (OK_DLS == sh_.objKind(up1))
+                peerUp1 = dlSegPeer(sh_, up1);
+
+            TObjId peerUp2 = OBJ_INVALID;
+            if (OK_DLS == sh_.objKind(up2))
+                peerUp2 = dlSegPeer(sh_, up2);
+
+            const bool rootOk1 = (root1 == up1 || root1 == peerUp1);
+            const bool rootOk2 = (root2 == up2 || root2 == peerUp2);
             if (rootOk1 != rootOk2) {
                 // up-link candidate mismatch
                 ok_ = false;
@@ -499,6 +510,7 @@ bool validatePointingObjectsCore(
         blackList.insert(subObjByChain(sh, root, bf.peer));
 
     const TValueId headAddr = sh.placedAt(subObjByChain(sh, root, bf.head));
+    const bool rootIsProto = sh.objIsProto(root);
 
     // TODO: move subObjByChain() calls out of the loop
     BOOST_FOREACH(const TObjId obj, refs) {
@@ -515,6 +527,10 @@ bool validatePointingObjectsCore(
             continue;
 
         if (hasKey(allowedReferers, objRoot(sh, obj)))
+            continue;
+
+        if (!rootIsProto && sh.objIsProto(obj))
+            // FIXME: subtle
             continue;
 
         // someone points at/inside who should not
