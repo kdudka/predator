@@ -142,15 +142,17 @@ class NonSegPrototypeFinder: public ISubMatchVisitor {
             }
 
             bool eq;
-            if (!sh_.proveEq(&eq, v1, v2) || !eq) {
-                // FIXME: At this point, we _have_ to check if we are able to
-                //        establish a prototype object for (v1, v2).  If we
-                //        later realize that we don't know how to create the
-                //        prototype, it will be simply too late to do anything!
-                SE_BREAK_IF(root1 <= 0 || root2 <= 0);
-                const TObjPair proto(root1, root2);
-                protoRoots_.insert(proto);
-            }
+            if (sh_.proveEq(&eq, v1, v2) && eq)
+                // do not traverse over shared data
+                return false;
+
+            // FIXME: At this point, we _have_ to check if we are able to
+            //        establish a prototype object for (v1, v2).  If we
+            //        later realize that we don't know how to create the
+            //        prototype, it will be simply too late to do anything!
+            SE_BREAK_IF(root1 <= 0 || root2 <= 0);
+            const TObjPair proto(root1, root2);
+            protoRoots_.insert(proto);
 
             // keep searching
             return true;

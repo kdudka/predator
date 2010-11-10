@@ -100,22 +100,7 @@ void insert_top(struct list_head *head)
     top->sub.prev = &top->sub;
     top->sub.next = &top->sub;
 
-#if 0
-    static int cnt;
-    if ((++cnt) % 2) {
-        insert_sub(&top->sub);
-        insert_sub(&top->sub);
-        insert_sub(&top->sub);
-#endif
-        insert_sub(&top->sub);
-
-#if 0
-        // NOTE: running this on bare metal may cause the machine to swap a bit
-        int i;
-        for (i = 1; i; ++i)
-            insert_sub(&top->sub);
-    }
-#endif
+    insert_sub(&top->sub);
 
     list_add_tail(&top->link, head);
 }
@@ -125,14 +110,12 @@ void create_top(struct list_head *top)
     insert_top(top);
     insert_top(top);
     insert_top(top);
-#if 0
     insert_top(top);
 
     // NOTE: running this on bare metal may cause the machine to swap a bit
     int i;
     for (i = 1; i; ++i)
         insert_top(top);
-#endif
 }
 
 int main()
@@ -142,9 +125,7 @@ int main()
     create_top(&top);
 
     ___sl_plot(NULL);
-#if 0
     destroy_top(&top);
-#endif
 
     return 0;
 }

@@ -54,6 +54,16 @@ inline TObjId /* root */ objRoot(const SymHeapTyped &sh, TObjId obj) {
     return root;
 }
 
+inline TObjId /* root */ objRootByVal(const SymHeapTyped &sh, TValueId val) {
+    const TObjId target = sh.pointsTo(val);
+    return objRoot(sh, target);
+}
+
+inline TObjId /* root */ objRootByPtr(const SymHeapTyped &sh, TObjId ptr) {
+    const TValueId val = sh.valueOf(ptr);
+    return objRootByVal(sh, val);
+}
+
 /// return offset of an object within another object;  -1 if not found
 inline int subOffsetIn(const SymHeapTyped &sh, TObjId in, TObjId of) {
     int offset = 0;

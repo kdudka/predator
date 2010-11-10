@@ -29,6 +29,8 @@ SLS abstraction
 
     test-0050.c - simple visualization of SLS abstraction in progress
 
+    test-0051.c - SLS, each item owns its own on heap allocated object
+
     test-0052.c - regression test for SLS discovery (struct nesting, etc.)
 
     test-0053.c - SLS creation/destruction
@@ -204,6 +206,9 @@ Linux lists
                 - a bit time consuming test-case for now
                 - we should probably handle cases like this one somehow more
                   generically
+
+    test-0107.c - Linux DLS with nested Linux DLLs consisting of _one_ item only
+                - an extension of test-0104, which was even harder to deal with
 
 
 Show-case

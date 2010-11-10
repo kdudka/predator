@@ -240,6 +240,78 @@ void detachClonedPrototype(
     }
 }
 
+TObjId protoClone(SymHeap &sh, const TObjId proto) {
+    // TODO: clone nested list segments
+    SE_BREAK_IF(OK_CONCRETE != sh.objKind(proto));
+
+    // once the object is cloned, it's no longer a prototype object
+    const TObjId clone = sh.objDup(proto);
+    sh.objSetProto(clone, false);
+    return clone;
+}
+
+struct ProtoFinder {
+    std::set<TObjId> protos;
+
+    bool operator()(SymHeap &sh, TObjId sub) {
+        const TObjId target = objRootByPtr(sh, sub);
+        if (target <= 0)
+            return /* continue */ true;
+
+        if (sh.objIsProto(target))
+            protos.insert(target);
+
+        return /* continue */ true;
+    }
+};
+
+// FIXME: this completely ignores Neq predicates for instance...
+void cloneGenericPrototype(
+        SymHeap                 &sh,
+        const TObjId            proto,
+        const TObjId            rootDst,
+        const TObjId            rootSrc)
+{
+    std::vector<TObjPair>       protoPairs;
+    std::set<TObjId>            haveSeen;
+    std::stack<TObjId>          todo;
+    todo.push(proto);
+    haveSeen.insert(proto);
+
+    CL_ERROR("cloneGenericPrototype() is just a hack for now!");
+
+    while (!todo.empty()) {
+        const TObjId proto = todo.top();
+        todo.pop();
+
+        const TObjId clone = protoClone(sh, proto);
+        protoPairs.push_back(TObjPair(proto, clone));
+
+        ProtoFinder visitor;
+        traverseSubObjs(sh, proto, visitor, /* leavesOnly */ true);
+        BOOST_FOREACH(const TObjId obj, visitor.protos) {
+            if (insertOnce(haveSeen, obj))
+                todo.push(obj);
+        }
+    }
+
+    SE_BREAK_IF(protoPairs.empty());
+
+    // FIXME: works, but likely to kill the CPU
+    BOOST_FOREACH(const TObjPair pp, protoPairs) {
+        const TObjId proto = pp.first;
+        const TObjId clone = pp.second;
+        detachClonedPrototype(sh, proto, clone, rootDst, rootSrc);
+
+        BOOST_FOREACH(const TObjPair other, protoPairs) {
+            if (pp.first == other.first)
+                continue;
+
+            detachClonedPrototype(sh, proto, clone, other.second, other.first);
+        }
+    }
+}
+
 TValueId /* addr */ segCloneIfNeeded(
         SymHeap                 &sh,
         const TObjId            rootDst,
@@ -514,15 +586,14 @@ struct UnknownValuesDuplicator {
         TValueId valNew = VAL_INVALID;
         const EUnknownValue code = sh.valGetUnknown(valOld);
         switch (code) {
-            case UV_KNOWN:
-                if (sh.objIsProto(sh.pointsTo(valOld))) {
-                    CL_ERROR("concretization of non-segment prototypes is not"
-                             "implemented yet");
-                    SE_TRAP;
-                }
+            case UV_KNOWN: {
+                const TObjId target = objRootByVal(sh, valOld);
+                if (sh.objIsProto(target))
+                    cloneGenericPrototype(sh, target, rootDst, rootSrc);
 
                 // we can keep known values as they are (shared data)
                 break;
+            }
 
             case UV_ABSTRACT:
                 valNew = segCloneIfNeeded(sh, rootDst, rootSrc, valOld);
