@@ -64,6 +64,24 @@ inline TObjId /* root */ objRootByPtr(const SymHeapTyped &sh, TObjId ptr) {
     return objRootByVal(sh, val);
 }
 
+inline bool objIsSeg(const SymHeap &sh, TObjId obj, bool anyPart = false) {
+    const EObjKind kind = sh.objKind(obj);
+    switch (kind) {
+        case OK_CONCRETE:
+            break;
+
+        case OK_SLS:
+        case OK_DLS:
+            return true;
+
+        case OK_HEAD:
+        case OK_PART:
+            return anyPart;
+    }
+
+    return false;
+}
+
 /// return offset of an object within another object;  -1 if not found
 inline int subOffsetIn(const SymHeapTyped &sh, TObjId in, TObjId of) {
     int offset = 0;

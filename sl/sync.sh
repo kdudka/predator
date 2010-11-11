@@ -1,7 +1,7 @@
 #!/bin/sh
 TIMEOUT="timeout 8"
 
-ALL=data/test-00??.c
+ALL=data/test-0???.c
 test -n "$1" && ALL="$*"
 export ALL
 

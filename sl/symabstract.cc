@@ -241,12 +241,20 @@ void detachClonedPrototype(
 }
 
 TObjId protoClone(SymHeap &sh, const TObjId proto) {
-    // TODO: clone nested list segments
-    SE_BREAK_IF(OK_CONCRETE != sh.objKind(proto));
+    TObjId clone = OBJ_INVALID;
 
-    // once the object is cloned, it's no longer a prototype object
-    const TObjId clone = sh.objDup(proto);
-    sh.objSetProto(clone, false);
+    if (objIsSeg(sh, proto)) {
+        // clone segment prototype
+        clone = segClone(sh, proto);
+        segSetProto(sh, clone, false);
+        return clone;
+    }
+    else {
+        // clone bare prototype
+        clone = sh.objDup(proto);
+        sh.objSetProto(clone, false);
+    }
+
     return clone;
 }
 
@@ -272,7 +280,9 @@ void cloneGenericPrototype(
         const TObjId            rootDst,
         const TObjId            rootSrc)
 {
-    std::vector<TObjPair>       protoPairs;
+    std::vector<TObjId>         protoList;
+    std::vector<TObjId>         cloneList;
+    std::vector<int>            lengthList;
     std::set<TObjId>            haveSeen;
     std::stack<TObjId>          todo;
     todo.push(proto);
@@ -283,73 +293,68 @@ void cloneGenericPrototype(
     while (!todo.empty()) {
         const TObjId proto = todo.top();
         todo.pop();
-
-        const TObjId clone = protoClone(sh, proto);
-        protoPairs.push_back(TObjPair(proto, clone));
+        protoList.push_back(proto);
 
         ProtoFinder visitor;
         traverseSubObjs(sh, proto, visitor, /* leavesOnly */ true);
         BOOST_FOREACH(const TObjId obj, visitor.protos) {
-            if (insertOnce(haveSeen, obj))
-                todo.push(obj);
-        }
-    }
-
-    SE_BREAK_IF(protoPairs.empty());
-
-    // FIXME: works, but likely to kill the CPU
-    BOOST_FOREACH(const TObjPair pp, protoPairs) {
-        const TObjId proto = pp.first;
-        const TObjId clone = pp.second;
-        detachClonedPrototype(sh, proto, clone, rootDst, rootSrc);
-
-        BOOST_FOREACH(const TObjPair other, protoPairs) {
-            if (pp.first == other.first)
+            if (!insertOnce(haveSeen, obj))
                 continue;
 
-            detachClonedPrototype(sh, proto, clone, other.second, other.first);
+            if (OK_DLS == sh.objKind(obj) &&
+                    !insertOnce(haveSeen, dlSegPeer(sh, obj)))
+                continue;
+
+            todo.push(obj);
         }
     }
-}
 
-TValueId /* addr */ segCloneIfNeeded(
-        SymHeap                 &sh,
-        const TObjId            rootDst,
-        const TObjId            rootSrc,
-        const TValueId          atAddr)
-{
-    TObjId seg = sh.pointsTo(atAddr);
-    const bool isHead = (OK_HEAD == sh.objKind(seg));
-    if (isHead)
-        // jump to root
-        seg = objRoot(sh, seg);
+    // allocate some space for clone IDs and minimal lengths
+    const unsigned cnt = protoList.size();
+    SE_BREAK_IF(!cnt);
+    cloneList.resize(cnt);
+    lengthList.resize(cnt);
 
-    if (!sh.objIsProto(seg))
-        // object is shared, nothing to clone here
-        return VAL_INVALID;
+    // clone the prototypes while reseting the minimal size to zero
+    for (unsigned i = 0; i < cnt; ++i) {
+        const TObjId proto = protoList[i];
+        if (objIsSeg(sh, proto)) {
+            lengthList[i] = segMinLength(sh, proto);
+            segSetMinLength(sh, proto, /* LS 0+ */ 0);
+        }
+        else
+            lengthList[i] = -1;
 
-    // read lower bound estimation of seg length
-    const unsigned len = segMinLength(sh, seg);
-    segSetMinLength(sh, seg, /* LS 0+ */ 0);
-
-    // once the object is cloned, it's no longer a prototype object
-    TObjId dup = segClone(sh, seg);
-    segSetProto(sh, dup, false);
-
-    // redirect all edges to the right direction
-    detachClonedPrototype(sh, seg, dup, rootDst, rootSrc);
-
-    if (len) {
-        // restore lower bound estimation of segment length
-        segSetMinLength(sh, seg, len);
-        segSetMinLength(sh, dup, len);
+        cloneList[i] = protoClone(sh, proto);
     }
 
-    if (isHead)
-        // jump back to head
-        dup = segHead(sh, dup);
+    // FIXME: works, but likely to kill the CPU
+    for (unsigned i = 0; i < cnt; ++i) {
+        const TObjId proto = protoList[i];
+        const TObjId clone = cloneList[i];
+        detachClonedPrototype(sh, proto, clone, rootDst, rootSrc);
 
-    return sh.placedAt(dup);
+        for (unsigned j = 0; j < cnt; ++j) {
+            if (i == j)
+                continue;
+
+            const TObjId otherProto = protoList[j];
+            const TObjId otherClone = cloneList[j];
+            detachClonedPrototype(sh, proto, clone, otherClone, otherProto);
+        }
+    }
+
+    // finally restore the minimal size of all segments
+    for (unsigned i = 0; i < cnt; ++i) {
+        const TObjId proto = protoList[i];
+        const TObjId clone = cloneList[i];
+        const int len = lengthList[i];
+        if (len <= 0)
+            continue;
+
+        segSetMinLength(sh, proto, len);
+        segSetMinLength(sh, clone, len);
+    }
 }
 
 // FIXME: not covered by any automatic test-case yet!
@@ -454,7 +459,7 @@ TValueId createGenericPrototype(
         const TProtoRoots           &protoRoots)
 {
     const unsigned cnt = protoRoots[0].size();
-    CL_DEBUG("createGenericPrototype() got " << cnt << "roots");
+    CL_DEBUG("createGenericPrototype() got " << cnt << " roots");
     SE_BREAK_IF(cnt != protoRoots[1].size());
 
     // NOTE: we may perform the length merge more times than actually necessary,
@@ -597,30 +602,24 @@ struct UnknownValuesDuplicator {
         if (valOld <= 0)
             return /* continue */ true;
 
-        // branch by _unknown_ value type
         TValueId valNew = VAL_INVALID;
         const EUnknownValue code = sh.valGetUnknown(valOld);
         switch (code) {
-            case UV_KNOWN: {
-                const TObjId target = objRootByVal(sh, valOld);
-                if (sh.objIsProto(target))
-                    cloneGenericPrototype(sh, target, rootDst, rootSrc);
-
-                // we can keep known values as they are (shared data)
-                break;
-            }
+            case UV_UNKNOWN:
+            case UV_UNINITIALIZED:
+                // duplicate unknown value
+                valNew = sh.valDuplicateUnknown(valOld);
+                sh.objSetValue(obj, valNew);
 
             case UV_ABSTRACT:
-                valNew = segCloneIfNeeded(sh, rootDst, rootSrc, valOld);
+            case UV_KNOWN:
                 break;
-
-            default:
-                valNew = sh.valDuplicateUnknown(valOld);
         }
 
-        // duplicate any unknown value
-        if (VAL_INVALID != valNew)
-            sh.objSetValue(obj, valNew);
+        // check if we point to prototype, or shared data
+        const TObjId target = objRootByVal(sh, valOld);
+        if (sh.objIsProto(target))
+            cloneGenericPrototype(sh, target, rootDst, rootSrc);
 
         return /* continue */ true;
     }
