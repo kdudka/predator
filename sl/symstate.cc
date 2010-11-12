@@ -60,38 +60,12 @@ void debugPlot(int idx, const SymHeap &sh) {
 }
 
 // /////////////////////////////////////////////////////////////////////////////
-// SymState implementation
-int SymState::lookup(const SymHeap &heap) const {
-    const int cnt = this->size();
-    if (!cnt)
-        // empty state --> not found
-        return -1;
-
-    ++::cntLookups;
-    SS_DEBUG(">>> lookup() starts, cnt = " << cnt);
-    debugPlot(0, heap);
-
-    for(int idx = 0; idx < cnt; ++idx) {
-        const int nth = idx + 1;
-        SS_DEBUG("--> lookup() tries sh #" << idx << ", cnt = " << cnt);
-        debugPlot(nth, heaps_[idx]);
-
-        if (areEqual(heap, heaps_[idx])) {
-            SS_DEBUG("<<< lookup() returns sh #" << idx << ", cnt = " << cnt);
-            return idx;
-        }
-    }
-
-    // not found
-    SS_DEBUG("<<< lookup() failed, cnt = " << cnt);
-    return -1;
-}
-
-void SymState::insert(const SymHeap &heap) {
-    const int idx = this->lookup(heap);
+// SymStateBase implementation
+void SymStateBase::insert(const SymHeap &sh) {
+    const int idx = this->lookup(sh);
     if (-1 == idx) {
         // add given heap to union
-        this->insertNew(heap);
+        this->insertNew(sh);
 #if DEBUG_SYMSTATE_INSERT
         CL_DEBUG("SymState::insert() has appended a new heap #"
                  << (this->size() - 1));
@@ -105,10 +79,41 @@ void SymState::insert(const SymHeap &heap) {
 #endif
 }
 
-void SymState::insert(const SymState &huni) {
+void SymStateBase::insert(const SymStateBase &huni) {
     BOOST_FOREACH(const SymHeap &current, huni) {
         this->insert(current);
     }
+}
+
+
+// /////////////////////////////////////////////////////////////////////////////
+// SymState implementation
+int SymState::lookup(const SymHeap &lookFor) const {
+    const int cnt = this->size();
+    if (!cnt)
+        // empty state --> not found
+        return -1;
+
+    ++::cntLookups;
+    SS_DEBUG(">>> lookup() starts, cnt = " << cnt);
+    debugPlot(0, lookFor);
+
+    for(int idx = 0; idx < cnt; ++idx) {
+        const int nth = idx + 1;
+        SS_DEBUG("--> lookup() tries sh #" << idx << ", cnt = " << cnt);
+
+        const SymHeap &sh = this->operator[](idx);
+        debugPlot(nth, sh);
+
+        if (areEqual(lookFor, sh)) {
+            SS_DEBUG("<<< lookup() returns sh #" << idx << ", cnt = " << cnt);
+            return idx;
+        }
+    }
+
+    // not found
+    SS_DEBUG("<<< lookup() failed, cnt = " << cnt);
+    return -1;
 }
 
 

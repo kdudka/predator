@@ -33,41 +33,36 @@ namespace CodeStorage {
     class Block;
 }
 
-/**
- * symbolic state represented as a union of SymHeap objects (aka disjuncts)
- *
- * During the symbolic execution (see SymExec) we keep such a state per each
- * basic block of the function just being processed.  The result of a
- * symbolically executed function is then the SymState taken from the basic
- * block containing CL_INSN_RET as soon as the fix-point calculation has
- * terminated.
- */
-class SymState {
+class SymStateBase {
     private:
         typedef std::vector<SymHeap> TList;
 
     public:
-        typedef TList::const_iterator const_iterator;
-        typedef TList::iterator iterator;
+        typedef TList::const_iterator           const_iterator;
+        typedef TList::iterator                 iterator;
 
     public:
-        virtual ~SymState() { }
+        virtual ~SymStateBase() { }
 
         virtual void clear() {
             heaps_.clear();
+        }
+
+        virtual void swap(SymStateBase &other) {
+            heaps_.swap(other.heaps_);
         }
 
         /**
          * look for the given symbolic heap, return its index if found, -1
          * otherwise
          */
-        int lookup(const SymHeap &heap) const;
+        virtual int lookup(const SymHeap &heap) const = 0;
 
-        /// insert given SymHeap object into the union
+        /// insert given SymHeap object into the state
         void insert(const SymHeap &heap);
 
-        /// merge given SymState object into self
-        void insert(const SymState &huni);
+        /// merge the content of the given SymStateBase object into the state
+        void insert(const SymStateBase &huni);
 
         /// return count of object stored in the container
         size_t size()          const { return heaps_.size();  }
@@ -103,6 +98,27 @@ class SymState {
 };
 
 /**
+ * symbolic state represented as a union of SymHeap objects (aka disjuncts)
+ *
+ * During the symbolic execution (see SymExec) we keep such a state per each
+ * basic block of the function just being processed.  The result of a
+ * symbolically executed function is then the SymState taken from the basic
+ * block containing CL_INSN_RET as soon as the fix-point calculation has
+ * terminated.
+ */
+class SymState: public SymStateBase {
+    public:
+        virtual int lookup(const SymHeap &sh) const;
+};
+
+class SymHeapList: public SymStateBase {
+    public:
+        virtual int lookup(const SymHeap &) const {
+            return /* not found */ -1;
+        }
+};
+
+/**
  * Extension of SymState, which distinguishes among already processed
  * symbolic heaps and symbolic heaps scheduled for processing.  Newly inserted
  * symbolic heaps are always marked as scheduled.  They can be marked as done
@@ -121,6 +137,12 @@ class SymStateMarked: public SymState {
         virtual void clear() {
             SymState::clear();
             done_.clear();
+        }
+
+        virtual void swap(SymStateBase &otherBase) {
+            SymStateMarked &other = dynamic_cast<SymStateMarked &>(otherBase);
+            SymState::swap(other);
+            done_.swap(other.done_);
         }
 
     protected:

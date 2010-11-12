@@ -167,7 +167,7 @@ class SymExecEngine {
         bool                            endReached_;
 
         SymStateMarked                  localState_;
-        SymState                        nextLocalState_;
+        SymStateMarked                  nextLocalState_;
         LocationWriter                  lw_;
 
     private:
@@ -453,7 +453,7 @@ bool /* complete */ SymExecEngine::execBlock() {
             return false;
 
         // swap states in order to be ready for next insn
-        localState_ = nextLocalState_;
+        localState_.swap(nextLocalState_);
     }
 
     // Mark symbolic heaps that have been processed as done.  They will be
