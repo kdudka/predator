@@ -350,6 +350,7 @@ void cloneGenericPrototype(
         const TObjId clone = cloneList[i];
         const int len = lengthList[i];
         if (len <= 0)
+            // -1 means "not a segment"
             continue;
 
         segSetMinLength(sh, proto, len);
