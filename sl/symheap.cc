@@ -1953,9 +1953,8 @@ bool SymHeap::proveEq(bool *result, TValueId valA, TValueId valB) const {
             // fall through!
 
         case UV_KNOWN: {
-            // FIXME: unguarded recursion
             bool eq;
-            if (!this->proveEq(&eq, valA, valNext) || eq)
+            if (!SymHeapTyped::proveEq(&eq, valA, valNext) || eq)
                 return false;
 
             *result = false;
