@@ -120,6 +120,7 @@ bool matchValues(
     const bool isSpecial = (v1 <= 0);
     SE_BREAK_IF(isSpecial && 0 < v2);
     if (isSpecial)
+        // already checked by matchPlainValues()/checkNonPosValues()
         return true;
 
     // check for unknown values

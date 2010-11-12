@@ -64,8 +64,8 @@ struct SymCallCtx::Private {
     bool                        computed;
     bool                        flushed;
 
-    void assignReturnValue(SymState &state);
-    void destroyStackFrame(SymState &state);
+    void assignReturnValue(SymHeap &sh);
+    void destroyStackFrame(SymHeap &sh);
 };
 
 SymCallCtx::SymCallCtx():
@@ -91,7 +91,7 @@ SymState& SymCallCtx::rawResults() {
     return d->rawResults;
 }
 
-void SymCallCtx::Private::assignReturnValue(SymState &state) {
+void SymCallCtx::Private::assignReturnValue(SymHeap &sh) {
     const cl_operand &op = *this->dst;
     if (CL_OPERAND_VOID == op.code)
         // we're done for a function returning void
@@ -103,24 +103,20 @@ void SymCallCtx::Private::assignReturnValue(SymState &state) {
     // that we can get the source backtrace by removing it from there locally.
     SymBackTrace callerSiteBt(*this->bt);
     callerSiteBt.popCall();
+    SymProc proc(sh, &callerSiteBt);
+    proc.setLocation(&op.loc);
 
-    // go through results and perform assignment of the return value
-    BOOST_FOREACH(SymHeap &res, state) {
-        SymProc proc(res, &callerSiteBt);
-        proc.setLocation(&op.loc);
+    const TObjId obj = proc.heapObjFromOperand(op);
+    SE_BREAK_IF(OBJ_INVALID == obj);
 
-        const TObjId obj = proc.heapObjFromOperand(op);
-        SE_BREAK_IF(OBJ_INVALID == obj);
+    const TValueId val = sh.valueOf(OBJ_RETURN);
+    SE_BREAK_IF(VAL_INVALID == val);
 
-        const TValueId val = res.valueOf(OBJ_RETURN);
-        SE_BREAK_IF(VAL_INVALID == val);
-
-        // assign the return value in the current symbolic heap
-        proc.objSetValue(obj, val);
-    }
+    // assign the return value in the current symbolic heap
+    proc.objSetValue(obj, val);
 }
 
-void SymCallCtx::Private::destroyStackFrame(SymState &state) {
+void SymCallCtx::Private::destroyStackFrame(SymHeap &sh) {
     using namespace CodeStorage;
     const Fnc &ref = *this->fnc;
 
@@ -129,58 +125,32 @@ void SymCallCtx::Private::destroyStackFrame(SymState &state) {
     CL_DEBUG_MSG(lw, "<<< destroying stack frame of "
             << nameOf(ref) << "()"
             << ", nestLevel = " << this->nestLevel);
-
-    int hCnt = 0;
 #endif
 
-    BOOST_FOREACH(SymHeap &res, state) {
+    SymProc proc(sh, this->bt);
+
+    BOOST_FOREACH(const int uid, ref.vars) {
+        const Var &var = ref.stor->vars[uid];
+        if (isOnStack(var)) {
+            const LocationWriter lw(&var.loc);
 #if DEBUG_SE_STACK_FRAME
-        if (1 < this->rawResults.size()) {
-            CL_DEBUG_MSG(lw, "*** destroying stack frame in result #"
-                    << (hCnt++));
+            CL_DEBUG_MSG(lw, "<<< destroying stack variable: #"
+                    << var.uid << " (" << var.name << ")" );
+#endif
+            const CVar cVar(var.uid, this->nestLevel);
+            const TObjId obj = sh.objByCVar(cVar);
+            SE_BREAK_IF(obj < 0);
+
+            proc.setLocation(lw);
+            proc.objDestroy(obj);
         }
-#endif
-        SymProc proc(res, this->bt);
-
-        BOOST_FOREACH(const int uid, ref.vars) {
-            const Var &var = ref.stor->vars[uid];
-            if (isOnStack(var)) {
-                const LocationWriter lw(&var.loc);
-#if DEBUG_SE_STACK_FRAME
-                CL_DEBUG_MSG(lw, "<<< destroying stack variable: #"
-                        << var.uid << " (" << var.name << ")" );
-#endif
-
-                const CVar cVar(var.uid, this->nestLevel);
-                const TObjId obj = res.objByCVar(cVar);
-                SE_BREAK_IF(obj < 0);
-
-                proc.setLocation(lw);
-                proc.objDestroy(obj);
-            }
-        }
-
-        // We need to look for junk since there can be a function returning an
-        // allocated object.  Then ignoring the return value on the caller's
-        // side can trigger a memory leak.  See data/test-0090.c for a use case.
-        proc.objDestroy(OBJ_RETURN);
     }
+
+    // We need to look for junk since there can be a function returning an
+    // allocated object.  Then ignoring the return value on the caller's
+    // side can trigger a memory leak.  See data/test-0090.c for a use case.
+    proc.objDestroy(OBJ_RETURN);
 }
-
-namespace {
-
-void flush(SymState &dst, const SymState src) {
-    BOOST_FOREACH(SymHeap sh, src) {
-#if SE_ABSTRACT_ON_CALL_DONE
-        // after the final merge and cleanup, chances are that the abstraction
-        // may be useful
-        abstractIfNeeded(sh);
-#endif
-        dst.insert(sh);
-    }
-}
-
-} // namespace
 
 void SymCallCtx::flushCallResults(SymState &dst) {
     if (d->flushed)
@@ -191,18 +161,30 @@ void SymCallCtx::flushCallResults(SymState &dst) {
     d->computed = true;
     d->flushed = true;
 
-    // now merge the results with the original surround
-    SymState results(d->rawResults);
-    BOOST_FOREACH(SymHeap &heap, results) {
-        joinHeapsByCVars(d->bt, &heap, &d->surround);
+    // go through the results and make them of the form that the caller likes
+    const unsigned cnt = d->rawResults.size();
+    for (unsigned i = 0; i < cnt; ++i) {
+        if (1 < cnt) {
+            CL_DEBUG("*** SymCallCtx::flushCallResults() is processing heap #"
+                     << i);
+        }
+
+        // first join the heap with its original surround
+        SymHeap sh(d->rawResults[i]);
+        joinHeapsByCVars(d->bt, &sh, &d->surround);
+
+        // perform all necessary action wrt. our function call convention
+        d->assignReturnValue(sh);
+        d->destroyStackFrame(sh);
+
+#if SE_ABSTRACT_ON_CALL_DONE
+        // after the final merge and cleanup, chances are that the abstraction
+        // may be useful
+        abstractIfNeeded(sh);
+#endif
+        // flush the result
+        dst.insert(sh);
     }
-
-    // polish the results
-    d->assignReturnValue(results);
-    d->destroyStackFrame(results);
-
-    // flush the results
-    flush(dst, results);
 }
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -328,7 +310,7 @@ void SymCallCache::Private::createStackFrame(SymHeap::TContCVar &cVars) {
 
             // FIXME: this is not going to work well, if the initializers depend
             // on stack variables that are not yet created;  we should probably
-            // do it the same way how global variables are created/initialized
+            // do it the same way as global variables are created/initialized
             if (var.initial) {
                 CL_DEBUG_MSG(lw, "--- initializing stack variable: #" << var.uid
                         << " (" << var.name << ")" );

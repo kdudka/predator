@@ -318,7 +318,10 @@ void SymExecEngine::execCondInsn() {
             return;
     }
 
+    CL_DEBUG_MSG(lw_, "?T? CL_INSN_COND updates TRUE branch");
     this->updateState(tlist[/* then label */ 0], val, VAL_TRUE);
+
+    CL_DEBUG_MSG(lw_, "?F? CL_INSN_COND updates FALSE branch");
     this->updateState(tlist[/* else label */ 1], val, VAL_FALSE);
 }
 

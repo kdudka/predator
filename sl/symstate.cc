@@ -73,11 +73,11 @@ int SymState::lookup(const SymHeap &heap) const {
 
     for(int idx = 0; idx < cnt; ++idx) {
         const int nth = idx + 1;
-        SS_DEBUG("--> lookup() tries sh #" << nth << ", cnt = " << cnt);
+        SS_DEBUG("--> lookup() tries sh #" << idx << ", cnt = " << cnt);
         debugPlot(nth, heaps_[idx]);
 
         if (areEqual(heap, heaps_[idx])) {
-            SS_DEBUG("<<< lookup() returns sh #" << nth << ", cnt = " << cnt);
+            SS_DEBUG("<<< lookup() returns sh #" << idx << ", cnt = " << cnt);
             return idx;
         }
     }
@@ -88,9 +88,21 @@ int SymState::lookup(const SymHeap &heap) const {
 }
 
 void SymState::insert(const SymHeap &heap) {
-    if (-1 == this->lookup(heap))
+    const int idx = this->lookup(heap);
+    if (-1 == idx) {
         // add given heap to union
         this->insertNew(heap);
+#if DEBUG_SYMSTATE_INSERT
+        CL_DEBUG("SymState::insert() has appended a new heap #"
+                 << (this->size() - 1));
+#endif
+        return;
+    }
+
+#if DEBUG_SYMSTATE_INSERT
+    CL_DEBUG("SymState::insert() has matched the given heap with heap #"
+             << idx << " of "<< this->size() << " heaps total");
+#endif
 }
 
 void SymState::insert(const SymState &huni) {
