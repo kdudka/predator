@@ -527,9 +527,18 @@ bool matchData(const SymHeap                &sh,
     return traverseSubObjs(sh, item, visitor, /* leavesOnly */ true);
 }
 
-bool slSegAvoidSelfCycle(const SymHeap &sh, const TObjId o1, const TObjId o2) {
-    const TValueId v1 = sh.placedAt(o1);
-    const TValueId v2 = sh.placedAt(o2);
+bool slSegAvoidSelfCycle(
+        const SymHeap               &sh,
+        const SegBindingFields      &bf,
+        const TObjId                objFrom,
+        const TObjId                objTo)
+{
+    if (!bf.peer.empty())
+        // not a SLS
+        return false;
+
+    const TValueId v1 = sh.placedAt(objFrom);
+    const TValueId v2 = sh.valueOf(subObjByChain(sh, objTo, bf.next));
 
     return haveSeg(sh, v1, v2, OK_SLS)
         || haveSeg(sh, v2, v1, OK_SLS);
@@ -601,7 +610,7 @@ unsigned /* len */ segDiscover(const SymHeap            &sh,
         // found nothing
         return 0;
 
-    if (slSegAvoidSelfCycle(sh, entry, path.back()))
+    if (slSegAvoidSelfCycle(sh, bf, entry, path.back()))
         // avoid creating self-cycle of two SLS segments
         return path.size() - 1;
 

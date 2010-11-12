@@ -22,7 +22,7 @@ struct item* create_sll(void)
 
     // NOTE: running this on bare metal may cause the machine to swap a bit
     int i;
-    for (i = 1; i; ++i) {
+    for (i = 1; 0 < i; ++i) {
         now->next = alloc_or_die();
         now = now->next;
     }
