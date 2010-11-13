@@ -278,13 +278,18 @@ bool dfsCmp(
         TWorkList               &wl,
         TMapping                &valMapping,
         const SymHeap           &sh1,
-        const SymHeap           &sh2)
+        const SymHeap           &sh2,
+        const bool              *pCancel = 0)
 {
     // DFS loop
     typename TWorkList::value_type item;
     while (wl.next(item)) {
         TValueId v1, v2;
         boost::tie(v1, v2) = item;
+
+        if (pCancel && *pCancel)
+            // traversal completely canceled by visitor
+            return false;
 
         bool follow;
         if (!matchValues(&follow, valMapping, sh1, sh2, v1, v2)) {
@@ -398,6 +403,9 @@ bool areEqual(
 
 template <class TItem, class TVisitor>
 class CustomWorkList: public WorkList<TItem> {
+    public:
+        bool                    cancel;
+
     private:
         typedef WorkList<TItem> TBase;
         const SymHeap           &sh_;
@@ -406,12 +414,16 @@ class CustomWorkList: public WorkList<TItem> {
 
     public:
         CustomWorkList(const SymHeap &sh, TVisitor *visitor):
+            cancel(false),
             sh_(sh),
             visitor_(visitor)
         {
         }
 
         bool schedule(const TItem &vp) {
+            if (this->cancel)
+                return false;
+
             if (!visitor_)
                 // no visitor anyway, keep going
                 return TBase::schedule(vp);
@@ -423,8 +435,15 @@ class CustomWorkList: public WorkList<TItem> {
             SC_DEBUG("CustomWorkList::schedule() calls visitor"
                      << SC_DUMP_V1_V2(sh_, sh_, vp.first, vp.second));
 
-            if (!visitor_->considerVisiting(vp))
-                // schedule canceled by the visitor
+            bool wantTraverse = true;
+            if (!visitor_->handleValuePair(&wantTraverse, vp)) {
+                // traversal completely canceled by the visitor
+                this->cancel = true;
+                return false;
+            }
+
+            if (!wantTraverse)
+                // visitor does not want to traverse this pair of values
                 return false;
 
             const bool rv = TBase::schedule(vp);
@@ -479,7 +498,7 @@ bool matchSubHeaps(
     }
 
     // run DFS
-    if (!dfsCmp(wl, valMapping, sh, sh))
+    if (!dfsCmp(wl, valMapping, sh, sh, &wl.cancel) || wl.cancel)
         return false;
 
     // FIXME: too late (significant performance waste)

@@ -84,22 +84,18 @@ class GenericPrototypeFinder: public ISubMatchVisitor {
     private:
         const SymHeap           &sh_;
         const TObjPair          &roots_;
-        bool                    ok_;
         std::set<TObjPair>      protoRoots_;
 
     public:
         GenericPrototypeFinder(const SymHeap &sh, const TObjPair &roots):
             sh_(sh),
-            roots_(roots),
-            ok_(true)
+            roots_(roots)
         {
         }
 
-        bool result(void) const { return ok_; }
-
         const std::set<TObjPair>& protoRoots(void) const { return protoRoots_; }
 
-        virtual bool considerVisiting(TValPair vp) {
+        virtual bool handleValuePair(bool *wantTraverse, TValPair vp) {
             const TValueId v1 = vp.first;
             const TValueId v2 = vp.second;
 
@@ -108,10 +104,6 @@ class GenericPrototypeFinder: public ISubMatchVisitor {
             if (o1 <= 0 || o2 <= 0)
                 // no valid objects anyway, keep going...
                 return true;
-
-            if (!ok_)
-                // FIXME: suboptimal interface of ISubMatchVisitor
-                return false;
 
             const TObjId root1 = objRoot(sh_, o1);
             const TObjId root2 = objRoot(sh_, o2);
@@ -128,23 +120,19 @@ class GenericPrototypeFinder: public ISubMatchVisitor {
 
             const bool rootOk1 = (root1 == up1 || root1 == peerUp1);
             const bool rootOk2 = (root2 == up2 || root2 == peerUp2);
-            if (rootOk1 != rootOk2) {
+            if (rootOk1 != rootOk2)
                 // up-link candidate mismatch
-                ok_ = false;
                 return false;
-            }
 
-            if (rootOk1) {
-                ok_ = validateUpLink(sh_, roots_, v1, v2);
-
-                // never step over roots_
-                return false;
-            }
+            // never step over roots_
+            *wantTraverse = false;
+            if (rootOk1)
+                return validateUpLink(sh_, roots_, v1, v2);
 
             bool eq;
             if (sh_.proveEq(&eq, v1, v2) && eq)
                 // do not traverse over shared data
-                return false;
+                return true;
 
             // FIXME: At this point, we _have_ to check if we are able to
             //        establish a prototype object for (v1, v2).  If we
@@ -176,7 +164,7 @@ bool considerGenericPrototype(
     GenericPrototypeFinder visitor(sh, roots);
 
     // traverse pointed sub-heaps
-    if (!matchSubHeaps(sh, startingPoints, &visitor) || !visitor.result())
+    if (!matchSubHeaps(sh, startingPoints, &visitor))
         return false;
 
     CL_DEBUG("considerGenericPrototype() has succeeded!");
