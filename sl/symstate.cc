@@ -25,6 +25,7 @@
 
 #include "symcmp.hh"
 #include "symdump.hh"
+#include "symjoin.hh"
 #include "symutil.hh"
 #include "util.hh"
 #include "worklist.hh"
@@ -121,9 +122,45 @@ int SymHeapUnion::lookup(const SymHeap &lookFor) const {
 
 // /////////////////////////////////////////////////////////////////////////////
 // SymStateWithJoin implementation
-bool SymStateWithJoin::insert(const SymHeap &sh) {
-    // TODO
-    return SymHeapUnion::insert(sh);
+bool SymStateWithJoin::insert(const SymHeap &shNew) {
+    const int cnt = this->size();
+
+    EJoinStatus     status;
+    SymHeap         result;
+    int             idx;
+
+    for(idx = 0; idx < cnt; ++idx) {
+        const SymHeap &shOld = this->operator[](idx);
+        if (joinSymHeaps(&status, &result, shOld, shNew))
+            // join succeeded
+            break;
+    }
+
+    if (idx == cnt) {
+        // nothing to join here
+        this->insertNew(shNew);
+        return true;
+    }
+
+    switch (status) {
+        case JS_USE_SH1:
+            // just keep the state as it is
+            break;
+
+        case JS_USE_SH2:
+            // replace the heap inside by the given one
+            result = shNew;
+            this->swapExisting(idx, result);
+            return true;
+
+        case JS_THREE_WAY:
+            // three-way merge
+            this->swapExisting(idx, result);
+            return true;
+    }
+
+    // nothing changed actually
+    return false;
 }
 
 

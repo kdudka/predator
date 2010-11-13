@@ -168,7 +168,7 @@ class SymExecEngine {
 
         SymHeapList                     localState_;
         SymHeapList                     nextLocalState_;
-        SymHeapUnion                    callResults_;
+        SymStateWithJoin                callResults_;
         LocationWriter                  lw_;
 
     private:
@@ -558,7 +558,7 @@ struct SymExec::Private {
     SymExec                     &se;
     const CodeStorage::Storage  &stor;
     SymExecParams               params;
-    SymHeapUnion                stateZero;
+    SymStateWithJoin            stateZero;
     SymBackTrace                bt;
     SymCallCache                callCache;
 

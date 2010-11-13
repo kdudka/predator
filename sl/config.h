@@ -51,6 +51,11 @@
 #define DEBUG_SYMPLOT                       0
 
 /**
+ * if 1, symjoin prints some extra debugging info
+ */
+#define DEBUG_SYMJOIN                       0
+
+/**
  * if 1, define TObjId and TValueId is integers (makes debugging easier)
  */
 #define DEBUG_SYMID_FORCE_INT               0

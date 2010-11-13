@@ -59,7 +59,7 @@ struct SymCallCtx::Private {
     SymHeap                     heap;
     SymHeap                     surround;
     const struct cl_operand     *dst;
-    SymHeapUnion                rawResults;
+    SymStateWithJoin            rawResults;
     int                         nestLevel;
     bool                        computed;
     bool                        flushed;
