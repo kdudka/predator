@@ -61,22 +61,24 @@ void debugPlot(int idx, const SymHeap &sh) {
 
 // /////////////////////////////////////////////////////////////////////////////
 // SymState implementation
-void SymState::insert(const SymHeap &sh) {
-    const int idx = this->lookup(sh);
+bool SymState::insert(const SymHeap &sh) {
+    int idx = this->lookup(sh);
     if (-1 == idx) {
+        idx = this->size();
+
         // add given heap to union
         this->insertNew(sh);
 #if DEBUG_SYMSTATE_INSERT
-        CL_DEBUG("SymState::insert() has appended a new heap #"
-                 << (this->size() - 1));
+        CL_DEBUG("SymState::insert() has appended a new heap #" << idx);
 #endif
-        return;
+        return true;
     }
 
 #if DEBUG_SYMSTATE_INSERT
     CL_DEBUG("SymState::insert() has matched the given heap with heap #"
              << idx << " of "<< this->size() << " heaps total");
 #endif
+    return false;
 }
 
 void SymState::insert(const SymState &huni) {
@@ -114,6 +116,14 @@ int SymHeapUnion::lookup(const SymHeap &lookFor) const {
     // not found
     SS_DEBUG("<<< lookup() failed, cnt = " << cnt);
     return -1;
+}
+
+
+// /////////////////////////////////////////////////////////////////////////////
+// SymStateWithJoin implementation
+bool SymStateWithJoin::insert(const SymHeap &sh) {
+    // TODO
+    return SymHeapUnion::insert(sh);
 }
 
 

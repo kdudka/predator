@@ -66,8 +66,7 @@ class SymHeapCore {
         /// @note there is no such thing like COW implemented for now
         SymHeapCore& operator=(const SymHeapCore &);
 
-        // TODO: explicit Clone operation, use shared_ptr for Privete
-        // implementation
+        virtual void swap(SymHeapCore &);
 
     public:
         /// container used to store object IDs to
@@ -386,6 +385,8 @@ class SymHeapTyped: public SymHeapCore {
         /// @note there is no such thing like COW implemented for now
         SymHeapTyped& operator=(const SymHeapTyped &);
 
+        virtual void swap(SymHeapCore &);
+
     public:
         /// container used to store CVar objects to
         typedef std::vector<CVar> TContCVar;
@@ -656,6 +657,8 @@ class SymHeap: public SymHeapTyped {
 
         /// @note there is no such thing like COW implemented for now
         SymHeap& operator=(const SymHeap &);
+
+        virtual void swap(SymHeapCore &);
 
     public:
         virtual TObjId objDup(TObjId obj);

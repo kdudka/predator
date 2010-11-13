@@ -489,6 +489,10 @@ SymHeapCore& SymHeapCore::operator=(const SymHeapCore &ref) {
     return *this;
 }
 
+void SymHeapCore::swap(SymHeapCore &ref) {
+    swapValues(this->d, ref.d);
+}
+
 TValueId SymHeapCore::valueOf(TObjId obj) const {
     // handle special cases first
     switch (obj) {
@@ -1454,6 +1458,15 @@ SymHeapTyped& SymHeapTyped::operator=(const SymHeapTyped &ref) {
     return *this;
 }
 
+void SymHeapTyped::swap(SymHeapCore &baseRef) {
+    // swap base
+    SymHeapCore::swap(baseRef);
+
+    // swap self
+    SymHeapTyped &ref = dynamic_cast<SymHeapTyped &>(baseRef);
+    swapValues(this->d, ref.d);
+}
+
 void SymHeapTyped::objSetValue(TObjId obj, TValueId val) {
 #if SE_SELF_TEST
     // range check
@@ -1773,6 +1786,15 @@ SymHeap& SymHeap::operator=(const SymHeap &ref) {
     delete d;
     d = new Private(*ref.d);
     return *this;
+}
+
+void SymHeap::swap(SymHeapCore &baseRef) {
+    // swap base
+    SymHeapTyped::swap(baseRef);
+
+    // swap self
+    SymHeap &ref = dynamic_cast<SymHeap &>(baseRef);
+    swapValues(this->d, ref.d);
 }
 
 TObjId SymHeap::objDup(TObjId objOld) {

@@ -59,7 +59,7 @@ class SymState {
         virtual int lookup(const SymHeap &heap) const = 0;
 
         /// insert given SymHeap object into the state
-        void insert(const SymHeap &heap);
+        virtual bool insert(const SymHeap &heap);
 
         /// merge the content of the given SymState object into the state
         void insert(const SymState &huni);
@@ -90,25 +90,16 @@ class SymState {
             heaps_.push_back(sh);
         }
 
+        virtual void swapExisting(int nth, SymHeap &sh) {
+            SymHeap &existing = heaps_.at(nth);
+            existing.swap(sh);
+        }
+
         /// lookup/insert optimization in SymCallCache implementation
         friend class PerFncCache;
 
     private:
         TList heaps_;
-};
-
-/**
- * symbolic state represented as a union of SymHeap objects (aka disjuncts)
- *
- * During the symbolic execution (see SymExec) we keep such a state per each
- * basic block of the function just being processed.  The result of a
- * symbolically executed function is then the SymState taken from the basic
- * block containing CL_INSN_RET as soon as the fix-point calculation has
- * terminated.
- */
-class SymHeapUnion: public SymState {
-    public:
-        virtual int lookup(const SymHeap &sh) const;
 };
 
 class SymHeapList: public SymState {
@@ -134,38 +125,65 @@ class SymHeapList: public SymState {
 };
 
 /**
- * Extension of SymHeapUnion, which distinguishes among already processed
+ * symbolic state represented as a union of SymHeap objects (aka disjuncts)
+ *
+ * During the symbolic execution (see SymExec) we keep such a state per each
+ * basic block of the function just being processed.  The result of a
+ * symbolically executed function is then the SymState taken from the basic
+ * block containing CL_INSN_RET as soon as the fix-point calculation has
+ * terminated.
+ */
+class SymHeapUnion: public SymState {
+    public:
+        virtual int lookup(const SymHeap &sh) const;
+};
+
+class SymStateWithJoin: public SymHeapUnion {
+    public:
+        virtual bool insert(const SymHeap &sh);
+};
+
+/**
+ * Extension of SymStateWithJoin, which distinguishes among already processed
  * symbolic heaps and symbolic heaps scheduled for processing.  Newly inserted
  * symbolic heaps are always marked as scheduled.  They can be marked as done
  * later, using the setDone() method.
  */
-class SymStateMarked: public SymHeapUnion {
+class SymStateMarked: public SymStateWithJoin {
     public:
-        /// import of SymHeapUnion rewrites the base and invalidates all flags
-        SymStateMarked& operator=(const SymHeapUnion &huni) {
-            static_cast<SymHeapUnion &>(*this) = huni;
+        /// import of SymState rewrites the base and invalidates all flags
+        SymStateMarked& operator=(const SymState &huni) {
+            static_cast<SymState &>(*this) = huni;
             done_.clear();
             done_.resize(huni.size(), false);
             return *this;
         }
 
         virtual void clear() {
-            SymHeapUnion::clear();
+            SymStateWithJoin::clear();
             done_.clear();
         }
 
         virtual void swap(SymState &otherBase) {
             SymStateMarked &other = dynamic_cast<SymStateMarked &>(otherBase);
-            SymHeapUnion::swap(other);
+            SymStateWithJoin::swap(other);
             done_.swap(other.done_);
         }
 
     protected:
         virtual void insertNew(const SymHeap &sh) {
-            SymHeapUnion::insertNew(sh);
+            SymStateWithJoin::insertNew(sh);
 
             // schedule the just inserted SymHeap for processing
             done_.push_back(false);
+        }
+
+        virtual void swapExisting(int nth, SymHeap &sh) {
+            SymStateWithJoin::swapExisting(nth, sh);
+
+            // an already inserted heap has been generalized, we need to
+            // schedule it once again
+            done_.at(nth) = false;
         }
 
     public:
