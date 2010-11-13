@@ -31,9 +31,10 @@ class SymHeap;
 
 /// @todo some dox
 enum EJoinStatus {
-    JS_THREE_WAY = 0,
+    JS_USE_ANY = 0,
     JS_USE_SH1,
-    JS_USE_SH2
+    JS_USE_SH2,
+    JS_THREE_WAY
 };
 
 /// @todo some dox

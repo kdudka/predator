@@ -20,14 +20,15 @@
 #include "config.h"
 #include "symcut.hh"
 
-#include "symbt.hh"
-#include "symplot.hh"
-
 #include <cl/cl_msg.hh>
 #include <cl/clutil.hh>
 #include <cl/code_listener.h>
 #include <cl/storage.hh>
 
+#include "symbt.hh"
+#include "symclone.hh"
+#include "symplot.hh"
+#include "symutil.hh"
 #include "worklist.hh"
 
 #include <algorithm>            // for std::copy, std::set_difference
@@ -86,42 +87,37 @@ void add(DeepCopyData &dc, TObjId objSrc, TObjId objDst) {
     dc.wl.schedule(objSrc, objDst);
 }
 
+class DCopyValVisitor {
+    private:
+        DeepCopyData::TValMap       &valMap_;
+
+    public:
+        DCopyValVisitor(DeepCopyData::TValMap &valMap): valMap_(valMap) { }
+
+        void operator()(const TValPair &item) {
+            valMap_[/* src */ item.first] = /* dst */ item.second;
+        }
+};
+
+class DCopyObjVisitor {
+    private:
+        DeepCopyData                &dc_;
+
+    public:
+        DCopyObjVisitor(DeepCopyData &dc): dc_(dc) { }
+
+        void operator()(const TObjPair &item) {
+            add(dc_, /* src */ item.first, /* dst */ item.second);
+        }
+};
+
 void digSubObjs(DeepCopyData &dc, TObjId objSrc, TObjId objDst)
 {
-    const SymHeap   &src = dc.src;
-    SymHeap         &dst = dc.dst;
+    DCopyValVisitor valVisitor(dc.valMap);
+    DCopyObjVisitor objVisitor(dc);
 
-    typedef DeepCopyData::TItem TItem;
-    std::stack<TItem> todo;
-    push(todo, objSrc, objDst);
-    while (!todo.empty()) {
-        TObjId objSrc, objDst;
-        boost::tie(objSrc, objDst) = todo.top();
-        todo.pop();
-
-        const struct cl_type *cltSrc = src.objType(objSrc);
-        SE_BREAK_IF(dst.objType(objDst) != cltSrc);
-        if (!cltSrc)
-            // anonymous object of known size
-            continue;
-
-        if (!isComposite(cltSrc))
-            // we should be set up
-            continue;
-
-        // store mapping of composite value
-        dc.valMap[src.valueOf(objSrc)] = dst.valueOf(objDst);
-
-        // go through fields
-        for (int i = 0; i < cltSrc->item_cnt; ++i) {
-            const TObjId subSrc = src.subObj(objSrc, i);
-            const TObjId subDst = dst.subObj(objDst, i);
-            SE_BREAK_IF(subSrc < 0 || subDst < 0);
-
-            add(dc, subSrc, subDst);
-            push(todo, subSrc, subDst);
-        }
-    }
+    const TObjPair root(objSrc, objDst);
+    digSubObjs(dc.src, dc.dst, root, valVisitor, objVisitor);
 }
 
 TObjId addObjectIfNeeded(DeepCopyData &dc, TObjId objSrc) {
@@ -136,9 +132,7 @@ TObjId addObjectIfNeeded(DeepCopyData &dc, TObjId objSrc) {
 
     // go to root
     const SymHeap &src = dc.src;
-    TObjId rootSrc = objSrc, tmp;
-    while (OBJ_INVALID != (tmp = src.objParent(rootSrc)))
-        rootSrc = tmp;
+    const TObjId rootSrc = objRoot(src, objSrc);
 
     CVar cv;
     if (src.cVar(&cv, rootSrc)) {

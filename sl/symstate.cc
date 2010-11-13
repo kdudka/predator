@@ -158,6 +158,7 @@ bool SymStateWithJoin::insert(const SymHeap &shNew) {
     }
 
     switch (status) {
+        case JS_USE_ANY:
         case JS_USE_SH1:
             // just keep the state as it is
             SS_DEBUG("<<< re-using sh #" << idx);
