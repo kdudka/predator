@@ -193,15 +193,9 @@ TObjId addObjectIfNeeded(DeepCopyData &dc, TObjId objSrc) {
 }
 
 void trackUses(DeepCopyData &dc, TValueId valSrc) {
-    // FIXME: there seems to be a bug in the optimization;  when the following
-    //        block is uncommented, it seems to change the result;  however as
-    //        far as I understand the code, something like that should never
-    //        happen
-#if 0
     if (!dc.digBackward)
         // optimization
         return;
-#endif
 
     // go from the value backward
     SymHeap::TContObj uses;

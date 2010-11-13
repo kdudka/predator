@@ -48,13 +48,13 @@ static bool debugSymState = static_cast<bool>(DEBUG_SYMSTATE);
 
 static int cntLookups = -1;
 
-void debugPlot(int idx, const SymHeap &sh) {
+void debugPlot(const char *name, int idx, const SymHeap &sh) {
     if (!::debugSymState)
         return;
 
     std::ostringstream str;
-    str << "symstate-loookup-"
-        << FIXW(6) << ::cntLookups << "-"
+    str << "symstate-"
+        << FIXW(6) << ::cntLookups << "-" << name << "-"
         << FIXW(4) << (idx);
 
     dump_plot(sh, str.str().c_str());
@@ -99,14 +99,14 @@ int SymHeapUnion::lookup(const SymHeap &lookFor) const {
 
     ++::cntLookups;
     SS_DEBUG(">>> lookup() starts, cnt = " << cnt);
-    debugPlot(0, lookFor);
+    debugPlot("lookup", 0, lookFor);
 
     for(int idx = 0; idx < cnt; ++idx) {
         const int nth = idx + 1;
         SS_DEBUG("--> lookup() tries sh #" << idx << ", cnt = " << cnt);
 
         const SymHeap &sh = this->operator[](idx);
-        debugPlot(nth, sh);
+        debugPlot("lookup", nth, sh);
 
         if (areEqual(lookFor, sh)) {
             SS_DEBUG("<<< lookup() returns sh #" << idx << ", cnt = " << cnt);
@@ -124,13 +124,27 @@ int SymHeapUnion::lookup(const SymHeap &lookFor) const {
 // SymStateWithJoin implementation
 bool SymStateWithJoin::insert(const SymHeap &shNew) {
     const int cnt = this->size();
+    if (!cnt) {
+        // no heaps inside, insert the first now
+        this->insertNew(shNew);
+        return true;
+    }
 
     EJoinStatus     status;
     SymHeap         result;
     int             idx;
 
+    ++::cntLookups;
+    SS_DEBUG(">>> insert() starts, cnt = " << cnt);
+    debugPlot("insert", 0, shNew);
+
     for(idx = 0; idx < cnt; ++idx) {
+        const int nth = idx + 1;
+        SS_DEBUG("--> insert() tries sh #" << idx << ", cnt = " << cnt);
+
         const SymHeap &shOld = this->operator[](idx);
+        debugPlot("insert", nth, shOld);
+
         if (joinSymHeaps(&status, &result, shOld, shNew))
             // join succeeded
             break;
@@ -138,6 +152,7 @@ bool SymStateWithJoin::insert(const SymHeap &shNew) {
 
     if (idx == cnt) {
         // nothing to join here
+        SS_DEBUG("<<< insertNew() fired, cnt = " << cnt);
         this->insertNew(shNew);
         return true;
     }
@@ -145,16 +160,19 @@ bool SymStateWithJoin::insert(const SymHeap &shNew) {
     switch (status) {
         case JS_USE_SH1:
             // just keep the state as it is
+            SS_DEBUG("<<< re-using sh #" << idx);
             break;
 
         case JS_USE_SH2:
             // replace the heap inside by the given one
+            SS_DEBUG("<<< replacing sh #" << idx);
             result = shNew;
             this->swapExisting(idx, result);
             return true;
 
         case JS_THREE_WAY:
             // three-way merge
+            SS_DEBUG("<<< three-way merge with sh #" << idx);
             this->swapExisting(idx, result);
             return true;
     }
