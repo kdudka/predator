@@ -59,7 +59,7 @@ struct SymCallCtx::Private {
     SymHeap                     heap;
     SymHeap                     surround;
     const struct cl_operand     *dst;
-    SymState                    rawResults;
+    SymHeapUnion                rawResults;
     int                         nestLevel;
     bool                        computed;
     bool                        flushed;
@@ -193,7 +193,7 @@ class PerFncCache {
     private:
         typedef std::vector<SymCallCtx *> TCtxMap;
 
-        SymState        huni_;
+        SymHeapUnion    huni_;
         TCtxMap         ctxMap_;
 
     public:

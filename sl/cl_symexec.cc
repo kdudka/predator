@@ -111,7 +111,7 @@ void execFnc(const CodeStorage::Fnc &fnc, const SymExecParams &ep,
     SymExec se(stor, ep);
 
     // run the symbolic execution
-    SymState results;
+    SymHeapUnion results;
     se.exec(fnc, results);
     if (!lookForGlJunk)
         return;

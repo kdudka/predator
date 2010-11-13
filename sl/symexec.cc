@@ -166,8 +166,9 @@ class SymExecEngine {
         bool                            waiting_;
         bool                            endReached_;
 
-        SymStateMarked                  localState_;
-        SymStateMarked                  nextLocalState_;
+        SymHeapList                     localState_;
+        SymHeapList                     nextLocalState_;
+        SymHeapUnion                    callResults_;
         LocationWriter                  lw_;
 
     private:
@@ -388,10 +389,13 @@ bool /* complete */ SymExecEngine::execInsn() {
         nextLocalState_.clear();
     }
 
+    // used only if (0 == insnIdx_)
+    SymStateMarked &origin = stateMap_[block_];
+
     // go through the remainder of symbolic heaps corresponding to localState_
     const unsigned hCnt = localState_.size();
     for (/* we allow resume */; heapIdx_ < hCnt; ++heapIdx_) {
-        if (localState_.isDone(heapIdx_))
+        if (!insnIdx_ && origin.isDone(heapIdx_))
             // for this particular symbolic heap, we already know the result and
             // the result is already included in the resulting state, skip it
             continue;
@@ -448,9 +452,11 @@ bool /* complete */ SymExecEngine::execBlock() {
             lw_ = &insn->loc;
 
         // execute current instruction
-        if (!this->execInsn())
+        if (!this->execInsn()) {
             // function call reached, we should stand by
+            callResults_.clear();
             return false;
+        }
 
         // swap states in order to be ready for next insn
         localState_.swap(nextLocalState_);
@@ -475,6 +481,9 @@ bool /* complete */ SymExecEngine::run() {
     const LocationWriter lw(&fnc->def.loc);
 
     if (waiting_) {
+        // pick up the results of the call
+        nextLocalState_.insert(callResults_);
+
         // we're on the way from a just completed function call...
         if (!this->execBlock())
             // ... and we've just hit another one
@@ -539,7 +548,7 @@ const CodeStorage::Insn* SymExecEngine::callInsn() const {
 }
 
 SymState* SymExecEngine::callResults() {
-    return &nextLocalState_;
+    return &callResults_;
 }
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -549,7 +558,7 @@ struct SymExec::Private {
     SymExec                     &se;
     const CodeStorage::Storage  &stor;
     SymExecParams               params;
-    SymState                    stateZero;
+    SymHeapUnion                stateZero;
     SymBackTrace                bt;
     SymCallCache                callCache;
 

@@ -60,8 +60,8 @@ void debugPlot(int idx, const SymHeap &sh) {
 }
 
 // /////////////////////////////////////////////////////////////////////////////
-// SymStateBase implementation
-void SymStateBase::insert(const SymHeap &sh) {
+// SymState implementation
+void SymState::insert(const SymHeap &sh) {
     const int idx = this->lookup(sh);
     if (-1 == idx) {
         // add given heap to union
@@ -79,7 +79,7 @@ void SymStateBase::insert(const SymHeap &sh) {
 #endif
 }
 
-void SymStateBase::insert(const SymStateBase &huni) {
+void SymState::insert(const SymState &huni) {
     BOOST_FOREACH(const SymHeap &current, huni) {
         this->insert(current);
     }
@@ -87,8 +87,8 @@ void SymStateBase::insert(const SymStateBase &huni) {
 
 
 // /////////////////////////////////////////////////////////////////////////////
-// SymState implementation
-int SymState::lookup(const SymHeap &lookFor) const {
+// SymHeapUnion implementation
+int SymHeapUnion::lookup(const SymHeap &lookFor) const {
     const int cnt = this->size();
     if (!cnt)
         // empty state --> not found

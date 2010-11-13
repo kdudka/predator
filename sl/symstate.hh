@@ -22,7 +22,7 @@
 
 /**
  * @file symstate.hh
- * SymState - @b symbolic @b state represented as a union of SymHeap objects
+ * @todo update dox
  */
 
 #include <vector>
@@ -33,7 +33,7 @@ namespace CodeStorage {
     class Block;
 }
 
-class SymStateBase {
+class SymState {
     private:
         typedef std::vector<SymHeap> TList;
 
@@ -42,13 +42,13 @@ class SymStateBase {
         typedef TList::iterator                 iterator;
 
     public:
-        virtual ~SymStateBase() { }
+        virtual ~SymState() { }
 
         virtual void clear() {
             heaps_.clear();
         }
 
-        virtual void swap(SymStateBase &other) {
+        virtual void swap(SymState &other) {
             heaps_.swap(other.heaps_);
         }
 
@@ -61,8 +61,8 @@ class SymStateBase {
         /// insert given SymHeap object into the state
         void insert(const SymHeap &heap);
 
-        /// merge the content of the given SymStateBase object into the state
-        void insert(const SymStateBase &huni);
+        /// merge the content of the given SymState object into the state
+        void insert(const SymState &huni);
 
         /// return count of object stored in the container
         size_t size()          const { return heaps_.size();  }
@@ -106,48 +106,63 @@ class SymStateBase {
  * block containing CL_INSN_RET as soon as the fix-point calculation has
  * terminated.
  */
-class SymState: public SymStateBase {
+class SymHeapUnion: public SymState {
     public:
         virtual int lookup(const SymHeap &sh) const;
 };
 
-class SymHeapList: public SymStateBase {
+class SymHeapList: public SymState {
     public:
+        SymHeapList() { }
+
+        SymHeapList(const SymState &ref):
+            // safe to slice the base, as we have no data anyway
+            SymState(ref)
+        {
+        }
+
+        SymHeapList& operator=(const SymState &ref) {
+            // safe to slice the base, as we have no data anyway
+            *static_cast<SymState *>(this) = ref;
+
+            return *this;
+        }
+
         virtual int lookup(const SymHeap &) const {
             return /* not found */ -1;
         }
 };
 
 /**
- * Extension of SymState, which distinguishes among already processed
+ * Extension of SymHeapUnion, which distinguishes among already processed
  * symbolic heaps and symbolic heaps scheduled for processing.  Newly inserted
  * symbolic heaps are always marked as scheduled.  They can be marked as done
  * later, using the setDone() method.
  */
-class SymStateMarked: public SymState {
+class SymStateMarked: public SymHeapUnion {
     public:
-        /// import of SymState rewrites the base and invalidates all flags
-        SymStateMarked& operator=(const SymState &huni) {
-            static_cast<SymState &>(*this) = huni;
+        /// import of SymHeapUnion rewrites the base and invalidates all flags
+        SymStateMarked& operator=(const SymHeapUnion &huni) {
+            static_cast<SymHeapUnion &>(*this) = huni;
             done_.clear();
             done_.resize(huni.size(), false);
             return *this;
         }
 
         virtual void clear() {
-            SymState::clear();
+            SymHeapUnion::clear();
             done_.clear();
         }
 
-        virtual void swap(SymStateBase &otherBase) {
+        virtual void swap(SymState &otherBase) {
             SymStateMarked &other = dynamic_cast<SymStateMarked &>(otherBase);
-            SymState::swap(other);
+            SymHeapUnion::swap(other);
             done_.swap(other.done_);
         }
 
     protected:
         virtual void insertNew(const SymHeap &sh) {
-            SymState::insertNew(sh);
+            SymHeapUnion::insertNew(sh);
 
             // schedule the just inserted SymHeap for processing
             done_.push_back(false);
