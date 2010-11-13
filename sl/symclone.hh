@@ -32,54 +32,62 @@
 
 #include <stack>
 
+#include <boost/array.hpp>
 #include <boost/tuple/tuple.hpp>
 
 template <class T>
 struct DummyVisitor {
-    void operator()(const T &) { }
+    bool operator()(const T &) const {
+        return true;
+    }
 };
 
-template <class TValVisitor, class TObjVisitor>
-void digSubObjs(
-        const SymHeap           &src,
-        SymHeap                 &dst,
-        const TObjPair          root,
-        TValVisitor             &valVisitor = DummyVisitor<TValPair>(),
-        TObjVisitor             &objVisitor = DummyVisitor<TObjPair>())
+template <int N, class TObjVisitor>
+bool traverseSubObjs(
+        boost::array<const SymHeap *, N>    sh,
+        boost::array<TObjId, N>             root,
+        TObjVisitor                         &objVisitor)
 {
-    std::stack<TObjPair> todo;
+    typedef boost::array<TObjId, N> TObjTuple;
+    std::stack<TObjTuple> todo;
     todo.push(root);
 
     while (!todo.empty()) {
-        TObjId objSrc, objDst;
-        boost::tie(objSrc, objDst) = todo.top();
+        TObjTuple item = todo.top();
         todo.pop();
 
-        const struct cl_type *cltSrc = src.objType(objSrc);
-        SE_BREAK_IF(dst.objType(objDst) != cltSrc);
-        if (!cltSrc)
+        const struct cl_type *const clt = sh[0]->objType(item[0]);
+#if SE_SELF_TEST
+        for (int h = 1; h < N; ++h)
+            SE_BREAK_IF(clt != sh[h]->objType(item[h]));
+#endif
+        if (!clt)
             // anonymous object of known size
             continue;
 
-        if (!isComposite(cltSrc))
+        if (!isComposite(clt))
             // we should be set up
             continue;
 
-        // store mapping of composite value
-        const TValPair values(src.valueOf(objSrc), src.valueOf(objDst));
-        valVisitor(values);
-
         // go through fields
-        for (int i = 0; i < cltSrc->item_cnt; ++i) {
-            const TObjId subSrc = src.subObj(objSrc, i);
-            const TObjId subDst = dst.subObj(objDst, i);
-            SE_BREAK_IF(subSrc < 0 || subDst < 0);
+        for (int i = 0; i < clt->item_cnt; ++i) {
 
-            const TObjPair objs(subSrc, subDst);
-            objVisitor(objs);
-            todo.push(objs);
+            TObjTuple subItem;
+            for (int h = 0; h < N; ++h) {
+                subItem[h] = sh[h]->subObj(item[h], i);
+                SE_BREAK_IF(subItem[h] < 0);
+            }
+
+            // call sub-object visitor
+            if (!objVisitor(subItem))
+                return false;
+
+            todo.push(subItem);
         }
     }
+
+    // not interrupted by any visitor
+    return true;
 }
 
 #endif /* H_GUARD_SYM_CLONE_H */

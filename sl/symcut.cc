@@ -85,39 +85,43 @@ void add(DeepCopyData &dc, TObjId objSrc, TObjId objDst) {
     dc.objMap[objSrc] = objDst;
     dc.valMap[dc.src.placedAt(objSrc)] = dc.dst.placedAt(objDst);
     dc.wl.schedule(objSrc, objDst);
+
+    const TValueId valSrc = dc.src.valueOf(objSrc);
+    const TValueId valDst = dc.dst.valueOf(objDst);
+    if (OBJ_INVALID != dc.src.valGetCompositeObj(valSrc))
+        // store mapping of composite object's value
+        dc.valMap[valSrc] = valDst;
 }
-
-class DCopyValVisitor {
-    private:
-        DeepCopyData::TValMap       &valMap_;
-
-    public:
-        DCopyValVisitor(DeepCopyData::TValMap &valMap): valMap_(valMap) { }
-
-        void operator()(const TValPair &item) {
-            valMap_[/* src */ item.first] = /* dst */ item.second;
-        }
-};
 
 class DCopyObjVisitor {
     private:
-        DeepCopyData                &dc_;
+        DeepCopyData &dc_;
 
     public:
         DCopyObjVisitor(DeepCopyData &dc): dc_(dc) { }
 
-        void operator()(const TObjPair &item) {
-            add(dc_, /* src */ item.first, /* dst */ item.second);
+        bool operator()(const boost::array<TObjId, 2> &item) {
+            const TObjId objSrc = item[/* src */ 0];
+            const TObjId objDst = item[/* dst */ 1];
+            add(dc_, objSrc, objDst);
+
+            return /* continue */ true;
         }
 };
 
 void digSubObjs(DeepCopyData &dc, TObjId objSrc, TObjId objDst)
 {
-    DCopyValVisitor valVisitor(dc.valMap);
     DCopyObjVisitor objVisitor(dc);
 
-    const TObjPair root(objSrc, objDst);
-    digSubObjs(dc.src, dc.dst, root, valVisitor, objVisitor);
+    boost::array<const SymHeap *, 2> sh;
+    sh[0] = &dc.src;
+    sh[1] = &dc.dst;
+
+    boost::array<TObjId, 2> root;
+    root[0] = objSrc;
+    root[1] = objDst;
+
+    traverseSubObjs<2>(sh, root, objVisitor);
 }
 
 TObjId addObjectIfNeeded(DeepCopyData &dc, TObjId objSrc) {

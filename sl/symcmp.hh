@@ -56,4 +56,20 @@ bool matchSubHeaps(
         const TValPairList      &startingPoints,
         ISubMatchVisitor        *visitor = 0);
 
+inline bool checkNonPosValues(int a, int b) {
+    if (0 < a && 0 < b)
+        // we'll need to properly compare positive values
+        return false;
+
+    // non-positive values always have to match, bail out otherwise
+    return a != b;
+}
+
+typedef TValMap                                             TValMapBidir[2];
+
+bool matchPlainValues(
+        TValMapBidir            valMapping,
+        const TValueId          v1,
+        const TValueId          v2);
+
 #endif /* H_GUARD_SYM_CMP_H */

@@ -60,18 +60,8 @@
 // set to 'true' if you wonder why SymCmp matches states as it does (noisy)
 static bool debugSymCmp = static_cast<bool>(DEBUG_SYMCMP);
 
-bool checkNonPosValues(int a, int b) {
-    if (0 < a && 0 < b)
-        // we'll need to properly compare positive values
-        return false;
-
-    // non-positive values always have to match, bail out otherwise
-    return a != b;
-}
-
-template <class TMapping>
 bool matchPlainValues(
-        TMapping                valMapping[2],
+        TValMapBidir            valMapping,
         const TValueId          v1,
         const TValueId          v2)
 {
@@ -84,15 +74,15 @@ bool matchPlainValues(
         return true;
 
     // left-to-right check
-    TMapping &ltr = valMapping[/* ltr */ 0];
-    typename TMapping::iterator iter1 = ltr.find(v1);
+    TValMap &ltr = valMapping[/* ltr */ 0];
+    TValMap::iterator iter1 = ltr.find(v1);
     if (iter1 != ltr.end())
         // substitution already defined, check if it applies seamlessly
         return iter1->second == v2;
 
     // right-to-left check
-    TMapping &rtl = valMapping[/* rtl */ 1];
-    typename TMapping::iterator iter2 = rtl.find(v2);
+    TValMap &rtl = valMapping[/* rtl */ 1];
+    TValMap::iterator iter2 = rtl.find(v2);
     if (iter2 != rtl.end())
         // substitution already defined, check if it applies seamlessly
         return iter2->second == v1;
