@@ -336,14 +336,14 @@ bool preserveHeadPtr(const SymHeap                &sh,
 }
 
 // TODO: rewrite, simplify, and make it easier to follow
-bool validatePointingObjectsCore(
+bool validatePointingObjects(
         const SymHeap               &sh,
         const SegBindingFields      &bf,
         const TObjId                root,
         TObjId                      prev,
         const TObjId                next,
-        const SymHeap::TContObj     &protoRoots,
-        const bool                  toInsideOnly)
+        const SymHeap::TContObj     &protoRoots = SymHeap::TContObj(),
+        const bool                  toInsideOnly = false)
 {
     const bool isDls = !bf.peer.empty();
     std::set<TObjId> allowedReferers;
@@ -408,21 +408,12 @@ bool validatePointingObjectsCore(
 }
 
 // FIXME: suboptimal implementation
-bool validatePointingObjects(
+bool validatePrototypes(
         const SymHeap               &sh,
         const SegBindingFields      &bf,
         const TObjId                root,
-        TObjId                      prev,
-        const TObjId                next,
-        SymHeap::TContObj           protoRoots,
-        const bool                  toInsideOnly = false)
+        SymHeap::TContObj           protoRoots)
 {
-    // first validate 'root' itself
-    if (!validatePointingObjectsCore(sh, bf, root, prev, next,
-                                     protoRoots, toInsideOnly))
-        return false;
-
-    // then validate all prototypes
     TObjId peer = OBJ_INVALID;
     protoRoots.push_back(root);
     if (OK_DLS == sh.objKind(root))
@@ -432,9 +423,8 @@ bool validatePointingObjects(
         if (proto == root || proto == peer)
             continue;
 
-        if (!validatePointingObjectsCore(sh, bf, proto, OBJ_INVALID,
-                                         OBJ_INVALID, protoRoots,
-                                         /* toInsideOnly */ false))
+        if (!validatePointingObjects(sh, bf, proto, OBJ_INVALID, OBJ_INVALID,
+                                     protoRoots))
             return false;
     }
 
@@ -448,8 +438,26 @@ bool validateSegEntry(const SymHeap              &sh,
                       const TObjId               next,
                       const SymHeap::TContObj    &protoRoots)
 {
-    return validatePointingObjects(sh, bf, entry, OBJ_INVALID, next,
-                                   protoRoots, /* toInsideOnly */ true);
+    // first validate 'root' itself
+    if (!validatePointingObjects(sh, bf, entry, OBJ_INVALID, next, protoRoots,
+                                 /* toInsideOnly */ true))
+        return false;
+
+    return validatePrototypes(sh, bf, entry, protoRoots);
+}
+
+TObjId nextObj(
+        const SymHeap               &sh,
+        const SegBindingFields      &bf,
+        TObjId                      obj)
+{
+    if (OK_DLS == sh.objKind(obj))
+        // jump to peer in case of DLS
+        obj = dlSegPeer(sh, obj);
+
+    const TObjId nextPtr = subObjByChain(sh, obj, bf.next);
+    const TObjId nextHead = sh.pointsTo(sh.valueOf(nextPtr));
+    return objRoot(sh, nextHead);
 }
 
 TObjId jumpToNextObj(const SymHeap              &sh,
@@ -498,8 +506,7 @@ TObjId jumpToNextObj(const SymHeap              &sh,
     }
 
     if (dlSegOnPath
-            && !validatePointingObjects(sh, bf, obj, /* prev */ obj, next,
-                                        /* TODO */ SymHeap::TContObj()))
+            && !validatePointingObjects(sh, bf, obj, /* prev */ obj, next))
         // never step over a peer object that is pointed from outside!
         return OBJ_INVALID;
 
@@ -608,18 +615,33 @@ unsigned /* len */ segDiscover(const SymHeap            &sh,
             // invalid entry
             break;
 
-        // look ahead
-        TObjId next = jumpToNextObj(sh, bf, haveSeen, obj);
-        if (OBJ_INVALID != next && !insertOnce(haveSeen, next))
+        if (!insertOnce(haveSeen, nextObj(sh, bf, obj)))
             // loop detected
             break;
 
-        if (!validatePointingObjects(sh, bf, obj, prev, next, protoRoots[1]))
-            // someone points to inside who should not
+        if (!validatePrototypes(sh, bf, obj, protoRoots[1]))
+            // someone points to a prototype
             break;
 
-        // enlarge the path by one
-        path.push_back(obj);
+        const bool allowReferredEnd =
+            /* looking of a DLS */ !bf.peer.empty()
+            && OK_DLS != sh.objKind(obj);
+
+        if (allowReferredEnd)
+            // we allow others to point to a DLS end point
+            path.push_back(obj);
+
+        // look ahead
+        TObjId next = jumpToNextObj(sh, bf, haveSeen, obj);
+        if (!validatePointingObjects(sh, bf, obj, prev, next, protoRoots[1]))
+            // someone points at/inside who should not
+            break;
+
+        if (!allowReferredEnd)
+            // enlarge the path by one
+            path.push_back(obj);
+
+        // jump to the next object on the path
         prev = obj;
         obj = next;
     }

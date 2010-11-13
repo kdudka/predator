@@ -11,6 +11,3 @@ make $MAKEOPTS -s -f "$topdir/sl/data/Makefile.in" TIMEOUT="timeout 2" \
     || exit $?
 printf "done\n"
 "$SVG_VIEWER" *.svg
-
-# wipe all .dot and .svg
-rm -f *.dot *.svg

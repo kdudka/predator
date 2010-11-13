@@ -1,3 +1,5 @@
+#include "../sl.h"
+
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -292,6 +294,8 @@ int main()
     dll_remove(&list, dll_beg(&list));
     chk_dll_size(&list, 0);
 #endif
+
+    ___sl_plot(NULL);
 
     return 0;
 }

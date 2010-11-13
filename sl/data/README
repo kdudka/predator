@@ -355,6 +355,7 @@ symplot tutorial
     test-0014.c - automatic regression test, based on dll.c/test-dll.cc
                 - some noise that comes from unsupported handling of strings
                 - but the DLL operations itself seem to be analysed properly
+                - reports an artificial memory leak caused by the abstraction
 
     test-0016.c - SLL creation, fixed length on bare metal
                 - seen infinite because we abstract out integral values
