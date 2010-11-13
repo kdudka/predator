@@ -796,20 +796,29 @@ void SymHeapCore::valReplaceUnknown(TValueId val, TValueId replaceBy) {
             SE_TRAP;
         }
 #endif
-
         // make it possible to override the implementation (template method)
-        if (!this->valReplaceUnknownImpl(val, replaceBy)) {
-            CL_WARN("overridden implementation valReplaceUnknownImpl() failed"
-                    ", has to over-approximate...");
-#if SE_SELF_TEST
-            CL_NOTE("val #" << val
-                    << " should have been replaced by #" << replaceBy);
-            CL_NOTE("attempt to plot heap...");
-            dump_plot(*this, "valReplaceUnknownImpl-failed");
-#endif
-            continue;
+        if (this->valReplaceUnknownImpl(val, replaceBy))
+            goto subst_done;
+
+        CL_DEBUG("overridden implementation valReplaceUnknownImpl() failed"
+                 << ", val #" << val
+                 << " should have been replaced by #" << replaceBy
+                 << ", now trying reverse substitution...");
+
+        if (this->valReplaceUnknownImpl(replaceBy, val)) {
+            swapValues(val, replaceBy);
+            goto subst_done;
         }
 
+#if SE_SELF_TEST
+        CL_WARN("overridden implementation valReplaceUnknownImpl() failed"
+                ", has to over-approximate...");
+        CL_NOTE("attempt to plot heap...");
+        dump_plot(*this, "valReplaceUnknownImpl-failed");
+#endif
+        continue;
+
+subst_done:
         // handle all EqIf predicates
         EqIfDb::TDst eqIfs;
         d->eqIfDb.lookupOnce(eqIfs, val);
@@ -1855,7 +1864,7 @@ bool SymHeap::valReplaceUnknownImpl(TValueId val, TValueId replaceBy) {
     const EUnknownValue code = this->valGetUnknown(val);
     switch (code) {
         case UV_KNOWN:
-            SE_TRAP;
+            // known values are not supposed to be replaced
             return false;
 
         case UV_ABSTRACT:
