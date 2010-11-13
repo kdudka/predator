@@ -544,6 +544,36 @@ bool slSegAvoidSelfCycle(
         || haveSeg(sh, v2, v1, OK_SLS);
 }
 
+void dlSegAvoidSelfCycle(
+        const SymHeap               &sh,
+        const SegBindingFields      &bf,
+        const TObjId                entry,
+        std::set<TObjId>            &haveSeen)
+{
+    if (bf.peer.empty())
+        // not a DLS
+        return;
+
+    const TObjId prevPtr = subObjByChain(sh, entry, bf.peer);
+    TObjId prev = sh.pointsTo(sh.valueOf(prevPtr));
+    prev = subObjByInvChain(sh, prev, bf.head);
+    if (prev <= 0)
+        // no valid previous object
+        return;
+
+    const struct cl_type *const cltEntry = sh.objType(entry);
+    const struct cl_type *const cltPrev = sh.objType(prev);
+    SE_BREAK_IF(!cltEntry);
+    if (!cltPrev || *cltPrev != *cltEntry)
+        // type mismatch
+        return;
+
+    // note we have seen the previous object (and its peer in case of DLS)
+    haveSeen.insert(prev);
+    if (OK_DLS == sh.objKind(prev))
+        haveSeen.insert(dlSegPeer(sh, prev));
+}
+
 unsigned /* len */ segDiscover(const SymHeap            &sh,
                                const SegBindingFields   &bf,
                                const TObjId             entry)
@@ -557,19 +587,7 @@ unsigned /* len */ segDiscover(const SymHeap            &sh,
     haveSeen.insert(entry);
     TObjId prev = entry;
 
-    const bool isDls = !bf.peer.empty();
-    if (isDls) {
-        // avoid DLS self-loop
-        const TObjId prevPtr = subObjByChain(sh, entry, bf.peer);
-        TObjId prev = sh.pointsTo(sh.valueOf(prevPtr));
-        prev = subObjByInvChain(sh, prev, bf.head);
-        if (0 < prev) {
-            haveSeen.insert(prev);
-            if (OK_DLS == sh.objKind(prev))
-                haveSeen.insert(dlSegPeer(sh, prev));
-        }
-    }
-
+    dlSegAvoidSelfCycle(sh, bf, entry, haveSeen);
     TObjId obj = jumpToNextObj(sh, bf, haveSeen, entry);
     if (!insertOnce(haveSeen, obj))
         // loop detected
@@ -592,7 +610,7 @@ unsigned /* len */ segDiscover(const SymHeap            &sh,
 
         // look ahead
         TObjId next = jumpToNextObj(sh, bf, haveSeen, obj);
-        if (!insertOnce(haveSeen, next))
+        if (OBJ_INVALID != next && !insertOnce(haveSeen, next))
             // loop detected
             break;
 
