@@ -20,6 +20,77 @@
 #include "config_cl.h"
 #include <cl/clutil.hh>
 
+#include "util.hh"
+
+#include <boost/tuple/tuple.hpp>
+
+bool operator==(const struct cl_type &a, const struct cl_type &b) {
+    // go through the given types recursively and match UIDs etc.
+    typedef std::pair<const struct cl_type *, const struct cl_type *> TItem;
+    std::stack<TItem> todo;
+    push(todo, &a, &b);
+    while (!todo.empty()) {
+        const struct cl_type *cltA, *cltB;
+        boost::tie(cltA, cltB) = todo.top();
+        todo.pop();
+
+        if (cltA->uid == cltB->uid)
+            // UID matched, go next
+            continue;
+
+        const enum cl_type_e code = cltA->code;
+        if (cltB->code != code)
+            // code mismatch
+            return false;
+
+        const int cnt = cltA->item_cnt;
+        if (cltB->item_cnt != cnt)
+            // mismatch in the count of sub-types
+            return false;
+
+        switch (code) {
+            case CL_TYPE_VOID:
+            case CL_TYPE_INT:
+            case CL_TYPE_CHAR:
+            case CL_TYPE_BOOL:
+            case CL_TYPE_REAL:
+                if (cltA->name && cltB->name && STREQ(cltA->name, cltB->name))
+                    // FIXME: we simply ignore differences that gcc seems
+                    //        important!
+                    return true;
+
+                // fall through!
+
+            case CL_TYPE_ENUM:
+            case CL_TYPE_UNKNOWN:
+                return false;
+
+            case CL_TYPE_STRING:
+                // should be used only by cl_cst, see the dox
+                TRAP;
+                return false;
+
+            case CL_TYPE_PTR:
+            case CL_TYPE_FNC:
+            case CL_TYPE_STRUCT:
+            case CL_TYPE_UNION:
+            case CL_TYPE_ARRAY:
+                // nest into types
+                for (int i = 0; i < cnt; ++i) {
+                    const struct cl_type_item *ciA = cltA->items + i;
+                    const struct cl_type_item *ciB = cltB->items + i;
+                    if (ciA->name && ciB->name && !STREQ(ciA->name, ciB->name))
+                        return false;
+
+                    push(todo, ciA->type, ciB->type);
+                }
+        }
+    }
+
+    // all OK
+    return true;
+}
+
 const struct cl_type* targetTypeOfPtr(const struct cl_type *clt) {
     SE_BREAK_IF(!clt || clt->code != CL_TYPE_PTR || clt->item_cnt != 1);
 

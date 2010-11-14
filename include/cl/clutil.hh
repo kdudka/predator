@@ -31,6 +31,14 @@
 #include <set>
 #include <stack>
 
+/// compare given two pieces of static type-info semantically
+bool operator==(const struct cl_type &cltA, const struct cl_type &cltB);
+
+/// compare given two pieces of static type-info semantically
+inline bool operator!=(const struct cl_type &cltA, const struct cl_type &cltB) {
+    return !(cltA == cltB);
+}
+
 /// return type of the @b target object that the pointer type can point to
 const struct cl_type* targetTypeOfPtr(const struct cl_type *clt);
 
