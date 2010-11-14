@@ -55,6 +55,7 @@ class Box : public FA {
 	union {
 		Data* data;
 		SelData* selInfo;
+		void* info;
 	};
 
 	std::vector<std::pair<std::vector<size_t>, std::set<size_t> > > selCoverage;
@@ -110,6 +111,11 @@ public:
 		assert(this->isData());
 		return *this->data;
 	}
+
+	void* getInfo() const {
+		assert(this->isBox());
+		return this->info;
+	}
 /*
 	bool isReference() const {
 		return this->type == Box::refID;
@@ -129,7 +135,7 @@ public:
 		switch (this->type) {
 			case selID: return 1;
 			case dataID: return 0;
-			default: return this->variables.size() - 1;
+			default: return this->variables.size()?(this->variables.size() - 1):(0);
 		}
 	}
 	
@@ -183,9 +189,9 @@ public:
 	void computeCoverage() {
 		assert(this->isBox());
 		this->selCoverage.clear();
-		for (vector<TA<label_type>*>::iterator i = this->roots.begin(); i != this->roots.end(); ++i) {
-			vector<size_t> v = Box::getDownwardCoverage(**i);
-			set<size_t> s(v.begin(), v.end());
+		for (std::vector<TA<label_type>*>::iterator i = this->roots.begin(); i != this->roots.end(); ++i) {
+			std::vector<size_t> v = Box::getDownwardCoverage(**i);
+			std::set<size_t> s(v.begin(), v.end());
 			if (v.size() != s.size())
 				throw runtime_error("Box::computeCoverage(): A selector was defined more than once!");
 			this->selCoverage.push_back(make_pair(v, s));
@@ -195,7 +201,10 @@ public:
 	bool outputCovers(size_t offset) const {
 		switch (this->type) {
 			case Box::selID: return this->getSelector().offset == offset;
-			case Box::boxID: return this->selCoverage.front().second.count(offset) > 0;
+			case Box::boxID:
+				if (this->selCoverage.empty())
+					return false;
+				return this->selCoverage.front().second.count(offset) > 0;
 			default: return false;
 		}
 	}
@@ -206,8 +215,10 @@ public:
 
 protected:
 
-	Box(TA<label_type>::Manager& taMan, const std::string& name)
-	 : FA(taMan), type(Box::boxID), name(name) {}
+	Box(TA<label_type>::Manager& taMan, const std::string& name, void* info = NULL)
+	 : FA(taMan), type(Box::boxID), name(name), info(info) {
+		this->selCoverage.push_back(make_pair(std::vector<size_t>(), std::set<size_t>()));
+	}
 
 	Box(TA<label_type>::Manager& taMan, const std::string& name, const SelData& selInfo)
 	 : FA(taMan), type(Box::selID), name(name), selInfo(new SelData(selInfo)) {
@@ -249,8 +260,8 @@ public:
 
 public:
 
-	static Box createBox(TA<label_type>::Manager& taMan, const std::string& name) {
-		return Box(taMan, name);
+	static Box createBox(TA<label_type>::Manager& taMan, const std::string& name, void* info = NULL) {
+		return Box(taMan, name, info);
 	}
 
 	static Box createSelector(TA<label_type>::Manager& taMan, const std::string& name, const SelData& selInfo) {
@@ -360,6 +371,12 @@ public:
 		ss << data;
 		return this->boxIndex.insert(
 			make_pair(ss.str(), Box::createData(this->taMan, ss.str(), data))
+		).first->second;
+	}
+
+	const Box& getInfo(const std::string& name, void* info = NULL) {
+		return this->boxIndex.insert(
+			make_pair(name, Box::createBox(this->taMan, name, info))
 		).first->second;
 	}
 

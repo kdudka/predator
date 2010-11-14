@@ -278,7 +278,7 @@ protected:
 				throw runtime_error("Engine::execAssignment(): size of allocated block doesn't correspond to the size of the destination!");
 			vector<SelData> sels;
 			NodeBuilder::buildNode(sels, dst.type->items[0].type);
-			dst.writeData(fae, Data::createRef(fae.nodeCreate(sels)), rev);
+			dst.writeData(fae, Data::createRef(fae.nodeCreate(sels, &this->boxMan.getInfo(dst.type->items[0].type->name))), rev);
 		} else {
 			assert(*(src.type) == *(dst.type));
 			vector<size_t> offs;
@@ -550,6 +550,8 @@ protected:
 
 		} catch (const std::exception& e) {
 
+			CL_DEBUG(e.what());
+
 			TraceRecorder::Item* item = this->revRun(*fae);
 
 			if (!item)
@@ -648,8 +650,8 @@ protected:
 		for (vector<pair<const FAE*, const CodeStorage::Insn*> >::reverse_iterator i = trace.rbegin(); i != trace.rend(); ++i) {
 			if (i->second)
 				CL_DEBUG(*(i->second));
-			STATE_FROM_FAE(*i->first)->ctx->dumpContext(*i->first);
-			CL_DEBUG(std::endl << *(i->first));
+//			STATE_FROM_FAE(*i->first)->ctx->dumpContext(*i->first);
+//			CL_DEBUG(std::endl << *(i->first));
 		}
 
 		CL_DEBUG(*this->currentInsn);

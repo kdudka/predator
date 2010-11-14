@@ -223,8 +223,8 @@ struct SymState {
 
 			this->fwdConfWrapper.fae2ta(ta, index, fae);
 
-			CL_DEBUG("challenge" << std::endl << ta);
-			CL_DEBUG("response" << std::endl << this->fwdConf);
+//			CL_DEBUG("challenge" << std::endl << ta);
+//			CL_DEBUG("response" << std::endl << this->fwdConf);
 
 			if (TA<label_type>::subseteq(ta, this->fwdConf))
 				return false;

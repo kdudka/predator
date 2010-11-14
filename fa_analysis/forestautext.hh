@@ -949,7 +949,7 @@ public:
 
 	struct IsolateAllF {
 		bool operator()(const Box* box) const {
-			return true;
+			return !box->getDownwardCoverage(0).first.empty();
 		}
 	};
 
@@ -1179,12 +1179,14 @@ public:
 		this->variables[id] = data;
 	}
 
-	size_t nodeCreate(const std::vector<std::pair<SelData, Data> >& nodeInfo) {
+	size_t nodeCreate(const std::vector<std::pair<SelData, Data> >& nodeInfo, const Box* typeInfo = NULL) {
 		size_t root = this->roots.size();
 		TA<label_type>* ta = this->taMan->alloc();
 		std::vector<const Box*> label;
 		std::vector<size_t> lhs;
 		std::vector<size_t> o;
+		if (typeInfo)
+			label.push_back(typeInfo);
 		for (std::vector<std::pair<SelData, Data> >::const_iterator i = nodeInfo.begin(); i != nodeInfo.end(); ++i) {
 			SelData sel = i->first;
 			Data data = i->second;
@@ -1206,11 +1208,13 @@ public:
 		return root;
 	}
 
-	size_t nodeCreate(const std::vector<SelData>& nodeInfo) {
+	size_t nodeCreate(const std::vector<SelData>& nodeInfo, const Box* typeInfo = NULL) {
 		size_t root = this->roots.size();
 		TA<label_type>* ta = this->taMan->alloc();
 		// build label
 		std::vector<const Box*> label;
+		if (typeInfo)
+			label.push_back(typeInfo);
 		for (std::vector<SelData>::const_iterator i = nodeInfo.begin(); i != nodeInfo.end(); ++i)
 			label.push_back(&this->boxMan->getSelector(*i));
 		// build lhs
