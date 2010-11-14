@@ -65,7 +65,7 @@ bool matchPlainValues(
         const TValueId          v1,
         const TValueId          v2)
 {
-    if (checkNonPosValues(v1, v2))
+    if (!checkNonPosValues(v1, v2))
         // null vs. non-null, etc.
         return false;
 
@@ -302,7 +302,7 @@ bool dfsCmp(
 
         const TObjId obj1 = sh1.pointsTo(v1);
         const TObjId obj2 = sh2.pointsTo(v2);
-        if (checkNonPosValues(obj1, obj2)) {
+        if (!checkNonPosValues(obj1, obj2)) {
             SC_DEBUG("non-matched targets");
             return false;
         }

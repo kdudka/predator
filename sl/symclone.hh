@@ -48,8 +48,8 @@ bool traverseSubObjs(
         boost::array<TObjId, N>             root,
         TObjVisitor                         &objVisitor)
 {
-    typedef boost::array<TObjId, N> TObjTuple;
-    std::stack<TObjTuple> todo;
+    typedef boost::array<TObjId, N>         TObjTuple;
+    std::stack<TObjTuple>                   todo;
     todo.push(root);
 
     while (!todo.empty()) {
@@ -86,7 +86,7 @@ bool traverseSubObjs(
         }
     }
 
-    // not interrupted by any visitor
+    // not interrupted by the visitor
     return true;
 }
 

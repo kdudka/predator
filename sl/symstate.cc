@@ -123,6 +123,9 @@ int SymHeapUnion::lookup(const SymHeap &lookFor) const {
 // /////////////////////////////////////////////////////////////////////////////
 // SymStateWithJoin implementation
 bool SymStateWithJoin::insert(const SymHeap &shNew) {
+#if SE_DISABLE_SYMJOIN
+    return SymHeapUnion::insert(shNew);
+#endif
     const int cnt = this->size();
     if (!cnt) {
         // no heaps inside, insert the first now

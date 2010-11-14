@@ -108,6 +108,11 @@
 #define SE_DISABLE_SYMCUT                   0
 
 /**
+ * if 1, do not use the @b symjoin module at all
+ */
+#define SE_DISABLE_SYMJOIN                  0
+
+/**
  * maximal call depth
  */
 #define SE_MAX_CALL_DEPTH                   0x40

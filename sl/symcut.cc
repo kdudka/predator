@@ -111,8 +111,6 @@ class DCopyObjVisitor {
 
 void digSubObjs(DeepCopyData &dc, TObjId objSrc, TObjId objDst)
 {
-    DCopyObjVisitor objVisitor(dc);
-
     boost::array<const SymHeap *, 2> sh;
     sh[0] = &dc.src;
     sh[1] = &dc.dst;
@@ -121,6 +119,7 @@ void digSubObjs(DeepCopyData &dc, TObjId objSrc, TObjId objDst)
     root[0] = objSrc;
     root[1] = objDst;
 
+    DCopyObjVisitor objVisitor(dc);
     traverseSubObjs<2>(sh, root, objVisitor);
 }
 

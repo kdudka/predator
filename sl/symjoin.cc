@@ -26,6 +26,7 @@
 #include "symclone.hh"
 #include "symcmp.hh"
 #include "symstate.hh"
+#include "symutil.hh"
 #include "worklist.hh"
 
 #include <map>
@@ -40,9 +41,9 @@
 } while (0)
 
 #define SJ_VALP(v1, v2) "(v1 = #" << v1 << ", v2 = #" << v2 << ")"
+#define SJ_OBJP(v1, v2) "(o1 = #" << v1 << ", o2 = #" << v2 << ")"
 
 typedef boost::array<const SymHeap *, 3>        TSymHeapTriple;
-//typedef boost::array<TValueId       , 3>        TValTriple;
 typedef boost::array<TObjId         , 3>        TObjTriple;
 
 struct SymJoinCtx {
@@ -58,11 +59,13 @@ struct SymJoinCtx {
     TValMap                     valMap2;
 
     WorkList<TValPair>          wl;
+    EJoinStatus                 status;
 
     SymJoinCtx(SymHeap &dst_, const SymHeap &sh1_, const SymHeap &sh2_):
         dst(dst_),
         sh1(sh1_),
-        sh2(sh2_)
+        sh2(sh2_),
+        status(JS_USE_ANY)
     {
     }
 };
@@ -75,6 +78,10 @@ class ObjJoinVisitor {
         ObjJoinVisitor(SymJoinCtx &ctx): ctx_(ctx) { }
 
         bool operator()(const TObjTriple &item) {
+            const SymHeap &sh1 = ctx_.sh1;
+            const SymHeap &sh2 = ctx_.sh2;
+            SymHeap       &dst = ctx_.dst;
+
             const TObjId obj1   = item[0];
             const TObjId obj2   = item[1];
             const TObjId objDst = item[2];
@@ -84,18 +91,26 @@ class ObjJoinVisitor {
             ctx_.objMap2[obj2]  = objDst;
 
             // store object's address
-            const TValueId addr = ctx_.dst.placedAt(objDst);
-            ctx_.valMap1[ctx_.sh1.placedAt(obj1)] = addr;
-            ctx_.valMap2[ctx_.sh2.placedAt(obj2)] = addr;
+            const TValueId addr = dst.placedAt(objDst);
+            ctx_.valMap1[sh1.placedAt(obj1)] = addr;
+            ctx_.valMap2[sh2.placedAt(obj2)] = addr;
 
-            const TValueId v1 = ctx_.sh1.valueOf(obj1);
-            const TValueId v2 = ctx_.sh2.valueOf(obj2);
+            const TValueId v1 = sh1.valueOf(obj1);
+            const TValueId v2 = sh2.valueOf(obj2);
             if (VAL_NULL == v1 && VAL_NULL == v2) {
                 ctx_.dst.objSetValue(objDst, VAL_NULL);
                 return /* continue */ true;
             }
 
+            // store mapping of composite object's values
+            const TValueId vDst = dst.valueOf(objDst);
+            if (OBJ_INVALID != sh1.valGetCompositeObj(v1))
+                ctx_.valMap1[v1] = vDst;
+            if (OBJ_INVALID != sh2.valGetCompositeObj(v2))
+                ctx_.valMap2[v2] = vDst;
+
             // special values have to match (NULL not treated as special here)
+            // TODO: should we consider also join of VAL_TRUE/VAL_FALSE?
             if (v1 < 0 || v2 < 0) {
                 if (v1 == v2)
                     return /* continue */ true;
@@ -111,22 +126,207 @@ class ObjJoinVisitor {
         }
 };
 
-bool joinUnkownValues(SymJoinCtx &ctx, const TValueId v1, const TValueId v2) {
-    // TODO
-    (void) ctx;
-    (void) v1;
-    (void) v2;
-    SE_BREAK_IF(debugSymJoin);
+bool traverseSubObjs(
+        SymJoinCtx              &ctx,
+        const TObjId            root1,
+        const TObjId            root2,
+        const TObjId            rootDst)
+{
+#if SE_SELF_TEST
+    // all three types have to match!
+    const struct cl_type *clt1   = ctx.sh1.objType(root1);
+    const struct cl_type *clt2   = ctx.sh2.objType(root2);
+    const struct cl_type *cltDst = ctx.dst.objType(rootDst);
+    SE_BREAK_IF(!clt1 || !clt2 || !cltDst);
+    SE_BREAK_IF(*clt1 != *cltDst);
+    SE_BREAK_IF(*clt2 != *cltDst);
+#endif
+    TObjTriple root;
+    root[/* sh1 */ 0] = root1;
+    root[/* sh2 */ 1] = root2;
+    root[/* dst */ 2] = rootDst;
+
+    TSymHeapTriple sht;
+    sht[0] = &ctx.sh1;
+    sht[1] = &ctx.sh2;
+    sht[2] = &ctx.dst;
+
+    // guide the visitors through them
+    ObjJoinVisitor objVisitor(ctx);
+    return objVisitor(root)
+        && traverseSubObjs<3>(sht, root, objVisitor);
+}
+
+bool joinClt(
+        const struct cl_type    **pDst,
+        const struct cl_type    *clt1,
+        const struct cl_type    *clt2)
+{
+    const bool anon1 = !clt1;
+    const bool anon2 = !clt2;
+    if (anon1 && anon2) {
+        *pDst = 0;
+        return true;
+    }
+
+    if (anon1 != anon2)
+        return false;
+
+    SE_BREAK_IF(anon1 || anon2);
+    if (*clt1 != *clt2)
+        return false;
+
+    *pDst = clt1;
     return true;
 }
 
-bool joinAbstractValues(SymJoinCtx &ctx, const TValueId v1, const TValueId v2) {
+bool joinValClt(
+        const struct cl_type    **pDst,
+        SymJoinCtx              &ctx,
+        const TValueId          v1,
+        const TValueId          v2)
+{
+    const struct cl_type *clt1 = ctx.sh1.valType(v1);
+    const struct cl_type *clt2 = ctx.sh2.valType(v2);
+    if (joinClt(pDst, clt1, clt2))
+        return true;
+
+    SJ_DEBUG("<-- value clt mismatch: " << SJ_VALP(v1, v2));
+    return false;
+}
+
+bool joinObjClt(
+        const struct cl_type    **pDst,
+        SymJoinCtx              &ctx,
+        const TObjId            o1,
+        const TObjId            o2)
+{
+    const struct cl_type *clt1 = ctx.sh1.objType(o1);
+    const struct cl_type *clt2 = ctx.sh2.objType(o2);
+    if (joinClt(pDst, clt1, clt2))
+        return true;
+
+    SJ_DEBUG("<-- object clt mismatch: " << SJ_OBJP(o1, o2));
+    return false;
+}
+
+void defineValueMapping(
+        SymJoinCtx              &ctx,
+        const TValueId          v1,
+        const TValueId          v2,
+        const TValueId          vDst)
+{
+    TValMap &vMap1 = ctx.valMap1;
+    TValMap &vMap2 = ctx.valMap2;
+
+    // check for redefinition
+    SE_BREAK_IF(hasKey(vMap1, v1));
+    SE_BREAK_IF(hasKey(vMap2, v2));
+
+    vMap1[v1] = vDst;
+    vMap2[v2] = vDst;
+}
+
+bool followValuePair(
+        SymJoinCtx              &ctx,
+        const EUnknownValue     code,
+        const TValueId          v1,
+        const TValueId          v2)
+{
+    if (UV_KNOWN != code) {
+        SE_BREAK_IF(debugSymJoin);
+        return true;
+    }
+
+    const SymHeap &sh1 = ctx.sh1;
+    const SymHeap &sh2 = ctx.sh2;
+
+    // TODO: compositle values
+    // TODO: custom values
+
+    const TObjId o1 = sh1.pointsTo(v1);
+    const TObjId o2 = sh2.pointsTo(v2);
+    if (!checkNonPosValues(o1, o2)) {
+        SJ_DEBUG("<-- target validity mismatch: " << SJ_VALP(v1, v2)
+                 << " -> " << SJ_OBJP(o1, o2));
+        return false;
+    }
+
+    if (o1 < 0 && o2 < 0)
+        // already checked
+        return true;
+
+    const struct cl_type *clt;
+    if (!joinObjClt(&clt, ctx, o1, o2))
+        return false;
+
+    const TObjId root1 = objRoot(sh1, o1);
+    const TObjId root2 = objRoot(sh2, o2);
+    if (hasKey(ctx.objMap1, root1)) {
+        SE_BREAK_IF(!hasKey(ctx.objMap2, root2));
+        return true;
+    }
+
+    SE_BREAK_IF(root1 <= 0 || root2 <= 0);
+    if (!joinObjClt(&clt, ctx, root1, root2))
+        return false;
+
+    if (!clt) {
+        // TODO: anonymous object of known size
+        SE_BREAK_IF(debugSymJoin);
+        return true;
+    }
+
+    const TObjId rootDst = ctx.dst.objCreate(clt);
+    return traverseSubObjs(ctx, root1, root2, rootDst);
+}
+
+bool joinUnkownValues(
+        bool                    *pResult,
+        SymJoinCtx              &ctx,
+        const TValueId          v1,
+        const TValueId          v2,
+        const EUnknownValue     code1,
+        const EUnknownValue     code2)
+{
+    SE_BREAK_IF((code1 == code2) && UV_UNKNOWN != code1);
+    const struct cl_type *clt;
+    if (!joinValClt(&clt, ctx, v1, v2)) {
+        *pResult = false;
+        return true;
+    }
+
+    const bool isUnknown1 = (UV_UNKNOWN == code1);
+    const bool isUnknown2 = (UV_UNKNOWN == code2);
+    if (isUnknown1 && isUnknown2) {
+        const TValueId vDst = ctx.dst.valCreateUnknown(UV_UNKNOWN, clt);
+        defineValueMapping(ctx, v1, v2, vDst);
+        *pResult = true;
+        return true;
+    }
+
     // TODO
+    SE_BREAK_IF(debugSymJoin);
+    return false;
+}
+
+bool joinAbstractValues(
+        bool                    *pResult,
+        SymJoinCtx              &ctx,
+        const TValueId          v1,
+        const TValueId          v2,
+        const EUnknownValue     code1,
+        const EUnknownValue     code2)
+{
+    // TODO
+    (void) pResult;
     (void) ctx;
     (void) v1;
     (void) v2;
+    (void) code1;
+    (void) code2;
     SE_BREAK_IF(debugSymJoin);
-    return true;
+    return false;
 }
 
 bool joinValueCore(
@@ -135,54 +335,24 @@ bool joinValueCore(
         const TValueId          v1,
         const TValueId          v2)
 {
-    TValMap::const_iterator i1 = ctx.valMap1.find(v1);
-    TValMap::const_iterator i2 = ctx.valMap2.find(v2);
-
-    const bool hasTarget1 = (ctx.valMap1.end() != i1);
-    const bool hasTarget2 = (ctx.valMap2.end() != i2);
-    SE_BREAK_IF(hasTarget1 && hasTarget2);
-
-    if (hasTarget1) {
-        // sync mapping of v2
-        ctx.valMap2[v2] = i1->second;
-        return true;
-    }
-
-    if (hasTarget2) {
-        // sync mapping of v1
-        ctx.valMap1[v1] = i2->second;
-        return true;
-    }
-
-    SE_BREAK_IF(hasTarget1 || hasTarget2);
     switch (code) {
+        case UV_ABSTRACT:
         case UV_KNOWN:
-            SE_BREAK_IF(debugSymJoin);
-            return true;
+            return followValuePair(ctx, code, v1, v2);
 
+        case UV_UNKNOWN:
         case UV_UNINITIALIZED:
             break;
-
-        default:
-            SE_TRAP;
-            return true;
     }
 
-    SymHeap         &dst = ctx.dst;
-    const SymHeap   &sh1 = ctx.sh1;
-    const SymHeap   &sh2 = ctx.sh2;
-
-    const struct cl_type *clt1 = sh1.valType(v1);
-    const struct cl_type *clt2 = sh2.valType(v2);
-    if (clt1 && clt2 && (*clt1 != *clt2)) {
-        SJ_DEBUG("<-- unknown value clt mismatch: " << SJ_VALP(v1, v2));
+    // join clt of unknown values
+    const struct cl_type *clt;
+    if (!joinValClt(&clt, ctx, v1, v2))
         return false;
-    }
 
     // create a new unknown value
-    const TValueId valDst = dst.valCreateUnknown(code, clt1);
-    ctx.valMap1[v1] = valDst;
-    ctx.valMap2[v2] = valDst;
+    const TValueId vDst = ctx.dst.valCreateUnknown(code, clt);
+    defineValueMapping(ctx, v1, v2, vDst);
     return true;
 }
 
@@ -192,26 +362,22 @@ bool joinValuePair(SymJoinCtx &ctx, const TValueId v1, const TValueId v2) {
 
     const EUnknownValue code1 = sh1.valGetUnknown(v1);
     const EUnknownValue code2 = sh2.valGetUnknown(v2);
-    if (UV_UNKNOWN == code1 || UV_UNKNOWN == code2)
-        return joinUnkownValues(ctx, v1, v2);
 
-    if (UV_ABSTRACT == code1 || UV_ABSTRACT == code2)
-        return joinAbstractValues(ctx, v1, v2);
+    bool result;
+    if ((UV_UNKNOWN == code1 || UV_UNKNOWN == code2)
+            && joinUnkownValues(&result, ctx, v1, v2, code1, code2))
+        return result;
+
+    if ((UV_ABSTRACT == code1 || UV_ABSTRACT == code2)
+            && joinAbstractValues(&result, ctx, v1, v2, code1, code2))
+        return result;
 
     if (code1 != code2) {
         SJ_DEBUG("<-- unknown value code mismatch: " << SJ_VALP(v1, v2));
         return false;
     }
 
-    switch (code1) {
-        case UV_KNOWN:
-        case UV_UNINITIALIZED:
-            return joinValueCore(ctx, code1, v1, v2);
-
-        default:
-            SE_TRAP;
-            return false;
-    }
+    return joinValueCore(ctx, code1, v1, v2);
 }
 
 bool joinPendingValues(SymJoinCtx &ctx) {
@@ -223,19 +389,24 @@ bool joinPendingValues(SymJoinCtx &ctx) {
         TValMap::const_iterator i1 = ctx.valMap1.find(v1);
         TValMap::const_iterator i2 = ctx.valMap2.find(v2);
 
-        if ((ctx.valMap1.end() != i1) && (ctx.valMap2.end() != i2)) {
-            const TValueId vDst1 = i1->second;
-            const TValueId vDst2 = i2->second;
-            if (vDst1 != vDst2) {
+        const bool hasTarget1 = (ctx.valMap1.end() != i1);
+        const bool hasTarget2 = (ctx.valMap2.end() != i2);
+        if (hasTarget1 || hasTarget2) {
+            const TValueId vDst1 = (hasTarget1)
+                ? i1->second
+                : static_cast<TValueId>(VAL_INVALID);
+
+            const TValueId vDst2 = (hasTarget2)
+                ? i2->second
+                : static_cast<TValueId>(VAL_INVALID);
+
+            if ((hasTarget1 != hasTarget2) || (vDst1 != vDst2)) {
                 SJ_DEBUG("<-- value mapping mismatch: " << SJ_VALP(v1, v2)
                          "-> " << SJ_VALP(vDst1, vDst2));
                 return false;
             }
-
-            continue;
         }
-
-        if (!joinValuePair(ctx, v1, v2))
+        else if (!joinValuePair(ctx, v1, v2))
             return false;
     }
 
@@ -256,26 +427,17 @@ bool joinCVars(SymJoinCtx &ctx) {
         return false;
     }
 
-    ObjJoinVisitor objVisitor(ctx);
-
     // go through all program variables
     BOOST_FOREACH(const CVar &cv, cVars1) {
-        TObjTriple root;
-        root[/* sh1 */ 0] = sh1.objByCVar(cv);
-        root[/* sh2 */ 1] = sh2.objByCVar(cv);
+        const TObjId root1 = sh1.objByCVar(cv);
+        const TObjId root2 = sh2.objByCVar(cv);
 
         // create a corresponding program variable in the resulting heap
-        const struct cl_type *clt = sh1.objType(root[0]);
-        SE_BREAK_IF(!clt);
-        root[/* dst */ 2] = dst.objCreate(clt, cv);
+        const struct cl_type *clt = sh1.objType(root1);
+        const TObjId rootDst = dst.objCreate(clt, cv);
 
-        TSymHeapTriple sht;
-        sht[0] = &ctx.sh1;
-        sht[1] = &ctx.sh2;
-        sht[2] = &ctx.dst;
-
-        // guide the visitors
-        if (!objVisitor(root) || !traverseSubObjs<3>(sht, root, objVisitor))
+        // look at the values inside
+        if (!traverseSubObjs(ctx, root1, root2, rootDst))
             return false;
     }
 
@@ -293,8 +455,7 @@ bool joinSymHeaps(
     *pDst = SymHeap();
 
     // initialize symbolic join ctx
-    SymHeap &dst = *pDst;
-    SymJoinCtx ctx(dst, sh1, sh2);
+    SymJoinCtx ctx(*pDst, sh1, sh2);
 
     // start with program variables
     if (!joinCVars(ctx)) {
@@ -302,6 +463,7 @@ bool joinSymHeaps(
         return false;
     }
 
+    // go through all values in them
     if (!joinPendingValues(ctx)) {
         SE_BREAK_IF(areEqual(sh1, sh2));
         return false;
@@ -312,7 +474,6 @@ bool joinSymHeaps(
     if (!areEqual(sh1, sh2))
         return false;
 
-    // TODO
-    *pStatus = JS_USE_ANY;
+    *pStatus = ctx.status;
     return true;
 }
