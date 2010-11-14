@@ -34,6 +34,7 @@
 #include "ufae.hh"
 #include "nodebuilder.hh"
 #include "symctx.hh"
+#include "builtintable.hh"
 #include "utils.hh"
 
 struct SymState {
@@ -54,8 +55,10 @@ struct SymState {
 
 	bool entryPoint;
 
+	size_t absHeight;
+
 	SymState(TA<label_type>::Backend& taBackend, LabMan& labMan)
-		: fwdConf(taBackend), fwdConfWrapper(this->fwdConf, labMan) {}
+		: fwdConf(taBackend), fwdConfWrapper(this->fwdConf, labMan), absHeight(1) {}
 
 	~SymState() {
 		utils::eraseMapFirst(this->confMap);
@@ -68,6 +71,7 @@ struct SymState {
 		boost::unordered_map<const FAE*, std::list<const FAE*>::iterator>::iterator i = this->confMap.find(fae);
 		assert(i != this->confMap.end());
 		std::list<const FAE*>::iterator j = i->second;
+		delete i->first;
 		this->confMap.erase(i);
 		if (j != queue.end())
 			queue.erase(j);
@@ -78,13 +82,12 @@ struct SymState {
 		this->fwdConf.clear();
 		TA<label_type> ta(*this->fwdConf.backend);
 		Index<size_t> index;
-		for (boost::unordered_map<const FAE*, std::list<const FAE*>::iterator>::iterator i = this->confMap.begin(); i != this->confMap.end(); ++i) {
-			if (i->second != queue.end())
-				continue;
+		for (boost::unordered_map<const FAE*, std::list<const FAE*>::iterator>::iterator i = this->confMap.begin(); i != this->confMap.end(); ++i)
 			this->fwdConfWrapper.fae2ta(ta, index, *i->first);
-		}
-		this->fwdConfWrapper.adjust(index);
-		ta.minimized(this->fwdConf);			
+		if (!ta.getTransitions().empty()) {
+			this->fwdConfWrapper.adjust(index);
+			ta.minimized(this->fwdConf);
+		}		
 	}
 /*
 	FAE* next() {
@@ -108,26 +111,89 @@ struct SymState {
 		}
 	}
 
-	void prepareOperands(std::list<const FAE*>& queue, const FAE& fae) {
-		std::vector<FAE*> tmp1, tmp2;
-		ContainerGuard<vector<FAE*> > g1(tmp1), g2(tmp2);
-		tmp1.push_back(new FAE(fae));
+	void prepareOperandsGeneric(std::vector<FAE*>& dst, const FAE& fae) {
+		std::vector<FAE*> tmp;
+		ContainerGuard<vector<FAE*> > g(tmp);
+		dst.push_back(new FAE(fae));
 		for (std::vector<cl_operand>::const_iterator i = (*this->insn)->operands.begin(); i != (*this->insn)->operands.end(); ++i) {
 			if (i->code != cl_operand_e::CL_OPERAND_VAR)
 				continue;
-			this->prepareOperand(tmp2, tmp1, *i);
-			utils::erase(tmp1);
-			std::swap(tmp1, tmp2);
+			this->prepareOperand(tmp, dst, *i);
+			utils::erase(dst);
+			std::swap(dst, tmp);
 		}
-//		dst.insert(dst.end(), tmp1.begin(), tmp1.end());
-		for (vector<FAE*>::iterator i = tmp1.begin(); i != tmp1.end(); ++i) {
-//			this->outConf.push_back(*i);
+	}
+
+	void enqueue(std::list<const FAE*>& queue, const std::vector<FAE*>& src) {
+		for (std::vector<FAE*>::const_iterator i = src.begin(); i != src.end(); ++i) {
 			this->confMap.insert(std::make_pair(*i, queue.insert(queue.end(), *i)));
 			CL_DEBUG("enqueued " << *i);
 			this->ctx->dumpContext(**i);
 			CL_DEBUG(std::endl << **i);
 		}
-		g1.release();
+	}
+
+	void prepareFree(std::list<const FAE*>& queue, const FAE& fae) {
+		std::vector<FAE*> tmp;
+		ContainerGuard<vector<FAE*> > g(tmp);
+		this->prepareOperandsGeneric(tmp, fae);
+		for (std::vector<FAE*>::iterator i = tmp.begin(); i != tmp.end(); ++i) {
+			OperandInfo src;
+			std::vector<FAE*> tmp2;
+			this->ctx->parseOperand(src, **i, &(*this->insn)->operands[2]);
+			Data data = src.readData(**i, itov((size_t)0));
+			if (!data.isRef() || (data.d_ref.displ != 0)) {
+				tmp2.push_back(new FAE(**i));
+				this->enqueue(queue, tmp2);
+				continue;
+			}
+			fae.isolateAtRoot(tmp2, data.d_ref.root, FAE::IsolateAllF());
+			this->enqueue(queue, tmp2);
+		}
+	}
+
+	// TODO: correctly unroll stack frame
+	void prepareRet(std::list<const FAE*>& queue, const FAE& fae) {
+		std::vector<FAE*> tmp;
+		ContainerGuard<vector<FAE*> > g(tmp);
+		this->prepareOperandsGeneric(tmp, fae);
+		g.release();
+		this->enqueue(queue, tmp);
+	}
+
+	void prepareOperands(std::list<const FAE*>& queue, const FAE& fae) {
+		switch ((*this->insn)->code) {
+			case cl_insn_e::CL_INSN_RET:
+				this->prepareRet(queue, fae);
+				return;
+
+			case cl_insn_e::CL_INSN_CALL:
+				assert((*this->insn)->operands[1].code == cl_operand_e::CL_OPERAND_CST);
+				assert((*this->insn)->operands[1].data.cst.code == cl_type_e::CL_TYPE_FNC);
+				switch (BuiltinTableStatic::data[(*this->insn)->operands[1].data.cst.data.cst_fnc.name]) {
+					case builtin_e::biFree:
+						this->prepareFree(queue, fae);
+						break;
+					default: {
+						std::vector<FAE*> tmp;
+						ContainerGuard<vector<FAE*> > g(tmp);
+						this->prepareOperandsGeneric(tmp, fae);
+						g.release();
+						this->enqueue(queue, tmp);
+						break;
+					}
+				}
+				break;
+
+			default: {
+				std::vector<FAE*> tmp;
+				ContainerGuard<vector<FAE*> > g(tmp);
+				this->prepareOperandsGeneric(tmp, fae);
+				g.release();
+				this->enqueue(queue, tmp);
+				break;
+			}
+		}
 	}
 
 	// careful
@@ -156,6 +222,9 @@ struct SymState {
 			Index<size_t> index;
 
 			this->fwdConfWrapper.fae2ta(ta, index, fae);
+
+			CL_DEBUG("challenge" << std::endl << ta);
+			CL_DEBUG("response" << std::endl << this->fwdConf);
 
 			if (TA<label_type>::subseteq(ta, this->fwdConf))
 				return false;

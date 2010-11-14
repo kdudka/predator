@@ -22,7 +22,7 @@ include("../CMakeLists.common")
 add_definitions("-I../include -g -DDEBUG")
 
 # libfa.a
-add_library(fa treeaut.cc timbuk.cc box.cc forestaut.cc forestautext.cc ufae.cc symexec.cc label.cc symctx.cc)
+add_library(fa treeaut.cc timbuk.cc box.cc forestaut.cc forestautext.cc ufae.cc symexec.cc label.cc symctx.cc builtintable.cc)
 # avoid a failure while linking libfa_analysis.so (may be gcc specific):
 set_target_properties(fa PROPERTIES COMPILE_FLAGS -fPIC)
 # libfa_analysis.so

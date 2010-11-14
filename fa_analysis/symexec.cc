@@ -20,6 +20,7 @@
 #include <sstream>
 #include <vector>
 #include <list>
+#include <set>
 #include <boost/unordered_set.hpp>
 #include <boost/unordered_map.hpp>
 
@@ -37,54 +38,16 @@
 #include "symctx.hh"
 #include "symstate.hh"
 #include "loopanalyser.hh"
+#include "builtintable.hh"
 
 #include "symexec.hh"
 
-using boost::unordered_set;
-using boost::unordered_map;
 using std::vector;
 using std::list;
-/*
-struct FAEContainer {
+using std::set;
+using boost::unordered_set;
+using boost::unordered_map;
 
-	std::vector<FAE*> conf;
-	
-	FAEContainer() {}
-	FAEContainer(const FAE& fae) {
-		this->conf.push_back(new FAE(fae));
-	}
-
-	~FAEContainer() {
-		utils::erase(this->conf);
-	}
-
-	template <class F>
-	void apply(F f) {
-		for (std::vector<FAE*>::iterator i = this->conf.begin(); i != this->conf.end(); ++i)
-			f(**i);
-	}
-
-	template <class F>
-	void forAll(F f) {
-		std::vector<FAE*> tmp;
-		ContainerGuard<FAE*> g(tmp);
-		for (std::vector<FAE*>::iterator i = this->conf.begin(); i != this->conf.end(); ++i)
-			f(tmp, *((const FAE*)*i));
-		std::swap(this->conf, tmp);
-	}
-	
-	template <class F>
-	void forAll(FAEContainer& dst, F f) {
-		for (std::vector<FAE*>::iterator i = this->conf.begin(); i != this->conf.end(); ++i)
-			f(dst.conf, *((const FAE*)*i));
-	}
-
-protected:
-
-	FAEContainer(const FAEContainer&) {}
-
-};
-*/
 void dumpOperandTypes(std::ostream& os, const cl_operand* op) {
 	os << "operand:" << std::endl;
 	cltToStream(os, op->type, false);
@@ -96,20 +59,21 @@ void dumpOperandTypes(std::ostream& os, const cl_operand* op) {
 	}
 }
 
-void dumpLocation(const cl_location* loc) {
-	if (loc->file)
-		CL_DEBUG(loc->file << ':' << loc->line << ": ");
+std::ostream& operator<<(std::ostream& os, const cl_location& loc) {
+	if (loc.file)
+		return os << loc.file << ':' << loc.line;
 	else
-		CL_DEBUG("<unknown location>: ");
+		return os << "<unknown location>";
 }
-
+/*
 struct SymOp {
 
 	SymState* src;
 	SymState* dst;
 
 };
-
+*/
+#define STATE_FROM_FAE(fae) ((SymState*)(assert((fae).varGet(IP_INDEX).isNativePtr()), (fae).varGet(IP_INDEX).d_native_ptr))
 
 struct TraceRecorder {
 
@@ -117,13 +81,18 @@ struct TraceRecorder {
 
 		Item* parent;
 		const FAE* fae;
-		const CodeStorage::Insn* insn;
+		FAE normalized;
+		FAE::NormInfo normInfo;
 		vector<Item*> children;
 
-		Item(Item* parent, const FAE* fae, const CodeStorage::Insn* insn)
-			: parent(parent), fae(fae), insn(insn) {
+		Item(Item* parent, const FAE* fae, const FAE& normalized, const FAE::NormInfo& normInfo)
+			: parent(parent), fae(fae), normalized(normalized), normInfo(normInfo) {
 			if (parent)
 				parent->children.push_back(this);
+		}
+
+		void removeChild(Item* item) {
+			this->children.erase(std::find(this->children.begin(), this->children.end(), item));
 		}
 
 	};
@@ -141,7 +110,7 @@ struct TraceRecorder {
 
 	void init(const FAE* fae) {
 		this->clear();
-		Item* item = new Item(NULL, fae, NULL);
+		Item* item = new Item(NULL, fae, FAE(*fae), FAE::NormInfo());
 		this->confMap.insert(make_pair(fae, item));
 	}
 
@@ -151,40 +120,46 @@ struct TraceRecorder {
 		return i->second;
 	}
 
-	void add(const FAE* parent, const FAE* fae, const CodeStorage::Insn* insn) {
+	void add(const FAE* parent, const FAE* fae, const FAE& normalized, const FAE::NormInfo& normInfo) {
 		this->confMap.insert(
-			make_pair(fae, new Item(this->find(parent), fae, insn))
+			make_pair(fae, new Item(this->find(parent), fae, normalized, normInfo))
 		);
 	}
+
+	void remove(const FAE* fae) {
+		unordered_map<const FAE*, Item*>::iterator i = this->confMap.find(fae);
+		assert(i != this->confMap.end());
+		delete i->second;
+		this->confMap.erase(i);
+	}
+
+	template <class F>
+	void invalidate(TraceRecorder::Item* node, F f) {
+
+		for (vector<Item*>::iterator i = node->children.begin(); i != node->children.end(); ++i)
+			this->invalidate(*i, f);
+
+		const FAE* fae = node->fae;
+
+		this->remove(fae);
+
+		f(fae);
+
+	}
+
+	template <class F>
+	void invalidateChildren(TraceRecorder::Item* node, F f) {
+
+		for (vector<Item*>::iterator i = node->children.begin(); i != node->children.end(); ++i)
+			this->invalidate(*i, f);
+
+		node->children.clear();
 	
-};
-
-typedef enum { biNone, biMalloc, biFree, biNondet } builtin_e;
-
-struct BuiltinTable {
-
-	unordered_map<string, builtin_e> _table;
-
-public:
-
-	BuiltinTable() {
-		this->_table["malloc"] = builtin_e::biMalloc;
-		this->_table["free"] = builtin_e::biFree;
-		this->_table["__nondet"] = builtin_e::biNondet;
-	}
-
-	builtin_e operator[](const string& key) {
-		unordered_map<string, builtin_e>::iterator i = this->_table.find(key);
-		return (i == this->_table.end())?(builtin_e::biNone):(i->second);
 	}
 
 };
-
-#define STATE_FROM_FAE(fae) ((SymState*)(assert((fae).varGet(IP_INDEX).isNativePtr()), (fae).varGet(IP_INDEX).d_native_ptr))
 
 class SymExec::Engine {
-
-	static BuiltinTable builtins;
 
 	const CodeStorage::Storage& stor;
 
@@ -254,8 +229,12 @@ protected:
 		fae.getNearbyReferences(fae.varGet(ABP_INDEX).d_ref.root, tmp);
 		fae.normalize(normInfo, tmp);
 
-		if (target->entryPoint)
-			fae.heightAbstraction(1);
+		FAE normalized(fae);
+
+		if (target->entryPoint) {
+			CL_DEBUG("abstracting ... " << target->absHeight);
+			fae.heightAbstraction(target->absHeight);
+		}
 
 //		CL_DEBUG("after abstraction: " << std::endl << fae);
 
@@ -264,7 +243,7 @@ protected:
 		if (target->enqueue(this->queue, fae)) {
 			int i = this->queue.size() - l;
 			for (std::list<const FAE*>::reverse_iterator j = this->queue.rbegin(); i > 0; --i, ++j)
-				this->traceRecorder.add(this->currentConf, *j, this->currentInsn);
+				this->traceRecorder.add(this->currentConf, *j, normalized, normInfo);
 		}
 		else CL_DEBUG("hit");
 
@@ -278,57 +257,6 @@ protected:
 		
 	}
 
-	Data readData(const FAE& fae, const OperandInfo& oi, const vector<size_t>& offs) {
-		Data data;
-		switch (oi.flag) {
-			case o_flag_e::ref:
-			case o_flag_e::safe_ref:
-				if (offs.size() > 1)
-					fae.nodeLookupMultiple(oi.data.d_ref.root, oi.data.d_ref.displ, offs, data);
-				else
-					fae.nodeLookup(oi.data.d_ref.root, oi.data.d_ref.displ, data);
-				break;
-			case o_flag_e::reg:
-				if (offs.size() > 1)
-					data = OperandInfo::extractNestedStruct(fae.varGet(oi.data.d_ref.root), oi.data.d_ref.displ, offs);
-				else
-					data = fae.varGet(oi.data.d_ref.root);
-				break;
-			case o_flag_e::val:
-				data = oi.data;
-				break;
-			default:
-				assert(false);
-		}
-		CL_DEBUG("read: " << oi << " -> " << data);
-		return data;
-	}
-
-	void writeData(FAE& fae, const OperandInfo& oi, const Data& in, Data& out) {
-		CL_DEBUG("write: " << in << " -> " << oi);
-		switch (oi.flag) {
-			case o_flag_e::ref:
-			case o_flag_e::safe_ref:
-				if (in.isStruct())
-					fae.nodeModifyMultiple(oi.data.d_ref.root, oi.data.d_ref.displ, in, out);
-				else
-					fae.nodeModify(oi.data.d_ref.root, oi.data.d_ref.displ, in, out);
-				break;
-			case o_flag_e::reg:
-				out = fae.varGet(oi.data.d_ref.root);
-				if (in.isStruct()) {
-					Data tmp = out;
-					OperandInfo::modifyNestedStruct(tmp, oi.data.d_ref.displ, in);
-					fae.varSet(oi.data.d_ref.root, tmp);
-				} else {
-					fae.varSet(oi.data.d_ref.root, in);
-				}
-				break;
-			default:
-				assert(false);
-		}
-	}
-
 	void execAssignment(SymState* state, FAE& fae, const CodeStorage::Insn* insn) {
 
 		OperandInfo dst, src;
@@ -337,25 +265,25 @@ protected:
 
 		assert(src.type->code == dst.type->code);
 
-		Data dataOut;
+		RevInfo rev;
 
 		if (
 			src.type->code == cl_type_e::CL_TYPE_PTR &&
 			src.type->items[0].type->code == cl_type_e::CL_TYPE_VOID &&
 			dst.type->items[0].type->code != cl_type_e::CL_TYPE_VOID
 		) {
-			Data data = this->readData(fae, src, itov((size_t)0));
+			Data data = src.readData(fae, itov((size_t)0));
 			assert(data.isVoidPtr());
 			if (dst.type->items[0].type->size != (int)data.d_void_ptr)
 				throw runtime_error("Engine::execAssignment(): size of allocated block doesn't correspond to the size of the destination!");
 			vector<SelData> sels;
 			NodeBuilder::buildNode(sels, dst.type->items[0].type);
-			this->writeData(fae, dst, Data::createRef(fae.nodeCreate(sels)), dataOut);
+			dst.writeData(fae, Data::createRef(fae.nodeCreate(sels)), rev);
 		} else {
 			assert(*(src.type) == *(dst.type));
 			vector<size_t> offs;
 			NodeBuilder::buildNode(offs, src.type);
-			this->writeData(fae, dst, this->readData(fae, src, offs), dataOut);
+			dst.writeData(fae, src.readData(fae, offs), rev);
 		}
 
 		this->enqueueNextInsn(state, fae);
@@ -387,14 +315,14 @@ protected:
 		vector<size_t> offs2;
 		NodeBuilder::buildNode(offs2, src2.type);
 
-		Data data1 = this->readData(fae, src1, offs1);
-		Data data2 = this->readData(fae, src2, offs2);
+		Data data1 = src1.readData(fae, offs1);
+		Data data2 = src2.readData(fae, offs2);
 		vector<Data> res;
 		Engine::dataEq(data1, data2, neg, res);
-		Data dataOut;
+		RevInfo rev;
 		for (vector<Data>::iterator j = res.begin(); j != res.end(); ++j) {
 			FAE tmp(fae);
-			this->writeData(tmp, dst, *j, dataOut);
+			dst.writeData(tmp, *j, rev);
 			this->enqueueNextInsn(state, tmp);
 		}
 
@@ -415,11 +343,12 @@ protected:
 		NodeBuilder::buildNode(offs1, src1.type);
 		NodeBuilder::buildNode(offs2, src2.type);
 
-		Data data1 = this->readData(fae, src1, offs1);
-		Data data2 = this->readData(fae, src2, offs2);
+		Data data1 = src1.readData(fae, offs1);
+		Data data2 = src2.readData(fae, offs2);
 		assert(data1.isInt() && data2.isInt());
-		Data res = Data::createInt((data1.d_int + data2.d_int > 0)?(1):(0)), dataOut;
-		this->writeData(fae, dst, res, dataOut);
+		Data res = Data::createInt((data1.d_int + data2.d_int > 0)?(1):(0));
+		RevInfo rev;
+		dst.writeData(fae, res, rev);
 
 		this->enqueueNextInsn(state, fae);
 		
@@ -432,9 +361,10 @@ protected:
 		state->ctx->parseOperand(src, fae, &insn->operands[2]);
 		assert(src.type->code == cl_type_e::CL_TYPE_INT);
 
-		Data data = this->readData(fae, src, itov((size_t)0)), out;
+		Data data = src.readData(fae, itov((size_t)0));
 		assert(data.isInt());
-		this->writeData(fae, dst, Data::createVoidPtr(data.d_int), out);
+		RevInfo rev;
+		dst.writeData(fae, Data::createVoidPtr(data.d_int), rev);
 
 		this->enqueueNextInsn(state, fae);
 	
@@ -444,7 +374,7 @@ protected:
 
 		OperandInfo src;
 		state->ctx->parseOperand(src, fae, &insn->operands[2]);
-		Data data = this->readData(fae, src, itov((size_t)0));
+		Data data = src.readData(fae, itov((size_t)0));
 		if (!data.isRef()) {
 			std::stringstream ss;
 			ss << "Engine::execFree(): attempt to release an unsiutable value - " << data << '!';
@@ -455,13 +385,8 @@ protected:
 			ss << "Engine::execFree(): attempt to release a reference not pointing at the beginning of an allocated block - " << data << '!';
 			throw runtime_error(ss.str());
 		}
-		vector<FAE*> tmp;
-		ContainerGuard<vector<FAE*> > g(tmp);
-		fae.isolateAtRoot(tmp, data.d_ref.root, FAE::IsolateAllF());
-		for (vector<FAE*>::iterator j = tmp.begin(); j != tmp.end(); ++j) {
-			(*j)->nodeDelete(data.d_ref.root);
-			this->enqueueNextInsn(state, **j);
-		}
+		fae.nodeDelete(data.d_ref.root);
+		this->enqueueNextInsn(state, fae);
 		
 	}
 
@@ -470,8 +395,8 @@ protected:
 		OperandInfo dst;
 		state->ctx->parseOperand(dst, fae, &insn->operands[0]);
 
-		Data out;
-		this->writeData(fae, dst, Data::createUnknw(), out);
+		RevInfo rev;
+		dst.writeData(fae, Data::createUnknw(), rev);
 		this->enqueueNextInsn(state, fae);
 
 	}
@@ -491,7 +416,7 @@ protected:
 
 		assert(src.type->code == cl_type_e::CL_TYPE_BOOL);
 
-		Data data = this->readData(fae, src, itov((size_t)0));
+		Data data = src.readData(fae, itov((size_t)0));
 
 		if (!data.isBool())
 			throw runtime_error("Engine::execCond(): non boolean condition argument!");
@@ -502,16 +427,13 @@ protected:
 
 	}
 
-
+	// TODO: implement proper return
 	void execRet(SymState* state, FAE& fae, const CodeStorage::Insn* insn) {
 
-		vector<FAE*> tmp;
-		ContainerGuard<vector<FAE*> > g(tmp);
+		bool b = state->ctx->destroyStackFrame(fae);
+		assert(!b);
 
-		assert(!state->ctx->destroyStackFrame(fae));
-
-		for (vector<FAE*>::iterator i = tmp.begin(); i != tmp.end(); ++i)
-			(*i)->check();
+		fae.check();
 		
 	}
 
@@ -550,7 +472,7 @@ protected:
 			case cl_insn_e::CL_INSN_CALL:
 				assert(insn->operands[1].code == cl_operand_e::CL_OPERAND_CST);
 				assert(insn->operands[1].data.cst.code == cl_type_e::CL_TYPE_FNC);
-				switch (Engine::builtins[insn->operands[1].data.cst.data.cst_fnc.name]) {
+				switch (BuiltinTableStatic::data[insn->operands[1].data.cst.data.cst_fnc.name]) {
 					case builtin_e::biMalloc:
 						this->execMalloc(state, fae, insn);
 						break;
@@ -584,6 +506,22 @@ protected:
 				
 	}
 
+	struct InvalidateF {
+
+		list<const FAE*>& queue;
+		set<SymState*>& s;
+		
+		InvalidateF(list<const FAE*>& queue, set<SymState*>& s) : queue(queue), s(s) {}
+
+		void operator()(const FAE* fae) {
+			SymState* state = STATE_FROM_FAE(*fae);
+			state->invalidate(this->queue, fae);
+			if (state->entryPoint)
+				s.insert(state);
+		}
+
+	};
+
 	void processState(const FAE* fae) {
 
 		assert(fae);
@@ -594,7 +532,7 @@ protected:
 
 		state->confMap[fae] = this->queue.end();
 
-		const cl_location* loc = &(*state->insn)->loc;
+		const cl_location& loc = (*state->insn)->loc;
 
 		CL_DEBUG("processing " << fae);
 
@@ -602,7 +540,7 @@ protected:
 		
 		CL_DEBUG(std::endl << *fae);
 
-		dumpLocation(loc);
+		CL_DEBUG(loc << ": " << **state->insn);
 
 		try {
 
@@ -612,31 +550,111 @@ protected:
 
 		} catch (const std::exception& e) {
 
-			CL_DEBUG("reconstructing abstract trace ...");
+			TraceRecorder::Item* item = this->revRun(*fae);
 
-			vector<pair<const FAE*, const CodeStorage::Insn*> > trace;
+			if (!item)
 
-			const TraceRecorder::Item* item = this->traceRecorder.find(this->currentConf);
+				throw;
+
+			state = STATE_FROM_FAE(*item->fae);
+
+			assert(state->entryPoint);
+
+			set<SymState*> s;
+
+			this->traceRecorder.invalidateChildren(item, InvalidateF(this->queue, s));
+
+			const FAE* tmp2 = item->fae;
 			
-			while (item) {
-				trace.push_back(make_pair(item->fae, item->insn));
-				item = item->parent;
+			TraceRecorder::Item* parent = item->parent;
+
+			this->traceRecorder.remove(tmp2);
+
+			InvalidateF(this->queue, s)(tmp2);
+
+			assert(parent);
+
+			parent->removeChild(item);
+
+			for (set<SymState*>::iterator i = s.begin(); i != s.end(); ++i) {
+				(*i)->recompute(this->queue);
+				CL_DEBUG("new fixpoint:" << std::endl << (*i)->fwdConf);
 			}
 
-			CL_DEBUG("trace:");
+			CL_DEBUG("adjusting abstraction ... " << ++state->absHeight);
 
-			for (vector<pair<const FAE*, const CodeStorage::Insn*> >::reverse_iterator i = trace.rbegin(); i != trace.rend(); ++i) {
-				STATE_FROM_FAE(*i->first)->ctx->dumpContext(*i->first);
-				if (i->second)
-					CL_DEBUG(*(i->second));
-				CL_DEBUG(std::endl << *(i->first));
-			}
+			CL_DEBUG("resuming execution ... ");
+			CL_DEBUG(loc << ": " << **state->insn);
 
-			CL_DEBUG(*this->currentInsn);
-
-			throw;
+			STATE_FROM_FAE(*parent->fae)->enqueue(this->queue, itov((FAE*)parent->fae));
+//			throw;
 
 		}
+
+	}
+
+	TraceRecorder::Item* revRun(const FAE& fae) {
+
+//		CL_DEBUG("reconstructing abstract trace ...");
+
+		vector<pair<const FAE*, const CodeStorage::Insn*> > trace;
+
+		TraceRecorder::Item* item = this->traceRecorder.find(&fae);
+
+		FAE tmp(fae);
+
+		SymState* state;
+		
+		while (item->parent) {
+
+			STATE_FROM_FAE(*item->fae)->ctx->dumpContext(*item->fae);
+			CL_DEBUG(std::endl << tmp);
+
+			state = STATE_FROM_FAE(*item->parent->fae);
+
+			CL_DEBUG("rewinding " << (*state->insn)->loc << ": " << **state->insn);
+			
+			FAE::NormInfo normInfo;
+
+			std::vector<size_t> v;
+			tmp.getNearbyReferences(fae.varGet(ABP_INDEX).d_ref.root, v);
+			tmp.normalize(normInfo, v);
+
+//			CL_DEBUG("denormalizing " << std::endl << tmp << "with" << std::endl << item->normalized);
+//			CL_DEBUG(item->normInfo);
+
+			if (!tmp.denormalize(item->normalized, item->normInfo)) {
+				CL_DEBUG("spurious counter example (denormalization)!" << std::endl << item->normalized);
+				return item;
+			}
+
+//			CL_DEBUG("reversing " << std::endl << tmp << "with" << std::endl << *item->parent->fae);
+
+			if (!tmp.reverse(*item->parent->fae)) {
+				CL_DEBUG("spurious counter example (reversal)!" << std::endl << *item->parent->fae);
+				return item;
+			}
+
+			trace.push_back(make_pair(item->fae, *state->insn));
+
+			item = item->parent;
+
+		}
+
+		trace.push_back(make_pair(item->fae, *state->insn));
+
+		CL_DEBUG("trace:");
+
+		for (vector<pair<const FAE*, const CodeStorage::Insn*> >::reverse_iterator i = trace.rbegin(); i != trace.rend(); ++i) {
+			if (i->second)
+				CL_DEBUG(*(i->second));
+			STATE_FROM_FAE(*i->first)->ctx->dumpContext(*i->first);
+			CL_DEBUG(std::endl << *(i->first));
+		}
+
+		CL_DEBUG(*this->currentInsn);
+
+		return NULL;
 
 	}
 
@@ -675,17 +693,9 @@ public:
 	    CL_DEBUG("entering main stack frame ...");
 		// enter main stack frame
 		mainCtx->createStackFrame(fae, init);
-/*
-	    CL_DEBUG("initial state dump ...");
-		for (std::vector<FAE*>::iterator i = init->outConf.begin(); i != init->outConf.end(); ++i) {
-			CL_DEBUG(std::endl << **i);
-			this->confBuffer.push_back(new FAE(**i));
-			this->confDict[*i] = this->confBuffer.back();
-		}
-*/
+
 	    CL_DEBUG("sheduling initial state ...");
 		// schedule initial state for processing
-//		this->todo.push_back(init);
 		init->enqueue(this->queue, fae);
 
 		this->traceRecorder.init(this->queue.front());
@@ -706,8 +716,6 @@ public:
 	}
 
 };
-
-BuiltinTable SymExec::Engine::builtins;
 
 SymExec::SymExec(const CodeStorage::Storage &stor)
 	: engine(new Engine(stor)) {}

@@ -165,6 +165,7 @@ public:
 			this->writeLabel(i->first, i->second);
 		this->endl();
 		this->newModel(name);
+		this->endl();
 		this->startStates();
 		for (set<size_t>::iterator i = states.begin(); i != states.end(); ++i)
 			this->writeState(*i);

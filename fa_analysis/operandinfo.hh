@@ -30,6 +30,58 @@
 #include "forestautext.hh"
 #include "nodebuilder.hh"
 
+typedef enum { r_none, r_ref, r_reg } r_flag_e;
+
+struct RevInfo {
+
+	r_flag_e flag;
+	Data dest;
+	Data data;
+	Data aux;
+	std::vector<std::pair<SelData, Data> > nodeInfo;
+
+	RevInfo(const r_flag_e& flag = r_flag_e::r_none, const Data& dest = Data(), const Data& data = Data())
+		: flag(flag), dest(dest), data(data) {}
+/*
+	friend std::ostream& operator<<(std::ostream& os, const RevInfo& ri) {
+		switch (ri.flag) {
+			case o_flag_e::malloc: os << "(malloc)"; break;
+			case o_flag_e::free: os << "(free)"; break;
+			case o_flag_e::ref: os << "(ref)" << ri.dest.d_ref.root << '+' << ri.dest.d_ref.displ; break;
+			case o_flag_e::reg: os << "(reg)" << ri.dest.d_ref.root << '+' << ri.dest.d_ref.displ; break;
+		}
+		return os;
+	}
+
+	void apply(FAE& fae) {
+		if (this->flag == r_flag_e::none)
+			return;
+		CL_DEBUG("rewinding: " << this->data);
+		Data tmp;
+		switch (this->flag) {
+			case r_flag_e::malloc:
+				fae.unsafeNodeDelete(this->dest.d_ref.root
+				break;
+			case r_flag_e::free:
+				Data ref = Data::createRef(fae.nodeCreate(this->nodeInfo));
+				fae.nodeModify(this->dest.d_ref.root, this->dest.d_ref.displ, ref, tmp);
+				break;
+			case r_flag_e::ref:
+				if (this->data.isStruct())
+					fae.nodeModifyMultiple(this->dest.d_ref.root, this->dest.d_ref.displ, this->data, tmp);
+				else
+					fae.nodeModify(this->dest.d_ref.root, this->dest.d_ref.displ, this->data, tmp);
+				break;
+			case r_flag_e::reg:
+				fae.varSet(this->dest.d_ref.root, this->data);
+				break;
+			default:
+				assert(false);
+		}
+	}
+*/
+};
+
 typedef enum { safe_ref, ref, reg, val } o_flag_e;
 
 struct OperandInfo {
@@ -192,6 +244,60 @@ struct OperandInfo {
 		}
 		if (matched != src.d_struct->size())
 			throw std::runtime_error("OperandInfo::modifyNestedStruct(): selectors mismatch!");
+	}
+
+	Data readData(const FAE& fae, const vector<size_t>& offs) {
+		Data data;
+		switch (this->flag) {
+			case o_flag_e::ref:
+			case o_flag_e::safe_ref:
+				if (offs.size() > 1)
+					fae.nodeLookupMultiple(this->data.d_ref.root, this->data.d_ref.displ, offs, data);
+				else
+					fae.nodeLookup(this->data.d_ref.root, this->data.d_ref.displ, data);
+				break;
+			case o_flag_e::reg:
+				if (offs.size() > 1)
+					data = OperandInfo::extractNestedStruct(fae.varGet(this->data.d_ref.root), this->data.d_ref.displ, offs);
+				else
+					data = fae.varGet(this->data.d_ref.root);
+				break;
+			case o_flag_e::val:
+				data = this->data;
+				break;
+			default:
+				assert(false);
+		}
+		CL_DEBUG("read: " << *this << " -> " << data);
+		return data;
+	}
+
+	void writeData(FAE& fae, const Data& in, RevInfo& info) {
+		CL_DEBUG("write: " << in << " -> " << *this);
+		info.dest = this->data;
+		switch (this->flag) {
+			case o_flag_e::ref:
+			case o_flag_e::safe_ref:
+				info.flag = r_flag_e::r_ref;
+				if (in.isStruct())
+					fae.nodeModifyMultiple(this->data.d_ref.root, this->data.d_ref.displ, in, info.data);
+				else
+					fae.nodeModify(this->data.d_ref.root, this->data.d_ref.displ, in, info.data);
+				break;
+			case o_flag_e::reg:
+				info.flag = r_flag_e::r_reg;
+				info.data = fae.varGet(this->data.d_ref.root);
+				if (in.isStruct()) {
+					Data tmp = info.data;
+					OperandInfo::modifyNestedStruct(tmp, this->data.d_ref.displ, in);
+					fae.varSet(this->data.d_ref.root, tmp);
+				} else {
+					fae.varSet(this->data.d_ref.root, in);
+				}
+				break;
+			default:
+				assert(false);
+		}
 	}
 
 };

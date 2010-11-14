@@ -528,7 +528,7 @@ public:
 
 	template <class F>
 	static size_t computeProduct(const lt_cache_type& cache1, const lt_cache_type& cache2, F f, size_t stateOffset = 0) {
-		std::vector<std::pair<size_t, size_t> > stack;
+//		std::vector<std::pair<size_t, size_t> > stack;
 		boost::unordered_map<std::pair<size_t, size_t>, size_t> product;
 		for (typename lt_cache_type::const_iterator i = cache1.begin(); i != cache1.end(); ++i) {
 			if (!i->second.front()->_lhs->first.empty())
@@ -540,16 +540,17 @@ public:
 				for (typename std::vector<const TT<T>*>::const_iterator l = j->second.begin(); l != j->second.end(); ++l) {
 					std::pair<boost::unordered_map<std::pair<size_t, size_t>, size_t>::iterator, bool> p =
 						product.insert(make_pair(make_pair((*k)->_rhs, (*l)->_rhs), product.size() + stateOffset));
-					if (p.second) {
-						f(*k, *l, std::vector<size_t>(), p.first->second);
-						stack.push_back(p.first->first);
-					}
+					f(*k, *l, std::vector<size_t>(), p.first->second);
+//					if (p.second)
+//						stack.push_back(p.first->first);
 				}
 			}
 		}
-		while (!stack.empty()) {
-			std::pair<size_t, size_t> s = stack.back();
-			stack.pop_back();
+		bool changed = true;
+		while (changed) {
+//			std::pair<size_t, size_t> s = stack.back();
+//			stack.pop_back();
+			changed = false;
 			for (typename lt_cache_type::const_iterator i = cache1.begin(); i != cache1.end(); ++i) {
 				if (i->second.front()->_lhs->first.empty())
 					continue;
@@ -572,10 +573,9 @@ public:
 							continue;
 						std::pair<boost::unordered_map<std::pair<size_t, size_t>, size_t>::iterator, bool> p =
 							product.insert(make_pair(make_pair((*k)->_rhs, (*l)->_rhs), product.size() + stateOffset));
-						if (p.second) {
-							f(*k, *l, lhs, p.first->second);
-							stack.push_back(p.first->first);
-						}
+						f(*k, *l, lhs, p.first->second);
+						if (p.second)
+							changed = true; //stack.push_back(p.first->first);
 					}
 				}
 			}
@@ -626,33 +626,7 @@ public:
 		predicate.buildLTCache(cache2);
 		TA<T>::computeProduct(cache1, cache2, TA<T>::PredicateF(dst, predicate));
 	}
-/*
-	// currently erases '1' from the relation
-	void heightAbstraction(std::vector<std::vector<bool> >& result, size_t height, const Index<size_t>& stateIndex) const {
-		std::vector<size_t> classIndex(stateIndex.size(), 0), newClassIndex(stateIndex.size());
-		boost::unordered_map<std::pair<T, std::vector<size_t> >, size_t> classes;
-		while (height--) {
-			classes.clear();
-			for (typename set<typename trans_cache_type::value_type*>::const_iterator i = this->transitions.begin(); i != this->transitions.end(); ++i) {
-				std::vector<size_t> tmp = itov(classIndex[stateIndex[(*i)->first._rhs]]);
-				for (std::vector<size_t>::const_iterator j = (*i)->first._lhs->first.begin(); j != (*i)->first._lhs->first.end(); ++j)
-					tmp.push_back(classIndex[stateIndex[*j]]);
-				newClassIndex[stateIndex[(*i)->first._rhs]] = classes.insert(
-					std::make_pair(std::make_pair((*i)->first._label, tmp), classes.size())
-				).first->second;
-			}
-			std::swap(classIndex, newClassIndex);
-		}
-		for (size_t i = 0; i < result.size(); ++i) {
-			for (size_t j = 0; j < i; ++j) {
-				if (classIndex[i] != classIndex[j]) {
-					result[i][j] = false;
-					result[j][i] = false;
-				}
-			}
-		}
-	}
-*/
+
 	static bool transMatch(const TT<T>* t1, const TT<T>* t2, std::vector<std::vector<bool> >& mat, const Index<size_t>& stateIndex) {
 
 		if (t1->_label != t2->_label)
@@ -676,22 +650,22 @@ public:
 		this->buildTDCache(cache);
 
 		std::vector<std::vector<bool> > tmp;
-
+/*
 		for (Index<size_t>::iterator i = stateIndex.begin(); i != stateIndex.end(); ++i)
 			std::cerr << i->first << ':' << i->second << ' ';
 		std::cerr << std::endl;
-
+*/
 		while (height--) {
 
 			tmp = result;
-
+/*
 			for (size_t i = 0; i < tmp.size(); ++i) {
 				for (size_t j = 0; j < tmp[i].size(); ++j) {
 					std::cerr << tmp[i][j];
 				}
 				std::cerr << std::endl;
 			}
-
+*/
 			for (Index<size_t>::iterator i = stateIndex.begin(); i != stateIndex.end(); ++i) {
 
 				size_t state1 = i->second;
@@ -706,7 +680,7 @@ public:
 
 					if ((state1 == state2) || !tmp[state1][state2])
 						continue;
-//std::cerr << i->second << " <- " << k->second << " (" << tmp[state1][state2] << ')' << std::endl;					
+
 					typename td_cache_type::iterator l = cache.insert(
 						std::make_pair(k->first, std::vector<const TT<T>*>())
 					).first;
@@ -714,11 +688,10 @@ public:
 					bool match = false;
 
 					for (typename std::vector<const TT<T>*>::const_iterator m = j->second.begin(); m != j->second.end(); ++m) {
-//std::cerr << "challenge: " << **m << std::endl;
+
 						for (typename std::vector<const TT<T>*>::const_iterator n = l->second.begin(); n != l->second.end(); ++n) {
 
 							if (TA<T>::transMatch(*m, *n, tmp, stateIndex)) {
-//std::cerr << "response: " << **n << std::endl;
 								match = true;
 								break;
 							}
@@ -746,13 +719,6 @@ public:
 				if (!result[j][i])
 					result[i][j] = false;
 			}
-		}
-
-		for (size_t i = 0; i < result.size(); ++i) {
-			for (size_t j = 0; j < result[i].size(); ++j) {
-				std::cerr << result[i][j];
-			}
-			std::cerr << std::endl;
 		}
 
 	}
