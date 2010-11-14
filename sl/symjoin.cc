@@ -25,6 +25,7 @@
 
 #include "symclone.hh"
 #include "symcmp.hh"
+#include "symseg.hh"
 #include "symstate.hh"
 #include "symutil.hh"
 #include "worklist.hh"
@@ -61,6 +62,8 @@ struct SymJoinCtx {
     WorkList<TValPair>          wl;
     EJoinStatus                 status;
 
+    std::map<TObjId /* seg */, unsigned /* len */> segLengths;
+
     SymJoinCtx(SymHeap &dst_, const SymHeap &sh1_, const SymHeap &sh2_):
         dst(dst_),
         sh1(sh1_),
@@ -69,6 +72,22 @@ struct SymJoinCtx {
     {
     }
 };
+
+void updateJoinStatus(SymJoinCtx &ctx, const EJoinStatus action) {
+    EJoinStatus &status = ctx.status;
+    switch (status) {
+        case JS_THREE_WAY:
+            return;
+
+        case JS_USE_ANY:
+            status = action;
+            return;
+
+        default:
+            if (action != status)
+                status = JS_THREE_WAY;
+    }
+}
 
 /// (OBJ_INVALID == objDst) means read-only!!!
 bool joinFreshObjTripple(
@@ -362,6 +381,27 @@ bool joinSegBinding(
     return false;
 }
 
+unsigned joinSegLength(
+        SymJoinCtx              &ctx,
+        const TObjId            o1,
+        const TObjId            o2)
+{
+    const SymHeap &sh1 = ctx.sh1;
+    const SymHeap &sh2 = ctx.sh2;
+
+    const unsigned len1 = (OK_CONCRETE == sh1.objKind(o1))
+        ? /* OK_CONCRETE */ 1
+        : segMinLength(sh1, o1);
+
+    const unsigned len2 = (OK_CONCRETE == sh2.objKind(o2))
+        ? /* OK_CONCRETE */ 1
+        : segMinLength(sh2, o2);
+
+    return (len1 < len2)
+        ? len1
+        : len2;
+}
+
 bool defineValueMapping(
         SymJoinCtx              &ctx,
         const TValueId          v1,
@@ -411,19 +451,22 @@ bool createObject(
     if (!joinSegBinding(&bf, ctx, root1, root2))
         return false;
 
-    // TODO
     const bool isProto = sh1.objIsProto(root1);
     if (isProto != sh2.objIsProto(root2)) {
         SJ_DEBUG("<-- prototype vs shared: " << SJ_OBJP(root1, root2));
         return false;
     }
 
+    updateJoinStatus(ctx, action);
+
     // preserve 'prototype' flag
     const TObjId rootDst = ctx.dst.objCreate(clt);
     dst.objSetProto(rootDst, isProto);
 
-    if (OK_CONCRETE != kind)
+    if (OK_CONCRETE != kind) {
         dst.objSetAbstract(rootDst, kind, bf);
+        ctx.segLengths[rootDst] = joinSegLength(ctx, root1, root2);
+    }
 
     return traverseSubObjs(ctx, root1, root2, rootDst);
 }
@@ -710,12 +753,11 @@ bool joinSymHeaps(
         return false;
     }
 
-    // TODO
-    if (!areEqual(sh1, sh2)) {
-        SE_BREAK_IF(debugSymJoin);
+    if (!debugSymJoin && !areEqual(sh1, sh2))
+        // do not allow symjoin optimization if not debugging (not stable yet)
         return false;
-    }
 
+    SE_BREAK_IF(JS_USE_ANY == ctx.status && !areEqual(sh1, sh2));
     *pStatus = ctx.status;
     return true;
 }
