@@ -213,6 +213,85 @@ bool haveDlSegAt(const SymHeap &sh, TValueId atAddr, TValueId peerAddr) {
     return (segHeadAddr(sh, peer) == peerAddr);
 }
 
+void segHandleNeq(SymHeap &sh, TObjId seg, TObjId peer, SymHeap::ENeqOp op) {
+    const TObjId next = nextPtrFromSeg(sh, peer);
+    const TValueId valNext = sh.valueOf(next);
+
+    const TValueId headAddr = segHeadAddr(sh, seg);
+    sh.neqOp(op, headAddr, valNext);
+}
+
+void dlSegSetMinLength(SymHeap &sh, TObjId dls, unsigned len) {
+    const TObjId peer = dlSegPeer(sh, dls);
+    switch (len) {
+        case 0:
+            segHandleNeq(sh, dls, peer, SymHeap::NEQ_DEL);
+            return;
+
+        case 1:
+            segHandleNeq(sh, dls, peer, SymHeap::NEQ_ADD);
+            return;
+
+        case 2:
+        default:
+            break;
+    }
+
+    // let it be DLS 2+
+    const TValueId a1 = segHeadAddr(sh, dls);
+    const TValueId a2 = segHeadAddr(sh, peer);
+    sh.neqOp(SymHeap::NEQ_ADD, a1, a2);
+}
+
+void segSetMinLength(SymHeap &sh, TObjId seg, unsigned len) {
+    const EObjKind kind = sh.objKind(seg);
+    switch (kind) {
+        case OK_SLS:
+            segHandleNeq(sh, seg, seg, (len)
+                    ? SymHeap::NEQ_ADD
+                    : SymHeap::NEQ_DEL);
+            break;
+
+        case OK_HEAD:
+            seg = objRoot(sh, seg);
+            // fall through!
+
+        case OK_DLS:
+            dlSegSetMinLength(sh, seg, len);
+            break;
+
+        default:
+#if SE_SELF_TEST
+            SE_TRAP;
+#endif
+            break;
+    }
+}
+
+TObjId segClone(SymHeap &sh, const TObjId seg) {
+    const TObjId dupSeg = sh.objDup(seg);
+
+    if (OK_DLS == sh.objKind(seg)) {
+        // we need to clone the peer as well
+        const TObjId peer = dlSegPeer(sh, seg);
+        const TObjId dupPeer = sh.objDup(peer);
+
+        // dig the 'peer' selectors of the cloned objects
+        const TFieldIdxChain icpSeg  = sh.objBinding(dupSeg).peer;
+        const TFieldIdxChain icpPeer = sh.objBinding(dupPeer).peer;
+
+        // resolve selectors -> sub-objects
+        const TObjId ppSeg  = subObjByChain(sh, dupSeg , icpSeg);
+        const TObjId ppPeer = subObjByChain(sh, dupPeer, icpPeer);
+
+        // now cross the 'peer' pointers
+        sh.objSetValue(ppSeg, segHeadAddr(sh, dupPeer));
+        sh.objSetValue(ppPeer, segHeadAddr(sh, dupSeg));
+    }
+
+    return dupSeg;
+}
+
 // works, but not used for now
 #if 0
 namespace {

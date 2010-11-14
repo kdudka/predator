@@ -63,11 +63,17 @@ TObjId dlSegPeer(const SymHeap &sh, TObjId dls);
 /// return lower estimation of DLS length
 unsigned dlSegMinLength(const SymHeap &sh, TObjId dls);
 
+void dlSegSetMinLength(SymHeap &sh, TObjId dls, unsigned len);
+
 /// return lower estimation of segment length
 unsigned segMinLength(const SymHeap &sh, TObjId seg);
 
+void segSetMinLength(SymHeap &sh, TObjId seg, unsigned len);
+
 /// same as SymHeap::objSetProto(), but takes care of DLS peers
 void segSetProto(SymHeap &sh, TObjId seg, bool isProto);
+
+TObjId segClone(SymHeap &sh, const TObjId seg);
 
 /// destroy the given list segment object (including DLS peer in case of DLS)
 void segDestroy(SymHeap &sh, TObjId seg);
