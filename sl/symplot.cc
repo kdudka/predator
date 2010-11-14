@@ -297,20 +297,18 @@ void SymPlot::Private::plotNodeObj(TObjId obj) {
         // colorize heap (sub)object
         this->dotStream << ", fontcolor=red";
 
-    this->dotStream << ", label=\"[" << prefixByCode(code) << "] #";
+    this->dotStream << ", label=\"[" << prefixByCode(code) << "] #" << obj;
 
     CVar cVar;
     if (this->heap->cVar(&cVar, obj)) {
-        this->dotStream << cVar.uid;
+        this->dotStream << " (#" << cVar.uid;
         const CodeStorage::Var &var = this->stor->vars[cVar.uid];
         std::string name = var.name;
         if (!name.empty())
             this->dotStream << " - " << name;
         if (1 < cVar.inst)
             this->dotStream << ", inst = " << cVar.inst;
-    }
-    else {
-        this->dotStream << obj;
+        this->dotStream << ")";
     }
 
     std::string filedName;

@@ -49,6 +49,9 @@ static bool debugSymState = static_cast<bool>(DEBUG_SYMSTATE);
 static int cntLookups = -1;
 
 void debugPlot(const char *name, int idx, const SymHeap &sh) {
+#if DEBUG_SYMJOIN
+    if (!STREQ(name, "insert"))
+#endif
     if (!::debugSymState)
         return;
 
@@ -136,18 +139,20 @@ bool SymStateWithJoin::insert(const SymHeap &shNew) {
     EJoinStatus     status;
     SymHeap         result;
     int             idx;
-
+#if DEBUG_SYMJOIN
     ++::cntLookups;
-    SS_DEBUG(">>> insert() starts, cnt = " << cnt);
+    CL_DEBUG(">>> SymStateWithJoin::insert() starts, cnt = " << cnt);
     debugPlot("insert", 0, shNew);
-
+#endif
     for(idx = 0; idx < cnt; ++idx) {
-        const int nth = idx + 1;
-        SS_DEBUG("--> insert() tries sh #" << idx << ", cnt = " << cnt);
-
         const SymHeap &shOld = this->operator[](idx);
-        debugPlot("insert", nth, shOld);
+#if DEBUG_SYMJOIN
+        const int nth = idx + 1;
+        CL_DEBUG("--> SymStateWithJoin::insert() tries sh #" << idx
+                 << ", cnt = " << cnt);
 
+        debugPlot("insert", nth, shOld);
+#endif
         if (joinSymHeaps(&status, &result, shOld, shNew))
             // join succeeded
             break;
@@ -155,33 +160,40 @@ bool SymStateWithJoin::insert(const SymHeap &shNew) {
 
     if (idx == cnt) {
         // nothing to join here
-        SS_DEBUG("<<< insertNew() fired, cnt = " << cnt);
+#if DEBUG_SYMJOIN
+        CL_DEBUG("<<< SymStateWithJoin::insertNew() fired, cnt = " << cnt);
+#endif
         this->insertNew(shNew);
         return true;
     }
 
     switch (status) {
         case JS_USE_ANY:
+            // JS_USE_ANY means exact match
+            break;
+
         case JS_USE_SH1:
-            // just keep the state as it is
-            SS_DEBUG("<<< re-using sh #" << idx);
+            CL_DEBUG("<J> sh #" << idx << " is stronger than the given one");
             break;
 
         case JS_USE_SH2:
             // replace the heap inside by the given one
-            SS_DEBUG("<<< replacing sh #" << idx);
+            CL_DEBUG("<J> replacing sh #" << idx);
             result = shNew;
             this->swapExisting(idx, result);
             return true;
 
         case JS_THREE_WAY:
             // three-way merge
-            SS_DEBUG("<<< three-way merge with sh #" << idx);
+            CL_DEBUG("<J> three-way merge with sh #" << idx);
             this->swapExisting(idx, result);
             return true;
     }
 
     // nothing changed actually
+#if DEBUG_SYMJOIN
+    CL_DEBUG("<<< SymStateWithJoin: re-using sh #" << idx);
+#endif
     return false;
 }
 

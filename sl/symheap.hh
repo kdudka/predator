@@ -48,6 +48,7 @@ enum EUnknownValue {
 };
 
 struct DeepCopyData;
+struct SymJoinCtx;
 
 /**
  * symbolic heap @b core - no type-info, no object composition at this level
@@ -187,6 +188,11 @@ class SymHeapCore {
         void objDestroy(TObjId obj, TObjId kind);
 
         friend TValueId handleValue(DeepCopyData &dc, TValueId valSrc);
+        friend bool followValuePair(
+                SymJoinCtx              &ctx,
+                const EUnknownValue     code,
+                const TValueId          v1,
+                const TValueId          v2);
 
     public:
         /**

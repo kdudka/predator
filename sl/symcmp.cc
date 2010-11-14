@@ -113,6 +113,12 @@ bool matchValues(
         // already checked by matchPlainValues()/checkNonPosValues()
         return true;
 
+    const struct cl_type *clt1 = sh1.valType(v1);
+    const struct cl_type *clt2 = sh2.valType(v2);
+    if ((!!clt1 != !!clt2) || (clt1 && *clt1 != *clt2))
+        // value clt mismatch
+        return false;
+
     // check for unknown values
     const EUnknownValue code = sh1.valGetUnknown(v1);
     if (code != sh2.valGetUnknown(v2))
@@ -131,14 +137,19 @@ bool matchValues(
     }
 
     // check custom values state
-    const int cVal1 = sh1.valGetCustom(/* TODO */ 0, v1);
-    const int cVal2 = sh2.valGetCustom(/* TODO */ 0, v2);
+    const int cVal1 = sh1.valGetCustom(&clt1, v1);
+    const int cVal2 = sh2.valGetCustom(&clt2, v2);
     if ((OBJ_INVALID == cVal1) != (OBJ_INVALID == cVal2))
         return false;
 
-    if (OBJ_INVALID != cVal1)
-        // pair of custom values
+    if (OBJ_INVALID != cVal1) {
+        if ((!!clt1 != !!clt2) || (clt1 && *clt1 != *clt2))
+            // custom value clt mismatch
+            return false;
+
+        // match pair of custom values
         return (cVal1 == cVal2);
+    }
 
     // follow all other values
     *follow = true;
