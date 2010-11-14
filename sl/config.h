@@ -110,7 +110,7 @@
 /**
  * if 1, do not use the @b symjoin module at all
  */
-#define SE_DISABLE_SYMJOIN                  0
+#define SE_DISABLE_SYMJOIN                  1
 
 /**
  * maximal call depth

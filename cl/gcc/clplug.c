@@ -1805,7 +1805,7 @@ int plugin_init (struct plugin_name_args *plugin_info,
 
     // check for compatibility with host gcc's version
     if (!plugin_default_version_check(version, &gcc_version)) {
-        CL_ERROR("error: host gcc's version/build mismatch"
+        CL_ERROR("host gcc's version/build mismatch"
                  ", call-backs not registered!");
 
         return 0;

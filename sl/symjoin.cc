@@ -62,7 +62,8 @@ struct SymJoinCtx {
     WorkList<TValPair>          wl;
     EJoinStatus                 status;
 
-    std::map<TObjId /* seg */, unsigned /* len */> segLengths;
+    typedef std::map<TObjId /* seg */, unsigned /* len */>      TSegLengths;
+    TSegLengths                 segLengths;
 
     SymJoinCtx(SymHeap &dst_, const SymHeap &sh1_, const SymHeap &sh2_):
         dst(dst_),
@@ -126,16 +127,18 @@ bool joinFreshObjTripple(
         return true;
     }
 
-    if (!readOnly) {
+    const TObjId cObj1 = sh1.valGetCompositeObj(v1);
+    const TObjId cObj2 = sh2.valGetCompositeObj(v2);
+    if ((OBJ_INVALID == cObj1) != (OBJ_INVALID == cObj2)) {
+        SJ_DEBUG("<-- scalar vs. composite value " << SJ_VALP(v1, v2));
+        return false;
+    }
+
+    if (!readOnly && OBJ_INVALID != cObj1) {
         // store mapping of composite object's values
         const TValueId vDst = dst.valueOf(objDst);
-        if (OBJ_INVALID != sh1.valGetCompositeObj(v1)) {
-            SE_BREAK_IF(OBJ_INVALID == sh2.valGetCompositeObj(v2));
-            if (!defineValueMapping(ctx, v1, v2, vDst)) {
-                SE_BREAK_IF("not likely to happen");
-                return false;
-            }
-        }
+        if (!defineValueMapping(ctx, v1, v2, vDst))
+            return false;
     }
 
     // special values have to match (NULL not treated as special here)
@@ -198,10 +201,8 @@ class ObjJoinVisitor {
             const TValueId addr1 = ctx_.sh1.placedAt(obj1);
             const TValueId addr2 = ctx_.sh2.placedAt(obj2);
             const TValueId dstAt = ctx_.dst.placedAt(objDst);
-            if (!defineValueMapping(ctx_, addr1, addr2, dstAt)) {
-                SE_BREAK_IF("not likely to happen");
+            if (!defineValueMapping(ctx_, addr1, addr2, dstAt))
                 return false;
-            }
 
             return /* continue */ joinFreshObjTripple(ctx_, obj1, obj2, objDst);
         }
@@ -499,8 +500,10 @@ bool followObjPair(
 
     if (!clt) {
         // TODO: anonymous object of known size
-        SE_BREAK_IF(debugSymJoin);
-        return true;
+#if SE_SELF_TEST
+        SE_TRAP;
+#endif
+        return false;
     }
 
     if (readOnly)
@@ -511,15 +514,9 @@ bool followObjPair(
 
 bool followValuePair(
         SymJoinCtx              &ctx,
-        const EUnknownValue     code,
         const TValueId          v1,
         const TValueId          v2)
 {
-    if (UV_KNOWN != code) {
-        SE_BREAK_IF(debugSymJoin);
-        return true;
-    }
-
     const struct cl_type *clt1, *clt2;
     const int cVal1 = ctx.sh1.valGetCustom(&clt1, v1);
     const int cVal2 = ctx.sh2.valGetCustom(&clt2, v2);
@@ -683,7 +680,7 @@ bool joinValueCore(
     switch (code) {
         case UV_ABSTRACT:
         case UV_KNOWN:
-            return followValuePair(ctx, code, v1, v2);
+            return followValuePair(ctx, v1, v2);
 
         case UV_UNKNOWN:
         case UV_UNINITIALIZED:
@@ -769,6 +766,37 @@ bool joinCVars(SymJoinCtx &ctx) {
     return true;
 }
 
+void setDstValues(SymJoinCtx &ctx) {
+    SE_BREAK_IF(ctx.objMap1.size() != ctx.objMap2.size());
+
+    BOOST_FOREACH(SymJoinCtx::TObjMap::const_reference ref, ctx.objMap1) {
+        const TObjId objDst = ref.second;
+        SE_BREAK_IF(objDst < 0);
+
+        const TObjId o1     = ref.first;
+        const TValueId v1   = ctx.sh1.valueOf(o1);
+
+        TValueId vDst = v1;
+        if (0 < vDst) {
+            TValMap &vMap = ctx.valMap1[/* ltr */ 0];
+            TValMap::iterator it1 = vMap.find(v1);
+            SE_BREAK_IF(vMap.end() == it1);
+            vDst = it1->second;
+        }
+
+        SymHeap &dst = ctx.dst;
+        const TObjId compObj = dst.valGetCompositeObj(vDst);
+        if (OBJ_INVALID != compObj) {
+            // composite values already match
+            SE_BREAK_IF(compObj != objDst);
+            continue;
+        }
+
+        // set the value
+        dst.objSetValue(objDst, vDst);
+    }
+}
+
 bool matchPreds(
         const SymHeap           &sh1,
         const SymHeap           &sh2,
@@ -777,6 +805,22 @@ bool matchPreds(
     // FIXME: too strict for us?
     return sh1.matchPreds(sh2, vMap[/* ltr */ 0])
         && sh2.matchPreds(sh1, vMap[/* rtl */ 1]);
+}
+
+void handleDstPreds(SymJoinCtx &ctx) {
+    // go through all segments and initialize minLength
+    BOOST_FOREACH(SymJoinCtx::TSegLengths::const_reference ref, ctx.segLengths)
+    {
+        const TObjId    seg = ref.first;
+        const unsigned  len = ref.second;
+        segSetMinLength(ctx.dst, seg, len);
+    }
+
+    // finally check the predicates
+    if (!matchPreds(ctx.sh1, ctx.dst, ctx.valMap1))
+        updateJoinStatus(ctx, JS_USE_SH2);
+    if (!matchPreds(ctx.sh2, ctx.dst, ctx.valMap2))
+        updateJoinStatus(ctx, JS_USE_SH1);
 }
 
 bool joinSymHeaps(
@@ -803,24 +847,18 @@ bool joinSymHeaps(
         return false;
     }
 
-    // finally check the predicates
-    if (!matchPreds(sh1, ctx.dst, ctx.valMap1))
-        updateJoinStatus(ctx, JS_USE_SH2);
-    if (!matchPreds(sh2, ctx.dst, ctx.valMap2))
-        updateJoinStatus(ctx, JS_USE_SH1);
+    // time to preserve all 'hasValue' edges and *some* Neq predicates
+    setDstValues(ctx);
+    handleDstPreds(ctx);
 
-    // do not allow symjoin optimization if not debugging (not stable yet)
-    if (!debugSymJoin) {
-        *pStatus = JS_USE_ANY;
-        return areEqual(sh1, sh2);
+    if (debugSymJoin) {
+        // catch possible regression at this point
+        SE_BREAK_IF((JS_USE_ANY == ctx.status) != areEqual(sh1, sh2));
+        SE_BREAK_IF((JS_THREE_WAY == ctx.status) && areEqual(sh1, ctx.dst));
+        SE_BREAK_IF((JS_THREE_WAY == ctx.status) && areEqual(sh2, ctx.dst));
     }
 
-    // catch malfunction at this point
-    SE_BREAK_IF(JS_USE_ANY == ctx.status && !areEqual(sh1, sh2));
-
-    // not implemented yet
-    SE_BREAK_IF(JS_THREE_WAY == ctx.status);
-
+    // all OK
     *pStatus = ctx.status;
     return true;
 }

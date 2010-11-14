@@ -50,7 +50,7 @@ static int cntLookups = -1;
 
 void debugPlot(const char *name, int idx, const SymHeap &sh) {
 #if DEBUG_SYMJOIN
-    if (!STREQ(name, "insert"))
+    if (!STREQ(name, "join"))
 #endif
     if (!::debugSymState)
         return;
@@ -139,20 +139,10 @@ bool SymStateWithJoin::insert(const SymHeap &shNew) {
     EJoinStatus     status;
     SymHeap         result;
     int             idx;
-#if DEBUG_SYMJOIN
+
     ++::cntLookups;
-    CL_DEBUG(">>> SymStateWithJoin::insert() starts, cnt = " << cnt);
-    debugPlot("insert", 0, shNew);
-#endif
     for(idx = 0; idx < cnt; ++idx) {
         const SymHeap &shOld = this->operator[](idx);
-#if DEBUG_SYMJOIN
-        const int nth = idx + 1;
-        CL_DEBUG("--> SymStateWithJoin::insert() tries sh #" << idx
-                 << ", cnt = " << cnt);
-
-        debugPlot("insert", nth, shOld);
-#endif
         if (joinSymHeaps(&status, &result, shOld, shNew))
             // join succeeded
             break;
@@ -160,9 +150,6 @@ bool SymStateWithJoin::insert(const SymHeap &shNew) {
 
     if (idx == cnt) {
         // nothing to join here
-#if DEBUG_SYMJOIN
-        CL_DEBUG("<<< SymStateWithJoin::insertNew() fired, cnt = " << cnt);
-#endif
         this->insertNew(shNew);
         return true;
     }
@@ -174,11 +161,16 @@ bool SymStateWithJoin::insert(const SymHeap &shNew) {
 
         case JS_USE_SH1:
             CL_DEBUG("<J> sh #" << idx << " is stronger than the given one");
+            debugPlot("join", 0, shNew);
+            debugPlot("join", 1, this->operator[](idx));
             break;
 
         case JS_USE_SH2:
             // replace the heap inside by the given one
             CL_DEBUG("<J> replacing sh #" << idx);
+            debugPlot("join", 0, this->operator[](idx));
+            debugPlot("join", 1, shNew);
+
             result = shNew;
             this->swapExisting(idx, result);
             return true;
@@ -186,6 +178,10 @@ bool SymStateWithJoin::insert(const SymHeap &shNew) {
         case JS_THREE_WAY:
             // three-way merge
             CL_DEBUG("<J> three-way merge with sh #" << idx);
+            debugPlot("join", 0, this->operator[](idx));
+            debugPlot("join", 1, shNew);
+            debugPlot("join", 2, result);
+
             this->swapExisting(idx, result);
             return true;
     }
@@ -233,9 +229,7 @@ bool SymStateMap::insert(const CodeStorage::Block                *dst,
     Private::BlockState &ref = d->cont[dst];
 
     // insert the given symbolic heap
-    const unsigned last = ref.state.size();
-    ref.state.insert(sh);
-    const bool changed = (last != ref.state.size());
+    const bool changed = ref.state.insert(sh);
 
     if (src)
         // store inbound edge

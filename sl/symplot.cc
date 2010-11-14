@@ -526,7 +526,7 @@ void SymPlot::Private::plotZeroValue(TObjId obj) {
             break;
 
         default:
-            SE_TRAP;
+            this->plotNodeAux(obj, CL_TYPE_UNKNOWN, "[unknown type] 0");
     }
 }
 

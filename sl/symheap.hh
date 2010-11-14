@@ -190,7 +190,6 @@ class SymHeapCore {
         friend TValueId handleValue(DeepCopyData &dc, TValueId valSrc);
         friend bool followValuePair(
                 SymJoinCtx              &ctx,
-                const EUnknownValue     code,
                 const TValueId          v1,
                 const TValueId          v2);
 
