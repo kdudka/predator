@@ -908,6 +908,14 @@ bool joinSymHeaps(
         SE_BREAK_IF((JS_THREE_WAY == ctx.status) && areEqual(sh2, ctx.dst));
     }
 
+#if SE_DISABLE_THREE_WAY_JOIN
+    if (JS_THREE_WAY == ctx.status) {
+        CL_WARN("three-way join disabled by configuration, recompile "
+                "with SE_DISABLE_THREE_WAY_JOIN == 0 to enable it");
+        return false;
+    }
+#endif
+
     // all OK
     *pStatus = ctx.status;
     return true;

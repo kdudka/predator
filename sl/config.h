@@ -110,7 +110,12 @@
 /**
  * if 1, do not use the @b symjoin module at all
  */
-#define SE_DISABLE_SYMJOIN                  1
+#define SE_DISABLE_SYMJOIN                  0
+
+/**
+ * if 1, do not allow three-way join
+ */
+#define SE_DISABLE_THREE_WAY_JOIN           1
 
 /**
  * maximal call depth

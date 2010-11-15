@@ -18,6 +18,4 @@ test-0106.c:54:15: warning: binary operator not implemented yet
 test-0106.c:53:27: warning: binary operator not implemented yet
 test-0106.c:54:15: warning: binary operator not implemented yet
 test-0106.c:53:27: warning: binary operator not implemented yet
-test-0106.c:54:15: warning: binary operator not implemented yet
-test-0106.c:53:27: warning: binary operator not implemented yet
 test-0106.c:77:12: warning: killing junk

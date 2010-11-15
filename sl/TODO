@@ -1,16 +1,9 @@
-o  join of states ... example:
-   - input: empty | 1 node | SLS 0+ | SLS 1+
-   - output: SLS 0+
+o  join of generic prototypes
 
 o  get ready for hlist_head/hlist_node from <linux/list.h>, now we can handle
    only list_head based lists
 
-o  explicit isomorphism in symstate and cut-points based split/join algorithms
-
-o  We should be able to cover small lists (of length 0 or 1) by a compatible
-   list segment prototype while analyzing the data of a segment candidate.
-   First we need to extend DataMatchVisitor, in order allow such abstraction.
-   Then we can hook it somewhere in mergeValues().
+o  cut-points based split/join algorithms
 
 o  canonical representation of Linux DLSs nested into Linux DLSs
 
