@@ -881,18 +881,22 @@ void SymHeapCore::gatherValAliasing(TContValue &dst, TValueId ref) const {
     std::copy(line.begin(), line.end(), std::back_inserter(dst));
 }
 
-void SymHeapCore::neqOp(ENeqOp op, TValueId valA, TValueId valB) {
+bool SymHeapCore::neqOp(ENeqOp op, TValueId valA, TValueId valB) {
     switch (op) {
         case NEQ_NOP:
-            break;
+            // do nothing, successfully
+            return true;
 
         case NEQ_ADD:
             d->neqDb.add(valA, valB);
-            break;
+            return true;
 
         case NEQ_DEL:
             d->neqDb.del(valA, valB);
-            break;
+            return true;
+
+        case NEQ_QUERY_EXPLICIT_NEQ:
+            return d->neqDb.areNeq(valA, valB);
     }
 }
 
@@ -1920,7 +1924,7 @@ void SymHeap::dlSegCrossNeqOp(ENeqOp op, TValueId headAddr1) {
         SymHeapCore::neqOp(NEQ_DEL, headAddr1, headAddr2);
 }
 
-void SymHeap::neqOp(ENeqOp op, TValueId valA, TValueId valB) {
+bool SymHeap::neqOp(ENeqOp op, TValueId valA, TValueId valB) {
     if (NEQ_ADD == op && haveDlSegAt(*this, valA, valB)) {
         // adding the 2+ flag implies adding of the 1+ flag
         this->dlSegCrossNeqOp(op, valA);
@@ -1928,16 +1932,16 @@ void SymHeap::neqOp(ENeqOp op, TValueId valA, TValueId valB) {
     else {
         if (haveSeg(*this, valA, valB, OK_DLS)) {
             this->dlSegCrossNeqOp(op, valA);
-            return;
+            return true;
         }
 
         if (haveSeg(*this, valB, valA, OK_DLS)) {
             this->dlSegCrossNeqOp(op, valB);
-            return;
+            return true;
         }
     }
 
-    SymHeapTyped::neqOp(op, valA, valB);
+    return SymHeapTyped::neqOp(op, valA, valB);
 }
 
 bool SymHeap::proveEq(bool *result, TValueId valA, TValueId valB) const {

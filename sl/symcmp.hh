@@ -31,6 +31,12 @@
 
 class SymHeap;
 
+/// @todo some dox
+bool joinClt(
+        const struct cl_type    *clt1,
+        const struct cl_type    *clt2,
+        const struct cl_type    **pDst = 0);
+
 /// either intra-heap or inter-heap value mapping
 typedef std::map<TValueId /* src */, TValueId /* dst */>    TValMap;
 

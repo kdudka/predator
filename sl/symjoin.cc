@@ -64,6 +64,7 @@ struct SymJoinCtx {
 
     typedef std::map<TObjId /* seg */, unsigned /* len */>      TSegLengths;
     TSegLengths                 segLengths;
+    SymHeap::TContValue         nonZeroVals;
 
     SymJoinCtx(SymHeap &dst_, const SymHeap &sh1_, const SymHeap &sh2_):
         dst(dst_),
@@ -98,12 +99,21 @@ bool defineValueMapping(
 {
     const bool ok1 = matchPlainValues(ctx.valMap1, v1, vDst);
     const bool ok2 = matchPlainValues(ctx.valMap2, v2, vDst);
-    if (ok1 && ok2)
-        // no inconsistency so far
-        return true;
+    if (!ok1 || !ok2) {
+        SJ_DEBUG("<-- value mapping mismatch " << SJ_VALP(v1, v2));
+        return false;
+    }
 
-    SJ_DEBUG("<-- value mapping mismatch " << SJ_VALP(v1, v2));
-    return false;
+    // FIXME: const-insance interface of SymHeap::neqOp()
+    SymHeap &sh1 = const_cast<SymHeap &>(ctx.sh1);
+    SymHeap &sh2 = const_cast<SymHeap &>(ctx.sh2);
+
+    const bool nz1 = sh1.neqOp(SymHeap::NEQ_QUERY_EXPLICIT_NEQ, VAL_NULL, v1);
+    const bool nz2 = sh2.neqOp(SymHeap::NEQ_QUERY_EXPLICIT_NEQ, VAL_NULL, v2);
+    if (nz1 && nz2)
+        ctx.nonZeroVals.push_back(vDst);
+
+    return true;
 }
 
 /// (OBJ_INVALID == objDst) means read-only!!!
@@ -274,29 +284,6 @@ bool segMatchLookAhead(
         && traverseSubObjs<2>(sht, roots, visitor);
 }
 
-bool joinClt(
-        const struct cl_type    **pDst,
-        const struct cl_type    *clt1,
-        const struct cl_type    *clt2)
-{
-    const bool anon1 = !clt1;
-    const bool anon2 = !clt2;
-    if (anon1 && anon2) {
-        *pDst = 0;
-        return true;
-    }
-
-    if (anon1 != anon2)
-        return false;
-
-    SE_BREAK_IF(anon1 || anon2);
-    if (*clt1 != *clt2)
-        return false;
-
-    *pDst = clt1;
-    return true;
-}
-
 bool joinValClt(
         const struct cl_type    **pDst,
         SymJoinCtx              &ctx,
@@ -305,7 +292,7 @@ bool joinValClt(
 {
     const struct cl_type *clt1 = ctx.sh1.valType(v1);
     const struct cl_type *clt2 = ctx.sh2.valType(v2);
-    if (joinClt(pDst, clt1, clt2))
+    if (joinClt(clt1, clt2, pDst))
         return true;
 
     SJ_DEBUG("<-- value clt mismatch " << SJ_VALP(v1, v2));
@@ -320,7 +307,7 @@ bool joinObjClt(
 {
     const struct cl_type *clt1 = ctx.sh1.objType(o1);
     const struct cl_type *clt2 = ctx.sh2.objType(o2);
-    if (joinClt(pDst, clt1, clt2))
+    if (joinClt(clt1, clt2, pDst))
         return true;
 
     SJ_DEBUG("<-- object clt mismatch " << SJ_OBJP(o1, o2));
@@ -528,7 +515,7 @@ bool followValuePair(
     if (OBJ_INVALID != cVal1) {
         // matching pair of custom values
         const struct cl_type *clt;
-        if (!joinClt(&clt, clt1, clt2)) {
+        if (!joinClt(clt1, clt2, &clt)) {
             SJ_DEBUG("<-- custom value clt mismatch " << SJ_VALP(v1, v2));
             return false;
         }
@@ -814,6 +801,10 @@ void handleDstPreds(SymJoinCtx &ctx) {
         const TObjId    seg = ref.first;
         const unsigned  len = ref.second;
         segSetMinLength(ctx.dst, seg, len);
+    }
+
+    BOOST_FOREACH(const TValueId val, ctx.nonZeroVals) {
+        ctx.dst.neqOp(SymHeap::NEQ_ADD, val, VAL_NULL);
     }
 
     // finally check the predicates
