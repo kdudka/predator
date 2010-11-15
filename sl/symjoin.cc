@@ -64,7 +64,7 @@ struct SymJoinCtx {
 
     typedef std::map<TObjId /* seg */, unsigned /* len */>      TSegLengths;
     TSegLengths                 segLengths;
-    SymHeap::TContValue         nonZeroVals;
+    std::set<TValPair>          sharedNeqs;
 
     SymJoinCtx(SymHeap &dst_, const SymHeap &sh1_, const SymHeap &sh2_):
         dst(dst_),
@@ -72,6 +72,11 @@ struct SymJoinCtx {
         sh2(sh2_),
         status(JS_USE_ANY)
     {
+        // VAL_NULL should be always mapped to VAL_NULL
+        valMap1[0][VAL_NULL] = VAL_NULL;
+        valMap1[1][VAL_NULL] = VAL_NULL;
+        valMap2[0][VAL_NULL] = VAL_NULL;
+        valMap2[1][VAL_NULL] = VAL_NULL;
     }
 };
 
@@ -107,14 +112,45 @@ bool defineValueMapping(
         return false;
     }
 
-    // FIXME: const-insance interface of SymHeap::neqOp()
+    // FIXME: const-insane interface of SymHeap::neqOp()
     SymHeap &sh1 = const_cast<SymHeap &>(ctx.sh1);
     SymHeap &sh2 = const_cast<SymHeap &>(ctx.sh2);
 
-    const bool nz1 = sh1.neqOp(SymHeap::NEQ_QUERY_EXPLICIT_NEQ, VAL_NULL, v1);
-    const bool nz2 = sh2.neqOp(SymHeap::NEQ_QUERY_EXPLICIT_NEQ, VAL_NULL, v2);
-    if (nz1 && nz2)
-        ctx.nonZeroVals.push_back(vDst);
+    // look for shared Neq predicates
+    SymHeap::TContValue rVals1;
+    sh1.gatherRelatedValues(rVals1, v1);
+    BOOST_FOREACH(const TValueId rel1, rVals1) {
+        if (!sh1.neqOp(SymHeap::NEQ_QUERY_EXPLICIT_NEQ, v1, rel1))
+            // not a Neq in sh1
+            continue;
+
+        TValMap &vMap1 = ctx.valMap1[/* ltr */ 0];
+        TValMap::const_iterator it1 = vMap1.find(rel1);
+        if (vMap1.end() == it1)
+            // related value has not (yet?) any mapping to dst
+            continue;
+
+        const TValueId relDst = it1->second;
+        TValMap &vMap2r = ctx.valMap2[/* rtl */ 1];
+        TValMap::const_iterator it2r = vMap2r.find(relDst);
+        if (vMap2r.end() == it2r)
+            // related value has not (yet?) any mapping back to sh2
+            continue;
+
+        const TValueId rel2 = it2r->second;
+        if (!sh2.neqOp(SymHeap::NEQ_QUERY_EXPLICIT_NEQ, v2, rel2))
+            // not a Neq in sh2
+            continue;
+
+        // sort Neq values
+        TValueId valLt = vDst;
+        TValueId valGt = relDst;
+        sortValues(valLt, valGt);
+
+        // insert a shared Neq predicate
+        const TValPair neq(valLt, valGt);
+        ctx.sharedNeqs.insert(neq);
+    }
 
     return true;
 }
@@ -817,13 +853,17 @@ void handleDstPreds(SymJoinCtx &ctx) {
         segSetMinLength(ctx.dst, seg, len);
     }
 
-    BOOST_FOREACH(const TValueId val, ctx.nonZeroVals) {
-        const TObjId target = ctx.dst.pointsTo(val);
-        if (hasKey(ctx.segLengths, target))
+    BOOST_FOREACH(const TValPair neq, ctx.sharedNeqs) {
+        TValueId valLt, valGt;
+        boost::tie(valLt, valGt) = neq;
+
+        const TObjId targetLt = ctx.dst.pointsTo(valLt);
+        const TObjId targetGt = ctx.dst.pointsTo(valGt);
+        if (hasKey(ctx.segLengths, targetLt) || hasKey(ctx.segLengths, targetGt))
             // preserve segment length
             continue;
 
-        ctx.dst.neqOp(SymHeap::NEQ_ADD, val, VAL_NULL);
+        ctx.dst.neqOp(SymHeap::NEQ_ADD, valLt, valGt);
     }
 
     // finally check the predicates
