@@ -76,6 +76,9 @@ struct SymJoinCtx {
 };
 
 void updateJoinStatus(SymJoinCtx &ctx, const EJoinStatus action) {
+    if (JS_USE_ANY == action)
+        return;
+
     EJoinStatus &status = ctx.status;
     switch (status) {
         case JS_THREE_WAY:
@@ -486,11 +489,22 @@ bool followObjPair(
         return false;
 
     if (!clt) {
-        // TODO: anonymous object of known size
-#if SE_SELF_TEST
-        SE_TRAP;
-#endif
-        return false;
+        // anonymous object of known size
+        const int cbSize1 = ctx.sh1.objSizeOfAnon(root1);
+        const int cbSize2 = ctx.sh2.objSizeOfAnon(root2);
+        if (cbSize1 != cbSize2) {
+            SJ_DEBUG("<-- anon object size mismatch " << SJ_OBJP(root1, root2));
+            return false;
+        }
+
+        // create the join object
+        const TObjId anon = ctx.dst.objCreateAnon(cbSize1);
+        ctx.objMap1[root1] = anon;
+        ctx.objMap2[root2] = anon;
+        return defineValueMapping(ctx,
+                ctx.sh1.placedAt(root1),
+                ctx.sh2.placedAt(root2),
+                ctx.dst.placedAt(anon));
     }
 
     if (readOnly)
@@ -804,6 +818,11 @@ void handleDstPreds(SymJoinCtx &ctx) {
     }
 
     BOOST_FOREACH(const TValueId val, ctx.nonZeroVals) {
+        const TObjId target = ctx.dst.pointsTo(val);
+        if (hasKey(ctx.segLengths, target))
+            // preserve segment length
+            continue;
+
         ctx.dst.neqOp(SymHeap::NEQ_ADD, val, VAL_NULL);
     }
 

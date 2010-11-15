@@ -47,6 +47,10 @@ SLS abstraction
 
     test-0106.c - pseudo tree consisting of two SLLs
 
+    test-0112.c - hello-world, once used as the most trivial example for symjoin
+
+    test-0113.c - error-free variant of test-0106
+
 
 DLS abstraction
 ===============
