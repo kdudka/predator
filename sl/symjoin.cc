@@ -34,7 +34,7 @@
 
 #include <boost/foreach.hpp>
 
-/* static */ bool debugSymJoin = static_cast<bool>(DEBUG_SYMJOIN);
+static bool debugSymJoin = static_cast<bool>(DEBUG_SYMJOIN);
 
 #define SJ_DEBUG(...) do {                                                  \
     if (::debugSymJoin)                                                     \
@@ -43,9 +43,6 @@
 
 #define SJ_VALP(v1, v2) "(v1 = #" << v1 << ", v2 = #" << v2 << ")"
 #define SJ_OBJP(v1, v2) "(o1 = #" << v1 << ", o2 = #" << v2 << ")"
-
-typedef boost::array<const SymHeap *, 3>        TSymHeapTriple;
-typedef boost::array<TObjId         , 3>        TObjTriple;
 
 struct SymJoinCtx {
     SymHeap                     &dst;
@@ -99,28 +96,28 @@ void updateJoinStatus(SymJoinCtx &ctx, const EJoinStatus action) {
     }
 }
 
-bool defineValueMapping(
+bool hasExplicitNeq(
+        const SymHeap           &shConst,
+        const TValueId          v1,
+        const TValueId          v2)
+{
+    // FIXME: const-insane interface of SymHeap::neqOp()
+    SymHeap &sh = const_cast<SymHeap &>(shConst);
+    return sh.neqOp(SymHeap::NEQ_QUERY_EXPLICIT_NEQ, v1, v2);
+}
+
+
+void gatherSharedPreds(
         SymJoinCtx              &ctx,
         const TValueId          v1,
         const TValueId          v2,
         const TValueId          vDst)
 {
-    const bool ok1 = matchPlainValues(ctx.valMap1, v1, vDst);
-    const bool ok2 = matchPlainValues(ctx.valMap2, v2, vDst);
-    if (!ok1 || !ok2) {
-        SJ_DEBUG("<-- value mapping mismatch " << SJ_VALP(v1, v2));
-        return false;
-    }
-
-    // FIXME: const-insane interface of SymHeap::neqOp()
-    SymHeap &sh1 = const_cast<SymHeap &>(ctx.sh1);
-    SymHeap &sh2 = const_cast<SymHeap &>(ctx.sh2);
-
     // look for shared Neq predicates
     SymHeap::TContValue rVals1;
-    sh1.gatherRelatedValues(rVals1, v1);
+    ctx.sh1.gatherRelatedValues(rVals1, v1);
     BOOST_FOREACH(const TValueId rel1, rVals1) {
-        if (!sh1.neqOp(SymHeap::NEQ_QUERY_EXPLICIT_NEQ, v1, rel1))
+        if (!hasExplicitNeq(ctx.sh1, v1, rel1))
             // not a Neq in sh1
             continue;
 
@@ -138,7 +135,7 @@ bool defineValueMapping(
             continue;
 
         const TValueId rel2 = it2r->second;
-        if (!sh2.neqOp(SymHeap::NEQ_QUERY_EXPLICIT_NEQ, v2, rel2))
+        if (!hasExplicitNeq(ctx.sh2, v2, rel2))
             // not a Neq in sh2
             continue;
 
@@ -151,7 +148,62 @@ bool defineValueMapping(
         const TValPair neq(valLt, valGt);
         ctx.sharedNeqs.insert(neq);
     }
+}
 
+bool defineValueMapping(
+        SymJoinCtx              &ctx,
+        const TValueId          v1,
+        const TValueId          v2,
+        const TValueId          vDst)
+{
+    const bool ok1 = matchPlainValues(ctx.valMap1, v1, vDst);
+    const bool ok2 = matchPlainValues(ctx.valMap2, v2, vDst);
+    if (!ok1 || !ok2) {
+        SJ_DEBUG("<-- value mapping mismatch " << SJ_VALP(v1, v2));
+        return false;
+    }
+
+    gatherSharedPreds(ctx, v1, v2, vDst);
+    return true;
+}
+
+// read-only inconsistency check
+bool checkValueMapping(
+        bool                    *pResult,
+        const SymJoinCtx        &ctx,
+        const TValueId          v1,
+        const TValueId          v2)
+{
+    // read-only value lookup
+    const TValMap &vMap1 = ctx.valMap1[/* ltr */ 0];
+    const TValMap &vMap2 = ctx.valMap2[/* ltr */ 0];
+    TValMap::const_iterator i1 = vMap1.find(v1);
+    TValMap::const_iterator i2 = vMap2.find(v2);
+
+    const bool hasMapping1 = (vMap1.end() != i1);
+    const bool hasMapping2 = (vMap2.end() != i2);
+    if (!hasMapping1 && !hasMapping2)
+        // we have not enough info yet, try it later...
+        return false;
+
+    const TValueId vDst1 = (hasMapping1)
+        ? i1->second
+        : static_cast<TValueId>(VAL_INVALID);
+
+    const TValueId vDst2 = (hasMapping2)
+        ? i2->second
+        : static_cast<TValueId>(VAL_INVALID);
+
+    if (hasMapping1 && hasMapping1 && (vDst1 == vDst2)) {
+        // mapping already known and known to be consistent
+        *pResult = true;
+        return true;
+    }
+
+    SJ_DEBUG("<-- value mapping mismatch: " << SJ_VALP(v1, v2)
+             "-> " << SJ_VALP(vDst1, vDst2));
+
+    *pResult = false;
     return true;
 }
 
@@ -170,11 +222,9 @@ bool joinFreshObjTripple(
 
     const TValueId v1 = sh1.valueOf(obj1);
     const TValueId v2 = sh2.valueOf(obj2);
-    if (VAL_NULL == v1 && VAL_NULL == v2) {
-        if (!readOnly)
-            dst.objSetValue(objDst, VAL_NULL);
+    if (VAL_NULL == v1 && VAL_NULL == v2)
+        // both values are VAL_NULL, nothing more to join here
         return true;
-    }
 
     const TObjId cObj1 = sh1.valGetCompositeObj(v1);
     const TObjId cObj2 = sh2.valGetCompositeObj(v2);
@@ -200,36 +250,18 @@ bool joinFreshObjTripple(
         return false;
     }
 
-    // TODO: rewrite
-#if 1
-    TValMap::const_iterator i1 = ctx.valMap1[/* ltr */ 0].find(v1);
-    TValMap::const_iterator i2 = ctx.valMap2[/* ltr */ 0].find(v2);
+    bool result;
+    if (checkValueMapping(&result, ctx, v1, v2))
+        // no need to follow values
+        return result;
 
-    const bool hasTarget1 = (ctx.valMap1[/* ltr */ 0].end() != i1);
-    const bool hasTarget2 = (ctx.valMap2[/* ltr */ 0].end() != i2);
-    if (hasTarget1 || hasTarget2) {
-        const TValueId vDst1 = (hasTarget1)
-            ? i1->second
-            : static_cast<TValueId>(VAL_INVALID);
-
-        const TValueId vDst2 = (hasTarget2)
-            ? i2->second
-            : static_cast<TValueId>(VAL_INVALID);
-
-        if (hasTarget1 && hasTarget1 && (vDst1 == vDst2))
-            return true;
-
-        SJ_DEBUG("<-- value mapping mismatch: " << SJ_VALP(v1, v2)
-                 "-> " << SJ_VALP(vDst1, vDst2));
-        return false;
-    }
-#endif
     if (!readOnly && ctx.wl.schedule(TValPair(v1, v2)))
         SJ_DEBUG("+++ " << SJ_VALP(v1, v2) << " <- " << SJ_OBJP(obj1, obj2));
 
     return true;
 }
 
+template <class TArray>
 class ObjJoinVisitor {
     private:
         SymJoinCtx &ctx_;
@@ -237,7 +269,7 @@ class ObjJoinVisitor {
     public:
         ObjJoinVisitor(SymJoinCtx &ctx): ctx_(ctx) { }
 
-        bool operator()(const TObjTriple &item) {
+        bool operator()(const TArray &item) {
             const TObjId obj1   = item[0];
             const TObjId obj2   = item[1];
             const TObjId objDst = item[2];
@@ -279,6 +311,8 @@ bool traverseSubObjs(
         const TObjId            root2,
         const TObjId            rootDst)
 {
+    typedef boost::array<const SymHeap *, 3>        TSymHeapTriple;
+    typedef boost::array<TObjId         , 3>        TObjTriple;
 #if SE_SELF_TEST
     // all three types have to match!
     const struct cl_type *clt1   = ctx.sh1.objType(root1);
@@ -299,7 +333,7 @@ bool traverseSubObjs(
     sht[2] = &ctx.dst;
 
     // guide the visitors through them
-    ObjJoinVisitor objVisitor(ctx);
+    ObjJoinVisitor<TObjTriple> objVisitor(ctx);
     return objVisitor(root)
         && traverseSubObjs<3>(sht, root, objVisitor);
 }
@@ -647,7 +681,7 @@ bool joinSegmentWithAny(
         const EJoinStatus       action)
 {
     SJ_DEBUG(">>> joinSegmentWithAny" << SJ_OBJP(root1, root2));
-    if (followObjPair(ctx, root1, root2, action, /* roSegMatch */ true)) {
+    if (followObjPair(ctx, root1, root2, action, /* read-only */ true)) {
         // go ahead, try it read-write!
         *pResult = followObjPair(ctx, root1, root2, action);
         return true;
@@ -810,8 +844,8 @@ void setDstValues(SymJoinCtx &ctx) {
         const TObjId objDst = ref.second;
         SE_BREAK_IF(objDst < 0);
 
-        const TObjId o1     = ref.first;
-        const TValueId v1   = ctx.sh1.valueOf(o1);
+        const TObjId obj1   = ref.first;
+        const TValueId v1   = ctx.sh1.valueOf(obj1);
 
         TValueId vDst = v1;
         if (0 < vDst) {
@@ -859,7 +893,8 @@ void handleDstPreds(SymJoinCtx &ctx) {
 
         const TObjId targetLt = ctx.dst.pointsTo(valLt);
         const TObjId targetGt = ctx.dst.pointsTo(valGt);
-        if (hasKey(ctx.segLengths, targetLt) || hasKey(ctx.segLengths, targetGt))
+        if (hasKey(ctx.segLengths, targetLt)
+                || hasKey(ctx.segLengths, targetGt))
             // preserve segment length
             continue;
 
