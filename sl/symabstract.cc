@@ -313,9 +313,9 @@ void segMergeLengths(
     segSetMinLength(sh, seg2, /* LS 0+ */ 0);
 
     // put the minimum of both lengths back to both segments
-    const unsigned min = (len1 < len2) ? len1 : len2;
-    segSetMinLength(sh, seg1, min);
-    segSetMinLength(sh, seg2, min);
+    const unsigned len = std::min(len1, len2);
+    segSetMinLength(sh, seg1, len);
+    segSetMinLength(sh, seg2, len);
 }
 
 bool matchSelfPointers(
@@ -621,44 +621,21 @@ void slSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf)
     const TObjId obj = *pObj;
     const TObjId objPtrNext = subObjByChain(sh, obj, bf.next);
     const TValueId valNext = sh.valueOf(objPtrNext);
+    SE_BREAK_IF(valNext <= 0);
 
-    // check for a failure of segDiscover() -- FIXME: too strict
-    SE_BREAK_IF(valNext <= 0 || 1 != sh.usedByCount(valNext));
+    // read minimal length of 'obj' and set it temporarily to zero
+    unsigned len = objMinLength(sh, obj);
+    if (objIsSeg(sh, obj))
+        segSetMinLength(sh, obj, /* SLS 0+ */ 0);
 
     // jump to the next object
     const TObjId objNext = subObjByInvChain(sh, sh.pointsTo(valNext), bf.head);
-    const EObjKind kindNext = sh.objKind(objNext);
-    SE_BREAK_IF(OK_SLS == kindNext && bf != sh.objBinding(objNext));
-
-    // accumulate resulting segment's minimal length
-    unsigned len = 0;
-    const EObjKind kind = sh.objKind(obj);
-    switch (kind) {
-        case OK_CONCRETE:
-            len = 1;
-            break;
-
-        case OK_SLS:
-            len = segMinLength(sh, obj);
-            break;
-
-        default:
-#if SE_SELF_TEST
-            SE_TRAP;
-#endif
-            break;
-    }
-
-    if (OK_CONCRETE == kindNext) {
+    len += objMinLength(sh, objNext);
+    if (objIsSeg(sh, objNext))
+        segSetMinLength(sh, objNext, /* SLS 0+ */ 0);
+    else
         // abstract the _next_ object
         sh.objSetAbstract(objNext, OK_SLS, bf);
-
-        // accumulate resulting segment's minimal length
-        ++len;
-    }
-    else
-        // accumulate resulting segment's minimal length
-        len += segMinLength(sh, objNext);
 
     // merge data
     SE_BREAK_IF(OK_SLS != sh.objKind(objNext));
@@ -673,7 +650,7 @@ void slSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf)
     objReplace(sh, obj, objNext);
 
     if (len)
-        // initialize resulting segment's minimal length
+        // declare resulting segment's minimal length
         segSetMinLength(sh, objNext, len);
 
     // move to the next object

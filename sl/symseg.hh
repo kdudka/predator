@@ -68,6 +68,12 @@ void dlSegSetMinLength(SymHeap &sh, TObjId dls, unsigned len);
 /// return lower estimation of segment length
 unsigned segMinLength(const SymHeap &sh, TObjId seg);
 
+inline unsigned objMinLength(const SymHeap &sh, TObjId obj) {
+    return (objIsSeg(sh, obj))
+        ? segMinLength(sh, obj)
+        : /* OK_CONCRETE */ 1;
+}
+
 void segSetMinLength(SymHeap &sh, TObjId seg, unsigned len);
 
 /// same as SymHeap::objSetProto(), but takes care of DLS peers

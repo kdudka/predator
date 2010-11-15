@@ -42,7 +42,7 @@ static bool debugSymJoin = static_cast<bool>(DEBUG_SYMJOIN);
 } while (0)
 
 #define SJ_VALP(v1, v2) "(v1 = #" << v1 << ", v2 = #" << v2 << ")"
-#define SJ_OBJP(v1, v2) "(o1 = #" << v1 << ", o2 = #" << v2 << ")"
+#define SJ_OBJP(o1, o2) "(o1 = #" << o1 << ", o2 = #" << o2 << ")"
 
 struct SymJoinCtx {
     SymHeap                     &dst;
@@ -167,7 +167,7 @@ bool defineValueMapping(
     return true;
 }
 
-// read-only inconsistency check
+// read-only (in)consistency check
 bool checkValueMapping(
         bool                    *pResult,
         const SymJoinCtx        &ctx,
@@ -216,18 +216,14 @@ bool joinFreshObjTripple(
 {
     const bool readOnly = (OBJ_INVALID == objDst);
 
-    const SymHeap &sh1 = ctx.sh1;
-    const SymHeap &sh2 = ctx.sh2;
-    SymHeap       &dst = ctx.dst;
-
-    const TValueId v1 = sh1.valueOf(obj1);
-    const TValueId v2 = sh2.valueOf(obj2);
+    const TValueId v1 = ctx.sh1.valueOf(obj1);
+    const TValueId v2 = ctx.sh2.valueOf(obj2);
     if (VAL_NULL == v1 && VAL_NULL == v2)
         // both values are VAL_NULL, nothing more to join here
         return true;
 
-    const TObjId cObj1 = sh1.valGetCompositeObj(v1);
-    const TObjId cObj2 = sh2.valGetCompositeObj(v2);
+    const TObjId cObj1 = ctx.sh1.valGetCompositeObj(v1);
+    const TObjId cObj2 = ctx.sh2.valGetCompositeObj(v2);
     if ((OBJ_INVALID == cObj1) != (OBJ_INVALID == cObj2)) {
         SJ_DEBUG("<-- scalar vs. composite value " << SJ_VALP(v1, v2));
         return false;
@@ -235,7 +231,7 @@ bool joinFreshObjTripple(
 
     if (!readOnly && OBJ_INVALID != cObj1) {
         // store mapping of composite object's values
-        const TValueId vDst = dst.valueOf(objDst);
+        const TValueId vDst = ctx.dst.valueOf(objDst);
         if (!defineValueMapping(ctx, v1, v2, vDst))
             return false;
     }
@@ -278,7 +274,7 @@ class ObjJoinVisitor {
             ctx_.objMap1[obj1]  = objDst;
             ctx_.objMap2[obj2]  = objDst;
 
-            // store object's address
+            // store object's addresses
             const TValueId addr1 = ctx_.sh1.placedAt(obj1);
             const TValueId addr2 = ctx_.sh2.placedAt(obj2);
             const TValueId dstAt = ctx_.dst.placedAt(objDst);
@@ -435,8 +431,8 @@ bool joinSegBinding(
         const TObjId            o1,
         const TObjId            o2)
 {
-    const bool isSeg1 = (OK_CONCRETE != ctx.sh1.objKind(o1));
-    const bool isSeg2 = (OK_CONCRETE != ctx.sh2.objKind(o2));
+    const bool isSeg1 = objIsSeg(ctx.sh1, o1);
+    const bool isSeg2 = objIsSeg(ctx.sh2, o2);
     if (!isSeg1 && !isSeg2)
         // nothing to join here
         return true;
@@ -467,27 +463,6 @@ bool joinSegBinding(
     return false;
 }
 
-unsigned joinSegLength(
-        SymJoinCtx              &ctx,
-        const TObjId            o1,
-        const TObjId            o2)
-{
-    const SymHeap &sh1 = ctx.sh1;
-    const SymHeap &sh2 = ctx.sh2;
-
-    const unsigned len1 = (OK_CONCRETE == sh1.objKind(o1))
-        ? /* OK_CONCRETE */ 1
-        : segMinLength(sh1, o1);
-
-    const unsigned len2 = (OK_CONCRETE == sh2.objKind(o2))
-        ? /* OK_CONCRETE */ 1
-        : segMinLength(sh2, o2);
-
-    return (len1 < len2)
-        ? len1
-        : len2;
-}
-
 bool createObject(
         SymJoinCtx              &ctx,
         const struct cl_type    *clt,
@@ -495,10 +470,6 @@ bool createObject(
         const TObjId            root2,
         const EJoinStatus       action)
 {
-    const SymHeap   &sh1 = ctx.sh1;
-    const SymHeap   &sh2 = ctx.sh2;
-    SymHeap         &dst = ctx.dst;
-
     EObjKind kind;
     if (!joinObjKind(&kind, ctx, root1, root2, action))
         return false;
@@ -507,8 +478,8 @@ bool createObject(
     if (!joinSegBinding(&bf, ctx, root1, root2))
         return false;
 
-    const bool isProto = sh1.objIsProto(root1);
-    if (isProto != sh2.objIsProto(root2)) {
+    const bool isProto = ctx.sh1.objIsProto(root1);
+    if (isProto != ctx.sh2.objIsProto(root2)) {
         SJ_DEBUG("<-- prototype vs shared: " << SJ_OBJP(root1, root2));
         return false;
     }
@@ -517,14 +488,41 @@ bool createObject(
 
     // preserve 'prototype' flag
     const TObjId rootDst = ctx.dst.objCreate(clt);
-    dst.objSetProto(rootDst, isProto);
+    ctx.dst.objSetProto(rootDst, isProto);
 
     if (OK_CONCRETE != kind) {
-        dst.objSetAbstract(rootDst, kind, bf);
-        ctx.segLengths[rootDst] = joinSegLength(ctx, root1, root2);
+        // abstract object
+        ctx.dst.objSetAbstract(rootDst, kind, bf);
+
+        // compute minimal length of the resulting segment
+        const unsigned len1 = objMinLength(ctx.sh1, root1);
+        const unsigned len2 = objMinLength(ctx.sh2, root2);
+        ctx.segLengths[rootDst] = std::min(len1, len2);
     }
 
     return traverseSubObjs(ctx, root1, root2, rootDst);
+}
+
+bool joinAnonObjects(
+        SymJoinCtx              &ctx,
+        const TObjId            o1,
+        const TObjId            o2)
+{
+    const int cbSize1 = ctx.sh1.objSizeOfAnon(o1);
+    const int cbSize2 = ctx.sh2.objSizeOfAnon(o2);
+    if (cbSize1 != cbSize2) {
+        SJ_DEBUG("<-- anon object size mismatch " << SJ_OBJP(o1, o2));
+        return false;
+    }
+
+    // create the join object
+    const TObjId anon = ctx.dst.objCreateAnon(cbSize1);
+    ctx.objMap1[o1] = anon;
+    ctx.objMap2[o2] = anon;
+    return defineValueMapping(ctx,
+            ctx.sh1.placedAt(o1),
+            ctx.sh2.placedAt(o2),
+            ctx.dst.placedAt(anon));
 }
 
 bool followObjPair(
@@ -538,6 +536,7 @@ bool followObjPair(
     if (!joinObjClt(&clt, ctx, o1, o2))
         return false;
 
+    // jump to roots
     const TObjId root1 = objRoot(ctx.sh1, o1);
     const TObjId root2 = objRoot(ctx.sh2, o2);
     if (hasKey(ctx.objMap1, root1)) {
@@ -548,6 +547,7 @@ bool followObjPair(
             return false;
         }
 
+        // join mapping of object's address
         const TValueId addr1 = ctx.sh1.placedAt(root1);
         const TValueId addr2 = ctx.sh2.placedAt(root2);
         const TValueId dstAt = ctx.dst.placedAt(rootDst);
@@ -560,27 +560,15 @@ bool followObjPair(
 
     if (!clt) {
         // anonymous object of known size
-        const int cbSize1 = ctx.sh1.objSizeOfAnon(root1);
-        const int cbSize2 = ctx.sh2.objSizeOfAnon(root2);
-        if (cbSize1 != cbSize2) {
-            SJ_DEBUG("<-- anon object size mismatch " << SJ_OBJP(root1, root2));
-            return false;
-        }
-
-        // create the join object
-        const TObjId anon = ctx.dst.objCreateAnon(cbSize1);
-        ctx.objMap1[root1] = anon;
-        ctx.objMap2[root2] = anon;
-        return defineValueMapping(ctx,
-                ctx.sh1.placedAt(root1),
-                ctx.sh2.placedAt(root2),
-                ctx.dst.placedAt(anon));
+        return !readOnly
+            && joinAnonObjects(ctx, root1, root2);
     }
 
     if (readOnly)
+        // do not create any object, just check if it was possible
         return segMatchLookAhead(ctx, root1, root2);
-    else
-        return createObject(ctx, clt, root1, root2, action);
+
+    return createObject(ctx, clt, root1, root2, action);
 }
 
 bool followValuePair(
@@ -873,7 +861,6 @@ bool matchPreds(
         const SymHeap           &sh2,
         const TValMapBidir      &vMap)
 {
-    // FIXME: too strict for us?
     return sh1.matchPreds(sh2, vMap[/* ltr */ 0])
         && sh2.matchPreds(sh1, vMap[/* rtl */ 1]);
 }
@@ -901,7 +888,7 @@ void handleDstPreds(SymJoinCtx &ctx) {
         ctx.dst.neqOp(SymHeap::NEQ_ADD, valLt, valGt);
     }
 
-    // finally check the predicates
+    // cross-over check of Neq predicates
     if (!matchPreds(ctx.sh1, ctx.dst, ctx.valMap1))
         updateJoinStatus(ctx, JS_USE_SH2);
     if (!matchPreds(ctx.sh2, ctx.dst, ctx.valMap2))
@@ -932,7 +919,7 @@ bool joinSymHeaps(
         return false;
     }
 
-    // time to preserve all 'hasValue' edges and *some* Neq predicates
+    // time to preserve all 'hasValue' edges and shared Neq predicates
     setDstValues(ctx);
     handleDstPreds(ctx);
 
