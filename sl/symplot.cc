@@ -686,7 +686,7 @@ bool SymPlot::Private::resolveValueOf(TValueId *pDst, TObjId obj) {
     const TValueId value = this->heap->valueOf(obj);
     switch (value) {
         case VAL_INVALID:
-            SE_TRAP;
+            this->plotNodeAux(obj, CL_TYPE_VOID, "VAL_INVALID");
             return false;
 
         case VAL_NULL /* = VAL_FALSE*/:
@@ -897,7 +897,6 @@ void SymPlot::Private::digValues() {
     }
 }
 
-// called only from plotCVar() for now
 void SymPlot::Private::plotObj(TObjId obj) {
     // plot the variable itself
     this->plotNodeObj(obj);
@@ -963,6 +962,14 @@ bool SymPlot::plot(const std::string &name) {
     d->heap->gatherCVars(cVars);
     BOOST_FOREACH(CVar cv, cVars) {
         d->plotCVar(cv);
+    }
+
+    // plot also all dangling objects, although we are not happy to see them
+    SymHeap::TContObj roots;
+    d->heap->gatherRootObjs(roots);
+    BOOST_FOREACH(const TObjId obj, roots) {
+        if (!hasKey(d->objDone, obj))
+            d->plotObj(obj);
     }
 
     // close dot file
