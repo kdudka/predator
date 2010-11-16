@@ -40,7 +40,7 @@
  * @note Though the type is defined as enumeration for now, the code should not
  * rely on that fact, as it may be subject for change in the future.
  */
-typedef enum {
+enum TObjId {
     /**
      * special object to store function's return value to. OBJ_RETURN denotes a
      * @b valid object, with fixed TObjId. @n @n
@@ -88,14 +88,14 @@ typedef enum {
      * sort of non-portable hack, abusing enumeration type for integral purposes
      */
     OBJ_MAX_ID        = /* XXX */ UINT_MAX
-} TObjId;
+};
 
 /**
  * SymHeap @b value @b ID
  * @note Though the type is defined as enumeration for now, the code should not
  * rely on that fact, as it may be subject for change in the future.
  */
-typedef enum {
+enum TValueId {
     /**
      * special enumeration value denoting a NULL pointer.  This value can't be
      * followed by SymHeap::pointsTo().  This enumeration value @b coincides
@@ -132,7 +132,7 @@ typedef enum {
      * @copydoc symid.hh::OBJ_MAX_ID
      */
     VAL_MAX_ID        = /* XXX */ UINT_MAX
-} TValueId;
+};
 
 #if DEBUG_SYMID_FORCE_INT
 #   define TObjId int
