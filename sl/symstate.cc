@@ -187,9 +187,6 @@ bool SymStateWithJoin::insert(const SymHeap &shNew) {
     }
 
     // nothing changed actually
-#if DEBUG_SYMJOIN
-    CL_DEBUG("<<< SymStateWithJoin: re-using sh #" << idx);
-#endif
     return false;
 }
 

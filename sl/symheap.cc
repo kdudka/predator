@@ -1411,14 +1411,14 @@ TObjId SymHeapTyped::objDup(TObjId obj) {
     return image;
 }
 
-void SymHeapTyped::objDestroyPriv(TObjId obj) {
+void SymHeapTyped::objDestroyPriv(TObjId root) {
     typedef std::stack<TObjId> TStack;
     TStack todo;
 
     // we are using explicit stack to avoid recursion
-    todo.push(obj);
+    todo.push(root);
     while (!todo.empty()) {
-        obj = todo.top();
+        const TObjId obj = todo.top();
         todo.pop();
 
         // schedule all subvars for removal
@@ -1435,8 +1435,10 @@ void SymHeapTyped::objDestroyPriv(TObjId obj) {
     }
 
     // remove self from roots (if ever there)
-    remove_if(d->roots.begin(), d->roots.end(),
-            bind2nd(std::equal_to<TObjId>(), obj));
+    TContObj::iterator rend(
+            remove_if(d->roots.begin(), d->roots.end(),
+            bind2nd(std::equal_to<TObjId>(), root)));
+    d->roots.erase(rend, d->roots.end());
 }
 
 SymHeapTyped::SymHeapTyped():
