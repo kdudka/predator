@@ -605,7 +605,7 @@ protected:
 
 		FAE tmp(fae);
 
-		SymState* state;
+		SymState* state = NULL;
 		
 		while (item->parent) {
 
@@ -643,18 +643,20 @@ protected:
 
 		}
 
-		trace.push_back(make_pair(item->fae, *state->insn));
+		assert(state);
+
+//		trace.push_back(make_pair(item->fae, *state->insn));
 
 		CL_DEBUG("trace:");
 
 		for (vector<pair<const FAE*, const CodeStorage::Insn*> >::reverse_iterator i = trace.rbegin(); i != trace.rend(); ++i) {
 			if (i->second)
-				CL_DEBUG(*(i->second));
+				CL_NOTE(i->second->loc << ": " << *(i->second));
 //			STATE_FROM_FAE(*i->first)->ctx->dumpContext(*i->first);
 //			CL_DEBUG(std::endl << *(i->first));
 		}
 
-		CL_DEBUG(*this->currentInsn);
+		CL_NOTE(this->currentInsn->loc << ": " << *this->currentInsn);
 
 		return NULL;
 

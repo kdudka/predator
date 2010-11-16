@@ -479,7 +479,7 @@ protected:
 	void checkGarbage(const std::vector<bool>& visited) {
 		for (size_t i = 0; i < this->roots.size(); ++i) {
 			if (!visited[i] && (this->roots[i] != NULL)) {
-				std::cerr << "the root " << i << " is not referenced anymore ... " << std::endl;
+//				std::cerr << "the root " << i << " is not referenced anymore ... " << std::endl;
 				throw std::runtime_error("FAE::checkGarbage(): garbage detected!");
 			}
 		}
@@ -518,7 +518,8 @@ public:
 		NormInfo() {}
 
 		void addRoot(size_t index) {
-			assert(this->data.insert(std::make_pair(index, RootInfo(index))).second);
+			bool b = this->data.insert(std::make_pair(index, RootInfo(index))).second;
+			assert(b);			
 		}
 
 		void mergeRoots(size_t dst, size_t src, size_t refState) {
@@ -572,7 +573,7 @@ public:
 		for (std::vector<size_t>::iterator i = tmp.begin(); i != tmp.end(); ++i) {
 			this->normalizeRoot(normInfo, normalized, *i, marked);
 			if (!marked[*i]) {
-//				std::cerr << "merging " << *i << " into " << root << std::endl;
+//				std::cerr << "merging " << *i << '(' << this->roots[*i] << ')' << " into " << root << '(' << this->roots[root] << ')' << std::endl;
 				size_t refState;
 				TA<label_type>* ta = this->mergeRoot(*this->roots[root], *i, *this->roots[*i], refState);
 				FAE::updateRoot(this->roots[root], *this->taMan, ta);
