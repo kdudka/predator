@@ -55,26 +55,19 @@ ADD_C_FLAG(       "PEDANTIC"        "-pedantic")
 ADD_C_FLAG(       "W_ALL"           "-Wall")
 ADD_CXX_ONLY_FLAG("W_NO_DEPRECATED" "-Wno-deprecated")
 
-option(SL_WEXTRA "Set to ON to use -Wextra (recommended)" ON)
-if(SL_WEXTRA)
+option(USE_WEXTRA "Set to ON to use -Wextra (recommended)" ON)
+if(USE_WEXTRA)
     ADD_C_FLAG("W_EXTRA" "-Wextra")
 endif()
 
-option(SL_WERROR "Set to ON to use -Werror (recommended)" OFF)
-if(SL_WERROR)
+option(USE_WERROR "Set to ON to use -Werror (recommended)" OFF)
+if(USE_WERROR)
     ADD_C_FLAG("W_ERROR" "-Werror")
 endif()
 
-option(SL_DEBUG "Set to ON to enable debugging support" OFF)
-if(SL_DEBUG)
-    add_definitions("-O0 -g")
-else()
-    add_definitions("-O3 -DNDEBUG -DSL_OPTIMIZED_BUILD")
-endif()
-
-option(SL_USE_INT3_AS_BRK
+option(USE_INT3_AS_BRK
        "Set to ON to use INT3 for breakpoints (SIGTRAP is used by default)" OFF)
-if(SL_USE_INT3_AS_BRK)
+if(USE_INT3_AS_BRK)
     add_definitions("-DSL_USE_INT3_AS_BRK")
 endif()
 

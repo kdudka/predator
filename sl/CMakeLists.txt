@@ -23,6 +23,13 @@ enable_testing()
 
 include("../CMakeLists.common")
 
+option(SL_DEBUG "Set to ON to enable debugging support" OFF)
+if(SL_DEBUG)
+    add_definitions("-O0 -g")
+else()
+    add_definitions("-O3 -DNDEBUG -DSL_OPTIMIZED_BUILD")
+endif()
+
 # libsl.so
 add_library(sl SHARED
     cl_symexec.cc
