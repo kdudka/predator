@@ -395,8 +395,13 @@ TValueId createGenericPrototype(
     else
         return v2;
 
-    for (unsigned i = 0; i < cnt; ++i)
-        sh.objSetProto(protoRoots[1][i], true);
+    for (unsigned i = 0; i < cnt; ++i) {
+        const TObjId proto = protoRoots[1][i];
+        if (objIsSeg(sh, proto))
+            segSetProto(sh, proto, true);
+        else
+            sh.objSetProto(proto, true);
+    }
 
     return v2;
 }
