@@ -112,7 +112,7 @@ bool digJunk(const SymHeap &heap, TValueId *ptrVal) {
             return false;
 
         const TValueId val = heap.placedAt(obj);
-        SE_BREAK_IF(val <= 0);
+        CL_BREAK_IF(val <= 0);
 
         digPointingObjects(wl, heap, val);
     }
@@ -134,7 +134,7 @@ bool collectJunk(SymHeap &sh, TValueId val, LocationWriter lw) {
         if (digJunk(sh, &val)) {
             detected = true;
             const TObjId obj = sh.pointsTo(val);
-            SE_BREAK_IF(obj <= 0);
+            CL_BREAK_IF(obj <= 0);
 
             // gather all values inside the junk object
             std::vector<TValueId> ptrs;

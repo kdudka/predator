@@ -84,7 +84,7 @@ std::string PlotEnumerator::decorate(std::string name) {
     if (SYMPLOT_STOP_AFTER_N_STATES < id) {
         CL_ERROR("SYMPLOT_STOP_AFTER_N_STATES (" << SYMPLOT_STOP_AFTER_N_STATES
                 << ") exceeded, now stopping per user's request...");
-        SE_TRAP;
+        CL_TRAP;
     }
 #endif
 
@@ -101,7 +101,7 @@ std::string PlotEnumerator::decorate(std::string name) {
 
 #ifdef SYMPLOT_STOP_CONDITION
     if (SYMPLOT_STOP_CONDITION(name))
-        SE_TRAP;
+        CL_TRAP;
 #endif
 
     return name;
@@ -254,7 +254,7 @@ bool SymPlot::Private::digFieldName(std::string &dst, TObjId obj) {
         return false;
 
     const struct cl_type *clt = this->heap->objType(parent);
-    SE_BREAK_IF(!clt || !isComposite(clt));
+    CL_BREAK_IF(!clt || !isComposite(clt));
 
     const char *name = clt->items[nth].name;
     if (!name)
@@ -266,7 +266,7 @@ bool SymPlot::Private::digFieldName(std::string &dst, TObjId obj) {
 }
 
 void SymPlot::Private::plotNodeObj(TObjId obj) {
-    SE_BREAK_IF(obj <= 0);
+    CL_BREAK_IF(obj <= 0);
     const struct cl_type *clt = this->heap->objType(obj);
     const enum cl_type_e code = (clt)
         ? clt->code
@@ -320,7 +320,7 @@ void SymPlot::Private::plotNodeObj(TObjId obj) {
 
 void SymPlot::Private::plotNodeObjAnon(TObjId obj) {
     const int size = this->heap->objSizeOfAnon(obj);
-    SE_BREAK_IF(size <= 0);
+    CL_BREAK_IF(size <= 0);
 
     this->dotStream << "\t" << SL_QUOTE(obj)
         << " [shape=box, color=red, fontcolor=red"
@@ -509,7 +509,7 @@ void SymPlot::Private::plotSingleValue(TValueId value) {
 
 void SymPlot::Private::plotZeroValue(TObjId obj) {
     const struct cl_type *clt = this->heap->objType(obj);
-    SE_BREAK_IF(!clt);
+    CL_BREAK_IF(!clt);
 
     const enum cl_type_e code = clt->code;
     switch (code) {
@@ -547,14 +547,14 @@ void SymPlot::Private::digNext(TObjId obj) {
     const TFieldIdxChain icHead = bf.head;
     if (!icHead.empty()) {
         const TObjId objHead = subObjByChain(*this->heap, obj, icHead);
-        SE_BREAK_IF(objHead <= 0);
+        CL_BREAK_IF(objHead <= 0);
 
         // store 'head' pointer object
         this->heads.insert(objHead);
     }
 
     const TObjId objNext = subObjByChain(*this->heap, obj, bf.next);
-    SE_BREAK_IF(objNext <= 0);
+    CL_BREAK_IF(objNext <= 0);
 
     // store 'next' poitner object
     this->nexts.insert(objNext);
@@ -562,7 +562,7 @@ void SymPlot::Private::digNext(TObjId obj) {
         return;
 
     const TObjId objPeer = subObjByChain(*this->heap, obj, bf.peer);
-    SE_BREAK_IF(objPeer <= 0);
+    CL_BREAK_IF(objPeer <= 0);
 
     // store 'peer' pointer object
     this->peers.insert(objPeer);
@@ -573,14 +573,14 @@ void SymPlot::Private::openCluster(TObjId obj) {
     if (this->heap->objIsProto(obj))
         label = "[prototype] ";
 
-#if SE_SELF_TEST
+#ifndef NDEBUG
     const char *color, *pw;
 #else
     const char *color = "", *pw = "";
 #endif
 
     const struct cl_type *clt = this->heap->objType(obj);
-    SE_BREAK_IF(!clt);
+    CL_BREAK_IF(!clt);
 
     const EObjKind kind = this->heap->objKind(obj);
     switch (kind) {
@@ -632,7 +632,7 @@ bool SymPlot::Private::handleCustomValue(TValueId value) {
     if (-1 == cVal)
         return false;
 
-    SE_BREAK_IF(!clt || clt->code != CL_TYPE_PTR);
+    CL_BREAK_IF(!clt || clt->code != CL_TYPE_PTR);
     clt = clt->items[0].type;
     if (!clt || clt->code != CL_TYPE_FNC) {
         CL_WARN_MSG(this->lw, "custom value ignored while plotting");
@@ -641,10 +641,10 @@ bool SymPlot::Private::handleCustomValue(TValueId value) {
 
     const CodeStorage::FncDb &fncs = this->stor->fncs;
     const Fnc *fnc = fncs[cVal];
-    SE_BREAK_IF(!fnc);
+    CL_BREAK_IF(!fnc);
 
     const char *fncName = nameOf(*fnc);
-    SE_BREAK_IF(!fncName);
+    CL_BREAK_IF(!fncName);
 
     std::string name(fncName);
     name += "()";
@@ -670,13 +670,13 @@ bool SymPlot::Private::handleUnknownValue(TValueId value) {
             return true;
 
         default:
-            SE_TRAP;
+            CL_TRAP;
             return true;
     }
 }
 
 bool SymPlot::Private::resolveValueOf(TValueId *pDst, TObjId obj) {
-    SE_BREAK_IF(obj < 0);
+    CL_BREAK_IF(obj < 0);
 
     // avoid duplicates
     if (hasKey(this->objDone, obj))
@@ -783,11 +783,11 @@ class ObjectDigger {
 };
 
 void ObjectDigger::operate(TFieldIdxChain ic, const struct cl_type *clt) {
-    SE_BREAK_IF(!clt);
+    CL_BREAK_IF(!clt);
 
     const SymHeap &sh = *self_->heap;
     const TObjId obj = subObjByChain(sh, root_, ic);
-    SE_BREAK_IF(obj <= 0);
+    CL_BREAK_IF(obj <= 0);
 
     // first close all pending clusters
     this->setupNestLevel(ic.size());
@@ -844,7 +844,7 @@ void SymPlot::Private::digObj(TObjId obj) {
     }
 
     const TObjId peer = dlSegPeer(*this->heap, obj);
-    SE_BREAK_IF(peer <= 0);
+    CL_BREAK_IF(peer <= 0);
 
     const char *label = (this->heap->objIsProto(obj))
         ? "[prototype] DLS"

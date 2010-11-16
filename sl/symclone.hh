@@ -57,9 +57,9 @@ bool traverseSubObjs(
         todo.pop();
 
         const struct cl_type *const clt = sh[0]->objType(item[0]);
-#if SE_SELF_TEST
+#ifndef NDEBUG
         for (int h = 1; h < N; ++h)
-            SE_BREAK_IF(clt != sh[h]->objType(item[h]));
+            CL_BREAK_IF(clt != sh[h]->objType(item[h]));
 #endif
         if (!clt)
             // anonymous object of known size
@@ -75,7 +75,7 @@ bool traverseSubObjs(
             TObjTuple subItem;
             for (int h = 0; h < N; ++h) {
                 subItem[h] = sh[h]->subObj(item[h], i);
-                SE_BREAK_IF(subItem[h] < 0);
+                CL_BREAK_IF(subItem[h] < 0);
             }
 
             // call sub-object visitor

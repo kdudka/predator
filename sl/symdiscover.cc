@@ -41,7 +41,7 @@ bool validateUpLink(const SymHeap       &sh,
 {
     const TObjId root1 = roots.first;
     const TObjId root2 = roots.second;
-    SE_BREAK_IF(root1 <= 0 || root2 <= 0);
+    CL_BREAK_IF(root1 <= 0 || root2 <= 0);
 
     TObjId peer1 = OBJ_INVALID;
     if (OK_DLS == sh.objKind(root1))
@@ -138,7 +138,7 @@ class GenericPrototypeFinder: public ISubMatchVisitor {
             //        establish a prototype object for (v1, v2).  If we
             //        later realize that we don't know how to create the
             //        prototype, it will be simply too late to do anything!
-            SE_BREAK_IF(root1 <= 0 || root2 <= 0);
+            CL_BREAK_IF(root1 <= 0 || root2 <= 0);
             const TObjPair proto(root1, root2);
             protoRoots_.insert(proto);
 
@@ -155,7 +155,7 @@ bool considerGenericPrototype(
         TProtoRoots             *protoRoots)
 {
     CL_DEBUG("considerGenericPrototype() called...");
-    SE_BREAK_IF(v1 <= 0 || v2 <= 0);
+    CL_BREAK_IF(v1 <= 0 || v2 <= 0);
 
     // declare starting points
     TValPairList startingPoints(1, TValPair(v1, v2));
@@ -294,7 +294,7 @@ bool matchSegBinding(const SymHeap              &sh,
                 && (bf.peer == bfDiscover.next);
 
         default:
-            SE_TRAP;
+            CL_TRAP;
             return false;
     }
 }
@@ -462,7 +462,7 @@ TObjId jumpToNextObj(const SymHeap              &sh,
 
     const struct cl_type *clt = sh.objType(obj);
     const TObjId nextPtr = subObjByChain(sh, obj, bf.next);
-    SE_BREAK_IF(nextPtr <= 0);
+    CL_BREAK_IF(nextPtr <= 0);
 
     const TObjId nextHead = sh.pointsTo(sh.valueOf(nextPtr));
     if (nextHead <= 0)
@@ -558,7 +558,7 @@ void dlSegAvoidSelfCycle(
 
     const struct cl_type *const cltEntry = sh.objType(entry);
     const struct cl_type *const cltPrev = sh.objType(prev);
-    SE_BREAK_IF(!cltEntry);
+    CL_BREAK_IF(!cltEntry);
     if (!cltPrev || *cltPrev != *cltEntry)
         // type mismatch
         return;
@@ -725,7 +725,7 @@ class ProbeEntryVisitor {
             root_(root),
             clt_(sh.objType(root))
         {
-            SE_BREAK_IF(!clt_);
+            CL_BREAK_IF(!clt_);
         }
 
         bool operator()(const SymHeap &sh, TObjId sub, TFieldIdxChain ic) const

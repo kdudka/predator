@@ -66,7 +66,7 @@ bool readPlotName(std::string *dst, const TOpList opList,
         ? lw.last
         : lw.loc;
 
-    SE_BREAK_IF(-1 == loc.locLine || loc.locFile.empty());
+    CL_BREAK_IF(-1 == loc.locLine || loc.locFile.empty());
     if (-1 == loc.locLine) {
         // sorry, no location info here
         *dst = "anonplot";
@@ -224,21 +224,21 @@ bool handleBuiltIn(SymState                     &dst,
 {
     const CodeStorage::TOperandList &opList = insn.operands;
     const struct cl_operand &fnc = opList[1];
-    SE_BREAK_IF(CL_OPERAND_CST != fnc.code);
+    CL_BREAK_IF(CL_OPERAND_CST != fnc.code);
 
     const struct cl_cst &cst = fnc.data.cst;
-    SE_BREAK_IF(CL_TYPE_FNC != cst.code);
-    SE_BREAK_IF(CL_SCOPE_GLOBAL != fnc.scope || !cst.data.cst_fnc.is_extern);
+    CL_BREAK_IF(CL_TYPE_FNC != cst.code);
+    CL_BREAK_IF(CL_SCOPE_GLOBAL != fnc.scope || !cst.data.cst_fnc.is_extern);
 
     const char *fncName = cst.data.cst_fnc.name;
-    SE_BREAK_IF(!fncName);
+    CL_BREAK_IF(!fncName);
 
     SymHeap                     &sh = core.sh();
     const LocationWriter        &lw = core.lw();
     const SymExecCoreParams     &ep = core.params();
 
     if (STREQ(fncName, "abort")) {
-        SE_BREAK_IF(opList.size() != 2 || opList[0].code != CL_OPERAND_VOID);
+        CL_BREAK_IF(opList.size() != 2 || opList[0].code != CL_OPERAND_VOID);
 
         // do nothing for abort()
         dst.insert(sh);
@@ -249,7 +249,7 @@ bool handleBuiltIn(SymState                     &dst,
         CL_WARN_MSG(lw, "___sl_break() reached, stopping per user's request");
         dst.insert(sh);
 
-        SE_TRAP;
+        CL_TRAP;
         return true;
     }
 

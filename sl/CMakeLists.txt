@@ -27,7 +27,7 @@ option(SL_DEBUG "Set to ON to enable debugging support" OFF)
 if(SL_DEBUG)
     add_definitions("-O0 -g")
 else()
-    add_definitions("-O3 -DNDEBUG -DSL_OPTIMIZED_BUILD")
+    add_definitions("-O3 -DNDEBUG")
 endif()
 
 # libsl.so

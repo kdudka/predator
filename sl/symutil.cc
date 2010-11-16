@@ -58,14 +58,14 @@ TObjId subObjByInvChain(const SymHeap &sh, TObjId obj, TFieldIdxChain ic) {
 
     // now check if the captured selector sequence matches the given one
     for (unsigned i = 0; i < ic.size(); ++i) {
-        SE_BREAK_IF(chkStack.empty());
+        CL_BREAK_IF(chkStack.empty());
         if (chkStack.top() != ic[i])
             // field mismatch
             return OBJ_INVALID;
 
         chkStack.pop();
     }
-    SE_BREAK_IF(!chkStack.empty());
+    CL_BREAK_IF(!chkStack.empty());
 
     return obj;
 }
@@ -83,14 +83,14 @@ bool isHeapObject(const SymHeap &heap, TObjId obj) {
 
 void digRootObject(const SymHeap &heap, TValueId *pValue) {
     TObjId obj = heap.pointsTo(*pValue);
-    SE_BREAK_IF(obj < 0);
+    CL_BREAK_IF(obj < 0);
 
     TObjId parent;
     while (OBJ_INVALID != (parent = heap.objParent(obj)))
         obj = parent;
 
     TValueId val = heap.placedAt(obj);
-    SE_BREAK_IF(val <= 0);
+    CL_BREAK_IF(val <= 0);
 
     *pValue = val;
 }
@@ -122,7 +122,7 @@ void getPtrValues(SymHeapCore::TContValue &dst, const SymHeap &heap,
             case CL_TYPE_UNION:
                 for (int i = 0; i < clt->item_cnt; ++i) {
                     const TObjId subObj = heap.subObj(obj, i);
-                    SE_BREAK_IF(subObj < 0);
+                    CL_BREAK_IF(subObj < 0);
 
                     todo.push(subObj);
                 }
@@ -138,8 +138,8 @@ void getPtrValues(SymHeapCore::TContValue &dst, const SymHeap &heap,
             default:
                 // other types of value should be safe to ignore here
                 // but worth to check by a debugger at least once anyway
-#if SE_SELF_TEST
-                SE_TRAP;
+#ifndef NDEBUG
+                CL_TRAP;
 #endif
                 break;
         }
@@ -148,13 +148,13 @@ void getPtrValues(SymHeapCore::TContValue &dst, const SymHeap &heap,
 
 void objReplace(SymHeap &sh, TObjId oldObj, TObjId newObj) {
     // check for possible replacement of sub-object
-    SE_BREAK_IF(OBJ_INVALID != sh.objParent(oldObj));
-    SE_BREAK_IF(OBJ_INVALID != sh.objParent(newObj));
+    CL_BREAK_IF(OBJ_INVALID != sh.objParent(oldObj));
+    CL_BREAK_IF(OBJ_INVALID != sh.objParent(newObj));
 
     // resolve object addresses
     const TValueId oldAddr = sh.placedAt(oldObj);
     const TValueId newAddr = sh.placedAt(newObj);
-    SE_BREAK_IF(oldAddr <= 0 || newAddr <= 0);
+    CL_BREAK_IF(oldAddr <= 0 || newAddr <= 0);
 
     // update all references
     sh.valReplace(oldAddr, newAddr);
@@ -182,7 +182,7 @@ template <> struct TraverseSubObjsHelper<TInitialItem> {
                                             const TInitialItem      &item)
     {
         const struct cl_type *clt = sh.objType(item.first);
-        SE_BREAK_IF(item.second && (!clt || *clt != *item.second->type));
+        CL_BREAK_IF(item.second && (!clt || *clt != *item.second->type));
         return clt;
     }
 
@@ -203,7 +203,7 @@ template <> struct TraverseSubObjsHelper<TInitialItem> {
 bool initSingleVariable(SymHeap &sh, const TInitialItem &item) {
     const TObjId obj = item.first;
     const struct cl_type *clt = sh.objType(obj);
-    SE_BREAK_IF(!clt);
+    CL_BREAK_IF(!clt);
 
     const enum cl_type_e code = clt->code;
     switch (code) {
@@ -213,7 +213,7 @@ bool initSingleVariable(SymHeap &sh, const TInitialItem &item) {
 
         case CL_TYPE_UNION:
         case CL_TYPE_STRUCT:
-            SE_TRAP;
+            CL_TRAP;
 
         default:
             break;
@@ -239,7 +239,7 @@ bool initSingleVariable(SymHeap &sh, const TInitialItem &item) {
             << static_cast<int>(val));
 
     // set the initial value
-    SE_BREAK_IF(VAL_INVALID == val);
+    CL_BREAK_IF(VAL_INVALID == val);
     sh.objSetValue(obj, val);
 
     return /* continue */ true;
@@ -265,7 +265,7 @@ class PointingObjectsFinder {
 
         bool operator()(const SymHeap &sh, TObjId obj) const {
             const TValueId addr = sh.placedAt(obj);
-            SE_BREAK_IF(addr <= 0);
+            CL_BREAK_IF(addr <= 0);
 
             sh.usedBy(dst_, addr);
             return /* continue */ true;

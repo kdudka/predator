@@ -110,7 +110,7 @@ void handleVarDeref(Data::TState                        &state,
             return;
 
         default:
-            SE_TRAP;
+            CL_TRAP;
     }
 }
 
@@ -128,7 +128,7 @@ void handleDerefs(Data::TState &state, const CodeStorage::Insn *insn)
             // no dereference here
             continue;
 
-        SE_BREAK_IF(CL_OPERAND_VAR != op.code);
+        CL_BREAK_IF(CL_OPERAND_VAR != op.code);
         handleVarDeref(state, op, &insn->loc);
     }
 }
@@ -279,7 +279,7 @@ bool handleInsnCmpNull(Data::TState                 &state,
             break;
 
         default:
-            SE_TRAP;
+            CL_TRAP;
     }
 
     // now store the relation among the pointer and the result of the comparison
@@ -309,19 +309,19 @@ we_know:
 void handleInsnBinop(Data::TState &state, const CodeStorage::Insn *insn) {
     const CodeStorage::TOperandList &opList = insn->operands;
 
-#if SE_SELF_TEST
+#ifndef NDEBUG
     // binary instructions are said to have no dereferences
     // (better to check anyway)
     BOOST_FOREACH(const struct cl_operand &op, opList) {
         const struct cl_accessor *ac = op.accessor;
         if (ac && ac->code == CL_ACCESSOR_DEREF)
-            SE_TRAP;
+            CL_TRAP;
     }
 #endif
 
     // resolve operands
     const struct cl_operand &dst = opList[0];
-    SE_BREAK_IF(dst.accessor);
+    CL_BREAK_IF(dst.accessor);
     const int uidDst = varIdFromOperand(&dst);
     VarState &vs = state[uidDst];
 
@@ -436,7 +436,7 @@ void handleInsnNonterm(Data::TState &state, const CodeStorage::Insn *insn) {
             break;
 
         default:
-            SE_TRAP;
+            CL_TRAP;
     }
 }
 
@@ -492,7 +492,7 @@ void replaceInBranch(Data::TState &state, int uid, bool val) {
             return;
 
         default:
-            SE_TRAP;
+            CL_TRAP;
             return;
     }
 
@@ -546,7 +546,7 @@ void handleInsnCond(Data                                    &data,
     const struct cl_operand &cond = insn->operands[0];
     const int uid = varIdFromOperand(&cond);
     Data::TState::const_iterator it = state.find(uid);
-    SE_BREAK_IF(state.end() == it);
+    CL_BREAK_IF(state.end() == it);
     const VarState &vs = it->second;
 
     // now check if we know the value
@@ -593,7 +593,7 @@ void handleInsnTerm(Data                            &data,
             return;
 
         default:
-            SE_TRAP;
+            CL_TRAP;
     }
 }
 
@@ -626,7 +626,7 @@ void handleFnc(const CodeStorage::Fnc &fnc) {
         todo.erase(i);
 
         // process one basic block
-        SE_BREAK_IF(!bb || !bb->size());
+        CL_BREAK_IF(!bb || !bb->size());
         const Insn *insn = bb->operator[](0);
         const LocationWriter lw(&insn->loc);
         CL_DEBUG_MSG(lw, "analyzing block " << bb->name() << "...");

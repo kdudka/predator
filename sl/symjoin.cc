@@ -309,14 +309,14 @@ bool traverseSubObjs(
 {
     typedef boost::array<const SymHeap *, 3>        TSymHeapTriple;
     typedef boost::array<TObjId         , 3>        TObjTriple;
-#if SE_SELF_TEST
+#ifndef NDEBUG
     // all three types have to match!
     const struct cl_type *clt1   = ctx.sh1.objType(root1);
     const struct cl_type *clt2   = ctx.sh2.objType(root2);
     const struct cl_type *cltDst = ctx.dst.objType(rootDst);
-    SE_BREAK_IF(!clt1 || !clt2 || !cltDst);
-    SE_BREAK_IF(*clt1 != *cltDst);
-    SE_BREAK_IF(*clt2 != *cltDst);
+    CL_BREAK_IF(!clt1 || !clt2 || !cltDst);
+    CL_BREAK_IF(*clt1 != *cltDst);
+    CL_BREAK_IF(*clt2 != *cltDst);
 #endif
     TObjTriple root;
     root[/* sh1 */ 0] = root1;
@@ -393,19 +393,19 @@ bool joinObjKind(
     const EObjKind kind1 = ctx.sh1.objKind(o1);
     const EObjKind kind2 = ctx.sh2.objKind(o2);
     if (OK_CONCRETE == kind1) {
-        SE_BREAK_IF(action == JS_USE_SH1);
+        CL_BREAK_IF(action == JS_USE_SH1);
         *pDst = kind2;
         return true;
     }
 
     if (OK_CONCRETE == kind2) {
-        SE_BREAK_IF(action == JS_USE_SH2);
+        CL_BREAK_IF(action == JS_USE_SH2);
         *pDst = kind1;
         return true;
     }
 
     if (kind1 == kind2) {
-        SE_BREAK_IF(action != JS_USE_ANY);
+        CL_BREAK_IF(action != JS_USE_ANY);
         *pDst = kind1;
         return true;
     }
@@ -459,7 +459,7 @@ bool joinSegBinding(
     }
 
     // not reachable
-    SE_TRAP;
+    CL_TRAP;
     return false;
 }
 
@@ -554,7 +554,7 @@ bool followObjPair(
         return defineValueMapping(ctx, addr1, addr2, dstAt);
     }
 
-    SE_BREAK_IF(root1 <= 0 || root2 <= 0);
+    CL_BREAK_IF(root1 <= 0 || root2 <= 0);
     if (!joinObjClt(&clt, ctx, root1, root2))
         return false;
 
@@ -608,14 +608,14 @@ bool followValuePair(
         return followObjPair(ctx, o1, o2, JS_USE_ANY);
 
     // special handling for OBJ_DELETED/OBJ_LOST
-#if SE_SELF_TEST
+#ifndef NDEBUG
     switch (o1) {
         case OBJ_DELETED:
         case OBJ_LOST:
             if (o1 == o2)
                 break;
         default:
-            SE_TRAP;
+            CL_TRAP;
     }
 #endif
 
@@ -641,7 +641,7 @@ bool joinUnkownValues(
         const EUnknownValue     code1,
         const EUnknownValue     code2)
 {
-    SE_BREAK_IF((code1 == code2) && UV_UNKNOWN != code1);
+    CL_BREAK_IF((code1 == code2) && UV_UNKNOWN != code1);
     const struct cl_type *clt;
     if (!joinValClt(&clt, ctx, v1, v2)) {
         *pResult = false;
@@ -657,7 +657,7 @@ bool joinUnkownValues(
     }
 
     // TODO
-    SE_BREAK_IF(debugSymJoin);
+    CL_BREAK_IF(debugSymJoin);
     return false;
 }
 
@@ -693,7 +693,7 @@ bool insertSegmentClone(
     (void) v2;
     (void) action;
 
-    //SE_BREAK_IF(debugSymJoin);
+    //CL_BREAK_IF(debugSymJoin);
     return false;
 }
 
@@ -723,7 +723,7 @@ bool joinAbstractValues(
     if (isAbs1 && isAbs2)
         return joinSegmentWithAny(pResult, ctx, root1, root2, JS_USE_ANY);
 
-    SE_BREAK_IF(isAbs1 == isAbs2);
+    CL_BREAK_IF(isAbs1 == isAbs2);
     if (joinSegmentWithAny(pResult, ctx, root1, root2, subStatus))
         return true;
 
@@ -826,11 +826,11 @@ bool joinCVars(SymJoinCtx &ctx) {
 }
 
 void setDstValues(SymJoinCtx &ctx) {
-    SE_BREAK_IF(ctx.objMap1.size() != ctx.objMap2.size());
+    CL_BREAK_IF(ctx.objMap1.size() != ctx.objMap2.size());
 
     BOOST_FOREACH(SymJoinCtx::TObjMap::const_reference ref, ctx.objMap1) {
         const TObjId objDst = ref.second;
-        SE_BREAK_IF(objDst < 0);
+        CL_BREAK_IF(objDst < 0);
 
         const TObjId obj1   = ref.first;
         const TValueId v1   = ctx.sh1.valueOf(obj1);
@@ -839,7 +839,7 @@ void setDstValues(SymJoinCtx &ctx) {
         if (0 < vDst) {
             TValMap &vMap = ctx.valMap1[/* ltr */ 0];
             TValMap::iterator it1 = vMap.find(v1);
-            SE_BREAK_IF(vMap.end() == it1);
+            CL_BREAK_IF(vMap.end() == it1);
             vDst = it1->second;
         }
 
@@ -847,7 +847,7 @@ void setDstValues(SymJoinCtx &ctx) {
         const TObjId compObj = dst.valGetCompositeObj(vDst);
         if (OBJ_INVALID != compObj) {
             // composite values already match
-            SE_BREAK_IF(compObj != objDst);
+            CL_BREAK_IF(compObj != objDst);
             continue;
         }
 
@@ -909,13 +909,13 @@ bool joinSymHeaps(
 
     // start with program variables
     if (!joinCVars(ctx)) {
-        SE_BREAK_IF(areEqual(sh1, sh2));
+        CL_BREAK_IF(areEqual(sh1, sh2));
         return false;
     }
 
     // go through all values in them
     if (!joinPendingValues(ctx)) {
-        SE_BREAK_IF(areEqual(sh1, sh2));
+        CL_BREAK_IF(areEqual(sh1, sh2));
         return false;
     }
 
@@ -925,9 +925,9 @@ bool joinSymHeaps(
 
     if (debugSymJoin) {
         // catch possible regression at this point
-        SE_BREAK_IF((JS_USE_ANY == ctx.status) != areEqual(sh1, sh2));
-        SE_BREAK_IF((JS_THREE_WAY == ctx.status) && areEqual(sh1, ctx.dst));
-        SE_BREAK_IF((JS_THREE_WAY == ctx.status) && areEqual(sh2, ctx.dst));
+        CL_BREAK_IF((JS_USE_ANY == ctx.status) != areEqual(sh1, sh2));
+        CL_BREAK_IF((JS_THREE_WAY == ctx.status) && areEqual(sh1, ctx.dst));
+        CL_BREAK_IF((JS_THREE_WAY == ctx.status) && areEqual(sh2, ctx.dst));
     }
 
 #if SE_DISABLE_THREE_WAY_JOIN

@@ -76,7 +76,7 @@ class DumpCltVisitor {
 
             // print type at the current level
             const struct cl_type *clt = item->type;
-            SE_BREAK_IF(!clt);
+            CL_BREAK_IF(!clt);
             cltToStreamCore(out_, clt);
             out_ << "\n";
 
@@ -179,8 +179,8 @@ void operandToStreamCstInt(std::ostream &str, const struct cl_operand &op) {
             // fall through!
 
         default:
-#if SE_SELF_TEST
-            SE_TRAP;
+#ifndef NDEBUG
+            CL_TRAP;
 #endif
             break;
     }
@@ -196,7 +196,7 @@ void operandToStreamCst(std::ostream &str, const struct cl_operand &op) {
 
         case CL_TYPE_FNC: {
             const char *name = cst.data.cst_fnc.name;
-            SE_BREAK_IF(!name);
+            CL_BREAK_IF(!name);
 
             str << name;
             break;
@@ -204,28 +204,28 @@ void operandToStreamCst(std::ostream &str, const struct cl_operand &op) {
 
         case CL_TYPE_STRING: {
             const char *text = cst.data.cst_string.value;
-            SE_BREAK_IF(!text);
+            CL_BREAK_IF(!text);
 
             str << "\"" << text << "\"";
             break;
         }
 
         default:
-#if SE_SELF_TEST
-            SE_TRAP;
+#ifndef NDEBUG
+            CL_TRAP;
 #endif
             break;
     }
 }
 
 const char* fieldName(const struct cl_accessor *ac) {
-    SE_BREAK_IF(!ac || ac->code != CL_ACCESSOR_ITEM);
+    CL_BREAK_IF(!ac || ac->code != CL_ACCESSOR_ITEM);
 
     const struct cl_type *clt = ac->type;
-    SE_BREAK_IF(!clt);
+    CL_BREAK_IF(!clt);
 
     const int id = ac->data.item.id;
-    SE_BREAK_IF(clt->item_cnt <= id || id < 0);
+    CL_BREAK_IF(clt->item_cnt <= id || id < 0);
 
     const char *name = clt->items[id].name;
     return (name)
@@ -264,8 +264,8 @@ void operandToStreamAcs(std::ostream &str, const struct cl_accessor *ac) {
                 // fall through!
 
             default:
-#if SE_SELF_TEST
-                SE_TRAP;
+#ifndef NDEBUG
+                CL_TRAP;
 #endif
                 break;
         }
@@ -319,8 +319,8 @@ void operandToStream(std::ostream &str, const struct cl_operand &op) {
         case CL_OPERAND_VOID:
             // this should have been handled elsewhere
         default:
-#if SE_SELF_TEST
-            SE_TRAP;
+#ifndef NDEBUG
+            CL_TRAP;
 #endif
             break;
     }
@@ -374,8 +374,8 @@ void binOpToStream(std::ostream &str, int subCode,
         case CL_BINOP_BIT_AND:          str << " & ";           break;
         case CL_BINOP_BIT_XOR:          str << " ^ ";           break;
         default:
-#if SE_SELF_TEST
-            SE_TRAP;
+#ifndef NDEBUG
+            CL_TRAP;
 #endif
             break;
     }
@@ -452,8 +452,8 @@ void insnToStream(std::ostream &str, const CodeStorage::Insn &insn) {
             break;
 
         default:
-#if SE_SELF_TEST
-            SE_TRAP;
+#ifndef NDEBUG
+            CL_TRAP;
 #endif
             break;
     }

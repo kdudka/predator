@@ -107,10 +107,10 @@ void SymCallCtx::Private::assignReturnValue(SymHeap &sh) {
     proc.setLocation(&op.loc);
 
     const TObjId obj = proc.heapObjFromOperand(op);
-    SE_BREAK_IF(OBJ_INVALID == obj);
+    CL_BREAK_IF(OBJ_INVALID == obj);
 
     const TValueId val = sh.valueOf(OBJ_RETURN);
-    SE_BREAK_IF(VAL_INVALID == val);
+    CL_BREAK_IF(VAL_INVALID == val);
 
     // assign the return value in the current symbolic heap
     proc.objSetValue(obj, val);
@@ -139,7 +139,7 @@ void SymCallCtx::Private::destroyStackFrame(SymHeap &sh) {
 #endif
             const CVar cVar(var.uid, this->nestLevel);
             const TObjId obj = sh.objByCVar(cVar);
-            SE_BREAK_IF(obj < 0);
+            CL_BREAK_IF(obj < 0);
 
             proc.setLocation(lw);
             proc.objDestroy(obj);
@@ -155,7 +155,7 @@ void SymCallCtx::Private::destroyStackFrame(SymHeap &sh) {
 void SymCallCtx::flushCallResults(SymState &dst) {
     if (d->flushed)
         // are we really ready for this?
-        SE_TRAP;
+        CL_TRAP;
 
     // mark as done
     d->computed = true;
@@ -227,7 +227,7 @@ class PerFncCache {
 #endif
             huni_.insertNew(heap);
             ctxMap_.push_back(ctx);
-            SE_BREAK_IF(huni_.size() != ctxMap_.size());
+            CL_BREAK_IF(huni_.size() != ctxMap_.size());
         }
 };
 
@@ -353,7 +353,7 @@ void SymCallCache::Private::setCallArgs(const CodeStorage::TOperandList &opList)
         // cVar lookup
         const CVar cVar(arg, this->nestLevel);
         const TObjId lhs = this->heap->objByCVar(cVar);
-        SE_BREAK_IF(OBJ_INVALID == lhs);
+        CL_BREAK_IF(OBJ_INVALID == lhs);
 
         if (opList.size() <= pos) {
             // no value given for this arg
@@ -362,7 +362,7 @@ void SymCallCache::Private::setCallArgs(const CodeStorage::TOperandList &opList)
 
             // read the UV_UNINITIALIZED of lhs
             TValueId val = this->heap->valueOf(lhs);
-            SE_BREAK_IF(UV_UNINITIALIZED != this->heap->valGetUnknown(val));
+            CL_BREAK_IF(UV_UNINITIALIZED != this->heap->valGetUnknown(val));
 
             // change UV_UNINITIALIZED to UV_UNKNOWN in lhs
             const struct cl_type *clt = this->heap->valType(val);
@@ -374,7 +374,7 @@ void SymCallCache::Private::setCallArgs(const CodeStorage::TOperandList &opList)
         // read the given argument's value
         const struct cl_operand &op = opList[pos++];
         const TValueId val = srcProc.heapValFromOperand(op);
-        SE_BREAK_IF(VAL_INVALID == val);
+        CL_BREAK_IF(VAL_INVALID == val);
 
         // set the value of lhs accordingly
         this->proc->objSetValue(lhs, val);
@@ -439,7 +439,7 @@ SymCallCtx& SymCallCache::getCallCtx(SymHeap                    heap,
 
     // check insn validity
     const TOperandList &opList = insn.operands;
-    SE_BREAK_IF(CL_INSN_CALL != insn.code || opList.size() < 2);
+    CL_BREAK_IF(CL_INSN_CALL != insn.code || opList.size() < 2);
 
     // create SymProc and update the location info
     SymProc proc(heap, d->bt);
@@ -478,7 +478,7 @@ SymCallCtx& SymCallCache::getCallCtx(SymHeap                    heap,
     // get either an existing ctx, or create a new one
     SymCallCtx *ctx = d->getCallCtx(uid, heap);
     if (!ctx)
-        SE_TRAP;
+        CL_TRAP;
 
     // not flushed yet
     ctx->d->flushed     = false;

@@ -115,7 +115,7 @@ void buildIgnoreList(const SymHeap &sh, TObjId obj, TIgnoreList &ignoreList) {
         case OK_HEAD:
         case OK_PART:
             // invalid call of buildIgnoreList()
-            SE_TRAP;
+            CL_TRAP;
 
         case OK_DLS:
             // preserve 'peer' field

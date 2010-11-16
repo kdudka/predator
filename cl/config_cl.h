@@ -25,8 +25,6 @@
 #define GIT_SHA1 cl_git_sha1
 #include "trap.h"
 
-#define TRAP SE_TRAP
-
 /**
  * if 1, check each code_listener filter by the integrity checker
  */

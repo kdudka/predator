@@ -26,7 +26,7 @@ option(CL_DEBUG "Set to ON to enable debugging support" OFF)
 if(CL_DEBUG)
     add_definitions("-O0 -g")
 else()
-    add_definitions("-O3 -DNDEBUG -DSL_OPTIMIZED_BUILD")
+    add_definitions("-O3 -DNDEBUG")
 endif()
 
 # Check for isatty(3)

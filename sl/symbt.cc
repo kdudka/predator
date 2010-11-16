@@ -75,7 +75,7 @@ const CodeStorage::Fnc* SymBackTrace::Private::fncOnTop() const {
     const CodeStorage::Fnc *fnc = &top.fnc;
 
     // check bt integrity
-    SE_BREAK_IF(!fnc);
+    CL_BREAK_IF(!fnc);
 
     return fnc;
 }
@@ -84,7 +84,7 @@ const CodeStorage::Fnc* SymBackTrace::Private::fncById(int id) const {
     const CodeStorage::Fnc *fnc = this->stor.fncs[id];
 
     // check fnc ID validity
-    SE_BREAK_IF(!fnc);
+    CL_BREAK_IF(!fnc);
 
     return fnc;
 }
@@ -99,7 +99,7 @@ void SymBackTrace::Private::pushFnc(const CodeStorage::Fnc *fnc,
     int &ref = this->nestMap[fnc];
 
     // check bt integrity
-    SE_BREAK_IF(ref < 0 || static_cast<int>(this->btStack.size()) < ref);
+    CL_BREAK_IF(ref < 0 || static_cast<int>(this->btStack.size()) < ref);
 
     // increment instance counter
     ++ref;
@@ -121,7 +121,7 @@ void SymBackTrace::Private::popFnc() {
     }
 
     // check bt integrity
-    SE_BREAK_IF(ref < 0 || static_cast<int>(this->btStack.size()) < ref);
+    CL_BREAK_IF(ref < 0 || static_cast<int>(this->btStack.size()) < ref);
 }
 
 SymBackTrace::SymBackTrace(const CodeStorage::Storage &stor):
@@ -165,11 +165,11 @@ void SymBackTrace::printBackTrace() const {
 
         if (ptrace) {
             // perform path tracing at the current level
-            SE_BREAK_IF(ppStack.empty());
+            CL_BREAK_IF(ppStack.empty());
 
             const IPathTracer *pp = ppStack.top();
             ppStack.pop();
-            SE_BREAK_IF(!pp);
+            CL_BREAK_IF(!pp);
 
             pp->printPaths();
         }
@@ -187,7 +187,7 @@ const CodeStorage::Fnc* SymBackTrace::popCall() {
     const CodeStorage::Fnc *fnc = d->fncOnTop();
 
     // check bt integrity
-    SE_BREAK_IF(!fnc);
+    CL_BREAK_IF(!fnc);
 
     d->popFnc();
     return fnc;
@@ -227,7 +227,7 @@ LocationWriter SymBackTrace::topCallLoc() const {
 bool SymBackTrace::hasRecursiveCall() const {
     BOOST_FOREACH(const Private::TMap::value_type &item, d->nestMap) {
         const int cnt = item.second;
-        SE_BREAK_IF(cnt <= 0);
+        CL_BREAK_IF(cnt <= 0);
 
         if (1 < cnt)
             // a recursive call has been found
@@ -247,8 +247,8 @@ void SymBackTrace::pushPathTracer(const IPathTracer *pp) {
 }
 
 void SymBackTrace::popPathTracer(const IPathTracer *pp) {
-    SE_BREAK_IF(d->ppStack.empty());
-    SE_BREAK_IF(d->ppStack.top() != pp);
+    CL_BREAK_IF(d->ppStack.empty());
+    CL_BREAK_IF(d->ppStack.top() != pp);
     (void) pp;
     d->ppStack.pop();
 }

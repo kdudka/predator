@@ -28,6 +28,17 @@
 #include "config_cl.h"
 #include "version_cl.h"
 
+// avoid the following warnings with -Wundef:
+//      ../include/gcc/obstack.h:299:23: warning: "__NeXT__" is not defined
+//      ../include/gcc/vec.h:440:5: warning: "ENABLE_CHECKING" is not defined
+//      ../include/gcc/toplev.h:54:6: warning: "ENABLE_CHECKING" is not defined
+#ifndef __NeXT__
+#   define __NeXT__ 0
+#endif
+#ifndef ENABLE_CHECKING
+#   define ENABLE_CHECKING 0
+#endif
+
 #include <gcc/coretypes.h>
 #include <gcc/diagnostic.h>
 #include <gcc/ggc.h>
@@ -401,7 +412,7 @@ static int get_type_sizeof(tree t)
         return 0;
 
     if (TREE_INT_CST_HIGH(size))
-        TRAP;
+        CL_TRAP;
 
     return TREE_INT_CST_LOW(size);
 }
@@ -449,11 +460,11 @@ static struct cl_type* add_bare_type_if_needed(tree t);
 static struct cl_type* add_type_if_needed(tree t)
 {
     if (NULL_TREE == t)
-        TRAP;
+        CL_TRAP;
 
     tree type = TREE_TYPE(t);
     if (NULL_TREE == type)
-        TRAP;
+        CL_TRAP;
 
     return add_bare_type_if_needed(type);
 }
@@ -463,13 +474,13 @@ static int dig_field_offset(tree t)
     // read bit offset
     tree node = DECL_FIELD_BIT_OFFSET(t);
     if (!node || INTEGER_CST != TREE_CODE(node) || TREE_INT_CST_HIGH(node))
-        TRAP;
+        CL_TRAP;
     int offset = TREE_INT_CST_LOW(node) >> 3;
 
     // read byte offset
     node = DECL_FIELD_OFFSET(t);
     if (!node || INTEGER_CST != TREE_CODE(node) || TREE_INT_CST_HIGH(node))
-        TRAP;
+        CL_TRAP;
     offset += TREE_INT_CST_LOW(node);
 
     // return total offset [in bytes]
@@ -508,7 +519,7 @@ static void dig_fnc_type(struct cl_type *clt, tree t)
     for (t = TYPE_ARG_TYPES(t); t; t = TREE_CHAIN(t)) {
         tree val = TREE_VALUE(t);
         if (!val)
-            TRAP;
+            CL_TRAP;
 
         // TODO: chunk allocation ?
         clt->items = CL_RESIZEVEC(struct cl_type_item, clt->items,
@@ -581,7 +592,7 @@ static void read_specific_type(struct cl_type *clt, tree type)
             break;
 
         default:
-            TRAP;
+            CL_TRAP;
     };
 }
 
@@ -623,7 +634,7 @@ static enum cl_scope_e get_decl_scope(tree t)
                 break;
 
             default:
-                TRAP;
+                CL_TRAP;
         }
     }
 
@@ -645,7 +656,7 @@ static int field_lookup(tree op, tree field)
     tree type = TREE_TYPE(op);
     if (NULL_TREE == type)
         // decl omitted?
-        TRAP;
+        CL_TRAP;
 
     tree t = TYPE_FIELDS(type);
     int i;
@@ -654,7 +665,7 @@ static int field_lookup(tree op, tree field)
             return i;
 
     // not found
-    TRAP;
+    CL_TRAP;
     return -1;
 }
 
@@ -696,18 +707,18 @@ static void read_initial(struct cl_initializer **pinit, tree ctor)
 
     // allocate array of nested initializers
     const int cnt = clt->item_cnt;
-    SE_BREAK_IF(cnt <= 0);
+    CL_BREAK_IF(cnt <= 0);
     struct cl_initializer **vec = CL_ZNEW_ARRAY(struct cl_initializer *, cnt);
     initial->data.nested_initials = vec;
 
     unsigned idx;
     tree field, val;
     FOR_EACH_CONSTRUCTOR_ELT(CONSTRUCTOR_ELTS(ctor), idx, field, val) {
-        SE_BREAK_IF(cnt <= (int)idx);
+        CL_BREAK_IF(cnt <= (int)idx);
 
         // field lookup
         const int nth = field_lookup(ctor, field);
-        SE_BREAK_IF(clt->items[nth].type != add_type_if_needed(field));
+        CL_BREAK_IF(clt->items[nth].type != add_type_if_needed(field));
 
         // FIXME: unguarded recursion
         read_initial(vec + nth, val);
@@ -771,7 +782,7 @@ static void read_raw_operand(struct cl_operand *op, tree t)
                 op->data.cst.data.cst_int.value = TREE_INT_CST_LOW (t);
             else
                 // FIXME: this would probably overflow...
-                TRAP;
+                CL_TRAP;
 
             break;
 
@@ -786,7 +797,7 @@ static void read_raw_operand(struct cl_operand *op, tree t)
             break;
 
         default:
-            TRAP;
+            CL_TRAP;
     }
 }
 
@@ -805,11 +816,11 @@ static void chain_accessor(struct cl_accessor **ac, enum cl_type_e code)
 static struct cl_type* operand_type_lookup(tree t)
 {
     if (NULL_TREE == t)
-        TRAP;
+        CL_TRAP;
 
     tree op0 = TREE_OPERAND(t, 0);
     if (NULL_TREE == op0)
-        TRAP;
+        CL_TRAP;
 
     return add_type_if_needed(op0);
 }
@@ -833,7 +844,7 @@ static void handle_accessor_array_ref(struct cl_accessor **ac, tree t)
 
     tree op1 = TREE_OPERAND(t, 1);
     if (!op1)
-        TRAP;
+        CL_TRAP;
 
     struct cl_operand *index = CL_ZNEW(struct cl_operand);
     CL_ASSERT(index);
@@ -863,7 +874,7 @@ static bool handle_accessor(struct cl_accessor **ac, tree *pt)
 {
     tree t = *pt;
     if (NULL_TREE == t)
-        TRAP;
+        CL_TRAP;
 
     enum tree_code code = TREE_CODE(t);
     switch (code) {
@@ -930,7 +941,7 @@ static void handle_operand(struct cl_operand *op, tree t)
     while (handle_accessor(&op->accessor, &t));
 
     if (NULL_TREE == t)
-        TRAP;
+        CL_TRAP;
     read_raw_operand(op, t);
 }
 
@@ -938,7 +949,7 @@ static void handle_stmt_unop(gimple stmt, enum tree_code code,
                              struct cl_operand *dst, tree src_tree)
 {
     if (CONSTRUCTOR == TREE_CODE(src_tree)) {
-        SE_BREAK_IF(dst->code != CL_OPERAND_VAR);
+        CL_BREAK_IF(dst->code != CL_OPERAND_VAR);
         struct cl_initializer **pinit = &dst->data.var->initial;
         if (!*pinit)
             read_initial(pinit, src_tree);
@@ -980,7 +991,7 @@ static void handle_stmt_unop(gimple stmt, enum tree_code code,
             CL_OP_UNHANDLED(FLOAT_EXPR)
 
             default:
-                TRAP;
+                CL_TRAP;
         }
     }
 
@@ -1038,7 +1049,7 @@ static void handle_stmt_binop(gimple stmt, enum tree_code code,
         CL_OP_UNHANDLED(RROTATE_EXPR)
 
         default:
-            TRAP;
+            CL_TRAP;
     }
 
     if (CL_INSN_NOP != cli.code)
@@ -1069,7 +1080,7 @@ static void handle_stmt_assign(gimple stmt)
             break;
 
         default:
-            TRAP;
+            CL_TRAP;
     };
     free_cl_operand_data(&dst);
 }
@@ -1095,7 +1106,7 @@ static void handle_stmt_call(gimple stmt)
         op0 = TREE_OPERAND(op0, 0);
 
     if (!op0)
-        TRAP;
+        CL_TRAP;
 
     // lhs
     struct cl_operand dst;
@@ -1212,7 +1223,7 @@ static void handle_stmt_cond(gimple stmt)
     }
 
     if (!label_true || !label_false)
-        TRAP;
+        CL_TRAP;
 
     handle_stmt_cond_br(stmt, label_true, label_false);
     free(label_true);
@@ -1232,12 +1243,12 @@ static unsigned find_case_label_target(gimple stmt, int label_decl_uid)
         struct basic_block_def *bb = e->dest;
         if (!bb)
             // edge with no target
-            TRAP;
+            CL_TRAP;
 
         // obtain gimple
         struct gimple_bb_info *bb_info = bb->il.gimple;
         if (!bb_info || ! bb_info->seq || !bb_info->seq->first)
-            TRAP;
+            CL_TRAP;
 
         // check whether first statement in BB is GIMPLE_LABEL
         gimple bb_stmt = bb_info->seq->first->stmt;
@@ -1247,14 +1258,14 @@ static unsigned find_case_label_target(gimple stmt, int label_decl_uid)
         // get label declaration
         tree label = gimple_label_label(bb_stmt);
         if (!label)
-            TRAP;
+            CL_TRAP;
 
         if (label_decl_uid == LABEL_DECL_UID(label))
             // match
             return bb->index;
     }
 
-    TRAP;
+    CL_TRAP;
     // no matching GIMPLE_LABEL was found in BB successors
     // this should never happen
     return (unsigned) -1;
@@ -1275,7 +1286,7 @@ static void handle_stmt_switch(gimple stmt)
     for (i = 0; i < gimple_switch_num_labels(stmt); ++i) {
         tree case_decl = gimple_switch_label(stmt, i);
         if (!case_decl)
-            TRAP;
+            CL_TRAP;
 
         // lowest case value with same label
         struct cl_operand val_lo;
@@ -1293,7 +1304,7 @@ static void handle_stmt_switch(gimple stmt)
         // figure out where to jump in that case
         tree case_label = CASE_LABEL(case_decl);
         if (!case_label || LABEL_DECL != TREE_CODE(case_label))
-            TRAP;
+            CL_TRAP;
 
         // look for corresponding GIMPLE_LABEL in successor BBs
         int case_label_uid = LABEL_DECL_UID(case_label);
@@ -1366,7 +1377,7 @@ static tree cb_walk_gimple_stmt (gimple_stmt_iterator *iter,
             break;
 
         default:
-            TRAP;
+            CL_TRAP;
     }
 
     if (show_gimple)
@@ -1410,7 +1421,7 @@ static void handle_fnc_bb (struct basic_block_def *bb)
     struct gimple_bb_info *gimple = bb->il.gimple;
     if (NULL == gimple) {
         CL_WARN_UNHANDLED ("gimple not found");
-        TRAP;
+        CL_TRAP;
         return;
     }
     handle_bb_gimple(gimple->seq);
@@ -1436,7 +1447,7 @@ static void handle_fnc_cfg (struct control_flow_graph *cfg)
     }
 
     if (!bb)
-        TRAP;
+        CL_TRAP;
 
     while (/* skip EXIT block */ bb->next_bb) {
         handle_fnc_bb(bb);
@@ -1465,7 +1476,7 @@ static void handle_fnc_decl (tree decl)
 {
     tree ident = DECL_NAME (decl);
     if (!ident)
-        TRAP;
+        CL_TRAP;
 
     // emit fnc declaration
     struct cl_operand fnc;

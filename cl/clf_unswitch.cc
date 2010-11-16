@@ -109,7 +109,7 @@ ClfUnfoldSwitch::~ClfUnfoldSwitch() {
 
 int ClfUnfoldSwitch::getCaseVal(const struct cl_operand *op) {
     if (!op || !op->type)
-        TRAP;
+        CL_TRAP;
 
     enum cl_type_e code = op->type->code;
     switch (code) {
@@ -118,7 +118,7 @@ int ClfUnfoldSwitch::getCaseVal(const struct cl_operand *op) {
             break;
 
         default:
-            TRAP;
+            CL_TRAP;
     }
 
     return op->data.cst.data.cst_int.value;
@@ -128,7 +128,7 @@ int ClfUnfoldSwitch::getCaseVal(const struct cl_operand *op) {
 // TODO: implement shared module providing this
 void ClfUnfoldSwitch::cloneSwitchSrc(const struct cl_operand *op) {
     if (!op)
-        TRAP;
+        CL_TRAP;
 
     src_ = *op;
 
@@ -224,7 +224,7 @@ void ClfUnfoldSwitch::emitCase(int cst, struct cl_type *type, const char *label)
 
 void ClfUnfoldSwitch::emitDefault() {
     if (defLabel_.empty())
-        TRAP;
+        CL_TRAP;
 
     struct cl_insn cli;
     cli.code                = CL_INSN_JMP;

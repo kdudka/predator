@@ -90,7 +90,7 @@ inline int subOffsetIn(const SymHeapTyped &sh, TObjId in, TObjId of) {
     int nth;
     while (OBJ_INVALID != (parent = sh.objParent(of, &nth))) {
         const struct cl_type *clt = sh.objType(parent);
-        SE_BREAK_IF(!clt || clt->item_cnt <= nth);
+        CL_BREAK_IF(!clt || clt->item_cnt <= nth);
 
         offset += clt->items[nth].offset;
         if (parent == in)
@@ -134,7 +134,7 @@ template <> struct TraverseSubObjsHelper<TObjId> {
 template <> struct TraverseSubObjsHelper<TObjPair> {
     static const struct cl_type* getItemClt(const SymHeap &sh, TObjPair item) {
         const struct cl_type *clt = sh.objType(item.first);
-        SE_BREAK_IF(clt != sh.objType(item.second));
+        CL_BREAK_IF(clt != sh.objType(item.second));
         return clt;
     }
     static TObjPair getNextItem(const SymHeap &sh, TObjPair item, int nth) {
@@ -158,7 +158,7 @@ bool /* complete */ traverseSubObjs(THeap &sh, TItem item, TVisitor &visitor,
 
         typedef TraverseSubObjsHelper<TItem> THelper;
         const struct cl_type *clt = THelper::getItemClt(sh, item);
-        SE_BREAK_IF(!clt || !isComposite(clt));
+        CL_BREAK_IF(!clt || !isComposite(clt));
 
         for (int i = 0; i < clt->item_cnt; ++i) {
             const TItem next = THelper::getNextItem(sh, item, i);
@@ -202,11 +202,11 @@ bool /* complete */ traverseSubObjsIc(THeap &sh, TItem item, TVisitor &visitor)
     todo.push(si);
     while (!todo.empty()) {
         TStackItem &si = todo.top();
-        SE_BREAK_IF(si.ic.empty());
+        CL_BREAK_IF(si.ic.empty());
 
         typedef TraverseSubObjsHelper<TItem> THelper;
         const struct cl_type *clt = THelper::getItemClt(sh, si.item);
-        SE_BREAK_IF(!clt || !isComposite(clt));
+        CL_BREAK_IF(!clt || !isComposite(clt));
 
         typename TFieldIdxChain::reference nth = si.ic.back();
         if (nth == clt->item_cnt) {

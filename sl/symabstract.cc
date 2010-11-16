@@ -110,7 +110,7 @@ void redirectInboundEdges(
             continue;
 
         TObjId parent = sh.pointsTo(sh.valueOf(obj));
-        SE_BREAK_IF(parent <= 0);
+        CL_BREAK_IF(parent <= 0);
 
         // seek obj's root
         int nth;
@@ -122,7 +122,7 @@ void redirectInboundEdges(
         TObjId target = redirectTo;
         BOOST_REVERSE_FOREACH(int nth, invIc) {
             target = sh.subObj(target, nth);
-            SE_BREAK_IF(OBJ_INVALID == target);
+            CL_BREAK_IF(OBJ_INVALID == target);
         }
 
         // redirect!
@@ -138,12 +138,12 @@ void detachClonedPrototype(
         const TObjId            rootSrc)
 {
     const bool isRootDls = (OK_DLS == sh.objKind(rootDst));
-    SE_BREAK_IF(isRootDls && (OK_DLS != sh.objKind(rootSrc)));
+    CL_BREAK_IF(isRootDls && (OK_DLS != sh.objKind(rootSrc)));
 
     TObjId rootSrcPeer = OBJ_INVALID;
     if (isRootDls) {
         rootSrcPeer = dlSegPeer(sh, rootSrc);
-        SE_BREAK_IF(dlSegPeer(sh, rootDst) != rootSrcPeer);
+        CL_BREAK_IF(dlSegPeer(sh, rootDst) != rootSrcPeer);
     }
 
     redirectInboundEdges(sh, rootDst, proto, clone);
@@ -232,7 +232,7 @@ void cloneGenericPrototype(
 
     // allocate some space for clone IDs and minimal lengths
     const unsigned cnt = protoList.size();
-    SE_BREAK_IF(!cnt);
+    CL_BREAK_IF(!cnt);
     cloneList.resize(cnt);
     lengthList.resize(cnt);
 
@@ -286,7 +286,7 @@ void segMergeLengths(
         const TObjId        seg2)
 {
     const EObjKind kind = sh.objKind(seg1);
-    SE_BREAK_IF(kind != sh.objKind(seg2));
+    CL_BREAK_IF(kind != sh.objKind(seg2));
     switch (kind) {
         case OK_CONCRETE:
             // not a segment
@@ -294,8 +294,8 @@ void segMergeLengths(
 
         case OK_HEAD:
         case OK_PART:
-#if SE_SELF_TEST
-            SE_TRAP;
+#ifndef NDEBUG
+            CL_TRAP;
 #endif
             break;
 
@@ -344,9 +344,9 @@ TValueId mergeSmallList(
 
     const TValueId segAt = (isAbstract1) ? v1 : v2;
     const TObjId seg = objRoot(sh, sh.pointsTo(segAt));
-#if SE_SELF_TEST
+#ifndef NDEBUG
     const bool isAbstract2 = (UV_ABSTRACT == sh.valGetUnknown(v2));
-    SE_BREAK_IF(isAbstract1 == isAbstract2);
+    CL_BREAK_IF(isAbstract1 == isAbstract2);
 
     const TValueId conAt = (isAbstract2) ? v1 : v2;
     const TObjId segUp = (isAbstract1) ? roots.first : roots.second;
@@ -356,7 +356,7 @@ TValueId mergeSmallList(
         ? segHeadAddr(sh, (dlSegPeer(sh, seg)))
         : static_cast<TValueId>(VAL_INVALID);
 
-    SE_BREAK_IF(!segMatchSmallList(sh, segUp, conUp, segAt, conAt)
+    CL_BREAK_IF(!segMatchSmallList(sh, segUp, conUp, segAt, conAt)
              && !segMatchSmallList(sh, segUp, conUp, peerAt, conAt));
 #endif
 
@@ -382,7 +382,7 @@ TValueId createGenericPrototype(
 {
     const unsigned cnt = protoRoots[0].size();
     CL_DEBUG("createGenericPrototype() got " << cnt << " roots");
-    SE_BREAK_IF(cnt != protoRoots[1].size());
+    CL_BREAK_IF(cnt != protoRoots[1].size());
 
     // NOTE: we may perform the length merge more times than actually necessary,
     // but it's harmless and still better then omitting it by accident
@@ -501,8 +501,8 @@ struct ValueAbstractor {
         if (collectJunk(sh, valDst)) {
             CL_ERROR("junk detected during abstraction"
                     ", the analysis is no more sound!");
-#if SE_SELF_TEST
-            SE_TRAP;
+#ifndef NDEBUG
+            CL_TRAP;
 #endif
         }
 
@@ -592,8 +592,8 @@ struct ValueSynchronizer {
         // if the last reference is gone, we have a problem
         if (collectJunk(sh, valDst)) {
             CL_ERROR("junk detected by ValueSynchronizer");
-#if SE_SELF_TEST
-            SE_TRAP;
+#ifndef NDEBUG
+            CL_TRAP;
 #endif
         }
 
@@ -621,7 +621,7 @@ void slSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf)
     const TObjId obj = *pObj;
     const TObjId objPtrNext = subObjByChain(sh, obj, bf.next);
     const TValueId valNext = sh.valueOf(objPtrNext);
-    SE_BREAK_IF(valNext <= 0);
+    CL_BREAK_IF(valNext <= 0);
 
     // read minimal length of 'obj' and set it temporarily to zero
     unsigned len = objMinLength(sh, obj);
@@ -638,7 +638,7 @@ void slSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf)
         sh.objSetAbstract(objNext, OK_SLS, bf);
 
     // merge data
-    SE_BREAK_IF(OK_SLS != sh.objKind(objNext));
+    CL_BREAK_IF(OK_SLS != sh.objKind(objNext));
     abstractNonMatchingValues(sh, obj, objNext);
 
     // replace all references to 'head'
@@ -659,7 +659,7 @@ void slSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf)
 
 void dlSegCreate(SymHeap &sh, TObjId o1, TObjId o2, SegBindingFields bf) {
     // validate call of dlSegCreate()
-    SE_BREAK_IF(OK_CONCRETE != sh.objKind(o1) || OK_CONCRETE != sh.objKind(o2));
+    CL_BREAK_IF(OK_CONCRETE != sh.objKind(o1) || OK_CONCRETE != sh.objKind(o2));
 
     swapValues(bf.next, bf.peer);
     sh.objSetAbstract(o1, OK_DLS, bf);
@@ -677,7 +677,7 @@ void dlSegCreate(SymHeap &sh, TObjId o1, TObjId o2, SegBindingFields bf) {
 }
 
 void dlSegGobble(SymHeap &sh, TObjId dls, TObjId var, bool backward) {
-    SE_BREAK_IF(OK_DLS != sh.objKind(dls) || OK_CONCRETE != sh.objKind(var));
+    CL_BREAK_IF(OK_DLS != sh.objKind(dls) || OK_CONCRETE != sh.objKind(var));
 
     // handle DLS Neq predicates
     const unsigned len = dlSegMinLength(sh, dls) + /* OK_CONCRETE */ 1;
@@ -714,13 +714,13 @@ void dlSegMerge(SymHeap &sh, TObjId seg1, TObjId seg2) {
     dlSegSetMinLength(sh, seg2, /* DLS 0+ */ 0);
 
     // check for a failure of segDiscover()
-    SE_BREAK_IF(sh.objBinding(seg1) != sh.objBinding(seg2));
+    CL_BREAK_IF(sh.objBinding(seg1) != sh.objBinding(seg2));
 
     const TObjId peer1 = dlSegPeer(sh, seg1);
-#if SE_SELF_TEST
+#ifndef NDEBUG
     const TObjId nextPtr = nextPtrFromSeg(sh, peer1);
     const TValueId valNext = sh.valueOf(nextPtr);
-    SE_BREAK_IF(valNext != segHeadAddr(sh, seg2));
+    CL_BREAK_IF(valNext != segHeadAddr(sh, seg2));
 #endif
 
     const TObjId peer2 = dlSegPeer(sh, seg2);
@@ -762,7 +762,7 @@ void dlSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf)
         case OK_HEAD:
         case OK_PART:
             // *** segDiscover() failure detected ***
-            SE_TRAP;
+            CL_TRAP;
 
         case OK_DLS:
             // jump to peer
@@ -797,7 +797,7 @@ void dlSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf)
     // the current object has been just consumed, move to the next one
     *pObj = o2;
 
-#if SE_SELF_TEST
+#ifndef NDEBUG
     // just check if the Neq predicates work well so far
     dlSegMinLength(sh, o2);
 #endif
@@ -863,7 +863,7 @@ bool considerAbstraction(SymHeap                    &sh,
 }
 
 void segReplaceRefs(SymHeap &sh, TValueId valOld, TValueId valNew) {
-    SE_BREAK_IF(UV_ABSTRACT != sh.valGetUnknown(valOld));
+    CL_BREAK_IF(UV_ABSTRACT != sh.valGetUnknown(valOld));
 
     TObjId objOld = sh.pointsTo(valOld);
     TObjId headOld = objOld;
@@ -882,7 +882,7 @@ void segReplaceRefs(SymHeap &sh, TValueId valOld, TValueId valNew) {
             break;
 
         default:
-            SE_TRAP;
+            CL_TRAP;
     }
 
     TObjId objNew = sh.pointsTo(valNew);
@@ -895,7 +895,7 @@ void segReplaceRefs(SymHeap &sh, TValueId valOld, TValueId valNew) {
 
     if (OK_HEAD == kind) {
         objOld = subObjByInvChain(sh, objOld, icHead);
-        SE_BREAK_IF(objOld < 0);
+        CL_BREAK_IF(objOld < 0);
 
         const TValueId addrOld = sh.placedAt(objOld);
         if (0 == sh.usedByCount(addrOld))
@@ -917,8 +917,8 @@ void segReplaceRefs(SymHeap &sh, TValueId valOld, TValueId valNew) {
     }
     else {
         // TODO: check this with a debugger at least once
-#if SE_SELF_TEST
-        SE_TRAP;
+#ifndef NDEBUG
+        CL_TRAP;
 #endif
         const TObjId headNew = subObjByChain(sh, objNew, icHead);
         sh.valReplace(sh.placedAt(headOld), sh.placedAt(headNew));
@@ -1028,7 +1028,7 @@ void concretizeObj(SymHeap &sh, TValueId addr, TSymHeapList &todo) {
         case OK_HEAD:
         case OK_PART:
             // invalid call of concretizeObj()
-            SE_TRAP;
+            CL_TRAP;
 
         case OK_SLS:
             break;

@@ -115,7 +115,7 @@ class ClfCbSeqChk: public ClFilterBase {
 
                 case CL_INSN_CALL:
                 case CL_INSN_SWITCH:
-                    TRAP;
+                    CL_TRAP;
             }
 
             ClFilterBase::insn(cli);
@@ -465,7 +465,7 @@ void ClfCbSeqChk::setState(EState newState) {
         case S_DESTROYED:
             // this should never happen
             this->emitUnexpected(newState);
-            TRAP;
+            CL_TRAP;
     }
 
     state_ = newState;
