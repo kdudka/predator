@@ -115,7 +115,7 @@
 /**
  * if 1, do not allow three-way join
  */
-#define SE_DISABLE_THREE_WAY_JOIN           1
+#define SE_DISABLE_THREE_WAY_JOIN           0
 
 /**
  * maximal call depth

@@ -31,9 +31,14 @@
 #include "symutil.hh"
 #include "worklist.hh"
 
+#include <algorithm>            // for std::copy_if
+#include <functional>           // for std::bind
 #include <map>
+#include <set>
 
 #include <boost/foreach.hpp>
+#include <boost/lambda/lambda.hpp>
+#include <boost/lambda/bind.hpp>
 
 static bool debugSymJoin = static_cast<bool>(DEBUG_SYMJOIN);
 
@@ -1052,6 +1057,78 @@ void handleDstPreds(SymJoinCtx &ctx) {
         updateJoinStatus(ctx, JS_USE_SH1);
 }
 
+bool segDetectSelfLoopHelper(
+        const SymHeap           &sh,
+        std::set<TObjId>        &haveSeen,
+        TObjId                  seg)
+{
+    // remember original kind of object
+    const EObjKind kind = sh.objKind(seg);
+
+    // find a loop-less path
+    std::set<TObjId> path;
+    while (insertOnce(path, seg)) {
+        TObjId peer = seg;
+        if (OK_DLS == kind) {
+            // jump to peer in case of DLS
+            peer = dlSegPeer(sh, seg);
+            if (!insertOnce(path, peer))
+                break;
+        }
+
+        const TValueId valNext = sh.valueOf(nextPtrFromSeg(sh, peer));
+        TObjId next = sh.pointsTo(valNext);
+        if (next < 0)
+            // no valid next object --> no loop
+            return false;
+
+        const EObjKind kindNext = sh.objKind(next);
+        if (kindNext != kind && kindNext != OK_HEAD)
+            // no compatible next segment --> no loop
+            return false;
+
+        seg = objRoot(sh, next);
+        if (kind != sh.objKind(seg))
+            // no compatible next segment --> no loop
+            return false;
+
+        // optimization
+        haveSeen.insert(seg);
+    }
+
+    // loop detected!
+    return true;
+}
+
+// FIXME: not tested
+bool segDetectSelfLoop(const SymHeap &sh) {
+    using namespace boost::lambda;
+
+    // gather all root objects
+    SymHeap::TContObj roots;
+    sh.gatherRootObjs(roots);
+
+    // filter segment roots from there
+    std::set<TObjId> segRoots;
+    std::copy_if(roots.begin(), roots.end(),
+                 std::inserter(segRoots, segRoots.begin()),
+                 bind(objIsSeg, std::cref(sh), _1, false));
+
+    // go through all entries
+    std::set<TObjId> haveSeen;
+    BOOST_FOREACH(const TObjId seg, segRoots) {
+        if (!insertOnce(haveSeen, seg))
+            continue;
+
+        if (segDetectSelfLoopHelper(sh, haveSeen, seg))
+            // cycle detected!
+            return true;
+    }
+
+    // found nothing harmful
+    return false;
+}
+
 bool joinSymHeaps(
         EJoinStatus             *pStatus,
         SymHeap                 *pDst,
@@ -1079,6 +1156,12 @@ bool joinSymHeaps(
     // time to preserve all 'hasValue' edges and shared Neq predicates
     setDstValues(ctx);
     handleDstPreds(ctx);
+
+    if (JS_THREE_WAY == ctx.status && segDetectSelfLoop(ctx.dst)) {
+        // purely segmental loops cause us problems
+        CL_DEBUG(">J< segment cycle detected, cancelling three-way join...");
+        return false;
+    }
 
     if (debugSymJoin) {
         // catch possible regression at this point
