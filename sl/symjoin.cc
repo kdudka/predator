@@ -240,9 +240,15 @@ bool joinFreshObjTripple(
         // both values are VAL_NULL, nothing more to join here
         return true;
 
-    if (segClone && (VAL_NULL == v1 || VAL_NULL == v2))
-        // same as above, but now only one value of v1 and v2 is valid
-        return true;
+    if (VAL_NULL == v1 || VAL_NULL == v2) {
+        if (segClone)
+            // same as above, but now only one value of v1 and v2 is valid
+            return true;
+
+        if (!checkValueMapping(ctx, v1, v2))
+            // mapping already inconsistent
+            return false;
+    }
 
     const TObjId cObj1 = ctx.sh1.valGetCompositeObj(v1);
     const TObjId cObj2 = ctx.sh2.valGetCompositeObj(v2);
@@ -764,7 +770,7 @@ bool insertSegmentClone(
     const TValueId backGt = shGt.valueOf(nextPtrFromSeg(shGt, seg));
     const TValueId nextGt = shGt.valueOf(nextPtrFromSeg(shGt, peer));
     const TValueId nextLt = (isGt2) ? v1 : v2;
-    if (!checkValueMapping(ctx, 
+    if (!checkNonPosValues(nextGt, nextLt) || !checkValueMapping(ctx, 
                 (isGt1) ? nextGt : nextLt,
                 (isGt2) ? nextGt : nextLt))
     {

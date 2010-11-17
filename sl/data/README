@@ -448,6 +448,9 @@ symplot tutorial
 
     test-0095.c - regression test focused on struct/union nesting
 
+    test-0114.c - hello-world, once used as the most trivial example for symjoin
+                  and its insertSegmentClone() based three-way join
+
 
 Tiny DLL library written on scratch
 ===================================
