@@ -120,7 +120,6 @@ bool hasExplicitNeq(
     return sh.neqOp(SymHeap::NEQ_QUERY_EXPLICIT_NEQ, v1, v2);
 }
 
-
 void gatherSharedPreds(
         SymJoinCtx              &ctx,
         const TValueId          v1,
@@ -270,24 +269,22 @@ bool joinFreshObjTripple(
         const TValueId val = (isGt1) ? v1 : v2;
         if (hasKey(vm[/* lrt */ 0], val))
             return true;
+    }
+    else {
+        // special values have to match (NULL not treated as special here)
+        // TODO: should we consider also join of VAL_TRUE/VAL_FALSE?
+        if (v1 < 0 || v2 < 0) {
+            if (v1 == v2)
+                return true;
 
-        goto vp_schedule;
+            SJ_DEBUG("<-- special value mismatch " << SJ_VALP(v1, v2));
+            return false;
+        }
+
+        if (readOnly)
+            return checkValueMapping(ctx, v1, v2);
     }
 
-    // special values have to match (NULL not treated as special here)
-    // TODO: should we consider also join of VAL_TRUE/VAL_FALSE?
-    if (v1 < 0 || v2 < 0) {
-        if (v1 == v2)
-            return true;
-
-        SJ_DEBUG("<-- special value mismatch " << SJ_VALP(v1, v2));
-        return false;
-    }
-
-    if (readOnly)
-        return checkValueMapping(ctx, v1, v2);
-
-vp_schedule:
     if (ctx.wl.schedule(TValPair(v1, v2)))
         SJ_DEBUG("+++ " << SJ_VALP(v1, v2) << " <- " << SJ_OBJP(obj1, obj2));
 
@@ -648,17 +645,7 @@ bool followValuePair(
         return followObjPair(ctx, o1, o2, JS_USE_ANY);
 
     // special handling for OBJ_DELETED/OBJ_LOST
-#ifndef NDEBUG
-    switch (o1) {
-        case OBJ_DELETED:
-        case OBJ_LOST:
-            if (o1 == o2)
-                break;
-        default:
-            CL_TRAP;
-    }
-#endif
-
+    CL_BREAK_IF(o1 != OBJ_DELETED && o1 != OBJ_LOST);
     const struct cl_type *clt;
     if (!joinValClt(&clt, ctx, v1, v2))
         return false;
@@ -821,9 +808,10 @@ bool insertSegmentClone(
             (isGt1) ? nextGt : nextLt,
             (isGt2) ? nextGt : nextLt);
 
-    if (ctx.wl.schedule(next))
+    if (ctx.wl.schedule(next)) {
         SJ_DEBUG("+++ " << SJ_VALP(next.first, next.second)
                  << " <- insertSegmentClone");
+    }
 
     return true;
 }
@@ -836,28 +824,23 @@ bool joinAbstractValues(
         const EUnknownValue     code1,
         const EUnknownValue     code2)
 {
-    const SymHeap &sh1 = ctx.sh1;
-    const SymHeap &sh2 = ctx.sh2;
-
     const bool isAbs1 = (UV_ABSTRACT == code1);
     const bool isAbs2 = (UV_ABSTRACT == code2);
     const EJoinStatus subStatus = (isAbs1)
         ? JS_USE_SH1
         : JS_USE_SH2;
 
-    const TObjId root1 = objRootByVal(sh1, v1);
-    const TObjId root2 = objRootByVal(sh2, v2);
-    if (root1 < 0 || root2 < 0)
-        goto seg_clone;
+    const TObjId root1 = objRootByVal(ctx.sh1, v1);
+    const TObjId root2 = objRootByVal(ctx.sh2, v2);
+    if (0 < root1 && 0 < root2) {
+        if (isAbs1 && isAbs2)
+            return joinSegmentWithAny(pResult, ctx, root1, root2, JS_USE_ANY);
 
-    if (isAbs1 && isAbs2)
-        return joinSegmentWithAny(pResult, ctx, root1, root2, JS_USE_ANY);
+        CL_BREAK_IF(isAbs1 == isAbs2);
+        if (joinSegmentWithAny(pResult, ctx, root1, root2, subStatus))
+            return true;
+    }
 
-    CL_BREAK_IF(isAbs1 == isAbs2);
-    if (joinSegmentWithAny(pResult, ctx, root1, root2, subStatus))
-        return true;
-
-seg_clone:
     *pResult = insertSegmentClone(ctx, v1, v2, subStatus);
     return true;
 }
@@ -1104,13 +1087,16 @@ bool joinSymHeaps(
         CL_BREAK_IF((JS_THREE_WAY == ctx.status) && areEqual(sh2, ctx.dst));
     }
 
-#if SE_DISABLE_THREE_WAY_JOIN
     if (JS_THREE_WAY == ctx.status) {
+#if SE_DISABLE_THREE_WAY_JOIN
         CL_WARN("three-way join disabled by configuration, recompile "
                 "with SE_DISABLE_THREE_WAY_JOIN == 0 to enable it");
         return false;
-    }
+#else
+        CL_WARN("three-way join enabled by configuration, recompile "
+                "with SE_DISABLE_THREE_WAY_JOIN == 1 to disable it");
 #endif
+    }
 
     // all OK
     *pStatus = ctx.status;
