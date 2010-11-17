@@ -75,6 +75,7 @@ struct SymJoinCtx {
     typedef std::map<TObjId /* seg */, unsigned /* len */>      TSegLengths;
     TSegLengths                 segLengths;
     std::set<TValPair>          sharedNeqs;
+    std::set<TObjPair>          tieBreaking;
 
     SymJoinCtx(SymHeap &dst_, const SymHeap &sh1_, const SymHeap &sh2_):
         dst(dst_),
@@ -736,6 +737,7 @@ bool insertSegmentCloneHelper(
         : static_cast<TObjId>(OBJ_INVALID);
 
     // clone the object
+    ctx.tieBreaking.insert(TObjPair(root1, root2));
     if (createObject(ctx, clt, root1, root2, action))
         return true;
 
@@ -763,6 +765,7 @@ bool insertSegmentClone(
         peer = dlSegPeer(shGt, seg);
 
     // resolve the 'next' pointer and check its validity
+    const TValueId backGt = shGt.valueOf(nextPtrFromSeg(shGt, seg));
     const TValueId nextGt = shGt.valueOf(nextPtrFromSeg(shGt, peer));
     const TValueId nextLt = (isGt2) ? v1 : v2;
     if (!checkValueMapping(ctx, 
@@ -790,6 +793,10 @@ bool insertSegmentClone(
             break;
         }
 
+        if (backGt == valGt || nextGt == valGt)
+            // do not go byond the segment, just follow its data
+            continue;
+
         const TObjId objGt = objRootByVal(shGt, valGt);
         if (objGt < 0 || hasKey(objMapGt, objGt))
             // nothing to clone here
@@ -800,7 +807,19 @@ bool insertSegmentClone(
             return false;
     }
 
-    // all OK
+    if (VAL_NULL == nextGt && VAL_NULL == nextLt)
+        // do not follow VAL_NULL pair
+        return true;
+
+    // FIXME: what about DLS back-link here?
+    const TValPair next(
+            (isGt1) ? nextGt : nextLt,
+            (isGt2) ? nextGt : nextLt);
+
+    if (ctx.wl.schedule(next))
+        SJ_DEBUG("+++ " << SJ_VALP(next.first, next.second)
+                 << " <- insertSegmentClone");
+
     return true;
 }
 
@@ -933,34 +952,98 @@ bool joinCVars(SymJoinCtx &ctx) {
     return true;
 }
 
+TValueId roValLookup(const TValMap &vMap, const TValueId val) {
+    if (val <= 0)
+        return val;
+
+    TValMap::const_iterator it = vMap.find(val);
+    return (vMap.end() == it)
+        ? static_cast<TValueId>(VAL_INVALID)
+        : it->second;
+}
+
+template <class TItem>
+void setDstValuesCore(SymJoinCtx &ctx, const TItem &rItem) {
+    const TObjId objDst = rItem.first;
+    CL_BREAK_IF(objDst < 0);
+
+    const TObjPair &orig = rItem.second;
+    const TObjId obj1 = orig.first;
+    const TObjId obj2 = orig.second;
+    CL_BREAK_IF(OBJ_INVALID == obj1 && OBJ_INVALID == obj2);
+
+    const TValueId v1 = ctx.sh1.valueOf(obj1);
+    const TValueId v2 = ctx.sh2.valueOf(obj2);
+
+    const bool isComp1 = (OBJ_INVALID != ctx.sh1.valGetCompositeObj(v1));
+    const bool isComp2 = (OBJ_INVALID != ctx.sh2.valGetCompositeObj(v2));
+    if (isComp1 || isComp2) {
+        // do not bother by composite values
+        CL_BREAK_IF(OBJ_INVALID != obj1 && !isComp1);
+        CL_BREAK_IF(OBJ_INVALID != obj2 && !isComp2);
+        return;
+    }
+
+    const TValueId vDstBy1 = roValLookup(ctx.valMap1[/* ltr */ 0], v1);
+    const TValueId vDstBy2 = roValLookup(ctx.valMap2[/* ltr */ 0], v2);
+    if (vDstBy1 == vDstBy2) {
+        // the values are equal --> pick any
+        ctx.dst.objSetValue(objDst, vDstBy1);
+        return;
+    }
+
+    // tie breaking
+    bool use1 = false;
+    bool use2 = false;
+    if (obj2 < 0)
+        use1 = true;
+    else if (obj1 < 0)
+        use2 = true;
+    else {
+        const TObjId target1 = objRootByVal(ctx.sh1, v1);
+        const TObjId target2 = objRootByVal(ctx.sh2, v2);
+
+        const TObjPair rp1(target1, OBJ_INVALID);
+        const TObjPair rp2(OBJ_INVALID, target2);
+
+        use1 = hasKey(ctx.tieBreaking, rp1);
+        use2 = hasKey(ctx.tieBreaking, rp2);
+    }
+
+    CL_BREAK_IF(use1 == use2);
+    const TValueId vDst = (use1) ? vDstBy1 : vDstBy2;
+
+    // set the value
+    ctx.dst.objSetValue(objDst, vDst);
+}
+
 void setDstValues(SymJoinCtx &ctx) {
-    CL_BREAK_IF(ctx.objMap1.size() != ctx.objMap2.size());
+    typedef SymJoinCtx::TObjMap TObjMap;
+    typedef std::map<TObjId /* objDst */, TObjPair> TMap;
+    TMap rMap;
 
-    BOOST_FOREACH(SymJoinCtx::TObjMap::const_reference ref, ctx.objMap1) {
+    // reverse mapping for ctx.objMap1
+    BOOST_FOREACH(TObjMap::const_reference ref, ctx.objMap1) {
         const TObjId objDst = ref.second;
-        CL_BREAK_IF(objDst < 0);
+        if (!hasKey(rMap, objDst))
+            rMap[objDst].second = OBJ_INVALID;
 
-        const TObjId obj1   = ref.first;
-        const TValueId v1   = ctx.sh1.valueOf(obj1);
+        // objDst -> obj1
+        rMap[objDst].first = ref.first;
+    }
 
-        TValueId vDst = v1;
-        if (0 < vDst) {
-            TValMap &vMap = ctx.valMap1[/* ltr */ 0];
-            TValMap::iterator it1 = vMap.find(v1);
-            CL_BREAK_IF(vMap.end() == it1);
-            vDst = it1->second;
-        }
+    // reverse mapping for ctx.objMap2
+    BOOST_FOREACH(TObjMap::const_reference ref, ctx.objMap2) {
+        const TObjId objDst = ref.second;
+        if (!hasKey(rMap, objDst))
+            rMap[objDst].first = OBJ_INVALID;
 
-        SymHeap &dst = ctx.dst;
-        const TObjId compObj = dst.valGetCompositeObj(vDst);
-        if (OBJ_INVALID != compObj) {
-            // composite values already match
-            CL_BREAK_IF(compObj != objDst);
-            continue;
-        }
+        // objDst -> obj2
+        rMap[objDst].second = ref.first;
+    }
 
-        // set the value
-        dst.objSetValue(objDst, vDst);
+    BOOST_FOREACH(TMap::const_reference rItem, rMap) {
+        setDstValuesCore(ctx, rItem);
     }
 }
 

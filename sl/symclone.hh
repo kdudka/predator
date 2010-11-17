@@ -65,8 +65,10 @@ bool traverseSubObjs(
 
         const struct cl_type *const clt = sh[idxValid]->objType(item[idxValid]);
 #ifndef NDEBUG
-        for (int h = 1 + idxValid; h < N; ++h)
-            CL_BREAK_IF(clt != sh[h]->objType(item[h]));
+        for (int h = 1 + idxValid; h < N; ++h) {
+            const struct cl_type *const cltPeer = sh[h]->objType(item[h]);
+            CL_BREAK_IF(cltPeer && *cltPeer != *clt);
+        }
 #endif
         if (!clt)
             // anonymous object of known size
