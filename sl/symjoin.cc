@@ -21,6 +21,7 @@
 #include "symjoin.hh"
 
 #include <cl/cl_msg.hh>
+#include <cl/cldebug.hh>
 #include <cl/clutil.hh>
 
 #include "symclone.hh"
@@ -44,6 +45,18 @@ static bool debugSymJoin = static_cast<bool>(DEBUG_SYMJOIN);
 #define SJ_VALP(v1, v2) "(v1 = #" << v1 << ", v2 = #" << v2 << ")"
 #define SJ_OBJP(o1, o2) "(o1 = #" << o1 << ", o2 = #" << o2 << ")"
 
+template <class T>
+class WorkListWithUndo: public WorkList<T> {
+    private:
+        typedef WorkList<T> TBase;
+
+    public:
+        void undo(const T &item) {
+            CL_BREAK_IF(!hasKey(TBase::done_, item));
+            TBase::todo_.push(item);
+        }
+};
+
 struct SymJoinCtx {
     SymHeap                     &dst;
     const SymHeap               &sh1;
@@ -56,7 +69,7 @@ struct SymJoinCtx {
     TValMapBidir                valMap1;
     TValMapBidir                valMap2;
 
-    WorkList<TValPair>          wl;
+    WorkListWithUndo<TValPair>  wl;
     EJoinStatus                 status;
 
     typedef std::map<TObjId /* seg */, unsigned /* len */>      TSegLengths;
@@ -156,14 +169,20 @@ bool defineValueMapping(
         const TValueId          v2,
         const TValueId          vDst)
 {
-    const bool ok1 = matchPlainValues(ctx.valMap1, v1, vDst);
-    const bool ok2 = matchPlainValues(ctx.valMap2, v2, vDst);
+    const bool hasValue1 = (VAL_INVALID != v1);
+    const bool hasValue2 = (VAL_INVALID != v2);
+    CL_BREAK_IF(!hasValue1 && !hasValue2);
+
+    const bool ok1 = !hasValue1 || matchPlainValues(ctx.valMap1, v1, vDst);
+    const bool ok2 = !hasValue2 || matchPlainValues(ctx.valMap2, v2, vDst);
     if (!ok1 || !ok2) {
         SJ_DEBUG("<-- value mapping mismatch " << SJ_VALP(v1, v2));
         return false;
     }
 
-    gatherSharedPreds(ctx, v1, v2, vDst);
+    if (hasValue1 && hasValue2)
+        gatherSharedPreds(ctx, v1, v2, vDst);
+
     return true;
 }
 
@@ -209,7 +228,10 @@ bool joinFreshObjTripple(
         const TObjId            obj2,
         const TObjId            objDst)
 {
+    const bool segClone = (OBJ_INVALID == obj1 || OBJ_INVALID == obj2);
     const bool readOnly = (OBJ_INVALID == objDst);
+    CL_BREAK_IF(segClone && readOnly);
+    CL_BREAK_IF(obj1 < 0 && obj2 < 0);
 
     const TValueId v1 = ctx.sh1.valueOf(obj1);
     const TValueId v2 = ctx.sh2.valueOf(obj2);
@@ -217,18 +239,32 @@ bool joinFreshObjTripple(
         // both values are VAL_NULL, nothing more to join here
         return true;
 
+    if (segClone && (VAL_NULL == v1 || VAL_NULL == v2))
+        // same as above, but now only one value of v1 and v2 is valid
+        return true;
+
     const TObjId cObj1 = ctx.sh1.valGetCompositeObj(v1);
     const TObjId cObj2 = ctx.sh2.valGetCompositeObj(v2);
-    if ((OBJ_INVALID == cObj1) != (OBJ_INVALID == cObj2)) {
+    if (!segClone && (OBJ_INVALID == cObj1) != (OBJ_INVALID == cObj2)) {
         SJ_DEBUG("<-- scalar vs. composite value " << SJ_VALP(v1, v2));
         return false;
     }
 
-    if (OBJ_INVALID != cObj1) {
+    if (OBJ_INVALID != cObj1 || OBJ_INVALID != cObj2) {
         // store mapping of composite object's values
         const TValueId vDst = ctx.dst.valueOf(objDst);
         return readOnly
             || defineValueMapping(ctx, v1, v2, vDst);
+    }
+
+    if (segClone) {
+        const bool isGt1 = (OBJ_INVALID == obj2);
+        const TValMapBidir &vm = (isGt1) ? ctx.valMap1 : ctx.valMap2;
+        const TValueId val = (isGt1) ? v1 : v2;
+        if (hasKey(vm[/* lrt */ 0], val))
+            return true;
+
+        goto vp_schedule;
     }
 
     // special values have to match (NULL not treated as special here)
@@ -244,6 +280,7 @@ bool joinFreshObjTripple(
     if (readOnly)
         return checkValueMapping(ctx, v1, v2);
 
+vp_schedule:
     if (ctx.wl.schedule(TValPair(v1, v2)))
         SJ_DEBUG("+++ " << SJ_VALP(v1, v2) << " <- " << SJ_OBJP(obj1, obj2));
 
@@ -264,8 +301,11 @@ class ObjJoinVisitor {
             const TObjId objDst = item[2];
 
             // store object IDs mapping
-            ctx_.objMap1[obj1]  = objDst;
-            ctx_.objMap2[obj2]  = objDst;
+            if (OBJ_INVALID != obj1)
+                ctx_.objMap1[obj1] = objDst;
+
+            if (OBJ_INVALID != obj2)
+                ctx_.objMap2[obj2] = objDst;
 
             // store object's addresses
             const TValueId addr1 = ctx_.sh1.placedAt(obj1);
@@ -307,9 +347,9 @@ bool traverseSubObjs(
     const struct cl_type *clt1   = ctx.sh1.objType(root1);
     const struct cl_type *clt2   = ctx.sh2.objType(root2);
     const struct cl_type *cltDst = ctx.dst.objType(rootDst);
-    CL_BREAK_IF(!clt1 || !clt2 || !cltDst);
-    CL_BREAK_IF(*clt1 != *cltDst);
-    CL_BREAK_IF(*clt2 != *cltDst);
+    CL_BREAK_IF(!cltDst || (OBJ_INVALID == root1 && OBJ_INVALID == root2));
+    CL_BREAK_IF(OBJ_INVALID != root1 && *clt1 != *cltDst);
+    CL_BREAK_IF(OBJ_INVALID != root2 && *clt2 != *cltDst);
 #endif
     TObjTriple root;
     root[/* sh1 */ 0] = root1;
@@ -672,46 +712,98 @@ bool joinSegmentWithAny(
     return false;
 }
 
-#include "symdump.hh"
+bool insertSegmentCloneHelper(
+        SymJoinCtx              &ctx,
+        const SymHeap           &shGt,
+        const TObjId            objGt,
+        const EJoinStatus       action)
+{
+    const struct cl_type *clt = shGt.objType(objGt);
+    if (!clt)
+        // TODO: clone anonymous prototypes?
+        return true;
+
+    SJ_DEBUG("+i+ insertSegmentClone: cloning object #" << objGt <<
+             ", clt = " << *clt <<
+             ", action = " << action);
+
+    const TObjId root1 = (JS_USE_SH1 == action)
+        ? objGt
+        : static_cast<TObjId>(OBJ_INVALID);
+
+    const TObjId root2 = (JS_USE_SH2 == action)
+        ? objGt
+        : static_cast<TObjId>(OBJ_INVALID);
+
+    // clone the object
+    if (createObject(ctx, clt, root1, root2, action))
+        return true;
+
+    SJ_DEBUG("<-- insertSegmentClone: failed to create object "
+             << SJ_OBJP(root1, root2));
+    return false;
+}
+
 bool insertSegmentClone(
-        bool                    *pResult,
         SymJoinCtx              &ctx,
         const TValueId          v1,
         const TValueId          v2,
         const EJoinStatus       action)
 {
+    SJ_DEBUG(">>> insertSegmentClone" << SJ_VALP(v1, v2));
     const bool isGt1 = (JS_USE_SH1 == action);
     const bool isGt2 = (JS_USE_SH2 == action);
     CL_BREAK_IF(isGt1 == isGt2);
 
-    const SymHeap &shGt = (isGt1) ? ctx.sh1 : ctx.sh2;
-    const SymHeap &shLt = (isGt2) ? ctx.sh1 : ctx.sh2;
-
     // resolve the existing segment in shGt
-    TObjId seg = objRoot(shGt, shGt.pointsTo((isGt1) ? v1 : v2));
+    const SymHeap &shGt = (isGt1) ? ctx.sh1 : ctx.sh2;
+    const TObjId seg = objRootByVal(shGt, (isGt1) ? v1 : v2);
+    TObjId peer = seg;
     if (OK_DLS == shGt.objKind(seg))
-        seg = dlSegPeer(shGt, seg);
+        peer = dlSegPeer(shGt, seg);
 
-    // resolve the 'next' pointer and check for inconsistency with shLt
-    const TValueId valGt = shGt.valueOf(nextPtrFromSeg(shGt, seg));
-    const TValueId valLt = (isGt2) ? v1 : v2;
+    // resolve the 'next' pointer and check its validity
+    const TValueId nextGt = shGt.valueOf(nextPtrFromSeg(shGt, peer));
+    const TValueId nextLt = (isGt2) ? v1 : v2;
     if (!checkValueMapping(ctx, 
-                (isGt1) ? valGt : valLt,
-                (isGt2) ? valGt : valLt))
-        // no way
+                (isGt1) ? nextGt : nextLt,
+                (isGt2) ? nextGt : nextLt))
+    {
+        SJ_DEBUG("<-- insertSegmentClone: value mismatch "
+                 "(nextLt = #" << nextLt << ", nextGt = #" << nextGt << ")");
         return false;
-
-    if (debugSymJoin) {
-        dump_plot(shLt);
-        dump_plot(shGt);
     }
 
-    // TODO
-    CL_BREAK_IF(debugSymJoin);
-    return false;
+    const SymJoinCtx::TObjMap &objMapGt = (isGt1) ? ctx.objMap1 : ctx.objMap2;
+
+    TValPair vp(
+            (isGt1) ? shGt.placedAt(seg) : static_cast<TValueId>(VAL_INVALID),
+            (isGt2) ? shGt.placedAt(seg) : static_cast<TValueId>(VAL_INVALID));
+
+    ctx.wl.schedule(vp);
+    while (ctx.wl.next(vp)) {
+        const TValueId valGt = (isGt1) ? vp.first : vp.second;
+        const TValueId valLt = (isGt2) ? vp.first : vp.second;
+        if (VAL_INVALID != valLt) {
+            // process the rest of ctx.wl rather in joinPendingValues()
+            ctx.wl.undo(vp);
+            break;
+        }
+
+        const TObjId objGt = objRootByVal(shGt, valGt);
+        if (objGt < 0 || hasKey(objMapGt, objGt))
+            // nothing to clone here
+            continue;
+
+        if (!insertSegmentCloneHelper(ctx, shGt, objGt, action))
+            // clone failed
+            return false;
+    }
+
+    // all OK
+    return true;
 }
 
-// FIXME: highly experimental
 bool joinAbstractValues(
         bool                    *pResult,
         SymJoinCtx              &ctx,
@@ -729,10 +821,10 @@ bool joinAbstractValues(
         ? JS_USE_SH1
         : JS_USE_SH2;
 
-    const TObjId root1 = objRoot(sh1, sh1.pointsTo(v1));
-    const TObjId root2 = objRoot(sh2, sh2.pointsTo(v2));
+    const TObjId root1 = objRootByVal(sh1, v1);
+    const TObjId root2 = objRootByVal(sh2, v2);
     if (root1 < 0 || root2 < 0)
-        return insertSegmentClone(pResult, ctx, v1, v2, subStatus);
+        goto seg_clone;
 
     if (isAbs1 && isAbs2)
         return joinSegmentWithAny(pResult, ctx, root1, root2, JS_USE_ANY);
@@ -741,7 +833,9 @@ bool joinAbstractValues(
     if (joinSegmentWithAny(pResult, ctx, root1, root2, subStatus))
         return true;
 
-    return insertSegmentClone(pResult, ctx, v1, v2, subStatus);
+seg_clone:
+    *pResult = insertSegmentClone(ctx, v1, v2, subStatus);
+    return true;
 }
 
 bool joinValueCore(

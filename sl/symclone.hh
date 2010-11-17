@@ -52,13 +52,20 @@ bool traverseSubObjs(
     std::stack<TObjTuple>                   todo;
     todo.push(root);
 
+    // TODO: this should definitely appear in dox
+    int idxValid = 0;
+    while (idxValid < N && OBJ_INVALID == root[idxValid])
+        ++idxValid;
+
+    CL_BREAK_IF(N <= idxValid);
+
     while (!todo.empty()) {
         TObjTuple item = todo.top();
         todo.pop();
 
-        const struct cl_type *const clt = sh[0]->objType(item[0]);
+        const struct cl_type *const clt = sh[idxValid]->objType(item[idxValid]);
 #ifndef NDEBUG
-        for (int h = 1; h < N; ++h)
+        for (int h = 1 + idxValid; h < N; ++h)
             CL_BREAK_IF(clt != sh[h]->objType(item[h]));
 #endif
         if (!clt)
@@ -73,10 +80,8 @@ bool traverseSubObjs(
         for (int i = 0; i < clt->item_cnt; ++i) {
 
             TObjTuple subItem;
-            for (int h = 0; h < N; ++h) {
+            for (int h = 0; h < N; ++h)
                 subItem[h] = sh[h]->subObj(item[h], i);
-                CL_BREAK_IF(subItem[h] < 0);
-            }
 
             // call sub-object visitor
             if (!objVisitor(subItem))

@@ -844,8 +844,6 @@ void SymPlot::Private::digObj(TObjId obj) {
     }
 
     const TObjId peer = dlSegPeer(*this->heap, obj);
-    CL_BREAK_IF(peer <= 0);
-
     const char *label = (this->heap->objIsProto(obj))
         ? "[prototype] DLS"
         : "DLS";
@@ -860,7 +858,8 @@ void SymPlot::Private::digObj(TObjId obj) {
 
     // plot the two parts of a DLS into the cluster
     this->digObjCore(obj);
-    this->digObjCore(peer);
+    if (0 < peer)
+        this->digObjCore(peer);
 
     // close the cluster
     this->dotStream << "}" << std::endl;

@@ -69,6 +69,9 @@ void dlSegSetMinLength(SymHeap &sh, TObjId dls, unsigned len);
 unsigned segMinLength(const SymHeap &sh, TObjId seg);
 
 inline unsigned objMinLength(const SymHeap &sh, TObjId obj) {
+    if (obj <= 0)
+        return 0;
+
     return (objIsSeg(sh, obj))
         ? segMinLength(sh, obj)
         : /* OK_CONCRETE */ 1;

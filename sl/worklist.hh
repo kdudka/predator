@@ -31,35 +31,36 @@ class WorkList {
     public:
         typedef T value_type;
 
-    private:
-        std::stack<T> todo;
-        std::set<T>   done; // FIXME: misleading identifier
+    protected:
+        std::stack<T> todo_;
+        std::set<T>   done_; // FIXME: misleading identifier
 
     public:
         WorkList() { }
         WorkList(const T &item) {
-            todo.push(item);
-            done.insert(item);
+            todo_.push(item);
+            done_.insert(item);
         }
 
         bool next(T &dst) {
-            if (todo.empty())
+            if (todo_.empty())
                 return false;
 
-            dst = todo.top();
-            todo.pop();
+            dst = todo_.top();
+            todo_.pop();
             return true;
         }
 
         bool schedule(const T &item) {
-            if (hasKey(done, item))
+            if (hasKey(done_, item))
                 return false;
 
-            todo.push(item);
-            done.insert(item);
+            todo_.push(item);
+            done_.insert(item);
             return true;
         }
 
+        // FIXME: really bad idea as log as schedule(const T &) is non-virutal
         template <class T1, class T2>
         bool schedule(const T1 &i1, const T2 &i2) {
             return this->schedule(T(i1, i2));
