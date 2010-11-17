@@ -169,7 +169,6 @@ bool defineValueMapping(
 
 // read-only (in)consistency check
 bool checkValueMapping(
-        bool                    *pResult,
         const SymJoinCtx        &ctx,
         const TValueId          v1,
         const TValueId          v2)
@@ -184,7 +183,7 @@ bool checkValueMapping(
     const bool hasMapping2 = (vMap2.end() != i2);
     if (!hasMapping1 && !hasMapping2)
         // we have not enough info yet, try it later...
-        return false;
+        return true;
 
     const TValueId vDst1 = (hasMapping1)
         ? i1->second
@@ -194,17 +193,13 @@ bool checkValueMapping(
         ? i2->second
         : static_cast<TValueId>(VAL_INVALID);
 
-    if (hasMapping1 && hasMapping1 && (vDst1 == vDst2)) {
+    if (hasMapping1 && hasMapping1 && (vDst1 == vDst2))
         // mapping already known and known to be consistent
-        *pResult = true;
         return true;
-    }
 
     SJ_DEBUG("<-- value mapping mismatch: " << SJ_VALP(v1, v2)
              "-> " << SJ_VALP(vDst1, vDst2));
-
-    *pResult = false;
-    return true;
+    return false;
 }
 
 /// (OBJ_INVALID == objDst) means read-only!!!
@@ -229,11 +224,11 @@ bool joinFreshObjTripple(
         return false;
     }
 
-    if (!readOnly && OBJ_INVALID != cObj1) {
+    if (OBJ_INVALID != cObj1) {
         // store mapping of composite object's values
         const TValueId vDst = ctx.dst.valueOf(objDst);
-        if (!defineValueMapping(ctx, v1, v2, vDst))
-            return false;
+        return readOnly
+            || defineValueMapping(ctx, v1, v2, vDst);
     }
 
     // special values have to match (NULL not treated as special here)
@@ -246,12 +241,10 @@ bool joinFreshObjTripple(
         return false;
     }
 
-    bool result;
-    if (checkValueMapping(&result, ctx, v1, v2))
-        // no need to follow values
-        return result;
+    if (readOnly)
+        return checkValueMapping(ctx, v1, v2);
 
-    if (!readOnly && ctx.wl.schedule(TValPair(v1, v2)))
+    if (ctx.wl.schedule(TValPair(v1, v2)))
         SJ_DEBUG("+++ " << SJ_VALP(v1, v2) << " <- " << SJ_OBJP(obj1, obj2));
 
     return true;
@@ -679,6 +672,7 @@ bool joinSegmentWithAny(
     return false;
 }
 
+#include "symdump.hh"
 bool insertSegmentClone(
         bool                    *pResult,
         SymJoinCtx              &ctx,
@@ -686,14 +680,34 @@ bool insertSegmentClone(
         const TValueId          v2,
         const EJoinStatus       action)
 {
-    // TODO
-    (void) pResult;
-    (void) ctx;
-    (void) v1;
-    (void) v2;
-    (void) action;
+    const bool isGt1 = (JS_USE_SH1 == action);
+    const bool isGt2 = (JS_USE_SH2 == action);
+    CL_BREAK_IF(isGt1 == isGt2);
 
-    //CL_BREAK_IF(debugSymJoin);
+    const SymHeap &shGt = (isGt1) ? ctx.sh1 : ctx.sh2;
+    const SymHeap &shLt = (isGt2) ? ctx.sh1 : ctx.sh2;
+
+    // resolve the existing segment in shGt
+    TObjId seg = objRoot(shGt, shGt.pointsTo((isGt1) ? v1 : v2));
+    if (OK_DLS == shGt.objKind(seg))
+        seg = dlSegPeer(shGt, seg);
+
+    // resolve the 'next' pointer and check for inconsistency with shLt
+    const TValueId valGt = shGt.valueOf(nextPtrFromSeg(shGt, seg));
+    const TValueId valLt = (isGt2) ? v1 : v2;
+    if (!checkValueMapping(ctx, 
+                (isGt1) ? valGt : valLt,
+                (isGt2) ? valGt : valLt))
+        // no way
+        return false;
+
+    if (debugSymJoin) {
+        dump_plot(shLt);
+        dump_plot(shGt);
+    }
+
+    // TODO
+    CL_BREAK_IF(debugSymJoin);
     return false;
 }
 
