@@ -25,9 +25,15 @@
  * @todo some dox
  */
 
-#include "symid.hh"
+#include "symheap.hh"
 
-class SymHeap;
+/// future replacment of matchData() from symdiscover
+bool joinData(
+        const SymHeap           &sh,
+        const SegBindingFields  &bf,
+        const TObjId            o1,
+        const TObjId            o2,
+        SymHeap::TContObj       protoRoots[1][2]);
 
 /// @todo some dox
 enum EJoinStatus {
@@ -43,13 +49,5 @@ bool joinSymHeaps(
         SymHeap                 *dst,
         const SymHeap           &sh1,
         const SymHeap           &sh2);
-
-// TODO
-#if 0
-bool joinSubHeaps(
-        const SymHeap           &sh,
-        const TValPairList      &startingPoints,
-        ISubMatchVisitor        *visitor = 0);
-#endif
 
 #endif /* H_GUARD_SYM_JOIN_H */

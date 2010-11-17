@@ -25,6 +25,7 @@
 #include <cl/storage.hh>
 
 #include "symcmp.hh"
+#include "symjoin.hh"
 #include "symseg.hh"
 #include "symutil.hh"
 #include "util.hh"
@@ -451,6 +452,7 @@ bool matchData(const SymHeap                &sh,
                const TObjId                 o2,
                TProtoRoots                  *protoRoots)
 {
+#if SE_DISABLE_SYMJOIN_IN_SYMDISCOVER
     const TObjId nextPtr = subObjByChain(sh, o1, bf.next);
 
     DataMatchVisitor visitor(o1, o2);
@@ -464,6 +466,9 @@ bool matchData(const SymHeap                &sh,
 
     const TObjPair item(o1, o2);
     return traverseSubObjs(sh, item, visitor, /* leavesOnly */ true);
+#else
+    return joinData(sh, bf, o1, o2, protoRoots);
+#endif
 }
 
 bool slSegAvoidSelfCycle(

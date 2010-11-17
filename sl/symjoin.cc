@@ -82,6 +82,8 @@ struct SymJoinCtx {
     std::set<TValPair>          sharedNeqs;
     std::set<TObjPair>          tieBreaking;
 
+    std::set<TObjPair>          protoRoots;
+
     SymJoinCtx(SymHeap &dst_, const SymHeap &sh1_, const SymHeap &sh2_):
         dst(dst_),
         sh1(sh1_),
@@ -297,34 +299,37 @@ bool joinFreshObjTripple(
 }
 
 template <class TArray>
-class ObjJoinVisitor {
-    private:
-        SymJoinCtx &ctx_;
+struct ObjJoinVisitor {
+    SymJoinCtx              &ctx;
+    std::set<TObjId>        blackList;
 
-    public:
-        ObjJoinVisitor(SymJoinCtx &ctx): ctx_(ctx) { }
+    ObjJoinVisitor(SymJoinCtx &ctx_): ctx(ctx_) { }
 
-        bool operator()(const TArray &item) {
-            const TObjId obj1   = item[0];
-            const TObjId obj2   = item[1];
-            const TObjId objDst = item[2];
+    bool operator()(const TArray &item) {
+        const TObjId obj1   = item[0];
+        const TObjId obj2   = item[1];
+        const TObjId objDst = item[2];
 
-            // store object IDs mapping
-            if (OBJ_INVALID != obj1)
-                ctx_.objMap1[obj1] = objDst;
+        // check black-list
+        if (hasKey(blackList, objDst))
+            return /* continue */ true;
 
-            if (OBJ_INVALID != obj2)
-                ctx_.objMap2[obj2] = objDst;
+        // store object IDs mapping
+        if (OBJ_INVALID != obj1)
+            ctx.objMap1[obj1] = objDst;
 
-            // store object's addresses
-            const TValueId addr1 = ctx_.sh1.placedAt(obj1);
-            const TValueId addr2 = ctx_.sh2.placedAt(obj2);
-            const TValueId dstAt = ctx_.dst.placedAt(objDst);
-            if (!defineValueMapping(ctx_, addr1, addr2, dstAt))
-                return false;
+        if (OBJ_INVALID != obj2)
+            ctx.objMap2[obj2] = objDst;
 
-            return /* continue */ joinFreshObjTripple(ctx_, obj1, obj2, objDst);
-        }
+        // store object's addresses
+        const TValueId addr1 = ctx.sh1.placedAt(obj1);
+        const TValueId addr2 = ctx.sh2.placedAt(obj2);
+        const TValueId dstAt = ctx.dst.placedAt(objDst);
+        if (!defineValueMapping(ctx, addr1, addr2, dstAt))
+            return false;
+
+        return /* continue */ joinFreshObjTripple(ctx, obj1, obj2, objDst);
+    }
 };
 
 class SegMatchVisitor {
@@ -347,7 +352,8 @@ bool traverseSubObjs(
         SymJoinCtx              &ctx,
         const TObjId            root1,
         const TObjId            root2,
-        const TObjId            rootDst)
+        const TObjId            rootDst,
+        const SegBindingFields  *bfBlackList = 0)
 {
     typedef boost::array<const SymHeap *, 3>        TSymHeapTriple;
     typedef boost::array<TObjId         , 3>        TObjTriple;
@@ -370,8 +376,34 @@ bool traverseSubObjs(
     sht[1] = &ctx.sh2;
     sht[2] = &ctx.dst;
 
-    // guide the visitors through them
+    // initialize visitor
     ObjJoinVisitor<TObjTriple> objVisitor(ctx);
+    if (bfBlackList) {
+        const TFieldIdxChain &icNext = bfBlackList->next;
+        if (!icNext.empty()) {
+            const TObjId next = subObjByChain(ctx.dst, rootDst, icNext);
+            objVisitor.blackList.insert(next);
+        }
+
+        const TFieldIdxChain &icPeer = bfBlackList->peer;
+        if (!icPeer.empty()) {
+            const TObjId peer = subObjByChain(ctx.dst, rootDst, icPeer);
+            objVisitor.blackList.insert(peer);
+        }
+    }
+    else if ((&ctx.sh1 == &ctx.sh2)) {
+        // we are called from joinData()
+        if (root1 == root2)
+            // do not follow shared data
+            return true;
+
+        else {
+            const TObjPair proto(root1, root2);
+            ctx.protoRoots.insert(proto);
+        }
+    }
+
+    // guide the visitors through them
     return objVisitor(root)
         && traverseSubObjs<3>(sht, root, objVisitor);
 }
@@ -524,6 +556,12 @@ bool joinProtoFlag(
     *pDst = ctx.sh1.objIsProto(root1);
     if (ctx.sh2.objIsProto(root2) == *pDst)
         return true;
+
+    if (&ctx.sh1 == &ctx.sh2) {
+        // we are called from joinData()
+        *pDst = true;
+        return true;
+    }
 
     SJ_DEBUG("<-- prototype vs shared: " << SJ_OBJP(root1, root2));
     return false;
@@ -962,6 +1000,10 @@ void setDstValuesCore(SymJoinCtx &ctx, const TItem &rItem) {
     const TValueId vDstBy1 = roValLookup(ctx.valMap1[/* ltr */ 0], v1);
     const TValueId vDstBy2 = roValLookup(ctx.valMap2[/* ltr */ 0], v2);
     if (vDstBy1 == vDstBy2) {
+        if (&ctx.sh1 == &ctx.sh2)
+            // we are called from joinData()
+            return;
+
         // the values are equal --> pick any
         ctx.dst.objSetValue(objDst, vDstBy1);
         return;
@@ -1187,5 +1229,55 @@ bool joinSymHeaps(
 
     // all OK
     *pStatus = ctx.status;
+    return true;
+}
+
+bool joinData(
+        const SymHeap           &sh,
+        const SegBindingFields  &bf,
+        const TObjId            o1,
+        const TObjId            o2,
+        SymHeap::TContObj       protoRoots[1][2])
+{
+    SymHeap tmp;
+    SymJoinCtx ctx(
+            /* dst */ tmp,
+            /* sh1 */ sh,
+            /* sh2 */ sh);
+
+    const struct cl_type *clt;
+    if (!joinClt(sh.objType(o1), sh.objType(o2), &clt) || !clt) {
+#ifndef NDEBUG
+        // why are we called actually?
+        CL_TRAP;
+#endif
+        return false;
+    }
+
+    // TODO
+    //CL_BREAK_IF(OK_DLS == sh.objKind(o1) || OK_DLS == sh.objKind(o2));
+
+    const TObjId rootDst = tmp.objCreate(clt);
+    if (!traverseSubObjs(ctx, o1, o2, rootDst, &bf))
+        return false;
+
+    if (!joinPendingValues(ctx))
+        return false;
+
+    setDstValues(ctx);
+    handleDstPreds(ctx);
+
+    if (JS_THREE_WAY == ctx.status) {
+        CL_WARN("three-way join not yet allowed for joinData()");
+        return false;
+    }
+
+    if (protoRoots) {
+        BOOST_FOREACH(const TObjPair &proto, ctx.protoRoots) {
+            (*protoRoots)[0].push_back(proto.first);
+            (*protoRoots)[1].push_back(proto.second);
+        }
+    }
+
     return true;
 }
