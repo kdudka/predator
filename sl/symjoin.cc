@@ -667,31 +667,21 @@ bool followValuePair(
     return defineValueMapping(ctx, v1, v2, vDst);
 }
 
-bool joinUnkownValues(
-        bool                    *pResult,
-        SymJoinCtx              &ctx,
-        const TValueId          v1,
-        const TValueId          v2,
+bool joinUnknownValuesCode(
+        EUnknownValue           *pDst,
         const EUnknownValue     code1,
         const EUnknownValue     code2)
 {
-    CL_BREAK_IF((code1 == code2) && UV_UNKNOWN != code1);
-    const struct cl_type *clt;
-    if (!joinValClt(&clt, ctx, v1, v2)) {
-        *pResult = false;
+    if (UV_UNINITIALIZED == code1 && UV_UNINITIALIZED == code2) {
+        *pDst = UV_UNINITIALIZED;
         return true;
     }
 
-    const bool isUnknown1 = (UV_UNKNOWN == code1);
-    const bool isUnknown2 = (UV_UNKNOWN == code2);
-    if (isUnknown1 && isUnknown2) {
-        const TValueId vDst = ctx.dst.valCreateUnknown(UV_UNKNOWN, clt);
-        *pResult = defineValueMapping(ctx, v1, v2, vDst);
+    if (UV_UNKNOWN == code1 || UV_UNKNOWN == code2) {
+        *pDst = UV_UNKNOWN;
         return true;
     }
 
-    // TODO
-    CL_BREAK_IF(debugSymJoin);
     return false;
 }
 
@@ -714,11 +704,17 @@ bool joinSegmentWithAny(
 }
 
 bool insertSegmentCloneHelper(
-        SymJoinCtx              &ctx,
-        const SymHeap           &shGt,
-        const TObjId            objGt,
-        const EJoinStatus       action)
+        SymJoinCtx                  &ctx,
+        const SymHeap               &shGt,
+        const TValueId              valGt,
+        const SymJoinCtx::TObjMap   &objMapGt,
+        const EJoinStatus           action)
 {
+    const TObjId objGt = objRootByVal(shGt, valGt);
+    if (objGt < 0 || hasKey(objMapGt, objGt))
+        // nothing to clone here
+        return true;
+
     const struct cl_type *clt = shGt.objType(objGt);
     if (!clt)
         // TODO: clone anonymous prototypes?
@@ -797,12 +793,15 @@ bool insertSegmentClone(
             // do not go byond the segment, just follow its data
             continue;
 
-        const TObjId objGt = objRootByVal(shGt, valGt);
-        if (objGt < 0 || hasKey(objMapGt, objGt))
-            // nothing to clone here
-            continue;
-
-        if (!insertSegmentCloneHelper(ctx, shGt, objGt, action))
+        const EUnknownValue code = shGt.valGetUnknown(valGt);
+        if (UV_UNINITIALIZED == code || UV_UNKNOWN == code) {
+            // clone unknown value
+            const struct cl_type *const clt = shGt.valType(valGt);
+            const TValueId vDst = ctx.dst.valCreateUnknown(code, clt);
+            if (defineValueMapping(ctx, vp.first, vp.second, vDst))
+                return false;
+        }
+        else if (!insertSegmentCloneHelper(ctx, shGt, valGt, objMapGt, action))
             // clone failed
             return false;
     }
@@ -857,44 +856,22 @@ seg_clone:
     return true;
 }
 
-bool joinValueCore(
-        SymJoinCtx              &ctx,
-        const EUnknownValue     code,
-        const TValueId          v1,
-        const TValueId          v2)
-{
-    switch (code) {
-        case UV_ABSTRACT:
-        case UV_KNOWN:
-            return followValuePair(ctx, v1, v2);
+bool joinValuePair(SymJoinCtx &ctx, const TValueId v1, const TValueId v2) {
+    const EUnknownValue code1 = ctx.sh1.valGetUnknown(v1);
+    const EUnknownValue code2 = ctx.sh2.valGetUnknown(v2);
 
-        case UV_UNKNOWN:
-        case UV_UNINITIALIZED:
-            break;
+    EUnknownValue code;
+    if (joinUnknownValuesCode(&code, code1, code2)) {
+        // create unknown value
+        const struct cl_type *clt;
+        if (!joinValClt(&clt, ctx, v1, v2))
+            return false;
+
+        const TValueId vDst = ctx.dst.valCreateUnknown(code, clt);
+        return defineValueMapping(ctx, v1, v2, vDst);
     }
 
-    // join clt of unknown values
-    const struct cl_type *clt;
-    if (!joinValClt(&clt, ctx, v1, v2))
-        return false;
-
-    // create a new unknown value
-    const TValueId vDst = ctx.dst.valCreateUnknown(code, clt);
-    return defineValueMapping(ctx, v1, v2, vDst);
-}
-
-bool joinValuePair(SymJoinCtx &ctx, const TValueId v1, const TValueId v2) {
-    const SymHeap &sh1 = ctx.sh1;
-    const SymHeap &sh2 = ctx.sh2;
-
-    const EUnknownValue code1 = sh1.valGetUnknown(v1);
-    const EUnknownValue code2 = sh2.valGetUnknown(v2);
-
     bool result;
-    if ((UV_UNKNOWN == code1 || UV_UNKNOWN == code2)
-            && joinUnkownValues(&result, ctx, v1, v2, code1, code2))
-        return result;
-
     if ((UV_ABSTRACT == code1 || UV_ABSTRACT == code2)
             && joinAbstractValues(&result, ctx, v1, v2, code1, code2))
         return result;
@@ -904,7 +881,7 @@ bool joinValuePair(SymJoinCtx &ctx, const TValueId v1, const TValueId v2) {
         return false;
     }
 
-    return joinValueCore(ctx, code1, v1, v2);
+    return followValuePair(ctx, v1, v2);
 }
 
 bool joinPendingValues(SymJoinCtx &ctx) {
