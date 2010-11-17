@@ -87,6 +87,24 @@ bool joinClt(
     return true;
 }
 
+bool joinUnknownValuesCode(
+        EUnknownValue           *pDst,
+        const EUnknownValue     code1,
+        const EUnknownValue     code2)
+{
+    if (UV_UNINITIALIZED == code1 && UV_UNINITIALIZED == code2) {
+        *pDst = UV_UNINITIALIZED;
+        return true;
+    }
+
+    if (UV_UNKNOWN == code1 || UV_UNKNOWN == code2) {
+        *pDst = UV_UNKNOWN;
+        return true;
+    }
+
+    return false;
+}
+
 bool matchPlainValues(
         TValMapBidir            valMapping,
         const TValueId          v1,

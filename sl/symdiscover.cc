@@ -180,25 +180,6 @@ bool considerGenericPrototype(
     return true;
 }
 
-// TODO: extend this for lists of length 1 and 2, now we support only empty ones
-bool segMatchSmallList(
-        const SymHeap           &sh,
-        const TObjId            segUp,
-        const TObjId            conUp,
-        const TValueId          segVal,
-        const TValueId          conVal)
-{
-    TObjId seg = objRoot(sh, sh.pointsTo(segVal));
-    if (OK_DLS == sh.objKind(seg))
-        seg = dlSegPeer(sh, seg);
-
-    const TObjPair roots(segUp, conUp);
-    const TValueId valNext = sh.valueOf(nextPtrFromSeg(sh, seg));
-    return validateUpLink(sh, roots, valNext, conVal);
-}
-
-// TODO: I don't think we need separate handling for segment and non-segment
-//       prototypes, we should merge those routines together at some point!
 struct DataMatchVisitor {
     std::set<TObjId>    ignoreList;
     TProtoRoots         *protoRoots;
@@ -229,43 +210,6 @@ struct DataMatchVisitor {
 
         if (validateUpLink(sh, roots_, v1, v2))
             return /* continue */ true;
-
-        // compare _unknown_ value codes
-        const EUnknownValue code1 = sh.valGetUnknown(v1);
-        const EUnknownValue code2 = sh.valGetUnknown(v2);
-
-        const bool isAbstract1 = (UV_ABSTRACT == code1);
-        const bool isAbstract2 = (UV_ABSTRACT == code2);
-        if (isAbstract1 != isAbstract2 && segMatchSmallList(sh,
-                    (isAbstract1) ? roots_.first : roots_.second,
-                    (isAbstract2) ? roots_.first : roots_.second,
-                    (isAbstract1) ? v1 : v2,
-                    (isAbstract2) ? v1 : v2))
-        {
-            // in case we have a list segment vs. a small compatible list, we
-            // can cover both by a list segment with the appropriate length
-            if (protoRoots) {
-                (*protoRoots)[0].push_back(objRoot(sh, sh.pointsTo(v1)));
-                (*protoRoots)[1].push_back(objRoot(sh, sh.pointsTo(v2)));
-            }
-
-            return /* continue */ true;
-        }
-
-        if (code1 != code2)
-            return /* mismatch */ false;
-
-        switch (code1) {
-            case UV_UNINITIALIZED:
-            case UV_UNKNOWN:
-                // we don't require unkown values to match
-                // FIXME: what about Neq predicates with foreign values???
-                return /* continue */ true;
-
-            case UV_KNOWN:
-            case UV_ABSTRACT:
-                break;
-        }
 
         return considerGenericPrototype(sh, roots_, v1, v2, protoRoots);
     }

@@ -25,6 +25,7 @@
 #include <cl/clutil.hh>
 #include <cl/storage.hh>
 
+#include "symcmp.hh"
 #include "symdiscover.hh"
 #include "symgc.hh"
 #include "symseg.hh"
@@ -333,46 +334,6 @@ bool matchSelfPointers(
         && (roots.second == objRoot(sh, o2));
 }
 
-// TODO: extend this for lists of length 1 and 2, now we support only empty ones
-TValueId mergeSmallList(
-        SymHeap                 &sh,
-        const TObjPair          &roots,
-        const TValueId          v1,
-        const TValueId          v2)
-{
-    const bool isAbstract1 = (UV_ABSTRACT == sh.valGetUnknown(v1));
-
-    const TValueId segAt = (isAbstract1) ? v1 : v2;
-    const TObjId seg = objRoot(sh, sh.pointsTo(segAt));
-#ifndef NDEBUG
-    const bool isAbstract2 = (UV_ABSTRACT == sh.valGetUnknown(v2));
-    CL_BREAK_IF(isAbstract1 == isAbstract2);
-
-    const TValueId conAt = (isAbstract2) ? v1 : v2;
-    const TObjId segUp = (isAbstract1) ? roots.first : roots.second;
-    const TObjId conUp = (isAbstract2) ? roots.first : roots.second;
-
-    const TValueId peerAt = (OK_DLS == sh.objKind(seg))
-        ? segHeadAddr(sh, (dlSegPeer(sh, seg)))
-        : static_cast<TValueId>(VAL_INVALID);
-
-    CL_BREAK_IF(!segMatchSmallList(sh, segUp, conUp, segAt, conAt)
-             && !segMatchSmallList(sh, segUp, conUp, peerAt, conAt));
-#endif
-
-    // a list segment merged with an empty list results into a list segment 0+
-    segSetMinLength(sh, seg, /* LS 0+ */ 0);
-
-    // duplicate the nested abstract object on call of concretizeObj()
-    segSetProto(sh, seg, true);
-
-    if (isAbstract1)
-        // FIXME: do we need some handling for DLS peers at this point?
-        redirectInboundEdges(sh, seg, roots.first, roots.second);
-
-    return segAt;
-}
-
 TValueId createGenericPrototype(
         SymHeap                     &sh,
         const TObjId                src,
@@ -421,48 +382,21 @@ TValueId mergeValues(
         // perform their concretization later on
         return VAL_INVALID;
 
-    // if the types of _unknown_ values are compatible, it should be safe to
-    // pass it through;  UV_UNKNOWN otherwise
+    TProtoRoots protoRoots;
+    if (considerGenericPrototype(sh, roots, v1, v2, &protoRoots))
+        // take values v1, v2 and create a prototype for them
+        return createGenericPrototype(sh, src, v1, v2, protoRoots);
+
+    // unknown value for us
     const EUnknownValue code1 = sh.valGetUnknown(v1);
     const EUnknownValue code2 = sh.valGetUnknown(v2);
-    const bool isAbstract1 = (UV_ABSTRACT == code1);
-    const bool isAbstract2 = (UV_ABSTRACT == code2);
-    if (isAbstract1 != isAbstract2)
-        // a quirk for small lists (of length 0 or 1)
-        return mergeSmallList(sh, roots, v1, v2);
-
-    EUnknownValue code = (code1 == code2)
-        ? code1
-        : UV_UNKNOWN;
-
-    TProtoRoots protoRoots;
-
-    switch (code) {
-        case UV_UNKNOWN:
-        case UV_UNINITIALIZED:
-            // safe to keep unknown values as they are, they will be duplicated
-            // on concretization anyway
-            break;
-
-        case UV_KNOWN:
-        case UV_ABSTRACT:
-            if (considerGenericPrototype(sh, roots, v1, v2, &protoRoots))
-                return createGenericPrototype(sh, src, v1, v2, protoRoots);
-    }
-
-    if (UV_KNOWN == code)
-        // if we merge two distinct known values into one, it becomes more an
-        // unknown value
+    EUnknownValue code;
+    if (!joinUnknownValuesCode(&code, code1, code2))
         code = UV_UNKNOWN;
 
-    // attempt to dig some type-info for the new unknown value
-    const struct cl_type *clt1 = sh.valType(v1);
-    const struct cl_type *clt2 = sh.valType(v2);
-
-    // if both values are of the same type, pass the type into the result
-    const struct cl_type *clt = (clt1 && clt2 && *clt1 == *clt2)
-        ? clt1
-        : /* type-info is either unknown, or incompatible */ 0;
+    const struct cl_type *clt;
+    if (!joinClt(sh.valType(v1), sh.valType(v2), &clt))
+        clt = 0;
 
     // introduce a new unknown value, representing the join of v1 and v2
     return sh.valCreateUnknown(code, clt);

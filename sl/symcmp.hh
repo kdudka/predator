@@ -25,17 +25,21 @@
  * various algorithms for comparison of symbolic (sub-)heaps
  */
 
-#include "symid.hh"
+#include "symheap.hh"
 #include <map>
 #include <vector>
-
-class SymHeap;
 
 /// @todo some dox
 bool joinClt(
         const struct cl_type    *clt1,
         const struct cl_type    *clt2,
         const struct cl_type    **pDst = 0);
+
+/// @todo some dox
+bool joinUnknownValuesCode(
+        EUnknownValue           *pDst,
+        const EUnknownValue     code1,
+        const EUnknownValue     code2);
 
 /// either intra-heap or inter-heap value mapping
 typedef std::map<TValueId /* src */, TValueId /* dst */>    TValMap;
