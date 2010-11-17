@@ -397,7 +397,7 @@ bool segMatchLookAhead(
 
 bool joinValClt(
         const struct cl_type    **pDst,
-        SymJoinCtx              &ctx,
+        const SymJoinCtx        &ctx,
         const TValueId          v1,
         const TValueId          v2)
 {
@@ -412,7 +412,7 @@ bool joinValClt(
 
 bool joinObjClt(
         const struct cl_type    **pDst,
-        SymJoinCtx              &ctx,
+        const SymJoinCtx        &ctx,
         const TObjId            o1,
         const TObjId            o2)
 {
@@ -427,7 +427,7 @@ bool joinObjClt(
 
 bool joinObjKind(
         EObjKind                *pDst,
-        SymJoinCtx              &ctx,
+        const SymJoinCtx        &ctx,
         const TObjId            o1,
         const TObjId            o2,
         const EJoinStatus       action)
@@ -469,7 +469,7 @@ bool joinObjKind(
 
 bool joinSegBinding(
         SegBindingFields        *pBf,
-        SymJoinCtx              &ctx,
+        const SymJoinCtx        &ctx,
         const TObjId            o1,
         const TObjId            o2)
 {
@@ -505,6 +505,30 @@ bool joinSegBinding(
     return false;
 }
 
+bool joinProtoFlag(
+        bool                    *pDst,
+        const SymJoinCtx        &ctx,
+        const TObjId            root1,
+        const TObjId            root2)
+{
+    if (OBJ_INVALID == root2) {
+        *pDst = ctx.sh1.objIsProto(root1);
+        return true;
+    }
+
+    if (OBJ_INVALID == root1) {
+        *pDst = ctx.sh2.objIsProto(root2);
+        return true;
+    }
+
+    *pDst = ctx.sh1.objIsProto(root1);
+    if (ctx.sh2.objIsProto(root2) == *pDst)
+        return true;
+
+    SJ_DEBUG("<-- prototype vs shared: " << SJ_OBJP(root1, root2));
+    return false;
+}
+
 bool createObject(
         SymJoinCtx              &ctx,
         const struct cl_type    *clt,
@@ -520,11 +544,9 @@ bool createObject(
     if (!joinSegBinding(&bf, ctx, root1, root2))
         return false;
 
-    const bool isProto = ctx.sh1.objIsProto(root1);
-    if (isProto != ctx.sh2.objIsProto(root2)) {
-        SJ_DEBUG("<-- prototype vs shared: " << SJ_OBJP(root1, root2));
+    bool isProto;
+    if (!joinProtoFlag(&isProto, ctx, root1, root2))
         return false;
-    }
 
     updateJoinStatus(ctx, action);
 
