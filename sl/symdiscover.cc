@@ -467,7 +467,7 @@ bool matchData(const SymHeap                &sh,
     const TObjPair item(o1, o2);
     return traverseSubObjs(sh, item, visitor, /* leavesOnly */ true);
 #else
-    return joinData(sh, bf, o1, o2, protoRoots);
+    return joinDataReadOnly(sh, bf, o1, o2, protoRoots);
 #endif
 }
 

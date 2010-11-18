@@ -26,6 +26,7 @@
 
 #include "symclone.hh"
 #include "symcmp.hh"
+#include "symgc.hh"
 #include "symseg.hh"
 #include "symstate.hh"
 #include "symutil.hh"
@@ -49,6 +50,8 @@ static bool debugSymJoin = static_cast<bool>(DEBUG_SYMJOIN);
 
 #define SJ_VALP(v1, v2) "(v1 = #" << v1 << ", v2 = #" << v2 << ")"
 #define SJ_OBJP(o1, o2) "(o1 = #" << o1 << ", o2 = #" << o2 << ")"
+
+typedef boost::array<TObjId, 3>                                 TObjTriple;
 
 template <class T>
 class WorkListWithUndo: public WorkList<T> {
@@ -82,7 +85,7 @@ struct SymJoinCtx {
     std::set<TValPair>          sharedNeqs;
     std::set<TObjPair>          tieBreaking;
 
-    std::set<TObjPair>          protoRoots;
+    std::set<TObjTriple>        protoRoots;
 
     SymJoinCtx(SymHeap &dst_, const SymHeap &sh1_, const SymHeap &sh2_):
         dst(dst_),
@@ -298,14 +301,13 @@ bool joinFreshObjTripple(
     return true;
 }
 
-template <class TArray>
 struct ObjJoinVisitor {
     SymJoinCtx              &ctx;
     std::set<TObjId>        blackList;
 
     ObjJoinVisitor(SymJoinCtx &ctx_): ctx(ctx_) { }
 
-    bool operator()(const TArray &item) {
+    bool operator()(const TObjTriple &item) {
         const TObjId obj1   = item[0];
         const TObjId obj2   = item[1];
         const TObjId objDst = item[2];
@@ -356,7 +358,6 @@ bool traverseSubObjs(
         const SegBindingFields  *bfBlackList = 0)
 {
     typedef boost::array<const SymHeap *, 3>        TSymHeapTriple;
-    typedef boost::array<TObjId         , 3>        TObjTriple;
 #ifndef NDEBUG
     // all three types have to match!
     const struct cl_type *clt1   = ctx.sh1.objType(root1);
@@ -366,10 +367,10 @@ bool traverseSubObjs(
     CL_BREAK_IF(OBJ_INVALID != root1 && *clt1 != *cltDst);
     CL_BREAK_IF(OBJ_INVALID != root2 && *clt2 != *cltDst);
 #endif
-    TObjTriple root;
-    root[/* sh1 */ 0] = root1;
-    root[/* sh2 */ 1] = root2;
-    root[/* dst */ 2] = rootDst;
+    TObjTriple roots;
+    roots[/* sh1 */ 0] = root1;
+    roots[/* sh2 */ 1] = root2;
+    roots[/* dst */ 2] = rootDst;
 
     TSymHeapTriple sht;
     sht[0] = &ctx.sh1;
@@ -377,7 +378,7 @@ bool traverseSubObjs(
     sht[2] = &ctx.dst;
 
     // initialize visitor
-    ObjJoinVisitor<TObjTriple> objVisitor(ctx);
+    ObjJoinVisitor objVisitor(ctx);
     if (bfBlackList) {
         const TFieldIdxChain &icNext = bfBlackList->next;
         if (!icNext.empty()) {
@@ -397,15 +398,12 @@ bool traverseSubObjs(
             // do not follow shared data
             return true;
 
-        else {
-            const TObjPair proto(root1, root2);
-            ctx.protoRoots.insert(proto);
-        }
+        ctx.protoRoots.insert(roots);
     }
 
     // guide the visitors through them
-    return objVisitor(root)
-        && traverseSubObjs<3>(sht, root, objVisitor);
+    return objVisitor(roots)
+        && traverseSubObjs<3>(sht, roots, objVisitor);
 }
 
 bool segMatchLookAhead(
@@ -965,14 +963,19 @@ bool joinCVars(SymJoinCtx &ctx) {
     return true;
 }
 
-TValueId roValLookup(const TValMap &vMap, const TValueId val) {
-    if (val <= 0)
-        return val;
+/// known to work only for TObjId/TValueId
+template <class TMap>
+typename TMap::mapped_type roMapLookup(
+        const TMap                          &roMap,
+        const typename TMap::mapped_type    id)
+{
+    if (id <= 0)
+        return id;
 
-    TValMap::const_iterator it = vMap.find(val);
-    return (vMap.end() == it)
-        ? static_cast<TValueId>(VAL_INVALID)
-        : it->second;
+    typename TMap::const_iterator iter = roMap.find(id);
+    return (roMap.end() == iter)
+        ? static_cast<typename TMap::mapped_type>(-1)
+        : iter->second;
 }
 
 template <class TItem>
@@ -997,11 +1000,11 @@ void setDstValuesCore(SymJoinCtx &ctx, const TItem &rItem) {
         return;
     }
 
-    const TValueId vDstBy1 = roValLookup(ctx.valMap1[/* ltr */ 0], v1);
-    const TValueId vDstBy2 = roValLookup(ctx.valMap2[/* ltr */ 0], v2);
+    const TValueId vDstBy1 = roMapLookup(ctx.valMap1[/* ltr */ 0], v1);
+    const TValueId vDstBy2 = roMapLookup(ctx.valMap2[/* ltr */ 0], v2);
     if (vDstBy1 == vDstBy2) {
-        if (&ctx.sh1 == &ctx.sh2)
-            // we are called from joinData()
+        if (&ctx.sh1 == &ctx.sh2 && VAL_INVALID == vDstBy1)
+            // we are called from joinData() and perhaps hit the binding fields
             return;
 
         // the values are equal --> pick any
@@ -1232,7 +1235,46 @@ bool joinSymHeaps(
     return true;
 }
 
-bool joinData(
+bool joinDataCore(
+        SymJoinCtx              &ctx,
+        const SegBindingFields  &bf,
+        const TObjId            o1,
+        const TObjId            o2)
+{
+    const SymHeap &sh = ctx.sh1;
+    CL_BREAK_IF(&sh != &ctx.sh2);
+
+    const struct cl_type *clt;
+    if (!joinClt(ctx.sh1.objType(o1), sh.objType(o2), &clt) || !clt) {
+#ifndef NDEBUG
+        // why are we called actually?
+        CL_TRAP;
+#endif
+        return false;
+    }
+
+    // TODO
+    //CL_BREAK_IF(OK_DLS == sh.objKind(o1) || OK_DLS == sh.objKind(o2));
+
+    const TObjId rootDst = ctx.dst.objCreate(clt);
+    if (!traverseSubObjs(ctx, o1, o2, rootDst, &bf))
+        return false;
+
+    if (!joinPendingValues(ctx))
+        return false;
+
+    setDstValues(ctx);
+    handleDstPreds(ctx);
+
+    if (JS_THREE_WAY == ctx.status) {
+        CL_WARN("three-way join not yet allowed for joinDataCore()");
+        return false;
+    }
+
+    return true;
+}
+
+bool joinDataReadOnly(
         const SymHeap           &sh,
         const SegBindingFields  &bf,
         const TObjId            o1,
@@ -1245,39 +1287,133 @@ bool joinData(
             /* sh1 */ sh,
             /* sh2 */ sh);
 
-    const struct cl_type *clt;
-    if (!joinClt(sh.objType(o1), sh.objType(o2), &clt) || !clt) {
-#ifndef NDEBUG
-        // why are we called actually?
-        CL_TRAP;
-#endif
+    if (!joinDataCore(ctx, bf, o1, o2))
         return false;
-    }
-
-    // TODO
-    //CL_BREAK_IF(OK_DLS == sh.objKind(o1) || OK_DLS == sh.objKind(o2));
-
-    const TObjId rootDst = tmp.objCreate(clt);
-    if (!traverseSubObjs(ctx, o1, o2, rootDst, &bf))
-        return false;
-
-    if (!joinPendingValues(ctx))
-        return false;
-
-    setDstValues(ctx);
-    handleDstPreds(ctx);
-
-    if (JS_THREE_WAY == ctx.status) {
-        CL_WARN("three-way join not yet allowed for joinData()");
-        return false;
-    }
 
     if (protoRoots) {
-        BOOST_FOREACH(const TObjPair &proto, ctx.protoRoots) {
-            (*protoRoots)[0].push_back(proto.first);
-            (*protoRoots)[1].push_back(proto.second);
+        BOOST_FOREACH(const TObjTriple &proto, ctx.protoRoots) {
+            (*protoRoots)[0].push_back(proto[0]);
+            (*protoRoots)[1].push_back(proto[1]);
         }
     }
 
     return true;
 }
+
+struct JoinValueVisitor {
+    SymJoinCtx                  &ctx;
+    std::set<TObjId>            ignoreList;
+    bool                        bidir;
+
+    JoinValueVisitor(SymJoinCtx &ctx_):
+        ctx(ctx_)
+    {
+    }
+
+    bool operator()(SymHeap &sh, TObjPair item) const {
+        const TObjId dst = item.first;
+        const TObjId src = item.second;
+        if (hasKey(ignoreList, dst))
+            return /* continue */ true;
+
+        const TValueId oldDst = sh.valueOf(dst);
+        const TValueId oldSrc = sh.valueOf(src);
+
+        const TValueId newDst = roMapLookup(ctx.valMap1[/* ltr */ 0], oldDst);
+        const TValueId newSrc = roMapLookup(ctx.valMap2[/* ltr */ 0], oldSrc);
+
+        // TODO: handle prototypes
+        CL_BREAK_IF(newDst != newSrc);
+
+        sh.objSetValue(dst, newDst);
+        if (collectJunk(sh, oldDst))
+            CL_DEBUG("    JoinValueVisitor drops a sub-heap (oldDst)");
+
+        if (!this->bidir)
+            return /* continue */ true;
+
+        sh.objSetValue(src, newSrc);
+        if (collectJunk(sh, oldSrc))
+            CL_DEBUG("    JoinValueVisitor drops a sub-heap (oldSrc)");
+
+        return /* continue */ true;
+    }
+};
+
+/// future replacment of matchData() from symdiscover
+bool joinData(
+        SymHeap                 &sh,
+        const TObjId            dst,
+        const TObjId            src,
+        const bool              bidir)
+{
+    SymJoinCtx ctx(
+            /* dst */ sh,
+            /* sh1 */ sh,
+            /* sh2 */ sh);
+
+    // dst is expected to be a segment
+    CL_BREAK_IF(OK_SLS != sh.objKind(dst) && OK_DLS != sh.objKind(dst));
+    const SegBindingFields bf(sh.objBinding(dst));
+
+    if (!joinDataCore(ctx, bf, dst, src))
+        return false;
+
+    const TObjId dstGhost = roMapLookup(ctx.objMap1, dst);
+    CL_BREAK_IF(dstGhost != roMapLookup(ctx.objMap2, src));
+
+    // go through prototypes
+    BOOST_FOREACH(const TObjTriple &proto, ctx.protoRoots) {
+        const TObjId protoDst   = proto[/* sh1 */ 0];
+        const TObjId protoSrc   = proto[/* sh2 */ 1];
+        const TObjId protoGhost = proto[/* dst */ 2];
+
+        if (objIsSeg(sh, protoDst))
+            // remove Neq predicates, their targets are going to vanish soon
+            segSetMinLength(sh, protoDst, 0);
+
+        if (bidir && objIsSeg(sh, protoSrc))
+            // remove Neq predicates, their targets are going to vanish soon
+            segSetMinLength(sh, protoSrc, 0);
+
+        if (objIsSeg(sh, protoGhost))
+            // temporarily remove Neq predicates
+            segSetMinLength(sh, protoGhost, 0);
+
+        redirectInboundEdges(sh,
+                /* pointingFrom */  protoGhost,
+                /* pointingTo   */  dstGhost,
+                /* redirectTo   */  dst);
+
+        sh.objSetProto(protoGhost, true);
+    }
+
+    JoinValueVisitor visitor(ctx);
+    visitor.bidir = bidir;
+    buildIgnoreList(sh, dst, visitor.ignoreList);
+
+    // traverse all sub-objects
+    const TObjPair item(dst, src);
+    traverseSubObjs(sh, item, visitor, /* leavesOnly */ true);
+
+    // restore minimal length of segment prototypes
+    BOOST_FOREACH(const TObjTriple &proto, ctx.protoRoots) {
+        typedef SymJoinCtx::TSegLengths TLens;
+        const TLens &lens = ctx.segLengths;
+
+        const TObjId protoDst = proto[/* dst */ 2];
+        TLens::const_iterator it = lens.find(protoDst);
+        if (lens.end() == it)
+            continue;
+
+        const unsigned len = it->second;
+        if (len)
+            segSetMinLength(sh, protoDst, len);
+    }
+
+    if (collectJunk(sh, sh.placedAt(dstGhost)))
+        CL_DEBUG("    JoinValueVisitor drops a sub-heap (dstGhost)");
+
+    return true;
+}
+

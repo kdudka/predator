@@ -28,12 +28,19 @@
 #include "symheap.hh"
 
 /// future replacment of matchData() from symdiscover
-bool joinData(
+bool joinDataReadOnly(
         const SymHeap           &sh,
         const SegBindingFields  &bf,
         const TObjId            o1,
         const TObjId            o2,
         SymHeap::TContObj       protoRoots[1][2]);
+
+/// future replacment of abstractNonMatchingValues() from symabstract
+bool joinData(
+        SymHeap                 &sh,
+        const TObjId            dst,
+        const TObjId            src,
+        const bool              bidir);
 
 /// @todo some dox
 enum EJoinStatus {

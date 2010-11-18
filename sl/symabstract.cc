@@ -26,6 +26,7 @@
 #include <cl/storage.hh>
 
 #include "symcmp.hh"
+#include "symjoin.hh"
 #include "symdiscover.hh"
 #include "symgc.hh"
 #include "symseg.hh"
@@ -95,41 +96,6 @@ static struct AbstractionThreshold dlsThreshold = {
     /* innerSegLen */ 1,
     /* spareSuffix */ 0
 };
-
-void redirectInboundEdges(
-        SymHeap                 &sh,
-        const TObjId            pointingFrom,
-        const TObjId            pointingTo,
-        const TObjId            redirectTo)
-{
-    // go through all objects pointing at/inside pointingTo
-    SymHeap::TContObj refs;
-    gatherPointingObjects(sh, refs, pointingTo, /* toInsideOnly */ false);
-    BOOST_FOREACH(const TObjId obj, refs) {
-        if (pointingFrom != objRoot(sh, obj))
-            // pointed from elsewhere, keep going
-            continue;
-
-        TObjId parent = sh.pointsTo(sh.valueOf(obj));
-        CL_BREAK_IF(parent <= 0);
-
-        // seek obj's root
-        int nth;
-        TFieldIdxChain invIc;
-        while (OBJ_INVALID != (parent = sh.objParent(parent, &nth)))
-            invIc.push_back(nth);
-
-        // now take the selector chain reversely
-        TObjId target = redirectTo;
-        BOOST_REVERSE_FOREACH(int nth, invIc) {
-            target = sh.subObj(target, nth);
-            CL_BREAK_IF(OBJ_INVALID == target);
-        }
-
-        // redirect!
-        sh.objSetValue(obj, sh.placedAt(target));
-    }
-}
 
 void detachClonedPrototype(
         SymHeap                 &sh,
@@ -490,6 +456,7 @@ struct UnknownValuesDuplicator {
 void abstractNonMatchingValues(SymHeap &sh, TObjId src, TObjId dst,
                                bool bidir = false)
 {
+#if SE_DISABLE_SYMJOIN_IN_SYMDISCOVER
     ValueAbstractor visitor(src, dst);
     visitor.bidir       = bidir;
     buildIgnoreList(sh, dst, visitor.ignoreList);
@@ -497,6 +464,9 @@ void abstractNonMatchingValues(SymHeap &sh, TObjId src, TObjId dst,
     // traverse all sub-objects
     const TObjPair item(src, dst);
     traverseSubObjs(sh, item, visitor, /* leavesOnly */ true);
+#else
+    /* TODO: check success */ joinData(sh, dst, src, bidir);
+#endif
 }
 
 // when concretizing an object, we need to duplicate all _unknown_ values

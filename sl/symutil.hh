@@ -242,4 +242,10 @@ void gatherPointingObjects(const SymHeap            &sh,
                            const TObjId             root,
                            bool                     toInsideOnly);
 
+void redirectInboundEdges(
+        SymHeap                 &sh,
+        const TObjId            pointingFrom,
+        const TObjId            pointingTo,
+        const TObjId            redirectTo);
+
 #endif /* H_GUARD_SYMUTIL_H */
