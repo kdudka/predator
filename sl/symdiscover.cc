@@ -368,11 +368,12 @@ bool validatePrototypes(
 bool validateSegEntry(const SymHeap              &sh,
                       const SegBindingFields     &bf,
                       const TObjId               entry,
+                      const TObjId               prev,
                       const TObjId               next,
                       const SymHeap::TContObj    &protoRoots)
 {
     // first validate 'root' itself
-    if (!validatePointingObjects(sh, bf, entry, OBJ_INVALID, next, protoRoots,
+    if (!validatePointingObjects(sh, bf, entry, prev, next, protoRoots,
                                  /* toInsideOnly */ true))
         return false;
 
@@ -547,8 +548,8 @@ unsigned /* len */ segDiscover(const SymHeap            &sh,
             break;
         }
 
-        if (prev == entry
-                && !validateSegEntry(sh, bf, entry, obj, protoRoots[0]))
+        if (prev == entry && !validateSegEntry(sh, bf, entry, OBJ_INVALID, obj,
+                                               protoRoots[0]))
             // invalid entry
             break;
 
@@ -560,23 +561,26 @@ unsigned /* len */ segDiscover(const SymHeap            &sh,
             // someone points to a prototype
             break;
 
-        const bool allowReferredEnd =
-            /* looking of a DLS */ !bf.peer.empty()
-            && OK_DLS != sh.objKind(obj);
-
-        if (allowReferredEnd)
-            // we allow others to point to a DLS end point
-            path.push_back(obj);
-
         // look ahead
         TObjId next = jumpToNextObj(sh, bf, haveSeen, obj);
-        if (!validatePointingObjects(sh, bf, obj, prev, next, protoRoots[1]))
+        if (!validatePointingObjects(sh, bf, obj, prev, next, protoRoots[1])) {
             // someone points at/inside who should not
-            break;
 
-        if (!allowReferredEnd)
-            // enlarge the path by one
-            path.push_back(obj);
+            const bool allowReferredEnd =
+                /* looking of a DLS */ !bf.peer.empty()
+                && OK_DLS != sh.objKind(obj)
+                && validateSegEntry(sh, bf, obj, prev, OBJ_INVALID,
+                                    protoRoots[1]);
+
+            if (allowReferredEnd)
+                // we allow others to point at DLS end-point's _head_
+                path.push_back(obj);
+
+            break;
+        }
+
+        // enlarge the path by one
+        path.push_back(obj);
 
         // jump to the next object on the path
         prev = obj;
