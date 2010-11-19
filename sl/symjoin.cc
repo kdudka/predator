@@ -743,7 +743,22 @@ bool followObjPair(
 
     const TObjId peer1 = dlSegPeer(ctx.sh1, o1);
     const TObjId peer2 = dlSegPeer(ctx.sh2, o2);
-    return followObjPairCore(ctx, peer1, peer2, action, readOnly);
+    if (!followObjPairCore(ctx, peer1, peer2, action, readOnly))
+        return false;
+
+    // we might have just joined a DLS pair as shared data, which would lead to
+    // incomplete DLS pair in ctx.dst and later cause some problems;  the best
+    // thing to do at this point, is to recover the binding of DLS in ctx.dst
+    const TObjId seg = roMapLookup(ctx.objMap1, o1);
+    CL_BREAK_IF(OBJ_INVALID == seg || seg != roMapLookup(ctx.objMap2, o2));
+
+    const TObjId peer = roMapLookup(ctx.objMap1, peer2);
+    CL_BREAK_IF(OBJ_INVALID == peer || peer != roMapLookup(ctx.objMap2, peer2));
+
+    SymHeap &sh = ctx.dst;
+    sh.objSetValue(peerPtrFromSeg(sh,  seg), segHeadAddr(sh, peer));
+    sh.objSetValue(peerPtrFromSeg(sh, peer), segHeadAddr(sh,  seg));
+    return true;
 }
 
 bool followValuePair(
@@ -855,6 +870,31 @@ bool insertSegmentCloneHelper(
     return false;
 }
 
+template <class TWorkList>
+void scheduleSegAddr(
+        TWorkList               &wl,
+        const SymHeap           &shGt,
+        const TObjId            seg,
+        const TObjId            peer,
+        const EJoinStatus       action)
+{
+    CL_BREAK_IF(JS_USE_SH1 != action && JS_USE_SH2 != action);
+    static const TValueId valInvalid = static_cast<TValueId>(VAL_INVALID);
+
+    const TValPair vpSeg(
+            (JS_USE_SH1 == action) ? shGt.placedAt(seg) : valInvalid,
+            (JS_USE_SH2 == action) ? shGt.placedAt(seg) : valInvalid);
+    wl.schedule(vpSeg);
+
+    if (seg == peer)
+        return;
+
+    const TValPair vpPeer(
+            (JS_USE_SH1 == action) ? shGt.placedAt(peer) : valInvalid,
+            (JS_USE_SH2 == action) ? shGt.placedAt(peer) : valInvalid);
+    wl.schedule(vpPeer);
+}
+
 bool insertSegmentClone(
         SymJoinCtx              &ctx,
         const TValueId          v1,
@@ -893,7 +933,7 @@ bool insertSegmentClone(
             (isGt1) ? shGt.placedAt(seg) : static_cast<TValueId>(VAL_INVALID),
             (isGt2) ? shGt.placedAt(seg) : static_cast<TValueId>(VAL_INVALID));
 
-    ctx.wl.schedule(vp);
+    scheduleSegAddr(ctx.wl, shGt, seg, peer, action);
     while (ctx.wl.next(vp)) {
         const TValueId valGt = (isGt1) ? vp.first : vp.second;
         const TValueId valLt = (isGt2) ? vp.first : vp.second;
@@ -957,10 +997,13 @@ bool joinAbstractValues(
         if (isAbs1 && isAbs2)
             return joinSegmentWithAny(pResult, ctx, root1, root2, JS_USE_ANY);
 
-        CL_BREAK_IF(isAbs1 == isAbs2);
-        if (joinSegmentWithAny(pResult, ctx, root1, root2, subStatus))
+        else if (joinSegmentWithAny(pResult, ctx, root1, root2, subStatus))
             return true;
     }
+
+    if (UV_UNINITIALIZED == code1 || UV_UNINITIALIZED == code2)
+        // such values could be hardly used as reliable anchors
+        return false;
 
     *pResult = insertSegmentClone(ctx, v1, v2, subStatus);
     return true;
@@ -1363,35 +1406,39 @@ void mapGhostAddressSpace(
     traverseSubObjs(sh, root, visitor, /* leavesOnly */ false);
 }
 
-bool dlSegCheckProtoConsistency(SymJoinCtx &ctx) {
+/// this runs only in debug build
+bool dlSegCheckProtoConsistency(const SymJoinCtx &ctx) {
     BOOST_FOREACH(const TObjTriple &proto, ctx.protoRoots) {
         const TObjId obj1   = proto[0];
         const TObjId obj2   = proto[1];
-        if (OK_DLS != ctx.sh1.objKind(obj1))
+        const TObjId objDst = proto[2];
+        if (OK_DLS != ctx.dst.objKind(objDst))
             // we are intersted only DLSs here
             continue;
 
-        CL_BREAK_IF(OK_DLS != ctx.sh2.objKind(obj2));
-        CL_BREAK_IF(OK_DLS != ctx.dst.objKind(proto[/* dst */ 2]));
-        const TObjId peer1 = dlSegPeer(ctx.sh1, obj1);
-        const TObjId peer2 = dlSegPeer(ctx.sh2, obj2);
+        TObjTriple protoPeer;
+        const TObjId peerDst = dlSegPeer(ctx.dst, objDst);
+        const TValueId peerAt = ctx.dst.placedAt(peerDst);
 
-        const TObjId peerDstBy1 = roMapLookup(ctx.objMap1, peer1);
-        const TObjId peerDstBy2 = roMapLookup(ctx.objMap2, peer2);
-        if (peerDstBy1 != peerDstBy2) {
-            SJ_DEBUG("<-- DLS prototype peer mismatch " << SJ_OBJP(obj1, obj2));
-            return false;
+        if (OK_DLS == ctx.sh1.objKind(obj1))
+            protoPeer[0] = dlSegPeer(ctx.sh1, obj1);
+        else {
+            const TValMap &vMap1r = ctx.valMap1[/* rtl */ 1];
+            protoPeer[0] = ctx.sh1.pointsTo(roMapLookup(vMap1r, peerAt));
         }
 
-        TObjTriple protoPeer;
-        protoPeer[0] = peer1;
-        protoPeer[1] = peer2;
-        protoPeer[2] = peerDstBy1;
+        if (OK_DLS == ctx.sh2.objKind(obj2))
+            protoPeer[1] = dlSegPeer(ctx.sh2, obj2);
+        else {
+            const TValMap &vMap2r = ctx.valMap2[/* rtl */ 1];
+            protoPeer[1] = ctx.sh2.pointsTo(roMapLookup(vMap2r, peerAt));
+        }
+
+        protoPeer[2] = dlSegPeer(ctx.dst, objDst);
         if (hasKey(ctx.protoRoots, protoPeer))
             continue;
 
-        SJ_DEBUG("<-- DLS prototype peer not a prototype "
-                 << SJ_OBJP(obj1, obj2));
+        CL_ERROR("DLS prototype peer not a prototype " << SJ_OBJP(obj1, obj2));
         return false;
     }
 
@@ -1435,12 +1482,12 @@ bool joinDataCore(
     if (!joinPendingValues(ctx))
         return false;
 
-    // check consistency of DLS prototype peers
-    dlSegCheckProtoConsistency(ctx);
-
     std::set<TObjId> blackList;
     buildIgnoreList(blackList, ctx.dst, rootDst, bf);
     setDstValues(ctx, &blackList);
+
+    // check consistency of DLS prototype peers
+    CL_BREAK_IF(!dlSegCheckProtoConsistency(ctx));
 
     handleDstPreds(ctx);
 
@@ -1618,7 +1665,7 @@ bool joinData(
     }
 
     if (collectJunk(sh, sh.placedAt(dstGhost)))
-        CL_DEBUG("    JoinValueVisitor drops a sub-heap (dstGhost)");
+        CL_DEBUG("    joinData() drops a sub-heap (dstGhost)");
 
     return true;
 }
