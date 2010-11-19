@@ -647,7 +647,7 @@ void dlSegMerge(SymHeap &sh, TObjId seg1, TObjId seg2) {
 
     // introduce some UV_UNKNOWN values if necessary
     abstractNonMatchingValues(sh,  seg1,  seg2, /* bidir */ true);
-#ifndef SE_DISABLE_SYMJOIN_IN_SYMDISCOVER
+#if SE_DISABLE_SYMJOIN_IN_SYMDISCOVER
     abstractNonMatchingValues(sh, peer1, peer2, /* bidir */ true);
 #endif
 

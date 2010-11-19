@@ -1295,13 +1295,12 @@ bool dlSegCheckProtoConsistency(SymJoinCtx &ctx) {
     BOOST_FOREACH(const TObjTriple &proto, ctx.protoRoots) {
         const TObjId obj1   = proto[0];
         const TObjId obj2   = proto[1];
-        const TObjId objDst = proto[2];
         if (OK_DLS != ctx.sh1.objKind(obj1))
             // we are intersted only DLSs here
             continue;
 
         CL_BREAK_IF(OK_DLS != ctx.sh2.objKind(obj2));
-        CL_BREAK_IF(OK_DLS != ctx.dst.objKind(objDst));
+        CL_BREAK_IF(OK_DLS != ctx.dst.objKind(proto[/* dst */ 2]));
         const TObjId peer1 = dlSegPeer(ctx.sh1, obj1);
         const TObjId peer2 = dlSegPeer(ctx.sh2, obj2);
 
