@@ -1451,6 +1451,27 @@ struct JoinValueVisitor {
     }
 };
 
+void recoverPointersToSelf(
+        SymHeap                 &sh,
+        const TObjId            dst,
+        const TObjId            src,
+        const TObjId            ghost,
+        const bool              bidir)
+{
+    redirectInboundEdges(sh,
+            /* pointingFrom */  dst,
+            /* pointingTo   */  ghost,
+            /* redirectTo   */  dst);
+
+    if (!bidir)
+        return;
+
+    redirectInboundEdges(sh,
+            /* pointingFrom */  src,
+            /* pointingTo   */  ghost,
+            /* redirectTo   */  src);
+}
+
 /// future replacment of matchData() from symdiscover
 bool joinData(
         SymHeap                 &sh,
@@ -1474,6 +1495,10 @@ bool joinData(
 
     const TObjId dstGhost = roMapLookup(ctx.objMap1, dst);
     CL_BREAK_IF(dstGhost != roMapLookup(ctx.objMap2, src));
+
+    const unsigned cntProto = ctx.protoRoots.size();
+    if (cntProto)
+        CL_DEBUG("    joinData() merges " << cntProto << " prototype objects");
 
     // go through prototypes
     BOOST_FOREACH(const TObjTriple &proto, ctx.protoRoots) {
@@ -1508,6 +1533,9 @@ bool joinData(
     // traverse all sub-objects
     const TObjPair item(dst, src);
     traverseSubObjs(sh, item, visitor, /* leavesOnly */ true);
+
+    // pointers to self should remain pointers to self
+    recoverPointersToSelf(sh, dst, src, dstGhost, bidir);
 
     // restore minimal length of segment prototypes
     BOOST_FOREACH(const TObjTriple &proto, ctx.protoRoots) {
