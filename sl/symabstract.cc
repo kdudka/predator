@@ -881,17 +881,26 @@ void spliceOutListSegmentCore(SymHeap &sh, TObjId obj, TObjId peer) {
     const TObjId next = nextPtrFromSeg(sh, peer);
     const TValueId valNext = sh.valueOf(next);
 
+    TValueId peerAt = VAL_INVALID;
     if (obj != peer) {
-        // OK_DLS --> destroy peer
+        // OK_DLS --> unlink peer
         const TFieldIdxChain icPrev = sh.objBinding(obj).next;
         const TValueId valPrev = sh.valueOf(subObjByChain(sh, obj, icPrev));
-        segReplaceRefs(sh, segHeadAddr(sh, peer), valPrev);
-        sh.objDestroy(peer);
+        peerAt = segHeadAddr(sh, peer);
+        segReplaceRefs(sh, peerAt, valPrev);
     }
 
-    // destroy self
-    segReplaceRefs(sh, segHeadAddr(sh, obj), valNext);
-    sh.objDestroy(obj);
+    // unlink self
+    const TValueId segAt = segHeadAddr(sh, obj);
+    segReplaceRefs(sh, segAt, valNext);
+
+    // destroy peer in case of DLS
+    if (VAL_INVALID != peerAt && collectJunk(sh, peerAt))
+        CL_DEBUG("spliceOutSegmentIfNeeded() drops a sub-heap (peerAt)");
+
+    // destroy self, including all nested prototypes
+    if (collectJunk(sh, segAt))
+        CL_DEBUG("spliceOutSegmentIfNeeded() drops a sub-heap (segAt)");
 
     debugPlot(sh);
 }
