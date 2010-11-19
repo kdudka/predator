@@ -109,7 +109,11 @@ inline TValueId segHeadAddr(const SymHeap &sh, TObjId seg) {
 }
 
 template <class TIgnoreList>
-void buildIgnoreList(const SymHeap &sh, TObjId obj, TIgnoreList &ignoreList) {
+void buildIgnoreList(
+        TIgnoreList             &ignoreList,
+        const SymHeap           &sh,
+        const TObjId            obj)
+{
     TObjId tmp;
 
     const EObjKind kind = sh.objKind(obj);
@@ -130,6 +134,26 @@ void buildIgnoreList(const SymHeap &sh, TObjId obj, TIgnoreList &ignoreList) {
             // preserve 'next' field
             tmp = subObjByChain(sh, obj, sh.objBinding(obj).next);
             ignoreList.insert(tmp);
+    }
+}
+
+template <class TIgnoreList>
+void buildIgnoreList(
+        TIgnoreList             &ignoreList,
+        const SymHeap           &sh,
+        const TObjId            obj,
+        const SegBindingFields  &bf)
+{
+    const TFieldIdxChain &icNext = bf.next;
+    if (!icNext.empty()) {
+        const TObjId next = subObjByChain(sh, obj, icNext);
+        ignoreList.insert(next);
+    }
+
+    const TFieldIdxChain &icPeer = bf.peer;
+    if (!icPeer.empty()) {
+        const TObjId peer = subObjByChain(sh, obj, icPeer);
+        ignoreList.insert(peer);
     }
 }
 

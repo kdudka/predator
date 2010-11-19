@@ -452,6 +452,10 @@ struct UnknownValuesDuplicator {
     }
 };
 
+#if !SE_DISABLE_SYMJOIN_IN_SYMDISCOVER
+void dlSegSyncPeerData(SymHeap &sh, const TObjId dls);
+#endif
+
 // when abstracting an object, we need to abstract all non-matching values in
 void abstractNonMatchingValues(SymHeap &sh, TObjId src, TObjId dst,
                                bool bidir = false)
@@ -459,13 +463,24 @@ void abstractNonMatchingValues(SymHeap &sh, TObjId src, TObjId dst,
 #if SE_DISABLE_SYMJOIN_IN_SYMDISCOVER
     ValueAbstractor visitor(src, dst);
     visitor.bidir       = bidir;
-    buildIgnoreList(sh, dst, visitor.ignoreList);
+    buildIgnoreList(visitor.ignoreList, sh, dst);
 
     // traverse all sub-objects
     const TObjPair item(src, dst);
     traverseSubObjs(sh, item, visitor, /* leavesOnly */ true);
 #else
-    /* TODO: check success */ joinData(sh, dst, src, bidir);
+    if (!joinData(sh, dst, src, bidir)) {
+        CL_ERROR("joinData() failed, symbolic heap is not consistent any more");
+#ifndef NDEBUG
+        CL_TRAP;
+#endif
+    }
+
+    if (OK_DLS == sh.objKind(dst))
+        dlSegSyncPeerData(sh, dst);
+
+    if (bidir && OK_DLS == sh.objKind(src))
+        dlSegSyncPeerData(sh, src);
 #endif
 }
 
@@ -474,7 +489,7 @@ void duplicateUnknownValues(SymHeap &sh, TObjId obj, TObjId dup) {
     UnknownValuesDuplicator visitor;
     visitor.rootDst = obj;
     visitor.rootSrc = dup;
-    buildIgnoreList(sh, obj, visitor.ignoreList);
+    buildIgnoreList(visitor.ignoreList, sh, obj);
 
     // traverse all sub-objects
     traverseSubObjs(sh, obj, visitor, /* leavesOnly */ true);
@@ -499,12 +514,8 @@ struct ValueSynchronizer {
         sh.objSetValue(dst, valSrc);
 
         // if the last reference is gone, we have a problem
-        if (collectJunk(sh, valDst)) {
-            CL_ERROR("junk detected by ValueSynchronizer");
-#ifndef NDEBUG
-            CL_TRAP;
-#endif
-        }
+        if (collectJunk(sh, valDst))
+            CL_DEBUG("    ValueSynchronizer drops a sub-heap (dlSegPeer)");
 
         return /* continue */ true;
     }
@@ -513,7 +524,7 @@ struct ValueSynchronizer {
 void dlSegSyncPeerData(SymHeap &sh, const TObjId dls) {
     const TObjId peer = dlSegPeer(sh, dls);
     ValueSynchronizer visitor;
-    buildIgnoreList(sh, dls, visitor.ignoreList);
+    buildIgnoreList(visitor.ignoreList, sh, dls);
 
     // if there was "a pointer to self", it should remain "a pointer to self";
     SymHeap::TContObj refs;
@@ -636,7 +647,9 @@ void dlSegMerge(SymHeap &sh, TObjId seg1, TObjId seg2) {
 
     // introduce some UV_UNKNOWN values if necessary
     abstractNonMatchingValues(sh,  seg1,  seg2, /* bidir */ true);
+#ifndef SE_DISABLE_SYMJOIN_IN_SYMDISCOVER
     abstractNonMatchingValues(sh, peer1, peer2, /* bidir */ true);
+#endif
 
     // preserve backLink
     const TValueId valNext2 = sh.valueOf(nextPtrFromSeg(sh, seg1));

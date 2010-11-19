@@ -200,7 +200,8 @@ bool defineValueMapping(
 bool checkValueMapping(
         const SymJoinCtx        &ctx,
         const TValueId          v1,
-        const TValueId          v2)
+        const TValueId          v2,
+        const bool              allowUnknownMapping)
 {
     // read-only value lookup
     const TValMap &vMap1 = ctx.valMap1[/* ltr */ 0];
@@ -211,8 +212,8 @@ bool checkValueMapping(
     const bool hasMapping1 = (vMap1.end() != i1);
     const bool hasMapping2 = (vMap2.end() != i2);
     if (!hasMapping1 && !hasMapping2)
-        // we have not enough info yet, try it later...
-        return true;
+        // we have not enough info yet
+        return allowUnknownMapping;
 
     const TValueId vDst1 = (hasMapping1)
         ? i1->second
@@ -254,7 +255,7 @@ bool joinFreshObjTripple(
             // same as above, but now only one value of v1 and v2 is valid
             return true;
 
-        if (!checkValueMapping(ctx, v1, v2))
+        if (!checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ true))
             // mapping already inconsistent
             return false;
     }
@@ -292,8 +293,12 @@ bool joinFreshObjTripple(
         }
 
         if (readOnly)
-            return checkValueMapping(ctx, v1, v2);
+            return checkValueMapping(ctx, v1, v2,
+                                     /* allowUnknownMapping */ true);
     }
+
+    if (checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ false))
+        return true;
 
     if (ctx.wl.schedule(TValPair(v1, v2)))
         SJ_DEBUG("+++ " << SJ_VALP(v1, v2) << " <- " << SJ_OBJP(obj1, obj2));
@@ -312,10 +317,6 @@ struct ObjJoinVisitor {
         const TObjId obj2   = item[1];
         const TObjId objDst = item[2];
 
-        // check black-list
-        if (hasKey(blackList, objDst))
-            return /* continue */ true;
-
         // store object IDs mapping
         if (OBJ_INVALID != obj1)
             ctx.objMap1[obj1] = objDst;
@@ -329,6 +330,10 @@ struct ObjJoinVisitor {
         const TValueId dstAt = ctx.dst.placedAt(objDst);
         if (!defineValueMapping(ctx, addr1, addr2, dstAt))
             return false;
+
+        // check black-list
+        if (hasKey(blackList, objDst))
+            return /* continue */ true;
 
         return /* continue */ joinFreshObjTripple(ctx, obj1, obj2, objDst);
     }
@@ -379,19 +384,9 @@ bool traverseSubObjs(
 
     // initialize visitor
     ObjJoinVisitor objVisitor(ctx);
-    if (bfBlackList) {
-        const TFieldIdxChain &icNext = bfBlackList->next;
-        if (!icNext.empty()) {
-            const TObjId next = subObjByChain(ctx.dst, rootDst, icNext);
-            objVisitor.blackList.insert(next);
-        }
+    if (bfBlackList)
+        buildIgnoreList(objVisitor.blackList, ctx.dst, rootDst, *bfBlackList);
 
-        const TFieldIdxChain &icPeer = bfBlackList->peer;
-        if (!icPeer.empty()) {
-            const TObjId peer = subObjByChain(ctx.dst, rootDst, icPeer);
-            objVisitor.blackList.insert(peer);
-        }
-    }
     else if ((&ctx.sh1 == &ctx.sh2)) {
         // we are called from joinData()
         if (root1 == root2)
@@ -804,7 +799,8 @@ bool insertSegmentClone(
     const TValueId nextLt = (isGt2) ? v1 : v2;
     if (!checkNonPosValues(nextGt, nextLt) || !checkValueMapping(ctx, 
                 (isGt1) ? nextGt : nextLt,
-                (isGt2) ? nextGt : nextLt))
+                (isGt2) ? nextGt : nextLt,
+                /* allowUnknownMapping */ true))
     {
         SJ_DEBUG("<-- insertSegmentClone: value mismatch "
                  "(nextLt = #" << nextLt << ", nextGt = #" << nextGt << ")");
@@ -978,10 +974,16 @@ typename TMap::mapped_type roMapLookup(
         : iter->second;
 }
 
-template <class TItem>
-void setDstValuesCore(SymJoinCtx &ctx, const TItem &rItem) {
+template <class TItem, class TBlackList>
+void setDstValuesCore(
+        SymJoinCtx              &ctx,
+        const TItem             &rItem,
+        const TBlackList        &blackList)
+{
     const TObjId objDst = rItem.first;
     CL_BREAK_IF(objDst < 0);
+    if (hasKey(blackList, objDst))
+        return;
 
     const TObjPair &orig = rItem.second;
     const TObjId obj1 = orig.first;
@@ -1037,7 +1039,7 @@ void setDstValuesCore(SymJoinCtx &ctx, const TItem &rItem) {
     ctx.dst.objSetValue(objDst, vDst);
 }
 
-void setDstValues(SymJoinCtx &ctx) {
+void setDstValues(SymJoinCtx &ctx, const std::set<TObjId> *blackList = 0) {
     typedef SymJoinCtx::TObjMap TObjMap;
     typedef std::map<TObjId /* objDst */, TObjPair> TMap;
     TMap rMap;
@@ -1062,8 +1064,12 @@ void setDstValues(SymJoinCtx &ctx) {
         rMap[objDst].second = ref.first;
     }
 
+    std::set<TObjId> emptyBlackList;
+    if (!blackList)
+        blackList = &emptyBlackList;
+
     BOOST_FOREACH(TMap::const_reference rItem, rMap) {
-        setDstValuesCore(ctx, rItem);
+        setDstValuesCore(ctx, rItem, blackList);
     }
 }
 
@@ -1235,6 +1241,92 @@ bool joinSymHeaps(
     return true;
 }
 
+class GhostMapper {
+    private:
+        TValMap                 &vMap_;
+
+    public:
+        GhostMapper(TValMap &vMap):
+            vMap_(vMap)
+        {
+        }
+
+        bool operator()(const SymHeap &sh, const TObjPair &item) {
+            // obtain addresses
+            const TValueId addrReal  = sh.placedAt(item.first);
+            const TValueId addrGhost = sh.placedAt(item.second);
+            CL_BREAK_IF(addrReal < 0 || addrGhost < 0);
+            CL_BREAK_IF(addrReal == addrGhost);
+
+            // wait, first we need to translate the address into ctx.dst world
+            const TValueId image = roMapLookup(vMap_, addrReal);
+            CL_BREAK_IF(image <= 0);
+
+            // introduce ghost mapping
+            CL_BREAK_IF(hasKey(vMap_, addrGhost));
+            vMap_[addrGhost] = image;
+
+            return /* continue */ true;
+        }
+};
+
+void mapGhostAddressSpace(
+        SymJoinCtx              &ctx,
+        const TObjId            objReal,
+        const TObjId            objGhost,
+        const EJoinStatus       action)
+{
+    const SymHeap &sh = ctx.sh1;
+    CL_BREAK_IF(&sh != &ctx.sh2);
+    CL_BREAK_IF(objReal < 0 || objGhost < 0);
+
+    TValMapBidir &vMap = (JS_USE_SH1 == action)
+        ? ctx.valMap1
+        : ctx.valMap2;
+
+    GhostMapper visitor(vMap[/* ltr */ 0]);
+    const TObjPair root(objReal, objGhost);
+
+    visitor(sh, root);
+    traverseSubObjs(sh, root, visitor, /* leavesOnly */ false);
+}
+
+bool dlSegCheckProtoConsistency(SymJoinCtx &ctx) {
+    BOOST_FOREACH(const TObjTriple &proto, ctx.protoRoots) {
+        const TObjId obj1   = proto[0];
+        const TObjId obj2   = proto[1];
+        const TObjId objDst = proto[2];
+        if (OK_DLS != ctx.sh1.objKind(obj1))
+            // we are intersted only DLSs here
+            continue;
+
+        CL_BREAK_IF(OK_DLS != ctx.sh2.objKind(obj2));
+        CL_BREAK_IF(OK_DLS != ctx.dst.objKind(objDst));
+        const TObjId peer1 = dlSegPeer(ctx.sh1, obj1);
+        const TObjId peer2 = dlSegPeer(ctx.sh2, obj2);
+
+        const TObjId peerDstBy1 = roMapLookup(ctx.objMap1, peer1);
+        const TObjId peerDstBy2 = roMapLookup(ctx.objMap2, peer2);
+        if (peerDstBy1 != peerDstBy2) {
+            SJ_DEBUG("<-- DLS prototype peer mismatch " << SJ_OBJP(obj1, obj2));
+            return false;
+        }
+
+        TObjTriple protoPeer;
+        protoPeer[0] = peer1;
+        protoPeer[1] = peer2;
+        protoPeer[2] = peerDstBy1;
+        if (hasKey(ctx.protoRoots, protoPeer))
+            continue;
+
+        SJ_DEBUG("<-- DLS prototype peer not a prototype "
+                 << SJ_OBJP(obj1, obj2));
+        return false;
+    }
+
+    return true;
+}
+
 bool joinDataCore(
         SymJoinCtx              &ctx,
         const SegBindingFields  &bf,
@@ -1260,10 +1352,28 @@ bool joinDataCore(
     if (!traverseSubObjs(ctx, o1, o2, rootDst, &bf))
         return false;
 
+    // never step over DLS peer
+    if (OK_DLS == sh.objKind(o1)) {
+        const TObjId peer = dlSegPeer(sh, o1);
+        if (peer != o2)
+            mapGhostAddressSpace(ctx, o1, peer, JS_USE_SH1);
+    }
+    if (OK_DLS == sh.objKind(o2)) {
+        const TObjId peer = dlSegPeer(sh, o2);
+        if (peer != o1)
+            mapGhostAddressSpace(ctx, o2, peer, JS_USE_SH2);
+    }
+
     if (!joinPendingValues(ctx))
         return false;
 
-    setDstValues(ctx);
+    // check consistency of DLS prototype peers
+    dlSegCheckProtoConsistency(ctx);
+
+    std::set<TObjId> blackList;
+    buildIgnoreList(blackList, ctx.dst, rootDst, bf);
+    setDstValues(ctx, &blackList);
+
     handleDstPreds(ctx);
 
     if (JS_THREE_WAY == ctx.status) {
@@ -1322,8 +1432,10 @@ struct JoinValueVisitor {
         const TValueId newDst = roMapLookup(ctx.valMap1[/* ltr */ 0], oldDst);
         const TValueId newSrc = roMapLookup(ctx.valMap2[/* ltr */ 0], oldSrc);
 
-        // TODO: handle prototypes
         CL_BREAK_IF(newDst != newSrc);
+        if (VAL_INVALID == newDst)
+            // shared data
+            return true;
 
         sh.objSetValue(dst, newDst);
         if (collectJunk(sh, oldDst))
@@ -1357,6 +1469,8 @@ bool joinData(
     const SegBindingFields bf(sh.objBinding(dst));
 
     if (!joinDataCore(ctx, bf, dst, src))
+        // TODO: collect the already created dangling object and return the heap
+        //       in a more consistent shape!
         return false;
 
     const TObjId dstGhost = roMapLookup(ctx.objMap1, dst);
@@ -1390,7 +1504,7 @@ bool joinData(
 
     JoinValueVisitor visitor(ctx);
     visitor.bidir = bidir;
-    buildIgnoreList(sh, dst, visitor.ignoreList);
+    buildIgnoreList(visitor.ignoreList, sh, dst);
 
     // traverse all sub-objects
     const TObjPair item(dst, src);
