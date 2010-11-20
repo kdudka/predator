@@ -65,6 +65,21 @@ class WorkListWithUndo: public WorkList<T> {
         }
 };
 
+/// known to work only for TObjId/TValueId
+template <class TMap>
+typename TMap::mapped_type roMapLookup(
+        const TMap                          &roMap,
+        const typename TMap::mapped_type    id)
+{
+    if (id <= 0)
+        return id;
+
+    typename TMap::const_iterator iter = roMap.find(id);
+    return (roMap.end() == iter)
+        ? static_cast<typename TMap::mapped_type>(-1)
+        : iter->second;
+}
+
 struct SymJoinCtx {
     SymHeap                     &dst;
     const SymHeap               &sh1;
@@ -196,6 +211,38 @@ bool defineValueMapping(
     return true;
 }
 
+bool defineAddressMapping(
+        SymJoinCtx              &ctx,
+        const TObjId            obj1,
+        const TObjId            obj2,
+        const TObjId            objDst)
+{
+    const TValueId addr1 = ctx.sh1.placedAt(obj1);
+    const TValueId addr2 = ctx.sh2.placedAt(obj2);
+    const TValueId dstAt = ctx.dst.placedAt(objDst);
+    return defineValueMapping(ctx, addr1, addr2, dstAt);
+}
+
+bool defineAddressMappingOfSub(
+        SymJoinCtx              &ctx,
+        const TObjId            obj1,
+        const TObjId            obj2)
+{
+    if (&ctx.sh1 != &ctx.sh2)
+        // this is not necessary on the way from joinSymHeaps()
+        return true;
+
+    const TObjId objDstBy1 = roMapLookup(ctx.objMap1, obj1);
+    const TObjId objDstBy2 = roMapLookup(ctx.objMap2, obj2);
+    if (objDstBy1 != objDstBy2) {
+        SJ_DEBUG("<-- sub-object mismatch " << SJ_OBJP(obj1, obj2));
+        return false;
+    }
+
+    // join mapping of object's address
+    return defineAddressMapping(ctx, obj1, obj2, objDstBy1);
+}
+
 // read-only (in)consistency check
 bool checkValueMapping(
         const SymJoinCtx        &ctx,
@@ -309,8 +356,13 @@ bool joinFreshObjTripple(
 struct ObjJoinVisitor {
     SymJoinCtx              &ctx;
     std::set<TObjId>        blackList;
+    bool                    noFollow;
 
-    ObjJoinVisitor(SymJoinCtx &ctx_): ctx(ctx_) { }
+    ObjJoinVisitor(SymJoinCtx &ctx_):
+        ctx(ctx_),
+        noFollow(false)
+    {
+    }
 
     bool operator()(const TObjTriple &item) {
         const TObjId obj1   = item[0];
@@ -325,14 +377,11 @@ struct ObjJoinVisitor {
             ctx.objMap2[obj2] = objDst;
 
         // store object's addresses
-        const TValueId addr1 = ctx.sh1.placedAt(obj1);
-        const TValueId addr2 = ctx.sh2.placedAt(obj2);
-        const TValueId dstAt = ctx.dst.placedAt(objDst);
-        if (!defineValueMapping(ctx, addr1, addr2, dstAt))
+        if (!defineAddressMapping(ctx, obj1, obj2, objDst))
             return false;
 
         // check black-list
-        if (hasKey(blackList, objDst))
+        if (noFollow || hasKey(blackList, objDst))
             return /* continue */ true;
 
         return /* continue */ joinFreshObjTripple(ctx, obj1, obj2, objDst);
@@ -389,11 +438,13 @@ bool traverseSubObjs(
 
     else if ((&ctx.sh1 == &ctx.sh2)) {
         // we are called from joinData()
+
         if (root1 == root2)
             // do not follow shared data
-            return true;
+            objVisitor.noFollow = true;
 
-        ctx.protoRoots.insert(roots);
+        else 
+            ctx.protoRoots.insert(roots);
     }
 
     // guide the visitors through them
@@ -614,18 +665,15 @@ bool joinAnonObjects(
     const TObjId anon = ctx.dst.objCreateAnon(cbSize1);
     ctx.objMap1[o1] = anon;
     ctx.objMap2[o2] = anon;
-    return defineValueMapping(ctx,
-            ctx.sh1.placedAt(o1),
-            ctx.sh2.placedAt(o2),
-            ctx.dst.placedAt(anon));
+    return defineAddressMapping(ctx, o1, o2, anon);
 }
 
-bool followObjPair(
+bool followObjPairCore(
         SymJoinCtx              &ctx,
         const TObjId            o1,
         const TObjId            o2,
         const EJoinStatus       action,
-        const bool              readOnly = false)
+        const bool              readOnly)
 {
     const struct cl_type *clt;
     if (!joinObjClt(&clt, ctx, o1, o2))
@@ -643,10 +691,8 @@ bool followObjPair(
         }
 
         // join mapping of object's address
-        const TValueId addr1 = ctx.sh1.placedAt(root1);
-        const TValueId addr2 = ctx.sh2.placedAt(root2);
-        const TValueId dstAt = ctx.dst.placedAt(rootDst);
-        return defineValueMapping(ctx, addr1, addr2, dstAt);
+        return defineAddressMapping(ctx, root1, root2, rootDst)
+            && defineAddressMappingOfSub(ctx, o1, o2);
     }
 
     CL_BREAK_IF(root1 <= 0 || root2 <= 0);
@@ -663,7 +709,41 @@ bool followObjPair(
         // do not create any object, just check if it was possible
         return segMatchLookAhead(ctx, root1, root2);
 
-    return createObject(ctx, clt, root1, root2, action);
+    if (&ctx.sh1 == &ctx.sh2 && &ctx.sh2 == &ctx.dst && root1 == root2)
+        // shared data
+        return traverseSubObjs(ctx, root1, root1, root1);
+
+    return createObject(ctx, clt, root1, root2, action)
+        && defineAddressMappingOfSub(ctx, o1, o2);
+}
+
+bool followObjPair(
+        SymJoinCtx              &ctx,
+        const TObjId            o1,
+        const TObjId            o2,
+        const EJoinStatus       action,
+        const bool              readOnly = false)
+{
+    if (!followObjPairCore(ctx, o1, o2, action, readOnly))
+        return false;
+
+    if (&ctx.sh1 != &ctx.sh2)
+        // we are on the way from joinSymHeaps()
+        return true;
+
+    if (o1 != o2)
+        // looks rather as a prototype and we are interested in shared data here
+        return true;
+
+    const bool isDls = (OK_DLS == ctx.sh1.objKind(o1));
+    CL_BREAK_IF(isDls != (OK_DLS == ctx.sh2.objKind(o2)));
+    if (!isDls)
+        // not a DLS
+        return true;
+
+    const TObjId peer1 = dlSegPeer(ctx.sh1, o1);
+    const TObjId peer2 = dlSegPeer(ctx.sh2, o2);
+    return followObjPairCore(ctx, peer1, peer2, action, readOnly);
 }
 
 bool followValuePair(
@@ -920,6 +1000,7 @@ bool joinPendingValues(SymJoinCtx &ctx) {
         const TValueId v1 = vp.first;
         const TValueId v2 = vp.second;
 
+        SJ_DEBUG("--- " << SJ_VALP(v1, v2));
         if (!joinValuePair(ctx, v1, v2))
             return false;
     }
@@ -959,21 +1040,6 @@ bool joinCVars(SymJoinCtx &ctx) {
     return true;
 }
 
-/// known to work only for TObjId/TValueId
-template <class TMap>
-typename TMap::mapped_type roMapLookup(
-        const TMap                          &roMap,
-        const typename TMap::mapped_type    id)
-{
-    if (id <= 0)
-        return id;
-
-    typename TMap::const_iterator iter = roMap.find(id);
-    return (roMap.end() == iter)
-        ? static_cast<typename TMap::mapped_type>(-1)
-        : iter->second;
-}
-
 template <class TItem, class TBlackList>
 void setDstValuesCore(
         SymJoinCtx              &ctx,
@@ -1002,13 +1068,19 @@ void setDstValuesCore(
         return;
     }
 
+    if (&ctx.sh1 == &ctx.sh2 && obj1 == obj2) {
+        // shared data
+        CL_BREAK_IF(v1 != v2);
+        if (&ctx.sh1 == &ctx.dst)
+            // read-write mode
+            ctx.dst.objSetValue(objDst, v1);
+
+        return;
+    }
+
     const TValueId vDstBy1 = roMapLookup(ctx.valMap1[/* ltr */ 0], v1);
     const TValueId vDstBy2 = roMapLookup(ctx.valMap2[/* ltr */ 0], v2);
     if (vDstBy1 == vDstBy2) {
-        if (&ctx.sh1 == &ctx.sh2 && VAL_INVALID == vDstBy1)
-            // we are called from joinData() and perhaps hit the binding fields
-            return;
-
         // the values are equal --> pick any
         ctx.dst.objSetValue(objDst, vDstBy1);
         return;
@@ -1344,9 +1416,6 @@ bool joinDataCore(
         return false;
     }
 
-    // TODO
-    //CL_BREAK_IF(OK_DLS == sh.objKind(o1) || OK_DLS == sh.objKind(o2));
-
     const TObjId rootDst = ctx.dst.objCreate(clt);
     if (!traverseSubObjs(ctx, o1, o2, rootDst, &bf))
         return false;
@@ -1430,11 +1499,7 @@ struct JoinValueVisitor {
 
         const TValueId newDst = roMapLookup(ctx.valMap1[/* ltr */ 0], oldDst);
         const TValueId newSrc = roMapLookup(ctx.valMap2[/* ltr */ 0], oldSrc);
-
         CL_BREAK_IF(newDst != newSrc);
-        if (VAL_INVALID == newDst)
-            // shared data
-            return true;
 
         sh.objSetValue(dst, newDst);
         if (collectJunk(sh, oldDst))
