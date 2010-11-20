@@ -294,8 +294,9 @@ bool validatePointingObjects(
     allowedReferers.insert(root);
 
     // collect all objects pointing at/inside the object
+    // NOTE: we really intend to pass toInsideOnly == false at this point!
     SymHeap::TContObj refs;
-    gatherPointingObjects(sh, refs, root, toInsideOnly);
+    gatherPointingObjects(sh, refs, root, /* toInsideOnly */ false);
 
     // consider also up-links from nested prototypes
     std::copy(protoRoots.begin(), protoRoots.end(),
