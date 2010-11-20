@@ -41,26 +41,26 @@
         CL_DEBUG("SymState: " << __VA_ARGS__);                              \
 } while (0)
 
-#define FIXW(w) std::fixed << std::setfill('0') << std::setw(w)
-
 // set to 'true' if you wonder why SymState matches states as it does (noisy)
 static bool debugSymState = static_cast<bool>(DEBUG_SYMSTATE);
 
 static int cntLookups = -1;
 
-void debugPlot(const char *name, int idx, const SymHeap &sh) {
-#if DEBUG_SYMJOIN
-    if (!STREQ(name, "join"))
+namespace {
+    void debugPlot(const char *name, int idx, const SymHeap &sh) {
+#if 0//DEBUG_SYMJOIN
+        if (!STREQ(name, "join"))
 #endif
-    if (!::debugSymState)
-        return;
+        if (!::debugSymState)
+            return;
 
-    std::ostringstream str;
-    str << "symstate-"
-        << FIXW(6) << ::cntLookups << "-" << name << "-"
-        << FIXW(4) << (idx);
+        std::ostringstream str;
+        str << "symstate-"
+            << FIXW(6) << ::cntLookups << "-" << name << "-"
+            << FIXW(4) << idx;
 
-    dump_plot(sh, str.str().c_str());
+        dump_plot(sh, str.str().c_str());
+    }
 }
 
 // /////////////////////////////////////////////////////////////////////////////

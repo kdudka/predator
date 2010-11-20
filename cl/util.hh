@@ -27,6 +27,8 @@
 #   define STREQ(s1, s2) (0 == strcmp(s1, s2))
 #endif
 
+#define FIXW(w) std::fixed << std::setfill('0') << std::setw(w)
+
 template <typename T>
 void swapValues(T &a, T &b) {
     const T tmp = a;

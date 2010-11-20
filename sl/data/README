@@ -133,6 +133,18 @@ Higher level SLS/DLS abstraction, etc.
                 - bounded recursion of depth 2
                 - see the function dll_create_generic() for details
 
+    test-0110.c - top level SLL
+                - odd nodes contain only one item of nested SLL (not a SLL)
+                - even nodes contain two items of nested SLL
+                - the same type is used at both levels, which helps negligibly
+
+    test-0111.c - alternation of test-0110
+                - two distinct types are used, which makes it harder to digest
+
+    test-0116.c - alternation of test-0111
+                - length of the nested SLL changes periodically: 1, 3, 0, 2
+                - no way to analyse without three-way join of prototypes
+
 
 Linux lists
 ===========

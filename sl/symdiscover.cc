@@ -469,7 +469,8 @@ bool matchData(const SymHeap                &sh,
     const TObjPair item(o1, o2);
     return traverseSubObjs(sh, item, visitor, /* leavesOnly */ true);
 #else
-    return joinDataReadOnly(sh, bf, o1, o2, protoRoots);
+    EJoinStatus status;
+    return joinDataReadOnly(&status, sh, bf, o1, o2, protoRoots);
 #endif
 }
 
@@ -544,6 +545,9 @@ unsigned /* len */ segDiscover(const SymHeap            &sh,
     while (OBJ_INVALID != obj) {
         // compare the data
         TProtoRoots protoRoots;
+        // TODO: optimize such that matchData() is not called at all when any
+        // _program_ variable points at/inside;  call of matchData() in such
+        // cases is significant waste for us!
         if (!matchData(sh, bf, prev, obj, &protoRoots)) {
             CL_DEBUG("    DataMatchVisitor refuses to create a segment!");
             break;

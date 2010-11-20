@@ -101,17 +101,8 @@ void insert_top(struct list_head *head)
     top->sub.next = &top->sub;
 
     static int cnt;
-    if ((++cnt) % 2) {
+    if ((++cnt) % 2)
         insert_sub(&top->sub);
-        insert_sub(&top->sub);
-        insert_sub(&top->sub);
-        insert_sub(&top->sub);
-
-        // NOTE: running this on bare metal may cause the machine to swap a bit
-        int i;
-        for (i = 1; i; ++i)
-            insert_sub(&top->sub);
-    }
 
     list_add_tail(&top->link, head);
 }

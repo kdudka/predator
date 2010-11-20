@@ -27,8 +27,17 @@
 
 #include "symheap.hh"
 
+/// @todo some dox
+enum EJoinStatus {
+    JS_USE_ANY = 0,
+    JS_USE_SH1,
+    JS_USE_SH2,
+    JS_THREE_WAY
+};
+
 /// replacement of matchData() from symdiscover
 bool joinDataReadOnly(
+        EJoinStatus             *pStatus,
         const SymHeap           &sh,
         const SegBindingFields  &bf,
         const TObjId            o1,
@@ -41,14 +50,6 @@ bool joinData(
         const TObjId            dst,
         const TObjId            src,
         const bool              bidir);
-
-/// @todo some dox
-enum EJoinStatus {
-    JS_USE_ANY = 0,
-    JS_USE_SH1,
-    JS_USE_SH2,
-    JS_THREE_WAY
-};
 
 /// @todo some dox
 bool joinSymHeaps(
