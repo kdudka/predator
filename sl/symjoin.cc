@@ -1293,6 +1293,19 @@ bool segDetectSelfLoop(const SymHeap &sh) {
     return false;
 }
 
+bool validateThreeWayStatus(const EJoinStatus status) {
+#if !SE_DISABLE_THREE_WAY_JOIN
+    (void) status;
+#else
+    if (JS_THREE_WAY != status)
+#endif
+        return true;
+
+    CL_WARN("three-way join disabled by configuration, recompile "
+            "with SE_DISABLE_THREE_WAY_JOIN == 0 to enable it");
+    return false;
+}
+
 bool joinSymHeaps(
         EJoinStatus             *pStatus,
         SymHeap                 *pDst,
@@ -1334,16 +1347,8 @@ bool joinSymHeaps(
         CL_BREAK_IF((JS_THREE_WAY == ctx.status) && areEqual(sh2, ctx.dst));
     }
 
-    if (JS_THREE_WAY == ctx.status) {
-#if SE_DISABLE_THREE_WAY_JOIN
-        CL_WARN("three-way join disabled by configuration, recompile "
-                "with SE_DISABLE_THREE_WAY_JOIN == 0 to enable it");
+    if (!validateThreeWayStatus(ctx.status))
         return false;
-#else
-        CL_WARN("three-way join enabled by configuration, recompile "
-                "with SE_DISABLE_THREE_WAY_JOIN == 1 to disable it");
-#endif
-    }
 
     // all OK
     *pStatus = ctx.status;
@@ -1485,12 +1490,7 @@ bool joinDataCore(
 
     handleDstPreds(ctx);
 
-    if (JS_THREE_WAY == ctx.status) {
-        CL_WARN("three-way join not yet allowed for joinDataCore()");
-        return false;
-    }
-
-    return true;
+    return validateThreeWayStatus(ctx.status);
 }
 
 bool joinDataReadOnly(

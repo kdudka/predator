@@ -115,7 +115,7 @@
 /**
  * if 1, do not use the @b symjoin module for discovering of prototypes
  */
-#define SE_DISABLE_SYMJOIN_IN_SYMDISCOVER   1
+#define SE_DISABLE_SYMJOIN_IN_SYMDISCOVER   0
 
 /**
  * if 1, do not allow three-way join

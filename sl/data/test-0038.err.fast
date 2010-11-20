@@ -1,3 +1,2 @@
 test-0038.c:42:22: warning: binary operator not implemented yet
-test-0038.c:42:22: warning: binary operator not implemented yet
 test-0038.c:48:21: error: dereference of NULL value
