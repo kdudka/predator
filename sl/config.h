@@ -76,12 +76,6 @@
 #define DEBUG_UNUSED_VALUES                 0
 
 /**
- * if 1, the garbage collector does not see objects pointed beyond the root as
- * garbage
- */
-#define GC_ADMIT_LINUX_LISTS                1
-
-/**
  * if 1, call optimization is not performed; it may introduce some compile-time
  * warnings and memory leaks as a side effect
  */
