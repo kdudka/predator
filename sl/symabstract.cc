@@ -39,6 +39,13 @@
 
 #include <boost/foreach.hpp>
 
+#define REQUIRE_GC_ACTIVITY(sh, val, fnc) do {                                 \
+    if (collectJunk(sh, val))                                                  \
+        break;                                                                 \
+    CL_ERROR(#fnc "() failed to collect garbage, " #val " still referenced");  \
+    CL_BREAK_IF("REQUIRE_GC_ACTIVITY has not been successful");                \
+} while (0)
+
 #if DEBUG_SYMABSTRACT
 #   include "symdump.hh"
 #   define FIXW(w) std::fixed << std::setfill('0') << std::setw(w)
@@ -563,11 +570,11 @@ void slSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf)
 
     // replace all references to 'head'
     const TFieldIdxChain icHead = sh.objBinding(objNext).head;
-    const TObjId head = subObjByChain(sh, obj, icHead);
-    sh.valReplace(sh.placedAt(head), segHeadAddr(sh, objNext));
+    const TValueId headAt = sh.placedAt(subObjByChain(sh, obj, icHead));
+    sh.valReplace(headAt, segHeadAddr(sh, objNext));
 
-    // replace self by the next object
-    objReplace(sh, obj, objNext);
+    // destroy self, including all prototypes
+    REQUIRE_GC_ACTIVITY(sh, headAt, slSegAbstractionStep);
 
     if (len)
         // declare resulting segment's minimal length
@@ -618,8 +625,9 @@ void dlSegGobble(SymHeap &sh, TObjId dls, TObjId var, bool backward) {
 
     // replace VAR by DLS
     const TObjId varHead = subObjByChain(sh, var, bf.head);
-    sh.valReplace(sh.placedAt(varHead), segHeadAddr(sh, dls));
-    objReplace(sh, var, dls);
+    const TValueId headAt = sh.placedAt(varHead);
+    sh.valReplace(headAt, segHeadAddr(sh, dls));
+    REQUIRE_GC_ACTIVITY(sh, headAt, dlSegGobble);
 
     // handle DLS Neq predicates
     dlSegSetMinLength(sh, dls, len);
@@ -655,13 +663,15 @@ void dlSegMerge(SymHeap &sh, TObjId seg1, TObjId seg2) {
     const TValueId valNext2 = sh.valueOf(nextPtrFromSeg(sh, seg1));
     sh.objSetValue(nextPtrFromSeg(sh, seg2), valNext2);
 
-    // update all references to 'head'
-    sh.valReplace(segHeadAddr(sh,  seg1), segHeadAddr(sh,  seg2));
-    sh.valReplace(segHeadAddr(sh, peer1), segHeadAddr(sh, peer2));
-
     // replace both parts point-wise
-    objReplace(sh,  seg1,  seg2);
-    objReplace(sh, peer1, peer2);
+    const TValueId  segAt = segHeadAddr(sh,  seg1);
+    const TValueId peerAt = segHeadAddr(sh, peer1);
+
+    sh.valReplace( segAt, segHeadAddr(sh,  seg2));
+    sh.valReplace(peerAt, segHeadAddr(sh, peer2));
+
+    REQUIRE_GC_ACTIVITY(sh,  segAt, dlSegMerge);
+    REQUIRE_GC_ACTIVITY(sh, peerAt, dlSegMerge);
 
     if (len)
         // handle DLS Neq predicates
@@ -865,8 +875,10 @@ bool dlSegReplaceByConcrete(SymHeap &sh, TObjId obj, TObjId peer) {
     const TValueId addrPeer = sh.placedAt(peer);
     segReplaceRefs(sh, addrPeer, addrSelf);
 
-    // destroy the peer object and concretize self
-    sh.objDestroy(peer);
+    // destroy peer, including all prototypes
+    REQUIRE_GC_ACTIVITY(sh, addrPeer, dlSegReplaceByConcrete);
+
+    // concretize self
     sh.objSetConcrete(obj);
 
     // this can't fail (at least I hope so...)

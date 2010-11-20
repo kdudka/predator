@@ -146,23 +146,6 @@ void getPtrValues(SymHeapCore::TContValue &dst, const SymHeap &heap,
     }
 }
 
-void objReplace(SymHeap &sh, TObjId oldObj, TObjId newObj) {
-    // check for possible replacement of sub-object
-    CL_BREAK_IF(OBJ_INVALID != sh.objParent(oldObj));
-    CL_BREAK_IF(OBJ_INVALID != sh.objParent(newObj));
-
-    // resolve object addresses
-    const TValueId oldAddr = sh.placedAt(oldObj);
-    const TValueId newAddr = sh.placedAt(newObj);
-    CL_BREAK_IF(oldAddr <= 0 || newAddr <= 0);
-
-    // update all references
-    sh.valReplace(oldAddr, newAddr);
-
-    // now destroy the old object
-    sh.objDestroy(oldObj);
-}
-
 void skipObj(const SymHeap &sh, TObjId *pObj, TFieldIdxChain icHead,
              TFieldIdxChain icNext)
 {
