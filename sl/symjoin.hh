@@ -27,7 +27,7 @@
 
 #include "symheap.hh"
 
-/// future replacment of matchData() from symdiscover
+/// replacement of matchData() from symdiscover
 bool joinDataReadOnly(
         const SymHeap           &sh,
         const SegBindingFields  &bf,
@@ -35,7 +35,7 @@ bool joinDataReadOnly(
         const TObjId            o2,
         SymHeap::TContObj       protoRoots[1][2]);
 
-/// future replacment of abstractNonMatchingValues() from symabstract
+/// replacement of abstractNonMatchingValues() from symabstract
 bool joinData(
         SymHeap                 &sh,
         const TObjId            dst,
