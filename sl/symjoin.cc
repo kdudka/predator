@@ -135,16 +135,6 @@ void updateJoinStatus(SymJoinCtx &ctx, const EJoinStatus action) {
     }
 }
 
-bool hasExplicitNeq(
-        const SymHeap           &shConst,
-        const TValueId          v1,
-        const TValueId          v2)
-{
-    // FIXME: const-insane interface of SymHeap::neqOp()
-    SymHeap &sh = const_cast<SymHeap &>(shConst);
-    return sh.neqOp(SymHeap::NEQ_QUERY_EXPLICIT_NEQ, v1, v2);
-}
-
 void gatherSharedPreds(
         SymJoinCtx              &ctx,
         const TValueId          v1,
@@ -155,7 +145,7 @@ void gatherSharedPreds(
     SymHeap::TContValue rVals1;
     ctx.sh1.gatherRelatedValues(rVals1, v1);
     BOOST_FOREACH(const TValueId rel1, rVals1) {
-        if (!hasExplicitNeq(ctx.sh1, v1, rel1))
+        if (!ctx.sh1.queryExplicitNeq(v1, rel1))
             // not a Neq in sh1
             continue;
 
@@ -173,7 +163,7 @@ void gatherSharedPreds(
             continue;
 
         const TValueId rel2 = it2r->second;
-        if (!hasExplicitNeq(ctx.sh2, v2, rel2))
+        if (!ctx.sh2.queryExplicitNeq(v2, rel2))
             // not a Neq in sh2
             continue;
 
@@ -1210,8 +1200,8 @@ void handleDstPreds(SymJoinCtx &ctx) {
         TValueId valLt, valGt;
         boost::tie(valLt, valGt) = neq;
 
-        const TObjId targetLt = ctx.dst.pointsTo(valLt);
-        const TObjId targetGt = ctx.dst.pointsTo(valGt);
+        const TObjId targetLt = objRootByVal(ctx.dst, valLt);
+        const TObjId targetGt = objRootByVal(ctx.dst, valGt);
         if (hasKey(ctx.segLengths, targetLt)
                 || hasKey(ctx.segLengths, targetGt))
             // preserve segment length
@@ -1219,6 +1209,10 @@ void handleDstPreds(SymJoinCtx &ctx) {
 
         ctx.dst.neqOp(SymHeap::NEQ_ADD, valLt, valGt);
     }
+
+    if (&ctx.sh1 == &ctx.sh2)
+        // TODO: match predicates also in prototypes
+        return;
 
     // cross-over check of Neq predicates
     if (!matchPreds(ctx.sh1, ctx.dst, ctx.valMap1))
@@ -1546,9 +1540,36 @@ struct JoinValueVisitor {
 
         const TValueId newDst = roMapLookup(ctx.valMap1[/* ltr */ 0], oldDst);
         const TValueId newSrc = roMapLookup(ctx.valMap2[/* ltr */ 0], oldSrc);
-        CL_BREAK_IF(newDst != newSrc);
+        if (newDst == newSrc) {
+            // values are equal --> pick any
+            sh.objSetValue(dst, newDst);
+            goto join_ok;
+        }
 
-        sh.objSetValue(dst, newDst);
+        // asymmetric prototype match (dst < src)
+        TObjTriple proto;
+        proto[0] = OBJ_INVALID;
+        proto[1] = objRootByVal(ctx.dst, oldSrc);
+        proto[2] = objRootByVal(ctx.dst, newSrc);
+        if (hasKey(ctx.protoRoots, proto)) {
+            sh.objSetValue(dst, newSrc);
+            goto join_ok;
+        }
+
+        // asymmetric prototype match (src < dst)
+        proto[0] = objRootByVal(ctx.dst, oldDst);
+        proto[1] = OBJ_INVALID;
+        proto[2] = objRootByVal(ctx.dst, newDst);
+        if (hasKey(ctx.protoRoots, proto)) {
+            sh.objSetValue(dst, newDst);
+            goto join_ok;
+        }
+
+        CL_ERROR("JoinValueVisitor failed to join values");
+        CL_BREAK_IF("JoinValueVisitor is not yet fully implemented");
+        return /* continue */ true;
+
+join_ok:
         if (collectJunk(sh, oldDst))
             CL_DEBUG("    JoinValueVisitor drops a sub-heap (oldDst)");
 

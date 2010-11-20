@@ -237,8 +237,7 @@ class SymHeapCore {
         enum ENeqOp {
             NEQ_NOP = 0,
             NEQ_ADD,
-            NEQ_DEL,
-            NEQ_QUERY_EXPLICIT_NEQ
+            NEQ_DEL
         };
 
         /**
@@ -248,7 +247,13 @@ class SymHeapCore {
          * @param valA one side of the inequality
          * @param valB one side of the inequality
          */
-        virtual bool neqOp(ENeqOp op, TValueId valA, TValueId valB);
+        virtual void neqOp(ENeqOp op, TValueId valA, TValueId valB);
+
+        /**
+         * return true, only if _explicit_ neq predicate is defined among valA
+         * and valB
+         */
+        bool queryExplicitNeq(TValueId valA, TValueId valB) const;
 
         /**
          * introduce a new @b EqIf @b predicate (if not present already)
@@ -703,7 +708,7 @@ class SymHeap: public SymHeapTyped {
          * @copydoc SymHeapTyped::neqOp
          * @note overridden in order to complement DLS Neq
          */
-        virtual bool neqOp(ENeqOp op, TValueId valA, TValueId valB);
+        virtual void neqOp(ENeqOp op, TValueId valA, TValueId valB);
 
         /**
          * @copydoc SymHeapTyped::proveEq
