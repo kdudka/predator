@@ -117,6 +117,11 @@
 #define SE_DISABLE_THREE_WAY_JOIN           0
 
 /**
+ * if 1, abstraction path length is penalized by complexity of prototype join
+ */
+#define SE_PREFER_LOSSLESS_PROTOTYPES       1
+
+/**
  * maximal call depth
  */
 #define SE_MAX_CALL_DEPTH                   0x40

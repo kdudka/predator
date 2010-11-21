@@ -400,6 +400,10 @@ TObjId jumpToNextObj(const SymHeap              &sh,
                      std::set<TObjId>           &haveSeen,
                      TObjId                     obj)
 {
+    if (!matchSegBinding(sh, obj, bf))
+        // binding mismatch
+        return OBJ_INVALID;
+
     const bool dlSegOnPath = (OK_DLS == sh.objKind(obj));
     if (dlSegOnPath) {
         // jump to peer in case of DLS
@@ -452,9 +456,11 @@ bool matchData(const SymHeap                &sh,
                const SegBindingFields       &bf,
                const TObjId                 o1,
                const TObjId                 o2,
-               TProtoRoots                  *protoRoots)
+               TProtoRoots                  *protoRoots,
+               int                          *pThreshold)
 {
 #if SE_DISABLE_SYMJOIN_IN_SYMDISCOVER
+    (void) pThreshold;
     const TObjId nextPtr = subObjByChain(sh, o1, bf.next);
 
     DataMatchVisitor visitor(o1, o2);
@@ -470,7 +476,34 @@ bool matchData(const SymHeap                &sh,
     return traverseSubObjs(sh, item, visitor, /* leavesOnly */ true);
 #else
     EJoinStatus status;
-    return joinDataReadOnly(&status, sh, bf, o1, o2, protoRoots);
+    if (!joinDataReadOnly(&status, sh, bf, o1, o2, protoRoots))
+        return false;
+
+#if SE_PREFER_LOSSLESS_PROTOTYPES
+    // FIXME: highly experimental
+    if (objIsSeg(sh, o2) && objIsSeg(sh, nextObj(sh, bf, o2)))
+        return true;
+
+    int thr = 0;
+    switch (status) {
+        case JS_USE_ANY:
+            break;
+
+        case JS_USE_SH1:
+        case JS_USE_SH2:
+            thr = 2;
+            break;
+
+        case JS_THREE_WAY:
+            thr = 3;
+            break;
+    }
+
+    if (*pThreshold < thr)
+        *pThreshold = thr;
+#endif
+
+    return true;
 #endif
 }
 
@@ -540,6 +573,9 @@ unsigned /* len */ segDiscover(const SymHeap            &sh,
         // loop detected
         return 0;
 
+    // [experimental] we need a way to prefer lossless prototypes
+    int threshold = 0;
+
     // main loop of segDiscover()
     std::vector<TObjId> path;
     while (OBJ_INVALID != obj) {
@@ -548,7 +584,7 @@ unsigned /* len */ segDiscover(const SymHeap            &sh,
         // TODO: optimize such that matchData() is not called at all when any
         // _program_ variable points at/inside;  call of matchData() in such
         // cases is significant waste for us!
-        if (!matchData(sh, bf, prev, obj, &protoRoots)) {
+        if (!matchData(sh, bf, prev, obj, &protoRoots, &threshold)) {
             CL_DEBUG("    DataMatchVisitor refuses to create a segment!");
             break;
         }
@@ -596,11 +632,12 @@ unsigned /* len */ segDiscover(const SymHeap            &sh,
         // found nothing
         return 0;
 
+    int len = path.size();
     if (slSegAvoidSelfCycle(sh, bf, entry, path.back()))
         // avoid creating self-cycle of two SLS segments
-        return path.size() - 1;
+        --len;
 
-    return path.size();
+    return std::max(0, len - threshold);
 }
 
 bool digSegmentHead(TFieldIdxChain          &dst,
