@@ -253,175 +253,6 @@ void cloneGenericPrototype(
     }
 }
 
-// FIXME: not covered by any automatic test-case yet!
-void segMergeLengths(
-        SymHeap             &sh,
-        const TObjId        seg1,
-        const TObjId        seg2)
-{
-    const EObjKind kind = sh.objKind(seg1);
-    CL_BREAK_IF(kind != sh.objKind(seg2));
-    switch (kind) {
-        case OK_CONCRETE:
-            // not a segment
-            return;
-
-        case OK_HEAD:
-        case OK_PART:
-#ifndef NDEBUG
-            CL_TRAP;
-#endif
-            break;
-
-        case OK_SLS:
-        case OK_DLS:
-            break;
-    }
-
-    // read lower bound estimation of seg1 length and reset it to zero
-    const unsigned len1 = segMinLength(sh, seg1);
-    segSetMinLength(sh, seg1, /* LS 0+ */ 0);
-
-    // read lower bound estimation of seg2 length and reset it to zero
-    const unsigned len2 = segMinLength(sh, seg2);
-    segSetMinLength(sh, seg2, /* LS 0+ */ 0);
-
-    // put the minimum of both lengths back to both segments
-    const unsigned len = std::min(len1, len2);
-    segSetMinLength(sh, seg1, len);
-    segSetMinLength(sh, seg2, len);
-}
-
-bool matchSelfPointers(
-        SymHeap                 &sh,
-        const TObjPair          &roots,
-        const TValueId          v1,
-        const TValueId          v2)
-{
-    const TObjId o1 = sh.pointsTo(v1);
-    const TObjId o2 = sh.pointsTo(v2);
-    if (o1 <= 0 || o2 <= 0)
-        return false;
-
-    return (roots.first  == objRoot(sh, o1))
-        && (roots.second == objRoot(sh, o2));
-}
-
-TValueId createGenericPrototype(
-        SymHeap                     &sh,
-        const TObjId                src,
-        const TValueId              v1,
-        const TValueId              v2,
-        const TProtoRoots           &protoRoots)
-{
-    const unsigned cnt = protoRoots[0].size();
-    CL_DEBUG("createGenericPrototype() got " << cnt << " roots");
-    CL_BREAK_IF(cnt != protoRoots[1].size());
-
-    // NOTE: we may perform the length merge more times than actually necessary,
-    // but it's harmless and still better then omitting it by accident
-    for (unsigned i = 0; i < cnt; ++i)
-        segMergeLengths(sh, protoRoots[0][i], protoRoots[1][i]);
-
-    sh.objSetValue(src, v2);
-    if (collectJunk(sh, v1))
-        CL_DEBUG("createGenericPrototype() has dropped some part of the heap");
-    else
-        return v2;
-
-    for (unsigned i = 0; i < cnt; ++i) {
-        const TObjId proto = protoRoots[1][i];
-        if (objIsSeg(sh, proto))
-            segSetProto(sh, proto, true);
-        else
-            sh.objSetProto(proto, true);
-    }
-
-    return v2;
-}
-
-TValueId mergeValues(
-        SymHeap                     &sh,
-        const TObjPair              &roots,
-        const TValueId              v1,
-        const TValueId              v2,
-        const TObjId    /* XXX */   src)
-{
-    if (v1 == v2)
-        return v1;
-
-    if (matchSelfPointers(sh, roots, v1, v2))
-        // it is safe to keep these values as they are, as we know how to
-        // perform their concretization later on
-        return VAL_INVALID;
-
-    TProtoRoots protoRoots;
-    if (considerGenericPrototype(sh, roots, v1, v2, &protoRoots))
-        // take values v1, v2 and create a prototype for them
-        return createGenericPrototype(sh, src, v1, v2, protoRoots);
-
-    // unknown value for us
-    const EUnknownValue code1 = sh.valGetUnknown(v1);
-    const EUnknownValue code2 = sh.valGetUnknown(v2);
-    EUnknownValue code;
-    if (!joinUnknownValuesCode(&code, code1, code2))
-        code = UV_UNKNOWN;
-
-    const struct cl_type *clt;
-    if (!joinClt(sh.valType(v1), sh.valType(v2), &clt))
-        clt = 0;
-
-    // introduce a new unknown value, representing the join of v1 and v2
-    return sh.valCreateUnknown(code, clt);
-}
-
-// visitor
-struct ValueAbstractor {
-    std::set<TObjId>    ignoreList;
-    bool                bidir;
-    TObjPair            roots_;
-
-    ValueAbstractor(TObjId o1, TObjId o2):
-        roots_(o1, o2)
-    {
-    }
-
-    bool operator()(SymHeap &sh, TObjPair item) const {
-        const TObjId src = item.first;
-        const TObjId dst = item.second;
-        if (hasKey(ignoreList, dst))
-            return /* continue */ true;
-
-        TValueId valSrc = sh.valueOf(src);
-        TValueId valDst = sh.valueOf(dst);
-        bool eq;
-        if (sh.proveEq(&eq, valSrc, valDst) && eq)
-            // values are equal
-            return /* continue */ true;
-
-        // merge values
-        const TValueId valNew = mergeValues(sh, roots_, valSrc, valDst,
-                                            /* XXX */ src);
-        if (VAL_INVALID == valNew)
-            return /* continue */ true;
-
-        sh.objSetValue(dst, valNew);
-        if (this->bidir)
-            sh.objSetValue(src, valNew);
-
-        // if the last reference is gone, we have a problem
-        if (collectJunk(sh, valDst)) {
-            CL_ERROR("junk detected during abstraction"
-                    ", the analysis is no more sound!");
-#ifndef NDEBUG
-            CL_TRAP;
-#endif
-        }
-
-        return /* continue */ true;
-    }
-};
-
 // visitor
 struct UnknownValuesDuplicator {
     std::set<TObjId> ignoreList;
@@ -459,56 +290,6 @@ struct UnknownValuesDuplicator {
     }
 };
 
-#if !SE_DISABLE_SYMJOIN_IN_SYMDISCOVER
-void dlSegSyncPeerData(SymHeap &sh, const TObjId dls);
-#endif
-
-// when abstracting an object, we need to abstract all non-matching values in
-void abstractNonMatchingValues(SymHeap &sh, TObjId src, TObjId dst,
-                               bool bidir = false)
-{
-#if SE_DISABLE_SYMJOIN_IN_SYMDISCOVER
-    ValueAbstractor visitor(src, dst);
-    visitor.bidir       = bidir;
-    buildIgnoreList(visitor.ignoreList, sh, dst);
-
-    // traverse all sub-objects
-    const TObjPair item(src, dst);
-    traverseSubObjs(sh, item, visitor, /* leavesOnly */ true);
-#else
-    if (!joinData(sh, dst, src, bidir)) {
-        CL_ERROR("joinData() failed, symbolic heap is not consistent any more");
-#ifndef NDEBUG
-        CL_TRAP;
-#endif
-    }
-
-    if (OK_DLS == sh.objKind(dst))
-        dlSegSyncPeerData(sh, dst);
-
-    if (bidir && OK_DLS == sh.objKind(src))
-        dlSegSyncPeerData(sh, src);
-
-    // drop any dangling Neq predicates
-    sh.pack();
-#endif
-}
-
-// when concretizing an object, we need to duplicate all _unknown_ values
-void duplicateUnknownValues(SymHeap &sh, TObjId obj, TObjId dup) {
-    UnknownValuesDuplicator visitor;
-    visitor.rootDst = obj;
-    visitor.rootSrc = dup;
-    buildIgnoreList(visitor.ignoreList, sh, obj);
-
-    // traverse all sub-objects
-    traverseSubObjs(sh, obj, visitor, /* leavesOnly */ true);
-
-    // if there was "a pointer to self", it should remain "a pointer to self";
-    // however "self" has been changed, so that a redirection is necessary
-    redirectInboundEdges(sh, dup, obj, dup);
-}
-
 struct ValueSynchronizer {
     std::set<TObjId>    ignoreList;
 
@@ -544,6 +325,38 @@ void dlSegSyncPeerData(SymHeap &sh, const TObjId dls) {
 
     const TObjPair item(dls, peer);
     traverseSubObjs(sh, item, visitor, /* leavesOnly */ true);
+}
+
+// when abstracting an object, we need to abstract all non-matching values in
+void abstractNonMatchingValues(SymHeap &sh, TObjId src, TObjId dst,
+                               bool bidir = false)
+{
+    if (!joinData(sh, dst, src, bidir))
+        CL_BREAK_IF("joinData() failed, failure of segDiscover()?");
+
+    if (OK_DLS == sh.objKind(dst))
+        dlSegSyncPeerData(sh, dst);
+
+    if (bidir && OK_DLS == sh.objKind(src))
+        dlSegSyncPeerData(sh, src);
+
+    // drop any dangling Neq predicates
+    sh.pack();
+}
+
+// when concretizing an object, we need to duplicate all _unknown_ values
+void duplicateUnknownValues(SymHeap &sh, TObjId obj, TObjId dup) {
+    UnknownValuesDuplicator visitor;
+    visitor.rootDst = obj;
+    visitor.rootSrc = dup;
+    buildIgnoreList(visitor.ignoreList, sh, obj);
+
+    // traverse all sub-objects
+    traverseSubObjs(sh, obj, visitor, /* leavesOnly */ true);
+
+    // if there was "a pointer to self", it should remain "a pointer to self";
+    // however "self" has been changed, so that a redirection is necessary
+    redirectInboundEdges(sh, dup, obj, dup);
 }
 
 void slSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf)
@@ -658,9 +471,6 @@ void dlSegMerge(SymHeap &sh, TObjId seg1, TObjId seg2) {
 
     // introduce some UV_UNKNOWN values if necessary
     abstractNonMatchingValues(sh,  seg1,  seg2, /* bidir */ true);
-#if SE_DISABLE_SYMJOIN_IN_SYMDISCOVER
-    abstractNonMatchingValues(sh, peer1, peer2, /* bidir */ true);
-#endif
 
     // preserve backLink
     const TValueId valNext2 = sh.valueOf(nextPtrFromSeg(sh, seg1));
