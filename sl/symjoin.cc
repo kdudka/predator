@@ -1328,15 +1328,32 @@ void handleDstPreds(SymJoinCtx &ctx) {
         ctx.dst.neqOp(SymHeap::NEQ_ADD, valLt, valGt);
     }
 
-    if (ctx.joiningData())
-        // TODO: match predicates also in prototypes
+    if (!ctx.joiningData()) {
+        // cross-over check of Neq predicates
+        if (!matchPreds(ctx.sh1, ctx.dst, ctx.valMap1))
+            updateJoinStatus(ctx, JS_USE_SH2);
+        if (!matchPreds(ctx.sh2, ctx.dst, ctx.valMap2))
+            updateJoinStatus(ctx, JS_USE_SH1);
         return;
+    }
 
-    // cross-over check of Neq predicates
-    if (!matchPreds(ctx.sh1, ctx.dst, ctx.valMap1))
-        updateJoinStatus(ctx, JS_USE_SH2);
-    if (!matchPreds(ctx.sh2, ctx.dst, ctx.valMap2))
-        updateJoinStatus(ctx, JS_USE_SH1);
+    // TODO: match gneric Neq predicates also in prototypes;  for now we
+    // consider only minimal segment lengths
+    BOOST_FOREACH(const TObjTriple &proto, ctx.protoRoots) {
+        const TObjId proto1     = proto[/* sh1 */ 0];
+        const TObjId proto2     = proto[/* sh2 */ 1];
+        const TObjId protoDst   = proto[/* dst */ 2];
+
+        const unsigned len1     = objMinLength(ctx.sh1, proto1);
+        const unsigned len2     = objMinLength(ctx.sh2, proto2);
+        const unsigned lenDst   = objMinLength(ctx.dst, protoDst);
+
+        if (lenDst < len1)
+            updateJoinStatus(ctx, JS_USE_SH2);
+
+        if (lenDst < len2)
+            updateJoinStatus(ctx, JS_USE_SH1);
+    }
 }
 
 bool segDetectSelfLoopHelper(
@@ -1791,6 +1808,26 @@ void recoverPrototypes(
     }
 }
 
+void restorePrototypeLengths(SymJoinCtx &ctx) {
+    CL_BREAK_IF(!ctx.joiningDataReadWrite());
+    SymHeap &sh = ctx.dst;
+
+    // restore minimal length of segment prototypes
+    BOOST_FOREACH(const TObjTriple &proto, ctx.protoRoots) {
+        typedef SymJoinCtx::TSegLengths TLens;
+        const TLens &lens = ctx.segLengths;
+
+        const TObjId protoDst = proto[/* dst */ 2];
+        TLens::const_iterator it = lens.find(protoDst);
+        if (lens.end() == it)
+            continue;
+
+        const unsigned len = it->second;
+        if (len)
+            segSetMinLength(sh, protoDst, len);
+    }
+}
+
 /// replacement of matchData() from symdiscover
 bool joinData(
         SymHeap                 &sh,
@@ -1828,23 +1865,9 @@ bool joinData(
     traverseSubObjs(sh, TObjPair(dst, src), visitor, /* leavesOnly */ true);
 
     // redirect some edges if necessary
-    recoverPointersToSelf(sh, dst, src, ghost, bidir);
     recoverPrototypes(ctx, dst, ghost, bidir);
-
-    // restore minimal length of segment prototypes
-    BOOST_FOREACH(const TObjTriple &proto, ctx.protoRoots) {
-        typedef SymJoinCtx::TSegLengths TLens;
-        const TLens &lens = ctx.segLengths;
-
-        const TObjId protoDst = proto[/* dst */ 2];
-        TLens::const_iterator it = lens.find(protoDst);
-        if (lens.end() == it)
-            continue;
-
-        const unsigned len = it->second;
-        if (len)
-            segSetMinLength(sh, protoDst, len);
-    }
+    recoverPointersToSelf(sh, dst, src, ghost, bidir);
+    restorePrototypeLengths(ctx);
 
     if (collectJunk(sh, sh.placedAt(ghost)))
         CL_DEBUG("    joinData() drops a sub-heap (ghost)");
@@ -1855,4 +1878,3 @@ bool joinData(
 
     return true;
 }
-
