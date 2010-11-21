@@ -1,5 +1,3 @@
-o  join of generic prototypes
-
 o  get ready for hlist_head/hlist_node from <linux/list.h>, now we can handle
    only list_head based lists
 

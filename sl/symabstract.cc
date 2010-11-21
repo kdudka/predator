@@ -183,7 +183,7 @@ void cloneGenericPrototype(
     todo.push(proto);
     haveSeen.insert(proto);
 
-    CL_ERROR("cloneGenericPrototype() is just a hack for now!");
+    CL_DEBUG("WARNING: cloneGenericPrototype() is just a hack for now!");
 
     while (!todo.empty()) {
         const TObjId proto = todo.top();
