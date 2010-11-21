@@ -85,5 +85,20 @@ int main()
     struct node_top *sll = create_sll();
     ___sl_plot_by_ptr(&sll, NULL);
 
+    // destroy the structure
+    while (sll) {
+        struct node_top *next = sll->next;
+
+        struct node_low *data = sll->data;
+        while (data) {
+            struct node_low *data_next = data->next;
+            free(data);
+            data = data_next;
+        }
+
+        free(sll);
+        sll = next;
+    }
+
     return 0;
 }
