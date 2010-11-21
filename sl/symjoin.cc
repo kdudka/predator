@@ -377,11 +377,13 @@ bool joinFreshObjTripple(
         // same as above, but now only one value of v1 and v2 is valid
         return true;
 
-    if (VAL_NULL == v1 && hasKey(ctx.valMap2[/* lrt */ 0], v2))
+    if (VAL_NULL == v1 && (hasKey(ctx.valMap2[/* lrt */ 0], v2)
+            || UV_KNOWN == ctx.sh2.valGetUnknown(v2)))
         // mapping already inconsistent
         return false;
 
-    if (VAL_NULL == v2 && hasKey(ctx.valMap1[/* lrt */ 0], v1))
+    if (VAL_NULL == v2 && (hasKey(ctx.valMap1[/* lrt */ 0], v1)
+            || UV_KNOWN == ctx.sh1.valGetUnknown(v1)))
         // mapping already inconsistent
         return false;
 
@@ -928,7 +930,7 @@ bool insertSegmentCloneHelper(
         // nothing to clone here
         return false;
 
-    if (objGt < 0 || hasKey(objMapGt, objGt))
+    if (hasKey(objMapGt, objGt))
         // mapping already available for objGt
         return true;
 
@@ -1314,6 +1316,7 @@ void handleDstPreds(SymJoinCtx &ctx) {
         segSetMinLength(ctx.dst, seg, len);
     }
 
+    // go through shared Neq predicates
     BOOST_FOREACH(const TValPair neq, ctx.sharedNeqs) {
         TValueId valLt, valGt;
         boost::tie(valLt, valGt) = neq;
@@ -1325,6 +1328,7 @@ void handleDstPreds(SymJoinCtx &ctx) {
             // preserve segment length
             continue;
 
+        // handle generic Neq predicate
         ctx.dst.neqOp(SymHeap::NEQ_ADD, valLt, valGt);
     }
 
@@ -1471,12 +1475,13 @@ bool joinSymHeaps(
         return false;
     }
 
-    // time to preserve all 'hasValue' edges and shared Neq predicates
+    // time to preserve all 'hasValue' edges
     if (!setDstValues(ctx)) {
         CL_BREAK_IF(areEqual(sh1, sh2));
         return false;
     }
 
+    // go through shared Neq predicates and set minimal segment lengths
     handleDstPreds(ctx);
 
     if (debugSymJoin) {
@@ -1713,7 +1718,6 @@ struct JoinValueVisitor {
         if (hasKey(ctx.protoRoots, proto))
             return newSrc;
 
-
         CL_ERROR("JoinValueVisitor failed to join values");
         CL_BREAK_IF("JoinValueVisitor is not yet fully implemented");
         return VAL_INVALID;
@@ -1851,8 +1855,8 @@ bool joinData(
     // go through the commont part of joinData()/joinDataReadOnly()
     SymJoinCtx ctx(sh);
     if (!joinDataCore(ctx, bf, dst, src))
-        // TODO: collect the already created dangling object and return the heap
-        //       in a more consistent shape!
+        // TODO: collect the already created dangling objects and return
+        //       the heap in a more consistent shape!
         return false;
 
     // ghost is a transiently existing object representing the join of dst/src

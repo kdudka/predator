@@ -459,8 +459,8 @@ bool matchData(const SymHeap                &sh,
                TProtoRoots                  *protoRoots,
                int                          *pThreshold)
 {
-#if SE_DISABLE_SYMJOIN_IN_SYMDISCOVER
     (void) pThreshold;
+#if SE_DISABLE_SYMJOIN_IN_SYMDISCOVER
     const TObjId nextPtr = subObjByChain(sh, o1, bf.next);
 
     DataMatchVisitor visitor(o1, o2);

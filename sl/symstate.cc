@@ -176,8 +176,8 @@ bool SymStateWithJoin::insert(const SymHeap &shNew) {
             return true;
 
         case JS_THREE_WAY:
-            // three-way merge
-            CL_DEBUG("<J> three-way merge with sh #" << idx);
+            // three-way join
+            CL_DEBUG("<J> three-way join with sh #" << idx);
             debugPlot("join", 0, this->operator[](idx));
             debugPlot("join", 1, shNew);
             debugPlot("join", 2, result);
