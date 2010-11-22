@@ -31,8 +31,9 @@
 #include <boost/unordered_set.hpp>
 
 #include "forestaut.hh"
-#include "box.hh"
+#include "boxman.hh"
 #include "labman.hh"
+//#include "leafmanager.hh"
 #include "utils.hh"
 #include "tatimint.hh"
 
@@ -43,104 +44,132 @@ using std::pair;
 using std::make_pair;
 using std::runtime_error;
 
-template <class T>
-class LeafManager {
-
-	boost::unordered_map<T, size_t> index;
-	boost::unordered_map<size_t, T> invIndex;
-
-public:
-
-	void set(const T& leaf, size_t state) {
-		pair<typename boost::unordered_map<T, size_t>::iterator, bool> p =
-			this->index.insert(make_pair(leaf, state));
-		if (!p.second)
-			throw runtime_error("LeafManager::set(): leaf already registered!");
-		if (!this->invIndex.insert(make_pair(state, leaf)).second)
-			throw runtime_error("LeafManager::set(): state <-> leaf association corrupted!");
-	}
-
-	size_t find(const T& leaf) const {
-		typename boost::unordered_map<T, size_t>::const_iterator i = this->index.find(leaf);
-		if (i == this->index.end())
-			throw runtime_error("LeafManager::find(): leaf not found!");
-		return i->second;
-	}
-
-	bool add(const T& leaf, size_t& candidate) {
-		pair<typename boost::unordered_map<T, size_t>::iterator, bool> p =
-			this->index.insert(make_pair(leaf, candidate));
-		if (p.second)
-			this->invIndex.insert(make_pair(candidate, leaf));
-		else
-			candidate = p.first->second;
-		return p.second;
-	}
-
-	bool isLeaf(size_t state) const {
-		return (this->invIndex.find(state) != this->invIndex.end());
-	}
-
-	bool isLeaf(size_t state, T& leaf) const {
-		typename boost::unordered_map<size_t, T>::const_iterator i = this->invIndex.find(state);
-		if (i == this->invIndex.end())
-			return false;
-		leaf = i->second;
-		return true;		
-	}
-	
-	size_t remove(const T& leaf) {
-		typename boost::unordered_map<T, size_t>::iterator i = this->index.find(leaf);
-		if (i == this->index.end())
-			throw runtime_error("LeafManager::remove(): leaf not found!");
-		size_t state = i->second;
-		typename boost::unordered_map<size_t, T>::iterator j = this->invIndex.find(state);
-		if (j == this->invIndex.end())
-			throw runtime_error("LeafManager::remove(): state <-> leaf association corrupted!");
-		this->index.erase(i);
-		this->invIndex.erase(j);
-		return state;
-	}
-
-	void clear() {
-		this->index.clear();
-		this->invIndex.clear();
-	}
-
-};
+#define _MSBM			((~(size_t)0) >> 1)
+#define _MSB			(~_MSBM)
+#define _MSB_TEST(x)	(x & _MSB)
+#define _MSB_GET(x)		(x & _MSBM)
+#define _MSB_ADD(x)		(x | _MSB)
 
 class FAE : public FA {
 
 	friend std::ostream& operator<<(std::ostream& os, const FAE& fae);
 
-	mutable BoxManager* boxMan;
+	mutable BoxMan* boxMan;
 	mutable LabMan* labMan;
 
 	size_t stateOffset;
 
-	vector<vector<size_t> > rootMap;
-	
-	// root -> (selector -> root)
-	boost::unordered_map<size_t, map<size_t, size_t> > selectorMap;
+	std::vector<vector<size_t> > rootMap;
+/*
+	struct RootInfo {
+		
+		struct BoxInfo {
+			size_t root;
+			const TT<label_type>* transition;
+			const Box* box;
+		};
 
-//	LeafManager<size_t> refMan;
-	LeafManager<const Data*> dataMan;
+		boost::unordered_map<const Box*, BoxInfo> boxMap;
+
+	};
+	
+	// root -> BoxInfo
+	boost::unordered_map<size_t, RootInfo> boxMap;
+*/
 
 //	boost::unordered_map<size_t, size_t> rootReferenceIndex;
 //	boost::unordered_map<size_t, size_t> invRootReferenceIndex;
 
+protected:
+/*
+	void joinBox(TA<label_type>& dst, const Box* box, const TA<label_type>& src) {
+		TA<label_type> ta(this->taMan->getBackend());
+		vector<size_t> lhs;
+		Index<size_t> index;
+		TA<label_type>::iterator l = src.end();
+		for (TA<label_type>::iterator i = src.begin(); i != src.end(); ++i) {
+			if (i->rhs() == src.getFinalState()) {
+				assert(l == src.end());
+				l = i;
+			}
+			lhs.clear();
+			index.translateOTF(lhs, i->lhs(), this->nextState());
+			ta.addTransition(lhs, i->label(), index.translateOTF(i->rhs()) + this->nextState());
+		}
+		assert(l != src.end());
+		for (TA<label_type>::iterator i = dst.begin(); i != dst.end(); ++i) {
+			if (i->rhs() == dst.getFinalState()) {
+				std::vector<const Box*> label;
+				lhs.clear();
+				size_t lhsOffset = 0;
+				
+				for (std::vector<const Box*>::const_iterator j = i->label().dataB->begin(); j != i->label().dataB->end(); ++j) {
+					if (*j != box) {
+						label.push_back(*j)
+						// this box is not interesting
+						for (size_t k = 0; k < (*j)->getArity(); ++k, ++lhsOffset)
+							lhs.push_back(i->lhs()[lhsOffset]);
+						continue;
+					}
+					label.insert(label.end(), l->label().dataB->begin(), l->label().dataB->end());
+					lhs.insert(lhs.end(), l->lhs().begin(), l->lhs.end());
+				}
+
+				
+				
+			}
+		}
+	}
+*/
+	void decomposeAtRoot(vector<FAE*>& dst, size_t root, const std::set<const Box*>& boxes) const {
+		throw runtime_error("FAE::decomposeAtRoot(): box decomposition not implemented! (désolé)");
+/*		assert(root < this->roots.size());
+		for (TA<label_type>::iterator i = this->roots[root]->begin(); i != this->roots[root]->end(); ++i) {
+			if (i->rhs() == this->roots[root]->getFinalState()) {
+				FAE fae(*this);
+				TA<label_type> ta(*fae.roots[root], false);
+				vector<size_t> lhs;
+				size_t lhsOffset = 0;
+				for (std::vector<const Box*>::const_iterator j = i->label().dataB->begin(); j != i->label().dataB->end(); ++j) {
+					if (boxes.count(*j) == 0) {
+						// this box is not interesting
+						for (size_t k = 0; k < (*j)->getArity(); ++k, ++lhsOffset)
+							lhs.push_back(i->lhs()[lhsOffset]);
+						continue;
+					}
+					// we have to isolate here
+					for (size_t k = 0; k < (*j)->getArity(); ++k, ++lhsOffset) {
+						if (this->dataMan.isLeaf(i->lhs()[lhsOffset])) {
+							// no need to create a leaf when it's already there
+							lhs.push_back(i->lhs()[lhsOffset]);
+							continue;
+						}
+						// update new left-hand side
+						lhs.push_back(fae.addData(ta, Data::createRef(fae.roots.size())));
+						// prepare new root
+						TA<label_type> tmp(*fae.roots[root], false);
+						tmp.addFinalState(i->lhs()[lhsOffset]);
+						TA<label_type>* tmp2 = fae.taMan->alloc();
+						tmp.unreachableFree(*tmp2);
+						// compute 'o'
+						boost::unordered_map<size_t, vector<size_t> > o;
+						FAE::computeDownwardO(*tmp2, o);
+						fae.roots.push_back(tmp2);
+						fae.rootMap.push_back(o[tmp2->getFinalState()]);
+					}
+					if ((*j)->isBox())
+						boxes.insert(*j);
+				}
+				size_t newState = fae.freshState();
+				ta.addTransition(lhs, i->label(), newState);
+				ta.addFinalState(newState);
+			}
+		}
+*/
+	}
+
 public:
 
-	void clear() {
-		FA::clear();
-		this->stateOffset = 1;
-		this->rootMap.clear();
-		this->selectorMap.clear();
-//		this->rootReferenceIndex.clear();
-//		this->invRootReferenceIndex.clear();
-		this->dataMan.clear();
-	}
-	
 	void loadTA(const TA<label_type>& src, const TA<label_type>::td_cache_type& cache, const TT<label_type>* top, size_t stateOffset) {
 		this->clear();
 		this->variables = *top->label().data;
@@ -149,13 +178,8 @@ public:
 			TA<label_type>* ta = this->taMan->alloc();
 			this->roots.push_back(ta);
 			// add reachable transitions
-			for (TA<label_type>::td_iterator j = src.tdStart(cache, itov(*i)); j.isValid(); j.next()) {
+			for (TA<label_type>::td_iterator j = src.tdStart(cache, itov(*i)); j.isValid(); j.next())
 				ta->addTransition(*j);
-				if (j->lhs().empty()) {
-					if (j->label().head().getType() == Box::dataID)
-						this->dataMan.set(&j->label().head().getData(), j->rhs());
-				}
-			}
 			ta->addFinalState(*i);
 			// recompute 'o'
 			boost::unordered_map<size_t, vector<size_t> > o;
@@ -186,14 +210,37 @@ protected:
 	}
 	
 	size_t addData(TA<label_type>& dst, const Data& data) {
-		const Box* b = &this->boxMan->getData(data);
-		size_t state = this->nextState();
-		if (this->dataMan.add(&b->getData(), state))
-			this->newState();
-		dst.addTransition(vector<size_t>(), &this->labMan->lookup(itov(b)), state);
+		const DataBox* b = this->boxMan->getData(data);
+		size_t state = _MSB_ADD(b->getId());
+		dst.addTransition(vector<size_t>(), &this->labMan->lookup(itov((const AbstractBox*)b)), state);
 		return state;
 	}
 
+	static bool isData(size_t state) {
+		return _MSB_TEST(state);
+	}
+
+	static bool isData(const AbstractBox* box, const Data*& data) {
+		if (!box->isType(box_type_e::bData))
+			return false;
+		data = &((DataBox*)box)->getData();
+		return true;
+	}
+
+	bool isData(size_t state, const Data*& data) const {
+		if (!FAE::isData(state))
+			return false;
+		data = &this->boxMan->getData(_MSB_GET(state))->getData();
+		return true;
+	}
+
+	static bool isRef(const AbstractBox* box, size_t ref) {
+		if (!box->isType(box_type_e::bData))
+			return false;
+		return ((DataBox*)box)->getData().isRef(ref);
+	}
+
+/*
 	static bool containsBox(label_type label) {
 		for (vector<const Box*>::const_iterator i = label.dataB->begin(); i != label.dataB->end(); ++i) {
 			if ((*i)->isBox())
@@ -201,7 +248,7 @@ protected:
 		}
 		return false;
 	}
-
+*/
 	static void removeMultOcc(vector<size_t>& x) {
 		set<size_t> s;
 		size_t offset = 0;
@@ -212,8 +259,8 @@ protected:
 		x.resize(s.size());
 	}
 
-	static void reorderBoxes(vector<const Box*>& label, vector<size_t>& lhs) {
-		vector<std::pair<const Box*, vector<size_t> > > tmp;
+	static void reorderBoxes(vector<const AbstractBox*>& label, vector<size_t>& lhs) {
+		vector<std::pair<const AbstractBox*, vector<size_t> > > tmp;
 		std::vector<size_t>::iterator lhsBegin = lhs.end(), lhsEnd = lhs.begin();
 		for (size_t i = 0; i < label.size(); ++i) {
 			lhsBegin = lhsEnd;
@@ -251,21 +298,21 @@ protected:
 		FAE::removeMultOcc(res);
 		std::swap(dst, res);
 	}
-
+/*
 	static void updateRoot(TA<label_type>*& root, TA<label_type>::Manager& manager, TA<label_type>* newRoot) {
 		if (root)
 			manager.release(root);
 		root = newRoot;
 	}
-
+*/
 	TA<label_type>* relabelReferences(TA<label_type>* src, const vector<size_t>& index) {
 		TA<label_type>* ta = this->taMan->alloc();
 		ta->addFinalState(src->getFinalState());
 		for (TA<label_type>::iterator i = src->begin(); i != src->end(); ++i) {
-			vector<size_t> lhs;
-			for (vector<size_t>::const_iterator j = i->lhs().begin(); j != i->lhs().end(); ++j) {
+			std::vector<size_t> lhs;
+			for (std::vector<size_t>::const_iterator j = i->lhs().begin(); j != i->lhs().end(); ++j) {
 				const Data* data;
-				if (!this->dataMan.isLeaf(*j, data) || !data->isRef() || index[data->d_ref.root] == data->d_ref.root) {
+				if (!this->isData(*j, data) || !data->isRef() || index[data->d_ref.root] == data->d_ref.root) {
 					lhs.push_back(*j);
 				} else {
 					if (index[data->d_ref.root] != (size_t)(-1))
@@ -286,13 +333,13 @@ protected:
 			vector<size_t> lhs;
 			for (vector<size_t>::const_iterator j = i->lhs().begin(); j != i->lhs().end(); ++j) {
 				const Data* data;
-				if (this->dataMan.isLeaf(*j, data) && data->isRef(root)) {
+				if (FAE::isData(*j, data) && data->isRef(root)) {
 					lhs.push_back(this->addData(*ta, Data::createUndef()));
 				} else {
 					lhs.push_back(*j);
 				}
 			}
-			if (!i->label().head().isData() || !i->label().head().getData().isRef(root))
+			if (!FAE::isRef(i->label().head(), root))
 				ta->addTransition(lhs, i->label(), i->rhs());
 		}
 		return ta;
@@ -308,8 +355,8 @@ protected:
 		assert(ref < this->roots.size());
 		TA<label_type> ta(this->taMan->getBackend());
 		ta.addFinalState(dst.getFinalState());
-		const Box* b = &this->boxMan->getData(Data::createRef(ref));
-		size_t refState = this->dataMan.find(&b->getData());
+		const DataBox* b = this->boxMan->getData(Data::createRef(ref));
+		size_t refState = _MSB_ADD(b->getId());
 		joinState = this->freshState();
 		bool hit = false;
 		for (TA<label_type>::iterator i = dst.begin(); i != dst.end(); ++i) {
@@ -364,8 +411,8 @@ protected:
 			changed = false;
 			for (TA<label_type>::iterator i = ta.begin(); i != ta.end(); ++i) {
 				const Data* data;
-				vector<size_t> v;
-				if (i->label().head().isData(data) && data->isRef()) {
+				std::vector<size_t> v;
+				if (FAE::isData(i->label().head(), data) && data->isRef()) {
 					v.push_back(data->d_ref.root);
 				} else {
 //					vector<size_t> order;
@@ -385,35 +432,35 @@ protected:
 	}
 
 	static bool isUniqueRef(const TA<label_type>& ta, size_t ref) {
-		const Data* data;
+//		const Data* data;
 		boost::unordered_map<size_t, size_t> index;
 		for (TA<label_type>::iterator i = ta.begin(); i != ta.end(); ++i) {
-			if (i->label().head().isData(data) && data->isRef(ref))
+			if (FAE::isRef(i->label().head(), ref))
 				index.insert(make_pair(i->rhs(), 1));
 		}
 		bool changed = true;
 		while (changed) {
 			changed = false;
 			for (TA<label_type>::iterator i = ta.begin(); i != ta.end(); ++i) {
-				if (!i->label().head().isData()) {
-					size_t sum = 0;
-					for (vector<size_t>::const_iterator j = i->lhs().begin(); j != i->lhs().end(); ++j)
-						sum += index.insert(make_pair(*j, 0)).first->second;
-					if (sum == 0)
-						continue;
-					// if everything is reachable, then we can safely conclude here
-					if (sum > 1)
-						return false;
-					size_t& k = index.insert(make_pair(i->rhs(), 0)).first->second;
-//					sum = std::min(sum, 2);
-//					if (k < sum) {
-//						k = sum;
-//						changed = true;
-//					}
-					if (k == 0) {
-						k = 1;
-						changed = true;
-					}
+				if (!i->label().head()->isStructural())
+					continue;
+				size_t sum = 0;
+				for (vector<size_t>::const_iterator j = i->lhs().begin(); j != i->lhs().end(); ++j)
+					sum += index.insert(make_pair(*j, 0)).first->second;
+				if (sum == 0)
+					continue;
+				// if everything is reachable, then we can safely conclude here
+				if (sum > 1)
+					return false;
+				size_t& k = index.insert(make_pair(i->rhs(), 0)).first->second;
+//				sum = std::min(sum, 2);
+//				if (k < sum) {
+//					k = sum;
+//					changed = true;
+//				}
+				if (k == 0) {
+					k = 1;
+					changed = true;
 				}
 			}
 		}
@@ -427,7 +474,7 @@ protected:
 		}
 		visited[c] = true;
 		order.push_back(c);
-		for (vector<size_t>::const_iterator i = this->rootMap[c].begin(); i != this->rootMap[c].end(); ++i) {
+		for (std::vector<size_t>::const_iterator i = this->rootMap[c].begin(); i != this->rootMap[c].end(); ++i) {
 			this->visitDown(*i, visited, order, marked);
 			if (!marked[*i] && !FAE::isUniqueRef(*this->roots[c], *i))
 				marked[*i] = true;
@@ -438,7 +485,7 @@ protected:
 		if (visited[c])
 			return;
 		visited[c] = true;
-		for (vector<size_t>::const_iterator i = this->rootMap[c].begin(); i != this->rootMap[c].end(); ++i)
+		for (std::vector<size_t>::const_iterator i = this->rootMap[c].begin(); i != this->rootMap[c].end(); ++i)
 			this->visitDown(*i, visited);
 	}
 
@@ -447,7 +494,7 @@ protected:
 		visited = std::vector<bool>(this->roots.size(), false);
 		marked = std::vector<bool>(this->roots.size(), false);
 		order.clear();
-		for (vector<Data>::const_iterator i = this->variables.begin(); i != variables.end(); ++i) {
+		for (std::vector<Data>::const_iterator i = this->variables.begin(); i != variables.end(); ++i) {
 			// skip everything what is not a root reference
 			if (!i->isRef())
 				continue;
@@ -464,7 +511,7 @@ protected:
 	void traverse(std::vector<bool>& visited) const {
 		// TODO: upward traversal
 		visited = std::vector<bool>(this->roots.size(), false);
-		for (vector<Data>::const_iterator i = this->variables.begin(); i != variables.end(); ++i) {
+		for (std::vector<Data>::const_iterator i = this->variables.begin(); i != variables.end(); ++i) {
 			// skip everything what is not a root reference
 			if (!i->isRef())
 				continue;
@@ -576,8 +623,8 @@ public:
 //				std::cerr << "merging " << *i << '(' << this->roots[*i] << ')' << " into " << root << '(' << this->roots[root] << ')' << std::endl;
 				size_t refState;
 				TA<label_type>* ta = this->mergeRoot(*this->roots[root], *i, *this->roots[*i], refState);
-				FAE::updateRoot(this->roots[root], *this->taMan, ta);
-				FAE::updateRoot(this->roots[*i], *this->taMan, NULL);
+				this->updateRoot(this->roots[root], ta);
+				this->updateRoot(this->roots[*i], NULL);
 				FAE::updateMap(this->rootMap[root], *i, this->rootMap[*i]);
 				normInfo.mergeRoots(root, *i, refState);
 			}
@@ -599,11 +646,11 @@ public:
 		std::vector<size_t> index(this->roots.size(), (size_t)(-1));
 		std::vector<bool> normalized(this->roots.size(), false);
 		std::vector<TA<label_type>*> newRoots;
-		std::vector<vector<size_t> > newRootMap;
+		std::vector<std::vector<size_t> > newRootMap;
 		size_t offset = 0;
 		for (std::vector<size_t>::iterator i = order.begin(); i < order.end(); ++i) {
 			this->normalizeRoot(normInfo, normalized, *i, marked);
-			assert(marked[*i] || (this->roots[*i] == NULL));
+//			assert(marked[*i] || (this->roots[*i] == NULL));
 			if (!marked[*i])
 				continue;
 			newRoots.push_back(this->roots[*i]);
@@ -617,7 +664,7 @@ public:
 		this->roots = newRoots;
 		this->rootMap = newRootMap;
 		for (size_t i = 0; i < this->roots.size(); ++i) {
-			FAE::updateRoot(this->roots[i], *this->taMan, this->relabelReferences(this->roots[i], index));
+			this->updateRoot(this->roots[i], this->relabelReferences(this->roots[i], index));
 			FAE::renameVector(this->rootMap[i], index);
 		}
 		// update variables
@@ -665,7 +712,7 @@ public:
 						state = this->addData(*dst[p.second], Data::createRef(splitPoints[l->second].second));
 					} else {
 						stack.push_back(std::make_pair(*k, p.second));
-						if (this->dataMan.isLeaf(state))
+						if (FAE::isData(state))
 							state = *k;
 						else
 							state = stateIndex.translateOTF(*k) + this->stateOffset;
@@ -673,7 +720,7 @@ public:
 					lhs.push_back(state);
 				}
 				size_t rhs;
-				if (this->dataMan.isLeaf((*j)->rhs()))
+				if (FAE::isData((*j)->rhs()))
 					rhs = (*j)->rhs();
 				else
 					rhs = stateIndex.translateOTF((*j)->rhs()) + this->stateOffset;
@@ -697,7 +744,7 @@ public:
 		void operator()(const TT<label_type>* t1, const TT<label_type>* t2, const std::vector<size_t>& lhs, size_t& rhs) {
 //			std::cerr << *t1 << " vs " << *t2 << std::endl;
 			const Data* data;
-			if (this->fae.dataMan.isLeaf(t1->rhs(), data)) {
+			if (this->fae.isData(t1->rhs(), data)) {
 				if (data->isRef()) {
 					if (data->d_ref.root < this->index.size())
 						rhs = fae.addData(this->dst, Data::createRef(this->index[data->d_ref.root], data->d_ref.displ));
@@ -732,7 +779,7 @@ public:
 
 		void operator()(const TT<label_type>* t1, const TT<label_type>* t2, const std::vector<size_t>& lhs, size_t& rhs) {
 			const Data* data;
-			if (this->fae.dataMan.isLeaf(t1->rhs(), data)) {
+			if (this->fae.isData(t1->rhs(), data)) {
 				if (data->isRef()) {
 					if (data->d_ref.root < this->index.size())
 						rhs = fae.addData(this->dst, Data::createRef(this->index[data->d_ref.root], data->d_ref.displ));
@@ -756,7 +803,7 @@ public:
 		
 		FAE tmp(*this);
 		for (std::vector<TA<label_type>*>::iterator i = this->roots.begin(); i != this->roots.end(); ++i)
-			FAE::updateRoot(*i, *this->taMan, NULL);
+			this->updateRoot(*i, NULL);
 
 		this->rootMap.resize(normInfo.rootCount);
 
@@ -827,7 +874,7 @@ public:
 
 		void operator()(const TT<label_type>* t1, const TT<label_type>* t2, const std::vector<size_t>& lhs, size_t& rhs) {
 			const Data* data;
-			if (this->fae.dataMan.isLeaf(t2->rhs(), data))
+			if (this->fae.isData(t2->rhs(), data))
 				rhs = t2->rhs();
 			this->dst.addTransition(lhs, t2->_label, rhs);
 			if (this->src1.isFinalState(t1->rhs()) && this->src2.isFinalState(t2->rhs()))
@@ -837,10 +884,10 @@ public:
 	};
 
 	void buildLTCacheExt(const TA<label_type>& ta, TA<label_type>::lt_cache_type& cache) {
-		const Box* b = &this->boxMan->getData(Data::createUndef());
-		label_type lUndef = &this->labMan->lookup(itov(b));
+		const DataBox* b = this->boxMan->getData(Data::createUndef());
+		label_type lUndef = &this->labMan->lookup(itov((const AbstractBox*)b));
 		for (TA<label_type>::iterator i = ta.begin(); i != ta.end(); ++i) {
-			if (i->label().head().isData()) {
+			if (i->label().head()->isType(box_type_e::bData)) {
 				cache.insert(
 					make_pair(lUndef, std::vector<const TT<label_type>*>())
 				).first->second.push_back(&*i);
@@ -858,7 +905,7 @@ public:
 		this->rootMap = fae.rootMap;
 
 		if (this->roots.size() > fae.roots.size()) {
-			FAE::updateRoot(this->roots.back(), *this->taMan, NULL);
+			this->updateRoot(this->roots.back(), NULL);
 			this->roots.pop_back();
 		}
 
@@ -866,7 +913,7 @@ public:
 
 		FAE tmp(*this);
 		for (std::vector<TA<label_type>*>::iterator i = this->roots.begin(); i != this->roots.end(); ++i)
-			FAE::updateRoot(*i, *this->taMan, NULL);
+			this->updateRoot(*i, NULL);
 
 		for (size_t i = 0; i < this->roots.size(); ++i) {
 			if (!tmp.roots[i]) {
@@ -917,12 +964,8 @@ public:
 				}
 			}
 			ta.heightAbstraction(rel, height, stateIndex);
-			FAE::updateRoot(this->roots[i], *this->taMan, &ta.collapsed(*this->taMan->alloc(), rel, stateIndex));
+			this->updateRoot(this->roots[i], &ta.collapsed(*this->taMan->alloc(), rel, stateIndex));
 		}
-	}
-
-	void decomposeAtRoot(vector<FAE*>& dst, size_t root, const vector<const Box*>& boxes) const {
-		throw runtime_error("FAE::decomposeAtRoot(): box decomposition not implemented! (désolé)");
 	}
 
 	struct IsolateOneF {
@@ -930,8 +973,8 @@ public:
 
 		IsolateOneF(size_t offset) : offset(offset) {}
 
-		bool operator()(const Box* box) const {
-			return box->getDownwardCoverage(0).second.count(this->offset);
+		bool operator()(const StructuralBox* box) const {
+			return box->outputCovers(this->offset);
 		}
 	};
 
@@ -943,14 +986,14 @@ public:
 				this->s.insert(*i + offset);
 		}
 		
-		bool operator()(const Box* box) const {
-			return utils::checkIntersection(box->getDownwardCoverage(0).second, this->s);
+		bool operator()(const StructuralBox* box) const {
+			return utils::checkIntersection(box->outputCoverage(), this->s);
 		}
 	};
 
 	struct IsolateAllF {
-		bool operator()(const Box* box) const {
-			return !box->getDownwardCoverage(0).first.empty();
+		bool operator()(const StructuralBox*) const {
+			return true;
 		}
 	};
 
@@ -964,9 +1007,12 @@ public:
 				TA<label_type> ta(*fae.roots[root], false);
 				vector<size_t> lhs;
 				size_t lhsOffset = 0;
-				std::vector<const Box*> boxes;
-				for (vector<const Box*>::const_iterator j = i->label().dataB->begin(); j != i->label().dataB->end(); ++j) {
-					if (!f(*j)) {
+				std::set<const Box*> boxes;
+				for (std::vector<const AbstractBox*>::const_iterator j = i->label().dataB->begin(); j != i->label().dataB->end(); ++j) {
+					if (!(*j)->isStructural())
+						continue;
+					StructuralBox* b = (StructuralBox*)(*j);
+					if (!f(b)) {
 						// this box is not interesting
 						for (size_t k = 0; k < (*j)->getArity(); ++k, ++lhsOffset)
 							lhs.push_back(i->lhs()[lhsOffset]);
@@ -974,7 +1020,7 @@ public:
 					}
 					// we have to isolate here
 					for (size_t k = 0; k < (*j)->getArity(); ++k, ++lhsOffset) {
-						if (this->dataMan.isLeaf(i->lhs()[lhsOffset])) {
+						if (FAE::isData(i->lhs()[lhsOffset])) {
 							// no need to create a leaf when it's already there
 							lhs.push_back(i->lhs()[lhsOffset]);
 							continue;
@@ -992,8 +1038,8 @@ public:
 						fae.roots.push_back(tmp2);
 						fae.rootMap.push_back(o[tmp2->getFinalState()]);
 					}
-					if ((*j)->isBox())
-						boxes.push_back(*j);
+					if (b->isType(box_type_e::bBox))
+						boxes.insert((const Box*)*j);
 				}
 				size_t newState = fae.freshState();
 				ta.addTransition(lhs, i->label(), newState);
@@ -1001,7 +1047,7 @@ public:
 				TA<label_type>* tmp = fae.taMan->alloc();
 				ta.unreachableFree(*tmp);
 				// exchange the original automaton with the new one
-				FAE::updateRoot(fae.roots[root], *fae.taMan, tmp);
+				fae.updateRoot(fae.roots[root], tmp);
 				o_map_type o;
 				FAE::computeDownwardO(*tmp, o);
 				fae.rootMap[root] = o[tmp->getFinalState()];
@@ -1026,50 +1072,64 @@ public:
 		}
 	}
 
+	static bool isSelector(const AbstractBox* box) {
+		return box->isType(box_type_e::bSel);
+	}
+
+	static const SelData& readSelector(const AbstractBox* box) {
+		return ((SelBox*)box)->getData();
+	}
+
+	static bool isSelector(const AbstractBox* box, size_t offset) {
+		if (!FAE::isSelector(box))
+			return false;
+		return FAE::readSelector(box).offset == offset;
+	}
+
 	void transitionLookup(const TT<label_type>& transition, size_t offset, Data& data) const {
 		bool found = false;
 		size_t lhsOffset = 0;
-		for (vector<const Box*>::const_iterator i = transition.label().dataB->begin(); i != transition.label().dataB->end(); ++i) {
-			if ((*i)->isSelector(offset)) {
+		for (vector<const AbstractBox*>::const_iterator i = transition.label().dataB->begin(); i != transition.label().dataB->end(); ++i) {
+			if (FAE::isSelector(*i, offset)) {
 				assert(!found);
 				found = true;
 				const Data* tmp;
-				if (!this->dataMan.isLeaf(transition.lhs()[lhsOffset], tmp))
+				if (!this->isData(transition.lhs()[lhsOffset], tmp))
 					throw std::runtime_error("FAE::transitionLookup(): destination is not a leaf!");
 				data = *tmp;
-				FAE::displToData((*i)->getSelector(), data);
+				FAE::displToData(FAE::readSelector(*i), data);
 			}
 			lhsOffset += (*i)->getArity();
 		}
 		if (!found)
-			throw std::runtime_error("FAE::nodeLookup(): selector not found!");
+			throw std::runtime_error("FAE::trasitionLookup(): selector not found!");
 	}
 
 	void transitionLookup(const TT<label_type>& transition, size_t base, const std::set<size_t>& offsets, Data& data) const {
 		size_t lhsOffset = 0;
 		data = Data::createStruct();
-		for (vector<const Box*>::const_iterator i = transition.label().dataB->begin(); i != transition.label().dataB->end(); ++i) {
-			if ((*i)->isSelector() && offsets.count((*i)->getSelector().offset)) {
+		for (vector<const AbstractBox*>::const_iterator i = transition.label().dataB->begin(); i != transition.label().dataB->end(); ++i) {
+			if (FAE::isSelector(*i) && offsets.count(FAE::readSelector(*i).offset)) {
 				const Data* tmp;
-				if (!this->dataMan.isLeaf(transition.lhs()[lhsOffset], tmp))
+				if (!this->isData(transition.lhs()[lhsOffset], tmp))
 					throw std::runtime_error("FAE::transitionLookup(): destination is not a leaf!");
-				data.d_struct->push_back(Data::item_info((*i)->getSelector().offset - base, *tmp));
-				FAE::displToData((*i)->getSelector(), data.d_struct->back().second);
+				data.d_struct->push_back(Data::item_info(FAE::readSelector(*i).offset - base, *tmp));
+				FAE::displToData(FAE::readSelector(*i), data.d_struct->back().second);
 			} 
 			lhsOffset += (*i)->getArity();
 		}
 		if (data.d_struct->size() != offsets.size())
-			throw std::runtime_error("FAE::nodeLookup(): selectors missmatch!");
+			throw std::runtime_error("FAE::transitionLookup(): selectors missmatch!");
 	}
 
 	void transitionLookup(const TT<label_type>& transition, std::vector<std::pair<SelData, Data> >& nodeInfo) const {
 		size_t lhsOffset = 0;
-		for (vector<const Box*>::const_iterator i = transition.label().dataB->begin(); i != transition.label().dataB->end(); ++i) {
-			assert((*i)->isSelector());
+		for (vector<const AbstractBox*>::const_iterator i = transition.label().dataB->begin(); i != transition.label().dataB->end(); ++i) {
+			assert(FAE::isSelector(*i));
 			const Data* tmp;
-			if (!this->dataMan.isLeaf(transition.lhs()[lhsOffset], tmp))
+			if (!this->isData(transition.lhs()[lhsOffset], tmp))
 				throw std::runtime_error("FAE::transitionLookup(): destination is not a leaf!");
-			nodeInfo.push_back(std::make_pair((*i)->getSelector(), *tmp));
+			nodeInfo.push_back(std::make_pair(FAE::readSelector(*i), *tmp));
 			FAE::displToData(nodeInfo.back().first, nodeInfo.back().second);
 			lhsOffset += (*i)->getArity();
 		}
@@ -1077,23 +1137,23 @@ public:
 
 	void transitionModify(TA<label_type>& dst, const TT<label_type>& transition, size_t offset, const Data& in, Data& out) {
 		vector<size_t> lhs;
-		vector<const Box*> label;
+		vector<const AbstractBox*> label;
 		size_t lhsOffset = 0;
 		bool found = false;
-		for (vector<const Box*>::const_iterator i = transition.label().dataB->begin(); i != transition.label().dataB->end(); ++i) {
-			if ((*i)->isSelector(offset)) {
+		for (vector<const AbstractBox*>::const_iterator i = transition.label().dataB->begin(); i != transition.label().dataB->end(); ++i) {
+			if (FAE::isSelector(*i, offset)) {
 				assert(!found);
 				found = true;
 				const Data* tmp;
-				if (!this->dataMan.isLeaf(transition.lhs()[lhsOffset], tmp))
+				if (!this->isData(transition.lhs()[lhsOffset], tmp))
 					throw runtime_error("FAE::transitionModify(): destination is not a leaf!");
 				out = *tmp;
-				FAE::displToData((*i)->getSelector(), out);
-				SelData s = (*i)->getSelector();
+				SelData s = FAE::readSelector(*i);
+				FAE::displToData(s, out);
 				Data d = in;
 				FAE::displToSel(s, d);
 				lhs.push_back(this->addData(dst, d));
-				label.push_back(&this->boxMan->getSelector(s));
+				label.push_back(this->boxMan->getSelector(s));
 			} else {
 				lhs.insert(lhs.end(), transition.lhs().begin() + lhsOffset, transition.lhs().begin() + lhsOffset + (*i)->getArity());
 				label.push_back(*i);
@@ -1101,7 +1161,7 @@ public:
 			lhsOffset += (*i)->getArity();
 		}
 		if (!found)
-			throw runtime_error("FAE::nodeModify(): selector not found!");
+			throw runtime_error("FAE::transitionModify(): selector not found!");
 		FAE::reorderBoxes(label, lhs);
 		size_t state = this->freshState();
 		dst.addFinalState(state);
@@ -1110,23 +1170,23 @@ public:
 
 	void transitionModify(TA<label_type>& dst, const TT<label_type>& transition, size_t base, const std::map<size_t, Data>& in, Data& out) {
 		vector<size_t> lhs;
-		vector<const Box*> label;
+		vector<const AbstractBox*> label;
 		size_t lhsOffset = 0;
 		out = Data::createStruct();
-		for (vector<const Box*>::const_iterator i = transition.label().dataB->begin(); i != transition.label().dataB->end(); ++i) {
-			if ((*i)->isSelector()) {
-				std::map<size_t, Data>::const_iterator j = in.find((*i)->getSelector().offset);
+		for (vector<const AbstractBox*>::const_iterator i = transition.label().dataB->begin(); i != transition.label().dataB->end(); ++i) {
+			if (FAE::isSelector(*i)) {
+				std::map<size_t, Data>::const_iterator j = in.find(FAE::readSelector(*i).offset);
 				if (j != in.end()) {
 					const Data* tmp;
-					if (!this->dataMan.isLeaf(transition.lhs()[lhsOffset], tmp))
+					if (!this->isData(transition.lhs()[lhsOffset], tmp))
 						throw runtime_error("FAE::transitionModify(): destination is not a leaf!");
-					out.d_struct->push_back(Data::item_info((*i)->getSelector().offset - base, *tmp));
-					FAE::displToData((*i)->getSelector(), out.d_struct->back().second);
-					SelData s = (*i)->getSelector();
+					out.d_struct->push_back(Data::item_info(FAE::readSelector(*i).offset - base, *tmp));
+					SelData s = FAE::readSelector(*i);
+					FAE::displToData(s, out.d_struct->back().second);
 					Data d = j->second;
 					FAE::displToSel(s, d);
 					lhs.push_back(this->addData(dst, d));
-					label.push_back(&this->boxMan->getSelector(s));
+					label.push_back(this->boxMan->getSelector(s));
 				} else {
 					lhs.insert(lhs.end(), transition.lhs().begin() + lhsOffset, transition.lhs().begin() + lhsOffset + (*i)->getArity());
 					label.push_back(*i);
@@ -1135,7 +1195,7 @@ public:
 			lhsOffset += (*i)->getArity();
 		}
 		if (out.d_struct->size() != in.size())
-			throw runtime_error("FAE::nodeModify(): selectors missmatch!");
+			throw runtime_error("FAE::transitionModify(): selectors missmatch!");
 		FAE::reorderBoxes(label, lhs);
 		size_t state = this->freshState();
 		dst.addFinalState(state);
@@ -1180,10 +1240,10 @@ public:
 		this->variables[id] = data;
 	}
 
-	size_t nodeCreate(const std::vector<std::pair<SelData, Data> >& nodeInfo, const Box* typeInfo = NULL) {
+	size_t nodeCreate(const std::vector<std::pair<SelData, Data> >& nodeInfo, const TypeBox* typeInfo = NULL) {
 		size_t root = this->roots.size();
 		TA<label_type>* ta = this->taMan->alloc();
-		std::vector<const Box*> label;
+		std::vector<const AbstractBox*> label;
 		std::vector<size_t> lhs;
 		std::vector<size_t> o;
 		if (typeInfo)
@@ -1193,7 +1253,7 @@ public:
 			Data data = i->second;
 			FAE::displToSel(sel, data);
 			// label
-			label.push_back(&this->boxMan->getSelector(sel));
+			label.push_back(this->boxMan->getSelector(sel));
 			// lhs
 			lhs.push_back(this->addData(*ta, data));
 			// o
@@ -1209,15 +1269,15 @@ public:
 		return root;
 	}
 
-	size_t nodeCreate(const std::vector<SelData>& nodeInfo, const Box* typeInfo = NULL) {
+	size_t nodeCreate(const std::vector<SelData>& nodeInfo, const TypeBox* typeInfo = NULL) {
 		size_t root = this->roots.size();
 		TA<label_type>* ta = this->taMan->alloc();
 		// build label
-		std::vector<const Box*> label;
+		std::vector<const AbstractBox*> label;
 		if (typeInfo)
 			label.push_back(typeInfo);
 		for (std::vector<SelData>::const_iterator i = nodeInfo.begin(); i != nodeInfo.end(); ++i)
-			label.push_back(&this->boxMan->getSelector(*i));
+			label.push_back(this->boxMan->getSelector(*i));
 		// build lhs
 		vector<size_t> lhs(nodeInfo.size(), this->addData(*ta, Data::createUndef()));
 		// reorder
@@ -1240,17 +1300,17 @@ public:
 				*i = Data::createUndef();
 		}
 		// erase node
-		FAE::updateRoot(this->roots[root], *this->taMan, NULL);
+		this->updateRoot(this->roots[root], NULL);
 		// make all references to this rootpoint dangling
 		size_t i = 0;
 		for (; i < root; ++i) {
-			FAE::updateRoot(this->roots[i], *this->taMan, this->invalidateReference(this->roots[i], root));
+			this->updateRoot(this->roots[i], this->invalidateReference(this->roots[i], root));
 			FAE::invalidateReference(this->rootMap[i], root);
 		}
 		// skip 'root'
 		++i;
 		for (; i < this->roots.size(); ++i) {
-			FAE::updateRoot(this->roots[i], *this->taMan, this->invalidateReference(this->roots[i], root));
+			this->updateRoot(this->roots[i], this->invalidateReference(this->roots[i], root));
 			FAE::invalidateReference(this->rootMap[i], root);
 		}
 		
@@ -1260,7 +1320,7 @@ public:
 		assert(root < this->roots.size());
 		assert(this->roots[root]);
 		// erase node
-		FAE::updateRoot(this->roots[root], *this->taMan, NULL);
+		this->updateRoot(this->roots[root], NULL);
 	}
 
 	void nodeLookup(size_t root, size_t offset, Data& data) const {
@@ -1315,7 +1375,7 @@ public:
 		}
 		TA<label_type>* tmp = this->taMan->alloc();
 		ta.unreachableFree(*tmp);
-		FAE::updateRoot(this->roots[root], *this->taMan, tmp);
+		this->updateRoot(this->roots[root], tmp);
 		boost::unordered_map<size_t, vector<size_t> > o;
 		FAE::computeDownwardO(*tmp, o);
 		this->rootMap[root] = o[tmp->getFinalState()];
@@ -1338,7 +1398,7 @@ public:
 		}
 		TA<label_type>* tmp = this->taMan->alloc();
 		ta.unreachableFree(*tmp);
-		FAE::updateRoot(this->roots[root], *this->taMan, tmp);
+		this->updateRoot(this->roots[root], tmp);
 		boost::unordered_map<size_t, vector<size_t> > o;
 		FAE::computeDownwardO(*tmp, o);
 		this->rootMap[root] = o[tmp->getFinalState()];
@@ -1351,7 +1411,7 @@ public:
 			if (i->rhs() == this->roots[root]->getFinalState()) {
 				for (std::vector<size_t>::const_iterator j = i->lhs().begin(); j != i->lhs().end(); ++j) {
 					const Data* data;
-					if (this->dataMan.isLeaf(*j, data) && data->isRef())
+					if (this->isData(*j, data) && data->isRef())
 						out.push_back(data->d_ref.root);
 				}
 				// only one accepting rule is exppected
@@ -1363,7 +1423,7 @@ public:
 public:
 
 	// state 0 should never be allocated by FAE (?)
-	FAE(TA<label_type>::Manager& taMan, LabMan& labMan, BoxManager& boxMan)
+	FAE(TA<label_type>::Manager& taMan, LabMan& labMan, BoxMan& boxMan)
 	 : FA(taMan), boxMan(&boxMan), labMan(&labMan), stateOffset(1) {
 		 // init special root references (this is not required)
 //		 this->registerRootReference(varNull, this->freshState());
@@ -1371,12 +1431,14 @@ public:
 	}
 
 	FAE(const FAE& x)
-		: FA(x), boxMan(x.boxMan), labMan(x.labMan), stateOffset(x.stateOffset), rootMap(x.rootMap),
-		selectorMap(x.selectorMap), dataMan(x.dataMan) {
+		: FA(x), boxMan(x.boxMan), labMan(x.labMan), stateOffset(x.stateOffset), rootMap(x.rootMap)/*,
+		selectorMap(x.selectorMap)*/ {
 	}
 //		rootReferenceIndex(x.rootReferenceIndex), invRootReferenceIndex(x.invRootReferenceIndex) {}
 
-	~FAE() { this->clear();	}
+	~FAE() {
+		this->clear();
+	}
 	
 	FAE& operator=(const FAE& x) {
 		((FA*)this)->operator=(x);
@@ -1384,11 +1446,20 @@ public:
 		this->labMan = x.labMan;
 		this->stateOffset = x.stateOffset;
 		this->rootMap = x.rootMap;
-		this->selectorMap = x.selectorMap;
-//		this->refMan = x.refMan;
-		this->dataMan = x.dataMan;
+//		this->selectorMap = x.selectorMap;
 		return *this;		
 	}
+
+	void clear() {
+		((FA*)this)->clear();
+		this->stateOffset = 1;
+		this->rootMap.clear();
+//		this->selectorMap.clear();
+//		this->rootReferenceIndex.clear();
+//		this->invRootReferenceIndex.clear();
+//		this->dataMan.clear();
+	}
+
 
 /* WIP */
 protected:
@@ -1559,6 +1630,7 @@ protected:
 		dst.insert(dst.end(), tmp.begin(), tmp.end());
 	}	
 */
+/*
 	// ensures the existence of 'o' (can create more accepting states)
 	TA<label_type>* normalizeTA(TA<label_type>* src, o_map_type& o) {
 		TA<label_type>* ta = this->taMan->alloc();
@@ -1751,7 +1823,7 @@ protected:
 			delete fae;
 		}		
 	}	
-
+*/
 /*
 	void traverse(vector<size_t>& order, set<size_t>& marked, vector<size_t>& garbage) {
 		// TODO: upward traversal

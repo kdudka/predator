@@ -20,31 +20,229 @@
 #ifndef BOX_H
 #define BOX_H
 
-#include <vector>
-#include <set>
 #include <string>
 #include <stdexcept>
-#include <fstream>
+#include <cassert>
 #include <ostream>
-#include <sstream>
 
-#include <boost/unordered_map.hpp>
-#include <boost/algorithm/string.hpp>
-
-#include "cache.hh"
 #include "types.hh"
-//#include "varinfo.hh"
 #include "labman.hh"
 #include "forestaut.hh"
-#include "tatimint.hh"
-
+#include "abstractbox.hh"
+/*
 using std::vector;
 using std::string;
 using std::pair;
 using std::set;
 using std::make_pair;
 using std::runtime_error;
+*/
+class TypeBox : public AbstractBox {
+	
+	std::string name;
 
+	void* typeInfo;
+
+public:
+
+	TypeBox(const std::string& name, void* typeInfo)
+		: AbstractBox(box_type_e::bTypeInfo), name(name), typeInfo(typeInfo) {}
+
+	const std::string& getName() const {
+		return this->name;
+	}
+
+	void* getTypeInfo() const {
+		return this->typeInfo;
+	}
+
+	virtual void toStream(std::ostream& os) const {
+		os << this->name;
+	}
+
+};
+
+class DataBox : public AbstractBox {
+
+	size_t id;
+
+	const Data* data;
+
+public:
+
+	DataBox(size_t id, const Data* data)
+		: AbstractBox(box_type_e::bData), id(id), data(data) {}
+
+	size_t getId() const {
+		return this->id;
+	}
+
+	const Data& getData() const {
+		return *this->data;
+	}
+
+	virtual void toStream(std::ostream& os) const {
+		os << *this->data;
+	}
+
+};
+
+class StructuralBox : public AbstractBox {
+
+protected:
+
+	StructuralBox(box_type_e type) : AbstractBox(type) {
+	}
+
+public:
+
+	virtual bool outputCovers(size_t offset) const = 0;
+
+	virtual const std::set<size_t>& outputCoverage() const = 0;
+
+};
+
+class SelBox : public StructuralBox {
+
+	const SelData* data;
+
+	std::set<size_t> s;
+
+public:
+
+	SelBox(const SelData* data)
+		: StructuralBox(box_type_e::bSel), data(data) {
+		s.insert(data->offset);
+	}
+
+	const SelData& getData() const {
+		return *this->data;
+	}
+
+	virtual void toStream(std::ostream& os) const {
+		os << *this->data;
+	}
+
+	virtual size_t getArity() const {
+		return 1;
+	}
+
+	virtual bool outputCovers(size_t offset) const {
+		return this->data->offset == offset;
+	}
+
+	virtual const std::set<size_t>& outputCoverage() const {
+		return s;
+	}
+
+};
+
+class Box : public FA, public StructuralBox {
+
+	friend class BoxManager;
+
+	std::string name;
+
+	std::vector<
+		std::pair<std::vector<size_t>, std::set<size_t> >
+	> selCoverage;
+
+protected:
+
+	Box(TA<label_type>::Manager& taMan, std::string& name)
+		: FA(taMan), StructuralBox(box_type_e::bBox), name(name) {}
+
+public:
+/*
+	static void getDownwardCoverage(const std::vector<const AbstractBox*>& label, std::vector<size_t>& v) {
+		for (std::vector<const AbstractBox*>::const_iterator i = label.begin(); i != label.end(); ++i) {
+			switch ((*i)->type) {
+				case selID: v.push_back((*i)->getSelector().offset);
+				case dataID: continue;
+				default:
+					assert((*i)->roots.size());
+					std::vector<size_t> v2;
+					Box::getDownwardCoverage(*(*i)->roots[0], v2);
+					v.insert(v.end(), v2.begin(), v2.end());
+					break;
+			}
+		}
+	}
+	
+	static void getDownwardCoverage(const TA<label_type>& ta, std::vector<size_t>& v) {
+		bool b = false;
+		for (TA<label_type>::iterator i = ta.begin(); i != ta.end(); ++i) {
+			if (!ta.isFinalState(i->rhs()))
+				continue;
+			std::vector<size_t> v2;
+			Box::getDownwardCoverage(*i->label().dataB, v2);
+			if (!b) {
+				v = v2;
+				b = true;
+			} else {
+				if (v != v2)
+					throw runtime_error("Box::getDownwardCoverage(): Inconsistent accepting rules while computing selector coverage!");
+			}			
+		}
+	}
+*/
+
+	virtual bool outputCovers(size_t offset) const {
+		assert(this->selCoverage.size());
+		return this->selCoverage.front().second.count(offset) > 0;
+	}
+	
+	virtual const std::set<size_t>& outputCoverage() const {
+		assert(this->selCoverage.size());
+		return this->selCoverage.front().second;
+	}
+/*
+	const std::set<size_t>& getSelCoverage(size_t x = 0) const {
+		assert(x < this->selCoverage.size());
+		return this->selCoverage[x].second;
+	}
+*/
+/*
+	void computeCoverage() {
+		this->selCoverage.clear();
+		for (std::vector<TA<label_type>*>::iterator i = this->roots.begin(); i != this->roots.end(); ++i) {
+			std::vector<size_t> v;
+			Box::getDownwardCoverage(**i);
+			std::set<size_t> s(v.begin(), v.end());
+			if (v.size() != s.size())
+				throw runtime_error("Box::computeCoverage(): A selector was defined more than once!");
+			this->selCoverage.push_back(make_pair(v, s));
+		}
+	}
+*/
+/*
+	void computeTrigger(vector<const Box*>& boxes) {
+		boxes.clear();
+		set<const Box*> s;
+		for (TA<label_type>::iterator i = this->roots[0]->begin(); i != this->roots[0]->end(); ++i) {
+			if (this->roots[0]->isFinalState(i->rhs()))
+				s.insert(i->label().dataB->begin(), i->label().dataB->end());
+		}
+		boxes = vector<const Box*>(s.begin(), s.end());
+	}
+*/
+	bool inputCovers(size_t offset) const {
+		throw std::runtime_error("Box::inputCovers(): not implemented!");
+	}
+
+public:
+
+	virtual void toStream(std::ostream& os) const {
+		os << this->name;
+	}
+
+	virtual size_t getArity() const {
+		return this->variables.size() - 1;
+	}
+
+};
+
+/*
 class Box : public FA {
 
 	friend class BoxManager;
@@ -116,21 +314,7 @@ public:
 		assert(this->isBox());
 		return this->info;
 	}
-/*
-	bool isReference() const {
-		return this->type == Box::refID;
-	}
 
-	bool isReference(size_t which) const {
-		return this->type == Box::refID && this->uintTag == which;
-	}
-
-	size_t getReference() const {
-		assert(this->isReference());
-		return this->uintTag;
-	}
-
-*/
 	size_t getArity() const {
 		switch (this->type) {
 			case selID: return 1;
@@ -267,21 +451,11 @@ public:
 	static Box createSelector(TA<label_type>::Manager& taMan, const std::string& name, const SelData& selInfo) {
 		return Box(taMan, name, selInfo);
 	}
-/*
-	static Box createReference(TA<FA::label_type>::Manager& taMan, size_t root) {
-		std::ostringstream ss;
-		switch (root) {
-			case varNull: ss << "null"; break;
-			case varUndef: ss << "undef"; break;
-			default: ss << "r:" << root;
-		}
-		return Box(taMan, Box::refID, root, ss.str());
-	}
-*/
+
 	static Box createData(TA<label_type>::Manager& taMan, const std::string& name, const Data& data) {
 		return Box(taMan, name, data);
 	}
-/*
+
 	static FA::label_type translateLabel(LabMan& labMan, const vector<const BoxTemplate*>* label, const boost::unordered_map<const BoxTemplate*, const Box*>& args) {
 		vector<const Box*> v;
 		for (vector<const BoxTemplate*>::const_iterator i = label->begin(); i != label->end(); ++i) {
@@ -292,7 +466,7 @@ public:
 		}
 		return &labMan.lookup(v);
 	}
-*/
+
 	void computeTrigger(vector<const Box*>& boxes) {
 		boxes.clear();
 		set<const Box*> s;
@@ -308,157 +482,5 @@ public:
 	}
 
 };
-
-class BoxManager {
-
-	mutable TA<label_type>::Manager& taMan;
-	mutable LabMan& labMan;
-
-	boost::unordered_map<string, Box> boxIndex;
-
-public:
-
-	static const char* selPrefix;
-	static const char* refPrefix;
-	static const char* dataPrefix;
-	static const char* nullStr;
-	static const char* undefStr;
-
-	static bool isSelectorName(const std::string& name) {
-		return memcmp(name.c_str(), selPrefix, strlen(selPrefix)) == 0;
-	}
-
-	// TODO: parse size and aux
-	static SelData getSelectorFromName(const std::string& name) {
-		assert(BoxManager::isSelectorName(name));
-		return SelData(atol(name.c_str() + strlen(selPrefix)), 0, 0);
-	}
-
-	static bool isReferenceName(const std::string& name) {
-		return (name == nullStr) || (name == undefStr) || (memcmp(name.c_str(), refPrefix, strlen(refPrefix)) == 0);
-	}
-
-	static Data getReferenceFromName(const std::string& name) {
-		assert(BoxManager::isReferenceName(name));
-		if (name == nullStr)
-			return Data::createVoidPtr(0);
-		if (name == undefStr)
-			return Data::createUndef();
-		return Data::createRef(atol(name.c_str() + strlen(refPrefix)));
-	}
-/*
-	static bool isDataName(const std::string& name) {
-		return (memcmp(name.c_str(), refPrefix, strlen(dataPrefix)) == 0);
-	}
-
-	static Data getDataFromName(const std::string& name) {
-		assert(BoxManager::isData(name));
-		return atol(name.c_str() + strlen(dataPrefix));
-	}
 */
-public:
-
-	const Box& getSelector(const SelData& sel) {
-		std::stringstream ss;
-		ss << selPrefix << '|' << sel.offset << '|' << sel.size << '|' << sel.displ;
-		return this->boxIndex.insert(
-			make_pair(ss.str(), Box::createSelector(this->taMan, ss.str(), sel))
-		).first->second;
-	}
-
-	const Box& getData(const Data& data) {
-		std::stringstream ss;
-		ss << data;
-		return this->boxIndex.insert(
-			make_pair(ss.str(), Box::createData(this->taMan, ss.str(), data))
-		).first->second;
-	}
-
-	const Box& getInfo(const std::string& name, void* info = NULL) {
-		return this->boxIndex.insert(
-			make_pair(name, Box::createBox(this->taMan, name, info))
-		).first->second;
-	}
-
-protected:
-
-	const Box& loadBox(const string& name, const boost::unordered_map<string, string>& database) {
-
-		boost::unordered_map<string, Box>::iterator i = this->boxIndex.find(name);
-		if (i != this->boxIndex.end())
-			return i->second;
-
-		if (BoxManager::isSelectorName(name))
-			return this->getSelector(BoxManager::getSelectorFromName(name));
-
-		if (BoxManager::isReferenceName(name))
-			return this->getData(BoxManager::getReferenceFromName(name));
-
-		boost::unordered_map<string, string>::const_iterator j = database.find(name);
-		if (j == database.end())
-			throw std::runtime_error("Box '" + name + "' not found!");
-
-		Box& box = this->boxIndex.insert(
-			make_pair(name, Box::createBox(this->taMan, name))
-		).first->second;
-
-		std::fstream input(j->second.c_str());
-
-		TAReader reader(input, j->second);
-
-		TA<string>::Backend sBackend;
-		TA<string> sta(sBackend);
-
-		TA<label_type>* ta = this->taMan.alloc();
-
-		string autName;
-
-		reader.readFirst(sta, autName);
-
-		this->translateRoot(*ta, sta, database);
-		box.variables.push_back(Data::createRef(box.roots.size(), 0));
-		box.roots.push_back(ta);
-
-		while (reader.readNext(sta, autName)) {
-			ta = taMan.alloc();
-			this->translateRoot(*ta, sta, database);
-			if (memcmp(autName.c_str(), "in", 2) == 0)
-				box.variables.push_back(Data::createRef(box.roots.size(), 0));
-			box.roots.push_back(ta);
-		}
-
-		box.computeCoverage();
-
-		return box;
-
-	}
-
-	void translateRoot(TA<label_type>& dst, const TA<string>& src, const boost::unordered_map<string, string>& database) {
-		dst.clear();
-		for (TA<string>::iterator i = src.begin(); i != src.end(); ++i) {
-			vector<string> strs;
-			boost::split(strs, i->label(), boost::is_from_range('_', '_'));
-			vector<const Box*> label;
-			for (vector<string>::iterator j = strs.begin(); j != strs.end(); ++j)
-				label.push_back(&this->loadBox(*j, database));
-			dst.addTransition(i->lhs(), &this->labMan.lookup(label), i->rhs());
-		}
-		dst.addFinalState(src.getFinalState());
-	}
-
-public:
-
-	BoxManager(TA<label_type>::Manager& taMan, LabMan& labMan) : taMan(taMan), labMan(labMan) {}
-
-	void loadTemplates(const boost::unordered_map<string, string>& database) {
-		for (boost::unordered_map<string, string>::const_iterator i = database.begin(); i != database.end(); ++i)
-			this->loadBox(i->first, database);
-	}
-
-	LabMan& getLabMan() const {
-		return this->labMan;
-	}
-
-};
-
 #endif

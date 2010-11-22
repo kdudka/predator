@@ -1,6 +1,7 @@
 #include <stdlib.h>
 
 int main() {
+
     struct T {
         struct T* next;
     };
@@ -17,7 +18,7 @@ int main() {
     struct T* z = NULL;
 
     while (x != NULL) {
-//        y = x;
+        y = x;
         x = x->next;
         y->next = z;
         z = y;
@@ -30,4 +31,5 @@ int main() {
     }
 
     return 0;
+
 }

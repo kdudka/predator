@@ -1,7 +1,6 @@
 critical
 
 medium
-* cache data outside Box
 * reserve stack space for function arguments
 * redesign internal structure of symbols in order to search faster
 * ? cleanup label_type (use boxes only)
@@ -9,7 +8,6 @@ medium
 * overhaul of execution tree (increase granularity)
 
 low
-* move leaf maps into one table (split state domain)
 * cache o mapping and compute only on demand
 * cache accepting transitions
 * extend o computation to record single/multiple occurences

@@ -40,6 +40,17 @@ protected:
 	std::vector<TA<label_type>*> roots;
 	mutable TA<label_type>::Manager* taMan;
 
+	void updateRoot(TA<label_type>*& root, TA<label_type>* newRoot) {
+		if (root)
+			this->taMan->release(root);
+		root = newRoot;
+	}
+
+	void releaseRoots() {
+		for (std::vector<TA<label_type>*>::iterator i = this->roots.begin(); i != this->roots.end(); ++i)
+			this->updateRoot(*i, NULL);
+	}
+
 public:
 
 	FA(TA<label_type>::Manager& taMan) : taMan(&taMan) {}
@@ -66,10 +77,7 @@ public:
 	}
 	
 	void clear() {
-		for (std::vector<TA<label_type>*>::iterator i = this->roots.begin(); i != this->roots.end(); ++i) {
-			if (*i)
-				this->taMan->release(*i);
-		}
+		this->releaseRoots();
 		this->roots.clear();
 		this->variables.clear();
 	}

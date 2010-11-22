@@ -168,7 +168,7 @@ class SymExec::Engine {
 	TA<label_type>::Backend taBackend;
 	TA<label_type>::Manager taMan;
 	LabMan labMan;
-	BoxManager boxMan;
+	BoxMan boxMan;
 
 	typedef unordered_map<const CodeStorage::Fnc*, SymCtx*> ctx_store_type;
 	ctx_store_type ctxStore;
@@ -278,7 +278,7 @@ protected:
 				throw runtime_error("Engine::execAssignment(): size of allocated block doesn't correspond to the size of the destination!");
 			vector<SelData> sels;
 			NodeBuilder::buildNode(sels, dst.type->items[0].type);
-			dst.writeData(fae, Data::createRef(fae.nodeCreate(sels, &this->boxMan.getInfo(dst.type->items[0].type->name))), rev);
+			dst.writeData(fae, Data::createRef(fae.nodeCreate(sels, this->boxMan.getInfo(dst.type->items[0].type->name))), rev);
 		} else {
 			assert(*(src.type) == *(dst.type));
 			vector<size_t> offs;

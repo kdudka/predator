@@ -45,6 +45,7 @@ public:
 
 	void clear() { this->stateOffset = 1; }
 
+	// currently cripples leaf states
 	TA<label_type>& fae2ta(TA<label_type>& dst, Index<size_t>& index, const FAE& src) const {
 		vector<size_t> lhs;
 		for (vector<TA<label_type>*>::const_iterator i = src.roots.begin(); i != src.roots.end(); ++i) {
@@ -64,7 +65,7 @@ public:
 	void adjust(const Index<size_t>& index) {
 		this->stateOffset += index.size();
 	}
-
+/*
 	void ta2fae(vector<FAE*>& dst, TA<label_type>::Manager& taMan, LabMan& labMan, BoxManager& boxMan) const {
 		TA<label_type>::td_cache_type cache;
 		this->backend.buildTDCache(cache);
@@ -76,7 +77,7 @@ public:
 			fae->loadTA(this->backend, cache, *i, this->stateOffset);
 		}
 	}
-
+*/
 	friend std::ostream& operator<<(std::ostream& os, const UFAE& ufae) {
 		TAWriter<label_type>(os).writeOne(ufae.backend);
 		return os;

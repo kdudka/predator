@@ -17,7 +17,23 @@
  * along with predator.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <string>
+#include <sstream>
+
 #include "forestautext.hh"
+
+struct WriteStateF {
+
+	std::string operator()(size_t state) const {
+		std::ostringstream ss;
+		if (_MSB_TEST(state))
+			ss << 'r' << _MSB_GET(state);
+		else
+			ss << 'q' << state;
+		return ss.str();
+	}
+
+};
 
 std::ostream& operator<<(std::ostream& os, const FAE& fae) {
 //	TA<label_type>::Backend backend;
@@ -40,7 +56,7 @@ std::ostream& operator<<(std::ostream& os, const FAE& fae) {
 		for (std::set<size_t>::iterator j = ta.getFinalStates().begin(); j != ta.getFinalStates().end(); ++j)
 			writer.writeState(*j);
 		writer.endl();
-		writer.writeTransitions(ta);
+		writer.writeTransitions(ta, WriteStateF());
 //		TAWriter<label_type>(os).writeOne(*ta, ss.str());
 //		TAWriter<label_type>(os).writeOne(*fae.roots[i], ss.str());
 	}

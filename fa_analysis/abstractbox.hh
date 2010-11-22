@@ -17,15 +17,47 @@
  * along with predator.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "box.hh"
-/*
-const size_t Box::boxID;
-const size_t Box::selID;
-const size_t Box::dataID;
+#ifndef ABSTRACT_BOX_H
+#define ABSTRACT_BOX_H
 
-const char* BoxManager::selPrefix = "sel";
-const char* BoxManager::refPrefix = "ref";
-const char* BoxManager::dataPrefix = "data";
-const char* BoxManager::nullStr = "null";
-const char* BoxManager::undefStr = "undef";
-*/
+#include <ostream>
+
+typedef enum { bBox, bTypeInfo, bSel, bData } box_type_e;
+
+class AbstractBox {
+
+	box_type_e type;
+
+protected:
+
+	AbstractBox(box_type_e type) : type(type) {
+	}
+
+public:
+
+	box_type_e getType() const {
+		return this->type;
+	}
+
+	bool isType(box_type_e type) const {
+		return this->type == type;
+	}
+
+	bool isStructural() const {
+		return (this->type == bBox) || (this->type == bSel);
+	}
+
+	virtual size_t getArity() const {
+		return 0;
+	}
+
+	virtual void toStream(std::ostream& os) const = 0;
+
+	friend std::ostream& operator<<(std::ostream& os, const AbstractBox& rhs) {
+		rhs.toStream(os);
+		return os;
+	}
+
+};
+
+#endif

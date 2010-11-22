@@ -37,7 +37,7 @@
 #define ABP_OFFSET		0
 #define ABP_SIZE		SymCtx::size_of_data
 #define IP_OFFSET		(ABP_OFFSET + ABP_SIZE)
-#define IP_SIZE			SymCtx::size_of_code
+#define IP_SIZE			SymCtx::size_of_data
 
 struct SymCtx {
 

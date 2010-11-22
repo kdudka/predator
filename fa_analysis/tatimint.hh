@@ -140,6 +140,16 @@ public:
 
 	TAWriter(std::ostream& output) : TimbukWriter(output) {}
 
+	template <class F>
+	void writeTransitions(const TA<T>& aut, F f) {
+		for (typename TA<T>::iterator i = aut.begin(); i != aut.end(); ++i) {
+			std::ostringstream ss;
+			ss << i->label();
+			this->writeTransition(i->lhs(), ss.str(), i->rhs(), f);
+			this->endl();
+		}
+	}
+
 	void writeTransitions(const TA<T>& aut) {
 		for (typename TA<T>::iterator i = aut.begin(); i != aut.end(); ++i) {
 			std::ostringstream ss;

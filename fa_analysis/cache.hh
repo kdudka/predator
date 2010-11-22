@@ -83,6 +83,10 @@ public:
 		this->store.clear();
 	}
 
+	bool empty() const {
+		return this->store.empty();
+	}
+
 };
 
 template <class T, class V>

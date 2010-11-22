@@ -855,7 +855,7 @@ public:
 	}
 
 public:
-	
+
 	// makes state numbers contiguous
 	TA& reduced(TA<T>& dst, Index<size_t>& index) const {
 		return TA<T>::reduce(dst, *this, index);
@@ -932,8 +932,19 @@ public:
 	
 	public:
 
-		Manager(typename TA<T>::Backend& backend) : backend(backend) {}
-	
+		Manager(typename TA<T>::Backend& backend) : backend(backend) {
+			this->taCache.addListener(this);
+		}
+
+		~Manager() {
+			utils::erase(this->taPool);
+			assert(this->taCache.empty());
+		}
+
+		const Cache<TA<T>*>& getCache() const {
+			return this->taCache;
+		}
+
 		TA<T>* alloc() {
 			TA<T>* dst;
 			if (!this->taPool.empty()) {

@@ -33,7 +33,22 @@ struct SelData {
 	int		displ;
 
 	SelData(size_t offset, int size, int displ) : offset(offset), size(size), displ(displ) {}
-	
+
+	friend size_t hash_value(const SelData& v) {
+		return boost::hash_value(v.offset + v.size + v.displ);
+	}
+
+	bool operator==(const SelData& rhs) const {
+		return this->offset == rhs.offset && this->size == rhs.size && this->displ == rhs.displ;
+	}
+
+	friend std::ostream& operator<<(std::ostream& os, const SelData& x) {
+		os << "sel" << x.offset << ':' << x.size << '[';
+		if (x.displ >= 0)
+			os << '+';
+		return os << x.displ << ']';
+	}
+
 };
 
 struct Data {
@@ -244,30 +259,4 @@ struct Data {
 
 };
 
-/*
-struct VarInfo {
-		
-	Data data;
-	int aux;
-
-	var_info(size_t data, int aux) : data(data), aux(aux) {}
-
-	friend size_t hash_value(const var_info& v) {
-		return hash_value(v.data + v.aux);
-	}
-
-	bool operator==(const var_info& rhs) const {
-		return (this->data == rhs.data) && (this->aux == rhs.aux);
-	}
-	
-	friend std::ostream& operator<<(std::ostream& os, const var_info& x) {
-		os << "v:";
-		switch (x.index) {
-			case (size_t)(-1): return os << "null";
-			case (size_t)(-2): return os << "undef";
-			default: return os << x.index << '+' << x.offset;
-		}
-	}
-};
-*/
 #endif

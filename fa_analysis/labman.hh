@@ -25,11 +25,12 @@
 
 #include "cache.hh"
 #include "types.hh"
+#include "abstractbox.hh"
 
 class LabMan {
 	
 	Cache<std::pair<size_t, std::vector<Data> > > varStore;
-	Cache<std::vector<const class Box*> > boxStore;
+	Cache<std::vector<const AbstractBox*> > boxStore;
 
 public:
 
@@ -39,7 +40,7 @@ public:
 		return this->varStore.lookup(std::make_pair(arity, x))->first.second;
 	}
 
-	const std::vector<const class Box*>& lookup(const std::vector<const class Box*>& x) {
+	const std::vector<const AbstractBox*>& lookup(const std::vector<const AbstractBox*>& x) {
 		return this->boxStore.lookup(x)->first;
 	}
 
