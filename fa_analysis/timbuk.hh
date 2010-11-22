@@ -450,6 +450,11 @@ public:
 		this->out << " q" << state;
 	}
 
+	template <class F>
+	void writeState(size_t state, F f) {
+		this->out << ' ' << f(state);
+	}
+
 	void writeState(const std::string& state) {
 		this->out << ' ' << state;
 	}

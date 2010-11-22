@@ -848,8 +848,24 @@ public:
 			dst.addTransition(lhs, (*i)->first._label, index.translateOTF((*i)->first._rhs) + offset);
 		}
 		if (addFinalStates) {
-			for (set<size_t>::const_iterator i = src.finalStates.begin(); i != src.finalStates.end(); ++i)
+			for (std::set<size_t>::const_iterator i = src.finalStates.begin(); i != src.finalStates.end(); ++i)
 				dst.addFinalState(index.translateOTF(*i) + offset);
+		}
+		return dst;
+	}
+
+	template <class F>
+	static TA<T>& rename(TA<T>& dst, const TA<T>& src, F f, bool addFinalStates = true) {
+		vector<size_t> lhs;
+		for (typename set<typename trans_cache_type::value_type*>::const_iterator i = src.transitions.begin(); i != src.transitions.end(); ++i) {
+			lhs.resize((*i)->first._lhs->first.size());
+			for (size_t j = 0; j < (*i)->first._lhs->first.size(); ++j)
+				lhs[j] = f((*i)->first._lhs->first[j]);
+			dst.addTransition(lhs, (*i)->first._label, f((*i)->first._rhs));
+		}
+		if (addFinalStates) {
+			for (std::set<size_t>::const_iterator i = src.finalStates.begin(); i != src.finalStates.end(); ++i)
+				dst.addFinalState(f(*i));
 		}
 		return dst;
 	}

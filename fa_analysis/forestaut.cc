@@ -20,7 +20,20 @@
 #include "forestaut.hh"
 #include "tatimint.hh"
 
+struct WriteStateF {
+
+	std::string operator()(size_t state) const {
+		std::ostringstream ss;
+		if (_MSB_TEST(state))
+			ss << 'r' << _MSB_GET(state);
+		else
+			ss << 'q' << state;
+		return ss.str();
+	}
+
+};
+
 std::ostream& operator<<(std::ostream& os, const TA<label_type>& ta) {
-	TAWriter<label_type>(os).writeOne(ta);
+	TAWriter<label_type>(os).writeOne(ta, WriteStateF());
 	return os;
 }

@@ -136,6 +136,16 @@ public:
 template <class T>
 class TAWriter : public TimbukWriter {
 
+	struct StdF {
+
+		std::string operator()(size_t s) {
+			std::ostringstream ss;
+			ss << 'q' << s;
+			return ss.str();
+		}
+
+	};
+
 public:
 
 	TAWriter(std::ostream& output) : TimbukWriter(output) {}
@@ -159,6 +169,37 @@ public:
 		}
 	}
 
+	template <class F>
+	void writeOne(const TA<T>& aut, F f, const string& name = "TreeAutomaton") {
+		map<string, size_t> labels;
+		set<size_t> states;
+		for (typename TA<T>::iterator i = aut.begin(); i != aut.end(); ++i) {
+			std::ostringstream ss;
+			ss << i->label();
+			labels.insert(make_pair(ss.str(), i->lhs().size()));
+			states.insert(i->rhs());
+			for (size_t j = 0; j < i->lhs().size(); ++j)
+				states.insert(i->lhs()[j]);
+		}
+		this->startAlphabet();
+		for (map<string, size_t>::iterator i = labels.begin(); i != labels.end(); ++i)
+			this->writeLabel(i->first, i->second);
+		this->endl();
+		this->newModel(name);
+		this->endl();
+		this->startStates();
+		for (set<size_t>::iterator i = states.begin(); i != states.end(); ++i)
+			this->writeState(*i, f);
+		this->endl();
+		this->startFinalStates();
+		for (set<size_t>::iterator i = aut.getFinalStates().begin(); i != aut.getFinalStates().end(); ++i)
+			this->writeState(*i, f);
+		this->endl();
+		this->startTransitions();
+		this->endl();
+		this->writeTransitions(aut, f);
+	}
+	
 	void writeOne(const TA<T>& aut, const string& name = "TreeAutomaton") {
 		map<string, size_t> labels;
 		set<size_t> states;
@@ -188,7 +229,7 @@ public:
 		this->endl();
 		this->writeTransitions(aut);
 	}
-	
+
 };
 
 #endif

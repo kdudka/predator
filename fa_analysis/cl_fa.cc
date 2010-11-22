@@ -58,7 +58,7 @@ void clEasyRun(const CodeStorage::Storage& stor, const char* configString) {
     CL_DEBUG("starting verification stuff ...");
     try {
 		SymExec(stor).run(*main);
-		CL_NOTE("program is safe ...");
+		CL_NOTE("the program is safe ...");
 	} catch (const std::exception& e) {
 		CL_ERROR(e.what());
 		return;

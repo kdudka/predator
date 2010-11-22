@@ -30,6 +30,12 @@
 #include "label.hh"
 #include "labman.hh"
 
+#define _MSBM			((~(size_t)0) >> 1)
+#define _MSB			(~_MSBM)
+#define _MSB_TEST(x)	(x & _MSB)
+#define _MSB_GET(x)		(x & _MSBM)
+#define _MSB_ADD(x)		(x | _MSB)
+
 class FA {
 
 	friend class UFAE;

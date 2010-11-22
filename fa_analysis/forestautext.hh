@@ -44,12 +44,6 @@ using std::pair;
 using std::make_pair;
 using std::runtime_error;
 
-#define _MSBM			((~(size_t)0) >> 1)
-#define _MSB			(~_MSBM)
-#define _MSB_TEST(x)	(x & _MSB)
-#define _MSB_GET(x)		(x & _MSBM)
-#define _MSB_ADD(x)		(x | _MSB)
-
 class FAE : public FA {
 
 	friend std::ostream& operator<<(std::ostream& os, const FAE& fae);

@@ -712,6 +712,13 @@ public:
 				this->processState(this->currentConf);
 			}
 
+			for (state_store_type::iterator i = this->stateStore.begin(); i != this->stateStore.end(); ++i) {
+				if (!i->second->entryPoint)
+					continue;
+				CL_DEBUG("fixpoint at " << (*i->second->insn)->loc);
+				CL_DEBUG(std::endl << i->second->fwdConf);
+			}				
+
 		} catch (std::exception& e) {
 			CL_DEBUG(e.what());
 			throw;

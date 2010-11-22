@@ -79,7 +79,7 @@ struct Index {
 	size_t translate(const T& x) const {
 		typename map_type::const_iterator i = this->map.find(x);
 		if (i == this->map.end())
-			throw std::runtime_error("Indexer::translate() : lookup failed");
+			throw std::runtime_error("Index::translate() : lookup failed");
 		return i->second;
 	}
 	
