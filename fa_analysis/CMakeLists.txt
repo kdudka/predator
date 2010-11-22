@@ -19,7 +19,14 @@
 cmake_minimum_required(VERSION 2.6)
 project(fa_analysis C CXX)
 include("../CMakeLists.common")
-add_definitions("-I../include -g -DDEBUG")
+add_definitions("-I../include")
+
+option(FA_DEBUG "Set to OFF to enable optimized build" ON)
+if(FA_DEBUG)
+    add_definitions("-O0 -g")
+else()
+    add_definitions("-O3 -DNDEBUG")
+endif()
 
 # libfa.a
 add_library(fa treeaut.cc timbuk.cc forestaut.cc forestautext.cc ufae.cc symexec.cc symctx.cc builtintable.cc)

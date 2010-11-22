@@ -155,7 +155,7 @@ TObjId addObjectIfNeeded(DeepCopyData &dc, TObjId objSrc) {
     const struct cl_type *clt = src.objType(rootSrc);
     if (!clt) {
         // assume anonymous object of known size
-        SE_BREAK_IF(src.objType(objSrc));
+        CL_BREAK_IF(src.objType(objSrc));
 
         const int cbSize = src.objSizeOfAnon(objSrc);
         const TObjId objDst = dst.objCreateAnon(cbSize);
@@ -185,7 +185,7 @@ TObjId addObjectIfNeeded(DeepCopyData &dc, TObjId objSrc) {
             return dc.objMap[objSrc];
     }
 
-    SE_TRAP;
+    CL_TRAP;
     return OBJ_INVALID;
 }
 
@@ -246,11 +246,11 @@ TValueId handleValue(DeepCopyData &dc, TValueId valSrc) {
 
     const EUnknownValue code = src.valGetUnknown(valSrc);
     if (UV_UNKNOWN == code && !offValues.empty()) {
-        SE_BREAK_IF(1 != offValues.size());
+        CL_BREAK_IF(1 != offValues.size());
 
         // handle an off-value
         SymHeap::TOffVal ov = offValues.front();
-        SE_BREAK_IF(0 < ov.second);
+        CL_BREAK_IF(0 < ov.second);
 
         // FIXME: avoid unguarded recursion on handleValue() here
         ov.first = handleValue(dc, ov.first);
@@ -278,17 +278,17 @@ TValueId handleValue(DeepCopyData &dc, TValueId valSrc) {
 
     // now is the time to "dereference" the value
     const TObjId targetSrc = src.pointsTo(valSrc);
-    SE_BREAK_IF(OBJ_INVALID == targetSrc);
+    CL_BREAK_IF(OBJ_INVALID == targetSrc);
 
     if (targetSrc < 0) {
         // special handling for OBJ_DELETED/OBJ_LOST
-#if SE_SELF_TEST
+#ifndef NDEBUG
         switch (targetSrc) {
             case OBJ_DELETED:
             case OBJ_LOST:
                 break;
             default:
-                SE_TRAP;
+                CL_TRAP;
         }
 #endif
 
@@ -326,30 +326,30 @@ void deepCopy(DeepCopyData &dc) {
         const TObjId objSrc = item.first;
         const TObjId objDst = item.second;
 
-        SE_BREAK_IF(objSrc < 0 || objDst < 0);
+        CL_BREAK_IF(objSrc < 0 || objDst < 0);
         if (objSrc == OBJ_RETURN && objDst == OBJ_RETURN)
             // FIXME: really safe to ignore?
             continue;
 
         // read the address
         const TValueId atSrc = src.placedAt(objSrc);
-        SE_BREAK_IF(atSrc <= 0);
+        CL_BREAK_IF(atSrc <= 0);
 
         trackUses(dc, atSrc);
 
         // read the original value
         TValueId valSrc = src.valueOf(objSrc);
-        SE_BREAK_IF(VAL_INVALID == valSrc);
+        CL_BREAK_IF(VAL_INVALID == valSrc);
 
         // do whatever we need to do with the value
         const TValueId valDst = handleValue(dc, valSrc);
-        SE_BREAK_IF(VAL_INVALID == valDst);
+        CL_BREAK_IF(VAL_INVALID == valDst);
 
-#if SE_SELF_TEST
+#ifndef NDEBUG
         // check for composite values
         const bool comp1 = (-1 != src.valGetCompositeObj(valSrc));
         const bool comp2 = (-1 != dst.valGetCompositeObj(valDst));
-        SE_BREAK_IF(comp1 != comp2);
+        CL_BREAK_IF(comp1 != comp2);
 #endif
         if (-1 == src.valGetCompositeObj(valSrc))
             // now set object's value
@@ -384,12 +384,12 @@ void prune(const SymHeap &src, SymHeap &dst,
     // go through all program variables
     BOOST_FOREACH(CVar cv, snap) {
         const TObjId objSrc = dc.src.objByCVar(cv);
-        SE_BREAK_IF(OBJ_INVALID == objSrc);
+        CL_BREAK_IF(OBJ_INVALID == objSrc);
 
-#if SE_SELF_TEST
+#ifndef NDEBUG
         // we should always know type of program variables
         const struct cl_type *cltObjSrc = dc.src.objType(objSrc);
-        SE_BREAK_IF(!cltObjSrc);
+        CL_BREAK_IF(!cltObjSrc);
 #endif
 
         addObjectIfNeeded(dc, objSrc);
@@ -457,7 +457,7 @@ void splitHeapByCVars(const SymBackTrace *bt, SymHeap *srcDst,
     CL_DEBUG("splitHeapByCVars() resulting heap size: " << std::fixed
             << std::setprecision(2) << std::setw(5) << ratio << "%");
 
-#if SE_SELF_TEST
+#ifndef NDEBUG
     // basic sanity check
     if (cntA < cntOrig || cntA + cntB != cntTotal) {
         CL_ERROR("symcut: splitHeapByCVars() failed, attempt to plot heaps...");
@@ -465,7 +465,7 @@ void splitHeapByCVars(const SymBackTrace *bt, SymHeap *srcDst,
         plotHeap(bt,  dst,            "prune-output");
         plotHeap(bt, *saveSurroundTo, "prune-surround");
         CL_NOTE("symcut: plot done, please consider analyzing the results");
-        SE_TRAP;
+        CL_TRAP;
     }
 #else
     (void) bt;

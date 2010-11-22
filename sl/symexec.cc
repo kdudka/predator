@@ -73,7 +73,7 @@ void createGlVars(SymHeap &sh, const CodeStorage::Storage &stor) {
         // look for the corresponding heap object
         const CVar cVar(var.uid, /* gl variable */ 0);
         const TObjId obj = sh.objByCVar(cVar);
-        SE_BREAK_IF(obj <= 0);
+        CL_BREAK_IF(obj <= 0);
 
         // initialize a global/static variable
         initVariable(sh, obj, var);
@@ -211,7 +211,7 @@ void SymExecEngine::initEngine(const SymHeap &init)
 void SymExecEngine::execReturn() {
     const CodeStorage::Insn *insn = block_->operator[](insnIdx_);
     const CodeStorage::TOperandList &opList = insn->operands;
-    SE_BREAK_IF(1 != opList.size());
+    CL_BREAK_IF(1 != opList.size());
 
     SymHeap heap(localState_[heapIdx_]);
 
@@ -221,7 +221,7 @@ void SymExecEngine::execReturn() {
         proc.setLocation(lw_);
 
         const TValueId val = proc.heapValFromOperand(src);
-        SE_BREAK_IF(VAL_INVALID == val);
+        CL_BREAK_IF(VAL_INVALID == val);
 
         heap.objDefineType(OBJ_RETURN, src.type);
         proc.objSetValue(OBJ_RETURN, val);
@@ -270,7 +270,7 @@ void SymExecEngine::execCondInsn() {
     const CodeStorage::Insn *insn = block_->operator[](insnIdx_);
     const CodeStorage::TOperandList &oplist = insn->operands;
     const CodeStorage::TTargetList &tlist = insn->targets;
-    SE_BREAK_IF(2 != tlist.size() || 1 != oplist.size());
+    CL_BREAK_IF(2 != tlist.size() || 1 != oplist.size());
 
     // IF (operand) GOTO target0 ELSE target1
 
@@ -315,7 +315,7 @@ void SymExecEngine::execCondInsn() {
 
         case UV_KNOWN:
         case UV_ABSTRACT:
-            SE_TRAP;
+            CL_TRAP;
             return;
     }
 
@@ -353,7 +353,7 @@ void SymExecEngine::execTermInsn() {
             // go through!
 
         default:
-            SE_TRAP;
+            CL_TRAP;
     }
 }
 
@@ -494,7 +494,7 @@ bool /* complete */ SymExecEngine::run() {
         waiting_ = true;
 
         // check for possible protocol error
-        SE_BREAK_IF(1 != todo_.size());
+        CL_BREAK_IF(1 != todo_.size());
     }
 
     // main loop of SymExecEngine
@@ -534,7 +534,7 @@ bool /* complete */ SymExecEngine::run() {
 }
 
 const SymHeap* SymExecEngine::callEntry() const {
-    SE_BREAK_IF(heapIdx_ < 1);
+    CL_BREAK_IF(heapIdx_ < 1);
     return &localState_[heapIdx_ - /* already incremented for next wheel */ 1];
 }
 
@@ -542,7 +542,7 @@ const CodeStorage::Insn* SymExecEngine::callInsn() const {
     const CodeStorage::Insn *insn = block_->operator[](insnIdx_);
 
     // check for possible protocol error
-    SE_BREAK_IF(CL_INSN_CALL != insn->code);
+    CL_BREAK_IF(CL_INSN_CALL != insn->code);
 
     return insn;
 }
@@ -609,7 +609,7 @@ const CodeStorage::Fnc* SymExec::Private::resolveCallInsn(
 {
     const CodeStorage::Fnc *fnc;
     const CodeStorage::TOperandList &opList = insn.operands;
-    SE_BREAK_IF(CL_INSN_CALL != insn.code || opList.size() < 2);
+    CL_BREAK_IF(CL_INSN_CALL != insn.code || opList.size() < 2);
 
     // look for Fnc ought to be called
     SymProc proc(heap, &this->bt);
@@ -618,7 +618,7 @@ const CodeStorage::Fnc* SymExec::Private::resolveCallInsn(
     const struct cl_operand &opFnc = opList[/* fnc */ 1];
     const int uid = proc.fncFromOperand(opFnc);
     if (-1 == uid) {
-        SE_BREAK_IF(CL_OPERAND_CST == opFnc.code);
+        CL_BREAK_IF(CL_OPERAND_CST == opFnc.code);
         CL_ERROR_MSG(lw, "failed to resolve indirect function call");
         goto fail;
     }
@@ -633,7 +633,7 @@ const CodeStorage::Fnc* SymExec::Private::resolveCallInsn(
     if (!isDefined(*fnc)) {
         const struct cl_cst &cst = opFnc.data.cst;
         const char *name = cst.data.cst_fnc.name;
-        SE_BREAK_IF(CL_TYPE_FNC != cst.code || !name);
+        CL_BREAK_IF(CL_TYPE_FNC != cst.code || !name);
 
         CL_WARN_MSG(lw, "ignoring call of undefined function: "
                 << name << "()");
@@ -750,7 +750,7 @@ void SymExec::exec(const CodeStorage::Fnc &fnc, SymState &results) {
     // all together
     BOOST_FOREACH(const SymHeap &heap, d->stateZero) {
         // check for bt offset
-        SE_BREAK_IF(d->bt.size());
+        CL_BREAK_IF(d->bt.size());
 
         // initialize backtrace
         d->bt.pushCall(uidOf(fnc), &fnc.def.loc);

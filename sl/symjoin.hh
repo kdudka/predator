@@ -25,9 +25,7 @@
  * @todo some dox
  */
 
-#include "symid.hh"
-
-class SymHeap;
+#include "symheap.hh"
 
 /// @todo some dox
 enum EJoinStatus {
@@ -37,19 +35,27 @@ enum EJoinStatus {
     JS_THREE_WAY
 };
 
+/// replacement of matchData() from symdiscover
+bool joinDataReadOnly(
+        EJoinStatus             *pStatus,
+        const SymHeap           &sh,
+        const SegBindingFields  &bf,
+        const TObjId            o1,
+        const TObjId            o2,
+        SymHeap::TContObj       protoRoots[1][2]);
+
+/// replacement of abstractNonMatchingValues() from symabstract
+bool joinData(
+        SymHeap                 &sh,
+        const TObjId            dst,
+        const TObjId            src,
+        const bool              bidir);
+
 /// @todo some dox
 bool joinSymHeaps(
         EJoinStatus             *pStatus,
         SymHeap                 *dst,
         const SymHeap           &sh1,
         const SymHeap           &sh2);
-
-// TODO
-#if 0
-bool joinSubHeaps(
-        const SymHeap           &sh,
-        const TValPairList      &startingPoints,
-        ISubMatchVisitor        *visitor = 0);
-#endif
 
 #endif /* H_GUARD_SYM_JOIN_H */

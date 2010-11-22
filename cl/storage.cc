@@ -70,7 +70,7 @@ namespace {
         typename TDb::const_iterator iter = db.find(key);
         if (db.end() == iter)
             // can't insert anything into const object
-            TRAP;
+            CL_TRAP;
 
         return idxTab[iter->second];
     }
@@ -104,21 +104,21 @@ Var::Var(EVar code_, const struct cl_operand *op):
     uid(op->data.var->uid),
     initial(op->data.var->initial)
 {
-    SE_BREAK_IF(CL_OPERAND_VAR != op->code);
+    CL_BREAK_IF(CL_OPERAND_VAR != op->code);
     if (op->data.var->name)
         name = op->data.var->name;
 
     // dig type of variable
     this->clt = digVarType(op);
     if (!this->clt)
-        TRAP;
+        CL_TRAP;
 
     // check for eventual scope mismatch
     switch (code) {
         case VAR_GL:
             if (CL_SCOPE_GLOBAL != op->scope
                     && CL_SCOPE_STATIC != op->scope)
-                TRAP;
+                CL_TRAP;
             break;
 
         case VAR_LC:
@@ -128,7 +128,7 @@ Var::Var(EVar code_, const struct cl_operand *op):
             // fall through!
 
         case VAR_VOID:
-            TRAP;
+            CL_TRAP;
     }
 }
 
@@ -144,7 +144,7 @@ bool isOnStack(const Var &var) {
             return false;
     }
 
-    TRAP;
+    CL_TRAP;
     return false;
 }
 
@@ -216,8 +216,8 @@ TypeDb::~TypeDb() {
 }
 
 void TypeDb::Private::updatePtrSizeof(int size, int *pField) {
-    SE_BREAK_IF(size <= 0);
-    SE_BREAK_IF(-1 != *pField && *pField != size);
+    CL_BREAK_IF(size <= 0);
+    CL_BREAK_IF(-1 != *pField && *pField != size);
     *pField = size;
 }
 
@@ -225,7 +225,7 @@ void TypeDb::Private::digPtrSizeof(const struct cl_type *clt) {
     if (CL_TYPE_PTR != clt->code)
         return;
 
-    SE_BREAK_IF(1 != clt->item_cnt);
+    CL_BREAK_IF(1 != clt->item_cnt);
     const struct cl_type *next = clt->items[0].type;
     this->updatePtrSizeof(clt->size, (CL_TYPE_FNC == next->code)
             ? &this->codePtrSizeof
@@ -296,7 +296,7 @@ const struct cl_type* TypeDb::operator[](int uid) const {
                 << uid);
 
         // we'll probably have to crash anyway
-        TRAP;
+        CL_TRAP;
         return 0;
     }
 
@@ -312,7 +312,7 @@ void Block::append(const Insn *insn) {
         const Insn *last = insns_[insns_.size() - 1];
         if (cl_is_term_insn(last->code))
             // invalid insn sequence
-            TRAP;
+            CL_TRAP;
     }
 
     insns_.push_back(insn);
@@ -321,7 +321,7 @@ void Block::append(const Insn *insn) {
 const Insn* Block::front() const {
     if (insns_.empty())
         // no instructions here, sorry
-        TRAP;
+        CL_TRAP;
 
     return insns_.front();
 }
@@ -329,7 +329,7 @@ const Insn* Block::front() const {
 const Insn* Block::back() const {
     if (insns_.empty())
         // no instructions here, sorry
-        TRAP;
+        CL_TRAP;
 
     return insns_.back();
 }
@@ -338,7 +338,7 @@ const TTargetList& Block::targets() const {
     const Insn *last = this->back();
     if (!cl_is_term_insn(last->code))
         // no chance to get targets without any terminal insn
-        TRAP;
+        CL_TRAP;
 
     return last->targets;
 }
@@ -374,7 +374,7 @@ ControlFlow& ControlFlow::operator=(const ControlFlow &ref) {
 
 const Block* ControlFlow::entry() const {
     if (bbs_.empty())
-        TRAP;
+        CL_TRAP;
 
     return bbs_[0];
 }
@@ -399,11 +399,11 @@ namespace {
     const struct cl_cst& cstFromFnc(const Fnc &fnc) {
         const struct cl_operand &op = fnc.def;
         if (CL_OPERAND_CST != op.code)
-            TRAP;
+            CL_TRAP;
 
         const struct cl_cst &cst = op.data.cst;
         if (CL_TYPE_FNC != cst.code)
-            TRAP;
+            CL_TRAP;
 
         return cst;
     }

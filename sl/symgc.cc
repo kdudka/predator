@@ -32,10 +32,6 @@
 
 #include <boost/foreach.hpp>
 
-#ifndef GC_ADMIT_LINUX_LISTS
-#   define GC_ADMIT_LINUX_LISTS 0
-#endif
-
 namespace {
 
 template <class TWL>
@@ -53,7 +49,6 @@ void digPointingObjectsCore(TWL &wl, const SymHeap &heap, TValueId val) {
     }
 }
 
-#if GC_ADMIT_LINUX_LISTS
 template <class TWL>
 struct WLWrap {
     TWL &wl;
@@ -64,19 +59,16 @@ struct WLWrap {
         return /* continue */ true;
     }
 };
-#endif
 
 template <class TWL>
 void digPointingObjects(TWL &wl, const SymHeap &sh, TValueId val) {
     digPointingObjectsCore(wl, sh, val);
 
-#if GC_ADMIT_LINUX_LISTS
     const TObjId root = objRoot(sh, sh.pointsTo(val));
     if (0 < root && isComposite(sh.objType(root))) {
         const WLWrap<TWL> visitor(wl);
         traverseSubObjs(sh, root, visitor, /* leavesOnly */ false);
     }
-#endif
 }
 
 bool digJunk(const SymHeap &heap, TValueId *ptrVal) {
@@ -112,7 +104,7 @@ bool digJunk(const SymHeap &heap, TValueId *ptrVal) {
             return false;
 
         const TValueId val = heap.placedAt(obj);
-        SE_BREAK_IF(val <= 0);
+        CL_BREAK_IF(val <= 0);
 
         digPointingObjects(wl, heap, val);
     }
@@ -134,7 +126,7 @@ bool collectJunk(SymHeap &sh, TValueId val, LocationWriter lw) {
         if (digJunk(sh, &val)) {
             detected = true;
             const TObjId obj = sh.pointsTo(val);
-            SE_BREAK_IF(obj <= 0);
+            CL_BREAK_IF(obj <= 0);
 
             // gather all values inside the junk object
             std::vector<TValueId> ptrs;

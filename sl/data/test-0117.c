@@ -43,15 +43,18 @@ struct node_top* alloc1(void)
 struct node_top* alloc2(void)
 {
     struct node_top *pi = create_top();
-#ifdef PREDATOR
     pi->data = create_low();
     pi->data->next = create_low();
-#else
-    // a special quirk for tools that are not ready for real-world code sources
-    struct node_low *help = create_low();
-    pi->data = help;
-    help->next = create_low();
-#endif
+
+    return pi;
+}
+
+struct node_top* alloc3(void)
+{
+    struct node_top *pi = create_top();
+    pi->data = create_low();
+    pi->data->next = create_low();
+    pi->data->next->next = create_low();
 
     return pi;
 }
@@ -64,6 +67,10 @@ struct node_top* create_sll(void)
     // NOTE: running this on bare metal may cause the machine to swap a bit
     int i;
     for (i = 1; i; ++i) {
+        now->next = alloc3();
+        now = now->next;
+        now->next = create_top();
+        now = now->next;
         now->next = alloc2();
         now = now->next;
         now->next = alloc1();
@@ -77,6 +84,21 @@ int main()
 {
     struct node_top *sll = create_sll();
     ___sl_plot_by_ptr(&sll, NULL);
+
+    // destroy the structure
+    while (sll) {
+        struct node_top *next = sll->next;
+
+        struct node_low *data = sll->data;
+        while (data) {
+            struct node_low *data_next = data->next;
+            free(data);
+            data = data_next;
+        }
+
+        free(sll);
+        sll = next;
+    }
 
     return 0;
 }

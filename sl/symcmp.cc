@@ -79,12 +79,30 @@ bool joinClt(
     if (anon1 != anon2)
         return false;
 
-    SE_BREAK_IF(anon1 || anon2);
+    CL_BREAK_IF(anon1 || anon2);
     if (*clt1 != *clt2)
         return false;
 
     *pDst = clt1;
     return true;
+}
+
+bool joinUnknownValuesCode(
+        EUnknownValue           *pDst,
+        const EUnknownValue     code1,
+        const EUnknownValue     code2)
+{
+    if (UV_UNINITIALIZED == code1 && UV_UNINITIALIZED == code2) {
+        *pDst = UV_UNINITIALIZED;
+        return true;
+    }
+
+    if (UV_UNKNOWN == code1 || UV_UNKNOWN == code2) {
+        *pDst = UV_UNKNOWN;
+        return true;
+    }
+
+    return false;
 }
 
 bool matchPlainValues(
@@ -135,7 +153,7 @@ bool matchValues(
 
     // check for special values
     const bool isSpecial = (v1 <= 0);
-    SE_BREAK_IF(isSpecial && 0 < v2);
+    CL_BREAK_IF(isSpecial && 0 < v2);
     if (isSpecial)
         // already checked by matchPlainValues()/checkNonPosValues()
         return true;
@@ -211,7 +229,7 @@ bool digComposite(
     // to see through multi-level Linux lists
     const TObjId root1 = objRoot(sh1, cObj1);
     const TObjId root2 = objRoot(sh2, cObj2);
-    SE_BREAK_IF(OBJ_INVALID == root1 || OBJ_INVALID == root2);
+    CL_BREAK_IF(OBJ_INVALID == root1 || OBJ_INVALID == root2);
 
     typedef std::pair<TObjId, TObjId> TItem;
     std::stack<TItem> todo;
@@ -245,7 +263,7 @@ bool digComposite(
                 for (int i = 0; i < clt->item_cnt; ++i) {
                     const TObjId sub1 = sh1.subObj(o1, i);
                     const TObjId sub2 = sh2.subObj(o2, i);
-                    SE_BREAK_IF(sub1 < 0 || sub2 < 0);
+                    CL_BREAK_IF(sub1 < 0 || sub2 < 0);
 
                     push(todo, sub1, sub2);
                 }
@@ -264,8 +282,8 @@ bool digComposite(
             default:
                 // other type of values should be safe to ignore here
                 // but worth to check by a debugger at least once anyway
-#if SE_SELF_TEST
-                SE_TRAP;
+#ifndef NDEBUG
+                CL_TRAP;
 #endif
                 break;
         }
@@ -279,12 +297,9 @@ bool cmpAbstractObjects(
         TObjId                  o1,
         TObjId                  o2)
 {
-    // TODO
-#if 0
-    if (sh1.objIsProto(o1) != sh2.objIsProto(o2))
-        // prototype vs. shared object
+    if (&sh1 != &sh2 && sh1.objIsProto(o1) != sh2.objIsProto(o2))
+        // prototype vs. shared object while called from areEqual()
         return false;
-#endif
 
     const EObjKind kind = sh1.objKind(o1);
     if (sh2.objKind(o2) != kind)
@@ -376,8 +391,8 @@ bool areEqual(
         TValMap                 *srcToDst,
         TValMap                 *dstToSrc)
 {
-    SE_BREAK_IF(srcToDst && !srcToDst->empty());
-    SE_BREAK_IF(dstToSrc && !dstToSrc->empty());
+    CL_BREAK_IF(srcToDst && !srcToDst->empty());
+    CL_BREAK_IF(dstToSrc && !dstToSrc->empty());
 
     // DFS stack
     WorkList<TValPair> wl;
@@ -397,7 +412,7 @@ bool areEqual(
     BOOST_FOREACH(CVar cv, cVars1) {
         const TObjId o1 = sh1.objByCVar(cv);
         const TObjId o2 = sh2.objByCVar(cv);
-        SE_BREAK_IF(o1 < 0 || o2 < 0);
+        CL_BREAK_IF(o1 < 0 || o2 < 0);
 
         // retrieve values of static variables
         const TValueId v1 = sh1.valueOf(o1);
@@ -475,7 +490,7 @@ class CustomWorkList: public WorkList<TItem> {
                 return false;
 
             const bool rv = TBase::schedule(vp);
-            SE_BREAK_IF(!rv);
+            CL_BREAK_IF(!rv);
             return rv;
         }
 
@@ -493,7 +508,7 @@ bool matchCVars(const SymHeap &sh, const TValMap &valMap) {
         if (o1 <= 0)
             continue;
 
-        SE_BREAK_IF(o2 <= 0);
+        CL_BREAK_IF(o2 <= 0);
 
         CVar cv1, cv2;
         const bool isCVar1 = sh.cVar(&cv1, o1);

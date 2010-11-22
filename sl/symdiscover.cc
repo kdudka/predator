@@ -25,6 +25,7 @@
 #include <cl/storage.hh>
 
 #include "symcmp.hh"
+#include "symjoin.hh"
 #include "symseg.hh"
 #include "symutil.hh"
 #include "util.hh"
@@ -41,7 +42,7 @@ bool validateUpLink(const SymHeap       &sh,
 {
     const TObjId root1 = roots.first;
     const TObjId root2 = roots.second;
-    SE_BREAK_IF(root1 <= 0 || root2 <= 0);
+    CL_BREAK_IF(root1 <= 0 || root2 <= 0);
 
     TObjId peer1 = OBJ_INVALID;
     if (OK_DLS == sh.objKind(root1))
@@ -138,7 +139,7 @@ class GenericPrototypeFinder: public ISubMatchVisitor {
             //        establish a prototype object for (v1, v2).  If we
             //        later realize that we don't know how to create the
             //        prototype, it will be simply too late to do anything!
-            SE_BREAK_IF(root1 <= 0 || root2 <= 0);
+            CL_BREAK_IF(root1 <= 0 || root2 <= 0);
             const TObjPair proto(root1, root2);
             protoRoots_.insert(proto);
 
@@ -155,7 +156,7 @@ bool considerGenericPrototype(
         TProtoRoots             *protoRoots)
 {
     CL_DEBUG("considerGenericPrototype() called...");
-    SE_BREAK_IF(v1 <= 0 || v2 <= 0);
+    CL_BREAK_IF(v1 <= 0 || v2 <= 0);
 
     // declare starting points
     TValPairList startingPoints(1, TValPair(v1, v2));
@@ -180,25 +181,6 @@ bool considerGenericPrototype(
     return true;
 }
 
-// TODO: extend this for lists of length 1 and 2, now we support only empty ones
-bool segMatchSmallList(
-        const SymHeap           &sh,
-        const TObjId            segUp,
-        const TObjId            conUp,
-        const TValueId          segVal,
-        const TValueId          conVal)
-{
-    TObjId seg = objRoot(sh, sh.pointsTo(segVal));
-    if (OK_DLS == sh.objKind(seg))
-        seg = dlSegPeer(sh, seg);
-
-    const TObjPair roots(segUp, conUp);
-    const TValueId valNext = sh.valueOf(nextPtrFromSeg(sh, seg));
-    return validateUpLink(sh, roots, valNext, conVal);
-}
-
-// TODO: I don't think we need separate handling for segment and non-segment
-//       prototypes, we should merge those routines together at some point!
 struct DataMatchVisitor {
     std::set<TObjId>    ignoreList;
     TProtoRoots         *protoRoots;
@@ -230,43 +212,6 @@ struct DataMatchVisitor {
         if (validateUpLink(sh, roots_, v1, v2))
             return /* continue */ true;
 
-        // compare _unknown_ value codes
-        const EUnknownValue code1 = sh.valGetUnknown(v1);
-        const EUnknownValue code2 = sh.valGetUnknown(v2);
-
-        const bool isAbstract1 = (UV_ABSTRACT == code1);
-        const bool isAbstract2 = (UV_ABSTRACT == code2);
-        if (isAbstract1 != isAbstract2 && segMatchSmallList(sh,
-                    (isAbstract1) ? roots_.first : roots_.second,
-                    (isAbstract2) ? roots_.first : roots_.second,
-                    (isAbstract1) ? v1 : v2,
-                    (isAbstract2) ? v1 : v2))
-        {
-            // in case we have a list segment vs. a small compatible list, we
-            // can cover both by a list segment with the appropriate length
-            if (protoRoots) {
-                (*protoRoots)[0].push_back(objRoot(sh, sh.pointsTo(v1)));
-                (*protoRoots)[1].push_back(objRoot(sh, sh.pointsTo(v2)));
-            }
-
-            return /* continue */ true;
-        }
-
-        if (code1 != code2)
-            return /* mismatch */ false;
-
-        switch (code1) {
-            case UV_UNINITIALIZED:
-            case UV_UNKNOWN:
-                // we don't require unkown values to match
-                // FIXME: what about Neq predicates with foreign values???
-                return /* continue */ true;
-
-            case UV_KNOWN:
-            case UV_ABSTRACT:
-                break;
-        }
-
         return considerGenericPrototype(sh, roots_, v1, v2, protoRoots);
     }
 };
@@ -294,7 +239,7 @@ bool matchSegBinding(const SymHeap              &sh,
                 && (bf.peer == bfDiscover.next);
 
         default:
-            SE_TRAP;
+            CL_TRAP;
             return false;
     }
 }
@@ -349,8 +294,9 @@ bool validatePointingObjects(
     allowedReferers.insert(root);
 
     // collect all objects pointing at/inside the object
+    // NOTE: we really intend to pass toInsideOnly == false at this point!
     SymHeap::TContObj refs;
-    gatherPointingObjects(sh, refs, root, toInsideOnly);
+    gatherPointingObjects(sh, refs, root, /* toInsideOnly */ false);
 
     // consider also up-links from nested prototypes
     std::copy(protoRoots.begin(), protoRoots.end(),
@@ -423,11 +369,12 @@ bool validatePrototypes(
 bool validateSegEntry(const SymHeap              &sh,
                       const SegBindingFields     &bf,
                       const TObjId               entry,
+                      const TObjId               prev,
                       const TObjId               next,
                       const SymHeap::TContObj    &protoRoots)
 {
     // first validate 'root' itself
-    if (!validatePointingObjects(sh, bf, entry, OBJ_INVALID, next, protoRoots,
+    if (!validatePointingObjects(sh, bf, entry, prev, next, protoRoots,
                                  /* toInsideOnly */ true))
         return false;
 
@@ -453,6 +400,10 @@ TObjId jumpToNextObj(const SymHeap              &sh,
                      std::set<TObjId>           &haveSeen,
                      TObjId                     obj)
 {
+    if (!matchSegBinding(sh, obj, bf))
+        // binding mismatch
+        return OBJ_INVALID;
+
     const bool dlSegOnPath = (OK_DLS == sh.objKind(obj));
     if (dlSegOnPath) {
         // jump to peer in case of DLS
@@ -462,7 +413,7 @@ TObjId jumpToNextObj(const SymHeap              &sh,
 
     const struct cl_type *clt = sh.objType(obj);
     const TObjId nextPtr = subObjByChain(sh, obj, bf.next);
-    SE_BREAK_IF(nextPtr <= 0);
+    CL_BREAK_IF(nextPtr <= 0);
 
     const TObjId nextHead = sh.pointsTo(sh.valueOf(nextPtr));
     if (nextHead <= 0)
@@ -505,8 +456,11 @@ bool matchData(const SymHeap                &sh,
                const SegBindingFields       &bf,
                const TObjId                 o1,
                const TObjId                 o2,
-               TProtoRoots                  *protoRoots)
+               TProtoRoots                  *protoRoots,
+               int                          *pThreshold)
 {
+    (void) pThreshold;
+#if SE_DISABLE_SYMJOIN_IN_SYMDISCOVER
     const TObjId nextPtr = subObjByChain(sh, o1, bf.next);
 
     DataMatchVisitor visitor(o1, o2);
@@ -520,6 +474,37 @@ bool matchData(const SymHeap                &sh,
 
     const TObjPair item(o1, o2);
     return traverseSubObjs(sh, item, visitor, /* leavesOnly */ true);
+#else
+    EJoinStatus status;
+    if (!joinDataReadOnly(&status, sh, bf, o1, o2, protoRoots))
+        return false;
+
+#if SE_PREFER_LOSSLESS_PROTOTYPES
+    // FIXME: highly experimental
+    if (objIsSeg(sh, o2) && objIsSeg(sh, nextObj(sh, bf, o2)))
+        return true;
+
+    int thr = 0;
+    switch (status) {
+        case JS_USE_ANY:
+            break;
+
+        case JS_USE_SH1:
+        case JS_USE_SH2:
+            thr = 2;
+            break;
+
+        case JS_THREE_WAY:
+            thr = 3;
+            break;
+    }
+
+    if (*pThreshold < thr)
+        *pThreshold = thr;
+#endif
+
+    return true;
+#endif
 }
 
 bool slSegAvoidSelfCycle(
@@ -558,7 +543,7 @@ void dlSegAvoidSelfCycle(
 
     const struct cl_type *const cltEntry = sh.objType(entry);
     const struct cl_type *const cltPrev = sh.objType(prev);
-    SE_BREAK_IF(!cltEntry);
+    CL_BREAK_IF(!cltEntry);
     if (!cltPrev || *cltPrev != *cltEntry)
         // type mismatch
         return;
@@ -588,18 +573,24 @@ unsigned /* len */ segDiscover(const SymHeap            &sh,
         // loop detected
         return 0;
 
+    // [experimental] we need a way to prefer lossless prototypes
+    int threshold = 0;
+
     // main loop of segDiscover()
     std::vector<TObjId> path;
     while (OBJ_INVALID != obj) {
         // compare the data
         TProtoRoots protoRoots;
-        if (!matchData(sh, bf, prev, obj, &protoRoots)) {
+        // TODO: optimize such that matchData() is not called at all when any
+        // _program_ variable points at/inside;  call of matchData() in such
+        // cases is significant waste for us!
+        if (!matchData(sh, bf, prev, obj, &protoRoots, &threshold)) {
             CL_DEBUG("    DataMatchVisitor refuses to create a segment!");
             break;
         }
 
-        if (prev == entry
-                && !validateSegEntry(sh, bf, entry, obj, protoRoots[0]))
+        if (prev == entry && !validateSegEntry(sh, bf, entry, OBJ_INVALID, obj,
+                                               protoRoots[0]))
             // invalid entry
             break;
 
@@ -611,23 +602,26 @@ unsigned /* len */ segDiscover(const SymHeap            &sh,
             // someone points to a prototype
             break;
 
-        const bool allowReferredEnd =
-            /* looking of a DLS */ !bf.peer.empty()
-            && OK_DLS != sh.objKind(obj);
-
-        if (allowReferredEnd)
-            // we allow others to point to a DLS end point
-            path.push_back(obj);
-
         // look ahead
         TObjId next = jumpToNextObj(sh, bf, haveSeen, obj);
-        if (!validatePointingObjects(sh, bf, obj, prev, next, protoRoots[1]))
+        if (!validatePointingObjects(sh, bf, obj, prev, next, protoRoots[1])) {
             // someone points at/inside who should not
-            break;
 
-        if (!allowReferredEnd)
-            // enlarge the path by one
-            path.push_back(obj);
+            const bool allowReferredEnd =
+                /* looking of a DLS */ !bf.peer.empty()
+                && OK_DLS != sh.objKind(obj)
+                && validateSegEntry(sh, bf, obj, prev, OBJ_INVALID,
+                                    protoRoots[1]);
+
+            if (allowReferredEnd)
+                // we allow others to point at DLS end-point's _head_
+                path.push_back(obj);
+
+            break;
+        }
+
+        // enlarge the path by one
+        path.push_back(obj);
 
         // jump to the next object on the path
         prev = obj;
@@ -638,11 +632,12 @@ unsigned /* len */ segDiscover(const SymHeap            &sh,
         // found nothing
         return 0;
 
+    int len = path.size();
     if (slSegAvoidSelfCycle(sh, bf, entry, path.back()))
         // avoid creating self-cycle of two SLS segments
-        return path.size() - 1;
+        --len;
 
-    return path.size();
+    return std::max(0, len - threshold);
 }
 
 bool digSegmentHead(TFieldIdxChain          &dst,
@@ -725,7 +720,7 @@ class ProbeEntryVisitor {
             root_(root),
             clt_(sh.objType(root))
         {
-            SE_BREAK_IF(!clt_);
+            CL_BREAK_IF(!clt_);
         }
 
         bool operator()(const SymHeap &sh, TObjId sub, TFieldIdxChain ic) const

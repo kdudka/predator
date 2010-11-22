@@ -76,12 +76,6 @@
 #define DEBUG_UNUSED_VALUES                 0
 
 /**
- * if 1, the garbage collector does not see objects pointed beyond the root as
- * garbage
- */
-#define GC_ADMIT_LINUX_LISTS                1
-
-/**
  * if 1, call optimization is not performed; it may introduce some compile-time
  * warnings and memory leaks as a side effect
  */
@@ -108,14 +102,24 @@
 #define SE_DISABLE_SYMCUT                   0
 
 /**
- * if 1, do not use the @b symjoin module at all
+ * if 1, do not use the @b symjoin module for symbolic state management
  */
-#define SE_DISABLE_SYMJOIN                  0
+#define SE_DISABLE_SYMJOIN_IN_SYMSTATE      0
+
+/**
+ * if 1, do not use the @b symjoin module for discovering of prototypes
+ */
+#define SE_DISABLE_SYMJOIN_IN_SYMDISCOVER   0
 
 /**
  * if 1, do not allow three-way join
  */
-#define SE_DISABLE_THREE_WAY_JOIN           1
+#define SE_DISABLE_THREE_WAY_JOIN           0
+
+/**
+ * if 1, abstraction path length is penalized by complexity of prototype join
+ */
+#define SE_PREFER_LOSSLESS_PROTOTYPES       1
 
 /**
  * maximal call depth

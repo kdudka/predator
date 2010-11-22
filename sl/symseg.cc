@@ -29,14 +29,14 @@ TObjId nextPtrFromSeg(const SymHeap &sh, TObjId seg) {
         seg = objRoot(sh, seg);
 
     // validate call of nextPtrFromSeg()
-    SE_BREAK_IF(OK_CONCRETE == sh.objKind(seg));
+    CL_BREAK_IF(OK_CONCRETE == sh.objKind(seg));
 
     const TFieldIdxChain icNext = sh.objBinding(seg).next;
     return subObjByChain(sh, seg, icNext);
 }
 
 TObjId peerPtrFromSeg(const SymHeap &sh, TObjId seg) {
-    SE_BREAK_IF(OK_DLS != sh.objKind(seg));
+    CL_BREAK_IF(OK_DLS != sh.objKind(seg));
 
     const TFieldIdxChain icPeer = sh.objBinding(seg).peer;
     return subObjByChain(sh, seg, icPeer);
@@ -45,7 +45,7 @@ TObjId peerPtrFromSeg(const SymHeap &sh, TObjId seg) {
 TObjId dlSegPeer(const SymHeap &sh, TObjId dls) {
     // validate call of dlSegPeer()
     const TObjId root = objRoot(sh, dls);
-    SE_BREAK_IF(OK_DLS != sh.objKind(root));
+    CL_BREAK_IF(OK_DLS != sh.objKind(root));
 
     TObjId peer = root;
     const SegBindingFields &bf = sh.objBinding(dls);
@@ -60,7 +60,7 @@ namespace {
             return /* no idea */ false;
 
         // equal basically means 'invalid segment'
-        SE_BREAK_IF(eq);
+        CL_BREAK_IF(eq);
 
         return /* not equal */ true;
     }
@@ -68,7 +68,7 @@ namespace {
 
 unsigned dlSegMinLength(const SymHeap &sh, TObjId dls) {
     // validate call of dlSegNotEmpty()
-    SE_BREAK_IF(OK_DLS != sh.objKind(dls));
+    CL_BREAK_IF(OK_DLS != sh.objKind(dls));
 
     const TObjId peer = dlSegPeer(sh, dls);
 
@@ -85,14 +85,14 @@ unsigned dlSegMinLength(const SymHeap &sh, TObjId dls) {
     const bool ne2 = segProveNeq(sh, val2, segHeadAddr(sh, dls));
 
     // DLS cross Neq predicates have to be fully symmetric
-    SE_BREAK_IF(ne1 != ne2);
+    CL_BREAK_IF(ne1 != ne2);
     const bool ne = (ne1 && ne2);
 
     // if DLS heads are two distinct objects, we have at least two objects
     const TValueId head1 = segHeadAddr(sh, dls);
     const TValueId head2 = segHeadAddr(sh, peer);
     if (segProveNeq(sh, head1, head2)) {
-        SE_BREAK_IF(!ne);
+        CL_BREAK_IF(!ne);
         return /* DLS 2+ */ 2;
     }
 
@@ -104,7 +104,7 @@ unsigned segMinLength(const SymHeap &sh, TObjId seg) {
     switch (kind) {
         case OK_CONCRETE:
         case OK_PART:
-            SE_TRAP;
+            CL_TRAP;
 
         case OK_SLS:
             break;
@@ -140,8 +140,8 @@ void segSetProto(SymHeap &sh, TObjId seg, bool isProto) {
             break;
 
         default:
-#if SE_SELF_TEST
-            SE_TRAP;
+#ifndef NDEBUG
+            CL_TRAP;
 #endif
             break;
     }
@@ -153,7 +153,7 @@ void segDestroy(SymHeap &sh, TObjId seg) {
         case OK_CONCRETE:
         case OK_PART:
             // invalid call of segDestroy()
-            SE_TRAP;
+            CL_TRAP;
 
         case OK_HEAD:
             seg = objRoot(sh, seg);
@@ -261,8 +261,8 @@ void segSetMinLength(SymHeap &sh, TObjId seg, unsigned len) {
             break;
 
         default:
-#if SE_SELF_TEST
-            SE_TRAP;
+#ifndef NDEBUG
+            CL_TRAP;
 #endif
             break;
     }
@@ -304,7 +304,7 @@ void dropHeadIc(
     const unsigned cntHead = icHead.size();
     for (unsigned i = 0; i < cnt; ++i) {
         if (i < cntHead) {
-            SE_BREAK_IF(icHead[i] != icSrc[i]);
+            CL_BREAK_IF(icHead[i] != icSrc[i]);
             continue;
         }
 

@@ -67,7 +67,7 @@ bool operator==(const struct cl_type &a, const struct cl_type &b) {
 
             case CL_TYPE_STRING:
                 // should be used only by cl_cst, see the dox
-                TRAP;
+                CL_TRAP;
                 return false;
 
             case CL_TYPE_PTR:
@@ -92,10 +92,10 @@ bool operator==(const struct cl_type &a, const struct cl_type &b) {
 }
 
 const struct cl_type* targetTypeOfPtr(const struct cl_type *clt) {
-    SE_BREAK_IF(!clt || clt->code != CL_TYPE_PTR || clt->item_cnt != 1);
+    CL_BREAK_IF(!clt || clt->code != CL_TYPE_PTR || clt->item_cnt != 1);
 
     clt = clt->items[/* target */ 0].type;
-    SE_BREAK_IF(!clt);
+    CL_BREAK_IF(!clt);
     return clt;
 }
 
@@ -105,7 +105,7 @@ bool seekRefAccessor(const struct cl_accessor *ac) {
             continue;
 
         // there should be no more accessors after the first CL_ACCESSOR_REF
-        SE_BREAK_IF(ac->next);
+        CL_BREAK_IF(ac->next);
         return true;
     }
 
@@ -114,16 +114,16 @@ bool seekRefAccessor(const struct cl_accessor *ac) {
 }
 
 int intCstFromOperand(const struct cl_operand *op) {
-    SE_BREAK_IF(CL_OPERAND_CST != op->code);
+    CL_BREAK_IF(CL_OPERAND_CST != op->code);
 
     const struct cl_cst &cst = op->data.cst;
-    SE_BREAK_IF(CL_TYPE_INT != cst.code);
+    CL_BREAK_IF(CL_TYPE_INT != cst.code);
 
     return cst.data.cst_int.value;
 }
 
 int varIdFromOperand(const struct cl_operand *op, const char **pName) {
-    SE_BREAK_IF(CL_OPERAND_VAR != op->code);
+    CL_BREAK_IF(CL_OPERAND_VAR != op->code);
     if (pName)
         *pName = op->data.var->name;
 

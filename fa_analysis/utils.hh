@@ -30,7 +30,7 @@
 #include <boost/unordered_set.hpp>
 #include <boost/unordered_map.hpp>
 
-#ifdef DEBUG
+#ifndef NDEBUG
 #define DEBUG_MSG(x) do { std::cerr << x << std::endl; } while (0)
 #else
 #define DEBUG_MSG(x)

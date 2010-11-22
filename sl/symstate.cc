@@ -41,26 +41,26 @@
         CL_DEBUG("SymState: " << __VA_ARGS__);                              \
 } while (0)
 
-#define FIXW(w) std::fixed << std::setfill('0') << std::setw(w)
-
 // set to 'true' if you wonder why SymState matches states as it does (noisy)
 static bool debugSymState = static_cast<bool>(DEBUG_SYMSTATE);
 
 static int cntLookups = -1;
 
-void debugPlot(const char *name, int idx, const SymHeap &sh) {
-#if DEBUG_SYMJOIN
-    if (!STREQ(name, "join"))
+namespace {
+    void debugPlot(const char *name, int idx, const SymHeap &sh) {
+#if 0//DEBUG_SYMJOIN
+        if (!STREQ(name, "join"))
 #endif
-    if (!::debugSymState)
-        return;
+        if (!::debugSymState)
+            return;
 
-    std::ostringstream str;
-    str << "symstate-"
-        << FIXW(6) << ::cntLookups << "-" << name << "-"
-        << FIXW(4) << (idx);
+        std::ostringstream str;
+        str << "symstate-"
+            << FIXW(6) << ::cntLookups << "-" << name << "-"
+            << FIXW(4) << idx;
 
-    dump_plot(sh, str.str().c_str());
+        dump_plot(sh, str.str().c_str());
+    }
 }
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -126,7 +126,7 @@ int SymHeapUnion::lookup(const SymHeap &lookFor) const {
 // /////////////////////////////////////////////////////////////////////////////
 // SymStateWithJoin implementation
 bool SymStateWithJoin::insert(const SymHeap &shNew) {
-#if SE_DISABLE_SYMJOIN
+#if SE_DISABLE_SYMJOIN_IN_SYMSTATE
     return SymHeapUnion::insert(shNew);
 #endif
     const int cnt = this->size();
@@ -176,8 +176,8 @@ bool SymStateWithJoin::insert(const SymHeap &shNew) {
             return true;
 
         case JS_THREE_WAY:
-            // three-way merge
-            CL_DEBUG("<J> three-way merge with sh #" << idx);
+            // three-way join
+            CL_DEBUG("<J> three-way join with sh #" << idx);
             debugPlot("join", 0, this->operator[](idx));
             debugPlot("join", 1, shNew);
             debugPlot("join", 2, result);
@@ -187,9 +187,6 @@ bool SymStateWithJoin::insert(const SymHeap &shNew) {
     }
 
     // nothing changed actually
-#if DEBUG_SYMJOIN
-    CL_DEBUG("<<< SymStateWithJoin: re-using sh #" << idx);
-#endif
     return false;
 }
 

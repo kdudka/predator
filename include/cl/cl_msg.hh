@@ -37,7 +37,7 @@
  * literal
  */
 #define CL_DIE(msg) do { \
-    cl_die("fatal error: " msg); \
+    cl_die("fatal error: " msg "\n"); \
     abort(); \
 } while (0)
 

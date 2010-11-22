@@ -98,7 +98,7 @@ bool /* complete */ traverseTypeIc(const struct cl_type *clt, TVisitor &visitor,
     todo.push(si);
     while (!todo.empty()) {
         TItem &si = todo.top();
-        SE_BREAK_IF(si.ic.empty());
+        CL_BREAK_IF(si.ic.empty());
 
         typename TFieldIdxChain::reference nth = si.ic.back();
         if (nth == si.clt->item_cnt) {

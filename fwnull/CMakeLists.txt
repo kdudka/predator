@@ -23,6 +23,13 @@ enable_testing()
 
 include("../CMakeLists.common")
 
+option(FWNULL_DEBUG "Set to ON to enable debugging support" OFF)
+if(FWNULL_DEBUG)
+    add_definitions("-O0 -g")
+else()
+    add_definitions("-O3 -DNDEBUG")
+endif()
+
 # libfwnull.so
 add_library(fwnull SHARED
     cl_fwnull.cc

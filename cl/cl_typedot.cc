@@ -93,7 +93,7 @@ class ClTypeDotGenerator: public ICodeListener {
 
                 case CL_INSN_CALL:
                 case CL_INSN_SWITCH:
-                    TRAP;
+                    CL_TRAP;
             }
         }
 
@@ -225,7 +225,7 @@ namespace {
     // FIXME: copy pasted from cl_pp.cc
     const char* typeName(const struct cl_type *clt) {
         if (!clt)
-            TRAP;
+            CL_TRAP;
 
         const char *name = clt->name;
         return (name)
@@ -289,7 +289,7 @@ deref_done:
             break;
 
         default:
-            TRAP;
+            CL_TRAP;
     }
 
     if (!str.empty())

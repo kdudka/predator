@@ -206,7 +206,7 @@ namespace {
 
         switch (code) {
             case CL_INSN_NOP:
-                TRAP;
+                CL_TRAP;
                 break;
 
             case CL_INSN_JMP:
@@ -248,7 +248,7 @@ namespace {
             case CL_INSN_CALL:
             case CL_INSN_SWITCH:
                 // wrong constructor used
-                TRAP;
+                CL_TRAP;
         }
 
         return insn;
@@ -386,13 +386,13 @@ void ClStorageBuilder::Private::digOperandVar(const struct cl_operand *op) {
                     if (id == var.uid)
                         break;
                 case VAR_GL:
-                    TRAP;
+                    CL_TRAP;
             }
             break;
         }
 
         case CL_SCOPE_BB:
-            TRAP;
+            CL_TRAP;
     }
 
     this->digInitial(op->data.var->initial);
@@ -412,7 +412,7 @@ void ClStorageBuilder::Private::digOperandCst(const struct cl_operand *op) {
             break;
         default:
             // unexpected scope for fnc
-            TRAP;
+            CL_TRAP;
     }
 
     // create a place-holder if needed
@@ -461,7 +461,7 @@ void ClStorageBuilder::Private::digOperand(const struct cl_operand *op) {
             break;
 
         case CL_OPERAND_VOID:
-            TRAP;
+            CL_TRAP;
     }
 }
 
@@ -471,11 +471,11 @@ void ClStorageBuilder::Private::openInsn(Insn *newInsn) {
 
     if (insn)
         // Aiee, insn already opened
-        TRAP;
+        CL_TRAP;
 
     if (!bb)
         // we have actually no basic block to append the insn to
-        TRAP;
+        CL_TRAP;
 
     bb->append(newInsn);
     insn = newInsn;
@@ -494,7 +494,7 @@ void ClStorageBuilder::Private::closeInsn() {
 
 void ClStorageBuilder::file_open(const char *fileName) {
     if (!fileName)
-        TRAP;
+        CL_TRAP;
 
     d->file = fileName;
 }
@@ -507,15 +507,15 @@ void ClStorageBuilder::file_close() {
 
 void ClStorageBuilder::fnc_open(const struct cl_operand *op) {
     if (CL_OPERAND_CST != op->code)
-        TRAP;
+        CL_TRAP;
 
     const struct cl_cst &cst = op->data.cst;
     if (CL_TYPE_FNC != cst.code)
-        TRAP;
+        CL_TRAP;
 
     if (!op->loc.file)
         // orphans not implemented yet
-        TRAP;
+        CL_TRAP;
 
     // store file for fnc
     d->file = op->loc.file;
@@ -538,7 +538,7 @@ void ClStorageBuilder::fnc_open(const struct cl_operand *op) {
 
 void ClStorageBuilder::fnc_arg_decl(int pos, const struct cl_operand *op) {
     if (CL_OPERAND_VAR != op->code)
-        TRAP;
+        CL_TRAP;
 
     const int uid = op->data.var->uid;
     Fnc &fnc = *(d->fnc);
@@ -549,7 +549,7 @@ void ClStorageBuilder::fnc_arg_decl(int pos, const struct cl_operand *op) {
     const int argCnt = fnc.args.size();
     if (argCnt + /* FIXME: start with zero instead? */ 1 != pos)
         // argument list not sorted
-        TRAP;
+        CL_TRAP;
 
     else
         fnc.args.push_back(uid);
@@ -641,7 +641,7 @@ void ClStorageBuilder::insn_switch_case(
         const Block* &defTarget = targets[0];
         if (defTarget)
             // attempt to redefine default label
-            TRAP;
+            CL_TRAP;
 
         // store target for default
         targets[0] = cfg[label];
@@ -649,16 +649,16 @@ void ClStorageBuilder::insn_switch_case(
     }
 
     if (CL_OPERAND_CST != val_lo->code || CL_OPERAND_CST != val_hi->code)
-        TRAP;
+        CL_TRAP;
 
     const struct cl_cst &cst_lo = val_lo->data.cst;
     const struct cl_cst &cst_hi = val_hi->data.cst;
     if (CL_TYPE_INT != cst_lo.code || CL_TYPE_INT != cst_hi.code)
-        TRAP;
+        CL_TRAP;
 
     const int lo = cst_lo.data.cst_int.value;
     const int hi = cst_hi.data.cst_int.value;
-    SE_BREAK_IF(hi < lo);
+    CL_BREAK_IF(hi < lo);
 
     TOperandList &operands = d->insn->operands;
     struct cl_operand val = *val_lo;
@@ -670,7 +670,7 @@ void ClStorageBuilder::insn_switch_case(
         const unsigned idx = targets.size();
         if (operands.size() != idx)
             // something went wrong, offset detected
-            TRAP;
+            CL_TRAP;
 
         // store case value
         operands.resize(idx + 1);

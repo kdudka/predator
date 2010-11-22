@@ -245,7 +245,7 @@ void ClPrettyPrint::printIntegralCst(const struct cl_operand *op) {
             break;
 
         default:
-            TRAP;
+            CL_TRAP;
     }
 }
 
@@ -278,14 +278,14 @@ void ClPrettyPrint::printCst(const struct cl_operand *op) {
             break;
 
         default:
-            TRAP;
+            CL_TRAP;
     }
 }
 
 namespace {
     const char* typeName(const struct cl_type *clt) {
         if (!clt)
-            TRAP;
+            CL_TRAP;
 
         const char *name = clt->name;
         return (name)
@@ -361,7 +361,7 @@ deref_done:
             break;
 
         default:
-            TRAP;
+            CL_TRAP;
     }
 
     if (!str.empty())
@@ -385,7 +385,7 @@ deref_done:
 
 void ClPrettyPrint::printVarType(const struct cl_operand *op) {
     if (op->code == CL_OPERAND_VOID)
-        TRAP;
+        CL_TRAP;
 
     if (!showTypes_)
         return;
@@ -406,7 +406,7 @@ namespace {
             case CL_SCOPE_FUNCTION:     return 'F';
             case CL_SCOPE_BB:           return 'B';
             default:
-                TRAP;
+                CL_TRAP;
                 return 'U';
         }
     }
@@ -520,7 +520,7 @@ void ClPrettyPrint::printOperandVar(const struct cl_operand *op) {
                     break;
 
             default:
-                TRAP;
+                CL_TRAP;
         }
     }
 }
@@ -793,7 +793,7 @@ void ClPrettyPrint::insn(
 
         case CL_INSN_CALL:
         case CL_INSN_SWITCH:
-            TRAP;
+            CL_TRAP;
     }
 }
 
@@ -856,12 +856,12 @@ void ClPrettyPrint::insn_switch_case(
     }
 
     if (CL_OPERAND_CST != val_lo->code || CL_OPERAND_CST != val_hi->code)
-        TRAP;
+        CL_TRAP;
 
     const struct cl_cst &cst_lo = val_lo->data.cst;
     const struct cl_cst &cst_hi = val_hi->data.cst;
     if (CL_TYPE_INT != cst_lo.code || CL_TYPE_INT != cst_hi.code)
-        TRAP;
+        CL_TRAP;
 
     const int lo = cst_lo.data.cst_int.value;
     const int hi = cst_hi.data.cst_int.value;

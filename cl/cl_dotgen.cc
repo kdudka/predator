@@ -566,7 +566,7 @@ void ClDotGenerator::insn(const struct cl_insn *cli) {
 
         case CL_INSN_CALL:
         case CL_INSN_SWITCH:
-            TRAP;
+            CL_TRAP;
     }
     lastInsn_ = cli->code;
 }
