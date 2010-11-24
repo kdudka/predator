@@ -36,6 +36,7 @@ add_library(fa SHARED treeaut.cc timbuk.cc forestaut.cc symexec.cc symctx.cc bui
 #set_target_properties(fa PROPERTIES COMPILE_FLAGS -fPIC)
 # test
 #add_executable(fa_test test.cc)
+set_target_properties(fa PROPERTIES LINK_FLAGS -lrt)
 
 # link with code_listener
 find_library(CL_LIB cl ../cl_build)

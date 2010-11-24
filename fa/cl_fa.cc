@@ -19,6 +19,7 @@
 
 #include <iostream>
 #include <stdexcept>
+#include <ctime>
 
 #include <cl/easy.hh>
 #include <cl/cl_msg.hh>
@@ -55,6 +56,9 @@ void clEasyRun(const CodeStorage::Storage& stor, const char* configString) {
         return;
     }
 
+	timespec start_tp, end_tp;
+	clock_gettime(CLOCK_THREAD_CPUTIME_ID , &start_tp);
+
     CL_DEBUG("starting verification stuff ...");
     try {
 		SymExec(stor).run(*main);
@@ -63,5 +67,8 @@ void clEasyRun(const CodeStorage::Storage& stor, const char* configString) {
 		CL_ERROR(e.what());
 		return;
 	}
+
+	clock_gettime(CLOCK_THREAD_CPUTIME_ID , &end_tp);
+	CL_NOTE("analysis took " << (end_tp.tv_sec - start_tp.tv_sec) + (end_tp.tv_nsec - start_tp.tv_nsec)*10e-9 << "s of processor time");
 
 }
