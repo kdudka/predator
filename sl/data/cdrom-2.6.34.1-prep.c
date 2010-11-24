@@ -33265,8 +33265,8 @@ static const char __mod_license3676[] __attribute__((__used__)) __attribute__((s
 
 /* added driver - inspired by invader cdrom.c example */
 
-int nondet;
 int get_nondet_int(void) { int a; return a; }
+bool nondet(void) { return get_nondet_int(); }
 void *get_nondet_ptr(void) { void *a; return a; }
 
 int printk(const char *format, ...) { int a; return a; }
@@ -33314,7 +33314,7 @@ void HsInitialize(void)
 {
     struct ctl_table *tbl;
 
-    while (nondet) {
+    while (nondet()) {
         struct cdrom_device_info *cdi;
         cdi = HsCreateCdromDeviceInfo();
         register_cdrom(cdi);
@@ -33348,33 +33348,41 @@ int main_sub(void)
         return (tmp);
     }
 
-    while ((&nondet > 0)) {
-        if ((&nondet > 0)) {
-            struct media_event_desc *med;
-            med = get_nondet_ptr();
-            tmp = cdrom_get_media_event(cdi, med);
-        } else if ((&nondet > 0)) {
+
+#if 1 // short test
             bdev = NEW(struct block_device);
             cdrom_open(cdi, bdev, (fmode_t)0);
             free(bdev);
-        } else if ((&nondet > 0)) {
+            //cdrom_release(cdi, (fmode_t)0);
+#else
+    while (nondet()) {
+        if (nondet()) {
+            struct media_event_desc *med;
+            med = get_nondet_ptr();
+            tmp = cdrom_get_media_event(cdi, med);
+        } else if (nondet()) {
+            bdev = NEW(struct block_device);
+            cdrom_open(cdi, bdev, (fmode_t)0);
+            free(bdev);
+        } else if (nondet()) {
             cdrom_release(cdi, (fmode_t)0);
-        } else if ((&nondet > 0)) {
+        } else if (nondet()) {
             tmp = cdrom_number_of_slots(cdi);
-        } else if ((&nondet > 0)) {
+        } else if (nondet()) {
             cmd = get_nondet_int();
             arg = get_nondet_int();
             tmp = mmc_ioctl(cdi, cmd, arg);
-        } else if ((&nondet > 0)) {
+        } else if (nondet()) {
             bdev = NEW(struct block_device);
             cmd = get_nondet_int();
             arg = get_nondet_int();
             tmp = cdrom_ioctl(cdi, bdev, (fmode_t)0, cmd, arg);
             free(bdev);
-        } else if ((&nondet > 0)) {
+        } else if (nondet()) {
             tmp = cdrom_media_changed(cdi);
         }
     }
+#endif
 
     unregister_cdrom(cdi);
     cdrom_exit();
