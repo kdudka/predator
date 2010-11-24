@@ -40,7 +40,7 @@ CURL            ?= curl --location -v#      # URL grabber command-line
 GIT             ?= git#                     # use this to override git(1)
 SVN             ?= svn#                     # use this to override svn(1)
 
-DIRS_BUILD      ?= cl fwnull sl fa_analysis
+DIRS_BUILD      ?= cl fwnull sl fa
 DIRS_INSTALL    ?= cl fwnull sl
 
 .PHONY: all check clean distcheck distclean api cl/api sl/api \

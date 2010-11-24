@@ -61,9 +61,9 @@ void dumpOperandTypes(std::ostream& os, const cl_operand* op) {
 
 std::ostream& operator<<(std::ostream& os, const cl_location& loc) {
 	if (loc.file)
-		return os << loc.file << ':' << loc.line;
+		return os << loc.file << ':' << loc.line << ':';
 	else
-		return os << "<unknown location>";
+		return os << "<unknown location>:";
 }
 /*
 struct SymOp {
@@ -540,7 +540,7 @@ protected:
 		
 		CL_DEBUG(std::endl << *fae);
 
-		CL_DEBUG(loc << ": " << **state->insn);
+		CL_DEBUG(loc << ' ' << **state->insn);
 
 		try {
 
@@ -586,7 +586,7 @@ protected:
 			CL_DEBUG("adjusting abstraction ... " << ++state->absHeight);
 
 			CL_DEBUG("resuming execution ... ");
-			CL_DEBUG(loc << ": " << **state->insn);
+			CL_DEBUG(loc << ' ' << **state->insn);
 
 			STATE_FROM_FAE(*parent->fae)->enqueue(this->queue, itov((FAE*)parent->fae));
 //			throw;
@@ -614,7 +614,7 @@ protected:
 
 			state = STATE_FROM_FAE(*item->parent->fae);
 
-			CL_DEBUG("rewinding " << (*state->insn)->loc << ": " << **state->insn);
+			CL_DEBUG("rewinding " << (*state->insn)->loc << ' ' << **state->insn);
 			
 			FAE::NormInfo normInfo;
 
@@ -651,12 +651,12 @@ protected:
 
 		for (vector<pair<const FAE*, const CodeStorage::Insn*> >::reverse_iterator i = trace.rbegin(); i != trace.rend(); ++i) {
 			if (i->second)
-				CL_NOTE(i->second->loc << ": " << *(i->second));
+				CL_NOTE_MSG(i->second->loc, *(i->second));
 //			STATE_FROM_FAE(*i->first)->ctx->dumpContext(*i->first);
 //			CL_DEBUG(std::endl << *(i->first));
 		}
 
-		CL_NOTE(this->currentInsn->loc << ": " << *this->currentInsn);
+		CL_NOTE_MSG(this->currentInsn->loc, *this->currentInsn);
 
 		return NULL;
 

@@ -115,6 +115,18 @@ public:
 	}
 
 	bool operator<(const TT& rhs) const {
+		return (this->_rhs < rhs._rhs) || (
+			(this->_rhs == rhs._rhs) && (
+				(this->_label < rhs._label) || (
+					(this->_label == rhs._label) && (
+						this->_lhs->first < rhs._lhs->first
+					)
+				)
+			)
+		);
+	}
+/*
+	bool operator<(const TT& rhs) const {
 		return (this->_label < rhs._label) || (
 			(this->_label == rhs._label) && (
 				(this->_lhs->first < rhs._lhs->first) || (
@@ -124,7 +136,7 @@ public:
 				)
 			)
 		);
-/*		return (this->_lhs->first < rhs._lhs->first) || (
+		return (this->_lhs->first < rhs._lhs->first) || (
 			(this->_lhs->first == rhs._lhs->first) && (
 				(this->_label < rhs._label) || (
 					(this->_label == rhs._label) && (
@@ -132,9 +144,9 @@ public:
 					)
 				)
 			)
-		);*/
+		);
 	}
-	
+*/	
 	friend size_t hash_value(const TT& t) {
 		return hash_value(hash_value(hash_value(t._lhs) + hash_value(t._label)) + hash_value(t._rhs));
 	}

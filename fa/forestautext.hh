@@ -33,9 +33,8 @@
 #include "forestaut.hh"
 #include "boxman.hh"
 #include "labman.hh"
-//#include "leafmanager.hh"
-#include "utils.hh"
 #include "tatimint.hh"
+#include "utils.hh"
 
 using std::vector;
 using std::set;
@@ -46,7 +45,33 @@ using std::runtime_error;
 
 class FAE : public FA {
 
-	friend std::ostream& operator<<(std::ostream& os, const FAE& fae);
+	friend std::ostream& operator<<(std::ostream& os, const FAE& fae) {
+//		TA<label_type>::Backend backend;
+//		TA<label_type> ta(backend);
+/*		os << "vars";
+		for (std::vector<Data>::const_iterator i = fae.variables.begin(); i != fae.variables.end(); ++i)
+			os << ' ' << *i;
+		os << std::endl;*/
+		for (size_t i = 0; i < fae.roots.size(); ++i) {
+			if (!fae.roots[i])
+				continue;
+			os << "===" << std::endl << "root " << i << " o=[";
+			for (size_t j = 0; j < fae.rootMap[i].size(); ++j)
+				os << fae.rootMap[i][j];
+			os << ']';
+			TA<label_type>& ta = *fae.roots[i];
+//			ta.clear();
+//			fae.roots[i]->minimized(ta);
+			TAWriter<label_type> writer(os);
+			for (std::set<size_t>::iterator j = ta.getFinalStates().begin(); j != ta.getFinalStates().end(); ++j)
+				writer.writeState(*j);
+			writer.endl();
+			writer.writeTransitions(ta, FA::WriteStateF());
+//			TAWriter<label_type>(os).writeOne(*ta, ss.str());
+//			TAWriter<label_type>(os).writeOne(*fae.roots[i], ss.str());
+		}
+		return os;
+	}
 
 	mutable BoxMan* boxMan;
 	mutable LabMan* labMan;

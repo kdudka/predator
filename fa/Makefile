@@ -23,21 +23,21 @@ CTEST ?= ctest
 
 all: ../cl_build/libcl.so
 	$(MAKE) -C ../cl_build # make sure the libcl.so is up2date
-	mkdir -p ../fa_analysis_build
-	cd ../fa_analysis_build && $(CMAKE) ../fa_analysis
-	$(MAKE) -C ../fa_analysis_build
+	mkdir -p ../fa_build
+	cd ../fa_build && $(CMAKE) ../fa
+	$(MAKE) -C ../fa_build
 
 check: all
-	cd ../fa_analysis_build && $(CTEST) --output-on-failure
+	cd ../fa_build && $(CTEST) --output-on-failure
 
 clean:
 	rm -f version.h
-	if test -e ../fa_analysis_build/Makefile; then \
-		$(MAKE) clean -C ../fa_analysis_build; \
+	if test -e ../fa_build/Makefile; then \
+		$(MAKE) clean -C ../fa_build; \
 	fi
 
 distclean: clean
-	rm -rf ../fa_analysis_build
+	rm -rf ../fa_build
 
 distcheck: distclean
 	$(MAKE) check

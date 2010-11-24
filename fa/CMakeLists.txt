@@ -17,7 +17,7 @@
 
 # project metadata
 cmake_minimum_required(VERSION 2.6)
-project(fa_analysis C CXX)
+project(fa C CXX)
 include("../CMakeLists.common")
 add_definitions("-I../include")
 
@@ -29,15 +29,15 @@ else()
 endif()
 
 # libfa.a
-add_library(fa treeaut.cc timbuk.cc forestaut.cc forestautext.cc ufae.cc symexec.cc symctx.cc builtintable.cc)
-# avoid a failure while linking libfa_analysis.so (may be gcc specific):
-set_target_properties(fa PROPERTIES COMPILE_FLAGS -fPIC)
+#add_library(fa treeaut.cc timbuk.cc forestaut.cc symexec.cc symctx.cc builtintable.cc)
 # libfa_analysis.so
-add_library(fa_analysis SHARED cl_fa.cc)
+add_library(fa SHARED treeaut.cc timbuk.cc forestaut.cc symexec.cc symctx.cc builtintable.cc cl_fa.cc)
+# avoid a failure while linking libfa_analysis.so (may be gcc specific):
+#set_target_properties(fa PROPERTIES COMPILE_FLAGS -fPIC)
 # test
 #add_executable(fa_test test.cc)
 
 # link with code_listener
 find_library(CL_LIB cl ../cl_build)
-target_link_libraries(fa_analysis fa ${CL_LIB})
+target_link_libraries(fa ${CL_LIB})
 #target_link_libraries(fa_test fa)

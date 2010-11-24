@@ -24,6 +24,7 @@
 #include <stdexcept>
 #include <cassert>
 #include <ostream>
+#include <sstream>
 
 #include "types.hh"
 #include "treeaut.hh"
@@ -58,6 +59,19 @@ protected:
 	}
 
 public:
+
+	struct WriteStateF {
+
+		std::string operator()(size_t state) const {
+			std::ostringstream ss;
+			if (_MSB_TEST(state))
+				ss << 'r' << _MSB_GET(state);
+			else
+				ss << 'q' << state;
+			return ss.str();
+		}
+
+	};
 
 	FA(TA<label_type>::Manager& taMan) : taMan(&taMan) {}
 	

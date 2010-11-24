@@ -22,19 +22,6 @@
 
 #include "forestautext.hh"
 
-struct WriteStateF {
-
-	std::string operator()(size_t state) const {
-		std::ostringstream ss;
-		if (_MSB_TEST(state))
-			ss << 'r' << _MSB_GET(state);
-		else
-			ss << 'q' << state;
-		return ss.str();
-	}
-
-};
-
 std::ostream& operator<<(std::ostream& os, const FAE& fae) {
 //	TA<label_type>::Backend backend;
 //	TA<label_type> ta(backend);

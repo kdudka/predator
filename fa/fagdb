@@ -6,8 +6,8 @@ fi
 
 # basic setup
 set -x
-FA_BUILD=../fa_analysis_build
-FA_PLUG="$FA_BUILD/libfa_analysis.so"
+FA_BUILD=../fa_build
+FA_PLUG="$FA_BUILD/libfa.so"
 CC1="../gcc-install/libexec/gcc/`ls ../gcc-install/lib/gcc/`/4.[56]*/cc1"
 
 # initial checks
@@ -26,7 +26,7 @@ test -z "$GDB" && GDB=gdb
 test -z "$FA_VERBOSE" && FA_VERBOSE=1
 
 # use pp code listener by default
-test -z "$FA_OPTS" && FA_OPTS="-fplugin-arg-libfa_analysis-dump-pp"
+test -z "$FA_OPTS" && FA_OPTS="-fplugin-arg-libfa-dump-pp"
 
 # run the debugger
 eval "$GDB" --quiet --args "$CC1" "$1" \
@@ -34,5 +34,5 @@ eval "$GDB" --quiet --args "$CC1" "$1" \
     -dumpbase test.c -quiet -o /dev/null \
     -m32 -O0 -Wall -Wextra \
     -fplugin="$FA_PLUG" \
-    -fplugin-arg-libfa_analysis-verbose="$FA_VERBOSE" \
+    -fplugin-arg-libfa-verbose="$FA_VERBOSE" \
     $FA_OPTS

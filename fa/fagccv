@@ -8,22 +8,22 @@ self="`readlink -f "$0"`"
 topdir="`dirname "$self"`/.."
 
 # basic setup
-FA_BUILD="$topdir/fa_analysis_build"
-FA_PLUG="$FA_BUILD/libfa_analysis.so"
+FA_BUILD="$topdir/fa_build"
+FA_PLUG="$FA_BUILD/libfa.so"
 GCC="$topdir/gcc-install/bin/gcc"
 
 # initial checks
 test -x "$GCC"                              || exit 1
 
 # attempt to make
-make -s $MAKEOPTS -C "$topdir/fa_analysis"  || exit 1
+make -s $MAKEOPTS -C "$topdir/fa"  || exit 1
 test -x "$FA_PLUG"                          || exit 1
 
 # use verbose level 0 by default
 test -z "$FA_VERBOSE" && FA_VERBOSE=0
 
 # use pp code listener by default
-test -z "$FA_OPTS" && FA_OPTS="-fplugin-arg-libfa_analysis-dump-pp"
+test -z "$FA_OPTS" && FA_OPTS="-fplugin-arg-libfa-dump-pp"
 
 # use chromium as default SVG_VIEWER
 test -z "$SVG_VIEWER" && SVG_VIEWER=chromium
@@ -34,18 +34,18 @@ if test x1 = "x$FA_PLOT"; then
 fi
 
 # run the gcc
-valgrind --leak-check=full --trace-children=yes "$GCC" -c "$1" -o /dev/null -O0 -m32 \
+valgrind --trace-children=yes "$GCC" -c "$1" -o /dev/null -O0 -m32 \
     -DALIEN \
     -fplugin="$FA_PLUG" \
-    -fplugin-arg-libfa_analysis-verbose="$FA_VERBOSE" \
+    -fplugin-arg-libfa-verbose="$FA_VERBOSE" \
     $FA_OPTS \
     #|| exit $?
 
-if test x1 = "x$FA_PLOT"; then
+#if test x1 = "x$FA_PLOT"; then
     # visualize graphs
-    printf "graph visualization in progress ... "
-    make $MAKEOPTS -s -f "$topdir/sl/data/Makefile" TIMEOUT="timeout 2" \
-        || exit $?
-    printf "done\n"
-    "$SVG_VIEWER" *.svg
-fi
+#    printf "graph visualization in progress ... "
+#    make $MAKEOPTS -s -f "$topdir/sl/data/Makefile" TIMEOUT="timeout 2" \
+#        || exit $?
+#    printf "done\n"
+#    "$SVG_VIEWER" *.svg
+#fi
