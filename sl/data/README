@@ -26,6 +26,8 @@ SLS abstraction
     test-0048.c - handling of shared/existential values during the abstraction
 
     test-0049.c - abstraction of SLL, each node contains a pointer to head
+                - a few mistakes have been done in the test
+                - see test-0118.c for the sane variant of this test
 
     test-0050.c - simple visualization of SLS abstraction in progress
 
@@ -50,6 +52,9 @@ SLS abstraction
     test-0112.c - hello-world, once used as the most trivial example for symjoin
 
     test-0113.c - error-free variant of test-0106
+
+    test-0118.c - abstraction of SLL, each node contains a pointer to head
+                - improved variant of test-0049
 
 
 DLS abstraction

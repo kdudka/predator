@@ -355,6 +355,9 @@ bool validatePrototypes(
 
     BOOST_FOREACH(const TObjId proto, protoRoots) {
         if (proto == root || proto == peer)
+            // we have inserted root/peer into protoRoots, in order to get them
+            // on the list of allowed referrers, but it does not mean that they
+            // are prototypes
             continue;
 
         if (!validatePointingObjects(sh, bf, proto, OBJ_INVALID, OBJ_INVALID,
