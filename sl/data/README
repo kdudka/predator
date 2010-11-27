@@ -56,6 +56,11 @@ SLS abstraction
     test-0118.c - abstraction of SLL, each node contains a pointer to head
                 - improved variant of test-0049
 
+    test-0119.c - a demo created as simplification of test-0118
+                - tons of OOM errors
+                - run with -fplugin-arg-libsl-symexec-args=fast
+                - plots self-explaining heap graphs with DEBUG_SYMABSTRACT == 1
+
 
 DLS abstraction
 ===============
