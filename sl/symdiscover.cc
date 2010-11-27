@@ -244,30 +244,6 @@ bool matchSegBinding(const SymHeap              &sh,
     }
 }
 
-bool preserveHeadPtr(const SymHeap                &sh,
-                     const SegBindingFields       &bf,
-                     const TObjId                 obj)
-{
-    const TValueId valPrev = sh.valueOf(subObjByChain(sh, obj, bf.peer));
-    const TValueId valNext = sh.valueOf(subObjByChain(sh, obj, bf.next));
-    if (valPrev <= 0 && valNext <= 0)
-        // no valid address anyway
-        return false;
-
-    const TValueId addrHead = sh.placedAt(subObjByChain(sh, obj, bf.head));
-    if (valPrev == addrHead || valNext == addrHead)
-        // head pointer detected
-        return true;
-
-    const TValueId addrRoot = sh.placedAt(obj);
-    if (valPrev == addrRoot || valNext == addrHead)
-        // root pointer detected
-        return true;
-
-    // found nothing harmful
-    return false;
-}
-
 // TODO: rewrite, simplify, and make it easier to follow
 bool validatePointingObjects(
         const SymHeap               &sh,
@@ -561,10 +537,6 @@ unsigned /* len */ segDiscover(const SymHeap            &sh,
                                const SegBindingFields   &bf,
                                const TObjId             entry)
 {
-    if (preserveHeadPtr(sh, bf, entry))
-        // special quirk for head pointers
-        return 0;
-
     // we use std::set to detect loops
     std::set<TObjId> haveSeen;
     haveSeen.insert(entry);
