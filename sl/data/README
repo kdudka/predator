@@ -242,6 +242,8 @@ Linux lists
 
     test-0109.c - Linux DLS with nested Linux DLLs consisting of _two_ items
 
+    test-0120.c - Linux "list" of length one, based on hlist_head/hlist_node
+
 
 Show-case
 =========
