@@ -268,12 +268,12 @@ struct OperandInfo {
 			default:
 				assert(false);
 		}
-		CL_DEBUG("read: " << *this << " -> " << data);
+		CL_CDEBUG("read: " << *this << " -> " << data);
 		return data;
 	}
 
 	void writeData(FAE& fae, const Data& in, RevInfo& info) {
-		CL_DEBUG("write: " << in << " -> " << *this);
+		CL_CDEBUG("write: " << in << " -> " << *this);
 		info.dest = this->data;
 		switch (this->flag) {
 			case o_flag_e::ref:

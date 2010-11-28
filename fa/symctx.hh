@@ -57,7 +57,7 @@ struct SymCtx {
 
 	const CodeStorage::Fnc& fnc;
 
-	vector<SelData> sfLayout;
+	std::vector<SelData> sfLayout;
 
 	// uid -> stack x offset/index
 	typedef boost::unordered_map<int, std::pair<bool, size_t> > var_map_type;
@@ -156,7 +156,7 @@ struct SymCtx {
 
 		std::vector<pair<SelData, Data> > stackInfo;
 
-		for (vector<SelData>::const_iterator i = this->sfLayout.begin(); i != this->sfLayout.end(); ++i)
+		for (std::vector<SelData>::const_iterator i = this->sfLayout.begin(); i != this->sfLayout.end(); ++i)
 			stackInfo.push_back(make_pair(*i, Data::createUndef()));
 
 		stackInfo[0].second = fae.varGet(ABP_INDEX);
@@ -228,45 +228,56 @@ struct SymCtx {
 		return true;
 	}
 
-	void dumpContext(const FAE& fae) const {
+	struct Dump {
 
-		std::vector<size_t> offs;
+		const SymCtx& ctx;
+		const FAE& fae;
 
-		for (std::vector<SelData>::const_iterator i = this->sfLayout.begin(); i != this->sfLayout.end(); ++i)
-			offs.push_back((*i).offset);
+		Dump(const SymCtx& ctx, const FAE& fae) : ctx(ctx), fae(fae) {}
+		
+		friend std::ostream& operator<<(std::ostream& os, const Dump& cd) {
 
-		Data data;
+			std::vector<size_t> offs;
 
-		fae.nodeLookupMultiple(fae.varGet(ABP_INDEX).d_ref.root, 0, offs, data);
+			for (std::vector<SelData>::const_iterator i = cd.ctx.sfLayout.begin(); i != cd.ctx.sfLayout.end(); ++i)
+				offs.push_back((*i).offset);
 
-		boost::unordered_map<size_t, Data> tmp;
-		for (std::vector<Data::item_info>::const_iterator i = data.d_struct->begin(); i != data.d_struct->end(); ++i)
-			tmp.insert(make_pair(i->first, i->second));
+			Data data;
 
-		for (CodeStorage::TVarList::const_iterator i = this->fnc.vars.begin(); i != this->fnc.vars.end(); ++i) {
+			cd.fae.nodeLookupMultiple(cd.fae.varGet(ABP_INDEX).d_ref.root, 0, offs, data);
 
-			const CodeStorage::Var& var = this->fnc.stor->vars[*i];
+			boost::unordered_map<size_t, Data> tmp;
+			for (std::vector<Data::item_info>::const_iterator i = data.d_struct->begin(); i != data.d_struct->end(); ++i)
+				tmp.insert(make_pair(i->first, i->second));
 
-			var_map_type::const_iterator j = this->varMap.find(var.uid);
-			assert(j != this->varMap.end());
+			for (CodeStorage::TVarList::const_iterator i = cd.ctx.fnc.vars.begin(); i != cd.ctx.fnc.vars.end(); ++i) {
 
-			switch (var.code) {
-				case CodeStorage::EVar::VAR_LC:
-					if (var.name.empty()) {
-//						CL_DEBUG('#' << var.uid << " = " << fae.varGet(j->second.second));
-					} else {
-						unordered_map<size_t, Data>::iterator k = tmp.find(j->second.second);
-						assert(k != tmp.end());
-						CL_DEBUG('#' << var.uid << ':' << var.name << " = " << k->second);
-					}
-					break;
-				default:
-					break;
-			}
+				const CodeStorage::Var& var = cd.ctx.fnc.stor->vars[*i];
+
+				var_map_type::const_iterator j = cd.ctx.varMap.find(var.uid);
+				assert(j != cd.ctx.varMap.end());
+
+				switch (var.code) {
+					case CodeStorage::EVar::VAR_LC:
+						if (var.name.empty()) {
+//							os << '#' << var.uid << " = " << fae.varGet(j->second.second) << std::endl;
+						} else {
+							boost::unordered_map<size_t, Data>::iterator k = tmp.find(j->second.second);
+							assert(k != tmp.end());
+							os << '#' << var.uid << ':' << var.name << " = " << k->second << std::endl;
+						}
+						break;
+					default:
+						break;
+				}
 			
+			}
+
+			return os;
+
 		}
 
-	}
+	};
 /*
 	static SymCtx* extractCtx(const FAE& fae) {
 

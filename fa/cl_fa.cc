@@ -37,7 +37,7 @@ void clEasyRun(const CodeStorage::Storage& stor, const char* configString) {
     using namespace CodeStorage;
 
     // look for main() by name
-    CL_DEBUG("looking for 'main()' at gl scope...");
+    CL_CDEBUG("looking for 'main()' at gl scope...");
     const NameDb::TNameMap &glNames = stor.fncNames.glNames;
     const NameDb::TNameMap::const_iterator iter = glNames.find("main");
     if (glNames.end() == iter) {
@@ -57,18 +57,17 @@ void clEasyRun(const CodeStorage::Storage& stor, const char* configString) {
     }
 
 	timespec start_tp, end_tp;
-	clock_gettime(CLOCK_THREAD_CPUTIME_ID , &start_tp);
+	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start_tp);
 
-    CL_DEBUG("starting verification stuff ...");
+    CL_CDEBUG("starting verification stuff ...");
     try {
 		SymExec(stor).run(*main);
 		CL_NOTE("the program is safe ...");
 	} catch (const std::exception& e) {
 		CL_ERROR(e.what());
-		return;
 	}
 
-	clock_gettime(CLOCK_THREAD_CPUTIME_ID , &end_tp);
-	CL_NOTE("analysis took " << (end_tp.tv_sec - start_tp.tv_sec) + (end_tp.tv_nsec - start_tp.tv_nsec)*10e-9 << "s of processor time");
+	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end_tp);
+	CL_NOTE("analysis took " << (end_tp.tv_sec - start_tp.tv_sec) + 1e-9*(end_tp.tv_nsec - start_tp.tv_nsec) << "s of processor time");
 
 }

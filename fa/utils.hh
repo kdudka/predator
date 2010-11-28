@@ -31,9 +31,11 @@
 #include <boost/unordered_map.hpp>
 
 #ifndef NDEBUG
-#define DEBUG_MSG(x) do { std::cerr << x << std::endl; } while (0)
+//#define DEBUG_MSG(x) do { std::cerr << x << std::endl; } while (0)
+#define CL_CDEBUG(x) CL_DEBUG(x)
 #else
-#define DEBUG_MSG(x)
+#define CL_CDEBUG(x)
+//#define DEBUG_MSG(x)
 #endif
 
 template <class T>

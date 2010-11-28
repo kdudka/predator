@@ -44,7 +44,7 @@ public:
 	}
 
 	void clear() { this->stateOffset = 1; }
-
+/*
 	struct RenameNonleafF {
 
 		Index<size_t>& index;
@@ -61,11 +61,11 @@ public:
 		}
 
 	};
-
+*/
 	TA<label_type>& fae2ta(TA<label_type>& dst, Index<size_t>& index, const FAE& src) const {
 		std::vector<size_t> lhs;
 		for (std::vector<TA<label_type>*>::const_iterator i = src.roots.begin(); i != src.roots.end(); ++i) {
-			TA<label_type>::rename(dst, **i, RenameNonleafF(index, this->stateOffset), false);
+			TA<label_type>::rename(dst, **i, FAE::RenameNonleafF(index, this->stateOffset), false);
 			lhs.push_back(index[(*i)->getFinalState()] + this->stateOffset);
 		}
 		dst.addTransition(lhs, &labMan.lookup(src.variables, lhs.size()), 0);

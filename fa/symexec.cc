@@ -232,11 +232,11 @@ protected:
 		FAE normalized(fae);
 
 		if (target->entryPoint) {
-			CL_DEBUG("abstracting ... " << target->absHeight);
+			CL_CDEBUG("abstracting ... " << target->absHeight);
 			fae.heightAbstraction(target->absHeight);
 		}
 
-//		CL_DEBUG("after abstraction: " << std::endl << fae);
+//		CL_CDEBUG("after abstraction: " << std::endl << fae);
 
 		size_t l = this->queue.size();
 
@@ -245,7 +245,7 @@ protected:
 			for (std::list<const FAE*>::reverse_iterator j = this->queue.rbegin(); i > 0; --i, ++j)
 				this->traceRecorder.add(this->currentConf, *j, normalized, normInfo);
 		}
-		else CL_DEBUG("hit");
+		else CL_CDEBUG("hit");
 
 	}
 
@@ -534,13 +534,10 @@ protected:
 
 		const cl_location& loc = (*state->insn)->loc;
 
-		CL_DEBUG("processing " << fae);
-
-		state->ctx->dumpContext(*fae);
-		
-		CL_DEBUG(std::endl << *fae);
-
-		CL_DEBUG(loc << ' ' << **state->insn);
+		CL_CDEBUG("processing " << fae);
+		CL_CDEBUG(std::endl << SymCtx::Dump(*state->ctx, *fae));
+		CL_CDEBUG(std::endl << *fae);
+		CL_CDEBUG(loc << ' ' << **state->insn);
 
 		try {
 
@@ -550,7 +547,7 @@ protected:
 
 		} catch (const std::exception& e) {
 
-			CL_DEBUG(e.what());
+			CL_CDEBUG(e.what());
 
 			TraceRecorder::Item* item = this->revRun(*fae);
 
@@ -580,13 +577,12 @@ protected:
 
 			for (set<SymState*>::iterator i = s.begin(); i != s.end(); ++i) {
 				(*i)->recompute(this->queue);
-				CL_DEBUG("new fixpoint:" << std::endl << (*i)->fwdConf);
+				CL_CDEBUG("new fixpoint:" << std::endl << (*i)->fwdConf);
 			}
 
-			CL_DEBUG("adjusting abstraction ... " << ++state->absHeight);
-
-			CL_DEBUG("resuming execution ... ");
-			CL_DEBUG(loc << ' ' << **state->insn);
+			CL_CDEBUG("adjusting abstraction ... " << ++state->absHeight);
+			CL_CDEBUG("resuming execution ... ");
+			CL_CDEBUG(loc << ' ' << **state->insn);
 
 			STATE_FROM_FAE(*parent->fae)->enqueue(this->queue, itov((FAE*)parent->fae));
 //			throw;
@@ -597,7 +593,7 @@ protected:
 
 	TraceRecorder::Item* revRun(const FAE& fae) {
 
-//		CL_DEBUG("reconstructing abstract trace ...");
+//		CL_CDEBUG("reconstructing abstract trace ...");
 
 		vector<pair<const FAE*, const CodeStorage::Insn*> > trace;
 
@@ -609,12 +605,12 @@ protected:
 		
 		while (item->parent) {
 
-			STATE_FROM_FAE(*item->fae)->ctx->dumpContext(*item->fae);
-			CL_DEBUG(std::endl << tmp);
+			CL_CDEBUG(std::endl << SymCtx::Dump(*STATE_FROM_FAE(*item->fae)->ctx, *item->fae));
+			CL_CDEBUG(std::endl << tmp);
 
 			state = STATE_FROM_FAE(*item->parent->fae);
 
-			CL_DEBUG("rewinding " << (*state->insn)->loc << ' ' << **state->insn);
+			CL_CDEBUG("rewinding " << (*state->insn)->loc << ' ' << **state->insn);
 			
 			FAE::NormInfo normInfo;
 
@@ -622,18 +618,18 @@ protected:
 			tmp.getNearbyReferences(fae.varGet(ABP_INDEX).d_ref.root, v);
 			tmp.normalize(normInfo, v);
 
-//			CL_DEBUG("denormalizing " << std::endl << tmp << "with" << std::endl << item->normalized);
-//			CL_DEBUG(item->normInfo);
+//			CL_CDEBUG("denormalizing " << std::endl << tmp << "with" << std::endl << item->normalized);
+//			CL_CDEBUG(item->normInfo);
 
 			if (!tmp.denormalize(item->normalized, item->normInfo)) {
-				CL_DEBUG("spurious counter example (denormalization)!" << std::endl << item->normalized);
+				CL_CDEBUG("spurious counter example (denormalization)!" << std::endl << item->normalized);
 				return item;
 			}
 
-//			CL_DEBUG("reversing " << std::endl << tmp << "with" << std::endl << *item->parent->fae);
+//			CL_CDEBUG("reversing " << std::endl << tmp << "with" << std::endl << *item->parent->fae);
 
 			if (!tmp.reverse(*item->parent->fae)) {
-				CL_DEBUG("spurious counter example (reversal)!" << std::endl << *item->parent->fae);
+				CL_CDEBUG("spurious counter example (reversal)!" << std::endl << *item->parent->fae);
 				return item;
 			}
 
@@ -647,13 +643,13 @@ protected:
 
 //		trace.push_back(make_pair(item->fae, *state->insn));
 
-		CL_DEBUG("trace:");
+		CL_CDEBUG("trace:");
 
 		for (vector<pair<const FAE*, const CodeStorage::Insn*> >::reverse_iterator i = trace.rbegin(); i != trace.rend(); ++i) {
 			if (i->second)
 				CL_NOTE_MSG(i->second->loc, *(i->second));
 //			STATE_FROM_FAE(*i->first)->ctx->dumpContext(*i->first);
-//			CL_DEBUG(std::endl << *(i->first));
+//			CL_CDEBUG(std::endl << *(i->first));
 		}
 
 		CL_NOTE_MSG(this->currentInsn->loc, *this->currentInsn);
@@ -674,31 +670,31 @@ public:
 
 	void run(const CodeStorage::Fnc& main) {
 
-	    CL_DEBUG("calculating loop entry points ...");
+	    CL_CDEBUG("calculating loop entry points ...");
 		// compute loop entry points
 		this->loopAnalyser.init(main.cfg.entry());
 		
-	    CL_DEBUG("creating main context ...");
+	    CL_CDEBUG("creating main context ...");
 		// create main context
 		SymCtx* mainCtx = this->getCtx(&main);
 
-	    CL_DEBUG("creating initial state ...");
+	    CL_CDEBUG("creating initial state ...");
 		// create an initial state
 		SymState* init = this->getState(main.cfg.entry()->begin(), mainCtx);
 
-	    CL_DEBUG("creating empty heap ...");
+	    CL_CDEBUG("creating empty heap ...");
 		// create empty heap with no local variables
 		FAE fae(this->taMan, this->labMan, this->boxMan);
 
-	    CL_DEBUG("allocating global registers ...");
+	    CL_CDEBUG("allocating global registers ...");
 		// add global registers
 		SymCtx::init(fae);
 
-	    CL_DEBUG("entering main stack frame ...");
+	    CL_CDEBUG("entering main stack frame ...");
 		// enter main stack frame
 		mainCtx->createStackFrame(fae, init);
 
-	    CL_DEBUG("sheduling initial state ...");
+	    CL_CDEBUG("sheduling initial state ...");
 		// schedule initial state for processing
 		init->enqueue(this->queue, fae);
 
@@ -715,12 +711,12 @@ public:
 			for (state_store_type::iterator i = this->stateStore.begin(); i != this->stateStore.end(); ++i) {
 				if (!i->second->entryPoint)
 					continue;
-				CL_DEBUG("fixpoint at " << (*i->second->insn)->loc);
-				CL_DEBUG(std::endl << i->second->fwdConf);
+				CL_CDEBUG("fixpoint at " << (*i->second->insn)->loc);
+				CL_CDEBUG(std::endl << i->second->fwdConf);
 			}				
 
 		} catch (std::exception& e) {
-			CL_DEBUG(e.what());
+			CL_CDEBUG(e.what());
 			throw;
 		}
 		

@@ -127,9 +127,9 @@ struct SymState {
 	void enqueue(std::list<const FAE*>& queue, const std::vector<FAE*>& src) {
 		for (std::vector<FAE*>::const_iterator i = src.begin(); i != src.end(); ++i) {
 			this->confMap.insert(std::make_pair(*i, queue.insert(queue.end(), *i)));
-			CL_DEBUG("enqueued " << *i);
-			this->ctx->dumpContext(**i);
-			CL_DEBUG(std::endl << **i);
+			CL_CDEBUG("enqueued " << *i);
+			CL_CDEBUG(std::endl << SymCtx::Dump(*this->ctx, **i));
+			CL_CDEBUG(std::endl << **i);
 		}
 	}
 
@@ -223,8 +223,8 @@ struct SymState {
 
 			this->fwdConfWrapper.fae2ta(ta, index, fae);
 
-//			CL_DEBUG("challenge" << std::endl << ta);
-//			CL_DEBUG("response" << std::endl << this->fwdConf);
+//			CL_CDEBUG("challenge" << std::endl << ta);
+//			CL_CDEBUG("response" << std::endl << this->fwdConf);
 
 			if (TA<label_type>::subseteq(ta, this->fwdConf))
 				return false;

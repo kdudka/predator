@@ -230,6 +230,14 @@ public:
 		throw std::runtime_error("Box::inputCovers(): not implemented!");
 	}
 
+	
+
+	void joinRoot(TA<label_type>& dst, size_t index) {
+	}
+
+	void addInternalRoots(FA& fa) {
+	}
+
 public:
 
 	virtual void toStream(std::ostream& os) const {

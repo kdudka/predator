@@ -92,30 +92,71 @@ class FAE : public FA {
 
 	};
 	
-	// root -> BoxInfo
+	// root -> RootInfo
 	boost::unordered_map<size_t, RootInfo> boxMap;
 */
 
 //	boost::unordered_map<size_t, size_t> rootReferenceIndex;
 //	boost::unordered_map<size_t, size_t> invRootReferenceIndex;
 
+public:
+
+	struct RenameNonleafF {
+
+		Index<size_t>& index;
+
+		size_t offset;
+		
+		RenameNonleafF(Index<size_t>& index, size_t offset = 0)
+			: index(index), offset(offset) {}
+
+		size_t operator()(size_t s) {
+			if (_MSB_TEST(s))
+				return s;
+			return this->index.translateOTF(s) + this->offset;
+		}
+
+	};
+
 protected:
 /*
+	void joinBox(TA<label_type>& dst, const TA<label_type>::iterator t, const Box* box) {
+		std::vector<size_t> lhs;
+		std::vector<const AbstractBox*> label;
+		for (std::vector<const AbstractBox*>::const_iterator i = t->label().dataB->begin(); i != t->label().dataB->end(); ++i) {
+			if (!(*i)->isStructural()) {
+				label.push_back(*i);
+				continue;
+			}
+			StructuralBox* b = (StructuralBox*)(*j);
+			if (b != (const StructuralBox*)box) {
+				// this box is not interesting
+				for (size_t k = 0; k < (*j)->getArity(); ++k, ++lhsOffset)
+					lhs.push_back(i->lhs()[lhsOffset]);
+				label.push_back(*i);
+				continue;
+			}
+			// join
+			
+		}
+		
+	}
+
 	void joinBox(TA<label_type>& dst, const Box* box, const TA<label_type>& src) {
 		TA<label_type> ta(this->taMan->getBackend());
-		vector<size_t> lhs;
+//		vector<size_t> lhs;
 		Index<size_t> index;
+		FA::rename(ta, src, FAE::RenameNonleafF(index, this->nextState));
 		TA<label_type>::iterator l = src.end();
 		for (TA<label_type>::iterator i = src.begin(); i != src.end(); ++i) {
 			if (i->rhs() == src.getFinalState()) {
 				assert(l == src.end());
 				l = i;
+				break;
 			}
-			lhs.clear();
-			index.translateOTF(lhs, i->lhs(), this->nextState());
-			ta.addTransition(lhs, i->label(), index.translateOTF(i->rhs()) + this->nextState());
 		}
 		assert(l != src.end());
+		
 		for (TA<label_type>::iterator i = dst.begin(); i != dst.end(); ++i) {
 			if (i->rhs() == dst.getFinalState()) {
 				std::vector<const Box*> label;

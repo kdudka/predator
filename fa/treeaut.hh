@@ -852,20 +852,6 @@ public:
 	
 	static bool subseteq(const TA<T>& a, const TA<T>& b);
 
-	static TA<T>& reduce(TA<T>& dst, const TA<T>& src, Index<size_t>& index, size_t offset = 0, bool addFinalStates = true) {
-		vector<size_t> lhs;
-		for (typename set<typename trans_cache_type::value_type*>::const_iterator i = src.transitions.begin(); i != src.transitions.end(); ++i) {
-			lhs.clear();
-			index.translateOTF(lhs, (*i)->first._lhs->first, offset);
-			dst.addTransition(lhs, (*i)->first._label, index.translateOTF((*i)->first._rhs) + offset);
-		}
-		if (addFinalStates) {
-			for (std::set<size_t>::const_iterator i = src.finalStates.begin(); i != src.finalStates.end(); ++i)
-				dst.addFinalState(index.translateOTF(*i) + offset);
-		}
-		return dst;
-	}
-
 	template <class F>
 	static TA<T>& rename(TA<T>& dst, const TA<T>& src, F f, bool addFinalStates = true) {
 		vector<size_t> lhs;
@@ -878,6 +864,20 @@ public:
 		if (addFinalStates) {
 			for (std::set<size_t>::const_iterator i = src.finalStates.begin(); i != src.finalStates.end(); ++i)
 				dst.addFinalState(f(*i));
+		}
+		return dst;
+	}
+
+	static TA<T>& reduce(TA<T>& dst, const TA<T>& src, Index<size_t>& index, size_t offset = 0, bool addFinalStates = true) {
+		vector<size_t> lhs;
+		for (typename set<typename trans_cache_type::value_type*>::const_iterator i = src.transitions.begin(); i != src.transitions.end(); ++i) {
+			lhs.clear();
+			index.translateOTF(lhs, (*i)->first._lhs->first, offset);
+			dst.addTransition(lhs, (*i)->first._label, index.translateOTF((*i)->first._rhs) + offset);
+		}
+		if (addFinalStates) {
+			for (std::set<size_t>::const_iterator i = src.finalStates.begin(); i != src.finalStates.end(); ++i)
+				dst.addFinalState(index.translateOTF(*i) + offset);
 		}
 		return dst;
 	}
