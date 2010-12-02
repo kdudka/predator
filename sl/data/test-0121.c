@@ -68,25 +68,6 @@ void traverse(struct list_head *head)
     }
 }
 
-void destroy(struct list_head *head)
-{
-    struct my_item *now = (struct my_item *)(
-            (char *)head->next - __builtin_offsetof (struct my_item, link)
-            );
-
-    ___SL_PLOT_STACK_FRAME(&destroy, "00");
-    while (&now->link != (head)) {
-        struct my_item *next = (struct my_item *)(
-                (char *)now->link.next - __builtin_offsetof (struct my_item, link)
-                );
-
-        ___SL_PLOT_STACK_FRAME(&destroy, "01");
-        free(now);
-        ___SL_PLOT_STACK_FRAME(&destroy, "02");
-        now = next;
-    }
-}
-
 struct master_item {
     struct master_item      *next;
     struct list_head        dll;

@@ -244,6 +244,15 @@ Linux lists
 
     test-0120.c - Linux "list" of length one, based on hlist_head/hlist_node
 
+    test-0121.c - alternation of test-0097
+                - once used as demo in slides about symdiscover
+                - we needed something that is easy to plot
+                - abstraction is triggerred only
+                  with SE_PREFER_LOSSLESS_PROTOTYPES == 0
+
+    test-0122.c - the most trivial case of Linux DLS abstraction
+                - once used as demo in slides about symdiscover
+
 
 Show-case
 =========
