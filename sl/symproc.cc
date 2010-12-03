@@ -847,53 +847,6 @@ bool SymExecCore::execCall(SymState &dst, const CodeStorage::Insn &insn) {
     return handleBuiltIn(dst, *this, insn);
 }
 
-namespace {
-    bool handleUnopTruthNotTrivial(TValueId &val) {
-        switch (val) {
-            case VAL_FALSE:
-                val = VAL_TRUE;
-                return true;
-
-            case VAL_TRUE:
-                val = VAL_FALSE;
-                return true;
-
-            case VAL_INVALID:
-                return true;
-
-            default:
-                return false;
-        }
-    }
-}
-
-template <class THeap>
-void handleUnopTruthNot(THeap &heap, TValueId &val, const struct cl_type *clt) {
-    // check type validity wrt. CL_UNOP_TRUTH_NOT
-    CL_BREAK_IF(!clt || clt->code != CL_TYPE_BOOL);
-
-    if (handleUnopTruthNotTrivial(val))
-        // we are done
-        return;
-
-    // the value we got msut be VAL_TRUE, VAL_FALSE, or an unknown value
-#ifndef NDEBUG
-    const EUnknownValue code = heap.valGetUnknown(val);
-    CL_BREAK_IF(UV_KNOWN == code || UV_ABSTRACT == code);
-#else
-    (void) clt;
-#endif
-
-    const TValueId origValue = val;
-    val = heap.valDuplicateUnknown(origValue);
-
-    // FIXME: not tested
-#ifndef NDEBUG
-    CL_TRAP;
-#endif
-    heap.addEqIf(origValue, val, VAL_TRUE, /* neg */ true);
-}
-
 template <class THeap>
 TValueId handleOpCmpBool(THeap &heap, enum cl_binop_e code,
                          const struct cl_type *dstClt, TValueId v1, TValueId v2)
@@ -922,10 +875,6 @@ TValueId handleOpCmpBool(THeap &heap, enum cl_binop_e code,
 
     CL_BREAK_IF(v1 < 0 || v2 < 0);
 
-    // FIXME: not tested
-#ifndef NDEBUG
-    CL_TRAP;
-#endif
     bool result;
     if (!heap.proveEq(&result, v1, v2))
         return heap.valCreateUnknown(UV_UNKNOWN, dstClt);
@@ -1178,23 +1127,20 @@ struct OpHandler</* unary */ 1> {
                              const struct cl_type *clt[1 + /* dst type */ 1])
     {
         SymHeap &sh = proc.heap_;
-        TValueId val = rhs[0];
+        const TValueId val = rhs[0];
 
         const enum cl_unop_e code = static_cast<enum cl_unop_e>(iCode);
         switch (code) {
             case CL_UNOP_TRUTH_NOT:
-                handleUnopTruthNot(sh, val, clt[0]);
-                // fall through!
+                return handleOpCmpBool(sh, CL_BINOP_EQ, clt[1], VAL_FALSE, val);
 
             case CL_UNOP_ASSIGN:
-                break;
+                return val;
 
             default:
                 CL_WARN_MSG(proc.lw_, "unary operator not implemented yet");
                 return sh.valCreateUnknown(UV_UNKNOWN, clt[/* dst */ 1]);
         }
-
-        return val;
     }
 };
 
