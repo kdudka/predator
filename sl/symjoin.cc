@@ -1124,6 +1124,7 @@ void scheduleSegAddr(
 }
 
 bool insertSegmentClone(
+        bool                    *pResult,
         SymJoinCtx              &ctx,
         const TValueId          v1,
         const TValueId          v2,
@@ -1179,18 +1180,22 @@ bool insertSegmentClone(
             // clone unknown value
             const struct cl_type *const clt = shGt.valType(valGt);
             const TValueId vDst = ctx.dst.valCreateUnknown(code, clt);
-            if (defineValueMapping(ctx, vp.first, vp.second, vDst))
-                return false;
+            if (0 < valLt && defineValueMapping(ctx, vp.first, vp.second, vDst))
+                continue;
         }
-        else if (!insertSegmentCloneHelper(ctx, shGt, valGt, objMapGt, action))
-            // clone failed
-            return false;
+        else if (insertSegmentCloneHelper(ctx, shGt, valGt, objMapGt, action))
+            continue;
+
+        // clone failed
+        *pResult = false;
+        return true;
     }
 
     // schedule the next object in the row
     const TValueId valNext1 = (isGt1) ? nextGt : nextLt;
     const TValueId valNext2 = (isGt2) ? nextGt : nextLt;
     considerValSchedule(ctx, valNext1, valNext2, OBJ_INVALID, OBJ_INVALID);
+    *pResult = true;
     return true;
 }
 
@@ -1222,8 +1227,7 @@ bool joinAbstractValues(
         // such values could be hardly used as reliable anchors
         return false;
 
-    *pResult = insertSegmentClone(ctx, v1, v2, subStatus);
-    return true;
+    return insertSegmentClone(pResult, ctx, v1, v2, subStatus);
 }
 
 bool joinValuePair(SymJoinCtx &ctx, const TValueId v1, const TValueId v2) {
