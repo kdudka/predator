@@ -538,6 +538,7 @@ void SymPlot::Private::digNext(TObjId obj) {
         case OK_PART:
             return;
 
+        case OK_MAY_EXIST:
         case OK_SLS:
         case OK_DLS:
             break;
@@ -590,6 +591,12 @@ void SymPlot::Private::openCluster(TObjId obj) {
                 ? "red"
                 : "black";
             pw = "1.0";
+            break;
+
+        case OK_MAY_EXIST:
+            label += "MAY_EXIST";
+            color = "blue";
+            pw = "3.0";
             break;
 
         case OK_HEAD:

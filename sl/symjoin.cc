@@ -933,7 +933,8 @@ bool followObjPair(
 bool followValuePair(
         SymJoinCtx              &ctx,
         const TValueId          v1,
-        const TValueId          v2)
+        const TValueId          v2,
+        const bool              readOnly)
 {
     const struct cl_type *clt1, *clt2;
     const int cVal1 = ctx.sh1.valGetCustom(&clt1, v1);
@@ -951,6 +952,11 @@ bool followValuePair(
             return false;
         }
 
+        if (readOnly) {
+            return checkValueMapping(ctx, v1, v2,
+                                     /* allowUnknownMapping */ true);
+        }
+
         const TValueId vDst = ctx.dst.valCreateCustom(clt, cVal1);
         return defineValueMapping(ctx, v1, v2, vDst);
     }
@@ -961,6 +967,12 @@ bool followValuePair(
         SJ_DEBUG("<-- target validity mismatch: " << SJ_VALP(v1, v2)
                  << " -> " << SJ_OBJP(o1, o2));
         return false;
+    }
+
+    if (readOnly) {
+        // shell-scan only!
+        return checkValueMapping(ctx, v1, v2,
+                                 /* allowUnknownMapping */ true);
     }
 
     if (0 < o1)
@@ -1246,6 +1258,69 @@ bool joinAbstractValues(
     return insertSegmentClone(pResult, ctx, v1, v2, subStatus);
 }
 
+class MayExistVisitor {
+    private:
+        SymJoinCtx              ctx_;
+        const EJoinStatus       action_;
+        const TValueId          valRef_;
+        TFieldIdxChain          icNext_;
+
+    public:
+        MayExistVisitor(
+                SymJoinCtx          &ctx,
+                const EJoinStatus   action,
+                const TValueId      valRef):
+            ctx_(ctx),
+            action_(action),
+            valRef_(valRef)
+        {
+            CL_BREAK_IF(JS_USE_SH1 != action && JS_USE_SH2 != action);
+        }
+
+        bool operator()(
+                const SymHeap   &sh,
+                const TObjId    sub,
+                TFieldIdxChain  ic)
+        {
+            const TValueId val = sh.valueOf(sub);
+            const TValueId v1 = (JS_USE_SH1 == action_) ? val : valRef_;
+            const TValueId v2 = (JS_USE_SH2 == action_) ? val : valRef_;
+            if (!followValuePair(ctx_, v1, v2, /* read-only */ true))
+                return /* continue */ true;
+
+            icNext_ = ic;
+            return /* continue */ false;
+        }
+};
+
+bool mayExistFallback(
+        SymJoinCtx              &ctx,
+        const TValueId          v1,
+        const TValueId          v2,
+        const EJoinStatus       action)
+{
+    const bool use1 = (JS_USE_SH1 == action);
+    const bool use2 = (JS_USE_SH2 == action);
+    CL_BREAK_IF(use1 == use2);
+
+    const SymHeap &sh = (use1) ? ctx.sh1 : ctx.sh2;
+    const TValueId val = (use1) ? v1 : v2;
+    const TObjId target = objRootByVal(sh, val);
+    if (target <= 0 || !isComposite(sh.objType(target)))
+        // non-starter
+        return false;
+
+    const TValueId ref = (use2) ? v1 : v2;
+    MayExistVisitor visitor(ctx, action, ref);
+    if (traverseSubObjsIc(sh, target, visitor))
+        // no match
+        return false;
+
+    // TODO: try to introduce OK_MAY_EXIST
+    CL_BREAK_IF(debugSymJoin);
+    return false;
+}
+
 bool joinValuePair(SymJoinCtx &ctx, const TValueId v1, const TValueId v2) {
     const EUnknownValue code1 = ctx.sh1.valGetUnknown(v1);
     const EUnknownValue code2 = ctx.sh2.valGetUnknown(v2);
@@ -1271,7 +1346,11 @@ bool joinValuePair(SymJoinCtx &ctx, const TValueId v1, const TValueId v2) {
         return false;
     }
 
-    return followValuePair(ctx, v1, v2);
+    if (followValuePair(ctx, v1, v2, /* read-only */ true))
+        return followValuePair(ctx, v1, v2, /* read-only */ false);
+
+    return mayExistFallback(ctx, v1, v2, JS_USE_SH1)
+        || mayExistFallback(ctx, v1, v2, JS_USE_SH2);
 }
 
 bool joinPendingValues(SymJoinCtx &ctx) {

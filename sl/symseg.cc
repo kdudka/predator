@@ -100,18 +100,23 @@ unsigned dlSegMinLength(const SymHeap &sh, TObjId dls) {
 }
 
 unsigned segMinLength(const SymHeap &sh, TObjId seg) {
-    const EObjKind kind = sh.objKind(seg);
+    EObjKind kind = sh.objKind(seg);
+    if (OK_HEAD == kind) {
+        seg = objRoot(sh, seg);
+        kind = sh.objKind(seg);
+    }
+
     switch (kind) {
         case OK_CONCRETE:
         case OK_PART:
+        case OK_HEAD:
             CL_TRAP;
+
+        case OK_MAY_EXIST:
+            return 0;
 
         case OK_SLS:
             break;
-
-        case OK_HEAD:
-            seg = objRoot(sh, seg);
-            // fall through!
 
         case OK_DLS:
             return dlSegMinLength(sh, seg);
@@ -148,21 +153,24 @@ void segSetProto(SymHeap &sh, TObjId seg, bool isProto) {
 }
 
 void segDestroy(SymHeap &sh, TObjId seg) {
-    const EObjKind kind = sh.objKind(seg);
+    EObjKind kind = sh.objKind(seg);
+    if (OK_HEAD == kind) {
+        seg = objRoot(sh, seg);
+        kind = sh.objKind(seg);
+    }
+
     switch (kind) {
         case OK_CONCRETE:
         case OK_PART:
+        case OK_HEAD:
             // invalid call of segDestroy()
             CL_TRAP;
-
-        case OK_HEAD:
-            seg = objRoot(sh, seg);
-            // fall through!
 
         case OK_DLS:
             sh.objDestroy(dlSegPeer(sh, seg));
             // fall through!
 
+        case OK_MAY_EXIST:
         case OK_SLS:
             sh.objDestroy(seg);
     }

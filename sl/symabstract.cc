@@ -543,6 +543,9 @@ void dlSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf)
 
     EObjKind kind = sh.objKind(o1);
     switch (kind) {
+        case OK_MAY_EXIST:
+            // TODO
+
         case OK_SLS:
         case OK_HEAD:
         case OK_PART:
@@ -790,6 +793,9 @@ void concretizeObj(SymHeap &sh, TValueId addr, TSymHeapList &todo) {
     // branch by SLS/DLS
     const EObjKind kind = sh.objKind(obj);
     switch (kind) {
+        case OK_MAY_EXIST:
+            // TODO
+
         case OK_CONCRETE:
         case OK_HEAD:
         case OK_PART:

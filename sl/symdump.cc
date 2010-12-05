@@ -91,6 +91,10 @@ void dump_kind(const SymHeap &heap, TObjId obj) {
             cout << "OK_CONCRETE";
             return;
 
+        case OK_MAY_EXIST:
+            cout << "OK_MAY_EXIST";
+            return;
+
         case OK_HEAD:
             cout << "OK_HEAD";
             return;
