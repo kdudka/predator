@@ -559,7 +559,7 @@ void SymPlot::Private::digNext(TObjId obj) {
 
     // store 'next' poitner object
     this->nexts.insert(objNext);
-    if (OK_SLS == kind)
+    if (OK_DLS != kind)
         return;
 
     const TObjId objPeer = subObjByChain(*this->heap, obj, bf.peer);

@@ -268,10 +268,13 @@ void segSetMinLength(SymHeap &sh, TObjId seg, unsigned len) {
             dlSegSetMinLength(sh, seg, len);
             break;
 
+        case OK_MAY_EXIST:
+            if (!len)
+                break;
+            // fall through!
+
         default:
-#ifndef NDEBUG
-            CL_TRAP;
-#endif
+            CL_BREAK_IF("ivalid call of segSetMinLength()");
             break;
     }
 }

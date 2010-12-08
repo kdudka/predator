@@ -741,12 +741,14 @@ bool joinProtoFlag(
     return false;
 }
 
+/// (NULL != icNext) means 'create OK_MAY_EXIST'
 bool createObject(
         SymJoinCtx              &ctx,
         const struct cl_type    *clt,
         const TObjId            root1,
         const TObjId            root2,
-        const EJoinStatus       action)
+        const EJoinStatus       action,
+        const TFieldIdxChain    *icNext = 0)
 {
     EObjKind kind;
     if (!joinObjKind(&kind, ctx, root1, root2, action))
@@ -759,6 +761,13 @@ bool createObject(
     bool isProto;
     if (!joinProtoFlag(&isProto, ctx, root1, root2))
         return false;
+
+    if (icNext) {
+        // we are asked to introduce OK_MAY_EXIST
+        CL_BREAK_IF(OK_CONCRETE != kind);
+        kind = OK_MAY_EXIST;
+        bf.next = *icNext;
+    }
 
     updateJoinStatus(ctx, action);
 
@@ -970,7 +979,7 @@ bool followValuePair(
     }
 
     if (readOnly) {
-        // shell-scan only!
+        // shallow scan only!
         return checkValueMapping(ctx, v1, v2,
                                  /* allowUnknownMapping */ true);
     }
@@ -1089,12 +1098,14 @@ read_only_ok:
     return true;
 }
 
-bool insertSegmentCloneHelper(
+/// (NULL != icNext) means 'introduce OK_MAY_EXIST'
+bool segmentCloneCore(
         SymJoinCtx                  &ctx,
         const SymHeap               &shGt,
         const TValueId              valGt,
         const SymJoinCtx::TObjMap   &objMapGt,
-        const EJoinStatus           action)
+        const EJoinStatus           action,
+        const TFieldIdxChain        *icNext)
 {
     const TObjId objGt = objRootByVal(shGt, valGt);
     if (objGt < 0)
@@ -1119,7 +1130,7 @@ bool insertSegmentCloneHelper(
 
     // clone the object
     ctx.tieBreaking.insert(TObjPair(root1, root2));
-    if (createObject(ctx, clt, root1, root2, action))
+    if (createObject(ctx, clt, root1, root2, action, icNext))
         return true;
 
     SJ_DEBUG("<-- insertSegmentClone: failed to create object "
@@ -1151,12 +1162,14 @@ void scheduleSegAddr(
     wl.schedule(vpPeer);
 }
 
+/// (NULL != icNext) means 'introduce OK_MAY_EXIST'
 bool insertSegmentClone(
         bool                    *pResult,
         SymJoinCtx              &ctx,
         const TValueId          v1,
         const TValueId          v2,
-        const EJoinStatus       action)
+        const EJoinStatus       action,
+        const TFieldIdxChain    *icNext = 0)
 {
     SJ_DEBUG(">>> insertSegmentClone" << SJ_VALP(v1, v2));
     const bool isGt1 = (JS_USE_SH1 == action);
@@ -1171,7 +1184,11 @@ bool insertSegmentClone(
         peer = dlSegPeer(shGt, seg);
 
     // resolve the 'next' pointer and check its validity
-    const TValueId nextGt = shGt.valueOf(nextPtrFromSeg(shGt, peer));
+    const TObjId nextPtr = (icNext)
+        ? subObjByChain(shGt, seg, *icNext)
+        : nextPtrFromSeg(shGt, peer);
+
+    const TValueId nextGt = shGt.valueOf(nextPtr);
     const TValueId nextLt = (isGt2) ? v1 : v2;
     if (!checkValueMapping(ctx, 
                 (isGt1) ? nextGt : nextLt,
@@ -1185,9 +1202,10 @@ bool insertSegmentClone(
 
     const SymJoinCtx::TObjMap &objMapGt = (isGt1) ? ctx.objMap1 : ctx.objMap2;
 
+    const TValueId segGtAt = shGt.placedAt(seg);
     TValPair vp(
-            (isGt1) ? shGt.placedAt(seg) : VAL_INVALID,
-            (isGt2) ? shGt.placedAt(seg) : VAL_INVALID);
+            (isGt1) ? segGtAt : VAL_INVALID,
+            (isGt2) ? segGtAt : VAL_INVALID);
 
     scheduleSegAddr(ctx.wl, shGt, seg, peer, action);
     while (ctx.wl.next(vp)) {
@@ -1203,6 +1221,10 @@ bool insertSegmentClone(
             // do not go byond the segment, just follow its data
             continue;
 
+        if (segGtAt != valGt)
+            // OK_MAY_EXIST is applicable only on the first object
+            icNext = 0;
+
         const EUnknownValue code = shGt.valGetUnknown(valGt);
         if (UV_UNINITIALIZED == code || UV_UNKNOWN == code) {
             // clone unknown value
@@ -1211,7 +1233,7 @@ bool insertSegmentClone(
             if (0 < valLt && defineValueMapping(ctx, vp.first, vp.second, vDst))
                 continue;
         }
-        else if (insertSegmentCloneHelper(ctx, shGt, valGt, objMapGt, action))
+        else if (segmentCloneCore(ctx, shGt, valGt, objMapGt, action, icNext))
             continue;
 
         // clone failed
@@ -1277,6 +1299,10 @@ class MayExistVisitor {
             CL_BREAK_IF(JS_USE_SH1 != action && JS_USE_SH2 != action);
         }
 
+        TFieldIdxChain icNext() const {
+            return icNext_;
+        }
+
         bool operator()(
                 const SymHeap   &sh,
                 const TObjId    sub,
@@ -1303,6 +1329,12 @@ bool mayExistFallback(
     const bool use2 = (JS_USE_SH2 == action);
     CL_BREAK_IF(use1 == use2);
 
+    const bool hasMapping1 = hasKey(ctx.valMap1[/* ltr */ 0], v1);
+    const bool hasMapping2 = hasKey(ctx.valMap2[/* ltr */ 0], v2);
+    if ((hasMapping1 != hasMapping2) && (hasMapping1 == use1))
+        // try it the other way around
+        return false;
+
     const SymHeap &sh = (use1) ? ctx.sh1 : ctx.sh2;
     const TValueId val = (use1) ? v1 : v2;
     const TObjId target = objRootByVal(sh, val);
@@ -1316,9 +1348,11 @@ bool mayExistFallback(
         // no match
         return false;
 
-    // TODO: try to introduce OK_MAY_EXIST
-    CL_BREAK_IF(debugSymJoin);
-    return false;
+    const TFieldIdxChain icNext(visitor.icNext());
+    bool result = false;
+    const bool ok = insertSegmentClone(&result, ctx, v1, v2, action, &icNext);
+    CL_BREAK_IF(!ok);
+    return result;
 }
 
 bool joinValuePair(SymJoinCtx &ctx, const TValueId v1, const TValueId v2) {
