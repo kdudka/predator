@@ -764,7 +764,7 @@ bool createObject(
 
     if (icNext) {
         // we are asked to introduce OK_MAY_EXIST
-        CL_BREAK_IF(OK_CONCRETE != kind);
+        CL_BREAK_IF(OK_CONCRETE != kind && OK_MAY_EXIST != kind);
         kind = OK_MAY_EXIST;
         bf.next = *icNext;
     }
@@ -1325,6 +1325,10 @@ bool mayExistFallback(
         const TValueId          v2,
         const EJoinStatus       action)
 {
+    if (!ctx.joiningData())
+        // TODO: consider usage of OK_MAY_EXIST also in join of states?
+        return false;
+
     const bool use1 = (JS_USE_SH1 == action);
     const bool use2 = (JS_USE_SH2 == action);
     CL_BREAK_IF(use1 == use2);
@@ -1350,8 +1354,11 @@ bool mayExistFallback(
 
     const TFieldIdxChain icNext(visitor.icNext());
     bool result = false;
+
     const bool ok = insertSegmentClone(&result, ctx, v1, v2, action, &icNext);
     CL_BREAK_IF(!ok);
+    (void) ok;
+
     return result;
 }
 

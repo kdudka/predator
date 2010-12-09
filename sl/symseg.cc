@@ -141,14 +141,12 @@ void segSetProto(SymHeap &sh, TObjId seg, bool isProto) {
             // fall through
 
         case OK_SLS:
+        case OK_MAY_EXIST:
             sh.objSetProto(seg, isProto);
             break;
 
         default:
-#ifndef NDEBUG
-            CL_TRAP;
-#endif
-            break;
+            CL_BREAK_IF("ivalid call of segSetProto()");
     }
 }
 

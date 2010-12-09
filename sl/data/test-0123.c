@@ -112,7 +112,6 @@ void create_top(struct list_head *top)
 {
     insert_top(top, 0);
     insert_top(top, 1);
-#if 0
     insert_top(top, 0);
     insert_top(top, 1);
 
@@ -122,7 +121,6 @@ void create_top(struct list_head *top)
         insert_top(top, 0);
         insert_top(top, 1);
     }
-#endif
 }
 
 int main()
@@ -132,7 +130,6 @@ int main()
     create_top(&top);
 
     ___sl_plot(NULL);
-    ___sl_break();
     //destroy_top(&top);
 
     return 0;
