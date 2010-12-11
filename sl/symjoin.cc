@@ -692,6 +692,31 @@ bool joinSegBinding(
     return false;
 }
 
+bool considerImplicitPrototype(
+        const SymJoinCtx        &ctx,
+        const TObjId            root1,
+        const TObjId            root2)
+{
+    const bool isProto1 = ctx.sh1.objIsProto(root1);
+    const bool isProto2 = ctx.sh2.objIsProto(root2);
+    CL_BREAK_IF(isProto1 == isProto2);
+    (void) isProto1;
+
+    const SymHeap &sh = (isProto2) ? ctx.sh1 : ctx.sh2;
+    const TObjId root = (isProto2) ? root1 : root2;
+
+    SymHeap::TContObj refs;
+    gatherPointingObjects(sh, refs, root, /* toInsideOnly */ false);
+    BOOST_FOREACH(const TObjId obj, refs) {
+        if (OK_CONCRETE != sh.objKind(obj))
+            return false;
+    }
+
+    SJ_DEBUG("P-P considerImplicitPrototype() matches a pair of objects: "
+             << SJ_OBJP(root1, root2));
+    return true;
+}
+
 bool joinProtoFlag(
         bool                    *pDst,
         const SymJoinCtx        &ctx,
@@ -712,7 +737,7 @@ bool joinProtoFlag(
     if (ctx.sh2.objIsProto(root2) == *pDst)
         return true;
 
-    if (ctx.joiningData()) {
+    if (ctx.joiningData() || considerImplicitPrototype(ctx, root1, root2)) {
         *pDst = true;
         return true;
     }
