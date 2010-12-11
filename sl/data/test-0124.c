@@ -132,9 +132,9 @@ static void seq_destroy(struct list *data)
 
         struct node *node = data->slist;
         while (node) {
-            struct node *next = node->next;
+            struct node *snext = node->next;
             free(node);
-            node = next;
+            node = snext;
         }
 
         free(data);
@@ -142,7 +142,7 @@ static void seq_destroy(struct list *data)
     }
 }
 
-static void seq_sort_push_one(struct node ***dst,
+static void merge_single_node(struct node ***dst,
                               struct node **data)
 {
     // pick up the current item and jump to the next one
@@ -155,32 +155,27 @@ static void seq_sort_push_one(struct node ***dst,
     *dst = &node->next;
 }
 
-static void seq_sort_pair_core(struct node **dst,
-                               struct node *data,
-                               struct node *next)
+static void merge_pair_core(struct node **dst,
+                            struct node *sub1,
+                            struct node *sub2)
 {
     // merge two sorted sub-lists into one
-    while (data || next) {
-        if (next && (!data || next->value < data->value))
-            seq_sort_push_one(&dst, &next);
+    while (sub1 || sub2) {
+        if (!sub2 || (sub1 && sub1->value < sub2->value))
+            merge_single_node(&dst, &sub1);
         else
-            seq_sort_push_one(&dst, &data);
+            merge_single_node(&dst, &sub2);
     }
 }
 
-static void seq_sort_pair(struct list **dst,
-                          struct list *data,
-                          struct list *next)
+static void merge_pair(struct list **dst,
+                       struct list *data,
+                       struct list *next)
 {
-    // allocate a new empty sub-list for the result
-    struct list *list = malloc(sizeof *list);
-    if (!list)
-        abort();
-
     // merge the given pair of sub-lists and insert the result into 'dst'
-    list->next = *dst;
-    *dst = list;
-    seq_sort_pair_core(&list->slist, data->slist, next->slist);
+    merge_pair_core(&data->slist, data->slist, next->slist);
+    data->next = *dst;
+    *dst = data;
 }
 
 static struct list* seq_sort_core(struct list *data)
@@ -197,10 +192,9 @@ static struct list* seq_sort_core(struct list *data)
         }
 
         // take the current sub-list and the next one and merge them into one
-        seq_sort_pair(&dst, data, next);
+        merge_pair(&dst, data, next);
 
-        // free the just processed pair of sub-lists and jump to the next one
-        free(data);
+        // free the just processed sub-list and jump to the next pair
         data = next->next;
         free(next);
     }
