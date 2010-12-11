@@ -476,13 +476,23 @@ bool /* complete */ SymExecEngine::execBlock() {
     return true;
 }
 
+void joinNewResults(
+        SymHeapList             &dst,
+        const SymState          &src)
+{
+    SymHeapUnion all;
+    all.swap(dst);
+    all.SymState::insert(src);
+    all.swap(dst);
+}
+
 bool /* complete */ SymExecEngine::run() {
     const CodeStorage::Fnc *fnc = bt_.topFnc();
     const LocationWriter lw(&fnc->def.loc);
 
     if (waiting_) {
-        // pick up the results of the call
-        nextLocalState_.insert(callResults_);
+        // pick up results of the pending call
+        joinNewResults(nextLocalState_, callResults_);
 
         // we're on the way from a just completed function call...
         if (!this->execBlock())

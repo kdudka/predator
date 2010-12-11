@@ -307,7 +307,7 @@ class SymHeapCore {
         /**
          * pick up all heap predicates that can be fully mapped by valMap into
          * ref and check if they have their own reflection in ref
-         * @param instance of another symbolic heap
+         * @param ref instance of another symbolic heap
          * @param valMap an (injective) mapping of values from this symbolic
          * heap into the symbolic heap that is given by ref
          * @return return true if all such predicates have their reflection in
