@@ -56,11 +56,6 @@
 #define DEBUG_SYMJOIN                       0
 
 /**
- * if 1, define TObjId and TValueId is integers (makes debugging easier)
- */
-#define DEBUG_SYMID_FORCE_INT               0
-
-/**
  * if 1, SymState plots heap graphs per each heap comparison (expensive)
  */
 #define DEBUG_SYMSTATE                      0

@@ -1172,8 +1172,7 @@ class CVarMap {
                 // gl variable explicitly requested
                 return (found)
                     ? iter->second
-                    // avoid a compile-time warning with DEBUG_SYMID_FORCE_INT
-                    : static_cast<TObjId>(OBJ_INVALID);
+                    : OBJ_INVALID;
             }
 
             // automatic fallback to gl variable

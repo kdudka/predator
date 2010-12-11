@@ -338,13 +338,8 @@ bool checkValueMapping(
         // we have not enough info yet
         return allowUnknownMapping;
 
-    const TValueId vDst1 = (hasMapping1)
-        ? i1->second
-        : static_cast<TValueId>(VAL_INVALID);
-
-    const TValueId vDst2 = (hasMapping2)
-        ? i2->second
-        : static_cast<TValueId>(VAL_INVALID);
+    const TValueId vDst1 = (hasMapping1) ? i1->second : VAL_INVALID;
+    const TValueId vDst2 = (hasMapping2) ? i2->second : VAL_INVALID;
 
     if (hasMapping1 && hasMapping1 && (vDst1 == vDst2))
         // mapping already known and known to be consistent
@@ -1107,13 +1102,8 @@ bool insertSegmentCloneHelper(
              ", clt = " << *clt <<
              ", action = " << action);
 
-    const TObjId root1 = (JS_USE_SH1 == action)
-        ? objGt
-        : static_cast<TObjId>(OBJ_INVALID);
-
-    const TObjId root2 = (JS_USE_SH2 == action)
-        ? objGt
-        : static_cast<TObjId>(OBJ_INVALID);
+    const TObjId root1 = (JS_USE_SH1 == action) ? objGt : OBJ_INVALID;
+    const TObjId root2 = (JS_USE_SH2 == action) ? objGt : OBJ_INVALID;
 
     // clone the object
     ctx.tieBreaking.insert(TObjPair(root1, root2));
@@ -1134,19 +1124,18 @@ void scheduleSegAddr(
         const EJoinStatus       action)
 {
     CL_BREAK_IF(JS_USE_SH1 != action && JS_USE_SH2 != action);
-    static const TValueId valInvalid = static_cast<TValueId>(VAL_INVALID);
 
     const TValPair vpSeg(
-            (JS_USE_SH1 == action) ? shGt.placedAt(seg) : valInvalid,
-            (JS_USE_SH2 == action) ? shGt.placedAt(seg) : valInvalid);
+            (JS_USE_SH1 == action) ? shGt.placedAt(seg) : VAL_INVALID,
+            (JS_USE_SH2 == action) ? shGt.placedAt(seg) : VAL_INVALID);
     wl.schedule(vpSeg);
 
     if (seg == peer)
         return;
 
     const TValPair vpPeer(
-            (JS_USE_SH1 == action) ? shGt.placedAt(peer) : valInvalid,
-            (JS_USE_SH2 == action) ? shGt.placedAt(peer) : valInvalid);
+            (JS_USE_SH1 == action) ? shGt.placedAt(peer) : VAL_INVALID,
+            (JS_USE_SH2 == action) ? shGt.placedAt(peer) : VAL_INVALID);
     wl.schedule(vpPeer);
 }
 
@@ -1185,8 +1174,8 @@ bool insertSegmentClone(
     const SymJoinCtx::TObjMap &objMapGt = (isGt1) ? ctx.objMap1 : ctx.objMap2;
 
     TValPair vp(
-            (isGt1) ? shGt.placedAt(seg) : static_cast<TValueId>(VAL_INVALID),
-            (isGt2) ? shGt.placedAt(seg) : static_cast<TValueId>(VAL_INVALID));
+            (isGt1) ? shGt.placedAt(seg) : VAL_INVALID,
+            (isGt2) ? shGt.placedAt(seg) : VAL_INVALID);
 
     scheduleSegAddr(ctx.wl, shGt, seg, peer, action);
     while (ctx.wl.next(vp)) {
