@@ -104,6 +104,46 @@ static struct AbstractionThreshold dlsThreshold = {
     /* spareSuffix */ 0
 };
 
+// visitor
+struct UnknownValuesDuplicator {
+    std::set<TObjId> ignoreList;
+
+    bool operator()(SymHeap &sh, TObjId obj) const {
+        if (hasKey(ignoreList, obj))
+            return /* continue */ true;
+
+        const TValueId valOld = sh.valueOf(obj);
+        if (valOld <= 0)
+            return /* continue */ true;
+
+        const EUnknownValue code = sh.valGetUnknown(valOld);
+        switch (code) {
+            case UV_ABSTRACT:
+            case UV_KNOWN:
+                return /* continue */ true;
+
+            case UV_UNKNOWN:
+            case UV_UNINITIALIZED:
+                break;
+        }
+
+        // duplicate unknown value
+        const TValueId valNew = sh.valDuplicateUnknown(valOld);
+        sh.objSetValue(obj, valNew);
+
+        return /* continue */ true;
+    }
+};
+
+// when concretizing an object, we need to duplicate all _unknown_ values
+void duplicateUnknownValues(SymHeap &sh, TObjId obj) {
+    UnknownValuesDuplicator visitor;
+    buildIgnoreList(visitor.ignoreList, sh, obj);
+
+    // traverse all sub-objects
+    traverseSubObjs(sh, obj, visitor, /* leavesOnly */ true);
+}
+
 void detachClonedPrototype(
         SymHeap                 &sh,
         const TObjId            proto,
@@ -149,6 +189,8 @@ TObjId protoClone(SymHeap &sh, const TObjId proto) {
         clone = sh.objDup(proto);
         sh.objSetProto(clone, false);
     }
+
+    duplicateUnknownValues(sh, clone);
 
     return clone;
 }
@@ -254,7 +296,7 @@ void cloneGenericPrototype(
 }
 
 // visitor
-struct UnknownValuesDuplicator {
+struct ProtoCloner {
     std::set<TObjId> ignoreList;
     TObjId rootDst;
     TObjId rootSrc;
@@ -267,14 +309,11 @@ struct UnknownValuesDuplicator {
         if (valOld <= 0)
             return /* continue */ true;
 
-        TValueId valNew = VAL_INVALID;
         const EUnknownValue code = sh.valGetUnknown(valOld);
         switch (code) {
             case UV_UNKNOWN:
             case UV_UNINITIALIZED:
-                // duplicate unknown value
-                valNew = sh.valDuplicateUnknown(valOld);
-                sh.objSetValue(obj, valNew);
+                return /* continue */ true;
 
             case UV_ABSTRACT:
             case UV_KNOWN:
@@ -344,9 +383,10 @@ void abstractNonMatchingValues(SymHeap &sh, TObjId src, TObjId dst,
     sh.pack();
 }
 
-// when concretizing an object, we need to duplicate all _unknown_ values
-void duplicateUnknownValues(SymHeap &sh, TObjId obj, TObjId dup) {
-    UnknownValuesDuplicator visitor;
+void clonePrototypes(SymHeap &sh, TObjId obj, TObjId dup) {
+    duplicateUnknownValues(sh, obj);
+
+    ProtoCloner visitor;
     visitor.rootDst = obj;
     visitor.rootSrc = dup;
     buildIgnoreList(visitor.ignoreList, sh, obj);
@@ -812,7 +852,7 @@ void concretizeObj(SymHeap &sh, TValueId addr, TSymHeapList &todo) {
     }
 
     // duplicate all unknown values, to keep the prover working
-    duplicateUnknownValues(sh, obj, aoDup);
+    clonePrototypes(sh, obj, aoDup);
 
     // concretize self and recover the list
     const TObjId ptrNext = subObjByChain(sh, obj, (OK_SLS == kind)
