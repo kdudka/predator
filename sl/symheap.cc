@@ -1980,12 +1980,15 @@ bool SymHeap::proveEq(bool *result, TValueId valA, TValueId valB) const {
     code = this->valGetUnknown(valNext);
     switch (code) {
         case UV_ABSTRACT:
-            if (valA != VAL_NULL
-                    || !segMinLength(*this, this->pointsTo(valNext)))
+            if (valA == VAL_NULL
+                    && segMinLength(*this, this->pointsTo(valNext)))
             {
+                *result = false;
+                return true;
+            }
+            else {
                 CL_WARN("SymHeap::proveEq() "
                         "does not see through a chain of segments");
-                return false;
             }
             // fall through!
 
