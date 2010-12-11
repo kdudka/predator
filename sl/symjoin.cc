@@ -1449,6 +1449,10 @@ bool setDstValues(SymJoinCtx &ctx, const std::set<TObjId> *blackList = 0) {
         blackList = &emptyBlackList;
 
     BOOST_FOREACH(TMap::const_reference rItem, rMap) {
+        if (!ctx.dst.objType(rItem.first))
+            // do not set value of anonymous objects
+            continue;
+
         if (!setDstValuesCore(ctx, rItem, blackList))
             return false;
     }

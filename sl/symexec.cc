@@ -480,7 +480,7 @@ void joinNewResults(
         SymHeapList             &dst,
         const SymState          &src)
 {
-    SymHeapUnion all;
+    SymStateWithJoin all;
     all.swap(dst);
     all.SymState::insert(src);
     all.swap(dst);
