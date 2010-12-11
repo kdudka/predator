@@ -114,11 +114,10 @@ static void seq_read(struct list **data)
 static void seq_write(struct list *data)
 {
     struct iterator iter;
-    struct node *node;
-
     setup_iterator(&iter, data);
     printf("seq_write:");
 
+    struct node *node;
     while ((node = get_next(&iter)))
         printf(" %d", node->value);
 
@@ -155,9 +154,9 @@ static void merge_single_node(struct node ***dst,
     *dst = &node->next;
 }
 
-static void merge_pair_core(struct node **dst,
-                            struct node *sub1,
-                            struct node *sub2)
+static void merge_pair(struct node **dst,
+                       struct node *sub1,
+                       struct node *sub2)
 {
     // merge two sorted sub-lists into one
     while (sub1 || sub2) {
@@ -166,16 +165,6 @@ static void merge_pair_core(struct node **dst,
         else
             merge_single_node(&dst, &sub2);
     }
-}
-
-static void merge_pair(struct list **dst,
-                       struct list *data,
-                       struct list *next)
-{
-    // merge the given pair of sub-lists and insert the result into 'dst'
-    merge_pair_core(&data->slist, data->slist, next->slist);
-    data->next = *dst;
-    *dst = data;
 }
 
 static struct list* seq_sort_core(struct list *data)
@@ -192,7 +181,9 @@ static struct list* seq_sort_core(struct list *data)
         }
 
         // take the current sub-list and the next one and merge them into one
-        merge_pair(&dst, data, next);
+        merge_pair(&data->slist, data->slist, next->slist);
+        data->next = dst;
+        dst = data;
 
         // free the just processed sub-list and jump to the next pair
         data = next->next;

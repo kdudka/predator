@@ -255,6 +255,8 @@ Linux lists
     test-0122.c - the most trivial case of Linux DLS abstraction
                 - once used as demo in slides about symdiscover
 
+    test-0123.c - Linux DLS with zero or one nested items in each node
+
 
 Show-case
 =========
