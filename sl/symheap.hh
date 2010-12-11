@@ -188,10 +188,6 @@ class SymHeapCore {
         void objDestroy(TObjId obj, TObjId kind);
 
         friend TValueId handleValue(DeepCopyData &dc, TValueId valSrc);
-        friend bool followValuePair(
-                SymJoinCtx              &ctx,
-                const TValueId          v1,
-                const TValueId          v2);
 
     public:
         /**

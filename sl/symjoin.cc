@@ -952,13 +952,15 @@ bool followValuePair(
     if (!joinValClt(&clt, ctx, v1, v2))
         return false;
 
-    SymHeap &dst = ctx.dst;
-    const TObjId objTmp = dst.objCreate(clt);
-    const TValueId vDst = dst.placedAt(objTmp);
+    CVar cv;
+    if (OBJ_LOST == o1)
+        // we use (0 == uid) as universal stack object
+        cv.uid = 0;
 
-    // FIXME: avoid using of friend?
-    SymHeapCore &core = dynamic_cast<SymHeapCore &>(dst);
-    core.objDestroy(objTmp, /* OBJ_DELETED/OBJ_LOST */ o1);
+    SymHeap &dst = ctx.dst;
+    const TObjId objTmp = dst.objCreate(clt, cv);
+    const TValueId vDst = dst.placedAt(objTmp);
+    dst.objDestroy(objTmp);
     return defineValueMapping(ctx, v1, v2, vDst);
 }
 
