@@ -1,3 +1,4 @@
+ChangeLog
 cl_build/
 fa_build/
 fwnull_build/
@@ -9,5 +10,3 @@ gcc-src
 invader-1_1/
 invader.zip
 sl_build/
-sparse/
-ssd/

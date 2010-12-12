@@ -21,7 +21,7 @@ CTEST           ?= ctest
 .PHONY: all clean distclean distcheck install \
 	version_cl.h
 
-all: version_cl.h ../ssd
+all: version_cl.h
 	mkdir -p ../cl_build
 	cd ../cl_build && $(CMAKE) ../cl
 	$(MAKE) -C ../cl_build
@@ -51,15 +51,3 @@ distcheck: distclean
 
 install: all
 	$(MAKE) -C ../cl_build install
-
-#../sparse:
-#	$(MAKE) -C .. sparse
-#
-#../sparse/libsparse.a: ../sparse
-#	$(MAKE) -C ../sparse
-
-../ssd:
-	$(MAKE) -C .. ssd
-
-#../ssd/util/faketty.so: ../ssd/util/faketty.c
-#	$(MAKE) -C ../ssd/util
