@@ -39,7 +39,7 @@ version_cl.h:
 		fi
 
 clean:
-	test -d ../.git && rm -f version_cl.h
+	if test -d ../.git; then rm -f version_cl.h; fi
 	if test -e ../cl_build/Makefile; then $(MAKE) clean -C ../cl_build; fi
 
 distclean: clean
