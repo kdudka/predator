@@ -5,7 +5,7 @@ FAQ                 Frequently Asked Questions (and corresponding answers)
 Makefile            root Makefile, among others useful to build gcc
 cl/                 source codes of Code Listener and its gcc front-end
 cl/README           more specific README for the source codes of cl
-fa/		    Jiri Simacek's pet project
+fa/                 Jiri Simacek's pet project
 invader-extras/     downstream patches for Invader
 ocaml/mltags        script generating tags for ocaml sources
 seplog/             original implementation of symbolic heap by Petr Peringer

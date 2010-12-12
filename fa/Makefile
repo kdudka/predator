@@ -31,7 +31,6 @@ check: all
 	cd ../fa_build && $(CTEST) --output-on-failure
 
 clean:
-	rm -f version.h
 	if test -e ../fa_build/Makefile; then \
 		$(MAKE) clean -C ../fa_build; \
 	fi

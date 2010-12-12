@@ -39,8 +39,7 @@ version_cl.h:
 		fi
 
 clean:
-	rm -f version_cl.h
-	rm -f gcc/*.dot
+	test -d ../.git && rm -f version_cl.h
 	if test -e ../cl_build/Makefile; then $(MAKE) clean -C ../cl_build; fi
 
 distclean: clean
