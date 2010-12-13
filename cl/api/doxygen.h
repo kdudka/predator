@@ -57,7 +57,7 @@
  *
  * - internals: cl.hh, cl_decorator.hh, cl_factory.hh
  *      - ICodeListener
- *      - ClDecoratorBase
+ *      - ClFilterBase
  *      - ClFactory
  *
  * - configuration: config_cl.h
