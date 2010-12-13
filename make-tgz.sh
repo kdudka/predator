@@ -22,7 +22,7 @@ cd "${TMP}/${NAME}"                                 || die
 git init                                            || die
 git pull "$REPO" "$BRANCH"                          || die
 make ChangeLog                                      || die
-rm -rf .git                                         || die
+rm -rf .git make-tgz.sh                             || die
 cd ..                                               || die
 test -d "$NAME"                                     || die
 TGZ="${NAME}.tar.gz"                                || die

@@ -162,3 +162,10 @@ include/gcc: gcc-install/lib/gcc
 ChangeLog:
 	git log --pretty="format:%ad  %an%n%n%w(80,8,8)%B%n" --date=short > $@
 
+gcc-install/lib/gcc:
+	@echo "*** 'gcc-install/lib/gcc' does not exist.  If you want to proceed"
+	@echo "*** with standalone build of gcc, try 'make build_gcc' first.  If"
+	@echo "*** it does not help, consult ./FAQ.  If anything goes wrong,"
+	@echo "*** please submit a bug report to <idudka@fit.vutbr.cz>."
+	@echo
+	@false
