@@ -647,66 +647,32 @@ bool considerAbstraction(SymHeap                    &sh,
     return true;
 }
 
-void segReplaceRefs(SymHeap &sh, TValueId valOld, TValueId valNew) {
-    CL_BREAK_IF(UV_ABSTRACT != sh.valGetUnknown(valOld));
+void segReplaceRefs(SymHeap &sh, TObjId seg, TValueId valNext) {
+    const TObjId head = segHead(sh, seg);
+    const TValueId segAt = sh.placedAt(head);
+    sh.valReplace(segAt, valNext);
 
-    TObjId objOld = sh.pointsTo(valOld);
-    TObjId headOld = objOld;
-    sh.valReplace(valOld, valNew);
+    const int offHead = subOffsetIn(sh, seg, head);
+    CL_BREAK_IF(offHead < 0);
 
-    const EObjKind kind = sh.objKind(objOld);
-    switch (kind) {
-        case OK_SLS:
-        case OK_DLS:
-            headOld = segHead(sh, objOld);
-            if (headOld == objOld)
-                // no Linux lists involved
-                return;
-
-        case OK_HEAD:
-            break;
-
-        default:
-            CL_TRAP;
-    }
-
-    TObjId objNew = sh.pointsTo(valNew);
-    if (objNew < 0)
+    const TObjId next = sh.pointsTo( valNext);
+    if (next < 0)
         return;
 
-    const TFieldIdxChain icHead = sh.objBinding(objOld).head;
-    if (icHead.empty())
-        return;
+    // TODO: check types in debug build
+    SymHeap::TContObj refs;
+    gatherPointingObjects(sh, refs, seg, /* toInsideOnly */ false);
+    BOOST_FOREACH(const TObjId obj, refs) {
+        const TObjId target = sh.pointsTo(sh.valueOf(obj));
+        const struct cl_type *cltPtr = sh.objType(obj);
+        CL_BREAK_IF(target <= 0 || !cltPtr);
 
-    if (OK_HEAD == kind) {
-        objOld = subObjByInvChain(sh, objOld, icHead);
-        CL_BREAK_IF(objOld < 0);
+        const TObjId root = objRoot(sh, target);
+        const int off = subOffsetIn(sh, root, target) - offHead;
+        const TValueId val = addrQueryByOffset(sh, next, off, cltPtr);
 
-        const TValueId addrOld = sh.placedAt(objOld);
-        if (0 == sh.usedByCount(addrOld))
-            // root not used anyway
-            return;
-
-        objNew = subObjByInvChain(sh, objNew, icHead);
-        if (0 < objNew)
-            valNew = sh.placedAt(objNew);
-
-        else {
-            // attempt to create a virtual object
-            const int off = subOffsetIn(sh, objOld, headOld);
-            const SymHeapCore::TOffVal ov(valNew, -off);
-            valNew = sh.valCreateByOffset(ov);
-        }
-
-        sh.valReplace(sh.placedAt(objOld), valNew);
-    }
-    else {
-        // TODO: check this with a debugger at least once
-#ifndef NDEBUG
-        CL_TRAP;
-#endif
-        const TObjId headNew = subObjByChain(sh, objNew, icHead);
-        sh.valReplace(sh.placedAt(headOld), sh.placedAt(headNew));
+        // redirect!
+        sh.objSetValue(obj, val);
     }
 }
 
@@ -724,11 +690,13 @@ bool dlSegReplaceByConcrete(SymHeap &sh, TObjId obj, TObjId peer) {
     sh.objSetValue(peerPtr, valNext);
 
     // redirect all references originally pointing to peer to the current object
-    const TValueId addrSelf = sh.placedAt(obj);
-    const TValueId addrPeer = sh.placedAt(peer);
-    segReplaceRefs(sh, addrPeer, addrSelf);
+    redirectInboundEdges(sh,
+            /* pointingFrom */ OBJ_INVALID,
+            /* pointingTo   */ peer,
+            /* redirectTo   */ obj);
 
     // destroy peer, including all prototypes
+    const TValueId addrPeer = sh.placedAt(peer);
     REQUIRE_GC_ACTIVITY(sh, addrPeer, dlSegReplaceByConcrete);
 
     // concretize self
@@ -739,31 +707,33 @@ bool dlSegReplaceByConcrete(SymHeap &sh, TObjId obj, TObjId peer) {
     return true;
 }
 
-void spliceOutListSegmentCore(SymHeap &sh, TObjId obj, TObjId peer) {
+void spliceOutListSegmentCore(SymHeap &sh, TObjId seg, TObjId peer) {
     debugPlotInit("spliceOutListSegmentCore");
     debugPlot(sh);
 
+    // read valNext now as we may overwrite it during unlink of peer
     const TObjId next = nextPtrFromSeg(sh, peer);
     const TValueId valNext = sh.valueOf(next);
 
     TValueId peerAt = VAL_INVALID;
-    if (obj != peer) {
+    if (seg != peer) {
+        peerAt = sh.placedAt(peer);
+
         // OK_DLS --> unlink peer
-        const TFieldIdxChain icPrev = sh.objBinding(obj).next;
-        const TValueId valPrev = sh.valueOf(subObjByChain(sh, obj, icPrev));
-        peerAt = segHeadAddr(sh, peer);
-        segReplaceRefs(sh, peerAt, valPrev);
+        const TObjId prevPtr = nextPtrFromSeg(sh, seg);
+        const TValueId valPrev = sh.valueOf(prevPtr);
+        segReplaceRefs(sh, peer, valPrev);
     }
 
     // unlink self
-    const TValueId segAt = segHeadAddr(sh, obj);
-    segReplaceRefs(sh, segAt, valNext);
+    segReplaceRefs(sh, seg, valNext);
 
     // destroy peer in case of DLS
     if (VAL_INVALID != peerAt && collectJunk(sh, peerAt))
         CL_DEBUG("spliceOutSegmentIfNeeded() drops a sub-heap (peerAt)");
 
     // destroy self, including all nested prototypes
+    const TValueId segAt = sh.placedAt(seg);
     if (collectJunk(sh, segAt))
         CL_DEBUG("spliceOutSegmentIfNeeded() drops a sub-heap (segAt)");
 

@@ -1008,51 +1008,10 @@ TValueId handleOpCmp(THeap &heap, enum cl_binop_e code,
     }
 }
 
-struct SubByOffsetFinder {
-    TObjId                  root;
-    TObjId                  subFound;
-    const struct cl_type    *cltToSeek;
-    int                     offToSeek;
-
-    bool operator()(const SymHeap &sh, TObjId sub) {
-        const struct cl_type *clt = sh.objType(sub);
-        if (!clt || *clt != *this->cltToSeek)
-            return /* continue */ true;
-
-        if (this->offToSeek != subOffsetIn(sh, this->root, sub))
-            return /* continue */ true;
-
-        // found!
-        this->subFound = sub;
-        return /* break */ false;
-    }
-};
-
-TObjId subSeekByOffset(const SymHeap &sh, TObjId obj,
-                       const struct cl_type *clt, int offToSeek)
-{
-    if (!offToSeek)
-        return obj;
-
-    // prepare visitor
-    SubByOffsetFinder visitor;
-    visitor.root        = obj;
-    visitor.cltToSeek   = clt;
-    visitor.offToSeek   = offToSeek;
-    visitor.subFound    = OBJ_INVALID;
-
-    // look for the requested sub-object
-    if (traverseSubObjs(sh, obj, visitor, /* leavesOnly */ false))
-        return OBJ_INVALID;
-    else
-        return visitor.subFound;
-}
-
-TValueId handlePointerPlus(SymHeap &sh, const struct cl_type *clt,
+TValueId handlePointerPlus(SymHeap &sh, const struct cl_type *cltPtr,
                            TValueId ptr, const struct cl_operand &op,
                            const LocationWriter lw)
 {
-    const struct cl_type *const cltPtr = clt;
     if (CL_OPERAND_CST != op.code) {
         CL_ERROR_MSG(lw, "pointer plus offset not known in compile-time");
         return sh.valCreateUnknown(UV_UNKNOWN, cltPtr);
@@ -1063,54 +1022,13 @@ TValueId handlePointerPlus(SymHeap &sh, const struct cl_type *clt,
         return sh.valCreateUnknown(UV_UNKNOWN, cltPtr);
     }
 
-    // jump to _target_ type
-    clt = targetTypeOfPtr(clt);
-    const TObjId target = sh.pointsTo(ptr);
-
     // read integral offset
     const int offRequested = intCstFromOperand(&op);
     CL_DEBUG("handlePointerPlus(): " << offRequested << "b offset requested");
 
-    // seek root object while cumulating the offset
-    TObjId obj = target;
-    TObjId parent;
-    int off = offRequested;
-    int nth;
-    while (OBJ_INVALID != (parent = sh.objParent(obj, &nth))) {
-        const struct cl_type *cltParent = sh.objType(parent);
-        CL_BREAK_IF(cltParent->item_cnt <= nth);
-
-        off += cltParent->items[nth].offset;
-        obj = parent;
-    }
-
-    const struct cl_type *cltRoot = sh.objType(obj);
-    if (!cltRoot || cltRoot->code != CL_TYPE_STRUCT) {
-        CL_ERROR_MSG(lw, "unsupported target type for pointer plus");
-        return sh.valCreateUnknown(UV_UNKNOWN, cltPtr);
-    }
-
-    if (off < 0) {
-        // we need to create an off-value
-        const SymHeapCore::TOffVal ov(sh.placedAt(obj), off);
-        return sh.valCreateByOffset(ov);
-    }
-
-    obj = subSeekByOffset(sh, obj, clt, off);
-    if (obj <= 0) {
-        // fall-back to off-value, but now related to the original target,
-        // instead of root
-        const SymHeapCore::TOffVal ov(sh.placedAt(target), offRequested);
-        return sh.valCreateByOffset(ov);
-    }
-
-    // get the final address and check type compatibility
-    const TValueId addr = sh.placedAt(obj);
-    const struct cl_type *cltDst = sh.valType(addr);
-    if (!cltDst || *cltDst != *clt)
-        CL_DEBUG_MSG(lw, "dangerous assignment of pointer plus' result");
-
-    return addr;
+    const TObjId target = sh.pointsTo(ptr);
+    CL_BREAK_IF(target <= 0);
+    return addrQueryByOffset(sh, target, offRequested, cltPtr, &lw);
 }
 
 // template for generic (unary, binary, ...) operator handlers

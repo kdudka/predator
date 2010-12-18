@@ -35,6 +35,8 @@
 
 #include <stack>
 
+class LocationWriter;
+
 namespace CodeStorage {
     struct Var;
 }
@@ -84,6 +86,9 @@ inline bool objIsSeg(const SymHeap &sh, TObjId obj, bool anyPart = false) {
 
 /// return offset of an object within another object;  -1 if not found
 inline int subOffsetIn(const SymHeapTyped &sh, TObjId in, TObjId of) {
+    if (in == of)
+        return 0;
+
     int offset = 0;
     TObjId parent;
 
@@ -240,6 +245,14 @@ void gatherPointingObjects(const SymHeap            &sh,
                            const TObjId             root,
                            bool                     toInsideOnly);
 
+TValueId addrQueryByOffset(
+        SymHeap                 &sh,
+        const TObjId            target,
+        const int               offRequested,
+        const struct cl_type    *cltPtr,
+        const LocationWriter    *lw = 0);
+
+/// (OBJ_INVALID != pointingFrom) means 'pointing from anywhere'
 void redirectInboundEdges(
         SymHeap                 &sh,
         const TObjId            pointingFrom,
