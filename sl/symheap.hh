@@ -337,7 +337,11 @@ struct CVar {
     /// zero for global/static variables, instance number 1..n otherwise
     int inst;
 
-    CVar(): uid(-1) { }
+    CVar():
+        uid(-1),
+        inst(-1)
+    {
+    }
 
     CVar(int uid_, int inst_):
         uid(uid_),
