@@ -249,9 +249,11 @@ void SymExecEngine::updateState(const CodeStorage::Block *ofBlock,
 
     // update _target_ state and check if anything has changed
     if (!stateMap_.insertFast(ofBlock, block_, sh)) {
-        CL_DEBUG_MSG(lw_, "--- block " << name << " left intact");
-
-    } else {
+        CL_DEBUG_MSG(lw_, "--- block " << name
+                     << " left intact (size of target is "
+                     << stateMap_[ofBlock].size() << ")");
+    }
+    else {
         const size_t last = todo_.size();
 
         // schedule for next wheel (if not already)
@@ -262,7 +264,8 @@ void SymExecEngine::updateState(const CodeStorage::Block *ofBlock,
                 << " block " << name
                 << ((already)
                     ? " changed, but already scheduled"
-                    : " scheduled for next wheel"));
+                    : " scheduled for next wheel")
+                << " (size of target is " << stateMap_[ofBlock].size() << ")");
     }
 }
 
@@ -400,8 +403,10 @@ bool /* complete */ SymExecEngine::execInsn() {
             // the result is already included in the resulting state, skip it
             continue;
 
-        if (1 < hCnt)
-            CL_DEBUG_MSG(lw_, "*** processing heap #" << heapIdx_);
+        if (1 < hCnt) {
+            CL_DEBUG_MSG(lw_, "*** processing heap #" << heapIdx_
+                         << " (initial size of state was " << hCnt << ")");
+        }
 
         if (isTerm) {
             // terminal insn
@@ -436,7 +441,8 @@ bool /* complete */ SymExecEngine::execBlock() {
         const LocationWriter lw(&insn->loc);
         CL_DEBUG_MSG(lw_, "___ we are back in " << name
                 << ", insn #" << insnIdx_
-                << ", heap #" << (heapIdx_ - 1));
+                << ", heap #" << (heapIdx_ - 1)
+                << ", " << todo_.size() << " basic block(s) in the queue");
     }
 
     if (!insnIdx_)
@@ -471,7 +477,8 @@ bool /* complete */ SymExecEngine::execBlock() {
         origin.setDone(h);
 
     // the whole block is processed now
-    CL_DEBUG_MSG(lw_, "___ completed batch for " << name);
+    CL_DEBUG_MSG(lw_, "___ completed batch for " << name
+                 << ", " << todo_.size() << " basic block(s) in the queue");
     insnIdx_ = 0;
     return true;
 }
@@ -521,7 +528,8 @@ bool /* complete */ SymExecEngine::run() {
 
         // enter the basic block
         const std::string &name = block_->name();
-        CL_DEBUG_MSG(lw_, "___ entering " << name);
+        CL_DEBUG_MSG(lw_, "___ entering " << name
+                     << ", " << todo_.size() << " basic block(s) in the queue");
         insnIdx_ = 0;
         heapIdx_ = 0;
 
