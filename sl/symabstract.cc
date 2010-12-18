@@ -543,6 +543,9 @@ void dlSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf)
 
     EObjKind kind = sh.objKind(o1);
     switch (kind) {
+        case OK_MAY_EXIST:
+            // TODO
+
         case OK_SLS:
         case OK_HEAD:
         case OK_PART:
@@ -796,6 +799,7 @@ void concretizeObj(SymHeap &sh, TValueId addr, TSymHeapList &todo) {
             // invalid call of concretizeObj()
             CL_TRAP;
 
+        case OK_MAY_EXIST:
         case OK_SLS:
             break;
 
@@ -810,6 +814,13 @@ void concretizeObj(SymHeap &sh, TValueId addr, TSymHeapList &todo) {
 
     debugPlotInit("concretizeObj");
     debugPlot(sh);
+
+    if (OK_MAY_EXIST == kind) {
+        // this kind is much easier than regular list segments
+        sh.objSetConcrete(obj);
+        debugPlot(sh);
+        return;
+    }
 
     // duplicate self as abstract object
     const TObjId aoDup = sh.objDup(obj);

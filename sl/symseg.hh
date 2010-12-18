@@ -133,6 +133,7 @@ void buildIgnoreList(
             // fall through!
 
         case OK_SLS:
+        case OK_MAY_EXIST:
             // preserve 'next' field
             tmp = subObjByChain(sh, obj, sh.objBinding(obj).next);
             ignoreList.insert(tmp);

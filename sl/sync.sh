@@ -1,5 +1,5 @@
 #!/bin/sh
-TIMEOUT="timeout 8"
+TIMEOUT="timeout 30"
 
 ALL=data/test-0???.c
 test -n "$1" && ALL="$*"

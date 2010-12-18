@@ -172,6 +172,7 @@ TObjId addObjectIfNeeded(DeepCopyData &dc, TObjId objSrc) {
 
     const EObjKind kind = src.objKind(rootSrc);
     switch (kind) {
+        case OK_MAY_EXIST:
         case OK_DLS:
         case OK_SLS: {
             const SegBindingFields segBinding = src.objBinding(rootSrc);

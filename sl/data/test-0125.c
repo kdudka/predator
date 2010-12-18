@@ -92,7 +92,7 @@ void insert_sub(struct list_head *head)
     list_add_tail(&sub->link, head);
 }
 
-void insert_top(struct list_head *head, bool empty)
+void insert_top(struct list_head *head)
 {
     struct top_list *top = malloc(sizeof(*top));
     if (!top)
@@ -101,25 +101,25 @@ void insert_top(struct list_head *head, bool empty)
     top->sub.prev = &top->sub;
     top->sub.next = &top->sub;
 
-    static int cnt;
-    if (!empty)
+    static int cnt = 0;
+    while (++cnt % 7) {
         insert_sub(&top->sub);
+    }
 
     list_add_tail(&top->link, head);
 }
 
 void create_top(struct list_head *top)
 {
-    insert_top(top, 0);
-    insert_top(top, 1);
-    insert_top(top, 0);
-    insert_top(top, 1);
+    insert_top(top);
+    insert_top(top);
+    insert_top(top);
 
     // NOTE: running this on bare metal may cause the machine to swap a bit
     int i;
     for (i = 1; i; ++i) {
-        insert_top(top, 0);
-        insert_top(top, 1);
+        insert_top(top);
+        insert_top(top);
     }
 }
 

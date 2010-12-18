@@ -50,6 +50,7 @@ bool matchSegBinding(const SymHeap              &sh,
         return false;
 
     switch (kind) {
+        case OK_MAY_EXIST:
         case OK_SLS:
             return (bf.next == bfDiscover.next);
 
@@ -58,7 +59,7 @@ bool matchSegBinding(const SymHeap              &sh,
                 && (bf.peer == bfDiscover.next);
 
         default:
-            CL_TRAP;
+            CL_BREAK_IF("matchSegBinding() needs to be improved");
             return false;
     }
 }
