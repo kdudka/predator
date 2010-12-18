@@ -741,14 +741,14 @@ bool joinProtoFlag(
     return false;
 }
 
-/// (NULL != icNext) means 'create OK_MAY_EXIST'
+/// (NULL != bfMayExist) means 'create OK_MAY_EXIST'
 bool createObject(
         SymJoinCtx              &ctx,
         const struct cl_type    *clt,
         const TObjId            root1,
         const TObjId            root2,
         const EJoinStatus       action,
-        const TFieldIdxChain    *icNext = 0)
+        const SegBindingFields  *bfMayExist = 0)
 {
     EObjKind kind;
     if (!joinObjKind(&kind, ctx, root1, root2, action))
@@ -762,11 +762,11 @@ bool createObject(
     if (!joinProtoFlag(&isProto, ctx, root1, root2))
         return false;
 
-    if (icNext) {
+    if (bfMayExist) {
         // we are asked to introduce OK_MAY_EXIST
         CL_BREAK_IF(OK_CONCRETE != kind && OK_MAY_EXIST != kind);
         kind = OK_MAY_EXIST;
-        bf.next = *icNext;
+        bf = *bfMayExist;
     }
 
     updateJoinStatus(ctx, action);
@@ -1098,14 +1098,14 @@ read_only_ok:
     return true;
 }
 
-/// (NULL != icNext) means 'introduce OK_MAY_EXIST'
+/// (NULL != bf) means 'introduce OK_MAY_EXIST'
 bool segmentCloneCore(
         SymJoinCtx                  &ctx,
         const SymHeap               &shGt,
         const TValueId              valGt,
         const SymJoinCtx::TObjMap   &objMapGt,
         const EJoinStatus           action,
-        const TFieldIdxChain        *icNext)
+        const SegBindingFields      *bf)
 {
     const TObjId objGt = objRootByVal(shGt, valGt);
     if (objGt < 0)
@@ -1130,7 +1130,7 @@ bool segmentCloneCore(
 
     // clone the object
     ctx.tieBreaking.insert(TObjPair(root1, root2));
-    if (createObject(ctx, clt, root1, root2, action, icNext))
+    if (createObject(ctx, clt, root1, root2, action, bf))
         return true;
 
     SJ_DEBUG("<-- insertSegmentClone: failed to create object "
@@ -1162,14 +1162,14 @@ void scheduleSegAddr(
     wl.schedule(vpPeer);
 }
 
-/// (NULL != icNext) means 'introduce OK_MAY_EXIST'
+/// (NULL != bf) means 'introduce OK_MAY_EXIST'
 bool insertSegmentClone(
         bool                    *pResult,
         SymJoinCtx              &ctx,
         const TValueId          v1,
         const TValueId          v2,
         const EJoinStatus       action,
-        const TFieldIdxChain    *icNext = 0)
+        const SegBindingFields  *bf = 0)
 {
     SJ_DEBUG(">>> insertSegmentClone" << SJ_VALP(v1, v2));
     const bool isGt1 = (JS_USE_SH1 == action);
@@ -1184,8 +1184,8 @@ bool insertSegmentClone(
         peer = dlSegPeer(shGt, seg);
 
     // resolve the 'next' pointer and check its validity
-    const TObjId nextPtr = (icNext)
-        ? subObjByChain(shGt, seg, *icNext)
+    const TObjId nextPtr = (bf)
+        ? subObjByChain(shGt, seg, bf->next)
         : nextPtrFromSeg(shGt, peer);
 
     const TValueId nextGt = shGt.valueOf(nextPtr);
@@ -1223,7 +1223,7 @@ bool insertSegmentClone(
 
         if (segGtAt != valGt)
             // OK_MAY_EXIST is applicable only on the first object
-            icNext = 0;
+            bf = 0;
 
         const EUnknownValue code = shGt.valGetUnknown(valGt);
         if (UV_UNINITIALIZED == code || UV_UNKNOWN == code) {
@@ -1233,7 +1233,7 @@ bool insertSegmentClone(
             if (0 < valLt && defineValueMapping(ctx, vp.first, vp.second, vDst))
                 continue;
         }
-        else if (segmentCloneCore(ctx, shGt, valGt, objMapGt, action, icNext))
+        else if (segmentCloneCore(ctx, shGt, valGt, objMapGt, action, bf))
             continue;
 
         // clone failed
@@ -1319,6 +1319,30 @@ class MayExistVisitor {
         }
 };
 
+class SubAddrFinder {
+    private:
+        const TValueId subAddr_;
+        TFieldIdxChain result_;
+
+    public:
+        SubAddrFinder(const TValueId subAddr): subAddr_(subAddr) { }
+
+        TFieldIdxChain result() const { return result_; }
+
+        bool operator()(
+                const SymHeap   &sh,
+                const TObjId    sub,
+                TFieldIdxChain  ic)
+        {
+            if (subAddr_ != sh.placedAt(sub))
+                return /* continue */ true;
+
+            // found!
+            result_ = ic;
+            return false;
+        }
+};
+
 bool mayExistFallback(
         SymJoinCtx              &ctx,
         const TValueId          v1,
@@ -1352,10 +1376,19 @@ bool mayExistFallback(
         // no match
         return false;
 
-    const TFieldIdxChain icNext(visitor.icNext());
+    // dig head
+    SubAddrFinder headFinder(val);
+    if (traverseSubObjsIc(sh, target, headFinder)) {
+        CL_BREAK_IF("MayExistVisitor malfunction");
+        return false;
+    }
+
+    SegBindingFields bf;
+    bf.head = headFinder.result();
+    bf.next = visitor.icNext();
     bool result = false;
 
-    const bool ok = insertSegmentClone(&result, ctx, v1, v2, action, &icNext);
+    const bool ok = insertSegmentClone(&result, ctx, v1, v2, action, &bf);
     CL_BREAK_IF(!ok);
     (void) ok;
 
