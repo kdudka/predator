@@ -676,10 +676,13 @@ bool SymPlot::Private::handleUnknownValue(TValueId value) {
             this->plotNodeAux(value, CL_TYPE_UNKNOWN, "UV_UNKNOWN");
             return true;
 
-        default:
-            CL_TRAP;
+        case UV_DONT_CARE:
+            this->plotNodeAux(value, CL_TYPE_UNKNOWN, "UV_DONT_CARE");
             return true;
     }
+
+    CL_TRAP;
+    return true;
 }
 
 bool SymPlot::Private::resolveValueOf(TValueId *pDst, TObjId obj) {

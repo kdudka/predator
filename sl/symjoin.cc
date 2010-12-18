@@ -1226,15 +1226,25 @@ bool insertSegmentClone(
             bf = 0;
 
         const EUnknownValue code = shGt.valGetUnknown(valGt);
-        if (UV_UNINITIALIZED == code || UV_UNKNOWN == code) {
-            // clone unknown value
-            const struct cl_type *const clt = shGt.valType(valGt);
-            const TValueId vDst = ctx.dst.valCreateUnknown(code, clt);
-            if (0 < valLt && defineValueMapping(ctx, vp.first, vp.second, vDst))
-                continue;
+        switch (code) {
+            case UV_UNINITIALIZED:
+            case UV_UNKNOWN:
+            case UV_DONT_CARE: {
+                // clone unknown value
+                const struct cl_type *const clt = shGt.valType(valGt);
+                const TValueId vDst = ctx.dst.valCreateUnknown(code, clt);
+                if (0 < valLt && defineValueMapping(ctx, vp.first, vp.second, vDst))
+                    continue;
+                else
+                    break;
+            }
+
+            default:
+                if (segmentCloneCore(ctx, shGt, valGt, objMapGt, action, bf))
+                    continue;
+                else
+                    break;
         }
-        else if (segmentCloneCore(ctx, shGt, valGt, objMapGt, action, bf))
-            continue;
 
         // clone failed
         *pResult = false;
@@ -1395,19 +1405,42 @@ bool mayExistFallback(
     return result;
 }
 
+bool unknownValueFallBack(
+        SymJoinCtx              &ctx,
+        const TValueId          v1,
+        const TValueId          v2,
+        const TValueId          vDst)
+{
+    const TValueId vDstBy1 = roMapLookup(ctx.valMap1[/* ltr */ 0], v1);
+    const TValueId vDstBy2 = roMapLookup(ctx.valMap2[/* ltr */ 0], v2);
+
+    // TODO
+    CL_DEBUG("WARNING: unknownValueFallBack() not implemented yet!");
+    CL_BREAK_IF(debugSymJoin);
+    (void) vDstBy1;
+    (void) vDstBy2;
+    (void) vDst;
+    return false;
+}
+
 bool joinValuePair(SymJoinCtx &ctx, const TValueId v1, const TValueId v2) {
     const EUnknownValue code1 = ctx.sh1.valGetUnknown(v1);
     const EUnknownValue code2 = ctx.sh2.valGetUnknown(v2);
 
     EUnknownValue code;
     if (joinUnknownValuesCode(&code, code1, code2)) {
-        // create unknown value
         const struct cl_type *clt;
         if (!joinValClt(&clt, ctx, v1, v2))
             return false;
 
+        // create a new unknown value in ctx.dst
         const TValueId vDst = ctx.dst.valCreateUnknown(code, clt);
-        return defineValueMapping(ctx, v1, v2, vDst);
+
+        if (checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ true))
+            // go ahead, proceed read-write
+            return defineValueMapping(ctx, v1, v2, vDst);
+
+        return unknownValueFallBack(ctx, v1, v2, vDst);
     }
 
     bool result;

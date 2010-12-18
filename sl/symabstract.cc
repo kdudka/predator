@@ -123,6 +123,7 @@ struct UnknownValuesDuplicator {
                 return /* continue */ true;
 
             case UV_UNKNOWN:
+            case UV_DONT_CARE:
             case UV_UNINITIALIZED:
                 break;
         }
@@ -312,6 +313,7 @@ struct ProtoCloner {
         const EUnknownValue code = sh.valGetUnknown(valOld);
         switch (code) {
             case UV_UNKNOWN:
+            case UV_DONT_CARE:
             case UV_UNINITIALIZED:
                 return /* continue */ true;
 

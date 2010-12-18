@@ -97,6 +97,11 @@ bool joinUnknownValuesCode(
         return true;
     }
 
+    if (UV_DONT_CARE == code1 || UV_DONT_CARE == code2) {
+        *pDst = UV_DONT_CARE;
+        return true;
+    }
+
     if (UV_UNKNOWN == code1 || UV_UNKNOWN == code2) {
         *pDst = UV_UNKNOWN;
         return true;
@@ -176,6 +181,7 @@ bool matchValues(
             break;
 
         case UV_UNKNOWN:
+        case UV_DONT_CARE:
         case UV_UNINITIALIZED:
             // do not follow unknown values
             return true;

@@ -129,6 +129,7 @@ TObjId SymProc::handleDerefCore(TValueId val) {
             break;
 
         case UV_UNKNOWN:
+        case UV_DONT_CARE:
             CL_ERROR_MSG(lw_, "dereference of unknown value");
             bt_->printBackTrace();
             return OBJ_DEREF_FAILED;
@@ -679,6 +680,7 @@ void SymExecCore::execFreeCore(const TValueId val) {
             break;
 
         case UV_UNKNOWN:
+        case UV_DONT_CARE:
             CL_ERROR_MSG(lw_, "free() called on unknown value");
             bt_->printBackTrace();
             return;
@@ -847,6 +849,26 @@ bool SymExecCore::execCall(SymState &dst, const CodeStorage::Insn &insn) {
     return handleBuiltIn(dst, *this, insn);
 }
 
+bool valIsInteresting(const SymHeap &sh, const TValueId val) {
+    if (VAL_NULL == val)
+        return true;
+
+    const struct cl_type *clt = sh.valType(val);
+    if (!clt)
+        // FIXME: really?
+        return true;
+
+    const enum cl_type_e code = clt->code;
+    switch (code) {
+        case CL_TYPE_FNC:
+            // we are not much interested in function pointers
+            return false;
+
+        default:
+            return true;
+    }
+}
+
 template <class THeap>
 TValueId handleOpCmpBool(THeap &heap, enum cl_binop_e code,
                          const struct cl_type *dstClt, TValueId v1, TValueId v2)
@@ -972,22 +994,27 @@ TValueId handleOpCmpPtr(THeap &heap, enum cl_binop_e code,
 
     // check if the values are equal
     bool result;
-    if (!heap.proveEq(&result, v1, v2)) {
-        // we don't know if the values are equal or not
-        const TValueId val = heap.valCreateUnknown(UV_UNKNOWN, dstClt);
+    if (heap.proveEq(&result, v1, v2)) {
+        // invert if needed
+        if (CL_BINOP_NE == code)
+            result = !result;
 
-        // store the relation over the triple (val, v1, v2) for posteriors
+        return (result)
+            ? VAL_TRUE
+            : VAL_FALSE;
+    }
+
+    if (valIsInteresting(heap, v1) && valIsInteresting(heap, v2)) {
+
+        // store the relation over the triple (val, v1, v2) for posterity
+        const TValueId val = heap.valCreateUnknown(UV_UNKNOWN, dstClt);
         heap.addEqIf(val, v1, v2, /* neg */ CL_BINOP_NE == code);
         return val;
     }
 
-    // invert if needed
-    if (CL_BINOP_NE == code)
-        result = !result;
-
-    return (result)
-        ? VAL_TRUE
-        : VAL_FALSE;
+    CL_DEBUG("handleOpCmpPtr() returns UV_DONT_CARE for values #" << v1
+             << " and #" << v2);
+    return heap.valCreateUnknown(UV_DONT_CARE, dstClt);
 }
 
 template <class THeap>

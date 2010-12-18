@@ -44,6 +44,7 @@ enum EUnknownValue {
     UV_KNOWN = 0,           ///< known value - what we usually wish we had
     UV_ABSTRACT,            ///< points to SLS/DLS (the prover needs to know it)
     UV_UNKNOWN,             ///< unknown value - what we usually have in reality
+    UV_DONT_CARE,           ///< unknown value that we don't want to know anyway
     UV_UNINITIALIZED        ///< unknown value of an uninitialised object
 };
 

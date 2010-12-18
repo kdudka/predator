@@ -240,7 +240,8 @@ void SymExecEngine::updateState(const CodeStorage::Block *ofBlock,
     // clone the current symbolic heap, as we are going to change it eventually
     SymHeap sh(localState_[heapIdx_]);
 
-    if (VAL_INVALID != valDst && VAL_INVALID != valSrc)
+    if (VAL_INVALID != valDst && VAL_INVALID != valSrc
+            && UV_DONT_CARE != sh.valGetUnknown(valDst))
         // replace an unknown value while traversing an unambiguous condition
         sh.valReplaceUnknown(valDst, valSrc);
 
@@ -307,7 +308,11 @@ void SymExecEngine::execCondInsn() {
     const EUnknownValue code = heap.valGetUnknown(val);
     switch (code) {
         case UV_UNKNOWN:
-            CL_DEBUG_MSG(lw_, "??? CL_INSN_COND got VAL_UNKNOWN");
+            CL_DEBUG_MSG(lw_, "??? CL_INSN_COND got UV_UNKNOWN");
+            break;
+
+        case UV_DONT_CARE:
+            CL_DEBUG_MSG(lw_, "??? CL_INSN_COND got UV_DONT_CARE");
             break;
 
         case UV_UNINITIALIZED:
