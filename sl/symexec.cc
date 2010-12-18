@@ -228,7 +228,7 @@ void SymExecEngine::execReturn() {
     }
 
     // commit one of the function results
-    dst_.insert(heap);
+    dst_.insertFast(heap);
     endReached_ = true;
 }
 
@@ -248,7 +248,7 @@ void SymExecEngine::updateState(const CodeStorage::Block *ofBlock,
     abstractIfNeeded(sh);
 
     // update _target_ state and check if anything has changed
-    if (!stateMap_.insert(ofBlock, block_, sh)) {
+    if (!stateMap_.insertFast(ofBlock, block_, sh)) {
         CL_DEBUG_MSG(lw_, "--- block " << name << " left intact");
 
     } else {
@@ -597,7 +597,7 @@ SymExec::SymExec(const CodeStorage::Storage &stor, const SymExecParams &params):
     // create the initial state, consisting of global/static variables
     SymHeap init;
     createGlVars(init, stor);
-    d->stateZero.insert(init);
+    d->stateZero.insertFast(init);
 }
 
 SymExec::~SymExec() {
@@ -667,7 +667,7 @@ fail:
     }
 
     // call failed, so that we have exactly one resulting heap
-    results.insert(heap);
+    results.insertFast(heap);
     return 0;
 }
 

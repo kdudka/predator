@@ -1167,7 +1167,7 @@ bool SymExecCore::concretizeLoop(SymState                       &dst,
         }
 
         // process the current heap and move to the next one (if any)
-        core.execCore(dst, insn);
+        core.execCore(dst, insn, /* aggressive optimization */1 == todo.size());
         todo.pop_front();
     }
 
@@ -1229,7 +1229,11 @@ bool SymExecCore::concretizeIfNeeded(SymState                   &results,
     return true;
 }
 
-bool SymExecCore::execCore(SymState &dst, const CodeStorage::Insn &insn) {
+bool SymExecCore::execCore(
+        SymState                &dst,
+        const CodeStorage::Insn &insn,
+        const bool              feelFreeToOverwrite)
+{
     const enum cl_insn_e code = insn.code;
     switch (code) {
         case CL_INSN_UNOP:
@@ -1248,7 +1252,12 @@ bool SymExecCore::execCore(SymState &dst, const CodeStorage::Insn &insn) {
             return false;
     }
 
-    dst.insert(heap_);
+    if (feelFreeToOverwrite)
+        // aggressive optimization
+        dst.insertFast(heap_);
+    else
+        dst.insert(heap_);
+
     return true;
 }
 
@@ -1258,5 +1267,5 @@ bool SymExecCore::exec(SymState &dst, const CodeStorage::Insn &insn) {
         // concretization loop done
         return true;
 
-    return this->execCore(dst, insn);
+    return this->execCore(dst, insn, /* aggressive optimization */ true);
 }
