@@ -130,7 +130,7 @@ int main()
     create_top(&top);
 
     ___sl_plot(NULL);
-    //destroy_top(&top);
+    destroy_top(&top);
 
     return 0;
 }

@@ -793,15 +793,13 @@ void concretizeObj(SymHeap &sh, TValueId addr, TSymHeapList &todo) {
     // branch by SLS/DLS
     const EObjKind kind = sh.objKind(obj);
     switch (kind) {
-        case OK_MAY_EXIST:
-            // TODO
-
         case OK_CONCRETE:
         case OK_HEAD:
         case OK_PART:
             // invalid call of concretizeObj()
             CL_TRAP;
 
+        case OK_MAY_EXIST:
         case OK_SLS:
             break;
 
@@ -816,6 +814,13 @@ void concretizeObj(SymHeap &sh, TValueId addr, TSymHeapList &todo) {
 
     debugPlotInit("concretizeObj");
     debugPlot(sh);
+
+    if (OK_MAY_EXIST == kind) {
+        // this kind is much easier than regular list segments
+        sh.objSetConcrete(obj);
+        debugPlot(sh);
+        return;
+    }
 
     // duplicate self as abstract object
     const TObjId aoDup = sh.objDup(obj);
