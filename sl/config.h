@@ -26,6 +26,11 @@
 #include "trap.h"
 
 /**
+ * if 1, print amount of allocated memory on certain places when in verbose mode
+ */
+#define DEBUG_MEM_USAGE                     1
+
+/**
  * if 1, print created/destroyed stack variables when running in verbose mode
  */
 #define DEBUG_SE_STACK_FRAME                0

@@ -41,6 +41,18 @@
 #include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
 
+#if DEBUG_MEM_USAGE
+#   include <malloc.h>
+void printMemUsage(const char *fnc) {
+    struct mallinfo info = mallinfo();
+    const unsigned cnt = info.uordblks >> /* MiB */ 20;
+    CL_DEBUG("current memory usage: " << cnt << " MB"
+             << " (just completed " << fnc << "())");
+}
+#else
+void printMemUsage(const char *) { }
+#endif
+
 // utilities
 namespace {
 
@@ -713,16 +725,20 @@ void SymExec::Private::execLoop(const StackItem &item) {
 
         // do as much as we can at the current call level
         if (engine->run()) {
+            printMemUsage("SymExecEngine::run");
+
             // call done at this level
             item.ctx->flushCallResults(*item.dst);
             item.ctx->invalidate();
             this->bt.popCall();
+            printMemUsage("SymCallCtx::flushCallResults");
 
             // remove top of the stack
             delete engine;
             rtStack.pop();
 
             // wake up the caller (if any)
+            printMemUsage("SymExecEngine::~SymExecEngine");
             continue;
         }
 
@@ -759,7 +775,9 @@ void SymExec::Private::execLoop(const StackItem &item) {
         // prepare a new run-time stack item for the call
         StackItem next;
         next.ctx = &ctx;
+        printMemUsage("SymCall::getCallCtx");
         next.eng = this->createEngine(ctx);
+        printMemUsage("SymExec::createEngine");
 
         // pass the result back to the caller as soon as we have one
         next.dst = item.eng->callResults();
