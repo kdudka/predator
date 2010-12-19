@@ -48,20 +48,20 @@ index 5ee7b95..f35bdb6 100644
  
   cdi = (struct cdrom_device_info *)malloc(sizeof(struct cdrom_device_info));
   cdi->ops = (struct cdrom_device_ops *)malloc(sizeof(struct cdrom_device_ops));
-+ cdi->ops->open             = (void(*)()) 0;
++ cdi->ops->open             = (int (*)()) 0;
 + cdi->ops->release          = (void(*)()) 0;
-+ cdi->ops->drive_status     = (void(*)()) 0;
-+ cdi->ops->media_changed    = (void(*)()) 0;
-+ cdi->ops->tray_move        = (void(*)()) 0;
-+ cdi->ops->lock_door        = (void(*)()) 0;
-+ cdi->ops->select_speed     = (void(*)()) 0;
-+ cdi->ops->select_disc      = (void(*)()) 0;
-+ cdi->ops->get_last_session = (void(*)()) 0;
-+ cdi->ops->get_mcn          = (void(*)()) 0;
-+ cdi->ops->reset            = (void(*)()) 0;
-+ cdi->ops->audio_ioctl      = (void(*)()) 0;
-+ cdi->ops->dev_ioctl        = (void(*)()) 0;
-+ cdi->ops->generic_packet   = (void(*)()) 0;
++ cdi->ops->drive_status     = (int (*)()) 0;
++ cdi->ops->media_changed    = (int (*)()) 0;
++ cdi->ops->tray_move        = (int (*)()) 0;
++ cdi->ops->lock_door        = (int (*)()) 0;
++ cdi->ops->select_speed     = (int (*)()) 0;
++ cdi->ops->select_disc      = (int (*)()) 0;
++ cdi->ops->get_last_session = (int (*)()) 0;
++ cdi->ops->get_mcn          = (int (*)()) 0;
++ cdi->ops->reset            = (int (*)()) 0;
++ cdi->ops->audio_ioctl      = (int (*)()) 0;
++ cdi->ops->dev_ioctl        = (int (*)()) 0;
++ cdi->ops->generic_packet   = (int (*)()) 0;
 +
   cdi->disk = (struct gendisk *)malloc(sizeof(struct gendisk));
   cdi->disk->queue = (struct request_queue *)malloc(sizeof(struct request_queue));

@@ -44,8 +44,19 @@
 #if DEBUG_MEM_USAGE
 #   include <malloc.h>
 void printMemUsage(const char *fnc) {
+    static bool overflowDetected;
+    if (overflowDetected)
+        // instead of printing misleading numbers, we rather print nothing
+        return;
+
     struct mallinfo info = mallinfo();
     const unsigned cnt = info.uordblks >> /* MiB */ 20;
+    if (2048U <= cnt) {
+        // mallinfo() is broken by design <https://bugzilla.redhat.com/173813>
+        overflowDetected = true;
+        return;
+    }
+
     CL_DEBUG("current memory usage: " << cnt << " MB"
              << " (just completed " << fnc << "())");
 }
