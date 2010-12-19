@@ -1404,22 +1404,76 @@ bool mayExistFallback(
     return result;
 }
 
+TValueId /* old */ vmRemoveMappingOf(TValMapBidir &vm, const TValueId val) {
+    TValMap &ltr = vm[/* ltr */ 0];
+    TValMap &rtl = vm[/* rtl */ 1];
+
+    TValMap::iterator it = ltr.find(val);
+    CL_BREAK_IF(ltr.end() == it);
+
+    const TValueId old = it->second;
+    CL_BREAK_IF(!hasKey(rtl, old));
+
+    ltr.erase(it);
+    rtl.erase(old);
+    return old;
+}
+
+void disjoinUnknownValues(
+        SymJoinCtx              &ctx,
+        const TValueId          val,
+        const TValueId          tpl,
+        const EJoinStatus       action)
+{
+    updateJoinStatus(ctx, action);
+    const bool isGt2 = (JS_USE_SH2 == action);
+    CL_BREAK_IF(!isGt2 && (JS_USE_SH1 != action));
+
+    // forget all up to now value mapping of 'val'
+    TValMapBidir &vm = (isGt2) ? ctx.valMap1 : ctx.valMap2;
+    const TValueId old = vmRemoveMappingOf(vm, val);
+
+    // gather all objects that hold 'val' inside
+    SymHeap::TContObj refs;
+    const SymHeap &sh = (isGt2) ? ctx.sh1 : ctx.sh2;
+    sh.usedBy(refs, val);
+
+    // go through all referres that have their image in ctx.dst
+    SymJoinCtx::TObjMap &objMap = (isGt2) ? ctx.objMap1 : ctx.objMap2;
+    BOOST_FOREACH(const TObjId objSrc, refs) {
+        const TObjId objDst = roMapLookup(objMap, objSrc);
+        if (OBJ_INVALID == objDst)
+            // no image in ctx.dst yet
+            continue;
+
+        const TValueId valDst = ctx.dst.valDuplicateUnknown(tpl);
+        SJ_DEBUG("-u- disjoinUnknownValues() rewrites mapping" <<
+                 ", old = " << old <<
+                 ", new = " << valDst <<
+                 ", action = " << action);
+
+        ctx.dst.objSetValue(objDst, valDst);
+    }
+}
+
 bool unknownValueFallBack(
         SymJoinCtx              &ctx,
         const TValueId          v1,
         const TValueId          v2,
         const TValueId          vDst)
 {
-    const TValueId vDstBy1 = roMapLookup(ctx.valMap1[/* ltr */ 0], v1);
-    const TValueId vDstBy2 = roMapLookup(ctx.valMap2[/* ltr */ 0], v2);
+    const bool hasMapping1 = hasKey(ctx.valMap1[/* ltr */ 0], v1);
+    const bool hasMapping2 = hasKey(ctx.valMap2[/* ltr */ 0], v2);
+    CL_BREAK_IF(!hasMapping1 && !hasMapping2);
 
-    // TODO
-    CL_DEBUG("WARNING: unknownValueFallBack() not implemented yet!");
-    CL_BREAK_IF(debugSymJoin);
-    (void) vDstBy1;
-    (void) vDstBy2;
-    (void) vDst;
-    return false;
+    if (hasMapping1)
+        disjoinUnknownValues(ctx, v1, vDst, JS_USE_SH2);
+
+    if (hasMapping2)
+        disjoinUnknownValues(ctx, v2, vDst, JS_USE_SH1);
+
+    // FIXME: vDst stays unused at this point
+    return true;
 }
 
 bool joinValuePair(SymJoinCtx &ctx, const TValueId v1, const TValueId v2) {
@@ -1545,6 +1599,22 @@ TValueId joinDstValue(
         return VAL_INVALID;
 }
 
+bool seenUnknown(const SymHeap &sh, const TValueId val) {
+    if (val <= 0)
+        return false;
+
+    const EUnknownValue code = sh.valGetUnknown(val);
+    switch (code) {
+        case UV_UNINITIALIZED:
+        case UV_UNKNOWN:
+        case UV_DONT_CARE:
+            return true;
+
+        default:
+            return false;
+    }
+}
+
 template <class TItem, class TBlackList>
 bool setDstValuesCore(
         SymJoinCtx              &ctx,
@@ -1588,7 +1658,8 @@ bool setDstValuesCore(
     const bool validObj2 = (OBJ_INVALID != obj2);
     const TValueId vDst = joinDstValue(ctx, v1, v2, validObj1, validObj2);
     if (VAL_INVALID == vDst)
-        return false;
+        return seenUnknown(ctx.sh1, v1)
+            || seenUnknown(ctx.sh2, v2);
 
     // set the value
     ctx.dst.objSetValue(objDst, vDst);
