@@ -715,6 +715,7 @@ void SymExec::Private::execLoop(const StackItem &item) {
         if (engine->run()) {
             // call done at this level
             item.ctx->flushCallResults(*item.dst);
+            item.ctx->invalidate();
             this->bt.popCall();
 
             // remove top of the stack

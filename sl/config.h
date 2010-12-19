@@ -71,8 +71,7 @@
 #define DEBUG_UNUSED_VALUES                 0
 
 /**
- * if 1, call optimization is not performed; it may introduce some compile-time
- * warnings and memory leaks as a side effect
+ * if 1, call cache is not used at all
  */
 #define SE_DISABLE_CALL_CACHE               0
 
