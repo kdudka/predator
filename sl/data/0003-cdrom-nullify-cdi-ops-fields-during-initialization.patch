@@ -1,0 +1,89 @@
+From 25713db7f3a22ad9fda7a99ea7024758ef4bce05 Mon Sep 17 00:00:00 2001
+From: Kamil Dudka <kdudka@redhat.com>
+Date: Sun, 19 Dec 2010 11:51:20 +0100
+Subject: [PATCH 3/3] cdrom: nullify cdi->ops fields during initialization
+
+It leads to much easier analysis, but the coverage is poor.
+---
+ examples/drivers/cdrom.c |   23 +++++++++++++++++------
+ 1 files changed, 17 insertions(+), 6 deletions(-)
+
+diff --git a/examples/drivers/cdrom.c b/examples/drivers/cdrom.c
+index 5ee7b95..f35bdb6 100644
+--- a/examples/drivers/cdrom.c
++++ b/examples/drivers/cdrom.c
+@@ -2724,7 +2724,6 @@ int register_cdrom(struct cdrom_device_info *cdi )
+   banner_printed = (char)1;
+   cdrom_sysctl_register();
+  }
+-#if 0
+  if ((unsigned int )cdo->drive_status == (unsigned int )((void *)0)) {
+   (*change_capability) &= -2049;
+  }
+@@ -2758,7 +2757,6 @@ int register_cdrom(struct cdrom_device_info *cdi )
+  if ((unsigned int )cdo->generic_packet == (unsigned int )((void *)0)) {
+   (*change_capability) &= -4097;
+  }
+-#endif
+  cdi->mc_flags = 0U;
+  cdo->n_minors = 0;
+  cdi->options = 4;
+@@ -3031,7 +3029,6 @@ static void cdrom_count_tracks(struct cdrom_device_info *cdi , tracktype *tracks
+   return;
+  }
+ 
+-#if 0
+  ret = get_nondet_int();
+  if (ret) {
+   if (ret == -123) {
+@@ -3069,7 +3066,6 @@ static void cdrom_count_tracks(struct cdrom_device_info *cdi , tracktype *tracks
+   }
+   i ++;
+  }
+-#endif
+  if (debug == 1) {
+   HsPrintk("<6>cdrom: disc has %d tracks: %d=audio %d=data %d=Cd-I %d=XA\n", header.cdth_trk1,
+       tracks->audio, tracks->data, tracks->cdi, tracks->xa);
+@@ -6080,6 +6076,21 @@ struct cdrom_device_info *HsCreateCdromDeviceInfo(void)
+ 
+  cdi = (struct cdrom_device_info *)malloc(sizeof(struct cdrom_device_info));
+  cdi->ops = (struct cdrom_device_ops *)malloc(sizeof(struct cdrom_device_ops));
++ cdi->ops->open             = (void(*)()) 0;
++ cdi->ops->release          = (void(*)()) 0;
++ cdi->ops->drive_status     = (void(*)()) 0;
++ cdi->ops->media_changed    = (void(*)()) 0;
++ cdi->ops->tray_move        = (void(*)()) 0;
++ cdi->ops->lock_door        = (void(*)()) 0;
++ cdi->ops->select_speed     = (void(*)()) 0;
++ cdi->ops->select_disc      = (void(*)()) 0;
++ cdi->ops->get_last_session = (void(*)()) 0;
++ cdi->ops->get_mcn          = (void(*)()) 0;
++ cdi->ops->reset            = (void(*)()) 0;
++ cdi->ops->audio_ioctl      = (void(*)()) 0;
++ cdi->ops->dev_ioctl        = (void(*)()) 0;
++ cdi->ops->generic_packet   = (void(*)()) 0;
++
+  cdi->disk = (struct gendisk *)malloc(sizeof(struct gendisk));
+  cdi->disk->queue = (struct request_queue *)malloc(sizeof(struct request_queue));
+  cdi->disk->queue->boundary_rq = (struct request *)malloc(sizeof(struct request));
+@@ -6165,7 +6176,7 @@ int main_sub(void)
+   return(tmp);
+  }
+ 
+- do {
++ while ((get_nondet_int() > 0)) {
+   if ((get_nondet_int() > 0)) {
+    med = get_nondet_ptr();
+    tmp = cdrom_get_media_event(cdi, med);
+@@ -6206,7 +6217,7 @@ int main_sub(void)
+   else if ((get_nondet_int() > 0)) {
+    tmp = cdrom_media_changed(cdi);
+   }
+- } while (0);
++ }
+ 
+  tmp = unregister_cdrom(cdi);
+  if (tmp == 0) {
+-- 
+1.7.3.2
+
