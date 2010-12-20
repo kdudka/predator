@@ -538,6 +538,7 @@ void SymPlot::Private::digNext(TObjId obj) {
         case OK_PART:
             return;
 
+        case OK_MAY_EXIST:
         case OK_SLS:
         case OK_DLS:
             break;
@@ -558,7 +559,7 @@ void SymPlot::Private::digNext(TObjId obj) {
 
     // store 'next' poitner object
     this->nexts.insert(objNext);
-    if (OK_SLS == kind)
+    if (OK_DLS != kind)
         return;
 
     const TObjId objPeer = subObjByChain(*this->heap, obj, bf.peer);
@@ -590,6 +591,12 @@ void SymPlot::Private::openCluster(TObjId obj) {
                 ? "red"
                 : "black";
             pw = "1.0";
+            break;
+
+        case OK_MAY_EXIST:
+            label += "MAY_EXIST";
+            color = "blue";
+            pw = "3.0";
             break;
 
         case OK_HEAD:
@@ -669,10 +676,13 @@ bool SymPlot::Private::handleUnknownValue(TValueId value) {
             this->plotNodeAux(value, CL_TYPE_UNKNOWN, "UV_UNKNOWN");
             return true;
 
-        default:
-            CL_TRAP;
+        case UV_DONT_CARE:
+            this->plotNodeAux(value, CL_TYPE_UNKNOWN, "UV_DONT_CARE");
             return true;
     }
+
+    CL_TRAP;
+    return true;
 }
 
 bool SymPlot::Private::resolveValueOf(TValueId *pDst, TObjId obj) {

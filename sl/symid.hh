@@ -31,10 +31,6 @@
 #include <climits>          // needed for UINT_MAX
 #include <utility>          // needed for std::pair
 
-#ifndef DEBUG_SYMID_FORCE_INT
-#   define DEBUG_SYMID_FORCE_INT 0
-#endif
-
 /**
  * SymHeap @b object @b ID
  * @note Though the type is defined as enumeration for now, the code should not
@@ -133,11 +129,6 @@ enum TValueId {
      */
     VAL_MAX_ID        = /* XXX */ UINT_MAX
 };
-
-#if DEBUG_SYMID_FORCE_INT
-#   define TObjId int
-#   define TValueId int
-#endif
 
 typedef std::pair<TObjId, TObjId>           TObjPair;
 typedef std::pair<TValueId, TValueId>       TValPair;

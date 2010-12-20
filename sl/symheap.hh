@@ -44,6 +44,7 @@ enum EUnknownValue {
     UV_KNOWN = 0,           ///< known value - what we usually wish we had
     UV_ABSTRACT,            ///< points to SLS/DLS (the prover needs to know it)
     UV_UNKNOWN,             ///< unknown value - what we usually have in reality
+    UV_DONT_CARE,           ///< unknown value that we don't want to know anyway
     UV_UNINITIALIZED        ///< unknown value of an uninitialised object
 };
 
@@ -188,10 +189,6 @@ class SymHeapCore {
         void objDestroy(TObjId obj, TObjId kind);
 
         friend TValueId handleValue(DeepCopyData &dc, TValueId valSrc);
-        friend bool followValuePair(
-                SymJoinCtx              &ctx,
-                const TValueId          v1,
-                const TValueId          v2);
 
     public:
         /**
@@ -307,7 +304,7 @@ class SymHeapCore {
         /**
          * pick up all heap predicates that can be fully mapped by valMap into
          * ref and check if they have their own reflection in ref
-         * @param instance of another symbolic heap
+         * @param ref instance of another symbolic heap
          * @param valMap an (injective) mapping of values from this symbolic
          * heap into the symbolic heap that is given by ref
          * @return return true if all such predicates have their reflection in
@@ -341,7 +338,11 @@ struct CVar {
     /// zero for global/static variables, instance number 1..n otherwise
     int inst;
 
-    CVar(): uid(-1) { }
+    CVar():
+        uid(-1),
+        inst(-1)
+    {
+    }
 
     CVar(int uid_, int inst_):
         uid(uid_),
@@ -625,6 +626,8 @@ enum EObjKind {
     OK_CONCRETE     = 0,    ///< concrete object (not a segment)
     OK_SLS          = 1,    ///< singly-linked list segment
     OK_DLS          = 2,    ///< doubly-linked list segment
+
+    OK_MAY_EXIST,
 
     OK_HEAD,                ///< segment's head (useful for Linux lists)
     OK_PART                 ///< part of a segment (sub-object)

@@ -184,7 +184,7 @@ class SymExecCore: public SymProc {
                             const TOpList &opList, const TDerefs &derefs);
 
         bool concretizeIfNeeded(SymState &dst, const CodeStorage::Insn &insn);
-        bool execCore(SymState &dst, const CodeStorage::Insn &insn);
+        bool execCore(SymState &dst, const CodeStorage::Insn &insn, const bool);
 
     private:
         const SymExecCoreParams ep_;

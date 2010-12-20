@@ -1,0 +1,5 @@
+test-0121.c:111:9: warning: killing junk
+test-0121.c:117:25: note: from call of create_sll_pe()
+test-0121.c:125:45: note: from call of create_shape()
+test-0121.c:123:5: note: from call of main()
+test-0121.c:125:45: warning: killing junk

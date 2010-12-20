@@ -157,6 +157,8 @@ Higher level SLS/DLS abstraction, etc.
 
     test-0117.c - error-free variant of test-0116 (only a destructor added)
 
+    test-0124.c - merge-sort operating on two level SLL
+
 
 Linux lists
 ===========
@@ -242,7 +244,24 @@ Linux lists
 
     test-0109.c - Linux DLS with nested Linux DLLs consisting of _two_ items
 
+    test-0115.c - non-deterministic variant of test-0123
+                - terminates instantly with SE_PREFER_LOSSLESS_PROTOTYPES == 0
+                - otherwise runs horribly long, but the result is still correct
+
     test-0120.c - Linux "list" of length one, based on hlist_head/hlist_node
+
+    test-0121.c - alternation of test-0097
+                - once used as demo in slides about symdiscover
+                - we needed something that is easy to plot
+                - abstraction is triggerred only
+                  with SE_PREFER_LOSSLESS_PROTOTYPES == 0
+
+    test-0122.c - the most trivial case of Linux DLS abstraction
+                - once used as demo in slides about symdiscover
+
+    test-0123.c - Linux DLS with zero or one nested items in each node
+
+    test-0125.c - a more generic variant of test-0115
 
 
 Show-case

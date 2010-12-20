@@ -40,7 +40,7 @@ version.h:
 		fi
 
 clean:
-	rm -f version.h
+	if test -d ../.git; then rm -f version.h; fi
 	if test -e ../fwnull_build/Makefile; then \
 		$(MAKE) clean -C ../fwnull_build; \
 	fi

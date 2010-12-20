@@ -66,7 +66,6 @@ set(clplug_incs ${clplug_incs} "-I${sl_SOURCE_DIR}/../include")
 set(clplug_incs ${clplug_incs} "-I${sl_SOURCE_DIR}/../include/gcc")
 
 set(examples
-    0000
     0001 0002 0003 0004 0005 0006 0007 0008 0009 0010
     0011 0012 0013 0014 0015 0016 0017 0018 0019 0020
     0021 0022 0023 0024 0025 0026 0027 0028 0029 0030
@@ -78,7 +77,8 @@ set(examples
     0081 0082 0083 0084 0085 0086 0087 0088 0089 0090
     0091 0092 0093 0094 0095 0096 0097 0098 0099 0100
     0101 0102 0103 0104 0105 0106 0107 0108 0109 0110
-    0111 0112 0113 0114      0116 0117 0118 0119 0120)
+    0111 0112 0113 0114 0115 0116 0117 0118 0119 0120
+    0121 0122 0123 0124 0125)
 
 # FIXME: define this macro more generically, in particular the count of args
 macro(test_sym_exec label tool arg1 arg2 arg3)

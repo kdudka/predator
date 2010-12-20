@@ -323,6 +323,9 @@ bool checkValueMapping(
         const TValueId          v2,
         const bool              allowUnknownMapping)
 {
+    if (!checkNonPosValues(v1, v2))
+        return false;
+
     // read-only value lookup
     const TValMap &vMap1 = ctx.valMap1[/* ltr */ 0];
     const TValMap &vMap2 = ctx.valMap2[/* ltr */ 0];
@@ -335,13 +338,8 @@ bool checkValueMapping(
         // we have not enough info yet
         return allowUnknownMapping;
 
-    const TValueId vDst1 = (hasMapping1)
-        ? i1->second
-        : static_cast<TValueId>(VAL_INVALID);
-
-    const TValueId vDst2 = (hasMapping2)
-        ? i2->second
-        : static_cast<TValueId>(VAL_INVALID);
+    const TValueId vDst1 = (hasMapping1) ? i1->second : VAL_INVALID;
+    const TValueId vDst2 = (hasMapping2) ? i2->second : VAL_INVALID;
 
     if (hasMapping1 && hasMapping1 && (vDst1 == vDst2))
         // mapping already known and known to be consistent
@@ -468,18 +466,27 @@ struct ObjJoinVisitor {
     }
 };
 
-class SegMatchVisitor {
-    private:
-        SymJoinCtx &ctx_;
+struct SegMatchVisitor {
+    SymJoinCtx              &ctx;
+    std::set<TObjId>        blackList;
 
     public:
-        SegMatchVisitor(SymJoinCtx &ctx): ctx_(ctx) { }
+        SegMatchVisitor(SymJoinCtx &ctx_):
+            ctx(ctx_)
+        {
+        }
 
         bool operator()(const boost::array<TObjId, 2> &item) {
-            const TObjId obj1   = item[0];
-            const TObjId obj2   = item[1];
+            const TObjId obj1 = item[0];
+            const TObjId obj2 = item[1];
 
-            return joinFreshObjTripple(ctx_, obj1, obj2,
+            const TObjId img1 = roMapLookup(ctx.objMap1, obj1);
+            const TObjId img2 = roMapLookup(ctx.objMap2, obj2);
+            if (hasKey(blackList, img1) || hasKey(blackList, img2))
+                // black-listed
+                return true;
+
+            return joinFreshObjTripple(ctx, obj1, obj2,
                                        /* read-only */ OBJ_INVALID);
         }
 };
@@ -543,6 +550,17 @@ bool segMatchLookAhead(
 
     // guide the visitors through them
     SegMatchVisitor visitor(ctx);
+
+    if (OK_DLS == ctx.sh1.objKind(root1)) {
+        const TObjId peerPtr1 = peerPtrFromSeg(ctx.sh1, root1);
+        visitor.blackList.insert(roMapLookup(ctx.objMap1, peerPtr1));
+    }
+
+    if (OK_DLS == ctx.sh2.objKind(root2)) {
+        const TObjId peerPtr2 = peerPtrFromSeg(ctx.sh2, root2);
+        visitor.blackList.insert(roMapLookup(ctx.objMap2, peerPtr2));
+    }
+
     return visitor(roots)
         && traverseSubObjs<2>(sht, roots, visitor);
 }
@@ -669,6 +687,31 @@ bool joinSegBinding(
     return false;
 }
 
+bool considerImplicitPrototype(
+        const SymJoinCtx        &ctx,
+        const TObjId            root1,
+        const TObjId            root2)
+{
+    const bool isProto1 = ctx.sh1.objIsProto(root1);
+    const bool isProto2 = ctx.sh2.objIsProto(root2);
+    CL_BREAK_IF(isProto1 == isProto2);
+    (void) isProto1;
+
+    const SymHeap &sh = (isProto2) ? ctx.sh1 : ctx.sh2;
+    const TObjId root = (isProto2) ? root1 : root2;
+
+    SymHeap::TContObj refs;
+    gatherPointingObjects(sh, refs, root, /* toInsideOnly */ false);
+    BOOST_FOREACH(const TObjId obj, refs) {
+        if (OK_CONCRETE != sh.objKind(obj))
+            return false;
+    }
+
+    SJ_DEBUG("P-P considerImplicitPrototype() matches a pair of objects: "
+             << SJ_OBJP(root1, root2));
+    return true;
+}
+
 bool joinProtoFlag(
         bool                    *pDst,
         const SymJoinCtx        &ctx,
@@ -689,7 +732,7 @@ bool joinProtoFlag(
     if (ctx.sh2.objIsProto(root2) == *pDst)
         return true;
 
-    if (ctx.joiningData()) {
+    if (ctx.joiningData() || considerImplicitPrototype(ctx, root1, root2)) {
         *pDst = true;
         return true;
     }
@@ -698,12 +741,14 @@ bool joinProtoFlag(
     return false;
 }
 
+/// (NULL != bfMayExist) means 'create OK_MAY_EXIST'
 bool createObject(
         SymJoinCtx              &ctx,
         const struct cl_type    *clt,
         const TObjId            root1,
         const TObjId            root2,
-        const EJoinStatus       action)
+        const EJoinStatus       action,
+        const SegBindingFields  *bfMayExist = 0)
 {
     EObjKind kind;
     if (!joinObjKind(&kind, ctx, root1, root2, action))
@@ -716,6 +761,13 @@ bool createObject(
     bool isProto;
     if (!joinProtoFlag(&isProto, ctx, root1, root2))
         return false;
+
+    if (bfMayExist) {
+        // we are asked to introduce OK_MAY_EXIST
+        CL_BREAK_IF(OK_CONCRETE != kind && OK_MAY_EXIST != kind);
+        kind = OK_MAY_EXIST;
+        bf = *bfMayExist;
+    }
 
     updateJoinStatus(ctx, action);
 
@@ -804,24 +856,13 @@ bool followObjPairCore(
         && defineAddressMappingOfSub(ctx, o1, o2);
 }
 
-bool followObjPair(
+bool dlSegHandleShared(
         SymJoinCtx              &ctx,
         const TObjId            o1,
         const TObjId            o2,
         const EJoinStatus       action,
-        const bool              readOnly = false)
+        const bool              readOnly)
 {
-    if (!followObjPairCore(ctx, o1, o2, action, readOnly))
-        return false;
-
-    if (!ctx.joiningData())
-        // we are on the way from joinSymHeaps()
-        return true;
-
-    if (o1 != o2)
-        // looks rather as a prototype and we are interested in shared data here
-        return true;
-
     const bool isDls = (OK_DLS == ctx.sh1.objKind(o1));
     CL_BREAK_IF(isDls != (OK_DLS == ctx.sh2.objKind(o2)));
     if (!isDls)
@@ -832,6 +873,9 @@ bool followObjPair(
     const TObjId peer2 = dlSegPeer(ctx.sh2, o2);
     if (!followObjPairCore(ctx, peer1, peer2, action, readOnly))
         return false;
+
+    if (readOnly)
+        return true;
 
     // we might have just joined a DLS pair as shared data, which would lead to
     // unconnected DLS pair in ctx.dst and later cause some problems;  the best
@@ -848,10 +892,58 @@ bool followObjPair(
     return true;
 }
 
+bool followObjPair(
+        SymJoinCtx              &ctx,
+        const TObjId            o1,
+        const TObjId            o2,
+        const EJoinStatus       action,
+        const bool              readOnly = false)
+{
+    if (!followObjPairCore(ctx, o1, o2, action, readOnly))
+        return false;
+
+    if (!ctx.joiningData())
+        // we are on the way from joinSymHeaps()
+        return true;
+
+    if (o1 == o2)
+        // shared data
+        return dlSegHandleShared(ctx, o1, o2, action, readOnly);
+
+    if (readOnly)
+        // postpone it till the read-write attempt
+        return true;
+
+    const bool isDls1 = (OK_DLS == ctx.sh1.objKind(o1));
+    const bool isDls2 = (OK_DLS == ctx.sh2.objKind(o2));
+    if (isDls1 == isDls2)
+        return true;
+
+    CL_BREAK_IF(isDls1 && JS_USE_SH1 != action);
+    CL_BREAK_IF(isDls2 && JS_USE_SH2 != action);
+
+    const TObjId peer1 = (isDls1) ? dlSegPeer(ctx.sh1, o1) : OBJ_INVALID;
+    const TObjId peer2 = (isDls2) ? dlSegPeer(ctx.sh2, o2) : OBJ_INVALID;
+
+    const SymJoinCtx::TObjMap &om = (isDls1) ? ctx.objMap1 : ctx.objMap2;
+    if (hasKey(om, (isDls1) ? peer1 : peer2))
+        // alredy cloned
+        return true;
+
+    // clone peer object
+    ctx.tieBreaking.insert(TObjPair(peer1, peer2));
+
+    const struct cl_type *clt = (isDls1)
+        ? ctx.sh1.objType(peer1)
+        : ctx.sh2.objType(peer2);
+    return createObject(ctx, clt, peer1, peer2, action);
+}
+
 bool followValuePair(
         SymJoinCtx              &ctx,
         const TValueId          v1,
-        const TValueId          v2)
+        const TValueId          v2,
+        const bool              readOnly)
 {
     const struct cl_type *clt1, *clt2;
     const int cVal1 = ctx.sh1.valGetCustom(&clt1, v1);
@@ -869,6 +961,11 @@ bool followValuePair(
             return false;
         }
 
+        if (readOnly) {
+            return checkValueMapping(ctx, v1, v2,
+                                     /* allowUnknownMapping */ true);
+        }
+
         const TValueId vDst = ctx.dst.valCreateCustom(clt, cVal1);
         return defineValueMapping(ctx, v1, v2, vDst);
     }
@@ -881,6 +978,12 @@ bool followValuePair(
         return false;
     }
 
+    if (readOnly) {
+        // shallow scan only!
+        return checkValueMapping(ctx, v1, v2,
+                                 /* allowUnknownMapping */ true);
+    }
+
     if (0 < o1)
         return followObjPair(ctx, o1, o2, JS_USE_ANY);
 
@@ -890,40 +993,119 @@ bool followValuePair(
     if (!joinValClt(&clt, ctx, v1, v2))
         return false;
 
-    SymHeap &dst = ctx.dst;
-    const TObjId objTmp = dst.objCreate(clt);
-    const TValueId vDst = dst.placedAt(objTmp);
+    CVar cv;
+    if (OBJ_LOST == o1)
+        // we use (0 == uid) as universal stack object
+        cv.uid = 0;
 
-    // FIXME: avoid using of friend?
-    SymHeapCore &core = dynamic_cast<SymHeapCore &>(dst);
-    core.objDestroy(objTmp, /* OBJ_DELETED/OBJ_LOST */ o1);
+    SymHeap &dst = ctx.dst;
+    const TObjId objTmp = dst.objCreate(clt, cv);
+    const TValueId vDst = dst.placedAt(objTmp);
+    dst.objDestroy(objTmp);
     return defineValueMapping(ctx, v1, v2, vDst);
+}
+
+void considerValSchedule(
+        SymJoinCtx              &ctx,
+        const TValueId          v1,
+        const TValueId          v2,
+        const TObjId            byObj1,
+        const TObjId            byObj2)
+{
+    if (VAL_NULL == v1 && VAL_NULL == v2)
+        return;
+
+    if (checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ false))
+        return;
+
+    const TValPair vp(v1, v2);
+    if (!ctx.wl.schedule(vp))
+        return;
+
+    SJ_DEBUG("+++ " << SJ_VALP(v1, v2) << " <- " << SJ_OBJP(byObj1, byObj2));
 }
 
 bool joinSegmentWithAny(
         bool                    *pResult,
         SymJoinCtx              &ctx,
-        const TObjId            root1,
-        const TObjId            root2,
+        TObjId                  root1,
+        TObjId                  root2,
         const EJoinStatus       action)
 {
     SJ_DEBUG(">>> joinSegmentWithAny" << SJ_OBJP(root1, root2));
-    if (followObjPair(ctx, root1, root2, action, /* read-only */ true)) {
-        // go ahead, try it read-write!
-        *pResult = followObjPair(ctx, root1, root2, action);
-        return true;
+    const bool isDls1 = (OK_DLS == ctx.sh1.objKind(root1));
+    const bool isDls2 = (OK_DLS == ctx.sh2.objKind(root2));
+    if (followObjPair(ctx, root1, root2, action, /* read-only */ true))
+        goto read_only_ok;
+
+    if (isDls1) {
+        root1 = dlSegPeer(ctx.sh1, root1);
+        if (followObjPair(ctx, root1, root2, action, /* read-only */ true))
+            goto read_only_ok;
+    }
+
+    if (isDls2) {
+        root2 = dlSegPeer(ctx.sh2, root2);
+        if (followObjPair(ctx, root1, root2, action, /* read-only */ true))
+            goto read_only_ok;
+    }
+
+    if (isDls1 && isDls2) {
+        root1 = dlSegPeer(ctx.sh1, root1);
+        if (followObjPair(ctx, root1, root2, action, /* read-only */ true))
+            goto read_only_ok;
     }
 
     SJ_DEBUG("<<< joinSegmentWithAny" << SJ_OBJP(root1, root2));
     return false;
+
+read_only_ok:
+    // SegBindingFields is assumed to be already matching at this point
+    SegBindingFields bf = (JS_USE_SH1 == action)
+        ? ctx.sh1.objBinding(root1)
+        : ctx.sh2.objBinding(root2);
+
+    TObjId peer1 = root1;
+    if (OK_DLS == ctx.sh1.objKind(root1)) {
+        peer1 = dlSegPeer(ctx.sh1, root1);
+        bf = ctx.sh1.objBinding(peer1);
+    }
+
+    TObjId peer2 = root2;
+    if (OK_DLS == ctx.sh2.objKind(root2)) {
+        peer2 = dlSegPeer(ctx.sh2, root2);
+        bf = ctx.sh2.objBinding(peer2);
+    }
+
+    const TObjId next1 = subObjByChain(ctx.sh1, peer1, bf.next);
+    const TObjId next2 = subObjByChain(ctx.sh2, peer2, bf.next);
+
+    const TValueId valNext1 = ctx.sh1.valueOf(next1);
+    const TValueId valNext2 = ctx.sh2.valueOf(next2);
+    if (!checkValueMapping(ctx, valNext1, valNext2,
+                           /* allowUnknownMapping */ true))
+    {
+        SJ_DEBUG("<<< joinSegmentWithAny" << SJ_OBJP(root1, root2));
+        return false;
+    }
+
+    // go ahead, try it read-write!
+    *pResult = followObjPair(ctx, root1, root2, action);
+    if (!*pResult)
+        return true;
+
+    considerValSchedule(ctx, valNext1, valNext2, peer1, peer2);
+    return true;
 }
 
-bool insertSegmentCloneHelper(
+/// (NULL != bf) means 'introduce OK_MAY_EXIST'
+bool segmentCloneCore(
         SymJoinCtx                  &ctx,
         const SymHeap               &shGt,
         const TValueId              valGt,
         const SymJoinCtx::TObjMap   &objMapGt,
-        const EJoinStatus           action)
+        const EJoinStatus           action,
+        const SegBindingFields      *bf)
 {
     const TObjId objGt = objRootByVal(shGt, valGt);
     if (objGt < 0)
@@ -943,17 +1125,12 @@ bool insertSegmentCloneHelper(
              ", clt = " << *clt <<
              ", action = " << action);
 
-    const TObjId root1 = (JS_USE_SH1 == action)
-        ? objGt
-        : static_cast<TObjId>(OBJ_INVALID);
-
-    const TObjId root2 = (JS_USE_SH2 == action)
-        ? objGt
-        : static_cast<TObjId>(OBJ_INVALID);
+    const TObjId root1 = (JS_USE_SH1 == action) ? objGt : OBJ_INVALID;
+    const TObjId root2 = (JS_USE_SH2 == action) ? objGt : OBJ_INVALID;
 
     // clone the object
     ctx.tieBreaking.insert(TObjPair(root1, root2));
-    if (createObject(ctx, clt, root1, root2, action))
+    if (createObject(ctx, clt, root1, root2, action, bf))
         return true;
 
     SJ_DEBUG("<-- insertSegmentClone: failed to create object "
@@ -970,27 +1147,29 @@ void scheduleSegAddr(
         const EJoinStatus       action)
 {
     CL_BREAK_IF(JS_USE_SH1 != action && JS_USE_SH2 != action);
-    static const TValueId valInvalid = static_cast<TValueId>(VAL_INVALID);
 
     const TValPair vpSeg(
-            (JS_USE_SH1 == action) ? shGt.placedAt(seg) : valInvalid,
-            (JS_USE_SH2 == action) ? shGt.placedAt(seg) : valInvalid);
+            (JS_USE_SH1 == action) ? shGt.placedAt(seg) : VAL_INVALID,
+            (JS_USE_SH2 == action) ? shGt.placedAt(seg) : VAL_INVALID);
     wl.schedule(vpSeg);
 
     if (seg == peer)
         return;
 
     const TValPair vpPeer(
-            (JS_USE_SH1 == action) ? shGt.placedAt(peer) : valInvalid,
-            (JS_USE_SH2 == action) ? shGt.placedAt(peer) : valInvalid);
+            (JS_USE_SH1 == action) ? shGt.placedAt(peer) : VAL_INVALID,
+            (JS_USE_SH2 == action) ? shGt.placedAt(peer) : VAL_INVALID);
     wl.schedule(vpPeer);
 }
 
+/// (NULL != bf) means 'introduce OK_MAY_EXIST'
 bool insertSegmentClone(
+        bool                    *pResult,
         SymJoinCtx              &ctx,
         const TValueId          v1,
         const TValueId          v2,
-        const EJoinStatus       action)
+        const EJoinStatus       action,
+        const SegBindingFields  *bf = 0)
 {
     SJ_DEBUG(">>> insertSegmentClone" << SJ_VALP(v1, v2));
     const bool isGt1 = (JS_USE_SH1 == action);
@@ -1005,9 +1184,13 @@ bool insertSegmentClone(
         peer = dlSegPeer(shGt, seg);
 
     // resolve the 'next' pointer and check its validity
-    const TValueId nextGt = shGt.valueOf(nextPtrFromSeg(shGt, peer));
+    const TObjId nextPtr = (bf)
+        ? subObjByChain(shGt, seg, bf->next)
+        : nextPtrFromSeg(shGt, peer);
+
+    const TValueId nextGt = shGt.valueOf(nextPtr);
     const TValueId nextLt = (isGt2) ? v1 : v2;
-    if (!checkNonPosValues(nextGt, nextLt) || !checkValueMapping(ctx, 
+    if (!checkValueMapping(ctx, 
                 (isGt1) ? nextGt : nextLt,
                 (isGt2) ? nextGt : nextLt,
                 /* allowUnknownMapping */ true))
@@ -1019,9 +1202,10 @@ bool insertSegmentClone(
 
     const SymJoinCtx::TObjMap &objMapGt = (isGt1) ? ctx.objMap1 : ctx.objMap2;
 
+    const TValueId segGtAt = shGt.placedAt(seg);
     TValPair vp(
-            (isGt1) ? shGt.placedAt(seg) : static_cast<TValueId>(VAL_INVALID),
-            (isGt2) ? shGt.placedAt(seg) : static_cast<TValueId>(VAL_INVALID));
+            (isGt1) ? segGtAt : VAL_INVALID,
+            (isGt2) ? segGtAt : VAL_INVALID);
 
     scheduleSegAddr(ctx.wl, shGt, seg, peer, action);
     while (ctx.wl.next(vp)) {
@@ -1037,33 +1221,41 @@ bool insertSegmentClone(
             // do not go byond the segment, just follow its data
             continue;
 
-        const EUnknownValue code = shGt.valGetUnknown(valGt);
-        if (UV_UNINITIALIZED == code || UV_UNKNOWN == code) {
-            // clone unknown value
-            const struct cl_type *const clt = shGt.valType(valGt);
-            const TValueId vDst = ctx.dst.valCreateUnknown(code, clt);
-            if (defineValueMapping(ctx, vp.first, vp.second, vDst))
-                return false;
-        }
-        else if (!insertSegmentCloneHelper(ctx, shGt, valGt, objMapGt, action))
-            // clone failed
-            return false;
-    }
+        if (segGtAt != valGt)
+            // OK_MAY_EXIST is applicable only on the first object
+            bf = 0;
 
-    if (VAL_NULL == nextGt && VAL_NULL == nextLt)
-        // do not follow VAL_NULL pair
+        const EUnknownValue code = shGt.valGetUnknown(valGt);
+        switch (code) {
+            case UV_UNINITIALIZED:
+            case UV_UNKNOWN:
+            case UV_DONT_CARE: {
+                // clone unknown value
+                const struct cl_type *const clt = shGt.valType(valGt);
+                const TValueId vDst = ctx.dst.valCreateUnknown(code, clt);
+                if (0 < valLt && defineValueMapping(ctx, vp.first, vp.second, vDst))
+                    continue;
+                else
+                    break;
+            }
+
+            default:
+                if (segmentCloneCore(ctx, shGt, valGt, objMapGt, action, bf))
+                    continue;
+                else
+                    break;
+        }
+
+        // clone failed
+        *pResult = false;
         return true;
+    }
 
     // schedule the next object in the row
-    const TValPair next(
-            (isGt1) ? nextGt : nextLt,
-            (isGt2) ? nextGt : nextLt);
-
-    if (ctx.wl.schedule(next)) {
-        SJ_DEBUG("+++ " << SJ_VALP(next.first, next.second)
-                 << " <- insertSegmentClone");
-    }
-
+    const TValueId valNext1 = (isGt1) ? nextGt : nextLt;
+    const TValueId valNext2 = (isGt2) ? nextGt : nextLt;
+    considerValSchedule(ctx, valNext1, valNext2, OBJ_INVALID, OBJ_INVALID);
+    *pResult = true;
     return true;
 }
 
@@ -1095,8 +1287,140 @@ bool joinAbstractValues(
         // such values could be hardly used as reliable anchors
         return false;
 
-    *pResult = insertSegmentClone(ctx, v1, v2, subStatus);
-    return true;
+    return insertSegmentClone(pResult, ctx, v1, v2, subStatus);
+}
+
+class MayExistVisitor {
+    private:
+        SymJoinCtx              ctx_;
+        const EJoinStatus       action_;
+        const TValueId          valRef_;
+        TFieldIdxChain          icNext_;
+
+    public:
+        MayExistVisitor(
+                SymJoinCtx          &ctx,
+                const EJoinStatus   action,
+                const TValueId      valRef):
+            ctx_(ctx),
+            action_(action),
+            valRef_(valRef)
+        {
+            CL_BREAK_IF(JS_USE_SH1 != action && JS_USE_SH2 != action);
+        }
+
+        TFieldIdxChain icNext() const {
+            return icNext_;
+        }
+
+        bool operator()(
+                const SymHeap   &sh,
+                const TObjId    sub,
+                TFieldIdxChain  ic)
+        {
+            const TValueId val = sh.valueOf(sub);
+            const TValueId v1 = (JS_USE_SH1 == action_) ? val : valRef_;
+            const TValueId v2 = (JS_USE_SH2 == action_) ? val : valRef_;
+            if (!followValuePair(ctx_, v1, v2, /* read-only */ true))
+                return /* continue */ true;
+
+            icNext_ = ic;
+            return /* continue */ false;
+        }
+};
+
+class SubAddrFinder {
+    private:
+        const TValueId subAddr_;
+        TFieldIdxChain result_;
+
+    public:
+        SubAddrFinder(const TValueId subAddr): subAddr_(subAddr) { }
+
+        TFieldIdxChain result() const { return result_; }
+
+        bool operator()(
+                const SymHeap   &sh,
+                const TObjId    sub,
+                TFieldIdxChain  ic)
+        {
+            if (subAddr_ != sh.placedAt(sub))
+                return /* continue */ true;
+
+            // found!
+            result_ = ic;
+            return false;
+        }
+};
+
+bool mayExistFallback(
+        SymJoinCtx              &ctx,
+        const TValueId          v1,
+        const TValueId          v2,
+        const EJoinStatus       action)
+{
+    if (!ctx.joiningData())
+        // TODO: consider usage of OK_MAY_EXIST also in join of states?
+        return false;
+
+    const bool use1 = (JS_USE_SH1 == action);
+    const bool use2 = (JS_USE_SH2 == action);
+    CL_BREAK_IF(use1 == use2);
+
+    const bool hasMapping1 = hasKey(ctx.valMap1[/* ltr */ 0], v1);
+    const bool hasMapping2 = hasKey(ctx.valMap2[/* ltr */ 0], v2);
+    if ((hasMapping1 != hasMapping2) && (hasMapping1 == use1))
+        // try it the other way around
+        return false;
+
+    const SymHeap &sh = (use1) ? ctx.sh1 : ctx.sh2;
+    const TValueId val = (use1) ? v1 : v2;
+    const TObjId target = objRootByVal(sh, val);
+    if (target <= 0 || !isComposite(sh.objType(target)))
+        // non-starter
+        return false;
+
+    const TValueId ref = (use2) ? v1 : v2;
+    MayExistVisitor visitor(ctx, action, ref);
+    if (traverseSubObjsIc(sh, target, visitor))
+        // no match
+        return false;
+
+    // dig head
+    SubAddrFinder headFinder(val);
+    if (traverseSubObjsIc(sh, target, headFinder)) {
+        CL_BREAK_IF("MayExistVisitor malfunction");
+        return false;
+    }
+
+    SegBindingFields bf;
+    bf.head = headFinder.result();
+    bf.next = visitor.icNext();
+    bool result = false;
+
+    const bool ok = insertSegmentClone(&result, ctx, v1, v2, action, &bf);
+    CL_BREAK_IF(!ok);
+    (void) ok;
+
+    return result;
+}
+
+bool unknownValueFallBack(
+        SymJoinCtx              &ctx,
+        const TValueId          v1,
+        const TValueId          v2,
+        const TValueId          vDst)
+{
+    const TValueId vDstBy1 = roMapLookup(ctx.valMap1[/* ltr */ 0], v1);
+    const TValueId vDstBy2 = roMapLookup(ctx.valMap2[/* ltr */ 0], v2);
+
+    // TODO
+    CL_DEBUG("WARNING: unknownValueFallBack() not implemented yet!");
+    CL_BREAK_IF(debugSymJoin);
+    (void) vDstBy1;
+    (void) vDstBy2;
+    (void) vDst;
+    return false;
 }
 
 bool joinValuePair(SymJoinCtx &ctx, const TValueId v1, const TValueId v2) {
@@ -1105,13 +1429,18 @@ bool joinValuePair(SymJoinCtx &ctx, const TValueId v1, const TValueId v2) {
 
     EUnknownValue code;
     if (joinUnknownValuesCode(&code, code1, code2)) {
-        // create unknown value
         const struct cl_type *clt;
         if (!joinValClt(&clt, ctx, v1, v2))
             return false;
 
+        // create a new unknown value in ctx.dst
         const TValueId vDst = ctx.dst.valCreateUnknown(code, clt);
-        return defineValueMapping(ctx, v1, v2, vDst);
+
+        if (checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ true))
+            // go ahead, proceed read-write
+            return defineValueMapping(ctx, v1, v2, vDst);
+
+        return unknownValueFallBack(ctx, v1, v2, vDst);
     }
 
     bool result;
@@ -1124,7 +1453,11 @@ bool joinValuePair(SymJoinCtx &ctx, const TValueId v1, const TValueId v2) {
         return false;
     }
 
-    return followValuePair(ctx, v1, v2);
+    if (followValuePair(ctx, v1, v2, /* read-only */ true))
+        return followValuePair(ctx, v1, v2, /* read-only */ false);
+
+    return mayExistFallback(ctx, v1, v2, JS_USE_SH1)
+        || mayExistFallback(ctx, v1, v2, JS_USE_SH2);
 }
 
 bool joinPendingValues(SymJoinCtx &ctx) {
@@ -1291,6 +1624,10 @@ bool setDstValues(SymJoinCtx &ctx, const std::set<TObjId> *blackList = 0) {
         blackList = &emptyBlackList;
 
     BOOST_FOREACH(TMap::const_reference rItem, rMap) {
+        if (!ctx.dst.objType(rItem.first))
+            // do not set value of anonymous objects
+            continue;
+
         if (!setDstValuesCore(ctx, rItem, blackList))
             return false;
     }

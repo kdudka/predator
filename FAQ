@@ -45,6 +45,10 @@ A: * 32bit system headers, especially in case of 64bit OS
      - you can check their status
        by 'gcc -m32 -o /dev/null /usr/include/stdlib.h'
 
+   * valgrind
+     - available at http://valgrind.org/
+     - package is usually called 'valgrind'
+
 Q: How can I run the test-suite?
 A:
     $ make check

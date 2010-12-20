@@ -26,6 +26,11 @@
 #include "trap.h"
 
 /**
+ * if 1, print amount of allocated memory on certain places when in verbose mode
+ */
+#define DEBUG_MEM_USAGE                     1
+
+/**
  * if 1, print created/destroyed stack variables when running in verbose mode
  */
 #define DEBUG_SE_STACK_FRAME                0
@@ -56,11 +61,6 @@
 #define DEBUG_SYMJOIN                       0
 
 /**
- * if 1, define TObjId and TValueId is integers (makes debugging easier)
- */
-#define DEBUG_SYMID_FORCE_INT               0
-
-/**
  * if 1, SymState plots heap graphs per each heap comparison (expensive)
  */
 #define DEBUG_SYMSTATE                      0
@@ -76,8 +76,7 @@
 #define DEBUG_UNUSED_VALUES                 0
 
 /**
- * if 1, call optimization is not performed; it may introduce some compile-time
- * warnings and memory leaks as a side effect
+ * if 1, call cache is not used at all
  */
 #define SE_DISABLE_CALL_CACHE               0
 
@@ -105,11 +104,6 @@
  * if 1, do not use the @b symjoin module for symbolic state management
  */
 #define SE_DISABLE_SYMJOIN_IN_SYMSTATE      0
-
-/**
- * if 1, do not use the @b symjoin module for discovering of prototypes
- */
-#define SE_DISABLE_SYMJOIN_IN_SYMDISCOVER   0
 
 /**
  * if 1, do not allow three-way join

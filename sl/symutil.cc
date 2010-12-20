@@ -268,17 +268,122 @@ void gatherPointingObjects(const SymHeap            &sh,
     traverseSubObjs(sh, root, visitor, /* leavesOnly */ false);
 }
 
+struct SubByOffsetFinder {
+    TObjId                  root;
+    TObjId                  subFound;
+    const struct cl_type    *cltToSeek;
+    int                     offToSeek;
+
+    bool operator()(const SymHeap &sh, TObjId sub) {
+        const struct cl_type *clt = sh.objType(sub);
+        if (!clt || *clt != *this->cltToSeek)
+            return /* continue */ true;
+
+        if (this->offToSeek != subOffsetIn(sh, this->root, sub))
+            return /* continue */ true;
+
+        // found!
+        this->subFound = sub;
+        return /* break */ false;
+    }
+};
+
+TObjId subSeekByOffset(const SymHeap &sh, TObjId obj,
+                       const struct cl_type *clt, int offToSeek)
+{
+    if (!offToSeek)
+        return obj;
+
+    // prepare visitor
+    SubByOffsetFinder visitor;
+    visitor.root        = obj;
+    visitor.cltToSeek   = clt;
+    visitor.offToSeek   = offToSeek;
+    visitor.subFound    = OBJ_INVALID;
+
+    // look for the requested sub-object
+    if (traverseSubObjs(sh, obj, visitor, /* leavesOnly */ false))
+        return OBJ_INVALID;
+    else
+        return visitor.subFound;
+}
+
+TValueId addrQueryByOffset(
+        SymHeap                 &sh,
+        const TObjId            target,
+        const int               offRequested,
+        const struct cl_type    *cltPtr,
+        const LocationWriter    *lw)
+{
+    // seek root object while cumulating the offset
+    TObjId obj = target;
+    TObjId parent;
+    int off = offRequested;
+    int nth;
+    while (OBJ_INVALID != (parent = sh.objParent(obj, &nth))) {
+        const struct cl_type *cltParent = sh.objType(parent);
+        CL_BREAK_IF(cltParent->item_cnt <= nth);
+
+        off += cltParent->items[nth].offset;
+        obj = parent;
+    }
+
+    const struct cl_type *cltRoot = sh.objType(obj);
+    if (!cltRoot || cltRoot->code != CL_TYPE_STRUCT) {
+        if (lw)
+            CL_ERROR_MSG(*lw, "unsupported target type for pointer plus");
+
+        return sh.valCreateUnknown(UV_UNKNOWN, 0);
+    }
+
+    if (off < 0) {
+        // we need to create an off-value
+        const SymHeapCore::TOffVal ov(sh.placedAt(obj), off);
+        return sh.valCreateByOffset(ov);
+    }
+
+    // jump to _target_ type
+    const struct cl_type *clt = targetTypeOfPtr(cltPtr);
+
+    obj = subSeekByOffset(sh, obj, clt, off);
+    if (obj <= 0) {
+        // fall-back to off-value, but now related to the original target,
+        // instead of root
+        const SymHeapCore::TOffVal ov(sh.placedAt(target), offRequested);
+        return sh.valCreateByOffset(ov);
+    }
+
+    // get the final address and check type compatibility
+    const TValueId addr = sh.placedAt(obj);
+    const struct cl_type *cltDst = sh.valType(addr);
+    if (!cltDst || *cltDst != *clt) {
+        const char msg[] = "dangerous assignment of pointer plus' result";
+        if (lw)
+            CL_DEBUG_MSG(lw, msg);
+        else
+            CL_DEBUG(msg);
+    }
+
+    return addr;
+}
+
 void redirectInboundEdges(
         SymHeap                 &sh,
         const TObjId            pointingFrom,
         const TObjId            pointingTo,
         const TObjId            redirectTo)
 {
+#ifndef NDEBUG
+    const struct cl_type *clt1 = sh.objType(pointingTo);
+    const struct cl_type *clt2 = sh.objType(redirectTo);
+    CL_BREAK_IF(!clt1 || !clt2 || *clt1 != *clt2);
+#endif
+
     // go through all objects pointing at/inside pointingTo
     SymHeap::TContObj refs;
     gatherPointingObjects(sh, refs, pointingTo, /* toInsideOnly */ false);
     BOOST_FOREACH(const TObjId obj, refs) {
-        if (pointingFrom != objRoot(sh, obj))
+        if (OBJ_INVALID != pointingFrom && pointingFrom != objRoot(sh, obj))
             // pointed from elsewhere, keep going
             continue;
 

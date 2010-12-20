@@ -132,16 +132,10 @@ test-0119.c:35:5: note: from call of main()
 test-0119.c:29:29: error: dereference of NULL value
 test-0119.c:37:41: note: from call of create_longer_sll()
 test-0119.c:35:5: note: from call of main()
-test-0119.c:29:29: error: dereference of NULL value
-test-0119.c:37:41: note: from call of create_longer_sll()
-test-0119.c:35:5: note: from call of main()
 test-0119.c:30:9: error: dereference of NULL value
 test-0119.c:37:41: note: from call of create_longer_sll()
 test-0119.c:35:5: note: from call of main()
 test-0119.c:30:9: error: dereference of NULL value
-test-0119.c:37:41: note: from call of create_longer_sll()
-test-0119.c:35:5: note: from call of main()
-test-0119.c:30:29: error: dereference of NULL value
 test-0119.c:37:41: note: from call of create_longer_sll()
 test-0119.c:35:5: note: from call of main()
 test-0119.c:30:29: error: dereference of NULL value

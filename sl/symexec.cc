@@ -41,6 +41,29 @@
 #include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
 
+#if DEBUG_MEM_USAGE
+#   include <malloc.h>
+void printMemUsage(const char *fnc) {
+    static bool overflowDetected;
+    if (overflowDetected)
+        // instead of printing misleading numbers, we rather print nothing
+        return;
+
+    struct mallinfo info = mallinfo();
+    const unsigned cnt = info.uordblks >> /* MiB */ 20;
+    if (2048U <= cnt) {
+        // mallinfo() is broken by design <https://bugzilla.redhat.com/173813>
+        overflowDetected = true;
+        return;
+    }
+
+    CL_DEBUG("current memory usage: " << cnt << " MB"
+             << " (just completed " << fnc << "())");
+}
+#else
+void printMemUsage(const char *) { }
+#endif
+
 // utilities
 namespace {
 
@@ -228,7 +251,7 @@ void SymExecEngine::execReturn() {
     }
 
     // commit one of the function results
-    dst_.insert(heap);
+    dst_.insertFast(heap);
     endReached_ = true;
 }
 
@@ -240,7 +263,8 @@ void SymExecEngine::updateState(const CodeStorage::Block *ofBlock,
     // clone the current symbolic heap, as we are going to change it eventually
     SymHeap sh(localState_[heapIdx_]);
 
-    if (VAL_INVALID != valDst && VAL_INVALID != valSrc)
+    if (VAL_INVALID != valDst && VAL_INVALID != valSrc
+            && UV_DONT_CARE != sh.valGetUnknown(valDst))
         // replace an unknown value while traversing an unambiguous condition
         sh.valReplaceUnknown(valDst, valSrc);
 
@@ -248,10 +272,12 @@ void SymExecEngine::updateState(const CodeStorage::Block *ofBlock,
     abstractIfNeeded(sh);
 
     // update _target_ state and check if anything has changed
-    if (!stateMap_.insert(ofBlock, block_, sh)) {
-        CL_DEBUG_MSG(lw_, "--- block " << name << " left intact");
-
-    } else {
+    if (!stateMap_.insertFast(ofBlock, block_, sh)) {
+        CL_DEBUG_MSG(lw_, "--- block " << name
+                     << " left intact (size of target is "
+                     << stateMap_[ofBlock].size() << ")");
+    }
+    else {
         const size_t last = todo_.size();
 
         // schedule for next wheel (if not already)
@@ -262,7 +288,8 @@ void SymExecEngine::updateState(const CodeStorage::Block *ofBlock,
                 << " block " << name
                 << ((already)
                     ? " changed, but already scheduled"
-                    : " scheduled for next wheel"));
+                    : " scheduled for next wheel")
+                << " (size of target is " << stateMap_[ofBlock].size() << ")");
     }
 }
 
@@ -304,7 +331,11 @@ void SymExecEngine::execCondInsn() {
     const EUnknownValue code = heap.valGetUnknown(val);
     switch (code) {
         case UV_UNKNOWN:
-            CL_DEBUG_MSG(lw_, "??? CL_INSN_COND got VAL_UNKNOWN");
+            CL_DEBUG_MSG(lw_, "??? CL_INSN_COND got UV_UNKNOWN");
+            break;
+
+        case UV_DONT_CARE:
+            CL_DEBUG_MSG(lw_, "??? CL_INSN_COND got UV_DONT_CARE");
             break;
 
         case UV_UNINITIALIZED:
@@ -400,8 +431,10 @@ bool /* complete */ SymExecEngine::execInsn() {
             // the result is already included in the resulting state, skip it
             continue;
 
-        if (1 < hCnt)
-            CL_DEBUG_MSG(lw_, "*** processing heap #" << heapIdx_);
+        if (1 < hCnt) {
+            CL_DEBUG_MSG(lw_, "*** processing heap #" << heapIdx_
+                         << " (initial size of state was " << hCnt << ")");
+        }
 
         if (isTerm) {
             // terminal insn
@@ -436,7 +469,8 @@ bool /* complete */ SymExecEngine::execBlock() {
         const LocationWriter lw(&insn->loc);
         CL_DEBUG_MSG(lw_, "___ we are back in " << name
                 << ", insn #" << insnIdx_
-                << ", heap #" << (heapIdx_ - 1));
+                << ", heap #" << (heapIdx_ - 1)
+                << ", " << todo_.size() << " basic block(s) in the queue");
     }
 
     if (!insnIdx_)
@@ -471,9 +505,20 @@ bool /* complete */ SymExecEngine::execBlock() {
         origin.setDone(h);
 
     // the whole block is processed now
-    CL_DEBUG_MSG(lw_, "___ completed batch for " << name);
+    CL_DEBUG_MSG(lw_, "___ completed batch for " << name
+                 << ", " << todo_.size() << " basic block(s) in the queue");
     insnIdx_ = 0;
     return true;
+}
+
+void joinNewResults(
+        SymHeapList             &dst,
+        const SymState          &src)
+{
+    SymStateWithJoin all;
+    all.swap(dst);
+    all.SymState::insert(src);
+    all.swap(dst);
 }
 
 bool /* complete */ SymExecEngine::run() {
@@ -481,8 +526,8 @@ bool /* complete */ SymExecEngine::run() {
     const LocationWriter lw(&fnc->def.loc);
 
     if (waiting_) {
-        // pick up the results of the call
-        nextLocalState_.insert(callResults_);
+        // pick up results of the pending call
+        joinNewResults(nextLocalState_, callResults_);
 
         // we're on the way from a just completed function call...
         if (!this->execBlock())
@@ -511,7 +556,8 @@ bool /* complete */ SymExecEngine::run() {
 
         // enter the basic block
         const std::string &name = block_->name();
-        CL_DEBUG_MSG(lw_, "___ entering " << name);
+        CL_DEBUG_MSG(lw_, "___ entering " << name
+                     << ", " << todo_.size() << " basic block(s) in the queue");
         insnIdx_ = 0;
         heapIdx_ = 0;
 
@@ -587,7 +633,7 @@ SymExec::SymExec(const CodeStorage::Storage &stor, const SymExecParams &params):
     // create the initial state, consisting of global/static variables
     SymHeap init;
     createGlVars(init, stor);
-    d->stateZero.insert(init);
+    d->stateZero.insertFast(init);
 }
 
 SymExec::~SymExec() {
@@ -657,7 +703,7 @@ fail:
     }
 
     // call failed, so that we have exactly one resulting heap
-    results.insert(heap);
+    results.insertFast(heap);
     return 0;
 }
 
@@ -690,15 +736,20 @@ void SymExec::Private::execLoop(const StackItem &item) {
 
         // do as much as we can at the current call level
         if (engine->run()) {
+            printMemUsage("SymExecEngine::run");
+
             // call done at this level
             item.ctx->flushCallResults(*item.dst);
+            item.ctx->invalidate();
             this->bt.popCall();
+            printMemUsage("SymCallCtx::flushCallResults");
 
             // remove top of the stack
             delete engine;
             rtStack.pop();
 
             // wake up the caller (if any)
+            printMemUsage("SymExecEngine::~SymExecEngine");
             continue;
         }
 
@@ -735,7 +786,9 @@ void SymExec::Private::execLoop(const StackItem &item) {
         // prepare a new run-time stack item for the call
         StackItem next;
         next.ctx = &ctx;
+        printMemUsage("SymCall::getCallCtx");
         next.eng = this->createEngine(ctx);
+        printMemUsage("SymExec::createEngine");
 
         // pass the result back to the caller as soon as we have one
         next.dst = item.eng->callResults();

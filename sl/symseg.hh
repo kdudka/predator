@@ -118,11 +118,13 @@ void buildIgnoreList(
 
     const EObjKind kind = sh.objKind(obj);
     switch (kind) {
-        case OK_CONCRETE:
         case OK_HEAD:
         case OK_PART:
-            // invalid call of buildIgnoreList()
-            CL_TRAP;
+            CL_BREAK_IF("invalid call of buildIgnoreList()");
+            // fall through!
+
+        case OK_CONCRETE:
+            return;
 
         case OK_DLS:
             // preserve 'peer' field
@@ -131,6 +133,7 @@ void buildIgnoreList(
             // fall through!
 
         case OK_SLS:
+        case OK_MAY_EXIST:
             // preserve 'next' field
             tmp = subObjByChain(sh, obj, sh.objBinding(obj).next);
             ignoreList.insert(tmp);

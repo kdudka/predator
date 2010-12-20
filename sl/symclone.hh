@@ -35,13 +35,6 @@
 #include <boost/array.hpp>
 #include <boost/tuple/tuple.hpp>
 
-template <class T>
-struct DummyVisitor {
-    bool operator()(const T &) const {
-        return true;
-    }
-};
-
 template <int N, class TObjVisitor>
 bool traverseSubObjs(
         boost::array<const SymHeap *, N>    sh,

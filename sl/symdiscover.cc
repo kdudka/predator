@@ -35,187 +35,6 @@
 
 #include <boost/foreach.hpp>
 
-bool validateUpLink(const SymHeap       &sh,
-                    const TObjPair      &roots,
-                    const TValueId      valNext1,
-                    const TValueId      valNext2)
-{
-    const TObjId root1 = roots.first;
-    const TObjId root2 = roots.second;
-    CL_BREAK_IF(root1 <= 0 || root2 <= 0);
-
-    TObjId peer1 = OBJ_INVALID;
-    if (OK_DLS == sh.objKind(root1))
-        peer1 = dlSegPeer(sh, root1);
-
-    TObjId peer2 = OBJ_INVALID;
-    if (OK_DLS == sh.objKind(root2))
-        peer2 = dlSegPeer(sh, root2);
-
-    TObjId o1 = sh.pointsTo(valNext1);
-    TObjId o2 = sh.pointsTo(valNext2);
-    if (o1 <= 0 || o2 <= 0)
-        // non starter
-        return false;
-
-    for (;;) {
-        int nth1, nth2;
-        o1 = sh.objParent(o1, &nth1);
-        o2 = sh.objParent(o2, &nth2);
-
-        if (OBJ_INVALID == o1 || OBJ_INVALID == o2)
-            // root mismatch
-            return false;
-
-        if (nth1 != nth2)
-            // selector mismatch
-            return false;
-
-        if ((root1 == o1 || peer1 == o1)
-                && (root2 == o2 || peer2 == o2))
-            // uplink validated!
-            break;
-    }
-
-    CL_DEBUG("validateUpLink() has successfully validated an up-link!");
-    return true;
-}
-
-class GenericPrototypeFinder: public ISubMatchVisitor {
-    private:
-        const SymHeap           &sh_;
-        const TObjPair          &roots_;
-        std::set<TObjPair>      protoRoots_;
-
-    public:
-        GenericPrototypeFinder(const SymHeap &sh, const TObjPair &roots):
-            sh_(sh),
-            roots_(roots)
-        {
-        }
-
-        const std::set<TObjPair>& protoRoots(void) const { return protoRoots_; }
-
-        virtual bool handleValuePair(bool *wantTraverse, TValPair vp) {
-            const TValueId v1 = vp.first;
-            const TValueId v2 = vp.second;
-
-            const TObjId o1 = sh_.pointsTo(v1);
-            const TObjId o2 = sh_.pointsTo(v2);
-            if (o1 <= 0 || o2 <= 0)
-                // no valid objects anyway, keep going...
-                return true;
-
-            const TObjId root1 = objRoot(sh_, o1);
-            const TObjId root2 = objRoot(sh_, o2);
-            const TObjId up1 = roots_.first;
-            const TObjId up2 = roots_.second;
-
-            TObjId peerUp1 = OBJ_INVALID;
-            if (OK_DLS == sh_.objKind(up1))
-                peerUp1 = dlSegPeer(sh_, up1);
-
-            TObjId peerUp2 = OBJ_INVALID;
-            if (OK_DLS == sh_.objKind(up2))
-                peerUp2 = dlSegPeer(sh_, up2);
-
-            const bool rootOk1 = (root1 == up1 || root1 == peerUp1);
-            const bool rootOk2 = (root2 == up2 || root2 == peerUp2);
-            if (rootOk1 != rootOk2)
-                // up-link candidate mismatch
-                return false;
-
-            // never step over roots_
-            *wantTraverse = false;
-            if (rootOk1)
-                return validateUpLink(sh_, roots_, v1, v2);
-
-            bool eq;
-            if (sh_.proveEq(&eq, v1, v2) && eq)
-                // do not traverse over shared data
-                return true;
-
-            // FIXME: At this point, we _have_ to check if we are able to
-            //        establish a prototype object for (v1, v2).  If we
-            //        later realize that we don't know how to create the
-            //        prototype, it will be simply too late to do anything!
-            CL_BREAK_IF(root1 <= 0 || root2 <= 0);
-            const TObjPair proto(root1, root2);
-            protoRoots_.insert(proto);
-
-            // keep searching
-            return true;
-        }
-};
-
-bool considerGenericPrototype(
-        const SymHeap           &sh,
-        const TObjPair          &roots,
-        const TValueId          v1,
-        const TValueId          v2,
-        TProtoRoots             *protoRoots)
-{
-    CL_DEBUG("considerGenericPrototype() called...");
-    CL_BREAK_IF(v1 <= 0 || v2 <= 0);
-
-    // declare starting points
-    TValPairList startingPoints(1, TValPair(v1, v2));
-
-    // initialize visitor
-    GenericPrototypeFinder visitor(sh, roots);
-
-    // traverse pointed sub-heaps
-    if (!matchSubHeaps(sh, startingPoints, &visitor))
-        return false;
-
-    CL_DEBUG("considerGenericPrototype() has succeeded!");
-    if (protoRoots) {
-        // dump prototype adresses
-        TProtoRoots &dst = *protoRoots;
-        BOOST_FOREACH(const TObjPair &proto, visitor.protoRoots()) {
-            dst[0].push_back(proto.first);
-            dst[1].push_back(proto.second);
-        }
-    }
-
-    return true;
-}
-
-struct DataMatchVisitor {
-    std::set<TObjId>    ignoreList;
-    TProtoRoots         *protoRoots;
-    TObjPair            roots_;
-
-    DataMatchVisitor(TObjId o1, TObjId o2):
-        protoRoots(0),
-        roots_(o1, o2)
-    {
-    }
-
-    bool operator()(const SymHeap &sh, TObjPair item) const {
-        const TObjId o1 = item.first;
-        if (hasKey(ignoreList, o1))
-            return /* continue */ true;
-
-        // first compare value IDs
-        const TValueId v1 = sh.valueOf(o1);
-        const TValueId v2 = sh.valueOf(item.second);
-
-        bool eq;
-        if (sh.proveEq(&eq, v1, v2) && eq)
-            return /* continue */ true;
-
-        // special values have to match
-        if (v1 <= 0 || v2 <= 0)
-            return /* mismatch */ false;
-
-        if (validateUpLink(sh, roots_, v1, v2))
-            return /* continue */ true;
-
-        return considerGenericPrototype(sh, roots_, v1, v2, protoRoots);
-    }
-};
-
 bool matchSegBinding(const SymHeap              &sh,
                      const TObjId               obj,
                      const SegBindingFields     &bfDiscover)
@@ -231,6 +50,7 @@ bool matchSegBinding(const SymHeap              &sh,
         return false;
 
     switch (kind) {
+        case OK_MAY_EXIST:
         case OK_SLS:
             return (bf.next == bfDiscover.next);
 
@@ -239,7 +59,7 @@ bool matchSegBinding(const SymHeap              &sh,
                 && (bf.peer == bfDiscover.next);
 
         default:
-            CL_TRAP;
+            CL_BREAK_IF("matchSegBinding() needs to be improved");
             return false;
     }
 }
@@ -438,27 +258,13 @@ bool matchData(const SymHeap                &sh,
                TProtoRoots                  *protoRoots,
                int                          *pThreshold)
 {
-    (void) pThreshold;
-#if SE_DISABLE_SYMJOIN_IN_SYMDISCOVER
-    const TObjId nextPtr = subObjByChain(sh, o1, bf.next);
-
-    DataMatchVisitor visitor(o1, o2);
-    visitor.ignoreList.insert(nextPtr);
-    visitor.protoRoots = protoRoots;
-
-    if (!bf.peer.empty()) {
-        const TObjId prevPtr = subObjByChain(sh, o1, bf.peer);
-        visitor.ignoreList.insert(prevPtr);
-    }
-
-    const TObjPair item(o1, o2);
-    return traverseSubObjs(sh, item, visitor, /* leavesOnly */ true);
-#else
     EJoinStatus status;
     if (!joinDataReadOnly(&status, sh, bf, o1, o2, protoRoots))
         return false;
 
-#if SE_PREFER_LOSSLESS_PROTOTYPES
+#if !SE_PREFER_LOSSLESS_PROTOTYPES
+    return true;
+#endif
     // FIXME: highly experimental
     if (objIsSeg(sh, o2) && objIsSeg(sh, nextObj(sh, bf, o2)))
         return true;
@@ -480,10 +286,7 @@ bool matchData(const SymHeap                &sh,
 
     if (*pThreshold < thr)
         *pThreshold = thr;
-#endif
-
     return true;
-#endif
 }
 
 bool slSegAvoidSelfCycle(

@@ -129,6 +129,7 @@ TObjId SymProc::handleDerefCore(TValueId val) {
             break;
 
         case UV_UNKNOWN:
+        case UV_DONT_CARE:
             CL_ERROR_MSG(lw_, "dereference of unknown value");
             bt_->printBackTrace();
             return OBJ_DEREF_FAILED;
@@ -679,6 +680,7 @@ void SymExecCore::execFreeCore(const TValueId val) {
             break;
 
         case UV_UNKNOWN:
+        case UV_DONT_CARE:
             CL_ERROR_MSG(lw_, "free() called on unknown value");
             bt_->printBackTrace();
             return;
@@ -847,51 +849,24 @@ bool SymExecCore::execCall(SymState &dst, const CodeStorage::Insn &insn) {
     return handleBuiltIn(dst, *this, insn);
 }
 
-namespace {
-    bool handleUnopTruthNotTrivial(TValueId &val) {
-        switch (val) {
-            case VAL_FALSE:
-                val = VAL_TRUE;
-                return true;
+bool valIsInteresting(const SymHeap &sh, const TValueId val) {
+    if (VAL_NULL == val)
+        return true;
 
-            case VAL_TRUE:
-                val = VAL_FALSE;
-                return true;
+    const struct cl_type *clt = sh.valType(val);
+    if (!clt)
+        // FIXME: really?
+        return true;
 
-            case VAL_INVALID:
-                return true;
+    const enum cl_type_e code = clt->code;
+    switch (code) {
+        case CL_TYPE_FNC:
+            // we are not much interested in function pointers
+            return false;
 
-            default:
-                return false;
-        }
+        default:
+            return true;
     }
-}
-
-template <class THeap>
-void handleUnopTruthNot(THeap &heap, TValueId &val, const struct cl_type *clt) {
-    // check type validity wrt. CL_UNOP_TRUTH_NOT
-    CL_BREAK_IF(!clt || clt->code != CL_TYPE_BOOL);
-
-    if (handleUnopTruthNotTrivial(val))
-        // we are done
-        return;
-
-    // the value we got msut be VAL_TRUE, VAL_FALSE, or an unknown value
-#ifndef NDEBUG
-    const EUnknownValue code = heap.valGetUnknown(val);
-    CL_BREAK_IF(UV_KNOWN == code || UV_ABSTRACT == code);
-#else
-    (void) clt;
-#endif
-
-    const TValueId origValue = val;
-    val = heap.valDuplicateUnknown(origValue);
-
-    // FIXME: not tested
-#ifndef NDEBUG
-    CL_TRAP;
-#endif
-    heap.addEqIf(origValue, val, VAL_TRUE, /* neg */ true);
 }
 
 template <class THeap>
@@ -922,10 +897,6 @@ TValueId handleOpCmpBool(THeap &heap, enum cl_binop_e code,
 
     CL_BREAK_IF(v1 < 0 || v2 < 0);
 
-    // FIXME: not tested
-#ifndef NDEBUG
-    CL_TRAP;
-#endif
     bool result;
     if (!heap.proveEq(&result, v1, v2))
         return heap.valCreateUnknown(UV_UNKNOWN, dstClt);
@@ -1023,22 +994,27 @@ TValueId handleOpCmpPtr(THeap &heap, enum cl_binop_e code,
 
     // check if the values are equal
     bool result;
-    if (!heap.proveEq(&result, v1, v2)) {
-        // we don't know if the values are equal or not
-        const TValueId val = heap.valCreateUnknown(UV_UNKNOWN, dstClt);
+    if (heap.proveEq(&result, v1, v2)) {
+        // invert if needed
+        if (CL_BINOP_NE == code)
+            result = !result;
 
-        // store the relation over the triple (val, v1, v2) for posteriors
+        return (result)
+            ? VAL_TRUE
+            : VAL_FALSE;
+    }
+
+    if (valIsInteresting(heap, v1) && valIsInteresting(heap, v2)) {
+
+        // store the relation over the triple (val, v1, v2) for posterity
+        const TValueId val = heap.valCreateUnknown(UV_UNKNOWN, dstClt);
         heap.addEqIf(val, v1, v2, /* neg */ CL_BINOP_NE == code);
         return val;
     }
 
-    // invert if needed
-    if (CL_BINOP_NE == code)
-        result = !result;
-
-    return (result)
-        ? VAL_TRUE
-        : VAL_FALSE;
+    CL_DEBUG("handleOpCmpPtr() returns UV_DONT_CARE for values #" << v1
+             << " and #" << v2);
+    return heap.valCreateUnknown(UV_DONT_CARE, dstClt);
 }
 
 template <class THeap>
@@ -1059,51 +1035,10 @@ TValueId handleOpCmp(THeap &heap, enum cl_binop_e code,
     }
 }
 
-struct SubByOffsetFinder {
-    TObjId                  root;
-    TObjId                  subFound;
-    const struct cl_type    *cltToSeek;
-    int                     offToSeek;
-
-    bool operator()(const SymHeap &sh, TObjId sub) {
-        const struct cl_type *clt = sh.objType(sub);
-        if (!clt || *clt != *this->cltToSeek)
-            return /* continue */ true;
-
-        if (this->offToSeek != subOffsetIn(sh, this->root, sub))
-            return /* continue */ true;
-
-        // found!
-        this->subFound = sub;
-        return /* break */ false;
-    }
-};
-
-TObjId subSeekByOffset(const SymHeap &sh, TObjId obj,
-                       const struct cl_type *clt, int offToSeek)
-{
-    if (!offToSeek)
-        return obj;
-
-    // prepare visitor
-    SubByOffsetFinder visitor;
-    visitor.root        = obj;
-    visitor.cltToSeek   = clt;
-    visitor.offToSeek   = offToSeek;
-    visitor.subFound    = OBJ_INVALID;
-
-    // look for the requested sub-object
-    if (traverseSubObjs(sh, obj, visitor, /* leavesOnly */ false))
-        return OBJ_INVALID;
-    else
-        return visitor.subFound;
-}
-
-TValueId handlePointerPlus(SymHeap &sh, const struct cl_type *clt,
+TValueId handlePointerPlus(SymHeap &sh, const struct cl_type *cltPtr,
                            TValueId ptr, const struct cl_operand &op,
                            const LocationWriter lw)
 {
-    const struct cl_type *const cltPtr = clt;
     if (CL_OPERAND_CST != op.code) {
         CL_ERROR_MSG(lw, "pointer plus offset not known in compile-time");
         return sh.valCreateUnknown(UV_UNKNOWN, cltPtr);
@@ -1114,54 +1049,13 @@ TValueId handlePointerPlus(SymHeap &sh, const struct cl_type *clt,
         return sh.valCreateUnknown(UV_UNKNOWN, cltPtr);
     }
 
-    // jump to _target_ type
-    clt = targetTypeOfPtr(clt);
-    const TObjId target = sh.pointsTo(ptr);
-
     // read integral offset
     const int offRequested = intCstFromOperand(&op);
     CL_DEBUG("handlePointerPlus(): " << offRequested << "b offset requested");
 
-    // seek root object while cumulating the offset
-    TObjId obj = target;
-    TObjId parent;
-    int off = offRequested;
-    int nth;
-    while (OBJ_INVALID != (parent = sh.objParent(obj, &nth))) {
-        const struct cl_type *cltParent = sh.objType(parent);
-        CL_BREAK_IF(cltParent->item_cnt <= nth);
-
-        off += cltParent->items[nth].offset;
-        obj = parent;
-    }
-
-    const struct cl_type *cltRoot = sh.objType(obj);
-    if (!cltRoot || cltRoot->code != CL_TYPE_STRUCT) {
-        CL_ERROR_MSG(lw, "unsupported target type for pointer plus");
-        return sh.valCreateUnknown(UV_UNKNOWN, cltPtr);
-    }
-
-    if (off < 0) {
-        // we need to create an off-value
-        const SymHeapCore::TOffVal ov(sh.placedAt(obj), off);
-        return sh.valCreateByOffset(ov);
-    }
-
-    obj = subSeekByOffset(sh, obj, clt, off);
-    if (obj <= 0) {
-        // fall-back to off-value, but now related to the original target,
-        // instead of root
-        const SymHeapCore::TOffVal ov(sh.placedAt(target), offRequested);
-        return sh.valCreateByOffset(ov);
-    }
-
-    // get the final address and check type compatibility
-    const TValueId addr = sh.placedAt(obj);
-    const struct cl_type *cltDst = sh.valType(addr);
-    if (!cltDst || *cltDst != *clt)
-        CL_DEBUG_MSG(lw, "dangerous assignment of pointer plus' result");
-
-    return addr;
+    const TObjId target = sh.pointsTo(ptr);
+    CL_BREAK_IF(target <= 0);
+    return addrQueryByOffset(sh, target, offRequested, cltPtr, &lw);
 }
 
 // template for generic (unary, binary, ...) operator handlers
@@ -1178,23 +1072,20 @@ struct OpHandler</* unary */ 1> {
                              const struct cl_type *clt[1 + /* dst type */ 1])
     {
         SymHeap &sh = proc.heap_;
-        TValueId val = rhs[0];
+        const TValueId val = rhs[0];
 
         const enum cl_unop_e code = static_cast<enum cl_unop_e>(iCode);
         switch (code) {
             case CL_UNOP_TRUTH_NOT:
-                handleUnopTruthNot(sh, val, clt[0]);
-                // fall through!
+                return handleOpCmpBool(sh, CL_BINOP_EQ, clt[1], VAL_FALSE, val);
 
             case CL_UNOP_ASSIGN:
-                break;
+                return val;
 
             default:
                 CL_WARN_MSG(proc.lw_, "unary operator not implemented yet");
                 return sh.valCreateUnknown(UV_UNKNOWN, clt[/* dst */ 1]);
         }
-
-        return val;
     }
 };
 
@@ -1303,7 +1194,7 @@ bool SymExecCore::concretizeLoop(SymState                       &dst,
         }
 
         // process the current heap and move to the next one (if any)
-        core.execCore(dst, insn);
+        core.execCore(dst, insn, /* aggressive optimization */1 == todo.size());
         todo.pop_front();
     }
 
@@ -1365,7 +1256,11 @@ bool SymExecCore::concretizeIfNeeded(SymState                   &results,
     return true;
 }
 
-bool SymExecCore::execCore(SymState &dst, const CodeStorage::Insn &insn) {
+bool SymExecCore::execCore(
+        SymState                &dst,
+        const CodeStorage::Insn &insn,
+        const bool              feelFreeToOverwrite)
+{
     const enum cl_insn_e code = insn.code;
     switch (code) {
         case CL_INSN_UNOP:
@@ -1384,7 +1279,12 @@ bool SymExecCore::execCore(SymState &dst, const CodeStorage::Insn &insn) {
             return false;
     }
 
-    dst.insert(heap_);
+    if (feelFreeToOverwrite)
+        // aggressive optimization
+        dst.insertFast(heap_);
+    else
+        dst.insert(heap_);
+
     return true;
 }
 
@@ -1394,5 +1294,5 @@ bool SymExecCore::exec(SymState &dst, const CodeStorage::Insn &insn) {
         // concretization loop done
         return true;
 
-    return this->execCore(dst, insn);
+    return this->execCore(dst, insn, /* aggressive optimization */ true);
 }

@@ -33,9 +33,6 @@ INVADER_DIR     ?= invader-1_1
 INVADER_SRC     ?= $(INVADER_DIR)/sources
 INVADER_CIL     ?= $(INVADER_SRC)/cil
 
-SPARSE          ?= sparse#                  # local git repo for SPARSE
-SSD_GIT         ?= ssd#                     # local git repo for SSD
-
 CURL            ?= curl --location -v#      # URL grabber command-line
 GIT             ?= git#                     # use this to override git(1)
 SVN             ?= svn#                     # use this to override svn(1)
@@ -43,11 +40,11 @@ SVN             ?= svn#                     # use this to override svn(1)
 DIRS_BUILD      ?= cl fwnull sl fa
 DIRS_INSTALL    ?= cl fwnull sl
 
-.PHONY: all check clean distcheck distclean api cl/api sl/api \
+.PHONY: all check clean distcheck distclean api cl/api sl/api ChangeLog \
 	build_gcc build_gcc_svn update_gcc update_gcc_src_only \
 	build_inv
 
-all: $(SSD_GIT) include/gcc/
+all: include/gcc/
 	$(foreach dir, $(DIRS_BUILD), $(MAKE) -C $(dir) $@ &&) true
 
 check: include/gcc/
@@ -59,10 +56,10 @@ clean:
 distclean:
 	$(foreach dir, $(DIRS_BUILD), $(MAKE) -C $(dir) $@ &&) true
 
-distcheck: $(SSD_GIT) include/gcc/
+distcheck: include/gcc/
 	$(foreach dir, $(DIRS_BUILD), $(MAKE) -C $(dir) $@ &&) true
 
-install: $(SSD_GIT) include/gcc/
+install: include/gcc/
 	$(foreach dir, $(DIRS_INSTALL), $(MAKE) -C $(dir) $@ &&) true
 
 cl/api:
@@ -153,19 +150,22 @@ $(INVADER):
 $(GCC45):
 	$(CURL) -o $@ 'ftp://ftp.lip6.fr/pub/gcc/releases/gcc-4.5.1/gcc-4.5.1.tar.bz2'
 
-# initialize a local git repo for SPARSE
-$(SPARSE):
-	$(GIT) clone git://git.kernel.org/pub/scm/devel/sparse/chrisl/sparse.git $@
-
 # create SVN working copy for gcc sources
 build_gcc_svn:
 	if test -e "$(GCC_SRC)"; then exit 1; fi
 	$(SVN) co svn://gcc.gnu.org/svn/gcc/trunk $(GCC_SRC)
 	$(MAKE) build_gcc
 
-# clone read-only git repo of SSD
-$(SSD_GIT):
-	$(GIT) clone http://dudka.no-ip.org/git/ssd.git $@
-
 include/gcc: gcc-install/lib/gcc
 	cd include && ln -fsvT ../gcc-install/lib/gcc/`ls ../gcc-install/lib/gcc/`/4.[56]*/plugin/include gcc
+
+ChangeLog:
+	git log --pretty="format:%ad  %an%n%n%w(80,8,8)%B%n" --date=short > $@
+
+gcc-install/lib/gcc:
+	@echo "*** 'gcc-install/lib/gcc' does not exist.  If you want to proceed"
+	@echo "*** with standalone build of gcc, try 'make build_gcc' first.  If"
+	@echo "*** it does not help, consult ./FAQ.  If anything goes wrong,"
+	@echo "*** please submit a bug report to <idudka@fit.vutbr.cz>."
+	@echo
+	@false

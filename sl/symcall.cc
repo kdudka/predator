@@ -187,6 +187,12 @@ void SymCallCtx::flushCallResults(SymState &dst) {
     }
 }
 
+void SymCallCtx::invalidate() {
+#if SE_DISABLE_CALL_CACHE
+    delete this;
+#endif
+}
+
 // /////////////////////////////////////////////////////////////////////////////
 // call context cache per one fnc
 class PerFncCache {

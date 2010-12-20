@@ -91,6 +91,10 @@ void dump_kind(const SymHeap &heap, TObjId obj) {
             cout << "OK_CONCRETE";
             return;
 
+        case OK_MAY_EXIST:
+            cout << "OK_MAY_EXIST";
+            return;
+
         case OK_HEAD:
             cout << "OK_HEAD";
             return;
@@ -302,6 +306,10 @@ TObjId /* pointsTo */ dump_value_core(const SymHeap &heap, TValueId value)
             cout << "    code      = UV_UNKNOWN\n";
             return OBJ_INVALID;
 
+        case UV_DONT_CARE:
+            cout << "    code      = UV_DONT_CARE\n";
+            return OBJ_INVALID;
+
         case UV_UNINITIALIZED:
             cout << "    code      = UV_UNINITIALIZED\n";
             return OBJ_INVALID;
@@ -357,6 +365,11 @@ void dump_value_refs(const SymHeap &heap, TValueId value) {
 void dump_cvar(const SymHeap &heap, CVar cVar) {
     const TObjId obj = heap.objByCVar(cVar);
     dump_obj(heap, obj);
+}
+
+void dump_cvar(const SymHeap &heap, int uid, int inst) {
+    const CVar cv(uid, inst);
+    dump_cvar(heap, cv);
 }
 
 void dump_heap(const SymHeap &heap) {

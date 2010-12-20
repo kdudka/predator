@@ -1,0 +1,123 @@
+From f08ed517785b12a37098a9b089789bb214983223 Mon Sep 17 00:00:00 2001
+From: Kamil Dudka <kdudka@redhat.com>
+Date: Sun, 19 Dec 2010 11:45:04 +0100
+Subject: [PATCH 1/3] cdrom: rewrite the code into C language
+
+---
+ examples/drivers/cdrom.c |   33 +++++++++++++++------------------
+ 1 files changed, 15 insertions(+), 18 deletions(-)
+
+diff --git a/examples/drivers/cdrom.c b/examples/drivers/cdrom.c
+index ddbf2d2..8e3cbb0 100644
+--- a/examples/drivers/cdrom.c
++++ b/examples/drivers/cdrom.c
+@@ -1,7 +1,4 @@
+-# 1 "acdrom.c"
+-# 1 "<built-in>"
+-# 1 "<command line>"
+-# 1 "acdrom.c"
++#define mallocnull(cb) malloc(cb)
+ 
+ 
+ 
+@@ -4028,13 +4025,13 @@ int cdrom_get_last_written(struct cdrom_device_info *cdi , long *last_written )
+  }
+  ret = cdrom_get_disc_info(cdi, & di);
+ 
+- if ((&nondet > 0)) {
++ if ((get_nondet_int() > 0)) {
+   goto use_toc;
+  }
+  last_track = (unsigned int )(((int )di.last_track_msb << 8) | (int )di.last_track_lsb);
+  ti_size = cdrom_get_track_info(cdi, (unsigned short )last_track, (unsigned char)1, & ti);
+ 
+- if ((&nondet > 0)) {
++ if ((get_nondet_int() > 0)) {
+   goto use_toc;
+  }
+  if (ti.blank) {
+@@ -4045,12 +4042,12 @@ int cdrom_get_last_written(struct cdrom_device_info *cdi , long *last_written )
+   ti_size = cdrom_get_track_info(cdi, (unsigned short )last_track, (unsigned char)1, & ti);
+  }
+ 
+- if ((&nondet > 0)) {
++ if ((get_nondet_int() > 0)) {
+   goto use_toc;
+  }
+  if (ti.lra_v) {
+ 
+-  if ((&nondet > 0)) {
++  if ((get_nondet_int() > 0)) {
+    (*last_written) = (long )__fswab32(ti.last_rec_address);
+   } else {
+    goto _L;
+@@ -6124,14 +6121,14 @@ void HsInitialize(void)
+         initialized = 0;
+ 
+  cdrom_root_table = HsCreateCtlTable(0);
+-        while((&nondet > 0)) {
++        while((get_nondet_int() > 0)) {
+   tbl = HsCreateCtlTable(1);
+   tbl->child = cdrom_root_table->child;
+   cdrom_root_table->child = tbl;
+  }
+ 
+  topCdromPtr = 0;
+-        while((&nondet > 0)) {
++        while((get_nondet_int() > 0)) {
+          cdi = HsCreateCdromDeviceInfo();
+   cdi->next = topCdromPtr;
+   topCdromPtr = cdi;
+@@ -6164,12 +6161,12 @@ int main_sub(void)
+   return(tmp);
+  }
+ 
+- while ((&nondet > 0)) {
+-  if ((&nondet > 0)) {
++ while ((get_nondet_int() > 0)) {
++  if ((get_nondet_int() > 0)) {
+    med = get_nondet_ptr();
+    tmp = cdrom_get_media_event(cdi, med);
+   }
+-  else if ((&nondet > 0)) {
++  else if ((get_nondet_int() > 0)) {
+    fp = (struct file *)malloc(sizeof(struct file));
+    ip = (struct inode *)malloc(sizeof(struct inode));
+                  ip->i_bdev = (struct block_device *)malloc(sizeof(struct block_device));
+@@ -6178,20 +6175,20 @@ int main_sub(void)
+    free(fp);
+    free(ip);
+   }
+-  else if ((&nondet > 0)) {
++  else if ((get_nondet_int() > 0)) {
+    fp = (struct file *)malloc(sizeof(struct file));
+    cdrom_release(cdi, fp);
+    free(fp);
+   }
+-  else if ((&nondet > 0)) {
++  else if ((get_nondet_int() > 0)) {
+    tmp = cdrom_number_of_slots(cdi);
+   }
+-  else if ((&nondet > 0)) {
++  else if ((get_nondet_int() > 0)) {
+    cmd = get_nondet_int();
+    arg = get_nondet_int();
+    tmp = mmc_ioctl(cdi, cmd, arg);
+   }
+-  else if ((&nondet > 0)) {
++  else if ((get_nondet_int() > 0)) {
+    fp = (struct file *)malloc(sizeof(struct file));
+    ip = (struct inode *)malloc(sizeof(struct inode));
+                  ip->i_bdev = (struct block_device *)malloc(sizeof(struct block_device));
+@@ -6202,7 +6199,7 @@ int main_sub(void)
+    free(ip);
+    free(fp);
+   }
+-  else if ((&nondet > 0)) {
++  else if ((get_nondet_int() > 0)) {
+    tmp = cdrom_media_changed(cdi);
+   }
+  }
+-- 
+1.7.3.2
+

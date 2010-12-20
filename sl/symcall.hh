@@ -71,6 +71,12 @@ class SymCallCtx {
          */
         void flushCallResults(SymState &dst);
 
+        /**
+         * invalidate the context, which may trigger its removal from cache and
+         * consequently destruction of the SymCallCtx object itself
+         */
+        void invalidate();
+
     private:
         /// @note these objects can't be created/destroyed out of SymCallCache
         SymCallCtx();

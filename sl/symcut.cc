@@ -172,6 +172,7 @@ TObjId addObjectIfNeeded(DeepCopyData &dc, TObjId objSrc) {
 
     const EObjKind kind = src.objKind(rootSrc);
     switch (kind) {
+        case OK_MAY_EXIST:
         case OK_DLS:
         case OK_SLS: {
             const SegBindingFields segBinding = src.objBinding(rootSrc);
@@ -282,24 +283,17 @@ TValueId handleValue(DeepCopyData &dc, TValueId valSrc) {
 
     if (targetSrc < 0) {
         // special handling for OBJ_DELETED/OBJ_LOST
-#ifndef NDEBUG
-        switch (targetSrc) {
-            case OBJ_DELETED:
-            case OBJ_LOST:
-                break;
-            default:
-                CL_TRAP;
-        }
-#endif
+        CL_BREAK_IF(OBJ_DELETED != targetSrc && OBJ_LOST != targetSrc);
 
-        // FIXME: really safe to ignore (cltValSrc == 0) ??
+        CVar cv;
+        if (OBJ_LOST == targetSrc)
+            // we use (0 == uid) as universal stack object
+            cv.uid = 0;
+
         const struct cl_type *cltValSrc = src.valType(valSrc);
-        const TObjId objTmp = dst.objCreate(cltValSrc);
+        const TObjId objTmp = dst.objCreate(cltValSrc, cv);
         const TValueId valDst = dst.placedAt(objTmp);
-
-        // FIXME: avoid using of friend?
-        SymHeapCore &core = dynamic_cast<SymHeapCore &>(dst);
-        core.objDestroy(objTmp, /* OBJ_DELETED/OBJ_LOST */ targetSrc);
+        dst.objDestroy(objTmp);
 
         valMap[valSrc] = valDst;
         return valDst;

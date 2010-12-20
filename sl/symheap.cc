@@ -1172,8 +1172,7 @@ class CVarMap {
                 // gl variable explicitly requested
                 return (found)
                     ? iter->second
-                    // avoid a compile-time warning with DEBUG_SYMID_FORCE_INT
-                    : static_cast<TObjId>(OBJ_INVALID);
+                    : OBJ_INVALID;
             }
 
             // automatic fallback to gl variable
@@ -1279,12 +1278,30 @@ TValueId SymHeapTyped::createCompValue(const struct cl_type *clt, TObjId obj) {
 
 void SymHeapTyped::initValClt(TObjId obj) {
     // look for object's address
-    const TValueId val = SymHeapCore::placedAt(obj);
-    CL_BREAK_IF(VAL_INVALID == val);
+    const TValueId addr = SymHeapCore::placedAt(obj);
+    CL_BREAK_IF(VAL_INVALID == addr);
 
-    // initialize value's type
-    const Private::Object &ref = d->objects[obj];
-    d->values.at(val).clt = ref.clt;
+    // initialize value's type of the address
+    const struct cl_type *clt = d->objects[obj].clt;
+    d->values.at(addr).clt = clt;
+    if (!clt)
+        // not type-info here
+        return;
+
+    const TValueId val = this->valueOf(obj);
+    if (val <= 0)
+        // special value inside
+        return;
+
+    Private::Value &ref = d->values.at(val);
+    if (ref.clt)
+        // value type already defined
+        return;
+
+    // initialize value's type of the value _inside_
+    ref.clt = (CL_TYPE_PTR == clt->code)
+        ? targetTypeOfPtr(clt)
+        : clt;
 }
 
 TObjId SymHeapTyped::createSubVar(const struct cl_type *clt, TObjId parent) {
@@ -1980,12 +1997,15 @@ bool SymHeap::proveEq(bool *result, TValueId valA, TValueId valB) const {
     code = this->valGetUnknown(valNext);
     switch (code) {
         case UV_ABSTRACT:
-            if (valA != VAL_NULL
-                    || !segMinLength(*this, this->pointsTo(valNext)))
+            if (valA == VAL_NULL
+                    && segMinLength(*this, this->pointsTo(valNext)))
             {
+                *result = false;
+                return true;
+            }
+            else {
                 CL_WARN("SymHeap::proveEq() "
                         "does not see through a chain of segments");
-                return false;
             }
             // fall through!
 
