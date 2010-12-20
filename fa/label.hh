@@ -32,22 +32,26 @@ struct label_type {
 		const std::vector<const AbstractBox*>* dataB;
 	};
 
-	label_type(const std::vector<Data>* data) : type(0), data(data) {}
-	label_type(const std::vector<const AbstractBox*>* dataB) : type(1), dataB(dataB) {}
+	label_type() : type(0), data(NULL) {}
+	label_type(const std::vector<Data>* data) : type(1), data(data) {}
+	label_type(const std::vector<const AbstractBox*>* dataB) : type(2), dataB(dataB) {}
 
 	friend size_t hash_value(const label_type& l) {
-		using namespace boost;
-		return hash_value(hash_value(l.type) + hash_value(l.data));
+		size_t h = boost::hash_value(l.type);
+		boost::hash_combine(h, l.data);
+		return h;
 	}
 
 	const AbstractBox* head() const {
-		assert(this->type == 1);
+		assert(this->type == 2);
 		assert(this->dataB);
 		assert(this->dataB->size() > 0);
 		return (*this->dataB)[0];
 	}
 		
-	bool operator<(const label_type& rhs) const { return this->data < rhs.data; }
+	bool operator<(const label_type& rhs) const {
+		return this->data < rhs.data;
+	}
 
 	bool operator==(const label_type& rhs) const { return this->data == rhs.data; }
 
@@ -56,7 +60,8 @@ struct label_type {
 	friend std::ostream& operator<<(std::ostream& os, const label_type& label) {
 		os << '<';
 		switch (label.type) {
-			case 0: {
+			case 1: {
+				assert(label.data);
 				assert(!label.data->empty());
 				std::vector<Data>::const_iterator i = label.data->begin();
 				os << *i;
@@ -64,7 +69,8 @@ struct label_type {
 					os << ',' << *i;
 				break;
 			}
-			case 1: {
+			case 2: {
+				assert(label.dataB);
 				assert(!label.dataB->empty());
 				std::vector<const AbstractBox*>::const_iterator i = label.dataB->begin();
 				os << **i;

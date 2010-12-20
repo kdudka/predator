@@ -39,23 +39,18 @@ using std::map;
 using std::pair;
 using std::make_pair;
 
-using boost::hash_value;
 using boost::unordered_map;
 
 template <class T> class TA;
 
 template <class T>
-class TT {
+class TTBase {
 
 	friend class TA<T>;
 
 public:
 
-	typedef Cache<vector<size_t> > lhs_cache_type;
-
-private:
-
-	mutable lhs_cache_type& lhsCache;
+	typedef Cache<std::vector<size_t> > lhs_cache_type;
 
 public:
 
@@ -63,67 +58,120 @@ public:
 	T _label;
 	size_t _rhs;
 
-	TT(const TT& transition)
-		: lhsCache(transition.lhsCache), _label(transition._label) {
-		this->_lhs = this->lhsCache.lookup(transition._lhs->first);
-//		this->_label = transition._label;
-		this->_rhs = transition._rhs;
-	}
+protected:
 
-	TT(const vector<size_t>& lhs, const T& label, size_t rhs, lhs_cache_type& lhsCache)
-		: lhsCache(lhsCache), _label(label) {
-		this->_lhs = this->lhsCache.lookup(lhs);
-//		this->_label = label;
-		this->_rhs = rhs;
+	TTBase(lhs_cache_type::value_type* lhs = NULL, const T& label = T(), size_t rhs = 0)
+		: _lhs(lhs), _label(label), _rhs(rhs) {}
+
+public:
+
+	const std::vector<size_t>& lhs() const {
+		assert(this->_lhs);
+		return this->_lhs->first;
 	}
 	
-	TT(const vector<size_t>& lhs, const T& label, size_t rhs, const vector<size_t>& index, lhs_cache_type& lhsCache)
-		: lhsCache(lhsCache), _label(label) {
-		vector<size_t> tmp(lhs.size());
-		for (size_t i = 0; i < lhs.size(); ++i)
-			tmp[i] = index[lhs[i]];
-		this->_lhs = this->lhsCache.lookup(tmp);
-//		this->_label = label;
-		this->_rhs = index[rhs];
-	}
-
-	TT(const TT& transition, lhs_cache_type& lhsCache)
-		: lhsCache(lhsCache), _label(transition._label) {
-		this->_lhs = this->lhsCache.lookup(transition._lhs->first);
-//		this->_label = transition._label;
-		this->_rhs = transition._rhs;
-	}
-  
-	TT(const TT& transition, const vector<size_t>& index, lhs_cache_type& lhsCache)
-		: lhsCache(lhsCache), _label(transition._label) {
-		vector<size_t> tmp(transition._lhs->first.size());
-		for (size_t i = 0; i < transition._lhs->first.size(); ++i)
-			tmp[i] = index[transition._lhs->first[i]];
-		this->_lhs = this->lhsCache.lookup(tmp);
-//		this->_label = transition._label;
-		this->_rhs = index[transition._rhs];
-	}
-
-	~TT() { this->lhsCache.release(this->_lhs);	}
-
-	const vector<size_t>& lhs() const { return this->_lhs->first; }
 	const T& label() const { return this->_label; }
+
 	size_t rhs() const { return this->_rhs; }
 	
-	bool operator==(const TT& rhs) const {
+	bool operator==(const TTBase& rhs) const {
 		return (this->_label == rhs._label) && (this->_lhs == rhs._lhs) && (this->_rhs == rhs._rhs);
 	}
 
-	bool operator<(const TT& rhs) const {
+	bool operator<(const TTBase& rhs) const {
 		return (this->_rhs < rhs._rhs) || (
 			(this->_rhs == rhs._rhs) && (
 				(this->_label < rhs._label) || (
 					(this->_label == rhs._label) && (
-						this->_lhs->first < rhs._lhs->first
+						this->_lhs < rhs._lhs
 					)
 				)
 			)
 		);
+/*		if (this->_rhs < rhs._rhs)
+			return true;
+		if (this->_rhs != rhs._rhs)
+			return false;
+		if (this->_label < rhs._label)
+			return true;
+		if (this->_label != rhs._label)
+			return false;
+		return this->_lhs < rhs._lhs;*/
+/*		assert(this->_lhs);
+		assert(rhs._lhs);
+		return this->_lhs->first < rhs._lhs->first;*/
+
+	}
+
+	friend size_t hash_value(const TTBase& t) {
+		size_t h = boost::hash_value(t._lhs);
+		boost::hash_combine(h, t._label);
+		boost::hash_combine(h, t._rhs);
+		return h;
+	}
+	
+	friend std::ostream& operator<<(std::ostream& os, const TTBase& t) {
+		os << t._label << '(';
+		if (t._lhs) {
+			if (t._lhs->first.size() > 0) {
+				os << t._lhs->first[0];
+				for (size_t i = 1; i < t._lhs->first.size(); ++i)
+					os << ',' << t._lhs->first[i];
+			}
+		}
+		return os << ")->" << t._rhs;
+	}
+
+};
+
+template <class T>
+class TT : public TTBase<T> {
+
+	friend class TA<T>;
+
+private:
+
+	mutable typename TTBase<T>::lhs_cache_type& lhsCache;
+
+public:
+
+	TT(const TT& t)
+		: TTBase<T>(t._lhs, t._label, t._rhs), lhsCache(t.lhsCache) {
+		this->lhsCache.addRef(this->_lhs);
+	}
+
+	TT(const std::vector<size_t>& lhs, const T& label, size_t rhs, typename TTBase<T>::lhs_cache_type& lhsCache)
+		: TTBase<T>(lhsCache.lookup(lhs), label, rhs), lhsCache(lhsCache) {}
+	
+	TT(const std::vector<size_t>& lhs, const T& label, size_t rhs, const vector<size_t>& index, typename TTBase<T>::lhs_cache_type& lhsCache)
+		: TTBase<T>(NULL, label, index[rhs]), lhsCache(lhsCache) {
+		vector<size_t> tmp(lhs.size());
+		for (size_t i = 0; i < lhs.size(); ++i)
+			tmp[i] = index[lhs[i]];
+		this->_lhs = this->lhsCache.lookup(tmp);
+	}
+
+	TT(const TT& t, typename TTBase<T>::lhs_cache_type& lhsCache)
+		: TTBase<T>(lhsCache.lookup(t._lhs->first), t._label, t._rhs), lhsCache(lhsCache) {}
+  
+	TT(const TT& t, const std::vector<size_t>& index, typename TTBase<T>::lhs_cache_type& lhsCache)
+		: TTBase<T>(NULL, t._label, index[t._rhs]), lhsCache(lhsCache) {
+		vector<size_t> tmp(t._lhs->first.size());
+		for (size_t i = 0; i < t._lhs->first.size(); ++i)
+			tmp[i] = index[t._lhs->first[i]];
+		this->_lhs = this->lhsCache.lookup(tmp);
+	}
+
+	~TT() { this->lhsCache.release(this->_lhs);	}
+
+	bool llhsLessThan(const TT& rhs, const std::vector<std::vector<bool> >& cons, const Index<size_t>& stateIndex) const {
+		if (this->_label != rhs._label)
+			return false;
+		for (size_t i = 0; i < this->_lhs->first.size(); ++i) {
+			if (!cons[stateIndex[this->_lhs->first[i]]][stateIndex[rhs._lhs->first[i]]])
+				return false;
+		}
+		return true;
 	}
 /*
 	bool operator<(const TT& rhs) const {
@@ -147,20 +195,6 @@ public:
 		);
 	}
 */	
-	friend size_t hash_value(const TT& t) {
-		return hash_value(hash_value(hash_value(t._lhs) + hash_value(t._label)) + hash_value(t._rhs));
-	}
-	
-	friend std::ostream& operator<<(std::ostream& os, const TT& t) {
-		os << t._label << '(';
-		if (t._lhs->first.size() > 0) {
-			os << t._lhs->first[0];
-			for (size_t i = 1; i < t._lhs->first.size(); ++i)
-				os << ',' << t._lhs->first[i];
-		}
-		return os << ")->" << t._rhs;
-	}
-
 };
 
 template <class T>
@@ -175,25 +209,37 @@ public:
 	// this is the place where transitions are stored
 	struct Backend {
 
-		typename TT<T>::lhs_cache_type lhsCache;
+		typename TTBase<T>::lhs_cache_type lhsCache;
 		trans_cache_type transCache;
 
 	};
 
 	mutable Backend* backend;
 	
+	struct CmpF {
+		bool operator()(typename trans_cache_type::value_type* lhs, typename trans_cache_type::value_type* rhs) const {
+			return lhs->first < rhs->first;
+		}
+	};
+
+	typedef std::set<typename trans_cache_type::value_type*, CmpF> trans_set_type;
+
 	typename TT<T>::lhs_cache_type& lhsCache() const { return this->backend->lhsCache; }
 
 	trans_cache_type& transCache() const { return this->backend->transCache; }
 
 	class Iterator {
-		typename set<typename trans_cache_type::value_type*>::const_iterator _i;
+		typename trans_set_type::const_iterator _i;
 	public:
-		Iterator(typename set<typename trans_cache_type::value_type*>::const_iterator i) : _i(i) {}
+		Iterator(typename trans_set_type::const_iterator i) : _i(i) {}
 
 		Iterator& operator++() { return ++this->_i, *this; }
 
 		Iterator operator++(int) { return Iterator(this->_i++); }
+
+		Iterator& operator--() { return --this->_i, *this; }
+
+		Iterator operator--(int) { return Iterator(this->_i--); }
 
 		const TT<T>& operator*() const { return (*this->_i)->first; }
 
@@ -212,11 +258,11 @@ public:
 	class TDIterator {
 		
 		const td_cache_type& _cache;
-		set<size_t> _visited;
-		vector<pair<typename vector<const TT<T>*>::const_iterator, typename vector<const TT<T>*>::const_iterator> > _stack;
+		std::set<size_t> _visited;
+		std::vector<pair<typename vector<const TT<T>*>::const_iterator, typename vector<const TT<T>*>::const_iterator> > _stack;
 	
-		void insertLhs(const vector<size_t>& lhs) {
-			for (vector<size_t>::const_iterator i = lhs.begin(); i != lhs.end(); ++i) {
+		void insertLhs(const std::vector<size_t>& lhs) {
+			for (std::vector<size_t>::const_iterator i = lhs.begin(); i != lhs.end(); ++i) {
 				if (this->_visited.insert(*i).second) {
 					typename td_cache_type::const_iterator j = this->_cache.find(*i);
 					if (j != this->_cache.end())
@@ -273,34 +319,83 @@ public:
 	size_t next_state;
 	size_t maxRank;
 
-	struct CmpF {
-		bool operator()(typename trans_cache_type::value_type* lhs, typename trans_cache_type::value_type* rhs) {
-			return lhs->first < rhs->first;
-		}
-	};
-
-	typedef std::set<typename trans_cache_type::value_type*, CmpF> trans_set_type;
-
 	trans_set_type transitions;
 	std::set<size_t> finalStates;
 	
 //	std::map<const std::vector<int>*, int> lhsMap;
 
+	typename trans_cache_type::value_type* internalAdd(const TT<T>& t) {
+		typename trans_cache_type::value_type* x = this->transCache().lookup(t);
+		if (this->transitions.insert(x).second) {
+			if (t._lhs->first.size() > this->maxRank)
+				this->maxRank = t._lhs->first.size();
+		} else this->transCache().release(x);
+		return x;
+	}
+
 public:
 
 	TA(Backend& backend) : backend(&backend), next_state(0), maxRank(0) {}
 	
-	TA(const TA<T>& ta, bool copyFinalStates = true) : backend(ta.backend), next_state(ta.next_state), maxRank(ta.maxRank), transitions(ta.transitions) {
-		for (typename std::set<typename trans_cache_type::value_type*>::iterator i = this->transitions.begin(); i != this->transitions.end(); ++i)
-			this->transCache().addRef(*i);
+	TA(const TA<T>& ta, bool copyFinalStates = true)
+		: backend(ta.backend), next_state(ta.next_state), maxRank(ta.maxRank),
+		transitions(ta.transitions) {
 		if (copyFinalStates)
 			this->finalStates = ta.finalStates;
+		for (typename std::set<typename trans_cache_type::value_type*>::iterator i = this->transitions.begin(); i != this->transitions.end(); ++i)
+			this->transCache().addRef(*i);
 	}
-	
+
 	~TA() { this->clear(); }
 
 	typename TA<T>::Iterator begin() const { return typename TA<T>::Iterator(this->transitions.begin()); }
 	typename TA<T>::Iterator end() const { return typename TA<T>::Iterator(this->transitions.end()); }
+
+	typename trans_set_type::const_iterator _lookup(size_t rhs) const {
+		char buffer[sizeof(std::pair<const TT<T>, size_t>)];
+		std::pair<const TT<T>, size_t>* tPtr = (std::pair<const TT<T>, size_t>*)buffer;
+		new (reinterpret_cast<TTBase<T>*>(const_cast<TT<T>*>(&tPtr->first))) TTBase<T>(NULL, T(), rhs);
+		typename trans_set_type::const_iterator i = this->transitions.lower_bound(tPtr);
+		((TTBase<T>*)&tPtr->first)->~TTBase();
+		return i;
+	}
+
+	typename TA<T>::Iterator begin(size_t rhs) const {
+		return Iterator(this->_lookup(rhs));
+	}
+
+	typename TA<T>::Iterator end(size_t rhs) const {
+		typename TA<T>::Iterator i = this->begin(rhs);
+		for (; i != this->end() && i->rhs() == rhs; ++i);
+		return Iterator(i);
+	}
+
+	typename TA<T>::Iterator end(size_t rhs, typename TA<T>::Iterator i) const {
+		for (; i != this->end() && i->rhs() == rhs; ++i);
+		return Iterator(i);
+	}
+
+	typename TA<T>::Iterator accBegin() const {
+		return this->begin(this->getFinalState());
+	}
+
+	typename TA<T>::Iterator accEnd() const {
+		typename TA<T>::Iterator i = this->accBegin();
+		return this->end(this->getFinalState(), i);
+	}
+	
+	typename TA<T>::Iterator accEnd(typename TA<T>::Iterator i) const {
+		return this->end(this->getFinalState(), i);
+	}
+
+/*
+	typename TA<T>::RhsIterator getRhsIterator(size_t state) const {
+		return TA<T>::RhsIterator(*this, state);
+	}*/
+//	typename TA<T>::AcceptingIterator a_end() const {
+//		assert(this->acceptingValid);
+//		return TA<T>::AcceptingIterator(this->acceptingTransitions.end());
+//	}
 
 	typename TA<T>::TDIterator tdStart(const td_cache_type& cache) const {
 		return typename TA<T>::TDIterator(cache, vector<size_t>(this->finalStates.begin(), this->finalStates.end()));
@@ -347,7 +442,7 @@ public:
 	}
 	
 	void buildStateIndex(Index<size_t>& index) const {
-		for (typename set<typename trans_cache_type::value_type*>::const_iterator i = this->transitions.begin(); i != this->transitions.end(); ++i) {
+		for (typename std::set<typename trans_cache_type::value_type*>::const_iterator i = this->transitions.begin(); i != this->transitions.end(); ++i) {
 			for (vector<size_t>::const_iterator j = (*i)->first._lhs->first.begin(); j != (*i)->first._lhs->first.end(); ++j)
 				index.add(*j);
 			index.add((*i)->first._rhs);
@@ -430,66 +525,44 @@ public:
 	}
 
 	typename trans_cache_type::value_type* addTransition(const vector<size_t>& lhs, const T& label, size_t rhs) {
-		if (lhs.size() > this->maxRank)
-			this->maxRank = lhs.size();
-		typename trans_cache_type::value_type* x = this->transCache().lookup(TT<T>(lhs, label, rhs, this->lhsCache()));
-		if (!this->transitions.insert(x).second)
-			this->transCache().release(x);
-		return x;
+		return this->internalAdd(TT<T>(lhs, label, rhs, this->lhsCache()));
 	}
 
 	typename trans_cache_type::value_type* addTransition(const vector<size_t>& lhs, const T& label, size_t rhs, const vector<size_t>& index) {
-		if (lhs.size() > this->maxRank)
-			this->maxRank = lhs.size();
-		typename trans_cache_type::value_type* x = this->transCache().lookup(TT<T>(lhs, label, rhs, index, this->lhsCache()));
-		if (!this->transitions.insert(x).second)
-			this->transCache().release(x);
-		return x;
+		return this->internalAdd(TT<T>(lhs, label, rhs, index, this->lhsCache()));
 	}
 
 	typename trans_cache_type::value_type* addTransition(const typename trans_cache_type::value_type* transition) {
-		if (transition->first.lhs().size() > this->maxRank)
-			this->maxRank = transition->first.lhs().size();
-		typename trans_cache_type::value_type* x = this->transCache().lookup(TT<T>(transition->first, this->lhsCache()));
-		if (!this->transitions.insert(x).second)
-			this->transCache().release(x);
-		return x;
+		return this->internalAdd(TT<T>(transition->first, this->lhsCache()));
 	}
 
 	typename trans_cache_type::value_type* addTransition(const typename trans_cache_type::value_type* transition, const vector<size_t>& index) {
-		if (transition->first.lhs().size() > this->maxRank)
-			this->maxRank = transition->first.lhs().size();
-		typename trans_cache_type::value_type* x = this->transCache().lookup(TT<T>(transition->first, index, this->lhsCache()));
-		if (!this->transitions.insert(x).second)
-			this->transCache().release(x);
-		return x;
+		return this->internalAdd(TT<T>(transition->first, index, this->lhsCache()));
 	}
 
 	typename trans_cache_type::value_type* addTransition(const TT<T>& transition) {
-		if (transition.lhs().size() > this->maxRank)
-			this->maxRank = transition.lhs().size();
-		typename trans_cache_type::value_type* x = this->transCache().lookup(TT<T>(transition, this->lhsCache()));
-		if (!this->transitions.insert(x).second)
-			this->transCache().release(x);
-		return x;
+		return this->internalAdd(TT<T>(transition, this->lhsCache()));
 	}
 
 	typename trans_cache_type::value_type* addTransition(const TT<T>& transition, const vector<size_t>& index) {
-		if (transition.lhs().size() > this->maxRank)
-			this->maxRank = transition.lhs().size();
-		typename trans_cache_type::value_type* x = this->transCache().lookup(TT<T>(transition, index, this->lhsCache()));
-		if (!this->transitions.insert(x).second)
-			this->transCache().release(x);
-		return x;
+		return this->internalAdd(TT<T>(transition, index, this->lhsCache()));
 	}
 
-	void addFinalState(size_t state) { this->finalStates.insert(state); }
+	void addFinalState(size_t state) {
+		this->finalStates.insert(state);
+	}
 	
-	void addFinalStates(const vector<size_t>& states) { this->finalStates.insert(states.begin(), states.end()); }
+	void addFinalStates(const vector<size_t>& states) {
+		this->finalStates.insert(states.begin(), states.end());
+	}
 	
-	void removeFinalState(size_t state) { this->finalStates.erase(state); }
+	void removeFinalState(size_t state) {
+		this->finalStates.erase(state);
+	}
 	
-	void clearFinalStates() { this->finalStates.clear(); }
+	void clearFinalStates() {
+		this->finalStates.clear();
+	}
 
 	bool isFinalState(size_t state) const { return (this->finalStates.find(state) != this->finalStates.end()); }
 	
@@ -501,6 +574,18 @@ public:
 	}
 	
 	const trans_set_type& getTransitions() const { return this->transitions; }
+/*
+	TA<T>::RhsIterator getAcceptingTransitions() const {
+		return this->getRhsIterator(this->getFinalState());
+	}
+*/
+	const TT<T>& getAcceptingTransition() const {
+		TA<T>::Iterator i = this->accBegin();
+		const TT<T>* t = &*i;
+		if (++i != this->end())
+			assert(i->rhs() != t->rhs());
+		return *t;
+	}
 
 	void downwardTranslation(LTS& lts, const Index<size_t>& stateIndex, const Index<T>& labelIndex) const;
 	
@@ -539,8 +624,7 @@ public:
 	}
 
 	template <class F>
-	static size_t computeProduct(const lt_cache_type& cache1, const lt_cache_type& cache2, F f, size_t stateOffset = 0) {
-//		std::vector<std::pair<size_t, size_t> > stack;
+	static size_t buProduct(const lt_cache_type& cache1, const lt_cache_type& cache2, F f, size_t stateOffset = 0) {
 		boost::unordered_map<std::pair<size_t, size_t>, size_t> product;
 		for (typename lt_cache_type::const_iterator i = cache1.begin(); i != cache1.end(); ++i) {
 			if (!i->second.front()->_lhs->first.empty())
@@ -553,15 +637,11 @@ public:
 					std::pair<boost::unordered_map<std::pair<size_t, size_t>, size_t>::iterator, bool> p =
 						product.insert(make_pair(make_pair((*k)->_rhs, (*l)->_rhs), product.size() + stateOffset));
 					f(*k, *l, std::vector<size_t>(), p.first->second);
-//					if (p.second)
-//						stack.push_back(p.first->first);
 				}
 			}
 		}
 		bool changed = true;
 		while (changed) {
-//			std::pair<size_t, size_t> s = stack.back();
-//			stack.pop_back();
 			changed = false;
 			for (typename lt_cache_type::const_iterator i = cache1.begin(); i != cache1.end(); ++i) {
 				if (i->second.front()->_lhs->first.empty())
@@ -587,7 +667,7 @@ public:
 							product.insert(make_pair(make_pair((*k)->_rhs, (*l)->_rhs), product.size() + stateOffset));
 						f(*k, *l, lhs, p.first->second);
 						if (p.second)
-							changed = true; //stack.push_back(p.first->first);
+							changed = true;
 					}
 				}
 			}
@@ -604,9 +684,9 @@ public:
 		IntersectF(TA<T>& dst, const TA<T>& src1, const TA<T>& src2) : dst(dst), src1(src1), src2(src2) {}
 
 		void operator()(const TT<T>* t1, const TT<T>* t2, const std::vector<size_t>& lhs, size_t rhs) {
-			this->dst.addTransition(lhs, t1->_label, rhs);
 			if (this->src1.isFinalState(t1->_rhs) && this->src2.isFinalState(t2->_rhs))
 				this->dst.addFinalState(rhs);
+			this->dst.addTransition(lhs, t1->_label, rhs);
 		}
 
 	};
@@ -615,7 +695,7 @@ public:
 		lt_cache_type cache1, cache2;
 		src1.buildLTCache(cache1);
 		src2.buildLTCache(cache2);
-		return TA<T>::computeProduct(cache1, cache2, TA<T>::IntersectF(dst, src1, src2), stateOffset);
+		return TA<T>::buProduct(cache1, cache2, TA<T>::IntersectF(dst, src1, src2), stateOffset);
 	}
 
 	struct PredicateF {
@@ -636,9 +716,48 @@ public:
 		lt_cache_type cache1, cache2;
 		this->buildLTCache(cache1);
 		predicate.buildLTCache(cache2);
-		TA<T>::computeProduct(cache1, cache2, TA<T>::PredicateF(dst, predicate));
+		TA<T>::buProduct(cache1, cache2, TA<T>::PredicateF(dst, predicate));
 	}
-
+/*
+	template <class F>
+	static bool tdMatch(const TA<T> ta1, size_t s1, const TA<T> ta2, size_t s2, F f) {
+		boost::unordered_map<size_t, size_t> matching;
+		std::vector<std::pair<size_t, size_t> > stack;
+		std::pair<size_t, size_t> s(s1, s2);
+		product.insert(s);
+		stack.push_back(s);
+		while (!stack.empty()) {
+			std::pair<size_t, size_t> el = stack.back();
+			stack.pop_back();
+			typename TA<T>::trans_set_type::const_iterator i = ta1._lookup(el.first);
+			if (i == ta1.transitions.end())
+				continue;
+			typename TA<T>::trans_set_type::const_iterator j = ta2._lookup(el.second);
+			if (j == ta2.transitions.end())
+				continue;
+			typename TA<T>::trans_set_type::const_iterator k = j;
+			for (; i != ta1.transitions.end() && (*i)->first._rhs == el.first; ++i) {
+				bool matched = false;
+				for (; j != ta2.transitions.end() && (*j)->first._rhs == el.second; ++j) {	
+					std::vector<size_t> lhs1((*i)->first._lhs->first), lhs2((*j)->first._lhs->first);
+					if (!f((*i)->first, lhs1, (*j)->first, lhs2))
+						continue;
+					matched = true;
+					for (size_t m = 0; m < lhs1.size(); ++m) {
+						std::pair<size_t, size_t> el(lhs1[m], lhs2[m]);
+						
+						if (product.insert(el).second)
+							stack.push_back(el);
+					}
+				}
+				if (!matched)
+					return false;
+				j = k;
+			}
+		}
+		return true;
+	}
+*/
 	static bool transMatch(const TT<T>* t1, const TT<T>* t2, std::vector<std::vector<bool> >& mat, const Index<size_t>& stateIndex) {
 
 		if (t1->_label != t2->_label)
@@ -668,7 +787,6 @@ public:
 		std::cerr << std::endl;
 */
 		while (height--) {
-
 			tmp = result;
 /*
 			for (size_t i = 0; i < tmp.size(); ++i) {
@@ -679,49 +797,32 @@ public:
 			}
 */
 			for (Index<size_t>::iterator i = stateIndex.begin(); i != stateIndex.end(); ++i) {
-
 				size_t state1 = i->second;
-
 				typename td_cache_type::iterator j = cache.insert(
 					std::make_pair(i->first, std::vector<const TT<T>*>())
 				).first;
-
 				for (Index<size_t>::iterator k = stateIndex.begin(); k != stateIndex.end(); ++k) {
-
 					size_t state2 = k->second;
-
 					if ((state1 == state2) || !tmp[state1][state2])
 						continue;
-
 					typename td_cache_type::iterator l = cache.insert(
 						std::make_pair(k->first, std::vector<const TT<T>*>())
 					).first;
-
 					bool match = false;
-
 					for (typename std::vector<const TT<T>*>::const_iterator m = j->second.begin(); m != j->second.end(); ++m) {
-
 						for (typename std::vector<const TT<T>*>::const_iterator n = l->second.begin(); n != l->second.end(); ++n) {
-
 							if (TA<T>::transMatch(*m, *n, tmp, stateIndex)) {
 								match = true;
 								break;
 							}
-
 						}
-
 						if (match)
 							break;
-
 					}
-
 					if (!match)
 						result[state1][state2] = false;
-
 				}
-
 			}
-
 		}
 
 		for (size_t i = 0; i < result.size(); ++i) {
@@ -757,7 +858,7 @@ public:
 	
 	// collapses states according to a given relation
 	TA<T>& collapsed(TA<T>& dst, const vector<vector<bool> >& rel, const Index<size_t>& stateIndex) const {
-		vector<size_t> headIndex;
+		std::vector<size_t> headIndex;
 		utils::relBuildClasses(rel, headIndex);
 		// TODO: perhaps improve indexing
 		std::vector<size_t> invStateIndex(stateIndex.size());
@@ -765,27 +866,29 @@ public:
 			invStateIndex[i->second] = i->first;
 		for (std::vector<size_t>::iterator i = headIndex.begin(); i != headIndex.end(); ++i)
 			*i = invStateIndex[*i];
+		for (std::set<size_t>::const_iterator i = this->finalStates.begin(); i != this->finalStates.end(); ++i)
+			dst.addFinalState(headIndex[stateIndex[*i]]);
 		for (typename set<typename trans_cache_type::value_type*>::const_iterator i = this->transitions.begin(); i != this->transitions.end(); ++i) {
-			vector<size_t> lhs;
+			std::vector<size_t> lhs;
 			stateIndex.translate(lhs, (*i)->first._lhs->first);
 			for (size_t j = 0; j < lhs.size(); ++j)
 				lhs[j] = headIndex[lhs[j]];
 			dst.addTransition(lhs, (*i)->first._label, headIndex[stateIndex[(*i)->first._rhs]]);
 		}
-		for (set<size_t>::const_iterator i = this->finalStates.begin(); i != this->finalStates.end(); ++i)
-			dst.addFinalState(headIndex[stateIndex[*i]]);
 		return dst; 
 	}
 	
 	TA<T>& uselessFree(TA<T>& dst) const {
-		vector<typename trans_cache_type::value_type*> v1(this->transitions.begin(), this->transitions.end()), v2;
-		set<size_t> states;
+		for (std::set<size_t>::const_iterator i = this->finalStates.begin(); i != this->finalStates.end(); ++i)
+			dst.addFinalState(*i);
+		std::vector<typename trans_cache_type::value_type*> v1(this->transitions.begin(), this->transitions.end()), v2;
+		std::set<size_t> states;
 		bool changed = true;
 		while (changed) {
 			changed = false;
 			for (typename vector<typename trans_cache_type::value_type*>::const_iterator i = v1.begin(); i != v1.end(); ++i) {
 				bool matches = true;
-				for (vector<size_t>::const_iterator j = (*i)->first._lhs->first.begin(); j != (*i)->first._lhs->first.end(); ++j) {
+				for (std::vector<size_t>::const_iterator j = (*i)->first._lhs->first.begin(); j != (*i)->first._lhs->first.end(); ++j) {
 					if (!states.count(*j)) {
 						matches = false;
 						break;
@@ -802,20 +905,24 @@ public:
 			v1.clear();
 			std::swap(v1, v2);
 		}
-		for (set<size_t>::const_iterator i = this->finalStates.begin(); i != this->finalStates.end(); ++i) {
-			if (states.count(*i))
-				dst.addFinalState(*i);
+		for (std::set<size_t>::iterator i = dst.finalStates.begin(), j; i != dst.finalStates.end(); ) {
+			if (!states.count(*i)) {
+				j = i++;
+				dst.finalStates.erase(*j);
+			} else ++i;
 		}
 		return dst;
 	}
 	
 	TA<T>& unreachableFree(TA<T>& dst) const {
-		vector<typename trans_cache_type::value_type*> v1(transitions.begin(), this->transitions.end()), v2;
-		set<size_t> states(this->finalStates.begin(), this->finalStates.end());
+		std::vector<typename trans_cache_type::value_type*> v1(transitions.begin(), this->transitions.end()), v2;
+		std::set<size_t> states(this->finalStates.begin(), this->finalStates.end());
+		for (std::set<size_t>::const_iterator i = this->finalStates.begin(); i != this->finalStates.end(); ++i)
+			dst.addFinalState(*i);
 		bool changed = true;
 		while (changed) {
 			changed = false;
-			for (typename vector<typename trans_cache_type::value_type*>::const_iterator i = v1.begin(); i != v1.end(); ++i) {
+			for (typename std::vector<typename trans_cache_type::value_type*>::const_iterator i = v1.begin(); i != v1.end(); ++i) {
 				if (states.count((*i)->first._rhs)) {
 					dst.addTransition(*i);
 					for (vector<size_t>::const_iterator j = (*i)->first._lhs->first.begin(); j != (*i)->first._lhs->first.end(); ++j) {
@@ -829,24 +936,53 @@ public:
 			v1.clear();
 			std::swap(v1, v2);
 		}
-		for (set<size_t>::const_iterator i = this->finalStates.begin(); i != this->finalStates.end(); ++i)
-			dst.addFinalState(*i);
 		return dst;
 	}
+
+	TA<T>& downwardSieve(TA<T>& dst, const std::vector<std::vector<bool> >& cons, const Index<size_t>& stateIndex) const {
+
+		td_cache_type cache;
+		this->buildTDCache(cache);
+
+		for (std::set<size_t>::const_iterator i = this->finalStates.begin(); i != this->finalStates.end(); ++i)
+			dst.addFinalState(*i);
+		for (typename td_cache_type::iterator i = cache.begin(); i != cache.end(); ++i) {
+			std::list<const TT<T>*> tmp;
+			for (typename std::vector<const TT<T>*>::iterator j = i->second.begin(); j != i->second.end(); ++j) {
+				bool noskip = true;
+				for (typename std::list<const TT<T>*>::iterator k = tmp.begin(); k != tmp.end(); ) {
+					if ((*j)->llhsLessThan(**k, cons, stateIndex)) {
+						noskip = false;
+						break;
+					}
+					if ((*k)->llhsLessThan(**j, cons, stateIndex)) {
+						typename std::list<const TT<T>*>::iterator l = k++;
+						tmp.erase(l);
+					} else ++k;
+				}
+				if (noskip)
+					tmp.push_back(*j);
+			}
+			for (typename std::list<const TT<T>*>::iterator j = tmp.begin(); j != tmp.end(); ++j)
+				dst.addTransition(**j);
+		}
+		return dst;
 	
-	TA<T>& minimized(TA<T>& dst, const vector<vector<bool> >& cons, const Index<size_t>& stateIndex) const {
+	}
+	
+	TA<T>& minimized(TA<T>& dst, const std::vector<std::vector<bool> >& cons, const Index<size_t>& stateIndex) const {
 		typename TA<T>::Backend backend;
 		vector<vector<bool> > dwn;
 		this->downwardSimulation(dwn, stateIndex);
 		utils::relAnd(dwn, cons, dwn);
-		TA<T> tmp1(backend), tmp2(backend);
-		return this->collapsed(tmp1, dwn, stateIndex).uselessFree(tmp2).unreachableFree(dst);
+		TA<T> tmp1(backend), tmp2(backend), tmp3(backend);
+		return this->collapsed(tmp1, dwn, stateIndex).uselessFree(tmp2).downwardSieve(tmp3, dwn, stateIndex).unreachableFree(dst);
 	}
 	
 	TA<T>& minimized(TA<T>& dst) const {
 		Index<size_t> stateIndex;
 		this->buildSortedStateIndex(stateIndex);
-		vector<vector<bool> > cons(stateIndex.size(), vector<bool>(stateIndex.size(), true));
+		std::vector<std::vector<bool> > cons(stateIndex.size(), std::vector<bool>(stateIndex.size(), true));
 		return this->minimized(dst, cons, stateIndex);
 	}
 	
@@ -854,35 +990,62 @@ public:
 
 	template <class F>
 	static TA<T>& rename(TA<T>& dst, const TA<T>& src, F f, bool addFinalStates = true) {
-		vector<size_t> lhs;
-		for (typename set<typename trans_cache_type::value_type*>::const_iterator i = src.transitions.begin(); i != src.transitions.end(); ++i) {
+		std::vector<size_t> lhs;
+		if (addFinalStates) {
+			for (std::set<size_t>::const_iterator i = src.finalStates.begin(); i != src.finalStates.end(); ++i)
+				dst.addFinalState(f(*i));
+		}
+		for (typename std::set<typename trans_cache_type::value_type*>::const_iterator i = src.transitions.begin(); i != src.transitions.end(); ++i) {
 			lhs.resize((*i)->first._lhs->first.size());
 			for (size_t j = 0; j < (*i)->first._lhs->first.size(); ++j)
 				lhs[j] = f((*i)->first._lhs->first[j]);
 			dst.addTransition(lhs, (*i)->first._label, f((*i)->first._rhs));
 		}
-		if (addFinalStates) {
-			for (std::set<size_t>::const_iterator i = src.finalStates.begin(); i != src.finalStates.end(); ++i)
-				dst.addFinalState(f(*i));
-		}
 		return dst;
 	}
 
 	static TA<T>& reduce(TA<T>& dst, const TA<T>& src, Index<size_t>& index, size_t offset = 0, bool addFinalStates = true) {
-		vector<size_t> lhs;
-		for (typename set<typename trans_cache_type::value_type*>::const_iterator i = src.transitions.begin(); i != src.transitions.end(); ++i) {
-			lhs.clear();
-			index.translateOTF(lhs, (*i)->first._lhs->first, offset);
-			dst.addTransition(lhs, (*i)->first._label, index.translateOTF((*i)->first._rhs) + offset);
-		}
+		std::vector<size_t> lhs;
 		if (addFinalStates) {
 			for (std::set<size_t>::const_iterator i = src.finalStates.begin(); i != src.finalStates.end(); ++i)
 				dst.addFinalState(index.translateOTF(*i) + offset);
+		}
+		for (typename std::set<typename trans_cache_type::value_type*>::const_iterator i = src.transitions.begin(); i != src.transitions.end(); ++i) {
+			lhs.clear();
+			index.translateOTF(lhs, (*i)->first._lhs->first, offset);
+			dst.addTransition(lhs, (*i)->first._label, index.translateOTF((*i)->first._rhs) + offset);
 		}
 		return dst;
 	}
 
 public:
+
+	struct AcceptingF {
+		const TA<T>& ta;
+		AcceptingF(const TA<T>& ta) : ta(ta) {}
+		bool operator()(const TT<T>* t) { return ta.isFinalState(t->_rhs); }
+	};
+
+	struct NonAcceptingF {
+		const TA<T>& ta;
+		NonAcceptingF(const TA<T>& ta) : ta(ta) {}
+		bool operator()(const TT<T>* t) { return !ta.isFinalState(t->_rhs); }
+	};
+
+	TA& copyTransitions(TA<T>& dst) const {
+		for (typename std::set<typename trans_cache_type::value_type*>::const_iterator i = this->transitions.begin(); i != this->transitions.end(); ++i)
+			dst.addTransition(*i);
+		return dst;
+	}
+
+	template <class F>
+	TA& copyTransitions(TA<T>& dst, F f) const {
+		for (typename std::set<typename trans_cache_type::value_type*>::const_iterator i = this->transitions.begin(); i != this->transitions.end(); ++i) {
+			if (f(&(*i)->first))
+				dst.addTransition(*i);
+		}
+		return dst;
+	}
 
 	// makes state numbers contiguous
 	TA& reduced(TA<T>& dst, Index<size_t>& index) const {
@@ -890,24 +1053,24 @@ public:
 	}
 	
 	static TA<T>& disjointUnion(TA<T>& dst, const TA<T>& a, const TA<T>& b) {
-		for (typename set<typename trans_cache_type::value_type*>::const_iterator i = a.transitions.begin(); i != a.transitions.end(); ++i)
-			dst.addTransition(*i);
-		for (typename set<typename trans_cache_type::value_type*>::const_iterator i = b.transitions.begin(); i != b.transitions.end(); ++i)
-			dst.addTransition(*i);
 		for (set<size_t>::const_iterator i = a.finalStates.begin(); i != a.finalStates.end(); ++i)
 			dst.addFinalState(*i);
 		for (set<size_t>::const_iterator i = b.finalStates.begin(); i != b.finalStates.end(); ++i)
 			dst.addFinalState(*i);
+		for (typename std::set<typename trans_cache_type::value_type*>::const_iterator i = a.transitions.begin(); i != a.transitions.end(); ++i)
+			dst.addTransition(*i);
+		for (typename std::set<typename trans_cache_type::value_type*>::const_iterator i = b.transitions.begin(); i != b.transitions.end(); ++i)
+			dst.addTransition(*i);
 		return dst;
 	}
 
 	static TA<T>& disjointUnion(TA<T>& dst, const TA<T>& src, bool addFinalStates = true) {
-		for (typename set<typename trans_cache_type::value_type*>::const_iterator i = src.transitions.begin(); i != src.transitions.end(); ++i)
-			dst.addTransition(*i);
 		if (addFinalStates) {
-			for (set<size_t>::const_iterator i = src.finalStates.begin(); i != src.finalStates.end(); ++i)
+			for (std::set<size_t>::const_iterator i = src.finalStates.begin(); i != src.finalStates.end(); ++i)
 				dst.addFinalState(*i);
 		}
+		for (typename set<typename trans_cache_type::value_type*>::const_iterator i = src.transitions.begin(); i != src.transitions.end(); ++i)
+			dst.addTransition(*i);
 		return dst;
 	}
 
@@ -928,13 +1091,13 @@ public:
 	}
 
 	TA<T>& unfoldAtRoot(TA<T>& dst, size_t newState, bool registerFinalState = true) const {
-		for (typename set<typename trans_cache_type::value_type*>::const_iterator i = this->transitions.begin(); i != this->transitions.end(); ++i) {
+		if (registerFinalState)
+			dst.addFinalState(newState);
+		for (typename std::set<typename trans_cache_type::value_type*>::const_iterator i = this->transitions.begin(); i != this->transitions.end(); ++i) {
 			dst.addTransition(*i);
 			if (this->isFinalState((*i)->first._rhs))
 				dst.addTransition((*i)->first._lhs->first, (*i)->first._label, newState);
 		}
-		if (registerFinalState)
-			dst.addFinalState(newState);
 		return dst;
 	}
 

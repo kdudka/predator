@@ -147,6 +147,10 @@ class Box : public FA, public StructuralBox {
 		std::pair<std::vector<size_t>, std::set<size_t> >
 	> selCoverage;
 
+	std::vector<std::set<const AbstractBox*> > trigger;
+
+	std::vector<std::vector<size_t> > o;
+
 protected:
 
 	Box(TA<label_type>::Manager& taMan, std::string& name)
@@ -196,6 +200,14 @@ public:
 		assert(this->selCoverage.size());
 		return this->selCoverage.front().second;
 	}
+
+	bool inputCovers(size_t index, size_t offset) const {
+		throw std::runtime_error("Box::inputCovers(): not implemented!");
+	}
+
+	virtual const std::set<size_t>& inputCoverage(size_t index) const {
+		throw std::runtime_error("Box::inputCoverage(): not implemented!");
+	}
 /*
 	const std::set<size_t>& getSelCoverage(size_t x = 0) const {
 		assert(x < this->selCoverage.size());
@@ -226,18 +238,45 @@ public:
 		boxes = vector<const Box*>(s.begin(), s.end());
 	}
 */
-	bool inputCovers(size_t offset) const {
-		throw std::runtime_error("Box::inputCovers(): not implemented!");
+
+	const std::set<const AbstractBox*>& getTrigger(size_t root) const {
+		assert(this->trigger.size() < root);
+		return this->trigger[root];
+	}
+
+	const std::vector<size_t>& getO(size_t root) const {
+		assert(this->o.size() < root);
+		return this->o[root];
 	}
 
 	
-
-	void joinRoot(TA<label_type>& dst, size_t index) {
+	
+/*
+	void appendRoot(TA<label_type>& dst, size_t index, const TT<label_type>& t, size_t state) {
+		std::vector<size_t> lhs;
+		std::vector<const AbstractBox*> label;
+		size_t lhsOffset = 0;
+		for (std::vector<const AbstractBox*>::const_iterator i = t.label().dataB->begin(); i != t.label().dataB->end(); ++i) {
+			if (!(*i)->isStructural()) {
+				label.push_back(*i);
+				continue;
+			}
+			StructuralBox* b = (StructuralBox*)(*i);
+			if (b != (const StructuralBox*)this) {
+				// this box is not interesting
+				for (size_t k = 0; k < b->getArity(); ++k, ++lhsOffset)
+					lhs.push_back(t.lhs()[lhsOffset]);
+				label.push_back(b);
+				continue;
+			}
+			
+		}
+		// append
 	}
 
 	void addInternalRoots(FA& fa) {
 	}
-
+*/
 public:
 
 	virtual void toStream(std::ostream& os) const {

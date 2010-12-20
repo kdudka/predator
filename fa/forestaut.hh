@@ -60,6 +60,8 @@ protected:
 
 public:
 
+	typedef boost::unordered_map<size_t, vector<size_t> > o_map_type;
+
 	struct WriteStateF {
 
 		std::string operator()(size_t state) const {
@@ -100,6 +102,11 @@ public:
 		this->releaseRoots();
 		this->roots.clear();
 		this->variables.clear();
+	}
+
+	const TA<label_type>* getRoot(size_t i) const {
+		assert(i < roots.size());
+		return this->roots[i];
 	}
 	
 };

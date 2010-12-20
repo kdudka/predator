@@ -245,7 +245,7 @@ protected:
 			for (std::list<const FAE*>::reverse_iterator j = this->queue.rbegin(); i > 0; --i, ++j)
 				this->traceRecorder.add(this->currentConf, *j, normalized, normInfo);
 		}
-		else CL_CDEBUG("hit");
+		else { CL_CDEBUG("hit"); }
 
 	}
 
@@ -275,7 +275,7 @@ protected:
 			Data data = src.readData(fae, itov((size_t)0));
 			assert(data.isVoidPtr());
 			if (dst.type->items[0].type->size != (int)data.d_void_ptr)
-				throw runtime_error("Engine::execAssignment(): size of allocated block doesn't correspond to the size of the destination!");
+				throw ProgramError("allocated block's size mismatch");
 			vector<SelData> sels;
 			NodeBuilder::buildNode(sels, dst.type->items[0].type);
 			dst.writeData(fae, Data::createRef(fae.nodeCreate(sels, this->boxMan.getInfo(dst.type->items[0].type->name))), rev);
@@ -375,16 +375,10 @@ protected:
 		OperandInfo src;
 		state->ctx->parseOperand(src, fae, &insn->operands[2]);
 		Data data = src.readData(fae, itov((size_t)0));
-		if (!data.isRef()) {
-			std::stringstream ss;
-			ss << "Engine::execFree(): attempt to release an unsiutable value - " << data << '!';
-			throw runtime_error(ss.str());
-		}
-		if (data.d_ref.displ != 0) {
-			std::stringstream ss;
-			ss << "Engine::execFree(): attempt to release a reference not pointing at the beginning of an allocated block - " << data << '!';
-			throw runtime_error(ss.str());
-		}
+		if (!data.isRef())
+			throw ProgramError("releasing non-pointer value");
+		if (data.d_ref.displ != 0)
+			throw ProgramError("releasing a pointer which points inside the block");
 		fae.nodeDelete(data.d_ref.root);
 		this->enqueueNextInsn(state, fae);
 		
@@ -449,7 +443,7 @@ protected:
 						this->execAssignment(state, fae, insn);
 						break;
 					default:
-						assert(false);
+						throw std::runtime_error("feature not implemented");
 				}
 				break;
 
@@ -465,7 +459,7 @@ protected:
 						this->execPlus(state, fae, insn);
 						break;
 					default:
-						assert(false);
+						throw std::runtime_error("feature not implemented");
 				}
 				break;
 
@@ -483,7 +477,7 @@ protected:
 						this->execNondet(state, fae, insn);
 						break;
 					default:
-						assert(false);
+						throw std::runtime_error("feature not implemented");
 				}
 				break;
 
@@ -500,7 +494,7 @@ protected:
 				break;
 
 			default:
-				assert(false);
+				throw std::runtime_error("feature not implemented");
 
 		}
 				
@@ -545,7 +539,7 @@ protected:
 
 			this->execInsn(state, tmp);
 
-		} catch (const std::exception& e) {
+		} catch (const ProgramError& e) {
 
 			CL_CDEBUG(e.what());
 
@@ -553,7 +547,7 @@ protected:
 
 			if (!item)
 
-				throw;
+				throw ProgramError(e.what(), &(*state->insn)->loc);
 
 			state = STATE_FROM_FAE(*item->fae);
 
@@ -585,7 +579,6 @@ protected:
 			CL_CDEBUG(loc << ' ' << **state->insn);
 
 			STATE_FROM_FAE(*parent->fae)->enqueue(this->queue, itov((FAE*)parent->fae));
-//			throw;
 
 		}
 
@@ -711,8 +704,8 @@ public:
 			for (state_store_type::iterator i = this->stateStore.begin(); i != this->stateStore.end(); ++i) {
 				if (!i->second->entryPoint)
 					continue;
-				CL_CDEBUG("fixpoint at " << (*i->second->insn)->loc);
-				CL_CDEBUG(std::endl << i->second->fwdConf);
+				CL_DEBUG("fixpoint at " << (*i->second->insn)->loc);
+				CL_DEBUG(std::endl << i->second->fwdConf);
 			}				
 
 		} catch (std::exception& e) {

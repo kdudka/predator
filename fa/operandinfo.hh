@@ -29,6 +29,7 @@
 #include "regdef.hh"
 #include "forestautext.hh"
 #include "nodebuilder.hh"
+#include "programerror.hh"
 
 typedef enum { r_none, r_ref, r_reg } r_flag_e;
 
@@ -152,8 +153,8 @@ struct OperandInfo {
 			fae.nodeLookup(this->data.d_ref.root, this->data.d_ref.displ, this->data);
 			if (!this->data.isRef()) {
 				std::stringstream ss;
-				ss << "OperandInfo::parseVar(): dereferenced value is not a valid reference - " << data << '!';
-				throw std::runtime_error(ss.str());
+				ss << "dereferenced value is not a valid reference [" << data << ']';
+				throw ProgramError(ss.str());
 			}
 
 			this->flag = o_flag_e::ref;
@@ -181,8 +182,8 @@ struct OperandInfo {
 			this->data = fae.varGet(this->data.d_ref.root);
 			if (!this->data.isRef()) {
 				std::stringstream ss;
-				ss << "OperandInfo::parseReg(): dereferenced value is not a valid reference - " << data << '!';
-				throw std::runtime_error(ss.str());
+				ss << "dereferenced value is not a valid reference [" << data << ']';
+				throw ProgramError(ss.str());
 			}
 
 			this->flag = o_flag_e::ref;

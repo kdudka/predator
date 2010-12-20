@@ -63,13 +63,13 @@ public:
 	};
 */
 	TA<label_type>& fae2ta(TA<label_type>& dst, Index<size_t>& index, const FAE& src) const {
+		dst.addFinalState(0);
 		std::vector<size_t> lhs;
 		for (std::vector<TA<label_type>*>::const_iterator i = src.roots.begin(); i != src.roots.end(); ++i) {
 			TA<label_type>::rename(dst, **i, FAE::RenameNonleafF(index, this->stateOffset), false);
 			lhs.push_back(index[(*i)->getFinalState()] + this->stateOffset);
 		}
 		dst.addTransition(lhs, &labMan.lookup(src.variables, lhs.size()), 0);
-		dst.addFinalState(0);
 		return dst;
 	}
 

@@ -33,8 +33,10 @@
 #ifndef NDEBUG
 //#define DEBUG_MSG(x) do { std::cerr << x << std::endl; } while (0)
 #define CL_CDEBUG(x) CL_DEBUG(x)
+#define CL_CDEBUG_MSG(x) CL_DEBUG_MSG(x)
 #else
 #define CL_CDEBUG(x)
+#define CL_CDEBUG_MSG(x)
 //#define DEBUG_MSG(x)
 #endif
 

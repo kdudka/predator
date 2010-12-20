@@ -25,12 +25,16 @@
 #include <cl/cl_msg.hh>
 #include <cl/location.hh>
 #include <cl/storage.hh>
+#include <cl/cldebug.hh>
+#include <cl/clutil.hh>
 
 #include "symctx.hh"
 #include "symexec.hh"
 
 // required by the gcc plug-in API
 extern "C" { int plugin_is_GPL_compatible; }
+
+std::ostream& operator<<(std::ostream& os, const cl_location& loc);
 
 void clEasyRun(const CodeStorage::Storage& stor, const char* configString) {
 //    CL_ERROR("fa_analysis is not implemented yet");
@@ -63,6 +67,11 @@ void clEasyRun(const CodeStorage::Storage& stor, const char* configString) {
     try {
 		SymExec(stor).run(*main);
 		CL_NOTE("the program is safe ...");
+	} catch (const ProgramError& e) {
+		if (e.location())
+			CL_ERROR_MSG(*e.location(), e.what());
+		else
+			CL_ERROR(e.what());
 	} catch (const std::exception& e) {
 		CL_ERROR(e.what());
 	}
