@@ -792,6 +792,9 @@ void SymHeapCore::valReplaceUnknown(TValueId val, TValueId replaceBy) {
     while (wl.next(item)) {
         boost::tie(val, replaceBy) = item;
 
+        TContObj refs;
+        this->usedBy(refs, val);
+
 #ifndef NDEBUG
         // ensure there hasn't been any inequality defined among the pair
         if (d->neqDb.areNeq(val, replaceBy)) {
@@ -829,6 +832,10 @@ subst_done:
         BOOST_FOREACH(const EqIfDb::TPred &pred, eqIfs) {
             TValueId valCond, valLt, valGt; bool neg;
             boost::tie(valCond, valLt, valGt, neg) = pred;
+
+            if (1U == refs.size())
+                // EXPERIMENTAL: kill valCond ASAP in order to reduce state bloat
+                this->objSetValue(refs[0], val);
 
             // deduce if the values are equal or not equal
             bool areEqual = false;
