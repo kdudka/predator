@@ -127,7 +127,9 @@ struct SymJoinCtx {
     typedef std::map<TObjId /* seg */, unsigned /* len */>      TSegLengths;
     TSegLengths                 segLengths;
     std::set<TValPair>          sharedNeqs;
+
     std::set<TObjPair>          tieBreaking;
+    std::set<TValPair>          alreadyJoined;
 
     std::set<TObjTriple>        protoRoots;
 
@@ -364,6 +366,10 @@ bool joinFreshObjTripple(
         // same as above, but now only one value of v1 and v2 is valid
         return true;
 
+    if (hasKey(ctx.alreadyJoined, TValPair(v1, v2)))
+        // the join has been already successful
+        return true;
+
     if (VAL_NULL == v1 && (hasKey(ctx.valMap2[/* lrt */ 0], v2)
             || v2 < 0 || UV_KNOWN == ctx.sh2.valGetUnknown(v2)))
         // mapping already inconsistent
@@ -392,7 +398,7 @@ bool joinFreshObjTripple(
         const bool isGt1 = (OBJ_INVALID == obj2);
         const TValMapBidir &vm = (isGt1) ? ctx.valMap1 : ctx.valMap2;
         const TValueId val = (isGt1) ? v1 : v2;
-        if (hasKey(vm[/* lrt */ 0], val))
+        if (val <= 0 || hasKey(vm[/* lrt */ 0], val))
             return true;
     }
     else {
@@ -1219,10 +1225,14 @@ bool insertSegmentClone(
             case UV_UNINITIALIZED:
             case UV_UNKNOWN:
             case UV_DONT_CARE: {
+                if (!ctx.joiningData())
+                    // XXX
+                    break;
+
                 // clone unknown value
                 const struct cl_type *const clt = shGt.valType(valGt);
                 const TValueId vDst = ctx.dst.valCreateUnknown(code, clt);
-                if (0 < valLt && defineValueMapping(ctx, vp.first, vp.second, vDst))
+                if (defineValueMapping(ctx, vp.first, vp.second, vDst))
                     continue;
                 else
                     break;
@@ -1458,6 +1468,8 @@ bool joinPendingValues(SymJoinCtx &ctx) {
         SJ_DEBUG("--- " << SJ_VALP(v1, v2));
         if (!joinValuePair(ctx, v1, v2))
             return false;
+
+        ctx.alreadyJoined.insert(vp);
     }
 
     return true;

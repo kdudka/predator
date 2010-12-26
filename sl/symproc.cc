@@ -955,6 +955,9 @@ TValueId handleOpCmpInt(THeap &heap, enum cl_binop_e code,
     }
 
 who_knows:
+#if !SE_TRACK_UNKNOWN_INT_VALUES
+    return heap.valCreateUnknown(UV_DONT_CARE, dstClt);
+#endif
     // unknown result of int comparison
     TValueId val = heap.valCreateUnknown(UV_UNKNOWN, dstClt);
     switch (code) {
