@@ -103,7 +103,9 @@ bool /* complete */ traverseTypeIc(const struct cl_type *clt, TVisitor &visitor,
         typename TFieldIdxChain::reference nth = si.ic.back();
         if (nth == si.clt->item_cnt) {
             // done at this level
-            done.erase(si.clt->uid);
+            if (isComposite(si.clt))
+                done.erase(si.clt->uid);
+
             todo.pop();
             continue;
         }
