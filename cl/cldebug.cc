@@ -56,16 +56,24 @@ typedef std::vector<int /* nth */> TFieldIdxChain;
 
 class DumpCltVisitor {
     private:
-        std::ostream &out_;
+        std::ostream            &out_;
+        const unsigned          depth_;
 
     public:
-        DumpCltVisitor(std::ostream &out): out_(out) { }
+        DumpCltVisitor(std::ostream &out, const unsigned depth):
+            out_(out),
+            depth_(depth)
+        {
+        }
 
         bool operator()(TFieldIdxChain ic, const struct cl_type_item *item)
             const
         {
-            // indent regarding the current nest level
             const unsigned nestLevel = ic.size();
+            if (depth_ < nestLevel)
+                return /* continue */ true;
+
+            // indent regarding the current nest level
             const std::string indent(nestLevel << 2, ' ');
             out_ << indent;
 
@@ -84,8 +92,8 @@ class DumpCltVisitor {
         }
 };
 
-void cltToStream(std::ostream &out, const struct cl_type *clt, bool oneline) {
-    if (oneline) {
+void cltToStream(std::ostream &out, const struct cl_type *clt, unsigned depth) {
+    if (!depth) {
         cltToStreamCore(out, clt);
         return;
     }
@@ -100,7 +108,7 @@ void cltToStream(std::ostream &out, const struct cl_type *clt, bool oneline) {
     out << "\n";
 
     // go through the type recursively
-    const DumpCltVisitor visitor(out);
+    const DumpCltVisitor visitor(out, depth);
     traverseTypeIc<TFieldIdxChain>(clt, visitor);
 }
 

@@ -140,7 +140,7 @@ template <> struct TraverseSubObjsHelper<TObjId> {
 template <> struct TraverseSubObjsHelper<TObjPair> {
     static const struct cl_type* getItemClt(const SymHeap &sh, TObjPair item) {
         const struct cl_type *clt = sh.objType(item.first);
-        CL_BREAK_IF(clt != sh.objType(item.second));
+        CL_BREAK_IF(!clt || *clt != *sh.objType(item.second));
         return clt;
     }
     static TObjPair getNextItem(const SymHeap &sh, TObjPair item, int nth) {

@@ -40,7 +40,7 @@ namespace {
 }
 
 void dump_clt(const struct cl_type *clt) {
-    cltToStream(cout, clt, /* oneline */ false);
+    cltToStream(cout, clt, /* depth */ 3U);
 }
 
 void dump_ac(const struct cl_accessor *ac) {

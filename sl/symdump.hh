@@ -43,6 +43,7 @@ class SymHeap;
 
 /// dump @b type-info given as clt
 void dump_clt(const struct cl_type *clt);
+void dump_clt(const struct cl_type *clt, unsigned depth);
 
 /// dump a chain of @b accessors
 void dump_ac(const struct cl_accessor *ac);

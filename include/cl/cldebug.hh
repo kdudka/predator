@@ -30,14 +30,14 @@ namespace CodeStorage {
     struct Insn;
 }
 
-void cltToStream(std::ostream &str, const struct cl_type *clt, bool oneline);
+void cltToStream(std::ostream &str, const struct cl_type *clt, unsigned depth);
 void acToStream(std::ostream &str, const struct cl_accessor *ac, bool oneline);
 void operandToStream(std::ostream &str, const struct cl_operand &op);
 void insnToStream(std::ostream &str, const CodeStorage::Insn &insn);
 
 inline std::ostream& operator<<(std::ostream &str, const struct cl_type &clt)
 {
-    cltToStream(str, &clt, /* oneline */ true);
+    cltToStream(str, &clt, /* oneline */ 0U);
     return str;
 }
 
