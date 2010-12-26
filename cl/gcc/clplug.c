@@ -118,10 +118,10 @@ extern void print_gimple_stmt (FILE *, gimple, int, int);
 #endif // CLPLUG_SILENT
 
 #define CL_WARN_UNHANDLED_GIMPLE(stmt, what) \
-    CL_WARN_UNHANDLED_WITH_LOC((stmt)->gsbase.location, what)
+    CL_WARN_UNHANDLED_WITH_LOC((stmt)->gsbase.location, "unhandled " what)
 
 #define CL_WARN_UNHANDLED_EXPR(expr, what) do { \
-    CL_WARN_UNHANDLED_WITH_LOC(EXPR_LOCATION(expr), what); \
+    CL_WARN_UNHANDLED_WITH_LOC(EXPR_LOCATION(expr), "unhandled " what); \
     if (CL_VERBOSE_UNHANDLED_EXPR & verbose) \
         debug_tree(expr); \
 } while (0)
@@ -471,19 +471,19 @@ static struct cl_type* add_type_if_needed(tree t)
 
 static int dig_field_offset(tree t)
 {
-    // read bit offset
-    tree node = DECL_FIELD_BIT_OFFSET(t);
+    // read byte offset
+    tree node = DECL_FIELD_OFFSET(t);
     if (!node || INTEGER_CST != TREE_CODE(node) || TREE_INT_CST_HIGH(node))
         CL_TRAP;
-    int offset = TREE_INT_CST_LOW(node) >> 3;
+    int offset = TREE_INT_CST_LOW(node) << 3;
 
-    // read byte offset
-    node = DECL_FIELD_OFFSET(t);
+    // read bit offset
+    node = DECL_FIELD_BIT_OFFSET(t);
     if (!node || INTEGER_CST != TREE_CODE(node) || TREE_INT_CST_HIGH(node))
         CL_TRAP;
     offset += TREE_INT_CST_LOW(node);
 
-    // return total offset [in bytes]
+    // return total offset [in bits]
     return offset;
 }
 
@@ -497,7 +497,9 @@ static void dig_record_type(struct cl_type *clt, tree t)
         struct cl_type_item *item = &clt->items[clt->item_cnt ++];
         item->type = /* recursion */ add_type_if_needed(t);
         item->name = /* possibly anonymous member */ NULL;
-        item->offset = dig_field_offset(t);
+
+        // FIXME: bytes as units are too coarse, we should switch to bits
+        item->offset = dig_field_offset(t) >> 3;
 
         // read item's name (if any)
         tree name = DECL_NAME(t);
@@ -667,6 +669,27 @@ static int field_lookup(tree op, tree field)
     // not found
     CL_TRAP;
     return -1;
+}
+
+static int bitfield_lookup(tree op)
+{
+    // compute the offset we are looking for [in bits]
+    const int offset = TREE_INT_CST_LOW(TREE_OPERAND(op, 2));
+
+    tree type = TREE_TYPE(TREE_OPERAND(op, 0));
+    if (NULL_TREE == type)
+        // decl omitted?
+        CL_TRAP;
+
+    tree t = TYPE_FIELDS(type);
+    int i;
+    for (i = 0; t; t = TREE_CHAIN(t), ++i)
+        if (offset == dig_field_offset(t))
+            return i;
+
+    // not found
+    CL_WARN_UNHANDLED_EXPR(op, "BIT_FIELD_REF");
+    return 0;
 }
 
 static void handle_operand(struct cl_operand *op, tree t);
@@ -870,6 +893,13 @@ static void handle_accessor_component_ref(struct cl_accessor **ac, tree t)
     (*ac)->data.item.id = field_lookup(op, field);
 }
 
+static void handle_accessor_bitfield(struct cl_accessor **ac, tree t)
+{
+    chain_accessor(ac, CL_ACCESSOR_ITEM);
+    (*ac)->type         = operand_type_lookup(t);
+    (*ac)->data.item.id = bitfield_lookup(t);
+}
+
 static bool handle_accessor(struct cl_accessor **ac, tree *pt)
 {
     tree t = *pt;
@@ -899,7 +929,7 @@ static bool handle_accessor(struct cl_accessor **ac, tree *pt)
             break;
 
         case BIT_FIELD_REF:
-            CL_WARN_UNHANDLED_EXPR(t, "BIT_FIELD_REF");
+            handle_accessor_bitfield(ac, t);
             break;
 
         default:
