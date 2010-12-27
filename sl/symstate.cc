@@ -134,6 +134,42 @@ int SymHeapUnion::lookup(const SymHeap &lookFor) const {
 
 // /////////////////////////////////////////////////////////////////////////////
 // SymStateWithJoin implementation
+void SymStateWithJoin::packSuffix(unsigned idx) {
+    const unsigned suffix = idx++;
+
+    while (idx < this->size()) {
+        SymHeap &shNew = const_cast<SymHeap &>(this->operator[](suffix));
+        SymHeap &shOld = const_cast<SymHeap &>(this->operator[](idx));
+
+        EJoinStatus     status;
+        SymHeap         result;
+        if (!joinSymHeaps(&status, &result, shNew, shOld)) {
+            ++idx;
+            continue;
+        }
+
+        CL_DEBUG("<J> packSuffix(): suffix = " << suffix
+                << ", idx = " << idx
+                << ", action = " << status);
+
+        switch (status) {
+            case JS_USE_ANY:
+            case JS_USE_SH1:
+                break;
+
+            case JS_USE_SH2:
+                this->swapExisting(suffix, shOld);
+                break;
+
+            case JS_THREE_WAY:
+                this->swapExisting(suffix, result);
+                break;
+        }
+
+        this->eraseExisting(idx);
+    }
+}
+
 bool SymStateWithJoin::insertCore(
         SymHeap                 &shNew,
         const bool              feelFreeToOverwrite)
@@ -203,6 +239,7 @@ bool SymStateWithJoin::insertCore(
                 this->swapExisting(idx, result);
             }
 
+            this->packSuffix(idx);
             return true;
 
         case JS_THREE_WAY:
@@ -213,6 +250,7 @@ bool SymStateWithJoin::insertCore(
             debugPlot("join", 2, result);
 
             this->swapExisting(idx, result);
+            this->packSuffix(idx);
             return true;
     }
 

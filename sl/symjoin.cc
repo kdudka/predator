@@ -54,17 +54,6 @@ static bool debugSymJoin = static_cast<bool>(DEBUG_SYMJOIN);
 #define SJ_VALP(v1, v2) "(v1 = #" << v1 << ", v2 = #" << v2 << ")"
 #define SJ_OBJP(o1, o2) "(o1 = #" << o1 << ", o2 = #" << o2 << ")"
 
-std::ostream& operator<<(std::ostream &str, const EJoinStatus status) {
-    switch (status) {
-        case JS_USE_ANY:        return (str << "JS_USE_ANY"  );
-        case JS_USE_SH1:        return (str << "JS_USE_SH1"  );
-        case JS_USE_SH2:        return (str << "JS_USE_SH2"  );
-        case JS_THREE_WAY:      return (str << "JS_THREE_WAY");
-        default:
-            return (str << static_cast<int>(status));
-    }
-}
-
 static int cntJoinOps = -1;
 
 namespace {

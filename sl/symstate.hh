@@ -100,6 +100,10 @@ class SymState {
             heaps_[last].swap(sh);
         }
 
+        virtual void eraseExisting(int nth) {
+            heaps_.erase(heaps_.begin() + nth);
+        }
+
         virtual void swapExisting(int nth, SymHeap &sh) {
             SymHeap &existing = heaps_.at(nth);
             existing.swap(sh);
@@ -154,7 +158,8 @@ class SymStateWithJoin: public SymHeapUnion {
         virtual bool insertFast(SymHeap &sh);
 
     private:
-        virtual bool insertCore(SymHeap &sh, const bool feelFreeToOverwrite);
+        void packSuffix(unsigned idx);
+        bool insertCore(SymHeap &sh, const bool feelFreeToOverwrite);
 };
 
 /**
@@ -197,6 +202,11 @@ class SymStateMarked: public SymStateWithJoin {
 
             // schedule the just inserted SymHeap for processing
             done_.push_back(false);
+        }
+
+        virtual void eraseExisting(int nth) {
+            SymStateWithJoin::eraseExisting(nth);
+            done_.erase(done_.begin() + nth);
         }
 
         virtual void swapExisting(int nth, SymHeap &sh) {
