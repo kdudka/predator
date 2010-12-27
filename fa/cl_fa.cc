@@ -17,6 +17,8 @@
  * along with predator.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <vector>
+#include <fstream>
 #include <iostream>
 #include <stdexcept>
 #include <ctime>
@@ -28,6 +30,8 @@
 #include <cl/cldebug.hh>
 #include <cl/clutil.hh>
 
+#include <boost/unordered_map.hpp>
+
 #include "symctx.hh"
 #include "symexec.hh"
 
@@ -36,9 +40,54 @@ extern "C" { int plugin_is_GPL_compatible; }
 
 std::ostream& operator<<(std::ostream& os, const cl_location& loc);
 
+struct Config {
+
+	std::string dbRoot;
+
+	void processArg(const std::string& key, const std::string& value) {
+		if (key == "db-root")
+			this->dbRoot = value;
+	}
+
+	Config(const std::string& c) {
+		std::vector<std::string> args;
+		boost::split(args, c, boost::is_from_range(';', ';'));
+		for (std::vector<std::string>::iterator i = args.begin(); i != args.end(); ++i) {
+			std::vector<std::string> data;
+			boost::split(data, *i, boost::is_from_range(':', ':'));
+			if (data.size() == 2)
+				this->processArg(data[0], data[1]);
+		}			
+	}
+
+};
+
+struct BoxDb {
+
+	boost::unordered_map<std::string, std::string> store;
+
+	BoxDb(const std::string& root, const std::string& fileName) {
+		std::ifstream input((root + "/" + fileName).c_str());
+		std::string buf;
+		while (std::getline(input, buf)) {
+			std::vector<std::string> data;
+			boost::split(data, buf, boost::is_from_range(':', ':'));
+			if (data.size() == 2)
+				this->store[data[0]] = root + "/" + data[1];
+		}
+	}
+
+};
+
 void clEasyRun(const CodeStorage::Storage& stor, const char* configString) {
-//    CL_ERROR("fa_analysis is not implemented yet");
+
     using namespace CodeStorage;
+
+	CL_CDEBUG("config: " << configString);
+
+	Config c(configString);
+
+	BoxDb db(c.dbRoot, "index");
 
     // look for main() by name
     CL_CDEBUG("looking for 'main()' at gl scope...");
@@ -65,7 +114,9 @@ void clEasyRun(const CodeStorage::Storage& stor, const char* configString) {
 
     CL_CDEBUG("starting verification stuff ...");
     try {
-		SymExec(stor).run(*main);
+		SymExec se(stor);
+		se.loadBoxes(db.store);
+		se.run(*main);
 		CL_NOTE("the program is safe ...");
 	} catch (const ProgramError& e) {
 		if (e.location())

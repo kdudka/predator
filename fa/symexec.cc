@@ -183,6 +183,8 @@ class SymExec::Engine {
 	
 	TraceRecorder traceRecorder;
 
+	std::vector<const Box*> boxes;
+
 protected:
 
 	SymCtx* getCtx(const CodeStorage::Fnc* fnc) {
@@ -218,15 +220,50 @@ protected:
 
 	}
 
+	bool foldStructures(FAE& fae, const std::set<size_t>& forbidden) {
+
+		// do not fold at 0
+		for (size_t i = 1; i < fae.getRootCount(); ++i) {
+			if (forbidden.count(i))
+				continue;
+			for (std::vector<const Box*>::const_iterator j = this->boxes.begin(); j != this->boxes.end(); ++j) {
+				CL_CDEBUG("trying " << *(const AbstractBox*)(*j) << " at " << i);
+				if (fae.foldBox(i, *j))
+					return true;
+			}
+		}
+
+		return false;
+
+	}
+
 	void stateUnion(SymState* target, FAE& fae) {
 
 		fae.varSet(IP_INDEX, Data::createNativePtr((void*)target));
 
+		std::set<size_t> tmp;
 		FAE::NormInfo normInfo;
-
-		std::vector<size_t> tmp;
-
 		fae.getNearbyReferences(fae.varGet(ABP_INDEX).d_ref.root, tmp);
+
+		if (target->entryPoint) {
+			CL_CDEBUG(std::endl << fae);
+			while (Engine::foldStructures(fae, tmp)) {
+//				CL_CDEBUG(std::endl << fae);
+				fae.normalize(normInfo, tmp);
+				normInfo.clear();
+				tmp.clear();
+				fae.getNearbyReferences(fae.varGet(ABP_INDEX).d_ref.root, tmp);
+			}
+//			{
+//				CL_CDEBUG(std::endl << fae);
+//				normInfo.clear();
+//				tmp.clear();
+//				fae.getNearbyReferences(fae.varGet(ABP_INDEX).d_ref.root, tmp);
+//				fae.normalize(normInfo, tmp);
+//				CL_CDEBUG(std::endl << fae);
+//			}
+		}
+
 		fae.normalize(normInfo, tmp);
 
 		FAE normalized(fae);
@@ -607,9 +644,9 @@ protected:
 			
 			FAE::NormInfo normInfo;
 
-			std::vector<size_t> v;
-			tmp.getNearbyReferences(fae.varGet(ABP_INDEX).d_ref.root, v);
-			tmp.normalize(normInfo, v);
+			std::set<size_t> s;
+			tmp.getNearbyReferences(fae.varGet(ABP_INDEX).d_ref.root, s);
+			tmp.normalize(normInfo, s);
 
 //			CL_CDEBUG("denormalizing " << std::endl << tmp << "with" << std::endl << item->normalized);
 //			CL_CDEBUG(item->normInfo);
@@ -659,6 +696,17 @@ public:
 	~Engine() {
 		utils::eraseMap(this->stateStore);
 		utils::eraseMap(this->ctxStore);
+	}
+
+	void loadBoxes(const boost::unordered_map<std::string, std::string>& db) {
+
+	    CL_CDEBUG("loading boxes ...");
+
+		for (boost::unordered_map<std::string, std::string>::const_iterator i = db.begin(); i != db.end(); ++i) {
+			this->boxes.push_back((const Box*)this->boxMan.loadBox(i->first, db));
+			CL_CDEBUG(i->first << ':' << std::endl << *(const FA*)this->boxes.back());
+		}
+		
 	}
 
 	void run(const CodeStorage::Fnc& main) {
@@ -723,6 +771,11 @@ SymExec::SymExec(const CodeStorage::Storage &stor)
 SymExec::~SymExec() {
 	delete this->engine;
 }
+
+void SymExec::loadBoxes(const boost::unordered_map<std::string, std::string>& db) {
+	this->engine->loadBoxes(db);
+}
+
 
 void SymExec::run(const CodeStorage::Fnc& main) {
 	this->engine->run(main);

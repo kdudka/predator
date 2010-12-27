@@ -17,11 +17,13 @@
  * along with predator.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef VAR_INFO_H
-#define VAR_INFO_H
+#ifndef TYPES_H
+#define TYPES_H
 
+#include <string>
 #include <ostream>
 #include <cassert>
+#include <stdexcept>
 
 #include <vector>
 #include <boost/unordered_map.hpp>
@@ -33,6 +35,12 @@ struct SelData {
 	int		displ;
 
 	SelData(size_t offset, int size, int displ) : offset(offset), size(size), displ(displ) {}
+
+	static SelData fromArgs(const std::vector<std::string>& args) {
+		if (args.size() != 4)
+			throw std::runtime_error("incorrect number of arguments");
+	 	return SelData(atol(args[1].c_str()), atol(args[2].c_str()), atol(args[3].c_str()));
+	}
 
 	friend size_t hash_value(const SelData& v) {
 		return boost::hash_value(v.offset + v.size + v.displ);
@@ -154,6 +162,25 @@ struct Data {
 		Data data(type_enum::t_bool);
 		data.d_bool = x;
 		return data;
+	}
+
+	static Data fromArgs(const std::vector<std::string>& args) {
+		if (args[1] == "int") {
+			if (args.size() != 3)
+				throw std::runtime_error("incorrect number of arguments");
+		 	Data data(type_enum::t_int);
+		 	data.d_int = atol(args[2].c_str());
+		 	return data;
+		}
+		if (args[1] == "ref") {
+			if (args.size() != 4)
+				throw std::runtime_error("incorrect number of arguments");
+		 	Data data(type_enum::t_ref);
+		 	data.d_ref.root = atol(args[2].c_str());
+		 	data.d_ref.displ = atol(args[3].c_str());
+		 	return data;
+		}
+		throw std::runtime_error("non-parsable arguments");
 	}
 
 	void clear() {

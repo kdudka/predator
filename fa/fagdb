@@ -30,9 +30,10 @@ test -z "$FA_OPTS" && FA_OPTS="-fplugin-arg-libfa-dump-pp"
 
 # run the debugger
 eval "$GDB" --quiet --args "$CC1" "$1" \
-    -DALIEN \
+    -DFORESTER \
     -dumpbase test.c -quiet -o /dev/null \
     -m32 -O0 -Wall -Wextra \
     -fplugin="$FA_PLUG" \
     -fplugin-arg-libfa-verbose="$FA_VERBOSE" \
+    -fplugin-arg-libfa-args="db-root:boxes" \
     $FA_OPTS

@@ -1,17 +1,17 @@
 Ops
-ref0:0 ref1:0
-sel0:1 sel1:1
+data_ref_0_0:0 data_ref_1_0:0
+sel_0_4_0:1 sel_4_4_0:1
 
 Automaton out
 States out_q0 out_q1
 Final States out_q0 
 Transitions
-sel0(out_q1) -> out_q0
-ref1 -> out_q1
+sel_0_4_0(out_q1) -> out_q0
+data_ref_1_0 -> out_q1
 
 Automaton in1
 States in1_q0 in1_q1
 Final States in1_q0
 Transitions
-sel1(in1_q1) -> in1_q0
-ref0 -> in1_q1
+sel_4_4_0(in1_q1) -> in1_q0
+data_ref_0_0 -> in1_q1

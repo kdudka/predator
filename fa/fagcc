@@ -35,9 +35,10 @@ fi
 
 # run the gcc
 "$GCC" -c "$1" -o /dev/null -O0 -m32 \
-    -DALIEN \
+    -DFORESTER \
     -fplugin="$FA_PLUG" \
     -fplugin-arg-libfa-verbose="$FA_VERBOSE" \
+    -fplugin-arg-libfa-args="db-root:boxes" \
     $FA_OPTS \
     #|| exit $?
 

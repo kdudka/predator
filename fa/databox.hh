@@ -17,30 +17,34 @@
  * along with predator.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef SYM_EXEC_H
-#define SYM_EXEC_H
+#ifndef DATA_BOX_H
+#define DATA_BOX_H
 
-#include <boost/unordered_map.hpp>
+#include "abstractbox.hh"
+#include "types.hh"
 
-namespace CodeStorage {
-    struct Fnc;
-    struct Storage;
-}
+class DataBox : public AbstractBox {
 
-class SymExec {
+	size_t id;
+
+	const Data* data;
 
 public:
 
-	SymExec(const CodeStorage::Storage &stor);
-	~SymExec();
+	DataBox(size_t id, const Data* data)
+		: AbstractBox(box_type_e::bData), id(id), data(data) {}
 
-	void loadBoxes(const boost::unordered_map<std::string, std::string>& db);
-	void run(const CodeStorage::Fnc& main);
+	size_t getId() const {
+		return this->id;
+	}
 
-private:
+	const Data& getData() const {
+		return *this->data;
+	}
 
-	class Engine;
-	Engine *engine;
+	virtual void toStream(std::ostream& os) const {
+		os << *this->data;
+	}
 
 };
 

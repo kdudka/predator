@@ -29,14 +29,8 @@
 #include "labman.hh"
 #include "forestaut.hh"
 #include "abstractbox.hh"
-/*
-using std::vector;
-using std::string;
-using std::pair;
-using std::set;
-using std::make_pair;
-using std::runtime_error;
-*/
+#include "databox.hh"
+
 class TypeBox : public AbstractBox {
 	
 	std::string name;
@@ -58,31 +52,6 @@ public:
 
 	virtual void toStream(std::ostream& os) const {
 		os << this->name;
-	}
-
-};
-
-class DataBox : public AbstractBox {
-
-	size_t id;
-
-	const Data* data;
-
-public:
-
-	DataBox(size_t id, const Data* data)
-		: AbstractBox(box_type_e::bData), id(id), data(data) {}
-
-	size_t getId() const {
-		return this->id;
-	}
-
-	const Data& getData() const {
-		return *this->data;
-	}
-
-	virtual void toStream(std::ostream& os) const {
-		os << *this->data;
 	}
 
 };
@@ -139,7 +108,7 @@ public:
 
 class Box : public FA, public StructuralBox {
 
-	friend class BoxManager;
+	friend class BoxMan;
 
 	std::string name;
 
@@ -147,37 +116,37 @@ class Box : public FA, public StructuralBox {
 		std::pair<std::vector<size_t>, std::set<size_t> >
 	> selCoverage;
 
-	std::vector<std::set<const AbstractBox*> > trigger;
-
-	std::vector<std::vector<size_t> > o;
+	std::vector<std::set<const AbstractBox*> > triggers;
 
 protected:
 
-	Box(TA<label_type>::Manager& taMan, std::string& name)
+	Box(TA<label_type>::Manager& taMan, const std::string& name)
 		: FA(taMan), StructuralBox(box_type_e::bBox), name(name) {}
 
 public:
-/*
+
 	static void getDownwardCoverage(const std::vector<const AbstractBox*>& label, std::vector<size_t>& v) {
 		for (std::vector<const AbstractBox*>::const_iterator i = label.begin(); i != label.end(); ++i) {
-			switch ((*i)->type) {
-				case selID: v.push_back((*i)->getSelector().offset);
-				case dataID: continue;
-				default:
-					assert((*i)->roots.size());
+			switch ((*i)->getType()) {
+				case box_type_e::bSel:
+					v.push_back(((const SelBox*)*i)->getData().offset);
+					break;
+				case box_type_e::bBox: {
+					const Box* box = (const Box*)*i;
+					assert(box->roots.size());
 					std::vector<size_t> v2;
-					Box::getDownwardCoverage(*(*i)->roots[0], v2);
+					Box::getDownwardCoverage(*box->roots[0], v2);
 					v.insert(v.end(), v2.begin(), v2.end());
 					break;
+				}
+				default: continue;
 			}
 		}
 	}
 	
 	static void getDownwardCoverage(const TA<label_type>& ta, std::vector<size_t>& v) {
 		bool b = false;
-		for (TA<label_type>::iterator i = ta.begin(); i != ta.end(); ++i) {
-			if (!ta.isFinalState(i->rhs()))
-				continue;
+		for (TA<label_type>::iterator i = ta.accBegin(); i != ta.accEnd(i); ++i) {
 			std::vector<size_t> v2;
 			Box::getDownwardCoverage(*i->label().dataB, v2);
 			if (!b) {
@@ -185,11 +154,10 @@ public:
 				b = true;
 			} else {
 				if (v != v2)
-					throw runtime_error("Box::getDownwardCoverage(): Inconsistent accepting rules while computing selector coverage!");
+					throw std::runtime_error("Box::getDownwardCoverage(): Inconsistent accepting rules while computing selector coverage!");
 			}			
 		}
 	}
-*/
 
 	virtual bool outputCovers(size_t offset) const {
 		assert(this->selCoverage.size());
@@ -214,69 +182,37 @@ public:
 		return this->selCoverage[x].second;
 	}
 */
-/*
 	void computeCoverage() {
 		this->selCoverage.clear();
 		for (std::vector<TA<label_type>*>::iterator i = this->roots.begin(); i != this->roots.end(); ++i) {
 			std::vector<size_t> v;
-			Box::getDownwardCoverage(**i);
+			Box::getDownwardCoverage(**i, v);
 			std::set<size_t> s(v.begin(), v.end());
 			if (v.size() != s.size())
-				throw runtime_error("Box::computeCoverage(): A selector was defined more than once!");
-			this->selCoverage.push_back(make_pair(v, s));
+				throw std::runtime_error("Box::computeCoverage(): A selector was defined more than once!");
+			this->selCoverage.push_back(std::make_pair(v, s));
 		}
 	}
-*/
-/*
-	void computeTrigger(vector<const Box*>& boxes) {
-		boxes.clear();
-		set<const Box*> s;
-		for (TA<label_type>::iterator i = this->roots[0]->begin(); i != this->roots[0]->end(); ++i) {
-			if (this->roots[0]->isFinalState(i->rhs()))
-				s.insert(i->label().dataB->begin(), i->label().dataB->end());
+
+	void computeTriggers() {
+		this->triggers.clear();
+		for (size_t i = 0; i < this->roots.size(); ++i) {
+			this->triggers.push_back(std::set<const AbstractBox*>());
+			for (TA<label_type>::iterator j = this->roots[i]->accBegin(); j != this->roots[i]->accEnd(j); ++j)
+				this->triggers.back().insert(j->label().dataB->begin(), j->label().dataB->end());
 		}
-		boxes = vector<const Box*>(s.begin(), s.end());
 	}
-*/
 
 	const std::set<const AbstractBox*>& getTrigger(size_t root) const {
-		assert(this->trigger.size() < root);
-		return this->trigger[root];
+		assert(root < this->triggers.size());
+		return this->triggers[root];
 	}
 
 	const std::vector<size_t>& getO(size_t root) const {
-		assert(this->o.size() < root);
-		return this->o[root];
+		assert(root < this->rootMap.size());
+		return this->rootMap[root];
 	}
 
-	
-	
-/*
-	void appendRoot(TA<label_type>& dst, size_t index, const TT<label_type>& t, size_t state) {
-		std::vector<size_t> lhs;
-		std::vector<const AbstractBox*> label;
-		size_t lhsOffset = 0;
-		for (std::vector<const AbstractBox*>::const_iterator i = t.label().dataB->begin(); i != t.label().dataB->end(); ++i) {
-			if (!(*i)->isStructural()) {
-				label.push_back(*i);
-				continue;
-			}
-			StructuralBox* b = (StructuralBox*)(*i);
-			if (b != (const StructuralBox*)this) {
-				// this box is not interesting
-				for (size_t k = 0; k < b->getArity(); ++k, ++lhsOffset)
-					lhs.push_back(t.lhs()[lhsOffset]);
-				label.push_back(b);
-				continue;
-			}
-			
-		}
-		// append
-	}
-
-	void addInternalRoots(FA& fa) {
-	}
-*/
 public:
 
 	virtual void toStream(std::ostream& os) const {
@@ -284,7 +220,20 @@ public:
 	}
 
 	virtual size_t getArity() const {
-		return this->variables.size() - 1;
+		return this->roots.size() - 1;
+	}
+
+	void initialize() {
+
+		for (std::vector<TA<label_type>*>::iterator i = this->roots.begin(); i != this->roots.end(); ++i) {
+			o_map_type o;
+			FA::computeDownwardO(**i, o);
+			this->rootMap.push_back(o[(*i)->getFinalState()]);
+		}
+
+		this->computeCoverage();
+		this->computeTriggers();
+		
 	}
 
 };

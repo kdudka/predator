@@ -17,31 +17,23 @@
  * along with predator.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef SYM_EXEC_H
-#define SYM_EXEC_H
+#ifndef PROGRAM_ERROR_H
+#define PROGRAM_ERROR_H
 
-#include <boost/unordered_map.hpp>
+#include <string>
+#include <stdexcept>
 
-namespace CodeStorage {
-    struct Fnc;
-    struct Storage;
-}
+#include <cl/location.hh>
 
-class SymExec {
-
+class ProgramError : public std::exception {
+	std::string msg;
+	const cl_location* loc;
 public:
-
-	SymExec(const CodeStorage::Storage &stor);
-	~SymExec();
-
-	void loadBoxes(const boost::unordered_map<std::string, std::string>& db);
-	void run(const CodeStorage::Fnc& main);
-
-private:
-
-	class Engine;
-	Engine *engine;
-
+	ProgramError(const std::string& msg = "", const cl_location* loc = NULL) : msg(msg), loc(loc) {}
+	virtual ~ProgramError() throw() {}
+	virtual const char* what() const throw() { return this->msg.c_str(); }
+	const cl_location* location() const throw() { return this->loc; }
+	
 };
 
 #endif

@@ -104,6 +104,7 @@ public:
 						case EOF: this->val = "EOF"; return this->token = tt_eof;
 						case '\n': ++this->lineno; break;
 						case '-': this->val += '-'; state = 1; break;
+						case '<': state = 4; break;
 						default:
 							
 							if (isalpha(c) || c == '_') {
@@ -149,6 +150,14 @@ public:
 						this->input->putback(c);
 						return this->token = tt_int;
 					}
+
+					this->val += c;
+					break;
+
+				case 4:
+
+					if (c == '>')
+						return this->token = tt_id;
 
 					this->val += c;
 					break;

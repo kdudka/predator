@@ -43,50 +43,9 @@ using std::map;
 using std::pair;
 using std::make_pair;
 using std::runtime_error;
-/*
-struct PG {
 
-	template <class T>
-	static void reset(std::vector<T>& p) {
-		std::sort(p.begin(), p.end());
-	}
+typedef enum { mFail, mSuccess, mDunno } match_result_e;
 
-	//--------------------------------------------------------
-	// Generate next permutation (algorithm from Rosen p. 284)
-	//--------------------------------------------------------
-	template <class T>
-	static bool next(std::vector<T>& p) {
-		assert(p.size());
-
-    	// find largest index j with p[j] < p[j+1]
-	    int j;
-    	for (j = p.size() - 2; j >= 0 && p[j] > p[j + 1]; --k);
-
-    	if (j < 0)
-    		return false;
-
-		// find index k such that p[k] is smallest integer
-		// greater than p[j] to the right of p[j]
-		size_t k;
-		for (k = p.size() - 1; p[j] > p[k]; --k);
-
-		// interchange p[j] and p[k]
-		T tmp = p[k];
-		p[k] = p[j];
-		p[j] = tmp;
-
-		// put tail end of permutation after jth position in increasing order
-		while (size_t r = a.size() - 1, s = j + 1; r > s; --r, ++s) {
-			tmp = p[s];
-			p[s] = p[r];
-			p[r] = tmp;
-		}
-
-		return true;
-	}
-
-};
-*/
 template <class T, class F>
 struct TAIsom {
 
@@ -97,7 +56,7 @@ struct TAIsom {
 	std::vector<boost::unordered_map<size_t, size_t>::iterator> sStack;
 
 	TAIsom(const TA<T>& ta1, const TA<T>& ta2, F f) : ta1(ta1), ta2(ta2), f(f) {}
-
+/*
 	bool matchLabels(const std::vector<const TT<label_type>*>& v1, const std::vector<const TT<label_type>*>& v2) {
 		for (size_t i = 0; i < v1.size(); ++i) {
 			if (!this->f(*v1[i], *v2[i]))
@@ -105,8 +64,9 @@ struct TAIsom {
 		}
 		return true;
 	}
-
+*/
 	bool matchLhss(const std::vector<const TT<label_type>*>& v1, const std::vector<const TT<label_type>*>& v2) {
+		assert(v1.size() == v2.size());
 		for (size_t i = 0; i < v1.size(); ++i) {
 			for  (size_t j = 0; j < v1[i]->lhs().size(); ++j) {
 				if (!this->matchStates(v1[i]->lhs()[j], v2[i]->lhs()[j]))
@@ -132,7 +92,20 @@ struct TAIsom {
 		size_t mark = this->sStack.size();
 		std::sort(v2.begin(), v2.end());
 		do {
-			if (this->matchLabels(v1, v2) && this->matchLhss(v1, v2))
+			size_t i;
+			for (i = 0; i < v1.size(); ++i) {
+				switch (this->f(*v1[i], *v2[i])) {
+					case match_result_e::mSuccess:
+						continue;
+					case match_result_e::mDunno:
+						if (this->matchLhss(v1, v2))
+							continue;
+					default:
+						break;	
+				}
+				break;
+			}
+			if (i == v2.size())
 				return true;
 			for (size_t i = mark; i < this->sStack.size(); ++i)
 				this->sMatching.erase(this->sStack[i]);
@@ -149,39 +122,11 @@ struct TAIsom {
 
 class FAE : public FA {
 
-	friend std::ostream& operator<<(std::ostream& os, const FAE& fae) {
-//		TA<label_type>::Backend backend;
-//		TA<label_type> ta(backend);
-/*		os << "vars";
-		for (std::vector<Data>::const_iterator i = fae.variables.begin(); i != fae.variables.end(); ++i)
-			os << ' ' << *i;
-		os << std::endl;*/
-		for (size_t i = 0; i < fae.roots.size(); ++i) {
-			if (!fae.roots[i])
-				continue;
-			os << "===" << std::endl << "root " << i << " o=[";
-			for (size_t j = 0; j < fae.rootMap[i].size(); ++j)
-				os << fae.rootMap[i][j];
-			os << ']';
-			TA<label_type>& ta = *fae.roots[i];
-//			ta.clear();
-//			fae.roots[i]->minimized(ta);
-			TAWriter<label_type> writer(os);
-			for (std::set<size_t>::iterator j = ta.getFinalStates().begin(); j != ta.getFinalStates().end(); ++j)
-				writer.writeState(*j);
-			writer.endl();
-			writer.writeTransitions(ta, FA::WriteStateF());
-//			TAWriter<label_type>(os).writeOne(*ta, ss.str());
-//			TAWriter<label_type>(os).writeOne(*fae.roots[i], ss.str());
-		}
-		return os;
-	}
-
 	mutable BoxMan* boxMan;
 	mutable LabMan* labMan;
 
 	size_t stateOffset;
-
+/*
 	std::vector<vector<size_t> > rootMap;
 
 	void updateRootMap(size_t root) {
@@ -190,7 +135,7 @@ class FAE : public FA {
 		FAE::computeDownwardO(*this->roots[root], o);
 		this->rootMap[root] = o[this->roots[root]->getFinalState()];
 	}
-
+*/
 	// root x selector -> root
 	boost::unordered_map<std::pair<size_t, size_t>, size_t> selectorMap;
 
@@ -233,14 +178,44 @@ public:
 
 	};
 
+	struct RenameSelectedF {
+
+		const boost::unordered_map<size_t, size_t>& index;
+		
+		RenameSelectedF(const boost::unordered_map<size_t, size_t>& index)
+			: index(index) {}
+
+		size_t operator()(size_t s) {
+			boost::unordered_map<size_t, size_t>::const_iterator i = this->index.find(s);
+			if (i == this->index.end())
+				return s;
+			return i->second;
+		}
+
+	};
+
 protected:
+
+	TA<label_type>& unique(TA<label_type>& dst, const TA<label_type>& src, bool addFinalStates = true) {
+		Index<size_t> stateIndex;
+		TA<label_type>::rename(dst, src, RenameNonleafF(stateIndex, this->nextState()), addFinalStates);
+		this->incrementStateOffset(stateIndex.size());
+		return dst;
+	}
+
+	TA<label_type>& unique(TA<label_type>& dst, const TA<label_type>& src, Index<size_t>& stateIndex, bool addFinalStates = true) {
+		TA<label_type>::rename(dst, src, RenameNonleafF(stateIndex, this->nextState()), addFinalStates);
+		this->incrementStateOffset(stateIndex.size());
+		return dst;
+	}
 
 	void boxMerge(TA<label_type>& dst, const TA<label_type>& src, const TA<label_type>& boxRoot, const Box* box, const std::vector<size_t>& rootIndex) {
 		TA<label_type> tmp(this->taMan->getBackend()), tmp2(this->taMan->getBackend());
-		this->relabelReferences(tmp, boxRoot, rootIndex);
-		Index<size_t> stateIndex;
-		TA<label_type>::rename(tmp2, tmp, RenameNonleafF(stateIndex, this->nextState()));
-		this->incrementStateOffset(stateIndex.size());
+		this->adjustLeaves(tmp2, boxRoot);
+		this->relabelReferences(tmp, tmp2, rootIndex);
+		tmp2.clear();
+		this->unique(tmp2, tmp);
+		src.copyTransitions(dst, TA<label_type>::NonAcceptingF(src));
 		tmp2.copyTransitions(dst, TA<label_type>::NonAcceptingF(tmp2));
 		dst.addFinalState(tmp2.getFinalState());
 		for (TA<label_type>::iterator i = src.accBegin(); i != src.accEnd(i); ++i) {
@@ -261,6 +236,8 @@ protected:
 							lhs.push_back(i->lhs()[lhsOffset]);
 						label.push_back(b);
 						continue;
+					} else {
+						lhsOffset += box->getArity();
 					}
 					assert(!found);
 					found = true;
@@ -276,49 +253,72 @@ protected:
 				lhs2.insert(lhs2.end(), j->lhs().begin(), j->lhs().end());
 				label2.insert(label2.end(), j->label().dataB->begin(), j->label().dataB->end());
 				FAE::reorderBoxes(label2, lhs2);
-				dst.addTransition(lhs2, &this->labMan->lookup(label2), i->rhs());
+				dst.addTransition(lhs2, &this->labMan->lookup(label2), j->rhs());
 			}
 		}
 	}
 
-	void unfoldBox(size_t root, const Box* box) {
-		assert(this->roots[root]);
-		assert(box);
-		const TT<label_type>& t = this->roots[root]->getAcceptingTransition();
-		size_t lhsOffset = 0;
-		std::vector<size_t> bSig = box->getO(0);
-		std::vector<size_t> sig;
-		for (std::vector<const AbstractBox*>::const_iterator i = t.label().dataB->begin(); i != t.label().dataB->end(); ++i) {
-			if ((const AbstractBox*)box != *i) {
-				lhsOffset += (*i)->getArity();
-				continue;
+	struct RootSentry {
+		
+		FAE& fae;
+		size_t expectedRoots;
+
+		RootSentry(FAE& fae) : fae(fae), expectedRoots(fae.roots.size()) {}
+
+		~RootSentry() {
+			while (this->fae.roots.size() > this->expectedRoots)
+				this->fae.taMan->release(this->fae.roots.back());
+			this->fae.roots.resize(this->expectedRoots);
+			this->fae.rootMap.resize(this->expectedRoots);
+		}
+
+		void adjust() {
+			this->expectedRoots = this->fae.roots.size();
+		}
+
+	};
+
+	// matches root against box output while adding necessary roots on the fly!!!
+	struct IsomRootF {
+
+		FAE& fae;
+		size_t root;
+		std::vector<size_t>& index;
+		
+		IsomRootF(FAE& fae, size_t root, std::vector<size_t>& index)
+			: fae(fae), root(root), index(index) {
+			assert(root < this->fae.roots.size());
+		}
+
+		match_result_e operator()(const TT<label_type>& t1, const TT<label_type>& t2) {
+			size_t ref1, ref2;
+			if (!FAE::getRef(t1.label().head(), ref1)) {
+				if (FAE::getRef(t2.label().head(), ref2)) {
+					assert(ref2 < this->index.size());
+					if ((this->index[ref2] != (size_t)(-1)) && (this->index[ref2] != ref1))
+						return match_result_e::mFail;
+					this->index[ref2] = this->fae.roots.size();
+					this->fae.roots.push_back(this->fae.taMan->alloc());
+					Index<size_t> stateIndex;
+					size_t offset = this->fae.nextState();
+					this->fae.unique(*this->fae.roots.back(), *this->fae.roots[root], stateIndex, false);
+					this->fae.roots.back()->addFinalState(stateIndex[t1.rhs()] + offset);
+					this->fae.rootMap.push_back(std::vector<size_t>());
+					this->fae.updateRootMap(this->fae.rootMap.size() - 1);
+					return match_result_e::mSuccess;
+				}
+				return (t1.label() == t2.label())?(match_result_e::mDunno):(match_result_e::mFail);
 			}
-			for (size_t j = 0; j < box->getArity(); ++j) {
-				size_t ref;
-				bool b = this->getRef(t.lhs()[lhsOffset + j], ref);
-				assert(b);
-				sig.push_back(ref);
-			}
-			break;
+			if (!FAE::getRef(t2.label().head(), ref2))
+				return match_result_e::mFail;
+			assert(ref2 < this->index.size());
+			if ((this->index[ref2] != (size_t)(-1)) && (this->index[ref2] != ref1))
+				return match_result_e::mFail;
+			this->index[ref2] = ref1;
+			return match_result_e::mSuccess;
 		}
-		// compute index
-		std::vector<size_t> index(box->getArity() + 1, (size_t)(-1));
-		index[0] = root;
-		for (size_t i = 0; i < sig.size(); ++i) {
-			assert(bSig[i] < index.size());
-			index[bSig[i]] = sig[i];
-		}
-		TA<label_type>* ta = this->taMan->alloc();
-		this->boxMerge(*ta, *this->roots[root], *box->getRoot(0), box, index);
-		this->updateRoot(this->roots[root], ta);
-		this->updateRootMap(root);
-		for (size_t i = 0; i < box->getArity(); ++i) {
-			ta = this->taMan->alloc();
-			this->boxMerge(*ta, *this->roots[index[i]], *box->getRoot(i), NULL, index);
-			this->updateRoot(this->roots[index[i]], ta);
-			this->updateRootMap(index[i]);
-		}
-	}
+
+	};
 
 	struct IsomF {
 
@@ -327,22 +327,21 @@ protected:
 		IsomF(std::vector<size_t>& index) : index(index) {}
 
 		// TODO: revise
-		bool operator()(const TT<label_type>& t1, const TT<label_type>& t2) {
+		match_result_e operator()(const TT<label_type>& t1, const TT<label_type>& t2) {
 			size_t ref1, ref2;
 			if (!FAE::getRef(t1.label().head(), ref1))
-				return (t1.label() == t2.label());
+				return (t1.label() == t2.label())?(match_result_e::mDunno):(match_result_e::mFail);
 			if (!FAE::getRef(t2.label().head(), ref2))
-				return false;
-			if ((this->index[ref2] != (size_t)(-1)) && (this->index[ref2] == ref1))
-				return false;
+				return match_result_e::mFail;
 			assert(ref2 < this->index.size());
-			this->index[ref2] = ref1;
-			return true;
+			if ((this->index[ref2] == (size_t)(-1)) || (this->index[ref2] != ref1))
+				return match_result_e::mFail;
+			return match_result_e::mSuccess;
 		}
 
 	};
 
-	static void copyBox(std::vector<size_t>& lhs, std::vector<const AbstractBox*>& label, const AbstractBox* box, const std::vector<size_t>& srcLhs, size_t srcOffset) {
+	static void copyBox(std::vector<size_t>& lhs, std::vector<const AbstractBox*>& label, const AbstractBox* box, const std::vector<size_t>& srcLhs, size_t& srcOffset) {
 		for (size_t i = 0; i < box->getArity(); ++i, ++srcOffset)
 			lhs.push_back(srcLhs[srcOffset]);
 		label.push_back(box);
@@ -377,26 +376,91 @@ protected:
 		return true;
 	}
 
-	bool foldBox(size_t root, const Box* box) {
+public:
+
+	void unfoldBox(size_t root, const Box* box) {
+		assert(root < this->roots.size());
 		assert(this->roots[root]);
 		assert(box);
+		const TT<label_type>& t = this->roots[root]->getAcceptingTransition();
+		size_t lhsOffset = 0;
+		std::vector<size_t> bSig = box->getO(0);
+		std::vector<size_t> sig;
+		for (std::vector<const AbstractBox*>::const_iterator i = t.label().dataB->begin(); i != t.label().dataB->end(); ++i) {
+			if ((const AbstractBox*)box != *i) {
+				lhsOffset += (*i)->getArity();
+				continue;
+			}
+			for (size_t j = 0; j < box->getArity(); ++j) {
+				size_t ref;
+				bool b = this->getRef(t.lhs()[lhsOffset + j], ref);
+				assert(b);
+				sig.push_back(ref);
+			}
+			break;
+		}
+		// compute index
+		std::vector<size_t> index(box->getArity() + 1, (size_t)(-1));
+		index[0] = root;
+		for (size_t i = 0; i < sig.size(); ++i) {
+			assert(bSig[i] < index.size());
+			index[bSig[i]] = sig[i];
+		}
+		TA<label_type>* ta = this->taMan->alloc();
+		this->boxMerge(*ta, *this->roots[root], *box->getRoot(0), box, index);
+		this->updateRoot(this->roots[root], ta);
+		this->updateRootMap(root);
+		for (size_t i = 0; i < box->getArity(); ++i) {
+			TA<label_type> tmp(this->taMan->getBackend());
+			this->roots[index[i + 1]]->unfoldAtRoot(tmp, this->freshState());
+			ta = this->taMan->alloc();
+			this->boxMerge(*ta, tmp, *box->getRoot(i + 1), NULL, index);
+			this->updateRoot(this->roots[index[i + 1]], ta);
+			this->updateRootMap(index[i + 1]);
+		}
+	}
+
+	bool foldBox(size_t root, const Box* box) {
+		assert(root < this->roots.size());
+		assert(this->roots[root]);
+		assert(box);
+
 		TA<label_type> tmp(this->taMan->getBackend()), cTmp(this->taMan->getBackend());
 		if (!this->boxCut(tmp, cTmp, *this->roots[root], box->getTrigger(0)))
 			return false;
+
+		RootSentry rs(*this);
+
+		std::vector<size_t> index(box->getArity() + 1, (size_t)(-1));
+		index[0] = root;
+		// match automata
+		if (!TAIsom<label_type, IsomRootF>(cTmp, *box->getRoot(0), IsomRootF(*this, root, index)).run())
+			return false;
+
+		const std::vector<size_t>& sig = box->getO(0);
+		std::vector<size_t> cSig(sig.size());
+		for (size_t i = 0; i < sig.size(); ++i) {
+			assert(sig[i] < index.size());
+			cSig[i] = index[sig[i]];
+		}
+/*
 		o_map_type o;
 		FAE::computeDownwardO(cTmp, o);
 		const std::vector<size_t>& sig = box->getO(0);
 		std::vector<size_t> cSig = o[cTmp.getFinalState()];
 		if (sig.size() != cSig.size())
 			return false;
-
+*/
+/*
 		// compute index
-		std::vector<size_t> index(box->getArity() + 1, (size_t)(-1));
-		index[root] = 0;
+		index[0] = root;
 		for (size_t i = 0; i < sig.size(); ++i) {
 			assert(sig[i] < index.size());
 			index[sig[i]] = cSig[i];
 		}
+*/
+
+		o_map_type o;
 
 		// match inputs
 		std::vector<std::pair<TA<label_type>, TA<label_type> > > iTmp;
@@ -419,16 +483,14 @@ protected:
 			}
 		}
 
-		// match automata
-		if (!TAIsom<label_type, IsomF>(cTmp, *box->getRoot(0), IsomF(index)).run())
-			return false;
-
 		for (size_t i = 0; i < cSig.size(); ++i) {
 			if (cSig[i] == root)
 				continue;
 			if (!TAIsom<label_type, IsomF>(iTmp[i].second, *box->getRoot(sig[i]), IsomF(index)).run())
 				return false;
 		}		
+
+		rs.adjust();
 
 		// update selector map
 /*		for (size_t i = 0; i < box->getArity(); ++i) {
@@ -443,6 +505,8 @@ protected:
 		TA<label_type>* ta = this->taMan->alloc();
 
 		size_t state = tmp.getFinalState();
+
+		ta->addFinalState(state);
 
 		for (TA<label_type>::Iterator i = tmp.begin(); i != tmp.end(); ++i) {
 			if (i->rhs() != state) {
@@ -525,26 +589,25 @@ protected:
 		return state;
 	}
 
-	static bool isData(size_t state) {
-		return _MSB_TEST(state);
-	}
-
-	static bool isData(const AbstractBox* box, const Data*& data) {
-		if (!box->isType(box_type_e::bData))
-			return false;
-		data = &((DataBox*)box)->getData();
-		return true;
+	void adjustLeaves(TA<label_type>& dst, const TA<label_type>& src) {
+		boost::unordered_map<size_t, size_t> leafIndex;
+		for (TA<label_type>::iterator i = src.begin(); i != src.end(); ++i) {
+			size_t ref;
+			if (FAE::getRef(i->label().head(), ref))
+				leafIndex.insert(std::make_pair(i->rhs(), this->addData(dst, Data::createRef(ref))));
+		}
+		TA<label_type>::rename(dst, src, RenameSelectedF(leafIndex));
 	}
 
 	bool isData(size_t state, const Data*& data) const {
-		if (!FAE::isData(state))
+		if (!FA::isData(state))
 			return false;
 		data = &this->boxMan->getData(_MSB_GET(state))->getData();
 		return true;
 	}
 
 	bool getRef(size_t state, size_t& ref) const {
-		if (!FAE::isData(state))
+		if (!FA::isData(state))
 			return false;
 		const Data& data = this->boxMan->getData(_MSB_GET(state))->getData();
 		if (!data.isRef())
@@ -552,6 +615,13 @@ protected:
 		ref = data.d_ref.root;
 		return true;
 	}
+
+	static bool isRef(const AbstractBox* box) {
+		if (!box->isType(box_type_e::bData))
+			return false;
+		return ((DataBox*)box)->getData().isRef();
+	}
+
 
 	static bool isRef(const AbstractBox* box, size_t ref) {
 		if (!box->isType(box_type_e::bData))
@@ -577,40 +647,14 @@ protected:
 		return false;
 	}
 */
-	static void removeMultOcc(vector<size_t>& x) {
-		set<size_t> s;
-		size_t offset = 0;
-		for (size_t i = 0; i < x.size(); ++i) {
-			if (s.insert(x[i]).second)
-				x[offset++] = x[i];
-		}
-		x.resize(s.size());
-	}
-
-	static void reorderBoxes(vector<const AbstractBox*>& label, vector<size_t>& lhs) {
-		std::vector<std::pair<const AbstractBox*, std::vector<size_t> > > tmp;
-		std::vector<size_t>::iterator lhsBegin = lhs.end(), lhsEnd = lhs.begin();
-		for (size_t i = 0; i < label.size(); ++i) {
-			lhsBegin = lhsEnd;
-			lhsEnd += label[i]->getArity();
-			tmp.push_back(std::make_pair(label[i], std::vector<size_t>(lhsBegin, lhsEnd)));
-		}
-		std::sort(tmp.begin(), tmp.end());
-		lhs.clear();
-		for (size_t i = 0; i < tmp.size(); ++i) {
-			label[i] = tmp[i].first;
-			lhs.insert(lhs.end(), tmp[i].second.begin(), tmp[i].second.end());
-		}
-	}
-
-	static void renameVector(vector<size_t>& dst, const vector<size_t>& index) {
+	static void renameVector(std::vector<size_t>& dst, const std::vector<size_t>& index) {
 		for (std::vector<size_t>::iterator i = dst.begin(); i != dst.end(); ++i) {
 			assert(index[*i] != (size_t)(-1));
 			*i = index[*i];
 		}
 	}
 
-	static void updateMap(vector<size_t>& dst, size_t ref, const vector<size_t>& src) {
+	static void updateMap(std::vector<size_t>& dst, size_t ref, const std::vector<size_t>& src) {
 		std::vector<size_t> res;
 		std::vector<size_t>::iterator i = std::find(dst.begin(), dst.end(), ref);
 		assert(i != dst.end());
@@ -708,53 +752,6 @@ protected:
 		TA<label_type>* ta2 = this->taMan->alloc();
 		ta.unreachableFree(*ta2);
 		return ta2;
-	}
-
-	static bool updateO(o_map_type& o, size_t state, const vector<size_t>& v) {
-		pair<o_map_type::iterator, bool> p = o.insert(make_pair(state, v));
-		if (p.second)
-			return true;
-		if (p.first->second.size() >= v.size())
-			return false;
-/*		if (p.first->second.size() > v.size())
-			throw runtime_error("FAE::updateO(): Inconsistent update of 'o' (length mismatch)!");*/
-/*		for (size_t i = 0; i < p.first->second.size(); ++i) {
-			if (v[i] != p.first->second[i])
-				throw runtime_error("FAE::updateO(): Inconsistent update of 'o' (prefix mismatch)!");
-		}*/
-		if (p.first->second != v) {
-			p.first->second = v;
-			return true;
-		}
-		return false;
-	}
-
-	// computes downward 'o' function
-	static void computeDownwardO(const TA<label_type>& ta, o_map_type& o) {
-		o.clear();
-		bool changed = true;
-		while (changed) {
-			changed = false;
-			for (TA<label_type>::iterator i = ta.begin(); i != ta.end(); ++i) {
-				const Data* data;
-				std::vector<size_t> v;
-				if (FAE::isData(i->label().head(), data) && data->isRef()) {
-					v.push_back(data->d_ref.root);
-				} else {
-//					vector<size_t> order;
-//					FAE::evaluateLhsOrder(*i->label().dataB, order);
-					for (std::vector<size_t>::const_iterator j = i->lhs().begin(); j != i->lhs().end(); ++j) {
-						o_map_type::iterator k = o.find(*j);
-						if (k == o.end())
-							break;
-						v.insert(v.end(), k->second.begin(), k->second.end());
-					}
-					FAE::removeMultOcc(v);
-				}
-				if (FAE::updateO(o, i->rhs(), v))
-					changed = true;
-			}
-		}
 	}
 
 	static bool isUniqueRef(const TA<label_type>& ta, size_t ref) {
@@ -890,9 +887,14 @@ public:
 
 		NormInfo() {}
 
+		void clear() {
+			this->rootCount = 0;
+			this->data.clear();
+		}
+
 		void addRoot(size_t index) {
 			bool b = this->data.insert(std::make_pair(index, RootInfo(index))).second;
-			assert(b);			
+			assert(b);
 		}
 
 		void mergeRoots(size_t dst, size_t src, size_t refState) {
@@ -958,7 +960,7 @@ public:
 	}
 
 	// normalize representation
-	void normalize(NormInfo& normInfo, const std::vector<size_t>& forbidden = std::vector<size_t>()) {
+	void normalize(NormInfo& normInfo, const std::set<size_t>& forbidden = std::set<size_t>()) {
 		// compute canonical root ordering
 		std::vector<size_t> order;
 		std::vector<bool> visited(this->roots.size(), false), marked(this->roots.size(), false);
@@ -966,7 +968,7 @@ public:
 		// check garbage
 		this->checkGarbage(visited);
 		// prevent merging of forbidden roots
-		for (std::vector<size_t>::const_iterator i = forbidden.begin(); i != forbidden.end(); ++i)
+		for (std::set<size_t>::const_iterator i = forbidden.begin(); i != forbidden.end(); ++i)
 			marked[*i] = true;
 		// reindex roots
 		std::vector<size_t> index(this->roots.size(), (size_t)(-1));
@@ -1038,7 +1040,7 @@ public:
 						state = this->addData(*dst[p.second], Data::createRef(splitPoints[l->second].second));
 					} else {
 						stack.push_back(std::make_pair(*k, p.second));
-						if (FAE::isData(state))
+						if (FA::isData(state))
 							state = *k;
 						else
 							state = stateIndex.translateOTF(*k) + this->stateOffset;
@@ -1046,7 +1048,7 @@ public:
 					lhs.push_back(state);
 				}
 				size_t rhs;
-				if (FAE::isData((*j)->rhs()))
+				if (FA::isData((*j)->rhs()))
 					rhs = (*j)->rhs();
 				else
 					rhs = stateIndex.translateOTF((*j)->rhs()) + this->stateOffset;
@@ -1330,8 +1332,10 @@ public:
 		assert(this->roots[root]);
 		for (TA<label_type>::iterator i = this->roots[root]->accBegin(); i != this->roots[root]->accEnd(i); ++i) {
 			FAE fae(*this);
-			TA<label_type> ta(*fae.roots[root], false);
+//			TA<label_type> ta(*fae.taMan);
 			size_t newState = fae.freshState();
+//			fae.roots[root]->unfoldAtRoot(ta, newState);
+			TA<label_type> ta(*fae.roots[root], false);
 			ta.addFinalState(newState);
 			vector<size_t> lhs;
 			size_t lhsOffset = 0;
@@ -1348,7 +1352,7 @@ public:
 				}
 				// we have to isolate here
 				for (size_t k = 0; k < (*j)->getArity(); ++k, ++lhsOffset) {
-					if (FAE::isData(i->lhs()[lhsOffset])) {
+					if (FA::isData(i->lhs()[lhsOffset])) {
 						// no need to create a leaf when it's already there
 						lhs.push_back(i->lhs()[lhsOffset]);
 						continue;
@@ -1374,8 +1378,13 @@ public:
 			// exchange the original automaton with the new one
 			fae.updateRoot(fae.roots[root], tmp);
 			fae.updateRootMap(root);
-			if (!boxes.empty())
+			if (!boxes.empty()) {
+//				std::cerr << fae;
+//				__asm__("int3");
 				fae.decomposeAtRoot(root, boxes);
+//				std::cerr << fae;
+//				__asm__("int3");
+			}
 			dst.push_back(new FAE(fae));
 		}
 	}
@@ -1696,14 +1705,14 @@ public:
 		this->rootMap[root] = o[tmp->getFinalState()];
 	}	
 
-	void getNearbyReferences(size_t root, std::vector<size_t>& out) const {
+	void getNearbyReferences(size_t root, std::set<size_t>& out) const {
 		assert(root < this->roots.size());
 		assert(this->roots[root]);
 		const TT<label_type>& t = this->roots[root]->getAcceptingTransition();
 		for (std::vector<size_t>::const_iterator i = t.lhs().begin(); i != t.lhs().end(); ++i) {
 			const Data* data;
 			if (this->isData(*i, data) && data->isRef())
-				out.push_back(data->d_ref.root);
+				out.insert(data->d_ref.root);
 		}
 	}	
 
@@ -1711,28 +1720,20 @@ public:
 
 	// state 0 should never be allocated by FAE (?)
 	FAE(TA<label_type>::Manager& taMan, LabMan& labMan, BoxMan& boxMan)
-	 : FA(taMan), boxMan(&boxMan), labMan(&labMan), stateOffset(1) {
-		 // init special root references (this is not required)
-//		 this->registerRootReference(varNull, this->freshState());
-//		 this->registerRootReference(varUndef, this->freshState());
-	}
+	 : FA(taMan), boxMan(&boxMan), labMan(&labMan), stateOffset(1) {}
 
 	FAE(const FAE& x)
-		: FA(x), boxMan(x.boxMan), labMan(x.labMan), stateOffset(x.stateOffset), rootMap(x.rootMap)/*,
+		: FA(x), boxMan(x.boxMan), labMan(x.labMan), stateOffset(x.stateOffset)/*,
 		selectorMap(x.selectorMap)*/ {
 	}
-//		rootReferenceIndex(x.rootReferenceIndex), invRootReferenceIndex(x.invRootReferenceIndex) {}
 
-	~FAE() {
-		this->clear();
-	}
+	~FAE() { this->clear(); }
 	
 	FAE& operator=(const FAE& x) {
 		((FA*)this)->operator=(x);
 		this->boxMan = x.boxMan;
 		this->labMan = x.labMan;
 		this->stateOffset = x.stateOffset;
-		this->rootMap = x.rootMap;
 //		this->selectorMap = x.selectorMap;
 		return *this;		
 	}
@@ -1740,183 +1741,12 @@ public:
 	void clear() {
 		((FA*)this)->clear();
 		this->stateOffset = 1;
-		this->rootMap.clear();
 //		this->selectorMap.clear();
-//		this->rootReferenceIndex.clear();
-//		this->invRootReferenceIndex.clear();
-//		this->dataMan.clear();
 	}
-
 
 /* WIP */
 protected:
 
-/*
-	void doAbstraction() {
-		this->heightAbstraction(abstract();
-	}
-*/
-/*
-	bool x_not_null(size_t x) const {
-		assert(x < this->variables.size());
-		return this->variables[x].index != varNull;
-	}
-
-	bool x_eq_y(size_t x, size_t y) const {
-		assert(x < this->variables.size());
-		assert(y < this->variables.size());
-		if ((this->variables[x].index == varUndef) || (this->variables[y].index == varUndef))
-			throw runtime_error("FAE:x_eq_y(): comparing undefined value!");
-		return this->variables[x] == this->variables[y];
-	}
-	
-	void x_ass_new(vector<FAE*>& dst, size_t x, size_t pointerSlots, size_t dataSlots) const {
-		assert(x < this->variables.size());
-		if (dataSlots > 0)
-			throw std::runtime_error("FAE::x_ass_new(): Data handling not implemented! (désolé)");
-		FAE* fae = new FAE(*this);
-		dst.push_back(fae);
-		size_t root = fae->roots.size();
-		TA<label_type>* ta = fae->taMan->alloc();
-		fae->roots.push_back(ta);
-		fae->variables[x] = var_info(root, 0);
-		// build lhs out of undefs
-		vector<size_t> lhs(pointerSlots, fae->addReference(*ta, varUndef));
-		// build label out of selectors
-		vector<const Box*> label;
-		for (size_t i = 0; i < pointerSlots; ++i)
-			label.push_back(&fae->boxMan->getSelector(i));
-		FAE::reorderBoxes(label, lhs);
-		size_t f = fae->freshState();
-		ta->addTransition(lhs, &fae->labMan->lookup(label), f);
-		ta->addFinalState(f);
-		// udate rootMap
-		fae->rootMap.push_back(std::vector<size_t>());
-		NormInfo normInfo;
-		fae->normalize(normInfo);
-	}
-
-	void del_x(vector<FAE*>& dst, size_t x) const {
-		assert(x < this->variables.size());
-		// raise some reasonable exception here
-		switch (this->variables[x].index) {
-			case varNull: throw runtime_error("FAE::del_x(): destination variable contains NULL!");
-			case varUndef: throw runtime_error("FAE::del_x(): destination variable undefined!");
-		}
-		size_t root = this->variables[x].index;
-		this->isolateAtRoot(dst, root);
-		for (vector<FAE*>::iterator i = dst.begin(); i != dst.end(); ++i) {
-			if ((*i)->variables[x].offset != 0) {
-				// TODO: raise some reasonable exception here (instead of runtime_error)
-				throw runtime_error("FAE::del_x(): call on a variable pointing inside an allocated block!");
-			}
-			// update variable content
-			for (std::vector<var_info>::iterator j = (*i)->variables.begin(); j != (*i)->variables.end(); ++j) {
-				if (j->index == root)
-					j->index = varUndef;
-			}
-			// make all references to this rootpoint dangling
-			vector<size_t> index((*i)->roots.size());
-			for (size_t j = 0; j < (*i)->roots.size(); ++j)
-				index[j] = (j == root)?(varUndef):(j);
-			for (size_t j = 0; j < (*i)->roots.size(); ++j) {
-				TA<label_type>* ta = (*i)->relabelReferences((*i)->roots[j], index);
-				(*i)->taMan->release((*i)->roots[j]);
-				(*i)->roots[j] = ta;				
-			}
-			// normalize
-			NormInfo normInfo;
-			(*i)->normalize(normInfo, itov(root));
-		}
-	}
-
-	void x_ass_null(vector<FAE*>& dst, size_t x) const {
-		assert(x < this->variables.size());
-		FAE* fae = new FAE(*this);
-		dst.push_back(fae);
-		fae->variables[x] = var_info(varNull, 0);
-		NormInfo normInfo;
-		fae->normalize(normInfo);
-	}
-	
-	void x_ass_y(vector<FAE*>& dst, size_t x, size_t y, size_t offset) const {
-		assert(x < this->variables.size());
-		assert(y < this->variables.size());
-		FAE* fae = new FAE(*this);
-		dst.push_back(fae);
-		fae->variables[x] = fae->variables[y];
-		fae->variables[x].offset += offset;
-		NormInfo normInfo;
-		fae->normalize(normInfo);
-	}
-	
-	void x_ass_y_next(vector<FAE*>& dst, size_t x, size_t y, size_t selector) const {
-		assert(x < this->variables.size());
-		assert(y < this->variables.size());
-		// TODO: raise some reasonable exception here (instead of runtime_error)
-		switch (this->variables[y].index) {
-			case varNull: throw runtime_error("FAE::x_ass_y_next(): source variable contains NULL!");
-			case varUndef: throw runtime_error("FAE::x_ass_y_next(): source variable undefined!");
-		}
-		size_t root = this->variables[y].index;
-		selector += this->variables[y].offset;
-		assert(root < this->roots.size());
-		this->isolateAtRoot(dst, root, itov(selector));
-		for (vector<FAE*>::iterator i = dst.begin(); i != dst.end(); ++i) {
-			// find the destination of the selector
-			for (TA<label_type>::iterator j = (*i)->roots[root]->begin(); j != (*i)->roots[root]->end(); ++j) {
-				if (j->rhs() == (*i)->roots[root]->getFinalState()) {
-					// only one accepting rule is exppected
-					(*i)->findSelectorDestination(*j, selector, (*i)->variables[x].index, (*i)->variables[x].offset);
-					break;
-				}				
-			}		
-			NormInfo normInfo;
-			(*i)->normalize(normInfo);
-		}
-	}	
-
-	void x_next_ass_y(std::vector<FAE*>& dst, size_t x, size_t y, size_t selector) const {
-		assert(x < this->variables.size());
-		assert(y < this->variables.size());
-		// TODO: raise some reasonable exception here (instead of runtime_error)
-		switch (this->variables[x].index) {
-			case varNull: throw runtime_error("FAE::x_ass_y_next(): destination variable contains NULL!");
-			case varUndef: throw runtime_error("FAE::x_ass_y_next(): destination variable undefined!");
-		}
-		size_t root = this->variables[x].index;
-		selector += this->variables[x].offset;
-		assert(root < this->roots.size());
-		std::vector<FAE*> tmp;
-		this->isolateAtRoot(tmp, root, itov(selector));
-		try {
-			for (vector<FAE*>::iterator i = tmp.begin(); i != tmp.end(); ++i) {
-				TA<label_type>* ta = (*i)->taMan->alloc();
-				for (TA<label_type>::iterator j = (*i)->roots[root]->begin(); j != (*i)->roots[root]->end(); ++j) {
-					if (j->rhs() == (*i)->roots[root]->getFinalState()) {
-						// only one accepting rule is exppected
-						(*i)->changeSelectorDestination(*ta, *j, selector, (*i)->variables[y].index, (*i)->variables[y].offset);
-					} else {
-						ta->addTransition(*j);
-					}
-				}		
-				ta->addFinalState((*i)->roots[root]->getFinalState());
-				(*i)->taMan->release((*i)->roots[root]);
-				(*i)->roots[root] = ta;
-				boost::unordered_map<size_t, vector<size_t> > o;
-				FAE::computeDownwardO(*ta, o);
-				(*i)->rootMap[root] = o[ta->getFinalState()];
-				NormInfo normInfo;
-				(*i)->normalize(normInfo);
-			}
-		} catch (...) {
-			for (vector<FAE*>::iterator i = tmp.begin(); i != tmp.end(); ++i)
-				delete *i;
-			throw;
-		}
-		dst.insert(dst.end(), tmp.begin(), tmp.end());
-	}	
-*/
 /*
 	// ensures the existence of 'o' (can create more accepting states)
 	TA<label_type>* normalizeTA(TA<label_type>* src, o_map_type& o) {
@@ -2111,86 +1941,6 @@ protected:
 		}		
 	}	
 */
-/*
-	void traverse(vector<size_t>& order, set<size_t>& marked, vector<size_t>& garbage) {
-		// TODO: upward traversal
-		order.clear();
-		marked.clear();
-		set<size_t> visited;
-		for (vector<Data>::iterator i = this->variables.begin(); i != variables.end(); ++i) {
-			// skip everything what is not a root reference
-			if (!i->isPtr())
-				continue;
-			size_t root = i->d_ptr.root;
-			// mark rootpoint pointed by a variable
-			marked.insert(root);
-			// check whether we traversed this one before
-			if (visited.count(root))
-				continue;
-			this->visitDown(root, visited, order, marked);
-		}
-		garbage.clear();
-		for (size_t i = 0; i < this->roots.size(); ++i) {
-			if (!visited.count(i))
-				garbage.push_back(i);
-		}
-	}
-*/
-/*
-	void computeIndex(const std::vector<size_t>& order, std::vector<size_t>& index) {
-		index = std::vector<size_t>(order.size(), (size_t)(-1));
-		size_t offset = 0;
-		for (std::vector<size_t>::const_iterator i = order.begin(); i < order.end(); ++i) {
-			assert(*i < index.size());
-			index[*i] = offset++;
-		}
-	}
-
-	// reorder roots according to the order (do not relabel leaves)
-	void reorderRoots(const std::vector<size_t>& index) {
-		vector<TA<label_type>*> oldRoots = this->roots;
-		vector<vector<size_t> > oldRootMap = this->rootMap;
-		// update representation
-		for (size_t i = 0; i < this->roots.size(); ++i) {
-			this->roots[i] = oldRoots[index[i]];
-			this->rootMap[i] = oldRootMap[index[i]];
-		}
-		// update variables
-		for (std::vector<var_info>::iterator i = this->variables.begin(); i != this->variables.end(); ++i) {
-			if (!FAE::isNullOrUndef(i->index))
-				i->index = index[i->index];
-		}
-	}
-
-	// relabel references
-	void relabelReferences(const std::vector<size_t>& index) {
-		for (size_t i = 0; i < this->roots.size(); ++i) {
-			TA<label_type>* ta = this->roots[i];
-			this->roots[i] = this->relabelReferences(ta, index);
-			this->taMan->release(ta);
-			FAE::renameVector(this->rootMap[i], index);
-		}
-	}
-
-	// merge roots (reordered, but not renamed)
-	void mergeRoots(const std::vector<size_t>& order, const std::set<size_t>& marked, std::vector<std::vector<size_t> >& revInfo) {
-		for (size_t i = 0, last = (size_t)(-1); i < this->roots.size(); ++i) {
-			if (marked.count(order[i]) == 1) {
-				this->roots[++last] = this->roots[i];
-				revInfo.push_back(itov(last));
-			} else {
-				assert(last != (size_t)(-1));
-				size_t refState;
-				TA<label_type>* ta = this->mergeRoot(this->roots[last], order[i], this->roots[i], refState);
-				this->taMan->release(this->roots[last]);
-				this->roots[last] = ta;
-				FAE::updateMap(this->rootMap[last], order[i], this->rootMap[i]);
-				revInfo.back().push_back(refState);
-			}
-		}
-	}
-*/
-	
 };
 
 #endif

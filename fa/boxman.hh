@@ -22,11 +22,13 @@
 
 #include <vector>
 #include <string>
+#include <fstream>
 
 #include <boost/unordered_map.hpp>
 #include <boost/algorithm/string.hpp>
 
 #include "treeaut.hh"
+#include "tatimint.hh"
 #include "label.hh"
 #include "labman.hh"
 #include "types.hh"
@@ -37,6 +39,8 @@ class BoxMan {
 
 	mutable TA<label_type>::Manager& taMan;
 	mutable LabMan& labMan;
+
+	TA<std::string>::Backend sBackend;
 
 	boost::unordered_map<Data, const DataBox*> dataIndex;
 	std::vector<const DataBox*> invDataIndex; 
@@ -82,71 +86,79 @@ public:
 	}
 
 protected:
-/*
-	const Box& loadBox(const string& name, const boost::unordered_map<string, string>& database) {
 
-		boost::unordered_map<string, Box>::iterator i = this->boxIndex.find(name);
-		if (i != this->boxIndex.end())
-			return i->second;
+	TA<label_type>& translateRoot(TA<label_type>& dst, const TA<std::string>& src, const boost::unordered_map<std::string, std::string>& database) {
+		dst.clear();
+		for (TA<std::string>::iterator i = src.begin(); i != src.end(); ++i) {
+			std::vector<std::string> strs;
+			boost::split(strs, i->label(), boost::is_from_range(',', ','));
+			std::vector<const AbstractBox*> label;
+			for (vector<std::string>::iterator j = strs.begin(); j != strs.end(); ++j)
+				label.push_back(this->loadBox(*j, database));
+//			std::vector<size_t> lhs(i->lhs());
+//			FA::reorderBoxes(label, lhs);
+			dst.addTransition(i->lhs(), &this->labMan.lookup(label), i->rhs());
+		}
+		dst.addFinalState(src.getFinalState());
+		return dst;
+	}
 
-		if (BoxManager::isSelectorName(name))
-			return this->getSelector(BoxManager::getSelectorFromName(name));
+public:
 
-		if (BoxManager::isReferenceName(name))
-			return this->getData(BoxManager::getReferenceFromName(name));
+	const AbstractBox* loadBox(const std::string& name, const boost::unordered_map<std::string, std::string>& database) {
 
-		boost::unordered_map<string, string>::const_iterator j = database.find(name);
+		std::vector<std::string> args;
+
+		boost::split(args, name, boost::is_from_range('_', '_'));
+
+		if (args[0] == "sel")
+			return this->getSelector(SelData::fromArgs(args));
+		if (args[0] == "data")
+			return this->getData(Data::fromArgs(args));
+
+		std::pair<boost::unordered_map<std::string, const Box*>::iterator, bool> p =
+			this->boxIndex.insert(std::make_pair(name, (const Box*)NULL));
+		if (!p.second)
+			return p.first->second;
+
+		boost::unordered_map<std::string, std::string>::const_iterator j = database.find(name);
 		if (j == database.end())
-			throw std::runtime_error("Box '" + name + "' not found!");
+			throw std::runtime_error("Source for box '" + name + "' not found!");
 
-		Box& box = this->boxIndex.insert(
-			make_pair(name, Box::createBox(this->taMan, name))
-		).first->second;
+		Box* box = new Box(this->taMan, name);
+
+		p.first->second = box;
 
 		std::fstream input(j->second.c_str());
 
 		TAReader reader(input, j->second);
 
-		TA<string>::Backend sBackend;
-		TA<string> sta(sBackend);
+		TA<std::string> sta(this->sBackend);
 
-		TA<label_type>* ta = this->taMan.alloc();
-
-		string autName;
+		std::string autName;
 
 		reader.readFirst(sta, autName);
 
-		this->translateRoot(*ta, sta, database);
-		box.variables.push_back(Data::createRef(box.roots.size(), 0));
-		box.roots.push_back(ta);
+		TA<label_type> tmp(this->taMan.getBackend());
+
+//		box.variables.push_back(Data::createRef(box.roots.size(), 0));
+		this->translateRoot(tmp, sta, database);
+		box->roots.push_back(this->taMan.clone(&tmp));
 
 		while (reader.readNext(sta, autName)) {
-			ta = taMan.alloc();
-			this->translateRoot(*ta, sta, database);
-			if (memcmp(autName.c_str(), "in", 2) == 0)
-				box.variables.push_back(Data::createRef(box.roots.size(), 0));
-			box.roots.push_back(ta);
+			tmp.clear();
+			this->translateRoot(tmp, sta, database);
+			box->roots.push_back(this->taMan.clone(&tmp));
+//			if (memcmp(autName.c_str(), "in", 2) == 0)
+//				box.variables.push_back(Data::createRef(box.roots.size(), 0));
 		}
 
-		box.computeCoverage();
+		box->initialize();
 
 		return box;
 
 	}
 
-	void translateRoot(TA<label_type>& dst, const TA<string>& src, const boost::unordered_map<string, string>& database) {
-		dst.clear();
-		for (TA<string>::iterator i = src.begin(); i != src.end(); ++i) {
-			vector<string> strs;
-			boost::split(strs, i->label(), boost::is_from_range('_', '_'));
-			vector<const Box*> label;
-			for (vector<string>::iterator j = strs.begin(); j != strs.end(); ++j)
-				label.push_back(&this->loadBox(*j, database));
-			dst.addTransition(i->lhs(), &this->labMan.lookup(label), i->rhs());
-		}
-		dst.addFinalState(src.getFinalState());
-	}
-*/
 public:
 
 	BoxMan(TA<label_type>::Manager& taMan, LabMan& labMan)
@@ -166,6 +178,13 @@ public:
 */
 	LabMan& getLabMan() const {
 		return this->labMan;
+	}
+
+	std::vector<const Box*> getBoxList() const {
+		std::vector<const Box*> result;
+		for (boost::unordered_map<std::string, const Box*>::const_iterator i = this->boxIndex.begin(); i != this->boxIndex.end(); ++i)
+			result.push_back(i->second);
+		return result;
 	}
 
 public:
