@@ -767,6 +767,7 @@ static struct cl_var* add_var_if_needed(tree t)
     if (VAR_DECL == TREE_CODE(t))
         read_initial(&var->initial, DECL_INITIAL(t));
 
+    var->artificial = DECL_ARTIFICIAL(t);
     return var;
 }
 

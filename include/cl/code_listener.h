@@ -405,6 +405,11 @@ struct cl_var {
      */
     struct cl_initializer               *initial;
 
+    /**
+     * true for auxiliary variables introduced by the compiler
+     */
+    bool                                artificial;
+
     /* TODO: is_extern? */
 };
 
