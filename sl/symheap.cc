@@ -1963,64 +1963,62 @@ void SymHeap::neqOp(ENeqOp op, TValueId valA, TValueId valB) {
     SymHeapTyped::neqOp(op, valA, valB);
 }
 
+bool SymHeap::proveNotNull(TValueId val) const {
+    std::set<TValueId> haveSeen;
+
+    while (0 < val && insertOnce(haveSeen, val)) {
+        const EUnknownValue code = this->valGetUnknown(val);
+        switch (code) {
+            case UV_KNOWN:
+                // concrete object reached --> prove done
+                return true;
+
+            case UV_ABSTRACT:
+                break;
+
+            default:
+                // we can't prove much for unknown values
+                return false;
+        }
+
+        if (this->queryExplicitNeq(VAL_NULL, val))
+            // prove done
+            return true;
+
+        TObjId seg = objRootByVal(*this, val);
+        if (OK_DLS == this->objKind(seg))
+            seg = dlSegPeer(*this, seg);
+
+        if (seg < 0)
+            // no valid object here
+            return false;
+
+        const TValueId valNext = this->valueOf(nextPtrFromSeg(*this, seg));
+        if (this->queryExplicitNeq(val, valNext))
+            // non-empty abstract object reached --> prove done
+            return true;
+
+        // jump to next value
+        val = valNext;
+    }
+
+    return false;
+}
+
 bool SymHeap::proveEq(bool *result, TValueId valA, TValueId valB) const {
     if (SymHeapTyped::proveEq(result, valA, valB))
         return true;
 
     // having the values always in the same order leads to simpler code
     sortValues(valA, valB);
-
-    if (UV_ABSTRACT == this->valGetUnknown(valA))
-        // this is not going to work well for a pair abstract objects
+    if (VAL_NULL != valA)
         return false;
 
-    EUnknownValue code = this->valGetUnknown(valB);
-    if (UV_ABSTRACT != code)
-        // we are interested only in abstract objects here
+    if (!this->proveNotNull(valB))
         return false;
 
-    // resolve list segment root
-    TObjId obj = this->pointsTo(valB);
-    obj = subObjByInvChain(*this, obj, this->objBinding(obj).head);
-
-    if (OK_DLS == this->objKind(obj))
-        // jump to peer in case of DLS
-        obj = dlSegPeer(*this, obj);
-
-    const TObjId next = nextPtrFromSeg(*this, obj);
-    const TValueId valNext = this->valueOf(next);
-    if (VAL_NULL == valNext)
-        // we already know that there is no Neq(valB, VAL_NULL) defined, from
-        // the call of SymHeapTyped::proveEq() above
-        return false;
-
-    code = this->valGetUnknown(valNext);
-    switch (code) {
-        case UV_ABSTRACT:
-            if (valA == VAL_NULL
-                    && segMinLength(*this, this->pointsTo(valNext)))
-            {
-                *result = false;
-                return true;
-            }
-            else {
-                CL_WARN("SymHeap::proveEq() "
-                        "does not see through a chain of segments");
-            }
-            // fall through!
-
-        case UV_KNOWN: {
-            bool eq;
-            if (!SymHeapTyped::proveEq(&eq, valA, valNext) || eq)
-                return false;
-
-            *result = false;
-            return true;
-        }
-
-        default:
-            return false;
-    }
+    *result = false;
+    return true;
 }
 
 void SymHeap::objDestroy(TObjId obj) {

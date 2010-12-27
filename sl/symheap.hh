@@ -731,6 +731,7 @@ class SymHeap: public SymHeapTyped {
 
     private:
         void dlSegCrossNeqOp(ENeqOp op, TValueId headAddr);
+        bool proveNotNull(TValueId val) const;
 
     private:
         struct Private;
