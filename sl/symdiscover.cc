@@ -262,14 +262,12 @@ bool matchData(const SymHeap                &sh,
     if (!joinDataReadOnly(&status, sh, bf, o1, o2, protoRoots))
         return false;
 
-#if !SE_PREFER_LOSSLESS_PROTOTYPES
-    return true;
-#endif
     // FIXME: highly experimental
     if (objIsSeg(sh, o2) && objIsSeg(sh, nextObj(sh, bf, o2)))
         return true;
 
     int thr = 0;
+#if SE_PREFER_LOSSLESS_PROTOTYPES
     switch (status) {
         case JS_USE_ANY:
             break;
@@ -283,9 +281,11 @@ bool matchData(const SymHeap                &sh,
             thr = 3;
             break;
     }
+#endif
 
-    if (*pThreshold < thr)
+    if (pThreshold)
         *pThreshold = thr;
+
     return true;
 }
 
@@ -352,13 +352,15 @@ unsigned /* len */ segDiscover(const SymHeap            &sh,
         return 0;
 
     // [experimental] we need a way to prefer lossless prototypes
-    int threshold = 0;
+    int maxThreshold = 0;
 
     // main loop of segDiscover()
     std::vector<TObjId> path;
     while (OBJ_INVALID != obj) {
         // compare the data
         TProtoRoots protoRoots;
+        int threshold = 0;
+
         // TODO: optimize such that matchData() is not called at all when any
         // _program_ variable points at/inside;  call of matchData() in such
         // cases is significant waste for us!
@@ -391,15 +393,20 @@ unsigned /* len */ segDiscover(const SymHeap            &sh,
                 && validateSegEntry(sh, bf, obj, prev, OBJ_INVALID,
                                     protoRoots[1]);
 
-            if (allowReferredEnd)
+            if (allowReferredEnd) {
                 // we allow others to point at DLS end-point's _head_
                 path.push_back(obj);
+                if (maxThreshold < threshold)
+                    maxThreshold = threshold;
+            }
 
             break;
         }
 
         // enlarge the path by one
         path.push_back(obj);
+        if (maxThreshold < threshold)
+            maxThreshold = threshold;
 
         // jump to the next object on the path
         prev = obj;
@@ -415,7 +422,7 @@ unsigned /* len */ segDiscover(const SymHeap            &sh,
         // avoid creating self-cycle of two SLS segments
         --len;
 
-    return std::max(0, len - threshold);
+    return std::max(0, len - maxThreshold);
 }
 
 bool digSegmentHead(TFieldIdxChain          &dst,
