@@ -562,7 +562,7 @@ bool segMatchLookAhead(
 
 bool joinValClt(
         const struct cl_type    **pDst,
-        const SymJoinCtx        &ctx,
+        SymJoinCtx              &ctx,
         const TValueId          v1,
         const TValueId          v2)
 {
@@ -570,6 +570,18 @@ bool joinValClt(
     const struct cl_type *clt2 = ctx.sh2.valType(v2);
     if (joinClt(clt1, clt2, pDst))
         return true;
+
+    const bool hasClt1 = !!clt1;
+    const bool hasClt2 = !!clt2;
+    if (hasClt1 != hasClt2) {
+        // one of the heaps has some extra type info that the other one has not
+        updateJoinStatus(ctx, (hasClt2)
+                ? JS_USE_SH1
+                : JS_USE_SH2);
+
+        *pDst = 0;
+        return true;
+    }
 
     SJ_DEBUG("<-- value clt mismatch " << SJ_VALP(v1, v2));
     return false;
@@ -1405,6 +1417,10 @@ bool mayExistFallback(
 }
 
 TValueId /* old */ vmRemoveMappingOf(TValMapBidir &vm, const TValueId val) {
+    if (val <= 0)
+        // do not remove special values
+        return val;
+
     TValMap &ltr = vm[/* ltr */ 0];
     TValMap &rtl = vm[/* rtl */ 1];
 
