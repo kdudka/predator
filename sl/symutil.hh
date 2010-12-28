@@ -73,8 +73,6 @@ inline bool objIsSeg(const SymHeap &sh, TObjId obj, bool anyPart = false) {
             break;
 
         case OK_MAY_EXIST:
-            // FIXME: really?
-
         case OK_SLS:
         case OK_DLS:
             return true;

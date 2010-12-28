@@ -35,6 +35,9 @@
 
 #include <boost/foreach.hpp>
 
+// FIXME: this should also check compatibility of bfDiscover vs. object kind
+//        (we know that it works fine for all kinds at the moment, but it will
+//        break as soon as a new object kind is added)
 bool matchSegBinding(const SymHeap              &sh,
                      const TObjId               obj,
                      const SegBindingFields     &bfDiscover)

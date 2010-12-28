@@ -1399,7 +1399,8 @@ bool mayExistFallback(
 
     // dig head
     SubAddrFinder headFinder(val);
-    if (traverseSubObjsIc(sh, target, headFinder)) {
+    if (val != sh.placedAt(target) && traverseSubObjsIc(sh, target, headFinder))
+    {
         CL_BREAK_IF("MayExistVisitor malfunction");
         return false;
     }

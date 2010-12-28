@@ -1873,6 +1873,15 @@ const SegBindingFields& SymHeap::objBinding(TObjId obj) const {
 void SymHeap::objSetAbstract(TObjId obj, EObjKind kind,
                              const SegBindingFields &bf)
 {
+    if (OK_SLS == kind && hasKey(d->objMap, obj)) {
+        Private::ObjectEx &ref = d->objMap[obj];
+        CL_BREAK_IF(OK_MAY_EXIST != ref.kind || bf != ref.bf);
+
+        // OK_MAY_EXIST -> OK_SLS
+        ref.kind = kind;
+        return;
+    }
+
     CL_BREAK_IF(OK_CONCRETE == kind || hasKey(d->objMap, obj));
 
     // initialize abstract object

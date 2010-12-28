@@ -416,7 +416,7 @@ void slSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf)
     // jump to the next object
     const TObjId objNext = subObjByInvChain(sh, sh.pointsTo(valNext), bf.head);
     len += objMinLength(sh, objNext);
-    if (objIsSeg(sh, objNext))
+    if (OK_SLS == sh.objKind(objNext))
         segSetMinLength(sh, objNext, /* SLS 0+ */ 0);
     else
         // abstract the _next_ object
