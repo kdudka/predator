@@ -250,48 +250,23 @@ bool digComposite(
             // type mismatch
             return false;
 
-        const enum cl_type_e code = (clt)
-            ? clt->code
-            : /* anonymous object of known size */ CL_TYPE_PTR;
+        if (isComposite(clt)) {
+            for (int i = 0; i < clt->item_cnt; ++i) {
+                const TObjId sub1 = sh1.subObj(o1, i);
+                const TObjId sub2 = sh2.subObj(o2, i);
+                CL_BREAK_IF(sub1 < 0 || sub2 < 0);
 
-        switch (code) {
-            case CL_TYPE_PTR: {
-                const TValueId val1 = sh1.valueOf(o1);
-                const TValueId val2 = sh2.valueOf(o2);
-                if (wl.schedule(val1, val2))
-                    SC_DEBUG_VAL_SCHEDULE_BY("digComposite", o1, o2,
-                                          sh1, sh2, val1, val2);
-                break;
+                push(todo, sub1, sub2);
             }
 
-            case CL_TYPE_STRUCT:
-            case CL_TYPE_UNION:
-                for (int i = 0; i < clt->item_cnt; ++i) {
-                    const TObjId sub1 = sh1.subObj(o1, i);
-                    const TObjId sub2 = sh2.subObj(o2, i);
-                    CL_BREAK_IF(sub1 < 0 || sub2 < 0);
+            continue;
+        }
 
-                    push(todo, sub1, sub2);
-                }
-                break;
-
-            case CL_TYPE_CHAR:
-            case CL_TYPE_ARRAY:
-            case CL_TYPE_ENUM:
-                // well, we don't support these types anyway yet...
-                break;
-
-            case CL_TYPE_BOOL:
-            case CL_TYPE_INT:
-                break;
-
-            default:
-                // other type of values should be safe to ignore here
-                // but worth to check by a debugger at least once anyway
-#ifndef NDEBUG
-                CL_TRAP;
-#endif
-                break;
+        const TValueId val1 = sh1.valueOf(o1);
+        const TValueId val2 = sh2.valueOf(o2);
+        if (wl.schedule(val1, val2)) {
+            SC_DEBUG_VAL_SCHEDULE_BY("digComposite", o1, o2,
+                                  sh1, sh2, val1, val2);
         }
     }
     return true;
