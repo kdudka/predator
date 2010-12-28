@@ -4,5 +4,4 @@ test-0037.c:27:11: error: dereference of NULL value
 test-0037.c:27:11: error: type of the pointer being dereferenced does not match type of the target object
 test-0037.c:27:11: error: dereference of NULL value
 test-0037.c:27:11: error: type of the pointer being dereferenced does not match type of the target object
-test-0037.c:31:13: error: double free() detected
-test-0037.c:19:24: warning: killing junk
+test-0037.c:17:5: warning: end of function main() has not been reached

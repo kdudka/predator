@@ -118,6 +118,10 @@ bool SymProc::checkForInvalidDeref(TObjId obj) {
 }
 
 TObjId SymProc::handleDerefCore(TValueId val) {
+    if (VAL_DEREF_FAILED == val)
+        // we're already on an error path
+        return OBJ_DEREF_FAILED;
+
     // do we really know the value?
     const EUnknownValue code = heap_.valGetUnknown(val);
     switch (code) {
@@ -257,6 +261,7 @@ void SymProc::resolveAliasing(TValueId *pVal, const struct cl_type *cltTarget,
                     "type of the target object");
 
             bt_->printBackTrace();
+            *pVal = VAL_DEREF_FAILED;
         }
 
         return;
