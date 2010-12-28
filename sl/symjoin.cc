@@ -1225,10 +1225,6 @@ bool insertSegmentClone(
             case UV_UNINITIALIZED:
             case UV_UNKNOWN:
             case UV_DONT_CARE: {
-                if (!ctx.joiningData())
-                    // XXX
-                    break;
-
                 // clone unknown value
                 const struct cl_type *const clt = shGt.valType(valGt);
                 const TValueId vDst = ctx.dst.valCreateUnknown(code, clt);
@@ -1284,6 +1280,10 @@ bool joinAbstractValues(
 
     if (UV_UNINITIALIZED == code1 || UV_UNINITIALIZED == code2)
         // such values could be hardly used as reliable anchors
+        return false;
+
+    if (!ctx.joiningData())
+        // TODO: consider usage of insertSegmentClone also in join of states?
         return false;
 
     return insertSegmentClone(pResult, ctx, v1, v2, subStatus);
