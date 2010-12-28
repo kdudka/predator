@@ -198,6 +198,7 @@ class SymExecEngine {
         void initEngine(const SymHeap &init);
         void execReturn();
         void updateState(const CodeStorage::Block *ofBlock,
+                         TObjId varToKill = OBJ_INVALID,
                          TValueId valDst = VAL_INVALID,
                          TValueId valSrc = VAL_INVALID);
         void execCondInsn();
@@ -256,12 +257,19 @@ void SymExecEngine::execReturn() {
 }
 
 void SymExecEngine::updateState(const CodeStorage::Block *ofBlock,
+                                TObjId varToKill,
                                 TValueId valDst, TValueId valSrc)
 {
     const std::string &name = ofBlock->name();
 
     // clone the current symbolic heap, as we are going to change it eventually
     SymHeap sh(localState_[heapIdx_]);
+
+    if (OBJ_INVALID != varToKill) {
+        // EXPERIMENTAL: kill varToKill ASAP in order to reduce state bloat
+        const TValueId killer = sh.valCreateUnknown(UV_UNKNOWN, 0);
+        sh.objSetValue(varToKill, killer);
+    }
 
     if (VAL_INVALID != valDst && VAL_INVALID != valSrc
             && UV_DONT_CARE != sh.valGetUnknown(valDst))
@@ -305,7 +313,8 @@ void SymExecEngine::execCondInsn() {
     SymProc proc(const_cast<SymHeap &>(heap), &bt_);
     proc.setLocation(lw_);
 
-    const TValueId val = proc.heapValFromOperand(oplist[0]);
+    const struct cl_operand &op = oplist[0];
+    const TValueId val = proc.heapValFromOperand(op);
     if (VAL_DEREF_FAILED == val) {
         // error should have been already emitted
         CL_DEBUG_MSG(lw_, "ignored VAL_DEREF_FAILED");
@@ -314,14 +323,15 @@ void SymExecEngine::execCondInsn() {
 
     bool eq;
     if (heap.proveEq(&eq, val, VAL_FALSE)) {
+        const TObjId objCond = proc.heapObjFromOperand(op);
         if (!eq) {
             CL_DEBUG_MSG(lw_, ".T. CL_INSN_COND got VAL_TRUE");
-            this->updateState(tlist[/* then label */ 0]);
+            this->updateState(tlist[/* then label */ 0], objCond);
             return;
         }
         else {
             CL_DEBUG_MSG(lw_, ".F. CL_INSN_COND got VAL_FALSE");
-            this->updateState(tlist[/* else label */ 1]);
+            this->updateState(tlist[/* else label */ 1], objCond);
             return;
         }
     }
@@ -351,10 +361,10 @@ void SymExecEngine::execCondInsn() {
     }
 
     CL_DEBUG_MSG(lw_, "?T? CL_INSN_COND updates TRUE branch");
-    this->updateState(tlist[/* then label */ 0], val, VAL_TRUE);
+    this->updateState(tlist[/* then label */ 0], OBJ_INVALID, val, VAL_TRUE);
 
     CL_DEBUG_MSG(lw_, "?F? CL_INSN_COND updates FALSE branch");
-    this->updateState(tlist[/* else label */ 1], val, VAL_FALSE);
+    this->updateState(tlist[/* else label */ 1], OBJ_INVALID, val, VAL_FALSE);
 }
 
 void SymExecEngine::execTermInsn() {
