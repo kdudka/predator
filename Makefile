@@ -15,8 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with predator.  If not, see <http://www.gnu.org/licenses/>.
 
-GCC45           ?= gcc-4.5.1.tar.bz2#       # released gcc 4.5.1
-GCC45_DIR       ?= gcc-4.5.1#               # unpackged release of gcc 4.5.1
+GCC45           ?= gcc-4.5.2.tar.bz2#       # released gcc 4.5.2
+GCC45_DIR       ?= gcc-4.5.2#               # unpackged release of gcc 4.5.2
 
 GCC_SRC         ?= gcc-src#                 # SVN working copy for gcc src
 GCC_BUILD       ?= gcc-build#               # working directory gcc build
@@ -148,7 +148,7 @@ $(INVADER):
 
 # fetch released gcc 4.5
 $(GCC45):
-	$(CURL) -o $@ 'ftp://ftp.lip6.fr/pub/gcc/releases/gcc-4.5.1/gcc-4.5.1.tar.bz2'
+	$(CURL) -o $@ 'ftp://ftp.lip6.fr/pub/gcc/releases/gcc-4.5.2/gcc-4.5.2.tar.bz2'
 
 # create SVN working copy for gcc sources
 build_gcc_svn:

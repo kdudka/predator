@@ -70,13 +70,13 @@ A:
     there is something like standardized location for them across all
     distributions.  On my box they are located in:
 
-    /usr/lib64/gcc/x86_64-pc-linux-gnu/4.5.1/plugin/include
+    /usr/lib64/gcc/x86_64-pc-linux-gnu/4.5.2/plugin/include
 
 Q: How can I run the test-suite using my system GCC?
 A:
-    $ make check CMAKE="cmake -D GCC45=gcc-4.5.1"
+    $ make check CMAKE="cmake -D GCC45=gcc-4.5.2"
 
-    You need to replace gcc-4.5.1 by either absolute path to your gcc
+    You need to replace gcc-4.5.2 by either absolute path to your gcc
     executable, or a ralative one to $PATH.
 
 Q: How can I compile GCC from SVN sources?

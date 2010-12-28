@@ -2,8 +2,8 @@ ChangeLog
 cl_build/
 fa_build/
 fwnull_build/
-gcc-4.5.1/
-gcc-4.5.1.tar.bz2
+gcc-4.5.2/
+gcc-4.5.2.tar.bz2
 gcc-build/
 gcc-install/
 gcc-src
