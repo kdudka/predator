@@ -1484,11 +1484,14 @@ bool unknownValueFallBack(
 
     if (hasMapping1)
         disjoinUnknownValues(ctx, v1, vDst, JS_USE_SH2);
+    else
+        defineValueMapping(ctx, v1, VAL_INVALID, vDst);
 
     if (hasMapping2)
         disjoinUnknownValues(ctx, v2, vDst, JS_USE_SH1);
+    else
+        defineValueMapping(ctx, VAL_INVALID, v2, vDst);
 
-    // FIXME: vDst stays unused at this point
     return true;
 }
 
@@ -2141,6 +2144,12 @@ struct JoinValueVisitor {
         proto[1] = objRootByVal(ctx.dst, oldSrc);
         proto[2] = objRootByVal(ctx.dst, newSrc);
         if (hasKey(ctx.protoRoots, proto))
+            return newSrc;
+
+        if (VAL_NULL == newSrc && UV_UNKNOWN == ctx.dst.valGetUnknown(newDst))
+            return newDst;
+
+        if (VAL_NULL == newDst && UV_UNKNOWN == ctx.dst.valGetUnknown(newSrc))
             return newSrc;
 
         CL_ERROR("JoinValueVisitor failed to join values");

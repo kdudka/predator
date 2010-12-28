@@ -466,6 +466,7 @@ symplot tutorial
     test-0035.c - a test-case for collecting of global junk
 
     test-0036.c - a torture test focused on Neq predicates, prover, etc.
+                - does not work with SE_DISABLE_THREE_WAY_JOIN == 0
 
     test-0044.c - a torture test focused on chaining of dereferences
 
