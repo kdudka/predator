@@ -1,0 +1,35 @@
+#!/bin/sh
+
+# ensure we don't overwrite something we don't want to
+dir="`dirname $0`"
+dir="`readlink -f $dir`"
+test "`basename $dir`" = linux-drivers      || exit 1
+test -f "$dir/configure"                    || exit 1
+
+# start with the template Makefile
+cat > GNUmakefile << EOF
+# DO NOT CHANGE THIS FILE !!!
+#
+# GNUmakefile is automatically generated from the Makefile template.  All
+# manual changes of GNUmakefile will be blown away by next run of configure.
+
+EOF
+cat Makefile >> GNUmakefile
+
+# now generate the virtual targets for all test-cases
+for i in *.c; do
+    # generate the t-XXX target (t = Test)
+    printf "t-%s:\n\t../slgcc %s\n\n" "$i" "$i" >> GNUmakefile
+
+    # generate the f-XXX target (f = Fast)
+    printf "f-%s:\n\t../slgccf %s\n\n" "$i" "$i" >> GNUmakefile
+
+    # generate the v-XXX target (v = Verbose)
+    printf "v-%s:\n\t../slgccv %s\n\n" "$i" "$i" >> GNUmakefile
+
+    # generate the p-XXX target (p = Path-trace)
+    printf "p-%s:\n\t../slgccp %s\n\n" "$i" "$i" >> GNUmakefile
+
+    # generate the r-XXX target (r = Run)
+    printf "r-%s:\n\t../run %s\n\n" "$i" "$i" >> GNUmakefile
+done
