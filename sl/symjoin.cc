@@ -123,6 +123,7 @@ struct SymJoinCtx {
 
     WorkListWithUndo<TValPair>  wl;
     EJoinStatus                 status;
+    bool                        allowThreeWay;
 
     typedef std::map<TObjId /* seg */, unsigned /* len */>      TSegLengths;
     TSegLengths                 segLengths;
@@ -146,7 +147,8 @@ struct SymJoinCtx {
         dst(dst_),
         sh1(sh1_),
         sh2(sh2_),
-        status(JS_USE_ANY)
+        status(JS_USE_ANY),
+        allowThreeWay(true)
     {
         initValMaps();
     }
@@ -156,7 +158,8 @@ struct SymJoinCtx {
         dst(tmp_),
         sh1(sh_),
         sh2(sh_),
-        status(JS_USE_ANY)
+        status(JS_USE_ANY),
+        allowThreeWay(true)
     {
         initValMaps();
     }
@@ -166,7 +169,8 @@ struct SymJoinCtx {
         dst(sh_),
         sh1(sh_),
         sh2(sh_),
-        status(JS_USE_ANY)
+        status(JS_USE_ANY),
+        allowThreeWay(true)
     {
         initValMaps();
     }
@@ -182,23 +186,26 @@ struct SymJoinCtx {
 };
 
 /// update ctx.status according to action
-void updateJoinStatus(SymJoinCtx &ctx, const EJoinStatus action) {
+bool updateJoinStatus(SymJoinCtx &ctx, const EJoinStatus action) {
     if (JS_USE_ANY == action)
-        return;
+        return true;
 
     EJoinStatus &status = ctx.status;
     switch (status) {
         case JS_THREE_WAY:
-            return;
+            break;
 
         case JS_USE_ANY:
             status = action;
-            return;
+            break;
 
         default:
             if (action != status)
                 status = JS_THREE_WAY;
     }
+
+    return (JS_THREE_WAY != status)
+        || ctx.allowThreeWay;
 }
 
 /**
@@ -554,9 +561,8 @@ bool joinValClt(
     const bool hasClt2 = !!clt2;
     if (hasClt1 != hasClt2) {
         // one of the heaps has some extra type info that the other one has not
-        updateJoinStatus(ctx, (hasClt2)
-                ? JS_USE_SH1
-                : JS_USE_SH2);
+        if (!updateJoinStatus(ctx, (hasClt2) ? JS_USE_SH1 : JS_USE_SH2))
+            return false;
 
         *pDst = 0;
         return true;
@@ -755,7 +761,8 @@ bool createObject(
         bf = *bfMayExist;
     }
 
-    updateJoinStatus(ctx, action);
+    if (!updateJoinStatus(ctx, action))
+        return false;
 
     // preserve 'prototype' flag
     const TObjId rootDst = ctx.dst.objCreate(clt);
@@ -1156,6 +1163,11 @@ bool insertSegmentClone(
         const SegBindingFields  *bf = 0)
 {
     SJ_DEBUG(">>> insertSegmentClone" << SJ_VALP(v1, v2));
+    if (!ctx.joiningData())
+        // on the way from joinSymHeaps(), insertSegmentClone() based three way
+        // joins are destructive
+        ctx.allowThreeWay = false;
+
     const bool isGt1 = (JS_USE_SH1 == action);
     const bool isGt2 = (JS_USE_SH2 == action);
     CL_BREAK_IF(isGt1 == isGt2);
@@ -1271,10 +1283,6 @@ bool joinAbstractValues(
         // such values could be hardly used as reliable anchors
         return false;
 
-    if (!ctx.joiningData())
-        // TODO: consider usage of insertSegmentClone also in join of states?
-        return false;
-
     return insertSegmentClone(pResult, ctx, v1, v2, subStatus);
 }
 
@@ -1347,10 +1355,6 @@ bool mayExistFallback(
         const TValueId          v2,
         const EJoinStatus       action)
 {
-    if (!ctx.joiningData())
-        // TODO: consider usage of OK_MAY_EXIST also in join of states?
-        return false;
-
     const bool use1 = (JS_USE_SH1 == action);
     const bool use2 = (JS_USE_SH2 == action);
     CL_BREAK_IF(use1 == use2);
@@ -1366,6 +1370,10 @@ bool mayExistFallback(
     const TObjId target = objRootByVal(sh, val);
     if (target <= 0 || !isComposite(sh.objType(target)))
         // non-starter
+        return false;
+
+    if (OK_CONCRETE != sh.objKind(target))
+        // only concrete objects/prototypes are candidates for OK_MAY_EXIST
         return false;
 
     const TValueId ref = (use2) ? v1 : v2;
@@ -1413,13 +1421,15 @@ TValueId /* old */ vmRemoveMappingOf(TValMapBidir &vm, const TValueId val) {
     return old;
 }
 
-void disjoinUnknownValues(
+bool disjoinUnknownValues(
         SymJoinCtx              &ctx,
         const TValueId          val,
         const TValueId          tpl,
         const EJoinStatus       action)
 {
-    updateJoinStatus(ctx, action);
+    if (!updateJoinStatus(ctx, action))
+        return false;
+
     const bool isGt2 = (JS_USE_SH2 == action);
     CL_BREAK_IF(!isGt2 && (JS_USE_SH1 != action));
 
@@ -1448,6 +1458,8 @@ void disjoinUnknownValues(
 
         ctx.dst.objSetValue(objDst, valDst);
     }
+
+    return true;
 }
 
 bool unknownValueFallBack(
@@ -1460,13 +1472,17 @@ bool unknownValueFallBack(
     const bool hasMapping2 = hasKey(ctx.valMap2[/* ltr */ 0], v2);
     CL_BREAK_IF(!hasMapping1 && !hasMapping2);
 
-    if (hasMapping1)
-        disjoinUnknownValues(ctx, v1, vDst, JS_USE_SH2);
+    if (hasMapping1) {
+        if (!disjoinUnknownValues(ctx, v1, vDst, JS_USE_SH2))
+            return false;
+    }
     else
         defineValueMapping(ctx, v1, VAL_INVALID, vDst);
 
-    if (hasMapping2)
-        disjoinUnknownValues(ctx, v2, vDst, JS_USE_SH1);
+    if (hasMapping2) {
+        if (!disjoinUnknownValues(ctx, v2, vDst, JS_USE_SH1))
+            return false;
+    }
     else
         defineValueMapping(ctx, VAL_INVALID, v2, vDst);
 
@@ -1840,6 +1856,12 @@ bool segDetectSelfLoop(const SymHeap &sh) {
 bool validateThreeWayStatus(const SymJoinCtx &ctx) {
     if (JS_THREE_WAY != ctx.status)
         return true;
+
+    if (!ctx.allowThreeWay) {
+        CL_DEBUG(">J< destructive information lost detected"
+                 ", cancelling three-way join...");
+        return false;
+    }
 
     if (segDetectSelfLoop(ctx.dst)) {
         // purely segmental loops cause us problems

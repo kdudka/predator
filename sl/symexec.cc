@@ -648,6 +648,7 @@ SymExec::SymExec(const CodeStorage::Storage &stor, const SymExecParams &params):
 
 SymExec::~SymExec() {
     delete d;
+    printMemUsage("SymExec::~SymExec");
 }
 
 const CodeStorage::Storage& SymExec::stor() const {
