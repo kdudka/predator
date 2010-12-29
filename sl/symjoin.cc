@@ -286,27 +286,6 @@ bool defineAddressMapping(
     return defineValueMapping(ctx, addr1, addr2, dstAt);
 }
 
-/// define address mapping for the given sub-object pair (obj1, obj2)
-bool defineAddressMappingOfSub(
-        SymJoinCtx              &ctx,
-        const TObjId            obj1,
-        const TObjId            obj2)
-{
-    if (!ctx.joiningData())
-        // this is not necessary on the way from joinSymHeaps()
-        return true;
-
-    const TObjId objDstBy1 = roMapLookup(ctx.objMap1, obj1);
-    const TObjId objDstBy2 = roMapLookup(ctx.objMap2, obj2);
-    if (objDstBy1 != objDstBy2) {
-        SJ_DEBUG("<-- sub-object mismatch " << SJ_OBJP(obj1, obj2));
-        return false;
-    }
-
-    // join mapping of object's address
-    return defineAddressMapping(ctx, obj1, obj2, objDstBy1);
-}
-
 /// read-only (in)consistency check among value pair (v1, v2)
 bool checkValueMapping(
         const SymJoinCtx        &ctx,
@@ -795,7 +774,7 @@ bool createObject(
     return traverseSubObjs(ctx, root1, root2, rootDst);
 }
 
-bool joinAnonObjects(
+bool createAnonObject(
         SymJoinCtx              &ctx,
         const TObjId            o1,
         const TObjId            o2)
@@ -837,8 +816,7 @@ bool followObjPairCore(
         }
 
         // join mapping of object's address
-        return defineAddressMapping(ctx, root1, root2, rootDst)
-            && defineAddressMappingOfSub(ctx, o1, o2);
+        return defineAddressMapping(ctx, root1, root2, rootDst);
     }
 
     CL_BREAK_IF(root1 <= 0 || root2 <= 0);
@@ -848,7 +826,7 @@ bool followObjPairCore(
     if (!clt) {
         // anonymous object of known size
         return !readOnly
-            && joinAnonObjects(ctx, root1, root2);
+            && createAnonObject(ctx, root1, root2);
     }
 
     if (readOnly)
@@ -859,8 +837,7 @@ bool followObjPairCore(
         // we are on the way from joinData() and hit shared data
         return traverseSubObjs(ctx, root1, root1, root1);
 
-    return createObject(ctx, clt, root1, root2, action)
-        && defineAddressMappingOfSub(ctx, o1, o2);
+    return createObject(ctx, clt, root1, root2, action);
 }
 
 bool dlSegHandleShared(
