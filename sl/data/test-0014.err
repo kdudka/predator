@@ -1,3 +1,9 @@
+test-0014.c: In function ‘dll_pop_front’:
+cc1: warning: unhandled array initializer
+test-0014.c: In function ‘dll_pop_back’:
+cc1: warning: unhandled array initializer
+test-0014.c: In function ‘create_item’:
+cc1: warning: unhandled array initializer
 test-0014.c:237:12: warning: CL_TYPE_STRING not supported by SymProc
 test-0014.c:242:12: warning: CL_TYPE_STRING not supported by SymProc
 test-0014.c:53:9: warning: CL_ACCESSOR_DEREF_ARRAY not implemented yet

@@ -11,7 +11,7 @@ all: *.dot
 *.dot:
 	$(TIMEOUT) \
 		$(DOT) $@ -T$(FORMAT) \
-		| $(SED) 's/"green"/"#00FF00"/g' \
+		| $(SED) -e 's/"green"/"#00FF00"/g' -e 's/scale(1 1)/scale(.5 .5)/g' \
 		> `$(BASENAME) $@ .dot`.$(FORMAT) 
 
 chkinv: *.c
