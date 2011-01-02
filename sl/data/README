@@ -159,6 +159,10 @@ Higher level SLS/DLS abstraction, etc.
 
     test-0124.c - merge-sort operating on two level SLL
 
+    test-0127.c - SLL, each item contains random length sublist of length >=0
+
+    test-0128.c - SLL, each item contains zero or one nested item
+
 
 Linux lists
 ===========
@@ -496,6 +500,8 @@ symplot tutorial
 
     test-0114.c - hello-world, once used as the most trivial example for symjoin
                   and its insertSegmentClone() based three-way join
+
+    test-0126.c - trivial test-case focused on three-way join of unknown values
 
 
 Tiny DLL library written on scratch

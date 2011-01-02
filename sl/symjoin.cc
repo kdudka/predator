@@ -356,13 +356,13 @@ bool joinFreshObjTripple(
         // the join has been already successful
         return true;
 
-    if (VAL_NULL == v1 && (hasKey(ctx.valMap2[/* lrt */ 0], v2)
-            || v2 < 0 || UV_KNOWN == ctx.sh2.valGetUnknown(v2)))
+    if (VAL_NULL == v1 && (v2 < 0 || hasKey(ctx.valMap2[/* lrt */ 0], v2)
+            || (!ctx.joiningData() && UV_KNOWN == ctx.sh2.valGetUnknown(v2))))
         // mapping already inconsistent
         return false;
 
-    if (VAL_NULL == v2 && (hasKey(ctx.valMap1[/* lrt */ 0], v1)
-            || v1 < 0 || UV_KNOWN == ctx.sh1.valGetUnknown(v1)))
+    if (VAL_NULL == v2 && (v1 < 0 || hasKey(ctx.valMap1[/* lrt */ 0], v1)
+            || (!ctx.joiningData() && UV_KNOWN == ctx.sh1.valGetUnknown(v1))))
         // mapping already inconsistent
         return false;
 

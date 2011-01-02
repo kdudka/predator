@@ -48,7 +48,7 @@ static int cntLookups = -1;
 
 namespace {
     void debugPlot(const char *name, int idx, const SymHeap &sh) {
-#if 0//DEBUG_SYMJOIN
+#if DEBUG_SYMJOIN
         if (!STREQ(name, "join"))
 #endif
         if (!::debugSymState)
