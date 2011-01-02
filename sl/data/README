@@ -163,6 +163,9 @@ Higher level SLS/DLS abstraction, etc.
 
     test-0128.c - SLL, each item contains zero or one nested item
 
+    test-0129.c - alternation of test-0127 with DLLs intead of SLLs
+                - currently does not work with SE_PREFER_LOSSLESS_PROTOTYPES
+
 
 Linux lists
 ===========
