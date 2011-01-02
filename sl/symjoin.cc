@@ -1205,6 +1205,9 @@ bool disjoinUnknownValues(
         const TValueId          tpl,
         const EJoinStatus       action)
 {
+    if (!updateJoinStatus(ctx, action))
+        return false;
+
     const bool isGt2 = (JS_USE_SH2 == action);
     CL_BREAK_IF(!isGt2 && (JS_USE_SH1 != action));
 
@@ -1216,8 +1219,6 @@ bool disjoinUnknownValues(
     SymHeap::TContObj refs;
     const SymHeap &sh = (isGt2) ? ctx.sh1 : ctx.sh2;
     sh.usedBy(refs, val);
-
-    unsigned cntHits = 0;
 
     // go through all referres that have their image in ctx.dst
     SymJoinCtx::TObjMap &objMap = (isGt2) ? ctx.objMap1 : ctx.objMap2;
@@ -1234,13 +1235,8 @@ bool disjoinUnknownValues(
                  ", action = " << action);
 
         ctx.dst.objSetValue(objDst, valDst);
-        ++cntHits;
     }
 
-    if (1U < cntHits)
-        return updateJoinStatus(ctx, action);
-
-    // nothing changed actually
     return true;
 }
 
@@ -1250,8 +1246,8 @@ bool unknownValueFallBack(
         const TValueId          v2,
         const TValueId          vDst)
 {
-    const bool hasMapping1 = (0 < v1) && hasKey(ctx.valMap1[/* ltr */ 0], v1);
-    const bool hasMapping2 = (0 < v2) && hasKey(ctx.valMap2[/* ltr */ 0], v2);
+    const bool hasMapping1 = hasKey(ctx.valMap1[/* ltr */ 0], v1);
+    const bool hasMapping2 = hasKey(ctx.valMap2[/* ltr */ 0], v2);
     CL_BREAK_IF(!hasMapping1 && !hasMapping2);
 
     if (hasMapping1) {
