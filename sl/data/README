@@ -312,6 +312,8 @@ Show-case
                     test-0102.c:148:16: note: from call of destroy_top()
                     test-0102.c:141:5: note: from call of main()
 
+    test-0131.c - combination of test-0037 and test-0073
+
 
 Call cache
 ==========
@@ -326,11 +328,6 @@ Call cache
                 - inspired by an already fixed bug there
                 - the comments inside are valid only with SE_DISABLE_SYMCUT
                 - with symcut enabled, we have even more cache hits!
-
-
-symplot tutorial
-================
-    test-0046.c - visualization of Neq predicates
 
 
 "Hello world!" like examples
@@ -480,6 +477,8 @@ symplot tutorial
     test-0044.c - a torture test focused on chaining of dereferences
 
     test-0045.c - a test that checks if Neq predicates are honored by symstate
+
+    test-0046.c - visualization of Neq predicates
 
           off.c - a tiny test-case for field offset retrieving from gcc
                 - no main() inside
