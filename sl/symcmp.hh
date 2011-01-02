@@ -30,12 +30,6 @@
 #include <vector>
 
 /// @todo some dox
-bool joinClt(
-        const struct cl_type    *clt1,
-        const struct cl_type    *clt2,
-        const struct cl_type    **pDst = 0);
-
-/// @todo some dox
 bool joinUnknownValuesCode(
         EUnknownValue           *pDst,
         const EUnknownValue     code1,

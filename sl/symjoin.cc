@@ -546,6 +546,33 @@ bool segMatchLookAhead(
         && traverseSubObjs<2>(sht, roots, visitor);
 }
 
+bool joinClt(
+        const struct cl_type    *clt1,
+        const struct cl_type    *clt2,
+        const struct cl_type    **pDst)
+{
+    const struct cl_type *sink;
+    if (!pDst)
+        pDst = &sink;
+
+    const bool anon1 = !clt1;
+    const bool anon2 = !clt2;
+    if (anon1 && anon2) {
+        *pDst = 0;
+        return true;
+    }
+
+    if (anon1 != anon2)
+        return false;
+
+    CL_BREAK_IF(anon1 || anon2);
+    if (*clt1 != *clt2)
+        return false;
+
+    *pDst = clt1;
+    return true;
+}
+
 bool joinValClt(
         const struct cl_type    **pDst,
         SymJoinCtx              &ctx,

@@ -60,31 +60,20 @@
 // set to 'true' if you wonder why SymCmp matches states as it does (noisy)
 static bool debugSymCmp = static_cast<bool>(DEBUG_SYMCMP);
 
-bool joinClt(
+bool compareClt(
         const struct cl_type    *clt1,
-        const struct cl_type    *clt2,
-        const struct cl_type    **pDst)
+        const struct cl_type    *clt2)
 {
-    const struct cl_type *sink;
-    if (!pDst)
-        pDst = &sink;
-
-    const bool anon1 = !clt1;
-    const bool anon2 = !clt2;
-    if (anon1 && anon2) {
-        *pDst = 0;
+    if (clt1 == clt2)
+        // exact match
         return true;
-    }
 
-    if (anon1 != anon2)
+    if (!clt1 || !clt2)
+        // one of them is NULL
         return false;
 
-    CL_BREAK_IF(anon1 || anon2);
-    if (*clt1 != *clt2)
-        return false;
-
-    *pDst = clt1;
-    return true;
+    // compare the types semantically
+    return (*clt1 == *clt2);
 }
 
 bool joinUnknownValuesCode(
@@ -165,7 +154,7 @@ bool matchValues(
 
     const struct cl_type *clt1 = sh1.valType(v1);
     const struct cl_type *clt2 = sh2.valType(v2);
-    if (!joinClt(clt1, clt2))
+    if (!compareClt(clt1, clt2))
         // value clt mismatch
         return false;
 
@@ -194,7 +183,7 @@ bool matchValues(
         return false;
 
     if (OBJ_INVALID != cVal1) {
-        if (!joinClt(clt1, clt2))
+        if (!compareClt(clt1, clt2))
             // custom value clt mismatch
             return false;
 
