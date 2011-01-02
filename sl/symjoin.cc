@@ -1205,8 +1205,8 @@ bool disjoinUnknownValues(
         const TValueId          tpl,
         const EJoinStatus       action)
 {
-    if (!updateJoinStatus(ctx, action))
-        return false;
+    if (val <= 0)
+        return updateJoinStatus(ctx, action);
 
     const bool isGt2 = (JS_USE_SH2 == action);
     CL_BREAK_IF(!isGt2 && (JS_USE_SH1 != action));
@@ -1220,7 +1220,7 @@ bool disjoinUnknownValues(
     const SymHeap &sh = (isGt2) ? ctx.sh1 : ctx.sh2;
     sh.usedBy(refs, val);
 
-    // go through all referres that have their image in ctx.dst
+    // go through all referrers that have their image in ctx.dst
     SymJoinCtx::TObjMap &objMap = (isGt2) ? ctx.objMap1 : ctx.objMap2;
     BOOST_FOREACH(const TObjId objSrc, refs) {
         const TObjId objDst = roMapLookup(objMap, objSrc);
@@ -1237,7 +1237,8 @@ bool disjoinUnknownValues(
         ctx.dst.objSetValue(objDst, valDst);
     }
 
-    return true;
+    // FIXME: this may be inaccurate in some cases
+    return updateJoinStatus(ctx, action);
 }
 
 bool unknownValueFallBack(
@@ -1254,15 +1255,19 @@ bool unknownValueFallBack(
         if (!disjoinUnknownValues(ctx, v1, vDst, JS_USE_SH2))
             return false;
     }
-    else
-        defineValueMapping(ctx, v1, VAL_INVALID, vDst);
+    else {
+        if (!defineValueMapping(ctx, v1, VAL_INVALID, vDst))
+            return false;
+    }
 
     if (hasMapping2) {
         if (!disjoinUnknownValues(ctx, v2, vDst, JS_USE_SH1))
             return false;
     }
-    else
-        defineValueMapping(ctx, VAL_INVALID, v2, vDst);
+    else {
+        if (!defineValueMapping(ctx, VAL_INVALID, v2, vDst))
+            return false;
+    }
 
     return true;
 }
