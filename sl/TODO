@@ -6,3 +6,5 @@ o  cut-points based split/join algorithms
 o  canonical representation of Linux DLSs nested into Linux DLSs
 
 o  make some driver analysis run
+
+o  implement off-values handling in symjoin
