@@ -1,4 +1,3 @@
-test-0106.c:54:15: warning: binary operator not implemented yet
 test-0106.c:13:15: error: dereference of uninitialized value
 test-0106.c:34:19: note: from call of seek_lmost()
 test-0106.c:54:15: note: from call of insert()
@@ -9,13 +8,4 @@ test-0106.c:36:19: note: from call of seek_rmost()
 test-0106.c:54:15: note: from call of insert()
 test-0106.c:74:34: note: from call of create_pseudo_tree()
 test-0106.c:72:5: note: from call of main()
-test-0106.c:53:27: warning: binary operator not implemented yet
-test-0106.c:54:15: warning: binary operator not implemented yet
-test-0106.c:53:27: warning: binary operator not implemented yet
-test-0106.c:54:15: warning: binary operator not implemented yet
-test-0106.c:53:27: warning: binary operator not implemented yet
-test-0106.c:54:15: warning: binary operator not implemented yet
-test-0106.c:53:27: warning: binary operator not implemented yet
-test-0106.c:54:15: warning: binary operator not implemented yet
-test-0106.c:53:27: warning: binary operator not implemented yet
 test-0106.c:77:12: warning: killing junk

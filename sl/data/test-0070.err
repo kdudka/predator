@@ -1,5 +1,3 @@
-test-0070.c:47:20: warning: binary operator not implemented yet
-test-0070.c:78:20: warning: binary operator not implemented yet
 test-0070.c:90:9: warning: killing junk
 test-0070.c:118:25: note: from call of create_sane_shape()
 test-0070.c:116:5: note: from call of main()

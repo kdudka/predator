@@ -1,15 +1,4 @@
 test-0047.c:19:29: error: dereference of uninitialized value
 test-0047.c:35:20: note: from call of insert_item()
 test-0047.c:29:5: note: from call of main()
-test-0047.c:34:19: warning: binary operator not implemented yet
-test-0047.c:19:35: warning: binary operator not implemented yet
-test-0047.c:34:19: warning: binary operator not implemented yet
-test-0047.c:19:35: warning: binary operator not implemented yet
-test-0047.c:34:19: warning: binary operator not implemented yet
-test-0047.c:19:35: warning: binary operator not implemented yet
-test-0047.c:34:19: warning: binary operator not implemented yet
-test-0047.c:19:35: warning: binary operator not implemented yet
-test-0047.c:34:19: warning: binary operator not implemented yet
-test-0047.c:19:35: warning: binary operator not implemented yet
-test-0047.c:34:19: warning: binary operator not implemented yet
 test-0047.c:36:26: warning: killing junk

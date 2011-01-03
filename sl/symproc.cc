@@ -1118,7 +1118,6 @@ struct OpHandler</* binary */ 2> {
                 return handleOpCmp(sh, code, clt[2], clt[0], rhs[0], rhs[1]);
 
             default:
-                CL_WARN_MSG(proc.lw_, "binary operator not implemented yet");
                 return sh.valCreateUnknown(UV_UNKNOWN, clt[/* dst */ 2]);
         }
     }

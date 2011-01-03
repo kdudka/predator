@@ -1,3 +1,2 @@
-test-0069.c:34:20: warning: binary operator not implemented yet
 test-0069.c:59:9: warning: killing junk
 test-0069.c:64:13: warning: killing junk
