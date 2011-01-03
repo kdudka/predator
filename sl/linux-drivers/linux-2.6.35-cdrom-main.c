@@ -5,6 +5,7 @@
 // ===========================================================================================================================
 #include "linux-2.6.35-cdrom.c"
 // ===========================================================================================================================
+#define NULL ((void*)0)
 
 // generate nondeterministic int, bool, and pointer
 int get_nondet_int(void)        { int a; return a; }
@@ -12,9 +13,9 @@ bool nondet(void)               { return get_nondet_int(); }
 void *get_nondet_ptr(void)      { void *a; return a; }
 
 // declaration of intrinsics
-extern void* malloc(size_t);
+extern __attribute__((alloc_size(1))) void* malloc(size_t);
 extern void free(const void*);
-extern void abort(void);
+extern __attribute__((noreturn)) void abort(void);
 
 #define NEW(type) ({                    \
     void *ptr = malloc(sizeof(type));   \
@@ -54,8 +55,6 @@ void HsFreeCdromDeviceInfo(struct cdrom_device_info *cdi)
 
 void HsInitialize(void)
 {
-    struct ctl_table *tbl;
-
     while (nondet()) {
         struct cdrom_device_info *cdi;
         cdi = HsCreateCdromDeviceInfo();
@@ -67,15 +66,10 @@ void HsInitialize(void)
 int main_sub(void)
 {
     int tmp;
-    int size;
     unsigned int cmd;
     unsigned long arg;
     struct cdrom_device_info *cdi;
-    struct file *fp;
-    struct inode *ip;
     struct block_device *bdev;
-
-    long *next_writable;
 
     HsInitialize();
 
@@ -131,7 +125,7 @@ int main_sub(void)
     return (0);
 }
 
-int main()
+int main(void)
 {
     return main_sub();
 }
