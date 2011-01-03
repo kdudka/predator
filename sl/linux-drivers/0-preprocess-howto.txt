@@ -10,10 +10,7 @@ Compile kernel - check if configuration is correct:
 
 Edit "Makefile" to use C preprocessor instead of sparse:
   CHECK           s/sparse/$(CPP)/
-  CHECKFLAGS      remove  -Wbitwise -Wno-return-void
-
-  CC              = $(CROSS_COMPILE)gcc -m32
-                                        ^^^^^ TODO: test if really needed for ARCH=i386
+  CHECKFLAGS      remove: -D__STDC__  -Wbitwise -Wno-return-void
 
 Edit  "scripts/Makefile.build"  to add output file name:
   cmd_force_checksrc = $(CHECK) $(CHECKFLAGS) $(c_flags) $< -o $<.prep;

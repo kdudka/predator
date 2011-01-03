@@ -1,0 +1,87 @@
+#!/bin/bash
+if test -z "$1" || test ! -e "$1"; then
+    echo Usage: $0 foo.c
+    exit 1
+fi
+
+self="`readlink -f "$0"`"
+topdir="`dirname "$self"`/../.."
+
+# basic setup
+SL_BUILD="$topdir/sl_build"
+SL_PLUG="$SL_BUILD/libsl.so"
+GCC="$topdir/gcc-install/bin/gcc"
+
+# initial checks
+test -x "$GCC"                              || exit 1
+test -x "$SL_PLUG"                          || exit 1
+
+# use verbose level 0 by default
+test -z "$SL_VERBOSE" && SL_VERBOSE=0
+
+# use pp code listener by default
+# uncomment for use: test -z "$SL_OPTS" && SL_OPTS="-fplugin-arg-libsl-dump-pp"
+
+# use chromium as default SVG_VIEWER
+test -z "$SVG_VIEWER" && SVG_VIEWER=chromium
+
+if test x1 = "x$SL_PLOT"; then
+    # wipe all .dot and .svg
+    rm -f *.dot *.svg
+fi
+
+# options used by kernel makefile (changed -O2 to -O0)
+KERNEL_CFLAGS="
+-Wall
+-Wundef
+-Wstrict-prototypes
+-Wno-trigraphs
+-fno-strict-aliasing
+-fno-common
+-Werror-implicit-function-declaration
+-Wno-format-security
+-fno-delete-null-pointer-checks
+-O0
+-m32
+-msoft-float
+-mregparm=3
+-freg-struct-return
+-mpreferred-stack-boundary=2
+-march=i486
+-mtune=generic
+-Wa,-mtune=generic32
+-ffreestanding
+-Wno-sign-compare
+-fno-asynchronous-unwind-tables
+-mno-sse
+-mno-mmx
+-mno-sse2
+-mno-3dnow
+-Wframe-larger-than=2048
+-fno-stack-protector
+-fomit-frame-pointer
+-Wdeclaration-after-statement
+-Wno-pointer-sign
+-fno-strict-overflow
+-fconserve-stack
+"
+
+#
+# run the gcc
+time -p "$GCC" $KERNEL_CFLAGS  -c "$1" -o /dev/null \
+    -DPREDATOR \
+    -I../../cl -I../../cl/gcc -I../../include -I../../include/gcc \
+    -fplugin="$SL_PLUG" \
+    -fplugin-arg-libsl-verbose="$SL_VERBOSE" \
+    $SL_OPTS \
+    #|| exit $?
+
+if test x1 = "x$SL_PLOT"; then
+    # visualize graphs
+    printf "graph visualization in progress ... "
+    make $MAKEOPTS -s -f "$topdir/sl/data/Makefile" TIMEOUT="timeout 2" \
+        || exit $?
+    printf "done\n"
+    "$SVG_VIEWER" *.svg
+fi
+
