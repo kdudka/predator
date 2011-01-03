@@ -1544,6 +1544,13 @@ bool mayExistFallback(
 }
 
 bool joinValuePair(SymJoinCtx &ctx, const TValueId v1, const TValueId v2) {
+    const bool err1 = (VAL_DEREF_FAILED == v1);
+    const bool err2 = (VAL_DEREF_FAILED == v2);
+    if (err1 && err2)
+        return true;
+    if (err1 || err2)
+        return false;
+
     const EUnknownValue code1 = ctx.sh1.valGetUnknown(v1);
     const EUnknownValue code2 = ctx.sh2.valGetUnknown(v2);
 

@@ -177,7 +177,7 @@ void segDestroy(SymHeap &sh, TObjId seg) {
 bool haveSeg(const SymHeap &sh, TValueId atAddr, TValueId pointingTo,
              const EObjKind kind)
 {
-    if (UV_ABSTRACT != sh.valGetUnknown(atAddr))
+    if ((atAddr <= 0) || UV_ABSTRACT != sh.valGetUnknown(atAddr))
         // not an abstract object
         return false;
 
@@ -200,6 +200,10 @@ bool haveSeg(const SymHeap &sh, TValueId atAddr, TValueId pointingTo,
 }
 
 bool haveDlSegAt(const SymHeap &sh, TValueId atAddr, TValueId peerAddr) {
+    if (atAddr <= 0 || peerAddr <= 0)
+        // no valid targets
+        return false;
+
     if (UV_ABSTRACT != sh.valGetUnknown(atAddr)
             || UV_ABSTRACT != sh.valGetUnknown(peerAddr))
         // not abstract objects

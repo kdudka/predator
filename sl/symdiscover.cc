@@ -35,9 +35,6 @@
 
 #include <boost/foreach.hpp>
 
-// FIXME: this should also check compatibility of bfDiscover vs. object kind
-//        (we know that it works fine for all kinds at the moment, but it will
-//        break as soon as a new object kind is added)
 bool matchSegBinding(const SymHeap              &sh,
                      const TObjId               obj,
                      const SegBindingFields     &bfDiscover)
@@ -52,9 +49,22 @@ bool matchSegBinding(const SymHeap              &sh,
         // head mismatch
         return false;
 
+    if (bfDiscover.peer.empty()) {
+        // OK_SLS
+        switch (kind) {
+            case OK_MAY_EXIST:
+            case OK_SLS:
+                return (bf.next == bfDiscover.next);
+
+            default:
+                return false;
+        }
+    }
+
+    // OK_DLS
     switch (kind) {
         case OK_MAY_EXIST:
-        case OK_SLS:
+            // TODO: check polarity
             return (bf.next == bfDiscover.next);
 
         case OK_DLS:
@@ -62,7 +72,6 @@ bool matchSegBinding(const SymHeap              &sh,
                 && (bf.peer == bfDiscover.next);
 
         default:
-            CL_BREAK_IF("matchSegBinding() needs to be improved");
             return false;
     }
 }
@@ -230,6 +239,10 @@ TObjId jumpToNextObj(const SymHeap              &sh,
     const struct cl_type *cltNext = sh.objType(next);
     if (!cltNext || *cltNext != *clt)
         // type mismatch
+        return OBJ_INVALID;
+
+    if (sh.cVar(0, objRoot(sh, next)))
+        // objects on stack should NOT be abstracted out
         return OBJ_INVALID;
 
     if (!matchSegBinding(sh, next, bf))

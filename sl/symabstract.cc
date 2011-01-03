@@ -660,9 +660,17 @@ void segReplaceRefs(SymHeap &sh, TObjId seg, TValueId valNext) {
     const int offHead = subOffsetIn(sh, seg, head);
     CL_BREAK_IF(offHead < 0);
 
-    const TObjId next = sh.pointsTo( valNext);
-    if (next < 0)
-        return;
+    const TObjId next = sh.pointsTo(valNext);
+    switch (next) {
+        case OBJ_DELETED:
+        case OBJ_LOST:
+            CL_DEBUG("WARNING: OBJ_DELETED/OBJ_LOST handling not optimal"
+                     " in segReplaceRefs()");
+            return;
+
+        default:
+            CL_BREAK_IF(0 < valNext && next < 0);
+    }
 
     // TODO: check types in debug build
     SymHeap::TContObj refs;
@@ -674,7 +682,9 @@ void segReplaceRefs(SymHeap &sh, TObjId seg, TValueId valNext) {
 
         const TObjId root = objRoot(sh, target);
         const int off = subOffsetIn(sh, root, target) - offHead;
-        const TValueId val = addrQueryByOffset(sh, next, off, cltPtr);
+        const TValueId val = (0 < next)
+            ? addrQueryByOffset(sh, next, off, cltPtr)
+            : valNext;
 
         // redirect!
         sh.objSetValue(obj, val);

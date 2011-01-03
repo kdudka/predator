@@ -913,7 +913,7 @@ namespace {
     {
         sortValues(valA, valB);
 
-        if (UV_ABSTRACT == sh.valGetUnknown(valA)) {
+        if ((0 < valA) && UV_ABSTRACT == sh.valGetUnknown(valA)) {
             // UV_ABSTRACT is treated as _unkown_ value here, it has to be valB
             const TValueId tmp = valA;
             valA = valB;
