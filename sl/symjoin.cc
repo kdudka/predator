@@ -907,6 +907,7 @@ bool dlSegHandleShared(
     SymHeap &sh = ctx.dst;
     sh.objSetValue(peerPtrFromSeg(sh,  seg), segHeadAddr(sh, peer));
     sh.objSetValue(peerPtrFromSeg(sh, peer), segHeadAddr(sh,  seg));
+    CL_BREAK_IF(!dlSegCheckConsistency(ctx.dst));
     return true;
 }
 
@@ -1982,6 +1983,7 @@ bool joinSymHeaps(
     // all OK
     *pStatus = ctx.status;
     SJ_DEBUG("<-- joinSymHeaps() says " << ctx.status);
+    CL_BREAK_IF(!dlSegCheckConsistency(ctx.dst));
     return true;
 }
 
@@ -2116,6 +2118,7 @@ bool joinDataCore(
         return false;
 
     // check consistency of DLS prototype peers
+    CL_BREAK_IF(!dlSegCheckConsistency(ctx.dst));
     CL_BREAK_IF(!dlSegCheckProtoConsistency(ctx));
 
     // go through Neq predicates

@@ -20,8 +20,12 @@
 #include "config.h"
 #include "symseg.hh"
 
+#include <cl/cl_msg.hh>
+
 #include "symheap.hh"
 #include "symutil.hh"
+
+#include <boost/foreach.hpp>
 
 TObjId nextPtrFromSeg(const SymHeap &sh, TObjId seg) {
     if (OK_HEAD == sh.objKind(seg))
@@ -305,36 +309,53 @@ TObjId segClone(SymHeap &sh, const TObjId seg) {
     return dupSeg;
 }
 
-// works, but not used for now
-#if 0
-namespace {
-void dropHeadIc(
-        TFieldIdxChain          &dst,
-        const TFieldIdxChain    &icSrc,
-        const TFieldIdxChain    &icHead)
-{
-    const unsigned cnt = icSrc.size();
-    const unsigned cntHead = icHead.size();
-    for (unsigned i = 0; i < cnt; ++i) {
-        if (i < cntHead) {
-            CL_BREAK_IF(icHead[i] != icSrc[i]);
-            continue;
+bool dlSegCheckConsistency(const SymHeap &sh) {
+    SymHeapCore::TContObj roots;
+    sh.gatherRootObjs(roots);
+    BOOST_FOREACH(const TObjId obj, roots) {
+        const EObjKind kind = sh.objKind(obj);
+        switch (kind) {
+            case OK_HEAD:
+                CL_ERROR("OK_HEAD appears among root objects");
+                return false;
+
+            case OK_PART:
+                CL_ERROR("OK_PART appears among root objects");
+                return false;
+
+            case OK_SLS:
+            case OK_CONCRETE:
+            case OK_MAY_EXIST:
+                // we are interested in OK_DLS here
+                continue;
+
+            case OK_DLS:
+                break;
         }
 
-        dst.push_back(icSrc[i]);
+        if (sh.cVar(0, obj)) {
+            CL_ERROR("OK_DLS on stack detected");
+            return false;
+        }
+
+        if (sh.placedAt(obj) <= 0) {
+            CL_ERROR("OK_DLS with invalid address detected");
+            return false;
+        }
+
+        const TObjId peer = dlSegPeer(sh, obj);
+        if (peer <= 0) {
+            CL_ERROR("OK_DLS with invalid peer detected");
+            return false;
+        }
+
+        if (OK_DLS != sh.objKind(peer)) {
+            CL_ERROR("DLS peer not a DLS");
+            return false;
+        }
     }
-}
-} // namespace
 
-TFieldIdxChain nextByHead(const SegBindingFields &bf) {
-    TFieldIdxChain dst;
-    dropHeadIc(dst, bf.next, bf.head);
-    return dst;
+    // all OK
+    return true;
 }
 
-TFieldIdxChain peerByHead(const SegBindingFields &bf) {
-    TFieldIdxChain dst;
-    dropHeadIc(dst, bf.peer, bf.head);
-    return dst;
-}
-#endif

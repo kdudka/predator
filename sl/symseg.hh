@@ -160,4 +160,10 @@ void buildIgnoreList(
     }
 }
 
+/**
+ * returns true if all DLS in the given symbolic heap are consistent
+ * @note this runs in debug build only
+ */
+bool dlSegCheckConsistency(const SymHeap &sh);
+
 #endif /* H_GUARD_SYMSEG_H */

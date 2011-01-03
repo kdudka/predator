@@ -597,10 +597,16 @@ void segAbstractionStep(SymHeap                     &sh,
                         const SegBindingFields      &bf,
                         TObjId                      *pObj)
 {
-    if (bf.peer.empty())
+    if (bf.peer.empty()) {
+        // SLS
         slSegAbstractionStep(sh, pObj, bf);
-    else
-        dlSegAbstractionStep(sh, pObj, bf);
+        return;
+    }
+
+    // DLS
+    CL_BREAK_IF(!dlSegCheckConsistency(sh));
+    dlSegAbstractionStep(sh, pObj, bf);
+    CL_BREAK_IF(!dlSegCheckConsistency(sh));
 }
 
 bool considerAbstraction(SymHeap                    &sh,
@@ -694,6 +700,7 @@ void segReplaceRefs(SymHeap &sh, TObjId seg, TValueId valNext) {
 bool dlSegReplaceByConcrete(SymHeap &sh, TObjId obj, TObjId peer) {
     debugPlotInit("dlSegReplaceByConcrete");
     debugPlot(sh);
+    CL_BREAK_IF(!dlSegCheckConsistency(sh));
 
     // first kill any related Neq predicates, we're going to concretize anyway
     dlSegSetMinLength(sh, obj, /* DLS 0+ */ 0);
@@ -719,6 +726,7 @@ bool dlSegReplaceByConcrete(SymHeap &sh, TObjId obj, TObjId peer) {
 
     // this can't fail (at least I hope so...)
     debugPlot(sh);
+    CL_BREAK_IF(!dlSegCheckConsistency(sh));
     return true;
 }
 
@@ -817,6 +825,7 @@ void concretizeObj(SymHeap &sh, TValueId addr, TSymHeapList &todo) {
 
         case OK_DLS:
             // jump to peer
+            CL_BREAK_IF(!dlSegCheckConsistency(sh));
             peer = dlSegPeer(sh, obj);
             break;
     }
@@ -860,6 +869,7 @@ void concretizeObj(SymHeap &sh, TValueId addr, TSymHeapList &todo) {
         const TObjId backLink = subObjByChain(sh, aoDup, bf.next);
         const TValueId headAddr = sh.placedAt(subObjByChain(sh, obj, bf.head));
         sh.objSetValue(backLink, headAddr);
+        CL_BREAK_IF(!dlSegCheckConsistency(sh));
     }
 
     segSetMinLength(sh, aoDup, lenRemains);
@@ -876,6 +886,8 @@ bool spliceOutListSegment(SymHeap &sh, TValueId atAddr, TValueId pointingTo)
         : obj;
 
     if (OK_DLS == sh.objKind(obj)) {
+        CL_BREAK_IF(!dlSegCheckConsistency(sh));
+
         const TObjId peer = dlSegPeer(sh, obj);
         if (sh.placedAt(peer) == pointingTo)
             // assume identity over the two parts of DLS
