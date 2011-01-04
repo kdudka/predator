@@ -1,4 +1,4 @@
-
+// vim: tw=128
 // functions common to all drivers from Linux 2.6.35 kernel
 // functions can be abstracted
 
@@ -19,7 +19,24 @@ void __memzero(void *x, size_t y)
 // int a; return a;
 //}
 
+void elv_put_request(struct request_queue *q, struct request *rq)
+{
+        struct elevator_queue *e = q->elevator;
+
+        if (e->ops->elevator_put_req_fn)
+                e->ops->elevator_put_req_fn(rq);
+}
+
 //     U blk_free_request
+#define REQ_ELVPRIV     (1 << __REQ_ELVPRIV)
+
+static inline void blk_free_request(struct request_queue *q, struct request *rq)
+{
+        if (rq->cmd_flags & REQ_ELVPRIV)
+                elv_put_request(q, rq);
+        mempool_free(rq, q->rq.rq_pool);
+}
+
 //     U blk_get_request
 struct request *blk_get_request(struct request_queue *q , int rw , gfp_t gfp_mask)
 {
@@ -48,6 +65,50 @@ int check_disk_change(struct block_device *x) { int a; return a; }
 //     U current_task
 //     U elv_completed_request
 //     U freed_request
+
+void __wake_up(wait_queue_head_t *q, unsigned int mode, 
+                        int nr_exclusive, void *key) 
+{ 
+//        unsigned long flags; 
+// 
+//        spin_lock_irqsave(&q->lock, flags); 
+//        __wake_up_common(q, mode, nr_exclusive, 0, key); 
+//        spin_unlock_irqrestore(&q->lock, flags); 
+} 
+
+#define wake_up(x)                      __wake_up(x, 3, 1, NULL)
+
+
+static void __freed_request(struct request_queue *q, int sync)
+{
+        struct request_list *rl = &q->rq;
+
+//        if (rl->count[sync] < queue_congestion_off_threshold(q))
+//                blk_clear_queue_congested(q, sync);
+
+        if (rl->count[sync] + 1 <= q->nr_requests) {
+                if (waitqueue_active(&rl->wait[sync]))
+                        wake_up(&rl->wait[sync]);
+
+                blk_clear_queue_full(q, sync);
+        }
+}
+
+static void freed_request(struct request_queue *q, int sync, int priv)
+{
+        struct request_list *rl = &q->rq;
+
+        rl->count[sync]--;
+        if (priv)
+                rl->elvpriv--;
+
+        __freed_request(q, sync);
+
+        if ((rl->starved[sync ^ 1]))
+                __freed_request(q, sync ^ 1);
+}
+
+
 //     U invalidate_bdev
 void invalidate_bdev(struct block_device *x) { return ; }
 
@@ -70,13 +131,71 @@ int scsi_cmd_ioctl(struct request_queue *x, struct gendisk *y, fmode_t ttt, unsi
  int a; return a;
 }
 //     U sysctl_set_parent
+static void sysctl_set_parent(struct ctl_table *parent, struct ctl_table *table)
+{
+    for (; table->procname; table++) {
+	table->parent = parent;
+	if (table->child)
+	    sysctl_set_parent(table, table->child);
+    }
+}
+
 
 //     U try_attach
+static struct ctl_table *is_branch_in(struct ctl_table *branch,
+                                      struct ctl_table *table)
+{
+        struct ctl_table *p;
+        const char *s = branch->procname;
+
+        /* branch should have named subdirectory as its first element */
+        if (!s || !branch->child)
+                return NULL;
+
+        /* ... and nothing else */
+        if (branch[1].procname) 
+                return NULL;    
+        
+        /* table should contain subdirectory with the same name */
+        for (p = table; p->procname; p++) {
+                if (!p->child)  
+                        continue;
+                if (p->procname && strcmp(p->procname, s) == 0)
+                        return p;
+        }
+        return NULL;
+}
+
+/* see if attaching q to p would be an improvement */
+static void try_attach(struct ctl_table_header *p, struct ctl_table_header *q)
+{
+        struct ctl_table *to = p->ctl_table, *by = q->ctl_table;
+        struct ctl_table *next;
+        int is_better = 0;
+        int not_in_parent = !p->attached_by;
+
+        while ((next = is_branch_in(by, to)) != NULL) {
+                if (by == q->attached_by)
+                        is_better = 1;
+                if (to == p->attached_by)
+                        not_in_parent = 1;
+                by = by->child;
+                to = next->child;
+        }
+
+        if (is_better && not_in_parent) {
+                q->attached_by = by;
+                q->attached_to = to;
+                q->parent = p;
+        }
+}
+
 //     U unregister_sysctl_table
 //     U warn_slowpath_null
 
 
-int printk(const char *format, ...) { int a; return a; }
+__attribute__((regparm(0))) int printk(const char * fmt, ...) { int a; return a; }
+
 void *memcpy(void *to, const void *from, size_t len) { void *a; return a; }
 
 
@@ -100,10 +219,12 @@ void *memcpy(void *to, const void *from, size_t len) { void *a; return a; }
 
 
 // simple kmalloc
-void *__kmalloc(size_t size, gfp_t flags) {
+void *  __attribute__((alloc_size(1))) __kmalloc(size_t size, gfp_t flags) {
     return malloc(size);
 }
 void kfree(const void *objp) { free(objp); }
+
+#pragma GCC diagnostic ignored "-Wuninitialized"
 
 int param_set_bool(const char *val, struct kernel_param *kp) { int r; return r; }
 int param_get_bool(char *buffer, struct kernel_param *kp) { int r; return r; }

@@ -37,7 +37,8 @@ CFLAGS=	\
 -Wdeclaration-after-statement		\
 -Wno-pointer-sign			\
 -fno-strict-overflow			\
--fconserve-stack
+-fconserve-stack                        \
+# CFLAGS end
 
 OBJFILES = \
 invader-cdrom.o   \

@@ -5,17 +5,16 @@ How to preprocess all *.c files in Linux kernel
 Do some (minimal) configuration (file 0-kernel-config is my .config):
   $ make ARCH=i386 menuconfig
 
-Compile kernel - check if configuration is correct:
-  $ make ARCH=i386
-
-Edit "Makefile" to use C preprocessor instead of sparse:
+Edit "Makefile" to use C preprocessor instead of "sparse":
   CHECK           s/sparse/$(CPP)/
-  CHECKFLAGS      remove: -D__STDC__  -Wbitwise -Wno-return-void
+  CHECKFLAGS      remove at least: -D__STDC__  -Wbitwise -Wno-return-void
 
 Edit  "scripts/Makefile.build"  to add output file name:
   cmd_force_checksrc = $(CHECK) $(CHECKFLAGS) $(c_flags) $< -o $<.prep;
                                                             ^^^^^^^^^^ add
 
-Preprocess all C sources:
+Preprocess all C sources (can be verbose with V=1):
   $ make ARCH=i386 C=2
+
+Copy the preprocessed drivers from ./drivers/cdrom/ etc
 

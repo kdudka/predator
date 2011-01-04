@@ -1204,14 +1204,14 @@ static inline __attribute__((always_inline)) int ffs(int x)
 {
  int r;
 
+
+
+
+
  asm("bsfl %1,%0\n\t"
-     "cmovzl %2,%0"
-     : "=r" (r) : "rm" (x), "r" (-1));
-
-
-
-
-
+     "jnz 1f\n\t"
+     "movl $-1,%0\n"
+     "1:" : "=r" (r) : "rm" (x));
 
  return r + 1;
 }
@@ -1220,14 +1220,14 @@ static inline __attribute__((always_inline)) int fls(int x)
 {
  int r;
 
+
+
+
+
  asm("bsrl %1,%0\n\t"
-     "cmovzl %2,%0"
-     : "=&r" (r) : "rm" (x), "rm" (-1));
-
-
-
-
-
+     "jnz 1f\n\t"
+     "movl $-1,%0\n"
+     "1:" : "=r" (r) : "rm" (x));
 
  return r + 1;
 }
@@ -2266,6 +2266,8 @@ static inline __attribute__((always_inline)) unsigned long long __cmpxchg64_loca
        : "memory");
  return prev;
 }
+//# 267 "/home/peringer/local/src/linux-2.6.35/arch/x86/include/asm/cmpxchg_32.h"
+extern unsigned long long cmpxchg_486_u64(volatile void *, u64, u64);
 //# 3 "/home/peringer/local/src/linux-2.6.35/arch/x86/include/asm/cmpxchg.h" 2
 //# 8 "/home/peringer/local/src/linux-2.6.35/arch/x86/include/asm/system.h" 2
 //# 1 "/home/peringer/local/src/linux-2.6.35/arch/x86/include/asm/nops.h" 1
@@ -4286,7 +4288,7 @@ struct cpuinfo_x86 {
  u16 initial_apicid;
  u16 x86_clflush_size;
 //# 116 "/home/peringer/local/src/linux-2.6.35/arch/x86/include/asm/processor.h"
-} __attribute__((__aligned__((1 << (5)))));
+} __attribute__((__aligned__((1 << (6)))));
 //# 132 "/home/peringer/local/src/linux-2.6.35/arch/x86/include/asm/processor.h"
 extern struct cpuinfo_x86 boot_cpu_data;
 extern struct cpuinfo_x86 new_cpu_data;
@@ -4393,7 +4395,7 @@ struct tss_struct {
 
  unsigned long stack[64];
 
-} __attribute__((__aligned__((1 << (5)))));
+} __attribute__((__aligned__((1 << (6)))));
 
 extern __attribute__((section(".data" ""))) __typeof__(struct tss_struct) init_tss ;
 
@@ -4773,7 +4775,17 @@ static inline __attribute__((always_inline)) void cpu_relax(void)
 static inline __attribute__((always_inline)) void sync_core(void)
 {
  int tmp;
-//# 730 "/home/peringer/local/src/linux-2.6.35/arch/x86/include/asm/processor.h"
+
+
+ if (boot_cpu_data.x86 < 5)
+
+
+  asm volatile("jmp 1f\n1:\n" ::: "memory");
+ else
+
+
+
+
   asm volatile("cpuid" : "=a" (tmp) : "0" (1)
         : "ebx", "ecx", "edx", "memory");
 }
@@ -4814,7 +4826,7 @@ static inline __attribute__((always_inline)) void wbinvd_halt(void)
 {
  asm volatile ("661:\n\t" "lock; addl $0,0(%%esp)" "\n662:\n" ".section .altinstructions,\"a\"\n" " " ".balign 4" " " "\n" " " ".long" " " "661b\n" " " ".long" " " "663f\n" "	 .byte " "(0*32+26)" "\n" "	 .byte 662b-661b\n" "	 .byte 664f-663f\n" "	 .byte 0xff + (664f-663f) - (662b-661b)\n" ".previous\n" ".section .altinstr_replacement, \"ax\"\n" "663:\n\t" "mfence" "\n664:\n" ".previous" : : : "memory");
 
- if ((__builtin_constant_p((0*32+19)) && ( ((((0*32+19))>>5)==0 && (1UL<<(((0*32+19))&31) & ((1<<((0*32+ 0) & 31))|0|0|0| (1<<((0*32+ 8) & 31))|0|0|(1<<((0*32+15) & 31))| 0|0))) || ((((0*32+19))>>5)==1 && (1UL<<(((0*32+19))&31) & (0|0))) || ((((0*32+19))>>5)==2 && (1UL<<(((0*32+19))&31) & 0)) || ((((0*32+19))>>5)==3 && (1UL<<(((0*32+19))&31) & (0))) || ((((0*32+19))>>5)==4 && (1UL<<(((0*32+19))&31) & 0)) || ((((0*32+19))>>5)==5 && (1UL<<(((0*32+19))&31) & 0)) || ((((0*32+19))>>5)==6 && (1UL<<(((0*32+19))&31) & 0)) || ((((0*32+19))>>5)==7 && (1UL<<(((0*32+19))&31) & 0)) ) ? 1 : (__builtin_constant_p(((0*32+19))) ? constant_test_bit(((0*32+19)), ((unsigned long *)((&boot_cpu_data)->x86_capability))) : variable_test_bit(((0*32+19)), ((unsigned long *)((&boot_cpu_data)->x86_capability))))))
+ if ((__builtin_constant_p((0*32+19)) && ( ((((0*32+19))>>5)==0 && (1UL<<(((0*32+19))&31) & ((1<<((0*32+ 0) & 31))|0|0|0| 0|0|0|0| 0|0))) || ((((0*32+19))>>5)==1 && (1UL<<(((0*32+19))&31) & (0|0))) || ((((0*32+19))>>5)==2 && (1UL<<(((0*32+19))&31) & 0)) || ((((0*32+19))>>5)==3 && (1UL<<(((0*32+19))&31) & (0))) || ((((0*32+19))>>5)==4 && (1UL<<(((0*32+19))&31) & 0)) || ((((0*32+19))>>5)==5 && (1UL<<(((0*32+19))&31) & 0)) || ((((0*32+19))>>5)==6 && (1UL<<(((0*32+19))&31) & 0)) || ((((0*32+19))>>5)==7 && (1UL<<(((0*32+19))&31) & 0)) ) ? 1 : (__builtin_constant_p(((0*32+19))) ? constant_test_bit(((0*32+19)), ((unsigned long *)((&boot_cpu_data)->x86_capability))) : variable_test_bit(((0*32+19)), ((unsigned long *)((&boot_cpu_data)->x86_capability))))))
   asm volatile("cli; wbinvd; 1: hlt; jmp 1b" : : : "memory");
  else
   while (1)
@@ -4839,8 +4851,8 @@ static inline __attribute__((always_inline)) unsigned long get_debugctlmsr(void)
  unsigned long debugctlmsr = 0;
 
 
-
-
+ if (boot_cpu_data.x86 < 6)
+  return 0;
 
  ((debugctlmsr) = native_read_msr((0x000001d9)));
 
@@ -4850,8 +4862,8 @@ static inline __attribute__((always_inline)) unsigned long get_debugctlmsr(void)
 static inline __attribute__((always_inline)) void update_debugctlmsr(unsigned long debugctlmsr)
 {
 
-
-
+ if (boot_cpu_data.x86 < 6)
+  return;
 
  native_write_msr((0x000001d9), (u32)((u64)(debugctlmsr)), (u32)((u64)(debugctlmsr) >> 32));
 }
@@ -4912,7 +4924,7 @@ struct aperfmperf {
 
 static inline __attribute__((always_inline)) void get_aperfmperf(struct aperfmperf *am)
 {
- ({ static bool __warned; int __ret_warn_once = !!(!(__builtin_constant_p((3*32+28)) && ( ((((3*32+28))>>5)==0 && (1UL<<(((3*32+28))&31) & ((1<<((0*32+ 0) & 31))|0|0|0| (1<<((0*32+ 8) & 31))|0|0|(1<<((0*32+15) & 31))| 0|0))) || ((((3*32+28))>>5)==1 && (1UL<<(((3*32+28))&31) & (0|0))) || ((((3*32+28))>>5)==2 && (1UL<<(((3*32+28))&31) & 0)) || ((((3*32+28))>>5)==3 && (1UL<<(((3*32+28))&31) & (0))) || ((((3*32+28))>>5)==4 && (1UL<<(((3*32+28))&31) & 0)) || ((((3*32+28))>>5)==5 && (1UL<<(((3*32+28))&31) & 0)) || ((((3*32+28))>>5)==6 && (1UL<<(((3*32+28))&31) & 0)) || ((((3*32+28))>>5)==7 && (1UL<<(((3*32+28))&31) & 0)) ) ? 1 : (__builtin_constant_p(((3*32+28))) ? constant_test_bit(((3*32+28)), ((unsigned long *)((&boot_cpu_data)->x86_capability))) : variable_test_bit(((3*32+28)), ((unsigned long *)((&boot_cpu_data)->x86_capability)))))); if (__builtin_expect(!!(__ret_warn_once), 0)) if (({ int __ret_warn_on = !!(!__warned); if (__builtin_expect(!!(__ret_warn_on), 0)) warn_slowpath_null("/home/peringer/local/src/linux-2.6.35/arch/x86/include/asm/processor.h", 1005); __builtin_expect(!!(__ret_warn_on), 0); })) __warned = true; __builtin_expect(!!(__ret_warn_once), 0); });
+ ({ static bool __warned; int __ret_warn_once = !!(!(__builtin_constant_p((3*32+28)) && ( ((((3*32+28))>>5)==0 && (1UL<<(((3*32+28))&31) & ((1<<((0*32+ 0) & 31))|0|0|0| 0|0|0|0| 0|0))) || ((((3*32+28))>>5)==1 && (1UL<<(((3*32+28))&31) & (0|0))) || ((((3*32+28))>>5)==2 && (1UL<<(((3*32+28))&31) & 0)) || ((((3*32+28))>>5)==3 && (1UL<<(((3*32+28))&31) & (0))) || ((((3*32+28))>>5)==4 && (1UL<<(((3*32+28))&31) & 0)) || ((((3*32+28))>>5)==5 && (1UL<<(((3*32+28))&31) & 0)) || ((((3*32+28))>>5)==6 && (1UL<<(((3*32+28))&31) & 0)) || ((((3*32+28))>>5)==7 && (1UL<<(((3*32+28))&31) & 0)) ) ? 1 : (__builtin_constant_p(((3*32+28))) ? constant_test_bit(((3*32+28)), ((unsigned long *)((&boot_cpu_data)->x86_capability))) : variable_test_bit(((3*32+28)), ((unsigned long *)((&boot_cpu_data)->x86_capability)))))); if (__builtin_expect(!!(__ret_warn_once), 0)) if (({ int __ret_warn_on = !!(!__warned); if (__builtin_expect(!!(__ret_warn_on), 0)) warn_slowpath_null("/home/peringer/local/src/linux-2.6.35/arch/x86/include/asm/processor.h", 1005); __builtin_expect(!!(__ret_warn_on), 0); })) __warned = true; __builtin_expect(!!(__ret_warn_once), 0); });
 
  ((am->aperf) = native_read_msr((0x000000e8)));
  ((am->mperf) = native_read_msr((0x000000e7)));
@@ -4942,7 +4954,7 @@ static inline __attribute__((always_inline)) void prefetch_range(void *addr, siz
  char *cp;
  char *end = addr + len;
 
- for (cp = addr; cp < end; cp += (4*(1 << (5))))
+ for (cp = addr; cp < end; cp += (4*(1 << (6))))
   prefetch(cp);
 
 }
@@ -5483,7 +5495,7 @@ typedef struct {
 //# 35 "/home/peringer/local/src/linux-2.6.35/arch/x86/include/asm/atomic64_32.h"
 static inline __attribute__((always_inline)) long long atomic64_cmpxchg(atomic64_t *v, long long o, long long n)
 {
- return ((__typeof__(*(&v->counter)))__cmpxchg64((&v->counter), (unsigned long long)(o), (unsigned long long)(n)));
+ return ({ __typeof__(*(&v->counter)) __ret; __typeof__(*(&v->counter)) __old = (o); __typeof__(*(&v->counter)) __new = (n); asm volatile ("661:\n\t" "" "call cmpxchg8b_emu" "\n662:\n" ".section .altinstructions,\"a\"\n" " " ".balign 4" " " "\n" " " ".long" " " "661b\n" " " ".long" " " "663f\n" "	 .byte " "(0*32+ 8)" "\n" "	 .byte 662b-661b\n" "	 .byte 664f-663f\n" "	 .byte 0xff + (664f-663f) - (662b-661b)\n" ".previous\n" ".section .altinstr_replacement, \"ax\"\n" "663:\n\t" "lock; cmpxchg8b (%%esi)" "\n664:\n" ".previous" : "=A" (__ret) : "i" (0), "S" ((&v->counter)), "0" (__old), "b" ((unsigned int)__new), "c" ((unsigned int)(__new>>32)) : "memory"); __ret; });
 }
 //# 48 "/home/peringer/local/src/linux-2.6.35/arch/x86/include/asm/atomic64_32.h"
 static inline __attribute__((always_inline)) long long atomic64_xchg(atomic64_t *v, long long n)
@@ -5491,7 +5503,7 @@ static inline __attribute__((always_inline)) long long atomic64_xchg(atomic64_t 
  long long o;
  unsigned high = (unsigned)(n >> 32);
  unsigned low = (unsigned)n;
- asm volatile("call atomic64_" "xchg" "_cx8"
+ asm volatile("661:\n\t" "call atomic64_" "xchg" "_386" "\n662:\n" ".section .altinstructions,\"a\"\n" " " ".balign 4" " " "\n" " " ".long" " " "661b\n" " " ".long" " " "663f\n" "	 .byte " "(0*32+ 8)" "\n" "	 .byte 662b-661b\n" "	 .byte 664f-663f\n" "	 .byte 0xff + (664f-663f) - (662b-661b)\n" ".previous\n" ".section .altinstr_replacement, \"ax\"\n" "663:\n\t" "call atomic64_" "xchg" "_cx8" "\n664:\n" ".previous"
        : "=A" (o), "+b" (low), "+c" (high)
        : "S" (v)
        : "memory"
@@ -5503,7 +5515,7 @@ static inline __attribute__((always_inline)) void atomic64_set(atomic64_t *v, lo
 {
  unsigned high = (unsigned)(i >> 32);
  unsigned low = (unsigned)i;
- asm volatile("call atomic64_" "set" "_cx8"
+ asm volatile("661:\n\t" "call atomic64_" "set" "_386" "\n662:\n" ".section .altinstructions,\"a\"\n" " " ".balign 4" " " "\n" " " ".long" " " "661b\n" " " ".long" " " "663f\n" "	 .byte " "(0*32+ 8)" "\n" "	 .byte 662b-661b\n" "	 .byte 664f-663f\n" "	 .byte 0xff + (664f-663f) - (662b-661b)\n" ".previous\n" ".section .altinstr_replacement, \"ax\"\n" "663:\n\t" "call atomic64_" "set" "_cx8" "\n664:\n" ".previous"
        : "+b" (low), "+c" (high)
        : "S" (v)
        : "eax", "edx", "memory"
@@ -5519,7 +5531,7 @@ static inline __attribute__((always_inline)) void atomic64_set(atomic64_t *v, lo
 static inline __attribute__((always_inline)) long long atomic64_read(atomic64_t *v)
 {
  long long r;
- asm volatile("call atomic64_" "read" "_cx8"
+ asm volatile("661:\n\t" "call atomic64_" "read" "_386" "\n662:\n" ".section .altinstructions,\"a\"\n" " " ".balign 4" " " "\n" " " ".long" " " "661b\n" " " ".long" " " "663f\n" "	 .byte " "(0*32+ 8)" "\n" "	 .byte 662b-661b\n" "	 .byte 664f-663f\n" "	 .byte 0xff + (664f-663f) - (662b-661b)\n" ".previous\n" ".section .altinstr_replacement, \"ax\"\n" "663:\n\t" "call atomic64_" "read" "_cx8" "\n664:\n" ".previous"
        : "=A" (r), "+c" (v)
        : : "memory"
        );
@@ -5528,7 +5540,7 @@ static inline __attribute__((always_inline)) long long atomic64_read(atomic64_t 
 //# 102 "/home/peringer/local/src/linux-2.6.35/arch/x86/include/asm/atomic64_32.h"
 static inline __attribute__((always_inline)) long long atomic64_add_return(long long i, atomic64_t *v)
 {
- asm volatile("call atomic64_" "add_return" "_cx8"
+ asm volatile("661:\n\t" "call atomic64_" "add_return" "_386" "\n662:\n" ".section .altinstructions,\"a\"\n" " " ".balign 4" " " "\n" " " ".long" " " "661b\n" " " ".long" " " "663f\n" "	 .byte " "(0*32+ 8)" "\n" "	 .byte 662b-661b\n" "	 .byte 664f-663f\n" "	 .byte 0xff + (664f-663f) - (662b-661b)\n" ".previous\n" ".section .altinstr_replacement, \"ax\"\n" "663:\n\t" "call atomic64_" "add_return" "_cx8" "\n664:\n" ".previous"
        : "+A" (i), "+c" (v)
        : : "memory"
        );
@@ -5540,7 +5552,7 @@ static inline __attribute__((always_inline)) long long atomic64_add_return(long 
 
 static inline __attribute__((always_inline)) long long atomic64_sub_return(long long i, atomic64_t *v)
 {
- asm volatile("call atomic64_" "sub_return" "_cx8"
+ asm volatile("661:\n\t" "call atomic64_" "sub_return" "_386" "\n662:\n" ".section .altinstructions,\"a\"\n" " " ".balign 4" " " "\n" " " ".long" " " "661b\n" " " ".long" " " "663f\n" "	 .byte " "(0*32+ 8)" "\n" "	 .byte 662b-661b\n" "	 .byte 664f-663f\n" "	 .byte 0xff + (664f-663f) - (662b-661b)\n" ".previous\n" ".section .altinstr_replacement, \"ax\"\n" "663:\n\t" "call atomic64_" "sub_return" "_cx8" "\n664:\n" ".previous"
        : "+A" (i), "+c" (v)
        : : "memory"
        );
@@ -5550,7 +5562,7 @@ static inline __attribute__((always_inline)) long long atomic64_sub_return(long 
 static inline __attribute__((always_inline)) long long atomic64_inc_return(atomic64_t *v)
 {
  long long a;
- asm volatile("call atomic64_" "inc_return" "_cx8"
+ asm volatile("661:\n\t" "call atomic64_" "inc_return" "_386" "\n662:\n" ".section .altinstructions,\"a\"\n" " " ".balign 4" " " "\n" " " ".long" " " "661b\n" " " ".long" " " "663f\n" "	 .byte " "(0*32+ 8)" "\n" "	 .byte 662b-661b\n" "	 .byte 664f-663f\n" "	 .byte 0xff + (664f-663f) - (662b-661b)\n" ".previous\n" ".section .altinstr_replacement, \"ax\"\n" "663:\n\t" "call atomic64_" "inc_return" "_cx8" "\n664:\n" ".previous"
        : "=A" (a)
        : "S" (v)
        : "memory", "ecx"
@@ -5561,7 +5573,7 @@ static inline __attribute__((always_inline)) long long atomic64_inc_return(atomi
 static inline __attribute__((always_inline)) long long atomic64_dec_return(atomic64_t *v)
 {
  long long a;
- asm volatile("call atomic64_" "dec_return" "_cx8"
+ asm volatile("661:\n\t" "call atomic64_" "dec_return" "_386" "\n662:\n" ".section .altinstructions,\"a\"\n" " " ".balign 4" " " "\n" " " ".long" " " "661b\n" " " ".long" " " "663f\n" "	 .byte " "(0*32+ 8)" "\n" "	 .byte 662b-661b\n" "	 .byte 664f-663f\n" "	 .byte 0xff + (664f-663f) - (662b-661b)\n" ".previous\n" ".section .altinstr_replacement, \"ax\"\n" "663:\n\t" "call atomic64_" "dec_return" "_cx8" "\n664:\n" ".previous"
        : "=A" (a)
        : "S" (v)
        : "memory", "ecx"
@@ -5571,7 +5583,7 @@ static inline __attribute__((always_inline)) long long atomic64_dec_return(atomi
 //# 152 "/home/peringer/local/src/linux-2.6.35/arch/x86/include/asm/atomic64_32.h"
 static inline __attribute__((always_inline)) long long atomic64_add(long long i, atomic64_t *v)
 {
- asm volatile("call atomic64_" "add_return" "_cx8"
+ asm volatile("661:\n\t" "call atomic64_" "add" "_386" "\n662:\n" ".section .altinstructions,\"a\"\n" " " ".balign 4" " " "\n" " " ".long" " " "661b\n" " " ".long" " " "663f\n" "	 .byte " "(0*32+ 8)" "\n" "	 .byte 662b-661b\n" "	 .byte 664f-663f\n" "	 .byte 0xff + (664f-663f) - (662b-661b)\n" ".previous\n" ".section .altinstr_replacement, \"ax\"\n" "663:\n\t" "call atomic64_" "add_return" "_cx8" "\n664:\n" ".previous"
        : "+A" (i), "+c" (v)
        : : "memory"
        );
@@ -5580,7 +5592,7 @@ static inline __attribute__((always_inline)) long long atomic64_add(long long i,
 //# 168 "/home/peringer/local/src/linux-2.6.35/arch/x86/include/asm/atomic64_32.h"
 static inline __attribute__((always_inline)) long long atomic64_sub(long long i, atomic64_t *v)
 {
- asm volatile("call atomic64_" "sub_return" "_cx8"
+ asm volatile("661:\n\t" "call atomic64_" "sub" "_386" "\n662:\n" ".section .altinstructions,\"a\"\n" " " ".balign 4" " " "\n" " " ".long" " " "661b\n" " " ".long" " " "663f\n" "	 .byte " "(0*32+ 8)" "\n" "	 .byte 662b-661b\n" "	 .byte 664f-663f\n" "	 .byte 0xff + (664f-663f) - (662b-661b)\n" ".previous\n" ".section .altinstr_replacement, \"ax\"\n" "663:\n\t" "call atomic64_" "sub_return" "_cx8" "\n664:\n" ".previous"
        : "+A" (i), "+c" (v)
        : : "memory"
        );
@@ -5600,7 +5612,7 @@ static inline __attribute__((always_inline)) int atomic64_sub_and_test(long long
 
 static inline __attribute__((always_inline)) void atomic64_inc(atomic64_t *v)
 {
- asm volatile("call atomic64_" "inc_return" "_cx8"
+ asm volatile("661:\n\t" "call atomic64_" "inc" "_386" "\n662:\n" ".section .altinstructions,\"a\"\n" " " ".balign 4" " " "\n" " " ".long" " " "661b\n" " " ".long" " " "663f\n" "	 .byte " "(0*32+ 8)" "\n" "	 .byte 662b-661b\n" "	 .byte 664f-663f\n" "	 .byte 0xff + (664f-663f) - (662b-661b)\n" ".previous\n" ".section .altinstr_replacement, \"ax\"\n" "663:\n\t" "call atomic64_" "inc_return" "_cx8" "\n664:\n" ".previous"
        : : "S" (v)
        : "memory", "eax", "ecx", "edx"
        );
@@ -5614,7 +5626,7 @@ static inline __attribute__((always_inline)) void atomic64_inc(atomic64_t *v)
 
 static inline __attribute__((always_inline)) void atomic64_dec(atomic64_t *v)
 {
- asm volatile("call atomic64_" "dec_return" "_cx8"
+ asm volatile("661:\n\t" "call atomic64_" "dec" "_386" "\n662:\n" ".section .altinstructions,\"a\"\n" " " ".balign 4" " " "\n" " " ".long" " " "661b\n" " " ".long" " " "663f\n" "	 .byte " "(0*32+ 8)" "\n" "	 .byte 662b-661b\n" "	 .byte 664f-663f\n" "	 .byte 0xff + (664f-663f) - (662b-661b)\n" ".previous\n" ".section .altinstr_replacement, \"ax\"\n" "663:\n\t" "call atomic64_" "dec_return" "_cx8" "\n664:\n" ".previous"
        : : "S" (v)
        : "memory", "eax", "ecx", "edx"
        );
@@ -5639,7 +5651,7 @@ static inline __attribute__((always_inline)) int atomic64_add_unless(atomic64_t 
 {
  unsigned low = (unsigned)u;
  unsigned high = (unsigned)(u >> 32);
- asm volatile("call atomic64_" "add_unless" "_cx8" "\n\t"
+ asm volatile("661:\n\t" "call atomic64_" "add_unless" "_386" "\n662:\n" ".section .altinstructions,\"a\"\n" " " ".balign 4" " " "\n" " " ".long" " " "661b\n" " " ".long" " " "663f\n" "	 .byte " "(0*32+ 8)" "\n" "	 .byte 662b-661b\n" "	 .byte 664f-663f\n" "	 .byte 0xff + (664f-663f) - (662b-661b)\n" ".previous\n" ".section .altinstr_replacement, \"ax\"\n" "663:\n\t" "call atomic64_" "add_unless" "_cx8" "\n664:\n" ".previous" "\n\t"
        : "+A" (a), "+c" (v), "+S" (low), "+D" (high)
        : : "memory");
  return (int)a;
@@ -5649,7 +5661,7 @@ static inline __attribute__((always_inline)) int atomic64_add_unless(atomic64_t 
 static inline __attribute__((always_inline)) int atomic64_inc_not_zero(atomic64_t *v)
 {
  int r;
- asm volatile("call atomic64_" "inc_not_zero" "_cx8"
+ asm volatile("661:\n\t" "call atomic64_" "inc_not_zero" "_386" "\n662:\n" ".section .altinstructions,\"a\"\n" " " ".balign 4" " " "\n" " " ".long" " " "661b\n" " " ".long" " " "663f\n" "	 .byte " "(0*32+ 8)" "\n" "	 .byte 662b-661b\n" "	 .byte 664f-663f\n" "	 .byte 0xff + (664f-663f) - (662b-661b)\n" ".previous\n" ".section .altinstr_replacement, \"ax\"\n" "663:\n\t" "call atomic64_" "inc_not_zero" "_cx8" "\n664:\n" ".previous"
        : "=a" (r)
        : "S" (v)
        : "ecx", "edx", "memory"
@@ -5660,7 +5672,7 @@ static inline __attribute__((always_inline)) int atomic64_inc_not_zero(atomic64_
 static inline __attribute__((always_inline)) long long atomic64_dec_if_positive(atomic64_t *v)
 {
  long long r;
- asm volatile("call atomic64_" "dec_if_positive" "_cx8"
+ asm volatile("661:\n\t" "call atomic64_" "dec_if_positive" "_386" "\n662:\n" ".section .altinstructions,\"a\"\n" " " ".balign 4" " " "\n" " " ".long" " " "661b\n" " " ".long" " " "663f\n" "	 .byte " "(0*32+ 8)" "\n" "	 .byte 662b-661b\n" "	 .byte 664f-663f\n" "	 .byte 0xff + (664f-663f) - (662b-661b)\n" ".previous\n" ".section .altinstr_replacement, \"ax\"\n" "663:\n\t" "call atomic64_" "dec_if_positive" "_cx8" "\n664:\n" ".previous"
        : "=A" (r)
        : "S" (v)
        : "ecx", "memory"
@@ -8606,8 +8618,8 @@ static inline __attribute__((always_inline)) cycles_t get_cycles(void)
  unsigned long long ret = 0;
 
 
-
-
+ if (!(__builtin_constant_p((0*32+ 4)) && ( ((((0*32+ 4))>>5)==0 && (1UL<<(((0*32+ 4))&31) & ((1<<((0*32+ 0) & 31))|0|0|0| 0|0|0|0| 0|0))) || ((((0*32+ 4))>>5)==1 && (1UL<<(((0*32+ 4))&31) & (0|0))) || ((((0*32+ 4))>>5)==2 && (1UL<<(((0*32+ 4))&31) & 0)) || ((((0*32+ 4))>>5)==3 && (1UL<<(((0*32+ 4))&31) & (0))) || ((((0*32+ 4))>>5)==4 && (1UL<<(((0*32+ 4))&31) & 0)) || ((((0*32+ 4))>>5)==5 && (1UL<<(((0*32+ 4))&31) & 0)) || ((((0*32+ 4))>>5)==6 && (1UL<<(((0*32+ 4))&31) & 0)) || ((((0*32+ 4))>>5)==7 && (1UL<<(((0*32+ 4))&31) & 0)) ) ? 1 : (__builtin_constant_p(((0*32+ 4))) ? constant_test_bit(((0*32+ 4)), ((unsigned long *)((&boot_cpu_data)->x86_capability))) : variable_test_bit(((0*32+ 4)), ((unsigned long *)((&boot_cpu_data)->x86_capability))))))
+  return 0;
 
  ((ret) = __native_read_tsc());
 
@@ -8616,7 +8628,14 @@ static inline __attribute__((always_inline)) cycles_t get_cycles(void)
 
 static inline __attribute__((always_inline)) __attribute__((always_inline)) cycles_t vget_cycles(void)
 {
-//# 45 "/home/peringer/local/src/linux-2.6.35/arch/x86/include/asm/tsc.h"
+
+
+
+
+
+ if (!(__builtin_constant_p((0*32+ 4)) && ( ((((0*32+ 4))>>5)==0 && (1UL<<(((0*32+ 4))&31) & ((1<<((0*32+ 0) & 31))|0|0|0| 0|0|0|0| 0|0))) || ((((0*32+ 4))>>5)==1 && (1UL<<(((0*32+ 4))&31) & (0|0))) || ((((0*32+ 4))>>5)==2 && (1UL<<(((0*32+ 4))&31) & 0)) || ((((0*32+ 4))>>5)==3 && (1UL<<(((0*32+ 4))&31) & (0))) || ((((0*32+ 4))>>5)==4 && (1UL<<(((0*32+ 4))&31) & 0)) || ((((0*32+ 4))>>5)==5 && (1UL<<(((0*32+ 4))&31) & 0)) || ((((0*32+ 4))>>5)==6 && (1UL<<(((0*32+ 4))&31) & 0)) || ((((0*32+ 4))>>5)==7 && (1UL<<(((0*32+ 4))&31) & 0)) ) ? 1 : (__builtin_constant_p(((0*32+ 4))) ? constant_test_bit(((0*32+ 4)), ((unsigned long *)((&boot_cpu_data)->x86_capability))) : variable_test_bit(((0*32+ 4)), ((unsigned long *)((&boot_cpu_data)->x86_capability))))))
+  return 0;
+
  return (cycles_t)__native_read_tsc();
 }
 
@@ -11788,7 +11807,7 @@ static inline __attribute__((always_inline)) __attribute__((always_inline)) void
 
  if (size <= 64) goto found; else i++;
 
- if (size <= 96) goto found; else i++;
+
 
  if (size <= 128) goto found; else i++;
 
@@ -12817,7 +12836,7 @@ extern int sysctl_nr_open;
 extern struct inodes_stat_t inodes_stat;
 extern int leases_enable, lease_break_time;
 
-extern int dir_notify_enable;
+
 
 
 struct buffer_head;
@@ -13481,7 +13500,7 @@ struct inode {
  struct address_space *i_mapping;
  struct address_space i_data;
 
- struct dquot *i_dquot[2];
+
 
  struct list_head i_devices;
  union {
@@ -13491,17 +13510,7 @@ struct inode {
  };
 
  __u32 i_generation;
-
-
- __u32 i_fsnotify_mask;
- struct hlist_head i_fsnotify_mark_entries;
-
-
-
- struct list_head inotify_watches;
- struct mutex inotify_mutex;
-
-
+//# 779 "include/linux/fs.h"
  unsigned long i_state;
  unsigned long dirtied_when;
 
@@ -14232,8 +14241,8 @@ struct super_operations {
  int (*show_options)(struct seq_file *, struct vfsmount *);
  int (*show_stats)(struct seq_file *, struct vfsmount *);
 
- ssize_t (*quota_read)(struct super_block *, int, char *, size_t, loff_t);
- ssize_t (*quota_write)(struct super_block *, int, const char *, size_t, loff_t);
+
+
 
  int (*bdev_try_to_free_page)(struct super_block*, struct page*, gfp_t);
 };
@@ -15161,49 +15170,6 @@ static inline __attribute__((always_inline)) void set_capacity(struct gendisk *d
 {
  disk->part0.nr_sects = size;
 }
-//# 420 "include/linux/genhd.h"
-struct bsd_disklabel {
- __le32 d_magic;
- __s16 d_type;
- __s16 d_subtype;
- char d_typename[16];
- char d_packname[16];
- __u32 d_secsize;
- __u32 d_nsectors;
- __u32 d_ntracks;
- __u32 d_ncylinders;
- __u32 d_secpercyl;
- __u32 d_secperunit;
- __u16 d_sparespertrack;
- __u16 d_sparespercyl;
- __u32 d_acylinders;
- __u16 d_rpm;
- __u16 d_interleave;
- __u16 d_trackskew;
- __u16 d_cylskew;
- __u32 d_headswitch;
- __u32 d_trkseek;
- __u32 d_flags;
-
- __u32 d_drivedata[5];
-
- __u32 d_spare[5];
- __le32 d_magic2;
- __le16 d_checksum;
-
-
- __le16 d_npartitions;
- __le32 d_bbsize;
- __le32 d_sbsize;
- struct bsd_partition {
-  __le32 p_size;
-  __le32 p_offset;
-  __le32 p_fsize;
-  __u8 p_fstype;
-  __u8 p_frag;
-  __le16 p_cpg;
- } d_partitions[16];
-};
 //# 527 "include/linux/genhd.h"
 extern int blk_alloc_devt(struct hd_struct *part, dev_t *devt);
 extern void blk_free_devt(dev_t devt);
