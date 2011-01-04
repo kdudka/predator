@@ -272,6 +272,9 @@ Linux lists
 
     test-0125.c - a more generic variant of test-0115
 
+    test-0132.c - example of creating, adding, deleting, and traversing the list
+                - contributed by Kulesh Shanmugasundaram
+
 
 Show-case
 =========
@@ -332,13 +335,6 @@ Call cache
 
 "Hello world!" like examples
 ============================
-         list.c - trivial destruction of SLL
-                - finite length (0, 1 and 2 nodes)
-                - recursive and non-recursive variant of the algorithm
-                - can be passed through Predator with:
-                    -DSELF_TEST
-                    -fplugin-arg-libsl-symexec-args=fast
-
     test-0002.c - invalid dereference
                     - NULL value
                     - an uninitialized value

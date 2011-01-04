@@ -1,0 +1,32 @@
+test-0132.c:50:11: error: dereference of NULL value
+list.h:61:12: warning: killing junk
+test-0132.c:50:11: note: from call of list_add()
+test-0132.c:23:5: note: from call of main()
+test-0132.c:50:11: error: dereference of NULL value
+list.h:61:12: warning: killing junk
+test-0132.c:50:11: note: from call of list_add()
+test-0132.c:23:5: note: from call of main()
+list.h:61:12: warning: killing junk
+test-0132.c:50:11: note: from call of list_add()
+test-0132.c:23:5: note: from call of main()
+test-0132.c:50:11: error: dereference of NULL value
+list.h:61:12: warning: killing junk
+test-0132.c:50:11: note: from call of list_add()
+test-0132.c:23:5: note: from call of main()
+list.h:61:12: warning: killing junk
+test-0132.c:50:11: note: from call of list_add()
+test-0132.c:23:5: note: from call of main()
+list.h:61:12: warning: killing junk
+test-0132.c:50:11: note: from call of list_add()
+test-0132.c:23:5: note: from call of main()
+test-0132.c:50:11: error: dereference of NULL value
+list.h:61:12: warning: killing junk
+test-0132.c:50:11: note: from call of list_add()
+test-0132.c:23:5: note: from call of main()
+list.h:61:12: warning: killing junk
+test-0132.c:50:11: note: from call of list_add()
+test-0132.c:23:5: note: from call of main()
+test-0132.c:50:11: error: dereference of NULL value
+list.h:61:12: warning: killing junk
+test-0132.c:50:11: note: from call of list_add()
+test-0132.c:23:5: note: from call of main()
