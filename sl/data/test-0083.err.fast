@@ -1,2 +1,3 @@
+test-0083.c:13:19: warning: killing junk
 test-0083.c:18:15: warning: killing junk
 test-0083.c:13:19: warning: killing junk

@@ -1532,6 +1532,10 @@ bool mayExistFallback(
         return false;
     }
 
+    // mayExistFallback() always implies JS_THREE_WAY
+    if (!updateJoinStatus(ctx, JS_THREE_WAY))
+        return false;
+
     SegBindingFields bf;
     bf.head = headFinder.result();
     bf.next = visitor.icNext();
