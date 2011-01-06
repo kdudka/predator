@@ -325,6 +325,9 @@ Show-case
 
     test-0131.c - combination of test-0037 and test-0073
 
+    test-0137.c - successfully caught misuse of list_for_each() from Linux
+                - contributed by Tomas Vojnar
+
 
 Call cache
 ==========
