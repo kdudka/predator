@@ -281,6 +281,8 @@ Linux lists
 
     test-0135.c - Bubble-Sort implementation operating on Linux DLLs
 
+    test-0136.c - optimized variant of test-0135
+
 
 Show-case
 =========

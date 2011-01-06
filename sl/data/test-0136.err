@@ -1,0 +1,2 @@
+test-0136.c: In function 'gl_sort_pass':
+test-0136.c:83:13: warning: unhandled GIMPLE_PREDICT
