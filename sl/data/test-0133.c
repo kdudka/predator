@@ -106,10 +106,8 @@ static void gl_sort()
     while ((max_pos = gl_seek_max()))
         list_move(max_pos, &dst);
 
-    // FIXME: Is there any macro in <linux/list.h> doing exactly this?
-    dst.next->prev = &gl_list;
-    dst.prev->next = &gl_list;
-    gl_list = dst;
+    list_add(&gl_list, &dst);
+    list_del(&dst);
 }
 
 int main()
