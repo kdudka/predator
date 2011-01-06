@@ -275,6 +275,8 @@ Linux lists
     test-0132.c - example of creating, adding, deleting, and traversing the list
                 - contributed by Kulesh Shanmugasundaram
 
+    test-0133.c - Insert-Sort implementation operating on Linux DLLs
+
 
 Show-case
 =========
