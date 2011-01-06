@@ -1,2 +1,2 @@
-test-0134.c: In function ‘gl_seek_max’:
+test-0134.c: In function 'gl_seek_max':
 test-0134.c:82:13: warning: unhandled GIMPLE_PREDICT

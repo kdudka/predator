@@ -98,7 +98,7 @@ test_sym_exec("simple-test" ${GCC_HOST} "" "" "")
 # FIXME: define this macro more generically, in particular the count of args
 macro(test_sym_exec_regre ext arg1)
     foreach (num ${examples})
-        set(cmd "${GCC_HOST}")
+        set(cmd "LC_ALL=C ${GCC_HOST}")
 
         # needed for test-0000
         foreach (inc ${clplug_incs})

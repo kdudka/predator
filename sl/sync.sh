@@ -1,6 +1,9 @@
 #!/bin/sh
 TIMEOUT="timeout 30"
 
+LC_ALL=C
+export LC_ALL
+
 ALL=data/test-0???.c
 test -n "$1" && ALL="$*"
 export ALL
