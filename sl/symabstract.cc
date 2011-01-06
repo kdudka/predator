@@ -879,7 +879,7 @@ void concretizeObj(SymHeap &sh, TValueId addr, TSymHeapList &todo) {
 
 bool spliceOutListSegment(SymHeap &sh, TValueId atAddr, TValueId pointingTo)
 {
-    const TObjId obj = sh.pointsTo(atAddr);
+    const TObjId obj = objRootByVal(sh, atAddr);
     const EObjKind kind = sh.objKind(obj);
     const TObjId peer = (OK_DLS == kind)
         ? dlSegPeer(sh, obj)
