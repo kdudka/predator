@@ -442,9 +442,30 @@ void slSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf)
     *pObj = objNext;
 }
 
+void enlargeMayExist(SymHeap &sh, const TObjId obj) {
+    const EObjKind kind = sh.objKind(obj);
+    switch (kind) {
+        case OK_MAY_EXIST:
+            sh.objSetConcrete(obj);
+            // fall through!
+
+        case OK_CONCRETE:
+            return;
+
+        default:
+            CL_BREAK_IF("invalid call of enlargeMayExist()");
+    }
+}
+
 void dlSegCreate(SymHeap &sh, TObjId o1, TObjId o2, SegBindingFields bf) {
-    // validate call of dlSegCreate()
-    CL_BREAK_IF(OK_CONCRETE != sh.objKind(o1) || OK_CONCRETE != sh.objKind(o2));
+    // compute resulting segment's length
+    const unsigned len =
+        objMinLength(sh, o1) +
+        objMinLength(sh, o2);
+
+    // OK_MAY_EXIST -> OK_CONCRETE if necessary
+    enlargeMayExist(sh, o1);
+    enlargeMayExist(sh, o2);
 
     swapValues(bf.next, bf.peer);
     sh.objSetAbstract(o1, OK_DLS, bf);
@@ -455,18 +476,19 @@ void dlSegCreate(SymHeap &sh, TObjId o1, TObjId o2, SegBindingFields bf) {
     // introduce some UV_UNKNOWN values if necessary
     abstractNonMatchingValues(sh, o1, o2, /* bidir */ true);
 
-    // a just created DLS is said to be 2+
-    dlSegSetMinLength(sh, o1, /* DLS 2+ */ 2);
+    // just created DLS is said to be 2+ as long as no OK_MAY_EXIST are involved
+    dlSegSetMinLength(sh, o1, len);
 
     dlSegSyncPeerData(sh, o1);
 }
 
 void dlSegGobble(SymHeap &sh, TObjId dls, TObjId var, bool backward) {
-    CL_BREAK_IF(OK_DLS != sh.objKind(dls) || OK_CONCRETE != sh.objKind(var));
+    CL_BREAK_IF(OK_DLS != sh.objKind(dls));
 
-    // handle DLS Neq predicates
-    const unsigned len = dlSegMinLength(sh, dls) + /* OK_CONCRETE */ 1;
+    // handle DLS Neq predicates and OK_MAY_EXIST
+    const unsigned len = dlSegMinLength(sh, dls) + objMinLength(sh, var);
     dlSegSetMinLength(sh, dls, /* DLS 0+ */ 0);
+    enlargeMayExist(sh, var);
 
     if (!backward)
         // jump to peer
@@ -545,9 +567,6 @@ void dlSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf)
 
     EObjKind kind = sh.objKind(o1);
     switch (kind) {
-        case OK_MAY_EXIST:
-            // TODO
-
         case OK_SLS:
         case OK_HEAD:
         case OK_PART:
@@ -560,7 +579,7 @@ void dlSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf)
 
             // jump to the next object (as we know such an object exists)
             skipObj(sh, &o2, sh.objBinding(o2).head, sh.objBinding(o2).next);
-            if (OK_CONCRETE == sh.objKind(o2)) {
+            if (OK_DLS != sh.objKind(o2)) {
                 // DLS + VAR
                 dlSegGobble(sh, o1, o2, /* backward */ false);
                 return;
@@ -570,10 +589,11 @@ void dlSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf)
             dlSegMerge(sh, o1, o2);
             break;
 
+        case OK_MAY_EXIST:
         case OK_CONCRETE:
             // jump to the next object (as we know such an object exists)
             skipObj(sh, &o2, bf.head, bf.next);
-            if (OK_CONCRETE == sh.objKind(o2)) {
+            if (OK_DLS != sh.objKind(o2)) {
                 // VAR + VAR
                 dlSegCreate(sh, o1, o2, bf);
                 return;
