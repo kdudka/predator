@@ -43,8 +43,6 @@ class SymProc {
     public:
         /**
          * creation of the symbolic heap processor is a really cheap operation
-         * SymHeap and a class providing the write access on top of that.  I
-         * guess it will be not that easy as it sounds.
          * @param heap an instance of SymHeap to operate on
          * @param bt an instance of symbolic backtrace used to distinguish among
          * instances of automatic variables and to print backtraces when

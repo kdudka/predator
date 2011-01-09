@@ -283,6 +283,8 @@ Linux lists
 
     test-0136.c - optimized variant of test-0135
 
+    test-0138.c - test-0135 extended by invalid free (forgot to use list_entry)
+
 
 Show-case
 =========

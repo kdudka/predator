@@ -1,0 +1,15 @@
+test-0138.c: In function 'gl_sort_pass':
+test-0138.c:89:13: warning: unhandled GIMPLE_PREDICT
+test-0138.c:65:13: error: attempt to free a non-root object
+test-0138.c:115:15: note: from call of gl_destroy()
+test-0138.c:105:5: note: from call of main()
+test-0138.c:65:13: error: attempt to free a non-root object
+test-0138.c:115:15: note: from call of gl_destroy()
+test-0138.c:105:5: note: from call of main()
+test-0138.c:65:13: error: attempt to free a non-root object
+test-0138.c:115:15: note: from call of gl_destroy()
+test-0138.c:105:5: note: from call of main()
+test-0138.c:65:13: error: attempt to free a non-root object
+test-0138.c:115:15: note: from call of gl_destroy()
+test-0138.c:105:5: note: from call of main()
+test-0138.c:29:1: warning: killing junk
