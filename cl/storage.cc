@@ -247,6 +247,8 @@ bool TypeDb::insert(const struct cl_type *clt) {
 
     // insert type into db
     db[uid] = clt;
+    types_.push_back(clt);
+
     d->digPtrSizeof(clt);
     return true;
 }

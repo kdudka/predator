@@ -159,6 +159,13 @@ class VarDb {
  * @todo Check if there is a front-end which really needs types to be cloned.
  */
 class TypeDb {
+    private:
+        typedef STD_VECTOR(const struct cl_type *) TList;
+
+    public:
+        typedef TList::const_iterator const_iterator;
+        typedef const_iterator iterator;
+
     public:
         TypeDb();
         ~TypeDb();
@@ -180,6 +187,21 @@ class TypeDb {
         const struct cl_type* operator[](int) const;
 
         /**
+         * return STL-like iterator to go through the container
+         */
+        const_iterator begin() const { return types_.begin(); }
+
+        /**
+         * return STL-like iterator to go through the container
+         */
+        const_iterator end()   const { return types_.end();   }
+
+        /**
+         * return count of object stored in the container
+         */
+        size_t size()          const { return types_.size();  }
+
+        /**
          * value of sizeof(void (*)()) in the analysed program, -1 if such
          * information is not available
          */
@@ -199,6 +221,7 @@ class TypeDb {
         TypeDb& operator=(const TypeDb &);
 
     private:
+        TList types_;
         struct Private;
         Private *d;
 };

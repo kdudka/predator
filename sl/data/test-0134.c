@@ -99,6 +99,7 @@ static void gl_sort()
     while ((max_pos = gl_seek_max()))
         list_move(max_pos, &dst);
 
+    // NOTE: list_replace() was introduced in 2.6.18 and does exactly this
     list_add(&gl_list, &dst);
     list_del(&dst);
 }
