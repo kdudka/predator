@@ -879,14 +879,12 @@ public:
 	}
 	
 	TA<T>& uselessFree(TA<T>& dst) const {
-		for (std::set<size_t>::const_iterator i = this->finalStates.begin(); i != this->finalStates.end(); ++i)
-			dst.addFinalState(*i);
 		std::vector<typename trans_cache_type::value_type*> v1(this->transitions.begin(), this->transitions.end()), v2;
 		std::set<size_t> states;
 		bool changed = true;
 		while (changed) {
 			changed = false;
-			for (typename vector<typename trans_cache_type::value_type*>::const_iterator i = v1.begin(); i != v1.end(); ++i) {
+			for (typename std::vector<typename trans_cache_type::value_type*>::const_iterator i = v1.begin(); i != v1.end(); ++i) {
 				bool matches = true;
 				for (std::vector<size_t>::const_iterator j = (*i)->first._lhs->first.begin(); j != (*i)->first._lhs->first.end(); ++j) {
 					if (!states.count(*j)) {
@@ -905,11 +903,9 @@ public:
 			v1.clear();
 			std::swap(v1, v2);
 		}
-		for (std::set<size_t>::iterator i = dst.finalStates.begin(), j; i != dst.finalStates.end(); ) {
-			if (!states.count(*i)) {
-				j = i++;
-				dst.finalStates.erase(*j);
-			} else ++i;
+		for (std::set<size_t>::iterator i = this->finalStates.begin(); i != this->finalStates.end(); ++i) {
+			if (states.count(*i))
+				dst.finalStates.insert(*i);
 		}
 		return dst;
 	}
@@ -925,7 +921,59 @@ public:
 			for (typename std::vector<typename trans_cache_type::value_type*>::const_iterator i = v1.begin(); i != v1.end(); ++i) {
 				if (states.count((*i)->first._rhs)) {
 					dst.addTransition(*i);
-					for (vector<size_t>::const_iterator j = (*i)->first._lhs->first.begin(); j != (*i)->first._lhs->first.end(); ++j) {
+					for (std::vector<size_t>::const_iterator j = (*i)->first._lhs->first.begin(); j != (*i)->first._lhs->first.end(); ++j) {
+						if (states.insert(*j).second)
+							changed = true;
+					}
+				} else {
+					v2.push_back(*i);
+				}
+			}
+			v1.clear();
+			std::swap(v1, v2);
+		}
+		return dst;
+	}
+
+	TA<T>& uselessAndUnreachableFree(TA<T>& dst) const {
+		std::vector<typename trans_cache_type::value_type*> v1(this->transitions.begin(), this->transitions.end()), v2, v3;
+		std::set<size_t> states;
+		bool changed = true;
+		while (changed) {
+			changed = false;
+			for (typename std::vector<typename trans_cache_type::value_type*>::const_iterator i = v1.begin(); i != v1.end(); ++i) {
+				bool matches = true;
+				for (std::vector<size_t>::const_iterator j = (*i)->first._lhs->first.begin(); j != (*i)->first._lhs->first.end(); ++j) {
+					if (!states.count(*j)) {
+						matches = false;
+						break;
+					}
+				}
+				if (matches) {
+					if (states.insert((*i)->first._rhs).second)
+						changed = true;
+					v3.push_back(*i);
+				} else {
+					v2.push_back(*i);
+				}
+			}
+			v1.clear();
+			std::swap(v1, v2);
+		}
+		for (std::set<size_t>::iterator i = this->finalStates.begin(); i != this->finalStates.end(); ++i) {
+			if (states.count(*i))
+				dst.finalStates.insert(*i);
+		}
+		std::swap(v1, v3);
+		v2.clear();
+		states = std::set<size_t>(dst.finalStates.begin(), dst.finalStates.end());
+		changed = true;
+		while (changed) {
+			changed = false;
+			for (typename std::vector<typename trans_cache_type::value_type*>::const_iterator i = v1.begin(); i != v1.end(); ++i) {
+				if (states.count((*i)->first._rhs)) {
+					dst.addTransition(*i);
+					for (std::vector<size_t>::const_iterator j = (*i)->first._lhs->first.begin(); j != (*i)->first._lhs->first.end(); ++j) {
 						if (states.insert(*j).second)
 							changed = true;
 					}

@@ -245,26 +245,20 @@ protected:
 		FAE::NormInfo normInfo;
 		fae.getNearbyReferences(fae.varGet(ABP_INDEX).d_ref.root, tmp);
 
+		fae.normalize(normInfo, tmp);
+
 		if (target->entryPoint) {
 			CL_CDEBUG(std::endl << fae);
-			while (Engine::foldStructures(fae, tmp)) {
+			std::set<size_t> tmp2;
+			tmp2.insert(0);
+			while (Engine::foldStructures(fae, tmp2)) {
 //				CL_CDEBUG(std::endl << fae);
-				fae.normalize(normInfo, tmp);
 				normInfo.clear();
+				fae.normalize(normInfo, tmp);
 				tmp.clear();
 				fae.getNearbyReferences(fae.varGet(ABP_INDEX).d_ref.root, tmp);
 			}
-//			{
-//				CL_CDEBUG(std::endl << fae);
-//				normInfo.clear();
-//				tmp.clear();
-//				fae.getNearbyReferences(fae.varGet(ABP_INDEX).d_ref.root, tmp);
-//				fae.normalize(normInfo, tmp);
-//				CL_CDEBUG(std::endl << fae);
-//			}
 		}
-
-		fae.normalize(normInfo, tmp);
 
 		FAE normalized(fae);
 
@@ -315,7 +309,19 @@ protected:
 				throw ProgramError("allocated block's size mismatch");
 			vector<SelData> sels;
 			NodeBuilder::buildNode(sels, dst.type->items[0].type);
-			dst.writeData(fae, Data::createRef(fae.nodeCreate(sels, this->boxMan.getInfo(dst.type->items[0].type->name))), rev);
+			dst.writeData(
+				fae,
+				Data::createRef(
+					fae.nodeCreate(
+						sels,
+						this->boxMan.getInfo(
+							dst.type->items[0].type->name,
+							(void*)dst.type->items[0].type
+						)
+					)
+				),
+				rev
+			);
 		} else {
 			assert(*(src.type) == *(dst.type));
 			vector<size_t> offs;
@@ -578,6 +584,8 @@ protected:
 
 		} catch (const ProgramError& e) {
 
+//			throw;
+
 			CL_CDEBUG(e.what());
 
 			TraceRecorder::Item* item = this->revRun(*fae);
@@ -691,7 +699,8 @@ protected:
 public:
 
 	Engine(const CodeStorage::Storage& stor)
-		: stor(stor), taMan(this->taBackend), boxMan(this->taMan, this->labMan) {}
+		: stor(stor), taMan(this->taBackend), boxMan(this->taMan, this->labMan) {
+	}
 
 	~Engine() {
 		utils::eraseMap(this->stateStore);

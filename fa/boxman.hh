@@ -87,17 +87,21 @@ public:
 
 protected:
 
-	TA<label_type>& translateRoot(TA<label_type>& dst, const TA<std::string>& src, const boost::unordered_map<std::string, std::string>& database) {
+	TA<label_type>& translateRoot(TA<label_type>& dst, bool& composed, const TA<std::string>& src, const boost::unordered_map<std::string, std::string>& database) {
 		dst.clear();
 		for (TA<std::string>::iterator i = src.begin(); i != src.end(); ++i) {
 			std::vector<std::string> strs;
 			boost::split(strs, i->label(), boost::is_from_range(',', ','));
 			std::vector<const AbstractBox*> label;
-			for (vector<std::string>::iterator j = strs.begin(); j != strs.end(); ++j)
-				label.push_back(this->loadBox(*j, database));
-//			std::vector<size_t> lhs(i->lhs());
-//			FA::reorderBoxes(label, lhs);
-			dst.addTransition(i->lhs(), &this->labMan.lookup(label), i->rhs());
+			for (vector<std::string>::iterator j = strs.begin(); j != strs.end(); ++j) {
+				const AbstractBox* box = this->loadBox(*j, database);
+				if (box->isType(box_type_e::bBox))
+					composed = true;
+				label.push_back(box);
+			}
+			std::vector<size_t> lhs(i->lhs());
+			FA::reorderBoxes(label, lhs);
+			dst.addTransition(lhs, &this->labMan.lookup(label), i->rhs());
 		}
 		dst.addFinalState(src.getFinalState());
 		return dst;
@@ -141,18 +145,21 @@ public:
 
 		TA<label_type> tmp(this->taMan.getBackend());
 
+		bool composed = false;
+
 //		box.variables.push_back(Data::createRef(box.roots.size(), 0));
-		this->translateRoot(tmp, sta, database);
+		this->translateRoot(tmp, composed, sta, database);
 		box->roots.push_back(this->taMan.clone(&tmp));
 
 		while (reader.readNext(sta, autName)) {
 			tmp.clear();
-			this->translateRoot(tmp, sta, database);
+			this->translateRoot(tmp, composed, sta, database);
 			box->roots.push_back(this->taMan.clone(&tmp));
 //			if (memcmp(autName.c_str(), "in", 2) == 0)
 //				box.variables.push_back(Data::createRef(box.roots.size(), 0));
 		}
 
+		box->composed = composed;
 		box->initialize();
 
 		return box;

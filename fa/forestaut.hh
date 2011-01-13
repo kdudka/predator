@@ -76,6 +76,16 @@ protected:
 	std::vector<TA<label_type>*> roots;
 	std::vector<std::vector<size_t> > rootMap;
 
+	template <class F>
+	static void iterateLabel(const TT<label_type>& t, F f) {
+		std::vector<size_t>::const_iterator lhsi = t.lhs().begin();
+		for (std::vector<const AbstractBox*>::const_iterator i = t.label().dataB->begin(); i != t.label().dataB->end(); ++i) {
+			if (!f(*i, lhsi))
+				break;
+			lhsi += (*i)->getArity();
+		}
+	}
+
 	static bool isData(size_t state) {
 		return _MSB_TEST(state);
 	}
@@ -171,6 +181,10 @@ protected:
 		boost::unordered_map<size_t, std::vector<size_t> > o;
 		FA::computeDownwardO(*this->roots[root], o);
 		this->rootMap[root] = o[this->roots[root]->getFinalState()];
+	}
+
+	bool hasReference(size_t root, size_t target) const {
+		return std::find(this->rootMap[root].begin(), this->rootMap[root].end(), target) != this->rootMap[root].end();
 	}
 
 	void releaseRoots() {

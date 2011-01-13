@@ -70,6 +70,10 @@ struct BoxDb {
 		std::ifstream input((root + "/" + fileName).c_str());
 		std::string buf;
 		while (std::getline(input, buf)) {
+			if (buf.empty())
+				continue;
+			if (buf[0] == '#')
+				continue;
 			std::vector<std::string> data;
 			boost::split(data, buf, boost::is_from_range(':', ':'));
 			if (data.size() == 2)

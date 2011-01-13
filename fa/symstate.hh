@@ -101,12 +101,16 @@ struct SymState {
 	void prepareOperand(std::vector<FAE*>& dst, const vector<FAE*>& src, const cl_operand& op) {
 		std::vector<size_t> offs;
 		NodeBuilder::buildNode(offs, op.type);
+		std::vector<size_t> offs2(offs.size());
 		OperandInfo oi;
 		for (std::vector<FAE*>::const_iterator i = src.begin(); i != src.end(); ++i) {
 			this->ctx->parseOperand(oi, **i, &op);
-			if (oi.flag == o_flag_e::ref)
-				(*i)->isolateAtRoot(dst, oi.data.d_ref.root, FAE::IsolateSetF(offs, oi.data.d_ref.displ));
-			else
+			if (oi.flag == o_flag_e::ref) {
+				for (size_t j = 0; j < offs.size(); ++j)
+					offs2[j] = offs[j] + oi.data.d_ref.displ;
+				(*i)->isolateSet(dst, oi.data.d_ref.root, offs2);
+				assert(dst.size());
+			} else
 				dst.push_back(new FAE(**i));
 		}
 	}
@@ -147,7 +151,11 @@ struct SymState {
 				this->enqueue(queue, tmp2);
 				continue;
 			}
-			fae.isolateAtRoot(tmp2, data.d_ref.root, FAE::IsolateAllF());
+			const TypeBox* typeBox = fae.getType(data.d_ref.root);
+			std::vector<size_t> v;
+			NodeBuilder::buildNode(v, (cl_type*)typeBox->getTypeInfo());
+			fae.isolateSet(tmp2, data.d_ref.root, v);
+			assert(tmp2.size());
 			this->enqueue(queue, tmp2);
 		}
 	}

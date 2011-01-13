@@ -209,6 +209,34 @@ protected:
 		return dst;
 	}
 
+	struct MergeF {
+
+		const Box* m;
+		std::vector<size_t>& lhs;
+		std::vector<const AbstractBox*>& label;
+		bool found;
+
+		MergeF(const Box* m, std::vector<size_t>& lhs, std::vector<const AbstractBox*>& label)
+			: m(m), lhs(lhs), label(label), found(false) {}
+
+		bool operator()(const AbstractBox* box, std::vector<size_t>::const_iterator lhsi) {
+			if (!box->isStructural()) {
+				this->label.push_back(box);
+				return true;
+			}
+			StructuralBox* sb = (StructuralBox*)box;
+			if (sb != m) {
+				// this box is not interesting
+				for (size_t k = 0; k < sb->getArity(); ++k, ++lhsi)
+					lhs.push_back(*lhsi);
+				label.push_back(box);
+				return true;
+			}
+			assert(!this->found);
+			this->found = true;
+		}
+	};
+
 	void boxMerge(TA<label_type>& dst, const TA<label_type>& src, const TA<label_type>& boxRoot, const Box* box, const std::vector<size_t>& rootIndex) {
 		TA<label_type> tmp(this->taMan->getBackend()), tmp2(this->taMan->getBackend());
 		this->adjustLeaves(tmp2, boxRoot);
@@ -236,9 +264,8 @@ protected:
 							lhs.push_back(i->lhs()[lhsOffset]);
 						label.push_back(b);
 						continue;
-					} else {
-						lhsOffset += box->getArity();
 					}
+					lhsOffset += box->getArity();
 					assert(!found);
 					found = true;
 				}
@@ -266,8 +293,10 @@ protected:
 		RootSentry(FAE& fae) : fae(fae), expectedRoots(fae.roots.size()) {}
 
 		~RootSentry() {
-			while (this->fae.roots.size() > this->expectedRoots)
-				this->fae.taMan->release(this->fae.roots.back());
+			if (this->expectedRoots == this->fae.roots.size())
+				return;
+			for (size_t i = this->expectedRoots; i < this->fae.roots.size(); ++i)
+				this->fae.taMan->release(this->fae.roots[i]);
 			this->fae.roots.resize(this->expectedRoots);
 			this->fae.rootMap.resize(this->expectedRoots);
 		}
@@ -293,6 +322,8 @@ protected:
 		match_result_e operator()(const TT<label_type>& t1, const TT<label_type>& t2) {
 			size_t ref1, ref2;
 			if (!FAE::getRef(t1.label().head(), ref1)) {
+				if (!t1.label().head()->isStructural())
+					return match_result_e::mFail;
 				if (FAE::getRef(t2.label().head(), ref2)) {
 					assert(ref2 < this->index.size());
 					if ((this->index[ref2] != (size_t)(-1)) && (this->index[ref2] != ref1))
@@ -406,16 +437,17 @@ public:
 			assert(bSig[i] < index.size());
 			index[bSig[i]] = sig[i];
 		}
-		TA<label_type>* ta = this->taMan->alloc();
-		this->boxMerge(*ta, *this->roots[root], *box->getRoot(0), box, index);
-		this->updateRoot(this->roots[root], ta);
+		TA<label_type> ta(this->taMan->getBackend());
+//		TA<label_type>* ta = this->taMan->alloc();
+		this->boxMerge(ta, *this->roots[root], *box->getRoot(0), box, index);
+		this->updateRoot(this->roots[root], &ta.unreachableFree(*this->taMan->alloc()));
 		this->updateRootMap(root);
 		for (size_t i = 0; i < box->getArity(); ++i) {
 			TA<label_type> tmp(this->taMan->getBackend());
 			this->roots[index[i + 1]]->unfoldAtRoot(tmp, this->freshState());
-			ta = this->taMan->alloc();
-			this->boxMerge(*ta, tmp, *box->getRoot(i + 1), NULL, index);
-			this->updateRoot(this->roots[index[i + 1]], ta);
+			ta.clear();
+			this->boxMerge(ta, tmp, *box->getRoot(i + 1), NULL, index);
+			this->updateRoot(this->roots[index[i + 1]], &ta.unreachableFree(*this->taMan->alloc()));
 			this->updateRootMap(index[i + 1]);
 		}
 	}
@@ -443,22 +475,6 @@ public:
 			assert(sig[i] < index.size());
 			cSig[i] = index[sig[i]];
 		}
-/*
-		o_map_type o;
-		FAE::computeDownwardO(cTmp, o);
-		const std::vector<size_t>& sig = box->getO(0);
-		std::vector<size_t> cSig = o[cTmp.getFinalState()];
-		if (sig.size() != cSig.size())
-			return false;
-*/
-/*
-		// compute index
-		index[0] = root;
-		for (size_t i = 0; i < sig.size(); ++i) {
-			assert(sig[i] < index.size());
-			index[sig[i]] = cSig[i];
-		}
-*/
 
 		o_map_type o;
 
@@ -527,8 +543,10 @@ public:
 		this->updateRootMap(root);
 		
 		for (size_t i = 0; i < cSig.size(); ++i) {
-			if (cSig[i] == root)
-				continue;
+			if (cSig[i] == root) {
+				bool b = this->boxCut(iTmp[i].first, iTmp[i].second, *this->roots[cSig[i]], box->getTrigger(sig[i]));
+				assert(b);
+			}
 			this->updateRoot(this->roots[cSig[i]], this->taMan->clone(&iTmp[i].first));
 			this->updateRootMap(cSig[i]);
 		}
@@ -664,13 +682,7 @@ protected:
 		FAE::removeMultOcc(res);
 		std::swap(dst, res);
 	}
-/*
-	static void updateRoot(TA<label_type>*& root, TA<label_type>::Manager& manager, TA<label_type>* newRoot) {
-		if (root)
-			manager.release(root);
-		root = newRoot;
-	}
-*/
+
 	TA<label_type>& relabelReferences(TA<label_type>& dst, const TA<label_type>& src, const vector<size_t>& index) {
 		dst.addFinalState(src.getFinalState());
 		for (TA<label_type>::iterator i = src.begin(); i != src.end(); ++i) {
@@ -1296,6 +1308,191 @@ public:
 		}
 	}
 
+	struct TypeSearchF {
+
+		const TypeBox*& typeBox;
+
+		TypeSearchF(const TypeBox*& typeBox)
+			: typeBox(typeBox) {}
+
+		bool operator()(const AbstractBox* abox, std::vector<size_t>::const_iterator) {
+			if (!abox->isType(box_type_e::bTypeInfo))
+				return true;
+			this->typeBox = (const TypeBox*)abox;
+			return false;
+		}
+
+	};
+
+	// enumerates downwards selectors
+	const TypeBox* getType(size_t target) const {
+		assert(target < this->roots.size());
+		assert(this->roots[target]);
+
+		const TypeBox* typeBox = NULL;
+		FA::iterateLabel(*this->roots[target]->accBegin(), TypeSearchF(typeBox));
+		if (!typeBox)
+			throw std::runtime_error("FAE::getType(): type box not found!");
+		return typeBox;
+	}
+
+	struct RootEnumF {
+
+		size_t target;
+		std::set<size_t>& selectors;
+
+		RootEnumF(size_t target, std::set<size_t>& selectors)
+			: target(target), selectors(selectors) {}
+
+		bool operator()(const AbstractBox* abox, std::vector<size_t>::const_iterator) {
+			if (!abox->isStructural())
+				return true;
+			const StructuralBox* box = (const StructuralBox*)abox;
+			this->selectors.insert(box->outputCoverage().begin(), box->outputCoverage().end());
+			return true;
+		}
+
+	};
+
+	// enumerates downwards selectors
+	void enumerateSelectorsAtRoot(std::set<size_t>& selectors, size_t target) const {
+		assert(target < this->roots.size());
+		assert(this->roots[target]);
+
+		FA::iterateLabel(*this->roots[target]->accBegin(), RootEnumF(target, selectors));		
+	}
+
+	struct LeafEnumF {
+
+		const FAE& fae;
+		size_t target;
+		std::set<size_t>& selectors;
+
+		LeafEnumF(const FAE& fae, size_t target, std::set<size_t>& selectors)
+			: fae(fae), target(target), selectors(selectors) {}
+
+		bool operator()(const AbstractBox* abox, std::vector<size_t>::const_iterator lhsi) {
+			if (!abox->isType(box_type_e::bBox))
+				return true;
+			const Box* box = (const Box*)abox;
+			for (size_t k = 0; k < box->getArity(); ++k, ++lhsi) {
+				size_t ref;
+				if (fae.getRef(*lhsi, ref) && ref == this->target)
+					this->selectors.insert(box->inputCoverage(k).begin(), box->inputCoverage(k).end());
+			}
+			return true;
+		}
+
+	};
+
+	// enumerates upwards selectors
+	void enumerateSelectorsAtLeaf(std::set<size_t>& selectors, size_t root, size_t target) const {
+		assert(root < this->roots.size());
+		assert(this->roots[root]);
+
+		for (TA<label_type>::iterator i = this->roots[root]->begin(); i != this->roots[root]->end(); ++i)
+			FA::iterateLabel(*i, LeafEnumF(*this, target, selectors));
+	}
+
+	struct LeafScanF {
+
+		const FAE& fae;
+		size_t selector;
+		size_t target;
+		const Box*& matched;
+
+		LeafScanF(const FAE& fae, size_t selector, size_t target, const Box*& matched)
+			: fae(fae), selector(selector), target(target), matched(matched) {}
+
+		bool operator()(const AbstractBox* abox, std::vector<size_t>::const_iterator lhsi) {
+			if (!abox->isType(box_type_e::bBox))
+				return true;
+			const Box* box = (const Box*)abox;
+			for (size_t k = 0; k < box->getArity(); ++k, ++lhsi) {
+				size_t ref;
+				if (fae.getRef(*lhsi, ref) && ref == this->target && box->inputCovers(k, this->selector)) {
+					this->matched = box;
+					return false;
+				}
+			}
+			return true;
+		}
+
+	};
+
+	// adds redundant root points to allow further manipulation
+	void isolateAtLeaf(std::vector<FAE*>& dst, size_t root, size_t target, size_t selector) const {
+		assert(root < this->roots.size());
+		assert(this->roots[root]);
+
+		std::vector<std::pair<const TT<label_type>*, const Box*> > v;
+
+		TA<label_type> ta(this->taMan->getBackend());
+
+		const Box* matched;
+		for (TA<label_type>::iterator i = this->roots[root]->begin(); i != this->roots[root]->end(); ++i) {
+			matched = NULL;
+			FA::iterateLabel(*i, LeafScanF(*this, selector, target, matched));
+			if (matched) {
+				v.push_back(std::make_pair(&*i, matched));
+			} else {
+				ta.addTransition(*i);
+			}
+		}
+
+		assert(v.size());
+
+		for (std::vector<std::pair<const TT<label_type>*, const Box*> >::iterator i = v.begin(); i != v.end(); ++i) {
+			FAE fae(*this);
+			TA<label_type> ta2(fae.taMan->getBackend());
+			if (i->first->rhs() == this->roots[root]->getFinalState()) {
+				ta.copyTransitions(ta2);
+				size_t state = fae.freshState();
+				ta2.addFinalState(state);
+				const TT<label_type>& t = ta2.addTransition(i->first->lhs(), i->first->label(), state)->first;
+				fae.updateRoot(fae.roots[root], &ta2.uselessAndUnreachableFree(*fae.taMan->alloc()));
+				fae.updateRootMap(root);
+				std::set<const Box*> boxes;
+				fae.isolateAtRoot(root, t, IsolateBoxF(i->second), boxes);
+				fae.unfoldBox(root, i->second);
+				if (!i->second->isComposed())
+					dst.push_back(new FAE(fae));
+				else
+					fae.isolateOne(dst, root, selector);
+				continue;
+			}
+			ta2.addFinalState(this->roots[root]->getFinalState());
+			for (TA<label_type>::iterator j = ta.begin(); j != ta.end(); ++j) {
+				ta2.addTransition(*j);
+				std::vector<size_t> lhs = j->lhs();
+				for (std::vector<size_t>::iterator k = lhs.begin(); k != lhs.end(); ++k) {
+					if (*k == i->first->rhs()) {
+						*k = fae.addData(ta2, Data::createRef(fae.roots.size()));
+						ta2.addTransition(lhs, j->label(), j->rhs());
+						*k = i->first->rhs();
+					}
+				}
+			}
+			fae.updateRoot(fae.roots[root], &ta2.uselessAndUnreachableFree(*fae.taMan->alloc()));
+			fae.updateRootMap(root);
+			ta2.clear();
+			size_t state = fae.freshState();
+			ta2.addFinalState(state);
+			const TT<label_type>& t = ta2.addTransition(i->first->lhs(), i->first->label(), state)->first;
+			ta.copyTransitions(ta2);
+			fae.roots.push_back(&ta2.uselessAndUnreachableFree(*fae.taMan->alloc()));
+			fae.rootMap.push_back(std::vector<size_t>());
+			std::set<const Box*> boxes;
+			fae.isolateAtRoot(fae.roots.size() - 1, t, IsolateBoxF(i->second), boxes);
+			fae.unfoldBox(fae.roots.size() - 1, i->second);
+			if (!i->second->isComposed())
+				dst.push_back(new FAE(fae));
+			else
+				fae.isolateOne(dst, root, selector);
+		}
+
+	}
+
 	struct IsolateOneF {
 		size_t offset;
 
@@ -1303,6 +1500,16 @@ public:
 
 		bool operator()(const StructuralBox* box) const {
 			return box->outputCovers(this->offset);
+		}
+	};
+
+	struct IsolateBoxF {
+		const Box* box;
+
+		IsolateBoxF(const Box* box) : box(box) {}
+
+		bool operator()(const StructuralBox* box) const {
+			return this->box == box;
 		}
 	};
 
@@ -1327,68 +1534,208 @@ public:
 
 	// adds redundant root points to allow further manipulation
 	template <class F>
+	void isolateAtRoot(size_t root, const TT<label_type>& t, F f, std::set<const Box*>& boxes) {
+		assert(root < this->roots.size());
+		assert(this->roots[root]);
+		size_t newState = this->freshState();
+		TA<label_type> ta(*this->roots[root], false);
+		ta.addFinalState(newState);
+		std::vector<size_t> lhs;
+		size_t lhsOffset = 0;
+		for (std::vector<const AbstractBox*>::const_iterator j = t.label().dataB->begin(); j != t.label().dataB->end(); ++j) {
+			if (!(*j)->isStructural())
+				continue;
+			StructuralBox* b = (StructuralBox*)(*j);
+			if (!f(b)) {
+				// this box is not interesting
+				for (size_t k = 0; k < (*j)->getArity(); ++k, ++lhsOffset)
+					lhs.push_back(t.lhs()[lhsOffset]);
+				continue;
+			}
+			// we have to isolate here
+			for (size_t k = 0; k < (*j)->getArity(); ++k, ++lhsOffset) {
+				if (FA::isData(t.lhs()[lhsOffset])) {
+					// no need to create a leaf when it's already there
+					lhs.push_back(t.lhs()[lhsOffset]);
+					continue;
+				}
+				// update new left-hand side
+				lhs.push_back(this->addData(ta, Data::createRef(this->roots.size())));
+				// prepare new root
+				TA<label_type> tmp(*this->roots[root], false);
+				tmp.addFinalState(t.lhs()[lhsOffset]);
+				TA<label_type>* tmp2 = this->taMan->alloc();
+				tmp.unreachableFree(*tmp2);
+				// update 'o'
+				this->roots.push_back(tmp2);
+				this->rootMap.push_back(std::vector<size_t>());
+				this->updateRootMap(this->roots.size() - 1);
+			}
+			if (b->isType(box_type_e::bBox))
+				boxes.insert((const Box*)*j);
+		}
+		ta.addTransition(lhs, t.label(), newState);
+		TA<label_type>* tmp = this->taMan->alloc();
+		ta.unreachableFree(*tmp);
+		// exchange the original automaton with the new one
+		this->updateRoot(this->roots[root], tmp);
+		this->updateRootMap(root);
+	}
+
+	// adds redundant root points to allow further manipulation
+	template <class F>
 	void isolateAtRoot(std::vector<FAE*>& dst, size_t root, F f) const {
 		assert(root < this->roots.size());
 		assert(this->roots[root]);
 		for (TA<label_type>::iterator i = this->roots[root]->accBegin(); i != this->roots[root]->accEnd(i); ++i) {
 			FAE fae(*this);
-//			TA<label_type> ta(*fae.taMan);
-			size_t newState = fae.freshState();
-//			fae.roots[root]->unfoldAtRoot(ta, newState);
-			TA<label_type> ta(*fae.roots[root], false);
-			ta.addFinalState(newState);
-			vector<size_t> lhs;
-			size_t lhsOffset = 0;
 			std::set<const Box*> boxes;
-			for (std::vector<const AbstractBox*>::const_iterator j = i->label().dataB->begin(); j != i->label().dataB->end(); ++j) {
-				if (!(*j)->isStructural())
-					continue;
-				StructuralBox* b = (StructuralBox*)(*j);
-				if (!f(b)) {
-					// this box is not interesting
-					for (size_t k = 0; k < (*j)->getArity(); ++k, ++lhsOffset)
-						lhs.push_back(i->lhs()[lhsOffset]);
-					continue;
-				}
-				// we have to isolate here
-				for (size_t k = 0; k < (*j)->getArity(); ++k, ++lhsOffset) {
-					if (FA::isData(i->lhs()[lhsOffset])) {
-						// no need to create a leaf when it's already there
-						lhs.push_back(i->lhs()[lhsOffset]);
-						continue;
-					}
-					// update new left-hand side
-					lhs.push_back(fae.addData(ta, Data::createRef(fae.roots.size())));
-					// prepare new root
-					TA<label_type> tmp(*fae.roots[root], false);
-					tmp.addFinalState(i->lhs()[lhsOffset]);
-					TA<label_type>* tmp2 = fae.taMan->alloc();
-					tmp.unreachableFree(*tmp2);
-					// update 'o'
-					fae.roots.push_back(tmp2);
-					fae.rootMap.push_back(std::vector<size_t>());
-					fae.updateRootMap(fae.roots.size() - 1);
-				}
-				if (b->isType(box_type_e::bBox))
-					boxes.insert((const Box*)*j);
-			}
-			ta.addTransition(lhs, i->label(), newState);
-			TA<label_type>* tmp = fae.taMan->alloc();
-			ta.unreachableFree(*tmp);
-			// exchange the original automaton with the new one
-			fae.updateRoot(fae.roots[root], tmp);
-			fae.updateRootMap(root);
+			fae.isolateAtRoot(root, *i, f, boxes);
 			if (!boxes.empty()) {
-//				std::cerr << fae;
-//				__asm__("int3");
 				fae.decomposeAtRoot(root, boxes);
-//				std::cerr << fae;
-//				__asm__("int3");
+				bool composed;
+				for (std::set<const Box*>::iterator j = boxes.begin(); j != boxes.end(); ++j) {
+					if ((*j)->isComposed()) {
+						composed = true;
+						break;
+					}
+				}
+				if (composed)
+					fae.isolateAtRoot(dst, root, f);
+				else
+					dst.push_back(new FAE(fae));
+			} else {
+				dst.push_back(new FAE(fae));
 			}
-			dst.push_back(new FAE(fae));
 		}
 	}
 
+	void isolateOne(std::vector<FAE*>& dst, size_t target, size_t offset) const {
+		assert(target < this->roots.size());
+		assert(this->roots[target]);
+
+		std::set<size_t> tmp;
+
+		this->enumerateSelectorsAtRoot(tmp, target);
+
+		if (tmp.count(offset)) {
+			this->isolateAtRoot(dst, target, IsolateOneF(offset));
+			return;
+		}
+
+		for (size_t i = 0; i < this->roots.size(); ++i) {
+			tmp.clear();
+			if (std::find(this->rootMap[i].begin(), this->rootMap[i].end(), target) != this->rootMap[i].end()) {
+				this->enumerateSelectorsAtLeaf(tmp, i, target);
+				if (tmp.count(offset)) {
+					this->isolateAtLeaf(dst, i, target, offset);
+					return;
+				}
+					
+			}
+		}
+
+		throw std::runtime_error("FAE::isolateOne(): selector lookup failed!");
+
+	}
+
+	void isolateSet(std::vector<FAE*>& dst, size_t target, const std::vector<size_t>& offsets) const {
+
+		assert(target < this->roots.size());
+		assert(this->roots[target]);
+
+		std::vector<size_t> offsD;
+		std::set<size_t> tmpS, offsU;
+
+		this->enumerateSelectorsAtRoot(tmpS, target);
+
+		for (std::vector<size_t>::const_iterator i = offsets.begin(); i != offsets.end(); ++i) {
+			if (tmpS.count(*i))
+				offsD.push_back(*i);
+			else
+				offsU.insert(*i);
+		}
+
+		if (offsU.empty()) {
+			this->isolateAtRoot(dst, target, IsolateSetF(offsD));
+			return;
+		}
+
+		std::vector<FAE*> tmp, tmp2;
+
+		ContainerGuard<std::vector<FAE*> > g(tmp), f(tmp2);
+
+		this->isolateAtRoot(tmp, target, IsolateSetF(offsD));
+
+		for (std::set<size_t>::iterator i = offsU.begin(); i != offsU.end(); ++i) {
+			for (std::vector<FAE*>::iterator j = tmp.begin(); j != tmp.end(); ++j) {
+				tmpS.clear();			
+				(*j)->enumerateSelectorsAtRoot(tmpS, target);
+				if (tmpS.count(*i))
+					tmp2.push_back(new FAE(**j));
+				else {
+					bool found = false;
+					for (size_t k = 0; k < (*j)->roots.size(); ++k) {
+						if (!(*j)->hasReference(k, target))
+							continue;
+						tmpS.clear();
+						(*j)->enumerateSelectorsAtLeaf(tmpS, k, target);
+						if (tmpS.count(*i)) {
+							(*j)->isolateAtLeaf(tmp2, k, target, *i);
+							found = true;
+							break;
+						}						
+					}
+					if (!found)
+						throw std::runtime_error("FAE::isolateSet(): selector lookup failed!");
+				}
+			}
+			utils::erase(tmp);
+			std::swap(tmp, tmp2);
+		}
+
+		dst.insert(dst.end(), tmp.begin(), tmp.end());
+
+		g.release();
+		f.release();
+
+	}
+/*
+	void isolateAll(std::vector<FAE*>& dst, size_t target) const {
+
+		assert(target < this->roots.size());
+		assert(this->roots[target]);
+
+		std::vector<FAE*> tmp, tmp2;
+
+		ContainerGuard<std::vector<FAE*> > g(tmp), f(tmp2);
+
+		this->isolateAtRoot(tmp, target, IsolateAllF());
+
+		std::set<size_t> offs;
+
+		for (size_t i = 0; i < this->roots.size(); ++i) {
+			if (std::find(this->rootMap[i].begin(), this->rootMap[i].end(), target) != this->rootMap[i].end()) {
+				offs.clear();
+				this->enumerateSelectorsAtLeaf(offs, i, target);
+				if (offs.empty())
+					continue;
+				for (std::set<size_t>::iterator j = offs.begin(); j != offs.end(); ++j) {
+					for (std::vector<FAE*>::iterator k = tmp.begin(); k != tmp.end(); ++k)
+						(*k)->isolateAtLeaf(tmp2, i, target, *j);
+					std::swap(tmp, tmp2);
+					utils::erase(tmp2);
+				}
+			}
+		}
+
+		dst.insert(dst.end(), tmp.begin(), tmp.end());
+
+		g.release();
+		f.release();
+
+	}
+*/
 	static void displToData(const SelData& sel, Data& data) {
 		if (data.isRef())
 			data.d_ref.displ = sel.displ;
@@ -1418,7 +1765,7 @@ public:
 	void transitionLookup(const TT<label_type>& transition, size_t offset, Data& data) const {
 		bool found = false;
 		size_t lhsOffset = 0;
-		for (vector<const AbstractBox*>::const_iterator i = transition.label().dataB->begin(); i != transition.label().dataB->end(); ++i) {
+		for (std::vector<const AbstractBox*>::const_iterator i = transition.label().dataB->begin(); i != transition.label().dataB->end(); ++i) {
 			if (FAE::isSelector(*i, offset)) {
 				assert(!found);
 				found = true;
@@ -1437,7 +1784,7 @@ public:
 	void transitionLookup(const TT<label_type>& transition, size_t base, const std::set<size_t>& offsets, Data& data) const {
 		size_t lhsOffset = 0;
 		data = Data::createStruct();
-		for (vector<const AbstractBox*>::const_iterator i = transition.label().dataB->begin(); i != transition.label().dataB->end(); ++i) {
+		for (std::vector<const AbstractBox*>::const_iterator i = transition.label().dataB->begin(); i != transition.label().dataB->end(); ++i) {
 			if (FAE::isSelector(*i) && offsets.count(FAE::readSelector(*i).offset)) {
 				const Data* tmp;
 				if (!this->isData(transition.lhs()[lhsOffset], tmp))
@@ -1453,7 +1800,7 @@ public:
 
 	void transitionLookup(const TT<label_type>& transition, std::vector<std::pair<SelData, Data> >& nodeInfo) const {
 		size_t lhsOffset = 0;
-		for (vector<const AbstractBox*>::const_iterator i = transition.label().dataB->begin(); i != transition.label().dataB->end(); ++i) {
+		for (std::vector<const AbstractBox*>::const_iterator i = transition.label().dataB->begin(); i != transition.label().dataB->end(); ++i) {
 			assert(FAE::isSelector(*i));
 			const Data* tmp;
 			if (!this->isData(transition.lhs()[lhsOffset], tmp))
@@ -1467,11 +1814,11 @@ public:
 	void transitionModify(TA<label_type>& dst, const TT<label_type>& transition, size_t offset, const Data& in, Data& out) {
 		size_t state = this->freshState();
 		dst.addFinalState(state);
-		vector<size_t> lhs;
-		vector<const AbstractBox*> label;
+		std::vector<size_t> lhs;
+		std::vector<const AbstractBox*> label;
 		size_t lhsOffset = 0;
 		bool found = false;
-		for (vector<const AbstractBox*>::const_iterator i = transition.label().dataB->begin(); i != transition.label().dataB->end(); ++i) {
+		for (std::vector<const AbstractBox*>::const_iterator i = transition.label().dataB->begin(); i != transition.label().dataB->end(); ++i) {
 			if (FAE::isSelector(*i, offset)) {
 				assert(!found);
 				found = true;
@@ -1500,11 +1847,11 @@ public:
 	void transitionModify(TA<label_type>& dst, const TT<label_type>& transition, size_t base, const std::map<size_t, Data>& in, Data& out) {
 		size_t state = this->freshState();
 		dst.addFinalState(state);
-		vector<size_t> lhs;
-		vector<const AbstractBox*> label;
+		std::vector<size_t> lhs;
+		std::vector<const AbstractBox*> label;
 		size_t lhsOffset = 0;
 		out = Data::createStruct();
-		for (vector<const AbstractBox*>::const_iterator i = transition.label().dataB->begin(); i != transition.label().dataB->end(); ++i) {
+		for (std::vector<const AbstractBox*>::const_iterator i = transition.label().dataB->begin(); i != transition.label().dataB->end(); ++i) {
 			if (FAE::isSelector(*i)) {
 				std::map<size_t, Data>::const_iterator j = in.find(FAE::readSelector(*i).offset);
 				if (j != in.end()) {

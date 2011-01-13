@@ -105,6 +105,7 @@ public:
 						case '\n': ++this->lineno; break;
 						case '-': this->val += '-'; state = 1; break;
 						case '<': state = 4; break;
+						case '#': state = 5; break;
 						default:
 							
 							if (isalpha(c) || c == '_') {
@@ -162,6 +163,13 @@ public:
 					this->val += c;
 					break;
 
+				case 5:
+
+					if (c == '\n') {
+						++this->lineno;
+						state = 0;
+					}
+					break;
 			}
 
 		}

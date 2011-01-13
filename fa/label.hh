@@ -48,7 +48,7 @@ struct label_type {
 		assert(this->dataB->size() > 0);
 		return (*this->dataB)[0];
 	}
-		
+
 	bool operator<(const label_type& rhs) const {
 		return this->data < rhs.data;
 	}
