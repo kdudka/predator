@@ -34,6 +34,7 @@
 #include "forestaut.hh"
 #include "forestautext.hh"
 #include "ufae.hh"
+#include "nodebuilder.hh"
 #include "operandinfo.hh"
 #include "symctx.hh"
 #include "symstate.hh"
@@ -312,13 +313,7 @@ protected:
 			dst.writeData(
 				fae,
 				Data::createRef(
-					fae.nodeCreate(
-						sels,
-						this->boxMan.getInfo(
-							dst.type->items[0].type->name,
-							(void*)dst.type->items[0].type
-						)
-					)
+					fae.nodeCreate(sels, this->boxMan.getTypeInfo(dst.type->items[0].type->name))
 				),
 				rev
 			);
@@ -696,10 +691,25 @@ protected:
 
 	}
 
+	void loadTypes() {
+
+	    CL_CDEBUG("loading types ...");
+
+		for (CodeStorage::TypeDb::iterator i = this->stor.types.begin(); i != this->stor.types.end(); ++i) {
+			if ((*i)->code != cl_type_e::CL_TYPE_STRUCT)
+				continue;
+			std::vector<size_t> v;
+			NodeBuilder::buildNode(v, *i);
+			this->boxMan.createTypeInfo((*i)->name, v);
+		}
+
+	}
+
 public:
 
 	Engine(const CodeStorage::Storage& stor)
 		: stor(stor), taMan(this->taBackend), boxMan(this->taMan, this->labMan) {
+		this->loadTypes();
 	}
 
 	~Engine() {

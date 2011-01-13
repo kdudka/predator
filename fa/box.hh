@@ -34,24 +34,26 @@
 class TypeBox : public AbstractBox {
 	
 	std::string name;
-
-	void* typeInfo;
+	std::vector<size_t> selectors;
 
 public:
 
-	TypeBox(const std::string& name, void* typeInfo)
-		: AbstractBox(box_type_e::bTypeInfo), name(name), typeInfo(typeInfo) {}
+	TypeBox(const std::string& name, const std::vector<size_t>& selectors)
+		: AbstractBox(box_type_e::bTypeInfo), name(name), selectors(selectors) {}
 
 	const std::string& getName() const {
 		return this->name;
 	}
 
-	void* getTypeInfo() const {
-		return this->typeInfo;
+	const std::vector<size_t>& getSelectors() const {
+		return this->selectors;
 	}
 
 	virtual void toStream(std::ostream& os) const {
-		os << this->name;
+		os << this->name << '{';
+		for (std::vector<size_t>::const_iterator i = this->selectors.begin(); i != this->selectors.end(); ++i)
+			os << *i << ';';
+		os << '}';
 	}
 
 };
@@ -224,12 +226,7 @@ public:
 		assert((index + 1) < this->selCoverage.size());
 		return this->selCoverage[index + 1];
 	}
-/*
-	const std::set<size_t>& getSelCoverage(size_t x = 0) const {
-		assert(x < this->selCoverage.size());
-		return this->selCoverage[x].second;
-	}
-*/
+
 	void computeCoverage() {
 		for (std::vector<TA<label_type>*>::iterator i = this->roots.begin(); i != this->roots.end(); ++i) {
 			std::vector<size_t> v;

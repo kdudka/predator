@@ -152,9 +152,7 @@ struct SymState {
 				continue;
 			}
 			const TypeBox* typeBox = fae.getType(data.d_ref.root);
-			std::vector<size_t> v;
-			NodeBuilder::buildNode(v, (cl_type*)typeBox->getTypeInfo());
-			fae.isolateSet(tmp2, data.d_ref.root, v);
+			fae.isolateSet(tmp2, data.d_ref.root, typeBox->getSelectors());
 			assert(tmp2.size());
 			this->enqueue(queue, tmp2);
 		}

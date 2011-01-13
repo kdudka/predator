@@ -47,6 +47,10 @@ public:
 		return (this->type == bBox) || (this->type == bSel);
 	}
 
+	bool isData() const {
+		return this->type == bData;
+	}
+
 	virtual size_t getArity() const {
 		return 0;
 	}

@@ -287,22 +287,26 @@ protected:
 
 	struct RootSentry {
 		
-		FAE& fae;
+		FAE* fae;
 		size_t expectedRoots;
+		size_t stateOffset;
 
-		RootSentry(FAE& fae) : fae(fae), expectedRoots(fae.roots.size()) {}
+		RootSentry(FAE& fae) : fae(&fae), expectedRoots(fae.roots.size()), stateOffset(fae.nextState()) {}
 
 		~RootSentry() {
-			if (this->expectedRoots == this->fae.roots.size())
+			if (!this->fae)
 				return;
-			for (size_t i = this->expectedRoots; i < this->fae.roots.size(); ++i)
-				this->fae.taMan->release(this->fae.roots[i]);
-			this->fae.roots.resize(this->expectedRoots);
-			this->fae.rootMap.resize(this->expectedRoots);
+			if (this->expectedRoots == this->fae->roots.size())
+				return;
+			for (size_t i = this->expectedRoots; i < this->fae->roots.size(); ++i)
+				this->fae->taMan->release(this->fae->roots[i]);
+			this->fae->roots.resize(this->expectedRoots);
+			this->fae->rootMap.resize(this->expectedRoots);
+			this->fae->setStateOffset(this->stateOffset);
 		}
 
-		void adjust() {
-			this->expectedRoots = this->fae.roots.size();
+		void release() {
+			this->fae = NULL;
 		}
 
 	};
@@ -322,9 +326,9 @@ protected:
 		match_result_e operator()(const TT<label_type>& t1, const TT<label_type>& t2) {
 			size_t ref1, ref2;
 			if (!FAE::getRef(t1.label().head(), ref1)) {
-				if (!t1.label().head()->isStructural())
-					return match_result_e::mFail;
-				if (FAE::getRef(t2.label().head(), ref2)) {
+//				if (t1.label().head()->isData())
+//					return match_result_e::mFail;
+				if (!t1.label().head()->isData() && FAE::getRef(t2.label().head(), ref2)) {
 					assert(ref2 < this->index.size());
 					if ((this->index[ref2] != (size_t)(-1)) && (this->index[ref2] != ref1))
 						return match_result_e::mFail;
@@ -334,6 +338,7 @@ protected:
 					size_t offset = this->fae.nextState();
 					this->fae.unique(*this->fae.roots.back(), *this->fae.roots[root], stateIndex, false);
 					this->fae.roots.back()->addFinalState(stateIndex[t1.rhs()] + offset);
+					fae.incrementStateOffset(stateIndex.size());
 					this->fae.rootMap.push_back(std::vector<size_t>());
 					this->fae.updateRootMap(this->fae.rootMap.size() - 1);
 					return match_result_e::mSuccess;
@@ -465,6 +470,7 @@ public:
 
 		std::vector<size_t> index(box->getArity() + 1, (size_t)(-1));
 		index[0] = root;
+
 		// match automata
 		if (!TAIsom<label_type, IsomRootF>(cTmp, *box->getRoot(0), IsomRootF(*this, root, index)).run())
 			return false;
@@ -506,7 +512,7 @@ public:
 				return false;
 		}		
 
-		rs.adjust();
+		rs.release();
 
 		// update selector map
 /*		for (size_t i = 0; i < box->getArity(); ++i) {
@@ -600,6 +606,10 @@ protected:
 		this->stateOffset += amount;
 	}
 	
+	void setStateOffset(size_t offset) {
+		this->stateOffset = offset;
+	}
+
 	size_t addData(TA<label_type>& dst, const Data& data) {
 		const DataBox* b = this->boxMan->getData(data);
 		size_t state = _MSB_ADD(b->getId());

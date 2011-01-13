@@ -75,14 +75,21 @@ public:
 		return p.second;
 	}
 
-	const TypeBox* getInfo(const std::string& name, void* info = NULL) {
+	const TypeBox* getTypeInfo(const std::string& name) {
+		boost::unordered_map<std::string, const TypeBox*>::const_iterator i = this->typeIndex.find(name);
+		if (i == this->typeIndex.end())
+			throw std::runtime_error("BoxMan::getTypeInfo(): type not found!");
+		return i->second;
+	}
+
+	const TypeBox* createTypeInfo(const std::string& name, const std::vector<size_t>& selectors) {
 		std::pair<const std::string, const TypeBox*>& p = *this->typeIndex.insert(
 			std::make_pair(name, (const TypeBox*)NULL)
 		).first;
-		if (!p.second)
-			p.second = new TypeBox(name, info);
+		if (p.second)
+			throw std::runtime_error("BoxMan::createTypeInfo(): type already exists!");
+		p.second = new TypeBox(name, selectors);
 		return p.second;
-
 	}
 
 protected:
@@ -119,6 +126,11 @@ public:
 			return this->getSelector(SelData::fromArgs(args));
 		if (args[0] == "data")
 			return this->getData(Data::fromArgs(args));
+		if (args[0] == "type") {
+			if (args.size() != 2)
+				throw std::runtime_error("Incorrect number of arguments in type specification!");
+			return this->getTypeInfo(args[1]);
+		}
 
 		std::pair<boost::unordered_map<std::string, const Box*>::iterator, bool> p =
 			this->boxIndex.insert(std::make_pair(name, (const Box*)NULL));
