@@ -28,26 +28,6 @@
 #include "config.h"
 #include "symutil.hh"
 
-#ifndef BUILDING_DOX
-// exported only for debugging purposes
-bool segMatchSmallList(
-        const SymHeap           &sh,
-        const TObjId            segUp,
-        const TObjId            conUp,
-        const TValueId          segVal,
-        const TValueId          conVal);
-#endif
-
-typedef SymHeap::TContObj TProtoRoots[2];
-
-// experimental, will be documented later eventually
-bool considerGenericPrototype(
-        const SymHeap           &sh,
-        const TObjPair          &roots,
-        const TValueId          v1,
-        const TValueId          v2,
-        TProtoRoots             *protoRoots);
-
 /**
  * Take the given symbolic heap and look for the best possible abstraction in
  * there.  If nothing is found, zero is returned.  Otherwise it returns total

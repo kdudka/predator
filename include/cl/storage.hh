@@ -143,7 +143,7 @@ class VarDb {
         const_iterator end()   const { return vars_.end();   }
 
         /**
-         * return count of object stored in the container
+         * return count of variables stored in the container
          */
         size_t size()          const { return vars_.size();  }
 
@@ -197,7 +197,7 @@ class TypeDb {
         const_iterator end()   const { return types_.end();   }
 
         /**
-         * return count of object stored in the container
+         * return count of types stored in the container
          */
         size_t size()          const { return types_.size();  }
 

@@ -267,6 +267,8 @@ TObjId jumpToNextObj(const SymHeap              &sh,
     return next;
 }
 
+typedef SymHeap::TContObj TProtoRoots[2];
+
 bool matchData(const SymHeap                &sh,
                const SegBindingFields       &bf,
                const TObjId                 o1,
