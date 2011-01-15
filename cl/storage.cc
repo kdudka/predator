@@ -69,8 +69,7 @@ namespace {
     {
         typename TDb::const_iterator iter = db.find(key);
         if (db.end() == iter)
-            // can't insert anything into const object
-            CL_TRAP;
+            CL_BREAK_IF("can't insert anything into const object");
 
         return idxTab[iter->second];
     }
@@ -81,8 +80,6 @@ namespace {
 namespace {
     const struct cl_type* digVarType(const struct cl_operand *op) {
         const struct cl_accessor *ac = op->accessor;
-
-        // FIXME: this hasn't been tested very well for all types of accessors
         return (ac)
             ? ac->type
             : op->type;
@@ -110,26 +107,29 @@ Var::Var(EVar code_, const struct cl_operand *op):
 
     // dig type of variable
     this->clt = digVarType(op);
-    if (!this->clt)
-        CL_TRAP;
+    CL_BREAK_IF(!this->clt);
 
     // check for eventual scope mismatch
     switch (code) {
         case VAR_GL:
-            if (CL_SCOPE_GLOBAL != op->scope
-                    && CL_SCOPE_STATIC != op->scope)
-                CL_TRAP;
+            if (CL_SCOPE_GLOBAL == op->scope || CL_SCOPE_STATIC == op->scope)
+                return;
+
+            // invalid scope
             break;
 
         case VAR_LC:
         case VAR_FNC_ARG:
             if (CL_SCOPE_FUNCTION == op->scope)
-                break;
+                return;
             // fall through!
 
         case VAR_VOID:
-            CL_TRAP;
+            // invalid scope
+            break;
     }
+
+    CL_BREAK_IF("attempt to create invalid CodeStorage::Var object");
 }
 
 bool isOnStack(const Var &var) {
@@ -144,7 +144,7 @@ bool isOnStack(const Var &var) {
             return false;
     }
 
-    CL_TRAP;
+    CL_BREAK_IF("CodeStorage::isOnStack() got invalid CodeStorage::Var object");
     return false;
 }
 
@@ -202,7 +202,7 @@ struct TypeDb::Private {
     {
     }
 
-    void updatePtrSizeof(int size, int *pField);
+    static void updatePtrSizeof(int size, int *pField);
     void digPtrSizeof(const struct cl_type *);
 };
 
@@ -272,16 +272,9 @@ void readTypeTree(TypeDb &db, const struct cl_type *clt) {
     typeStack.push(clt);
     while (!typeStack.empty()) {
         clt = typeStack.top();
-#if 0
-        std::cout << "--- " << clt->uid
-            << "(code = " << clt->code
-            << ", item_cnt = " << clt->item_cnt
-            << ")\n";
-#endif
         typeStack.pop();
         if (db.insert(clt)) {
-            const int max = (CL_TYPE_ARRAY == clt->code) ? 1
-                : clt->item_cnt;
+            const int max = clt->item_cnt;
             const struct cl_type_item *items = clt->items;
             for (int i = 0; i < max; ++i)
                 typeStack.push(items[i].type);
@@ -298,7 +291,7 @@ const struct cl_type* TypeDb::operator[](int uid) const {
                 << uid);
 
         // we'll probably have to crash anyway
-        CL_TRAP;
+        CL_BREAK_IF("invalid call of TypeDb::operator[](int) const");
         return 0;
     }
 
@@ -309,38 +302,29 @@ const struct cl_type* TypeDb::operator[](int uid) const {
 // /////////////////////////////////////////////////////////////////////////////
 // Block implementation
 void Block::append(const Insn *insn) {
+#ifndef NDEBUG
     if (!insns_.empty()) {
         // check insn sequence
         const Insn *last = insns_[insns_.size() - 1];
-        if (cl_is_term_insn(last->code))
-            // invalid insn sequence
-            CL_TRAP;
+        CL_BREAK_IF(cl_is_term_insn(last->code));
     }
-
+#endif
     insns_.push_back(insn);
 }
 
 const Insn* Block::front() const {
-    if (insns_.empty())
-        // no instructions here, sorry
-        CL_TRAP;
-
+    CL_BREAK_IF(insns_.empty());
     return insns_.front();
 }
 
 const Insn* Block::back() const {
-    if (insns_.empty())
-        // no instructions here, sorry
-        CL_TRAP;
-
+    CL_BREAK_IF(insns_.empty());
     return insns_.back();
 }
 
 const TTargetList& Block::targets() const {
     const Insn *last = this->back();
-    if (!cl_is_term_insn(last->code))
-        // no chance to get targets without any terminal insn
-        CL_TRAP;
+    CL_BREAK_IF(!cl_is_term_insn(last->code));
 
     return last->targets;
 }
@@ -375,16 +359,14 @@ ControlFlow& ControlFlow::operator=(const ControlFlow &ref) {
 }
 
 const Block* ControlFlow::entry() const {
-    if (bbs_.empty())
-        CL_TRAP;
-
+    CL_BREAK_IF(bbs_.empty());
     return bbs_[0];
 }
 
 Block*& ControlFlow::operator[](const char *name) {
     Block* &ref = dbLookup(d->db, bbs_, name, 0);
     if (!ref)
-        // XXX: the object will be NOT destroyed by ControlFlow
+        // the object will be NOT destroyed by ControlFlow
         ref = new Block(this, name);
 
     return ref;
@@ -400,12 +382,10 @@ const Block* ControlFlow::operator[](const char *name) const {
 namespace {
     const struct cl_cst& cstFromFnc(const Fnc &fnc) {
         const struct cl_operand &op = fnc.def;
-        if (CL_OPERAND_CST != op.code)
-            CL_TRAP;
+        CL_BREAK_IF(CL_OPERAND_CST != op.code);
 
         const struct cl_cst &cst = op.data.cst;
-        if (CL_TYPE_FNC != cst.code)
-            CL_TRAP;
+        CL_BREAK_IF(CL_TYPE_FNC != cst.code);
 
         return cst;
     }
@@ -458,7 +438,7 @@ FncDb& FncDb::operator=(const FncDb &ref) {
 Fnc*& FncDb::operator[](int uid) {
     Fnc* &ref = dbLookup(d->db, fncs_, uid, 0);
     if (!ref)
-        // XXX: the object will be NOT destroyed by FncDb
+        // the object will be NOT destroyed by FncDb
         ref = new Fnc;
 
     return ref;
