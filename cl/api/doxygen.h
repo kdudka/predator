@@ -35,7 +35,7 @@
  *      - cl_storage.hh
  *      - cl_easy.hh
  *
- * - decorators:
+ * - filters:
  *      - clf_intchk.hh
  *      - clf_unilabel.hh
  *      - clf_unswitch.hh

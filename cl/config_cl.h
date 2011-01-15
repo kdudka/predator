@@ -36,11 +36,6 @@
 #define CL_MSG_SQUEEZE_REPEATS          1
 
 /**
- * if 1, use ugly temporary workaround for missing type info of sparse args
- */
-#define CLF_ARG_SUBST_KEEP_TYPE_REF     1
-
-/**
  * if 1, do not check for unused local variables and registers
  */
 #define CLF_BYPASS_USAGE_CHK            1
@@ -49,11 +44,6 @@
  * if 1, suppress warnings about unhandled code constructs
  */
 #define CLPLUG_SILENT                   0
-
-/**
- * type enumerator debug level; set to 0 to disable debugging
- */
-#define DEBUG_TYPE_ENUMERATOR           0
 
 /**
  * if 1, print progress of code_listener factory when running in verbose mode
