@@ -285,6 +285,12 @@ Linux lists
 
     test-0138.c - test-0135 extended by invalid free (forgot to use list_entry)
 
+    test-0139.c - traversal of two nodes length Linux DLL
+
+    test-0140.c - traversal of two nodes length Linux DLL
+                - spurious memory leak caused by the destructor which expects
+                  exactly two nodes
+
 
 Show-case
 =========

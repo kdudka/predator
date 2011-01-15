@@ -184,6 +184,7 @@ struct cl_type_item {
 
     /**
      * name of the nested item, mainly used by struct/union
+     * @attention structs and unions may have anonymous items
      */
     const char                          *name;
 
@@ -221,6 +222,10 @@ struct cl_type {
 
     /**
      * type's name, or NULL for anonymous type
+     * @attention Even if the type is named, the name is not guaranteed to be
+     * unique.  Neither the C language guarantees anything like that.  This
+     * field is suitable only for error/warning messages and debugging.  Types
+     * are distinguishable by cl_type::uid and never ever by cl_type::name.
      */
     const char                          *name;
 
