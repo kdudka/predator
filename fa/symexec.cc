@@ -223,18 +223,22 @@ protected:
 
 	bool foldStructures(FAE& fae, const std::set<size_t>& forbidden) {
 
+		bool found = false;
+
 		// do not fold at 0
 		for (size_t i = 1; i < fae.getRootCount(); ++i) {
 			if (forbidden.count(i))
 				continue;
 			for (std::vector<const Box*>::const_iterator j = this->boxes.begin(); j != this->boxes.end(); ++j) {
 				CL_CDEBUG("trying " << *(const AbstractBox*)(*j) << " at " << i);
-				if (fae.foldBox(i, *j))
-					return true;
+				if (fae.foldBox(i, *j)) {
+					CL_CDEBUG("hit");
+					found = true;
+				}
 			}
 		}
 
-		return false;
+		return found;
 
 	}
 
@@ -310,11 +314,17 @@ protected:
 				throw ProgramError("allocated block's size mismatch");
 			vector<SelData> sels;
 			NodeBuilder::buildNode(sels, dst.type->items[0].type);
+			std::string typeName;
+			if (dst.type->items[0].type->name)
+				typeName = std::string(dst.type->items[0].type->name);
+			else {
+				std::ostringstream ss;
+				ss << dst.type->items[0].type->uid;
+				typeName = ss.str();
+			}
 			dst.writeData(
 				fae,
-				Data::createRef(
-					fae.nodeCreate(sels, this->boxMan.getTypeInfo(dst.type->items[0].type->name))
-				),
+				Data::createRef(fae.nodeCreate(sels, this->boxMan.getTypeInfo(typeName))),
 				rev
 			);
 		} else {
@@ -579,9 +589,11 @@ protected:
 
 		} catch (const ProgramError& e) {
 
-//			throw;
-
 			CL_CDEBUG(e.what());
+
+			this->printTrace(*fae);
+
+			throw;
 
 			TraceRecorder::Item* item = this->revRun(*fae);
 
@@ -621,6 +633,48 @@ protected:
 			STATE_FROM_FAE(*parent->fae)->enqueue(this->queue, itov((FAE*)parent->fae));
 
 		}
+
+	}
+
+	void printTrace(const FAE& fae) {
+
+		vector<pair<const FAE*, const CodeStorage::Insn*> > trace;
+
+		TraceRecorder::Item* item = this->traceRecorder.find(&fae);
+
+		SymState* state = NULL;
+
+		while (item) {
+
+			state = STATE_FROM_FAE(*item->fae);
+
+			trace.push_back(make_pair(item->fae, *state->insn));
+
+			item = item->parent;
+
+		}
+
+		assert(state);
+
+//		trace.push_back(make_pair(item->fae, *state->insn));
+
+		CL_CDEBUG("trace:");
+
+		for (vector<pair<const FAE*, const CodeStorage::Insn*> >::reverse_iterator i = trace.rbegin(); i != trace.rend(); ++i) {
+			if (i->second) {
+				state = STATE_FROM_FAE(*i->first);
+				CL_CDEBUG(std::endl << SymCtx::Dump(*state->ctx, *i->first));
+				CL_CDEBUG(std::endl << *i->first);
+				CL_NOTE_MSG(i->second->loc, *(i->second));
+			}
+//			STATE_FROM_FAE(*i->first)->ctx->dumpContext(*i->first);
+//			CL_CDEBUG(std::endl << *(i->first));
+		}
+
+		state = STATE_FROM_FAE(fae);
+		CL_CDEBUG(std::endl << SymCtx::Dump(*state->ctx, fae));
+		CL_CDEBUG(std::endl << fae);
+		CL_NOTE_MSG(this->currentInsn->loc, *this->currentInsn);
 
 	}
 
@@ -698,11 +752,25 @@ protected:
 		for (CodeStorage::TypeDb::iterator i = this->stor.types.begin(); i != this->stor.types.end(); ++i) {
 			if ((*i)->code != cl_type_e::CL_TYPE_STRUCT)
 				continue;
+			std::string name;
+			if ((*i)->name)
+				name = std::string((*i)->name);
+			else {
+				std::ostringstream ss;
+				ss << (*i)->uid;
+				name = ss.str();
+			}
+				
 			std::vector<size_t> v;
 			NodeBuilder::buildNode(v, *i);
 			this->boxMan.createTypeInfo((*i)->name, v);
 		}
 
+	}
+
+	void printQueue() const {
+		for (std::list<const FAE*>::const_iterator i = this->queue.begin(); i != this->queue.end(); ++i)
+			std::cerr << **i;
 	}
 
 public:
@@ -759,13 +827,23 @@ public:
 		init->enqueue(this->queue, fae);
 
 		this->traceRecorder.init(this->queue.front());
-
+//size_t current = 1;
+//size_t min = 1;
 		try {
 
 			while (!this->queue.empty()) {
-				this->currentConf = this->queue.front();
-				this->queue.pop_front();
+//				this->currentConf = this->queue.front();
+//				this->queue.pop_front();
+				this->currentConf = this->queue.back();
+				this->queue.pop_back();
 				this->processState(this->currentConf);
+/*				if (this->queue.size() < current)
+					min = this->queue.size();
+				if ((this->queue.size() > current) && (min == current)) {
+					std::cerr << "peak at " << min << std::endl;
+//					this->printQueue();
+				}
+				current = this->queue.size();*/
 			}
 
 			for (state_store_type::iterator i = this->stateStore.begin(); i != this->stateStore.end(); ++i) {

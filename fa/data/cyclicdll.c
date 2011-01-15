@@ -19,10 +19,11 @@ int main() {
     while (__nondet()) {
 	y = malloc(sizeof(struct T));
 	y->next = x->next;
+        y->next->prev = y;
 	y->prev = x;
 	y->data = 0;
-        x->next->prev = y;
 	x->next = y;
+	y = NULL;
     }
 
     y = x->next;

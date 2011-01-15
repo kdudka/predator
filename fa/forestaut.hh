@@ -55,7 +55,7 @@ public:
 				continue;
 			os << "===" << std::endl << "root " << i << " o=[";
 			for (size_t j = 0; j < fa.rootMap[i].size(); ++j)
-				os << fa.rootMap[i][j];
+				os << fa.rootMap[i][j].first << '(' << fa.rootMap[i][j].second << ')';
 			os << ']';
 			TA<label_type>& ta = *fa.roots[i];
 			TAWriter<label_type> writer(os);
@@ -66,7 +66,7 @@ public:
 		return os;
 	}
 
-	typedef boost::unordered_map<size_t, vector<size_t> > o_map_type;
+	typedef boost::unordered_map<size_t, std::vector<std::pair<size_t, bool> > > o_map_type;
 
 protected:
 
@@ -74,7 +74,7 @@ protected:
 
 	std::vector<Data> variables;
 	std::vector<TA<label_type>*> roots;
-	std::vector<std::vector<size_t> > rootMap;
+	std::vector<std::vector<std::pair<size_t, bool> > > rootMap;
 
 	template <class F>
 	static void iterateLabel(const TT<label_type>& t, F f) {
@@ -97,14 +97,18 @@ protected:
 		return true;
 	}
 
-	static void removeMultOcc(std::vector<size_t>& x) {
-		std::set<size_t> s;
+	static void removeMultOcc(std::vector<std::pair<size_t, bool> >& x) {
+		boost::unordered_map<size_t, bool*> m;
 		size_t offset = 0;
 		for (size_t i = 0; i < x.size(); ++i) {
-			if (s.insert(x[i]).second)
+			std::pair<boost::unordered_map<size_t, bool*>::iterator, bool> p =
+				m.insert(std::make_pair(x[i].first, &x[i].second));
+			if (p.second)
 				x[offset++] = x[i];
+			else
+				*p.first->second = true;
 		}
-		x.resize(s.size());
+		x.resize(offset);
 	}
 
 	static void reorderBoxes(vector<const AbstractBox*>& label, std::vector<size_t>& lhs) {
@@ -123,7 +127,7 @@ protected:
 		}
 	}
 
-	static bool updateO(o_map_type& o, size_t state, const std::vector<size_t>& v) {
+	static bool updateO(o_map_type& o, size_t state, const std::vector<std::pair<size_t, bool> >& v) {
 		std::pair<o_map_type::iterator, bool> p = o.insert(std::make_pair(state, v));
 		if (p.second)
 			return true;
@@ -150,9 +154,9 @@ protected:
 			changed = false;
 			for (TA<label_type>::iterator i = ta.begin(); i != ta.end(); ++i) {
 				const Data* data;
-				std::vector<size_t> v;
+				std::vector<std::pair<size_t, bool> > v;
 				if (FA::isData(i->label().head(), data) && data->isRef()) {
-					v.push_back(data->d_ref.root);
+					v.push_back(std::make_pair(data->d_ref.root, false));
 				} else {
 //					vector<size_t> order;
 //					FAE::evaluateLhsOrder(*i->label().dataB, order);
@@ -178,13 +182,17 @@ protected:
 
 	void updateRootMap(size_t root) {
 		assert(root < this->roots.size());
-		boost::unordered_map<size_t, std::vector<size_t> > o;
+		o_map_type o;
 		FA::computeDownwardO(*this->roots[root], o);
 		this->rootMap[root] = o[this->roots[root]->getFinalState()];
 	}
 
 	bool hasReference(size_t root, size_t target) const {
-		return std::find(this->rootMap[root].begin(), this->rootMap[root].end(), target) != this->rootMap[root].end();
+		for (std::vector<std::pair<size_t, bool> >::const_iterator i = this->rootMap[root].begin(); i != this->rootMap[root].end(); ++i) {
+			if (i->first == target)
+				return true;
+		}
+		return false;
 	}
 
 	void releaseRoots() {

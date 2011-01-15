@@ -115,8 +115,8 @@ class Box : public FA, public StructuralBox {
 	std::string name;
 
 	std::vector<std::set<size_t> > selCoverage;
-
 	std::vector<std::set<const AbstractBox*> > triggers;
+	std::vector<std::vector<size_t> > rootSig;
 
 	bool composed;
 	bool initialized;
@@ -240,8 +240,8 @@ public:
 
 	void computeUpwardCoverage() {
 		for (size_t i = 0; i < this->roots.size(); ++i) {
-			for (std::vector<size_t>::iterator j = this->rootMap[i].begin(); j != this->rootMap[i].end(); ++j)
-				this->enumerateSelectorsAtLeaf(this->selCoverage[*j], i, *j);
+			for (std::vector<std::pair<size_t, bool> >::iterator j = this->rootMap[i].begin(); j != this->rootMap[i].end(); ++j)
+				this->enumerateSelectorsAtLeaf(this->selCoverage[j->first], i, j->first);
 		}
 	}
 
@@ -258,9 +258,14 @@ public:
 		return this->triggers[root];
 	}
 
-	const std::vector<size_t>& getO(size_t root) const {
+	const std::vector<std::pair<size_t, bool> >& getO(size_t root) const {
 		assert(root < this->rootMap.size());
 		return this->rootMap[root];
+	}
+
+	const std::vector<size_t>& getSig(size_t root) const {
+		assert(root < this->rootSig.size());
+		return this->rootSig[root];
 	}
 
 public:
@@ -284,6 +289,10 @@ public:
 			o_map_type o;
 			FA::computeDownwardO(**i, o);
 			this->rootMap.push_back(o[(*i)->getFinalState()]);
+			std::vector<size_t> v;
+			for (std::vector<std::pair<size_t, bool> >::iterator j = o[(*i)->getFinalState()].begin(); j != o[(*i)->getFinalState()].end(); ++j)
+				v.push_back(j->first);
+			this->rootSig.push_back(v);
 		}
 
 		this->computeCoverage();
