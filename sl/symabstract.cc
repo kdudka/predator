@@ -547,8 +547,14 @@ void dlSegMerge(SymHeap &sh, TObjId seg1, TObjId seg2) {
     sh.valReplace( segAt, segHeadAddr(sh,  seg2));
     sh.valReplace(peerAt, segHeadAddr(sh, peer2));
 
-    REQUIRE_GC_ACTIVITY(sh,  segAt, dlSegMerge);
-    REQUIRE_GC_ACTIVITY(sh, peerAt, dlSegMerge);
+    // destroy segAt and peerAt, including all prototypes -- either at once, or
+    // one by one (depending on the shape of subgraph)
+    REQUIRE_GC_ACTIVITY(sh, segAt, dlSegMerge);
+    if (!collectJunk(sh, peerAt) && 0 < sh.pointsTo(peerAt)) {
+        CL_ERROR("dlSegMerge() failed to collect garbage"
+                 ", peerAt still referenced");
+        CL_BREAK_IF("collectJunk() has not been successful");
+    }
 
     if (len)
         // handle DLS Neq predicates
