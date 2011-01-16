@@ -1,0 +1,30 @@
+#!/bin/bash
+if test -z "$1" || test ! -e "$1"; then
+    echo Usage: $0 foo.c
+    exit 1
+fi
+
+# basic setup
+self="`readlink -f "$0"`"
+sldir="`dirname "$self"`/.."
+topdir="`readlink -f "$sldir"`"
+invader="$topdir/invader-1_1/bin/x86_LINUX/invader"
+
+if test -x "$invader"; then
+
+    # compile
+    out=`mktemp`
+    gcc -E "$1" -o "$out" || exit $?
+
+    # analyse
+    "$invader" "$out"
+    rv=$?
+
+    # cleanup and exit
+    rm -fv $out
+    exit $rv
+fi
+
+echo "*** '$invader' does not exist."
+echo "*** Try to run 'make invader-1_1 -C $topdir' first."
+exit 1
