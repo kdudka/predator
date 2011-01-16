@@ -146,12 +146,10 @@ void getPtrValues(SymHeapCore::TContValue &dst, const SymHeap &heap,
     }
 }
 
-void skipObj(const SymHeap &sh, TObjId *pObj, TFieldIdxChain icHead,
-             TFieldIdxChain icNext)
+void skipObj(const SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext)
 {
     const TObjId objPtrNext = subObjByChain(sh, *pObj, icNext);
-    const TObjId headNext = sh.pointsTo(sh.valueOf(objPtrNext));
-    const TObjId objNext = subObjByInvChain(sh, headNext, icHead);
+    const TObjId objNext = objRootByPtr(sh, objPtrNext);
 
     // move to the next object
     *pObj = objNext;

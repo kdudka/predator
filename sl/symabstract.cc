@@ -414,7 +414,7 @@ void slSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf)
         segSetMinLength(sh, obj, /* SLS 0+ */ 0);
 
     // jump to the next object
-    const TObjId objNext = subObjByInvChain(sh, sh.pointsTo(valNext), bf.head);
+    const TObjId objNext = objRootByVal(sh, valNext);
     len += objMinLength(sh, objNext);
     if (OK_SLS == sh.objKind(objNext))
         segSetMinLength(sh, objNext, /* SLS 0+ */ 0);
@@ -578,7 +578,7 @@ void dlSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf)
             o2 = dlSegPeer(sh, o2);
 
             // jump to the next object (as we know such an object exists)
-            skipObj(sh, &o2, sh.objBinding(o2).head, sh.objBinding(o2).next);
+            skipObj(sh, &o2, sh.objBinding(o2).next);
             if (OK_DLS != sh.objKind(o2)) {
                 // DLS + VAR
                 dlSegGobble(sh, o1, o2, /* backward */ false);
@@ -592,7 +592,7 @@ void dlSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf)
         case OK_MAY_EXIST:
         case OK_CONCRETE:
             // jump to the next object (as we know such an object exists)
-            skipObj(sh, &o2, bf.head, bf.next);
+            skipObj(sh, &o2, bf.next);
             if (OK_DLS != sh.objKind(o2)) {
                 // VAR + VAR
                 dlSegCreate(sh, o1, o2, bf);
@@ -658,7 +658,7 @@ bool considerAbstraction(SymHeap                    &sh,
     // handle sparePrefix/spareSuffix
     int len = lenTotal - at.sparePrefix - at.spareSuffix;
     for (unsigned i = 0; i < at.sparePrefix; ++i)
-        skipObj(sh, &obj, bf.head, bf.next);
+        skipObj(sh, &obj, bf.next);
 
     const char *name = (isSls)
         ? "SLS"

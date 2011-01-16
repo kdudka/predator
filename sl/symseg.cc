@@ -53,7 +53,7 @@ TObjId dlSegPeer(const SymHeap &sh, TObjId dls) {
 
     TObjId peer = root;
     const SegBindingFields &bf = sh.objBinding(dls);
-    skipObj(sh, &peer, bf.head, bf.peer);
+    skipObj(sh, &peer, bf.peer);
     return peer;
 }
 

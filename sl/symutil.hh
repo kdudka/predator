@@ -111,8 +111,7 @@ inline int subOffsetIn(const SymHeapTyped &sh, TObjId in, TObjId of) {
 void getPtrValues(SymHeapCore::TContValue &dst, const SymHeap &heap,
                   TObjId obj);
 
-void skipObj(const SymHeap &sh, TObjId *pObj, TFieldIdxChain icHead,
-             TFieldIdxChain icNext);
+void skipObj(const SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext);
 
 void initVariable(SymHeap                       &sh,
                   TObjId                        obj,

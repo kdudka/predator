@@ -236,6 +236,10 @@ TObjId jumpToNextObj(const SymHeap              &sh,
         // no suitable next object
         return OBJ_INVALID;
 
+    if (OBJ_INVALID != sh.objParent(next))
+        // next object is embedded into another object
+        return OBJ_INVALID;
+
     const struct cl_type *cltNext = sh.objType(next);
     if (!cltNext || *cltNext != *clt)
         // type mismatch
@@ -335,8 +339,7 @@ void dlSegAvoidSelfCycle(
         return;
 
     const TObjId prevPtr = subObjByChain(sh, entry, bf.peer);
-    TObjId prev = sh.pointsTo(sh.valueOf(prevPtr));
-    prev = subObjByInvChain(sh, prev, bf.head);
+    const TObjId prev = objRootByPtr(sh, prevPtr);
     if (prev <= 0)
         // no valid previous object
         return;
