@@ -707,10 +707,10 @@ protected:
 //			CL_CDEBUG(std::endl << *(i->first));
 		}
 
-		state = STATE_FROM_FAE(fae);
-		CL_CDEBUG(std::endl << SymCtx::Dump(*state->ctx, fae));
-		CL_CDEBUG(std::endl << fae);
-		CL_NOTE_MSG(this->currentInsn->loc, *this->currentInsn);
+//		state = STATE_FROM_FAE(fae);
+//		CL_CDEBUG(std::endl << SymCtx::Dump(*state->ctx, fae));
+//		CL_CDEBUG(std::endl << fae);
+//		CL_NOTE_MSG(this->currentInsn->loc, *this->currentInsn);
 
 	}
 
