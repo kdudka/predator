@@ -1,6 +1,6 @@
 #!/bin/bash
 if test -z "$1" || test ! -e "$1"; then
-    echo Usage: $0 foo.c
+    echo "Usage: $0 foo.c <box directory>"
     exit 1
 fi
 
@@ -28,6 +28,11 @@ test -z "$FA_VERBOSE" && FA_VERBOSE=1
 # use pp code listener by default
 test -z "$FA_OPTS" && FA_OPTS="-fplugin-arg-libfa-dump-pp"
 
+BOXDB=""
+if [ "$2" != "" ]; then
+    BOXDB="-fplugin-arg-libfa-args=db-root:$2"
+fi
+
 # run the debugger
 eval "$GDB" --quiet --args "$CC1" "$1" \
     -DFORESTER \
@@ -35,5 +40,5 @@ eval "$GDB" --quiet --args "$CC1" "$1" \
     -m32 -O0 -Wall -Wextra \
     -fplugin="$FA_PLUG" \
     -fplugin-arg-libfa-verbose="$FA_VERBOSE" \
-    -fplugin-arg-libfa-args="db-root:boxes" \
+    $BOXDB \
     $FA_OPTS

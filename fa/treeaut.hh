@@ -758,9 +758,10 @@ public:
 		return true;
 	}
 */
-	static bool transMatch(const TT<T>* t1, const TT<T>* t2, std::vector<std::vector<bool> >& mat, const Index<size_t>& stateIndex) {
+	template <class F>
+	static bool transMatch(const TT<T>* t1, const TT<T>* t2, F f, const std::vector<std::vector<bool> >& mat, const Index<size_t>& stateIndex) {
 
-		if (t1->_label != t2->_label)
+		if (!f(t1->_label, t2->_label))
 			return false;
 
 		bool match = true;
@@ -775,27 +776,17 @@ public:
 	}
 
 	// currently erases '1' from the relation
-	void heightAbstraction(std::vector<std::vector<bool> >& result, size_t height, const Index<size_t>& stateIndex) const {
+	template <class F>
+	void heightAbstraction(std::vector<std::vector<bool> >& result, size_t height, F f, const Index<size_t>& stateIndex) const {
 
 		td_cache_type cache;
 		this->buildTDCache(cache);
 
 		std::vector<std::vector<bool> > tmp;
-/*
-		for (Index<size_t>::iterator i = stateIndex.begin(); i != stateIndex.end(); ++i)
-			std::cerr << i->first << ':' << i->second << ' ';
-		std::cerr << std::endl;
-*/
+
 		while (height--) {
 			tmp = result;
-/*
-			for (size_t i = 0; i < tmp.size(); ++i) {
-				for (size_t j = 0; j < tmp[i].size(); ++j) {
-					std::cerr << tmp[i][j];
-				}
-				std::cerr << std::endl;
-			}
-*/
+
 			for (Index<size_t>::iterator i = stateIndex.begin(); i != stateIndex.end(); ++i) {
 				size_t state1 = i->second;
 				typename td_cache_type::iterator j = cache.insert(
@@ -811,7 +802,7 @@ public:
 					bool match = false;
 					for (typename std::vector<const TT<T>*>::const_iterator m = j->second.begin(); m != j->second.end(); ++m) {
 						for (typename std::vector<const TT<T>*>::const_iterator n = l->second.begin(); n != l->second.end(); ++n) {
-							if (TA<T>::transMatch(*m, *n, tmp, stateIndex)) {
+							if (TA<T>::transMatch(*m, *n, f, tmp, stateIndex)) {
 								match = true;
 								break;
 							}

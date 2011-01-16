@@ -348,10 +348,6 @@ protected:
 	}
 
 	bool boxCut(TA<label_type>& dst, TA<label_type>& complement, const TA<label_type>& src, const std::set<const AbstractBox*>& trigger) {
-		dst.addFinalState(src.getFinalState());
-		complement.addFinalState(src.getFinalState());
-		src.copyTransitions(dst, TA<label_type>::NonAcceptingF(src));
-		dst.copyTransitions(complement);
 		for (TA<label_type>::Iterator i = src.accBegin(); i != src.accEnd(i); ++i) {
 			std::vector<size_t> lhs, cLhs;
 			std::vector<const AbstractBox*> label, cLabel;
@@ -373,6 +369,10 @@ protected:
 				complement.addTransition(cLhs, &this->labMan->lookup(cLabel), src.getFinalState());
 			} else return false;
 		}
+		dst.addFinalState(src.getFinalState());
+		complement.addFinalState(src.getFinalState());
+		src.copyTransitions(dst, TA<label_type>::NonAcceptingF(src));
+		src.copyTransitions(complement, TA<label_type>::NonAcceptingF(src));
 		return true;
 	}
 
@@ -1263,7 +1263,8 @@ public:
 
 	}
 
-	void heightAbstraction(size_t height = 1) {
+	template <class F>
+	void heightAbstraction(size_t height, F f) {
 		for (size_t i = 0; i < this->roots.size(); ++i) {
 			TA<label_type> ta(this->taMan->getBackend());
 			this->roots[i]->minimized(ta);
@@ -1283,7 +1284,7 @@ public:
 						rel[j->second][k->second] = true;
 				}
 			}
-			ta.heightAbstraction(rel, height, stateIndex);
+			ta.heightAbstraction(rel, height, f, stateIndex);
 			this->updateRoot(this->roots[i], &ta.collapsed(*this->taMan->alloc(), rel, stateIndex));
 		}
 	}

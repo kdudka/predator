@@ -41,13 +41,17 @@ struct SymState {
 
 	// configuration obtained in forward run
 	TA<label_type> fwdConf;
-
 	UFAE fwdConfWrapper;
+
+//	TA<label_type> fixpoint;
+//	UFAE fixpointWrapper;
 	
-	boost::unordered_map<const FAE*, std::list<const FAE*>::iterator> confMap;
+//	boost::unordered_map<const FAE*, std::list<const FAE*>::iterator> confMap;
 
 	// outstanding configurations
 //	std::vector<FAE*> outConf;
+
+	std::vector<const FAE*> fixpoint;
 
 	const SymCtx* ctx;
 
@@ -57,24 +61,39 @@ struct SymState {
 
 	size_t absHeight;
 
-	SymState(TA<label_type>::Backend& taBackend, LabMan& labMan)
-		: fwdConf(taBackend), fwdConfWrapper(this->fwdConf, labMan), absHeight(1) {}
+	SymState(TA<label_type>::Backend& fwdBackend, TA<label_type>::Backend& fixpointBackend, LabMan& labMan)
+		: fwdConf(fixpointBackend), fwdConfWrapper(this->fwdConf, labMan)/*, fixpoint(fixpointBackend), fixpointWrapper(this->fixpoint, labMan)*/, absHeight(1) {}
 
 	~SymState() {
-		utils::eraseMapFirst(this->confMap);
-//		utils::erase(this->outConf);
+//		utils::eraseMapFirst(this->confMap);
+		utils::erase(this->fixpoint);
 //		for (std::vector<FAE*>::iterator i = this->outConf.begin(); i != this->outConf.end(); ++i)
 //			delete *i;
 	}
 
+	void extendFixpoint(const FAE* fae) {
+		this->fixpoint.push_back(new FAE(*fae));
+/*		TA<label_type> ta(*this->fixpoint.backend);
+		Index<size_t> index;
+		this->fixpointWrapper.fae2ta(ta, index, *fae);
+		this->fixpointWrapper.join(ta, index);
+		this->fixpoint.minimized(ta);
+		this->fixpoint = ta;*/
+		
+/*		boost::unordered_map<const FAE*, std::list<const FAE*>::iterator>::iterator i = this->confMap.find(fae);
+		assert(i != this->confMap.end());
+		delete i->first;
+		this->confMap.erase(i);*/
+	}
+/*
 	void invalidate(const FAE* fae) {
 		boost::unordered_map<const FAE*, std::list<const FAE*>::iterator>::iterator i = this->confMap.find(fae);
 		assert(i != this->confMap.end());
 		delete i->first;
 		this->confMap.erase(i);
 	}
-
-	void invalidate(std::list<const FAE*>& queue, const FAE* fae) {
+*/
+/*	void invalidate(std::list<const FAE*>& queue, const FAE* fae) {
 		boost::unordered_map<const FAE*, std::list<const FAE*>::iterator>::iterator i = this->confMap.find(fae);
 		assert(i != this->confMap.end());
 		std::list<const FAE*>::iterator j = i->second;
@@ -83,18 +102,20 @@ struct SymState {
 		if (j != queue.end())
 			queue.erase(j);
 	}
-
-	void recompute(std::list<const FAE*>& queue) {
+*/
+	void recompute() {
 		this->fwdConfWrapper.clear();
 		this->fwdConf.clear();
 		TA<label_type> ta(*this->fwdConf.backend);
 		Index<size_t> index;
-		for (boost::unordered_map<const FAE*, std::list<const FAE*>::iterator>::iterator i = this->confMap.begin(); i != this->confMap.end(); ++i)
-			this->fwdConfWrapper.fae2ta(ta, index, *i->first);
+		for (std::vector<const FAE*>::iterator i = this->fixpoint.begin(); i != this->fixpoint.end(); ++i)
+			this->fwdConfWrapper.fae2ta(ta, index, **i);
 		if (!ta.getTransitions().empty()) {
 			this->fwdConfWrapper.adjust(index);
 			ta.minimized(this->fwdConf);
 		}		
+//		this->fwdConfWrapper.setStateOffset(this->fixpointWrapper.getStateOffset());
+//		this->fwdConf = this->fixpoint;
 	}
 /*
 	FAE* next() {
@@ -137,7 +158,8 @@ struct SymState {
 
 	void enqueue(std::list<const FAE*>& queue, const std::vector<FAE*>& src) {
 		for (std::vector<FAE*>::const_iterator i = src.begin(); i != src.end(); ++i) {
-			this->confMap.insert(std::make_pair(*i, queue.insert(queue.end(), *i)));
+//			this->confMap.insert(std::make_pair(*i, queue.insert(queue.end(), *i)));
+			queue.push_back(*i);
 			CL_CDEBUG("enqueued " << *i);
 			CL_CDEBUG(std::endl << SymCtx::Dump(*this->ctx, **i));
 			CL_CDEBUG(std::endl << **i);
@@ -243,10 +265,8 @@ struct SymState {
 				return false;
 
 			this->fwdConfWrapper.join(ta, index);
-
-			ta = this->fwdConf;
-			this->fwdConf.clear();
-			ta.minimized(this->fwdConf);			
+			this->fwdConf.minimized(ta);
+			this->fwdConf = ta;
 
 		}
 		

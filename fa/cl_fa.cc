@@ -23,6 +23,10 @@
 #include <stdexcept>
 #include <ctime>
 
+#include <boost/unordered_map.hpp>
+
+#include <signal.h>
+
 #include <cl/easy.hh>
 #include <cl/cl_msg.hh>
 #include <cl/location.hh>
@@ -30,10 +34,15 @@
 #include <cl/cldebug.hh>
 #include <cl/clutil.hh>
 
-#include <boost/unordered_map.hpp>
-
 #include "symctx.hh"
 #include "symexec.hh"
+
+SymExec* pse = NULL;
+
+void setDbgFlag(int) {
+	if (pse)
+		pse->setDbgFlag();
+}
 
 // required by the gcc plug-in API
 extern "C" { int plugin_is_GPL_compatible; }
@@ -117,6 +126,8 @@ void clEasyRun(const CodeStorage::Storage& stor, const char* configString) {
     CL_CDEBUG("starting verification stuff ...");
     try {
 		SymExec se(stor);
+		pse = &se;
+		signal(SIGUSR1, setDbgFlag);
 		Config c(configString);
 		if (!c.dbRoot.empty()){
 			BoxDb db(c.dbRoot, "index");

@@ -44,11 +44,15 @@ public:
 	}
 
 	bool isStructural() const {
-		return (this->type == bBox) || (this->type == bSel);
+		return (this->type == box_type_e::bBox) || (this->type == box_type_e::bSel);
+	}
+
+	bool isBox() const {
+		return this->type == box_type_e::bBox;
 	}
 
 	bool isData() const {
-		return this->type == bData;
+		return this->type == box_type_e::bData;
 	}
 
 	virtual size_t getArity() const {

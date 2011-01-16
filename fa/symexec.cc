@@ -82,14 +82,20 @@ struct TraceRecorder {
 
 		Item* parent;
 		const FAE* fae;
+		std::list<const FAE*>::reverse_iterator queueTag;
 		FAE normalized;
 		FAE::NormInfo normInfo;
 		set<Item*> children;
 
-		Item(Item* parent, const FAE* fae, const FAE& normalized, const FAE::NormInfo& normInfo)
-			: parent(parent), fae(fae), normalized(normalized), normInfo(normInfo) {
+		Item(Item* parent, const FAE* fae, std::list<const FAE*>::reverse_iterator queueTag, const FAE& normalized, const FAE::NormInfo& normInfo)
+			: parent(parent), fae(fae), queueTag(queueTag), normalized(normalized), normInfo(normInfo) {
 			if (parent)
 				parent->children.insert(this);
+		}
+
+		~Item() {
+			assert(this->fae);
+			delete this->fae;
 		}
 
 		void removeChild(Item* item) {
@@ -110,9 +116,9 @@ struct TraceRecorder {
 		utils::eraseMap(this->confMap);
 	}
 
-	void init(const FAE* fae) {
+	void init(const FAE* fae, std::list<const FAE*>::reverse_iterator i) {
 		this->clear();
-		Item* item = new Item(NULL, fae, FAE(*fae), FAE::NormInfo());
+		Item* item = new Item(NULL, fae, i, FAE(*fae), FAE::NormInfo());
 		this->confMap.insert(make_pair(fae, item));
 	}
 
@@ -122,9 +128,9 @@ struct TraceRecorder {
 		return i->second;
 	}
 
-	void add(const FAE* parent, const FAE* fae, const FAE& normalized, const FAE::NormInfo& normInfo) {
+	void add(const FAE* parent, const FAE* fae, std::list<const FAE*>::reverse_iterator i, const FAE& normalized, const FAE::NormInfo& normInfo) {
 		this->confMap.insert(
-			make_pair(fae, new Item(this->find(parent), fae, normalized, normInfo))
+			make_pair(fae, new Item(this->find(parent), fae, i, normalized, normInfo))
 		);
 	}
 
@@ -138,14 +144,14 @@ struct TraceRecorder {
 	template <class F>
 	void invalidate(TraceRecorder::Item* node, F f) {
 
+		f(node);
+
 		for (set<Item*>::iterator i = node->children.begin(); i != node->children.end(); ++i)
 			this->invalidate(*i, f);
 
 		const FAE* fae = node->fae;
 
 		this->remove(fae);
-
-		f(fae);
 
 	}
 
@@ -170,7 +176,7 @@ struct TraceRecorder {
 				return;
 			}
 			parent->removeChild(node);
-			f(node->fae);
+			f(node);
 			this->remove(node->fae);
 			node = parent;
 		}
@@ -185,6 +191,7 @@ class SymExec::Engine {
 	LoopAnalyser loopAnalyser;
 
 	TA<label_type>::Backend taBackend;
+	TA<label_type>::Backend fixpointBackend;
 	TA<label_type>::Manager taMan;
 	LabMan labMan;
 	BoxMan boxMan;
@@ -203,6 +210,10 @@ class SymExec::Engine {
 	TraceRecorder traceRecorder;
 
 	std::vector<const Box*> boxes;
+	std::vector<const Box*> basicBoxes;
+	boost::unordered_map<const Box*, std::vector<const Box*> > hierarchy;
+
+	bool dbgFlag;
 
 protected:
 
@@ -230,7 +241,7 @@ protected:
 		if (i != this->stateStore.end())
 			return i->second;
 
-		SymState* s = new SymState(this->taBackend, this->labMan);
+		SymState* s = new SymState(this->taBackend, this->fixpointBackend, this->labMan);
 		s->insn = insn;
 		s->ctx = ctx;
 		s->entryPoint = this->loopAnalyser.isEntryPoint(*insn);
@@ -239,39 +250,81 @@ protected:
 
 	}
 
-	bool foldStructures(FAE& fae, const std::set<size_t>& forbidden) {
+	bool foldBox(SymState* target, FAE& fae, size_t root, const Box* box) {
+		CL_CDEBUG("trying " << *(const AbstractBox*)box << " at " << root);
+		if (!fae.foldBox(root, box))
+			return false;
+		CL_CDEBUG("match");
+		std::set<size_t> tmp;
+		fae.getNearbyReferences(fae.varGet(ABP_INDEX).d_ref.root, tmp);
+		FAE::NormInfo normInfo;
+		fae.normalize(normInfo, tmp);
+		boost::unordered_map<const Box*, std::vector<const Box*> >::iterator i =
+			this->hierarchy.find(box);
+		if (i == this->hierarchy.end())
+			return true;
+		this->recAbstractAndFold(target, fae, i->second);
+		return true;
+	}
 
-		bool found = false;
+	void recAbstractAndFold(SymState* target, FAE& fae, const std::vector<const Box*>& boxes) {
+
+		CL_CDEBUG("abstracting ... " << target->absHeight);
+		fae.heightAbstraction(target->absHeight, ExactLabelMatchF());
+		CL_CDEBUG(std::endl << fae);
 
 		// do not fold at 0
 		for (size_t i = 1; i < fae.getRootCount(); ++i) {
-			if (forbidden.count(i))
-				continue;
-			for (std::vector<const Box*>::const_iterator j = this->boxes.begin(); j != this->boxes.end(); ++j) {
-				CL_CDEBUG("trying " << *(const AbstractBox*)(*j) << " at " << i);
-				if (fae.foldBox(i, *j)) {
-					CL_CDEBUG("hit");
-					found = true;
-				}
+			for (std::vector<const Box*>::const_iterator j = boxes.begin(); j != boxes.end(); ++j) {
+				if (this->foldBox(target, fae, i, *j))
+					i = 1;
 			}
 		}
 
-		return found;
+	}
+
+	void abstractAndFold(SymState* target, FAE& fae) {
+
+//		this->recAbstractAndFold(target, fae, this->basicBoxes);
+
+		// do not fold at 0
+		for (size_t i = 1; i < fae.getRootCount(); ++i) {
+			for (std::vector<const Box*>::const_iterator j = this->boxes.begin(); j != this->boxes.end(); ++j) {
+				if (fae.foldBox(i, *j))
+					CL_CDEBUG("match");
+			}
+		}
+
+		std::set<size_t> tmp;
+		fae.getNearbyReferences(fae.varGet(ABP_INDEX).d_ref.root, tmp);
+		FAE::NormInfo normInfo;
+		fae.normalize(normInfo, tmp);
+
+		CL_CDEBUG("abstracting ... " << target->absHeight);
+		fae.heightAbstraction(target->absHeight, ExactLabelMatchF());
 
 	}
 
-	struct InvalidateSimpleF {
+	struct DestroySimpleF {
 
-		InvalidateSimpleF() {}
+		DestroySimpleF() {}
 
-		void operator()(const FAE* fae) {
+		void operator()(TraceRecorder::Item* node) {
 
-			SymState* state = STATE_FROM_FAE(*fae);
-			if (!state->entryPoint)
-				STATE_FROM_FAE(*fae)->invalidate(fae);
+			SymState* state = STATE_FROM_FAE(*node->fae);
+			if (state->entryPoint)
+				STATE_FROM_FAE(*node->fae)->extendFixpoint(node->fae);
+//			else
+//				STATE_FROM_FAE(*node->fae)->invalidate(node->fae);			
 
 		}
 
+	};
+
+	struct ExactLabelMatchF {
+		bool operator()(const label_type& l1, const label_type& l2) {
+			return l1 == l2;
+		}
 	};
 
 
@@ -285,25 +338,10 @@ protected:
 
 		fae.normalize(normInfo, tmp);
 
-		if (target->entryPoint) {
-			CL_CDEBUG(std::endl << fae);
-			std::set<size_t> tmp2;
-			tmp2.insert(0);
-			while (Engine::foldStructures(fae, tmp2)) {
-//				CL_CDEBUG(std::endl << fae);
-				normInfo.clear();
-				fae.normalize(normInfo, tmp);
-				tmp.clear();
-				fae.getNearbyReferences(fae.varGet(ABP_INDEX).d_ref.root, tmp);
-			}
-		}
-
 		FAE normalized(fae);
 
-		if (target->entryPoint) {
-			CL_CDEBUG("abstracting ... " << target->absHeight);
-			fae.heightAbstraction(target->absHeight);
-		}
+		if (target->entryPoint)
+			this->abstractAndFold(target, fae);
 
 //		CL_CDEBUG("after abstraction: " << std::endl << fae);
 
@@ -312,11 +350,11 @@ protected:
 		if (target->enqueue(this->queue, fae)) {
 			int i = this->queue.size() - l;
 			for (std::list<const FAE*>::reverse_iterator j = this->queue.rbegin(); i > 0; --i, ++j)
-				this->traceRecorder.add(this->currentConf, *j, normalized, normInfo);
+				this->traceRecorder.add(this->currentConf, *j, j, normalized, normInfo);
 		}
 		else {
 			CL_CDEBUG("hit");
-			this->traceRecorder.destroyBranch(this->currentConf, InvalidateSimpleF());
+			this->traceRecorder.destroyBranch(this->currentConf, DestroySimpleF());
 		}
 
 	}
@@ -591,9 +629,11 @@ protected:
 		
 		InvalidateF(list<const FAE*>& queue, set<SymState*>& s) : queue(queue), s(s) {}
 
-		void operator()(const FAE* fae) {
-			SymState* state = STATE_FROM_FAE(*fae);
-			state->invalidate(this->queue, fae);
+		void operator()(TraceRecorder::Item* node) {
+			SymState* state = STATE_FROM_FAE(*node->fae);
+			if (node->queueTag != this->queue.rend())
+				this->queue.erase(--node->queueTag.base());
+//			state->invalidate(this->queue, node->fae);
 			if (state->entryPoint)
 				s.insert(state);
 		}
@@ -608,7 +648,10 @@ protected:
 
 		this->currentInsn = *state->insn;
 
-		state->confMap[fae] = this->queue.end();
+		TraceRecorder::Item* item = this->traceRecorder.find(fae);
+
+//		state->confMap[fae] = this->queue.end();
+		item->queueTag = this->queue.rend();
 
 		const cl_location& loc = (*state->insn)->loc;
 
@@ -651,14 +694,14 @@ protected:
 
 			this->traceRecorder.remove(tmp2);
 
-			InvalidateF(this->queue, s)(tmp2);
+			InvalidateF(this->queue, s)(item);
 
 			assert(parent);
 
 			parent->removeChild(item);
 
 			for (set<SymState*>::iterator i = s.begin(); i != s.end(); ++i) {
-				(*i)->recompute(this->queue);
+				(*i)->recompute();
 				CL_CDEBUG("new fixpoint:" << std::endl << (*i)->fwdConf);
 			}
 
@@ -812,7 +855,7 @@ protected:
 public:
 
 	Engine(const CodeStorage::Storage& stor)
-		: stor(stor), taMan(this->taBackend), boxMan(this->taMan, this->labMan) {
+		: stor(stor), taMan(this->taBackend), boxMan(this->taMan, this->labMan), dbgFlag(false) {
 		this->loadTypes();
 	}
 
@@ -829,6 +872,8 @@ public:
 			this->boxes.push_back((const Box*)this->boxMan.loadBox(i->first, db));
 			CL_CDEBUG(i->first << ':' << std::endl << *(const FA*)this->boxes.back());
 		}
+
+		this->boxMan.buildBoxHierarchy(this->hierarchy, this->basicBoxes);
 		
 	}
 
@@ -862,7 +907,7 @@ public:
 		// schedule initial state for processing
 		init->enqueue(this->queue, fae);
 
-		this->traceRecorder.init(this->queue.front());
+		this->traceRecorder.init(this->queue.front(), this->queue.rbegin());
 //size_t current = 1;
 //size_t min = 1;
 		try {
@@ -872,6 +917,10 @@ public:
 //				this->queue.pop_front();
 				this->currentConf = this->queue.back();
 				this->queue.pop_back();
+				if (this->dbgFlag) {
+					std::cerr << *this->currentConf;
+					this->dbgFlag = false;
+				}
 				this->processState(this->currentConf);
 /*				if (this->queue.size() < current)
 					min = this->queue.size();
@@ -896,6 +945,10 @@ public:
 		
 	}
 
+	void setDbgFlag() {
+		this->dbgFlag = 1;
+	}	
+
 };
 
 SymExec::SymExec(const CodeStorage::Storage &stor)
@@ -909,7 +962,10 @@ void SymExec::loadBoxes(const boost::unordered_map<std::string, std::string>& db
 	this->engine->loadBoxes(db);
 }
 
-
 void SymExec::run(const CodeStorage::Fnc& main) {
 	this->engine->run(main);
+}
+
+void SymExec::setDbgFlag() {
+	this->engine->setDbgFlag();
 }

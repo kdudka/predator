@@ -36,6 +36,7 @@ public:
 
 	void loadBoxes(const boost::unordered_map<std::string, std::string>& db);
 	void run(const CodeStorage::Fnc& main);
+	void setDbgFlag();
 
 private:
 

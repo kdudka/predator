@@ -44,6 +44,14 @@ public:
 	}
 
 	void clear() { this->stateOffset = 1; }
+
+	size_t getStateOffset() const {
+		return this->stateOffset;
+	}
+
+	void setStateOffset(size_t offset) {
+		this->stateOffset = offset;
+	}
 /*
 	struct RenameNonleafF {
 

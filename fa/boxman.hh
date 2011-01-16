@@ -209,6 +209,21 @@ public:
 		return result;
 	}
 
+	 void buildBoxHierarchy(boost::unordered_map<const Box*, std::vector<const Box*> >& hierarchy, std::vector<const Box*>& basic) const {
+		for (boost::unordered_map<std::string, const Box*>::const_iterator i = this->boxIndex.begin(); i != this->boxIndex.end(); ++i) {
+			const std::set<const AbstractBox*>& trigger = i->second->getTrigger(0);
+			bool composed = false;
+			for (std::set<const AbstractBox*>::const_iterator j = trigger.begin(); j != trigger.end(); ++j) {
+				if ((*j)->isBox()) {
+					hierarchy.insert(std::make_pair((const Box*)*j, std::vector<const Box*>())).first->second.push_back(i->second);
+					composed = true;
+				}
+			}
+			if (!composed)
+				basic.push_back(i->second);
+		}
+	}
+
 public:
 /*
 	static const char* selPrefix;
