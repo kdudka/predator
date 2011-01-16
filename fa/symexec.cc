@@ -84,16 +84,17 @@ struct TraceRecorder {
 		const FAE* fae;
 		FAE normalized;
 		FAE::NormInfo normInfo;
-		vector<Item*> children;
+		set<Item*> children;
 
 		Item(Item* parent, const FAE* fae, const FAE& normalized, const FAE::NormInfo& normInfo)
 			: parent(parent), fae(fae), normalized(normalized), normInfo(normInfo) {
 			if (parent)
-				parent->children.push_back(this);
+				parent->children.insert(this);
 		}
 
 		void removeChild(Item* item) {
-			this->children.erase(std::find(this->children.begin(), this->children.end(), item));
+			size_t s = this->children.erase(item);
+			assert(s == 1);
 		}
 
 	};
@@ -137,7 +138,7 @@ struct TraceRecorder {
 	template <class F>
 	void invalidate(TraceRecorder::Item* node, F f) {
 
-		for (vector<Item*>::iterator i = node->children.begin(); i != node->children.end(); ++i)
+		for (set<Item*>::iterator i = node->children.begin(); i != node->children.end(); ++i)
 			this->invalidate(*i, f);
 
 		const FAE* fae = node->fae;
@@ -151,11 +152,28 @@ struct TraceRecorder {
 	template <class F>
 	void invalidateChildren(TraceRecorder::Item* node, F f) {
 
-		for (vector<Item*>::iterator i = node->children.begin(); i != node->children.end(); ++i)
+		for (set<Item*>::iterator i = node->children.begin(); i != node->children.end(); ++i)
 			this->invalidate(*i, f);
 
 		node->children.clear();
 	
+	}
+
+	template <class F>
+	void destroyBranch(const FAE* fae, F f) {
+		TraceRecorder::Item* node = this->find(fae);
+		assert(node);
+		while (node->children.empty()) {
+			TraceRecorder::Item* parent = node->parent;
+			if (!parent) {
+				this->remove(node->fae);
+				return;
+			}
+			parent->removeChild(node);
+			f(node->fae);
+			this->remove(node->fae);
+			node = parent;
+		}
 	}
 
 };
@@ -242,6 +260,21 @@ protected:
 
 	}
 
+	struct InvalidateSimpleF {
+
+		InvalidateSimpleF() {}
+
+		void operator()(const FAE* fae) {
+
+			SymState* state = STATE_FROM_FAE(*fae);
+			if (!state->entryPoint)
+				STATE_FROM_FAE(*fae)->invalidate(fae);
+
+		}
+
+	};
+
+
 	void stateUnion(SymState* target, FAE& fae) {
 
 		fae.varSet(IP_INDEX, Data::createNativePtr((void*)target));
@@ -281,7 +314,10 @@ protected:
 			for (std::list<const FAE*>::reverse_iterator j = this->queue.rbegin(); i > 0; --i, ++j)
 				this->traceRecorder.add(this->currentConf, *j, normalized, normInfo);
 		}
-		else { CL_CDEBUG("hit"); }
+		else {
+			CL_CDEBUG("hit");
+			this->traceRecorder.destroyBranch(this->currentConf, InvalidateSimpleF());
+		}
 
 	}
 
@@ -843,8 +879,8 @@ public:
 					std::cerr << "peak at " << min << std::endl;
 //					this->printQueue();
 				}
-				current = this->queue.size();*/
-			}
+				current = this->queue.size();
+*/			}
 
 			for (state_store_type::iterator i = this->stateStore.begin(); i != this->stateStore.end(); ++i) {
 				if (!i->second->entryPoint)

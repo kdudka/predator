@@ -1,6 +1,6 @@
 #!/bin/bash
 if test -z "$1" || test ! -e "$1"; then
-    echo Usage: $0 foo.c
+    echo "Usage: $0 foo.c <box directory>"
     exit 1
 fi
 
@@ -33,12 +33,17 @@ if test x1 = "x$FA_PLOT"; then
     rm -f *.dot *.svg
 fi
 
+BOXDB=""
+if [ "$2" != "" ]; then
+    BOXDB="-fplugin-arg-libfa-args=db-root:$2"
+fi
+
 # run the gcc
 "$GCC" -c "$1" -o /dev/null -O0 -m32 \
     -DFORESTER \
     -fplugin="$FA_PLUG" \
     -fplugin-arg-libfa-verbose="$FA_VERBOSE" \
-    -fplugin-arg-libfa-args="db-root:boxes" \
+    $BOXDB \
     $FA_OPTS \
     #|| exit $?
 

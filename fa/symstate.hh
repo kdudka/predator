@@ -67,6 +67,13 @@ struct SymState {
 //			delete *i;
 	}
 
+	void invalidate(const FAE* fae) {
+		boost::unordered_map<const FAE*, std::list<const FAE*>::iterator>::iterator i = this->confMap.find(fae);
+		assert(i != this->confMap.end());
+		delete i->first;
+		this->confMap.erase(i);
+	}
+
 	void invalidate(std::list<const FAE*>& queue, const FAE* fae) {
 		boost::unordered_map<const FAE*, std::list<const FAE*>::iterator>::iterator i = this->confMap.find(fae);
 		assert(i != this->confMap.end());

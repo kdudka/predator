@@ -78,7 +78,7 @@ public:
 	const TypeBox* getTypeInfo(const std::string& name) {
 		boost::unordered_map<std::string, const TypeBox*>::const_iterator i = this->typeIndex.find(name);
 		if (i == this->typeIndex.end())
-			throw std::runtime_error("BoxMan::getTypeInfo(): type not found!");
+			throw std::runtime_error("BoxMan::getTypeInfo(): type for " + name + " not found!");
 		return i->second;
 	}
 
@@ -146,6 +146,9 @@ public:
 		p.first->second = box;
 
 		std::fstream input(j->second.c_str());
+
+		if (!input.good())
+			throw std::runtime_error("Unable to open " + j->second);
 
 		TAReader reader(input, j->second);
 

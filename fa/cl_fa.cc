@@ -68,6 +68,8 @@ struct BoxDb {
 
 	BoxDb(const std::string& root, const std::string& fileName) {
 		std::ifstream input((root + "/" + fileName).c_str());
+		if (!input.good())
+			throw std::runtime_error("Unable to open " + root + "/" + fileName);
 		std::string buf;
 		while (std::getline(input, buf)) {
 			if (buf.empty())
@@ -88,10 +90,6 @@ void clEasyRun(const CodeStorage::Storage& stor, const char* configString) {
     using namespace CodeStorage;
 
 	CL_CDEBUG("config: " << configString);
-
-	Config c(configString);
-
-	BoxDb db(c.dbRoot, "index");
 
     // look for main() by name
     CL_CDEBUG("looking for 'main()' at gl scope...");
@@ -119,19 +117,24 @@ void clEasyRun(const CodeStorage::Storage& stor, const char* configString) {
     CL_CDEBUG("starting verification stuff ...");
     try {
 		SymExec se(stor);
-		se.loadBoxes(db.store);
+		Config c(configString);
+		if (!c.dbRoot.empty()){
+			BoxDb db(c.dbRoot, "index");
+			se.loadBoxes(db.store);
+		}
 		se.run(*main);
 		CL_NOTE("the program is safe ...");
+		clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end_tp);
+		CL_NOTE("analysis took " << (end_tp.tv_sec - start_tp.tv_sec) + 1e-9*(end_tp.tv_nsec - start_tp.tv_nsec) << "s of processor time");
 	} catch (const ProgramError& e) {
 		if (e.location())
 			CL_ERROR_MSG(*e.location(), e.what());
 		else
 			CL_ERROR(e.what());
+		clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end_tp);
+		CL_NOTE("analysis took " << (end_tp.tv_sec - start_tp.tv_sec) + 1e-9*(end_tp.tv_nsec - start_tp.tv_nsec) << "s of processor time");
 	} catch (const std::exception& e) {
 		CL_ERROR(e.what());
 	}
-
-	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end_tp);
-	CL_NOTE("analysis took " << (end_tp.tv_sec - start_tp.tv_sec) + 1e-9*(end_tp.tv_nsec - start_tp.tv_nsec) << "s of processor time");
 
 }
