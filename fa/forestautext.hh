@@ -919,7 +919,14 @@ public:
 				os << i->first << ':' << i->second << std::endl;
 			return os;
 		}
-	
+/*
+		void check() const {
+			size_t i = 0;
+			for (std::map<size_t, RootInfo>::const_iterator j = this->data.begin(); j != this->data.end(); ++j)
+				i += j->second.mergedRoots.size() + 1;
+			assert(i == this->rootCount);			
+		}
+*/	
 	};
 
 	// check consistency
@@ -997,7 +1004,7 @@ public:
 	}
 
 	// single accepting in, (single accepting out?)
-	void split(std::vector<TA<label_type>*>& dst, const TA<label_type>& src, size_t baseIndex, const std::vector<std::pair<size_t, size_t> >& splitPoints) {
+	void split(std::vector<TA<label_type>*>& dst, const TA<label_type>& src, size_t baseIndex, const std::set<std::pair<size_t, size_t> >& splitPoints) {
 
 		Index<size_t> stateIndex;
 
@@ -1007,13 +1014,15 @@ public:
 		boost::unordered_map<size_t, size_t> splitMap;
 
 		dst[baseIndex]->addFinalState(stateIndex.translateOTF(src.getFinalState()) + this->stateOffset);
-		for (size_t i = 0; i < splitPoints.size(); ++i) {
-			splitMap.insert(std::make_pair(splitPoints[i].first, splitPoints[i].second));
-			dst[splitPoints[i].second]->addFinalState(stateIndex.translateOTF(splitPoints[i].first) + this->stateOffset);
+		for (std::set<std::pair<size_t, size_t> >::const_iterator i = splitPoints.begin(); i != splitPoints.end(); ++i) {
+			splitMap.insert(std::make_pair(i->first, i->second));
+			dst[i->second]->addFinalState(stateIndex.translateOTF(i->first) + this->stateOffset);
 		}
 
+		std::cerr << src;
+
 		std::vector<std::pair<size_t, size_t> > stack = itov(std::make_pair(src.getFinalState(), baseIndex));
-		
+
 		boost::unordered_set<std::pair<size_t, size_t> > visited;
 		while (!stack.empty()) {
 			std::pair<size_t, size_t> p = stack.back();
@@ -1029,24 +1038,23 @@ public:
 					size_t state;
 					if (l != splitMap.end()) {
 						stack.push_back(std::make_pair(*k, l->second));
-						state = this->addData(*dst[p.second], Data::createRef(splitPoints[l->second].second));
+						state = this->addData(*dst[p.second], Data::createRef(l->second));
 					} else {
 						stack.push_back(std::make_pair(*k, p.second));
-						if (FA::isData(state))
+						if (FA::isData(*k))
 							state = *k;
 						else
 							state = stateIndex.translateOTF(*k) + this->stateOffset;
 					}
 					lhs.push_back(state);
 				}
-				size_t rhs;
-				if (FA::isData((*j)->rhs()))
-					rhs = (*j)->rhs();
-				else
-					rhs = stateIndex.translateOTF((*j)->rhs()) + this->stateOffset;
+				size_t rhs = (*j)->rhs();
+				if (!FA::isData(rhs))
+					rhs = stateIndex.translateOTF(rhs) + this->stateOffset;
 				dst[p.second]->addTransition(lhs, (*j)->label(), rhs);
 			}
 		}
+
 		this->incrementStateOffset(stateIndex.size());
 	}
 
@@ -1084,12 +1092,12 @@ public:
 		FAE& fae;
 		TA<label_type>& dst;
 		const std::vector<size_t>& index;
-		std::vector<std::pair<size_t, size_t> >& splitPoints;
+		std::set<std::pair<size_t, size_t> >& splitPoints;
 		const TA<label_type>& src1;
 		const TA<label_type>& src2;
 		boost::unordered_map<size_t, size_t> rootMap;
 		
-		IntersectAndRelabelSpecialF(FAE& fae, TA<label_type>& dst, std::vector<std::pair<size_t, size_t> >& splitPoints, const std::vector<size_t>& index, const TA<label_type>& src1, const TA<label_type>& src2, const NormInfo::RootInfo& rootInfo)
+		IntersectAndRelabelSpecialF(FAE& fae, TA<label_type>& dst, std::set<std::pair<size_t, size_t> >& splitPoints, const std::vector<size_t>& index, const TA<label_type>& src1, const TA<label_type>& src2, const NormInfo::RootInfo& rootInfo)
 			: fae(fae), dst(dst), index(index), splitPoints(splitPoints), src1(src1), src2(src2) {
 			for (std::vector<std::pair<size_t, size_t> >::const_iterator i = rootInfo.mergedRoots.begin(); i != rootInfo.mergedRoots.end(); ++i) {
 				bool b = this->rootMap.insert(std::make_pair(i->second, i->first)).second;
@@ -1112,7 +1120,7 @@ public:
 				this->dst.addFinalState(rhs);
 			boost::unordered_map<size_t, size_t>::iterator i = rootMap.find(t2->rhs());
 			if (i != this->rootMap.end())
-				this->splitPoints.push_back(std::make_pair(rhs, i->second));
+				this->splitPoints.insert(std::make_pair(rhs, i->second));
 		}
 
 	};
@@ -1159,7 +1167,7 @@ public:
 				);
 			} else {
 				TA<label_type> ta(this->taMan->getBackend());
-				std::vector<std::pair<size_t, size_t> > splitPoints;
+				std::set<std::pair<size_t, size_t> > splitPoints;
 				stateCount = TA<label_type>::buProduct(
 					cache1,
 					cache2,
@@ -1174,7 +1182,10 @@ public:
 		}
 
 		for (size_t i = 0; i < this->roots.size(); ++i) {
-			if (this->roots[i] && this->roots[i]->getFinalStates().empty())
+			if (!this->roots[i])
+				continue;
+			this->updateRoot(this->roots[i], &this->roots[i]->uselessAndUnreachableFree(*this->taMan->alloc()));
+			if (this->roots[i]->getFinalStates().empty())
 				return false;
 		}
 
@@ -1257,6 +1268,9 @@ public:
 				
 			if (this->roots[i]->getFinalStates().empty())
 				return false;
+
+			this->updateRoot(this->roots[i], &this->roots[i]->unreachableFree(*this->taMan->alloc()));
+
 		}
 
 		return true;

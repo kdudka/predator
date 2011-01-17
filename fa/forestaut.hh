@@ -59,7 +59,9 @@ public:
 			os << ']';
 			TA<label_type>& ta = *fa.roots[i];
 			TAWriter<label_type> writer(os);
-			writer.writeState(ta.getFinalState());
+			for (std::set<size_t>::iterator j = ta.getFinalStates().begin(); j != ta.getFinalStates().end(); ++j)
+				writer.writeState(*j);
+//			writer.writeState(ta.getFinalState());
 			writer.endl();
 			writer.writeTransitions(ta, FA::WriteStateF());
 		}

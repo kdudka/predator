@@ -82,12 +82,12 @@ struct TraceRecorder {
 
 		Item* parent;
 		const FAE* fae;
-		std::list<const FAE*>::reverse_iterator queueTag;
+		std::list<const FAE*>::iterator queueTag;
 		FAE normalized;
 		FAE::NormInfo normInfo;
 		set<Item*> children;
 
-		Item(Item* parent, const FAE* fae, std::list<const FAE*>::reverse_iterator queueTag, const FAE& normalized, const FAE::NormInfo& normInfo)
+		Item(Item* parent, const FAE* fae, std::list<const FAE*>::iterator queueTag, const FAE& normalized, const FAE::NormInfo& normInfo)
 			: parent(parent), fae(fae), queueTag(queueTag), normalized(normalized), normInfo(normInfo) {
 			if (parent)
 				parent->children.insert(this);
@@ -96,6 +96,7 @@ struct TraceRecorder {
 		~Item() {
 			assert(this->fae);
 			delete this->fae;
+			this->fae = NULL;
 		}
 
 		void removeChild(Item* item) {
@@ -116,7 +117,7 @@ struct TraceRecorder {
 		utils::eraseMap(this->confMap);
 	}
 
-	void init(const FAE* fae, std::list<const FAE*>::reverse_iterator i) {
+	void init(const FAE* fae, std::list<const FAE*>::iterator i) {
 		this->clear();
 		Item* item = new Item(NULL, fae, i, FAE(*fae), FAE::NormInfo());
 		this->confMap.insert(make_pair(fae, item));
@@ -128,7 +129,7 @@ struct TraceRecorder {
 		return i->second;
 	}
 
-	void add(const FAE* parent, const FAE* fae, std::list<const FAE*>::reverse_iterator i, const FAE& normalized, const FAE::NormInfo& normInfo) {
+	void add(const FAE* parent, const FAE* fae, std::list<const FAE*>::iterator i, const FAE& normalized, const FAE::NormInfo& normInfo) {
 		this->confMap.insert(
 			make_pair(fae, new Item(this->find(parent), fae, i, normalized, normInfo))
 		);
@@ -336,7 +337,15 @@ protected:
 		FAE::NormInfo normInfo;
 		fae.getNearbyReferences(fae.varGet(ABP_INDEX).d_ref.root, tmp);
 
+//		CL_CDEBUG("before normalization: " << std::endl << fae); 
+
 		fae.normalize(normInfo, tmp);
+
+//		CL_CDEBUG("after normalization: " << std::endl << fae); 
+
+//		CL_CDEBUG("normInfo: " << std::endl << normInfo); 
+
+//		normInfo.check();
 
 		FAE normalized(fae);
 
@@ -349,8 +358,10 @@ protected:
 
 		if (target->enqueue(this->queue, fae)) {
 			int i = this->queue.size() - l;
-			for (std::list<const FAE*>::reverse_iterator j = this->queue.rbegin(); i > 0; --i, ++j)
-				this->traceRecorder.add(this->currentConf, *j, j, normalized, normInfo);
+			for (std::list<const FAE*>::reverse_iterator j = this->queue.rbegin(); i > 0; --i, ++j) {
+				std::list<const FAE*>::iterator k = j.base();
+				this->traceRecorder.add(this->currentConf, *j, --k, normalized, normInfo);
+			}
 		}
 		else {
 			CL_CDEBUG("hit");
@@ -631,8 +642,8 @@ protected:
 
 		void operator()(TraceRecorder::Item* node) {
 			SymState* state = STATE_FROM_FAE(*node->fae);
-			if (node->queueTag != this->queue.rend())
-				this->queue.erase(--node->queueTag.base());
+			if (node->queueTag != this->queue.end())
+				this->queue.erase(node->queueTag);
 //			state->invalidate(this->queue, node->fae);
 			if (state->entryPoint)
 				s.insert(state);
@@ -651,7 +662,7 @@ protected:
 		TraceRecorder::Item* item = this->traceRecorder.find(fae);
 
 //		state->confMap[fae] = this->queue.end();
-		item->queueTag = this->queue.rend();
+		item->queueTag = this->queue.end();
 
 		const cl_location& loc = (*state->insn)->loc;
 
@@ -680,6 +691,8 @@ protected:
 
 				throw ProgramError(e.what(), &(*state->insn)->loc);
 
+			throw;
+
 			state = STATE_FROM_FAE(*item->fae);
 
 			assert(state->entryPoint);
@@ -692,9 +705,9 @@ protected:
 			
 			TraceRecorder::Item* parent = item->parent;
 
-			this->traceRecorder.remove(tmp2);
-
 			InvalidateF(this->queue, s)(item);
+
+			this->traceRecorder.remove(tmp2);
 
 			assert(parent);
 
@@ -742,8 +755,8 @@ protected:
 		for (vector<pair<const FAE*, const CodeStorage::Insn*> >::reverse_iterator i = trace.rbegin(); i != trace.rend(); ++i) {
 			if (i->second) {
 				state = STATE_FROM_FAE(*i->first);
-				CL_CDEBUG(std::endl << SymCtx::Dump(*state->ctx, *i->first));
-				CL_CDEBUG(std::endl << *i->first);
+//				CL_CDEBUG(std::endl << SymCtx::Dump(*state->ctx, *i->first));
+//				CL_CDEBUG(std::endl << *i->first);
 				CL_NOTE_MSG(i->second->loc, *(i->second));
 			}
 //			STATE_FROM_FAE(*i->first)->ctx->dumpContext(*i->first);
@@ -784,15 +797,15 @@ protected:
 			tmp.getNearbyReferences(fae.varGet(ABP_INDEX).d_ref.root, s);
 			tmp.normalize(normInfo, s);
 
-//			CL_CDEBUG("denormalizing " << std::endl << tmp << "with" << std::endl << item->normalized);
-//			CL_CDEBUG(item->normInfo);
+			CL_CDEBUG("denormalizing " << std::endl << tmp << "with" << std::endl << item->normalized);
+			CL_CDEBUG(item->normInfo);
 
 			if (!tmp.denormalize(item->normalized, item->normInfo)) {
 				CL_CDEBUG("spurious counter example (denormalization)!" << std::endl << item->normalized);
 				return item;
 			}
 
-//			CL_CDEBUG("reversing " << std::endl << tmp << "with" << std::endl << *item->parent->fae);
+			CL_CDEBUG("reversing " << std::endl << tmp << "with" << std::endl << *item->parent->fae);
 
 			if (!tmp.reverse(*item->parent->fae)) {
 				CL_CDEBUG("spurious counter example (reversal)!" << std::endl << *item->parent->fae);
@@ -907,7 +920,7 @@ public:
 		// schedule initial state for processing
 		init->enqueue(this->queue, fae);
 
-		this->traceRecorder.init(this->queue.front(), this->queue.rbegin());
+		this->traceRecorder.init(this->queue.front(), this->queue.begin());
 //size_t current = 1;
 //size_t min = 1;
 		try {
