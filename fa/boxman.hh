@@ -116,6 +116,34 @@ protected:
 
 public:
 
+	struct RenameSelectedF {
+
+		const boost::unordered_map<size_t, size_t>& index;
+		
+		RenameSelectedF(const boost::unordered_map<size_t, size_t>& index)
+			: index(index) {}
+
+		size_t operator()(size_t s) {
+			boost::unordered_map<size_t, size_t>::const_iterator i = this->index.find(s);
+			if (i == this->index.end())
+				return s;
+			return i->second;
+		}
+
+	};
+
+	TA<label_type>& adjustLeaves(TA<label_type>& dst, const TA<label_type>& src) {
+		boost::unordered_map<size_t, size_t> leafIndex;
+		for (TA<label_type>::iterator i = src.begin(); i != src.end(); ++i) {
+			if (i->label().head()->isData()) {
+				const DataBox* b = this->getData(((const DataBox*)i->label().head())->getData());
+				leafIndex.insert(std::make_pair(i->rhs(), _MSB_ADD(b->getId())));
+			}
+		}
+		TA<label_type>::rename(dst, src, RenameSelectedF(leafIndex));
+		return dst;
+	}
+
 	const AbstractBox* loadBox(const std::string& name, const boost::unordered_map<std::string, std::string>& database) {
 
 		std::vector<std::string> args;
@@ -164,12 +192,12 @@ public:
 
 //		box.variables.push_back(Data::createRef(box.roots.size(), 0));
 		this->translateRoot(tmp, composed, sta, database);
-		box->roots.push_back(this->taMan.clone(&tmp));
+		box->roots.push_back(&this->adjustLeaves(*this->taMan.alloc(), tmp));
 
 		while (reader.readNext(sta, autName)) {
 			tmp.clear();
 			this->translateRoot(tmp, composed, sta, database);
-			box->roots.push_back(this->taMan.clone(&tmp));
+			box->roots.push_back(&this->adjustLeaves(*this->taMan.alloc(), tmp));
 //			if (memcmp(autName.c_str(), "in", 2) == 0)
 //				box.variables.push_back(Data::createRef(box.roots.size(), 0));
 		}
@@ -225,201 +253,7 @@ public:
 	}
 
 public:
-/*
-	static const char* selPrefix;
-	static const char* refPrefix;
-	static const char* dataPrefix;
-	static const char* nullStr;
-	static const char* undefStr;
-
-	static bool isSelectorName(const std::string& name) {
-		return memcmp(name.c_str(), selPrefix, strlen(selPrefix)) == 0;
-	}
-
-	// TODO: parse size and aux
-	static SelData getSelectorFromName(const std::string& name) {
-		assert(BoxManager::isSelectorName(name));
-		return SelData(atol(name.c_str() + strlen(selPrefix)), 0, 0);
-	}
-
-	static bool isReferenceName(const std::string& name) {
-		return (name == nullStr) || (name == undefStr) || (memcmp(name.c_str(), refPrefix, strlen(refPrefix)) == 0);
-	}
-
-	static Data getReferenceFromName(const std::string& name) {
-		assert(BoxManager::isReferenceName(name));
-		if (name == nullStr)
-			return Data::createVoidPtr(0);
-		if (name == undefStr)
-			return Data::createUndef();
-		return Data::createRef(atol(name.c_str() + strlen(refPrefix)));
-	}
-
-	static bool isDataName(const std::string& name) {
-		return (memcmp(name.c_str(), refPrefix, strlen(dataPrefix)) == 0);
-	}
-
-	static Data getDataFromName(const std::string& name) {
-		assert(BoxManager::isData(name));
-		return atol(name.c_str() + strlen(dataPrefix));
-	}
-*/
-};
-
-/*
-class BoxManager {
-
-	mutable TA<label_type>::Manager& taMan;
-	mutable LabMan& labMan;
-
-	boost::unordered_map<string, Box> boxIndex;
-
-	LeafManager<const Data> dataMan;
-
-public:
-
-	static const char* selPrefix;
-	static const char* refPrefix;
-	static const char* dataPrefix;
-	static const char* nullStr;
-	static const char* undefStr;
-
-	static bool isSelectorName(const std::string& name) {
-		return memcmp(name.c_str(), selPrefix, strlen(selPrefix)) == 0;
-	}
-
-	// TODO: parse size and aux
-	static SelData getSelectorFromName(const std::string& name) {
-		assert(BoxManager::isSelectorName(name));
-		return SelData(atol(name.c_str() + strlen(selPrefix)), 0, 0);
-	}
-
-	static bool isReferenceName(const std::string& name) {
-		return (name == nullStr) || (name == undefStr) || (memcmp(name.c_str(), refPrefix, strlen(refPrefix)) == 0);
-	}
-
-	static Data getReferenceFromName(const std::string& name) {
-		assert(BoxManager::isReferenceName(name));
-		if (name == nullStr)
-			return Data::createVoidPtr(0);
-		if (name == undefStr)
-			return Data::createUndef();
-		return Data::createRef(atol(name.c_str() + strlen(refPrefix)));
-	}
-
-	static bool isDataName(const std::string& name) {
-		return (memcmp(name.c_str(), refPrefix, strlen(dataPrefix)) == 0);
-	}
-
-	static Data getDataFromName(const std::string& name) {
-		assert(BoxManager::isData(name));
-		return atol(name.c_str() + strlen(dataPrefix));
-	}
-
-public:
-
-	const Box& getSelector(const SelData& sel) {
-		std::stringstream ss;
-		ss << selPrefix << '|' << sel.offset << '|' << sel.size << '|' << sel.displ;
-		return this->boxIndex.insert(
-			make_pair(ss.str(), Box::createSelector(this->taMan, ss.str(), sel))
-		).first->second;
-	}
-
-	const Box& getData(const Data& data) {
-		std::stringstream ss;
-		ss << data;
-		return this->boxIndex.insert(
-			make_pair(ss.str(), Box::createData(this->taMan, ss.str(), data))
-		).first->second;
-	}
-
-	const Box& getInfo(const std::string& name, void* info = NULL) {
-		return this->boxIndex.insert(
-			make_pair("$" + name, Box::createBox(this->taMan, "$" + name, info))
-		).first->second;
-	}
-
-protected:
-
-	const Box& loadBox(const string& name, const boost::unordered_map<string, string>& database) {
-
-		boost::unordered_map<string, Box>::iterator i = this->boxIndex.find(name);
-		if (i != this->boxIndex.end())
-			return i->second;
-
-		if (BoxManager::isSelectorName(name))
-			return this->getSelector(BoxManager::getSelectorFromName(name));
-
-		if (BoxManager::isReferenceName(name))
-			return this->getData(BoxManager::getReferenceFromName(name));
-
-		boost::unordered_map<string, string>::const_iterator j = database.find(name);
-		if (j == database.end())
-			throw std::runtime_error("Box '" + name + "' not found!");
-
-		Box& box = this->boxIndex.insert(
-			make_pair(name, Box::createBox(this->taMan, name))
-		).first->second;
-
-		std::fstream input(j->second.c_str());
-
-		TAReader reader(input, j->second);
-
-		TA<string>::Backend sBackend;
-		TA<string> sta(sBackend);
-
-		TA<label_type>* ta = this->taMan.alloc();
-
-		string autName;
-
-		reader.readFirst(sta, autName);
-
-		this->translateRoot(*ta, sta, database);
-		box.variables.push_back(Data::createRef(box.roots.size(), 0));
-		box.roots.push_back(ta);
-
-		while (reader.readNext(sta, autName)) {
-			ta = taMan.alloc();
-			this->translateRoot(*ta, sta, database);
-			if (memcmp(autName.c_str(), "in", 2) == 0)
-				box.variables.push_back(Data::createRef(box.roots.size(), 0));
-			box.roots.push_back(ta);
-		}
-
-		box.computeCoverage();
-
-		return box;
-
-	}
-
-	void translateRoot(TA<label_type>& dst, const TA<string>& src, const boost::unordered_map<string, string>& database) {
-		dst.clear();
-		for (TA<string>::iterator i = src.begin(); i != src.end(); ++i) {
-			vector<string> strs;
-			boost::split(strs, i->label(), boost::is_from_range('_', '_'));
-			vector<const Box*> label;
-			for (vector<string>::iterator j = strs.begin(); j != strs.end(); ++j)
-				label.push_back(&this->loadBox(*j, database));
-			dst.addTransition(i->lhs(), &this->labMan.lookup(label), i->rhs());
-		}
-		dst.addFinalState(src.getFinalState());
-	}
-
-public:
-
-	BoxManager(TA<label_type>::Manager& taMan, LabMan& labMan) : taMan(taMan), labMan(labMan) {}
-
-	void loadTemplates(const boost::unordered_map<string, string>& database) {
-		for (boost::unordered_map<string, string>::const_iterator i = database.begin(); i != database.end(); ++i)
-			this->loadBox(i->first, database);
-	}
-
-	LabMan& getLabMan() const {
-		return this->labMan;
-	}
 
 };
-*/
 
 #endif

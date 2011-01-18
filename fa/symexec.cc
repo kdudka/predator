@@ -216,6 +216,9 @@ class SymExec::Engine {
 
 	bool dbgFlag;
 
+	size_t statesEvaluated;
+	size_t tracesEvaluated;
+
 protected:
 
 	SymCtx* getCtx(const CodeStorage::Fnc* fnc) {
@@ -288,18 +291,25 @@ protected:
 
 //		this->recAbstractAndFold(target, fae, this->basicBoxes);
 
+		bool matched = false;
+
 		// do not fold at 0
 		for (size_t i = 1; i < fae.getRootCount(); ++i) {
 			for (std::vector<const Box*>::const_iterator j = this->boxes.begin(); j != this->boxes.end(); ++j) {
-				if (fae.foldBox(i, *j))
+				CL_CDEBUG("trying " << *(const AbstractBox*)*j << " at " << i);
+				if (fae.foldBox(i, *j)) {
+					matched = true;
 					CL_CDEBUG("match");
+				}
 			}
 		}
 
-		std::set<size_t> tmp;
-		fae.getNearbyReferences(fae.varGet(ABP_INDEX).d_ref.root, tmp);
-		FAE::NormInfo normInfo;
-		fae.normalize(normInfo, tmp);
+		if (matched) {
+			std::set<size_t> tmp;
+			fae.getNearbyReferences(fae.varGet(ABP_INDEX).d_ref.root, tmp);
+			FAE::NormInfo normInfo;
+			fae.normalize(normInfo, tmp);
+		}
 
 		CL_CDEBUG("abstracting ... " << target->absHeight);
 		fae.heightAbstraction(target->absHeight, ExactLabelMatchF());
@@ -364,6 +374,7 @@ protected:
 			}
 		}
 		else {
+			++this->tracesEvaluated;
 			CL_CDEBUG("hit");
 			this->traceRecorder.destroyBranch(this->currentConf, DestroySimpleF());
 		}
@@ -865,6 +876,14 @@ protected:
 			std::cerr << **i;
 	}
 
+	void printInfo() {
+		if (this->dbgFlag) {
+			std::cerr << *this->currentConf;
+			std::cerr << "evaluated states: " << this->statesEvaluated << ", evaluated traces: " << this->tracesEvaluated << std::endl;
+			this->dbgFlag = false;
+		}
+	}
+
 public:
 
 	Engine(const CodeStorage::Storage& stor)
@@ -879,11 +898,11 @@ public:
 
 	void loadBoxes(const boost::unordered_map<std::string, std::string>& db) {
 
-	    CL_CDEBUG("loading boxes ...");
+	    CL_DEBUG("loading boxes ...");
 
 		for (boost::unordered_map<std::string, std::string>::const_iterator i = db.begin(); i != db.end(); ++i) {
 			this->boxes.push_back((const Box*)this->boxMan.loadBox(i->first, db));
-			CL_CDEBUG(i->first << ':' << std::endl << *(const FA*)this->boxes.back());
+			CL_DEBUG(i->first << ':' << std::endl << *(const FA*)this->boxes.back());
 		}
 
 		this->boxMan.buildBoxHierarchy(this->hierarchy, this->basicBoxes);
@@ -921,8 +940,7 @@ public:
 		init->enqueue(this->queue, fae);
 
 		this->traceRecorder.init(this->queue.front(), this->queue.begin());
-//size_t current = 1;
-//size_t min = 1;
+
 		try {
 
 			while (!this->queue.empty()) {
@@ -930,19 +948,10 @@ public:
 //				this->queue.pop_front();
 				this->currentConf = this->queue.back();
 				this->queue.pop_back();
-				if (this->dbgFlag) {
-					std::cerr << *this->currentConf;
-					this->dbgFlag = false;
-				}
+				++this->statesEvaluated;
+				this->printInfo();
 				this->processState(this->currentConf);
-/*				if (this->queue.size() < current)
-					min = this->queue.size();
-				if ((this->queue.size() > current) && (min == current)) {
-					std::cerr << "peak at " << min << std::endl;
-//					this->printQueue();
-				}
-				current = this->queue.size();
-*/			}
+			}
 
 			for (state_store_type::iterator i = this->stateStore.begin(); i != this->stateStore.end(); ++i) {
 				if (!i->second->entryPoint)
@@ -950,6 +959,8 @@ public:
 				CL_DEBUG("fixpoint at " << (*i->second->insn)->loc);
 				CL_DEBUG(std::endl << i->second->fwdConf);
 			}				
+
+			CL_DEBUG("evaluated states: " << this->statesEvaluated << ", evaluated traces: " << this->tracesEvaluated);
 
 		} catch (std::exception& e) {
 			CL_CDEBUG(e.what());

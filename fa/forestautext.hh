@@ -75,6 +75,11 @@ struct TAIsom {
 	}
 
 	bool matchStates(size_t s1, size_t s2) {
+		switch (f.matchStates(s1, s2)) {
+			case match_result_e::mSuccess: return true;
+			case match_result_e::mFail: return false;
+			default: break;
+		}
 		std::pair<typename boost::unordered_map<size_t, size_t>::iterator, bool> p
 			= this->sMatching.insert(std::make_pair(s1, s2));
 		if (!p.second)
@@ -92,7 +97,7 @@ struct TAIsom {
 		do {
 			size_t i;
 			for (i = 0; i < v1.size(); ++i) {
-				switch (this->f(*v1[i], *v2[i])) {
+				switch (this->f.matchTransitions(*v1[i], *v2[i])) {
 					case match_result_e::mSuccess:
 						continue;
 					case match_result_e::mDunno:
@@ -144,22 +149,6 @@ public:
 
 	};
 
-	struct RenameSelectedF {
-
-		const boost::unordered_map<size_t, size_t>& index;
-		
-		RenameSelectedF(const boost::unordered_map<size_t, size_t>& index)
-			: index(index) {}
-
-		size_t operator()(size_t s) {
-			boost::unordered_map<size_t, size_t>::const_iterator i = this->index.find(s);
-			if (i == this->index.end())
-				return s;
-			return i->second;
-		}
-
-	};
-
 protected:
 
 	TA<label_type>& unique(TA<label_type>& dst, const TA<label_type>& src, bool addFinalStates = true) {
@@ -205,9 +194,8 @@ protected:
 */
 	void boxMerge(TA<label_type>& dst, const TA<label_type>& src, const TA<label_type>& boxRoot, const Box* box, const std::vector<size_t>& rootIndex) {
 		TA<label_type> tmp(this->taMan->getBackend()), tmp2(this->taMan->getBackend());
-		this->adjustLeaves(tmp2, boxRoot);
-		this->relabelReferences(tmp, tmp2, rootIndex);
-		tmp2.clear();
+//		this->boxMan->adjustLeaves(tmp2, boxRoot);
+		this->relabelReferences(tmp, boxRoot, rootIndex);
 		this->unique(tmp2, tmp);
 		src.copyTransitions(dst, TA<label_type>::NonAcceptingF(src));
 		tmp2.copyTransitions(dst, TA<label_type>::NonAcceptingF(tmp2));
@@ -289,11 +277,49 @@ protected:
 			assert(root < this->fae.roots.size());
 		}
 
-		match_result_e operator()(const TT<label_type>& t1, const TT<label_type>& t2) {
-			size_t ref1, ref2;
+		match_result_e matchStates(size_t s1, size_t s2) {
+			const Data* data1, * data2;
+			if (this->fae.isData(s1, data1)) {
+				if (!this->fae.isData(s2, data2))
+					return match_result_e::mFail;
+				if (!data1->isRef() || !data2->isRef())
+					return (data1 == data2)?(match_result_e::mSuccess):(match_result_e::mFail);
+				assert(data2->d_ref.root < this->index.size());
+				size_t ref1 = data1->d_ref.root, ref2 = data2->d_ref.root;
+				if ((this->index[ref2] != (size_t)(-1)) && (this->index[ref2] != ref1))
+					return match_result_e::mFail;
+				this->index[ref2] = ref1;
+				return match_result_e::mSuccess;
+			}
+			if (!this->fae.isData(s2, data2))
+				return match_result_e::mDunno;
+			if (!data2->isRef())
+				return match_result_e::mFail;
+			size_t ref2 = data2->d_ref.root;
+			assert(ref2 < this->index.size());
+			if (this->index[ref2] != (size_t)(-1))
+				return match_result_e::mFail;
+			this->index[ref2] = this->fae.roots.size();
+			this->fae.roots.push_back(this->fae.taMan->alloc());
+			Index<size_t> stateIndex;
+			size_t offset = this->fae.nextState();
+			this->fae.unique(*this->fae.roots.back(), *this->fae.roots[this->root], stateIndex, false);
+			this->fae.roots.back()->addFinalState(stateIndex[s1] + offset);
+			fae.incrementStateOffset(stateIndex.size());
+			this->fae.rootMap.push_back(std::vector<std::pair<size_t, bool> >());
+			this->fae.updateRootMap(this->fae.rootMap.size() - 1);
+			return match_result_e::mSuccess;
+		}
+
+		match_result_e matchTransitions(const TT<label_type>& t1, const TT<label_type>& t2) {
+			return (t1.label() == t2.label())?(match_result_e::mDunno):(match_result_e::mFail);
+//		match_result_e operator()(const TT<label_type>& t1, const TT<label_type>& t2) {
+/*			size_t ref1, ref2;
+			std::cerr << "trying " << t1 << " vs " << t2 << std::endl;
 			if (!FAE::getRef(t1.label().head(), ref1)) {
 				if (!t1.label().head()->isData() && FAE::getRef(t2.label().head(), ref2)) {
 					assert(ref2 < this->index.size());
+					std::cerr << "adding temporary root point at " << t1.rhs() << std::endl;
 					if ((this->index[ref2] != (size_t)(-1)) && (this->index[ref2] != ref1))
 						return match_result_e::mFail;
 					this->index[ref2] = this->fae.roots.size();
@@ -315,20 +341,41 @@ protected:
 			if ((this->index[ref2] != (size_t)(-1)) && (this->index[ref2] != ref1))
 				return match_result_e::mFail;
 			this->index[ref2] = ref1;
-			return match_result_e::mSuccess;
+			return match_result_e::mSuccess;*/
 		}
 
 	};
 
 	struct IsomF {
 
+		const FAE& fae;
 		std::vector<size_t>& index;
 		
-		IsomF(std::vector<size_t>& index) : index(index) {}
+		IsomF(const FAE& fae, std::vector<size_t>& index) : fae(fae), index(index) {}
 
-		// TODO: revise
-		match_result_e operator()(const TT<label_type>& t1, const TT<label_type>& t2) {
-			size_t ref1, ref2;
+		match_result_e matchStates(size_t s1, size_t s2) {
+			const Data* data1, * data2;
+			if (this->fae.isData(s1, data1)) {
+				if (!this->fae.isData(s2, data2))
+					return match_result_e::mFail;
+				if (!data1->isRef() || !data2->isRef())
+					return (data1 == data2)?(match_result_e::mSuccess):(match_result_e::mFail);
+				assert(data2->d_ref.root < this->index.size());
+				size_t ref1 = data1->d_ref.root, ref2 = data2->d_ref.root;
+				if ((this->index[ref2] != (size_t)(-1)) && (this->index[ref2] != ref1))
+					return match_result_e::mFail;
+				this->index[ref2] = ref1;
+				return match_result_e::mSuccess;
+			}
+			if (!this->fae.isData(s2, data2))
+				return match_result_e::mDunno;
+			return match_result_e::mFail;
+		}
+
+		match_result_e matchTransitions(const TT<label_type>& t1, const TT<label_type>& t2) {
+//		match_result_e operator()(const TT<label_type>& t1, const TT<label_type>& t2) {
+			return (t1.label() == t2.label())?(match_result_e::mDunno):(match_result_e::mFail);
+/*			size_t ref1, ref2;
 			if (!FAE::getRef(t1.label().head(), ref1))
 				return (t1.label() == t2.label())?(match_result_e::mDunno):(match_result_e::mFail);
 			if (!FAE::getRef(t2.label().head(), ref2))
@@ -336,7 +383,7 @@ protected:
 			assert(ref2 < this->index.size());
 			if ((this->index[ref2] == (size_t)(-1)) || (this->index[ref2] != ref1))
 				return match_result_e::mFail;
-			return match_result_e::mSuccess;
+			return match_result_e::mSuccess;*/
 		}
 
 	};
@@ -472,7 +519,7 @@ public:
 		for (size_t i = 0; i < cSig.size(); ++i) {
 			if (cSig[i] == root)
 				continue;
-			if (!TAIsom<label_type, IsomF>(iTmp[i].second, *box->getRoot(sig[i]), IsomF(index)).run())
+			if (!TAIsom<label_type, IsomF>(iTmp[i].second, *box->getRoot(sig[i]), IsomF(*this, index)).run())
 				return false;
 		}		
 
@@ -572,7 +619,7 @@ protected:
 		dst.addTransition(vector<size_t>(), &this->labMan->lookup(itov((const AbstractBox*)b)), state);
 		return state;
 	}
-
+/*
 	void adjustLeaves(TA<label_type>& dst, const TA<label_type>& src) {
 		boost::unordered_map<size_t, size_t> leafIndex;
 		for (TA<label_type>::iterator i = src.begin(); i != src.end(); ++i) {
@@ -590,7 +637,7 @@ protected:
 		}
 		TA<label_type>::rename(dst, src, RenameSelectedF(leafIndex));
 	}
-
+*/
 	bool isData(size_t state, const Data*& data) const {
 		if (!FA::isData(state))
 			return false;

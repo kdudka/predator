@@ -4,11 +4,9 @@ medium
 * reserve stack space for function arguments
 * redesign internal structure of symbols in order to search faster
 * ? cleanup label_type (use boxes only)
-* consider switching to dfs
 * overhaul of execution tree (increase granularity)
+* test inclusion after picking items from todo list
 
 low
 * cache o mapping and compute only on demand
-* cache accepting transitions
-* extend o computation to record single/multiple occurences
 
