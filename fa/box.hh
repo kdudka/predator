@@ -26,10 +26,10 @@
 #include <ostream>
 
 #include "types.hh"
-#include "labman.hh"
+//#include "labman.hh"
 #include "forestaut.hh"
 #include "abstractbox.hh"
-#include "databox.hh"
+//#include "databox.hh"
 
 class TypeBox : public AbstractBox {
 	
@@ -129,6 +129,7 @@ protected:
 	struct LeafEnumF {
 
 		const TA<label_type>& ta;
+		const TT<label_type>& t;
 		size_t target;
 		std::set<size_t>& selectors;
 
@@ -136,25 +137,25 @@ protected:
 			TA<label_type>::Iterator i = this->ta.begin(state);
 			if (i == this->ta.end(state))
 				return false;
-			if (!i->label().head()->isType(box_type_e::bData))
+			if (!i->label()->isData())
 				return false;
-			const Data& data = ((const DataBox*)i->label().head())->getData();
+			const Data& data = i->label()->getData();
 			if (!data.isRef())
 				return false;
 			ref = data.d_ref.root;
 			return true;
 		}
 
-		LeafEnumF(const TA<label_type>& ta, size_t target, std::set<size_t>& selectors)
-			: ta(ta), target(target), selectors(selectors) {}
+		LeafEnumF(const TA<label_type>& ta, const TT<label_type>& t, size_t target, std::set<size_t>& selectors)
+			: ta(ta), t(t), target(target), selectors(selectors) {}
 
-		bool operator()(const AbstractBox* abox, std::vector<size_t>::const_iterator lhsi) {
+		bool operator()(const AbstractBox* abox, size_t, size_t offset) {
 			if (!abox->isType(box_type_e::bBox))
 				return true;
 			const Box* box = (const Box*)abox;
-			for (size_t k = 0; k < box->getArity(); ++k, ++lhsi) {
+			for (size_t k = 0; k < box->getArity(); ++k, ++offset) {
 				size_t ref;
-				if (this->getRef(*lhsi, ref) && ref == this->target)
+				if (this->getRef(t.lhs()[offset], ref) && ref == this->target)
 					this->selectors.insert(box->inputCoverage(k).begin(), box->inputCoverage(k).end());
 			}
 			return true;
@@ -162,13 +163,15 @@ protected:
 
 	};
 
-	// enumerates upwards selectors
+	// enumerates upward selectors
 	void enumerateSelectorsAtLeaf(std::set<size_t>& selectors, size_t root, size_t target) const {
 		assert(root < this->roots.size());
 		assert(this->roots[root]);
 
-		for (TA<label_type>::iterator i = this->roots[root]->begin(); i != this->roots[root]->end(); ++i)
-			FA::iterateLabel(*i, LeafEnumF(*this->roots[root], target, selectors));
+		for (TA<label_type>::iterator i = this->roots[root]->begin(); i != this->roots[root]->end(); ++i) {
+			if (i->label()->isNode())
+				i->label()->iterate(LeafEnumF(*this->roots[root], *i, target, selectors));
+		}
 	}
 
 public:
@@ -196,7 +199,7 @@ public:
 		bool b = false;
 		for (TA<label_type>::iterator i = ta.accBegin(); i != ta.accEnd(i); ++i) {
 			std::vector<size_t> v2;
-			Box::getDownwardCoverage(*i->label().dataB, v2);
+			Box::getDownwardCoverage(i->label()->getNode(), v2);
 			if (!b) {
 				v = v2;
 				b = true;
@@ -249,7 +252,7 @@ public:
 		for (size_t i = 0; i < this->roots.size(); ++i) {
 			this->triggers.push_back(std::set<const AbstractBox*>());
 			for (TA<label_type>::iterator j = this->roots[i]->accBegin(); j != this->roots[i]->accEnd(j); ++j)
-				this->triggers.back().insert(j->label().dataB->begin(), j->label().dataB->end());
+				this->triggers.back().insert(j->label()->getNode().begin(), j->label()->getNode().end());
 		}
 	}
 

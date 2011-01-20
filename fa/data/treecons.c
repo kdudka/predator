@@ -7,11 +7,6 @@ int main() {
         struct TreeNode* right;
     };
 
-    struct StackItem {
-        struct StackItem* next;
-	struct TreeNode* node;
-    };
-
     struct TreeNode* root = malloc(sizeof(*root)), *n;
     root->left = NULL;
     root->right = NULL;
@@ -38,29 +33,28 @@ int main() {
 
     n = NULL;
 
-    struct StackItem* s = malloc(sizeof(*s)), *st;
-    s->next = NULL;
-    s->node = root;
+    struct TreeNode* pred;
 
-    while (s != NULL) {
-        st = s;
-        s = s->next;
-	n = st->node;
-	free(st);
-	if (n->left) {
-	    st = malloc(sizeof(*st));
-	    st->next = s;
-	    st->node = n->left;
-	    s = st;
+    while (root) {
+	pred = NULL;
+        n = root;
+	while (n->left || n->right) {
+	    pred = n;
+	    if (n->left)
+		n = n->left;
+	    else
+		n = n->right;
 	}
-	if (n->right) {
-	    st = malloc(sizeof(*st));
-	    st->next = s;
-	    st->node = n->right;
-	    s = st;
-	}
+	if (pred) {
+	    if (n == pred->left)
+		pred->left = NULL;
+	    else
+		pred->right = NULL;	    
+	} else
+	    root = NULL;
 	free(n);
     }
 
     return 0;
+
 }

@@ -61,8 +61,8 @@ struct SymState {
 
 	size_t absHeight;
 
-	SymState(TA<label_type>::Backend& fwdBackend, TA<label_type>::Backend& fixpointBackend, LabMan& labMan)
-		: fwdConf(fixpointBackend), fwdConfWrapper(this->fwdConf, labMan)/*, fixpoint(fixpointBackend), fixpointWrapper(this->fixpoint, labMan)*/, absHeight(1) {}
+	SymState(TA<label_type>::Backend& fwdBackend, TA<label_type>::Backend& fixpointBackend, BoxMan& boxMan)
+		: fwdConf(fixpointBackend), fwdConfWrapper(this->fwdConf, boxMan)/*, fixpoint(fixpointBackend), fixpointWrapper(this->fixpoint, labMan)*/, absHeight(1) {}
 
 	~SymState() {
 //		utils::eraseMapFirst(this->confMap);
@@ -155,7 +155,7 @@ struct SymState {
 			std::swap(dst, tmp);
 		}
 	}
-
+/*
 	void enqueue(std::list<const FAE*>& queue, const std::vector<FAE*>& src) {
 		for (std::vector<FAE*>::const_iterator i = src.begin(); i != src.end(); ++i) {
 //			this->confMap.insert(std::make_pair(*i, queue.insert(queue.end(), *i)));
@@ -165,41 +165,33 @@ struct SymState {
 			CL_CDEBUG(std::endl << **i);
 		}
 	}
-
-	void prepareFree(std::list<const FAE*>& queue, const FAE& fae) {
+*/
+	void prepareFree(std::vector<FAE*>& dst, const FAE& fae) {
 		std::vector<FAE*> tmp;
 		ContainerGuard<vector<FAE*> > g(tmp);
 		this->prepareOperandsGeneric(tmp, fae);
 		for (std::vector<FAE*>::iterator i = tmp.begin(); i != tmp.end(); ++i) {
 			OperandInfo src;
-			std::vector<FAE*> tmp2;
 			this->ctx->parseOperand(src, **i, &(*this->insn)->operands[2]);
 			Data data = src.readData(**i, itov((size_t)0));
 			if (!data.isRef() || (data.d_ref.displ != 0)) {
-				tmp2.push_back(new FAE(**i));
-				this->enqueue(queue, tmp2);
-				continue;
+				dst.push_back(new FAE(**i));
+			} else {
+				const TypeBox* typeBox = fae.getType(data.d_ref.root);
+				fae.isolateSet(dst, data.d_ref.root, typeBox->getSelectors());
 			}
-			const TypeBox* typeBox = fae.getType(data.d_ref.root);
-			fae.isolateSet(tmp2, data.d_ref.root, typeBox->getSelectors());
-			assert(tmp2.size());
-			this->enqueue(queue, tmp2);
 		}
 	}
 
 	// TODO: correctly unroll stack frame
-	void prepareRet(std::list<const FAE*>& queue, const FAE& fae) {
-		std::vector<FAE*> tmp;
-		ContainerGuard<vector<FAE*> > g(tmp);
-		this->prepareOperandsGeneric(tmp, fae);
-		g.release();
-		this->enqueue(queue, tmp);
+	void prepareRet(std::vector<FAE*>& dst, const FAE& fae) {
+		this->prepareOperandsGeneric(dst, fae);
 	}
 
-	void prepareOperands(std::list<const FAE*>& queue, const FAE& fae) {
+	void prepareOperands(std::vector<FAE*>& dst, const FAE& fae) {
 		switch ((*this->insn)->code) {
 			case cl_insn_e::CL_INSN_RET:
-				this->prepareRet(queue, fae);
+				this->prepareRet(dst, fae);
 				return;
 
 			case cl_insn_e::CL_INSN_CALL:
@@ -207,25 +199,17 @@ struct SymState {
 				assert((*this->insn)->operands[1].data.cst.code == cl_type_e::CL_TYPE_FNC);
 				switch (BuiltinTableStatic::data[(*this->insn)->operands[1].data.cst.data.cst_fnc.name]) {
 					case builtin_e::biFree:
-						this->prepareFree(queue, fae);
+						this->prepareFree(dst, fae);
 						break;
 					default: {
-						std::vector<FAE*> tmp;
-						ContainerGuard<vector<FAE*> > g(tmp);
-						this->prepareOperandsGeneric(tmp, fae);
-						g.release();
-						this->enqueue(queue, tmp);
+						this->prepareOperandsGeneric(dst, fae);
 						break;
 					}
 				}
 				break;
 
 			default: {
-				std::vector<FAE*> tmp;
-				ContainerGuard<vector<FAE*> > g(tmp);
-				this->prepareOperandsGeneric(tmp, fae);
-				g.release();
-				this->enqueue(queue, tmp);
+				this->prepareOperandsGeneric(dst, fae);
 				break;
 			}
 		}
@@ -249,7 +233,7 @@ struct SymState {
 		}
 	}
 
-	bool enqueue(std::list<const FAE*>& queue, const FAE& fae) {
+	bool testInclusion(const FAE& fae) {
 
 		if (this->entryPoint) {
 
@@ -262,7 +246,9 @@ struct SymState {
 //			CL_CDEBUG("response" << std::endl << this->fwdConf);
 
 			if (TA<label_type>::subseteq(ta, this->fwdConf))
-				return false;
+				return true;
+
+//			CL_DEBUG("extending fixpoint with:" << std::endl << fae);
 
 			this->fwdConfWrapper.join(ta, index);
 			this->fwdConf.minimized(ta);
@@ -270,9 +256,7 @@ struct SymState {
 
 		}
 		
-		this->prepareOperands(queue, fae);
-
-		return true;
+		return false;
 
 	}
 /*

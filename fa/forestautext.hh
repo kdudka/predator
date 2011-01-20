@@ -32,7 +32,7 @@
 
 #include "forestaut.hh"
 #include "boxman.hh"
-#include "labman.hh"
+//#include "labman.hh"
 #include "tatimint.hh"
 #include "utils.hh"
 #include "programerror.hh"
@@ -126,7 +126,7 @@ struct TAIsom {
 class FAE : public FA {
 
 	mutable BoxMan* boxMan;
-	mutable LabMan* labMan;
+//	mutable LabMan* labMan;
 
 	size_t stateOffset;
 
@@ -206,7 +206,7 @@ protected:
 			size_t lhsOffset = 0;
 			if (box) {
 				bool found = false;
-				for (std::vector<const AbstractBox*>::const_iterator j = i->label().dataB->begin(); j != i->label().dataB->end(); ++j) {
+				for (std::vector<const AbstractBox*>::const_iterator j = i->label()->getNode().begin(); j != i->label()->getNode().end(); ++j) {
 					if (!(*j)->isStructural()) {
 						label.push_back(*j);
 						continue;
@@ -226,15 +226,15 @@ protected:
 				assert(found);
 			} else {
 				lhs = i->lhs();
-				label = *i->label().dataB;
+				label = i->label()->getNode();
 			}
 			for (TA<label_type>::iterator j = tmp2.accBegin(); j != tmp2.accEnd(j); ++j) {
 				std::vector<size_t> lhs2 = lhs;
 				std::vector<const AbstractBox*> label2 = label;
 				lhs2.insert(lhs2.end(), j->lhs().begin(), j->lhs().end());
-				label2.insert(label2.end(), j->label().dataB->begin(), j->label().dataB->end());
-				FAE::reorderBoxes(label2, lhs2);
-				dst.addTransition(lhs2, &this->labMan->lookup(label2), j->rhs());
+				label2.insert(label2.end(), j->label()->getNode().begin(), j->label()->getNode().end());
+				FA::reorderBoxes(label2, lhs2);
+				dst.addTransition(lhs2, this->boxMan->lookupLabel(label2), j->rhs());
 			}
 		}
 	}
@@ -313,35 +313,6 @@ protected:
 
 		match_result_e matchTransitions(const TT<label_type>& t1, const TT<label_type>& t2) {
 			return (t1.label() == t2.label())?(match_result_e::mDunno):(match_result_e::mFail);
-//		match_result_e operator()(const TT<label_type>& t1, const TT<label_type>& t2) {
-/*			size_t ref1, ref2;
-			std::cerr << "trying " << t1 << " vs " << t2 << std::endl;
-			if (!FAE::getRef(t1.label().head(), ref1)) {
-				if (!t1.label().head()->isData() && FAE::getRef(t2.label().head(), ref2)) {
-					assert(ref2 < this->index.size());
-					std::cerr << "adding temporary root point at " << t1.rhs() << std::endl;
-					if ((this->index[ref2] != (size_t)(-1)) && (this->index[ref2] != ref1))
-						return match_result_e::mFail;
-					this->index[ref2] = this->fae.roots.size();
-					this->fae.roots.push_back(this->fae.taMan->alloc());
-					Index<size_t> stateIndex;
-					size_t offset = this->fae.nextState();
-					this->fae.unique(*this->fae.roots.back(), *this->fae.roots[root], stateIndex, false);
-					this->fae.roots.back()->addFinalState(stateIndex[t1.rhs()] + offset);
-					fae.incrementStateOffset(stateIndex.size());
-					this->fae.rootMap.push_back(std::vector<std::pair<size_t, bool> >());
-					this->fae.updateRootMap(this->fae.rootMap.size() - 1);
-					return match_result_e::mSuccess;
-				}
-				return (t1.label() == t2.label())?(match_result_e::mDunno):(match_result_e::mFail);
-			}
-			if (!FAE::getRef(t2.label().head(), ref2))
-				return match_result_e::mFail;
-			assert(ref2 < this->index.size());
-			if ((this->index[ref2] != (size_t)(-1)) && (this->index[ref2] != ref1))
-				return match_result_e::mFail;
-			this->index[ref2] = ref1;
-			return match_result_e::mSuccess;*/
 		}
 
 	};
@@ -373,17 +344,7 @@ protected:
 		}
 
 		match_result_e matchTransitions(const TT<label_type>& t1, const TT<label_type>& t2) {
-//		match_result_e operator()(const TT<label_type>& t1, const TT<label_type>& t2) {
 			return (t1.label() == t2.label())?(match_result_e::mDunno):(match_result_e::mFail);
-/*			size_t ref1, ref2;
-			if (!FAE::getRef(t1.label().head(), ref1))
-				return (t1.label() == t2.label())?(match_result_e::mDunno):(match_result_e::mFail);
-			if (!FAE::getRef(t2.label().head(), ref2))
-				return match_result_e::mFail;
-			assert(ref2 < this->index.size());
-			if ((this->index[ref2] == (size_t)(-1)) || (this->index[ref2] != ref1))
-				return match_result_e::mFail;
-			return match_result_e::mSuccess;*/
 		}
 
 	};
@@ -401,7 +362,7 @@ protected:
 			size_t lhsOffset = 0;
 			const TT<label_type>& t = *i;
 			size_t matched = 0;
-			for (std::vector<const AbstractBox*>::const_iterator j = t.label().dataB->begin(); j != t.label().dataB->end(); ++j) {
+			for (std::vector<const AbstractBox*>::const_iterator j = t.label()->getNode().begin(); j != t.label()->getNode().end(); ++j) {
 				if (trigger.count(*j)) {
 					FAE::copyBox(cLhs, cLabel, *j, t.lhs(), lhsOffset);
 					++matched;
@@ -411,9 +372,9 @@ protected:
 			}
 			if (matched == trigger.size()) {
 				FAE::reorderBoxes(label, lhs);
-				dst.addTransition(lhs, &this->labMan->lookup(label), src.getFinalState());
+				dst.addTransition(lhs, this->boxMan->lookupLabel(label), src.getFinalState());
 				FAE::reorderBoxes(cLabel, cLhs);
-				complement.addTransition(cLhs, &this->labMan->lookup(cLabel), src.getFinalState());
+				complement.addTransition(cLhs, this->boxMan->lookupLabel(cLabel), src.getFinalState());
 			} else return false;
 		}
 		dst.addFinalState(src.getFinalState());
@@ -433,7 +394,7 @@ public:
 		size_t lhsOffset = 0;
 		std::vector<size_t> bSig = box->getSig(0);
 		std::vector<size_t> sig;
-		for (std::vector<const AbstractBox*>::const_iterator i = t.label().dataB->begin(); i != t.label().dataB->end(); ++i) {
+		for (std::vector<const AbstractBox*>::const_iterator i = t.label()->getNode().begin(); i != t.label()->getNode().end(); ++i) {
 			if ((const AbstractBox*)box != *i) {
 				lhsOffset += (*i)->getArity();
 				continue;
@@ -537,13 +498,13 @@ public:
 				ta->addTransition(*i);
 				continue;
 			}
-			std::vector<const AbstractBox*> label(*i->label().dataB);
+			std::vector<const AbstractBox*> label(i->label()->getNode());
 			std::vector<size_t> lhs(i->lhs());
 			label.push_back(box);
 			for (size_t j = 0; j < cSig.size(); ++j)
 				lhs.push_back(this->addData(*ta, Data::createRef(cSig[j])));
 			FAE::reorderBoxes(label, lhs);
-			ta->addTransition(lhs, &this->labMan->lookup(label), state);
+			ta->addTransition(lhs, this->boxMan->lookupLabel(label), state);
 		}
 
 		// replace
@@ -573,7 +534,7 @@ public:
 
 	void loadTA(const TA<label_type>& src, const TA<label_type>::td_cache_type& cache, const TT<label_type>* top, size_t stateOffset) {
 		this->clear();
-		this->variables = *top->label().data;
+		this->variables = top->label()->getVData();
 		this->stateOffset = stateOffset;
 		for (vector<size_t>::const_iterator i = top->lhs().begin(); i != top->lhs().end(); ++i) {
 			TA<label_type>* ta = this->taMan->alloc();
@@ -614,66 +575,48 @@ protected:
 	}
 
 	size_t addData(TA<label_type>& dst, const Data& data) {
-		const DataBox* b = this->boxMan->getData(data);
-		size_t state = _MSB_ADD(b->getId());
-		dst.addTransition(vector<size_t>(), &this->labMan->lookup(itov((const AbstractBox*)b)), state);
+		label_type label = this->boxMan->lookupLabel(data);
+		size_t state = _MSB_ADD(label->getDataId());
+		dst.addTransition(vector<size_t>(), label, state);
 		return state;
 	}
-/*
-	void adjustLeaves(TA<label_type>& dst, const TA<label_type>& src) {
-		boost::unordered_map<size_t, size_t> leafIndex;
-		for (TA<label_type>::iterator i = src.begin(); i != src.end(); ++i) {
-			if (i->label().head()->isData()) {
-				leafIndex.insert(
-					std::make_pair(
-						i->rhs(),
-						this->addData(dst, ((const DataBox*)i->label().head())->getData())
-					)
-				);
-			}
-//			size_t ref;
-//			if (FAE::getRef(i->label().head(), ref))
-//				leafIndex.insert(std::make_pair(i->rhs(), this->addData(dst, Data::createRef(ref))));
-		}
-		TA<label_type>::rename(dst, src, RenameSelectedF(leafIndex));
-	}
-*/
+
 	bool isData(size_t state, const Data*& data) const {
 		if (!FA::isData(state))
 			return false;
-		data = &this->boxMan->getData(_MSB_GET(state))->getData();
+		data = &this->boxMan->getData(_MSB_GET(state));
 		return true;
 	}
 
 	bool getRef(size_t state, size_t& ref) const {
 		if (!FA::isData(state))
 			return false;
-		const Data& data = this->boxMan->getData(_MSB_GET(state))->getData();
+		const Data& data = this->boxMan->getData(_MSB_GET(state));
 		if (!data.isRef())
 			return false;
 		ref = data.d_ref.root;
 		return true;
 	}
 
-	static bool isRef(const AbstractBox* box) {
-		if (!box->isType(box_type_e::bData))
+	static bool isRef(label_type label) {
+		if (!label->isData())
 			return false;
-		return ((DataBox*)box)->getData().isRef();
+		return label->getData().isRef();
 	}
 
 
-	static bool isRef(const AbstractBox* box, size_t ref) {
-		if (!box->isType(box_type_e::bData))
+	static bool isRef(label_type label, size_t ref) {
+		if (!label->isData())
 			return false;
-		return ((DataBox*)box)->getData().isRef(ref);
+		return label->getData().isRef(ref);
 	}
 
-	static bool getRef(const AbstractBox* box, size_t& ref) {
-		if (!box->isType(box_type_e::bData))
+	static bool getRef(label_type label, size_t& ref) {
+		if (!label->isData())
 			return false;
-		if (!((DataBox*)box)->getData().isRef())
+		if (!label->getData().isRef())
 			return false;
-		ref = ((DataBox*)box)->getData().d_ref.root;
+		ref = label->getData().d_ref.root;
 		return true;
 	}
 /*
@@ -742,7 +685,7 @@ protected:
 					lhs.push_back(*j);
 				}
 			}
-			if (!FAE::isRef(i->label().head(), root))
+			if (!FAE::isRef(i->label(), root))
 				dst.addTransition(lhs, i->label(), i->rhs());
 		}
 		return dst;
@@ -765,8 +708,7 @@ protected:
 		assert(ref < this->roots.size());
 		TA<label_type> ta(this->taMan->getBackend());
 		ta.addFinalState(dst.getFinalState());
-		const DataBox* b = this->boxMan->getData(Data::createRef(ref));
-		size_t refState = _MSB_ADD(b->getId());
+		size_t refState = _MSB_ADD(this->boxMan->getDataId(Data::createRef(ref)));
 		joinState = this->freshState();
 		bool hit = false;
 		for (TA<label_type>::iterator i = dst.begin(); i != dst.end(); ++i) {
@@ -791,43 +733,7 @@ protected:
 		ta.unreachableFree(*ta2);
 		return ta2;
 	}
-/*
-	static bool isUniqueRef(const TA<label_type>& ta, size_t ref) {
-//		const Data* data;
-		boost::unordered_map<size_t, size_t> index;
-		for (TA<label_type>::iterator i = ta.begin(); i != ta.end(); ++i) {
-			if (FAE::isRef(i->label().head(), ref))
-				index.insert(make_pair(i->rhs(), 1));
-		}
-		bool changed = true;
-		while (changed) {
-			changed = false;
-			for (TA<label_type>::iterator i = ta.begin(); i != ta.end(); ++i) {
-				if (!i->label().head()->isStructural())
-					continue;
-				size_t sum = 0;
-				for (vector<size_t>::const_iterator j = i->lhs().begin(); j != i->lhs().end(); ++j)
-					sum += index.insert(make_pair(*j, 0)).first->second;
-				if (sum == 0)
-					continue;
-				// if everything is reachable, then we can safely conclude here
-				if (sum > 1)
-					return false;
-				size_t& k = index.insert(make_pair(i->rhs(), 0)).first->second;
-//				sum = std::min(sum, 2);
-//				if (k < sum) {
-//					k = sum;
-//					changed = true;
-//				}
-				if (k == 0) {
-					k = 1;
-					changed = true;
-				}
-			}
-		}
-		return true;
-	}
-*/
+
 	void visitDown(size_t c, std::vector<bool>& visited, std::vector<size_t>& order, std::vector<bool>& marked) const {
 		if (visited[c]) {
 			marked[c] = true;
@@ -837,7 +743,6 @@ protected:
 		order.push_back(c);
 		for (std::vector<std::pair<size_t, bool> >::const_iterator i = this->rootMap[c].begin(); i != this->rootMap[c].end(); ++i) {
 			this->visitDown(i->first, visited, order, marked);
-//			if (!marked[*i] && !FAE::isUniqueRef(*this->roots[c], *i))
 			if (i->second)
 				marked[i->first] = true;
 		}
@@ -1262,10 +1167,9 @@ public:
 	};
 
 	void buildLTCacheExt(const TA<label_type>& ta, TA<label_type>::lt_cache_type& cache) {
-		const DataBox* b = this->boxMan->getData(Data::createUndef());
-		label_type lUndef = &this->labMan->lookup(itov((const AbstractBox*)b));
+		label_type lUndef = this->boxMan->lookupLabel(Data::createUndef());
 		for (TA<label_type>::iterator i = ta.begin(); i != ta.end(); ++i) {
-			if (i->label().head()->isType(box_type_e::bData)) {
+			if (i->label()->isData()) {
 				cache.insert(
 					make_pair(lUndef, std::vector<const TT<label_type>*>())
 				).first->second.push_back(&*i);
@@ -1325,57 +1229,40 @@ public:
 	}
 
 	template <class F>
-	void heightAbstraction(size_t height, F f) {
-		for (size_t i = 0; i < this->roots.size(); ++i) {
-			TA<label_type> ta(this->taMan->getBackend());
-			this->roots[i]->minimized(ta);
-			Index<size_t> stateIndex;
-			ta.buildStateIndex(stateIndex);
-			std::vector<std::vector<bool> > rel(stateIndex.size(), std::vector<bool>(stateIndex.size(), false));
-			o_map_type o;
-			FAE::computeDownwardO(ta, o);
-			for (Index<size_t>::iterator j = stateIndex.begin(); j != stateIndex.end(); ++j) {
-				rel[j->second][j->second] = true;
+	void heightAbstraction(size_t root, size_t height, F f) {
+		assert(root < this->roots.size());
+		TA<label_type> ta(this->taMan->getBackend());
+		this->roots[root]->uselessAndUnreachableFree(ta);
+//			this->roots[i]->minimized(ta);
+//			std::cerr << "===\n" << ta;
+		Index<size_t> stateIndex;
+		ta.buildStateIndex(stateIndex);
+		std::vector<std::vector<bool> > rel(stateIndex.size(), std::vector<bool>(stateIndex.size(), true));
+		ta.heightAbstraction(rel, height, f, stateIndex);
+//			std::cerr << stateIndex << std::endl;
+//			utils::relPrint(std::cerr, rel);
+		o_map_type o;
+		FA::computeDownwardO(ta, o);
+		for (Index<size_t>::iterator j = stateIndex.begin(); j != stateIndex.end(); ++j) {
+//				rel[j->second][j->second] = true;
 //				if (this->dataMan.isLeaf(j->first))
 //					continue;
-				for (Index<size_t>::iterator k = stateIndex.begin(); k != stateIndex.end(); ++k) {
-					if (k == j) // || this->dataMan.isLeaf(k->first))
-						continue;
-					if (o[j->first] == o[k->first])
-						rel[j->second][k->second] = true;
-				}
+			for (Index<size_t>::iterator k = stateIndex.begin(); k != stateIndex.end(); ++k) {
+				if (k == j) // || this->dataMan.isLeaf(k->first))
+					continue;
+				if (o[j->first] != o[k->first])
+					rel[j->second][k->second] = false;
 			}
-			ta.heightAbstraction(rel, height, f, stateIndex);
-			this->updateRoot(this->roots[i], &ta.collapsed(*this->taMan->alloc(), rel, stateIndex));
 		}
+//			std::cerr << "===" << std::endl;
+//			utils::relPrint(std::cerr, rel);
+		this->updateRoot(this->roots[root], &ta.collapsed(*this->taMan->alloc(), rel, stateIndex));
 	}
 
-	struct TypeSearchF {
-
-		const TypeBox*& typeBox;
-
-		TypeSearchF(const TypeBox*& typeBox)
-			: typeBox(typeBox) {}
-
-		bool operator()(const AbstractBox* abox, std::vector<size_t>::const_iterator) {
-			if (!abox->isType(box_type_e::bTypeInfo))
-				return true;
-			this->typeBox = (const TypeBox*)abox;
-			return false;
-		}
-
-	};
-
-	// enumerates downwards selectors
 	const TypeBox* getType(size_t target) const {
 		assert(target < this->roots.size());
 		assert(this->roots[target]);
-
-		const TypeBox* typeBox = NULL;
-		FA::iterateLabel(*this->roots[target]->accBegin(), TypeSearchF(typeBox));
-		if (!typeBox)
-			throw std::runtime_error("FAE::getType(): type box not found!");
-		return typeBox;
+		return (TypeBox*)this->roots[target]->accBegin()->label()->boxLookup((size_t)(-1)).aBox;
 	}
 
 	struct RootEnumF {
@@ -1386,11 +1273,11 @@ public:
 		RootEnumF(size_t target, std::set<size_t>& selectors)
 			: target(target), selectors(selectors) {}
 
-		bool operator()(const AbstractBox* abox, std::vector<size_t>::const_iterator) {
-			if (!abox->isStructural())
+		bool operator()(const AbstractBox* aBox, size_t, size_t) {
+			if (!aBox->isStructural())
 				return true;
-			const StructuralBox* box = (const StructuralBox*)abox;
-			this->selectors.insert(box->outputCoverage().begin(), box->outputCoverage().end());
+			const StructuralBox* sBox = (const StructuralBox*)aBox;
+			this->selectors.insert(sBox->outputCoverage().begin(), sBox->outputCoverage().end());
 			return true;
 		}
 
@@ -1400,26 +1287,26 @@ public:
 	void enumerateSelectorsAtRoot(std::set<size_t>& selectors, size_t target) const {
 		assert(target < this->roots.size());
 		assert(this->roots[target]);
-
-		FA::iterateLabel(*this->roots[target]->accBegin(), RootEnumF(target, selectors));		
+		this->roots[target]->accBegin()->label()->iterate(RootEnumF(target, selectors));		
 	}
 
 	struct LeafEnumF {
 
 		const FAE& fae;
+		const TT<label_type>& t;
 		size_t target;
 		std::set<size_t>& selectors;
 
-		LeafEnumF(const FAE& fae, size_t target, std::set<size_t>& selectors)
-			: fae(fae), target(target), selectors(selectors) {}
+		LeafEnumF(const FAE& fae, const TT<label_type>& t, size_t target, std::set<size_t>& selectors)
+			: fae(fae), t(t), target(target), selectors(selectors) {}
 
-		bool operator()(const AbstractBox* abox, std::vector<size_t>::const_iterator lhsi) {
-			if (!abox->isType(box_type_e::bBox))
+		bool operator()(const AbstractBox* aBox, size_t, size_t offset) {
+			if (!aBox->isType(box_type_e::bBox))
 				return true;
-			const Box* box = (const Box*)abox;
-			for (size_t k = 0; k < box->getArity(); ++k, ++lhsi) {
+			const Box* box = (const Box*)aBox;
+			for (size_t k = 0; k < box->getArity(); ++k, ++offset) {
 				size_t ref;
-				if (fae.getRef(*lhsi, ref) && ref == this->target)
+				if (fae.getRef(this->t.lhs()[offset], ref) && ref == this->target)
 					this->selectors.insert(box->inputCoverage(k).begin(), box->inputCoverage(k).end());
 			}
 			return true;
@@ -1432,27 +1319,30 @@ public:
 		assert(root < this->roots.size());
 		assert(this->roots[root]);
 
-		for (TA<label_type>::iterator i = this->roots[root]->begin(); i != this->roots[root]->end(); ++i)
-			FA::iterateLabel(*i, LeafEnumF(*this, target, selectors));
+		for (TA<label_type>::iterator i = this->roots[root]->begin(); i != this->roots[root]->end(); ++i) {
+			if (i->label()->isNode())
+				i->label()->iterate(LeafEnumF(*this, *i, target, selectors));
+		}
 	}
 
 	struct LeafScanF {
 
 		const FAE& fae;
+		const TT<label_type>& t;
 		size_t selector;
 		size_t target;
 		const Box*& matched;
 
-		LeafScanF(const FAE& fae, size_t selector, size_t target, const Box*& matched)
-			: fae(fae), selector(selector), target(target), matched(matched) {}
+		LeafScanF(const FAE& fae, const TT<label_type>& t, size_t selector, size_t target, const Box*& matched)
+			: fae(fae), t(t), selector(selector), target(target), matched(matched) {}
 
-		bool operator()(const AbstractBox* abox, std::vector<size_t>::const_iterator lhsi) {
-			if (!abox->isType(box_type_e::bBox))
+		bool operator()(const AbstractBox* aBox, size_t, size_t offset) {
+			if (!aBox->isType(box_type_e::bBox))
 				return true;
-			const Box* box = (const Box*)abox;
-			for (size_t k = 0; k < box->getArity(); ++k, ++lhsi) {
+			const Box* box = (const Box*)aBox;
+			for (size_t k = 0; k < box->getArity(); ++k, ++offset) {
 				size_t ref;
-				if (fae.getRef(*lhsi, ref) && ref == this->target && box->inputCovers(k, this->selector)) {
+				if (fae.getRef(this->t.lhs()[offset], ref) && ref == this->target && box->inputCovers(k, this->selector)) {
 					this->matched = box;
 					return false;
 				}
@@ -1473,8 +1363,12 @@ public:
 
 		const Box* matched;
 		for (TA<label_type>::iterator i = this->roots[root]->begin(); i != this->roots[root]->end(); ++i) {
+			if (!i->label()->isNode()) {
+				ta.addTransition(*i);
+				continue;
+			}
 			matched = NULL;
-			FA::iterateLabel(*i, LeafScanF(*this, selector, target, matched));
+			i->label()->iterate(LeafScanF(*this, *i, selector, target, matched));
 			if (matched) {
 				v.push_back(std::make_pair(&*i, matched));
 			} else {
@@ -1584,7 +1478,7 @@ public:
 		ta.addFinalState(newState);
 		std::vector<size_t> lhs;
 		size_t lhsOffset = 0;
-		for (std::vector<const AbstractBox*>::const_iterator j = t.label().dataB->begin(); j != t.label().dataB->end(); ++j) {
+		for (std::vector<const AbstractBox*>::const_iterator j = t.label()->getNode().begin(); j != t.label()->getNode().end(); ++j) {
 			if (!(*j)->isStructural())
 				continue;
 			StructuralBox* b = (StructuralBox*)(*j);
@@ -1740,6 +1634,8 @@ public:
 			std::swap(tmp, tmp2);
 		}
 
+		assert(tmp.size());
+
 		dst.insert(dst.end(), tmp.begin(), tmp.end());
 
 		g.release();
@@ -1809,44 +1705,31 @@ public:
 	}
 
 	void transitionLookup(const TT<label_type>& transition, size_t offset, Data& data) const {
-		bool found = false;
-		size_t lhsOffset = 0;
-		for (std::vector<const AbstractBox*>::const_iterator i = transition.label().dataB->begin(); i != transition.label().dataB->end(); ++i) {
-			if (FAE::isSelector(*i, offset)) {
-				assert(!found);
-				found = true;
-				const Data* tmp;
-				if (!this->isData(transition.lhs()[lhsOffset], tmp))
-					throw std::runtime_error("FAE::transitionLookup(): destination is not a leaf!");
-				data = *tmp;
-				FAE::displToData(FAE::readSelector(*i), data);
-			}
-			lhsOffset += (*i)->getArity();
-		}
-		if (!found)
-			throw std::runtime_error("FAE::trasitionLookup(): selector not found!");
+		const NodeLabel::NodeItem& ni = transition.label()->boxLookup(offset);
+		assert(FAE::isSelector(ni.aBox, offset));
+		const Data* tmp;
+		if (!this->isData(transition.lhs()[ni.offset], tmp))
+			throw std::runtime_error("FAE::transitionLookup(): destination is not a leaf!");
+		data = *tmp;
+		FAE::displToData(FAE::readSelector(ni.aBox), data);
 	}
 
-	void transitionLookup(const TT<label_type>& transition, size_t base, const std::set<size_t>& offsets, Data& data) const {
-		size_t lhsOffset = 0;
+	void transitionLookup(const TT<label_type>& transition, size_t base, const std::vector<size_t>& offsets, Data& data) const {
 		data = Data::createStruct();
-		for (std::vector<const AbstractBox*>::const_iterator i = transition.label().dataB->begin(); i != transition.label().dataB->end(); ++i) {
-			if (FAE::isSelector(*i) && offsets.count(FAE::readSelector(*i).offset)) {
-				const Data* tmp;
-				if (!this->isData(transition.lhs()[lhsOffset], tmp))
-					throw std::runtime_error("FAE::transitionLookup(): destination is not a leaf!");
-				data.d_struct->push_back(Data::item_info(FAE::readSelector(*i).offset - base, *tmp));
-				FAE::displToData(FAE::readSelector(*i), data.d_struct->back().second);
-			} 
-			lhsOffset += (*i)->getArity();
+		for (std::vector<size_t>::const_iterator i = offsets.begin(); i != offsets.end(); ++i) {
+			const NodeLabel::NodeItem& ni = transition.label()->boxLookup(*i);
+			assert(FAE::isSelector(ni.aBox, *i));
+			const Data* tmp;
+			if (!this->isData(transition.lhs()[ni.offset], tmp))
+				throw std::runtime_error("FAE::transitionLookup(): destination is not a leaf!");
+			data.d_struct->push_back(Data::item_info(*i - base, *tmp));
+			FAE::displToData(FAE::readSelector(ni.aBox), data.d_struct->back().second);
 		}
-		if (data.d_struct->size() != offsets.size())
-			throw std::runtime_error("FAE::transitionLookup(): selectors missmatch!");
 	}
 
 	void transitionLookup(const TT<label_type>& transition, std::vector<std::pair<SelData, Data> >& nodeInfo) const {
 		size_t lhsOffset = 0;
-		for (std::vector<const AbstractBox*>::const_iterator i = transition.label().dataB->begin(); i != transition.label().dataB->end(); ++i) {
+		for (std::vector<const AbstractBox*>::const_iterator i = transition.label()->getNode().begin(); i != transition.label()->getNode().end(); ++i) {
 			assert(FAE::isSelector(*i));
 			const Data* tmp;
 			if (!this->isData(transition.lhs()[lhsOffset], tmp))
@@ -1860,68 +1743,46 @@ public:
 	void transitionModify(TA<label_type>& dst, const TT<label_type>& transition, size_t offset, const Data& in, Data& out) {
 		size_t state = this->freshState();
 		dst.addFinalState(state);
-		std::vector<size_t> lhs;
-		std::vector<const AbstractBox*> label;
-		size_t lhsOffset = 0;
-		bool found = false;
-		for (std::vector<const AbstractBox*>::const_iterator i = transition.label().dataB->begin(); i != transition.label().dataB->end(); ++i) {
-			if (FAE::isSelector(*i, offset)) {
-				assert(!found);
-				found = true;
-				const Data* tmp;
-				if (!this->isData(transition.lhs()[lhsOffset], tmp))
-					throw runtime_error("FAE::transitionModify(): destination is not a leaf!");
-				out = *tmp;
-				SelData s = FAE::readSelector(*i);
-				FAE::displToData(s, out);
-				Data d = in;
-				FAE::displToSel(s, d);
-				lhs.push_back(this->addData(dst, d));
-				label.push_back(this->boxMan->getSelector(s));
-			} else {
-				lhs.insert(lhs.end(), transition.lhs().begin() + lhsOffset, transition.lhs().begin() + lhsOffset + (*i)->getArity());
-				label.push_back(*i);
-			}
-			lhsOffset += (*i)->getArity();
-		}
-		if (!found)
-			throw runtime_error("FAE::transitionModify(): selector not found!");
+		std::vector<size_t> lhs = transition.lhs();
+		std::vector<const AbstractBox*> label = transition.label()->getNode();
+		const NodeLabel::NodeItem& ni = transition.label()->boxLookup(offset);
+		assert(FAE::isSelector(ni.aBox, offset));
+		const Data* tmp;
+		if (!this->isData(transition.lhs()[ni.offset], tmp))
+			throw std::runtime_error("FAE::transitionLookup(): destination is not a leaf!");
+		out = *tmp;
+		SelData s = FAE::readSelector(ni.aBox);
+		FAE::displToData(s, out);
+		Data d = in;
+		FAE::displToSel(s, d);
+		lhs[ni.offset] = this->addData(dst, d);
+		label[ni.index] = this->boxMan->getSelector(s);
 		FAE::reorderBoxes(label, lhs);
-		dst.addTransition(lhs, &this->labMan->lookup(label), state);
+		dst.addTransition(lhs, this->boxMan->lookupLabel(label), state);
 	}
 
-	void transitionModify(TA<label_type>& dst, const TT<label_type>& transition, size_t base, const std::map<size_t, Data>& in, Data& out) {
+	void transitionModify(TA<label_type>& dst, const TT<label_type>& transition, size_t base, const std::vector<std::pair<size_t, Data> >& in, Data& out) {
 		size_t state = this->freshState();
 		dst.addFinalState(state);
-		std::vector<size_t> lhs;
-		std::vector<const AbstractBox*> label;
-		size_t lhsOffset = 0;
+		std::vector<size_t> lhs = transition.lhs();
+		std::vector<const AbstractBox*> label = transition.label()->getNode();
 		out = Data::createStruct();
-		for (std::vector<const AbstractBox*>::const_iterator i = transition.label().dataB->begin(); i != transition.label().dataB->end(); ++i) {
-			if (FAE::isSelector(*i)) {
-				std::map<size_t, Data>::const_iterator j = in.find(FAE::readSelector(*i).offset);
-				if (j != in.end()) {
-					const Data* tmp;
-					if (!this->isData(transition.lhs()[lhsOffset], tmp))
-						throw runtime_error("FAE::transitionModify(): destination is not a leaf!");
-					out.d_struct->push_back(Data::item_info(FAE::readSelector(*i).offset - base, *tmp));
-					SelData s = FAE::readSelector(*i);
-					FAE::displToData(s, out.d_struct->back().second);
-					Data d = j->second;
-					FAE::displToSel(s, d);
-					lhs.push_back(this->addData(dst, d));
-					label.push_back(this->boxMan->getSelector(s));
-				} else {
-					lhs.insert(lhs.end(), transition.lhs().begin() + lhsOffset, transition.lhs().begin() + lhsOffset + (*i)->getArity());
-					label.push_back(*i);
-				}
-			}
-			lhsOffset += (*i)->getArity();
+		for (std::vector<std::pair<size_t, Data>>::const_iterator i = in.begin(); i != in.end(); ++i) {
+			const NodeLabel::NodeItem& ni = transition.label()->boxLookup(i->first);
+			assert(FAE::isSelector(ni.aBox, i->first));
+			const Data* tmp;
+			if (!this->isData(transition.lhs()[ni.offset], tmp))
+				throw runtime_error("FAE::transitionModify(): destination is not a leaf!");
+			out.d_struct->push_back(Data::item_info(i->first - base, *tmp));
+			SelData s = FAE::readSelector(ni.aBox);
+			FAE::displToData(s, out.d_struct->back().second);
+			Data d = i->second;
+			FAE::displToSel(s, d);
+			lhs[ni.offset] = this->addData(dst, d);
+			label[ni.index] = this->boxMan->getSelector(s);
 		}
-		if (out.d_struct->size() != in.size())
-			throw runtime_error("FAE::transitionModify(): selectors missmatch!");
 		FAE::reorderBoxes(label, lhs);
-		dst.addTransition(lhs, &this->labMan->lookup(label), state);
+		dst.addTransition(lhs, this->boxMan->lookupLabel(label), state);
 	}
 
 public:
@@ -1985,7 +1846,7 @@ public:
 				o.push_back(std::make_pair(i->second.d_ref.root, false));
 		}
 		FAE::reorderBoxes(label, lhs);
-		ta->addTransition(lhs, &this->labMan->lookup(label), f);
+		ta->addTransition(lhs, this->boxMan->lookupLabel(label), f);
 		this->roots.push_back(ta);
 		this->rootMap.push_back(o);
 		return root;
@@ -2007,7 +1868,7 @@ public:
 		// reorder
 		FAE::reorderBoxes(label, lhs);
 		// fill the rest
-		ta->addTransition(lhs, &this->labMan->lookup(label), f);
+		ta->addTransition(lhs, this->boxMan->lookupLabel(label), f);
 		this->roots.push_back(ta);
 		this->rootMap.push_back(std::vector<std::pair<size_t, bool> >());
 		return root;
@@ -2060,10 +1921,7 @@ public:
 	void nodeLookupMultiple(size_t root, size_t base, const std::vector<size_t>& offsets, Data& data) const {
 		assert(root < this->roots.size());
 		assert(this->roots[root]);
-		std::set<size_t> s;
-		for (std::vector<size_t>::const_iterator i = offsets.begin(); i != offsets.end(); ++i)
-			s.insert(base + *i);
-		this->transitionLookup(this->roots[root]->getAcceptingTransition(), base, s, data);
+		this->transitionLookup(this->roots[root]->getAcceptingTransition(), base, offsets, data);
 	}	
 
 	void nodeModify(size_t root, size_t offset, const Data& in, Data& out) {
@@ -2084,11 +1942,8 @@ public:
 		assert(root < this->roots.size());
 		assert(this->roots[root]);
 		assert(in.isStruct());
-		std::map<size_t, Data> m;
-		for (std::vector<Data::item_info>::const_iterator i = in.d_struct->begin(); i != in.d_struct->end(); ++i)
-			m.insert(std::make_pair(i->first + offset, i->second));
 		TA<label_type> ta(this->taMan->getBackend());
-		this->transitionModify(ta, this->roots[root]->getAcceptingTransition(), offset, m, out);
+		this->transitionModify(ta, this->roots[root]->getAcceptingTransition(), offset, *in.d_struct, out);
 		this->roots[root]->copyTransitions(ta);
 		TA<label_type>* tmp = this->taMan->alloc();
 		ta.unreachableFree(*tmp);
@@ -2112,11 +1967,11 @@ public:
 public:
 
 	// state 0 should never be allocated by FAE (?)
-	FAE(TA<label_type>::Manager& taMan, LabMan& labMan, BoxMan& boxMan)
-	 : FA(taMan), boxMan(&boxMan), labMan(&labMan), stateOffset(1) {}
+	FAE(TA<label_type>::Manager& taMan, BoxMan& boxMan)
+	 : FA(taMan), boxMan(&boxMan), stateOffset(1) {}
 
 	FAE(const FAE& x)
-		: FA(x), boxMan(x.boxMan), labMan(x.labMan), stateOffset(x.stateOffset)/*,
+		: FA(x), boxMan(x.boxMan), stateOffset(x.stateOffset)/*,
 		selectorMap(x.selectorMap)*/ {
 	}
 
@@ -2125,7 +1980,6 @@ public:
 	FAE& operator=(const FAE& x) {
 		((FA*)this)->operator=(x);
 		this->boxMan = x.boxMan;
-		this->labMan = x.labMan;
 		this->stateOffset = x.stateOffset;
 //		this->selectorMap = x.selectorMap;
 		return *this;		

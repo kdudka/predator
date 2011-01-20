@@ -22,7 +22,7 @@
 
 #include <ostream>
 
-typedef enum { bBox, bTypeInfo, bSel, bData } box_type_e;
+typedef enum { bBox, bTypeInfo, bSel/*, bData*/ } box_type_e;
 
 class AbstractBox {
 
@@ -50,11 +50,11 @@ public:
 	bool isBox() const {
 		return this->type == box_type_e::bBox;
 	}
-
+/*
 	bool isData() const {
 		return this->type == box_type_e::bData;
 	}
-
+*/
 	virtual size_t getArity() const {
 		return 0;
 	}

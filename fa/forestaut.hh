@@ -33,9 +33,9 @@
 #include "treeaut.hh"
 #include "tatimint.hh"
 #include "label.hh"
-#include "labman.hh"
+//#include "labman.hh"
 #include "abstractbox.hh"
-#include "databox.hh"
+//#include "databox.hh"
 
 #define _MSBM			((~(size_t)0) >> 1)
 #define _MSB			(~_MSBM)
@@ -77,7 +77,7 @@ protected:
 	std::vector<Data> variables;
 	std::vector<TA<label_type>*> roots;
 	std::vector<std::vector<std::pair<size_t, bool> > > rootMap;
-
+/*
 	template <class F>
 	static void iterateLabel(const TT<label_type>& t, F f) {
 		std::vector<size_t>::const_iterator lhsi = t.lhs().begin();
@@ -87,18 +87,18 @@ protected:
 			lhsi += (*i)->getArity();
 		}
 	}
-
+*/
 	static bool isData(size_t state) {
 		return _MSB_TEST(state);
 	}
-
+/*
 	static bool isData(const AbstractBox* box, const Data*& data) {
 		if (!box->isType(box_type_e::bData))
 			return false;
 		data = &((DataBox*)box)->getData();
 		return true;
 	}
-
+*/
 	static void removeMultOcc(std::vector<std::pair<size_t, bool> >& x) {
 		boost::unordered_map<size_t, bool*> m;
 		size_t offset = 0;
@@ -135,12 +135,6 @@ protected:
 			return true;
 		if (p.first->second.size() >= v.size())
 			return false;
-/*		if (p.first->second.size() > v.size())
-			throw runtime_error("FAE::updateO(): Inconsistent update of 'o' (length mismatch)!");*/
-/*		for (size_t i = 0; i < p.first->second.size(); ++i) {
-			if (v[i] != p.first->second[i])
-				throw runtime_error("FAE::updateO(): Inconsistent update of 'o' (prefix mismatch)!");
-		}*/
 		if (p.first->second != v) {
 			p.first->second = v;
 			return true;
@@ -157,21 +151,24 @@ protected:
 			for (TA<label_type>::iterator i = ta.begin(); i != ta.end(); ++i) {
 				const Data* data;
 				std::vector<std::pair<size_t, bool> > v;
-				if (FA::isData(i->label().head(), data) && data->isRef()) {
+				if (i->label()->isData(data) && data->isRef()) {
 					v.push_back(std::make_pair(data->d_ref.root, false));
+					if (FA::updateO(o, i->rhs(), v))
+						changed = true;
 				} else {
-//					vector<size_t> order;
-//					FAE::evaluateLhsOrder(*i->label().dataB, order);
 					for (std::vector<size_t>::const_iterator j = i->lhs().begin(); j != i->lhs().end(); ++j) {
 						o_map_type::iterator k = o.find(*j);
 						if (k == o.end())
-							break;
+//							break;
+							continue;
 						v.insert(v.end(), k->second.begin(), k->second.end());
 					}
-					FA::removeMultOcc(v);
+					if (!v.empty()) {
+						FA::removeMultOcc(v);
+						if (FA::updateO(o, i->rhs(), v))
+							changed = true;
+					}
 				}
-				if (FA::updateO(o, i->rhs(), v))
-					changed = true;
 			}
 		}
 	}

@@ -25,7 +25,8 @@
 
 #include "utils.hh"
 #include "treeaut.hh"
-#include "labman.hh"
+#include "label.hh"
+#include "boxman.hh"
 #include "forestautext.hh"
 
 class UFAE {
@@ -34,11 +35,11 @@ class UFAE {
 	
 	size_t stateOffset;
 	
-	mutable LabMan& labMan;
+	mutable BoxMan& boxMan;
 	
 public:
 
-	UFAE(TA<label_type>& backend, LabMan& labMan) : backend(backend), stateOffset(1), labMan(labMan) {
+	UFAE(TA<label_type>& backend, BoxMan& boxMan) : backend(backend), stateOffset(1), boxMan(boxMan) {
 		// let 0 be the only accepting state
 		this->backend.addFinalState(0);
 	}
@@ -77,7 +78,7 @@ public:
 			TA<label_type>::rename(dst, **i, FAE::RenameNonleafF(index, this->stateOffset), false);
 			lhs.push_back(index[(*i)->getFinalState()] + this->stateOffset);
 		}
-		dst.addTransition(lhs, &labMan.lookup(src.variables, lhs.size()), 0);
+		dst.addTransition(lhs, this->boxMan.lookupLabel(lhs.size(), src.variables), 0);
 		return dst;
 	}
 

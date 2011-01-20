@@ -76,19 +76,27 @@ struct SymOp {
 */
 #define STATE_FROM_FAE(fae) ((SymState*)(assert((fae).varGet(IP_INDEX).isNativePtr()), (fae).varGet(IP_INDEX).d_native_ptr))
 
+typedef enum { itDenormalize, itReverse }  tr_item_type;
+
 struct TraceRecorder {
 
 	struct Item {
 
 		Item* parent;
+		tr_item_type itemType;
 		const FAE* fae;
 		std::list<const FAE*>::iterator queueTag;
-		FAE normalized;
 		FAE::NormInfo normInfo;
 		set<Item*> children;
 
-		Item(Item* parent, const FAE* fae, std::list<const FAE*>::iterator queueTag, const FAE& normalized, const FAE::NormInfo& normInfo)
-			: parent(parent), fae(fae), queueTag(queueTag), normalized(normalized), normInfo(normInfo) {
+		Item(Item* parent, const FAE* fae, std::list<const FAE*>::iterator queueTag, const FAE::NormInfo& normInfo)
+			: parent(parent), itemType(tr_item_type::itDenormalize), fae(fae), queueTag(queueTag), normInfo(normInfo) {
+			if (parent)
+				parent->children.insert(this);
+		}
+
+		Item(Item* parent, const FAE* fae)
+			: parent(parent), itemType(tr_item_type::itReverse), fae(fae) {
 			if (parent)
 				parent->children.insert(this);
 		}
@@ -119,7 +127,7 @@ struct TraceRecorder {
 
 	void init(const FAE* fae, std::list<const FAE*>::iterator i) {
 		this->clear();
-		Item* item = new Item(NULL, fae, i, FAE(*fae), FAE::NormInfo());
+		Item* item = new Item(NULL, fae, i, FAE::NormInfo());
 		this->confMap.insert(make_pair(fae, item));
 	}
 
@@ -129,9 +137,15 @@ struct TraceRecorder {
 		return i->second;
 	}
 
-	void add(const FAE* parent, const FAE* fae, std::list<const FAE*>::iterator i, const FAE& normalized, const FAE::NormInfo& normInfo) {
+	void add(const FAE* parent, const FAE* fae, std::list<const FAE*>::iterator i, const FAE::NormInfo& normInfo) {
 		this->confMap.insert(
-			make_pair(fae, new Item(this->find(parent), fae, i, normalized, normInfo))
+			make_pair(fae, new Item(this->find(parent), fae, i, normInfo))
+		);
+	}
+
+	void add(const FAE* parent, const FAE* fae) {
+		this->confMap.insert(
+			make_pair(fae, new Item(this->find(parent), fae))
 		);
 	}
 
@@ -194,7 +208,6 @@ class SymExec::Engine {
 	TA<label_type>::Backend taBackend;
 	TA<label_type>::Backend fixpointBackend;
 	TA<label_type>::Manager taMan;
-	LabMan labMan;
 	BoxMan boxMan;
 
 	typedef unordered_map<const CodeStorage::Fnc*, SymCtx*> ctx_store_type;
@@ -245,7 +258,7 @@ protected:
 		if (i != this->stateStore.end())
 			return i->second;
 
-		SymState* s = new SymState(this->taBackend, this->fixpointBackend, this->labMan);
+		SymState* s = new SymState(this->taBackend, this->fixpointBackend, this->boxMan);
 		s->insn = insn;
 		s->ctx = ctx;
 		s->entryPoint = this->loopAnalyser.isEntryPoint(*insn);
@@ -254,6 +267,18 @@ protected:
 
 	}
 
+	struct ExactLabelMatchF {
+		bool operator()(const label_type& l1, const label_type& l2) {
+			return l1 == l2;
+		}
+	};
+
+	struct SmartLabelMatchF {
+		bool operator()(const label_type& l1, const label_type& l2) {
+			return l1->getTag() == l2->getTag();
+		}
+	};
+/*
 	bool foldBox(SymState* target, FAE& fae, size_t root, const Box* box) {
 		CL_CDEBUG("trying " << *(const AbstractBox*)box << " at " << root);
 		if (!fae.foldBox(root, box))
@@ -273,12 +298,13 @@ protected:
 
 	void recAbstractAndFold(SymState* target, FAE& fae, const std::vector<const Box*>& boxes) {
 
-		CL_CDEBUG("abstracting ... " << target->absHeight);
-		fae.heightAbstraction(target->absHeight, ExactLabelMatchF());
+		CL_CDEBUG("abstracting and folding ... " << target->absHeight);
+//		fae.heightAbstraction(target->absHeight, ExactLabelMatchF());
 		CL_CDEBUG(std::endl << fae);
 
 		// do not fold at 0
 		for (size_t i = 1; i < fae.getRootCount(); ++i) {
+			fae.heightAbstraction(i, target->absHeight, ExactLabelMatchF());
 			for (std::vector<const Box*>::const_iterator j = boxes.begin(); j != boxes.end(); ++j) {
 				if (this->foldBox(target, fae, i, *j))
 					i = 1;
@@ -286,7 +312,7 @@ protected:
 		}
 
 	}
-
+*/
 	void abstractAndFold(SymState* target, FAE& fae) {
 
 //		this->recAbstractAndFold(target, fae, this->basicBoxes);
@@ -312,7 +338,8 @@ protected:
 		}
 
 		CL_CDEBUG("abstracting ... " << target->absHeight);
-		fae.heightAbstraction(target->absHeight, ExactLabelMatchF());
+		for (size_t i = 1; i < fae.getRootCount(); ++i)
+			fae.heightAbstraction(i, target->absHeight, SmartLabelMatchF());
 
 	}
 
@@ -332,14 +359,7 @@ protected:
 
 	};
 
-	struct ExactLabelMatchF {
-		bool operator()(const label_type& l1, const label_type& l2) {
-			return l1 == l2;
-		}
-	};
-
-
-	void stateUnion(SymState* target, FAE& fae) {
+	void enqueue(SymState* target, FAE& fae) {
 
 		fae.varSet(IP_INDEX, Data::createNativePtr((void*)target));
 
@@ -357,27 +377,15 @@ protected:
 
 //		normInfo.check();
 
-		FAE normalized(fae);
+//		FAE normalized(fae);
 
 		if (target->entryPoint)
 			this->abstractAndFold(target, fae);
 
-//		CL_CDEBUG("after abstraction: " << std::endl << fae);
+		std::list<const FAE*>::iterator k = this->queue.insert(this->queue.end(), new FAE(fae));
+		this->traceRecorder.add(this->currentConf, *k, k, normInfo);
 
-		size_t l = this->queue.size();
-
-		if (target->enqueue(this->queue, fae)) {
-			int i = this->queue.size() - l;
-			for (std::list<const FAE*>::reverse_iterator j = this->queue.rbegin(); i > 0; --i, ++j) {
-				std::list<const FAE*>::iterator k = j.base();
-				this->traceRecorder.add(this->currentConf, *j, --k, normalized, normInfo);
-			}
-		}
-		else {
-			++this->tracesEvaluated;
-			CL_CDEBUG("hit");
-			this->traceRecorder.destroyBranch(this->currentConf, DestroySimpleF());
-		}
+		CL_CDEBUG("enqueued: " << *k << std::endl << **k);
 
 	}
 
@@ -385,7 +393,7 @@ protected:
 
 		state->finalizeOperands(src);
 
-		this->stateUnion(this->getState(state->insn + 1, state->ctx), src);
+		this->enqueue(this->getState(state->insn + 1, state->ctx), src);
 		
 	}
 
@@ -543,7 +551,7 @@ protected:
 
 		state->finalizeOperands(fae);
 
-		this->stateUnion(this->getState(insn->targets[0]->begin(), state->ctx), fae);
+		this->enqueue(this->getState(insn->targets[0]->begin(), state->ctx), fae);
 
 	}
 
@@ -561,7 +569,7 @@ protected:
 
 		state->finalizeOperands(fae);
 
-		this->stateUnion(this->getState(insn->targets[((data.d_bool))?(0):(1)]->begin(), state->ctx), fae);
+		this->enqueue(this->getState(insn->targets[((data.d_bool))?(0):(1)]->begin(), state->ctx), fae);
 
 	}
 
@@ -662,18 +670,13 @@ protected:
 
 	};
 
-	void processState(const FAE* fae) {
+	void processState(SymState* state, FAE* fae) {
 
+		assert(state);
 		assert(fae);
 
-		SymState* state = STATE_FROM_FAE(*fae);
-
+		this->currentConf = fae;
 		this->currentInsn = *state->insn;
-
-		TraceRecorder::Item* item = this->traceRecorder.find(fae);
-
-//		state->confMap[fae] = this->queue.end();
-		item->queueTag = this->queue.end();
 
 		const cl_location& loc = (*state->insn)->loc;
 
@@ -682,11 +685,41 @@ protected:
 		CL_CDEBUG(std::endl << *fae);
 		CL_CDEBUG(loc << ' ' << **state->insn);
 
+		this->execInsn(state, *fae);
+
+	}
+
+	void processItem(const FAE* fae) {
+
+		assert(fae);
+
+		SymState* state = STATE_FROM_FAE(*fae);
+		
+		if (state->testInclusion(*fae)) {
+			++this->tracesEvaluated;
+			CL_CDEBUG("hit");
+			this->traceRecorder.destroyBranch(fae, DestroySimpleF());
+			return;
+		}
+
+		TraceRecorder::Item* item = this->traceRecorder.find(fae);
+
+		item->queueTag = this->queue.end();
+
 		try {
 
-			FAE tmp(*fae);
+			std::vector<FAE*> tmp;
+			ContainerGuard<std::vector<FAE*> > g(tmp);
 
-			this->execInsn(state, tmp);
+			state->prepareOperands(tmp, *fae);
+
+			for (std::vector<FAE*>::iterator i = tmp.begin(); i != tmp.end(); ++i)
+				this->traceRecorder.add(fae, *i);
+
+			g.release();
+			
+			for (std::vector<FAE*>::iterator i = tmp.begin(); i != tmp.end(); ++i)
+				this->processState(state, *i);
 
 		} catch (const ProgramError& e) {
 
@@ -729,14 +762,36 @@ protected:
 				CL_CDEBUG("new fixpoint:" << std::endl << (*i)->fwdConf);
 			}
 
+			const cl_location& loc = (*state->insn)->loc;
+
 			CL_CDEBUG("adjusting abstraction ... " << ++state->absHeight);
 			CL_CDEBUG("resuming execution ... ");
 			CL_CDEBUG(loc << ' ' << **state->insn);
 
-			STATE_FROM_FAE(*parent->fae)->enqueue(this->queue, itov((FAE*)parent->fae));
+			parent->queueTag = this->queue.insert(this->queue.end(), parent->fae);
 
 		}
 
+	}
+
+	void printInfo(const FAE* fae) {
+		if (this->dbgFlag) {
+			std::cerr << *fae;
+			std::cerr << "evaluated states: " << this->statesEvaluated << ", evaluated traces: " << this->tracesEvaluated << std::endl;
+			this->dbgFlag = false;
+		}
+	}
+
+	void mainLoop() {
+		while (!this->queue.empty()) {
+//			this->currentConf = this->queue.front();
+//			this->queue.pop_front();
+			const FAE* fae = this->queue.back();
+			this->queue.pop_back();
+			++this->statesEvaluated;
+			this->printInfo(fae);
+			this->processItem(fae);
+		}
 	}
 
 	void printTrace(const FAE& fae) {
@@ -783,7 +838,7 @@ protected:
 
 	TraceRecorder::Item* revRun(const FAE& fae) {
 
-//		CL_CDEBUG("reconstructing abstract trace ...");
+		CL_CDEBUG("reconstructing abstract trace ...");
 
 		vector<pair<const FAE*, const CodeStorage::Insn*> > trace;
 
@@ -801,26 +856,42 @@ protected:
 			state = STATE_FROM_FAE(*item->parent->fae);
 
 			CL_CDEBUG("rewinding " << (*state->insn)->loc << ' ' << **state->insn);
-			
-			FAE::NormInfo normInfo;
 
-			std::set<size_t> s;
-			tmp.getNearbyReferences(fae.varGet(ABP_INDEX).d_ref.root, s);
-			tmp.normalize(normInfo, s);
+			switch (item->itemType) {
 
-			CL_CDEBUG("denormalizing " << std::endl << tmp << "with" << std::endl << item->normalized);
-			CL_CDEBUG(item->normInfo);
+				case tr_item_type::itDenormalize: {
 
-			if (!tmp.denormalize(item->normalized, item->normInfo)) {
-				CL_CDEBUG("spurious counter example (denormalization)!" << std::endl << item->normalized);
-				return item;
-			}
+					CL_CDEBUG("denormalizing " << std::endl << tmp << "with" << std::endl << *item->fae);
+					CL_CDEBUG(item->normInfo);
 
-			CL_CDEBUG("reversing " << std::endl << tmp << "with" << std::endl << *item->parent->fae);
+					if (!tmp.denormalize(*item->fae, item->normInfo)) {
+						CL_CDEBUG("spurious counter example (denormalization)!" << std::endl << *item->fae);
+						return item;
+					}
 
-			if (!tmp.reverse(*item->parent->fae)) {
-				CL_CDEBUG("spurious counter example (reversal)!" << std::endl << *item->parent->fae);
-				return item;
+					break;
+
+				}
+
+				case tr_item_type::itReverse: {
+
+					CL_CDEBUG("reversing " << std::endl << tmp << "with" << std::endl << *item->parent->fae);
+
+					if (!tmp.reverse(*item->parent->fae)) {
+						CL_CDEBUG("spurious counter example (reversal)!" << std::endl << *item->parent->fae);
+						return item;
+					}
+
+					FAE::NormInfo normInfo;
+
+					std::set<size_t> s;
+					tmp.getNearbyReferences(fae.varGet(ABP_INDEX).d_ref.root, s);
+					tmp.normalize(normInfo, s);
+
+					break;
+
+				}
+
 			}
 
 			trace.push_back(make_pair(item->fae, *state->insn));
@@ -876,18 +947,10 @@ protected:
 			std::cerr << **i;
 	}
 
-	void printInfo() {
-		if (this->dbgFlag) {
-			std::cerr << *this->currentConf;
-			std::cerr << "evaluated states: " << this->statesEvaluated << ", evaluated traces: " << this->tracesEvaluated << std::endl;
-			this->dbgFlag = false;
-		}
-	}
-
 public:
 
 	Engine(const CodeStorage::Storage& stor)
-		: stor(stor), taMan(this->taBackend), boxMan(this->taMan, this->labMan), dbgFlag(false) {
+		: stor(stor), taMan(this->taBackend), boxMan(this->taMan), dbgFlag(false) {
 		this->loadTypes();
 	}
 
@@ -925,7 +988,7 @@ public:
 
 	    CL_CDEBUG("creating empty heap ...");
 		// create empty heap with no local variables
-		FAE fae(this->taMan, this->labMan, this->boxMan);
+		FAE fae(this->taMan, this->boxMan);
 
 	    CL_CDEBUG("allocating global registers ...");
 		// add global registers
@@ -937,21 +1000,16 @@ public:
 
 	    CL_CDEBUG("sheduling initial state ...");
 		// schedule initial state for processing
-		init->enqueue(this->queue, fae);
+		this->queue.push_back(new FAE(fae));
 
 		this->traceRecorder.init(this->queue.front(), this->queue.begin());
 
+		this->statesEvaluated = 0;
+		this->tracesEvaluated = 0;
+
 		try {
 
-			while (!this->queue.empty()) {
-//				this->currentConf = this->queue.front();
-//				this->queue.pop_front();
-				this->currentConf = this->queue.back();
-				this->queue.pop_back();
-				++this->statesEvaluated;
-				this->printInfo();
-				this->processState(this->currentConf);
-			}
+			this->mainLoop();
 
 			for (state_store_type::iterator i = this->stateStore.begin(); i != this->stateStore.end(); ++i) {
 				if (!i->second->entryPoint)

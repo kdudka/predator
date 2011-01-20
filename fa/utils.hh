@@ -350,6 +350,12 @@ public:
 		return os << ']';
 	}
 
+	template <class T, class F>
+	static void iterate(T& x, F f) {
+		for (typename T::iterator i = x.begin(); i != x.end(); ++i)
+			f(*i);
+	}
+
 	template <class T>
 	static void erase(T& x) {
 		for (typename T::iterator i = x.begin(); i != x.end(); ++i)

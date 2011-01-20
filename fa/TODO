@@ -1,12 +1,11 @@
 critical
+* overhaul of execution tree (increase granularity)
 
 medium
+* improve Data handling
+* develop better register allocation
 * reserve stack space for function arguments
-* redesign internal structure of symbols in order to search faster
-* ? cleanup label_type (use boxes only)
-* overhaul of execution tree (increase granularity)
-* test inclusion after picking items from todo list
 
 low
 * cache o mapping and compute only on demand
-
+* make AbstractBox::getArity() non-virtual

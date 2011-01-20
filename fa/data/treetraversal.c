@@ -1,3 +1,4 @@
+
 #include <stdlib.h>
 
 int __nondet();
@@ -7,16 +8,18 @@ int main() {
     struct TreeNode {
         struct TreeNode* left;
         struct TreeNode* right;
+        struct TreeNode* parent;
     };
-/*
+
     struct StackItem {
         struct StackItem* next;
 	struct TreeNode* node;
     };
-*/
+
     struct TreeNode* root = malloc(sizeof(*root)), *n;
     root->left = NULL;
     root->right = NULL;
+    root->parent = NULL;
 
     while (__nondet()) {
         n = root;
@@ -30,36 +33,19 @@ int main() {
 		n->left = malloc(sizeof(*n));
 		n->left->left = NULL;
 		n->left->right = NULL;
+		n->left->parent = n;
 	}
 	if (!n->right && __nondet()) {
 		n->right = malloc(sizeof(*n));
 		n->right->left = NULL;
 		n->right->right = NULL;
+		n->right->parent = n;
 	}
     }
-
-    struct TreeNode sentinel;
-
-    n = root;
-    struct TreeNode* pred = &sentinel;
-    struct TreeNode* succ = NULL;
-
-    while (n != &sentinel) {
-	succ = n->left;
-	n->left = n->right;
-	n->right = pred;
-	pred = n;
-	n = succ;
-	if (!n) {
-	    n = pred;
-	    pred = NULL;
-	}
-    }
-
-    if (pred != root)
-	((struct TreeNode*)NULL)->left = NULL;
 
     n = NULL;
+
+    struct TreeNode* pred;
 
     while (root) {
 	pred = NULL;
@@ -104,6 +90,41 @@ int main() {
 	}
 	free(n);
     }
-*/
+
     return 0;
+*/
 }
+
+/*
+void BinarySearchTree::iterate_constant_space() {
+  BinarySearchTree *current = this, *from = NULL;
+  current->visit();
+  while (current != this || from == NULL) {
+    while (current->left) {
+      current = current->left;
+      current->visit();
+    }
+    if (current->right) {
+      current = current->right;
+      current->visit();
+      continue;
+    }
+    from = current;
+    current = current->parent;
+    if (from == current->left) {
+      current = current->right;
+      current->visit();
+    } else {
+      while (from != current->left && current != this) {
+        from = current;
+        current = current->parent;
+      }
+      if (current == this && from == current->left && current->right) {
+        current = current->right;
+        current->visit();
+      }
+    }
+  }
+}
+*/
+
