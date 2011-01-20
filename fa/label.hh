@@ -98,6 +98,14 @@ struct NodeLabel {
 		return this->data.id;
 	}
 
+	const AbstractBox* boxLookup(size_t offset, const AbstractBox* def) const {
+		assert(this->type == node_type::n_node);
+		boost::unordered_map<size_t, NodeItem>::const_iterator i = this->node.m->find(offset);
+		if (i == this->node.m->end())
+			return def;
+		return i->second.aBox;
+	}
+
 	const NodeItem& boxLookup(size_t offset) const {
 		assert(this->type == node_type::n_node);
 		boost::unordered_map<size_t, NodeItem>::const_iterator i = this->node.m->find(offset);

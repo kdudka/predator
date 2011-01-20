@@ -45,7 +45,7 @@ class BoxMan {
 	boost::unordered_map<Data, NodeLabel*> dataStore;
 	std::vector<const Data*> dataIndex; 
 	boost::unordered_map<std::vector<const AbstractBox*>, NodeLabel*> nodeStore;
-	boost::unordered_set<std::vector<size_t> > tagStore;
+	boost::unordered_set<std::pair<const TypeBox*, std::vector<size_t> > > tagStore;
 	boost::unordered_map<std::pair<size_t, std::vector<Data> >, NodeLabel*> vDataStore;
 
 //	boost::unordered_map<Data, const DataBox*> dataIndex;
@@ -114,7 +114,11 @@ public:
 			std::vector<size_t> tag;
 			label->iterate(EvaluateBoxF(*label, tag));
 			std::sort(tag.begin(), tag.end());
-			label->setTag((void*)&*this->tagStore.insert(tag).first);
+			label->setTag(
+				(void*)&*this->tagStore.insert(
+					std::make_pair((const TypeBox*)label->boxLookup((size_t)(-1), NULL), tag)
+				).first
+			);
 			p.first->second = label;
 		}
 		return p.first->second;

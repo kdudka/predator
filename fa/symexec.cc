@@ -275,7 +275,9 @@ protected:
 
 	struct SmartLabelMatchF {
 		bool operator()(const label_type& l1, const label_type& l2) {
-			return l1->getTag() == l2->getTag();
+			if (l1->isNode() && l2->isNode())
+				return l1->getTag() == l2->getTag();
+			return l1 == l2;
 		}
 	};
 /*

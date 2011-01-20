@@ -62,7 +62,8 @@ struct SymState {
 	size_t absHeight;
 
 	SymState(TA<label_type>::Backend& fwdBackend, TA<label_type>::Backend& fixpointBackend, BoxMan& boxMan)
-		: fwdConf(fixpointBackend), fwdConfWrapper(this->fwdConf, boxMan)/*, fixpoint(fixpointBackend), fixpointWrapper(this->fixpoint, labMan)*/, absHeight(1) {}
+		: fwdConf(fixpointBackend), fwdConfWrapper(this->fwdConf, boxMan)
+		/*, fixpoint(fixpointBackend), fixpointWrapper(this->fixpoint, labMan)*/, absHeight(1) {}
 
 	~SymState() {
 //		utils::eraseMapFirst(this->confMap);

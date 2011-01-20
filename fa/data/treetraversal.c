@@ -45,27 +45,28 @@ int main() {
 
     n = NULL;
 
-    struct TreeNode* pred;
+//    struct TreeNode* pred;
 
     while (root) {
-	pred = NULL;
+//	pred = NULL;
         n = root;
 	while (n->left || n->right) {
-	    pred = n;
+//	    pred = n;
 	    if (n->left)
 		n = n->left;
 	    else
 		n = n->right;
 	}
-	if (pred) {
-	    if (n == pred->left)
-		pred->left = NULL;
+	if (n->parent) {
+	    if (n == n->parent->left)
+		n->parent->left = NULL;
 	    else
-		pred->right = NULL;	    
+		n->parent->right = NULL;	    
 	} else
 	    root = NULL;
 	free(n);
     }
+
 /*
     struct StackItem* s = malloc(sizeof(*s)), *st;
     s->next = NULL;
