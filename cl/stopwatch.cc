@@ -39,15 +39,14 @@ void StopWatch::reset() {
     d->start = clock();
 }
 
-long /* msec */ StopWatch::elapsed() const {
-    static const long RATIO = CLOCKS_PER_SEC/1000L;
-    const clock_t diff = clock() - d->start;
+float /* sec */ StopWatch::elapsed() const {
+    static const float RATIO = CLOCKS_PER_SEC;
+    const float diff = clock() - d->start;
     return diff/RATIO;
 }
 
 std::ostream& operator<<(std::ostream &str, const StopWatch &watch) {
-    float elapsed = watch.elapsed();
-    elapsed /= /* msec -> sec */ 1000.0;
+    const float elapsed = watch.elapsed();
     str << std::fixed << std::setprecision(3) << elapsed << " s";
     return str;
 }

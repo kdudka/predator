@@ -28,7 +28,7 @@ class StopWatch {
         ~StopWatch();
 
         void reset();
-        long /* msec */ elapsed() const;
+        float /* sec */ elapsed() const;
 
     private:
         struct Private;
