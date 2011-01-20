@@ -652,17 +652,23 @@ protected:
 	TA<label_type>& relabelReferences(TA<label_type>& dst, const TA<label_type>& src, const vector<size_t>& index) {
 		dst.addFinalState(src.getFinalState());
 		for (TA<label_type>::iterator i = src.begin(); i != src.end(); ++i) {
+			if (i->label()->isData())
+				continue;
 			std::vector<size_t> lhs;
 			for (std::vector<size_t>::const_iterator j = i->lhs().begin(); j != i->lhs().end(); ++j) {
 				const Data* data;
-				if (!this->isData(*j, data) || !data->isRef() || index[data->d_ref.root] == data->d_ref.root) {
+				if (this->isData(*j, data)) {
+					if (data->isRef()) {
+						if (index[data->d_ref.root] != (size_t)(-1))
+							lhs.push_back(this->addData(dst, Data::createRef(index[data->d_ref.root], data->d_ref.displ)));
+						else
+							lhs.push_back(this->addData(dst, Data::createUndef()));
+					} else {
+						lhs.push_back(this->addData(dst, *data));
+					}
+					
+				} else
 					lhs.push_back(*j);
-				} else {
-					if (index[data->d_ref.root] != (size_t)(-1))
-						lhs.push_back(this->addData(dst, Data::createRef(index[data->d_ref.root], data->d_ref.displ)));
-					else
-						lhs.push_back(this->addData(dst, Data::createUndef()));
-				}
 			}
 			dst.addTransition(lhs, i->label(), i->rhs());
 		}

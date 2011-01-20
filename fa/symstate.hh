@@ -249,7 +249,7 @@ struct SymState {
 			if (TA<label_type>::subseteq(ta, this->fwdConf))
 				return true;
 
-//			CL_DEBUG("extending fixpoint with:" << std::endl << fae);
+//			CL_CDEBUG("extending fixpoint with:" << std::endl << fae);
 
 			this->fwdConfWrapper.join(ta, index);
 			this->fwdConf.minimized(ta);

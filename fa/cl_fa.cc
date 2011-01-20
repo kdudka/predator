@@ -22,6 +22,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <ctime>
+#include <cstdlib>
 
 #include <boost/unordered_map.hpp>
 
@@ -95,6 +96,9 @@ struct BoxDb {
 };
 
 void clEasyRun(const CodeStorage::Storage& stor, const char* configString) {
+
+	// initialize random numbers
+//	srandom(time(NULL));
 
     using namespace CodeStorage;
 
