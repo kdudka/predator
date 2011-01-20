@@ -31,6 +31,11 @@
 #define CL_DEBUG_CLF                    0
 
 /**
+ * if 1, show the amount of time taken by the analysis even without verbose mode
+ */
+#define CL_EASY_TIMER                   0
+
+/**
  * if 1, filter out repeated error/warning messages (sort of 2>&1 | uniq)
  */
 #define CL_MSG_SQUEEZE_REPEATS          1

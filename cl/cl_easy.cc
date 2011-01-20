@@ -26,8 +26,17 @@
 #include <cl/easy.hh>
 
 #include "cl_storage.hh"
+#include "stopwatch.hh"
 
 #include <string>
+
+#define _CL_PRINT_TIME(mech, watch) mech("clEasyRun() took " << watch)
+
+#if CL_EASY_TIMER
+#   define CL_PRINT_TIME(watch) _CL_PRINT_TIME(CL_NOTE, watch)
+#else
+#   define CL_PRINT_TIME(watch) _CL_PRINT_TIME(CL_DEBUG, watch)
+#endif
 
 class ClEasy: public ClStorageBuilder {
     public:
@@ -40,7 +49,9 @@ class ClEasy: public ClStorageBuilder {
     protected:
         virtual void run(CodeStorage::Storage &stor) {
             CL_DEBUG("ClEasy is calling peer...");
+            StopWatch watch;
             clEasyRun(stor, configString_.c_str());
+            CL_PRINT_TIME(watch);
         }
 
     private:

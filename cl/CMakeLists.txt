@@ -61,6 +61,7 @@ add_library(cl STATIC
     gcc/clplug.c
     location.cc
     ssd.cc
+    stopwatch.cc
     storage.cc
     version.c)
 
