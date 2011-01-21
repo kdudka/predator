@@ -98,7 +98,7 @@ struct BoxDb {
 void clEasyRun(const CodeStorage::Storage& stor, const char* configString) {
 
 	// initialize random numbers
-//	srandom(time(NULL));
+	srandom(time(NULL));
 
     using namespace CodeStorage;
 

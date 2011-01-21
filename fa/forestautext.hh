@@ -452,6 +452,8 @@ public:
 		for (size_t i = 0; i < sig.size(); ++i) {
 			assert(sig[i] < index.size());
 			cSig[i] = index[sig[i]];
+			if (sig[i] != 0 && cSig[i] == root)
+				return false;
 		}
 
 		o_map_type o;

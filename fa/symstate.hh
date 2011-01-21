@@ -252,6 +252,7 @@ struct SymState {
 //			CL_CDEBUG("extending fixpoint with:" << std::endl << fae);
 
 			this->fwdConfWrapper.join(ta, index);
+			ta.clear();
 			this->fwdConf.minimized(ta);
 			this->fwdConf = ta;
 

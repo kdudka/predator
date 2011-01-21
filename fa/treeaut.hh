@@ -589,11 +589,11 @@ public:
 
 	void downwardTranslation(LTS& lts, const Index<size_t>& stateIndex, const Index<T>& labelIndex) const;
 	
-	void downwardSimulation(vector<vector<bool> >& rel, const Index<size_t>& stateIndex) const;
+	void downwardSimulation(std::vector<std::vector<bool> >& rel, const Index<size_t>& stateIndex) const;
 	
-	void upwardTranslation(LTS& lts, vector<vector<size_t> >& part, vector<vector<bool> >& rel, const Index<size_t>& stateIndex, const Index<T>& labelIndex, const vector<vector<bool> >& sim) const;
+	void upwardTranslation(LTS& lts, std::vector<std::vector<size_t> >& part, vector<vector<bool> >& rel, const Index<size_t>& stateIndex, const Index<T>& labelIndex, const vector<vector<bool> >& sim) const;
 
-	void upwardSimulation(vector<vector<bool> >& rel, const Index<size_t>& stateIndex, const vector<vector<bool> >& param) const;
+	void upwardSimulation(vector<vector<bool> >& rel, const Index<size_t>& stateIndex, const std::vector<std::vector<bool> >& param) const;
 	
 	static void combinedSimulation(vector<vector<bool> >& dst, const vector<vector<bool> >& dwn, const vector<vector<bool> >& up) {
 		size_t size = dwn.size();

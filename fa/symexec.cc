@@ -455,8 +455,8 @@ protected:
 
 	static void dataEq(const Data& x, const Data& y, bool neg, vector<Data>& res) {
 		if ((x.isUnknw() || x.isUndef()) || (y.isUnknw() || y.isUndef())) {
-//			if ((float)random()/RAND_MAX < 0.5) {
-			if (1) {
+			if ((float)random()/RAND_MAX < 0.5) {
+//			if (1) {
 				res.push_back(Data::createBool(false));
 				res.push_back(Data::createBool(true));
 			} else {
@@ -713,16 +713,16 @@ protected:
 	void processState(SymState* state, const FAE* parent) {
 
 		assert(state);
-		assert(fae);
+		assert(parent);
 
 		this->currentConf = parent;
 		this->currentInsn = *state->insn;
 
 		const cl_location& loc = (*state->insn)->loc;
 
-		CL_CDEBUG("processing " << fae);
-		CL_CDEBUG(std::endl << SymCtx::Dump(*state->ctx, *fae));
-		CL_CDEBUG(std::endl << *fae);
+		CL_CDEBUG("processing " << parent);
+		CL_CDEBUG(std::endl << SymCtx::Dump(*state->ctx, *parent));
+		CL_CDEBUG(std::endl << *parent);
 		CL_CDEBUG(loc << ' ' << **state->insn);
 
 		this->execInsn(state, parent);
@@ -1058,6 +1058,15 @@ public:
 					continue;
 				CL_DEBUG("fixpoint at " << (*i->second->insn)->loc);
 				CL_DEBUG(std::endl << i->second->fwdConf);
+//				Index<size_t> index;
+//				i->second->fwdConf.buildStateIndex(index);
+//				std::cerr << index << std::endl;
+//				vector<vector<bool> > rel;
+//				i->second->fwdConf.downwardSimulation(rel, index);
+//				utils::relPrint(std::cerr, rel);
+//				TA<label_type> ta(this->taBackend);
+//				i->second->fwdConf.minimized(ta);
+//				std::cerr << ta;
 			}				
 
 			CL_DEBUG("evaluated states: " << this->statesEvaluated << ", evaluated traces: " << this->tracesEvaluated);
