@@ -441,9 +441,9 @@ protected:
 				rev
 			);
 		} else {
-			assert(*(src.type) == *(dst.type));
+//			assert(*(src.type) == *(dst.type));
 			vector<size_t> offs;
-			NodeBuilder::buildNode(offs, src.type);
+			NodeBuilder::buildNode(offs, dst.type);
 			dst.writeData(*fae, src.readData(*fae, offs), rev);
 		}
 
@@ -474,7 +474,7 @@ protected:
 		state->ctx->parseOperand(src1, *parent, &insn->operands[1]);
 		state->ctx->parseOperand(src2, *parent, &insn->operands[2]);
 
-		assert(*src1.type == *src2.type);
+//		assert(*src1.type == *src2.type);
 		assert(OperandInfo::isLValue(dst.flag));
 		assert(dst.type->code == cl_type_e::CL_TYPE_BOOL);
 
@@ -518,6 +518,38 @@ protected:
 		Data data2 = src2.readData(*parent, offs2);
 		assert(data1.isInt() && data2.isInt());
 		Data res = Data::createInt((data1.d_int + data2.d_int > 0)?(1):(0));
+
+		RevInfo rev;
+
+		FAE* fae = new FAE(*parent);
+		Guard<FAE> g(fae);
+		dst.writeData(*fae, res, rev);
+
+		g.release();
+
+		this->enqueueNextInsn(state, parent, fae);
+		
+	}
+
+	void execPointerPlus(SymState* state, const FAE* parent, const CodeStorage::Insn* insn) {
+
+		OperandInfo dst, src1, src2;
+		state->ctx->parseOperand(dst, *parent, &insn->operands[0]);
+		state->ctx->parseOperand(src1, *parent, &insn->operands[1]);
+		state->ctx->parseOperand(src2, *parent, &insn->operands[2]);
+
+		assert(dst.type->code == cl_type_e::CL_TYPE_PTR);
+		assert(src1.type->code == cl_type_e::CL_TYPE_PTR);
+		assert(src2.type->code == cl_type_e::CL_TYPE_INT);
+
+		vector<size_t> offs1, offs2;
+		NodeBuilder::buildNode(offs1, src1.type);
+		NodeBuilder::buildNode(offs2, src2.type);
+
+		Data data1 = src1.readData(*parent, offs1);
+		Data data2 = src2.readData(*parent, offs2);
+		assert(data1.isRef() && data2.isInt());
+		Data res = Data::createRef(data1.d_ref.root, data1.d_ref.displ + data2.d_int);
 
 		RevInfo rev;
 
@@ -650,6 +682,12 @@ protected:
 					case cl_binop_e::CL_BINOP_PLUS:
 						this->execPlus(state, parent, insn);
 						break;
+/*					case cl_binop_e::CL_BINOP_MINUS:
+						this->execMinus(state, parent, insn);
+						break;*/
+					case cl_binop_e::CL_BINOP_POINTER_PLUS:
+						this->execPointerPlus(state, parent, insn);
+						break;
 					default:
 						throw std::runtime_error("feature not implemented");
 				}
@@ -718,13 +756,6 @@ protected:
 		this->currentConf = parent;
 		this->currentInsn = *state->insn;
 
-		const cl_location& loc = (*state->insn)->loc;
-
-		CL_CDEBUG("processing " << parent);
-		CL_CDEBUG(std::endl << SymCtx::Dump(*state->ctx, *parent));
-		CL_CDEBUG(std::endl << *parent);
-		CL_CDEBUG(loc << ' ' << **state->insn);
-
 		this->execInsn(state, parent);
 
 	}
@@ -751,6 +782,13 @@ protected:
 			std::vector<FAE*> tmp;
 			ContainerGuard<std::vector<FAE*> > g(tmp);
 
+			const cl_location& loc = (*state->insn)->loc;
+
+			CL_CDEBUG(loc << ' ' << **state->insn);
+			CL_CDEBUG("preprocessing " << fae);
+			CL_CDEBUG(std::endl << SymCtx::Dump(*state->ctx, *fae));
+			CL_CDEBUG(std::endl << *fae);
+
 			state->prepareOperands(tmp, *fae);
 
 			for (std::vector<FAE*>::iterator i = tmp.begin(); i != tmp.end(); ++i)
@@ -765,15 +803,19 @@ protected:
 
 			CL_CDEBUG(e.what());
 
-			this->printTrace(*fae);
+//			this->printTrace(*fae);
 
-			throw;
+//			throw;
 
 			TraceRecorder::Item* item = this->revRun(*fae);
 
 			if (!item)
 
 				throw ProgramError(e.what(), &(*state->insn)->loc);
+
+			CL_DEBUG("spurious counter example ...");
+
+			this->printTrace(*fae);
 
 			throw;
 
