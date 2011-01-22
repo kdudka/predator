@@ -610,7 +610,9 @@ void SymExecEngine::printStats() const {
     CL_NOTE_MSG(lw_,
             ">>> while executing " << fncName_ << "()"
             ", " << dst_.size() << " result(s) already computed"
-            ", " << bset.size() << " basic block(s) in the queue");
+            ", " << bset.size() << " basic block(s) in the queue"
+            ", " << localState_.size() << " src heap(s)"
+            ", " << nextLocalState_.size() << " dst heap(s)");
 
     // go through scheduled basic blocks
     BOOST_FOREACH(const BlockPtr &ptr, bset) {
@@ -632,8 +634,8 @@ void SymExecEngine::printStats() const {
         LocationWriter lw(&first->loc);
         CL_NOTE_MSG(lw,
                 "block " << name << " scheduled"
-                ", " << waiting << " heap(s) pending of "
-                << total << " heap(s) total");
+                ", " << total << " heap(s) total"
+                ", " << waiting << " heap(s) pending");
     }
 }
 
@@ -660,7 +662,7 @@ void SymExecEngine::processPendingSignals() {
     if (!SignalCatcher::caught(&signum))
         return;
 
-    CL_DEBUG("S!S caught signal " << signum << ", attempt to print stats...");
+    CL_DEBUG("SIG caught (" << signum << "), attempt to print stats...");
     stats_.printStats();
     printMemUsage("SymExecEngine::processPendingSignals");
 
