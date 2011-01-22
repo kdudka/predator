@@ -453,6 +453,43 @@ protected:
 		
 	}
 
+	void execTruthNot(SymState* state, const FAE* parent, const CodeStorage::Insn* insn) {
+
+		OperandInfo dst, src;
+		state->ctx->parseOperand(dst, *parent, &insn->operands[0]);
+		state->ctx->parseOperand(src, *parent, &insn->operands[1]);
+
+		assert(dst.type->code == cl_type_e::CL_TYPE_BOOL);
+		assert(src.type->code == cl_type_e::CL_TYPE_BOOL || src.type->code == cl_type_e::CL_TYPE_INT);
+
+		vector<size_t> offs;
+		NodeBuilder::buildNode(offs, src.type);
+
+		Data data = src.readData(*parent, offs), res;
+
+		switch (data.type) {
+			case data_type_e::t_bool:
+				res = Data::createBool(!data.d_bool);
+				break;
+			case data_type_e::t_int:
+				res = Data::createBool(!data.d_int);
+				break;
+			default:
+				assert(false);
+		}
+
+		RevInfo rev;
+
+		FAE* fae = new FAE(*parent);
+		Guard<FAE> g(fae);
+		dst.writeData(*fae, res, rev);
+
+		g.release();
+
+		this->enqueueNextInsn(state, parent, fae);
+		
+	}
+
 	static void dataEq(const Data& x, const Data& y, bool neg, vector<Data>& res) {
 		if ((x.isUnknw() || x.isUndef()) || (y.isUnknw() || y.isUndef())) {
 			if ((float)random()/RAND_MAX < 0.5) {
@@ -665,6 +702,9 @@ protected:
 				switch (insn->subCode) {
 					case cl_unop_e::CL_UNOP_ASSIGN:
 						this->execAssignment(state, parent, insn);
+						break;
+					case cl_unop_e::CL_UNOP_TRUTH_NOT:
+						this->execTruthNot(state, parent, insn);
 						break;
 					default:
 						throw std::runtime_error("feature not implemented");

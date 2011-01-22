@@ -59,23 +59,23 @@ struct SelData {
 
 };
 
+typedef enum {
+	t_undef,
+	t_unknw,
+	t_native_ptr,
+	t_void_ptr,
+	t_ref,
+	t_int,
+	t_bool,
+	t_struct,
+	t_other
+} data_type_e;
+
 struct Data {
 
 	typedef std::pair<size_t, Data> item_info;
 
-	typedef enum {
-		t_undef,
-		t_unknw,
-		t_native_ptr,
-		t_void_ptr,
-		t_ref,
-		t_int,
-		t_bool,
-		t_struct,
-		t_other
-	} type_enum;
-
-	type_enum type;
+	data_type_e type;
 
 	int size;
 
@@ -91,16 +91,16 @@ struct Data {
 		std::vector<item_info>* d_struct;
 	};
 
-	Data(type_enum type = type_enum::t_undef) : type(type), size(0) {}
+	Data(data_type_e type = data_type_e::t_undef) : type(type), size(0) {}
 
 	Data(const Data& data) : type(data.type), size(data.size) {
 		switch (data.type) {
-			case type_enum::t_native_ptr: this->d_native_ptr = data.d_native_ptr; break;
-			case type_enum::t_void_ptr: this->d_void_ptr = data.d_void_ptr; break;
-			case type_enum::t_ref: this->d_ref.root = data.d_ref.root; this->d_ref.displ = data.d_ref.displ; break;
-			case type_enum::t_int: this->d_int = data.d_int; break;
-			case type_enum::t_bool: this->d_bool = data.d_bool; break;
-			case type_enum::t_struct: this->d_struct = new std::vector<item_info>(*data.d_struct); break;
+			case data_type_e::t_native_ptr: this->d_native_ptr = data.d_native_ptr; break;
+			case data_type_e::t_void_ptr: this->d_void_ptr = data.d_void_ptr; break;
+			case data_type_e::t_ref: this->d_ref.root = data.d_ref.root; this->d_ref.displ = data.d_ref.displ; break;
+			case data_type_e::t_int: this->d_int = data.d_int; break;
+			case data_type_e::t_bool: this->d_bool = data.d_bool; break;
+			case data_type_e::t_struct: this->d_struct = new std::vector<item_info>(*data.d_struct); break;
 			default: break;
 		}
 	}
@@ -112,12 +112,12 @@ struct Data {
 		this->type = rhs.type;
 		this->size = rhs.size;
 		switch (rhs.type) {
-			case type_enum::t_native_ptr: this->d_native_ptr = rhs.d_native_ptr; break;
-			case type_enum::t_void_ptr: this->d_void_ptr = rhs.d_void_ptr; break;
-			case type_enum::t_ref: this->d_ref.root = rhs.d_ref.root; this->d_ref.displ = rhs.d_ref.displ; break;
-			case type_enum::t_int: this->d_int = rhs.d_int; break;
-			case type_enum::t_bool: this->d_bool = rhs.d_bool; break;
-			case type_enum::t_struct: this->d_struct = new std::vector<item_info>(*rhs.d_struct); break;
+			case data_type_e::t_native_ptr: this->d_native_ptr = rhs.d_native_ptr; break;
+			case data_type_e::t_void_ptr: this->d_void_ptr = rhs.d_void_ptr; break;
+			case data_type_e::t_ref: this->d_ref.root = rhs.d_ref.root; this->d_ref.displ = rhs.d_ref.displ; break;
+			case data_type_e::t_int: this->d_int = rhs.d_int; break;
+			case data_type_e::t_bool: this->d_bool = rhs.d_bool; break;
+			case data_type_e::t_struct: this->d_struct = new std::vector<item_info>(*rhs.d_struct); break;
 			default: break;
 		}
 		return *this;
@@ -125,41 +125,41 @@ struct Data {
 
 	static Data createUndef() { return Data(); }
 
-	static Data createUnknw() { return Data(type_enum::t_unknw); }
+	static Data createUnknw() { return Data(data_type_e::t_unknw); }
 
 	static Data createNativePtr(void* ptr) {
-		Data data(type_enum::t_native_ptr);
+		Data data(data_type_e::t_native_ptr);
 		data.d_native_ptr = ptr;
 		return data;
 	}
 
 	static Data createRef(size_t root, int displ = 0) {
-		Data data(type_enum::t_ref);
+		Data data(data_type_e::t_ref);
 		data.d_ref.root = root;
 		data.d_ref.displ = displ;
 		return data;
 	}
 
 	static Data createStruct(const std::vector<item_info>& items = std::vector<item_info>()) {
-		Data data(type_enum::t_struct);
+		Data data(data_type_e::t_struct);
 		data.d_struct = new std::vector<item_info>(items);
 		return data;
 	}
 
 	static Data createVoidPtr(size_t size = 0) {
-		Data data(type_enum::t_void_ptr);
+		Data data(data_type_e::t_void_ptr);
 		data.d_void_ptr = size;
 		return data;
 	}
 
 	static Data createInt(int x) {
-		Data data(type_enum::t_int);
+		Data data(data_type_e::t_int);
 		data.d_int = x;
 		return data;
 	}
 
 	static Data createBool(bool x) {
-		Data data(type_enum::t_bool);
+		Data data(data_type_e::t_bool);
 		data.d_bool = x;
 		return data;
 	}
@@ -168,14 +168,14 @@ struct Data {
 		if (args[1] == "int") {
 			if (args.size() != 3)
 				throw std::runtime_error("incorrect number of arguments");
-		 	Data data(type_enum::t_int);
+		 	Data data(data_type_e::t_int);
 		 	data.d_int = atol(args[2].c_str());
 		 	return data;
 		}
 		if (args[1] == "ref") {
 			if (args.size() != 4)
 				throw std::runtime_error("incorrect number of arguments");
-		 	Data data(type_enum::t_ref);
+		 	Data data(data_type_e::t_ref);
 		 	data.d_ref.root = atol(args[2].c_str());
 		 	data.d_ref.displ = atol(args[3].c_str());
 		 	return data;
@@ -184,65 +184,65 @@ struct Data {
 	}
 
 	void clear() {
-		if (this->type == type_enum::t_struct)
+		if (this->type == data_type_e::t_struct)
 			delete this->d_struct;
-		this->type = type_enum::t_undef;
+		this->type = data_type_e::t_undef;
 	}
 
 	bool isDefined() const {
-		return this->type != type_enum::t_undef;
+		return this->type != data_type_e::t_undef;
 	}
 
 	bool isUndef() const {
-		return this->type == type_enum::t_undef;
+		return this->type == data_type_e::t_undef;
 	}
 
 	bool isUnknw() const {
-		return this->type == type_enum::t_unknw;
+		return this->type == data_type_e::t_unknw;
 	}
 
 	bool isNativePtr() const {
-		return this->type == type_enum::t_native_ptr;
+		return this->type == data_type_e::t_native_ptr;
 	}
 
 	bool isVoidPtr() const {
-		return this->type == type_enum::t_void_ptr;
+		return this->type == data_type_e::t_void_ptr;
 	}
 
 	bool isNull() const {
-		return this->type == type_enum::t_void_ptr && this->d_void_ptr == 0;
+		return this->type == data_type_e::t_void_ptr && this->d_void_ptr == 0;
 	}
 
 	bool isRef() const {
-		return this->type == type_enum::t_ref;
+		return this->type == data_type_e::t_ref;
 	}
 
 	bool isRef(size_t root) const {
-		return this->type == type_enum::t_ref && this->d_ref.root == root;
+		return this->type == data_type_e::t_ref && this->d_ref.root == root;
 	}
 
 	bool isStruct() const {
-		return this->type == type_enum::t_struct;
+		return this->type == data_type_e::t_struct;
 	}
 
 	bool isBool() const {
-		return this->type == type_enum::t_bool;
+		return this->type == data_type_e::t_bool;
 	}
 
 	bool isInt() const {
-		return this->type == type_enum::t_int;
+		return this->type == data_type_e::t_int;
 	}
 
 	friend size_t hash_value(const Data& v) {
 		switch (v.type) {
-			case type_enum::t_undef:
-			case type_enum::t_unknw: return boost::hash_value(v.type);
-			case type_enum::t_native_ptr: return boost::hash_value(v.type + boost::hash_value(v.d_native_ptr));
-			case type_enum::t_void_ptr: return boost::hash_value(v.type + v.d_void_ptr);
-			case type_enum::t_ref: return boost::hash_value(v.type + v.d_ref.root + v.d_ref.displ);
-			case type_enum::t_int: return boost::hash_value(v.type + v.d_int);
-			case type_enum::t_bool: return boost::hash_value(v.type + v.d_bool);
-			case type_enum::t_struct: return boost::hash_value(v.type + boost::hash_value(*v.d_struct));
+			case data_type_e::t_undef:
+			case data_type_e::t_unknw: return boost::hash_value(v.type);
+			case data_type_e::t_native_ptr: return boost::hash_value(v.type + boost::hash_value(v.d_native_ptr));
+			case data_type_e::t_void_ptr: return boost::hash_value(v.type + v.d_void_ptr);
+			case data_type_e::t_ref: return boost::hash_value(v.type + v.d_ref.root + v.d_ref.displ);
+			case data_type_e::t_int: return boost::hash_value(v.type + v.d_int);
+			case data_type_e::t_bool: return boost::hash_value(v.type + v.d_bool);
+			case data_type_e::t_struct: return boost::hash_value(v.type + boost::hash_value(*v.d_struct));
 			default: return boost::hash_value(v.type + v.d_void_ptr);
 		}
 	}
@@ -251,14 +251,14 @@ struct Data {
 		if (this->type != rhs.type)
 			return false;
 		switch (this->type) {
-			case type_enum::t_undef:
-			case type_enum::t_unknw: return true;
-			case type_enum::t_void_ptr: return this->d_void_ptr == rhs.d_void_ptr;
-			case type_enum::t_native_ptr: return this->d_native_ptr == rhs.d_native_ptr;
-			case type_enum::t_ref: return this->d_ref.root == rhs.d_ref.root && this->d_ref.displ == rhs.d_ref.displ;
-			case type_enum::t_int: return this->d_int == rhs.d_int;
-			case type_enum::t_bool: return this->d_bool == rhs.d_bool;
-			case type_enum::t_struct: return *this->d_struct == *rhs.d_struct;
+			case data_type_e::t_undef:
+			case data_type_e::t_unknw: return true;
+			case data_type_e::t_void_ptr: return this->d_void_ptr == rhs.d_void_ptr;
+			case data_type_e::t_native_ptr: return this->d_native_ptr == rhs.d_native_ptr;
+			case data_type_e::t_ref: return this->d_ref.root == rhs.d_ref.root && this->d_ref.displ == rhs.d_ref.displ;
+			case data_type_e::t_int: return this->d_int == rhs.d_int;
+			case data_type_e::t_bool: return this->d_bool == rhs.d_bool;
+			case data_type_e::t_struct: return *this->d_struct == *rhs.d_struct;
 			default: return false;
 		}
 	}
@@ -266,14 +266,14 @@ struct Data {
 	friend std::ostream& operator<<(std::ostream& os, const Data& x) {
 //		os << '[' << x.size << ']';
 		switch (x.type) {
-			case type_enum::t_undef: os << "(undef)"; break;
-			case type_enum::t_unknw: os << "(unknw)"; break;
-			case type_enum::t_native_ptr: os << "(native_ptr)" << x.d_native_ptr; break;
-			case type_enum::t_void_ptr: os << "(void_ptr)" << x.d_void_ptr; break;
-			case type_enum::t_ref: os << "(ref)" << x.d_ref.root << '+' << x.d_ref.displ; break;
-			case type_enum::t_int: os << "(int)" << x.d_int; break;
-			case type_enum::t_bool: os << "(bool)" << x.d_bool; break;
-			case type_enum::t_struct:
+			case data_type_e::t_undef: os << "(undef)"; break;
+			case data_type_e::t_unknw: os << "(unknw)"; break;
+			case data_type_e::t_native_ptr: os << "(native_ptr)" << x.d_native_ptr; break;
+			case data_type_e::t_void_ptr: os << "(void_ptr)" << x.d_void_ptr; break;
+			case data_type_e::t_ref: os << "(ref)" << x.d_ref.root << '+' << x.d_ref.displ; break;
+			case data_type_e::t_int: os << "(int)" << x.d_int; break;
+			case data_type_e::t_bool: os << "(bool)" << x.d_bool; break;
+			case data_type_e::t_struct:
 				os << "(struct)[ ";
 				for (std::vector<item_info>::iterator i = x.d_struct->begin(); i != x.d_struct->end(); ++i)
 					os << '+' << i->first << ": " << i->second << ' ';
