@@ -58,7 +58,16 @@ bool SignalCatcher::cleanup() {
             ok = false;
     }
 
-    return ok;
+    if (!ok)
+        // we already have a (non-recoverable) problem
+        return false;
+
+    // clear static data
+    ::backup.clear();
+    for (int i = 0; i < _NSIG; ++i)
+        sig_flags[i] = static_cast<sig_atomic_t>(false);
+
+    return true;
 }
 
 bool SignalCatcher::caught(int signum) {
