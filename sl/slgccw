@@ -1,0 +1,54 @@
+#!/bin/bash
+if test -z "$1" || test ! -e "$1"; then
+    echo Usage: $0 foo.c
+    exit 1
+fi
+
+self="`readlink -f "$0"`"
+topdir="`dirname "$self"`/.."
+
+# basic setup
+SL_BUILD=$topdir/sl_build
+SL_PLUG="$SL_BUILD/libsl.so"
+CCHOST="`basename $topdir/gcc-install/lib/gcc/*`"
+CC1="`eval ls "$topdir/gcc-install/libexec/gcc/$CCHOST/4.[56]*/cc1"`"
+
+# initial checks
+eval test -x "$CC1"             || exit 1
+test -d "$SL_BUILD"             || exit 1
+test -f "$SL_BUILD/Makefile"    || exit 1
+
+# attempt to make
+make -s -C "$SL_BUILD"          || exit 1
+test -x "$SL_PLUG"              || exit 1
+
+# use verbose level 0 by default
+test -z "$SL_VERBOSE" && SL_VERBOSE=0
+
+# use fast code listener by default
+test -z "$SL_OPTS" && SL_OPTS="-fplugin-arg-libsl-args=fast"
+
+# run cc1
+"$CC1" "$1" \
+    -I../cl -I../cl/gcc -I../include -I../include/gcc \
+    -DPREDATOR \
+    -dumpbase test.c -quiet -o /dev/null \
+    -m32 -O0 -Wall -Wextra \
+    -fplugin="$SL_PLUG" \
+    -fplugin-arg-libsl-verbose="$SL_VERBOSE" \
+    $SL_OPTS &
+
+PID_CC1=$!
+trap "kill -9 $PID_CC1" EXIT
+
+sleep 1 || exit $?
+for i in `seq 150`; do
+    sleep .1 || exit $?
+    test -e /proc/$PID_CC1 || exit 0
+done
+
+printf "\n@ %s\n" "`date`"
+while kill -SIGUSR1 $PID_CC1 2>/dev/null; do
+    sleep 16 || exit $?
+    printf "\n@ %s\n" "`date`"
+done

@@ -612,7 +612,9 @@ void SymExecEngine::printStats() const {
             ", " << dst_.size() << " result(s) already computed"
             ", " << bset.size() << " basic block(s) in the queue"
             ", " << localState_.size() << " src heap(s)"
-            ", " << nextLocalState_.size() << " dst heap(s)");
+            ", " << nextLocalState_.size() << " dst heap(s)"
+            ", insn #" << insnIdx_ <<
+            ", heap #" << heapIdx_);
 
     // go through scheduled basic blocks
     BOOST_FOREACH(const BlockPtr &ptr, bset) {
