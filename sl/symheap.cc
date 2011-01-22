@@ -1979,7 +1979,7 @@ void SymHeap::neqOp(ENeqOp op, TValueId valA, TValueId valB) {
     SymHeapTyped::neqOp(op, valA, valB);
 }
 
-bool SymHeap::proveNotNull(TValueId val) const {
+bool SymHeap::proveNonEq(TValueId ref, TValueId val) const {
     std::set<TValueId> haveSeen;
 
     while (0 < val && insertOnce(haveSeen, val)) {
@@ -1987,7 +1987,7 @@ bool SymHeap::proveNotNull(TValueId val) const {
         switch (code) {
             case UV_KNOWN:
                 // concrete object reached --> prove done
-                return true;
+                return (val != ref);
 
             case UV_ABSTRACT:
                 break;
@@ -1997,7 +1997,7 @@ bool SymHeap::proveNotNull(TValueId val) const {
                 return false;
         }
 
-        if (this->queryExplicitNeq(VAL_NULL, val))
+        if (this->queryExplicitNeq(ref, val))
             // prove done
             return true;
 
@@ -2026,11 +2026,11 @@ bool SymHeap::proveEq(bool *result, TValueId valA, TValueId valB) const {
         return true;
 
     // having the values always in the same order leads to simpler code
-    sortValues(valA, valB);
-    if (VAL_NULL != valA)
+    moveKnownValueToLeft(*this, valA, valB);
+    if (UV_KNOWN != this->valGetUnknown(valA))
         return false;
 
-    if (!this->proveNotNull(valB))
+    if (!this->proveNonEq(/* ref */ valA, valB))
         return false;
 
     *result = false;
