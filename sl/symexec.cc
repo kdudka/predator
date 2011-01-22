@@ -65,21 +65,15 @@ void printMemUsage(const char *fnc) {
 void printMemUsage(const char *) { }
 #endif
 
-static bool sigHandlerInstalled;
-static void sigHandlerInstallOnce(void) {
-    if (::sigHandlerInstalled)
-        return;
-
-    // will be processed in SymExecEngine::processPendingSignals() eventually
-    SignalCatcher::install(SIGINT);
-    SignalCatcher::install(SIGUSR1);
-    SignalCatcher::install(SIGTERM);
-
-    ::sigHandlerInstalled = true;
-}
-
 // utilities
 namespace {
+
+bool installSignalHandlers(void) {
+    // will be processed in SymExecEngine::processPendingSignals() eventually
+    return SignalCatcher::install(SIGINT)
+        && SignalCatcher::install(SIGUSR1)
+        && SignalCatcher::install(SIGTERM);
+}
 
 void createGlVars(SymHeap &sh, const CodeStorage::Storage &stor) {
     using namespace CodeStorage;
@@ -903,7 +897,8 @@ void SymExec::Private::execLoop(const StackItem &item) {
 }
 
 void SymExec::exec(const CodeStorage::Fnc &fnc, SymState &results) {
-    sigHandlerInstallOnce();
+    if (!installSignalHandlers())
+        CL_WARN("unable to install signal handlers");
 
     // go through all symbolic heaps of the initial state, merging the results
     // all together
@@ -943,6 +938,10 @@ void SymExec::exec(const CodeStorage::Fnc &fnc, SymState &results) {
         // root call
         d->execLoop(si);
     }
+
+    // uninstall signal handlers
+    if (!SignalCatcher::cleanup())
+        CL_WARN("unable to restore previous signal handlers");
 }
 
 void SymExec::printStats() const {

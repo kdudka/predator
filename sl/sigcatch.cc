@@ -39,8 +39,8 @@ static void generic_signal_handler(int signum) {
 }
 
 bool SignalCatcher::install(int signum) {
-    // each signal may be installed at most once, check it in the debug build
-    CL_BREAK_IF(hasKey(backup, signum));
+    if (hasKey(backup, signum))
+        return false;
 
     const sighandler_t old = signal(signum, generic_signal_handler);
     if (SIG_ERR == old)
@@ -53,6 +53,7 @@ bool SignalCatcher::install(int signum) {
 bool SignalCatcher::cleanup() {
     bool ok = true;
 
+    // uninstall signal handler
     BOOST_FOREACH(auto item, ::backup) {
         if (SIG_ERR == signal(item.first, item.second))
             ok = false;
@@ -78,12 +79,14 @@ bool SignalCatcher::caught(int signum) {
     return true;
 }
 
-bool SignalCatcher::caught(int *signum) {
-    for (int i = 0; i < _NSIG; ++i) {
-        if (caught(i)) {
-            *signum = i;
-            return true;
-        }
+bool SignalCatcher::caught(int *pSignum) {
+    BOOST_FOREACH(auto item, ::backup) {
+        const int signum = item.first;
+        if (!caught(signum))
+            continue;
+
+        *pSignum = signum;
+        return true;
     }
 
     return false;
