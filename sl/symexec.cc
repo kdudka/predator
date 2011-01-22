@@ -450,10 +450,16 @@ bool /* complete */ SymExecEngine::execInsn() {
     // go through the remainder of symbolic heaps corresponding to localState_
     const unsigned hCnt = localState_.size();
     for (/* we allow resume */; heapIdx_ < hCnt; ++heapIdx_) {
-        if (!insnIdx_ && origin.isDone(heapIdx_))
-            // for this particular symbolic heap, we already know the result and
-            // the result is already included in the resulting state, skip it
-            continue;
+        if (!insnIdx_) {
+            if (origin.isDone(heapIdx_))
+                // for this particular symbolic heap, we already know the result
+                // and the result is already included in the resulting state,
+                // skip it
+                continue;
+
+            // mark as processed now since it can be re-scheduled right away
+            origin.setDone(heapIdx_);
+        }
 
         // terrify the user by our current schedule if he is asking for that :-)
         this->processPendingSignals();
@@ -486,10 +492,6 @@ bool /* complete */ SymExecEngine::execInsn() {
 bool /* complete */ SymExecEngine::execBlock() {
     const std::string &name = block_->name();
 
-    // state valid for the entry of this BB
-    SymStateMarked &origin = stateMap_[block_];
-    const int origCnt = origin.size();
-
     if (insnIdx_ || heapIdx_) {
         // some debugging output of the resume process
         const CodeStorage::Insn *insn = block_->operator[](insnIdx_);
@@ -502,7 +504,7 @@ bool /* complete */ SymExecEngine::execBlock() {
 
     if (!insnIdx_)
         // fresh run, let's initialize the local state by the BB entry
-        localState_ = origin;
+        localState_ = stateMap_[block_];
 
     // go through the remainder of BB insns
     for (; insnIdx_ < block_->size(); ++insnIdx_) {
@@ -522,14 +524,6 @@ bool /* complete */ SymExecEngine::execBlock() {
         // swap states in order to be ready for next insn
         localState_.swap(nextLocalState_);
     }
-
-    // Mark symbolic heaps that have been processed as done.  They will be
-    // omitted on the next call of execBlock() for the same BB since there is no
-    // chance to get different results for the same symbolic heaps on the input.
-    // NOTE: We don't know whether origCnt == origin.size() at this point, but
-    //       only                  origCnt <= origin.size()
-    for (int h = 0; h < origCnt; ++h)
-        origin.setDone(h);
 
     // the whole block is processed now
     CL_DEBUG_MSG(lw_, "___ completed batch for " << name
