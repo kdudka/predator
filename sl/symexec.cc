@@ -25,6 +25,7 @@
 #include <cl/cldebug.hh>
 #include <cl/clutil.hh>
 
+#include "sigcatch.hh"
 #include "symabstract.hh"
 #include "symbt.hh"
 #include "symcall.hh"
@@ -63,6 +64,19 @@ void printMemUsage(const char *fnc) {
 #else
 void printMemUsage(const char *) { }
 #endif
+
+static bool sigHandlerInstalled;
+static void sigHandlerInstallOnce(void) {
+    if (::sigHandlerInstalled)
+        return;
+
+    // will be processed in SymExecEngine::processPendingSignals() eventually
+    SignalCatcher::install(SIGINT);
+    SignalCatcher::install(SIGUSR1);
+    SignalCatcher::install(SIGTERM);
+
+    ::sigHandlerInstalled = true;
+}
 
 // utilities
 namespace {
@@ -137,7 +151,7 @@ bool operator<(const BlockPtr &a, const BlockPtr &b) {
 
 // /////////////////////////////////////////////////////////////////////////////
 // SymExecEngine
-class SymExecEngine {
+class SymExecEngine: public IStatsProvider {
     public:
         SymExecEngine(const SymExec &se, SymBackTrace &bt,
                       const SymHeap &src, SymState &dst):
@@ -145,6 +159,7 @@ class SymExecEngine {
             params_(se.params()),
             bt_(bt),
             dst_(dst),
+            stats_(se),
             ptracer_(stateMap_),
             block_(0),
             insnIdx_(0),
@@ -167,6 +182,8 @@ class SymExecEngine {
     public:
         bool /* complete */ run();
 
+        virtual void printStats() const;
+
         // TODO: describe the interface briefly
         const SymHeap*              callEntry() const;
         const CodeStorage::Insn*    callInsn() const;
@@ -179,6 +196,8 @@ class SymExecEngine {
         SymExecParams                   params_;
         SymBackTrace                    &bt_;
         SymState                        &dst_;
+        const IStatsProvider            &stats_;
+        std::string                     fncName_;
 
         SymStateMap                     stateMap_;
         PathTracer                      ptracer_;
@@ -206,6 +225,7 @@ class SymExecEngine {
         bool execNontermInsn();
         bool execInsn();
         bool execBlock();
+        void processPendingSignals();
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -214,14 +234,14 @@ void SymExecEngine::initEngine(const SymHeap &init)
 {
     // look for fnc name
     const CodeStorage::Fnc *fnc = bt_.topFnc();
-    const std::string &fncName = nameOf(*fnc);
+    fncName_ = nameOf(*fnc);
     lw_ = &fnc->def.loc;
-    CL_DEBUG_MSG(lw_, ">>> entering " << fncName << "()");
+    CL_DEBUG_MSG(lw_, ">>> entering " << fncName_ << "()");
 
     // look for the entry block
     const CodeStorage::Block *entry = fnc->cfg.entry();
     if (!entry) {
-        CL_ERROR_MSG(lw_, fncName << ": " << "entry block not found");
+        CL_ERROR_MSG(lw_, fncName_ << ": " << "entry block not found");
         return;
     }
 
@@ -441,6 +461,9 @@ bool /* complete */ SymExecEngine::execInsn() {
             // the result is already included in the resulting state, skip it
             continue;
 
+        // terrify the user by our current schedule if he is asking for that :-)
+        this->processPendingSignals();
+
         if (1 < hCnt) {
             CL_DEBUG_MSG(lw_, "*** processing heap #" << heapIdx_
                          << " (initial size of state was " << hCnt << ")");
@@ -560,7 +583,7 @@ bool /* complete */ SymExecEngine::run() {
         todo_.erase(i);
 
         // update location info and ptracer
-        const CodeStorage::Insn *first = block_->operator[](0);
+        const CodeStorage::Insn *first = block_->front();
         lw_ = &first->loc;
         ptracer_.setBlock(block_);
 
@@ -589,6 +612,43 @@ bool /* complete */ SymExecEngine::run() {
     return true;
 }
 
+void SymExecEngine::printStats() const {
+    TBlockSet bset(todo_);
+    if (block_)
+        // include the basic block just being computed into the statistics
+        bset.insert(block_);
+
+    // per function statistics
+    CL_NOTE_MSG(lw_,
+            ">>> while executing " << fncName_ << "()"
+            ", " << dst_.size() << " result(s) already computed"
+            ", " << bset.size() << " basic block(s) in the queue");
+
+    // go through scheduled basic blocks
+    BOOST_FOREACH(const BlockPtr &ptr, bset) {
+        const CodeStorage::Block *bb = ptr.bb;
+        const std::string &name = bb->name();
+
+        // query total count of heaps
+        SymExecEngine *self = const_cast<SymExecEngine *>(this);
+        const SymStateMarked &state = self->stateMap_[bb];
+        const unsigned total = state.size();
+
+        // compute heaps pending for execution
+        unsigned waiting = 0;
+        for (unsigned i = 0; i < total; ++i)
+            if (!state.isDone(i))
+                ++waiting;
+
+        const CodeStorage::Insn *first = bb->front();
+        LocationWriter lw(&first->loc);
+        CL_NOTE_MSG(lw,
+                "block " << name << " scheduled"
+                ", " << waiting << " heap(s) pending of "
+                << total << " heap(s) total");
+    }
+}
+
 const SymHeap* SymExecEngine::callEntry() const {
     CL_BREAK_IF(heapIdx_ < 1);
     return &localState_[heapIdx_ - /* already incremented for next wheel */ 1];
@@ -607,16 +667,37 @@ SymState* SymExecEngine::callResults() {
     return &callResults_;
 }
 
+void SymExecEngine::processPendingSignals() {
+    int signum;
+    if (!SignalCatcher::caught(&signum))
+        return;
+
+    CL_DEBUG("S!S caught signal " << signum << ", attempt to print stats...");
+    stats_.printStats();
+    printMemUsage("SymExecEngine::processPendingSignals");
+
+    switch (signum) {
+        case SIGUSR1:
+            break;
+
+        default:
+            CL_WARN("caught signal " << signum);
+            SignalCatcher::cleanup();
+            raise(signum);
+    }
+}
+
 // /////////////////////////////////////////////////////////////////////////////
 // SymExec implementation
 struct StackItem;
 struct SymExec::Private {
-    SymExec                     &se;
-    const CodeStorage::Storage  &stor;
-    SymExecParams               params;
-    SymStateWithJoin            stateZero;
-    SymBackTrace                bt;
-    SymCallCache                callCache;
+    SymExec                         &se;
+    const CodeStorage::Storage      &stor;
+    SymExecParams                   params;
+    SymStateWithJoin                stateZero;
+    SymBackTrace                    bt;
+    SymCallCache                    callCache;
+    std::stack<IStatsProvider *>    statsStack;
 
     Private(SymExec &se_, const CodeStorage::Storage &stor_):
         se(se_),
@@ -735,6 +816,10 @@ struct StackItem {
 void SymExec::Private::execLoop(const StackItem &item) {
     using CodeStorage::Fnc;
 
+    // register statistics provider
+    CL_BREAK_IF(!this->statsStack.empty());
+    this->statsStack.push(item.eng);
+
     // run-time stack
     typedef std::stack<StackItem> TStack;
     TStack rtStack;
@@ -754,6 +839,10 @@ void SymExec::Private::execLoop(const StackItem &item) {
             item.ctx->invalidate();
             this->bt.popCall();
             printMemUsage("SymCallCtx::flushCallResults");
+
+            // unregister statistics provider
+            CL_BREAK_IF(this->statsStack.empty());
+            this->statsStack.pop();
 
             // remove top of the stack
             delete engine;
@@ -794,15 +883,19 @@ void SymExec::Private::execLoop(const StackItem &item) {
             continue;
         }
 
+        printMemUsage("SymCall::getCallCtx");
+
         // prepare a new run-time stack item for the call
         StackItem next;
         next.ctx = &ctx;
-        printMemUsage("SymCall::getCallCtx");
         next.eng = this->createEngine(ctx);
         printMemUsage("SymExec::createEngine");
 
         // pass the result back to the caller as soon as we have one
         next.dst = item.eng->callResults();
+
+        // register statistics provider
+        this->statsStack.push(next.eng);
 
         // perform the call now!
         rtStack.push(next);
@@ -810,6 +903,8 @@ void SymExec::Private::execLoop(const StackItem &item) {
 }
 
 void SymExec::exec(const CodeStorage::Fnc &fnc, SymState &results) {
+    sigHandlerInstallOnce();
+
     // go through all symbolic heaps of the initial state, merging the results
     // all together
     BOOST_FOREACH(const SymHeap &heap, d->stateZero) {
@@ -847,5 +942,14 @@ void SymExec::exec(const CodeStorage::Fnc &fnc, SymState &results) {
 
         // root call
         d->execLoop(si);
+    }
+}
+
+void SymExec::printStats() const {
+    // TODO: print SymCallCache stats here as soon as we have implemented some
+
+    for (auto tmpStack(d->statsStack); !tmpStack.empty(); tmpStack.pop()) {
+        const IStatsProvider *provider = tmpStack.top();
+        provider->printStats();
     }
 }

@@ -47,12 +47,18 @@ struct SymExecParams {
     }
 };
 
+class IStatsProvider {
+    public:
+        virtual ~IStatsProvider() { }
+        virtual void printStats() const = 0;
+};
+
 /**
  * top level algorithm of the @b symbolic @b execution
  *
  * for now, @b fast @b mode means that OOM analysis is omitted
  */
-class SymExec {
+class SymExec: public IStatsProvider {
     public:
         /**
          * load the static info about the analyzed code
@@ -83,6 +89,8 @@ class SymExec {
          * @param results a container for results of the symbolic execution
          */
         void exec(const CodeStorage::Fnc &fnc, SymState &results);
+
+        virtual void printStats() const;
 
     private:
         /// object copying is @b not allowed
