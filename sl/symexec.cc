@@ -461,13 +461,13 @@ bool /* complete */ SymExecEngine::execInsn() {
             origin.setDone(heapIdx_);
         }
 
-        // terrify the user by our current schedule if he is asking for that :-)
-        this->processPendingSignals();
-
         if (1 < hCnt) {
             CL_DEBUG_MSG(lw_, "*** processing heap #" << heapIdx_
                          << " (initial size of state was " << hCnt << ")");
         }
+
+        // terrify the user by our current schedule if he is asking for that :-)
+        this->processPendingSignals();
 
         if (isTerm) {
             // terminal insn
@@ -608,7 +608,7 @@ void SymExecEngine::printStats() const {
 
     // per function statistics
     CL_NOTE_MSG(lw_,
-            ">>> while executing " << fncName_ << "()"
+            "... while executing " << fncName_ << "()"
             ", " << dst_.size() << " result(s) already computed"
             ", " << bset.size() << " basic block(s) in the queue"
             ", " << localState_.size() << " src heap(s)"
@@ -635,7 +635,7 @@ void SymExecEngine::printStats() const {
         const CodeStorage::Insn *first = bb->front();
         LocationWriter lw(&first->loc);
         CL_NOTE_MSG(lw,
-                "block " << name << " scheduled"
+                "___ block " << name << " scheduled"
                 ", " << total << " heap(s) total"
                 ", " << waiting << " heap(s) pending");
     }
@@ -664,17 +664,20 @@ void SymExecEngine::processPendingSignals() {
     if (!SignalCatcher::caught(&signum))
         return;
 
-    CL_DEBUG("SIG caught (" << signum << "), attempt to print stats...");
+    CL_WARN_MSG(lw_, "caught signal " << signum);
     stats_.printStats();
-    printMemUsage("SymExecEngine::processPendingSignals");
+    printMemUsage("SymExec::printStats");
 
     switch (signum) {
         case SIGUSR1:
             break;
 
         default:
-            CL_WARN("caught signal " << signum);
+            // remove all handlers and forward the signal to the original
+            // handler, which will most likely kill the process by SIGINT
+            // or SIGTERM
             SignalCatcher::cleanup();
+            CL_BREAK_IF(SIGINT != signum && SIGTERM != signum);
             raise(signum);
     }
 }
