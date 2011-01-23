@@ -1,25 +1,29 @@
 #include <stdlib.h>
 
-//int __nondet();
-#define __nondet() 1
+int __nondet();
+//#define __nondet() 1
 
-typedef enum {red,black} Colour;
+typedef enum {RED,BLACK} Colour;
 
-//rotate(x,left,right) gives rotate left
-//rotate(x,right,left) gives rotate right
-#define ROTATE(x,right,left)							\
-    r = x->right;                                                               \
-    x->right = r->left;                                                         \
-    r->left->parent = x;                                                        \
-    r->parent = x->parent;                                                      \
-    if (x->parent == &null) {        	                                        \
-	    root = r;                                                           \
-	    if (x == x->parent->left) {x->parent->left = r;}                    \
-	    else {x->parent->right = r;}                                        \
-    }                                                                           \
-    r->left = x;                                                                \
-    x->parent = r;                                                              \
-    r = &null;
+//rotate(X,left,right) gives rotate LEFT
+//rotate(X,right,left) gives rotate RIGHT
+//
+#define ROTATE(X,LEFT,RIGHT)					\
+    r = X->RIGHT;                                               \
+    X->RIGHT = r->LEFT;                                         \
+    r->LEFT->parent = X;                                        \
+    r->parent = X->parent;                                      \
+    if (X->parent == &null) {root = r;}                         \
+    else {                                                      \
+            if (X == X->parent->LEFT) {X->parent->LEFT = r;}    \
+	    else {X->parent->RIGHT = r;}                        \
+    }                                                           \
+    r->LEFT = X;                                                \
+    X->parent = r;                                              \
+    r = NULL;
+
+#define LEFT_ROTATE(X) ROTATE(X,left,right)
+#define RIGHT_ROTATE(X) ROTATE(X,right,left)
 
 
 int main() {
@@ -34,80 +38,100 @@ int main() {
     struct T* r; //an auxliary var used in the ROTATE macro
 
     //the sentinell node used instead of NULL
-    struct T null = {.left=NULL,.right=NULL,.parent=NULL,.colour=black};
+    struct T null = {.left=NULL,.right=NULL,.parent=NULL,.colour=BLACK};
     
     //start with an empty tree
     struct T* root = &null;
 
     //insert a random number of random nodes 
     while (__nondet()) {
+	    if (root->colour != BLACK)
+		*(int*)(NULL) = 0;
 	    //create a new node z 
-	    struct T* z = malloc(sizeof(struct T));
+	    struct T* z = root;
 	    struct T* y = &null;
-	    struct T* x = root;
 	    //insert z as a random leaf
-	    while (x != &null) {
-		    y = x;   
-		    if (__nondet()) {x = x->left;}
-		    else {x = x->right;}
+	    int lastChoice;
+	    while (z != &null) {
+		    y = z;   
+		    if (__nondet()) {
+//		    if (1) {
+			    z = z->left;
+			    lastChoice = 0;
+//			    if (x == &null) {y->left = z;}
+		    }
+		    else {
+			    z = z->right;
+			    lastChoice = 1;
+//			    if (x == &null) {y->right = z;}
+		    }
 	    }
+	    z = malloc(sizeof(struct T));
 	    z->parent = y;
 	    //make z root if the tree is empty
 	    if (y == &null) {root = z;}
             else {
-		    if (__nondet()) {y->left = z;}
-		    else {y->right = z;}
+	            if (lastChoice == 0) {y->left = z;}
+	            else {y->right = z; lastChoice = 0;}
 	    }
-	    //make z red
+	    y = NULL;
+	    //make z RED
 	    z->left = &null;
 	    z->right = &null;
-	    z->colour = red;
+	    z->colour = RED;
 
 
 	    //rebalance the tree
-	    while (z->parent->colour == red) {
+	    while (z->parent->colour == RED) {
 		    if (z->parent == z->parent->parent->left) {
 			    y = z->parent->parent->right;
-			    if (y->colour == red) {
-				    z->parent->colour = black;
-				    z->colour = black;
-				    z->parent->parent->colour = red;
+			    if (y->colour == RED) {
+				    z->parent->colour = BLACK;
+				    y->colour = BLACK;
+				    y = NULL;
+				    z->parent->parent->colour = RED;
 				    z = z->parent->parent;
 			    }
 			    else {
+				    y = NULL;
 				    if (z == z->parent->right) {
 					    z = z->parent;
-					    //rotate left (z)
-					    ROTATE(z,left,right)
+					    LEFT_ROTATE(z)
 				    }
-				    z->parent->colour = black;
-				    z->parent->parent->colour = red;
-				    //rotate right
-				    ROTATE(z->parent->parent,right,left)
+				    z->parent->colour = BLACK;
+				    z->parent->parent->colour = RED;
+				    y = z->parent->parent;
+				    //RIGHT_ROTATE(z->parent->parent)
+				    RIGHT_ROTATE(y)
+				    y = NULL;
 			    }
 		    } 
 		    else {
 			    y = z->parent->parent->left;
-			    if (y->colour == red) {
-				    z->parent->colour = black;
-				    z->colour = black;
-				    z->parent->parent->colour = red;
+			    if (y->colour == RED) {
+				    z->parent->colour = BLACK;
+				    y->colour = BLACK;
+				    y = NULL;
+				    z->parent->parent->colour = RED;
 				    z = z->parent->parent;
 			    }
 			    else {
+				    y = NULL;
 				    if (z == z->parent->left) {
 					    z = z->parent;
-					    //rotate right (z)
-					    ROTATE(z,right,left)
+					    RIGHT_ROTATE(z)
 				    }
-				    z->parent->colour = black;
-				    z->parent->parent->colour = red;
-				    //rotate left
-				    ROTATE(z->parent->parent,left,right)
+				    z->parent->colour = BLACK;
+				    z->parent->parent->colour = RED;
+				    y = z->parent->parent;
+				    //LEFT_ROTATE(z->parent->parent)
+				    LEFT_ROTATE(y)
+				    y = NULL;
 			    }
 		    }
 	    }
-	    root->colour=black;
+	    z = NULL;
+	    root->colour=BLACK;
     }
 
     //Test that: 

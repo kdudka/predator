@@ -259,10 +259,15 @@ public:
 		
 		const td_cache_type& _cache;
 		std::set<size_t> _visited;
-		std::vector<pair<typename vector<const TT<T>*>::const_iterator, typename vector<const TT<T>*>::const_iterator> > _stack;
+		std::vector<
+			std::pair<
+				typename std::vector<const TT<T>*>::const_iterator,
+				typename std::vector<const TT<T>*>::const_iterator
+			>
+		> _stack;
 	
 		void insertLhs(const std::vector<size_t>& lhs) {
-			for (std::vector<size_t>::const_iterator i = lhs.begin(); i != lhs.end(); ++i) {
+			for (std::vector<size_t>::const_reverse_iterator i = lhs.rbegin(); i != lhs.rend(); ++i) {
 				if (this->_visited.insert(*i).second) {
 					typename td_cache_type::const_iterator j = this->_cache.find(*i);
 					if (j != this->_cache.end())
@@ -285,8 +290,8 @@ public:
 			// if something changed then we have a new "working" item on the top of the stack
 			if (this->_stack.size() != oldSize)
 				return true;
+			++this->_stack.back().first;
 			do {
-				++this->_stack.back().first;
 				// is there something to process ?
 				if (this->_stack.back().first != this->_stack.back().second)
 					return true;
@@ -398,7 +403,7 @@ public:
 //	}
 
 	typename TA<T>::TDIterator tdStart(const td_cache_type& cache) const {
-		return typename TA<T>::TDIterator(cache, vector<size_t>(this->finalStates.begin(), this->finalStates.end()));
+		return typename TA<T>::TDIterator(cache, std::vector<size_t>(this->finalStates.begin(), this->finalStates.end()));
 	}
 
 	typename TA<T>::TDIterator tdStart(const td_cache_type& cache, const vector<size_t>& stack) const {
@@ -552,7 +557,11 @@ public:
 		this->finalStates.insert(state);
 	}
 	
-	void addFinalStates(const vector<size_t>& states) {
+	void addFinalStates(const std::vector<size_t>& states) {
+		this->finalStates.insert(states.begin(), states.end());
+	}
+
+	void addFinalStates(const std::set<size_t>& states) {
 		this->finalStates.insert(states.begin(), states.end());
 	}
 	
@@ -761,7 +770,10 @@ public:
 	template <class F>
 	static bool transMatch(const TT<T>* t1, const TT<T>* t2, F f, const std::vector<std::vector<bool> >& mat, const Index<size_t>& stateIndex) {
 
-		if (!f(t1->_label, t2->_label))
+		if (!f(*t1, *t2))
+			return false;
+
+		if (t1->_lhs->first.size() != t2->_lhs->first.size())
 			return false;
 
 		bool match = true;
@@ -1011,13 +1023,27 @@ public:
 	
 	TA<T>& minimized(TA<T>& dst, const std::vector<std::vector<bool> >& cons, const Index<size_t>& stateIndex) const {
 		typename TA<T>::Backend backend;
-		vector<vector<bool> > dwn;
+		std::vector<vector<bool> > dwn;
 		this->downwardSimulation(dwn, stateIndex);
 		utils::relAnd(dwn, cons, dwn);
 		TA<T> tmp1(backend), tmp2(backend), tmp3(backend);
 		return this->collapsed(tmp1, dwn, stateIndex).uselessFree(tmp2).downwardSieve(tmp3, dwn, stateIndex).unreachableFree(dst);
 	}
 	
+	TA<T>& minimizedCombo(TA<T>& dst) const {
+		Index<size_t> stateIndex;
+		this->buildSortedStateIndex(stateIndex);
+		typename TA<T>::Backend backend;
+		std::vector<vector<bool> > dwn;
+		this->downwardSimulation(dwn, stateIndex);
+		std::vector<vector<bool> > up;
+		this->upwardSimulation(up, stateIndex, dwn);
+		std::vector<vector<bool> > rel;
+		TA<T>::combinedSimulation(rel, dwn, up);
+		TA<T> tmp(backend);
+		return this->collapsed(tmp, rel, stateIndex).minimized(dst);
+	}
+
 	TA<T>& minimized(TA<T>& dst) const {
 		Index<size_t> stateIndex;
 		this->buildSortedStateIndex(stateIndex);
@@ -1113,12 +1139,12 @@ public:
 		return dst;
 	}
 
-	static TA<T>& renamedUnion(TA<T>& dst, const TA<T>& a, const TA<T>& b, size_t& aSize) {
+	static TA<T>& renamedUnion(TA<T>& dst, const TA<T>& a, const TA<T>& b, size_t& aSize, size_t offset = 0) {
 		Index<size_t> index;
-		reduce(dst, a, index);
+		reduce(dst, a, index, offset);
 		aSize = index.size();
 		index.clear();
-		reduce(dst, b, index, aSize);
+		reduce(dst, b, index, aSize, offset);
 		return dst;
 	}
 
@@ -1136,6 +1162,19 @@ public:
 			dst.addTransition(*i);
 			if (this->isFinalState((*i)->first._rhs))
 				dst.addTransition((*i)->first._lhs->first, (*i)->first._label, newState);
+		}
+		return dst;
+	}
+
+	TA<T>& unfoldAtRoot(TA<T>& dst, const boost::unordered_map<size_t, size_t>& states, bool registerFinalState = true) const {
+		this->copyTransitions(dst);
+		for (std::set<size_t>::const_iterator i = this->finalStates.begin(); i != this->finalStates.end(); ++i) {
+			boost::unordered_map<size_t, size_t>::const_iterator j = states.find(*i);
+			assert(j != states.end());
+			for (typename trans_set_type::const_iterator k = this->_lookup(*i); k != this->transitions.end() && (*k)->first._rhs == *i; ++k)
+				dst.addTransition((*k)->first._lhs->first, (*k)->first._label, j->second);
+			if (registerFinalState)
+				dst.addFinalState(j->second);
 		}
 		return dst;
 	}

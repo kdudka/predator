@@ -22,7 +22,7 @@
 
 #include <ostream>
 
-typedef enum { bBox, bTypeInfo, bSel/*, bData*/ } box_type_e;
+typedef enum { bBox, bTypeInfo, bSel } box_type_e;
 
 class AbstractBox {
 
@@ -30,7 +30,10 @@ class AbstractBox {
 
 protected:
 
-	AbstractBox(box_type_e type) : type(type) {
+	size_t arity;
+	size_t order;
+
+	AbstractBox(box_type_e type) : type(type), arity(0), order(0) {
 	}
 
 public:
@@ -50,13 +53,13 @@ public:
 	bool isBox() const {
 		return this->type == box_type_e::bBox;
 	}
-/*
-	bool isData() const {
-		return this->type == box_type_e::bData;
+
+	size_t getArity() const {
+		return this->arity;
 	}
-*/
-	virtual size_t getArity() const {
-		return 0;
+
+	size_t getOrder() const {
+		return this->order;
 	}
 
 	virtual void toStream(std::ostream& os) const = 0;

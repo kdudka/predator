@@ -88,9 +88,6 @@ protected:
 		}
 	}
 */
-	static bool isData(size_t state) {
-		return _MSB_TEST(state);
-	}
 /*
 	static bool isData(const AbstractBox* box, const Data*& data) {
 		if (!box->isType(box_type_e::bData))
@@ -113,6 +110,14 @@ protected:
 		x.resize(offset);
 	}
 
+	struct BoxCmpF {
+		bool operator()(const std::pair<const AbstractBox*, std::vector<size_t> >& v1, const std::pair<const AbstractBox*, std::vector<size_t> >& v2) {
+			if (v1.first->isType(box_type_e::bTypeInfo))
+				return true;
+			return v1.first->getOrder() < v2.first->getOrder();
+		}
+	};
+
 	static void reorderBoxes(vector<const AbstractBox*>& label, std::vector<size_t>& lhs) {
 		std::vector<std::pair<const AbstractBox*, std::vector<size_t> > > tmp;
 		std::vector<size_t>::iterator lhsBegin = lhs.end(), lhsEnd = lhs.begin();
@@ -121,7 +126,7 @@ protected:
 			lhsEnd += label[i]->getArity();
 			tmp.push_back(std::make_pair(label[i], std::vector<size_t>(lhsBegin, lhsEnd)));
 		}
-		std::sort(tmp.begin(), tmp.end());
+		std::sort(tmp.begin(), tmp.end(), BoxCmpF());
 		lhs.clear();
 		for (size_t i = 0; i < tmp.size(); ++i) {
 			label[i] = tmp[i].first;
@@ -183,7 +188,10 @@ protected:
 		assert(root < this->roots.size());
 		o_map_type o;
 		FA::computeDownwardO(*this->roots[root], o);
-		this->rootMap[root] = o[this->roots[root]->getFinalState()];
+		std::set<size_t>::const_iterator i = this->roots[root]->getFinalStates().begin();
+		this->rootMap[root] = o[*i];
+		for (++i; i != this->roots[root]->getFinalStates().end(); ++i)
+			assert(this->rootMap[root] == o[*i]);
 	}
 
 	bool hasReference(size_t root, size_t target) const {
@@ -200,6 +208,10 @@ protected:
 	}
 
 public:
+
+	static bool isData(size_t state) {
+		return _MSB_TEST(state);
+	}
 
 	struct WriteStateF {
 

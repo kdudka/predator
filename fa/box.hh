@@ -84,6 +84,8 @@ public:
 	SelBox(const SelData* data)
 		: StructuralBox(box_type_e::bSel), data(data) {
 		s.insert(data->offset);
+		this->arity = 1;
+		this->order = data->offset;
 	}
 
 	const SelData& getData() const {
@@ -92,10 +94,6 @@ public:
 
 	virtual void toStream(std::ostream& os) const {
 		os << *this->data;
-	}
-
-	virtual size_t getArity() const {
-		return 1;
 	}
 
 	virtual bool outputCovers(size_t offset) const {
@@ -235,6 +233,8 @@ public:
 			std::vector<size_t> v;
 			Box::getDownwardCoverage(**i, v);
 			std::set<size_t> s(v.begin(), v.end());
+			if (v.empty())
+				throw std::runtime_error("Box::computeCoverage(): No outgoing selectors found!");
 			if (v.size() != s.size())
 				throw std::runtime_error("Box::computeCoverage(): A selector was defined more than once!");
 			this->selCoverage.push_back(s);
@@ -277,17 +277,14 @@ public:
 		os << this->name;
 	}
 
-	virtual size_t getArity() const {
-		return this->roots.size() - 1;
-	}
-
 	void initialize() {
 
 		if (this->initialized)
 			return;
 
 		this->initialized = true;
-
+		this->arity = this->roots.size() - 1;
+		
 		for (std::vector<TA<label_type>*>::iterator i = this->roots.begin(); i != this->roots.end(); ++i) {
 			o_map_type o;
 			FA::computeDownwardO(**i, o);
@@ -299,9 +296,10 @@ public:
 		}
 
 		this->computeCoverage();
+		this->order = *this->selCoverage[0].begin();
 		this->computeUpwardCoverage();
 		this->computeTriggers();
-		
+
 	}
 
 	bool isComposed() const {

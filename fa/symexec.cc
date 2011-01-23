@@ -267,19 +267,43 @@ protected:
 
 	}
 
-	struct ExactLabelMatchF {
-		bool operator()(const label_type& l1, const label_type& l2) {
-			return l1 == l2;
+	struct ExactTMatchF {
+		bool operator()(const TT<label_type>& t1, const TT<label_type>& t2) {
+			return t1.label() == t2.label();
 		}
 	};
 
-	struct SmartLabelMatchF {
-		bool operator()(const label_type& l1, const label_type& l2) {
-			if (l1->isNode() && l2->isNode())
-				return l1->getTag() == l2->getTag();
-			return l1 == l2;
+	struct SmartTMatchF {
+		bool operator()(const TT<label_type>& t1, const TT<label_type>& t2) {
+			if (t1.label()->isNode() && t2.label()->isNode())
+				return t1.label()->getTag() == t2.label()->getTag();
+			return t1.label() == t2.label();
 		}
 	};
+
+	struct SmarterTMatchF {
+		bool operator()(const TT<label_type>& t1, const TT<label_type>& t2) {
+			if (t1.label()->isNode() && t2.label()->isNode()) {
+				if (t1.label()->getTag() != t2.label()->getTag())
+					return false;
+				std::vector<size_t> tmp;
+				for (std::vector<size_t>::const_iterator i = t1.lhs().begin(); i != t1.lhs().end(); ++i) {
+					if (FA::isData(*i))
+						tmp.push_back(*i);
+				}
+				size_t i = 0;
+				for (std::vector<size_t>::const_iterator j = t2.lhs().begin(); j != t2.lhs().end(); ++j) {
+					if (FA::isData(*j)) {
+						if ((i >= tmp.size()) || (*j != tmp[i++]))
+							return false;
+					}
+				}
+				return (i == tmp.size());
+			}
+			return t1.label() == t2.label();
+		}
+	};
+
 /*
 	bool foldBox(SymState* target, FAE& fae, size_t root, const Box* box) {
 		CL_CDEBUG("trying " << *(const AbstractBox*)box << " at " << root);
@@ -315,9 +339,34 @@ protected:
 
 	}
 */
-	void abstractAndFold(SymState* target, FAE& fae) {
 
-//		this->recAbstractAndFold(target, fae, this->basicBoxes);
+	struct CompareVariablesF {
+		bool operator()(size_t i, const TA<label_type>& ta1, const TA<label_type>& ta2) {
+			if (i)
+				return true;
+			const TT<label_type>& t1 = ta1.getAcceptingTransition();
+			const TT<label_type>& t2 = ta2.getAcceptingTransition();
+			return (t1.label() == t2.label()) && (t1.lhs() == t2.lhs());
+		}
+	};
+
+	struct FuseNonZeroF {
+		bool operator()(size_t root, const FAE&) {
+			return root != 0;
+		}
+	};
+
+	void mergeFixpoint(SymState* target, FAE& fae) {
+		std::vector<FAE*> tmp;
+		ContainerGuard<std::vector<FAE*> > g(tmp);
+		FAE::loadCompatibleFAs(tmp, target->fwdConf, this->taMan, this->boxMan, &fae, 0, CompareVariablesF());
+//		for (size_t i = 0; i < tmp.size(); ++i)
+//			CL_CDEBUG("accelerator " << std::endl << *tmp[i]);
+		fae.fuse(tmp, FuseNonZeroF());
+		CL_CDEBUG("fused " << std::endl << fae);
+	}
+
+	void fold(SymState* target, FAE& fae) {
 
 		bool matched = false;
 
@@ -339,9 +388,15 @@ protected:
 			fae.normalize(normInfo, tmp);
 		}
 
+	}
+
+	void abstract(SymState* target, FAE& fae) {
+
+//		this->recAbstractAndFold(target, fae, this->basicBoxes);
+
 		CL_CDEBUG("abstracting ... " << target->absHeight);
 		for (size_t i = 1; i < fae.getRootCount(); ++i)
-			fae.heightAbstraction(i, target->absHeight, SmartLabelMatchF());
+			fae.heightAbstraction(i, target->absHeight, SmartTMatchF());
 
 	}
 
@@ -371,11 +426,11 @@ protected:
 		FAE::NormInfo normInfo;
 		fae->getNearbyReferences(fae->varGet(ABP_INDEX).d_ref.root, tmp);
 
-//		CL_CDEBUG("before normalization: " << std::endl << fae); 
+//		CL_CDEBUG("before normalization: " << std::endl << *fae); 
 
 		fae->normalize(normInfo, tmp);
 
-//		CL_CDEBUG("after normalization: " << std::endl << fae); 
+//		CL_CDEBUG("after normalization: " << std::endl << *fae); 
 
 //		CL_CDEBUG("normInfo: " << std::endl << normInfo); 
 
@@ -383,8 +438,12 @@ protected:
 
 //		FAE normalized(fae);
 
-		if (target->entryPoint)
-			this->abstractAndFold(target, *fae);
+		if (target->entryPoint) {
+			this->fold(target, *fae);
+			this->mergeFixpoint(target, *fae);
+			this->abstract(target, *fae);
+//			fae->minimizeRoots();
+		}
 
 		g.release();
 
@@ -493,7 +552,6 @@ protected:
 	static void dataEq(const Data& x, const Data& y, bool neg, vector<Data>& res) {
 		if ((x.isUnknw() || x.isUndef()) || (y.isUnknw() || y.isUndef())) {
 			if ((float)random()/RAND_MAX < 0.5) {
-//			if (1) {
 				res.push_back(Data::createBool(false));
 				res.push_back(Data::createBool(true));
 			} else {
@@ -796,6 +854,12 @@ protected:
 		this->currentConf = parent;
 		this->currentInsn = *state->insn;
 
+		const cl_location& loc = (*state->insn)->loc;
+		CL_CDEBUG(loc << ' ' << **state->insn);
+		CL_CDEBUG("processing " << parent);
+		CL_CDEBUG(std::endl << SymCtx::Dump(*state->ctx, *parent));
+		CL_CDEBUG(std::endl << *parent);
+
 		this->execInsn(state, parent);
 
 	}
@@ -843,9 +907,9 @@ protected:
 
 			CL_CDEBUG(e.what());
 
-//			this->printTrace(*fae);
+			this->printTrace(*fae);
 
-//			throw;
+			throw;
 
 			TraceRecorder::Item* item = this->revRun(*fae);
 
@@ -898,15 +962,20 @@ protected:
 
 	void printInfo(const FAE* fae) {
 		if (this->dbgFlag) {
-			std::cerr << *fae;
-			std::cerr << "evaluated states: " << this->statesEvaluated << ", evaluated traces: " << this->tracesEvaluated << std::endl;
+			SymState* state = STATE_FROM_FAE(*fae);
+			assert(state);
+			if (!state->entryPoint)
+				return;
+			CL_DEBUG(std::endl << SymCtx::Dump(*state->ctx, *fae));
+			CL_DEBUG(std::endl << *fae);
+			CL_DEBUG("evaluated states: " << this->statesEvaluated << ", evaluated traces: " << this->tracesEvaluated);
 			this->dbgFlag = false;
 		}
 	}
 
 	void mainLoop() {
 		while (!this->queue.empty()) {
-//			this->currentConf = this->queue.front();
+//			const FAE* fae = this->queue.front();
 //			this->queue.pop_front();
 			const FAE* fae = this->queue.back();
 			this->queue.pop_back();
@@ -944,8 +1013,8 @@ protected:
 		for (vector<pair<const FAE*, const CodeStorage::Insn*> >::reverse_iterator i = trace.rbegin(); i != trace.rend(); ++i) {
 			if (i->second) {
 				state = STATE_FROM_FAE(*i->first);
-//				CL_CDEBUG(std::endl << SymCtx::Dump(*state->ctx, *i->first));
-//				CL_CDEBUG(std::endl << *i->first);
+				CL_CDEBUG(std::endl << SymCtx::Dump(*state->ctx, *i->first));
+				CL_CDEBUG(std::endl << *i->first);
 				CL_NOTE_MSG(i->second->loc, *(i->second));
 			}
 //			STATE_FROM_FAE(*i->first)->ctx->dumpContext(*i->first);

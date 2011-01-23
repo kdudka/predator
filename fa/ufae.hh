@@ -71,14 +71,42 @@ public:
 
 	};
 */
+	template <class T>
+	struct Cursor {
+		T begin;
+		T end;
+		T curr;
+		Cursor(T begin, T end) : begin(begin), end(end), curr(begin) {}
+		bool inc() {
+			if (++this->curr != this->end)
+				return true;
+			this->curr = this->begin;
+			return false;
+		}
+	};
+
 	TA<label_type>& fae2ta(TA<label_type>& dst, Index<size_t>& index, const FAE& src) const {
 		dst.addFinalState(0);
-		std::vector<size_t> lhs;
+		std::vector<Cursor<std::set<size_t>::const_iterator> > tmp;
 		for (std::vector<TA<label_type>*>::const_iterator i = src.roots.begin(); i != src.roots.end(); ++i) {
 			TA<label_type>::rename(dst, **i, FAE::RenameNonleafF(index, this->stateOffset), false);
-			lhs.push_back(index[(*i)->getFinalState()] + this->stateOffset);
+			assert((*i)->getFinalStates().size());
+			tmp.push_back(Cursor<std::set<size_t>::const_iterator>((*i)->getFinalStates().begin(), (*i)->getFinalStates().end()));
 		}
-		dst.addTransition(lhs, this->boxMan.lookupLabel(lhs.size(), src.variables), 0);
+		std::vector<size_t> lhs(tmp.size());
+		label_type label = this->boxMan.lookupLabel(tmp.size(), src.variables);
+		bool valid = true;
+//		std::cerr << index << std::endl;
+		while (valid) {
+			for (size_t i = 0; i < lhs.size(); ++i) {
+//				std::cerr << *tmp[i].curr << ' ';
+				lhs[i] = index[*tmp[i].curr] + this->stateOffset;
+			}
+			dst.addTransition(lhs, label, 0);
+			valid = false;
+			for (std::vector<Cursor<std::set<size_t>::const_iterator> >::iterator i = tmp.begin(); !valid && i != tmp.end(); ++i)
+				valid = i->inc();
+		}
 		return dst;
 	}
 
@@ -90,19 +118,19 @@ public:
 	void adjust(const Index<size_t>& index) {
 		this->stateOffset += index.size();
 	}
-/*
-	void ta2fae(vector<FAE*>& dst, TA<label_type>::Manager& taMan, LabMan& labMan, BoxManager& boxMan) const {
+
+	void ta2fae(vector<FAE*>& dst, TA<label_type>::Manager& taMan, BoxMan& boxMan) const {
 		TA<label_type>::td_cache_type cache;
 		this->backend.buildTDCache(cache);
 		vector<const TT<label_type>*>& v = cache.insert(make_pair(0, vector<const TT<label_type>*>())).first->second;
 		// iterate over all "synthetic" transitions and constuct new FAE for each
 		for (vector<const TT<label_type>*>::iterator i = v.begin(); i != v.end(); ++i) {
-			FAE* fae = new FAE(taMan, labMan, boxMan);
+			FAE* fae = new FAE(taMan, boxMan);
 			dst.push_back(fae);
 			fae->loadTA(this->backend, cache, *i, this->stateOffset);
 		}
 	}
-*/
+
 	friend std::ostream& operator<<(std::ostream& os, const UFAE& ufae) {
 		TAWriter<label_type>(os).writeOne(ufae.backend);
 		return os;

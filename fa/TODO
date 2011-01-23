@@ -1,5 +1,6 @@
 critical
 * overhaul of execution tree (increase granularity)
+* adapt NormInfo for multiple accepting states
 
 medium
 * improve Data handling
