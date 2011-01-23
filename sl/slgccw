@@ -39,7 +39,7 @@ test -z "$SL_OPTS" && SL_OPTS="-fplugin-arg-libsl-args=fast"
     $SL_OPTS &
 
 PID_CC1=$!
-trap "kill -9 $PID_CC1" EXIT
+trap "kill -9 $PID_CC1 2>/dev/null" EXIT
 
 sleep 1 || exit $?
 for i in `seq 150`; do
