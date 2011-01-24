@@ -442,7 +442,8 @@ protected:
 			this->fold(target, *fae);
 			this->mergeFixpoint(target, *fae);
 			this->abstract(target, *fae);
-//			fae->minimizeRoots();
+/*			if (target->absHeight > 1)
+				fae->minimizeRootsCombo();*/
 		}
 
 		g.release();

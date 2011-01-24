@@ -320,6 +320,21 @@ class OLRTAlgorithm {
 
 protected:
 
+	void fastSplit(const std::vector<size_t>& remove) {
+		for (std::vector<size_t>::const_iterator i = remove.begin(); i != remove.end(); ++i) {
+			StateListElem* elem = this->_index[*i];
+			elem->block()->moveToTmp(elem);
+			elem->block()->checkEmpty();
+		}
+		for (std::vector<size_t>::const_iterator i = remove.begin(); i != remove.end(); ++i) {
+			StateListElem* elem = this->_index[*i];
+			if (elem->block()->tmp() != NULL) {
+				OLRTBlock* block = new OLRTBlock(this->_relation.newEntry(), elem->block(), *this->_lts);
+				this->_partition.push_back(block);
+			}
+		}
+	}
+
 	void split(const std::vector<size_t>& remove, std::vector<OLRTBlock*>& removeList) {
 		removeList.clear();
 		std::vector<OLRTBlock*> splitList;
@@ -450,7 +465,7 @@ public:
 		for (size_t a = 0; a < this->_lts->labels(); ++a) {
 //			this->dump();
 			this->_delta1[a].buildVector(tmp2);
-			this->fakeSplit(tmp2);
+			this->fastSplit(tmp2);
 		}
 		std::vector<std::vector<bool> > tmp[2];
 		tmp[0].resize(this->_lts->labels(), std::vector<bool>(this->_partition.size(), true));
@@ -512,6 +527,7 @@ public:
 	}
 
 	void fakeSplit(const std::vector<size_t>& remove) {
+		std::vector<OLRTBlock*> splitList;
 		for (std::vector<size_t>::const_iterator i = remove.begin(); i != remove.end(); ++i) {
 			StateListElem* elem = this->_index[*i];
 			elem->block()->moveToTmp(elem);
@@ -520,8 +536,18 @@ public:
 		for (std::vector<size_t>::const_iterator i = remove.begin(); i != remove.end(); ++i) {
 			StateListElem* elem = this->_index[*i];
 			if (elem->block()->tmp() != NULL) {
+				splitList.push_back(elem->block());
 				OLRTBlock* block = new OLRTBlock(this->_relation.newEntry(), elem->block(), *this->_lts);
 				this->_partition.push_back(block);
+			}
+		}
+		for (std::vector<OLRTBlock*>::reverse_iterator i = splitList.rbegin(); i != splitList.rend(); ++i) {
+			OLRTBlock* bint = (*i)->intersection();
+			(*i)->intersection(NULL);
+//			for (std::vector<OLRTBlock*>::iterator j = this->_partition.begin(); j != this->_partition.end(); ++j) {
+			for (std::vector<OLRTBlock*>::reverse_iterator j = this->_partition.rbegin(); j != this->_partition.rend(); ++j) {
+				this->_relation.data()[(*j)->index()][bint->index()] = this->_relation.data()[(*j)->index()][(*i)->index()];
+				this->_relation.data()[bint->index()][(*j)->index()] = this->_relation.data()[(*i)->index()][(*j)->index()];
 			}
 		}
 	}

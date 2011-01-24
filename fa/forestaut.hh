@@ -101,7 +101,7 @@ protected:
 		size_t offset = 0;
 		for (size_t i = 0; i < x.size(); ++i) {
 			std::pair<boost::unordered_map<size_t, bool*>::iterator, bool> p =
-				m.insert(std::make_pair(x[i].first, &x[i].second));
+				m.insert(std::make_pair(x[i].first, &x[offset].second));
 			if (p.second)
 				x[offset++] = x[i];
 			else

@@ -38,7 +38,6 @@
 class BoxMan {
 
 	mutable TA<label_type>::Manager& taMan;
-//	mutable LabMan& labMan;
 
 	TA<std::string>::Backend sBackend;
 
@@ -48,8 +47,6 @@ class BoxMan {
 	boost::unordered_set<std::pair<const TypeBox*, std::vector<size_t> > > tagStore;
 	boost::unordered_map<std::pair<size_t, std::vector<Data> >, NodeLabel*> vDataStore;
 
-//	boost::unordered_map<Data, const DataBox*> dataIndex;
-//	std::vector<const DataBox*> invDataIndex; 
 	boost::unordered_map<SelData, const SelBox*> selIndex;
 	boost::unordered_map<std::string, const TypeBox*> typeIndex;
 	boost::unordered_map<std::string, const Box*> boxIndex;
@@ -226,16 +223,14 @@ public:
 
 	const AbstractBox* loadBox(const std::string& name, const boost::unordered_map<std::string, std::string>& database) {
 
+		if (boost::starts_with(name, "type_"))
+			return this->getTypeInfo(name.substr(5));
+
 		std::vector<std::string> args;
 		boost::split(args, name, boost::is_from_range('_', '_'));
 
 		if (args[0] == "sel")
 			return this->getSelector(SelData::fromArgs(args));
-		if (args[0] == "type") {
-			if (args.size() != 2)
-				throw std::runtime_error("Incorrect number of arguments in type specification!");
-			return this->getTypeInfo(args[1]);
-		}
 
 		std::pair<boost::unordered_map<std::string, const Box*>::iterator, bool> p =
 			this->boxIndex.insert(std::make_pair(name, (const Box*)NULL));

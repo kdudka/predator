@@ -1504,10 +1504,7 @@ public:
 				std::set<const Box*> boxes;
 				fae.isolateAtRoot(root, t, IsolateBoxF(i->second), boxes);
 				fae.unfoldBox(root, i->second);
-				if (!i->second->isComposed())
-					dst.push_back(new FAE(fae));
-				else
-					fae.isolateOne(dst, root, selector);
+				fae.isolateOne(dst, root, selector);
 				continue;
 			}
 			ta2.addFinalStates(this->roots[root]->getFinalStates());
@@ -1534,10 +1531,7 @@ public:
 			std::set<const Box*> boxes;
 			fae.isolateAtRoot(fae.roots.size() - 1, t, IsolateBoxF(i->second), boxes);
 			fae.unfoldBox(fae.roots.size() - 1, i->second);
-			if (!i->second->isComposed())
-				dst.push_back(new FAE(fae));
-			else
-				fae.isolateOne(dst, root, selector);
+			fae.isolateOne(dst, root, selector);
 		}
 
 	}
@@ -1710,7 +1704,10 @@ public:
 
 		ContainerGuard<std::vector<FAE*> > g(tmp), f(tmp2);
 
-		this->isolateAtRoot(tmp, target, IsolateSetF(offsD));
+		if (offsD.size())
+			this->isolateAtRoot(tmp, target, IsolateSetF(offsD));
+		else
+			tmp.push_back(new FAE(*this));
 
 		for (std::set<size_t>::iterator i = offsU.begin(); i != offsU.end(); ++i) {
 			for (std::vector<FAE*>::iterator j = tmp.begin(); j != tmp.end(); ++j) {
