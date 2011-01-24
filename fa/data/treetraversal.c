@@ -44,9 +44,57 @@ int main() {
     }
 
     n = NULL;
+/*
+    struct TreeNode* parent = root, * right = NULL, * curr;
+    while (parent != NULL) {
+	curr = parent->left;
+	if (curr != NULL) {
+	    while (curr != right && curr->right != NULL)
+	        curr = curr->right;
 
+	    if (curr != right) {
+	        curr->right = parent;
+	        parent = parent->left;
+                continue;
+	    } else
+                curr->right = NULL;
+	} else
+	right = parent;
+	parent = parent->right;
+    }
+*/
+/*
+    if (!root)
+	return;
+
+    struct TreeNode* current = root, * from = NULL;
+    while (current != root || from == NULL) {
+        while (current->left)
+            current = current->left;
+
+	if (current->right) {
+	    current = current->right;
+	    continue;
+	}
+
+	from = current;
+	current = current->parent;
+
+	if (from == current->left) {
+	    current = current->right;
+	} else {
+	    while (from != current->left && current != root) {
+	    	from = current;
+	        current = current->parent;
+     	    }
+	    if (current == root && from == current->left && current->right)
+        	current = current->right;
+    	}
+
+    }
+*/
 //    struct TreeNode* pred;
-
+/*
     while (root) {
 //	pred = NULL;
         n = root;
@@ -66,8 +114,8 @@ int main() {
 	    root = NULL;
 	free(n);
     }
+*/
 
-/*
     struct StackItem* s = malloc(sizeof(*s)), *st;
     s->next = NULL;
     s->node = root;
@@ -93,7 +141,7 @@ int main() {
     }
 
     return 0;
-*/
+
 }
 
 /*

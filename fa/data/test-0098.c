@@ -95,6 +95,9 @@ struct master_item {
     (dll)->prev = dll;\
     (dll)->next = dll;\
 \
+    append_one(dll);\
+    append_one(dll);\
+    append_one(dll);\
     while (__nondet())\
         append_one(dll);\
 }
@@ -131,8 +134,8 @@ int main()
     struct list_head* lh, * lh2, *lh3;
     struct my_item *now, *next;
 
-//    create_sll_item(sll);
- //   create_sll_item(sll);
+    create_sll_item(sll);
+    create_sll_item(sll);
  
     while (__nondet())
         create_sll_item(sll);

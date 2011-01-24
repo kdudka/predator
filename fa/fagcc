@@ -13,25 +13,25 @@ FA_PLUG="$FA_BUILD/libfa.so"
 GCC="$topdir/gcc-install/bin/gcc"
 
 # initial checks
-test -x "$GCC"                              || exit 1
+#test -x "$GCC"                              || exit 1
 
 # attempt to make
-make -s $MAKEOPTS -C "$topdir/fa"  || exit 1
-test -x "$FA_PLUG"                          || exit 1
+#make -s $MAKEOPTS -C "$topdir/fa"  || exit 1
+#test -x "$FA_PLUG"                          || exit 1
 
 # use verbose level 0 by default
 test -z "$FA_VERBOSE" && FA_VERBOSE=0
 
 # use pp code listener by default
-test -z "$FA_OPTS" && FA_OPTS="-fplugin-arg-libfa-dump-pp"
+#test -z "$FA_OPTS" && FA_OPTS="-fplugin-arg-libfa-dump-pp"
 
 # use chromium as default SVG_VIEWER
-test -z "$SVG_VIEWER" && SVG_VIEWER=chromium
+#test -z "$SVG_VIEWER" && SVG_VIEWER=chromium
 
-if test x1 = "x$FA_PLOT"; then
+#if test x1 = "x$FA_PLOT"; then
     # wipe all .dot and .svg
-    rm -f *.dot *.svg
-fi
+#    rm -f *.dot *.svg
+#fi
 
 BOXDB=""
 if [ "$2" != "" ]; then
