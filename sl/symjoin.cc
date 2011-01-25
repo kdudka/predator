@@ -384,24 +384,22 @@ bool joinFreshObjTripple(
         const bool isGt1 = (OBJ_INVALID == obj2);
         const TValMapBidir &vm = (isGt1) ? ctx.valMap1 : ctx.valMap2;
         const TValueId val = (isGt1) ? v1 : v2;
-        if (val <= 0 || hasKey(vm[/* lrt */ 0], val))
+        return (val <= 0 || hasKey(vm[/* lrt */ 0], val));
+    }
+
+    // special values have to match (NULL not treated as special here)
+    // TODO: should we consider also join of VAL_TRUE/VAL_FALSE?
+    if (v1 < 0 || v2 < 0) {
+        if (v1 == v2)
             return true;
-    }
-    else {
-        // special values have to match (NULL not treated as special here)
-        // TODO: should we consider also join of VAL_TRUE/VAL_FALSE?
-        if (v1 < 0 || v2 < 0) {
-            if (v1 == v2)
-                return true;
 
-            SJ_DEBUG("<-- special value mismatch " << SJ_VALP(v1, v2));
-            return false;
-        }
-
-        if (readOnly)
-            return checkValueMapping(ctx, v1, v2,
-                                     /* allowUnknownMapping */ true);
+        SJ_DEBUG("<-- special value mismatch " << SJ_VALP(v1, v2));
+        return false;
     }
+
+    if (readOnly)
+        return checkValueMapping(ctx, v1, v2,
+                                 /* allowUnknownMapping */ true);
 
     if (checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ false))
         return true;
