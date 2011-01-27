@@ -351,7 +351,7 @@ protected:
 	};
 
 	struct FuseNonZeroF {
-		bool operator()(size_t root, const FAE&) {
+		bool operator()(size_t root, const FAE*) {
 			return root != 0;
 		}
 	};
@@ -363,6 +363,7 @@ protected:
 //		for (size_t i = 0; i < tmp.size(); ++i)
 //			CL_CDEBUG("accelerator " << std::endl << *tmp[i]);
 		fae.fuse(tmp, FuseNonZeroF());
+//		fae.fuse(target->fwdConf, FuseNonZeroF());
 		CL_CDEBUG("fused " << std::endl << fae);
 	}
 

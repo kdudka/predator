@@ -119,7 +119,7 @@ protected:
 	
 public:
 
-	TAMultiReader(TA<string>::Backend& backend, std::istream& input, const string& name = "")
+	TAMultiReader(TA<string>::Backend& backend, std::istream& input = std::cin, const string& name = "")
 		: TimbukReader(input, name), backend(backend) {}
 
 	void clear() {
@@ -148,7 +148,7 @@ class TAWriter : public TimbukWriter {
 
 public:
 
-	TAWriter(std::ostream& output) : TimbukWriter(output) {}
+	TAWriter(std::ostream& output = std::cout) : TimbukWriter(output) {}
 
 	template <class F>
 	void writeTransitions(const TA<T>& aut, F f) {

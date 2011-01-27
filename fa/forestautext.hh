@@ -624,12 +624,31 @@ public:
 		for (std::vector<FAE*>::const_iterator i = src.begin(); i != src.end(); ++i) {
 			assert(this->roots.size() == (*i)->roots.size());
 			for (size_t j = 0; j < this->roots.size(); ++j) {
-				if (!f(j, **i))
+				if (!f(j, *i))
 					continue;
 				index.clear();
 				TA<label_type>::rename(*this->roots[j], *(*i)->roots[j], RenameNonleafF(index, this->nextState()), false);
 				this->incrementStateOffset(index.size());
 			}
+		}
+/*		for (size_t i = 0; i < this->roots.size(); ++i) {
+//			std::cerr << *this->roots[i];
+			TA<label_type> ta(this->taMan->getBackend());
+			this->roots[i]->unfoldAtRoot(ta, this->freshState());
+			this->updateRoot(this->roots[i], &this->roots[i]->uselessAndUnreachableFree(*this->taMan->alloc()));
+		}*/
+	}
+
+	template <class F>
+	void fuse(const TA<label_type>& src, F f) {
+		Index<size_t> index;
+		TA<label_type> tmp(this->taMan->getBackend());
+		TA<label_type>::rename(tmp, src, RenameNonleafF(index, this->nextState()), false);
+		this->incrementStateOffset(index.size());
+		for (size_t i = 0; i < this->roots.size(); ++i) {
+			if (!f(i, NULL))
+				continue;
+			tmp.copyTransitions(*this->roots[i]);
 		}
 /*		for (size_t i = 0; i < this->roots.size(); ++i) {
 //			std::cerr << *this->roots[i];

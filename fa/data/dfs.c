@@ -38,7 +38,6 @@ int main() {
 		z->parent = n;
 		z->data = 0;
 		n->left = z;
-		z = NULL;
 	}
 	if (!n->right && __nondet()) {
 		z = malloc(sizeof(struct TreeNode));
@@ -47,24 +46,25 @@ int main() {
 		z->parent = n;
 		z->data = 0;
 		n->right = z;
-		z = NULL;
 	}
+	z = NULL;
     }
 
     n = root;
-    while (n != NULL) {
+    while (n) {
 	z = n->left;
-	if ((z != NULL) && (z->data == 0)) 
+	if (z && (z->data == 0))
 	    n = z;
 	else {
 	    z = n->right;
-	    if ((z != NULL) && (z->data == 0)) 
+	    if (z && (z->data == 0)) 
 		n = z;
 	    else {
 		n->data = 1;
 		n = n->parent;
 	    }
 	}
+	z = NULL;
     }
 //    struct TreeNode* pred;
 /*
@@ -92,7 +92,7 @@ int main() {
     s->next = NULL;
     s->node = root;
 
-    while (s != NULL) {
+    while (s) {
         st = s;
         s = s->next;
 	n = st->node;
