@@ -632,10 +632,14 @@ void SymExecEngine::printStats() const {
             if (!state.isDone(i))
                 ++waiting;
 
+        const char *status = (bb == block_)
+            ? " in progress"
+            : " scheduled";
+
         const CodeStorage::Insn *first = bb->front();
         LocationWriter lw(&first->loc);
         CL_NOTE_MSG(lw,
-                "___ block " << name << " scheduled"
+                "___ block " << name << status <<
                 ", " << total << " heap(s) total"
                 ", " << waiting << " heap(s) pending");
     }
