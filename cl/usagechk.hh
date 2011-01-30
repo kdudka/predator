@@ -89,14 +89,12 @@ inline void UsageChecker<TKey, TValue>::emitPendingMessages(
 
         if (!u.read) {
             CL_WARN_MSG(cl_loc_fallback(&u.loc, loc),
-                    "warning: unused "
-                    << what_ << u.val);
+                    "unused " << what_ << u.val);
         }
 
         if (!u.written) {
             CL_ERROR_MSG(cl_loc_fallback(&u.loc, loc),
-                    "error: uninitialized "
-                    << what_ << u.val);
+                    "uninitialized " << what_ << u.val);
         }
     }
 }
