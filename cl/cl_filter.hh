@@ -87,7 +87,7 @@ class ClFilterBase: public ICodeListener {
         }
 
         virtual void insn_call_open(
-            const struct cl_location*loc,
+            const struct cl_loc     *loc,
             const struct cl_operand *dst,
             const struct cl_operand *fnc)
         {
@@ -106,14 +106,14 @@ class ClFilterBase: public ICodeListener {
         }
 
         virtual void insn_switch_open(
-            const struct cl_location*loc,
+            const struct cl_loc     *loc,
             const struct cl_operand *src)
         {
             slave_->insn_switch_open(loc, src);
         }
 
         virtual void insn_switch_case(
-            const struct cl_location*loc,
+            const struct cl_loc     *loc,
             const struct cl_operand *val_lo,
             const struct cl_operand *val_hi,
             const char              *label)

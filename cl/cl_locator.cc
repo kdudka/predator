@@ -19,9 +19,10 @@
 
 #include "cl_locator.hh"
 
-#include <cl/location.hh>
+#include <cl/cl_msg.hh>
 
 #include "cl.hh"
+#include "cl_private.hh"
 
 #include <iostream>
 
@@ -30,16 +31,16 @@ class ClLocator: public ICodeListener {
         ClLocator();
 
         virtual void file_open(const char *file_name) {
-            lastLoc_.currentFile = file_name;
+            CL_LOC_SET_FILE(lastLoc_, file_name);
         }
 
         virtual void file_close() {
-            lastLoc_.currentFile.clear();
+            lastLoc_ = cl_loc_unknown;
         }
 
         virtual void fnc_open(const struct cl_operand *fnc) {
             this->printLocation(&fnc->loc);
-            lastLoc_ = &fnc->loc;
+            lastLoc_ = fnc->loc;
         }
 
         virtual void fnc_arg_decl(int, const struct cl_operand *) { }
@@ -47,35 +48,34 @@ class ClLocator: public ICodeListener {
         virtual void bb_open(const char *) { }
 
         virtual void insn(const struct cl_insn *cli) {
-            if (CL_INSN_JMP != cli->code)
-                this->printLocation(&cli->loc);
-            lastLoc_ = &cli->loc;
+            this->printLocation(&cli->loc);
+            CL_LOC_SETIF(lastLoc_, &cli->loc);
         }
 
-        virtual void insn_call_open(const struct cl_location *loc,
+        virtual void insn_call_open(const struct cl_loc     *loc,
                                     const struct cl_operand *,
                                     const struct cl_operand *)
         {
             this->printLocation(loc);
-            lastLoc_ = loc;
+            CL_LOC_SETIF(lastLoc_, loc);
         }
 
         virtual void insn_call_arg(int, const struct cl_operand *) { }
         virtual void insn_call_close() { }
 
-        virtual void insn_switch_open(const struct cl_location *loc,
+        virtual void insn_switch_open(const struct cl_loc     *loc,
                                       const struct cl_operand *)
         {
             this->printLocation(loc);
-            lastLoc_ = loc;
+            CL_LOC_SETIF(lastLoc_, loc);
         }
 
-        virtual void insn_switch_case(const struct cl_location *loc,
+        virtual void insn_switch_case(const struct cl_loc     *loc,
                                       const struct cl_operand *,
                                       const struct cl_operand *, const char *)
         {
             this->printLocation(loc);
-            lastLoc_ = loc;
+            CL_LOC_SETIF(lastLoc_, loc);
         }
 
         virtual void insn_switch_close() { }
@@ -84,10 +84,10 @@ class ClLocator: public ICodeListener {
 
     private:
         std::ostream            &out_;
-        Location                lastLoc_;
+        struct cl_loc           lastLoc_;
 
     private:
-        void printLocation(const struct cl_location *);
+        void printLocation(const struct cl_loc *);
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -97,10 +97,9 @@ ClLocator::ClLocator():
 {
 }
 
-void ClLocator::printLocation(const struct cl_location *loc) {
-    out_ << LocationWriter(loc, &lastLoc_)
-        << "linearized code follows..."
-        << std::endl;
+void ClLocator::printLocation(const struct cl_loc *loc) {
+    CL_DEBUG_MSG(cl_loc_fallback(loc, &lastLoc_),
+            "linearized code follows...");
 }
 
 // /////////////////////////////////////////////////////////////////////////////

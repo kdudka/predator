@@ -22,7 +22,6 @@
 #include <cl/easy.hh>
 #include <cl/cl_msg.hh>
 #include <cl/clutil.hh>
-#include <cl/location.hh>
 #include <cl/storage.hh>
 
 #include <set>
@@ -54,7 +53,7 @@ enum EVarState {
 /// state of variable (scope of its validity is basic block)
 struct VarState {
     EVarState           code;   ///< current state (valid per current block)
-    LocationWriter      lw;     ///< location where the state became valid
+    const struct cl_loc *lw;    ///< location where the state became valid
     int /* uid */       peer;   ///< used only for VS_NULL_IFF, VS_NOT_NULL_IFF
 
     VarState(): code(VS_UNDEF) { }
@@ -78,7 +77,7 @@ struct Data {
  */
 void handleVarDeref(Data::TState                        &state,
                     const struct cl_operand             &op,
-                    LocationWriter                      lw)
+                    const struct cl_loc                 *lw)
 {
     const int uid = varIdFromOperand(&op);
     VarState &vs = state[uid];
@@ -244,7 +243,7 @@ void handleInsnUnop(Data::TState &state, const CodeStorage::Insn *insn) {
 bool handleInsnCmpNull(Data::TState                 &state,
                        VarState                     &vsDst,
                        const struct cl_operand      *src,
-                       LocationWriter               lw,
+                       const struct cl_loc          *lw,
                        bool                         neg)
 {
     if (src->accessor)
@@ -628,8 +627,7 @@ void handleFnc(const CodeStorage::Fnc &fnc) {
         // process one basic block
         CL_BREAK_IF(!bb || !bb->size());
         const Insn *insn = bb->operator[](0);
-        const LocationWriter lw(&insn->loc);
-        CL_DEBUG_MSG(lw, "analyzing block " << bb->name() << "...");
+        CL_DEBUG_MSG(&insn->loc, "analyzing block " << bb->name() << "...");
         handleBlock(data, bb);
     }
 }
@@ -644,8 +642,9 @@ void clEasyRun(const CodeStorage::Storage &stor, const char *) {
         if (!isDefined(fnc))
             continue;
 
-        const LocationWriter lw(&fnc.def.loc);
-        CL_DEBUG_MSG(lw, "analyzing function " << nameOf(fnc) << "()...");
+        CL_DEBUG_MSG(&fnc.def.loc, "analyzing function "
+                << nameOf(fnc) << "()...");
+
         handleFnc(fnc);
     }
 }

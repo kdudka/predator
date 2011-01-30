@@ -42,7 +42,7 @@ bool chkVoidCall(const TOpList &opList)
 
 template <int NTH, class TOpList>
 bool readPlotName(std::string *dst, const TOpList opList,
-                  const LocationWriter &lw)
+                  const struct cl_loc *loc)
 {
     const cl_operand &op = opList[NTH + /* dst + fnc */ 2];
     if (CL_OPERAND_CST != op.code)
@@ -62,22 +62,17 @@ bool readPlotName(std::string *dst, const TOpList opList,
         return false;
 
     // NULL given as plot name, we're asked to generate the name automagically
-    const Location &loc = (-1 == lw.loc.locLine)
-        ? lw.last
-        : lw.loc;
-
-    CL_BREAK_IF(-1 == loc.locLine || loc.locFile.empty());
-    if (-1 == loc.locLine) {
+    if (!loc || !loc->file) {
         // sorry, no location info here
         *dst = "anonplot";
         return true;
     }
 
-    char *dup = strdup(loc.locFile.c_str());
+    char *dup = strdup(loc->file);
     const char *fname = basename(dup);
 
     std::ostringstream str;
-    str << fname << "-" << loc.locLine;
+    str << fname << "-" << loc->line;
     *dst = str.str();
 
     free(dup);
@@ -102,8 +97,6 @@ bool readNameAndValue(std::string       *pName,
                       TProc             &proc)
 {
     const CodeStorage::TOperandList &opList = insn.operands;
-    const LocationWriter lw(&insn.loc);
-
     if (!chkVoidCall<2>(opList))
         return false;
 
@@ -134,12 +127,12 @@ bool fncFromHeapVal(const TStor &stor, const TFnc **dst, TValueId value,
 }
 
 namespace {
-void emitPrototypeError(const LocationWriter &lw, const std::string &fnc) {
+void emitPrototypeError(const struct cl_loc *lw, const std::string &fnc) {
     CL_WARN_MSG(lw, "incorrectly called "
             << fnc << "() not recognized as built-in");
 }
 
-void emitPlotError(const LocationWriter &lw, const std::string &plotName) {
+void emitPlotError(const struct cl_loc *lw, const std::string &plotName) {
     CL_WARN_MSG(lw, "error while plotting '" << plotName << "'");
 }
 } // namespace
@@ -154,7 +147,7 @@ void emitPlotError(const LocationWriter &lw, const std::string &plotName) {
 template <class TInsn, class TProc>
 bool callPlot(const TInsn &insn, TProc &proc) {
     const CodeStorage::TOperandList &opList = insn.operands;
-    const LocationWriter lw(&insn.loc);
+    const struct cl_loc *lw = &insn.loc;
 
     std::string plotName;
     if (!chkVoidCall<1>(opList)
@@ -170,7 +163,7 @@ bool callPlot(const TInsn &insn, TProc &proc) {
 
 template <class TInsn, class TProc>
 bool callPlotByPtr(const TInsn &insn, TProc &proc) {
-    const LocationWriter lw(&insn.loc);
+    const struct cl_loc *lw = &insn.loc;
 
     std::string plotName;
     TValueId value;
@@ -187,7 +180,7 @@ bool callPlotByPtr(const TInsn &insn, TProc &proc) {
 template <class TInsn, class TProc>
 bool callPlotStackFrame(const TInsn &insn, TProc &proc) {
     const CodeStorage::Storage &stor = *insn.stor;
-    const LocationWriter lw(&insn.loc);
+    const struct cl_loc *lw = &insn.loc;
     const SymHeap &sh = proc.sh();
 
     std::string plotName;
@@ -234,7 +227,7 @@ bool handleBuiltIn(SymState                     &dst,
     CL_BREAK_IF(!fncName);
 
     SymHeap                     &sh = core.sh();
-    const LocationWriter        &lw = core.lw();
+    const struct cl_loc         *lw = core.lw();
     const SymExecCoreParams     &ep = core.params();
 
     if (STREQ(fncName, "abort")) {

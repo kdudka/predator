@@ -21,7 +21,6 @@
 
 #include <cl/easy.hh>
 #include <cl/cl_msg.hh>
-#include <cl/location.hh>
 #include <cl/storage.hh>
 
 #include "symbt.hh"
@@ -87,7 +86,7 @@ void digGlJunk(const CodeStorage::Storage &stor, SymHeap &heap) {
 
     BOOST_FOREACH(const Var &var, stor.vars) {
         if (VAR_GL == var.code) {
-            const LocationWriter lw(&var.loc);
+            const struct cl_loc *lw = &var.loc;
             CL_DEBUG_MSG(lw, "(g) destroying gl variable: #"
                     << var.uid << " (" << var.name << ")" );
 
@@ -105,7 +104,7 @@ void execFnc(const CodeStorage::Fnc &fnc, const SymExecParams &ep,
              bool lookForGlJunk = false)
 {
     const CodeStorage::Storage &stor = *fnc.stor;
-    const LocationWriter lw(&fnc.def.loc);
+    const struct cl_loc *lw = &fnc.def.loc;
     CL_DEBUG_MSG(lw, "creating fresh initial state for "
             << nameOf(fnc) << "()...");
     SymExec se(stor, ep);
@@ -173,7 +172,7 @@ void execVirtualRoots(const CodeStorage::FncDb &fncs, const SymExecParams &ep) {
         if (!isDefined(fnc) || hasKey(callees, uidOf(fnc)))
             continue;
 
-        const LocationWriter lw(&fnc.def.loc);
+        const struct cl_loc *lw = &fnc.def.loc;
         CL_DEBUG_MSG(lw, nameOf(fnc)
                 << "() is defined, but not called from anywhere");
 

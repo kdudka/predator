@@ -75,7 +75,7 @@ class SymBackTrace {
          * @param lw location of the call related to the caller (definitely @b
          * not location of the called function)
          */
-        void pushCall(int fncId, const LocationWriter &lw);
+        void pushCall(int fncId, const struct cl_loc *lw);
 
         /**
          * leave the call of function on top of the backtrace
@@ -107,7 +107,7 @@ class SymBackTrace {
         const CodeStorage::Fnc* topFnc() const;
 
         /// return location of call of the topmost function in the backtrace
-        LocationWriter topCallLoc() const;
+        const struct cl_loc* topCallLoc() const;
 
         /// return true, if there is @b any recursive call in the backtrace
         bool hasRecursiveCall() const;

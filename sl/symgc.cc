@@ -114,7 +114,7 @@ bool digJunk(const SymHeap &heap, TValueId *ptrVal) {
 
 } // namespace
 
-bool collectJunk(SymHeap &sh, TValueId val, LocationWriter lw) {
+bool collectJunk(SymHeap &sh, TValueId val, const struct cl_loc *lw) {
     bool detected = false;
 
     std::stack<TValueId> todo;

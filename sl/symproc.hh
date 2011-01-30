@@ -26,7 +26,6 @@
  * operations
  */
 
-#include <cl/location.hh>
 #include <cl/storage.hh>
 
 #include "symid.hh"
@@ -59,7 +58,7 @@ class SymProc {
 
         SymHeap&                    sh() { return heap_; }
         const SymBackTrace*         bt() { return bt_;   }
-        const LocationWriter&       lw() { return lw_;   }
+        const struct cl_loc*        lw() { return lw_;   }
 
         /**
          * update location info
@@ -67,7 +66,7 @@ class SymProc {
          * info in error/warning messages
          * @param lw where to retrieve the location info from
          */
-        void setLocation(const LocationWriter &lw) {
+        void setLocation(const struct cl_loc *lw) {
             lw_ = lw;
         }
 
@@ -107,7 +106,7 @@ class SymProc {
     protected:
         SymHeap                     &heap_;     ///< heap to operate on
         const SymBackTrace          *bt_;
-        LocationWriter              lw_;
+        const struct cl_loc         *lw_;
 
         // internal helper of SymExecCore::execOp()
         template <int N> friend struct OpHandler;

@@ -21,7 +21,6 @@
 #include "symplot.hh"
 
 #include <cl/cl_msg.hh>
-#include <cl/location.hh>
 #include <cl/storage.hh>
 #include <cl/clutil.hh>
 
@@ -115,7 +114,7 @@ struct SymPlot::Private {
     const SymHeap                       *heap;
     std::ofstream                       dotStream;
     bool                                ok;
-    LocationWriter                      lw;
+    const struct cl_loc                 *lw;
     WorkList<TValueId>                  workList;
     std::set<TObjId>                    objDone;
     int                                 last;

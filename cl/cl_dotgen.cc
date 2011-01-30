@@ -21,9 +21,9 @@
 #include "cl_dotgen.hh"
 
 #include <cl/cl_msg.hh>
-#include <cl/location.hh>
 
 #include "cl.hh"
+#include "cl_private.hh"
 #include "util.hh"
 
 #include <libgen.h>         // for basename(3)
@@ -59,7 +59,7 @@ class ClDotGenerator: public ICodeListener {
             const struct cl_insn    *cli);
 
         virtual void insn_call_open(
-            const struct cl_location*loc,
+            const struct cl_loc     *loc,
             const struct cl_operand *dst,
             const struct cl_operand *fnc);
 
@@ -70,11 +70,11 @@ class ClDotGenerator: public ICodeListener {
         virtual void insn_call_close();
 
         virtual void insn_switch_open(
-            const struct cl_location*loc,
+            const struct cl_loc     *loc,
             const struct cl_operand *src);
 
         virtual void insn_switch_case(
-            const struct cl_location*loc,
+            const struct cl_loc     *loc,
             const struct cl_operand *val_lo,
             const struct cl_operand *val_hi,
             const char              *label);
@@ -89,7 +89,7 @@ class ClDotGenerator: public ICodeListener {
         std::ofstream           perFileOut_;
         std::ofstream           perFncOut_;
 
-        Location                loc_;
+        struct cl_loc           loc_;
         std::string             fnc_;
         std::string             bb_;
         int                     bbPos_;
@@ -171,10 +171,10 @@ class ClDotGenerator: public ICodeListener {
 #define SL_DOT_SUFFIX ".svg"
 
 #define SL_QUOTE_PER_FILE_URL \
-    SL_QUOTE(basename((char *) loc_.currentFile.c_str()) << SL_DOT_SUFFIX)
+    SL_QUOTE(basename((char *) loc_.file) << SL_DOT_SUFFIX)
 
 #define SL_QUOTE_URL(fnc) \
-    SL_QUOTE(basename((char *) loc_.currentFile.c_str()) \
+    SL_QUOTE(basename((char *) loc_.file) \
     << "-" << fnc << SL_DOT_SUFFIX)
 
 #define SL_GRAPH(name) \
@@ -238,6 +238,7 @@ void ClDotGenerator::closeDot(std::ofstream &str) {
 
 ClDotGenerator::ClDotGenerator(const char *glDotFile):
     hasGlDotFile_(glDotFile && *glDotFile),
+    loc_(cl_loc_unknown),
     bbPos_(0),
     nodeType_(NT_PLAIN)
 {
@@ -347,7 +348,7 @@ void ClDotGenerator::emitPendingCalls() {
 
 void ClDotGenerator::emitFncEntry(const char *label) {
     FILE_FNC_STREAM(SL_SUBGRAPH(fnc_ << "." << label, fnc_
-                << "() at " << loc_.locFile << ":" << loc_.locLine)
+                << "() at " << loc_.file << ":" << loc_.line)
             << "\tcolor=blue;" << std::endl
             << "\tbgcolor=gray99;" << std::endl);
 
@@ -442,7 +443,7 @@ void ClDotGenerator::checkForFncRef(const struct cl_operand *op) {
 }
 
 void ClDotGenerator::file_open(const char *file_name) {
-    loc_.currentFile = file_name;
+    CL_LOC_SET_FILE(loc_, file_name);
     ClDotGenerator::createDotFile(perFileOut_, file_name, true);
     perFileOut_ << SL_GRAPH(file_name);
 
@@ -453,20 +454,21 @@ void ClDotGenerator::file_open(const char *file_name) {
 
 void ClDotGenerator::file_close()
 {
+    loc_ = cl_loc_unknown;
     ClDotGenerator::closeDot(perFileOut_);
     ClDotGenerator::closeSub(glOut_);
 }
 
 void ClDotGenerator::fnc_open(const struct cl_operand *fnc)
 {
-    loc_ = &fnc->loc;
+    loc_ = fnc->loc;
     fnc_ = fnc->data.cst.data.cst_fnc.name;
 
     ClDotGenerator::createDotFile(perFncOut_,
-                                  string(loc_.currentFile) + "-" + fnc_,
+                                  string(loc_.file) + "-" + fnc_,
                                   true);
     perFncOut_ << SL_GRAPH(fnc_ << "()"
-            << " at " << loc_.locFile << ":" << loc_.locLine);
+            << " at " << loc_.file << ":" << loc_.line);
 
     glOut_ << "\t" << SL_QUOTE(fnc_)
             << " [label=" << SL_QUOTE(fnc_)
@@ -571,7 +573,7 @@ void ClDotGenerator::insn(const struct cl_insn *cli) {
     lastInsn_ = cli->code;
 }
 
-void ClDotGenerator::insn_call_open(const struct cl_location *loc,
+void ClDotGenerator::insn_call_open(const struct cl_loc     *loc,
                                     const struct cl_operand *,
                                     const struct cl_operand *fnc)
 {
@@ -600,7 +602,7 @@ void ClDotGenerator::insn_call_open(const struct cl_location *loc,
             // fall through!!
 
         default:
-            CL_WARN_MSG(LocationWriter(loc, &loc_),
+            CL_WARN_MSG(cl_loc_fallback(loc, &loc_),
                     "ClDotGenerator: unhandled call");
             return;
     }
@@ -625,7 +627,7 @@ void ClDotGenerator::insn_call_close()
 {
 }
 
-void ClDotGenerator::insn_switch_open(const struct cl_location *,
+void ClDotGenerator::insn_switch_open(const struct cl_loc *,
                                       const struct cl_operand *src)
 {
     perFncOut_ << "\t" << SL_QUOTE_BB(bb_ << SL_BB_POS_SUFFIX)
@@ -635,7 +637,7 @@ void ClDotGenerator::insn_switch_open(const struct cl_location *,
     this->checkForFncRef(src);
 }
 
-void ClDotGenerator::insn_switch_case(const struct cl_location *,
+void ClDotGenerator::insn_switch_case(const struct cl_loc *,
                                       const struct cl_operand *,
                                       const struct cl_operand *,
                                       const char              *label)

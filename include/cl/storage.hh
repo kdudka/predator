@@ -58,7 +58,7 @@ enum EVar {
  */
 struct Var {
     EVar                        code;   ///< high-level kind of variable
-    struct cl_location          loc;    ///< location of its declaration
+    struct cl_loc               loc;    ///< location of its declaration
 
     /**
      * type of the variable
@@ -292,7 +292,7 @@ struct Insn {
     /**
      * corresponding location in the original source code
      */
-    struct cl_location          loc;
+    struct cl_loc               loc;
 
     /**
      * List of all operands used by the instruction.

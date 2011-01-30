@@ -21,7 +21,6 @@
 #include "sympath.hh"
 
 #include <cl/cl_msg.hh>
-#include <cl/location.hh>
 #include <cl/storage.hh>
 
 #include "symstate.hh"
@@ -34,27 +33,27 @@
 
 /// get location of the first (or last) insn with valid location info
 template <class TBlock>
-LocationWriter digBlockLocation(TBlock bb, bool backward)
+const struct cl_loc* digBlockLocation(TBlock bb, bool backward)
 {
     if (backward) {
         // pick up the location of the _last_ insn with valid location
         BOOST_REVERSE_FOREACH(const CodeStorage::Insn *insn, *bb) {
-            const LocationWriter lw(&insn->loc);
-            if (lw)
-                return lw;
+            const struct cl_loc *loc = &insn->loc;
+            if (loc->file)
+                return loc;
         }
     }
     else {
         // pick up the location of the _first_ insn with valid location
         BOOST_FOREACH(const CodeStorage::Insn *insn, *bb) {
-            const LocationWriter lw(&insn->loc);
-            if (lw)
-                return lw;
+            const struct cl_loc *loc = &insn->loc;
+            if (loc->file)
+                return loc;
         }
     }
 
     // not found
-    return LocationWriter();
+    return 0;
 }
 
 /// print one item of the path trace
@@ -62,7 +61,7 @@ template <class TBlock>
 void printOneBlock(TBlock bb, int level, bool backward, bool loop = false) {
     using std::string;
 
-    const LocationWriter lw = digBlockLocation(bb, backward);
+    const struct cl_loc *lw = digBlockLocation(bb, backward);
     const string &name = bb->name();
     const string indent(level << 2, ' ');
 

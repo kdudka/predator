@@ -21,6 +21,7 @@
 #include "clf_intchk.hh"
 
 #include "cl_filter.hh"
+#include "cl_private.hh"
 #include "clf_opchk.hh"
 #include "usagechk.hh"
 
@@ -41,12 +42,13 @@ class ClfCbSeqChk: public ClFilterBase {
         virtual void file_open(
             const char              *file_name)
         {
-            loc_.currentFile = file_name;
+            CL_LOC_SET_FILE(loc_, file_name);
             this->setState(S_FILE_LEVEL);
             ClFilterBase::file_open(file_name);
         }
 
         virtual void file_close() {
+            loc_ = cl_loc_unknown;
             this->setState(S_INIT);
             ClFilterBase::file_close();
         }
@@ -54,7 +56,7 @@ class ClfCbSeqChk: public ClFilterBase {
         virtual void fnc_open(
             const struct cl_operand *fnc)
         {
-            loc_ = &fnc->loc;
+            loc_ = fnc->loc;
             this->setState(S_FNC_DECL);
             ClFilterBase::fnc_open(fnc);
         }
@@ -82,7 +84,7 @@ class ClfCbSeqChk: public ClFilterBase {
         virtual void insn(
             const struct cl_insn    *cli)
         {
-            loc_ = &cli->loc;
+            loc_ = cli->loc;
 
             switch (cli->code) {
                 case CL_INSN_NOP:
@@ -122,11 +124,11 @@ class ClfCbSeqChk: public ClFilterBase {
         }
 
         virtual void insn_call_open(
-            const struct cl_location*loc,
+            const struct cl_loc     *loc,
             const struct cl_operand *dst,
             const struct cl_operand *fnc)
         {
-            loc_ = loc;
+            CL_LOC_SETIF(loc_, loc);
             this->setState(S_INSN_CALL);
             ClFilterBase::insn_call_open(loc, dst, fnc);
         }
@@ -145,21 +147,21 @@ class ClfCbSeqChk: public ClFilterBase {
         }
 
         virtual void insn_switch_open(
-            const struct cl_location*loc,
+            const struct cl_loc     *loc,
             const struct cl_operand *src)
         {
-            loc_ = loc;
+            CL_LOC_SETIF(loc_, loc);
             this->setState(S_INSN_SWITCH);
             ClFilterBase::insn_switch_open(loc, src);
         }
 
         virtual void insn_switch_case(
-            const struct cl_location*loc,
+            const struct cl_loc     *loc,
             const struct cl_operand *val_lo,
             const struct cl_operand *val_hi,
             const char              *label)
         {
-            loc_ = loc;
+            CL_LOC_SETIF(loc_, loc);
             this->chkInsnSwitchCase();
             ClFilterBase::insn_switch_case(loc, val_lo, val_hi, label);
         }
@@ -190,7 +192,7 @@ class ClfCbSeqChk: public ClFilterBase {
         };
 
         EState                      state_;
-        Location                    loc_;
+        struct cl_loc               loc_;
 
 
     private:
@@ -219,14 +221,14 @@ class ClfLabelChk: public ClFilterBase {
         virtual void file_open(
             const char              *file_name)
         {
-            loc_.currentFile = file_name;
+            CL_LOC_SET_FILE(loc_, file_name);
             ClFilterBase::file_open(file_name);
         }
 
         virtual void fnc_open(
             const struct cl_operand *fnc)
         {
-            loc_ = &fnc->loc;
+            loc_ = fnc->loc;
             this->reset();
             ClFilterBase::fnc_open(fnc);
         }
@@ -246,7 +248,7 @@ class ClfLabelChk: public ClFilterBase {
         virtual void insn(
             const struct cl_insn    *cli)
         {
-            loc_ = &cli->loc;
+            loc_ = cli->loc;
 
             switch (cli->code) {
                 case CL_INSN_JMP:
@@ -266,12 +268,12 @@ class ClfLabelChk: public ClFilterBase {
         }
 
         virtual void insn_switch_case(
-            const struct cl_location*loc,
+            const struct cl_loc     *loc,
             const struct cl_operand *val_lo,
             const struct cl_operand *val_hi,
             const char              *label)
         {
-            loc_ = loc;
+            CL_LOC_SETIF(loc_, loc);
             this->reqLabel(label);
             ClFilterBase::insn_switch_case(loc, val_lo, val_hi, label);
         }
@@ -280,15 +282,20 @@ class ClfLabelChk: public ClFilterBase {
         struct LabelState {
             bool                    defined;
             bool                    reachable;
-            Location                loc;
+            struct cl_loc           loc;
 
-            LabelState(): defined(false), reachable(false) { }
+            LabelState():
+                defined(false),
+                reachable(false),
+                loc(cl_loc_unknown)
+            {
+            }
         };
 
         typedef std::map<std::string, LabelState> TMap;
 
         TMap                map_;
-        Location            loc_;
+        struct cl_loc       loc_;
 
     private:
         void reset();
@@ -373,7 +380,8 @@ class ClfLcVarUsageChk: public ClfOpCheckerBase {
 // ClfCbSeqChk implementation
 ClfCbSeqChk::ClfCbSeqChk(ICodeListener *slave):
     ClFilterBase(slave),
-    state_(S_INIT)
+    state_(S_INIT),
+    loc_(cl_loc_unknown)
 {
 }
 
@@ -396,7 +404,7 @@ const char* ClfCbSeqChk::toString(EState state) {
 }
 
 void ClfCbSeqChk::emitUnexpected(const char *what) {
-    CL_ERROR_MSG(LocationWriter(0, &loc_), "unexpected callback in state "
+    CL_ERROR_MSG(&loc_, "unexpected callback in state "
             << toString(state_) << " (" << what << ")");
 }
 
@@ -553,7 +561,8 @@ void ClfCbSeqChk::setSwitchClose() {
 // /////////////////////////////////////////////////////////////////////////////
 // ClfLabelChk implementation
 ClfLabelChk::ClfLabelChk(ICodeListener *slave):
-    ClFilterBase(slave)
+    ClFilterBase(slave),
+    loc_(cl_loc_unknown)
 {
 }
 
@@ -564,19 +573,18 @@ void ClfLabelChk::reset() {
 void ClfLabelChk::defineLabel(const char *label) {
     LabelState &ls = map_[label];
     if (ls.defined) {
-        CL_ERROR_MSG(LocationWriter(loc_), "redefinition of label '"
-                << label << "'");
-        CL_NOTE_MSG(LocationWriter(ls.loc), "originally defined here");
+        CL_ERROR_MSG(&loc_, "redefinition of label '" << label << "'");
+        CL_NOTE_MSG(&ls.loc, "originally defined here");
     }
     ls.defined = true;
-    if (ls.loc.locLine < 0)
+    if (!ls.loc.file)
         ls.loc = loc_;
 }
 
 void ClfLabelChk::reqLabel(const char *label) {
     LabelState &ls = map_[label];
     ls.reachable = true;
-    if (ls.loc.locLine < 0)
+    if (!ls.loc.file)
         ls.loc = loc_;
 }
 
@@ -585,13 +593,13 @@ void ClfLabelChk::emitWarnings() {
     for (i = map_.begin(); i != map_.end(); ++i) {
         const std::string label = i->first;
         const LabelState &ls = i->second;
-        const LocationWriter lw(ls.loc, &loc_);
+        const struct cl_loc *loc = cl_loc_fallback(&ls.loc, &loc_);
 
         if (!ls.defined)
-            CL_ERROR_MSG(lw, "jump to undefined label '" << label << "'");
+            CL_ERROR_MSG(loc, "jump to undefined label '" << label << "'");
 
         if (!ls.reachable)
-            CL_WARN_MSG(lw, "unreachable label '" << label << "'");
+            CL_WARN_MSG(loc, "unreachable label '" << label << "'");
     }
 }
 

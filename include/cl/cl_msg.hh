@@ -26,6 +26,8 @@
  * through the code listener interface
  */
 
+#include "code_listener.h"
+
 #include <cstdlib>      // needed for abort()
 #include <sstream>      // needed for std::ostringstream
 #include <string>       // needed for operator<<(std::ostream, std::string)
@@ -94,7 +96,7 @@
  * @param what whatever you need to stream out
  */
 #define CL_DEBUG_MSG(loc, what) \
-    CL_MSG_STREAM(cl_debug, (loc) << "debug: " << what)
+    CL_MSG_STREAM(cl_debug, *(loc) << "debug: " << what)
 
 /**
  * emit a @b warning message using the given location info
@@ -102,7 +104,7 @@
  * @param what whatever you need to stream out
  */
 #define CL_WARN_MSG(loc, what) \
-    CL_MSG_STREAM(cl_warn, (loc) << "warning: " << what)
+    CL_MSG_STREAM(cl_warn, *(loc) << "warning: " << what)
 
 /**
  * emit an @b error message using the given location info
@@ -110,7 +112,7 @@
  * @param what whatever you need to stream out
  */
 #define CL_ERROR_MSG(loc, what) \
-    CL_MSG_STREAM(cl_error, (loc) << "error: " << what)
+    CL_MSG_STREAM(cl_error, *(loc) << "error: " << what)
 
 /**
  * emit a @b note message using the given location info
@@ -118,7 +120,29 @@
  * @param what whatever you need to stream out
  */
 #define CL_NOTE_MSG(loc, what) \
-    CL_MSG_STREAM(cl_note, (loc) << "note: " << what)
+    CL_MSG_STREAM(cl_note, *(loc) << "note: " << what)
+
+inline std::ostream& operator<<(std::ostream &str, const struct cl_loc &loc) {
+    if (!&loc || !loc.file) {
+        str << "<unknown location>: ";
+        return str;
+    }
+
+    // print file
+    str << loc.file << ":";
+
+    if (0 < loc.line) {
+        // print lineno
+        str << loc.line << ":";
+
+        if (0 < loc.column)
+            // print column
+            str << loc.column << ":";
+    }
+
+    str << " ";
+    return str;
+}
 
 /// emit raw debug message
 void cl_debug(const char *msg);

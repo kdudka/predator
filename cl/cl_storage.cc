@@ -581,7 +581,7 @@ void ClStorageBuilder::insn(const struct cl_insn *cli) {
 }
 
 void ClStorageBuilder::insn_call_open(
-    const struct cl_location*loc,
+    const struct cl_loc     *loc,
     const struct cl_operand *dst,
     const struct cl_operand *fnc)
 {
@@ -609,7 +609,7 @@ void ClStorageBuilder::insn_call_close() {
 }
 
 void ClStorageBuilder::insn_switch_open(
-    const struct cl_location*loc,
+    const struct cl_loc     *loc,
     const struct cl_operand *src)
 {
     Insn *insn = new Insn;
@@ -628,7 +628,7 @@ void ClStorageBuilder::insn_switch_open(
 }
 
 void ClStorageBuilder::insn_switch_case(
-    const struct cl_location*,
+    const struct cl_loc     *,
     const struct cl_operand *val_lo,
     const struct cl_operand *val_hi,
     const char              *label)

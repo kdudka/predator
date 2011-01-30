@@ -21,7 +21,6 @@
 #define H_GUARD_USAGECHK_H
 
 #include <cl/cl_msg.hh>
-#include <cl/location.hh>
 
 #include <map>
 #include <string>
@@ -38,35 +37,40 @@ class UsageChecker {
             map_.clear();
         }
 
-        void read(TKey key, const TValue &val, const Location &loc) {
+        void read(TKey key, const TValue &val, const struct cl_loc *loc) {
             Usage &u = map_[key];
             u.read = true;
-            if (u.loc.locLine < 0) {
-                u.loc = loc;
+            if (!u.loc.file) {
+                CL_LOC_SETIF(u.loc, loc);
                 u.val = val;
             }
         }
 
-        void write(TKey key, const TValue &val, const Location &loc) {
+        void write(TKey key, const TValue &val, const struct cl_loc *loc) {
             Usage &u = map_[key];
             u.written = true;
-            if (u.loc.locLine < 0) {
-                u.loc = loc;
+            if (!u.loc.file) {
+                CL_LOC_SETIF(u.loc, loc);
                 u.val = val;
             }
         }
 
-        void emitPendingMessages(const Location &loc);
+        void emitPendingMessages(const struct cl_loc *loc);
 
     private:
 #ifndef BUILDING_DOX
         struct Usage {
             bool            read;
             bool            written;
-            Location        loc;
+            struct cl_loc   loc;
             TValue          val;
 
-            Usage(): read(false), written(false) { }
+            Usage():
+                read(false),
+                written(false),
+                loc(cl_loc_unknown)
+            {
+            }
         };
 
         typedef std::map<int, Usage> TMap;
@@ -76,22 +80,23 @@ class UsageChecker {
 };
 
 template <class TKey, class TValue>
-inline void UsageChecker<TKey, TValue>::emitPendingMessages(const Location &loc)
+inline void UsageChecker<TKey, TValue>::emitPendingMessages(
+        const struct cl_loc *loc)
 {
     typename TMap::iterator i;
     for (i = map_.begin(); i != map_.end(); ++i) {
         const Usage &u = i->second;
 
         if (!u.read) {
-            CL_MSG_STREAM(cl_warn,
-                    LocationWriter(u.loc, &loc)
-                    << "warning: unused " << what_ << u.val);
+            CL_WARN_MSG(cl_loc_fallback(&u.loc, loc),
+                    "warning: unused "
+                    << what_ << u.val);
         }
 
         if (!u.written) {
-            CL_MSG_STREAM(cl_error,
-                    LocationWriter(u.loc, &loc)
-                    << "error: uninitialized " << what_ << u.val);
+            CL_ERROR_MSG(cl_loc_fallback(&u.loc, loc),
+                    "error: uninitialized "
+                    << what_ << u.val);
         }
     }
 }

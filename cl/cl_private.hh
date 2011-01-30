@@ -34,4 +34,25 @@ struct cl_code_listener* cl_create_listener_wrap(ICodeListener *);
  */
 ICodeListener* cl_obtain_from_wrap(struct cl_code_listener *);
 
+/**
+ * evaluates as true if the given (struct cl_loc *) pLoc is valid location info
+ */
+#define CL_LOC_VALID(pLoc) ((pLoc) && (pLoc)->file)
+
+/**
+ * rewrites dst by *pSrc, if (struct cl_loc *) pSrc is valid location info
+ */
+#define CL_LOC_SETIF(dst, pSrc) do {        \
+    if (CL_LOC_VALID(pSrc))                 \
+        (dst) = *(pSrc);                    \
+} while (0)
+
+/**
+ * initialize location info by the given file name
+ */
+#define CL_LOC_SET_FILE(dst, _file) do {    \
+    (dst) = cl_loc_unknown;                 \
+    (dst).file = (_file);                   \
+} while (0)
+
 #endif /* H_GUARD_CL_PRIVATE_H */

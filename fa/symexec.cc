@@ -60,12 +60,6 @@ void dumpOperandTypes(std::ostream& os, const cl_operand* op) {
 	}
 }
 
-std::ostream& operator<<(std::ostream& os, const cl_location& loc) {
-	if (loc.file)
-		return os << loc.file << ':' << loc.line << ':';
-	else
-		return os << "<unknown location>:";
-}
 /*
 struct SymOp {
 
@@ -856,7 +850,7 @@ protected:
 		this->currentConf = parent;
 		this->currentInsn = *state->insn;
 
-		const cl_location& loc = (*state->insn)->loc;
+		const cl_loc& loc = (*state->insn)->loc;
 		CL_CDEBUG(loc << ' ' << **state->insn);
 		CL_CDEBUG("processing " << parent);
 		CL_CDEBUG(std::endl << SymCtx::Dump(*state->ctx, *parent));
@@ -888,7 +882,7 @@ protected:
 			std::vector<FAE*> tmp;
 			ContainerGuard<std::vector<FAE*> > g(tmp);
 
-			const cl_location& loc = (*state->insn)->loc;
+			const cl_loc& loc = (*state->insn)->loc;
 
 			CL_CDEBUG(loc << ' ' << **state->insn);
 			CL_CDEBUG("preprocessing " << fae);
@@ -950,7 +944,7 @@ protected:
 				CL_CDEBUG("new fixpoint:" << std::endl << (*i)->fwdConf);
 			}
 
-			const cl_location& loc = (*state->insn)->loc;
+			const cl_loc& loc = (*state->insn)->loc;
 
 			CL_CDEBUG("adjusting abstraction ... " << ++state->absHeight);
 			CL_CDEBUG("resuming execution ... ");
@@ -1017,7 +1011,7 @@ protected:
 				state = STATE_FROM_FAE(*i->first);
 				CL_CDEBUG(std::endl << SymCtx::Dump(*state->ctx, *i->first));
 				CL_CDEBUG(std::endl << *i->first);
-				CL_NOTE_MSG(i->second->loc, *(i->second));
+				CL_NOTE_MSG(&i->second->loc, *(i->second));
 			}
 //			STATE_FROM_FAE(*i->first)->ctx->dumpContext(*i->first);
 //			CL_CDEBUG(std::endl << *(i->first));
@@ -1103,12 +1097,12 @@ protected:
 
 		for (vector<pair<const FAE*, const CodeStorage::Insn*> >::reverse_iterator i = trace.rbegin(); i != trace.rend(); ++i) {
 			if (i->second)
-				CL_NOTE_MSG(i->second->loc, *(i->second));
+				CL_NOTE_MSG(&i->second->loc, *(i->second));
 //			STATE_FROM_FAE(*i->first)->ctx->dumpContext(*i->first);
 //			CL_CDEBUG(std::endl << *(i->first));
 		}
 
-		CL_NOTE_MSG(this->currentInsn->loc, *this->currentInsn);
+		CL_NOTE_MSG(&this->currentInsn->loc, *this->currentInsn);
 
 		return NULL;
 

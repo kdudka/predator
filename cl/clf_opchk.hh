@@ -21,15 +21,15 @@
 #define H_GUARD_CLF_OPCHK_H
 
 #include "cl_filter.hh"
-#include <cl/location.hh>
+#include "cl_private.hh"
 
 class ClfOpCheckerBase: public ClFilterBase {
     public:
         ClfOpCheckerBase(ICodeListener *slave);
 
     protected:
-        const Location& lastLocation() const {
-            return loc_;
+        const struct cl_loc* lastLocation() const {
+            return &loc_;
         }
 
     protected:
@@ -47,14 +47,14 @@ class ClfOpCheckerBase: public ClFilterBase {
         virtual void file_open(
             const char              *file_name)
         {
-            loc_.currentFile = file_name;
+            CL_LOC_SET_FILE(loc_, file_name);
             ClFilterBase::file_open(file_name);
         }
 
         virtual void fnc_open(
             const struct cl_operand *fnc)
         {
-            loc_ = &fnc->loc;
+            loc_ = fnc->loc;
             ClFilterBase::fnc_open(fnc);
         }
 
@@ -69,7 +69,7 @@ class ClfOpCheckerBase: public ClFilterBase {
         virtual void insn(
             const struct cl_insn    *cli)
         {
-            loc_ = &cli->loc;
+            loc_ = cli->loc;
 
             switch (cli->code) {
                 case CL_INSN_COND:
@@ -99,11 +99,11 @@ class ClfOpCheckerBase: public ClFilterBase {
         }
 
         virtual void insn_call_open(
-            const struct cl_location*loc,
+            const struct cl_loc     *loc,
             const struct cl_operand *dst,
             const struct cl_operand *fnc)
         {
-            loc_ = loc;
+            CL_LOC_SETIF(loc_, loc);
             this->handleDstSrc(dst);
             this->handleSrc(fnc);
             ClFilterBase::insn_call_open(loc, dst, fnc);
@@ -118,16 +118,16 @@ class ClfOpCheckerBase: public ClFilterBase {
         }
 
         virtual void insn_switch_open(
-            const struct cl_location*loc,
+            const struct cl_loc     *loc,
             const struct cl_operand *src)
         {
-            loc_ = loc;
+            CL_LOC_SETIF(loc_, loc);
             this->handleSrc(src);
             ClFilterBase::insn_switch_open(loc, src);
         }
 
     private:
-        Location            loc_;
+        struct cl_loc       loc_;
 
     private:
         void handleArrayIdx(const struct cl_operand *);

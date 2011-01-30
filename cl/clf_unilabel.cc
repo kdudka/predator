@@ -86,7 +86,7 @@ class ClfUniLabel: public ClFilterBase {
         }
 
         virtual void insn_switch_case(
-            const struct cl_location*loc,
+            const struct cl_loc     *loc,
             const struct cl_operand *val_lo,
             const struct cl_operand *val_hi,
             const char              *label)

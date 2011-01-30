@@ -58,7 +58,7 @@ class ClChain: public ICodeListener {
             const struct cl_insn    *cli);
 
         virtual void insn_call_open(
-            const struct cl_location*loc,
+            const struct cl_loc     *loc,
             const struct cl_operand *dst,
             const struct cl_operand *fnc);
 
@@ -69,11 +69,11 @@ class ClChain: public ICodeListener {
         virtual void insn_call_close();
 
         virtual void insn_switch_open(
-            const struct cl_location*loc,
+            const struct cl_loc     *loc,
             const struct cl_operand *src);
 
         virtual void insn_switch_case(
-            const struct cl_location*loc,
+            const struct cl_loc     *loc,
             const struct cl_operand *val_lo,
             const struct cl_operand *val_hi,
             const char              *label);
@@ -153,7 +153,7 @@ void ClChain::insn(
 }
 
 void ClChain::insn_call_open(
-            const struct cl_location*loc,
+            const struct cl_loc     *loc,
             const struct cl_operand *dst,
             const struct cl_operand *fnc)
 {
@@ -173,14 +173,14 @@ void ClChain::insn_call_close()
 }
 
 void ClChain::insn_switch_open(
-            const struct cl_location*loc,
+            const struct cl_loc     *loc,
             const struct cl_operand *src)
 {
     CL_CHAIN_FOREACH_VA(insn_switch_open, loc, src);
 }
 
 void ClChain::insn_switch_case(
-            const struct cl_location*loc,
+            const struct cl_loc     *loc,
             const struct cl_operand *val_lo,
             const struct cl_operand *val_hi,
             const char              *label)

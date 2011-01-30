@@ -23,16 +23,16 @@
 #include <string>
 #include <stdexcept>
 
-#include <cl/location.hh>
+#include <cl/code_listener.h>
 
 class ProgramError : public std::exception {
 	std::string msg;
-	const cl_location* loc;
+	const cl_loc* loc;
 public:
-	ProgramError(const std::string& msg = "", const cl_location* loc = NULL) : msg(msg), loc(loc) {}
+	ProgramError(const std::string& msg = "", const cl_loc* loc = NULL) : msg(msg), loc(loc) {}
 	virtual ~ProgramError() throw() {}
 	virtual const char* what() const throw() { return this->msg.c_str(); }
-	const cl_location* location() const throw() { return this->loc; }
+	const cl_loc* location() const throw() { return this->loc; }
 	
 };
 

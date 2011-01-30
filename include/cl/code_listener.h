@@ -32,6 +32,46 @@ extern "C" {
  */
 
 /**
+ * generic location info.
+ * @note taken from gcc's expanded_location defined in <gcc/input.h>
+ */
+struct cl_loc {
+    /**
+     * input file as zero-terminated string. If NULL, the location info is
+     * either invalid or not available.
+     */
+    const char                          *file;
+
+    /**
+     * line number in the input file (starting at 1).
+     */
+    int                                 line;
+
+    /**
+     * column number in the input file (starting at 1).
+     */
+    int                                 column;
+
+    /**
+     * true, if the token is located in a system header.
+     * @note not used for now
+     */
+    bool                                sysp;
+};
+
+/**
+ * nullified location info, which means "unknown location"
+ */
+extern const struct cl_loc cl_loc_unknown;
+
+/**
+ * return loc if it is a valid location info; return fallback otherwise
+ */
+const struct cl_loc* cl_loc_fallback(
+        const struct cl_loc     *loc,
+        const struct cl_loc     *fallback);
+
+/**
  * type of function writing a message
  * @param msg zero-terminated string to write
  */
@@ -94,36 +134,6 @@ void cl_global_init_defaults(
  * free resources allocated by cl_global_init() or cl_global_init_defaults()
  */
 void cl_global_cleanup(void);
-
-/**
- * generic location info.
- * @note taken from gcc's expanded_location defined in <gcc/input.h>
- */
-struct cl_location {
-    /**
-     * input file as zero-terminated string. If NULL, the file currently being
-     * processed is taken as the input file.
-     */
-    const char                          *file;
-
-    /**
-     * line number in the input file (starting at 1). If the value is negative,
-     * data in this structure are not considered valid at all.
-     */
-    int                                 line;
-
-    /**
-     * column number in the input file (starting at 1). If such information is
-     * not available for the token, set the value to -1.
-     */
-    int                                 column;
-
-    /**
-     * true, if the token is located in a system header.
-     * @note not used for now
-     */
-    bool                                sysp;
-};
 
 /**
  * symbol scope enumeration (linearly ordered)
@@ -213,7 +223,7 @@ struct cl_type {
     /**
      * location of type's declaration (may or may not be valid)
      */
-    struct cl_location                  loc;
+    struct cl_loc                       loc;
 
     /**
      * scope of type's declaration
@@ -455,7 +465,7 @@ struct cl_operand {
     /**
      * location of the operand's occurrence
      */
-    struct cl_location                  loc;
+    struct cl_loc                       loc;
 
     /**
      * scope of the operand's validity
@@ -620,7 +630,7 @@ struct cl_insn {
     /**
      * location of the instruction's occurrence
      */
-    struct cl_location                  loc;
+    struct cl_loc                       loc;
 
     /* instruction specific data */
     union {
@@ -781,7 +791,7 @@ struct cl_code_listener {
      */
     void (*insn_call_open)(
             struct cl_code_listener     *self,
-            const struct cl_location    *loc,
+            const struct cl_loc         *loc,
             const struct cl_operand     *dst,
             const struct cl_operand     *fnc);
 
@@ -811,7 +821,7 @@ struct cl_code_listener {
      */
     void (*insn_switch_open)(
             struct cl_code_listener     *self,
-            const struct cl_location    *loc,
+            const struct cl_loc         *loc,
             const struct cl_operand     *src);
 
     /**
@@ -824,7 +834,7 @@ struct cl_code_listener {
      */
     void (*insn_switch_case)(
             struct cl_code_listener     *self,
-            const struct cl_location    *loc,
+            const struct cl_loc         *loc,
             const struct cl_operand     *val_lo,
             const struct cl_operand     *val_hi,
             const char                  *label);

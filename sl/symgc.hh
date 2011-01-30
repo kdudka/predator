@@ -25,8 +25,6 @@
  * collectJunk - implementation of a garbage collector for the symbolic heap
  */
 
-#include <cl/location.hh>
-
 #include "symid.hh"
 
 class SymHeap;
@@ -42,7 +40,6 @@ class SymHeap;
  * @param lw pass some location info in, if you want to emit some warnings
  * @return true if any junk has been detected/collected
  */
-bool collectJunk(SymHeap &sh, TValueId val,
-                 LocationWriter lw = LocationWriter()); 
+bool collectJunk(SymHeap &sh, TValueId val, const struct cl_loc *lw = 0); 
 
 #endif /* H_GUARD_SYMGC_H */

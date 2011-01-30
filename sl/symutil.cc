@@ -311,7 +311,7 @@ TValueId addrQueryByOffset(
         const TObjId            target,
         const int               offRequested,
         const struct cl_type    *cltPtr,
-        const LocationWriter    *lw)
+        const struct cl_loc     *lw)
 {
     // seek root object while cumulating the offset
     TObjId obj = target;
@@ -329,7 +329,7 @@ TValueId addrQueryByOffset(
     const struct cl_type *cltRoot = sh.objType(obj);
     if (!cltRoot || cltRoot->code != CL_TYPE_STRUCT) {
         if (lw)
-            CL_ERROR_MSG(*lw, "unsupported target type for pointer plus");
+            CL_ERROR_MSG(lw, "unsupported target type for pointer plus");
 
         return sh.valCreateUnknown(UV_UNKNOWN, 0);
     }

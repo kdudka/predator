@@ -69,7 +69,7 @@ class ClStorageBuilder: public ICodeListener {
             const struct cl_insn    *cli);
 
         virtual void insn_call_open(
-            const struct cl_location*loc,
+            const struct cl_loc     *loc,
             const struct cl_operand *dst,
             const struct cl_operand *fnc);
 
@@ -80,11 +80,11 @@ class ClStorageBuilder: public ICodeListener {
         virtual void insn_call_close();
 
         virtual void insn_switch_open(
-            const struct cl_location*loc,
+            const struct cl_loc     *loc,
             const struct cl_operand *src);
 
         virtual void insn_switch_case(
-            const struct cl_location*loc,
+            const struct cl_loc     *loc,
             const struct cl_operand *val_lo,
             const struct cl_operand *val_hi,
             const char              *label);

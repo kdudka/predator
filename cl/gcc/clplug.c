@@ -384,7 +384,7 @@ static bool error_detected(void)
     return global_dc && global_dc->diagnostic_count[DK_ERROR];
 }
 
-static void read_gcc_location(struct cl_location *loc, location_t gcc_loc)
+static void read_gcc_location(struct cl_loc *loc, location_t gcc_loc)
 {
     expanded_location exp_loc = expand_location(gcc_loc);
     loc->file   = exp_loc.file;
@@ -393,7 +393,7 @@ static void read_gcc_location(struct cl_location *loc, location_t gcc_loc)
     loc->sysp   = /* FIXME: is this field always valid? */ exp_loc.sysp;
 }
 
-static void read_gimple_location(struct cl_location *loc, const_gimple g)
+static void read_gimple_location(struct cl_loc *loc, const_gimple g)
 {
     read_gcc_location(loc, g->gsbase.location);
 }
@@ -1148,7 +1148,7 @@ static void handle_stmt_call(gimple stmt)
     handle_operand(&fnc, op0);
 
     // emit CALL insn
-    struct cl_location loc;
+    struct cl_loc loc;
     read_gimple_location(&loc, stmt);
     cl->insn_call_open(cl, &loc, &dst, &fnc);
     free_cl_operand_data(&dst);
@@ -1308,7 +1308,7 @@ static void handle_stmt_switch(gimple stmt)
     handle_operand(&src, gimple_switch_index(stmt));
 
     // emit insn_switch_open
-    struct cl_location loc;
+    struct cl_loc loc;
     read_gimple_location(&loc, stmt);
     cl->insn_switch_open(cl, &loc, &src);
     free_cl_operand_data(&src);

@@ -83,8 +83,7 @@ void createGlVars(SymHeap &sh, const CodeStorage::Storage &stor) {
         if (VAR_GL != var.code)
             continue;
 
-        const LocationWriter lw(&var.loc);
-        CL_DEBUG_MSG(lw, "(g) creating global variable: #" << var.uid
+        CL_DEBUG_MSG(&var.loc, "(g) creating global variable: #" << var.uid
                 << " (" << var.name << ")");
 
         // create the corresponding heap object
@@ -97,8 +96,7 @@ void createGlVars(SymHeap &sh, const CodeStorage::Storage &stor) {
         if (VAR_GL != var.code)
             continue;
 
-        const LocationWriter lw(&var.loc);
-        CL_DEBUG_MSG(lw, "(g) initializing global variable: #" << var.uid
+        CL_DEBUG_MSG(&var.loc, "(g) initializing global variable: #" << var.uid
                 << " (" << var.name << ")");
 
         // look for the corresponding heap object
@@ -205,7 +203,7 @@ class SymExecEngine: public IStatsProvider {
         SymHeapList                     localState_;
         SymHeapList                     nextLocalState_;
         SymStateWithJoin                callResults_;
-        LocationWriter                  lw_;
+        const struct cl_loc             *lw_;
 
     private:
         void initEngine(const SymHeap &init);
@@ -494,8 +492,6 @@ bool /* complete */ SymExecEngine::execBlock() {
 
     if (insnIdx_ || heapIdx_) {
         // some debugging output of the resume process
-        const CodeStorage::Insn *insn = block_->operator[](insnIdx_);
-        const LocationWriter lw(&insn->loc);
         CL_DEBUG_MSG(lw_, "___ we are back in " << name
                 << ", insn #" << insnIdx_
                 << ", heap #" << (heapIdx_ - 1)
@@ -544,7 +540,6 @@ void joinNewResults(
 
 bool /* complete */ SymExecEngine::run() {
     const CodeStorage::Fnc *fnc = bt_.topFnc();
-    const LocationWriter lw(&fnc->def.loc);
 
     if (waiting_) {
         // pick up results of the pending call
@@ -588,14 +583,15 @@ bool /* complete */ SymExecEngine::run() {
             return false;
     }
 
+    const struct cl_loc *loc = &fnc->def.loc;
     if (!endReached_) {
-        CL_WARN_MSG(lw, "end of function "
+        CL_WARN_MSG(loc, "end of function "
                 << nameOf(*fnc) << "() has not been reached");
         bt_.printBackTrace();
     }
 
     // we are done with this function
-    CL_DEBUG_MSG(lw, "<<< leaving " << nameOf(*fnc) << "()");
+    CL_DEBUG_MSG(loc, "<<< leaving " << nameOf(*fnc) << "()");
     waiting_ = false;
     return true;
 }
@@ -637,8 +633,7 @@ void SymExecEngine::printStats() const {
             : " scheduled";
 
         const CodeStorage::Insn *first = bb->front();
-        LocationWriter lw(&first->loc);
-        CL_NOTE_MSG(lw,
+        CL_NOTE_MSG(&first->loc,
                 "___ block " << name << status <<
                 ", " << total << " heap(s) total"
                 ", " << waiting << " heap(s) pending");
@@ -750,8 +745,9 @@ const CodeStorage::Fnc* SymExec::Private::resolveCallInsn(
 
     // look for Fnc ought to be called
     SymProc proc(heap, &this->bt);
-    const LocationWriter lw(&insn.loc);
+    const struct cl_loc *lw = &insn.loc;
     proc.setLocation(lw);
+
     const struct cl_operand &opFnc = opList[/* fnc */ 1];
     const int uid = proc.fncFromOperand(opFnc);
     if (-1 == uid) {
@@ -868,7 +864,7 @@ void SymExec::Private::execLoop(const StackItem &item) {
         SymCallCtx &ctx = this->callCache.getCallCtx(entry, *fnc, insn);
         if (!ctx.needExec()) {
             // call cache hit
-            const LocationWriter lw(this->bt.topCallLoc());
+            const struct cl_loc *lw = this->bt.topCallLoc();
             CL_DEBUG_MSG(lw, "(x) call of function optimized out: "
                     << nameOf(*fnc) << "()");
 

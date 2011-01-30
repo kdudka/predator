@@ -44,6 +44,22 @@
 #   define CHK_LAST(text, filter) do { } while (0)
 #endif
 
+const struct cl_loc cl_loc_unknown = {
+    0,  // .file
+    0,  // .line
+    0,  // .column
+    0,  // .sysp
+};
+
+const struct cl_loc* cl_loc_fallback(
+        const struct cl_loc     *loc,
+        const struct cl_loc     *fallback)
+{
+    return (loc->file)
+        ? loc
+        : fallback;
+}
+
 static const char *app_name = "<cl uninitialized>";
 static bool app_name_allocated = false;
 
@@ -237,7 +253,7 @@ static void cl_wrap_insn(
 
 static void cl_wrap_insn_call_open(
             struct cl_code_listener *self,
-            const struct cl_location*loc,
+            const struct cl_loc     *loc,
             const struct cl_operand *dst,
             const struct cl_operand *fnc)
 {
@@ -260,7 +276,7 @@ static void cl_wrap_insn_call_close(
 
 static void cl_wrap_insn_switch_open(
             struct cl_code_listener *self,
-            const struct cl_location*loc,
+            const struct cl_loc     *loc,
             const struct cl_operand *src)
 {
     CL_WRAP_VA(insn_switch_open, loc, src);
@@ -268,7 +284,7 @@ static void cl_wrap_insn_switch_open(
 
 static void cl_wrap_insn_switch_case(
             struct cl_code_listener *self,
-            const struct cl_location*loc,
+            const struct cl_loc     *loc,
             const struct cl_operand *val_lo,
             const struct cl_operand *val_hi,
             const char              *label)

@@ -1045,7 +1045,7 @@ TValueId handleOpCmp(THeap &heap, enum cl_binop_e code,
 
 TValueId handlePointerPlus(SymHeap &sh, const struct cl_type *cltPtr,
                            TValueId ptr, const struct cl_operand &op,
-                           const LocationWriter lw)
+                           const struct cl_loc *lw)
 {
     if (CL_OPERAND_CST != op.code) {
         CL_ERROR_MSG(lw, "pointer plus offset not known in compile-time");
@@ -1063,7 +1063,7 @@ TValueId handlePointerPlus(SymHeap &sh, const struct cl_type *cltPtr,
 
     const TObjId target = sh.pointsTo(ptr);
     CL_BREAK_IF(target <= 0);
-    return addrQueryByOffset(sh, target, offRequested, cltPtr, &lw);
+    return addrQueryByOffset(sh, target, offRequested, cltPtr, lw);
 }
 
 // template for generic (unary, binary, ...) operator handlers

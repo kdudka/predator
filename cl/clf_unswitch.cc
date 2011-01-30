@@ -45,14 +45,14 @@ class ClfUnfoldSwitch: public ClFilterBase {
         virtual ~ClfUnfoldSwitch();
 
         virtual void insn_switch_open(
-            const struct cl_location *,
+            const struct cl_loc      *,
             const struct cl_operand *src)
         {
             this->cloneSwitchSrc(src);
         }
 
         virtual void insn_switch_case(
-            const struct cl_location*loc,
+            const struct cl_loc     *loc,
             const struct cl_operand *val_lo,
             const struct cl_operand *val_hi,
             const char              *label)
@@ -84,9 +84,9 @@ class ClfUnfoldSwitch: public ClFilterBase {
         int                 casePerSwitchCnt_;
         int                 switchCnt_;
         struct cl_operand   src_;
-        struct cl_location  loc_;
+        struct cl_loc       loc_;
         std::string         defLabel_;
-        struct cl_location  defLoc_;
+        struct cl_loc       defLoc_;
 
         std::vector<struct cl_var *>    ptrs_;
 

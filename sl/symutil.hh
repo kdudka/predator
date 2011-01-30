@@ -250,7 +250,7 @@ TValueId addrQueryByOffset(
         const TObjId            target,
         const int               offRequested,
         const struct cl_type    *cltPtr,
-        const LocationWriter    *lw = 0);
+        const struct cl_loc     *lw = 0);
 
 /// (OBJ_INVALID != pointingFrom) means 'pointing from anywhere'
 void redirectInboundEdges(

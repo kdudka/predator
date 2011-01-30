@@ -30,7 +30,6 @@
 
 #include <cl/easy.hh>
 #include <cl/cl_msg.hh>
-#include <cl/location.hh>
 #include <cl/storage.hh>
 #include <cl/cldebug.hh>
 #include <cl/clutil.hh>
@@ -48,7 +47,7 @@ void setDbgFlag(int) {
 // required by the gcc plug-in API
 extern "C" { int plugin_is_GPL_compatible; }
 
-std::ostream& operator<<(std::ostream& os, const cl_location& loc);
+std::ostream& operator<<(std::ostream& os, const cl_loc& loc);
 
 struct Config {
 
@@ -143,7 +142,7 @@ void clEasyRun(const CodeStorage::Storage& stor, const char* configString) {
 		CL_NOTE("analysis took " << (end_tp.tv_sec - start_tp.tv_sec) + 1e-9*(end_tp.tv_nsec - start_tp.tv_nsec) << "s of processor time");
 	} catch (const ProgramError& e) {
 		if (e.location())
-			CL_ERROR_MSG(*e.location(), e.what());
+			CL_ERROR_MSG(e.location(), e.what());
 		else
 			CL_ERROR(e.what());
 		clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end_tp);

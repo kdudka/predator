@@ -21,7 +21,6 @@
 #include "symcall.hh"
 
 #include <cl/cl_msg.hh>
-#include <cl/location.hh>
 #include <cl/storage.hh>
 
 #include "symbt.hh"
@@ -121,8 +120,7 @@ void SymCallCtx::Private::destroyStackFrame(SymHeap &sh) {
     const Fnc &ref = *this->fnc;
 
 #if DEBUG_SE_STACK_FRAME
-    const LocationWriter lw(&ref.def.loc);
-    CL_DEBUG_MSG(lw, "<<< destroying stack frame of "
+    CL_DEBUG_MSG(&ref.def.loc, "<<< destroying stack frame of "
             << nameOf(ref) << "()"
             << ", nestLevel = " << this->nestLevel);
 #endif
@@ -132,7 +130,7 @@ void SymCallCtx::Private::destroyStackFrame(SymHeap &sh) {
     BOOST_FOREACH(const int uid, ref.vars) {
         const Var &var = ref.stor->vars[uid];
         if (isOnStack(var)) {
-            const LocationWriter lw(&var.loc);
+            const struct cl_loc *lw = &var.loc;
 #if DEBUG_SE_STACK_FRAME
             CL_DEBUG_MSG(lw, "<<< destroying stack variable: #"
                     << var.uid << " (" << var.name << ")" );
@@ -248,7 +246,7 @@ struct SymCallCache::Private {
 
     TCache                      cache;
     SymBackTrace                *bt;
-    LocationWriter              lw;
+    const struct cl_loc         *lw;
     SymHeap                     *heap;
     SymProc                     *proc;
     const CodeStorage::Fnc      *fnc;
@@ -302,7 +300,7 @@ void SymCallCache::Private::createStackFrame(SymHeap::TContCVar &cVars) {
         if (isOnStack(var)) {
             // automatic variable (and/or fnc arg)
 #if DEBUG_SE_STACK_FRAME
-            LocationWriter lw(&var.loc);
+            const struct cl_loc *lw = &var.loc;
             CL_DEBUG_MSG(lw, ">>> creating stack variable: #" << var.uid
                     << " (" << var.name << ")" );
 #endif
@@ -336,7 +334,7 @@ void SymCallCache::Private::setCallArgs(const CodeStorage::TOperandList &opList)
         CL_DEBUG_MSG(this->lw,
                 "too many arguments given (vararg fnc involved?)");
 
-        const LocationWriter lwDecl(&this->fnc->def.loc);
+        const struct cl_loc *lwDecl = &this->fnc->def.loc;
         CL_DEBUG_MSG(lwDecl, "note: fnc was declared here");
     }
 

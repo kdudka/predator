@@ -21,7 +21,6 @@
 #include "cl_typedot.hh"
 
 #include <cl/cl_msg.hh>
-#include <cl/location.hh>
 
 #include "cl.hh"
 #include "util.hh"
@@ -39,13 +38,8 @@ class ClTypeDotGenerator: public ICodeListener {
         ClTypeDotGenerator(const char *glDotFile);
         virtual ~ClTypeDotGenerator();
 
-        virtual void file_open(const char *file_name) {
-            loc_.currentFile = file_name;
-        }
-
-        virtual void file_close() {
-            loc_.currentFile.clear();
-        }
+        virtual void file_open(const char *) { }
+        virtual void file_close() { }
 
         virtual void fnc_open(
             const struct cl_operand *fnc)
@@ -97,7 +91,7 @@ class ClTypeDotGenerator: public ICodeListener {
             }
         }
 
-        virtual void insn_call_open(const struct cl_location *,
+        virtual void insn_call_open(const struct cl_loc *,
             const struct cl_operand *dst,
             const struct cl_operand *fnc)
         {
@@ -113,14 +107,14 @@ class ClTypeDotGenerator: public ICodeListener {
         virtual void insn_call_close() { }
 
         virtual void insn_switch_open(
-            const struct cl_location *,
+            const struct cl_loc     *,
             const struct cl_operand *src)
         {
             this->handleOperand(src);
         }
 
         virtual void insn_switch_case(
-            const struct cl_location *,
+            const struct cl_loc     *,
             const struct cl_operand *val_lo,
             const struct cl_operand *val_hi,
             const char *)
@@ -137,7 +131,6 @@ class ClTypeDotGenerator: public ICodeListener {
         typedef std::stack<const struct cl_type *> TStack;
 
         std::ofstream           glOut_;
-        Location                loc_;
         std::string             fnc_;
 
         std::set<cl_type_uid_t> typeSet_;

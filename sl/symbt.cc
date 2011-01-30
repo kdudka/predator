@@ -21,7 +21,6 @@
 #include "symbt.hh"
 
 #include <cl/cl_msg.hh>
-#include <cl/location.hh>
 #include <cl/storage.hh>
 
 #include "util.hh"
@@ -36,11 +35,11 @@
 struct SymBackTrace::Private {
     struct BtStackItem {
         const CodeStorage::Fnc      &fnc;
-        const LocationWriter        lw;
+        const struct cl_loc         *loc;
 
-        BtStackItem(const CodeStorage::Fnc *fnc_, const LocationWriter &lw_):
+        BtStackItem(const CodeStorage::Fnc *fnc_, const struct cl_loc *loc_):
             fnc(*fnc_),
-            lw(lw_)
+            loc(loc_)
         {
         }
     };
@@ -62,7 +61,7 @@ struct SymBackTrace::Private {
 
     const CodeStorage::Fnc* fncOnTop() const;
     const CodeStorage::Fnc* fncById(int id) const;
-    void pushFnc(const CodeStorage::Fnc *, const LocationWriter &);
+    void pushFnc(const CodeStorage::Fnc *, const struct cl_loc *);
     void popFnc();
 };
 
@@ -90,9 +89,9 @@ const CodeStorage::Fnc* SymBackTrace::Private::fncById(int id) const {
 }
 
 void SymBackTrace::Private::pushFnc(const CodeStorage::Fnc *fnc,
-                                    const LocationWriter   &lw)
+                                    const struct cl_loc    *loc)
 {
-    const BtStackItem item(fnc, lw);
+    const BtStackItem item(fnc, loc);
     this->btStack.push(item);
     this->fncSeq.push_back(uidOf(*fnc));
 
@@ -174,13 +173,13 @@ void SymBackTrace::printBackTrace() const {
             pp->printPaths();
         }
 
-        CL_NOTE_MSG(item.lw, "from call of " << nameOf(item.fnc) << "()");
+        CL_NOTE_MSG(item.loc, "from call of " << nameOf(item.fnc) << "()");
     }
 }
 
-void SymBackTrace::pushCall(int fncId, const LocationWriter &lw) {
+void SymBackTrace::pushCall(int fncId, const struct cl_loc *loc) {
     const CodeStorage::Fnc *fnc = d->fncById(fncId);
-    d->pushFnc(fnc, lw);
+    d->pushFnc(fnc, loc);
 }
 
 const CodeStorage::Fnc* SymBackTrace::popCall() {
@@ -215,13 +214,10 @@ const CodeStorage::Fnc* SymBackTrace::topFnc() const {
     return d->fncOnTop();
 }
 
-LocationWriter SymBackTrace::topCallLoc() const {
-    if (d->btStack.empty())
-        // empty stack, so there is no top
-        return LocationWriter();
-
+const struct cl_loc* SymBackTrace::topCallLoc() const {
+    CL_BREAK_IF(d->btStack.empty());
     const Private::BtStackItem &top = d->btStack.top();
-    return top.lw;
+    return top.loc;
 }
 
 bool SymBackTrace::hasRecursiveCall() const {

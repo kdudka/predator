@@ -73,7 +73,7 @@ class ICodeListener {
 
         /// See cl_code_listener::insn_call_open
         virtual void insn_call_open(
-            const struct cl_location*loc,
+            const struct cl_loc     *loc,
             const struct cl_operand *dst,
             const struct cl_operand *fnc)
             = 0;
@@ -90,13 +90,13 @@ class ICodeListener {
 
         /// See cl_code_listener::insn_switch_open
         virtual void insn_switch_open(
-            const struct cl_location*loc,
+            const struct cl_loc     *loc,
             const struct cl_operand *src)
             = 0;
 
         /// See cl_code_listener::insn_switch_case
         virtual void insn_switch_case(
-            const struct cl_location*loc,
+            const struct cl_loc     *loc,
             const struct cl_operand *val_lo,
             const struct cl_operand *val_hi,
             const char              *label)
