@@ -1,0 +1,36 @@
+Avoid trailing white space
+==========================
+taken from http://git.savannah.gnu.org/gitweb/?p=coreutils.git;a=blob;f=HACKING
+
+If you use Emacs, customize its font-lock mode (FIXME: provide more detail) or
+try one of its whitespace packages.  This appears to be the one that will end up
+in emacs 23:
+
+    http://www.emacswiki.org/emacs/WhiteSpace
+
+[that page says its version also works with emacs 21 and 22]
+If you use vim, add this to ~/.vimrc:
+
+    let c_space_errors=1
+    highlight RedundantSpaces ctermbg=red guibg=red
+    match RedundantSpaces /\s\+$\| \+\ze\t/
+
+
+Git can help too, by stopping you from committing any change that would
+add trailing blanks.  The example pre-commit hook contains code to check
+for trailing whitespace and spaces before tabs; enable it by moving it
+to the right place and making sure it is executable:
+
+    mv .git/hooks/pre-commit.sample .git/hooks/pre-commit
+
+With a repository created by git-1.5.6 or older, use this command:
+
+    chmod +x .git/hooks/pre-commit
+
+To manually check for whitespace errors before committing, you can use
+
+    git diff --check
+
+Git also has some settings to enable suitable internal whitespace checks.
+See the manpage for git-apply for details.
+

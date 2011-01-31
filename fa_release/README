@@ -1,0 +1,27 @@
+Files maintained by the git repository
+======================================
+COPYING             GPLv3 license text
+FAQ                 Frequently Asked Questions (and corresponding answers)
+Makefile            root Makefile, among others useful to build gcc
+cl/                 source codes of Code Listener and its gcc front-end
+cl/README           more specific README for the source codes of cl
+fa/                 source codes of Forester
+
+
+Files maintained locally only
+=============================
+cl_build/           working directory for build of libcl.so
+fa_build/           working directory for build of libfa.so
+gcc                 symlink to gcc internal headers (feel free to override)
+gcc-build/          working directory for build of gcc
+gcc-install/        location of the installed gcc after a successful build
+gcc-src/            symlink to (or SVN working copy of) gcc sources
+
+
+Useful targets of the root Makefile
+===================================
+all                 run 'make' in cl and fa (default)
+check               run 'make check' in cl and fa
+distcheck           run 'make distcheck' in cl and fa
+build_gcc           build gcc from the released tarball
+build_gcc_svn       build gcc from SVN sources (NOTE: this may take some time)
