@@ -1004,13 +1004,13 @@ protected:
 
 //		trace.push_back(make_pair(item->fae, *state->insn));
 
-		CL_CDEBUG("trace:");
+		CL_DEBUG("trace:");
 
 		for (vector<pair<const FAE*, const CodeStorage::Insn*> >::reverse_iterator i = trace.rbegin(); i != trace.rend(); ++i) {
 			if (i->second) {
 				state = STATE_FROM_FAE(*i->first);
-				CL_CDEBUG(std::endl << SymCtx::Dump(*state->ctx, *i->first));
-				CL_CDEBUG(std::endl << *i->first);
+				CL_DEBUG(std::endl << SymCtx::Dump(*state->ctx, *i->first));
+				CL_DEBUG(std::endl << *i->first);
 				CL_NOTE_MSG(&i->second->loc, *(i->second));
 			}
 //			STATE_FROM_FAE(*i->first)->ctx->dumpContext(*i->first);

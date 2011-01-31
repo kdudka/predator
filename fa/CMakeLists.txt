@@ -20,6 +20,7 @@ cmake_minimum_required(VERSION 2.6)
 project(fa C CXX)
 include("../CMakeLists.common")
 add_definitions("-I../include")
+enable_testing()
 
 option(FA_DEBUG "Set to OFF to enable optimized build" ON)
 if(FA_DEBUG)
@@ -28,17 +29,29 @@ else()
     add_definitions("-O3 -DNDEBUG")
 endif()
 
-# libfa.a
-#add_library(fa treeaut.cc timbuk.cc forestaut.cc symexec.cc symctx.cc builtintable.cc)
-# libfa_analysis.so
+add_test(
+	"sll_reversal" ../gcc-install/bin/gcc -c ../fa/data/sll-rev.c -o /dev/null -O0 -m32
+    -DFORESTER
+    -fplugin=../fa_build/libfa.so
+    -fplugin-arg-libfa-verbose=0
+)
+add_test(
+	"sll_mergesort" ../gcc-install/bin/gcc -c ../fa/data/sll-mergesort.c -o /dev/null -O0 -m32
+    -DFORESTER
+    -fplugin=../fa_build/libfa.so
+    -fplugin-arg-libfa-verbose=0
+)
+add_test(
+	"dsw" ../gcc-install/bin/gcc -c ../fa/data/dsw.c -o /dev/null -O0 -m32
+    -DFORESTER
+    -fplugin=../fa_build/libfa.so
+    -fplugin-arg-libfa-verbose=0
+)
+
+# libfa.so
 add_library(fa SHARED treeaut.cc timbuk.cc forestaut.cc symexec.cc symctx.cc builtintable.cc cl_fa.cc)
-# avoid a failure while linking libfa_analysis.so (may be gcc specific):
-#set_target_properties(fa PROPERTIES COMPILE_FLAGS -fPIC)
-# test
-#add_executable(fa_test test.cc)
 set_target_properties(fa PROPERTIES LINK_FLAGS -lrt)
 
 # link with code_listener
 find_library(CL_LIB cl ../cl_build)
 target_link_libraries(fa ${CL_LIB})
-#target_link_libraries(fa_test fa)

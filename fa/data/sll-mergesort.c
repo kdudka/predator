@@ -43,6 +43,7 @@ int main() {
 	  return 0;
 
 	while (data->next != data) {
+
 	  item = data->data;
 	  item2 = data->next->data;
 
@@ -60,19 +61,7 @@ int main() {
 
 	  struct DItem* dst = data->data;
 
-	  while (item || item2) {
-
-	    if (!item2) {
-	      dst->next = item;
-	      item = NULL;
-	      break;
-	    }
-
-	    if (!item) {
-	      dst->next = item2;
-	      item2 = NULL;
-	      break;
-	    }
+	  while (item && item2) {
 
 	    if (__nondet()) {
 	      dst->next = item;
@@ -86,6 +75,17 @@ int main() {
 
 	  }
 
+	  if (item) {
+	    dst->next = item;
+	    item = NULL;
+	  }
+
+	  if (item2) {
+	    dst->next = item2;
+	    item2 = NULL;
+	  }
+
+	  dst = NULL;
 	  data = data->next;
 
 	}
