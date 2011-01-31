@@ -10,8 +10,8 @@ BRANCH="`git status | head -1 | sed 's/^#.* //'`"     || die
 printf "%s: considering release of branch '%s' of '%s'...\n" \
     "$0" "$BRANCH" "$REPO"
 set -x
-#test -z "`git diff HEAD`"                           || die
-#test -z "`git diff origin/$BRANCH`"                 || die
+test -z "`git diff HEAD`"                           || die
+test -z "`git diff origin/$BRANCH`"                 || die
 make -j5 -C fa distcheck                            || die
 
 STAMP="`git log --pretty="%cd-%h" --date=short -1`" || die
