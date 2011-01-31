@@ -22,7 +22,7 @@ include("../CMakeLists.common")
 add_definitions("-I../include")
 enable_testing()
 
-option(FA_DEBUG "Set to OFF to enable optimized build" ON)
+option(FA_DEBUG "Set to OFF to enable optimized build" OFF)
 if(FA_DEBUG)
     add_definitions("-O0 -g")
 else()
