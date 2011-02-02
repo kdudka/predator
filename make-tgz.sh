@@ -84,7 +84,7 @@ make version.h -C sl        || die "failed to create sl/version.h"
 make ChangeLog "CHLOG_WATCH=$chlog_watch" \
     || die "failed to generate ChangeLog"
 
-# sync FAQ
+# sync FAQ and Makefile
 # TODO: sync README
 case "$PROJECT" in
     code-listener)
@@ -92,6 +92,7 @@ case "$PROJECT" in
             -e 's/\<sl\>/fwnull' \
             -e 's/\<SL\>/FWNULL' \
             FAQ
+        sed -i 's/cl fwnull.*/cl fwnull/' Makefile
         ;;
 
     forester)
@@ -99,9 +100,11 @@ case "$PROJECT" in
             -e 's/\<sl\>/fa' \
             -e 's/\<SL\>/FA' \
             FAQ
+        sed -i 's/cl fwnull sl/cl fwnull/' Makefile
         ;;
 
     predator)
+        sed -i 's/cl fwnull sl fa/cl fwnull sl/' Makefile
         ;;
 
     *)
