@@ -89,22 +89,25 @@ make ChangeLog "CHLOG_WATCH=$chlog_watch" \
 case "$PROJECT" in
     code-listener)
         sed -i \
-            -e 's/\<sl\>/fwnull' \
-            -e 's/\<SL\>/FWNULL' \
-            FAQ
-        sed -i 's/cl fwnull.*/cl fwnull/' Makefile
+            -e 's/\<sl\>/fwnull/' \
+            -e 's/\<SL_/FWNULL_/' \
+            FAQ || die "failed to adapt FAQ"
+        sed -i 's/cl fwnull.*/cl fwnull/' Makefile \
+            || die "failed to adapt Makefile"
         ;;
 
     forester)
         sed -i \
-            -e 's/\<sl\>/fa' \
-            -e 's/\<SL\>/FA' \
-            FAQ
-        sed -i 's/cl fwnull sl/cl fwnull/' Makefile
+            -e 's/\<sl\>/fa/' \
+            -e 's/\<SL_/FA_/' \
+            FAQ || die "failed to adapt FAQ"
+        sed -i 's/cl fwnull sl/cl fwnull/' Makefile \
+            || die "failed to adapt Makefile"
         ;;
 
     predator)
-        sed -i 's/cl fwnull sl fa/cl fwnull sl/' Makefile
+        sed -i 's/cl fwnull sl fa/cl fwnull sl/' Makefile \
+            || die "failed to adapt Makefile"
         ;;
 
     *)
