@@ -29,7 +29,7 @@ case "$PROJECT" in
         ;;
 
     forester)
-        chlog_watch="fa fa_analysis"
+        chlog_watch="fa"
         drop_sl=yes
         ;;
 
@@ -49,7 +49,7 @@ REPO="`git rev-parse --show-toplevel`" \
 printf "%s: considering release of %s using %s...\n" \
     "$SH_NAME" "$PROJECT" "$REPO"
 
-branch="`git stat | head -1 | sed 's/^#.* //'`" \
+branch="`git status | head -1 | sed 's/^#.* //'`" \
     || die "unable to read git branch"
 
 test xmaster = "x$branch" \
