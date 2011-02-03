@@ -13,8 +13,7 @@ usage(){
     exit 1
 }
 
-PRUNE_ALWAYS="dev-util fa_release invader-extras make-forester.sh make-tgz.sh \
-    ocaml seplog .git"
+PRUNE_ALWAYS="dev-util invader-extras make-tgz.sh ocaml seplog .git"
 
 chlog_watch=
 drop_fa=no
@@ -29,7 +28,7 @@ case "$PROJECT" in
         ;;
 
     forester)
-        chlog_watch="fa"
+        chlog_watch="fa fa_analysis"
         drop_sl=yes
         ;;
 
