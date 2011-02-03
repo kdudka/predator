@@ -41,8 +41,6 @@
  *      - clf_unswitch.hh
  *
  * - error/warning messages: cl_msg.hh, location.hh,
- *      - Location
- *      - LocationWriter
  *      - #CL_ERROR, #CL_ERROR_MSG
  *      - #CL_WARN, #CL_WARN_MSG
  *      - #CL_NOTE, #CL_NOTE_MSG
