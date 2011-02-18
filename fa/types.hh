@@ -263,6 +263,8 @@ struct Data {
 		}
 	}
 
+	bool operator!=(const Data& rhs) const { return !(*this == rhs); }
+
 	friend std::ostream& operator<<(std::ostream& os, const Data& x) {
 //		os << '[' << x.size << ']';
 		switch (x.type) {

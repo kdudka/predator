@@ -18,6 +18,7 @@ int main() {
 	struct DItem* item, * item2;
 	struct TLItem *lItem;
 
+	// fill top level list with single data items
 	while (__nondet()) {
 
           item = malloc(sizeof *item);
@@ -42,6 +43,7 @@ int main() {
 	if (!data)
 	  return 0;
 
+	// merge subsequent pairs
 	while (data->next != data) {
 
 	  item = data->data;
@@ -51,37 +53,27 @@ int main() {
 	  data->next = lItem->next;
 	  free(lItem);
 
-	  if (__nondet()) {  
-	    data->data = item;
-	    item = item->next;
-	  } else {
-	    data->data = item2;
-	    item2 = item2->next;
-	  }
-
-	  struct DItem* dst = data->data;
+	  struct DItem** dst = &data->data;
 
 	  while (item && item2) {
 
-	    if (__nondet()) {
-	      dst->next = item;
+	    if (item->value < item2->value) {
+	      *dst = item;
 	      item = item->next;
 	    } else {
-	      dst->next = item2;
+	      *dst = item2;
 	      item2 = item2->next;
 	    }
 
-	    dst = dst->next;
+	    dst = &(*dst)->next;
 
 	  }
 
 	  if (item) {
-	    dst->next = item;
+	    *dst = item;
 	    item = NULL;
-	  }
-
-	  if (item2) {
-	    dst->next = item2;
+	  } else if (item2) {
+	    *dst = item2;
 	    item2 = NULL;
 	  }
 
@@ -90,6 +82,7 @@ int main() {
 
 	}
 
+	// release the list
 	item = data->data;
 	free(data);
 

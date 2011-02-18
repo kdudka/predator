@@ -545,6 +545,21 @@ protected:
 		
 	}
 
+	template <class F>
+	static void dataCmp(vector<Data>& res, const Data& x, const Data& y, F f) {
+		if ((x.isUnknw() || x.isUndef()) || (y.isUnknw() || y.isUndef())) {
+			if ((float)random()/RAND_MAX < 0.5) {
+				res.push_back(Data::createBool(false));
+				res.push_back(Data::createBool(true));
+			} else {
+				res.push_back(Data::createBool(true));
+				res.push_back(Data::createBool(false));
+			}
+		} else
+			res.push_back(Data::createBool(f(x, y)));
+	}
+
+/*
 	static void dataEq(const Data& x, const Data& y, bool neg, vector<Data>& res) {
 		if ((x.isUnknw() || x.isUndef()) || (y.isUnknw() || y.isUndef())) {
 			if ((float)random()/RAND_MAX < 0.5) {
@@ -557,7 +572,40 @@ protected:
 		} else
 			res.push_back(Data::createBool((x == y) != neg));
 	}
+*/
+	template <class F>
+	void execCmp(SymState* state, const FAE* parent, const CodeStorage::Insn* insn, F f) {
 
+		OperandInfo dst, src1, src2;
+		state->ctx->parseOperand(dst, *parent, &insn->operands[0]);
+		state->ctx->parseOperand(src1, *parent, &insn->operands[1]);
+		state->ctx->parseOperand(src2, *parent, &insn->operands[2]);
+
+//		assert(*src1.type == *src2.type);
+		assert(OperandInfo::isLValue(dst.flag));
+		assert(dst.type->code == cl_type_e::CL_TYPE_BOOL);
+
+		vector<size_t> offs1;
+		NodeBuilder::buildNode(offs1, src1.type);
+
+		vector<size_t> offs2;
+		NodeBuilder::buildNode(offs2, src2.type);
+
+		Data data1 = src1.readData(*parent, offs1);
+		Data data2 = src2.readData(*parent, offs2);
+		vector<Data> res;
+		Engine::dataCmp(res, data1, data2, f);
+		RevInfo rev;
+		for (vector<Data>::iterator j = res.begin(); j != res.end(); ++j) {
+			FAE* fae = new FAE(*parent);
+			Guard<FAE> g(fae);
+			dst.writeData(*fae, *j, rev);
+			g.release();
+			this->enqueueNextInsn(state, parent, fae);
+		}
+
+	}
+/*
 	void execEq(SymState* state, const FAE* parent, const CodeStorage::Insn* insn, bool neg) {
 
 		OperandInfo dst, src1, src2;
@@ -589,7 +637,7 @@ protected:
 		}
 
 	}
-
+*/
 	void execPlus(SymState* state, const FAE* parent, const CodeStorage::Insn* insn) {
 
 		OperandInfo dst, src1, src2;
@@ -746,6 +794,28 @@ protected:
 		
 	}
 
+	struct CmpEq {
+		bool operator()(const Data& x, const Data& y) const {
+			return x == y;
+		}
+	};
+
+	struct CmpNeq {
+		bool operator()(const Data& x, const Data& y) const {
+			return x != y;
+		}
+	};
+
+	struct CmpLt {
+		bool operator()(const Data& x, const Data& y) const {
+			if (x.isInt() && y.isInt())
+				return x.d_int < y.d_int;
+			if (x.isBool() && y.isBool())
+				return x.d_bool < y.d_bool;
+			throw std::runtime_error("SymExec::Engine::CmpLt(): comparison of the corresponding types not supported");
+		}
+	};
+
 	void execInsn(SymState* state, const FAE* parent) {
 
 		const CodeStorage::Insn* insn = *state->insn;
@@ -768,10 +838,13 @@ protected:
 			case cl_insn_e::CL_INSN_BINOP:
 				switch (insn->subCode) {
 					case cl_binop_e::CL_BINOP_EQ:
-						this->execEq(state, parent, insn, false);
+						this->execCmp(state, parent, insn, CmpEq());
 						break;
 					case cl_binop_e::CL_BINOP_NE:
-						this->execEq(state, parent, insn, true);
+						this->execCmp(state, parent, insn, CmpNeq());
+						break;
+					case cl_binop_e::CL_BINOP_LT:
+						this->execCmp(state, parent, insn, CmpLt());
 						break;
 					case cl_binop_e::CL_BINOP_PLUS:
 						this->execPlus(state, parent, insn);
