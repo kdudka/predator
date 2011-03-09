@@ -14,6 +14,9 @@
  *
  * @remark
  *
+ * - an entry point for @b easy analyzers: easy.hh
+ *      - clEasyRun()
+ *
  * - code listener API: code_listener.h
  *      - struct cl_operand
  *      - struct cl_type
@@ -40,7 +43,7 @@
  *      - clf_unilabel.hh
  *      - clf_unswitch.hh
  *
- * - error/warning messages: cl_msg.hh, location.hh,
+ * - error/warning messages: cl_msg.hh
  *      - #CL_ERROR, #CL_ERROR_MSG
  *      - #CL_WARN, #CL_WARN_MSG
  *      - #CL_NOTE, #CL_NOTE_MSG

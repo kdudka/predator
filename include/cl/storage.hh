@@ -35,11 +35,11 @@
 
 /**
  * @file storage.hh
- * an easy to use model of @b storage for serialised code_listener objects
+ * object model that describes the analyzed code on the input
  */
 
 /**
- * an easy to use model of storage for serialised code_listener objects
+ * object model that describes the analyzed code on the input
  */
 namespace CodeStorage {
 
