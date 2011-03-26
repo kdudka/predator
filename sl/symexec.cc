@@ -685,13 +685,14 @@ void SymExecEngine::processPendingSignals() {
 // SymExec implementation
 struct StackItem;
 struct SymExec::Private {
-    SymExec                         &se;
-    const CodeStorage::Storage      &stor;
-    SymExecParams                   params;
-    SymStateWithJoin                stateZero;
-    SymBackTrace                    bt;
-    SymCallCache                    callCache;
-    std::stack<IStatsProvider *>    statsStack;
+    SymExec                                 &se;
+    const CodeStorage::Storage              &stor;
+    SymExecParams                           params;
+    SymStateWithJoin                        stateZero;
+    SymBackTrace                            bt;
+    SymCallCache                            callCache;
+    typedef std::stack<IStatsProvider *>    TStatsStack;
+    TStatsStack                             statsStack;
 
     Private(SymExec &se_, const CodeStorage::Storage &stor_):
         se(se_),
@@ -948,7 +949,8 @@ void SymExec::exec(const CodeStorage::Fnc &fnc, SymState &results) {
 void SymExec::printStats() const {
     // TODO: print SymCallCache stats here as soon as we have implemented some
 
-    for (auto tmpStack(d->statsStack); !tmpStack.empty(); tmpStack.pop()) {
+    typedef Private::TStatsStack TStack;
+    for (TStack tmpStack(d->statsStack); !tmpStack.empty(); tmpStack.pop()) {
         const IStatsProvider *provider = tmpStack.top();
         provider->printStats();
     }

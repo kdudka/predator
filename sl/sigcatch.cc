@@ -32,7 +32,8 @@
 
 static volatile sig_atomic_t sig_flags[_NSIG];
 
-static std::map<int /* signum */, sighandler_t> backup;
+typedef std::map<int /* signum */, sighandler_t> TBackup;
+static TBackup backup;
 
 static void generic_signal_handler(int signum) {
     sig_flags[signum] = static_cast<sig_atomic_t>(true);
@@ -54,7 +55,7 @@ bool SignalCatcher::cleanup() {
     bool ok = true;
 
     // uninstall signal handler
-    BOOST_FOREACH(auto item, ::backup) {
+    BOOST_FOREACH(TBackup::const_reference item, ::backup) {
         if (SIG_ERR == signal(item.first, item.second))
             ok = false;
     }
@@ -80,7 +81,7 @@ bool SignalCatcher::caught(int signum) {
 }
 
 bool SignalCatcher::caught(int *pSignum) {
-    BOOST_FOREACH(auto item, ::backup) {
+    BOOST_FOREACH(TBackup::const_reference item, ::backup) {
         const int signum = item.first;
         if (!caught(signum))
             continue;
