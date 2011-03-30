@@ -68,7 +68,7 @@ class AliasDb {
         typedef TSet                            TLine;
 
     public:
-        AliasDb() { }
+        AliasDb(): empty_() { }
         AliasDb(const AliasDb &ref) {
             this->operator=(ref);
         }
@@ -139,6 +139,7 @@ class OffsetDb {
         }
 
     public:
+        OffsetDb(): empty_() {}
         void add(TOffVal ov, TValueId target) {
             // add the given relation
             this->addNoClobber(ov, target);

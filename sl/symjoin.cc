@@ -1895,7 +1895,7 @@ bool segDetectSelfLoop(const SymHeap &sh) {
     std::set<TObjId> segRoots;
     std::copy_if(roots.begin(), roots.end(),
                  std::inserter(segRoots, segRoots.begin()),
-                 bind(objIsSeg, std::cref(sh), _1, false));
+                 boost::lambda::bind(objIsSeg, std::cref(sh), _1, false));
 
     // go through all entries
     std::set<TObjId> haveSeen;
