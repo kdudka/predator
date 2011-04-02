@@ -15,8 +15,10 @@
 # You should have received a copy of the GNU General Public License
 # along with predator.  If not, see <http://www.gnu.org/licenses/>.
 
-GCC45           ?= gcc-4.5.2.tar.bz2#       # released gcc 4.5.2
-GCC45_DIR       ?= gcc-4.5.2#               # unpackged release of gcc 4.5.2
+GCC_STABLE      ?= gcc-4.6.0#               # released gcc
+GCC_STABLE_TGZ  ?= $(GCC_STABLE).tar.bz2#   # tarball of released gcc
+GCC_STABLE_URL  ?= \
+	ftp://ftp.lip6.fr/pub/gcc/releases/$(GCC_STABLE)/$(GCC_STABLE_TGZ)
 
 GCC_SRC         ?= gcc-src#                 # SVN working copy for gcc src
 GCC_BUILD       ?= gcc-build#               # working directory gcc build
@@ -73,8 +75,8 @@ sl/api:
 api: cl/api sl/api
 
 # unpack released gcc 4.5
-$(GCC45_DIR): $(GCC45)
-	test -d $(GCC45_DIR) || tar xf $(GCC45)
+$(GCC_STABLE): $(GCC_STABLE_TGZ)
+	test -d $(GCC_STABLE) || tar xf $(GCC_STABLE_TGZ)
 
 # initialize a git repo for Invader and apply downstream patches
 $(INVADER_DIR): $(INVADER)
@@ -101,8 +103,8 @@ $(GCC_SRC):
 			echo "--- keeping '$(GCC_SRC)' as is"; \
 		else \
 			set -x \
-			&& $(MAKE) $(GCC45_DIR) \
-			&& ln -fsvT $(GCC45_DIR) $(GCC_SRC) \
+			&& $(MAKE) $(GCC_STABLE) \
+			&& ln -fsvT $(GCC_STABLE) $(GCC_SRC) \
 			&& readlink -e $(GCC_SRC); \
 		fi
 
@@ -147,8 +149,8 @@ $(INVADER):
 	$(CURL) -o $@ 'http://www.eastlondonmassive.org/invader-1_1.zip'
 
 # fetch released gcc 4.5
-$(GCC45):
-	$(CURL) -o $@ 'ftp://ftp.lip6.fr/pub/gcc/releases/gcc-4.5.2/gcc-4.5.2.tar.bz2'
+$(GCC_STABLE_TGZ):
+	$(CURL) -o $@ '$(GCC_STABLE_URL)'
 
 # create SVN working copy for gcc sources
 build_gcc_svn:
