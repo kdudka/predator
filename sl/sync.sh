@@ -33,6 +33,7 @@ gen(){
         -fplugin-arg-libsl-preserve-ec \
         2>&1 \
         | grep -v '\[internal location\]$' \
+        | sed 's/ \[enabled by default\]$//' \
         | sed 's|data/||' \
         > data/`basename $i .c`.err$2
       printf "\n"

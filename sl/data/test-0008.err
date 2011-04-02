@@ -19,16 +19,16 @@ test-0008.c:37:5: note: from call of main()
 test-0008.c:32:11: warning: killing junk
 test-0008.c:38:9: note: from call of test()
 test-0008.c:37:5: note: from call of main()
-test-0008.c:33:17: error: dereference of NULL value
+test-0008.c:33:7: error: dereference of NULL value
 test-0008.c:38:9: note: from call of test()
 test-0008.c:37:5: note: from call of main()
-test-0008.c:33:17: error: dereference of NULL value
+test-0008.c:33:7: error: dereference of NULL value
 test-0008.c:38:9: note: from call of test()
 test-0008.c:37:5: note: from call of main()
-test-0008.c:33:17: error: dereference of NULL value
+test-0008.c:33:7: error: dereference of NULL value
 test-0008.c:38:9: note: from call of test()
 test-0008.c:37:5: note: from call of main()
-test-0008.c:33:17: error: dereference of NULL value
+test-0008.c:33:7: error: dereference of NULL value
 test-0008.c:38:9: note: from call of test()
 test-0008.c:37:5: note: from call of main()
 test-0008.c:33:24: error: dereference of NULL value
@@ -63,16 +63,16 @@ test-0008.c:37:5: note: from call of main()
 test-0008.c:32:11: warning: killing junk
 test-0008.c:39:9: note: from call of test()
 test-0008.c:37:5: note: from call of main()
-test-0008.c:33:17: error: dereference of NULL value
+test-0008.c:33:7: error: dereference of NULL value
 test-0008.c:39:9: note: from call of test()
 test-0008.c:37:5: note: from call of main()
-test-0008.c:33:17: error: dereference of NULL value
+test-0008.c:33:7: error: dereference of NULL value
 test-0008.c:39:9: note: from call of test()
 test-0008.c:37:5: note: from call of main()
-test-0008.c:33:17: error: dereference of NULL value
+test-0008.c:33:7: error: dereference of NULL value
 test-0008.c:39:9: note: from call of test()
 test-0008.c:37:5: note: from call of main()
-test-0008.c:33:17: error: dereference of NULL value
+test-0008.c:33:7: error: dereference of NULL value
 test-0008.c:39:9: note: from call of test()
 test-0008.c:37:5: note: from call of main()
 test-0008.c:33:24: error: dereference of NULL value

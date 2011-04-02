@@ -147,6 +147,9 @@ macro(test_sym_exec_regre name_suff ext arg1)
         set(cmd "${cmd} | sed s/`echo ${sl_SOURCE_DIR}/ ")
         set(cmd "${cmd} | sed 's/\\\\\\\\//\\\\\\\\\\\\\\\\\\\\\\\\//g'`//")
 
+        # appeard in gcc-4.6.0
+        set(cmd "${cmd} | sed 's/ \\\\[enabled by default\\\\]\$//'")
+
         # ... and finally diff with the expected output
         set(cmd
             "${cmd} | diff -up ${sl_SOURCE_DIR}/data/test-${num}.err${ext} -")
