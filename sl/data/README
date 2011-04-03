@@ -163,10 +163,10 @@ Higher level SLS/DLS abstraction, etc.
 
     test-0128.c - SLL, each item contains zero or one nested item
 
-    test-0129.c - alternation of test-0127 with DLLs intead of SLLs
+    test-0129.c - alternation of test-0127 with DLLs instead of SLLs
                 - currently does not work with SE_PREFER_LOSSLESS_PROTOTYPES
 
-    test-0130.c - alternation of test-0128 with DLLs intead of SLLs
+    test-0130.c - alternation of test-0128 with DLLs instead of SLLs
 
 
 Linux lists
@@ -521,6 +521,8 @@ Call cache
                   and its insertSegmentClone() based three-way join
 
     test-0126.c - trivial test-case focused on three-way join of unknown values
+
+    test-0141.c - simplification of test-0103.c (only some offset manipulation)
 
 
 Tiny DLL library written on scratch

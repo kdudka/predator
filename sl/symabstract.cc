@@ -708,6 +708,12 @@ void segReplaceRefs(SymHeap &sh, TObjId seg, TValueId valNext) {
     SymHeap::TContObj refs;
     gatherPointingObjects(sh, refs, seg, /* toInsideOnly */ false);
     BOOST_FOREACH(const TObjId obj, refs) {
+        if (VAL_NULL == valNext) {
+            // FIXME: not correct in all cases
+            sh.objSetValue(obj, VAL_NULL);
+            continue;
+        }
+            
         const TObjId target = sh.pointsTo(sh.valueOf(obj));
         if (next < 0 || target < 0) {
             CL_DEBUG("WARNING: suboptimal implementation of segReplaceRefs()");

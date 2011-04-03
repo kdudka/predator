@@ -401,8 +401,13 @@ TValueId addrQueryByOffset(
     // jump to _target_ type
     const struct cl_type *clt = targetTypeOfPtr(cltPtr);
 
-    obj = subSeekByOffset(sh, obj, off, clt);
-    if (obj <= 0) {
+    const TObjId sub = subSeekByOffset(sh, obj, off, clt);
+    if (sub <= 0) {
+        if (!off)
+            // we have already reached zero offset
+            // --> it should be safe to just return the address
+            return sh.placedAt(obj);
+
         // fall-back to off-value, but now related to the original target,
         // instead of root
         const SymHeapCore::TOffVal ov(sh.placedAt(target), offRequested);
@@ -410,7 +415,7 @@ TValueId addrQueryByOffset(
     }
 
     // get the final address and check type compatibility
-    const TValueId addr = sh.placedAt(obj);
+    const TValueId addr = sh.placedAt(sub);
     const struct cl_type *cltDst = sh.valType(addr);
     if (!cltDst || *cltDst != *clt) {
         const char msg[] = "dangerous assignment of pointer plus' result";
