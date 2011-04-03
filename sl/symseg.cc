@@ -57,19 +57,6 @@ TObjId dlSegPeer(const SymHeap &sh, TObjId dls) {
     return peer;
 }
 
-namespace {
-    bool segProveNeq(const SymHeap &sh, TValueId v1, TValueId v2) {
-        bool eq;
-        if (!sh.proveEq(&eq, v1, v2))
-            return /* no idea */ false;
-
-        // equal basically means 'invalid segment'
-        CL_BREAK_IF(eq);
-
-        return /* not equal */ true;
-    }
-}
-
 unsigned dlSegMinLength(const SymHeap &sh, TObjId dls) {
     // validate call of dlSegNotEmpty()
     CL_BREAK_IF(OK_DLS != sh.objKind(dls));
@@ -85,8 +72,8 @@ unsigned dlSegMinLength(const SymHeap &sh, TObjId dls) {
     const TValueId val2 = sh.valueOf(next2);
 
     // attempt to prove both
-    const bool ne1 = segProveNeq(sh, val1, segHeadAddr(sh, peer));
-    const bool ne2 = segProveNeq(sh, val2, segHeadAddr(sh, dls));
+    const bool ne1 = sh.queryExplicitNeq(val1, segHeadAddr(sh, peer));
+    const bool ne2 = sh.queryExplicitNeq(val2, segHeadAddr(sh, dls));
 
     // DLS cross Neq predicates have to be fully symmetric
     CL_BREAK_IF(ne1 != ne2);
@@ -95,7 +82,7 @@ unsigned dlSegMinLength(const SymHeap &sh, TObjId dls) {
     // if DLS heads are two distinct objects, we have at least two objects
     const TValueId head1 = segHeadAddr(sh, dls);
     const TValueId head2 = segHeadAddr(sh, peer);
-    if (segProveNeq(sh, head1, head2)) {
+    if (sh.queryExplicitNeq(head1, head2)) {
         CL_BREAK_IF(!ne);
         return /* DLS 2+ */ 2;
     }
@@ -129,7 +116,7 @@ unsigned segMinLength(const SymHeap &sh, TObjId seg) {
     const TObjId next = nextPtrFromSeg(sh, seg);
     const TValueId nextVal = sh.valueOf(next);
     const TValueId headAddr = segHeadAddr(sh, seg);
-    return static_cast<unsigned>(segProveNeq(sh, headAddr, nextVal));
+    return static_cast<unsigned>(sh.queryExplicitNeq(headAddr, nextVal));
 }
 
 void segSetProto(SymHeap &sh, TObjId seg, bool isProto) {
