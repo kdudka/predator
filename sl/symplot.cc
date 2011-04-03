@@ -128,6 +128,11 @@ struct SymPlot::Private {
     typedef std::pair<TValueId, TValueId>                   TEdgeNeq;
     std::set<TEdgeNeq>                  neqSet;
 
+    // NOTE: only temporary solution for debugging purposes;  explicit aliasing
+    //       will go away
+    std::set<TEdgeNeq>                  aliasSet;
+    std::set<TValueId>                  valDone;
+
     std::set<TObjId>                    heads;
     std::set<TObjId>                    nexts;
     std::set<TObjId>                    peers;
@@ -149,6 +154,8 @@ struct SymPlot::Private {
     void gobbleEdgeValueOf(TObjId obj, TValueId value);
     void gobbleEdgeOffValue(TValueId val, const SymHeap::TOffVal &ov);
     void gobbleEdgeNeq(TValueId val1, TValueId val2);
+    void gobbleEdgeAlias(TValueId val1, TValueId val2);
+    TValueId lowestVisibleAliasOf(TValueId);
     void emitPendingEdges();
 
     void plotSingleValue(TValueId value);
@@ -423,6 +430,29 @@ void SymPlot::Private::gobbleEdgeNeq(TValueId val1, TValueId val2) {
     this->neqSet.insert(edge);
 }
 
+void SymPlot::Private::gobbleEdgeAlias(TValueId val1, TValueId val2) {
+    sortValues(val1, val2);
+    TEdgeNeq edge(val1, val2);
+    this->aliasSet.insert(edge);
+}
+
+TValueId SymPlot::Private::lowestVisibleAliasOf(TValueId val) {
+    SymHeap::TContValue aliases;
+    this->heap->gatherValAliasing(aliases, val);
+    BOOST_FOREACH(const TValueId valAlias, aliases) {
+        if (!hasKey(this->valDone, valAlias))
+            // not a visible alias
+            continue;
+
+        if (val < valAlias)
+            continue;
+
+        val = valAlias;
+    }
+
+    return val;
+}
+
 void SymPlot::Private::emitPendingEdges() {
     // plot all valueOf edges
     BOOST_FOREACH(const TEdgeValueOf &edge, this->evList) {
@@ -439,12 +469,28 @@ void SymPlot::Private::emitPendingEdges() {
             << std::endl;
     }
 
-    // plot all Neq edges
+    // plot Neq edges
+    std::set<TEdgeNeq> neqDone;
     BOOST_FOREACH(const TEdgeNeq &edge, this->neqSet) {
-        const TValueId v1 = edge.first;
-        const TValueId v2 = edge.second;
+        const TValueId v1 = this->lowestVisibleAliasOf(edge.first);
+        const TValueId v2 = this->lowestVisibleAliasOf(edge.second);
+        if (!insertOnce(neqDone, TEdgeNeq(v1, v2)))
+            continue;
+
         this->dotStream << "\t" << SL_QUOTE(v1) << " -> " << SL_QUOTE(v2)
             << " [color=gold, fontcolor=red, label=\"Neq\", arrowhead=none];"
+            << std::endl;
+    }
+
+    // plot Alias edges
+    BOOST_FOREACH(const TEdgeNeq &edge, this->aliasSet) {
+        const TValueId v1 = edge.first;
+        const TValueId v2 = edge.second;
+        if (!hasKey(this->valDone, v1) || !hasKey(this->valDone, v2))
+            continue;
+
+        this->dotStream << "\t" << SL_QUOTE(v1) << " -> " << SL_QUOTE(v2)
+            << " [label=\"Alias\", arrowhead=none];"
             << std::endl;
     }
 
@@ -452,6 +498,7 @@ void SymPlot::Private::emitPendingEdges() {
     this->evList.clear();
     this->ovList.clear();
     this->neqSet.clear();
+    this->aliasSet.clear();
 }
 
 void SymPlot::Private::plotSingleValue(TValueId value) {
@@ -459,6 +506,8 @@ void SymPlot::Private::plotSingleValue(TValueId value) {
         this->plotNodeValue(value, CL_TYPE_UNKNOWN, 0);
         return;
     }
+
+    this->valDone.insert(value);
 
     // visualize off-value relations
     SymHeap::TOffValCont offValues;
@@ -496,6 +545,17 @@ void SymPlot::Private::plotSingleValue(TValueId value) {
 
         CL_WARN("SymPlot: unhandled predicate over values #"
                 << value << " and #" << peer);
+    }
+
+    // go through aliasas
+    SymHeap::TContValue aliases;
+    this->heap->gatherValAliasing(aliases, value);
+    BOOST_FOREACH(const TValueId valAlias, aliases) {
+        if (valAlias == value)
+            // do not plot self loops
+            continue;
+
+        this->gobbleEdgeAlias(value, valAlias);
     }
 
     const struct cl_type *clt = this->heap->valType(value);
