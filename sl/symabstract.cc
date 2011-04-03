@@ -528,7 +528,7 @@ void dlSegMerge(SymHeap &sh, TObjId seg1, TObjId seg2) {
 #ifndef NDEBUG
     const TObjId nextPtr = nextPtrFromSeg(sh, peer1);
     const TValueId valNext = sh.valueOf(nextPtr);
-    CL_BREAK_IF(valNext != segHeadAddr(sh, seg2));
+    CL_BREAK_IF(!areEqualAddrs(sh, valNext, segHeadAddr(sh, seg2)));
 #endif
 
     const TObjId peer2 = dlSegPeer(sh, seg2);
@@ -698,9 +698,7 @@ void segReplaceRefs(SymHeap &sh, TObjId seg, TValueId valNext) {
     switch (next) {
         case OBJ_DELETED:
         case OBJ_LOST:
-            CL_DEBUG("WARNING: OBJ_DELETED/OBJ_LOST handling not optimal"
-                     " in segReplaceRefs()");
-            return;
+            break;
 
         default:
             CL_BREAK_IF(0 < valNext && next < 0);
@@ -711,16 +709,20 @@ void segReplaceRefs(SymHeap &sh, TObjId seg, TValueId valNext) {
     gatherPointingObjects(sh, refs, seg, /* toInsideOnly */ false);
     BOOST_FOREACH(const TObjId obj, refs) {
         const TObjId target = sh.pointsTo(sh.valueOf(obj));
+        if (next < 0 || target < 0) {
+            CL_DEBUG("WARNING: suboptimal implementation of segReplaceRefs()");
+            const TValueId val = sh.valDuplicateUnknown(valNext);
+            sh.objSetValue(obj, val);
+            continue;
+        }
+
         const struct cl_type *cltPtr = sh.objType(obj);
         CL_BREAK_IF(target <= 0 || !cltPtr);
 
+        // redirect!
         const TObjId root = objRoot(sh, target);
         const int off = subOffsetIn(sh, root, target) - offHead;
-        const TValueId val = (0 < next)
-            ? addrQueryByOffset(sh, next, off, cltPtr)
-            : valNext;
-
-        // redirect!
+        const TValueId val = addrQueryByOffset(sh, next, off, cltPtr);
         sh.objSetValue(obj, val);
     }
 }

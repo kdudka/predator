@@ -114,6 +114,10 @@ struct SymJoinCtx {
     const SymHeap               &sh1;
     const SymHeap               &sh2;
 
+    // they need to be black-listed in joinAbstractValues()
+    std::set<TObjId>            sset1;
+    std::set<TObjId>            sset2;
+
     typedef std::map<TObjId /* src */, TObjId /* dst */>        TObjMap;
     TObjMap                     objMap1;
     TObjMap                     objMap2;
@@ -1353,11 +1357,11 @@ bool insertSegmentClone(
             break;
         }
 
-        if (nextGt == valGt)
+        if (areEqualAddrs(shGt, nextGt, valGt))
             // do not go byond the segment, just follow its data
             continue;
 
-        if (segGtAt != valGt)
+        if (!areEqualAddrs(shGt, segGtAt, valGt))
             // OK_MAY_EXIST is applicable only on the first object
             off = 0;
 
@@ -1400,17 +1404,34 @@ bool joinAbstractValues(
         SymJoinCtx              &ctx,
         const TValueId          v1,
         const TValueId          v2,
-        const EUnknownValue     code1,
-        const EUnknownValue     code2)
+        EUnknownValue           *pCode1,
+        EUnknownValue           *pCode2)
 {
-    const bool isAbs1 = (UV_ABSTRACT == code1);
-    const bool isAbs2 = (UV_ABSTRACT == code2);
+    const TObjId root1 = objRootByVal(ctx.sh1, v1);
+    const TObjId root2 = objRootByVal(ctx.sh2, v2);
+
+    bool isAbs1 = (UV_ABSTRACT == *pCode1);
+    if (isAbs1 && hasKey(ctx.sset1, root1)) {
+        // do not treat the starting point as encountered segment
+        isAbs1 = false;
+        *pCode1 = UV_KNOWN;
+    }
+
+    bool isAbs2 = (UV_ABSTRACT == *pCode2);
+    if (isAbs2 && hasKey(ctx.sset2, root2)) {
+        // do not treat the starting point as encountered segment
+        isAbs2 = false;
+        *pCode2 = UV_KNOWN;
+    }
+
+    if (!isAbs1 && !isAbs2)
+        // nothing to join here
+        return false;
+
     const EJoinStatus subStatus = (isAbs1)
         ? JS_USE_SH1
         : JS_USE_SH2;
 
-    const TObjId root1 = objRootByVal(ctx.sh1, v1);
-    const TObjId root2 = objRootByVal(ctx.sh2, v2);
     if (0 < root1 && 0 < root2) {
         if (isAbs1 && isAbs2)
             return joinSegmentWithAny(pResult, ctx, root1, root2, JS_USE_ANY);
@@ -1419,7 +1440,7 @@ bool joinAbstractValues(
             return true;
     }
 
-    if (UV_UNINITIALIZED == code1 || UV_UNINITIALIZED == code2)
+    if (UV_UNINITIALIZED == *pCode1 || UV_UNINITIALIZED == *pCode2)
         // such values could be hardly used as reliable anchors
         return false;
 
@@ -1563,8 +1584,8 @@ bool joinValuePair(SymJoinCtx &ctx, const TValueId v1, const TValueId v2) {
     if (err1 || err2)
         return false;
 
-    const EUnknownValue code1 = ctx.sh1.valGetUnknown(v1);
-    const EUnknownValue code2 = ctx.sh2.valGetUnknown(v2);
+    EUnknownValue code1 = ctx.sh1.valGetUnknown(v1);
+    EUnknownValue code2 = ctx.sh2.valGetUnknown(v2);
 
     EUnknownValue code;
     if (joinUnknownValuesCode(&code, code1, code2)) {
@@ -1579,7 +1600,7 @@ bool joinValuePair(SymJoinCtx &ctx, const TValueId v1, const TValueId v2) {
 
     bool result;
     if ((UV_ABSTRACT == code1 || UV_ABSTRACT == code2)
-            && joinAbstractValues(&result, ctx, v1, v2, code1, code2))
+            && joinAbstractValues(&result, ctx, v1, v2, &code1, &code2))
         return result;
 
     if (code1 != code2) {
@@ -2106,14 +2127,19 @@ bool joinDataCore(
     if (!traverseSubObjs(ctx, o1, o2, rootDst, &off))
         return false;
 
+    ctx.sset1.insert(o1);
+    ctx.sset2.insert(o2);
+
     // never step over DLS peer
     if (OK_DLS == sh.objKind(o1)) {
         const TObjId peer = dlSegPeer(sh, o1);
+        ctx.sset1.insert(peer);
         if (peer != o2)
             mapGhostAddressSpace(ctx, o1, peer, JS_USE_SH1);
     }
     if (OK_DLS == sh.objKind(o2)) {
         const TObjId peer = dlSegPeer(sh, o2);
+        ctx.sset2.insert(peer);
         if (peer != o1)
             mapGhostAddressSpace(ctx, o2, peer, JS_USE_SH2);
     }
