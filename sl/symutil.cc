@@ -239,16 +239,25 @@ void initVariable(SymHeap                       &sh,
 }
 
 class PointingObjectsFinder {
-    SymHeap::TContObj &dst_;
+    public:
+        // we have to use std::set, a vector is not sufficient in all cases
+        typedef std::set<TObjId> TResults;
+
+    private:
+        TResults results_;
 
     public:
-        PointingObjectsFinder(SymHeap::TContObj &dst): dst_(dst) { }
+        const TResults& results() const { return results_; }
 
-        bool operator()(const SymHeap &sh, TObjId obj) const {
+        bool operator()(const SymHeap &sh, TObjId obj) {
             const TValueId addr = sh.placedAt(obj);
             CL_BREAK_IF(addr <= 0);
 
-            sh.usedBy(dst_, addr);
+            SymHeap::TContObj refs;
+            sh.usedBy(refs, addr);
+            std::copy(refs.begin(), refs.end(),
+                      std::inserter(results_, results_.begin()));
+
             return /* continue */ true;
         }
 };
@@ -258,12 +267,13 @@ void gatherPointingObjects(const SymHeap            &sh,
                            const TObjId             root,
                            bool                     toInsideOnly)
 {
-    const PointingObjectsFinder visitor(dst);
-
+    PointingObjectsFinder visitor;
     if (!toInsideOnly)
         visitor(sh, root);
 
     traverseSubObjs(sh, root, visitor, /* leavesOnly */ false);
+    std::copy(visitor.results().begin(), visitor.results().end(),
+              std::back_inserter(dst));
 }
 
 struct SubByOffsetFinder {
