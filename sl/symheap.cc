@@ -1788,7 +1788,7 @@ void SymHeapTyped::objSetProto(TObjId obj, bool isProto) {
 struct SymHeap::Private {
     struct ObjectEx {
         EObjKind            kind;
-        SegBindingFields    bf;
+        BindingOff          off;
 
         ObjectEx(): kind(OK_CONCRETE) { }
     };
@@ -1839,10 +1839,6 @@ TObjId SymHeap::objDup(TObjId objOld) {
         // set the pointing value's code to UV_ABSTRACT
         const TValueId addrNew = this->placedAt(objNew);
         SymHeapCore::valSetUnknown(addrNew, UV_ABSTRACT);
-
-        // mark the address of 'head' as UV_ABSTRACT
-        const TValueId addrHead = segHeadAddr(*this, objNew);
-        SymHeapCore::valSetUnknown(addrHead, UV_ABSTRACT);
     }
 
     return objNew;
@@ -1862,21 +1858,36 @@ EObjKind SymHeap::objKind(TObjId obj) const {
         : OK_PART;
 }
 
-const SegBindingFields& SymHeap::objBinding(TObjId obj) const {
+EUnknownValue SymHeap::valGetUnknown(TValueId val) const {
+    const TObjId target = this->pointsTo(val);
+    if (0 < target) {
+        const EObjKind kind = this->objKind(target);
+        switch (kind) {
+            case OK_CONCRETE:
+                break;
+
+            default:
+                return UV_ABSTRACT;
+        }
+    }
+
+    return SymHeapCore::valGetUnknown(val);
+}
+
+const BindingOff& SymHeap::objBinding(TObjId obj) const {
     const TObjId root = objRoot(*this, obj);
 
     Private::TObjMap::iterator iter = d->objMap.find(root);
     CL_BREAK_IF(d->objMap.end() == iter);
 
-    return iter->second.bf;
+    return iter->second.off;
 }
 
-void SymHeap::objSetAbstract(TObjId obj, EObjKind kind,
-                             const SegBindingFields &bf)
+void SymHeap::objSetAbstract(TObjId obj, EObjKind kind, const BindingOff &off)
 {
     if (OK_SLS == kind && hasKey(d->objMap, obj)) {
         Private::ObjectEx &ref = d->objMap[obj];
-        CL_BREAK_IF(OK_MAY_EXIST != ref.kind || bf != ref.bf);
+        CL_BREAK_IF(OK_MAY_EXIST != ref.kind || off != ref.off);
 
         // OK_MAY_EXIST -> OK_SLS
         ref.kind = kind;
@@ -1888,20 +1899,17 @@ void SymHeap::objSetAbstract(TObjId obj, EObjKind kind,
     // initialize abstract object
     Private::ObjectEx &ref = d->objMap[obj];
     ref.kind    = kind;
-    ref.bf      = bf;
+    ref.off     = off;
 
     // mark the value as UV_ABSTRACT
     const TValueId addr = this->placedAt(obj);
     SymHeapCore::valSetUnknown(addr, UV_ABSTRACT);
-
-    // mark the address of 'head' as UV_ABSTRACT
-    const TValueId addrHead = segHeadAddr(*this, obj);
-    SymHeapCore::valSetUnknown(addrHead, UV_ABSTRACT);
 #ifndef NDEBUG
     // check for self-loops
-    const TObjId objBind = subObjByChain(*this, obj, bf.next);
+    const TObjId objBind = ptrObjByOffset(*this, obj, off.next);
     const TValueId valNext = this->valueOf(objBind);
-    CL_BREAK_IF(addr == valNext || addrHead == valNext);
+    const TObjId head = compObjByOffset(*this, obj, off.head);
+    CL_BREAK_IF(addr == valNext || this->placedAt(head) == valNext);
 #endif
 }
 

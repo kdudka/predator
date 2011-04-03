@@ -146,9 +146,9 @@ void getPtrValues(SymHeapCore::TContValue &dst, const SymHeap &heap,
     }
 }
 
-void skipObj(const SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext)
+void skipObj(const SymHeap &sh, TObjId *pObj, int offNext)
 {
-    const TObjId objPtrNext = subObjByChain(sh, *pObj, icNext);
+    const TObjId objPtrNext = ptrObjByOffset(sh, *pObj, offNext);
     const TObjId objNext = objRootByPtr(sh, objPtrNext);
 
     // move to the next object
@@ -270,12 +270,22 @@ struct SubByOffsetFinder {
     TObjId                  root;
     TObjId                  subFound;
     const struct cl_type    *cltToSeek;
+    enum cl_type_e          cltCodeToSeek;
     int                     offToSeek;
 
     bool operator()(const SymHeap &sh, TObjId sub) {
         const struct cl_type *clt = sh.objType(sub);
-        if (!clt || *clt != *this->cltToSeek)
+        if (!clt)
             return /* continue */ true;
+
+        if (cltToSeek) {
+            if (*cltToSeek != *clt)
+                return /* continue */ true;
+        }
+        else {
+            if (cltCodeToSeek != clt->code)
+                return /* continue */ true;
+        }
 
         if (this->offToSeek != subOffsetIn(sh, this->root, sub))
             return /* continue */ true;
@@ -286,24 +296,62 @@ struct SubByOffsetFinder {
     }
 };
 
-TObjId subSeekByOffset(const SymHeap &sh, TObjId obj,
-                       const struct cl_type *clt, int offToSeek)
+TObjId subSeekByOffset(
+        const SymHeap               &sh,
+        const TObjId                root,
+        const int                   offToSeek,
+        const struct cl_type        *clt,
+        const enum cl_type_e        code = CL_TYPE_UNKNOWN)
 {
-    if (!offToSeek)
-        return obj;
+    if (OBJ_INVALID == root)
+        return OBJ_INVALID;
 
     // prepare visitor
     SubByOffsetFinder visitor;
-    visitor.root        = obj;
-    visitor.cltToSeek   = clt;
-    visitor.offToSeek   = offToSeek;
-    visitor.subFound    = OBJ_INVALID;
+    visitor.root            = root;
+    visitor.cltToSeek       = clt;
+    visitor.cltCodeToSeek   = code;
+    visitor.offToSeek       = offToSeek;
+    visitor.subFound        = OBJ_INVALID;
+
+    // first try the root itself
+    if (!visitor(sh, root))
+        // matched
+        return visitor.subFound;
 
     // look for the requested sub-object
-    if (traverseSubObjs(sh, obj, visitor, /* leavesOnly */ false))
+    if (traverseSubObjs(sh, root, visitor, /* leavesOnly */ false))
         return OBJ_INVALID;
     else
         return visitor.subFound;
+}
+
+void valReplace(SymHeap &sh, const TValueId of, const TValueId by) {
+    SymHeap::TContValue aliases;
+    sh.gatherValAliasing(aliases, of);
+    BOOST_FOREACH(const TValueId val, aliases) {
+        sh.valReplace(val, by);
+    }
+}
+
+void seekRoot(const SymHeap &sh, TObjId *pRoot, int *pOff) {
+    const TObjId obj = *pRoot;
+    if (OBJ_INVALID == obj)
+        return;
+
+    const TObjId root = objRoot(sh, obj);
+    (*pOff) += subOffsetIn(sh, root, obj);
+    (*pRoot) = root;
+}
+
+TObjId ptrObjByOffset(const SymHeap &sh, TObjId obj, int off) {
+    seekRoot(sh, &obj, &off);
+    return subSeekByOffset(sh, obj, off, /* clt */ 0, CL_TYPE_PTR);
+}
+
+TObjId compObjByOffset(const SymHeap &sh, TObjId obj, int off) {
+    seekRoot(sh, &obj, &off);
+    return subSeekByOffset(sh, obj, off, /* clt */ 0, CL_TYPE_STRUCT);
 }
 
 TValueId addrQueryByOffset(
@@ -343,7 +391,7 @@ TValueId addrQueryByOffset(
     // jump to _target_ type
     const struct cl_type *clt = targetTypeOfPtr(cltPtr);
 
-    obj = subSeekByOffset(sh, obj, clt, off);
+    obj = subSeekByOffset(sh, obj, off, clt);
     if (obj <= 0) {
         // fall-back to off-value, but now related to the original target,
         // instead of root

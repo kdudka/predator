@@ -63,28 +63,7 @@ namespace {
     }
 }
 
-void dump_ic(const struct cl_type *clt, TFieldIdxChain ic) {
-    for (unsigned i = 0; i < ic.size(); ++i) {
-        if (i)
-            cout << ".";
-
-        const int idx = ic[i];
-        if (!clt || clt->code != CL_TYPE_STRUCT) {
-            cout << "XXX";
-            return;
-        }
-
-        cout << idx;
-        const char *name = clt->items[idx].name;
-        if (name)
-            cout << "(" << name << ")";
-
-        clt = clt->items[idx].type;
-    }
-}
-
 void dump_kind(const SymHeap &heap, TObjId obj) {
-    const struct cl_type *clt = heap.objType(obj);
     const EObjKind kind = heap.objKind(obj);
     switch (kind) {
         case OK_CONCRETE:
@@ -104,23 +83,17 @@ void dump_kind(const SymHeap &heap, TObjId obj) {
             return;
 
         case OK_SLS:
-            cout << "OK_SLS, icNext = ";
+            cout << "OK_SLS, offNext = " << heap.objBinding(obj).next;
             break;
 
         case OK_DLS:
-            cout << "OK_DLS, icPeer = ";
-            dump_ic(clt, heap.objBinding(obj).peer );
-            cout << ", icNext = ";
+            cout << "OK_DLS, offPeer = " << heap.objBinding(obj).prev
+                << ", offNext = " << heap.objBinding(obj).next;
     }
 
-    dump_ic(clt, heap.objBinding(obj).next);
-
-    const TFieldIdxChain icHead = heap.objBinding(obj).head;
-    if (icHead.empty())
-        return;
-
-    cout << ", icHead = ";
-    dump_ic(clt, icHead);
+    const int offHead = heap.objBinding(obj).head;
+    if (offHead)
+        cout << ", icHead = " << offHead;
 }
 
 void dump_obj(const SymHeap &heap, TObjId obj) {
@@ -206,8 +179,8 @@ void dump_obj(const SymHeap &heap, TObjId obj) {
     const EObjKind kind = heap.objKind(obj);
     if (OK_DLS == kind) {
         cout << "    peer      = ";
-        const TFieldIdxChain icPeer = heap.objBinding(obj).peer;
-        const TObjId peerPtr = subObjByChain(heap, obj, icPeer);
+        const int offPeer = heap.objBinding(obj).prev;
+        const TObjId peerPtr = ptrObjByOffset(heap, obj, offPeer);
         const TValueId valPeer = heap.valueOf(peerPtr);
         if (0 < valPeer) {
             const TObjId peer = heap.pointsTo(valPeer);
@@ -234,8 +207,8 @@ void dump_obj(const SymHeap &heap, TObjId obj) {
 
     if (OK_CONCRETE != kind && OK_HEAD != kind && OK_PART != kind) {
         cout << "    next      = ";
-        const TFieldIdxChain icNext = heap.objBinding(obj).next;
-        const TObjId nextPtr = subObjByChain(heap, obj, icNext);
+        const int offNext = heap.objBinding(obj).next;
+        const TObjId nextPtr = ptrObjByOffset(heap, obj, offNext);
         const TValueId valNext = heap.valueOf(nextPtr);
         if (0 < valNext) {
             const TObjId next = heap.pointsTo(valNext);

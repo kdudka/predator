@@ -281,9 +281,9 @@ bool cmpAbstractObjects(
         return true;
 
     // compare binding fields
-    const SegBindingFields bf1 = sh1.objBinding(o1);
-    const SegBindingFields bf2 = sh2.objBinding(o2);
-    return (bf1 == bf2);
+    const BindingOff &off1 = sh1.objBinding(o1);
+    const BindingOff &off2 = sh2.objBinding(o2);
+    return (off1 == off2);
 }
 
 template <class TWorkList, class TMapping>

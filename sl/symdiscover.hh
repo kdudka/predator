@@ -26,7 +26,12 @@
  */
 
 #include "config.h"
-#include "symutil.hh"
+#include "symheap.hh"
+
+/// @todo some dox
+inline bool isDlsBinding(const BindingOff &off) {
+    return (off.next != off.prev);
+}
 
 /**
  * Take the given symbolic heap and look for the best possible abstraction in
@@ -45,7 +50,7 @@
  */
 unsigned /* len */ discoverBestAbstraction(
         const SymHeap           &sh,
-        SegBindingFields        *bf,
+        BindingOff              *bf,
         TObjId                  *entry);
 
 #endif /* H_GUARD_SYMDISCOVER_H */

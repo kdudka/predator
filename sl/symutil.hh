@@ -41,9 +41,6 @@ namespace CodeStorage {
     struct Var;
 }
 
-TObjId subObjByChain(const SymHeap &sh, TObjId obj, TFieldIdxChain ic);
-TObjId subObjByInvChain(const SymHeap &sh, TObjId obj, TFieldIdxChain ic);
-
 bool isHeapObject(const SymHeap &heap, TObjId obj);
 
 void digRootObject(const SymHeap &heap, TValueId *pValue);
@@ -85,6 +82,21 @@ inline bool objIsSeg(const SymHeap &sh, TObjId obj, bool anyPart = false) {
     return false;
 }
 
+// TODO: remove this as soon as we get the implicit aliasing working
+void valReplace(SymHeap &sh, const TValueId val, const TValueId by);
+
+inline bool areEqualAddrs(
+        const SymHeap               &sh,
+        const TValueId              v1,
+        const TValueId              v2)
+{
+    bool eq;
+    if (sh.proveEq(&eq, v1, v2))
+        return eq;
+    else
+        return false;
+}
+
 /// return offset of an object within another object;  -1 if not found
 inline int subOffsetIn(const SymHeapTyped &sh, TObjId in, TObjId of) {
     if (in == of)
@@ -105,13 +117,17 @@ inline int subOffsetIn(const SymHeapTyped &sh, TObjId in, TObjId of) {
         of = parent;
     }
 
-    return /* not found */ -1;
+    CL_BREAK_IF("invalid call of subOffsetIn() detected");
+    return /* not found */ 0;
 }
+
+TObjId ptrObjByOffset(const SymHeap &sh, TObjId obj, int off);
+TObjId compObjByOffset(const SymHeap &sh, TObjId obj, int off);
 
 void getPtrValues(SymHeapCore::TContValue &dst, const SymHeap &heap,
                   TObjId obj);
 
-void skipObj(const SymHeap &sh, TObjId *pObj, TFieldIdxChain icNext);
+void skipObj(const SymHeap &sh, TObjId *pObj, int offNext);
 
 void initVariable(SymHeap                       &sh,
                   TObjId                        obj,
@@ -184,6 +200,11 @@ bool /* complete */ traverseSubObjs(THeap &sh, TItem item, TVisitor &visitor,
     return true;
 }
 
+// only for compatibility with legacy code
+#if 1
+typedef std::vector<int /* nth */> TFieldIdxChain;
+TObjId subObjByChain(const SymHeap &sh, TObjId obj, TFieldIdxChain ic);
+
 #ifndef BUILDING_DOX
 template <class TItem>
 struct SubTraversalStackItem {
@@ -239,6 +260,7 @@ bool /* complete */ traverseSubObjsIc(THeap &sh, TItem item, TVisitor &visitor)
     // the traversal is done, without any interruption by visitor
     return true;
 }
+#endif
 
 void gatherPointingObjects(const SymHeap            &sh,
                            SymHeap::TContObj        &dst,

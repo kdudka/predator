@@ -48,9 +48,6 @@ bool haveSeg(const SymHeap &sh, TValueId atAddr, TValueId pointingTo,
  */
 bool haveDlSegAt(const SymHeap &sh, TValueId atAddr, TValueId peerAddr);
 
-TFieldIdxChain nextByHead(const SegBindingFields &bf);
-TFieldIdxChain peerByHead(const SegBindingFields &bf);
-
 /// return 'next' pointer of the given list segment as a heap object
 TObjId nextPtrFromSeg(const SymHeap &sh, TObjId seg);
 
@@ -93,8 +90,8 @@ void segDestroy(SymHeap &sh, TObjId seg);
  * @note this is mostly useful as soon as @b Linux @b lists are involved
  */
 inline TObjId segHead(const SymHeap &sh, TObjId seg) {
-    const TFieldIdxChain icHead = sh.objBinding(seg).head;
-    return subObjByChain(sh, seg, icHead);
+    const int offHead = sh.objBinding(seg).head;
+    return compObjByOffset(sh, seg, offHead);
 }
 
 /**
@@ -128,14 +125,14 @@ void buildIgnoreList(
 
         case OK_DLS:
             // preserve 'peer' field
-            tmp = subObjByChain(sh, obj, sh.objBinding(obj).peer);
+            tmp = ptrObjByOffset(sh, obj, sh.objBinding(obj).prev);
             ignoreList.insert(tmp);
             // fall through!
 
         case OK_SLS:
         case OK_MAY_EXIST:
             // preserve 'next' field
-            tmp = subObjByChain(sh, obj, sh.objBinding(obj).next);
+            tmp = ptrObjByOffset(sh, obj, sh.objBinding(obj).next);
             ignoreList.insert(tmp);
     }
 }
@@ -145,19 +142,15 @@ void buildIgnoreList(
         TIgnoreList             &ignoreList,
         const SymHeap           &sh,
         const TObjId            obj,
-        const SegBindingFields  &bf)
+        const BindingOff        &off)
 {
-    const TFieldIdxChain &icNext = bf.next;
-    if (!icNext.empty()) {
-        const TObjId next = subObjByChain(sh, obj, icNext);
+    const TObjId next = ptrObjByOffset(sh, obj, off.next);
+    if (OBJ_INVALID != next)
         ignoreList.insert(next);
-    }
 
-    const TFieldIdxChain &icPeer = bf.peer;
-    if (!icPeer.empty()) {
-        const TObjId peer = subObjByChain(sh, obj, icPeer);
-        ignoreList.insert(peer);
-    }
+    const TObjId prev = ptrObjByOffset(sh, obj, off.prev);
+    if (OBJ_INVALID != prev)
+        ignoreList.insert(prev);
 }
 
 /**

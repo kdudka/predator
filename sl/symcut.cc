@@ -175,7 +175,7 @@ TObjId addObjectIfNeeded(DeepCopyData &dc, TObjId objSrc) {
         case OK_MAY_EXIST:
         case OK_DLS:
         case OK_SLS: {
-            const SegBindingFields segBinding = src.objBinding(rootSrc);
+            const BindingOff &segBinding = src.objBinding(rootSrc);
             dst.objSetAbstract(rootDst, kind, segBinding);
         }
         // fall through!

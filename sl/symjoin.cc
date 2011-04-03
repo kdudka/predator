@@ -475,7 +475,7 @@ bool traverseSubObjs(
         const TObjId            root1,
         const TObjId            root2,
         const TObjId            rootDst,
-        const SegBindingFields  *bfBlackList = 0)
+        const BindingOff        *offBlackList = 0)
 {
     typedef boost::array<const SymHeap *, 3>        TSymHeapTriple;
 #ifndef NDEBUG
@@ -498,8 +498,8 @@ bool traverseSubObjs(
 
     // initialize visitor
     ObjJoinVisitor objVisitor(ctx);
-    if (bfBlackList)
-        buildIgnoreList(objVisitor.blackList, ctx.dst, rootDst, *bfBlackList);
+    if (offBlackList)
+        buildIgnoreList(objVisitor.blackList, ctx.dst, rootDst, *offBlackList);
 
     else if (ctx.joiningData()) {
         if (root1 == root2)
@@ -667,7 +667,7 @@ bool joinObjKind(
 }
 
 bool joinSegBinding(
-        SegBindingFields        *pBf,
+        BindingOff              *pOff,
         const SymJoinCtx        &ctx,
         const TObjId            o1,
         const TObjId            o2)
@@ -679,9 +679,9 @@ bool joinSegBinding(
         return true;
 
     if (isSeg1 && isSeg2) {
-        const SegBindingFields bf = ctx.sh1.objBinding(o1);
-        if (bf == ctx.sh2.objBinding(o2)) {
-            *pBf = bf;
+        const BindingOff off = ctx.sh1.objBinding(o1);
+        if (off == ctx.sh2.objBinding(o2)) {
+            *pOff = off;
             return true;
         }
 
@@ -690,12 +690,12 @@ bool joinSegBinding(
     }
 
     if (isSeg1) {
-        *pBf = ctx.sh1.objBinding(o1);
+        *pOff = ctx.sh1.objBinding(o1);
         return true;
     }
 
     if (isSeg2) {
-        *pBf = ctx.sh2.objBinding(o2);
+        *pOff = ctx.sh2.objBinding(o2);
         return true;
     }
 
@@ -758,32 +758,32 @@ bool joinProtoFlag(
     return false;
 }
 
-/// (NULL != bfMayExist) means 'create OK_MAY_EXIST'
+/// (NULL != offMayExist) means 'create OK_MAY_EXIST'
 bool createObject(
         SymJoinCtx              &ctx,
         const struct cl_type    *clt,
         const TObjId            root1,
         const TObjId            root2,
         const EJoinStatus       action,
-        const SegBindingFields  *bfMayExist = 0)
+        const BindingOff        *offMayExist = 0)
 {
     EObjKind kind;
     if (!joinObjKind(&kind, ctx, root1, root2, action))
         return false;
 
-    SegBindingFields bf;
-    if (!joinSegBinding(&bf, ctx, root1, root2))
+    BindingOff off;
+    if (!joinSegBinding(&off, ctx, root1, root2))
         return false;
 
     bool isProto;
     if (!joinProtoFlag(&isProto, ctx, root1, root2))
         return false;
 
-    if (bfMayExist) {
+    if (offMayExist) {
         // we are asked to introduce OK_MAY_EXIST
         CL_BREAK_IF(OK_CONCRETE != kind && OK_MAY_EXIST != kind);
         kind = OK_MAY_EXIST;
-        bf = *bfMayExist;
+        off = *offMayExist;
     }
 
     if (!updateJoinStatus(ctx, action))
@@ -795,7 +795,7 @@ bool createObject(
 
     if (OK_CONCRETE != kind) {
         // abstract object
-        ctx.dst.objSetAbstract(rootDst, kind, bf);
+        ctx.dst.objSetAbstract(rootDst, kind, off);
 
         // compute minimal length of the resulting segment
         const unsigned len1 = objMinLength(ctx.sh1, root1);
@@ -1077,25 +1077,25 @@ bool joinSegmentWithAny(
     return false;
 
 read_only_ok:
-    // SegBindingFields is assumed to be already matching at this point
-    SegBindingFields bf = (JS_USE_SH1 == action)
+    // BindingOff is assumed to be already matching at this point
+    BindingOff off = (JS_USE_SH1 == action)
         ? ctx.sh1.objBinding(root1)
         : ctx.sh2.objBinding(root2);
 
     TObjId peer1 = root1;
     if (OK_DLS == ctx.sh1.objKind(root1)) {
         peer1 = dlSegPeer(ctx.sh1, root1);
-        bf = ctx.sh1.objBinding(peer1);
+        off = ctx.sh1.objBinding(peer1);
     }
 
     TObjId peer2 = root2;
     if (OK_DLS == ctx.sh2.objKind(root2)) {
         peer2 = dlSegPeer(ctx.sh2, root2);
-        bf = ctx.sh2.objBinding(peer2);
+        off = ctx.sh2.objBinding(peer2);
     }
 
-    const TObjId next1 = subObjByChain(ctx.sh1, peer1, bf.next);
-    const TObjId next2 = subObjByChain(ctx.sh2, peer2, bf.next);
+    const TObjId next1 = ptrObjByOffset(ctx.sh1, peer1, off.next);
+    const TObjId next2 = ptrObjByOffset(ctx.sh2, peer2, off.next);
 
     const TValueId valNext1 = ctx.sh1.valueOf(next1);
     const TValueId valNext2 = ctx.sh2.valueOf(next2);
@@ -1115,14 +1115,14 @@ read_only_ok:
     return true;
 }
 
-/// (NULL != bf) means 'introduce OK_MAY_EXIST'
+/// (NULL != off) means 'introduce OK_MAY_EXIST'
 bool segmentCloneCore(
         SymJoinCtx                  &ctx,
         const SymHeap               &shGt,
         const TValueId              valGt,
         const SymJoinCtx::TObjMap   &objMapGt,
         const EJoinStatus           action,
-        const SegBindingFields      *bf)
+        const BindingOff            *off)
 {
     const TObjId objGt = objRootByVal(shGt, valGt);
     if (objGt < 0)
@@ -1147,7 +1147,7 @@ bool segmentCloneCore(
 
     // clone the object
     ctx.tieBreaking.insert(TObjPair(root1, root2));
-    if (createObject(ctx, clt, root1, root2, action, bf))
+    if (createObject(ctx, clt, root1, root2, action, off))
         return true;
 
     SJ_DEBUG("<-- insertSegmentClone: failed to create object "
@@ -1293,14 +1293,14 @@ bool handleUnknownValues(
     return unknownValueFallBack(ctx, v1, v2, vDst);
 }
 
-/// (NULL != bf) means 'introduce OK_MAY_EXIST'
+/// (NULL != off) means 'introduce OK_MAY_EXIST'
 bool insertSegmentClone(
         bool                    *pResult,
         SymJoinCtx              &ctx,
         const TValueId          v1,
         const TValueId          v2,
         const EJoinStatus       action,
-        const SegBindingFields  *bf = 0)
+        const BindingOff        *off = 0)
 {
     SJ_DEBUG(">>> insertSegmentClone" << SJ_VALP(v1, v2));
     if (!ctx.joiningData())
@@ -1320,8 +1320,8 @@ bool insertSegmentClone(
         peer = dlSegPeer(shGt, seg);
 
     // resolve the 'next' pointer and check its validity
-    const TObjId nextPtr = (bf)
-        ? subObjByChain(shGt, seg, bf->next)
+    const TObjId nextPtr = (off)
+        ? ptrObjByOffset(shGt, seg, off->next)
         : nextPtrFromSeg(shGt, peer);
 
     const TValueId nextGt = shGt.valueOf(nextPtr);
@@ -1359,7 +1359,7 @@ bool insertSegmentClone(
 
         if (segGtAt != valGt)
             // OK_MAY_EXIST is applicable only on the first object
-            bf = 0;
+            off = 0;
 
         const EUnknownValue code = shGt.valGetUnknown(valGt);
         switch (code) {
@@ -1376,7 +1376,7 @@ bool insertSegmentClone(
             }
 
             default:
-                if (segmentCloneCore(ctx, shGt, valGt, objMapGt, action, bf))
+                if (segmentCloneCore(ctx, shGt, valGt, objMapGt, action, off))
                     continue;
                 else
                     break;
@@ -1431,28 +1431,31 @@ class MayExistVisitor {
         SymJoinCtx              ctx_;
         const EJoinStatus       action_;
         const TValueId          valRef_;
-        TFieldIdxChain          icNext_;
+        const TObjId            root_;
+        int                     offNext_;
 
     public:
         MayExistVisitor(
                 SymJoinCtx          &ctx,
                 const EJoinStatus   action,
-                const TValueId      valRef):
+                const TValueId      valRef,
+                const TObjId        root):
             ctx_(ctx),
             action_(action),
-            valRef_(valRef)
+            valRef_(valRef),
+            root_(root),
+            offNext_(0)
         {
             CL_BREAK_IF(JS_USE_SH1 != action && JS_USE_SH2 != action);
         }
 
-        TFieldIdxChain icNext() const {
-            return icNext_;
+        int offNext() const {
+            return offNext_;
         }
 
         bool operator()(
                 const SymHeap   &sh,
-                const TObjId    sub,
-                TFieldIdxChain  ic)
+                const TObjId    sub)
         {
             const TValueId val = sh.valueOf(sub);
             const TValueId v1 = (JS_USE_SH1 == action_) ? val : valRef_;
@@ -1460,7 +1463,7 @@ class MayExistVisitor {
             if (!followValuePair(ctx_, v1, v2, /* read-only */ true))
                 return /* continue */ true;
 
-            icNext_ = ic;
+            offNext_ = subOffsetIn(sh, root_, sub);
             return /* continue */ false;
         }
 };
@@ -1468,23 +1471,28 @@ class MayExistVisitor {
 class SubAddrFinder {
     private:
         const TValueId subAddr_;
-        TFieldIdxChain result_;
+        const TObjId   root_;
+        int            result_;
 
     public:
-        SubAddrFinder(const TValueId subAddr): subAddr_(subAddr) { }
+        SubAddrFinder(const TValueId subAddr, const TObjId root):
+            subAddr_(subAddr),
+            root_(root),
+            result_(0)
+        {
+        }
 
-        TFieldIdxChain result() const { return result_; }
+        int result() const { return result_; }
 
         bool operator()(
                 const SymHeap   &sh,
-                const TObjId    sub,
-                TFieldIdxChain  ic)
+                const TObjId    sub)
         {
             if (subAddr_ != sh.placedAt(sub))
                 return /* continue */ true;
 
             // found!
-            result_ = ic;
+            result_ = subOffsetIn(sh, root_, sub);
             return false;
         }
 };
@@ -1517,14 +1525,15 @@ bool mayExistFallback(
         return false;
 
     const TValueId ref = (use2) ? v1 : v2;
-    MayExistVisitor visitor(ctx, action, ref);
-    if (traverseSubObjsIc(sh, target, visitor))
+    MayExistVisitor visitor(ctx, action, ref, /* root */ target);
+    if (traverseSubObjs(sh, target, visitor, /* leavesOnly */ true))
         // no match
         return false;
 
     // dig head
-    SubAddrFinder headFinder(val);
-    if (val != sh.placedAt(target) && traverseSubObjsIc(sh, target, headFinder))
+    SubAddrFinder headFinder(val, target);
+    if (headFinder(sh, target)
+            && traverseSubObjs(sh, target, headFinder, /* leavesOnly */ false))
     {
         CL_BREAK_IF("MayExistVisitor malfunction");
         return false;
@@ -1534,12 +1543,12 @@ bool mayExistFallback(
     if (!updateJoinStatus(ctx, JS_THREE_WAY))
         return false;
 
-    SegBindingFields bf;
-    bf.head = headFinder.result();
-    bf.next = visitor.icNext();
+    BindingOff off;
+    off.head = headFinder.result();
+    off.next = visitor.offNext();
     bool result = false;
 
-    const bool ok = insertSegmentClone(&result, ctx, v1, v2, action, &bf);
+    const bool ok = insertSegmentClone(&result, ctx, v1, v2, action, &off);
     CL_BREAK_IF(!ok);
     (void) ok;
 
@@ -2079,7 +2088,7 @@ bool dlSegCheckProtoConsistency(const SymJoinCtx &ctx) {
 
 bool joinDataCore(
         SymJoinCtx              &ctx,
-        const SegBindingFields  &bf,
+        const BindingOff        &off,
         const TObjId            o1,
         const TObjId            o2)
 {
@@ -2094,7 +2103,7 @@ bool joinDataCore(
 
     // start with the given pair of objects and create a ghost object for them
     const TObjId rootDst = ctx.dst.objCreate(clt);
-    if (!traverseSubObjs(ctx, o1, o2, rootDst, &bf))
+    if (!traverseSubObjs(ctx, o1, o2, rootDst, &off))
         return false;
 
     // never step over DLS peer
@@ -2115,7 +2124,7 @@ bool joinDataCore(
 
     // batch assignment of all values in ctx.dst
     std::set<TObjId> blackList;
-    buildIgnoreList(blackList, ctx.dst, rootDst, bf);
+    buildIgnoreList(blackList, ctx.dst, rootDst, off);
     if (!setDstValues(ctx, &blackList))
         return false;
 
@@ -2133,7 +2142,7 @@ bool joinDataCore(
 bool joinDataReadOnly(
         EJoinStatus             *pStatus,
         const SymHeap           &sh,
-        const SegBindingFields  &bf,
+        const BindingOff        &off,
         const TObjId            o1,
         const TObjId            o2,
         SymHeap::TContObj       protoRoots[1][2])
@@ -2142,7 +2151,7 @@ bool joinDataReadOnly(
     // go through the commont part of joinData()/joinDataReadOnly()
     SymHeap tmp;
     SymJoinCtx ctx(tmp, sh);
-    if (!joinDataCore(ctx, bf, o1, o2))
+    if (!joinDataCore(ctx, off, o1, o2))
         return false;
 
     unsigned cntProto1 = 0;
@@ -2339,17 +2348,17 @@ bool joinData(
 
     // dst is expected to be a segment
     CL_BREAK_IF(!objIsSeg(sh, dst));
-    const SegBindingFields bf(sh.objBinding(dst));
+    const BindingOff off(sh.objBinding(dst));
     if (debugSymJoin) {
         EJoinStatus status = JS_USE_ANY;
-        joinDataReadOnly(&status, sh, bf, dst, src, 0);
+        joinDataReadOnly(&status, sh, off, dst, src, 0);
         if (JS_USE_ANY != status)
             debugPlot(sh, "joinData", dst, src, "00");
     }
 
     // go through the commont part of joinData()/joinDataReadOnly()
     SymJoinCtx ctx(sh);
-    if (!joinDataCore(ctx, bf, dst, src))
+    if (!joinDataCore(ctx, off, dst, src))
         // TODO: collect the already created dangling objects and return
         //       the heap in a more consistent shape!
         return false;

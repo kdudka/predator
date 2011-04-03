@@ -198,7 +198,7 @@ class SymHeapCore {
          * of known value
          * @todo rename SymHeapCore::valGetUnknown
          */
-        EUnknownValue valGetUnknown(TValueId val) const;
+        virtual EUnknownValue valGetUnknown(TValueId val) const;
 
 
         /// duplicate the given @b unknown @b value
@@ -633,29 +633,29 @@ enum EObjKind {
     OK_PART                 ///< part of a segment (sub-object)
 };
 
-typedef std::vector<int /* nth */> TFieldIdxChain;
+struct BindingOff {
+    int head;               ///< target offset
+    int next;               ///< offset of the 'next' or 'r' pointer
+    int prev;               ///< offset of the 'prev' or 'l' pointer
 
-struct SegBindingFields {
-    /// position of the head sub-object (used by Linux lists)
-    TFieldIdxChain head;
-
-    /// pointer to next (used by SLS and DLS)
-    TFieldIdxChain next;
-
-    /// pointer to peer (used by DLS only)
-    TFieldIdxChain peer;
+    BindingOff():
+        head(0),
+        next(0),
+        prev(0)
+    {
+    }
 };
 
-inline bool operator==(const SegBindingFields &bf1, const SegBindingFields &bf2)
+inline bool operator==(const BindingOff &off1, const BindingOff &off2)
 {
-    return bf1.head == bf2.head
-        && bf1.next == bf2.next
-        && bf1.peer == bf2.peer;
+    return off1.head == off2.head
+        && off1.next == off2.next
+        && off1.prev == off2.prev;
 }
 
-inline bool operator!=(const SegBindingFields &bf1, const SegBindingFields &bf2)
+inline bool operator!=(const BindingOff &off1, const BindingOff &off2)
 {
-    return !operator==(bf1, bf2);
+    return !operator==(off1, off2);
 }
 
 class SymHeap: public SymHeapTyped {
@@ -676,6 +676,7 @@ class SymHeap: public SymHeapTyped {
 
     public:
         virtual TObjId objDup(TObjId obj);
+        virtual EUnknownValue valGetUnknown(TValueId val) const;
 
     public:
         /**
@@ -683,27 +684,10 @@ class SymHeap: public SymHeapTyped {
          * SLS, DLS, and the like.
          */
         EObjKind objKind(TObjId obj) const;
-
-        /**
-         * return the binding fields for the given @b abstract object
-         */
-        const SegBindingFields& objBinding(TObjId obj) const;
+        const BindingOff& objBinding(TObjId obj) const;
 
     public:
-        /**
-         * convert the given @b concrete object to an abstract object.  If you
-         * need to create higher level abstract object, just call this method
-         * more times, but always on the root object, which should be a concrete
-         * object.
-         */
-        void objSetAbstract(TObjId obj, EObjKind kind,
-                            const SegBindingFields &binding);
-
-        /**
-         * convert the given @b abstract object to a concrete object.  If
-         * the given object is a regular SLS/DLS object, it results to a
-         * concrete object.  Otherwise, the abstraction level is just decreased.
-         */
+        void objSetAbstract(TObjId obj, EObjKind kind, const BindingOff &off);
         void objSetConcrete(TObjId obj);
 
     public:

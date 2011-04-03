@@ -401,10 +401,10 @@ void clonePrototypes(SymHeap &sh, TObjId obj, TObjId dup) {
     redirectInboundEdges(sh, dup, obj, dup);
 }
 
-void slSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf)
+void slSegAbstractionStep(SymHeap &sh, TObjId *pObj, const BindingOff &off)
 {
     const TObjId obj = *pObj;
-    const TObjId objPtrNext = subObjByChain(sh, obj, bf.next);
+    const TObjId objPtrNext = ptrObjByOffset(sh, obj, off.next);
     const TValueId valNext = sh.valueOf(objPtrNext);
     CL_BREAK_IF(valNext <= 0);
 
@@ -420,16 +420,16 @@ void slSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf)
         segSetMinLength(sh, objNext, /* SLS 0+ */ 0);
     else
         // abstract the _next_ object
-        sh.objSetAbstract(objNext, OK_SLS, bf);
+        sh.objSetAbstract(objNext, OK_SLS, off);
 
     // merge data
     CL_BREAK_IF(OK_SLS != sh.objKind(objNext));
     abstractNonMatchingValues(sh, obj, objNext);
 
     // replace all references to 'head'
-    const TFieldIdxChain icHead = sh.objBinding(objNext).head;
-    const TValueId headAt = sh.placedAt(subObjByChain(sh, obj, icHead));
-    sh.valReplace(headAt, segHeadAddr(sh, objNext));
+    const int offHead = sh.objBinding(objNext).head;
+    const TValueId headAt = sh.placedAt(compObjByOffset(sh, obj, offHead));
+    valReplace(sh, headAt, segHeadAddr(sh, objNext));
 
     // destroy self, including all prototypes
     REQUIRE_GC_ACTIVITY(sh, headAt, slSegAbstractionStep);
@@ -457,7 +457,7 @@ void enlargeMayExist(SymHeap &sh, const TObjId obj) {
     }
 }
 
-void dlSegCreate(SymHeap &sh, TObjId o1, TObjId o2, SegBindingFields bf) {
+void dlSegCreate(SymHeap &sh, TObjId o1, TObjId o2, BindingOff off) {
     // compute resulting segment's length
     const unsigned len =
         objMinLength(sh, o1) +
@@ -467,11 +467,11 @@ void dlSegCreate(SymHeap &sh, TObjId o1, TObjId o2, SegBindingFields bf) {
     enlargeMayExist(sh, o1);
     enlargeMayExist(sh, o2);
 
-    swapValues(bf.next, bf.peer);
-    sh.objSetAbstract(o1, OK_DLS, bf);
+    swapValues(off.next, off.prev);
+    sh.objSetAbstract(o1, OK_DLS, off);
 
-    swapValues(bf.next, bf.peer);
-    sh.objSetAbstract(o2, OK_DLS, bf);
+    swapValues(off.next, off.prev);
+    sh.objSetAbstract(o2, OK_DLS, off);
 
     // introduce some UV_UNKNOWN values if necessary
     abstractNonMatchingValues(sh, o1, o2, /* bidir */ true);
@@ -498,15 +498,15 @@ void dlSegGobble(SymHeap &sh, TObjId dls, TObjId var, bool backward) {
     abstractNonMatchingValues(sh, var, dls);
 
     // store the pointer DLS -> VAR
-    const SegBindingFields &bf = sh.objBinding(dls);
-    const TObjId dlsNextPtr = subObjByChain(sh, dls, bf.next);
-    const TObjId varNextPtr = subObjByChain(sh, var, bf.next);
+    const BindingOff &off = sh.objBinding(dls);
+    const TObjId dlsNextPtr = ptrObjByOffset(sh, dls, off.next);
+    const TObjId varNextPtr = ptrObjByOffset(sh, var, off.next);
     sh.objSetValue(dlsNextPtr, sh.valueOf(varNextPtr));
 
     // replace VAR by DLS
-    const TObjId varHead = subObjByChain(sh, var, bf.head);
+    const TObjId varHead = compObjByOffset(sh, var, off.head);
     const TValueId headAt = sh.placedAt(varHead);
-    sh.valReplace(headAt, segHeadAddr(sh, dls));
+    valReplace(sh, headAt, segHeadAddr(sh, dls));
     REQUIRE_GC_ACTIVITY(sh, headAt, dlSegGobble);
 
     // handle DLS Neq predicates
@@ -544,8 +544,8 @@ void dlSegMerge(SymHeap &sh, TObjId seg1, TObjId seg2) {
     const TValueId  segAt = segHeadAddr(sh,  seg1);
     const TValueId peerAt = segHeadAddr(sh, peer1);
 
-    sh.valReplace( segAt, segHeadAddr(sh,  seg2));
-    sh.valReplace(peerAt, segHeadAddr(sh, peer2));
+    valReplace(sh,  segAt, segHeadAddr(sh,  seg2));
+    valReplace(sh, peerAt, segHeadAddr(sh, peer2));
 
     // destroy segAt and peerAt, including all prototypes -- either at once, or
     // one by one (depending on the shape of subgraph)
@@ -563,7 +563,7 @@ void dlSegMerge(SymHeap &sh, TObjId seg1, TObjId seg2) {
     dlSegSyncPeerData(sh, seg2);
 }
 
-void dlSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf)
+void dlSegAbstractionStep(SymHeap &sh, TObjId *pObj, const BindingOff &off)
 {
     // the first object is clear
     const TObjId o1 = *pObj;
@@ -598,10 +598,10 @@ void dlSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf)
         case OK_MAY_EXIST:
         case OK_CONCRETE:
             // jump to the next object (as we know such an object exists)
-            skipObj(sh, &o2, bf.next);
+            skipObj(sh, &o2, off.next);
             if (OK_DLS != sh.objKind(o2)) {
                 // VAR + VAR
-                dlSegCreate(sh, o1, o2, bf);
+                dlSegCreate(sh, o1, o2, off);
                 return;
             }
 
@@ -619,28 +619,30 @@ void dlSegAbstractionStep(SymHeap &sh, TObjId *pObj, const SegBindingFields &bf)
 #endif
 }
 
-void segAbstractionStep(SymHeap                     &sh,
-                        const SegBindingFields      &bf,
-                        TObjId                      *pObj)
+void segAbstractionStep(
+        SymHeap                     &sh,
+        const BindingOff            &off,
+        TObjId                      *pObj)
 {
-    if (bf.peer.empty()) {
-        // SLS
-        slSegAbstractionStep(sh, pObj, bf);
+    if (isDlsBinding(off)) {
+        // DLS
+        CL_BREAK_IF(!dlSegCheckConsistency(sh));
+        dlSegAbstractionStep(sh, pObj, off);
+        CL_BREAK_IF(!dlSegCheckConsistency(sh));
         return;
     }
 
-    // DLS
-    CL_BREAK_IF(!dlSegCheckConsistency(sh));
-    dlSegAbstractionStep(sh, pObj, bf);
-    CL_BREAK_IF(!dlSegCheckConsistency(sh));
+    // SLS
+    slSegAbstractionStep(sh, pObj, off);
 }
 
-bool considerAbstraction(SymHeap                    &sh,
-                         const SegBindingFields     &bf,
-                         const TObjId               entry,
-                         const unsigned             lenTotal)
+bool considerAbstraction(
+        SymHeap                     &sh,
+        const BindingOff            &off,
+        const TObjId                entry,
+        const unsigned              lenTotal)
 {
-    const bool isSls = bf.peer.empty();
+    const bool isSls = !isDlsBinding(off);
     const AbstractionThreshold &at = (isSls)
         ? slsThreshold
         : dlsThreshold;
@@ -664,7 +666,7 @@ bool considerAbstraction(SymHeap                    &sh,
     // handle sparePrefix/spareSuffix
     int len = lenTotal - at.sparePrefix - at.spareSuffix;
     for (unsigned i = 0; i < at.sparePrefix; ++i)
-        skipObj(sh, &obj, bf.next);
+        skipObj(sh, &obj, off.next);
 
     const char *name = (isSls)
         ? "SLS"
@@ -676,7 +678,7 @@ bool considerAbstraction(SymHeap                    &sh,
     debugPlot(sh);
 
     for (int i = 0; i < len; ++i) {
-        segAbstractionStep(sh, bf, &obj);
+        segAbstractionStep(sh, off, &obj);
         debugPlot(sh);
     }
 
@@ -687,7 +689,7 @@ bool considerAbstraction(SymHeap                    &sh,
 void segReplaceRefs(SymHeap &sh, TObjId seg, TValueId valNext) {
     const TObjId head = segHead(sh, seg);
     const TValueId segAt = sh.placedAt(head);
-    sh.valReplace(segAt, valNext);
+    valReplace(sh, segAt, valNext);
 
     const int offHead = subOffsetIn(sh, seg, head);
     CL_BREAK_IF(offHead < 0);
@@ -732,8 +734,8 @@ bool dlSegReplaceByConcrete(SymHeap &sh, TObjId obj, TObjId peer) {
     dlSegSetMinLength(sh, obj, /* DLS 0+ */ 0);
 
     // take the value of 'next' pointer from peer
-    const TFieldIdxChain icPeer = sh.objBinding(obj).peer;
-    const TObjId peerPtr = subObjByChain(sh, obj, icPeer);
+    const int offPeer = sh.objBinding(obj).prev;
+    const TObjId peerPtr = ptrObjByOffset(sh, obj, offPeer);
     const TValueId valNext = sh.valueOf(nextPtrFromSeg(sh, peer));
     sh.objSetValue(peerPtr, valNext);
 
@@ -815,12 +817,12 @@ void abstractIfNeeded(SymHeap &sh) {
 #if SE_DISABLE_SLS && SE_DISABLE_DLS
     return;
 #endif
-    SegBindingFields    bf;
+    BindingOff          off;
     TObjId              entry;
     unsigned            len;
 
-    while ((len = discoverBestAbstraction(sh, &bf, &entry))) {
-        if (!considerAbstraction(sh, bf, entry, len))
+    while ((len = discoverBestAbstraction(sh, &off, &entry))) {
+        if (!considerAbstraction(sh, off, entry, len))
             // the best abstraction given is unfortunately not good enough
             break;
 
@@ -830,10 +832,7 @@ void abstractIfNeeded(SymHeap &sh) {
 }
 
 void concretizeObj(SymHeap &sh, TValueId addr, TSymHeapList &todo) {
-    TObjId obj = sh.pointsTo(addr);
-    if (OK_HEAD == sh.objKind(obj))
-        obj = objRoot(sh, obj);
-
+    TObjId obj = objRootByVal(sh, addr);
     TObjId peer = obj;
 
     // branch by SLS/DLS
@@ -874,8 +873,8 @@ void concretizeObj(SymHeap &sh, TValueId addr, TSymHeapList &todo) {
     const TValueId aoDupHeadAddr = segHeadAddr(sh, aoDup);
     if (OK_DLS == kind) {
         // DLS relink
-        const TFieldIdxChain icPeer = sh.objBinding(peer).peer;
-        const TObjId peerField = subObjByChain(sh, peer, icPeer);
+        const int offPeer = sh.objBinding(peer).prev;
+        const TObjId peerField = ptrObjByOffset(sh, peer, offPeer);
         sh.objSetValue(peerField, aoDupHeadAddr);
     }
 
@@ -883,17 +882,19 @@ void concretizeObj(SymHeap &sh, TValueId addr, TSymHeapList &todo) {
     clonePrototypes(sh, obj, aoDup);
 
     // concretize self and recover the list
-    const TObjId ptrNext = subObjByChain(sh, obj, (OK_SLS == kind)
+    const TObjId ptrNext = ptrObjByOffset(sh, obj, (OK_SLS == kind)
             ? sh.objBinding(obj).next
-            : sh.objBinding(obj).peer);
+            : sh.objBinding(obj).prev);
     sh.objSetConcrete(obj);
     sh.objSetValue(ptrNext, aoDupHeadAddr);
 
     if (OK_DLS == kind) {
         // update DLS back-link
-        const SegBindingFields &bf = sh.objBinding(aoDup);
-        const TObjId backLink = subObjByChain(sh, aoDup, bf.next);
-        const TValueId headAddr = sh.placedAt(subObjByChain(sh, obj, bf.head));
+        const BindingOff &off = sh.objBinding(aoDup);
+        const TObjId backLink = ptrObjByOffset(sh, aoDup, off.next);
+        const TValueId headAddr = sh.placedAt(
+                compObjByOffset(sh, obj, off.head));
+
         sh.objSetValue(backLink, headAddr);
         CL_BREAK_IF(!dlSegCheckConsistency(sh));
     }

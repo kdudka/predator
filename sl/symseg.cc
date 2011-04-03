@@ -35,15 +35,15 @@ TObjId nextPtrFromSeg(const SymHeap &sh, TObjId seg) {
     // validate call of nextPtrFromSeg()
     CL_BREAK_IF(OK_CONCRETE == sh.objKind(seg));
 
-    const TFieldIdxChain icNext = sh.objBinding(seg).next;
-    return subObjByChain(sh, seg, icNext);
+    const int offNext = sh.objBinding(seg).next;
+    return ptrObjByOffset(sh, seg, offNext);
 }
 
 TObjId peerPtrFromSeg(const SymHeap &sh, TObjId seg) {
     CL_BREAK_IF(OK_DLS != sh.objKind(seg));
 
-    const TFieldIdxChain icPeer = sh.objBinding(seg).peer;
-    return subObjByChain(sh, seg, icPeer);
+    const int offPeer = sh.objBinding(seg).prev;
+    return ptrObjByOffset(sh, seg, offPeer);
 }
 
 TObjId dlSegPeer(const SymHeap &sh, TObjId dls) {
@@ -52,8 +52,8 @@ TObjId dlSegPeer(const SymHeap &sh, TObjId dls) {
     CL_BREAK_IF(OK_DLS != sh.objKind(root));
 
     TObjId peer = root;
-    const SegBindingFields &bf = sh.objBinding(dls);
-    skipObj(sh, &peer, bf.peer);
+    const BindingOff &off = sh.objBinding(dls);
+    skipObj(sh, &peer, off.prev);
     return peer;
 }
 
@@ -294,12 +294,12 @@ TObjId segClone(SymHeap &sh, const TObjId seg) {
         const TObjId dupPeer = sh.objDup(peer);
 
         // dig the 'peer' selectors of the cloned objects
-        const TFieldIdxChain icpSeg  = sh.objBinding(dupSeg).peer;
-        const TFieldIdxChain icpPeer = sh.objBinding(dupPeer).peer;
+        const int offpSeg  = sh.objBinding(dupSeg).prev;
+        const int offpPeer = sh.objBinding(dupPeer).prev;
 
         // resolve selectors -> sub-objects
-        const TObjId ppSeg  = subObjByChain(sh, dupSeg , icpSeg);
-        const TObjId ppPeer = subObjByChain(sh, dupPeer, icpPeer);
+        const TObjId ppSeg  = ptrObjByOffset(sh, dupSeg , offpSeg);
+        const TObjId ppPeer = ptrObjByOffset(sh, dupPeer, offpPeer);
 
         // now cross the 'peer' pointers
         sh.objSetValue(ppSeg, segHeadAddr(sh, dupPeer));

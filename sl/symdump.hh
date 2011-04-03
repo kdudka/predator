@@ -48,9 +48,6 @@ void dump_clt(const struct cl_type *clt, unsigned depth);
 /// dump a chain of @b accessors
 void dump_ac(const struct cl_accessor *ac);
 
-/// dump a chain of @b selectors
-void dump_ic(const struct cl_type *clt, TFieldIdxChain ic);
-
 /// dump @b kind of the given object
 void dump_kind(const SymHeap &heap, TObjId obj);
 

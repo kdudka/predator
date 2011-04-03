@@ -52,7 +52,7 @@ inline std::ostream& operator<<(std::ostream &str, const EJoinStatus status) {
 bool joinDataReadOnly(
         EJoinStatus             *pStatus,
         const SymHeap           &sh,
-        const SegBindingFields  &bf,
+        const BindingOff        &bf,
         const TObjId            o1,
         const TObjId            o2,
         SymHeap::TContObj       protoRoots[1][2]);
