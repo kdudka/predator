@@ -62,13 +62,12 @@ class AliasDb {
         typedef std::set<TValueId>              TSet;
         typedef std::map<TValueId, TSet *>      TMap;
         TMap            cont_;
-        const TSet      empty_;
 
     public:
         typedef TSet                            TLine;
 
     public:
-        AliasDb(): empty_() { }
+        AliasDb() { }
         AliasDb(const AliasDb &ref) {
             this->operator=(ref);
         }
@@ -99,6 +98,9 @@ class AliasDb {
         }
 
         bool lookup(TValueId v1, TValueId v2) const {
+            if (v1 == v2)
+                return true;
+
             TMap::const_iterator iter = cont_.find(v1);
             if (cont_.end() == iter)
                 return false;
@@ -106,10 +108,13 @@ class AliasDb {
                 return hasKey(iter->second, v2);
         }
 
-        const TLine& getByValue(TValueId val) const {
+        TLine getByValue(TValueId val) const {
             TMap::const_iterator iter = cont_.find(val);
-            if (cont_.end() == iter)
-                return empty_;
+            if (cont_.end() == iter) {
+                TLine singleton;
+                singleton.insert(val);
+                return singleton;
+            }
             else
                 return *iter->second;
         }
@@ -345,6 +350,8 @@ void EqIfDb::gatherRelatedValues(TDst2 &dst, TValueId val) const {
 }
 
 void AliasDb::add(TValueId v1, TValueId v2) {
+    CL_BREAK_IF(v1 <= 0 || v2 <= 0);
+
     // first look for existing aliases
     TMap::iterator i1 = cont_.find(v1);
     TMap::iterator i2 = cont_.find(v2);
@@ -424,7 +431,54 @@ struct SymHeapCore::Private {
     void valueDestructor(TValueId value);
     void releaseValueOf(TObjId obj);
     TObjId acquireObj();
+
+    // FIXME: suboptimal design, we need to implement the implicit aliasing ASAP
+    void valSeekLowestAlias(TValueId *);
+    template <typename TMethod> bool neqOpWrap(TMethod, TValueId, TValueId);
 };
+
+void SymHeapCore::Private::valSeekLowestAlias(TValueId *pVal) {
+#ifndef NDEBUG
+    // check for creation of illegal Neq predicates
+    switch (*pVal) {
+        case VAL_FALSE:
+        case VAL_TRUE:
+            break;
+
+        default:
+            CL_BREAK_IF(*pVal < 0);
+    }
+#endif
+
+    const AliasDb::TLine aliases = this->aliasDb.getByValue(*pVal);
+    BOOST_FOREACH(const TValueId valAlias, aliases) {
+        if (valAlias < *pVal)
+            *pVal = valAlias;
+    }
+}
+
+template <typename TMethod>
+bool SymHeapCore::Private::neqOpWrap(
+        TMethod         op,
+        TValueId        v1,
+        TValueId        v2)
+{
+    this->valSeekLowestAlias(&v1);
+    this->valSeekLowestAlias(&v2);
+    return (this->neqDb.*op)(v1, v2);
+}
+
+template </* a method returning void */>
+bool SymHeapCore::Private::neqOpWrap<void (NeqDb::*)(TValueId, TValueId)>(
+        void (NeqDb::*op)(TValueId, TValueId),
+        TValueId        v1,
+        TValueId        v2)
+{
+    this->valSeekLowestAlias(&v1);
+    this->valSeekLowestAlias(&v2);
+    (this->neqDb.*op)(v1, v2);
+    return true;
+}
 
 void SymHeapCore::Private::valueDestructor(TValueId val) {
 #if DEBUG_UNUSED_VALUES
@@ -544,8 +598,12 @@ void SymHeapCore::usedBy(TContObj &dst, TValueId val) const {
         // value ID is either out of range, or does not point to a valid obj
         return;
 
-    const Private::Value::TUsedBy &usedBy = d->values[val].usedBy;
-    std::copy(usedBy.begin(), usedBy.end(), std::back_inserter(dst));
+    TContValue aliases;
+    this->gatherValAliasing(aliases, val);
+    BOOST_FOREACH(const TValueId valAlias, aliases) {
+        const Private::Value::TUsedBy &usedBy = d->values[valAlias].usedBy;
+        std::copy(usedBy.begin(), usedBy.end(), std::back_inserter(dst));
+    }
 }
 
 /// return how many objects use the value
@@ -554,7 +612,15 @@ unsigned SymHeapCore::usedByCount(TValueId val) const {
         // value ID is either out of range, or does not point to a valid obj
         return 0; // means: "not used"
 
-    return d->values[val].usedBy.size();
+    unsigned cnt = 0;
+    TContValue aliases;
+    this->gatherValAliasing(aliases, val);
+    BOOST_FOREACH(const TValueId valAlias, aliases) {
+        const Private::Value::TUsedBy &usedBy = d->values[valAlias].usedBy;
+        cnt += usedBy.size();
+    }
+
+    return cnt;
 }
 
 TObjId SymHeapCore::objDup(TObjId objOrigin) {
@@ -670,8 +736,7 @@ void SymHeapCore::pack() {
     const unsigned cnt = d->values.size();
     for (unsigned i = 1; i < cnt; ++i) {
         const TValueId val = static_cast<TValueId>(i);
-        const Private::Value &ref = d->values[val];
-        if (!ref.usedBy.empty())
+        if (this->usedByCount(val))
             // value used, keep going...
             continue;
 
@@ -754,8 +819,8 @@ void SymHeapCore::valReplace(TValueId val, TValueId newVal) {
     TContValue neqs;
     d->neqDb.gatherRelatedValues(neqs, val);
     BOOST_FOREACH(const TValueId neq, neqs) {
-        d->neqDb.del(val, neq);
-        d->neqDb.add(newVal, neq);
+        d->neqOpWrap(&NeqDb::del, val, neq);
+        d->neqOpWrap(&NeqDb::add, newVal, neq);
     }
 #ifndef NDEBUG
     // make sure we didn't create any dangling predicates
@@ -798,7 +863,7 @@ void SymHeapCore::valReplaceUnknown(TValueId val, TValueId replaceBy) {
 
 #ifndef NDEBUG
         // ensure there hasn't been any inequality defined among the pair
-        if (d->neqDb.areNeq(val, replaceBy)) {
+        if (d->neqOpWrap(&NeqDb::areNeq, val, replaceBy)) {
             CL_ERROR("inconsistency detected among values #" << val
                     << " and #" << replaceBy);
             CL_TRAP;
@@ -885,7 +950,7 @@ void SymHeapCore::gatherOffValues(TOffValCont &dst, TValueId ref) const {
 }
 
 void SymHeapCore::gatherValAliasing(TContValue &dst, TValueId ref) const {
-    const AliasDb::TLine &line = d->aliasDb.getByValue(ref);
+    const AliasDb::TLine line = d->aliasDb.getByValue(ref);
     std::copy(line.begin(), line.end(), std::back_inserter(dst));
 }
 
@@ -895,17 +960,17 @@ void SymHeapCore::neqOp(ENeqOp op, TValueId valA, TValueId valB) {
             return;
 
         case NEQ_ADD:
-            d->neqDb.add(valA, valB);
+            d->neqOpWrap(&NeqDb::add, valA, valB);
             return;
 
         case NEQ_DEL:
-            d->neqDb.del(valA, valB);
+            d->neqOpWrap(&NeqDb::del, valA, valB);
             return;
     }
 }
 
 bool SymHeapCore::queryExplicitNeq(TValueId valA, TValueId valB) const {
-    return d->neqDb.areNeq(valA, valB);
+    return d->neqOpWrap(&NeqDb::areNeq, valA, valB);
 }
 
 namespace {
@@ -1010,7 +1075,7 @@ bool SymHeapCore::proveEq(bool *result, TValueId valA, TValueId valB) const {
         return true;
     }
 
-    if (d->neqDb.areNeq(valA, valB)) {
+    if (d->neqOpWrap(&NeqDb::areNeq, valA, valB)) {
         // good luck, we have explicit info the values are not equal
         *result = false;
         return true;
@@ -1022,8 +1087,12 @@ bool SymHeapCore::proveEq(bool *result, TValueId valA, TValueId valB) const {
 
 void SymHeapCore::gatherRelatedValues(TContValue &dst, TValueId val) const {
     // TODO: should we care about off-values here?
-    d->neqDb.gatherRelatedValues(dst, val);
-    d->eqIfDb.gatherRelatedValues(dst, val);
+    TContValue aliases;
+    this->gatherValAliasing(aliases, val);
+    BOOST_FOREACH(const TValueId valAlias, aliases) {
+        d->neqDb.gatherRelatedValues(dst, valAlias);
+        d->eqIfDb.gatherRelatedValues(dst, valAlias);
+    }
 }
 
 template <class TValMap>
@@ -1101,7 +1170,7 @@ bool SymHeapCore::matchPreds(const SymHeapCore &ref, const TValMap &valMap)
             // seems like a dangling predicate, which we are not interested in
             continue;
 
-        if (!ref.d->neqDb.areNeq(valLt, valGt))
+        if (!ref.d->neqOpWrap(&NeqDb::areNeq, valLt, valGt))
             // Neq predicate not matched
             return false;
     }
@@ -1354,7 +1423,7 @@ void SymHeapTyped::createSubs(TObjId obj) {
             d->objects[subObj].nthItem = i; // position in struct
             d->objects[obj].subObjs[i] = subObj;
 
-            if (!item->offset) {
+            if (!item->offset && OBJ_RETURN != obj) {
                 // declare explicit aliasing with parent object's addr
                 SymHeapCore::addAlias(this->placedAt(obj),
                                       this->placedAt(subObj));
