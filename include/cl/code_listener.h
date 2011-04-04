@@ -826,6 +826,11 @@ struct cl_code_listener {
 
     /**
      * CL_INSN_SWITCH per case callback
+     *
+     * For a singleton case branch, @b val_lo and @b val_hi hold the same
+     * integral constants (literals).  Otherwise, an @b integral @b range of
+     * constants can be specified.   @b Default @b target is encoded as
+     * (CL_OPERAND_VOID == val_lo->code && CL_OPERAND_VOID == val_hi->code).
      * @param self Pointer to cl_code_listener object.
      * @param loc location of the function definition
      * @param val_lo Begin of the range for given case.
