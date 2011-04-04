@@ -849,26 +849,24 @@ void ClPrettyPrint::insn_switch_case(
     if (CL_OPERAND_VOID == val_lo->code && CL_OPERAND_VOID == val_hi->code) {
         out_ << "\t\t\t"
             << SSD_INLINE_COLOR(C_YELLOW, "default") << ":";
-
-        return;
-    }
-
-    if (CL_OPERAND_CST != val_lo->code || CL_OPERAND_CST != val_hi->code)
+    } else if (CL_OPERAND_CST != val_lo->code
+               || CL_OPERAND_CST != val_hi->code) {
         CL_TRAP;
+    } else {
+        const struct cl_cst &cst_lo = val_lo->data.cst;
+        const struct cl_cst &cst_hi = val_hi->data.cst;
+        if (CL_TYPE_INT != cst_lo.code || CL_TYPE_INT != cst_hi.code)
+            CL_TRAP;
 
-    const struct cl_cst &cst_lo = val_lo->data.cst;
-    const struct cl_cst &cst_hi = val_hi->data.cst;
-    if (CL_TYPE_INT != cst_lo.code || CL_TYPE_INT != cst_hi.code)
-        CL_TRAP;
-
-    const int lo = cst_lo.data.cst_int.value;
-    const int hi = cst_hi.data.cst_int.value;
-    for (int i = lo; i <= hi; ++i) {
-        out_ << "\t\t\t"
-            << SSD_INLINE_COLOR(C_YELLOW, "case")
-            << " " << i << ":";
-        if (i != hi)
-            out_ << " /* fall through */" << std::endl;
+        const int lo = cst_lo.data.cst_int.value;
+        const int hi = cst_hi.data.cst_int.value;
+        for (int i = lo; i <= hi; ++i) {
+            out_ << "\t\t\t"
+                << SSD_INLINE_COLOR(C_YELLOW, "case")
+                << " " << i << ":";
+            if (i != hi)
+                out_ << " /* fall through */" << std::endl;
+        }
     }
 
     out_ << " "
