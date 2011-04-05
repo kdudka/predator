@@ -348,9 +348,11 @@ void unOpToStream(std::ostream &str, int subCode,
         case CL_UNOP_ASSIGN:
             break;
 
-        case CL_UNOP_TRUTH_NOT:     str << "!";     break;
-        case CL_UNOP_BIT_NOT:       str << "~";     break;
-        case CL_UNOP_MINUS:         str << "-";     break;
+        case CL_UNOP_TRUTH_NOT:     str << "!";                 break;
+        case CL_UNOP_BIT_NOT:       str << "~";                 break;
+        case CL_UNOP_MINUS:         str << "-";                 break;
+        case CL_UNOP_ABS:           str << "(abs)";             break;
+        case CL_UNOP_FLOAT:         str << "(float)";           break;
     }
 
     operandToStream(str, opList[/* src */ 1]);
@@ -382,9 +384,8 @@ void binOpToStream(std::ostream &str, int subCode,
         case CL_BINOP_BIT_AND:          str << " & ";           break;
         case CL_BINOP_BIT_XOR:          str << " ^ ";           break;
         default:
-#ifndef NDEBUG
-            CL_TRAP;
-#endif
+            str << " (unknown binary operator) ";
+            CL_BREAK_IF("unknown binary operator");
             break;
     }
 

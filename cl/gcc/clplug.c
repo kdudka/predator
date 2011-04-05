@@ -1012,14 +1012,8 @@ static void handle_stmt_unop(gimple stmt, enum tree_code code,
             case TRUTH_NOT_EXPR:        *ptype = CL_UNOP_TRUTH_NOT;     break;
             case BIT_NOT_EXPR:          *ptype = CL_UNOP_BIT_NOT;       break;
             case NEGATE_EXPR:           *ptype = CL_UNOP_MINUS;         break;
-
-#define CL_OP_UNHANDLED(what) \
-    case what: CL_WARN_UNHANDLED_GIMPLE(stmt, #what); \
-               cli.code = CL_INSN_NOP; \
-               break;
-
-            CL_OP_UNHANDLED(ABS_EXPR)
-            CL_OP_UNHANDLED(FLOAT_EXPR)
+            case ABS_EXPR:              *ptype = CL_UNOP_ABS;           break;
+            case FLOAT_EXPR:            *ptype = CL_UNOP_FLOAT;         break;
 
             default:
                 CL_TRAP;
@@ -1060,6 +1054,7 @@ static void handle_stmt_binop(gimple stmt, enum tree_code code,
         case PLUS_EXPR:             *ptype = CL_BINOP_PLUS;             break;
         case MINUS_EXPR:            *ptype = CL_BINOP_MINUS;            break;
         case MULT_EXPR:             *ptype = CL_BINOP_MULT;             break;
+        case EXACT_DIV_EXPR:        *ptype = CL_BINOP_EXACT_DIV;        break;
         case TRUNC_DIV_EXPR:        *ptype = CL_BINOP_TRUNC_DIV;        break;
         case TRUNC_MOD_EXPR:        *ptype = CL_BINOP_TRUNC_MOD;        break;
         case RDIV_EXPR:             *ptype = CL_BINOP_RDIV;             break;
@@ -1072,12 +1067,10 @@ static void handle_stmt_binop(gimple stmt, enum tree_code code,
         case BIT_IOR_EXPR:          *ptype = CL_BINOP_BIT_IOR;          break;
         case BIT_XOR_EXPR:          *ptype = CL_BINOP_BIT_XOR;          break;
         case POINTER_PLUS_EXPR:     *ptype = CL_BINOP_POINTER_PLUS;     break;
-
-        CL_OP_UNHANDLED(EXACT_DIV_EXPR)
-        CL_OP_UNHANDLED(LSHIFT_EXPR)
-        CL_OP_UNHANDLED(RSHIFT_EXPR)
-        CL_OP_UNHANDLED(LROTATE_EXPR)
-        CL_OP_UNHANDLED(RROTATE_EXPR)
+        case LSHIFT_EXPR:           *ptype = CL_BINOP_LSHIFT;           break;
+        case RSHIFT_EXPR:           *ptype = CL_BINOP_RSHIFT;           break;
+        case LROTATE_EXPR:          *ptype = CL_BINOP_LROTATE;          break;
+        case RROTATE_EXPR:          *ptype = CL_BINOP_RROTATE;          break;
 
         default:
             CL_TRAP;

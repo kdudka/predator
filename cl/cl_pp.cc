@@ -648,6 +648,16 @@ void ClPrettyPrint::printInsnUnop(const struct cl_insn *cli) {
             out_ << SSD_INLINE_COLOR(C_RED, "-");
             break;
 
+        case CL_UNOP_ABS:
+            out_ << SSD_INLINE_COLOR(C_LIGHT_PURPLE, "abs") << "(";
+            this->printOperand(src);
+            out_ << ")" << std::endl;
+            return;
+
+        case CL_UNOP_FLOAT:
+            out_ << SSD_INLINE_COLOR(C_LIGHT_PURPLE, "(float)");
+            break;
+
         case CL_UNOP_ASSIGN:
             break;
     }
@@ -717,6 +727,7 @@ void ClPrettyPrint::printInsnBinop(const struct cl_insn *cli) {
             SSD_COLORIZE(out_, C_YELLOW) << "*";
             break;
 
+        case CL_BINOP_EXACT_DIV:
         case CL_BINOP_TRUNC_DIV:
         case CL_BINOP_RDIV:
             SSD_COLORIZE(out_, C_YELLOW) << "/";
@@ -748,6 +759,22 @@ void ClPrettyPrint::printInsnBinop(const struct cl_insn *cli) {
 
         case CL_BINOP_BIT_XOR:
             SSD_COLORIZE(out_, C_YELLOW) << "^";
+            break;
+
+        case CL_BINOP_LSHIFT:
+            SSD_COLORIZE(out_, C_YELLOW) << "<<";
+            break;
+
+        case CL_BINOP_RSHIFT:
+            SSD_COLORIZE(out_, C_YELLOW) << ">>";
+            break;
+
+        case CL_BINOP_LROTATE:
+            SSD_COLORIZE(out_, C_RED) << "L-ROTATE-BY";
+            break;
+
+        case CL_BINOP_RROTATE:
+            SSD_COLORIZE(out_, C_RED) << "R-ROTATE-BY";
             break;
     }
 

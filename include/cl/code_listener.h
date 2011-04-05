@@ -575,7 +575,11 @@ enum cl_unop_e {
     /**
      * unary minus
      */
-    CL_UNOP_MINUS
+    CL_UNOP_MINUS,
+
+    /* undocumented for now */
+    CL_UNOP_ABS,
+    CL_UNOP_FLOAT
 
     /* TODO */
 };
@@ -601,6 +605,7 @@ enum cl_binop_e {
     CL_BINOP_PLUS,
     CL_BINOP_MINUS,
     CL_BINOP_MULT,
+    CL_BINOP_EXACT_DIV,
     CL_BINOP_TRUNC_DIV,
     CL_BINOP_TRUNC_MOD,
     CL_BINOP_RDIV,
@@ -613,7 +618,13 @@ enum cl_binop_e {
     /* bitwise */
     CL_BINOP_BIT_AND,
     CL_BINOP_BIT_IOR,
-    CL_BINOP_BIT_XOR
+    CL_BINOP_BIT_XOR,
+
+    /* shift and rotation */
+    CL_BINOP_LSHIFT,
+    CL_BINOP_RSHIFT,
+    CL_BINOP_LROTATE,
+    CL_BINOP_RROTATE
 
     /* TODO */
 };
