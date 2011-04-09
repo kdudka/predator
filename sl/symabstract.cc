@@ -26,6 +26,7 @@
 #include <cl/storage.hh>
 
 #include "symcmp.hh"
+#include "symdebug.hh"
 #include "symjoin.hh"
 #include "symdiscover.hh"
 #include "symgc.hh"
@@ -39,49 +40,14 @@
 
 #include <boost/foreach.hpp>
 
+LOCAL_DEBUG_PLOTTER(symabstract, DEBUG_SYMABSTRACT)
+
 #define REQUIRE_GC_ACTIVITY(sh, val, fnc) do {                                 \
     if (collectJunk(sh, val))                                                  \
         break;                                                                 \
     CL_ERROR(#fnc "() failed to collect garbage, " #val " still referenced");  \
     CL_BREAK_IF("REQUIRE_GC_ACTIVITY has not been successful");                \
 } while (0)
-
-#if DEBUG_SYMABSTRACT
-#   include "symdump.hh"
-#   define FIXW(w) std::fixed << std::setfill('0') << std::setw(w)
-namespace {
-    static int cntAbstraction = -1;
-    static int cntAbstractionStep;
-    static std::string abstractionName;
-
-    void debugPlotInit(std::string name) {
-        ++::cntAbstraction;
-        ::cntAbstractionStep = 0;
-        ::abstractionName = name;
-    }
-
-    std::string debugPlotName() {
-        std::ostringstream str;
-
-        str << "symabstract-" << FIXW(4) << ::cntAbstraction
-            << "-" << ::abstractionName
-            << "-" << FIXW(4) << (::cntAbstractionStep++);
-
-        return str.str();
-    }
-
-    void debugPlot(const SymHeap &sh) {
-        std::string name = debugPlotName();
-        dump_plot(sh, name.c_str());
-    }
-} // namespace
-
-#else // DEBUG_SYMABSTRACT
-namespace {
-    void debugPlotInit(std::string) { }
-    void debugPlot(const SymHeap &) { }
-}
-#endif // DEBUG_SYMABSTRACT
 
 /// common configuration template for abstraction triggering
 struct AbstractionThreshold {
@@ -674,12 +640,12 @@ bool considerAbstraction(
     CL_DEBUG("    AAA initiating " << name
              << " abstraction of length " << len);
 
-    debugPlotInit(name);
-    debugPlot(sh);
+    LDP_INIT(symabstract, name);
+    LDP_PLOT(symabstract, sh);
 
     for (int i = 0; i < len; ++i) {
         segAbstractionStep(sh, off, &obj);
-        debugPlot(sh);
+        LDP_PLOT(symabstract, sh);
     }
 
     CL_DEBUG("<-- successfully abstracted " << name);
@@ -734,8 +700,8 @@ void segReplaceRefs(SymHeap &sh, TObjId seg, TValueId valNext) {
 }
 
 bool dlSegReplaceByConcrete(SymHeap &sh, TObjId obj, TObjId peer) {
-    debugPlotInit("dlSegReplaceByConcrete");
-    debugPlot(sh);
+    LDP_INIT(symabstract, "dlSegReplaceByConcrete");
+    LDP_PLOT(symabstract, sh);
     CL_BREAK_IF(!dlSegCheckConsistency(sh));
 
     // first kill any related Neq predicates, we're going to concretize anyway
@@ -761,14 +727,14 @@ bool dlSegReplaceByConcrete(SymHeap &sh, TObjId obj, TObjId peer) {
     sh.objSetConcrete(obj);
 
     // this can't fail (at least I hope so...)
-    debugPlot(sh);
+    LDP_PLOT(symabstract, sh);
     CL_BREAK_IF(!dlSegCheckConsistency(sh));
     return true;
 }
 
 void spliceOutListSegmentCore(SymHeap &sh, TObjId seg, TObjId peer) {
-    debugPlotInit("spliceOutListSegmentCore");
-    debugPlot(sh);
+    LDP_INIT(symabstract, "spliceOutListSegmentCore");
+    LDP_PLOT(symabstract, sh);
 
     // read valNext now as we may overwrite it during unlink of peer
     const TObjId next = nextPtrFromSeg(sh, peer);
@@ -796,7 +762,7 @@ void spliceOutListSegmentCore(SymHeap &sh, TObjId seg, TObjId peer) {
     if (collectJunk(sh, segAt))
         CL_DEBUG("spliceOutSegmentIfNeeded() drops a sub-heap (segAt)");
 
-    debugPlot(sh);
+    LDP_PLOT(symabstract, sh);
 }
 
 unsigned /* len */ spliceOutSegmentIfNeeded(SymHeap &sh, TObjId ao, TObjId peer,
@@ -804,13 +770,13 @@ unsigned /* len */ spliceOutSegmentIfNeeded(SymHeap &sh, TObjId ao, TObjId peer,
 {
     const unsigned len = segMinLength(sh, ao);
     if (len) {
-        debugPlotInit("spliceOutSegmentIfNeeded");
-        debugPlot(sh);
+        LDP_INIT(symabstract, "spliceOutSegmentIfNeeded");
+        LDP_PLOT(symabstract, sh);
 
         // drop any existing Neq predicates
         segSetMinLength(sh, ao, 0);
 
-        debugPlot(sh);
+        LDP_PLOT(symabstract, sh);
         return len - 1;
     }
 
@@ -866,13 +832,13 @@ void concretizeObj(SymHeap &sh, TValueId addr, TSymHeapList &todo) {
     // handle the possibly empty variant (if exists)
     const unsigned lenRemains = spliceOutSegmentIfNeeded(sh, obj, peer, todo);
 
-    debugPlotInit("concretizeObj");
-    debugPlot(sh);
+    LDP_INIT(symabstract, "concretizeObj");
+    LDP_PLOT(symabstract, sh);
 
     if (OK_MAY_EXIST == kind) {
         // this kind is much easier than regular list segments
         sh.objSetConcrete(obj);
-        debugPlot(sh);
+        LDP_PLOT(symabstract, sh);
         return;
     }
 
@@ -909,7 +875,7 @@ void concretizeObj(SymHeap &sh, TValueId addr, TSymHeapList &todo) {
 
     segSetMinLength(sh, aoDup, lenRemains);
 
-    debugPlot(sh);
+    LDP_PLOT(symabstract, sh);
 }
 
 bool spliceOutListSegment(SymHeap &sh, TValueId atAddr, TValueId pointingTo)
