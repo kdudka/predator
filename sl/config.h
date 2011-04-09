@@ -31,6 +31,11 @@
 #define DEBUG_MEM_USAGE                     1
 
 /**
+ * if 1, plot heap graphs of branching by non-deterministic conditions
+ */
+#define DEBUG_SE_NODNET_COND                0
+
+/**
  * if 1, print created/destroyed stack variables when running in verbose mode
  */
 #define DEBUG_SE_STACK_FRAME                0

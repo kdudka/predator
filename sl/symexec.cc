@@ -29,6 +29,7 @@
 #include "symabstract.hh"
 #include "symbt.hh"
 #include "symcall.hh"
+#include "symdebug.hh"
 #include "sympath.hh"
 #include "symproc.hh"
 #include "symstate.hh"
@@ -41,6 +42,8 @@
 
 #include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
+
+LOCAL_DEBUG_PLOTTER(nondetCond, DEBUG_SE_NODNET_COND)
 
 #if DEBUG_MEM_USAGE
 #   include <malloc.h>
@@ -285,8 +288,11 @@ void SymExecEngine::updateState(const CodeStorage::Block *ofBlock,
 
     if (VAL_INVALID != valDst && VAL_INVALID != valSrc
             && UV_DONT_CARE != sh.valGetUnknown(valDst))
+    {
         // replace an unknown value while traversing an unambiguous condition
         sh.valReplaceUnknown(valDst, valSrc);
+        LDP_PLOT(nondetCond, sh);
+    }
 
     // time to consider abstraction
     abstractIfNeeded(sh);
@@ -371,6 +377,11 @@ void SymExecEngine::execCondInsn() {
             CL_TRAP;
             return;
     }
+
+    std::ostringstream str;
+    str << "at-line-" << lw_->line;
+    LDP_INIT(nondetCond, str.str().c_str());
+    LDP_PLOT(nondetCond, heap);
 
     CL_DEBUG_MSG(lw_, "?T? CL_INSN_COND updates TRUE branch");
     this->updateState(tlist[/* then label */ 0], OBJ_INVALID, val, VAL_TRUE);
