@@ -186,6 +186,14 @@ bool validateSegEntry(
         const TObjId                next,
         const SymHeap::TContObj     &protoRoots)
 {
+    if (isDlsBinding(off)) {
+        // valPrev has to be at least VAL_NULL, withdraw it otherwise
+        const TObjId prev = ptrObjByOffset(sh, entry, off.prev);
+        CL_BREAK_IF(prev <= 0);
+        if (sh.valueOf(prev) < 0)
+            return false;
+    }
+
     // first validate 'root' itself
     if (!validatePointingObjects(sh, off, entry, prev, next, protoRoots,
                                  /* toInsideOnly */ true))
@@ -270,6 +278,11 @@ TObjId jumpToNextObj(
     if (dlSegOnPath
             && !validatePointingObjects(sh, off, obj, /* prev */ obj, next))
         // never step over a peer object that is pointed from outside!
+        return OBJ_INVALID;
+
+    // check if valNext inside the 'next' object is at least VAL_NULL
+    // (otherwise we are not able to construct Neq edges to express its length)
+    if (sh.valueOf(ptrObjByOffset(sh, next, off.next)) < 0)
         return OBJ_INVALID;
 
     return next;
