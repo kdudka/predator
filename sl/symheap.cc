@@ -1003,14 +1003,8 @@ void SymHeapCore::addEqIf(TValueId valCond, TValueId valA, TValueId valB,
     // having the values always in the same order leads to simpler code
     moveKnownValueToLeft(*this, valA, valB);
 
-#ifndef NDEBUG
-    // valB must be an unknown value
-    CL_BREAK_IF(this->lastValueId() < valB || valB <= 0);
-
     // valB must be an unknown value (we count UV_ABSTRACT as unknown here)
-    const Private::Value &refB = d->values[valB];
-    CL_BREAK_IF(UV_KNOWN == refB.code);
-#endif
+    CL_BREAK_IF(UV_KNOWN == this->valGetUnknown(valB));
 
     // all seems fine to store the predicate
     d->eqIfDb.add(EqIfDb::TPred(valCond, valA, valB, neg));
@@ -1062,10 +1056,9 @@ bool SymHeapCore::proveEq(bool *result, TValueId valA, TValueId valB) const {
 
     // we presume (0 <= valA) and (0 < valB) at this point
     CL_BREAK_IF(this->lastValueId() < valB || valB < 0);
-    const Private::Value &refB = d->values[valB];
 
     // now look at the kind of valB
-    const EUnknownValue code = refB.code;
+    const EUnknownValue code = this->valGetUnknown(valB);
     if (UV_KNOWN == code) {
         // it should be safe to just compare the IDs in this case
         // NOTE: it's not that easy when UV_ABSTRACT is involved
