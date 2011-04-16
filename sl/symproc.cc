@@ -926,7 +926,15 @@ TValueId compareValues(
             return v1;
     }
 
-    const TValueId val = sh.valCreateUnknown(UV_UNKNOWN, cltDst);
+    // propagate UV_UNINITIALIZED
+    EUnknownValue uvCode = UV_UNKNOWN;
+    if (UV_UNINITIALIZED == sh.valGetUnknown(v1)
+            || UV_UNINITIALIZED == sh.valGetUnknown(v2))
+    {
+        uvCode = UV_UNINITIALIZED;
+    }
+
+    const TValueId val = sh.valCreateUnknown(uvCode, cltDst);
     if (preserveEq && preserveNeq)
         // introduce an EqIf predicate
         sh.addEqIf(val, v1, v2, neg);

@@ -1,3 +1,6 @@
+test-0047.c:18:8: warning: conditional jump depends on uninitialized value
+test-0047.c:35:20: note: from call of insert_item()
+test-0047.c:29:5: note: from call of main()
 test-0047.c:19:29: error: dereference of uninitialized value
 test-0047.c:35:20: note: from call of insert_item()
 test-0047.c:29:5: note: from call of main()
