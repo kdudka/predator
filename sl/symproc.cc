@@ -854,193 +854,84 @@ bool SymExecCore::execCall(SymState &dst, const CodeStorage::Insn &insn) {
     return handleBuiltIn(dst, *this, insn);
 }
 
-bool valIsInteresting(const SymHeap &sh, const TValueId val) {
-    if (VAL_NULL == val)
-        return true;
-
-    const struct cl_type *clt = sh.valType(val);
-    if (!clt)
-        // FIXME: really?
-        return true;
-
-    const enum cl_type_e code = clt->code;
-    switch (code) {
-        case CL_TYPE_FNC:
-            // we are not much interested in function pointers
-            return false;
-
-        default:
-            return true;
-    }
-}
-
-template <class THeap>
-TValueId handleOpCmpBool(THeap &heap, enum cl_binop_e code,
-                         const struct cl_type *dstClt, TValueId v1, TValueId v2)
+bool describeCmpOp(
+        const enum cl_binop_e       code,
+        bool                        *pNegative,
+        bool                        *pPreserveEq,
+        bool                        *pPreserveNeq)
 {
-    // TODO: describe the following magic somehow
-    TValueId valElim = VAL_FALSE;
+    *pNegative = false;
+    *pPreserveEq = false;
+    *pPreserveNeq = false;
+
     switch (code) {
         case CL_BINOP_EQ:
-            valElim = VAL_TRUE;
+            *pPreserveEq = true;
             // fall through!
-
-        case CL_BINOP_NE:
-            break;
-
-        default:
-            // crazy comparison of bool values
-            CL_TRAP;
-            return VAL_INVALID;
-    }
-    if (v1 == valElim)
-        return v2;
-    if (v2 == valElim)
-        return v1;
-    if (v1 == v2 && (v1 == VAL_TRUE || v1 == VAL_FALSE))
-        return valElim;
-
-    CL_BREAK_IF(v1 < 0 || v2 < 0);
-
-    bool result;
-    if (!heap.proveEq(&result, v1, v2))
-        return heap.valCreateUnknown(UV_UNKNOWN, dstClt);
-
-    // invert if needed
-    if (CL_BINOP_NE == code)
-        result = !result;
-
-    return (result)
-        ? VAL_TRUE
-        : VAL_FALSE;
-}
-
-template <class THeap>
-TValueId handleOpCmpInt(THeap &heap, enum cl_binop_e code,
-                        const struct cl_type *dstClt, TValueId v1, TValueId v2)
-{
-    CL_BREAK_IF(VAL_INVALID == v1 || VAL_INVALID == v2);
-
-    // check if the values are equal
-    bool eq;
-    if (!heap.proveEq(&eq, v1, v2))
-        // we don't know if the values are equal or not
-        goto who_knows;
-
-    switch (code) {
-        case CL_BINOP_LT:
-        case CL_BINOP_GT:
-            if (eq)
-                // we got either (x < x), or (x > x)
-                return VAL_FALSE;
-            else
-                // bad luck, hard to compare unknown values for < >
-                goto who_knows;
 
         case CL_BINOP_LE:
         case CL_BINOP_GE:
-            if (eq)
-                // we got either (x <= x), or (x >= x)
-                return VAL_TRUE;
-            else
-                // bad luck, hard to compare unknown values for <= >=
-                goto who_knows;
+            *pPreserveNeq = true;
+            return true;
 
         case CL_BINOP_NE:
-            eq = !eq;
+            *pNegative = true;
+            *pPreserveEq = true;
+            *pPreserveNeq = true;
             // fall through!
 
-        case CL_BINOP_EQ:
-            return (eq)
-                ? VAL_TRUE
-                : VAL_FALSE;
+        case CL_BINOP_LT:
+        case CL_BINOP_GT:
+            return true;
 
         default:
-            CL_TRAP;
-    }
-
-who_knows:
-#if !SE_TRACK_UNKNOWN_INT_VALUES
-    return heap.valCreateUnknown(UV_DONT_CARE, dstClt);
-#endif
-    // unknown result of int comparison
-    TValueId val = heap.valCreateUnknown(UV_UNKNOWN, dstClt);
-    switch (code) {
-        case CL_BINOP_EQ:
-            heap.addEqIf(val, v1, v2, /* neg */ false);
-            return val;
-
-        case CL_BINOP_NE:
-            heap.addEqIf(val, v1, v2, /* neg */ true);
-            return val;
-
-        default:
-            // EqIf predicate is not suitable for <, <=, >, >=
-            return val;
+            // unhandled binary operator
+            return false;
     }
 }
 
-template <class THeap>
-TValueId handleOpCmpPtr(THeap &heap, enum cl_binop_e code,
-                        const struct cl_type *dstClt, TValueId v1, TValueId v2)
+TValueId compareValues(
+        SymHeap                     &sh,
+        const enum cl_binop_e       code,
+        const struct cl_type        *cltDst,
+        const struct cl_type        *cltSrc,
+        const TValueId              v1,
+        const TValueId              v2)
 {
     if (VAL_DEREF_FAILED == v1 || VAL_DEREF_FAILED == v2)
         return VAL_DEREF_FAILED;
 
-    CL_BREAK_IF(v1 < 0 || v2 < 0);
-
-    switch (code) {
-        case CL_BINOP_EQ:
-        case CL_BINOP_NE:
-            break;
-
-        default:
-            // crazy comparison of pointer values
-            CL_TRAP;
-            return VAL_INVALID;
+    // resolve binary operator
+    bool neg, preserveEq, preserveNeq;
+    if (!describeCmpOp(code, &neg, &preserveEq, &preserveNeq)) {
+        CL_WARN("binary operator not implemented yet");
+        return sh.valCreateUnknown(UV_UNKNOWN, cltDst);
     }
 
-    // check if the values are equal
-    bool result;
-    if (heap.proveEq(&result, v1, v2)) {
-        // invert if needed
-        if (CL_BINOP_NE == code)
-            result = !result;
+    // inconsistency check
+    bool eq;
+    if (sh.proveEq(&eq, v1, v2)) {
+        if (eq && preserveNeq)
+            return boolToVal(!neg);
 
-        return (result)
-            ? VAL_TRUE
-            : VAL_FALSE;
+        if (!eq && preserveEq)
+            return boolToVal(neg);
     }
 
-    if (valIsInteresting(heap, v1) && valIsInteresting(heap, v2)) {
-
-        // store the relation over the triple (val, v1, v2) for posterity
-        const TValueId val = heap.valCreateUnknown(UV_UNKNOWN, dstClt);
-        heap.addEqIf(val, v1, v2, /* neg */ CL_BINOP_NE == code);
-        return val;
+    // forward unknown bool values if possible
+    if (CL_TYPE_BOOL == cltSrc->code) {
+        if (v1 == boolToVal(!neg))
+            return v2;
+        if (v2 == boolToVal(!neg))
+            return v1;
     }
 
-    CL_DEBUG("handleOpCmpPtr() returns UV_DONT_CARE for values #" << v1
-             << " and #" << v2);
-    return heap.valCreateUnknown(UV_DONT_CARE, dstClt);
-}
+    const TValueId val = sh.valCreateUnknown(UV_UNKNOWN, cltDst);
+    if (preserveEq && preserveNeq)
+        // introduce an EqIf predicate
+        sh.addEqIf(val, v1, v2, neg);
 
-template <class THeap>
-TValueId handleOpCmp(THeap &heap, enum cl_binop_e code,
-                     const struct cl_type *dstClt, const struct cl_type *clt,
-                     TValueId v1, TValueId v2)
-{
-    // clt is assumed to be valid at this point
-    switch (clt->code) {
-        case CL_TYPE_PTR:  return handleOpCmpPtr (heap, code, dstClt, v1, v2);
-        case CL_TYPE_BOOL: return handleOpCmpBool(heap, code, dstClt, v1, v2);
-        case CL_TYPE_INT:  return handleOpCmpInt (heap, code, dstClt, v1, v2);
-
-        default:
-            // unsupported type
-            CL_WARN("binary operator not implemented yet");
-            return heap.valCreateUnknown(UV_UNKNOWN, dstClt);
-    }
+    return val;
 }
 
 TValueId handlePointerPlus(SymHeap &sh, const struct cl_type *cltPtr,
@@ -1085,7 +976,8 @@ struct OpHandler</* unary */ 1> {
         const enum cl_unop_e code = static_cast<enum cl_unop_e>(iCode);
         switch (code) {
             case CL_UNOP_TRUTH_NOT:
-                return handleOpCmpBool(sh, CL_BINOP_EQ, clt[1], VAL_FALSE, val);
+                return compareValues(sh, CL_BINOP_EQ, clt[0], clt[1],
+                                     VAL_FALSE, val);
 
             case CL_UNOP_ASSIGN:
                 return val;
@@ -1115,7 +1007,7 @@ struct OpHandler</* binary */ 2> {
             case CL_BINOP_LE:
             case CL_BINOP_GE:
                 CL_BREAK_IF(clt[/* src1 */ 0]->code != clt[/* src2 */ 1]->code);
-                return handleOpCmp(sh, code, clt[2], clt[0], rhs[0], rhs[1]);
+                return compareValues(sh, code, clt[2], clt[0], rhs[0], rhs[1]);
 
             default:
                 return sh.valCreateUnknown(UV_UNKNOWN, clt[/* dst */ 2]);

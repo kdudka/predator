@@ -35,6 +35,20 @@ class SymBackTrace;
 class SymHeap;
 class SymState;
 
+bool describeCmpOp(
+        const enum cl_binop_e       code,
+        bool                        *pNegative,
+        bool                        *pPreserveEq,
+        bool                        *pPreserveNeq);
+
+TValueId compareValues(
+        SymHeap                     &sh,
+        const enum cl_binop_e       code,
+        const struct cl_type        *cltDst,
+        const struct cl_type        *cltSrc,
+        const TValueId              v1,
+        const TValueId              v2);
+
 /**
  * a layer on top of SymHeap, providing some higher-level operations
  */

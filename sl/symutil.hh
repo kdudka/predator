@@ -41,6 +41,12 @@ namespace CodeStorage {
     struct Var;
 }
 
+inline TValueId boolToVal(const bool b) {
+    return (b)
+        ? VAL_TRUE
+        : VAL_FALSE;
+}
+
 bool isHeapObject(const SymHeap &heap, TObjId obj);
 
 void digRootObject(const SymHeap &heap, TValueId *pValue);
