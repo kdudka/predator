@@ -63,7 +63,8 @@ class SymProc {
          */
         SymProc(SymHeap &heap, const SymBackTrace *bt):
             heap_(heap),
-            bt_(bt)
+            bt_(bt),
+            lw_(0)
         {
         }
 
