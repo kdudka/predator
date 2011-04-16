@@ -350,7 +350,7 @@ void deepCopy(DeepCopyData &dc) {
             dst.objSetValue(objDst, valDst);
 
         if (/* optimization */ dc.digBackward) {
-            // now poke all values related by Neq or EqIf predicates
+            // now poke all values related by Neq predicates
             SymHeap::TContValue relatedVals;
             src.gatherRelatedValues(relatedVals, valSrc);
             BOOST_FOREACH(TValueId relValSrc, relatedVals) {
@@ -365,7 +365,7 @@ void deepCopy(DeepCopyData &dc) {
         }
     }
 
-    // finally copy all relevant Neq/EqIf predicates
+    // finally copy all relevant Neq predicates
     src.copyRelevantPreds(dst, dc.valMap);
 }
 

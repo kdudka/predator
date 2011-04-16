@@ -522,7 +522,7 @@ void SymPlot::Private::plotSingleValue(TValueId value) {
         this->gobbleEdgeOffValue(value, ov);
     }
 
-    // traverse all Neq/EqIf predicates
+    // traverse all Neq predicates
     SymHeap::TContValue relatedVals;
     this->heap->gatherRelatedValues(relatedVals, value);
     BOOST_FOREACH(TValueId peer, relatedVals) {

@@ -253,18 +253,6 @@ class SymHeapCore {
         bool queryExplicitNeq(TValueId valA, TValueId valB) const;
 
         /**
-         * introduce a new @b EqIf @b predicate (if not present already)
-         * @todo Documentation of addEqIf() needs to be re-worded.
-         * @param valCond as soon as valCond becomes a known value, an explicit
-         * (in)equality will be deduced for valA and valB.  This means valCond
-         * stands for a @b trigger.  It must be an @b unknown @b Boolean value.
-         * @param valA one side of the (in)equality scheduled for consideration
-         * @param valB one side of the (in)equality scheduled for consideration
-         * @param neg @b polarity, (valA == valB) iff (valCond != @b neg)
-         */
-        void addEqIf(TValueId valCond, TValueId valA, TValueId valB, bool neg);
-
-        /**
          * @b reasoning about possibly unknown heap values
          * @param result where to store the result to in case of @b success
          * @param valA one side of the (in)equality being proved
@@ -282,7 +270,7 @@ class SymHeapCore {
 
         /**
          * return the list of values that are connected to the given value by a
-         * Neq/EqIf predicate
+         * Neq predicate
          * @param dst a container to place the result in
          * @param val the reference value, used to search the predicates and
          * then all the related values accordingly

@@ -45,7 +45,7 @@
 #   define DEBUG_UNUSED_VALUES 0
 #endif
 
-// NeqDb/EqIfDb helper
+// NeqDb helper
 template <class TDst>
 void emitOne(TDst &dst, TValueId val) {
 #if 0
@@ -254,101 +254,6 @@ class NeqDb {
                                             const;
 };
 
-class EqIfDb {
-    public:
-        typedef boost::tuple<
-                TValueId  /* valCond */,
-                TValueId  /* valLt   */,
-                TValueId  /* ValGt   */,
-                bool      /* neg     */>
-            TPred;
-
-        typedef std::vector<TPred>                          TDst;
-
-    private:
-        typedef std::set<TPred>                             TSet;
-        typedef std::map<TValueId /* valCond */, TSet>      TMap;
-        TMap cont_;
-
-    public:
-        bool empty() const {
-            return cont_.empty();
-        }
-
-        void add(TPred pred) {
-            const TValueId valCond = pred.get<0>();
-            TSet &ref = cont_[valCond];
-            ref.insert(pred);
-        }
-
-        void lookupOnce(TDst &dst, TValueId valCond) {
-            TMap::iterator iter = cont_.find(valCond);
-            if (cont_.end() == iter)
-                // no match
-                return;
-
-            // stream out all the relevant predicates
-            const TSet &ref = iter->second;
-            std::copy(ref.begin(), ref.end(), std::back_inserter(dst));
-
-            // delete the db entry afterwards
-            cont_.erase(iter);
-        }
-
-        template <class TDst2>
-        void gatherRelatedValues(TDst2 &dst, TValueId val) const;
-
-        void killByValue(TValueId val) {
-            if (cont_.erase(val)) {
-                CL_DEBUG("EqIfDb::killByValue(#" << val
-                        << ") removed dangling EqIf predicate");
-            }
-
-            // TODO
-#ifndef NDEBUG
-            std::vector<TValueId> tmp;
-            this->gatherRelatedValues(tmp, val);
-            CL_BREAK_IF(!tmp.empty());
-#endif
-        }
-
-        friend void SymHeapCore::copyRelevantPreds(SymHeapCore &dst,
-                                                   const SymHeapCore::TValMap &)
-                                                   const;
-
-        friend bool SymHeapCore::matchPreds(const SymHeapCore &,
-                                            const SymHeapCore::TValMap &)
-                                            const;
-};
-
-template <class TDst2>
-void EqIfDb::gatherRelatedValues(TDst2 &dst, TValueId val) const {
-    // FIXME: suboptimal due to performance
-    TMap::const_iterator iter;
-    for (iter = cont_.begin(); iter != cont_.end(); ++iter) {
-        const TSet &line = iter->second;
-        BOOST_FOREACH(const TPred &pred, line) {
-            TValueId valCond, valLt, valGt; bool neg;
-            boost::tie(valCond, valLt, valGt, neg) = pred;
-            // FIXME: some are not realistic
-            // TODO: prune and write some documentation of what is
-            // possible and what is not
-            if (valCond == val) {
-                emitOne(dst, valLt);
-                emitOne(dst, valGt);
-            }
-            if (valLt == val) {
-                emitOne(dst, valCond);
-                emitOne(dst, valGt);
-            }
-            if (valGt == val) {
-                emitOne(dst, valCond);
-                emitOne(dst, valLt);
-            }
-        }
-    }
-}
-
 void AliasDb::add(TValueId v1, TValueId v2) {
     CL_BREAK_IF(v1 <= 0 || v2 <= 0);
 
@@ -426,7 +331,6 @@ struct SymHeapCore::Private {
     AliasDb                 aliasDb;
     OffsetDb                offsetDb;
     NeqDb                   neqDb;
-    EqIfDb                  eqIfDb;
 
     void valueDestructor(TValueId value);
     void releaseValueOf(TObjId obj);
@@ -722,16 +626,9 @@ void SymHeapCore::objSetValue(TObjId obj, TValueId val) {
 }
 
 void SymHeapCore::pack() {
-    const bool hasNeq  = !d->neqDb.empty();
-    const bool hasEqIf = !d->eqIfDb.empty();
-    if (!hasNeq && !hasEqIf)
+    if (!d->neqDb.empty())
         // no predicates found, we're done
         return;
-
-    if (hasEqIf) {
-        CL_WARN("SymHeapCore::pack() encountered an EqIf predicate, chances are"
-                " that it will cause some problems elsewhere...");
-    }
 
     const unsigned cnt = d->values.size();
     for (unsigned i = 1; i < cnt; ++i) {
@@ -740,11 +637,7 @@ void SymHeapCore::pack() {
             // value used, keep going...
             continue;
 
-        if (hasNeq)
-            d->neqDb.killByValue(val);
-
-        if (hasEqIf)
-            d->eqIfDb.killByValue(val);
+        d->neqDb.killByValue(val);
     }
 }
 
@@ -851,78 +744,22 @@ bool SymHeapCore::valReplaceUnknownImpl(TValueId val, TValueId replaceBy) {
 }
 
 void SymHeapCore::valReplaceUnknown(TValueId val, TValueId replaceBy) {
-    typedef std::pair<TValueId /* val */, TValueId /* replaceBy */> TItem;
-    TItem item(val, replaceBy);
-
-    WorkList<TItem> wl(item);
-    while (wl.next(item)) {
-        boost::tie(val, replaceBy) = item;
-
-        TContObj refs;
-        this->usedBy(refs, val);
-
 #ifndef NDEBUG
-        // ensure there hasn't been any inequality defined among the pair
-        if (d->neqOpWrap(&NeqDb::areNeq, val, replaceBy)) {
-            CL_ERROR("inconsistency detected among values #" << val
-                    << " and #" << replaceBy);
-            CL_TRAP;
-        }
+    // ensure there hasn't been any inequality defined among the pair
+    if (d->neqOpWrap(&NeqDb::areNeq, val, replaceBy)) {
+        CL_ERROR("inconsistency detected among values #" << val
+                << " and #" << replaceBy);
+        CL_TRAP;
+    }
 #endif
-        // make it possible to override the implementation (template method)
-        if (this->valReplaceUnknownImpl(val, replaceBy))
-            goto subst_done;
-
-        CL_DEBUG("overridden implementation valReplaceUnknownImpl() failed"
-                 << ", val #" << val
-                 << " should have been replaced by #" << replaceBy
-                 << ", now trying reverse substitution...");
-
-        if (this->valReplaceUnknownImpl(replaceBy, val)) {
-            swapValues(val, replaceBy);
-            goto subst_done;
-        }
-
-#ifndef NDEBUG
+    // make it possible to override the implementation (template method)
+    if (!this->valReplaceUnknownImpl(val, replaceBy)) {
         CL_WARN("overridden implementation valReplaceUnknownImpl() failed"
                 ", has to over-approximate...");
+#ifndef NDEBUG
         CL_NOTE("attempt to plot heap...");
         dump_plot(*this, "valReplaceUnknownImpl-failed");
 #endif
-        continue;
-
-subst_done:
-        // handle all EqIf predicates
-        EqIfDb::TDst eqIfs;
-        d->eqIfDb.lookupOnce(eqIfs, val);
-        BOOST_FOREACH(const EqIfDb::TPred &pred, eqIfs) {
-            TValueId valCond, valLt, valGt; bool neg;
-            boost::tie(valCond, valLt, valGt, neg) = pred;
-
-            if (1U == refs.size())
-                // EXPERIMENTAL: kill valCond ASAP in order to reduce state bloat
-                this->objSetValue(refs[0], val);
-
-            // deduce if the values are equal or not equal
-            bool areEqual = false;
-            switch (replaceBy) {
-                case VAL_FALSE:
-                    areEqual = neg;
-                    break;
-
-                case VAL_TRUE:
-                    areEqual = !neg;
-                    break;
-
-                default:
-                    CL_TRAP;
-            }
-
-            if (areEqual)
-                wl.schedule(TItem(valGt, valLt));
-            else
-                this->neqOp(NEQ_ADD, valLt, valGt);
-        }
     }
 }
 
@@ -986,28 +823,6 @@ namespace {
             valB = tmp;
         }
     }
-}
-
-void SymHeapCore::addEqIf(TValueId valCond, TValueId valA, TValueId valB,
-                          bool neg)
-{
-#ifndef NDEBUG
-    CL_BREAK_IF(VAL_INVALID == valA || VAL_INVALID == valB);
-    CL_BREAK_IF(this->lastValueId() < valCond || valCond <= 0);
-
-    // valCond must be an unknown value
-    const Private::Value &refCond = d->values[valCond];
-    CL_BREAK_IF(UV_KNOWN == refCond.code || UV_ABSTRACT == refCond.code);
-#endif
-
-    // having the values always in the same order leads to simpler code
-    moveKnownValueToLeft(*this, valA, valB);
-
-    // valB must be an unknown value (we count UV_ABSTRACT as unknown here)
-    CL_BREAK_IF(UV_KNOWN == this->valGetUnknown(valB));
-
-    // all seems fine to store the predicate
-    d->eqIfDb.add(EqIfDb::TPred(valCond, valA, valB, neg));
 }
 
 namespace {
@@ -1084,7 +899,6 @@ void SymHeapCore::gatherRelatedValues(TContValue &dst, TValueId val) const {
     this->gatherValAliasing(aliases, val);
     BOOST_FOREACH(const TValueId valAlias, aliases) {
         d->neqDb.gatherRelatedValues(dst, valAlias);
-        d->eqIfDb.gatherRelatedValues(dst, valAlias);
     }
 }
 
@@ -1104,27 +918,6 @@ bool valMapLookup(const TValMap &valMap, TValueId *pVal) {
     return true;
 }
 
-template <class TValMap>
-void copyRelevantEqIf(SymHeapCore &dst, const EqIfDb::TPred &pred,
-                      const TValMap &valMap)
-{
-    // FIXME: this code has never run, let's go with a debugger first
-#ifndef NDEBUG
-    CL_TRAP;
-#endif
-    TValueId valCond, valLt, valGt; bool neg;
-    boost::tie(valCond, valLt, valGt, neg) = pred;
-
-    if (!valMapLookup(valMap, &valCond)
-            || !valMapLookup(valMap, &valLt)
-            || !valMapLookup(valMap, &valGt))
-        // not relevant
-        return;
-
-    // create the image now!
-    dst.addEqIf(valCond, valLt, valGt, neg);
-}
-
 void SymHeapCore::copyRelevantPreds(SymHeapCore &dst, const TValMap &valMap)
     const
 {
@@ -1139,16 +932,6 @@ void SymHeapCore::copyRelevantPreds(SymHeapCore &dst, const TValMap &valMap)
 
         // create the image now!
         dst.neqOp(NEQ_ADD, valLt, valGt);
-    }
-
-    // go through EqIfDb
-    EqIfDb::TMap &db = d->eqIfDb.cont_;
-    EqIfDb::TMap::const_iterator iter;
-    for (iter = db.begin(); iter != db.end(); ++iter) {
-        const EqIfDb::TSet &line = iter->second;
-        BOOST_FOREACH(const EqIfDb::TPred &pred, line) {
-            copyRelevantEqIf(dst, pred, valMap);
-        }
     }
 }
 
@@ -1166,41 +949,6 @@ bool SymHeapCore::matchPreds(const SymHeapCore &ref, const TValMap &valMap)
         if (!ref.d->neqOpWrap(&NeqDb::areNeq, valLt, valGt))
             // Neq predicate not matched
             return false;
-    }
-
-    // go through EqIfDb
-    BOOST_FOREACH(EqIfDb::TMap::const_reference item, d->eqIfDb.cont_) {
-        const EqIfDb::TSet &line = item.second;
-        BOOST_FOREACH(const EqIfDb::TPred &pred, line) {
-            TValueId valCond, valLt, valGt; bool neg;
-            boost::tie(valCond, valLt, valGt, neg) = pred;
-
-            if (!valMapLookup(valMap, &valCond)
-                    || !valMapLookup(valMap, &valLt)
-                    || !valMapLookup(valMap, &valGt))
-                // seems like a dangling predicate, which we are not interested in
-                continue;
-
-            const EqIfDb::TMap &peer = ref.d->eqIfDb.cont_;
-            EqIfDb::TMap::const_iterator iter = peer.find(valCond);
-            if (peer.end() == iter)
-                // EqIf predicate not found
-                return false;
-
-            BOOST_FOREACH(const EqIfDb::TPred &peerPred, iter->second) {
-                if (peerPred.get</* valCond */ 0>() == valCond
-                        && peerPred.get</* valLt */ 1>() == valLt
-                        && peerPred.get</* valGt */ 2>() == valGt
-                        && peerPred.get</* neg */3>() == neg)
-                    goto eqif_matched;
-            }
-
-            // no matching EqIf predicate found
-            return false;
-        }
-
-eqif_matched:
-        (void) 0;
     }
 
     return true;
