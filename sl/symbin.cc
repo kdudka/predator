@@ -246,6 +246,24 @@ bool handleBuiltIn(SymState                     &dst,
         return true;
     }
 
+    if (STREQ(fncName, "___sl_get_nondet_int")) {
+        if (2 != opList.size()) {
+            emitPrototypeError(lw, fncName);
+            return false;
+        }
+
+        // set the returned value to a new unknown value
+        CL_DEBUG_MSG(lw, "executing ___sl_get_nondet_int()");
+        const struct cl_operand &opDst = opList[0];
+        const TObjId objDst = core.heapObjFromOperand(opDst);
+        const TValueId val = sh.valCreateUnknown(UV_UNKNOWN, opDst.type);
+        core.objSetValue(objDst, val);
+
+        // insert the resulting heap
+        dst.insert(sh);
+        return true;
+    }
+
     HANDLE_PLOT_CALL(___sl_plot,             callPlot          );
     HANDLE_PLOT_CALL(___sl_plot_by_ptr,      callPlotByPtr     );
     HANDLE_PLOT_CALL(___sl_plot_stack_frame, callPlotStackFrame);

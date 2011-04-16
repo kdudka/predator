@@ -36,6 +36,7 @@ void ___sl_break(void);
 void ___sl_plot(const char *name);
 void ___sl_plot_stack_frame(void (*fnc)(), const char *name);
 void ___sl_plot_by_ptr(const void *ptr, const char *name);
+int ___sl_get_nondet_int(void);
 
 #else
 // dummy implementations of our built-ins, useful to run our test-cases on bare
@@ -59,6 +60,12 @@ static inline void ___sl_plot_stack_frame(void (*fnc)(), const char *name)
 static inline void ___sl_plot_by_ptr(const void *ptr, const char *name) {
     (void) ptr;
     (void) name;
+}
+
+static inline int ___sl_get_nondet_int(void)
+{
+    int i;
+    return i;
 }
 #endif
 

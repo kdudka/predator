@@ -35,7 +35,7 @@ struct node_low* create_low(void)
 
 int get_nondet()
 {
-    int i;
+    int i = ___sl_get_nondet_int();
     return i;
 }
 
