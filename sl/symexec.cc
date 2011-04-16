@@ -211,10 +211,15 @@ class SymExecEngine: public IStatsProvider {
     private:
         void initEngine(const SymHeap &init);
         void execReturn();
-        void updateState(const CodeStorage::Block *ofBlock,
-                         TObjId varToKill = OBJ_INVALID,
-                         TValueId valDst = VAL_INVALID,
-                         TValueId valSrc = VAL_INVALID);
+        void updateState(SymHeap &sh, const CodeStorage::Block *ofBlock);
+        void updateStateInBranch(
+                SymHeap                     sh,
+                const CodeStorage::Block    *ofBlock,
+                const bool                  branch,
+                const cl_binop_e            code,
+                const TValueId              v1,
+                const TValueId              v2);
+
         void execCondInsn();
         void execTermInsn();
         bool execNontermInsn();
@@ -271,28 +276,8 @@ void SymExecEngine::execReturn() {
     endReached_ = true;
 }
 
-void SymExecEngine::updateState(const CodeStorage::Block *ofBlock,
-                                TObjId varToKill,
-                                TValueId valDst, TValueId valSrc)
-{
+void SymExecEngine::updateState(SymHeap &sh, const CodeStorage::Block *ofBlock) {
     const std::string &name = ofBlock->name();
-
-    // clone the current symbolic heap, as we are going to change it eventually
-    SymHeap sh(localState_[heapIdx_]);
-
-    if (OBJ_INVALID != varToKill) {
-        // EXPERIMENTAL: kill varToKill ASAP in order to reduce state bloat
-        const TValueId killer = sh.valCreateUnknown(UV_UNKNOWN, 0);
-        sh.objSetValue(varToKill, killer);
-    }
-
-    if (VAL_INVALID != valDst && VAL_INVALID != valSrc
-            && UV_DONT_CARE != sh.valGetUnknown(valDst))
-    {
-        // replace an unknown value while traversing an unambiguous condition
-        sh.valReplaceUnknown(valDst, valSrc);
-        LDP_PLOT(nondetCond, sh);
-    }
 
     // time to consider abstraction
     abstractIfNeeded(sh);
@@ -319,45 +304,117 @@ void SymExecEngine::updateState(const CodeStorage::Block *ofBlock,
     }
 }
 
-void SymExecEngine::execCondInsn() {
-    const CodeStorage::Insn *insn = block_->operator[](insnIdx_);
-    const CodeStorage::TOperandList &oplist = insn->operands;
-    const CodeStorage::TTargetList &tlist = insn->targets;
-    CL_BREAK_IF(2 != tlist.size() || 1 != oplist.size());
+void replaceUnkownValue(
+        SymHeap                     &sh,
+        const TValueId              v1,
+        const TValueId              v2)
+{
+    const bool isUnknown1 = (UV_KNOWN != sh.valGetUnknown(v1));
+    CL_BREAK_IF(!isUnknown1 && UV_KNOWN == sh.valGetUnknown(v2));
+    if (isUnknown1)
+        sh.valReplaceUnknown(v1, v2);
+    else
+        sh.valReplaceUnknown(v2, v1);
+}
 
-    // IF (operand) GOTO target0 ELSE target1
+void SymExecEngine::updateStateInBranch(
+        SymHeap                     sh,
+        const CodeStorage::Block    *ofBlock,
+        const bool                  branch,
+        const cl_binop_e            code,
+        const TValueId              v1,
+        const TValueId              v2)
+{
+    // resolve binary operator
+    bool neg, preserveEq, preserveNeq;
+    if (describeCmpOp(code, &neg, &preserveEq, &preserveNeq)) {
+        if (branch == neg) {
+            if (!preserveNeq)
+                goto fallback;
 
-    const SymHeap &heap = localState_[heapIdx_];
-    SymProc proc(const_cast<SymHeap &>(heap), &bt_);
-    proc.setLocation(lw_);
-
-    const struct cl_operand &op = oplist[0];
-    const TValueId val = proc.heapValFromOperand(op);
-    if (VAL_DEREF_FAILED == val) {
-        // error should have been already emitted
-        CL_DEBUG_MSG(lw_, "ignored VAL_DEREF_FAILED");
-        return;
-    }
-
-    bool eq;
-    if (heap.proveEq(&eq, val, VAL_FALSE)) {
-        const TObjId objCond = proc.heapObjFromOperand(op);
-        if (!eq) {
-            CL_DEBUG_MSG(lw_, ".T. CL_INSN_COND got VAL_TRUE");
-            this->updateState(tlist[/* then label */ 0], objCond);
-            return;
+            // introduce a Neq predicate over v1 and v2
+            sh.neqOp(SymHeap::NEQ_ADD, v1, v2);
         }
         else {
-            CL_DEBUG_MSG(lw_, ".F. CL_INSN_COND got VAL_FALSE");
-            this->updateState(tlist[/* else label */ 1], objCond);
-            return;
+            if (!preserveEq)
+                goto fallback;
+
+            // we have deduced that v1 and v2 is actually the same value
+            replaceUnkownValue(sh, v1, v2);
         }
     }
 
-    // operand value is unknown, go to both targets
+    LDP_PLOT(nondetCond, sh);
 
-    const EUnknownValue code = heap.valGetUnknown(val);
-    switch (code) {
+fallback:
+    this->updateState(sh, ofBlock);
+}
+
+void SymExecEngine::execCondInsn() {
+    // we should get a CL_INSN_BINOP instruction and a CL_INSN_COND instruction
+    const CodeStorage::Insn *insnCmp = block_->operator[](insnIdx_ - 1);
+    const CodeStorage::Insn *insnCnd = block_->operator[](insnIdx_);
+    CL_BREAK_IF(CL_INSN_BINOP != insnCmp->code);
+    CL_BREAK_IF(CL_INSN_COND != insnCnd->code);
+
+    // check that both instructions are connected accordingly
+    const struct cl_operand &cmpDst = insnCmp->operands[/* dst */ 0];
+#ifndef NDEBUG
+    const struct cl_operand &cndSrc = insnCnd->operands[/* src */ 0];
+    CL_BREAK_IF(CL_OPERAND_VAR != cmpDst.code || CL_OPERAND_VAR != cndSrc.code);
+    CL_BREAK_IF(varIdFromOperand(&cmpDst) != varIdFromOperand(&cndSrc));
+#endif
+
+    // read type of condition variable
+    const struct cl_type *cltDst = cmpDst.type;
+    CL_BREAK_IF(!cltDst || cltDst != cndSrc.type);
+    CL_BREAK_IF(CL_TYPE_BOOL != cltDst->code);
+
+    // read operands
+    const struct cl_operand &op1 = insnCmp->operands[/* src1 */ 1];
+    const struct cl_operand &op2 = insnCmp->operands[/* src2 */ 2];
+    const struct cl_type *cltSrc = op1.type;
+    CL_BREAK_IF(!cltSrc || !op2.type || cltSrc->code != op2.type->code);
+
+    // a working area for the CL_INSN_BINOP instruction
+    SymHeap sh(localState_[heapIdx_]);
+    SymProc proc(sh, &bt_);
+    proc.setLocation(lw_);
+
+    // compute the result of CL_INSN_BINOP
+    const enum cl_binop_e code = static_cast<enum cl_binop_e>(insnCmp->subCode);
+    const TValueId v1 = proc.heapValFromOperand(op1);
+    const TValueId v2 = proc.heapValFromOperand(op2);
+    const TValueId val = compareValues(sh, code, cltDst, cltSrc, v1, v2);
+
+    // read targets
+    const CodeStorage::TTargetList &tlist = insnCnd->targets;
+    const CodeStorage::Block *targetThen = tlist[/* then label */ 0];
+    const CodeStorage::Block *targetElse = tlist[/* else label */ 1];
+
+    // inconsistency check
+    switch (val) {
+        case VAL_DEREF_FAILED:
+            // error should have been already emitted
+            CL_DEBUG_MSG(lw_, "ignored VAL_DEREF_FAILED");
+            return;
+
+        case VAL_TRUE:
+            CL_DEBUG_MSG(lw_, ".T. CL_INSN_COND got VAL_TRUE");
+            this->updateState(sh, targetThen);
+            return;
+
+        case VAL_FALSE:
+            CL_DEBUG_MSG(lw_, ".F. CL_INSN_COND got VAL_FALSE");
+            this->updateState(sh, targetElse);
+            return;
+
+        default:
+            // we need to update both targets
+            break;
+    }
+
+    switch (sh.valGetUnknown(val)) {
         case UV_UNKNOWN:
             CL_DEBUG_MSG(lw_, "??? CL_INSN_COND got UV_UNKNOWN");
             break;
@@ -381,13 +438,13 @@ void SymExecEngine::execCondInsn() {
     std::ostringstream str;
     str << "at-line-" << lw_->line;
     LDP_INIT(nondetCond, str.str().c_str());
-    LDP_PLOT(nondetCond, heap);
+    LDP_PLOT(nondetCond, sh);
 
     CL_DEBUG_MSG(lw_, "?T? CL_INSN_COND updates TRUE branch");
-    this->updateState(tlist[/* then label */ 0], OBJ_INVALID, val, VAL_TRUE);
+    this->updateStateInBranch(sh, targetThen, true, code, v1, v2);
 
     CL_DEBUG_MSG(lw_, "?F? CL_INSN_COND updates FALSE branch");
-    this->updateState(tlist[/* else label */ 1], OBJ_INVALID, val, VAL_FALSE);
+    this->updateStateInBranch(sh, targetElse, false, code, v1, v2);
 }
 
 void SymExecEngine::execTermInsn() {
@@ -411,7 +468,8 @@ void SymExecEngine::execTermInsn() {
 
         case CL_INSN_JMP:
             if (1 == tlist.size()) {
-                this->updateState(tlist[/* target block */ 0]);
+                SymHeap sh(localState_[heapIdx_]);
+                this->updateState(sh, tlist[/* target */ 0]);
                 break;
             }
             // go through!
@@ -451,6 +509,19 @@ bool /* complete */ SymExecEngine::execInsn() {
 
         // let's begin with empty resulting heap union
         nextLocalState_.clear();
+    }
+
+    if (!isTerm) {
+        CL_BREAK_IF(block_->size() <= insnIdx_);
+
+        // look ahead for CL_INSN_COND
+        const CodeStorage::Insn *nextInsn = block_->operator[](insnIdx_ + 1);
+        if (CL_INSN_COND == nextInsn->code) {
+            // this is going to be handled in execCondInsn() right away
+            CL_BREAK_IF(CL_INSN_BINOP != insn->code);
+            localState_.swap(nextLocalState_);
+            return true;
+        }
     }
 
     // used only if (0 == insnIdx_)

@@ -934,12 +934,7 @@ TValueId compareValues(
         uvCode = UV_UNINITIALIZED;
     }
 
-    const TValueId val = sh.valCreateUnknown(uvCode, cltDst);
-    if (preserveEq && preserveNeq)
-        // introduce an EqIf predicate
-        sh.addEqIf(val, v1, v2, neg);
-
-    return val;
+    return sh.valCreateUnknown(uvCode, cltDst);
 }
 
 TValueId handlePointerPlus(SymHeap &sh, const struct cl_type *cltPtr,
