@@ -277,6 +277,10 @@ deref_done:
             glOut_ << "bool";
             break;
 
+        case CL_TYPE_REAL:
+            glOut_ << "real";
+            break;
+
         case CL_TYPE_ENUM:
             glOut_ << "enum" << " " << typeName(clt);
             break;

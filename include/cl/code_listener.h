@@ -397,6 +397,11 @@ struct cl_cst {
         struct {
             const char                  *value;
         } cst_string; /**< valid only for @b CL_TYPE_STRING */
+
+        /* CL_TYPE_REAL */
+        struct {
+            double                      value;
+        } cst_real; /**< valid only for @b CL_TYPE_REAL */
     } data;
 };
 

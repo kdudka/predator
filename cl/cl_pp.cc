@@ -276,6 +276,10 @@ void ClPrettyPrint::printCst(const struct cl_operand *op) {
             }
             break;
 
+        case CL_TYPE_REAL:
+            SSD_COLORIZE(out_, C_WHITE) << op->data.cst.data.cst_real.value;
+            break;
+
         default:
             CL_TRAP;
     }
@@ -357,6 +361,10 @@ deref_done:
         case CL_TYPE_ENUM:
             out_ << SSD_INLINE_COLOR(C_GREEN, "enum") << " "
                 << SSD_INLINE_COLOR(C_DARK_GRAY, typeName(clt));
+            break;
+
+        case CL_TYPE_REAL:
+            out_ << SSD_INLINE_COLOR(C_GREEN, "real");
             break;
 
         default:
