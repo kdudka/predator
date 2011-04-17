@@ -340,10 +340,6 @@ TObjId subSeekByOffset(
         return visitor.subFound;
 }
 
-void valReplace(SymHeap &sh, const TValueId of, const TValueId by) {
-    sh.valReplace(of, by);
-}
-
 void seekRoot(const SymHeap &sh, TObjId *pRoot, int *pOff) {
     const TObjId obj = *pRoot;
     if (OBJ_INVALID == obj)

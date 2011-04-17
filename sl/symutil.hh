@@ -88,21 +88,6 @@ inline bool objIsSeg(const SymHeap &sh, TObjId obj, bool anyPart = false) {
     return false;
 }
 
-// TODO: remove this as soon as we get the implicit aliasing working
-void valReplace(SymHeap &sh, const TValueId val, const TValueId by);
-
-inline bool areEqualAddrs(
-        const SymHeap               &sh,
-        const TValueId              v1,
-        const TValueId              v2)
-{
-    bool eq;
-    if (sh.proveEq(&eq, v1, v2))
-        return eq;
-    else
-        return false;
-}
-
 /// return offset of an object within another object;  -1 if not found
 inline int subOffsetIn(const SymHeapTyped &sh, TObjId in, TObjId of) {
     if (in == of)

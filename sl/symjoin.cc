@@ -1357,11 +1357,11 @@ bool insertSegmentClone(
             break;
         }
 
-        if (areEqualAddrs(shGt, nextGt, valGt))
+        if (nextGt == valGt)
             // do not go byond the segment, just follow its data
             continue;
 
-        if (!areEqualAddrs(shGt, segGtAt, valGt))
+        if (segGtAt != valGt)
             // OK_MAY_EXIST is applicable only on the first object
             off = 0;
 

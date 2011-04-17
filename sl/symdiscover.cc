@@ -132,7 +132,7 @@ bool validatePointingObjects(
         if (isDls && obj == ptrObjByOffset(sh, next, off.prev))
             continue;
 
-        if (toInsideOnly && areEqualAddrs(sh, sh.valueOf(obj), headAddr))
+        if (toInsideOnly && (sh.valueOf(obj) == headAddr))
             continue;
 
         if (hasKey(allowedReferers, objRoot(sh, obj)))
@@ -270,7 +270,7 @@ TObjId jumpToNextObj(
         // check DLS back-link
         const TValueId valPrev = sh.valueOf(ptrObjByOffset(sh, next, off.prev));
         const TValueId headAt = sh.placedAt(compObjByOffset(sh, obj, off.head));
-        if (!areEqualAddrs(sh, valPrev, headAt))
+        if (valPrev != headAt)
             // DLS back-link mismatch
             return OBJ_INVALID;
     }
@@ -496,7 +496,7 @@ struct PtrFinder {
         if (val <= 0)
             return /* continue */ true;
 
-        if (!areEqualAddrs(sh, val, targetAddr))
+        if (val != targetAddr)
             return /* continue */ true;
 
         // target found!

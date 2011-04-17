@@ -395,7 +395,7 @@ void slSegAbstractionStep(SymHeap &sh, TObjId *pObj, const BindingOff &off)
     // replace all references to 'head'
     const int offHead = sh.objBinding(objNext).head;
     const TValueId headAt = sh.placedAt(compObjByOffset(sh, obj, offHead));
-    valReplace(sh, headAt, segHeadAddr(sh, objNext));
+    sh.valReplace(headAt, segHeadAddr(sh, objNext));
 
     // destroy self, including all prototypes
     REQUIRE_GC_ACTIVITY(sh, headAt, slSegAbstractionStep);
@@ -472,7 +472,7 @@ void dlSegGobble(SymHeap &sh, TObjId dls, TObjId var, bool backward) {
     // replace VAR by DLS
     const TObjId varHead = compObjByOffset(sh, var, off.head);
     const TValueId headAt = sh.placedAt(varHead);
-    valReplace(sh, headAt, segHeadAddr(sh, dls));
+    sh.valReplace(headAt, segHeadAddr(sh, dls));
     REQUIRE_GC_ACTIVITY(sh, headAt, dlSegGobble);
 
     // handle DLS Neq predicates
@@ -494,7 +494,7 @@ void dlSegMerge(SymHeap &sh, TObjId seg1, TObjId seg2) {
 #ifndef NDEBUG
     const TObjId nextPtr = nextPtrFromSeg(sh, peer1);
     const TValueId valNext = sh.valueOf(nextPtr);
-    CL_BREAK_IF(!areEqualAddrs(sh, valNext, segHeadAddr(sh, seg2)));
+    CL_BREAK_IF(valNext != segHeadAddr(sh, seg2));
 #endif
 
     const TObjId peer2 = dlSegPeer(sh, seg2);
@@ -510,8 +510,8 @@ void dlSegMerge(SymHeap &sh, TObjId seg1, TObjId seg2) {
     const TValueId  segAt = segHeadAddr(sh,  seg1);
     const TValueId peerAt = segHeadAddr(sh, peer1);
 
-    valReplace(sh,  segAt, segHeadAddr(sh,  seg2));
-    valReplace(sh, peerAt, segHeadAddr(sh, peer2));
+    sh.valReplace( segAt, segHeadAddr(sh,  seg2));
+    sh.valReplace(peerAt, segHeadAddr(sh, peer2));
 
     // destroy segAt and peerAt, including all prototypes -- either at once, or
     // one by one (depending on the shape of subgraph)
@@ -655,7 +655,7 @@ bool considerAbstraction(
 void segReplaceRefs(SymHeap &sh, TObjId seg, TValueId valNext) {
     const TObjId head = segHead(sh, seg);
     const TValueId segAt = sh.placedAt(head);
-    valReplace(sh, segAt, valNext);
+    sh.valReplace(segAt, valNext);
 
     const int offHead = subOffsetIn(sh, seg, head);
     CL_BREAK_IF(offHead < 0);
