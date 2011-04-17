@@ -117,7 +117,7 @@ void dump_kind(const SymHeap &heap, TObjId obj) {
                 << ", offNext = " << heap.objBinding(obj).next;
     }
 
-    const int offHead = heap.objBinding(obj).head;
+    const TOffset offHead = heap.objBinding(obj).head;
     if (offHead)
         cout << ", icHead = " << offHead;
 }
@@ -205,7 +205,7 @@ void dump_obj(const SymHeap &heap, TObjId obj) {
     const EObjKind kind = heap.objKind(obj);
     if (OK_DLS == kind) {
         cout << "    peer      = ";
-        const int offPeer = heap.objBinding(obj).prev;
+        const TOffset offPeer = heap.objBinding(obj).prev;
         const TObjId peerPtr = ptrObjByOffset(heap, obj, offPeer);
         const TValueId valPeer = heap.valueOf(peerPtr);
         if (0 < valPeer) {
@@ -233,7 +233,7 @@ void dump_obj(const SymHeap &heap, TObjId obj) {
 
     if (OK_CONCRETE != kind && OK_HEAD != kind && OK_PART != kind) {
         cout << "    next      = ";
-        const int offNext = heap.objBinding(obj).next;
+        const TOffset offNext = heap.objBinding(obj).next;
         const TObjId nextPtr = ptrObjByOffset(heap, obj, offNext);
         const TValueId valNext = heap.valueOf(nextPtr);
         if (0 < valNext) {

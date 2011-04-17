@@ -90,7 +90,7 @@ void segDestroy(SymHeap &sh, TObjId seg);
  * @note this is mostly useful as soon as @b Linux @b lists are involved
  */
 inline TObjId segHead(const SymHeap &sh, TObjId seg) {
-    const int offHead = sh.objBinding(seg).head;
+    const TOffset offHead = sh.objBinding(seg).head;
     return compObjByOffset(sh, seg, offHead);
 }
 

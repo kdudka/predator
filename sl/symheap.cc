@@ -99,7 +99,7 @@ class OffsetDb {
             return iter->second;
         }
 
-        int /* offset */ lookup(TValueId v1, TValueId v2) {
+        TOffset lookup(TValueId v1, TValueId v2) {
             TValMap::iterator iter = valMap_.find(v1);
             if (valMap_.end() == iter)
                 return /* not found */ 0;
@@ -635,7 +635,7 @@ namespace {
 }
 
 namespace {
-    bool proveEqBool(bool *result, int valA, int valB) {
+    bool proveEqBool(bool *result, TValueId valA, TValueId valB) {
         if ((valA == valB) && (VAL_TRUE == valA || VAL_FALSE == valA)) {
             // values are equal
             *result = true;

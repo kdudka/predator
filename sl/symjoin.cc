@@ -1453,7 +1453,7 @@ class MayExistVisitor {
         const EJoinStatus       action_;
         const TValueId          valRef_;
         const TObjId            root_;
-        int                     offNext_;
+        TOffset                 offNext_;
 
     public:
         MayExistVisitor(
@@ -1470,7 +1470,7 @@ class MayExistVisitor {
             CL_BREAK_IF(JS_USE_SH1 != action && JS_USE_SH2 != action);
         }
 
-        int offNext() const {
+        TOffset offNext() const {
             return offNext_;
         }
 
@@ -1493,7 +1493,7 @@ class SubAddrFinder {
     private:
         const TValueId subAddr_;
         const TObjId   root_;
-        int            result_;
+        TOffset        result_;
 
     public:
         SubAddrFinder(const TValueId subAddr, const TObjId root):
@@ -1503,7 +1503,7 @@ class SubAddrFinder {
         {
         }
 
-        int result() const { return result_; }
+        TOffset result() const { return result_; }
 
         bool operator()(
                 const SymHeap   &sh,

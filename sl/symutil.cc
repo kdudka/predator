@@ -146,7 +146,7 @@ void getPtrValues(SymHeapCore::TContValue &dst, const SymHeap &heap,
     }
 }
 
-void skipObj(const SymHeap &sh, TObjId *pObj, int offNext)
+void skipObj(const SymHeap &sh, TObjId *pObj, TOffset offNext)
 {
     const TObjId objPtrNext = ptrObjByOffset(sh, *pObj, offNext);
     const TObjId objNext = objRootByPtr(sh, objPtrNext);
@@ -281,7 +281,7 @@ struct SubByOffsetFinder {
     TObjId                  subFound;
     const struct cl_type    *cltToSeek;
     enum cl_type_e          cltCodeToSeek;
-    int                     offToSeek;
+    TOffset                 offToSeek;
 
     bool operator()(const SymHeap &sh, TObjId sub) {
         const struct cl_type *clt = sh.objType(sub);
@@ -309,7 +309,7 @@ struct SubByOffsetFinder {
 TObjId subSeekByOffset(
         const SymHeap               &sh,
         const TObjId                root,
-        const int                   offToSeek,
+        const TOffset               offToSeek,
         const struct cl_type        *clt,
         const enum cl_type_e        code)
 {
@@ -340,7 +340,7 @@ TObjId subSeekByOffset(
         return visitor.subFound;
 }
 
-void seekRoot(const SymHeap &sh, TObjId *pRoot, int *pOff) {
+void seekRoot(const SymHeap &sh, TObjId *pRoot, TOffset *pOff) {
     const TObjId obj = *pRoot;
     if (OBJ_INVALID == obj)
         return;
@@ -350,12 +350,12 @@ void seekRoot(const SymHeap &sh, TObjId *pRoot, int *pOff) {
     (*pRoot) = root;
 }
 
-TObjId ptrObjByOffset(const SymHeap &sh, TObjId obj, int off) {
+TObjId ptrObjByOffset(const SymHeap &sh, TObjId obj, TOffset off) {
     seekRoot(sh, &obj, &off);
     return subSeekByOffset(sh, obj, off, /* clt */ 0, CL_TYPE_PTR);
 }
 
-TObjId compObjByOffset(const SymHeap &sh, TObjId obj, int off) {
+TObjId compObjByOffset(const SymHeap &sh, TObjId obj, TOffset off) {
     seekRoot(sh, &obj, &off);
     return subSeekByOffset(sh, obj, off, /* clt */ 0, CL_TYPE_STRUCT);
 }
@@ -363,14 +363,14 @@ TObjId compObjByOffset(const SymHeap &sh, TObjId obj, int off) {
 TValueId addrQueryByOffset(
         SymHeap                 &sh,
         const TObjId            target,
-        const int               offRequested,
+        const TOffset           offRequested,
         const struct cl_type    *cltPtr,
         const struct cl_loc     *lw)
 {
     // seek root object while cumulating the offset
     TObjId obj = target;
     TObjId parent;
-    int off = offRequested;
+    TOffset off = offRequested;
     int nth;
     while (OBJ_INVALID != (parent = sh.objParent(obj, &nth))) {
         const struct cl_type *cltParent = sh.objType(parent);

@@ -89,11 +89,11 @@ inline bool objIsSeg(const SymHeap &sh, TObjId obj, bool anyPart = false) {
 }
 
 /// return offset of an object within another object;  -1 if not found
-inline int subOffsetIn(const SymHeapTyped &sh, TObjId in, TObjId of) {
+inline TOffset subOffsetIn(const SymHeapTyped &sh, TObjId in, TObjId of) {
     if (in == of)
         return 0;
 
-    int offset = 0;
+    TOffset offset = 0;
     TObjId parent;
 
     int nth;
@@ -115,17 +115,17 @@ inline int subOffsetIn(const SymHeapTyped &sh, TObjId in, TObjId of) {
 TObjId subSeekByOffset(
         const SymHeap               &sh,
         const TObjId                root,
-        const int                   offToSeek,
+        const TOffset               offToSeek,
         const struct cl_type        *clt,
         const enum cl_type_e        code = CL_TYPE_UNKNOWN);
 
-TObjId ptrObjByOffset(const SymHeap &sh, TObjId obj, int off);
-TObjId compObjByOffset(const SymHeap &sh, TObjId obj, int off);
+TObjId ptrObjByOffset(const SymHeap &sh, TObjId obj, TOffset off);
+TObjId compObjByOffset(const SymHeap &sh, TObjId obj, TOffset off);
 
 void getPtrValues(SymHeapCore::TContValue &dst, const SymHeap &heap,
                   TObjId obj);
 
-void skipObj(const SymHeap &sh, TObjId *pObj, int offNext);
+void skipObj(const SymHeap &sh, TObjId *pObj, TOffset offNext);
 
 void initVariable(SymHeap                       &sh,
                   TObjId                        obj,
@@ -268,7 +268,7 @@ void gatherPointingObjects(const SymHeap            &sh,
 TValueId addrQueryByOffset(
         SymHeap                 &sh,
         const TObjId            target,
-        const int               offRequested,
+        const TOffset           offRequested,
         const struct cl_type    *cltPtr,
         const struct cl_loc     *lw = 0);
 

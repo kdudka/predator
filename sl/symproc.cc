@@ -187,7 +187,7 @@ void SymProc::resolveOffValue(TValueId *pVal, const struct cl_accessor **pAc) {
         return;
 
     // going through the chain of CL_ACCESSOR_ITEM, look for the target
-    int off = 0;
+    TOffset off = 0;
     TValueId valTarget = VAL_INVALID;
     while (ac && ac->code == CL_ACCESSOR_ITEM && VAL_INVALID == valTarget) {
         // compute cumulative offset at the current level
@@ -271,7 +271,7 @@ void SymProc::handleDeref(TObjId *pObj, const struct cl_accessor **pAc) {
     *pObj = this->handleDerefCore(val, cltTarget);
 }
 
-int offDerefArray(const struct cl_accessor *ac) {
+TOffset offDerefArray(const struct cl_accessor *ac) {
     // resolve index and type
     const int idx = intCstFromOperand(ac->data.array.index);
     const struct cl_type *clt = ac->type;
@@ -282,14 +282,14 @@ int offDerefArray(const struct cl_accessor *ac) {
     CL_BREAK_IF(!clt);
 
     // compute the offset
-    const int off = idx * clt->size;
+    const TOffset off = idx * clt->size;
     if (off)
         CL_BREAK_IF("not tested yet");
 
     return off;
 }
 
-int offItem(const struct cl_accessor *ac) {
+TOffset offItem(const struct cl_accessor *ac) {
     const int id = ac->data.item.id;
     const struct cl_type *clt = ac->type;
     CL_BREAK_IF(!clt || clt->item_cnt <= id);
@@ -315,7 +315,7 @@ TObjId SymProc::heapObjFromOperand(const struct cl_operand &op) {
         return obj;
 
     // go through the chain of accessors
-    int off = 0;
+    TOffset off = 0;
     bool isRef = false;
     for (; ac; ac = ac->next) {
         const enum cl_accessor_e code = ac->code;
@@ -886,7 +886,7 @@ TValueId handlePointerPlus(SymHeap &sh, const struct cl_type *cltPtr,
     }
 
     // read integral offset
-    const int offRequested = intCstFromOperand(&op);
+    const TOffset offRequested = intCstFromOperand(&op);
     CL_DEBUG("handlePointerPlus(): " << offRequested << "b offset requested");
 
     const TObjId target = sh.pointsTo(ptr);

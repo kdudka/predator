@@ -35,14 +35,14 @@ TObjId nextPtrFromSeg(const SymHeap &sh, TObjId seg) {
     // validate call of nextPtrFromSeg()
     CL_BREAK_IF(OK_CONCRETE == sh.objKind(seg));
 
-    const int offNext = sh.objBinding(seg).next;
+    const TOffset offNext = sh.objBinding(seg).next;
     return ptrObjByOffset(sh, seg, offNext);
 }
 
 TObjId peerPtrFromSeg(const SymHeap &sh, TObjId seg) {
     CL_BREAK_IF(OK_DLS != sh.objKind(seg));
 
-    const int offPeer = sh.objBinding(seg).prev;
+    const TOffset offPeer = sh.objBinding(seg).prev;
     return ptrObjByOffset(sh, seg, offPeer);
 }
 
@@ -281,8 +281,8 @@ TObjId segClone(SymHeap &sh, const TObjId seg) {
         const TObjId dupPeer = sh.objDup(peer);
 
         // dig the 'peer' selectors of the cloned objects
-        const int offpSeg  = sh.objBinding(dupSeg).prev;
-        const int offpPeer = sh.objBinding(dupPeer).prev;
+        const TOffset offpSeg  = sh.objBinding(dupSeg).prev;
+        const TOffset offpPeer = sh.objBinding(dupPeer).prev;
 
         // resolve selectors -> sub-objects
         const TObjId ppSeg  = ptrObjByOffset(sh, dupSeg , offpSeg);

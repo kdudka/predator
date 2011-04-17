@@ -393,7 +393,7 @@ void slSegAbstractionStep(SymHeap &sh, TObjId *pObj, const BindingOff &off)
     abstractNonMatchingValues(sh, obj, objNext);
 
     // replace all references to 'head'
-    const int offHead = sh.objBinding(objNext).head;
+    const TOffset offHead = sh.objBinding(objNext).head;
     const TValueId headAt = sh.placedAt(compObjByOffset(sh, obj, offHead));
     sh.valReplace(headAt, segHeadAddr(sh, objNext));
 
@@ -657,7 +657,7 @@ void segReplaceRefs(SymHeap &sh, TObjId seg, TValueId valNext) {
     const TValueId segAt = sh.placedAt(head);
     sh.valReplace(segAt, valNext);
 
-    const int offHead = subOffsetIn(sh, seg, head);
+    const TOffset offHead = subOffsetIn(sh, seg, head);
     CL_BREAK_IF(offHead < 0);
 
     const TObjId next = sh.pointsTo(valNext);
@@ -693,7 +693,7 @@ void segReplaceRefs(SymHeap &sh, TObjId seg, TValueId valNext) {
 
         // redirect!
         const TObjId root = objRoot(sh, target);
-        const int off = subOffsetIn(sh, root, target) - offHead;
+        const TOffset off = subOffsetIn(sh, root, target) - offHead;
         const TValueId val = addrQueryByOffset(sh, next, off, cltPtr);
         sh.objSetValue(obj, val);
     }
@@ -708,7 +708,7 @@ bool dlSegReplaceByConcrete(SymHeap &sh, TObjId obj, TObjId peer) {
     dlSegSetMinLength(sh, obj, /* DLS 0+ */ 0);
 
     // take the value of 'next' pointer from peer
-    const int offPeer = sh.objBinding(obj).prev;
+    const TOffset offPeer = sh.objBinding(obj).prev;
     const TObjId peerPtr = ptrObjByOffset(sh, obj, offPeer);
     const TValueId valNext = sh.valueOf(nextPtrFromSeg(sh, peer));
     sh.objSetValue(peerPtr, valNext);
@@ -847,7 +847,7 @@ void concretizeObj(SymHeap &sh, TValueId addr, TSymHeapList &todo) {
     const TValueId aoDupHeadAddr = segHeadAddr(sh, aoDup);
     if (OK_DLS == kind) {
         // DLS relink
-        const int offPeer = sh.objBinding(peer).prev;
+        const TOffset offPeer = sh.objBinding(peer).prev;
         const TObjId peerField = ptrObjByOffset(sh, peer, offPeer);
         sh.objSetValue(peerField, aoDupHeadAddr);
     }

@@ -466,7 +466,7 @@ unsigned /* len */ segDiscover(
 }
 
 bool digSegmentHead(
-        int                         *pOff,
+        TOffset                     *pOff,
         const SymHeap               &sh,
         const struct cl_type        *cltRoot,
         TObjId                      obj)
@@ -489,7 +489,7 @@ bool digSegmentHead(
 struct PtrFinder {
     TObjId              root;
     TValueId            targetAddr;
-    int                 offFound;
+    TOffset             offFound;
 
     bool operator()(const SymHeap &sh, TObjId sub) {
         const TValueId val = sh.valueOf(sub);

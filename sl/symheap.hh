@@ -51,6 +51,9 @@ enum EUnknownValue {
 struct DeepCopyData;
 struct SymJoinCtx;
 
+/// a type used by SymHeap for byte offsets
+typedef short TOffset;
+
 /**
  * symbolic heap @b core - no type-info, no object composition at this level
  */
@@ -219,7 +222,7 @@ class SymHeapCore {
 
     public:
         // TODO: review the following interface and write some dox
-        typedef std::pair<TValueId /* valRef */, int /* offset */>  TOffVal;
+        typedef std::pair<TValueId /* valRef */, TOffset>           TOffVal;
         typedef std::vector<TOffVal>                                TOffValCont;
 
         // TODO: review the following interface and write some dox
@@ -619,9 +622,9 @@ enum EObjKind {
 };
 
 struct BindingOff {
-    int head;               ///< target offset
-    int next;               ///< offset of the 'next' or 'r' pointer
-    int prev;               ///< offset of the 'prev' or 'l' pointer
+    TOffset head;           ///< target offset
+    TOffset next;           ///< offset of the 'next' or 'r' pointer
+    TOffset prev;           ///< offset of the 'prev' or 'l' pointer
 
     BindingOff():
         head(0),
