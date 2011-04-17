@@ -105,11 +105,8 @@ class SymProc {
         void heapSetSingleVal(TObjId lhs, TValueId rhs);
         void heapObjDefineType(TObjId lhs, TValueId rhs);
         bool checkForInvalidDeref(TObjId obj);
-        TObjId handleDerefCore(TValueId value);
+        TObjId handleDerefCore(TValueId value, const struct cl_type *cltTarget);
         void handleDeref(TObjId *pObj, const struct cl_accessor **pAc);
-        void resolveAliasing(TValueId *pVal, const struct cl_type *cltTarget,
-                             bool virtualDereference);
-
         void resolveOffValue(TValueId *pVal, const struct cl_accessor **pAc);
         TValueId heapValFromObj(const struct cl_operand &op);
         TValueId heapValFromCst(const struct cl_operand &op);

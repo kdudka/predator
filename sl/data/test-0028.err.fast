@@ -1,10 +1,10 @@
 test-0028.c:24:13: error: amount of allocated memory not accurate
 test-0028.c:24:13: note: allocated: 4 bytes
 test-0028.c:24:13: note:  expected: 8 bytes
-test-0028.c:16:17: error: dereference of non-existing non-heap object
+test-0028.c:16:17: error: dereference of already deleted heap object
 test-0028.c:26:14: note: from call of free_list()
 test-0028.c:22:5: note: from call of main()
-test-0028.c:17:13: error: attempt to free a non-heap object, which does not exist anyhow
+test-0028.c:17:13: error: double free() detected
 test-0028.c:26:14: note: from call of free_list()
 test-0028.c:22:5: note: from call of main()
 test-0028.c:13:13: warning: end of function free_list() has not been reached

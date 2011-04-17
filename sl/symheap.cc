@@ -562,6 +562,13 @@ TObjId SymHeapCore::objCreate() {
     return obj;
 }
 
+void SymHeapCore::objRewriteAddress(TObjId obj, TValueId addr) {
+    CL_BREAK_IF(this->lastObjId() < obj || obj < 0);
+    CL_BREAK_IF(this->pointsTo(addr) < 0);
+
+    d->objects[obj].address = addr;
+}
+
 TValueId SymHeapCore::valCreate(EUnknownValue code, TObjId target) {
     // check range (we allow OBJ_INVALID here for custom values)
     CL_BREAK_IF(this->lastObjId() < target);
@@ -722,10 +729,6 @@ void SymHeapCore::valReplace(TValueId val, TValueId newVal) {
     if (!related.empty())
         CL_TRAP;
 #endif
-}
-
-void SymHeapCore::addAlias(TValueId v1, TValueId v2) {
-    d->aliasDb.add(v1, v2);
 }
 
 // template method
@@ -1165,9 +1168,8 @@ void SymHeapTyped::createSubs(TObjId obj) {
             d->objects[obj].subObjs[i] = subObj;
 
             if (!item->offset && OBJ_RETURN != obj) {
-                // declare explicit aliasing with parent object's addr
-                SymHeapCore::addAlias(this->placedAt(obj),
-                                      this->placedAt(subObj));
+                // declare implicit aliasing with parent object's addr
+                SymHeapCore::objRewriteAddress(subObj, this->placedAt(obj));
             }
 
             push(todo, subObj, subClt);
@@ -1214,9 +1216,8 @@ TObjId SymHeapTyped::objDup(TObjId obj) {
             refParent.subObjs[item.nth] = dst;
 
             if (!subOffsetIn(*this, parent, dst)) {
-                // declare explicit aliasing with parent object's addr
-                SymHeapCore::addAlias(this->placedAt(dst),
-                                      this->placedAt(parent));
+                // declare implicit aliasing with parent object's addr
+                SymHeapCore::objRewriteAddress(dst, this->placedAt(parent));
             }
         }
 

@@ -117,7 +117,7 @@ bool SymProc::checkForInvalidDeref(TObjId obj) {
     return true;
 }
 
-TObjId SymProc::handleDerefCore(TValueId val) {
+TObjId SymProc::handleDerefCore(TValueId val, const struct cl_type *cltTarget) {
     if (VAL_DEREF_FAILED == val)
         // we're already on an error path
         return OBJ_DEREF_FAILED;
@@ -145,16 +145,26 @@ TObjId SymProc::handleDerefCore(TValueId val) {
     }
 
     // look for the target
-    const TObjId target = heap_.pointsTo(val);
+    TObjId target = heap_.pointsTo(val);
     if (this->checkForInvalidDeref(target))
         // error already handled
         return OBJ_DEREF_FAILED;
 
+    if (cltTarget) {
+        target = subSeekByOffset(heap_, target, /* off */ 0, cltTarget);
+        if (target < 0) {
+            CL_ERROR_MSG(lw_,
+                    "type of the pointer being dereferenced does not match "
+                    "type of the target object");
+
+            bt_->printBackTrace();
+            return OBJ_DEREF_FAILED;
+        }
+    }
+
     // all OK
     return target;
 }
-
-namespace {
 
 TObjId varFromOperand(const struct cl_operand &op, const SymHeap &sh,
                       const SymBackTrace *bt)
@@ -163,71 +173,6 @@ TObjId varFromOperand(const struct cl_operand &op, const SymHeap &sh,
     const int nestLevel = bt->countOccurrencesOfTopFnc();
     const CVar cVar(uid, nestLevel);
     return sh.objByCVar(cVar);
-}
-
-} // namespace
-
-void SymProc::resolveAliasing(TValueId *pVal, const struct cl_type *cltTarget,
-                              bool virtualDefeference)
-{
-    TValueId val = *pVal;
-    const struct cl_type *clt = heap_.valType(val);
-    if (!clt)
-        // no type-info, giving up...
-        return;
-
-    if (*clt == *cltTarget)
-        // no aliasing, all seems OK
-        return;
-
-    if (CL_TYPE_PTR == clt->code && CL_TYPE_PTR == cltTarget->code
-            && CL_TYPE_FNC != targetTypeOfPtr(clt)->code
-            && CL_TYPE_FNC != targetTypeOfPtr(cltTarget)->code)
-        // multi-level dereference may be handled eventually later, as long
-        // as both _target_ pointers are data pointers.  Generally it's not
-        // guaranteed that sizeof(void *) == sizeof(void (*)())
-        return;
-
-    // get all aliases of 'val'
-    SymHeap::TContValue aliasing;
-    heap_.gatherValAliasing(aliasing, val);
-
-    // go through the list and look for a suitable one
-    unsigned cntMatch = 0;
-    BOOST_FOREACH(const TValueId alias, aliasing) {
-        const struct cl_type *clt = heap_.valType(alias);
-        if (!clt)
-            continue;
-
-        if (*clt != *cltTarget)
-            continue;
-
-        // match!
-        cntMatch++;
-        val = alias;
-#ifdef NDEBUG
-        break;
-#endif
-    }
-
-    if (!cntMatch) {
-        if (!virtualDefeference) {
-            CL_ERROR_MSG(lw_,
-                    "type of the pointer being dereferenced does not match "
-                    "type of the target object");
-
-            bt_->printBackTrace();
-            *pVal = VAL_DEREF_FAILED;
-        }
-
-        return;
-    }
-
-    // ensure we've got a _deterministic_ match
-    CL_BREAK_IF(1 < cntMatch);
-
-    CL_DEBUG_MSG(lw_, "value alias matched during dereference of a pointer");
-    *pVal = val;
 }
 
 void SymProc::resolveOffValue(TValueId *pVal, const struct cl_accessor **pAc) {
@@ -269,18 +214,12 @@ void SymProc::resolveOffValue(TValueId *pVal, const struct cl_accessor **pAc) {
 
 void SymProc::handleDeref(TObjId *pObj, const struct cl_accessor **pAc) {
     // mark the current accessor as done in advance, and move to the next one
-    const struct cl_accessor *ac = *pAc;
-    *pAc = ac->next;
+    *pAc = (*pAc)->next;
 
     const TObjId obj = *pObj;
     if (obj < 0)
         // we're already on an error path
         return;
-
-    // derive the target type of the pointer we're dereferencing
-    const struct cl_type *clt = heap_.objType(obj);
-    const struct cl_type *cltTarget = targetTypeOfPtr(clt);
-    CL_BREAK_IF(!clt || !cltTarget || cltTarget->code == CL_TYPE_VOID);
 
     // read the value inside the pointer
     TValueId val = heap_.valueOf(obj);
@@ -300,6 +239,24 @@ void SymProc::handleDeref(TObjId *pObj, const struct cl_accessor **pAc) {
             break;
     }
 
+    // attempt to resolve an off-value
+    this->resolveOffValue(&val, pAc);
+
+    // derive the target type of the pointer we're dereferencing
+    const struct cl_type *clt = heap_.objType(obj);
+    const struct cl_type *cltTarget = (*pAc)
+        ? (*pAc)->type
+        : targetTypeOfPtr(clt);
+
+    CL_BREAK_IF(!clt || !cltTarget || cltTarget->code == CL_TYPE_VOID);
+    if (CL_TYPE_PTR == clt->code && CL_TYPE_PTR == cltTarget->code
+            && CL_TYPE_FNC != targetTypeOfPtr(clt)->code
+            && CL_TYPE_FNC != targetTypeOfPtr(cltTarget)->code)
+        // multi-level dereference may be handled eventually later, as long
+        // as both _target_ pointers are data pointers.  Generally it's not
+        // guaranteed that sizeof(void *) == sizeof(void (*)())
+        cltTarget = 0;
+
     // We need to introduce a less chatty variant of dereference for accessor
     // chains of the form:
     //
@@ -307,16 +264,11 @@ void SymProc::handleDeref(TObjId *pObj, const struct cl_accessor **pAc) {
     //
     // ... as we should not claim there is an invalid dereference, if only
     // an address is actually being computed
-    const bool virtualDefeference = seekRefAccessor(ac);
-
-    // attempt to resolve aliasing
-    this->resolveAliasing(&val, cltTarget, virtualDefeference);
-
-    // attempt to resolve an off-value
-    this->resolveOffValue(&val, pAc);
+    if (seekRefAccessor(*pAc))
+        cltTarget = 0;
 
     // now perform the actual dereference
-    *pObj = this->handleDerefCore(val);
+    *pObj = this->handleDerefCore(val, cltTarget);
 }
 
 int offDerefArray(const struct cl_accessor *ac) {

@@ -130,6 +130,13 @@ class SymHeapCore {
         TObjId objCreate();
 
         /**
+         * rewrite object's address by another object's address (internal use
+         * only, mainly by SymHeapTyped for implicit address aliasing at the
+         * level of struct/union nesting)
+         */
+        void objRewriteAddress(TObjId obj, TValueId addr);
+
+        /**
          * create a new symbolic heap value
          * @param code kind of the unknown value, UV_KNOWN if not unknown
          * @param target pointed object's ID
@@ -139,15 +146,6 @@ class SymHeapCore {
 
         /// alter an already existing value (use with caution)
         void valSetUnknown(TValueId val, EUnknownValue code);
-
-        /**
-         * declare explicit aliasing among the given pair of values.  It may be
-         * later used in SymHeapCore::proveEq().  This method is known to be
-         * called from SymHeapTyped, during the creation of a composite type.
-         * @note No differences are made between val1 and val2.  The arguments
-         * are fully symmetric.
-         */
-        void addAlias(TValueId val1, TValueId val2);
 
     public:
         TObjId lastObjId() const;

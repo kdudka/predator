@@ -2041,7 +2041,7 @@ class GhostMapper {
             CL_BREAK_IF(image <= 0);
 
             // introduce ghost mapping
-            CL_BREAK_IF(hasKey(vMap_, addrGhost));
+            CL_BREAK_IF(hasKey(vMap_, addrGhost) && vMap_[addrGhost] != image);
             vMap_[addrGhost] = image;
 
             return /* continue */ true;
