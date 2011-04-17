@@ -699,34 +699,6 @@ void SymExecCore::execFreeCore(const TValueId val) {
     this->objDestroy(obj);
 }
 
-void SymExecCore::seekAliasedRoot(TValueId *pValue) {
-    const TValueId val = *pValue;
-    const TObjId obj = heap_.pointsTo(val);
-    if (obj < 0)
-        // no valid target anyway
-        return;
-
-    // seek the root
-    const TObjId root = objRoot(heap_, obj);
-    CL_BREAK_IF(root < 0);
-    if (obj == root)
-        // we've already got the root object
-        return;
-
-    // get root's address
-    const TValueId valRoot = heap_.placedAt(root);
-    CL_BREAK_IF(valRoot <= 0);
-
-    // finally check if the given value is alias of the root or not
-    bool eq;
-    if (!heap_.proveEq(&eq, val, valRoot) || !eq)
-        return;
-
-    // found!
-    CL_DEBUG_MSG(lw_, "alias of root matched during execution of free()");
-    *pValue = valRoot;
-}
-
 void SymExecCore::execFree(const CodeStorage::TOperandList &opList) {
     CL_BREAK_IF(/* dst + fnc + ptr */ 3 != opList.size());
 
@@ -749,7 +721,6 @@ void SymExecCore::execFree(const CodeStorage::TOperandList &opList) {
             break;
     }
 
-    this->seekAliasedRoot(&val);
     this->execFreeCore(val);
 }
 

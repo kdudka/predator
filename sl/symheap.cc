@@ -324,12 +324,8 @@ void SymHeapCore::usedBy(TContObj &dst, TValueId val) const {
         // value ID is either out of range, or does not point to a valid obj
         return;
 
-    TContValue aliases;
-    this->gatherValAliasing(aliases, val);
-    BOOST_FOREACH(const TValueId valAlias, aliases) {
-        const Private::Value::TUsedBy &usedBy = d->values[valAlias].usedBy;
-        std::copy(usedBy.begin(), usedBy.end(), std::back_inserter(dst));
-    }
+    const Private::Value::TUsedBy &usedBy = d->values[val].usedBy;
+    std::copy(usedBy.begin(), usedBy.end(), std::back_inserter(dst));
 }
 
 /// return how many objects use the value
@@ -338,15 +334,8 @@ unsigned SymHeapCore::usedByCount(TValueId val) const {
         // value ID is either out of range, or does not point to a valid obj
         return 0; // means: "not used"
 
-    unsigned cnt = 0;
-    TContValue aliases;
-    this->gatherValAliasing(aliases, val);
-    BOOST_FOREACH(const TValueId valAlias, aliases) {
-        const Private::Value::TUsedBy &usedBy = d->values[valAlias].usedBy;
-        cnt += usedBy.size();
-    }
-
-    return cnt;
+    const Private::Value::TUsedBy &usedBy = d->values[val].usedBy;
+    return usedBy.size();
 }
 
 TObjId SymHeapCore::objDup(TObjId objOrigin) {
@@ -611,10 +600,6 @@ void SymHeapCore::gatherOffValues(TOffValCont &dst, TValueId ref) const {
     dst = d->offsetDb.getOffValues(ref);
 }
 
-void SymHeapCore::gatherValAliasing(TContValue &dst, TValueId ref) const {
-    dst.push_back(ref);
-}
-
 void SymHeapCore::neqOp(ENeqOp op, TValueId valA, TValueId valB) {
     switch (op) {
         case NEQ_NOP:
@@ -719,11 +704,7 @@ bool SymHeapCore::proveEq(bool *result, TValueId valA, TValueId valB) const {
 
 void SymHeapCore::gatherRelatedValues(TContValue &dst, TValueId val) const {
     // TODO: should we care about off-values here?
-    TContValue aliases;
-    this->gatherValAliasing(aliases, val);
-    BOOST_FOREACH(const TValueId valAlias, aliases) {
-        d->neqDb.gatherRelatedValues(dst, valAlias);
-    }
+    d->neqDb.gatherRelatedValues(dst, val);
 }
 
 template <class TValMap>

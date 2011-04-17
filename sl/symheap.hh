@@ -226,7 +226,6 @@ class SymHeapCore {
         TValueId valCreateByOffset(TOffVal);
         TValueId valGetByOffset(TOffVal) const;
         void gatherOffValues(TOffValCont &dst, TValueId ref) const;
-        void gatherValAliasing(TContValue &dst, TValueId ref) const;
 
     public:
         enum ENeqOp {

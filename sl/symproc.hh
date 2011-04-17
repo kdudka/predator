@@ -174,7 +174,6 @@ class SymExecCore: public SymProc {
 
     private:
         bool lhsFromOperand(TObjId *pObj, const struct cl_operand &op);
-        void seekAliasedRoot(TValueId *pVal);
 
         template <int ARITY>
         void execOp(const CodeStorage::Insn &insn);

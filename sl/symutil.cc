@@ -341,11 +341,7 @@ TObjId subSeekByOffset(
 }
 
 void valReplace(SymHeap &sh, const TValueId of, const TValueId by) {
-    SymHeap::TContValue aliases;
-    sh.gatherValAliasing(aliases, of);
-    BOOST_FOREACH(const TValueId val, aliases) {
-        sh.valReplace(val, by);
-    }
+    sh.valReplace(of, by);
 }
 
 void seekRoot(const SymHeap &sh, TObjId *pRoot, int *pOff) {
