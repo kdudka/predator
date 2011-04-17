@@ -293,7 +293,7 @@ struct SubByOffsetFinder {
                 return /* continue */ true;
         }
         else {
-            if (cltCodeToSeek != clt->code)
+            if (CL_TYPE_UNKNOWN != cltCodeToSeek && cltCodeToSeek != clt->code)
                 return /* continue */ true;
         }
 
@@ -311,7 +311,7 @@ TObjId subSeekByOffset(
         const TObjId                root,
         const int                   offToSeek,
         const struct cl_type        *clt,
-        const enum cl_type_e        code = CL_TYPE_UNKNOWN)
+        const enum cl_type_e        code)
 {
     if (OBJ_INVALID == root)
         return OBJ_INVALID;
@@ -328,6 +328,10 @@ TObjId subSeekByOffset(
     if (!visitor(sh, root))
         // matched
         return visitor.subFound;
+
+    if (!isComposite(sh.objType(root)))
+        // not a composite type
+        return OBJ_INVALID;
 
     // look for the requested sub-object
     if (traverseSubObjs(sh, root, visitor, /* leavesOnly */ false))

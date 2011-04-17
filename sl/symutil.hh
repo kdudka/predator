@@ -127,6 +127,13 @@ inline int subOffsetIn(const SymHeapTyped &sh, TObjId in, TObjId of) {
     return /* not found */ 0;
 }
 
+TObjId subSeekByOffset(
+        const SymHeap               &sh,
+        const TObjId                root,
+        const int                   offToSeek,
+        const struct cl_type        *clt,
+        const enum cl_type_e        code = CL_TYPE_UNKNOWN);
+
 TObjId ptrObjByOffset(const SymHeap &sh, TObjId obj, int off);
 TObjId compObjByOffset(const SymHeap &sh, TObjId obj, int off);
 

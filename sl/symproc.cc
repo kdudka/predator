@@ -154,50 +154,6 @@ TObjId SymProc::handleDerefCore(TValueId val) {
     return target;
 }
 
-void SymProc::heapObjHandleAccessorItem(TObjId *pObj,
-                                        const struct cl_accessor *ac)
-{
-    if (*pObj < 0)
-        // nothing to do at this level, keep going...
-        return;
-
-    // access subObj
-    const int id = ac->data.item.id;
-    *pObj = heap_.subObj(*pObj, id);
-
-    // Although this may be a regular error in the analysed program, we don't
-    // have a meaningful error message for that yet.  It should be safe to
-    // ignore the failure in a production build, as it will be caught later.
-    CL_BREAK_IF(OBJ_INVALID == *pObj);
-}
-
-void SymProc::heapObjHandleAccessor(TObjId *pObj,
-                                    const struct cl_accessor *ac)
-{
-    const enum cl_accessor_e code = ac->code;
-    switch (code) {
-        case CL_ACCESSOR_DEREF:
-            // this should have been handled elsewhere
-            CL_TRAP;
-            return;
-
-        case CL_ACCESSOR_ITEM:
-            this->heapObjHandleAccessorItem(pObj, ac);
-            return;
-
-        case CL_ACCESSOR_REF:
-            // CL_ACCESSOR_REF will be processed within heapValFromObj()
-            // on the way out from here ... otherwise we are encountering
-            // a bug!
-            return;
-
-        case CL_ACCESSOR_DEREF_ARRAY:
-            CL_WARN_MSG(lw_, "CL_ACCESSOR_DEREF_ARRAY not implemented yet");
-            *pObj = OBJ_DEREF_FAILED;
-            return;
-    }
-}
-
 namespace {
 
 TObjId varFromOperand(const struct cl_operand &op, const SymHeap &sh,
@@ -363,8 +319,34 @@ void SymProc::handleDeref(TObjId *pObj, const struct cl_accessor **pAc) {
     *pObj = this->handleDerefCore(val);
 }
 
+int offDerefArray(const struct cl_accessor *ac) {
+    // resolve index and type
+    const int idx = intCstFromOperand(ac->data.array.index);
+    const struct cl_type *clt = ac->type;
+    CL_BREAK_IF(!clt || clt->item_cnt != 1);
+
+    // jump to target type
+    clt = clt->items[0].type;
+    CL_BREAK_IF(!clt);
+
+    // compute the offset
+    const int off = idx * clt->size;
+    if (off)
+        CL_BREAK_IF("not tested yet");
+
+    return off;
+}
+
+int offItem(const struct cl_accessor *ac) {
+    const int id = ac->data.item.id;
+    const struct cl_type *clt = ac->type;
+    CL_BREAK_IF(!clt || clt->item_cnt <= id);
+
+    return clt->items[id].offset;
+}
+
 TObjId SymProc::heapObjFromOperand(const struct cl_operand &op) {
-    // resolve static variable
+    // resolve program variable
     TObjId obj = varFromOperand(op, heap_, bt_);
     CL_BREAK_IF(OBJ_INVALID == obj);
 
@@ -377,13 +359,42 @@ TObjId SymProc::heapObjFromOperand(const struct cl_operand &op) {
     if (ac->code == CL_ACCESSOR_DEREF)
         this->handleDeref(&obj, &ac);
 
-    // we don't support chaining of CL_ACCESSOR_DEREF (yet?)
-    CL_BREAK_IF(ac && ac->code == CL_ACCESSOR_DEREF);
+    if (obj <= 0)
+        return obj;
 
-    while (ac) {
-        this->heapObjHandleAccessor(&obj, ac);
-        ac = ac->next;
+    // go through the chain of accessors
+    int off = 0;
+    bool isRef = false;
+    for (; ac; ac = ac->next) {
+        const enum cl_accessor_e code = ac->code;
+        switch (code) {
+            case CL_ACCESSOR_REF:
+                CL_BREAK_IF(isRef || ac->next);
+                isRef = true;
+                continue;
+
+            case CL_ACCESSOR_DEREF:
+                CL_BREAK_IF("chaining of CL_ACCESSOR_DEREF not supported");
+                continue;
+
+            case CL_ACCESSOR_DEREF_ARRAY:
+                off += offDerefArray(ac);
+                break;
+
+            case CL_ACCESSOR_ITEM:
+                off += offItem(ac);
+                break;
+        }
     }
+
+    // resolve type of the target object
+    const struct cl_type *clt = op.type;
+    if (isRef)
+        clt = targetTypeOfPtr(clt);
+
+    const TObjId sub = subSeekByOffset(heap_, obj, off, clt);
+    if (!!off || OBJ_INVALID != sub)
+        obj = sub;
 
     return obj;
 }
