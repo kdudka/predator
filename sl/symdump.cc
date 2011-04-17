@@ -43,8 +43,34 @@ void dump_clt(const struct cl_type *clt) {
     cltToStream(cout, clt, /* depth */ 3U);
 }
 
+void dump_clt(const struct cl_type *clt, unsigned depth) {
+    cltToStream(cout, clt, depth);
+}
+
 void dump_ac(const struct cl_accessor *ac) {
     acToStream(cout, ac, /* oneline */ false);
+}
+
+void dump_ac(const struct cl_accessor &ac) {
+    dump_ac(&ac);
+}
+
+void dump_op(const struct cl_operand &op) {
+    cout << op << "\n";
+}
+
+void dump_op(const struct cl_operand *op) {
+    dump_op(*op);
+}
+
+// NOTE: symbol cl_insn clashes with a gdb internal debugging function
+void dump_cl_insn(const struct CodeStorage::Insn &insn) {
+    cout << insn << "\n";
+}
+
+// NOTE: symbol cl_insn clashes with a gdb internal debugging function
+void dump_cl_insn(const struct CodeStorage::Insn *insn) {
+    dump_cl_insn(*insn);
 }
 
 namespace {

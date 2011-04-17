@@ -47,6 +47,10 @@ void cltToStreamCore(std::ostream &out, const struct cl_type *clt) {
         case CL_TYPE_CHAR:       out << "CL_TYPE_CHAR"      ; break;
         case CL_TYPE_STRING:     out << "CL_TYPE_STRING"    ; break;
     }
+
+    if (clt->name)
+        out << ", name = " << clt->name;
+
     out << ")";
 }
 

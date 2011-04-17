@@ -35,6 +35,7 @@ class SymHeap;
 #ifndef BUILDING_DOX
     namespace CodeStorage {
         struct Storage;
+        struct Insn;
     }
 
     // for internal use only
@@ -46,7 +47,19 @@ void dump_clt(const struct cl_type *clt);
 void dump_clt(const struct cl_type *clt, unsigned depth);
 
 /// dump a chain of @b accessors
+void dump_ac(const struct cl_accessor &ac);
+/// dump a chain of @b accessors
 void dump_ac(const struct cl_accessor *ac);
+
+/// dump a code listener @b operand
+void dump_op(const struct cl_operand &op);
+/// dump a code listener @b operand
+void dump_op(const struct cl_operand *op);
+
+/// dump a code listener @b instruction
+void dump_cl_insn(const struct CodeStorage::Insn &insn);
+/// dump a code listener @b instruction
+void dump_cl_insn(const struct CodeStorage::Insn *insn);
 
 /// dump @b kind of the given object
 void dump_kind(const SymHeap &heap, TObjId obj);
