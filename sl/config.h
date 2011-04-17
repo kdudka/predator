@@ -76,11 +76,6 @@
 #define DEBUG_SYMSTATE_INSERT               0
 
 /**
- * if 1, SymHeapCore leaves a debug message when a value became unused
- */
-#define DEBUG_UNUSED_VALUES                 0
-
-/**
  * if 1, call cache is not used at all
  */
 #define SE_DISABLE_CALL_CACHE               0

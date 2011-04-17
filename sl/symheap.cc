@@ -56,72 +56,6 @@ void emitOne(TDst &dst, TValueId val) {
     dst.push_back(val);
 }
 
-/// alias lookup db (fully symmetric)
-class AliasDb {
-    private:
-        typedef std::set<TValueId>              TSet;
-        typedef std::map<TValueId, TSet *>      TMap;
-        TMap            cont_;
-
-    public:
-        typedef TSet                            TLine;
-
-    public:
-        AliasDb() { }
-        AliasDb(const AliasDb &ref) {
-            this->operator=(ref);
-        }
-
-        // deep copy
-        AliasDb& operator=(const AliasDb &ref) {
-            BOOST_FOREACH(TMap::value_type item, ref.cont_) {
-                const TSet &origin = *(item.second);
-                cont_[item.first] = new TSet(origin);
-            }
-
-            return *this;
-        }
-
-        ~AliasDb() {
-            // we use a set to avoid a double free during the destruction
-            std::set<TSet *> done;
-
-            BOOST_FOREACH(TMap::value_type item, cont_) {
-                TSet *s = item.second;
-                if (hasKey(done, s))
-                    // already deleted
-                    continue;
-
-                done.insert(s);
-                delete s;
-            }
-        }
-
-        bool lookup(TValueId v1, TValueId v2) const {
-            if (v1 == v2)
-                return true;
-
-            TMap::const_iterator iter = cont_.find(v1);
-            if (cont_.end() == iter)
-                return false;
-            else
-                return hasKey(iter->second, v2);
-        }
-
-        TLine getByValue(TValueId val) const {
-            TMap::const_iterator iter = cont_.find(val);
-            if (cont_.end() == iter) {
-                TLine singleton;
-                singleton.insert(val);
-                return singleton;
-            }
-            else
-                return *iter->second;
-        }
-
-        void add(TValueId v1, TValueId v2);
-};
-
 /// cluster values that are related by known offset between each other
 class OffsetDb {
     public:
@@ -254,58 +188,6 @@ class NeqDb {
                                             const;
 };
 
-void AliasDb::add(TValueId v1, TValueId v2) {
-    CL_BREAK_IF(v1 <= 0 || v2 <= 0);
-
-    // first look for existing aliases
-    TMap::iterator i1 = cont_.find(v1);
-    TMap::iterator i2 = cont_.find(v2);
-    const bool hasSet1 = cont_.end() != i1;
-    const bool hasSet2 = cont_.end() != i2;
-
-    if (hasSet1 && hasSet2) {
-        // connect two clusters of aliases all together
-        TSet *s1 = i1->second;
-        TSet *s2 = i2->second;
-
-        // FIXME: not tested yet
-#ifndef NDEBUG
-        CL_TRAP;
-#endif
-        // merge sets
-        s1->insert(s2->begin(), s2->end());
-
-        // replace all references
-        BOOST_FOREACH(TValueId val, *s1) {
-            cont_[val] = s1;
-        }
-
-        // s2 should be no more referenced at this point
-        // (as long as AliasDb works correctly)
-        delete s2;
-    }
-
-    if (!hasSet1 && !hasSet2) {
-        TSet *s = new TSet();
-        s->insert(v1);
-        s->insert(v2);
-        cont_[v1] = s;
-        cont_[v2] = s;
-        return;
-    }
-
-    if (hasSet1) {
-        TSet *s = i1->second;
-        s->insert(v2);
-        cont_[v2] = s;
-    }
-    else /* if (hasSet2) */ {
-        TSet *s = i2->second;
-        s->insert(v1);
-        cont_[v1] = s;
-    }
-}
-
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of SymHeapCore
 struct SymHeapCore::Private {
@@ -328,69 +210,12 @@ struct SymHeapCore::Private {
     std::vector<Object>     objects;
     std::vector<Value>      values;
 
-    AliasDb                 aliasDb;
     OffsetDb                offsetDb;
     NeqDb                   neqDb;
 
-    void valueDestructor(TValueId value);
     void releaseValueOf(TObjId obj);
     TObjId acquireObj();
-
-    // FIXME: suboptimal design, we need to implement the implicit aliasing ASAP
-    void valSeekLowestAlias(TValueId *);
-    template <typename TMethod> bool neqOpWrap(TMethod, TValueId, TValueId);
 };
-
-void SymHeapCore::Private::valSeekLowestAlias(TValueId *pVal) {
-#ifndef NDEBUG
-    // check for creation of illegal Neq predicates
-    switch (*pVal) {
-        case VAL_FALSE:
-        case VAL_TRUE:
-            break;
-
-        default:
-            CL_BREAK_IF(*pVal < 0);
-    }
-#endif
-
-    const AliasDb::TLine aliases = this->aliasDb.getByValue(*pVal);
-    BOOST_FOREACH(const TValueId valAlias, aliases) {
-        if (valAlias < *pVal)
-            *pVal = valAlias;
-    }
-}
-
-template <typename TMethod>
-bool SymHeapCore::Private::neqOpWrap(
-        TMethod         op,
-        TValueId        v1,
-        TValueId        v2)
-{
-    this->valSeekLowestAlias(&v1);
-    this->valSeekLowestAlias(&v2);
-    return (this->neqDb.*op)(v1, v2);
-}
-
-template </* a method returning void */>
-bool SymHeapCore::Private::neqOpWrap<void (NeqDb::*)(TValueId, TValueId)>(
-        void (NeqDb::*op)(TValueId, TValueId),
-        TValueId        v1,
-        TValueId        v2)
-{
-    this->valSeekLowestAlias(&v1);
-    this->valSeekLowestAlias(&v2);
-    (this->neqDb.*op)(v1, v2);
-    return true;
-}
-
-void SymHeapCore::Private::valueDestructor(TValueId val) {
-#if DEBUG_UNUSED_VALUES
-    CL_DEBUG("SymHeapCore: value #" << val << " became internally unused");
-#else
-    (void) val;
-#endif
-}
 
 void SymHeapCore::Private::releaseValueOf(TObjId obj) {
     // this method is strictly private, range checks should be already done
@@ -406,9 +231,6 @@ void SymHeapCore::Private::releaseValueOf(TObjId obj) {
 #else
     uses.erase(obj);
 #endif
-
-    if (uses.empty())
-        this->valueDestructor(val);
 }
 
 TObjId SymHeapCore::Private::acquireObj() {
@@ -719,8 +541,8 @@ void SymHeapCore::valReplace(TValueId val, TValueId newVal) {
     TContValue neqs;
     d->neqDb.gatherRelatedValues(neqs, val);
     BOOST_FOREACH(const TValueId neq, neqs) {
-        d->neqOpWrap(&NeqDb::del, val, neq);
-        d->neqOpWrap(&NeqDb::add, newVal, neq);
+        d->neqDb.del(val, neq);
+        d->neqDb.add(newVal, neq);
     }
 #ifndef NDEBUG
     // make sure we didn't create any dangling predicates
@@ -749,7 +571,7 @@ bool SymHeapCore::valReplaceUnknownImpl(TValueId val, TValueId replaceBy) {
 void SymHeapCore::valReplaceUnknown(TValueId val, TValueId replaceBy) {
 #ifndef NDEBUG
     // ensure there hasn't been any inequality defined among the pair
-    if (d->neqOpWrap(&NeqDb::areNeq, val, replaceBy)) {
+    if (d->neqDb.areNeq(val, replaceBy)) {
         CL_ERROR("inconsistency detected among values #" << val
                 << " and #" << replaceBy);
         CL_TRAP;
@@ -790,8 +612,7 @@ void SymHeapCore::gatherOffValues(TOffValCont &dst, TValueId ref) const {
 }
 
 void SymHeapCore::gatherValAliasing(TContValue &dst, TValueId ref) const {
-    const AliasDb::TLine line = d->aliasDb.getByValue(ref);
-    std::copy(line.begin(), line.end(), std::back_inserter(dst));
+    dst.push_back(ref);
 }
 
 void SymHeapCore::neqOp(ENeqOp op, TValueId valA, TValueId valB) {
@@ -800,17 +621,17 @@ void SymHeapCore::neqOp(ENeqOp op, TValueId valA, TValueId valB) {
             return;
 
         case NEQ_ADD:
-            d->neqOpWrap(&NeqDb::add, valA, valB);
+            d->neqDb.add(valA, valB);
             return;
 
         case NEQ_DEL:
-            d->neqOpWrap(&NeqDb::del, valA, valB);
+            d->neqDb.del(valA, valB);
             return;
     }
 }
 
 bool SymHeapCore::queryExplicitNeq(TValueId valA, TValueId valB) const {
-    return d->neqOpWrap(&NeqDb::areNeq, valA, valB);
+    return d->neqDb.areNeq(valA, valB);
 }
 
 namespace {
@@ -853,8 +674,8 @@ bool SymHeapCore::proveEq(bool *result, TValueId valA, TValueId valB) const {
         // we can prove nothing for invalid values
         return false;
 
-    if (valA == valB || d->aliasDb.lookup(valA, valB)) {
-        // identical value IDs (or explicit aliasing) ... the prove is done
+    if (valA == valB) {
+        // identical value IDs ... the prove is done
         *result = true;
         return true;
     }
@@ -886,7 +707,7 @@ bool SymHeapCore::proveEq(bool *result, TValueId valA, TValueId valB) const {
         return true;
     }
 
-    if (d->neqOpWrap(&NeqDb::areNeq, valA, valB)) {
+    if (d->neqDb.areNeq(valA, valB)) {
         // good luck, we have explicit info the values are not equal
         *result = false;
         return true;
@@ -949,7 +770,7 @@ bool SymHeapCore::matchPreds(const SymHeapCore &ref, const TValMap &valMap)
             // seems like a dangling predicate, which we are not interested in
             continue;
 
-        if (!ref.d->neqOpWrap(&NeqDb::areNeq, valLt, valGt))
+        if (!ref.d->neqDb.areNeq(valLt, valGt))
             // Neq predicate not matched
             return false;
     }
