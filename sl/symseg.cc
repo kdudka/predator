@@ -72,8 +72,8 @@ unsigned dlSegMinLength(const SymHeap &sh, TObjId dls) {
     const TValueId val2 = sh.valueOf(next2);
 
     // attempt to prove both
-    const bool ne1 = sh.queryExplicitNeq(val1, segHeadAddr(sh, peer));
-    const bool ne2 = sh.queryExplicitNeq(val2, segHeadAddr(sh, dls));
+    const bool ne1 = sh.SymHeapCore::proveNeq(val1, segHeadAddr(sh, peer));
+    const bool ne2 = sh.SymHeapCore::proveNeq(val2, segHeadAddr(sh, dls));
 
     // DLS cross Neq predicates have to be fully symmetric
     CL_BREAK_IF(ne1 != ne2);
@@ -82,7 +82,7 @@ unsigned dlSegMinLength(const SymHeap &sh, TObjId dls) {
     // if DLS heads are two distinct objects, we have at least two objects
     const TValueId head1 = segHeadAddr(sh, dls);
     const TValueId head2 = segHeadAddr(sh, peer);
-    if (sh.queryExplicitNeq(head1, head2)) {
+    if (sh.SymHeapCore::proveNeq(head1, head2)) {
         CL_BREAK_IF(!ne);
         return /* DLS 2+ */ 2;
     }
@@ -116,7 +116,7 @@ unsigned segMinLength(const SymHeap &sh, TObjId seg) {
     const TObjId next = nextPtrFromSeg(sh, seg);
     const TValueId nextVal = sh.valueOf(next);
     const TValueId headAddr = segHeadAddr(sh, seg);
-    return static_cast<unsigned>(sh.queryExplicitNeq(headAddr, nextVal));
+    return static_cast<unsigned>(sh.SymHeapCore::proveNeq(headAddr, nextVal));
 }
 
 void segSetProto(SymHeap &sh, TObjId seg, bool isProto) {

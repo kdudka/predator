@@ -246,23 +246,8 @@ class SymHeapCore {
          */
         virtual void neqOp(ENeqOp op, TValueId valA, TValueId valB);
 
-        /**
-         * return true, only if _explicit_ neq predicate is defined among valA
-         * and valB
-         */
-        bool queryExplicitNeq(TValueId valA, TValueId valB) const;
-
-        /**
-         * @b reasoning about possibly unknown heap values
-         * @param result where to store the result to in case of @b success
-         * @param valA one side of the (in)equality being proved
-         * @param valB one side of the (in)equality being proved
-         * @return true, if we know the values are either equal, or non-equal;
-         * false if @b don't @b know
-         * @note The content of *result is not touched at all in case the
-         * reasoning has been not successful.
-         */
-        virtual bool proveEq(bool *result, TValueId valA, TValueId valB) const;
+        /// return true if the given pair of values is proven to be non-equal
+        virtual bool proveNeq(TValueId valA, TValueId valB) const;
 
     public:
         /// a type used for (injective) value IDs mapping
@@ -686,10 +671,10 @@ class SymHeap: public SymHeapTyped {
         virtual void neqOp(ENeqOp op, TValueId valA, TValueId valB);
 
         /**
-         * @copydoc SymHeapTyped::proveEq
+         * @copydoc SymHeapTyped::proveNeq
          * @note overridden in order to see through SLS/DLS
          */
-        virtual bool proveEq(bool *result, TValueId valA, TValueId valB) const;
+        virtual bool proveNeq(TValueId valA, TValueId valB) const;
 
         /**
          * @copydoc SymHeapTyped::objDestroy
@@ -703,7 +688,6 @@ class SymHeap: public SymHeapTyped {
 
     private:
         void dlSegCrossNeqOp(ENeqOp op, TValueId headAddr);
-        bool proveNonEq(TValueId ref, TValueId val) const;
 
     private:
         struct Private;

@@ -615,18 +615,13 @@ void SymHeapCore::neqOp(ENeqOp op, TValueId valA, TValueId valB) {
     }
 }
 
-bool SymHeapCore::queryExplicitNeq(TValueId valA, TValueId valB) const {
-    return d->neqDb.areNeq(valA, valB);
-}
-
 namespace {
     void moveKnownValueToLeft(const SymHeapCore &sh,
                               TValueId &valA, TValueId &valB)
     {
         sortValues(valA, valB);
 
-        if ((0 < valA) && UV_ABSTRACT == sh.valGetUnknown(valA)) {
-            // UV_ABSTRACT is treated as _unkown_ value here, it has to be valB
+        if ((0 < valA) && UV_KNOWN != sh.valGetUnknown(valA)) {
             const TValueId tmp = valA;
             valA = valB;
             valB = tmp;
@@ -634,71 +629,38 @@ namespace {
     }
 }
 
-namespace {
-    bool proveEqBool(bool *result, TValueId valA, TValueId valB) {
-        if ((valA == valB) && (VAL_TRUE == valA || VAL_FALSE == valA)) {
-            // values are equal
-            *result = true;
-            return true;
-        }
-
-        // we presume (VAL_TRUE < VAL_FALSE) and (valA <= valB) at this point
-        if (VAL_TRUE == valA && VAL_FALSE == valB) {
-            // values are not equal
-            *result = false;
-            return true;
-        }
-
-        // we don't really know if the values are equal or not
-        return false;
-    }
-}
-
-bool SymHeapCore::proveEq(bool *result, TValueId valA, TValueId valB) const {
+bool SymHeapCore::proveNeq(TValueId valA, TValueId valB) const {
+    // check for invalid values
     if (VAL_INVALID == valA || VAL_INVALID == valB)
-        // we can prove nothing for invalid values
         return false;
 
-    if (valA == valB) {
-        // identical value IDs ... the prove is done
-        *result = true;
-        return true;
-    }
-
-    if (d->offsetDb.lookup(valA, valB)) {
-        // there is an offset defined among the values, they can't be equal
-        *result = false;
-        return true;
-    }
+    // check for identical values
+    if (valA == valB)
+        return false;
 
     // having the values always in the same order leads to simpler code
     moveKnownValueToLeft(*this, valA, valB);
 
-    // non-heap comparison of bool values
-    if (proveEqBool(result, valA, valB))
-        return true;
+    // check for known bool values
+    if (VAL_TRUE == valA)
+        return (VAL_FALSE == valB);
 
     // we presume (0 <= valA) and (0 < valB) at this point
     CL_BREAK_IF(this->lastValueId() < valB || valB < 0);
-
-    // now look at the kind of valB
     const EUnknownValue code = this->valGetUnknown(valB);
-    if (UV_KNOWN == code) {
-        // it should be safe to just compare the IDs in this case
-        // NOTE: it's not that easy when UV_ABSTRACT is involved
-
-        // NOTE: we in fact know (valA != valB) at this point, look above
-        *result = /* (valA == valB) */ false;
+    if (UV_KNOWN == code)
+        // NOTE: we know (valA != valB) at this point, look above
         return true;
-    }
 
-    if (d->neqDb.areNeq(valA, valB)) {
-        // good luck, we have explicit info the values are not equal
-        *result = false;
+    // check for a Neq predicate
+    if (d->neqDb.areNeq(valA, valB))
         return true;
-    }
 
-    // giving up, really no idea if the values are equal or not...
+    if (d->offsetDb.lookup(valA, valB))
+        // there is an offset defined among the values, they can't be equal
+        return true;
+
+    // cannot prove non-equality
     return false;
 }
 
@@ -1601,7 +1563,15 @@ void SymHeap::neqOp(ENeqOp op, TValueId valA, TValueId valB) {
     SymHeapTyped::neqOp(op, valA, valB);
 }
 
-bool SymHeap::proveNonEq(TValueId ref, TValueId val) const {
+bool SymHeap::proveNeq(TValueId ref, TValueId val) const {
+    if (SymHeapTyped::proveNeq(ref, val))
+        return true;
+
+    // having the values always in the same order leads to simpler code
+    moveKnownValueToLeft(*this, ref, val);
+    if (UV_KNOWN != this->valGetUnknown(ref))
+        return false;
+
     std::set<TValueId> haveSeen;
 
     while (0 < val && insertOnce(haveSeen, val)) {
@@ -1619,7 +1589,7 @@ bool SymHeap::proveNonEq(TValueId ref, TValueId val) const {
                 return false;
         }
 
-        if (this->queryExplicitNeq(ref, val))
+        if (SymHeapCore::proveNeq(ref, val))
             // prove done
             return true;
 
@@ -1632,7 +1602,7 @@ bool SymHeap::proveNonEq(TValueId ref, TValueId val) const {
             return false;
 
         const TValueId valNext = this->valueOf(nextPtrFromSeg(*this, seg));
-        if (this->queryExplicitNeq(val, valNext))
+        if (SymHeapCore::proveNeq(val, valNext))
             // non-empty abstract object reached --> prove done
             return true;
 
@@ -1641,22 +1611,6 @@ bool SymHeap::proveNonEq(TValueId ref, TValueId val) const {
     }
 
     return false;
-}
-
-bool SymHeap::proveEq(bool *result, TValueId valA, TValueId valB) const {
-    if (SymHeapTyped::proveEq(result, valA, valB))
-        return true;
-
-    // having the values always in the same order leads to simpler code
-    moveKnownValueToLeft(*this, valA, valB);
-    if (UV_KNOWN != this->valGetUnknown(valA))
-        return false;
-
-    if (!this->proveNonEq(/* ref */ valA, valB))
-        return false;
-
-    *result = false;
-    return true;
 }
 
 void SymHeap::objDestroy(TObjId obj) {

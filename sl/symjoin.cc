@@ -227,7 +227,7 @@ void gatherSharedPreds(
     SymHeap::TContValue rVals1;
     ctx.sh1.gatherRelatedValues(rVals1, v1);
     BOOST_FOREACH(const TValueId rel1, rVals1) {
-        if (!ctx.sh1.queryExplicitNeq(v1, rel1))
+        if (!ctx.sh1.SymHeapCore::proveNeq(v1, rel1))
             // not a Neq in sh1
             continue;
 
@@ -245,7 +245,7 @@ void gatherSharedPreds(
             continue;
 
         const TValueId rel2 = it2r->second;
-        if (!ctx.sh2.queryExplicitNeq(v2, rel2))
+        if (!ctx.sh2.SymHeapCore::proveNeq(v2, rel2))
             // not a Neq in sh2
             continue;
 

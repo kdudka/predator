@@ -843,14 +843,10 @@ TValueId compareValues(
     }
 
     // inconsistency check
-    bool eq;
-    if (sh.proveEq(&eq, v1, v2)) {
-        if (eq && preserveNeq)
-            return boolToVal(!neg);
-
-        if (!eq && preserveEq)
-            return boolToVal(neg);
-    }
+    if ((v1 == v2) && preserveNeq)
+        return boolToVal(!neg);
+    if (sh.proveNeq(v1, v2) && preserveEq)
+        return boolToVal(neg);
 
     // forward unknown bool values if possible
     if (CL_TYPE_BOOL == cltSrc->code) {
