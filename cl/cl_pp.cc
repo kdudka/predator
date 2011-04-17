@@ -207,12 +207,23 @@ void ClPrettyPrint::printIntegralCst(const struct cl_operand *op) {
 
     enum cl_type_e code = type->code;
     switch (code) {
-        case CL_TYPE_PTR:
+        case CL_TYPE_PTR: {
+            struct cl_accessor *ac = op->accessor;
+            if (ac && ac->code == CL_ACCESSOR_DEREF) {
+                if (ac->code == CL_ACCESSOR_DEREF)
+                    SSD_COLORIZE(out_, C_LIGHT_RED) << "*";
+                else
+                    CL_DEBUG("unexpected accessor by CL_OPERAND_CST pointer");
+                if (ac->next)
+                    CL_DEBUG("2+ accessors by CL_OPERAND_CST pointer");
+            }
+
             if (value)
                 SSD_COLORIZE(out_, C_LIGHT_RED) << "0x" << std::hex << value;
             else
                 SSD_COLORIZE(out_, C_WHITE) << "NULL";
 
+            }
             break;
 
         case CL_TYPE_UNKNOWN:
@@ -544,8 +555,8 @@ void ClPrettyPrint::printOperand(const struct cl_operand *op) {
             break;
 
         case CL_OPERAND_CST:
-            if (op->accessor)
-                CL_DEBUG("CL_OPERAND_CST with op->accessor");
+            if (op->accessor && op->type->code != CL_TYPE_PTR)
+                CL_DEBUG("accessor by non-pointer CL_OPERAND_CST");
             this->printCst(op);
             break;
 
