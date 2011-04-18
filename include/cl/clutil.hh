@@ -56,6 +56,15 @@ inline bool isComposite(const struct cl_type *clt) {
     }
 }
 
+inline bool isDataPtr(const struct cl_type *clt) {
+    if (!clt || clt->code != CL_TYPE_PTR)
+        return false;
+
+    clt = targetTypeOfPtr(clt);
+    CL_BREAK_IF(!clt);
+    return (CL_TYPE_FNC != clt->code);
+}
+
 /**
  * return true if there is any CL_ACCESSOR_REF in the given chain of accessors
  * @note CL_ACCESSOR_REF accessors can't be chained with each other, as it makes

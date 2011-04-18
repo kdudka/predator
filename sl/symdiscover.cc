@@ -657,7 +657,7 @@ unsigned /* len */ discoverBestAbstraction(
         // use ProbeEntryVisitor visitor to validate the potential segment entry
         SegCandidate segc;
         const ProbeEntryVisitor visitor(segc.offList, sh, obj);
-        traverseSubObjs(sh, obj, visitor, /* leavesOnly */ true);
+        traverseLivePtrs(sh, sh.placedAt(obj), visitor);
         if (segc.offList.empty())
             // found nothing
             continue;

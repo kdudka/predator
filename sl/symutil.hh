@@ -35,6 +35,8 @@
 
 #include <stack>
 
+#include <boost/foreach.hpp>
+
 class LocationWriter;
 
 namespace CodeStorage {
@@ -164,6 +166,29 @@ template <> struct TraverseSubObjsHelper<TObjPair> {
     }
 };
 #endif
+
+/// take the given visitor through all live pointers
+template <class THeap, class TVisitor>
+bool /* complete */ traverseLivePtrs(
+        THeap                       &sh,
+        const TValId                rootAt,
+        TVisitor                    &visitor)
+{
+    // check that we got a valid root object
+    CL_BREAK_IF(sh.pointsTo(rootAt) <= 0);
+    CL_BREAK_IF(sh.pointsTo(rootAt) != objRootByVal(sh, rootAt));
+
+    TObjList ptrs;
+    sh.gatherLivePointers(ptrs, rootAt);
+    BOOST_FOREACH(const TObjId obj, ptrs) {
+        if (!visitor(sh, obj))
+            // traversal cancelled by visitor
+            return false;
+    }
+
+    // done
+    return true;
+}
 
 /// take the given visitor through a composite object (or whatever you pass in)
 template <class THeap, class TVisitor, class TItem = TObjId>

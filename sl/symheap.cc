@@ -776,6 +776,7 @@ struct SymHeapTyped::Private {
         TObjId                      parent;
         TObjList                    subObjs;
         bool                        isProto;
+        std::set<TObjId>            livePtrs;
 
         Object():
             clt(0),
@@ -839,6 +840,7 @@ TObjId SymHeapTyped::createSubVar(const struct cl_type *clt, TObjId parent) {
 }
 
 void SymHeapTyped::createSubs(TObjId obj) {
+    const TObjId root = obj;
     const struct cl_type *clt = d->objects.at(obj).clt;
 
     typedef std::pair<TObjId, const struct cl_type *> TPair;
@@ -868,6 +870,9 @@ void SymHeapTyped::createSubs(TObjId obj) {
             d->objects[subObj].nthItem = i; // position in struct
             d->objects[obj].subObjs[i] = subObj;
 
+            if (isDataPtr(subClt))
+                d->objects[root].livePtrs.insert(subObj);
+
             if (!item->offset && OBJ_RETURN != obj) {
                 // declare implicit aliasing with parent object's addr
                 SymHeapCore::objRewriteAddress(subObj, this->placedAt(obj));
@@ -883,14 +888,14 @@ struct ObjDupStackItem {
     TObjId  dstParent;
     int     nth;
 };
-TObjId SymHeapTyped::objDup(TObjId obj) {
+TObjId SymHeapTyped::objDup(TObjId root) {
     CL_DEBUG("SymHeapTyped::objDup() is taking place...");
-    CL_BREAK_IF(OBJ_INVALID != this->objParent(obj));
+    CL_BREAK_IF(OBJ_INVALID != this->objParent(root));
 
     TObjId image = OBJ_INVALID;
 
     ObjDupStackItem item;
-    item.srcObj = obj;
+    item.srcObj = root;
     item.dstParent = OBJ_INVALID;
 
     std::stack<ObjDupStackItem> todo;
@@ -902,12 +907,18 @@ TObjId SymHeapTyped::objDup(TObjId obj) {
         // duplicate a single object
         const TObjId src = item.srcObj;
         const TObjId dst = SymHeapCore::objDup(src);
-        if (OBJ_INVALID == image)
-            image = dst;
 
         // copy the metadata
         d->objects[dst] = d->objects[src];
         d->objects[dst].parent = item.dstParent;
+        if (OBJ_INVALID == image) {
+            image = dst;
+
+            // the contents of livePtrs is no longer valid!
+            d->objects[dst].livePtrs.clear();
+        }
+        else if (hasKey(d->objects[root].livePtrs, src))
+            d->objects[image].livePtrs.insert(dst);
 
         // update the reference to self in the parent object
         const TObjId parent = item.dstParent;
@@ -937,13 +948,24 @@ TObjId SymHeapTyped::objDup(TObjId obj) {
         }
     }
 
-    const Private::Object &ref = d->objects[obj];
+    const Private::Object &ref = d->objects[root];
     if (isComposite(ref.clt) && -1 == ref.parent)
         // if the original was a root object, the new one must also be
         // FIXME: should we care about CL_TYPE_UNION here?
         d->roots.insert(image);
 
     return image;
+}
+
+void SymHeapTyped::gatherLivePointers(TObjList &dst, TValId atAddr) const {
+    const TObjId root = this->pointsTo(atAddr);
+    CL_BREAK_IF(root <= 0);
+
+    const Private::Object &ref = d->objects[root];
+    CL_BREAK_IF(OBJ_INVALID != ref.parent);
+
+    std::copy(ref.livePtrs.begin(), ref.livePtrs.end(),
+            std::back_inserter(dst));
 }
 
 void SymHeapTyped::objDestroyPriv(TObjId root) {
