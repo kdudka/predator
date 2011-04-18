@@ -794,7 +794,7 @@ bool createObject(
         return false;
 
     // preserve 'prototype' flag
-    const TObjId rootDst = ctx.dst.objCreate(clt);
+    const TObjId rootDst = ctx.dst.objCreate(clt, /* XXX */ CVar());
     ctx.dst.objSetProto(rootDst, isProto);
 
     if (OK_CONCRETE != kind) {
@@ -823,7 +823,7 @@ bool createAnonObject(
     }
 
     // create the join object
-    const TObjId anon = ctx.dst.objCreateAnon(cbSize1);
+    const TObjId anon = ctx.dst.pointsTo(ctx.dst.heapAlloc(cbSize1));
     ctx.objMap1[o1] = anon;
     ctx.objMap2[o2] = anon;
     return defineAddressMapping(ctx, o1, o2, anon);
@@ -2123,7 +2123,7 @@ bool joinDataCore(
     }
 
     // start with the given pair of objects and create a ghost object for them
-    const TObjId rootDst = ctx.dst.objCreate(clt);
+    const TObjId rootDst = ctx.dst.objCreate(clt, /* XXX */ CVar());
     if (!traverseSubObjs(ctx, o1, o2, rootDst, &off))
         return false;
 

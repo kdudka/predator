@@ -158,7 +158,7 @@ TObjId addObjectIfNeeded(DeepCopyData &dc, TObjId objSrc) {
         CL_BREAK_IF(src.objType(objSrc));
 
         const int cbSize = src.objSizeOfAnon(objSrc);
-        const TObjId objDst = dst.objCreateAnon(cbSize);
+        const TObjId objDst = dst.pointsTo(dst.heapAlloc(cbSize));
         add(dc, objSrc, objDst);
         return objDst;
     }

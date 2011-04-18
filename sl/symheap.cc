@@ -1211,11 +1211,11 @@ TObjId SymHeapTyped::objCreate(const struct cl_type *clt, CVar cVar) {
     return obj;
 }
 
-TObjId SymHeapTyped::objCreateAnon(int cbSize) {
+TValueId SymHeapTyped::heapAlloc(int cbSize) {
     const TObjId obj = SymHeapCore::objCreate();
     d->objects[obj].cbSize = cbSize;
 
-    return obj;
+    return this->placedAt(obj);
 }
 
 int SymHeapTyped::objSizeOfAnon(TObjId obj) const {

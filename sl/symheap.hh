@@ -489,15 +489,14 @@ class SymHeapTyped: public SymHeapCore {
          * objCreateAnon() instead.
          * @return ID of the just created symbolic heap object
          */
-        TObjId objCreate(const struct cl_type *clt, CVar cVar = CVar());
+        TObjId objCreate(const struct cl_type *clt, CVar cVar);
 
         /**
-         * create a new symbolic heap object of known size, but @b unknown @b
-         * type
+         * create a new heap object of known size
          * @param cbSize size of the object in @b bytes
-         * @return ID of the just created symbolic heap object
+         * @return value ID of the acquired address
          */
-        TObjId objCreateAnon(int cbSize);
+        TValueId heapAlloc(int cbSize);
 
         /**
          * return size of the given object of @b unknown @b type
