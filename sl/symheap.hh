@@ -88,7 +88,7 @@ class SymHeapCore {
          * depending on kind of the queried object.
          * @note It may acquire a new value ID in case the value is not known.
          */
-        TValId valueOf(TObjId obj) const;
+        TValId valueOf(TObjId obj) /* FIXME */ const;
 
         /**
          * return a value corresponding to @b symbolic @b address of the given
@@ -100,7 +100,7 @@ class SymHeapCore {
          * not.
          * @note The operation has always a unique result.
          */
-        TValId placedAt(TObjId obj) const;
+        TValId placedAt(TObjId obj) /* FIXME */ const;
 
         /**
          * return an object ID which the given value @b points @b to
@@ -165,14 +165,6 @@ class SymHeapCore {
          * SymProc::objSetValue().
          */
         virtual void objSetValue(TObjId obj, TValId val);
-
-        /**
-         * remove dangling predicates.  Remove any predicates containing a value
-         * that is no more referred internally.  Do not call the method as long
-         * as you hold any value IDs externally, you may loose some useful
-         * predicates in that case.
-         */
-        virtual void pack();
 
     protected:
         /**

@@ -154,20 +154,6 @@ class NeqDb {
             return cont_.empty();
         }
 
-        void killByValue(TValId val) {
-            // FIXME: suboptimal due to performance
-            TCont snap(cont_);
-            BOOST_FOREACH(const TItem &item, snap) {
-                if (item.first != val && item.second != val)
-                    continue;
-
-                CL_DEBUG("NeqDb::killByValue(#" << val
-                        << ") removed dangling Neq predicate");
-
-                cont_.erase(item);
-            }
-        }
-
         template <class TDst>
         void gatherRelatedValues(TDst &dst, TValId val) const {
             // FIXME: suboptimal due to performance
@@ -449,22 +435,6 @@ void SymHeapCore::objSetValue(TObjId obj, TValId val) {
 
     Private::Value &ref = d->values.at(val);
     ref.usedBy.insert(obj);
-}
-
-void SymHeapCore::pack() {
-    if (!d->neqDb.empty())
-        // no predicates found, we're done
-        return;
-
-    const unsigned cnt = d->values.size();
-    for (unsigned i = 1; i < cnt; ++i) {
-        const TValId val = static_cast<TValId>(i);
-        if (this->usedByCount(val))
-            // value used, keep going...
-            continue;
-
-        d->neqDb.killByValue(val);
-    }
 }
 
 void SymHeapCore::objDestroy(TObjId obj, TObjId kind) {

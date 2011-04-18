@@ -346,9 +346,6 @@ void abstractNonMatchingValues(SymHeap &sh, TObjId src, TObjId dst,
 
     if (bidir && OK_DLS == sh.objKind(src))
         dlSegSyncPeerData(sh, src);
-
-    // drop any dangling Neq predicates
-    sh.pack();
 }
 
 void clonePrototypes(SymHeap &sh, TObjId obj, TObjId dup) {
