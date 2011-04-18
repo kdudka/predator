@@ -366,7 +366,6 @@ class SymHeapTyped: public SymHeapCore {
         virtual TObjId objDup(TObjId obj);
 
     public:
-        /// overridden to catch all misuses
         virtual void objSetValue(TObjId obj, TValId val);
 
         /**

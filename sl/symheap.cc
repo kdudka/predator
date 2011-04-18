@@ -773,6 +773,7 @@ struct SymHeapTyped::Private {
         size_t                      cbSize;
         CVar                        cVar;
         int                         nthItem; // -1  OR  0 .. parent.item_cnt-1
+        TObjId                      root;
         TObjId                      parent;
         TObjList                    subObjs;
         bool                        isProto;
@@ -782,6 +783,7 @@ struct SymHeapTyped::Private {
             clt(0),
             cbSize(0),
             nthItem(-1),
+            root(OBJ_INVALID),
             parent(OBJ_INVALID),
             isProto(false)
         {
@@ -867,11 +869,9 @@ void SymHeapTyped::createSubs(TObjId obj) {
             const struct cl_type_item *item = clt->items + i;
             const struct cl_type *subClt = item->type;
             const TObjId subObj = this->createSubVar(subClt, obj);
+            d->objects[subObj].root = root;
             d->objects[subObj].nthItem = i; // position in struct
             d->objects[obj].subObjs[i] = subObj;
-
-            if (isDataPtr(subClt))
-                d->objects[root].livePtrs.insert(subObj);
 
             if (!item->offset && OBJ_RETURN != obj) {
                 // declare implicit aliasing with parent object's addr
@@ -910,6 +910,7 @@ TObjId SymHeapTyped::objDup(TObjId root) {
 
         // copy the metadata
         d->objects[dst] = d->objects[src];
+        d->objects[dst].root = image;
         d->objects[dst].parent = item.dstParent;
         if (OBJ_INVALID == image) {
             image = dst;
@@ -1028,15 +1029,18 @@ void SymHeapTyped::swap(SymHeapCore &baseRef) {
 }
 
 void SymHeapTyped::objSetValue(TObjId obj, TValId val) {
-#ifndef NDEBUG
-    // range check
     CL_BREAK_IF(this->lastObjId() < obj || obj < 0);
+    CL_BREAK_IF(!d->objects[obj].subObjs.empty());
 
-    if (!d->objects[obj].subObjs.empty())
-        // invalid call of SymHeapTyped::objSetValue(), you want probably go
-        // through SymProc::objSetValue()
-        CL_TRAP;
-#endif
+    Private::Object &ref = d->objects[obj];
+    if (isDataPtr(ref.clt)) {
+        TObjId root = obj;
+        if (OBJ_INVALID != ref.root)
+            root = ref.root;
+
+        d->objects.at(root).livePtrs.insert(obj);
+    }
+
     SymHeapCore::objSetValue(obj, val);
 }
 
