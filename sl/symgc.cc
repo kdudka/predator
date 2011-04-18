@@ -125,7 +125,7 @@ bool collectJunk(SymHeap &sh, TValueId val, const struct cl_loc *lw) {
 
         if (digJunk(sh, &val)) {
             detected = true;
-            const TObjId obj = sh.pointsTo(val);
+            const TObjId obj = objRootByVal(sh, val);
             CL_BREAK_IF(obj <= 0);
 
             // gather all values inside the junk object
@@ -135,7 +135,8 @@ bool collectJunk(SymHeap &sh, TValueId val, const struct cl_loc *lw) {
             // destroy junk
             if (lw)
                 CL_WARN_MSG(lw, "killing junk");
-            sh.objDestroy(obj);
+            if (!sh.valDestroyTarget(sh.placedAt(obj)))
+                CL_BREAK_IF("failed to kill junk");
 
             // schedule just created junk candidates for next wheel
             BOOST_FOREACH(TValueId ptrVal, ptrs) {

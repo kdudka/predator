@@ -1022,7 +1022,9 @@ bool followValuePair(
     SymHeap &dst = ctx.dst;
     const TObjId objTmp = dst.objCreate(clt, cv);
     const TValueId vDst = dst.placedAt(objTmp);
-    dst.objDestroy(objTmp);
+    if (!dst.valDestroyTarget(vDst))
+        CL_BREAK_IF("SymHeap malfunction");
+
     return defineValueMapping(ctx, v1, v2, vDst);
 }
 

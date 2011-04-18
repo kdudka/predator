@@ -833,7 +833,7 @@ struct SymHeapTyped::Private {
 
     std::vector<Object>             objects;
     std::vector<Value>              values;
-    TContObj                        roots;
+    std::set<TObjId>                roots;
 };
 
 void SymHeapTyped::notifyResize(bool valOnly) {
@@ -1003,10 +1003,10 @@ TObjId SymHeapTyped::objDup(TObjId obj) {
     }
 
     const Private::Object &ref = d->objects[obj];
-    if (ref.clt && ref.clt->code == CL_TYPE_STRUCT && -1 == ref.parent)
+    if (isComposite(ref.clt) && -1 == ref.parent)
         // if the original was a root object, the new one must also be
         // FIXME: should we care about CL_TYPE_UNION here?
-        d->roots.push_back(image);
+        d->roots.insert(image);
 
     return image;
 }
@@ -1034,11 +1034,8 @@ void SymHeapTyped::objDestroyPriv(TObjId root) {
         SymHeapCore::objDestroy(obj, kind);
     }
 
-    // remove self from roots (if ever there)
-    TContObj::iterator rend(
-            remove_if(d->roots.begin(), d->roots.end(),
-            bind2nd(std::equal_to<TObjId>(), root)));
-    d->roots.erase(rend, d->roots.end());
+    // remove self from roots
+    d->roots.erase(root);
 }
 
 SymHeapTyped::SymHeapTyped():
@@ -1144,7 +1141,7 @@ void SymHeapTyped::gatherCVars(TContCVar &dst) const {
 }
 
 void SymHeapTyped::gatherRootObjs(TContObj &dst) const {
-    dst = d->roots;
+    std::copy(d->roots.begin(), d->roots.end(), std::back_inserter(dst));
 }
 
 TObjId SymHeapTyped::valGetCompositeObj(TValueId val) const {
@@ -1199,9 +1196,8 @@ TObjId SymHeapTyped::objCreate(const struct cl_type *clt, CVar cVar) {
     ref.cVar    = cVar;
     if (clt) {
         this->createSubs(obj);
-        if (CL_TYPE_STRUCT == clt->code)
-            // FIXME: should we care about CL_TYPE_UNION here?
-            d->roots.push_back(obj);
+        if (isComposite(clt))
+            d->roots.insert(obj);
     }
 
     if (/* heap object */ -1 != cVar.uid)
@@ -1216,6 +1212,19 @@ TValueId SymHeapTyped::heapAlloc(int cbSize) {
     d->objects[obj].cbSize = cbSize;
 
     return this->placedAt(obj);
+}
+
+bool SymHeapTyped::valDestroyTarget(TValueId val) {
+    const TObjId target = this->pointsTo(val);
+    if (target <= 0)
+        return false;
+
+    Private::Object &ref = d->objects.at(target);
+    if (-1 != ref.parent)
+        return false;
+
+    this->objDestroy(target);
+    return true;
 }
 
 int SymHeapTyped::objSizeOfAnon(TObjId obj) const {
@@ -1238,9 +1247,8 @@ void SymHeapTyped::objDefineType(TObjId obj, const struct cl_type *clt) {
     // delayed object's type definition
     ref.clt = clt;
     this->createSubs(obj);
-    if (CL_TYPE_STRUCT == clt->code)
-        // FIXME: should we care about CL_TYPE_UNION here?
-        d->roots.push_back(obj);
+    if (isComposite(clt))
+        d->roots.insert(obj);
 
     if (OBJ_RETURN == obj)
         // OBJ_RETURN has no address

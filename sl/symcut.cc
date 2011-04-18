@@ -293,7 +293,8 @@ TValueId handleValue(DeepCopyData &dc, TValueId valSrc) {
         const struct cl_type *cltValSrc = src.valType(valSrc);
         const TObjId objTmp = dst.objCreate(cltValSrc, cv);
         const TValueId valDst = dst.placedAt(objTmp);
-        dst.objDestroy(objTmp);
+        if (!dst.valDestroyTarget(valDst))
+            CL_BREAK_IF("failed to release valDst");
 
         valMap[valSrc] = valDst;
         return valDst;

@@ -499,6 +499,12 @@ class SymHeapTyped: public SymHeapCore {
         TValueId heapAlloc(int cbSize);
 
         /**
+         * destroy target of the given value (root has to be at zero offset)
+         * @return true, if the operation succeeds
+         */
+        bool valDestroyTarget(TValueId);
+
+        /**
          * return size of the given object of @b unknown @b type
          * @param obj ID of the object to look for
          * @attention This method may not be called on objects with known type.
@@ -515,7 +521,7 @@ class SymHeapTyped: public SymHeapCore {
          */
         void objDefineType(TObjId obj, const struct cl_type *clt);
 
-    public:
+    protected:
 
         /**
          * @b destroy the given heap object.  All values which have been
@@ -675,13 +681,17 @@ class SymHeap: public SymHeapTyped {
          */
         virtual bool proveNeq(TValueId valA, TValueId valB) const;
 
+    protected:
         /**
          * @copydoc SymHeapTyped::objDestroy
          * @note overridden in order to remove internal data of abstract objects
          */
         virtual void objDestroy(TObjId obj);
 
-    protected:
+        // XXX
+        friend class SymCallCache;
+        friend class SymProc;
+
         /// overridden in order to see through SLS/DLS
         virtual bool valReplaceUnknownImpl(TValueId val, TValueId replaceBy);
 
