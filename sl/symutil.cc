@@ -271,6 +271,10 @@ void gatherPointingObjects(const SymHeap            &sh,
     if (!toInsideOnly)
         visitor(sh, root);
 
+    if (!isComposite(sh.objType(root)))
+        // nothing to traverse here
+        return;
+
     traverseSubObjs(sh, root, visitor, /* leavesOnly */ false);
     std::copy(visitor.results().begin(), visitor.results().end(),
               std::back_inserter(dst));

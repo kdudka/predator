@@ -32,42 +32,25 @@
 
 #include <boost/foreach.hpp>
 
-namespace {
-
-template <class TWL>
-void digPointingObjectsCore(TWL &wl, const SymHeap &heap, TValueId val) {
-    // go through all objects having the value
-    SymHeap::TContObj cont;
-    heap.usedBy(cont, val);
-    BOOST_FOREACH(TObjId obj, cont) {
-
-        // go through all super objects
-        while (0 < obj) {
-            wl.schedule(obj);
-            obj = heap.objParent(obj);
-        }
-    }
-}
-
-template <class TWL>
-struct WLWrap {
-    TWL &wl;
-    WLWrap (TWL &wl_): wl(wl_) { }
-    bool operator()(const SymHeap &sh, TObjId sub) const {
-        const TValueId at = sh.placedAt(sub);
-        digPointingObjectsCore(wl, sh, at);
-        return /* continue */ true;
-    }
-};
-
 template <class TWL>
 void digPointingObjects(TWL &wl, const SymHeap &sh, TValueId val) {
-    digPointingObjectsCore(wl, sh, val);
+    // go through all objects having the value
+    SymHeap::TContObj cont;
+    sh.usedBy(cont, val);
+    BOOST_FOREACH(TObjId obj, cont) {
+        wl.schedule(obj);
+    }
 
-    const TObjId root = objRoot(sh, sh.pointsTo(val));
-    if (0 < root && isComposite(sh.objType(root))) {
-        const WLWrap<TWL> visitor(wl);
-        traverseSubObjs(sh, root, visitor, /* leavesOnly */ false);
+    // seek object's root
+    const TObjId root = objRootByVal(sh, val);
+    if (sh.placedAt(root) < 0)
+        return;
+
+    // traverse all subobjects
+    SymHeap::TContObj refs;
+    gatherPointingObjects(sh, refs, root, /* toInsideOnly */ false);
+    BOOST_FOREACH(const TObjId obj, refs) {
+        wl.schedule(obj);
     }
 }
 
@@ -111,8 +94,6 @@ bool digJunk(const SymHeap &heap, TValueId *ptrVal) {
 
     return true;
 }
-
-} // namespace
 
 bool collectJunk(SymHeap &sh, TValueId val, const struct cl_loc *lw) {
     bool detected = false;
