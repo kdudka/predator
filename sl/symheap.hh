@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2010 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2009-2011 Kamil Dudka <kdudka@redhat.com>
  * Copyright (C) 2010 Petr Peringer, FIT
  *
  * This file is part of predator.
@@ -121,10 +121,10 @@ class SymHeapCore {
         /// return how many objects use the value
         unsigned usedByCount(TValId val) const;
 
+    protected:
         /// create a duplicate of the given object with a new object ID
         virtual TObjId objDup(TObjId obj);
 
-    protected:
         /**
          * create a new symbolic heap object
          * @return ID of the just created symbolic heap object
@@ -195,9 +195,8 @@ class SymHeapCore {
          */
         virtual EUnknownValue valGetUnknown(TValId val) const;
 
-
-        /// duplicate the given @b unknown @b value
-        virtual TValId valDuplicateUnknown(TValId tpl);
+        /// clone of the given value (deep copy)
+        TValId valClone(TValId);
 
         /// replace all occurences of val by replaceBy
         void valReplace(TValId val, TValId replaceBy);
@@ -212,7 +211,7 @@ class SymHeapCore {
 
     public:
         // TODO: review the following interface and write some dox
-        typedef std::pair<TValId /* valRef */, TOffset>           TOffVal;
+        typedef std::pair<TValId /* valRef */, TOffset>             TOffVal;
         typedef std::vector<TOffVal>                                TOffValCont;
 
         // TODO: review the following interface and write some dox
@@ -362,10 +361,11 @@ class SymHeapTyped: public SymHeapCore {
         /// container used to store CVar objects to
         typedef std::vector<CVar> TContCVar;
 
-    public:
+    protected:
         /// create a deep copy of the given object with new object IDs
         virtual TObjId objDup(TObjId obj);
 
+    public:
         /// overridden to catch all misuses
         virtual void objSetValue(TObjId obj, TValId val);
 
@@ -380,9 +380,6 @@ class SymHeapTyped: public SymHeapCore {
          * of the call has not been yet assigned to a type-safe pointer.
          */
         const struct cl_type* objType(TObjId obj) const;
-
-        /// overridden to preserve the type-info during duplication
-        virtual TValId valDuplicateUnknown(TValId tpl);
 
     public:
         /**
@@ -622,10 +619,8 @@ class SymHeap: public SymHeapTyped {
         virtual void swap(SymHeapCore &);
 
     public:
-        virtual TObjId objDup(TObjId obj);
         virtual EUnknownValue valGetUnknown(TValId val) const;
 
-    public:
         /**
          * return @b kind of the object. Here @b kind means concrete object,
          * SLS, DLS, and the like.
@@ -662,6 +657,8 @@ class SymHeap: public SymHeapTyped {
          * @note overridden in order to remove internal data of abstract objects
          */
         virtual void objDestroy(TObjId obj);
+
+        virtual TObjId objDup(TObjId obj);
 
         // XXX
         friend class SymCallCache;

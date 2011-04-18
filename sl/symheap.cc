@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2010 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2009-2011 Kamil Dudka <kdudka@redhat.com>
  * Copyright (C) 2010 Petr Peringer, FIT
  *
  * This file is part of predator.
@@ -482,17 +482,40 @@ EUnknownValue SymHeapCore::valGetUnknown(TValId val) const {
     return d->values[val].code;
 }
 
-TValId SymHeapCore::valDuplicateUnknown(TValId val) {
+TValId SymHeapCore::valClone(TValId val) {
     if (this->lastValueId() < val || val <= 0)
         // value ID is either out of range, or does not point to a valid obj
         return VAL_INVALID;
 
+    // check unknown value code
     const Private::Value &ref = d->values[val];
-    const TValId valNew = this->valCreate(ref.code, ref.target);
+    const EUnknownValue code = ref.code;
+    switch (code) {
+        case UV_UNKNOWN:
+        case UV_UNINITIALIZED:
+        case UV_DONT_CARE:
+            return this->valCreate(ref.code, ref.target);
 
-    // we've just created a new value, let's notify posterity
-    this->notifyResize(/* valOnly */ true);
-    return valNew;
+        case UV_KNOWN:
+        case UV_ABSTRACT:
+            break;
+    }
+
+    // check target
+    const TObjId target = this->pointsTo(val);
+    switch (target) {
+        case OBJ_DELETED:
+        case OBJ_LOST:
+            return this->valCreateDangling(target);
+
+        default:
+            CL_BREAK_IF(target <= 0);
+    }
+
+    // call virtual implementation of deep cloning
+    const TObjId dup = this->objDup(target);
+    CL_BREAK_IF(dup <= 0);
+    return this->placedAt(dup);
 }
 
 /// change value of all variables with value val to (fresh) newval
@@ -862,6 +885,8 @@ struct ObjDupStackItem {
 };
 TObjId SymHeapTyped::objDup(TObjId obj) {
     CL_DEBUG("SymHeapTyped::objDup() is taking place...");
+    CL_BREAK_IF(OBJ_INVALID != this->objParent(obj));
+
     TObjId image = OBJ_INVALID;
 
     ObjDupStackItem item;
@@ -1000,15 +1025,6 @@ const struct cl_type* SymHeapTyped::objType(TObjId obj) const {
         return 0;
 
     return d->objects[obj].clt;
-}
-
-TValId SymHeapTyped::valDuplicateUnknown(TValId val) {
-    if (this->lastValueId() < val || val <= 0)
-        // value ID is either out of range, or does not point to a valid obj
-        return VAL_INVALID;
-
-    // duplicate the value by core
-    return SymHeapCore::valDuplicateUnknown(val);
 }
 
 bool SymHeapTyped::cVar(CVar *dst, TObjId obj) const {

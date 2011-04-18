@@ -46,6 +46,13 @@ void moveKnownValueToLeft(
     }
 }
 
+// a wrapper for legacy code; this will go away once we switch to symheap-ng
+TObjId objDup(SymHeap &sh, const TObjId obj) {
+    const TValId addr = sh.placedAt(obj);
+    const TValId dupAt = sh.valClone(addr);
+    return sh.pointsTo(dupAt);
+}
+
 TObjId subObjByChain(const SymHeap &sh, TObjId obj, TFieldIdxChain ic) {
     BOOST_FOREACH(const int nth, ic) {
         obj = sh.subObj(obj, nth);

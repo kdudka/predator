@@ -1186,7 +1186,7 @@ bool disjoinUnknownValues(
             // no image in ctx.dst yet
             continue;
 
-        const TValId valDst = ctx.dst.valDuplicateUnknown(tpl);
+        const TValId valDst = ctx.dst.valClone(tpl);
         SJ_DEBUG("-u- disjoinUnknownValues() rewrites mapping" <<
                  ", old = " << old <<
                  ", new = " << valDst <<

@@ -275,12 +275,12 @@ void segSetMinLength(SymHeap &sh, TObjId seg, unsigned len) {
 }
 
 TObjId segClone(SymHeap &sh, const TObjId seg) {
-    const TObjId dupSeg = sh.objDup(seg);
+    const TObjId dupSeg = objDup(sh, seg);
 
     if (OK_DLS == sh.objKind(seg)) {
         // we need to clone the peer as well
         const TObjId peer = dlSegPeer(sh, seg);
-        const TObjId dupPeer = sh.objDup(peer);
+        const TObjId dupPeer = objDup(sh, peer);
 
         // dig the 'peer' selectors of the cloned objects
         const TOffset offpSeg  = sh.objBinding(dupSeg).prev;

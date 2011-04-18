@@ -95,7 +95,7 @@ struct UnknownValuesDuplicator {
         }
 
         // duplicate unknown value
-        const TValId valNew = sh.valDuplicateUnknown(valOld);
+        const TValId valNew = sh.valClone(valOld);
         sh.objSetValue(obj, valNew);
 
         return /* continue */ true;
@@ -153,7 +153,7 @@ TObjId protoClone(SymHeap &sh, const TObjId proto) {
     }
     else {
         // clone bare prototype
-        clone = sh.objDup(proto);
+        clone = objDup(sh, proto);
         sh.objSetProto(clone, false);
     }
 
@@ -680,7 +680,7 @@ void segReplaceRefs(SymHeap &sh, TObjId seg, TValId valNext) {
         const TObjId target = sh.pointsTo(sh.valueOf(obj));
         if (next < 0 || target < 0) {
             CL_DEBUG("WARNING: suboptimal implementation of segReplaceRefs()");
-            const TValId val = sh.valDuplicateUnknown(valNext);
+            const TValId val = sh.valClone(valNext);
             sh.objSetValue(obj, val);
             continue;
         }
@@ -840,7 +840,7 @@ void concretizeObj(SymHeap &sh, TValId addr, TSymHeapList &todo) {
     }
 
     // duplicate self as abstract object
-    const TObjId aoDup = sh.objDup(obj);
+    const TObjId aoDup = objDup(sh, obj);
     const TValId aoDupHeadAddr = segHeadAddr(sh, aoDup);
     if (OK_DLS == kind) {
         // DLS relink
