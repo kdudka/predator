@@ -47,7 +47,7 @@
 
 // NeqDb helper
 template <class TDst>
-void emitOne(TDst &dst, TValueId val) {
+void emitOne(TDst &dst, TValId val) {
 #if 0
     // the following condition seems to clash with our needs in SymPlot
     if (val <= 0)
@@ -63,13 +63,13 @@ class OffsetDb {
         typedef SymHeapCore::TOffValCont            TOffValCont;
 
     private:
-        typedef std::map<TOffVal, TValueId>         TOffMap;
-        typedef std::map<TValueId, TOffValCont>     TValMap;
+        typedef std::map<TOffVal, TValId>           TOffMap;
+        typedef std::map<TValId, TOffValCont>       TValMap;
         TOffMap                 offMap_;
         TValMap                 valMap_;
         const TOffValCont       empty_;
 
-        void addNoClobber(const TOffVal &ov, TValueId target) {
+        void addNoClobber(const TOffVal &ov, TValId target) {
             // check for redefinition
             CL_BREAK_IF(hasKey(offMap_, ov));
 
@@ -79,18 +79,18 @@ class OffsetDb {
 
     public:
         OffsetDb(): empty_() {}
-        void add(TOffVal ov, TValueId target) {
+        void add(TOffVal ov, TValId target) {
             // add the given relation
             this->addNoClobber(ov, target);
 
             // and now the other way around
-            const TValueId src = ov.first;
+            const TValId src = ov.first;
             ov.first = target;
             ov.second = -ov.second;
             this->addNoClobber(ov, src);
         }
 
-        TValueId lookup(const TOffVal &ov) {
+        TValId lookup(const TOffVal &ov) {
             TOffMap::iterator iter = offMap_.find(ov);
             if (offMap_.end() == iter)
                 // not found
@@ -99,7 +99,7 @@ class OffsetDb {
             return iter->second;
         }
 
-        TOffset lookup(TValueId v1, TValueId v2) {
+        TOffset lookup(TValId v1, TValId v2) {
             TValMap::iterator iter = valMap_.find(v1);
             if (valMap_.end() == iter)
                 return /* not found */ 0;
@@ -113,7 +113,7 @@ class OffsetDb {
             return /* not found */ 0;
         }
 
-        const TOffValCont& getOffValues(TValueId val) {
+        const TOffValCont& getOffValues(TValId val) {
             TValMap::iterator iter = valMap_.find(val);
             if (valMap_.end() == iter)
                 // not found
@@ -125,24 +125,24 @@ class OffsetDb {
 
 class NeqDb {
     private:
-        typedef std::pair<TValueId /* valLt */, TValueId /* valGt */> TItem;
+        typedef std::pair<TValId /* valLt */, TValId /* valGt */> TItem;
         typedef std::set<TItem> TCont;
         TCont cont_;
 
     public:
-        bool areNeq(TValueId valLt, TValueId valGt) const {
+        bool areNeq(TValId valLt, TValId valGt) const {
             sortValues(valLt, valGt);
             TItem item(valLt, valGt);
             return hasKey(cont_, item);
         }
-        void add(TValueId valLt, TValueId valGt) {
+        void add(TValId valLt, TValId valGt) {
             CL_BREAK_IF(valLt == valGt);
 
             sortValues(valLt, valGt);
             TItem item(valLt, valGt);
             cont_.insert(item);
         }
-        void del(TValueId valLt, TValueId valGt) {
+        void del(TValId valLt, TValId valGt) {
             CL_BREAK_IF(valLt == valGt);
 
             sortValues(valLt, valGt);
@@ -154,7 +154,7 @@ class NeqDb {
             return cont_.empty();
         }
 
-        void killByValue(TValueId val) {
+        void killByValue(TValId val) {
             // FIXME: suboptimal due to performance
             TCont snap(cont_);
             BOOST_FOREACH(const TItem &item, snap) {
@@ -169,7 +169,7 @@ class NeqDb {
         }
 
         template <class TDst>
-        void gatherRelatedValues(TDst &dst, TValueId val) const {
+        void gatherRelatedValues(TDst &dst, TValId val) const {
             // FIXME: suboptimal due to performance
             BOOST_FOREACH(const TItem &item, cont_) {
                 if (item.first == val)
@@ -192,8 +192,8 @@ class NeqDb {
 // implementation of SymHeapCore
 struct SymHeapCore::Private {
     struct Object {
-        TValueId            address;
-        TValueId            value;
+        TValId                          address;
+        TValId                          value;
 
         Object(): address(VAL_INVALID), value(VAL_INVALID) { }
     };
@@ -219,7 +219,7 @@ struct SymHeapCore::Private {
 
 void SymHeapCore::Private::releaseValueOf(TObjId obj) {
     // this method is strictly private, range checks should be already done
-    const TValueId val = this->objects[obj].value;
+    const TValId val = this->objects[obj].value;
     if (val <= 0)
         return;
 
@@ -275,7 +275,7 @@ void SymHeapCore::swap(SymHeapCore &ref) {
 }
 
 // FIXME: should this be declared non-const?
-TValueId SymHeapCore::valueOf(TObjId obj) const {
+TValId SymHeapCore::valueOf(TObjId obj) const {
     // handle special cases first
     switch (obj) {
         case OBJ_INVALID:
@@ -298,7 +298,7 @@ TValueId SymHeapCore::valueOf(TObjId obj) const {
         // object ID is either out of range, or does not represent a valid obj
         return VAL_INVALID;
 
-    TValueId &val = d->objects[obj].value;
+    TValId &val = d->objects[obj].value;
     if (VAL_INVALID == val) {
         // deleayed creation of an uninitialized value
         SymHeapCore &self = const_cast<SymHeapCore &>(*this);
@@ -313,12 +313,12 @@ TValueId SymHeapCore::valueOf(TObjId obj) const {
 }
 
 // FIXME: should this be declared non-const?
-TValueId SymHeapCore::placedAt(TObjId obj) const {
+TValId SymHeapCore::placedAt(TObjId obj) const {
     if (this->lastObjId() < obj || obj <= 0)
         // object ID is either out of range, or does not represent a valid obj
         return VAL_INVALID;
 
-    TValueId &addr = d->objects[obj].address;
+    TValId &addr = d->objects[obj].address;
     if (VAL_NULL == addr)
         // deleayed address creation
         addr = const_cast<SymHeapCore *>(this)->valCreate(UV_KNOWN, obj);
@@ -326,7 +326,7 @@ TValueId SymHeapCore::placedAt(TObjId obj) const {
     return addr;
 }
 
-TObjId SymHeapCore::pointsTo(TValueId val) const {
+TObjId SymHeapCore::pointsTo(TValId val) const {
     if (this->lastValueId() < val || val <= 0)
         // value ID is either out of range, or does not point to a valid obj
         return OBJ_INVALID;
@@ -335,7 +335,7 @@ TObjId SymHeapCore::pointsTo(TValueId val) const {
     return ref.target;
 }
 
-void SymHeapCore::usedBy(TContObj &dst, TValueId val) const {
+void SymHeapCore::usedBy(TContObj &dst, TValId val) const {
     if (this->lastValueId() < val || val <= 0)
         // value ID is either out of range, or does not point to a valid obj
         return;
@@ -345,7 +345,7 @@ void SymHeapCore::usedBy(TContObj &dst, TValueId val) const {
 }
 
 /// return how many objects use the value
-unsigned SymHeapCore::usedByCount(TValueId val) const {
+unsigned SymHeapCore::usedByCount(TValId val) const {
     if (this->lastValueId() < val || val <= 0)
         // value ID is either out of range, or does not point to a valid obj
         return 0; // means: "not used"
@@ -381,20 +381,20 @@ TObjId SymHeapCore::objCreate() {
     return obj;
 }
 
-void SymHeapCore::objRewriteAddress(TObjId obj, TValueId addr) {
+void SymHeapCore::objRewriteAddress(TObjId obj, TValId addr) {
     CL_BREAK_IF(this->lastObjId() < obj || obj < 0);
     CL_BREAK_IF(this->pointsTo(addr) < 0);
 
     d->objects[obj].address = addr;
 }
 
-TValueId SymHeapCore::valCreate(EUnknownValue code, TObjId target) {
+TValId SymHeapCore::valCreate(EUnknownValue code, TObjId target) {
     // check range (we allow OBJ_INVALID here for custom values)
     CL_BREAK_IF(this->lastObjId() < target);
 
     // acquire value ID
     const size_t last = std::max(d->objects.size(), d->values.size());
-    const TValueId val = static_cast<TValueId>(last);
+    const TValId val = static_cast<TValId>(last);
     d->values.resize(val + 1);
 
     Private::Value &ref = d->values[val];
@@ -408,7 +408,7 @@ TValueId SymHeapCore::valCreate(EUnknownValue code, TObjId target) {
     return val;
 }
 
-void SymHeapCore::valSetUnknown(TValueId val, EUnknownValue code) {
+void SymHeapCore::valSetUnknown(TValId val, EUnknownValue code) {
 #ifndef NDEBUG
     switch (code) {
         case UV_KNOWN:
@@ -432,12 +432,12 @@ TObjId SymHeapCore::lastObjId() const {
     return static_cast<TObjId>(cnt);
 }
 
-TValueId SymHeapCore::lastValueId() const {
+TValId SymHeapCore::lastValueId() const {
     const size_t cnt = d->values.size() - /* safe because of VAL_NULL */ 1;
-    return static_cast<TValueId>(cnt);
+    return static_cast<TValId>(cnt);
 }
 
-void SymHeapCore::objSetValue(TObjId obj, TValueId val) {
+void SymHeapCore::objSetValue(TObjId obj, TValId val) {
     // check range
     CL_BREAK_IF(this->lastObjId()   < obj || obj < 0);
     CL_BREAK_IF(this->lastValueId() < val || val == VAL_INVALID);
@@ -458,7 +458,7 @@ void SymHeapCore::pack() {
 
     const unsigned cnt = d->values.size();
     for (unsigned i = 1; i < cnt; ++i) {
-        const TValueId val = static_cast<TValueId>(i);
+        const TValId val = static_cast<TValId>(i);
         if (this->usedByCount(val))
             // value used, keep going...
             continue;
@@ -482,7 +482,7 @@ void SymHeapCore::objDestroy(TObjId obj, TObjId kind) {
     }
 #endif
 
-    const TValueId addr = d->objects[obj].address;
+    const TValId addr = d->objects[obj].address;
     if (0 < addr)
         d->values.at(addr).target = kind;
 
@@ -491,12 +491,12 @@ void SymHeapCore::objDestroy(TObjId obj, TObjId kind) {
     d->objects[obj].value   = VAL_INVALID;
 }
 
-TValueId SymHeapCore::valCreateDangling(TObjId kind) {
+TValId SymHeapCore::valCreateDangling(TObjId kind) {
     CL_BREAK_IF(OBJ_DELETED != kind && OBJ_LOST != kind);
     return this->valCreate(UV_KNOWN, kind);
 }
 
-EUnknownValue SymHeapCore::valGetUnknown(TValueId val) const {
+EUnknownValue SymHeapCore::valGetUnknown(TValId val) const {
     switch (val) {
         case VAL_NULL: /* == VAL_FALSE */
         case VAL_TRUE:
@@ -512,13 +512,13 @@ EUnknownValue SymHeapCore::valGetUnknown(TValueId val) const {
     return d->values[val].code;
 }
 
-TValueId SymHeapCore::valDuplicateUnknown(TValueId val) {
+TValId SymHeapCore::valDuplicateUnknown(TValId val) {
     if (this->lastValueId() < val || val <= 0)
         // value ID is either out of range, or does not point to a valid obj
         return VAL_INVALID;
 
     const Private::Value &ref = d->values[val];
-    const TValueId valNew = this->valCreate(ref.code, ref.target);
+    const TValId valNew = this->valCreate(ref.code, ref.target);
 
     // we've just created a new value, let's notify posterity
     this->notifyResize(/* valOnly */ true);
@@ -526,7 +526,7 @@ TValueId SymHeapCore::valDuplicateUnknown(TValueId val) {
 }
 
 /// change value of all variables with value val to (fresh) newval
-void SymHeapCore::valReplace(TValueId val, TValueId newVal) {
+void SymHeapCore::valReplace(TValId val, TValId newVal) {
     // collect objects having the value val
     TContObj rlist;
     this->usedBy(rlist, val);
@@ -542,7 +542,7 @@ void SymHeapCore::valReplace(TValueId val, TValueId newVal) {
     // reflect the change in NeqDb
     TContValue neqs;
     d->neqDb.gatherRelatedValues(neqs, val);
-    BOOST_FOREACH(const TValueId neq, neqs) {
+    BOOST_FOREACH(const TValId neq, neqs) {
         d->neqDb.del(val, neq);
         d->neqDb.add(newVal, neq);
     }
@@ -556,7 +556,7 @@ void SymHeapCore::valReplace(TValueId val, TValueId newVal) {
 }
 
 // template method
-bool SymHeapCore::valReplaceUnknownImpl(TValueId val, TValueId replaceBy) {
+bool SymHeapCore::valReplaceUnknownImpl(TValId val, TValId replaceBy) {
     // collect objects having the value 'val'
     TContObj rlist;
     this->usedBy(rlist, val);
@@ -570,7 +570,7 @@ bool SymHeapCore::valReplaceUnknownImpl(TValueId val, TValueId replaceBy) {
     return true;
 }
 
-void SymHeapCore::valReplaceUnknown(TValueId val, TValueId replaceBy) {
+void SymHeapCore::valReplaceUnknown(TValId val, TValId replaceBy) {
 #ifndef NDEBUG
     // ensure there hasn't been any inequality defined among the pair
     if (d->neqDb.areNeq(val, replaceBy)) {
@@ -590,9 +590,9 @@ void SymHeapCore::valReplaceUnknown(TValueId val, TValueId replaceBy) {
     }
 }
 
-TValueId SymHeapCore::valCreateByOffset(TOffVal ov) {
+TValId SymHeapCore::valCreateByOffset(TOffVal ov) {
     // first look if such a value already exists
-    TValueId val = d->offsetDb.lookup(ov);
+    TValId val = d->offsetDb.lookup(ov);
     if (0 < val)
         return val;
 
@@ -605,15 +605,15 @@ TValueId SymHeapCore::valCreateByOffset(TOffVal ov) {
     return val;
 }
 
-TValueId SymHeapCore::valGetByOffset(TOffVal ov) const {
+TValId SymHeapCore::valGetByOffset(TOffVal ov) const {
     return d->offsetDb.lookup(ov);
 }
 
-void SymHeapCore::gatherOffValues(TOffValCont &dst, TValueId ref) const {
+void SymHeapCore::gatherOffValues(TOffValCont &dst, TValId ref) const {
     dst = d->offsetDb.getOffValues(ref);
 }
 
-void SymHeapCore::neqOp(ENeqOp op, TValueId valA, TValueId valB) {
+void SymHeapCore::neqOp(ENeqOp op, TValId valA, TValId valB) {
     switch (op) {
         case NEQ_NOP:
             return;
@@ -629,20 +629,19 @@ void SymHeapCore::neqOp(ENeqOp op, TValueId valA, TValueId valB) {
 }
 
 namespace {
-    void moveKnownValueToLeft(const SymHeapCore &sh,
-                              TValueId &valA, TValueId &valB)
+    void moveKnownValueToLeft(const SymHeapCore &sh, TValId &valA, TValId &valB)
     {
         sortValues(valA, valB);
 
         if ((0 < valA) && UV_KNOWN != sh.valGetUnknown(valA)) {
-            const TValueId tmp = valA;
+            const TValId tmp = valA;
             valA = valB;
             valB = tmp;
         }
     }
 }
 
-bool SymHeapCore::proveNeq(TValueId valA, TValueId valB) const {
+bool SymHeapCore::proveNeq(TValId valA, TValId valB) const {
     // check for invalid values
     if (VAL_INVALID == valA || VAL_INVALID == valB)
         return false;
@@ -677,13 +676,13 @@ bool SymHeapCore::proveNeq(TValueId valA, TValueId valB) const {
     return false;
 }
 
-void SymHeapCore::gatherRelatedValues(TContValue &dst, TValueId val) const {
+void SymHeapCore::gatherRelatedValues(TContValue &dst, TValId val) const {
     // TODO: should we care about off-values here?
     d->neqDb.gatherRelatedValues(dst, val);
 }
 
 template <class TValMap>
-bool valMapLookup(const TValMap &valMap, TValueId *pVal) {
+bool valMapLookup(const TValMap &valMap, TValId *pVal) {
     if (*pVal <= VAL_NULL)
         // special values always match, no need for mapping
         return true;
@@ -703,8 +702,8 @@ void SymHeapCore::copyRelevantPreds(SymHeapCore &dst, const TValMap &valMap)
 {
     // go through NeqDb
     BOOST_FOREACH(const NeqDb::TItem &item, d->neqDb.cont_) {
-        TValueId valLt = item.first;
-        TValueId valGt = item.second;
+        TValId valLt = item.first;
+        TValId valGt = item.second;
 
         if (!valMapLookup(valMap, &valLt) || !valMapLookup(valMap, &valGt))
             // not relevant
@@ -720,8 +719,8 @@ bool SymHeapCore::matchPreds(const SymHeapCore &ref, const TValMap &valMap)
 {
     // go through NeqDb
     BOOST_FOREACH(const NeqDb::TItem &item, d->neqDb.cont_) {
-        TValueId valLt = item.first;
-        TValueId valGt = item.second;
+        TValId valLt = item.first;
+        TValId valGt = item.second;
         if (!valMapLookup(valMap, &valLt) || !valMapLookup(valMap, &valGt))
             // seems like a dangling predicate, which we are not interested in
             continue;
@@ -840,7 +839,7 @@ struct SymHeapTyped::Private {
 
     CVarMap                         cVarMap;
 
-    typedef std::map<int, TValueId> TCValueMap;
+    typedef std::map<int, TValId>   TCValueMap;
     TCValueMap                      cValueMap;
 
     std::vector<Object>             objects;
@@ -862,8 +861,8 @@ void SymHeapTyped::notifyResize(bool valOnly) {
         d->objects.resize(lastObjId + 1);
 }
 
-TValueId SymHeapTyped::createCompValue(TObjId obj) {
-    const TValueId val = SymHeapCore::valCreate(UV_KNOWN, OBJ_INVALID);
+TValId SymHeapTyped::createCompValue(TObjId obj) {
+    const TValId val = SymHeapCore::valCreate(UV_KNOWN, OBJ_INVALID);
     CL_BREAK_IF(VAL_INVALID == val);
 
     d->values[val].compObj = obj;
@@ -1046,7 +1045,7 @@ void SymHeapTyped::swap(SymHeapCore &baseRef) {
     swapValues(this->d, ref.d);
 }
 
-void SymHeapTyped::objSetValue(TObjId obj, TValueId val) {
+void SymHeapTyped::objSetValue(TObjId obj, TValId val) {
 #ifndef NDEBUG
     // range check
     CL_BREAK_IF(this->lastObjId() < obj || obj < 0);
@@ -1068,7 +1067,7 @@ const struct cl_type* SymHeapTyped::objType(TObjId obj) const {
     return d->objects[obj].clt;
 }
 
-TValueId SymHeapTyped::valDuplicateUnknown(TValueId val) {
+TValId SymHeapTyped::valDuplicateUnknown(TValId val) {
     if (this->lastValueId() < val || val <= 0)
         // value ID is either out of range, or does not point to a valid obj
         return VAL_INVALID;
@@ -1107,7 +1106,7 @@ void SymHeapTyped::gatherRootObjs(TContObj &dst) const {
     std::copy(d->roots.begin(), d->roots.end(), std::back_inserter(dst));
 }
 
-TObjId SymHeapTyped::valGetCompositeObj(TValueId val) const {
+TObjId SymHeapTyped::valGetCompositeObj(TValId val) const {
     if (this->lastValueId() < val || val <= 0)
         // value ID is either out of range, or does not point a valid obj
         return OBJ_INVALID;
@@ -1169,14 +1168,14 @@ TObjId SymHeapTyped::objCreate(const struct cl_type *clt, CVar cVar) {
     return obj;
 }
 
-TValueId SymHeapTyped::heapAlloc(int cbSize) {
+TValId SymHeapTyped::heapAlloc(int cbSize) {
     const TObjId obj = SymHeapCore::objCreate();
     d->objects[obj].cbSize = cbSize;
 
     return this->placedAt(obj);
 }
 
-bool SymHeapTyped::valDestroyTarget(TValueId val) {
+bool SymHeapTyped::valDestroyTarget(TValId val) {
     const TObjId target = this->pointsTo(val);
     if (target <= 0)
         return false;
@@ -1226,7 +1225,7 @@ void SymHeapTyped::objDestroy(TObjId obj) {
 
     if (OBJ_RETURN == obj) {
         // (un)initialize OBJ_RETURN for next wheel
-        const TValueId uv = this->valCreate(UV_UNINITIALIZED, OBJ_UNKNOWN);
+        const TValId uv = this->valCreate(UV_UNINITIALIZED, OBJ_UNKNOWN);
         SymHeapCore::objSetValue(OBJ_RETURN, uv);
 
         Private::Object &ref = d->objects[OBJ_RETURN];
@@ -1235,15 +1234,15 @@ void SymHeapTyped::objDestroy(TObjId obj) {
     }
 }
 
-TValueId SymHeapTyped::valCreateUnknown(EUnknownValue code) {
+TValId SymHeapTyped::valCreateUnknown(EUnknownValue code) {
     return SymHeapCore::valCreate(code, OBJ_UNKNOWN);
 }
 
-TValueId SymHeapTyped::valCreateCustom(int cVal) {
+TValId SymHeapTyped::valCreateCustom(int cVal) {
     Private::TCValueMap::iterator iter = d->cValueMap.find(cVal);
     if (d->cValueMap.end() == iter) {
         // cVal not found, create a new wrapper for it
-        const TValueId val = SymHeapCore::valCreate(UV_KNOWN, OBJ_INVALID);
+        const TValId val = SymHeapCore::valCreate(UV_KNOWN, OBJ_INVALID);
         if (VAL_INVALID == val)
             return VAL_INVALID;
 
@@ -1262,7 +1261,7 @@ TValueId SymHeapTyped::valCreateCustom(int cVal) {
     return iter->second;
 }
 
-int SymHeapTyped::valGetCustom(TValueId val) const
+int SymHeapTyped::valGetCustom(TValId val) const
 {
     if (this->lastValueId() < val || val <= 0)
         // value ID is either out of range, or does not point to a valid obj
@@ -1352,7 +1351,7 @@ TObjId SymHeap::objDup(TObjId objOld) {
         d->objMap[objNew] = tmp;
 
         // set the pointing value's code to UV_ABSTRACT
-        const TValueId addrNew = this->placedAt(objNew);
+        const TValId addrNew = this->placedAt(objNew);
         SymHeapCore::valSetUnknown(addrNew, UV_ABSTRACT);
     }
 
@@ -1373,7 +1372,7 @@ EObjKind SymHeap::objKind(TObjId obj) const {
         : OK_PART;
 }
 
-EUnknownValue SymHeap::valGetUnknown(TValueId val) const {
+EUnknownValue SymHeap::valGetUnknown(TValId val) const {
     const TObjId target = this->pointsTo(val);
     if (0 < target) {
         const EObjKind kind = this->objKind(target);
@@ -1417,12 +1416,12 @@ void SymHeap::objSetAbstract(TObjId obj, EObjKind kind, const BindingOff &off)
     ref.off     = off;
 
     // mark the value as UV_ABSTRACT
-    const TValueId addr = this->placedAt(obj);
+    const TValId addr = this->placedAt(obj);
     SymHeapCore::valSetUnknown(addr, UV_ABSTRACT);
 #ifndef NDEBUG
     // check for self-loops
     const TObjId objBind = ptrObjByOffset(*this, obj, off.next);
-    const TValueId valNext = this->valueOf(objBind);
+    const TValId valNext = this->valueOf(objBind);
     const TObjId head = compObjByOffset(*this, obj, off.head);
     CL_BREAK_IF(addr == valNext || this->placedAt(head) == valNext);
 #endif
@@ -1434,18 +1433,18 @@ void SymHeap::objSetConcrete(TObjId obj) {
     CL_BREAK_IF(d->objMap.end() == iter);
 
     // mark the address of 'head' as UV_KNOWN
-    const TValueId addrHead = segHeadAddr(*this, obj);
+    const TValId addrHead = segHeadAddr(*this, obj);
     SymHeapCore::valSetUnknown(addrHead, UV_KNOWN);
 
     // mark the value as UV_KNOWN
-    const TValueId addr = this->placedAt(obj);
+    const TValId addr = this->placedAt(obj);
     SymHeapCore::valSetUnknown(addr, UV_KNOWN);
 
     // just remove the object ID from the map
     d->objMap.erase(iter);
 }
 
-bool SymHeap::valReplaceUnknownImpl(TValueId val, TValueId replaceBy) {
+bool SymHeap::valReplaceUnknownImpl(TValId val, TValId replaceBy) {
     const EUnknownValue code = this->valGetUnknown(val);
     switch (code) {
         case UV_KNOWN:
@@ -1460,19 +1459,19 @@ bool SymHeap::valReplaceUnknownImpl(TValueId val, TValueId replaceBy) {
     }
 }
 
-void SymHeap::dlSegCrossNeqOp(ENeqOp op, TValueId headAddr1) {
+void SymHeap::dlSegCrossNeqOp(ENeqOp op, TValId headAddr1) {
     const TObjId head1 = this->pointsTo(headAddr1);
     const TObjId seg1 = objRoot(*this, head1);
     const TObjId seg2 = dlSegPeer(*this, seg1);
-    const TValueId headAddr2 = segHeadAddr(*this, seg2);
+    const TValId headAddr2 = segHeadAddr(*this, seg2);
 
     // dig pointer-to-next objects
     const TObjId next1 = nextPtrFromSeg(*this, seg1);
     const TObjId next2 = nextPtrFromSeg(*this, seg2);
 
     // read the values (addresses of the surround)
-    const TValueId val1 = this->valueOf(next1);
-    const TValueId val2 = this->valueOf(next2);
+    const TValId val1 = this->valueOf(next1);
+    const TValId val2 = this->valueOf(next2);
 
     // add/del Neq predicates
     SymHeapCore::neqOp(op, val1, headAddr2);
@@ -1483,7 +1482,7 @@ void SymHeap::dlSegCrossNeqOp(ENeqOp op, TValueId headAddr1) {
         SymHeapCore::neqOp(NEQ_DEL, headAddr1, headAddr2);
 }
 
-void SymHeap::neqOp(ENeqOp op, TValueId valA, TValueId valB) {
+void SymHeap::neqOp(ENeqOp op, TValId valA, TValId valB) {
     if (NEQ_ADD == op && haveDlSegAt(*this, valA, valB)) {
         // adding the 2+ flag implies adding of the 1+ flag
         this->dlSegCrossNeqOp(op, valA);
@@ -1503,7 +1502,7 @@ void SymHeap::neqOp(ENeqOp op, TValueId valA, TValueId valB) {
     SymHeapTyped::neqOp(op, valA, valB);
 }
 
-bool SymHeap::proveNeq(TValueId ref, TValueId val) const {
+bool SymHeap::proveNeq(TValId ref, TValId val) const {
     if (SymHeapTyped::proveNeq(ref, val))
         return true;
 
@@ -1512,7 +1511,7 @@ bool SymHeap::proveNeq(TValueId ref, TValueId val) const {
     if (UV_KNOWN != this->valGetUnknown(ref))
         return false;
 
-    std::set<TValueId> haveSeen;
+    std::set<TValId> haveSeen;
 
     while (0 < val && insertOnce(haveSeen, val)) {
         const EUnknownValue code = this->valGetUnknown(val);
@@ -1541,7 +1540,7 @@ bool SymHeap::proveNeq(TValueId ref, TValueId val) const {
             // no valid object here
             return false;
 
-        const TValueId valNext = this->valueOf(nextPtrFromSeg(*this, seg));
+        const TValId valNext = this->valueOf(nextPtrFromSeg(*this, seg));
         if (SymHeapCore::proveNeq(val, valNext))
             // non-empty abstract object reached --> prove done
             return true;

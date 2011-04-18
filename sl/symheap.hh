@@ -78,7 +78,7 @@ class SymHeapCore {
         typedef std::vector<TObjId>     TContObj;
 
         /// container used to store value IDs to
-        typedef std::vector<TValueId>   TContValue;
+        typedef std::vector<TValId>     TContValue;
 
     public:
         /**
@@ -89,7 +89,7 @@ class SymHeapCore {
          * depending on kind of the queried object.
          * @note It may acquire a new value ID in case the value is not known.
          */
-        TValueId valueOf(TObjId obj) const;
+        TValId valueOf(TObjId obj) const;
 
         /**
          * return a value corresponding to @b symbolic @b address of the given
@@ -101,7 +101,7 @@ class SymHeapCore {
          * not.
          * @note The operation has always a unique result.
          */
-        TValueId placedAt(TObjId obj) const;
+        TValId placedAt(TObjId obj) const;
 
         /**
          * return an object ID which the given value @b points @b to
@@ -109,7 +109,7 @@ class SymHeapCore {
          * @return A valid object ID in case of success, invalid otherwise.
          * @note The operation has always a unique result.
          */
-        TObjId pointsTo(TValueId val) const;
+        TObjId pointsTo(TValId val) const;
 
         /**
          * collect all objects having the given value
@@ -117,10 +117,10 @@ class SymHeapCore {
          * @param val ID of the value to look for
          * @note The operation may return from 0 to n results.
          */
-        void usedBy(TContObj &dst, TValueId val) const;
+        void usedBy(TContObj &dst, TValId val) const;
 
         /// return how many objects use the value
-        unsigned usedByCount(TValueId val) const;
+        unsigned usedByCount(TValId val) const;
 
         /// create a duplicate of the given object with a new object ID
         virtual TObjId objDup(TObjId obj);
@@ -137,7 +137,7 @@ class SymHeapCore {
          * only, mainly by SymHeapTyped for implicit address aliasing at the
          * level of struct/union nesting)
          */
-        void objRewriteAddress(TObjId obj, TValueId addr);
+        void objRewriteAddress(TObjId obj, TValId addr);
 
         /**
          * create a new symbolic heap value
@@ -145,14 +145,14 @@ class SymHeapCore {
          * @param target pointed object's ID
          * @return ID of the just created symbolic heap value
          */
-        TValueId valCreate(EUnknownValue code, TObjId target);
+        TValId valCreate(EUnknownValue code, TObjId target);
 
         /// alter an already existing value (use with caution)
-        void valSetUnknown(TValueId val, EUnknownValue code);
+        void valSetUnknown(TValId val, EUnknownValue code);
 
     public:
         TObjId lastObjId() const;
-        TValueId lastValueId() const;
+        TValId lastValueId() const;
 
     public:
         /**
@@ -165,7 +165,7 @@ class SymHeapCore {
          * interested in such abilities, you are looking for
          * SymProc::objSetValue().
          */
-        virtual void objSetValue(TObjId obj, TValueId val);
+        virtual void objSetValue(TObjId obj, TValId val);
 
         /**
          * remove dangling predicates.  Remove any predicates containing a value
@@ -189,11 +189,11 @@ class SymHeapCore {
          */
         void objDestroy(TObjId obj, TObjId kind);
 
-        friend TValueId handleValue(DeepCopyData &dc, TValueId valSrc);
+        friend TValId handleValue(DeepCopyData &dc, TValId valSrc);
 
     public:
         // TODO: remove this?
-        TValueId valCreateDangling(TObjId kind);
+        TValId valCreateDangling(TObjId kind);
 
         /**
          * check the state of a @b possibly @b unknown @b value
@@ -202,11 +202,11 @@ class SymHeapCore {
          * of known value
          * @todo rename SymHeapCore::valGetUnknown
          */
-        virtual EUnknownValue valGetUnknown(TValueId val) const;
+        virtual EUnknownValue valGetUnknown(TValId val) const;
 
 
         /// duplicate the given @b unknown @b value
-        virtual TValueId valDuplicateUnknown(TValueId tpl);
+        virtual TValId valDuplicateUnknown(TValId tpl);
 
         /**
          * replace all occurrences of the given @b unknown value by @b any (not
@@ -218,20 +218,20 @@ class SymHeapCore {
          * @note This method is heavily used by non-deterministic execution of
          * CL_INSN_COND.
          */
-        virtual void valReplaceUnknown(TValueId val, TValueId replaceBy);
+        virtual void valReplaceUnknown(TValId val, TValId replaceBy);
 
         /// change all variables using value _val to value _newval (all known)
-        void valReplace(TValueId _val, TValueId _newval);
+        void valReplace(TValId _val, TValId _newval);
 
     public:
         // TODO: review the following interface and write some dox
-        typedef std::pair<TValueId /* valRef */, TOffset>           TOffVal;
+        typedef std::pair<TValId /* valRef */, TOffset>           TOffVal;
         typedef std::vector<TOffVal>                                TOffValCont;
 
         // TODO: review the following interface and write some dox
-        TValueId valCreateByOffset(TOffVal);
-        TValueId valGetByOffset(TOffVal) const;
-        void gatherOffValues(TOffValCont &dst, TValueId ref) const;
+        TValId valCreateByOffset(TOffVal);
+        TValId valGetByOffset(TOffVal) const;
+        void gatherOffValues(TOffValCont &dst, TValId ref) const;
 
     public:
         enum ENeqOp {
@@ -247,14 +247,14 @@ class SymHeapCore {
          * @param valA one side of the inequality
          * @param valB one side of the inequality
          */
-        virtual void neqOp(ENeqOp op, TValueId valA, TValueId valB);
+        virtual void neqOp(ENeqOp op, TValId valA, TValId valB);
 
         /// return true if the given pair of values is proven to be non-equal
-        virtual bool proveNeq(TValueId valA, TValueId valB) const;
+        virtual bool proveNeq(TValId valA, TValId valB) const;
 
     public:
         /// a type used for (injective) value IDs mapping
-        typedef std::map<TValueId, TValueId> TValMap;
+        typedef std::map<TValId, TValId> TValMap;
 
         /**
          * return the list of values that are connected to the given value by a
@@ -263,7 +263,7 @@ class SymHeapCore {
          * @param val the reference value, used to search the predicates and
          * then all the related values accordingly
          */
-        void gatherRelatedValues(TContValue &dst, TValueId val) const;
+        void gatherRelatedValues(TContValue &dst, TValId val) const;
 
         /**
          * copy all @b relevant predicates from the symbolic heap to another
@@ -290,7 +290,7 @@ class SymHeapCore {
 
     protected:
         /// template method
-        virtual bool valReplaceUnknownImpl(TValueId val, TValueId replaceBy);
+        virtual bool valReplaceUnknownImpl(TValId val, TValId replaceBy);
 
         /// template method
         virtual void notifyResize(bool /* valOnly */) { }
@@ -384,7 +384,7 @@ class SymHeapTyped: public SymHeapCore {
         virtual TObjId objDup(TObjId obj);
 
         /// overridden to catch all misuses
-        virtual void objSetValue(TObjId obj, TValueId val);
+        virtual void objSetValue(TObjId obj, TValId val);
 
         /**
          * look for static type-info of the given object, which has to be @b
@@ -399,7 +399,7 @@ class SymHeapTyped: public SymHeapCore {
         const struct cl_type* objType(TObjId obj) const;
 
         /// overridden to preserve the type-info during duplication
-        virtual TValueId valDuplicateUnknown(TValueId tpl);
+        virtual TValId valDuplicateUnknown(TValId tpl);
 
     public:
         /**
@@ -448,7 +448,7 @@ class SymHeapTyped: public SymHeapCore {
          * @return ID of a composite object in case of success, OBJ_INVALID
          * otherwise
          */
-        TObjId valGetCompositeObj(TValueId val) const;
+        TObjId valGetCompositeObj(TValId val) const;
 
         /**
          * return nth sub-object of the given object, which has to be a
@@ -487,13 +487,13 @@ class SymHeapTyped: public SymHeapCore {
          * @param cbSize size of the object in @b bytes
          * @return value ID of the acquired address
          */
-        TValueId heapAlloc(int cbSize);
+        TValId heapAlloc(int cbSize);
 
         /**
          * destroy target of the given value (root has to be at zero offset)
          * @return true, if the operation succeeds
          */
-        bool valDestroyTarget(TValueId);
+        bool valDestroyTarget(TValId);
 
         /**
          * return size of the given object of @b unknown @b type
@@ -533,7 +533,7 @@ class SymHeapTyped: public SymHeapCore {
          * allowed here
          * @return ID of the just created value
          */
-        TValueId valCreateUnknown(EUnknownValue code);
+        TValId valCreateUnknown(EUnknownValue code);
 
     public:
         /**
@@ -543,7 +543,7 @@ class SymHeapTyped: public SymHeapCore {
          * @param cVal any integral value you need to wrap
          * @return ID of the just created value
          */
-        TValueId valCreateCustom(int cVal);
+        TValId valCreateCustom(int cVal);
 
         /**
          * retrieve a foreign value, previously @b wrapped by valCreateCustom(),
@@ -551,7 +551,7 @@ class SymHeapTyped: public SymHeapCore {
          * @param val ID of the value to look into
          * @return the requested foreign value, or -1 if no such value exists
          */
-        int valGetCustom(TValueId val) const;
+        int valGetCustom(TValId val) const;
 
         /**
          * true, if the given object should be cloned on concretization of the
@@ -574,7 +574,7 @@ class SymHeapTyped: public SymHeapCore {
         Private *d;
 
     private:
-        TValueId createCompValue(TObjId obj);
+        TValId createCompValue(TObjId obj);
         TObjId createSubVar(const struct cl_type *clt, TObjId parent);
         void createSubs(TObjId obj);
         void objDestroyPriv(TObjId obj);
@@ -640,7 +640,7 @@ class SymHeap: public SymHeapTyped {
 
     public:
         virtual TObjId objDup(TObjId obj);
-        virtual EUnknownValue valGetUnknown(TValueId val) const;
+        virtual EUnknownValue valGetUnknown(TValId val) const;
 
     public:
         /**
@@ -659,13 +659,13 @@ class SymHeap: public SymHeapTyped {
          * @copydoc SymHeapTyped::neqOp
          * @note overridden in order to complement DLS Neq
          */
-        virtual void neqOp(ENeqOp op, TValueId valA, TValueId valB);
+        virtual void neqOp(ENeqOp op, TValId valA, TValId valB);
 
         /**
          * @copydoc SymHeapTyped::proveNeq
          * @note overridden in order to see through SLS/DLS
          */
-        virtual bool proveNeq(TValueId valA, TValueId valB) const;
+        virtual bool proveNeq(TValId valA, TValId valB) const;
 
     protected:
         /**
@@ -679,10 +679,10 @@ class SymHeap: public SymHeapTyped {
         friend class SymProc;
 
         /// overridden in order to see through SLS/DLS
-        virtual bool valReplaceUnknownImpl(TValueId val, TValueId replaceBy);
+        virtual bool valReplaceUnknownImpl(TValId val, TValId replaceBy);
 
     private:
-        void dlSegCrossNeqOp(ENeqOp op, TValueId headAddr);
+        void dlSegCrossNeqOp(ENeqOp op, TValId headAddr);
 
     private:
         struct Private;

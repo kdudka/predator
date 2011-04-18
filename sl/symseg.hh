@@ -36,7 +36,7 @@
  * @param pointingTo target address of the given potential list segment
  * @param kind kind of list segment to look for
  */
-bool haveSeg(const SymHeap &sh, TValueId atAddr, TValueId pointingTo,
+bool haveSeg(const SymHeap &sh, TValId atAddr, TValId pointingTo,
              const EObjKind kind);
 
 /**
@@ -46,7 +46,7 @@ bool haveSeg(const SymHeap &sh, TValueId atAddr, TValueId pointingTo,
  * @param atAddr address of the heap object for consideration
  * @param peerAddr potential address of DLS peer object
  */
-bool haveDlSegAt(const SymHeap &sh, TValueId atAddr, TValueId peerAddr);
+bool haveDlSegAt(const SymHeap &sh, TValId atAddr, TValId peerAddr);
 
 /// return 'next' pointer of the given list segment as a heap object
 TObjId nextPtrFromSeg(const SymHeap &sh, TObjId seg);
@@ -100,7 +100,7 @@ inline TObjId segHead(const SymHeap &sh, TObjId seg) {
  * segment
  * @note this is mostly useful as soon as @b Linux @b lists are involved
  */
-inline TValueId segHeadAddr(const SymHeap &sh, TObjId seg) {
+inline TValId segHeadAddr(const SymHeap &sh, TObjId seg) {
     const TObjId head = segHead(sh, seg);
     return sh.placedAt(head);
 }

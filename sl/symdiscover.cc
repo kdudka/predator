@@ -118,7 +118,7 @@ bool validatePointingObjects(
     if (isDls)
         blackList.insert(ptrObjByOffset(sh, root, off.prev));
 
-    const TValueId headAddr = sh.placedAt(compObjByOffset(sh, root, off.head));
+    const TValId headAddr = sh.placedAt(compObjByOffset(sh, root, off.head));
     const bool rootIsProto = sh.objIsProto(root);
 
     // TODO: move subObjByChain() calls out of the loop
@@ -268,8 +268,8 @@ TObjId jumpToNextObj(
     const bool isDls = isDlsBinding(off);
     if (isDls) {
         // check DLS back-link
-        const TValueId valPrev = sh.valueOf(ptrObjByOffset(sh, next, off.prev));
-        const TValueId headAt = sh.placedAt(compObjByOffset(sh, obj, off.head));
+        const TValId valPrev = sh.valueOf(ptrObjByOffset(sh, next, off.prev));
+        const TValId headAt = sh.placedAt(compObjByOffset(sh, obj, off.head));
         if (valPrev != headAt)
             // DLS back-link mismatch
             return OBJ_INVALID;
@@ -339,8 +339,8 @@ bool slSegAvoidSelfCycle(
         // not a SLS
         return false;
 
-    const TValueId v1 = sh.placedAt(objFrom);
-    const TValueId v2 = sh.valueOf(ptrObjByOffset(sh, objTo, off.next));
+    const TValId v1 = sh.placedAt(objFrom);
+    const TValId v2 = sh.valueOf(ptrObjByOffset(sh, objTo, off.next));
 
     return haveSeg(sh, v1, v2, OK_SLS)
         || haveSeg(sh, v2, v1, OK_SLS);
@@ -488,11 +488,11 @@ bool digSegmentHead(
 
 struct PtrFinder {
     TObjId              root;
-    TValueId            targetAddr;
+    TValId              targetAddr;
     TOffset             offFound;
 
     bool operator()(const SymHeap &sh, TObjId sub) {
-        const TValueId val = sh.valueOf(sub);
+        const TValId val = sh.valueOf(sub);
         if (val <= 0)
             return /* continue */ true;
 
@@ -546,7 +546,7 @@ class ProbeEntryVisitor {
 
         bool operator()(const SymHeap &sh, TObjId sub) const
         {
-            const TValueId val = sh.valueOf(sub);
+            const TValId val = sh.valueOf(sub);
             if (val <= 0)
                 return /* continue */ true;
 
@@ -649,7 +649,7 @@ unsigned /* len */ discoverBestAbstraction(
             // skip static/automatic objects
             continue;
 
-        const TValueId addr = sh.placedAt(obj);
+        const TValId addr = sh.placedAt(obj);
         if (VAL_INVALID == addr)
             // no valid object anyway
             continue;

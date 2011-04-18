@@ -81,7 +81,7 @@ bool isHeapObject(const SymHeap &heap, TObjId obj) {
     return true;
 }
 
-void digRootObject(const SymHeap &heap, TValueId *pValue) {
+void digRootObject(const SymHeap &heap, TValId *pValue) {
     TObjId obj = heap.pointsTo(*pValue);
     CL_BREAK_IF(obj < 0);
 
@@ -89,7 +89,7 @@ void digRootObject(const SymHeap &heap, TValueId *pValue) {
     while (OBJ_INVALID != (parent = heap.objParent(obj)))
         obj = parent;
 
-    TValueId val = heap.placedAt(obj);
+    TValId val = heap.placedAt(obj);
     CL_BREAK_IF(val <= 0);
 
     *pValue = val;
@@ -111,7 +111,7 @@ void getPtrValues(SymHeapCore::TContValue &dst, const SymHeap &heap,
 
         switch (code) {
             case CL_TYPE_PTR: {
-                const TValueId val = heap.valueOf(obj);
+                const TValId val = heap.valueOf(obj);
                 if (0 < val)
                     dst.push_back(val);
 
@@ -214,7 +214,7 @@ bool initSingleVariable(SymHeap &sh, const TInitialItem &item) {
 
     // resolve initial value
     const struct cl_operand *op = initial->data.value;
-    const TValueId val = proc.heapValFromOperand(*op);
+    const TValId val = proc.heapValFromOperand(*op);
     CL_DEBUG("using explicit initializer: obj #"
             << static_cast<int>(obj) << " <-- val #"
             << static_cast<int>(val));
@@ -250,7 +250,7 @@ class PointingObjectsFinder {
         const TResults& results() const { return results_; }
 
         bool operator()(const SymHeap &sh, TObjId obj) {
-            const TValueId addr = sh.placedAt(obj);
+            const TValId addr = sh.placedAt(obj);
             CL_BREAK_IF(addr <= 0);
 
             SymHeap::TContObj refs;
@@ -364,7 +364,7 @@ TObjId compObjByOffset(const SymHeap &sh, TObjId obj, TOffset off) {
     return subSeekByOffset(sh, obj, off, /* clt */ 0, CL_TYPE_STRUCT);
 }
 
-TValueId addrQueryByOffset(
+TValId addrQueryByOffset(
         SymHeap                 &sh,
         const TObjId            target,
         const TOffset           offRequested,

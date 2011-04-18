@@ -115,17 +115,17 @@ struct SymPlot::Private {
     std::ofstream                       dotStream;
     bool                                ok;
     const struct cl_loc                 *lw;
-    WorkList<TValueId>                  workList;
+    WorkList<TValId>                  workList;
     std::set<TObjId>                    objDone;
     int                                 last;
 
-    typedef std::pair<TObjId, TValueId>                     TEdgeValueOf;
+    typedef std::pair<TObjId, TValId>                       TEdgeValueOf;
     std::vector<TEdgeValueOf>           evList;
 
-    typedef std::pair<TValueId, SymHeap::TOffVal>           TEdgeOffVal;
+    typedef std::pair<TValId, SymHeap::TOffVal>             TEdgeOffVal;
     std::vector<TEdgeOffVal>            ovList;
 
-    typedef std::pair<TValueId, TValueId>                   TEdgeNeq;
+    typedef std::pair<TValId, TValId>                       TEdgeNeq;
     std::set<TEdgeNeq>                  neqSet;
 
     std::set<TObjId>                    heads;
@@ -138,29 +138,29 @@ struct SymPlot::Private {
     bool digFieldName(std::string &dst, TObjId obj);
     void plotNodeObj(TObjId obj);
     void plotNodeObjAnon(TObjId obj);
-    void plotNodeValue(TValueId val, enum cl_type_e code, const char *label);
+    void plotNodeValue(TValId val, enum cl_type_e code, const char *label);
     void plotNodeAux(int src, enum cl_type_e code, const char *label);
-    void plotNeqZero(TValueId val);
+    void plotNeqZero(TValId val);
 
-    void plotEdgePointsTo(TValueId value, TObjId obj);
-    void plotEdgeValueOf(TObjId obj, TValueId value);
+    void plotEdgePointsTo(TValId value, TObjId obj);
+    void plotEdgeValueOf(TObjId obj, TValId value);
     void plotEdgeSub(TObjId obj, TObjId sub);
 
-    void gobbleEdgeValueOf(TObjId obj, TValueId value);
-    void gobbleEdgeOffValue(TValueId val, const SymHeap::TOffVal &ov);
-    void gobbleEdgeNeq(TValueId val1, TValueId val2);
-    void gobbleEdgeAlias(TValueId val1, TValueId val2);
+    void gobbleEdgeValueOf(TObjId obj, TValId value);
+    void gobbleEdgeOffValue(TValId val, const SymHeap::TOffVal &ov);
+    void gobbleEdgeNeq(TValId val1, TValId val2);
+    void gobbleEdgeAlias(TValId val1, TValId val2);
     void emitPendingEdges();
 
-    void plotSingleValue(TValueId value);
+    void plotSingleValue(TValId value);
     void plotZeroValue(TObjId obj);
     void digNext(TObjId obj);
     void openCluster(TObjId obj);
 
-    bool handleCustomValue(TValueId value);
-    bool handleUnknownValue(TValueId value);
-    bool resolveValueOf(TValueId *pDst, TObjId obj);
-    bool resolvePointsTo(TObjId *pDst, TValueId val);
+    bool handleCustomValue(TValId value);
+    bool handleUnknownValue(TValId value);
+    bool resolveValueOf(TValId *pDst, TObjId obj);
+    bool resolvePointsTo(TObjId *pDst, TValId val);
 
     void digObjCore(TObjId obj);
     void digObj(TObjId obj);
@@ -328,7 +328,7 @@ void SymPlot::Private::plotNodeObjAnon(TObjId obj) {
         << std::endl;
 }
 
-void SymPlot::Private::plotNodeValue(TValueId val, enum cl_type_e code,
+void SymPlot::Private::plotNodeValue(TValId val, enum cl_type_e code,
                                      const char *label)
 {
     // visualize the count of references as pen width
@@ -364,7 +364,7 @@ void SymPlot::Private::plotNodeAux(int src, enum cl_type_e code,
         << "];" << std::endl;
 }
 
-void SymPlot::Private::plotNeqZero(TValueId val) {
+void SymPlot::Private::plotNeqZero(TValId val) {
     const char *label = "!= 0";
 
     const int id = ++(this->last);
@@ -381,13 +381,13 @@ void SymPlot::Private::plotNeqZero(TValueId val) {
         << "];" << std::endl;
 }
 
-void SymPlot::Private::plotEdgePointsTo(TValueId value, TObjId obj) {
+void SymPlot::Private::plotEdgePointsTo(TValId value, TObjId obj) {
     this->dotStream << "\t" << SL_QUOTE(value) << " -> " << SL_QUOTE(obj)
         << " [color=green, fontcolor=green, label=\"pointsTo\"];"
         << std::endl;
 }
 
-void SymPlot::Private::plotEdgeValueOf(TObjId obj, TValueId value) {
+void SymPlot::Private::plotEdgeValueOf(TObjId obj, TValId value) {
     this->dotStream << "\t" << SL_QUOTE(obj) << " -> " << SL_QUOTE(value)
         << " [color=blue, fontcolor=blue];"
         << std::endl;
@@ -400,19 +400,19 @@ void SymPlot::Private::plotEdgeSub(TObjId obj, TObjId sub) {
         << std::endl;
 }
 
-void SymPlot::Private::gobbleEdgeValueOf(TObjId obj, TValueId value) {
+void SymPlot::Private::gobbleEdgeValueOf(TObjId obj, TValId value) {
     TEdgeValueOf edge(obj, value);
     this->evList.push_back(edge);
 }
 
-void SymPlot::Private::gobbleEdgeOffValue(TValueId val,
+void SymPlot::Private::gobbleEdgeOffValue(TValId val,
                                           const SymHeap::TOffVal &ov)
 {
     TEdgeOffVal edge(val, ov);
     this->ovList.push_back(edge);
 }
 
-void SymPlot::Private::gobbleEdgeNeq(TValueId val1, TValueId val2) {
+void SymPlot::Private::gobbleEdgeNeq(TValId val1, TValId val2) {
     // Neq predicates induce a symmetric relation, let's handle them such
     sortValues(val1, val2);
 
@@ -428,7 +428,7 @@ void SymPlot::Private::emitPendingEdges() {
 
     // plot all off-value edges
     BOOST_FOREACH(const TEdgeOffVal &edge, this->ovList) {
-        const TValueId dst = edge.first;
+        const TValId dst = edge.first;
         const SymHeap::TOffVal &ov = edge.second;
         this->dotStream << "\t" << SL_QUOTE(ov.first) << " -> " << SL_QUOTE(dst)
             << " [color=red, fontcolor=red,"
@@ -439,8 +439,8 @@ void SymPlot::Private::emitPendingEdges() {
     // plot Neq edges
     std::set<TEdgeNeq> neqDone;
     BOOST_FOREACH(const TEdgeNeq &edge, this->neqSet) {
-        const TValueId v1 = edge.first;
-        const TValueId v2 = edge.second;
+        const TValId v1 = edge.first;
+        const TValId v2 = edge.second;
         if (!insertOnce(neqDone, TEdgeNeq(v1, v2)))
             continue;
 
@@ -455,7 +455,7 @@ void SymPlot::Private::emitPendingEdges() {
     this->neqSet.clear();
 }
 
-void SymPlot::Private::plotSingleValue(TValueId value) {
+void SymPlot::Private::plotSingleValue(TValId value) {
     if (value <= 0) {
         this->plotNodeValue(value, CL_TYPE_UNKNOWN, 0);
         return;
@@ -477,7 +477,7 @@ void SymPlot::Private::plotSingleValue(TValueId value) {
     // traverse all Neq predicates
     SymHeap::TContValue relatedVals;
     this->heap->gatherRelatedValues(relatedVals, value);
-    BOOST_FOREACH(TValueId peer, relatedVals) {
+    BOOST_FOREACH(TValId peer, relatedVals) {
         if (0 < peer)
             this->workList.schedule(peer);
 
@@ -634,7 +634,7 @@ void SymPlot::Private::openCluster(TObjId obj) {
         << "\tpenwidth=" << pw << ";"               << std::endl;
 }
 
-bool SymPlot::Private::handleCustomValue(TValueId value) {
+bool SymPlot::Private::handleCustomValue(TValId value) {
     using namespace CodeStorage;
 
     const int cVal = this->heap->valGetCustom(value);
@@ -656,7 +656,7 @@ bool SymPlot::Private::handleCustomValue(TValueId value) {
     return true;
 }
 
-bool SymPlot::Private::handleUnknownValue(TValueId value) {
+bool SymPlot::Private::handleUnknownValue(TValId value) {
     const EUnknownValue code = this->heap->valGetUnknown(value);
     switch (code) {
         case UV_KNOWN:
@@ -680,7 +680,7 @@ bool SymPlot::Private::handleUnknownValue(TValueId value) {
     return true;
 }
 
-bool SymPlot::Private::resolveValueOf(TValueId *pDst, TObjId obj) {
+bool SymPlot::Private::resolveValueOf(TValId *pDst, TObjId obj) {
     CL_BREAK_IF(obj < 0);
 
     // avoid duplicates
@@ -688,7 +688,7 @@ bool SymPlot::Private::resolveValueOf(TValueId *pDst, TObjId obj) {
         return false;
     this->objDone.insert(obj);
 
-    const TValueId value = this->heap->valueOf(obj);
+    const TValId value = this->heap->valueOf(obj);
     switch (value) {
         case VAL_INVALID:
             this->plotNodeAux(obj, CL_TYPE_VOID, "VAL_INVALID");
@@ -714,7 +714,7 @@ bool SymPlot::Private::resolveValueOf(TValueId *pDst, TObjId obj) {
     return true;
 }
 
-bool SymPlot::Private::resolvePointsTo(TObjId *pDst, TValueId value) {
+bool SymPlot::Private::resolvePointsTo(TObjId *pDst, TValId value) {
     if (this->handleUnknownValue(value))
         return false;
 
@@ -800,7 +800,7 @@ void ObjectDigger::operate(TFieldIdxChain ic, const struct cl_type *clt) {
     if (!isComposite(clt)) {
         self_->plotNodeObj(obj);
 
-        TValueId value;
+        TValId value;
         if (self_->resolveValueOf(&value, obj)) {
             self_->gobbleEdgeValueOf(obj, value);
             self_->workList.schedule(value);
@@ -871,7 +871,7 @@ void SymPlot::Private::digObj(TObjId obj) {
 }
 
 void SymPlot::Private::digValues() {
-    TValueId value;
+    TValId value;
     while (workList.next(value)) {
         // plot the value itself
         this->plotSingleValue(value);
@@ -906,7 +906,7 @@ void SymPlot::Private::plotObj(TObjId obj) {
     this->plotNodeObj(obj);
 
     // look for the value inside
-    TValueId value;
+    TValId value;
     if (!this->resolveValueOf(&value, obj))
         // we got a bare value, which can't be followed, so we're done
         return;
@@ -981,7 +981,7 @@ bool SymPlot::plot(const std::string &name) {
     return d->ok;
 }
 
-bool SymPlot::plotHeapValue(const std::string &name, TValueId value) {
+bool SymPlot::plotHeapValue(const std::string &name, TValId value) {
     // create dot file
     d->ok = true;
     if (!d->openDotFile(name))

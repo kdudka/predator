@@ -68,8 +68,8 @@ unsigned dlSegMinLength(const SymHeap &sh, TObjId dls) {
     const TObjId next2 = nextPtrFromSeg(sh, peer);
 
     // red the values (addresses of the surround)
-    const TValueId val1 = sh.valueOf(next1);
-    const TValueId val2 = sh.valueOf(next2);
+    const TValId val1 = sh.valueOf(next1);
+    const TValId val2 = sh.valueOf(next2);
 
     // attempt to prove both
     const bool ne1 = sh.SymHeapCore::proveNeq(val1, segHeadAddr(sh, peer));
@@ -80,8 +80,8 @@ unsigned dlSegMinLength(const SymHeap &sh, TObjId dls) {
     const bool ne = (ne1 && ne2);
 
     // if DLS heads are two distinct objects, we have at least two objects
-    const TValueId head1 = segHeadAddr(sh, dls);
-    const TValueId head2 = segHeadAddr(sh, peer);
+    const TValId head1 = segHeadAddr(sh, dls);
+    const TValId head2 = segHeadAddr(sh, peer);
     if (sh.SymHeapCore::proveNeq(head1, head2)) {
         CL_BREAK_IF(!ne);
         return /* DLS 2+ */ 2;
@@ -114,8 +114,8 @@ unsigned segMinLength(const SymHeap &sh, TObjId seg) {
     }
 
     const TObjId next = nextPtrFromSeg(sh, seg);
-    const TValueId nextVal = sh.valueOf(next);
-    const TValueId headAddr = segHeadAddr(sh, seg);
+    const TValId nextVal = sh.valueOf(next);
+    const TValId headAddr = segHeadAddr(sh, seg);
     return static_cast<unsigned>(sh.SymHeapCore::proveNeq(headAddr, nextVal));
 }
 
@@ -167,7 +167,7 @@ void segDestroy(SymHeap &sh, TObjId seg) {
     }
 }
 
-bool haveSeg(const SymHeap &sh, TValueId atAddr, TValueId pointingTo,
+bool haveSeg(const SymHeap &sh, TValId atAddr, TValId pointingTo,
              const EObjKind kind)
 {
     if ((atAddr <= 0) || UV_ABSTRACT != sh.valGetUnknown(atAddr))
@@ -188,11 +188,11 @@ bool haveSeg(const SymHeap &sh, TValueId atAddr, TValueId pointingTo,
 
     // compare the end-points
     const TObjId nextPtr = nextPtrFromSeg(sh, seg);
-    const TValueId valNext = sh.valueOf(nextPtr);
+    const TValId valNext = sh.valueOf(nextPtr);
     return (valNext == pointingTo);
 }
 
-bool haveDlSegAt(const SymHeap &sh, TValueId atAddr, TValueId peerAddr) {
+bool haveDlSegAt(const SymHeap &sh, TValId atAddr, TValId peerAddr) {
     if (atAddr <= 0 || peerAddr <= 0)
         // no valid targets
         return false;
@@ -218,9 +218,9 @@ bool haveDlSegAt(const SymHeap &sh, TValueId atAddr, TValueId peerAddr) {
 
 void segHandleNeq(SymHeap &sh, TObjId seg, TObjId peer, SymHeap::ENeqOp op) {
     const TObjId next = nextPtrFromSeg(sh, peer);
-    const TValueId valNext = sh.valueOf(next);
+    const TValId valNext = sh.valueOf(next);
 
-    const TValueId headAddr = segHeadAddr(sh, seg);
+    const TValId headAddr = segHeadAddr(sh, seg);
     sh.neqOp(op, headAddr, valNext);
 }
 
@@ -241,8 +241,8 @@ void dlSegSetMinLength(SymHeap &sh, TObjId dls, unsigned len) {
     }
 
     // let it be DLS 2+
-    const TValueId a1 = segHeadAddr(sh, dls);
-    const TValueId a2 = segHeadAddr(sh, peer);
+    const TValId a1 = segHeadAddr(sh, dls);
+    const TValId a2 = segHeadAddr(sh, peer);
     sh.neqOp(SymHeap::NEQ_ADD, a1, a2);
 }
 

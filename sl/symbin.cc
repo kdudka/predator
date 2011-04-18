@@ -80,9 +80,9 @@ bool readPlotName(std::string *dst, const TOpList opList,
 }
 
 template <int NTH, class TOpList, class TProc>
-bool readHeapVal(TValueId *dst, const TOpList opList, TProc &proc) {
+bool readHeapVal(TValId *dst, const TOpList opList, TProc &proc) {
     const cl_operand &op = opList[NTH + /* dst + fnc */ 2];
-    const TValueId value = proc.heapValFromOperand(op);
+    const TValId value = proc.heapValFromOperand(op);
     if (value < 0)
         return false;
 
@@ -92,7 +92,7 @@ bool readHeapVal(TValueId *dst, const TOpList opList, TProc &proc) {
 
 template <class TInsn, class TProc>
 bool readNameAndValue(std::string       *pName,
-                      TValueId          *pValue,
+                      TValId            *pValue,
                       const TInsn       &insn,
                       TProc             &proc)
 {
@@ -110,7 +110,7 @@ bool readNameAndValue(std::string       *pName,
 }
 
 template <class TStor, class TFnc, class THeap>
-bool fncFromHeapVal(const TStor &stor, const TFnc **dst, TValueId value,
+bool fncFromHeapVal(const TStor &stor, const TFnc **dst, TValId value,
                     const THeap &heap)
 {
     const int uid = heap.valGetCustom(value);
@@ -166,7 +166,7 @@ bool callPlotByPtr(const TInsn &insn, TProc &proc) {
     const struct cl_loc *lw = &insn.loc;
 
     std::string plotName;
-    TValueId value;
+    TValId value;
     if (!readNameAndValue(&plotName, &value, insn, proc)) {
         emitPrototypeError(lw, "___sl_plot_by_ptr");
         return false;
@@ -184,7 +184,7 @@ bool callPlotStackFrame(const TInsn &insn, TProc &proc) {
     const SymHeap &sh = proc.sh();
 
     std::string plotName;
-    TValueId value;
+    TValId value;
     const CodeStorage::Fnc *fnc;
 
     if (!readNameAndValue(&plotName, &value, insn, proc)
@@ -256,7 +256,7 @@ bool handleBuiltIn(SymState                     &dst,
         CL_DEBUG_MSG(lw, "executing ___sl_get_nondet_int()");
         const struct cl_operand &opDst = opList[0];
         const TObjId objDst = core.heapObjFromOperand(opDst);
-        const TValueId val = sh.valCreateUnknown(UV_UNKNOWN);
+        const TValId val = sh.valCreateUnknown(UV_UNKNOWN);
         core.objSetValue(objDst, val);
 
         // insert the resulting heap

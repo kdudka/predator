@@ -23,7 +23,7 @@
 /**
  * @file symid.hh
  * types used for identification of SymHeap entities - symid.hh::TObjId and
- * symid.hh::TValueId
+ * symid.hh::TValId
  */
 
 #include "config.h"
@@ -91,7 +91,7 @@ enum TObjId {
  * @note Though the type is defined as enumeration for now, the code should not
  * rely on that fact, as it may be subject for change in the future.
  */
-enum TValueId {
+enum TValId {
     /**
      * special enumeration value denoting a NULL pointer.  This value can't be
      * followed by SymHeap::pointsTo().  This enumeration value @b coincides
@@ -131,6 +131,6 @@ enum TValueId {
 };
 
 typedef std::pair<TObjId, TObjId>           TObjPair;
-typedef std::pair<TValueId, TValueId>       TValPair;
+typedef std::pair<TValId, TValId>           TValPair;
 
 #endif /* H_GUARD_SYM_ID_H */

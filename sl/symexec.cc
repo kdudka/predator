@@ -217,8 +217,8 @@ class SymExecEngine: public IStatsProvider {
                 const CodeStorage::Block    *ofBlock,
                 const bool                  branch,
                 const cl_binop_e            code,
-                const TValueId              v1,
-                const TValueId              v2);
+                const TValId                v1,
+                const TValId                v2);
 
         void execCondInsn();
         void execTermInsn();
@@ -264,7 +264,7 @@ void SymExecEngine::execReturn() {
         SymProc proc(heap, &bt_);
         proc.setLocation(lw_);
 
-        const TValueId val = proc.heapValFromOperand(src);
+        const TValId val = proc.heapValFromOperand(src);
         CL_BREAK_IF(VAL_INVALID == val);
 
         heap.objDefineType(OBJ_RETURN, src.type);
@@ -306,8 +306,8 @@ void SymExecEngine::updateState(SymHeap &sh, const CodeStorage::Block *ofBlock) 
 
 void replaceUnkownValue(
         SymHeap                     &sh,
-        const TValueId              v1,
-        const TValueId              v2)
+        const TValId                v1,
+        const TValId                v2)
 {
     const bool isUnknown1 = (UV_KNOWN != sh.valGetUnknown(v1));
     CL_BREAK_IF(!isUnknown1 && UV_KNOWN == sh.valGetUnknown(v2));
@@ -322,8 +322,8 @@ void SymExecEngine::updateStateInBranch(
         const CodeStorage::Block    *ofBlock,
         const bool                  branch,
         const cl_binop_e            code,
-        const TValueId              v1,
-        const TValueId              v2)
+        const TValId                v1,
+        const TValId                v2)
 {
     // resolve binary operator
     bool neg, preserveEq, preserveNeq;
@@ -357,9 +357,9 @@ void SymExecEngine::execCondInsn() {
     CL_BREAK_IF(CL_INSN_BINOP != insnCmp->code);
     CL_BREAK_IF(CL_INSN_COND != insnCnd->code);
 
+#ifndef NDEBUG
     // check that both instructions are connected accordingly
     const struct cl_operand &cmpDst = insnCmp->operands[/* dst */ 0];
-#ifndef NDEBUG
     const struct cl_operand &cndSrc = insnCnd->operands[/* src */ 0];
     CL_BREAK_IF(CL_OPERAND_VAR != cmpDst.code || CL_OPERAND_VAR != cndSrc.code);
     CL_BREAK_IF(varIdFromOperand(&cmpDst) != varIdFromOperand(&cndSrc));
@@ -378,9 +378,9 @@ void SymExecEngine::execCondInsn() {
 
     // compute the result of CL_INSN_BINOP
     const enum cl_binop_e code = static_cast<enum cl_binop_e>(insnCmp->subCode);
-    const TValueId v1 = proc.heapValFromOperand(op1);
-    const TValueId v2 = proc.heapValFromOperand(op2);
-    const TValueId val = compareValues(sh, code, cltSrc, v1, v2);
+    const TValId v1 = proc.heapValFromOperand(op1);
+    const TValId v2 = proc.heapValFromOperand(op2);
+    const TValId val = compareValues(sh, code, cltSrc, v1, v2);
 
     // read targets
     const CodeStorage::TTargetList &tlist = insnCnd->targets;
@@ -862,7 +862,7 @@ fail:
     const struct cl_operand dst = opList[/* dst */ 0];
     if (CL_OPERAND_VOID != dst.code) {
         // set return value to unknown
-        const TValueId val = heap.valCreateUnknown(UV_UNKNOWN);
+        const TValId val = heap.valCreateUnknown(UV_UNKNOWN);
         const TObjId obj = proc.heapObjFromOperand(dst);
         proc.objSetValue(obj, val);
     }

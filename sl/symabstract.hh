@@ -48,7 +48,7 @@ typedef std::list<SymHeap> TSymHeapList;
  * @note the first result is always stored into srcDst, the use of dst is
  * optional and should be eventually handled separately by caller
  */
-void concretizeObj(SymHeap &srcDst, TValueId atAddr, TSymHeapList &dst);
+void concretizeObj(SymHeap &srcDst, TValId atAddr, TSymHeapList &dst);
 
 /**
  * analyze the given symbolic heap and consider abstraction of some shapes that
@@ -69,6 +69,6 @@ void abstractIfNeeded(SymHeap &sh);
  * @param pointingTo target point of the segment, it will be equal with atAddr
  * as long as the operation succeeds
  */
-bool spliceOutListSegment(SymHeap &sh, TValueId atAddr, TValueId pointingTo);
+bool spliceOutListSegment(SymHeap &sh, TValId atAddr, TValId pointingTo);
 
 #endif /* H_GUARD_SYMABSTRACT_H */

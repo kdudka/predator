@@ -41,12 +41,12 @@ bool describeCmpOp(
         bool                        *pPreserveEq,
         bool                        *pPreserveNeq);
 
-TValueId compareValues(
+TValId compareValues(
         SymHeap                     &sh,
         const enum cl_binop_e       code,
         const struct cl_type        *clt,
-        const TValueId              v1,
-        const TValueId              v2);
+        const TValId                v1,
+        const TValId                v2);
 
 /**
  * a layer on top of SymHeap, providing some higher-level operations
@@ -89,26 +89,26 @@ class SymProc {
         TObjId heapObjFromOperand(const struct cl_operand &op);
 
         /// obtain a heap value corresponding to the given operand
-        virtual TValueId heapValFromOperand(const struct cl_operand &op);
+        virtual TValId heapValFromOperand(const struct cl_operand &op);
 
         /// resolve Fnc uid from the given opreand, -1 if there is no such Fnc
         int /* uid */ fncFromOperand(const struct cl_operand &op);
 
         /// high-level interface to SymHeap::objSetValue()
-        void objSetValue(TObjId lhs, TValueId rhs);
+        void objSetValue(TObjId lhs, TValId rhs);
 
         /// high-level interface to SymHeap::objDestroy()
         void objDestroy(TObjId obj);
 
     private:
-        void heapSetSingleVal(TObjId lhs, TValueId rhs);
-        void heapObjDefineType(TObjId lhs, TValueId rhs);
+        void heapSetSingleVal(TObjId lhs, TValId rhs);
+        void heapObjDefineType(TObjId lhs, TValId rhs);
         bool checkForInvalidDeref(TObjId obj);
-        TObjId handleDerefCore(TValueId value, const struct cl_type *cltTarget);
+        TObjId handleDerefCore(TValId value, const struct cl_type *cltTarget);
         void handleDeref(TObjId *pObj, const struct cl_accessor **pAc);
-        void resolveOffValue(TValueId *pVal, const struct cl_accessor **pAc);
-        TValueId heapValFromObj(const struct cl_operand &op);
-        TValueId heapValFromCst(const struct cl_operand &op);
+        void resolveOffValue(TValId *pVal, const struct cl_accessor **pAc);
+        TValId heapValFromObj(const struct cl_operand &op);
+        TValId heapValFromCst(const struct cl_operand &op);
 
     protected:
         SymHeap                     &heap_;     ///< heap to operate on
@@ -169,7 +169,7 @@ class SymExecCore: public SymProc {
         bool exec(SymState &dst, const CodeStorage::Insn &insn);
 
         /// overridden in order to handle SymExecCoreParams::invCompatMode
-        virtual TValueId heapValFromOperand(const struct cl_operand &op);
+        virtual TValId heapValFromOperand(const struct cl_operand &op);
 
     private:
         bool lhsFromOperand(TObjId *pObj, const struct cl_operand &op);
@@ -178,7 +178,7 @@ class SymExecCore: public SymProc {
         void execOp(const CodeStorage::Insn &insn);
 
         void execMalloc(SymState &dst, const CodeStorage::TOperandList &opList);
-        void execFreeCore(TValueId val);
+        void execFreeCore(TValId val);
         void execFree(const CodeStorage::TOperandList &opList);
         bool execCall(SymState &dst, const CodeStorage::Insn &insn);
 

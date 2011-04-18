@@ -69,7 +69,7 @@ class SymPlot {
          * decorated by a serial number
          * @param value ID of a value denoting the requested sub-heap
          */
-        bool plotHeapValue(const std::string &name, TValueId value);
+        bool plotHeapValue(const std::string &name, TValId value);
 
         /**
          * plot a sub-heap reachable from automatic variables of the given

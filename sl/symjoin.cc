@@ -93,7 +93,7 @@ class WorkListWithUndo: public WorkList<T> {
         }
 };
 
-/// known to work only with TObjId/TValueId
+/// known to work only with TObjId/TValId
 template <class TMap>
 typename TMap::mapped_type roMapLookup(
         const TMap                          &roMap,
@@ -219,14 +219,14 @@ bool updateJoinStatus(SymJoinCtx &ctx, const EJoinStatus action) {
  */
 void gatherSharedPreds(
         SymJoinCtx              &ctx,
-        const TValueId          v1,
-        const TValueId          v2,
-        const TValueId          vDst)
+        const TValId            v1,
+        const TValId            v2,
+        const TValId            vDst)
 {
     // look for shared Neq predicates
     SymHeap::TContValue rVals1;
     ctx.sh1.gatherRelatedValues(rVals1, v1);
-    BOOST_FOREACH(const TValueId rel1, rVals1) {
+    BOOST_FOREACH(const TValId rel1, rVals1) {
         if (!ctx.sh1.SymHeapCore::proveNeq(v1, rel1))
             // not a Neq in sh1
             continue;
@@ -237,21 +237,21 @@ void gatherSharedPreds(
             // related value has not (yet?) any mapping to dst
             continue;
 
-        const TValueId relDst = it1->second;
+        const TValId relDst = it1->second;
         TValMap &vMap2r = ctx.valMap2[/* rtl */ 1];
         TValMap::const_iterator it2r = vMap2r.find(relDst);
         if (vMap2r.end() == it2r)
             // related value has not (yet?) any mapping back to sh2
             continue;
 
-        const TValueId rel2 = it2r->second;
+        const TValId rel2 = it2r->second;
         if (!ctx.sh2.SymHeapCore::proveNeq(v2, rel2))
             // not a Neq in sh2
             continue;
 
         // sort Neq values
-        TValueId valLt = vDst;
-        TValueId valGt = relDst;
+        TValId valLt = vDst;
+        TValId valGt = relDst;
         sortValues(valLt, valGt);
 
         // insert a shared Neq predicate
@@ -263,9 +263,9 @@ void gatherSharedPreds(
 /// define value mapping for the given value triple (v1, v2, vDst)
 bool defineValueMapping(
         SymJoinCtx              &ctx,
-        const TValueId          v1,
-        const TValueId          v2,
-        const TValueId          vDst)
+        const TValId            v1,
+        const TValId            v2,
+        const TValId            vDst)
 {
     const bool hasValue1 = (VAL_INVALID != v1);
     const bool hasValue2 = (VAL_INVALID != v2);
@@ -291,17 +291,17 @@ bool defineAddressMapping(
         const TObjId            obj2,
         const TObjId            objDst)
 {
-    const TValueId addr1 = ctx.sh1.placedAt(obj1);
-    const TValueId addr2 = ctx.sh2.placedAt(obj2);
-    const TValueId dstAt = ctx.dst.placedAt(objDst);
+    const TValId addr1 = ctx.sh1.placedAt(obj1);
+    const TValId addr2 = ctx.sh2.placedAt(obj2);
+    const TValId dstAt = ctx.dst.placedAt(objDst);
     return defineValueMapping(ctx, addr1, addr2, dstAt);
 }
 
 /// read-only (in)consistency check among value pair (v1, v2)
 bool checkValueMapping(
         const SymJoinCtx        &ctx,
-        const TValueId          v1,
-        const TValueId          v2,
+        const TValId            v1,
+        const TValId            v2,
         const bool              allowUnknownMapping)
 {
     if (!checkNonPosValues(v1, v2))
@@ -319,8 +319,8 @@ bool checkValueMapping(
         // we have not enough info yet
         return allowUnknownMapping;
 
-    const TValueId vDst1 = (hasMapping1) ? i1->second : VAL_INVALID;
-    const TValueId vDst2 = (hasMapping2) ? i2->second : VAL_INVALID;
+    const TValId vDst1 = (hasMapping1) ? i1->second : VAL_INVALID;
+    const TValId vDst2 = (hasMapping2) ? i2->second : VAL_INVALID;
 
     if (hasMapping1 && hasMapping1 && (vDst1 == vDst2))
         // mapping already known and known to be consistent
@@ -346,8 +346,8 @@ bool joinFreshObjTripple(
     CL_BREAK_IF(segClone && readOnly);
     CL_BREAK_IF(obj1 < 0 && obj2 < 0);
 
-    const TValueId v1 = ctx.sh1.valueOf(obj1);
-    const TValueId v2 = ctx.sh2.valueOf(obj2);
+    const TValId v1 = ctx.sh1.valueOf(obj1);
+    const TValId v2 = ctx.sh2.valueOf(obj2);
     if (VAL_NULL == v1 && VAL_NULL == v2)
         // both values are VAL_NULL, nothing more to join here
         return true;
@@ -379,7 +379,7 @@ bool joinFreshObjTripple(
 
     if (OBJ_INVALID != cObj1 || OBJ_INVALID != cObj2) {
         // store mapping of composite object's values
-        const TValueId vDst = ctx.dst.valueOf(objDst);
+        const TValId vDst = ctx.dst.valueOf(objDst);
         return readOnly
             || defineValueMapping(ctx, v1, v2, vDst);
     }
@@ -387,7 +387,7 @@ bool joinFreshObjTripple(
     if (segClone) {
         const bool isGt1 = (OBJ_INVALID == obj2);
         const TValMapBidir &vm = (isGt1) ? ctx.valMap1 : ctx.valMap2;
-        const TValueId val = (isGt1) ? v1 : v2;
+        const TValId val = (isGt1) ? v1 : v2;
         return (val <= 0 || hasKey(vm[/* lrt */ 0], val));
     }
 
@@ -936,8 +936,8 @@ bool followObjPair(
 
 bool followValuePair(
         SymJoinCtx              &ctx,
-        const TValueId          v1,
-        const TValueId          v2,
+        const TValId            v1,
+        const TValId            v2,
         const bool              readOnly)
 {
     const int cVal1 = ctx.sh1.valGetCustom(v1);
@@ -954,7 +954,7 @@ bool followValuePair(
                                      /* allowUnknownMapping */ true);
         }
 
-        const TValueId vDst = ctx.dst.valCreateCustom(cVal1);
+        const TValId vDst = ctx.dst.valCreateCustom(cVal1);
         return defineValueMapping(ctx, v1, v2, vDst);
     }
 
@@ -977,14 +977,14 @@ bool followValuePair(
 
     // special handling for OBJ_DELETED/OBJ_LOST
     CL_BREAK_IF(o1 != OBJ_DELETED && o1 != OBJ_LOST);
-    const TValueId vDst = ctx.dst.valCreateDangling(o1);
+    const TValId vDst = ctx.dst.valCreateDangling(o1);
     return defineValueMapping(ctx, v1, v2, vDst);
 }
 
 void considerValSchedule(
         SymJoinCtx              &ctx,
-        const TValueId          v1,
-        const TValueId          v2,
+        const TValId            v1,
+        const TValId            v2,
         const TObjId            byObj1,
         const TObjId            byObj2)
 {
@@ -1056,8 +1056,8 @@ read_only_ok:
     const TObjId next1 = ptrObjByOffset(ctx.sh1, peer1, off.next);
     const TObjId next2 = ptrObjByOffset(ctx.sh2, peer2, off.next);
 
-    const TValueId valNext1 = ctx.sh1.valueOf(next1);
-    const TValueId valNext2 = ctx.sh2.valueOf(next2);
+    const TValId valNext1 = ctx.sh1.valueOf(next1);
+    const TValId valNext2 = ctx.sh2.valueOf(next2);
     if (!checkValueMapping(ctx, valNext1, valNext2,
                            /* allowUnknownMapping */ true))
     {
@@ -1078,7 +1078,7 @@ read_only_ok:
 bool segmentCloneCore(
         SymJoinCtx                  &ctx,
         const SymHeap               &shGt,
-        const TValueId              valGt,
+        const TValId                valGt,
         const SymJoinCtx::TObjMap   &objMapGt,
         const EJoinStatus           action,
         const BindingOff            *off)
@@ -1138,7 +1138,7 @@ void scheduleSegAddr(
     wl.schedule(vpPeer);
 }
 
-TValueId /* old */ vmRemoveMappingOf(TValMapBidir &vm, const TValueId val) {
+TValId /* old */ vmRemoveMappingOf(TValMapBidir &vm, const TValId val) {
     if (val <= 0)
         // do not remove special values
         return val;
@@ -1149,7 +1149,7 @@ TValueId /* old */ vmRemoveMappingOf(TValMapBidir &vm, const TValueId val) {
     TValMap::iterator it = ltr.find(val);
     CL_BREAK_IF(ltr.end() == it);
 
-    const TValueId old = it->second;
+    const TValId old = it->second;
     CL_BREAK_IF(!hasKey(rtl, old));
 
     ltr.erase(it);
@@ -1159,8 +1159,8 @@ TValueId /* old */ vmRemoveMappingOf(TValMapBidir &vm, const TValueId val) {
 
 bool disjoinUnknownValues(
         SymJoinCtx              &ctx,
-        const TValueId          val,
-        const TValueId          tpl,
+        const TValId            val,
+        const TValId            tpl,
         const EJoinStatus       action)
 {
     if (val <= 0)
@@ -1171,7 +1171,7 @@ bool disjoinUnknownValues(
 
     // forget all up to now value mapping of 'val'
     TValMapBidir &vm = (isGt2) ? ctx.valMap1 : ctx.valMap2;
-    const TValueId old = vmRemoveMappingOf(vm, val);
+    const TValId old = vmRemoveMappingOf(vm, val);
 
     // gather all objects that hold 'val' inside
     SymHeap::TContObj refs;
@@ -1186,7 +1186,7 @@ bool disjoinUnknownValues(
             // no image in ctx.dst yet
             continue;
 
-        const TValueId valDst = ctx.dst.valDuplicateUnknown(tpl);
+        const TValId valDst = ctx.dst.valDuplicateUnknown(tpl);
         SJ_DEBUG("-u- disjoinUnknownValues() rewrites mapping" <<
                  ", old = " << old <<
                  ", new = " << valDst <<
@@ -1201,9 +1201,9 @@ bool disjoinUnknownValues(
 
 bool unknownValueFallBack(
         SymJoinCtx              &ctx,
-        const TValueId          v1,
-        const TValueId          v2,
-        const TValueId          vDst)
+        const TValId            v1,
+        const TValId            v2,
+        const TValId            vDst)
 {
     const bool hasMapping1 = hasKey(ctx.valMap1[/* ltr */ 0], v1);
     const bool hasMapping2 = hasKey(ctx.valMap2[/* ltr */ 0], v2);
@@ -1232,9 +1232,9 @@ bool unknownValueFallBack(
 
 bool handleUnknownValues(
         SymJoinCtx              &ctx,
-        const TValueId          v1,
-        const TValueId          v2,
-        const TValueId          vDst)
+        const TValId            v1,
+        const TValId            v2,
+        const TValId            vDst)
 {
     if (debugSymJoin) {
         SymHeap::TOffValCont off1, off2;
@@ -1256,8 +1256,8 @@ bool handleUnknownValues(
 bool insertSegmentClone(
         bool                    *pResult,
         SymJoinCtx              &ctx,
-        const TValueId          v1,
-        const TValueId          v2,
+        const TValId            v1,
+        const TValId            v2,
         const EJoinStatus       action,
         const BindingOff        *off = 0)
 {
@@ -1283,8 +1283,8 @@ bool insertSegmentClone(
         ? ptrObjByOffset(shGt, seg, off->next)
         : nextPtrFromSeg(shGt, peer);
 
-    const TValueId nextGt = shGt.valueOf(nextPtr);
-    const TValueId nextLt = (isGt2) ? v1 : v2;
+    const TValId nextGt = shGt.valueOf(nextPtr);
+    const TValId nextLt = (isGt2) ? v1 : v2;
     if (!checkValueMapping(ctx, 
                 (isGt1) ? nextGt : nextLt,
                 (isGt2) ? nextGt : nextLt,
@@ -1297,15 +1297,15 @@ bool insertSegmentClone(
 
     const SymJoinCtx::TObjMap &objMapGt = (isGt1) ? ctx.objMap1 : ctx.objMap2;
 
-    const TValueId segGtAt = shGt.placedAt(seg);
+    const TValId segGtAt = shGt.placedAt(seg);
     TValPair vp(
             (isGt1) ? segGtAt : VAL_INVALID,
             (isGt2) ? segGtAt : VAL_INVALID);
 
     scheduleSegAddr(ctx.wl, shGt, seg, peer, action);
     while (ctx.wl.next(vp)) {
-        const TValueId valGt = (isGt1) ? vp.first : vp.second;
-        const TValueId valLt = (isGt2) ? vp.first : vp.second;
+        const TValId valGt = (isGt1) ? vp.first : vp.second;
+        const TValId valLt = (isGt2) ? vp.first : vp.second;
         if (VAL_INVALID != valLt) {
             // process the rest of ctx.wl rather in joinPendingValues()
             ctx.wl.undo(vp);
@@ -1326,7 +1326,7 @@ bool insertSegmentClone(
             case UV_UNKNOWN:
             case UV_DONT_CARE: {
                 // clone unknown value
-                const TValueId vDst = ctx.dst.valCreateUnknown(code);
+                const TValId vDst = ctx.dst.valCreateUnknown(code);
                 if (handleUnknownValues(ctx, vp.first, vp.second, vDst))
                     continue;
                 else
@@ -1346,8 +1346,8 @@ bool insertSegmentClone(
     }
 
     // schedule the next object in the row
-    const TValueId valNext1 = (isGt1) ? nextGt : nextLt;
-    const TValueId valNext2 = (isGt2) ? nextGt : nextLt;
+    const TValId valNext1 = (isGt1) ? nextGt : nextLt;
+    const TValId valNext2 = (isGt2) ? nextGt : nextLt;
     considerValSchedule(ctx, valNext1, valNext2, OBJ_INVALID, OBJ_INVALID);
     *pResult = true;
     return true;
@@ -1356,8 +1356,8 @@ bool insertSegmentClone(
 bool joinAbstractValues(
         bool                    *pResult,
         SymJoinCtx              &ctx,
-        const TValueId          v1,
-        const TValueId          v2,
+        const TValId            v1,
+        const TValId            v2,
         EUnknownValue           *pCode1,
         EUnknownValue           *pCode2)
 {
@@ -1405,7 +1405,7 @@ class MayExistVisitor {
     private:
         SymJoinCtx              ctx_;
         const EJoinStatus       action_;
-        const TValueId          valRef_;
+        const TValId            valRef_;
         const TObjId            root_;
         TOffset                 offNext_;
 
@@ -1413,7 +1413,7 @@ class MayExistVisitor {
         MayExistVisitor(
                 SymJoinCtx          &ctx,
                 const EJoinStatus   action,
-                const TValueId      valRef,
+                const TValId        valRef,
                 const TObjId        root):
             ctx_(ctx),
             action_(action),
@@ -1432,9 +1432,9 @@ class MayExistVisitor {
                 const SymHeap   &sh,
                 const TObjId    sub)
         {
-            const TValueId val = sh.valueOf(sub);
-            const TValueId v1 = (JS_USE_SH1 == action_) ? val : valRef_;
-            const TValueId v2 = (JS_USE_SH2 == action_) ? val : valRef_;
+            const TValId val = sh.valueOf(sub);
+            const TValId v1 = (JS_USE_SH1 == action_) ? val : valRef_;
+            const TValId v2 = (JS_USE_SH2 == action_) ? val : valRef_;
             if (!followValuePair(ctx_, v1, v2, /* read-only */ true))
                 return /* continue */ true;
 
@@ -1445,12 +1445,12 @@ class MayExistVisitor {
 
 class SubAddrFinder {
     private:
-        const TValueId subAddr_;
+        const TValId    subAddr_;
         const TObjId   root_;
         TOffset        result_;
 
     public:
-        SubAddrFinder(const TValueId subAddr, const TObjId root):
+        SubAddrFinder(const TValId subAddr, const TObjId root):
             subAddr_(subAddr),
             root_(root),
             result_(0)
@@ -1474,8 +1474,8 @@ class SubAddrFinder {
 
 bool mayExistFallback(
         SymJoinCtx              &ctx,
-        const TValueId          v1,
-        const TValueId          v2,
+        const TValId            v1,
+        const TValId            v2,
         const EJoinStatus       action)
 {
     const bool use1 = (JS_USE_SH1 == action);
@@ -1489,7 +1489,7 @@ bool mayExistFallback(
         return false;
 
     const SymHeap &sh = (use1) ? ctx.sh1 : ctx.sh2;
-    const TValueId val = (use1) ? v1 : v2;
+    const TValId val = (use1) ? v1 : v2;
     const TObjId target = objRootByVal(sh, val);
     if (target <= 0 || !isComposite(sh.objType(target)))
         // non-starter
@@ -1499,7 +1499,7 @@ bool mayExistFallback(
         // only concrete objects/prototypes are candidates for OK_MAY_EXIST
         return false;
 
-    const TValueId ref = (use2) ? v1 : v2;
+    const TValId ref = (use2) ? v1 : v2;
     MayExistVisitor visitor(ctx, action, ref, /* root */ target);
     if (traverseSubObjs(sh, target, visitor, /* leavesOnly */ true))
         // no match
@@ -1530,7 +1530,7 @@ bool mayExistFallback(
     return result;
 }
 
-bool joinValuePair(SymJoinCtx &ctx, const TValueId v1, const TValueId v2) {
+bool joinValuePair(SymJoinCtx &ctx, const TValId v1, const TValId v2) {
     const bool err1 = (VAL_DEREF_FAILED == v1);
     const bool err2 = (VAL_DEREF_FAILED == v2);
     if (err1 && err2)
@@ -1544,7 +1544,7 @@ bool joinValuePair(SymJoinCtx &ctx, const TValueId v1, const TValueId v2) {
     EUnknownValue code;
     if (joinUnknownValuesCode(&code, code1, code2)) {
         // create a new unknown value in ctx.dst
-        const TValueId vDst = ctx.dst.valCreateUnknown(code);
+        const TValId vDst = ctx.dst.valCreateUnknown(code);
         return handleUnknownValues(ctx, v1, v2, vDst);
     }
 
@@ -1568,8 +1568,8 @@ bool joinValuePair(SymJoinCtx &ctx, const TValueId v1, const TValueId v2) {
 bool joinPendingValues(SymJoinCtx &ctx) {
     TValPair vp;
     while (ctx.wl.next(vp)) {
-        const TValueId v1 = vp.first;
-        const TValueId v2 = vp.second;
+        const TValId v1 = vp.first;
+        const TValId v2 = vp.second;
 
         SJ_DEBUG("--- " << SJ_VALP(v1, v2));
         if (!joinValuePair(ctx, v1, v2))
@@ -1613,15 +1613,15 @@ bool joinCVars(SymJoinCtx &ctx) {
     return true;
 }
 
-TValueId joinDstValue(
+TValId joinDstValue(
         const SymJoinCtx        &ctx,
-        const TValueId          v1,
-        const TValueId          v2,
+        const TValId            v1,
+        const TValId            v2,
         const bool              validObj1,
         const bool              validObj2)
 {
-    const TValueId vDstBy1 = roMapLookup(ctx.valMap1[/* ltr */ 0], v1);
-    const TValueId vDstBy2 = roMapLookup(ctx.valMap2[/* ltr */ 0], v2);
+    const TValId vDstBy1 = roMapLookup(ctx.valMap1[/* ltr */ 0], v1);
+    const TValId vDstBy2 = roMapLookup(ctx.valMap2[/* ltr */ 0], v2);
     if (vDstBy1 == vDstBy2)
         // the values are equal --> pick any
         return vDstBy1;
@@ -1651,7 +1651,7 @@ TValueId joinDstValue(
         return VAL_INVALID;
 }
 
-bool seenUnknown(const SymHeap &sh, const TValueId val) {
+bool seenUnknown(const SymHeap &sh, const TValId val) {
     if (val <= 0)
         return false;
 
@@ -1683,8 +1683,8 @@ bool setDstValuesCore(
     const TObjId obj2 = orig.second;
     CL_BREAK_IF(OBJ_INVALID == obj1 && OBJ_INVALID == obj2);
 
-    const TValueId v1 = ctx.sh1.valueOf(obj1);
-    const TValueId v2 = ctx.sh2.valueOf(obj2);
+    const TValId v1 = ctx.sh1.valueOf(obj1);
+    const TValId v2 = ctx.sh2.valueOf(obj2);
 
     const bool isComp1 = (OBJ_INVALID != ctx.sh1.valGetCompositeObj(v1));
     const bool isComp2 = (OBJ_INVALID != ctx.sh2.valGetCompositeObj(v2));
@@ -1708,7 +1708,7 @@ bool setDstValuesCore(
     // compute the resulting value
     const bool validObj1 = (OBJ_INVALID != obj1);
     const bool validObj2 = (OBJ_INVALID != obj2);
-    const TValueId vDst = joinDstValue(ctx, v1, v2, validObj1, validObj2);
+    const TValId vDst = joinDstValue(ctx, v1, v2, validObj1, validObj2);
     if (VAL_INVALID == vDst)
         return seenUnknown(ctx.sh1, v1)
             || seenUnknown(ctx.sh2, v2);
@@ -1779,7 +1779,7 @@ void handleDstPreds(SymJoinCtx &ctx) {
 
     // go through shared Neq predicates
     BOOST_FOREACH(const TValPair neq, ctx.sharedNeqs) {
-        TValueId valLt, valGt;
+        TValId valLt, valGt;
         boost::tie(valLt, valGt) = neq;
 
         const TObjId targetLt = objRootByVal(ctx.dst, valLt);
@@ -1840,7 +1840,7 @@ bool segDetectSelfLoopHelper(
                 break;
         }
 
-        const TValueId valNext = sh.valueOf(nextPtrFromSeg(sh, peer));
+        const TValId valNext = sh.valueOf(nextPtrFromSeg(sh, peer));
         TObjId next = sh.pointsTo(valNext);
         if (next < 0)
             // no valid next object --> no loop
@@ -1981,13 +1981,13 @@ class GhostMapper {
 
         bool operator()(const SymHeap &sh, const TObjPair &item) {
             // obtain addresses
-            const TValueId addrReal  = sh.placedAt(item.first);
-            const TValueId addrGhost = sh.placedAt(item.second);
+            const TValId addrReal  = sh.placedAt(item.first);
+            const TValId addrGhost = sh.placedAt(item.second);
             CL_BREAK_IF(addrReal < 0 || addrGhost < 0);
             CL_BREAK_IF(addrReal == addrGhost);
 
             // wait, first we need to translate the address into ctx.dst world
-            const TValueId image = roMapLookup(vMap_, addrReal);
+            const TValId image = roMapLookup(vMap_, addrReal);
             CL_BREAK_IF(image <= 0);
 
             // introduce ghost mapping
@@ -2030,7 +2030,7 @@ bool dlSegCheckProtoConsistency(const SymJoinCtx &ctx) {
 
         TObjTriple protoPeer;
         const TObjId peerDst = dlSegPeer(ctx.dst, objDst);
-        const TValueId peerAt = ctx.dst.placedAt(peerDst);
+        const TValId peerAt = ctx.dst.placedAt(peerDst);
 
         if (OK_DLS == ctx.sh1.objKind(obj1))
             protoPeer[0] = dlSegPeer(ctx.sh1, obj1);
@@ -2170,9 +2170,9 @@ struct JoinValueVisitor {
     {
     }
 
-    TValueId joinValues(const TValueId oldDst, const TValueId oldSrc) const {
-        const TValueId newDst = roMapLookup(ctx.valMap1[/* ltr */ 0], oldDst);
-        const TValueId newSrc = roMapLookup(ctx.valMap2[/* ltr */ 0], oldSrc);
+    TValId joinValues(const TValId oldDst, const TValId oldSrc) const {
+        const TValId newDst = roMapLookup(ctx.valMap1[/* ltr */ 0], oldDst);
+        const TValId newSrc = roMapLookup(ctx.valMap2[/* ltr */ 0], oldSrc);
         if (newDst == newSrc)
             // values are equal --> pick any
             return newDst;
@@ -2209,10 +2209,10 @@ struct JoinValueVisitor {
         if (hasKey(this->ignoreList, dst))
             return /* continue */ true;
 
-        const TValueId oldDst = sh.valueOf(dst);
-        const TValueId oldSrc = sh.valueOf(src);
+        const TValId oldDst = sh.valueOf(dst);
+        const TValId oldSrc = sh.valueOf(src);
 
-        const TValueId valNew = this->joinValues(oldDst, oldSrc);
+        const TValId valNew = this->joinValues(oldDst, oldSrc);
         if (VAL_INVALID == valNew)
             return /* continue */ true;
 

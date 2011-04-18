@@ -36,7 +36,7 @@ bool joinUnknownValuesCode(
         const EUnknownValue     code2);
 
 /// either intra-heap or inter-heap value mapping
-typedef std::map<TValueId /* src */, TValueId /* dst */>    TValMap;
+typedef std::map<TValId /* src */, TValId /* dst */>        TValMap;
 
 /// @todo some dox
 bool areEqual(
@@ -45,7 +45,7 @@ bool areEqual(
         TValMap                 *srcToDst = 0,
         TValMap                 *dstToSrc = 0);
 
-typedef std::pair<TValueId, TValueId>                       TValPair;
+typedef std::pair<TValId, TValId>                           TValPair;
 
 class ISubMatchVisitor {
     public:
@@ -73,7 +73,7 @@ typedef TValMap                                             TValMapBidir[2];
 
 bool matchPlainValues(
         TValMapBidir            valMapping,
-        const TValueId          v1,
-        const TValueId          v2);
+        const TValId            v1,
+        const TValId            v2);
 
 #endif /* H_GUARD_SYM_CMP_H */

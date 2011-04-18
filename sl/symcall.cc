@@ -108,7 +108,7 @@ void SymCallCtx::Private::assignReturnValue(SymHeap &sh) {
     const TObjId obj = proc.heapObjFromOperand(op);
     CL_BREAK_IF(OBJ_INVALID == obj);
 
-    const TValueId val = sh.valueOf(OBJ_RETURN);
+    const TValId val = sh.valueOf(OBJ_RETURN);
     CL_BREAK_IF(VAL_INVALID == val);
 
     // assign the return value in the current symbolic heap
@@ -365,7 +365,7 @@ void SymCallCache::Private::setCallArgs(const CodeStorage::TOperandList &opList)
                     "missing argument being treated as unknown value");
 
             // read the UV_UNINITIALIZED of lhs
-            TValueId val = this->heap->valueOf(lhs);
+            TValId val = this->heap->valueOf(lhs);
             CL_BREAK_IF(UV_UNINITIALIZED != this->heap->valGetUnknown(val));
 
             // change UV_UNINITIALIZED to UV_UNKNOWN in lhs
@@ -376,7 +376,7 @@ void SymCallCache::Private::setCallArgs(const CodeStorage::TOperandList &opList)
 
         // read the given argument's value
         const struct cl_operand &op = opList[pos++];
-        const TValueId val = srcProc.heapValFromOperand(op);
+        const TValId val = srcProc.heapValFromOperand(op);
         CL_BREAK_IF(VAL_INVALID == val);
 
         // set the value of lhs accordingly

@@ -101,8 +101,8 @@ bool joinUnknownValuesCode(
 
 bool matchPlainValues(
         TValMapBidir            valMapping,
-        const TValueId          v1,
-        const TValueId          v2)
+        const TValId            v1,
+        const TValId            v2)
 {
     if (!checkNonPosValues(v1, v2))
         // null vs. non-null, etc.
@@ -138,8 +138,8 @@ bool matchValues(
         TMapping                &valMapping,
         const SymHeap           &sh1,
         const SymHeap           &sh2,
-        const TValueId          v1,
-        const TValueId          v2)
+        const TValId            v1,
+        const TValId            v2)
 {
     *follow = false;
     if (!matchPlainValues(valMapping, v1, v2))
@@ -191,8 +191,8 @@ bool digComposite(
         TWorkList               &wl,
         const SymHeap           &sh1,
         const SymHeap           &sh2,
-        const TValueId          v1,
-        const TValueId          v2)
+        const TValId            v1,
+        const TValId            v2)
 {
     *isComp = false;
     const TObjId cObj1 = sh1.valGetCompositeObj(v1);
@@ -240,8 +240,8 @@ bool digComposite(
             continue;
         }
 
-        const TValueId val1 = sh1.valueOf(o1);
-        const TValueId val2 = sh2.valueOf(o2);
+        const TValId val1 = sh1.valueOf(o1);
+        const TValId val2 = sh2.valueOf(o2);
         if (wl.schedule(val1, val2)) {
             SC_DEBUG_VAL_SCHEDULE_BY("digComposite", o1, o2,
                                   sh1, sh2, val1, val2);
@@ -286,7 +286,7 @@ bool dfsCmp(
     // DFS loop
     typename TWorkList::value_type item;
     while (wl.next(item)) {
-        TValueId v1, v2;
+        TValId v1, v2;
         boost::tie(v1, v2) = item;
 
         if (pCancel && *pCancel)
@@ -374,8 +374,8 @@ bool areEqual(
         CL_BREAK_IF(o1 < 0 || o2 < 0);
 
         // retrieve values of static variables
-        const TValueId v1 = sh1.valueOf(o1);
-        const TValueId v2 = sh2.valueOf(o2);
+        const TValId v1 = sh1.valueOf(o1);
+        const TValId v2 = sh2.valueOf(o2);
 
         // optimization
         bool follow;
@@ -454,7 +454,7 @@ class CustomWorkList: public WorkList<TItem> {
         }
 
         // FIXME: there is no TBase::schedule() virtual method --> subtle
-        bool schedule(const TValueId v1, const TValueId v2) {
+        bool schedule(const TValId v1, const TValId v2) {
             const TValPair vp(v1, v2);
             return this->schedule(vp);
         }

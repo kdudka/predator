@@ -41,7 +41,7 @@ namespace CodeStorage {
     struct Var;
 }
 
-inline TValueId boolToVal(const bool b) {
+inline TValId boolToVal(const bool b) {
     return (b)
         ? VAL_TRUE
         : VAL_FALSE;
@@ -49,7 +49,7 @@ inline TValueId boolToVal(const bool b) {
 
 bool isHeapObject(const SymHeap &heap, TObjId obj);
 
-void digRootObject(const SymHeap &heap, TValueId *pValue);
+void digRootObject(const SymHeap &heap, TValId *pValue);
 
 inline TObjId /* root */ objRoot(const SymHeapTyped &sh, TObjId obj) {
     TObjId root = obj;
@@ -59,13 +59,13 @@ inline TObjId /* root */ objRoot(const SymHeapTyped &sh, TObjId obj) {
     return root;
 }
 
-inline TObjId /* root */ objRootByVal(const SymHeapTyped &sh, TValueId val) {
+inline TObjId /* root */ objRootByVal(const SymHeapTyped &sh, TValId val) {
     const TObjId target = sh.pointsTo(val);
     return objRoot(sh, target);
 }
 
 inline TObjId /* root */ objRootByPtr(const SymHeapTyped &sh, TObjId ptr) {
-    const TValueId val = sh.valueOf(ptr);
+    const TValId val = sh.valueOf(ptr);
     return objRootByVal(sh, val);
 }
 
@@ -265,7 +265,7 @@ void gatherPointingObjects(const SymHeap            &sh,
                            const TObjId             root,
                            bool                     toInsideOnly);
 
-TValueId addrQueryByOffset(
+TValId addrQueryByOffset(
         SymHeap                 &sh,
         const TObjId            target,
         const TOffset           offRequested,

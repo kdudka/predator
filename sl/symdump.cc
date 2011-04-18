@@ -36,7 +36,7 @@
 using std::cout;
 
 namespace {
-    TObjId /* pointsTo */ dump_value_core(const SymHeap &heap, TValueId value);
+    TObjId /* pointsTo */ dump_value_core(const SymHeap &heap, TValId value);
 }
 
 void dump_clt(const struct cl_type *clt) {
@@ -160,11 +160,11 @@ void dump_obj(const SymHeap &heap, TObjId obj) {
     dump_kind(heap, obj);
     cout << "\n";
 
-    const TValueId placedAt = heap.placedAt(obj);
+    const TValId placedAt = heap.placedAt(obj);
     if (0 < placedAt)
         cout << "    placedAt  = /* value */ #" << placedAt << "\n";
 
-    const TValueId value = heap.valueOf(obj);
+    const TValId value = heap.valueOf(obj);
     if (VAL_NULL == value && clt && clt->code == CL_TYPE_PTR)
         cout << "    value     = VAL_NULL\n";
     else if (0 < value)
@@ -201,7 +201,7 @@ void dump_obj(const SymHeap &heap, TObjId obj) {
         cout << "    peer      = ";
         const TOffset offPeer = heap.objBinding(obj).prev;
         const TObjId peerPtr = ptrObjByOffset(heap, obj, offPeer);
-        const TValueId valPeer = heap.valueOf(peerPtr);
+        const TValId valPeer = heap.valueOf(peerPtr);
         if (0 < valPeer) {
             const TObjId peer = heap.pointsTo(valPeer);
             cout << "/* obj */ #" << peer << ", kind = ";
@@ -229,7 +229,7 @@ void dump_obj(const SymHeap &heap, TObjId obj) {
         cout << "    next      = ";
         const TOffset offNext = heap.objBinding(obj).next;
         const TObjId nextPtr = ptrObjByOffset(heap, obj, offNext);
-        const TValueId valNext = heap.valueOf(nextPtr);
+        const TValId valNext = heap.valueOf(nextPtr);
         if (0 < valNext) {
             const TObjId next = heap.pointsTo(valNext);
             cout << "/* obj */ #" << next << ", kind = ";
@@ -243,7 +243,7 @@ void dump_obj(const SymHeap &heap, TObjId obj) {
 }
 
 namespace {
-TObjId /* pointsTo */ dump_value_core(const SymHeap &heap, TValueId value)
+TObjId /* pointsTo */ dump_value_core(const SymHeap &heap, TValId value)
 {
     cout << "dump_value(#" << value << ")\n";
 
@@ -325,7 +325,7 @@ TObjId /* pointsTo */ dump_value_core(const SymHeap &heap, TValueId value)
 }
 } // namespace
 
-void dump_value(const SymHeap &heap, TValueId value) {
+void dump_value(const SymHeap &heap, TValId value) {
     const TObjId pointsTo = dump_value_core(heap, value);
     if (0 < pointsTo) {
         std::cout << "\n";
@@ -333,7 +333,7 @@ void dump_value(const SymHeap &heap, TValueId value) {
     }
 }
 
-void dump_value_refs(const SymHeap &heap, TValueId value) {
+void dump_value_refs(const SymHeap &heap, TValId value) {
     // dump value itself
     dump_value_core(heap, value);
 
@@ -394,7 +394,7 @@ void dump_id(const SymHeapCore *core, int id) {
 
     else
         // assume value ID
-        dump_value(heap, static_cast<TValueId>(id));
+        dump_value(heap, static_cast<TValId>(id));
 }
 
 void dump_id(const SymHeapCore &core, int id) {

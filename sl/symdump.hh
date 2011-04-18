@@ -68,10 +68,10 @@ void dump_kind(const SymHeap &heap, TObjId obj);
 void dump_obj(const SymHeap &heap, TObjId obj);
 
 /// dump a symbolic heap @b value
-void dump_value(const SymHeap &heap, TValueId value);
+void dump_value(const SymHeap &heap, TValId value);
 
 /// dump a symbolic heap value, including all (directly) @b referred @b objects
-void dump_value_refs(const SymHeap &heap, TValueId value);
+void dump_value_refs(const SymHeap &heap, TValId value);
 
 /// dump a static/automatic @b variable, see CodeStorage
 void dump_cvar(const SymHeap &heap, CVar cv);

@@ -33,7 +33,7 @@
 #include <boost/foreach.hpp>
 
 template <class TWL>
-void digPointingObjects(TWL &wl, const SymHeap &sh, TValueId val) {
+void digPointingObjects(TWL &wl, const SymHeap &sh, TValId val) {
     // go through all objects having the value
     SymHeap::TContObj cont;
     sh.usedBy(cont, val);
@@ -54,7 +54,7 @@ void digPointingObjects(TWL &wl, const SymHeap &sh, TValueId val) {
     }
 }
 
-bool digJunk(const SymHeap &heap, TValueId *ptrVal) {
+bool digJunk(const SymHeap &heap, TValId *ptrVal) {
     if (*ptrVal <= 0)
         return false;
 
@@ -86,7 +86,7 @@ bool digJunk(const SymHeap &heap, TValueId *ptrVal) {
         if (!isHeapObject(heap, obj))
             return false;
 
-        const TValueId val = heap.placedAt(obj);
+        const TValId val = heap.placedAt(obj);
         CL_BREAK_IF(val <= 0);
 
         digPointingObjects(wl, heap, val);
@@ -95,13 +95,13 @@ bool digJunk(const SymHeap &heap, TValueId *ptrVal) {
     return true;
 }
 
-bool collectJunk(SymHeap &sh, TValueId val, const struct cl_loc *lw) {
+bool collectJunk(SymHeap &sh, TValId val, const struct cl_loc *lw) {
     bool detected = false;
 
-    std::stack<TValueId> todo;
+    std::stack<TValId> todo;
     todo.push(val);
     while (!todo.empty()) {
-        TValueId val = todo.top();
+        TValId val = todo.top();
         todo.pop();
 
         if (digJunk(sh, &val)) {
@@ -110,7 +110,7 @@ bool collectJunk(SymHeap &sh, TValueId val, const struct cl_loc *lw) {
             CL_BREAK_IF(obj <= 0);
 
             // gather all values inside the junk object
-            std::vector<TValueId> ptrs;
+            std::vector<TValId> ptrs;
             getPtrValues(ptrs, sh, obj);
 
             // destroy junk
@@ -120,7 +120,7 @@ bool collectJunk(SymHeap &sh, TValueId val, const struct cl_loc *lw) {
                 CL_BREAK_IF("failed to kill junk");
 
             // schedule just created junk candidates for next wheel
-            BOOST_FOREACH(TValueId ptrVal, ptrs) {
+            BOOST_FOREACH(TValId ptrVal, ptrs) {
                 todo.push(ptrVal);
             }
         }

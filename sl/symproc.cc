@@ -40,7 +40,7 @@
 
 // /////////////////////////////////////////////////////////////////////////////
 // SymProc implementation
-TValueId SymProc::heapValFromCst(const struct cl_operand &op) {
+TValId SymProc::heapValFromCst(const struct cl_operand &op) {
     bool isBool = false;
     enum cl_type_e code = op.type->code;
     switch (code) {
@@ -73,7 +73,7 @@ TValueId SymProc::heapValFromCst(const struct cl_operand &op) {
                     return VAL_NULL;
 
                 // create a new unknown non-NULL value
-                TValueId val = heap_.valCreateUnknown(UV_UNKNOWN);
+                TValId val = heap_.valCreateUnknown(UV_UNKNOWN);
                 heap_.neqOp(SymHeap::NEQ_ADD, val, VAL_NULL);
                 return val;
             }
@@ -117,7 +117,7 @@ bool SymProc::checkForInvalidDeref(TObjId obj) {
     return true;
 }
 
-TObjId SymProc::handleDerefCore(TValueId val, const struct cl_type *cltTarget) {
+TObjId SymProc::handleDerefCore(TValId val, const struct cl_type *cltTarget) {
     if (VAL_DEREF_FAILED == val)
         // we're already on an error path
         return OBJ_DEREF_FAILED;
@@ -175,8 +175,8 @@ TObjId varFromOperand(const struct cl_operand &op, const SymHeap &sh,
     return sh.objByCVar(cVar);
 }
 
-void SymProc::resolveOffValue(TValueId *pVal, const struct cl_accessor **pAc) {
-    const TValueId val = *pVal;
+void SymProc::resolveOffValue(TValId *pVal, const struct cl_accessor **pAc) {
+    const TValId val = *pVal;
     if (val <= 0 || UV_UNKNOWN != heap_.valGetUnknown(val))
         // we're not interested here in such a value
         return;
@@ -188,7 +188,7 @@ void SymProc::resolveOffValue(TValueId *pVal, const struct cl_accessor **pAc) {
 
     // going through the chain of CL_ACCESSOR_ITEM, look for the target
     TOffset off = 0;
-    TValueId valTarget = VAL_INVALID;
+    TValId valTarget = VAL_INVALID;
     while (ac && ac->code == CL_ACCESSOR_ITEM && VAL_INVALID == valTarget) {
         // compute cumulative offset at the current level
         const struct cl_type *clt = ac->type;
@@ -222,7 +222,7 @@ void SymProc::handleDeref(TObjId *pObj, const struct cl_accessor **pAc) {
         return;
 
     // read the value inside the pointer
-    TValueId val = heap_.valueOf(obj);
+    TValId val = heap_.valueOf(obj);
     switch (val) {
         case VAL_NULL:
             CL_ERROR_MSG(lw_, "dereference of NULL value");
@@ -351,7 +351,7 @@ TObjId SymProc::heapObjFromOperand(const struct cl_operand &op) {
     return obj;
 }
 
-TValueId SymProc::heapValFromObj(const struct cl_operand &op) {
+TValId SymProc::heapValFromObj(const struct cl_operand &op) {
     const TObjId obj = this->heapObjFromOperand(op);
     switch (obj) {
         case OBJ_INVALID:
@@ -377,7 +377,7 @@ TValueId SymProc::heapValFromObj(const struct cl_operand &op) {
         : heap_.valueOf(obj);
 }
 
-TValueId SymProc::heapValFromOperand(const struct cl_operand &op) {
+TValId SymProc::heapValFromOperand(const struct cl_operand &op) {
     const enum cl_operand_e code = op.code;
     switch (code) {
         case CL_OPERAND_VAR:
@@ -404,7 +404,7 @@ int /* uid */ SymProc::fncFromOperand(const struct cl_operand &op) {
 
     } else {
         // indirect call
-        const TValueId val = this->heapValFromOperand(op);
+        const TValId val = this->heapValFromOperand(op);
         if (VAL_INVALID == val)
             // Oops, it does not look as indirect call actually
             CL_TRAP;
@@ -414,7 +414,7 @@ int /* uid */ SymProc::fncFromOperand(const struct cl_operand &op) {
     }
 }
 
-void SymProc::heapObjDefineType(TObjId lhs, TValueId rhs) {
+void SymProc::heapObjDefineType(TObjId lhs, TValId rhs) {
     const TObjId var = heap_.pointsTo(rhs);
     CL_BREAK_IF(OBJ_INVALID == var);
 
@@ -448,9 +448,9 @@ void SymProc::heapObjDefineType(TObjId lhs, TValueId rhs) {
     heap_.objDefineType(var, clt);
 }
 
-void SymProc::heapSetSingleVal(TObjId lhs, TValueId rhs) {
+void SymProc::heapSetSingleVal(TObjId lhs, TValId rhs) {
     // save the old value, which is going to be overwritten
-    const TValueId oldValue = heap_.valueOf(lhs);
+    const TValId oldValue = heap_.valueOf(lhs);
     CL_BREAK_IF(VAL_INVALID == oldValue);
 
     if (0 < rhs) {
@@ -468,10 +468,10 @@ void SymProc::heapSetSingleVal(TObjId lhs, TValueId rhs) {
 class ValueWriter {
     private:
         SymProc             &proc_;
-        const TValueId      valToWrite_;
+        const TValId        valToWrite_;
 
     public:
-        ValueWriter(SymProc *proc, TValueId valToWrite):
+        ValueWriter(SymProc *proc, TValId valToWrite):
             proc_(*proc),
             valToWrite_(valToWrite)
         {
@@ -504,7 +504,7 @@ class UnionInvalidator {
             }
             while (OBJ_INVALID != (obj = sh.objParent(obj)));
 
-            const TValueId val = sh.valCreateUnknown(UV_UNKNOWN);
+            const TValId val = sh.valCreateUnknown(UV_UNKNOWN);
             proc_.heapSetSingleVal(sub, val);
             return /* continue */ true;
         }
@@ -519,14 +519,14 @@ class ValueMirror {
 
         bool operator()(SymHeap &sh, const TObjPair &item) const {
             const TObjId lhs = item.first;
-            const TValueId rhs = sh.valueOf(item.second);
+            const TValId rhs = sh.valueOf(item.second);
             proc_.heapSetSingleVal(lhs, rhs);
 
             return /* continue */ true;
         }
 };
 
-void SymProc::objSetValue(TObjId lhs, TValueId rhs) {
+void SymProc::objSetValue(TObjId lhs, TValId rhs) {
     // seek all surrounding unions on the way to root (if any)
     TObjId parent, obj = lhs;
     for (; OBJ_INVALID != (parent = heap_.objParent(obj)); obj = parent) {
@@ -570,7 +570,7 @@ void SymProc::objSetValue(TObjId lhs, TValueId rhs) {
 
 void SymProc::objDestroy(TObjId obj) {
     // gather potentialy destroyed pointer sub-values
-    std::vector<TValueId> ptrs;
+    std::vector<TValId> ptrs;
     getPtrValues(ptrs, heap_, obj);
 
     // destroy object recursively
@@ -578,7 +578,7 @@ void SymProc::objDestroy(TObjId obj) {
 
     // now check for JUNK
     bool junk = false;
-    BOOST_FOREACH(TValueId val, ptrs) {
+    BOOST_FOREACH(TValId val, ptrs) {
         if (collectJunk(heap_, val, lw_))
             junk = true;
     }
@@ -590,7 +590,7 @@ void SymProc::objDestroy(TObjId obj) {
 
 // /////////////////////////////////////////////////////////////////////////////
 // SymExecCore implementation
-TValueId SymExecCore::heapValFromOperand(const struct cl_operand &op) {
+TValId SymExecCore::heapValFromOperand(const struct cl_operand &op) {
     const char *name;
     if (!ep_.invCompatMode)
         goto no_nasty_assumptions;
@@ -633,7 +633,7 @@ bool SymExecCore::lhsFromOperand(TObjId *pObj, const struct cl_operand &op) {
     }
 }
 
-void SymExecCore::execFreeCore(const TValueId val) {
+void SymExecCore::execFreeCore(const TValId val) {
     const EUnknownValue code = heap_.valGetUnknown(val);
     switch (code) {
         case UV_ABSTRACT:
@@ -702,7 +702,7 @@ void SymExecCore::execFree(const CodeStorage::TOperandList &opList) {
     CL_BREAK_IF(CL_OPERAND_VOID != opList[0].code);
 
     // resolve value to be freed
-    TValueId val = heapValFromOperand(opList[/* ptr given to free() */2]);
+    TValId val = heapValFromOperand(opList[/* ptr given to free() */2]);
     CL_BREAK_IF(VAL_INVALID == val);
 
     switch (val) {
@@ -736,7 +736,7 @@ void SymExecCore::execMalloc(SymState                           &state,
     CL_DEBUG_MSG(lw_, "executing malloc(" << cbAmount << ")");
 
     // now create a heap object
-    const TValueId val = heap_.heapAlloc(cbAmount);
+    const TValId val = heap_.heapAlloc(cbAmount);
     CL_BREAK_IF(val <= 0);
 
     if (!ep_.fastMode) {
@@ -817,12 +817,12 @@ bool describeCmpOp(
     }
 }
 
-TValueId compareValues(
+TValId compareValues(
         SymHeap                     &sh,
         const enum cl_binop_e       code,
         const struct cl_type        *clt,
-        const TValueId              v1,
-        const TValueId              v2)
+        const TValId                v1,
+        const TValId                v2)
 {
     if (VAL_DEREF_FAILED == v1 || VAL_DEREF_FAILED == v2)
         return VAL_DEREF_FAILED;
@@ -859,9 +859,12 @@ TValueId compareValues(
     return sh.valCreateUnknown(uvCode);
 }
 
-TValueId handlePointerPlus(SymHeap &sh, const struct cl_type *cltPtr,
-                           TValueId ptr, const struct cl_operand &op,
-                           const struct cl_loc *lw)
+TValId handlePointerPlus(
+        SymHeap                     &sh,
+        const struct cl_type        *cltPtr,
+        const TValId                ptr,
+        const struct cl_operand     &op,
+        const struct cl_loc         *lw)
 {
     if (CL_OPERAND_CST != op.code) {
         CL_ERROR_MSG(lw, "pointer plus offset not known in compile-time");
@@ -885,18 +888,24 @@ TValueId handlePointerPlus(SymHeap &sh, const struct cl_type *cltPtr,
 // template for generic (unary, binary, ...) operator handlers
 template <int ARITY>
 struct OpHandler {
-    static TValueId handleOp(SymProc &proc, int code, const TValueId rhs[ARITY],
-                             const struct cl_type *clt[ARITY +/* dst */1]);
+    static TValId handleOp(
+            SymProc                 &proc,
+            int                     code,
+            const TValId            rhs[ARITY],
+            const struct cl_type    *clt[ARITY +/* dst */1]);
 };
 
 // unary operator handler
 template <>
 struct OpHandler</* unary */ 1> {
-    static TValueId handleOp(SymProc &proc, int iCode, const TValueId rhs[1],
-                             const struct cl_type *clt[1 + /* dst type */ 1])
+    static TValId handleOp(
+            SymProc                 &proc,
+            int                     iCode,
+            const TValId            rhs[1],
+            const struct cl_type    *clt[1 + /* dst type */ 1])
     {
         SymHeap &sh = proc.heap_;
-        const TValueId val = rhs[0];
+        const TValId val = rhs[0];
 
         const enum cl_unop_e code = static_cast<enum cl_unop_e>(iCode);
         switch (code) {
@@ -916,8 +925,11 @@ struct OpHandler</* unary */ 1> {
 // binary operator handler
 template <>
 struct OpHandler</* binary */ 2> {
-    static TValueId handleOp(SymProc &proc, int iCode, const TValueId rhs[2],
-                             const struct cl_type *clt[2 + /* dst type */ 1])
+    static TValId handleOp(
+            SymProc                 &proc,
+            int                     iCode,
+            const TValId            rhs[2],
+            const struct cl_type    *clt[2 + /* dst type */ 1])
     {
         CL_BREAK_IF(!clt[0] || !clt[1] || !clt[2]);
         SymHeap &sh = proc.heap_;
@@ -953,12 +965,12 @@ void SymExecCore::execOp(const CodeStorage::Insn &insn) {
 
     // gather rhs values (and type-info)
     const CodeStorage::TOperandList &opList = insn.operands;
-    TValueId rhs[ARITY];
+    TValId rhs[ARITY];
     for (int i = 0; i < ARITY; ++i) {
         const struct cl_operand &op = opList[i + /* [+dst] */ 1];
         clt[i] = op.type;
 
-        const TValueId val = this->heapValFromOperand(op);
+        const TValId val = this->heapValFromOperand(op);
         CL_BREAK_IF(VAL_INVALID == val);
         if (VAL_DEREF_FAILED == val) {
             // we're already on an error path
@@ -969,7 +981,7 @@ void SymExecCore::execOp(const CodeStorage::Insn &insn) {
         rhs[i] = val;
     }
 
-    TValueId valResult = VAL_INVALID;
+    TValId valResult = VAL_INVALID;
     if (2 == ARITY && CL_BINOP_POINTER_PLUS
             == static_cast<enum cl_binop_e>(insn.subCode))
     {
@@ -1007,7 +1019,7 @@ bool SymExecCore::concretizeLoop(SymState                       &dst,
 
             // we expect a pointer at this point
             const TObjId ptr = varFromOperand(op, sh, bt_);
-            const TValueId val = sh.valueOf(ptr);
+            const TValId val = sh.valueOf(ptr);
             if (0 < val && UV_ABSTRACT == sh.valGetUnknown(val)) {
                 CL_BREAK_IF(hitLocal);
                 hit = true;

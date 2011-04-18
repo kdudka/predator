@@ -40,6 +40,6 @@ class SymHeap;
  * @param lw pass some location info in, if you want to emit some warnings
  * @return true if any junk has been detected/collected
  */
-bool collectJunk(SymHeap &sh, TValueId val, const struct cl_loc *lw = 0); 
+bool collectJunk(SymHeap &sh, TValId val, const struct cl_loc *lw = 0); 
 
 #endif /* H_GUARD_SYMGC_H */

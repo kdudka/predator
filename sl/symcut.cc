@@ -57,7 +57,7 @@ void fillSet(TSet &dst, const TList &src)
 
 struct DeepCopyData {
     typedef std::map<TObjId   /* src */, TObjId   /* dst */>    TObjMap;
-    typedef std::map<TValueId /* src */, TValueId /* dst */>    TValMap;
+    typedef std::map<TValId   /* src */, TValId   /* dst */>    TValMap;
     typedef std::pair<TObjId  /* src */, TObjId   /* dst */>    TItem;
     typedef std::set<CVar>                                      TCut;
 
@@ -86,8 +86,8 @@ void add(DeepCopyData &dc, TObjId objSrc, TObjId objDst) {
     dc.valMap[dc.src.placedAt(objSrc)] = dc.dst.placedAt(objDst);
     dc.wl.schedule(objSrc, objDst);
 
-    const TValueId valSrc = dc.src.valueOf(objSrc);
-    const TValueId valDst = dc.dst.valueOf(objDst);
+    const TValId valSrc = dc.src.valueOf(objSrc);
+    const TValId valDst = dc.dst.valueOf(objDst);
     if (OBJ_INVALID != dc.src.valGetCompositeObj(valSrc))
         // store mapping of composite object's value
         dc.valMap[valSrc] = valDst;
@@ -190,7 +190,7 @@ TObjId addObjectIfNeeded(DeepCopyData &dc, TObjId objSrc) {
     return OBJ_INVALID;
 }
 
-void trackUses(DeepCopyData &dc, TValueId valSrc) {
+void trackUses(DeepCopyData &dc, TValId valSrc) {
     if (!dc.digBackward)
         // optimization
         return;
@@ -203,7 +203,7 @@ void trackUses(DeepCopyData &dc, TValueId valSrc) {
     }
 }
 
-TValueId handleValue(DeepCopyData &dc, TValueId valSrc) {
+TValId handleValue(DeepCopyData &dc, TValId valSrc) {
     const SymHeap   &src = dc.src;
     SymHeap         &dst = dc.dst;
 
@@ -239,7 +239,7 @@ TValueId handleValue(DeepCopyData &dc, TValueId valSrc) {
     const int custom = src.valGetCustom(valSrc);
     if (-1 != custom) {
         // custom value, e.g. fnc pointer
-        const TValueId valDst = dst.valCreateCustom(custom);
+        const TValId valDst = dst.valCreateCustom(custom);
         valMap[valSrc] = valDst;
         return valDst;
     }
@@ -256,7 +256,7 @@ TValueId handleValue(DeepCopyData &dc, TValueId valSrc) {
         ov.first = handleValue(dc, ov.first);
 
         // store the off-value's mapping
-        const TValueId valDst = dst.valCreateByOffset(ov);
+        const TValId valDst = dst.valCreateByOffset(ov);
         valMap[valSrc] = valDst;
         return valDst;
     }
@@ -269,7 +269,7 @@ TValueId handleValue(DeepCopyData &dc, TValueId valSrc) {
 
         default: {
             // a proper unkonwn value
-            const TValueId valDst = dst.valCreateUnknown(code);
+            const TValId valDst = dst.valCreateUnknown(code);
             valMap[valSrc] = valDst;
             return valDst;
         }
@@ -282,14 +282,14 @@ TValueId handleValue(DeepCopyData &dc, TValueId valSrc) {
     if (targetSrc < 0) {
         // special handling for OBJ_DELETED/OBJ_LOST
         CL_BREAK_IF(OBJ_DELETED != targetSrc && OBJ_LOST != targetSrc);
-        const TValueId valDst = dst.valCreateDangling(targetSrc);
+        const TValId valDst = dst.valCreateDangling(targetSrc);
         valMap[valSrc] = valDst;
         return valDst;
     }
 
     // create the target object, if it does not exist already
     const TObjId targetDst = addObjectIfNeeded(dc, targetSrc);
-    const TValueId valDst = dst.placedAt(targetDst);
+    const TValId valDst = dst.placedAt(targetDst);
 
     if (UV_ABSTRACT == code)
         // preserve UV_ABSTRACT code
@@ -314,17 +314,17 @@ void deepCopy(DeepCopyData &dc) {
             continue;
 
         // read the address
-        const TValueId atSrc = src.placedAt(objSrc);
+        const TValId atSrc = src.placedAt(objSrc);
         CL_BREAK_IF(atSrc <= 0);
 
         trackUses(dc, atSrc);
 
         // read the original value
-        TValueId valSrc = src.valueOf(objSrc);
+        TValId valSrc = src.valueOf(objSrc);
         CL_BREAK_IF(VAL_INVALID == valSrc);
 
         // do whatever we need to do with the value
-        const TValueId valDst = handleValue(dc, valSrc);
+        const TValId valDst = handleValue(dc, valSrc);
         CL_BREAK_IF(VAL_INVALID == valDst);
 
 #ifndef NDEBUG
@@ -341,7 +341,7 @@ void deepCopy(DeepCopyData &dc) {
             // now poke all values related by Neq predicates
             SymHeap::TContValue relatedVals;
             src.gatherRelatedValues(relatedVals, valSrc);
-            BOOST_FOREACH(TValueId relValSrc, relatedVals) {
+            BOOST_FOREACH(TValId relValSrc, relatedVals) {
                 if (valSrc <= 0 || relValSrc <= 0)
                     continue;
 #if DEBUG_SYMCUT

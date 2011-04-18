@@ -78,7 +78,7 @@ struct UnknownValuesDuplicator {
         if (hasKey(ignoreList, obj))
             return /* continue */ true;
 
-        const TValueId valOld = sh.valueOf(obj);
+        const TValId valOld = sh.valueOf(obj);
         if (valOld <= 0)
             return /* continue */ true;
 
@@ -95,7 +95,7 @@ struct UnknownValuesDuplicator {
         }
 
         // duplicate unknown value
-        const TValueId valNew = sh.valDuplicateUnknown(valOld);
+        const TValId valNew = sh.valDuplicateUnknown(valOld);
         sh.objSetValue(obj, valNew);
 
         return /* continue */ true;
@@ -272,7 +272,7 @@ struct ProtoCloner {
         if (hasKey(ignoreList, obj))
             return /* continue */ true;
 
-        const TValueId valOld = sh.valueOf(obj);
+        const TValId valOld = sh.valueOf(obj);
         if (valOld <= 0)
             return /* continue */ true;
 
@@ -307,8 +307,8 @@ struct ValueSynchronizer {
             return /* continue */ true;
 
         // store value of 'src' into 'dst'
-        TValueId valSrc = sh.valueOf(src);
-        TValueId valDst = sh.valueOf(dst);
+        TValId valSrc = sh.valueOf(src);
+        TValId valDst = sh.valueOf(dst);
         sh.objSetValue(dst, valSrc);
 
         // if the last reference is gone, we have a problem
@@ -371,7 +371,7 @@ void slSegAbstractionStep(SymHeap &sh, TObjId *pObj, const BindingOff &off)
 {
     const TObjId obj = *pObj;
     const TObjId objPtrNext = ptrObjByOffset(sh, obj, off.next);
-    const TValueId valNext = sh.valueOf(objPtrNext);
+    const TValId valNext = sh.valueOf(objPtrNext);
     CL_BREAK_IF(valNext <= 0);
 
     // read minimal length of 'obj' and set it temporarily to zero
@@ -394,7 +394,7 @@ void slSegAbstractionStep(SymHeap &sh, TObjId *pObj, const BindingOff &off)
 
     // replace all references to 'head'
     const TOffset offHead = sh.objBinding(objNext).head;
-    const TValueId headAt = sh.placedAt(compObjByOffset(sh, obj, offHead));
+    const TValId headAt = sh.placedAt(compObjByOffset(sh, obj, offHead));
     sh.valReplace(headAt, segHeadAddr(sh, objNext));
 
     // destroy self, including all prototypes
@@ -471,7 +471,7 @@ void dlSegGobble(SymHeap &sh, TObjId dls, TObjId var, bool backward) {
 
     // replace VAR by DLS
     const TObjId varHead = compObjByOffset(sh, var, off.head);
-    const TValueId headAt = sh.placedAt(varHead);
+    const TValId headAt = sh.placedAt(varHead);
     sh.valReplace(headAt, segHeadAddr(sh, dls));
     REQUIRE_GC_ACTIVITY(sh, headAt, dlSegGobble);
 
@@ -493,7 +493,7 @@ void dlSegMerge(SymHeap &sh, TObjId seg1, TObjId seg2) {
     const TObjId peer1 = dlSegPeer(sh, seg1);
 #ifndef NDEBUG
     const TObjId nextPtr = nextPtrFromSeg(sh, peer1);
-    const TValueId valNext = sh.valueOf(nextPtr);
+    const TValId valNext = sh.valueOf(nextPtr);
     CL_BREAK_IF(valNext != segHeadAddr(sh, seg2));
 #endif
 
@@ -503,12 +503,12 @@ void dlSegMerge(SymHeap &sh, TObjId seg1, TObjId seg2) {
     abstractNonMatchingValues(sh,  seg1,  seg2, /* bidir */ true);
 
     // preserve backLink
-    const TValueId valNext2 = sh.valueOf(nextPtrFromSeg(sh, seg1));
+    const TValId valNext2 = sh.valueOf(nextPtrFromSeg(sh, seg1));
     sh.objSetValue(nextPtrFromSeg(sh, seg2), valNext2);
 
     // replace both parts point-wise
-    const TValueId  segAt = segHeadAddr(sh,  seg1);
-    const TValueId peerAt = segHeadAddr(sh, peer1);
+    const TValId  segAt = segHeadAddr(sh,  seg1);
+    const TValId peerAt = segHeadAddr(sh, peer1);
 
     sh.valReplace( segAt, segHeadAddr(sh,  seg2));
     sh.valReplace(peerAt, segHeadAddr(sh, peer2));
@@ -652,9 +652,9 @@ bool considerAbstraction(
     return true;
 }
 
-void segReplaceRefs(SymHeap &sh, TObjId seg, TValueId valNext) {
+void segReplaceRefs(SymHeap &sh, TObjId seg, TValId valNext) {
     const TObjId head = segHead(sh, seg);
-    const TValueId segAt = sh.placedAt(head);
+    const TValId segAt = sh.placedAt(head);
     sh.valReplace(segAt, valNext);
 
     const TOffset offHead = subOffsetIn(sh, seg, head);
@@ -683,7 +683,7 @@ void segReplaceRefs(SymHeap &sh, TObjId seg, TValueId valNext) {
         const TObjId target = sh.pointsTo(sh.valueOf(obj));
         if (next < 0 || target < 0) {
             CL_DEBUG("WARNING: suboptimal implementation of segReplaceRefs()");
-            const TValueId val = sh.valDuplicateUnknown(valNext);
+            const TValId val = sh.valDuplicateUnknown(valNext);
             sh.objSetValue(obj, val);
             continue;
         }
@@ -694,7 +694,7 @@ void segReplaceRefs(SymHeap &sh, TObjId seg, TValueId valNext) {
         // redirect!
         const TObjId root = objRoot(sh, target);
         const TOffset off = subOffsetIn(sh, root, target) - offHead;
-        const TValueId val = addrQueryByOffset(sh, next, off, cltPtr);
+        const TValId val = addrQueryByOffset(sh, next, off, cltPtr);
         sh.objSetValue(obj, val);
     }
 }
@@ -710,7 +710,7 @@ bool dlSegReplaceByConcrete(SymHeap &sh, TObjId obj, TObjId peer) {
     // take the value of 'next' pointer from peer
     const TOffset offPeer = sh.objBinding(obj).prev;
     const TObjId peerPtr = ptrObjByOffset(sh, obj, offPeer);
-    const TValueId valNext = sh.valueOf(nextPtrFromSeg(sh, peer));
+    const TValId valNext = sh.valueOf(nextPtrFromSeg(sh, peer));
     sh.objSetValue(peerPtr, valNext);
 
     // redirect all references originally pointing to peer to the current object
@@ -720,7 +720,7 @@ bool dlSegReplaceByConcrete(SymHeap &sh, TObjId obj, TObjId peer) {
             /* redirectTo   */ obj);
 
     // destroy peer, including all prototypes
-    const TValueId addrPeer = sh.placedAt(peer);
+    const TValId addrPeer = sh.placedAt(peer);
     REQUIRE_GC_ACTIVITY(sh, addrPeer, dlSegReplaceByConcrete);
 
     // concretize self
@@ -738,15 +738,15 @@ void spliceOutListSegmentCore(SymHeap &sh, TObjId seg, TObjId peer) {
 
     // read valNext now as we may overwrite it during unlink of peer
     const TObjId next = nextPtrFromSeg(sh, peer);
-    const TValueId valNext = sh.valueOf(next);
+    const TValId valNext = sh.valueOf(next);
 
-    TValueId peerAt = VAL_INVALID;
+    TValId peerAt = VAL_INVALID;
     if (seg != peer) {
         peerAt = sh.placedAt(peer);
 
         // OK_DLS --> unlink peer
         const TObjId prevPtr = nextPtrFromSeg(sh, seg);
-        const TValueId valPrev = sh.valueOf(prevPtr);
+        const TValId valPrev = sh.valueOf(prevPtr);
         segReplaceRefs(sh, peer, valPrev);
     }
 
@@ -758,7 +758,7 @@ void spliceOutListSegmentCore(SymHeap &sh, TObjId seg, TObjId peer) {
         CL_DEBUG("spliceOutSegmentIfNeeded() drops a sub-heap (peerAt)");
 
     // destroy self, including all nested prototypes
-    const TValueId segAt = sh.placedAt(seg);
+    const TValId segAt = sh.placedAt(seg);
     if (collectJunk(sh, segAt))
         CL_DEBUG("spliceOutSegmentIfNeeded() drops a sub-heap (segAt)");
 
@@ -805,7 +805,7 @@ void abstractIfNeeded(SymHeap &sh) {
     }
 }
 
-void concretizeObj(SymHeap &sh, TValueId addr, TSymHeapList &todo) {
+void concretizeObj(SymHeap &sh, TValId addr, TSymHeapList &todo) {
     TObjId obj = objRootByVal(sh, addr);
     TObjId peer = obj;
 
@@ -844,7 +844,7 @@ void concretizeObj(SymHeap &sh, TValueId addr, TSymHeapList &todo) {
 
     // duplicate self as abstract object
     const TObjId aoDup = sh.objDup(obj);
-    const TValueId aoDupHeadAddr = segHeadAddr(sh, aoDup);
+    const TValId aoDupHeadAddr = segHeadAddr(sh, aoDup);
     if (OK_DLS == kind) {
         // DLS relink
         const TOffset offPeer = sh.objBinding(peer).prev;
@@ -866,7 +866,7 @@ void concretizeObj(SymHeap &sh, TValueId addr, TSymHeapList &todo) {
         // update DLS back-link
         const BindingOff &off = sh.objBinding(aoDup);
         const TObjId backLink = ptrObjByOffset(sh, aoDup, off.next);
-        const TValueId headAddr = sh.placedAt(
+        const TValId headAddr = sh.placedAt(
                 compObjByOffset(sh, obj, off.head));
 
         sh.objSetValue(backLink, headAddr);
@@ -878,7 +878,7 @@ void concretizeObj(SymHeap &sh, TValueId addr, TSymHeapList &todo) {
     LDP_PLOT(symabstract, sh);
 }
 
-bool spliceOutListSegment(SymHeap &sh, TValueId atAddr, TValueId pointingTo)
+bool spliceOutListSegment(SymHeap &sh, TValId atAddr, TValId pointingTo)
 {
     const TObjId obj = objRootByVal(sh, atAddr);
     const EObjKind kind = sh.objKind(obj);
@@ -896,7 +896,7 @@ bool spliceOutListSegment(SymHeap &sh, TValueId atAddr, TValueId pointingTo)
     }
 
     const TObjId next = nextPtrFromSeg(sh, peer);
-    const TValueId valNext = sh.valueOf(next);
+    const TValId valNext = sh.valueOf(next);
     if (valNext != pointingTo)
         return false;
 
