@@ -274,6 +274,7 @@ void SymHeapCore::swap(SymHeapCore &ref) {
     swapValues(this->d, ref.d);
 }
 
+// FIXME: should this be declared non-const?
 TValueId SymHeapCore::valueOf(TObjId obj) const {
     // handle special cases first
     switch (obj) {
@@ -297,17 +298,32 @@ TValueId SymHeapCore::valueOf(TObjId obj) const {
         // object ID is either out of range, or does not represent a valid obj
         return VAL_INVALID;
 
-    const Private::Object &ref = d->objects[obj];
-    return ref.value;
+    TValueId &val = d->objects[obj].value;
+    if (VAL_INVALID == val) {
+        // deleayed creation of an uninitialized value
+        SymHeapCore &self = const_cast<SymHeapCore &>(*this);
+        val = self.valCreate(UV_UNINITIALIZED, OBJ_UNKNOWN);
+
+        // store backward reference
+        Private::Value &ref = d->values[val];
+        ref.usedBy.insert(obj);
+    }
+
+    return val;
 }
 
+// FIXME: should this be declared non-const?
 TValueId SymHeapCore::placedAt(TObjId obj) const {
     if (this->lastObjId() < obj || obj <= 0)
         // object ID is either out of range, or does not represent a valid obj
         return VAL_INVALID;
 
-    const Private::Object &ref = d->objects[obj];
-    return ref.address;
+    TValueId &addr = d->objects[obj].address;
+    if (VAL_NULL == addr)
+        // deleayed address creation
+        addr = const_cast<SymHeapCore *>(this)->valCreate(UV_KNOWN, obj);
+
+    return addr;
 }
 
 TObjId SymHeapCore::pointsTo(TValueId val) const {
@@ -356,17 +372,9 @@ TObjId SymHeapCore::objCreate() {
     // acquire object ID
     const TObjId obj = d->acquireObj();
 
-    // obtain value pair
-    const TValueId address = this->valCreate(UV_KNOWN, obj);
-    const TValueId value   = this->valCreate(UV_UNINITIALIZED, OBJ_UNKNOWN);
-
     // keeping a reference here may cause headaches in case of reallocation
-    d->objects[obj].address = address;
-    d->objects[obj].value   = value;
-
-    // store backward reference
-    Private::Value &ref = d->values[value];
-    ref.usedBy.insert(obj);
+    d->objects[obj].address = /* delayed value creation */ VAL_NULL;
+    d->objects[obj].value   = /* delayed value creation */ VAL_INVALID;
 
     // we've just created an object, let's notify posterity
     this->notifyResize(/* valOnly */ false);
