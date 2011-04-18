@@ -73,7 +73,7 @@ TValueId SymProc::heapValFromCst(const struct cl_operand &op) {
                     return VAL_NULL;
 
                 // create a new unknown non-NULL value
-                TValueId val = heap_.valCreateUnknown(UV_UNKNOWN, op.type);
+                TValueId val = heap_.valCreateUnknown(UV_UNKNOWN);
                 heap_.neqOp(SymHeap::NEQ_ADD, val, VAL_NULL);
                 return val;
             }
@@ -81,7 +81,7 @@ TValueId SymProc::heapValFromCst(const struct cl_operand &op) {
         case CL_TYPE_FNC: {
             // wrap fnc uid as SymHeap value
             const int uid = cst.data.cst_fnc.uid;
-            return heap_.valCreateCustom(op.type, uid);
+            return heap_.valCreateCustom(uid);
         }
 
         case CL_TYPE_STRING:
@@ -89,7 +89,7 @@ TValueId SymProc::heapValFromCst(const struct cl_operand &op) {
             // fall through!
 
         default:
-            return heap_.valCreateUnknown(UV_UNKNOWN, op.type);
+            return heap_.valCreateUnknown(UV_UNKNOWN);
     }
 }
 
@@ -359,7 +359,7 @@ TValueId SymProc::heapValFromObj(const struct cl_operand &op) {
             return VAL_INVALID;
 
         case OBJ_UNKNOWN:
-            return heap_.valCreateUnknown(UV_UNKNOWN, op.type);
+            return heap_.valCreateUnknown(UV_UNKNOWN);
 
         case OBJ_DELETED:
         case OBJ_DEREF_FAILED:
@@ -409,11 +409,8 @@ int /* uid */ SymProc::fncFromOperand(const struct cl_operand &op) {
             // Oops, it does not look as indirect call actually
             CL_TRAP;
 
-        // obtain the inner content of the custom value and check its type-info
-        const struct cl_type *clt;
-        const int uid = heap_.valGetCustom(&clt, val);
-        CL_BREAK_IF(-1 != uid && CL_TYPE_FNC != targetTypeOfPtr(clt)->code);
-        return uid;
+        // obtain the inner content of the custom value
+        return heap_.valGetCustom(val);
     }
 }
 
@@ -507,7 +504,7 @@ class UnionInvalidator {
             }
             while (OBJ_INVALID != (obj = sh.objParent(obj)));
 
-            const TValueId val = sh.valCreateUnknown(UV_UNKNOWN, /* clt */ 0);
+            const TValueId val = sh.valCreateUnknown(UV_UNKNOWN);
             proc_.heapSetSingleVal(sub, val);
             return /* continue */ true;
         }
@@ -608,8 +605,7 @@ TValueId SymExecCore::heapValFromOperand(const struct cl_operand &op) {
         // &nondet and __nodet should pass this check (ugly)
         CL_BREAK_IF(op.accessor && op.accessor->code != CL_ACCESSOR_REF);
 
-        return heap_.valCreateUnknown(UV_UNKNOWN,
-                                      /* not always correct */ op.type);
+        return heap_.valCreateUnknown(UV_UNKNOWN);
     }
 
 no_nasty_assumptions:
@@ -824,8 +820,7 @@ bool describeCmpOp(
 TValueId compareValues(
         SymHeap                     &sh,
         const enum cl_binop_e       code,
-        const struct cl_type        *cltDst,
-        const struct cl_type        *cltSrc,
+        const struct cl_type        *clt,
         const TValueId              v1,
         const TValueId              v2)
 {
@@ -836,7 +831,7 @@ TValueId compareValues(
     bool neg, preserveEq, preserveNeq;
     if (!describeCmpOp(code, &neg, &preserveEq, &preserveNeq)) {
         CL_WARN("binary operator not implemented yet");
-        return sh.valCreateUnknown(UV_UNKNOWN, cltDst);
+        return sh.valCreateUnknown(UV_UNKNOWN);
     }
 
     // inconsistency check
@@ -846,7 +841,7 @@ TValueId compareValues(
         return boolToVal(neg);
 
     // forward unknown bool values if possible
-    if (CL_TYPE_BOOL == cltSrc->code) {
+    if (CL_TYPE_BOOL == clt->code) {
         if (v1 == boolToVal(!neg))
             return v2;
         if (v2 == boolToVal(!neg))
@@ -861,7 +856,7 @@ TValueId compareValues(
         uvCode = UV_UNINITIALIZED;
     }
 
-    return sh.valCreateUnknown(uvCode, cltDst);
+    return sh.valCreateUnknown(uvCode);
 }
 
 TValueId handlePointerPlus(SymHeap &sh, const struct cl_type *cltPtr,
@@ -870,12 +865,12 @@ TValueId handlePointerPlus(SymHeap &sh, const struct cl_type *cltPtr,
 {
     if (CL_OPERAND_CST != op.code) {
         CL_ERROR_MSG(lw, "pointer plus offset not known in compile-time");
-        return sh.valCreateUnknown(UV_UNKNOWN, cltPtr);
+        return sh.valCreateUnknown(UV_UNKNOWN);
     }
 
     if (VAL_NULL == ptr) {
         CL_DEBUG_MSG(lw, "pointer plus with NULL treated as unknown value");
-        return sh.valCreateUnknown(UV_UNKNOWN, cltPtr);
+        return sh.valCreateUnknown(UV_UNKNOWN);
     }
 
     // read integral offset
@@ -906,15 +901,14 @@ struct OpHandler</* unary */ 1> {
         const enum cl_unop_e code = static_cast<enum cl_unop_e>(iCode);
         switch (code) {
             case CL_UNOP_TRUTH_NOT:
-                return compareValues(sh, CL_BINOP_EQ, clt[0], clt[1],
-                                     VAL_FALSE, val);
+                return compareValues(sh, CL_BINOP_EQ, clt[0], VAL_FALSE, val);
 
             case CL_UNOP_ASSIGN:
                 return val;
 
             default:
                 CL_WARN_MSG(proc.lw_, "unary operator not implemented yet");
-                return sh.valCreateUnknown(UV_UNKNOWN, clt[/* dst */ 1]);
+                return sh.valCreateUnknown(UV_UNKNOWN);
         }
     }
 };
@@ -937,10 +931,10 @@ struct OpHandler</* binary */ 2> {
             case CL_BINOP_LE:
             case CL_BINOP_GE:
                 CL_BREAK_IF(clt[/* src1 */ 0]->code != clt[/* src2 */ 1]->code);
-                return compareValues(sh, code, clt[2], clt[0], rhs[0], rhs[1]);
+                return compareValues(sh, code, clt[0], rhs[0], rhs[1]);
 
             default:
-                return sh.valCreateUnknown(UV_UNKNOWN, clt[/* dst */ 2]);
+                return sh.valCreateUnknown(UV_UNKNOWN);
         }
     }
 };

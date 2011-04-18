@@ -389,7 +389,7 @@ TValueId addrQueryByOffset(
         if (lw)
             CL_ERROR_MSG(lw, "unsupported target type for pointer plus");
 
-        return sh.valCreateUnknown(UV_UNKNOWN, 0);
+        return sh.valCreateUnknown(UV_UNKNOWN);
     }
 
     if (off < 0) {
@@ -414,18 +414,7 @@ TValueId addrQueryByOffset(
         return sh.valCreateByOffset(ov);
     }
 
-    // get the final address and check type compatibility
-    const TValueId addr = sh.placedAt(sub);
-    const struct cl_type *cltDst = sh.valType(addr);
-    if (!cltDst || *cltDst != *clt) {
-        const char msg[] = "dangerous assignment of pointer plus' result";
-        if (lw)
-            CL_DEBUG_MSG(lw, msg);
-        else
-            CL_DEBUG(msg);
-    }
-
-    return addr;
+    return sh.placedAt(sub);
 }
 
 void redirectInboundEdges(

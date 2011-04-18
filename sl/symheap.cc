@@ -491,6 +491,11 @@ void SymHeapCore::objDestroy(TObjId obj, TObjId kind) {
     d->objects[obj].value   = VAL_INVALID;
 }
 
+TValueId SymHeapCore::valCreateDangling(TObjId kind) {
+    CL_BREAK_IF(OBJ_DELETED != kind && OBJ_LOST != kind);
+    return this->valCreate(UV_KNOWN, kind);
+}
+
 EUnknownValue SymHeapCore::valGetUnknown(TValueId val) const {
     switch (val) {
         case VAL_NULL: /* == VAL_FALSE */
@@ -826,12 +831,11 @@ struct SymHeapTyped::Private {
     };
 
     struct Value {
-        const struct cl_type        *clt;
         TObjId                      compObj;
         bool                        isCustom;
         int                         customData;
 
-        Value(): clt(0), compObj(OBJ_INVALID), isCustom(false) { }
+        Value(): compObj(OBJ_INVALID), isCustom(false) { }
     };
 
     CVarMap                         cVarMap;
@@ -858,43 +862,12 @@ void SymHeapTyped::notifyResize(bool valOnly) {
         d->objects.resize(lastObjId + 1);
 }
 
-TValueId SymHeapTyped::createCompValue(const struct cl_type *clt, TObjId obj) {
+TValueId SymHeapTyped::createCompValue(TObjId obj) {
     const TValueId val = SymHeapCore::valCreate(UV_KNOWN, OBJ_INVALID);
     CL_BREAK_IF(VAL_INVALID == val);
 
-    Private::Value &ref = d->values[val];
-    ref.clt         = clt;
-    ref.compObj     = obj;
-
+    d->values[val].compObj = obj;
     return val;
-}
-
-void SymHeapTyped::initValClt(TObjId obj) {
-    // look for object's address
-    const TValueId addr = SymHeapCore::placedAt(obj);
-    CL_BREAK_IF(VAL_INVALID == addr);
-
-    // initialize value's type of the address
-    const struct cl_type *clt = d->objects[obj].clt;
-    d->values.at(addr).clt = clt;
-    if (!clt)
-        // not type-info here
-        return;
-
-    const TValueId val = this->valueOf(obj);
-    if (val <= 0)
-        // special value inside
-        return;
-
-    Private::Value &ref = d->values.at(val);
-    if (ref.clt)
-        // value type already defined
-        return;
-
-    // initialize value's type of the value _inside_
-    ref.clt = (CL_TYPE_PTR == clt->code)
-        ? targetTypeOfPtr(clt)
-        : clt;
 }
 
 TObjId SymHeapTyped::createSubVar(const struct cl_type *clt, TObjId parent) {
@@ -905,7 +878,6 @@ TObjId SymHeapTyped::createSubVar(const struct cl_type *clt, TObjId parent) {
     ref.clt         = clt;
     ref.parent      = parent;
 
-    this->initValClt(obj);
     return obj;
 }
 
@@ -927,7 +899,7 @@ void SymHeapTyped::createSubs(TObjId obj) {
             continue;
 
         const int cnt = clt->item_cnt;
-        SymHeapCore::objSetValue(obj, this->createCompValue(clt, obj));
+        SymHeapCore::objSetValue(obj, this->createCompValue(obj));
 
         // keeping a reference at this point may cause headaches in case
         // of reallocation
@@ -978,9 +950,6 @@ TObjId SymHeapTyped::objDup(TObjId obj) {
         d->objects[dst] = d->objects[src];
         d->objects[dst].parent = item.dstParent;
 
-        // initialize clt of its address
-        this->initValClt(dst);
-
         // update the reference to self in the parent object
         const TObjId parent = item.dstParent;
         if (OBJ_INVALID != parent) {
@@ -998,8 +967,7 @@ TObjId SymHeapTyped::objDup(TObjId obj) {
             continue;
 
         // assume composite object
-        const struct cl_type *clt = d->objects[src].clt;
-        SymHeapCore::objSetValue(dst, this->createCompValue(clt, dst));
+        SymHeapCore::objSetValue(dst, this->createCompValue(dst));
 
         // traverse composite types recursively
         for (unsigned i = 0; i < subObjs.size(); ++i) {
@@ -1100,26 +1068,13 @@ const struct cl_type* SymHeapTyped::objType(TObjId obj) const {
     return d->objects[obj].clt;
 }
 
-const struct cl_type* SymHeapTyped::valType(TValueId val) const {
-    if (this->lastValueId() < val || val <= 0)
-        // value ID is either out of range, or does not point a valid obj
-        return 0;
-
-    return d->values[val].clt;
-}
-
 TValueId SymHeapTyped::valDuplicateUnknown(TValueId val) {
     if (this->lastValueId() < val || val <= 0)
         // value ID is either out of range, or does not point to a valid obj
         return VAL_INVALID;
 
     // duplicate the value by core
-    const TValueId dup = SymHeapCore::valDuplicateUnknown(val);
-
-    // duplicate also the type-info
-    d->values.at(dup).clt = this->valType(val);
-
-    return dup;
+    return SymHeapCore::valDuplicateUnknown(val);
 }
 
 bool SymHeapTyped::cVar(CVar *dst, TObjId obj) const {
@@ -1211,7 +1166,6 @@ TObjId SymHeapTyped::objCreate(const struct cl_type *clt, CVar cVar) {
     if (/* heap object */ -1 != cVar.uid)
         d->cVarMap.insert(cVar, obj);
 
-    this->initValClt(obj);
     return obj;
 }
 
@@ -1257,13 +1211,6 @@ void SymHeapTyped::objDefineType(TObjId obj, const struct cl_type *clt) {
     this->createSubs(obj);
     if (isComposite(clt))
         d->roots.insert(obj);
-
-    if (OBJ_RETURN == obj)
-        // OBJ_RETURN has no address
-        return;
-
-    // delayed value's type definition
-    this->initValClt(obj);
 }
 
 void SymHeapTyped::objDestroy(TObjId obj) {
@@ -1288,18 +1235,11 @@ void SymHeapTyped::objDestroy(TObjId obj) {
     }
 }
 
-TValueId SymHeapTyped::valCreateUnknown(EUnknownValue code,
-                                   const struct cl_type *clt)
-{
-    const TValueId val = SymHeapCore::valCreate(code, OBJ_UNKNOWN);
-    if (VAL_INVALID == val)
-        return VAL_INVALID;
-
-    d->values[val].clt = clt;
-    return val;
+TValueId SymHeapTyped::valCreateUnknown(EUnknownValue code) {
+    return SymHeapCore::valCreate(code, OBJ_UNKNOWN);
 }
 
-TValueId SymHeapTyped::valCreateCustom(const struct cl_type *clt, int cVal) {
+TValueId SymHeapTyped::valCreateCustom(int cVal) {
     Private::TCValueMap::iterator iter = d->cValueMap.find(cVal);
     if (d->cValueMap.end() == iter) {
         // cVal not found, create a new wrapper for it
@@ -1309,7 +1249,6 @@ TValueId SymHeapTyped::valCreateCustom(const struct cl_type *clt, int cVal) {
 
         // initialize heap value
         Private::Value &ref = d->values[val];
-        ref.clt         = clt;
         ref.isCustom    = true;
         ref.customData  = cVal;
 
@@ -1320,21 +1259,10 @@ TValueId SymHeapTyped::valCreateCustom(const struct cl_type *clt, int cVal) {
     }
 
     // custom value already wrapped, we have to reuse it
-    const TValueId val = iter->second;
-
-#ifndef NDEBUG
-    // check heap integrity
-    const Private::Value &ref = d->values.at(val);
-    CL_BREAK_IF(!ref.isCustom);
-
-    // type-info has to match
-    CL_BREAK_IF(ref.clt != clt);
-#endif
-
-    return val;
+    return iter->second;
 }
 
-int SymHeapTyped::valGetCustom(const struct cl_type **pClt, TValueId val) const
+int SymHeapTyped::valGetCustom(TValueId val) const
 {
     if (this->lastValueId() < val || val <= 0)
         // value ID is either out of range, or does not point to a valid obj
@@ -1344,10 +1272,6 @@ int SymHeapTyped::valGetCustom(const struct cl_type **pClt, TValueId val) const
     if (!ref.isCustom)
         // not a custom value
         return -1;
-
-    if (pClt)
-        // provide type info if requested to do so
-        *pClt = ref.clt;
 
     return ref.customData;
 }

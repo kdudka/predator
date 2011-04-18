@@ -369,8 +369,7 @@ void SymCallCache::Private::setCallArgs(const CodeStorage::TOperandList &opList)
             CL_BREAK_IF(UV_UNINITIALIZED != this->heap->valGetUnknown(val));
 
             // change UV_UNINITIALIZED to UV_UNKNOWN in lhs
-            const struct cl_type *clt = this->heap->valType(val);
-            val = this->heap->valCreateUnknown(UV_UNKNOWN, clt);
+            val = this->heap->valCreateUnknown(UV_UNKNOWN);
             this->proc->objSetValue(lhs, val);
             continue;
         }

@@ -113,7 +113,7 @@ template <class TStor, class TFnc, class THeap>
 bool fncFromHeapVal(const TStor &stor, const TFnc **dst, TValueId value,
                     const THeap &heap)
 {
-    const int uid = heap.valGetCustom(/* pClt */ 0, value);
+    const int uid = heap.valGetCustom(value);
     if (-1 == uid)
         return false;
 
@@ -256,7 +256,7 @@ bool handleBuiltIn(SymState                     &dst,
         CL_DEBUG_MSG(lw, "executing ___sl_get_nondet_int()");
         const struct cl_operand &opDst = opList[0];
         const TObjId objDst = core.heapObjFromOperand(opDst);
-        const TValueId val = sh.valCreateUnknown(UV_UNKNOWN, opDst.type);
+        const TValueId val = sh.valCreateUnknown(UV_UNKNOWN);
         core.objSetValue(objDst, val);
 
         // insert the resulting heap

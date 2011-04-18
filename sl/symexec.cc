@@ -365,11 +365,6 @@ void SymExecEngine::execCondInsn() {
     CL_BREAK_IF(varIdFromOperand(&cmpDst) != varIdFromOperand(&cndSrc));
 #endif
 
-    // read type of condition variable
-    const struct cl_type *cltDst = cmpDst.type;
-    CL_BREAK_IF(!cltDst || cltDst != cndSrc.type);
-    CL_BREAK_IF(CL_TYPE_BOOL != cltDst->code);
-
     // read operands
     const struct cl_operand &op1 = insnCmp->operands[/* src1 */ 1];
     const struct cl_operand &op2 = insnCmp->operands[/* src2 */ 2];
@@ -385,7 +380,7 @@ void SymExecEngine::execCondInsn() {
     const enum cl_binop_e code = static_cast<enum cl_binop_e>(insnCmp->subCode);
     const TValueId v1 = proc.heapValFromOperand(op1);
     const TValueId v2 = proc.heapValFromOperand(op2);
-    const TValueId val = compareValues(sh, code, cltDst, cltSrc, v1, v2);
+    const TValueId val = compareValues(sh, code, cltSrc, v1, v2);
 
     // read targets
     const CodeStorage::TTargetList &tlist = insnCnd->targets;
@@ -867,7 +862,7 @@ fail:
     const struct cl_operand dst = opList[/* dst */ 0];
     if (CL_OPERAND_VOID != dst.code) {
         // set return value to unknown
-        const TValueId val = heap.valCreateUnknown(UV_UNKNOWN, dst.type);
+        const TValueId val = heap.valCreateUnknown(UV_UNKNOWN);
         const TObjId obj = proc.heapObjFromOperand(dst);
         proc.objSetValue(obj, val);
     }

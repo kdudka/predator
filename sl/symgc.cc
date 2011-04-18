@@ -68,7 +68,7 @@ bool digJunk(const SymHeap &heap, TValueId *ptrVal) {
             return false;
     }
 
-    if (VAL_INVALID != heap.valGetCustom(0, *ptrVal))
+    if (VAL_INVALID != heap.valGetCustom(*ptrVal))
         // ignore custom values (e.g. fnc pointers)
         return false;
 

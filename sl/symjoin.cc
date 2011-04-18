@@ -575,32 +575,6 @@ bool joinClt(
     return true;
 }
 
-bool joinValClt(
-        const struct cl_type    **pDst,
-        SymJoinCtx              &ctx,
-        const TValueId          v1,
-        const TValueId          v2)
-{
-    const struct cl_type *clt1 = ctx.sh1.valType(v1);
-    const struct cl_type *clt2 = ctx.sh2.valType(v2);
-    if (joinClt(clt1, clt2, pDst))
-        return true;
-
-    const bool hasClt1 = !!clt1;
-    const bool hasClt2 = !!clt2;
-    if (hasClt1 != hasClt2) {
-        // one of the heaps has some extra type info that the other one has not
-        if (!updateJoinStatus(ctx, (hasClt2) ? JS_USE_SH1 : JS_USE_SH2))
-            return false;
-
-        *pDst = 0;
-        return true;
-    }
-
-    SJ_DEBUG("<-- value clt mismatch " << SJ_VALP(v1, v2));
-    return false;
-}
-
 bool joinObjClt(
         const struct cl_type    **pDst,
         const SymJoinCtx        &ctx,
@@ -966,9 +940,8 @@ bool followValuePair(
         const TValueId          v2,
         const bool              readOnly)
 {
-    const struct cl_type *clt1, *clt2;
-    const int cVal1 = ctx.sh1.valGetCustom(&clt1, v1);
-    const int cVal2 = ctx.sh2.valGetCustom(&clt2, v2);
+    const int cVal1 = ctx.sh1.valGetCustom(v1);
+    const int cVal2 = ctx.sh2.valGetCustom(v2);
     if ((OBJ_INVALID == cVal1) != (OBJ_INVALID == cVal2) || (cVal1 != cVal2)) {
         SJ_DEBUG("<-- custom values mismatch " << SJ_VALP(v1, v2));
         return false;
@@ -976,18 +949,12 @@ bool followValuePair(
 
     if (OBJ_INVALID != cVal1) {
         // matching pair of custom values
-        const struct cl_type *clt;
-        if (!joinClt(clt1, clt2, &clt)) {
-            SJ_DEBUG("<-- custom value clt mismatch " << SJ_VALP(v1, v2));
-            return false;
-        }
-
         if (readOnly) {
             return checkValueMapping(ctx, v1, v2,
                                      /* allowUnknownMapping */ true);
         }
 
-        const TValueId vDst = ctx.dst.valCreateCustom(clt, cVal1);
+        const TValueId vDst = ctx.dst.valCreateCustom(cVal1);
         return defineValueMapping(ctx, v1, v2, vDst);
     }
 
@@ -1010,21 +977,7 @@ bool followValuePair(
 
     // special handling for OBJ_DELETED/OBJ_LOST
     CL_BREAK_IF(o1 != OBJ_DELETED && o1 != OBJ_LOST);
-    const struct cl_type *clt;
-    if (!joinValClt(&clt, ctx, v1, v2))
-        return false;
-
-    CVar cv;
-    if (OBJ_LOST == o1)
-        // we use (0 == uid) as universal stack object
-        cv.uid = 0;
-
-    SymHeap &dst = ctx.dst;
-    const TObjId objTmp = dst.objCreate(clt, cv);
-    const TValueId vDst = dst.placedAt(objTmp);
-    if (!dst.valDestroyTarget(vDst))
-        CL_BREAK_IF("SymHeap malfunction");
-
+    const TValueId vDst = ctx.dst.valCreateDangling(o1);
     return defineValueMapping(ctx, v1, v2, vDst);
 }
 
@@ -1373,8 +1326,7 @@ bool insertSegmentClone(
             case UV_UNKNOWN:
             case UV_DONT_CARE: {
                 // clone unknown value
-                const struct cl_type *const clt = shGt.valType(valGt);
-                const TValueId vDst = ctx.dst.valCreateUnknown(code, clt);
+                const TValueId vDst = ctx.dst.valCreateUnknown(code);
                 if (handleUnknownValues(ctx, vp.first, vp.second, vDst))
                     continue;
                 else
@@ -1591,12 +1543,8 @@ bool joinValuePair(SymJoinCtx &ctx, const TValueId v1, const TValueId v2) {
 
     EUnknownValue code;
     if (joinUnknownValuesCode(&code, code1, code2)) {
-        const struct cl_type *clt;
-        if (!joinValClt(&clt, ctx, v1, v2))
-            return false;
-
         // create a new unknown value in ctx.dst
-        const TValueId vDst = ctx.dst.valCreateUnknown(code, clt);
+        const TValueId vDst = ctx.dst.valCreateUnknown(code);
         return handleUnknownValues(ctx, v1, v2, vDst);
     }
 

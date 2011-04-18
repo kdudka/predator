@@ -167,14 +167,8 @@ void dump_obj(const SymHeap &heap, TObjId obj) {
     const TValueId value = heap.valueOf(obj);
     if (VAL_NULL == value && clt && clt->code == CL_TYPE_PTR)
         cout << "    value     = VAL_NULL\n";
-    else if (0 < value) {
-        cout << "    value     = /* value */ #" << value;
-        const struct cl_type *cltVal = heap.valType(value);
-        if (cltVal)
-            cout << ", clt = " << (*cltVal);
-
-        cout << "\n";
-    }
+    else if (0 < value)
+        cout << "    value     = /* value */ #" << value << "\n";
 
     const TObjId parent = heap.objParent(obj);
     if (-1 != parent)
@@ -288,10 +282,6 @@ TObjId /* pointsTo */ dump_value_core(const SymHeap &heap, TValueId value)
         return OBJ_INVALID;
     }
 
-    const struct cl_type *clt = heap.valType(value);
-    if (clt)
-        cout << "    clt       = " << (*clt) << "\n";
-
     const EUnknownValue code = heap.valGetUnknown(value);
     switch (code) {
         case UV_KNOWN:
@@ -315,14 +305,9 @@ TObjId /* pointsTo */ dump_value_core(const SymHeap &heap, TValueId value)
     }
 
     // FIXME: not tested
-    const struct cl_type *cltCustom;
-    const int custom = heap.valGetCustom(&cltCustom, value);
+    const int custom = heap.valGetCustom(value);
     if (-1 != custom) {
-        cout << "    cVal      = /* custom value */ #" << custom;
-        if (cltCustom)
-            cout << ", clt = " << (*clt);
-
-        cout << "\n";
+        cout << "    cVal      = /* custom value */ #" << custom << "\n";
         return OBJ_INVALID;
     }
 

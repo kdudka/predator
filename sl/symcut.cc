@@ -236,11 +236,10 @@ TValueId handleValue(DeepCopyData &dc, TValueId valSrc) {
         // good luck, we have already handled the value before
         return iterValSrc->second;
 
-    const struct cl_type *cltCustom = 0;
-    const int custom = src.valGetCustom(&cltCustom, valSrc);
+    const int custom = src.valGetCustom(valSrc);
     if (-1 != custom) {
         // custom value, e.g. fnc pointer
-        const TValueId valDst = dst.valCreateCustom(cltCustom, custom);
+        const TValueId valDst = dst.valCreateCustom(custom);
         valMap[valSrc] = valDst;
         return valDst;
     }
@@ -270,8 +269,7 @@ TValueId handleValue(DeepCopyData &dc, TValueId valSrc) {
 
         default: {
             // a proper unkonwn value
-            const struct cl_type *cltUnkown = src.valType(valSrc);
-            const TValueId valDst = dst.valCreateUnknown(code, cltUnkown);
+            const TValueId valDst = dst.valCreateUnknown(code);
             valMap[valSrc] = valDst;
             return valDst;
         }
@@ -284,18 +282,7 @@ TValueId handleValue(DeepCopyData &dc, TValueId valSrc) {
     if (targetSrc < 0) {
         // special handling for OBJ_DELETED/OBJ_LOST
         CL_BREAK_IF(OBJ_DELETED != targetSrc && OBJ_LOST != targetSrc);
-
-        CVar cv;
-        if (OBJ_LOST == targetSrc)
-            // we use (0 == uid) as universal stack object
-            cv.uid = 0;
-
-        const struct cl_type *cltValSrc = src.valType(valSrc);
-        const TObjId objTmp = dst.objCreate(cltValSrc, cv);
-        const TValueId valDst = dst.placedAt(objTmp);
-        if (!dst.valDestroyTarget(valDst))
-            CL_BREAK_IF("failed to release valDst");
-
+        const TValueId valDst = dst.valCreateDangling(targetSrc);
         valMap[valSrc] = valDst;
         return valDst;
     }

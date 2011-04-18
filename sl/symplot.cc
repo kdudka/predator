@@ -365,11 +365,7 @@ void SymPlot::Private::plotNodeAux(int src, enum cl_type_e code,
 }
 
 void SymPlot::Private::plotNeqZero(TValueId val) {
-    const struct cl_type *clt = this->heap->valType(val);
-    const bool isPtr = (clt && clt->code != CL_TYPE_INT);
-    const char *label = (isPtr)
-        ? "!= NULL"
-        : "!= 0";
+    const char *label = "!= 0";
 
     const int id = ++(this->last);
     this->dotStream << "\t"
@@ -502,7 +498,11 @@ void SymPlot::Private::plotSingleValue(TValueId value) {
                 << value << " and #" << peer);
     }
 
-    const struct cl_type *clt = this->heap->valType(value);
+    const struct cl_type *clt = 0;
+    const TObjId target = this->heap->pointsTo(value);
+    if (0 < target)
+        clt = this->heap->objType(target);
+
     const enum cl_type_e code = (clt)
         ? clt->code
         : CL_TYPE_UNKNOWN;
@@ -637,17 +637,9 @@ void SymPlot::Private::openCluster(TObjId obj) {
 bool SymPlot::Private::handleCustomValue(TValueId value) {
     using namespace CodeStorage;
 
-    const struct cl_type *clt;
-    const int cVal = this->heap->valGetCustom(&clt, value);
+    const int cVal = this->heap->valGetCustom(value);
     if (-1 == cVal)
         return false;
-
-    CL_BREAK_IF(!clt || clt->code != CL_TYPE_PTR);
-    clt = clt->items[0].type;
-    if (!clt || clt->code != CL_TYPE_FNC) {
-        CL_WARN_MSG(this->lw, "custom value ignored while plotting");
-        return true;
-    }
 
     const CodeStorage::FncDb &fncs = this->stor->fncs;
     const Fnc *fnc = fncs[cVal];

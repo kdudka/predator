@@ -44,8 +44,7 @@ bool describeCmpOp(
 TValueId compareValues(
         SymHeap                     &sh,
         const enum cl_binop_e       code,
-        const struct cl_type        *cltDst,
-        const struct cl_type        *cltSrc,
+        const struct cl_type        *clt,
         const TValueId              v1,
         const TValueId              v2);
 

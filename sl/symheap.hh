@@ -192,6 +192,9 @@ class SymHeapCore {
         friend TValueId handleValue(DeepCopyData &dc, TValueId valSrc);
 
     public:
+        // TODO: remove this?
+        TValueId valCreateDangling(TObjId kind);
+
         /**
          * check the state of a @b possibly @b unknown @b value
          * @param val ID of the value to check
@@ -395,18 +398,6 @@ class SymHeapTyped: public SymHeapCore {
          */
         const struct cl_type* objType(TObjId obj) const;
 
-        /**
-         * look for static type-info of the given value, which has to be @b
-         * valid
-         * @param val ID of the value to look for
-         * @return pointer to the instance cl_type in case of success, 0
-         * otherwise
-         * @note The heap can contain valid values without any type-info.
-         * That's usually the case when malloc() has been called, but the result
-         * of the call has not been yet assigned to a type-safe pointer.
-         */
-        const struct cl_type* valType(TValueId val) const;
-
         /// overridden to preserve the type-info during duplication
         virtual TValueId valDuplicateUnknown(TValueId tpl);
 
@@ -540,31 +531,27 @@ class SymHeapTyped: public SymHeapCore {
          * inequality with other values - see proveEq()
          * @param code fine-grained kind of the unknown value, UV_KNOWN is not
          * allowed here
-         * @param clt static type-info about the unknown value, compulsory.
          * @return ID of the just created value
          */
-        TValueId valCreateUnknown(EUnknownValue code,
-                                  const struct cl_type *clt);
+        TValueId valCreateUnknown(EUnknownValue code);
 
     public:
         /**
          * @b wrap a foreign (integral) value into a symbolic heap value
          * @note this approach is currently used to deal with @b function @b
          * pointers among others
-         * @param clt static type-info about the @b wrapped value
          * @param cVal any integral value you need to wrap
          * @return ID of the just created value
          */
-        TValueId valCreateCustom(const struct cl_type *clt, int cVal);
+        TValueId valCreateCustom(int cVal);
 
         /**
          * retrieve a foreign value, previously @b wrapped by valCreateCustom(),
          * from the given heap value
-         * @param pClt store type-info to *pClt, if (pClt != 0)
          * @param val ID of the value to look into
          * @return the requested foreign value, or -1 if no such value exists
          */
-        int valGetCustom(const struct cl_type **pClt, TValueId val) const;
+        int valGetCustom(TValueId val) const;
 
         /**
          * true, if the given object should be cloned on concretization of the
@@ -587,8 +574,7 @@ class SymHeapTyped: public SymHeapCore {
         Private *d;
 
     private:
-        void initValClt(TObjId obj);
-        TValueId createCompValue(const struct cl_type *clt, TObjId obj);
+        TValueId createCompValue(TObjId obj);
         TObjId createSubVar(const struct cl_type *clt, TObjId parent);
         void createSubs(TObjId obj);
         void objDestroyPriv(TObjId obj);
