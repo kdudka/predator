@@ -335,7 +335,7 @@ TObjId SymHeapCore::pointsTo(TValId val) const {
     return ref.target;
 }
 
-void SymHeapCore::usedBy(TContObj &dst, TValId val) const {
+void SymHeapCore::usedBy(TObjList &dst, TValId val) const {
     if (this->lastValueId() < val || val <= 0)
         // value ID is either out of range, or does not point to a valid obj
         return;
@@ -528,7 +528,7 @@ TValId SymHeapCore::valDuplicateUnknown(TValId val) {
 /// change value of all variables with value val to (fresh) newval
 void SymHeapCore::valReplace(TValId val, TValId newVal) {
     // collect objects having the value val
-    TContObj rlist;
+    TObjList rlist;
     this->usedBy(rlist, val);
 
     // go through the list and replace the value by newval
@@ -540,7 +540,7 @@ void SymHeapCore::valReplace(TValId val, TValId newVal) {
     SymHeapCore::neqOp(NEQ_DEL, val, newVal);
 
     // reflect the change in NeqDb
-    TContValue neqs;
+    TValList neqs;
     d->neqDb.gatherRelatedValues(neqs, val);
     BOOST_FOREACH(const TValId neq, neqs) {
         d->neqDb.del(val, neq);
@@ -548,7 +548,7 @@ void SymHeapCore::valReplace(TValId val, TValId newVal) {
     }
 #ifndef NDEBUG
     // make sure we didn't create any dangling predicates
-    TContValue related;
+    TValList related;
     this->gatherRelatedValues(related, val);
     if (!related.empty())
         CL_TRAP;
@@ -558,7 +558,7 @@ void SymHeapCore::valReplace(TValId val, TValId newVal) {
 // template method
 bool SymHeapCore::valReplaceUnknownImpl(TValId val, TValId replaceBy) {
     // collect objects having the value 'val'
-    TContObj rlist;
+    TObjList rlist;
     this->usedBy(rlist, val);
 
     // go through the list and replace the value by 'replaceBy'
@@ -676,7 +676,7 @@ bool SymHeapCore::proveNeq(TValId valA, TValId valB) const {
     return false;
 }
 
-void SymHeapCore::gatherRelatedValues(TContValue &dst, TValId val) const {
+void SymHeapCore::gatherRelatedValues(TValList &dst, TValId val) const {
     // TODO: should we care about off-values here?
     d->neqDb.gatherRelatedValues(dst, val);
 }
@@ -816,7 +816,7 @@ struct SymHeapTyped::Private {
         CVar                        cVar;
         int                         nthItem; // -1  OR  0 .. parent.item_cnt-1
         TObjId                      parent;
-        TContObj                    subObjs;
+        TObjList                    subObjs;
         bool                        isProto;
 
         Object():
@@ -961,7 +961,7 @@ TObjId SymHeapTyped::objDup(TObjId obj) {
             }
         }
 
-        const TContObj subObjs(d->objects[src].subObjs);
+        const TObjList subObjs(d->objects[src].subObjs);
         if (subObjs.empty())
             continue;
 
@@ -1102,7 +1102,7 @@ void SymHeapTyped::gatherCVars(TContCVar &dst) const {
     d->cVarMap.getAll(dst);
 }
 
-void SymHeapTyped::gatherRootObjs(TContObj &dst) const {
+void SymHeapTyped::gatherRootObjs(TObjList &dst) const {
     std::copy(d->roots.begin(), d->roots.end(), std::back_inserter(dst));
 }
 
@@ -1121,7 +1121,7 @@ TObjId SymHeapTyped::subObj(TObjId obj, int nth) const {
         return OBJ_INVALID;
 
     const Private::Object &ref = d->objects[obj];
-    const TContObj &subs = ref.subObjs;
+    const TObjList &subs = ref.subObjs;
     const int cnt = subs.size();
 
     // this helps to avoid a warning when compiling with DEBUG_SYMID_FORCE_INT

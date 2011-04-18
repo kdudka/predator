@@ -224,7 +224,7 @@ void gatherSharedPreds(
         const TValId            vDst)
 {
     // look for shared Neq predicates
-    SymHeap::TContValue rVals1;
+    TValList rVals1;
     ctx.sh1.gatherRelatedValues(rVals1, v1);
     BOOST_FOREACH(const TValId rel1, rVals1) {
         if (!ctx.sh1.SymHeapCore::proveNeq(v1, rel1))
@@ -695,7 +695,7 @@ bool considerImplicitPrototype(
     const SymHeap &sh = (isProto2) ? ctx.sh1 : ctx.sh2;
     const TObjId root = (isProto2) ? root1 : root2;
 
-    SymHeap::TContObj refs;
+    TObjList refs;
     gatherPointingObjects(sh, refs, root, /* toInsideOnly */ false);
     BOOST_FOREACH(const TObjId obj, refs) {
         if (OK_CONCRETE != sh.objKind(obj))
@@ -1174,7 +1174,7 @@ bool disjoinUnknownValues(
     const TValId old = vmRemoveMappingOf(vm, val);
 
     // gather all objects that hold 'val' inside
-    SymHeap::TContObj refs;
+    TObjList refs;
     const SymHeap &sh = (isGt2) ? ctx.sh1 : ctx.sh2;
     sh.usedBy(refs, val);
 
@@ -1868,7 +1868,7 @@ bool segDetectSelfLoop(const SymHeap &sh) {
     using namespace boost::lambda;
 
     // gather all root objects
-    SymHeap::TContObj roots;
+    TObjList roots;
     sh.gatherRootObjs(roots);
 
     // filter segment roots from there
@@ -2121,7 +2121,7 @@ bool joinDataReadOnly(
         const BindingOff        &off,
         const TObjId            o1,
         const TObjId            o2,
-        SymHeap::TContObj       protoRoots[1][2])
+        TObjList                protoRoots[1][2])
 {
     SJ_DEBUG("--> joinDataReadOnly" << SJ_OBJP(o1, o2));
     // go through the commont part of joinData()/joinDataReadOnly()

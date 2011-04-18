@@ -122,8 +122,7 @@ TObjId subSeekByOffset(
 TObjId ptrObjByOffset(const SymHeap &sh, TObjId obj, TOffset off);
 TObjId compObjByOffset(const SymHeap &sh, TObjId obj, TOffset off);
 
-void getPtrValues(SymHeapCore::TContValue &dst, const SymHeap &heap,
-                  TObjId obj);
+void getPtrValues(TValList &dst, const SymHeap &heap, TObjId obj);
 
 void skipObj(const SymHeap &sh, TObjId *pObj, TOffset offNext);
 
@@ -261,7 +260,7 @@ bool /* complete */ traverseSubObjsIc(THeap &sh, TItem item, TVisitor &visitor)
 #endif
 
 void gatherPointingObjects(const SymHeap            &sh,
-                           SymHeap::TContObj        &dst,
+                           TObjList                 &dst,
                            const TObjId             root,
                            bool                     toInsideOnly);
 

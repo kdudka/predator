@@ -475,7 +475,7 @@ void SymPlot::Private::plotSingleValue(TValId value) {
     }
 
     // traverse all Neq predicates
-    SymHeap::TContValue relatedVals;
+    TValList relatedVals;
     this->heap->gatherRelatedValues(relatedVals, value);
     BOOST_FOREACH(TValId peer, relatedVals) {
         if (0 < peer)
@@ -969,7 +969,7 @@ bool SymPlot::plot(const std::string &name) {
     }
 
     // plot also all dangling objects, although we are not happy to see them
-    SymHeap::TContObj roots;
+    TObjList roots;
     d->heap->gatherRootObjs(roots);
     BOOST_FOREACH(const TObjId obj, roots) {
         if (!hasKey(d->objDone, obj))

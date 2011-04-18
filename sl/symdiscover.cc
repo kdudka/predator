@@ -84,7 +84,7 @@ bool validatePointingObjects(
         const TObjId                root,
         TObjId                      prev,
         const TObjId                next,
-        const SymHeap::TContObj     &protoRoots = SymHeap::TContObj(),
+        const TObjList              &protoRoots = TObjList(),
         const bool                  toInsideOnly = false)
 {
     const bool isDls = isDlsBinding(off);
@@ -104,7 +104,7 @@ bool validatePointingObjects(
 
     // collect all objects pointing at/inside the object
     // NOTE: we really intend to pass toInsideOnly == false at this point!
-    SymHeap::TContObj refs;
+    TObjList refs;
     gatherPointingObjects(sh, refs, root, /* toInsideOnly */ false);
 
     // consider also up-links from nested prototypes
@@ -155,7 +155,7 @@ bool validatePrototypes(
         const SymHeap               &sh,
         const BindingOff            &off,
         const TObjId                root,
-        SymHeap::TContObj           protoRoots)
+        TObjList                    protoRoots)
 {
     TObjId peer = OBJ_INVALID;
     protoRoots.push_back(root);
@@ -184,7 +184,7 @@ bool validateSegEntry(
         const TObjId                entry,
         const TObjId                prev,
         const TObjId                next,
-        const SymHeap::TContObj     &protoRoots)
+        const TObjList              &protoRoots)
 {
     if (isDlsBinding(off)) {
         // valPrev has to be at least VAL_NULL, withdraw it otherwise
@@ -288,7 +288,7 @@ TObjId jumpToNextObj(
     return next;
 }
 
-typedef SymHeap::TContObj TProtoRoots[2];
+typedef TObjList TProtoRoots[2];
 
 bool matchData(
         const SymHeap               &sh,
@@ -642,7 +642,7 @@ unsigned /* len */ discoverBestAbstraction(
     TSegCandidateList candidates;
 
     // go through all potential segment entries
-    SymHeapCore::TContObj roots;
+    TObjList roots;
     sh.gatherRootObjs(roots);
     BOOST_FOREACH(const TObjId obj, roots) {
         if (sh.cVar(0, obj))

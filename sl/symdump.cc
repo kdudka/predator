@@ -247,7 +247,7 @@ TObjId /* pointsTo */ dump_value_core(const SymHeap &heap, TValId value)
 {
     cout << "dump_value(#" << value << ")\n";
 
-    SymHeap::TContObj refs;
+    TObjList refs;
     heap.usedBy(refs, value);
     BOOST_FOREACH(const int obj, refs) {
         cout << "    ref found : /* obj */ #" << obj << "\n";
@@ -338,7 +338,7 @@ void dump_value_refs(const SymHeap &heap, TValId value) {
     dump_value_core(heap, value);
 
     // dump all referrer objects
-    SymHeap::TContObj refs;
+    TObjList refs;
     heap.usedBy(refs, value);
     BOOST_FOREACH(const TObjId obj, refs) {
         std::cout << "\n";

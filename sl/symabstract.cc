@@ -325,7 +325,7 @@ void dlSegSyncPeerData(SymHeap &sh, const TObjId dls) {
     buildIgnoreList(visitor.ignoreList, sh, dls);
 
     // if there was "a pointer to self", it should remain "a pointer to self";
-    SymHeap::TContObj refs;
+    TObjList refs;
     gatherPointingObjects(sh, refs, dls, /* toInsideOnly */ false);
     std::copy(refs.begin(), refs.end(),
               std::inserter(visitor.ignoreList, visitor.ignoreList.begin()));
@@ -671,7 +671,7 @@ void segReplaceRefs(SymHeap &sh, TObjId seg, TValId valNext) {
     }
 
     // TODO: check types in debug build
-    SymHeap::TContObj refs;
+    TObjList refs;
     gatherPointingObjects(sh, refs, seg, /* toInsideOnly */ false);
     BOOST_FOREACH(const TObjId obj, refs) {
         if (VAL_NULL == valNext) {

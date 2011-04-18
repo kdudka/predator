@@ -55,7 +55,7 @@ bool joinDataReadOnly(
         const BindingOff        &bf,
         const TObjId            o1,
         const TObjId            o2,
-        SymHeap::TContObj       protoRoots[1][2]);
+        TObjList                protoRoots[1][2]);
 
 /// replacement of abstractNonMatchingValues() from symabstract
 bool joinData(

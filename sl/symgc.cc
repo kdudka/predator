@@ -35,7 +35,7 @@
 template <class TWL>
 void digPointingObjects(TWL &wl, const SymHeap &sh, TValId val) {
     // go through all objects having the value
-    SymHeap::TContObj cont;
+    TObjList cont;
     sh.usedBy(cont, val);
     BOOST_FOREACH(TObjId obj, cont) {
         wl.schedule(obj);
@@ -47,7 +47,7 @@ void digPointingObjects(TWL &wl, const SymHeap &sh, TValId val) {
         return;
 
     // traverse all subobjects
-    SymHeap::TContObj refs;
+    TObjList refs;
     gatherPointingObjects(sh, refs, root, /* toInsideOnly */ false);
     BOOST_FOREACH(const TObjId obj, refs) {
         wl.schedule(obj);

@@ -196,7 +196,7 @@ void trackUses(DeepCopyData &dc, TValId valSrc) {
         return;
 
     // go from the value backward
-    SymHeap::TContObj uses;
+    TObjList uses;
     dc.src.usedBy(uses, valSrc);
     BOOST_FOREACH(TObjId objSrc, uses) {
         addObjectIfNeeded(dc, objSrc);
@@ -339,7 +339,7 @@ void deepCopy(DeepCopyData &dc) {
 
         if (/* optimization */ dc.digBackward) {
             // now poke all values related by Neq predicates
-            SymHeap::TContValue relatedVals;
+            TValList relatedVals;
             src.gatherRelatedValues(relatedVals, valSrc);
             BOOST_FOREACH(TValId relValSrc, relatedVals) {
                 if (valSrc <= 0 || relValSrc <= 0)

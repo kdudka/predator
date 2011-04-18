@@ -52,7 +52,13 @@ struct DeepCopyData;
 struct SymJoinCtx;
 
 /// a type used by SymHeap for byte offsets
-typedef short TOffset;
+typedef short                                           TOffset;
+
+/// container used to store object IDs to
+typedef std::vector<TObjId>                             TObjList;
+
+/// container used to store value IDs to
+typedef std::vector<TValId>                             TValList;
 
 /**
  * symbolic heap @b core - no type-info, no object composition at this level
@@ -72,13 +78,6 @@ class SymHeapCore {
         SymHeapCore& operator=(const SymHeapCore &);
 
         virtual void swap(SymHeapCore &);
-
-    public:
-        /// container used to store object IDs to
-        typedef std::vector<TObjId>     TContObj;
-
-        /// container used to store value IDs to
-        typedef std::vector<TValId>     TContValue;
 
     public:
         /**
@@ -117,7 +116,7 @@ class SymHeapCore {
          * @param val ID of the value to look for
          * @note The operation may return from 0 to n results.
          */
-        void usedBy(TContObj &dst, TValId val) const;
+        void usedBy(TObjList &dst, TValId val) const;
 
         /// return how many objects use the value
         unsigned usedByCount(TValId val) const;
@@ -263,7 +262,7 @@ class SymHeapCore {
          * @param val the reference value, used to search the predicates and
          * then all the related values accordingly
          */
-        void gatherRelatedValues(TContValue &dst, TValId val) const;
+        void gatherRelatedValues(TValList &dst, TValId val) const;
 
         /**
          * copy all @b relevant predicates from the symbolic heap to another
@@ -438,7 +437,7 @@ class SymHeapTyped: public SymHeapCore {
          * @param dst reference to a container to store the result to
          * @note The operation may return from 0 to n results.
          */
-        void gatherRootObjs(TContObj &dst) const;
+        void gatherRootObjs(TObjList &dst) const;
 
     public:
         /**

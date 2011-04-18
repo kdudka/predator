@@ -95,9 +95,7 @@ void digRootObject(const SymHeap &heap, TValId *pValue) {
     *pValue = val;
 }
 
-void getPtrValues(SymHeapCore::TContValue &dst, const SymHeap &heap,
-                  TObjId obj)
-{
+void getPtrValues(TValList &dst, const SymHeap &heap, TObjId obj) {
     std::stack<TObjId> todo;
     todo.push(obj);
     while (!todo.empty()) {
@@ -253,7 +251,7 @@ class PointingObjectsFinder {
             const TValId addr = sh.placedAt(obj);
             CL_BREAK_IF(addr <= 0);
 
-            SymHeap::TContObj refs;
+            TObjList refs;
             sh.usedBy(refs, addr);
             std::copy(refs.begin(), refs.end(),
                       std::inserter(results_, results_.begin()));
@@ -263,7 +261,7 @@ class PointingObjectsFinder {
 };
 
 void gatherPointingObjects(const SymHeap            &sh,
-                           SymHeap::TContObj        &dst,
+                           TObjList                 &dst,
                            const TObjId             root,
                            bool                     toInsideOnly)
 {
@@ -430,7 +428,7 @@ void redirectInboundEdges(
 #endif
 
     // go through all objects pointing at/inside pointingTo
-    SymHeap::TContObj refs;
+    TObjList refs;
     gatherPointingObjects(sh, refs, pointingTo, /* toInsideOnly */ false);
     BOOST_FOREACH(const TObjId obj, refs) {
         if (OBJ_INVALID != pointingFrom && pointingFrom != objRoot(sh, obj))

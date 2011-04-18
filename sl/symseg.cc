@@ -299,7 +299,7 @@ TObjId segClone(SymHeap &sh, const TObjId seg) {
 }
 
 bool dlSegCheckConsistency(const SymHeap &sh) {
-    SymHeapCore::TContObj roots;
+    TObjList roots;
     sh.gatherRootObjs(roots);
     BOOST_FOREACH(const TObjId obj, roots) {
         const EObjKind kind = sh.objKind(obj);
