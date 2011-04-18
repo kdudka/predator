@@ -525,22 +525,7 @@ void SymHeapCore::valReplace(TValId val, TValId newVal) {
 #endif
 }
 
-// template method
-bool SymHeapCore::valReplaceUnknownImpl(TValId val, TValId replaceBy) {
-    // collect objects having the value 'val'
-    TObjList rlist;
-    this->usedBy(rlist, val);
-
-    // go through the list and replace the value by 'replaceBy'
-    BOOST_FOREACH(const TObjId obj, rlist) {
-        this->objSetValue(obj, replaceBy);
-    }
-
-    // this implementation is so easy that it really can't fail
-    return true;
-}
-
-void SymHeapCore::valReplaceUnknown(TValId val, TValId replaceBy) {
+void SymHeapCore::valMerge(TValId val, TValId replaceBy) {
 #ifndef NDEBUG
     // ensure there hasn't been any inequality defined among the pair
     if (d->neqDb.areNeq(val, replaceBy)) {
@@ -549,15 +534,8 @@ void SymHeapCore::valReplaceUnknown(TValId val, TValId replaceBy) {
         CL_TRAP;
     }
 #endif
-    // make it possible to override the implementation (template method)
-    if (!this->valReplaceUnknownImpl(val, replaceBy)) {
-        CL_WARN("overridden implementation valReplaceUnknownImpl() failed"
-                ", has to over-approximate...");
-#ifndef NDEBUG
-        CL_NOTE("attempt to plot heap...");
-        dump_plot(*this, "valReplaceUnknownImpl-failed");
-#endif
-    }
+    moveKnownValueToLeft(*this, replaceBy, val);
+    this->valReplace(val, replaceBy);
 }
 
 TValId SymHeapCore::valCreateByOffset(TOffVal ov) {
@@ -595,19 +573,6 @@ void SymHeapCore::neqOp(ENeqOp op, TValId valA, TValId valB) {
         case NEQ_DEL:
             d->neqDb.del(valA, valB);
             return;
-    }
-}
-
-namespace {
-    void moveKnownValueToLeft(const SymHeapCore &sh, TValId &valA, TValId &valB)
-    {
-        sortValues(valA, valB);
-
-        if ((0 < valA) && UV_KNOWN != sh.valGetUnknown(valA)) {
-            const TValId tmp = valA;
-            valA = valB;
-            valB = tmp;
-        }
     }
 }
 
@@ -1414,19 +1379,28 @@ void SymHeap::objSetConcrete(TObjId obj) {
     d->objMap.erase(iter);
 }
 
-bool SymHeap::valReplaceUnknownImpl(TValId val, TValId replaceBy) {
-    const EUnknownValue code = this->valGetUnknown(val);
-    switch (code) {
-        case UV_KNOWN:
-            // known values are not supposed to be replaced
-            return false;
+void SymHeap::valMerge(TValId v1, TValId v2) {
+    // check that at least one value is unknown
+    moveKnownValueToLeft(*this, v1, v2);
+    const EUnknownValue code1 = this->valGetUnknown(v1);
+    const EUnknownValue code2 = this->valGetUnknown(v2);
+    CL_BREAK_IF(UV_KNOWN == code2);
 
-        case UV_ABSTRACT:
-            return spliceOutListSegment(*this, val, replaceBy);
-
-        default:
-            return SymHeapTyped::valReplaceUnknownImpl(val, replaceBy);
+    if (UV_ABSTRACT != code1 && UV_ABSTRACT != code2) {
+        // no abstract objects involved
+        SymHeapTyped::valMerge(v1, v2);
+        return;
     }
+
+    if (UV_ABSTRACT == code1 && spliceOutListSegment(*this, v1, v2))
+        // splice-out succeeded ... ls(v1, v2)
+        return;
+
+    if (UV_ABSTRACT == code2 && spliceOutListSegment(*this, v2, v1))
+        // splice-out succeeded ... ls(v2, v1)
+        return;
+
+    CL_DEBUG("failed to splice-out list segment, has to over-approximate");
 }
 
 void SymHeap::dlSegCrossNeqOp(ENeqOp op, TValId headAddr1) {

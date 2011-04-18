@@ -304,19 +304,6 @@ void SymExecEngine::updateState(SymHeap &sh, const CodeStorage::Block *ofBlock) 
     }
 }
 
-void replaceUnkownValue(
-        SymHeap                     &sh,
-        const TValId                v1,
-        const TValId                v2)
-{
-    const bool isUnknown1 = (UV_KNOWN != sh.valGetUnknown(v1));
-    CL_BREAK_IF(!isUnknown1 && UV_KNOWN == sh.valGetUnknown(v2));
-    if (isUnknown1)
-        sh.valReplaceUnknown(v1, v2);
-    else
-        sh.valReplaceUnknown(v2, v1);
-}
-
 void SymExecEngine::updateStateInBranch(
         SymHeap                     sh,
         const CodeStorage::Block    *ofBlock,
@@ -340,7 +327,7 @@ void SymExecEngine::updateStateInBranch(
                 goto fallback;
 
             // we have deduced that v1 and v2 is actually the same value
-            replaceUnkownValue(sh, v1, v2);
+            sh.valMerge(v1, v2);
         }
     }
 

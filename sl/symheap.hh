@@ -199,20 +199,16 @@ class SymHeapCore {
         /// duplicate the given @b unknown @b value
         virtual TValId valDuplicateUnknown(TValId tpl);
 
-        /**
-         * replace all occurrences of the given @b unknown value by @b any (not
-         * necessarily unknown) value, given as the second argument
-         * @param val ID of the value about to be replaced.  It @b must be an
-         * unknown value.
-         * @param replaceBy @b any value to replace by.  It may be another
-         * unknown value, known value or even a special value.
-         * @note This method is heavily used by non-deterministic execution of
-         * CL_INSN_COND.
-         */
-        virtual void valReplaceUnknown(TValId val, TValId replaceBy);
+        /// replace all occurences of val by replaceBy
+        void valReplace(TValId val, TValId replaceBy);
 
-        /// change all variables using value _val to value _newval (all known)
-        void valReplace(TValId _val, TValId _newval);
+        /**
+         * assume that v1 and v2 are equal.  Useful when e.g. traversing a
+         * non-deterministic condition.  This implies that one of them may be
+         * dropped.  You can utilize SymHeapTyped::usedByCount() to check which
+         * one (if any).
+         */
+        virtual void valMerge(TValId v1, TValId v2);
 
     public:
         // TODO: review the following interface and write some dox
@@ -280,10 +276,6 @@ class SymHeapCore {
         bool matchPreds(const SymHeapCore &ref, const TValMap &valMap) const;
 
     protected:
-        /// template method
-        virtual bool valReplaceUnknownImpl(TValId val, TValId replaceBy);
-
-        /// template method
         virtual void notifyResize(bool /* valOnly */) { }
 
     private:
@@ -658,6 +650,12 @@ class SymHeap: public SymHeapTyped {
          */
         virtual bool proveNeq(TValId valA, TValId valB) const;
 
+        /**
+         * @copydoc SymHeapTyped::proveNeq
+         * @note overridden in order to splice-out SLS/DLS
+         */
+        virtual void valMerge(TValId v1, TValId v2);
+
     protected:
         /**
          * @copydoc SymHeapTyped::objDestroy
@@ -668,9 +666,6 @@ class SymHeap: public SymHeapTyped {
         // XXX
         friend class SymCallCache;
         friend class SymProc;
-
-        /// overridden in order to see through SLS/DLS
-        virtual bool valReplaceUnknownImpl(TValId val, TValId replaceBy);
 
     private:
         void dlSegCrossNeqOp(ENeqOp op, TValId headAddr);

@@ -26,10 +26,25 @@
 #include "symbt.hh"
 #include "symheap.hh"
 #include "symproc.hh"
+#include "util.hh"
 
 #include <stack>
 
 #include <boost/foreach.hpp>
+
+void moveKnownValueToLeft(
+        const SymHeapCore           &sh,
+        TValId                      &valA,
+        TValId                      &valB)
+{
+    sortValues(valA, valB);
+
+    if ((0 < valA) && UV_KNOWN != sh.valGetUnknown(valA)) {
+        const TValId tmp = valA;
+        valA = valB;
+        valB = tmp;
+    }
+}
 
 TObjId subObjByChain(const SymHeap &sh, TObjId obj, TFieldIdxChain ic) {
     BOOST_FOREACH(const int nth, ic) {

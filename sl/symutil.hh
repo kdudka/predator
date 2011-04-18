@@ -47,6 +47,8 @@ inline TValId boolToVal(const bool b) {
         : VAL_FALSE;
 }
 
+void moveKnownValueToLeft(const SymHeapCore &sh, TValId &valA, TValId &valB);
+
 bool isHeapObject(const SymHeap &heap, TObjId obj);
 
 void digRootObject(const SymHeap &heap, TValId *pValue);
