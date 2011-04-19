@@ -654,6 +654,10 @@ unsigned /* len */ discoverBestAbstraction(
             // no valid object anyway
             continue;
 
+        if (!isComposite(sh.objType(obj)))
+            // we do not support generic objects atm, this will change soonish!
+            continue;
+
         // use ProbeEntryVisitor visitor to validate the potential segment entry
         SegCandidate segc;
         const ProbeEntryVisitor visitor(segc.offList, sh, obj);

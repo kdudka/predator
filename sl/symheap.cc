@@ -770,21 +770,28 @@ class CVarMap {
 struct SymHeapTyped::Private {
     struct Object {
         const struct cl_type        *clt;
-        size_t                      cbSize;
-        CVar                        cVar;
         int                         nthItem; // -1  OR  0 .. parent.item_cnt-1
         TObjId                      root;
         TObjId                      parent;
         TObjList                    subObjs;
-        bool                        isProto;
-        std::set<TObjId>            livePtrs;
 
         Object():
             clt(0),
-            cbSize(0),
             nthItem(-1),
             root(OBJ_INVALID),
-            parent(OBJ_INVALID),
+            parent(OBJ_INVALID)
+        {
+        }
+    };
+
+    struct Root {
+        size_t                      cbSize;
+        CVar                        cVar;
+        std::set<TObjId>            livePtrs;
+        bool                        isProto;
+
+        Root():
+            cbSize(0),
             isProto(false)
         {
         }
@@ -805,7 +812,9 @@ struct SymHeapTyped::Private {
 
     std::vector<Object>             objects;
     std::vector<Value>              values;
-    std::set<TObjId>                roots;
+
+    typedef std::map<TObjId, Root>  TRootMap;
+    TRootMap                        roots;
 };
 
 void SymHeapTyped::notifyResize(bool valOnly) {
@@ -910,16 +919,17 @@ TObjId SymHeapTyped::objDup(TObjId root) {
 
         // copy the metadata
         d->objects[dst] = d->objects[src];
-        d->objects[dst].root = image;
         d->objects[dst].parent = item.dstParent;
         if (OBJ_INVALID == image) {
             image = dst;
-
-            // the contents of livePtrs is no longer valid!
-            d->objects[dst].livePtrs.clear();
+            d->roots[image].cVar    = d->roots[root].cVar;
+            d->roots[image].isProto = d->roots[root].isProto;
         }
-        else if (hasKey(d->objects[root].livePtrs, src))
-            d->objects[image].livePtrs.insert(dst);
+        else if (hasKey(d->roots[root].livePtrs, src))
+            d->roots[image].livePtrs.insert(dst);
+
+        // recover root
+        d->objects[dst].root = image;
 
         // update the reference to self in the parent object
         const TObjId parent = item.dstParent;
@@ -949,22 +959,15 @@ TObjId SymHeapTyped::objDup(TObjId root) {
         }
     }
 
-    const Private::Object &ref = d->objects[root];
-    if (isComposite(ref.clt) && -1 == ref.parent)
-        // if the original was a root object, the new one must also be
-        // FIXME: should we care about CL_TYPE_UNION here?
-        d->roots.insert(image);
-
     return image;
 }
 
 void SymHeapTyped::gatherLivePointers(TObjList &dst, TValId atAddr) const {
     const TObjId root = this->pointsTo(atAddr);
-    CL_BREAK_IF(root <= 0);
+    Private::TRootMap::const_iterator it = d->roots.find(root);
+    CL_BREAK_IF(d->roots.end() == it);
 
-    const Private::Object &ref = d->objects[root];
-    CL_BREAK_IF(OBJ_INVALID != ref.parent);
-
+    const Private::Root &ref = it->second;
     std::copy(ref.livePtrs.begin(), ref.livePtrs.end(),
             std::back_inserter(dst));
 }
@@ -972,6 +975,13 @@ void SymHeapTyped::gatherLivePointers(TObjList &dst, TValId atAddr) const {
 void SymHeapTyped::objDestroyPriv(TObjId root) {
     typedef std::stack<TObjId> TStack;
     TStack todo;
+
+    const Private::TRootMap::const_iterator it = d->roots.find(root);
+    CL_BREAK_IF(d->roots.end() == it);
+    const Private::Root &rootData = it->second;
+    const TObjId kind = (-1 == rootData.cVar.uid)
+        ? OBJ_DELETED
+        : OBJ_LOST;
 
     // we are using explicit stack to avoid recursion
     todo.push(root);
@@ -986,20 +996,21 @@ void SymHeapTyped::objDestroyPriv(TObjId root) {
         }
 
         // remove current
-        const TObjId kind = (-1 == ref.cVar.uid)
-            ? OBJ_DELETED
-            : OBJ_LOST;
         SymHeapCore::objDestroy(obj, kind);
     }
 
     // remove self from roots
-    d->roots.erase(root);
+    if (/* XXX */ OBJ_RETURN != root)
+        d->roots.erase(root);
 }
 
 SymHeapTyped::SymHeapTyped():
     d(new Private)
 {
     SymHeapTyped::notifyResize(/* valOnly */ false);
+
+    // XXX
+    d->roots[OBJ_RETURN];
 }
 
 SymHeapTyped::SymHeapTyped(const SymHeapTyped &ref):
@@ -1038,7 +1049,7 @@ void SymHeapTyped::objSetValue(TObjId obj, TValId val) {
         if (OBJ_INVALID != ref.root)
             root = ref.root;
 
-        d->objects.at(root).livePtrs.insert(obj);
+        d->roots.at(root).livePtrs.insert(obj);
     }
 
     SymHeapCore::objSetValue(obj, val);
@@ -1058,7 +1069,12 @@ bool SymHeapTyped::cVar(CVar *dst, TObjId obj) const {
         // object ID is either out of range, or does not represent a valid obj
         return false;
 
-    const CVar &cVar = d->objects[obj].cVar;
+    const Private::TRootMap::const_iterator it = d->roots.find(obj);
+    if (d->roots.end() == it)
+        // not a root object
+        return false;
+
+    const CVar &cVar = it->second.cVar;
     if (-1 == cVar.uid)
         // looks like a heap object
         return false;
@@ -1080,7 +1096,13 @@ void SymHeapTyped::gatherCVars(TContCVar &dst) const {
 }
 
 void SymHeapTyped::gatherRootObjs(TObjList &dst) const {
-    std::copy(d->roots.begin(), d->roots.end(), std::back_inserter(dst));
+    BOOST_FOREACH(Private::TRootMap::const_reference item, d->roots) {
+        const TObjId obj = item.first;
+        if (/* XXX */ OBJ_RETURN == obj)
+            continue;
+
+        dst.push_back(obj);
+    }
 }
 
 TObjId SymHeapTyped::valGetCompositeObj(TValId val) const {
@@ -1130,14 +1152,14 @@ TObjId SymHeapTyped::objCreate(const struct cl_type *clt, CVar cVar) {
     if (OBJ_INVALID == obj)
         return OBJ_INVALID;
 
+    d->roots[obj].cVar = cVar;
+
     Private::Object &ref = d->objects[obj];
     ref.clt     = clt;
-    ref.cVar    = cVar;
-    if (clt) {
+    ref.root    = obj;
+
+    if (clt)
         this->createSubs(obj);
-        if (isComposite(clt))
-            d->roots.insert(obj);
-    }
 
     if (/* heap object */ -1 != cVar.uid)
         d->cVarMap.insert(cVar, obj);
@@ -1147,7 +1169,8 @@ TObjId SymHeapTyped::objCreate(const struct cl_type *clt, CVar cVar) {
 
 TValId SymHeapTyped::heapAlloc(int cbSize) {
     const TObjId obj = SymHeapCore::objCreate();
-    d->objects[obj].cbSize = cbSize;
+    d->objects[obj].root = obj;
+    d->roots[obj].cbSize = cbSize;
 
     return this->placedAt(obj);
 }
@@ -1166,13 +1189,12 @@ bool SymHeapTyped::valDestroyTarget(TValId val) {
 }
 
 int SymHeapTyped::objSizeOfAnon(TObjId obj) const {
-    CL_BREAK_IF(this->lastObjId() < obj || obj <= 0);
-    const Private::Object &ref = d->objects[obj];
-
     // if we know the type, it's not an anonymous object
-    CL_BREAK_IF(ref.clt);
+    CL_BREAK_IF(this->objType(obj));
 
-    return ref.cbSize;
+    Private::TRootMap::const_iterator it = d->roots.find(obj);
+    CL_BREAK_IF(d->roots.end() == it);
+    return it->second.cbSize;
 }
 
 void SymHeapTyped::objDefineType(TObjId obj, const struct cl_type *clt) {
@@ -1185,15 +1207,14 @@ void SymHeapTyped::objDefineType(TObjId obj, const struct cl_type *clt) {
     // delayed object's type definition
     ref.clt = clt;
     this->createSubs(obj);
-    if (isComposite(clt))
-        d->roots.insert(obj);
 }
 
 void SymHeapTyped::objDestroy(TObjId obj) {
-    CL_BREAK_IF(this->lastObjId() < obj || obj < 0);
-    Private::Object &ref = d->objects[obj];
+    // check if obj is a root object
+    Private::TRootMap::const_iterator it = d->roots.find(obj);
+    CL_BREAK_IF(d->roots.end() == it);
 
-    const CVar cv = ref.cVar;
+    const CVar cv = it->second.cVar;
     if (cv.uid != /* heap object */ -1)
         d->cVarMap.remove(cv);
 
@@ -1257,21 +1278,23 @@ bool SymHeapTyped::objIsProto(TObjId obj) const {
         // not a prototype for sure
         return false;
 
-    // jump to root
-    obj = objRoot(*this, obj);
+    // seek root
+    const TObjId root = d->objects.at(obj).root;
+    Private::TRootMap::const_iterator it = d->roots.find(root);
+    CL_BREAK_IF(d->roots.end() == it);
 
-    CL_BREAK_IF(this->lastObjId() < obj || obj < 0);
-    return d->objects[obj].isProto;
+    return it->second.isProto;
 }
 
 void SymHeapTyped::objSetProto(TObjId obj, bool isProto) {
     CL_BREAK_IF(this->lastObjId() < obj || obj < 0);
     Private::Object &ref = d->objects[obj];
 
-    // this method is supposed to be called only on root objects
-    CL_BREAK_IF(-1 != ref.parent);
+    // seek root
+    Private::TRootMap::iterator it = d->roots.find(ref.root);
+    CL_BREAK_IF(d->roots.end() == it);
 
-    ref.isProto = isProto;
+    it->second.isProto = isProto;
 }
 
 // /////////////////////////////////////////////////////////////////////////////
