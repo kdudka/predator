@@ -1501,7 +1501,7 @@ bool mayExistFallback(
 
     const TValId ref = (use2) ? v1 : v2;
     MayExistVisitor visitor(ctx, action, ref, /* root */ target);
-    if (traverseSubObjs(sh, target, visitor, /* leavesOnly */ true))
+    if (traverseLivePtrs(sh, sh.placedAt(target), visitor))
         // no match
         return false;
 

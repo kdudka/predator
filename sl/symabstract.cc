@@ -200,7 +200,7 @@ void cloneGenericPrototype(
         protoList.push_back(proto);
 
         ProtoFinder visitor;
-        traverseSubObjs(sh, proto, visitor, /* leavesOnly */ true);
+        traverseLivePtrs(sh, sh.placedAt(proto), visitor);
         BOOST_FOREACH(const TObjId obj, visitor.protos) {
             if (!insertOnce(haveSeen, obj))
                 continue;
@@ -356,8 +356,8 @@ void clonePrototypes(SymHeap &sh, TObjId obj, TObjId dup) {
     visitor.rootSrc = dup;
     buildIgnoreList(visitor.ignoreList, sh, obj);
 
-    // traverse all sub-objects
-    traverseSubObjs(sh, obj, visitor, /* leavesOnly */ true);
+    // traverse all live sub-objects
+    traverseLivePtrs(sh, sh.placedAt(obj), visitor);
 
     // if there was "a pointer to self", it should remain "a pointer to self";
     // however "self" has been changed, so that a redirection is necessary
