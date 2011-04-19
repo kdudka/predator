@@ -769,7 +769,7 @@ class CVarMap {
 // implementation of SymHeapTyped
 struct SymHeapTyped::Private {
     struct Object {
-        const struct cl_type        *clt;
+        TObjType                    clt;
         int                         nthItem; // -1  OR  0 .. parent.item_cnt-1
         TObjId                      root;
         TObjId                      parent;
@@ -840,7 +840,7 @@ TValId SymHeapTyped::createCompValue(TObjId obj) {
     return val;
 }
 
-TObjId SymHeapTyped::createSubVar(const struct cl_type *clt, TObjId parent) {
+TObjId SymHeapTyped::createSubVar(TObjType clt, TObjId parent) {
     const TObjId obj = SymHeapCore::objCreate();
     CL_BREAK_IF(OBJ_INVALID == obj);
 
@@ -853,9 +853,9 @@ TObjId SymHeapTyped::createSubVar(const struct cl_type *clt, TObjId parent) {
 
 void SymHeapTyped::createSubs(TObjId obj) {
     const TObjId root = obj;
-    const struct cl_type *clt = d->objects.at(obj).clt;
+    TObjType clt = d->objects.at(obj).clt;
 
-    typedef std::pair<TObjId, const struct cl_type *> TPair;
+    typedef std::pair<TObjId, TObjType> TPair;
     typedef std::stack<TPair> TStack;
     TStack todo;
 
@@ -877,7 +877,7 @@ void SymHeapTyped::createSubs(TObjId obj) {
         d->objects[obj].subObjs.resize(cnt);
         for (int i = 0; i < cnt; ++i) {
             const struct cl_type_item *item = clt->items + i;
-            const struct cl_type *subClt = item->type;
+            TObjType subClt = item->type;
             const TObjId subObj = this->createSubVar(subClt, obj);
             d->objects[subObj].root = root;
             d->objects[subObj].nthItem = i; // position in struct
@@ -1075,7 +1075,7 @@ void SymHeapTyped::objSetValue(TObjId obj, TValId val) {
     SymHeapCore::objSetValue(obj, val);
 }
 
-const struct cl_type* SymHeapTyped::objType(TObjId obj) const {
+TObjType SymHeapTyped::objType(TObjId obj) const {
     if (this->lastObjId() < obj || obj < 0)
         // object ID is either out of range, or does not represent a valid obj
         // (we allow OBJ_RETURN here)
@@ -1167,7 +1167,7 @@ TObjId SymHeapTyped::objParent(TObjId obj, int *nth) const {
     return parent;
 }
 
-TObjId SymHeapTyped::objCreate(const struct cl_type *clt, CVar cVar) {
+TObjId SymHeapTyped::objCreate(TObjType clt, CVar cVar) {
     const TObjId obj = SymHeapCore::objCreate();
     if (OBJ_INVALID == obj)
         return OBJ_INVALID;
@@ -1217,7 +1217,7 @@ int SymHeapTyped::objSizeOfAnon(TObjId obj) const {
     return it->second.cbSize;
 }
 
-void SymHeapTyped::objDefineType(TObjId obj, const struct cl_type *clt) {
+void SymHeapTyped::objDefineType(TObjId obj, TObjType clt) {
     CL_BREAK_IF(this->lastObjId() < obj || obj < 0);
     Private::Object &ref = d->objects[obj];
 

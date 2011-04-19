@@ -60,6 +60,9 @@ typedef std::vector<TObjId>                             TObjList;
 /// container used to store value IDs to
 typedef std::vector<TValId>                             TValList;
 
+/// a type used for type-info
+typedef const struct cl_type                            *TObjType;
+
 /**
  * symbolic heap @b core - no type-info, no object composition at this level
  */
@@ -378,7 +381,7 @@ class SymHeapTyped: public SymHeapCore {
          * That's usually the case when malloc() has been called, but the result
          * of the call has not been yet assigned to a type-safe pointer.
          */
-        const struct cl_type* objType(TObjId obj) const;
+        TObjType objType(TObjId obj) const;
 
     public:
         /**
@@ -459,7 +462,7 @@ class SymHeapTyped: public SymHeapCore {
          * objCreateAnon() instead.
          * @return ID of the just created symbolic heap object
          */
-        TObjId objCreate(const struct cl_type *clt, CVar cVar);
+        TObjId objCreate(TObjType clt, CVar cVar);
 
         /**
          * create a new heap object of known size
@@ -489,7 +492,7 @@ class SymHeapTyped: public SymHeapCore {
          * @note This may trigger creation of all sub-objects, if the given type
          * is a composite type.
          */
-        void objDefineType(TObjId obj, const struct cl_type *clt);
+        void objDefineType(TObjId obj, TObjType clt);
 
         void gatherLiveObjects(TObjList &dst, TValId atAddr) const;
         void gatherLivePointers(TObjList &dst, TValId atAddr) const;
@@ -557,7 +560,7 @@ class SymHeapTyped: public SymHeapCore {
 
     private:
         TValId createCompValue(TObjId obj);
-        TObjId createSubVar(const struct cl_type *clt, TObjId parent);
+        TObjId createSubVar(TObjType clt, TObjId parent);
         void createSubs(TObjId obj);
         void objDestroyPriv(TObjId obj);
 };
