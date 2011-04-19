@@ -491,6 +491,7 @@ class SymHeapTyped: public SymHeapCore {
          */
         void objDefineType(TObjId obj, const struct cl_type *clt);
 
+        void gatherLiveObjects(TObjList &dst, TValId atAddr) const;
         void gatherLivePointers(TObjList &dst, TValId atAddr) const;
 
     protected:

@@ -108,7 +108,7 @@ void duplicateUnknownValues(SymHeap &sh, TObjId obj) {
     buildIgnoreList(visitor.ignoreList, sh, obj);
 
     // traverse all sub-objects
-    traverseSubObjs(sh, obj, visitor, /* leavesOnly */ true);
+    traverseLiveObjs(sh, sh.placedAt(obj), visitor);
 }
 
 void detachClonedPrototype(

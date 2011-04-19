@@ -168,19 +168,20 @@ template <> struct TraverseSubObjsHelper<TObjPair> {
 #endif
 
 /// take the given visitor through all live pointers
-template <class THeap, class TVisitor>
-bool /* complete */ traverseLivePtrs(
+template <class THeap, class TVisitor, typename TMethod>
+bool /* complete */ traverseCore(
         THeap                       &sh,
         const TValId                rootAt,
-        TVisitor                    &visitor)
+        TVisitor                    &visitor,
+        TMethod                     method)
 {
     // check that we got a valid root object
     CL_BREAK_IF(sh.pointsTo(rootAt) <= 0);
     CL_BREAK_IF(sh.pointsTo(rootAt) != objRootByVal(sh, rootAt));
 
-    TObjList ptrs;
-    sh.gatherLivePointers(ptrs, rootAt);
-    BOOST_FOREACH(const TObjId obj, ptrs) {
+    TObjList objs;
+    (sh.*method)(objs, rootAt);
+    BOOST_FOREACH(const TObjId obj, objs) {
         if (!visitor(sh, obj))
             // traversal cancelled by visitor
             return false;
@@ -188,6 +189,26 @@ bool /* complete */ traverseLivePtrs(
 
     // done
     return true;
+}
+
+/// take the given visitor through all live pointers
+template <class THeap, class TVisitor>
+bool /* complete */ traverseLivePtrs(
+        THeap                       &sh,
+        const TValId                rootAt,
+        TVisitor                    &visitor)
+{
+    return traverseCore(sh, rootAt, visitor, &SymHeap::gatherLivePointers);
+}
+
+/// take the given visitor through all live objects
+template <class THeap, class TVisitor>
+bool /* complete */ traverseLiveObjs(
+        THeap                       &sh,
+        const TValId                rootAt,
+        TVisitor                    &visitor)
+{
+    return traverseCore(sh, rootAt, visitor, &SymHeap::gatherLiveObjects);
 }
 
 /// take the given visitor through a composite object (or whatever you pass in)

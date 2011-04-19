@@ -788,6 +788,7 @@ struct SymHeapTyped::Private {
         size_t                      cbSize;
         CVar                        cVar;
         std::set<TObjId>            livePtrs;
+        std::set<TObjId>            liveData;
         bool                        isProto;
 
         Root():
@@ -927,6 +928,8 @@ TObjId SymHeapTyped::objDup(TObjId root) {
         }
         else if (hasKey(d->roots[root].livePtrs, src))
             d->roots[image].livePtrs.insert(dst);
+        else if (hasKey(d->roots[root].liveData, src))
+            d->roots[image].liveData.insert(dst);
 
         // recover root
         d->objects[dst].root = image;
@@ -972,6 +975,18 @@ void SymHeapTyped::gatherLivePointers(TObjList &dst, TValId atAddr) const {
             std::back_inserter(dst));
 }
 
+void SymHeapTyped::gatherLiveObjects(TObjList &dst, TValId atAddr) const {
+    const TObjId root = this->pointsTo(atAddr);
+    Private::TRootMap::const_iterator it = d->roots.find(root);
+    CL_BREAK_IF(d->roots.end() == it);
+
+    const Private::Root &ref = it->second;
+    std::copy(ref.livePtrs.begin(), ref.livePtrs.end(),
+            std::back_inserter(dst));
+    std::copy(ref.liveData.begin(), ref.liveData.end(),
+            std::back_inserter(dst));
+}
+
 void SymHeapTyped::objDestroyPriv(TObjId root) {
     typedef std::stack<TObjId> TStack;
     TStack todo;
@@ -1011,6 +1026,7 @@ SymHeapTyped::SymHeapTyped():
 
     // XXX
     d->roots[OBJ_RETURN];
+    d->objects[OBJ_RETURN].root = OBJ_RETURN;
 }
 
 SymHeapTyped::SymHeapTyped(const SymHeapTyped &ref):
@@ -1044,13 +1060,17 @@ void SymHeapTyped::objSetValue(TObjId obj, TValId val) {
     CL_BREAK_IF(!d->objects[obj].subObjs.empty());
 
     Private::Object &ref = d->objects[obj];
-    if (isDataPtr(ref.clt)) {
-        TObjId root = obj;
-        if (OBJ_INVALID != ref.root)
-            root = ref.root;
+    const TObjId root = ref.root;
+    CL_BREAK_IF(root < 0);
 
-        d->roots.at(root).livePtrs.insert(obj);
-    }
+    Private::TRootMap::iterator it = d->roots.find(root);
+    CL_BREAK_IF(d->roots.end() == it);
+
+    Private::Root &rootData = d->roots[root];
+    if (isDataPtr(ref.clt))
+        rootData.livePtrs.insert(obj);
+    else
+        rootData.liveData.insert(obj);
 
     SymHeapCore::objSetValue(obj, val);
 }
