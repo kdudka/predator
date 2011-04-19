@@ -332,20 +332,24 @@ struct SubByOffsetFinder {
 
 TObjId subSeekByOffset(
         const SymHeap               &sh,
-        const TObjId                root,
+        const TObjId                obj,
         const TOffset               offToSeek,
         const struct cl_type        *clt,
         const enum cl_type_e        code)
 {
+    const TObjId root = objRoot(sh, obj);
     if (OBJ_INVALID == root)
         return OBJ_INVALID;
+
+    TOffset offRoot = 0;
+    sh.valTarget(sh.placedAt(obj), &offRoot);
 
     // prepare visitor
     SubByOffsetFinder visitor;
     visitor.root            = root;
     visitor.cltToSeek       = clt;
     visitor.cltCodeToSeek   = code;
-    visitor.offToSeek       = offToSeek;
+    visitor.offToSeek       = offToSeek + offRoot;
     visitor.subFound        = OBJ_INVALID;
 
     // first try the root itself
@@ -412,11 +416,9 @@ TValId addrQueryByOffset(
         return sh.valCreateUnknown(UV_UNKNOWN);
     }
 
-    if (off < 0) {
+    if (off < 0)
         // we need to create an off-value
-        const SymHeapCore::TOffVal ov(sh.placedAt(obj), off);
-        return sh.valCreateByOffset(ov);
-    }
+        return sh.valByOffset(sh.placedAt(obj), off);
 
     // jump to _target_ type
     const struct cl_type *clt = targetTypeOfPtr(cltPtr);
@@ -430,8 +432,7 @@ TValId addrQueryByOffset(
 
         // fall-back to off-value, but now related to the original target,
         // instead of root
-        const SymHeapCore::TOffVal ov(sh.placedAt(target), offRequested);
-        return sh.valCreateByOffset(ov);
+        return sh.valByOffset(sh.placedAt(target), offRequested);
     }
 
     return sh.placedAt(sub);

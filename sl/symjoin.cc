@@ -97,7 +97,7 @@ class WorkListWithUndo: public WorkList<T> {
 template <class TMap>
 typename TMap::mapped_type roMapLookup(
         const TMap                          &roMap,
-        const typename TMap::mapped_type    id)
+        const typename TMap::key_type       id)
 {
     if (id <= 0)
         return id;

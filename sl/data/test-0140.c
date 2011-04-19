@@ -33,8 +33,8 @@ int main()
     // plot heap after list_for_each_entry() -- an off-value should be there
     ___sl_plot(NULL);
 
-    // insane -- better to use list_entry()
-    free(((char *)list.next) - sizeof(int));
-    free(((char *)list.prev) - sizeof(int));
+    // use list_entry()
+    free(list_entry(list.next, struct node, embedded_head));
+    free(list_entry(list.prev, struct node, embedded_head));
     return 0;
 }

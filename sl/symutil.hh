@@ -95,27 +95,15 @@ inline bool objIsSeg(const SymHeap &sh, TObjId obj, bool anyPart = false) {
 }
 
 /// return offset of an object within another object;  -1 if not found
-inline TOffset subOffsetIn(const SymHeapTyped &sh, TObjId in, TObjId of) {
-    if (in == of)
-        return 0;
+inline TOffset subOffsetIn(const SymHeap &sh, TObjId in, TObjId of) {
+    TOffset off1 = 0;
+    TOffset off2 = 0;
 
-    TOffset offset = 0;
-    TObjId parent;
+    SymHeap &shNonConst = const_cast<SymHeap &>(sh);
+    shNonConst.valTarget(sh.placedAt(in), &off1);
+    shNonConst.valTarget(sh.placedAt(of), &off2);
 
-    int nth;
-    while (OBJ_INVALID != (parent = sh.objParent(of, &nth))) {
-        const struct cl_type *clt = sh.objType(parent);
-        CL_BREAK_IF(!clt || clt->item_cnt <= nth);
-
-        offset += clt->items[nth].offset;
-        if (parent == in)
-            return offset;
-
-        of = parent;
-    }
-
-    CL_BREAK_IF("invalid call of subOffsetIn() detected");
-    return /* not found */ 0;
+    return off2 - off1;
 }
 
 TObjId subSeekByOffset(

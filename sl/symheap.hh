@@ -37,6 +37,10 @@
 struct cl_accessor;
 struct cl_type;
 
+enum EValueTarget {
+    VT_UNKNOWN              ///< arbitrary target
+};
+
 /**
  * enumeration of unknown values
  */
@@ -103,7 +107,7 @@ class SymHeapCore {
          * not.
          * @note The operation has always a unique result.
          */
-        TValId placedAt(TObjId obj) /* FIXME */ const;
+        virtual TValId placedAt(TObjId obj) /* FIXME */ const = 0;
 
         /**
          * return an object ID which the given value @b points @b to
@@ -111,7 +115,7 @@ class SymHeapCore {
          * @return A valid object ID in case of success, invalid otherwise.
          * @note The operation has always a unique result.
          */
-        TObjId pointsTo(TValId val) const;
+        virtual TObjId pointsTo(TValId val) /* FIXME */ const;
 
         /**
          * collect all objects having the given value
@@ -135,13 +139,6 @@ class SymHeapCore {
         TObjId objCreate();
 
         /**
-         * rewrite object's address by another object's address (internal use
-         * only, mainly by SymHeapTyped for implicit address aliasing at the
-         * level of struct/union nesting)
-         */
-        void objRewriteAddress(TObjId obj, TValId addr);
-
-        /**
          * create a new symbolic heap value
          * @param code kind of the unknown value, UV_KNOWN if not unknown
          * @param target pointed object's ID
@@ -150,7 +147,7 @@ class SymHeapCore {
         TValId valCreate(EUnknownValue code, TObjId target);
 
         /// alter an already existing value (use with caution)
-        void valSetUnknown(TValId val, EUnknownValue code);
+        virtual void valSetUnknown(TValId val, EUnknownValue code);
 
     public:
         TObjId lastObjId() const;
@@ -175,13 +172,11 @@ class SymHeapCore {
          * pointing to the object, will now point to either OBJ_DELETED or
          * OBJ_LOST, depending on kind of the object being destroyed.
          * @param obj ID of the object to destroy
-         * @param kind OBJ_DELETED for heap object, or OBJ_LOST for
-         * static/automatic object
          * @note This is really @b low-level @b implementation.  It does not
          * e.g. check for junk.  If you are interested in this ability, you
          * are looking for SymProc::objDestroy().
          */
-        void objDestroy(TObjId obj, TObjId kind);
+        void objDestroy(TObjId obj);
 
         friend TValId handleValue(DeepCopyData &dc, TValId valSrc);
 
@@ -211,16 +206,6 @@ class SymHeapCore {
          * one (if any).
          */
         virtual void valMerge(TValId v1, TValId v2);
-
-    public:
-        // TODO: review the following interface and write some dox
-        typedef std::pair<TValId /* valRef */, TOffset>             TOffVal;
-        typedef std::vector<TOffVal>                                TOffValCont;
-
-        // TODO: review the following interface and write some dox
-        TValId valCreateByOffset(TOffVal);
-        TValId valGetByOffset(TOffVal) const;
-        void gatherOffValues(TOffValCont &dst, TValId ref) const;
 
     public:
         enum ENeqOp {
@@ -383,6 +368,20 @@ class SymHeapTyped: public SymHeapCore {
          */
         TObjType objType(TObjId obj) const;
 
+        TValId valByOffset(TValId, TOffset offset);
+        EValueTarget valTarget(TValId, TOffset *offset = 0) const;
+
+        virtual TValId placedAt(TObjId obj) /* FIXME */ const;
+        virtual TObjId pointsTo(TValId val) const;
+
+        virtual bool proveNeq(TValId valA, TValId valB) const;
+
+    public:
+        // TODO: drop this left-over
+        typedef std::pair<TValId /* valRef */, TOffset>             TOffVal;
+        typedef std::vector<TOffVal>                                TOffValCont;
+        void gatherOffValues(TOffValCont &dst, TValId ref) const;
+
     public:
         /**
          * look for a static/automatic variable corresponding to the given
@@ -519,6 +518,9 @@ class SymHeapTyped: public SymHeapCore {
          * @return ID of the just created value
          */
         TValId valCreateUnknown(EUnknownValue code);
+
+        virtual void valSetUnknown(TValId val, EUnknownValue code);
+        virtual EUnknownValue valGetUnknown(TValId val) const;
 
     public:
         /**

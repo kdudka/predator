@@ -526,6 +526,8 @@ Call cache
 
     test-0142.c - simplification of test-0133.c (only some offset manipulation)
 
+    test-0143.c - test-0032.c reduced to a minimal example while debugging a bug
+
 
 Tiny DLL library written on scratch
 ===================================

@@ -256,7 +256,7 @@ TValId handleValue(DeepCopyData &dc, TValId valSrc) {
         ov.first = handleValue(dc, ov.first);
 
         // store the off-value's mapping
-        const TValId valDst = dst.valCreateByOffset(ov);
+        const TValId valDst = dst.valByOffset(ov.first, ov.second);
         valMap[valSrc] = valDst;
         return valDst;
     }

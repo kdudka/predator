@@ -1,0 +1,2 @@
+test-0143.c:22:21: error: dereference of NULL value
+test-0143.c:22:21: warning: killing junk

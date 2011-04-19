@@ -104,6 +104,9 @@ bool SymProc::checkForInvalidDeref(TObjId obj) {
             break;
 
         case OBJ_UNKNOWN:
+            CL_ERROR_MSG(lw_, "dereference of unknown value");
+            break;
+
         case OBJ_INVALID:
             CL_TRAP;
 
@@ -126,11 +129,9 @@ TObjId SymProc::handleDerefCore(TValId val, const struct cl_type *cltTarget) {
     const EUnknownValue code = heap_.valGetUnknown(val);
     switch (code) {
         case UV_ABSTRACT:
-#ifndef NDEBUG
-            CL_TRAP;
-#endif
-        case UV_KNOWN:
-            break;
+            if (!cltTarget)
+                // this should be fine as long as we only take the address
+                break;
 
         case UV_UNKNOWN:
         case UV_DONT_CARE:
@@ -142,6 +143,9 @@ TObjId SymProc::handleDerefCore(TValId val, const struct cl_type *cltTarget) {
             CL_ERROR_MSG(lw_, "dereference of uninitialized value");
             bt_->printBackTrace();
             return OBJ_DEREF_FAILED;
+
+        case UV_KNOWN:
+            break;
     }
 
     // look for the target
@@ -197,7 +201,7 @@ void SymProc::resolveOffValue(TValId *pVal, const struct cl_accessor **pAc) {
 
         if (off)
             // attempt to resolve off-value
-            valTarget = heap_.valGetByOffset(SymHeapCore::TOffVal(val, off));
+            valTarget = heap_.valByOffset(val, off);
 
         // jump to the next accessor
         ac = ac->next;
