@@ -239,7 +239,7 @@ class PerFncCache {
 // implementation of SymCallCache
 struct SymCallCache::Private {
     typedef SymBackTrace::TFncSeq                       TFncSeq;
-    typedef SymHeapTyped::TContCVar                     TCVars;
+    typedef SymHeap::TContCVar                          TCVars;
     typedef std::map<int /* uid */, PerFncCache>        TCacheCol;
     typedef std::map<TCVars, TCacheCol>                 TCacheRow;
     typedef std::map<TFncSeq, TCacheRow>                TCache;
@@ -396,7 +396,7 @@ SymCallCtx* SymCallCache::Private::getCallCtx(int uid, const SymHeap &heap) {
 
     // 2nd level cache lookup
     // FIXME: We rely on the assumption that gatherCVars() returns the variables
-    //        always in the same order, however SymHeapTyped API does not
+    //        always in the same order, however SymHeap API does not
     //        guarantee anything like that.  Luckily it should cause nothing
     //        evil in the analysis, only some unnecessary bloat of cache...
     SymHeap::TContCVar cVars;

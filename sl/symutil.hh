@@ -49,7 +49,7 @@ inline TValId boolToVal(const bool b) {
         : VAL_FALSE;
 }
 
-void moveKnownValueToLeft(const SymHeapCore &sh, TValId &valA, TValId &valB);
+void moveKnownValueToLeft(const SymHeapXXXX &sh, TValId &valA, TValId &valB);
 
 TObjId objDup(SymHeap &sh, const TObjId obj);
 
@@ -57,7 +57,7 @@ bool isHeapObject(const SymHeap &heap, TObjId obj);
 
 void digRootObject(const SymHeap &heap, TValId *pValue);
 
-inline TObjId /* root */ objRoot(const SymHeapTyped &sh, TObjId obj) {
+inline TObjId /* root */ objRoot(const SymHeap &sh, TObjId obj) {
     TObjId root = obj;
     while (OBJ_INVALID != (obj = sh.objParent(root)))
         root = obj;
@@ -65,12 +65,12 @@ inline TObjId /* root */ objRoot(const SymHeapTyped &sh, TObjId obj) {
     return root;
 }
 
-inline TObjId /* root */ objRootByVal(const SymHeapTyped &sh, TValId val) {
+inline TObjId /* root */ objRootByVal(const SymHeap &sh, TValId val) {
     const TObjId target = sh.pointsTo(val);
     return objRoot(sh, target);
 }
 
-inline TObjId /* root */ objRootByPtr(const SymHeapTyped &sh, TObjId ptr) {
+inline TObjId /* root */ objRootByPtr(const SymHeap &sh, TObjId ptr) {
     const TValId val = sh.valueOf(ptr);
     return objRootByVal(sh, val);
 }

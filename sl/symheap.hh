@@ -23,7 +23,7 @@
 
 /**
  * @file symheap.hh
- * SymHeapTyped - @b symbolic @b heap representation, the core part of "symexec"
+ * SymHeapCore - @b symbolic @b heap representation, the core part of "symexec"
  * code listener
  */
 
@@ -31,7 +31,7 @@
 #include "symid.hh"
 
 #include <list>
-#include <map>                  // for SymHeapCore::TValMap
+#include <map>                  // for SymHeapXXXX::TValMap
 #include <vector>
 
 struct cl_accessor;
@@ -70,21 +70,21 @@ typedef const struct cl_type                            *TObjType;
 /**
  * symbolic heap @b core - no type-info, no object composition at this level
  */
-class SymHeapCore {
+class SymHeapXXXX {
     public:
         /// create an empty symbolic heap
-        SymHeapCore();
+        SymHeapXXXX();
 
         /// destruction of the symbolic heap invalidates all IDs of its entities
-        virtual ~SymHeapCore();
+        virtual ~SymHeapXXXX();
 
         /// @note there is no such thing like COW implemented for now
-        SymHeapCore(const SymHeapCore &);
+        SymHeapXXXX(const SymHeapXXXX &);
 
         /// @note there is no such thing like COW implemented for now
-        SymHeapCore& operator=(const SymHeapCore &);
+        SymHeapXXXX& operator=(const SymHeapXXXX &);
 
-        virtual void swap(SymHeapCore &);
+        virtual void swap(SymHeapXXXX &);
 
     public:
         /**
@@ -189,7 +189,7 @@ class SymHeapCore {
          * @param val ID of the value to check
          * @return fine-grained kind of the unknown value, or UV_KNOWN in case
          * of known value
-         * @todo rename SymHeapCore::valGetUnknown
+         * @todo rename SymHeapXXXX::valGetUnknown
          */
         virtual EUnknownValue valGetUnknown(TValId val) const;
 
@@ -202,7 +202,7 @@ class SymHeapCore {
         /**
          * assume that v1 and v2 are equal.  Useful when e.g. traversing a
          * non-deterministic condition.  This implies that one of them may be
-         * dropped.  You can utilize SymHeapTyped::usedByCount() to check which
+         * dropped.  You can utilize SymHeapCore::usedByCount() to check which
          * one (if any).
          */
         virtual void valMerge(TValId v1, TValId v2);
@@ -249,7 +249,7 @@ class SymHeapCore {
          * @param valMap an (injective) value mapping, used for translation
          * of value IDs among heaps
          */
-        void copyRelevantPreds(SymHeapCore &dst, const TValMap &valMap) const;
+        void copyRelevantPreds(SymHeapXXXX &dst, const TValMap &valMap) const;
 
         /**
          * pick up all heap predicates that can be fully mapped by valMap into
@@ -260,7 +260,7 @@ class SymHeapCore {
          * @return return true if all such predicates have their reflection in
          * ref, false otherwise
          */
-        bool matchPreds(const SymHeapCore &ref, const TValMap &valMap) const;
+        bool matchPreds(const SymHeapXXXX &ref, const TValMap &valMap) const;
 
     protected:
         virtual void notifyResize(bool /* valOnly */) { }
@@ -329,21 +329,21 @@ inline bool operator<(const CVar &a, const CVar &b) {
 /**
  * @b symbolic @b heap representation, the core part of "symexec" project
  */
-class SymHeapTyped: public SymHeapCore {
+class SymHeapCore: public SymHeapXXXX {
     public:
         /// create an empty symbolic heap
-        SymHeapTyped();
+        SymHeapCore();
 
         /// destruction of the symbolic heap invalidates all IDs of its entities
-        virtual ~SymHeapTyped();
+        virtual ~SymHeapCore();
 
         /// @note there is no such thing like COW implemented for now
-        SymHeapTyped(const SymHeapTyped &);
+        SymHeapCore(const SymHeapCore &);
 
         /// @note there is no such thing like COW implemented for now
-        SymHeapTyped& operator=(const SymHeapTyped &);
+        SymHeapCore& operator=(const SymHeapCore &);
 
-        virtual void swap(SymHeapCore &);
+        virtual void swap(SymHeapXXXX &);
 
     public:
         /// container used to store CVar objects to
@@ -609,7 +609,7 @@ inline bool operator!=(const BindingOff &off1, const BindingOff &off2)
     return !operator==(off1, off2);
 }
 
-class SymHeap: public SymHeapTyped {
+class SymHeap: public SymHeapCore {
     public:
         /// create an empty symbolic heap
         SymHeap();
@@ -623,7 +623,7 @@ class SymHeap: public SymHeapTyped {
         /// @note there is no such thing like COW implemented for now
         SymHeap& operator=(const SymHeap &);
 
-        virtual void swap(SymHeapCore &);
+        virtual void swap(SymHeapXXXX &);
 
     public:
         virtual EUnknownValue valGetUnknown(TValId val) const;
@@ -641,26 +641,26 @@ class SymHeap: public SymHeapTyped {
 
     public:
         /**
-         * @copydoc SymHeapTyped::neqOp
+         * @copydoc SymHeapCore::neqOp
          * @note overridden in order to complement DLS Neq
          */
         virtual void neqOp(ENeqOp op, TValId valA, TValId valB);
 
         /**
-         * @copydoc SymHeapTyped::proveNeq
+         * @copydoc SymHeapCore::proveNeq
          * @note overridden in order to see through SLS/DLS
          */
         virtual bool proveNeq(TValId valA, TValId valB) const;
 
         /**
-         * @copydoc SymHeapTyped::proveNeq
+         * @copydoc SymHeapCore::proveNeq
          * @note overridden in order to splice-out SLS/DLS
          */
         virtual void valMerge(TValId v1, TValId v2);
 
     protected:
         /**
-         * @copydoc SymHeapTyped::objDestroy
+         * @copydoc SymHeapCore::objDestroy
          * @note overridden in order to remove internal data of abstract objects
          */
         virtual void objDestroy(TObjId obj);
