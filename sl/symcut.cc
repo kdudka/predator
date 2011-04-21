@@ -220,16 +220,6 @@ TValId handleValue(DeepCopyData &dc, TValId valSrc) {
         // special value IDs always match
         return valSrc;
 
-    // traverse all off-values (only in one direction)
-    SymHeap::TOffValCont offValues;
-    src.gatherOffValues(offValues, valSrc);
-    BOOST_FOREACH(const SymHeap::TOffVal &ov, offValues) {
-        if (ov.second < 0)
-            continue;
-
-        trackUses(dc, ov.first);
-    }
-
     DeepCopyData::TValMap &valMap = dc.valMap;
     DeepCopyData::TValMap::iterator iterValSrc = valMap.find(valSrc);
     if (valMap.end() != iterValSrc)
@@ -245,22 +235,6 @@ TValId handleValue(DeepCopyData &dc, TValId valSrc) {
     }
 
     const EUnknownValue code = src.valGetUnknown(valSrc);
-    if (UV_UNKNOWN == code && !offValues.empty()) {
-        CL_BREAK_IF(1 != offValues.size());
-
-        // handle an off-value
-        SymHeap::TOffVal ov = offValues.front();
-        CL_BREAK_IF(0 < ov.second);
-
-        // FIXME: avoid unguarded recursion on handleValue() here
-        ov.first = handleValue(dc, ov.first);
-
-        // store the off-value's mapping
-        const TValId valDst = dst.valByOffset(ov.first, ov.second);
-        valMap[valSrc] = valDst;
-        return valDst;
-    }
-
     switch (code) {
         case UV_ABSTRACT:
             // will be handled later

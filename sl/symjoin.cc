@@ -1236,15 +1236,6 @@ bool handleUnknownValues(
         const TValId            v2,
         const TValId            vDst)
 {
-    if (debugSymJoin) {
-        SymHeap::TOffValCont off1, off2;
-        ctx.sh1.gatherOffValues(off1, v1);
-        ctx.sh2.gatherOffValues(off2, v2);
-
-        CL_BREAK_IF(!off1.empty());
-        CL_BREAK_IF(!off2.empty());
-    }
-
     if (defineValueMapping(ctx, v1, v2, vDst))
         // no inconsistency here
         return true;

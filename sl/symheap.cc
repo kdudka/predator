@@ -257,7 +257,8 @@ struct SymHeapCore::Private {
     typedef std::map<TObjId, Root>  TRootMap;
     TRootMap                        roots;
 
-    typedef std::map<TOffVal, TValId> TOffMap;
+    typedef std::pair<TValId /* valRef */, TOffset>             TOffVal;
+    typedef std::map<TOffVal, TValId>                           TOffMap;
     TOffMap                         offVals;
 
     NeqDb                           neqDb;
@@ -754,7 +755,7 @@ TValId SymHeapCore::valByOffset(TValId val, TOffset off) {
         return val;
 
     // off-value lookup
-    const TOffVal ov(val, off);
+    const Private::TOffVal ov(val, off);
     Private::TOffMap::const_iterator it = d->offVals.find(ov);
     if (d->offVals.end() != it)
         return it->second;
@@ -956,12 +957,6 @@ TObjId SymHeapCore::pointsTo(TValId val) const {
     }
 
     return best;
-}
-
-void SymHeapCore::gatherOffValues(TOffValCont &dst, TValId ref) const {
-    //CL_BREAK_IF("not implemented yet");
-    (void) dst;
-    (void) ref;
 }
 
 bool SymHeapCore::cVar(CVar *dst, TObjId obj) const {

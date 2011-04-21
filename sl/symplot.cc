@@ -122,8 +122,10 @@ struct SymPlot::Private {
     typedef std::pair<TObjId, TValId>                       TEdgeValueOf;
     std::vector<TEdgeValueOf>           evList;
 
+#if 0
     typedef std::pair<TValId, SymHeap::TOffVal>             TEdgeOffVal;
     std::vector<TEdgeOffVal>            ovList;
+#endif
 
     typedef std::pair<TValId, TValId>                       TEdgeNeq;
     std::set<TEdgeNeq>                  neqSet;
@@ -147,7 +149,7 @@ struct SymPlot::Private {
     void plotEdgeSub(TObjId obj, TObjId sub);
 
     void gobbleEdgeValueOf(TObjId obj, TValId value);
-    void gobbleEdgeOffValue(TValId val, const SymHeap::TOffVal &ov);
+    // TODO: void gobbleEdgeOffValue(TValId val, const SymHeap::TOffVal &ov);
     void gobbleEdgeNeq(TValId val1, TValId val2);
     void gobbleEdgeAlias(TValId val1, TValId val2);
     void emitPendingEdges();
@@ -405,12 +407,14 @@ void SymPlot::Private::gobbleEdgeValueOf(TObjId obj, TValId value) {
     this->evList.push_back(edge);
 }
 
+#if 0
 void SymPlot::Private::gobbleEdgeOffValue(TValId val,
                                           const SymHeap::TOffVal &ov)
 {
     TEdgeOffVal edge(val, ov);
     this->ovList.push_back(edge);
 }
+#endif
 
 void SymPlot::Private::gobbleEdgeNeq(TValId val1, TValId val2) {
     // Neq predicates induce a symmetric relation, let's handle them such
@@ -426,7 +430,8 @@ void SymPlot::Private::emitPendingEdges() {
         this->plotEdgeValueOf(edge.first, edge.second);
     }
 
-    // plot all off-value edges
+    // TODO: plot all off-value edges
+#if 0
     BOOST_FOREACH(const TEdgeOffVal &edge, this->ovList) {
         const TValId dst = edge.first;
         const SymHeap::TOffVal &ov = edge.second;
@@ -435,6 +440,7 @@ void SymPlot::Private::emitPendingEdges() {
             << " label=\"[+" << ov.second << "]\"];"
             << std::endl;
     }
+#endif
 
     // plot Neq edges
     std::set<TEdgeNeq> neqDone;
@@ -451,7 +457,7 @@ void SymPlot::Private::emitPendingEdges() {
 
     // cleanup for next wheel
     this->evList.clear();
-    this->ovList.clear();
+    // this->ovList.clear();
     this->neqSet.clear();
 }
 
@@ -461,7 +467,8 @@ void SymPlot::Private::plotSingleValue(TValId value) {
         return;
     }
 
-    // visualize off-value relations
+    // TODO: visualize off-value relations
+#if 0
     SymHeap::TOffValCont offValues;
     this->heap->gatherOffValues(offValues, value);
     BOOST_FOREACH(const SymHeap::TOffVal &ov, offValues) {
@@ -473,6 +480,7 @@ void SymPlot::Private::plotSingleValue(TValId value) {
 
         this->gobbleEdgeOffValue(value, ov);
     }
+#endif
 
     // traverse all Neq predicates
     TValList relatedVals;

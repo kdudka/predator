@@ -306,12 +306,6 @@ class SymHeapCore {
         virtual TObjId pointsTo(TValId val) const;
 
     public:
-        // TODO: drop this left-over
-        typedef std::pair<TValId /* valRef */, TOffset>             TOffVal;
-        typedef std::vector<TOffVal>                                TOffValCont;
-        void gatherOffValues(TOffValCont &dst, TValId ref) const;
-
-    public:
         /// container used to store CVar objects to
         typedef std::vector<CVar> TContCVar;
 
