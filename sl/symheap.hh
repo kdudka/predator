@@ -177,25 +177,6 @@ class SymHeapCore {
         unsigned usedByCount(TValId val) const;
 
     protected:
-        /// create a duplicate of the given object with a new object ID
-        TObjId objDupHelper(TObjId obj);
-
-        TObjId pointsToHelper(TValId val) /* FIXME */ const;
-
-        /**
-         * create a new symbolic heap object
-         * @return ID of the just created symbolic heap object
-         */
-        TObjId objCreate();
-
-        /**
-         * create a new symbolic heap value
-         * @param code kind of the unknown value, UV_KNOWN if not unknown
-         * @param target pointed object's ID
-         * @return ID of the just created symbolic heap value
-         */
-        TValId valCreate(EUnknownValue code, TObjId target);
-
         /// alter an already existing value (use with caution)
         virtual void valSetUnknown(TValId val, EUnknownValue code);
 
@@ -320,8 +301,6 @@ class SymHeapCore {
     protected:
         /// create a deep copy of the given object with new object IDs
         virtual TObjId objDup(TObjId obj);
-
-        void objSetValueHelper(TObjId obj, TValId val);
 
     public:
 
@@ -462,10 +441,6 @@ class SymHeapCore {
         void gatherLiveObjects(TObjList &dst, TValId atAddr) const;
         void gatherLivePointers(TObjList &dst, TValId atAddr) const;
 
-    protected:
-
-        void objDestroyHelper(TObjId obj);
-
     public:
         /**
          * create an @b unkown @b value, which does not guarantee trivial
@@ -475,9 +450,6 @@ class SymHeapCore {
          * @return ID of the just created value
          */
         TValId valCreateUnknown(EUnknownValue code);
-
-        void valSetUnknownHelper(TValId val, EUnknownValue code);
-        EUnknownValue valGetUnknownHelper(TValId val) const;
 
     public:
         /**
@@ -509,9 +481,6 @@ class SymHeapCore {
          * are shared.
          */
         void objSetProto(TObjId obj, bool isProto);
-
-    protected:
-        virtual void notifyResize(bool valOnly);
 
     private:
         struct Private;
