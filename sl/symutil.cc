@@ -33,7 +33,7 @@
 #include <boost/foreach.hpp>
 
 void moveKnownValueToLeft(
-        const SymHeapXXXX           &sh,
+        const SymHeapCore           &sh,
         TValId                      &valA,
         TValId                      &valB)
 {

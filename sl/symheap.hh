@@ -67,214 +67,6 @@ typedef std::vector<TValId>                             TValList;
 /// a type used for type-info
 typedef const struct cl_type                            *TObjType;
 
-// XXX
-class SymHeapCore;
-
-/**
- * symbolic heap @b core - no type-info, no object composition at this level
- */
-class SymHeapXXXX {
-    public:
-        /// create an empty symbolic heap
-        SymHeapXXXX();
-
-        /// destruction of the symbolic heap invalidates all IDs of its entities
-        virtual ~SymHeapXXXX();
-
-        /// @note there is no such thing like COW implemented for now
-        SymHeapXXXX(const SymHeapXXXX &);
-
-        /// @note there is no such thing like COW implemented for now
-        SymHeapXXXX& operator=(const SymHeapXXXX &);
-
-        virtual void swap(SymHeapXXXX &);
-
-    public:
-        /**
-         * return a value @b stored @b in the given object
-         * @param obj ID of the object to look into
-         * @return A valid value ID in case of success, invalid otherwise.
-         * @note It may also return @b unknown, @b composite or @b custom value,
-         * depending on kind of the queried object.
-         * @note It may acquire a new value ID in case the value is not known.
-         */
-        TValId valueOf(TObjId obj) /* FIXME */ const;
-
-        /**
-         * return a value corresponding to @b symbolic @b address of the given
-         * object
-         * @param obj ID of the object to look for
-         * @return A valid value ID when a valid object ID is given, VAL_INVALID
-         * otherwise.
-         * @note It can be also abused to check if an object ID is valid, or
-         * not.
-         * @note The operation has always a unique result.
-         */
-        virtual TValId placedAt(TObjId obj) /* FIXME */ const = 0;
-
-        /**
-         * return an object ID which the given value @b points @b to
-         * @param val ID of the value to follow
-         * @return A valid object ID in case of success, invalid otherwise.
-         * @note The operation has always a unique result.
-         */
-        virtual TObjId pointsTo(TValId val) /* FIXME */ const;
-
-        /**
-         * collect all objects having the given value
-         * @param dst reference to a container to store the result to
-         * @param val ID of the value to look for
-         * @note The operation may return from 0 to n results.
-         */
-        void usedBy(TObjList &dst, TValId val) const;
-
-        /// return how many objects use the value
-        unsigned usedByCount(TValId val) const;
-
-    protected:
-        /// create a duplicate of the given object with a new object ID
-        virtual TObjId objDup(TObjId obj);
-
-        /**
-         * create a new symbolic heap object
-         * @return ID of the just created symbolic heap object
-         */
-        TObjId objCreate();
-
-        /**
-         * create a new symbolic heap value
-         * @param code kind of the unknown value, UV_KNOWN if not unknown
-         * @param target pointed object's ID
-         * @return ID of the just created symbolic heap value
-         */
-        TValId valCreate(EUnknownValue code, TObjId target);
-
-        /// alter an already existing value (use with caution)
-        virtual void valSetUnknown(TValId val, EUnknownValue code);
-
-    public:
-        TObjId lastObjId() const;
-        TValId lastValueId() const;
-
-    public:
-        /**
-         * @b set @b value of the given object, which has to be @b valid and may
-         * @b not be a composite object
-         * @param obj ID of the object to set value of
-         * @param val ID requested to be stored into the object
-         * @note This is really @b low-level @b implementation.  It does not
-         * check for junk, delayed type-info definition, etc.  If you are
-         * interested in such abilities, you are looking for
-         * SymProc::objSetValue().
-         */
-        virtual void objSetValue(TObjId obj, TValId val);
-
-    protected:
-        /**
-         * @b destroy the given heap object.  All values which have been
-         * pointing to the object, will now point to either OBJ_DELETED or
-         * OBJ_LOST, depending on kind of the object being destroyed.
-         * @param obj ID of the object to destroy
-         * @note This is really @b low-level @b implementation.  It does not
-         * e.g. check for junk.  If you are interested in this ability, you
-         * are looking for SymProc::objDestroy().
-         */
-        void objDestroy(TObjId obj);
-
-        friend TValId handleValue(DeepCopyData &dc, TValId valSrc);
-
-    public:
-        // TODO: remove this?
-        TValId valCreateDangling(TObjId kind);
-
-        /**
-         * check the state of a @b possibly @b unknown @b value
-         * @param val ID of the value to check
-         * @return fine-grained kind of the unknown value, or UV_KNOWN in case
-         * of known value
-         * @todo rename SymHeapXXXX::valGetUnknown
-         */
-        virtual EUnknownValue valGetUnknown(TValId val) const;
-
-        /// clone of the given value (deep copy)
-        TValId valClone(TValId);
-
-        /// replace all occurences of val by replaceBy
-        virtual void valReplace(TValId val, TValId replaceBy) = 0;
-
-        /**
-         * assume that v1 and v2 are equal.  Useful when e.g. traversing a
-         * non-deterministic condition.  This implies that one of them may be
-         * dropped.  You can utilize SymHeapCore::usedByCount() to check which
-         * one (if any).
-         */
-        virtual void valMerge(TValId v1, TValId v2);
-
-    public:
-        enum ENeqOp {
-            NEQ_NOP = 0,
-            NEQ_ADD,
-            NEQ_DEL
-        };
-
-        /**
-         * introduce a new @b Neq @b predicate (if not present already), or
-         * remove an existing one
-         * @param op requested operation - NEQ_ADD or NEQ_DEL
-         * @param valA one side of the inequality
-         * @param valB one side of the inequality
-         */
-        virtual void neqOp(ENeqOp op, TValId valA, TValId valB) = 0;
-
-        /// return true if the given pair of values is proven to be non-equal
-        virtual bool proveNeq(TValId valA, TValId valB) const = 0;
-
-    public:
-        /// a type used for (injective) value IDs mapping
-        typedef std::map<TValId, TValId> TValMap;
-
-        /**
-         * return the list of values that are connected to the given value by a
-         * Neq predicate
-         * @param dst a container to place the result in
-         * @param val the reference value, used to search the predicates and
-         * then all the related values accordingly
-         */
-        virtual void gatherRelatedValues(TValList &dst, TValId val) const = 0;
-
-        /**
-         * copy all @b relevant predicates from the symbolic heap to another
-         * symbolic heap, using the given (injective) value IDs mapping.  Here
-         * @b relevant means that there exists a suitable mapping for all the
-         * values which are connected by the predicate
-         * @param dst destination heap, there will be added the relevant
-         * predicates
-         * @param valMap an (injective) value mapping, used for translation
-         * of value IDs among heaps
-         */
-        virtual void copyRelevantPreds(SymHeapCore &dst, const TValMap &valMap)
-            const = 0;
-
-        /**
-         * pick up all heap predicates that can be fully mapped by valMap into
-         * ref and check if they have their own reflection in ref
-         * @param ref instance of another symbolic heap
-         * @param valMap an (injective) mapping of values from this symbolic
-         * heap into the symbolic heap that is given by ref
-         * @return return true if all such predicates have their reflection in
-         * ref, false otherwise
-         */
-        virtual bool matchPreds(const SymHeapCore &ref, const TValMap &valMap)
-            const = 0;
-
-    protected:
-        virtual void notifyResize(bool /* valOnly */) { }
-
-    private:
-        struct Private;
-        Private *d;
-};
-
 /**
  * bundles static identification of a variable with its instance number
  *
@@ -334,7 +126,7 @@ inline bool operator<(const CVar &a, const CVar &b) {
 /**
  * @b symbolic @b heap representation, the core part of "symexec" project
  */
-class SymHeapCore: public SymHeapXXXX {
+class SymHeapCore {
     public:
         /// create an empty symbolic heap
         SymHeapCore();
@@ -348,8 +140,179 @@ class SymHeapCore: public SymHeapXXXX {
         /// @note there is no such thing like COW implemented for now
         SymHeapCore& operator=(const SymHeapCore &);
 
-        virtual void swap(SymHeapXXXX &);
+        virtual void swap(SymHeapCore &);
 
+    public:
+        /**
+         * return a value @b stored @b in the given object
+         * @param obj ID of the object to look into
+         * @return A valid value ID in case of success, invalid otherwise.
+         * @note It may also return @b unknown, @b composite or @b custom value,
+         * depending on kind of the queried object.
+         * @note It may acquire a new value ID in case the value is not known.
+         */
+        TValId valueOf(TObjId obj) /* FIXME */ const;
+
+        /**
+         * return a value corresponding to @b symbolic @b address of the given
+         * object
+         * @param obj ID of the object to look for
+         * @return A valid value ID when a valid object ID is given, VAL_INVALID
+         * otherwise.
+         * @note It can be also abused to check if an object ID is valid, or
+         * not.
+         * @note The operation has always a unique result.
+         */
+        virtual TValId placedAt(TObjId obj) /* FIXME */ const;
+
+        /**
+         * collect all objects having the given value
+         * @param dst reference to a container to store the result to
+         * @param val ID of the value to look for
+         * @note The operation may return from 0 to n results.
+         */
+        void usedBy(TObjList &dst, TValId val) const;
+
+        /// return how many objects use the value
+        unsigned usedByCount(TValId val) const;
+
+    protected:
+        /// create a duplicate of the given object with a new object ID
+        TObjId objDupHelper(TObjId obj);
+
+        TObjId pointsToHelper(TValId val) /* FIXME */ const;
+
+        /**
+         * create a new symbolic heap object
+         * @return ID of the just created symbolic heap object
+         */
+        TObjId objCreate();
+
+        /**
+         * create a new symbolic heap value
+         * @param code kind of the unknown value, UV_KNOWN if not unknown
+         * @param target pointed object's ID
+         * @return ID of the just created symbolic heap value
+         */
+        TValId valCreate(EUnknownValue code, TObjId target);
+
+        /// alter an already existing value (use with caution)
+        virtual void valSetUnknown(TValId val, EUnknownValue code);
+
+    public:
+        TObjId lastObjId() const;
+        TValId lastValueId() const;
+
+    public:
+        /**
+         * @b set @b value of the given object, which has to be @b valid and may
+         * @b not be a composite object
+         * @param obj ID of the object to set value of
+         * @param val ID requested to be stored into the object
+         * @note This is really @b low-level @b implementation.  It does not
+         * check for junk, delayed type-info definition, etc.  If you are
+         * interested in such abilities, you are looking for
+         * SymProc::objSetValue().
+         */
+        virtual void objSetValue(TObjId obj, TValId val);
+
+    protected:
+        /**
+         * @b destroy the given heap object.  All values which have been
+         * pointing to the object, will now point to either OBJ_DELETED or
+         * OBJ_LOST, depending on kind of the object being destroyed.
+         * @param obj ID of the object to destroy
+         * @note This is really @b low-level @b implementation.  It does not
+         * e.g. check for junk.  If you are interested in this ability, you
+         * are looking for SymProc::objDestroy().
+         */
+        virtual void objDestroy(TObjId obj);
+
+        friend TValId handleValue(DeepCopyData &dc, TValId valSrc);
+
+    public:
+        // TODO: remove this?
+        TValId valCreateDangling(TObjId kind);
+
+        /**
+         * check the state of a @b possibly @b unknown @b value
+         * @param val ID of the value to check
+         * @return fine-grained kind of the unknown value, or UV_KNOWN in case
+         * of known value
+         * @todo rename SymHeapXXXX::valGetUnknown
+         */
+        virtual EUnknownValue valGetUnknown(TValId val) const;
+
+        /// clone of the given value (deep copy)
+        TValId valClone(TValId);
+
+        /// replace all occurences of val by replaceBy
+        virtual void valReplace(TValId val, TValId replaceBy);
+
+        /**
+         * assume that v1 and v2 are equal.  Useful when e.g. traversing a
+         * non-deterministic condition.  This implies that one of them may be
+         * dropped.  You can utilize SymHeapCore::usedByCount() to check which
+         * one (if any).
+         */
+        virtual void valMerge(TValId v1, TValId v2);
+
+    public:
+        enum ENeqOp {
+            NEQ_NOP = 0,
+            NEQ_ADD,
+            NEQ_DEL
+        };
+
+        /**
+         * introduce a new @b Neq @b predicate (if not present already), or
+         * remove an existing one
+         * @param op requested operation - NEQ_ADD or NEQ_DEL
+         * @param valA one side of the inequality
+         * @param valB one side of the inequality
+         */
+        virtual void neqOp(ENeqOp op, TValId valA, TValId valB);
+
+        /// return true if the given pair of values is proven to be non-equal
+        virtual bool proveNeq(TValId valA, TValId valB) const;
+
+    public:
+        /// a type used for (injective) value IDs mapping
+        typedef std::map<TValId, TValId> TValMap;
+
+        /**
+         * return the list of values that are connected to the given value by a
+         * Neq predicate
+         * @param dst a container to place the result in
+         * @param val the reference value, used to search the predicates and
+         * then all the related values accordingly
+         */
+        virtual void gatherRelatedValues(TValList &dst, TValId val) const;
+
+        /**
+         * copy all @b relevant predicates from the symbolic heap to another
+         * symbolic heap, using the given (injective) value IDs mapping.  Here
+         * @b relevant means that there exists a suitable mapping for all the
+         * values which are connected by the predicate
+         * @param dst destination heap, there will be added the relevant
+         * predicates
+         * @param valMap an (injective) value mapping, used for translation
+         * of value IDs among heaps
+         */
+        virtual void copyRelevantPreds(SymHeapCore &dst, const TValMap &valMap)
+            const;
+
+        /**
+         * pick up all heap predicates that can be fully mapped by valMap into
+         * ref and check if they have their own reflection in ref
+         * @param ref instance of another symbolic heap
+         * @param valMap an (injective) mapping of values from this symbolic
+         * heap into the symbolic heap that is given by ref
+         * @return return true if all such predicates have their reflection in
+         * ref, false otherwise
+         */
+        virtual bool matchPreds(const SymHeapCore &ref, const TValMap &valMap)
+            const;
     public:
         /// container used to store CVar objects to
         typedef std::vector<CVar> TContCVar;
@@ -358,8 +321,9 @@ class SymHeapCore: public SymHeapXXXX {
         /// create a deep copy of the given object with new object IDs
         virtual TObjId objDup(TObjId obj);
 
+        void objSetValueHelper(TObjId obj, TValId val);
+
     public:
-        virtual void objSetValue(TObjId obj, TValId val);
 
         /**
          * look for static type-info of the given object, which has to be @b
@@ -376,10 +340,7 @@ class SymHeapCore: public SymHeapXXXX {
         TValId valByOffset(TValId, TOffset offset);
         EValueTarget valTarget(TValId, TOffset *offset = 0) const;
 
-        virtual TValId placedAt(TObjId obj) /* FIXME */ const;
         virtual TObjId pointsTo(TValId val) const;
-
-        virtual bool proveNeq(TValId valA, TValId valB) const;
 
     public:
         // TODO: drop this left-over
@@ -503,16 +464,7 @@ class SymHeapCore: public SymHeapXXXX {
 
     protected:
 
-        /**
-         * @b destroy the given heap object.  All values which have been
-         * pointing to the object, will now point to either OBJ_DELETED or
-         * OBJ_LOST, depending on kind of the object being destroyed.
-         * @param obj ID of the object to destroy
-         * @note This is really @b low-level @b implementation.  It does not
-         * e.g. check for junk.  If you are interested in this ability, you
-         * are looking for SymProc::objDestroy().
-         */
-        virtual void objDestroy(TObjId obj);
+        void objDestroyHelper(TObjId obj);
 
     public:
         /**
@@ -524,8 +476,8 @@ class SymHeapCore: public SymHeapXXXX {
          */
         TValId valCreateUnknown(EUnknownValue code);
 
-        virtual void valSetUnknown(TValId val, EUnknownValue code);
-        virtual EUnknownValue valGetUnknown(TValId val) const;
+        void valSetUnknownHelper(TValId val, EUnknownValue code);
+        EUnknownValue valGetUnknownHelper(TValId val) const;
 
     public:
         /**
@@ -557,14 +509,6 @@ class SymHeapCore: public SymHeapXXXX {
          * are shared.
          */
         void objSetProto(TObjId obj, bool isProto);
-
-    public:
-        virtual void neqOp(ENeqOp op, TValId valA, TValId valB);
-        void valReplace(TValId val, TValId replaceBy);
-        typedef std::map<TValId, TValId> TValMap;
-        void gatherRelatedValues(TValList &dst, TValId val) const;
-        void copyRelevantPreds(SymHeapCore &dst, const TValMap &valMap) const;
-        bool matchPreds(const SymHeapCore &ref, const TValMap &valMap) const;
 
     protected:
         virtual void notifyResize(bool valOnly);
@@ -636,7 +580,7 @@ class SymHeap: public SymHeapCore {
         /// @note there is no such thing like COW implemented for now
         SymHeap& operator=(const SymHeap &);
 
-        virtual void swap(SymHeapXXXX &);
+        virtual void swap(SymHeapCore &);
 
     public:
         virtual EUnknownValue valGetUnknown(TValId val) const;

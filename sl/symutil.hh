@@ -49,7 +49,7 @@ inline TValId boolToVal(const bool b) {
         : VAL_FALSE;
 }
 
-void moveKnownValueToLeft(const SymHeapXXXX &sh, TValId &valA, TValId &valB);
+void moveKnownValueToLeft(const SymHeapCore &sh, TValId &valA, TValId &valB);
 
 TObjId objDup(SymHeap &sh, const TObjId obj);
 
