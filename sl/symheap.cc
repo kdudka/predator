@@ -900,6 +900,21 @@ TValId SymHeapCore::placedAt(TObjId obj) const {
     return self.valByOffset(rootData.addr, objData.off);
 }
 
+TObjId SymHeapCore::objAt(TValId at, TObjType clt) {
+    CL_BREAK_IF("not implemented yet");
+    (void) at;
+    (void) clt;
+    return OBJ_INVALID;
+}
+
+TObjId SymHeapCore::objAt(TValId at, TObjCode code) {
+    CL_BREAK_IF("not implemented yet");
+    (void) at;
+    (void) code;
+    return OBJ_INVALID;
+}
+
+// FIXME: this should go away
 TObjId SymHeapCore::pointsTo(TValId val) const {
     if (VAL_NULL == val || d->valOutOfRange(val))
         // value ID is either out of range, or does not point to a valid obj

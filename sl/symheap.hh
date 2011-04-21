@@ -30,12 +30,11 @@
 #include "config.h"
 #include "symid.hh"
 
-#include <list>
-#include <map>                  // for SymHeapXXXX::TValMap
-#include <vector>
+#include <cl/code_listener.h>
 
-struct cl_accessor;
-struct cl_type;
+#include <list>
+#include <map>              // for SymHeapCore::TValMap
+#include <vector>
 
 enum EValueTarget {
     VT_UNKNOWN              ///< arbitrary target
@@ -66,6 +65,9 @@ typedef std::vector<TValId>                             TValList;
 
 /// a type used for type-info
 typedef const struct cl_type                            *TObjType;
+
+/// a class of type (structure, pointer, union, ...)
+typedef enum cl_type_e                                  TObjCode;
 
 /**
  * bundles static identification of a variable with its instance number
@@ -165,7 +167,7 @@ class SymHeapCore {
          * not.
          * @note The operation has always a unique result.
          */
-        virtual TValId placedAt(TObjId obj) /* FIXME */ const;
+        TValId placedAt(TObjId obj) /* FIXME */ const;
 
         /**
          * collect all objects having the given value
@@ -178,7 +180,6 @@ class SymHeapCore {
         /// return how many objects use the value
         unsigned usedByCount(TValId val) const;
 
-    public:
         /**
          * @b set @b value of the given object, which has to be @b valid and may
          * @b not be a composite object
@@ -189,7 +190,7 @@ class SymHeapCore {
          * interested in such abilities, you are looking for
          * SymProc::objSetValue().
          */
-        virtual void objSetValue(TObjId obj, TValId val);
+        void objSetValue(TObjId obj, TValId val);
 
     protected:
         /**
@@ -211,23 +212,9 @@ class SymHeapCore {
          * @param val ID of the value to check
          * @return fine-grained kind of the unknown value, or UV_KNOWN in case
          * of known value
-         * @todo rename SymHeapXXXX::valGetUnknown
+         * @todo remove SymHeapCore::valGetUnknown
          */
         virtual EUnknownValue valGetUnknown(TValId val) const;
-
-        /// clone of the given value (deep copy)
-        TValId valClone(TValId);
-
-        /// replace all occurences of val by replaceBy
-        virtual void valReplace(TValId val, TValId replaceBy);
-
-        /**
-         * assume that v1 and v2 are equal.  Useful when e.g. traversing a
-         * non-deterministic condition.  This implies that one of them may be
-         * dropped.  You can utilize SymHeapCore::usedByCount() to check which
-         * one (if any).
-         */
-        virtual void valMerge(TValId v1, TValId v2);
 
     public:
         enum ENeqOp {
@@ -259,7 +246,7 @@ class SymHeapCore {
          * @param val the reference value, used to search the predicates and
          * then all the related values accordingly
          */
-        virtual void gatherRelatedValues(TValList &dst, TValId val) const;
+        void gatherRelatedValues(TValList &dst, TValId val) const;
 
         /**
          * copy all @b relevant predicates from the symbolic heap to another
@@ -271,8 +258,7 @@ class SymHeapCore {
          * @param valMap an (injective) value mapping, used for translation
          * of value IDs among heaps
          */
-        virtual void copyRelevantPreds(SymHeapCore &dst, const TValMap &valMap)
-            const;
+        void copyRelevantPreds(SymHeapCore &dst, const TValMap &valMap) const;
 
         /**
          * pick up all heap predicates that can be fully mapped by valMap into
@@ -283,30 +269,42 @@ class SymHeapCore {
          * @return return true if all such predicates have their reflection in
          * ref, false otherwise
          */
-        virtual bool matchPreds(const SymHeapCore &ref, const TValMap &valMap)
-            const;
+        bool matchPreds(const SymHeapCore &ref, const TValMap &valMap) const;
 
     public:
 
         /**
-         * look for static type-info of the given object, which has to be @b
-         * valid
+         * look for static type-info of the given object
          * @param obj ID of the object to look for
          * @return pointer to the instance cl_type in case of success, 0
          * otherwise
-         * @note The heap can contain valid objects without any type-info.
-         * That's usually the case when malloc() has been called, but the result
-         * of the call has not been yet assigned to a type-safe pointer.
          */
         TObjType objType(TObjId obj) const;
 
-        TValId valByOffset(TValId, TOffset offset);
+        TObjId pointsTo(TValId val) const;
 
+        // symheap-ng
+        TValId valByOffset(TValId, TOffset offset);
         EValueTarget valTarget(TValId) const;
         TValId valRoot(TValId) const;
         TOffset valOffset(TValId) const;
 
-        virtual TObjId pointsTo(TValId val) const;
+        TObjId objAt(TValId at, TObjType clt);
+        TObjId objAt(TValId at, TObjCode code);
+
+        /// clone of the given value (deep copy)
+        TValId valClone(TValId);
+
+        /// replace all occurences of val by replaceBy
+        virtual void valReplace(TValId val, TValId replaceBy);
+
+        /**
+         * assume that v1 and v2 are equal.  Useful when e.g. traversing a
+         * non-deterministic condition.  This implies that one of them may be
+         * dropped.  You can utilize SymHeapCore::usedByCount() to check which
+         * one (if any).
+         */
+        virtual void valMerge(TValId v1, TValId v2);
 
     public:
         /// container used to store CVar objects to
@@ -341,13 +339,6 @@ class SymHeapCore {
          */
         void gatherCVars(TContCVar &dst) const;
 
-        /**
-         * collect all (either static/automatic) or dynamic @b root objects.
-         * Here @b root means that the object contains some sub-objects, but is
-         * @b not part of another object
-         * @param dst reference to a container to store the result to
-         * @note The operation may return from 0 to n results.
-         */
         void gatherRootObjs(TObjList &dst) const;
 
     public:
@@ -384,10 +375,7 @@ class SymHeapCore {
         /**
          * create a new symbolic heap object of @b known @b type
          * @param clt pointer to static type-info (see CodeStorage), compulsory.
-         * @param cVar variable identification for non-heap object.  Use the
-         * default CVar constructor for a heap object of known type
-         * @note If you need to create a heap object of unknown type, use
-         * objCreateAnon() instead.
+         * @param cVar variable identification
          * @return ID of the just created symbolic heap object
          */
         TObjId objCreate(TObjType clt, CVar cVar);
