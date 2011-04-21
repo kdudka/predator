@@ -272,6 +272,9 @@ struct SymHeapCore::Private {
     inline TValId valRoot(const TValId, const Value &);
     inline TValId valRoot(const TValId);
 
+    inline TObjId objRoot(const TObjId, const Object &);
+    inline TObjId objRoot(const TObjId);
+
     TObjId objCreate();
     TValId valCreate(EUnknownValue code, TObjId target);
 
@@ -319,6 +322,22 @@ inline TValId SymHeapCore::Private::valRoot(const TValId val) {
 
     const Value &valData = this->values[val];
     return this->valRoot(val, valData);
+}
+
+/// optimized variant, use it in case you already have &objData
+inline TObjId SymHeapCore::Private::objRoot(const TObjId obj, const Object &objData) {
+    const TObjId objRoot = objData.root;
+    if (OBJ_INVALID == objRoot)
+        return obj;
+
+    CL_BREAK_IF(objOutOfRange(objRoot));
+    return objRoot;
+}
+
+inline TObjId SymHeapCore::Private::objRoot(const TObjId obj) {
+    CL_BREAK_IF(objOutOfRange(obj));
+    const Object &objData = this->objects[obj];
+    return this->objRoot(obj, objData);
 }
 
 void SymHeapCore::Private::releaseValueOf(TObjId obj) {
@@ -390,16 +409,24 @@ TValId SymHeapCore::valueOf(TObjId obj) const {
     }
 
     CL_BREAK_IF(d->objOutOfRange(obj));
-    TValId &val = d->objects[obj].value;
-    if (VAL_INVALID == val) {
-        // deleayed creation of an uninitialized value
-        SymHeapCore &self = const_cast<SymHeapCore &>(*this);
-        val = self.d->valCreate(UV_UNINITIALIZED, OBJ_UNKNOWN);
+    Private::Object &objData = d->objects[obj];
 
-        // store backward reference
-        d->values[val].usedBy.insert(obj);
+    TValId &val = objData.value;
+    if (VAL_INVALID != val)
+        // the object has a value
+        return val;
+
+    if (isComposite(objData.clt)) {
+        // deleayed creation of a composite value
+        val = d->valCreate(UV_KNOWN, OBJ_INVALID);
+        d->values[val].compObj = obj;
     }
+    else
+        // deleayed creation of an uninitialized value
+        val = d->valCreate(UV_UNINITIALIZED, OBJ_UNKNOWN);
 
+    // store backward reference
+    d->values[val].usedBy.insert(obj);
     return val;
 }
 
@@ -422,14 +449,8 @@ unsigned SymHeapCore::usedByCount(TValId val) const {
     return usedBy.size();
 }
 
-TObjId SymHeapCore::lastObjId() const {
-    const size_t cnt = d->objects.size() - /* safe because of OBJ_RETURN */ 1;
-    return static_cast<TObjId>(cnt);
-}
-
-TValId SymHeapCore::lastValueId() const {
-    const size_t cnt = d->values.size() - /* safe because of VAL_NULL */ 1;
-    return static_cast<TValId>(cnt);
+unsigned SymHeapCore::lastId() const {
+    return d->lastId<unsigned>();
 }
 
 TValId SymHeapCore::valCreateDangling(TObjId kind) {
@@ -438,18 +459,17 @@ TValId SymHeapCore::valCreateDangling(TObjId kind) {
 }
 
 TValId SymHeapCore::valClone(TValId val) {
-    if (this->lastValueId() < val || val <= 0)
-        // value ID is either out of range, or does not point to a valid obj
-        return VAL_INVALID;
+    CL_BREAK_IF(VAL_NULL == val);
+    CL_BREAK_IF(d->valOutOfRange(val));
+    const Private::Value &valData = d->values[val];
 
     // check unknown value code
-    const Private::Value &ref = d->values[val];
-    const EUnknownValue code = ref.code;
+    const EUnknownValue code = valData.code;
     switch (code) {
         case UV_UNKNOWN:
         case UV_UNINITIALIZED:
         case UV_DONT_CARE:
-            return d->valCreate(ref.code, ref.target);
+            return d->valCreate(valData.code, valData.target);
 
         case UV_KNOWN:
         case UV_ABSTRACT:
@@ -474,14 +494,7 @@ TValId SymHeapCore::valClone(TValId val) {
 }
 
 void SymHeapCore::valMerge(TValId val, TValId replaceBy) {
-#ifndef NDEBUG
-    // ensure there hasn't been any inequality defined among the pair
-    if (this->proveNeq(val, replaceBy)) {
-        CL_ERROR("inconsistency detected among values #" << val
-                << " and #" << replaceBy);
-        CL_TRAP;
-    }
-#endif
+    CL_BREAK_IF(this->proveNeq(val, replaceBy));
     moveKnownValueToLeft(*this, replaceBy, val);
     this->valReplace(val, replaceBy);
 }
@@ -500,14 +513,6 @@ bool valMapLookup(const TValMap &valMap, TValId *pVal) {
     // match
     *pVal = iter->second;
     return true;
-}
-
-TValId SymHeapCore::createCompValue(TObjId obj) {
-    const TValId val = d->valCreate(UV_KNOWN, OBJ_INVALID);
-    CL_BREAK_IF(VAL_INVALID == val);
-
-    d->values[val].compObj = obj;
-    return val;
 }
 
 TObjId SymHeapCore::createSubVar(TObjType clt, TObjId parent) {
@@ -541,7 +546,6 @@ void SymHeapCore::createSubs(TObjId obj) {
             continue;
 
         const int cnt = clt->item_cnt;
-        d->setValueOf(obj, this->createCompValue(obj));
 
         // keeping a reference at this point may cause headaches in case
         // of reallocation
@@ -595,7 +599,10 @@ TObjId SymHeapCore::objDup(TObjId root) {
         d->objects[dst] = d->objects[src];
         d->objects[dst].parent = item.dstParent;
         if (OBJ_INVALID == image) {
+            // root object
             image = dst;
+            d->objects[dst].root = OBJ_INVALID;
+
             d->roots[image].grid[/* off */0][this->objType(root)] = image;
             d->roots[image].cVar    = d->roots[root].cVar;
             d->roots[image].isProto = d->roots[root].isProto;
@@ -605,12 +612,12 @@ TObjId SymHeapCore::objDup(TObjId root) {
         else if (hasKey(d->roots[root].liveData, src))
             d->roots[image].liveData.insert(dst);
 
-        // recover root
-        d->objects[dst].root = image;
-
         // update the reference to self in the parent object
         const TObjId parent = item.dstParent;
         if (OBJ_INVALID != parent) {
+            // recover root
+            d->objects[dst].root = image;
+
             Private::Object &refParent = d->objects.at(parent);
             refParent.subObjs[item.nth] = dst;
 
@@ -626,7 +633,7 @@ TObjId SymHeapCore::objDup(TObjId root) {
             continue;
 
         // assume composite object
-        d->setValueOf(dst, this->createCompValue(dst));
+        d->setValueOf(dst, VAL_INVALID);
 
         // traverse composite types recursively
         for (unsigned i = 0; i < subObjs.size(); ++i) {
@@ -686,20 +693,12 @@ void SymHeapCore::objDestroyPriv(TObjId root) {
 SymHeapCore::SymHeapCore():
     d(new Private)
 {
+    // define specials
     d->objects.resize(/* OBJ_RETURN */ 1);
     d->values.resize(/* VAL_NULL */ 1);
 
-    // (un)initialize OBJ_RETURN
-    Private::Object &ref = d->objects[OBJ_RETURN];
-    ref.value = d->valCreate(UV_UNINITIALIZED, OBJ_UNKNOWN);
-
-    // store backward reference to OBJ_RETURN
-    Private::Value &refValue = d->values[ref.value];
-    refValue.usedBy.insert(OBJ_RETURN);
-
     // XXX
     d->roots[OBJ_RETURN];
-    d->objects[OBJ_RETURN].root = OBJ_RETURN;
 }
 
 SymHeapCore::SymHeapCore(const SymHeapCore &ref):
@@ -724,11 +723,14 @@ void SymHeapCore::swap(SymHeapCore &baseRef) {
 }
 
 void SymHeapCore::objSetValue(TObjId obj, TValId val) {
-    CL_BREAK_IF(this->lastObjId() < obj || obj < 0);
+    CL_BREAK_IF(d->lastObjId() < obj || obj < 0);
     CL_BREAK_IF(!d->objects[obj].subObjs.empty());
 
+    // seek root
     Private::Object &ref = d->objects[obj];
-    Private::Root &rootData = roMapLookup(d->roots, ref.root);
+    const TObjId root = d->objRoot(obj, ref);
+
+    Private::Root &rootData = roMapLookup(d->roots, root);
     if (isDataPtr(ref.clt))
         rootData.livePtrs.insert(obj);
     else
@@ -738,7 +740,7 @@ void SymHeapCore::objSetValue(TObjId obj, TValId val) {
 }
 
 TObjType SymHeapCore::objType(TObjId obj) const {
-    if (this->lastObjId() < obj || obj < 0)
+    if (d->lastObjId() < obj || obj < 0)
         // object ID is either out of range, or does not represent a valid obj
         // (we allow OBJ_RETURN here)
         return 0;
@@ -751,7 +753,8 @@ TValId SymHeapCore::valByOffset(TValId val, TOffset off) {
         return val;
 
     // subtract the root
-    const Private::Value &ref = d->values.at(val);
+    CL_BREAK_IF(d->valOutOfRange(val));
+    const Private::Value &ref = d->values[val];
     val  = d->valRoot(val);
     off += ref.offRoot;
     if (!off)
@@ -780,7 +783,7 @@ TValId SymHeapCore::valByOffset(TValId val, TOffset off) {
 }
 
 EValueTarget SymHeapCore::valTarget(TValId val, TOffset *offset) const {
-    CL_BREAK_IF(this->lastValueId() < val || val < 0);
+    CL_BREAK_IF(d->lastValId() < val || val < 0);
     *offset = d->values[val].offRoot;
     return VT_UNKNOWN;
 }
@@ -873,12 +876,12 @@ bool SymHeapCore::matchPreds(const SymHeapCore &ref, const TValMap &valMap)
 
 // FIXME: should this be declared non-const?
 TValId SymHeapCore::placedAt(TObjId obj) const {
-    if (this->lastObjId() < obj || obj <= 0)
+    if (d->lastObjId() < obj || obj <= 0)
         // object ID is either out of range, or does not represent a valid obj
         return VAL_INVALID;
 
     Private::Object &ref = d->objects[obj];
-    const TObjId root = ref.root;
+    const TObjId root = d->objRoot(obj, ref);
     CL_BREAK_IF(root < 0);
 
     SymHeapCore &self = /* FIXME */ const_cast<SymHeapCore &>(*this);
@@ -893,7 +896,7 @@ TValId SymHeapCore::placedAt(TObjId obj) const {
 }
 
 TObjId SymHeapCore::pointsTo(TValId val) const {
-    if (this->lastValueId() < val || val <= 0)
+    if (d->lastValId() < val || val <= 0)
         // value ID is either out of range, or does not point to a valid obj
         return OBJ_INVALID;
 
@@ -968,7 +971,7 @@ void SymHeapCore::gatherOffValues(TOffValCont &dst, TValId ref) const {
 }
 
 bool SymHeapCore::cVar(CVar *dst, TObjId obj) const {
-    if (this->lastObjId() < obj || obj <= 0)
+    if (d->lastObjId() < obj || obj <= 0)
         // object ID is either out of range, or does not represent a valid obj
         return false;
 
@@ -1009,7 +1012,7 @@ void SymHeapCore::gatherRootObjs(TObjList &dst) const {
 }
 
 TObjId SymHeapCore::valGetCompositeObj(TValId val) const {
-    if (this->lastValueId() < val || val <= 0)
+    if (d->lastValId() < val || val <= 0)
         // value ID is either out of range, or does not point a valid obj
         return OBJ_INVALID;
 
@@ -1020,7 +1023,7 @@ TObjId SymHeapCore::valGetCompositeObj(TValId val) const {
 }
 
 TObjId SymHeapCore::subObj(TObjId obj, int nth) const {
-    if (this->lastObjId() < obj || obj < 0)
+    if (d->lastObjId() < obj || obj < 0)
         // object ID is either out of range, or does not represent a valid obj
         // (we allow OBJ_RETURN here)
         return OBJ_INVALID;
@@ -1038,7 +1041,7 @@ TObjId SymHeapCore::subObj(TObjId obj, int nth) const {
 }
 
 TObjId SymHeapCore::objParent(TObjId obj, int *nth) const {
-    if (this->lastObjId() < obj || obj <= 0)
+    if (d->lastObjId() < obj || obj <= 0)
         // object ID is either out of range, or does not represent a valid obj
         return OBJ_INVALID;
 
@@ -1060,7 +1063,6 @@ TObjId SymHeapCore::objCreate(TObjType clt, CVar cVar) {
 
     Private::Object &ref = d->objects[obj];
     ref.clt     = clt;
-    ref.root    = obj;
 
     Private::TGrid &grid = d->roots[obj].grid;
     grid[/* off */ 0][clt] = obj;
@@ -1076,7 +1078,6 @@ TObjId SymHeapCore::objCreate(TObjType clt, CVar cVar) {
 
 TValId SymHeapCore::heapAlloc(int cbSize) {
     const TObjId obj = d->objCreate();
-    d->objects[obj].root = obj;
 
     Private::Root &rootData = d->roots[obj];
     rootData.cbSize = cbSize;
@@ -1107,11 +1108,18 @@ int SymHeapCore::objSizeOfAnon(TObjId obj) const {
 }
 
 void SymHeapCore::objDefineType(TObjId obj, TObjType clt) {
-    CL_BREAK_IF(this->lastObjId() < obj || obj < 0);
+    CL_BREAK_IF(d->lastObjId() < obj || obj < 0);
     Private::Object &ref = d->objects[obj];
 
     // type redefinition not allowed for now
     CL_BREAK_IF(ref.clt);
+
+    // there should be no value as long as it was "a target of a void pointer"
+    if (VAL_INVALID != ref.value) {
+        // FIXME: this happens with test-0106.c during error recovery
+        CL_BREAK_IF("SymHeapCore::objDefineType() sees a dangling value");
+        d->releaseValueOf(obj);
+    }
 
     // delayed object's type definition
     ref.clt = clt;
@@ -1138,13 +1146,10 @@ void SymHeapCore::objDestroy(TObjId obj) {
     addr = VAL_INVALID;
 
     if (OBJ_RETURN == obj) {
-        // (un)initialize OBJ_RETURN for next wheel
-        const TValId uv = d->valCreate(UV_UNINITIALIZED, OBJ_UNKNOWN);
-        d->setValueOf(OBJ_RETURN, uv);
-
-        Private::Object &ref = d->objects[OBJ_RETURN];
-        ref.clt = 0;
-        ref.subObjs.clear();
+        // reinitialize OBJ_RETURN
+        d->releaseValueOf(OBJ_RETURN);
+        d->objects[OBJ_RETURN] = Private::Object();
+        d->roots[OBJ_RETURN] = Private::Root();
     }
 }
 
@@ -1207,7 +1212,7 @@ TValId SymHeapCore::valCreateCustom(int cVal) {
 
 int SymHeapCore::valGetCustom(TValId val) const
 {
-    if (this->lastValueId() < val || val <= 0)
+    if (d->lastValId() < val || val <= 0)
         // value ID is either out of range, or does not point to a valid obj
         return -1;
 
@@ -1225,17 +1230,17 @@ bool SymHeapCore::objIsProto(TObjId obj) const {
         return false;
 
     // seek root
-    const TObjId root = d->objects.at(obj).root;
+    const TObjId root = d->objRoot(obj);
     const Private::Root &rootData = roMapLookup(d->roots, root);
     return rootData.isProto;
 }
 
 void SymHeapCore::objSetProto(TObjId obj, bool isProto) {
-    CL_BREAK_IF(this->lastObjId() < obj || obj < 0);
-    Private::Object &ref = d->objects[obj];
+    CL_BREAK_IF(d->lastObjId() < obj || obj < 0);
 
     // seek root
-    Private::Root &rootData = roMapLookup(d->roots, ref.root);
+    const TObjId root = d->objRoot(obj);
+    Private::Root &rootData = roMapLookup(d->roots, root);
     rootData.isProto = isProto;
 }
 
@@ -1447,7 +1452,7 @@ bool SymHeapCore::proveNeq(TValId valA, TValId valB) const {
         return (VAL_FALSE == valB);
 
     // we presume (0 <= valA) and (0 < valB) at this point
-    CL_BREAK_IF(this->lastValueId() < valB || valB < 0);
+    CL_BREAK_IF(d->lastValId() < valB || valB < 0);
     const EUnknownValue code = this->valGetUnknown(valB);
     if (UV_KNOWN == code)
         // NOTE: we know (valA != valB) at this point, look above

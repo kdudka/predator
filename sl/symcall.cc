@@ -450,9 +450,6 @@ SymCallCtx& SymCallCache::getCallCtx(SymHeap                    heap,
     d->heap = &heap;
     d->proc = &proc;
 
-    // re-initialize OBJ_RETURN
-    heap.objDestroy(OBJ_RETURN);
-
     // store Fnc ought to be called
     d->fnc = &fnc;
     CL_DEBUG_MSG(d->lw, "SymCallCache is looking for "

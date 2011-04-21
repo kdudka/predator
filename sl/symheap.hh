@@ -177,8 +177,7 @@ class SymHeapCore {
         unsigned usedByCount(TValId val) const;
 
     public:
-        TObjId lastObjId() const;
-        TValId lastValueId() const;
+        unsigned lastId() const;
 
     public:
         /**
@@ -481,7 +480,6 @@ class SymHeapCore {
         Private *d;
 
     private:
-        TValId createCompValue(TObjId obj);
         TObjId createSubVar(TObjType clt, TObjId parent);
         void createSubs(TObjId obj);
         void objDestroyPriv(TObjId obj);
@@ -588,7 +586,7 @@ class SymHeap: public SymHeapCore {
         virtual TObjId objDup(TObjId obj);
 
         // XXX
-        friend class SymCallCache;
+        friend class SymExecEngine;
         friend class SymProc;
 
     private:

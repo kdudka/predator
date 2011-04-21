@@ -431,7 +431,7 @@ void splitHeapByCVars(const SymBackTrace *bt, SymHeap *srcDst,
             << cntOrig << " -> " << cntA << " |" << cntB
             << " (" << cntTotal << " program variables in total)");
 
-    const float ratio = 100.0 * dst.lastValueId() / srcDst->lastValueId();
+    const float ratio = 100.0 * dst.lastId() / srcDst->lastId();
     CL_DEBUG("splitHeapByCVars() resulting heap size: " << std::fixed
             << std::setprecision(2) << std::setw(5) << ratio << "%");
 
