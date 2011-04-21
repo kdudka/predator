@@ -291,10 +291,6 @@ TValId handleValue(DeepCopyData &dc, TValId valSrc) {
     const TObjId targetDst = addObjectIfNeeded(dc, targetSrc);
     const TValId valDst = dst.placedAt(targetDst);
 
-    if (UV_ABSTRACT == code)
-        // preserve UV_ABSTRACT code
-        dst.valSetUnknown(valDst, UV_ABSTRACT);
-
     // return target object's address
     return valDst;
 }

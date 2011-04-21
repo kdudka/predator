@@ -176,10 +176,6 @@ class SymHeapCore {
         /// return how many objects use the value
         unsigned usedByCount(TValId val) const;
 
-    protected:
-        /// alter an already existing value (use with caution)
-        virtual void valSetUnknown(TValId val, EUnknownValue code);
-
     public:
         TObjId lastObjId() const;
         TValId lastValueId() const;
@@ -208,8 +204,6 @@ class SymHeapCore {
          * are looking for SymProc::objDestroy().
          */
         virtual void objDestroy(TObjId obj);
-
-        friend TValId handleValue(DeepCopyData &dc, TValId valSrc);
 
     public:
         // TODO: remove this?

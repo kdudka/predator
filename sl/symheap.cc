@@ -1154,25 +1154,6 @@ TValId SymHeapCore::valCreateUnknown(EUnknownValue code) {
     return val;
 }
 
-void SymHeapCore::valSetUnknown(TValId val, EUnknownValue code) {
-#ifndef NDEBUG
-    switch (code) {
-        case UV_KNOWN:
-        case UV_ABSTRACT:
-            break;
-
-        default:
-            // please check if the caller is aware of what he's doing
-            CL_TRAP;
-    }
-#endif
-
-    const TValId valRoot = d->valRoot(val);
-    Private::Value &valRootData = d->values.at(valRoot);
-    CL_BREAK_IF(valRootData.target <= 0);
-    valRootData.code = code;
-}
-
 EUnknownValue SymHeapCore::valGetUnknown(TValId val) const {
     switch (val) {
         case VAL_NULL: /* == VAL_FALSE */
@@ -1310,10 +1291,6 @@ TObjId SymHeap::objDup(TObjId objOld) {
         // duplicate metadata of an abstract object
         Private::ObjectEx tmp(iter->second);
         d->objMap[objNew] = tmp;
-
-        // set the pointing value's code to UV_ABSTRACT
-        const TValId addrNew = this->placedAt(objNew);
-        SymHeapCore::valSetUnknown(addrNew, UV_ABSTRACT);
     }
 
     return objNew;
@@ -1375,31 +1352,12 @@ void SymHeap::objSetAbstract(TObjId obj, EObjKind kind, const BindingOff &off)
     Private::ObjectEx &ref = d->objMap[obj];
     ref.kind    = kind;
     ref.off     = off;
-
-    // mark the value as UV_ABSTRACT
-    const TValId addr = this->placedAt(obj);
-    SymHeapCore::valSetUnknown(addr, UV_ABSTRACT);
-#ifndef NDEBUG
-    // check for self-loops
-    const TObjId objBind = ptrObjByOffset(*this, obj, off.next);
-    const TValId valNext = this->valueOf(objBind);
-    const TObjId head = compObjByOffset(*this, obj, off.head);
-    CL_BREAK_IF(addr == valNext || this->placedAt(head) == valNext);
-#endif
 }
 
 void SymHeap::objSetConcrete(TObjId obj) {
     CL_DEBUG("SymHeap::objSetConcrete() is taking place...");
     Private::TObjMap::iterator iter = d->objMap.find(obj);
     CL_BREAK_IF(d->objMap.end() == iter);
-
-    // mark the address of 'head' as UV_KNOWN
-    const TValId addrHead = segHeadAddr(*this, obj);
-    SymHeapCore::valSetUnknown(addrHead, UV_KNOWN);
-
-    // mark the value as UV_KNOWN
-    const TValId addr = this->placedAt(obj);
-    SymHeapCore::valSetUnknown(addr, UV_KNOWN);
 
     // just remove the object ID from the map
     d->objMap.erase(iter);
