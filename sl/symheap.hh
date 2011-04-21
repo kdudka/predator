@@ -142,6 +142,8 @@ class SymHeapCore {
 
         virtual void swap(SymHeapCore &);
 
+        unsigned lastId() const;
+
     public:
         /**
          * return a value @b stored @b in the given object
@@ -177,9 +179,6 @@ class SymHeapCore {
         unsigned usedByCount(TValId val) const;
 
     public:
-        unsigned lastId() const;
-
-    public:
         /**
          * @b set @b value of the given object, which has to be @b valid and may
          * @b not be a composite object
@@ -205,7 +204,6 @@ class SymHeapCore {
         virtual void objDestroy(TObjId obj);
 
     public:
-        // TODO: remove this?
         TValId valCreateDangling(TObjId kind);
 
         /**
@@ -287,13 +285,6 @@ class SymHeapCore {
          */
         virtual bool matchPreds(const SymHeapCore &ref, const TValMap &valMap)
             const;
-    public:
-        /// container used to store CVar objects to
-        typedef std::vector<CVar> TContCVar;
-
-    protected:
-        /// create a deep copy of the given object with new object IDs
-        virtual TObjId objDup(TObjId obj);
 
     public:
 
@@ -321,6 +312,9 @@ class SymHeapCore {
         void gatherOffValues(TOffValCont &dst, TValId ref) const;
 
     public:
+        /// container used to store CVar objects to
+        typedef std::vector<CVar> TContCVar;
+
         /**
          * look for a static/automatic variable corresponding to the given
          * symbolic heap object, which has to be @b valid
@@ -444,7 +438,6 @@ class SymHeapCore {
          */
         TValId valCreateUnknown(EUnknownValue code);
 
-    public:
         /**
          * @b wrap a foreign (integral) value into a symbolic heap value
          * @note this approach is currently used to deal with @b function @b
@@ -475,14 +468,13 @@ class SymHeapCore {
          */
         void objSetProto(TObjId obj, bool isProto);
 
+    protected:
+        /// create a deep copy of the given object with new object IDs
+        virtual TObjId objDup(TObjId obj);
+
     private:
         struct Private;
         Private *d;
-
-    private:
-        TObjId createSubVar(TObjType clt, TObjId parent);
-        void createSubs(TObjId obj);
-        void objDestroyPriv(TObjId obj);
 };
 
 /**
