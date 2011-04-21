@@ -109,12 +109,12 @@ class NeqDb {
             }
         }
 
-        friend void SymHeapXXXX::copyRelevantPreds(SymHeapXXXX &dst,
-                                                   const SymHeapXXXX::TValMap &)
+        friend void SymHeapCore::copyRelevantPreds(SymHeapCore &dst,
+                                                   const SymHeapCore::TValMap &)
                                                    const;
 
-        friend bool SymHeapXXXX::matchPreds(const SymHeapXXXX &,
-                                            const SymHeapXXXX::TValMap &)
+        friend bool SymHeapCore::matchPreds(const SymHeapCore &,
+                                            const SymHeapCore::TValMap &)
                                             const;
 };
 
@@ -138,7 +138,6 @@ struct SymHeapXXXX::Private {
 
     std::vector<Object>     objects;
     std::vector<Value>      values;
-    NeqDb                   neqDb;
 
     void releaseValueOf(TObjId obj);
     TObjId acquireObj();
@@ -393,40 +392,10 @@ TValId SymHeapXXXX::valClone(TValId val) {
     return this->placedAt(dup);
 }
 
-/// change value of all variables with value val to (fresh) newval
-void SymHeapXXXX::valReplace(TValId val, TValId newVal) {
-    // collect objects having the value val
-    TObjList rlist;
-    this->usedBy(rlist, val);
-
-    // go through the list and replace the value by newval
-    BOOST_FOREACH(const TObjId obj, rlist) {
-        this->objSetValue(obj, newVal);
-    }
-
-    // kill Neq predicate among the pair of values (if any)
-    SymHeapXXXX::neqOp(NEQ_DEL, val, newVal);
-
-    // reflect the change in NeqDb
-    TValList neqs;
-    d->neqDb.gatherRelatedValues(neqs, val);
-    BOOST_FOREACH(const TValId neq, neqs) {
-        d->neqDb.del(val, neq);
-        d->neqDb.add(newVal, neq);
-    }
-#ifndef NDEBUG
-    // make sure we didn't create any dangling predicates
-    TValList related;
-    this->gatherRelatedValues(related, val);
-    if (!related.empty())
-        CL_TRAP;
-#endif
-}
-
 void SymHeapXXXX::valMerge(TValId val, TValId replaceBy) {
 #ifndef NDEBUG
     // ensure there hasn't been any inequality defined among the pair
-    if (d->neqDb.areNeq(val, replaceBy)) {
+    if (this->proveNeq(val, replaceBy)) {
         CL_ERROR("inconsistency detected among values #" << val
                 << " and #" << replaceBy);
         CL_TRAP;
@@ -434,57 +403,6 @@ void SymHeapXXXX::valMerge(TValId val, TValId replaceBy) {
 #endif
     moveKnownValueToLeft(*this, replaceBy, val);
     this->valReplace(val, replaceBy);
-}
-
-void SymHeapXXXX::neqOp(ENeqOp op, TValId valA, TValId valB) {
-    switch (op) {
-        case NEQ_NOP:
-            return;
-
-        case NEQ_ADD:
-            d->neqDb.add(valA, valB);
-            return;
-
-        case NEQ_DEL:
-            d->neqDb.del(valA, valB);
-            return;
-    }
-}
-
-bool SymHeapXXXX::proveNeq(TValId valA, TValId valB) const {
-    // check for invalid values
-    if (VAL_INVALID == valA || VAL_INVALID == valB)
-        return false;
-
-    // check for identical values
-    if (valA == valB)
-        return false;
-
-    // having the values always in the same order leads to simpler code
-    moveKnownValueToLeft(*this, valA, valB);
-
-    // check for known bool values
-    if (VAL_TRUE == valA)
-        return (VAL_FALSE == valB);
-
-    // we presume (0 <= valA) and (0 < valB) at this point
-    CL_BREAK_IF(this->lastValueId() < valB || valB < 0);
-    const EUnknownValue code = this->valGetUnknown(valB);
-    if (UV_KNOWN == code)
-        // NOTE: we know (valA != valB) at this point, look above
-        return true;
-
-    // check for a Neq predicate
-    if (d->neqDb.areNeq(valA, valB))
-        return true;
-
-    // cannot prove non-equality
-    return false;
-}
-
-void SymHeapXXXX::gatherRelatedValues(TValList &dst, TValId val) const {
-    // TODO: should we care about off-values here?
-    d->neqDb.gatherRelatedValues(dst, val);
 }
 
 template <class TValMap>
@@ -500,42 +418,6 @@ bool valMapLookup(const TValMap &valMap, TValId *pVal) {
 
     // match
     *pVal = iter->second;
-    return true;
-}
-
-void SymHeapXXXX::copyRelevantPreds(SymHeapXXXX &dst, const TValMap &valMap)
-    const
-{
-    // go through NeqDb
-    BOOST_FOREACH(const NeqDb::TItem &item, d->neqDb.cont_) {
-        TValId valLt = item.first;
-        TValId valGt = item.second;
-
-        if (!valMapLookup(valMap, &valLt) || !valMapLookup(valMap, &valGt))
-            // not relevant
-            continue;
-
-        // create the image now!
-        dst.neqOp(NEQ_ADD, valLt, valGt);
-    }
-}
-
-bool SymHeapXXXX::matchPreds(const SymHeapXXXX &ref, const TValMap &valMap)
-    const
-{
-    // go through NeqDb
-    BOOST_FOREACH(const NeqDb::TItem &item, d->neqDb.cont_) {
-        TValId valLt = item.first;
-        TValId valGt = item.second;
-        if (!valMapLookup(valMap, &valLt) || !valMapLookup(valMap, &valGt))
-            // seems like a dangling predicate, which we are not interested in
-            continue;
-
-        if (!ref.d->neqDb.areNeq(valLt, valGt))
-            // Neq predicate not matched
-            return false;
-    }
-
     return true;
 }
 
@@ -686,6 +568,8 @@ struct SymHeapCore::Private {
 
     typedef std::map<TOffVal, TValId> TOffMap;
     TOffMap                         offVals;
+
+    NeqDb                           neqDb;
 
     TValId valRoot(TValId val);
 };
@@ -987,6 +871,92 @@ EValueTarget SymHeapCore::valTarget(TValId val, TOffset *offset) const {
     CL_BREAK_IF(this->lastValueId() < val || val < 0);
     *offset = d->values[val].offRoot;
     return VT_UNKNOWN;
+}
+
+/// change value of all variables with value val to (fresh) newval
+void SymHeapCore::valReplace(TValId val, TValId newVal) {
+    // collect objects having the value val
+    TObjList rlist;
+    this->usedBy(rlist, val);
+
+    // go through the list and replace the value by newval
+    BOOST_FOREACH(const TObjId obj, rlist) {
+        this->objSetValue(obj, newVal);
+    }
+
+    // kill Neq predicate among the pair of values (if any)
+    SymHeapCore::neqOp(NEQ_DEL, val, newVal);
+
+    // reflect the change in NeqDb
+    TValList neqs;
+    d->neqDb.gatherRelatedValues(neqs, val);
+    BOOST_FOREACH(const TValId neq, neqs) {
+        d->neqDb.del(val, neq);
+        d->neqDb.add(newVal, neq);
+    }
+#ifndef NDEBUG
+    // make sure we didn't create any dangling predicates
+    TValList related;
+    this->gatherRelatedValues(related, val);
+    if (!related.empty())
+        CL_TRAP;
+#endif
+}
+
+void SymHeapCore::neqOp(ENeqOp op, TValId valA, TValId valB) {
+    switch (op) {
+        case NEQ_NOP:
+            return;
+
+        case NEQ_ADD:
+            d->neqDb.add(valA, valB);
+            return;
+
+        case NEQ_DEL:
+            d->neqDb.del(valA, valB);
+            return;
+    }
+}
+
+void SymHeapCore::gatherRelatedValues(TValList &dst, TValId val) const {
+    // TODO: should we care about off-values here?
+    d->neqDb.gatherRelatedValues(dst, val);
+}
+
+void SymHeapCore::copyRelevantPreds(SymHeapCore &dst, const TValMap &valMap)
+    const
+{
+    // go through NeqDb
+    BOOST_FOREACH(const NeqDb::TItem &item, d->neqDb.cont_) {
+        TValId valLt = item.first;
+        TValId valGt = item.second;
+
+        if (!valMapLookup(valMap, &valLt) || !valMapLookup(valMap, &valGt))
+            // not relevant
+            continue;
+
+        // create the image now!
+        dst.neqOp(NEQ_ADD, valLt, valGt);
+    }
+}
+
+bool SymHeapCore::matchPreds(const SymHeapCore &ref, const TValMap &valMap)
+    const
+{
+    // go through NeqDb
+    BOOST_FOREACH(const NeqDb::TItem &item, d->neqDb.cont_) {
+        TValId valLt = item.first;
+        TValId valGt = item.second;
+        if (!valMapLookup(valMap, &valLt) || !valMapLookup(valMap, &valGt))
+            // seems like a dangling predicate, which we are not interested in
+            continue;
+
+        if (!ref.d->neqDb.areNeq(valLt, valGt))
+            // Neq predicate not matched
+            return false;
+    }
+
+    return true;
 }
 
 // FIXME: should this be declared non-const?
@@ -1560,12 +1530,12 @@ void SymHeap::dlSegCrossNeqOp(ENeqOp op, TValId headAddr1) {
     const TValId val2 = this->valueOf(next2);
 
     // add/del Neq predicates
-    SymHeapXXXX::neqOp(op, val1, headAddr2);
-    SymHeapXXXX::neqOp(op, val2, headAddr1);
+    SymHeapCore::neqOp(op, val1, headAddr2);
+    SymHeapCore::neqOp(op, val2, headAddr1);
 
     if (NEQ_DEL == op)
         // removing the 1+ flag implies removal of the 2+ flag
-        SymHeapXXXX::neqOp(NEQ_DEL, headAddr1, headAddr2);
+        SymHeapCore::neqOp(NEQ_DEL, headAddr1, headAddr2);
 }
 
 void SymHeap::neqOp(ENeqOp op, TValId valA, TValId valB) {
@@ -1588,17 +1558,39 @@ void SymHeap::neqOp(ENeqOp op, TValId valA, TValId valB) {
     SymHeapCore::neqOp(op, valA, valB);
 }
 
-bool SymHeapCore::proveNeq(TValId v1, TValId v2) const {
-    if (SymHeapXXXX::proveNeq(v1, v2))
+bool SymHeapCore::proveNeq(TValId valA, TValId valB) const {
+    // check for invalid values
+    if (VAL_INVALID == valA || VAL_INVALID == valB)
+        return false;
+
+    // check for identical values
+    if (valA == valB)
+        return false;
+
+    // having the values always in the same order leads to simpler code
+    moveKnownValueToLeft(*this, valA, valB);
+
+    // check for known bool values
+    if (VAL_TRUE == valA)
+        return (VAL_FALSE == valB);
+
+    // we presume (0 <= valA) and (0 < valB) at this point
+    CL_BREAK_IF(this->lastValueId() < valB || valB < 0);
+    const EUnknownValue code = this->valGetUnknown(valB);
+    if (UV_KNOWN == code)
+        // NOTE: we know (valA != valB) at this point, look above
         return true;
 
-    CL_BREAK_IF(v1 == v2);
-    if (v1 <= 0 || v2 <= 0)
+    // check for a Neq predicate
+    if (d->neqDb.areNeq(valA, valB))
+        return true;
+
+    if (valA <= 0 || valB <= 0)
         // no handling of special values here
         return false;
 
-    const TValId root1 = d->valRoot(v1);
-    const TValId root2 = d->valRoot(v2);
+    const TValId root1 = d->valRoot(valA);
+    const TValId root2 = d->valRoot(valB);
     if (root1 != root2)
         // roots differ
         return false;
@@ -1633,7 +1625,7 @@ bool SymHeap::proveNeq(TValId ref, TValId val) const {
                 return false;
         }
 
-        if (SymHeapXXXX::proveNeq(ref, val))
+        if (SymHeapCore::proveNeq(ref, val))
             // prove done
             return true;
 
@@ -1646,7 +1638,7 @@ bool SymHeap::proveNeq(TValId ref, TValId val) const {
             return false;
 
         const TValId valNext = this->valueOf(nextPtrFromSeg(*this, seg));
-        if (SymHeapXXXX::proveNeq(val, valNext))
+        if (SymHeapCore::proveNeq(val, valNext))
             // non-empty abstract object reached --> prove done
             return true;
 

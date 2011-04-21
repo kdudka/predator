@@ -67,6 +67,9 @@ typedef std::vector<TValId>                             TValList;
 /// a type used for type-info
 typedef const struct cl_type                            *TObjType;
 
+// XXX
+class SymHeapCore;
+
 /**
  * symbolic heap @b core - no type-info, no object composition at this level
  */
@@ -197,7 +200,7 @@ class SymHeapXXXX {
         TValId valClone(TValId);
 
         /// replace all occurences of val by replaceBy
-        void valReplace(TValId val, TValId replaceBy);
+        virtual void valReplace(TValId val, TValId replaceBy) = 0;
 
         /**
          * assume that v1 and v2 are equal.  Useful when e.g. traversing a
@@ -221,10 +224,10 @@ class SymHeapXXXX {
          * @param valA one side of the inequality
          * @param valB one side of the inequality
          */
-        virtual void neqOp(ENeqOp op, TValId valA, TValId valB);
+        virtual void neqOp(ENeqOp op, TValId valA, TValId valB) = 0;
 
         /// return true if the given pair of values is proven to be non-equal
-        virtual bool proveNeq(TValId valA, TValId valB) const;
+        virtual bool proveNeq(TValId valA, TValId valB) const = 0;
 
     public:
         /// a type used for (injective) value IDs mapping
@@ -237,7 +240,7 @@ class SymHeapXXXX {
          * @param val the reference value, used to search the predicates and
          * then all the related values accordingly
          */
-        void gatherRelatedValues(TValList &dst, TValId val) const;
+        virtual void gatherRelatedValues(TValList &dst, TValId val) const = 0;
 
         /**
          * copy all @b relevant predicates from the symbolic heap to another
@@ -249,7 +252,8 @@ class SymHeapXXXX {
          * @param valMap an (injective) value mapping, used for translation
          * of value IDs among heaps
          */
-        void copyRelevantPreds(SymHeapXXXX &dst, const TValMap &valMap) const;
+        virtual void copyRelevantPreds(SymHeapCore &dst, const TValMap &valMap)
+            const = 0;
 
         /**
          * pick up all heap predicates that can be fully mapped by valMap into
@@ -260,7 +264,8 @@ class SymHeapXXXX {
          * @return return true if all such predicates have their reflection in
          * ref, false otherwise
          */
-        bool matchPreds(const SymHeapXXXX &ref, const TValMap &valMap) const;
+        virtual bool matchPreds(const SymHeapCore &ref, const TValMap &valMap)
+            const = 0;
 
     protected:
         virtual void notifyResize(bool /* valOnly */) { }
@@ -552,6 +557,14 @@ class SymHeapCore: public SymHeapXXXX {
          * are shared.
          */
         void objSetProto(TObjId obj, bool isProto);
+
+    public:
+        virtual void neqOp(ENeqOp op, TValId valA, TValId valB);
+        void valReplace(TValId val, TValId replaceBy);
+        typedef std::map<TValId, TValId> TValMap;
+        void gatherRelatedValues(TValList &dst, TValId val) const;
+        void copyRelevantPreds(SymHeapCore &dst, const TValMap &valMap) const;
+        bool matchPreds(const SymHeapCore &ref, const TValMap &valMap) const;
 
     protected:
         virtual void notifyResize(bool valOnly);
