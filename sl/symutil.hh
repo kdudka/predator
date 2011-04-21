@@ -66,8 +66,11 @@ inline TObjId /* root */ objRoot(const SymHeap &sh, TObjId obj) {
 }
 
 inline TObjId /* root */ objRootByVal(const SymHeap &sh, TValId val) {
-    const TObjId target = sh.pointsTo(val);
-    return objRoot(sh, target);
+    if (val <= 0)
+        return OBJ_INVALID;
+
+    const TValId rootAt = sh.valRoot(val);
+    return sh.pointsTo(rootAt);
 }
 
 inline TObjId /* root */ objRootByPtr(const SymHeap &sh, TObjId ptr) {
@@ -96,13 +99,8 @@ inline bool objIsSeg(const SymHeap &sh, TObjId obj, bool anyPart = false) {
 
 /// return offset of an object within another object;  -1 if not found
 inline TOffset subOffsetIn(const SymHeap &sh, TObjId in, TObjId of) {
-    TOffset off1 = 0;
-    TOffset off2 = 0;
-
-    SymHeap &shNonConst = const_cast<SymHeap &>(sh);
-    shNonConst.valTarget(sh.placedAt(in), &off1);
-    shNonConst.valTarget(sh.placedAt(of), &off2);
-
+    const TOffset off1 = sh.valOffset(sh.placedAt(in));
+    const TOffset off2 = sh.valOffset(sh.placedAt(of));
     return off2 - off1;
 }
 

@@ -301,7 +301,10 @@ class SymHeapCore {
         TObjType objType(TObjId obj) const;
 
         TValId valByOffset(TValId, TOffset offset);
-        EValueTarget valTarget(TValId, TOffset *offset = 0) const;
+
+        EValueTarget valTarget(TValId) const;
+        TValId valRoot(TValId) const;
+        TOffset valOffset(TValId) const;
 
         virtual TObjId pointsTo(TValId val) const;
 

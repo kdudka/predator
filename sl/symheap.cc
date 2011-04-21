@@ -776,13 +776,23 @@ TValId SymHeapCore::valByOffset(TValId val, TOffset off) {
     return val;
 }
 
-EValueTarget SymHeapCore::valTarget(TValId val, TOffset *offset) const {
+EValueTarget SymHeapCore::valTarget(TValId val) const {
     CL_BREAK_IF(d->valOutOfRange(val));
 
-    if (offset)
-        *offset = d->values[val].offRoot;
+    CL_BREAK_IF("not implemented yet");
+    (void) val;
 
     return VT_UNKNOWN;
+}
+
+TValId SymHeapCore::valRoot(TValId val) const {
+    return d->valRoot(val);
+}
+
+TOffset SymHeapCore::valOffset(TValId val) const {
+    CL_BREAK_IF(VAL_NULL == val || d->valOutOfRange(val));
+    const Private::Value &valData = d->values[val];
+    return valData.offRoot;
 }
 
 /// change value of all variables with value val to (fresh) newval

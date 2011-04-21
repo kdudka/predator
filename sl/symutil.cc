@@ -341,8 +341,7 @@ TObjId subSeekByOffset(
     if (OBJ_INVALID == root)
         return OBJ_INVALID;
 
-    TOffset offRoot = 0;
-    sh.valTarget(sh.placedAt(obj), &offRoot);
+    const TOffset offRoot = sh.valOffset(sh.placedAt(obj));
 
     // prepare visitor
     SubByOffsetFinder visitor;
