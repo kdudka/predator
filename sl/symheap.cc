@@ -920,17 +920,6 @@ TObjId SymHeapCore::pointsTo(TValId val) const {
         // value ID is either out of range, or does not point to a valid obj
         return OBJ_INVALID;
 
-    // already deleted?
-    const TObjId kind = /* XXX */ d->values[d->valRoot(val)].compObj;
-    switch (kind) {
-        case OBJ_DELETED:
-        case OBJ_LOST:
-            return kind;
-
-        default:
-            break;
-    }
-
     // root lookup
     const TValId valRoot = d->valRoot(val);
     const TObjId root = d->values[valRoot].target;
@@ -1028,10 +1017,7 @@ TObjId SymHeapCore::valGetCompositeObj(TValId val) const {
     if (VAL_NULL == val || d->valOutOfRange(val))
         return OBJ_INVALID;
 
-    const TObjId compObj = d->values[val].compObj;
-    return (0 <= compObj)
-        ? compObj
-        : OBJ_INVALID;
+    return d->values[val].compObj;
 }
 
 TObjId SymHeapCore::subObj(TObjId obj, int nth) const {
@@ -1144,7 +1130,7 @@ void SymHeapCore::objDestroy(TObjId obj) {
 
     TValId &addr = rootData.addr;
     if (0 < addr)
-        d->values.at(addr)./*FIXME*/compObj = kind;
+        d->values.at(addr).target = kind;
 
     addr = VAL_INVALID;
 
