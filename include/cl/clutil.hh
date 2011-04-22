@@ -61,7 +61,7 @@ inline bool isDataPtr(const struct cl_type *clt) {
         return false;
 
     clt = targetTypeOfPtr(clt);
-    CL_BREAK_IF(!clt);
+    assert(clt);
     return (CL_TYPE_FNC != clt->code);
 }
 
@@ -107,7 +107,7 @@ bool /* complete */ traverseTypeIc(const struct cl_type *clt, TVisitor &visitor,
     todo.push(si);
     while (!todo.empty()) {
         TItem &si = todo.top();
-        CL_BREAK_IF(si.ic.empty());
+        assert(!si.ic.empty());
 
         typename TFieldIdxChain::reference nth = si.ic.back();
         if (nth == si.clt->item_cnt) {
