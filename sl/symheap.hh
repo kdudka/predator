@@ -192,18 +192,6 @@ class SymHeapCore {
          */
         void objSetValue(TObjId obj, TValId val);
 
-    protected:
-        /**
-         * @b destroy the given heap object.  All values which have been
-         * pointing to the object, will now point to either OBJ_DELETED or
-         * OBJ_LOST, depending on kind of the object being destroyed.
-         * @param obj ID of the object to destroy
-         * @note This is really @b low-level @b implementation.  It does not
-         * e.g. check for junk.  If you are interested in this ability, you
-         * are looking for SymProc::objDestroy().
-         */
-        virtual void objDestroy(TObjId obj);
-
     public:
         TValId valCreateDangling(TObjId kind);
 
@@ -293,7 +281,7 @@ class SymHeapCore {
         TObjId objAt(TValId at, TObjCode code);
 
         /// clone of the given value (deep copy)
-        TValId valClone(TValId);
+        virtual TValId valClone(TValId);
 
         /// replace all occurences of val by replaceBy
         virtual void valReplace(TValId val, TValId replaceBy);
@@ -391,7 +379,7 @@ class SymHeapCore {
          * destroy target of the given value (root has to be at zero offset)
          * @return true, if the operation succeeds
          */
-        bool valDestroyTarget(TValId);
+        virtual bool valDestroyTarget(TValId);
 
         /**
          * return size of the given object of @b unknown @b type
@@ -452,10 +440,6 @@ class SymHeapCore {
          * are shared.
          */
         void valTargetSetProto(TValId, bool isProto);
-
-    protected:
-        /// create a deep copy of the given object with new object IDs
-        virtual TObjId objDup(TObjId obj);
 
     private:
         struct Private;
@@ -553,14 +537,9 @@ class SymHeap: public SymHeapCore {
          */
         virtual void valMerge(TValId v1, TValId v2);
 
-    protected:
-        /**
-         * @copydoc SymHeapCore::objDestroy
-         * @note overridden in order to remove internal data of abstract objects
-         */
-        virtual void objDestroy(TObjId obj);
+        virtual bool valDestroyTarget(TValId);
 
-        virtual TObjId objDup(TObjId obj);
+        virtual TValId valClone(TValId);
 
     private:
         void dlSegCrossNeqOp(ENeqOp op, TValId headAddr);

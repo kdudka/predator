@@ -276,8 +276,10 @@ struct SymHeapCore::Private {
     inline TObjId objRoot(const TObjId, const Object &);
     inline TObjId objRoot(const TObjId);
 
-    TObjId objCreate();
     TValId valCreate(EUnknownValue code, TObjId target);
+    TObjId objCreate();
+    TObjId objDup(TObjId root);
+    void objDestroy(TObjId obj);
 
     void releaseValueOf(TObjId obj);
     void setValueOf(TObjId of, TValId val);
@@ -493,8 +495,7 @@ TValId SymHeapCore::valClone(TValId val) {
             CL_BREAK_IF(target <= 0);
     }
 
-    // call virtual implementation of deep cloning
-    const TObjId dup = this->objDup(target);
+    const TObjId dup = d->objDup(target);
     CL_BREAK_IF(dup <= 0);
     return this->placedAt(dup);
 }
@@ -573,9 +574,10 @@ struct ObjDupStackItem {
     TObjId  dstParent;
     int     nth;
 };
-TObjId SymHeapCore::objDup(TObjId root) {
-    CL_DEBUG("SymHeapCore::objDup() is taking place...");
-    CL_BREAK_IF(OBJ_INVALID != this->objParent(root));
+TObjId SymHeapCore::Private::objDup(TObjId root) {
+    CL_DEBUG("SymHeapCore::Private::objDup() is taking place...");
+    CL_BREAK_IF(objOutOfRange(root));
+    CL_BREAK_IF(OBJ_INVALID != this->objects[root].root);
 
     TObjId image = OBJ_INVALID;
 
@@ -591,49 +593,50 @@ TObjId SymHeapCore::objDup(TObjId root) {
 
         // duplicate a single object
         const TObjId src = item.srcObj;
-        const TObjId dst = d->objCreate();
-        const Private::Object &origin = d->objects.at(src);
-        d->setValueOf(dst, origin.value);
+        const TObjId dst = this->objCreate();
+        const Private::Object &origin = this->objects.at(src);
+        this->setValueOf(dst, origin.value);
 
         // copy the metadata
-        d->objects[dst] = d->objects[src];
-        d->objects[dst].parent = item.dstParent;
+        this->objects[dst] = this->objects[src];
+        this->objects[dst].parent = item.dstParent;
         if (OBJ_INVALID == image) {
             // root object
             image = dst;
-            d->objects[dst].root = OBJ_INVALID;
+            this->objects[dst].root = OBJ_INVALID;
 
-            d->roots[image].grid[/* off */0][this->objType(root)] = image;
-            d->roots[image].cVar    = d->roots[root].cVar;
-            d->roots[image].isProto = d->roots[root].isProto;
+            const TObjType cltRoot = this->objects[root].clt;
+            this->roots[image].grid[/* off */0][cltRoot] = image;
+            this->roots[image].cVar    = this->roots[root].cVar;
+            this->roots[image].isProto = this->roots[root].isProto;
         }
-        else if (hasKey(d->roots[root].livePtrs, src))
-            d->roots[image].livePtrs.insert(dst);
-        else if (hasKey(d->roots[root].liveData, src))
-            d->roots[image].liveData.insert(dst);
+        else if (hasKey(this->roots[root].livePtrs, src))
+            this->roots[image].livePtrs.insert(dst);
+        else if (hasKey(this->roots[root].liveData, src))
+            this->roots[image].liveData.insert(dst);
 
         // update the reference to self in the parent object
         const TObjId parent = item.dstParent;
         if (OBJ_INVALID != parent) {
             // recover root
-            d->objects[dst].root = image;
+            this->objects[dst].root = image;
 
-            CL_BREAK_IF(d->objOutOfRange(parent));
-            d->objects[parent].subObjs[item.nth] = dst;
+            CL_BREAK_IF(objOutOfRange(parent));
+            this->objects[parent].subObjs[item.nth] = dst;
 
             // recover grid
-            const TOffset off = d->objects[dst].off;
-            const TObjType clt = d->objects[dst].clt;
-            Private::TGrid &grid = d->roots[image].grid;
+            const TOffset off = this->objects[dst].off;
+            const TObjType clt = this->objects[dst].clt;
+            Private::TGrid &grid = this->roots[image].grid;
             grid[off][clt] = dst;
         }
 
-        const TObjList subObjs(d->objects[src].subObjs);
+        const TObjList subObjs(this->objects[src].subObjs);
         if (subObjs.empty())
             continue;
 
         // assume composite object
-        d->setValueOf(dst, VAL_INVALID);
+        this->setValueOf(dst, VAL_INVALID);
 
         // traverse composite types recursively
         for (unsigned i = 0; i < subObjs.size(); ++i) {
@@ -1150,7 +1153,7 @@ bool SymHeapCore::valDestroyTarget(TValId val) {
     if (-1 != d->objects[target].parent)
         return false;
 
-    this->objDestroy(target);
+    d->objDestroy(target);
     return true;
 }
 
@@ -1165,7 +1168,7 @@ int SymHeapCore::objSizeOfAnon(TObjId obj) const {
 void SymHeapCore::objDefineType(TObjId obj, TObjType clt) {
     if (OBJ_RETURN == obj)
         // cleanup OBJ_RETURN for next wheel
-        this->objDestroy(OBJ_RETURN);
+        d->objDestroy(OBJ_RETURN);
 
     CL_BREAK_IF(d->objOutOfRange(obj));
     Private::Object &objData = d->objects[obj];
@@ -1185,31 +1188,32 @@ void SymHeapCore::objDefineType(TObjId obj, TObjType clt) {
     d->subsCreate(obj);
 }
 
-void SymHeapCore::objDestroy(TObjId obj) {
-    CL_BREAK_IF(OBJ_INVALID != this->objParent(obj));
-    Private::Root &rootData = roMapLookup(d->roots, obj);
+void SymHeapCore::Private::objDestroy(TObjId obj) {
+    CL_BREAK_IF(objOutOfRange(obj));
+    CL_BREAK_IF(OBJ_INVALID != this->objects[obj].root);
+    Private::Root &rootData = roMapLookup(this->roots, obj);
 
     // remove the corresponding program variable (if any)
     TObjId kind = OBJ_DELETED;
     const CVar cv = rootData.cVar;
     if (cv.uid != /* heap object */ -1) {
-        d->cVarMap.remove(cv);
+        this->cVarMap.remove(cv);
         kind = OBJ_LOST;
     }
 
     // invalidate the address
     const TValId addr = rootData.addr;
     if (0 < addr) {
-        CL_BREAK_IF(d->valOutOfRange(addr));
-        d->values[addr].target = kind;
+        CL_BREAK_IF(valOutOfRange(addr));
+        this->values[addr].target = kind;
     }
 
     // destroy the object
-    d->subsDestroy(obj);
+    this->subsDestroy(obj);
     if (OBJ_RETURN == obj) {
         // reinitialize OBJ_RETURN
-        d->objects[OBJ_RETURN] = Private::Object();
-        d->roots[OBJ_RETURN] = Private::Root();
+        this->objects[OBJ_RETURN] = Private::Object();
+        this->roots[OBJ_RETURN] = Private::Root();
     }
 }
 
@@ -1311,15 +1315,18 @@ void SymHeapCore::valTargetSetProto(TValId val, bool isProto) {
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of SymHeap
 struct SymHeap::Private {
-    struct ObjectEx {
+    struct AbstractObject {
         EObjKind            kind;
         BindingOff          off;
 
-        ObjectEx(): kind(OK_CONCRETE) { }
+        AbstractObject():
+            kind(OK_CONCRETE)
+        {
+        }
     };
 
-    typedef std::map<TObjId, ObjectEx> TObjMap;
-    TObjMap objMap;
+    typedef std::map<TValId, AbstractObject> TData;
+    TData data;
 };
 
 SymHeap::SymHeap():
@@ -1353,22 +1360,31 @@ void SymHeap::swap(SymHeapCore &baseRef) {
     swapValues(this->d, ref.d);
 }
 
-TObjId SymHeap::objDup(TObjId objOld) {
-    const TObjId objNew = SymHeapCore::objDup(objOld);
-    Private::TObjMap::iterator iter = d->objMap.find(objOld);
-    if (d->objMap.end() != iter) {
-        // duplicate metadata of an abstract object
-        Private::ObjectEx tmp(iter->second);
-        d->objMap[objNew] = tmp;
-    }
+TValId SymHeap::valClone(TValId val) {
+    const TValId dup = SymHeapCore::valClone(val);
+    if (dup <= 0)
+        return dup;
 
-    return objNew;
+    const TValId valRoot = this->valRoot(val);
+    const TValId dupRoot = this->valRoot(dup);
+    CL_BREAK_IF(valRoot <= 0 || dupRoot <= 0);
+
+    Private::TData::iterator iter = d->data.find(valRoot);
+    if (d->data.end() != iter)
+        // duplicate metadata of an abstract object
+        d->data[dupRoot] = iter->second;
+
+    return dup;
 }
 
 EObjKind SymHeap::valTargetKind(TValId val) const {
-    const TObjId root = objRootByVal(*this, val);
-    Private::TObjMap::iterator iter = d->objMap.find(root);
-    if (d->objMap.end() != iter)
+    if (val <= 0)
+        // FIXME
+        return OK_CONCRETE;
+
+    const TValId valRoot = this->valRoot(val);
+    Private::TData::iterator iter = d->data.find(valRoot);
+    if (d->data.end() != iter)
         return iter->second.kind;
 
     return OK_CONCRETE;
@@ -1383,10 +1399,10 @@ EUnknownValue SymHeap::valGetUnknown(TValId val) const {
 }
 
 const BindingOff& SymHeap::segBinding(TValId at) const {
-    const TObjId root = objRootByVal(*this, at);
+    const TValId valRoot = this->valRoot(at);
 
-    Private::TObjMap::iterator iter = d->objMap.find(root);
-    CL_BREAK_IF(d->objMap.end() == iter);
+    Private::TData::iterator iter = d->data.find(valRoot);
+    CL_BREAK_IF(d->data.end() == iter);
 
     return iter->second.off;
 }
@@ -1396,34 +1412,35 @@ void SymHeap::valTargetSetAbstract(
         EObjKind                    kind,
         const BindingOff            &off)
 {
-    const TObjId obj = objRootByVal(*this, at);
+    const TValId valRoot = this->valRoot(at);
 
-    if (OK_SLS == kind && hasKey(d->objMap, obj)) {
-        Private::ObjectEx &ref = d->objMap[obj];
-        CL_BREAK_IF(OK_MAY_EXIST != ref.kind || off != ref.off);
+    Private::TData::iterator iter = d->data.find(valRoot);
+    if (d->data.end() != iter && OK_SLS == kind) {
+        Private::AbstractObject &aoData = iter->second;
+        CL_BREAK_IF(OK_MAY_EXIST != aoData.kind || off != aoData.off);
 
         // OK_MAY_EXIST -> OK_SLS
-        ref.kind = kind;
+        aoData.kind = kind;
         return;
     }
 
-    CL_BREAK_IF(OK_CONCRETE == kind || hasKey(d->objMap, obj));
+    CL_BREAK_IF(OK_CONCRETE == kind || hasKey(d->data, valRoot));
 
     // initialize abstract object
-    Private::ObjectEx &ref = d->objMap[obj];
-    ref.kind    = kind;
-    ref.off     = off;
+    Private::AbstractObject &aoData = d->data[valRoot];
+    aoData.kind     = kind;
+    aoData.off      = off;
 }
 
 void SymHeap::valTargetSetConcrete(TValId at) {
-    const TObjId root = objRootByVal(*this, at);
+    const TValId valRoot = this->valRoot(at);
 
     CL_DEBUG("SymHeap::objSetConcrete() is taking place...");
-    Private::TObjMap::iterator iter = d->objMap.find(root);
-    CL_BREAK_IF(d->objMap.end() == iter);
+    Private::TData::iterator iter = d->data.find(valRoot);
+    CL_BREAK_IF(d->data.end() == iter);
 
     // just remove the object ID from the map
-    d->objMap.erase(iter);
+    d->data.erase(iter);
 }
 
 void SymHeap::valMerge(TValId v1, TValId v2) {
@@ -1584,7 +1601,14 @@ bool SymHeap::proveNeq(TValId ref, TValId val) const {
     return false;
 }
 
-void SymHeap::objDestroy(TObjId obj) {
-    SymHeapCore::objDestroy(obj);
-    d->objMap.erase(obj);
+bool SymHeap::valDestroyTarget(TValId val) {
+    const TValId valRoot = this->valRoot(val);
+    if (!SymHeapCore::valDestroyTarget(val))
+        return false;
+
+    CL_BREAK_IF(valRoot <= 0);
+    if (d->data.erase(valRoot))
+        CL_DEBUG("SymHeap::valDestroyTarget() destroys an abstract object");
+
+    return true;
 }
