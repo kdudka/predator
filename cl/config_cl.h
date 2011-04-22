@@ -31,6 +31,11 @@
 #define CL_DEBUG_CLF                    0
 
 /**
+ * if 1, print tons of verbose output when killing variables
+ */
+#define CL_DEBUG_VAR_KILLER             0
+
+/**
  * if 1, show the amount of time taken by the analysis even without verbose mode
  */
 #define CL_EASY_TIMER                   0
