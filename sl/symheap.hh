@@ -527,8 +527,12 @@ class SymHeap: public SymHeapCore {
         const BindingOff& segBinding(TValId at) const;
 
     public:
-        void objSetAbstract(TObjId obj, EObjKind kind, const BindingOff &off);
-        void objSetConcrete(TObjId obj);
+        void valTargetSetAbstract(
+                TValId                      val,
+                EObjKind                    kind,
+                const BindingOff            &off);
+
+        void valTargetSetConcrete(TValId val);
 
     public:
         /**

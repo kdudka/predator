@@ -1387,8 +1387,13 @@ const BindingOff& SymHeap::segBinding(TValId at) const {
     return iter->second.off;
 }
 
-void SymHeap::objSetAbstract(TObjId obj, EObjKind kind, const BindingOff &off)
+void SymHeap::valTargetSetAbstract(
+        TValId                      at,
+        EObjKind                    kind,
+        const BindingOff            &off)
 {
+    const TObjId obj = objRootByVal(*this, at);
+
     if (OK_SLS == kind && hasKey(d->objMap, obj)) {
         Private::ObjectEx &ref = d->objMap[obj];
         CL_BREAK_IF(OK_MAY_EXIST != ref.kind || off != ref.off);
@@ -1406,9 +1411,11 @@ void SymHeap::objSetAbstract(TObjId obj, EObjKind kind, const BindingOff &off)
     ref.off     = off;
 }
 
-void SymHeap::objSetConcrete(TObjId obj) {
+void SymHeap::valTargetSetConcrete(TValId at) {
+    const TObjId root = objRootByVal(*this, at);
+
     CL_DEBUG("SymHeap::objSetConcrete() is taking place...");
-    Private::TObjMap::iterator iter = d->objMap.find(obj);
+    Private::TObjMap::iterator iter = d->objMap.find(root);
     CL_BREAK_IF(d->objMap.end() == iter);
 
     // just remove the object ID from the map

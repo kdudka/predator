@@ -776,7 +776,7 @@ bool createObject(
 
     if (OK_CONCRETE != kind) {
         // abstract object
-        ctx.dst.objSetAbstract(rootDst, kind, off);
+        objSetAbstract(ctx.dst, rootDst, kind, off);
 
         // compute minimal length of the resulting segment
         const unsigned len1 = objMinLength(ctx.sh1, root1);

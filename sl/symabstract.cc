@@ -388,7 +388,7 @@ void slSegAbstractionStep(SymHeap &sh, TObjId *pObj, const BindingOff &off)
         segSetMinLength(sh, objNext, /* SLS 0+ */ 0);
     else
         // abstract the _next_ object
-        sh.objSetAbstract(objNext, OK_SLS, off);
+        sh.valTargetSetAbstract(valNext, OK_SLS, off);
 
     // merge data
     CL_BREAK_IF(OK_SLS != objKind(sh, objNext));
@@ -414,7 +414,7 @@ void enlargeMayExist(SymHeap &sh, const TObjId obj) {
     const EObjKind kind = objKind(sh, obj);
     switch (kind) {
         case OK_MAY_EXIST:
-            sh.objSetConcrete(obj);
+            objSetConcrete(sh, obj);
             // fall through!
 
         case OK_CONCRETE:
@@ -436,10 +436,10 @@ void dlSegCreate(SymHeap &sh, TObjId o1, TObjId o2, BindingOff off) {
     enlargeMayExist(sh, o2);
 
     swapValues(off.next, off.prev);
-    sh.objSetAbstract(o1, OK_DLS, off);
+    objSetAbstract(sh, o1, OK_DLS, off);
 
     swapValues(off.next, off.prev);
-    sh.objSetAbstract(o2, OK_DLS, off);
+    objSetAbstract(sh, o2, OK_DLS, off);
 
     // introduce some UV_UNKNOWN values if necessary
     abstractNonMatchingValues(sh, o1, o2, /* bidir */ true);
@@ -724,7 +724,7 @@ bool dlSegReplaceByConcrete(SymHeap &sh, TObjId obj, TObjId peer) {
     REQUIRE_GC_ACTIVITY(sh, addrPeer, dlSegReplaceByConcrete);
 
     // concretize self
-    sh.objSetConcrete(obj);
+    objSetConcrete(sh, obj);
 
     // this can't fail (at least I hope so...)
     LDP_PLOT(symabstract, sh);
@@ -835,7 +835,7 @@ void concretizeObj(SymHeap &sh, TValId addr, TSymHeapList &todo) {
 
     if (OK_MAY_EXIST == kind) {
         // this kind is much easier than regular list segments
-        sh.objSetConcrete(obj);
+        objSetConcrete(sh, obj);
         LDP_PLOT(symabstract, sh);
         return;
     }
@@ -857,7 +857,7 @@ void concretizeObj(SymHeap &sh, TValId addr, TSymHeapList &todo) {
     const TObjId ptrNext = ptrObjByOffset(sh, obj, (OK_SLS == kind)
             ? segBinding(sh, obj).next
             : segBinding(sh, obj).prev);
-    sh.objSetConcrete(obj);
+    objSetConcrete(sh, obj);
     sh.objSetValue(ptrNext, aoDupHeadAddr);
 
     if (OK_DLS == kind) {

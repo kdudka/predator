@@ -82,6 +82,26 @@ inline const BindingOff& segBinding(const SymHeap &sh, TObjId obj) {
     return sh.segBinding(addr);
 }
 
+inline void objSetAbstract(
+        SymHeap                     &sh,
+        const TObjId                obj,
+        const EObjKind              kind,
+        const BindingOff            &off)
+{
+    const TValId addr = sh.placedAt(obj);
+    CL_BREAK_IF(addr <= 0);
+    sh.valTargetSetAbstract(addr, kind, off);
+}
+
+inline void objSetConcrete(
+        SymHeap                     &sh,
+        const TObjId                obj)
+{
+    const TValId addr = sh.placedAt(obj);
+    CL_BREAK_IF(addr <= 0);
+    sh.valTargetSetConcrete(addr);
+}
+
 /// same as SymHeap::objSetProto(), but takes care of DLS peers
 void segSetProto(SymHeap &sh, TObjId seg, bool isProto);
 
