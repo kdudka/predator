@@ -554,7 +554,7 @@ void SymPlot::Private::digNext(TObjId obj) {
                 return;
     }
 
-    const BindingOff &off = this->heap->objBinding(obj);
+    const BindingOff &off = segBinding(*this->heap, obj);
     const TOffset offHead = off.head;
     if (offHead) {
         const TObjId objHead = compObjByOffset(*this->heap, obj, offHead);

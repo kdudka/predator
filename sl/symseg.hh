@@ -76,6 +76,12 @@ inline unsigned objMinLength(const SymHeap &sh, TObjId obj) {
 
 void segSetMinLength(SymHeap &sh, TObjId seg, unsigned len);
 
+inline const BindingOff& segBinding(const SymHeap &sh, TObjId obj) {
+    const TValId addr = sh.placedAt(obj);
+    CL_BREAK_IF(addr <= 0);
+    return sh.segBinding(addr);
+}
+
 /// same as SymHeap::objSetProto(), but takes care of DLS peers
 void segSetProto(SymHeap &sh, TObjId seg, bool isProto);
 
@@ -90,7 +96,7 @@ void segDestroy(SymHeap &sh, TObjId seg);
  * @note this is mostly useful as soon as @b Linux @b lists are involved
  */
 inline TObjId segHead(const SymHeap &sh, TObjId seg) {
-    const TOffset offHead = sh.objBinding(seg).head;
+    const TOffset offHead = segBinding(sh, seg).head;
     return compObjByOffset(sh, seg, offHead);
 }
 
@@ -120,14 +126,14 @@ void buildIgnoreList(
 
         case OK_DLS:
             // preserve 'peer' field
-            tmp = ptrObjByOffset(sh, obj, sh.objBinding(obj).prev);
+            tmp = ptrObjByOffset(sh, obj, segBinding(sh, obj).prev);
             ignoreList.insert(tmp);
             // fall through!
 
         case OK_SLS:
         case OK_MAY_EXIST:
             // preserve 'next' field
-            tmp = ptrObjByOffset(sh, obj, sh.objBinding(obj).next);
+            tmp = ptrObjByOffset(sh, obj, segBinding(sh, obj).next);
             ignoreList.insert(tmp);
     }
 }

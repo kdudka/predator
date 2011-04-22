@@ -45,7 +45,7 @@ bool matchSegBinding(
         // nothing to match actually
         return true;
 
-    const BindingOff off = sh.objBinding(obj);
+    const BindingOff off = segBinding(sh, obj);
     if (off.head != offDiscover.head)
         // head mismatch
         return false;

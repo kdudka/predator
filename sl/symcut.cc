@@ -28,6 +28,7 @@
 #include "symbt.hh"
 #include "symclone.hh"
 #include "symplot.hh"
+#include "symseg.hh"
 #include "symutil.hh"
 #include "worklist.hh"
 
@@ -175,8 +176,8 @@ TObjId addObjectIfNeeded(DeepCopyData &dc, TObjId objSrc) {
         case OK_MAY_EXIST:
         case OK_DLS:
         case OK_SLS: {
-            const BindingOff &segBinding = src.objBinding(rootSrc);
-            dst.objSetAbstract(rootDst, kind, segBinding);
+            const BindingOff &off = segBinding(src, rootSrc);
+            dst.objSetAbstract(rootDst, kind, off);
         }
         // fall through!
 

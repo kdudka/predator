@@ -657,8 +657,8 @@ bool joinSegBinding(
         return true;
 
     if (isSeg1 && isSeg2) {
-        const BindingOff off = ctx.sh1.objBinding(o1);
-        if (off == ctx.sh2.objBinding(o2)) {
+        const BindingOff off = segBinding(ctx.sh1, o1);
+        if (off == segBinding(ctx.sh2, o2)) {
             *pOff = off;
             return true;
         }
@@ -668,12 +668,12 @@ bool joinSegBinding(
     }
 
     if (isSeg1) {
-        *pOff = ctx.sh1.objBinding(o1);
+        *pOff = segBinding(ctx.sh1, o1);
         return true;
     }
 
     if (isSeg2) {
-        *pOff = ctx.sh2.objBinding(o2);
+        *pOff = segBinding(ctx.sh2, o2);
         return true;
     }
 
@@ -1041,19 +1041,19 @@ bool joinSegmentWithAny(
 read_only_ok:
     // BindingOff is assumed to be already matching at this point
     BindingOff off = (JS_USE_SH1 == action)
-        ? ctx.sh1.objBinding(root1)
-        : ctx.sh2.objBinding(root2);
+        ? segBinding(ctx.sh1, root1)
+        : segBinding(ctx.sh2, root2);
 
     TObjId peer1 = root1;
     if (OK_DLS == objKind(ctx.sh1, root1)) {
         peer1 = dlSegPeer(ctx.sh1, root1);
-        off = ctx.sh1.objBinding(peer1);
+        off = segBinding(ctx.sh1, peer1);
     }
 
     TObjId peer2 = root2;
     if (OK_DLS == objKind(ctx.sh2, root2)) {
         peer2 = dlSegPeer(ctx.sh2, root2);
-        off = ctx.sh2.objBinding(peer2);
+        off = segBinding(ctx.sh2, peer2);
     }
 
     const TObjId next1 = ptrObjByOffset(ctx.sh1, peer1, off.next);
@@ -2318,7 +2318,7 @@ bool joinData(
 
     // dst is expected to be a segment
     CL_BREAK_IF(!objIsSeg(sh, dst));
-    const BindingOff off(sh.objBinding(dst));
+    const BindingOff off(segBinding(sh, dst));
     if (debugSymJoin) {
         EJoinStatus status = JS_USE_ANY;
         joinDataReadOnly(&status, sh, off, dst, src, 0);

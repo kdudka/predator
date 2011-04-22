@@ -22,6 +22,7 @@
 
 #include <cl/cl_msg.hh>
 
+#include "symseg.hh"
 #include "symutil.hh"
 #include "util.hh"
 #include "worklist.hh"
@@ -266,8 +267,8 @@ bool cmpAbstractObjects(
         return true;
 
     // compare binding fields
-    const BindingOff &off1 = sh1.objBinding(o1);
-    const BindingOff &off2 = sh2.objBinding(o2);
+    const BindingOff &off1 = segBinding(sh1, o1);
+    const BindingOff &off2 = segBinding(sh2, o2);
     return (off1 == off2);
 }
 

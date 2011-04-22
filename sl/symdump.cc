@@ -26,6 +26,7 @@
 
 #include "symheap.hh"
 #include "symplot.hh"
+#include "symseg.hh"
 #include "symutil.hh"
 
 #include <iostream>
@@ -101,15 +102,15 @@ void dump_kind(const SymHeap &heap, TObjId obj) {
             return;
 
         case OK_SLS:
-            cout << "OK_SLS, offNext = " << heap.objBinding(obj).next;
+            cout << "OK_SLS, offNext = " << segBinding(heap, obj).next;
             break;
 
         case OK_DLS:
-            cout << "OK_DLS, offPeer = " << heap.objBinding(obj).prev
-                << ", offNext = " << heap.objBinding(obj).next;
+            cout << "OK_DLS, offPeer = " << segBinding(heap, obj).prev
+                << ", offNext = " << segBinding(heap, obj).next;
     }
 
-    const TOffset offHead = heap.objBinding(obj).head;
+    const TOffset offHead = segBinding(heap, obj).head;
     if (offHead)
         cout << ", icHead = " << offHead;
 }
@@ -191,7 +192,7 @@ void dump_obj(const SymHeap &heap, TObjId obj) {
     const EObjKind kind = objKind(heap, obj);
     if (OK_DLS == kind) {
         cout << "    peer      = ";
-        const TOffset offPeer = heap.objBinding(obj).prev;
+        const TOffset offPeer = segBinding(heap, obj).prev;
         const TObjId peerPtr = ptrObjByOffset(heap, obj, offPeer);
         const TValId valPeer = heap.valueOf(peerPtr);
         if (0 < valPeer) {
@@ -219,7 +220,7 @@ void dump_obj(const SymHeap &heap, TObjId obj) {
 
     if (OK_CONCRETE != kind) {
         cout << "    next      = ";
-        const TOffset offNext = heap.objBinding(obj).next;
+        const TOffset offNext = segBinding(heap, obj).next;
         const TObjId nextPtr = ptrObjByOffset(heap, obj, offNext);
         const TValId valNext = heap.valueOf(nextPtr);
         if (0 < valNext) {

@@ -1378,8 +1378,8 @@ EUnknownValue SymHeap::valGetUnknown(TValId val) const {
     return SymHeapCore::valGetUnknown(val);
 }
 
-const BindingOff& SymHeap::objBinding(TObjId obj) const {
-    const TObjId root = objRoot(*this, obj);
+const BindingOff& SymHeap::segBinding(TValId at) const {
+    const TObjId root = objRootByVal(*this, at);
 
     Private::TObjMap::iterator iter = d->objMap.find(root);
     CL_BREAK_IF(d->objMap.end() == iter);

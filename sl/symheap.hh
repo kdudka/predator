@@ -524,7 +524,7 @@ class SymHeap: public SymHeapCore {
          * SLS, DLS, and the like.
          */
         EObjKind valTargetKind(TValId) const;
-        const BindingOff& objBinding(TObjId obj) const;
+        const BindingOff& segBinding(TValId at) const;
 
     public:
         void objSetAbstract(TObjId obj, EObjKind kind, const BindingOff &off);

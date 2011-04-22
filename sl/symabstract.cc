@@ -395,7 +395,7 @@ void slSegAbstractionStep(SymHeap &sh, TObjId *pObj, const BindingOff &off)
     abstractNonMatchingValues(sh, obj, objNext);
 
     // replace all references to 'head'
-    const TOffset offHead = sh.objBinding(objNext).head;
+    const TOffset offHead = sh.segBinding(valNext).head;
     const TValId headAt = sh.placedAt(compObjByOffset(sh, obj, offHead));
     sh.valReplace(headAt, segHeadAddr(sh, objNext));
 
@@ -466,7 +466,7 @@ void dlSegGobble(SymHeap &sh, TObjId dls, TObjId var, bool backward) {
     abstractNonMatchingValues(sh, var, dls);
 
     // store the pointer DLS -> VAR
-    const BindingOff &off = sh.objBinding(dls);
+    const BindingOff &off = segBinding(sh, dls);
     const TObjId dlsNextPtr = ptrObjByOffset(sh, dls, off.next);
     const TObjId varNextPtr = ptrObjByOffset(sh, var, off.next);
     sh.objSetValue(dlsNextPtr, sh.valueOf(varNextPtr));
@@ -490,7 +490,7 @@ void dlSegMerge(SymHeap &sh, TObjId seg1, TObjId seg2) {
     dlSegSetMinLength(sh, seg2, /* DLS 0+ */ 0);
 
     // check for a failure of segDiscover()
-    CL_BREAK_IF(sh.objBinding(seg1) != sh.objBinding(seg2));
+    CL_BREAK_IF(segBinding(sh, seg1) != segBinding(sh, seg2));
 
     const TObjId peer1 = dlSegPeer(sh, seg1);
 #ifndef NDEBUG
@@ -550,7 +550,7 @@ void dlSegAbstractionStep(SymHeap &sh, TObjId *pObj, const BindingOff &off)
             o2 = dlSegPeer(sh, o2);
 
             // jump to the next object (as we know such an object exists)
-            skipObj(sh, &o2, sh.objBinding(o2).next);
+            skipObj(sh, &o2, segBinding(sh, o2).next);
             if (OK_DLS != objKind(sh, o2)) {
                 // DLS + VAR
                 dlSegGobble(sh, o1, o2, /* backward */ false);
@@ -708,7 +708,7 @@ bool dlSegReplaceByConcrete(SymHeap &sh, TObjId obj, TObjId peer) {
     dlSegSetMinLength(sh, obj, /* DLS 0+ */ 0);
 
     // take the value of 'next' pointer from peer
-    const TOffset offPeer = sh.objBinding(obj).prev;
+    const TOffset offPeer = segBinding(sh, obj).prev;
     const TObjId peerPtr = ptrObjByOffset(sh, obj, offPeer);
     const TValId valNext = sh.valueOf(nextPtrFromSeg(sh, peer));
     sh.objSetValue(peerPtr, valNext);
@@ -845,7 +845,7 @@ void concretizeObj(SymHeap &sh, TValId addr, TSymHeapList &todo) {
     const TValId aoDupHeadAddr = segHeadAddr(sh, aoDup);
     if (OK_DLS == kind) {
         // DLS relink
-        const TOffset offPeer = sh.objBinding(peer).prev;
+        const TOffset offPeer = segBinding(sh, peer).prev;
         const TObjId peerField = ptrObjByOffset(sh, peer, offPeer);
         sh.objSetValue(peerField, aoDupHeadAddr);
     }
@@ -855,14 +855,14 @@ void concretizeObj(SymHeap &sh, TValId addr, TSymHeapList &todo) {
 
     // concretize self and recover the list
     const TObjId ptrNext = ptrObjByOffset(sh, obj, (OK_SLS == kind)
-            ? sh.objBinding(obj).next
-            : sh.objBinding(obj).prev);
+            ? segBinding(sh, obj).next
+            : segBinding(sh, obj).prev);
     sh.objSetConcrete(obj);
     sh.objSetValue(ptrNext, aoDupHeadAddr);
 
     if (OK_DLS == kind) {
         // update DLS back-link
-        const BindingOff &off = sh.objBinding(aoDup);
+        const BindingOff &off = sh.segBinding(aoDupHeadAddr);
         const TObjId backLink = ptrObjByOffset(sh, aoDup, off.next);
         const TValId headAddr = sh.placedAt(
                 compObjByOffset(sh, obj, off.head));
