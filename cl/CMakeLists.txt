@@ -59,6 +59,7 @@ add_library(cl STATIC
     clutil.cc
     code_listener.cc
     gcc/clplug.c
+    killer.cc
     ssd.cc
     stopwatch.cc
     storage.cc

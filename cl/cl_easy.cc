@@ -26,6 +26,7 @@
 #include <cl/easy.hh>
 
 #include "cl_storage.hh"
+#include "killer.hh"
 #include "stopwatch.hh"
 
 #include <string>
@@ -48,6 +49,9 @@ class ClEasy: public ClStorageBuilder {
 
     protected:
         virtual void run(CodeStorage::Storage &stor) {
+            CL_DEBUG("killing local variables...");
+            killLocalVariables(stor);
+
             CL_DEBUG("ClEasy is calling peer...");
             StopWatch watch;
             clEasyRun(stor, configString_.c_str());
