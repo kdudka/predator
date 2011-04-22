@@ -562,10 +562,6 @@ class SymHeap: public SymHeapCore {
 
         virtual TObjId objDup(TObjId obj);
 
-        // XXX
-        friend class SymExecEngine;
-        friend class SymProc;
-
     private:
         void dlSegCrossNeqOp(ENeqOp op, TValId headAddr);
 

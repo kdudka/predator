@@ -1163,6 +1163,10 @@ int SymHeapCore::objSizeOfAnon(TObjId obj) const {
 }
 
 void SymHeapCore::objDefineType(TObjId obj, TObjType clt) {
+    if (OBJ_RETURN == obj)
+        // cleanup OBJ_RETURN for next wheel
+        this->objDestroy(OBJ_RETURN);
+
     CL_BREAK_IF(d->objOutOfRange(obj));
     Private::Object &objData = d->objects[obj];
 

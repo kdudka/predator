@@ -125,10 +125,6 @@ void digSubObjs(DeepCopyData &dc, TObjId objSrc, TObjId objDst)
 }
 
 TObjId addObjectIfNeeded(DeepCopyData &dc, TObjId objSrc) {
-    if (OBJ_RETURN == objSrc)
-        // FIXME: safe to ignore??
-        return OBJ_RETURN;
-
     DeepCopyData::TObjMap::iterator iterObjSrc = dc.objMap.find(objSrc);
     if (dc.objMap.end() != iterObjSrc)
         // mapping already known
@@ -162,6 +158,15 @@ TObjId addObjectIfNeeded(DeepCopyData &dc, TObjId objSrc) {
         const TObjId objDst = dst.pointsTo(dst.heapAlloc(cbSize));
         add(dc, objSrc, objDst);
         return objDst;
+    }
+
+    if (OBJ_RETURN == rootSrc) {
+        // clone return value
+        dst.objDefineType(OBJ_RETURN, clt);
+        add(       dc, OBJ_RETURN, OBJ_RETURN);
+        digSubObjs(dc, OBJ_RETURN, OBJ_RETURN);
+
+        return OBJ_RETURN;
     }
 
     const TObjId rootDst = dst.objCreate(clt, cv);
