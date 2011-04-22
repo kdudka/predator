@@ -1177,24 +1177,26 @@ void SymHeapCore::objDefineType(TObjId obj, TObjType clt) {
 }
 
 void SymHeapCore::objDestroy(TObjId obj) {
-    Private::Root &rootData = roMapLookup(d->roots, obj);
-    const CVar cv = rootData.cVar;
-    if (cv.uid != /* heap object */ -1)
-        d->cVarMap.remove(cv);
-
-    const TObjId kind = (-1 == rootData.cVar.uid)
-        ? OBJ_DELETED
-        : OBJ_LOST;
-
     CL_BREAK_IF(OBJ_INVALID != this->objParent(obj));
+    Private::Root &rootData = roMapLookup(d->roots, obj);
+
+    // remove the corresponding program variable (if any)
+    TObjId kind = OBJ_DELETED;
+    const CVar cv = rootData.cVar;
+    if (cv.uid != /* heap object */ -1) {
+        d->cVarMap.remove(cv);
+        kind = OBJ_LOST;
+    }
+
+    // invalidate the address
+    const TValId addr = rootData.addr;
+    if (0 < addr) {
+        CL_BREAK_IF(d->valOutOfRange(addr));
+        d->values[addr].target = kind;
+    }
+
+    // destroy the object
     d->subsDestroy(obj);
-
-    TValId &addr = rootData.addr;
-    if (0 < addr)
-        d->values.at(addr).target = kind;
-
-    addr = VAL_INVALID;
-
     if (OBJ_RETURN == obj) {
         // reinitialize OBJ_RETURN
         d->objects[OBJ_RETURN] = Private::Object();
