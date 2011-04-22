@@ -31,7 +31,12 @@
 #define CL_DEBUG_CLF                    0
 
 /**
- * if 1, print tons of verbose output when killing variables
+ * debug level of the verbose output when killing variables
+ * - 0 ... a reasonable default
+ * - 1 ... print variables being killed and variables black-listed for killing
+ * - 2 ... print some basic progress info
+ * - 3 ... debug the algorithm at the level of instructions
+ * - 4 ... debug the algorithm at the level of operands
  */
 #define CL_DEBUG_VAR_KILLER             0
 
