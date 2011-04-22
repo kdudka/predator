@@ -330,6 +330,15 @@ struct Insn {
     TOperandList                operands;
 
     /**
+     * a bitset of size operands.size() -- one bit per each operand -- if the
+     * bit N is true, you can safely kill the variable referred by N-th operand.
+     * Note that computation of this data by CodeStorage is optional.  If the
+     * feature is not used, all bits are initialized to zero, which should be a
+     * safe over-approximation.
+     */
+    std::vector<bool>           opsToKill;
+
+    /**
      * List of all target blocks - useful only for @b terminal @b instructions.
      * Their particular semantic is highly dependent on @b type @b of @b the
      * @b instruction. Let's go to summarize it:

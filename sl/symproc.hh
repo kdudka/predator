@@ -188,6 +188,7 @@ class SymExecCore: public SymProc {
 
         bool concretizeIfNeeded(SymState &dst, const CodeStorage::Insn &insn);
         bool execCore(SymState &dst, const CodeStorage::Insn &insn, const bool);
+        void killVar(const struct cl_operand &op);
 
     private:
         const SymExecCoreParams ep_;

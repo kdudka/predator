@@ -1097,6 +1097,10 @@ bool SymExecCore::concretizeIfNeeded(SymState                   &results,
     return true;
 }
 
+void SymExecCore::killVar(const struct cl_operand &) {
+    CL_BREAK_IF("please implement");
+}
+
 bool SymExecCore::execCore(
         SymState                &dst,
         const CodeStorage::Insn &insn,
@@ -1113,11 +1117,19 @@ bool SymExecCore::execCore(
             break;
 
         case CL_INSN_CALL:
+            // TODO: kill variables
             return this->execCall(dst, insn);
 
         default:
             CL_TRAP;
             return false;
+    }
+
+    // kill variables
+    const CodeStorage::TOperandList &ops = insn.operands;
+    for (unsigned i = 0; i < ops.size(); ++i) {
+        if (insn.opsToKill[i])
+            this->killVar(ops[i]);
     }
 
     if (feelFreeToOverwrite)
