@@ -119,7 +119,7 @@ bool validatePointingObjects(
         blackList.insert(ptrObjByOffset(sh, root, off.prev));
 
     const TValId headAddr = sh.placedAt(compObjByOffset(sh, root, off.head));
-    const bool rootIsProto = sh.objIsProto(root);
+    const bool rootIsProto = sh.valTargetIsProto(sh.placedAt(root));
 
     // TODO: move subObjByChain() calls out of the loop
     BOOST_FOREACH(const TObjId obj, refs) {
@@ -138,7 +138,7 @@ bool validatePointingObjects(
         if (hasKey(allowedReferers, objRoot(sh, obj)))
             continue;
 
-        if (!rootIsProto && sh.objIsProto(obj))
+        if (!rootIsProto && sh.valTargetIsProto(sh.placedAt(obj)))
             // FIXME: subtle
             continue;
 

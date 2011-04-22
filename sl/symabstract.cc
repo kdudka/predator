@@ -154,7 +154,7 @@ TObjId protoClone(SymHeap &sh, const TObjId proto) {
     else {
         // clone bare prototype
         clone = objDup(sh, proto);
-        sh.objSetProto(clone, false);
+        sh.valTargetSetProto(sh.placedAt(clone), false);
     }
 
     duplicateUnknownValues(sh, clone);
@@ -166,12 +166,16 @@ struct ProtoFinder {
     std::set<TObjId> protos;
 
     bool operator()(SymHeap &sh, TObjId sub) {
-        const TObjId target = objRootByPtr(sh, sub);
-        if (target <= 0)
+        const TValId val = sh.valueOf(sub);
+        if (val <= 0)
             return /* continue */ true;
 
-        if (sh.objIsProto(target))
-            protos.insert(target);
+        if (sh.valOffset(val))
+            // TODO: support for prototypes not pointed by roots?
+            return /* continue */ true;
+
+        if (sh.valTargetIsProto(val))
+            protos.insert(sh.objAt(val, CL_TYPE_STRUCT));
 
         return /* continue */ true;
     }
@@ -289,9 +293,10 @@ struct ProtoCloner {
         }
 
         // check if we point to prototype, or shared data
-        const TObjId target = objRootByVal(sh, valOld);
-        if (sh.objIsProto(target))
+        if (sh.valTargetIsProto(valOld)) {
+            const TObjId target = objRootByVal(sh, valOld);
             cloneGenericPrototype(sh, target, rootDst, rootSrc);
+        }
 
         return /* continue */ true;
     }

@@ -256,10 +256,6 @@ bool cmpAbstractObjects(
         TObjId                  o1,
         TObjId                  o2)
 {
-    if (&sh1 != &sh2 && sh1.objIsProto(o1) != sh2.objIsProto(o2))
-        // prototype vs. shared object while called from areEqual()
-        return false;
-
     const EObjKind kind = sh1.objKind(o1);
     if (sh2.objKind(o2) != kind)
         // kind of object mismatch
@@ -311,6 +307,11 @@ bool dfsCmp(
 
         if (isComp)
             continue;
+
+        if (&sh1 != &sh2
+                && sh1.valTargetIsProto(v1) != sh2.valTargetIsProto(v2))
+            // prototype vs. shared object while called from areEqual()
+            return false;
 
         const TObjId obj1 = sh1.pointsTo(v1);
         const TObjId obj2 = sh2.pointsTo(v2);

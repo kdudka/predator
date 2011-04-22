@@ -1274,22 +1274,27 @@ int SymHeapCore::valGetCustom(TValId val) const
     return valData.customData;
 }
 
-bool SymHeapCore::objIsProto(TObjId obj) const {
-    if (OBJ_RETURN == obj || d->objOutOfRange(obj))
+bool SymHeapCore::valTargetIsProto(TValId val) const {
+    if (VAL_NULL == val || d->valOutOfRange(val))
         // not a prototype for sure
         return false;
 
     // seek root
-    const TObjId root = d->objRoot(obj);
+    const TValId valRoot = d->valRoot(val);
+    const TObjId root = d->values[valRoot].target;
+    if (root < 0)
+        return false;
+
     const Private::Root &rootData = roMapLookup(d->roots, root);
     return rootData.isProto;
 }
 
-void SymHeapCore::objSetProto(TObjId obj, bool isProto) {
-    CL_BREAK_IF(OBJ_RETURN == obj || d->objOutOfRange(obj));
+void SymHeapCore::valTargetSetProto(TValId val, bool isProto) {
+    CL_BREAK_IF(VAL_NULL == val || d->valOutOfRange(val));
 
     // seek root
-    const TObjId root = d->objRoot(obj);
+    const TValId valRoot = d->valRoot(val);
+    const TObjId root = d->values[valRoot].target;
     Private::Root &rootData = roMapLookup(d->roots, root);
     rootData.isProto = isProto;
 }

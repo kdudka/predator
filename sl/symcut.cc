@@ -167,8 +167,8 @@ TObjId addObjectIfNeeded(DeepCopyData &dc, TObjId objSrc) {
     add(dc, rootSrc, rootDst);
     digSubObjs(dc, rootSrc, rootDst);
 
-    const bool isProto = src.objIsProto(rootSrc);
-    dst.objSetProto(rootDst, isProto);
+    const bool isProto = src.valTargetIsProto(src.placedAt(rootSrc));
+    dst.valTargetSetProto(dst.placedAt(rootDst), isProto);
 
     const EObjKind kind = src.objKind(rootSrc);
     switch (kind) {

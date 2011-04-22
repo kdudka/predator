@@ -582,7 +582,7 @@ void SymPlot::Private::digNext(TObjId obj) {
 
 void SymPlot::Private::openCluster(TObjId obj) {
     std::string label;
-    if (this->heap->objIsProto(obj))
+    if (this->heap->valTargetIsProto(this->heap->placedAt(obj)))
         label = "[prototype] ";
 
 #ifndef NDEBUG
@@ -856,8 +856,9 @@ void SymPlot::Private::digObj(TObjId obj) {
         return;
     }
 
+    const TValId addr = this->heap->placedAt(obj);
     const TObjId peer = dlSegPeer(*this->heap, obj);
-    const char *label = (this->heap->objIsProto(obj))
+    const char *label = (this->heap->valTargetIsProto(addr))
         ? "[prototype] DLS"
         : "DLS";
 

@@ -441,17 +441,17 @@ class SymHeapCore {
         int valGetCustom(TValId val) const;
 
         /**
-         * true, if the given object should be cloned on concretization of the
-         * parent object
+         * true, if the target object should be cloned on concretization of the
+         * owning object
          */
-        bool objIsProto(TObjId obj) const;
+        bool valTargetIsProto(TValId) const;
 
         /**
-         * set it to true, if the given @b root object should be cloned on
-         * concretization of the parent object.  By default, all nested objects
+         * set it to true, if the target object should be cloned on
+         * concretization of the owning object.  By default, all nested objects
          * are shared.
          */
-        void objSetProto(TObjId obj, bool isProto);
+        void valTargetSetProto(TValId, bool isProto);
 
     protected:
         /// create a deep copy of the given object with new object IDs

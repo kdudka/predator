@@ -128,12 +128,12 @@ void segSetProto(SymHeap &sh, TObjId seg, bool isProto) {
 
     switch (kind) {
         case OK_DLS:
-            sh.objSetProto(dlSegPeer(sh, seg), isProto);
+            sh.valTargetSetProto(sh.placedAt(dlSegPeer(sh, seg)), isProto);
             // fall through
 
         case OK_SLS:
         case OK_MAY_EXIST:
-            sh.objSetProto(seg, isProto);
+            sh.valTargetSetProto(sh.placedAt(seg), isProto);
             break;
 
         default:

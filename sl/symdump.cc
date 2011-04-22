@@ -220,7 +220,7 @@ void dump_obj(const SymHeap &heap, TObjId obj) {
     }
 
     cout << "    isProto   = ";
-    if (heap.objIsProto(obj))
+    if (heap.valTargetIsProto(heap.placedAt(obj)))
         cout << "true\n";
     else
         cout << "false\n";

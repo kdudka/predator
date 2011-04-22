@@ -687,8 +687,8 @@ bool considerImplicitPrototype(
         const TObjId            root1,
         const TObjId            root2)
 {
-    const bool isProto1 = ctx.sh1.objIsProto(root1);
-    const bool isProto2 = ctx.sh2.objIsProto(root2);
+    const bool isProto1 = ctx.sh1.valTargetIsProto(ctx.sh1.placedAt(root1));
+    const bool isProto2 = ctx.sh2.valTargetIsProto(ctx.sh2.placedAt(root2));
     CL_BREAK_IF(isProto1 == isProto2);
     (void) isProto1;
 
@@ -713,18 +713,21 @@ bool joinProtoFlag(
         const TObjId            root1,
         const TObjId            root2)
 {
+    const bool isProto1 = ctx.sh1.valTargetIsProto(ctx.sh1.placedAt(root1));
+    const bool isProto2 = ctx.sh2.valTargetIsProto(ctx.sh2.placedAt(root2));
+
     if (OBJ_INVALID == root2) {
-        *pDst = ctx.sh1.objIsProto(root1);
+        *pDst = isProto1;
         return true;
     }
 
     if (OBJ_INVALID == root1) {
-        *pDst = ctx.sh2.objIsProto(root2);
+        *pDst = isProto2;
         return true;
     }
 
-    *pDst = ctx.sh1.objIsProto(root1);
-    if (ctx.sh2.objIsProto(root2) == *pDst)
+    *pDst = isProto1;
+    if (isProto2 == *pDst)
         return true;
 
     if (ctx.joiningData() || considerImplicitPrototype(ctx, root1, root2)) {
@@ -769,7 +772,7 @@ bool createObject(
 
     // preserve 'prototype' flag
     const TObjId rootDst = ctx.dst.objCreate(clt, /* XXX */ CVar());
-    ctx.dst.objSetProto(rootDst, isProto);
+    ctx.dst.valTargetSetProto(ctx.dst.placedAt(rootDst), isProto);
 
     if (OK_CONCRETE != kind) {
         // abstract object
@@ -2279,7 +2282,7 @@ void recoverPrototypes(
                 /* pointingTo   */  objGhost,
                 /* redirectTo   */  objDst);
 
-        sh.objSetProto(protoGhost, true);
+        sh.valTargetSetProto(sh.placedAt(protoGhost), true);
     }
 }
 
