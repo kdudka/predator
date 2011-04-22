@@ -29,6 +29,7 @@
 #include "symproc.hh"
 #include "symstate.hh"
 #include "symutil.hh"
+#include "util.hh"
 
 #include <vector>
 
@@ -124,30 +125,45 @@ void SymCallCtx::Private::assignReturnValue(SymHeap &sh) {
 void SymCallCtx::Private::destroyStackFrame(SymHeap &sh) {
     using namespace CodeStorage;
     const Fnc &ref = *this->fnc;
-
-#if DEBUG_SE_STACK_FRAME
-    CL_DEBUG_MSG(&ref.def.loc, "<<< destroying stack frame of "
-            << nameOf(ref) << "()"
-            << ", nestLevel = " << this->nestLevel);
-#endif
-
     SymProc proc(sh, this->bt);
 
-    BOOST_FOREACH(const int uid, ref.vars) {
-        const Var &var = ref.stor->vars[uid];
-        if (isOnStack(var)) {
-            const struct cl_loc *lw = &var.loc;
-#if DEBUG_SE_STACK_FRAME
-            CL_DEBUG_MSG(lw, "<<< destroying stack variable: #"
-                    << var.uid << " (" << var.name << ")" );
-#endif
-            const CVar cVar(var.uid, this->nestLevel);
-            const TObjId obj = sh.objByCVar(cVar);
-            CL_BREAK_IF(obj < 0);
+    // gather live variables
+    SymHeap::TContCVar liveVars;
+    sh.gatherCVars(liveVars);
 
-            proc.setLocation(lw);
-            proc.objDestroy(obj);
-        }
+    // filter local variables
+    SymHeap::TContCVar liveLocals;
+    BOOST_FOREACH(const CVar &cv, liveVars) {
+        if (!isOnStack(ref.stor->vars[cv.uid]))
+            // not a local variable
+            continue;
+
+        if (cv.inst != this->nestLevel)
+            // not a local variable in this context
+            continue;
+
+        if (hasKey(ref.vars, cv.uid))
+            liveLocals.push_back(cv);
+    }
+
+    CL_DEBUG_MSG(&ref.def.loc, "<<< destroying stack frame of "
+            << nameOf(ref) << "()"
+            << ", nestLevel = " << this->nestLevel
+            << ", varsTotal = " << ref.vars.size()
+            << ", varsAlive = " << liveLocals.size());
+
+    BOOST_FOREACH(const CVar &cv, liveLocals) {
+        const Var &var = ref.stor->vars[cv.uid];
+        const struct cl_loc *lw = &var.loc;
+#if DEBUG_SE_STACK_FRAME
+        CL_DEBUG_MSG(lw, "<<< destroying stack variable: #"
+                << var.uid << " (" << var.name << ")" );
+#endif
+        const TObjId obj = sh.objByCVar(cv);
+        CL_BREAK_IF(obj < 0);
+
+        proc.setLocation(lw);
+        proc.objDestroy(obj);
     }
 
     // We need to look for junk since there can be a function returning an
