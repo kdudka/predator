@@ -86,6 +86,11 @@
 #define SE_ABSTRACT_ON_CALL_DONE            1
 
 /**
+ * if 1, program variables are created as needed; before a fnc call otherwise
+ */
+#define SE_LAZY_VARS_CREATION               1
+
+/**
  * if 1, do not use DLS (Doubly-linked List Segment) abstracion
  */
 #define SE_DISABLE_DLS                      0

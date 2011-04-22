@@ -23,7 +23,7 @@
 
 #include <cl/cl_msg.hh>
 #include <cl/clutil.hh>
-#include <cl/code_listener.h>
+#include <cl/storage.hh>
 
 #include "symabstract.hh"
 #include "symdump.hh"
@@ -1073,8 +1073,18 @@ bool SymHeapCore::cVar(CVar *dst, TObjId obj) const {
     return true;
 }
 
-TObjId SymHeapCore::objByCVar(CVar cVar) const {
-    return d->cVarMap.find(cVar);
+// FIXME: should this be declared non-const?
+TObjId SymHeapCore::objByCVar(CVar cv) const {
+    const TObjId obj = d->cVarMap.find(cv);
+    if (0 < obj)
+        return obj;
+
+    // lazy creation of a program variable
+    TObjType clt = stor_.vars[cv.uid].clt;
+    CL_BREAK_IF(!clt || clt->code == CL_TYPE_VOID);
+
+    SymHeapCore &self = /* XXX */ const_cast<SymHeapCore &>(*this); 
+    return self.objCreate(clt, cv);
 }
 
 void SymHeapCore::gatherCVars(TContCVar &dst) const {

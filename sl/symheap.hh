@@ -322,7 +322,7 @@ class SymHeapCore {
          * @param cVar static/automatic variable to look for
          * @return A valid object ID in case of success, invalid otherwise.
          */
-        TObjId objByCVar(CVar cVar) const;
+        TObjId objByCVar(CVar cVar) /* FIXME */ const;
 
         /**
          * collect all static/automatic variables (see CodeStorage) which have

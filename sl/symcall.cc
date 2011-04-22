@@ -330,18 +330,16 @@ void SymCallCache::Private::createStackFrame(SymHeap::TContCVar &cVars) {
             // gather stack frame in order to prune the heap afterwards
             const CVar cv(var.uid, this->nestLevel);
             cVars.push_back(cv);
-
+#if !SE_LAZY_VARS_CREATION
             // now create the SymHeap object
-            const TObjId obj = this->heap->objCreate(var.clt, cv);
-
-            // FIXME: this is not going to work well, if the initializers depend
-            // on stack variables that are not yet created;  we should probably
-            // do it the same way as global variables are created/initialized
+            this->heap->objCreate(var.clt, cv);
+#endif
             if (var.initial) {
                 CL_DEBUG_MSG(lw, "--- initializing stack variable: #" << var.uid
                         << " (" << var.name << ")" );
 
                 // reflect the given initializer
+                const TObjId obj = this->heap->objByCVar(cv);
                 initVariable(*this->heap, obj, var);
             }
         }
