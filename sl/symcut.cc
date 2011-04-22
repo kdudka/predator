@@ -377,7 +377,7 @@ void splitHeapByCVars(const SymBackTrace *bt, SymHeap *srcDst,
     fillSet(cset, cut);
 
     // cut the first part
-    SymHeap dst;
+    SymHeap dst(srcDst->stor());
     prune(*srcDst, dst, cset);
 
     if (!saveSurroundTo) {

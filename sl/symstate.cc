@@ -141,8 +141,11 @@ void SymStateWithJoin::packSuffix(unsigned idx) {
         SymHeap &shNew = const_cast<SymHeap &>(this->operator[](suffix));
         SymHeap &shOld = const_cast<SymHeap &>(this->operator[](idx));
 
+        TStorRef stor = shNew.stor();
+        CL_BREAK_IF(&stor != &shOld.stor());
+
         EJoinStatus     status;
-        SymHeap         result;
+        SymHeap         result(stor);
         if (!joinSymHeaps(&status, &result, shNew, shOld)) {
             ++idx;
             continue;
@@ -190,7 +193,7 @@ bool SymStateWithJoin::insertCore(
     }
 
     EJoinStatus     status;
-    SymHeap         result;
+    SymHeap         result(shNew.stor());
     int             idx;
 
     ++::cntLookups;

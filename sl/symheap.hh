@@ -51,8 +51,9 @@ enum EUnknownValue {
     UV_UNINITIALIZED        ///< unknown value of an uninitialised object
 };
 
-struct DeepCopyData;
-struct SymJoinCtx;
+namespace CodeStorage {
+    struct Storage;
+}
 
 /// a type used by SymHeap for byte offsets
 typedef short                                           TOffset;
@@ -68,6 +69,8 @@ typedef const struct cl_type                            *TObjType;
 
 /// a class of type (structure, pointer, union, ...)
 typedef enum cl_type_e                                  TObjCode;
+
+typedef const CodeStorage::Storage                      &TStorRef;
 
 /**
  * bundles static identification of a variable with its instance number
@@ -131,7 +134,7 @@ inline bool operator<(const CVar &a, const CVar &b) {
 class SymHeapCore {
     public:
         /// create an empty symbolic heap
-        SymHeapCore();
+        SymHeapCore(TStorRef);
 
         /// destruction of the symbolic heap invalidates all IDs of its entities
         virtual ~SymHeapCore();
@@ -143,6 +146,8 @@ class SymHeapCore {
         SymHeapCore& operator=(const SymHeapCore &);
 
         virtual void swap(SymHeapCore &);
+
+        TStorRef stor() const { return stor_; }
 
         unsigned lastId() const;
 
@@ -441,6 +446,9 @@ class SymHeapCore {
          */
         void valTargetSetProto(TValId, bool isProto);
 
+    protected:
+        TStorRef stor_;
+
     private:
         struct Private;
         Private *d;
@@ -487,7 +495,7 @@ inline bool operator!=(const BindingOff &off1, const BindingOff &off2)
 class SymHeap: public SymHeapCore {
     public:
         /// create an empty symbolic heap
-        SymHeap();
+        SymHeap(TStorRef);
 
         /// destruction of the symbolic heap invalidates all IDs of its entities
         virtual ~SymHeap();
@@ -532,7 +540,7 @@ class SymHeap: public SymHeapCore {
         virtual bool proveNeq(TValId valA, TValId valB) const;
 
         /**
-         * @copydoc SymHeapCore::proveNeq
+         * @copydoc SymHeapCore::valMerge
          * @note overridden in order to splice-out SLS/DLS
          */
         virtual void valMerge(TValId v1, TValId v2);

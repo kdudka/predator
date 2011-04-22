@@ -694,9 +694,12 @@ void SymHeapCore::Private::subsDestroy(TObjId root) {
         this->roots.erase(root);
 }
 
-SymHeapCore::SymHeapCore():
+SymHeapCore::SymHeapCore(TStorRef stor):
+    stor_(stor),
     d(new Private)
 {
+    CL_BREAK_IF(!&stor_);
+
     // define specials
     d->objects.resize(/* OBJ_RETURN */ 1);
     d->values.resize(/* VAL_NULL */ 1);
@@ -706,8 +709,10 @@ SymHeapCore::SymHeapCore():
 }
 
 SymHeapCore::SymHeapCore(const SymHeapCore &ref):
+    stor_(ref.stor_),
     d(new Private(*ref.d))
 {
+    CL_BREAK_IF(!&stor_);
 }
 
 SymHeapCore::~SymHeapCore() {
@@ -715,14 +720,15 @@ SymHeapCore::~SymHeapCore() {
 }
 
 SymHeapCore& SymHeapCore::operator=(const SymHeapCore &ref) {
+    CL_BREAK_IF(&stor_ != &ref.stor_);
+
     delete d;
     d = new Private(*ref.d);
     return *this;
 }
 
-void SymHeapCore::swap(SymHeapCore &baseRef) {
-    // swap self
-    SymHeapCore &ref = dynamic_cast<SymHeapCore &>(baseRef);
+void SymHeapCore::swap(SymHeapCore &ref) {
+    CL_BREAK_IF(&stor_ != &ref.stor_);
     swapValues(this->d, ref.d);
 }
 
@@ -1329,7 +1335,8 @@ struct SymHeap::Private {
     TData data;
 };
 
-SymHeap::SymHeap():
+SymHeap::SymHeap(TStorRef stor):
+    SymHeapCore(stor),
     d(new Private)
 {
 }

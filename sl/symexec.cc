@@ -781,7 +781,7 @@ SymExec::SymExec(const CodeStorage::Storage &stor, const SymExecParams &params):
     d->params = params;
 
     // create the initial state, consisting of global/static variables
-    SymHeap init;
+    SymHeap init(stor);
     createGlVars(init, stor);
     d->stateZero.insertFast(init);
 }

@@ -65,10 +65,16 @@ struct SymCallCtx::Private {
 
     void assignReturnValue(SymHeap &sh);
     void destroyStackFrame(SymHeap &sh);
+
+    Private(TStorRef stor):
+        heap(stor),
+        surround(stor)
+    {
+    }
 };
 
-SymCallCtx::SymCallCtx():
-    d(new Private)
+SymCallCtx::SymCallCtx(TStorRef stor):
+    d(new Private(stor))
 {
     d->computed = false;
     d->flushed = false;
@@ -408,7 +414,7 @@ SymCallCtx* SymCallCache::Private::getCallCtx(int uid, const SymHeap &heap) {
     SymCallCtx *ctx = pfc.lookup(heap);
     if (!ctx) {
         // cache miss
-        ctx = new SymCallCtx;
+        ctx = new SymCallCtx(heap.stor());
         ctx->d->bt      = this->bt;
         ctx->d->fnc     = this->fnc;
         ctx->d->heap    = heap;
@@ -471,7 +477,7 @@ SymCallCtx& SymCallCache::getCallCtx(SymHeap                    heap,
     d->setCallArgs(opList);
 
     // prune heap
-    SymHeap surround;
+    SymHeap surround(heap.stor());
     splitHeapByCVars(d->bt, &heap, cut, &surround);
     
     // get either an existing ctx, or create a new one

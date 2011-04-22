@@ -79,7 +79,7 @@ class SymCallCtx {
 
     private:
         /// @note these objects can't be created/destroyed out of SymCallCache
-        SymCallCtx();
+        SymCallCtx(TStorRef);
 
         /// @note these objects can't be created/destroyed out of SymCallCache
         ~SymCallCtx();

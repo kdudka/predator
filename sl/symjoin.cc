@@ -1918,8 +1918,9 @@ bool joinSymHeaps(
         const SymHeap           &sh2)
 {
     SJ_DEBUG("--> joinSymHeaps()");
-    // FIXME: provide SymHeap::clear() to achieve this?
-    *pDst = SymHeap();
+    TStorRef stor = sh1.stor();
+    CL_BREAK_IF(&stor != &sh2.stor());
+    *pDst = SymHeap(stor);
 
     // initialize symbolic join ctx
     SymJoinCtx ctx(*pDst, sh1, sh2);
@@ -2119,7 +2120,7 @@ bool joinDataReadOnly(
 {
     SJ_DEBUG("--> joinDataReadOnly" << SJ_OBJP(o1, o2));
     // go through the commont part of joinData()/joinDataReadOnly()
-    SymHeap tmp;
+    SymHeap tmp(sh.stor());
     SymJoinCtx ctx(tmp, sh);
     if (!joinDataCore(ctx, off, o1, o2))
         return false;

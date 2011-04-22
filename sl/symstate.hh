@@ -96,7 +96,7 @@ class SymState {
         /// aggressive optimization
         virtual void insertNewFast(SymHeap &sh) {
             const unsigned last = heaps_.size();
-            heaps_.push_back(SymHeap());
+            heaps_.push_back(SymHeap(sh.stor()));
             heaps_[last].swap(sh);
         }
 
