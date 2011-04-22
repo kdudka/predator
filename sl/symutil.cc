@@ -300,36 +300,6 @@ void gatherPointingObjects(const SymHeap            &sh,
               std::back_inserter(dst));
 }
 
-struct SubByOffsetFinder {
-    TObjId                  root;
-    TObjId                  subFound;
-    const struct cl_type    *cltToSeek;
-    enum cl_type_e          cltCodeToSeek;
-    TOffset                 offToSeek;
-
-    bool operator()(const SymHeap &sh, TObjId sub) {
-        const struct cl_type *clt = sh.objType(sub);
-        if (!clt)
-            return /* continue */ true;
-
-        if (cltToSeek) {
-            if (*cltToSeek != *clt)
-                return /* continue */ true;
-        }
-        else {
-            if (CL_TYPE_UNKNOWN != cltCodeToSeek && cltCodeToSeek != clt->code)
-                return /* continue */ true;
-        }
-
-        if (this->offToSeek != subOffsetIn(sh, this->root, sub))
-            return /* continue */ true;
-
-        // found!
-        this->subFound = sub;
-        return /* break */ false;
-    }
-};
-
 TObjId subSeekByOffset(
         const SymHeap               &sh,
         const TObjId                obj,
@@ -337,34 +307,18 @@ TObjId subSeekByOffset(
         const struct cl_type        *clt,
         const enum cl_type_e        code)
 {
-    const TObjId root = objRoot(sh, obj);
-    if (OBJ_INVALID == root)
-        return OBJ_INVALID;
+    if (obj < 0)
+        return obj;
 
-    const TOffset offRoot = sh.valOffset(sh.placedAt(obj));
+    SymHeap &shNonConst = const_cast<SymHeap &>(sh);
+    const TValId addr = sh.placedAt(obj);
+    const TValId subAddr = shNonConst.valByOffset(addr, offToSeek);
+    CL_BREAK_IF(subAddr <= 0);
 
-    // prepare visitor
-    SubByOffsetFinder visitor;
-    visitor.root            = root;
-    visitor.cltToSeek       = clt;
-    visitor.cltCodeToSeek   = code;
-    visitor.offToSeek       = offToSeek + offRoot;
-    visitor.subFound        = OBJ_INVALID;
-
-    // first try the root itself
-    if (!visitor(sh, root))
-        // matched
-        return visitor.subFound;
-
-    if (!isComposite(sh.objType(root)))
-        // not a composite type
-        return OBJ_INVALID;
-
-    // look for the requested sub-object
-    if (traverseSubObjs(sh, root, visitor, /* leavesOnly */ false))
-        return OBJ_INVALID;
+    if (clt)
+        return shNonConst.objAt(subAddr, clt);
     else
-        return visitor.subFound;
+        return shNonConst.objAt(subAddr, code);
 }
 
 void seekRoot(const SymHeap &sh, TObjId *pRoot, TOffset *pOff) {

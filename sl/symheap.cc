@@ -284,6 +284,8 @@ struct SymHeapCore::Private {
 
     void subsCreate(TObjId obj);
     void subsDestroy(TObjId obj);
+
+    bool gridLookup(TObjId *pFailCode, const TObjByType **pRow, const TValId);
 };
 
 inline TValId SymHeapCore::Private::lastValId() {
@@ -521,9 +523,11 @@ bool valMapLookup(const TValMap &valMap, TValId *pVal) {
 
 void SymHeapCore::Private::subsCreate(TObjId obj) {
     const TObjId root = obj;
-    TObjType clt = this->objects.at(obj).clt;
 
+    // initialize grid's root clt
+    TObjType clt = this->objects[obj].clt;
     Private::TGrid &grid = this->roots[root].grid;
+    grid[/* off */ 0][clt] = obj;
 
     typedef std::pair<TObjId, TObjType> TPair;
     typedef std::stack<TPair> TStack;
@@ -900,48 +904,108 @@ TValId SymHeapCore::placedAt(TObjId obj) const {
     return self.valByOffset(rootData.addr, objData.off);
 }
 
-TObjId SymHeapCore::objAt(TValId at, TObjType clt) {
-    CL_BREAK_IF("not implemented yet");
-    (void) at;
-    (void) clt;
-    return OBJ_INVALID;
+bool SymHeapCore::Private::gridLookup(
+        TObjId                      *pFailCode,
+        const Private::TObjByType   **pRow,
+        const TValId                val)
+{
+    if (VAL_NULL == val || this->valOutOfRange(val)) {
+        *pFailCode = OBJ_INVALID;
+        return false;
+    }
+
+    // root lookup
+    const TValId valRoot = this->valRoot(val);
+    const TObjId root = this->values[valRoot].target;
+    if (root <= 0) {
+        *pFailCode = root;
+        return false;
+    }
+
+    // grid lookup
+    const Private::Root &rootData = roMapLookup(this->roots, root);
+    const Private::TGrid &grid = rootData.grid;
+    const Private::Value &valData = this->values[val];
+    Private::TGrid::const_iterator it = grid.find(valData.offRoot);
+    if (grid.end() == it) {
+        *pFailCode = OBJ_UNKNOWN;
+        return false;
+    }
+
+    const Private::TObjByType *row = &it->second;
+    CL_BREAK_IF(row->empty());
+    *pRow = row;
+    return true;
 }
 
 TObjId SymHeapCore::objAt(TValId at, TObjCode code) {
-    CL_BREAK_IF("not implemented yet");
-    (void) at;
-    (void) code;
-    return OBJ_INVALID;
+    TObjId failCode;
+    const Private::TObjByType *row;
+    if (!d->gridLookup(&failCode, &row, at))
+        return failCode;
+
+    // TODO: optimize?
+    int maxSize = 0;
+    TObjId max = OBJ_UNKNOWN;
+    BOOST_FOREACH(const Private::TObjByType::const_reference item, *row) {
+        const TObjType cltItem = item.first;
+        if (!cltItem || cltItem->code != code)
+            continue;
+
+        const int size = cltItem->size;
+        if (size <= maxSize)
+            continue;
+
+        // FIXME: the legacy code expects the outer-most structure
+        maxSize = size;
+        max = item.second;
+    }
+
+    return max;
+}
+
+TObjId SymHeapCore::objAt(TValId at, TObjType clt) {
+    TObjId failCode;
+    const Private::TObjByType *row;
+    if (!d->gridLookup(&failCode, &row, at))
+        return failCode;
+
+    Private::TObjByType::const_iterator it = row->find(clt);
+    if (row->end() != it)
+        // exact match
+        return it->second;
+
+    if (!clt)
+        // no type-free object found
+        return OBJ_UNKNOWN;
+
+    // try semantic match
+    BOOST_FOREACH(const Private::TObjByType::const_reference item, *row) {
+        const TObjType cltItem = item.first;
+        if (cltItem && *cltItem == *clt)
+            return item.second;
+    }
+
+    if (isComposite(clt))
+        // giving up
+        return OBJ_UNKNOWN;
+
+    // TODO: optimize?
+    return this->objAt(at, clt->code);
 }
 
 // FIXME: this should go away
 TObjId SymHeapCore::pointsTo(TValId val) const {
-    if (VAL_NULL == val || d->valOutOfRange(val))
-        // value ID is either out of range, or does not point to a valid obj
-        return OBJ_INVALID;
-
-    // root lookup
-    const TValId valRoot = d->valRoot(val);
-    const TObjId root = d->values[valRoot].target;
-    if (root <= 0)
-        return root;
-
-    const Private::Value &valData = d->values[val];
-
-    // grid lookup
-    const Private::Root &rootData = roMapLookup(d->roots, root);
-    const Private::TGrid &grid = rootData.grid;
-    Private::TGrid::const_iterator it = grid.find(valData.offRoot);
-    if (grid.end() == it)
-        return OBJ_UNKNOWN;
-    const Private::TObjByType &row = it->second;
-    CL_BREAK_IF(row.empty());
+    TObjId failCode;
+    const Private::TObjByType *row;
+    if (!d->gridLookup(&failCode, &row, val))
+        return failCode;
 
     // look for the best candidate
     TObjId best = OBJ_INVALID;
     bool hasType = false;
     bool isComp  = false;
-    BOOST_FOREACH(const Private::TObjByType::const_reference item, row) {
+    BOOST_FOREACH(const Private::TObjByType::const_reference item, *row) {
         const TObjId target = item.second;
         if (OBJ_INVALID == best)
             best = target;
@@ -1052,9 +1116,6 @@ TObjId SymHeapCore::objCreate(TObjType clt, CVar cVar) {
     const TObjId obj = d->objCreate();
     d->objects[obj].clt = clt;
     d->roots[obj].cVar = cVar;
-
-    Private::TGrid &grid = d->roots[obj].grid;
-    grid[/* off */ 0][clt] = obj;
 
     if (clt)
         d->subsCreate(obj);
