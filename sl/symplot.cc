@@ -545,14 +545,13 @@ void SymPlot::Private::digNext(TObjId obj) {
     EObjKind kind = this->heap->objKind(obj);
     switch (kind) {
         case OK_CONCRETE:
-        case OK_HEAD:
-        case OK_PART:
             return;
 
         case OK_MAY_EXIST:
         case OK_SLS:
         case OK_DLS:
-            break;
+            if (this->heap->valOffset(this->heap->placedAt(obj)))
+                return;
     }
 
     const BindingOff &off = this->heap->objBinding(obj);
@@ -597,7 +596,6 @@ void SymPlot::Private::openCluster(TObjId obj) {
     const EObjKind kind = this->heap->objKind(obj);
     switch (kind) {
         case OK_CONCRETE:
-        case OK_PART:
             color = (CL_TYPE_UNION == clt->code)
                 ? "red"
                 : "black";
@@ -610,11 +608,14 @@ void SymPlot::Private::openCluster(TObjId obj) {
             pw = "3.0";
             break;
 
+            // TODO
+#if 0
         case OK_HEAD:
             label += "head";
             color = "green";
             pw = "2.0";
             break;
+#endif
 
         case OK_SLS:
             label += "SLS";

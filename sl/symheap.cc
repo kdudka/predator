@@ -893,7 +893,12 @@ TValId SymHeapCore::placedAt(TObjId obj) const {
     const TObjId root = d->objRoot(obj, objData);
     CL_BREAK_IF(root < 0);
 
-    Private::Root &rootData = roMapLookup(d->roots, root);
+    typename Private::TRootMap::iterator it = d->roots.find(root);
+    if (d->roots.end() == it)
+        // object already deleted?
+        return VAL_INVALID;
+
+    Private::Root &rootData = it->second;
     if (VAL_NULL == rootData.addr) {
         // deleayed address creation
         rootData.addr = d->valCreate(UV_KNOWN, root);
@@ -1357,17 +1362,12 @@ TObjId SymHeap::objDup(TObjId objOld) {
 }
 
 EObjKind SymHeap::objKind(TObjId obj) const {
-    Private::TObjMap::iterator iter = d->objMap.find(obj);
+    const TObjId root = objRoot(*this, obj);
+    Private::TObjMap::iterator iter = d->objMap.find(root);
     if (d->objMap.end() != iter)
         return iter->second.kind;
 
-    const TObjId root = objRoot(*this, obj);
-    if (!hasKey(d->objMap, root))
-        return OK_CONCRETE;
-
-    return (segHead(*this, root) == obj)
-        ? OK_HEAD
-        : OK_PART;
+    return OK_CONCRETE;
 }
 
 EUnknownValue SymHeap::valGetUnknown(TValId val) const {

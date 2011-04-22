@@ -100,14 +100,6 @@ void dump_kind(const SymHeap &heap, TObjId obj) {
             cout << "OK_MAY_EXIST";
             return;
 
-        case OK_HEAD:
-            cout << "OK_HEAD";
-            return;
-
-        case OK_PART:
-            cout << "OK_PART";
-            return;
-
         case OK_SLS:
             cout << "OK_SLS, offNext = " << heap.objBinding(obj).next;
             break;
@@ -207,7 +199,7 @@ void dump_obj(const SymHeap &heap, TObjId obj) {
             cout << "/* obj */ #" << peer << ", kind = ";
             dump_kind(heap, peer);
             cout << "\n";
-            if (OK_HEAD == heap.objKind(peer)) {
+            if (heap.valOffset(heap.placedAt(peer))) {
                 cout << "    peerObj   = ";
                 const TObjId peerObj = objRoot(heap, peer);
                 cout << "/* obj */ #" << peerObj << ", kind = ";
@@ -225,7 +217,7 @@ void dump_obj(const SymHeap &heap, TObjId obj) {
     else
         cout << "false\n";
 
-    if (OK_CONCRETE != kind && OK_HEAD != kind && OK_PART != kind) {
+    if (OK_CONCRETE != kind) {
         cout << "    next      = ";
         const TOffset offNext = heap.objBinding(obj).next;
         const TObjId nextPtr = ptrObjByOffset(heap, obj, offNext);

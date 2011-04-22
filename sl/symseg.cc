@@ -28,9 +28,8 @@
 #include <boost/foreach.hpp>
 
 TObjId nextPtrFromSeg(const SymHeap &sh, TObjId seg) {
-    if (OK_HEAD == sh.objKind(seg))
-        // jump to root
-        seg = objRoot(sh, seg);
+    // jump to root
+    seg = objRoot(sh, seg);
 
     // validate call of nextPtrFromSeg()
     CL_BREAK_IF(OK_CONCRETE == sh.objKind(seg));
@@ -91,16 +90,11 @@ unsigned dlSegMinLength(const SymHeap &sh, TObjId dls) {
 }
 
 unsigned segMinLength(const SymHeap &sh, TObjId seg) {
-    EObjKind kind = sh.objKind(seg);
-    if (OK_HEAD == kind) {
-        seg = objRoot(sh, seg);
-        kind = sh.objKind(seg);
-    }
+    seg = objRoot(sh, seg);
 
+    const EObjKind kind = sh.objKind(seg);
     switch (kind) {
         case OK_CONCRETE:
-        case OK_PART:
-        case OK_HEAD:
             CL_TRAP;
 
         case OK_MAY_EXIST:
@@ -120,12 +114,9 @@ unsigned segMinLength(const SymHeap &sh, TObjId seg) {
 }
 
 void segSetProto(SymHeap &sh, TObjId seg, bool isProto) {
-    EObjKind kind = sh.objKind(seg);
-    if (OK_HEAD == kind) {
-        seg = objRoot(sh, seg);
-        kind = sh.objKind(seg);
-    }
+    seg = objRoot(sh, seg);
 
+    const EObjKind kind = sh.objKind(seg);
     switch (kind) {
         case OK_DLS:
             sh.valTargetSetProto(sh.placedAt(dlSegPeer(sh, seg)), isProto);
@@ -142,16 +133,11 @@ void segSetProto(SymHeap &sh, TObjId seg, bool isProto) {
 }
 
 void segDestroy(SymHeap &sh, TObjId seg) {
-    EObjKind kind = sh.objKind(seg);
-    if (OK_HEAD == kind) {
-        seg = objRoot(sh, seg);
-        kind = sh.objKind(seg);
-    }
+    seg = objRoot(sh, seg);
 
+    const EObjKind kind = sh.objKind(seg);
     switch (kind) {
         case OK_CONCRETE:
-        case OK_PART:
-        case OK_HEAD:
             // invalid call of segDestroy()
             CL_TRAP;
 
@@ -247,6 +233,8 @@ void dlSegSetMinLength(SymHeap &sh, TObjId dls, unsigned len) {
 }
 
 void segSetMinLength(SymHeap &sh, TObjId seg, unsigned len) {
+    seg = objRoot(sh, seg);
+
     const EObjKind kind = sh.objKind(seg);
     switch (kind) {
         case OK_SLS:
@@ -254,10 +242,6 @@ void segSetMinLength(SymHeap &sh, TObjId seg, unsigned len) {
                     ? SymHeap::NEQ_ADD
                     : SymHeap::NEQ_DEL);
             break;
-
-        case OK_HEAD:
-            seg = objRoot(sh, seg);
-            // fall through!
 
         case OK_DLS:
             dlSegSetMinLength(sh, seg, len);
@@ -304,14 +288,6 @@ bool dlSegCheckConsistency(const SymHeap &sh) {
     BOOST_FOREACH(const TObjId obj, roots) {
         const EObjKind kind = sh.objKind(obj);
         switch (kind) {
-            case OK_HEAD:
-                CL_ERROR("OK_HEAD appears among root objects");
-                return false;
-
-            case OK_PART:
-                CL_ERROR("OK_PART appears among root objects");
-                return false;
-
             case OK_SLS:
             case OK_CONCRETE:
             case OK_MAY_EXIST:

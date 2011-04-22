@@ -542,8 +542,6 @@ void dlSegAbstractionStep(SymHeap &sh, TObjId *pObj, const BindingOff &off)
     EObjKind kind = sh.objKind(o1);
     switch (kind) {
         case OK_SLS:
-        case OK_HEAD:
-        case OK_PART:
             // *** segDiscover() failure detected ***
             CL_TRAP;
 
@@ -815,8 +813,6 @@ void concretizeObj(SymHeap &sh, TValId addr, TSymHeapList &todo) {
     const EObjKind kind = sh.objKind(obj);
     switch (kind) {
         case OK_CONCRETE:
-        case OK_HEAD:
-        case OK_PART:
             // invalid call of concretizeObj()
             CL_TRAP;
 

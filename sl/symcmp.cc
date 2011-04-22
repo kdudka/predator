@@ -261,7 +261,7 @@ bool cmpAbstractObjects(
         // kind of object mismatch
         return false;
 
-    if (OK_CONCRETE == kind || OK_PART == kind)
+    if (OK_CONCRETE == kind)
         // no abstract objects comparison
         return true;
 

@@ -115,11 +115,6 @@ void buildIgnoreList(
 
     const EObjKind kind = sh.objKind(obj);
     switch (kind) {
-        case OK_HEAD:
-        case OK_PART:
-            CL_BREAK_IF("invalid call of buildIgnoreList()");
-            // fall through!
-
         case OK_CONCRETE:
             return;
 

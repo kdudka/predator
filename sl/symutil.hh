@@ -79,6 +79,13 @@ inline TObjId /* root */ objRootByPtr(const SymHeap &sh, TObjId ptr) {
 }
 
 inline bool objIsSeg(const SymHeap &sh, TObjId obj, bool anyPart = false) {
+    const TValId addr = sh.placedAt(obj);
+    if (addr <= 0)
+        return false;
+
+    if (!anyPart && sh.valOffset(addr))
+        return false;
+
     const EObjKind kind = sh.objKind(obj);
     switch (kind) {
         case OK_CONCRETE:
@@ -88,10 +95,6 @@ inline bool objIsSeg(const SymHeap &sh, TObjId obj, bool anyPart = false) {
         case OK_SLS:
         case OK_DLS:
             return true;
-
-        case OK_HEAD:
-        case OK_PART:
-            return anyPart;
     }
 
     return false;

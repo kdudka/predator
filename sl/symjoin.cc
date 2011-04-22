@@ -1841,7 +1841,7 @@ bool segDetectSelfLoopHelper(
             return false;
 
         const EObjKind kindNext = sh.objKind(next);
-        if (kindNext != kind && kindNext != OK_HEAD)
+        if (kindNext != kind)
             // no compatible next segment --> no loop
             return false;
 

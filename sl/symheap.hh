@@ -472,11 +472,7 @@ enum EObjKind {
     OK_CONCRETE     = 0,    ///< concrete object (not a segment)
     OK_SLS          = 1,    ///< singly-linked list segment
     OK_DLS          = 2,    ///< doubly-linked list segment
-
-    OK_MAY_EXIST,
-
-    OK_HEAD,                ///< segment's head (useful for Linux lists)
-    OK_PART                 ///< part of a segment (sub-object)
+    OK_MAY_EXIST
 };
 
 struct BindingOff {
