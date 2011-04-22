@@ -90,7 +90,7 @@ namespace {
 }
 
 void dump_kind(const SymHeap &heap, TObjId obj) {
-    const EObjKind kind = heap.objKind(obj);
+    const EObjKind kind = objKind(heap, obj);
     switch (kind) {
         case OK_CONCRETE:
             cout << "OK_CONCRETE";
@@ -188,7 +188,7 @@ void dump_obj(const SymHeap &heap, TObjId obj) {
         // unguarded recursion
         dump_obj(heap, parent);
 
-    const EObjKind kind = heap.objKind(obj);
+    const EObjKind kind = objKind(heap, obj);
     if (OK_DLS == kind) {
         cout << "    peer      = ";
         const TOffset offPeer = heap.objBinding(obj).prev;

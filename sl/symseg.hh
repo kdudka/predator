@@ -113,7 +113,7 @@ void buildIgnoreList(
 {
     TObjId tmp;
 
-    const EObjKind kind = sh.objKind(obj);
+    const EObjKind kind = objKind(sh, obj);
     switch (kind) {
         case OK_CONCRETE:
             return;

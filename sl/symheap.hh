@@ -520,10 +520,10 @@ class SymHeap: public SymHeapCore {
         virtual EUnknownValue valGetUnknown(TValId val) const;
 
         /**
-         * return @b kind of the object. Here @b kind means concrete object,
+         * return @b kind of the target. Here @b kind means concrete object,
          * SLS, DLS, and the like.
          */
-        EObjKind objKind(TObjId obj) const;
+        EObjKind valTargetKind(TValId) const;
         const BindingOff& objBinding(TObjId obj) const;
 
     public:

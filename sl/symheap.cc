@@ -1361,8 +1361,8 @@ TObjId SymHeap::objDup(TObjId objOld) {
     return objNew;
 }
 
-EObjKind SymHeap::objKind(TObjId obj) const {
-    const TObjId root = objRoot(*this, obj);
+EObjKind SymHeap::valTargetKind(TValId val) const {
+    const TObjId root = objRootByVal(*this, val);
     Private::TObjMap::iterator iter = d->objMap.find(root);
     if (d->objMap.end() != iter)
         return iter->second.kind;
@@ -1371,17 +1371,9 @@ EObjKind SymHeap::objKind(TObjId obj) const {
 }
 
 EUnknownValue SymHeap::valGetUnknown(TValId val) const {
-    const TObjId target = this->pointsTo(val);
-    if (0 < target) {
-        const EObjKind kind = this->objKind(target);
-        switch (kind) {
-            case OK_CONCRETE:
-                break;
-
-            default:
-                return UV_ABSTRACT;
-        }
-    }
+    if (OK_CONCRETE != this->valTargetKind(val))
+        // abstract object
+        return UV_ABSTRACT;
 
     return SymHeapCore::valGetUnknown(val);
 }
@@ -1562,7 +1554,7 @@ bool SymHeap::proveNeq(TValId ref, TValId val) const {
             return true;
 
         TObjId seg = objRootByVal(*this, val);
-        if (OK_DLS == this->objKind(seg))
+        if (OK_DLS == this->valTargetKind(val))
             seg = dlSegPeer(*this, seg);
 
         if (seg < 0)

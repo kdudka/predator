@@ -534,12 +534,12 @@ bool segMatchLookAhead(
     // guide the visitors through them
     SegMatchVisitor visitor(ctx);
 
-    if (OK_DLS == ctx.sh1.objKind(root1)) {
+    if (OK_DLS == objKind(ctx.sh1, root1)) {
         const TObjId peerPtr1 = peerPtrFromSeg(ctx.sh1, root1);
         visitor.blackList.insert(roMapLookup(ctx.objMap1, peerPtr1));
     }
 
-    if (OK_DLS == ctx.sh2.objKind(root2)) {
+    if (OK_DLS == objKind(ctx.sh2, root2)) {
         const TObjId peerPtr2 = peerPtrFromSeg(ctx.sh2, root2);
         visitor.blackList.insert(roMapLookup(ctx.objMap2, peerPtr2));
     }
@@ -599,13 +599,13 @@ bool joinObjKind(
 {
     CL_BREAK_IF(OBJ_INVALID == o1 && OBJ_INVALID == o2);
 
-    const EObjKind kind1 = ctx.sh1.objKind(o1);
+    const EObjKind kind1 = objKind(ctx.sh1, o1);
     if (OBJ_INVALID == o2) {
         *pDst = kind1;
         return true;
     }
 
-    const EObjKind kind2 = ctx.sh2.objKind(o2);
+    const EObjKind kind2 = objKind(ctx.sh2, o2);
     if (OBJ_INVALID == o1) {
         *pDst = kind2;
         return true;
@@ -698,7 +698,7 @@ bool considerImplicitPrototype(
     TObjList refs;
     gatherPointingObjects(sh, refs, root, /* toInsideOnly */ false);
     BOOST_FOREACH(const TObjId obj, refs) {
-        if (OK_CONCRETE != sh.objKind(obj))
+        if (OK_CONCRETE != objKind(sh, obj))
             return false;
     }
 
@@ -860,8 +860,8 @@ bool dlSegHandleShared(
         const EJoinStatus       action,
         const bool              readOnly)
 {
-    const bool isDls = (OK_DLS == ctx.sh1.objKind(o1));
-    CL_BREAK_IF(isDls != (OK_DLS == ctx.sh2.objKind(o2)));
+    const bool isDls = (OK_DLS == objKind(ctx.sh1, o1));
+    CL_BREAK_IF(isDls != (OK_DLS == objKind(ctx.sh2, o2)));
     if (!isDls)
         // not a DLS
         return true;
@@ -912,8 +912,8 @@ bool followObjPair(
         // postpone it till the read-write attempt
         return true;
 
-    const bool isDls1 = (OK_DLS == ctx.sh1.objKind(o1));
-    const bool isDls2 = (OK_DLS == ctx.sh2.objKind(o2));
+    const bool isDls1 = (OK_DLS == objKind(ctx.sh1, o1));
+    const bool isDls2 = (OK_DLS == objKind(ctx.sh2, o2));
     if (isDls1 == isDls2)
         return true;
 
@@ -1012,8 +1012,8 @@ bool joinSegmentWithAny(
         const EJoinStatus       action)
 {
     SJ_DEBUG(">>> joinSegmentWithAny" << SJ_OBJP(root1, root2));
-    const bool isDls1 = (OK_DLS == ctx.sh1.objKind(root1));
-    const bool isDls2 = (OK_DLS == ctx.sh2.objKind(root2));
+    const bool isDls1 = (OK_DLS == objKind(ctx.sh1, root1));
+    const bool isDls2 = (OK_DLS == objKind(ctx.sh2, root2));
     if (followObjPair(ctx, root1, root2, action, /* read-only */ true))
         goto read_only_ok;
 
@@ -1045,13 +1045,13 @@ read_only_ok:
         : ctx.sh2.objBinding(root2);
 
     TObjId peer1 = root1;
-    if (OK_DLS == ctx.sh1.objKind(root1)) {
+    if (OK_DLS == objKind(ctx.sh1, root1)) {
         peer1 = dlSegPeer(ctx.sh1, root1);
         off = ctx.sh1.objBinding(peer1);
     }
 
     TObjId peer2 = root2;
-    if (OK_DLS == ctx.sh2.objKind(root2)) {
+    if (OK_DLS == objKind(ctx.sh2, root2)) {
         peer2 = dlSegPeer(ctx.sh2, root2);
         off = ctx.sh2.objBinding(peer2);
     }
@@ -1269,7 +1269,7 @@ bool insertSegmentClone(
     const SymHeap &shGt = (isGt1) ? ctx.sh1 : ctx.sh2;
     const TObjId seg = objRootByVal(shGt, (isGt1) ? v1 : v2);
     TObjId peer = seg;
-    if (OK_DLS == shGt.objKind(seg))
+    if (OK_DLS == objKind(shGt, seg))
         peer = dlSegPeer(shGt, seg);
 
     // resolve the 'next' pointer and check its validity
@@ -1489,7 +1489,7 @@ bool mayExistFallback(
         // non-starter
         return false;
 
-    if (OK_CONCRETE != sh.objKind(target))
+    if (OK_CONCRETE != objKind(sh, target))
         // only concrete objects/prototypes are candidates for OK_MAY_EXIST
         return false;
 
@@ -1821,7 +1821,7 @@ bool segDetectSelfLoopHelper(
         TObjId                  seg)
 {
     // remember original kind of object
-    const EObjKind kind = sh.objKind(seg);
+    const EObjKind kind = objKind(sh, seg);
 
     // find a loop-less path
     std::set<TObjId> path;
@@ -1840,13 +1840,13 @@ bool segDetectSelfLoopHelper(
             // no valid next object --> no loop
             return false;
 
-        const EObjKind kindNext = sh.objKind(next);
+        const EObjKind kindNext = objKind(sh, next);
         if (kindNext != kind)
             // no compatible next segment --> no loop
             return false;
 
         seg = objRoot(sh, next);
-        if (kind != sh.objKind(seg))
+        if (kind != objKind(sh, seg))
             // no compatible next segment --> no loop
             return false;
 
@@ -2018,7 +2018,7 @@ bool dlSegCheckProtoConsistency(const SymJoinCtx &ctx) {
         const TObjId obj1   = proto[0];
         const TObjId obj2   = proto[1];
         const TObjId objDst = proto[2];
-        if (OK_DLS != ctx.dst.objKind(objDst))
+        if (OK_DLS != objKind(ctx.dst, objDst))
             // we are intersted only DLSs here
             continue;
 
@@ -2026,14 +2026,14 @@ bool dlSegCheckProtoConsistency(const SymJoinCtx &ctx) {
         const TObjId peerDst = dlSegPeer(ctx.dst, objDst);
         const TValId peerAt = ctx.dst.placedAt(peerDst);
 
-        if (OK_DLS == ctx.sh1.objKind(obj1))
+        if (OK_DLS == objKind(ctx.sh1, obj1))
             protoPeer[0] = dlSegPeer(ctx.sh1, obj1);
         else {
             const TValMap &vMap1r = ctx.valMap1[/* rtl */ 1];
             protoPeer[0] = ctx.sh1.pointsTo(roMapLookup(vMap1r, peerAt));
         }
 
-        if (OK_DLS == ctx.sh2.objKind(obj2))
+        if (OK_DLS == objKind(ctx.sh2, obj2))
             protoPeer[1] = dlSegPeer(ctx.sh2, obj2);
         else {
             const TValMap &vMap2r = ctx.valMap2[/* rtl */ 1];
@@ -2075,13 +2075,13 @@ bool joinDataCore(
     ctx.sset2.insert(o2);
 
     // never step over DLS peer
-    if (OK_DLS == sh.objKind(o1)) {
+    if (OK_DLS == objKind(sh, o1)) {
         const TObjId peer = dlSegPeer(sh, o1);
         ctx.sset1.insert(peer);
         if (peer != o2)
             mapGhostAddressSpace(ctx, o1, peer, JS_USE_SH1);
     }
-    if (OK_DLS == sh.objKind(o2)) {
+    if (OK_DLS == objKind(sh, o2)) {
         const TObjId peer = dlSegPeer(sh, o2);
         ctx.sset2.insert(peer);
         if (peer != o1)

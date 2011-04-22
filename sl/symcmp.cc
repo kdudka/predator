@@ -256,8 +256,8 @@ bool cmpAbstractObjects(
         TObjId                  o1,
         TObjId                  o2)
 {
-    const EObjKind kind = sh1.objKind(o1);
-    if (sh2.objKind(o2) != kind)
+    const EObjKind kind = objKind(sh1, o1);
+    if (objKind(sh2, o2) != kind)
         // kind of object mismatch
         return false;
 

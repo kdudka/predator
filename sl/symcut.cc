@@ -170,7 +170,7 @@ TObjId addObjectIfNeeded(DeepCopyData &dc, TObjId objSrc) {
     const bool isProto = src.valTargetIsProto(src.placedAt(rootSrc));
     dst.valTargetSetProto(dst.placedAt(rootDst), isProto);
 
-    const EObjKind kind = src.objKind(rootSrc);
+    const EObjKind kind = objKind(src, rootSrc);
     switch (kind) {
         case OK_MAY_EXIST:
         case OK_DLS:

@@ -40,7 +40,7 @@ bool matchSegBinding(
         const TObjId                obj,
         const BindingOff            &offDiscover)
 {
-    const EObjKind kind = sh.objKind(obj);
+    const EObjKind kind = objKind(sh, obj);
     if (OK_CONCRETE == kind)
         // nothing to match actually
         return true;
@@ -89,11 +89,11 @@ bool validatePointingObjects(
 {
     const bool isDls = isDlsBinding(off);
     std::set<TObjId> allowedReferers;
-    if (OK_DLS == sh.objKind(root))
+    if (OK_DLS == objKind(sh, root))
         // retrieve peer's pointer to this object (if any)
         allowedReferers.insert(dlSegPeer(sh, root));
 
-    if (OK_DLS == sh.objKind(prev))
+    if (OK_DLS == objKind(sh, prev))
         // jump to peer in case of DLS
         prev = dlSegPeer(sh, prev);
 
@@ -159,7 +159,7 @@ bool validatePrototypes(
 {
     TObjId peer = OBJ_INVALID;
     protoRoots.push_back(root);
-    if (OK_DLS == sh.objKind(root))
+    if (OK_DLS == objKind(sh, root))
         protoRoots.push_back((peer = dlSegPeer(sh, root)));
 
     BOOST_FOREACH(const TObjId proto, protoRoots) {
@@ -207,7 +207,7 @@ TObjId nextObj(
         const BindingOff            &off,
         TObjId                      obj)
 {
-    if (OK_DLS == sh.objKind(obj))
+    if (OK_DLS == objKind(sh, obj))
         // jump to peer in case of DLS
         obj = dlSegPeer(sh, obj);
 
@@ -226,7 +226,7 @@ TObjId jumpToNextObj(
         // binding mismatch
         return OBJ_INVALID;
 
-    const bool dlSegOnPath = (OK_DLS == sh.objKind(obj));
+    const bool dlSegOnPath = (OK_DLS == objKind(sh, obj));
     if (dlSegOnPath) {
         // jump to peer in case of DLS
         obj = dlSegPeer(sh, obj);
@@ -371,7 +371,7 @@ void dlSegAvoidSelfCycle(
 
     // note we have seen the previous object (and its peer in case of DLS)
     haveSeen.insert(prev);
-    if (OK_DLS == sh.objKind(prev))
+    if (OK_DLS == objKind(sh, prev))
         haveSeen.insert(dlSegPeer(sh, prev));
 }
 
@@ -429,7 +429,7 @@ unsigned /* len */ segDiscover(
 
             const bool allowReferredEnd =
                 /* looking of a DLS */ isDlsBinding(off)
-                && OK_DLS != sh.objKind(obj)
+                && OK_DLS != objKind(sh, obj)
                 && validateSegEntry(sh, off, obj, prev, OBJ_INVALID,
                                     protoRoots[1]);
 

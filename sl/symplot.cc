@@ -542,7 +542,7 @@ void SymPlot::Private::plotZeroValue(TObjId obj) {
 }
 
 void SymPlot::Private::digNext(TObjId obj) {
-    EObjKind kind = this->heap->objKind(obj);
+    EObjKind kind = objKind(*this->heap, obj);
     switch (kind) {
         case OK_CONCRETE:
             return;
@@ -593,7 +593,7 @@ void SymPlot::Private::openCluster(TObjId obj) {
     const struct cl_type *clt = this->heap->objType(obj);
     CL_BREAK_IF(!clt);
 
-    const EObjKind kind = this->heap->objKind(obj);
+    const EObjKind kind = objKind(*this->heap, obj);
     switch (kind) {
         case OK_CONCRETE:
             color = (CL_TYPE_UNION == clt->code)
@@ -852,7 +852,7 @@ void SymPlot::Private::digObj(TObjId obj) {
     // pointed from anywhere
     obj = objRoot(*this->heap, obj);
 
-    if (OK_DLS != this->heap->objKind(obj)) {
+    if (OK_DLS != objKind(*this->heap, obj)) {
         this->digObjCore(obj);
         return;
     }

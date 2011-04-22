@@ -86,7 +86,7 @@ inline bool objIsSeg(const SymHeap &sh, TObjId obj, bool anyPart = false) {
     if (!anyPart && sh.valOffset(addr))
         return false;
 
-    const EObjKind kind = sh.objKind(obj);
+    const EObjKind kind = sh.valTargetKind(addr);
     switch (kind) {
         case OK_CONCRETE:
             break;
@@ -98,6 +98,15 @@ inline bool objIsSeg(const SymHeap &sh, TObjId obj, bool anyPart = false) {
     }
 
     return false;
+}
+
+inline EObjKind objKind(const SymHeap &sh, TObjId obj) {
+    const TValId addr = sh.placedAt(obj);
+    if (addr <= 0)
+        // not really
+        return OK_CONCRETE;
+
+    return sh.valTargetKind(addr);
 }
 
 /// return offset of an object within another object;  -1 if not found

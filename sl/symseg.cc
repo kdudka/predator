@@ -32,14 +32,14 @@ TObjId nextPtrFromSeg(const SymHeap &sh, TObjId seg) {
     seg = objRoot(sh, seg);
 
     // validate call of nextPtrFromSeg()
-    CL_BREAK_IF(OK_CONCRETE == sh.objKind(seg));
+    CL_BREAK_IF(OK_CONCRETE == objKind(sh, seg));
 
     const TOffset offNext = sh.objBinding(seg).next;
     return ptrObjByOffset(sh, seg, offNext);
 }
 
 TObjId peerPtrFromSeg(const SymHeap &sh, TObjId seg) {
-    CL_BREAK_IF(OK_DLS != sh.objKind(seg));
+    CL_BREAK_IF(OK_DLS != objKind(sh, seg));
 
     const TOffset offPeer = sh.objBinding(seg).prev;
     return ptrObjByOffset(sh, seg, offPeer);
@@ -48,7 +48,7 @@ TObjId peerPtrFromSeg(const SymHeap &sh, TObjId seg) {
 TObjId dlSegPeer(const SymHeap &sh, TObjId dls) {
     // validate call of dlSegPeer()
     const TObjId root = objRoot(sh, dls);
-    CL_BREAK_IF(OK_DLS != sh.objKind(root));
+    CL_BREAK_IF(OK_DLS != objKind(sh, root));
 
     TObjId peer = root;
     const BindingOff &off = sh.objBinding(dls);
@@ -58,7 +58,7 @@ TObjId dlSegPeer(const SymHeap &sh, TObjId dls) {
 
 unsigned dlSegMinLength(const SymHeap &sh, TObjId dls) {
     // validate call of dlSegNotEmpty()
-    CL_BREAK_IF(OK_DLS != sh.objKind(dls));
+    CL_BREAK_IF(OK_DLS != objKind(sh, dls));
 
     const TObjId peer = dlSegPeer(sh, dls);
 
@@ -92,7 +92,7 @@ unsigned dlSegMinLength(const SymHeap &sh, TObjId dls) {
 unsigned segMinLength(const SymHeap &sh, TObjId seg) {
     seg = objRoot(sh, seg);
 
-    const EObjKind kind = sh.objKind(seg);
+    const EObjKind kind = objKind(sh, seg);
     switch (kind) {
         case OK_CONCRETE:
             CL_TRAP;
@@ -116,7 +116,7 @@ unsigned segMinLength(const SymHeap &sh, TObjId seg) {
 void segSetProto(SymHeap &sh, TObjId seg, bool isProto) {
     seg = objRoot(sh, seg);
 
-    const EObjKind kind = sh.objKind(seg);
+    const EObjKind kind = objKind(sh, seg);
     switch (kind) {
         case OK_DLS:
             sh.valTargetSetProto(sh.placedAt(dlSegPeer(sh, seg)), isProto);
@@ -135,7 +135,7 @@ void segSetProto(SymHeap &sh, TObjId seg, bool isProto) {
 void segDestroy(SymHeap &sh, TObjId seg) {
     seg = objRoot(sh, seg);
 
-    const EObjKind kind = sh.objKind(seg);
+    const EObjKind kind = objKind(sh, seg);
     switch (kind) {
         case OK_CONCRETE:
             // invalid call of segDestroy()
@@ -161,13 +161,13 @@ bool haveSeg(const SymHeap &sh, TValId atAddr, TValId pointingTo,
         return false;
 
     TObjId seg = objRoot(sh, sh.pointsTo(atAddr));
-    if (kind != sh.objKind(seg))
+    if (kind != objKind(sh, seg))
         // kind mismatch
         return false;
 
     if (OK_DLS == kind) {
         seg = dlSegPeer(sh, seg);
-        if (OK_DLS != sh.objKind(seg))
+        if (OK_DLS != objKind(sh, seg))
             // invalid peer
             return false;
     }
@@ -189,12 +189,12 @@ bool haveDlSegAt(const SymHeap &sh, TValId atAddr, TValId peerAddr) {
         return false;
 
     const TObjId seg = objRoot(sh, sh.pointsTo(atAddr));
-    if (OK_DLS != sh.objKind(seg))
+    if (OK_DLS != objKind(sh, seg))
         // not a DLS
         return false;
 
     const TObjId peer = dlSegPeer(sh, seg);
-    if (OK_DLS != sh.objKind(peer))
+    if (OK_DLS != objKind(sh, peer))
         // invalid peer
         return false;
 
@@ -235,7 +235,7 @@ void dlSegSetMinLength(SymHeap &sh, TObjId dls, unsigned len) {
 void segSetMinLength(SymHeap &sh, TObjId seg, unsigned len) {
     seg = objRoot(sh, seg);
 
-    const EObjKind kind = sh.objKind(seg);
+    const EObjKind kind = objKind(sh, seg);
     switch (kind) {
         case OK_SLS:
             segHandleNeq(sh, seg, seg, (len)
@@ -261,7 +261,7 @@ void segSetMinLength(SymHeap &sh, TObjId seg, unsigned len) {
 TObjId segClone(SymHeap &sh, const TObjId seg) {
     const TObjId dupSeg = objDup(sh, seg);
 
-    if (OK_DLS == sh.objKind(seg)) {
+    if (OK_DLS == objKind(sh, seg)) {
         // we need to clone the peer as well
         const TObjId peer = dlSegPeer(sh, seg);
         const TObjId dupPeer = objDup(sh, peer);
@@ -286,7 +286,7 @@ bool dlSegCheckConsistency(const SymHeap &sh) {
     TObjList roots;
     sh.gatherRootObjs(roots);
     BOOST_FOREACH(const TObjId obj, roots) {
-        const EObjKind kind = sh.objKind(obj);
+        const EObjKind kind = objKind(sh, obj);
         switch (kind) {
             case OK_SLS:
             case OK_CONCRETE:
@@ -314,7 +314,7 @@ bool dlSegCheckConsistency(const SymHeap &sh) {
             return false;
         }
 
-        if (OK_DLS != sh.objKind(peer)) {
+        if (OK_DLS != objKind(sh, peer)) {
             CL_ERROR("DLS peer not a DLS");
             return false;
         }

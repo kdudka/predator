@@ -118,8 +118,8 @@ void detachClonedPrototype(
         const TObjId            rootDst,
         const TObjId            rootSrc)
 {
-    const bool isRootDls = (OK_DLS == sh.objKind(rootDst));
-    CL_BREAK_IF(isRootDls && (OK_DLS != sh.objKind(rootSrc)));
+    const bool isRootDls = (OK_DLS == objKind(sh, rootDst));
+    CL_BREAK_IF(isRootDls && (OK_DLS != objKind(sh, rootSrc)));
 
     TObjId rootSrcPeer = OBJ_INVALID;
     if (isRootDls) {
@@ -132,7 +132,7 @@ void detachClonedPrototype(
     if (isRootDls)
         redirectInboundEdges(sh, clone, rootSrcPeer, rootDst);
 
-    if (OK_DLS == sh.objKind(proto)) {
+    if (OK_DLS == objKind(sh, proto)) {
         const TObjId protoPeer = dlSegPeer(sh, proto);
         const TObjId clonePeer = dlSegPeer(sh, clone);
         redirectInboundEdges(sh, rootDst, protoPeer, clonePeer);
@@ -209,7 +209,7 @@ void cloneGenericPrototype(
             if (!insertOnce(haveSeen, obj))
                 continue;
 
-            if (OK_DLS == sh.objKind(obj) &&
+            if (OK_DLS == objKind(sh, obj) &&
                     !insertOnce(haveSeen, dlSegPeer(sh, obj)))
                 continue;
 
@@ -346,10 +346,10 @@ void abstractNonMatchingValues(SymHeap &sh, TObjId src, TObjId dst,
     if (!joinData(sh, dst, src, bidir))
         CL_BREAK_IF("joinData() failed, failure of segDiscover()?");
 
-    if (OK_DLS == sh.objKind(dst))
+    if (OK_DLS == objKind(sh, dst))
         dlSegSyncPeerData(sh, dst);
 
-    if (bidir && OK_DLS == sh.objKind(src))
+    if (bidir && OK_DLS == objKind(sh, src))
         dlSegSyncPeerData(sh, src);
 }
 
@@ -384,14 +384,14 @@ void slSegAbstractionStep(SymHeap &sh, TObjId *pObj, const BindingOff &off)
     // jump to the next object
     const TObjId objNext = objRootByVal(sh, valNext);
     len += objMinLength(sh, objNext);
-    if (OK_SLS == sh.objKind(objNext))
+    if (OK_SLS == sh.valTargetKind(valNext))
         segSetMinLength(sh, objNext, /* SLS 0+ */ 0);
     else
         // abstract the _next_ object
         sh.objSetAbstract(objNext, OK_SLS, off);
 
     // merge data
-    CL_BREAK_IF(OK_SLS != sh.objKind(objNext));
+    CL_BREAK_IF(OK_SLS != objKind(sh, objNext));
     abstractNonMatchingValues(sh, obj, objNext);
 
     // replace all references to 'head'
@@ -411,7 +411,7 @@ void slSegAbstractionStep(SymHeap &sh, TObjId *pObj, const BindingOff &off)
 }
 
 void enlargeMayExist(SymHeap &sh, const TObjId obj) {
-    const EObjKind kind = sh.objKind(obj);
+    const EObjKind kind = objKind(sh, obj);
     switch (kind) {
         case OK_MAY_EXIST:
             sh.objSetConcrete(obj);
@@ -451,7 +451,7 @@ void dlSegCreate(SymHeap &sh, TObjId o1, TObjId o2, BindingOff off) {
 }
 
 void dlSegGobble(SymHeap &sh, TObjId dls, TObjId var, bool backward) {
-    CL_BREAK_IF(OK_DLS != sh.objKind(dls));
+    CL_BREAK_IF(OK_DLS != objKind(sh, dls));
 
     // handle DLS Neq predicates and OK_MAY_EXIST
     const unsigned len = dlSegMinLength(sh, dls) + objMinLength(sh, var);
@@ -539,7 +539,7 @@ void dlSegAbstractionStep(SymHeap &sh, TObjId *pObj, const BindingOff &off)
     // we'll find the next one later on
     TObjId o2 = o1;
 
-    EObjKind kind = sh.objKind(o1);
+    EObjKind kind = objKind(sh, o1);
     switch (kind) {
         case OK_SLS:
             // *** segDiscover() failure detected ***
@@ -551,7 +551,7 @@ void dlSegAbstractionStep(SymHeap &sh, TObjId *pObj, const BindingOff &off)
 
             // jump to the next object (as we know such an object exists)
             skipObj(sh, &o2, sh.objBinding(o2).next);
-            if (OK_DLS != sh.objKind(o2)) {
+            if (OK_DLS != objKind(sh, o2)) {
                 // DLS + VAR
                 dlSegGobble(sh, o1, o2, /* backward */ false);
                 return;
@@ -565,7 +565,7 @@ void dlSegAbstractionStep(SymHeap &sh, TObjId *pObj, const BindingOff &off)
         case OK_CONCRETE:
             // jump to the next object (as we know such an object exists)
             skipObj(sh, &o2, off.next);
-            if (OK_DLS != sh.objKind(o2)) {
+            if (OK_DLS != objKind(sh, o2)) {
                 // VAR + VAR
                 dlSegCreate(sh, o1, o2, off);
                 return;
@@ -810,7 +810,7 @@ void concretizeObj(SymHeap &sh, TValId addr, TSymHeapList &todo) {
     TObjId peer = obj;
 
     // branch by SLS/DLS
-    const EObjKind kind = sh.objKind(obj);
+    const EObjKind kind = objKind(sh, obj);
     switch (kind) {
         case OK_CONCRETE:
             // invalid call of concretizeObj()
@@ -879,12 +879,12 @@ void concretizeObj(SymHeap &sh, TValId addr, TSymHeapList &todo) {
 bool spliceOutListSegment(SymHeap &sh, TValId atAddr, TValId pointingTo)
 {
     const TObjId obj = objRootByVal(sh, atAddr);
-    const EObjKind kind = sh.objKind(obj);
+    const EObjKind kind = objKind(sh, obj);
     const TObjId peer = (OK_DLS == kind)
         ? dlSegPeer(sh, obj)
         : obj;
 
-    if (OK_DLS == sh.objKind(obj)) {
+    if (OK_DLS == objKind(sh, obj)) {
         CL_BREAK_IF(!dlSegCheckConsistency(sh));
 
         const TObjId peer = dlSegPeer(sh, obj);
