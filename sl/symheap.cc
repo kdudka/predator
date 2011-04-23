@@ -1178,11 +1178,21 @@ bool SymHeapCore::valDestroyTarget(TValId val) {
     return true;
 }
 
-int SymHeapCore::objSizeOfAnon(TObjId obj) const {
-    // if we know the type, it's not an anonymous object
-    CL_BREAK_IF(this->objType(obj));
+int SymHeapCore::valSizeOfTarget(TValId val) const {
+    const TValId valRoot = d->valRoot(val);
 
-    const Private::Root &rootData = roMapLookup(d->roots, obj);
+    // XXX
+    const TObjId target = this->pointsTo(valRoot);
+    CL_BREAK_IF(d->objOutOfRange(target));
+    const Private::Object &objData = d->objects[target];
+
+    const TObjType clt = objData.clt;
+    if (clt)
+        // typed object
+        return clt->size;
+
+    // RAW object
+    const Private::Root &rootData = roMapLookup(d->roots, target);
     return rootData.cbSize;
 }
 

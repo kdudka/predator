@@ -154,7 +154,7 @@ TObjId addObjectIfNeeded(DeepCopyData &dc, TObjId objSrc) {
         // assume anonymous object of known size
         CL_BREAK_IF(src.objType(objSrc));
 
-        const int cbSize = src.objSizeOfAnon(objSrc);
+        const int cbSize = src.valSizeOfTarget(src.placedAt(objSrc));
         const TObjId objDst = dst.pointsTo(dst.heapAlloc(cbSize));
         add(dc, objSrc, objDst);
         return objDst;

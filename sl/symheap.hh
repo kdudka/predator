@@ -288,6 +288,7 @@ class SymHeapCore {
         EValueTarget valTarget(TValId) const;
         TValId valRoot(TValId) const;
         TOffset valOffset(TValId) const;
+        int valSizeOfTarget(TValId) const;
 
         TObjId objAt(TValId at, TObjType clt);
         TObjId objAt(TValId at, TObjCode code);
@@ -380,11 +381,6 @@ class SymHeapCore {
          * @return true, if the operation succeeds
          */
         virtual bool valDestroyTarget(TValId);
-
-        // TODO: remove this
-        int objSizeOfAnon(TObjId obj) const;
-
-        int valSizeOfTarget(TValId) const;
 
         /**
          * delayed static type-info definition of the given object

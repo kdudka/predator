@@ -321,7 +321,8 @@ void SymPlot::Private::plotNodeObj(TObjId obj) {
 }
 
 void SymPlot::Private::plotNodeObjAnon(TObjId obj) {
-    const int size = this->heap->objSizeOfAnon(obj);
+    const TValId at = this->heap->placedAt(obj);
+    const int size = this->heap->valSizeOfTarget(at);
     CL_BREAK_IF(size <= 0);
 
     this->dotStream << "\t" << SL_QUOTE(obj)

@@ -792,8 +792,8 @@ bool createAnonObject(
         const TObjId            o1,
         const TObjId            o2)
 {
-    const int cbSize1 = ctx.sh1.objSizeOfAnon(o1);
-    const int cbSize2 = ctx.sh2.objSizeOfAnon(o2);
+    const int cbSize1 = ctx.sh1.valSizeOfTarget(ctx.sh1.placedAt(o1));
+    const int cbSize2 = ctx.sh2.valSizeOfTarget(ctx.sh2.placedAt(o2));
     if (cbSize1 != cbSize2) {
         SJ_DEBUG("<-- anon object size mismatch " << SJ_OBJP(o1, o2));
         return false;

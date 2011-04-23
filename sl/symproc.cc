@@ -433,7 +433,7 @@ void SymProc::heapObjDefineType(TObjId lhs, TValId rhs) {
         return;
 
     // anonymous objects of zero size are not allowed
-    const int cbGot = heap_.objSizeOfAnon(var);
+    const int cbGot = heap_.valSizeOfTarget(rhs);
     CL_BREAK_IF(!cbGot);
 
     const int cbNeed = clt->size;
