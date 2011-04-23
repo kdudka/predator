@@ -91,7 +91,7 @@ void digGlJunk(const CodeStorage::Storage &stor, SymHeap &heap) {
                     << var.uid << " (" << var.name << ")" );
 
             const CVar cVar(var.uid, /* gl variable */ 0);
-            const TObjId obj = heap.objByCVar(cVar);
+            const TObjId obj = heap.pointsTo(heap.addrOfVar(cVar));
             CL_BREAK_IF(obj < 0);
 
             proc.setLocation(lw);

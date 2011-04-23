@@ -170,13 +170,16 @@ TObjId SymProc::handleDerefCore(TValId val, const struct cl_type *cltTarget) {
     return target;
 }
 
-TObjId varFromOperand(const struct cl_operand &op, const SymHeap &sh,
-                      const SymBackTrace *bt)
+TObjId varFromOperand(
+        const struct cl_operand     &op,
+        SymHeap                     &sh,
+        const SymBackTrace          *bt)
 {
     const int uid = varIdFromOperand(&op);
     const int nestLevel = bt->countOccurrencesOfTopFnc();
     const CVar cVar(uid, nestLevel);
-    return sh.objByCVar(cVar);
+    const TValId addr = sh.addrOfVar(cVar);
+    return sh.pointsTo(addr);
 }
 
 void SymProc::resolveOffValue(TValId *pVal, const struct cl_accessor **pAc) {

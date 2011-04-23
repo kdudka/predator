@@ -370,9 +370,12 @@ bool areEqual(
         return false;
     }
 
+    SymHeap &sh1Writable = const_cast<SymHeap &>(sh1);
+    SymHeap &sh2Writable = const_cast<SymHeap &>(sh2);
+
     BOOST_FOREACH(CVar cv, cVars1) {
-        const TObjId o1 = sh1.objByCVar(cv);
-        const TObjId o2 = sh2.objByCVar(cv);
+        const TObjId o1 = sh1.pointsTo(sh1Writable.addrOfVar(cv));
+        const TObjId o2 = sh2.pointsTo(sh2Writable.addrOfVar(cv));
         CL_BREAK_IF(o1 < 0 || o2 < 0);
 
         // retrieve values of static variables

@@ -946,7 +946,8 @@ void SymPlot::Private::plotCVar(CVar cVar) {
 #endif
 
     // SymbolicHeap variable lookup
-    const TObjId obj = this->heap->objByCVar(cVar);
+    const TValId at = const_cast<SymHeap *>(this->heap)->addrOfVar(cVar);
+    const TObjId obj = this->heap->pointsTo(at);
     if (OBJ_INVALID == obj)
         CL_DEBUG_MSG(this->lw, "objByCVar lookup failed");
 

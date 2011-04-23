@@ -1591,8 +1591,10 @@ bool joinCVars(SymJoinCtx &ctx) {
 
     // go through all program variables
     BOOST_FOREACH(const CVar &cv, cVars1) {
-        const TObjId root1 = sh1.objByCVar(cv);
-        const TObjId root2 = sh2.objByCVar(cv);
+        const TValId addr1 = const_cast<SymHeap &>(sh1).addrOfVar(cv);
+        const TValId addr2 = const_cast<SymHeap &>(sh2).addrOfVar(cv);
+        const TObjId root1 = sh1.pointsTo(addr1);
+        const TObjId root2 = sh2.pointsTo(addr2);
 
         // create a corresponding program variable in the resulting heap
         const struct cl_type *clt = sh1.objType(root1);

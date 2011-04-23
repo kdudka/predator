@@ -283,15 +283,35 @@ class SymHeapCore {
         // TODO: remove this
         TObjId pointsTo(TValId val) const;
 
-        // symheap-ng
+        /// translate the given address by the given offset
         TValId valByOffset(TValId, TOffset offset);
+
+        // TODO: implement?
         EValueTarget valTarget(TValId) const;
+
+        /// return the address of the root which the given value is binded to
         TValId valRoot(TValId) const;
+
+        /// return the relative placement from the root
         TOffset valOffset(TValId) const;
+
+        /// return size (in bytes) that we can safely write at the given addr
         int valSizeOfTarget(TValId) const;
 
+        /// return a _data_ pointer placed at the given address
+        TObjId ptrAt(TValId at);
+
+        /// return the biggest object placed at the given address
+        TObjId objAt(TValId at);
+
+        /// return an object of the given type at the given address
         TObjId objAt(TValId at, TObjType clt);
+
+        /// return an object of the given type at the given address
         TObjId objAt(TValId at, TObjCode code);
+
+        /// return address of the given program variable (create it if needed)
+        TValId addrOfVar(CVar);
 
         /// clone of the given value (deep copy)
         virtual TValId valClone(TValId);
@@ -322,16 +342,6 @@ class SymHeapCore {
          * object was allocated dynamically)
          */
         bool cVar(CVar *dst, TObjId obj) const;
-
-        /**
-         * look for a heap object corresponding to the given static/automatic
-         * variable
-         * @param cVar static/automatic variable to look for
-         * @return A valid object ID in case of success, invalid otherwise.
-         */
-        TObjId objByCVar(CVar cVar) /* FIXME */ const;
-
-        TValId addrOfVar(CVar);
 
         /**
          * collect all static/automatic variables (see CodeStorage) which have

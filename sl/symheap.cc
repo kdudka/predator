@@ -1073,11 +1073,10 @@ bool SymHeapCore::cVar(CVar *dst, TObjId obj) const {
     return true;
 }
 
-// FIXME: should this be declared non-const?
-TObjId SymHeapCore::objByCVar(CVar cv) const {
+TValId SymHeapCore::addrOfVar(CVar cv) {
     const TObjId obj = d->cVarMap.find(cv);
     if (0 < obj)
-        return obj;
+        return this->placedAt(obj);
 
     // lazy creation of a program variable
     TObjType clt = stor_.vars[cv.uid].clt;
@@ -1088,8 +1087,8 @@ TObjId SymHeapCore::objByCVar(CVar cv) const {
     CL_DEBUG_MSG(loc, "FFF SymHeapCore::objByCVar() creates stack variable "
             << varString);
 
-    SymHeapCore &self = /* XXX */ const_cast<SymHeapCore &>(*this); 
-    return self.objCreate(clt, cv);
+    const TObjId fresh = this->objCreate(clt, cv);
+    return this->placedAt(fresh);
 }
 
 void SymHeapCore::gatherCVars(TCVarList &dst) const {

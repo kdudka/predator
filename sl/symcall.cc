@@ -159,7 +159,7 @@ void SymCallCtx::Private::destroyStackFrame(SymHeap &sh) {
         CL_DEBUG_MSG(lw, "<<< destroying stack variable: #"
                 << var.uid << " (" << var.name << ")" );
 #endif
-        const TObjId obj = sh.objByCVar(cv);
+        const TObjId obj = sh.pointsTo(sh.addrOfVar(cv));
         CL_BREAK_IF(obj < 0);
 
         proc.setLocation(lw);
@@ -342,7 +342,7 @@ void SymCallCache::Private::createStackFrame(TCVarList &cVars) {
                     << " (" << var.name << ")" );
 
             // reflect the given initializer
-            const TObjId obj = this->heap->objByCVar(cv);
+            const TObjId obj = this->heap->pointsTo(this->heap->addrOfVar(cv));
             initVariable(*this->heap, obj, var);
         }
     }
@@ -378,7 +378,7 @@ void SymCallCache::Private::setCallArgs(const CodeStorage::TOperandList &opList)
 
         // cVar lookup
         const CVar cVar(arg, this->nestLevel);
-        const TObjId lhs = this->heap->objByCVar(cVar);
+        const TObjId lhs = this->heap->pointsTo(this->heap->addrOfVar(cVar));
         CL_BREAK_IF(OBJ_INVALID == lhs);
 
         if (opList.size() <= pos) {

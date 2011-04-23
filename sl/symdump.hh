@@ -74,10 +74,10 @@ void dump_value(const SymHeap &heap, TValId value);
 void dump_value_refs(const SymHeap &heap, TValId value);
 
 /// dump a static/automatic @b variable, see CodeStorage
-void dump_cvar(const SymHeap &heap, CVar cv);
+void dump_cvar(SymHeap &heap, CVar cv);
 
 /// dump a static/automatic @b variable, see CodeStorage
-void dump_cvar(const SymHeap &heap, int uid, int inst);
+void dump_cvar(SymHeap &heap, int uid, int inst);
 
 /// dump a @b all static/automatic @b variables of the given symbolic heap
 void dump_heap(const SymHeap &heap);

@@ -339,7 +339,8 @@ void prune(const SymHeap &src, SymHeap &dst,
 
     // go through all program variables
     BOOST_FOREACH(CVar cv, snap) {
-        const TObjId objSrc = dc.src.objByCVar(cv);
+        const TValId valSrc = const_cast<SymHeap &>(dc.src).addrOfVar(cv);
+        const TObjId objSrc = dc.src.pointsTo(valSrc);
         CL_BREAK_IF(OBJ_INVALID == objSrc);
 
 #ifndef NDEBUG

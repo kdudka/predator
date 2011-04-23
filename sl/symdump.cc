@@ -339,12 +339,12 @@ void dump_value_refs(const SymHeap &heap, TValId value) {
     }
 }
 
-void dump_cvar(const SymHeap &heap, CVar cVar) {
-    const TObjId obj = heap.objByCVar(cVar);
-    dump_obj(heap, obj);
+void dump_cvar(SymHeap &heap, CVar cVar) {
+    const TValId val = heap.addrOfVar(cVar);
+    dump_value(heap, val);
 }
 
-void dump_cvar(const SymHeap &heap, int uid, int inst) {
+void dump_cvar(SymHeap &heap, int uid, int inst) {
     const CVar cv(uid, inst);
     dump_cvar(heap, cv);
 }
@@ -357,7 +357,7 @@ void dump_heap(const SymHeap &heap) {
     TCVarList cVars;
     heap.gatherCVars(cVars);
     BOOST_FOREACH(const CVar cv, cVars) {
-        dump_cvar(heap, cv);
+        dump_cvar(const_cast<SymHeap &>(heap), cv);
         cout << "\n";
     }
 }
