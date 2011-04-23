@@ -302,10 +302,6 @@ bool matchData(
     if (!joinDataReadOnly(&status, sh, off, o1, o2, protoRoots))
         return false;
 
-    // FIXME: highly experimental
-    if (objIsSeg(sh, o2) && objIsSeg(sh, nextObj(sh, off, o2)))
-        return true;
-
     int thr = 0;
 #if SE_PREFER_LOSSLESS_PROTOTYPES
     switch (status) {

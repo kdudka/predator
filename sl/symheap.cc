@@ -1083,6 +1083,11 @@ TObjId SymHeapCore::objByCVar(CVar cv) const {
     TObjType clt = stor_.vars[cv.uid].clt;
     CL_BREAK_IF(!clt || clt->code == CL_TYPE_VOID);
 
+    const struct cl_loc *loc = 0;
+    std::string varString = varTostring(stor_, cv.uid, &loc);
+    CL_DEBUG_MSG(loc, "FFF SymHeapCore::objByCVar() creates stack variable "
+            << varString);
+
     SymHeapCore &self = /* XXX */ const_cast<SymHeapCore &>(*this); 
     return self.objCreate(clt, cv);
 }
@@ -1182,9 +1187,15 @@ int SymHeapCore::objSizeOfAnon(TObjId obj) const {
 }
 
 void SymHeapCore::objDefineType(TObjId obj, TObjType clt) {
-    if (OBJ_RETURN == obj)
+    if (OBJ_RETURN == obj) {
         // cleanup OBJ_RETURN for next wheel
         d->objDestroy(OBJ_RETURN);
+
+        if (!clt)
+            // objDefineType(OBJ_RETURN, 0) is a counter-intuitive way to
+            // destruct OBJ_RETURN
+            return;
+    }
 
     CL_BREAK_IF(d->objOutOfRange(obj));
     Private::Object &objData = d->objects[obj];

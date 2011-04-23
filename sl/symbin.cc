@@ -206,6 +206,7 @@ bool callPlotStackFrame(const TInsn &insn, TProc &proc) {
         else if (!(call(insn, core)))                                       \
             return false;                                                   \
                                                                             \
+        core.killInsn(insn);                                                \
         dst.insert(sh);                                                     \
         return true;                                                        \
     }                                                                       \

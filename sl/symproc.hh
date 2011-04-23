@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2010 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2009-2011 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -100,6 +100,9 @@ class SymProc {
         /// high-level interface to SymHeap::objDestroy()
         void objDestroy(TObjId obj);
 
+        /// invalidate all variables that are killed by the given instruction
+        void killInsn(const CodeStorage::Insn &);
+
     private:
         void heapSetSingleVal(TObjId lhs, TValId rhs);
         void heapObjDefineType(TObjId lhs, TValId rhs);
@@ -109,6 +112,7 @@ class SymProc {
         void resolveOffValue(TValId *pVal, const struct cl_accessor **pAc);
         TValId heapValFromObj(const struct cl_operand &op);
         TValId heapValFromCst(const struct cl_operand &op);
+        void killVar(const struct cl_operand &op);
 
     protected:
         SymHeap                     &heap_;     ///< heap to operate on
@@ -177,7 +181,7 @@ class SymExecCore: public SymProc {
         template <int ARITY>
         void execOp(const CodeStorage::Insn &insn);
 
-        void execMalloc(SymState &dst, const CodeStorage::TOperandList &opList);
+        void execMalloc(SymState &dst, const CodeStorage::Insn &);
         void execFreeCore(TValId val);
         void execFree(const CodeStorage::TOperandList &opList);
         bool execCall(SymState &dst, const CodeStorage::Insn &insn);
@@ -188,7 +192,6 @@ class SymExecCore: public SymProc {
 
         bool concretizeIfNeeded(SymState &dst, const CodeStorage::Insn &insn);
         bool execCore(SymState &dst, const CodeStorage::Insn &insn, const bool);
-        void killVar(const struct cl_operand &op);
 
     private:
         const SymExecCoreParams ep_;

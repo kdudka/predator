@@ -20,7 +20,11 @@
 #include "config_cl.h"
 #include <cl/clutil.hh>
 
+#include <cl/storage.hh>
+
 #include "util.hh"
+
+#include <sstream>
 
 #include <boost/tuple/tuple.hpp>
 
@@ -128,4 +132,23 @@ int varIdFromOperand(const struct cl_operand *op, const char **pName) {
         *pName = op->data.var->name;
 
     return op->data.var->uid;
+}
+
+std::string varTostring(
+        const CodeStorage::Storage      &stor,
+        const int                       uid,
+        const struct cl_loc             **pLoc)
+{
+    const CodeStorage::Var &var = stor.vars[uid];
+    if (pLoc)
+        *pLoc = &var.loc;
+
+    std::ostringstream str;
+    str << "#" << var.uid;
+
+    const std::string &name = var.name;
+    if (!name.empty())
+        str << " (" << name << ")";
+
+    return str.str();
 }

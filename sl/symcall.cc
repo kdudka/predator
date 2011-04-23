@@ -489,6 +489,7 @@ SymCallCtx& SymCallCache::getCallCtx(SymHeap                    heap,
     // initialize local variables of the called fnc
     d->createStackFrame(cut);
     d->setCallArgs(opList);
+    d->proc->killInsn(insn);
 
     // prune heap
     SymHeap surround(heap.stor());

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2010 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2009-2011 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -578,9 +578,13 @@ void SymProc::objDestroy(TObjId obj) {
     getPtrValues(ptrs, heap_, obj);
 
     // destroy object recursively
-    const TValId addr = heap_.placedAt(obj);
-    if (0 < addr)
-        heap_.valDestroyTarget(addr);
+    if (OBJ_RETURN == obj)
+        heap_.objDefineType(OBJ_RETURN, 0);
+    else {
+        const TValId addr = heap_.placedAt(obj);
+        if (0 < addr)
+            heap_.valDestroyTarget(addr);
+    }
 
     // now check for JUNK
     bool junk = false;
@@ -592,6 +596,28 @@ void SymProc::objDestroy(TObjId obj) {
     if (junk)
         // print backtrace at most once per one call of objDestroy()
         bt_->printBackTrace();
+}
+
+void SymProc::killVar(const struct cl_operand &op) {
+    const CodeStorage::Storage &stor = heap_.stor();
+    const int uid = varIdFromOperand(&op);
+    CL_DEBUG_MSG(lw_, "FFF SymExecCore::killVar() destroys stack variable "
+            << varTostring(stor, uid));
+
+    const TObjId obj = varFromOperand(op, heap_, bt_);
+    this->objDestroy(obj);
+}
+
+void SymProc::killInsn(const CodeStorage::Insn &insn) {
+#if !SE_EARLY_VARS_DESTRUCTION
+    return;
+#endif
+    // kill variables
+    const CodeStorage::TOperandList &ops = insn.operands;
+    for (unsigned i = 0; i < ops.size(); ++i) {
+        if (insn.opsToKill[i])
+            this->killVar(ops[i]);
+    }
 }
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -727,8 +753,9 @@ void SymExecCore::execFree(const CodeStorage::TOperandList &opList) {
 }
 
 void SymExecCore::execMalloc(SymState                           &state,
-                             const CodeStorage::TOperandList    &opList)
+                             const CodeStorage::Insn            &insn)
 {
+    const CodeStorage::TOperandList &opList = insn.operands;
     CL_BREAK_IF(/* dst + fnc + size */ 3 != opList.size());
 
     // resolve lhs
@@ -748,11 +775,13 @@ void SymExecCore::execMalloc(SymState                           &state,
     if (!ep_.fastMode) {
         // OOM state simulation
         this->objSetValue(varLhs, VAL_NULL);
+        this->killInsn(insn);
         state.insert(heap_);
     }
 
     // store the result of malloc
     this->objSetValue(varLhs, val);
+    this->killInsn(insn);
     state.insert(heap_);
 }
 
@@ -774,12 +803,13 @@ bool SymExecCore::execCall(SymState &dst, const CodeStorage::Insn &insn) {
         return false;
 
     if (STREQ(fncName, "malloc")) {
-        this->execMalloc(dst, opList);
+        this->execMalloc(dst, insn);
         return true;
     }
 
     if (STREQ(fncName, "free")) {
         this->execFree(opList);
+        this->killInsn(insn);
         dst.insert(heap_);
         return true;
     }
@@ -1097,20 +1127,6 @@ bool SymExecCore::concretizeIfNeeded(SymState                   &results,
     return true;
 }
 
-void SymExecCore::killVar(const struct cl_operand &op) {
-    const CodeStorage::Storage &stor = heap_.stor();
-    const CodeStorage::Var &var = stor.vars[varIdFromOperand(&op)];
-    std::string name(var.name);
-    if (!name.empty())
-        name = std::string(" (") + name + std::string(")");
-
-    CL_DEBUG_MSG(lw_, "FFF SymExecCore::killVar() destroys stack variable #"
-            << var.uid << name);
-
-    const TObjId obj = varFromOperand(op, heap_, bt_);
-    this->objDestroy(obj);
-}
-
 bool SymExecCore::execCore(
         SymState                &dst,
         const CodeStorage::Insn &insn,
@@ -1127,7 +1143,6 @@ bool SymExecCore::execCore(
             break;
 
         case CL_INSN_CALL:
-            // TODO: kill variables
             return this->execCall(dst, insn);
 
         default:
@@ -1136,11 +1151,7 @@ bool SymExecCore::execCore(
     }
 
     // kill variables
-    const CodeStorage::TOperandList &ops = insn.operands;
-    for (unsigned i = 0; i < ops.size(); ++i) {
-        if (insn.opsToKill[i])
-            this->killVar(ops[i]);
-    }
+    this->killInsn(insn);
 
     if (feelFreeToOverwrite)
         // aggressive optimization

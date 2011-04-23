@@ -86,6 +86,11 @@
 #define SE_ABSTRACT_ON_CALL_DONE            1
 
 /**
+ * if 1, local variables are destroyed as soon as they become dead
+ */
+#define SE_EARLY_VARS_DESTRUCTION           0
+
+/**
  * if 1, program variables are created as needed; before a fnc call otherwise
  */
 #define SE_LAZY_VARS_CREATION               1

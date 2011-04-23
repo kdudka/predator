@@ -327,10 +327,6 @@ void killLocalVariables(Storage &stor) {
         VarKiller::handleFnc(data, fnc);
     }
 
-    if (!::debugVarKiller)
-        // better to work in read-only mode unless we are debugging the killer
-        return;
-
     VarKiller::commitResults(data);
     VK_DEBUG(1, "killLocalVariables() has finished...");
 }

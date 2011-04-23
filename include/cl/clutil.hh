@@ -30,6 +30,11 @@
 #include <cassert>
 #include <set>
 #include <stack>
+#include <string>
+
+namespace CodeStorage {
+    struct Storage;
+}
 
 /// compare given two pieces of static type-info semantically
 bool operator==(const struct cl_type &cltA, const struct cl_type &cltB);
@@ -155,5 +160,10 @@ bool /* complete */ traverseTypeIc(const struct cl_type *clt, TVisitor &visitor,
     // the traversal is done, without any interruption by visitor
     return true;
 }
+
+std::string varTostring(
+        const CodeStorage::Storage      &stor,
+        const int                       uid,
+        const struct cl_loc             **pLoc = 0);
 
 #endif /* H_GUARD_CLUTIL_H */

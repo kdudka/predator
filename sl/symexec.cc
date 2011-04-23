@@ -982,6 +982,7 @@ void SymExec::exec(const CodeStorage::Fnc &fnc, SymState &results) {
         insn.loc  = fnc.def.loc;
         insn.operands.resize(2);
         insn.operands[1] = fnc.def;
+        insn.opsToKill.resize(2, false);
 
         // get call context for the root function
         SymCallCtx &ctx = d->callCache.getCallCtx(heap, fnc, insn);
