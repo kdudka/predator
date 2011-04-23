@@ -287,9 +287,7 @@ void SymPlot::Private::plotNodeObj(TObjId obj) {
         this->dotStream << ", color=" << colorByCode(code);
 
     // dig root object
-    TObjId root = obj, next;
-    while (OBJ_INVALID != (next = this->heap->objParent(root)))
-        root = next;
+    const TObjId root = objRoot(*this->heap, obj);
 
     if (this->heap->cVar(0, root))
         // colorize on-stack object

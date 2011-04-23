@@ -55,15 +55,7 @@ TObjId objDup(SymHeap &sh, const TObjId obj);
 
 bool isHeapObject(const SymHeap &heap, TObjId obj);
 
-void digRootObject(const SymHeap &heap, TValId *pValue);
-
-inline TObjId /* root */ objRoot(const SymHeap &sh, TObjId obj) {
-    TObjId root = obj;
-    while (OBJ_INVALID != (obj = sh.objParent(root)))
-        root = obj;
-
-    return root;
-}
+TObjId /* root */ objRoot(const SymHeap &sh, TObjId obj);
 
 inline TObjId /* root */ objRootByVal(const SymHeap &sh, TValId val) {
     if (val <= 0)

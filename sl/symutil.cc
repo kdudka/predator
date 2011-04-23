@@ -92,29 +92,26 @@ TObjId subObjByInvChain(const SymHeap &sh, TObjId obj, TFieldIdxChain ic) {
     return obj;
 }
 
-bool isHeapObject(const SymHeap &heap, TObjId obj) {
+bool isHeapObject(const SymHeap &sh, TObjId obj) {
     if (obj <= 0)
         return false;
 
-    for (; OBJ_INVALID != obj; obj = heap.objParent(obj))
-        if (heap.cVar(0, obj))
-            return false;
-
-    return true;
+    const TValId at = sh.placedAt(obj);
+    return SymHeap::isOnHeap(sh.valTarget(at));
 }
 
-void digRootObject(const SymHeap &heap, TValId *pValue) {
-    TObjId obj = heap.pointsTo(*pValue);
-    CL_BREAK_IF(obj < 0);
+TObjId /* root */ objRoot(const SymHeap &sh, TObjId obj) {
+    if (obj <= 0)
+        return obj;
 
-    TObjId parent;
-    while (OBJ_INVALID != (parent = heap.objParent(obj)))
-        obj = parent;
+    const TValId addr = sh.placedAt(obj);
+    const TValId rootAt = sh.valRoot(addr);
+    const TObjId root = const_cast<SymHeap &>(sh).objAt(rootAt);
+    if (OBJ_UNKNOWN == root)
+        // FIXME: a dangling object??? (try test-0093 with a debugger)
+        return obj;
 
-    TValId val = heap.placedAt(obj);
-    CL_BREAK_IF(val <= 0);
-
-    *pValue = val;
+    return root;
 }
 
 void getPtrValues(TValList &dst, const SymHeap &heap, TObjId obj) {

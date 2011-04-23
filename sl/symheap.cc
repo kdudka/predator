@@ -806,6 +806,16 @@ EValueTarget SymHeapCore::valTarget(TValId val) const {
         case OBJ_LOST:
             return VT_LOST;
 
+        case OBJ_UNKNOWN:
+            // either unknown value, or off-value
+            break;
+
+        case OBJ_RETURN:
+            // this happens in case a composite value is returned from a
+            // function;  the expected output of test-0090 prior to this commit
+            // was wrongly assuming that this area is dynamically allocated
+            return VT_ON_STACK;
+
         default:
             CL_BREAK_IF(target <= 0);
     }

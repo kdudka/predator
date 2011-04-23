@@ -720,7 +720,7 @@ void SymExecCore::execFreeCore(const TValId val) {
         return;
     }
 
-    if (OBJ_INVALID != heap_.objParent(obj)) {
+    if (heap_.valOffset(val)) {
         CL_ERROR_MSG(lw_, "attempt to free a non-root object");
         bt_->printBackTrace();
         return;

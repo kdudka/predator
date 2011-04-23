@@ -163,10 +163,6 @@ void dump_obj(const SymHeap &heap, TObjId obj) {
     else if (0 < value)
         cout << "    value     = /* value */ #" << value << "\n";
 
-    const TObjId parent = heap.objParent(obj);
-    if (-1 != parent)
-        cout << "    parent    = /* obj */ #" << parent << "\n";
-
     if (clt && clt->code == CL_TYPE_STRUCT) {
         for (int i = 0; i < clt->item_cnt; ++i) {
             const TObjId sub = heap.subObj(obj, i);
@@ -184,10 +180,6 @@ void dump_obj(const SymHeap &heap, TObjId obj) {
             cout << ", val = " << heap.valueOf(sub) << "\n";
         }
     }
-
-    if (-1 != parent)
-        // unguarded recursion
-        dump_obj(heap, parent);
 
     const EObjKind kind = objKind(heap, obj);
     if (OK_DLS == kind) {

@@ -78,7 +78,7 @@ bool digJunk(const SymHeap &heap, TValId *ptrVal) {
         return false;
 
     // only root objects can be destroyed
-    digRootObject(heap, ptrVal);
+    *ptrVal = heap.valRoot(*ptrVal);
 
     WorkList<TObjId> wl;
     digPointingObjects(wl, heap, *ptrVal);

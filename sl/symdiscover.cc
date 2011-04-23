@@ -248,7 +248,7 @@ TObjId jumpToNextObj(
         // no suitable next object
         return OBJ_INVALID;
 
-    if (OBJ_INVALID != sh.objParent(next))
+    if (sh.valOffset(sh.placedAt(next)))
         // next object is embedded into another object
         return OBJ_INVALID;
 
@@ -465,20 +465,13 @@ bool digSegmentHead(
         TOffset                     *pOff,
         const SymHeap               &sh,
         const struct cl_type        *cltRoot,
-        TObjId                      obj)
+        TValId                      at)
 {
-    const TObjId head = obj;
+    const TValId valRoot = sh.valRoot(at);
+    if (OBJ_UNKNOWN == const_cast<SymHeap &>(sh).objAt(valRoot, cltRoot))
+        return false;
 
-    while (*cltRoot != *sh.objType(obj)) {
-        int nth;
-        obj = sh.objParent(obj, &nth);
-        if (OBJ_INVALID == obj)
-            // head not found
-            return false;
-    }
-
-    // FIXME: not tested
-    *pOff = subOffsetIn(sh, obj, head);
+    *pOff = sh.valOffset(at);
     return true;
 }
 
@@ -555,7 +548,7 @@ class ProbeEntryVisitor {
                 return /* continue */ true;
 
             BindingOff off;
-            if (!digSegmentHead(&off.head, sh, clt_, next))
+            if (!digSegmentHead(&off.head, sh, clt_, val))
                 return /* continue */ true;
 
             // entry candidate found, check the back-link in case of DLL
