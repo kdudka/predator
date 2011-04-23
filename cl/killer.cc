@@ -26,6 +26,7 @@
 #include <cl/storage.hh>
 
 #include "util.hh"
+#include "stopwatch.hh"
 
 #include <map>
 #include <set>
@@ -171,7 +172,7 @@ void scanBlock(Data &data, TBlock bb) {
     BOOST_FOREACH(const Insn *insn, *bb)
         scanInsn(data, bb, *insn);
 
-    // dig backwared references
+    // dig backward references
     // FIXME: should they already be provided by CodeStorage?
     BOOST_FOREACH(TBlock target, bb->targets()) {
         BlockData &bTarget = data.blocks[target];
@@ -328,6 +329,8 @@ void commitResults(Data &data) {
 } // namespace VarKiller
 
 void killLocalVariables(Storage &stor) {
+    StopWatch watch;
+
     // shared state info
     VarKiller::Data data;
 
@@ -343,7 +346,7 @@ void killLocalVariables(Storage &stor) {
 
     // commit the results in batch mode (we needed to build Data::pointed first)
     VarKiller::commitResults(data);
-    VK_DEBUG(1, "killLocalVariables() has finished");
+    CL_DEBUG("killLocalVariables() took " << watch);
 }
 
 } // namespace CodeStorage

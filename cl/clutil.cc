@@ -148,7 +148,7 @@ std::string varTostring(
 
     const std::string &name = var.name;
     if (!name.empty())
-        str << " (" << name << ")";
+        str << ":" << name;
 
     return str.str();
 }
