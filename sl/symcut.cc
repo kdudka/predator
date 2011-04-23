@@ -372,11 +372,23 @@ void splitHeapByCVars(const SymBackTrace *bt, SymHeap *srcDst,
 #endif
     CL_DEBUG("splitHeapByCVars() started: cut by " << cut.size() << " variable(s)");
 
-    // std::vector -> std::set
+    // get the set of live program variables
+    SymHeap::TContCVar liveList;
+    srcDst->gatherCVars(liveList);
+    DeepCopyData::TCut live;
+    fillSet(live, liveList);
+
+    // make an intersection with the cut
     DeepCopyData::TCut cset;
-    fillSet(cset, cut);
+    BOOST_FOREACH(const CVar &cv, cut) {
+#if SE_LAZY_VARS_CREATION
+        if (hasKey(live, cv))
+#endif
+            cset.insert(cv);
+    }
 
     // cut the first part
+    const unsigned cntOrig = cset.size();
     SymHeap dst(srcDst->stor());
     prune(*srcDst, dst, cset);
 
@@ -403,7 +415,6 @@ void splitHeapByCVars(const SymBackTrace *bt, SymHeap *srcDst,
     // print some statistics
     const unsigned cntA = cset.size();
     const unsigned cntB = complement.size();
-    const unsigned cntOrig = cut.size();
     const unsigned cntTotal = all.size();
     CL_DEBUG("splitHeapByCVars() finished: "
             << cntOrig << " -> " << cntA << " |" << cntB
