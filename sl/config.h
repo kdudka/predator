@@ -38,7 +38,7 @@
 /**
  * if 1, print created/destroyed stack variables when running in verbose mode
  */
-#define DEBUG_SE_STACK_FRAME                0
+#define DEBUG_SE_STACK_FRAME                1
 
 /**
  * if 1, plot each abstraction/concretization step to a separate heap graph

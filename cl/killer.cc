@@ -100,8 +100,8 @@ void scanRefs(TSet &pointed, const cl_operand &op) {
 
     // black-list a variable that we take a reference to
     const int uid = varIdFromOperand(&op);
-    VK_DEBUG(1, "pointed |= #" << uid);
-    pointed.insert(uid);
+    if (insertOnce(pointed, uid))
+        VK_DEBUG(1, "pointed |= #" << uid);
 }
 
 void scanOperand(Data &data, TBlock bb, const cl_operand &op, bool dst) {
@@ -278,7 +278,7 @@ void killOperand(Insn &insn, TVar byUid) {
 
     // kill a single variable at a single location
     CL_BREAK_IF(idx < 0);
-    VK_DEBUG_MSG(1, &insn.loc, "killing variable #" << idx << " by " << insn);
+    VK_DEBUG_MSG(1, &insn.loc, "killing variable #" << byUid << " by " << insn);
     insn.opsToKill[idx] = true;
 }
 
@@ -298,6 +298,7 @@ void commitBlock(Data &data, TBlock bb, const TSet &pointed) {
 
         // FIXME: performance waste
         Data arena;
+        arena.pointed = /* only suppress duplicated verbose messages */ pointed;
         scanInsn(arena, bb, *insn);
         const BlockData &now = arena.blocks[bb];
 

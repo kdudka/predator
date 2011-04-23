@@ -32,13 +32,13 @@
 
 /**
  * debug level of the verbose output when killing variables
- * - 0 ... a reasonable default
+ * - 0 ... print only time elapsed
  * - 1 ... print variables being killed and variables black-listed for killing
  * - 2 ... print some basic progress info
  * - 3 ... debug the algorithm at the level of instructions
  * - 4 ... debug the algorithm at the level of operands
  */
-#define CL_DEBUG_VAR_KILLER             0
+#define CL_DEBUG_VAR_KILLER             1
 
 /**
  * if 1, show the amount of time taken by the analysis even without verbose mode

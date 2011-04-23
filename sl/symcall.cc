@@ -319,29 +319,32 @@ void SymCallCache::Private::createStackFrame(SymHeap::TContCVar &cVars) {
     // go through all variables that are visible from the function
     BOOST_FOREACH(const int uid, ref.vars) {
         const Var &var = ref.stor->vars[uid];
-        if (isOnStack(var)) {
-            // automatic variable (and/or fnc arg)
-#if DEBUG_SE_STACK_FRAME
-            const struct cl_loc *lw = &var.loc;
-            CL_DEBUG_MSG(lw, ">>> creating stack variable: #" << var.uid
-                    << " (" << var.name << ")" );
-#endif
+        if (!isOnStack(var))
+            continue;
 
-            // gather stack frame in order to prune the heap afterwards
-            const CVar cv(var.uid, this->nestLevel);
-            cVars.push_back(cv);
+        // gather local variables so that we can prune the heap afterwards
+        const CVar cv(var.uid, this->nestLevel);
+        cVars.push_back(cv);
+
 #if !SE_LAZY_VARS_CREATION
-            // now create the SymHeap object
-            this->heap->objCreate(var.clt, cv);
-#endif
-            if (var.initial) {
-                CL_DEBUG_MSG(lw, "--- initializing stack variable: #" << var.uid
-                        << " (" << var.name << ")" );
 
-                // reflect the given initializer
-                const TObjId obj = this->heap->objByCVar(cv);
-                initVariable(*this->heap, obj, var);
-            }
+#   if DEBUG_SE_STACK_FRAME
+        const struct cl_loc *lw = &var.loc;
+        CL_DEBUG_MSG(lw, ">>> creating stack variable: #" << var.uid
+                << " (" << var.name << ")" );
+#   endif
+        // now create the SymHeap object
+        this->heap->objCreate(var.clt, cv);
+
+#endif // SE_LAZY_VARS_CREATION
+
+        if (var.initial) {
+            CL_DEBUG_MSG(lw, "--- initializing stack variable: #" << var.uid
+                    << " (" << var.name << ")" );
+
+            // reflect the given initializer
+            const TObjId obj = this->heap->objByCVar(cv);
+            initVariable(*this->heap, obj, var);
         }
     }
 }
