@@ -128,11 +128,11 @@ void SymCallCtx::Private::destroyStackFrame(SymHeap &sh) {
     SymProc proc(sh, this->bt);
 
     // gather live variables
-    SymHeap::TContCVar liveVars;
+    TCVarList liveVars;
     sh.gatherCVars(liveVars);
 
     // filter local variables
-    SymHeap::TContCVar liveLocals;
+    TCVarList liveLocals;
     BOOST_FOREACH(const CVar &cv, liveVars) {
         if (!isOnStack(ref.stor->vars[cv.uid]))
             // not a local variable
@@ -261,9 +261,8 @@ class PerFncCache {
 // implementation of SymCallCache
 struct SymCallCache::Private {
     typedef SymBackTrace::TFncSeq                       TFncSeq;
-    typedef SymHeap::TContCVar                          TCVars;
     typedef std::map<int /* uid */, PerFncCache>        TCacheCol;
-    typedef std::map<TCVars, TCacheCol>                 TCacheRow;
+    typedef std::map<TCVarList, TCacheCol>              TCacheRow;
     typedef std::map<TFncSeq, TCacheRow>                TCache;
 
     TCache                      cache;
@@ -274,9 +273,9 @@ struct SymCallCache::Private {
     const CodeStorage::Fnc      *fnc;
     int                         nestLevel;
 
-    SymHeap::TContCVar          glVars;
+    TCVarList                   glVars;
 
-    void createStackFrame(SymHeap::TContCVar &vars);
+    void createStackFrame(TCVarList &vars);
     void setCallArgs(const CodeStorage::TOperandList &opList);
     SymCallCtx* getCallCtx(int uid, const SymHeap &heap);
 };
@@ -306,7 +305,7 @@ SymCallCache::~SymCallCache() {
     delete d;
 }
 
-void SymCallCache::Private::createStackFrame(SymHeap::TContCVar &cVars) {
+void SymCallCache::Private::createStackFrame(TCVarList &cVars) {
     using namespace CodeStorage;
     const Fnc &ref = *this->fnc;
 
@@ -422,7 +421,7 @@ SymCallCtx* SymCallCache::Private::getCallCtx(int uid, const SymHeap &heap) {
     //        always in the same order, however SymHeap API does not
     //        guarantee anything like that.  Luckily it should cause nothing
     //        evil in the analysis, only some unnecessary bloat of cache...
-    SymHeap::TContCVar cVars;
+    TCVarList cVars;
     heap.gatherCVars(cVars);
     TCacheCol &col = row[cVars];
 
@@ -487,7 +486,7 @@ SymCallCtx& SymCallCache::getCallCtx(SymHeap                    heap,
     }
 
     // start with gl variables as the cut
-    SymHeap::TContCVar cut(d->glVars);
+    TCVarList cut(d->glVars);
 
     // initialize local variables of the called fnc
     d->createStackFrame(cut);

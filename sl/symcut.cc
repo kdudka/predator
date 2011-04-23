@@ -364,8 +364,11 @@ namespace {
     }
 }
 
-void splitHeapByCVars(const SymBackTrace *bt, SymHeap *srcDst,
-                      const SymHeap::TContCVar &cut, SymHeap *saveSurroundTo)
+void splitHeapByCVars(
+        const SymBackTrace          *bt,
+        SymHeap                     *srcDst,
+        const TCVarList             &cut,
+        SymHeap                     *saveSurroundTo)
 {
 #if SE_DISABLE_SYMCUT
     return;
@@ -373,7 +376,7 @@ void splitHeapByCVars(const SymBackTrace *bt, SymHeap *srcDst,
     CL_DEBUG("splitHeapByCVars() started: cut by " << cut.size() << " variable(s)");
 
     // get the set of live program variables
-    SymHeap::TContCVar liveList;
+    TCVarList liveList;
     srcDst->gatherCVars(liveList);
     DeepCopyData::TCut live;
     fillSet(live, liveList);
@@ -401,7 +404,7 @@ void splitHeapByCVars(const SymBackTrace *bt, SymHeap *srcDst,
     CL_DEBUG("splitHeapByCVars() is computing the surround...");
 #endif
     // get the complete list of program variables
-    SymHeap::TContCVar all;
+    TCVarList all;
     srcDst->gatherCVars(all);
 
     // compute set difference
@@ -442,15 +445,17 @@ void splitHeapByCVars(const SymBackTrace *bt, SymHeap *srcDst,
     *srcDst = dst;
 }
 
-void joinHeapsByCVars(const SymBackTrace *bt, SymHeap *srcDst,
-                      const SymHeap *src2)
+void joinHeapsByCVars(
+        const SymBackTrace          *bt,
+        SymHeap                     *srcDst,
+        const SymHeap               *src2)
 {
     (void) bt;
 #if SE_DISABLE_SYMCUT
     return;
 #endif
     // gather _all_ program variables of *src2
-    SymHeap::TContCVar all;
+    TCVarList all;
     src2->gatherCVars(all);
 
     // std::vector -> std::set

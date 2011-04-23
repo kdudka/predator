@@ -354,7 +354,7 @@ void dump_heap(const SymHeap &heap) {
         << static_cast<const void *>(&heap)
         << ")\n";
 
-    SymHeap::TContCVar cVars;
+    TCVarList cVars;
     heap.gatherCVars(cVars);
     BOOST_FOREACH(const CVar cv, cVars) {
         dump_cvar(heap, cv);

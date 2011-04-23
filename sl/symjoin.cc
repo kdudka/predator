@@ -1581,7 +1581,7 @@ bool joinCVars(SymJoinCtx &ctx) {
     const SymHeap   &sh2 = ctx.sh2;
 
     // gather program variables
-    SymHeap::TContCVar cVars1, cVars2;
+    TCVarList cVars1, cVars2;
     sh1.gatherCVars(cVars1);
     sh2.gatherCVars(cVars2);
     if (cVars1 != cVars2) {

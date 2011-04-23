@@ -972,7 +972,7 @@ bool SymPlot::plot(const std::string &name) {
         return false;
 
     // go through all program variables
-    SymHeap::TContCVar cVars;
+    TCVarList cVars;
     d->heap->gatherCVars(cVars);
     BOOST_FOREACH(CVar cv, cVars) {
         d->plotCVar(cv);

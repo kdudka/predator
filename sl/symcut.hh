@@ -43,9 +43,11 @@ class SymBackTrace;
  * SymHeap; it will be used to stored the (possibly empty) part of heap that is
  * cut off
  */
-void splitHeapByCVars(const SymBackTrace *bt, SymHeap *srcDst,
-                      const SymHeap::TContCVar &cut,
-                      SymHeap *saveSurroundTo = 0);
+void splitHeapByCVars(
+        const SymBackTrace          *bt,
+        SymHeap                     *srcDst,
+        const TCVarList             &cut,
+        SymHeap                     *saveSurroundTo = 0);
 
 /**
  * split two disjunct symbolic heaps together, going from program variables
@@ -54,7 +56,9 @@ void splitHeapByCVars(const SymBackTrace *bt, SymHeap *srcDst,
  * @param srcDst the instance of heap to operate on
  * @param src2 the other instance of heap, which is used read-only
  */
-void joinHeapsByCVars(const SymBackTrace *bt, SymHeap *srcDst,
-                      const SymHeap *src2);
+void joinHeapsByCVars(
+        const SymBackTrace          *bt,
+        SymHeap                     *srcDst,
+        const SymHeap               *src2);
 
 #endif /* H_GUARD_SYM_CUT_H */

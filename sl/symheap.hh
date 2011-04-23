@@ -58,6 +58,9 @@ namespace CodeStorage {
 /// a type used by SymHeap for byte offsets
 typedef short                                           TOffset;
 
+/// a container to store offsets to
+typedef std::vector<TOffset>                            TOffList;
+
 /// container used to store object IDs to
 typedef std::vector<TObjId>                             TObjList;
 
@@ -113,6 +116,9 @@ inline bool operator==(const CVar &a, const CVar &b) {
 inline bool operator!=(const CVar &a, const CVar &b) {
     return !operator==(a, b);
 }
+
+/// a list of _program_ variables
+typedef std::vector<CVar>                               TCVarList;
 
 /**
  * lexicographical comparison of CVar objects
@@ -274,6 +280,7 @@ class SymHeapCore {
          */
         TObjType objType(TObjId obj) const;
 
+        // TODO: remove this
         TObjId pointsTo(TValId val) const;
 
         // symheap-ng
@@ -301,7 +308,6 @@ class SymHeapCore {
 
     public:
         /// container used to store CVar objects to
-        typedef std::vector<CVar> TContCVar;
 
         /**
          * look for a static/automatic variable corresponding to the given
@@ -324,14 +330,17 @@ class SymHeapCore {
          */
         TObjId objByCVar(CVar cVar) /* FIXME */ const;
 
+        TValId addrOfVar(CVar);
+
         /**
          * collect all static/automatic variables (see CodeStorage) which have
          * any equivalent in the symbolic heap
          * @param dst reference to a container to store the result to
          * @note The operation may return from 0 to n results.
          */
-        void gatherCVars(TContCVar &dst) const;
+        void gatherCVars(TCVarList &dst) const;
 
+        // TODO: remove this
         void gatherRootObjs(TObjList &dst) const;
 
     public:
@@ -344,24 +353,10 @@ class SymHeapCore {
          */
         TObjId valGetCompositeObj(TValId val) const;
 
-        /**
-         * return nth sub-object of the given object, which has to be a
-         * @b composite @b object
-         * @param obj a composite object, which is about to be traversed
-         * @param nth index of the sub-object (starting with 0)
-         * @note the upper bound of nth can be obtained e.g. by objType()
-         * @return A valid object ID in case of success, invalid otherwise.
-         */
+        // TODO: remove this
         TObjId subObj(TObjId obj, int nth) const;
 
-        /**
-         * check if the given value is part of a composite object, return ID of
-         * the @b surrounding @b object in that case, OBJ_INVALID otherwise
-         * @param obj ID of the object to check
-         * @param nth if not NULL, return position of the sub-object within the
-         * parent object
-         * @return A valid object ID in case of success, invalid otherwise.
-         */
+        // TODO: remove this
         TObjId objParent(TObjId obj, int *nth = 0) const;
 
     public:
@@ -386,13 +381,10 @@ class SymHeapCore {
          */
         virtual bool valDestroyTarget(TValId);
 
-        /**
-         * return size of the given object of @b unknown @b type
-         * @param obj ID of the object to look for
-         * @attention This method may not be called on objects with known type.
-         * @return the size in @b bytes
-         */
+        // TODO: remove this
         int objSizeOfAnon(TObjId obj) const;
+
+        int valSizeOfTarget(TValId) const;
 
         /**
          * delayed static type-info definition of the given object
@@ -403,6 +395,7 @@ class SymHeapCore {
          */
         void objDefineType(TObjId obj, TObjType clt);
 
+        void gatherLiveOffsets(TOffList &dst, TValId atAddr) const;
         void gatherLiveObjects(TObjList &dst, TValId atAddr) const;
         void gatherLivePointers(TObjList &dst, TValId atAddr) const;
 

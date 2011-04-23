@@ -1092,7 +1092,7 @@ TObjId SymHeapCore::objByCVar(CVar cv) const {
     return self.objCreate(clt, cv);
 }
 
-void SymHeapCore::gatherCVars(TContCVar &dst) const {
+void SymHeapCore::gatherCVars(TCVarList &dst) const {
     d->cVarMap.getAll(dst);
 }
 
