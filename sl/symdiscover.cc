@@ -631,25 +631,17 @@ unsigned /* len */ selectBestAbstraction(
 }
 
 unsigned /* len */ discoverBestAbstraction(
-        const SymHeap       &sh,
+        SymHeap             &sh,
         BindingOff          *off,
         TObjId              *entry)
 {
     TSegCandidateList candidates;
 
     // go through all potential segment entries
-    TObjList roots;
-    sh.gatherRootObjs(roots);
-    BOOST_FOREACH(const TObjId obj, roots) {
-        if (sh.cVar(0, obj))
-            // skip static/automatic objects
-            continue;
-
-        const TValId addr = sh.placedAt(obj);
-        if (VAL_INVALID == addr)
-            // no valid object anyway
-            continue;
-
+    TValList addrs;
+    sh.gatherRootObjects(addrs, SymHeap::isOnHeap);
+    BOOST_FOREACH(const TValId at, addrs) {
+        const TObjId obj = sh.objAt(at);
         if (!isComposite(sh.objType(obj)))
             // we do not support generic objects atm, this will change soonish!
             continue;

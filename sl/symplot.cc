@@ -981,9 +981,10 @@ bool SymPlot::plot(const std::string &name) {
     }
 
     // plot also all dangling objects, although we are not happy to see them
-    TObjList roots;
-    d->heap->gatherRootObjs(roots);
-    BOOST_FOREACH(const TObjId obj, roots) {
+    TValList roots;
+    d->heap->gatherRootObjects(roots);
+    BOOST_FOREACH(const TValId at, roots) {
+        const TObjId obj = const_cast<SymHeap *>(d->heap)->objAt(at);
         if (!hasKey(d->objDone, obj))
             d->plotObj(obj);
     }

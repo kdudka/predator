@@ -790,12 +790,68 @@ TValId SymHeapCore::valByOffset(TValId val, TOffset off) {
 }
 
 EValueTarget SymHeapCore::valTarget(TValId val) const {
+    if (val <= 0)
+        return VT_INVALID;
+
     CL_BREAK_IF(d->valOutOfRange(val));
+    const Private::Value &valData = d->values[val];
+    if (valData.isCustom)
+        return VT_CUSTOM;
 
-    CL_BREAK_IF("not implemented yet");
-    (void) val;
+    TObjId target = valData.target;
+    switch (target) {
+        case OBJ_DELETED:
+            return VT_DELETED;
 
-    return VT_UNKNOWN;
+        case OBJ_LOST:
+            return VT_LOST;
+
+        default:
+            CL_BREAK_IF(target <= 0);
+    }
+
+    const EUnknownValue code = this->valGetUnknown(val);
+    switch (code) {
+        case UV_KNOWN:
+            break;
+
+        case UV_ABSTRACT:
+            return VT_ABSTRACT;
+
+        case UV_UNINITIALIZED:
+        case UV_UNKNOWN:
+        case UV_DONT_CARE:
+            return VT_UNKNOWN;
+    }
+
+    const TValId valRoot = d->valRoot(val);
+    target = d->values[valRoot].target;
+
+    CL_BREAK_IF(target < 0);
+    const Private::Root &rootData = d->roots[target];
+    const int uid = rootData.cVar.uid;
+    if (-1 == uid)
+        return VT_ON_HEAP;
+
+    if (isOnStack(stor_.vars[uid]))
+        return VT_ON_STACK;
+    else
+        return VT_STATIC;
+}
+
+bool SymHeapCore::isAbstract(EValueTarget code) {
+    return (VT_ABSTRACT == code);
+}
+
+bool SymHeapCore::isOnHeap(EValueTarget code) {
+    switch (code) {
+        case VT_ON_HEAP:
+        case VT_ABSTRACT:
+            return true;
+
+        default:
+            return false;
+    }
 }
 
 TValId SymHeapCore::valRoot(TValId val) const {
@@ -958,19 +1014,28 @@ TObjId SymHeapCore::objAt(TValId at, TObjCode code) {
     if (!d->gridLookup(&failCode, &row, at))
         return failCode;
 
-    // TODO: optimize?
+    // seek the bigest object at the given row
     int maxSize = 0;
     TObjId max = OBJ_UNKNOWN;
     BOOST_FOREACH(const Private::TObjByType::const_reference item, *row) {
         const TObjType cltItem = item.first;
-        if (!cltItem || cltItem->code != code)
+        if (!cltItem)
+            // type-free object, keep going
+            continue;
+
+        if (CL_TYPE_VOID != code && cltItem->code != code)
+            // not the type we are looking for
             continue;
 
         const int size = cltItem->size;
-        if (size <= maxSize)
+        if (size < maxSize)
             continue;
 
-        // FIXME: the legacy code expects the outer-most structure
+        if ((size == maxSize) && !isComposite(cltItem))
+            // if two types have the same size, prefer the composite one
+            continue;
+
+        // update the maximum
         maxSize = size;
         max = item.second;
     }
@@ -1095,13 +1160,26 @@ void SymHeapCore::gatherCVars(TCVarList &dst) const {
     d->cVarMap.getAll(dst);
 }
 
-void SymHeapCore::gatherRootObjs(TObjList &dst) const {
+static bool dummyFilter(EValueTarget) {
+    return true;
+}
+
+void SymHeapCore::gatherRootObjects(TValList &dst, bool (*filter)(EValueTarget))
+    const
+{
+    if (!filter)
+        filter = dummyFilter;
+
     BOOST_FOREACH(Private::TRootMap::const_reference item, d->roots) {
         const TObjId obj = item.first;
         if (/* XXX */ OBJ_RETURN == obj)
             continue;
 
-        dst.push_back(obj);
+        const TValId at = this->placedAt(obj);
+        if (!filter(this->valTarget(at)))
+            continue;
+
+        dst.push_back(at);
     }
 }
 

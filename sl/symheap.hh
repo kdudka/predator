@@ -37,7 +37,15 @@
 #include <vector>
 
 enum EValueTarget {
-    VT_UNKNOWN              ///< arbitrary target
+    VT_INVALID,             ///< completely invalid target
+    VT_UNKNOWN,             ///< arbitrary target
+    VT_CUSTOM,              ///< not a pointer to data
+    VT_STATIC,              ///< target is static data
+    VT_ON_STACK,            ///< target is on stack
+    VT_ON_HEAP,             ///< target is on heap
+    VT_LOST,                ///< target was on stack, but it is no longer valid
+    VT_DELETED,             ///< target was on heap, but it is no longer valid
+    VT_ABSTRACT             ///< abstract object (segment)
 };
 
 /**
@@ -286,8 +294,10 @@ class SymHeapCore {
         /// translate the given address by the given offset
         TValId valByOffset(TValId, TOffset offset);
 
-        // TODO: implement?
+        /// classify the object we point to
         EValueTarget valTarget(TValId) const;
+        static bool isAbstract(EValueTarget);
+        static bool isOnHeap(EValueTarget);
 
         /// return the address of the root which the given value is binded to
         TValId valRoot(TValId) const;
@@ -301,14 +311,11 @@ class SymHeapCore {
         /// return a _data_ pointer placed at the given address
         TObjId ptrAt(TValId at);
 
-        /// return the biggest object placed at the given address
-        TObjId objAt(TValId at);
-
         /// return an object of the given type at the given address
         TObjId objAt(TValId at, TObjType clt);
 
-        /// return an object of the given type at the given address
-        TObjId objAt(TValId at, TObjCode code);
+        /// return the biggest object of the given type at the given address
+        TObjId objAt(TValId at, TObjCode code = /* do not care */ CL_TYPE_VOID);
 
         /// return address of the given program variable (create it if needed)
         TValId addrOfVar(CVar);
@@ -316,7 +323,7 @@ class SymHeapCore {
         /// clone of the given value (deep copy)
         virtual TValId valClone(TValId);
 
-        /// replace all occurences of val by replaceBy
+        /// replace all occurrences of val by replaceBy
         virtual void valReplace(TValId val, TValId replaceBy);
 
         /**
@@ -326,6 +333,11 @@ class SymHeapCore {
          * one (if any).
          */
         virtual void valMerge(TValId v1, TValId v2);
+
+        void gatherRootObjects(TValList &dst, bool (*)(EValueTarget) = 0) const;
+        void gatherLiveOffsets(TOffList &dst, TValId atAddr) const;
+        void gatherLiveObjects(TObjList &dst, TValId atAddr) const;
+        void gatherLivePointers(TObjList &dst, TValId atAddr) const;
 
     public:
         /// container used to store CVar objects to
@@ -350,9 +362,6 @@ class SymHeapCore {
          * @note The operation may return from 0 to n results.
          */
         void gatherCVars(TCVarList &dst) const;
-
-        // TODO: remove this
-        void gatherRootObjs(TObjList &dst) const;
 
     public:
         /**
@@ -400,10 +409,6 @@ class SymHeapCore {
          * is a composite type.
          */
         void objDefineType(TObjId obj, TObjType clt);
-
-        void gatherLiveOffsets(TOffList &dst, TValId atAddr) const;
-        void gatherLiveObjects(TObjList &dst, TValId atAddr) const;
-        void gatherLivePointers(TObjList &dst, TValId atAddr) const;
 
     public:
         /**

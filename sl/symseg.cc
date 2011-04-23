@@ -283,10 +283,10 @@ TObjId segClone(SymHeap &sh, const TObjId seg) {
 }
 
 bool dlSegCheckConsistency(const SymHeap &sh) {
-    TObjList roots;
-    sh.gatherRootObjs(roots);
-    BOOST_FOREACH(const TObjId obj, roots) {
-        const EObjKind kind = objKind(sh, obj);
+    TValList addrs;
+    sh.gatherRootObjects(addrs, SymHeap::isAbstract);
+    BOOST_FOREACH(const TValId at, addrs) {
+        const EObjKind kind = sh.valTargetKind(at);
         switch (kind) {
             case OK_SLS:
             case OK_CONCRETE:
@@ -298,16 +298,12 @@ bool dlSegCheckConsistency(const SymHeap &sh) {
                 break;
         }
 
-        if (sh.cVar(0, obj)) {
-            CL_ERROR("OK_DLS on stack detected");
-            return false;
-        }
-
-        if (sh.placedAt(obj) <= 0) {
+        if (at <= 0) {
             CL_ERROR("OK_DLS with invalid address detected");
             return false;
         }
 
+        const TObjId obj = const_cast<SymHeap &>(sh).objAt(at);
         const TObjId peer = dlSegPeer(sh, obj);
         if (peer <= 0) {
             CL_ERROR("OK_DLS with invalid peer detected");

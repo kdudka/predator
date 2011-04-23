@@ -1863,15 +1863,13 @@ bool segDetectSelfLoopHelper(
 bool segDetectSelfLoop(const SymHeap &sh) {
     using namespace boost::lambda;
 
-    // gather all root objects
-    TObjList roots;
-    sh.gatherRootObjs(roots);
+    // gather all abstract objects
+    TValList valRoots;
+    sh.gatherRootObjects(valRoots, SymHeap::isAbstract);
 
-    // filter segment roots from there
     std::set<TObjId> segRoots;
-    std::copy_if(roots.begin(), roots.end(),
-                 std::inserter(segRoots, segRoots.begin()),
-                 boost::lambda::bind(objIsSeg, std::cref(sh), _1, false));
+    BOOST_FOREACH(const TValId at, valRoots)
+        segRoots.insert(const_cast<SymHeap &>(sh).objAt(at));
 
     // go through all entries
     std::set<TObjId> haveSeen;

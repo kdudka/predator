@@ -49,7 +49,7 @@ inline bool isDlsBinding(const BindingOff &off) {
  * all.
  */
 unsigned /* len */ discoverBestAbstraction(
-        const SymHeap           &sh,
+        SymHeap                 &sh,
         BindingOff              *bf,
         TObjId                  *entry);
 
