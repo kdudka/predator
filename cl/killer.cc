@@ -105,7 +105,7 @@ void scanOperand(Data &data, TBlock bb, const cl_operand &op, bool dst) {
         return;
 
     BlockData &bData = data.blocks[bb];
-    VK_DEBUG(4, "scanOperand: " << op << ((dst) ? " [dst]" : " [src"));
+    VK_DEBUG(4, "scanOperand: " << op << ((dst) ? " [dst]" : " [src]"));
     const int uid = varIdFromOperand(&op);
     if (hasKey(bData.kill, uid))
         // already killed
@@ -130,13 +130,10 @@ void scanOperand(Data &data, TBlock bb, const cl_operand &op, bool dst) {
 
     VK_DEBUG(3, "gen(" << bb->name() << ") |= #" << uid);
     bData.gen.insert(uid);
-
-    // schedule this bb for fixed-point computation
-    data.todo.insert(bb);
 }
 
 void scanInsn(Data &data, TBlock bb, const Insn &insn) {
-    VK_DEBUG(3, "scanInsn: " << insn);
+    VK_DEBUG_MSG(3, &insn.loc, "scanInsn: " << insn);
     TOperandList opList = insn.operands;
     BOOST_FOREACH(const cl_operand &op, opList)
         scanRefs(data.pointed, op);
@@ -146,7 +143,9 @@ void scanInsn(Data &data, TBlock bb, const Insn &insn) {
         case CL_INSN_CALL:
         case CL_INSN_UNOP:
         case CL_INSN_BINOP:
-            for (unsigned i = 0; i < opList.size(); ++i)
+            // go backwards!
+            CL_BREAK_IF(opList.empty());
+            for (int i = opList.size() - 1; 0 <= i; --i)
                 scanOperand(data, bb, opList[i], /* dst */ !i);
             return;
 
@@ -175,6 +174,7 @@ void scanBlock(Data &data, TBlock bb) {
 }
 
 void updateBlock(Data &data, TBlock bb) {
+    VK_DEBUG_MSG(2, &bb->front()->loc, "updateBlock: " << bb->name());
     BlockData &bData = data.blocks[bb];
     bool anyChange = false;
 
@@ -212,8 +212,12 @@ void updateBlock(Data &data, TBlock bb) {
 }
 
 void computeFixPoint(Data &data) {
-    unsigned cntSteps = 0;
+    BOOST_FOREACH(TMap::const_reference item, data.blocks) {
+        TBlock bb = item.first;
+        updateBlock(data, bb);
+    }
 
+    unsigned cntSteps = 1;
     TBlockSet &todo = data.todo;
     while (!todo.empty()) {
         TBlockSet::iterator i = todo.begin();
@@ -237,10 +241,10 @@ void handleFnc(Data &data, Fnc &fnc) {
     computeFixPoint(data);
 }
 
-void killOperand(const Insn *insn, TVar byUid) {
-    int cntMatches = 0;
+void killOperand(Insn &insn, TVar byUid) {
+    int idx = -1;
 
-    const TOperandList opList = insn->operands;
+    const TOperandList opList = insn.operands;
     for (unsigned i = 0; i < opList.size(); ++i) {
         const cl_operand &op = opList[i];
         if (CL_OPERAND_VAR != op.code)
@@ -252,21 +256,28 @@ void killOperand(const Insn *insn, TVar byUid) {
             // not the operand we are about to kill
             continue;
 
-        // the var should not already be killed
-        CL_BREAK_IF(insn->opsToKill[i]);
+        if (-1 != idx) {
+            VK_DEBUG(1, "killOperand: ambiguous match of var #" << byUid
+                    << " in " << insn
+                    << " (cowardly refusing to kill it)");
+            return;
+        }
 
-        Insn &writable = const_cast<Insn &>(*insn);
-        writable.opsToKill[i] = true;
-        ++cntMatches;
+        // first match
+        idx = i;
     }
 
-    // we are supposed to kill exactly one variable
-    CL_BREAK_IF(1 != cntMatches);
+    CL_BREAK_IF(idx < 0);
+    insn.opsToKill[idx] = true;
 }
 
-void commitBlock(TBlock bb, const BlockData &bData, const TSet &pointed) {
+void commitBlock(Data &data, TBlock bb, const TSet &pointed) {
     CL_BREAK_IF(!bb->size());
-    TSet live = bData.gen;
+    TSet live;
+    BOOST_FOREACH(TBlock bbSrc, bb->targets()) {
+        BOOST_FOREACH(TVar vLive, data.blocks[bbSrc].gen)
+            live.insert(vLive);
+    }
 
     // go backwards through the instructions
     for (int i = bb->size()-1; 0 <= i; --i) {
@@ -289,7 +300,7 @@ void commitBlock(TBlock bb, const BlockData &bData, const TSet &pointed) {
             VK_DEBUG_MSG(1, &insn->loc, "killing variable #"
                     << vg << " by " << *insn);
 
-            killOperand(insn, vg);
+            killOperand(const_cast<Insn &>(*insn), vg);
         }
     }
 }
@@ -298,7 +309,7 @@ void commitResults(Data &data) {
     BOOST_FOREACH(TMap::const_reference item, data.blocks) {
         TBlock bb = item.first;
         VK_DEBUG_MSG(2, &bb->front()->loc, "commitResults: " << bb->name());
-        commitBlock(bb, item.second, data.pointed);
+        commitBlock(data, bb, data.pointed);
     }
 }
 

@@ -1097,8 +1097,18 @@ bool SymExecCore::concretizeIfNeeded(SymState                   &results,
     return true;
 }
 
-void SymExecCore::killVar(const struct cl_operand &) {
-    CL_BREAK_IF("please implement");
+void SymExecCore::killVar(const struct cl_operand &op) {
+    const CodeStorage::Storage &stor = heap_.stor();
+    const CodeStorage::Var &var = stor.vars[varIdFromOperand(&op)];
+    std::string name(var.name);
+    if (!name.empty())
+        name = std::string(" (") + name + std::string(")");
+
+    CL_DEBUG_MSG(lw_, "FFF SymExecCore::killVar() destroys stack variable #"
+            << var.uid << name);
+
+    const TObjId obj = varFromOperand(op, heap_, bt_);
+    this->objDestroy(obj);
 }
 
 bool SymExecCore::execCore(
