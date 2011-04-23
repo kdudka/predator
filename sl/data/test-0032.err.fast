@@ -1,1 +1,3 @@
-test-0032.c:64:21: warning: killing junk
+test-0032.c:33:26: warning: killing junk
+test-0032.c:64:21: note: from call of insert_list_item()
+test-0032.c:61:5: note: from call of main()

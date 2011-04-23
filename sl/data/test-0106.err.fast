@@ -21,4 +21,4 @@ test-0106.c:72:5: note: from call of main()
 test-0106.c:61:8: warning: conditional jump depends on uninitialized value
 test-0106.c:77:12: note: from call of destroy()
 test-0106.c:72:5: note: from call of main()
-test-0106.c:77:12: warning: killing junk
+test-0106.c:74:11: warning: killing junk

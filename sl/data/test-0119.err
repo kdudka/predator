@@ -10,6 +10,10 @@ test-0119.c:15:29: error: dereference of NULL value
 test-0119.c:26:18: note: from call of create_sll()
 test-0119.c:37:41: note: from call of create_longer_sll()
 test-0119.c:35:5: note: from call of main()
+test-0119.c:15:29: warning: killing junk
+test-0119.c:26:18: note: from call of create_sll()
+test-0119.c:37:41: note: from call of create_longer_sll()
+test-0119.c:35:5: note: from call of main()
 test-0119.c:16:9: error: dereference of NULL value
 test-0119.c:26:18: note: from call of create_sll()
 test-0119.c:37:41: note: from call of create_longer_sll()
@@ -30,11 +34,23 @@ test-0119.c:17:9: error: dereference of NULL value
 test-0119.c:26:18: note: from call of create_sll()
 test-0119.c:37:41: note: from call of create_longer_sll()
 test-0119.c:35:5: note: from call of main()
+test-0119.c:17:29: warning: killing junk
+test-0119.c:26:18: note: from call of create_sll()
+test-0119.c:37:41: note: from call of create_longer_sll()
+test-0119.c:35:5: note: from call of main()
+test-0119.c:17:29: warning: killing junk
+test-0119.c:26:18: note: from call of create_sll()
+test-0119.c:37:41: note: from call of create_longer_sll()
+test-0119.c:35:5: note: from call of main()
 test-0119.c:17:29: error: dereference of NULL value
 test-0119.c:26:18: note: from call of create_sll()
 test-0119.c:37:41: note: from call of create_longer_sll()
 test-0119.c:35:5: note: from call of main()
 test-0119.c:17:29: error: dereference of NULL value
+test-0119.c:26:18: note: from call of create_sll()
+test-0119.c:37:41: note: from call of create_longer_sll()
+test-0119.c:35:5: note: from call of main()
+test-0119.c:17:29: warning: killing junk
 test-0119.c:26:18: note: from call of create_sll()
 test-0119.c:37:41: note: from call of create_longer_sll()
 test-0119.c:35:5: note: from call of main()
@@ -94,26 +110,6 @@ test-0119.c:19:29: error: dereference of NULL value
 test-0119.c:26:18: note: from call of create_sll()
 test-0119.c:37:41: note: from call of create_longer_sll()
 test-0119.c:35:5: note: from call of main()
-test-0119.c:17:31: warning: killing junk
-test-0119.c:26:18: note: from call of create_sll()
-test-0119.c:37:41: note: from call of create_longer_sll()
-test-0119.c:35:5: note: from call of main()
-test-0119.c:15:31: warning: killing junk
-test-0119.c:26:18: note: from call of create_sll()
-test-0119.c:37:41: note: from call of create_longer_sll()
-test-0119.c:35:5: note: from call of main()
-test-0119.c:15:31: warning: killing junk
-test-0119.c:26:18: note: from call of create_sll()
-test-0119.c:37:41: note: from call of create_longer_sll()
-test-0119.c:35:5: note: from call of main()
-test-0119.c:17:31: warning: killing junk
-test-0119.c:26:18: note: from call of create_sll()
-test-0119.c:37:41: note: from call of create_longer_sll()
-test-0119.c:35:5: note: from call of main()
-test-0119.c:17:31: warning: killing junk
-test-0119.c:26:18: note: from call of create_sll()
-test-0119.c:37:41: note: from call of create_longer_sll()
-test-0119.c:35:5: note: from call of main()
 test-0119.c:27:18: error: dereference of NULL value
 test-0119.c:37:41: note: from call of create_longer_sll()
 test-0119.c:35:5: note: from call of main()
@@ -123,6 +119,9 @@ test-0119.c:35:5: note: from call of main()
 test-0119.c:28:29: error: dereference of NULL value
 test-0119.c:37:41: note: from call of create_longer_sll()
 test-0119.c:35:5: note: from call of main()
+test-0119.c:28:29: warning: killing junk
+test-0119.c:37:41: note: from call of create_longer_sll()
+test-0119.c:35:5: note: from call of main()
 test-0119.c:29:9: error: dereference of NULL value
 test-0119.c:37:41: note: from call of create_longer_sll()
 test-0119.c:35:5: note: from call of main()
@@ -147,20 +146,20 @@ test-0119.c:35:5: note: from call of main()
 test-0119.c:30:29: error: dereference of NULL value
 test-0119.c:37:41: note: from call of create_longer_sll()
 test-0119.c:35:5: note: from call of main()
-test-0119.c:31:5: error: dereference of NULL value
+test-0119.c:30:29: warning: killing junk
 test-0119.c:37:41: note: from call of create_longer_sll()
 test-0119.c:35:5: note: from call of main()
 test-0119.c:31:5: error: dereference of NULL value
 test-0119.c:37:41: note: from call of create_longer_sll()
 test-0119.c:35:5: note: from call of main()
-test-0119.c:28:31: warning: killing junk
+test-0119.c:31:5: error: dereference of NULL value
 test-0119.c:37:41: note: from call of create_longer_sll()
 test-0119.c:35:5: note: from call of main()
-test-0119.c:26:18: warning: killing junk
+test-0119.c:31:5: warning: killing junk
 test-0119.c:37:41: note: from call of create_longer_sll()
 test-0119.c:35:5: note: from call of main()
-test-0119.c:27:18: warning: killing junk
+test-0119.c:31:5: warning: killing junk
 test-0119.c:37:41: note: from call of create_longer_sll()
 test-0119.c:35:5: note: from call of main()
 test-0119.c:38:13: error: dereference of NULL value
-test-0119.c:38:13: warning: killing junk
+test-0119.c:37:18: warning: killing junk

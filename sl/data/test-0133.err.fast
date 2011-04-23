@@ -1,6 +1,2 @@
 test-0133.c: In function 'gl_seek_max':
 test-0133.c:89:13: warning: unhandled GIMPLE_PREDICT
-test-0133.c:88:12: warning: conditional jump depends on uninitialized value
-test-0133.c:106:11: note: from call of gl_seek_max()
-test-0133.c:120:12: note: from call of gl_sort()
-test-0133.c:114:5: note: from call of main()

@@ -1,1 +1,1 @@
-test-0128.c:68:38: warning: killing junk
+test-0128.c:68:22: warning: killing junk

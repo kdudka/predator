@@ -7,10 +7,16 @@ test-0008.c:35:5: note: from call of main()
 test-0008.c:30:11: error: dereference of NULL value
 test-0008.c:36:9: note: from call of test()
 test-0008.c:35:5: note: from call of main()
+test-0008.c:30:11: warning: killing junk
+test-0008.c:36:9: note: from call of test()
+test-0008.c:35:5: note: from call of main()
 test-0008.c:30:11: error: dereference of NULL value
 test-0008.c:36:9: note: from call of test()
 test-0008.c:35:5: note: from call of main()
 test-0008.c:30:11: error: dereference of NULL value
+test-0008.c:36:9: note: from call of test()
+test-0008.c:35:5: note: from call of main()
+test-0008.c:30:11: warning: killing junk
 test-0008.c:36:9: note: from call of test()
 test-0008.c:35:5: note: from call of main()
 test-0008.c:31:17: error: dereference of NULL value
@@ -29,12 +35,6 @@ test-0008.c:31:24: error: dereference of NULL value
 test-0008.c:36:9: note: from call of test()
 test-0008.c:35:5: note: from call of main()
 test-0008.c:31:24: error: dereference of NULL value
-test-0008.c:36:9: note: from call of test()
-test-0008.c:35:5: note: from call of main()
-test-0008.c:30:19: warning: killing junk
-test-0008.c:36:9: note: from call of test()
-test-0008.c:35:5: note: from call of main()
-test-0008.c:30:19: warning: killing junk
 test-0008.c:36:9: note: from call of test()
 test-0008.c:35:5: note: from call of main()
 test-0008.c:26:11: error: dereference of NULL value
@@ -48,10 +48,16 @@ test-0008.c:35:5: note: from call of main()
 test-0008.c:30:11: error: dereference of NULL value
 test-0008.c:37:9: note: from call of test()
 test-0008.c:35:5: note: from call of main()
+test-0008.c:30:11: warning: killing junk
+test-0008.c:37:9: note: from call of test()
+test-0008.c:35:5: note: from call of main()
 test-0008.c:30:11: error: dereference of NULL value
 test-0008.c:37:9: note: from call of test()
 test-0008.c:35:5: note: from call of main()
 test-0008.c:30:11: error: dereference of NULL value
+test-0008.c:37:9: note: from call of test()
+test-0008.c:35:5: note: from call of main()
+test-0008.c:30:11: warning: killing junk
 test-0008.c:37:9: note: from call of test()
 test-0008.c:35:5: note: from call of main()
 test-0008.c:31:17: error: dereference of NULL value
@@ -78,9 +84,3 @@ test-0008.c:15:33: warning: support of call recursion is not stable yet
 test-0008.c:15:33: note: nestLevel is 2
 test-0008.c:15:33: warning: support of call recursion is not stable yet
 test-0008.c:15:33: note: nestLevel is 3
-test-0008.c:30:19: warning: killing junk
-test-0008.c:37:9: note: from call of test()
-test-0008.c:35:5: note: from call of main()
-test-0008.c:30:19: warning: killing junk
-test-0008.c:37:9: note: from call of test()
-test-0008.c:35:5: note: from call of main()

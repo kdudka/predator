@@ -1,2 +1,2 @@
-test-0011.c:5:22: warning: killing junk
-test-0011.c:8:15: warning: killing junk
+test-0011.c:8:7: warning: killing junk
+test-0011.c:11:12: warning: killing junk

@@ -88,7 +88,7 @@
 /**
  * if 1, local variables are destroyed as soon as they become dead
  */
-#define SE_EARLY_VARS_DESTRUCTION           0
+#define SE_EARLY_VARS_DESTRUCTION           1
 
 /**
  * if 1, program variables are created as needed; before a fnc call otherwise

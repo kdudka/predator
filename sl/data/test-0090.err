@@ -1,14 +1,10 @@
-test-0090.c:33:20: warning: killing junk
+test-0090.c:33:9: warning: killing junk
 test-0090.c:58:10: note: from call of leak0()
 test-0090.c:54:5: note: from call of main()
-test-0090.c:38:20: warning: killing junk
+test-0090.c:38:9: warning: killing junk
 test-0090.c:59:10: note: from call of leak1()
 test-0090.c:54:5: note: from call of main()
-test-0090.c:15:30: warning: killing junk
-test-0090.c:43:15: note: from call of alloc_pair()
-test-0090.c:60:10: note: from call of leak2()
-test-0090.c:54:5: note: from call of main()
-test-0090.c:16:30: warning: killing junk
+test-0090.c:9:20: warning: killing junk
 test-0090.c:43:15: note: from call of alloc_pair()
 test-0090.c:60:10: note: from call of leak2()
 test-0090.c:54:5: note: from call of main()

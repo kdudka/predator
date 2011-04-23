@@ -18,4 +18,4 @@ test-0014.c:278:12: warning: CL_TYPE_STRING not supported by SymProc
 test-0014.c:283:12: warning: CL_TYPE_STRING not supported by SymProc
 test-0014.c:288:12: warning: CL_TYPE_STRING not supported by SymProc
 test-0014.c:293:12: warning: CL_TYPE_STRING not supported by SymProc
-test-0014.c:284:15: warning: killing junk
+test-0014.c:238:11: warning: killing junk
