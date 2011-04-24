@@ -866,6 +866,9 @@ bool SymHeapCore::isOnHeap(EValueTarget code) {
 }
 
 TValId SymHeapCore::valRoot(TValId val) const {
+    if (VAL_NULL == val)
+        return VAL_NULL;
+
     return d->valRoot(val);
 }
 

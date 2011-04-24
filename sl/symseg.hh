@@ -54,8 +54,16 @@ TObjId nextPtrFromSeg(const SymHeap &sh, TObjId seg);
 /// return 'peer' pointer of the given DLS
 TObjId peerPtrFromSeg(const SymHeap &sh, TObjId seg);
 
-/// return DLS peer object of the given DLS
+/// TODO: remove this
 TObjId dlSegPeer(const SymHeap &sh, TObjId dls);
+
+/// return DLS peer object of the given DLS
+inline TValId dlSegPeer(SymHeap &sh, TValId dls) {
+    CL_BREAK_IF(OK_DLS != sh.valTargetKind(dls));
+    const BindingOff &off = sh.segBinding(dls);
+    const TObjId ptr = sh.ptrAt(sh.valByOffset(dls, off.prev));
+    return sh.valRoot(sh.valueOf(ptr));
+}
 
 /// return lower estimation of DLS length
 unsigned dlSegMinLength(const SymHeap &sh, TObjId dls);

@@ -605,16 +605,18 @@ void segAbstractionStep(
 bool considerAbstraction(
         SymHeap                     &sh,
         const BindingOff            &off,
-        const TObjId                entry,
+        const TValId                entry,
         const unsigned              lenTotal)
 {
     const bool isSls = !isDlsBinding(off);
-    const AbstractionThreshold &at = (isSls)
+    const AbstractionThreshold &thr = (isSls)
         ? slsThreshold
         : dlsThreshold;
 
     // check whether the threshold is satisfied or not
-    const unsigned threshold = at.sparePrefix + at.innerSegLen + at.spareSuffix;
+    const unsigned threshold = thr.innerSegLen
+        + thr.sparePrefix
+        + thr.spareSuffix;
     if (lenTotal < threshold) {
         CL_DEBUG("<-- length (" << lenTotal
                 << ") of the longest segment is under the threshold ("
@@ -623,15 +625,15 @@ bool considerAbstraction(
     }
 
     CL_DEBUG("    --- length of the longest segment is " << lenTotal
-            << ", prefix=" << at.sparePrefix
-            << ", suffix=" << at.spareSuffix);
+            << ", prefix=" << thr.sparePrefix
+            << ", suffix=" << thr.spareSuffix);
 
     // cursor
-    TObjId obj = entry;
+    TObjId obj = sh.objAt(entry);
 
     // handle sparePrefix/spareSuffix
-    int len = lenTotal - at.sparePrefix - at.spareSuffix;
-    for (unsigned i = 0; i < at.sparePrefix; ++i)
+    int len = lenTotal - thr.sparePrefix - thr.spareSuffix;
+    for (unsigned i = 0; i < thr.sparePrefix; ++i)
         skipObj(sh, &obj, off.next);
 
     const char *name = (isSls)
@@ -792,7 +794,7 @@ void abstractIfNeeded(SymHeap &sh) {
     return;
 #endif
     BindingOff          off;
-    TObjId              entry;
+    TValId              entry;
     unsigned            len;
 
     while ((len = discoverBestAbstraction(sh, &off, &entry))) {
