@@ -288,8 +288,10 @@ void SymPlot::Private::plotNodeObj(TObjId obj) {
 
     // dig root object
     const TObjId root = objRoot(*this->heap, obj);
+    const TValId rootAt = this->heap->placedAt(root);
 
-    if (this->heap->cVar(0, root))
+    const bool isVar = SymHeap::isProgramVar(this->heap->valTarget(rootAt));
+    if (isVar)
         // colorize on-stack object
         this->dotStream << ", fontcolor=blue";
 
@@ -299,8 +301,8 @@ void SymPlot::Private::plotNodeObj(TObjId obj) {
 
     this->dotStream << ", label=\"[" << prefixByCode(code) << "] #" << obj;
 
-    CVar cVar;
-    if (this->heap->cVar(&cVar, obj)) {
+    if (isVar) {
+        CVar cVar = this->heap->cVarByRoot(rootAt);
         this->dotStream << " (#" << cVar.uid;
         const CodeStorage::Var &var = this->stor->vars[cVar.uid];
         std::string name = var.name;

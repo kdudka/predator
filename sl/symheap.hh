@@ -310,6 +310,7 @@ class SymHeapCore {
         EValueTarget valTarget(TValId) const;
         static bool isAbstract(EValueTarget);
         static bool isOnHeap(EValueTarget);
+        static bool isProgramVar(EValueTarget);
 
         /// return the address of the root which the given value is binded to
         TValId valRoot(TValId) const;
@@ -352,20 +353,11 @@ class SymHeapCore {
         void gatherLivePointers(TObjList &dst, TValId atAddr) const;
 
     public:
-        /// container used to store CVar objects to
-
         /**
-         * look for a static/automatic variable corresponding to the given
-         * symbolic heap object, which has to be @b valid
-         * @param dst instance of CVar object, to store the lookup result in
-         * case of success.  This may be also NULL, if there is no need to
-         * return the identification.
-         * @param obj ID of the object to look for
-         * @return true for in case of success (which means the variable is
-         * static/automatic, false otherwise (which usually means the given
-         * object was allocated dynamically)
+         * return the corresponding program variable of the given @b root
+         * address pointing to VT_STATIC/VT_ON_STACK
          */
-        bool cVar(CVar *dst, TObjId obj) const;
+        CVar cVarByRoot(TValId root) const;
 
         /**
          * collect all static/automatic variables (see CodeStorage) which have

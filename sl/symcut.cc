@@ -133,9 +133,11 @@ TObjId addObjectIfNeeded(DeepCopyData &dc, TObjId objSrc) {
     // go to root
     const SymHeap &src = dc.src;
     const TObjId rootSrc = objRoot(src, objSrc);
+    const TValId rootSrcAt = src.placedAt(rootSrc);
 
     CVar cv;
-    if (src.cVar(&cv, rootSrc)) {
+    if (SymHeap::isProgramVar(src.valTarget(rootSrcAt))) {
+        cv = src.cVarByRoot(rootSrcAt);
         // enlarge the cut if needed
 #if DEBUG_SYMCUT
         const size_t orig = dc.cut.size();
@@ -167,7 +169,7 @@ TObjId addObjectIfNeeded(DeepCopyData &dc, TObjId objSrc) {
     }
     else {
         // on heap object
-        const int size = src.valSizeOfTarget(src.placedAt(rootSrc));
+        const int size = src.valSizeOfTarget(rootSrcAt);
         rootDst = dst.objAt(dst.heapAlloc(size));
         if (clt)
             dst.objDefineType(rootDst, clt);
@@ -176,7 +178,7 @@ TObjId addObjectIfNeeded(DeepCopyData &dc, TObjId objSrc) {
     add(dc, rootSrc, rootDst);
     digSubObjs(dc, rootSrc, rootDst);
 
-    const bool isProto = src.valTargetIsProto(src.placedAt(rootSrc));
+    const bool isProto = src.valTargetIsProto(rootSrcAt);
     dst.valTargetSetProto(dst.placedAt(rootDst), isProto);
 
     const EObjKind kind = objKind(src, rootSrc);

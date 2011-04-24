@@ -710,16 +710,16 @@ void SymExecCore::execFreeCore(const TValId val) {
             break;
     }
 
-    CVar cVar;
-    if (heap_.cVar(&cVar, obj)) {
-        CL_DEBUG("about to free var #" << cVar.uid);
-        CL_ERROR_MSG(lw_, "attempt to free a non-heap object");
+    if (heap_.valOffset(val)) {
+        CL_ERROR_MSG(lw_, "attempt to free a non-root object");
         bt_->printBackTrace();
         return;
     }
 
-    if (heap_.valOffset(val)) {
-        CL_ERROR_MSG(lw_, "attempt to free a non-root object");
+    if (SymHeap::isProgramVar(heap_.valTarget(val))) {
+        CVar cv = heap_.cVarByRoot(val);
+        CL_DEBUG("about to free var " << varTostring(heap_.stor(), cv.uid));
+        CL_ERROR_MSG(lw_, "attempt to free a non-heap object");
         bt_->printBackTrace();
         return;
     }

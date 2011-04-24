@@ -900,6 +900,17 @@ bool SymHeapCore::isOnHeap(EValueTarget code) {
     }
 }
 
+bool SymHeapCore::isProgramVar(EValueTarget code) {
+    switch (code) {
+        case VT_STATIC:
+        case VT_ON_STACK:
+            return true;
+
+        default:
+            return false;
+    }
+}
+
 TValId SymHeapCore::valRoot(TValId val) const {
     if (val <= 0)
         return val;
@@ -1168,26 +1179,16 @@ TObjId SymHeapCore::pointsTo(TValId val) const {
     return self.objAt(val);
 }
 
-bool SymHeapCore::cVar(CVar *dst, TObjId obj) const {
-    if (OBJ_RETURN == obj || d->objOutOfRange(obj))
-        return false;
+CVar SymHeapCore::cVarByRoot(TValId valRoot) const {
+    // the following breakpoint checks everything
+    CL_BREAK_IF(valRoot <= 0 || valRoot != d->valRoot(valRoot));
 
-    const Private::TRootMap::const_iterator it = d->roots.find(obj);
-    if (d->roots.end() == it)
-        // not a root object
-        return false;
+    const TObjId root = d->values[valRoot].target;
+    const Private::Root &rootData = roMapLookup(d->roots, root);
 
-    const CVar &cVar = it->second.cVar;
-    if (-1 == cVar.uid)
-        // looks like a heap object
-        return false;
-
-    if (dst)
-        // return its identification if requested to do so
-        *dst = cVar;
-
-    // non-heap object
-    return true;
+    const CVar &cVar = rootData.cVar;
+    CL_BREAK_IF(-1 == cVar.uid);
+    return cVar;
 }
 
 TValId SymHeapCore::addrOfVar(CVar cv) {

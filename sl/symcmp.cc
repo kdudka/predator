@@ -480,18 +480,24 @@ class CustomWorkList: public WorkList<TItem> {
 };
 
 bool matchCVars(const SymHeap &sh, const TValMap &valMap) {
+    CL_BREAK_IF("rewritten, but not re-tested");
+
     BOOST_FOREACH(TValMap::const_reference vp, valMap) {
-        const TObjId o1 = sh.pointsTo(vp.first);
-        const TObjId o2 = sh.pointsTo(vp.second);
-        if (o1 <= 0)
+        const TValId v1 = vp.first;
+        const TValId v2 = vp.second;
+        if (v1 <= 0)
             continue;
 
-        CL_BREAK_IF(o2 <= 0);
+        CL_BREAK_IF(v2 <= 0);
+        const TValId root1 = sh.valRoot(v1);
+        const TValId root2 = sh.valRoot(v2);
 
-        CVar cv1, cv2;
-        const bool isCVar1 = sh.cVar(&cv1, o1);
-        const bool isCVar2 = sh.cVar(&cv2, o2);
-        if (isCVar1 != isCVar2 || cv1 != cv2)
+        const bool isCVar1 = SymHeap::isProgramVar(sh.valTarget(root1));
+        const bool isCVar2 = SymHeap::isProgramVar(sh.valTarget(root2));
+        if (isCVar1 != isCVar2)
+            return false;
+
+        if (sh.cVarByRoot(root1) != sh.cVarByRoot(root2))
             return false;
     }
 
