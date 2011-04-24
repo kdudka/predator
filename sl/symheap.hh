@@ -36,6 +36,17 @@
 #include <map>              // for SymHeapCore::TValMap
 #include <vector>
 
+enum EValueOrigin {
+    VO_INVALID,             ///< reserved for signalling error states
+    VO_ASSIGNED,            ///< known result of an operation
+    VO_UNKNOWN,             ///< unknown result of an operation (e.g. < >)
+    VO_REINTERPRET,         ///< a result of unsupported data reinterpretation
+    VO_DEREF_FAILED,        ///< a result of invalid dereference
+    VO_STATIC,              ///< untouched contents of static data
+    VO_STACK,               ///< untouched contents of stack
+    VO_HEAP                 ///< untouched contents of heap
+};
+
 enum EValueTarget {
     VT_INVALID,             ///< completely invalid target
     VT_UNKNOWN,             ///< arbitrary target
@@ -48,9 +59,7 @@ enum EValueTarget {
     VT_ABSTRACT             ///< abstract object (segment)
 };
 
-/**
- * enumeration of unknown values
- */
+// TODO: remove this
 enum EUnknownValue {
     UV_KNOWN = 0,           ///< known value - what we usually wish we had
     UV_ABSTRACT,            ///< points to SLS/DLS (the prover needs to know it)
