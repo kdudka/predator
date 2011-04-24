@@ -581,13 +581,11 @@ void SymProc::objDestroy(TObjId obj) {
     getPtrValues(ptrs, heap_, obj);
 
     // destroy object recursively
-    if (OBJ_RETURN == obj)
-        heap_.objDefineType(OBJ_RETURN, 0);
-    else {
-        const TValId addr = heap_.placedAt(obj);
-        if (0 < addr)
-            heap_.valDestroyTarget(addr);
-    }
+    const TValId addr = heap_.placedAt(obj);
+    if (0 < addr)
+        heap_.valDestroyTarget(addr);
+    else
+        CL_BREAK_IF("attempt to destroy an invalid object");
 
     // now check for JUNK
     bool junk = false;

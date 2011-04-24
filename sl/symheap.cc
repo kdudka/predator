@@ -962,7 +962,7 @@ bool SymHeapCore::matchPreds(const SymHeapCore &ref, const TValMap &valMap)
 
 // FIXME: should this be declared non-const?
 TValId SymHeapCore::placedAt(TObjId obj) const {
-    if (OBJ_RETURN == obj || d->objOutOfRange(obj))
+    if (d->objOutOfRange(obj))
         return VAL_INVALID;
 
     Private::Object &objData = d->objects[obj];
@@ -1222,7 +1222,7 @@ TValId SymHeapCore::heapAlloc(int cbSize) {
 bool SymHeapCore::valDestroyTarget(TValId val) {
     CL_BREAK_IF(d->valOutOfRange(val));
     const TObjId target = this->pointsTo(val);
-    if (target <= 0)
+    if (target < 0)
         return false;
 
     if (-1 != d->objects[target].parent)
@@ -1251,15 +1251,9 @@ int SymHeapCore::valSizeOfTarget(TValId val) const {
 }
 
 void SymHeapCore::objDefineType(TObjId obj, TObjType clt) {
-    if (OBJ_RETURN == obj) {
+    if (OBJ_RETURN == obj)
         // cleanup OBJ_RETURN for next wheel
         d->objDestroy(OBJ_RETURN);
-
-        if (!clt)
-            // objDefineType(OBJ_RETURN, 0) is a counter-intuitive way to
-            // destruct OBJ_RETURN
-            return;
-    }
 
     CL_BREAK_IF(d->objOutOfRange(obj));
     Private::Object &objData = d->objects[obj];
