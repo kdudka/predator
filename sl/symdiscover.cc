@@ -80,24 +80,19 @@ bool matchSegBinding(
 bool validatePointingObjects(
         SymHeap                     &sh,
         const BindingOff            &off,
-        const TValId                rootAt,
-        const TValId                prevAt,
-        const TValId                nextAt,
-        const TObjList              &protoRoots = TObjList(),
+        const TValId                root,
+        TValId                      prev,
+        const TValId                next,
+        const TValList              &protoRoots = TValList(),
         const bool                  toInsideOnly = false)
 {
-    // TODO: remove this
-    const TObjId                    root = sh.objAt(rootAt);
-    TObjId                          prev = sh.objAt(prevAt);
-    const TObjId                    next = sh.objAt(nextAt);
-
     const bool isDls = isDlsBinding(off);
-    std::set<TObjId> allowedReferers;
-    if (OK_DLS == objKind(sh, root))
+    std::set<TValId> allowedReferers;
+    if (OK_DLS == sh.valTargetKind(root))
         // retrieve peer's pointer to this object (if any)
         allowedReferers.insert(dlSegPeer(sh, root));
 
-    if (OK_DLS == objKind(sh, prev))
+    if (OK_DLS == sh.valTargetKind(prev))
         // jump to peer in case of DLS
         prev = dlSegPeer(sh, prev);
 
@@ -109,7 +104,7 @@ bool validatePointingObjects(
     // collect all objects pointing at/inside the object
     // NOTE: we really intend to pass toInsideOnly == false at this point!
     TObjList refs;
-    gatherPointingObjects(sh, refs, root, /* toInsideOnly */ false);
+    gatherPointingObjects(sh, refs, sh.objAt(root), /* toInsideOnly */ false);
 
     // consider also up-links from nested prototypes
     std::copy(protoRoots.begin(), protoRoots.end(),
@@ -117,32 +112,34 @@ bool validatePointingObjects(
 
     // please do not validate the binding pointers as data pointers;  otherwise
     // we might mistakenly abstract SLL with head-pointers of length 2 as DLS!!
-    std::set<TObjId> blackList;
-    blackList.insert(ptrObjByOffset(sh, root, off.next));
+    std::set<TValId> blackList;
+    blackList.insert(sh.valByOffset(root, off.next));
     if (isDls)
-        blackList.insert(ptrObjByOffset(sh, root, off.prev));
+        blackList.insert(sh.valByOffset(root, off.prev));
 
-    const TValId headAddr = sh.placedAt(compObjByOffset(sh, root, off.head));
-    const bool rootIsProto = sh.valTargetIsProto(sh.placedAt(root));
+    const TValId headAddr = sh.valByOffset(root, off.head);
+    const bool rootIsProto = sh.valTargetIsProto(root);
 
-    // TODO: move subObjByChain() calls out of the loop
+    std::set<TValId> whiteList;
+    whiteList.insert(sh.valByOffset(prev, off.next));
+    if (isDls)
+        whiteList.insert(sh.valByOffset(next, off.prev));
+
     BOOST_FOREACH(const TObjId obj, refs) {
-        if (hasKey(blackList, obj))
+        const TValId at = sh.placedAt(obj);
+        if (hasKey(blackList, at))
             return false;
 
-        if (obj == ptrObjByOffset(sh, prev, off.next))
-            continue;
-
-        if (isDls && obj == ptrObjByOffset(sh, next, off.prev))
+        if (hasKey(whiteList, at))
             continue;
 
         if (toInsideOnly && (sh.valueOf(obj) == headAddr))
             continue;
 
-        if (hasKey(allowedReferers, objRoot(sh, obj)))
+        if (hasKey(allowedReferers, sh.valRoot(at)))
             continue;
 
-        if (!rootIsProto && sh.valTargetIsProto(sh.placedAt(obj)))
+        if (!rootIsProto && sh.valTargetIsProto(at))
             // FIXME: subtle
             continue;
 
@@ -159,24 +156,22 @@ bool validatePrototypes(
         SymHeap                     &sh,
         const BindingOff            &off,
         const TValId                rootAt,
-        TObjList                    protoRoots)
+        TValList                    protoRoots)
 {
-    // TODO: remove this
-    const TObjId root = sh.objAt(rootAt);
+    TValId peerAt = VAL_INVALID;
+    protoRoots.push_back(rootAt);
+    if (OK_DLS == sh.valTargetKind(rootAt)) {
+        peerAt = dlSegPeer(sh, rootAt);
+        protoRoots.push_back(peerAt);
+    }
 
-    TObjId peer = OBJ_INVALID;
-    protoRoots.push_back(root);
-    if (OK_DLS == objKind(sh, root))
-        protoRoots.push_back((peer = dlSegPeer(sh, root)));
-
-    BOOST_FOREACH(const TObjId proto, protoRoots) {
-        if (proto == root || proto == peer)
+    BOOST_FOREACH(const TValId protoAt, protoRoots) {
+        if (protoAt == rootAt || protoAt == peerAt)
             // we have inserted root/peer into protoRoots, in order to get them
             // on the list of allowed referrers, but it does not mean that they
             // are prototypes
             continue;
 
-        const TValId protoAt = sh.placedAt(proto);
         if (!validatePointingObjects(sh, off, protoAt, VAL_INVALID, VAL_INVALID,
                                      protoRoots))
             return false;
@@ -192,7 +187,7 @@ bool validateSegEntry(
         const TValId                entry,
         const TValId                prev,
         const TValId                next,
-        const TObjList              &protoRoots)
+        const TValList              &protoRoots)
 {
     if (isDlsBinding(off)) {
         // valPrev has to be at least VAL_NULL, withdraw it otherwise
@@ -285,7 +280,7 @@ TValId jumpToNextObj(
     return next;
 }
 
-typedef TObjList TProtoRoots[2];
+typedef TValList TProtoRoots[2];
 
 bool matchData(
         SymHeap                     &sh,
@@ -295,12 +290,8 @@ bool matchData(
         TProtoRoots                 *protoRoots,
         int                         *pThreshold)
 {
-    // TODO: remove this
-    const TObjId o1 = sh.objAt(at1);
-    const TObjId o2 = sh.objAt(at2);
-
     EJoinStatus status;
-    if (!joinDataReadOnly(&status, sh, off, o1, o2, protoRoots))
+    if (!joinDataReadOnly(&status, sh, off, at1, at2, protoRoots))
         return false;
 
     int thr = 0;

@@ -343,13 +343,15 @@ void dlSegSyncPeerData(SymHeap &sh, const TObjId dls) {
 void abstractNonMatchingValues(SymHeap &sh, TObjId src, TObjId dst,
                                bool bidir = false)
 {
-    if (!joinData(sh, dst, src, bidir))
+    const TValId srcAt = sh.placedAt(src);
+    const TValId dstAt = sh.placedAt(dst);
+    if (!joinData(sh, dstAt, srcAt, bidir))
         CL_BREAK_IF("joinData() failed, failure of segDiscover()?");
 
-    if (OK_DLS == objKind(sh, dst))
+    if (OK_DLS == sh.valTargetKind(dstAt))
         dlSegSyncPeerData(sh, dst);
 
-    if (bidir && OK_DLS == objKind(sh, src))
+    if (bidir && OK_DLS == sh.valTargetKind(srcAt))
         dlSegSyncPeerData(sh, src);
 }
 

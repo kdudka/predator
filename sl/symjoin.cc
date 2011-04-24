@@ -2153,11 +2153,15 @@ bool joinDataReadOnly(
         EJoinStatus             *pStatus,
         const SymHeap           &sh,
         const BindingOff        &off,
-        const TObjId            o1,
-        const TObjId            o2,
-        TObjList                protoRoots[1][2])
+        const TValId            addr1,
+        const TValId            addr2,
+        TValList                protoRoots[1][2])
 {
+    // TODO: remove this
+    const TObjId o1 = const_cast<SymHeap &>(sh).objAt(addr1);
+    const TObjId o2 = const_cast<SymHeap &>(sh).objAt(addr2);
     SJ_DEBUG("--> joinDataReadOnly" << SJ_OBJP(o1, o2));
+
     // go through the commont part of joinData()/joinDataReadOnly()
     SymHeap tmp(sh.stor());
     SymJoinCtx ctx(tmp, sh);
@@ -2175,13 +2179,13 @@ bool joinDataReadOnly(
         if (OBJ_INVALID != o1Proto) {
             ++cntProto1;
             if (protoRoots)
-                (*protoRoots)[0].push_back(o1Proto);
+                (*protoRoots)[0].push_back(sh.placedAt(o1Proto));
         }
 
         if (OBJ_INVALID != o2Proto) {
             ++cntProto2;
             if (protoRoots)
-                (*protoRoots)[1].push_back(o2Proto);
+                (*protoRoots)[1].push_back(sh.placedAt(o2Proto));
         }
     }
 
@@ -2349,10 +2353,13 @@ void restorePrototypeLengths(SymJoinCtx &ctx) {
 /// replacement of matchData() from symdiscover
 bool joinData(
         SymHeap                 &sh,
-        const TObjId            dst,
-        const TObjId            src,
+        const TValId            dstAt,
+        const TValId            srcAt,
         const bool              bidir)
 {
+    // TODO: remove this
+    const TObjId dst = sh.objAt(dstAt);
+    const TObjId src = sh.objAt(srcAt);
     SJ_DEBUG("--> joinData" << SJ_OBJP(dst, src));
     ++cntJoinOps;
 
@@ -2361,7 +2368,7 @@ bool joinData(
     const BindingOff off(segBinding(sh, dst));
     if (debugSymJoin) {
         EJoinStatus status = JS_USE_ANY;
-        joinDataReadOnly(&status, sh, off, dst, src, 0);
+        joinDataReadOnly(&status, sh, off, dstAt, srcAt, 0);
         if (JS_USE_ANY != status)
             debugPlot(sh, "joinData", dst, src, "00");
     }

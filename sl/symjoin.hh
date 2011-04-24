@@ -53,15 +53,15 @@ bool joinDataReadOnly(
         EJoinStatus             *pStatus,
         const SymHeap           &sh,
         const BindingOff        &bf,
-        const TObjId            o1,
-        const TObjId            o2,
-        TObjList                protoRoots[1][2]);
+        const TValId            addr1,
+        const TValId            addr2,
+        TValList                protoRoots[1][2]);
 
 /// replacement of abstractNonMatchingValues() from symabstract
 bool joinData(
         SymHeap                 &sh,
-        const TObjId            dst,
-        const TObjId            src,
+        const TValId            dst,
+        const TValId            src,
         const bool              bidir);
 
 /// @todo some dox
