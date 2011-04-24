@@ -42,13 +42,13 @@ void digPointingObjects(TWL &wl, const SymHeap &sh, TValId val) {
     }
 
     // seek object's root
-    const TObjId root = objRootByVal(sh, val);
-    if (sh.placedAt(root) < 0)
+    const TValId root = sh.valRoot(val);
+    if (root < 0)
         return;
 
     // traverse all subobjects
     TObjList refs;
-    gatherPointingObjects(sh, refs, root, /* toInsideOnly */ false);
+    sh.pointedBy(refs, root);
     BOOST_FOREACH(const TObjId obj, refs) {
         wl.schedule(obj);
     }

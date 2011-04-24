@@ -247,24 +247,6 @@ class PointingObjectsFinder {
         }
 };
 
-void gatherPointingObjects(const SymHeap            &sh,
-                           TObjList                 &dst,
-                           const TObjId             root,
-                           bool                     toInsideOnly)
-{
-    PointingObjectsFinder visitor;
-    if (!toInsideOnly)
-        visitor(sh, root);
-
-    if (!isComposite(sh.objType(root)))
-        // nothing to traverse here
-        return;
-
-    traverseSubObjs(sh, root, visitor, /* leavesOnly */ false);
-    std::copy(visitor.results().begin(), visitor.results().end(),
-              std::back_inserter(dst));
-}
-
 TObjId subSeekByOffset(
         const SymHeap               &sh,
         const TObjId                obj,
@@ -330,7 +312,7 @@ void redirectInboundEdges(
 
     // go through all objects pointing at/inside pointingTo
     TObjList refs;
-    gatherPointingObjects(sh, refs, pointingTo, /* toInsideOnly */ false);
+    sh.pointedBy(refs, sh.placedAt(pointingTo));
     BOOST_FOREACH(const TObjId obj, refs) {
         if (OBJ_INVALID != pointingFrom && pointingFrom != objRoot(sh, obj))
             // pointed from elsewhere, keep going

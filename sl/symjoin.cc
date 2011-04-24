@@ -696,7 +696,7 @@ bool considerImplicitPrototype(
     const TObjId root = (isProto2) ? root1 : root2;
 
     TObjList refs;
-    gatherPointingObjects(sh, refs, root, /* toInsideOnly */ false);
+    sh.pointedBy(refs, sh.placedAt(root));
     BOOST_FOREACH(const TObjId obj, refs) {
         if (OK_CONCRETE != objKind(sh, obj))
             return false;
@@ -977,7 +977,7 @@ bool followValuePair(
 {
     const int cVal1 = ctx.sh1.valGetCustom(v1);
     const int cVal2 = ctx.sh2.valGetCustom(v2);
-    if ((OBJ_INVALID == cVal1) != (OBJ_INVALID == cVal2) || (cVal1 != cVal2)) {
+    if ((-1 == cVal1) != (-1 == cVal2) || (cVal1 != cVal2)) {
         SJ_DEBUG("<-- custom values mismatch " << SJ_VALP(v1, v2));
         return false;
     }
@@ -991,6 +991,11 @@ bool followValuePair(
 
         const TValId vDst = ctx.dst.valCreateCustom(cVal1);
         return defineValueMapping(ctx, v1, v2, vDst);
+    }
+
+    if (ctx.sh1.valOffset(v1) != ctx.sh2.valOffset(v2)) {
+        SJ_DEBUG("<-- value offset mismatch: " << SJ_VALP(v1, v2));
+        return false;
     }
 
     const TObjId o1 = ctx.sh1.pointsTo(v1);
@@ -1689,9 +1694,14 @@ bool seenUnknown(const SymHeap &sh, const TValId val) {
         case UV_DONT_CARE:
             return true;
 
-        default:
-            return false;
+        case UV_KNOWN:
+        case UV_ABSTRACT:
+            return (sh.valOffset(val) < 0);
     }
+
+    // not reachable
+    CL_TRAP;
+    return false;
 }
 
 template <class TItem, class TBlackList>

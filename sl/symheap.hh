@@ -196,6 +196,9 @@ class SymHeapCore {
          */
         void usedBy(TObjList &dst, TValId val) const;
 
+        /// return all objects that point at/inside the given object
+        void pointedBy(TObjList &dst, TValId root) const;
+
         /// return how many objects use the value
         unsigned usedByCount(TValId val) const;
 

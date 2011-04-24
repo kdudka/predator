@@ -285,11 +285,6 @@ bool /* complete */ traverseSubObjsIc(THeap &sh, TItem item, TVisitor &visitor)
 }
 #endif
 
-void gatherPointingObjects(const SymHeap            &sh,
-                           TObjList                 &dst,
-                           const TObjId             root,
-                           bool                     toInsideOnly);
-
 TValId addrQueryByOffset(
         SymHeap                 &sh,
         const TObjId            target,

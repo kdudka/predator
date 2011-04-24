@@ -104,7 +104,7 @@ bool validatePointingObjects(
     // collect all objects pointing at/inside the object
     // NOTE: we really intend to pass toInsideOnly == false at this point!
     TObjList refs;
-    gatherPointingObjects(sh, refs, sh.objAt(root), /* toInsideOnly */ false);
+    sh.pointedBy(refs, root);
 
     // consider also up-links from nested prototypes
     std::copy(protoRoots.begin(), protoRoots.end(),

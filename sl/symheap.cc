@@ -201,6 +201,8 @@ struct SymHeapCore::Private {
         }
     };
 
+    typedef std::set<TObjId>                            TUsedBy;
+
     // symheap-ng
     typedef std::map<TObjType, TObjId>                  TObjByType;
     typedef std::map<TOffset, TObjByType>               TGrid;
@@ -212,6 +214,7 @@ struct SymHeapCore::Private {
         std::set<TObjId>            livePtrs;
         std::set<TObjId>            liveData;
         bool                        isProto;
+        TUsedBy                     usedBy;
 
         // symheap-ng
         TGrid                       grid;
@@ -227,7 +230,6 @@ struct SymHeapCore::Private {
     struct Value {
         EUnknownValue               code;
         TObjId                      target;
-        typedef std::set<TObjId>    TUsedBy;
         TUsedBy                     usedBy;
         TValId                      valRoot;
         TOffset                     offRoot;
@@ -357,7 +359,7 @@ void SymHeapCore::Private::releaseValueOf(TObjId obj) {
         return;
 
     CL_BREAK_IF(valOutOfRange(val));
-    Value::TUsedBy &uses = this->values[val].usedBy;
+    TUsedBy &uses = this->values[val].usedBy;
 #ifndef NDEBUG
     if (1 != uses.erase(obj))
         // *** offset detected ***
@@ -365,17 +367,39 @@ void SymHeapCore::Private::releaseValueOf(TObjId obj) {
 #else
     uses.erase(obj);
 #endif
+
+    const TValId root = this->valRoot(val);
+    const TObjId target = this->values[root].target;
+    if (target < 0)
+        return;
+
+    Private::Root &rootData = roMapLookup(this->roots, target);
+#ifndef NDEBUG
+    if (1 != rootData.usedBy.erase(obj))
+        // *** offset detected ***
+        CL_TRAP;
+#else
+    rootData.usedBy.erase(obj);
+#endif
 }
 
 void SymHeapCore::Private::setValueOf(TObjId obj, TValId val) {
     this->releaseValueOf(obj);
     this->objects[obj].value = val;
-    if (val < 0)
+    if (val <= 0)
         return;
 
     CL_BREAK_IF(valOutOfRange(val));
     Private::Value &valData = this->values[val];
     valData.usedBy.insert(obj);
+
+    const TValId root = this->valRoot(val);
+    const TObjId target = this->values[root].target;
+    if (target < 0)
+        return;
+
+    Private::Root &rootData = roMapLookup(this->roots, target);
+    rootData.usedBy.insert(obj);
 }
 
 TObjId SymHeapCore::Private::objCreate() {
@@ -444,7 +468,18 @@ void SymHeapCore::usedBy(TObjList &dst, TValId val) const {
         // FIXME
         return;
 
-    const Private::Value::TUsedBy &usedBy = d->values[val].usedBy;
+    const Private::TUsedBy &usedBy = d->values[val].usedBy;
+    std::copy(usedBy.begin(), usedBy.end(), std::back_inserter(dst));
+}
+
+void SymHeapCore::pointedBy(TObjList &dst, TValId root) const {
+    CL_BREAK_IF(d->valOutOfRange(root));
+
+    const Private::Value &valData = d->values[root];
+    CL_BREAK_IF(VAL_INVALID != valData.valRoot);
+
+    const Private::Root &rootData = roMapLookup(d->roots, valData.target);
+    const Private::TUsedBy &usedBy = rootData.usedBy;
     std::copy(usedBy.begin(), usedBy.end(), std::back_inserter(dst));
 }
 
@@ -454,7 +489,7 @@ unsigned SymHeapCore::usedByCount(TValId val) const {
         // FIXME
         return 0;
 
-    const Private::Value::TUsedBy &usedBy = d->values[val].usedBy;
+    const Private::TUsedBy &usedBy = d->values[val].usedBy;
     return usedBy.size();
 }
 
@@ -873,7 +908,10 @@ TValId SymHeapCore::valRoot(TValId val) const {
 }
 
 TOffset SymHeapCore::valOffset(TValId val) const {
-    CL_BREAK_IF(VAL_NULL == val || d->valOutOfRange(val));
+    if (VAL_NULL == val)
+        return 0;
+
+    CL_BREAK_IF(d->valOutOfRange(val));
     const Private::Value &valData = d->values[val];
     return valData.offRoot;
 }

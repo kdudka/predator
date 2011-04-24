@@ -314,6 +314,20 @@ bool dfsCmp(
             // prototype vs. shared object while called from areEqual()
             return false;
 
+        const TOffset off = sh1.valOffset(v1);
+        if (off != sh2.valOffset(v2)) {
+            SC_DEBUG_VAL_MISMATCH("value offset mismatch");
+            return false;
+        }
+
+        if (off < 0) {
+            // XXX
+            v1 = sh1.valRoot(v1);
+            v2 = sh2.valRoot(v2);
+            if (wl.schedule(v1, v2))
+                SC_DEBUG_VAL_SCHEDULE("offVal", sh1, sh2, v1, v2);
+        }
+
         const TObjId obj1 = sh1.pointsTo(v1);
         const TObjId obj2 = sh2.pointsTo(v2);
         if (!checkNonPosValues(obj1, obj2)) {
