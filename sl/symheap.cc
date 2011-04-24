@@ -1019,6 +1019,30 @@ bool SymHeapCore::Private::gridLookup(
     return true;
 }
 
+TObjId SymHeapCore::ptrAt(TValId at) {
+    TObjId failCode;
+    const Private::TObjByType *row;
+    if (!d->gridLookup(&failCode, &row, at))
+        return failCode;
+
+    // seek a _data_ pointer at the given row
+    BOOST_FOREACH(const Private::TObjByType::const_reference item, *row) {
+        const TObjType clt = item.first;
+        if (!clt || clt->code != CL_TYPE_PTR)
+            // not a pointer
+            continue;
+
+        const TObjType cltTarget = targetTypeOfPtr(clt);
+        if (CL_TYPE_FNC != cltTarget->code)
+            // matched
+            return item.second;
+    }
+
+    // TODO: check that there is at most once pointer in the row in debug build
+
+    return OBJ_UNKNOWN;
+}
+
 TObjId SymHeapCore::objAt(TValId at, TObjCode code) {
     TObjId failCode;
     const Private::TObjByType *row;

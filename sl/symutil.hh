@@ -70,26 +70,12 @@ inline TObjId /* root */ objRootByPtr(const SymHeap &sh, TObjId ptr) {
     return objRootByVal(sh, val);
 }
 
-inline bool objIsSeg(const SymHeap &sh, TObjId obj, bool anyPart = false) {
+inline bool objIsSeg(const SymHeap &sh, TObjId obj) {
     const TValId addr = sh.placedAt(obj);
     if (addr <= 0)
         return false;
 
-    if (!anyPart && sh.valOffset(addr))
-        return false;
-
-    const EObjKind kind = sh.valTargetKind(addr);
-    switch (kind) {
-        case OK_CONCRETE:
-            break;
-
-        case OK_MAY_EXIST:
-        case OK_SLS:
-        case OK_DLS:
-            return true;
-    }
-
-    return false;
+    return SymHeap::isAbstract(sh.valTarget(addr));
 }
 
 inline EObjKind objKind(const SymHeap &sh, TObjId obj) {

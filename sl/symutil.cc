@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2010 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2009-2011 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -50,9 +50,10 @@ void moveKnownValueToLeft(
 TObjId objDup(SymHeap &sh, const TObjId obj) {
     const TValId addr = sh.placedAt(obj);
     const TValId dupAt = sh.valClone(addr);
-    return sh.pointsTo(dupAt);
+    return sh.objAt(dupAt);
 }
 
+// TODO: remove this
 TObjId subObjByChain(const SymHeap &sh, TObjId obj, TFieldIdxChain ic) {
     BOOST_FOREACH(const int nth, ic) {
         obj = sh.subObj(obj, nth);
@@ -63,6 +64,7 @@ TObjId subObjByChain(const SymHeap &sh, TObjId obj, TFieldIdxChain ic) {
     return obj;
 }
 
+// TODO: remove this
 TObjId subObjByInvChain(const SymHeap &sh, TObjId obj, TFieldIdxChain ic) {
     std::stack<int> chkStack;
 
@@ -114,62 +116,29 @@ TObjId /* root */ objRoot(const SymHeap &sh, TObjId obj) {
     return root;
 }
 
-void getPtrValues(TValList &dst, const SymHeap &heap, TObjId obj) {
-    std::stack<TObjId> todo;
-    todo.push(obj);
-    while (!todo.empty()) {
-        const TObjId obj = todo.top();
-        todo.pop();
+void getPtrValues(TValList &dst, const SymHeap &sh, TObjId obj) {
+    const TValId at = const_cast<SymHeap &>(sh).placedAt(obj);
 
-        const struct cl_type *clt = heap.objType(obj);
-        const enum cl_type_e code = (clt)
-            ? clt->code
-            : /* anonymous object of known size */ CL_TYPE_PTR;
-
-        switch (code) {
-            case CL_TYPE_PTR: {
-                const TValId val = heap.valueOf(obj);
-                if (0 < val)
-                    dst.push_back(val);
-
-                break;
-            }
-
-            case CL_TYPE_STRUCT:
-            case CL_TYPE_UNION:
-                for (int i = 0; i < clt->item_cnt; ++i) {
-                    const TObjId subObj = heap.subObj(obj, i);
-                    CL_BREAK_IF(subObj < 0);
-
-                    todo.push(subObj);
-                }
-                break;
-
-            case CL_TYPE_ENUM:
-            case CL_TYPE_ARRAY:
-            case CL_TYPE_CHAR:
-            case CL_TYPE_BOOL:
-            case CL_TYPE_INT:
-                break;
-
-            default:
-                // other types of value should be safe to ignore here
-                // but worth to check by a debugger at least once anyway
-#ifndef NDEBUG
-                CL_TRAP;
-#endif
-                break;
-        }
+    TObjList ptrs;
+    sh.gatherLivePointers(ptrs, at);
+    BOOST_FOREACH(const TObjId obj, ptrs) {
+        const TValId val = sh.valueOf(obj);
+        if (0 < val)
+            dst.push_back(sh.valueOf(obj));
     }
 }
 
 void skipObj(const SymHeap &sh, TObjId *pObj, TOffset offNext)
 {
-    const TObjId objPtrNext = ptrObjByOffset(sh, *pObj, offNext);
-    const TObjId objNext = objRootByPtr(sh, objPtrNext);
+    const TValId cursorAt = sh.placedAt(*pObj);
+    const TValId rootAt = sh.valRoot(cursorAt);
 
     // move to the next object
-    *pObj = objNext;
+    SymHeap &writable = const_cast<SymHeap &>(sh);
+    const TObjId ptr = writable.ptrAt(writable.valByOffset(rootAt, offNext));
+    const TValId nextAt = sh.valRoot(sh.valueOf(ptr));
+
+    *pObj = writable.objAt(nextAt);
 }
 
 typedef std::pair<TObjId, const cl_initializer *> TInitialItem;
@@ -225,8 +194,7 @@ bool initSingleVariable(SymHeap &sh, const TInitialItem &item) {
     }
 
     // FIXME: we're asking for troubles this way
-    const CodeStorage::Storage *null = 0;
-    SymBackTrace dummyBt(*null);
+    SymBackTrace dummyBt(sh.stor());
     SymProc proc(sh, &dummyBt);
 
     // resolve initial value
@@ -318,23 +286,11 @@ TObjId subSeekByOffset(
         return shNonConst.objAt(subAddr, code);
 }
 
-void seekRoot(const SymHeap &sh, TObjId *pRoot, TOffset *pOff) {
-    const TObjId obj = *pRoot;
-    if (OBJ_INVALID == obj)
-        return;
-
-    const TObjId root = objRoot(sh, obj);
-    (*pOff) += subOffsetIn(sh, root, obj);
-    (*pRoot) = root;
-}
-
 TObjId ptrObjByOffset(const SymHeap &sh, TObjId obj, TOffset off) {
-    seekRoot(sh, &obj, &off);
     return subSeekByOffset(sh, obj, off, /* clt */ 0, CL_TYPE_PTR);
 }
 
 TObjId compObjByOffset(const SymHeap &sh, TObjId obj, TOffset off) {
-    seekRoot(sh, &obj, &off);
     return subSeekByOffset(sh, obj, off, /* clt */ 0, CL_TYPE_STRUCT);
 }
 
@@ -345,47 +301,19 @@ TValId addrQueryByOffset(
         const struct cl_type    *cltPtr,
         const struct cl_loc     *lw)
 {
-    // seek root object while cumulating the offset
-    TObjId obj = target;
-    TObjId parent;
-    TOffset off = offRequested;
-    int nth;
-    while (OBJ_INVALID != (parent = sh.objParent(obj, &nth))) {
-        const struct cl_type *cltParent = sh.objType(parent);
-        CL_BREAK_IF(cltParent->item_cnt <= nth);
-
-        off += cltParent->items[nth].offset;
-        obj = parent;
-    }
-
-    const struct cl_type *cltRoot = sh.objType(obj);
-    if (!cltRoot || cltRoot->code != CL_TYPE_STRUCT) {
-        if (lw)
-            CL_ERROR_MSG(lw, "unsupported target type for pointer plus");
-
-        return sh.valCreateUnknown(UV_UNKNOWN);
-    }
-
-    if (off < 0)
-        // we need to create an off-value
-        return sh.valByOffset(sh.placedAt(obj), off);
+    const TValId at = sh.placedAt(target);
+    if (at < 0)
+        return at;
 
     // jump to _target_ type
     const struct cl_type *clt = targetTypeOfPtr(cltPtr);
 
-    const TObjId sub = subSeekByOffset(sh, obj, off, clt);
-    if (sub <= 0) {
-        if (!off)
-            // we have already reached zero offset
-            // --> it should be safe to just return the address
-            return sh.placedAt(obj);
+    // TODO: print the error message now (we will not have the type-info later)
+    (void) clt;
+    (void) lw;
 
-        // fall-back to off-value, but now related to the original target,
-        // instead of root
-        return sh.valByOffset(sh.placedAt(target), offRequested);
-    }
-
-    return sh.placedAt(sub);
+    SymHeap &writable = const_cast<SymHeap &>(sh);
+    return writable.valByOffset(at, offRequested);
 }
 
 void redirectInboundEdges(
@@ -408,24 +336,14 @@ void redirectInboundEdges(
             // pointed from elsewhere, keep going
             continue;
 
-        TObjId parent = sh.pointsTo(sh.valueOf(obj));
-        CL_BREAK_IF(parent <= 0);
+        // check the current link
+        const TValId nowAt = sh.valueOf(obj);
+        const TOffset offToRoot = sh.valOffset(nowAt);
+        const TValId targetAt = sh.placedAt(redirectTo);
+        CL_BREAK_IF(sh.valOffset(targetAt));
 
-        // seek obj's root
-        int nth;
-        TFieldIdxChain invIc;
-        while (OBJ_INVALID != (parent = sh.objParent(parent, &nth)))
-            invIc.push_back(nth);
-
-        // now take the selector chain reversely
-        TObjId target = redirectTo;
-        BOOST_REVERSE_FOREACH(int nth, invIc) {
-            target = sh.subObj(target, nth);
-            CL_BREAK_IF(OBJ_INVALID == target);
-        }
-
-        // redirect!
-        sh.objSetValue(obj, sh.placedAt(target));
+        // redirect accordingly
+        const TValId result = sh.valByOffset(targetAt, offToRoot);
+        sh.objSetValue(obj, result);
     }
 }
-
