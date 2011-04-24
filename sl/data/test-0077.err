@@ -1,2 +1,2 @@
 test-0077.c:46:18: error: dereference of unknown value
-test-0077.c:48:18: error: dereference of unknown value
+test-0077.c:48:18: error: type of the pointer being dereferenced does not match type of the target object

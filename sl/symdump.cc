@@ -268,6 +268,11 @@ TObjId /* pointsTo */ dump_value_core(const SymHeap &heap, TValId value)
         return OBJ_INVALID;
     }
 
+    const TOffset off = heap.valOffset(value);
+    cout << "    offset    = " << off << "\n";
+    if (off)
+        cout << "    valRoot   = " << heap.valRoot(value) << "\n";
+
     const EUnknownValue code = heap.valGetUnknown(value);
     switch (code) {
         case UV_KNOWN:

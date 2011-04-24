@@ -104,7 +104,9 @@ bool SymProc::checkForInvalidDeref(TObjId obj) {
             break;
 
         case OBJ_UNKNOWN:
-            CL_ERROR_MSG(lw_, "dereference of unknown value");
+            CL_ERROR_MSG(lw_,
+                    "type of the pointer being dereferenced does not match "
+                    "type of the target object");
             break;
 
         case OBJ_INVALID:
@@ -120,54 +122,53 @@ bool SymProc::checkForInvalidDeref(TObjId obj) {
     return true;
 }
 
-TObjId SymProc::handleDerefCore(TValId val, const struct cl_type *cltTarget) {
-    if (VAL_DEREF_FAILED == val)
-        // we're already on an error path
-        return OBJ_DEREF_FAILED;
+bool SymProc::checkForInvalidDeref(TValId val, TObjType cltTarget) {
+    switch (val) {
+        case VAL_NULL:
+            CL_ERROR_MSG(lw_, "dereference of NULL value");
+            bt_->printBackTrace();
+            // fall through!
+
+        case VAL_DEREF_FAILED:
+            return true;
+
+        case VAL_INVALID:
+            CL_TRAP;
+
+        default:
+            break;
+    }
 
     // do we really know the value?
     const EUnknownValue code = heap_.valGetUnknown(val);
     switch (code) {
         case UV_ABSTRACT:
-            if (!cltTarget)
-                // this should be fine as long as we only take the address
-                break;
-
         case UV_UNKNOWN:
         case UV_DONT_CARE:
             CL_ERROR_MSG(lw_, "dereference of unknown value");
             bt_->printBackTrace();
-            return OBJ_DEREF_FAILED;
+            return true;
 
         case UV_UNINITIALIZED:
             CL_ERROR_MSG(lw_, "dereference of uninitialized value");
             bt_->printBackTrace();
-            return OBJ_DEREF_FAILED;
+            return true;
 
         case UV_KNOWN:
             break;
     }
 
-    // look for the target
-    TObjId target = heap_.pointsTo(val);
-    if (this->checkForInvalidDeref(target))
-        // error already handled
-        return OBJ_DEREF_FAILED;
+    if (!cltTarget)
+        // no type-info, check that there is at least _some_ target
+        return this->checkForInvalidDeref(heap_.objAt(val));
 
-    if (cltTarget) {
-        target = subSeekByOffset(heap_, target, /* off */ 0, cltTarget);
-        if (target < 0) {
-            CL_ERROR_MSG(lw_,
-                    "type of the pointer being dereferenced does not match "
-                    "type of the target object");
+    else if (isDataPtr(cltTarget))
+        // check if there is _any_ data pointer at that address
+        return this->checkForInvalidDeref(heap_.ptrAt(val));
 
-            bt_->printBackTrace();
-            return OBJ_DEREF_FAILED;
-        }
-    }
-
-    // all OK
-    return target;
+    else
+        // mach the type of target object
+        return this->checkForInvalidDeref(heap_.objAt(val, cltTarget));
 }
 
 TObjId varFromOperand(
@@ -180,102 +181,6 @@ TObjId varFromOperand(
     const CVar cVar(uid, nestLevel);
     const TValId addr = sh.addrOfVar(cVar);
     return sh.pointsTo(addr);
-}
-
-void SymProc::resolveOffValue(TValId *pVal, const struct cl_accessor **pAc) {
-    const TValId val = *pVal;
-    if (val <= 0 || UV_UNKNOWN != heap_.valGetUnknown(val))
-        // we're not interested here in such a value
-        return;
-
-    const struct cl_accessor *ac = *pAc;
-    if (!ac || ac->code != CL_ACCESSOR_ITEM)
-        // no selectors --> no offset to compute
-        return;
-
-    // going through the chain of CL_ACCESSOR_ITEM, look for the target
-    TOffset off = 0;
-    TValId valTarget = VAL_INVALID;
-    while (ac && ac->code == CL_ACCESSOR_ITEM && VAL_INVALID == valTarget) {
-        // compute cumulative offset at the current level
-        const struct cl_type *clt = ac->type;
-        const int nth = ac->data.item.id;
-        off += clt->items[nth].offset;
-
-        if (off)
-            // attempt to resolve off-value
-            valTarget = heap_.valByOffset(val, off);
-
-        // jump to the next accessor
-        ac = ac->next;
-    }
-
-    if (VAL_INVALID == valTarget)
-        // not found
-        return;
-
-    // successfully resolved off-value
-    *pAc  = ac;
-    *pVal = valTarget;
-}
-
-void SymProc::handleDeref(TObjId *pObj, const struct cl_accessor **pAc) {
-    // mark the current accessor as done in advance, and move to the next one
-    *pAc = (*pAc)->next;
-
-    const TObjId obj = *pObj;
-    if (obj < 0)
-        // we're already on an error path
-        return;
-
-    // read the value inside the pointer
-    TValId val = heap_.valueOf(obj);
-    switch (val) {
-        case VAL_NULL:
-            CL_ERROR_MSG(lw_, "dereference of NULL value");
-            bt_->printBackTrace();
-            // fall through!
-
-        case VAL_DEREF_FAILED:
-            *pObj = OBJ_DEREF_FAILED;
-            return;
-
-        case VAL_INVALID:
-            CL_TRAP;
-        default:
-            break;
-    }
-
-    // attempt to resolve an off-value
-    this->resolveOffValue(&val, pAc);
-
-    // derive the target type of the pointer we're dereferencing
-    const struct cl_type *clt = heap_.objType(obj);
-    const struct cl_type *cltTarget = (*pAc)
-        ? (*pAc)->type
-        : targetTypeOfPtr(clt);
-
-    CL_BREAK_IF(!clt || !cltTarget || cltTarget->code == CL_TYPE_VOID);
-    if (CL_TYPE_PTR == clt->code && CL_TYPE_PTR == cltTarget->code
-            && CL_TYPE_FNC != targetTypeOfPtr(clt)->code
-            && CL_TYPE_FNC != targetTypeOfPtr(cltTarget)->code)
-        // multi-level dereference may be handled eventually later, as long
-        // as both _target_ pointers are data pointers.  Generally it's not
-        // guaranteed that sizeof(void *) == sizeof(void (*)())
-        cltTarget = 0;
-
-    // We need to introduce a less chatty variant of dereference for accessor
-    // chains of the form:
-    //
-    //      CL_ACCESSOR_DEREF -> ... -> CL_ACCESSOR_REF
-    //
-    // ... as we should not claim there is an invalid dereference, if only
-    // an address is actually being computed
-    if (seekRefAccessor(*pAc))
-        cltTarget = 0;
-
-    // now perform the actual dereference
-    *pObj = this->handleDerefCore(val, cltTarget);
 }
 
 TOffset offDerefArray(const struct cl_accessor *ac) {
@@ -306,20 +211,24 @@ TOffset offItem(const struct cl_accessor *ac) {
 
 TObjId SymProc::heapObjFromOperand(const struct cl_operand &op) {
     // resolve program variable
-    TObjId obj = varFromOperand(op, heap_, bt_);
-    CL_BREAK_IF(OBJ_INVALID == obj);
+    TObjId var = varFromOperand(op, heap_, bt_);
+    CL_BREAK_IF(OBJ_INVALID == var);
+    if (var < 0)
+        // we're already on an error path
+        return var;
 
     const struct cl_accessor *ac = op.accessor;
     if (!ac)
         // no accessors, we're done
-        return obj;
+        return var;
 
-    // first check for dereference and handle any off-value eventually
-    if (ac->code == CL_ACCESSOR_DEREF)
-        this->handleDeref(&obj, &ac);
-
-    if (obj <= 0)
-        return obj;
+    // check for dereference first
+    const bool isDeref = (CL_ACCESSOR_DEREF == ac->code);
+    if (isDeref) {
+        // jump to next accessor
+        CL_BREAK_IF(ac->next && *ac->next->type != *targetTypeOfPtr(ac->type));
+        ac = ac->next;
+    }
 
     // go through the chain of accessors
     TOffset off = 0;
@@ -346,16 +255,27 @@ TObjId SymProc::heapObjFromOperand(const struct cl_operand &op) {
         }
     }
 
-    // resolve type of the target object
-    const struct cl_type *clt = op.type;
-    if (isRef)
-        clt = targetTypeOfPtr(clt);
+    // resolve type of the target
+    const TObjType cltTarget = (isRef)
+        ? /* targetTypeOfPtr(op.type) is too strict in some cases */ 0
+        : op.type;
 
-    const TObjId sub = subSeekByOffset(heap_, obj, off, clt);
-    if (!!off || OBJ_INVALID != sub)
-        obj = sub;
+    // start with the address of the variable
+    TValId at = heap_.placedAt(var);
 
-    return obj;
+    if (isDeref)
+        // read the value inside the pointer
+        at = heap_.valueOf(heap_.ptrAt(at));
+
+    // apply the offset
+    at = heap_.valByOffset(at, off);
+
+    if (isDeref && this->checkForInvalidDeref(at, cltTarget))
+        return OBJ_DEREF_FAILED;
+
+    return (isRef)
+        ? heap_.objAt(at)
+        : heap_.objAt(at, cltTarget);
 }
 
 TValId SymProc::heapValFromObj(const struct cl_operand &op) {

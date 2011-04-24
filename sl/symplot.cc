@@ -299,7 +299,13 @@ void SymPlot::Private::plotNodeObj(TObjId obj) {
         // colorize heap (sub)object
         this->dotStream << ", fontcolor=red";
 
-    this->dotStream << ", label=\"[" << prefixByCode(code) << "] #" << obj;
+    this->dotStream << ", label=\"";
+    const TOffset off = this->heap->valOffset(this->heap->placedAt(obj));
+    if (off < 0)
+        this->dotStream << "[" << off << "] ";
+    if (0 < off)
+        this->dotStream << "[+" << off << "] ";
+    this->dotStream << "[" << prefixByCode(code) << "] #" << obj;
 
     if (isVar) {
         CVar cVar = this->heap->cVarByRoot(rootAt);

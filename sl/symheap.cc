@@ -793,7 +793,7 @@ TObjType SymHeapCore::objType(TObjId obj) const {
 }
 
 TValId SymHeapCore::valByOffset(TValId at, TOffset off) {
-    if (!off || at < 0)
+    if (!off || at <= 0)
         return at;
 
     // subtract the root

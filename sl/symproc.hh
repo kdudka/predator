@@ -107,9 +107,7 @@ class SymProc {
         void heapSetSingleVal(TObjId lhs, TValId rhs);
         void heapObjDefineType(TObjId lhs, TValId rhs);
         bool checkForInvalidDeref(TObjId obj);
-        TObjId handleDerefCore(TValId value, const struct cl_type *cltTarget);
-        void handleDeref(TObjId *pObj, const struct cl_accessor **pAc);
-        void resolveOffValue(TValId *pVal, const struct cl_accessor **pAc);
+        bool checkForInvalidDeref(TValId val, TObjType cltTarget);
         TValId heapValFromObj(const struct cl_operand &op);
         TValId heapValFromCst(const struct cl_operand &op);
         void killVar(const struct cl_operand &op);
