@@ -278,6 +278,7 @@ struct SymHeapCore::Private {
 
     TValId valCreate(EUnknownValue code, TObjId target);
     TObjId objCreate();
+    TObjId objCreate(TObjType clt, CVar cVar);
     TObjId objDup(TObjId root);
     void objDestroy(TObjId obj);
 
@@ -1029,15 +1030,18 @@ TObjId SymHeapCore::objAt(TValId at, TObjCode code) {
     TObjId max = OBJ_UNKNOWN;
     BOOST_FOREACH(const Private::TObjByType::const_reference item, *row) {
         const TObjType cltItem = item.first;
-        if (!cltItem)
-            // type-free object, keep going
-            continue;
+        const TObjId obj = item.second;
+        CL_BREAK_IF(d->objOutOfRange(obj));
 
-        if (CL_TYPE_VOID != code && cltItem->code != code)
+        const bool hasType = !!cltItem;
+        if (CL_TYPE_VOID != code && (!hasType || cltItem->code != code))
             // not the type we are looking for
             continue;
 
-        const int size = cltItem->size;
+        const int size = (hasType)
+            ? cltItem->size
+            : roMapLookup(d->roots, obj).cbSize;
+
         if (size < maxSize)
             continue;
 
@@ -1085,45 +1089,8 @@ TObjId SymHeapCore::objAt(TValId at, TObjType clt) {
 
 // FIXME: this should go away
 TObjId SymHeapCore::pointsTo(TValId val) const {
-    TObjId failCode;
-    const Private::TObjByType *row;
-    if (!d->gridLookup(&failCode, &row, val))
-        return failCode;
-
-    // look for the best candidate
-    TObjId best = OBJ_INVALID;
-    bool hasType = false;
-    bool isComp  = false;
-    BOOST_FOREACH(const Private::TObjByType::const_reference item, *row) {
-        const TObjId target = item.second;
-        if (OBJ_INVALID == best)
-            best = target;
-
-        const Private::Object &objData = d->objects.at(target);
-
-        // check type
-        const TObjType clt = objData.clt;
-        if (!clt)
-            continue;
-        if (!hasType) {
-            hasType = true;
-            best = target;
-        }
-
-        // check composition
-        if (!isComposite(clt))
-            continue;
-        if (!isComp) {
-            isComp = true;
-            best = target;
-        }
-
-        if (OBJ_INVALID == objData.parent)
-            // found root
-            return target;
-    }
-
-    return best;
+    SymHeapCore &self = const_cast<SymHeapCore &>(*this);
+    return self.objAt(val);
 }
 
 bool SymHeapCore::cVar(CVar *dst, TObjId obj) const {
@@ -1162,7 +1129,7 @@ TValId SymHeapCore::addrOfVar(CVar cv) {
     CL_DEBUG_MSG(loc, "FFF SymHeapCore::objByCVar() creates stack variable "
             << varString);
 
-    const TObjId fresh = this->objCreate(clt, cv);
+    const TObjId fresh = d->objCreate(clt, cv);
     return this->placedAt(fresh);
 }
 
@@ -1228,16 +1195,16 @@ TObjId SymHeapCore::objParent(TObjId obj, int *nth) const {
     return parent;
 }
 
-TObjId SymHeapCore::objCreate(TObjType clt, CVar cVar) {
-    const TObjId obj = d->objCreate();
-    d->objects[obj].clt = clt;
-    d->roots[obj].cVar = cVar;
+TObjId SymHeapCore::Private::objCreate(TObjType clt, CVar cVar) {
+    const TObjId obj = this->objCreate();
+    this->objects[obj].clt = clt;
+    this->roots[obj].cVar = cVar;
 
     if (clt)
-        d->subsCreate(obj);
+        this->subsCreate(obj);
 
     if (/* heap object */ -1 != cVar.uid)
-        d->cVarMap.insert(cVar, obj);
+        this->cVarMap.insert(cVar, obj);
 
     return obj;
 }
@@ -1308,6 +1275,7 @@ void SymHeapCore::objDefineType(TObjId obj, TObjType clt) {
     }
 
     // delayed object's type definition
+    objData = Private::Object();
     objData.clt = clt;
     d->subsCreate(obj);
 }

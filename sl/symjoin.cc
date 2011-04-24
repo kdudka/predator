@@ -739,6 +739,33 @@ bool joinProtoFlag(
     return false;
 }
 
+bool joinObjSize(
+        int                     *pDst,
+        SymJoinCtx              &ctx,
+        const TObjId            o1,
+        const TObjId            o2)
+{
+    if (OBJ_INVALID == o1) {
+        *pDst = ctx.sh2.valSizeOfTarget(ctx.sh2.placedAt(o2));
+        return true;
+    }
+
+    if (OBJ_INVALID == o2) {
+        *pDst = ctx.sh1.valSizeOfTarget(ctx.sh1.placedAt(o1));
+        return true;
+    }
+
+    const int cbSize1 = ctx.sh1.valSizeOfTarget(ctx.sh1.placedAt(o1));
+    const int cbSize2 = ctx.sh2.valSizeOfTarget(ctx.sh2.placedAt(o2));
+    if (cbSize1 != cbSize2) {
+        SJ_DEBUG("<-- object size mismatch " << SJ_OBJP(o1, o2));
+        return false;
+    }
+
+    *pDst = cbSize1;
+    return true;
+}
+
 /// (NULL != offMayExist) means 'create OK_MAY_EXIST'
 bool createObject(
         SymJoinCtx              &ctx,
@@ -767,11 +794,19 @@ bool createObject(
         off = *offMayExist;
     }
 
+    int size;
+    if (!joinObjSize(&size, ctx, root1, root2))
+        return false;
+
     if (!updateJoinStatus(ctx, action))
         return false;
 
+    // create an image in ctx.dst
+    const TObjId rootDst = ctx.dst.objAt(ctx.dst.heapAlloc(size));
+    if (clt)
+        ctx.dst.objDefineType(rootDst, clt);
+
     // preserve 'prototype' flag
-    const TObjId rootDst = ctx.dst.objCreate(clt, /* XXX */ CVar());
     ctx.dst.valTargetSetProto(ctx.dst.placedAt(rootDst), isProto);
 
     if (OK_CONCRETE != kind) {
@@ -792,15 +827,12 @@ bool createAnonObject(
         const TObjId            o1,
         const TObjId            o2)
 {
-    const int cbSize1 = ctx.sh1.valSizeOfTarget(ctx.sh1.placedAt(o1));
-    const int cbSize2 = ctx.sh2.valSizeOfTarget(ctx.sh2.placedAt(o2));
-    if (cbSize1 != cbSize2) {
-        SJ_DEBUG("<-- anon object size mismatch " << SJ_OBJP(o1, o2));
+    int size;
+    if (!joinObjSize(&size, ctx, o1, o2))
         return false;
-    }
 
     // create the join object
-    const TObjId anon = ctx.dst.pointsTo(ctx.dst.heapAlloc(cbSize1));
+    const TObjId anon = ctx.dst.pointsTo(ctx.dst.heapAlloc(size));
     ctx.objMap1[o1] = anon;
     ctx.objMap2[o2] = anon;
     return defineAddressMapping(ctx, o1, o2, anon);
@@ -1597,8 +1629,7 @@ bool joinCVars(SymJoinCtx &ctx) {
         const TObjId root2 = sh2.pointsTo(addr2);
 
         // create a corresponding program variable in the resulting heap
-        const struct cl_type *clt = sh1.objType(root1);
-        const TObjId rootDst = dst.objCreate(clt, cv);
+        const TObjId rootDst = dst.objAt(dst.addrOfVar(cv));
 
         // look at the values inside
         if (!traverseSubObjs(ctx, root1, root2, rootDst))
@@ -2067,8 +2098,16 @@ bool joinDataCore(
         return false;
     }
 
+    int size;
+    if (!joinObjSize(&size, ctx, o1, o2))
+        return false;
+
     // start with the given pair of objects and create a ghost object for them
-    const TObjId rootDst = ctx.dst.objCreate(clt, /* XXX */ CVar());
+    // create an image in ctx.dst
+    const TObjId rootDst = ctx.dst.objAt(ctx.dst.heapAlloc(size));
+    if (clt)
+        ctx.dst.objDefineType(rootDst, clt);
+
     if (!traverseSubObjs(ctx, o1, o2, rootDst, &off))
         return false;
 

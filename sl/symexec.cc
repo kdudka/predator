@@ -81,19 +81,6 @@ bool installSignalHandlers(void) {
 void createGlVars(SymHeap &sh, const CodeStorage::Storage &stor) {
     using namespace CodeStorage;
 
-    // first create all gl variables, without initializing anything
-    BOOST_FOREACH(const Var &var, stor.vars) {
-        if (VAR_GL != var.code)
-            continue;
-
-        CL_DEBUG_MSG(&var.loc, "(g) creating global variable: #" << var.uid
-                << " (" << var.name << ")");
-
-        // create the corresponding heap object
-        const CVar cVar(var.uid, /* gl variable */ 0);
-        sh.objCreate(var.clt, cVar);
-    }
-
     // now is the time to safely perform the initialization
     BOOST_FOREACH(const Var &var, stor.vars) {
         if (VAR_GL != var.code)

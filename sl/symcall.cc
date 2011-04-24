@@ -333,7 +333,7 @@ void SymCallCache::Private::createStackFrame(TCVarList &cVars) {
                 << " (" << var.name << ")" );
 #   endif
         // now create the SymHeap object
-        this->heap->objCreate(var.clt, cv);
+        (void) this->heap->addrOfVar(cv);
 
 #endif // SE_LAZY_VARS_CREATION
 

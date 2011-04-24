@@ -150,15 +150,6 @@ TObjId addObjectIfNeeded(DeepCopyData &dc, TObjId objSrc) {
 
     SymHeap &dst = dc.dst;
     const struct cl_type *clt = src.objType(rootSrc);
-    if (!clt) {
-        // assume anonymous object of known size
-        CL_BREAK_IF(src.objType(objSrc));
-
-        const int cbSize = src.valSizeOfTarget(src.placedAt(objSrc));
-        const TObjId objDst = dst.pointsTo(dst.heapAlloc(cbSize));
-        add(dc, objSrc, objDst);
-        return objDst;
-    }
 
     if (OBJ_RETURN == rootSrc) {
         // clone return value
@@ -169,7 +160,19 @@ TObjId addObjectIfNeeded(DeepCopyData &dc, TObjId objSrc) {
         return OBJ_RETURN;
     }
 
-    const TObjId rootDst = dst.objCreate(clt, cv);
+    TObjId rootDst = OBJ_INVALID;
+    if (-1 != cv.uid) {
+        // program variable
+        rootDst = dst.objAt(dst.addrOfVar(cv));
+    }
+    else {
+        // on heap object
+        const int size = src.valSizeOfTarget(src.placedAt(rootSrc));
+        rootDst = dst.objAt(dst.heapAlloc(size));
+        if (clt)
+            dst.objDefineType(rootDst, clt);
+    }
+
     add(dc, rootSrc, rootDst);
     digSubObjs(dc, rootSrc, rootDst);
 

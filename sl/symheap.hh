@@ -381,14 +381,6 @@ class SymHeapCore {
 
     public:
         /**
-         * create a new symbolic heap object of @b known @b type
-         * @param clt pointer to static type-info (see CodeStorage), compulsory.
-         * @param cVar variable identification
-         * @return ID of the just created symbolic heap object
-         */
-        TObjId objCreate(TObjType clt, CVar cVar);
-
-        /**
          * create a new heap object of known size
          * @param cbSize size of the object in @b bytes
          * @return value ID of the acquired address
