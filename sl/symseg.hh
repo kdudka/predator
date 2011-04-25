@@ -57,13 +57,23 @@ TObjId peerPtrFromSeg(const SymHeap &sh, TObjId seg);
 /// TODO: remove this
 TObjId dlSegPeer(const SymHeap &sh, TObjId dls);
 
-/// return DLS peer object of the given DLS
+/// return 'next' pointer in the given segment (given by root)
 inline TObjId nextPtrFromSeg(SymHeap &sh, TValId seg) {
     CL_BREAK_IF(sh.valOffset(seg));
     CL_BREAK_IF(VT_ABSTRACT != sh.valTarget(seg));
 
     const BindingOff &off = sh.segBinding(seg);
     const TValId addr = sh.valByOffset(seg, off.next);
+    return sh.ptrAt(addr);
+}
+
+/// return 'prev' pointer in the given segment (given by root)
+inline TObjId prevPtrFromSeg(SymHeap &sh, TValId seg) {
+    CL_BREAK_IF(sh.valOffset(seg));
+    CL_BREAK_IF(VT_ABSTRACT != sh.valTarget(seg));
+
+    const BindingOff &off = sh.segBinding(seg);
+    const TValId addr = sh.valByOffset(seg, off.prev);
     return sh.ptrAt(addr);
 }
 
@@ -95,23 +105,23 @@ inline TValId segHeadAt(SymHeap &sh, TValId seg) {
 }
 
 /// return lower estimation of DLS length
-unsigned dlSegMinLength(const SymHeap &sh, TObjId dls);
+unsigned dlSegMinLength(const SymHeap &sh, TValId dls);
 
-void dlSegSetMinLength(SymHeap &sh, TObjId dls, unsigned len);
+void dlSegSetMinLength(SymHeap &sh, TValId dls, unsigned len);
 
 /// return lower estimation of segment length
-unsigned segMinLength(const SymHeap &sh, TObjId seg);
+unsigned segMinLength(const SymHeap &sh, TValId seg);
 
 inline unsigned objMinLength(const SymHeap &sh, TObjId obj) {
     if (obj <= 0)
         return 0;
 
     return (objIsSeg(sh, obj))
-        ? segMinLength(sh, obj)
+        ? segMinLength(sh, sh.placedAt(obj))
         : /* OK_CONCRETE */ 1;
 }
 
-void segSetMinLength(SymHeap &sh, TObjId seg, unsigned len);
+void segSetMinLength(SymHeap &sh, TValId seg, unsigned len);
 
 inline const BindingOff& segBinding(const SymHeap &sh, TObjId obj) {
     const TValId addr = sh.placedAt(obj);

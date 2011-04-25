@@ -227,8 +227,8 @@ void cloneGenericPrototype(
     for (unsigned i = 0; i < cnt; ++i) {
         const TObjId proto = protoList[i];
         if (objIsSeg(sh, proto)) {
-            lengthList[i] = segMinLength(sh, proto);
-            segSetMinLength(sh, proto, /* LS 0+ */ 0);
+            lengthList[i] = segMinLength(sh, sh.placedAt(proto));
+            segSetMinLength(sh, sh.placedAt(proto), /* LS 0+ */ 0);
         }
         else
             lengthList[i] = -1;
@@ -261,8 +261,8 @@ void cloneGenericPrototype(
             // -1 means "not a segment"
             continue;
 
-        segSetMinLength(sh, proto, len);
-        segSetMinLength(sh, clone, len);
+        segSetMinLength(sh, sh.placedAt(proto), len);
+        segSetMinLength(sh, sh.placedAt(clone), len);
     }
 }
 
@@ -355,7 +355,11 @@ void abstractNonMatchingValues(SymHeap &sh, TObjId src, TObjId dst,
         dlSegSyncPeerData(sh, src);
 }
 
-void clonePrototypes(SymHeap &sh, TObjId obj, TObjId dup) {
+void clonePrototypes(SymHeap &sh, TValId objAt, TValId dupAt) {
+    // remove this
+    TObjId obj = sh.objAt(objAt);
+    TObjId dup = sh.objAt(dupAt);
+
     duplicateUnknownValues(sh, obj);
 
     ProtoCloner visitor;
@@ -381,13 +385,13 @@ void slSegAbstractionStep(SymHeap &sh, TObjId *pObj, const BindingOff &off)
     // read minimal length of 'obj' and set it temporarily to zero
     unsigned len = objMinLength(sh, obj);
     if (objIsSeg(sh, obj))
-        segSetMinLength(sh, obj, /* SLS 0+ */ 0);
+        segSetMinLength(sh, sh.placedAt(obj), /* SLS 0+ */ 0);
 
     // jump to the next object
     const TObjId objNext = objRootByVal(sh, valNext);
     len += objMinLength(sh, objNext);
     if (OK_SLS == sh.valTargetKind(valNext))
-        segSetMinLength(sh, objNext, /* SLS 0+ */ 0);
+        segSetMinLength(sh, sh.placedAt(objNext), /* SLS 0+ */ 0);
     else
         // abstract the _next_ object
         sh.valTargetSetAbstract(valNext, OK_SLS, off);
@@ -406,7 +410,7 @@ void slSegAbstractionStep(SymHeap &sh, TObjId *pObj, const BindingOff &off)
 
     if (len)
         // declare resulting segment's minimal length
-        segSetMinLength(sh, objNext, len);
+        segSetMinLength(sh, sh.placedAt(objNext), len);
 
     // move to the next object
     *pObj = objNext;
@@ -447,7 +451,7 @@ void dlSegCreate(SymHeap &sh, TObjId o1, TObjId o2, BindingOff off) {
     abstractNonMatchingValues(sh, o1, o2, /* bidir */ true);
 
     // just created DLS is said to be 2+ as long as no OK_MAY_EXIST are involved
-    dlSegSetMinLength(sh, o1, len);
+    dlSegSetMinLength(sh, sh.placedAt(o1), len);
 
     dlSegSyncPeerData(sh, o1);
 }
@@ -456,8 +460,9 @@ void dlSegGobble(SymHeap &sh, TObjId dls, TObjId var, bool backward) {
     CL_BREAK_IF(OK_DLS != objKind(sh, dls));
 
     // handle DLS Neq predicates and OK_MAY_EXIST
-    const unsigned len = dlSegMinLength(sh, dls) + objMinLength(sh, var);
-    dlSegSetMinLength(sh, dls, /* DLS 0+ */ 0);
+    const unsigned len = dlSegMinLength(sh, sh.placedAt(dls))
+        + objMinLength(sh, var);
+    dlSegSetMinLength(sh, sh.placedAt(dls), /* DLS 0+ */ 0);
     enlargeMayExist(sh, var);
 
     if (!backward)
@@ -480,16 +485,17 @@ void dlSegGobble(SymHeap &sh, TObjId dls, TObjId var, bool backward) {
     REQUIRE_GC_ACTIVITY(sh, headAt, dlSegGobble);
 
     // handle DLS Neq predicates
-    dlSegSetMinLength(sh, dls, len);
+    dlSegSetMinLength(sh, sh.placedAt(dls), len);
 
     dlSegSyncPeerData(sh, dls);
 }
 
 void dlSegMerge(SymHeap &sh, TObjId seg1, TObjId seg2) {
     // handle DLS Neq predicates
-    const unsigned len = dlSegMinLength(sh, seg1) + dlSegMinLength(sh, seg2);
-    dlSegSetMinLength(sh, seg1, /* DLS 0+ */ 0);
-    dlSegSetMinLength(sh, seg2, /* DLS 0+ */ 0);
+    const unsigned len = dlSegMinLength(sh, sh.placedAt(seg1))
+        + dlSegMinLength(sh, sh.placedAt(seg2));
+    dlSegSetMinLength(sh, sh.placedAt(seg1), /* DLS 0+ */ 0);
+    dlSegSetMinLength(sh, sh.placedAt(seg2), /* DLS 0+ */ 0);
 
     // check for a failure of segDiscover()
     CL_BREAK_IF(segBinding(sh, seg1) != segBinding(sh, seg2));
@@ -528,7 +534,7 @@ void dlSegMerge(SymHeap &sh, TObjId seg1, TObjId seg2) {
 
     if (len)
         // handle DLS Neq predicates
-        dlSegSetMinLength(sh, seg2, len);
+        dlSegSetMinLength(sh, sh.placedAt(seg2), len);
 
     dlSegSyncPeerData(sh, seg2);
 }
@@ -583,7 +589,7 @@ void dlSegAbstractionStep(SymHeap &sh, TObjId *pObj, const BindingOff &off)
 
 #ifndef NDEBUG
     // just check if the Neq predicates work well so far
-    dlSegMinLength(sh, o2);
+    dlSegMinLength(sh, sh.placedAt(o2));
 #endif
 }
 
@@ -710,7 +716,7 @@ void dlSegReplaceByConcrete(SymHeap &sh, TValId objAt, TValId peerAt) {
     CL_BREAK_IF(!dlSegCheckConsistency(sh));
 
     // first kill any related Neq predicates, we're going to concretize anyway
-    dlSegSetMinLength(sh, obj, /* DLS 0+ */ 0);
+    dlSegSetMinLength(sh, sh.placedAt(obj), /* DLS 0+ */ 0);
 
     // take the value of 'next' pointer from peer
     const TOffset offPeer = segBinding(sh, obj).prev;
@@ -773,16 +779,19 @@ void spliceOutListSegmentCore(SymHeap &sh, TValId segAddr, TValId peerAddr) {
     LDP_PLOT(symabstract, sh);
 }
 
-unsigned /* len */ spliceOutSegmentIfNeeded(SymHeap &sh, TObjId ao, TObjId peer,
-                                            TSymHeapList &todo)
+unsigned /* len */ spliceOutSegmentIfNeeded(
+        SymHeap                 &sh,
+        const TValId            seg,
+        const TValId            peer,
+        TSymHeapList            &todo)
 {
-    const unsigned len = segMinLength(sh, ao);
+    const unsigned len = segMinLength(sh, seg);
     if (len) {
         LDP_INIT(symabstract, "spliceOutSegmentIfNeeded");
         LDP_PLOT(symabstract, sh);
 
         // drop any existing Neq predicates
-        segSetMinLength(sh, ao, 0);
+        segSetMinLength(sh, seg, 0);
 
         LDP_PLOT(symabstract, sh);
         return len - 1;
@@ -790,7 +799,7 @@ unsigned /* len */ spliceOutSegmentIfNeeded(SymHeap &sh, TObjId ao, TObjId peer,
 
     // possibly empty LS
     SymHeap sh0(sh);
-    spliceOutListSegmentCore(sh0, sh0.placedAt(ao), sh0.placedAt(peer));
+    spliceOutListSegmentCore(sh0, seg, peer);
     todo.push_back(sh0);
     return /* LS 0+ */ 0;
 }
@@ -814,72 +823,55 @@ void abstractIfNeeded(SymHeap &sh) {
 }
 
 void concretizeObj(SymHeap &sh, TValId addr, TSymHeapList &todo) {
-    TObjId obj = objRootByVal(sh, addr);
-    TObjId peer = obj;
-
-    // branch by SLS/DLS
-    const EObjKind kind = objKind(sh, obj);
-    switch (kind) {
-        case OK_CONCRETE:
-            // invalid call of concretizeObj()
-            CL_TRAP;
-
-        case OK_MAY_EXIST:
-        case OK_SLS:
-            break;
-
-        case OK_DLS:
-            // jump to peer
-            CL_BREAK_IF(!dlSegCheckConsistency(sh));
-            peer = dlSegPeer(sh, obj);
-            break;
-    }
+    const TValId seg = sh.valRoot(addr);
+    const TValId peer = segPeer(sh, seg);
 
     // handle the possibly empty variant (if exists)
-    const unsigned lenRemains = spliceOutSegmentIfNeeded(sh, obj, peer, todo);
+    const unsigned lenRemains = spliceOutSegmentIfNeeded(sh, seg, peer, todo);
 
     LDP_INIT(symabstract, "concretizeObj");
     LDP_PLOT(symabstract, sh);
 
+    const EObjKind kind = sh.valTargetKind(seg);
     if (OK_MAY_EXIST == kind) {
         // this kind is much easier than regular list segments
-        objSetConcrete(sh, obj);
+        sh.valTargetSetConcrete(seg);
         LDP_PLOT(symabstract, sh);
         return;
     }
 
     // duplicate self as abstract object
-    const TObjId aoDup = objDup(sh, obj);
-    const TValId aoDupHeadAddr = segHeadAddr(sh, aoDup);
+    const TValId dup = sh.valClone(seg);
+    const TValId dupHead = segHeadAt(sh, dup);
     if (OK_DLS == kind) {
         // DLS relink
-        const TOffset offPeer = segBinding(sh, peer).prev;
-        const TObjId peerField = ptrObjByOffset(sh, peer, offPeer);
-        sh.objSetValue(peerField, aoDupHeadAddr);
+        const TObjId ptr = prevPtrFromSeg(sh, peer);
+        sh.objSetValue(ptr, dupHead);
     }
 
     // duplicate all unknown values, to keep the prover working
-    clonePrototypes(sh, obj, aoDup);
+    clonePrototypes(sh, seg, dup);
+
+    // resolve the relative placement of the 'next' pointer
+    const BindingOff off = sh.segBinding(seg);
+    const TOffset offNext = (OK_SLS == kind)
+        ? off.next
+        : off.prev;
 
     // concretize self and recover the list
-    const TObjId ptrNext = ptrObjByOffset(sh, obj, (OK_SLS == kind)
-            ? segBinding(sh, obj).next
-            : segBinding(sh, obj).prev);
-    objSetConcrete(sh, obj);
-    sh.objSetValue(ptrNext, aoDupHeadAddr);
+    sh.valTargetSetConcrete(seg);
+    const TObjId nextPtr = sh.ptrAt(sh.valByOffset(seg, offNext));
+    sh.objSetValue(nextPtr, dupHead);
 
     if (OK_DLS == kind) {
         // update DLS back-link
-        const BindingOff &off = sh.segBinding(aoDupHeadAddr);
-        const TObjId backLink = ptrObjByOffset(sh, aoDup, off.next);
-        const TValId headAddr = sh.placedAt(
-                compObjByOffset(sh, obj, off.head));
-
+        const TObjId backLink = sh.ptrAt(sh.valByOffset(dup, off.next));
+        const TValId headAddr = sh.valByOffset(seg, off.head);
         sh.objSetValue(backLink, headAddr);
         CL_BREAK_IF(!dlSegCheckConsistency(sh));
     }
 
-    segSetMinLength(sh, aoDup, lenRemains);
+    segSetMinLength(sh, dup, lenRemains);
 
     LDP_PLOT(symabstract, sh);
 }

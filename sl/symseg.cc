@@ -56,7 +56,10 @@ TObjId dlSegPeer(const SymHeap &sh, TObjId dls) {
     return peer;
 }
 
-unsigned dlSegMinLength(const SymHeap &sh, TObjId dls) {
+unsigned dlSegMinLength(const SymHeap &sh, TValId dlsAt) {
+    // TODO: remove this
+    TObjId dls = const_cast<SymHeap &>(sh).objAt(dlsAt);
+
     // validate call of dlSegNotEmpty()
     CL_BREAK_IF(OK_DLS != objKind(sh, dls));
 
@@ -89,10 +92,10 @@ unsigned dlSegMinLength(const SymHeap &sh, TObjId dls) {
     return static_cast<unsigned>(ne);
 }
 
-unsigned segMinLength(const SymHeap &sh, TObjId seg) {
-    seg = objRoot(sh, seg);
+unsigned segMinLength(const SymHeap &sh, TValId seg) {
+    CL_BREAK_IF(sh.valOffset(seg));
 
-    const EObjKind kind = objKind(sh, seg);
+    const EObjKind kind = sh.valTargetKind(seg);
     switch (kind) {
         case OK_CONCRETE:
             CL_TRAP;
@@ -107,9 +110,9 @@ unsigned segMinLength(const SymHeap &sh, TObjId seg) {
             return dlSegMinLength(sh, seg);
     }
 
-    const TObjId next = nextPtrFromSeg(sh, seg);
+    const TObjId next = nextPtrFromSeg(/* XXX */const_cast<SymHeap &>(sh), seg);
     const TValId nextVal = sh.valueOf(next);
-    const TValId headAddr = segHeadAddr(sh, seg);
+    const TValId headAddr = segHeadAt(/* XXX */const_cast<SymHeap &>(sh), seg);
     return static_cast<unsigned>(sh.SymHeapCore::proveNeq(headAddr, nextVal));
 }
 
@@ -202,16 +205,16 @@ bool haveDlSegAt(const SymHeap &sh, TValId atAddr, TValId peerAddr) {
     return (segHeadAddr(sh, peer) == peerAddr);
 }
 
-void segHandleNeq(SymHeap &sh, TObjId seg, TObjId peer, SymHeap::ENeqOp op) {
+void segHandleNeq(SymHeap &sh, TValId seg, TValId peer, SymHeap::ENeqOp op) {
     const TObjId next = nextPtrFromSeg(sh, peer);
     const TValId valNext = sh.valueOf(next);
 
-    const TValId headAddr = segHeadAddr(sh, seg);
+    const TValId headAddr = segHeadAt(sh, seg);
     sh.neqOp(op, headAddr, valNext);
 }
 
-void dlSegSetMinLength(SymHeap &sh, TObjId dls, unsigned len) {
-    const TObjId peer = dlSegPeer(sh, dls);
+void dlSegSetMinLength(SymHeap &sh, TValId dls, unsigned len) {
+    const TValId peer = dlSegPeer(sh, dls);
     switch (len) {
         case 0:
             segHandleNeq(sh, dls, peer, SymHeap::NEQ_DEL);
@@ -227,15 +230,13 @@ void dlSegSetMinLength(SymHeap &sh, TObjId dls, unsigned len) {
     }
 
     // let it be DLS 2+
-    const TValId a1 = segHeadAddr(sh, dls);
-    const TValId a2 = segHeadAddr(sh, peer);
+    const TValId a1 = segHeadAt(sh, dls);
+    const TValId a2 = segHeadAt(sh, peer);
     sh.neqOp(SymHeap::NEQ_ADD, a1, a2);
 }
 
-void segSetMinLength(SymHeap &sh, TObjId seg, unsigned len) {
-    seg = objRoot(sh, seg);
-
-    const EObjKind kind = objKind(sh, seg);
+void segSetMinLength(SymHeap &sh, TValId seg, unsigned len) {
+    const EObjKind kind = sh.valTargetKind(seg);
     switch (kind) {
         case OK_SLS:
             segHandleNeq(sh, seg, seg, (len)

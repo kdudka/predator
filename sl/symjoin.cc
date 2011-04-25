@@ -1862,7 +1862,7 @@ void handleDstPreds(SymJoinCtx &ctx) {
     {
         const TObjId    seg = ref.first;
         const unsigned  len = ref.second;
-        segSetMinLength(ctx.dst, seg, len);
+        segSetMinLength(ctx.dst, ctx.dst.placedAt(seg), len);
     }
 
     // go through shared Neq predicates
@@ -2372,15 +2372,15 @@ void recoverPrototypes(
 
         if (objIsSeg(sh, protoDst))
             // remove Neq predicates, their targets are going to vanish soon
-            segSetMinLength(sh, protoDst, 0);
+            segSetMinLength(sh, sh.placedAt(protoDst), 0);
 
         if (bidir && objIsSeg(sh, protoSrc))
             // remove Neq predicates, their targets are going to vanish soon
-            segSetMinLength(sh, protoSrc, 0);
+            segSetMinLength(sh, sh.placedAt(protoSrc), 0);
 
         if (objIsSeg(sh, protoGhost))
             // temporarily remove Neq predicates
-            segSetMinLength(sh, protoGhost, 0);
+            segSetMinLength(sh, sh.placedAt(protoGhost), 0);
 
         redirectInboundEdges(sh,
                 /* pointingFrom */  protoGhost,
@@ -2407,7 +2407,7 @@ void restorePrototypeLengths(SymJoinCtx &ctx) {
 
         const unsigned len = it->second;
         if (len)
-            segSetMinLength(sh, protoDst, len);
+            segSetMinLength(sh, sh.placedAt(protoDst), len);
     }
 }
 
