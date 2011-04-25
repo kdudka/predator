@@ -66,6 +66,8 @@ set(clplug_incs "-I${sl_SOURCE_DIR}/../cl" "-I${sl_SOURCE_DIR}/../cl/gcc")
 set(clplug_incs ${clplug_incs} "-I${sl_SOURCE_DIR}/../include")
 set(clplug_incs ${clplug_incs} "-I${sl_SOURCE_DIR}/../include/gcc")
 
+option(TEST_ONLY_FAST "Set to OFF to boost test coverage" ON)
+
 set(examples
     0001 0002 0003 0004 0005 0006 0007 0008 0009 0010
     0011 0012 0013 0014 0015 0016 0017 0018 0019 0020
@@ -97,10 +99,13 @@ macro(test_sym_exec label tool arg1 arg2 arg3)
             -fplugin-arg-libsl-verbose=1)
     endforeach()
 endmacro()
-test_sym_exec("simple-test" ${GCC_HOST} "" "" "")
+if(TEST_ONLY_FAST)
+else()
+    test_sym_exec("smoke-test" ${GCC_HOST} "" "" "")
+endif()
 
 # FIXME: define this macro more generically, in particular the count of args
-macro(test_sym_exec_regre ext arg1)
+macro(test_sym_exec_regre name_suff ext arg1)
     foreach (num ${examples})
         set(cmd "LC_ALL=C ${GCC_HOST}")
 
@@ -133,12 +138,15 @@ macro(test_sym_exec_regre ext arg1)
         # ... and finally diff with the expected output
         set(cmd
             "${cmd} | diff -up ${sl_SOURCE_DIR}/data/test-${num}.err${ext} -")
-        add_test("regression-test___example-${num}${ext}" sh -c "${cmd}")
+        add_test("test-${num}.c${name_suff}" sh -c "${cmd}")
     endforeach()
 endmacro(test_sym_exec_regre)
 
-test_sym_exec_regre(".fast" "-fplugin-arg-libsl-args=fast")
-test_sym_exec_regre("" "")
+test_sym_exec_regre("" ".fast" "-fplugin-arg-libsl-args=fast")
+if(TEST_ONLY_FAST)
+else()
+    test_sym_exec_regre("-OOM" "" "")
+endif()
 
 if(TEST_WITH_VALGRIND)
     test_sym_exec("valgrind-test" valgrind
@@ -147,10 +155,13 @@ if(TEST_WITH_VALGRIND)
         ${GCC_HOST})
 endif()
 
-add_test("headers_sanity-0" gcc -ansi -Wall -Wextra -Werror -pedantic
-    -o /dev/null
-    -c ${sl_SOURCE_DIR}/config.h)
+if(TEST_ONLY_FAST)
+else()
+    add_test("headers_sanity-0" gcc -ansi -Wall -Wextra -Werror -pedantic
+        -o /dev/null
+        -c ${sl_SOURCE_DIR}/config.h)
 
-add_test("headers_sanity-1" make -j
-    -C ${sl_SOURCE_DIR}
-    -f ${sl_SOURCE_DIR}/Makefile.chk)
+    add_test("headers_sanity-1" make -j
+        -C ${sl_SOURCE_DIR}
+        -f ${sl_SOURCE_DIR}/Makefile.chk)
+endif()

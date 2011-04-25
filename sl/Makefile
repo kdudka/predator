@@ -53,7 +53,8 @@ distclean: clean
 	$(MAKE) distclean -C data -f Makefile.in
 
 distcheck: distclean
-	$(MAKE) check
+	$(MAKE) check CMAKE='cmake -D TEST_ONLY_FAST=OFF'
+	$(MAKE) all CMAKE='cmake -D TEST_ONLY_FAST=ON'
 
 install: all
 	$(MAKE) -C ../sl_build install
