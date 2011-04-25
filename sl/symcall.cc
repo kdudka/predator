@@ -112,7 +112,7 @@ void SymCallCtx::Private::assignReturnValue(SymHeap &sh) {
     SymProc proc(sh, &callerSiteBt);
     proc.setLocation(&op.loc);
 
-    const TObjId obj = proc.heapObjFromOperand(op);
+    const TObjId obj = proc.objByOperand(op);
     CL_BREAK_IF(OBJ_INVALID == obj);
 
     const TValId val = sh.valueOf(OBJ_RETURN);
@@ -398,7 +398,7 @@ void SymCallCache::Private::setCallArgs(const CodeStorage::TOperandList &opList)
 
         // read the given argument's value
         const struct cl_operand &op = opList[pos++];
-        const TValId val = srcProc.heapValFromOperand(op);
+        const TValId val = srcProc.valFromOperand(op);
         CL_BREAK_IF(VAL_INVALID == val);
 
         // set the value of lhs accordingly

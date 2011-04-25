@@ -251,7 +251,7 @@ void SymExecEngine::execReturn() {
         SymProc proc(heap, &bt_);
         proc.setLocation(lw_);
 
-        const TValId val = proc.heapValFromOperand(src);
+        const TValId val = proc.valFromOperand(src);
         CL_BREAK_IF(VAL_INVALID == val);
 
         heap.objDefineType(OBJ_RETURN, src.type);
@@ -352,8 +352,8 @@ void SymExecEngine::execCondInsn() {
 
     // compute the result of CL_INSN_BINOP
     const enum cl_binop_e code = static_cast<enum cl_binop_e>(insnCmp->subCode);
-    const TValId v1 = proc.heapValFromOperand(op1);
-    const TValId v2 = proc.heapValFromOperand(op2);
+    const TValId v1 = proc.valFromOperand(op1);
+    const TValId v2 = proc.valFromOperand(op2);
     const TValId val = compareValues(sh, code, cltSrc, v1, v2);
 
     // read targets
@@ -837,7 +837,7 @@ fail:
     if (CL_OPERAND_VOID != dst.code) {
         // set return value to unknown
         const TValId val = heap.valCreateUnknown(UV_UNKNOWN);
-        const TObjId obj = proc.heapObjFromOperand(dst);
+        const TObjId obj = proc.objByOperand(dst);
         proc.objSetValue(obj, val);
     }
 

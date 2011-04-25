@@ -47,6 +47,9 @@ inline bool operator!=(const struct cl_type &cltA, const struct cl_type &cltB) {
 /// return type of the @b target object that the pointer type can point to
 const struct cl_type* targetTypeOfPtr(const struct cl_type *clt);
 
+/// return type of the @b target object that the array type can point to
+const struct cl_type* targetTypeOfArray(const struct cl_type *clt);
+
 inline bool isComposite(const struct cl_type *clt) {
     if (!clt)
         return false;

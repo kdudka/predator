@@ -103,6 +103,14 @@ const struct cl_type* targetTypeOfPtr(const struct cl_type *clt) {
     return clt;
 }
 
+const struct cl_type* targetTypeOfArray(const struct cl_type *clt) {
+    CL_BREAK_IF(!clt || clt->code != CL_TYPE_ARRAY || clt->item_cnt != 1);
+
+    clt = clt->items[/* target */ 0].type;
+    CL_BREAK_IF(!clt);
+    return clt;
+}
+
 bool seekRefAccessor(const struct cl_accessor *ac) {
     for(; ac; ac = ac->next) {
         if (CL_ACCESSOR_REF != ac->code)

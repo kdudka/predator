@@ -199,7 +199,7 @@ bool initSingleVariable(SymHeap &sh, const TInitialItem &item) {
 
     // resolve initial value
     const struct cl_operand *op = initial->data.value;
-    const TValId val = proc.heapValFromOperand(*op);
+    const TValId val = proc.valFromOperand(*op);
     CL_DEBUG("using explicit initializer: obj #"
             << static_cast<int>(obj) << " <-- val #"
             << static_cast<int>(val));

@@ -82,7 +82,7 @@ bool readPlotName(std::string *dst, const TOpList opList,
 template <int NTH, class TOpList, class TProc>
 bool readHeapVal(TValId *dst, const TOpList opList, TProc &proc) {
     const cl_operand &op = opList[NTH + /* dst + fnc */ 2];
-    const TValId value = proc.heapValFromOperand(op);
+    const TValId value = proc.valFromOperand(op);
     if (value < 0)
         return false;
 
@@ -256,7 +256,7 @@ bool handleBuiltIn(SymState                     &dst,
         // set the returned value to a new unknown value
         CL_DEBUG_MSG(lw, "executing ___sl_get_nondet_int()");
         const struct cl_operand &opDst = opList[0];
-        const TObjId objDst = core.heapObjFromOperand(opDst);
+        const TObjId objDst = core.objByOperand(opDst);
         const TValId val = sh.valCreateUnknown(UV_UNKNOWN);
         core.objSetValue(objDst, val);
 

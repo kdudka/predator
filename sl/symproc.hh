@@ -44,7 +44,7 @@ bool describeCmpOp(
 TValId compareValues(
         SymHeap                     &sh,
         const enum cl_binop_e       code,
-        const struct cl_type        *clt,
+        const TObjType              clt,
         const TValId                v1,
         const TValId                v2);
 
@@ -86,10 +86,10 @@ class SymProc {
 
     public:
         /// obtain a heap object corresponding to the given operand
-        TObjId heapObjFromOperand(const struct cl_operand &op);
+        TObjId objByOperand(const struct cl_operand &op);
 
         /// obtain a heap value corresponding to the given operand
-        virtual TValId heapValFromOperand(const struct cl_operand &op);
+        virtual TValId valFromOperand(const struct cl_operand &op);
 
         /// resolve Fnc uid from the given opreand, -1 if there is no such Fnc
         int /* uid */ fncFromOperand(const struct cl_operand &op);
@@ -102,6 +102,10 @@ class SymProc {
 
         /// invalidate all variables that are killed by the given instruction
         void killInsn(const CodeStorage::Insn &);
+
+    protected:
+        TValId varAt(const struct cl_operand &op);
+        TValId targetAt(const struct cl_operand &op);
 
     private:
         void heapSetSingleVal(TObjId lhs, TValId rhs);
@@ -171,7 +175,7 @@ class SymExecCore: public SymProc {
         bool exec(SymState &dst, const CodeStorage::Insn &insn);
 
         /// overridden in order to handle SymExecCoreParams::invCompatMode
-        virtual TValId heapValFromOperand(const struct cl_operand &op);
+        virtual TValId valFromOperand(const struct cl_operand &op);
 
     private:
         bool lhsFromOperand(TObjId *pObj, const struct cl_operand &op);
