@@ -153,6 +153,7 @@ struct SymPlot::Private {
     void gobbleEdgeNeq(TValId val1, TValId val2);
     void gobbleEdgeAlias(TValId val1, TValId val2);
     void emitPendingEdges();
+    void traverseNeqs(TValId value);
 
     void plotSingleValue(TValId value);
     void plotZeroValue(TObjId obj);
@@ -468,6 +469,25 @@ void SymPlot::Private::emitPendingEdges() {
     this->neqSet.clear();
 }
 
+// traverse all Neq predicates
+void SymPlot::Private::traverseNeqs(TValId ref) {
+    TValList relatedVals;
+    this->heap->gatherRelatedValues(relatedVals, ref);
+    BOOST_FOREACH(TValId val, relatedVals) {
+        CL_BREAK_IF(val < 0);
+        CL_BREAK_IF(!this->heap->SymHeapCore::proveNeq(ref, val));
+        if (VAL_NULL == val) {
+            // 'value' is said to be non-zero
+            this->plotNeqZero(ref);
+            continue;
+        }
+
+        // regular Neq predicate
+        this->workList.schedule(val);
+        this->gobbleEdgeNeq(ref, val);
+    }
+}
+
 void SymPlot::Private::plotSingleValue(TValId value) {
     if (value <= 0) {
         this->plotNodeValue(value, CL_TYPE_UNKNOWN, 0);
@@ -489,29 +509,9 @@ void SymPlot::Private::plotSingleValue(TValId value) {
     }
 #endif
 
-    // traverse all Neq predicates
-    TValList relatedVals;
-    this->heap->gatherRelatedValues(relatedVals, value);
-    BOOST_FOREACH(TValId peer, relatedVals) {
-        if (0 < peer)
-            this->workList.schedule(peer);
-
-        if (this->heap->SymHeapCore::proveNeq(value, peer)) {
-            if (VAL_NULL == peer) {
-                // 'value' is said to be non-zero
-                this->plotNeqZero(value);
-                continue;
-            }
-            else if (VAL_NULL < peer) {
-                // regular Neq predicate
-                this->gobbleEdgeNeq(value, peer);
-                continue;
-            }
-        }
-
-        CL_WARN("SymPlot: unhandled predicate over values #"
-                << value << " and #" << peer);
-    }
+    this->traverseNeqs(value);
+    if (this->heap->valOffset(value))
+        this->traverseNeqs(this->heap->valRoot(value));
 
     const struct cl_type *clt = 0;
     const TObjId target = this->heap->pointsTo(value);

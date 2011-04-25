@@ -291,6 +291,7 @@ struct SymHeapCore::Private {
 
     TObjId rootLookup(TValId val);
     bool gridLookup(TObjId *pFailCode, const TObjByType **pRow, const TValId);
+    void neqOpWrap(SymHeap::ENeqOp, TValId, TValId);
 };
 
 inline TValId SymHeapCore::Private::lastValId() {
@@ -423,6 +424,8 @@ TValId SymHeapCore::Private::valCreate(EUnknownValue code, TObjId target) {
 TValId SymHeapCore::valueOf(TObjId obj) const {
     // handle special cases first
     switch (obj) {
+        case OBJ_UNKNOWN:
+            // not implemented
         case OBJ_INVALID:
             return VAL_INVALID;
 
@@ -430,10 +433,6 @@ TValId SymHeapCore::valueOf(TObjId obj) const {
         case OBJ_DELETED:
         case OBJ_DEREF_FAILED:
             return VAL_DEREF_FAILED;
-
-        case OBJ_UNKNOWN:
-            // not implemented
-            CL_TRAP;
 
         default:
             break;
@@ -928,47 +927,56 @@ TOffset SymHeapCore::valOffset(TValId val) const {
 }
 
 /// change value of all variables with value val to (fresh) newval
-void SymHeapCore::valReplace(TValId val, TValId newVal) {
+void SymHeapCore::valReplace(TValId val, TValId replaceBy) {
+    CL_BREAK_IF(val <= 0);
+
     // collect objects having the value val
     TObjList rlist;
     this->usedBy(rlist, val);
 
     // go through the list and replace the value by newval
     BOOST_FOREACH(const TObjId obj, rlist) {
-        this->objSetValue(obj, newVal);
+        this->objSetValue(obj, replaceBy);
     }
 
     // kill Neq predicate among the pair of values (if any)
-    SymHeapCore::neqOp(NEQ_DEL, val, newVal);
+    SymHeapCore::neqOp(NEQ_DEL, val, replaceBy);
 
     // reflect the change in NeqDb
     TValList neqs;
     d->neqDb.gatherRelatedValues(neqs, val);
-    BOOST_FOREACH(const TValId neq, neqs) {
-        d->neqDb.del(val, neq);
-        d->neqDb.add(newVal, neq);
+    BOOST_FOREACH(const TValId valNeq, neqs) {
+        SymHeapCore::neqOp(NEQ_DEL, valNeq, val);
+        SymHeapCore::neqOp(NEQ_ADD, valNeq, replaceBy);
     }
-#ifndef NDEBUG
-    // make sure we didn't create any dangling predicates
-    TValList related;
-    this->gatherRelatedValues(related, val);
-    CL_BREAK_IF(!related.empty());
-#endif
 }
 
-void SymHeapCore::neqOp(ENeqOp op, TValId valA, TValId valB) {
+void SymHeapCore::Private::neqOpWrap(ENeqOp op, TValId valA, TValId valB) {
     switch (op) {
         case NEQ_NOP:
             return;
 
         case NEQ_ADD:
-            d->neqDb.add(valA, valB);
+            this->neqDb.add(valA, valB);
             return;
 
         case NEQ_DEL:
-            d->neqDb.del(valA, valB);
+            this->neqDb.del(valA, valB);
             return;
     }
+}
+
+void SymHeapCore::neqOp(ENeqOp op, TValId valA, TValId valB) {
+    d->neqOpWrap(op, valA, valB);
+
+    const TOffset off = this->valOffset(valA);
+    if (!off || off != this->valOffset(valB))
+        return;
+
+    // if both values have the same non-zero offset, connect also the roots
+    valA = this->valRoot(valA);
+    valB = this->valRoot(valB);
+    d->neqOpWrap(op, valA, valB);
 }
 
 void SymHeapCore::gatherRelatedValues(TValList &dst, TValId val) const {
@@ -1707,12 +1715,22 @@ bool SymHeapCore::proveNeq(TValId valA, TValId valB) const {
 
     const TValId root1 = d->valRoot(valA);
     const TValId root2 = d->valRoot(valB);
-    if (root1 != root2)
+    if (root1 == root2) {
+        CL_BREAK_IF("not tested");
+        return true;
+    }
+
+    const TOffset off = this->valOffset(valA);
+    if (!off)
         // roots differ
         return false;
 
-    CL_BREAK_IF("not tested");
-    return true;
+    if (off != this->valOffset(valB))
+        // offsets differ
+        return false;
+
+    // check for Neq between the roots
+    return d->neqDb.areNeq(root1, root2);
 }
 
 bool SymHeap::proveNeq(TValId ref, TValId val) const {
