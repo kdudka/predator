@@ -140,7 +140,7 @@
  * if more than zero, jump to debugger as soon as N graph of the same name has
  * been plotted
  */
-#define SYMPLOT_STOP_AFTER_N_STATES         0x40
+#define SYMPLOT_STOP_AFTER_N_STATES         0
 
 #if 0
 #define SYMPLOT_STOP_CONDITION(name) \

@@ -189,6 +189,57 @@ struct SymJoinCtx {
     }
 };
 
+/// handy when debugging
+void dump_ctx(const SymJoinCtx &ctx) {
+    using std::cout;
+
+    // plot heaps
+    if (!ctx.joiningDataReadWrite()) {
+        cout << "    plotting ctx.sh1...\n";
+        dump_plot(ctx.sh1);
+    }
+    if (!ctx.joiningData()) {
+        cout << "    plotting ctx.sh2...\n";
+        dump_plot(ctx.sh2);
+    }
+    cout << "    plotting ctx.dst...\n";
+    dump_plot(ctx.dst);
+
+    // print entry-point
+    cout << "\ndump_ctx: ";
+    if (ctx.joiningDataReadWrite())
+        cout << "joinData()\n";
+    else if (ctx.joiningData())
+        cout << "joinDataReadOnly()\n";
+    else
+        cout << "joinSymHeaps()\n";
+
+    // summarize mapping
+    cout << "    ctx.objMap1        .size() = " << ctx.objMap1.size() << "\n";
+    cout << "    ctx.objMap2        .size() = " << ctx.objMap2.size() << "\n\n";
+    cout << "    ctx.valMap1[0]     .size() = " << ctx.valMap1[0].size()
+        << "\n";
+    cout << "    ctx.valMap2[0]     .size() = " << ctx.valMap2[0].size()
+        << "\n\n";
+
+    // sumarize aux containers
+    cout << "    ctx.segLengths     .size() = " << ctx.segLengths.size()
+        << "\n";
+    cout << "    ctx.sharedNeqs     .size() = " << ctx.sharedNeqs.size()
+        << "\n";
+    cout << "    ctx.alreadyJoined  .size() = " << ctx.alreadyJoined.size()
+        << "\n";
+    cout << "    ctx.protoRoots     .size() = " << ctx.protoRoots.size()
+        << "\n\n";
+
+    // print queue stats
+    cout << "    ctx.wl          .cntSeen() = " << ctx.wl.cntSeen() << "\n";
+    cout << "    ctx.wl          .cntTodo() = " << ctx.wl.cntTodo() << "\n\n";
+
+    // print the current status
+    cout << "    ctx.status = " << ctx.status << "\n";
+}
+
 /// update ctx.status according to action
 bool updateJoinStatus(SymJoinCtx &ctx, const EJoinStatus action) {
     if (JS_USE_ANY == action)

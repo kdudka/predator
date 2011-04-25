@@ -65,6 +65,9 @@ class WorkList {
         bool schedule(const T1 &i1, const T2 &i2) {
             return this->schedule(T(i1, i2));
         }
+
+        unsigned cntSeen() const { return done_.size(); }
+        unsigned cntTodo() const { return todo_.size(); }
 };
 
 #endif /* H_GUARD_WORKLIST_H */
