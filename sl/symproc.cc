@@ -73,15 +73,15 @@ TValId SymProc::heapValFromCst(const struct cl_operand &op) {
                     return VAL_NULL;
 
                 // create a new unknown non-NULL value
-                TValId val = heap_.valCreateUnknown(UV_UNKNOWN);
-                heap_.neqOp(SymHeap::NEQ_ADD, val, VAL_NULL);
+                TValId val = sh_.valCreateUnknown(UV_UNKNOWN);
+                sh_.neqOp(SymHeap::NEQ_ADD, val, VAL_NULL);
                 return val;
             }
 
         case CL_TYPE_FNC: {
             // wrap fnc uid as SymHeap value
             const int uid = cst.data.cst_fnc.uid;
-            return heap_.valCreateCustom(uid);
+            return sh_.valCreateCustom(uid);
         }
 
         case CL_TYPE_STRING:
@@ -89,7 +89,7 @@ TValId SymProc::heapValFromCst(const struct cl_operand &op) {
             // fall through!
 
         default:
-            return heap_.valCreateUnknown(UV_UNKNOWN);
+            return sh_.valCreateUnknown(UV_UNKNOWN);
     }
 }
 
@@ -140,7 +140,7 @@ bool SymProc::checkForInvalidDeref(TValId val, TObjType cltTarget) {
     }
 
     // do we really know the value?
-    const EUnknownValue code = heap_.valGetUnknown(val);
+    const EUnknownValue code = sh_.valGetUnknown(val);
     switch (code) {
         case UV_ABSTRACT:
         case UV_UNKNOWN:
@@ -160,15 +160,15 @@ bool SymProc::checkForInvalidDeref(TValId val, TObjType cltTarget) {
 
     if (!cltTarget)
         // no type-info, check that there is at least _some_ target
-        return this->checkForInvalidDeref(heap_.objAt(val));
+        return this->checkForInvalidDeref(sh_.objAt(val));
 
     else if (isDataPtr(cltTarget))
         // check if there is _any_ data pointer at that address
-        return this->checkForInvalidDeref(heap_.ptrAt(val));
+        return this->checkForInvalidDeref(sh_.ptrAt(val));
 
     else
         // mach the type of target object
-        return this->checkForInvalidDeref(heap_.objAt(val, cltTarget));
+        return this->checkForInvalidDeref(sh_.objAt(val, cltTarget));
 }
 
 TObjId varFromOperand(
@@ -211,7 +211,7 @@ TOffset offItem(const struct cl_accessor *ac) {
 
 TObjId SymProc::heapObjFromOperand(const struct cl_operand &op) {
     // resolve program variable
-    TObjId var = varFromOperand(op, heap_, bt_);
+    TObjId var = varFromOperand(op, sh_, bt_);
     CL_BREAK_IF(OBJ_INVALID == var);
     if (var < 0)
         // we're already on an error path
@@ -261,21 +261,21 @@ TObjId SymProc::heapObjFromOperand(const struct cl_operand &op) {
         : op.type;
 
     // start with the address of the variable
-    TValId at = heap_.placedAt(var);
+    TValId at = sh_.placedAt(var);
 
     if (isDeref)
         // read the value inside the pointer
-        at = heap_.valueOf(heap_.ptrAt(at));
+        at = sh_.valueOf(sh_.ptrAt(at));
 
     // apply the offset
-    at = heap_.valByOffset(at, off);
+    at = sh_.valByOffset(at, off);
 
     if (isDeref && this->checkForInvalidDeref(at, cltTarget))
         return OBJ_DEREF_FAILED;
 
     return (isRef)
-        ? heap_.objAt(at)
-        : heap_.objAt(at, cltTarget);
+        ? sh_.objAt(at)
+        : sh_.objAt(at, cltTarget);
 }
 
 TValId SymProc::heapValFromObj(const struct cl_operand &op) {
@@ -286,7 +286,7 @@ TValId SymProc::heapValFromObj(const struct cl_operand &op) {
             return VAL_INVALID;
 
         case OBJ_UNKNOWN:
-            return heap_.valCreateUnknown(UV_UNKNOWN);
+            return sh_.valCreateUnknown(UV_UNKNOWN);
 
         case OBJ_DELETED:
         case OBJ_DEREF_FAILED:
@@ -300,8 +300,8 @@ TValId SymProc::heapValFromObj(const struct cl_operand &op) {
 
     // handle CL_ACCESSOR_REF if any
     return (seekRefAccessor(op.accessor))
-        ? heap_.placedAt(obj)
-        : heap_.valueOf(obj);
+        ? sh_.placedAt(obj)
+        : sh_.valueOf(obj);
 }
 
 TValId SymProc::heapValFromOperand(const struct cl_operand &op) {
@@ -337,15 +337,15 @@ int /* uid */ SymProc::fncFromOperand(const struct cl_operand &op) {
             CL_TRAP;
 
         // obtain the inner content of the custom value
-        return heap_.valGetCustom(val);
+        return sh_.valGetCustom(val);
     }
 }
 
 void SymProc::heapObjDefineType(TObjId lhs, TValId rhs) {
-    const TObjId var = heap_.pointsTo(rhs);
+    const TObjId var = sh_.pointsTo(rhs);
     CL_BREAK_IF(OBJ_INVALID == var);
 
-    const struct cl_type *clt = heap_.objType(lhs);
+    const struct cl_type *clt = sh_.objType(lhs);
     if (!clt)
         return;
 
@@ -356,7 +356,7 @@ void SymProc::heapObjDefineType(TObjId lhs, TValId rhs) {
         return;
 
     // anonymous objects of zero size are not allowed
-    const int cbGot = heap_.valSizeOfTarget(rhs);
+    const int cbGot = sh_.valSizeOfTarget(rhs);
     CL_BREAK_IF(!cbGot);
 
     const int cbNeed = clt->size;
@@ -372,23 +372,23 @@ void SymProc::heapObjDefineType(TObjId lhs, TValId rhs) {
         CL_NOTE_MSG(lw_, " expected: " << cbNeed << " bytes");
     }
 
-    heap_.objDefineType(var, clt);
+    sh_.objDefineType(var, clt);
 }
 
 void SymProc::heapSetSingleVal(TObjId lhs, TValId rhs) {
     // save the old value, which is going to be overwritten
-    const TValId oldValue = heap_.valueOf(lhs);
+    const TValId oldValue = sh_.valueOf(lhs);
     CL_BREAK_IF(VAL_INVALID == oldValue);
 
     if (0 < rhs) {
-        const TObjId target = heap_.pointsTo(rhs);
-        if (0 < target && !heap_.objType(target))
+        const TObjId target = sh_.pointsTo(rhs);
+        if (0 < target && !sh_.objType(target))
             // anonymous object is going to be specified by a type
             this->heapObjDefineType(lhs, rhs);
     }
 
-    heap_.objSetValue(lhs, rhs);
-    if (collectJunk(heap_, oldValue, lw_))
+    sh_.objSetValue(lhs, rhs);
+    if (collectJunk(sh_, oldValue, lw_))
         bt_->printBackTrace();
 }
 
@@ -456,33 +456,33 @@ class ValueMirror {
 void SymProc::objSetValue(TObjId lhs, TValId rhs) {
     // seek all surrounding unions on the way to root (if any)
     TObjId parent, obj = lhs;
-    for (; OBJ_INVALID != (parent = heap_.objParent(obj)); obj = parent) {
-        const struct cl_type *clt = heap_.objType(parent);
+    for (; OBJ_INVALID != (parent = sh_.objParent(obj)); obj = parent) {
+        const struct cl_type *clt = sh_.objType(parent);
         if (!clt || clt->code != CL_TYPE_UNION)
             continue;
 
         // invalidate all siblings within the surrounding union
         UnionInvalidator visitor(this, obj);
-        traverseSubObjs(heap_, parent, visitor, /* leavesOnly */ true);
+        traverseSubObjs(sh_, parent, visitor, /* leavesOnly */ true);
     }
 
     // FIXME: handle some other special values also this way?
     if (VAL_DEREF_FAILED == rhs) {
         // we're already on an error path
-        const struct cl_type *clt = heap_.objType(lhs);
+        const struct cl_type *clt = sh_.objType(lhs);
         if (!clt || clt->code != CL_TYPE_STRUCT) {
-            heap_.objSetValue(lhs, rhs);
+            sh_.objSetValue(lhs, rhs);
             return;
         }
 
         // fill values of all sub-objects by 'rhs'
         ValueWriter writer(this, rhs);
-        traverseSubObjs(heap_, lhs, writer, /* leavesOnly */ true);
+        traverseSubObjs(sh_, lhs, writer, /* leavesOnly */ true);
         return;
     }
 
     // FIXME: this doesn't work well if we get UV_UNKNOWN of type CL_TYPE_STRUCT
-    const TObjId rObj = heap_.valGetCompositeObj(rhs);
+    const TObjId rObj = sh_.valGetCompositeObj(rhs);
     if (OBJ_INVALID == rObj) {
         // non-composite value
         this->heapSetSingleVal(lhs, rhs);
@@ -492,25 +492,25 @@ void SymProc::objSetValue(TObjId lhs, TValId rhs) {
     // DFS for composite types
     const TObjPair item(lhs, rObj);
     const ValueMirror mirror(this);
-    traverseSubObjs(heap_, item, mirror, /* leavesOnly */ true);
+    traverseSubObjs(sh_, item, mirror, /* leavesOnly */ true);
 }
 
 void SymProc::objDestroy(TObjId obj) {
     // gather potentialy destroyed pointer sub-values
     std::vector<TValId> ptrs;
-    getPtrValues(ptrs, heap_, obj);
+    getPtrValues(ptrs, sh_, obj);
 
     // destroy object recursively
-    const TValId addr = heap_.placedAt(obj);
+    const TValId addr = sh_.placedAt(obj);
     if (0 < addr)
-        heap_.valDestroyTarget(addr);
+        sh_.valDestroyTarget(addr);
     else
         CL_BREAK_IF("attempt to destroy an invalid object");
 
     // now check for JUNK
     bool junk = false;
     BOOST_FOREACH(TValId val, ptrs) {
-        if (collectJunk(heap_, val, lw_))
+        if (collectJunk(sh_, val, lw_))
             junk = true;
     }
 
@@ -520,12 +520,12 @@ void SymProc::objDestroy(TObjId obj) {
 }
 
 void SymProc::killVar(const struct cl_operand &op) {
-    const CodeStorage::Storage &stor = heap_.stor();
+    const CodeStorage::Storage &stor = sh_.stor();
     const int uid = varIdFromOperand(&op);
     CL_DEBUG_MSG(lw_, "FFF SymExecCore::killVar() destroys stack variable "
             << varTostring(stor, uid));
 
-    const TObjId obj = varFromOperand(op, heap_, bt_);
+    const TObjId obj = varFromOperand(op, sh_, bt_);
     this->objDestroy(obj);
 }
 
@@ -558,7 +558,7 @@ TValId SymExecCore::heapValFromOperand(const struct cl_operand &op) {
         // &nondet and __nodet should pass this check (ugly)
         CL_BREAK_IF(op.accessor && op.accessor->code != CL_ACCESSOR_REF);
 
-        return heap_.valCreateUnknown(UV_UNKNOWN);
+        return sh_.valCreateUnknown(UV_UNKNOWN);
     }
 
 no_nasty_assumptions:
@@ -587,7 +587,7 @@ bool SymExecCore::lhsFromOperand(TObjId *pObj, const struct cl_operand &op) {
 }
 
 void SymExecCore::execFreeCore(const TValId val) {
-    const EUnknownValue code = heap_.valGetUnknown(val);
+    const EUnknownValue code = sh_.valGetUnknown(val);
     switch (code) {
         case UV_ABSTRACT:
             CL_TRAP;
@@ -608,7 +608,7 @@ void SymExecCore::execFreeCore(const TValId val) {
             return;
     }
 
-    const TObjId obj = heap_.pointsTo(val);
+    const TObjId obj = sh_.pointsTo(val);
     switch (obj) {
         case OBJ_DELETED:
             CL_ERROR_MSG(lw_, "double free() detected");
@@ -630,15 +630,15 @@ void SymExecCore::execFreeCore(const TValId val) {
             break;
     }
 
-    if (heap_.valOffset(val)) {
+    if (sh_.valOffset(val)) {
         CL_ERROR_MSG(lw_, "attempt to free a non-root object");
         bt_->printBackTrace();
         return;
     }
 
-    if (SymHeap::isProgramVar(heap_.valTarget(val))) {
-        CVar cv = heap_.cVarByRoot(val);
-        CL_DEBUG("about to free var " << varTostring(heap_.stor(), cv.uid));
+    if (SymHeap::isProgramVar(sh_.valTarget(val))) {
+        CVar cv = sh_.cVarByRoot(val);
+        CL_DEBUG("about to free var " << varTostring(sh_.stor(), cv.uid));
         CL_ERROR_MSG(lw_, "attempt to free a non-heap object");
         bt_->printBackTrace();
         return;
@@ -690,20 +690,20 @@ void SymExecCore::execMalloc(SymState                           &state,
     CL_DEBUG_MSG(lw_, "executing malloc(" << cbAmount << ")");
 
     // now create a heap object
-    const TValId val = heap_.heapAlloc(cbAmount);
+    const TValId val = sh_.heapAlloc(cbAmount);
     CL_BREAK_IF(val <= 0);
 
     if (!ep_.fastMode) {
         // OOM state simulation
         this->objSetValue(varLhs, VAL_NULL);
         this->killInsn(insn);
-        state.insert(heap_);
+        state.insert(sh_);
     }
 
     // store the result of malloc
     this->objSetValue(varLhs, val);
     this->killInsn(insn);
-    state.insert(heap_);
+    state.insert(sh_);
 }
 
 bool SymExecCore::execCall(SymState &dst, const CodeStorage::Insn &insn) {
@@ -731,7 +731,7 @@ bool SymExecCore::execCall(SymState &dst, const CodeStorage::Insn &insn) {
     if (STREQ(fncName, "free")) {
         this->execFree(opList);
         this->killInsn(insn);
-        dst.insert(heap_);
+        dst.insert(sh_);
         return true;
     }
 
@@ -861,7 +861,7 @@ struct OpHandler</* unary */ 1> {
             const TValId            rhs[1],
             const struct cl_type    *clt[1 + /* dst type */ 1])
     {
-        SymHeap &sh = proc.heap_;
+        SymHeap &sh = proc.sh_;
         const TValId val = rhs[0];
 
         const enum cl_unop_e code = static_cast<enum cl_unop_e>(iCode);
@@ -889,7 +889,7 @@ struct OpHandler</* binary */ 2> {
             const struct cl_type    *clt[2 + /* dst type */ 1])
     {
         CL_BREAK_IF(!clt[0] || !clt[1] || !clt[2]);
-        SymHeap &sh = proc.heap_;
+        SymHeap &sh = proc.sh_;
 
         const enum cl_binop_e code = static_cast<enum cl_binop_e>(iCode);
         switch (code) {
@@ -943,7 +943,7 @@ void SymExecCore::execOp(const CodeStorage::Insn &insn) {
             == static_cast<enum cl_binop_e>(insn.subCode))
     {
         // handle pointer plus
-        valResult = handlePointerPlus(heap_, clt[/* dst type */ ARITY],
+        valResult = handlePointerPlus(sh_, clt[/* dst type */ ARITY],
                                       rhs[0], opList[/* src2 */ 2], &insn.loc);
     }
     else
@@ -963,7 +963,7 @@ bool SymExecCore::concretizeLoop(SymState                       &dst,
     bool hit = false;
 
     TSymHeapList todo;
-    todo.push_back(heap_);
+    todo.push_back(sh_);
     while (!todo.empty()) {
         SymHeap &sh = todo.front();
         SymExecCore core(sh, bt_, ep_);
@@ -1076,9 +1076,9 @@ bool SymExecCore::execCore(
 
     if (feelFreeToOverwrite)
         // aggressive optimization
-        dst.insertFast(heap_);
+        dst.insertFast(sh_);
     else
-        dst.insert(heap_);
+        dst.insert(sh_);
 
     return true;
 }

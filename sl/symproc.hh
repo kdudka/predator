@@ -61,7 +61,7 @@ class SymProc {
          * necessary/suitable
          */
         SymProc(SymHeap &heap, const SymBackTrace *bt):
-            heap_(heap),
+            sh_(heap),
             bt_(bt),
             lw_(0)
         {
@@ -70,9 +70,9 @@ class SymProc {
         // FIXME: class SymProc should not have any virtual methods
         virtual ~SymProc() { }
 
-        SymHeap&                    sh() { return heap_; }
-        const SymBackTrace*         bt() { return bt_;   }
-        const struct cl_loc*        lw() { return lw_;   }
+        SymHeap&                    sh() { return sh_; }
+        const SymBackTrace*         bt() { return bt_; }
+        const struct cl_loc*        lw() { return lw_; }
 
         /**
          * update location info
@@ -113,7 +113,7 @@ class SymProc {
         void killVar(const struct cl_operand &op);
 
     protected:
-        SymHeap                     &heap_;     ///< heap to operate on
+        SymHeap                     &sh_;
         const SymBackTrace          *bt_;
         const struct cl_loc         *lw_;
 
