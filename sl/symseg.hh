@@ -58,11 +58,30 @@ TObjId peerPtrFromSeg(const SymHeap &sh, TObjId seg);
 TObjId dlSegPeer(const SymHeap &sh, TObjId dls);
 
 /// return DLS peer object of the given DLS
+inline TObjId nextPtrFromSeg(SymHeap &sh, TValId seg) {
+    CL_BREAK_IF(sh.valOffset(seg));
+    CL_BREAK_IF(VT_ABSTRACT != sh.valTarget(seg));
+
+    const BindingOff &off = sh.segBinding(seg);
+    const TValId addr = sh.valByOffset(seg, off.next);
+    return sh.ptrAt(addr);
+}
+
+/// return DLS peer object of the given DLS
 inline TValId dlSegPeer(SymHeap &sh, TValId dls) {
     CL_BREAK_IF(OK_DLS != sh.valTargetKind(dls));
     const BindingOff &off = sh.segBinding(dls);
     const TObjId ptr = sh.ptrAt(sh.valByOffset(dls, off.prev));
     return sh.valRoot(sh.valueOf(ptr));
+}
+
+/// return address of segment's head (useful mainly for Linux lists)
+inline TValId segHeadAt(SymHeap &sh, TValId seg) {
+    CL_BREAK_IF(sh.valOffset(seg));
+    CL_BREAK_IF(VT_ABSTRACT != sh.valTarget(seg));
+
+    const BindingOff &off = sh.segBinding(seg);
+    return sh.valByOffset(seg, off.head);
 }
 
 /// return lower estimation of DLS length

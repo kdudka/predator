@@ -550,7 +550,7 @@ class SymHeap: public SymHeapCore {
         virtual TValId valClone(TValId);
 
     private:
-        void dlSegCrossNeqOp(ENeqOp op, TValId headAddr);
+        void dlSegCrossNeqOp(ENeqOp op, TValId seg);
 
     private:
         struct Private;

@@ -1639,27 +1639,22 @@ void SymHeap::valMerge(TValId v1, TValId v2) {
     CL_DEBUG("failed to splice-out list segment, has to over-approximate");
 }
 
-void SymHeap::dlSegCrossNeqOp(ENeqOp op, TValId headAddr1) {
-    const TObjId head1 = this->objAt(headAddr1);
-    const TObjId seg1 = objRoot(*this, head1);
-    const TObjId seg2 = dlSegPeer(*this, seg1);
-    const TValId headAddr2 = segHeadAddr(*this, seg2);
-
-    // dig pointer-to-next objects
-    const TObjId next1 = nextPtrFromSeg(*this, seg1);
-    const TObjId next2 = nextPtrFromSeg(*this, seg2);
+void SymHeap::dlSegCrossNeqOp(ENeqOp op, TValId seg1) {
+    // seek roots
+    seg1 = this->valRoot(seg1);
+    TValId seg2 = dlSegPeer(*this, seg1);
 
     // read the values (addresses of the surround)
-    const TValId val1 = this->valueOf(next1);
-    const TValId val2 = this->valueOf(next2);
+    const TValId val1 = this->valueOf(nextPtrFromSeg(*this, seg1));
+    const TValId val2 = this->valueOf(nextPtrFromSeg(*this, seg2));
 
     // add/del Neq predicates
-    SymHeapCore::neqOp(op, val1, headAddr2);
-    SymHeapCore::neqOp(op, val2, headAddr1);
+    SymHeapCore::neqOp(op, val1, segHeadAt(*this, seg2));
+    SymHeapCore::neqOp(op, val2, segHeadAt(*this, seg1));
 
     if (NEQ_DEL == op)
         // removing the 1+ flag implies removal of the 2+ flag
-        SymHeapCore::neqOp(NEQ_DEL, headAddr1, headAddr2);
+        SymHeapCore::neqOp(NEQ_DEL, seg1, seg2);
 }
 
 void SymHeap::neqOp(ENeqOp op, TValId valA, TValId valB) {
