@@ -69,10 +69,20 @@ inline TObjId nextPtrFromSeg(SymHeap &sh, TValId seg) {
 
 /// return DLS peer object of the given DLS
 inline TValId dlSegPeer(SymHeap &sh, TValId dls) {
+    CL_BREAK_IF(sh.valOffset(dls));
     CL_BREAK_IF(OK_DLS != sh.valTargetKind(dls));
     const BindingOff &off = sh.segBinding(dls);
     const TObjId ptr = sh.ptrAt(sh.valByOffset(dls, off.prev));
     return sh.valRoot(sh.valueOf(ptr));
+}
+
+/// return DLS peer object in case of DLS, the given value otherwise
+inline TValId segPeer(SymHeap &sh, TValId seg) {
+    CL_BREAK_IF(sh.valOffset(seg));
+    CL_BREAK_IF(!SymHeap::isAbstract(sh.valTarget(seg)));
+    return (OK_DLS == sh.valTargetKind(seg))
+        ? dlSegPeer(sh, seg)
+        : seg;
 }
 
 /// return address of segment's head (useful mainly for Linux lists)

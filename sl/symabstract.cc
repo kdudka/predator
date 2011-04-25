@@ -700,7 +700,11 @@ void segReplaceRefs(SymHeap &sh, TObjId seg, TValId valNext) {
     }
 }
 
-bool dlSegReplaceByConcrete(SymHeap &sh, TObjId obj, TObjId peer) {
+void dlSegReplaceByConcrete(SymHeap &sh, TValId objAt, TValId peerAt) {
+    // TODO: remove this
+    TObjId obj = sh.objAt(objAt);
+    TObjId peer = sh.objAt(peerAt);
+
     LDP_INIT(symabstract, "dlSegReplaceByConcrete");
     LDP_PLOT(symabstract, sh);
     CL_BREAK_IF(!dlSegCheckConsistency(sh));
@@ -730,10 +734,13 @@ bool dlSegReplaceByConcrete(SymHeap &sh, TObjId obj, TObjId peer) {
     // this can't fail (at least I hope so...)
     LDP_PLOT(symabstract, sh);
     CL_BREAK_IF(!dlSegCheckConsistency(sh));
-    return true;
 }
 
-void spliceOutListSegmentCore(SymHeap &sh, TObjId seg, TObjId peer) {
+void spliceOutListSegmentCore(SymHeap &sh, TValId segAddr, TValId peerAddr) {
+    // TODO: remove this
+    TObjId seg = sh.objAt(segAddr);
+    TObjId peer = sh.objAt(peerAddr);
+
     LDP_INIT(symabstract, "spliceOutListSegmentCore");
     LDP_PLOT(symabstract, sh);
 
@@ -783,7 +790,7 @@ unsigned /* len */ spliceOutSegmentIfNeeded(SymHeap &sh, TObjId ao, TObjId peer,
 
     // possibly empty LS
     SymHeap sh0(sh);
-    spliceOutListSegmentCore(sh0, ao, peer);
+    spliceOutListSegmentCore(sh0, sh0.placedAt(ao), sh0.placedAt(peer));
     todo.push_back(sh0);
     return /* LS 0+ */ 0;
 }
@@ -877,28 +884,23 @@ void concretizeObj(SymHeap &sh, TValId addr, TSymHeapList &todo) {
     LDP_PLOT(symabstract, sh);
 }
 
-bool spliceOutListSegment(SymHeap &sh, TValId atAddr, TValId pointingTo)
-{
-    const TObjId obj = objRootByVal(sh, atAddr);
-    const EObjKind kind = objKind(sh, obj);
-    const TObjId peer = (OK_DLS == kind)
-        ? dlSegPeer(sh, obj)
-        : obj;
+bool spliceOutListSegment(SymHeap &sh, TValId atAddr, TValId pointingTo) {
+    const TValId seg = sh.valRoot(atAddr);
+    const TValId peer = segPeer(sh, seg);
 
-    if (OK_DLS == objKind(sh, obj)) {
-        CL_BREAK_IF(!dlSegCheckConsistency(sh));
-
-        const TObjId peer = dlSegPeer(sh, obj);
-        if (sh.placedAt(peer) == pointingTo)
-            // assume identity over the two parts of DLS
-            return dlSegReplaceByConcrete(sh, obj, peer);
+    if (pointingTo == peer && peer != seg) {
+        // assume identity over the two parts of a DLS
+        dlSegReplaceByConcrete(sh, seg, peer);
+        return true;
     }
 
-    const TObjId next = nextPtrFromSeg(sh, peer);
-    const TValId valNext = sh.valueOf(next);
-    if (valNext != pointingTo)
-        return false;
+    const TValId valNext = sh.valueOf(nextPtrFromSeg(sh, peer));
+    if (pointingTo == valNext) {
+        // assume empty segment
+        spliceOutListSegmentCore(sh, seg, peer);
+        return true;
+    }
 
-    spliceOutListSegmentCore(sh, obj, peer);
-    return true;
+    // giving up
+    return false;
 }

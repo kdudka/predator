@@ -4,18 +4,18 @@ if test -z "$1" || test ! -e "$1"; then
     exit 1
 fi
 
+self="`readlink -f "$0"`"
+topdir="`dirname "$self"`/.."
+
 # basic setup
-SL_BUILD=../sl_build
+SL_DIR="$topdir/sl"
+SL_BUILD="$topdir/sl_build"
 SL_PLUG="$SL_BUILD/libsl.so"
 CC1="../gcc-install/libexec/gcc/`ls ../gcc-install/lib/gcc/`/4.[56]*/cc1"
-
-# initial checks
-eval test -x "$CC1"             || exit 1
-test -d "$SL_BUILD"             || exit 1
-test -f "$SL_BUILD/Makefile"    || exit 1
+MOPTS="-s -j3 'CMAKE=cmake -D SL_DEBUG=ON -D USE_INT3_AS_BRK=ON'"
 
 # attempt to make
-make -C "$SL_BUILD" -s          || exit 1
+eval make -C "$SL_DIR" "$MOPTS" || exit 1
 test -x "$SL_PLUG"              || exit 1
 
 # use gdb by default
