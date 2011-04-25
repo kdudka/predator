@@ -159,17 +159,14 @@ void SymCallCtx::Private::destroyStackFrame(SymHeap &sh) {
         CL_DEBUG_MSG(lw, "<<< destroying stack variable: #"
                 << var.uid << " (" << var.name << ")" );
 #endif
-        const TObjId obj = sh.pointsTo(sh.addrOfVar(cv));
-        CL_BREAK_IF(obj < 0);
-
         proc.setLocation(lw);
-        proc.objDestroy(obj);
+        proc.valDestroyTarget(sh.addrOfVar(cv));
     }
 
     // We need to look for junk since there can be a function returning an
     // allocated object.  Then ignoring the return value on the caller's
     // side can trigger a memory leak.  See data/test-0090.c for a use case.
-    proc.objDestroy(OBJ_RETURN);
+    proc.valDestroyTarget(sh.placedAt(OBJ_RETURN));
 }
 
 void SymCallCtx::flushCallResults(SymState &dst) {

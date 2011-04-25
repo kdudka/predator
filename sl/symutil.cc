@@ -116,9 +116,7 @@ TObjId /* root */ objRoot(const SymHeap &sh, TObjId obj) {
     return root;
 }
 
-void getPtrValues(TValList &dst, const SymHeap &sh, TObjId obj) {
-    const TValId at = const_cast<SymHeap &>(sh).placedAt(obj);
-
+void getPtrValues(TValList &dst, const SymHeap &sh, TValId at) {
     TObjList ptrs;
     sh.gatherLivePointers(ptrs, at);
     BOOST_FOREACH(const TObjId obj, ptrs) {
@@ -274,28 +272,6 @@ TObjId ptrObjByOffset(const SymHeap &sh, TObjId obj, TOffset off) {
 
 TObjId compObjByOffset(const SymHeap &sh, TObjId obj, TOffset off) {
     return subSeekByOffset(sh, obj, off, /* clt */ 0, CL_TYPE_STRUCT);
-}
-
-TValId addrQueryByOffset(
-        SymHeap                 &sh,
-        const TObjId            target,
-        const TOffset           offRequested,
-        const struct cl_type    *cltPtr,
-        const struct cl_loc     *lw)
-{
-    const TValId at = sh.placedAt(target);
-    if (at < 0)
-        return at;
-
-    // jump to _target_ type
-    const struct cl_type *clt = targetTypeOfPtr(cltPtr);
-
-    // TODO: print the error message now (we will not have the type-info later)
-    (void) clt;
-    (void) lw;
-
-    SymHeap &writable = const_cast<SymHeap &>(sh);
-    return writable.valByOffset(at, offRequested);
 }
 
 void redirectInboundEdges(

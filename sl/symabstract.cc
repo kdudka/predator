@@ -664,7 +664,7 @@ void segReplaceRefs(SymHeap &sh, TObjId seg, TValId valNext) {
     const TOffset offHead = subOffsetIn(sh, seg, head);
     CL_BREAK_IF(offHead < 0);
 
-    const TObjId next = sh.pointsTo(valNext);
+    const TObjId next = sh.objAt(valNext);
     switch (next) {
         case OBJ_DELETED:
         case OBJ_LOST:
@@ -684,7 +684,8 @@ void segReplaceRefs(SymHeap &sh, TObjId seg, TValId valNext) {
             continue;
         }
             
-        const TObjId target = sh.pointsTo(sh.valueOf(obj));
+        const TValId targetAt = sh.valueOf(obj);
+        const TObjId target = sh.objAt(targetAt);
         if (next < 0 || target < 0) {
             CL_DEBUG("WARNING: suboptimal implementation of segReplaceRefs()");
             const TValId val = sh.valClone(valNext);
@@ -692,13 +693,9 @@ void segReplaceRefs(SymHeap &sh, TObjId seg, TValId valNext) {
             continue;
         }
 
-        const struct cl_type *cltPtr = sh.objType(obj);
-        CL_BREAK_IF(target <= 0 || !cltPtr);
-
         // redirect!
-        const TObjId root = objRoot(sh, target);
-        const TOffset off = subOffsetIn(sh, root, target) - offHead;
-        const TValId val = addrQueryByOffset(sh, next, off, cltPtr);
+        const TOffset off = sh.valOffset(targetAt) - offHead;
+        const TValId val = sh.valByOffset(valNext, off);
         sh.objSetValue(obj, val);
     }
 }

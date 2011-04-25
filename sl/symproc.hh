@@ -97,8 +97,8 @@ class SymProc {
         /// high-level interface to SymHeap::objSetValue()
         void objSetValue(TObjId lhs, TValId rhs);
 
-        /// high-level interface to SymHeap::objDestroy()
-        void objDestroy(TObjId obj);
+        /// high-level interface to SymHeap::valDestroyTarget()
+        void valDestroyTarget(TValId at);
 
         /// invalidate all variables that are killed by the given instruction
         void killInsn(const CodeStorage::Insn &);
@@ -179,6 +179,7 @@ class SymExecCore: public SymProc {
 
     private:
         bool lhsFromOperand(TObjId *pObj, const struct cl_operand &op);
+        TValId handlePointerPlus(const TValId at, const struct cl_operand &off);
 
         template <int ARITY>
         void execOp(const CodeStorage::Insn &insn);

@@ -245,7 +245,7 @@ TValId SymProc::targetAt(const struct cl_operand &op) {
 
     // resolve type of the target
     const TObjType cltTarget = (isRef)
-        ? /* targetTypeOfPtr(op.type) is too strict in some cases */ 0
+        ? /* FIXME: too strict in some cases */ targetTypeOfPtr(op.type)
         : op.type;
 
     if (isDeref)
@@ -490,13 +490,12 @@ void SymProc::objSetValue(TObjId lhs, TValId rhs) {
     traverseSubObjs(sh_, item, mirror, /* leavesOnly */ true);
 }
 
-void SymProc::objDestroy(TObjId obj) {
+void SymProc::valDestroyTarget(TValId addr) {
     // gather potentialy destroyed pointer sub-values
     std::vector<TValId> ptrs;
-    getPtrValues(ptrs, sh_, obj);
+    getPtrValues(ptrs, sh_, addr);
 
     // destroy object recursively
-    const TValId addr = sh_.placedAt(obj);
     if (0 < addr)
         sh_.valDestroyTarget(addr);
     else
@@ -521,8 +520,7 @@ void SymProc::killVar(const struct cl_operand &op) {
             << varTostring(stor, uid));
 
     const TValId addr = this->varAt(op);
-    const TObjId obj = sh_.objAt(addr);
-    this->objDestroy(obj);
+    this->valDestroyTarget(addr);
 }
 
 void SymProc::killInsn(const CodeStorage::Insn &insn) {
@@ -579,27 +577,6 @@ bool SymExecCore::lhsFromOperand(TObjId *pObj, const struct cl_operand &op) {
 }
 
 void SymExecCore::execFreeCore(const TValId val) {
-    const EUnknownValue code = sh_.valGetUnknown(val);
-    switch (code) {
-        case UV_ABSTRACT:
-            CL_TRAP;
-            // fall through!
-
-        case UV_KNOWN:
-            break;
-
-        case UV_UNKNOWN:
-        case UV_DONT_CARE:
-            CL_ERROR_MSG(lw_, "free() called on unknown value");
-            bt_->printBackTrace();
-            return;
-
-        case UV_UNINITIALIZED:
-            CL_ERROR_MSG(lw_, "free() called on uninitialized value");
-            bt_->printBackTrace();
-            return;
-    }
-
     const TObjId obj = sh_.pointsTo(val);
     switch (obj) {
         case OBJ_DELETED:
@@ -636,8 +613,7 @@ void SymExecCore::execFreeCore(const TValId val) {
         return;
     }
 
-    CL_DEBUG_MSG(lw_, "executing free()");
-    this->objDestroy(obj);
+    this->valDestroyTarget(val);
 }
 
 void SymExecCore::execFree(const CodeStorage::TOperandList &opList) {
@@ -648,20 +624,45 @@ void SymExecCore::execFree(const CodeStorage::TOperandList &opList) {
 
     // resolve value to be freed
     TValId val = valFromOperand(opList[/* ptr given to free() */2]);
-    CL_BREAK_IF(VAL_INVALID == val);
-
     switch (val) {
+        case VAL_INVALID:
+            CL_BREAK_IF("SymExecCore::execFree() got invalid value");
+            return;
+
         case VAL_NULL:
             CL_DEBUG_MSG(lw_, "ignoring free() called with NULL value");
             return;
 
         case VAL_DEREF_FAILED:
+            CL_DEBUG_MSG(lw_, "ignoring free() called on VAL_DEREF_FAILED");
             return;
 
         default:
             break;
     }
 
+    const EUnknownValue code = sh_.valGetUnknown(val);
+    switch (code) {
+        case UV_ABSTRACT:
+            CL_BREAK_IF("SymExecCore::execFree() got address of segment");
+            return;
+
+        case UV_KNOWN:
+            break;
+
+        case UV_UNKNOWN:
+        case UV_DONT_CARE:
+            CL_ERROR_MSG(lw_, "free() called on unknown value");
+            bt_->printBackTrace();
+            return;
+
+        case UV_UNINITIALIZED:
+            CL_ERROR_MSG(lw_, "free() called on uninitialized value");
+            bt_->printBackTrace();
+            return;
+    }
+
+    CL_DEBUG_MSG(lw_, "executing free()");
     this->execFreeCore(val);
 }
 
@@ -809,30 +810,23 @@ TValId compareValues(
     return sh.valCreateUnknown(uvCode);
 }
 
-TValId handlePointerPlus(
-        SymHeap                     &sh,
-        const TObjType              cltPtr,
-        const TValId                ptr,
-        const struct cl_operand     &op,
-        const struct cl_loc         *lw)
+TValId SymExecCore::handlePointerPlus(
+        const TValId                at,
+        const struct cl_operand     &op)
 {
     if (CL_OPERAND_CST != op.code) {
-        CL_ERROR_MSG(lw, "pointer plus offset not known in compile-time");
-        return sh.valCreateUnknown(UV_UNKNOWN);
+        CL_ERROR_MSG(lw_, "pointer plus offset not known in compile-time");
+        return sh_.valCreateUnknown(UV_UNKNOWN);
     }
 
-    if (VAL_NULL == ptr) {
-        CL_DEBUG_MSG(lw, "pointer plus with NULL treated as unknown value");
-        return sh.valCreateUnknown(UV_UNKNOWN);
+    if (VAL_NULL == at) {
+        CL_DEBUG_MSG(lw_, "pointer plus with NULL treated as unknown value");
+        return sh_.valCreateUnknown(UV_UNKNOWN);
     }
 
-    // read integral offset
     const TOffset offRequested = intCstFromOperand(&op);
     CL_DEBUG("handlePointerPlus(): " << offRequested << "b offset requested");
-
-    const TObjId target = sh.pointsTo(ptr);
-    CL_BREAK_IF(target <= 0);
-    return addrQueryByOffset(sh, target, offRequested, cltPtr, lw);
+    return sh_.valByOffset(at, offRequested);
 }
 
 // template for generic (unary, binary, ...) operator handlers
@@ -936,8 +930,7 @@ void SymExecCore::execOp(const CodeStorage::Insn &insn) {
             == static_cast<enum cl_binop_e>(insn.subCode))
     {
         // handle pointer plus
-        valResult = handlePointerPlus(sh_, clt[/* dst type */ ARITY],
-                                      rhs[0], opList[/* src2 */ 2], &insn.loc);
+        valResult = this->handlePointerPlus(rhs[0], opList[/* offset */ 2]);
     }
     else
         // handle generic operator

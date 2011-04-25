@@ -106,17 +106,16 @@ bool collectJunk(SymHeap &sh, TValId val, const struct cl_loc *lw) {
 
         if (digJunk(sh, &val)) {
             detected = true;
-            const TObjId obj = objRootByVal(sh, val);
-            CL_BREAK_IF(obj <= 0);
 
             // gather all values inside the junk object
+            const TValId root = sh.valRoot(val);
             std::vector<TValId> ptrs;
-            getPtrValues(ptrs, sh, obj);
+            getPtrValues(ptrs, sh, root);
 
             // destroy junk
             if (lw)
                 CL_WARN_MSG(lw, "killing junk");
-            if (!sh.valDestroyTarget(sh.placedAt(obj)))
+            if (!sh.valDestroyTarget(root))
                 CL_BREAK_IF("failed to kill junk");
 
             // schedule just created junk candidates for next wheel

@@ -104,7 +104,7 @@ TObjId subSeekByOffset(
 TObjId ptrObjByOffset(const SymHeap &sh, TObjId obj, TOffset off);
 TObjId compObjByOffset(const SymHeap &sh, TObjId obj, TOffset off);
 
-void getPtrValues(TValList &dst, const SymHeap &heap, TObjId obj);
+void getPtrValues(TValList &dst, const SymHeap &heap, TValId at);
 
 void skipObj(const SymHeap &sh, TObjId *pObj, TOffset offNext);
 
@@ -284,13 +284,6 @@ bool /* complete */ traverseSubObjsIc(THeap &sh, TItem item, TVisitor &visitor)
     return true;
 }
 #endif
-
-TValId addrQueryByOffset(
-        SymHeap                 &sh,
-        const TObjId            target,
-        const TOffset           offRequested,
-        const struct cl_type    *cltPtr,
-        const struct cl_loc     *lw = 0);
 
 /// (OBJ_INVALID != pointingFrom) means 'pointing from anywhere'
 void redirectInboundEdges(

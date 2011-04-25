@@ -84,6 +84,7 @@ void digGlJunk(const CodeStorage::Storage &stor, SymHeap &heap) {
     SymBackTrace bt(stor);
     SymProc proc(heap, &bt);
 
+    // FIXME: this unnecessarily creates all not yet created gl variables
     BOOST_FOREACH(const Var &var, stor.vars) {
         if (VAR_GL == var.code) {
             const struct cl_loc *lw = &var.loc;
@@ -91,11 +92,8 @@ void digGlJunk(const CodeStorage::Storage &stor, SymHeap &heap) {
                     << var.uid << " (" << var.name << ")" );
 
             const CVar cVar(var.uid, /* gl variable */ 0);
-            const TObjId obj = heap.pointsTo(heap.addrOfVar(cVar));
-            CL_BREAK_IF(obj < 0);
-
             proc.setLocation(lw);
-            proc.objDestroy(obj);
+            proc.valDestroyTarget(heap.addrOfVar(cVar));
         }
     }
 }
