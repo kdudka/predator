@@ -662,14 +662,14 @@ bool considerAbstraction(
     return true;
 }
 
-void segReplaceRefs(SymHeap &sh, TObjId seg, TValId valNext) {
-    const TObjId head = segHead(sh, seg);
-    const TValId segAt = sh.placedAt(head);
-    sh.valReplace(segAt, valNext);
+void segReplaceRefs(SymHeap &sh, TValId segAt, TValId valNext) {
+    // TODO: remove this
+    TObjId seg = sh.objAt(segAt);
 
-    const TOffset offHead = subOffsetIn(sh, seg, head);
-    CL_BREAK_IF(offHead < 0);
+    const TValId headAt = segHeadAt(sh, segAt);
+    sh.valReplace(headAt, valNext);
 
+    const TOffset offHead = sh.valOffset(headAt);
     const TObjId next = sh.objAt(valNext);
     switch (next) {
         case OBJ_DELETED:
@@ -742,11 +742,7 @@ void dlSegReplaceByConcrete(SymHeap &sh, TValId objAt, TValId peerAt) {
     CL_BREAK_IF(!dlSegCheckConsistency(sh));
 }
 
-void spliceOutListSegmentCore(SymHeap &sh, TValId segAddr, TValId peerAddr) {
-    // TODO: remove this
-    TObjId seg = sh.objAt(segAddr);
-    TObjId peer = sh.objAt(peerAddr);
-
+void spliceOutListSegmentCore(SymHeap &sh, TValId seg, TValId peer) {
     LDP_INIT(symabstract, "spliceOutListSegmentCore");
     LDP_PLOT(symabstract, sh);
 
@@ -754,10 +750,7 @@ void spliceOutListSegmentCore(SymHeap &sh, TValId segAddr, TValId peerAddr) {
     const TObjId next = nextPtrFromSeg(sh, peer);
     const TValId valNext = sh.valueOf(next);
 
-    TValId peerAt = VAL_INVALID;
     if (seg != peer) {
-        peerAt = sh.placedAt(peer);
-
         // OK_DLS --> unlink peer
         const TObjId prevPtr = nextPtrFromSeg(sh, seg);
         const TValId valPrev = sh.valueOf(prevPtr);
@@ -768,13 +761,12 @@ void spliceOutListSegmentCore(SymHeap &sh, TValId segAddr, TValId peerAddr) {
     segReplaceRefs(sh, seg, valNext);
 
     // destroy peer in case of DLS
-    if (VAL_INVALID != peerAt && collectJunk(sh, peerAt))
-        CL_DEBUG("spliceOutSegmentIfNeeded() drops a sub-heap (peerAt)");
+    if (peer != seg && collectJunk(sh, peer))
+        CL_DEBUG("spliceOutSegmentIfNeeded() drops a sub-heap (peer)");
 
     // destroy self, including all nested prototypes
-    const TValId segAt = sh.placedAt(seg);
-    if (collectJunk(sh, segAt))
-        CL_DEBUG("spliceOutSegmentIfNeeded() drops a sub-heap (segAt)");
+    if (collectJunk(sh, seg))
+        CL_DEBUG("spliceOutSegmentIfNeeded() drops a sub-heap (seg)");
 
     LDP_PLOT(symabstract, sh);
 }
