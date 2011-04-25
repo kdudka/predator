@@ -13,17 +13,18 @@ SL_PLUG="$SL_BUILD/libsl.so"
 GCC="$topdir/gcc-install/bin/gcc"
 
 # initial checks
-test -x "$GCC"                              || exit 1
+test -x "$GCC" || exit 1
 
 # attempt to make
-make -s $MAKEOPTS -C "$topdir/sl"           || exit 1
-test -x "$SL_PLUG"                          || exit 1
+test -x "$SL_PLUG" \
+    || make -s $MAKEOPTS -C "$topdir/sl" \
+    || exit 1
 
 # use verbose level 0 by default
 test -z "$SL_VERBOSE" && SL_VERBOSE=0
 
 # use pp code listener by default
-test -z "$SL_OPTS" && SL_OPTS="-fplugin-arg-libsl-dump-pp"
+#test -z "$SL_OPTS" && SL_OPTS="-fplugin-arg-libsl-dump-pp"
 
 # use chromium as default SVG_VIEWER
 test -z "$SVG_VIEWER" && SVG_VIEWER=chromium
@@ -40,7 +41,7 @@ fi
     -fplugin="$SL_PLUG" \
     -fplugin-arg-libsl-verbose="$SL_VERBOSE" \
     $SL_OPTS \
-    #|| exit $?
+    || exit $?
 
 if test x1 = "x$SL_PLOT"; then
     # visualize graphs

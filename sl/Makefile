@@ -22,7 +22,8 @@ CTEST           ?= ctest
 	version.h
 
 all: version.h ../cl_build/libcl.so configure
-	$(MAKE) -C ../cl_build # make sure the libcl.so is up2date
+	# make sure the libcl.so is up2date
+	$(MAKE) -C ../cl_build
 	mkdir -p ../sl_build
 	cd ../sl_build && $(CMAKE) ../sl
 	$(MAKE) -C ../sl_build
@@ -34,7 +35,7 @@ version.h:
 	@if test -d ../.git; then \
 		printf "#define SL_GIT_SHA1 \"%s\"\n" \
 			`git log -1 | head -1 | cut -f2 -d" "` \
-			| tee $@.tmp \
+			> $@.tmp \
 			&& install -m0644 -C -v $@.tmp $@ \
 			&& rm -f $@.tmp; \
 		fi
@@ -45,7 +46,7 @@ clean:
 	if test -e ../sl_build/Makefile; then $(MAKE) clean -C ../sl_build; fi
 
 configure:
-	cd data && ./configure
+	@cd data >/dev/null && ./configure
 
 distclean: clean
 	rm -rf ../sl_build

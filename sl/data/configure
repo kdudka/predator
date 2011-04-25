@@ -1,8 +1,7 @@
 #!/bin/sh
 
 # ensure we don't overwrite something we don't want to
-dir="`dirname $0`"
-dir="`readlink -f $dir`"
+dir="`readlink -f $PWD`"
 test "`basename $dir`" = data   || exit 1
 test -f "$dir/configure"        || exit 1
 test -f "$dir/Makefile.in"      || exit 1
