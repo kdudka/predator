@@ -33,12 +33,12 @@
 /**
  * if 1, plot heap graphs of branching by non-deterministic conditions
  */
-#define DEBUG_SE_NODNET_COND                0
+#define DEBUG_SE_NONDET_COND                0
 
 /**
- * if 1, print created/destroyed stack variables when running in verbose mode
+ * if 1, print created/destroyed variables when running in verbose mode
  */
-#define DEBUG_SE_STACK_FRAME                1
+#define DEBUG_SE_STACK_FRAME                0
 
 /**
  * if 1, plot each abstraction/concretization step to a separate heap graph

@@ -514,11 +514,12 @@ void SymProc::valDestroyTarget(TValId addr) {
 }
 
 void SymProc::killVar(const struct cl_operand &op) {
-    const CodeStorage::Storage &stor = sh_.stor();
+#if DEBUG_SE_STACK_FRAME
     const int uid = varIdFromOperand(&op);
-    CL_DEBUG_MSG(lw_, "FFF SymExecCore::killVar() destroys stack variable "
-            << varTostring(stor, uid));
-
+    const CodeStorage::Storage &stor = sh_.stor();
+    const std::string var = varTostring(stor, uid);
+    CL_DEBUG_MSG(lw_, "FFF SymExecCore::killVar() destroys var " << var);
+#endif
     const TValId addr = this->varAt(op);
     this->valDestroyTarget(addr);
 }

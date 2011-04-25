@@ -43,7 +43,7 @@
 #include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
 
-LOCAL_DEBUG_PLOTTER(nondetCond, DEBUG_SE_NODNET_COND)
+LOCAL_DEBUG_PLOTTER(nondetCond, DEBUG_SE_NONDET_COND)
 
 #if DEBUG_MEM_USAGE
 #   include <malloc.h>

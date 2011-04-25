@@ -1202,12 +1202,11 @@ TValId SymHeapCore::addrOfVar(CVar cv) {
     // lazy creation of a program variable
     TObjType clt = stor_.vars[cv.uid].clt;
     CL_BREAK_IF(!clt || clt->code == CL_TYPE_VOID);
-
+#if DEBUG_SE_STACK_FRAME
     const struct cl_loc *loc = 0;
     std::string varString = varTostring(stor_, cv.uid, &loc);
-    CL_DEBUG_MSG(loc, "FFF SymHeapCore::objByCVar() creates stack variable "
-            << varString);
-
+    CL_DEBUG_MSG(loc, "FFF SymHeapCore::objByCVar() creates var " << varString);
+#endif
     // create the correspongin heap object
     const TObjId fresh = d->objCreate(clt, cv);
 
