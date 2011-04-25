@@ -375,9 +375,9 @@ void clonePrototypes(SymHeap &sh, TValId objAt, TValId dupAt) {
     redirectInboundEdges(sh, dup, obj, dup);
 }
 
-void slSegAbstractionStep(SymHeap &sh, TObjId *pObj, const BindingOff &off)
+void slSegAbstractionStep(SymHeap &sh, TValId *pCursor, const BindingOff &off)
 {
-    const TObjId obj = *pObj;
+    const TObjId obj = sh.objAt(*pCursor);
     const TObjId objPtrNext = ptrObjByOffset(sh, obj, off.next);
     const TValId valNext = sh.valueOf(objPtrNext);
     CL_BREAK_IF(valNext <= 0);
@@ -413,7 +413,7 @@ void slSegAbstractionStep(SymHeap &sh, TObjId *pObj, const BindingOff &off)
         segSetMinLength(sh, sh.placedAt(objNext), len);
 
     // move to the next object
-    *pObj = objNext;
+    *pCursor = sh.placedAt(objNext);
 }
 
 void enlargeMayExist(SymHeap &sh, const TObjId obj) {
@@ -539,10 +539,10 @@ void dlSegMerge(SymHeap &sh, TObjId seg1, TObjId seg2) {
     dlSegSyncPeerData(sh, seg2);
 }
 
-void dlSegAbstractionStep(SymHeap &sh, TObjId *pObj, const BindingOff &off)
+void dlSegAbstractionStep(SymHeap &sh, TValId *pCursor, const BindingOff &off)
 {
     // the first object is clear
-    const TObjId o1 = *pObj;
+    const TObjId o1 = sh.objAt(*pCursor);
 
     // we'll find the next one later on
     TObjId o2 = o1;
@@ -585,7 +585,7 @@ void dlSegAbstractionStep(SymHeap &sh, TObjId *pObj, const BindingOff &off)
     }
 
     // the current object has been just consumed, move to the next one
-    *pObj = o2;
+    *pCursor = sh.placedAt(o2);
 
 #ifndef NDEBUG
     // just check if the Neq predicates work well so far
@@ -596,18 +596,18 @@ void dlSegAbstractionStep(SymHeap &sh, TObjId *pObj, const BindingOff &off)
 void segAbstractionStep(
         SymHeap                     &sh,
         const BindingOff            &off,
-        TObjId                      *pObj)
+        TValId                      *pCursor)
 {
     if (isDlsBinding(off)) {
         // DLS
         CL_BREAK_IF(!dlSegCheckConsistency(sh));
-        dlSegAbstractionStep(sh, pObj, off);
+        dlSegAbstractionStep(sh, pCursor, off);
         CL_BREAK_IF(!dlSegCheckConsistency(sh));
         return;
     }
 
     // SLS
-    slSegAbstractionStep(sh, pObj, off);
+    slSegAbstractionStep(sh, pCursor, off);
 }
 
 bool considerAbstraction(
@@ -637,12 +637,12 @@ bool considerAbstraction(
             << ", suffix=" << thr.spareSuffix);
 
     // cursor
-    TObjId obj = sh.objAt(entry);
+    TValId cursor = entry;
 
     // handle sparePrefix/spareSuffix
     int len = lenTotal - thr.sparePrefix - thr.spareSuffix;
     for (unsigned i = 0; i < thr.sparePrefix; ++i)
-        skipObj(sh, &obj, off.next);
+        cursor = nextRootObj(sh, cursor, off.next);
 
     const char *name = (isSls)
         ? "SLS"
@@ -654,7 +654,7 @@ bool considerAbstraction(
     LDP_PLOT(symabstract, sh);
 
     for (int i = 0; i < len; ++i) {
-        segAbstractionStep(sh, off, &obj);
+        segAbstractionStep(sh, off, &cursor);
         LDP_PLOT(symabstract, sh);
     }
 
@@ -662,14 +662,11 @@ bool considerAbstraction(
     return true;
 }
 
-void segReplaceRefs(SymHeap &sh, TValId segAt, TValId valNext) {
-    // TODO: remove this
-    TObjId seg = sh.objAt(segAt);
-
-    const TValId headAt = segHeadAt(sh, segAt);
+void segReplaceRefs(SymHeap &sh, TValId seg, TValId valNext) {
+    const TValId headAt = segHeadAt(sh, seg);
+    const TOffset offHead = sh.valOffset(headAt);
     sh.valReplace(headAt, valNext);
 
-    const TOffset offHead = sh.valOffset(headAt);
     const TObjId next = sh.objAt(valNext);
     switch (next) {
         case OBJ_DELETED:
@@ -682,7 +679,7 @@ void segReplaceRefs(SymHeap &sh, TValId segAt, TValId valNext) {
 
     // TODO: check types in debug build
     TObjList refs;
-    sh.pointedBy(refs, sh.placedAt(seg));
+    sh.pointedBy(refs, seg);
     BOOST_FOREACH(const TObjId obj, refs) {
         if (VAL_NULL == valNext) {
             // FIXME: not correct in all cases
@@ -706,36 +703,30 @@ void segReplaceRefs(SymHeap &sh, TValId segAt, TValId valNext) {
     }
 }
 
-void dlSegReplaceByConcrete(SymHeap &sh, TValId objAt, TValId peerAt) {
-    // TODO: remove this
-    TObjId obj = sh.objAt(objAt);
-    TObjId peer = sh.objAt(peerAt);
-
+void dlSegReplaceByConcrete(SymHeap &sh, TValId seg, TValId peer) {
     LDP_INIT(symabstract, "dlSegReplaceByConcrete");
     LDP_PLOT(symabstract, sh);
     CL_BREAK_IF(!dlSegCheckConsistency(sh));
 
     // first kill any related Neq predicates, we're going to concretize anyway
-    dlSegSetMinLength(sh, sh.placedAt(obj), /* DLS 0+ */ 0);
+    dlSegSetMinLength(sh, seg, /* DLS 0+ */ 0);
 
     // take the value of 'next' pointer from peer
-    const TOffset offPeer = segBinding(sh, obj).prev;
-    const TObjId peerPtr = ptrObjByOffset(sh, obj, offPeer);
+    const TObjId peerPtr = prevPtrFromSeg(sh, seg);
     const TValId valNext = sh.valueOf(nextPtrFromSeg(sh, peer));
     sh.objSetValue(peerPtr, valNext);
 
     // redirect all references originally pointing to peer to the current object
     redirectInboundEdges(sh,
             /* pointingFrom */ OBJ_INVALID,
-            /* pointingTo   */ peer,
-            /* redirectTo   */ obj);
+            /* pointingTo   */ /* FIXME */ sh.objAt(peer),
+            /* redirectTo   */ /* FIXME */ sh.objAt(seg));
 
     // destroy peer, including all prototypes
-    const TValId addrPeer = sh.placedAt(peer);
-    REQUIRE_GC_ACTIVITY(sh, addrPeer, dlSegReplaceByConcrete);
+    REQUIRE_GC_ACTIVITY(sh, peer, dlSegReplaceByConcrete);
 
     // concretize self
-    objSetConcrete(sh, obj);
+    sh.valTargetSetConcrete(seg);
 
     // this can't fail (at least I hope so...)
     LDP_PLOT(symabstract, sh);

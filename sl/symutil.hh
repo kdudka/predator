@@ -106,6 +106,13 @@ TObjId compObjByOffset(const SymHeap &sh, TObjId obj, TOffset off);
 
 void getPtrValues(TValList &dst, const SymHeap &heap, TValId at);
 
+inline TValId nextRootObj(SymHeap &sh, TValId root, TOffset offNext) {
+    CL_BREAK_IF(sh.valOffset(root));
+    const TObjId nextPtr = sh.ptrAt(sh.valByOffset(root, offNext));
+    return sh.valRoot(sh.valueOf(nextPtr));
+}
+
+// TODO: remove this
 void skipObj(const SymHeap &sh, TObjId *pObj, TOffset offNext);
 
 void initVariable(SymHeap                       &sh,
