@@ -40,6 +40,6 @@ gen(){
 }
 
 ticks &
-gen "-fplugin-arg-libsl-args=fast" .fast
-gen
+gen "" .fast
+gen "-fplugin-arg-libsl-args=oom"
 kill $!

@@ -1,7 +1,3 @@
-test-0093.c:111:9: error: free() called on unknown value
-test-0093.c:121:20: note: from call of misuse_of_union()
-test-0093.c:115:5: note: from call of main()
-test-0093.c:111:9: error: free() called on unknown value
-test-0093.c:121:20: note: from call of misuse_of_union()
-test-0093.c:115:5: note: from call of main()
-test-0093.c:78:1: warning: killing junk
+test-0093.c:111:18: warning: amount of allocated memory not accurate
+test-0093.c:111:18: note: allocated: 80 bytes
+test-0093.c:111:18: note:  expected: 12 bytes

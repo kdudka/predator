@@ -26,7 +26,7 @@ test -x "$SL_PLUG"              || exit 1
 test -z "$SL_VERBOSE" && SL_VERBOSE=0
 
 # use fast code listener by default
-test -z "$SL_OPTS" && SL_OPTS="-fplugin-arg-libsl-args=fast"
+#test -z "$SL_OPTS" && SL_OPTS="-fplugin-arg-libsl-args=fast"
 
 # run cc1
 "$CC1" "$1" \

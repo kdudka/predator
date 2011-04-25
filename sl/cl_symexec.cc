@@ -42,21 +42,19 @@ namespace {
 // FIXME: the implementation is amusing
 void parseConfigString(SymExecParams &sep, std::string cnf) {
     using std::string;
+    sep.fastMode = true;
     if (cnf.empty())
         return;
 
-    if (string("fast") == cnf) {
+    if (string("oom") == cnf) {
         CL_DEBUG("SymExec \"fast mode\" requested");
-        sep.fastMode = true;
+        sep.fastMode = false;
         return;
     }
 
     if (string("inv_compat") == cnf) {
         CL_DEBUG("SymExec \"inv_compat mode\" requested");
         sep.invCompatMode = true;
-
-        // implies "fast"
-        sep.fastMode = true;
         return;
     }
 
@@ -75,8 +73,7 @@ void parseConfigString(SymExecParams &sep, std::string cnf) {
         return;
     }
 
-    // unhandled config string
-    CL_TRAP;
+    CL_BREAK_IF("unhandled config string");
 }
 
 void digGlJunk(const CodeStorage::Storage &stor, SymHeap &heap) {
