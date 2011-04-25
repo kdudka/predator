@@ -140,8 +140,7 @@ endmacro(test_sym_exec_regre)
 test_sym_exec_regre(".fast" "-fplugin-arg-libsl-args=fast")
 test_sym_exec_regre("" "")
 
-option(SL_TEST_VALGRIND "Set to ON to enable valgrind tests" OFF)
-if(SL_TEST_VALGRIND)
+if(TEST_WITH_VALGRIND)
     test_sym_exec("valgrind-test" valgrind
         --trace-children=yes
         --error-exitcode=7

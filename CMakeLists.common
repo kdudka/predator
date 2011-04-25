@@ -74,3 +74,5 @@ endif()
 
 set(GCC_HOST "../gcc-install/bin/gcc"
     CACHE STRING "host gcc executable")
+
+option(TEST_WITH_VALGRIND "Set to ON to enable valgrind tests" OFF)

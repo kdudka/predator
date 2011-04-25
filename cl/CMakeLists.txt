@@ -109,11 +109,13 @@ set(self_extra_opts
     -fplugin-arg-libcl_test-dry-run)
 
 add_test("compile-self-extra" ${GCC_HOST} ${self_extra_opts})
-add_test("compile-self-valgrind" valgrind
-    --trace-children=yes
-    --error-exitcode=7
-    ${GCC_HOST}
-    ${self_extra_opts})
+if(TEST_WITH_VALGRIND)
+    add_test("compile-self-valgrind" valgrind
+        --trace-children=yes
+        --error-exitcode=7
+        ${GCC_HOST}
+        ${self_extra_opts})
+endif()
 
 add_test("headers_sanity-0" gcc -ansi -Wall -Wextra -Werror -pedantic
     -o /dev/null
