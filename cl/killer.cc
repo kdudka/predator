@@ -213,11 +213,6 @@ void updateBlock(Data &data, TBlock bb) {
 }
 
 void computeFixPoint(Data &data) {
-    // poke all blocks first (no chance to schedule them on the fly, since we
-    // needed to build BlockData::refs for each basic block first)
-    BOOST_FOREACH(TMap::const_reference item, data.blocks)
-        updateBlock(data, item.first);
-
     // fixed-point computation
     unsigned cntSteps = 1;
     TBlockSet &todo = data.todo;
@@ -240,8 +235,10 @@ void analyseFnc(Data &data, Fnc &fnc) {
     CL_BREAK_IF(!data.todo.empty());
 
     // go through basic blocks
-    BOOST_FOREACH(TBlock bb, fnc.cfg)
+    BOOST_FOREACH(TBlock bb, fnc.cfg) {
         scanBlock(data, bb);
+        data.todo.insert(bb);
+    }
 
     // compute a fixed-point for a single function
     VK_DEBUG_MSG(2, loc, "computing fixed-point for " << nameOf(fnc) << "()");
