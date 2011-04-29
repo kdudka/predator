@@ -1029,7 +1029,7 @@ TValId SymHeapCore::placedAt(TObjId obj) const {
     const TObjId root = d->objRoot(obj, objData);
     CL_BREAK_IF(root < 0);
 
-    typename Private::TRootMap::iterator it = d->roots.find(root);
+    Private::TRootMap::iterator it = d->roots.find(root);
     if (d->roots.end() == it)
         // object already deleted?
         return VAL_INVALID;
