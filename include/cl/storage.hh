@@ -64,7 +64,7 @@ struct Var {
      * type of the variable
      * @note This often differs from type of the operand given to constructor!
      */
-    const struct cl_type        *clt;
+    const struct cl_type        *type;
 
     /**
      * unique ID of variable

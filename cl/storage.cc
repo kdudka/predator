@@ -106,8 +106,8 @@ Var::Var(EVar code_, const struct cl_operand *op):
         name = op->data.var->name;
 
     // dig type of variable
-    this->clt = digVarType(op);
-    CL_BREAK_IF(!this->clt);
+    this->type = digVarType(op);
+    CL_BREAK_IF(!this->type);
 
     // check for eventual scope mismatch
     switch (code) {

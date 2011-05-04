@@ -215,7 +215,7 @@ void initVariable(SymHeap                       &sh,
 {
     const TInitialItem item(obj, var.initial);
 
-    if (isComposite(var.clt))
+    if (isComposite(var.type))
         traverseSubObjs(sh, item, initSingleVariable, /* leavesOnly */ true);
     else
         initSingleVariable(sh, item);

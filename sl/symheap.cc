@@ -1208,7 +1208,7 @@ TValId SymHeapCore::addrOfVar(CVar cv) {
     }
 
     // lazy creation of a program variable
-    TObjType clt = stor_.vars[cv.uid].clt;
+    TObjType clt = stor_.vars[cv.uid].type;
     CL_BREAK_IF(!clt || clt->code == CL_TYPE_VOID);
 #if DEBUG_SE_STACK_FRAME
     const struct cl_loc *loc = 0;

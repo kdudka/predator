@@ -89,9 +89,9 @@ struct SymCtx {
 							)
 						);
 					} else {
-						NodeBuilder::buildNode(this->sfLayout, var.clt, offset);
+						NodeBuilder::buildNode(this->sfLayout, var.type, offset);
 						this->varMap.insert(std::make_pair(var.uid, make_pair(true, offset)));
-						offset += var.clt->size;
+						offset += var.type->size;
 					}
 					break;
 				default:
