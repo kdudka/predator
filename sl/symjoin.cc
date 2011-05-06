@@ -865,8 +865,8 @@ bool createObject(
         objSetAbstract(ctx.dst, rootDst, kind, off);
 
         // compute minimal length of the resulting segment
-        const unsigned len1 = objMinLength(ctx.sh1, root1);
-        const unsigned len2 = objMinLength(ctx.sh2, root2);
+        const unsigned len1 = objMinLength(ctx.sh1, ctx.sh1.placedAt(root1));
+        const unsigned len2 = objMinLength(ctx.sh2, ctx.sh2.placedAt(root2));
         ctx.segLengths[rootDst] = std::min(len1, len2);
     }
 
@@ -1897,9 +1897,10 @@ void handleDstPreds(SymJoinCtx &ctx) {
         const TObjId proto2     = proto[/* sh2 */ 1];
         const TObjId protoDst   = proto[/* dst */ 2];
 
-        const unsigned len1     = objMinLength(ctx.sh1, proto1);
-        const unsigned len2     = objMinLength(ctx.sh2, proto2);
-        const unsigned lenDst   = objMinLength(ctx.dst, protoDst);
+        const unsigned len1 = objMinLength(ctx.sh1, ctx.sh1.placedAt(proto1));
+        const unsigned len2 = objMinLength(ctx.sh2, ctx.sh2.placedAt(proto2));
+        const unsigned lenDst = objMinLength(ctx.dst,
+                ctx.dst.placedAt(protoDst));
 
         if (lenDst < len1)
             updateJoinStatus(ctx, JS_USE_SH2);

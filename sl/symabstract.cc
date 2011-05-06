@@ -324,7 +324,10 @@ struct ValueSynchronizer {
     }
 };
 
-void dlSegSyncPeerData(SymHeap &sh, const TObjId dls) {
+void dlSegSyncPeerData(SymHeap &sh, const TValId dlsAt) {
+    // TODO: remove this
+    const TObjId dls = sh.objAt(dlsAt);
+
     const TObjId peer = dlSegPeer(sh, dls);
     ValueSynchronizer visitor;
     buildIgnoreList(visitor.ignoreList, sh, dls);
@@ -340,19 +343,20 @@ void dlSegSyncPeerData(SymHeap &sh, const TObjId dls) {
 }
 
 // when abstracting an object, we need to abstract all non-matching values in
-void abstractNonMatchingValues(SymHeap &sh, TObjId src, TObjId dst,
-                               bool bidir = false)
+void abstractNonMatchingValues(
+        SymHeap                     &sh,
+        const TValId                srcAt,
+        const TValId                dstAt,
+        const bool                  bidir = false)
 {
-    const TValId srcAt = sh.placedAt(src);
-    const TValId dstAt = sh.placedAt(dst);
     if (!joinData(sh, dstAt, srcAt, bidir))
         CL_BREAK_IF("joinData() failed, failure of segDiscover()?");
 
     if (OK_DLS == sh.valTargetKind(dstAt))
-        dlSegSyncPeerData(sh, dst);
+        dlSegSyncPeerData(sh, dstAt);
 
     if (bidir && OK_DLS == sh.valTargetKind(srcAt))
-        dlSegSyncPeerData(sh, src);
+        dlSegSyncPeerData(sh, srcAt);
 }
 
 void clonePrototypes(SymHeap &sh, TValId objAt, TValId dupAt) {
@@ -383,13 +387,13 @@ void slSegAbstractionStep(SymHeap &sh, TValId *pCursor, const BindingOff &off)
     CL_BREAK_IF(valNext <= 0);
 
     // read minimal length of 'obj' and set it temporarily to zero
-    unsigned len = objMinLength(sh, obj);
+    unsigned len = objMinLength(sh, sh.placedAt(obj));
     if (objIsSeg(sh, obj))
         segSetMinLength(sh, sh.placedAt(obj), /* SLS 0+ */ 0);
 
     // jump to the next object
     const TObjId objNext = objRootByVal(sh, valNext);
-    len += objMinLength(sh, objNext);
+    len += objMinLength(sh, sh.placedAt(objNext));
     if (OK_SLS == sh.valTargetKind(valNext))
         segSetMinLength(sh, sh.placedAt(objNext), /* SLS 0+ */ 0);
     else
@@ -398,7 +402,7 @@ void slSegAbstractionStep(SymHeap &sh, TValId *pCursor, const BindingOff &off)
 
     // merge data
     CL_BREAK_IF(OK_SLS != objKind(sh, objNext));
-    abstractNonMatchingValues(sh, obj, objNext);
+    abstractNonMatchingValues(sh, sh.placedAt(obj), sh.placedAt(objNext));
 
     // replace all references to 'head'
     const TOffset offHead = sh.segBinding(valNext).head;
@@ -416,11 +420,11 @@ void slSegAbstractionStep(SymHeap &sh, TValId *pCursor, const BindingOff &off)
     *pCursor = sh.placedAt(objNext);
 }
 
-void enlargeMayExist(SymHeap &sh, const TObjId obj) {
-    const EObjKind kind = objKind(sh, obj);
+void enlargeMayExist(SymHeap &sh, const TValId at) {
+    const EObjKind kind = sh.valTargetKind(at);
     switch (kind) {
         case OK_MAY_EXIST:
-            objSetConcrete(sh, obj);
+            sh.valTargetSetConcrete(at);
             // fall through!
 
         case OK_CONCRETE:
@@ -431,38 +435,35 @@ void enlargeMayExist(SymHeap &sh, const TObjId obj) {
     }
 }
 
-void dlSegCreate(SymHeap &sh, TObjId o1, TObjId o2, BindingOff off) {
+void dlSegCreate(SymHeap &sh, TValId a1, TValId a2, BindingOff off) {
     // compute resulting segment's length
-    const unsigned len =
-        objMinLength(sh, o1) +
-        objMinLength(sh, o2);
+    const unsigned len = objMinLength(sh, a1) + objMinLength(sh, a2);
 
     // OK_MAY_EXIST -> OK_CONCRETE if necessary
-    enlargeMayExist(sh, o1);
-    enlargeMayExist(sh, o2);
+    enlargeMayExist(sh, a1);
+    enlargeMayExist(sh, a2);
 
     swapValues(off.next, off.prev);
-    objSetAbstract(sh, o1, OK_DLS, off);
+    sh.valTargetSetAbstract(a1, OK_DLS, off);
 
     swapValues(off.next, off.prev);
-    objSetAbstract(sh, o2, OK_DLS, off);
+    sh.valTargetSetAbstract(a2, OK_DLS, off);
 
     // introduce some UV_UNKNOWN values if necessary
-    abstractNonMatchingValues(sh, o1, o2, /* bidir */ true);
+    abstractNonMatchingValues(sh, a1, a2, /* bidir */ true);
 
     // just created DLS is said to be 2+ as long as no OK_MAY_EXIST are involved
-    dlSegSetMinLength(sh, sh.placedAt(o1), len);
+    dlSegSetMinLength(sh, a1, len);
 
-    dlSegSyncPeerData(sh, o1);
+    dlSegSyncPeerData(sh, a1);
 }
 
-void dlSegGobble(SymHeap &sh, TObjId dls, TObjId var, bool backward) {
-    CL_BREAK_IF(OK_DLS != objKind(sh, dls));
+void dlSegGobble(SymHeap &sh, TValId dls, TValId var, bool backward) {
+    CL_BREAK_IF(OK_DLS != sh.valTargetKind(dls));
 
     // handle DLS Neq predicates and OK_MAY_EXIST
-    const unsigned len = dlSegMinLength(sh, sh.placedAt(dls))
-        + objMinLength(sh, var);
-    dlSegSetMinLength(sh, sh.placedAt(dls), /* DLS 0+ */ 0);
+    const unsigned len = dlSegMinLength(sh, dls) + objMinLength(sh, var);
+    dlSegSetMinLength(sh, dls, /* DLS 0+ */ 0);
     enlargeMayExist(sh, var);
 
     if (!backward)
@@ -473,59 +474,57 @@ void dlSegGobble(SymHeap &sh, TObjId dls, TObjId var, bool backward) {
     abstractNonMatchingValues(sh, var, dls);
 
     // store the pointer DLS -> VAR
-    const BindingOff &off = segBinding(sh, dls);
-    const TObjId dlsNextPtr = ptrObjByOffset(sh, dls, off.next);
-    const TObjId varNextPtr = ptrObjByOffset(sh, var, off.next);
+    const BindingOff &off = sh.segBinding(dls);
+    const TObjId dlsNextPtr = sh.ptrAt(sh.valByOffset(dls, off.next));
+    const TObjId varNextPtr = sh.ptrAt(sh.valByOffset(var, off.next));
     sh.objSetValue(dlsNextPtr, sh.valueOf(varNextPtr));
 
     // replace VAR by DLS
-    const TObjId varHead = compObjByOffset(sh, var, off.head);
-    const TValId headAt = sh.placedAt(varHead);
-    sh.valReplace(headAt, segHeadAddr(sh, dls));
+    const TValId headAt = sh.valByOffset(var, off.head);
+    sh.valReplace(headAt, segHeadAt(sh, dls));
     REQUIRE_GC_ACTIVITY(sh, headAt, dlSegGobble);
 
     // handle DLS Neq predicates
-    dlSegSetMinLength(sh, sh.placedAt(dls), len);
+    dlSegSetMinLength(sh, dls, len);
 
     dlSegSyncPeerData(sh, dls);
 }
 
-void dlSegMerge(SymHeap &sh, TObjId seg1, TObjId seg2) {
+void dlSegMerge(SymHeap &sh, TValId seg1, TValId seg2) {
     // handle DLS Neq predicates
-    const unsigned len = dlSegMinLength(sh, sh.placedAt(seg1))
-        + dlSegMinLength(sh, sh.placedAt(seg2));
-    dlSegSetMinLength(sh, sh.placedAt(seg1), /* DLS 0+ */ 0);
-    dlSegSetMinLength(sh, sh.placedAt(seg2), /* DLS 0+ */ 0);
+    const unsigned len = dlSegMinLength(sh, seg1) + dlSegMinLength(sh, seg2);
+    dlSegSetMinLength(sh, seg1, /* DLS 0+ */ 0);
+    dlSegSetMinLength(sh, seg2, /* DLS 0+ */ 0);
 
     // check for a failure of segDiscover()
-    CL_BREAK_IF(segBinding(sh, seg1) != segBinding(sh, seg2));
+    CL_BREAK_IF(sh.segBinding(seg1) != sh.segBinding(seg2));
 
-    const TObjId peer1 = dlSegPeer(sh, seg1);
+    const TValId peer1 = dlSegPeer(sh, seg1);
 #ifndef NDEBUG
     const TObjId nextPtr = nextPtrFromSeg(sh, peer1);
     const TValId valNext = sh.valueOf(nextPtr);
-    CL_BREAK_IF(valNext != segHeadAddr(sh, seg2));
+    CL_BREAK_IF(valNext != segHeadAt(sh, seg2));
 #endif
 
-    const TObjId peer2 = dlSegPeer(sh, seg2);
+    const TValId peer2 = dlSegPeer(sh, seg2);
 
     // introduce some UV_UNKNOWN values if necessary
-    abstractNonMatchingValues(sh,  seg1,  seg2, /* bidir */ true);
+    abstractNonMatchingValues(sh, seg1, seg2, /* bidir */ true);
 
     // preserve backLink
     const TValId valNext2 = sh.valueOf(nextPtrFromSeg(sh, seg1));
     sh.objSetValue(nextPtrFromSeg(sh, seg2), valNext2);
 
     // replace both parts point-wise
-    const TValId  segAt = segHeadAddr(sh,  seg1);
-    const TValId peerAt = segHeadAddr(sh, peer1);
+    const TValId headAt = segHeadAt(sh,  seg1);
+    const TValId peerAt = segHeadAt(sh, peer1);
 
-    sh.valReplace( segAt, segHeadAddr(sh,  seg2));
-    sh.valReplace(peerAt, segHeadAddr(sh, peer2));
+    sh.valReplace(headAt, segHeadAt(sh,  seg2));
+    sh.valReplace(peerAt, segHeadAt(sh, peer2));
 
-    // destroy segAt and peerAt, including all prototypes -- either at once, or
+    // destroy headAt and peerAt, including all prototypes -- either at once, or
     // one by one (depending on the shape of subgraph)
-    REQUIRE_GC_ACTIVITY(sh, segAt, dlSegMerge);
+    REQUIRE_GC_ACTIVITY(sh, headAt, dlSegMerge);
     if (!collectJunk(sh, peerAt) && 0 < sh.pointsTo(peerAt)) {
         CL_ERROR("dlSegMerge() failed to collect garbage"
                  ", peerAt still referenced");
@@ -534,7 +533,7 @@ void dlSegMerge(SymHeap &sh, TObjId seg1, TObjId seg2) {
 
     if (len)
         // handle DLS Neq predicates
-        dlSegSetMinLength(sh, sh.placedAt(seg2), len);
+        dlSegSetMinLength(sh, seg2, len);
 
     dlSegSyncPeerData(sh, seg2);
 }
@@ -542,12 +541,12 @@ void dlSegMerge(SymHeap &sh, TObjId seg1, TObjId seg2) {
 void dlSegAbstractionStep(SymHeap &sh, TValId *pCursor, const BindingOff &off)
 {
     // the first object is clear
-    const TObjId o1 = sh.objAt(*pCursor);
+    const TValId a1 = *pCursor;
 
     // we'll find the next one later on
-    TObjId o2 = o1;
+    TValId a2 = a1;
 
-    EObjKind kind = objKind(sh, o1);
+    const EObjKind kind = sh.valTargetKind(a1);
     switch (kind) {
         case OK_SLS:
             // *** segDiscover() failure detected ***
@@ -555,41 +554,41 @@ void dlSegAbstractionStep(SymHeap &sh, TValId *pCursor, const BindingOff &off)
 
         case OK_DLS:
             // jump to peer
-            o2 = dlSegPeer(sh, o2);
+            a2 = dlSegPeer(sh, a2);
 
             // jump to the next object (as we know such an object exists)
-            skipObj(sh, &o2, segBinding(sh, o2).next);
-            if (OK_DLS != objKind(sh, o2)) {
+            a2 = nextRootObj(sh, a2, sh.segBinding(a2).next);
+            if (OK_DLS != sh.valTargetKind(a2)) {
                 // DLS + VAR
-                dlSegGobble(sh, o1, o2, /* backward */ false);
+                dlSegGobble(sh, a1, a2, /* backward */ false);
                 return;
             }
 
             // DLS + DLS
-            dlSegMerge(sh, o1, o2);
+            dlSegMerge(sh, a1, a2);
             break;
 
         case OK_MAY_EXIST:
         case OK_CONCRETE:
             // jump to the next object (as we know such an object exists)
-            skipObj(sh, &o2, off.next);
-            if (OK_DLS != objKind(sh, o2)) {
+            a2 = nextRootObj(sh, a2, off.next);
+            if (OK_DLS != sh.valTargetKind(a2)) {
                 // VAR + VAR
-                dlSegCreate(sh, o1, o2, off);
+                dlSegCreate(sh, a1, a2, off);
                 return;
             }
 
             // VAR + DLS
-            dlSegGobble(sh, o2, o1, /* backward */ true);
+            dlSegGobble(sh, a2, a1, /* backward */ true);
             break;
     }
 
     // the current object has been just consumed, move to the next one
-    *pCursor = sh.placedAt(o2);
+    *pCursor = a2;
 
 #ifndef NDEBUG
     // just check if the Neq predicates work well so far
-    dlSegMinLength(sh, sh.placedAt(o2));
+    dlSegMinLength(sh, a2);
 #endif
 }
 

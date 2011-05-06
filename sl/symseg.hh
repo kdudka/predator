@@ -112,12 +112,13 @@ void dlSegSetMinLength(SymHeap &sh, TValId dls, unsigned len);
 /// return lower estimation of segment length
 unsigned segMinLength(const SymHeap &sh, TValId seg);
 
-inline unsigned objMinLength(const SymHeap &sh, TObjId obj) {
-    if (obj <= 0)
+inline unsigned objMinLength(const SymHeap &sh, TValId at) {
+    if (const_cast<SymHeap &>(sh).objAt(at) <= 0)
+        // XXX
         return 0;
 
-    return (objIsSeg(sh, obj))
-        ? segMinLength(sh, sh.placedAt(obj))
+    return (SymHeap::isAbstract(sh.valTarget(at)))
+        ? segMinLength(sh, at)
         : /* OK_CONCRETE */ 1;
 }
 
