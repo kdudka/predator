@@ -274,6 +274,33 @@ TObjId compObjByOffset(const SymHeap &sh, TObjId obj, TOffset off) {
     return subSeekByOffset(sh, obj, off, /* clt */ 0, CL_TYPE_STRUCT);
 }
 
+void redirectRefs(
+        SymHeap                 &sh,
+        const TValId            pointingFrom,
+        const TValId            pointingTo,
+        const TValId            redirectTo)
+{
+    // go through all objects pointing at/inside pointingTo
+    TObjList refs;
+    sh.pointedBy(refs, pointingTo);
+    BOOST_FOREACH(const TObjId obj, refs) {
+        const TValId referrerAt = sh.valRoot(sh.placedAt(obj));
+        if (VAL_INVALID != pointingFrom && pointingFrom != referrerAt)
+            // pointed from elsewhere, keep going
+            continue;
+
+        // check the current link
+        const TValId nowAt = sh.valueOf(obj);
+        const TOffset offToRoot = sh.valOffset(nowAt);
+        CL_BREAK_IF(sh.valOffset(redirectTo));
+
+        // redirect accordingly
+        const TValId result = sh.valByOffset(redirectTo, offToRoot);
+        sh.objSetValue(obj, result);
+    }
+}
+
+// TODO: remove this
 void redirectInboundEdges(
         SymHeap                 &sh,
         const TObjId            pointingFrom,

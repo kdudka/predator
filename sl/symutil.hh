@@ -292,6 +292,13 @@ bool /* complete */ traverseSubObjsIc(THeap &sh, TItem item, TVisitor &visitor)
 }
 #endif
 
+/// (VAL_INVALID != pointingFrom) means 'pointing from anywhere'
+void redirectRefs(
+        SymHeap                 &sh,
+        const TValId            pointingFrom,
+        const TValId            pointingTo,
+        const TValId            redirectTo);
+
 /// (OBJ_INVALID != pointingFrom) means 'pointing from anywhere'
 void redirectInboundEdges(
         SymHeap                 &sh,

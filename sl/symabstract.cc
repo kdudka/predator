@@ -103,12 +103,12 @@ struct UnknownValuesDuplicator {
 };
 
 // when concretizing an object, we need to duplicate all _unknown_ values
-void duplicateUnknownValues(SymHeap &sh, TObjId obj) {
+void duplicateUnknownValues(SymHeap &sh, TValId at) {
     UnknownValuesDuplicator visitor;
-    buildIgnoreList(visitor.ignoreList, sh, obj);
+    buildIgnoreList(visitor.ignoreList, sh, /* XXX */ sh.objAt(at));
 
     // traverse all sub-objects
-    traverseLiveObjs(sh, sh.placedAt(obj), visitor);
+    traverseLiveObjs(sh, at, visitor);
 }
 
 void detachClonedPrototype(
@@ -157,7 +157,7 @@ TObjId protoClone(SymHeap &sh, const TObjId proto) {
         sh.valTargetSetProto(sh.placedAt(clone), false);
     }
 
-    duplicateUnknownValues(sh, clone);
+    duplicateUnknownValues(sh, sh.placedAt(clone));
 
     return clone;
 }
@@ -360,64 +360,59 @@ void abstractNonMatchingValues(
 }
 
 void clonePrototypes(SymHeap &sh, TValId objAt, TValId dupAt) {
-    // remove this
-    TObjId obj = sh.objAt(objAt);
-    TObjId dup = sh.objAt(dupAt);
-
-    duplicateUnknownValues(sh, obj);
+    duplicateUnknownValues(sh, objAt);
 
     ProtoCloner visitor;
-    visitor.rootDst = obj;
-    visitor.rootSrc = dup;
-    buildIgnoreList(visitor.ignoreList, sh, obj);
+    visitor.rootDst = /* XXX */ sh.objAt(objAt);
+    visitor.rootSrc = /* XXX */ sh.objAt(dupAt);
+    buildIgnoreList(visitor.ignoreList, sh, /* XXX */ visitor.rootDst);
 
     // traverse all live sub-objects
-    traverseLivePtrs(sh, sh.placedAt(obj), visitor);
+    traverseLivePtrs(sh, objAt, visitor);
 
     // if there was "a pointer to self", it should remain "a pointer to self";
     // however "self" has been changed, so that a redirection is necessary
-    redirectInboundEdges(sh, dup, obj, dup);
+    redirectRefs(sh, dupAt, objAt, dupAt);
 }
 
 void slSegAbstractionStep(SymHeap &sh, TValId *pCursor, const BindingOff &off)
 {
-    const TObjId obj = sh.objAt(*pCursor);
-    const TObjId objPtrNext = ptrObjByOffset(sh, obj, off.next);
-    const TValId valNext = sh.valueOf(objPtrNext);
-    CL_BREAK_IF(valNext <= 0);
+    // jump to the next object
+    const TValId at = *pCursor;
+    const TObjId ptrNext = sh.ptrAt(sh.valByOffset(at, off.next));
+    const TValId nextAt = sh.valRoot(sh.valueOf(ptrNext));
+    CL_BREAK_IF(nextAt <= 0);
 
     // read minimal length of 'obj' and set it temporarily to zero
-    unsigned len = objMinLength(sh, sh.placedAt(obj));
-    if (objIsSeg(sh, obj))
-        segSetMinLength(sh, sh.placedAt(obj), /* SLS 0+ */ 0);
+    unsigned len = objMinLength(sh, at);
+    if (SymHeap::isAbstract(sh.valTarget(at)))
+        segSetMinLength(sh, at, /* SLS 0+ */ 0);
 
-    // jump to the next object
-    const TObjId objNext = objRootByVal(sh, valNext);
-    len += objMinLength(sh, sh.placedAt(objNext));
-    if (OK_SLS == sh.valTargetKind(valNext))
-        segSetMinLength(sh, sh.placedAt(objNext), /* SLS 0+ */ 0);
+    len += objMinLength(sh, nextAt);
+    if (OK_SLS == sh.valTargetKind(nextAt))
+        segSetMinLength(sh, nextAt, /* SLS 0+ */ 0);
     else
         // abstract the _next_ object
-        sh.valTargetSetAbstract(valNext, OK_SLS, off);
+        sh.valTargetSetAbstract(nextAt, OK_SLS, off);
 
     // merge data
-    CL_BREAK_IF(OK_SLS != objKind(sh, objNext));
-    abstractNonMatchingValues(sh, sh.placedAt(obj), sh.placedAt(objNext));
+    CL_BREAK_IF(OK_SLS != sh.valTargetKind(nextAt));
+    abstractNonMatchingValues(sh, at, nextAt);
 
     // replace all references to 'head'
-    const TOffset offHead = sh.segBinding(valNext).head;
-    const TValId headAt = sh.placedAt(compObjByOffset(sh, obj, offHead));
-    sh.valReplace(headAt, segHeadAddr(sh, objNext));
+    const TOffset offHead = sh.segBinding(nextAt).head;
+    const TValId headAt = sh.valByOffset(at, offHead);
+    sh.valReplace(headAt, segHeadAt(sh, nextAt));
 
     // destroy self, including all prototypes
     REQUIRE_GC_ACTIVITY(sh, headAt, slSegAbstractionStep);
 
     if (len)
         // declare resulting segment's minimal length
-        segSetMinLength(sh, sh.placedAt(objNext), len);
+        segSetMinLength(sh, nextAt, len);
 
     // move to the next object
-    *pCursor = sh.placedAt(objNext);
+    *pCursor = nextAt;
 }
 
 void enlargeMayExist(SymHeap &sh, const TValId at) {
