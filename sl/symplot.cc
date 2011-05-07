@@ -854,7 +854,7 @@ void SymPlot::Private::digObjCore(TObjId obj) {
     }
 
     ObjectDigger visitor(this, obj);
-    traverseTypeIc<TFieldIdxChain>(clt, visitor, /* digOnlyStructs */ true);
+    traverseTypeIc(clt, visitor, /* digOnlyStructs */ true);
 }
 
 void SymPlot::Private::digObj(TObjId obj) {

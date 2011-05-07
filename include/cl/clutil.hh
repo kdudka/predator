@@ -31,6 +31,7 @@
 #include <set>
 #include <stack>
 #include <string>
+#include <vector>
 
 namespace CodeStorage {
     struct Storage;
@@ -86,15 +87,16 @@ int intCstFromOperand(const struct cl_operand *op);
 /// return unique ID of the variable/register given as operand
 int varIdFromOperand(const struct cl_operand *op, const char **pName = 0);
 
+typedef std::vector<int /* nth */> TFieldIdxChain;
+
 // TODO: define TFieldIdxChain within CodeStorage to avoid the template arg
-template <class TFieldIdxChain>
 struct CltStackItem {
     const struct cl_type    *clt;
     TFieldIdxChain          ic;
 };
 
 // take the given visitor through a composite type (or whatever you pass in)
-template <class TFieldIdxChain, class TVisitor>
+template <class TVisitor>
 bool /* complete */ traverseTypeIc(const struct cl_type *clt, TVisitor &visitor,
                                    bool digOnlyComposite = false)
 {
@@ -105,7 +107,7 @@ bool /* complete */ traverseTypeIc(const struct cl_type *clt, TVisitor &visitor,
     done.insert(clt->uid);
 
     // initialize DFS
-    typedef CltStackItem<TFieldIdxChain> TItem;
+    typedef CltStackItem TItem;
     TItem si;
     si.clt = clt;
     si.ic.push_back(0);

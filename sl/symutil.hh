@@ -228,67 +228,8 @@ bool /* complete */ traverseSubObjs(THeap &sh, TItem item, TVisitor &visitor,
     return true;
 }
 
-// only for compatibility with legacy code
-#if 1
-typedef std::vector<int /* nth */> TFieldIdxChain;
+// TODO: remove this
 TObjId subObjByChain(const SymHeap &sh, TObjId obj, TFieldIdxChain ic);
-
-#ifndef BUILDING_DOX
-template <class TItem>
-struct SubTraversalStackItem {
-    TItem               item;
-    TFieldIdxChain      ic;
-};
-#endif
-
-/// take the given visitor through a composite object (or whatever you pass in)
-template <class THeap, class TVisitor, class TItem = TObjId>
-bool /* complete */ traverseSubObjsIc(THeap &sh, TItem item, TVisitor &visitor)
-{
-    typedef SubTraversalStackItem<TItem> TStackItem;
-    TStackItem si;
-    si.item = item;
-    si.ic.push_back(0);
-
-    std::stack<TStackItem> todo;
-    todo.push(si);
-    while (!todo.empty()) {
-        TStackItem &si = todo.top();
-        CL_BREAK_IF(si.ic.empty());
-
-        typedef TraverseSubObjsHelper<TItem> THelper;
-        const struct cl_type *clt = THelper::getItemClt(sh, si.item);
-        CL_BREAK_IF(!clt || !isComposite(clt));
-
-        typename TFieldIdxChain::reference nth = si.ic.back();
-        if (nth == clt->item_cnt) {
-            // done at this level
-            todo.pop();
-            continue;
-        }
-
-        TStackItem next = si;
-        next.item = THelper::getNextItem(sh, si.item, nth);
-        if (!/* continue */visitor(sh, next.item, si.ic))
-            return false;
-
-        const struct cl_type *cltNext = THelper::getItemClt(sh, next.item);
-        if (!cltNext || !isComposite(cltNext)) {
-            // move to the next field at this level
-            ++nth;
-            continue;
-        }
-
-        // nest into a sub-object
-        next.ic.push_back(0);
-        todo.push(next);
-        ++nth;
-    }
-
-    // the traversal is done, without any interruption by visitor
-    return true;
-}
-#endif
 
 /// (VAL_INVALID != pointingFrom) means 'pointing from anywhere'
 void redirectRefs(
