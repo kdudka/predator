@@ -824,6 +824,33 @@ TValId SymHeapCore::valByOffset(TValId at, TOffset off) {
     return val;
 }
 
+bool handleSpecialTargets(EValueTarget *pCode, const TObjId target) {
+    switch (target) {
+        case OBJ_DELETED:
+            *pCode = VT_DELETED;
+            return true;
+
+        case OBJ_LOST:
+            *pCode = VT_LOST;
+            return true;
+
+        case OBJ_RETURN:
+            // this happens in case a composite value is returned from a
+            // function;  the expected output of test-0090 prior to this commit
+            // was wrongly assuming that this area is dynamically allocated
+            *pCode = VT_ON_STACK;
+            return true;
+
+        case OBJ_UNKNOWN:
+            // either unknown value, or off-value
+            return false;
+
+        default:
+            CL_BREAK_IF(target <= 0);
+            return false;
+    }
+}
+
 EValueTarget SymHeapCore::valTarget(TValId val) const {
     if (val <= 0)
         return VT_INVALID;
@@ -834,29 +861,12 @@ EValueTarget SymHeapCore::valTarget(TValId val) const {
         return VT_CUSTOM;
 
     TObjId target = valData.target;
-    switch (target) {
-        case OBJ_DELETED:
-            return VT_DELETED;
+    EValueTarget code;
+    if (handleSpecialTargets(&code, target))
+        return code;
 
-        case OBJ_LOST:
-            return VT_LOST;
-
-        case OBJ_UNKNOWN:
-            // either unknown value, or off-value
-            break;
-
-        case OBJ_RETURN:
-            // this happens in case a composite value is returned from a
-            // function;  the expected output of test-0090 prior to this commit
-            // was wrongly assuming that this area is dynamically allocated
-            return VT_ON_STACK;
-
-        default:
-            CL_BREAK_IF(target <= 0);
-    }
-
-    const EUnknownValue code = this->valGetUnknown(val);
-    switch (code) {
+    const EUnknownValue uvCode = this->valGetUnknown(val);
+    switch (uvCode) {
         case UV_KNOWN:
             break;
 
@@ -871,8 +881,9 @@ EValueTarget SymHeapCore::valTarget(TValId val) const {
 
     const TValId valRoot = d->valRoot(val);
     target = d->values[valRoot].target;
+    if (handleSpecialTargets(&code, target))
+        return code;
 
-    CL_BREAK_IF(target < 0);
     const Private::Root &rootData = d->roots[target];
     const int uid = rootData.cVar.uid;
     if (-1 == uid)

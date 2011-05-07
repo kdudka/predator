@@ -46,13 +46,6 @@ void moveKnownValueToLeft(
     }
 }
 
-// a wrapper for legacy code; this will go away once we switch to symheap-ng
-TObjId objDup(SymHeap &sh, const TObjId obj) {
-    const TValId addr = sh.placedAt(obj);
-    const TValId dupAt = sh.valClone(addr);
-    return sh.objAt(dupAt);
-}
-
 // TODO: remove this
 TObjId subObjByChain(const SymHeap &sh, TObjId obj, TFieldIdxChain ic) {
     BOOST_FOREACH(const int nth, ic) {
@@ -92,14 +85,6 @@ TObjId subObjByInvChain(const SymHeap &sh, TObjId obj, TFieldIdxChain ic) {
     CL_BREAK_IF(!chkStack.empty());
 
     return obj;
-}
-
-bool isHeapObject(const SymHeap &sh, TObjId obj) {
-    if (obj <= 0)
-        return false;
-
-    const TValId at = sh.placedAt(obj);
-    return SymHeap::isOnHeap(sh.valTarget(at));
 }
 
 TObjId /* root */ objRoot(const SymHeap &sh, TObjId obj) {

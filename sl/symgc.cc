@@ -72,8 +72,7 @@ bool digJunk(const SymHeap &heap, TValId *ptrVal) {
         // ignore custom values (e.g. fnc pointers)
         return false;
 
-    TObjId obj = heap.pointsTo(*ptrVal);
-    if (!isHeapObject(heap, obj))
+    if (!SymHeap::isOnHeap(heap.valTarget(*ptrVal)))
         // non-heap object simply can't be JUNK
         return false;
 
@@ -82,12 +81,13 @@ bool digJunk(const SymHeap &heap, TValId *ptrVal) {
 
     WorkList<TObjId> wl;
     digPointingObjects(wl, heap, *ptrVal);
-    while (wl.next(obj)) {
-        if (!isHeapObject(heap, obj))
-            return false;
 
+    TObjId obj;
+    while (wl.next(obj)) {
         const TValId val = heap.placedAt(obj);
-        CL_BREAK_IF(val <= 0);
+        if (!SymHeap::isOnHeap(heap.valTarget(val)))
+            // non-heap object simply can't be JUNK
+            return false;
 
         digPointingObjects(wl, heap, val);
     }

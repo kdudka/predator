@@ -62,12 +62,6 @@ inline TValId valOfPtrAt(SymHeap &sh, TValId at, TOffset off) {
 }
 
 // TODO: remove this
-TObjId objDup(SymHeap &sh, const TObjId obj);
-
-// TODO: remove this
-bool isHeapObject(const SymHeap &heap, TObjId obj);
-
-// TODO: remove this
 TObjId objRoot(const SymHeap &sh, TObjId obj);
 
 // TODO: remove this
