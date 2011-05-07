@@ -105,7 +105,7 @@ struct UnknownValuesDuplicator {
 // when concretizing an object, we need to duplicate all _unknown_ values
 void duplicateUnknownValues(SymHeap &sh, TValId at) {
     UnknownValuesDuplicator visitor;
-    buildIgnoreList(visitor.ignoreList, sh, /* XXX */ sh.objAt(at));
+    buildIgnoreList(visitor.ignoreList, sh, at);
 
     // traverse all sub-objects
     traverseLiveObjs(sh, at, visitor);
@@ -113,57 +113,52 @@ void duplicateUnknownValues(SymHeap &sh, TValId at) {
 
 void detachClonedPrototype(
         SymHeap                 &sh,
-        const TObjId            proto,
-        const TObjId            clone,
-        const TObjId            rootDst,
-        const TObjId            rootSrc)
+        const TValId            proto,
+        const TValId            clone,
+        const TValId            rootDst,
+        const TValId            rootSrc)
 {
-    const bool isRootDls = (OK_DLS == objKind(sh, rootDst));
-    CL_BREAK_IF(isRootDls && (OK_DLS != objKind(sh, rootSrc)));
+    const bool isRootDls = (OK_DLS == sh.valTargetKind(rootDst));
+    CL_BREAK_IF(isRootDls && (OK_DLS != sh.valTargetKind(rootSrc)));
 
-    TObjId rootSrcPeer = OBJ_INVALID;
+    TValId rootSrcPeer = VAL_INVALID;
     if (isRootDls) {
         rootSrcPeer = dlSegPeer(sh, rootSrc);
         CL_BREAK_IF(dlSegPeer(sh, rootDst) != rootSrcPeer);
     }
 
-    redirectInboundEdges(sh, rootDst, proto, clone);
-    redirectInboundEdges(sh, proto, rootDst, rootSrc);
+    redirectRefs(sh, rootDst, proto, clone);
+    redirectRefs(sh, proto, rootDst, rootSrc);
     if (isRootDls)
-        redirectInboundEdges(sh, clone, rootSrcPeer, rootDst);
+        redirectRefs(sh, clone, rootSrcPeer, rootDst);
 
-    if (OK_DLS == objKind(sh, proto)) {
-        const TObjId protoPeer = dlSegPeer(sh, proto);
-        const TObjId clonePeer = dlSegPeer(sh, clone);
-        redirectInboundEdges(sh, rootDst, protoPeer, clonePeer);
-        redirectInboundEdges(sh, protoPeer, rootDst, rootSrc);
+    if (OK_DLS == sh.valTargetKind(proto)) {
+        const TValId protoPeer = dlSegPeer(sh, proto);
+        const TValId clonePeer = dlSegPeer(sh, clone);
+        redirectRefs(sh, rootDst, protoPeer, clonePeer);
+        redirectRefs(sh, protoPeer, rootDst, rootSrc);
         if (isRootDls)
-            redirectInboundEdges(sh, clonePeer, rootSrcPeer, rootDst);
+            redirectRefs(sh, clonePeer, rootSrcPeer, rootDst);
     }
 }
 
-TObjId protoClone(SymHeap &sh, const TObjId proto) {
-    TObjId clone = OBJ_INVALID;
-
-    if (objIsSeg(sh, proto)) {
+TValId protoClone(SymHeap &sh, const TValId proto) {
+    if (SymHeap::isAbstract(sh.valTarget(proto))) {
         // clone segment prototype
-        clone = segClone(sh, proto);
+        const TValId clone = segClone(sh, proto);
         segSetProto(sh, clone, false);
         return clone;
     }
-    else {
-        // clone bare prototype
-        clone = objDup(sh, proto);
-        sh.valTargetSetProto(sh.placedAt(clone), false);
-    }
 
-    duplicateUnknownValues(sh, sh.placedAt(clone));
-
+    // clone bare prototype
+    const TValId clone = sh.valClone(proto);
+    sh.valTargetSetProto(clone, false);
+    duplicateUnknownValues(sh, clone);
     return clone;
 }
 
 struct ProtoFinder {
-    std::set<TObjId> protos;
+    std::set<TValId> protos;
 
     bool operator()(SymHeap &sh, TObjId sub) {
         const TValId val = sh.valueOf(sub);
@@ -175,7 +170,7 @@ struct ProtoFinder {
             return /* continue */ true;
 
         if (sh.valTargetIsProto(val))
-            protos.insert(sh.objAt(val, CL_TYPE_STRUCT));
+            protos.insert(val);
 
         return /* continue */ true;
     }
@@ -184,36 +179,36 @@ struct ProtoFinder {
 // FIXME: this completely ignores Neq predicates for instance...
 void cloneGenericPrototype(
         SymHeap                 &sh,
-        const TObjId            proto,
-        const TObjId            rootDst,
-        const TObjId            rootSrc)
+        const TValId            proto,
+        const TValId            rootDst,
+        const TValId            rootSrc)
 {
-    std::vector<TObjId>         protoList;
-    std::vector<TObjId>         cloneList;
+    std::vector<TValId>         protoList;
+    std::vector<TValId>         cloneList;
     std::vector<int>            lengthList;
-    std::set<TObjId>            haveSeen;
-    std::stack<TObjId>          todo;
+    std::set<TValId>            haveSeen;
+    std::stack<TValId>          todo;
     todo.push(proto);
     haveSeen.insert(proto);
 
     CL_DEBUG("WARNING: cloneGenericPrototype() is just a hack for now!");
 
     while (!todo.empty()) {
-        const TObjId proto = todo.top();
+        const TValId proto = todo.top();
         todo.pop();
         protoList.push_back(proto);
 
         ProtoFinder visitor;
-        traverseLivePtrs(sh, sh.placedAt(proto), visitor);
-        BOOST_FOREACH(const TObjId obj, visitor.protos) {
-            if (!insertOnce(haveSeen, obj))
+        traverseLivePtrs(sh, proto, visitor);
+        BOOST_FOREACH(const TValId protoAt, visitor.protos) {
+            if (!insertOnce(haveSeen, protoAt))
                 continue;
 
-            if (OK_DLS == objKind(sh, obj) &&
-                    !insertOnce(haveSeen, dlSegPeer(sh, obj)))
+            if (OK_DLS == sh.valTargetKind(protoAt) &&
+                    !insertOnce(haveSeen, dlSegPeer(sh, protoAt)))
                 continue;
 
-            todo.push(obj);
+            todo.push(protoAt);
         }
     }
 
@@ -225,10 +220,10 @@ void cloneGenericPrototype(
 
     // clone the prototypes while reseting the minimal size to zero
     for (unsigned i = 0; i < cnt; ++i) {
-        const TObjId proto = protoList[i];
-        if (objIsSeg(sh, proto)) {
-            lengthList[i] = segMinLength(sh, sh.placedAt(proto));
-            segSetMinLength(sh, sh.placedAt(proto), /* LS 0+ */ 0);
+        const TValId proto = protoList[i];
+        if (SymHeap::isAbstract(sh.valTarget(proto))) {
+            lengthList[i] = segMinLength(sh, proto);
+            segSetMinLength(sh, proto, /* LS 0+ */ 0);
         }
         else
             lengthList[i] = -1;
@@ -238,49 +233,49 @@ void cloneGenericPrototype(
 
     // FIXME: works, but likely to kill the CPU
     for (unsigned i = 0; i < cnt; ++i) {
-        const TObjId proto = protoList[i];
-        const TObjId clone = cloneList[i];
+        const TValId proto = protoList[i];
+        const TValId clone = cloneList[i];
         detachClonedPrototype(sh, proto, clone, rootDst, rootSrc);
 
         for (unsigned j = 0; j < cnt; ++j) {
             if (i == j)
                 continue;
 
-            const TObjId otherProto = protoList[j];
-            const TObjId otherClone = cloneList[j];
+            const TValId otherProto = protoList[j];
+            const TValId otherClone = cloneList[j];
             detachClonedPrototype(sh, proto, clone, otherClone, otherProto);
         }
     }
 
     // finally restore the minimal size of all segments
     for (unsigned i = 0; i < cnt; ++i) {
-        const TObjId proto = protoList[i];
-        const TObjId clone = cloneList[i];
+        const TValId proto = protoList[i];
+        const TValId clone = cloneList[i];
         const int len = lengthList[i];
         if (len <= 0)
             // -1 means "not a segment"
             continue;
 
-        segSetMinLength(sh, sh.placedAt(proto), len);
-        segSetMinLength(sh, sh.placedAt(clone), len);
+        segSetMinLength(sh, proto, len);
+        segSetMinLength(sh, clone, len);
     }
 }
 
 // visitor
 struct ProtoCloner {
     std::set<TObjId> ignoreList;
-    TObjId rootDst;
-    TObjId rootSrc;
+    TValId rootDst;
+    TValId rootSrc;
 
     bool operator()(SymHeap &sh, TObjId obj) const {
         if (hasKey(ignoreList, obj))
             return /* continue */ true;
 
-        const TValId valOld = sh.valueOf(obj);
-        if (valOld <= 0)
+        const TValId val = sh.valueOf(obj);
+        if (val <= 0)
             return /* continue */ true;
 
-        const EUnknownValue code = sh.valGetUnknown(valOld);
+        const EUnknownValue code = sh.valGetUnknown(val);
         switch (code) {
             case UV_UNKNOWN:
             case UV_DONT_CARE:
@@ -293,10 +288,8 @@ struct ProtoCloner {
         }
 
         // check if we point to prototype, or shared data
-        if (sh.valTargetIsProto(valOld)) {
-            const TObjId target = objRootByVal(sh, valOld);
-            cloneGenericPrototype(sh, target, rootDst, rootSrc);
-        }
+        if (sh.valTargetIsProto(val))
+            cloneGenericPrototype(sh, sh.valRoot(val), rootDst, rootSrc);
 
         return /* continue */ true;
     }
@@ -324,21 +317,19 @@ struct ValueSynchronizer {
     }
 };
 
-void dlSegSyncPeerData(SymHeap &sh, const TValId dlsAt) {
-    // TODO: remove this
-    const TObjId dls = sh.objAt(dlsAt);
-
-    const TObjId peer = dlSegPeer(sh, dls);
+void dlSegSyncPeerData(SymHeap &sh, const TValId dls) {
+    const TValId peer = dlSegPeer(sh, dls);
     ValueSynchronizer visitor;
     buildIgnoreList(visitor.ignoreList, sh, dls);
 
     // if there was "a pointer to self", it should remain "a pointer to self";
     TObjList refs;
-    sh.pointedBy(refs, sh.placedAt(dls));
+    sh.pointedBy(refs, dls);
     std::copy(refs.begin(), refs.end(),
               std::inserter(visitor.ignoreList, visitor.ignoreList.begin()));
 
-    const TObjPair item(dls, peer);
+    // FIXME: do not assume fixed-type objects here!
+    const TObjPair item(sh.objAt(dls), sh.objAt(peer));
     traverseSubObjs(sh, item, visitor, /* leavesOnly */ true);
 }
 
@@ -360,12 +351,13 @@ void abstractNonMatchingValues(
 }
 
 void clonePrototypes(SymHeap &sh, TValId objAt, TValId dupAt) {
+    CL_BREAK_IF(sh.valOffset(objAt) || sh.valOffset(dupAt));
     duplicateUnknownValues(sh, objAt);
 
     ProtoCloner visitor;
-    visitor.rootDst = /* XXX */ sh.objAt(objAt);
-    visitor.rootSrc = /* XXX */ sh.objAt(dupAt);
-    buildIgnoreList(visitor.ignoreList, sh, /* XXX */ visitor.rootDst);
+    visitor.rootDst = objAt;
+    visitor.rootSrc = dupAt;
+    buildIgnoreList(visitor.ignoreList, sh, objAt);
 
     // traverse all live sub-objects
     traverseLivePtrs(sh, objAt, visitor);

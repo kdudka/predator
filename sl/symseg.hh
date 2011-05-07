@@ -151,9 +151,9 @@ inline void objSetConcrete(
 }
 
 /// same as SymHeap::objSetProto(), but takes care of DLS peers
-void segSetProto(SymHeap &sh, TObjId seg, bool isProto);
+void segSetProto(SymHeap &sh, TValId seg, bool isProto);
 
-TObjId segClone(SymHeap &sh, const TObjId seg);
+TValId segClone(SymHeap &sh, const TValId seg);
 
 /// destroy the given list segment object (including DLS peer in case of DLS)
 void segDestroy(SymHeap &sh, TObjId seg);
@@ -183,25 +183,29 @@ template <class TIgnoreList>
 void buildIgnoreList(
         TIgnoreList             &ignoreList,
         const SymHeap           &sh,
-        const TObjId            obj)
+        const TValId            at)
 {
+    SymHeap &writable = const_cast<SymHeap &>(sh);
+    TOffset off;
     TObjId tmp;
 
-    const EObjKind kind = objKind(sh, obj);
+    const EObjKind kind = sh.valTargetKind(at);
     switch (kind) {
         case OK_CONCRETE:
             return;
 
         case OK_DLS:
             // preserve 'peer' field
-            tmp = ptrObjByOffset(sh, obj, segBinding(sh, obj).prev);
+            off = sh.segBinding(at).prev;
+            tmp = writable.ptrAt(writable.valByOffset(at, off));
             ignoreList.insert(tmp);
             // fall through!
 
         case OK_SLS:
         case OK_MAY_EXIST:
             // preserve 'next' field
-            tmp = ptrObjByOffset(sh, obj, segBinding(sh, obj).next);
+            off = sh.segBinding(at).next;
+            tmp = writable.ptrAt(writable.valByOffset(at, off));
             ignoreList.insert(tmp);
     }
 }

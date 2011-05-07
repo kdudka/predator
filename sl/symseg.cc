@@ -116,18 +116,18 @@ unsigned segMinLength(const SymHeap &sh, TValId seg) {
     return static_cast<unsigned>(sh.SymHeapCore::proveNeq(headAddr, nextVal));
 }
 
-void segSetProto(SymHeap &sh, TObjId seg, bool isProto) {
-    seg = objRoot(sh, seg);
+void segSetProto(SymHeap &sh, TValId seg, bool isProto) {
+    CL_BREAK_IF(sh.valOffset(seg));
 
-    const EObjKind kind = objKind(sh, seg);
+    const EObjKind kind = sh.valTargetKind(seg);
     switch (kind) {
         case OK_DLS:
-            sh.valTargetSetProto(sh.placedAt(dlSegPeer(sh, seg)), isProto);
+            sh.valTargetSetProto(dlSegPeer(sh, seg), isProto);
             // fall through
 
         case OK_SLS:
         case OK_MAY_EXIST:
-            sh.valTargetSetProto(sh.placedAt(seg), isProto);
+            sh.valTargetSetProto(seg, isProto);
             break;
 
         default:
@@ -259,28 +259,28 @@ void segSetMinLength(SymHeap &sh, TValId seg, unsigned len) {
     }
 }
 
-TObjId segClone(SymHeap &sh, const TObjId seg) {
-    const TObjId dupSeg = objDup(sh, seg);
+TValId segClone(SymHeap &sh, const TValId seg) {
+    const TValId dup = sh.valClone(seg);
 
-    if (OK_DLS == objKind(sh, seg)) {
+    if (OK_DLS == sh.valTargetKind(seg)) {
         // we need to clone the peer as well
-        const TObjId peer = dlSegPeer(sh, seg);
-        const TObjId dupPeer = objDup(sh, peer);
+        const TValId peer = dlSegPeer(sh, seg);
+        const TValId dupPeer = sh.valClone(peer);
 
         // dig the 'peer' selectors of the cloned objects
-        const TOffset offpSeg  = segBinding(sh, dupSeg).prev;
-        const TOffset offpPeer = segBinding(sh, dupPeer).prev;
+        const TOffset offpSeg  = sh.segBinding(dup).prev;
+        const TOffset offpPeer = sh.segBinding(dupPeer).prev;
 
         // resolve selectors -> sub-objects
-        const TObjId ppSeg  = ptrObjByOffset(sh, dupSeg , offpSeg);
-        const TObjId ppPeer = ptrObjByOffset(sh, dupPeer, offpPeer);
+        const TObjId ppSeg  = sh.ptrAt(sh.valByOffset(dup, offpSeg));
+        const TObjId ppPeer = sh.ptrAt(sh.valByOffset(dupPeer, offpPeer));
 
         // now cross the 'peer' pointers
-        sh.objSetValue(ppSeg, segHeadAddr(sh, dupPeer));
-        sh.objSetValue(ppPeer, segHeadAddr(sh, dupSeg));
+        sh.objSetValue(ppSeg, segHeadAt(sh, dupPeer));
+        sh.objSetValue(ppPeer, segHeadAt(sh, dup));
     }
 
-    return dupSeg;
+    return dup;
 }
 
 bool dlSegCheckConsistency(const SymHeap &sh) {

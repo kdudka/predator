@@ -2448,7 +2448,7 @@ bool joinData(
 
     // assign values within dst (and also in src if bidir == true)
     JoinValueVisitor visitor(ctx, bidir);
-    buildIgnoreList(visitor.ignoreList, sh, dst);
+    buildIgnoreList(visitor.ignoreList, sh, sh.placedAt(dst));
     traverseSubObjs(sh, TObjPair(dst, src), visitor, /* leavesOnly */ true);
 
     // redirect some edges if necessary
