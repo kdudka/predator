@@ -2340,12 +2340,12 @@ struct JoinValueVisitor {
 
 void recoverPointersToSelf(
         SymHeap                 &sh,
-        const TObjId            dst,
-        const TObjId            src,
-        const TObjId            ghost,
+        const TValId            dst,
+        const TValId            src,
+        const TValId            ghost,
         const bool              bidir)
 {
-    redirectInboundEdges(sh,
+    redirectRefs(sh,
             /* pointingFrom */  dst,
             /* pointingTo   */  ghost,
             /* redirectTo   */  dst);
@@ -2353,7 +2353,7 @@ void recoverPointersToSelf(
     if (!bidir)
         return;
 
-    redirectInboundEdges(sh,
+    redirectRefs(sh,
             /* pointingFrom */  src,
             /* pointingTo   */  ghost,
             /* redirectTo   */  src);
@@ -2389,10 +2389,10 @@ void recoverPrototypes(
             // temporarily remove Neq predicates
             segSetMinLength(sh, sh.placedAt(protoGhost), 0);
 
-        redirectInboundEdges(sh,
-                /* pointingFrom */  protoGhost,
-                /* pointingTo   */  objGhost,
-                /* redirectTo   */  objDst);
+        redirectRefs(sh,
+                /* pointingFrom */  sh.placedAt(protoGhost),
+                /* pointingTo   */  sh.placedAt(objGhost),
+                /* redirectTo   */  sh.placedAt(objDst));
 
         sh.valTargetSetProto(sh.placedAt(protoGhost), true);
     }
@@ -2459,7 +2459,11 @@ bool joinData(
 
     // redirect some edges if necessary
     recoverPrototypes(ctx, dst, ghost, bidir);
-    recoverPointersToSelf(sh, dst, src, ghost, bidir);
+    recoverPointersToSelf(sh,
+            sh.placedAt(dst),
+            sh.placedAt(src),
+            sh.placedAt(ghost),
+            bidir);
     restorePrototypeLengths(ctx);
 
     if (collectJunk(sh, sh.placedAt(ghost)))

@@ -297,11 +297,4 @@ void redirectRefs(
         const TValId            pointingTo,
         const TValId            redirectTo);
 
-/// (OBJ_INVALID != pointingFrom) means 'pointing from anywhere'
-void redirectInboundEdges(
-        SymHeap                 &sh,
-        const TObjId            pointingFrom,
-        const TObjId            pointingTo,
-        const TObjId            redirectTo);
-
 #endif /* H_GUARD_SYMUTIL_H */

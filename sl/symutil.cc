@@ -242,36 +242,3 @@ void redirectRefs(
         sh.objSetValue(obj, result);
     }
 }
-
-// TODO: remove this
-void redirectInboundEdges(
-        SymHeap                 &sh,
-        const TObjId            pointingFrom,
-        const TObjId            pointingTo,
-        const TObjId            redirectTo)
-{
-#ifndef NDEBUG
-    const struct cl_type *clt1 = sh.objType(pointingTo);
-    const struct cl_type *clt2 = sh.objType(redirectTo);
-    CL_BREAK_IF(!clt1 || !clt2 || *clt1 != *clt2);
-#endif
-
-    // go through all objects pointing at/inside pointingTo
-    TObjList refs;
-    sh.pointedBy(refs, sh.placedAt(pointingTo));
-    BOOST_FOREACH(const TObjId obj, refs) {
-        if (OBJ_INVALID != pointingFrom && pointingFrom != objRoot(sh, obj))
-            // pointed from elsewhere, keep going
-            continue;
-
-        // check the current link
-        const TValId nowAt = sh.valueOf(obj);
-        const TOffset offToRoot = sh.valOffset(nowAt);
-        const TValId targetAt = sh.placedAt(redirectTo);
-        CL_BREAK_IF(sh.valOffset(targetAt));
-
-        // redirect accordingly
-        const TValId result = sh.valByOffset(targetAt, offToRoot);
-        sh.objSetValue(obj, result);
-    }
-}
