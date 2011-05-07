@@ -1494,7 +1494,7 @@ class MayExistVisitor {
         SymJoinCtx              ctx_;
         const EJoinStatus       action_;
         const TValId            valRef_;
-        const TObjId            root_;
+        const TValId            root_;
         TOffset                 offNext_;
 
     public:
@@ -1502,7 +1502,7 @@ class MayExistVisitor {
                 SymJoinCtx          &ctx,
                 const EJoinStatus   action,
                 const TValId        valRef,
-                const TObjId        root):
+                const TValId        root):
             ctx_(ctx),
             action_(action),
             valRef_(valRef),
@@ -1526,37 +1526,8 @@ class MayExistVisitor {
             if (!followValuePair(ctx_, v1, v2, /* read-only */ true))
                 return /* continue */ true;
 
-            offNext_ = subOffsetIn(sh, root_, sub);
+            offNext_ = sh.valOffset(sh.placedAt(sub));
             return /* continue */ false;
-        }
-};
-
-class SubAddrFinder {
-    private:
-        const TValId    subAddr_;
-        const TObjId   root_;
-        TOffset        result_;
-
-    public:
-        SubAddrFinder(const TValId subAddr, const TObjId root):
-            subAddr_(subAddr),
-            root_(root),
-            result_(0)
-        {
-        }
-
-        TOffset result() const { return result_; }
-
-        bool operator()(
-                const SymHeap   &sh,
-                const TObjId    sub)
-        {
-            if (subAddr_ != sh.placedAt(sub))
-                return /* continue */ true;
-
-            // found!
-            result_ = subOffsetIn(sh, root_, sub);
-            return false;
         }
 };
 
@@ -1588,16 +1559,15 @@ bool mayExistFallback(
         return false;
 
     const TValId ref = (use2) ? v1 : v2;
-    MayExistVisitor visitor(ctx, action, ref, /* root */ target);
-    if (traverseLivePtrs(sh, sh.placedAt(target), visitor))
+    const TValId targetAt = sh.placedAt(target);
+    CL_BREAK_IF(sh.valOffset(targetAt));
+    MayExistVisitor visitor(ctx, action, ref, /* root */ targetAt);
+    if (traverseLivePtrs(sh, targetAt, visitor))
         // no match
         return false;
 
     // dig head
-    SubAddrFinder headFinder(val, target);
-    if (headFinder(sh, target)
-            && traverseSubObjs(sh, target, headFinder, /* leavesOnly */ false))
-    {
+    if (sh.valRoot(val) != sh.placedAt(target)) {
         CL_BREAK_IF("MayExistVisitor malfunction");
         return false;
     }
@@ -1607,7 +1577,7 @@ bool mayExistFallback(
         return false;
 
     BindingOff off;
-    off.head = headFinder.result();
+    off.head = sh.valOffset(val);
     off.next = visitor.offNext();
     bool result = false;
 

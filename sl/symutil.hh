@@ -98,13 +98,6 @@ inline EObjKind objKind(const SymHeap &sh, TObjId obj) {
     return sh.valTargetKind(addr);
 }
 
-// TODO: remove this
-inline TOffset subOffsetIn(const SymHeap &sh, TObjId in, TObjId of) {
-    const TOffset off1 = sh.valOffset(sh.placedAt(in));
-    const TOffset off2 = sh.valOffset(sh.placedAt(of));
-    return off2 - off1;
-}
-
 void getPtrValues(TValList &dst, const SymHeap &heap, TValId at);
 
 inline TValId nextRootObj(SymHeap &sh, TValId root, TOffset offNext) {

@@ -113,7 +113,7 @@ void cltToStream(std::ostream &out, const struct cl_type *clt, unsigned depth) {
 
     // go through the type recursively
     const DumpCltVisitor visitor(out, depth);
-    traverseTypeIc<TFieldIdxChain>(clt, visitor);
+    traverseTypeIc(clt, visitor);
 }
 
 void acToStream(std::ostream &out, const struct cl_accessor *ac, bool oneline) {
