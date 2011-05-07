@@ -858,11 +858,12 @@ bool createObject(
         ctx.dst.objDefineType(rootDst, clt);
 
     // preserve 'prototype' flag
-    ctx.dst.valTargetSetProto(ctx.dst.placedAt(rootDst), isProto);
+    const TValId rootDstAt = ctx.dst.placedAt(rootDst);
+    ctx.dst.valTargetSetProto(rootDstAt, isProto);
 
     if (OK_CONCRETE != kind) {
         // abstract object
-        objSetAbstract(ctx.dst, rootDst, kind, off);
+        ctx.dst.valTargetSetAbstract(rootDstAt, kind, off);
 
         // compute minimal length of the resulting segment
         const unsigned len1 = objMinLength(ctx.sh1, ctx.sh1.placedAt(root1));

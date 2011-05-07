@@ -178,8 +178,9 @@ TObjId addObjectIfNeeded(DeepCopyData &dc, TObjId objSrc) {
     add(dc, rootSrc, rootDst);
     digSubObjs(dc, rootSrc, rootDst);
 
+    const TValId rootDstAt = dst.placedAt(rootDst);
     const bool isProto = src.valTargetIsProto(rootSrcAt);
-    dst.valTargetSetProto(dst.placedAt(rootDst), isProto);
+    dst.valTargetSetProto(rootDstAt, isProto);
 
     const EObjKind kind = objKind(src, rootSrc);
     switch (kind) {
@@ -187,7 +188,7 @@ TObjId addObjectIfNeeded(DeepCopyData &dc, TObjId objSrc) {
         case OK_DLS:
         case OK_SLS: {
             const BindingOff &off = segBinding(src, rootSrc);
-            objSetAbstract(dst, rootDst, kind, off);
+            dst.valTargetSetAbstract(rootDstAt, kind, off);
         }
         // fall through!
 
