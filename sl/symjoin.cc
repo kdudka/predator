@@ -1144,11 +1144,14 @@ read_only_ok:
         off = segBinding(ctx.sh2, peer2);
     }
 
-    const TObjId next1 = ptrObjByOffset(ctx.sh1, peer1, off.next);
-    const TObjId next2 = ptrObjByOffset(ctx.sh2, peer2, off.next);
+    const TValId peer1At = ctx.sh1.placedAt(peer1);
+    const TValId peer2At = ctx.sh2.placedAt(peer2);
 
-    const TValId valNext1 = ctx.sh1.valueOf(next1);
-    const TValId valNext2 = ctx.sh2.valueOf(next2);
+    SymHeap &writable1 = const_cast<SymHeap &>(ctx.sh1);
+    SymHeap &writable2 = const_cast<SymHeap &>(ctx.sh2);
+
+    const TValId valNext1 = valOfPtrAt(writable1, peer1At, off.next);
+    const TValId valNext2 = valOfPtrAt(writable2, peer2At, off.next);
     if (!checkValueMapping(ctx, valNext1, valNext2,
                            /* allowUnknownMapping */ true))
     {
@@ -1354,15 +1357,17 @@ bool insertSegmentClone(
     CL_BREAK_IF(isGt1 == isGt2);
 
     // resolve the existing segment in shGt
-    const SymHeap &shGt = (isGt1) ? ctx.sh1 : ctx.sh2;
-    const TObjId seg = objRootByVal(shGt, (isGt1) ? v1 : v2);
+    SymHeap &shGt = /* XXX */ const_cast<SymHeap &>
+        ((isGt1) ? ctx.sh1 : ctx.sh2);
+    const TValId segAt = shGt.valRoot((isGt1) ? v1 : v2);
+    const TObjId seg = shGt.objAt(segAt);
     TObjId peer = seg;
     if (OK_DLS == objKind(shGt, seg))
         peer = dlSegPeer(shGt, seg);
 
     // resolve the 'next' pointer and check its validity
     const TObjId nextPtr = (off)
-        ? ptrObjByOffset(shGt, seg, off->next)
+        ? shGt.ptrAt(shGt.valByOffset(segAt, off->next))
         : nextPtrFromSeg(shGt, peer);
 
     const TValId nextGt = shGt.valueOf(nextPtr);

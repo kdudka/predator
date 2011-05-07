@@ -48,10 +48,10 @@ bool haveSeg(const SymHeap &sh, TValId atAddr, TValId pointingTo,
  */
 bool haveDlSegAt(const SymHeap &sh, TValId atAddr, TValId peerAddr);
 
-/// return 'next' pointer of the given list segment as a heap object
+/// TODO: remove this
 TObjId nextPtrFromSeg(const SymHeap &sh, TObjId seg);
 
-/// return 'peer' pointer of the given DLS
+/// TODO: remove this
 TObjId peerPtrFromSeg(const SymHeap &sh, TObjId seg);
 
 /// TODO: remove this
@@ -102,6 +102,16 @@ inline TValId segHeadAt(SymHeap &sh, TValId seg) {
 
     const BindingOff &off = sh.segBinding(seg);
     return sh.valByOffset(seg, off.head);
+}
+
+/// we do NOT require root to be a segment
+inline TValId segNextRootObj(SymHeap &sh, TValId at, TOffset offNext) {
+    CL_BREAK_IF(sh.valOffset(at));
+    if (OK_DLS == sh.valTargetKind(at))
+        // jump to peer in case of DLS
+        at = dlSegPeer(sh, at);
+
+    return nextRootObj(sh, at, offNext);
 }
 
 /// return lower estimation of DLS length
@@ -158,25 +168,9 @@ TValId segClone(SymHeap &sh, const TValId seg);
 /// destroy the given list segment object (including DLS peer in case of DLS)
 void segDestroy(SymHeap &sh, TObjId seg);
 
-/**
- * return the @b head object of the given list segment
- * @note it may return the segment itself in case of regular list segment
- * @note this is mostly useful as soon as @b Linux @b lists are involved
- */
-inline TObjId segHead(const SymHeap &sh, TObjId seg) {
-    const TOffset offHead = segBinding(sh, seg).head;
-    return compObjByOffset(sh, seg, offHead);
-}
-
-/**
- * return address of the @b head object of the given list segment
- * @note it may return address of the segment itself in case of regular list
- * segment
- * @note this is mostly useful as soon as @b Linux @b lists are involved
- */
+// TODO: remove this
 inline TValId segHeadAddr(const SymHeap &sh, TObjId seg) {
-    const TObjId head = segHead(sh, seg);
-    return sh.placedAt(head);
+    return segHeadAt(const_cast<SymHeap &>(sh), sh.placedAt(seg));
 }
 
 template <class TIgnoreList>
@@ -217,11 +211,15 @@ void buildIgnoreList(
         const TObjId            obj,
         const BindingOff        &off)
 {
-    const TObjId next = ptrObjByOffset(sh, obj, off.next);
+    // TODO: remove this
+    const TValId at = sh.placedAt(obj);
+    SymHeap &writable = const_cast<SymHeap &>(sh);
+
+    const TObjId next = writable.ptrAt(writable.valByOffset(at, off.next));
     if (OBJ_INVALID != next)
         ignoreList.insert(next);
 
-    const TObjId prev = ptrObjByOffset(sh, obj, off.prev);
+    const TObjId prev = writable.ptrAt(writable.valByOffset(at, off.prev));
     if (OBJ_INVALID != prev)
         ignoreList.insert(prev);
 }

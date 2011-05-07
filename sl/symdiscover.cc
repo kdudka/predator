@@ -205,19 +205,6 @@ bool validateSegEntry(
     return validatePrototypes(sh, off, entry, protoRoots);
 }
 
-TValId nextObj(
-        SymHeap                     &sh,
-        const BindingOff            &off,
-        TValId                      at)
-{
-    if (OK_DLS == sh.valTargetKind(at))
-        // jump to peer in case of DLS
-        at = dlSegPeer(sh, at);
-
-    const TObjId nextPtr = sh.ptrAt(sh.valByOffset(at, off.next));
-    return sh.valRoot(sh.valueOf(nextPtr));
-}
-
 TValId jumpToNextObj(
         SymHeap                     &sh,
         const BindingOff            &off,
@@ -401,7 +388,7 @@ unsigned /* len */ segDiscover(
             // invalid entry
             break;
 
-        if (!insertOnce(haveSeen, nextObj(sh, off, at)))
+        if (!insertOnce(haveSeen, segNextRootObj(sh, at, off.next)))
             // loop detected
             break;
 
@@ -454,7 +441,7 @@ unsigned /* len */ segDiscover(
 
 class PtrFinder {
     private:
-        TValId                      lookFor_;
+        const TValId                lookFor_;
         TOffset                     offFound_;
 
     public:
@@ -489,14 +476,9 @@ void digBackLink(
 {
     const TValId lookFor = sh.valByOffset(rootAt, off.head);
     PtrFinder visitor(lookFor);
-    if (traverseLivePtrs(sh, nextAt, visitor)) {
-        // not found
-        off.prev = off.next;
-        return;
-    }
-
-    // found
-    off.prev = visitor.offFound();
+    off.prev = (/* found nothing */ traverseLivePtrs(sh, nextAt, visitor))
+        ? off.next
+        : visitor.offFound();
 }
 
 typedef std::vector<BindingOff> TBindingCandidateList;

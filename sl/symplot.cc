@@ -561,17 +561,20 @@ void SymPlot::Private::digNext(TObjId obj) {
                 return;
     }
 
+    SymHeap &sh = *const_cast<SymHeap *>(this->heap);
+    const TValId objAt = this->heap->placedAt(obj);
+
     const BindingOff &off = segBinding(*this->heap, obj);
     const TOffset offHead = off.head;
     if (offHead) {
-        const TObjId objHead = compObjByOffset(*this->heap, obj, offHead);
+        const TObjId objHead = sh.objAt(sh.valByOffset(objAt, offHead));
         CL_BREAK_IF(objHead <= 0);
 
         // store 'head' pointer object
         this->heads.insert(objHead);
     }
 
-    const TObjId objNext = ptrObjByOffset(*this->heap, obj, off.next);
+    const TObjId objNext = sh.ptrAt(sh.valByOffset(objAt, off.next));
     CL_BREAK_IF(objNext <= 0);
 
     // store 'next' poitner object
@@ -579,7 +582,7 @@ void SymPlot::Private::digNext(TObjId obj) {
     if (OK_DLS != kind)
         return;
 
-    const TObjId objPeer = ptrObjByOffset(*this->heap, obj, off.prev);
+    const TObjId objPeer = sh.ptrAt(sh.valByOffset(objAt, off.prev));
     CL_BREAK_IF(objPeer <= 0);
 
     // store 'peer' pointer object

@@ -27,33 +27,28 @@
 
 #include <boost/foreach.hpp>
 
+// TODO: remove this
 TObjId nextPtrFromSeg(const SymHeap &sh, TObjId seg) {
-    // jump to root
-    seg = objRoot(sh, seg);
+    const TValId segAt = sh.valRoot(sh.placedAt(seg));
+    const TOffset offNext = sh.segBinding(segAt).next;
 
-    // validate call of nextPtrFromSeg()
-    CL_BREAK_IF(OK_CONCRETE == objKind(sh, seg));
-
-    const TOffset offNext = segBinding(sh, seg).next;
-    return ptrObjByOffset(sh, seg, offNext);
+    SymHeap &writable = const_cast<SymHeap &>(sh);
+    return writable.ptrAt(writable.valByOffset(sh.placedAt(seg), offNext));
 }
 
+// TODO: remove this
 TObjId peerPtrFromSeg(const SymHeap &sh, TObjId seg) {
-    CL_BREAK_IF(OK_DLS != objKind(sh, seg));
+    const TValId segAt = sh.valRoot(sh.placedAt(seg));
+    const TOffset offPrev = sh.segBinding(segAt).prev;
 
-    const TOffset offPeer = segBinding(sh, seg).prev;
-    return ptrObjByOffset(sh, seg, offPeer);
+    SymHeap &writable = const_cast<SymHeap &>(sh);
+    return writable.ptrAt(writable.valByOffset(sh.placedAt(seg), offPrev));
 }
 
+// TODO: remove this
 TObjId dlSegPeer(const SymHeap &sh, TObjId dls) {
-    // validate call of dlSegPeer()
-    const TObjId root = objRoot(sh, dls);
-    CL_BREAK_IF(OK_DLS != objKind(sh, root));
-
-    TObjId peer = root;
-    const BindingOff &off = segBinding(sh, dls);
-    skipObj(sh, &peer, off.prev);
-    return peer;
+    SymHeap &writable = const_cast<SymHeap &>(sh);
+    return writable.objAt(dlSegPeer(writable, sh.placedAt(dls)));
 }
 
 unsigned dlSegMinLength(const SymHeap &sh, TValId dlsAt) {

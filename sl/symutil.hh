@@ -51,13 +51,27 @@ inline TValId boolToVal(const bool b) {
 
 void moveKnownValueToLeft(const SymHeapCore &sh, TValId &valA, TValId &valB);
 
+inline TValId valOfPtrAt(SymHeap &sh, TValId at) {
+    const TObjId ptr = sh.ptrAt(at);
+    return sh.valueOf(ptr);
+}
+
+inline TValId valOfPtrAt(SymHeap &sh, TValId at, TOffset off) {
+    const TValId ptrAt = sh.valByOffset(at, off);
+    return valOfPtrAt(sh, ptrAt);
+}
+
+// TODO: remove this
 TObjId objDup(SymHeap &sh, const TObjId obj);
 
+// TODO: remove this
 bool isHeapObject(const SymHeap &heap, TObjId obj);
 
-TObjId /* root */ objRoot(const SymHeap &sh, TObjId obj);
+// TODO: remove this
+TObjId objRoot(const SymHeap &sh, TObjId obj);
 
-inline TObjId /* root */ objRootByVal(const SymHeap &sh, TValId val) {
+// TODO: remove this
+inline TObjId objRootByVal(const SymHeap &sh, TValId val) {
     if (val <= 0)
         return OBJ_INVALID;
 
@@ -65,11 +79,13 @@ inline TObjId /* root */ objRootByVal(const SymHeap &sh, TValId val) {
     return sh.pointsTo(rootAt);
 }
 
-inline TObjId /* root */ objRootByPtr(const SymHeap &sh, TObjId ptr) {
+// TODO: remove this
+inline TObjId objRootByPtr(const SymHeap &sh, TObjId ptr) {
     const TValId val = sh.valueOf(ptr);
     return objRootByVal(sh, val);
 }
 
+// TODO: remove this
 inline bool objIsSeg(const SymHeap &sh, TObjId obj) {
     const TValId addr = sh.placedAt(obj);
     if (addr <= 0)
@@ -78,6 +94,7 @@ inline bool objIsSeg(const SymHeap &sh, TObjId obj) {
     return SymHeap::isAbstract(sh.valTarget(addr));
 }
 
+// TODO: remove this
 inline EObjKind objKind(const SymHeap &sh, TObjId obj) {
     const TValId addr = sh.placedAt(obj);
     if (addr <= 0)
@@ -87,22 +104,12 @@ inline EObjKind objKind(const SymHeap &sh, TObjId obj) {
     return sh.valTargetKind(addr);
 }
 
-/// return offset of an object within another object;  -1 if not found
+// TODO: remove this
 inline TOffset subOffsetIn(const SymHeap &sh, TObjId in, TObjId of) {
     const TOffset off1 = sh.valOffset(sh.placedAt(in));
     const TOffset off2 = sh.valOffset(sh.placedAt(of));
     return off2 - off1;
 }
-
-TObjId subSeekByOffset(
-        const SymHeap               &sh,
-        const TObjId                root,
-        const TOffset               offToSeek,
-        const struct cl_type        *clt,
-        const enum cl_type_e        code = CL_TYPE_UNKNOWN);
-
-TObjId ptrObjByOffset(const SymHeap &sh, TObjId obj, TOffset off);
-TObjId compObjByOffset(const SymHeap &sh, TObjId obj, TOffset off);
 
 void getPtrValues(TValList &dst, const SymHeap &heap, TValId at);
 
@@ -111,9 +118,6 @@ inline TValId nextRootObj(SymHeap &sh, TValId root, TOffset offNext) {
     const TObjId nextPtr = sh.ptrAt(sh.valByOffset(root, offNext));
     return sh.valRoot(sh.valueOf(nextPtr));
 }
-
-// TODO: remove this
-void skipObj(const SymHeap &sh, TObjId *pObj, TOffset offNext);
 
 void initVariable(SymHeap                       &sh,
                   TObjId                        obj,

@@ -703,10 +703,10 @@ void dlSegReplaceByConcrete(SymHeap &sh, TValId seg, TValId peer) {
     sh.objSetValue(peerPtr, valNext);
 
     // redirect all references originally pointing to peer to the current object
-    redirectInboundEdges(sh,
-            /* pointingFrom */ OBJ_INVALID,
-            /* pointingTo   */ /* FIXME */ sh.objAt(peer),
-            /* redirectTo   */ /* FIXME */ sh.objAt(seg));
+    redirectRefs(sh,
+            /* pointingFrom */ VAL_INVALID,
+            /* pointingTo   */ peer,
+            /* redirectTo   */ seg);
 
     // destroy peer, including all prototypes
     REQUIRE_GC_ACTIVITY(sh, peer, dlSegReplaceByConcrete);

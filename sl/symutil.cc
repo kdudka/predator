@@ -126,19 +126,6 @@ void getPtrValues(TValList &dst, const SymHeap &sh, TValId at) {
     }
 }
 
-void skipObj(const SymHeap &sh, TObjId *pObj, TOffset offNext)
-{
-    const TValId cursorAt = sh.placedAt(*pObj);
-    const TValId rootAt = sh.valRoot(cursorAt);
-
-    // move to the next object
-    SymHeap &writable = const_cast<SymHeap &>(sh);
-    const TObjId ptr = writable.ptrAt(writable.valByOffset(rootAt, offNext));
-    const TValId nextAt = sh.valRoot(sh.valueOf(ptr));
-
-    *pObj = writable.objAt(nextAt);
-}
-
 typedef std::pair<TObjId, const cl_initializer *> TInitialItem;
 
 // specialization of TraverseSubObjsHelper suitable for gl initializers
@@ -244,35 +231,6 @@ class PointingObjectsFinder {
             return /* continue */ true;
         }
 };
-
-TObjId subSeekByOffset(
-        const SymHeap               &sh,
-        const TObjId                obj,
-        const TOffset               offToSeek,
-        const struct cl_type        *clt,
-        const enum cl_type_e        code)
-{
-    if (obj < 0)
-        return obj;
-
-    SymHeap &shNonConst = const_cast<SymHeap &>(sh);
-    const TValId addr = sh.placedAt(obj);
-    const TValId subAddr = shNonConst.valByOffset(addr, offToSeek);
-    CL_BREAK_IF(subAddr <= 0);
-
-    if (clt)
-        return shNonConst.objAt(subAddr, clt);
-    else
-        return shNonConst.objAt(subAddr, code);
-}
-
-TObjId ptrObjByOffset(const SymHeap &sh, TObjId obj, TOffset off) {
-    return subSeekByOffset(sh, obj, off, /* clt */ 0, CL_TYPE_PTR);
-}
-
-TObjId compObjByOffset(const SymHeap &sh, TObjId obj, TOffset off) {
-    return subSeekByOffset(sh, obj, off, /* clt */ 0, CL_TYPE_STRUCT);
-}
 
 void redirectRefs(
         SymHeap                 &sh,

@@ -185,9 +185,10 @@ void dump_obj(const SymHeap &heap, TObjId obj) {
     const EObjKind kind = objKind(heap, obj);
     if (OK_DLS == kind) {
         cout << "    peer      = ";
-        const TOffset offPeer = segBinding(heap, obj).prev;
-        const TObjId peerPtr = ptrObjByOffset(heap, obj, offPeer);
-        const TValId valPeer = heap.valueOf(peerPtr);
+        const TValId at = heap.placedAt(obj);
+        const TOffset offPeer = heap.segBinding(at).prev;
+        SymHeap &writable = const_cast<SymHeap &>(heap);
+        const TValId valPeer = valOfPtrAt(writable, at, offPeer);
         if (0 < valPeer) {
             const TObjId peer = heap.pointsTo(valPeer);
             cout << "/* obj */ #" << peer << ", kind = ";
@@ -213,9 +214,10 @@ void dump_obj(const SymHeap &heap, TObjId obj) {
 
     if (OK_CONCRETE != kind) {
         cout << "    next      = ";
-        const TOffset offNext = segBinding(heap, obj).next;
-        const TObjId nextPtr = ptrObjByOffset(heap, obj, offNext);
-        const TValId valNext = heap.valueOf(nextPtr);
+        const TValId at = heap.placedAt(obj);
+        const TOffset offNext = heap.segBinding(at).next;
+        SymHeap &writable = const_cast<SymHeap &>(heap);
+        const TValId valNext = valOfPtrAt(writable, at, offNext);
         if (0 < valNext) {
             const TObjId next = heap.pointsTo(valNext);
             cout << "/* obj */ #" << next << ", kind = ";

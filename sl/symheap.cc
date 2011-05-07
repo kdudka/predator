@@ -1351,7 +1351,7 @@ void SymHeapCore::objDefineType(TObjId obj, TObjType clt) {
     // there should be no value as long as it was "a target of a void pointer"
     if (VAL_INVALID != objData.value) {
         // FIXME: this happens with test-0106.c during error recovery
-        CL_BREAK_IF("SymHeapCore::objDefineType() sees a dangling value");
+        //CL_BREAK_IF("SymHeapCore::objDefineType() sees a dangling value");
         d->releaseValueOf(obj);
     }
 
