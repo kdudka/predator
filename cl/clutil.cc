@@ -26,6 +26,7 @@
 
 #include <sstream>
 
+#include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
 
 bool operator==(const struct cl_type &a, const struct cl_type &b) {
@@ -159,4 +160,17 @@ std::string varTostring(
         str << ":" << name;
 
     return str.str();
+}
+
+int offsetByIdxChain(const struct cl_type *clt, const TFieldIdxChain &ic) {
+    int off = 0;
+
+    BOOST_FOREACH(const int idx, ic) {
+        CL_BREAK_IF(clt->item_cnt <= idx);
+        const struct cl_type_item *item = clt->items + idx;
+        off += item->offset;
+        clt = item->type;
+    }
+
+    return off;
 }

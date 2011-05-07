@@ -408,23 +408,40 @@ class ValueWriter {
 class UnionInvalidator {
     private:
         SymProc             &proc_;
+        SymHeap             &sh_;
+        const TValId        root_;
+        const TObjType      rootClt_;
         const TObjId        preserverSubtree_;
 
     public:
-        UnionInvalidator(SymProc *proc, TObjId preserverSubtree):
+        UnionInvalidator(SymProc *proc, TObjId root, TObjId preserverSubtree):
             proc_(*proc),
+            sh_(proc->sh_),
+            root_(sh_.placedAt(root)),
+            rootClt_(sh_.objType(root)),
             preserverSubtree_(preserverSubtree)
         {
+            CL_BREAK_IF(!rootClt_ || rootClt_->code != CL_TYPE_UNION);
         }
 
-        bool operator()(SymHeap &sh, TObjId sub) {
+        bool operator()(const TFieldIdxChain &ic, const struct cl_type_item *it)
+        {
+            SymHeap &sh = proc_.sh_;
+            const TObjType clt = it->type;
+            if (isComposite(clt))
+                return /* continue */ true;
+
+            const TOffset off = offsetByIdxChain(rootClt_, ic);
+            const TValId at = sh.valByOffset(root_, off);
+            const TObjId sub = sh.objAt(at, clt);
+
             // first ensure we don't overwrite something we don't want to
             TObjId obj = sub;
             do {
                 if (preserverSubtree_ == obj)
                     return /* continue */ true;
             }
-            while (OBJ_INVALID != (obj = sh.objParent(obj)));
+            while (OBJ_INVALID != (obj = /* XXX */ sh.objParent(obj)));
 
             const TValId val = sh.valCreateUnknown(UV_UNKNOWN);
             proc_.heapSetSingleVal(sub, val);
@@ -457,8 +474,8 @@ void SymProc::objSetValue(TObjId lhs, TValId rhs) {
             continue;
 
         // invalidate all siblings within the surrounding union
-        UnionInvalidator visitor(this, obj);
-        traverseSubObjs(sh_, parent, visitor, /* leavesOnly */ true);
+        UnionInvalidator visitor(this, parent, obj);
+        traverseTypeIc(clt, visitor, /* digOnlyStructs */ true);
     }
 
     // FIXME: handle some other special values also this way?
@@ -472,7 +489,7 @@ void SymProc::objSetValue(TObjId lhs, TValId rhs) {
 
         // fill values of all sub-objects by 'rhs'
         ValueWriter writer(this, rhs);
-        traverseSubObjs(sh_, lhs, writer, /* leavesOnly */ true);
+        traverseLiveObjs(sh_, sh_.placedAt(lhs), writer);
         return;
     }
 

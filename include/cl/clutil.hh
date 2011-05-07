@@ -89,7 +89,9 @@ int varIdFromOperand(const struct cl_operand *op, const char **pName = 0);
 
 typedef std::vector<int /* nth */> TFieldIdxChain;
 
-// TODO: define TFieldIdxChain within CodeStorage to avoid the template arg
+int offsetByIdxChain(const struct cl_type *, const TFieldIdxChain &);
+
+// TODO: do not define the helper type at gl scope
 struct CltStackItem {
     const struct cl_type    *clt;
     TFieldIdxChain          ic;

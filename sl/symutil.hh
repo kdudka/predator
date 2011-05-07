@@ -116,16 +116,6 @@ typedef std::pair<TObjId, TObjId> TObjPair;
 // helper template for traverseSubObjs()
 template <class TItem> struct TraverseSubObjsHelper { };
 
-// specialisation for TObjId, which means basic implementation of the traversal
-template <> struct TraverseSubObjsHelper<TObjId> {
-    static const struct cl_type* getItemClt(const SymHeap &sh, TObjId obj) {
-        return sh.objType(obj);
-    }
-    static TObjId getNextItem(const SymHeap &sh, TObjId obj, int nth) {
-        return sh.subObj(obj, nth);
-    }
-};
-
 // specialisation suitable for traversing two composite objects simultaneously
 template <> struct TraverseSubObjsHelper<TObjPair> {
     static const struct cl_type* getItemClt(const SymHeap &sh, TObjPair item) {
@@ -145,17 +135,23 @@ template <> struct TraverseSubObjsHelper<TObjPair> {
 template <class THeap, class TVisitor, typename TMethod>
 bool /* complete */ traverseCore(
         THeap                       &sh,
-        const TValId                rootAt,
+        const TValId                at,
         TVisitor                    &visitor,
         TMethod                     method)
 {
     // check that we got a valid root object
-    CL_BREAK_IF(sh.pointsTo(rootAt) <= 0);
-    CL_BREAK_IF(sh.pointsTo(rootAt) != objRootByVal(sh, rootAt));
+    CL_BREAK_IF(const_cast<SymHeap &>(sh).objAt(at) <= 0);
+    const TValId rootAt = sh.valRoot(at);
+    const TOffset offRoot = sh.valOffset(at);
 
     TObjList objs;
     (sh.*method)(objs, rootAt);
     BOOST_FOREACH(const TObjId obj, objs) {
+        const TOffset off = sh.valOffset(sh.placedAt(obj));
+        if (off < offRoot)
+            // do not go above the starting point
+            continue;
+
         if (!visitor(sh, obj))
             // traversal cancelled by visitor
             return false;
