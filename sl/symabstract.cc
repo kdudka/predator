@@ -371,8 +371,7 @@ void slSegAbstractionStep(SymHeap &sh, TValId *pCursor, const BindingOff &off)
 {
     // jump to the next object
     const TValId at = *pCursor;
-    const TObjId ptrNext = sh.ptrAt(sh.valByOffset(at, off.next));
-    const TValId nextAt = sh.valRoot(sh.valueOf(ptrNext));
+    const TValId nextAt = sh.valRoot(valOfPtrAt(sh, at, off.next));
     CL_BREAK_IF(nextAt <= 0);
 
     // read minimal length of 'obj' and set it temporarily to zero
@@ -462,9 +461,9 @@ void dlSegGobble(SymHeap &sh, TValId dls, TValId var, bool backward) {
 
     // store the pointer DLS -> VAR
     const BindingOff &off = sh.segBinding(dls);
-    const TObjId dlsNextPtr = sh.ptrAt(sh.valByOffset(dls, off.next));
-    const TObjId varNextPtr = sh.ptrAt(sh.valByOffset(var, off.next));
-    sh.objSetValue(dlsNextPtr, sh.valueOf(varNextPtr));
+    const TObjId nextPtr = sh.ptrAt(sh.valByOffset(dls, off.next));
+    const TValId valNext = valOfPtrAt(sh, var, off.next);
+    sh.objSetValue(nextPtr, valNext);
 
     // replace VAR by DLS
     const TValId headAt = sh.valByOffset(var, off.head);

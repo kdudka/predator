@@ -189,13 +189,9 @@ bool validateSegEntry(
         const TValId                next,
         const TValList              &protoRoots)
 {
-    if (isDlsBinding(off)) {
-        // valPrev has to be at least VAL_NULL, withdraw it otherwise
-        const TObjId prev = sh.ptrAt(sh.valByOffset(entry, off.prev));
-        CL_BREAK_IF(prev <= 0);
-        if (sh.valueOf(prev) < 0)
-            return false;
-    }
+    if (isDlsBinding(off) && (valOfPtrAt(sh, entry, off.prev) < 0))
+        // valPrev has to be at least VAL_NULL, withdraw it
+        return false;
 
     // first validate 'root' itself
     if (!validatePointingObjects(sh, off, entry, prev, next, protoRoots,
@@ -223,10 +219,7 @@ TValId jumpToNextObj(
     }
 
     const struct cl_type *clt = sh.objType(sh.objAt(at));
-    const TObjId nextPtr = sh.ptrAt(sh.valByOffset(at, off.next));
-    CL_BREAK_IF(nextPtr <= 0);
-
-    const TValId nextHead = sh.valueOf(nextPtr);
+    const TValId nextHead = valOfPtrAt(sh, at, off.next);
     if (nextHead <= 0 || off.head != sh.valOffset(nextHead))
         // no valid head pointed by nextPtr
         return VAL_INVALID;
@@ -261,7 +254,7 @@ TValId jumpToNextObj(
 
     // check if valNext inside the 'next' object is at least VAL_NULL
     // (otherwise we are not able to construct Neq edges to express its length)
-    if (sh.valueOf(sh.ptrAt(sh.valByOffset(next, off.next))) < 0)
+    if (valOfPtrAt(sh, next, off.next) < 0)
         return VAL_INVALID;
 
     return next;
@@ -314,8 +307,7 @@ bool slSegAvoidSelfCycle(
         // not a SLS
         return false;
 
-    const TObjId ptr2 = sh.ptrAt(sh.valByOffset(seg2, off.next));
-    const TValId next2 = sh.valRoot(sh.valueOf(ptr2));
+    const TValId next2 = nextRootObj(sh, seg2, off.next);
     return haveSeg(sh, next2, seg1, OK_SLS);
 }
 
@@ -329,8 +321,7 @@ void dlSegAvoidSelfCycle(
         // not a DLS
         return;
 
-    const TObjId prevPtr = sh.ptrAt(sh.valByOffset(entry, off.prev));
-    const TValId prev = sh.valRoot(sh.valueOf(prevPtr));
+    const TValId prev = nextRootObj(sh, entry, off.prev);
     if (prev <= 0)
         // no valid previous object
         return;
