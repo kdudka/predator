@@ -82,12 +82,6 @@ struct DeepCopyData {
 void add(DeepCopyData &dc, TObjId objSrc, TObjId objDst) {
     dc.valMap[dc.src.placedAt(objSrc)] = dc.dst.placedAt(objDst);
     dc.wl.schedule(objSrc, objDst);
-
-    const TValId valSrc = dc.src.valueOf(objSrc);
-    const TValId valDst = dc.dst.valueOf(objDst);
-    if (OBJ_INVALID != dc.src.valGetCompositeObj(valSrc))
-        // store mapping of composite object's value
-        dc.valMap[valSrc] = valDst;
 }
 
 class DCopyObjVisitor {
@@ -287,20 +281,15 @@ void deepCopy(DeepCopyData &dc) {
         // read the original value
         TValId valSrc = src.valueOf(objSrc);
         CL_BREAK_IF(VAL_INVALID == valSrc);
+        if (-1 != src.valGetCompositeObj(valSrc))
+            continue;
 
         // do whatever we need to do with the value
         const TValId valDst = handleValue(dc, valSrc);
         CL_BREAK_IF(VAL_INVALID == valDst);
 
-#ifndef NDEBUG
-        // check for composite values
-        const bool comp1 = (-1 != src.valGetCompositeObj(valSrc));
-        const bool comp2 = (-1 != dst.valGetCompositeObj(valDst));
-        CL_BREAK_IF(comp1 != comp2);
-#endif
-        if (-1 == src.valGetCompositeObj(valSrc))
-            // now set object's value
-            dst.objSetValue(objDst, valDst);
+        // now set object's value
+        dst.objSetValue(objDst, valDst);
 
         if (/* optimization */ dc.digBackward) {
             // now poke all values related by Neq predicates
