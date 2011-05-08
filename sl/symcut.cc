@@ -119,14 +119,13 @@ void digSubObjs(DeepCopyData &dc, TValId addrSrc, TValId addrDst)
     traverseSubObjs<2>(sh, root, objVisitor);
 }
 
-void addObjectIfNeeded(DeepCopyData &dc, TObjId rootSrc) {
-    SymHeap &src = dc.src;
-    SymHeap &dst = dc.dst;
-
-    const TValId rootSrcAt = src.placedAt(rootSrc);
+void addObjectIfNeeded(DeepCopyData &dc, TValId rootSrcAt) {
     if (hasKey(dc.valMap, rootSrcAt))
         // mapping already known
         return;
+
+    SymHeap &src = dc.src;
+    SymHeap &dst = dc.dst;
 
     CVar cv;
     if (SymHeap::isProgramVar(src.valTarget(rootSrcAt))) {
@@ -148,6 +147,7 @@ void addObjectIfNeeded(DeepCopyData &dc, TObjId rootSrc) {
     }
 
     // create the object in 'dst'
+    const TObjId rootSrc = src.objAt(rootSrcAt);
     TValId rootDstAt = (OBJ_RETURN == rootSrc)
         ? dst.placedAt(OBJ_RETURN)
         : dst.heapAlloc(src.valSizeOfTarget(rootSrcAt));
@@ -168,6 +168,20 @@ void addObjectIfNeeded(DeepCopyData &dc, TObjId rootSrc) {
     digSubObjs(dc, rootSrcAt, rootDstAt);
 }
 
+// TODO: optimize out all the unnecessary dc.valMap lookups
+TValId handleValueCore(DeepCopyData &dc, TValId srcAt) {
+    SymHeap &src = dc.src;
+    if (!hasKey(dc.valMap, srcAt)) {
+        const TValId rootSrcAt = src.valRoot(srcAt);
+        const TOffset off = src.valOffset(srcAt);
+        addObjectIfNeeded(dc, rootSrcAt);
+        if (off)
+            dc.valMap[srcAt] = dc.dst.valByOffset(dc.valMap[rootSrcAt], off);
+    }
+
+    return dc.valMap[srcAt];
+}
+
 void trackUses(DeepCopyData &dc, TValId valSrc) {
     if (!dc.digBackward)
         // optimization
@@ -177,8 +191,8 @@ void trackUses(DeepCopyData &dc, TValId valSrc) {
     TObjList uses;
     dc.src.usedBy(uses, valSrc);
     BOOST_FOREACH(TObjId objSrc, uses) {
-        addObjectIfNeeded(dc, objRoot(dc.src, objSrc));
-        dc.valMap[dc.src.placedAt(objSrc)];
+        const TValId srcAt = dc.src.placedAt(objSrc);
+        handleValueCore(dc, srcAt);
     }
 }
 
@@ -186,7 +200,6 @@ TValId handleValue(DeepCopyData &dc, TValId valSrc) {
     const SymHeap   &src = dc.src;
     SymHeap         &dst = dc.dst;
 
-    trackUses(dc, valSrc);
     if (valSrc <= 0)
         // special value IDs always match
         return valSrc;
@@ -196,6 +209,8 @@ TValId handleValue(DeepCopyData &dc, TValId valSrc) {
     if (valMap.end() != iterValSrc)
         // good luck, we have already handled the value before
         return iterValSrc->second;
+
+    trackUses(dc, valSrc);
 
     const int custom = src.valGetCustom(valSrc);
     if (-1 != custom) {
@@ -233,8 +248,7 @@ TValId handleValue(DeepCopyData &dc, TValId valSrc) {
     }
 
     // create the target object, if it does not exist already
-    addObjectIfNeeded(dc, objRoot(dc.src, targetSrc));
-    return valMap[dc.src.placedAt(targetSrc)];
+    return handleValueCore(dc, valSrc);
 }
 
 void deepCopy(DeepCopyData &dc) {
@@ -245,16 +259,11 @@ void deepCopy(DeepCopyData &dc) {
     while (dc.wl.next(item)) {
         const TObjId objSrc = item.first;
         const TObjId objDst = item.second;
-
         CL_BREAK_IF(objSrc < 0 || objDst < 0);
-        if (objSrc == OBJ_RETURN && objDst == OBJ_RETURN)
-            // FIXME: really safe to ignore?
-            continue;
 
         // read the address
         const TValId atSrc = src.placedAt(objSrc);
         CL_BREAK_IF(atSrc <= 0);
-
         trackUses(dc, atSrc);
 
         // read the original value
@@ -269,21 +278,6 @@ void deepCopy(DeepCopyData &dc) {
 
         // now set object's value
         dst.objSetValue(objDst, valDst);
-
-        if (/* optimization */ dc.digBackward) {
-            // now poke all values related by Neq predicates
-            TValList relatedVals;
-            src.gatherRelatedValues(relatedVals, valSrc);
-            BOOST_FOREACH(TValId relValSrc, relatedVals) {
-                if (valSrc <= 0 || relValSrc <= 0)
-                    continue;
-#if DEBUG_SYMCUT
-                CL_DEBUG("deepCopy() is traversing a predicate: #"
-                        << valSrc << " -> #" << relValSrc);
-#endif
-                handleValue(dc, relValSrc);
-            }
-        }
     }
 
     // finally copy all relevant Neq predicates
