@@ -2035,18 +2035,20 @@ bool joinSymHeaps(
 
 class GhostMapper {
     private:
+        const SymHeap           &sh_;
         TValMap                 &vMap_;
 
     public:
-        GhostMapper(TValMap &vMap):
+        GhostMapper(const SymHeap &sh, TValMap &vMap):
+            sh_(sh),
             vMap_(vMap)
         {
         }
 
-        bool operator()(const SymHeap &sh, const TObjId item[2]) {
+        bool operator()(const TObjId item[2]) {
             // obtain addresses
-            const TValId addrReal  = sh.placedAt(item[0]);
-            const TValId addrGhost = sh.placedAt(item[1]);
+            const TValId addrReal  = sh_.placedAt(item[0]);
+            const TValId addrGhost = sh_.placedAt(item[1]);
             CL_BREAK_IF(addrReal < 0 || addrGhost < 0);
             CL_BREAK_IF(addrReal == addrGhost);
 
@@ -2075,7 +2077,7 @@ void mapGhostAddressSpace(
         ? ctx.valMap1
         : ctx.valMap2;
 
-    GhostMapper visitor(vMap[/* ltr */ 0]);
+    GhostMapper visitor(ctx.sh1, vMap[/* ltr */ 0]);
 
     SymHeap &sh = /* XXX */ const_cast<SymHeap &>(ctx.sh1);
     const TValId roots[] = { sh.placedAt(objReal), sh.placedAt(objGhost) };
@@ -2281,7 +2283,8 @@ struct JoinValueVisitor {
         return VAL_INVALID;
     }
 
-    bool operator()(SymHeap &sh, TObjId item[2]) const {
+    bool operator()(TObjId item[2]) const {
+        SymHeap &sh = ctx.dst;
         const TObjId dst = item[0];
         const TObjId src = item[1];
         if (hasKey(this->ignoreList, dst))

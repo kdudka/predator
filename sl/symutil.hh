@@ -161,9 +161,9 @@ bool /* complete */ traverseLiveObjs(
 }
 
 /// take the given visitor through all live objects object-wise
-template <int N, class THeap, class TVisitor>
-bool /* complete */ traverseLiveObjs(
-        THeap                       &sh,
+template <unsigned N, class THeap, class TVisitor>
+bool /* complete */ traverseLiveObjsGeneric(
+        THeap                *const heaps[N],
         const TValId                at[N],
         TVisitor                    &visitor)
 {
@@ -171,6 +171,8 @@ bool /* complete */ traverseLiveObjs(
     TValId roots[N];
     TOffset offs[N];
     for (unsigned i = 0; i < N; ++i) {
+        SymHeap &sh = *heaps[i];
+
         const TValId addr = at[i];
         CL_BREAK_IF(const_cast<SymHeap &>(sh).objAt(addr) < 0);
         roots[i] = sh.valRoot(addr);
@@ -181,6 +183,8 @@ bool /* complete */ traverseLiveObjs(
     typedef std::pair<TOffset, TObjType> TItem;
     std::set<TItem> all;
     for (unsigned i = 0; i < N; ++i) {
+        SymHeap &sh = *heaps[i];
+
         TObjList objs;
         sh.gatherLiveObjects(objs, roots[i]);
         BOOST_FOREACH(const TObjId obj, objs) {
@@ -203,17 +207,33 @@ bool /* complete */ traverseLiveObjs(
 
         TObjId objs[N];
         for (unsigned i = 0; i < N; ++i) {
+            SymHeap &sh = *heaps[i];
+
             const TValId addr = sh.valByOffset(roots[i], offs[i] + off);
             objs[i] = sh.objAt(addr, clt);
         }
 
-        if (!visitor(sh, objs))
+        if (!visitor(objs))
             // traversal cancelled by visitor
             return false;
     }
 
     // done
     return true;
+}
+
+/// take the given visitor through all live objects object-wise
+template <unsigned N, class THeap, class TVisitor>
+bool /* complete */ traverseLiveObjs(
+        THeap                       &sh,
+        const TValId                at[N],
+        TVisitor                    &visitor)
+{
+    THeap *heaps[N];
+    for (unsigned i = 0; i < N; ++i)
+        heaps[i] = &sh;
+
+    return traverseLiveObjsGeneric<N>(heaps, at, visitor);
 }
 
 /// (VAL_INVALID != pointingFrom) means 'pointing from anywhere'

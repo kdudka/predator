@@ -456,9 +456,9 @@ class ValueMirror {
     public:
         ValueMirror(SymProc *proc): proc_(*proc) { }
 
-        bool operator()(SymHeap &sh, const TObjId item[2]) const {
+        bool operator()(const TObjId item[2]) const {
             const TObjId lhs = item[0];
-            const TValId rhs = sh.valueOf(item[1]);
+            const TValId rhs = proc_.sh_.valueOf(item[1]);
             proc_.heapSetSingleVal(lhs, rhs);
 
             return /* continue */ true;

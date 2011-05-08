@@ -296,9 +296,12 @@ struct ProtoCloner {
 };
 
 struct ValueSynchronizer {
+    SymHeap            &sh;
     std::set<TObjId>    ignoreList;
 
-    bool operator()(SymHeap &sh, TObjId item[2]) const {
+    ValueSynchronizer(SymHeap &sh_): sh(sh_) { }
+
+    bool operator()(TObjId item[2]) const {
         const TObjId src = item[0];
         const TObjId dst = item[1];
         if (hasKey(ignoreList, src))
@@ -319,7 +322,7 @@ struct ValueSynchronizer {
 
 void dlSegSyncPeerData(SymHeap &sh, const TValId dls) {
     const TValId peer = dlSegPeer(sh, dls);
-    ValueSynchronizer visitor;
+    ValueSynchronizer visitor(sh);
     buildIgnoreList(visitor.ignoreList, sh, dls);
 
     // if there was "a pointer to self", it should remain "a pointer to self";
