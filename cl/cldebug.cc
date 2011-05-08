@@ -370,9 +370,9 @@ void binOpToStream(std::ostream &str, int subCode,
     str << " = (";
     operandToStream(str, opList[/* src1 */ 1]);
 
-    // TODO: move this to cl API (or clutil)
     switch (code) {
         case CL_BINOP_EQ:               str << " == ";          break;
+        case CL_BINOP_TRUTH_XOR:
         case CL_BINOP_NE:               str << " != ";          break;
         case CL_BINOP_LT:               str << " < ";           break;
         case CL_BINOP_GT:               str << " > ";           break;
@@ -381,12 +381,22 @@ void binOpToStream(std::ostream &str, int subCode,
         case CL_BINOP_PLUS:             str << " + ";           break;
         case CL_BINOP_MINUS:            str << " - ";           break;
         case CL_BINOP_MULT:             str << " * ";           break;
+        case CL_BINOP_RDIV:
+        case CL_BINOP_EXACT_DIV:
         case CL_BINOP_TRUNC_DIV:        str << " / ";           break;
         case CL_BINOP_TRUNC_MOD:        str << " % ";           break;
         case CL_BINOP_POINTER_PLUS:     str << " (ptr +) ";     break;
         case CL_BINOP_BIT_IOR:          str << " | ";           break;
         case CL_BINOP_BIT_AND:          str << " & ";           break;
         case CL_BINOP_BIT_XOR:          str << " ^ ";           break;
+        case CL_BINOP_TRUTH_AND:        str << " && ";          break;
+        case CL_BINOP_TRUTH_OR:         str << " || ";          break;
+        case CL_BINOP_MIN:              str << " min ";         break;
+        case CL_BINOP_MAX:              str << " max ";         break;
+        case CL_BINOP_LSHIFT:           str << " << ";          break;
+        case CL_BINOP_RSHIFT:           str << " >> ";          break;
+        case CL_BINOP_LROTATE:          str << " <o ";          break;
+        case CL_BINOP_RROTATE:          str << " o> ";          break;
         default:
             str << " (unknown binary operator) ";
             CL_BREAK_IF("unknown binary operator");
