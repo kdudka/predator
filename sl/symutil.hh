@@ -110,27 +110,6 @@ void initVariable(SymHeap                       &sh,
                   TObjId                        obj,
                   const CodeStorage::Var        &var);
 
-typedef std::pair<TObjId, TObjId> TObjPair;
-
-#ifndef BUILDING_DOX
-// helper template for traverseSubObjs()
-template <class TItem> struct TraverseSubObjsHelper { };
-
-// specialisation suitable for traversing two composite objects simultaneously
-template <> struct TraverseSubObjsHelper<TObjPair> {
-    static const struct cl_type* getItemClt(const SymHeap &sh, TObjPair item) {
-        const struct cl_type *clt = sh.objType(item.first);
-        CL_BREAK_IF(!clt || *clt != *sh.objType(item.second));
-        return clt;
-    }
-    static TObjPair getNextItem(const SymHeap &sh, TObjPair item, int nth) {
-        item.first  = sh.subObj(item.first,  nth);
-        item.second = sh.subObj(item.second, nth);
-        return item;
-    }
-};
-#endif
-
 /// take the given visitor through all live pointers
 template <class THeap, class TVisitor, typename TMethod>
 bool /* complete */ traverseCore(
@@ -193,7 +172,7 @@ bool /* complete */ traverseLiveObjs(
     TOffset offs[N];
     for (unsigned i = 0; i < N; ++i) {
         const TValId addr = at[i];
-        CL_BREAK_IF(const_cast<SymHeap &>(sh).objAt(addr) <= 0);
+        CL_BREAK_IF(const_cast<SymHeap &>(sh).objAt(addr) < 0);
         roots[i] = sh.valRoot(addr);
         offs[i] = sh.valOffset(addr);
     }
@@ -234,42 +213,6 @@ bool /* complete */ traverseLiveObjs(
     }
 
     // done
-    return true;
-}
-
-/// take the given visitor through a composite object (or whatever you pass in)
-template <class THeap, class TVisitor, class TItem = TObjId>
-bool /* complete */ traverseSubObjs(THeap &sh, TItem item, TVisitor &visitor,
-                                    bool leavesOnly)
-{
-    std::stack<TItem> todo;
-    todo.push(item);
-    while (!todo.empty()) {
-        item = todo.top();
-        todo.pop();
-
-        typedef TraverseSubObjsHelper<TItem> THelper;
-        const struct cl_type *clt = THelper::getItemClt(sh, item);
-        CL_BREAK_IF(!clt || !isComposite(clt));
-
-        for (int i = 0; i < clt->item_cnt; ++i) {
-            const TItem next = THelper::getNextItem(sh, item, i);
-
-            const struct cl_type *subClt = THelper::getItemClt(sh, next);
-            if (subClt && isComposite(subClt)) {
-                todo.push(next);
-
-                if (leavesOnly)
-                    // do not call the visitor for internal nodes, if requested
-                    continue;
-            }
-
-            if (!/* continue */visitor(sh, next))
-                return false;
-        }
-    }
-
-    // the traversal is done, without any interruption by visitor
     return true;
 }
 

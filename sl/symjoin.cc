@@ -2043,10 +2043,10 @@ class GhostMapper {
         {
         }
 
-        bool operator()(const SymHeap &sh, const TObjPair &item) {
+        bool operator()(const SymHeap &sh, const TObjId item[2]) {
             // obtain addresses
-            const TValId addrReal  = sh.placedAt(item.first);
-            const TValId addrGhost = sh.placedAt(item.second);
+            const TValId addrReal  = sh.placedAt(item[0]);
+            const TValId addrGhost = sh.placedAt(item[1]);
             CL_BREAK_IF(addrReal < 0 || addrGhost < 0);
             CL_BREAK_IF(addrReal == addrGhost);
 
@@ -2076,10 +2076,12 @@ void mapGhostAddressSpace(
         : ctx.valMap2;
 
     GhostMapper visitor(vMap[/* ltr */ 0]);
-    const TObjPair root(objReal, objGhost);
 
-    visitor(ctx.sh1, root);
-    traverseSubObjs(ctx.sh1, root, visitor, /* leavesOnly */ false);
+    SymHeap &sh = /* XXX */ const_cast<SymHeap &>(ctx.sh1);
+    const TValId roots[] = { sh.placedAt(objReal), sh.placedAt(objGhost) };
+
+    // FIXME: this will break as soon as we switch to delayed objects creation
+    traverseLiveObjs<2>(sh, roots, visitor);
 }
 
 /// this runs only in debug build
@@ -2279,9 +2281,9 @@ struct JoinValueVisitor {
         return VAL_INVALID;
     }
 
-    bool operator()(SymHeap &sh, TObjPair item) const {
-        const TObjId dst = item.first;
-        const TObjId src = item.second;
+    bool operator()(SymHeap &sh, TObjId item[2]) const {
+        const TObjId dst = item[0];
+        const TObjId src = item[1];
         if (hasKey(this->ignoreList, dst))
             return /* continue */ true;
 
@@ -2424,8 +2426,11 @@ bool joinData(
 
     // assign values within dst (and also in src if bidir == true)
     JoinValueVisitor visitor(ctx, bidir);
-    buildIgnoreList(visitor.ignoreList, sh, sh.placedAt(dst));
-    traverseSubObjs(sh, TObjPair(dst, src), visitor, /* leavesOnly */ true);
+    buildIgnoreList(visitor.ignoreList, sh, dstAt);
+
+    // FIXME: this will break as soon as we switch to delayed objects creation
+    const TValId roots[] = { dstAt, srcAt};
+    traverseLiveObjs<2>(sh, roots, visitor);
 
     // redirect some edges if necessary
     recoverPrototypes(ctx, dst, ghost, bidir);

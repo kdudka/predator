@@ -72,7 +72,47 @@ void getPtrValues(TValList &dst, const SymHeap &sh, TValId at) {
 
 typedef std::pair<TObjId, const cl_initializer *> TInitialItem;
 
-// specialization of TraverseSubObjsHelper suitable for gl initializers
+// TODO: remove this
+template <class TItem> struct TraverseSubObjsHelper { };
+
+// TODO: remove this
+template <class THeap, class TVisitor, class TItem = TObjId>
+bool /* complete */ traverseSubObjs(THeap &sh, TItem item, TVisitor &visitor,
+                                    bool leavesOnly)
+{
+    std::stack<TItem> todo;
+    todo.push(item);
+    while (!todo.empty()) {
+        item = todo.top();
+        todo.pop();
+
+        typedef TraverseSubObjsHelper<TItem> THelper;
+        const struct cl_type *clt = THelper::getItemClt(sh, item);
+        CL_BREAK_IF(!clt || !isComposite(clt));
+
+        for (int i = 0; i < clt->item_cnt; ++i) {
+            const TItem next = THelper::getNextItem(sh, item, i);
+
+            const struct cl_type *subClt = THelper::getItemClt(sh, next);
+            if (subClt && isComposite(subClt)) {
+                todo.push(next);
+
+                if (leavesOnly)
+                    // do not call the visitor for internal nodes, if requested
+                    continue;
+            }
+
+            if (!/* continue */visitor(sh, next))
+                return false;
+        }
+    }
+
+    // the traversal is done, without any interruption by visitor
+    return true;
+}
+
+
+// TODO: remove this
 template <> struct TraverseSubObjsHelper<TInitialItem> {
     static const struct cl_type* getItemClt(const SymHeap           &sh,
                                             const TInitialItem      &item)

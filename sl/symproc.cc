@@ -456,9 +456,9 @@ class ValueMirror {
     public:
         ValueMirror(SymProc *proc): proc_(*proc) { }
 
-        bool operator()(SymHeap &sh, const TObjPair &item) const {
-            const TObjId lhs = item.first;
-            const TValId rhs = sh.valueOf(item.second);
+        bool operator()(SymHeap &sh, const TObjId item[2]) const {
+            const TObjId lhs = item[0];
+            const TValId rhs = sh.valueOf(item[1]);
             proc_.heapSetSingleVal(lhs, rhs);
 
             return /* continue */ true;
@@ -502,9 +502,9 @@ void SymProc::objSetValue(TObjId lhs, TValId rhs) {
     }
 
     // DFS for composite types
-    const TObjPair item(lhs, rObj);
     const ValueMirror mirror(this);
-    traverseSubObjs(sh_, item, mirror, /* leavesOnly */ true);
+    const TValId roots[] = { sh_.placedAt(lhs), sh_.placedAt(rObj) };
+    traverseLiveObjs<2>(sh_, roots, mirror);
 }
 
 void SymProc::valDestroyTarget(TValId addr) {

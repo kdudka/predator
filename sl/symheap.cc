@@ -1071,7 +1071,7 @@ bool SymHeapCore::Private::gridLookup(
         const TValId                val)
 {
     const TObjId root = this->rootLookup(val);
-    if (root <= 0) {
+    if (root < 0) {
         *pFailCode = root;
         return false;
     }
