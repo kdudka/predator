@@ -119,79 +119,53 @@ void digSubObjs(DeepCopyData &dc, TValId addrSrc, TValId addrDst)
     traverseSubObjs<2>(sh, root, objVisitor);
 }
 
-TValId addObjectIfNeeded(DeepCopyData &dc, TObjId objSrc) {
-    const SymHeap &src = dc.src;
-    const TValId srcAt = src.placedAt(objSrc);
-    DeepCopyData::TValMap::iterator iterValSrc = dc.valMap.find(srcAt);
-    if (dc.valMap.end() != iterValSrc)
-        // mapping already known
-        return iterValSrc->second;
+void addObjectIfNeeded(DeepCopyData &dc, TObjId rootSrc) {
+    SymHeap &src = dc.src;
+    SymHeap &dst = dc.dst;
 
-    // go to root
-    const TObjId rootSrc = objRoot(src, objSrc);
     const TValId rootSrcAt = src.placedAt(rootSrc);
+    if (hasKey(dc.valMap, rootSrcAt))
+        // mapping already known
+        return;
 
     CVar cv;
     if (SymHeap::isProgramVar(src.valTarget(rootSrcAt))) {
+        // program variable
         cv = src.cVarByRoot(rootSrcAt);
-        // enlarge the cut if needed
 #if DEBUG_SYMCUT
         const size_t orig = dc.cut.size();
 #endif
+        // enlarge the cut if needed
         dc.cut.insert(cv);
 #if DEBUG_SYMCUT
         if (dc.cut.size() != orig)
             CL_DEBUG("addObjectIfNeeded() is enlarging the cut by cVar #"
                     << cv.uid << ", nestlevel = " << cv.inst);
 #endif
+        const TValId rootDstAt = dst.addrOfVar(cv);
+        digSubObjs(dc, rootSrcAt, rootDstAt);
+        return;
     }
 
-    SymHeap &dst = dc.dst;
-    const struct cl_type *clt = src.objType(rootSrc);
+    // create the object in 'dst'
+    TValId rootDstAt = (OBJ_RETURN == rootSrc)
+        ? dst.placedAt(OBJ_RETURN)
+        : dst.heapAlloc(src.valSizeOfTarget(rootSrcAt));
+    const TObjType clt = src.objType(rootSrc);
+    if (clt)
+        dst.objDefineType(dst.objAt(rootDstAt), clt);
 
-    if (OBJ_RETURN == rootSrc) {
-        // clone return value
-        dst.objDefineType(OBJ_RETURN, clt);
-        digSubObjs(dc, src.placedAt(OBJ_RETURN), dst.placedAt(OBJ_RETURN));
-
-        return dst.placedAt(OBJ_RETURN);
-    }
-
-    TObjId rootDst = OBJ_INVALID;
-    if (-1 != cv.uid) {
-        // program variable
-        rootDst = dst.objAt(dst.addrOfVar(cv));
-    }
-    else {
-        // on heap object
-        const int size = src.valSizeOfTarget(rootSrcAt);
-        rootDst = dst.objAt(dst.heapAlloc(size));
-        if (clt)
-            dst.objDefineType(rootDst, clt);
-    }
-
-    const TValId rootDstAt = dst.placedAt(rootDst);
-    digSubObjs(dc, rootSrcAt, rootDstAt);
-
+    // preserve metadata of abstract objects
     const bool isProto = src.valTargetIsProto(rootSrcAt);
     dst.valTargetSetProto(rootDstAt, isProto);
-
-    const EObjKind kind = objKind(src, rootSrc);
-    switch (kind) {
-        case OK_MAY_EXIST:
-        case OK_DLS:
-        case OK_SLS: {
-            const BindingOff &off = segBinding(src, rootSrc);
-            dst.valTargetSetAbstract(rootDstAt, kind, off);
-        }
-        // fall through!
-
-        case OK_CONCRETE:
-            return dc.valMap[src.placedAt(objSrc)];
+    if (SymHeap::isAbstract(src.valTarget(rootSrcAt))) {
+        const EObjKind kind = src.valTargetKind(rootSrcAt);
+        const BindingOff &off = segBinding(src, rootSrc);
+        dst.valTargetSetAbstract(rootDstAt, kind, off);
     }
 
-    CL_TRAP;
-    return VAL_INVALID;
+    // look inside
+    digSubObjs(dc, rootSrcAt, rootDstAt);
 }
 
 void trackUses(DeepCopyData &dc, TValId valSrc) {
@@ -203,7 +177,8 @@ void trackUses(DeepCopyData &dc, TValId valSrc) {
     TObjList uses;
     dc.src.usedBy(uses, valSrc);
     BOOST_FOREACH(TObjId objSrc, uses) {
-        addObjectIfNeeded(dc, objSrc);
+        addObjectIfNeeded(dc, objRoot(dc.src, objSrc));
+        dc.valMap[dc.src.placedAt(objSrc)];
     }
 }
 
@@ -258,7 +233,8 @@ TValId handleValue(DeepCopyData &dc, TValId valSrc) {
     }
 
     // create the target object, if it does not exist already
-    return addObjectIfNeeded(dc, targetSrc);
+    addObjectIfNeeded(dc, objRoot(dc.src, targetSrc));
+    return valMap[dc.src.placedAt(targetSrc)];
 }
 
 void deepCopy(DeepCopyData &dc) {
@@ -322,17 +298,9 @@ void prune(const SymHeap &src, SymHeap &dst,
 
     // go through all program variables
     BOOST_FOREACH(CVar cv, snap) {
-        const TValId valSrc = dc.src.addrOfVar(cv);
-        const TObjId objSrc = dc.src.pointsTo(valSrc);
-        CL_BREAK_IF(OBJ_INVALID == objSrc);
-
-#ifndef NDEBUG
-        // we should always know type of program variables
-        const struct cl_type *cltObjSrc = dc.src.objType(objSrc);
-        CL_BREAK_IF(!cltObjSrc);
-#endif
-
-        addObjectIfNeeded(dc, objSrc);
+        const TValId srcAt = dc.src.addrOfVar(cv);
+        const TValId dstAt = dc.dst.addrOfVar(cv);
+        digSubObjs(dc, srcAt, dstAt);
     }
 
     // go through the worklist
