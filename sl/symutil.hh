@@ -181,6 +181,62 @@ bool /* complete */ traverseLiveObjs(
     return traverseCore(sh, rootAt, visitor, &SymHeap::gatherLiveObjects);
 }
 
+/// take the given visitor through all live objects object-wise
+template <int N, class THeap, class TVisitor>
+bool /* complete */ traverseLiveObjs(
+        THeap                       &sh,
+        const TValId                at[N],
+        TVisitor                    &visitor)
+{
+    // collect the starting points
+    TValId roots[N];
+    TOffset offs[N];
+    for (unsigned i = 0; i < N; ++i) {
+        const TValId addr = at[i];
+        CL_BREAK_IF(const_cast<SymHeap &>(sh).objAt(addr) <= 0);
+        roots[i] = sh.valRoot(addr);
+        offs[i] = sh.valOffset(addr);
+    }
+
+    // collect all live objects from everywhere
+    typedef std::pair<TOffset, TObjType> TItem;
+    std::set<TItem> all;
+    for (unsigned i = 0; i < N; ++i) {
+        TObjList objs;
+        sh.gatherLiveObjects(objs, roots[i]);
+        BOOST_FOREACH(const TObjId obj, objs) {
+            const TValId objAt = sh.placedAt(obj);
+            const TOffset off = sh.valOffset(objAt) - offs[i];
+            if (off < 0)
+                // do not go above the starting point
+                continue;
+
+            const TObjType clt = sh.objType(obj);
+            const TItem item(off, clt);
+            all.insert(item);
+        }
+    }
+
+    // go through all live objects
+    BOOST_FOREACH(const TItem &item, all) {
+        const TOffset  off = item.first;
+        const TObjType clt = item.second;
+
+        TObjId objs[N];
+        for (unsigned i = 0; i < N; ++i) {
+            const TValId addr = sh.valByOffset(roots[i], offs[i] + off);
+            objs[i] = sh.objAt(addr, clt);
+        }
+
+        if (!visitor(sh, objs))
+            // traversal cancelled by visitor
+            return false;
+    }
+
+    // done
+    return true;
+}
+
 /// take the given visitor through a composite object (or whatever you pass in)
 template <class THeap, class TVisitor, class TItem = TObjId>
 bool /* complete */ traverseSubObjs(THeap &sh, TItem item, TVisitor &visitor,

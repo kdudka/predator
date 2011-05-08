@@ -298,9 +298,9 @@ struct ProtoCloner {
 struct ValueSynchronizer {
     std::set<TObjId>    ignoreList;
 
-    bool operator()(SymHeap &sh, TObjPair item) const {
-        const TObjId src = item.first;
-        const TObjId dst = item.second;
+    bool operator()(SymHeap &sh, TObjId item[2]) const {
+        const TObjId src = item[0];
+        const TObjId dst = item[1];
         if (hasKey(ignoreList, src))
             return /* continue */ true;
 
@@ -328,9 +328,8 @@ void dlSegSyncPeerData(SymHeap &sh, const TValId dls) {
     std::copy(refs.begin(), refs.end(),
               std::inserter(visitor.ignoreList, visitor.ignoreList.begin()));
 
-    // FIXME: do not assume fixed-type objects here!
-    const TObjPair item(sh.objAt(dls), sh.objAt(peer));
-    traverseSubObjs(sh, item, visitor, /* leavesOnly */ true);
+    const TValId roots[] = { dls, peer };
+    traverseLiveObjs<2>(sh, roots, visitor);
 }
 
 // when abstracting an object, we need to abstract all non-matching values in
