@@ -772,17 +772,18 @@ bool SymPlot::Private::resolvePointsTo(TObjId *pDst, TValId value) {
 class ObjectDigger {
     private:
         SymPlot::Private    *const self_;
-        const TObjId        root_;
+        const TValId        root_;
+        const TObjType      rootClt_;
         unsigned            level_;
 
     public:
         ObjectDigger(SymPlot::Private *self, TObjId root):
             self_(self),
-            root_(root),
+            root_(self_->sh->placedAt(root)),
+            rootClt_(self_->sh->objType(root)),
             level_(0)
         {
-            const struct cl_type *clt = self_->sh->objType(root);
-            this->operate(TFieldIdxChain(), clt);
+            this->operate(TFieldIdxChain(), rootClt_);
         }
 
         ~ObjectDigger() {
@@ -807,10 +808,11 @@ class ObjectDigger {
 };
 
 void ObjectDigger::operate(TFieldIdxChain ic, const struct cl_type *clt) {
-    CL_BREAK_IF(!clt);
+    const TOffset off = offsetByIdxChain(rootClt_, ic);
 
-    const SymHeap &sh = *self_->sh;
-    const TObjId obj = subObjByChain(sh, root_, ic);
+    SymHeap &sh = /* XXX */ *const_cast<SymHeap *>(self_->sh);
+    const TValId at = sh.valByOffset(root_, off);
+    const TObjId obj = sh.objAt(at, clt);
     CL_BREAK_IF(obj <= 0);
 
     // first close all pending clusters

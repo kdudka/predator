@@ -188,7 +188,7 @@ void SymCallCtx::flushCallResults(SymState &dst) {
 
         // first join the heap with its original surround
         SymHeap sh(d->rawResults[i]);
-        joinHeapsByCVars(d->bt, &sh, &d->surround);
+        joinHeapsByCVars(&sh, &d->surround);
 
         // perform all necessary action wrt. our function call convention
         d->assignReturnValue(sh);
@@ -492,7 +492,7 @@ SymCallCtx& SymCallCache::getCallCtx(SymHeap                    heap,
 
     // prune heap
     SymHeap surround(heap.stor());
-    splitHeapByCVars(d->bt, &heap, cut, &surround);
+    splitHeapByCVars(&heap, cut, &surround);
     
     // get either an existing ctx, or create a new one
     SymCallCtx *ctx = d->getCallCtx(uid, heap);

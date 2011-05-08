@@ -25,7 +25,6 @@
 #include <cl/code_listener.h>
 #include <cl/storage.hh>
 
-#include "symbt.hh"
 #include "symclone.hh"
 #include "symplot.hh"
 #include "symseg.hh"
@@ -371,7 +370,6 @@ namespace {
 }
 
 void splitHeapByCVars(
-        const SymBackTrace          *bt,
         SymHeap                     *srcDst,
         const TCVarList             &cut,
         SymHeap                     *saveSurroundTo)
@@ -443,8 +441,6 @@ void splitHeapByCVars(
         CL_NOTE("symcut: plot done, please consider analyzing the results");
         CL_TRAP;
     }
-#else
-    (void) bt;
 #endif
 
     // update *srcDst (we can't do it sooner because of the plotting above)
@@ -452,11 +448,9 @@ void splitHeapByCVars(
 }
 
 void joinHeapsByCVars(
-        const SymBackTrace          *bt,
         SymHeap                     *srcDst,
         const SymHeap               *src2)
 {
-    (void) bt;
 #if SE_DISABLE_SYMCUT
     return;
 #endif

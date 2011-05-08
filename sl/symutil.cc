@@ -46,47 +46,6 @@ void moveKnownValueToLeft(
     }
 }
 
-// TODO: remove this
-TObjId subObjByChain(const SymHeap &sh, TObjId obj, TFieldIdxChain ic) {
-    BOOST_FOREACH(const int nth, ic) {
-        obj = sh.subObj(obj, nth);
-        if (OBJ_INVALID == obj)
-            break;
-    }
-
-    return obj;
-}
-
-// TODO: remove this
-TObjId subObjByInvChain(const SymHeap &sh, TObjId obj, TFieldIdxChain ic) {
-    std::stack<int> chkStack;
-
-    // just slowly go to the root
-    for (unsigned i = 0; i < ic.size(); ++i) {
-        int nth;
-        const TObjId parent = sh.objParent(obj, &nth);
-        if (OBJ_INVALID == parent)
-            // count mismatch
-            return OBJ_INVALID;
-
-        chkStack.push(nth);
-        obj = parent;
-    }
-
-    // now check if the captured selector sequence matches the given one
-    for (unsigned i = 0; i < ic.size(); ++i) {
-        CL_BREAK_IF(chkStack.empty());
-        if (chkStack.top() != ic[i])
-            // field mismatch
-            return OBJ_INVALID;
-
-        chkStack.pop();
-    }
-    CL_BREAK_IF(!chkStack.empty());
-
-    return obj;
-}
-
 TObjId /* root */ objRoot(const SymHeap &sh, TObjId obj) {
     if (obj <= 0)
         return obj;

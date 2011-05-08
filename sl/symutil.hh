@@ -273,9 +273,6 @@ bool /* complete */ traverseSubObjs(THeap &sh, TItem item, TVisitor &visitor,
     return true;
 }
 
-// TODO: remove this
-TObjId subObjByChain(const SymHeap &sh, TObjId obj, TFieldIdxChain ic);
-
 /// (VAL_INVALID != pointingFrom) means 'pointing from anywhere'
 void redirectRefs(
         SymHeap                 &sh,
