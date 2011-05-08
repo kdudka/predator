@@ -60,7 +60,7 @@ struct DeepCopyData {
     typedef std::pair<TObjId  /* src */, TObjId   /* dst */>    TItem;
     typedef std::set<CVar>                                      TCut;
 
-    const SymHeap       &src;
+    SymHeap             &src;
     SymHeap             &dst;
     TCut                &cut;
     const bool          digBackward;
@@ -71,18 +71,13 @@ struct DeepCopyData {
 
     DeepCopyData(const SymHeap &src_, SymHeap &dst_, TCut &cut_,
                  bool digBackward_):
-        src(src_),
+        src(/* XXX */ const_cast<SymHeap &>(src_)),
         dst(dst_),
         cut(cut_),
         digBackward(digBackward_)
     {
     }
 };
-
-void add(DeepCopyData &dc, TObjId objSrc, TObjId objDst) {
-    dc.valMap[dc.src.placedAt(objSrc)] = dc.dst.placedAt(objDst);
-    dc.wl.schedule(objSrc, objDst);
-}
 
 class DCopyObjVisitor {
     private:
@@ -94,21 +89,31 @@ class DCopyObjVisitor {
         bool operator()(const boost::array<TObjId, 2> &item) {
             const TObjId objSrc = item[/* src */ 0];
             const TObjId objDst = item[/* dst */ 1];
-            add(dc_, objSrc, objDst);
+
+            const TValId srcAt = dc_.src.placedAt(objSrc);
+            const TValId dstAt = dc_.dst.placedAt(objDst);
+            dc_.valMap[srcAt] = dstAt;
+
+            // FIXME: schedule by values instead
+            dc_.wl.schedule(objSrc, objDst);
 
             return /* continue */ true;
         }
 };
 
-void digSubObjs(DeepCopyData &dc, TObjId objSrc, TObjId objDst)
+void digSubObjs(DeepCopyData &dc, TValId addrSrc, TValId addrDst)
 {
     boost::array<const SymHeap *, 2> sh;
     sh[0] = &dc.src;
     sh[1] = &dc.dst;
 
     boost::array<TObjId, 2> root;
-    root[0] = objSrc;
-    root[1] = objDst;
+    root[0] = /* XXX */ dc.src.objAt(addrSrc);
+    root[1] = /* XXX */ dc.dst.objAt(addrDst);
+
+    // FIXME: schedule by values instead
+    dc.wl.schedule(root[0], root[1]);
+    dc.valMap[addrSrc] = addrDst;
 
     DCopyObjVisitor objVisitor(dc);
     traverseSubObjs<2>(sh, root, objVisitor);
@@ -147,8 +152,7 @@ TValId addObjectIfNeeded(DeepCopyData &dc, TObjId objSrc) {
     if (OBJ_RETURN == rootSrc) {
         // clone return value
         dst.objDefineType(OBJ_RETURN, clt);
-        add(       dc, OBJ_RETURN, OBJ_RETURN);
-        digSubObjs(dc, OBJ_RETURN, OBJ_RETURN);
+        digSubObjs(dc, src.placedAt(OBJ_RETURN), dst.placedAt(OBJ_RETURN));
 
         return dst.placedAt(OBJ_RETURN);
     }
@@ -166,10 +170,9 @@ TValId addObjectIfNeeded(DeepCopyData &dc, TObjId objSrc) {
             dst.objDefineType(rootDst, clt);
     }
 
-    add(dc, rootSrc, rootDst);
-    digSubObjs(dc, rootSrc, rootDst);
-
     const TValId rootDstAt = dst.placedAt(rootDst);
+    digSubObjs(dc, rootSrcAt, rootDstAt);
+
     const bool isProto = src.valTargetIsProto(rootSrcAt);
     dst.valTargetSetProto(rootDstAt, isProto);
 
@@ -319,7 +322,7 @@ void prune(const SymHeap &src, SymHeap &dst,
 
     // go through all program variables
     BOOST_FOREACH(CVar cv, snap) {
-        const TValId valSrc = const_cast<SymHeap &>(dc.src).addrOfVar(cv);
+        const TValId valSrc = dc.src.addrOfVar(cv);
         const TObjId objSrc = dc.src.pointsTo(valSrc);
         CL_BREAK_IF(OBJ_INVALID == objSrc);
 
