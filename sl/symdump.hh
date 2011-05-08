@@ -34,12 +34,8 @@ class SymHeap;
 
 #ifndef BUILDING_DOX
     namespace CodeStorage {
-        struct Storage;
         struct Insn;
     }
-
-    // for internal use only
-    void dump_plot_set_stor(const CodeStorage::Storage &);
 #endif
 
 /// dump @b type-info given as clt

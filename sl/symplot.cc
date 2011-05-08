@@ -964,11 +964,11 @@ void SymPlot::Private::plotCVar(CVar cVar) {
     this->plotObj(obj);
 }
 
-SymPlot::SymPlot(const CodeStorage::Storage &stor, const SymHeap &sh):
+SymPlot::SymPlot(const SymHeap &sh):
     d(new Private)
 {
-    d->stor = &stor;
     d->sh = &sh;
+    d->stor = &sh.stor();
     d->last = 0;
 }
 

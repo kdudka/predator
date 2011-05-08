@@ -394,28 +394,20 @@ void dump_id(const SymHeapCore &core, int id) {
     dump_id(&core, id);
 }
 
-static const CodeStorage::Storage *glStorPtr;
-
-void dump_plot_set_stor(const CodeStorage::Storage &stor) {
-    ::glStorPtr = &stor;
-}
-
 void dump_plot_core(const SymHeapCore *core, const char *name) {
     if (!core) {
         cout << "dump_plot: error: got a NULL pointer\n";
         return;
     }
 
-    const SymHeap *heap = dynamic_cast<const SymHeap *>(core);
-    if (!heap) {
+    const SymHeap *sh = dynamic_cast<const SymHeap *>(core);
+    if (!sh) {
         cout << "dump_plot: error: failed to downcast SymHeapCore to SymHeap\n";
         return;
     }
 
     // create an instance of SymPlot
-    const CodeStorage::Storage &stor = *::glStorPtr;
-    const SymHeap &sh = *heap;
-    SymPlot plotter(stor, sh);
+    SymPlot plotter(*sh);
 
     // attempt to plot heap
     if (!plotter.plot(name))

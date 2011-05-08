@@ -183,9 +183,6 @@ void execVirtualRoots(const CodeStorage::FncDb &fncs, const SymExecParams &ep) {
 void clEasyRun(const CodeStorage::Storage &stor, const char *configString) {
     using namespace CodeStorage;
 
-    // for debugging purposes only (TODO: #ifdef)
-    dump_plot_set_stor(stor);
-
     // read parameters of symbolic execution
     SymExecParams ep;
     parseConfigString(ep, configString);

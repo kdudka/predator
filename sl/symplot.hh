@@ -32,7 +32,6 @@
 
 namespace CodeStorage {
     struct Fnc;
-    struct Storage;
 }
 
 class SymBackTrace;
@@ -50,9 +49,9 @@ class SymPlot {
         /**
          * initialize plotter by static-info and symbolic heap
          * @param stor all-in-one info about the analyzed code, see CodeStorage
-         * @param heap a symbolic heap which is going to be plotted
+         * @param sh a symbolic heap which is going to be plotted
          */
-        SymPlot(const CodeStorage::Storage &stor, const SymHeap &heap);
+        SymPlot(const SymHeap &sh);
         ~SymPlot();
 
         /**

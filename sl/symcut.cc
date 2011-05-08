@@ -363,10 +363,9 @@ void prune(const SymHeap &src, SymHeap &dst,
 }
 
 namespace {
-    void plotHeap(const SymBackTrace *bt, const SymHeap &heap, const char *name)
+    void plotHeap(const SymHeap &sh, const char *name)
     {
-        const CodeStorage::Storage &stor = bt->stor();
-        SymPlot plotter(stor, heap);
+        SymPlot plotter(sh);
         plotter.plot(name);
     }
 }
@@ -438,9 +437,9 @@ void splitHeapByCVars(
     // basic sanity check
     if (cntA < cntOrig || cntA + cntB != cntTotal) {
         CL_ERROR("symcut: splitHeapByCVars() failed, attempt to plot heaps...");
-        plotHeap(bt, *srcDst,         "prune-input");
-        plotHeap(bt,  dst,            "prune-output");
-        plotHeap(bt, *saveSurroundTo, "prune-surround");
+        plotHeap(*srcDst,         "prune-input");
+        plotHeap( dst,            "prune-output");
+        plotHeap(*saveSurroundTo, "prune-surround");
         CL_NOTE("symcut: plot done, please consider analyzing the results");
         CL_TRAP;
     }

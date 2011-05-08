@@ -138,8 +138,7 @@ void emitPlotError(const struct cl_loc *lw, const std::string &plotName) {
 } // namespace
 
 #define DO_PLOT(method) do {                                                \
-    const CodeStorage::Storage &stor = *insn.stor;                          \
-    SymPlot plotter(stor, sh);                                              \
+    SymPlot plotter(sh);                                                    \
     if (!plotter.method)                                                    \
         emitPlotError(lw, plotName);                                        \
 } while (0)
