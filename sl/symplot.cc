@@ -111,7 +111,7 @@ std::string PlotEnumerator::decorate(std::string name) {
 // implementation of SymPlot
 struct SymPlot::Private {
     const CodeStorage::Storage          *stor;
-    const SymHeap                       *heap;
+    const SymHeap                       *sh;
     std::ofstream                       dotStream;
     bool                                ok;
     const struct cl_loc                 *lw;
@@ -251,12 +251,12 @@ namespace {
 
 bool SymPlot::Private::digFieldName(std::string &dst, TObjId obj) {
     int nth;
-    const TObjId parent = this->heap->objParent(obj, &nth);
+    const TObjId parent = this->sh->objParent(obj, &nth);
     if (OBJ_INVALID == parent)
         // no chance since there is no parent
         return false;
 
-    const struct cl_type *clt = this->heap->objType(parent);
+    const struct cl_type *clt = this->sh->objType(parent);
     CL_BREAK_IF(!clt || !isComposite(clt));
 
     const char *name = clt->items[nth].name;
@@ -270,7 +270,7 @@ bool SymPlot::Private::digFieldName(std::string &dst, TObjId obj) {
 
 void SymPlot::Private::plotNodeObj(TObjId obj) {
     CL_BREAK_IF(obj <= 0);
-    const struct cl_type *clt = this->heap->objType(obj);
+    const struct cl_type *clt = this->sh->objType(obj);
     const enum cl_type_e code = (clt)
         ? clt->code
         : CL_TYPE_UNKNOWN;
@@ -288,10 +288,10 @@ void SymPlot::Private::plotNodeObj(TObjId obj) {
         this->dotStream << ", color=" << colorByCode(code);
 
     // dig root object
-    const TObjId root = objRoot(*this->heap, obj);
-    const TValId rootAt = this->heap->placedAt(root);
+    const TObjId root = objRoot(*this->sh, obj);
+    const TValId rootAt = this->sh->placedAt(root);
 
-    const bool isVar = SymHeap::isProgramVar(this->heap->valTarget(rootAt));
+    const bool isVar = SymHeap::isProgramVar(this->sh->valTarget(rootAt));
     if (isVar)
         // colorize on-stack object
         this->dotStream << ", fontcolor=blue";
@@ -301,7 +301,7 @@ void SymPlot::Private::plotNodeObj(TObjId obj) {
         this->dotStream << ", fontcolor=red";
 
     this->dotStream << ", label=\"";
-    const TOffset off = this->heap->valOffset(this->heap->placedAt(obj));
+    const TOffset off = this->sh->valOffset(this->sh->placedAt(obj));
     if (off < 0)
         this->dotStream << "[" << off << "] ";
     if (0 < off)
@@ -309,7 +309,7 @@ void SymPlot::Private::plotNodeObj(TObjId obj) {
     this->dotStream << "[" << prefixByCode(code) << "] #" << obj;
 
     if (isVar) {
-        CVar cVar = this->heap->cVarByRoot(rootAt);
+        CVar cVar = this->sh->cVarByRoot(rootAt);
         this->dotStream << " (#" << cVar.uid;
         const CodeStorage::Var &var = this->stor->vars[cVar.uid];
         std::string name = var.name;
@@ -328,8 +328,8 @@ void SymPlot::Private::plotNodeObj(TObjId obj) {
 }
 
 void SymPlot::Private::plotNodeObjAnon(TObjId obj) {
-    const TValId at = this->heap->placedAt(obj);
-    const int size = this->heap->valSizeOfTarget(at);
+    const TValId at = this->sh->placedAt(obj);
+    const int size = this->sh->valSizeOfTarget(at);
     CL_BREAK_IF(size <= 0);
 
     this->dotStream << "\t" << SL_QUOTE(obj)
@@ -342,7 +342,7 @@ void SymPlot::Private::plotNodeValue(TValId val, enum cl_type_e code,
                                      const char *label)
 {
     // visualize the count of references as pen width
-    const float pw = static_cast<float>(this->heap->usedByCount(val));
+    const float pw = static_cast<float>(this->sh->usedByCount(val));
 
     this->dotStream << "\t" << SL_QUOTE(val)
         << " [shape=ellipse"
@@ -472,10 +472,10 @@ void SymPlot::Private::emitPendingEdges() {
 // traverse all Neq predicates
 void SymPlot::Private::traverseNeqs(TValId ref) {
     TValList relatedVals;
-    this->heap->gatherRelatedValues(relatedVals, ref);
+    this->sh->gatherRelatedValues(relatedVals, ref);
     BOOST_FOREACH(TValId val, relatedVals) {
         CL_BREAK_IF(val < 0);
-        CL_BREAK_IF(!this->heap->SymHeapCore::proveNeq(ref, val));
+        CL_BREAK_IF(!this->sh->SymHeapCore::proveNeq(ref, val));
         if (VAL_NULL == val) {
             // 'value' is said to be non-zero
             this->plotNeqZero(ref);
@@ -497,7 +497,7 @@ void SymPlot::Private::plotSingleValue(TValId value) {
     // TODO: visualize off-value relations
 #if 0
     SymHeap::TOffValCont offValues;
-    this->heap->gatherOffValues(offValues, value);
+    this->sh->gatherOffValues(offValues, value);
     BOOST_FOREACH(const SymHeap::TOffVal &ov, offValues) {
         this->workList.schedule(ov.first);
         if (ov.second < 0)
@@ -510,13 +510,13 @@ void SymPlot::Private::plotSingleValue(TValId value) {
 #endif
 
     this->traverseNeqs(value);
-    if (this->heap->valOffset(value))
-        this->traverseNeqs(this->heap->valRoot(value));
+    if (this->sh->valOffset(value))
+        this->traverseNeqs(this->sh->valRoot(value));
 
     const struct cl_type *clt = 0;
-    const TObjId target = this->heap->pointsTo(value);
+    const TObjId target = this->sh->pointsTo(value);
     if (0 < target)
-        clt = this->heap->objType(target);
+        clt = this->sh->objType(target);
 
     const enum cl_type_e code = (clt)
         ? clt->code
@@ -526,7 +526,7 @@ void SymPlot::Private::plotSingleValue(TValId value) {
 }
 
 void SymPlot::Private::plotZeroValue(TObjId obj) {
-    const struct cl_type *clt = this->heap->objType(obj);
+    const struct cl_type *clt = this->sh->objType(obj);
     CL_BREAK_IF(!clt);
 
     const enum cl_type_e code = clt->code;
@@ -549,7 +549,7 @@ void SymPlot::Private::plotZeroValue(TObjId obj) {
 }
 
 void SymPlot::Private::digNext(TObjId obj) {
-    EObjKind kind = objKind(*this->heap, obj);
+    EObjKind kind = objKind(*this->sh, obj);
     switch (kind) {
         case OK_CONCRETE:
             return;
@@ -557,14 +557,14 @@ void SymPlot::Private::digNext(TObjId obj) {
         case OK_MAY_EXIST:
         case OK_SLS:
         case OK_DLS:
-            if (this->heap->valOffset(this->heap->placedAt(obj)))
+            if (this->sh->valOffset(this->sh->placedAt(obj)))
                 return;
     }
 
-    SymHeap &sh = *const_cast<SymHeap *>(this->heap);
-    const TValId objAt = this->heap->placedAt(obj);
+    SymHeap &sh = *const_cast<SymHeap *>(this->sh);
+    const TValId objAt = this->sh->placedAt(obj);
 
-    const BindingOff &off = segBinding(*this->heap, obj);
+    const BindingOff &off = segBinding(*this->sh, obj);
     const TOffset offHead = off.head;
     if (offHead) {
         const TObjId objHead = sh.objAt(sh.valByOffset(objAt, offHead));
@@ -591,7 +591,7 @@ void SymPlot::Private::digNext(TObjId obj) {
 
 void SymPlot::Private::openCluster(TObjId obj) {
     std::string label;
-    if (this->heap->valTargetIsProto(this->heap->placedAt(obj)))
+    if (this->sh->valTargetIsProto(this->sh->placedAt(obj)))
         label = "[prototype] ";
 
 #ifndef NDEBUG
@@ -600,10 +600,10 @@ void SymPlot::Private::openCluster(TObjId obj) {
     const char *color = "", *pw = "";
 #endif
 
-    const struct cl_type *clt = this->heap->objType(obj);
+    const struct cl_type *clt = this->sh->objType(obj);
     CL_BREAK_IF(!clt);
 
-    const EObjKind kind = objKind(*this->heap, obj);
+    const EObjKind kind = objKind(*this->sh, obj);
     switch (kind) {
         case OK_CONCRETE:
             color = (CL_TYPE_UNION == clt->code)
@@ -656,7 +656,7 @@ void SymPlot::Private::openCluster(TObjId obj) {
 bool SymPlot::Private::handleCustomValue(TValId value) {
     using namespace CodeStorage;
 
-    const int cVal = this->heap->valGetCustom(value);
+    const int cVal = this->sh->valGetCustom(value);
     if (-1 == cVal)
         return false;
 
@@ -676,7 +676,7 @@ bool SymPlot::Private::handleCustomValue(TValId value) {
 }
 
 bool SymPlot::Private::handleUnknownValue(TValId value) {
-    const EUnknownValue code = this->heap->valGetUnknown(value);
+    const EUnknownValue code = this->sh->valGetUnknown(value);
     switch (code) {
         case UV_KNOWN:
         case UV_ABSTRACT:
@@ -707,7 +707,7 @@ bool SymPlot::Private::resolveValueOf(TValId *pDst, TObjId obj) {
         return false;
     this->objDone.insert(obj);
 
-    const TValId value = this->heap->valueOf(obj);
+    const TValId value = this->sh->valueOf(obj);
     switch (value) {
         case VAL_INVALID:
             this->plotNodeAux(obj, CL_TYPE_VOID, "VAL_INVALID");
@@ -740,7 +740,7 @@ bool SymPlot::Private::resolvePointsTo(TObjId *pDst, TValId value) {
     if (this->handleCustomValue(value))
         return false;
 
-    const TObjId obj = this->heap->pointsTo(value);
+    const TObjId obj = this->sh->pointsTo(value);
     switch (obj) {
         case OBJ_INVALID:
             this->plotNodeAux(value, CL_TYPE_VOID, "INVALID");
@@ -781,7 +781,7 @@ class ObjectDigger {
             root_(root),
             level_(0)
         {
-            const struct cl_type *clt = self_->heap->objType(root);
+            const struct cl_type *clt = self_->sh->objType(root);
             this->operate(TFieldIdxChain(), clt);
         }
 
@@ -809,7 +809,7 @@ class ObjectDigger {
 void ObjectDigger::operate(TFieldIdxChain ic, const struct cl_type *clt) {
     CL_BREAK_IF(!clt);
 
-    const SymHeap &sh = *self_->heap;
+    const SymHeap &sh = *self_->sh;
     const TObjId obj = subObjByChain(sh, root_, ic);
     CL_BREAK_IF(obj <= 0);
 
@@ -835,8 +835,8 @@ void ObjectDigger::operate(TFieldIdxChain ic, const struct cl_type *clt) {
     self_->openCluster(obj);
     self_->plotNodeObj(obj);
     for (int i = 0; i < clt->item_cnt; ++i) {
-        const TObjId sub = self_->heap->subObj(obj, i);
-        const struct cl_type *subClt = self_->heap->objType(sub);
+        const TObjId sub = self_->sh->subObj(obj, i);
+        const struct cl_type *subClt = self_->sh->objType(sub);
         if (!subClt || (isComposite(subClt) && !subClt->item_cnt))
             // skip empty structures/unions
             continue;
@@ -847,7 +847,7 @@ void ObjectDigger::operate(TFieldIdxChain ic, const struct cl_type *clt) {
 }
 
 void SymPlot::Private::digObjCore(TObjId obj) {
-    const struct cl_type *clt = this->heap->objType(obj);
+    const struct cl_type *clt = this->sh->objType(obj);
     if (!clt) {
         this->plotNodeObjAnon(obj);
         return;
@@ -860,16 +860,16 @@ void SymPlot::Private::digObjCore(TObjId obj) {
 void SymPlot::Private::digObj(TObjId obj) {
     // seek root, in order to draw the whole object, even if the root is not
     // pointed from anywhere
-    obj = objRoot(*this->heap, obj);
+    obj = objRoot(*this->sh, obj);
 
-    if (OK_DLS != objKind(*this->heap, obj)) {
+    if (OK_DLS != objKind(*this->sh, obj)) {
         this->digObjCore(obj);
         return;
     }
 
-    const TValId addr = this->heap->placedAt(obj);
-    const TObjId peer = dlSegPeer(*this->heap, obj);
-    const char *label = (this->heap->valTargetIsProto(addr))
+    const TValId addr = this->sh->placedAt(obj);
+    const TObjId peer = dlSegPeer(*this->sh, obj);
+    const char *label = (this->sh->valTargetIsProto(addr))
         ? "[prototype] DLS"
         : "DLS";
 
@@ -900,7 +900,7 @@ void SymPlot::Private::digValues() {
             // bare value can't be followed
             continue;
 
-        TObjId obj = this->heap->valGetCompositeObj(value);
+        TObjId obj = this->sh->valGetCompositeObj(value);
         if (OBJ_INVALID != obj) {
             // dig composite object and eventually schedule the values inside
             this->digObj(obj);
@@ -931,7 +931,7 @@ void SymPlot::Private::plotObj(TObjId obj) {
         // we got a bare value, which can't be followed, so we're done
         return;
 
-    if (OBJ_INVALID == this->heap->valGetCompositeObj(value)) {
+    if (OBJ_INVALID == this->sh->valGetCompositeObj(value)) {
         // connect the variable node with its value
         this->plotEdgeValueOf(obj, value);
 
@@ -955,8 +955,8 @@ void SymPlot::Private::plotCVar(CVar cVar) {
 #endif
 
     // SymbolicHeap variable lookup
-    const TValId at = const_cast<SymHeap *>(this->heap)->addrOfVar(cVar);
-    const TObjId obj = this->heap->pointsTo(at);
+    const TValId at = const_cast<SymHeap *>(this->sh)->addrOfVar(cVar);
+    const TObjId obj = this->sh->pointsTo(at);
     if (OBJ_INVALID == obj)
         CL_DEBUG_MSG(this->lw, "objByCVar lookup failed");
 
@@ -964,11 +964,11 @@ void SymPlot::Private::plotCVar(CVar cVar) {
     this->plotObj(obj);
 }
 
-SymPlot::SymPlot(const CodeStorage::Storage &stor, const SymHeap &heap):
+SymPlot::SymPlot(const CodeStorage::Storage &stor, const SymHeap &sh):
     d(new Private)
 {
     d->stor = &stor;
-    d->heap = &heap;
+    d->sh = &sh;
     d->last = 0;
 }
 
@@ -984,16 +984,16 @@ bool SymPlot::plot(const std::string &name) {
 
     // go through all program variables
     TCVarList cVars;
-    d->heap->gatherCVars(cVars);
+    d->sh->gatherCVars(cVars);
     BOOST_FOREACH(CVar cv, cVars) {
         d->plotCVar(cv);
     }
 
     // plot also all dangling objects, although we are not happy to see them
     TValList roots;
-    d->heap->gatherRootObjects(roots);
+    d->sh->gatherRootObjects(roots);
     BOOST_FOREACH(const TValId at, roots) {
-        const TObjId obj = const_cast<SymHeap *>(d->heap)->objAt(at);
+        const TObjId obj = const_cast<SymHeap *>(d->sh)->objAt(at);
         if (!hasKey(d->objDone, obj))
             d->plotObj(obj);
     }
