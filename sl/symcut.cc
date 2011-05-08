@@ -56,7 +56,6 @@ void fillSet(TSet &dst, const TList &src)
 }
 
 struct DeepCopyData {
-    typedef std::map<TObjId   /* src */, TObjId   /* dst */>    TObjMap;
     typedef std::map<TValId   /* src */, TValId   /* dst */>    TValMap;
     typedef std::pair<TObjId  /* src */, TObjId   /* dst */>    TItem;
     typedef std::set<CVar>                                      TCut;
@@ -66,7 +65,6 @@ struct DeepCopyData {
     TCut                &cut;
     const bool          digBackward;
 
-    TObjMap             objMap;
     TValMap             valMap;
 
     WorkList<TItem>     wl;
@@ -82,7 +80,6 @@ struct DeepCopyData {
 };
 
 void add(DeepCopyData &dc, TObjId objSrc, TObjId objDst) {
-    dc.objMap[objSrc] = objDst;
     dc.valMap[dc.src.placedAt(objSrc)] = dc.dst.placedAt(objDst);
     dc.wl.schedule(objSrc, objDst);
 
@@ -123,14 +120,15 @@ void digSubObjs(DeepCopyData &dc, TObjId objSrc, TObjId objDst)
     traverseSubObjs<2>(sh, root, objVisitor);
 }
 
-TObjId addObjectIfNeeded(DeepCopyData &dc, TObjId objSrc) {
-    DeepCopyData::TObjMap::iterator iterObjSrc = dc.objMap.find(objSrc);
-    if (dc.objMap.end() != iterObjSrc)
+TValId addObjectIfNeeded(DeepCopyData &dc, TObjId objSrc) {
+    const SymHeap &src = dc.src;
+    const TValId srcAt = src.placedAt(objSrc);
+    DeepCopyData::TValMap::iterator iterValSrc = dc.valMap.find(srcAt);
+    if (dc.valMap.end() != iterValSrc)
         // mapping already known
-        return iterObjSrc->second;
+        return iterValSrc->second;
 
     // go to root
-    const SymHeap &src = dc.src;
     const TObjId rootSrc = objRoot(src, objSrc);
     const TValId rootSrcAt = src.placedAt(rootSrc);
 
@@ -158,7 +156,7 @@ TObjId addObjectIfNeeded(DeepCopyData &dc, TObjId objSrc) {
         add(       dc, OBJ_RETURN, OBJ_RETURN);
         digSubObjs(dc, OBJ_RETURN, OBJ_RETURN);
 
-        return OBJ_RETURN;
+        return dst.placedAt(OBJ_RETURN);
     }
 
     TObjId rootDst = OBJ_INVALID;
@@ -192,11 +190,11 @@ TObjId addObjectIfNeeded(DeepCopyData &dc, TObjId objSrc) {
         // fall through!
 
         case OK_CONCRETE:
-            return dc.objMap[objSrc];
+            return dc.valMap[src.placedAt(objSrc)];
     }
 
     CL_TRAP;
-    return OBJ_INVALID;
+    return VAL_INVALID;
 }
 
 void trackUses(DeepCopyData &dc, TValId valSrc) {
@@ -217,14 +215,6 @@ TValId handleValue(DeepCopyData &dc, TValId valSrc) {
     SymHeap         &dst = dc.dst;
 
     trackUses(dc, valSrc);
-
-    const TObjId compSrc = src.valGetCompositeObj(valSrc);
-    if (OBJ_INVALID != compSrc) {
-        // value of a composite object
-        const TObjId compDst = addObjectIfNeeded(dc, compSrc);
-        return dst.valueOf(compDst);
-    }
-
     if (valSrc <= 0)
         // special value IDs always match
         return valSrc;
@@ -271,11 +261,7 @@ TValId handleValue(DeepCopyData &dc, TValId valSrc) {
     }
 
     // create the target object, if it does not exist already
-    const TObjId targetDst = addObjectIfNeeded(dc, targetSrc);
-    const TValId valDst = dst.placedAt(targetDst);
-
-    // return target object's address
-    return valDst;
+    return addObjectIfNeeded(dc, targetSrc);
 }
 
 void deepCopy(DeepCopyData &dc) {
