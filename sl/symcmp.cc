@@ -202,12 +202,53 @@ bool matchValues(
     return true;
 }
 
-template<class TWorkList>
+typedef WorkList<TValPair> TWorkList;
+
+class ValueComparator {
+    private:
+        TWorkList       &wl_;
+        TValMapBidir    &vMap_;
+        SymHeap         &sh1_;
+        SymHeap         &sh2_;
+
+    public:
+        ValueComparator(
+                TWorkList       &wl,
+                TValMapBidir    &vMap,
+                SymHeap         &sh1,
+                SymHeap         &sh2):
+            wl_(wl),
+            vMap_(vMap),
+            sh1_(sh1),
+            sh2_(sh2)
+        {
+        }
+
+        bool operator()(TObjId item[2]) {
+            SymHeap &sh1 = sh1_;
+            SymHeap &sh2 = sh2_;
+
+            const TValId v1 = sh1.valueOf(item[0]);
+            const TValId v2 = sh2.valueOf(item[1]);
+
+            if (!matchValues(vMap_, sh1, sh2, v1, v2)) {
+                SC_DEBUG_VAL_MISMATCH("value mismatch");
+                return false;
+            }
+
+            if (wl_.schedule(v1, v2))
+                SC_DEBUG_VAL_SCHEDULE("ValueComparator", sh1, sh2, v1, v2);
+
+            return /* continue */ true;
+        }
+};
+
 bool digComposite(
         bool                    *isComp,
         TWorkList               &wl,
-        const SymHeap           &sh1,
-        const SymHeap           &sh2,
+        TValMapBidir            &valMap,
+        SymHeap                 &sh1,
+        SymHeap                 &sh2,
         const TValId            v1,
         const TValId            v2)
 {
@@ -232,39 +273,18 @@ bool digComposite(
     const TObjId root2 = objRoot(sh2, cObj2);
     CL_BREAK_IF(OBJ_INVALID == root1 || OBJ_INVALID == root2);
 
-    typedef std::pair<TObjId, TObjId> TItem;
-    std::stack<TItem> todo;
-    push(todo, root1, root2);
-    while (!todo.empty()) {
-        TObjId o1, o2;
-        boost::tie(o1, o2) = todo.top();
-        todo.pop();
+    SymHeap *const heaps[] = {
+        &sh1,
+        &sh2
+    };
 
-        const struct cl_type *clt = sh1.objType(o1);
-        if (clt != sh2.objType(o2))
-            // type mismatch
-            return false;
+    TValId roots[] = {
+        sh1.placedAt(root1),
+        sh2.placedAt(root2)
+    };
 
-        if (isComposite(clt)) {
-            for (int i = 0; i < clt->item_cnt; ++i) {
-                const TObjId sub1 = sh1.subObj(o1, i);
-                const TObjId sub2 = sh2.subObj(o2, i);
-                CL_BREAK_IF(sub1 < 0 || sub2 < 0);
-
-                push(todo, sub1, sub2);
-            }
-
-            continue;
-        }
-
-        const TValId val1 = sh1.valueOf(o1);
-        const TValId val2 = sh2.valueOf(o2);
-        if (wl.schedule(val1, val2)) {
-            SC_DEBUG_VAL_SCHEDULE_BY("digComposite", o1, o2,
-                                  sh1, sh2, val1, val2);
-        }
-    }
-    return true;
+    ValueComparator visitor(wl, valMap, sh1, sh2);
+    return traverseLiveObjsGeneric<2>(heaps, roots, visitor);
 }
 
 template <class TWorkList, class TMapping>
@@ -286,7 +306,7 @@ bool dfsCmp(
         }
 
         bool isComp;
-        if (!digComposite(&isComp, wl, sh1, sh2, v1, v2)) {
+        if (!digComposite(&isComp, wl, valMapping, sh1, sh2, v1, v2)) {
             SC_DEBUG_VAL_MISMATCH("object composition mismatch");
             return false;
         }
