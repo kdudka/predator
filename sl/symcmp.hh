@@ -37,6 +37,7 @@ bool joinUnknownValuesCode(
 
 /// either intra-heap or inter-heap value mapping
 typedef std::map<TValId /* src */, TValId /* dst */>        TValMap;
+typedef TValMap                                             TValMapBidir[2];
 
 /// @todo some dox
 bool areEqual(
@@ -44,21 +45,6 @@ bool areEqual(
         const SymHeap           &sh2,
         TValMap                 *srcToDst = 0,
         TValMap                 *dstToSrc = 0);
-
-typedef std::pair<TValId, TValId>                           TValPair;
-
-class ISubMatchVisitor {
-    public:
-        virtual ~ISubMatchVisitor() { }
-        virtual bool handleValuePair(bool *wantTraverse, TValPair vp) = 0;
-};
-
-typedef std::vector<TValPair>                               TValPairList;
-
-bool matchSubHeaps(
-        const SymHeap           &sh,
-        const TValPairList      &startingPoints,
-        ISubMatchVisitor        *visitor = 0);
 
 inline bool checkNonPosValues(int a, int b) {
     if (0 < a && 0 < b)
@@ -69,13 +55,12 @@ inline bool checkNonPosValues(int a, int b) {
     return (a == b);
 }
 
-typedef TValMap                                             TValMapBidir[2];
-
 bool matchPlainValues(
         TValMapBidir            valMapping,
         const SymHeap           &sh1,
         const SymHeap           &sh2,
         const TValId            v1,
-        const TValId            v2);
+        const TValId            v2,
+        const bool              symHeapNG = false);
 
 #endif /* H_GUARD_SYM_CMP_H */

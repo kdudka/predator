@@ -130,7 +130,8 @@ bool matchPlainValues(
         const SymHeap           &sh1,
         const SymHeap           &sh2,
         const TValId            v1,
-        const TValId            v2)
+        const TValId            v2,
+        const bool              symHeapNG)
 {
     if (!checkNonPosValues(v1, v2))
         // null vs. non-null, etc.
@@ -159,7 +160,8 @@ bool matchPlainValues(
         return false;
 
     // TODO: throw this away as soon as symcmp/symjoin is ported to symheap-ng
-    return matchPlainValuesCore(valMapping, v1, v2);
+    return symHeapNG
+        || matchPlainValuesCore(valMapping, v1, v2);
 }
 
 template <class TMapping>
@@ -172,7 +174,7 @@ bool matchValues(
         const TValId            v2)
 {
     *follow = false;
-    if (!matchPlainValues(valMapping, sh1, sh2, v1, v2))
+    if (!matchPlainValues(valMapping, sh1, sh2, v1, v2, /* symHeapNG */ true))
         return false;
 
     // check for special values
@@ -449,114 +451,4 @@ bool areEqual(
 
     // match!
     return true;
-}
-
-template <class TItem, class TVisitor>
-class CustomWorkList: public WorkList<TItem> {
-    public:
-        bool                    cancel;
-
-    private:
-        typedef WorkList<TItem> TBase;
-        const SymHeap           &sh_;
-        TVisitor                *visitor_;
-        std::set<TItem>         haveSeen_;
-
-    public:
-        CustomWorkList(const SymHeap &sh, TVisitor *visitor):
-            cancel(false),
-            sh_(sh),
-            visitor_(visitor)
-        {
-        }
-
-        bool schedule(const TItem &vp) {
-            if (this->cancel)
-                return false;
-
-            if (!visitor_)
-                // no visitor anyway, keep going
-                return TBase::schedule(vp);
-
-            if (!insertOnce(haveSeen_, vp))
-                // already seen by visitor
-                return false;
-
-            SC_DEBUG("CustomWorkList::schedule() calls visitor"
-                     << SC_DUMP_V1_V2(sh_, sh_, vp.first, vp.second));
-
-            bool wantTraverse = true;
-            if (!visitor_->handleValuePair(&wantTraverse, vp)) {
-                // traversal completely canceled by the visitor
-                this->cancel = true;
-                return false;
-            }
-
-            if (!wantTraverse)
-                // visitor does not want to traverse this pair of values
-                return false;
-
-            const bool rv = TBase::schedule(vp);
-            CL_BREAK_IF(!rv);
-            return rv;
-        }
-
-        // FIXME: there is no TBase::schedule() virtual method --> subtle
-        bool schedule(const TValId v1, const TValId v2) {
-            const TValPair vp(v1, v2);
-            return this->schedule(vp);
-        }
-};
-
-bool matchCVars(const SymHeap &sh, const TValMap &valMap) {
-    CL_BREAK_IF("rewritten, but not re-tested");
-
-    BOOST_FOREACH(TValMap::const_reference vp, valMap) {
-        const TValId v1 = vp.first;
-        const TValId v2 = vp.second;
-        if (v1 <= 0)
-            continue;
-
-        CL_BREAK_IF(v2 <= 0);
-        const TValId root1 = sh.valRoot(v1);
-        const TValId root2 = sh.valRoot(v2);
-
-        const bool isCVar1 = SymHeap::isProgramVar(sh.valTarget(root1));
-        const bool isCVar2 = SymHeap::isProgramVar(sh.valTarget(root2));
-        if (isCVar1 != isCVar2)
-            return false;
-
-        if (sh.cVarByRoot(root1) != sh.cVarByRoot(root2))
-            return false;
-    }
-
-    return true;
-}
-
-bool matchSubHeaps(
-        const SymHeap           &sh,
-        const TValPairList      &startingPoints,
-        ISubMatchVisitor        *visitor)
-{
-    // DFS stack
-    typedef CustomWorkList<TValPair, ISubMatchVisitor>      TWorkList;
-    TWorkList wl(sh, visitor);
-
-    // value substitution (isomorphism)
-    TValMap valMapping[/* left-to-right + right-to-left */ 2];
-
-    BOOST_FOREACH(const TValPair &vp, startingPoints) {
-        // FIXME: it's not clear from the dox, if startingPoints should be also
-        //        given to the visitor, or not (but they _should_)
-        if (wl.schedule(vp))
-            SC_DEBUG("matchSubHeaps() picks up a starting point"
-                     << SC_DUMP_V1_V2(sh, sh, vp.first, vp.second));
-    }
-
-    // run DFS
-    if (!dfsCmp(wl, valMapping, sh, sh, &wl.cancel) || wl.cancel)
-        return false;
-
-    // FIXME: too late (significant performance waste)
-    return matchCVars(sh, valMapping[0]);
 }
