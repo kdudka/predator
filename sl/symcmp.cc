@@ -404,7 +404,7 @@ bool areEqual(
     WorkList<TValPair> wl;
 
     // value substitution (isomorphism)
-    TValMap valMapping[/* left-to-right + right-to-left */ 2];
+    TValMapBidir valMapping;
 
     // FIXME: suboptimal interface of SymHeap::gatherCVars()
     TCVarList cVars1, cVars2;
@@ -418,24 +418,11 @@ bool areEqual(
     SymHeap &sh1Writable = const_cast<SymHeap &>(sh1);
     SymHeap &sh2Writable = const_cast<SymHeap &>(sh2);
 
+    // start with program variables
     BOOST_FOREACH(CVar cv, cVars1) {
-        const TObjId o1 = sh1.pointsTo(sh1Writable.addrOfVar(cv));
-        const TObjId o2 = sh2.pointsTo(sh2Writable.addrOfVar(cv));
-        CL_BREAK_IF(o1 < 0 || o2 < 0);
-
-        // retrieve values of static variables
-        const TValId v1 = sh1.valueOf(o1);
-        const TValId v2 = sh2.valueOf(o2);
-
-        // optimization
-        bool follow;
-        if (!matchValues(&follow, valMapping, sh1, sh2, v1, v2)) {
-            SC_DEBUG_VAL_MISMATCH("value mismatch");
-            return false;
-        }
-
-        // schedule for DFS
-        if (follow && wl.schedule(v1, v2))
+        const TValId v1 = sh1Writable.addrOfVar(cv);
+        const TValId v2 = sh2Writable.addrOfVar(cv);
+        if (wl.schedule(v1, v2))
             SC_DEBUG_VAL_SCHEDULE("cVar(" << cv.uid << ")", sh1, sh2, v1, v2);
     }
 
