@@ -61,45 +61,6 @@
 // set to 'true' if you wonder why SymCmp matches states as it does (noisy)
 static bool debugSymCmp = static_cast<bool>(DEBUG_SYMCMP);
 
-bool compareClt(
-        const struct cl_type    *clt1,
-        const struct cl_type    *clt2)
-{
-    if (clt1 == clt2)
-        // exact match
-        return true;
-
-    if (!clt1 || !clt2)
-        // one of them is NULL
-        return false;
-
-    // compare the types semantically
-    return (*clt1 == *clt2);
-}
-
-bool joinUnknownValuesCode(
-        EUnknownValue           *pDst,
-        const EUnknownValue     code1,
-        const EUnknownValue     code2)
-{
-    if (UV_UNINITIALIZED == code1 && UV_UNINITIALIZED == code2) {
-        *pDst = UV_UNINITIALIZED;
-        return true;
-    }
-
-    if (UV_DONT_CARE == code1 || UV_DONT_CARE == code2) {
-        *pDst = UV_DONT_CARE;
-        return true;
-    }
-
-    if (UV_UNKNOWN == code1 || UV_UNKNOWN == code2) {
-        *pDst = UV_UNKNOWN;
-        return true;
-    }
-
-    return false;
-}
-
 bool matchPlainValuesCore(
         TValMapBidir            valMapping,
         const TValId            v1,
@@ -308,18 +269,13 @@ bool dfsCmp(
         TWorkList               &wl,
         TMapping                &valMapping,
         const SymHeap           &sh1,
-        const SymHeap           &sh2,
-        const bool              *pCancel = 0)
+        const SymHeap           &sh2)
 {
     // DFS loop
     typename TWorkList::value_type item;
     while (wl.next(item)) {
         TValId v1, v2;
         boost::tie(v1, v2) = item;
-
-        if (pCancel && *pCancel)
-            // traversal completely canceled by visitor
-            return false;
 
         bool follow;
         if (!matchValues(&follow, valMapping, sh1, sh2, v1, v2)) {
@@ -387,7 +343,7 @@ bool dfsCmp(
         return false;
     }
 
-    // heaps are equal (isomorphism)
+    // heaps are equal up to isomorphism
     return true;
 }
 

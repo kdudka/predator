@@ -1592,6 +1592,29 @@ bool mayExistFallback(
     return result;
 }
 
+bool joinUnknownValuesCode(
+        EUnknownValue           *pDst,
+        const EUnknownValue     code1,
+        const EUnknownValue     code2)
+{
+    if (UV_UNINITIALIZED == code1 && UV_UNINITIALIZED == code2) {
+        *pDst = UV_UNINITIALIZED;
+        return true;
+    }
+
+    if (UV_DONT_CARE == code1 || UV_DONT_CARE == code2) {
+        *pDst = UV_DONT_CARE;
+        return true;
+    }
+
+    if (UV_UNKNOWN == code1 || UV_UNKNOWN == code2) {
+        *pDst = UV_UNKNOWN;
+        return true;
+    }
+
+    return false;
+}
+
 bool joinValuePair(SymJoinCtx &ctx, const TValId v1, const TValId v2) {
     const bool err1 = (VAL_DEREF_FAILED == v1);
     const bool err2 = (VAL_DEREF_FAILED == v2);

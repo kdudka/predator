@@ -29,12 +29,6 @@
 #include <map>
 #include <vector>
 
-/// @todo some dox
-bool joinUnknownValuesCode(
-        EUnknownValue           *pDst,
-        const EUnknownValue     code1,
-        const EUnknownValue     code2);
-
 /// either intra-heap or inter-heap value mapping
 typedef std::map<TValId /* src */, TValId /* dst */>        TValMap;
 typedef TValMap                                             TValMapBidir[2];
