@@ -174,7 +174,7 @@ bool /* complete */ traverseLiveObjsGeneric(
         SymHeap &sh = *heaps[i];
 
         const TValId addr = at[i];
-        CL_BREAK_IF(const_cast<SymHeap &>(sh).objAt(addr) < 0);
+        CL_BREAK_IF(sh.objAt(addr) < 0);
         roots[i] = sh.valRoot(addr);
         offs[i] = sh.valOffset(addr);
     }

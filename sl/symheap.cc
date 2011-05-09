@@ -1162,8 +1162,9 @@ TObjId SymHeapCore::objAt(TValId at, TObjCode code) {
 }
 
 TObjId SymHeapCore::objAt(TValId at, TObjType clt) {
-    CL_BREAK_IF(!clt);
-    if (CL_TYPE_PTR == clt->code && CL_TYPE_FNC != targetTypeOfPtr(clt)->code)
+    if (clt
+            && CL_TYPE_PTR == clt->code
+            && CL_TYPE_FNC != targetTypeOfPtr(clt)->code)
         // look for a pointer to data
         return this->ptrAt(at);
 

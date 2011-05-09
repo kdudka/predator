@@ -25,7 +25,6 @@
 #include <cl/code_listener.h>
 #include <cl/storage.hh>
 
-#include "symclone.hh"
 #include "symplot.hh"
 #include "symseg.hh"
 #include "symutil.hh"
@@ -86,7 +85,7 @@ class DCopyObjVisitor {
     public:
         DCopyObjVisitor(DeepCopyData &dc): dc_(dc) { }
 
-        bool operator()(const boost::array<TObjId, 2> &item) {
+        bool operator()(const TObjId item[2]) {
             const TObjId objSrc = item[/* src */ 0];
             const TObjId objDst = item[/* dst */ 1];
 
@@ -103,20 +102,15 @@ class DCopyObjVisitor {
 
 void digSubObjs(DeepCopyData &dc, TValId addrSrc, TValId addrDst)
 {
-    boost::array<const SymHeap *, 2> sh;
-    sh[0] = &dc.src;
-    sh[1] = &dc.dst;
-
-    boost::array<TObjId, 2> root;
-    root[0] = /* XXX */ dc.src.objAt(addrSrc);
-    root[1] = /* XXX */ dc.dst.objAt(addrDst);
+    SymHeap *const heaps[] = { &dc.src, &dc.dst };
+    const TValId roots[] = { addrSrc, addrDst };
 
     // FIXME: schedule by values instead
-    dc.wl.schedule(root[0], root[1]);
+    dc.wl.schedule(dc.src.objAt(addrSrc), dc.dst.objAt(addrDst));
     dc.valMap[addrSrc] = addrDst;
 
     DCopyObjVisitor objVisitor(dc);
-    traverseSubObjs<2>(sh, root, objVisitor);
+    traverseLiveObjsGeneric<2>(heaps, roots, objVisitor);
 }
 
 void addObjectIfNeeded(DeepCopyData &dc, TValId rootSrcAt) {

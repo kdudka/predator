@@ -528,6 +528,7 @@ Call cache
 
     test-0143.c - test-0032.c reduced to a minimal example while debugging a bug
 
+    test-0147.c - test-0090.c reduced to a minimal example while debugging a bug
 
 Tiny DLL library written on scratch
 ===================================
