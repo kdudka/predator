@@ -173,6 +173,20 @@ bool matchValues(
         // match pair of custom values
         return (cVal1 == cVal2);
 
+    const EObjKind kind1 = sh1.valTargetKind(v1);
+    const EObjKind kind2 = sh2.valTargetKind(v2);
+    if (kind1 != kind2)
+        // kind of object mismatch
+        return false;
+
+    if (OK_CONCRETE != kind1) {
+        // compare binding fields
+        const BindingOff &off1 = sh1.segBinding(v1);
+        const BindingOff &off2 = sh2.segBinding(v2);
+        if (off1 != off2)
+            return false;
+    }
+
     // follow all other values
     *follow = true;
     return true;
@@ -243,27 +257,6 @@ bool digComposite(
     return true;
 }
 
-bool cmpAbstractObjects(
-        const SymHeap           &sh1,
-        const SymHeap           &sh2,
-        TObjId                  o1,
-        TObjId                  o2)
-{
-    const EObjKind kind = objKind(sh1, o1);
-    if (objKind(sh2, o2) != kind)
-        // kind of object mismatch
-        return false;
-
-    if (OK_CONCRETE == kind)
-        // no abstract objects comparison
-        return true;
-
-    // compare binding fields
-    const BindingOff &off1 = segBinding(sh1, o1);
-    const BindingOff &off2 = segBinding(sh2, o2);
-    return (off1 == off2);
-}
-
 template <class TWorkList, class TMapping>
 bool dfsCmp(
         TWorkList               &wl,
@@ -319,11 +312,6 @@ bool dfsCmp(
         const TObjId obj2 = sh2.pointsTo(v2);
         if (!checkNonPosValues(obj1, obj2)) {
             SC_DEBUG("non-matched targets");
-            return false;
-        }
-
-        if (!cmpAbstractObjects(sh1, sh2, obj1, obj2)) {
-            SC_DEBUG_VAL_MISMATCH("incompatible abstract objects");
             return false;
         }
 
