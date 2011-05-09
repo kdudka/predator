@@ -127,14 +127,12 @@ bool matchPlainValues(
 
 template <class TMapping>
 bool matchValues(
-        bool                    *follow,
         TMapping                &valMapping,
         const SymHeap           &sh1,
         const SymHeap           &sh2,
         const TValId            v1,
         const TValId            v2)
 {
-    *follow = false;
     if (!matchPlainValues(valMapping, sh1, sh2, v1, v2, /* symHeapNG */ true))
         return false;
 
@@ -173,6 +171,19 @@ bool matchValues(
         // match pair of custom values
         return (cVal1 == cVal2);
 
+    const bool isProto1 = sh1.valTargetIsProto(v1);
+    const bool isProto2 = sh2.valTargetIsProto(v2);
+    if (isProto1 != isProto2)
+        // prototype vs. shared object while called from areEqual()
+        return false;
+
+    const TOffset off1 = sh1.valOffset(v1);
+    const TOffset off2 = sh2.valOffset(v2);
+    if (off1 != off2) {
+        SC_DEBUG_VAL_MISMATCH("value offset mismatch");
+        return false;
+    }
+
     const EObjKind kind1 = sh1.valTargetKind(v1);
     const EObjKind kind2 = sh2.valTargetKind(v2);
     if (kind1 != kind2)
@@ -181,14 +192,13 @@ bool matchValues(
 
     if (OK_CONCRETE != kind1) {
         // compare binding fields
-        const BindingOff &off1 = sh1.segBinding(v1);
-        const BindingOff &off2 = sh2.segBinding(v2);
-        if (off1 != off2)
+        const BindingOff &bf1 = sh1.segBinding(v1);
+        const BindingOff &bf2 = sh2.segBinding(v2);
+        if (bf1 != bf2)
             return false;
     }
 
     // follow all other values
-    *follow = true;
     return true;
 }
 
@@ -261,8 +271,8 @@ template <class TWorkList, class TMapping>
 bool dfsCmp(
         TWorkList               &wl,
         TMapping                &valMapping,
-        const SymHeap           &sh1,
-        const SymHeap           &sh2)
+        SymHeap                 &sh1,
+        SymHeap                 &sh2)
 {
     // DFS loop
     typename TWorkList::value_type item;
@@ -270,15 +280,10 @@ bool dfsCmp(
         TValId v1, v2;
         boost::tie(v1, v2) = item;
 
-        bool follow;
-        if (!matchValues(&follow, valMapping, sh1, sh2, v1, v2)) {
+        if (!matchValues(valMapping, sh1, sh2, v1, v2)) {
             SC_DEBUG_VAL_MISMATCH("value mismatch");
             return false;
         }
-
-        if (!follow)
-            // no need for next wheel
-            continue;
 
         bool isComp;
         if (!digComposite(&isComp, wl, sh1, sh2, v1, v2)) {
@@ -289,17 +294,16 @@ bool dfsCmp(
         if (isComp)
             continue;
 
-        if (&sh1 != &sh2
-                && sh1.valTargetIsProto(v1) != sh2.valTargetIsProto(v2))
-            // prototype vs. shared object while called from areEqual()
+        const bool follow1 = SymHeap::isPossibleToDeref(sh1.valTarget(v1));
+        const bool follow2 = SymHeap::isPossibleToDeref(sh2.valTarget(v2));
+        if (follow1 != follow2)
             return false;
+
+        if (!follow1)
+            continue;
 
         const TOffset off = sh1.valOffset(v1);
-        if (off != sh2.valOffset(v2)) {
-            SC_DEBUG_VAL_MISMATCH("value offset mismatch");
-            return false;
-        }
-
+        CL_BREAK_IF(off != sh2.valOffset(v2));
         if (off < 0) {
             // XXX
             v1 = sh1.valRoot(v1);
@@ -321,14 +325,6 @@ bool dfsCmp(
         // schedule values for next wheel
         if (wl.schedule(v1, v2))
             SC_DEBUG_VAL_SCHEDULE_BY("dfsCmp", obj1, obj2, sh1, sh2, v1, v2);
-    }
-
-    // finally match heap predicates
-    if (!sh1.matchPreds(sh2, valMapping[/* ltr */ 0])
-            || !sh2.matchPreds(sh1, valMapping[/* rtl */ 1]))
-    {
-        SC_DEBUG("<-- failed to match heap predicates");
-        return false;
     }
 
     // heaps are equal up to isomorphism
@@ -371,8 +367,16 @@ bool areEqual(
     }
 
     // run DFS
-    if (!dfsCmp(wl, valMapping, sh1, sh2))
+    if (!dfsCmp(wl, valMapping, sh1Writable, sh2Writable))
         return false;
+
+    // finally match heap predicates
+    if (!sh1.matchPreds(sh2, valMapping[/* ltr */ 0])
+            || !sh2.matchPreds(sh1, valMapping[/* rtl */ 1]))
+    {
+        SC_DEBUG("<-- failed to match heap predicates");
+        return false;
+    }
 
     if (srcToDst)
         *srcToDst = valMapping[/* ltr */ 0];
@@ -380,6 +384,6 @@ bool areEqual(
     if (dstToSrc)
         *dstToSrc = valMapping[/* rtl */ 1];
 
-    // match!
+    // full match!
     return true;
 }
