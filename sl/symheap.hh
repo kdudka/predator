@@ -308,9 +308,12 @@ class SymHeapCore {
 
         /// classify the object we point to
         EValueTarget valTarget(TValId) const;
+
+        // FIXME: this should be moved out of SymHeapCore
         static bool isAbstract(EValueTarget);
         static bool isOnHeap(EValueTarget);
         static bool isProgramVar(EValueTarget);
+        static bool isPossibleToDeref(EValueTarget);
 
         /// return the address of the root which the given value is binded to
         TValId valRoot(TValId) const;

@@ -860,6 +860,10 @@ EValueTarget SymHeapCore::valTarget(TValId val) const {
     if (valData.isCustom)
         return VT_CUSTOM;
 
+    if (OBJ_INVALID != valData.compObj)
+        // TODO: either assign a separated VT_, or drop compObj completely
+        return VT_INVALID;
+
     TObjId target = valData.target;
     EValueTarget code;
     if (handleSpecialTargets(&code, target))
@@ -919,6 +923,11 @@ bool SymHeapCore::isProgramVar(EValueTarget code) {
         default:
             return false;
     }
+}
+
+bool SymHeapCore::isPossibleToDeref(EValueTarget code) {
+    return SymHeapCore::isOnHeap(code)
+        || SymHeapCore::isProgramVar(code);
 }
 
 TValId SymHeapCore::valRoot(TValId val) const {

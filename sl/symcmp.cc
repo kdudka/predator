@@ -100,19 +100,11 @@ bool joinUnknownValuesCode(
     return false;
 }
 
-bool matchPlainValues(
+bool matchPlainValuesCore(
         TValMapBidir            valMapping,
         const TValId            v1,
         const TValId            v2)
 {
-    if (!checkNonPosValues(v1, v2))
-        // null vs. non-null, etc.
-        return false;
-
-    else if (v1 <= VAL_NULL)
-        // no need to save mapping of special values, they're fixed anyway
-        return true;
-
     // left-to-right check
     TValMap &ltr = valMapping[/* ltr */ 0];
     TValMap::iterator iter1 = ltr.find(v1);
@@ -133,6 +125,43 @@ bool matchPlainValues(
     return true;
 }
 
+bool matchPlainValues(
+        TValMapBidir            valMapping,
+        const SymHeap           &sh1,
+        const SymHeap           &sh2,
+        const TValId            v1,
+        const TValId            v2)
+{
+    if (!checkNonPosValues(v1, v2))
+        // null vs. non-null, etc.
+        return false;
+
+    else if (v1 <= VAL_NULL)
+        // no need to save mapping of special values, they're fixed anyway
+        return true;
+
+    const bool isValidPtr1 = SymHeap::isPossibleToDeref(sh1.valTarget(v1));
+    const bool isValidPtr2 = SymHeap::isPossibleToDeref(sh2.valTarget(v2));
+    if (!isValidPtr1 || !isValidPtr2)
+        // we need to be careful with magic values
+        return matchPlainValuesCore(valMapping, v1, v2);
+
+    const TOffset off1 = sh1.valOffset(v1);
+    const TOffset off2 = sh2.valOffset(v2);
+    if (off1 != off2)
+        // offset mismatch
+        return false;
+
+    const TValId root1 = sh1.valRoot(v1);
+    const TValId root2 = sh2.valRoot(v2);
+    if (!matchPlainValuesCore(valMapping, root1, root2))
+        // root mismatch
+        return false;
+
+    // TODO: throw this away as soon as symcmp/symjoin is ported to symheap-ng
+    return matchPlainValuesCore(valMapping, v1, v2);
+}
+
 template <class TMapping>
 bool matchValues(
         bool                    *follow,
@@ -143,7 +172,7 @@ bool matchValues(
         const TValId            v2)
 {
     *follow = false;
-    if (!matchPlainValues(valMapping, v1, v2))
+    if (!matchPlainValues(valMapping, sh1, sh2, v1, v2))
         return false;
 
     // check for special values

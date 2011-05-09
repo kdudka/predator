@@ -73,6 +73,8 @@ typedef TValMap                                             TValMapBidir[2];
 
 bool matchPlainValues(
         TValMapBidir            valMapping,
+        const SymHeap           &sh1,
+        const SymHeap           &sh2,
         const TValId            v1,
         const TValId            v2);
 
