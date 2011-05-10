@@ -33,34 +33,6 @@
 #include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
 
-#define SC_DEBUG(...) do {                                                  \
-    if (::debugSymCmp)                                                      \
-        CL_DEBUG("SymCmp: " << __VA_ARGS__);                                \
-} while (0)
-
-#define SC_DUMP_ID(sh, id) \
-    "dump_id((SymHeap *)" << &(sh) << ", " << (id) << ")"
-
-#define SC_DUMP_V1_V2(sh1, sh2, v1, v2)                                     \
-    ", v1 = " << SC_DUMP_ID(sh1, v1) <<                                     \
-    ", v2 = " << SC_DUMP_ID(sh2, v2)
-
-#define SC_DEBUG_VAL_SCHEDULE(who, sh1, sh2, v1, v2)                        \
-    SC_DEBUG("+++ " << who                                                  \
-            << SC_DUMP_V1_V2(sh1, sh2, v1, v2))
-
-#define SC_DEBUG_VAL_SCHEDULE_BY(who, o1, o2, sh1, sh2, v1, v2)             \
-    SC_DEBUG_VAL_SCHEDULE(who << "(" << o1 << ", " << o2 << ")",            \
-                          sh1, sh2, v1, v2)
-
-#define SC_DEBUG_VAL_MISMATCH(...)                                          \
-    SC_DEBUG("<-- "                                                         \
-            << __VA_ARGS__                                                  \
-            << SC_DUMP_V1_V2(sh1, sh2, v1, v2))
-
-// set to 'true' if you wonder why SymCmp matches states as it does (noisy)
-static bool debugSymCmp = static_cast<bool>(DEBUG_SYMCMP);
-
 bool matchPlainValuesCore(
         TValMapBidir            valMapping,
         const TValId            v1,
@@ -178,10 +150,9 @@ bool matchValues(
 
     const TOffset off1 = sh1.valOffset(v1);
     const TOffset off2 = sh2.valOffset(v2);
-    if (off1 != off2) {
-        SC_DEBUG_VAL_MISMATCH("value offset mismatch");
+    if (off1 != off2)
+        // value offset mismatch
         return false;
-    }
 
     const EObjKind kind1 = sh1.valTargetKind(v1);
     const EObjKind kind2 = sh2.valTargetKind(v2);
@@ -224,20 +195,14 @@ class ValueComparator {
         }
 
         bool operator()(TObjId item[2]) {
-            SymHeap &sh1 = sh1_;
-            SymHeap &sh2 = sh2_;
+            const TValId v1 = sh1_.valueOf(item[0]);
+            const TValId v2 = sh2_.valueOf(item[1]);
 
-            const TValId v1 = sh1.valueOf(item[0]);
-            const TValId v2 = sh2.valueOf(item[1]);
-
-            if (!matchValues(vMap_, sh1, sh2, v1, v2)) {
-                SC_DEBUG_VAL_MISMATCH("value mismatch");
+            if (!matchValues(vMap_, sh1_, sh2_, v1, v2))
+                // value mismatch
                 return false;
-            }
 
-            if (wl_.schedule(v1, v2))
-                SC_DEBUG_VAL_SCHEDULE("ValueComparator", sh1, sh2, v1, v2);
-
+            wl_.schedule(v1, v2);
             return /* continue */ true;
         }
 };
@@ -278,15 +243,13 @@ bool dfsCmp(
 
         const EValueTarget code1 = sh1.valTarget(v1);
         const EValueTarget code2 = sh2.valTarget(v2);
-        if (code1 != code2) {
-            SC_DEBUG_VAL_MISMATCH("target kind mismatch");
+        if (code1 != code2)
+            // target kind mismatch
             return false;
-        }
 
-        if (!matchValues(vMap, sh1, sh2, v1, v2)) {
-            SC_DEBUG_VAL_MISMATCH("value mismatch");
+        if (!matchValues(vMap, sh1, sh2, v1, v2))
+            // value mismatch
             return false;
-        }
 
         if (!SymHeap::isPossibleToDeref(code1))
             // nothing to follow here
@@ -313,16 +276,15 @@ bool areEqual(
     WorkList<TValPair> wl;
 
     // value substitution (isomorphism)
-    TValMapBidir valMapping;
+    TValMapBidir vMap;
 
     // FIXME: suboptimal interface of SymHeap::gatherCVars()
     TCVarList cVars1, cVars2;
     sh1.gatherCVars(cVars1);
     sh2.gatherCVars(cVars2);
-    if (cVars1 != cVars2) {
-        SC_DEBUG("<-- different program variables");
+    if (cVars1 != cVars2)
+        // different program variables
         return false;
-    }
 
     SymHeap &sh1Writable = const_cast<SymHeap &>(sh1);
     SymHeap &sh2Writable = const_cast<SymHeap &>(sh2);
@@ -331,27 +293,22 @@ bool areEqual(
     BOOST_FOREACH(CVar cv, cVars1) {
         const TValId v1 = sh1Writable.addrOfVar(cv);
         const TValId v2 = sh2Writable.addrOfVar(cv);
-        if (wl.schedule(v1, v2))
-            SC_DEBUG_VAL_SCHEDULE("cVar(" << cv.uid << ")", sh1, sh2, v1, v2);
+        wl.schedule(v1, v2);
     }
 
     // run DFS
-    if (!dfsCmp(wl, valMapping, sh1Writable, sh2Writable))
+    if (!dfsCmp(wl, vMap, sh1Writable, sh2Writable))
         return false;
 
     // finally match heap predicates
-    if (!sh1.matchPreds(sh2, valMapping[/* ltr */ 0])
-            || !sh2.matchPreds(sh1, valMapping[/* rtl */ 1]))
-    {
-        SC_DEBUG("<-- failed to match heap predicates");
+    if (!sh1.matchPreds(sh2, vMap[0]) || !sh2.matchPreds(sh1, vMap[1]))
         return false;
-    }
 
     if (srcToDst)
-        *srcToDst = valMapping[/* ltr */ 0];
+        *srcToDst = vMap[/* ltr */ 0];
 
     if (dstToSrc)
-        *dstToSrc = valMapping[/* rtl */ 1];
+        *dstToSrc = vMap[/* rtl */ 1];
 
     // full match!
     return true;

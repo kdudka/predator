@@ -46,11 +46,6 @@
 #define DEBUG_SYMABSTRACT                   0
 
 /**
- * if 1, symcmp prints some extra debugging info (very noisy)
- */
-#define DEBUG_SYMCMP                        0
-
-/**
  * if 1, the symcut module prints some extra debugging info
  */
 #define DEBUG_SYMCUT                        0
