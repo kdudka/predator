@@ -134,7 +134,7 @@ struct SymJoinCtx {
     TSegLengths                 segLengths;
     std::set<TValPair>          sharedNeqs;
 
-    std::set<TObjPair>          tieBreaking;
+    std::set<TValPair>          tieBreaking;
     std::set<TValPair>          alreadyJoined;
 
     std::set<TValTriple>        protoRoots;
@@ -581,29 +581,21 @@ bool traverseSubObjs(
 
 bool segMatchLookAhead(
         SymJoinCtx              &ctx,
-        const TObjId            root1,
-        const TObjId            root2)
+        const TValId            root1,
+        const TValId            root2)
 {
-    SymHeap *const heaps[] = {
-        const_cast<SymHeap *>(&ctx.sh1),
-        const_cast<SymHeap *>(&ctx.sh2)
-    };
-
-    TValId roots[] = {
-        ctx.sh1.placedAt(root1),
-        ctx.sh2.placedAt(root2)
-    };
-
-    // guide the visitors through them
+    // set up a visitor
+    SymHeap *const heaps[] = { &ctx.sh1, &ctx.sh2 };
+    TValId roots[] = { root1, root2 };
     SegMatchVisitor visitor(ctx);
 
-    if (OK_DLS == objKind(ctx.sh1, root1)) {
-        const TObjId peerPtr1 = peerPtrFromSeg(ctx.sh1, root1);
+    if (OK_DLS == ctx.sh1.valTargetKind(root1)) {
+        const TObjId peerPtr1 = prevPtrFromSeg(ctx.sh1, root1);
         visitor.blackList.insert(roMapLookup(ctx.objMap1, peerPtr1));
     }
 
-    if (OK_DLS == objKind(ctx.sh2, root2)) {
-        const TObjId peerPtr2 = peerPtrFromSeg(ctx.sh2, root2);
+    if (OK_DLS == ctx.sh2.valTargetKind(root2)) {
+        const TObjId peerPtr2 = prevPtrFromSeg(ctx.sh2, root2);
         visitor.blackList.insert(roMapLookup(ctx.objMap2, peerPtr2));
     }
 
@@ -656,20 +648,20 @@ bool joinObjClt(
 bool joinObjKind(
         EObjKind                *pDst,
         const SymJoinCtx        &ctx,
-        const TObjId            o1,
-        const TObjId            o2,
+        const TValId            v1,
+        const TValId            v2,
         const EJoinStatus       action)
 {
-    CL_BREAK_IF(OBJ_INVALID == o1 && OBJ_INVALID == o2);
+    CL_BREAK_IF(VAL_INVALID == v1 && VAL_INVALID == v2);
 
-    const EObjKind kind1 = objKind(ctx.sh1, o1);
-    if (OBJ_INVALID == o2) {
+    const EObjKind kind1 = ctx.sh1.valTargetKind(v1);
+    if (VAL_INVALID == v2) {
         *pDst = kind1;
         return true;
     }
 
-    const EObjKind kind2 = objKind(ctx.sh2, o2);
-    if (OBJ_INVALID == o1) {
+    const EObjKind kind2 = ctx.sh2.valTargetKind(v2);
+    if (VAL_INVALID == v1) {
         *pDst = kind2;
         return true;
     }
@@ -702,7 +694,7 @@ bool joinObjKind(
             return true;
 
         default:
-            SJ_DEBUG("<-- object kind mismatch " << SJ_OBJP(o1, o2));
+            SJ_DEBUG("<-- object kind mismatch " << SJ_VALP(v1, v2));
             return false;
     }
 }
@@ -710,33 +702,33 @@ bool joinObjKind(
 bool joinSegBinding(
         BindingOff              *pOff,
         const SymJoinCtx        &ctx,
-        const TObjId            o1,
-        const TObjId            o2)
+        const TValId            v1,
+        const TValId            v2)
 {
-    const bool isSeg1 = objIsSeg(ctx.sh1, o1);
-    const bool isSeg2 = objIsSeg(ctx.sh2, o2);
+    const bool isSeg1 = SymHeap::isAbstract(ctx.sh1.valTarget(v1));
+    const bool isSeg2 = SymHeap::isAbstract(ctx.sh2.valTarget(v2));
     if (!isSeg1 && !isSeg2)
         // nothing to join here
         return true;
 
     if (isSeg1 && isSeg2) {
-        const BindingOff off = segBinding(ctx.sh1, o1);
-        if (off == segBinding(ctx.sh2, o2)) {
+        const BindingOff off = ctx.sh1.segBinding(v1);
+        if (off == ctx.sh2.segBinding(v2)) {
             *pOff = off;
             return true;
         }
 
-        SJ_DEBUG("<-- segment binding mismatch " << SJ_OBJP(o1, o2));
+        SJ_DEBUG("<-- segment binding mismatch " << SJ_VALP(v1, v2));
         return false;
     }
 
     if (isSeg1) {
-        *pOff = segBinding(ctx.sh1, o1);
+        *pOff = ctx.sh1.segBinding(v1);
         return true;
     }
 
     if (isSeg2) {
-        *pOff = segBinding(ctx.sh2, o2);
+        *pOff = ctx.sh2.segBinding(v2);
         return true;
     }
 
@@ -747,44 +739,45 @@ bool joinSegBinding(
 
 bool considerImplicitPrototype(
         const SymJoinCtx        &ctx,
-        const TObjId            root1,
-        const TObjId            root2)
+        const TValId            root1,
+        const TValId            root2)
 {
-    const bool isProto1 = ctx.sh1.valTargetIsProto(ctx.sh1.placedAt(root1));
-    const bool isProto2 = ctx.sh2.valTargetIsProto(ctx.sh2.placedAt(root2));
+    const bool isProto1 = ctx.sh1.valTargetIsProto(root1);
+    const bool isProto2 = ctx.sh2.valTargetIsProto(root2);
     CL_BREAK_IF(isProto1 == isProto2);
     (void) isProto1;
 
     const SymHeap &sh = (isProto2) ? ctx.sh1 : ctx.sh2;
-    const TObjId root = (isProto2) ? root1 : root2;
+    const TValId root = (isProto2) ? root1 : root2;
 
     TObjList refs;
-    sh.pointedBy(refs, sh.placedAt(root));
+    sh.pointedBy(refs, root);
     BOOST_FOREACH(const TObjId obj, refs) {
-        if (OK_CONCRETE != objKind(sh, obj))
+        const TValId at = sh.placedAt(obj);
+        if (OK_CONCRETE != sh.valTargetKind(at))
             return false;
     }
 
     SJ_DEBUG("P-P considerImplicitPrototype() matches a pair of objects: "
-             << SJ_OBJP(root1, root2));
+             << SJ_VALP(root1, root2));
     return true;
 }
 
 bool joinProtoFlag(
         bool                    *pDst,
         const SymJoinCtx        &ctx,
-        const TObjId            root1,
-        const TObjId            root2)
+        const TValId            root1,
+        const TValId            root2)
 {
-    const bool isProto1 = ctx.sh1.valTargetIsProto(ctx.sh1.placedAt(root1));
-    const bool isProto2 = ctx.sh2.valTargetIsProto(ctx.sh2.placedAt(root2));
+    const bool isProto1 = ctx.sh1.valTargetIsProto(root1);
+    const bool isProto2 = ctx.sh2.valTargetIsProto(root2);
 
-    if (OBJ_INVALID == root2) {
+    if (VAL_INVALID == root2) {
         *pDst = isProto1;
         return true;
     }
 
-    if (OBJ_INVALID == root1) {
+    if (VAL_INVALID == root1) {
         *pDst = isProto2;
         return true;
     }
@@ -798,30 +791,30 @@ bool joinProtoFlag(
         return true;
     }
 
-    SJ_DEBUG("<-- prototype vs shared: " << SJ_OBJP(root1, root2));
+    SJ_DEBUG("<-- prototype vs shared: " << SJ_VALP(root1, root2));
     return false;
 }
 
 bool joinObjSize(
         int                     *pDst,
         SymJoinCtx              &ctx,
-        const TObjId            o1,
-        const TObjId            o2)
+        const TValId            v1,
+        const TValId            v2)
 {
-    if (OBJ_INVALID == o1) {
-        *pDst = ctx.sh2.valSizeOfTarget(ctx.sh2.placedAt(o2));
+    if (VAL_INVALID == v1) {
+        *pDst = ctx.sh2.valSizeOfTarget(v2);
         return true;
     }
 
-    if (OBJ_INVALID == o2) {
-        *pDst = ctx.sh1.valSizeOfTarget(ctx.sh1.placedAt(o1));
+    if (VAL_INVALID == v2) {
+        *pDst = ctx.sh1.valSizeOfTarget(v1);
         return true;
     }
 
-    const int cbSize1 = ctx.sh1.valSizeOfTarget(ctx.sh1.placedAt(o1));
-    const int cbSize2 = ctx.sh2.valSizeOfTarget(ctx.sh2.placedAt(o2));
+    const int cbSize1 = ctx.sh1.valSizeOfTarget(v1);
+    const int cbSize2 = ctx.sh2.valSizeOfTarget(v2);
     if (cbSize1 != cbSize2) {
-        SJ_DEBUG("<-- object size mismatch " << SJ_OBJP(o1, o2));
+        SJ_DEBUG("<-- object size mismatch " << SJ_VALP(v1, v2));
         return false;
     }
 
@@ -833,8 +826,8 @@ bool joinObjSize(
 bool createObject(
         SymJoinCtx              &ctx,
         const struct cl_type    *clt,
-        const TObjId            root1,
-        const TObjId            root2,
+        const TValId            root1,
+        const TValId            root2,
         const EJoinStatus       action,
         const BindingOff        *offMayExist = 0)
 {
@@ -865,41 +858,43 @@ bool createObject(
         return false;
 
     // create an image in ctx.dst
-    const TObjId rootDst = ctx.dst.objAt(ctx.dst.heapAlloc(size));
+    const TValId rootDst = ctx.dst.heapAlloc(size);
     if (clt)
-        ctx.dst.objDefineType(rootDst, clt);
+        ctx.dst.objDefineType(ctx.dst.objAt(rootDst), clt);
 
     // preserve 'prototype' flag
-    const TValId rootDstAt = ctx.dst.placedAt(rootDst);
-    ctx.dst.valTargetSetProto(rootDstAt, isProto);
+    ctx.dst.valTargetSetProto(rootDst, isProto);
 
     if (OK_CONCRETE != kind) {
         // abstract object
-        ctx.dst.valTargetSetAbstract(rootDstAt, kind, off);
+        ctx.dst.valTargetSetAbstract(rootDst, kind, off);
 
         // compute minimal length of the resulting segment
-        const unsigned len1 = objMinLength(ctx.sh1, ctx.sh1.placedAt(root1));
-        const unsigned len2 = objMinLength(ctx.sh2, ctx.sh2.placedAt(root2));
-        ctx.segLengths[ctx.dst.placedAt(rootDst)] = std::min(len1, len2);
+        const unsigned len1 = objMinLength(ctx.sh1, root1);
+        const unsigned len2 = objMinLength(ctx.sh2, root2);
+        ctx.segLengths[rootDst] = std::min(len1, len2);
     }
 
-    return traverseSubObjs(ctx, root1, root2, rootDst);
+    return traverseSubObjs(ctx,
+            ctx.sh1.objAt(root1),
+            ctx.sh2.objAt(root2),
+            ctx.dst.objAt(rootDst));
 }
 
 bool createAnonObject(
         SymJoinCtx              &ctx,
-        const TObjId            o1,
-        const TObjId            o2)
+        const TValId            v1,
+        const TValId            v2)
 {
     int size;
-    if (!joinObjSize(&size, ctx, o1, o2))
+    if (!joinObjSize(&size, ctx, v1, v2))
         return false;
 
     // create the join object
     const TObjId anon = ctx.dst.pointsTo(ctx.dst.heapAlloc(size));
-    ctx.objMap1[o1] = anon;
-    ctx.objMap2[o2] = anon;
-    return defineAddressMapping(ctx, o1, o2, anon);
+    ctx.objMap1[/* XXX */ ctx.sh1.objAt(v1)] = anon;
+    ctx.objMap2[/* XXX */ ctx.sh1.objAt(v2)] = anon;
+    return defineValueMapping(ctx, v1, v2, /* XXX */ ctx.dst.placedAt(anon));
 }
 
 bool followObjPairCore(
@@ -932,21 +927,24 @@ bool followObjPairCore(
     if (!joinObjClt(&clt, ctx, root1, root2))
         return false;
 
+    const TValId addr1 = ctx.sh1.placedAt(root1);
+    const TValId addr2 = ctx.sh2.placedAt(root2);
+
     if (!clt) {
         // anonymous object of known size
         return !readOnly
-            && createAnonObject(ctx, root1, root2);
+            && createAnonObject(ctx, addr1, addr2);
     }
 
     if (readOnly)
         // do not create any object, just check if it was possible
-        return segMatchLookAhead(ctx, root1, root2);
+        return segMatchLookAhead(ctx, addr1, addr2);
 
     if (ctx.joiningDataReadWrite() && root1 == root2)
         // we are on the way from joinData() and hit shared data
         return traverseSubObjs(ctx, root1, root1, root1);
 
-    return createObject(ctx, clt, root1, root2, action);
+    return createObject(ctx, clt, addr1, addr2, action);
 }
 
 bool dlSegHandleShared(
@@ -1025,12 +1023,15 @@ bool followObjPair(
         return true;
 
     // clone peer object
-    ctx.tieBreaking.insert(TObjPair(peer1, peer2));
+    const TValPair tb(
+            ctx.sh1.placedAt(peer1),
+            ctx.sh2.placedAt(peer2));
+    ctx.tieBreaking.insert(tb);
 
     const struct cl_type *clt = (isDls1)
         ? ctx.sh1.objType(peer1)
         : ctx.sh2.objType(peer2);
-    return createObject(ctx, clt, peer1, peer2, action);
+    return createObject(ctx, clt, tb.first, tb.second, action);
 }
 
 bool followValuePair(
@@ -1212,8 +1213,11 @@ bool segmentCloneCore(
     const TObjId root2 = (JS_USE_SH2 == action) ? objGt : OBJ_INVALID;
 
     // clone the object
-    ctx.tieBreaking.insert(TObjPair(root1, root2));
-    if (createObject(ctx, clt, root1, root2, action, off))
+    const TValPair tb(
+            ctx.sh1.placedAt(root1),
+            ctx.sh2.placedAt(root2));
+    ctx.tieBreaking.insert(tb);
+    if (createObject(ctx, clt, tb.first, tb.second, action, off))
         return true;
 
     SJ_DEBUG("<-- insertSegmentClone: failed to create object "
@@ -1727,14 +1731,14 @@ TValId joinDstValue(
         return vDstBy2;
 
     // tie breaking
-    const TObjId target1 = objRootByVal(ctx.sh1, v1);
-    const TObjId target2 = objRootByVal(ctx.sh2, v2);
+    const TValId addr1 = ctx.sh1.valRoot(v1);
+    const TValId addr2 = ctx.sh2.valRoot(v2);
 
-    const TObjPair rp1(target1, OBJ_INVALID);
-    const TObjPair rp2(OBJ_INVALID, target2);
+    const TValPair tb1(addr1, VAL_INVALID);
+    const TValPair tb2(VAL_INVALID, addr2);
 
-    const bool use1 = hasKey(ctx.tieBreaking, rp1);
-    const bool use2 = hasKey(ctx.tieBreaking, rp2);
+    const bool use1 = hasKey(ctx.tieBreaking, tb1);
+    const bool use2 = hasKey(ctx.tieBreaking, tb2);
     if (use1 && use2)
         return VAL_INVALID;
     else if (use1)
@@ -2174,13 +2178,13 @@ bool joinDataCore(
     const TObjId o2 = writable.objAt(addr2);
 
     const struct cl_type *clt;
-    if (!joinClt(ctx.sh1.objType(o1), sh.objType(o2), &clt) || !clt) {
+    if (!joinObjClt(&clt, ctx, o1, o2) || !clt) {
         CL_BREAK_IF("joinDataCore() called on objects with incompatible clt");
         return false;
     }
 
     int size;
-    if (!joinObjSize(&size, ctx, o1, o2))
+    if (!joinObjSize(&size, ctx, addr1, addr2))
         return false;
 
     // start with the given pair of objects and create a ghost object for them
