@@ -243,8 +243,7 @@ class ValueComparator {
         }
 };
 
-bool digComposite(
-        bool                    *isComp,
+bool digRoots(
         TWorkList               &wl,
         TValMapBidir            &valMap,
         SymHeap                 &sh1,
@@ -252,35 +251,14 @@ bool digComposite(
         const TValId            v1,
         const TValId            v2)
 {
-    *isComp = false;
-    const TObjId cObj1 = sh1.valGetCompositeObj(v1);
-    const TObjId cObj2 = sh2.valGetCompositeObj(v2);
-
-    const bool isComp1 = (OBJ_INVALID != sh1.valGetCompositeObj(v1));
-    const bool isComp2 = (OBJ_INVALID != sh2.valGetCompositeObj(v2));
-    if (isComp1 != isComp2)
-        // scalar vs. composite objects, the heaps can't be equal
-        return false;
-
-    if (isComp1)
-        *isComp = true;
-    else
-        return true;
-
-    // we _have_ to jump to the roots at this point as long as we admit
-    // to see through multi-level Linux lists
-    const TObjId root1 = objRoot(sh1, cObj1);
-    const TObjId root2 = objRoot(sh2, cObj2);
-    CL_BREAK_IF(OBJ_INVALID == root1 || OBJ_INVALID == root2);
-
     SymHeap *const heaps[] = {
         &sh1,
         &sh2
     };
 
     TValId roots[] = {
-        sh1.placedAt(root1),
-        sh2.placedAt(root2)
+        sh1.valRoot(v1),
+        sh2.valRoot(v2)
     };
 
     ValueComparator visitor(wl, valMap, sh1, sh2);
@@ -305,15 +283,6 @@ bool dfsCmp(
             return false;
         }
 
-        bool isComp;
-        if (!digComposite(&isComp, wl, valMapping, sh1, sh2, v1, v2)) {
-            SC_DEBUG_VAL_MISMATCH("object composition mismatch");
-            return false;
-        }
-
-        if (isComp)
-            continue;
-
         const bool follow1 = SymHeap::isPossibleToDeref(sh1.valTarget(v1));
         const bool follow2 = SymHeap::isPossibleToDeref(sh2.valTarget(v2));
         if (follow1 != follow2)
@@ -321,6 +290,9 @@ bool dfsCmp(
 
         if (!follow1)
             continue;
+
+        if (!digRoots(wl, valMapping, sh1, sh2, v1, v2))
+            return false;
 
         const TOffset off = sh1.valOffset(v1);
         CL_BREAK_IF(off != sh2.valOffset(v2));
