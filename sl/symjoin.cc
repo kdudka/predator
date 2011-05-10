@@ -514,7 +514,7 @@ struct SegMatchVisitor {
         {
         }
 
-        bool operator()(const boost::array<TObjId, 2> &item) {
+        bool operator()(const TObjId item[2]) {
             const TObjId obj1 = item[0];
             const TObjId obj2 = item[1];
 
@@ -578,13 +578,15 @@ bool segMatchLookAhead(
         const TObjId            root1,
         const TObjId            root2)
 {
-    boost::array<TObjId, 2> roots;
-    roots[/* sh1 */ 0] = root1;
-    roots[/* sh2 */ 1] = root2;
+    SymHeap *const heaps[] = {
+        const_cast<SymHeap *>(&ctx.sh1),
+        const_cast<SymHeap *>(&ctx.sh2)
+    };
 
-    boost::array<const SymHeap *, 2> sht;
-    sht[0] = &ctx.sh1;
-    sht[1] = &ctx.sh2;
+    TValId roots[] = {
+        ctx.sh1.placedAt(root1),
+        ctx.sh2.placedAt(root2)
+    };
 
     // guide the visitors through them
     SegMatchVisitor visitor(ctx);
@@ -599,8 +601,8 @@ bool segMatchLookAhead(
         visitor.blackList.insert(roMapLookup(ctx.objMap2, peerPtr2));
     }
 
-    return visitor(roots)
-        && traverseSubObjs<2>(sht, roots, visitor);
+    // FIXME: this will break as soon as we switch to delayed objects creation
+    return traverseLiveObjsGeneric<2>(heaps, roots, visitor);
 }
 
 bool joinClt(
@@ -2155,11 +2157,16 @@ bool dlSegCheckProtoConsistency(const SymJoinCtx &ctx) {
 bool joinDataCore(
         SymJoinCtx              &ctx,
         const BindingOff        &off,
-        const TObjId            o1,
-        const TObjId            o2)
+        const TValId            addr1,
+        const TValId            addr2)
 {
     CL_BREAK_IF(!ctx.joiningData());
     const SymHeap &sh = ctx.sh1;
+    SymHeap &writable = const_cast<SymHeap &>(sh);
+
+    // TODO: remove this
+    const TObjId o1 = writable.objAt(addr1);
+    const TObjId o2 = writable.objAt(addr2);
 
     const struct cl_type *clt;
     if (!joinClt(ctx.sh1.objType(o1), sh.objType(o2), &clt) || !clt) {
@@ -2226,15 +2233,13 @@ bool joinDataReadOnly(
         const TValId            addr2,
         TValList                protoRoots[1][2])
 {
-    // TODO: remove this
-    const TObjId o1 = const_cast<SymHeap &>(sh).objAt(addr1);
-    const TObjId o2 = const_cast<SymHeap &>(sh).objAt(addr2);
-    SJ_DEBUG("--> joinDataReadOnly" << SJ_OBJP(o1, o2));
+    SJ_DEBUG("--> joinDataReadOnly" << SJ_VALP(addr1, addr2));
 
     // go through the commont part of joinData()/joinDataReadOnly()
     SymHeap tmp(sh.stor());
     SymJoinCtx ctx(tmp, sh);
-    if (!joinDataCore(ctx, off, o1, o2))
+    
+    if (!joinDataCore(ctx, off, addr1, addr2))
         return false;
 
     unsigned cntProto1 = 0;
@@ -2363,8 +2368,8 @@ void recoverPointersToSelf(
 
 void recoverPrototypes(
         SymJoinCtx              &ctx,
-        const TObjId            objDst,
-        const TObjId            objGhost,
+        const TValId            dst,
+        const TValId            ghost,
         const bool              bidir)
 {
     SymHeap &sh = ctx.dst;
@@ -2393,8 +2398,8 @@ void recoverPrototypes(
 
         redirectRefs(sh,
                 /* pointingFrom */  sh.placedAt(protoGhost),
-                /* pointingTo   */  sh.placedAt(objGhost),
-                /* redirectTo   */  sh.placedAt(objDst));
+                /* pointingTo   */  ghost,
+                /* redirectTo   */  dst);
 
         sh.valTargetSetProto(sh.placedAt(protoGhost), true);
     }
@@ -2423,22 +2428,20 @@ void restorePrototypeLengths(SymJoinCtx &ctx) {
 /// replacement of matchData() from symdiscover
 bool joinData(
         SymHeap                 &sh,
-        const TValId            dstAt,
-        const TValId            srcAt,
+        const TValId            dst,
+        const TValId            src,
         const bool              bidir)
 {
     // TODO: remove this
-    const TObjId dst = sh.objAt(dstAt);
-    const TObjId src = sh.objAt(srcAt);
-    SJ_DEBUG("--> joinData" << SJ_OBJP(dst, src));
+    SJ_DEBUG("--> joinData" << SJ_VALP(dst, src));
     ++cntJoinOps;
 
     // dst is expected to be a segment
-    CL_BREAK_IF(!objIsSeg(sh, dst));
-    const BindingOff off(segBinding(sh, dst));
+    CL_BREAK_IF(!SymHeap::isAbstract(sh.valTarget(dst)));
+    const BindingOff off(sh.segBinding(dst));
     if (debugSymJoin) {
         EJoinStatus status = JS_USE_ANY;
-        joinDataReadOnly(&status, sh, off, dstAt, srcAt, 0);
+        joinDataReadOnly(&status, sh, off, dst, src, 0);
         if (JS_USE_ANY != status)
             debugPlot(sh, "joinData", dst, src, "00");
     }
@@ -2451,27 +2454,23 @@ bool joinData(
         return false;
 
     // ghost is a transiently existing object representing the join of dst/src
-    const TObjId ghost = roMapLookup(ctx.objMap1, dst);
-    CL_BREAK_IF(ghost != roMapLookup(ctx.objMap2, src));
+    const TValId ghost = roMapLookup(ctx.valMap1[0], dst);
+    CL_BREAK_IF(ghost != roMapLookup(ctx.valMap2[0], src));
 
     // assign values within dst (and also in src if bidir == true)
     JoinValueVisitor visitor(ctx, bidir);
-    buildIgnoreList(visitor.ignoreList, sh, dstAt);
+    buildIgnoreList(visitor.ignoreList, sh, dst);
 
     // FIXME: this will break as soon as we switch to delayed objects creation
-    const TValId roots[] = { dstAt, srcAt};
+    const TValId roots[] = { dst, src};
     traverseLiveObjs<2>(sh, roots, visitor);
 
     // redirect some edges if necessary
     recoverPrototypes(ctx, dst, ghost, bidir);
-    recoverPointersToSelf(sh,
-            sh.placedAt(dst),
-            sh.placedAt(src),
-            sh.placedAt(ghost),
-            bidir);
+    recoverPointersToSelf(sh, dst, src, ghost, bidir);
     restorePrototypeLengths(ctx);
 
-    if (collectJunk(sh, sh.placedAt(ghost)))
+    if (collectJunk(sh, ghost))
         CL_DEBUG("    joinData() drops a sub-heap (ghost)");
 
     SJ_DEBUG("<-- joinData() has finished " << ctx.status);
