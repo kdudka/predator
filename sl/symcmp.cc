@@ -125,15 +125,14 @@ bool matchPlainValues(
         || matchPlainValuesCore(valMapping, v1, v2);
 }
 
-template <class TMapping>
 bool matchValues(
-        TMapping                &valMapping,
+        TValMapBidir            &vMap,
         const SymHeap           &sh1,
         const SymHeap           &sh2,
         const TValId            v1,
         const TValId            v2)
 {
-    if (!matchPlainValues(valMapping, sh1, sh2, v1, v2, /* symHeapNG */ true))
+    if (!matchPlainValues(vMap, sh1, sh2, v1, v2, /* symHeapNG */ true))
         return false;
 
     // check for special values
@@ -265,10 +264,9 @@ bool digRoots(
     return traverseLiveObjsGeneric<2>(heaps, roots, visitor);
 }
 
-template <class TWorkList, class TMapping>
 bool dfsCmp(
         TWorkList               &wl,
-        TMapping                &valMapping,
+        TValMapBidir            &vMap,
         SymHeap                 &sh1,
         SymHeap                 &sh2)
 {
@@ -278,45 +276,24 @@ bool dfsCmp(
         TValId v1, v2;
         boost::tie(v1, v2) = item;
 
-        if (!matchValues(valMapping, sh1, sh2, v1, v2)) {
+        const EValueTarget code1 = sh1.valTarget(v1);
+        const EValueTarget code2 = sh2.valTarget(v2);
+        if (code1 != code2) {
+            SC_DEBUG_VAL_MISMATCH("target kind mismatch");
+            return false;
+        }
+
+        if (!matchValues(vMap, sh1, sh2, v1, v2)) {
             SC_DEBUG_VAL_MISMATCH("value mismatch");
             return false;
         }
 
-        const bool follow1 = SymHeap::isPossibleToDeref(sh1.valTarget(v1));
-        const bool follow2 = SymHeap::isPossibleToDeref(sh2.valTarget(v2));
-        if (follow1 != follow2)
-            return false;
-
-        if (!follow1)
+        if (!SymHeap::isPossibleToDeref(code1))
+            // nothing to follow here
             continue;
 
-        if (!digRoots(wl, valMapping, sh1, sh2, v1, v2))
+        if (!digRoots(wl, vMap, sh1, sh2, v1, v2))
             return false;
-
-        const TOffset off = sh1.valOffset(v1);
-        CL_BREAK_IF(off != sh2.valOffset(v2));
-        if (off < 0) {
-            // XXX
-            v1 = sh1.valRoot(v1);
-            v2 = sh2.valRoot(v2);
-            if (wl.schedule(v1, v2))
-                SC_DEBUG_VAL_SCHEDULE("offVal", sh1, sh2, v1, v2);
-        }
-
-        const TObjId obj1 = sh1.pointsTo(v1);
-        const TObjId obj2 = sh2.pointsTo(v2);
-        if (!checkNonPosValues(obj1, obj2)) {
-            SC_DEBUG("non-matched targets");
-            return false;
-        }
-
-        v1 = sh1.valueOf(obj1);
-        v2 = sh2.valueOf(obj2);
-
-        // schedule values for next wheel
-        if (wl.schedule(v1, v2))
-            SC_DEBUG_VAL_SCHEDULE_BY("dfsCmp", obj1, obj2, sh1, sh2, v1, v2);
     }
 
     // heaps are equal up to isomorphism
