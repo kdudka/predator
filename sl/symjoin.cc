@@ -532,11 +532,16 @@ struct SegMatchVisitor {
 
 bool traverseSubObjs(
         SymJoinCtx              &ctx,
-        const TObjId            root1,
-        const TObjId            root2,
-        const TObjId            rootDst,
+        const TValId            addr1,
+        const TValId            addr2,
+        const TValId            addrDst,
         const BindingOff        *offBlackList = 0)
 {
+    // TODO: remove this
+    const TObjId root1    = ctx.sh1.objAt(addr1);
+    const TObjId root2    = ctx.sh2.objAt(addr2);
+    const TObjId rootDst  = ctx.dst.objAt(addrDst);
+
     typedef boost::array<const SymHeap *, 3>        TSymHeapTriple;
 #ifndef NDEBUG
     const struct cl_type *clt1   = ctx.sh1.objType(root1);
@@ -569,9 +574,9 @@ bool traverseSubObjs(
             objVisitor.noFollow = true;
         else {
             TValTriple proto;
-            proto[/* sh1 */ 0] = ctx.sh1.placedAt(root1);
-            proto[/* sh2 */ 1] = ctx.sh2.placedAt(root2);
-            proto[/* dst */ 2] = ctx.dst.placedAt(rootDst);
+            proto[/* sh1 */ 0] = addr1;
+            proto[/* sh2 */ 1] = addr2;
+            proto[/* dst */ 2] = addrDst;
             ctx.protoRoots.insert(proto);
         }
     }
@@ -877,10 +882,7 @@ bool createObject(
         ctx.segLengths[rootDst] = std::min(len1, len2);
     }
 
-    return traverseSubObjs(ctx,
-            ctx.sh1.objAt(root1),
-            ctx.sh2.objAt(root2),
-            ctx.dst.objAt(rootDst));
+    return traverseSubObjs(ctx, root1, root2, rootDst);
 }
 
 bool createAnonObject(
@@ -901,35 +903,29 @@ bool createAnonObject(
 
 bool followObjPairCore(
         SymJoinCtx              &ctx,
-        const TObjId            o1,
-        const TObjId            o2,
+        const TValId            addr1,
+        const TValId            addr2,
         const EJoinStatus       action,
         const bool              readOnly)
 {
-    const struct cl_type *clt;
-    if (!joinObjClt(&clt, ctx, o1, o2))
-        return false;
-
-    // jump to roots
-    const TValId addr1 = ctx.sh1.valRoot(ctx.sh1.placedAt(o1));
-    const TValId addr2 = ctx.sh2.valRoot(ctx.sh2.placedAt(o2));
-    const TObjId root1 = ctx.sh1.objAt(addr1);
-    const TObjId root2 = ctx.sh2.objAt(addr2);
     if (hasKey(ctx.valMap1[0], addr1)) {
         const TValId rootDstAt = ctx.valMap1[0][addr1];
-        const TObjId rootDst = ctx.dst.objAt(rootDstAt);
         TValMap::const_iterator i2 = ctx.valMap2[0].find(addr2);
         if (ctx.valMap2[0].end() == i2 || i2->second != rootDstAt) {
-            SJ_DEBUG("<-- object root mismatch " << SJ_OBJP(root1, root2));
+            SJ_DEBUG("<-- object root mismatch " << SJ_VALP(addr1, addr2));
             return false;
         }
 
         // join mapping of object's address
-        return defineAddressMapping(ctx, root1, root2, rootDst);
+        return defineValueMapping(ctx, addr1, addr2, rootDstAt);
     }
 
-    CL_BREAK_IF(root1 <= 0 || root2 <= 0);
-    if (!joinObjClt(&clt, ctx, root1, root2))
+    const TObjId o1 = ctx.sh1.objAt(addr1);
+    const TObjId o2 = ctx.sh2.objAt(addr2);
+    CL_BREAK_IF(o1 <= 0 || o2 <= 0);
+
+    TObjType clt;
+    if (!joinObjClt(&clt, ctx, o1, o2))
         return false;
 
     if (!clt) {
@@ -942,9 +938,9 @@ bool followObjPairCore(
         // do not create any object, just check if it was possible
         return segMatchLookAhead(ctx, addr1, addr2);
 
-    if (ctx.joiningDataReadWrite() && root1 == root2)
+    if (ctx.joiningDataReadWrite() && addr1 == addr2)
         // we are on the way from joinData() and hit shared data
-        return traverseSubObjs(ctx, root1, root1, root1);
+        return traverseSubObjs(ctx, addr1, addr1, addr1);
 
     return createObject(ctx, clt, addr1, addr2, action);
 }
@@ -964,10 +960,7 @@ bool dlSegHandleShared(
 
     const TValId peer1 = dlSegPeer(ctx.sh1, v1);
     const TValId peer2 = dlSegPeer(ctx.sh2, v2);
-    if (!followObjPairCore(ctx,
-                ctx.sh1.objAt(peer1),
-                ctx.sh2.objAt(peer2),
-                action, readOnly))
+    if (!followObjPairCore(ctx, peer1, peer2, action, readOnly))
         return false;
 
     if (readOnly)
@@ -996,15 +989,14 @@ bool followObjPair(
         const EJoinStatus       action,
         const bool              readOnly = false)
 {
-    if (!followObjPairCore(ctx, o1, o2, action, readOnly))
+    const TValId addr1 = ctx.sh1.valRoot(ctx.sh1.placedAt(o1));
+    const TValId addr2 = ctx.sh2.valRoot(ctx.sh2.placedAt(o2));
+    if (!followObjPairCore(ctx, addr1, addr2, action, readOnly))
         return false;
 
     if (!ctx.joiningData())
         // we are on the way from joinSymHeaps()
         return true;
-
-    const TValId addr1 = ctx.sh1.placedAt(o1);
-    const TValId addr2 = ctx.sh2.placedAt(o2);
 
     if (addr1 == addr2)
         // shared data
@@ -1683,14 +1675,10 @@ bool joinPendingValues(SymJoinCtx &ctx) {
 }
 
 bool joinCVars(SymJoinCtx &ctx) {
-    SymHeap         &dst = ctx.dst;
-    const SymHeap   &sh1 = ctx.sh1;
-    const SymHeap   &sh2 = ctx.sh2;
-
     // gather program variables
     TCVarList cVars1, cVars2;
-    sh1.gatherCVars(cVars1);
-    sh2.gatherCVars(cVars2);
+    ctx.sh1.gatherCVars(cVars1);
+    ctx.sh2.gatherCVars(cVars2);
     if (cVars1 != cVars2) {
         SJ_DEBUG("<-- different program variables");
         return false;
@@ -1698,16 +1686,14 @@ bool joinCVars(SymJoinCtx &ctx) {
 
     // go through all program variables
     BOOST_FOREACH(const CVar &cv, cVars1) {
-        const TValId addr1 = const_cast<SymHeap &>(sh1).addrOfVar(cv);
-        const TValId addr2 = const_cast<SymHeap &>(sh2).addrOfVar(cv);
-        const TObjId root1 = sh1.pointsTo(addr1);
-        const TObjId root2 = sh2.pointsTo(addr2);
+        const TValId addr1 = ctx.sh1.addrOfVar(cv);
+        const TValId addr2 = ctx.sh2.addrOfVar(cv);
 
         // create a corresponding program variable in the resulting heap
-        const TObjId rootDst = dst.objAt(dst.addrOfVar(cv));
+        const TValId rootDst = ctx.dst.addrOfVar(cv);
 
         // look at the values inside
-        if (!traverseSubObjs(ctx, root1, root2, rootDst))
+        if (!traverseSubObjs(ctx, addr1, addr2, rootDst))
             return false;
     }
 
@@ -2193,11 +2179,12 @@ bool joinDataCore(
 
     // start with the given pair of objects and create a ghost object for them
     // create an image in ctx.dst
-    const TObjId rootDst = ctx.dst.objAt(ctx.dst.heapAlloc(size));
+    const TValId rootDstAt = ctx.dst.heapAlloc(size);
+    const TObjId rootDst = ctx.dst.objAt(rootDstAt);
     if (clt)
         ctx.dst.objDefineType(rootDst, clt);
 
-    if (!traverseSubObjs(ctx, o1, o2, rootDst, &off))
+    if (!traverseSubObjs(ctx, addr1, addr2, rootDstAt, &off))
         return false;
 
     ctx.sset1.insert(o1);

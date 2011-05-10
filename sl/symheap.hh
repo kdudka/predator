@@ -400,13 +400,7 @@ class SymHeapCore {
          */
         virtual bool valDestroyTarget(TValId);
 
-        /**
-         * delayed static type-info definition of the given object
-         * @param obj ID of the object to define type of
-         * @param clt static type-info (see CodeStorage) to be set
-         * @note This may trigger creation of all sub-objects, if the given type
-         * is a composite type.
-         */
+        // TODO: remove this
         void objDefineType(TObjId obj, TObjType clt);
 
     public:
