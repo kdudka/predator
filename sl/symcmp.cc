@@ -97,6 +97,7 @@ bool matchPlainValues(
         || matchPlainValuesCore(valMapping, v1, v2);
 }
 
+// FIXME: this needs some cleanup and refactoring
 bool matchValues(
         TValMapBidir            &vMap,
         const SymHeap           &sh1,
@@ -172,6 +173,28 @@ bool matchValues(
     return true;
 }
 
+bool cmpValues(
+        bool                    *pNeedFollow,
+        TValMapBidir            &vMap,
+        const SymHeap           &sh1,
+        const SymHeap           &sh2,
+        const TValId            v1,
+        const TValId            v2)
+{
+    const EValueTarget code1 = sh1.valTarget(v1);
+    const EValueTarget code2 = sh2.valTarget(v2);
+    if (code1 != code2)
+        // target kind mismatch
+        return false;
+
+    if (!matchValues(vMap, sh1, sh2, v1, v2))
+        // value mismatch
+        return false;
+
+    *pNeedFollow = SymHeap::isPossibleToDeref(code1);
+    return true;
+}
+
 typedef WorkList<TValPair> TWorkList;
 
 class ValueComparator {
@@ -198,36 +221,21 @@ class ValueComparator {
             const TValId v1 = sh1_.valueOf(item[0]);
             const TValId v2 = sh2_.valueOf(item[1]);
 
-            if (!matchValues(vMap_, sh1_, sh2_, v1, v2))
+            bool follow;
+            if (!cmpValues(&follow, vMap_, sh1_, sh2_, v1, v2))
                 // value mismatch
                 return false;
 
-            wl_.schedule(v1, v2);
+            if (follow) {
+                // schedule roots for next wheel
+                const TValId root1 = sh1_.valRoot(v1);
+                const TValId root2 = sh2_.valRoot(v2);
+                wl_.schedule(root1, root2);
+            }
+
             return /* continue */ true;
         }
 };
-
-bool digRoots(
-        TWorkList               &wl,
-        TValMapBidir            &valMap,
-        SymHeap                 &sh1,
-        SymHeap                 &sh2,
-        const TValId            v1,
-        const TValId            v2)
-{
-    SymHeap *const heaps[] = {
-        &sh1,
-        &sh2
-    };
-
-    TValId roots[] = {
-        sh1.valRoot(v1),
-        sh2.valRoot(v2)
-    };
-
-    ValueComparator visitor(wl, valMap, sh1, sh2);
-    return traverseLiveObjsGeneric<2>(heaps, roots, visitor);
-}
 
 bool dfsCmp(
         TWorkList               &wl,
@@ -241,21 +249,22 @@ bool dfsCmp(
         TValId v1, v2;
         boost::tie(v1, v2) = item;
 
-        const EValueTarget code1 = sh1.valTarget(v1);
-        const EValueTarget code2 = sh2.valTarget(v2);
-        if (code1 != code2)
-            // target kind mismatch
-            return false;
-
-        if (!matchValues(vMap, sh1, sh2, v1, v2))
+        bool follow;
+        if (!cmpValues(&follow, vMap, sh1, sh2, v1, v2))
             // value mismatch
             return false;
 
-        if (!SymHeap::isPossibleToDeref(code1))
+        if (!follow)
             // nothing to follow here
             continue;
 
-        if (!digRoots(wl, vMap, sh1, sh2, v1, v2))
+        // set up a visitor
+        SymHeap *const heaps[] = { &sh1, &sh2 };
+        TValId roots[] = { v1, v2 };
+        ValueComparator visitor(wl, vMap, sh1, sh2);
+
+        // guide it through a pair of root objects
+        if (!traverseLiveObjsGeneric<2>(heaps, roots, visitor))
             return false;
     }
 
