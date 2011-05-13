@@ -891,7 +891,7 @@ bool createAnonObject(
         return false;
 
     // create the join object
-    const TObjId anon = ctx.dst.pointsTo(ctx.dst.heapAlloc(size));
+    const TObjId anon = ctx.dst.objAt(ctx.dst.heapAlloc(size));
     ctx.objMap1[/* XXX */ ctx.sh1.objAt(v1)] = anon;
     ctx.objMap2[/* XXX */ ctx.sh1.objAt(v2)] = anon;
     return defineValueMapping(ctx, v1, v2, /* XXX */ ctx.dst.placedAt(anon));
@@ -1059,8 +1059,8 @@ bool followValuePair(
         return false;
     }
 
-    const TObjId o1 = /* XXX */ ctx.sh1.pointsTo(v1);
-    const TObjId o2 = /* XXX */ ctx.sh2.pointsTo(v2);
+    const TObjId o1 = /* XXX */ ctx.sh1.objAt(v1);
+    const TObjId o2 = /* XXX */ ctx.sh2.objAt(v2);
     if (!checkNonPosValues(o1, o2)) {
         SJ_DEBUG("<-- target validity mismatch: " << SJ_VALP(v1, v2)
                  << " -> " << SJ_OBJP(o1, o2));

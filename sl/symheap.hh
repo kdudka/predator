@@ -300,9 +300,6 @@ class SymHeapCore {
          */
         TObjType objType(TObjId obj) const;
 
-        // TODO: remove this
-        TObjId pointsTo(TValId val) const;
-
         /// translate the given address by the given offset
         TValId valByOffset(TValId, TOffset offset);
 

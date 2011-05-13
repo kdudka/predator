@@ -513,7 +513,7 @@ void dlSegMerge(SymHeap &sh, TValId seg1, TValId seg2) {
     // destroy headAt and peerAt, including all prototypes -- either at once, or
     // one by one (depending on the shape of subgraph)
     REQUIRE_GC_ACTIVITY(sh, headAt, dlSegMerge);
-    if (!collectJunk(sh, peerAt) && 0 < sh.pointsTo(peerAt)) {
+    if (!collectJunk(sh, peerAt) && 0 < sh.objAt(peerAt)) {
         CL_ERROR("dlSegMerge() failed to collect garbage"
                  ", peerAt still referenced");
         CL_BREAK_IF("collectJunk() has not been successful");

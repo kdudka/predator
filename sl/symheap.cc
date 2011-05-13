@@ -1202,12 +1202,6 @@ TObjId SymHeapCore::objAt(TValId at, TObjType clt) {
     return OBJ_UNKNOWN;
 }
 
-// FIXME: this should go away
-TObjId SymHeapCore::pointsTo(TValId val) const {
-    SymHeapCore &self = const_cast<SymHeapCore &>(*this);
-    return self.objAt(val);
-}
-
 CVar SymHeapCore::cVarByRoot(TValId valRoot) const {
     // the following breakpoint checks everything
     CL_BREAK_IF(valRoot <= 0 || valRoot != d->valRoot(valRoot));

@@ -513,7 +513,7 @@ void SymPlot::Private::plotSingleValue(TValId value) {
         this->traverseNeqs(this->sh->valRoot(value));
 
     const struct cl_type *clt = 0;
-    const TObjId target = this->sh->pointsTo(value);
+    const TObjId target = const_cast<SymHeap *>(this->sh)->objAt(value);
     if (0 < target)
         clt = this->sh->objType(target);
 
@@ -740,7 +740,7 @@ bool SymPlot::Private::resolvePointsTo(TObjId *pDst, TValId value) {
     if (this->handleCustomValue(value))
         return false;
 
-    const TObjId obj = this->sh->pointsTo(value);
+    const TObjId obj = const_cast<SymHeap *>(this->sh)->objAt(value);
     switch (obj) {
         case OBJ_INVALID:
             this->plotNodeAux(value, CL_TYPE_VOID, "INVALID");
@@ -959,8 +959,9 @@ void SymPlot::Private::plotCVar(CVar cVar) {
 #endif
 
     // SymbolicHeap variable lookup
-    const TValId at = const_cast<SymHeap *>(this->sh)->addrOfVar(cVar);
-    const TObjId obj = this->sh->pointsTo(at);
+    SymHeap &writable = *const_cast<SymHeap *>(this->sh);
+    const TValId at = writable.addrOfVar(cVar);
+    const TObjId obj = writable.objAt(at);
     if (OBJ_INVALID == obj)
         CL_DEBUG_MSG(this->lw, "objByCVar lookup failed");
 

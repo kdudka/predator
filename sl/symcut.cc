@@ -191,8 +191,8 @@ void trackUses(DeepCopyData &dc, TValId valSrc) {
 }
 
 TValId handleValue(DeepCopyData &dc, TValId valSrc) {
-    const SymHeap   &src = dc.src;
-    SymHeap         &dst = dc.dst;
+    SymHeap &src = dc.src;
+    SymHeap &dst = dc.dst;
 
     if (valSrc <= 0)
         // special value IDs always match
@@ -230,7 +230,7 @@ TValId handleValue(DeepCopyData &dc, TValId valSrc) {
     }
 
     // now is the time to "dereference" the value
-    const TObjId targetSrc = src.pointsTo(valSrc);
+    const TObjId targetSrc = src.objAt(valSrc);
     CL_BREAK_IF(OBJ_INVALID == targetSrc);
 
     if (targetSrc < 0) {

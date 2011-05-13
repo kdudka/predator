@@ -190,7 +190,7 @@ void dump_obj(const SymHeap &heap, TObjId obj) {
         SymHeap &writable = const_cast<SymHeap &>(heap);
         const TValId valPeer = valOfPtrAt(writable, at, offPeer);
         if (0 < valPeer) {
-            const TObjId peer = heap.pointsTo(valPeer);
+            const TObjId peer = const_cast<SymHeap &>(heap).objAt(valPeer);
             cout << "/* obj */ #" << peer << ", kind = ";
             dump_kind(heap, peer);
             cout << "\n";
@@ -216,7 +216,7 @@ void dump_obj(const SymHeap &heap, TObjId obj) {
         SymHeap &writable = const_cast<SymHeap &>(heap);
         const TValId valNext = valOfPtrAt(writable, at, offNext);
         if (0 < valNext) {
-            const TObjId next = heap.pointsTo(valNext);
+            const TObjId next = const_cast<SymHeap &>(heap).objAt(valNext);
             cout << "/* obj */ #" << next << ", kind = ";
             dump_kind(heap, next);
             cout << "\n";
@@ -307,7 +307,7 @@ TObjId /* pointsTo */ dump_value_core(const SymHeap &heap, TValId value)
         return OBJ_INVALID;
     }
 
-    const TObjId pointsTo = heap.pointsTo(value);
+    const TObjId pointsTo = const_cast<SymHeap &>(heap).objAt(value);
     if (0 < pointsTo)
         cout << "    pointsTo  = /* obj */ #" << pointsTo << "\n";
 

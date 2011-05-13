@@ -339,7 +339,7 @@ void SymCallCache::Private::createStackFrame(TCVarList &cVars) {
                     << " (" << var.name << ")" );
 
             // reflect the given initializer
-            const TObjId obj = this->heap->pointsTo(this->heap->addrOfVar(cv));
+            const TObjId obj = this->heap->objAt(this->heap->addrOfVar(cv));
             initVariable(*this->heap, obj, var);
         }
     }
@@ -375,7 +375,7 @@ void SymCallCache::Private::setCallArgs(const CodeStorage::TOperandList &opList)
 
         // cVar lookup
         const CVar cVar(arg, this->nestLevel);
-        const TObjId lhs = this->heap->pointsTo(this->heap->addrOfVar(cVar));
+        const TObjId lhs = this->heap->objAt(this->heap->addrOfVar(cVar));
         CL_BREAK_IF(OBJ_INVALID == lhs);
 
         if (opList.size() <= pos) {

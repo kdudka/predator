@@ -337,7 +337,7 @@ int /* uid */ SymProc::fncFromOperand(const struct cl_operand &op) {
 }
 
 void SymProc::heapObjDefineType(TObjId lhs, TValId rhs) {
-    const TObjId var = sh_.pointsTo(rhs);
+    const TObjId var = sh_.objAt(rhs);
     CL_BREAK_IF(OBJ_INVALID == var);
 
     TObjType clt = sh_.objType(lhs);
@@ -376,7 +376,7 @@ void SymProc::heapSetSingleVal(TObjId lhs, TValId rhs) {
     CL_BREAK_IF(VAL_INVALID == oldValue);
 
     if (0 < rhs) {
-        const TObjId target = sh_.pointsTo(rhs);
+        const TObjId target = sh_.objAt(rhs);
         if (0 < target && !sh_.objType(target))
             // anonymous object is going to be specified by a type
             this->heapObjDefineType(lhs, rhs);
@@ -595,7 +595,7 @@ bool SymExecCore::lhsFromOperand(TObjId *pObj, const struct cl_operand &op) {
 }
 
 void SymExecCore::execFreeCore(const TValId val) {
-    const TObjId obj = sh_.pointsTo(val);
+    const TObjId obj = sh_.objAt(val);
     switch (obj) {
         case OBJ_DELETED:
             CL_ERROR_MSG(lw_, "double free() detected");
