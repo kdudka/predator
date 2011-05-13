@@ -891,10 +891,8 @@ bool createAnonObject(
         return false;
 
     // create the join object
-    const TObjId anon = ctx.dst.objAt(ctx.dst.heapAlloc(size));
-    ctx.objMap1[/* XXX */ ctx.sh1.objAt(v1)] = anon;
-    ctx.objMap2[/* XXX */ ctx.sh1.objAt(v2)] = anon;
-    return defineValueMapping(ctx, v1, v2, /* XXX */ ctx.dst.placedAt(anon));
+    const TValId anon = ctx.dst.heapAlloc(size);
+    return defineValueMapping(ctx, v1, v2, anon);
 }
 
 bool followObjPairCore(
@@ -1278,9 +1276,11 @@ bool disjoinUnknownValues(
     sh.usedBy(refs, val);
 
     // go through all referrers that have their image in ctx.dst
-    SymJoinCtx::TObjMap &objMap = (isGt2) ? ctx.objMap1 : ctx.objMap2;
+    const TValMap &valMap = (isGt2) ? ctx.valMap1[0] : ctx.valMap2[0];
     BOOST_FOREACH(const TObjId objSrc, refs) {
-        const TObjId objDst = roMapLookup(objMap, objSrc);
+        const TObjType clt = sh.objType(objSrc);
+        const TValId atDst = roMapLookup(valMap, sh.placedAt(objSrc));
+        const TObjId objDst = ctx.dst.objAt(atDst, clt);
         if (OBJ_INVALID == objDst)
             // no image in ctx.dst yet
             continue;
@@ -1806,23 +1806,31 @@ bool setDstValues(SymJoinCtx &ctx, const std::set<TObjId> *blackList = 0) {
     TMap rMap;
 
     // reverse mapping for ctx.objMap1
+    const TValMap &vMap1 = ctx.valMap1[0];
     BOOST_FOREACH(TObjMap::const_reference ref, ctx.objMap1) {
-        const TObjId objDst = ref.second;
+        const TObjId objSrc = ref.first;
+        const TObjType clt = ctx.sh1.objType(objSrc);
+        const TValId atDst = roMapLookup(vMap1, ctx.sh1.placedAt(objSrc));
+        const TObjId objDst = ctx.dst.objAt(atDst, clt);
         if (!hasKey(rMap, objDst))
             rMap[objDst].second = OBJ_INVALID;
 
         // objDst -> obj1
-        rMap[objDst].first = ref.first;
+        rMap[objDst].first = objSrc;
     }
 
     // reverse mapping for ctx.objMap2
+    const TValMap &vMap2 = ctx.valMap2[0];
     BOOST_FOREACH(TObjMap::const_reference ref, ctx.objMap2) {
-        const TObjId objDst = ref.second;
+        const TObjId objSrc = ref.first;
+        const TObjType clt = ctx.sh2.objType(objSrc);
+        const TValId atDst = roMapLookup(vMap2, ctx.sh2.placedAt(objSrc));
+        const TObjId objDst = ctx.dst.objAt(atDst, clt);
         if (!hasKey(rMap, objDst))
             rMap[objDst].first = OBJ_INVALID;
 
         // objDst -> obj2
-        rMap[objDst].second = ref.first;
+        rMap[objDst].second = objSrc;
     }
 
     std::set<TObjId> emptyBlackList;
