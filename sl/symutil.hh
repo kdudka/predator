@@ -62,33 +62,6 @@ inline TValId valOfPtrAt(SymHeap &sh, TValId at, TOffset off) {
 }
 
 // TODO: remove this
-TObjId objRoot(const SymHeap &sh, TObjId obj);
-
-// TODO: remove this
-inline TObjId objRootByVal(const SymHeap &sh, TValId val) {
-    if (val <= 0)
-        return OBJ_INVALID;
-
-    const TValId rootAt = sh.valRoot(val);
-    return sh.pointsTo(rootAt);
-}
-
-// TODO: remove this
-inline TObjId objRootByPtr(const SymHeap &sh, TObjId ptr) {
-    const TValId val = sh.valueOf(ptr);
-    return objRootByVal(sh, val);
-}
-
-// TODO: remove this
-inline bool objIsSeg(const SymHeap &sh, TObjId obj) {
-    const TValId addr = sh.placedAt(obj);
-    if (addr <= 0)
-        return false;
-
-    return SymHeap::isAbstract(sh.valTarget(addr));
-}
-
-// TODO: remove this
 inline EObjKind objKind(const SymHeap &sh, TObjId obj) {
     const TValId addr = sh.placedAt(obj);
     if (addr <= 0)

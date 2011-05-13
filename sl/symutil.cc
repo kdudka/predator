@@ -46,20 +46,6 @@ void moveKnownValueToLeft(
     }
 }
 
-TObjId /* root */ objRoot(const SymHeap &sh, TObjId obj) {
-    if (obj <= 0)
-        return obj;
-
-    const TValId addr = sh.placedAt(obj);
-    const TValId rootAt = sh.valRoot(addr);
-    const TObjId root = const_cast<SymHeap &>(sh).objAt(rootAt);
-    if (OBJ_UNKNOWN == root)
-        // FIXME: a dangling object??? (try test-0093 with a debugger)
-        return obj;
-
-    return root;
-}
-
 void getPtrValues(TValList &dst, const SymHeap &sh, TValId at) {
     TObjList ptrs;
     sh.gatherLivePointers(ptrs, at);

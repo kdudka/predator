@@ -288,8 +288,7 @@ void SymPlot::Private::plotNodeObj(TObjId obj) {
         this->dotStream << ", color=" << colorByCode(code);
 
     // dig root object
-    const TObjId root = objRoot(*this->sh, obj);
-    const TValId rootAt = this->sh->placedAt(root);
+    const TValId rootAt = this->sh->valRoot(this->sh->placedAt(obj));
 
     const bool isVar = SymHeap::isProgramVar(this->sh->valTarget(rootAt));
     if (isVar)
@@ -860,17 +859,19 @@ void SymPlot::Private::digObjCore(TObjId obj) {
 }
 
 void SymPlot::Private::digObj(TObjId obj) {
+    SymHeap &writable = *const_cast<SymHeap *>(this->sh);
+
     // seek root, in order to draw the whole object, even if the root is not
     // pointed from anywhere
-    obj = objRoot(*this->sh, obj);
+    const TValId addr = this->sh->valRoot(this->sh->placedAt(obj));
+    obj = writable.objAt(addr);
 
-    if (OK_DLS != objKind(*this->sh, obj)) {
+    if (OK_DLS != this->sh->valTargetKind(addr)) {
         this->digObjCore(obj);
         return;
     }
 
-    const TValId addr = this->sh->placedAt(obj);
-    const TObjId peer = dlSegPeer(*this->sh, obj);
+    const TObjId peer = writable.objAt(dlSegPeer(writable, addr));
     const char *label = (this->sh->valTargetIsProto(addr))
         ? "[prototype] DLS"
         : "DLS";

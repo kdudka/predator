@@ -1779,15 +1779,17 @@ bool SymHeap::proveNeq(TValId ref, TValId val) const {
             // prove done
             return true;
 
-        TObjId seg = objRootByVal(*this, val);
+        SymHeap &writable = *const_cast<SymHeap *>(this);
+
+        TValId seg = this->valRoot(val);
         if (OK_DLS == this->valTargetKind(val))
-            seg = dlSegPeer(*this, seg);
+            seg = dlSegPeer(writable, seg);
 
         if (seg < 0)
             // no valid object here
             return false;
 
-        const TValId valNext = this->valueOf(nextPtrFromSeg(*this, seg));
+        const TValId valNext = this->valueOf(nextPtrFromSeg(writable, seg));
         if (SymHeapCore::proveNeq(val, valNext))
             // non-empty abstract object reached --> prove done
             return true;

@@ -90,8 +90,9 @@ namespace {
     }
 }
 
-void dump_kind(const SymHeap &heap, TObjId obj) {
-    const EObjKind kind = objKind(heap, obj);
+void dump_kind(const SymHeap &sh, TObjId obj) {
+    const TValId at = sh.placedAt(obj);
+    const EObjKind kind = sh.valTargetKind(at);
     switch (kind) {
         case OK_CONCRETE:
             cout << "OK_CONCRETE";
@@ -102,15 +103,15 @@ void dump_kind(const SymHeap &heap, TObjId obj) {
             return;
 
         case OK_SLS:
-            cout << "OK_SLS, offNext = " << segBinding(heap, obj).next;
+            cout << "OK_SLS, offNext = " << sh.segBinding(at).next;
             break;
 
         case OK_DLS:
-            cout << "OK_DLS, offPeer = " << segBinding(heap, obj).prev
-                << ", offNext = " << segBinding(heap, obj).next;
+            cout << "OK_DLS, offPeer = " << sh.segBinding(at).prev
+                << ", offNext = " << sh.segBinding(at).next;
     }
 
-    const TOffset offHead = segBinding(heap, obj).head;
+    const TOffset offHead = sh.segBinding(at).head;
     if (offHead)
         cout << ", icHead = " << offHead;
 }
@@ -196,9 +197,6 @@ void dump_obj(const SymHeap &heap, TObjId obj) {
             cout << "\n";
             if (heap.valOffset(heap.placedAt(peer))) {
                 cout << "    peerObj   = ";
-                const TObjId peerObj = objRoot(heap, peer);
-                cout << "/* obj */ #" << peerObj << ", kind = ";
-                dump_kind(heap, peerObj);
                 cout << "\n";
             }
         }

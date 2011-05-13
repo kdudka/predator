@@ -131,7 +131,7 @@ void segSetProto(SymHeap &sh, TValId seg, bool isProto) {
 }
 
 void segDestroy(SymHeap &sh, TObjId seg) {
-    seg = objRoot(sh, seg);
+    seg = sh.objAt(sh.valRoot(sh.placedAt(seg)));
 
     const EObjKind kind = objKind(sh, seg);
     switch (kind) {
@@ -158,7 +158,7 @@ bool haveSeg(const SymHeap &sh, TValId atAddr, TValId pointingTo,
         // not an abstract object
         return false;
 
-    TObjId seg = objRoot(sh, sh.pointsTo(atAddr));
+    TObjId seg = const_cast<SymHeap &>(sh).objAt(sh.valRoot(atAddr));
     if (kind != objKind(sh, seg))
         // kind mismatch
         return false;
@@ -186,7 +186,7 @@ bool haveDlSegAt(const SymHeap &sh, TValId atAddr, TValId peerAddr) {
         // not abstract objects
         return false;
 
-    const TObjId seg = objRoot(sh, sh.pointsTo(atAddr));
+    const TObjId seg = const_cast<SymHeap &>(sh).objAt(sh.valRoot(atAddr));
     if (OK_DLS != objKind(sh, seg))
         // not a DLS
         return false;
