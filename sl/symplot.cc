@@ -548,7 +548,9 @@ void SymPlot::Private::plotZeroValue(TObjId obj) {
 }
 
 void SymPlot::Private::digNext(TObjId obj) {
-    EObjKind kind = objKind(*this->sh, obj);
+    const TValId at = this->sh->placedAt(obj);
+
+    const EObjKind kind = this->sh->valTargetKind(at);
     switch (kind) {
         case OK_CONCRETE:
             return;
@@ -556,24 +558,22 @@ void SymPlot::Private::digNext(TObjId obj) {
         case OK_MAY_EXIST:
         case OK_SLS:
         case OK_DLS:
-            if (this->sh->valOffset(this->sh->placedAt(obj)))
+            if (this->sh->valOffset(at))
                 return;
     }
 
     SymHeap &sh = *const_cast<SymHeap *>(this->sh);
-    const TValId objAt = this->sh->placedAt(obj);
-
     const BindingOff &off = segBinding(*this->sh, obj);
     const TOffset offHead = off.head;
     if (offHead) {
-        const TObjId objHead = sh.objAt(sh.valByOffset(objAt, offHead));
+        const TObjId objHead = sh.objAt(sh.valByOffset(at, offHead));
         CL_BREAK_IF(objHead <= 0);
 
         // store 'head' pointer object
         this->heads.insert(objHead);
     }
 
-    const TObjId objNext = sh.ptrAt(sh.valByOffset(objAt, off.next));
+    const TObjId objNext = sh.ptrAt(sh.valByOffset(at, off.next));
     CL_BREAK_IF(objNext <= 0);
 
     // store 'next' poitner object
@@ -581,7 +581,7 @@ void SymPlot::Private::digNext(TObjId obj) {
     if (OK_DLS != kind)
         return;
 
-    const TObjId objPeer = sh.ptrAt(sh.valByOffset(objAt, off.prev));
+    const TObjId objPeer = sh.ptrAt(sh.valByOffset(at, off.prev));
     CL_BREAK_IF(objPeer <= 0);
 
     // store 'peer' pointer object
@@ -590,7 +590,8 @@ void SymPlot::Private::digNext(TObjId obj) {
 
 void SymPlot::Private::openCluster(TObjId obj) {
     std::string label;
-    if (this->sh->valTargetIsProto(this->sh->placedAt(obj)))
+    const TValId at = this->sh->placedAt(obj);
+    if (this->sh->valTargetIsProto(at))
         label = "[prototype] ";
 
 #ifndef NDEBUG
@@ -602,7 +603,7 @@ void SymPlot::Private::openCluster(TObjId obj) {
     const struct cl_type *clt = this->sh->objType(obj);
     CL_BREAK_IF(!clt);
 
-    const EObjKind kind = objKind(*this->sh, obj);
+    const EObjKind kind = this->sh->valTargetKind(at);
     switch (kind) {
         case OK_CONCRETE:
             color = (CL_TYPE_UNION == clt->code)

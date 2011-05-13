@@ -51,14 +51,11 @@ TObjId dlSegPeer(const SymHeap &sh, TObjId dls) {
     return writable.objAt(dlSegPeer(writable, sh.placedAt(dls)));
 }
 
-unsigned dlSegMinLength(const SymHeap &sh, TValId dlsAt) {
-    // TODO: remove this
-    TObjId dls = const_cast<SymHeap &>(sh).objAt(dlsAt);
-
+unsigned dlSegMinLength(const SymHeap &sh, TValId dls) {
     // validate call of dlSegNotEmpty()
-    CL_BREAK_IF(OK_DLS != objKind(sh, dls));
+    CL_BREAK_IF(OK_DLS != sh.valTargetKind(dls));
 
-    const TObjId peer = dlSegPeer(sh, dls);
+    const TValId peer = dlSegPeer(sh, dls);
 
     // dig pointer-to-next objects
     const TObjId next1 = nextPtrFromSeg(sh, dls);
@@ -69,16 +66,16 @@ unsigned dlSegMinLength(const SymHeap &sh, TValId dlsAt) {
     const TValId val2 = sh.valueOf(next2);
 
     // attempt to prove both
-    const bool ne1 = sh.SymHeapCore::proveNeq(val1, segHeadAddr(sh, peer));
-    const bool ne2 = sh.SymHeapCore::proveNeq(val2, segHeadAddr(sh, dls));
+    const bool ne1 = sh.SymHeapCore::proveNeq(val1, segHeadAt(sh, peer));
+    const bool ne2 = sh.SymHeapCore::proveNeq(val2, segHeadAt(sh, dls));
 
     // DLS cross Neq predicates have to be fully symmetric
     CL_BREAK_IF(ne1 != ne2);
     const bool ne = (ne1 && ne2);
 
     // if DLS heads are two distinct objects, we have at least two objects
-    const TValId head1 = segHeadAddr(sh, dls);
-    const TValId head2 = segHeadAddr(sh, peer);
+    const TValId head1 = segHeadAt(sh, dls);
+    const TValId head2 = segHeadAt(sh, peer);
     if (sh.SymHeapCore::proveNeq(head1, head2)) {
         CL_BREAK_IF(!ne);
         return /* DLS 2+ */ 2;
@@ -131,22 +128,22 @@ void segSetProto(SymHeap &sh, TValId seg, bool isProto) {
 }
 
 void segDestroy(SymHeap &sh, TObjId seg) {
-    seg = sh.objAt(sh.valRoot(sh.placedAt(seg)));
+    const TValId segAt = sh.valRoot(sh.placedAt(seg));
 
-    const EObjKind kind = objKind(sh, seg);
+    const EObjKind kind = sh.valTargetKind(segAt);
     switch (kind) {
         case OK_CONCRETE:
             // invalid call of segDestroy()
             CL_TRAP;
 
         case OK_DLS:
-            if (!sh.valDestroyTarget(sh.placedAt(dlSegPeer(sh, seg))))
+            if (!sh.valDestroyTarget(dlSegPeer(sh, segAt)))
                 CL_BREAK_IF("failed to destroy DLS peer");
             // fall through!
 
         case OK_MAY_EXIST:
         case OK_SLS:
-            if (!sh.valDestroyTarget(sh.placedAt(seg)))
+            if (!sh.valDestroyTarget(segAt))
                 CL_BREAK_IF("failed to destroy segment");
     }
 }
@@ -158,14 +155,14 @@ bool haveSeg(const SymHeap &sh, TValId atAddr, TValId pointingTo,
         // not an abstract object
         return false;
 
-    TObjId seg = const_cast<SymHeap &>(sh).objAt(sh.valRoot(atAddr));
-    if (kind != objKind(sh, seg))
+    TValId seg = sh.valRoot(atAddr);
+    if (kind != sh.valTargetKind(seg))
         // kind mismatch
         return false;
 
     if (OK_DLS == kind) {
         seg = dlSegPeer(sh, seg);
-        if (OK_DLS != objKind(sh, seg))
+        if (OK_DLS != sh.valTargetKind(seg))
             // invalid peer
             return false;
     }
@@ -186,18 +183,18 @@ bool haveDlSegAt(const SymHeap &sh, TValId atAddr, TValId peerAddr) {
         // not abstract objects
         return false;
 
-    const TObjId seg = const_cast<SymHeap &>(sh).objAt(sh.valRoot(atAddr));
-    if (OK_DLS != objKind(sh, seg))
+    const TValId seg = sh.valRoot(atAddr);
+    if (OK_DLS != sh.valTargetKind(seg))
         // not a DLS
         return false;
 
-    const TObjId peer = dlSegPeer(sh, seg);
-    if (OK_DLS != objKind(sh, peer))
+    const TValId peer = dlSegPeer(sh, seg);
+    if (OK_DLS != sh.valTargetKind(peer))
         // invalid peer
         return false;
 
     // compare the end-points
-    return (segHeadAddr(sh, peer) == peerAddr);
+    return (segHeadAt(sh, peer) == peerAddr);
 }
 
 void segHandleNeq(SymHeap &sh, TValId seg, TValId peer, SymHeap::ENeqOp op) {
@@ -299,14 +296,13 @@ bool dlSegCheckConsistency(const SymHeap &sh) {
             return false;
         }
 
-        const TObjId obj = const_cast<SymHeap &>(sh).objAt(at);
-        const TObjId peer = dlSegPeer(sh, obj);
+        const TValId peer = dlSegPeer(sh, at);
         if (peer <= 0) {
             CL_ERROR("OK_DLS with invalid peer detected");
             return false;
         }
 
-        if (OK_DLS != objKind(sh, peer)) {
+        if (OK_DLS != sh.valTargetKind(peer)) {
             CL_ERROR("DLS peer not a DLS");
             return false;
         }

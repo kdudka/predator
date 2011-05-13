@@ -155,9 +155,8 @@ void dump_obj(const SymHeap &heap, TObjId obj) {
     dump_kind(heap, obj);
     cout << "\n";
 
-    const TValId placedAt = heap.placedAt(obj);
-    if (0 < placedAt)
-        cout << "    placedAt  = /* value */ #" << placedAt << "\n";
+    if (0 < objAt)
+        cout << "    placedAt  = /* value */ #" << objAt << "\n";
 
     const TValId value = heap.valueOf(obj);
     if (VAL_NULL == value && clt && clt->code == CL_TYPE_PTR)
@@ -183,7 +182,7 @@ void dump_obj(const SymHeap &heap, TObjId obj) {
         }
     }
 
-    const EObjKind kind = objKind(heap, obj);
+    const EObjKind kind = heap.valTargetKind(objAt);
     if (OK_DLS == kind) {
         cout << "    peer      = ";
         const TValId at = heap.placedAt(obj);

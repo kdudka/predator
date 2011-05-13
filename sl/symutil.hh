@@ -61,16 +61,6 @@ inline TValId valOfPtrAt(SymHeap &sh, TValId at, TOffset off) {
     return valOfPtrAt(sh, ptrAt);
 }
 
-// TODO: remove this
-inline EObjKind objKind(const SymHeap &sh, TObjId obj) {
-    const TValId addr = sh.placedAt(obj);
-    if (addr <= 0)
-        // not really
-        return OK_CONCRETE;
-
-    return sh.valTargetKind(addr);
-}
-
 void getPtrValues(TValList &dst, const SymHeap &heap, TValId at);
 
 inline TValId nextRootObj(SymHeap &sh, TValId root, TOffset offNext) {

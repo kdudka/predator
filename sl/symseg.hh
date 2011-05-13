@@ -58,36 +58,36 @@ TObjId peerPtrFromSeg(const SymHeap &sh, TObjId seg);
 TObjId dlSegPeer(const SymHeap &sh, TObjId dls);
 
 /// return 'next' pointer in the given segment (given by root)
-inline TObjId nextPtrFromSeg(SymHeap &sh, TValId seg) {
+inline TObjId nextPtrFromSeg(const SymHeap &sh, TValId seg) {
     CL_BREAK_IF(sh.valOffset(seg));
     CL_BREAK_IF(VT_ABSTRACT != sh.valTarget(seg));
 
     const BindingOff &off = sh.segBinding(seg);
-    const TValId addr = sh.valByOffset(seg, off.next);
-    return sh.ptrAt(addr);
+    const TValId addr = const_cast<SymHeap &>(sh).valByOffset(seg, off.next);
+    return const_cast<SymHeap &>(sh).ptrAt(addr);
 }
 
 /// return 'prev' pointer in the given segment (given by root)
-inline TObjId prevPtrFromSeg(SymHeap &sh, TValId seg) {
+inline TObjId prevPtrFromSeg(const SymHeap &sh, TValId seg) {
     CL_BREAK_IF(sh.valOffset(seg));
     CL_BREAK_IF(VT_ABSTRACT != sh.valTarget(seg));
 
     const BindingOff &off = sh.segBinding(seg);
-    const TValId addr = sh.valByOffset(seg, off.prev);
-    return sh.ptrAt(addr);
+    const TValId addr = const_cast<SymHeap &>(sh).valByOffset(seg, off.prev);
+    return const_cast<SymHeap &>(sh).ptrAt(addr);
 }
 
 /// return DLS peer object of the given DLS
-inline TValId dlSegPeer(SymHeap &sh, TValId dls) {
+inline TValId dlSegPeer(const SymHeap &sh, TValId dls) {
     CL_BREAK_IF(sh.valOffset(dls));
     CL_BREAK_IF(OK_DLS != sh.valTargetKind(dls));
     const BindingOff &off = sh.segBinding(dls);
-    const TObjId ptr = sh.ptrAt(sh.valByOffset(dls, off.prev));
-    return sh.valRoot(sh.valueOf(ptr));
+    const TValId peer = valOfPtrAt(const_cast<SymHeap &>(sh), dls, off.prev);
+    return sh.valRoot(peer);
 }
 
 /// return DLS peer object in case of DLS, the given value otherwise
-inline TValId segPeer(SymHeap &sh, TValId seg) {
+inline TValId segPeer(const SymHeap &sh, TValId seg) {
     CL_BREAK_IF(sh.valOffset(seg));
     CL_BREAK_IF(!SymHeap::isAbstract(sh.valTarget(seg)));
     return (OK_DLS == sh.valTargetKind(seg))
@@ -96,12 +96,12 @@ inline TValId segPeer(SymHeap &sh, TValId seg) {
 }
 
 /// return address of segment's head (useful mainly for Linux lists)
-inline TValId segHeadAt(SymHeap &sh, TValId seg) {
+inline TValId segHeadAt(const SymHeap &sh, TValId seg) {
     CL_BREAK_IF(sh.valOffset(seg));
     CL_BREAK_IF(VT_ABSTRACT != sh.valTarget(seg));
 
     const BindingOff &off = sh.segBinding(seg);
-    return sh.valByOffset(seg, off.head);
+    return const_cast<SymHeap &>(sh).valByOffset(seg, off.head);
 }
 
 /// we do NOT require root to be a segment
