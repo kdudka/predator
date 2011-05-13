@@ -34,15 +34,11 @@
 #include "worklist.hh"
 #include "util.hh"
 
-#include <algorithm>            // for std::copy_if
-#include <functional>           // for std::bind
 #include <iomanip>
 #include <map>
 #include <set>
 
 #include <boost/foreach.hpp>
-#include <boost/lambda/lambda.hpp>
-#include <boost/lambda/bind.hpp>
 
 static bool debugSymJoin = static_cast<bool>(DEBUG_SYMJOIN);
 
@@ -1221,24 +1217,23 @@ bool segmentCloneCore(
 template <class TWorkList>
 void scheduleSegAddr(
         TWorkList               &wl,
-        const SymHeap           &shGt,
-        const TObjId            seg,
-        const TObjId            peer,
+        const TValId            seg,
+        const TValId            peer,
         const EJoinStatus       action)
 {
     CL_BREAK_IF(JS_USE_SH1 != action && JS_USE_SH2 != action);
 
     const TValPair vpSeg(
-            (JS_USE_SH1 == action) ? shGt.placedAt(seg) : VAL_INVALID,
-            (JS_USE_SH2 == action) ? shGt.placedAt(seg) : VAL_INVALID);
+            (JS_USE_SH1 == action) ? seg : VAL_INVALID,
+            (JS_USE_SH2 == action) ? seg : VAL_INVALID);
     wl.schedule(vpSeg);
 
     if (seg == peer)
         return;
 
     const TValPair vpPeer(
-            (JS_USE_SH1 == action) ? shGt.placedAt(peer) : VAL_INVALID,
-            (JS_USE_SH2 == action) ? shGt.placedAt(peer) : VAL_INVALID);
+            (JS_USE_SH1 == action) ? peer : VAL_INVALID,
+            (JS_USE_SH2 == action) ? peer : VAL_INVALID);
     wl.schedule(vpPeer);
 }
 
@@ -1368,15 +1363,14 @@ bool insertSegmentClone(
 
     // resolve the existing segment in shGt
     SymHeap &shGt = ((isGt1) ? ctx.sh1 : ctx.sh2);
-    const TValId segAt = shGt.valRoot((isGt1) ? v1 : v2);
-    const TObjId seg = shGt.objAt(segAt);
-    TObjId peer = seg;
-    if (OK_DLS == objKind(shGt, seg))
+    const TValId seg = shGt.valRoot((isGt1) ? v1 : v2);
+    TValId peer = seg;
+    if (OK_DLS == shGt.valTargetKind(seg))
         peer = dlSegPeer(shGt, seg);
 
     // resolve the 'next' pointer and check its validity
     const TObjId nextPtr = (off)
-        ? shGt.ptrAt(shGt.valByOffset(segAt, off->next))
+        ? shGt.ptrAt(shGt.valByOffset(seg, off->next))
         : nextPtrFromSeg(shGt, peer);
 
     const TValId nextGt = shGt.valueOf(nextPtr);
@@ -1393,12 +1387,8 @@ bool insertSegmentClone(
 
     const TValMapBidir &valMapGt = (isGt1) ? ctx.valMap1 : ctx.valMap2;
 
-    const TValId segGtAt = shGt.placedAt(seg);
-    TValPair vp(
-            (isGt1) ? segGtAt : VAL_INVALID,
-            (isGt2) ? segGtAt : VAL_INVALID);
-
-    scheduleSegAddr(ctx.wl, shGt, seg, peer, action);
+    TValPair vp;
+    scheduleSegAddr(ctx.wl, seg, peer, action);
     while (ctx.wl.next(vp)) {
         const TValId valGt = (isGt1) ? vp.first : vp.second;
         const TValId valLt = (isGt2) ? vp.first : vp.second;
@@ -1412,7 +1402,7 @@ bool insertSegmentClone(
             // do not go byond the segment, just follow its data
             continue;
 
-        if (segGtAt != valGt)
+        if (seg != valGt)
             // OK_MAY_EXIST is applicable only on the first object
             off = 0;
 
@@ -1557,14 +1547,15 @@ bool mayExistFallback(
         // try it the other way around
         return false;
 
-    const SymHeap &sh = (use1) ? ctx.sh1 : ctx.sh2;
+    SymHeap &sh = (use1) ? ctx.sh1 : ctx.sh2;
     const TValId val = (use1) ? v1 : v2;
-    const TObjId target = objRootByVal(sh, val);
+    const TValId valRoot = sh.valRoot(val);
+    const TObjId target = sh.objAt(valRoot);
     if (target <= 0 || !isComposite(sh.objType(target)))
         // non-starter
         return false;
 
-    if (OK_CONCRETE != objKind(sh, target))
+    if (OK_CONCRETE != sh.valTargetKind(valRoot))
         // only concrete objects/prototypes are candidates for OK_MAY_EXIST
         return false;
 
@@ -1913,17 +1904,17 @@ void handleDstPreds(SymJoinCtx &ctx) {
 }
 
 bool segDetectSelfLoopHelper(
-        const SymHeap           &sh,
-        std::set<TObjId>        &haveSeen,
-        TObjId                  seg)
+        SymHeap                 &sh,
+        std::set<TValId>        &haveSeen,
+        TValId                  seg)
 {
     // remember original kind of object
-    const EObjKind kind = objKind(sh, seg);
+    const EObjKind kind = sh.valTargetKind(seg);
 
     // find a loop-less path
-    std::set<TObjId> path;
+    std::set<TValId> path;
     while (insertOnce(path, seg)) {
-        TObjId peer = seg;
+        TValId peer = seg;
         if (OK_DLS == kind) {
             // jump to peer in case of DLS
             peer = dlSegPeer(sh, seg);
@@ -1932,18 +1923,12 @@ bool segDetectSelfLoopHelper(
         }
 
         const TValId valNext = sh.valueOf(nextPtrFromSeg(sh, peer));
-        TObjId next = sh.pointsTo(valNext);
-        if (next < 0)
-            // no valid next object --> no loop
+        if (!SymHeap::isAbstract(sh.valTarget(valNext)))
+            // no next segment --> no loop
             return false;
 
-        const EObjKind kindNext = objKind(sh, next);
-        if (kindNext != kind)
-            // no compatible next segment --> no loop
-            return false;
-
-        seg = objRoot(sh, next);
-        if (kind != objKind(sh, seg))
+        seg = sh.valRoot(valNext);
+        if (kind != sh.valTargetKind(seg))
             // no compatible next segment --> no loop
             return false;
 
@@ -1955,20 +1940,14 @@ bool segDetectSelfLoopHelper(
     return true;
 }
 
-bool segDetectSelfLoop(const SymHeap &sh) {
-    using namespace boost::lambda;
-
+bool segDetectSelfLoop(SymHeap &sh) {
     // gather all abstract objects
-    TValList valRoots;
-    sh.gatherRootObjects(valRoots, SymHeap::isAbstract);
-
-    std::set<TObjId> segRoots;
-    BOOST_FOREACH(const TValId at, valRoots)
-        segRoots.insert(const_cast<SymHeap &>(sh).objAt(at));
+    TValList segRoots;
+    sh.gatherRootObjects(segRoots, SymHeap::isAbstract);
 
     // go through all entries
-    std::set<TObjId> haveSeen;
-    BOOST_FOREACH(const TObjId seg, segRoots) {
+    std::set<TValId> haveSeen;
+    BOOST_FOREACH(const TValId seg, segRoots) {
         if (!insertOnce(haveSeen, seg))
             continue;
 
@@ -2186,13 +2165,13 @@ bool joinDataCore(
     ctx.sset2.insert(addr2);
 
     // never step over DLS peer
-    if (OK_DLS == objKind(sh, o1)) {
+    if (OK_DLS == sh.valTargetKind(addr1)) {
         const TValId peer = dlSegPeer(sh, addr1);
         ctx.sset1.insert(peer);
         if (peer != addr2)
             mapGhostAddressSpace(ctx, addr1, peer, JS_USE_SH1);
     }
-    if (OK_DLS == objKind(sh, o2)) {
+    if (OK_DLS == sh.valTargetKind(addr2)) {
         const TValId peer = dlSegPeer(sh, addr2);
         ctx.sset2.insert(peer);
         if (peer != addr1)
