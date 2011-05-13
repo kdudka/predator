@@ -89,13 +89,8 @@ void createGlVars(SymHeap &sh, const CodeStorage::Storage &stor) {
         CL_DEBUG_MSG(&var.loc, "(g) initializing global variable: #" << var.uid
                 << " (" << var.name << ")");
 
-        // look for the corresponding heap object
-        const CVar cVar(var.uid, /* gl variable */ 0);
-        const TObjId obj = sh.objAt(sh.addrOfVar(cVar));
-        CL_BREAK_IF(obj <= 0);
-
         // initialize a global/static variable
-        initVariable(sh, obj, var);
+        initVariable(sh, var, /* gl variable */ 0);
     }
 }
 

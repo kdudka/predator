@@ -339,8 +339,7 @@ void SymCallCache::Private::createStackFrame(TCVarList &cVars) {
                     << " (" << var.name << ")" );
 
             // reflect the given initializer
-            const TObjId obj = this->heap->objAt(this->heap->addrOfVar(cv));
-            initVariable(*this->heap, obj, var);
+            initVariable(*this->heap, var, this->nestLevel);
         }
     }
 }

@@ -56,74 +56,11 @@ void getPtrValues(TValList &dst, const SymHeap &sh, TValId at) {
     }
 }
 
-typedef std::pair<TObjId, const cl_initializer *> TInitialItem;
-
-// TODO: remove this
-template <class TItem> struct TraverseSubObjsHelper { };
-
-// TODO: remove this
-template <class THeap, class TVisitor, class TItem = TObjId>
-bool /* complete */ traverseSubObjs(THeap &sh, TItem item, TVisitor &visitor,
-                                    bool leavesOnly)
+bool initSingleVariable(
+        SymHeap                         &sh,
+        const TObjId                     obj,
+        const struct cl_initializer     *initial)
 {
-    std::stack<TItem> todo;
-    todo.push(item);
-    while (!todo.empty()) {
-        item = todo.top();
-        todo.pop();
-
-        typedef TraverseSubObjsHelper<TItem> THelper;
-        const struct cl_type *clt = THelper::getItemClt(sh, item);
-        CL_BREAK_IF(!clt || !isComposite(clt));
-
-        for (int i = 0; i < clt->item_cnt; ++i) {
-            const TItem next = THelper::getNextItem(sh, item, i);
-
-            const struct cl_type *subClt = THelper::getItemClt(sh, next);
-            if (subClt && isComposite(subClt)) {
-                todo.push(next);
-
-                if (leavesOnly)
-                    // do not call the visitor for internal nodes, if requested
-                    continue;
-            }
-
-            if (!/* continue */visitor(sh, next))
-                return false;
-        }
-    }
-
-    // the traversal is done, without any interruption by visitor
-    return true;
-}
-
-
-// TODO: remove this
-template <> struct TraverseSubObjsHelper<TInitialItem> {
-    static const struct cl_type* getItemClt(const SymHeap           &sh,
-                                            const TInitialItem      &item)
-    {
-        const struct cl_type *clt = sh.objType(item.first);
-        CL_BREAK_IF(item.second && (!clt || *clt != *item.second->type));
-        return clt;
-    }
-
-    static TInitialItem getNextItem(const SymHeap                   &sh,
-                                    TInitialItem                    item,
-                                    int                             nth)
-    {
-        item.first = sh.subObj(item.first, nth);
-
-        const struct cl_initializer *&initial = item.second;
-        if (initial)
-            initial = initial->data.nested_initials[nth];
-
-        return item;
-    }
-};
-
-bool initSingleVariable(SymHeap &sh, const TInitialItem &item) {
-    const TObjId obj = item.first;
     const struct cl_type *clt = sh.objType(obj);
     CL_BREAK_IF(!clt);
 
@@ -141,7 +78,6 @@ bool initSingleVariable(SymHeap &sh, const TInitialItem &item) {
             break;
     }
 
-    const struct cl_initializer *initial = item.second;
     if (!initial) {
         // no initializer given, nullify the variable
         sh.objSetValue(obj, /* also equal to VAL_FALSE */ VAL_NULL);
@@ -166,16 +102,68 @@ bool initSingleVariable(SymHeap &sh, const TInitialItem &item) {
     return /* continue */ true;
 }
 
-void initVariable(SymHeap                       &sh,
-                  TObjId                        obj,
-                  const CodeStorage::Var        &var)
-{
-    const TInitialItem item(obj, var.initial);
+class InitVarLegacyWrapper {
+    private:
+        SymHeap                                 &sh_;
+        const TValId                            root_;
+        const TObjType                          rootClt_;
+        const struct cl_initializer            *initial_;
 
-    if (isComposite(var.type))
-        traverseSubObjs(sh, item, initSingleVariable, /* leavesOnly */ true);
-    else
-        initSingleVariable(sh, item);
+    public:
+        InitVarLegacyWrapper(
+                SymHeap                         &sh,
+                const TValId                    root,
+                const TObjType                  clt,
+                const struct cl_initializer    *initial):
+            sh_(sh),
+            root_(root),
+            rootClt_(clt),
+            initial_(initial)
+        {
+            CL_BREAK_IF(sh.valOffset(root));
+        }
+
+        bool operator()(TFieldIdxChain ic, const struct cl_type_item *item)
+            const
+        {
+            const TObjType clt = item->type;
+            if (isComposite(clt))
+                return /* continue */ true;
+
+            const TOffset off = offsetByIdxChain(rootClt_, ic);
+            const TValId at = sh_.valByOffset(root_, off);
+            const TObjId obj = sh_.objAt(at, clt);
+            CL_BREAK_IF(obj <= 0);
+
+            const struct cl_initializer *in = initial_;
+            BOOST_FOREACH(int idx, ic) {
+                CL_BREAK_IF(!isComposite(in->type));
+                in = in->data.nested_initials[idx];
+            }
+
+            CL_BREAK_IF(in->type != item->type);
+            initSingleVariable(sh_, obj, in);
+            return /* continue */ true;
+        }
+};
+
+void initVariable(
+        SymHeap                     &sh,
+        const CodeStorage::Var      &var,
+        const int                   nestLevel)
+{
+    const CVar cv(var.uid, nestLevel);
+    const TValId at = sh.addrOfVar(cv);
+    const TObjType clt = var.type;
+
+    if (isComposite(clt)) {
+        const InitVarLegacyWrapper visitor(sh, at, clt, var.initial);
+        traverseTypeIc(var.type, visitor, /* digOnlyComposite */ true);
+    }
+    else {
+        const TObjId obj = sh.objAt(at, clt);
+        initSingleVariable(sh, obj, var.initial);
+    }
 }
 
 class PointingObjectsFinder {

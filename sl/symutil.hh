@@ -69,9 +69,10 @@ inline TValId nextRootObj(SymHeap &sh, TValId root, TOffset offNext) {
     return sh.valRoot(sh.valueOf(nextPtr));
 }
 
-void initVariable(SymHeap                       &sh,
-                  TObjId                        obj,
-                  const CodeStorage::Var        &var);
+void initVariable(
+        SymHeap                     &sh,
+        const CodeStorage::Var      &var,
+        const int                   nestLevel);
 
 /// take the given visitor through all live pointers
 template <class THeap, class TVisitor, typename TMethod>
