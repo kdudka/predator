@@ -272,28 +272,6 @@ TObjId /* pointsTo */ dump_value_core(const SymHeap &heap, TValId value)
     if (off)
         cout << "    valRoot   = " << heap.valRoot(value) << "\n";
 
-    const EUnknownValue code = heap.valGetUnknown(value);
-    switch (code) {
-        case UV_KNOWN:
-            break;
-
-        case UV_ABSTRACT:
-            cout << "    code      = UV_ABSTRACT\n";
-            break;
-
-        case UV_UNKNOWN:
-            cout << "    code      = UV_UNKNOWN\n";
-            return OBJ_INVALID;
-
-        case UV_DONT_CARE:
-            cout << "    code      = UV_DONT_CARE\n";
-            return OBJ_INVALID;
-
-        case UV_UNINITIALIZED:
-            cout << "    code      = UV_UNINITIALIZED\n";
-            return OBJ_INVALID;
-    }
-
     // FIXME: not tested
     const int custom = heap.valGetCustom(value);
     if (-1 != custom) {

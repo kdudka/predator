@@ -58,22 +58,9 @@ bool digJunk(const SymHeap &heap, TValId *ptrVal) {
     if (*ptrVal <= 0)
         return false;
 
-    const EUnknownValue code = heap.valGetUnknown(*ptrVal);
-    switch (code) {
-        case UV_KNOWN:
-        case UV_ABSTRACT:
-            break;
-
-        default:
-            return false;
-    }
-
-    if (VAL_INVALID != heap.valGetCustom(*ptrVal))
-        // ignore custom values (e.g. fnc pointers)
-        return false;
-
-    if (!isOnHeap(heap.valTarget(*ptrVal)))
-        // non-heap object simply can't be JUNK
+    const EValueTarget code = heap.valTarget(*ptrVal);
+    if (!isOnHeap(code))
+        // non-heap objects cannot be JUNK
         return false;
 
     // only root objects can be destroyed
