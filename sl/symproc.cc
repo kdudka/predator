@@ -818,14 +818,19 @@ TValId compareValues(
     }
 
     // propagate UV_UNINITIALIZED
+    EValueOrigin vo = sh.valOrigin(v1);
     EUnknownValue uvCode = UV_UNKNOWN;
     if (UV_UNINITIALIZED == sh.valGetUnknown(v1)
             || UV_UNINITIALIZED == sh.valGetUnknown(v2))
     {
         uvCode = UV_UNINITIALIZED;
+        if (!isUninitialized(vo)) {
+            vo = sh.valOrigin(v2);
+            CL_BREAK_IF(!isUninitialized(vo));
+        }
     }
 
-    return sh.valCreateUnknown(uvCode, /* TODO */ VO_UNKNOWN);
+    return sh.valCreateUnknown(uvCode, vo);
 }
 
 TValId SymExecCore::handlePointerPlus(

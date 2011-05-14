@@ -1583,24 +1583,30 @@ bool joinUnknownValuesCode(
         EUnknownValue           *pDst,
         EValueOrigin            *pOrigin,
         const EUnknownValue     code1,
-        const EUnknownValue     code2)
+        const EUnknownValue     code2,
+        const EValueOrigin      vo1,
+        const EValueOrigin      vo2)
 {
     if (UV_UNINITIALIZED == code1 && UV_UNINITIALIZED == code2) {
         *pDst = UV_UNINITIALIZED;
+        if (isUninitialized(vo1))
+            *pOrigin = vo1;
+        else {
+            CL_BREAK_IF(!isUninitialized(vo2));
+            *pOrigin = vo2;
+        }
         return true;
     }
 
-    if (UV_DONT_CARE == code1 || UV_DONT_CARE == code2) {
-        *pDst = UV_DONT_CARE;
-        return true;
-    }
+    if (UV_UNKNOWN != code1 && UV_UNKNOWN != code2)
+        return false;
 
-    if (UV_UNKNOWN == code1 || UV_UNKNOWN == code2) {
-        *pDst = UV_UNKNOWN;
-        return true;
-    }
+    *pDst = UV_UNKNOWN;
+    *pOrigin = (vo1 == vo2)
+        ? vo1
+        : VO_UNKNOWN;
 
-    return false;
+    return true;
 }
 
 bool joinValuePair(SymJoinCtx &ctx, const TValId v1, const TValId v2) {
@@ -1614,9 +1620,12 @@ bool joinValuePair(SymJoinCtx &ctx, const TValId v1, const TValId v2) {
     EUnknownValue code1 = /* XXX */ ctx.sh1.valGetUnknown(v1);
     EUnknownValue code2 = /* XXX */ ctx.sh2.valGetUnknown(v2);
 
+    const EValueOrigin vo1 = ctx.sh1.valOrigin(v1);
+    const EValueOrigin vo2 = ctx.sh2.valOrigin(v2);
+
     EUnknownValue code;
     EValueOrigin vo;
-    if (joinUnknownValuesCode(&code, &vo, code1, code2)) {
+    if (joinUnknownValuesCode(&code, &vo, code1, code2, vo1, vo2)) {
         // create a new unknown value in ctx.dst
         const TValId vDst = ctx.dst.valCreateUnknown(code, vo);
         return handleUnknownValues(ctx, v1, v2, vDst);

@@ -378,25 +378,11 @@ void SymExecEngine::execCondInsn() {
             break;
     }
 
-    switch (sh.valGetUnknown(val)) {
-        case UV_UNKNOWN:
-            CL_DEBUG_MSG(lw_, "??? CL_INSN_COND got UV_UNKNOWN");
-            break;
-
-        case UV_DONT_CARE:
-            CL_DEBUG_MSG(lw_, "??? CL_INSN_COND got UV_DONT_CARE");
-            break;
-
-        case UV_UNINITIALIZED:
-            CL_WARN_MSG(lw_,
-                    "conditional jump depends on uninitialized value");
-            bt_.printBackTrace();
-            break;
-
-        case UV_KNOWN:
-        case UV_ABSTRACT:
-            CL_TRAP;
-            return;
+    const EValueOrigin vo = sh.valOrigin(val);
+    if (isUninitialized(vo)) {
+        // TODO: make the warning messages more precise
+        CL_WARN_MSG(lw_, "conditional jump depends on uninitialized value");
+        bt_.printBackTrace();
     }
 
     std::ostringstream str;
