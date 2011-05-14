@@ -205,13 +205,13 @@ struct SymHeapCore::Private {
     // symheap-ng
     typedef std::map<TObjType, TObjId>                  TObjByType;
     typedef std::map<TOffset, TObjByType>               TGrid;
+    typedef std::map<TObjId, bool /* isPtr */>          TLiveObjs;
 
     struct Root {
         TValId                      addr;
         size_t                      cbSize;
         CVar                        cVar;
-        std::set<TObjId>            livePtrs;
-        std::set<TObjId>            liveData;
+        TLiveObjs                   liveObjs;
         bool                        isProto;
         TUsedBy                     usedBy;
 
@@ -662,10 +662,14 @@ TObjId SymHeapCore::Private::objDup(TObjId root) {
             this->roots[image].cVar    = this->roots[root].cVar;
             this->roots[image].isProto = this->roots[root].isProto;
         }
-        else if (hasKey(this->roots[root].livePtrs, src))
-            this->roots[image].livePtrs.insert(dst);
-        else if (hasKey(this->roots[root].liveData, src))
-            this->roots[image].liveData.insert(dst);
+        else {
+            const TLiveObjs &liveSrc = this->roots[root].liveObjs;
+            TLiveObjs::const_iterator it = liveSrc.find(src);
+            if (liveSrc.end() != it) {
+                TLiveObjs &liveDst = this->roots[image].liveObjs;
+                liveDst[dst] = it->second;
+            }
+        }
 
         // update the reference to self in the parent object
         const TObjId parent = item.dstParent;
@@ -705,18 +709,21 @@ TObjId SymHeapCore::Private::objDup(TObjId root) {
 void SymHeapCore::gatherLivePointers(TObjList &dst, TValId atAddr) const {
     const TObjId root = const_cast<SymHeapCore *>(this)->objAt(atAddr);
     const Private::Root &rootData = roMapLookup(d->roots, root);
-    std::copy(rootData.livePtrs.begin(), rootData.livePtrs.end(),
-            std::back_inserter(dst));
+
+    typedef Private::TLiveObjs TMap;
+    BOOST_FOREACH(TMap::const_reference item, rootData.liveObjs) {
+        if (/* isPtr */ item.second)
+            dst.push_back(/* obj */ item.first);
+    }
 }
 
 void SymHeapCore::gatherLiveObjects(TObjList &dst, TValId atAddr) const {
     const TObjId root = const_cast<SymHeapCore *>(this)->objAt(atAddr);
     const Private::Root &rootData = roMapLookup(d->roots, root);
 
-    std::copy(rootData.livePtrs.begin(), rootData.livePtrs.end(),
-            std::back_inserter(dst));
-    std::copy(rootData.liveData.begin(), rootData.liveData.end(),
-            std::back_inserter(dst));
+    typedef Private::TLiveObjs TMap;
+    BOOST_FOREACH(TMap::const_reference item, rootData.liveObjs)
+        dst.push_back(/* obj */ item.first);
 }
 
 void SymHeapCore::Private::subsDestroy(TObjId root) {
@@ -724,12 +731,9 @@ void SymHeapCore::Private::subsDestroy(TObjId root) {
     this->objects[root].value = VAL_INVALID;
     Private::Root &rootData = roMapLookup(this->roots, root);
 
-    BOOST_FOREACH(const TObjId obj, rootData.livePtrs) {
-        this->releaseValueOf(obj);
-        this->objects[obj].value = VAL_INVALID;
-    }
-
-    BOOST_FOREACH(const TObjId obj, rootData.liveData) {
+    typedef Private::TLiveObjs TMap;
+    BOOST_FOREACH(TMap::const_reference item, rootData.liveObjs) {
+        const TObjId obj = item.first;
         this->releaseValueOf(obj);
         this->objects[obj].value = VAL_INVALID;
     }
@@ -785,14 +789,15 @@ void SymHeapCore::objSetValue(TObjId obj, TValId val) {
     const TObjId root = d->objRoot(obj, objData);
     Private::Root &rootData = roMapLookup(d->roots, root);
 
+    // we allow to set values of atomic types only
     const TObjType clt = objData.clt;
     CL_BREAK_IF(isComposite(clt));
 
-    if (isDataPtr(objData.clt))
-        rootData.livePtrs.insert(obj);
-    else
-        rootData.liveData.insert(obj);
+    // mark the destination object as live
+    const bool isPtr = isDataPtr(clt);
+    rootData.liveObjs[obj] = isPtr;
 
+    // now set the value
     d->setValueOf(obj, val);
 }
 
