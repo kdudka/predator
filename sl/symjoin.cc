@@ -37,7 +37,6 @@
 #include <map>
 #include <set>
 
-#include <boost/array.hpp>
 #include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
 
@@ -74,8 +73,6 @@ namespace {
         dump_plot(sh, str.str().c_str());
     }
 }
-
-typedef boost::array<TValId, 3>                                 TValTriple;
 
 template <class T>
 class WorkListWithUndo: public WorkList<T> {
@@ -133,7 +130,7 @@ struct SymJoinCtx {
     std::set<TValPair>          tieBreaking;
     std::set<TValPair>          alreadyJoined;
 
-    std::set<TValTriple>        protoRoots;
+    std::set<TValId /* dst */>  protoRoots;
 
     void initValMaps() {
         // VAL_NULL should be always mapped to VAL_NULL
@@ -533,13 +530,11 @@ bool traverseSubObjs(
     // TODO: remove this
     const TObjId root1    = ctx.sh1.objAt(addr1);
     const TObjId root2    = ctx.sh2.objAt(addr2);
-    const TObjId rootDst  = ctx.dst.objAt(addrDst);
 
-    typedef boost::array<const SymHeap *, 3>        TSymHeapTriple;
 #ifndef NDEBUG
     const struct cl_type *clt1   = ctx.sh1.objType(root1);
     const struct cl_type *clt2   = ctx.sh2.objType(root2);
-    const struct cl_type *cltDst = ctx.dst.objType(rootDst);
+    const struct cl_type *cltDst = ctx.dst.objType(ctx.dst.objAt(addrDst));
     CL_BREAK_IF(!cltDst || (OBJ_INVALID == root1 && OBJ_INVALID == root2));
     CL_BREAK_IF(OBJ_INVALID != root1 && *clt1 != *cltDst);
     CL_BREAK_IF(OBJ_INVALID != root2 && *clt2 != *cltDst);
@@ -569,16 +564,11 @@ bool traverseSubObjs(
     }
 
     else if (ctx.joiningData()) {
-        if (root1 == root2)
+        if (addr1 == addr2)
             // do not follow shared data
             objVisitor.noFollow = true;
-        else {
-            TValTriple proto;
-            proto[/* sh1 */ 0] = addr1;
-            proto[/* sh2 */ 1] = addr2;
-            proto[/* dst */ 2] = addrDst;
-            ctx.protoRoots.insert(proto);
-        }
+        else
+            ctx.protoRoots.insert(addrDst);
     }
 
     // guide the visitors through them
@@ -1895,10 +1885,9 @@ void handleDstPreds(SymJoinCtx &ctx) {
 
     // TODO: match gneric Neq predicates also in prototypes;  for now we
     // consider only minimal segment lengths
-    BOOST_FOREACH(const TValTriple &proto, ctx.protoRoots) {
-        const TValId proto1     = proto[/* sh1 */ 0];
-        const TValId proto2     = proto[/* sh2 */ 1];
-        const TValId protoDst   = proto[/* dst */ 2];
+    BOOST_FOREACH(const TValId protoDst, ctx.protoRoots) {
+        const TValId proto1 = roMapLookup(ctx.valMap1[/* rtl */ 1], protoDst);
+        const TValId proto2 = roMapLookup(ctx.valMap2[/* rtl */ 1], protoDst);
 
         const unsigned len1 = objMinLength(ctx.sh1, proto1);
         const unsigned len2 = objMinLength(ctx.sh2, proto2);
@@ -2100,38 +2089,16 @@ void mapGhostAddressSpace(
 
 /// this runs only in debug build
 bool dlSegCheckProtoConsistency(const SymJoinCtx &ctx) {
-    BOOST_FOREACH(const TValTriple &proto, ctx.protoRoots) {
-        const TValId proto1   = proto[0];
-        const TValId proto2   = proto[1];
-        const TValId protoDst = proto[2];
-        if (OK_DLS != ctx.dst.valTargetKind(protoDst))
+    BOOST_FOREACH(const TValId proto, ctx.protoRoots) {
+        if (OK_DLS != ctx.dst.valTargetKind(proto))
             // we are intersted only DLSs here
             continue;
 
-        TValTriple protoPeer;
-        const TValId peerDst = dlSegPeer(ctx.dst, protoDst);
-
-        if (OK_DLS == ctx.sh1.valTargetKind(proto1))
-            protoPeer[0] = dlSegPeer(ctx.sh1, proto1);
-        else {
-            const TValMap &vMap1r = ctx.valMap1[/* rtl */ 1];
-            protoPeer[0] = roMapLookup(vMap1r, peerDst);
+        const TValId peer = dlSegPeer(ctx.dst, proto);
+        if (!hasKey(ctx.protoRoots, peer)) {
+            CL_ERROR("DLS prototype peer not a prototype");
+            return false;
         }
-
-        if (OK_DLS == ctx.sh2.valTargetKind(proto2))
-            protoPeer[1] = dlSegPeer(ctx.sh2, proto2);
-        else {
-            const TValMap &vMap2r = ctx.valMap2[/* rtl */ 1];
-            protoPeer[1] = roMapLookup(vMap2r, peerDst);
-        }
-
-        protoPeer[2] = dlSegPeer(ctx.dst, protoDst);
-        if (hasKey(ctx.protoRoots, protoPeer))
-            continue;
-
-        CL_ERROR("DLS prototype peer not a prototype "
-                << SJ_VALP(proto1, proto2));
-        return false;
     }
 
     return true;
@@ -2229,9 +2196,9 @@ bool joinDataReadOnly(
     unsigned cntProto2 = 0;
 
     // go through prototypes
-    BOOST_FOREACH(const TValTriple &proto, ctx.protoRoots) {
-        const TValId proto1 = proto[0];
-        const TValId proto2 = proto[1];
+    BOOST_FOREACH(const TValId protoDst, ctx.protoRoots) {
+        const TValId proto1 = roMapLookup(ctx.valMap1[/* rtl */ 1], protoDst);
+        const TValId proto2 = roMapLookup(ctx.valMap2[/* rtl */ 1], protoDst);
 
         if (VAL_INVALID != proto1) {
             ++cntProto1;
@@ -2272,19 +2239,12 @@ struct JoinValueVisitor {
             // values are equal --> pick any
             return newDst;
 
-        // asymmetric prototype match (src < dst)
-        TValTriple proto;
-        proto[0] = ctx.dst.valRoot(oldDst);
-        proto[1] = VAL_INVALID;
-        proto[2] = ctx.dst.valRoot(newDst);
-        if (hasKey(ctx.protoRoots, proto))
+        if (hasKey(ctx.protoRoots, ctx.dst.valRoot(newDst)))
+            // asymmetric prototype match (src < dst)
             return newDst;
 
-        // asymmetric prototype match (dst < src)
-        proto[0] = VAL_INVALID;
-        proto[1] = ctx.dst.valRoot(oldSrc);
-        proto[2] = ctx.dst.valRoot(newSrc);
-        if (hasKey(ctx.protoRoots, proto))
+        if (hasKey(ctx.protoRoots, ctx.dst.valRoot(newSrc)))
+            // asymmetric prototype match (dst < src)
             return newSrc;
 
         if (VAL_NULL == newSrc && UV_UNKNOWN == ctx.dst.valGetUnknown(newDst))
@@ -2362,18 +2322,17 @@ void recoverPrototypes(
         CL_DEBUG("    joinData() joins " << cntProto << " prototype objects");
 
     // go through prototypes
-    BOOST_FOREACH(const TValTriple &proto, ctx.protoRoots) {
-        const TValId protoDst   = proto[/* sh1 */ 0];
-        const TValId protoSrc   = proto[/* sh2 */ 1];
-        const TValId protoGhost = proto[/* dst */ 2];
+    BOOST_FOREACH(const TValId protoGhost, ctx.protoRoots) {
+        const TValId proto1 = roMapLookup(ctx.valMap1[/* rtl */ 1], protoGhost);
+        const TValId proto2 = roMapLookup(ctx.valMap2[/* rtl */ 1], protoGhost);
 
-        if (SymHeap::isAbstract(sh.valTarget(protoDst)))
+        if (SymHeap::isAbstract(sh.valTarget(proto1)))
             // remove Neq predicates, their targets are going to vanish soon
-            segSetMinLength(sh, protoDst, 0);
+            segSetMinLength(sh, proto1, 0);
 
-        if (bidir && SymHeap::isAbstract(sh.valTarget(protoSrc)))
+        if (bidir && SymHeap::isAbstract(sh.valTarget(proto2)))
             // remove Neq predicates, their targets are going to vanish soon
-            segSetMinLength(sh, protoSrc, 0);
+            segSetMinLength(sh, proto2, 0);
 
         if (SymHeap::isAbstract(sh.valTarget(protoGhost)))
             // temporarily remove Neq predicates
@@ -2393,11 +2352,10 @@ void restorePrototypeLengths(SymJoinCtx &ctx) {
     SymHeap &sh = ctx.dst;
 
     // restore minimal length of segment prototypes
-    BOOST_FOREACH(const TValTriple &proto, ctx.protoRoots) {
+    BOOST_FOREACH(const TValId protoDst, ctx.protoRoots) {
         typedef SymJoinCtx::TSegLengths TLens;
-        const TLens &lens = ctx.segLengths;
 
-        const TValId protoDst = proto[/* dst */ 2];
+        const TLens &lens = ctx.segLengths;
         TLens::const_iterator it = lens.find(protoDst);
         if (lens.end() == it)
             continue;
