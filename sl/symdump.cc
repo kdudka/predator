@@ -162,24 +162,6 @@ void dump_obj(const SymHeap &heap, TObjId obj) {
     else if (0 < value)
         cout << "    value     = /* value */ #" << value << "\n";
 
-    if (clt && clt->code == CL_TYPE_STRUCT) {
-        for (int i = 0; i < clt->item_cnt; ++i) {
-            const TObjId sub = heap.subObj(obj, i);
-            if (sub <= 0)
-                continue;
-
-            cout << "    subObj[" << i << "] = /* obj */ #" << sub;
-            const char *name = clt->items[i].name;
-            if (name)
-                cout << ", \"" << name << "\"";
-            const struct cl_type *subClt = clt->items[i].type;
-            if (subClt)
-                cout << ", clt = " << (*clt);
-
-            cout << ", val = " << heap.valueOf(sub) << "\n";
-        }
-    }
-
     const EObjKind kind = heap.valTargetKind(objAt);
     if (OK_DLS == kind) {
         cout << "    peer      = ";

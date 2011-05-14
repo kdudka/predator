@@ -835,6 +835,9 @@ void ObjectDigger::operate(TFieldIdxChain ic, const struct cl_type *clt) {
     self_->digNext(obj);
     self_->openCluster(obj);
     self_->plotNodeObj(obj);
+
+    // TODO: port this hunk to symheap-ng if possible
+#if 0
     for (int i = 0; i < clt->item_cnt; ++i) {
         const TObjId sub = self_->sh->subObj(obj, i);
         const struct cl_type *subClt = self_->sh->objType(sub);
@@ -845,6 +848,7 @@ void ObjectDigger::operate(TFieldIdxChain ic, const struct cl_type *clt) {
         if (!hasKey(self_->objDone, sub))
             self_->plotEdgeSub(obj, sub);
     }
+#endif
 }
 
 void SymPlot::Private::digObjCore(TObjId obj) {

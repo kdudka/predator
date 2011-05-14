@@ -1348,20 +1348,6 @@ TObjId SymHeapCore::valGetComposite(TValId val) const {
 }
 
 // TODO: remove this
-TObjId SymHeapCore::subObj(TObjId obj, int nth) const {
-    if (d->objOutOfRange(obj))
-        return OBJ_INVALID;
-
-    const Private::Object &objData = d->objects[obj];
-    const TObjList &subs = objData.subObjs;
-    const int cnt = subs.size();
-
-    return (nth < cnt)
-        ? subs[nth]
-        : OBJ_INVALID;
-}
-
-// TODO: remove this
 TObjId SymHeapCore::objParent(TObjId obj, int *nth) const {
     if (OBJ_RETURN == obj || d->objOutOfRange(obj))
         return OBJ_INVALID;

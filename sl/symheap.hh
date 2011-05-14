@@ -363,9 +363,6 @@ class SymHeapCore {
         TObjId valGetComposite(TValId val) const;
 
         // TODO: remove this
-        TObjId subObj(TObjId obj, int nth) const;
-
-        // TODO: remove this
         TObjId objParent(TObjId obj, int *nth = 0) const;
 
     public:
