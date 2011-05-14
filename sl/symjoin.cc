@@ -116,8 +116,8 @@ struct SymJoinCtx {
     std::set<TValId>            sset2;
 
     typedef std::map<TObjId /* src */, TObjId /* dst */>        TObjMap;
-    TObjMap                     objMap1;
-    TObjMap                     objMap2;
+    std::vector<TObjId>         liveList1;
+    std::vector<TObjId>         liveList2;
 
     TValMapBidir                valMap1;
     TValMapBidir                valMap2;
@@ -212,8 +212,9 @@ void dump_ctx(const SymJoinCtx &ctx) {
         cout << "joinSymHeaps()\n";
 
     // summarize mapping
-    cout << "    ctx.objMap1        .size() = " << ctx.objMap1.size() << "\n";
-    cout << "    ctx.objMap2        .size() = " << ctx.objMap2.size() << "\n\n";
+    cout << "    ctx.liveList1      .size() = " << ctx.liveList1.size() << "\n";
+    cout << "    ctx.liveList2      .size() = " << ctx.liveList2.size()
+        << "\n\n";
     cout << "    ctx.valMap1[0]     .size() = " << ctx.valMap1[0].size()
         << "\n";
     cout << "    ctx.valMap2[0]     .size() = " << ctx.valMap2[0].size()
@@ -483,13 +484,6 @@ struct ObjJoinVisitor {
         const TObjId obj2   = item[1];
         const TObjId objDst = item[2];
 
-        // store object IDs mapping
-        if (OBJ_INVALID != obj1)
-            ctx.objMap1[obj1] = objDst;
-
-        if (OBJ_INVALID != obj2)
-            ctx.objMap2[obj2] = objDst;
-
         // store object's addresses
         if (!defineAddressMapping(ctx, obj1, obj2, objDst))
             return false;
@@ -556,6 +550,11 @@ bool traverseSubObjs(
     sht[0] = &ctx.sh1;
     sht[1] = &ctx.sh2;
     sht[2] = &ctx.dst;
+
+    if (SymHeap::isPossibleToDeref(ctx.sh1.valTarget(addr1)))
+        ctx.sh1.gatherLiveObjects(ctx.liveList1, addr1);
+    if (SymHeap::isPossibleToDeref(ctx.sh2.valTarget(addr2)))
+        ctx.sh2.gatherLiveObjects(ctx.liveList2, addr2);
 
     // initialize visitor
     ObjJoinVisitor objVisitor(ctx);
@@ -1805,10 +1804,9 @@ bool setDstValues(SymJoinCtx &ctx, const std::set<TObjId> *blackList = 0) {
     typedef std::map<TObjId /* objDst */, TObjPair> TMap;
     TMap rMap;
 
-    // reverse mapping for ctx.objMap1
+    // reverse mapping for ctx.liveList1
     const TValMap &vMap1 = ctx.valMap1[0];
-    BOOST_FOREACH(TObjMap::const_reference ref, ctx.objMap1) {
-        const TObjId objSrc = ref.first;
+    BOOST_FOREACH(const TObjId objSrc, ctx.liveList1) {
         const TObjType clt = ctx.sh1.objType(objSrc);
         const TValId atDst = roMapLookup(vMap1, ctx.sh1.placedAt(objSrc));
         const TObjId objDst = ctx.dst.objAt(atDst, clt);
@@ -1819,10 +1817,9 @@ bool setDstValues(SymJoinCtx &ctx, const std::set<TObjId> *blackList = 0) {
         rMap[objDst].first = objSrc;
     }
 
-    // reverse mapping for ctx.objMap2
+    // reverse mapping for ctx.liveList2
     const TValMap &vMap2 = ctx.valMap2[0];
-    BOOST_FOREACH(TObjMap::const_reference ref, ctx.objMap2) {
-        const TObjId objSrc = ref.first;
+    BOOST_FOREACH(const TObjId objSrc, ctx.liveList2) {
         const TObjType clt = ctx.sh2.objType(objSrc);
         const TValId atDst = roMapLookup(vMap2, ctx.sh2.placedAt(objSrc));
         const TObjId objDst = ctx.dst.objAt(atDst, clt);
