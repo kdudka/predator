@@ -230,6 +230,7 @@ struct SymHeapCore::Private {
 
     struct Value {
         EUnknownValue               code;
+        EValueOrigin                origin;
         TObjId                      target;
         TUsedBy                     usedBy;
         TValId                      valRoot;
@@ -242,6 +243,7 @@ struct SymHeapCore::Private {
 
         Value():
             code(UV_KNOWN),
+            origin(VO_INVALID),
             target(OBJ_INVALID),
             valRoot(VAL_INVALID),
             offRoot(0),
@@ -277,7 +279,7 @@ struct SymHeapCore::Private {
     inline TObjId objRoot(const TObjId, const Object &);
     inline TObjId objRoot(const TObjId);
 
-    TValId valCreate(EUnknownValue code, TObjId target);
+    TValId valCreate(EUnknownValue code, EValueOrigin origin, TObjId target);
     TObjId objCreate();
     TObjId objCreate(TObjType clt, CVar cVar);
     TObjId objDup(TObjId root);
@@ -408,16 +410,36 @@ TObjId SymHeapCore::Private::objCreate() {
     return obj;
 }
 
-TValId SymHeapCore::Private::valCreate(EUnknownValue code, TObjId target) {
+TValId SymHeapCore::Private::valCreate(
+        EUnknownValue               code,
+        EValueOrigin                origin,
+        TObjId                      target)
+{
     // acquire value ID
     const TValId val = this->lastId<TValId>();
     this->values.resize(val + 1);
 
     Private::Value &valData = this->values[val];
     valData.code        = code;
+    valData.origin      = origin;
     valData.target      = target;
 
     return val;
+}
+
+template <class TRootMap>
+EValueOrigin digOrigin(TStorRef stor, TRootMap &rootMap, TObjId root) {
+    if (root <= 0)
+        return VO_INVALID;
+
+    const typename TRootMap::mapped_type &rootData = roMapLookup(rootMap, root);
+    const int uid = rootData.cVar.uid;
+    if (-1 == uid)
+        return VO_HEAP;
+
+    return (isOnStack(stor.vars[uid]))
+        ? VO_STACK
+        : VO_STATIC;
 }
 
 // FIXME: should this be declared non-const?
@@ -448,12 +470,15 @@ TValId SymHeapCore::valueOf(TObjId obj) const {
 
     if (isComposite(objData.clt)) {
         // deleayed creation of a composite value
-        val = d->valCreate(UV_KNOWN, OBJ_INVALID);
+        val = d->valCreate(UV_KNOWN, VO_INVALID, OBJ_INVALID);
         d->values[val].compObj = obj;
     }
-    else
+    else {
         // deleayed creation of an uninitialized value
-        val = d->valCreate(UV_UNINITIALIZED, OBJ_UNKNOWN);
+        const TObjId root = d->objRoot(obj);
+        const EValueOrigin vo = digOrigin(stor_, d->roots, root);
+        val = d->valCreate(UV_UNINITIALIZED, vo, OBJ_UNKNOWN);
+    }
 
     // store backward reference
     d->values[val].usedBy.insert(obj);
@@ -494,7 +519,7 @@ unsigned SymHeapCore::lastId() const {
 
 TValId SymHeapCore::valCreateDangling(TObjId kind) {
     CL_BREAK_IF(OBJ_DELETED != kind && OBJ_LOST != kind);
-    return d->valCreate(UV_KNOWN, kind);
+    return d->valCreate(UV_KNOWN, VO_ASSIGNED, kind);
 }
 
 TValId SymHeapCore::valClone(TValId val) {
@@ -508,7 +533,7 @@ TValId SymHeapCore::valClone(TValId val) {
         case UV_UNKNOWN:
         case UV_UNINITIALIZED:
         case UV_DONT_CARE:
-            return d->valCreate(valData.code, valData.target);
+            return d->valCreate(valData.code, valData.origin, valData.target);
 
         case UV_KNOWN:
         case UV_ABSTRACT:
@@ -802,7 +827,8 @@ TValId SymHeapCore::valByOffset(TValId at, TOffset off) {
         return valRoot;
 
     // off-value lookup
-    const Private::TOffMap &offMap = d->values[valRoot].offMap;
+    const Private::Value &valData = d->values[valRoot];
+    const Private::TOffMap &offMap = valData.offMap;
     Private::TOffMap::const_iterator it = offMap.find(off);
     if (offMap.end() != it)
         return it->second;
@@ -814,7 +840,7 @@ TValId SymHeapCore::valByOffset(TValId at, TOffset off) {
         code = UV_UNKNOWN;
 
     // create a new off-value
-    const TValId val = d->valCreate(code, OBJ_UNKNOWN);
+    const TValId val = d->valCreate(code, valData.origin, OBJ_UNKNOWN);
     d->values[val].valRoot = valRoot;
     d->values[val].offRoot = off;
 
@@ -849,6 +875,26 @@ bool handleSpecialTargets(EValueTarget *pCode, const TObjId target) {
             CL_BREAK_IF(target <= 0);
             return false;
     }
+}
+
+EValueOrigin SymHeapCore::valOrigin(TValId val) const {
+    switch (val) {
+        case VAL_INVALID:
+            return VO_INVALID;
+
+        case VAL_DEREF_FAILED:
+            return VO_DEREF_FAILED;
+
+        case VAL_NULL /* = VAL_FALSE */:
+        case VAL_TRUE:
+            return VO_ASSIGNED;
+
+        default:
+            CL_BREAK_IF(d->valOutOfRange(val));
+    }
+
+    const Private::Value &valData = d->values[val];
+    return valData.origin;
 }
 
 EValueTarget SymHeapCore::valTarget(TValId val) const {
@@ -897,6 +943,19 @@ EValueTarget SymHeapCore::valTarget(TValId val) const {
         return VT_ON_STACK;
     else
         return VT_STATIC;
+}
+
+bool isUninitialized(EValueOrigin code) {
+    switch (code) {
+        case VO_STATIC:
+            // this may be subject for discussion
+        case VO_HEAP:
+        case VO_STACK:
+            return true;
+
+        default:
+            return false;
+    }
 }
 
 bool isAbstract(EValueTarget code) {
@@ -1068,7 +1127,7 @@ TValId SymHeapCore::placedAt(TObjId obj) const {
     Private::Root &rootData = it->second;
     if (VAL_NULL == rootData.addr) {
         // deleayed address creation
-        rootData.addr = d->valCreate(UV_KNOWN, root);
+        rootData.addr = d->valCreate(UV_KNOWN, VO_ASSIGNED, root);
         d->values[rootData.addr].offRoot = 0;
     }
 
@@ -1416,8 +1475,8 @@ void SymHeapCore::Private::objDestroy(TObjId obj) {
     }
 }
 
-TValId SymHeapCore::valCreateUnknown(EUnknownValue code) {
-    return d->valCreate(code, OBJ_UNKNOWN);
+TValId SymHeapCore::valCreateUnknown(EUnknownValue code, EValueOrigin origin) {
+    return d->valCreate(code, origin, OBJ_UNKNOWN);
 }
 
 EUnknownValue SymHeapCore::valGetUnknown(TValId val) const {
@@ -1453,7 +1512,7 @@ TValId SymHeapCore::valCreateCustom(int cVal) {
     Private::TCValueMap::iterator iter = d->cValueMap.find(cVal);
     if (d->cValueMap.end() == iter) {
         // cVal not found, create a new wrapper for it
-        const TValId val = d->valCreate(UV_KNOWN, OBJ_INVALID);
+        const TValId val = d->valCreate(UV_KNOWN, VO_ASSIGNED, OBJ_INVALID);
         if (VAL_INVALID == val)
             return VAL_INVALID;
 

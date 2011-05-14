@@ -47,6 +47,8 @@ enum EValueOrigin {
     VO_HEAP                 ///< untouched contents of heap
 };
 
+bool isUninitialized(EValueOrigin);
+
 enum EValueTarget {
     VT_INVALID,             ///< completely invalid target
     VT_UNKNOWN,             ///< arbitrary target
@@ -312,6 +314,9 @@ class SymHeapCore {
         /// classify the object we point to
         EValueTarget valTarget(TValId) const;
 
+        /// classify where the value originates from
+        EValueOrigin valOrigin(TValId) const;
+
         /// return the address of the root which the given value is binded to
         TValId valRoot(TValId) const;
 
@@ -401,14 +406,7 @@ class SymHeapCore {
         void objDefineType(TObjId obj, TObjType clt);
 
     public:
-        /**
-         * create an @b unkown @b value, which does not guarantee trivial
-         * inequality with other values - see proveEq()
-         * @param code fine-grained kind of the unknown value, UV_KNOWN is not
-         * allowed here
-         * @return ID of the just created value
-         */
-        TValId valCreateUnknown(EUnknownValue code);
+        TValId valCreateUnknown(EUnknownValue code, EValueOrigin origin);
 
         /**
          * @b wrap a foreign (integral) value into a symbolic heap value

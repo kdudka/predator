@@ -1410,7 +1410,8 @@ bool insertSegmentClone(
         else {
             // clone unknown value
             const EUnknownValue code = /* XXX */ shGt.valGetUnknown(valGt);
-            const TValId vDst = ctx.dst.valCreateUnknown(code);
+            const EValueOrigin vo = shGt.valOrigin(valGt);
+            const TValId vDst = ctx.dst.valCreateUnknown(code, vo);
             if (handleUnknownValues(ctx, vp.first, vp.second, vDst))
                 continue;
         }
@@ -1580,6 +1581,7 @@ bool mayExistFallback(
 
 bool joinUnknownValuesCode(
         EUnknownValue           *pDst,
+        EValueOrigin            *pOrigin,
         const EUnknownValue     code1,
         const EUnknownValue     code2)
 {
@@ -1613,9 +1615,10 @@ bool joinValuePair(SymJoinCtx &ctx, const TValId v1, const TValId v2) {
     EUnknownValue code2 = /* XXX */ ctx.sh2.valGetUnknown(v2);
 
     EUnknownValue code;
-    if (joinUnknownValuesCode(&code, code1, code2)) {
+    EValueOrigin vo;
+    if (joinUnknownValuesCode(&code, &vo, code1, code2)) {
         // create a new unknown value in ctx.dst
-        const TValId vDst = ctx.dst.valCreateUnknown(code);
+        const TValId vDst = ctx.dst.valCreateUnknown(code, vo);
         return handleUnknownValues(ctx, v1, v2, vDst);
     }
 

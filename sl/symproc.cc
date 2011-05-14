@@ -73,7 +73,7 @@ TValId SymProc::heapValFromCst(const struct cl_operand &op) {
                     return VAL_NULL;
 
                 // create a new unknown non-NULL value
-                TValId val = sh_.valCreateUnknown(UV_UNKNOWN);
+                TValId val = sh_.valCreateUnknown(UV_UNKNOWN, VO_ASSIGNED);
                 sh_.neqOp(SymHeap::NEQ_ADD, val, VAL_NULL);
                 return val;
             }
@@ -89,7 +89,7 @@ TValId SymProc::heapValFromCst(const struct cl_operand &op) {
             // fall through!
 
         default:
-            return sh_.valCreateUnknown(UV_UNKNOWN);
+            return sh_.valCreateUnknown(UV_UNKNOWN, VO_ASSIGNED);
     }
 }
 
@@ -290,7 +290,7 @@ TValId SymProc::heapValFromObj(const struct cl_operand &op) {
     const TObjId obj = this->objByOperand(op);
     switch (obj) {
         case OBJ_UNKNOWN:
-            return sh_.valCreateUnknown(UV_UNKNOWN);
+            return sh_.valCreateUnknown(UV_UNKNOWN, VO_REINTERPRET);
 
         case OBJ_DEREF_FAILED:
             return VAL_DEREF_FAILED;
@@ -443,7 +443,7 @@ class UnionInvalidator {
             }
             while (OBJ_INVALID != (obj = /* XXX */ sh.objParent(obj)));
 
-            const TValId val = sh.valCreateUnknown(UV_UNKNOWN);
+            const TValId val = sh.valCreateUnknown(UV_UNKNOWN, VO_REINTERPRET);
             proc_.heapSetSingleVal(sub, val);
             return /* continue */ true;
         }
@@ -570,7 +570,7 @@ TValId SymExecCore::valFromOperand(const struct cl_operand &op) {
         // &nondet and __nodet should pass this check (ugly)
         CL_BREAK_IF(op.accessor && op.accessor->code != CL_ACCESSOR_REF);
 
-        return sh_.valCreateUnknown(UV_UNKNOWN);
+        return sh_.valCreateUnknown(UV_UNKNOWN, VO_ASSIGNED);
     }
 
 no_nasty_assumptions:
@@ -800,7 +800,7 @@ TValId compareValues(
     bool neg, preserveEq, preserveNeq;
     if (!describeCmpOp(code, &neg, &preserveEq, &preserveNeq)) {
         CL_WARN("binary operator not implemented yet");
-        return sh.valCreateUnknown(UV_UNKNOWN);
+        return sh.valCreateUnknown(UV_UNKNOWN, VO_UNKNOWN);
     }
 
     // inconsistency check
@@ -825,7 +825,7 @@ TValId compareValues(
         uvCode = UV_UNINITIALIZED;
     }
 
-    return sh.valCreateUnknown(uvCode);
+    return sh.valCreateUnknown(uvCode, /* TODO */ VO_UNKNOWN);
 }
 
 TValId SymExecCore::handlePointerPlus(
@@ -834,12 +834,12 @@ TValId SymExecCore::handlePointerPlus(
 {
     if (CL_OPERAND_CST != op.code) {
         CL_ERROR_MSG(lw_, "pointer plus offset not known in compile-time");
-        return sh_.valCreateUnknown(UV_UNKNOWN);
+        return sh_.valCreateUnknown(UV_UNKNOWN, VO_UNKNOWN);
     }
 
     if (VAL_NULL == at) {
         CL_DEBUG_MSG(lw_, "pointer plus with NULL treated as unknown value");
-        return sh_.valCreateUnknown(UV_UNKNOWN);
+        return sh_.valCreateUnknown(UV_UNKNOWN, VO_UNKNOWN);
     }
 
     const TOffset offRequested = intCstFromOperand(&op);
@@ -879,7 +879,7 @@ struct OpHandler</* unary */ 1> {
 
             default:
                 CL_WARN_MSG(proc.lw_, "unary operator not implemented yet");
-                return sh.valCreateUnknown(UV_UNKNOWN);
+                return sh.valCreateUnknown(UV_UNKNOWN, VO_UNKNOWN);
         }
     }
 };
@@ -908,7 +908,7 @@ struct OpHandler</* binary */ 2> {
                 return compareValues(sh, code, clt[0], rhs[0], rhs[1]);
 
             default:
-                return sh.valCreateUnknown(UV_UNKNOWN);
+                return sh.valCreateUnknown(UV_UNKNOWN, VO_UNKNOWN);
         }
     }
 };

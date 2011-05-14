@@ -256,7 +256,7 @@ bool handleBuiltIn(SymState                     &dst,
         CL_DEBUG_MSG(lw, "executing ___sl_get_nondet_int()");
         const struct cl_operand &opDst = opList[0];
         const TObjId objDst = core.objByOperand(opDst);
-        const TValId val = sh.valCreateUnknown(UV_UNKNOWN);
+        const TValId val = sh.valCreateUnknown(UV_UNKNOWN, VO_UNKNOWN);
         core.objSetValue(objDst, val);
 
         // insert the resulting heap
