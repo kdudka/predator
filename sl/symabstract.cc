@@ -82,17 +82,8 @@ struct UnknownValuesDuplicator {
         if (valOld <= 0)
             return /* continue */ true;
 
-        const EUnknownValue code = sh.valGetUnknown(valOld);
-        switch (code) {
-            case UV_ABSTRACT:
-            case UV_KNOWN:
-                return /* continue */ true;
-
-            case UV_UNKNOWN:
-            case UV_DONT_CARE:
-            case UV_UNINITIALIZED:
-                break;
-        }
+        if (SymHeap::isPossibleToDeref(sh.valTarget(valOld)))
+            return /* continue */ true;
 
         // duplicate unknown value
         const TValId valNew = sh.valClone(valOld);
@@ -275,17 +266,8 @@ struct ProtoCloner {
         if (val <= 0)
             return /* continue */ true;
 
-        const EUnknownValue code = sh.valGetUnknown(val);
-        switch (code) {
-            case UV_UNKNOWN:
-            case UV_DONT_CARE:
-            case UV_UNINITIALIZED:
-                return /* continue */ true;
-
-            case UV_ABSTRACT:
-            case UV_KNOWN:
-                break;
-        }
+        if (!SymHeap::isPossibleToDeref(sh.valTarget(val)))
+            return /* continue */ true;
 
         // check if we point to prototype, or shared data
         if (sh.valTargetIsProto(val))

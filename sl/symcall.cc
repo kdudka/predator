@@ -384,7 +384,7 @@ void SymCallCache::Private::setCallArgs(const CodeStorage::TOperandList &opList)
 
             // read the UV_UNINITIALIZED of lhs
             TValId val = this->heap->valueOf(lhs);
-            CL_BREAK_IF(UV_UNINITIALIZED != this->heap->valGetUnknown(val));
+            CL_BREAK_IF(VT_UNKNOWN != this->heap->valTarget(val));
 
             // change UV_UNINITIALIZED to UV_UNKNOWN in lhs
             val = this->heap->valCreateUnknown(UV_UNKNOWN);
