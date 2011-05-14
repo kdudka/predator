@@ -60,6 +60,7 @@ enum EValueTarget {
 };
 
 bool isAbstract(EValueTarget);
+bool isGone(EValueTarget);
 bool isOnHeap(EValueTarget);
 bool isProgramVar(EValueTarget);
 bool isPossibleToDeref(EValueTarget);

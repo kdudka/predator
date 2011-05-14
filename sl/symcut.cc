@@ -214,19 +214,13 @@ TValId handleValue(DeepCopyData &dc, TValId valSrc) {
         return valDst;
     }
 
-    const EUnknownValue code = src.valGetUnknown(valSrc);
-    switch (code) {
-        case UV_ABSTRACT:
-            // will be handled later
-        case UV_KNOWN:
-            break;
-
-        default: {
-            // a proper unkonwn value
-            const TValId valDst = dst.valCreateUnknown(code);
-            valMap[valSrc] = valDst;
-            return valDst;
-        }
+    const EValueTarget code = src.valTarget(valSrc);
+    if (!isPossibleToDeref(code) && !isGone(code)) {
+        // an unkonwn value
+        const EUnknownValue uv = /* XXX */ src.valGetUnknown(valSrc);
+        const TValId valDst = dst.valCreateUnknown(uv);
+        valMap[valSrc] = valDst;
+        return valDst;
     }
 
     // now is the time to "dereference" the value

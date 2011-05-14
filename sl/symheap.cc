@@ -903,6 +903,17 @@ bool isAbstract(EValueTarget code) {
     return (VT_ABSTRACT == code);
 }
 
+bool isGone(EValueTarget code) {
+    switch (code) {
+        case VT_DELETED:
+        case VT_LOST:
+            return true;
+
+        default:
+            return false;
+    }
+}
+
 bool isOnHeap(EValueTarget code) {
     switch (code) {
         case VT_ON_HEAP:

@@ -116,22 +116,15 @@ bool matchValues(
         return true;
 
     // check for unknown values
-    const EUnknownValue code = sh1.valGetUnknown(v1);
-    if (code != sh2.valGetUnknown(v2))
-        // mismatch in kind of unknown values
+    const EValueTarget code1 = sh1.valTarget(v1);
+    const EValueTarget code2 = sh2.valTarget(v2);
+    if (code1 != code2)
+        // mismatch in kind of values
         return false;
 
-    switch (code) {
-        case UV_KNOWN:
-        case UV_ABSTRACT:
-            break;
-
-        case UV_UNKNOWN:
-        case UV_DONT_CARE:
-        case UV_UNINITIALIZED:
-            // do not follow unknown values
-            return true;
-    }
+    if (!isPossibleToDeref(code1) && VT_CUSTOM != code1)
+        // do not follow unknown values
+        return true;
 
     // check custom values state
     const int cVal1 = sh1.valGetCustom(v1);
