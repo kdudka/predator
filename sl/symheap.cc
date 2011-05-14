@@ -211,6 +211,7 @@ struct SymHeapCore::Private {
         TValId                      addr;
         size_t                      cbSize;
         CVar                        cVar;
+        TObjList                    allObjs;
         TLiveObjs                   liveObjs;
         bool                        isProto;
         TUsedBy                     usedBy;
@@ -616,91 +617,63 @@ void SymHeapCore::Private::subsCreate(TObjId obj) {
             this->objects[subObj].off = offTotal;
             grid[offTotal][subClt] = subObj;
 
+            this->roots[root].allObjs.push_back(subObj);
+
             push(todo, subObj, subClt);
         }
     }
 }
 
-struct ObjDupStackItem {
-    TObjId  srcObj;
-    TObjId  dstParent;
-    int     nth;
-};
 TObjId SymHeapCore::Private::objDup(TObjId root) {
     CL_DEBUG("SymHeapCore::Private::objDup() is taking place...");
     CL_BREAK_IF(objOutOfRange(root));
     CL_BREAK_IF(OBJ_INVALID != this->objects[root].root);
 
-    TObjId image = OBJ_INVALID;
+    // duplicate object metadata
+    TObjId image = this->objCreate();
+    const Private::Object &origin = this->objects.at(root);
+    this->setValueOf(image, origin.value);
+    this->objects[image] = origin;
 
-    ObjDupStackItem item;
-    item.srcObj = root;
-    item.dstParent = OBJ_INVALID;
+    // duplicate root metadata
+    const Private::Root &rootDataSrc = roMapLookup(this->roots, root);
+    Private::Root &rootDataDst = this->roots[image];
 
-    std::stack<ObjDupStackItem> todo;
-    todo.push(item);
-    while (!todo.empty()) {
-        item = todo.top();
-        todo.pop();
+    const TObjType cltRoot = origin.clt;
+    rootDataDst.grid[/* off */0][cltRoot] = image;
+    rootDataDst.cVar    = rootDataSrc.cVar;
+    rootDataDst.isProto = rootDataSrc.isProto;
 
+    if (!isComposite(cltRoot))
+        return image;
+
+    // assume composite object
+    this->setValueOf(image, VAL_INVALID);
+
+    BOOST_FOREACH(const TObjId src, rootDataSrc.allObjs) {
         // duplicate a single object
-        const TObjId src = item.srcObj;
         const TObjId dst = this->objCreate();
-        const Private::Object &origin = this->objects.at(src);
+        const Private::Object &origin = this->objects[src];
         this->setValueOf(dst, origin.value);
 
         // copy the metadata
-        this->objects[dst] = this->objects[src];
-        this->objects[dst].parent = item.dstParent;
-        if (OBJ_INVALID == image) {
-            // root object
-            image = dst;
-            this->objects[dst].root = OBJ_INVALID;
-
-            const TObjType cltRoot = this->objects[root].clt;
-            this->roots[image].grid[/* off */0][cltRoot] = image;
-            this->roots[image].cVar    = this->roots[root].cVar;
-            this->roots[image].isProto = this->roots[root].isProto;
-        }
-        else {
-            const TLiveObjs &liveSrc = this->roots[root].liveObjs;
-            TLiveObjs::const_iterator it = liveSrc.find(src);
-            if (liveSrc.end() != it) {
-                TLiveObjs &liveDst = this->roots[image].liveObjs;
-                liveDst[dst] = it->second;
-            }
+        this->objects[dst] = origin;
+        const TLiveObjs &liveSrc = rootDataSrc.liveObjs;
+        TLiveObjs::const_iterator it = liveSrc.find(src);
+        if (liveSrc.end() != it) {
+            TLiveObjs &liveDst = rootDataDst.liveObjs;
+            liveDst[dst] = it->second;
         }
 
-        // update the reference to self in the parent object
-        const TObjId parent = item.dstParent;
-        if (OBJ_INVALID != parent) {
-            // recover root
-            this->objects[dst].root = image;
+        // recover root
+        this->objects[dst].root = image;
+        rootDataDst.allObjs.push_back(dst);
 
-            CL_BREAK_IF(objOutOfRange(parent));
-            this->objects[parent].subObjs[item.nth] = dst;
-
-            // recover grid
-            const TOffset off = this->objects[dst].off;
-            const TObjType clt = this->objects[dst].clt;
-            Private::TGrid &grid = this->roots[image].grid;
-            grid[off][clt] = dst;
-        }
-
-        const TObjList subObjs(this->objects[src].subObjs);
-        if (subObjs.empty())
-            continue;
-
-        // assume composite object
-        this->setValueOf(dst, VAL_INVALID);
-
-        // traverse composite types recursively
-        for (unsigned i = 0; i < subObjs.size(); ++i) {
-            item.srcObj     = subObjs[i];
-            item.dstParent  = dst;
-            item.nth        = i;
-            todo.push(item);
-        }
+        // recover grid
+        const TOffset off = this->objects[dst].off;
+        const TObjType clt = this->objects[dst].clt;
+        Private::TGrid &grid = rootDataDst.grid;
+        grid[off][clt] = dst;
     }
 
     return image;
@@ -732,8 +705,7 @@ void SymHeapCore::Private::subsDestroy(TObjId root) {
     Private::Root &rootData = roMapLookup(this->roots, root);
 
     typedef Private::TLiveObjs TMap;
-    BOOST_FOREACH(TMap::const_reference item, rootData.liveObjs) {
-        const TObjId obj = item.first;
+    BOOST_FOREACH(const TObjId obj, rootData.allObjs) {
         this->releaseValueOf(obj);
         this->objects[obj].value = VAL_INVALID;
     }
