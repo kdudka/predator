@@ -108,7 +108,7 @@ struct SymJoinCtx {
     SymHeap                     &sh1;
     SymHeap                     &sh2;
 
-    // they need to be black-listed in joinAbstractValues()
+    // they need to be black-listed for joinAbstractValues()
     std::set<TValId>            sset1;
     std::set<TValId>            sset2;
 
@@ -1434,49 +1434,37 @@ bool joinAbstractValues(
         SymJoinCtx              &ctx,
         const TValId            v1,
         const TValId            v2,
-        EUnknownValue           *pCode1,
-        EUnknownValue           *pCode2)
+        const EValueTarget      code1,
+        const EValueTarget      code2)
 {
     const TValId root1 = ctx.sh1.valRoot(v1);
     const TValId root2 = ctx.sh2.valRoot(v2);
 
-    bool isAbs1 = (UV_ABSTRACT == *pCode1);
-    if (isAbs1 && hasKey(ctx.sset1, root1)) {
-        // do not treat the starting point as encountered segment
-        isAbs1 = false;
-        *pCode1 = UV_KNOWN;
-    }
-
-    bool isAbs2 = (UV_ABSTRACT == *pCode2);
-    if (isAbs2 && hasKey(ctx.sset2, root2)) {
-        // do not treat the starting point as encountered segment
-        isAbs2 = false;
-        *pCode2 = UV_KNOWN;
-    }
-
-    if (!isAbs1 && !isAbs2)
-        // nothing to join here
-        return false;
+    bool isAbs1 = (VT_ABSTRACT == code1);
+    bool isAbs2 = (VT_ABSTRACT == code2);
 
     const EJoinStatus subStatus = (isAbs1)
         ? JS_USE_SH1
         : JS_USE_SH2;
 
-    const bool isValid1 = isPossibleToDeref(ctx.sh1.valTarget(root1));
-    const bool isValid2 = isPossibleToDeref(ctx.sh2.valTarget(root2));
+    const bool isValid1 = isPossibleToDeref(code1);
+    const bool isValid2 = isPossibleToDeref(code2);
     if (isValid1 && isValid2) {
-        if (isAbs1 && isAbs2)
-            return joinSegmentWithAny(pResult, ctx, root1, root2, JS_USE_ANY);
+        if (isAbs1 && isAbs2) {
+            if (!joinSegmentWithAny(pResult, ctx, root1, root2, JS_USE_ANY))
+                *pResult = false;
+
+            return true;
+        }
 
         else if (joinSegmentWithAny(pResult, ctx, root1, root2, subStatus))
             return true;
     }
 
-    if (UV_UNINITIALIZED == *pCode1 || UV_UNINITIALIZED == *pCode2)
-        // such values could be hardly used as reliable anchors
-        return false;
+    if (!insertSegmentClone(pResult, ctx, v1, v2, subStatus))
+        *pResult = false;
 
-    return insertSegmentClone(pResult, ctx, v1, v2, subStatus);
+    return true;
 }
 
 class MayExistVisitor {
@@ -1579,66 +1567,88 @@ bool mayExistFallback(
     return result;
 }
 
-bool joinUnknownValuesCode(
-        EUnknownValue           *pDst,
-        EValueOrigin            *pOrigin,
-        const EUnknownValue     code1,
-        const EUnknownValue     code2,
-        const EValueOrigin      vo1,
-        const EValueOrigin      vo2)
+bool joinValuesByCode(
+        bool                   *pResult,
+        SymJoinCtx             &ctx,
+        const TValId            v1,
+        const TValId            v2)
 {
-    if (UV_UNINITIALIZED == code1 && UV_UNINITIALIZED == code2) {
-        *pDst = UV_UNINITIALIZED;
-        if (isUninitialized(vo1))
-            *pOrigin = vo1;
-        else {
-            CL_BREAK_IF(!isUninitialized(vo2));
-            *pOrigin = vo2;
-        }
+    CL_BREAK_IF(VAL_NULL == v1 && VAL_NULL == v2);
+    const bool haveNull = (VAL_NULL == v1 || VAL_NULL == v2);
+
+    // classify their origin
+    const EValueOrigin vo1 = ctx.sh1.valOrigin(v1);
+    const EValueOrigin vo2 = ctx.sh2.valOrigin(v2);
+
+    const bool err1 = (VO_DEREF_FAILED == vo1);
+    const bool err2 = (VO_DEREF_FAILED == vo2);
+    if (err1 || err2) {
+        *pResult = (err1 == err2);
         return true;
     }
 
-    if (UV_UNKNOWN != code1 && UV_UNKNOWN != code2)
+    // classify their targets
+    const EValueTarget code1 = ctx.sh1.valTarget(v1);
+    const EValueTarget code2 = ctx.sh2.valTarget(v2);
+    const bool haveUnknown = (VT_UNKNOWN == code1 || VT_UNKNOWN == code2);
+
+    // check for uninitialized values
+    const bool isUninit1 = isUninitialized(vo1);
+    const bool isUninit2 = isUninitialized(vo2);
+    if (isUninit1 && isUninit2) {
+        // we cannot be too much precise, but we should still be deterministic
+        const EValueOrigin vo = std::min(vo1, vo2);
+        const TValId vDst = ctx.dst.valCreateUnknown(UV_UNINITIALIZED, vo);
+        *pResult = handleUnknownValues(ctx, v1, v2, vDst);
+        return true;
+    }
+
+    if ((isUninit1 || isUninit2) && (haveNull || !haveUnknown
+            || isPossibleToDeref(code1)
+            || isPossibleToDeref(code2)))
+    {
+        // an uninitialized value vs. something incompatible
+        *pResult = false;
+        return true;
+    }
+
+    if (!haveUnknown)
+        // nothing to join here
         return false;
 
-    *pDst = UV_UNKNOWN;
-    *pOrigin = (vo1 == vo2)
-        ? vo1
-        : VO_UNKNOWN;
-
+    // create a new unknown value in ctx.dst
+    const EValueOrigin vo = (vo1 == vo2) ? vo1 : VO_UNKNOWN;
+    const TValId vDst = ctx.dst.valCreateUnknown(UV_UNKNOWN, vo);
+    *pResult = handleUnknownValues(ctx, v1, v2, vDst);
     return true;
 }
 
 bool joinValuePair(SymJoinCtx &ctx, const TValId v1, const TValId v2) {
-    const bool err1 = (VAL_DEREF_FAILED == v1);
-    const bool err2 = (VAL_DEREF_FAILED == v2);
-    if (err1 && err2)
-        return true;
-    if (err1 || err2)
-        return false;
-
-    EUnknownValue code1 = /* XXX */ ctx.sh1.valGetUnknown(v1);
-    EUnknownValue code2 = /* XXX */ ctx.sh2.valGetUnknown(v2);
-
-    const EValueOrigin vo1 = ctx.sh1.valOrigin(v1);
-    const EValueOrigin vo2 = ctx.sh2.valOrigin(v2);
-
-    EUnknownValue code;
-    EValueOrigin vo;
-    if (joinUnknownValuesCode(&code, &vo, code1, code2, vo1, vo2)) {
-        // create a new unknown value in ctx.dst
-        const TValId vDst = ctx.dst.valCreateUnknown(code, vo);
-        return handleUnknownValues(ctx, v1, v2, vDst);
-    }
-
     bool result;
-    if ((UV_ABSTRACT == code1 || UV_ABSTRACT == code2)
-            && joinAbstractValues(&result, ctx, v1, v2, &code1, &code2))
+    if (joinValuesByCode(&result, ctx, v1, v2))
         return result;
 
-    if (code1 != code2) {
-        SJ_DEBUG("<-- unknown value code mismatch " << SJ_VALP(v1, v2));
-        return false;
+    EValueTarget vt1 = ctx.sh1.valTarget(v1);
+    if ((VT_ABSTRACT == vt1) && hasKey(ctx.sset1, ctx.sh1.valRoot(v1)))
+        // do not treat the starting point as encountered segment
+        vt1 = VT_ON_HEAP;
+
+    EValueTarget vt2 = ctx.sh2.valTarget(v2);
+    if ((VT_ABSTRACT == vt2) && hasKey(ctx.sset2, ctx.sh2.valRoot(v2)))
+        // do not treat the starting point as encountered segment
+        vt2 = VT_ON_HEAP;
+
+    if ((VT_ABSTRACT == vt1 || VT_ABSTRACT == vt2)
+            && joinAbstractValues(&result, ctx, v1, v2, vt1, vt2))
+        return result;
+
+    if (VAL_NULL != v1 && VAL_NULL != v2) {
+        const bool haveTarget1 = isPossibleToDeref(vt1) || isGone(vt1);
+        const bool haveTarget2 = isPossibleToDeref(vt2) || isGone(vt2);
+        if (haveTarget1 != haveTarget2) {
+            SJ_DEBUG("<-- target validity mismatch " << SJ_VALP(v1, v2));
+            return false;
+        }
     }
 
     if (followValuePair(ctx, v1, v2, /* read-only */ true))
