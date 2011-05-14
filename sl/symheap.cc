@@ -185,15 +185,12 @@ struct SymHeapCore::Private {
         TValId                      value;
         TObjType                    clt;
         TObjId                      root;
-        TObjId                      /* XXX */ parent;
-        TObjList                    /* XXX */ subObjs;
         TOffset                     off;
 
         Object():
             value(VAL_INVALID),
             clt(0),
             root(OBJ_INVALID),
-            parent(OBJ_INVALID),
             off(0)
         {
         }
@@ -211,7 +208,7 @@ struct SymHeapCore::Private {
         TValId                      addr;
         size_t                      cbSize;
         CVar                        cVar;
-        TObjList                    allObjs;
+        TObjList          /* XXX */ allObjs;
         TLiveObjs                   liveObjs;
         bool                        isProto;
         TUsedBy                     usedBy;
@@ -599,18 +596,12 @@ void SymHeapCore::Private::subsCreate(TObjId obj) {
             continue;
 
         const int cnt = clt->item_cnt;
-
-        // keeping a reference at this point may cause headaches in case
-        // of reallocation
-        this->objects[obj].subObjs.resize(cnt);
         for (int i = 0; i < cnt; ++i) {
             const struct cl_type_item *item = clt->items + i;
             TObjType subClt = item->type;
             const TObjId subObj = this->objCreate();
             this->objects[subObj].clt           = subClt;
-            this->objects[subObj].parent        = obj;
             this->objects[subObj].root          = root;
-            this->objects[obj].subObjs[i]       = subObj;
 
             const TOffset off = item->offset;
             const TOffset offTotal = off + this->objects[obj].off;
