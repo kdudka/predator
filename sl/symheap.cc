@@ -1347,22 +1347,6 @@ TObjId SymHeapCore::valGetComposite(TValId val) const {
     return d->values[val].compObj;
 }
 
-// TODO: remove this
-TObjId SymHeapCore::objParent(TObjId obj, int *nth) const {
-    if (OBJ_RETURN == obj || d->objOutOfRange(obj))
-        return OBJ_INVALID;
-
-    const Private::Object &objData = d->objects[obj];
-    const TObjId parent = objData.parent;
-    if (OBJ_INVALID == parent)
-        return OBJ_INVALID;
-
-    if (nth)
-        *nth = objData.nthItem;
-
-    return parent;
-}
-
 TObjId SymHeapCore::Private::objCreate(TObjType clt, CVar cVar) {
     const TObjId obj = this->objCreate();
     this->objects[obj].clt = clt;

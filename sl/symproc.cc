@@ -404,6 +404,8 @@ class ValueWriter {
         }
 };
 
+// TODO: implement this functionality directly in SymHeap
+#if 0
 class UnionInvalidator {
     private:
         SymProc             &proc_;
@@ -447,6 +449,7 @@ class UnionInvalidator {
             return /* continue */ true;
         }
 };
+#endif
 
 class ValueMirror {
     private:
@@ -465,6 +468,8 @@ class ValueMirror {
 };
 
 void SymProc::objSetValue(TObjId lhs, TValId rhs) {
+    // TODO: implement this functionality directly in SymHeap
+#if 0
     // seek all surrounding unions on the way to root (if any)
     TObjId parent, obj = lhs;
     for (; OBJ_INVALID != (parent = sh_.objParent(obj)); obj = parent) {
@@ -476,6 +481,7 @@ void SymProc::objSetValue(TObjId lhs, TValId rhs) {
         UnionInvalidator visitor(this, parent, obj);
         traverseTypeIc(clt, visitor, /* digOnlyStructs */ true);
     }
+#endif
 
     // FIXME: handle some other special values also this way?
     if (VAL_DEREF_FAILED == rhs) {

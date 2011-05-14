@@ -249,7 +249,10 @@ namespace {
     }
 }
 
-bool SymPlot::Private::digFieldName(std::string &dst, TObjId obj) {
+bool SymPlot::Private::digFieldName(std::string &, TObjId) {
+    return false;
+    // TODO: port this hunk to symheap-ng if possible
+#if 0
     int nth;
     const TObjId parent = this->sh->objParent(obj, &nth);
     if (OBJ_INVALID == parent)
@@ -266,6 +269,7 @@ bool SymPlot::Private::digFieldName(std::string &dst, TObjId obj) {
 
     dst = name;
     return true;
+#endif
 }
 
 void SymPlot::Private::plotNodeObj(TObjId obj) {

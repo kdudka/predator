@@ -362,9 +362,6 @@ class SymHeapCore {
     public:
         TObjId valGetComposite(TValId val) const;
 
-        // TODO: remove this
-        TObjId objParent(TObjId obj, int *nth = 0) const;
-
     public:
         /**
          * create a new heap object of known size
