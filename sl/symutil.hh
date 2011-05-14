@@ -138,7 +138,6 @@ bool /* complete */ traverseLiveObjsGeneric(
         SymHeap &sh = *heaps[i];
 
         const TValId addr = at[i];
-        CL_BREAK_IF(sh.objAt(addr) < 0);
         roots[i] = sh.valRoot(addr);
         offs[i] = sh.valOffset(addr);
     }
@@ -148,9 +147,12 @@ bool /* complete */ traverseLiveObjsGeneric(
     std::set<TItem> all;
     for (unsigned i = 0; i < N; ++i) {
         SymHeap &sh = *heaps[i];
+        const TValId root = roots[i];
+        if (root < 0)
+            continue;
 
         TObjList objs;
-        sh.gatherLiveObjects(objs, roots[i]);
+        sh.gatherLiveObjects(objs, root);
         BOOST_FOREACH(const TObjId obj, objs) {
             const TValId objAt = sh.placedAt(obj);
             const TOffset off = sh.valOffset(objAt) - offs[i];

@@ -24,7 +24,6 @@
 #include <cl/cldebug.hh>
 #include <cl/clutil.hh>
 
-#include "symclone.hh"
 #include "symcmp.hh"
 #include "symdump.hh"
 #include "symgc.hh"
@@ -38,7 +37,9 @@
 #include <map>
 #include <set>
 
+#include <boost/array.hpp>
 #include <boost/foreach.hpp>
+#include <boost/tuple/tuple.hpp>
 
 static bool debugSymJoin = static_cast<bool>(DEBUG_SYMJOIN);
 
@@ -74,7 +75,6 @@ namespace {
     }
 }
 
-typedef boost::array<TObjId, 3>                                 TObjTriple;
 typedef boost::array<TValId, 3>                                 TValTriple;
 
 template <class T>
@@ -479,7 +479,7 @@ struct ObjJoinVisitor {
     {
     }
 
-    bool operator()(const TObjTriple &item) {
+    bool operator()(const TObjId item[3]) {
         const TObjId obj1   = item[0];
         const TObjId obj2   = item[1];
         const TObjId objDst = item[2];
@@ -527,6 +527,9 @@ bool traverseSubObjs(
         const TValId            addrDst,
         const BindingOff        *offBlackList = 0)
 {
+    if (!defineValueMapping(ctx, addr1, addr2, addrDst))
+        return false;
+
     // TODO: remove this
     const TObjId root1    = ctx.sh1.objAt(addr1);
     const TObjId root2    = ctx.sh2.objAt(addr2);
@@ -541,15 +544,17 @@ bool traverseSubObjs(
     CL_BREAK_IF(OBJ_INVALID != root1 && *clt1 != *cltDst);
     CL_BREAK_IF(OBJ_INVALID != root2 && *clt2 != *cltDst);
 #endif
-    TObjTriple roots;
-    roots[/* sh1 */ 0] = root1;
-    roots[/* sh2 */ 1] = root2;
-    roots[/* dst */ 2] = rootDst;
+    TValId roots[] = {
+        addr1,
+        addr2,
+        addrDst
+    };
 
-    TSymHeapTriple sht;
-    sht[0] = &ctx.sh1;
-    sht[1] = &ctx.sh2;
-    sht[2] = &ctx.dst;
+    SymHeap *const heaps[] = {
+        &ctx.sh1,
+        &ctx.sh2,
+        &ctx.dst
+    };
 
     if (SymHeap::isPossibleToDeref(ctx.sh1.valTarget(addr1)))
         ctx.sh1.gatherLiveObjects(ctx.liveList1, addr1);
@@ -577,8 +582,7 @@ bool traverseSubObjs(
     }
 
     // guide the visitors through them
-    return objVisitor(roots)
-        && traverseSubObjs<3>(sht, roots, objVisitor);
+    return traverseLiveObjsGeneric<3>(heaps, roots, objVisitor);
 }
 
 bool segMatchLookAhead(
