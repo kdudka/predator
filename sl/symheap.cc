@@ -184,16 +184,14 @@ struct SymHeapCore::Private {
     struct Object {
         TValId                      value;
         TObjType                    clt;
-        int                         nthItem; // -1  OR  0 .. parent.item_cnt-1
         TObjId                      root;
-        TObjId                      parent;
-        TObjList                    subObjs;
+        TObjId                      /* XXX */ parent;
+        TObjList                    /* XXX */ subObjs;
         TOffset                     off;
 
         Object():
             value(VAL_INVALID),
             clt(0),
-            nthItem(-1),
             root(OBJ_INVALID),
             parent(OBJ_INVALID),
             off(0)
@@ -611,7 +609,6 @@ void SymHeapCore::Private::subsCreate(TObjId obj) {
             this->objects[subObj].clt           = subClt;
             this->objects[subObj].parent        = obj;
             this->objects[subObj].root          = root;
-            this->objects[subObj].nthItem       = i; // position in struct
             this->objects[obj].subObjs[i]       = subObj;
 
             const TOffset off = item->offset;
@@ -723,25 +720,18 @@ void SymHeapCore::gatherLiveObjects(TObjList &dst, TValId atAddr) const {
 }
 
 void SymHeapCore::Private::subsDestroy(TObjId root) {
-    typedef std::stack<TObjId> TStack;
-    TStack todo;
+    this->releaseValueOf(root);
+    this->objects[root].value = VAL_INVALID;
+    Private::Root &rootData = roMapLookup(this->roots, root);
 
-    // we are using explicit stack to avoid recursion
-    todo.push(root);
-    while (!todo.empty()) {
-        const TObjId obj = todo.top();
-        todo.pop();
-
-        // schedule all subvars for removal
-        CL_BREAK_IF(objOutOfRange(obj));
-        const Private::Object &objData = this->objects[obj];
-        BOOST_FOREACH(TObjId subObj, objData.subObjs) {
-            todo.push(subObj);
-        }
-
-        // remove current
+    BOOST_FOREACH(const TObjId obj, rootData.livePtrs) {
         this->releaseValueOf(obj);
-        this->objects[obj].value   = VAL_INVALID;
+        this->objects[obj].value = VAL_INVALID;
+    }
+
+    BOOST_FOREACH(const TObjId obj, rootData.liveData) {
+        this->releaseValueOf(obj);
+        this->objects[obj].value = VAL_INVALID;
     }
 
     // remove self from roots
@@ -789,12 +779,14 @@ void SymHeapCore::swap(SymHeapCore &ref) {
 
 void SymHeapCore::objSetValue(TObjId obj, TValId val) {
     CL_BREAK_IF(d->objOutOfRange(obj));
-    CL_BREAK_IF(!d->objects[obj].subObjs.empty());
 
     // seek root
     Private::Object &objData = d->objects[obj];
     const TObjId root = d->objRoot(obj, objData);
     Private::Root &rootData = roMapLookup(d->roots, root);
+
+    const TObjType clt = objData.clt;
+    CL_BREAK_IF(isComposite(clt));
 
     if (isDataPtr(objData.clt))
         rootData.livePtrs.insert(obj);
