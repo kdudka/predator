@@ -59,6 +59,11 @@ enum EValueTarget {
     VT_ABSTRACT             ///< abstract object (segment)
 };
 
+bool isAbstract(EValueTarget);
+bool isOnHeap(EValueTarget);
+bool isProgramVar(EValueTarget);
+bool isPossibleToDeref(EValueTarget);
+
 // TODO: remove this
 enum EUnknownValue {
     UV_KNOWN = 0,           ///< known value - what we usually wish we had
@@ -305,12 +310,6 @@ class SymHeapCore {
 
         /// classify the object we point to
         EValueTarget valTarget(TValId) const;
-
-        // FIXME: this should be moved out of SymHeapCore
-        static bool isAbstract(EValueTarget);
-        static bool isOnHeap(EValueTarget);
-        static bool isProgramVar(EValueTarget);
-        static bool isPossibleToDeref(EValueTarget);
 
         /// return the address of the root which the given value is binded to
         TValId valRoot(TValId) const;

@@ -623,7 +623,7 @@ void SymExecCore::execFreeCore(const TValId val) {
         return;
     }
 
-    if (SymHeap::isProgramVar(sh_.valTarget(val))) {
+    if (isProgramVar(sh_.valTarget(val))) {
         CVar cv = sh_.cVarByRoot(val);
         CL_DEBUG("about to free var " << varTostring(sh_.stor(), cv.uid));
         CL_ERROR_MSG(lw_, "attempt to free a non-heap object");

@@ -277,7 +277,7 @@ TValId segClone(SymHeap &sh, const TValId seg) {
 
 bool dlSegCheckConsistency(const SymHeap &sh) {
     TValList addrs;
-    sh.gatherRootObjects(addrs, SymHeap::isAbstract);
+    sh.gatherRootObjects(addrs, isAbstract);
     BOOST_FOREACH(const TValId at, addrs) {
         const EObjKind kind = sh.valTargetKind(at);
         switch (kind) {

@@ -899,11 +899,11 @@ EValueTarget SymHeapCore::valTarget(TValId val) const {
         return VT_STATIC;
 }
 
-bool SymHeapCore::isAbstract(EValueTarget code) {
+bool isAbstract(EValueTarget code) {
     return (VT_ABSTRACT == code);
 }
 
-bool SymHeapCore::isOnHeap(EValueTarget code) {
+bool isOnHeap(EValueTarget code) {
     switch (code) {
         case VT_ON_HEAP:
         case VT_ABSTRACT:
@@ -914,7 +914,7 @@ bool SymHeapCore::isOnHeap(EValueTarget code) {
     }
 }
 
-bool SymHeapCore::isProgramVar(EValueTarget code) {
+bool isProgramVar(EValueTarget code) {
     switch (code) {
         case VT_STATIC:
         case VT_ON_STACK:
@@ -925,9 +925,9 @@ bool SymHeapCore::isProgramVar(EValueTarget code) {
     }
 }
 
-bool SymHeapCore::isPossibleToDeref(EValueTarget code) {
-    return SymHeapCore::isOnHeap(code)
-        || SymHeapCore::isProgramVar(code);
+bool isPossibleToDeref(EValueTarget code) {
+    return isOnHeap(code)
+        || isProgramVar(code);
 }
 
 TValId SymHeapCore::valRoot(TValId val) const {

@@ -82,7 +82,7 @@ struct UnknownValuesDuplicator {
         if (valOld <= 0)
             return /* continue */ true;
 
-        if (SymHeap::isPossibleToDeref(sh.valTarget(valOld)))
+        if (isPossibleToDeref(sh.valTarget(valOld)))
             return /* continue */ true;
 
         // duplicate unknown value
@@ -134,7 +134,7 @@ void detachClonedPrototype(
 }
 
 TValId protoClone(SymHeap &sh, const TValId proto) {
-    if (SymHeap::isAbstract(sh.valTarget(proto))) {
+    if (isAbstract(sh.valTarget(proto))) {
         // clone segment prototype
         const TValId clone = segClone(sh, proto);
         segSetProto(sh, clone, false);
@@ -212,7 +212,7 @@ void cloneGenericPrototype(
     // clone the prototypes while reseting the minimal size to zero
     for (unsigned i = 0; i < cnt; ++i) {
         const TValId proto = protoList[i];
-        if (SymHeap::isAbstract(sh.valTarget(proto))) {
+        if (isAbstract(sh.valTarget(proto))) {
             lengthList[i] = segMinLength(sh, proto);
             segSetMinLength(sh, proto, /* LS 0+ */ 0);
         }
@@ -266,7 +266,7 @@ struct ProtoCloner {
         if (val <= 0)
             return /* continue */ true;
 
-        if (!SymHeap::isPossibleToDeref(sh.valTarget(val)))
+        if (!isPossibleToDeref(sh.valTarget(val)))
             return /* continue */ true;
 
         // check if we point to prototype, or shared data
@@ -360,7 +360,7 @@ void slSegAbstractionStep(SymHeap &sh, TValId *pCursor, const BindingOff &off)
 
     // read minimal length of 'obj' and set it temporarily to zero
     unsigned len = objMinLength(sh, at);
-    if (SymHeap::isAbstract(sh.valTarget(at)))
+    if (isAbstract(sh.valTarget(at)))
         segSetMinLength(sh, at, /* SLS 0+ */ 0);
 
     len += objMinLength(sh, nextAt);

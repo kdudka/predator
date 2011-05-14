@@ -229,7 +229,7 @@ TValId jumpToNextObj(
         // type mismatch
         return VAL_INVALID;
 
-    if (!SymHeap::isOnHeap(sh.valTarget(next)))
+    if (!isOnHeap(sh.valTarget(next)))
         // objects on stack should NOT be abstracted out
         return VAL_INVALID;
 
@@ -586,7 +586,7 @@ unsigned /* len */ discoverBestAbstraction(
 
     // go through all potential segment entries
     TValList addrs;
-    sh.gatherRootObjects(addrs, SymHeap::isOnHeap);
+    sh.gatherRootObjects(addrs, isOnHeap);
     BOOST_FOREACH(const TValId at, addrs) {
         if (sh.objAt(at, CL_TYPE_STRUCT) < 0)
             // we do not support generic objects atm, this will change soonish!

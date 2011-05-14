@@ -122,7 +122,7 @@ void addObjectIfNeeded(DeepCopyData &dc, TValId rootSrcAt) {
     SymHeap &dst = dc.dst;
 
     CVar cv;
-    if (SymHeap::isProgramVar(src.valTarget(rootSrcAt))) {
+    if (isProgramVar(src.valTarget(rootSrcAt))) {
         // program variable
         cv = src.cVarByRoot(rootSrcAt);
 #if DEBUG_SYMCUT
@@ -152,7 +152,7 @@ void addObjectIfNeeded(DeepCopyData &dc, TValId rootSrcAt) {
     // preserve metadata of abstract objects
     const bool isProto = src.valTargetIsProto(rootSrcAt);
     dst.valTargetSetProto(rootDstAt, isProto);
-    if (SymHeap::isAbstract(src.valTarget(rootSrcAt))) {
+    if (isAbstract(src.valTarget(rootSrcAt))) {
         const EObjKind kind = src.valTargetKind(rootSrcAt);
         const BindingOff &off = segBinding(src, rootSrc);
         dst.valTargetSetAbstract(rootDstAt, kind, off);

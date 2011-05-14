@@ -74,8 +74,8 @@ bool matchPlainValues(
         // no need to save mapping of special values, they're fixed anyway
         return true;
 
-    const bool isValidPtr1 = SymHeap::isPossibleToDeref(sh1.valTarget(v1));
-    const bool isValidPtr2 = SymHeap::isPossibleToDeref(sh2.valTarget(v2));
+    const bool isValidPtr1 = isPossibleToDeref(sh1.valTarget(v1));
+    const bool isValidPtr2 = isPossibleToDeref(sh2.valTarget(v2));
     if (!isValidPtr1 || !isValidPtr2)
         // we need to be careful with magic values
         return matchPlainValuesCore(valMapping, v1, v2);
@@ -191,7 +191,7 @@ bool cmpValues(
         // value mismatch
         return false;
 
-    *pNeedFollow = SymHeap::isPossibleToDeref(code1);
+    *pNeedFollow = isPossibleToDeref(code1);
     return true;
 }
 

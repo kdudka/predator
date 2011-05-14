@@ -144,7 +144,7 @@ void dump_obj(const SymHeap &heap, TObjId obj) {
         cout << "    clt       = " << (*clt) << "\n";
 
     const TValId objAt = heap.placedAt(obj);
-    if (SymHeap::isProgramVar(heap.valTarget(objAt))) {
+    if (isProgramVar(heap.valTarget(objAt))) {
         CVar cVar = heap.cVarByRoot(heap.valRoot(objAt));
         cout << "    cVar      = /* CodeStorage var uid */ #" << cVar.uid
             << ", inst = " << cVar.inst

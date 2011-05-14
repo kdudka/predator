@@ -290,7 +290,7 @@ void SymPlot::Private::plotNodeObj(TObjId obj) {
     // dig root object
     const TValId rootAt = this->sh->valRoot(this->sh->placedAt(obj));
 
-    const bool isVar = SymHeap::isProgramVar(this->sh->valTarget(rootAt));
+    const bool isVar = isProgramVar(this->sh->valTarget(rootAt));
     if (isVar)
         // colorize on-stack object
         this->dotStream << ", fontcolor=blue";

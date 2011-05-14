@@ -89,7 +89,7 @@ inline TValId dlSegPeer(const SymHeap &sh, TValId dls) {
 /// return DLS peer object in case of DLS, the given value otherwise
 inline TValId segPeer(const SymHeap &sh, TValId seg) {
     CL_BREAK_IF(sh.valOffset(seg));
-    CL_BREAK_IF(!SymHeap::isAbstract(sh.valTarget(seg)));
+    CL_BREAK_IF(!isAbstract(sh.valTarget(seg)));
     return (OK_DLS == sh.valTargetKind(seg))
         ? dlSegPeer(sh, seg)
         : seg;
@@ -127,7 +127,7 @@ inline unsigned objMinLength(const SymHeap &sh, TValId at) {
         // XXX
         return 0;
 
-    return (SymHeap::isAbstract(sh.valTarget(at)))
+    return (isAbstract(sh.valTarget(at)))
         ? segMinLength(sh, at)
         : /* OK_CONCRETE */ 1;
 }

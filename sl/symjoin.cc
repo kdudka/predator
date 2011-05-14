@@ -551,9 +551,9 @@ bool traverseSubObjs(
         &ctx.dst
     };
 
-    if (SymHeap::isPossibleToDeref(ctx.sh1.valTarget(addr1)))
+    if (isPossibleToDeref(ctx.sh1.valTarget(addr1)))
         ctx.sh1.gatherLiveObjects(ctx.liveList1, addr1);
-    if (SymHeap::isPossibleToDeref(ctx.sh2.valTarget(addr2)))
+    if (isPossibleToDeref(ctx.sh2.valTarget(addr2)))
         ctx.sh2.gatherLiveObjects(ctx.liveList2, addr2);
 
     // initialize visitor
@@ -701,8 +701,8 @@ bool joinSegBinding(
         const TValId            v1,
         const TValId            v2)
 {
-    const bool isSeg1 = SymHeap::isAbstract(ctx.sh1.valTarget(v1));
-    const bool isSeg2 = SymHeap::isAbstract(ctx.sh2.valTarget(v2));
+    const bool isSeg1 = isAbstract(ctx.sh1.valTarget(v1));
+    const bool isSeg2 = isAbstract(ctx.sh2.valTarget(v2));
     if (!isSeg1 && !isSeg2)
         // nothing to join here
         return true;
@@ -1465,8 +1465,8 @@ bool joinAbstractValues(
         ? JS_USE_SH1
         : JS_USE_SH2;
 
-    const bool isValid1 = SymHeap::isPossibleToDeref(ctx.sh1.valTarget(root1));
-    const bool isValid2 = SymHeap::isPossibleToDeref(ctx.sh2.valTarget(root2));
+    const bool isValid1 = isPossibleToDeref(ctx.sh1.valTarget(root1));
+    const bool isValid2 = isPossibleToDeref(ctx.sh2.valTarget(root2));
     if (isValid1 && isValid2) {
         if (isAbs1 && isAbs2)
             return joinSegmentWithAny(pResult, ctx, root1, root2, JS_USE_ANY);
@@ -1921,7 +1921,7 @@ bool segDetectSelfLoopHelper(
         }
 
         const TValId valNext = sh.valueOf(nextPtrFromSeg(sh, peer));
-        if (!SymHeap::isAbstract(sh.valTarget(valNext)))
+        if (!isAbstract(sh.valTarget(valNext)))
             // no next segment --> no loop
             return false;
 
@@ -1941,7 +1941,7 @@ bool segDetectSelfLoopHelper(
 bool segDetectSelfLoop(SymHeap &sh) {
     // gather all abstract objects
     TValList segRoots;
-    sh.gatherRootObjects(segRoots, SymHeap::isAbstract);
+    sh.gatherRootObjects(segRoots, isAbstract);
 
     // go through all entries
     std::set<TValId> haveSeen;
@@ -2326,15 +2326,15 @@ void recoverPrototypes(
         const TValId proto1 = roMapLookup(ctx.valMap1[/* rtl */ 1], protoGhost);
         const TValId proto2 = roMapLookup(ctx.valMap2[/* rtl */ 1], protoGhost);
 
-        if (SymHeap::isAbstract(sh.valTarget(proto1)))
+        if (isAbstract(sh.valTarget(proto1)))
             // remove Neq predicates, their targets are going to vanish soon
             segSetMinLength(sh, proto1, 0);
 
-        if (bidir && SymHeap::isAbstract(sh.valTarget(proto2)))
+        if (bidir && isAbstract(sh.valTarget(proto2)))
             // remove Neq predicates, their targets are going to vanish soon
             segSetMinLength(sh, proto2, 0);
 
-        if (SymHeap::isAbstract(sh.valTarget(protoGhost)))
+        if (isAbstract(sh.valTarget(protoGhost)))
             // temporarily remove Neq predicates
             segSetMinLength(sh, protoGhost, 0);
 
@@ -2378,7 +2378,7 @@ bool joinData(
     ++cntJoinOps;
 
     // dst is expected to be a segment
-    CL_BREAK_IF(!SymHeap::isAbstract(sh.valTarget(dst)));
+    CL_BREAK_IF(!isAbstract(sh.valTarget(dst)));
     const BindingOff off(sh.segBinding(dst));
     if (debugSymJoin) {
         EJoinStatus status = JS_USE_ANY;

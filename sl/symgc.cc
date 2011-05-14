@@ -72,7 +72,7 @@ bool digJunk(const SymHeap &heap, TValId *ptrVal) {
         // ignore custom values (e.g. fnc pointers)
         return false;
 
-    if (!SymHeap::isOnHeap(heap.valTarget(*ptrVal)))
+    if (!isOnHeap(heap.valTarget(*ptrVal)))
         // non-heap object simply can't be JUNK
         return false;
 
@@ -85,7 +85,7 @@ bool digJunk(const SymHeap &heap, TValId *ptrVal) {
     TObjId obj;
     while (wl.next(obj)) {
         const TValId val = heap.placedAt(obj);
-        if (!SymHeap::isOnHeap(heap.valTarget(val)))
+        if (!isOnHeap(heap.valTarget(val)))
             // non-heap object simply can't be JUNK
             return false;
 
