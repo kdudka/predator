@@ -38,12 +38,18 @@ void moveKnownValueToLeft(
         TValId                      &valB)
 {
     sortValues(valA, valB);
+    if (valA <= 0 || VAL_TRUE == valA)
+        return;
 
-    if ((0 < valA) && UV_KNOWN != sh.valGetUnknown(valA)) {
-        const TValId tmp = valA;
-        valA = valB;
-        valB = tmp;
-    }
+    const EValueTarget code = sh.valTarget(valA);
+    if (VT_ON_HEAP == code || isProgramVar(code)
+            || /* FIXME */ VT_CUSTOM == code
+            || /* FIXME */ isGone(code))
+        return;
+
+    const TValId tmp = valA;
+    valA = valB;
+    valB = tmp;
 }
 
 void getPtrValues(TValList &dst, const SymHeap &sh, TValId at) {

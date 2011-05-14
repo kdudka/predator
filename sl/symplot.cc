@@ -676,26 +676,26 @@ bool SymPlot::Private::handleCustomValue(TValId value) {
 }
 
 bool SymPlot::Private::handleUnknownValue(TValId value) {
-    const EUnknownValue code = this->sh->valGetUnknown(value);
+    const EValueTarget code = this->sh->valTarget(value);
     switch (code) {
-        case UV_KNOWN:
-        case UV_ABSTRACT:
+        case VT_STATIC:
+        case VT_ON_STACK:
+        case VT_ON_HEAP:
+        case VT_ABSTRACT:
+        case VT_LOST:
+        case VT_DELETED:
+        case VT_CUSTOM:
             return false;
 
-        case UV_UNINITIALIZED:
-            this->plotNodeAux(value, CL_TYPE_UNKNOWN, "UV_UNINITIALIZED");
+        case VT_UNKNOWN:
+            this->plotNodeAux(value, CL_TYPE_UNKNOWN, "VT_UNKNOWN");
             return true;
 
-        case UV_UNKNOWN:
-            this->plotNodeAux(value, CL_TYPE_UNKNOWN, "UV_UNKNOWN");
-            return true;
-
-        case UV_DONT_CARE:
-            this->plotNodeAux(value, CL_TYPE_UNKNOWN, "UV_DONT_CARE");
-            return true;
+        case VT_INVALID:
+            break;
     }
 
-    CL_TRAP;
+    CL_BREAK_IF("unhandled value target code");
     return true;
 }
 
