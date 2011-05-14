@@ -139,23 +139,17 @@ bool SymProc::checkForInvalidDeref(TValId val, TObjType cltTarget) {
             break;
     }
 
-    // do we really know the value?
-    const EUnknownValue code = sh_.valGetUnknown(val);
-    switch (code) {
-        case UV_ABSTRACT:
-        case UV_UNKNOWN:
-        case UV_DONT_CARE:
-            CL_ERROR_MSG(lw_, "dereference of unknown value");
-            bt_->printBackTrace();
-            return true;
+    if (isUninitialized(sh_.valOrigin(val))) {
+        CL_ERROR_MSG(lw_, "dereference of uninitialized value");
+        bt_->printBackTrace();
+        return true;
+    }
 
-        case UV_UNINITIALIZED:
-            CL_ERROR_MSG(lw_, "dereference of uninitialized value");
-            bt_->printBackTrace();
-            return true;
-
-        case UV_KNOWN:
-            break;
+    const EValueTarget code = sh_.valTarget(val);
+    if (!isPossibleToDeref(code) && !isGone(code)) {
+        CL_ERROR_MSG(lw_, "dereference of unknown value");
+        bt_->printBackTrace();
+        return true;
     }
 
     if (!cltTarget)
@@ -659,25 +653,17 @@ void SymExecCore::execFree(const CodeStorage::TOperandList &opList) {
             break;
     }
 
-    const EUnknownValue code = sh_.valGetUnknown(val);
-    switch (code) {
-        case UV_ABSTRACT:
-            CL_BREAK_IF("SymExecCore::execFree() got address of segment");
-            return;
+    if (isUninitialized(sh_.valOrigin(val))) {
+        CL_ERROR_MSG(lw_, "free() called on uninitialized value");
+        bt_->printBackTrace();
+        return;
+    }
 
-        case UV_KNOWN:
-            break;
-
-        case UV_UNKNOWN:
-        case UV_DONT_CARE:
-            CL_ERROR_MSG(lw_, "free() called on unknown value");
-            bt_->printBackTrace();
-            return;
-
-        case UV_UNINITIALIZED:
-            CL_ERROR_MSG(lw_, "free() called on uninitialized value");
-            bt_->printBackTrace();
-            return;
+    const EValueTarget code = sh_.valTarget(val);
+    if (!isPossibleToDeref(code) && !isGone(code)) {
+        CL_ERROR_MSG(lw_, "free() called on unknown value");
+        bt_->printBackTrace();
+        return;
     }
 
     CL_DEBUG_MSG(lw_, "executing free()");
@@ -818,17 +804,23 @@ TValId compareValues(
     }
 
     // propagate UV_UNINITIALIZED
-    EValueOrigin vo = sh.valOrigin(v1);
-    EUnknownValue uvCode = UV_UNKNOWN;
-    if (UV_UNINITIALIZED == sh.valGetUnknown(v1)
-            || UV_UNINITIALIZED == sh.valGetUnknown(v2))
-    {
-        uvCode = UV_UNINITIALIZED;
-        if (!isUninitialized(vo)) {
-            vo = sh.valOrigin(v2);
-            CL_BREAK_IF(!isUninitialized(vo));
-        }
-    }
+    const EValueOrigin vo1 = sh.valOrigin(v1);
+    const EValueOrigin vo2 = sh.valOrigin(v2);
+
+    const bool isUninit1 = isUninitialized(vo1);
+    const bool isUninit2 = isUninitialized(vo2);
+
+    const EUnknownValue uvCode = (isUninit1 || isUninit2)
+        ? UV_UNINITIALIZED
+        : UV_UNKNOWN;
+
+    EValueOrigin vo = VO_UNKNOWN;
+    if (isUninit1 && isUninit2)
+        vo = std::min(vo1, vo2);
+    else if (isUninit1)
+        vo = vo1;
+    else if (isUninit2)
+        vo = vo2;
 
     return sh.valCreateUnknown(uvCode, vo);
 }

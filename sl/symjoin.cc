@@ -1409,8 +1409,10 @@ bool insertSegmentClone(
         }
         else {
             // clone unknown value
-            const EUnknownValue code = /* XXX */ shGt.valGetUnknown(valGt);
             const EValueOrigin vo = shGt.valOrigin(valGt);
+            const EUnknownValue code = /* XXX */ isUninitialized(vo)
+                ? UV_UNINITIALIZED
+                : UV_UNKNOWN;
             const TValId vDst = ctx.dst.valCreateUnknown(code, vo);
             if (handleUnknownValues(ctx, vp.first, vp.second, vDst))
                 continue;

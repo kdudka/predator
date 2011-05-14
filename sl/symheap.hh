@@ -234,13 +234,7 @@ class SymHeapCore {
     public:
         TValId valCreateDangling(TObjId kind);
 
-        /**
-         * check the state of a @b possibly @b unknown @b value
-         * @param val ID of the value to check
-         * @return fine-grained kind of the unknown value, or UV_KNOWN in case
-         * of known value
-         * @todo remove SymHeapCore::valGetUnknown
-         */
+    protected:
         virtual EUnknownValue valGetUnknown(TValId val) const;
 
     public:
@@ -500,9 +494,10 @@ class SymHeap: public SymHeapCore {
 
         virtual void swap(SymHeapCore &);
 
-    public:
+    protected:
         virtual EUnknownValue valGetUnknown(TValId val) const;
 
+    public:
         /**
          * return @b kind of the target. Here @b kind means concrete object,
          * SLS, DLS, and the like.
