@@ -411,12 +411,16 @@ bool joinFreshObjTripple(
         return true;
 
     if (VAL_NULL == v1 && (v2 < 0 || hasKey(ctx.valMap2[/* lrt */ 0], v2)
-            || (!ctx.joiningData() && UV_KNOWN == ctx.sh2.valGetUnknown(v2))))
+            || (!ctx.joiningData()
+                // FIXME: should we exclude VT_ABSTRACT at this point?
+                && isPossibleToDeref(ctx.sh2.valTarget(v2)))))
         // mapping already inconsistent
         return false;
 
     if (VAL_NULL == v2 && (v1 < 0 || hasKey(ctx.valMap1[/* lrt */ 0], v1)
-            || (!ctx.joiningData() && UV_KNOWN == ctx.sh1.valGetUnknown(v1))))
+            || (!ctx.joiningData()
+                // FIXME: should we exclude VT_ABSTRACT at this point?
+                && isPossibleToDeref(ctx.sh1.valTarget(v1)))))
         // mapping already inconsistent
         return false;
 
@@ -1399,24 +1403,16 @@ bool insertSegmentClone(
             // OK_MAY_EXIST is applicable only on the first object
             off = 0;
 
-        const EUnknownValue code = shGt.valGetUnknown(valGt);
-        switch (code) {
-            case UV_UNINITIALIZED:
-            case UV_UNKNOWN:
-            case UV_DONT_CARE: {
-                // clone unknown value
-                const TValId vDst = ctx.dst.valCreateUnknown(code);
-                if (handleUnknownValues(ctx, vp.first, vp.second, vDst))
-                    continue;
-                else
-                    break;
-            }
-
-            default:
-                if (segmentCloneCore(ctx, shGt, valGt, valMapGt, action, off))
-                    continue;
-                else
-                    break;
+        if (isPossibleToDeref(shGt.valTarget(valGt))) {
+            if (segmentCloneCore(ctx, shGt, valGt, valMapGt, action, off))
+                continue;
+        }
+        else {
+            // clone unknown value
+            const EUnknownValue code = /* XXX */ shGt.valGetUnknown(valGt);
+            const TValId vDst = ctx.dst.valCreateUnknown(code);
+            if (handleUnknownValues(ctx, vp.first, vp.second, vDst))
+                continue;
         }
 
         // clone failed
@@ -1613,8 +1609,8 @@ bool joinValuePair(SymJoinCtx &ctx, const TValId v1, const TValId v2) {
     if (err1 || err2)
         return false;
 
-    EUnknownValue code1 = ctx.sh1.valGetUnknown(v1);
-    EUnknownValue code2 = ctx.sh2.valGetUnknown(v2);
+    EUnknownValue code1 = /* XXX */ ctx.sh1.valGetUnknown(v1);
+    EUnknownValue code2 = /* XXX */ ctx.sh2.valGetUnknown(v2);
 
     EUnknownValue code;
     if (joinUnknownValuesCode(&code, code1, code2)) {
@@ -1725,21 +1721,10 @@ bool seenUnknown(const SymHeap &sh, const TValId val) {
     if (val <= 0)
         return false;
 
-    const EUnknownValue code = sh.valGetUnknown(val);
-    switch (code) {
-        case UV_UNINITIALIZED:
-        case UV_UNKNOWN:
-        case UV_DONT_CARE:
-            return true;
+    if (VT_UNKNOWN == sh.valTarget(val))
+        return true;
 
-        case UV_KNOWN:
-        case UV_ABSTRACT:
-            return (sh.valOffset(val) < 0);
-    }
-
-    // not reachable
-    CL_TRAP;
-    return false;
+    return (sh.valOffset(val) < 0);
 }
 
 template <class TItem, class TBlackList>
@@ -2247,10 +2232,10 @@ struct JoinValueVisitor {
             // asymmetric prototype match (dst < src)
             return newSrc;
 
-        if (VAL_NULL == newSrc && UV_UNKNOWN == ctx.dst.valGetUnknown(newDst))
+        if (VAL_NULL == newSrc && VT_UNKNOWN == ctx.dst.valTarget(newDst))
             return newDst;
 
-        if (VAL_NULL == newDst && UV_UNKNOWN == ctx.dst.valGetUnknown(newSrc))
+        if (VAL_NULL == newDst && VT_UNKNOWN == ctx.dst.valTarget(newSrc))
             return newSrc;
 
         CL_ERROR("JoinValueVisitor failed to join values");
