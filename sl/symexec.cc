@@ -817,7 +817,7 @@ fail:
     const struct cl_operand dst = opList[/* dst */ 0];
     if (CL_OPERAND_VOID != dst.code) {
         // set return value to unknown
-        const TValId val = heap.valCreateUnknown(UV_UNKNOWN, VO_UNKNOWN);
+        const TValId val = heap.valCreateUnknown(VT_UNKNOWN, VO_UNKNOWN);
         const TObjId obj = proc.objByOperand(dst);
         proc.objSetValue(obj, val);
     }

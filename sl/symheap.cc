@@ -532,11 +532,9 @@ TValId SymHeapCore::valClone(TValId val) {
     switch (code) {
         case UV_UNKNOWN:
         case UV_UNINITIALIZED:
-        case UV_DONT_CARE:
             return d->valCreate(valData.code, valData.origin, valData.target);
 
         case UV_KNOWN:
-        case UV_ABSTRACT:
             break;
     }
 
@@ -901,6 +899,9 @@ EValueTarget SymHeapCore::valTarget(TValId val) const {
     if (val <= 0)
         return VT_INVALID;
 
+    if (this->hasAbstractTarget(val))
+        return VT_ABSTRACT;
+
     CL_BREAK_IF(d->valOutOfRange(val));
     const Private::Value &valData = d->values[val];
     if (valData.isCustom)
@@ -920,12 +921,8 @@ EValueTarget SymHeapCore::valTarget(TValId val) const {
         case UV_KNOWN:
             break;
 
-        case UV_ABSTRACT:
-            return VT_ABSTRACT;
-
         case UV_UNINITIALIZED:
         case UV_UNKNOWN:
-        case UV_DONT_CARE:
             return VT_UNKNOWN;
     }
 
@@ -1487,14 +1484,15 @@ void SymHeapCore::Private::objDestroy(TObjId obj) {
     }
 }
 
-TValId SymHeapCore::valCreateUnknown(EUnknownValue code, EValueOrigin origin) {
-    return d->valCreate(code, origin, OBJ_UNKNOWN);
+TValId SymHeapCore::valCreateUnknown(EValueTarget code, EValueOrigin origin) {
+    const EUnknownValue uv = isUninitialized(origin)
+        ? UV_UNINITIALIZED
+        : UV_UNKNOWN;
+
+    return d->valCreate(uv, origin, OBJ_UNKNOWN);
 }
 
 EUnknownValue SymHeapCore::valGetUnknown(TValId val) const {
-    if (this->hasAbstractTarget(val))
-        return UV_ABSTRACT;
-
     switch (val) {
         case VAL_NULL: /* == VAL_FALSE */
         case VAL_TRUE:
@@ -1510,12 +1508,10 @@ EUnknownValue SymHeapCore::valGetUnknown(TValId val) const {
     const EUnknownValue code = d->values[val].code;
     switch (code) {
         case UV_KNOWN:
-        case UV_ABSTRACT:
             break;
 
         case UV_UNINITIALIZED:
         case UV_UNKNOWN:
-        case UV_DONT_CARE:
             return code;
     }
 

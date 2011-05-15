@@ -218,11 +218,7 @@ TValId handleValue(DeepCopyData &dc, TValId valSrc) {
     if (!isPossibleToDeref(code) && !isGone(code)) {
         // an unkonwn value
         const EValueOrigin vo = src.valOrigin(valSrc);
-        const EUnknownValue uv /* XXX */ = (isUninitialized(vo))
-            ? UV_UNINITIALIZED
-            : UV_UNKNOWN;
-
-        const TValId valDst = dst.valCreateUnknown(uv, vo);
+        const TValId valDst = dst.valCreateUnknown(code, vo);
         valMap[valSrc] = valDst;
         return valDst;
     }

@@ -1403,16 +1403,14 @@ bool insertSegmentClone(
             // OK_MAY_EXIST is applicable only on the first object
             off = 0;
 
-        if (isPossibleToDeref(shGt.valTarget(valGt))) {
+        const EValueTarget code = shGt.valTarget(valGt);
+        if (isPossibleToDeref(code)) {
             if (segmentCloneCore(ctx, shGt, valGt, valMapGt, action, off))
                 continue;
         }
         else {
             // clone unknown value
             const EValueOrigin vo = shGt.valOrigin(valGt);
-            const EUnknownValue code = /* XXX */ isUninitialized(vo)
-                ? UV_UNINITIALIZED
-                : UV_UNKNOWN;
             const TValId vDst = ctx.dst.valCreateUnknown(code, vo);
             if (handleUnknownValues(ctx, vp.first, vp.second, vDst))
                 continue;
@@ -1600,7 +1598,7 @@ bool joinValuesByCode(
     if (isUninit1 && isUninit2) {
         // we cannot be too much precise, but we should still be deterministic
         const EValueOrigin vo = std::min(vo1, vo2);
-        const TValId vDst = ctx.dst.valCreateUnknown(UV_UNINITIALIZED, vo);
+        const TValId vDst = ctx.dst.valCreateUnknown(VT_UNKNOWN, vo);
         *pResult = handleUnknownValues(ctx, v1, v2, vDst);
         return true;
     }
@@ -1620,7 +1618,7 @@ bool joinValuesByCode(
 
     // create a new unknown value in ctx.dst
     const EValueOrigin vo = (vo1 == vo2) ? vo1 : VO_UNKNOWN;
-    const TValId vDst = ctx.dst.valCreateUnknown(UV_UNKNOWN, vo);
+    const TValId vDst = ctx.dst.valCreateUnknown(VT_UNKNOWN, vo);
     *pResult = handleUnknownValues(ctx, v1, v2, vDst);
     return true;
 }
