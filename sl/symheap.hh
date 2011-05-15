@@ -62,6 +62,7 @@ enum EValueTarget {
 };
 
 bool isAbstract(EValueTarget);
+bool isKnownObject(EValueTarget);
 bool isGone(EValueTarget);
 bool isOnHeap(EValueTarget);
 bool isProgramVar(EValueTarget);
@@ -234,8 +235,14 @@ class SymHeapCore {
     public:
         TValId valCreateDangling(TObjId kind);
 
+    private:
+        EUnknownValue valGetUnknown(TValId val) const;
+
     protected:
-        virtual EUnknownValue valGetUnknown(TValId val) const;
+        virtual bool hasAbstractTarget(TValId) const {
+            // no abstract objects at this level
+            return false;
+        }
 
     public:
         enum ENeqOp {
@@ -495,7 +502,7 @@ class SymHeap: public SymHeapCore {
         virtual void swap(SymHeapCore &);
 
     protected:
-        virtual EUnknownValue valGetUnknown(TValId val) const;
+        virtual bool hasAbstractTarget(TValId val) const;
 
     public:
         /**

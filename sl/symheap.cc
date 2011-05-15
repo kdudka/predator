@@ -962,6 +962,18 @@ bool isAbstract(EValueTarget code) {
     return (VT_ABSTRACT == code);
 }
 
+bool isKnownObject(EValueTarget code) {
+    switch (code) {
+        case VT_STATIC:
+        case VT_ON_HEAP:
+        case VT_ON_STACK:
+            return true;
+
+        default:
+            return false;
+    }
+}
+
 bool isGone(EValueTarget code) {
     switch (code) {
         case VT_DELETED:
@@ -1480,6 +1492,9 @@ TValId SymHeapCore::valCreateUnknown(EUnknownValue code, EValueOrigin origin) {
 }
 
 EUnknownValue SymHeapCore::valGetUnknown(TValId val) const {
+    if (this->hasAbstractTarget(val))
+        return UV_ABSTRACT;
+
     switch (val) {
         case VAL_NULL: /* == VAL_FALSE */
         case VAL_TRUE:
@@ -1647,12 +1662,8 @@ EObjKind SymHeap::valTargetKind(TValId val) const {
     return OK_CONCRETE;
 }
 
-EUnknownValue SymHeap::valGetUnknown(TValId val) const {
-    if (OK_CONCRETE != this->valTargetKind(val))
-        // abstract object
-        return UV_ABSTRACT;
-
-    return SymHeapCore::valGetUnknown(val);
+bool SymHeap::hasAbstractTarget(TValId val) const {
+    return (OK_CONCRETE != this->valTargetKind(val));
 }
 
 const BindingOff& SymHeap::segBinding(TValId at) const {
@@ -1703,21 +1714,21 @@ void SymHeap::valTargetSetConcrete(TValId at) {
 void SymHeap::valMerge(TValId v1, TValId v2) {
     // check that at least one value is unknown
     moveKnownValueToLeft(*this, v1, v2);
-    const EUnknownValue code1 = this->valGetUnknown(v1);
-    const EUnknownValue code2 = this->valGetUnknown(v2);
-    CL_BREAK_IF(UV_KNOWN == code2);
+    const EValueTarget code1 = this->valTarget(v1);
+    const EValueTarget code2 = this->valTarget(v2);
+    CL_BREAK_IF(isKnownObject(code2));
 
-    if (UV_ABSTRACT != code1 && UV_ABSTRACT != code2) {
+    if (VT_ABSTRACT != code1 && VT_ABSTRACT != code2) {
         // no abstract objects involved
         SymHeapCore::valMerge(v1, v2);
         return;
     }
 
-    if (UV_ABSTRACT == code1 && spliceOutListSegment(*this, v1, v2))
+    if (VT_ABSTRACT == code1 && spliceOutListSegment(*this, v1, v2))
         // splice-out succeeded ... ls(v1, v2)
         return;
 
-    if (UV_ABSTRACT == code2 && spliceOutListSegment(*this, v2, v1))
+    if (VT_ABSTRACT == code2 && spliceOutListSegment(*this, v2, v1))
         // splice-out succeeded ... ls(v2, v1)
         return;
 
@@ -1780,8 +1791,8 @@ bool SymHeapCore::proveNeq(TValId valA, TValId valB) const {
 
     // we presume (0 <= valA) and (0 < valB) at this point
     CL_BREAK_IF(d->lastValId() < valB || valB < 0);
-    const EUnknownValue code = this->valGetUnknown(valB);
-    if (UV_KNOWN == code)
+    const EValueTarget code = this->valTarget(valB);
+    if (isKnownObject(code))
         // NOTE: we know (valA != valB) at this point, look above
         return true;
 
@@ -1819,19 +1830,28 @@ bool SymHeap::proveNeq(TValId ref, TValId val) const {
 
     // having the values always in the same order leads to simpler code
     moveKnownValueToLeft(*this, ref, val);
-    if (UV_KNOWN != this->valGetUnknown(ref))
+    const EValueTarget code = this->valTarget(ref);
+    if (VAL_NULL != ref
+            && !isKnownObject(code)
+            && /* XXX */ !isGone(code)
+            && /* XXX */ VT_CUSTOM != code)
         return false;
 
     std::set<TValId> haveSeen;
 
     while (0 < val && insertOnce(haveSeen, val)) {
-        const EUnknownValue code = this->valGetUnknown(val);
+        const EValueTarget code = this->valTarget(val);
         switch (code) {
-            case UV_KNOWN:
+            case VT_ON_STACK:
+            case VT_ON_HEAP:
+            case VT_STATIC:
+            case VT_DELETED:
+            case VT_LOST:
+            case VT_CUSTOM:
                 // concrete object reached --> prove done
                 return (val != ref);
 
-            case UV_ABSTRACT:
+            case VT_ABSTRACT:
                 break;
 
             default:
