@@ -697,6 +697,7 @@ bool SymPlot::Private::handleUnknownValue(TValId value) {
             this->plotNodeAux(value, CL_TYPE_UNKNOWN, "VT_UNKNOWN");
             return true;
 
+        case VT_COMPOSITE:
         case VT_INVALID:
             break;
     }
@@ -902,14 +903,15 @@ void SymPlot::Private::digValues() {
             // bare value can't be followed
             continue;
 
-        TObjId obj = this->sh->valGetCompositeObj(value);
-        if (OBJ_INVALID != obj) {
+        if (VT_COMPOSITE == this->sh->valTarget(value)) {
             // dig composite object and eventually schedule the values inside
-            this->digObj(obj);
+            const TObjId cObj = this->sh->valGetComposite(value);
+            this->digObj(cObj);
             continue;
         }
 
         // check the value inside
+        TObjId obj;
         if (!this->resolvePointsTo(&obj, value))
             // bare value can't be followed
             continue;

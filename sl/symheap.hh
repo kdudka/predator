@@ -52,6 +52,7 @@ bool isUninitialized(EValueOrigin);
 enum EValueTarget {
     VT_INVALID,             ///< completely invalid target
     VT_UNKNOWN,             ///< arbitrary target
+    VT_COMPOSITE,           ///< value of composite object (not a pointer to!)
     VT_CUSTOM,              ///< not a pointer to data
     VT_STATIC,              ///< target is static data
     VT_ON_STACK,            ///< target is on stack
@@ -359,14 +360,7 @@ class SymHeapCore {
         void gatherCVars(TCVarList &dst) const;
 
     public:
-        /**
-         * check if the given value represents a @b composite @b object, return
-         * the object needed to be traversed in that case, OBJ_INVALID otherwise
-         * @param val ID of the value to check
-         * @return ID of a composite object in case of success, OBJ_INVALID
-         * otherwise
-         */
-        TObjId valGetCompositeObj(TValId val) const;
+        TObjId valGetComposite(TValId val) const;
 
         // TODO: remove this
         TObjId subObj(TObjId obj, int nth) const;

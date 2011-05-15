@@ -492,18 +492,16 @@ void SymProc::objSetValue(TObjId lhs, TValId rhs) {
         return;
     }
 
-    // FIXME: this doesn't work well if we get UV_UNKNOWN of type CL_TYPE_STRUCT
-    const TObjId rObj = sh_.valGetCompositeObj(rhs);
-    if (OBJ_INVALID == rObj) {
-        // non-composite value
-        this->heapSetSingleVal(lhs, rhs);
+    if (VT_COMPOSITE == sh_.valTarget(rhs)) {
+        // DFS for composite types
+        const ValueMirror mirror(this);
+        const TObjId rObj = sh_.valGetComposite(rhs);
+        const TValId roots[] = { sh_.placedAt(lhs), sh_.placedAt(rObj) };
+        traverseLiveObjs<2>(sh_, roots, mirror);
         return;
     }
 
-    // DFS for composite types
-    const ValueMirror mirror(this);
-    const TValId roots[] = { sh_.placedAt(lhs), sh_.placedAt(rObj) };
-    traverseLiveObjs<2>(sh_, roots, mirror);
+    this->heapSetSingleVal(lhs, rhs);
 }
 
 void SymProc::valDestroyTarget(TValId addr) {

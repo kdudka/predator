@@ -236,7 +236,6 @@ struct SymHeapCore::Private {
         TValId                      valRoot;
         TOffset                     offRoot;
         TObjId                      compObj;
-        bool                        isCustom;
         int                         customData;
         TOffMap                     offMap;
 
@@ -247,8 +246,7 @@ struct SymHeapCore::Private {
             target(OBJ_INVALID),
             valRoot(VAL_INVALID),
             offRoot(0),
-            compObj(OBJ_INVALID),
-            isCustom(false)
+            compObj(OBJ_INVALID)
         {
         }
     };
@@ -490,7 +488,7 @@ TValId SymHeapCore::valueOf(TObjId obj) const {
 
     if (isComposite(objData.clt)) {
         // deleayed creation of a composite value
-        val = d->valCreate(VT_INVALID, VO_INVALID, OBJ_INVALID);
+        val = d->valCreate(VT_COMPOSITE, VO_INVALID, OBJ_INVALID);
         d->values[val].compObj = obj;
     }
     else {
@@ -897,16 +895,10 @@ EValueTarget SymHeapCore::valTarget(TValId val) const {
 
     CL_BREAK_IF(d->valOutOfRange(val));
     const Private::Value &valData = d->values[val];
-    if (valData.isCustom)
-        return VT_CUSTOM;
-
-    if (OBJ_INVALID != valData.compObj)
-        // TODO: either assign a separated VT_, or drop compObj completely
-        return VT_INVALID;
-
-    TObjId target = valData.target;
     EValueTarget code = valData.code;
     switch (code) {
+        case VT_CUSTOM:
+        case VT_COMPOSITE:
         case VT_DELETED:
         case VT_LOST:
             return code;
@@ -914,6 +906,8 @@ EValueTarget SymHeapCore::valTarget(TValId val) const {
         default:
             break;
     }
+
+    TObjId target = valData.target;
     if (handleSpecialTargets(&code, target))
         return code;
 
@@ -1348,10 +1342,8 @@ void SymHeapCore::gatherRootObjects(TValList &dst, bool (*filter)(EValueTarget))
     }
 }
 
-TObjId SymHeapCore::valGetCompositeObj(TValId val) const {
-    if (VAL_NULL == val || d->valOutOfRange(val))
-        return OBJ_INVALID;
-
+TObjId SymHeapCore::valGetComposite(TValId val) const {
+    CL_BREAK_IF(VT_COMPOSITE != this->valTarget(val));
     return d->values[val].compObj;
 }
 
@@ -1504,7 +1496,6 @@ TValId SymHeapCore::valCreateCustom(int cVal) {
 
         // initialize heap value
         Private::Value &objData = d->values[val];
-        objData.isCustom    = true;
         objData.customData  = cVal;
 
         // store cVal --> val mapping
@@ -1521,10 +1512,6 @@ int SymHeapCore::valGetCustom(TValId val) const
 {
     CL_BREAK_IF(VT_CUSTOM != this->valTarget(val));
     const Private::Value &valData = d->values[val];
-    if (!valData.isCustom)
-        // not a custom value
-        return -1;
-
     return valData.customData;
 }
 
