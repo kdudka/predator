@@ -188,50 +188,52 @@ typedef std::map<TObjId, bool /* isPtr */>              TLiveObjs;
 typedef std::map<int, TValId>                           TCValueMap;
 
 // FIXME: really good idea to define this as a value type?
-struct ValueBase {
+struct BareValue {
     EValueTarget                    code;
     EValueOrigin                    origin;
     TOffset                         offRoot;
     TUsedBy                         usedBy;
 
-    ValueBase(EValueTarget code_, EValueOrigin origin_):
+    BareValue(EValueTarget code_, EValueOrigin origin_):
         code(code_),
         origin(origin_),
         offRoot(0)
     {
     }
 
-    virtual ~ValueBase() { }
-    virtual ValueBase* clone() const = 0;
+    virtual ~BareValue() { }
+    virtual BareValue* clone() const {
+        return new BareValue(*this);
+    }
 };
 
-struct CompValue: public ValueBase {
+struct CompValue: public BareValue {
     TObjId                          compObj;
 
     CompValue(EValueTarget code_, EValueOrigin origin_):
-        ValueBase(code_, origin_)
+        BareValue(code_, origin_)
     {
     }
 
-    virtual ValueBase* clone() const {
+    virtual BareValue* clone() const {
         return new CompValue(*this);
     }
 };
 
-struct CustomValue: public ValueBase {
+struct CustomValue: public BareValue {
     int                             customData;
 
     CustomValue(EValueTarget code_, EValueOrigin origin_):
-        ValueBase(code_, origin_)
+        BareValue(code_, origin_)
     {
     }
 
-    virtual ValueBase* clone() const {
+    virtual BareValue* clone() const {
         return new CustomValue(*this);
     }
 };
 
-struct OffValue: public ValueBase {
+struct OffValue: public BareValue {
     TValId                          root;
 
     OffValue(
@@ -239,29 +241,29 @@ struct OffValue: public ValueBase {
             EValueOrigin            origin_,
             TValId                  root_,
             TOffset                 offRoot_):
-        ValueBase(code_, origin_),
+        BareValue(code_, origin_),
         root(root_)
     {
         offRoot = offRoot_;
     }
 
-    virtual ValueBase* clone() const {
+    virtual BareValue* clone() const {
         return new OffValue(*this);
     }
 };
 
-struct LegacyValue: public ValueBase {
+struct RootValue: public BareValue {
     TObjId                          target;
     TOffMap                         offMap;
 
-    LegacyValue(EValueTarget code_, EValueOrigin origin_):
-        ValueBase(code_, origin_),
+    RootValue(EValueTarget code_, EValueOrigin origin_):
+        BareValue(code_, origin_),
         target(OBJ_INVALID)
     {
     }
 
-    virtual ValueBase* clone() const {
-        return new LegacyValue(*this);
+    virtual BareValue* clone() const {
+        return new RootValue(*this);
     }
 };
 
@@ -316,7 +318,7 @@ struct SymHeapCore::Private {
     CVarMap                         cVarMap;
     TCValueMap                      cValueMap;
     std::vector<Object>             objects;
-    std::vector<ValueBase *>        values;
+    std::vector<BareValue *>        values;
     TRootMap                        roots;
     NeqDb                           neqDb;
 
@@ -328,9 +330,9 @@ struct SymHeapCore::Private {
     inline bool valOutOfRange(TValId);
     inline bool objOutOfRange(TObjId);
 
-    LegacyValue* valData(const TValId);
+    RootValue* valData(const TValId);
 
-    inline TValId valRoot(const TValId, const ValueBase *);
+    inline TValId valRoot(const TValId, const BareValue *);
     inline TValId valRoot(const TValId);
 
     inline TObjId objRoot(const TObjId, const Object &);
@@ -389,15 +391,15 @@ inline bool SymHeapCore::Private::objOutOfRange(TObjId obj) {
         || (this->lastObjId() < obj);
 }
 
-inline LegacyValue* SymHeapCore::Private::valData(const TValId val) {
+inline RootValue* SymHeapCore::Private::valData(const TValId val) {
     CL_BREAK_IF(valOutOfRange(val));
-    ValueBase *base = this->values[val];
-    return dynamic_cast<LegacyValue *>(base);
+    BareValue *base = this->values[val];
+    return dynamic_cast<RootValue *>(base);
 }
 
 inline TValId SymHeapCore::Private::valRoot(
         const TValId                val,
-        const ValueBase            *valData)
+        const BareValue            *valData)
 {
     if (!valData->offRoot)
         return val;
@@ -492,18 +494,33 @@ TValId SymHeapCore::Private::valCreate(
     this->values.resize(1 + static_cast<unsigned>(val));
 
     switch (code) {
+        case VT_INVALID:
+        case VT_UNKNOWN:
+        case VT_DELETED:
+        case VT_LOST:
+            this->values[val] = new BareValue(code, origin);
+            break;
+
         case VT_COMPOSITE:
             this->values[val] = new CompValue(code, origin);
-            return val;
+            break;
 
         case VT_CUSTOM:
             this->values[val] = new CustomValue(code, origin);
-            return val;
+            break;
 
-        default:
-            this->values[val] = new LegacyValue(code, origin);
-            return val;
+        case VT_ABSTRACT:
+            CL_BREAK_IF("invalid call of SymHeapCore::Private::valCreate()");
+            // fall through!
+
+        case VT_ON_HEAP:
+        case VT_ON_STACK:
+        case VT_STATIC:
+            this->values[val] = new RootValue(code, origin);
+            break;
     }
+
+    return val;
 }
 
 TValId SymHeapCore::Private::valCreateOff(
@@ -528,18 +545,18 @@ TValId SymHeapCore::Private::valDup(TValId val) {
     this->values.resize(1 + static_cast<unsigned>(dup));
 
     // deep copy the value
-    const ValueBase *tpl = this->values[val];
-    ValueBase *dupData = /* FIXME: subtle */ tpl->clone();
+    const BareValue *tpl = this->values[val];
+    BareValue *dupData = /* FIXME: subtle */ tpl->clone();
     this->values[dup] = dupData;
 
-    // wipe ValueBase::usedBy
+    // wipe BareValue::usedBy
     dupData->usedBy.clear();
     return dup;
 }
 
 SymHeapCore::Private::Private() {
     // a placeholder for VAL_NULL (TODO: remove this)
-    this->values.push_back(new LegacyValue(VT_INVALID, VO_INVALID));
+    this->values.push_back(new RootValue(VT_INVALID, VO_INVALID));
 }
 
 SymHeapCore::Private::Private(const SymHeapCore::Private &ref):
@@ -555,7 +572,7 @@ SymHeapCore::Private::Private(const SymHeapCore::Private &ref):
 
     // deep copy of all values
     for (unsigned i = 0; i < cnt; ++i) {
-        const ValueBase *tpl = ref.values[i];
+        const BareValue *tpl = ref.values[i];
         this->values[i] = (tpl)
             ? tpl->clone()
             : 0;
@@ -563,14 +580,17 @@ SymHeapCore::Private::Private(const SymHeapCore::Private &ref):
 }
 
 SymHeapCore::Private::~Private() {
-    BOOST_FOREACH(const ValueBase *valData, this->values)
+    BOOST_FOREACH(const BareValue *valData, this->values)
         delete valData;
 }
 
 template <class TRootMap>
 EValueTarget digTarget(TStorRef stor, TRootMap &rootMap, TObjId root) {
-    if (root <= 0)
+    if (root < 0)
         return VT_INVALID;
+
+    if (OBJ_RETURN == root)
+        return VT_ON_STACK;
 
     const typename TRootMap::mapped_type &rootData = roMapLookup(rootMap, root);
     const int uid = rootData.cVar.uid;
@@ -639,8 +659,6 @@ TValId SymHeapCore::valueOf(TObjId obj) const {
         const TObjId root = d->objRoot(obj);
         const EValueOrigin vo = digOrigin(stor_, d->roots, root);
         val = d->valCreate(VT_UNKNOWN, vo);
-        LegacyValue *valData = dynamic_cast<LegacyValue *>(d->values[val]);
-        valData->target = OBJ_UNKNOWN;
     }
 
     // store backward reference
@@ -660,7 +678,7 @@ void SymHeapCore::pointedBy(TObjList &dst, TValId root) const {
     CL_BREAK_IF(d->valOutOfRange(root));
     CL_BREAK_IF(d->values[root]->offRoot);
 
-    LegacyValue *valData = d->valData(root);
+    RootValue *valData = d->valData(root);
     const Private::Root &rootData = roMapLookup(d->roots, valData->target);
     const TUsedBy &usedBy = rootData.usedBy;
     std::copy(usedBy.begin(), usedBy.end(), std::back_inserter(dst));
@@ -681,7 +699,7 @@ unsigned SymHeapCore::lastId() const {
 
 TValId SymHeapCore::valClone(TValId val) {
     CL_BREAK_IF(VAL_NULL == val || d->valOutOfRange(val));
-    const ValueBase *valData = d->values[val];
+    const BareValue *valData = d->values[val];
 
     // check unknown value code
     const EValueTarget code = valData->code;
@@ -921,20 +939,20 @@ TValId SymHeapCore::valByOffset(TValId at, TOffset off) {
     if (!off)
         return valRoot;
 
+    const EValueTarget vt = d->values[at]->code;
+    if (VT_UNKNOWN == vt || isGone(vt))
+        // do not track off-value for invalid targets
+        return d->valDup(at);
+
     // off-value lookup
-    const LegacyValue *valData = d->valData(valRoot);
+    const RootValue *valData = d->valData(valRoot);
     const TOffMap &offMap = valData->offMap;
     TOffMap::const_iterator it = offMap.find(off);
     if (offMap.end() != it)
         return it->second;
 
-    // TODO: check if there is a valid target
-    EValueTarget code = this->valTarget(valRoot);
-    if (off < 0)
-        // we ended up above the root
-        code = /* TODO */ VT_UNKNOWN;
-
     // create a new off-value
+    const EValueTarget code = this->valTarget(valRoot);
     const TValId val = d->valCreateOff(code, valData->origin, valRoot, off);
     d->valData(valRoot)->offMap[off] = val;
     return val;
@@ -987,6 +1005,11 @@ EValueTarget SymHeapCore::valTarget(TValId val) const {
         return VT_ABSTRACT;
 
     CL_BREAK_IF(d->valOutOfRange(val));
+    const TOffset off = d->values[val]->offRoot;
+    if (off < 0)
+        // this value ended up above the root
+        return VT_UNKNOWN;
+
     EValueTarget code = d->values[val]->code;
     switch (code) {
         case VT_CUSTOM:
@@ -1234,12 +1257,12 @@ TObjId SymHeapCore::Private::rootLookup(TValId val) {
 
     const EValueTarget code = this->values[val]->code;
     switch (code) {
-        case VT_COMPOSITE:
-        case VT_CUSTOM:
-            return OBJ_INVALID;
+        case VT_UNKNOWN:
+            return /* XXX */ OBJ_UNKNOWN;
 
         default:
-            break;
+            if (!isPossibleToDeref(code))
+                return OBJ_INVALID;
     }
 
     // root lookup
@@ -1312,8 +1335,9 @@ TObjId SymHeapCore::objAt(TValId at, TObjCode code) {
             break;
     }
 
-    if (CL_TYPE_VOID == code && !d->values[at]->offRoot)
-        return d->valData(at)->target;
+    if (CL_TYPE_VOID == code && !d->values[at]->offRoot
+            && isPossibleToDeref(vt))
+        return /* XXX */ d->valData(at)->target;
 
     TObjId failCode;
     const TObjByType *row;
@@ -1560,18 +1584,7 @@ void SymHeapCore::Private::objDestroy(TObjId obj) {
 }
 
 TValId SymHeapCore::valCreate(EValueTarget code, EValueOrigin origin) {
-    const TValId val = d->valCreate(code, origin);
-
-    switch (code) {
-        case VT_COMPOSITE:
-        case VT_CUSTOM:
-            return val;
-
-        default:
-            d->valData(val)->target = /* XXX */ OBJ_UNKNOWN;
-    }
-
-    return val;
+    return d->valCreate(code, origin);
 }
 
 TValId SymHeapCore::valCreateCustom(int cVal) {
@@ -1597,7 +1610,7 @@ TValId SymHeapCore::valCreateCustom(int cVal) {
 int SymHeapCore::valGetCustom(TValId val) const
 {
     CL_BREAK_IF(d->valOutOfRange(val));
-    const ValueBase *base = d->values[val];
+    const BareValue *base = d->values[val];
 
     CL_BREAK_IF(VT_CUSTOM != base->code);
     const CustomValue *valData = dynamic_cast<const CustomValue *>(base);
