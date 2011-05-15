@@ -206,15 +206,15 @@ TValId handleValue(DeepCopyData &dc, TValId valSrc) {
 
     trackUses(dc, valSrc);
 
-    const int custom = src.valGetCustom(valSrc);
-    if (-1 != custom) {
+    const EValueTarget code = src.valTarget(valSrc);
+    if (VT_CUSTOM == code) {
         // custom value, e.g. fnc pointer
+        const int custom = src.valGetCustom(valSrc);
         const TValId valDst = dst.valCreateCustom(custom);
         valMap[valSrc] = valDst;
         return valDst;
     }
 
-    const EValueTarget code = src.valTarget(valSrc);
     if (!isPossibleToDeref(code)) {
         // an unkonwn value
         const EValueOrigin vo = src.valOrigin(valSrc);

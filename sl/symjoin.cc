@@ -1031,14 +1031,21 @@ bool followValuePair(
         const TValId            v2,
         const bool              readOnly)
 {
-    const int cVal1 = ctx.sh1.valGetCustom(v1);
-    const int cVal2 = ctx.sh2.valGetCustom(v2);
-    if ((-1 == cVal1) != (-1 == cVal2) || (cVal1 != cVal2)) {
-        SJ_DEBUG("<-- custom values mismatch " << SJ_VALP(v1, v2));
-        return false;
-    }
+    const bool isCustom1 = (VT_CUSTOM == ctx.sh1.valTarget(v1));
+    const bool isCustom2 = (VT_CUSTOM == ctx.sh2.valTarget(v2));
+    if (isCustom1 || isCustom2) {
+        if (!isCustom1 || !isCustom2) {
+            SJ_DEBUG("<-- custom value vs. something else " << SJ_VALP(v1, v2));
+            return false;
+        }
 
-    if (OBJ_INVALID != cVal1) {
+        const int cVal1 = ctx.sh1.valGetCustom(v1);
+        const int cVal2 = ctx.sh2.valGetCustom(v2);
+        if (cVal1 != cVal2) {
+            SJ_DEBUG("<-- custom values mismatch " << SJ_VALP(v1, v2));
+            return false;
+        }
+
         // matching pair of custom values
         if (readOnly) {
             return checkValueMapping(ctx, v1, v2,

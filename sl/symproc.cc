@@ -326,15 +326,11 @@ int /* uid */ SymProc::fncFromOperand(const struct cl_operand &op) {
         // direct call
         const struct cl_cst &cst = op.data.cst;
         CL_BREAK_IF(CL_TYPE_FNC != cst.code);
-
         return cst.data.cst_fnc.uid;
 
     } else {
         // indirect call
         const TValId val = this->valFromOperand(op);
-        CL_BREAK_IF(VAL_INVALID == val);
-
-        // obtain the inner content of the custom value
         return sh_.valGetCustom(val);
     }
 }

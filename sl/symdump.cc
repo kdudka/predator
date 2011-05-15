@@ -270,9 +270,8 @@ TObjId /* pointsTo */ dump_value_core(const SymHeap &heap, TValId value)
     if (off)
         cout << "    valRoot   = " << heap.valRoot(value) << "\n";
 
-    // FIXME: not tested
-    const int custom = heap.valGetCustom(value);
-    if (-1 != custom) {
+    if (VT_CUSTOM == heap.valTarget(value)) {
+        const int custom = heap.valGetCustom(value);
         cout << "    cVal      = /* custom value */ #" << custom << "\n";
         return OBJ_INVALID;
     }

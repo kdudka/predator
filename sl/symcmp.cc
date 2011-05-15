@@ -122,19 +122,16 @@ bool matchValues(
         // mismatch in kind of values
         return false;
 
-    if (!isPossibleToDeref(code1) && VT_CUSTOM != code1)
+    if (VT_CUSTOM == code1) {
+        // match pair of custom values
+        const int cVal1 = sh1.valGetCustom(v1);
+        const int cVal2 = sh2.valGetCustom(v2);
+        return (cVal1 == cVal2);
+    }
+
+    if (!isPossibleToDeref(code1))
         // do not follow unknown values
         return true;
-
-    // check custom values state
-    const int cVal1 = sh1.valGetCustom(v1);
-    const int cVal2 = sh2.valGetCustom(v2);
-    if ((-1 == cVal1) != (-1 == cVal2))
-        return false;
-
-    if (-1 != cVal1)
-        // match pair of custom values
-        return (cVal1 == cVal2);
 
     const bool isProto1 = sh1.valTargetIsProto(v1);
     const bool isProto2 = sh2.valTargetIsProto(v2);

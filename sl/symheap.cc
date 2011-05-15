@@ -1519,10 +1519,7 @@ TValId SymHeapCore::valCreateCustom(int cVal) {
 
 int SymHeapCore::valGetCustom(TValId val) const
 {
-    if (VAL_NULL == val || d->valOutOfRange(val))
-        // value ID is either out of range, or does not point to a valid obj
-        return -1;
-
+    CL_BREAK_IF(VT_CUSTOM != this->valTarget(val));
     const Private::Value &valData = d->values[val];
     if (!valData.isCustom)
         // not a custom value

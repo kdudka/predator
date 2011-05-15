@@ -656,10 +656,10 @@ void SymPlot::Private::openCluster(TObjId obj) {
 bool SymPlot::Private::handleCustomValue(TValId value) {
     using namespace CodeStorage;
 
-    const int cVal = this->sh->valGetCustom(value);
-    if (-1 == cVal)
+    if (VT_CUSTOM != this->sh->valTarget(value))
         return false;
 
+    const int cVal = this->sh->valGetCustom(value);
     const CodeStorage::FncDb &fncs = this->stor->fncs;
     const Fnc *fnc = fncs[cVal];
     CL_BREAK_IF(!fnc);

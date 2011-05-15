@@ -109,15 +109,14 @@ bool readNameAndValue(std::string       *pName,
     return true;
 }
 
-template <class TStor, class TFnc, class THeap>
-bool fncFromHeapVal(const TStor &stor, const TFnc **dst, TValId value,
-                    const THeap &heap)
+template <class TFnc>
+bool fncFromHeapVal(const TFnc **dst, TValId val, const SymHeap &sh)
 {
-    const int uid = heap.valGetCustom(value);
-    if (-1 == uid)
+    if (VT_CUSTOM != sh.valTarget(val))
         return false;
 
-    const CodeStorage::FncDb &fncs = stor.fncs;
+    const int uid = sh.valGetCustom(val);
+    const CodeStorage::FncDb &fncs = sh.stor().fncs;
     const TFnc *fnc = fncs[uid];
     if (!fnc)
         return false;
@@ -178,7 +177,6 @@ bool callPlotByPtr(const TInsn &insn, TProc &proc) {
 
 template <class TInsn, class TProc>
 bool callPlotStackFrame(const TInsn &insn, TProc &proc) {
-    const CodeStorage::Storage &stor = *insn.stor;
     const struct cl_loc *lw = &insn.loc;
     const SymHeap &sh = proc.sh();
 
@@ -187,7 +185,7 @@ bool callPlotStackFrame(const TInsn &insn, TProc &proc) {
     const CodeStorage::Fnc *fnc;
 
     if (!readNameAndValue(&plotName, &value, insn, proc)
-            || !fncFromHeapVal(stor, &fnc, value, sh))
+            || !fncFromHeapVal(&fnc, value, sh))
     {
         emitPrototypeError(lw, "___sl_plot_stack_frame");
         return false;

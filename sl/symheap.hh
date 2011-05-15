@@ -407,7 +407,7 @@ class SymHeapCore {
          * retrieve a foreign value, previously @b wrapped by valCreateCustom(),
          * from the given heap value
          * @param val ID of the value to look into
-         * @return the requested foreign value, or -1 if no such value exists
+         * @note this can be called only if (VT_CUSTOM == valTarget(val))
          */
         int valGetCustom(TValId val) const;
 
