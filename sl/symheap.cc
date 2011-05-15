@@ -40,6 +40,13 @@
 #include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
 
+#ifdef NDEBUG
+    // aggressive optimization
+#   define DCAST static_cast
+#else
+#   define DCAST dynamic_cast
+#endif
+
 template <class TMap>
 typename TMap::mapped_type& roMapLookup(
         TMap                                &roMap,
@@ -394,7 +401,7 @@ inline bool SymHeapCore::Private::objOutOfRange(TObjId obj) {
 inline RootValue* SymHeapCore::Private::valData(const TValId val) {
     CL_BREAK_IF(valOutOfRange(val));
     BareValue *base = this->values[val];
-    return dynamic_cast<RootValue *>(base);
+    return DCAST<RootValue *>(base);
 }
 
 inline TValId SymHeapCore::Private::valRoot(
@@ -404,7 +411,7 @@ inline TValId SymHeapCore::Private::valRoot(
     if (!valData->offRoot)
         return val;
 
-    const TValId valRoot = dynamic_cast<const OffValue *>(valData)->root;
+    const TValId valRoot = DCAST<const OffValue *>(valData)->root;
     CL_BREAK_IF(VAL_NULL == valRoot || valOutOfRange(valRoot));
     return valRoot;
 }
@@ -651,7 +658,7 @@ TValId SymHeapCore::valueOf(TObjId obj) const {
     if (isComposite(objData.clt)) {
         // deleayed creation of a composite value
         val = d->valCreate(VT_COMPOSITE, VO_INVALID);
-        CompValue *valData = dynamic_cast<CompValue *>(d->values[val]);
+        CompValue *valData = DCAST<CompValue *>(d->values[val]);
         valData->compObj = obj;
     }
     else {
@@ -1474,7 +1481,7 @@ TObjId SymHeapCore::valGetComposite(TValId val) const {
     CL_BREAK_IF(d->valOutOfRange(val));
     CL_BREAK_IF(VT_COMPOSITE != d->values[val]->code);
 
-    const CompValue *valData = dynamic_cast<CompValue *>(d->values[val]);
+    const CompValue *valData = DCAST<CompValue *>(d->values[val]);
     return valData->compObj;
 }
 
@@ -1594,7 +1601,7 @@ TValId SymHeapCore::valCreateCustom(int cVal) {
         const TValId val = d->valCreate(VT_CUSTOM, VO_ASSIGNED);
 
         // initialize heap value
-        CustomValue *valData = dynamic_cast<CustomValue *>(d->values[val]);
+        CustomValue *valData = DCAST<CustomValue *>(d->values[val]);
         valData->customData  = cVal;
 
         // store cVal --> val mapping
@@ -1613,7 +1620,7 @@ int SymHeapCore::valGetCustom(TValId val) const
     const BareValue *base = d->values[val];
 
     CL_BREAK_IF(VT_CUSTOM != base->code);
-    const CustomValue *valData = dynamic_cast<const CustomValue *>(base);
+    const CustomValue *valData = DCAST<const CustomValue *>(base);
     return valData->customData;
 }
 
@@ -1685,7 +1692,7 @@ void SymHeap::swap(SymHeapCore &baseRef) {
     SymHeapCore::swap(baseRef);
 
     // swap self
-    SymHeap &ref = dynamic_cast<SymHeap &>(baseRef);
+    SymHeap &ref = DCAST<SymHeap &>(baseRef);
     swapValues(this->d, ref.d);
 }
 
