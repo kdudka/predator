@@ -68,13 +68,6 @@ bool isOnHeap(EValueTarget);
 bool isProgramVar(EValueTarget);
 bool isPossibleToDeref(EValueTarget);
 
-// TODO: remove this
-enum EUnknownValue {
-    UV_KNOWN = 0,           ///< known value - what we usually wish we had
-    UV_UNKNOWN,             ///< unknown value - what we usually have in reality
-    UV_UNINITIALIZED        ///< unknown value of an uninitialised object
-};
-
 namespace CodeStorage {
     struct Storage;
 }
@@ -232,9 +225,6 @@ class SymHeapCore {
 
     public:
         TValId valCreateDangling(TObjId kind);
-
-    private:
-        EUnknownValue valGetUnknown(TValId val) const;
 
     protected:
         virtual bool hasAbstractTarget(TValId) const {
