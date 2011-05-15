@@ -191,6 +191,7 @@ typedef std::map<int, TValId>                           TCValueMap;
 struct ValueBase {
     EValueTarget                    code;
     EValueOrigin                    origin;
+    TUsedBy                         usedBy;
 
     ValueBase(EValueTarget code_, EValueOrigin origin_):
         code(code_),
@@ -202,12 +203,23 @@ struct ValueBase {
     virtual ValueBase* clone() const = 0;
 };
 
+struct CompValue: public ValueBase {
+    TObjId                          compObj;
+
+    CompValue(EValueTarget code_, EValueOrigin origin_):
+        ValueBase(code_, origin_)
+    {
+    }
+
+    virtual ValueBase* clone() const {
+        return new CompValue(*this);
+    }
+};
+
 struct LegacyValue: public ValueBase {
     TObjId                          target;
-    TUsedBy                         usedBy;
     TValId                          valRoot;
     TOffset                         offRoot;
-    TObjId                          compObj;
     int                             customData;
     TOffMap                         offMap;
 
@@ -215,23 +227,12 @@ struct LegacyValue: public ValueBase {
         ValueBase(code_, origin_),
         target(OBJ_INVALID),
         valRoot(VAL_INVALID),
-        offRoot(0),
-        compObj(OBJ_INVALID)
+        offRoot(0)
     {
     }
 
     virtual ValueBase* clone() const {
-        LegacyValue *dup = new LegacyValue(code, origin);
-
-        dup->target     = target;
-        dup->usedBy     = usedBy;
-        dup->valRoot    = valRoot;
-        dup->offRoot    = offRoot;
-        dup->compObj    = compObj;
-        dup->customData = customData;
-        dup->offMap     = offMap;
-
-        return dup;
+        return new LegacyValue(*this);
     }
 };
 
@@ -300,7 +301,7 @@ struct SymHeapCore::Private {
 
     LegacyValue* valData(const TValId);
 
-    inline TValId valRoot(const TValId, const LegacyValue *);
+    inline TValId valRoot(const TValId, const ValueBase *);
     inline TValId valRoot(const TValId);
 
     inline TObjId objRoot(const TObjId, const Object &);
@@ -363,9 +364,18 @@ inline LegacyValue* SymHeapCore::Private::valData(const TValId val) {
 
 inline TValId SymHeapCore::Private::valRoot(
         const TValId                val,
-        const LegacyValue          *valData)
+        const ValueBase            *valData)
 {
-    const TValId valRoot = valData->valRoot;
+    const EValueTarget code = valData->code;
+    switch (code) {
+        case VT_COMPOSITE:
+            return val;
+
+        default:
+            break;
+    }
+
+    const TValId valRoot = dynamic_cast<const LegacyValue *>(valData)->valRoot;
     if (VAL_INVALID == valRoot)
         return val;
 
@@ -377,9 +387,7 @@ inline TValId SymHeapCore::Private::valRoot(
 inline TValId SymHeapCore::Private::valRoot(const TValId val) {
     CL_BREAK_IF(VAL_NULL == val);
     CL_BREAK_IF(valOutOfRange(val));
-
-    const LegacyValue *valData = this->valData(val);
-    return this->valRoot(val, valData);
+    return this->valRoot(val, this->values[val]);
 }
 
 /// optimized variant, use it in case you already have &objData
@@ -406,7 +414,7 @@ void SymHeapCore::Private::releaseValueOf(TObjId obj) {
         return;
 
     CL_BREAK_IF(valOutOfRange(val));
-    TUsedBy &uses = this->valData(val)->usedBy;
+    TUsedBy &uses = this->values[val]->usedBy;
 #ifndef NDEBUG
     if (1 != uses.erase(obj))
         // *** offset detected ***
@@ -435,8 +443,7 @@ void SymHeapCore::Private::setValueOf(TObjId obj, TValId val) {
     if (val <= 0)
         return;
 
-    LegacyValue *valData = this->valData(val);
-    valData->usedBy.insert(obj);
+    this->values[val]->usedBy.insert(obj);
 
     const TObjId root = this->rootLookup(val);
     if (root < 0)
@@ -462,9 +469,17 @@ TValId SymHeapCore::Private::valCreate(
     const TValId val = this->nextId<TValId>();
     this->values.resize(1 + static_cast<unsigned>(val));
 
-    LegacyValue *valData = new LegacyValue(code, origin);
-    valData->target = target;
-    this->values[val] = valData;
+    LegacyValue *valData;
+    switch (code) {
+        case VT_COMPOSITE:
+            this->values[val] = new CompValue(code, origin);
+            break;
+
+        default:
+            valData = new LegacyValue(code, origin);
+            valData->target = target;
+            this->values[val] = valData;
+    }
 
     return val;
 }
@@ -563,7 +578,8 @@ TValId SymHeapCore::valueOf(TObjId obj) const {
     if (isComposite(objData.clt)) {
         // deleayed creation of a composite value
         val = d->valCreate(VT_COMPOSITE, VO_INVALID, OBJ_INVALID);
-        d->valData(val)->compObj = obj;
+        CompValue *valData = dynamic_cast<CompValue *>(d->values[val]);
+        valData->compObj = obj;
     }
     else {
         // deleayed creation of an uninitialized value
@@ -573,7 +589,7 @@ TValId SymHeapCore::valueOf(TObjId obj) const {
     }
 
     // store backward reference
-    d->valData(val)->usedBy.insert(obj);
+    d->values[val]->usedBy.insert(obj);
     return val;
 }
 
@@ -581,7 +597,7 @@ void SymHeapCore::usedBy(TObjList &dst, TValId val) const {
     if (VAL_NULL == val || d->valOutOfRange(val))
         return;
 
-    const TUsedBy &usedBy = d->valData(val)->usedBy;
+    const TUsedBy &usedBy = d->values[val]->usedBy;
     std::copy(usedBy.begin(), usedBy.end(), std::back_inserter(dst));
 }
 
@@ -601,7 +617,7 @@ unsigned SymHeapCore::usedByCount(TValId val) const {
     if (VAL_NULL == val || d->valOutOfRange(val))
         return 0;
 
-    const TUsedBy &usedBy = d->valData(val)->usedBy;
+    const TUsedBy &usedBy = d->values[val]->usedBy;
     return usedBy.size();
 }
 
@@ -922,8 +938,7 @@ EValueTarget SymHeapCore::valTarget(TValId val) const {
         return VT_ABSTRACT;
 
     CL_BREAK_IF(d->valOutOfRange(val));
-    const LegacyValue *valData = d->valData(val);
-    EValueTarget code = valData->code;
+    EValueTarget code = d->values[val]->code;
     switch (code) {
         case VT_CUSTOM:
         case VT_COMPOSITE:
@@ -935,11 +950,12 @@ EValueTarget SymHeapCore::valTarget(TValId val) const {
             break;
     }
 
+    const LegacyValue *valData = d->valData(val);
     TObjId target = valData->target;
     if (handleSpecialTargets(&code, target))
         return code;
 
-    code = valData->code;
+    code = d->values[val]->code;
     if (VT_UNKNOWN == code)
         return VT_UNKNOWN;
 
@@ -1047,6 +1063,15 @@ TOffset SymHeapCore::valOffset(TValId val) const {
         return 0;
 
     CL_BREAK_IF(d->valOutOfRange(val));
+    const EValueTarget code = d->values[val]->code;
+    switch (code) {
+        case VT_COMPOSITE:
+            return 0;
+
+        default:
+            break;
+    }
+
     const LegacyValue *valData = d->valData(val);
     return valData->offRoot;
 }
@@ -1175,6 +1200,15 @@ TObjId SymHeapCore::Private::rootLookup(TValId val) {
     if (VAL_NULL == val || this->valOutOfRange(val))
         return OBJ_INVALID;
 
+    const EValueTarget code = this->values[val]->code;
+    switch (code) {
+        case VT_COMPOSITE:
+            return OBJ_INVALID;
+
+        default:
+            break;
+    }
+
     // root lookup
     const TValId valRoot = this->valRoot(val);
     return this->valData(valRoot)->target;
@@ -1234,6 +1268,15 @@ TObjId SymHeapCore::ptrAt(TValId at) {
 TObjId SymHeapCore::objAt(TValId at, TObjCode code) {
     if (VAL_NULL == at || d->valOutOfRange(at))
         return OBJ_INVALID;
+
+    const EValueTarget vt = d->values[at]->code;
+    switch (vt) {
+        case VT_COMPOSITE:
+            return OBJ_INVALID;
+
+        default:
+            break;
+    }
 
     const LegacyValue *valData = d->valData(at);
     if (CL_TYPE_VOID == code && !valData->offRoot)
@@ -1371,8 +1414,11 @@ void SymHeapCore::gatherRootObjects(TValList &dst, bool (*filter)(EValueTarget))
 }
 
 TObjId SymHeapCore::valGetComposite(TValId val) const {
-    CL_BREAK_IF(VT_COMPOSITE != this->valTarget(val));
-    return d->valData(val)->compObj;
+    CL_BREAK_IF(d->valOutOfRange(val));
+    CL_BREAK_IF(VT_COMPOSITE != d->values[val]->code);
+
+    const CompValue *valData = dynamic_cast<CompValue *>(d->values[val]);
+    return valData->compObj;
 }
 
 TObjId SymHeapCore::Private::objCreate(TObjType clt, CVar cVar) {
