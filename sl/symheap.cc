@@ -539,24 +539,6 @@ unsigned SymHeapCore::lastId() const {
     return d->lastId<unsigned>();
 }
 
-TValId SymHeapCore::valCreateDangling(TObjId kind) {
-    EValueTarget code = VT_INVALID;
-    switch (kind) {
-        case OBJ_DELETED:
-            code = VT_DELETED;
-            break;
-
-        case OBJ_LOST:
-            code = VT_LOST;
-            break;
-
-        default:
-            CL_BREAK_IF("invalid call of valCreateDangling()");
-    }
-
-    return d->valCreate(code, VO_ASSIGNED, kind);
-}
-
 TValId SymHeapCore::valClone(TValId val) {
     CL_BREAK_IF(VAL_NULL == val);
     CL_BREAK_IF(d->valOutOfRange(val));
@@ -564,21 +546,11 @@ TValId SymHeapCore::valClone(TValId val) {
 
     // check unknown value code
     const EValueTarget code = valData.code;
-    if (!isPossibleToDeref(code) /* TODO */ && !isGone(code))
-        return d->valCreate(valData.code, valData.origin, valData.target);
-
-    // are we duplicating an object that does not exist?
-    const TObjId root = d->rootLookup(val);
-    switch (root) {
-        case OBJ_DELETED:
-        case OBJ_LOST:
-            return this->valCreateDangling(root);
-
-        default:
-            CL_BREAK_IF(root <= 0);
-    }
+    if (!isPossibleToDeref(code))
+        return d->valCreate(code, valData.origin, valData.target);
 
     // duplicate the root object
+    const TObjId root = d->rootLookup(val);
     const TObjId dup = d->objDup(root);
     const TValId dupAt = this->placedAt(dup);
 
@@ -1486,10 +1458,12 @@ void SymHeapCore::Private::objDestroy(TObjId obj) {
 
     // remove the corresponding program variable (if any)
     TObjId kind = OBJ_DELETED;
+    EValueTarget code = VT_DELETED;
     const CVar cv = rootData.cVar;
     if (cv.uid != /* heap object */ -1) {
         this->cVarMap.remove(cv);
         kind = OBJ_LOST;
+        code = VT_LOST;
     }
 
     // invalidate the address
@@ -1497,6 +1471,7 @@ void SymHeapCore::Private::objDestroy(TObjId obj) {
     if (0 < addr) {
         CL_BREAK_IF(valOutOfRange(addr));
         this->values[addr].target = kind;
+        this->values[addr].code   = code;
     }
 
     // destroy the object
@@ -1508,8 +1483,22 @@ void SymHeapCore::Private::objDestroy(TObjId obj) {
     }
 }
 
-TValId SymHeapCore::valCreateUnknown(EValueTarget code, EValueOrigin origin) {
-    return d->valCreate(code, origin, OBJ_UNKNOWN);
+TValId SymHeapCore::valCreate(EValueTarget code, EValueOrigin origin) {
+    TObjId target = OBJ_UNKNOWN;
+    switch (code) {
+        case VT_DELETED:
+            target = OBJ_DELETED;
+            break;
+
+        case VT_LOST:
+            target = OBJ_LOST;
+            break;
+
+        default:
+            break;
+    }
+
+    return d->valCreate(code, origin, target);
 }
 
 TValId SymHeapCore::valCreateCustom(int cVal) {

@@ -1062,19 +1062,11 @@ bool followValuePair(
         return false;
     }
 
-    if (readOnly) {
+    if (readOnly)
         // shallow scan only!
-        return checkValueMapping(ctx, v1, v2,
-                                 /* allowUnknownMapping */ true);
-    }
+        return checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ true);
 
-    if (0 < o1)
-        return followObjPair(ctx, v1, v2, JS_USE_ANY);
-
-    // special handling for OBJ_DELETED/OBJ_LOST
-    CL_BREAK_IF(o1 != OBJ_DELETED && o1 != OBJ_LOST);
-    const TValId vDst = ctx.dst.valCreateDangling(o1);
-    return defineValueMapping(ctx, v1, v2, vDst);
+    return followObjPair(ctx, v1, v2, JS_USE_ANY);
 }
 
 void considerValSchedule(
@@ -1411,7 +1403,7 @@ bool insertSegmentClone(
         else {
             // clone unknown value
             const EValueOrigin vo = shGt.valOrigin(valGt);
-            const TValId vDst = ctx.dst.valCreateUnknown(code, vo);
+            const TValId vDst = ctx.dst.valCreate(code, vo);
             if (handleUnknownValues(ctx, vp.first, vp.second, vDst))
                 continue;
         }
@@ -1583,7 +1575,7 @@ bool joinValuesByCode(
     const bool err1 = (VO_DEREF_FAILED == vo1);
     const bool err2 = (VO_DEREF_FAILED == vo2);
     if (err1 || err2) {
-        *pResult = (err1 == err2);
+        *pResult = (err1 && err2);
         return true;
     }
 
@@ -1592,13 +1584,26 @@ bool joinValuesByCode(
     const EValueTarget code2 = ctx.sh2.valTarget(v2);
     const bool haveUnknown = (VT_UNKNOWN == code1 || VT_UNKNOWN == code2);
 
+    const bool gone1 = isGone(code1);
+    const bool gone2 = isGone(code2);
+    if (gone1 || gone2) {
+        if (gone1 && gone2) {
+            const TValId vDst = ctx.dst.valCreate(VT_UNKNOWN, VO_ASSIGNED);
+            *pResult = handleUnknownValues(ctx, v1, v2, vDst);
+        }
+        else
+            *pResult = false;
+
+        return true;
+    }
+
     // check for uninitialized values
     const bool isUninit1 = isUninitialized(vo1);
     const bool isUninit2 = isUninitialized(vo2);
     if (isUninit1 && isUninit2) {
         // we cannot be too much precise, but we should still be deterministic
         const EValueOrigin vo = std::min(vo1, vo2);
-        const TValId vDst = ctx.dst.valCreateUnknown(VT_UNKNOWN, vo);
+        const TValId vDst = ctx.dst.valCreate(VT_UNKNOWN, vo);
         *pResult = handleUnknownValues(ctx, v1, v2, vDst);
         return true;
     }
@@ -1618,7 +1623,7 @@ bool joinValuesByCode(
 
     // create a new unknown value in ctx.dst
     const EValueOrigin vo = (vo1 == vo2) ? vo1 : VO_UNKNOWN;
-    const TValId vDst = ctx.dst.valCreateUnknown(VT_UNKNOWN, vo);
+    const TValId vDst = ctx.dst.valCreate(VT_UNKNOWN, vo);
     *pResult = handleUnknownValues(ctx, v1, v2, vDst);
     return true;
 }
@@ -1643,8 +1648,8 @@ bool joinValuePair(SymJoinCtx &ctx, const TValId v1, const TValId v2) {
         return result;
 
     if (VAL_NULL != v1 && VAL_NULL != v2) {
-        const bool haveTarget1 = isPossibleToDeref(vt1) || isGone(vt1);
-        const bool haveTarget2 = isPossibleToDeref(vt2) || isGone(vt2);
+        const bool haveTarget1 = isPossibleToDeref(vt1);
+        const bool haveTarget2 = isPossibleToDeref(vt2);
         if (haveTarget1 != haveTarget2) {
             SJ_DEBUG("<-- target validity mismatch " << SJ_VALP(v1, v2));
             return false;

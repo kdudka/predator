@@ -215,22 +215,10 @@ TValId handleValue(DeepCopyData &dc, TValId valSrc) {
     }
 
     const EValueTarget code = src.valTarget(valSrc);
-    if (!isPossibleToDeref(code) && !isGone(code)) {
+    if (!isPossibleToDeref(code)) {
         // an unkonwn value
         const EValueOrigin vo = src.valOrigin(valSrc);
-        const TValId valDst = dst.valCreateUnknown(code, vo);
-        valMap[valSrc] = valDst;
-        return valDst;
-    }
-
-    // now is the time to "dereference" the value
-    const TObjId targetSrc = src.objAt(valSrc);
-    CL_BREAK_IF(OBJ_INVALID == targetSrc);
-
-    if (targetSrc < 0) {
-        // special handling for OBJ_DELETED/OBJ_LOST
-        CL_BREAK_IF(OBJ_DELETED != targetSrc && OBJ_LOST != targetSrc);
-        const TValId valDst = dst.valCreateDangling(targetSrc);
+        const TValId valDst = dst.valCreate(code, vo);
         valMap[valSrc] = valDst;
         return valDst;
     }

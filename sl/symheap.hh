@@ -223,9 +223,6 @@ class SymHeapCore {
          */
         void objSetValue(TObjId obj, TValId val);
 
-    public:
-        TValId valCreateDangling(TObjId kind);
-
     protected:
         virtual bool hasAbstractTarget(TValId) const {
             // no abstract objects at this level
@@ -395,7 +392,7 @@ class SymHeapCore {
         void objDefineType(TObjId obj, TObjType clt);
 
     public:
-        TValId valCreateUnknown(EValueTarget code, EValueOrigin origin);
+        TValId valCreate(EValueTarget code, EValueOrigin origin);
 
         /**
          * @b wrap a foreign (integral) value into a symbolic heap value
