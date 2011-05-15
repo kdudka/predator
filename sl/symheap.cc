@@ -191,11 +191,13 @@ typedef std::map<int, TValId>                           TCValueMap;
 struct ValueBase {
     EValueTarget                    code;
     EValueOrigin                    origin;
+    TOffset                         offRoot;
     TUsedBy                         usedBy;
 
     ValueBase(EValueTarget code_, EValueOrigin origin_):
         code(code_),
-        origin(origin_)
+        origin(origin_),
+        offRoot(0)
     {
     }
 
@@ -232,14 +234,12 @@ struct CustomValue: public ValueBase {
 struct LegacyValue: public ValueBase {
     TObjId                          target;
     TValId                          valRoot;
-    TOffset                         offRoot;
     TOffMap                         offMap;
 
     LegacyValue(EValueTarget code_, EValueOrigin origin_):
         ValueBase(code_, origin_),
         target(OBJ_INVALID),
-        valRoot(VAL_INVALID),
-        offRoot(0)
+        valRoot(VAL_INVALID)
     {
     }
 
@@ -319,7 +319,8 @@ struct SymHeapCore::Private {
     inline TObjId objRoot(const TObjId, const Object &);
     inline TObjId objRoot(const TObjId);
 
-    TValId valCreate(EValueTarget code, EValueOrigin origin, TObjId target);
+    TValId valCreate(EValueTarget code, EValueOrigin origin);
+    TValId valDup(TValId);
     TObjId objCreate();
     TObjId objCreate(TObjType clt, CVar cVar);
     TObjId objDup(TObjId root);
@@ -475,30 +476,42 @@ TObjId SymHeapCore::Private::objCreate() {
 
 TValId SymHeapCore::Private::valCreate(
         EValueTarget                code,
-        EValueOrigin                origin,
-        TObjId                      target)
+        EValueOrigin                origin)
 {
     // acquire value ID
     const TValId val = this->nextId<TValId>();
     this->values.resize(1 + static_cast<unsigned>(val));
 
-    LegacyValue *valData;
     switch (code) {
         case VT_COMPOSITE:
             this->values[val] = new CompValue(code, origin);
-            break;
+            return val;
 
         case VT_CUSTOM:
             this->values[val] = new CustomValue(code, origin);
-            break;
+            return val;
 
         default:
-            valData = new LegacyValue(code, origin);
-            valData->target = target;
-            this->values[val] = valData;
+            this->values[val] = new LegacyValue(code, origin);
+            return val;
     }
+}
 
-    return val;
+TValId SymHeapCore::Private::valDup(TValId val) {
+    CL_BREAK_IF(valOutOfRange(val));
+
+    // acquire value ID
+    const TValId dup = this->nextId<TValId>();
+    this->values.resize(1 + static_cast<unsigned>(dup));
+
+    // deep copy the value
+    const ValueBase *tpl = this->values[val];
+    ValueBase *dupData = /* FIXME: subtle */ tpl->clone();
+    this->values[dup] = dupData;
+
+    // wipe ValueBase::usedBy
+    dupData->usedBy.clear();
+    return dup;
 }
 
 SymHeapCore::Private::Private() {
@@ -594,7 +607,7 @@ TValId SymHeapCore::valueOf(TObjId obj) const {
 
     if (isComposite(objData.clt)) {
         // deleayed creation of a composite value
-        val = d->valCreate(VT_COMPOSITE, VO_INVALID, OBJ_INVALID);
+        val = d->valCreate(VT_COMPOSITE, VO_INVALID);
         CompValue *valData = dynamic_cast<CompValue *>(d->values[val]);
         valData->compObj = obj;
     }
@@ -602,7 +615,9 @@ TValId SymHeapCore::valueOf(TObjId obj) const {
         // deleayed creation of an uninitialized value
         const TObjId root = d->objRoot(obj);
         const EValueOrigin vo = digOrigin(stor_, d->roots, root);
-        val = d->valCreate(VT_UNKNOWN, vo, OBJ_UNKNOWN);
+        val = d->valCreate(VT_UNKNOWN, vo);
+        LegacyValue *valData = dynamic_cast<LegacyValue *>(d->values[val]);
+        valData->target = OBJ_UNKNOWN;
     }
 
     // store backward reference
@@ -643,13 +658,13 @@ unsigned SymHeapCore::lastId() const {
 }
 
 TValId SymHeapCore::valClone(TValId val) {
-    CL_BREAK_IF(VAL_NULL == val);
-    const LegacyValue *valData = d->valData(val);
+    CL_BREAK_IF(VAL_NULL == val || d->valOutOfRange(val));
+    const ValueBase *valData = d->values[val];
 
     // check unknown value code
     const EValueTarget code = valData->code;
     if (!isPossibleToDeref(code))
-        return d->valCreate(code, valData->origin, valData->target);
+        return d->valDup(val);
 
     // duplicate the root object
     const TObjId root = d->rootLookup(val);
@@ -898,9 +913,10 @@ TValId SymHeapCore::valByOffset(TValId at, TOffset off) {
         code = /* TODO */ VT_UNKNOWN;
 
     // create a new off-value
-    const TValId val = d->valCreate(code, valData->origin, OBJ_UNKNOWN);
+    const TValId val = d->valCreate(code, valData->origin);
     d->valData(val)->valRoot = valRoot;
     d->valData(val)->offRoot = off;
+    d->valData(val)->target = OBJ_UNKNOWN;
 
     d->valData(valRoot)->offMap[off] = val;
     return val;
@@ -1204,8 +1220,8 @@ TValId SymHeapCore::placedAt(TObjId obj) const {
     if (VAL_NULL == rootData.addr) {
         // deleayed address creation
         const EValueTarget code = digTarget(stor_, d->roots, root);
-        rootData.addr = d->valCreate(code, VO_ASSIGNED, root);
-        d->valData(rootData.addr)->offRoot = 0;
+        rootData.addr = d->valCreate(code, VO_ASSIGNED);
+        d->valData(rootData.addr)->target = root;
     }
 
     SymHeapCore &self = /* FIXME */ const_cast<SymHeapCore &>(*this);
@@ -1545,14 +1561,25 @@ void SymHeapCore::Private::objDestroy(TObjId obj) {
 }
 
 TValId SymHeapCore::valCreate(EValueTarget code, EValueOrigin origin) {
-    return d->valCreate(code, origin, OBJ_UNKNOWN);
+    const TValId val = d->valCreate(code, origin);
+
+    switch (code) {
+        case VT_COMPOSITE:
+        case VT_CUSTOM:
+            return val;
+
+        default:
+            d->valData(val)->target = /* XXX */ OBJ_UNKNOWN;
+    }
+
+    return val;
 }
 
 TValId SymHeapCore::valCreateCustom(int cVal) {
     TCValueMap::iterator iter = d->cValueMap.find(cVal);
     if (d->cValueMap.end() == iter) {
         // cVal not found, create a new wrapper for it
-        const TValId val = d->valCreate(VT_CUSTOM, VO_ASSIGNED, OBJ_INVALID);
+        const TValId val = d->valCreate(VT_CUSTOM, VO_ASSIGNED);
 
         // initialize heap value
         CustomValue *valData = dynamic_cast<CustomValue *>(d->values[val]);
