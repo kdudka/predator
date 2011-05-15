@@ -121,10 +121,8 @@ void dump_obj(const SymHeap &heap, TObjId obj) {
 
     switch (obj) {
         case OBJ_INVALID:       cout << "    OBJ_INVALID\n";       return;
-        case OBJ_DELETED:       cout << "    OBJ_DELETED\n";       return;
         case OBJ_UNKNOWN:       cout << "    OBJ_UNKNOWN\n";       return;
         case OBJ_DEREF_FAILED:  cout << "    OBJ_DEREF_FAILED\n";  return;
-        case OBJ_LOST:          cout << "    OBJ_LOST\n";          return;
 
         case OBJ_RETURN:        cout << "    OBJ_RETURN\n";
         default:

@@ -637,14 +637,7 @@ void segReplaceRefs(SymHeap &sh, TValId seg, TValId valNext) {
     sh.valReplace(headAt, valNext);
 
     const TObjId next = sh.objAt(valNext);
-    switch (next) {
-        case OBJ_DELETED:
-        case OBJ_LOST:
-            break;
-
-        default:
-            CL_BREAK_IF(0 < valNext && next < 0);
-    }
+    CL_BREAK_IF(!isGone(sh.valTarget(valNext)) && 0 < valNext && next < 0);
 
     // TODO: check types in debug build
     TObjList refs;

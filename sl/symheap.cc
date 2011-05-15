@@ -473,8 +473,6 @@ TValId SymHeapCore::valueOf(TObjId obj) const {
         case OBJ_INVALID:
             return VAL_INVALID;
 
-        case OBJ_LOST:
-        case OBJ_DELETED:
         case OBJ_DEREF_FAILED:
             return VAL_DEREF_FAILED;
 
@@ -849,16 +847,9 @@ TValId SymHeapCore::valByOffset(TValId at, TOffset off) {
     return val;
 }
 
+// TODO: remove this
 bool handleSpecialTargets(EValueTarget *pCode, const TObjId target) {
     switch (target) {
-        case OBJ_DELETED:
-            *pCode = VT_DELETED;
-            return true;
-
-        case OBJ_LOST:
-            *pCode = VT_LOST;
-            return true;
-
         case OBJ_RETURN:
             // this happens in case a composite value is returned from a
             // function;  the expected output of test-0090 prior to this commit
@@ -896,6 +887,7 @@ EValueOrigin SymHeapCore::valOrigin(TValId val) const {
     return valData.origin;
 }
 
+// TODO: rewrite
 EValueTarget SymHeapCore::valTarget(TValId val) const {
     if (val <= 0)
         return VT_INVALID;
@@ -913,7 +905,15 @@ EValueTarget SymHeapCore::valTarget(TValId val) const {
         return VT_INVALID;
 
     TObjId target = valData.target;
-    EValueTarget code;
+    EValueTarget code = valData.code;
+    switch (code) {
+        case VT_DELETED:
+        case VT_LOST:
+            return code;
+
+        default:
+            break;
+    }
     if (handleSpecialTargets(&code, target))
         return code;
 
@@ -922,6 +922,15 @@ EValueTarget SymHeapCore::valTarget(TValId val) const {
         return VT_UNKNOWN;
 
     const TValId valRoot = d->valRoot(val);
+    code = d->values[valRoot].code;
+    switch (code) {
+        case VT_DELETED:
+        case VT_LOST:
+            return code;
+
+        default:
+            break;
+    }
     target = d->values[valRoot].target;
     if (handleSpecialTargets(&code, target))
         return code;
@@ -1457,12 +1466,10 @@ void SymHeapCore::Private::objDestroy(TObjId obj) {
     Private::Root &rootData = roMapLookup(this->roots, obj);
 
     // remove the corresponding program variable (if any)
-    TObjId kind = OBJ_DELETED;
     EValueTarget code = VT_DELETED;
     const CVar cv = rootData.cVar;
     if (cv.uid != /* heap object */ -1) {
         this->cVarMap.remove(cv);
-        kind = OBJ_LOST;
         code = VT_LOST;
     }
 
@@ -1470,7 +1477,7 @@ void SymHeapCore::Private::objDestroy(TObjId obj) {
     const TValId addr = rootData.addr;
     if (0 < addr) {
         CL_BREAK_IF(valOutOfRange(addr));
-        this->values[addr].target = kind;
+        this->values[addr].target = OBJ_INVALID;
         this->values[addr].code   = code;
     }
 
@@ -1484,21 +1491,7 @@ void SymHeapCore::Private::objDestroy(TObjId obj) {
 }
 
 TValId SymHeapCore::valCreate(EValueTarget code, EValueOrigin origin) {
-    TObjId target = OBJ_UNKNOWN;
-    switch (code) {
-        case VT_DELETED:
-            target = OBJ_DELETED;
-            break;
-
-        case VT_LOST:
-            target = OBJ_LOST;
-            break;
-
-        default:
-            break;
-    }
-
-    return d->valCreate(code, origin, target);
+    return d->valCreate(code, origin, OBJ_UNKNOWN);
 }
 
 TValId SymHeapCore::valCreateCustom(int cVal) {

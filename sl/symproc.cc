@@ -95,14 +95,6 @@ TValId SymProc::heapValFromCst(const struct cl_operand &op) {
 
 bool SymProc::checkForInvalidDeref(TObjId obj) {
     switch (obj) {
-        case OBJ_LOST:
-            CL_ERROR_MSG(lw_, "dereference of non-existing non-heap object");
-            break;
-
-        case OBJ_DELETED:
-            CL_ERROR_MSG(lw_, "dereference of already deleted heap object");
-            break;
-
         case OBJ_UNKNOWN:
             CL_ERROR_MSG(lw_,
                     "type of the pointer being dereferenced does not match "
@@ -110,7 +102,7 @@ bool SymProc::checkForInvalidDeref(TObjId obj) {
             break;
 
         case OBJ_INVALID:
-            CL_TRAP;
+            CL_BREAK_IF("SymProc::checkForInvalidDeref() got invalid object");
 
         default:
             // valid object
@@ -146,10 +138,29 @@ bool SymProc::checkForInvalidDeref(TValId val, TObjType cltTarget) {
     }
 
     const EValueTarget code = sh_.valTarget(val);
-    if (!isPossibleToDeref(code) && !isGone(code)) {
-        CL_ERROR_MSG(lw_, "dereference of unknown value");
-        bt_->printBackTrace();
-        return true;
+    switch (code) {
+        case VT_LOST:
+            CL_ERROR_MSG(lw_, "dereference of non-existing non-heap object");
+            bt_->printBackTrace();
+            return true;
+
+        case VT_DELETED:
+            CL_ERROR_MSG(lw_, "dereference of already deleted heap object");
+            bt_->printBackTrace();
+            return true;
+
+        case VT_ABSTRACT:
+        case VT_CUSTOM:
+            CL_BREAK_IF("attempt to dereference VT_ABSTRACT or VT_CUSTOM");
+            // fall through
+
+        case VT_UNKNOWN:
+            CL_ERROR_MSG(lw_, "dereference of unknown value");
+            bt_->printBackTrace();
+            return true;
+
+        default:
+            CL_BREAK_IF(!isPossibleToDeref(code));
     }
 
     if (!cltTarget)
@@ -264,8 +275,6 @@ TObjId SymProc::objByOperand(const struct cl_operand &op) {
     const TObjId obj = sh_.objAt(at, op.type);
     switch (obj) {
         case OBJ_INVALID:
-        case OBJ_DELETED:
-        case OBJ_LOST:
             CL_BREAK_IF("SymProc::objByOperand() failed to resolve an object");
             return OBJ_INVALID;
 
@@ -589,40 +598,32 @@ bool SymExecCore::lhsFromOperand(TObjId *pObj, const struct cl_operand &op) {
 }
 
 void SymExecCore::execFreeCore(const TValId val) {
-    const TObjId obj = sh_.objAt(val);
-    switch (obj) {
-        case OBJ_DELETED:
+    const EValueTarget code = sh_.valTarget(val);
+    switch (code) {
+        case VT_DELETED:
             CL_ERROR_MSG(lw_, "double free() detected");
             bt_->printBackTrace();
             return;
 
-        case OBJ_LOST:
+        case VT_LOST:
             // this is a double error in the analyzed program :-)
             CL_ERROR_MSG(lw_, "attempt to free a non-heap object"
                               ", which does not exist anyhow");
             bt_->printBackTrace();
             return;
 
-        case OBJ_UNKNOWN:
-        case OBJ_INVALID:
-            CL_TRAP;
+        case VT_STATIC:
+        case VT_ON_STACK:
+            CL_ERROR_MSG(lw_, "attempt to free a non-heap object");
+            bt_->printBackTrace();
+            return;
 
         default:
-            break;
-    }
-
-    if (sh_.valOffset(val)) {
-        CL_ERROR_MSG(lw_, "attempt to free a non-root object");
-        bt_->printBackTrace();
-        return;
-    }
-
-    if (isProgramVar(sh_.valTarget(val))) {
-        CVar cv = sh_.cVarByRoot(val);
-        CL_DEBUG("about to free var " << varTostring(sh_.stor(), cv.uid));
-        CL_ERROR_MSG(lw_, "attempt to free a non-heap object");
-        bt_->printBackTrace();
-        return;
+            if (sh_.valOffset(val)) {
+                CL_ERROR_MSG(lw_, "attempt to free a non-root object");
+                bt_->printBackTrace();
+                return;
+            }
     }
 
     this->valDestroyTarget(val);

@@ -682,10 +682,16 @@ bool SymPlot::Private::handleUnknownValue(TValId value) {
         case VT_ON_STACK:
         case VT_ON_HEAP:
         case VT_ABSTRACT:
-        case VT_LOST:
-        case VT_DELETED:
         case VT_CUSTOM:
             return false;
+
+        case VT_LOST:
+            this->plotNodeAux(value, CL_TYPE_UNKNOWN, "VT_LOST");
+            return true;
+
+        case VT_DELETED:
+            this->plotNodeAux(value, CL_TYPE_UNKNOWN, "VT_DELETED");
+            return true;
 
         case VT_UNKNOWN:
             this->plotNodeAux(value, CL_TYPE_UNKNOWN, "VT_UNKNOWN");
@@ -748,14 +754,6 @@ bool SymPlot::Private::resolvePointsTo(TObjId *pDst, TValId value) {
 
         case OBJ_DEREF_FAILED:
             this->plotNodeAux(value, CL_TYPE_VOID, "DEREF_FAILED");
-            return false;
-
-        case OBJ_DELETED:
-            this->plotNodeAux(value, CL_TYPE_VOID, "DELETED");
-            return false;
-
-        case OBJ_LOST:
-            this->plotNodeAux(value, CL_TYPE_VOID, "LOST");
             return false;
 
         case OBJ_UNKNOWN:

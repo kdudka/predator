@@ -59,26 +59,11 @@ enum TObjId {
     OBJ_DEREF_FAILED  = -2,
 
     /**
-     * special enumeration value denoting a requested object has been deleted.
-     * OBJ_DELETED can @b never denote a valid object.  It just says the object
-     * existed somewhere in the past.  This is among others used to detect a
-     * double free. @n @n
-     */
-    OBJ_DELETED       = -3,
-
-    /**
-     * special enumeration value denoting a requested (non-heap) object no more
-     * exists.  OBJ_LOST can @b never denote a valid object.  It just says the
-     * object existed the other day. @n @n
-     */
-    OBJ_LOST          = -4,
-
-    /**
      * special enumeration value denoting we in fact @b know @b nothing about
      * the requested object.  OBJ_UNKNOWN may or may not stand for an existing
      * object. @n @n
      */
-    OBJ_UNKNOWN       = -5,
+    OBJ_UNKNOWN       = -3,
 
     /**
      * sort of non-portable hack, abusing enumeration type for integral purposes
