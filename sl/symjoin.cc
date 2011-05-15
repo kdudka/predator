@@ -424,20 +424,6 @@ bool joinFreshObjTripple(
         // mapping already inconsistent
         return false;
 
-    const TObjId cObj1 = ctx.sh1.valGetCompositeObj(v1);
-    const TObjId cObj2 = ctx.sh2.valGetCompositeObj(v2);
-    if (!segClone && (OBJ_INVALID == cObj1) != (OBJ_INVALID == cObj2)) {
-        SJ_DEBUG("<-- scalar vs. composite value " << SJ_VALP(v1, v2));
-        return false;
-    }
-
-    if (OBJ_INVALID != cObj1 || OBJ_INVALID != cObj2) {
-        // store mapping of composite object's values
-        const TValId vDst = ctx.dst.valueOf(objDst);
-        return readOnly
-            || defineValueMapping(ctx, v1, v2, vDst);
-    }
-
     if (segClone) {
         const bool isGt1 = (OBJ_INVALID == obj2);
         const TValMapBidir &vm = (isGt1) ? ctx.valMap1 : ctx.valMap2;
@@ -1780,8 +1766,8 @@ bool setDstValuesCore(
     const TValId v1 = ctx.sh1.valueOf(obj1);
     const TValId v2 = ctx.sh2.valueOf(obj2);
 
-    const bool isComp1 = (OBJ_INVALID != ctx.sh1.valGetCompositeObj(v1));
-    const bool isComp2 = (OBJ_INVALID != ctx.sh2.valGetCompositeObj(v2));
+    const bool isComp1 = (isComposite(ctx.sh1.objType(obj1)));
+    const bool isComp2 = (isComposite(ctx.sh2.objType(obj2)));
     if (isComp1 || isComp2) {
         // do not bother by composite values
         CL_BREAK_IF(OBJ_INVALID != obj1 && !isComp1);

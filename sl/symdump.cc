@@ -276,12 +276,6 @@ TObjId /* pointsTo */ dump_value_core(const SymHeap &heap, TValId value)
         return OBJ_INVALID;
     }
 
-    const TObjId compObj = heap.valGetCompositeObj(value);
-    if (OBJ_INVALID != compObj) {
-        cout << "    compObj   = /* obj */ #" << compObj << "\n";
-        return OBJ_INVALID;
-    }
-
     const TObjId pointsTo = const_cast<SymHeap &>(heap).objAt(value);
     if (0 < pointsTo)
         cout << "    pointsTo  = /* obj */ #" << pointsTo << "\n";

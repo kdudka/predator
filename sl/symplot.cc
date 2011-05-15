@@ -933,7 +933,7 @@ void SymPlot::Private::plotObj(TObjId obj) {
         // we got a bare value, which can't be followed, so we're done
         return;
 
-    if (OBJ_INVALID == this->sh->valGetCompositeObj(value)) {
+    if (isComposite(this->sh->objType(obj))) {
         // connect the variable node with its value
         this->plotEdgeValueOf(obj, value);
 
