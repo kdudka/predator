@@ -115,15 +115,15 @@ class NeqDb {
 // CVar lookup container
 class CVarMap {
     private:
-        typedef std::map<CVar, TObjId>              TCont;
+        typedef std::map<CVar, TValId>              TCont;
         TCont                                       cont_;
 
     public:
-        void insert(CVar cVar, TObjId obj) {
+        void insert(CVar cVar, TValId val) {
 #ifndef NDEBUG
             const unsigned last = cont_.size();
 #endif
-            cont_[cVar] = obj;
+            cont_[cVar] = val;
 
             // check for mapping redefinition
             CL_BREAK_IF(last == cont_.size());
@@ -139,7 +139,7 @@ class CVarMap {
 #endif
         }
 
-        TObjId find(const CVar &cVar) {
+        TValId find(const CVar &cVar) {
             // regular lookup
             TCont::iterator iter = cont_.find(cVar);
             const bool found = (cont_.end() != iter);
@@ -147,7 +147,7 @@ class CVarMap {
                 // gl variable explicitly requested
                 return (found)
                     ? iter->second
-                    : OBJ_INVALID;
+                    : VAL_INVALID;
             }
 
             // automatic fallback to gl variable
@@ -158,7 +158,7 @@ class CVarMap {
 
             if (!found && !foundGl)
                 // not found anywhere
-                return OBJ_INVALID;
+                return VAL_INVALID;
 
             // check for clash on uid among lc/gl variable
             CL_BREAK_IF(found && foundGl);
@@ -173,14 +173,6 @@ class CVarMap {
         void getAll(TDst &dst) {
             BOOST_FOREACH(const TCont::value_type &item, cont_) {
                 dst.push_back(item.first);
-            }
-        }
-
-        template <class TFunctor>
-        void goThroughObjs(TFunctor &f)
-        {
-            BOOST_FOREACH(const TCont::value_type &item, cont_) {
-                f(item.second);
             }
         }
 };
@@ -351,7 +343,6 @@ struct SymHeapCore::Private {
 
     TValId valDup(TValId);
     TObjId objCreate();
-    TObjId objCreate(TObjType clt, CVar cVar);
     TObjId objDup(TObjId root);
     void objDestroy(TObjId obj);
 
@@ -1428,12 +1419,9 @@ CVar SymHeapCore::cVarByRoot(TValId valRoot) const {
 }
 
 TValId SymHeapCore::addrOfVar(CVar cv) {
-    const TObjId obj = d->cVarMap.find(cv);
-    if (0 < obj) {
-        // already exists, just return its address
-        const Private::Root &rootData = roMapLookup(d->roots, obj);
-        return rootData.addr;
-    }
+    TValId addr = d->cVarMap.find(cv);
+    if (0 < addr)
+        return addr;
 
     // lazy creation of a program variable
     TObjType clt = stor_.vars[cv.uid].type;
@@ -1443,11 +1431,16 @@ TValId SymHeapCore::addrOfVar(CVar cv) {
     std::string varString = varTostring(stor_, cv.uid, &loc);
     CL_DEBUG_MSG(loc, "FFF SymHeapCore::objByCVar() creates var " << varString);
 #endif
-    // create the correspongin heap object
-    const TObjId fresh = d->objCreate(clt, cv);
+    // create the corresponding heap object
+    const TObjId root = d->objCreate();
+    d->objects[root].clt = clt;
+    d->roots[root].cVar = cv;
+    d->subsCreate(root);
 
-    // assign a heap value to its address
-    return this->placedAt(fresh);
+    // store the address for next wheel
+    addr = this->placedAt(root);
+    d->cVarMap.insert(cv, addr);
+    return addr;
 }
 
 void SymHeapCore::gatherCVars(TCVarList &dst) const {
@@ -1483,20 +1476,6 @@ TObjId SymHeapCore::valGetComposite(TValId val) const {
 
     const CompValue *valData = DCAST<CompValue *>(d->values[val]);
     return valData->compObj;
-}
-
-TObjId SymHeapCore::Private::objCreate(TObjType clt, CVar cVar) {
-    const TObjId obj = this->objCreate();
-    this->objects[obj].clt = clt;
-    this->roots[obj].cVar = cVar;
-
-    if (clt)
-        this->subsCreate(obj);
-
-    if (/* heap object */ -1 != cVar.uid)
-        this->cVarMap.insert(cVar, obj);
-
-    return obj;
 }
 
 TValId SymHeapCore::heapAlloc(int cbSize) {
