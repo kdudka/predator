@@ -180,6 +180,13 @@ class CVarMap {
 
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of SymHeapCore
+typedef std::set<TObjId>                                TUsedBy;
+typedef std::map<TOffset, TValId>                       TOffMap;
+typedef std::map<TObjType, TObjId>                      TObjByType;
+typedef std::map<TOffset, TObjByType>                   TGrid;
+typedef std::map<TObjId, bool /* isPtr */>              TLiveObjs;
+typedef std::map<int, TValId>                           TCValueMap;
+
 struct SymHeapCore::Private {
     struct Object {
         TValId                      value;
@@ -195,14 +202,6 @@ struct SymHeapCore::Private {
         {
         }
     };
-
-    typedef std::set<TObjId>                            TUsedBy;
-    typedef std::map<TOffset, TValId>                   TOffMap;
-
-    // symheap-ng
-    typedef std::map<TObjType, TObjId>                  TObjByType;
-    typedef std::map<TOffset, TObjByType>               TGrid;
-    typedef std::map<TObjId, bool /* isPtr */>          TLiveObjs;
 
     struct Root {
         TValId                      addr;
@@ -223,6 +222,9 @@ struct SymHeapCore::Private {
         {
         }
     };
+
+    // TODO: drop this
+    typedef std::map<TObjId, Root>  TRootMap;
 
     struct Value {
         EValueTarget                code;
@@ -248,16 +250,10 @@ struct SymHeapCore::Private {
     };
 
     CVarMap                         cVarMap;
-
-    typedef std::map<int, TValId>   TCValueMap;
     TCValueMap                      cValueMap;
-
     std::vector<Object>             objects;
     std::vector<Value>              values;
-
-    typedef std::map<TObjId, Root>  TRootMap;
     TRootMap                        roots;
-
     NeqDb                           neqDb;
 
     inline TValId lastValId();
@@ -503,7 +499,7 @@ void SymHeapCore::usedBy(TObjList &dst, TValId val) const {
     if (VAL_NULL == val || d->valOutOfRange(val))
         return;
 
-    const Private::TUsedBy &usedBy = d->values[val].usedBy;
+    const TUsedBy &usedBy = d->values[val].usedBy;
     std::copy(usedBy.begin(), usedBy.end(), std::back_inserter(dst));
 }
 
@@ -514,7 +510,7 @@ void SymHeapCore::pointedBy(TObjList &dst, TValId root) const {
     CL_BREAK_IF(VAL_INVALID != valData.valRoot);
 
     const Private::Root &rootData = roMapLookup(d->roots, valData.target);
-    const Private::TUsedBy &usedBy = rootData.usedBy;
+    const TUsedBy &usedBy = rootData.usedBy;
     std::copy(usedBy.begin(), usedBy.end(), std::back_inserter(dst));
 }
 
@@ -523,7 +519,7 @@ unsigned SymHeapCore::usedByCount(TValId val) const {
     if (VAL_NULL == val || d->valOutOfRange(val))
         return 0;
 
-    const Private::TUsedBy &usedBy = d->values[val].usedBy;
+    const TUsedBy &usedBy = d->values[val].usedBy;
     return usedBy.size();
 }
 
@@ -578,7 +574,7 @@ void SymHeapCore::Private::subsCreate(TObjId obj) {
 
     // initialize grid's root clt
     TObjType clt = this->objects[obj].clt;
-    Private::TGrid &grid = this->roots[root].grid;
+    TGrid &grid = this->roots[root].grid;
     grid[/* off */ 0][clt] = obj;
 
     typedef std::pair<TObjId, TObjType> TPair;
@@ -663,7 +659,7 @@ TObjId SymHeapCore::Private::objDup(TObjId root) {
         // recover grid
         const TOffset off = this->objects[dst].off;
         const TObjType clt = this->objects[dst].clt;
-        Private::TGrid &grid = rootDataDst.grid;
+        TGrid &grid = rootDataDst.grid;
         grid[off][clt] = dst;
     }
 
@@ -673,9 +669,7 @@ TObjId SymHeapCore::Private::objDup(TObjId root) {
 void SymHeapCore::gatherLivePointers(TObjList &dst, TValId atAddr) const {
     const TObjId root = const_cast<SymHeapCore *>(this)->objAt(atAddr);
     const Private::Root &rootData = roMapLookup(d->roots, root);
-
-    typedef Private::TLiveObjs TMap;
-    BOOST_FOREACH(TMap::const_reference item, rootData.liveObjs) {
+    BOOST_FOREACH(TLiveObjs::const_reference item, rootData.liveObjs) {
         if (/* isPtr */ item.second)
             dst.push_back(/* obj */ item.first);
     }
@@ -685,8 +679,7 @@ void SymHeapCore::gatherLiveObjects(TObjList &dst, TValId atAddr) const {
     const TObjId root = const_cast<SymHeapCore *>(this)->objAt(atAddr);
     const Private::Root &rootData = roMapLookup(d->roots, root);
 
-    typedef Private::TLiveObjs TMap;
-    BOOST_FOREACH(TMap::const_reference item, rootData.liveObjs)
+    BOOST_FOREACH(TLiveObjs::const_reference item, rootData.liveObjs)
         dst.push_back(/* obj */ item.first);
 }
 
@@ -695,7 +688,6 @@ void SymHeapCore::Private::subsDestroy(TObjId root) {
     this->objects[root].value = VAL_INVALID;
     Private::Root &rootData = roMapLookup(this->roots, root);
 
-    typedef Private::TLiveObjs TMap;
     BOOST_FOREACH(const TObjId obj, rootData.allObjs) {
         this->releaseValueOf(obj);
         this->objects[obj].value = VAL_INVALID;
@@ -783,8 +775,8 @@ TValId SymHeapCore::valByOffset(TValId at, TOffset off) {
 
     // off-value lookup
     const Private::Value &valData = d->values[valRoot];
-    const Private::TOffMap &offMap = valData.offMap;
-    Private::TOffMap::const_iterator it = offMap.find(off);
+    const TOffMap &offMap = valData.offMap;
+    TOffMap::const_iterator it = offMap.find(off);
     if (offMap.end() != it)
         return it->second;
 
@@ -1113,8 +1105,8 @@ TObjId SymHeapCore::Private::rootLookup(TValId val) {
 }
 
 bool SymHeapCore::Private::gridLookup(
-        TObjId                      *pFailCode,
-        const Private::TObjByType   **pRow,
+        TObjId                     *pFailCode,
+        const TObjByType          **pRow,
         const TValId                val)
 {
     const TObjId root = this->rootLookup(val);
@@ -1125,15 +1117,15 @@ bool SymHeapCore::Private::gridLookup(
 
     // grid lookup
     const Private::Root &rootData = roMapLookup(this->roots, root);
-    const Private::TGrid &grid = rootData.grid;
+    const TGrid &grid = rootData.grid;
     const Private::Value &valData = this->values[val];
-    Private::TGrid::const_iterator it = grid.find(valData.offRoot);
+    TGrid::const_iterator it = grid.find(valData.offRoot);
     if (grid.end() == it) {
         *pFailCode = OBJ_UNKNOWN;
         return false;
     }
 
-    const Private::TObjByType *row = &it->second;
+    const TObjByType *row = &it->second;
     CL_BREAK_IF(row->empty());
     *pRow = row;
     return true;
@@ -1141,12 +1133,12 @@ bool SymHeapCore::Private::gridLookup(
 
 TObjId SymHeapCore::ptrAt(TValId at) {
     TObjId failCode;
-    const Private::TObjByType *row;
+    const TObjByType *row;
     if (!d->gridLookup(&failCode, &row, at))
         return failCode;
 
     // seek a _data_ pointer at the given row
-    BOOST_FOREACH(const Private::TObjByType::const_reference item, *row) {
+    BOOST_FOREACH(const TObjByType::const_reference item, *row) {
         const TObjType clt = item.first;
         if (!clt || clt->code != CL_TYPE_PTR)
             // not a pointer
@@ -1172,14 +1164,14 @@ TObjId SymHeapCore::objAt(TValId at, TObjCode code) {
         return valData.target;
 
     TObjId failCode;
-    const Private::TObjByType *row;
+    const TObjByType *row;
     if (!d->gridLookup(&failCode, &row, at))
         return failCode;
 
     // seek the bigest object at the given row
     int maxSize = 0;
     TObjId max = OBJ_UNKNOWN;
-    BOOST_FOREACH(const Private::TObjByType::const_reference item, *row) {
+    BOOST_FOREACH(const TObjByType::const_reference item, *row) {
         const TObjType cltItem = item.first;
         const TObjId obj = item.second;
         CL_BREAK_IF(d->objOutOfRange(obj));
@@ -1216,11 +1208,11 @@ TObjId SymHeapCore::objAt(TValId at, TObjType clt) {
         return this->ptrAt(at);
 
     TObjId failCode;
-    const Private::TObjByType *row;
+    const TObjByType *row;
     if (!d->gridLookup(&failCode, &row, at))
         return failCode;
 
-    Private::TObjByType::const_iterator it = row->find(clt);
+    TObjByType::const_iterator it = row->find(clt);
     if (row->end() != it)
         // exact match
         return it->second;
@@ -1230,7 +1222,7 @@ TObjId SymHeapCore::objAt(TValId at, TObjType clt) {
         return OBJ_UNKNOWN;
 
     // try semantic match
-    BOOST_FOREACH(const Private::TObjByType::const_reference item, *row) {
+    BOOST_FOREACH(const TObjByType::const_reference item, *row) {
         const TObjType cltItem = item.first;
         if (cltItem && *cltItem == *clt)
             return item.second;
@@ -1417,7 +1409,7 @@ TValId SymHeapCore::valCreate(EValueTarget code, EValueOrigin origin) {
 }
 
 TValId SymHeapCore::valCreateCustom(int cVal) {
-    Private::TCValueMap::iterator iter = d->cValueMap.find(cVal);
+    TCValueMap::iterator iter = d->cValueMap.find(cVal);
     if (d->cValueMap.end() == iter) {
         // cVal not found, create a new wrapper for it
         const TValId val = d->valCreate(VT_CUSTOM, VO_ASSIGNED, OBJ_INVALID);
