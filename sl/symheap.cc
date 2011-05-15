@@ -343,7 +343,7 @@ struct SymHeapCore::Private {
 
     TValId valDup(TValId);
     TObjId objCreate();
-    TObjId objDup(TObjId root);
+    TValId objDup(TObjId root);
     void objDestroy(TObjId obj);
 
     void releaseValueOf(TObjId obj);
@@ -706,8 +706,7 @@ TValId SymHeapCore::valClone(TValId val) {
 
     // duplicate the root object
     const TObjId root = d->rootLookup(val);
-    const TObjId dup = d->objDup(root);
-    const TValId dupAt = this->placedAt(dup);
+    const TValId dupAt = d->objDup(root);
 
     // take the offset into consideration
     const TOffset off = this->valOffset(val);
@@ -778,28 +777,37 @@ void SymHeapCore::Private::subsCreate(TObjId obj) {
     }
 }
 
-TObjId SymHeapCore::Private::objDup(TObjId root) {
+TValId SymHeapCore::Private::objDup(TObjId root) {
     CL_DEBUG("SymHeapCore::Private::objDup() is taking place...");
     CL_BREAK_IF(objOutOfRange(root));
     CL_BREAK_IF(OBJ_INVALID != this->objects[root].root);
 
     // duplicate object metadata
-    TObjId image = this->objCreate();
+    const TObjId image = this->objCreate();
     const Private::Object &origin = this->objects.at(root);
     this->setValueOf(image, origin.value);
     this->objects[image] = origin;
 
-    // duplicate root metadata
+    // check address of the given root
     const Private::Root &rootDataSrc = roMapLookup(this->roots, root);
-    Private::Root &rootDataDst = this->roots[image];
+    const TValId rootAt = rootDataSrc.addr;
+    CL_BREAK_IF(rootAt <= 0);
+    const EValueTarget code = this->values[rootAt]->code;
 
+    // assign an address to the clone
+    const TValId imageAt = this->valCreate(code, VO_ASSIGNED);
+    this->valData(imageAt)->target = image;
+    Private::Root &rootDataDst = this->roots[image];
+    rootDataDst.addr = imageAt;
+
+    // duplicate root metadata
     const TObjType cltRoot = origin.clt;
     rootDataDst.grid[/* off */0][cltRoot] = image;
     rootDataDst.cVar    = rootDataSrc.cVar;
     rootDataDst.isProto = rootDataSrc.isProto;
 
     if (!isComposite(cltRoot))
-        return image;
+        return imageAt;
 
     // assume composite object
     this->setValueOf(image, VAL_INVALID);
@@ -830,7 +838,7 @@ TObjId SymHeapCore::Private::objDup(TObjId root) {
         grid[off][clt] = dst;
     }
 
-    return image;
+    return imageAt;
 }
 
 void SymHeapCore::gatherLivePointers(TObjList &dst, TValId atAddr) const {
@@ -1232,19 +1240,15 @@ TValId SymHeapCore::placedAt(TObjId obj) const {
     const TObjId root = d->objRoot(obj, objData);
     CL_BREAK_IF(root < 0);
 
-    Private::TRootMap::iterator it = d->roots.find(root);
-    if (d->roots.end() == it)
-        // object already deleted?
-        return VAL_INVALID;
-
-    Private::Root &rootData = it->second;
-    if (VAL_NULL == rootData.addr) {
+    Private::Root &rootData = roMapLookup(d->roots, root);
+    TValId &addr = rootData.addr;
+    if (OBJ_RETURN == root && VAL_NULL == addr) {
         // deleayed address creation
-        const EValueTarget code = digTarget(stor_, d->roots, root);
-        rootData.addr = d->valCreate(code, VO_ASSIGNED);
-        d->valData(rootData.addr)->target = root;
+        addr = d->valCreate(VT_ON_STACK, VO_ASSIGNED);
+        d->valData(addr)->target = OBJ_RETURN;
     }
 
+    CL_BREAK_IF(addr <= 0);
     SymHeapCore &self = /* FIXME */ const_cast<SymHeapCore &>(*this);
     return self.valByOffset(rootData.addr, objData.off);
 }
@@ -1424,7 +1428,8 @@ TValId SymHeapCore::addrOfVar(CVar cv) {
         return addr;
 
     // lazy creation of a program variable
-    TObjType clt = stor_.vars[cv.uid].type;
+    const CodeStorage::Var &var = stor_.vars[cv.uid];
+    TObjType clt = var.type;
     CL_BREAK_IF(!clt || clt->code == CL_TYPE_VOID);
 #if DEBUG_SE_STACK_FRAME
     const struct cl_loc *loc = 0;
@@ -1437,8 +1442,13 @@ TValId SymHeapCore::addrOfVar(CVar cv) {
     d->roots[root].cVar = cv;
     d->subsCreate(root);
 
+    // assign an address
+    const EValueTarget code = isOnStack(var) ? VT_ON_STACK : VT_STATIC;
+    addr = d->valCreate(code, VO_ASSIGNED);
+    d->valData(addr)->target = root;
+    d->roots[root].addr = addr;
+
     // store the address for next wheel
-    addr = this->placedAt(root);
     d->cVarMap.insert(cv, addr);
     return addr;
 }
@@ -1485,7 +1495,12 @@ TValId SymHeapCore::heapAlloc(int cbSize) {
     rootData.cbSize = cbSize;
     rootData.grid[/* off */ 0][/* clt */ 0] = obj;
 
-    return this->placedAt(obj);
+    // assign an address
+    const TValId addr = d->valCreate(VT_ON_HEAP, VO_ASSIGNED);
+    d->valData(addr)->target = obj;
+    d->roots[obj].addr = addr;
+
+    return addr;
 }
 
 bool SymHeapCore::valDestroyTarget(TValId val) {
