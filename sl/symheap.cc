@@ -216,11 +216,23 @@ struct CompValue: public ValueBase {
     }
 };
 
+struct CustomValue: public ValueBase {
+    int                             customData;
+
+    CustomValue(EValueTarget code_, EValueOrigin origin_):
+        ValueBase(code_, origin_)
+    {
+    }
+
+    virtual ValueBase* clone() const {
+        return new CustomValue(*this);
+    }
+};
+
 struct LegacyValue: public ValueBase {
     TObjId                          target;
     TValId                          valRoot;
     TOffset                         offRoot;
-    int                             customData;
     TOffMap                         offMap;
 
     LegacyValue(EValueTarget code_, EValueOrigin origin_):
@@ -369,6 +381,7 @@ inline TValId SymHeapCore::Private::valRoot(
     const EValueTarget code = valData->code;
     switch (code) {
         case VT_COMPOSITE:
+        case VT_CUSTOM:
             return val;
 
         default:
@@ -473,6 +486,10 @@ TValId SymHeapCore::Private::valCreate(
     switch (code) {
         case VT_COMPOSITE:
             this->values[val] = new CompValue(code, origin);
+            break;
+
+        case VT_CUSTOM:
+            this->values[val] = new CustomValue(code, origin);
             break;
 
         default:
@@ -923,10 +940,8 @@ EValueOrigin SymHeapCore::valOrigin(TValId val) const {
 
         default:
             CL_BREAK_IF(d->valOutOfRange(val));
+            return d->values[val]->origin;
     }
-
-    const LegacyValue *valData = d->valData(val);
-    return valData->origin;
 }
 
 // TODO: rewrite
@@ -1066,6 +1081,7 @@ TOffset SymHeapCore::valOffset(TValId val) const {
     const EValueTarget code = d->values[val]->code;
     switch (code) {
         case VT_COMPOSITE:
+        case VT_CUSTOM:
             return 0;
 
         default:
@@ -1203,6 +1219,7 @@ TObjId SymHeapCore::Private::rootLookup(TValId val) {
     const EValueTarget code = this->values[val]->code;
     switch (code) {
         case VT_COMPOSITE:
+        case VT_CUSTOM:
             return OBJ_INVALID;
 
         default:
@@ -1272,6 +1289,7 @@ TObjId SymHeapCore::objAt(TValId at, TObjCode code) {
     const EValueTarget vt = d->values[at]->code;
     switch (vt) {
         case VT_COMPOSITE:
+        case VT_CUSTOM:
             return OBJ_INVALID;
 
         default:
@@ -1535,11 +1553,9 @@ TValId SymHeapCore::valCreateCustom(int cVal) {
     if (d->cValueMap.end() == iter) {
         // cVal not found, create a new wrapper for it
         const TValId val = d->valCreate(VT_CUSTOM, VO_ASSIGNED, OBJ_INVALID);
-        if (VAL_INVALID == val)
-            return VAL_INVALID;
 
         // initialize heap value
-        LegacyValue *valData = d->valData(val);
+        CustomValue *valData = dynamic_cast<CustomValue *>(d->values[val]);
         valData->customData  = cVal;
 
         // store cVal --> val mapping
@@ -1554,8 +1570,11 @@ TValId SymHeapCore::valCreateCustom(int cVal) {
 
 int SymHeapCore::valGetCustom(TValId val) const
 {
-    CL_BREAK_IF(VT_CUSTOM != this->valTarget(val));
-    const LegacyValue *valData = d->valData(val);
+    CL_BREAK_IF(d->valOutOfRange(val));
+    const ValueBase *base = d->values[val];
+
+    CL_BREAK_IF(VT_CUSTOM != base->code);
+    const CustomValue *valData = dynamic_cast<const CustomValue *>(base);
     return valData->customData;
 }
 
