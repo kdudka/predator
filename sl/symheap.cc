@@ -878,9 +878,13 @@ SymHeapCore::SymHeapCore(TStorRef stor):
 {
     CL_BREAK_IF(!&stor_);
 
-    // XXX
+    // assign an address to OBJ_RETURN
+    const TValId addr = d->valCreate(VT_ON_STACK, VO_ASSIGNED);
+    d->valData(addr)->target = OBJ_RETURN;
+    d->roots[OBJ_RETURN].addr = addr;
+
     d->objects.resize(/* OBJ_RETURN */ 1);
-    d->roots[OBJ_RETURN];
+    d->objects[OBJ_RETURN].root = addr;
 }
 
 SymHeapCore::SymHeapCore(const SymHeapCore &ref):
@@ -1237,18 +1241,11 @@ TValId SymHeapCore::placedAt(TObjId obj) const {
     const TObjId root = d->objRoot(obj);
     CL_BREAK_IF(root < 0);
 
-    Private::Root &rootData = roMapLookup(d->roots, root);
-    TValId &addr = rootData.addr;
-    if (OBJ_RETURN == root && VAL_NULL == addr) {
-        // deleayed address creation
-        addr = d->valCreate(VT_ON_STACK, VO_ASSIGNED);
-        d->valData(addr)->target = OBJ_RETURN;
-        d->objects[OBJ_RETURN].root = addr;
-    }
-
+    const TValId addr = roMapLookup(d->roots, root).addr;
     CL_BREAK_IF(addr <= 0);
+
     SymHeapCore &self = /* FIXME */ const_cast<SymHeapCore &>(*this);
-    return self.valByOffset(rootData.addr, d->objects[obj].off);
+    return self.valByOffset(addr, d->objects[obj].off);
 }
 
 TObjId SymHeapCore::Private::rootLookup(TValId val) {
@@ -1552,10 +1549,6 @@ void SymHeapCore::objDefineType(TObjId obj, TObjType clt) {
 
     // delayed object's type definition
     objData.clt = clt;
-    if (OBJ_RETURN == obj)
-        // XXX
-        this->placedAt(OBJ_RETURN);
-
     d->subsCreate(obj);
 }
 
@@ -1572,18 +1565,24 @@ void SymHeapCore::Private::objDestroy(TObjId obj) {
         code = VT_LOST;
     }
 
-    // invalidate the address
-    const TValId addr = rootData.addr;
-    CL_BREAK_IF(valOutOfRange(addr));
-    this->valData(addr)->target = OBJ_INVALID;
-    this->valData(addr)->code   = code;
+    if (OBJ_RETURN != obj) {
+        // invalidate the address
+        const TValId addr = rootData.addr;
+        CL_BREAK_IF(valOutOfRange(addr));
+        this->valData(addr)->target = OBJ_INVALID;
+        this->valData(addr)->code   = code;
+    }
 
     // destroy the object
     this->subsDestroy(obj);
     if (OBJ_RETURN == obj) {
         // reinitialize OBJ_RETURN
-        this->objects[OBJ_RETURN] = Private::Object();
+        this->objects[OBJ_RETURN].value = VAL_INVALID;
+        this->objects[OBJ_RETURN].clt = 0;
+
+        const TValId addr = this->roots[OBJ_RETURN].addr;
         this->roots[OBJ_RETURN] = Private::Root();
+        this->roots[OBJ_RETURN].addr = addr;
     }
 }
 
