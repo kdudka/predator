@@ -305,17 +305,11 @@ struct SymHeapCore::Private {
         }
     };
 
-    struct Root {
-    };
-
-    // TODO: drop this
-    typedef std::map<TObjId, Root>  TRootMap;
-
     CVarMap                         cVarMap;
     TCValueMap                      cValueMap;
     std::vector<Object>             objects;
     std::vector<BareValue *>        values;
-    TRootMap                        roots;
+    std::set<TValId>                liveRoots;
     NeqDb                           neqDb;
 
     inline TValId lastValId();
@@ -555,7 +549,7 @@ SymHeapCore::Private::Private(const SymHeapCore::Private &ref):
     cVarMap     (ref.cVarMap),
     cValueMap   (ref.cValueMap),
     objects     (ref.objects),
-    roots       (ref.roots),
+    liveRoots   (ref.liveRoots),
     neqDb       (ref.neqDb)
 {
     // allocate space for pointers
@@ -732,9 +726,8 @@ bool valMapLookup(const TValMap &valMap, TValId *pVal) {
 void SymHeapCore::Private::subsCreate(TObjId obj) {
     const TValId rootAt = this->objects[obj].root;
     CL_BREAK_IF(rootAt <= 0);
-
-    // XXX
-    this->roots[obj];
+    if (OBJ_RETURN != obj)
+        this->liveRoots.insert(rootAt);
 
     // initialize grid's root clt
     TObjType clt = this->objects[obj].clt;
@@ -806,8 +799,7 @@ TValId SymHeapCore::Private::objDup(TObjId root) {
     rootDataDst->cVar    = rootDataSrc->cVar;
     rootDataDst->isProto = rootDataSrc->isProto;
 
-    // XXX
-    this->roots[image];
+    this->liveRoots.insert(imageAt);
 
     if (!isComposite(cltRoot))
         return imageAt;
@@ -867,10 +859,6 @@ void SymHeapCore::Private::subsDestroy(TObjId root) {
         this->releaseValueOf(obj);
         this->objects[obj].value = VAL_INVALID;
     }
-
-    // remove self from roots
-    if (/* XXX */ OBJ_RETURN != root)
-        this->roots.erase(root);
 }
 
 SymHeapCore::SymHeapCore(TStorRef stor):
@@ -1368,7 +1356,7 @@ TObjId SymHeapCore::objAt(TValId at, TObjCode code) {
 
         // update the maximum
         maxSize = size;
-        max = item.second;
+        max = obj;
     }
 
     return max;
@@ -1465,17 +1453,9 @@ void SymHeapCore::gatherRootObjects(TValList &dst, bool (*filter)(EValueTarget))
     if (!filter)
         filter = dummyFilter;
 
-    BOOST_FOREACH(Private::TRootMap::const_reference item, d->roots) {
-        const TObjId obj = item.first;
-        if (/* XXX */ OBJ_RETURN == obj)
-            continue;
-
-        const TValId at = this->placedAt(obj);
-        if (!filter(this->valTarget(at)))
-            continue;
-
-        dst.push_back(at);
-    }
+    BOOST_FOREACH(const TValId at, d->liveRoots)
+        if (filter(this->valTarget(at)))
+            dst.push_back(at);
 }
 
 TObjId SymHeapCore::valGetComposite(TValId val) const {
@@ -1575,6 +1555,8 @@ void SymHeapCore::Private::objDestroy(TObjId obj) {
 
     // destroy the object
     this->subsDestroy(obj);
+    this->liveRoots.erase(addr);
+
     if (OBJ_RETURN == obj) {
         // reinitialize OBJ_RETURN
         this->objects[OBJ_RETURN].value = VAL_INVALID;
