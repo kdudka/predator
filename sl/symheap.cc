@@ -314,8 +314,6 @@ struct SymHeapCore::Private {
     inline TValId valRoot(const TValId, const BareValue *);
     inline TValId valRoot(const TValId);
 
-    inline TObjId objRoot(const TObjId);
-
     TValId valCreate(EValueTarget code, EValueOrigin origin);
     TValId valCreateOff(EValueTarget code, EValueOrigin origin, TValId root,
             TOffset);
@@ -390,18 +388,6 @@ inline TValId SymHeapCore::Private::valRoot(const TValId val) {
     CL_BREAK_IF(VAL_NULL == val);
     CL_BREAK_IF(valOutOfRange(val));
     return this->valRoot(val, this->values[val]);
-}
-
-inline TObjId SymHeapCore::Private::objRoot(const TObjId obj) {
-    if (OBJ_RETURN == obj)
-        return OBJ_RETURN;
-
-    CL_BREAK_IF(objOutOfRange(obj));
-    const Object &objData = this->objects[obj];
-
-    const TValId valRoot = objData.root;
-    CL_BREAK_IF(valOutOfRange(valRoot));
-    return DCAST<RootValue *>(this->values[valRoot])->target;
 }
 
 void SymHeapCore::Private::releaseValueOf(TObjId obj) {
@@ -559,26 +545,7 @@ SymHeapCore::Private::~Private() {
         delete valData;
 }
 
-template <class TRootMap>
-EValueTarget digTarget(TStorRef stor, TRootMap &rootMap, TObjId root) {
-    if (root < 0)
-        return VT_INVALID;
-
-    if (OBJ_RETURN == root)
-        return VT_ON_STACK;
-
-    const int uid = rootMap->cVar.uid;
-    if (-1 == uid)
-        return VT_ON_HEAP;
-
-    return (isOnStack(stor.vars[uid]))
-        ? VT_ON_STACK
-        : VT_STATIC;
-}
-
-template <class TRootMap>
-EValueOrigin digOrigin(TStorRef stor, TRootMap &rootMap, TObjId root) {
-    const EValueTarget code = digTarget(stor, rootMap, root);
+EValueOrigin originByCode(const EValueTarget code) {
     switch (code) {
         case VT_INVALID:
             return VO_INVALID;
@@ -593,7 +560,7 @@ EValueOrigin digOrigin(TStorRef stor, TRootMap &rootMap, TObjId root) {
             return VO_STATIC;
 
         default:
-            CL_BREAK_IF("digTarget() malfunction");
+            CL_BREAK_IF("invalid call of originByCode");
             return VO_INVALID;
     }
 }
@@ -630,9 +597,9 @@ TValId SymHeapCore::valueOf(TObjId obj) const {
     }
     else {
         // deleayed creation of an uninitialized value
-        const TObjId root = d->objRoot(obj);
-        const RootValue *valData = d->rootData(d->objects[obj].root);
-        const EValueOrigin vo = digOrigin(stor_, valData, root);
+        const TValId root = objData.root;
+        CL_BREAK_IF(d->valOutOfRange(root));
+        const EValueOrigin vo = originByCode(d->values[root]->code);
         val = d->valCreate(VT_UNKNOWN, vo);
     }
 
