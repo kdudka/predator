@@ -252,12 +252,26 @@ struct OffValue: public BareValue {
 };
 
 struct RootValue: public BareValue {
-    TObjId                          target;
+    TObjId            /* XXX */     target;
     TOffMap                         offMap;
+
+    TValId                          addr;
+    unsigned                        cbSize;
+    CVar                            cVar;
+    TObjList          /* XXX */     allObjs;
+    TLiveObjs                       liveObjs;
+    bool                            isProto;
+    TUsedBy                         usedByGl;
+
+    // symheap-ng
+    TGrid                           grid;
 
     RootValue(EValueTarget code_, EValueOrigin origin_):
         BareValue(code_, origin_),
-        target(OBJ_INVALID)
+        target(OBJ_INVALID),
+        addr(VAL_NULL),
+        cbSize(0),
+        isProto(false)
     {
     }
 
@@ -292,23 +306,6 @@ struct SymHeapCore::Private {
     };
 
     struct Root {
-        TValId                      addr;
-        unsigned                    cbSize;
-        CVar                        cVar;
-        TObjList          /* XXX */ allObjs;
-        TLiveObjs                   liveObjs;
-        bool                        isProto;
-        TUsedBy                     usedBy;
-
-        // symheap-ng
-        TGrid                       grid;
-
-        Root():
-            addr(VAL_NULL),
-            cbSize(0),
-            isProto(false)
-        {
-        }
     };
 
     // TODO: drop this
@@ -441,17 +438,18 @@ void SymHeapCore::Private::releaseValueOf(TObjId obj) {
     uses.erase(obj);
 #endif
 
-    const TObjId root = this->rootLookup(val);
-    if (root < 0)
+    const TValId root = this->valRoot(val);
+    BareValue *valData = this->values[root];
+    if (!isPossibleToDeref(valData->code))
         return;
 
-    Private::Root &rootData = roMapLookup(this->roots, root);
+    RootValue *rootData = DCAST<RootValue *>(valData);
 #ifndef NDEBUG
-    if (1 != rootData.usedBy.erase(obj))
+    if (1 != rootData->usedByGl.erase(obj))
         // *** offset detected ***
         CL_TRAP;
 #else
-    rootData.usedBy.erase(obj);
+    rootData->usedByGl.erase(obj);
 #endif
 }
 
@@ -463,12 +461,13 @@ void SymHeapCore::Private::setValueOf(TObjId obj, TValId val) {
 
     this->values[val]->usedBy.insert(obj);
 
-    const TObjId root = this->rootLookup(val);
-    if (root < 0)
+    const TValId root = this->valRoot(val);
+    BareValue *valData = this->values[root];
+    if (!isPossibleToDeref(valData->code))
         return;
 
-    Private::Root &rootData = roMapLookup(this->roots, root);
-    rootData.usedBy.insert(obj);
+    RootValue *rootData = DCAST<RootValue *>(valData);
+    rootData->usedByGl.insert(obj);
 }
 
 TObjId SymHeapCore::Private::objCreate() {
@@ -585,8 +584,7 @@ EValueTarget digTarget(TStorRef stor, TRootMap &rootMap, TObjId root) {
     if (OBJ_RETURN == root)
         return VT_ON_STACK;
 
-    const typename TRootMap::mapped_type &rootData = roMapLookup(rootMap, root);
-    const int uid = rootData.cVar.uid;
+    const int uid = rootMap->cVar.uid;
     if (-1 == uid)
         return VT_ON_HEAP;
 
@@ -650,7 +648,8 @@ TValId SymHeapCore::valueOf(TObjId obj) const {
     else {
         // deleayed creation of an uninitialized value
         const TObjId root = d->objRoot(obj);
-        const EValueOrigin vo = digOrigin(stor_, d->roots, root);
+        const RootValue *valData = d->valData(d->objects[obj].root);
+        const EValueOrigin vo = digOrigin(stor_, valData, root);
         val = d->valCreate(VT_UNKNOWN, vo);
     }
 
@@ -670,10 +669,10 @@ void SymHeapCore::usedBy(TObjList &dst, TValId val) const {
 void SymHeapCore::pointedBy(TObjList &dst, TValId root) const {
     CL_BREAK_IF(d->valOutOfRange(root));
     CL_BREAK_IF(d->values[root]->offRoot);
+    CL_BREAK_IF(!isPossibleToDeref(d->values[root]->code));
 
-    RootValue *valData = d->valData(root);
-    const Private::Root &rootData = roMapLookup(d->roots, valData->target);
-    const TUsedBy &usedBy = rootData.usedBy;
+    const RootValue *rootData = DCAST<const RootValue *>(d->values[root]);
+    const TUsedBy &usedBy = rootData->usedByGl;
     std::copy(usedBy.begin(), usedBy.end(), std::back_inserter(dst));
 }
 
@@ -731,19 +730,20 @@ bool valMapLookup(const TValMap &valMap, TValId *pVal) {
 }
 
 void SymHeapCore::Private::subsCreate(TObjId obj) {
-    const TObjId root = obj;
+    const TValId rootAt = this->objects[obj].root;
+    CL_BREAK_IF(rootAt <= 0);
+
+    // XXX
+    this->roots[obj];
 
     // initialize grid's root clt
     TObjType clt = this->objects[obj].clt;
-    TGrid &grid = this->roots[root].grid;
+    TGrid &grid = this->valData(rootAt)->grid;
     grid[/* off */ 0][clt] = obj;
 
     typedef std::pair<TObjId, TObjType> TPair;
     typedef std::stack<TPair> TStack;
     TStack todo;
-
-    const TValId rootAt = this->roots[root].addr;
-    CL_BREAK_IF(rootAt <= 0);
 
     // we use explicit stack to avoid recursion
     push(todo, obj, clt);
@@ -768,7 +768,7 @@ void SymHeapCore::Private::subsCreate(TObjId obj) {
             this->objects[subObj].off = offTotal;
             grid[offTotal][subClt] = subObj;
 
-            this->roots[root].allObjs.push_back(subObj);
+            this->valData(rootAt)->allObjs.push_back(subObj);
 
             push(todo, subObj, subClt);
         }
@@ -787,23 +787,27 @@ TValId SymHeapCore::Private::objDup(TObjId root) {
     this->objects[image] = origin;
 
     // check address of the given root
-    const Private::Root &rootDataSrc = roMapLookup(this->roots, root);
-    const TValId rootAt = rootDataSrc.addr;
+    const TValId rootAt = this->objects[root].root;
     CL_BREAK_IF(rootAt <= 0);
+
+    const RootValue *rootDataSrc = this->valData(rootAt);
     const EValueTarget code = this->values[rootAt]->code;
 
     // assign an address to the clone
     const TValId imageAt = this->valCreate(code, VO_ASSIGNED);
     this->valData(imageAt)->target = image;
-    Private::Root &rootDataDst = this->roots[image];
-    rootDataDst.addr = imageAt;
+    RootValue *rootDataDst = this->valData(imageAt);
+    rootDataDst->addr = imageAt;
     this->objects[image].root = imageAt;
 
     // duplicate root metadata
     const TObjType cltRoot = origin.clt;
-    rootDataDst.grid[/* off */0][cltRoot] = image;
-    rootDataDst.cVar    = rootDataSrc.cVar;
-    rootDataDst.isProto = rootDataSrc.isProto;
+    rootDataDst->grid[/* off */0][cltRoot] = image;
+    rootDataDst->cVar    = rootDataSrc->cVar;
+    rootDataDst->isProto = rootDataSrc->isProto;
+
+    // XXX
+    this->roots[image];
 
     if (!isComposite(cltRoot))
         return imageAt;
@@ -811,7 +815,7 @@ TValId SymHeapCore::Private::objDup(TObjId root) {
     // assume composite object
     this->setValueOf(image, VAL_INVALID);
 
-    BOOST_FOREACH(const TObjId src, rootDataSrc.allObjs) {
+    BOOST_FOREACH(const TObjId src, rootDataSrc->allObjs) {
         // duplicate a single object
         const TObjId dst = this->objCreate();
         const Private::Object &origin = this->objects[src];
@@ -819,50 +823,47 @@ TValId SymHeapCore::Private::objDup(TObjId root) {
 
         // copy the metadata
         this->objects[dst] = origin;
-        const TLiveObjs &liveSrc = rootDataSrc.liveObjs;
+        const TLiveObjs &liveSrc = rootDataSrc->liveObjs;
         TLiveObjs::const_iterator it = liveSrc.find(src);
         if (liveSrc.end() != it) {
-            TLiveObjs &liveDst = rootDataDst.liveObjs;
+            TLiveObjs &liveDst = rootDataDst->liveObjs;
             liveDst[dst] = it->second;
         }
 
         // recover root
         this->objects[dst].root = imageAt;
-        rootDataDst.allObjs.push_back(dst);
+        rootDataDst->allObjs.push_back(dst);
 
         // recover grid
         const TOffset off = this->objects[dst].off;
         const TObjType clt = this->objects[dst].clt;
-        TGrid &grid = rootDataDst.grid;
+        TGrid &grid = rootDataDst->grid;
         grid[off][clt] = dst;
     }
 
     return imageAt;
 }
 
-void SymHeapCore::gatherLivePointers(TObjList &dst, TValId atAddr) const {
-    const TObjId root = const_cast<SymHeapCore *>(this)->objAt(atAddr);
-    const Private::Root &rootData = roMapLookup(d->roots, root);
-    BOOST_FOREACH(TLiveObjs::const_reference item, rootData.liveObjs) {
+void SymHeapCore::gatherLivePointers(TObjList &dst, TValId root) const {
+    const RootValue *rootData = d->valData(root);
+    BOOST_FOREACH(TLiveObjs::const_reference item, rootData->liveObjs) {
         if (/* isPtr */ item.second)
             dst.push_back(/* obj */ item.first);
     }
 }
 
-void SymHeapCore::gatherLiveObjects(TObjList &dst, TValId atAddr) const {
-    const TObjId root = const_cast<SymHeapCore *>(this)->objAt(atAddr);
-    const Private::Root &rootData = roMapLookup(d->roots, root);
-
-    BOOST_FOREACH(TLiveObjs::const_reference item, rootData.liveObjs)
+void SymHeapCore::gatherLiveObjects(TObjList &dst, TValId root) const {
+    const RootValue *rootData = d->valData(root);
+    BOOST_FOREACH(TLiveObjs::const_reference item, rootData->liveObjs)
         dst.push_back(/* obj */ item.first);
 }
 
 void SymHeapCore::Private::subsDestroy(TObjId root) {
     this->releaseValueOf(root);
     this->objects[root].value = VAL_INVALID;
-    Private::Root &rootData = roMapLookup(this->roots, root);
+    RootValue *rootData = this->valData(this->objects[root].root);
 
-    BOOST_FOREACH(const TObjId obj, rootData.allObjs) {
+    BOOST_FOREACH(const TObjId obj, rootData->allObjs) {
         this->releaseValueOf(obj);
         this->objects[obj].value = VAL_INVALID;
     }
@@ -881,7 +882,7 @@ SymHeapCore::SymHeapCore(TStorRef stor):
     // assign an address to OBJ_RETURN
     const TValId addr = d->valCreate(VT_ON_STACK, VO_ASSIGNED);
     d->valData(addr)->target = OBJ_RETURN;
-    d->roots[OBJ_RETURN].addr = addr;
+    d->valData(addr)->addr = addr;
 
     d->objects.resize(/* OBJ_RETURN */ 1);
     d->objects[OBJ_RETURN].root = addr;
@@ -915,8 +916,8 @@ void SymHeapCore::objSetValue(TObjId obj, TValId val) {
     CL_BREAK_IF(d->objOutOfRange(obj));
 
     // seek root
-    const TObjId root = d->objRoot(obj);
-    Private::Root &rootData = roMapLookup(d->roots, root);
+    const TValId root = d->objects[obj].root;
+    RootValue *rootData = d->valData(root);
 
     // we allow to set values of atomic types only
     const TObjType clt = d->objects[obj].clt;
@@ -924,7 +925,7 @@ void SymHeapCore::objSetValue(TObjId obj, TValId val) {
 
     // mark the destination object as live
     const bool isPtr = isDataPtr(clt);
-    rootData.liveObjs[obj] = isPtr;
+    rootData->liveObjs[obj] = isPtr;
 
     // now set the value
     d->setValueOf(obj, val);
@@ -1046,8 +1047,8 @@ EValueTarget SymHeapCore::valTarget(TValId val) const {
     if (handleSpecialTargets(&code, target))
         return code;
 
-    const Private::Root &rootData = d->roots[target];
-    const int uid = rootData.cVar.uid;
+    const RootValue *rootData = d->valData(valRoot);
+    const int uid = rootData->cVar.uid;
     if (-1 == uid)
         return VT_ON_HEAP;
 
@@ -1238,10 +1239,10 @@ TValId SymHeapCore::placedAt(TObjId obj) const {
     if (d->objOutOfRange(obj))
         return VAL_INVALID;
 
-    const TObjId root = d->objRoot(obj);
+    const TValId root = d->objects[obj].root;
     CL_BREAK_IF(root < 0);
 
-    const TValId addr = roMapLookup(d->roots, root).addr;
+    const TValId addr = d->valData(root)->addr;
     CL_BREAK_IF(addr <= 0);
 
     SymHeapCore &self = /* FIXME */ const_cast<SymHeapCore &>(*this);
@@ -1279,8 +1280,8 @@ bool SymHeapCore::Private::gridLookup(
     }
 
     // grid lookup
-    const Private::Root &rootData = roMapLookup(this->roots, root);
-    const TGrid &grid = rootData.grid;
+    const RootValue *rootData = this->valData(this->objects[root].root);
+    const TGrid &grid = rootData->grid;
     const TOffset off = this->values[val]->offRoot;
     TGrid::const_iterator it = grid.find(off);
     if (grid.end() == it) {
@@ -1356,7 +1357,7 @@ TObjId SymHeapCore::objAt(TValId at, TObjCode code) {
 
         const int size = (hasType)
             ? cltItem->size
-            : roMapLookup(d->roots, obj).cbSize;
+            : d->valData(d->valRoot(at))->cbSize;
 
         if (size < maxSize)
             continue;
@@ -1409,11 +1410,10 @@ CVar SymHeapCore::cVarByRoot(TValId valRoot) const {
     // the following breakpoint checks everything
     CL_BREAK_IF(valRoot <= 0 || valRoot != d->valRoot(valRoot));
 
-    const TObjId root = d->valData(valRoot)->target;
-    const Private::Root &rootData = roMapLookup(d->roots, root);
-
-    const CVar &cVar = rootData.cVar;
+    const RootValue *rootData = d->valData(valRoot);
+    const CVar &cVar = rootData->cVar;
     CL_BREAK_IF(-1 == cVar.uid);
+
     return cVar;
 }
 
@@ -1434,13 +1434,13 @@ TValId SymHeapCore::addrOfVar(CVar cv) {
     // create the corresponding heap object
     const TObjId root = d->objCreate();
     d->objects[root].clt = clt;
-    d->roots[root].cVar = cv;
 
     // assign an address
     const EValueTarget code = isOnStack(var) ? VT_ON_STACK : VT_STATIC;
     addr = d->valCreate(code, VO_ASSIGNED);
     d->valData(addr)->target = root;
-    d->roots[root].addr = addr;
+    d->valData(addr)->cVar = cv;
+    d->valData(addr)->addr = addr;
     d->objects[root].root = addr;
 
     // create the structure
@@ -1489,15 +1489,15 @@ TObjId SymHeapCore::valGetComposite(TValId val) const {
 TValId SymHeapCore::heapAlloc(int cbSize) {
     const TObjId obj = d->objCreate();
 
-    Private::Root &rootData = d->roots[obj];
-    rootData.cbSize = cbSize;
-    rootData.grid[/* off */ 0][/* clt */ 0] = obj;
-
     // assign an address
     const TValId addr = d->valCreate(VT_ON_HEAP, VO_ASSIGNED);
     d->valData(addr)->target = obj;
-    d->roots[obj].addr = addr;
+    d->valData(addr)->addr = addr;
     d->objects[obj].root = addr;
+
+    RootValue *rootData = d->valData(addr);
+    rootData->cbSize = cbSize;
+    rootData->grid[/* off */ 0][/* clt */ 0] = obj;
 
     return addr;
 }
@@ -1525,8 +1525,8 @@ int SymHeapCore::valSizeOfTarget(TValId val) const {
         return clt->size;
 
     // RAW object
-    const Private::Root &rootData = roMapLookup(d->roots, root);
-    return rootData.cbSize;
+    const RootValue *rootData = d->valData(objData.root);
+    return rootData->cbSize;
 }
 
 void SymHeapCore::objDefineType(TObjId obj, TObjType clt) {
@@ -1555,19 +1555,19 @@ void SymHeapCore::objDefineType(TObjId obj, TObjType clt) {
 void SymHeapCore::Private::objDestroy(TObjId obj) {
     CL_BREAK_IF(objOutOfRange(obj));
     CL_BREAK_IF(this->objects[obj].off);
-    Private::Root &rootData = roMapLookup(this->roots, obj);
+    RootValue *rootData = this->valData(this->objects[obj].root);
 
     // remove the corresponding program variable (if any)
     EValueTarget code = VT_DELETED;
-    const CVar cv = rootData.cVar;
+    const CVar cv = rootData->cVar;
     if (cv.uid != /* heap object */ -1) {
         this->cVarMap.remove(cv);
         code = VT_LOST;
     }
 
+    const TValId addr = rootData->addr;
     if (OBJ_RETURN != obj) {
         // invalidate the address
-        const TValId addr = rootData.addr;
         CL_BREAK_IF(valOutOfRange(addr));
         this->valData(addr)->target = OBJ_INVALID;
         this->valData(addr)->code   = code;
@@ -1579,10 +1579,7 @@ void SymHeapCore::Private::objDestroy(TObjId obj) {
         // reinitialize OBJ_RETURN
         this->objects[OBJ_RETURN].value = VAL_INVALID;
         this->objects[OBJ_RETURN].clt = 0;
-
-        const TValId addr = this->roots[OBJ_RETURN].addr;
-        this->roots[OBJ_RETURN] = Private::Root();
-        this->roots[OBJ_RETURN].addr = addr;
+        this->valData(addr)->grid.clear();
     }
 }
 
@@ -1626,21 +1623,21 @@ bool SymHeapCore::valTargetIsProto(TValId val) const {
         return false;
 
     // seek root
-    const TObjId root = d->rootLookup(val);
+    const TValId root = d->valRoot(val);
     if (root < 0)
         return false;
 
-    const Private::Root &rootData = roMapLookup(d->roots, root);
-    return rootData.isProto;
+    const RootValue *rootData = d->valData(root);
+    return rootData->isProto;
 }
 
 void SymHeapCore::valTargetSetProto(TValId val, bool isProto) {
     CL_BREAK_IF(VAL_NULL == val || d->valOutOfRange(val));
 
     // seek root
-    const TObjId root = d->rootLookup(val);
-    Private::Root &rootData = roMapLookup(d->roots, root);
-    rootData.isProto = isProto;
+    const TValId root = d->valRoot(val);
+    RootValue *rootData = d->valData(root);
+    rootData->isProto = isProto;
 }
 
 // /////////////////////////////////////////////////////////////////////////////
