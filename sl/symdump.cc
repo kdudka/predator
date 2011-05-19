@@ -77,8 +77,7 @@ void dump_cl_insn(const struct CodeStorage::Insn *insn) {
 namespace {
     bool isObject(const SymHeap &heap, int id) {
         const TObjId obj = static_cast<TObjId>(id);
-        return (OBJ_RETURN == obj)
-            || (VAL_INVALID != heap.placedAt(obj));
+        return (VAL_INVALID != heap.placedAt(obj));
     }
 
     bool isIdValid(int id) {
@@ -123,8 +122,6 @@ void dump_obj(const SymHeap &heap, TObjId obj) {
         case OBJ_INVALID:       cout << "    OBJ_INVALID\n";       return;
         case OBJ_UNKNOWN:       cout << "    OBJ_UNKNOWN\n";       return;
         case OBJ_DEREF_FAILED:  cout << "    OBJ_DEREF_FAILED\n";  return;
-
-        case OBJ_RETURN:        cout << "    OBJ_RETURN\n";
         default:
             break;
     }

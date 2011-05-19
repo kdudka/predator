@@ -249,8 +249,9 @@ void SymExecEngine::execReturn() {
         const TValId val = proc.valFromOperand(src);
         CL_BREAK_IF(VAL_INVALID == val);
 
-        heap.objDefineType(OBJ_RETURN, src.type);
-        proc.objSetValue(OBJ_RETURN, val);
+        const TObjId ret = /* XXX */ heap.objAt(VAL_ADDR_OF_RET);
+        heap.objDefineType(ret, src.type);
+        proc.objSetValue(ret, val);
     }
 
     // commit one of the function results

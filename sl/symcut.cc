@@ -142,8 +142,8 @@ void addObjectIfNeeded(DeepCopyData &dc, TValId rootSrcAt) {
 
     // create the object in 'dst'
     const TObjId rootSrc = src.objAt(rootSrcAt);
-    TValId rootDstAt = (OBJ_RETURN == rootSrc)
-        ? dst.placedAt(OBJ_RETURN)
+    TValId rootDstAt = (VAL_ADDR_OF_RET == rootSrcAt)
+        ? VAL_ADDR_OF_RET
         : dst.heapAlloc(src.valSizeOfTarget(rootSrcAt));
     const TObjType clt = src.objType(rootSrc);
     if (clt)

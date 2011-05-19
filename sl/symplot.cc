@@ -765,7 +765,6 @@ bool SymPlot::Private::resolvePointsTo(TObjId *pDst, TValId value) {
             this->plotNodeAux(value, CL_TYPE_UNKNOWN, "?");
             return false;
 
-        case OBJ_RETURN:
         default:
             *pDst = obj;
             return true;

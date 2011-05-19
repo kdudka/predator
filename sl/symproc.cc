@@ -280,7 +280,6 @@ TObjId SymProc::objByOperand(const struct cl_operand &op) {
 
         case OBJ_UNKNOWN:
         case OBJ_DEREF_FAILED:
-        case OBJ_RETURN:
         default:
             return obj;
     }

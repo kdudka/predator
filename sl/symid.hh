@@ -38,12 +38,6 @@
  */
 enum TObjId {
     /**
-     * special object to store function's return value to. OBJ_RETURN denotes a
-     * @b valid object, with fixed TObjId. @n @n
-     */
-    OBJ_RETURN        =  0,
-
-    /**
      * special enumeration value denoting a failure of a method which may return
      * a valid object.  OBJ_INVALID can @b never denote a valid object.  @n @n
      */
@@ -84,6 +78,9 @@ enum TValId {
      * object.  @n @n
      */
     VAL_NULL          =  0,
+
+    /// @todo some dox
+    VAL_ADDR_OF_RET   =  1,
 
     /**
      * special enumeration value denoting a failure of a method which may return

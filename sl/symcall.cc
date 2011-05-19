@@ -115,7 +115,7 @@ void SymCallCtx::Private::assignReturnValue(SymHeap &sh) {
     const TObjId obj = proc.objByOperand(op);
     CL_BREAK_IF(OBJ_INVALID == obj);
 
-    const TValId val = sh.valueOf(OBJ_RETURN);
+    const TValId val = sh.valueOf(sh.objAt(VAL_ADDR_OF_RET));
     CL_BREAK_IF(VAL_INVALID == val);
 
     // assign the return value in the current symbolic heap
@@ -166,7 +166,7 @@ void SymCallCtx::Private::destroyStackFrame(SymHeap &sh) {
     // We need to look for junk since there can be a function returning an
     // allocated object.  Then ignoring the return value on the caller's
     // side can trigger a memory leak.  See data/test-0090.c for a use case.
-    proc.valDestroyTarget(sh.placedAt(OBJ_RETURN));
+    proc.valDestroyTarget(VAL_ADDR_OF_RET);
 }
 
 void SymCallCtx::flushCallResults(SymState &dst) {

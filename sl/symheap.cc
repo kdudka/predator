@@ -642,7 +642,7 @@ void SymHeapCore::Private::subsCreate(TObjId obj) {
     const HeapObject *objData = this->objData(obj);
     const TValId rootAt = objData->root;
     CL_BREAK_IF(rootAt <= 0);
-    if (OBJ_RETURN != obj)
+    if (VAL_ADDR_OF_RET != rootAt)
         this->liveRoots.insert(rootAt);
 
     // initialize grid's root clt
@@ -798,14 +798,15 @@ SymHeapCore::SymHeapCore(TStorRef stor):
 {
     CL_BREAK_IF(!&stor_);
 
-    // assign an address to OBJ_RETURN
+    // initialize VAL_ADDR_OF_RET
     const TValId addr = d->valCreate(VT_ON_STACK, VO_ASSIGNED);
+    CL_BREAK_IF(VAL_ADDR_OF_RET != addr);
 
     RootValue *rootData = d->rootData(addr);
-    rootData->target = OBJ_RETURN;
+    rootData->target = /* XXX */ (TObjId) 0;
     rootData->addr = addr;
 
-    HeapObject *objData = d->objData(OBJ_RETURN);
+    HeapObject *objData = d->objData(/* XXX */ (TObjId) 0);
     objData->root = addr;
 }
 
@@ -1390,9 +1391,9 @@ int SymHeapCore::valSizeOfTarget(TValId val) const {
 
 // TODO: remove this
 void SymHeapCore::objDefineType(TObjId obj, TObjType clt) {
-    if (OBJ_RETURN == obj)
+    if (VAL_ADDR_OF_RET == this->placedAt(obj))
         // cleanup OBJ_RETURN for next wheel
-        d->objDestroy(OBJ_RETURN);
+        d->objDestroy(obj);
 
     // type reinterpretation not allowed for now
     HeapObject *objData = d->objData(obj);
@@ -1427,7 +1428,7 @@ void SymHeapCore::Private::objDestroy(TObjId obj) {
     objData->value = VAL_INVALID;
     objData->clt = 0;
 
-    if (OBJ_RETURN == obj)
+    if (VAL_ADDR_OF_RET == root)
         return;
 
     // wipe rootData
