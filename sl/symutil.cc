@@ -65,7 +65,7 @@ void getPtrValues(TValList &dst, const SymHeap &sh, TValId at) {
 bool initSingleVariable(
         SymHeap                         &sh,
         const TObjId                     obj,
-        const struct cl_initializer     *initial)
+        const struct cl_initializer     *initial = 0)
 {
     const struct cl_type *clt = sh.objType(obj);
     CL_BREAK_IF(!clt);
@@ -142,6 +142,11 @@ class InitVarLegacyWrapper {
             CL_BREAK_IF(obj <= 0);
 
             const struct cl_initializer *in = initial_;
+            if (!in) {
+                initSingleVariable(sh_, obj);
+                return /* continue */ true;
+            }
+
             BOOST_FOREACH(int idx, ic) {
                 CL_BREAK_IF(!isComposite(in->type));
                 in = in->data.nested_initials[idx];
