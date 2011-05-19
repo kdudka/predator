@@ -325,7 +325,7 @@ struct SymHeapCore::Private {
 
     TValId valDup(TValId);
     TObjId objCreate();
-    TValId objDup(TObjId root);
+    TValId objDup(TValId root);
     void objDestroy(TObjId obj);
 
     void releaseValueOf(TObjId obj, TValId val);
@@ -334,7 +334,6 @@ struct SymHeapCore::Private {
     void subsCreate(TObjId obj);
     void subsDestroy(TObjId obj);
 
-    TObjId rootLookup(TValId val);
     bool gridLookup(TObjId *pFailCode, const TObjByType **pRow, const TValId);
     void neqOpWrap(SymHeap::ENeqOp, TValId, TValId);
 
@@ -610,8 +609,8 @@ TValId SymHeapCore::valClone(TValId val) {
         return d->valDup(val);
 
     // duplicate a root object
-    const TObjId root = /* XXX */ d->rootLookup(val);
-    const TValId dupAt = d->objDup(/* XXX */ root);
+    const TValId root = d->valRoot(val, valData);
+    const TValId dupAt = d->objDup(root);
 
     // take the offset into consideration
     return this->valByOffset(dupAt, valData->offRoot);
@@ -649,6 +648,7 @@ void SymHeapCore::Private::subsCreate(TObjId obj) {
     // initialize grid's root clt
     TObjType clt = objData->clt;
     RootValue *rootData = this->rootData(rootAt);
+    rootData->cbSize = clt->size;
     TGrid &grid = rootData->grid;
     grid[/* off */ 0][clt] = obj;
 
@@ -690,9 +690,10 @@ void SymHeapCore::Private::subsCreate(TObjId obj) {
     }
 }
 
-TValId SymHeapCore::Private::objDup(TObjId root) {
+TValId SymHeapCore::Private::objDup(TValId rootAt) {
     CL_DEBUG("SymHeapCore::Private::objDup() is taking place...");
-    const HeapObject *objDataSrc = this->objData(root);
+    const RootValue *rootDataSrc = this->rootData(rootAt);
+    const HeapObject *objDataSrc = this->objData(/* XXX */ rootDataSrc->target);
 
     // duplicate value of the root object
     const TObjId image = this->objCreate();
@@ -703,12 +704,7 @@ TValId SymHeapCore::Private::objDup(TObjId root) {
     HeapObject *objDataDst = this->objData(image);
     objDataDst->clt = cltRoot;
 
-    // check address of the given root
-    const TValId rootAt = objDataSrc->root;
-    CL_BREAK_IF(rootAt <= 0);
-
     // assign an address to the clone
-    const RootValue *rootDataSrc = this->rootData(rootAt);
     const EValueTarget code = rootDataSrc->code;
     const TValId imageAt = this->valCreate(code, VO_ASSIGNED);
     RootValue *rootDataDst = this->rootData(imageAt);
@@ -720,6 +716,7 @@ TValId SymHeapCore::Private::objDup(TObjId root) {
     rootDataDst->grid[/* off */0][cltRoot] = image;
     rootDataDst->cVar    = rootDataSrc->cVar;
     rootDataDst->isProto = rootDataSrc->isProto;
+    rootDataDst->cbSize  = rootDataSrc->cbSize;
 
     this->liveRoots.insert(imageAt);
 
@@ -1121,46 +1118,35 @@ TValId SymHeapCore::placedAt(TObjId obj) const {
     return writable.valByOffset(addr, objData->off);
 }
 
-// TODO: remove this
-TObjId SymHeapCore::Private::rootLookup(TValId val) {
-    if (val < 0)
-        return OBJ_INVALID;
-
-    const BareValue *valData = this->valData(val);
-    const EValueTarget code = valData->code;
-    switch (code) {
-        case VT_UNKNOWN:
-            return /* XXX */ OBJ_UNKNOWN;
-
-        default:
-            if (!isPossibleToDeref(code))
-                return OBJ_INVALID;
-    }
-
-    // root lookup
-    const TValId valRoot = this->valRoot(val, valData);
-    const RootValue *rootData = this->rootData(valRoot);
-    return rootData->target;
-}
-
 bool SymHeapCore::Private::gridLookup(
         TObjId                     *pFailCode,
         const TObjByType          **pRow,
         const TValId                val)
 {
-    const TObjId root = this->rootLookup(val);
-    if (root < 0) {
-        *pFailCode = root;
+    if (val <= 0) {
+        *pFailCode = OBJ_INVALID;
         return false;
     }
 
-    // jump to the corresponding grid
-    const HeapObject *objData = this->objData(root);
-    const RootValue *rootData = this->rootData(objData->root);
-    const TGrid &grid = rootData->grid;
+    const BareValue *valData = this->valData(val);
+    const EValueTarget code = valData->code;
+    switch (code) {
+        case VT_UNKNOWN:
+            *pFailCode = /* XXX */ OBJ_UNKNOWN;
+            return false;
+
+        default:
+            if (isPossibleToDeref(code))
+                break;
+
+            *pFailCode = OBJ_INVALID;
+            return false;
+    }
 
     // grid lookup
-    const BareValue *valData = this->valData(val);
+    const TValId valRoot = this->valRoot(val, valData);
+    const RootValue *rootData = this->rootData(valRoot);
+    const TGrid &grid = rootData->grid;
     const TOffset off = valData->offRoot;
     TGrid::const_iterator it = grid.find(off);
     if (grid.end() == it) {
@@ -1390,18 +1376,16 @@ bool SymHeapCore::valDestroyTarget(TValId val) {
 }
 
 int SymHeapCore::valSizeOfTarget(TValId val) const {
-    const TObjId root = d->rootLookup(val);
-    CL_BREAK_IF(d->objOutOfRange(root));
-    const HeapObject *objData = DCAST<const HeapObject *>(d->ents[root]);
+    const BareValue *valData = d->valData(val);
+    CL_BREAK_IF(!isPossibleToDeref(valData->code));
 
-    const TObjType clt = objData->clt;
-    if (clt)
-        // typed object
-        return clt->size;
+    const TValId root = d->valRoot(val, valData);
+    const RootValue *rootData = d->rootData(root);
 
-    // RAW object
-    const RootValue *rootData = d->rootData(objData->root);
-    return rootData->cbSize;
+    // FIXME: this field is not initialized accurately in all cases
+    const int rootSize = rootData->cbSize;
+    const TOffset off = valData->offRoot;
+    return rootSize - off;
 }
 
 // TODO: remove this
@@ -1752,10 +1736,7 @@ bool SymHeap::proveNeq(TValId ref, TValId val) const {
     // having the values always in the same order leads to simpler code
     moveKnownValueToLeft(*this, ref, val);
     const EValueTarget code = this->valTarget(ref);
-    if (VAL_NULL != ref
-            && !isKnownObject(code)
-            && /* XXX */ !isGone(code)
-            && /* XXX */ VT_CUSTOM != code)
+    if (isAbstract(code))
         return false;
 
     std::set<TValId> haveSeen;
