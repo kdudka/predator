@@ -548,15 +548,13 @@ TValId SymHeapCore::valueOf(TObjId obj) const {
             break;
     }
 
-    CL_BREAK_IF(d->objOutOfRange(obj));
-    HeapObject &objData = *DCAST<HeapObject *>(d->ents[obj]);
-
-    TValId &val = objData.value;
+    HeapObject *objData = d->objData(obj);
+    TValId &val = objData->value;
     if (VAL_INVALID != val)
         // the object has a value
         return val;
 
-    if (isComposite(objData.clt)) {
+    if (isComposite(objData->clt)) {
         // deleayed creation of a composite value
         val = d->valCreate(VT_COMPOSITE, VO_INVALID);
         CompValue *valData = DCAST<CompValue *>(d->ents[val]);
@@ -564,31 +562,35 @@ TValId SymHeapCore::valueOf(TObjId obj) const {
     }
     else {
         // deleayed creation of an uninitialized value
-        const TValId root = objData.root;
-        CL_BREAK_IF(d->valOutOfRange(root));
-
-        const BareValue *valData = DCAST<const BareValue *>(d->ents[root]);
-        const EValueOrigin vo = originByCode(valData->code);
+        const BareValue *rootData = d->rootData(objData->root);
+        const EValueOrigin vo = originByCode(rootData->code);
         val = d->valCreate(VT_UNKNOWN, vo);
     }
 
     // store backward reference
-    DCAST<BareValue *>(d->ents[val])->usedBy.insert(obj);
+    d->valData(val)->usedBy.insert(obj);
     return val;
 }
 
 void SymHeapCore::usedBy(TObjList &dst, TValId val) const {
-    if (VAL_NULL == val || d->valOutOfRange(val))
+    if (VAL_NULL == val)
         return;
 
-    const TUsedBy &usedBy = DCAST<BareValue *>(d->ents[val])->usedBy;
+    const BareValue *valData = d->valData(val);
+    const TUsedBy &usedBy = valData->usedBy;
     std::copy(usedBy.begin(), usedBy.end(), std::back_inserter(dst));
 }
 
-void SymHeapCore::pointedBy(TObjList &dst, TValId root) const {
-    CL_BREAK_IF(d->valOutOfRange(root));
+unsigned SymHeapCore::usedByCount(TValId val) const {
+    if (VAL_NULL == val)
+        return 0;
 
-    const RootValue *rootData = DCAST<const RootValue *>(d->ents[root]);
+    const BareValue *valData = d->valData(val);
+    return valData->usedBy.size();
+}
+
+void SymHeapCore::pointedBy(TObjList &dst, TValId root) const {
+    const RootValue *rootData = d->rootData(root);
     CL_BREAK_IF(rootData->offRoot);
     CL_BREAK_IF(!isPossibleToDeref(rootData->code));
 
@@ -596,36 +598,23 @@ void SymHeapCore::pointedBy(TObjList &dst, TValId root) const {
     std::copy(usedBy.begin(), usedBy.end(), std::back_inserter(dst));
 }
 
-/// return how many objects use the value
-unsigned SymHeapCore::usedByCount(TValId val) const {
-    if (VAL_NULL == val || d->valOutOfRange(val))
-        return 0;
-
-    const BareValue *valData = DCAST<const BareValue *>(d->ents[val]);
-    const TUsedBy &usedBy = valData->usedBy;
-    return usedBy.size();
-}
-
 unsigned SymHeapCore::lastId() const {
     return d->lastId<unsigned>();
 }
 
 TValId SymHeapCore::valClone(TValId val) {
-    CL_BREAK_IF(VAL_NULL == val || d->valOutOfRange(val));
-    const BareValue *valData = DCAST<const BareValue *>(d->ents[val]);
-
-    // check unknown value code
+    const BareValue *valData = d->valData(val);
     const EValueTarget code = valData->code;
     if (!isPossibleToDeref(code))
+        // duplicate an unknown value
         return d->valDup(val);
 
-    // duplicate the root object
-    const TObjId root = d->rootLookup(val);
-    const TValId dupAt = d->objDup(root);
+    // duplicate a root object
+    const TObjId root = /* XXX */ d->rootLookup(val);
+    const TValId dupAt = d->objDup(/* XXX */ root);
 
     // take the offset into consideration
-    const TOffset off = this->valOffset(val);
-    return this->valByOffset(dupAt, off);
+    return this->valByOffset(dupAt, valData->offRoot);
 }
 
 void SymHeapCore::valMerge(TValId val, TValId replaceBy) {
@@ -651,14 +640,16 @@ bool valMapLookup(const TValMap &valMap, TValId *pVal) {
 }
 
 void SymHeapCore::Private::subsCreate(TObjId obj) {
-    const TValId rootAt = DCAST<const HeapObject *>(this->ents[obj])->root;
+    const HeapObject *objData = this->objData(obj);
+    const TValId rootAt = objData->root;
     CL_BREAK_IF(rootAt <= 0);
     if (OBJ_RETURN != obj)
         this->liveRoots.insert(rootAt);
 
     // initialize grid's root clt
-    TObjType clt = DCAST<const HeapObject *>(this->ents[obj])->clt;
-    TGrid &grid = this->rootData(rootAt)->grid;
+    TObjType clt = objData->clt;
+    RootValue *rootData = this->rootData(rootAt);
+    TGrid &grid = rootData->grid;
     grid[/* off */ 0][clt] = obj;
 
     typedef std::pair<TObjId, TObjType> TPair;
@@ -675,21 +666,24 @@ void SymHeapCore::Private::subsCreate(TObjId obj) {
         if (!isComposite(clt))
             continue;
 
+        const TOffset offRoot = this->objData(obj)->off;
+
         const int cnt = clt->item_cnt;
         for (int i = 0; i < cnt; ++i) {
             const struct cl_type_item *item = clt->items + i;
             TObjType subClt = item->type;
+
             const TObjId subObj = this->objCreate();
-            DCAST<HeapObject *>(this->ents[subObj])->clt  = subClt;
-            DCAST<HeapObject *>(this->ents[subObj])->root = rootAt;
+            HeapObject *subData = this->objData(subObj);
+            subData->clt  = subClt;
+            subData->root = rootAt;
 
-            const TOffset offTotal = item->offset
-                + DCAST<const HeapObject *>(this->ents[obj])->off;
-
-            DCAST<HeapObject *>(this->ents[subObj])->off = offTotal;
+            const TOffset offTotal = offRoot + item->offset;
+            subData->off = offTotal;
             grid[offTotal][subClt] = subObj;
 
-            this->rootData(rootAt)->allObjs.push_back(subObj);
+            // XXX
+            rootData->allObjs.push_back(subObj);
 
             push(todo, subObj, subClt);
         }
@@ -698,32 +692,31 @@ void SymHeapCore::Private::subsCreate(TObjId obj) {
 
 TValId SymHeapCore::Private::objDup(TObjId root) {
     CL_DEBUG("SymHeapCore::Private::objDup() is taking place...");
-    CL_BREAK_IF(objOutOfRange(root));
-    CL_BREAK_IF(DCAST<const HeapObject *>(this->ents[root])->off);
+    const HeapObject *objDataSrc = this->objData(root);
 
-    // duplicate object metadata
+    // duplicate value of the root object
     const TObjId image = this->objCreate();
-    const HeapObject &origin = *DCAST<const HeapObject *>(this->ents[root]);
-    this->setValueOf(image, origin.value);
-    *DCAST<HeapObject *>(this->ents[image]) = origin;
+    this->setValueOf(image, objDataSrc->value);
+
+    // duplicate type-info of the root object
+    const TObjType cltRoot = objDataSrc->clt;
+    HeapObject *objDataDst = this->objData(image);
+    objDataDst->clt = cltRoot;
 
     // check address of the given root
-    const TValId rootAt = DCAST<const HeapObject *>(this->ents[root])->root;
+    const TValId rootAt = objDataSrc->root;
     CL_BREAK_IF(rootAt <= 0);
 
-    const RootValue *rootDataSrc = this->rootData(rootAt);
-    const EValueTarget code =
-        DCAST<const BareValue *>(this->ents[rootAt])->code;
-
     // assign an address to the clone
+    const RootValue *rootDataSrc = this->rootData(rootAt);
+    const EValueTarget code = rootDataSrc->code;
     const TValId imageAt = this->valCreate(code, VO_ASSIGNED);
-    this->rootData(imageAt)->target = image;
     RootValue *rootDataDst = this->rootData(imageAt);
+    rootDataDst->target = image;
     rootDataDst->addr = imageAt;
-    DCAST<HeapObject *>(this->ents[image])->root = imageAt;
+    objDataDst->root = imageAt;
 
     // duplicate root metadata
-    const TObjType cltRoot = origin.clt;
     rootDataDst->grid[/* off */0][cltRoot] = image;
     rootDataDst->cVar    = rootDataSrc->cVar;
     rootDataDst->isProto = rootDataSrc->isProto;
@@ -737,28 +730,28 @@ TValId SymHeapCore::Private::objDup(TObjId root) {
     this->setValueOf(image, VAL_INVALID);
 
     BOOST_FOREACH(const TObjId src, rootDataSrc->allObjs) {
+        objDataSrc = this->objData(src);
+
         // duplicate a single object
         const TObjId dst = this->objCreate();
-        const HeapObject &origin =
-            *DCAST<const HeapObject *>(this->ents[src]);
-        this->setValueOf(dst, origin.value);
+        this->setValueOf(dst, objDataSrc->value);
 
         // copy the metadata
-        *DCAST<HeapObject *>(this->ents[dst]) = origin;
+        objDataDst = this->objData(dst);
+        objDataDst->off = objDataSrc->off;
+        objDataDst->clt = objDataSrc->clt;
+
+        // prevserve live ptr/data object
         const TLiveObjs &liveSrc = rootDataSrc->liveObjs;
         TLiveObjs::const_iterator it = liveSrc.find(src);
-        if (liveSrc.end() != it) {
-            TLiveObjs &liveDst = rootDataDst->liveObjs;
-            liveDst[dst] = it->second;
-        }
+        if (liveSrc.end() != it)
+            rootDataDst->liveObjs[dst] = /* isPtr */ it->second;
 
         // recover root
-        DCAST<HeapObject *>(this->ents[dst])->root = imageAt;
+        objDataDst->root = imageAt;
         rootDataDst->allObjs.push_back(dst);
 
         // recover grid
-        const HeapObject *objDataDst =
-            DCAST<const HeapObject *>(this->ents[dst]);
         const TOffset off = objDataDst->off;
         const TObjType clt = objDataDst->clt;
         TGrid &grid = rootDataDst->grid;
