@@ -335,9 +335,6 @@ int /* uid */ SymProc::fncFromOperand(const struct cl_operand &op) {
 }
 
 void SymProc::heapObjDefineType(TObjId lhs, TValId rhs) {
-    const TObjId var = sh_.objAt(rhs);
-    CL_BREAK_IF(OBJ_INVALID == var);
-
     TObjType clt = sh_.objType(lhs);
     if (!clt)
         return;
@@ -365,7 +362,7 @@ void SymProc::heapObjDefineType(TObjId lhs, TValId rhs) {
         CL_NOTE_MSG(lw_, " expected: " << cbNeed << " bytes");
     }
 
-    sh_.objDefineType(var, clt);
+    sh_.valSetLastKnownTypeOfTarget(rhs, clt);
 }
 
 void SymProc::heapSetSingleVal(TObjId lhs, TValId rhs) {

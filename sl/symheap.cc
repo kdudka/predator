@@ -1389,9 +1389,11 @@ int SymHeapCore::valSizeOfTarget(TValId val) const {
     return rootSize - off;
 }
 
-// TODO: remove this
-void SymHeapCore::objDefineType(TObjId obj, TObjType clt) {
-    if (VAL_ADDR_OF_RET == this->placedAt(obj))
+void SymHeapCore::valSetLastKnownTypeOfTarget(TValId root, TObjType clt) {
+    RootValue *rootData = d->rootData(root);
+    const TObjId obj = /* XXX */ rootData->target;
+
+    if (VAL_ADDR_OF_RET == root)
         // cleanup OBJ_RETURN for next wheel
         d->objDestroy(obj);
 

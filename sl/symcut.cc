@@ -147,7 +147,7 @@ void addObjectIfNeeded(DeepCopyData &dc, TValId rootSrcAt) {
         : dst.heapAlloc(src.valSizeOfTarget(rootSrcAt));
     const TObjType clt = src.objType(rootSrc);
     if (clt)
-        dst.objDefineType(dst.objAt(rootDstAt), clt);
+        dst.valSetLastKnownTypeOfTarget(rootDstAt, clt);
 
     // preserve metadata of abstract objects
     const bool isProto = src.valTargetIsProto(rootSrcAt);

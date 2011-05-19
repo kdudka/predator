@@ -376,8 +376,9 @@ class SymHeapCore {
          */
         virtual bool valDestroyTarget(TValId);
 
-        // TODO: remove this
-        void objDefineType(TObjId obj, TObjType clt);
+        void valSetLastKnownTypeOfTarget(TValId root, TObjType clt);
+
+        TObjType valLastKnownTypeOfTarget(TValId root);
 
     public:
         TValId valCreate(EValueTarget code, EValueOrigin origin);

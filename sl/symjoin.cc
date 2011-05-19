@@ -846,7 +846,7 @@ bool createObject(
     // create an image in ctx.dst
     const TValId rootDst = ctx.dst.heapAlloc(size);
     if (clt)
-        ctx.dst.objDefineType(ctx.dst.objAt(rootDst), clt);
+        ctx.dst.valSetLastKnownTypeOfTarget(rootDst, clt);
 
     // preserve 'prototype' flag
     ctx.dst.valTargetSetProto(rootDst, isProto);
@@ -2137,7 +2137,7 @@ bool joinDataCore(
     const TValId rootDstAt = ctx.dst.heapAlloc(size);
     const TObjId rootDst = ctx.dst.objAt(rootDstAt);
     if (clt)
-        ctx.dst.objDefineType(rootDst, clt);
+        ctx.dst.valSetLastKnownTypeOfTarget(rootDstAt, clt);
 
     if (!traverseSubObjs(ctx, addr1, addr2, rootDstAt, &off))
         return false;
