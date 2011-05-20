@@ -48,15 +48,6 @@ bool haveSeg(const SymHeap &sh, TValId atAddr, TValId pointingTo,
  */
 bool haveDlSegAt(const SymHeap &sh, TValId atAddr, TValId peerAddr);
 
-/// TODO: remove this
-TObjId nextPtrFromSeg(const SymHeap &sh, TObjId seg);
-
-/// TODO: remove this
-TObjId peerPtrFromSeg(const SymHeap &sh, TObjId seg);
-
-/// TODO: remove this
-TObjId dlSegPeer(const SymHeap &sh, TObjId dls);
-
 /// return 'next' pointer in the given segment (given by root)
 inline TObjId nextPtrFromSeg(const SymHeap &sh, TValId seg) {
     CL_BREAK_IF(sh.valOffset(seg));
@@ -123,13 +114,18 @@ void dlSegSetMinLength(SymHeap &sh, TValId dls, unsigned len);
 unsigned segMinLength(const SymHeap &sh, TValId seg);
 
 inline unsigned objMinLength(const SymHeap &sh, TValId at) {
-    if (const_cast<SymHeap &>(sh).objAt(at) <= 0)
-        // XXX
-        return 0;
+    const EValueTarget code = sh.valTarget(at);
+    if (isAbstract(code))
+        // abstract target
+        return segMinLength(sh, at);
 
-    return (isAbstract(sh.valTarget(at)))
-        ? segMinLength(sh, at)
-        : /* OK_CONCRETE */ 1;
+    else if (isPossibleToDeref(code))
+        // concrete target
+        return 1;
+
+    else
+        // no target here
+        return 0;
 }
 
 void segSetMinLength(SymHeap &sh, TValId seg, unsigned len);
@@ -147,11 +143,6 @@ TValId segClone(SymHeap &sh, const TValId seg);
 
 /// destroy the given list segment object (including DLS peer in case of DLS)
 void segDestroy(SymHeap &sh, TObjId seg);
-
-// TODO: remove this
-inline TValId segHeadAddr(const SymHeap &sh, TObjId seg) {
-    return segHeadAt(const_cast<SymHeap &>(sh), sh.placedAt(seg));
-}
 
 template <class TIgnoreList>
 void buildIgnoreList(

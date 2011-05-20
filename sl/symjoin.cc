@@ -996,8 +996,8 @@ bool followObjPair(
     ctx.tieBreaking.insert(tb);
 
     const struct cl_type *clt = (isDls1)
-        ? ctx.sh1.objType(ctx.sh1.objAt(peer1))
-        : ctx.sh2.objType(ctx.sh2.objAt(peer2));
+        ? ctx.sh1.valLastKnownTypeOfTarget(peer1)
+        : ctx.sh2.valLastKnownTypeOfTarget(peer2);
     return createObject(ctx, clt, peer1, peer2, action);
 }
 

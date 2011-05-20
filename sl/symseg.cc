@@ -27,30 +27,6 @@
 
 #include <boost/foreach.hpp>
 
-// TODO: remove this
-TObjId nextPtrFromSeg(const SymHeap &sh, TObjId seg) {
-    const TValId segAt = sh.valRoot(sh.placedAt(seg));
-    const TOffset offNext = sh.segBinding(segAt).next;
-
-    SymHeap &writable = const_cast<SymHeap &>(sh);
-    return writable.ptrAt(writable.valByOffset(sh.placedAt(seg), offNext));
-}
-
-// TODO: remove this
-TObjId peerPtrFromSeg(const SymHeap &sh, TObjId seg) {
-    const TValId segAt = sh.valRoot(sh.placedAt(seg));
-    const TOffset offPrev = sh.segBinding(segAt).prev;
-
-    SymHeap &writable = const_cast<SymHeap &>(sh);
-    return writable.ptrAt(writable.valByOffset(sh.placedAt(seg), offPrev));
-}
-
-// TODO: remove this
-TObjId dlSegPeer(const SymHeap &sh, TObjId dls) {
-    SymHeap &writable = const_cast<SymHeap &>(sh);
-    return writable.objAt(dlSegPeer(writable, sh.placedAt(dls)));
-}
-
 unsigned dlSegMinLength(const SymHeap &sh, TValId dls) {
     // validate call of dlSegNotEmpty()
     CL_BREAK_IF(OK_DLS != sh.valTargetKind(dls));

@@ -1095,14 +1095,12 @@ bool SymHeapCore::Private::gridLookup(
     const BaseValue *valData = this->valData(val);
     const EValueTarget code = valData->code;
     switch (code) {
-        case VT_UNKNOWN:
-            *pFailCode = /* XXX */ OBJ_UNKNOWN;
-            return false;
-
         default:
             if (isPossibleToDeref(code))
                 break;
+            // fall through!
 
+        case VT_UNKNOWN:
             *pFailCode = OBJ_INVALID;
             return false;
     }

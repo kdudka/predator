@@ -973,8 +973,7 @@ bool SymExecCore::concretizeLoop(SymState                       &dst,
             const struct cl_operand &op = opList.at(idx);
 
             // we expect a pointer at this point
-            const TObjId ptr = sh.objAt(core.varAt(op));
-            const TValId val = sh.valueOf(ptr);
+            const TValId val = valOfPtrAt(sh, core.varAt(op));
             if (VT_ABSTRACT == sh.valTarget(val)) {
                 CL_BREAK_IF(hitLocal);
                 hit = true;

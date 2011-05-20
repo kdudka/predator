@@ -105,10 +105,6 @@ void digSubObjs(DeepCopyData &dc, TValId addrSrc, TValId addrDst)
     SymHeap *const heaps[] = { &dc.src, &dc.dst };
     const TValId roots[] = { addrSrc, addrDst };
 
-    // FIXME: schedule by values instead
-    dc.wl.schedule(dc.src.objAt(addrSrc), dc.dst.objAt(addrDst));
-    dc.valMap[addrSrc] = addrDst;
-
     DCopyObjVisitor objVisitor(dc);
     traverseLiveObjsGeneric<2>(heaps, roots, objVisitor);
 }
@@ -137,6 +133,7 @@ void addObjectIfNeeded(DeepCopyData &dc, TValId rootSrcAt) {
                     << cv.uid << ", nestlevel = " << cv.inst);
 #endif
         const TValId rootDstAt = dst.addrOfVar(cv);
+        dc.valMap[rootSrcAt] = rootDstAt;
         digSubObjs(dc, rootSrcAt, rootDstAt);
         return;
     }
@@ -156,11 +153,18 @@ void addObjectIfNeeded(DeepCopyData &dc, TValId rootSrcAt) {
         dst.valTargetSetAbstract(rootDstAt, kind, off);
     }
 
-    if (clt)
+    // store mapping of values
+    dc.valMap[rootSrcAt] = rootDstAt;
+
+    if (clt) {
         // look inside
         digSubObjs(dc, rootSrcAt, rootDstAt);
-    else
-        dc.valMap[rootSrcAt] = rootDstAt;
+        if (dc.wl.schedule(dc.src.objAt(rootSrcAt), dc.dst.objAt(rootDstAt))) {
+#if DEBUG_SYMCUT
+            CL_DEBUG("symcut: schedules a root object that was not alive");
+#endif
+        }
+    }
 }
 
 // TODO: optimize out all the unnecessary dc.valMap lookups
@@ -271,6 +275,7 @@ void prune(const SymHeap &src, SymHeap &dst,
     BOOST_FOREACH(CVar cv, snap) {
         const TValId srcAt = dc.src.addrOfVar(cv);
         const TValId dstAt = dc.dst.addrOfVar(cv);
+        dc.valMap[srcAt] = dstAt;
         digSubObjs(dc, srcAt, dstAt);
     }
 

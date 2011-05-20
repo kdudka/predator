@@ -115,7 +115,7 @@ void SymCallCtx::Private::assignReturnValue(SymHeap &sh) {
     const TObjId obj = proc.objByOperand(op);
     CL_BREAK_IF(OBJ_INVALID == obj);
 
-    const TValId val = sh.valueOf(sh.objAt(VAL_ADDR_OF_RET));
+    const TValId val = sh.valueOf(sh.objAt(VAL_ADDR_OF_RET, op.type));
     CL_BREAK_IF(VAL_INVALID == val);
 
     // assign the return value in the current symbolic heap
