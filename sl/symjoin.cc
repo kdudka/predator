@@ -1247,7 +1247,10 @@ bool disjoinUnknownValues(
         ctx.dst.objSetValue(objDst, valDst);
     }
 
-    // FIXME: this may be inaccurate in some cases
+    if (refs.size() <= 1)
+        // no visible changes at this point
+        return true;
+
     return updateJoinStatus(ctx, action);
 }
 

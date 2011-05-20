@@ -714,9 +714,8 @@ bool SymPlot::Private::resolveValueOf(TValId *pDst, TObjId obj) {
     CL_BREAK_IF(obj < 0);
 
     // avoid duplicates
-    if (hasKey(this->objDone, obj))
+    if (!insertOnce(this->objDone, obj))
         return false;
-    this->objDone.insert(obj);
 
     const TValId value = this->sh->valueOf(obj);
     switch (value) {
@@ -942,7 +941,7 @@ void SymPlot::Private::plotObj(TObjId obj) {
         // we got a bare value, which can't be followed, so we're done
         return;
 
-    if (isComposite(this->sh->objType(obj))) {
+    if (!isComposite(this->sh->objType(obj))) {
         // connect the variable node with its value
         this->plotEdgeValueOf(obj, value);
 
