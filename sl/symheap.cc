@@ -264,9 +264,7 @@ struct OffValue: public BaseValue {
 };
 
 struct RootValue: public BaseValue {
-    TObjId            /* XXX */     target;
     TOffMap                         offMap;
-
     TValId                          addr;
     TObjType                        lastKnownClt;
     unsigned                        cbSize;
@@ -275,13 +273,10 @@ struct RootValue: public BaseValue {
     TLiveObjs                       liveObjs;
     bool                            isProto;
     TUsedBy                         usedByGl;
-
-    // symheap-ng
     TGrid                           grid;
 
     RootValue(EValueTarget code_, EValueOrigin origin_):
         BaseValue(code_, origin_),
-        target(OBJ_INVALID),
         addr(VAL_NULL),
         lastKnownClt(0),
         cbSize(0),
@@ -333,7 +328,7 @@ struct SymHeapCore::Private {
     void releaseValueOf(TObjId obj, TValId val);
     void setValueOf(TObjId of, TValId val);
 
-    void subsCreate(TObjId obj);
+    void subsCreate(TValId root);
 
     bool gridLookup(TObjId *pFailCode, const TObjByType **pRow, const TValId);
     void neqOpWrap(SymHeap::ENeqOp, TValId, TValId);
@@ -639,24 +634,22 @@ bool valMapLookup(const TValMap &valMap, TValId *pVal) {
     return true;
 }
 
-void SymHeapCore::Private::subsCreate(TObjId obj) {
-    const HeapObject *objData = this->objData(obj);
-    const TValId rootAt = objData->root;
-    CL_BREAK_IF(rootAt <= 0);
+void SymHeapCore::Private::subsCreate(TValId rootAt) {
     this->liveRoots.insert(rootAt);
 
-    // initialize grid's root clt
-    TObjType clt = objData->clt;
+    // initialize root clt
     RootValue *rootData = this->rootData(rootAt);
+    TObjType clt = rootData->lastKnownClt;
     rootData->cbSize = clt->size;
-    TGrid &grid = rootData->grid;
-    grid[/* off */ 0][clt] = obj;
 
     typedef std::pair<TObjId, TObjType> TPair;
     typedef std::stack<TPair> TStack;
     TStack todo;
 
-    rootData->allObjs.push_back(obj);
+    CL_BREAK_IF(rootData->allObjs.size() != 1);
+    TObjId obj = rootData->allObjs.front();
+    TGrid &grid = rootData->grid;
+    grid[/* off */ 0][clt] = obj;
 
     // we use explicit stack to avoid recursion
     push(todo, obj, clt);
@@ -695,14 +688,12 @@ void SymHeapCore::Private::subsCreate(TObjId obj) {
 TValId SymHeapCore::Private::objDup(TValId rootAt) {
     CL_DEBUG("SymHeapCore::Private::objDup() is taking place...");
     const RootValue *rootDataSrc = this->rootData(rootAt);
-    const HeapObject *objDataSrc = this->objData(/* XXX */ rootDataSrc->target);
 
-    // duplicate value of the root object
+    // duplicate the root object
     const TObjId image = this->objCreate();
-    this->setValueOf(image, objDataSrc->value);
 
     // duplicate type-info of the root object
-    const TObjType cltRoot = objDataSrc->clt;
+    const TObjType cltRoot = rootDataSrc->lastKnownClt;
     HeapObject *objDataDst = this->objData(image);
     objDataDst->clt = cltRoot;
 
@@ -710,7 +701,6 @@ TValId SymHeapCore::Private::objDup(TValId rootAt) {
     const EValueTarget code = rootDataSrc->code;
     const TValId imageAt = this->valCreate(code, VO_ASSIGNED);
     RootValue *rootDataDst = this->rootData(imageAt);
-    rootDataDst->target = image;
     rootDataDst->addr = imageAt;
     objDataDst->root = imageAt;
 
@@ -725,14 +715,8 @@ TValId SymHeapCore::Private::objDup(TValId rootAt) {
 
     this->liveRoots.insert(imageAt);
 
-    if (!isComposite(cltRoot))
-        return imageAt;
-
-    // assume composite object
-    this->setValueOf(image, VAL_INVALID);
-
     BOOST_FOREACH(const TObjId src, rootDataSrc->allObjs) {
-        objDataSrc = this->objData(src);
+        const HeapObject *objDataSrc = this->objData(src);
 
         // duplicate a single object
         const TObjId dst = this->objCreate();
@@ -786,14 +770,7 @@ SymHeapCore::SymHeapCore(TStorRef stor):
     // initialize VAL_ADDR_OF_RET
     const TValId addrRet = d->valCreate(VT_ON_STACK, VO_ASSIGNED);
     CL_BREAK_IF(VAL_ADDR_OF_RET != addrRet);
-
-    const TObjId objRet = d->objCreate();
-    RootValue *rootData = d->rootData(addrRet);
-    rootData->target = objRet;
-    rootData->addr = addrRet;
-
-    HeapObject *objData = d->objData(objRet);
-    objData->root = addrRet;
+    d->rootData(addrRet)->addr = addrRet;
 }
 
 SymHeapCore::SymHeapCore(const SymHeapCore &ref):
@@ -1289,13 +1266,13 @@ TValId SymHeapCore::addrOfVar(CVar cv) {
     objData->root = addr;
 
     RootValue *rootData = d->rootData(addr);
-    rootData->target = root;
     rootData->cVar = cv;
     rootData->addr = addr;
     rootData->lastKnownClt = clt;
+    rootData->allObjs.push_back(root);
 
     // create the structure
-    d->subsCreate(root);
+    d->subsCreate(addr);
 
     // store the address for next wheel
     d->cVarMap.insert(cv, addr);
@@ -1330,6 +1307,7 @@ TObjId SymHeapCore::valGetComposite(TValId val) const {
 }
 
 TValId SymHeapCore::heapAlloc(int cbSize) {
+    // TODO: remove this (first we need to adapt symcut and the like)
     const TObjId obj = d->objCreate();
     HeapObject *objData = d->objData(obj);
 
@@ -1337,8 +1315,8 @@ TValId SymHeapCore::heapAlloc(int cbSize) {
     const TValId addr = d->valCreate(VT_ON_HEAP, VO_ASSIGNED);
     objData->root = addr;
 
+    // initialize meta-data
     RootValue *rootData = d->rootData(addr);
-    rootData->target = obj;
     rootData->addr = addr;
     rootData->cbSize = cbSize;
     rootData->grid[/* off */ 0][/* clt */ 0] = obj;
@@ -1375,23 +1353,31 @@ int SymHeapCore::valSizeOfTarget(TValId val) const {
 
 void SymHeapCore::valSetLastKnownTypeOfTarget(TValId root, TObjType clt) {
     RootValue *rootData = d->rootData(root);
-    const TObjId obj = /* XXX */ rootData->target;
 
-    if (VAL_ADDR_OF_RET == root)
-        // cleanup OBJ_RETURN for next wheel
+    // TODO: remove this
+    TObjId obj; 
+
+    if (VAL_ADDR_OF_RET == root) {
+        // destroy any stale target of VAL_ADDR_OF_RET
         d->objDestroy(root);
 
-    // type reinterpretation not allowed for now
-    HeapObject *objData = d->objData(obj);
-    CL_BREAK_IF(objData->clt);
+        // allocate a new target of VAL_ADDR_OF_RET
+        obj = d->objCreate();
+        rootData->code = VT_ON_STACK;
+    }
+    else {
+        obj = rootData->grid[/* off */ 0][/* clt */ 0];
+        rootData->grid.clear();
+    }
 
-    // there should be no value as long as it was "a target of a void pointer"
-    CL_BREAK_IF(VAL_INVALID != objData->value);
+    HeapObject *objData = d->objData(obj);
+    objData->root = root;
+    objData->clt = clt;
 
     // delayed object's type definition
+    rootData->allObjs.push_back(obj);
     rootData->lastKnownClt = clt;
-    objData->clt = clt;
-    d->subsCreate(obj);
+    d->subsCreate(root);
 }
 
 TObjType SymHeapCore::valLastKnownTypeOfTarget(TValId root) const {
@@ -1427,11 +1413,10 @@ void SymHeapCore::Private::objDestroy(TValId root) {
 
     // wipe rootData
     rootData->lastKnownClt = 0;
+    rootData->allObjs.clear();
+    rootData->liveObjs.clear();
     rootData->grid.clear();
-    if (VAL_ADDR_OF_RET != root) {
-        rootData->target = OBJ_INVALID;
-        rootData->code   = code;
-    }
+    rootData->code   = code;
 }
 
 TValId SymHeapCore::valCreate(EValueTarget code, EValueOrigin origin) {
