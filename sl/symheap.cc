@@ -328,13 +328,12 @@ struct SymHeapCore::Private {
     TValId valDup(TValId);
     TObjId objCreate();
     TValId objDup(TValId root);
-    void objDestroy(TObjId obj);
+    void objDestroy(TValId obj);
 
     void releaseValueOf(TObjId obj, TValId val);
     void setValueOf(TObjId of, TValId val);
 
     void subsCreate(TObjId obj);
-    void subsDestroy(TObjId obj);
 
     bool gridLookup(TObjId *pFailCode, const TObjByType **pRow, const TValId);
     void neqOpWrap(SymHeap::ENeqOp, TValId, TValId);
@@ -657,6 +656,8 @@ void SymHeapCore::Private::subsCreate(TObjId obj) {
     typedef std::stack<TPair> TStack;
     TStack todo;
 
+    rootData->allObjs.push_back(obj);
+
     // we use explicit stack to avoid recursion
     push(todo, obj, clt);
     while (!todo.empty()) {
@@ -720,6 +721,8 @@ TValId SymHeapCore::Private::objDup(TValId rootAt) {
     rootDataDst->cbSize  = rootDataSrc->cbSize;
     rootDataDst->lastKnownClt = rootDataSrc->lastKnownClt;
 
+    rootDataDst->allObjs.push_back(image);
+
     this->liveRoots.insert(imageAt);
 
     if (!isComposite(cltRoot))
@@ -772,26 +775,6 @@ void SymHeapCore::gatherLiveObjects(TObjList &dst, TValId root) const {
     const RootValue *rootData = d->rootData(root);
     BOOST_FOREACH(TLiveObjs::const_reference item, rootData->liveObjs)
         dst.push_back(/* obj */ item.first);
-}
-
-void SymHeapCore::Private::subsDestroy(TObjId root) {
-    HeapObject *objData = DCAST<HeapObject *>(this->ents[root]);
-
-    // release root
-    TValId &val = objData->value;
-    this->releaseValueOf(root, val);
-    val = VAL_INVALID;
-
-    // go through objects
-    RootValue *rootData = this->rootData(objData->root);
-    BOOST_FOREACH(const TObjId obj, rootData->allObjs) {
-        objData = this->objData(obj);
-
-        // release a single object
-        TValId &val = objData->value;
-        this->releaseValueOf(obj, val);
-        val = VAL_INVALID;
-    }
 }
 
 SymHeapCore::SymHeapCore(TStorRef stor):
@@ -1373,8 +1356,7 @@ bool SymHeapCore::valDestroyTarget(TValId val) {
         // such a target is not supposed to be destroyed
         return false;
 
-    const TObjId target = /* XXX */ d->rootData(val)->target;
-    d->objDestroy(target);
+    d->objDestroy(val);
     return true;
 }
 
@@ -1397,7 +1379,7 @@ void SymHeapCore::valSetLastKnownTypeOfTarget(TValId root, TObjType clt) {
 
     if (VAL_ADDR_OF_RET == root)
         // cleanup OBJ_RETURN for next wheel
-        d->objDestroy(obj);
+        d->objDestroy(root);
 
     // type reinterpretation not allowed for now
     HeapObject *objData = d->objData(obj);
@@ -1418,9 +1400,7 @@ TObjType SymHeapCore::valLastKnownTypeOfTarget(TValId root) const {
     return rootData->lastKnownClt;
 }
 
-void SymHeapCore::Private::objDestroy(TObjId obj) {
-    HeapObject *objData = this->objData(obj);
-    const TValId root = objData->root;
+void SymHeapCore::Private::objDestroy(TValId root) {
     RootValue *rootData = this->rootData(root);
 
     EValueTarget code = VT_DELETED;
@@ -1431,13 +1411,19 @@ void SymHeapCore::Private::objDestroy(TObjId obj) {
         code = VT_LOST;
     }
 
-    // destroy the object
-    this->subsDestroy(obj);
+    // release the root
     this->liveRoots.erase(root);
 
-    // wipe objData
-    objData->value = VAL_INVALID;
-    objData->clt = 0;
+    // go through objects
+    BOOST_FOREACH(const TObjId obj, rootData->allObjs) {
+        HeapObject *objData = this->objData(obj);
+        objData->clt = 0;
+
+        // release a single object
+        TValId &val = objData->value;
+        this->releaseValueOf(obj, val);
+        val = VAL_INVALID;
+    }
 
     // wipe rootData
     rootData->lastKnownClt = 0;
