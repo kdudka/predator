@@ -330,7 +330,7 @@ struct SymHeapCore::Private {
 
     void subsCreate(TValId root);
 
-    bool gridLookup(TObjId *pFailCode, const TObjByType **pRow, const TValId);
+    bool gridLookup(TObjByType **pRow, const TValId);
     void neqOpWrap(SymHeap::ENeqOp, TValId, TValId);
 
     private:
@@ -1082,15 +1082,9 @@ TValId SymHeapCore::placedAt(TObjId obj) const {
     return writable.valByOffset(addr, objData->off);
 }
 
-bool SymHeapCore::Private::gridLookup(
-        TObjId                     *pFailCode,
-        const TObjByType          **pRow,
-        const TValId                val)
-{
-    if (val <= 0) {
-        *pFailCode = OBJ_INVALID;
+bool SymHeapCore::Private::gridLookup(TObjByType **pRow, const TValId val) {
+    if (val <= 0)
         return false;
-    }
 
     const BaseValue *valData = this->valData(val);
     const EValueTarget code = valData->code;
@@ -1101,95 +1095,56 @@ bool SymHeapCore::Private::gridLookup(
             // fall through!
 
         case VT_UNKNOWN:
-            *pFailCode = OBJ_INVALID;
             return false;
     }
 
-    // grid lookup
+    // jump to root
     const TValId valRoot = this->valRoot(val, valData);
-    const RootValue *rootData = this->rootData(valRoot);
-    const TGrid &grid = rootData->grid;
+    RootValue *rootData = this->rootData(valRoot);
 
-    // TODO: uncomment this once we are ready for lazy objects creation
-    CL_BREAK_IF(grid.empty());
-
+    // grid lookup
+    TGrid &grid = rootData->grid;
     const TOffset off = valData->offRoot;
-    TGrid::const_iterator it = grid.find(off);
-    if (grid.end() == it) {
-        *pFailCode = OBJ_UNKNOWN;
-        return false;
-    }
-
-    const TObjByType *row = &it->second;
-    CL_BREAK_IF(row->empty());
-    *pRow = row;
+    *pRow = &grid[off];
     return true;
 }
 
 TObjId SymHeapCore::ptrAt(TValId at) {
-    TObjId failCode;
-    const TObjByType *row;
-    if (!d->gridLookup(&failCode, &row, at))
-        return failCode;
+    TObjByType *row;
+    if (!d->gridLookup(&row, at))
+        return OBJ_INVALID;
 
     // seek a _data_ pointer at the given row
     BOOST_FOREACH(const TObjByType::const_reference item, *row) {
         const TObjType clt = item.first;
-        if (!clt || clt->code != CL_TYPE_PTR)
-            // not a pointer
-            continue;
-
-        const TObjType cltTarget = targetTypeOfPtr(clt);
-        if (CL_TYPE_FNC != cltTarget->code)
+        if (isDataPtr(clt))
             // matched
             return item.second;
     }
-
-    // TODO: check that there is at most once pointer in the row in debug build
 
     return OBJ_UNKNOWN;
 }
 
 TObjId SymHeapCore::objAt(TValId at, TObjCode code) {
-    if (at <= 0)
+    TObjByType *row;
+    if (!d->gridLookup(&row, at))
         return OBJ_INVALID;
-
-    const BaseValue *valData = d->valData(at);
-    const EValueTarget vt = valData->code;
-    switch (vt) {
-        case VT_COMPOSITE:
-        case VT_CUSTOM:
-            return OBJ_INVALID;
-
-        default:
-            break;
-    }
-
-    const TValId root = d->valRoot(at, valData);
-    const RootValue *rootData = d->rootData(root);
-
-    TObjId failCode;
-    const TObjByType *row;
-    if (!d->gridLookup(&failCode, &row, at))
-        return failCode;
 
     // seek the bigest object at the given row
     int maxSize = 0;
     TObjId max = OBJ_UNKNOWN;
     BOOST_FOREACH(const TObjByType::const_reference item, *row) {
         const TObjType cltItem = item.first;
+        CL_BREAK_IF(!cltItem);
+
         const TObjId obj = item.second;
         CL_BREAK_IF(d->objOutOfRange(obj));
 
-        const bool hasType = !!cltItem;
-        if (CL_TYPE_VOID != code && (!hasType || cltItem->code != code))
+        if (CL_TYPE_VOID != code && (cltItem->code != code))
             // not the type we are looking for
             continue;
 
-        const int size = (hasType)
-            ? cltItem->size
-            : rootData->cbSize;
-
+        const int size = cltItem->size;
         if (size < maxSize)
             continue;
 
@@ -1206,25 +1161,19 @@ TObjId SymHeapCore::objAt(TValId at, TObjCode code) {
 }
 
 TObjId SymHeapCore::objAt(TValId at, TObjType clt) {
-    if (clt
-            && CL_TYPE_PTR == clt->code
-            && CL_TYPE_FNC != targetTypeOfPtr(clt)->code)
+    CL_BREAK_IF(!clt);
+    if (isDataPtr(clt))
         // look for a pointer to data
         return this->ptrAt(at);
 
-    TObjId failCode;
-    const TObjByType *row;
-    if (!d->gridLookup(&failCode, &row, at))
-        return failCode;
+    TObjByType *row;
+    if (!d->gridLookup(&row, at))
+        return OBJ_INVALID;
 
     TObjByType::const_iterator it = row->find(clt);
     if (row->end() != it)
         // exact match
         return it->second;
-
-    if (!clt)
-        // no type-free object found
-        return OBJ_UNKNOWN;
 
     // try semantic match
     BOOST_FOREACH(const TObjByType::const_reference item, *row) {
