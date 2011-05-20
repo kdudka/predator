@@ -335,21 +335,29 @@ int /* uid */ SymProc::fncFromOperand(const struct cl_operand &op) {
 }
 
 void SymProc::heapObjDefineType(TObjId lhs, TValId rhs) {
-    TObjType clt = sh_.objType(lhs);
-    if (!clt)
+    if (!isPossibleToDeref(sh_.valTarget(rhs)))
+        // no valid target anyway
         return;
 
-    // move to next clt
-    // --> what are we pointing to actually?
-    clt = targetTypeOfPtr(clt);
-    if (CL_TYPE_VOID == clt->code)
+    if (sh_.valOffset(rhs))
+        // not a pointer to root
+        return;
+
+    const TObjType cltTarget = targetTypeOfPtr(sh_.objType(lhs));
+    if (!cltTarget || CL_TYPE_VOID == cltTarget->code)
+        // no type-info given for the target
+        return;
+
+    const TObjType cltLast = sh_.valLastKnownTypeOfTarget(rhs);
+    if (cltLast /* TODO: && (*cltLast == *cltTarget) */)
+        // type info known to match already
         return;
 
     // anonymous objects of zero size are not allowed
     const int cbGot = sh_.valSizeOfTarget(rhs);
     CL_BREAK_IF(!cbGot);
 
-    const int cbNeed = clt->size;
+    const int cbNeed = cltTarget->size;
     if (cbGot != cbNeed) {
         static const char szMsg[] =
             "amount of allocated memory not accurate";
@@ -362,7 +370,7 @@ void SymProc::heapObjDefineType(TObjId lhs, TValId rhs) {
         CL_NOTE_MSG(lw_, " expected: " << cbNeed << " bytes");
     }
 
-    sh_.valSetLastKnownTypeOfTarget(rhs, clt);
+    sh_.valSetLastKnownTypeOfTarget(rhs, cltTarget);
 }
 
 void SymProc::heapSetSingleVal(TObjId lhs, TValId rhs) {
@@ -370,12 +378,8 @@ void SymProc::heapSetSingleVal(TObjId lhs, TValId rhs) {
     const TValId oldValue = sh_.valueOf(lhs);
     CL_BREAK_IF(VAL_INVALID == oldValue);
 
-    if (0 < rhs) {
-        const TObjId target = sh_.objAt(rhs);
-        if (0 < target && !sh_.objType(target))
-            // anonymous object is going to be specified by a type
-            this->heapObjDefineType(lhs, rhs);
-    }
+    // update type-info
+    this->heapObjDefineType(lhs, rhs);
 
     sh_.objSetValue(lhs, rhs);
     if (collectJunk(sh_, oldValue, lw_))
