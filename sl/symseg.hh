@@ -187,19 +187,15 @@ void buildIgnoreList(
 template <class TIgnoreList>
 void buildIgnoreList(
         TIgnoreList             &ignoreList,
-        const SymHeap           &sh,
-        const TObjId            obj,
+        SymHeap                 &sh,
+        const TValId            at,
         const BindingOff        &off)
 {
-    // TODO: remove this
-    const TValId at = sh.placedAt(obj);
-    SymHeap &writable = const_cast<SymHeap &>(sh);
-
-    const TObjId next = writable.ptrAt(writable.valByOffset(at, off.next));
+    const TObjId next = sh.ptrAt(sh.valByOffset(at, off.next));
     if (OBJ_INVALID != next)
         ignoreList.insert(next);
 
-    const TObjId prev = writable.ptrAt(writable.valByOffset(at, off.prev));
+    const TObjId prev = sh.ptrAt(sh.valByOffset(at, off.prev));
     if (OBJ_INVALID != prev)
         ignoreList.insert(prev);
 }

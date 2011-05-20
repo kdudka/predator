@@ -378,7 +378,7 @@ class SymHeapCore {
 
         void valSetLastKnownTypeOfTarget(TValId root, TObjType clt);
 
-        TObjType valLastKnownTypeOfTarget(TValId root);
+        TObjType valLastKnownTypeOfTarget(TValId root) const;
 
     public:
         TValId valCreate(EValueTarget code, EValueOrigin origin);

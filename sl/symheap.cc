@@ -268,6 +268,7 @@ struct RootValue: public BaseValue {
     TOffMap                         offMap;
 
     TValId                          addr;
+    TObjType                        lastKnownClt;
     unsigned                        cbSize;
     CVar                            cVar;
     TObjList          /* XXX */     allObjs;
@@ -282,6 +283,7 @@ struct RootValue: public BaseValue {
         BaseValue(code_, origin_),
         target(OBJ_INVALID),
         addr(VAL_NULL),
+        lastKnownClt(0),
         cbSize(0),
         isProto(false)
     {
@@ -717,6 +719,7 @@ TValId SymHeapCore::Private::objDup(TValId rootAt) {
     rootDataDst->cVar    = rootDataSrc->cVar;
     rootDataDst->isProto = rootDataSrc->isProto;
     rootDataDst->cbSize  = rootDataSrc->cbSize;
+    rootDataDst->lastKnownClt = rootDataSrc->lastKnownClt;
 
     this->liveRoots.insert(imageAt);
 
@@ -1308,6 +1311,7 @@ TValId SymHeapCore::addrOfVar(CVar cv) {
     rootData->target = root;
     rootData->cVar = cv;
     rootData->addr = addr;
+    rootData->lastKnownClt = clt;
 
     // create the structure
     d->subsCreate(root);
@@ -1391,6 +1395,7 @@ int SymHeapCore::valSizeOfTarget(TValId val) const {
 
 void SymHeapCore::valSetLastKnownTypeOfTarget(TValId root, TObjType clt) {
     RootValue *rootData = d->rootData(root);
+    rootData->lastKnownClt = clt;
     const TObjId obj = /* XXX */ rootData->target;
 
     if (VAL_ADDR_OF_RET == root)
@@ -1407,6 +1412,12 @@ void SymHeapCore::valSetLastKnownTypeOfTarget(TValId root, TObjType clt) {
     // delayed object's type definition
     objData->clt = clt;
     d->subsCreate(obj);
+}
+
+TObjType SymHeapCore::valLastKnownTypeOfTarget(TValId root) const {
+    CL_BREAK_IF(d->valData(root)->offRoot);
+    const RootValue *rootData = d->rootData(root);
+    return rootData->lastKnownClt;
 }
 
 void SymHeapCore::Private::objDestroy(TObjId obj) {

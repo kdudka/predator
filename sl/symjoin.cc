@@ -517,18 +517,6 @@ bool traverseSubObjs(
     if (!defineValueMapping(ctx, addr1, addr2, addrDst))
         return false;
 
-    // TODO: remove this
-    const TObjId root1    = ctx.sh1.objAt(addr1);
-    const TObjId root2    = ctx.sh2.objAt(addr2);
-
-#ifndef NDEBUG
-    const struct cl_type *clt1   = ctx.sh1.objType(root1);
-    const struct cl_type *clt2   = ctx.sh2.objType(root2);
-    const struct cl_type *cltDst = ctx.dst.objType(ctx.dst.objAt(addrDst));
-    CL_BREAK_IF(!cltDst || (OBJ_INVALID == root1 && OBJ_INVALID == root2));
-    CL_BREAK_IF(OBJ_INVALID != root1 && *clt1 != *cltDst);
-    CL_BREAK_IF(OBJ_INVALID != root2 && *clt2 != *cltDst);
-#endif
     TValId roots[] = {
         addr1,
         addr2,
@@ -549,8 +537,8 @@ bool traverseSubObjs(
     // initialize visitor
     ObjJoinVisitor objVisitor(ctx);
     if (offBlackList) {
-        buildIgnoreList(objVisitor.blackList1, ctx.sh1, root1, *offBlackList);
-        buildIgnoreList(objVisitor.blackList2, ctx.sh2, root2, *offBlackList);
+        buildIgnoreList(objVisitor.blackList1, ctx.sh1, addr1, *offBlackList);
+        buildIgnoreList(objVisitor.blackList2, ctx.sh2, addr2, *offBlackList);
     }
 
     else if (ctx.joiningData()) {
@@ -590,9 +578,9 @@ bool segMatchLookAhead(
 }
 
 bool joinClt(
+        const struct cl_type    **pDst,
         const struct cl_type    *clt1,
-        const struct cl_type    *clt2,
-        const struct cl_type    **pDst)
+        const struct cl_type    *clt2)
 {
     const struct cl_type *sink;
     if (!pDst)
@@ -614,21 +602,6 @@ bool joinClt(
 
     *pDst = clt1;
     return true;
-}
-
-bool joinObjClt(
-        const struct cl_type    **pDst,
-        const SymJoinCtx        &ctx,
-        const TObjId            o1,
-        const TObjId            o2)
-{
-    const struct cl_type *clt1 = ctx.sh1.objType(o1);
-    const struct cl_type *clt2 = ctx.sh2.objType(o2);
-    if (joinClt(clt1, clt2, pDst))
-        return true;
-
-    SJ_DEBUG("<-- object clt mismatch " << SJ_OBJP(o1, o2));
-    return false;
 }
 
 bool joinObjKind(
@@ -897,12 +870,10 @@ bool followObjPairCore(
         return defineValueMapping(ctx, addr1, addr2, rootDstAt);
     }
 
-    const TObjId o1 = ctx.sh1.objAt(addr1);
-    const TObjId o2 = ctx.sh2.objAt(addr2);
-    CL_BREAK_IF(o1 <= 0 || o2 <= 0);
-
     TObjType clt;
-    if (!joinObjClt(&clt, ctx, o1, o2))
+    const TObjType clt1 = ctx.sh1.valLastKnownTypeOfTarget(addr1);
+    const TObjType clt2 = ctx.sh2.valLastKnownTypeOfTarget(addr2);
+    if (!joinClt(&clt, clt1, clt2))
         return false;
 
     if (!clt) {
@@ -2118,12 +2089,10 @@ bool joinDataCore(
     CL_BREAK_IF(!ctx.joiningData());
     SymHeap &sh = ctx.sh1;
 
-    // TODO: remove this
-    const TObjId o1 = sh.objAt(addr1);
-    const TObjId o2 = sh.objAt(addr2);
-
-    const struct cl_type *clt;
-    if (!joinObjClt(&clt, ctx, o1, o2) || !clt) {
+    TObjType clt;
+    const TObjType clt1 = ctx.sh1.valLastKnownTypeOfTarget(addr1);
+    const TObjType clt2 = ctx.sh2.valLastKnownTypeOfTarget(addr2);
+    if (!joinClt(&clt, clt1, clt2)) {
         CL_BREAK_IF("joinDataCore() called on objects with incompatible clt");
         return false;
     }
@@ -2135,7 +2104,6 @@ bool joinDataCore(
     // start with the given pair of objects and create a ghost object for them
     // create an image in ctx.dst
     const TValId rootDstAt = ctx.dst.heapAlloc(size);
-    const TObjId rootDst = ctx.dst.objAt(rootDstAt);
     if (clt)
         ctx.dst.valSetLastKnownTypeOfTarget(rootDstAt, clt);
 
@@ -2165,7 +2133,7 @@ bool joinDataCore(
 
     // batch assignment of all values in ctx.dst
     std::set<TObjId> blackList;
-    buildIgnoreList(blackList, ctx.dst, rootDst, off);
+    buildIgnoreList(blackList, ctx.dst, rootDstAt, off);
     if (!setDstValues(ctx, &blackList))
         return false;
 
