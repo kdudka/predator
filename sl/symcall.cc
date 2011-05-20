@@ -492,6 +492,7 @@ SymCallCtx& SymCallCache::getCallCtx(SymHeap                    heap,
     // prune heap
     SymHeap surround(heap.stor());
     splitHeapByCVars(&heap, cut, &surround);
+    surround.valDestroyTarget(VAL_ADDR_OF_RET);
     
     // get either an existing ctx, or create a new one
     SymCallCtx *ctx = d->getCallCtx(uid, heap);

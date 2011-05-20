@@ -1037,14 +1037,6 @@ bool followValuePair(
         return false;
     }
 
-    const TObjId o1 = /* XXX */ ctx.sh1.objAt(v1);
-    const TObjId o2 = /* XXX */ ctx.sh2.objAt(v2);
-    if (!checkNonPosValues(o1, o2)) {
-        SJ_DEBUG("<-- target validity mismatch: " << SJ_VALP(v1, v2)
-                 << " -> " << SJ_OBJP(o1, o2));
-        return false;
-    }
-
     if (readOnly)
         // shallow scan only!
         return checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ true);

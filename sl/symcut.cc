@@ -118,6 +118,7 @@ void addObjectIfNeeded(DeepCopyData &dc, TValId rootSrcAt) {
         // mapping already known
         return;
 
+    CL_BREAK_IF(VAL_ADDR_OF_RET == rootSrcAt);
     SymHeap &src = dc.src;
     SymHeap &dst = dc.dst;
 
@@ -141,11 +142,8 @@ void addObjectIfNeeded(DeepCopyData &dc, TValId rootSrcAt) {
     }
 
     // create the object in 'dst'
-    const TObjId rootSrc = src.objAt(rootSrcAt);
-    TValId rootDstAt = (VAL_ADDR_OF_RET == rootSrcAt)
-        ? VAL_ADDR_OF_RET
-        : dst.heapAlloc(src.valSizeOfTarget(rootSrcAt));
-    const TObjType clt = src.objType(rootSrc);
+    const TObjType clt = src.valLastKnownTypeOfTarget(rootSrcAt);
+    TValId rootDstAt = dst.heapAlloc(src.valSizeOfTarget(rootSrcAt));
     if (clt)
         dst.valSetLastKnownTypeOfTarget(rootDstAt, clt);
 
@@ -154,12 +152,15 @@ void addObjectIfNeeded(DeepCopyData &dc, TValId rootSrcAt) {
     dst.valTargetSetProto(rootDstAt, isProto);
     if (isAbstract(src.valTarget(rootSrcAt))) {
         const EObjKind kind = src.valTargetKind(rootSrcAt);
-        const BindingOff &off = segBinding(src, rootSrc);
+        const BindingOff &off = src.segBinding(rootSrcAt);
         dst.valTargetSetAbstract(rootDstAt, kind, off);
     }
 
-    // look inside
-    digSubObjs(dc, rootSrcAt, rootDstAt);
+    if (clt)
+        // look inside
+        digSubObjs(dc, rootSrcAt, rootDstAt);
+    else
+        dc.valMap[rootSrcAt] = rootDstAt;
 }
 
 // TODO: optimize out all the unnecessary dc.valMap lookups
@@ -272,6 +273,10 @@ void prune(const SymHeap &src, SymHeap &dst,
         const TValId dstAt = dc.dst.addrOfVar(cv);
         digSubObjs(dc, srcAt, dstAt);
     }
+
+    if (src.valLastKnownTypeOfTarget(VAL_ADDR_OF_RET))
+        // clone VAL_ADDR_OF_RET
+        digSubObjs(dc, VAL_ADDR_OF_RET, VAL_ADDR_OF_RET);
 
     // go through the worklist
     deepCopy(dc);

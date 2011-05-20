@@ -1111,6 +1111,10 @@ bool SymHeapCore::Private::gridLookup(
     const TValId valRoot = this->valRoot(val, valData);
     const RootValue *rootData = this->rootData(valRoot);
     const TGrid &grid = rootData->grid;
+
+    // TODO: uncomment this once we are ready for lazy objects creation
+    CL_BREAK_IF(grid.empty());
+
     const TOffset off = valData->offRoot;
     TGrid::const_iterator it = grid.find(off);
     if (grid.end() == it) {
@@ -1307,19 +1311,13 @@ TObjId SymHeapCore::valGetComposite(TValId val) const {
 }
 
 TValId SymHeapCore::heapAlloc(int cbSize) {
-    // TODO: remove this (first we need to adapt symcut and the like)
-    const TObjId obj = d->objCreate();
-    HeapObject *objData = d->objData(obj);
-
     // assign an address
     const TValId addr = d->valCreate(VT_ON_HEAP, VO_ASSIGNED);
-    objData->root = addr;
 
     // initialize meta-data
     RootValue *rootData = d->rootData(addr);
     rootData->addr = addr;
     rootData->cbSize = cbSize;
-    rootData->grid[/* off */ 0][/* clt */ 0] = obj;
 
     return addr;
 }
@@ -1365,10 +1363,9 @@ void SymHeapCore::valSetLastKnownTypeOfTarget(TValId root, TObjType clt) {
         obj = d->objCreate();
         rootData->code = VT_ON_STACK;
     }
-    else {
-        obj = rootData->grid[/* off */ 0][/* clt */ 0];
-        rootData->grid.clear();
-    }
+    else
+        // TODO: remove this
+        obj = d->objCreate();
 
     HeapObject *objData = d->objData(obj);
     objData->root = root;

@@ -516,10 +516,16 @@ void SymPlot::Private::plotSingleValue(TValId value) {
     if (this->sh->valOffset(value))
         this->traverseNeqs(this->sh->valRoot(value));
 
+    const TValId valRoot = this->sh->valRoot(value);
+
     const struct cl_type *clt = 0;
-    const TObjId target = const_cast<SymHeap *>(this->sh)->objAt(value);
-    if (0 < target)
-        clt = this->sh->objType(target);
+    if (isPossibleToDeref(this->sh->valTarget(valRoot))
+            /* TODO */ && this->sh->valLastKnownTypeOfTarget(valRoot))
+    {
+        const TObjId target = const_cast<SymHeap *>(this->sh)->objAt(value);
+        if (0 < target)
+            clt = this->sh->objType(target);
+    }
 
     const enum cl_type_e code = (clt)
         ? clt->code

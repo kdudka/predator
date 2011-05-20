@@ -636,8 +636,7 @@ void segReplaceRefs(SymHeap &sh, TValId seg, TValId valNext) {
     const TOffset offHead = sh.valOffset(headAt);
     sh.valReplace(headAt, valNext);
 
-    const TObjId next = sh.objAt(valNext);
-    CL_BREAK_IF(!isGone(sh.valTarget(valNext)) && 0 < valNext && next < 0);
+    const bool isNextValid = isPossibleToDeref(sh.valTarget(valNext));
 
     // TODO: check types in debug build
     TObjList refs;
@@ -651,7 +650,7 @@ void segReplaceRefs(SymHeap &sh, TValId seg, TValId valNext) {
             
         const TValId targetAt = sh.valueOf(obj);
         const TObjId target = sh.objAt(targetAt);
-        if (next < 0 || target < 0) {
+        if (target < 0 || !isNextValid) {
             CL_DEBUG("WARNING: suboptimal implementation of segReplaceRefs()");
             const TValId val = sh.valClone(valNext);
             sh.objSetValue(obj, val);
