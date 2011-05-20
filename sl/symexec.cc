@@ -195,12 +195,17 @@ class SymExecEngine: public IStatsProvider {
         void execReturn();
         void updateState(SymHeap &sh, const CodeStorage::Block *ofBlock);
         void updateStateInBranch(
-                SymProc                    &proc,
-                const CodeStorage::Block   *ofBlock,
-                const bool                  branch,
-                const CodeStorage::Insn    &insnCmp,
-                const TValId                v1,
-                const TValId                v2);
+                SymProc                             &proc,
+                const CodeStorage::Block            *ofBlock,
+                const bool                          branch,
+                const CodeStorage::Insn             &insnCmp,
+                const TValId                        v1,
+                const TValId                        v2);
+
+        bool bypassNonPointers(
+                SymProc                             &proc,
+                const CodeStorage::Insn             &insnCmp,
+                const CodeStorage::TTargetList      &tlist);
 
         void execCondInsn();
         void execTermInsn();
@@ -324,6 +329,42 @@ fallback:
     this->updateState(sh, ofBlock);
 }
 
+// TODO: move this to <cl/clutil.hh>?
+inline bool isCodePtr(const struct cl_type *clt) {
+    if (!clt || clt->code != CL_TYPE_PTR)
+        return false;
+
+    clt = targetTypeOfPtr(clt);
+    assert(clt);
+    return (CL_TYPE_FNC == clt->code);
+}
+
+bool SymExecEngine::bypassNonPointers(
+        SymProc                                     &proc,
+        const CodeStorage::Insn                     &insnCmp,
+        const CodeStorage::TTargetList              &tlist)
+{
+    const TObjType clt1 = insnCmp.operands[/* src1 */ 1].type;
+    const TObjType clt2 = insnCmp.operands[/* src2 */ 2].type;
+
+    // TODO: what else should we black-list for tracking?
+    if (!isCodePtr(clt1) && !isCodePtr(clt2))
+        return false;
+
+    SymHeap &sh = proc.sh();
+    proc.killInsn(insnCmp);
+
+    SymHeap sh1(sh);
+    CL_DEBUG_MSG(lw_, "-T- CL_INSN_COND updates TRUE branch");
+    this->updateState(sh1, tlist[/* then label */ 0]);
+
+    SymHeap sh2(sh);
+    CL_DEBUG_MSG(lw_, "-F- CL_INSN_COND updates FALSE branch");
+    this->updateState(sh2, tlist[/* else label */ 1]);
+
+    return true;
+}
+
 void SymExecEngine::execCondInsn() {
     // we should get a CL_INSN_BINOP instruction and a CL_INSN_COND instruction
     const CodeStorage::Insn *insnCmp = block_->operator[](insnIdx_ - 1);
@@ -391,6 +432,10 @@ void SymExecEngine::execCondInsn() {
         CL_WARN_MSG(lw_, "conditional jump depends on uninitialized value");
         bt_.printBackTrace();
     }
+
+    if (this->bypassNonPointers(proc, *insnCmp, insnCnd->targets))
+        // do not track relations over data we are not interested in
+        return;
 
     std::ostringstream str;
     str << "at-line-" << lw_->line;
