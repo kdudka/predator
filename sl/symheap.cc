@@ -331,6 +331,8 @@ struct SymHeapCore::Private {
     void subsCreate(TValId root);
 
     bool gridLookup(TObjByType **pRow, const TValId);
+    bool lazyCreatePtr(TObjId *pObj, TObjType *pClt, TValId at);
+
     void neqOpWrap(SymHeap::ENeqOp, TValId, TValId);
 
     private:
@@ -1109,6 +1111,80 @@ bool SymHeapCore::Private::gridLookup(TObjByType **pRow, const TValId val) {
     return true;
 }
 
+template <class TPred>
+class CltFinder {
+    private:
+        const TObjType          cltRoot_;
+        const TOffset           offToSeek_;
+        TObjType                cltFound_;
+        TPred                  &pred_;
+
+    public:
+        CltFinder(TObjType cltRoot, TOffset offToSeek, TPred &pred):
+            cltRoot_(cltRoot),
+            offToSeek_(offToSeek),
+            pred_(pred)
+        {
+        }
+
+        TObjType cltFound() const { return cltFound_; }
+
+        bool operator()(const TFieldIdxChain &ic, const struct cl_type_item *it)
+        {
+            const TObjType clt = it->type;
+            if (!pred_(clt))
+                return /* continue */ true;
+
+            const TOffset off = offsetByIdxChain(cltRoot_, ic);
+            if (offToSeek_ != off)
+                return /* continue */ true;
+
+            // matched!
+            cltFound_ = clt;
+            return false;
+        }
+};
+
+bool SymHeapCore::Private::lazyCreatePtr(
+        TObjId                  *pObj,
+        TObjType                *pClt,
+        TValId                   at)
+{
+    // check offset
+    const BaseValue *valData = this->valData(at);
+    const TOffset off = valData->offRoot;
+
+    // jump to root
+    const TValId root = this->valRoot(at, valData);
+    /* const */ RootValue *rootData = this->rootData(root);
+
+    // check root type-info
+    const TObjType cltRoot = rootData->lastKnownClt;
+    CL_BREAK_IF(!cltRoot);
+
+    CltFinder<bool (&)(const TObjType)> visitor(cltRoot, off, isDataPtr);
+    if (traverseTypeIc(cltRoot, visitor, /* digOnlyComposite */ true))
+        // not found
+        return false;
+
+    // create a new pointer
+    const TObjType clt = visitor.cltFound();
+
+    const TObjId obj = this->objCreate();
+    HeapObject *objData = this->objData(obj);
+    objData->root = root;
+    objData->off  = off;
+    objData->clt  = clt;
+
+    // XXX
+    rootData->allObjs.push_back(obj);
+
+    // lazy creation successful
+    *pObj = obj;
+    *pClt = clt;
+    return true;
+}
+
 TObjId SymHeapCore::ptrAt(TValId at) {
     TObjByType *row;
     if (!d->gridLookup(&row, at))
@@ -1122,7 +1198,18 @@ TObjId SymHeapCore::ptrAt(TValId at) {
             return item.second;
     }
 
-    return OBJ_UNKNOWN;
+    if (this->valSizeOfTarget(at) < stor_.types.dataPtrSizeof())
+        // TODO: return a more specific error code (out of range)
+        return OBJ_UNKNOWN;
+
+    TObjId obj;
+    TObjType clt;
+    if (!d->lazyCreatePtr(&obj, &clt, at))
+        // TODO: refine the error codes coming from here
+        return OBJ_UNKNOWN;
+
+    row->operator[](clt) = obj;
+    return obj;
 }
 
 TObjId SymHeapCore::objAt(TValId at, TObjCode code) {
@@ -1160,6 +1247,17 @@ TObjId SymHeapCore::objAt(TValId at, TObjCode code) {
     return max;
 }
 
+class TypeEqual {
+    private:
+        const TObjType ref_;
+
+    public:
+        TypeEqual(TObjType ref): ref_(ref) { }
+        bool operator()(const TObjType clt) const {
+            return (clt == ref_);
+        }
+};
+
 TObjId SymHeapCore::objAt(TValId at, TObjType clt) {
     CL_BREAK_IF(!clt);
     if (isDataPtr(clt))
@@ -1182,8 +1280,35 @@ TObjId SymHeapCore::objAt(TValId at, TObjType clt) {
             return item.second;
     }
 
-    // not found
-    return OBJ_UNKNOWN;
+    if (this->valSizeOfTarget(at) < clt->size)
+        // TODO: return a more specific error code (out of range)
+        return OBJ_UNKNOWN;
+
+    const BaseValue *valData = d->valData(at);
+    const TValId root = d->valRoot(at, valData);
+    const TOffset off = valData->offRoot;
+
+    RootValue *rootData = d->rootData(root);
+    const TObjType cltRoot = rootData->lastKnownClt;
+
+    // FIXME: we need this shim to work around the legacy code in symdiscover
+    const TypeEqual pred(clt);
+    CltFinder<const TypeEqual> visitor(cltRoot, off, pred);
+    if (traverseTypeIc(cltRoot, visitor, /* digOnlyComposite */ true))
+        return OBJ_UNKNOWN;
+
+    const TObjId obj = d->objCreate();
+    HeapObject *objData = d->objData(obj);
+    objData->root = root;
+    objData->off  = off;
+    objData->clt  = clt;
+
+    row->operator[](clt) = obj;
+
+    // XXX
+    rootData->allObjs.push_back(obj);
+
+    return obj;
 }
 
 CVar SymHeapCore::cVarByRoot(TValId valRoot) const {
@@ -1220,10 +1345,11 @@ TValId SymHeapCore::addrOfVar(CVar cv) {
     rootData->cVar = cv;
     rootData->addr = addr;
     rootData->lastKnownClt = clt;
+    rootData->cbSize = clt->size;
     rootData->allObjs.push_back(root);
 
     // create the structure
-    d->subsCreate(addr);
+    rootData->grid[/* off */ 0][clt] = root;
 
     // store the address for next wheel
     d->cVarMap.insert(cv, addr);
