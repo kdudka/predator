@@ -471,7 +471,7 @@ struct ObjJoinVisitor {
         const TObjId obj2   = item[1];
         const TObjId objDst = item[2];
 
-        // store object's addresses
+        // TODO: remove this?
         if (!defineAddressMapping(ctx, obj1, obj2, objDst))
             return false;
 
@@ -928,6 +928,25 @@ bool dlSegHandleShared(
     sh.objSetValue(prevPtrFromSeg(sh, peer), segHeadAt(sh,  seg));
     CL_BREAK_IF(!dlSegCheckConsistency(ctx.dst));
     return true;
+}
+
+bool joinReturnAddrs(SymJoinCtx &ctx) {
+    TObjType clt;
+    const TObjType clt1 = ctx.sh1.valLastKnownTypeOfTarget(VAL_ADDR_OF_RET);
+    const TObjType clt2 = ctx.sh2.valLastKnownTypeOfTarget(VAL_ADDR_OF_RET);
+    if (!joinClt(&clt, clt1, clt2))
+        // mismatch in type of return value
+        return false;
+
+    if (!clt)
+        // nothing to join here
+        return true;
+
+    ctx.dst.valSetLastKnownTypeOfTarget(VAL_ADDR_OF_RET, clt);
+    return traverseSubObjs(ctx,
+            VAL_ADDR_OF_RET,
+            VAL_ADDR_OF_RET,
+            VAL_ADDR_OF_RET);
 }
 
 bool followObjPair(
@@ -1975,6 +1994,10 @@ bool joinSymHeaps(
 
     // initialize symbolic join ctx
     SymJoinCtx ctx(*pDst, sh1, sh2);
+
+    // first try to join return addresses (if in use)
+    if (!joinReturnAddrs(ctx))
+        return false;
 
     // start with program variables
     if (!joinCVars(ctx)) {
