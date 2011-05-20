@@ -307,6 +307,13 @@ bool slSegAvoidSelfCycle(
         // not a SLS
         return false;
 
+    // TODO: move this hack to the right place and document accordingly
+    const TValId valNext = valOfPtrAt(sh, seg2, off.next);
+    if (VAL_NULL != valNext
+            && !isPossibleToDeref(sh.valTarget(valNext))
+            && sh.usedByCount(valNext) < 2)
+        return true;
+
     const TValId next2 = nextRootObj(sh, seg2, off.next);
     return haveSeg(sh, next2, seg1, OK_SLS);
 }

@@ -195,10 +195,10 @@ class SymExecEngine: public IStatsProvider {
         void execReturn();
         void updateState(SymHeap &sh, const CodeStorage::Block *ofBlock);
         void updateStateInBranch(
-                SymHeap                     sh,
-                const CodeStorage::Block    *ofBlock,
+                SymProc                    &proc,
+                const CodeStorage::Block   *ofBlock,
                 const bool                  branch,
-                const cl_binop_e            code,
+                const CodeStorage::Insn    &insnCmp,
                 const TValId                v1,
                 const TValId                v2);
 
@@ -287,13 +287,16 @@ void SymExecEngine::updateState(SymHeap &sh, const CodeStorage::Block *ofBlock) 
 }
 
 void SymExecEngine::updateStateInBranch(
-        SymHeap                     sh,
-        const CodeStorage::Block    *ofBlock,
+        SymProc                    &proc,
+        const CodeStorage::Block   *ofBlock,
         const bool                  branch,
-        const cl_binop_e            code,
+        const CodeStorage::Insn    &insnCmp,
         const TValId                v1,
         const TValId                v2)
 {
+    SymHeap sh = proc.sh();
+    const enum cl_binop_e code = static_cast<enum cl_binop_e>(insnCmp.subCode);
+
     // resolve binary operator
     bool neg, preserveEq, preserveNeq;
     if (describeCmpOp(code, &neg, &preserveEq, &preserveNeq)) {
@@ -316,6 +319,7 @@ void SymExecEngine::updateStateInBranch(
     LDP_PLOT(nondetCond, sh);
 
 fallback:
+    proc.killInsn(insnCmp);
     this->updateState(sh, ofBlock);
 }
 
@@ -365,11 +369,13 @@ void SymExecEngine::execCondInsn() {
 
         case VAL_TRUE:
             CL_DEBUG_MSG(lw_, ".T. CL_INSN_COND got VAL_TRUE");
+            proc.killInsn(*insnCmp);
             this->updateState(sh, targetThen);
             return;
 
         case VAL_FALSE:
             CL_DEBUG_MSG(lw_, ".F. CL_INSN_COND got VAL_FALSE");
+            proc.killInsn(*insnCmp);
             this->updateState(sh, targetElse);
             return;
 
@@ -391,10 +397,10 @@ void SymExecEngine::execCondInsn() {
     LDP_PLOT(nondetCond, sh);
 
     CL_DEBUG_MSG(lw_, "?T? CL_INSN_COND updates TRUE branch");
-    this->updateStateInBranch(sh, targetThen, true, code, v1, v2);
+    this->updateStateInBranch(proc, targetThen, true,  *insnCmp, v1, v2);
 
     CL_DEBUG_MSG(lw_, "?F? CL_INSN_COND updates FALSE branch");
-    this->updateStateInBranch(sh, targetElse, false, code, v1, v2);
+    this->updateStateInBranch(proc, targetElse, false, *insnCmp, v1, v2);
 }
 
 void SymExecEngine::execTermInsn() {
