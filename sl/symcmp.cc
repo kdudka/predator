@@ -234,7 +234,7 @@ bool dfsCmp(
         SymHeap                 &sh2)
 {
     // DFS loop
-    typename TWorkList::value_type item;
+    TWorkList::value_type item;
     while (wl.next(item)) {
         TValId v1, v2;
         boost::tie(v1, v2) = item;

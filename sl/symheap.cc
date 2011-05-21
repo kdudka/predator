@@ -290,7 +290,7 @@ struct RootValue: public BaseValue {
 };
 
 struct SymHeapCore::Private {
-    // allocate VAL_NULL (TODO: avoid allocation of VAL_NULL) and OBJ_RETURN
+    // allocate a placeholder for VAL_NULL
     Private();
 
     // clone heap entities, they are now allocated separately
@@ -483,7 +483,8 @@ TValId SymHeapCore::Private::valDup(TValId val) {
 }
 
 SymHeapCore::Private::Private() {
-    this->ents.push_back(/* reserved for VAL_NULL */ 0);
+    // allocate a placeholder for VAL_NULL
+    this->ents.push_back(static_cast<IHeapEntity *>(0));
 }
 
 SymHeapCore::Private::Private(const SymHeapCore::Private &ref):
@@ -1109,6 +1110,7 @@ class CltFinder {
         CltFinder(TObjType cltRoot, TOffset offToSeek, TPred &pred):
             cltRoot_(cltRoot),
             offToSeek_(offToSeek),
+            cltFound_(/* just to silence GCC with -O2 */ 0),
             pred_(pred)
         {
         }
