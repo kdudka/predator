@@ -142,20 +142,22 @@ void emitPlotError(const struct cl_loc *lw, const std::string &plotName) {
         emitPlotError(lw, plotName);                                        \
 } while (0)
 
-template <class TInsn, class TProc>
-bool callPlot(const TInsn &insn, TProc &proc) {
+template <class TInsn, class TCore>
+bool callPlot(const TInsn &insn, TCore &core) {
     const CodeStorage::TOperandList &opList = insn.operands;
     const struct cl_loc *lw = &insn.loc;
 
     std::string plotName;
     if (!chkVoidCall<1>(opList)
-            || !readPlotName<0>(&plotName, opList, proc.lw())) {
+            || !readPlotName<0>(&plotName, opList, core.lw())) {
         emitPrototypeError(lw, "___sl_plot");
         return false;
     }
 
-    const SymHeap &sh = proc.sh();
-    DO_PLOT(plot(plotName));
+    const SymHeap &sh = core.sh();
+    if (!plotHeap(sh, plotName))
+        emitPlotError(lw, plotName);
+
     return true;
 }
 

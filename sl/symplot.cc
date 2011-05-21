@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2010-2011 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -106,6 +106,79 @@ std::string PlotEnumerator::decorate(std::string name) {
     return name;
 }
 
+// /////////////////////////////////////////////////////////////////////////////
+// implementation of plotHeap()
+struct PlotData {
+    SymHeap                             &sh;
+    std::ostream                        &out;
+    std::set<TValId>                    values;
+
+    PlotData(const SymHeap &sh_, std::ostream &out_):
+        sh(const_cast<SymHeap &>(sh_)),
+        out(out_)
+    {
+    }
+};
+
+#define SL_QUOTE(what) "\"" << what << "\""
+
+void render(PlotData &plot) {
+    CL_WARN("render(PlotData &plot) not implemented yet");
+}
+
+bool plotHeap(
+        const SymHeap                   &sh,
+        const std::string               &name,
+        const TValList                  &startingPoints)
+{
+    PlotEnumerator *pe = PlotEnumerator::instance();
+    std::string plotName(pe->decorate(name));
+    std::string fileName(plotName + ".dot");
+
+    // create a dot file
+    std::fstream out(fileName.c_str(), std::ios::out);
+    if (!out) {
+        CL_ERROR("unable to create file '" << fileName << "'");
+        return false;
+    }
+
+    // open graph
+    out << "digraph " << SL_QUOTE(plotName)
+        << " {\n\tlabel=<<FONT POINT-SIZE=\"18\">" << plotName
+        << "</FONT>>;\n\tclusterrank=local;\n\tlabelloc=t;\n";
+
+    // check whether we can write to stream
+    if (!out.flush()) {
+        CL_ERROR("unable to write file '" << fileName << "'");
+        out.close();
+        return false;
+    }
+
+    // initialize an instance of PlotData
+    CL_DEBUG("symplot: created dot file '" << fileName << "'");
+    PlotData plot(sh, out);
+    std::copy(startingPoints.begin(), startingPoints.end(),
+            std::inserter(plot.values, plot.values.begin()));
+
+    // do our stuff
+    render(plot);
+
+    // close graph
+    out << "}\n";
+    const bool ok = !!out;
+    out.close();
+    return ok;
+}
+
+bool plotHeap(
+        const SymHeap                   &sh,
+        const std::string               &name)
+{
+    TValList roots;
+    sh.gatherRootObjects(roots);
+    return plotHeap(sh, name, roots);
+}
+
 
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of SymPlot
@@ -171,8 +244,6 @@ struct SymPlot::Private {
     void plotObj(TObjId obj);
     void plotCVar(CVar cVar);
 };
-
-#define SL_QUOTE(what) "\"" << what << "\""
 
 bool SymPlot::Private::openDotFile(const std::string &plotName) {
     // compute a sort of unique file name
