@@ -1145,6 +1145,30 @@ class CltFinder {
         }
 };
 
+template <class TPred>
+TObjType guideCltFinder(
+        const TObjType          cltRoot,
+        const TOffset           off,
+        TPred                  &pred)
+{
+    CltFinder<TPred> visitor(cltRoot, off, pred);
+
+    // first check the root itself
+    const TFieldIdxChain ic;
+    struct cl_type_item item;
+    item.type = cltRoot;
+    if (!visitor(ic, &item))
+        return visitor.cltFound();
+
+    // traverse the type-info
+    if (!traverseTypeIc(cltRoot, visitor, /* digOnlyComposite */ true))
+        return visitor.cltFound();
+
+    // not found
+    return 0;
+}
+
+
 bool SymHeapCore::Private::lazyCreatePtr(
         TObjId                  *pObj,
         TObjType                *pClt,
@@ -1162,14 +1186,12 @@ bool SymHeapCore::Private::lazyCreatePtr(
     const TObjType cltRoot = rootData->lastKnownClt;
     CL_BREAK_IF(!cltRoot);
 
-    CltFinder<bool (&)(const TObjType)> visitor(cltRoot, off, isDataPtr);
-    if (traverseTypeIc(cltRoot, visitor, /* digOnlyComposite */ true))
+    const TObjType clt = guideCltFinder(cltRoot, off, isDataPtr);
+    if (!clt)
         // not found
         return false;
 
     // create a new pointer
-    const TObjType clt = visitor.cltFound();
-
     const TObjId obj = this->objCreate();
     HeapObject *objData = this->objData(obj);
     objData->root = root;
@@ -1244,7 +1266,32 @@ TObjId SymHeapCore::objAt(TValId at, TObjCode code) {
         max = obj;
     }
 
-    return max;
+    if (OBJ_UNKNOWN != max)
+        return max;
+
+    const BaseValue *valData = d->valData(at);
+    const TValId root = d->valRoot(at, valData);
+    const TOffset off = valData->offRoot;
+    if (off)
+        // TODO
+        return OBJ_UNKNOWN;
+
+    RootValue *rootData = d->rootData(root);
+    const TObjType clt = rootData->lastKnownClt;
+    if (CL_TYPE_VOID != code && code != clt->code)
+        // TODO
+        return OBJ_UNKNOWN;
+
+    const TObjId obj = d->objCreate();
+    HeapObject *objData = d->objData(obj);
+    objData->root = root;
+    objData->clt  = clt;
+
+    row->operator[](clt) = obj;
+
+    // XXX
+    rootData->allObjs.push_back(obj);
+    return obj;
 }
 
 class TypeEqual {
@@ -1293,8 +1340,7 @@ TObjId SymHeapCore::objAt(TValId at, TObjType clt) {
 
     // FIXME: we need this shim to work around the legacy code in symdiscover
     const TypeEqual pred(clt);
-    CltFinder<const TypeEqual> visitor(cltRoot, off, pred);
-    if (traverseTypeIc(cltRoot, visitor, /* digOnlyComposite */ true))
+    if (!guideCltFinder(cltRoot, off, pred))
         return OBJ_UNKNOWN;
 
     const TObjId obj = d->objCreate();
@@ -1331,25 +1377,15 @@ TValId SymHeapCore::addrOfVar(CVar cv) {
     CL_DEBUG_MSG(loc, "FFF SymHeapCore::objByCVar() creates var " << varString);
 #endif
 
-    // create the corresponding heap object
-    const TObjId root = d->objCreate();
-    HeapObject *objData = d->objData(root);
-    objData->clt = clt;
-
     // assign an address
     const EValueTarget code = isOnStack(var) ? VT_ON_STACK : VT_STATIC;
     addr = d->valCreate(code, VO_ASSIGNED);
-    objData->root = addr;
 
     RootValue *rootData = d->rootData(addr);
     rootData->cVar = cv;
     rootData->addr = addr;
     rootData->lastKnownClt = clt;
     rootData->cbSize = clt->size;
-    rootData->allObjs.push_back(root);
-
-    // create the structure
-    rootData->grid[/* off */ 0][clt] = root;
 
     // store the address for next wheel
     d->cVarMap.insert(cv, addr);
