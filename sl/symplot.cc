@@ -162,6 +162,36 @@ void digValues(PlotData &plot, const TValList &startingPoints) {
     }
 }
 
+void plotValue(PlotData &plot, const TValId val) {
+    // visualize the count of references as pen width
+    const float pw = static_cast<float>(plot.sh.usedByCount(val));
+    plot.out << "\t" << SL_QUOTE(val)
+        << " [shape=ellipse, penwidth=" << pw
+        << ", color=" << /* TODO */ "black"
+        << ", fontcolor=" << /* TODO */ "black"
+        << ", label=\"[" << /* TODO */ ""
+        << "] #" << val << "\"];\n";
+}
+
+void plotOffset(PlotData &plot, const TOffset off, const int from, const int to)
+{
+    const bool isAboveRoot = (off < 0);
+    const char *color = (isAboveRoot)
+        ? "red"
+        : "black";
+
+    const char *prefix = (isAboveRoot)
+        ? ""
+        : "+";
+
+    plot.out << "\t" << SL_QUOTE(from)
+        << " -> " << SL_QUOTE(to)
+        << " [color=" << color
+        << ", fontcolor=" << color
+        << ", label=\"[" << prefix << off
+        << "]\"];\n";
+}
+
 void plotTypeFreeObj(PlotData &plot, const TValId at) {
     SymHeap &sh = plot.sh;
 
@@ -170,9 +200,85 @@ void plotTypeFreeObj(PlotData &plot, const TValId at) {
 }
 
 void plotAtomicObj(PlotData &plot, const TObjId obj) {
+    CL_BREAK_IF(obj <= 0);
+    SymHeap &sh = plot.sh;
+
+    // TODO
+    const TObjType clt = sh.objType(obj);
+    plot.out << "\t" << SL_QUOTE(obj)
+        << " [shape=box, label=\"#" << obj << "\"];\n";
 }
 
-void plotCompositeObj(PlotData &plot, TValId root, const TObjList &liveObjs) {
+void plotCompositeObj(PlotData &plot, const TValId at, const TObjList &liveObjs)
+{
+    SymHeap &sh = plot.sh;
+
+    std::string label;
+    if (sh.valTargetIsProto(at))
+        label = "[prototype] ";
+
+    const char *color = "";
+    const char *pw = "";
+
+    const EObjKind kind = sh.valTargetKind(at);
+    switch (kind) {
+        case OK_CONCRETE:
+            color = "black";
+            pw = "1.0";
+            break;
+
+        case OK_MAY_EXIST:
+            label += "MAY_EXIST";
+            color = "blue";
+            pw = "3.0";
+            break;
+
+        case OK_SLS:
+            label += "SLS";
+            color = "red";
+            pw = "3.0";
+            break;
+
+        case OK_DLS:
+            label += "DLS/2";
+            color = "gold";
+            pw = "3.0";
+            break;
+    }
+
+    // open cluster
+    plot.out
+        << "subgraph \"cluster" << (++plot.last)
+        << "\" {\n\trank=same;\n\tlabel=" << SL_QUOTE(label)
+        << ";\n\tcolor=" << color
+        << ";\n\tfontcolor=" << color
+        << ";\n\tbgcolor=gray98;\n\tstyle=dashed;\n\tpenwidth=" << pw
+        << ";\n";
+
+    // plot the root value
+    plotValue(plot, at);
+
+    // sort objects by offset
+    typedef std::map<TOffset, TObjId> TObjByOff;
+    TObjByOff objByOff;
+    BOOST_FOREACH(const TObjId obj, liveObjs) {
+        const TOffset off = sh.valOffset(sh.placedAt(obj));
+        objByOff[off] = obj;
+    }
+
+    // plot all atomic objects inside
+    BOOST_FOREACH(TObjByOff::const_reference item, objByOff) {
+        // plot a single object
+        const TObjId obj = item.second;
+        plotAtomicObj(plot, obj);
+
+        // connect the inner object with the root by an offset edge
+        const TOffset off = item.first;
+        plotOffset(plot, off, at, obj);
+    }
+
+    // close cluster
+    plot.out << "}\n";
 }
 
 void plotDlSeg(PlotData &plot, const TValId seg, const TObjList &liveObjs) {
