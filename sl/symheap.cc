@@ -306,7 +306,6 @@ struct SymHeapCore::Private {
     NeqDb                           neqDb;
 
     template <typename T> T lastId() const;
-    template <typename T> T nextId() const;
 
     inline bool valOutOfRange(TValId);
     inline bool objOutOfRange(TObjId);
@@ -339,10 +338,6 @@ struct SymHeapCore::Private {
         // intentionally not implemented
         Private& operator=(const Private &);
 };
-
-template <typename T> T SymHeapCore::Private::nextId() const {
-    return static_cast<T>(this->ents.size());
-}
 
 template <typename T> T SymHeapCore::Private::lastId() const {
     return static_cast<T>(this->ents.size() - 1);
@@ -637,8 +632,6 @@ bool valMapLookup(const TValMap &valMap, TValId *pVal) {
 }
 
 void SymHeapCore::Private::subsCreate(TValId rootAt) {
-    this->liveRoots.insert(rootAt);
-
     // initialize root clt
     RootValue *rootData = this->rootData(rootAt);
     TObjType clt = rootData->lastKnownClt;
@@ -1090,15 +1083,8 @@ bool SymHeapCore::Private::gridLookup(TObjByType **pRow, const TValId val) {
 
     const BaseValue *valData = this->valData(val);
     const EValueTarget code = valData->code;
-    switch (code) {
-        default:
-            if (isPossibleToDeref(code))
-                break;
-            // fall through!
-
-        case VT_UNKNOWN:
-            return false;
-    }
+    if (!isPossibleToDeref(code))
+        return false;
 
     // jump to root
     const TValId valRoot = this->valRoot(val, valData);
@@ -1323,7 +1309,8 @@ TObjId SymHeapCore::objAt(TValId at, TObjType clt) {
     // try semantic match
     BOOST_FOREACH(const TObjByType::const_reference item, *row) {
         const TObjType cltItem = item.first;
-        if (cltItem && *cltItem == *clt)
+        CL_BREAK_IF(!cltItem);
+        if (*cltItem == *clt)
             return item.second;
     }
 
@@ -1380,6 +1367,7 @@ TValId SymHeapCore::addrOfVar(CVar cv) {
     // assign an address
     const EValueTarget code = isOnStack(var) ? VT_ON_STACK : VT_STATIC;
     addr = d->valCreate(code, VO_ASSIGNED);
+    d->liveRoots.insert(addr);
 
     RootValue *rootData = d->rootData(addr);
     rootData->cVar = cv;
@@ -1452,7 +1440,6 @@ int SymHeapCore::valSizeOfTarget(TValId val) const {
     const TValId root = d->valRoot(val, valData);
     const RootValue *rootData = d->rootData(root);
 
-    // FIXME: this field is not initialized accurately in all cases
     const int rootSize = rootData->cbSize;
     const TOffset off = valData->offRoot;
     return rootSize - off;
@@ -1483,6 +1470,8 @@ void SymHeapCore::valSetLastKnownTypeOfTarget(TValId root, TObjType clt) {
     // delayed object's type definition
     rootData->allObjs.push_back(obj);
     rootData->lastKnownClt = clt;
+    d->liveRoots.insert(root);
+
     d->subsCreate(root);
 }
 
