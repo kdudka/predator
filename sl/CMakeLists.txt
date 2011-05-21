@@ -87,16 +87,22 @@ set(examples
 
     0098 0123 0127 0128 0130 0124)
 
+set(cost 1048576)
+
 # FIXME: define this macro more generically, in particular the count of args
 macro(test_sym_exec label tool arg1 arg2 arg3)
     foreach (num ${examples})
-        add_test("${label}___example-${num}" ${tool} ${arg1} ${arg2} ${arg3}
+        set(test_name "${label}___example-${num}")
+        add_test(${test_name} ${tool} ${arg1} ${arg2} ${arg3}
             -c ${sl_SOURCE_DIR}/data/test-${num}.c
             -DPREDATOR ${clplug_incs}
             -fplugin=${sl_BINARY_DIR}/libsl.so
             -fplugin-arg-libsl-args=noplot
             -fplugin-arg-libsl-preserve-ec
             -fplugin-arg-libsl-verbose=1)
+
+        SET_TESTS_PROPERTIES(${test_name} PROPERTIES COST ${cost})
+        MATH(EXPR cost "${cost} - 1")
     endforeach()
 endmacro()
 if(TEST_ONLY_FAST)
@@ -138,7 +144,11 @@ macro(test_sym_exec_regre name_suff ext arg1)
         # ... and finally diff with the expected output
         set(cmd
             "${cmd} | diff -up ${sl_SOURCE_DIR}/data/test-${num}.err${ext} -")
-        add_test("test-${num}.c${name_suff}" sh -c "${cmd}")
+        set(test_name "test-${num}.c${name_suff}")
+        add_test(${test_name} sh -c "${cmd}")
+
+        SET_TESTS_PROPERTIES(${test_name} PROPERTIES COST ${cost})
+        MATH(EXPR cost "${cost} - 1")
     endforeach()
 endmacro(test_sym_exec_regre)
 
