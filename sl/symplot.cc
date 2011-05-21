@@ -114,10 +114,12 @@ struct PlotData {
     SymHeap                             &sh;
     std::ostream                        &out;
     TValues                             values;
+    int                                 last;
 
     PlotData(const SymHeap &sh_, std::ostream &out_):
         sh(const_cast<SymHeap &>(sh_)),
-        out(out_)
+        out(out_),
+        last(0)
     {
     }
 };
@@ -160,8 +162,96 @@ void digValues(PlotData &plot, const TValList &startingPoints) {
     }
 }
 
-void render(PlotData &plot) {
-    CL_WARN("render(PlotData &plot) not implemented yet");
+void plotTypeFreeObj(PlotData &plot, const TValId at) {
+    SymHeap &sh = plot.sh;
+
+    const unsigned size = sh.valSizeOfTarget(at);
+    CL_BREAK_IF(!size);
+}
+
+void plotAtomicObj(PlotData &plot, const TObjId obj) {
+}
+
+void plotCompositeObj(PlotData &plot, TValId root, const TObjList &liveObjs) {
+}
+
+void plotDlSeg(PlotData &plot, const TValId seg, const TObjList &liveObjs) {
+    SymHeap &sh = plot.sh;
+    const char *label = (sh.valTargetIsProto(seg))
+        ? "[prototype] DLS"
+        : "DLS";
+
+    // open a cluster for the DLS pair
+    plot.out
+        << "subgraph \"cluster" << (++plot.last)
+        << "\" {\n\tlabel=" << SL_QUOTE(label)
+        << "\n\tcolor=gold;\n\tfontcolor=gold;\n\tstyle=dashed;\n";
+
+    // plot the given root
+    plotCompositeObj(plot, seg, liveObjs);
+
+    // plot the corresponding peer
+    const TValId peer = dlSegPeer(sh, seg);
+    TObjList liveObjsAtPeer;
+    sh.gatherLiveObjects(liveObjsAtPeer, peer);
+    plotCompositeObj(plot, peer, liveObjsAtPeer);
+
+    // close the cluster
+    plot.out << "}\n";
+}
+
+void plotRootObjects(PlotData &plot) {
+    SymHeap &sh = plot.sh;
+    std::set<TValId> peersDone;
+
+    // go through roots
+    BOOST_FOREACH(PlotData::TValues::const_reference item, plot.values) {
+        if (! /* isRoot */ item.second)
+            continue;
+
+        const TValId root = item.first;
+        if (hasKey(peersDone, root))
+            // already plotted
+            continue;
+
+        // gather live objects
+        TObjList liveObjs;
+        sh.gatherLiveObjects(liveObjs, root);
+        if (liveObjs.empty()) {
+            plotTypeFreeObj(plot, root);
+            continue;
+        }
+
+        const EObjKind kind = sh.valTargetKind(root);
+        switch (kind) {
+            case OK_DLS:
+                peersDone.insert(segPeer(sh, root));
+                plotDlSeg(plot, root, liveObjs);
+                continue;
+
+            case OK_CONCRETE:
+                if (1 == liveObjs.size()) {
+                    const TObjId obj = liveObjs.front();
+                    if (sh.valOffset(sh.placedAt(obj)))
+                        break;
+
+                    plotAtomicObj(plot, obj);
+                    continue;
+                }
+                // fall through!
+
+            case OK_SLS:
+            case OK_MAY_EXIST:
+                break;
+        }
+
+        plotCompositeObj(plot, root, liveObjs);
+    }
+}
+
+void plotEverything(PlotData &plot) {
+    CL_WARN("plotEverything() is not implemented yet");
+    plotRootObjects(plot);
 }
 
 bool plotHeap(
@@ -198,7 +288,7 @@ bool plotHeap(
 
     // do our stuff
     digValues(plot, startingPoints);
-    render(plot);
+    plotEverything(plot);
 
     // close graph
     out << "}\n";
@@ -735,15 +825,6 @@ void SymPlot::Private::openCluster(TObjId obj) {
             color = "blue";
             pw = "3.0";
             break;
-
-            // TODO
-#if 0
-        case OK_HEAD:
-            label += "head";
-            color = "green";
-            pw = "2.0";
-            break;
-#endif
 
         case OK_SLS:
             label += "SLS";
