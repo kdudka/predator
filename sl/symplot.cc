@@ -109,9 +109,11 @@ std::string PlotEnumerator::decorate(std::string name) {
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of plotHeap()
 struct PlotData {
+    typedef std::map<TValId, bool /* isRoot */>             TValues;
+
     SymHeap                             &sh;
     std::ostream                        &out;
-    std::set<TValId>                    values;
+    TValues                             values;
 
     PlotData(const SymHeap &sh_, std::ostream &out_):
         sh(const_cast<SymHeap &>(sh_)),
@@ -121,6 +123,42 @@ struct PlotData {
 };
 
 #define SL_QUOTE(what) "\"" << what << "\""
+
+void digValues(PlotData &plot, const TValList &startingPoints) {
+    SymHeap &sh = plot.sh;
+
+    WorkList<TValId> todo;
+    BOOST_FOREACH(const TValId val, startingPoints)
+        if (0 < val)
+            todo.schedule(val);
+
+    TValId val;
+    while (todo.next(val)) {
+        // insert the value itself
+        plot.values[val] = /* isRoot */ false;
+        const EValueTarget code = sh.valTarget(val);
+        if (!isPossibleToDeref(code))
+            // target is not an object
+            continue;
+
+        // check the root
+        const TValId root = sh.valRoot(val);
+        plot.values[root] = /* isRoot */ true;
+        if (root != val && todo.seen(root))
+            // this root was already traversed
+            continue;
+
+        // traverse the root
+        TObjList liveObjs;
+        sh.gatherLiveObjects(liveObjs, val);
+        BOOST_FOREACH(const TObjId obj, liveObjs) {
+            const TValId valInside = sh.valueOf(obj);
+            if (0 < valInside)
+                // schedule the value inside for processing
+                todo.schedule(valInside);
+        }
+    }
+}
 
 void render(PlotData &plot) {
     CL_WARN("render(PlotData &plot) not implemented yet");
@@ -157,10 +195,9 @@ bool plotHeap(
     // initialize an instance of PlotData
     CL_DEBUG("symplot: created dot file '" << fileName << "'");
     PlotData plot(sh, out);
-    std::copy(startingPoints.begin(), startingPoints.end(),
-            std::inserter(plot.values, plot.values.begin()));
 
     // do our stuff
+    digValues(plot, startingPoints);
     render(plot);
 
     // close graph

@@ -82,7 +82,7 @@ class WorkListWithUndo: public WorkList<T> {
     public:
         /// push an @b already @b processed item back to WorkList
         void undo(const T &item) {
-            CL_BREAK_IF(!hasKey(TBase::done_, item));
+            CL_BREAK_IF(!hasKey(TBase::seen_, item));
             TBase::todo_.push(item);
         }
 };

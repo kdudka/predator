@@ -33,13 +33,13 @@ class WorkList {
 
     protected:
         std::stack<T> todo_;
-        std::set<T>   done_; // FIXME: misleading identifier
+        std::set<T>   seen_;
 
     public:
         WorkList() { }
         WorkList(const T &item) {
             todo_.push(item);
-            done_.insert(item);
+            seen_.insert(item);
         }
 
         bool next(T &dst) {
@@ -52,12 +52,16 @@ class WorkList {
         }
 
         bool schedule(const T &item) {
-            if (hasKey(done_, item))
+            if (hasKey(seen_, item))
                 return false;
 
             todo_.push(item);
-            done_.insert(item);
+            seen_.insert(item);
             return true;
+        }
+
+        bool seen(const T &item) const {
+            return hasKey(seen_, item);
         }
 
         // FIXME: really bad idea as log as schedule(const T &) is non-virutal
@@ -66,7 +70,7 @@ class WorkList {
             return this->schedule(T(i1, i2));
         }
 
-        unsigned cntSeen() const { return done_.size(); }
+        unsigned cntSeen() const { return seen_.size(); }
         unsigned cntTodo() const { return todo_.size(); }
 };
 
