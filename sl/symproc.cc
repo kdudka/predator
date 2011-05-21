@@ -948,6 +948,21 @@ void SymExecCore::execOp(const CodeStorage::Insn &insn) {
         // handle generic operator
         valResult = OpHandler<ARITY>::handleOp(*this, insn.subCode, rhs, clt);
 
+#if !SE_TRACK_NON_POINTER_VALUES
+    // avoid creation of live object in case we are not interested in its value
+    if (!isDataPtr(dst.type) && VO_UNKNOWN == sh_.valOrigin(valResult)) {
+        const TValId root = sh_.valRoot(sh_.placedAt(varLhs));
+
+        TObjList liveObjs;
+        sh_.gatherLiveObjects(liveObjs, root);
+        BOOST_FOREACH(const TObjId obj, liveObjs)
+            if (obj == varLhs)
+                goto already_alive;
+
+        return;
+    }
+already_alive:
+#endif
     // store the result
     this->objSetValue(varLhs, valResult);
 }

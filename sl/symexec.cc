@@ -347,8 +347,11 @@ bool SymExecEngine::bypassNonPointers(
     const TObjType clt1 = insnCmp.operands[/* src1 */ 1].type;
     const TObjType clt2 = insnCmp.operands[/* src2 */ 2].type;
 
-    // TODO: what else should we black-list for tracking?
+#if SE_TRACK_NON_POINTER_VALUES
     if (!isCodePtr(clt1) && !isCodePtr(clt2))
+#else
+    if (isDataPtr(clt1) || isDataPtr(clt2))
+#endif
         return false;
 
     SymHeap &sh = proc.sh();
@@ -426,16 +429,16 @@ void SymExecEngine::execCondInsn() {
             break;
     }
 
+    if (this->bypassNonPointers(proc, *insnCmp, insnCnd->targets))
+        // do not track relations over data we are not interested in
+        return;
+
     const EValueOrigin vo = sh.valOrigin(val);
     if (isUninitialized(vo)) {
         // TODO: make the warning messages more precise
         CL_WARN_MSG(lw_, "conditional jump depends on uninitialized value");
         bt_.printBackTrace();
     }
-
-    if (this->bypassNonPointers(proc, *insnCmp, insnCnd->targets))
-        // do not track relations over data we are not interested in
-        return;
 
     std::ostringstream str;
     str << "at-line-" << lw_->line;

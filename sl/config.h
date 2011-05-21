@@ -126,10 +126,10 @@
 #define SE_MAX_CALL_DEPTH                   0x40
 
 /**
- * if 1, support partial tracking of unknown integral values, which may result
- * into significant state explosion in some cases
+ * if 1, support partial tracking of non-pointer values, which may result into
+ * significant state explosion in some cases
  */
-#define SE_TRACK_UNKNOWN_INT_VALUES         1
+#define SE_TRACK_NON_POINTER_VALUES         1
 
 /**
  * if more than zero, jump to debugger as soon as N graph of the same name has
