@@ -663,13 +663,12 @@ const char* labelByTarget(const EValueTarget code) {
     return "";
 }
 
-void plotValue(PlotData &plot, const TValId val, const EValueTarget code)
+void plotValue(PlotData &plot, const TValId val)
 {
     SymHeap &sh = plot.sh;
 
     const char *color = "green";
     // TODO
-    (void) code;
 
     const float pw = static_cast<float>(1U + sh.usedByCount(val));
     plot.out << "\t" << SL_QUOTE(val)
@@ -702,9 +701,10 @@ void plotNonRootValues(PlotData &plot) {
 
         // plot a value node
         const TValId val = item.first;
-        const EValueTarget code = sh.valTarget(val);
-        plotValue(plot, val, code);
+        plotValue(plot, val);
 
+        const TValId root = sh.valRoot(val);
+        const EValueTarget code = sh.valTarget(root);
         if (!isPossibleToDeref(code))
             // no valid target
             continue;
@@ -719,7 +719,6 @@ void plotNonRootValues(PlotData &plot) {
         }
 
         // an off-value with either no target, or too many targets
-        const TValId root = sh.valRoot(val);
         const TOffset off = sh.valOffset(val);
         CL_BREAK_IF(!off);
         plotOffset(plot, off, root, val);
