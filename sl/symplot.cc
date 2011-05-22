@@ -357,13 +357,15 @@ struct AtomicObject {
 
 void plotAtomicObj(PlotData &plot, const AtomicObject ao, const bool lonely)
 {
+    SymHeap &sh = plot.sh;
+
     const TObjId obj = ao.obj;
     CL_BREAK_IF(obj <= 0);
 
     // store address mapping for the live object (FIXME: this may trigger
     // unnecessary assignment of a fresh address, which is inappropriate
     // as long as we take a _const_ reference to SymHeap)
-    const TValId at = plot.sh.placedAt(obj);
+    const TValId at = sh.placedAt(obj);
     plot.liveObjs[at].push_back(obj);
 
     const char *color = "black";
@@ -392,8 +394,25 @@ void plotAtomicObj(PlotData &plot, const AtomicObject ao, const bool lonely)
             props = ", style=dotted";
     }
 
+    if (lonely) {
+        const EValueTarget code = sh.valTarget(at);
+        switch (code) {
+            case VT_STATIC:
+                color = "green";
+                break;
+
+            case VT_ON_STACK:
+                color = "blue";
+                break;
+
+            default:
+                break;
+        }
+    }
+
     plot.out << "\t" << SL_QUOTE(obj)
-        << " [shape=box, color=" << color << props
+        << " [shape=box, color=" << color
+        << ", fontcolor=" << color << props
         << ", label=\"";
 
     describeObject(plot, obj, lonely);
@@ -583,6 +602,10 @@ void plotRootObjects(PlotData &plot) {
                         // offset detected
                         break;
 
+                    if (sh.usedByCount(root))
+                        // root pointed
+                        break;
+
                     const TObjType clt = sh.objType(obj);
                     CL_BREAK_IF(!clt);
                     if (clt->size != sh.valSizeOfTarget(root))
@@ -652,14 +675,21 @@ void plotValue(PlotData &plot, const TValId val, const EValueTarget code)
     plot.out << "\t" << SL_QUOTE(val)
         << " [shape=ellipse, penwidth=" << pw
         << ", fontcolor=" << color
-        << ", label=\"#" << val
-        << "\"];\n";
+        << ", label=\"#" << val;
+
+    const TOffset off = sh.valOffset(val);
+    if (off) {
+        const TValId root = sh.valRoot(val);
+        plot.out << " [root = #" << root << ", off = " << off << "]";
+    }
+
+    plot.out << "\"];\n";
 }
 
 void plotPointsTo(PlotData &plot, const TValId val, const TObjId target) {
     plot.out << "\t" << SL_QUOTE(val)
         << " -> " << SL_QUOTE(target)
-        << " [color=green, fontcolor=green, label=\"pointsTo\"];\n";
+        << " [color=green, fontcolor=green];\n";
 }
 
 void plotNonRootValues(PlotData &plot) {
@@ -696,10 +726,68 @@ void plotNonRootValues(PlotData &plot) {
     }
 }
 
+void plotAuxValue(PlotData &plot, const TObjId obj, const TValId val) {
+    const char *color = "blue";
+    const char *label = "XXX";
+
+    switch (val) {
+        case VAL_NULL:
+            label = "NULL";
+            break;
+
+        case VAL_TRUE:
+            color = "gold";
+            label = "TRUE";
+            break;
+
+        case VAL_DEREF_FAILED:
+            color = "red";
+            label = "DEREF_FAILED";
+            break;
+
+        case VAL_ADDR_OF_RET:
+            label = "ADDR_OF_RET";
+            break;
+
+        case VAL_INVALID:
+        default:
+            color = "red";
+            label = "VAL_INVALID";
+    }
+
+    const int id = ++plot.last;
+    plot.out << "\t" << SL_QUOTE("lonely" << id)
+        << " [shape=plaintext, fontcolor=" << color
+        << ", label=" << SL_QUOTE(label) << "];\n";
+
+    plot.out << "\t" << SL_QUOTE(obj)
+        << " -> " << SL_QUOTE("lonely" << id)
+        << " [color=blue];\n";
+}
+
+void plotHasValue(PlotData &plot, const TObjId obj) {
+    SymHeap &sh = plot.sh;
+
+    const TValId val = sh.valueOf(obj);
+    if (val <= 0) {
+        plotAuxValue(plot, obj, val);
+        return;
+    }
+
+    plot.out << "\t" << SL_QUOTE(obj)
+        << " -> " << SL_QUOTE(val)
+        << " [color=blue, fontcolor=blue];\n";
+}
+
 void plotEverything(PlotData &plot) {
-    CL_WARN("plotEverything() is not implemented yet");
     plotRootObjects(plot);
     plotNonRootValues(plot);
+
+    BOOST_FOREACH(PlotData::TLiveObjs::const_reference item, plot.liveObjs)
+        BOOST_FOREACH(const TObjId obj, /* TObjList */ item.second)
+            plotHasValue(plot, obj);
+
+    CL_WARN("plotEverything() is not implemented yet");
 }
 
 bool plotHeap(
