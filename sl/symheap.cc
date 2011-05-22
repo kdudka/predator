@@ -26,7 +26,7 @@
 #include <cl/storage.hh>
 
 #include "symabstract.hh"
-#include "symdump.hh"
+#include "symneq.hh"
 #include "symseg.hh"
 #include "symutil.hh"
 #include "util.hh"
@@ -49,37 +49,8 @@
 
 // /////////////////////////////////////////////////////////////////////////////
 // Neq predicates store
-class NeqDb {
-    private:
-        typedef std::pair<TValId /* valLt */, TValId /* valGt */> TItem;
-        typedef std::set<TItem> TCont;
-        TCont cont_;
-
+class FriendlyNeqDb: public NeqDb {
     public:
-        bool areNeq(TValId valLt, TValId valGt) const {
-            sortValues(valLt, valGt);
-            TItem item(valLt, valGt);
-            return hasKey(cont_, item);
-        }
-        void add(TValId valLt, TValId valGt) {
-            CL_BREAK_IF(valLt == valGt);
-
-            sortValues(valLt, valGt);
-            TItem item(valLt, valGt);
-            cont_.insert(item);
-        }
-        void del(TValId valLt, TValId valGt) {
-            CL_BREAK_IF(valLt == valGt);
-
-            sortValues(valLt, valGt);
-            TItem item(valLt, valGt);
-            cont_.erase(item);
-        }
-
-        bool empty() const {
-            return cont_.empty();
-        }
-
         template <class TDst>
         void gatherRelatedValues(TDst &dst, TValId val) const {
             // FIXME: suboptimal due to performance
@@ -91,13 +62,15 @@ class NeqDb {
             }
         }
 
-        friend void SymHeapCore::copyRelevantPreds(SymHeapCore &dst,
-                                                   const SymHeapCore::TValMap &)
-                                                   const;
+        friend void SymHeapCore::copyRelevantPreds(
+                SymHeapCore             &dst,
+                const TValMap           &vMap)
+            const;
 
-        friend bool SymHeapCore::matchPreds(const SymHeapCore &,
-                                            const SymHeapCore::TValMap &)
-                                            const;
+        friend bool SymHeapCore::matchPreds(
+                const SymHeapCore       &src,
+                const TValMap           &vMap)
+            const;
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -303,7 +276,7 @@ struct SymHeapCore::Private {
     TCValueMap                      cValueMap;
     std::vector<IHeapEntity *>      ents;
     std::set<TValId>                liveRoots;
-    NeqDb                           neqDb;
+    FriendlyNeqDb                   neqDb;
 
     template <typename T> T lastId() const;
 

@@ -85,13 +85,17 @@ typedef std::vector<TObjId>                             TObjList;
 /// container used to store value IDs to
 typedef std::vector<TValId>                             TValList;
 
+/// a type used for (injective) value IDs mapping
+typedef std::map<TValId, TValId>                        TValMap;
+
 /// a type used for type-info
-typedef const struct cl_type                            *TObjType;
+typedef const struct cl_type                           *TObjType;
 
 /// a class of type (structure, pointer, union, ...)
 typedef enum cl_type_e                                  TObjCode;
 
-typedef const CodeStorage::Storage                      &TStorRef;
+/// a reference to CodeStorage::Storage instance describing the analyzed code
+typedef const CodeStorage::Storage                     &TStorRef;
 
 /**
  * bundles static identification of a variable with its instance number
@@ -250,9 +254,6 @@ class SymHeapCore {
         virtual bool proveNeq(TValId valA, TValId valB) const;
 
     public:
-        /// a type used for (injective) value IDs mapping
-        typedef std::map<TValId, TValId> TValMap;
-
         /**
          * return the list of values that are connected to the given value by a
          * Neq predicate
