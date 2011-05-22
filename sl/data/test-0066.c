@@ -58,7 +58,7 @@ struct item* create_dll(void)
     for (i = 1; i; ++i)
         dll = create_dll_item(dll);
 
-    //___SL_PLOT_FNC(create_dll);
+    //___sl_plot(NULL);
     return dll;
 }
 
@@ -89,6 +89,6 @@ struct master_item* create_sll_of_dll(void *end)
 int main()
 {
     struct master_item *sll = create_sll_of_dll(NULL);
-    ___SL_PLOT_FNC(main);
+    ___sl_plot(NULL);
     return 0;
 }

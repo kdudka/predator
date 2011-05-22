@@ -128,10 +128,10 @@ struct master_item* dll_create_master(void)
 int main()
 {
     struct master_item *dll = dll_create_master();
-    ___sl_plot_by_ptr(dll, "01");
+    ___sl_plot("01");
 
     dll_destroy_nested_lists(dll);
-    ___sl_plot_by_ptr(dll, "02");
+    ___sl_plot("02");
 
     // just silence the gc
     dll_destroy_master(dll);

@@ -31,15 +31,6 @@
 #include <cstring>
 #include <libgen.h>
 
-template <int N_ARGS, class TOpList>
-bool chkVoidCall(const TOpList &opList)
-{
-    if (/* dst + fnc */ 2 != opList.size() - N_ARGS)
-        return false;
-    else
-        return (CL_OPERAND_VOID == opList[0].code);
-}
-
 template <int NTH, class TOpList>
 bool readPlotName(std::string *dst, const TOpList opList,
                   const struct cl_loc *loc)
@@ -79,52 +70,6 @@ bool readPlotName(std::string *dst, const TOpList opList,
     return true;
 }
 
-template <int NTH, class TOpList, class TProc>
-bool readHeapVal(TValId *dst, const TOpList opList, TProc &proc) {
-    const cl_operand &op = opList[NTH + /* dst + fnc */ 2];
-    const TValId value = proc.valFromOperand(op);
-    if (value < 0)
-        return false;
-
-    *dst = value;
-    return true;
-}
-
-template <class TInsn, class TProc>
-bool readNameAndValue(std::string       *pName,
-                      TValId            *pValue,
-                      const TInsn       &insn,
-                      TProc             &proc)
-{
-    const CodeStorage::TOperandList &opList = insn.operands;
-    if (!chkVoidCall<2>(opList))
-        return false;
-
-    if (!readHeapVal<0>(pValue, opList, proc))
-        return false;
-
-    if (!readPlotName<1>(pName, opList, proc.lw()))
-        return false;
-
-    return true;
-}
-
-template <class TFnc>
-bool fncFromHeapVal(const TFnc **dst, TValId val, const SymHeap &sh)
-{
-    if (VT_CUSTOM != sh.valTarget(val))
-        return false;
-
-    const int uid = sh.valGetCustom(val);
-    const CodeStorage::FncDb &fncs = sh.stor().fncs;
-    const TFnc *fnc = fncs[uid];
-    if (!fnc)
-        return false;
-
-    *dst = fnc;
-    return true;
-}
-
 namespace {
 void emitPrototypeError(const struct cl_loc *lw, const std::string &fnc) {
     CL_WARN_MSG(lw, "incorrectly called "
@@ -136,80 +81,49 @@ void emitPlotError(const struct cl_loc *lw, const std::string &plotName) {
 }
 } // namespace
 
-#define DO_PLOT(method) do {                                                \
-    SymPlot plotter(sh);                                                    \
-    if (!plotter.method)                                                    \
-        emitPlotError(lw, plotName);                                        \
-} while (0)
-
-template <class TInsn, class TCore>
-bool callPlot(const TInsn &insn, TCore &core) {
+bool callPlot(const CodeStorage::Insn &insn, SymProc &proc) {
     const CodeStorage::TOperandList &opList = insn.operands;
     const struct cl_loc *lw = &insn.loc;
 
+    const int cntArgs = opList.size() - /* dst + fnc */ 2;
+    if (cntArgs < 1)
+        // insufficient count of arguments
+        return false;
+
+    if (CL_OPERAND_VOID != opList[/* dst */ 0].code)
+        // not a function returning void
+        return false;
+
     std::string plotName;
-    if (!chkVoidCall<1>(opList)
-            || !readPlotName<0>(&plotName, opList, core.lw())) {
+    if (!readPlotName<0>(&plotName, opList, proc.lw())) {
         emitPrototypeError(lw, "___sl_plot");
         return false;
     }
 
-    const SymHeap &sh = core.sh();
-    if (!plotHeap(sh, plotName))
-        emitPlotError(lw, plotName);
-
-    return true;
-}
-
-template <class TInsn, class TProc>
-bool callPlotByPtr(const TInsn &insn, TProc &proc) {
-    const struct cl_loc *lw = &insn.loc;
-
-    std::string plotName;
-    TValId value;
-    if (!readNameAndValue(&plotName, &value, insn, proc)) {
-        emitPrototypeError(lw, "___sl_plot_by_ptr");
-        return false;
-    }
-
-    const SymHeap &sh = proc.sh();
-    DO_PLOT(plotHeapValue(plotName, value));
-    return true;
-}
-
-template <class TInsn, class TProc>
-bool callPlotStackFrame(const TInsn &insn, TProc &proc) {
-    const struct cl_loc *lw = &insn.loc;
     const SymHeap &sh = proc.sh();
 
-    std::string plotName;
-    TValId value;
-    const CodeStorage::Fnc *fnc;
+    if (1 == cntArgs) {
+        if (!plotHeap(sh, plotName))
+            emitPlotError(lw, plotName);
+    }
+    else {
+        // starting points were given
+        CL_BREAK_IF("not tested");
 
-    if (!readNameAndValue(&plotName, &value, insn, proc)
-            || !fncFromHeapVal(&fnc, value, sh))
-    {
-        emitPrototypeError(lw, "___sl_plot_stack_frame");
-        return false;
+        TValList startingPoints;
+        for (int i = 1; i < cntArgs; ++i) {
+            const struct cl_operand &op = opList[i + /* dst + fnc */ 2];
+            const TValId val = proc.valFromOperand(op);
+            startingPoints.push_back(val);
+        }
+
+        if (!plotHeap(sh, plotName, startingPoints))
+            emitPlotError(lw, plotName);
     }
 
-    DO_PLOT(plotStackFrame(plotName, *fnc, proc.bt()));
+    // built-in processed, we do not care if successfully at this point
     return true;
 }
-
-#define HANDLE_PLOT_CALL(name, call) do {                                   \
-    if (STREQ(fncName, #name)) {                                            \
-        if (ep.skipPlot)                                                    \
-            CL_DEBUG_MSG(lw, #name " skipped per user's request");          \
-                                                                            \
-        else if (!(call(insn, core)))                                       \
-            return false;                                                   \
-                                                                            \
-        core.killInsn(insn);                                                \
-        dst.insert(sh);                                                     \
-        return true;                                                        \
-    }                                                                       \
-} while (0)
 
 bool handleBuiltIn(SymState                     &dst,
                    SymExecCore                  &core,
@@ -264,9 +178,17 @@ bool handleBuiltIn(SymState                     &dst,
         return true;
     }
 
-    HANDLE_PLOT_CALL(___sl_plot,             callPlot          );
-    HANDLE_PLOT_CALL(___sl_plot_by_ptr,      callPlotByPtr     );
-    HANDLE_PLOT_CALL(___sl_plot_stack_frame, callPlotStackFrame);
+    if (STREQ(fncName, "___sl_plot")) {
+        if (ep.skipPlot)
+            CL_DEBUG_MSG(lw, "___sl_plot() skipped per user's request");
+
+        else if (!(callPlot(insn, core)))
+            return false;
+
+        core.killInsn(insn);
+        dst.insert(sh);
+        return true;
+    }
 
     // no built-in has been matched
     return false;

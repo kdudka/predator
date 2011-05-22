@@ -41,7 +41,7 @@ struct item* create_dll(void)
         now->next->prev = now;
         now->next->shared = dll->shared;
         now = now->next;
-        ___sl_plot_by_ptr(dll, "test-0056-one-step");
+        ___sl_plot("test-0056-one-step");
     }
 
     return dll;

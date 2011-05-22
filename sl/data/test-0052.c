@@ -85,7 +85,7 @@ void destroy_sll(struct item **pSll)
 int main()
 {
     struct item *sll = create_sll();
-    ___sl_plot_by_ptr(sll, "01-sll-ready");
+    ___sl_plot("01-sll-ready");
 
     destroy_sll(&sll);
     ___sl_plot("02-sll-gone");

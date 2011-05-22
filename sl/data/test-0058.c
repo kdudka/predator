@@ -65,10 +65,10 @@ void fast_forward(struct item **pDll)
 int main()
 {
     struct item *dll = create_dll();
-    ___sl_plot_by_ptr(&dll, "01-before-fast-forward");
+    ___sl_plot("01-before-fast-forward");
 
     fast_forward(&dll);
-    ___sl_plot_by_ptr(&dll, "02-after-fast-forward");
+    ___sl_plot("02-after-fast-forward");
 
     return 0;
 }

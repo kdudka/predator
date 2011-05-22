@@ -37,13 +37,13 @@ int main()
     struct my_item *now = (struct my_item *)(
             (char *)head->next - __builtin_offsetof (struct my_item, link)
             );
-    ___sl_plot_by_ptr(&now, "01-now");
+    ___sl_plot("01-now");
 
     // compute next pointer
     struct my_item *next = (struct my_item *)(
             (char *)now->link.next - __builtin_offsetof (struct my_item, link)
             );
-    ___sl_plot_by_ptr(&next, "02-next");
+    ___sl_plot("02-next");
 
     return 0;
 }

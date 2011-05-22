@@ -61,7 +61,7 @@ struct node* create_sll(void)
 int main()
 {
     struct node *sll = create_sll();
-    ___sl_plot_by_ptr(&sll, NULL);
+    ___sl_plot(NULL);
 
     return 0;
 }

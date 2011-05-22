@@ -62,7 +62,7 @@ int main()
         insert_item(insert_item(&list));
     }
 
-    ___sl_plot_by_ptr(&list, "01-cyclic-sll-ready");
+    ___sl_plot("01-cyclic-sll-ready");
 
     for (i = 1; i; ++i) {
         destroy_cyclic_sll(&list);

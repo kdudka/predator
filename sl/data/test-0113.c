@@ -73,7 +73,7 @@ void destroy(struct node *node)
 int main()
 {
     void *pt = create_pseudo_tree();
-    ___sl_plot_by_ptr(&pt, NULL);
+    ___sl_plot(NULL);
 
     destroy(pt);
 

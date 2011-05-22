@@ -60,19 +60,19 @@ void destroy(struct list_head *head)
             (char *)head->next - __builtin_offsetof (struct my_item, link)
             );
 
-    ___SL_PLOT_STACK_FRAME(&destroy, "00");
+    ___sl_plot("00");
     while (&now->link != (head)) {
-        ___SL_PLOT_STACK_FRAME(&destroy, "01");
+        ___sl_plot("01");
         struct my_item *next = (struct my_item *)(
                 (char *)now->link.next - __builtin_offsetof (struct my_item, link)
                 );
 
-        ___SL_PLOT_STACK_FRAME(&destroy, "02");
+        ___sl_plot("02");
         free(now);
-        ___SL_PLOT_STACK_FRAME(&destroy, "03");
+        ___sl_plot("03");
         now = next;
     }
-    ___SL_PLOT_STACK_FRAME(&destroy, "04");
+    ___sl_plot("04");
 }
 
 int main()
@@ -84,7 +84,7 @@ int main()
         append_one(&my_list);
 
     destroy(&my_list);
-    ___SL_PLOT_FNC(main);
+    ___sl_plot(NULL);
 
     return 0;
 }

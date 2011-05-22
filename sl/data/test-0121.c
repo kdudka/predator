@@ -123,7 +123,7 @@ struct master_item* create_shape(void)
 int main()
 {
     struct master_item *shape = create_shape();
-    ___sl_plot_by_ptr(&shape, NULL);
+    ___sl_plot(NULL);
     //___sl_break();
     return 0;
 }

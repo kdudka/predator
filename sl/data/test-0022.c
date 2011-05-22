@@ -19,7 +19,7 @@ static sll_item_t* create_item(sll_item_t *list)
         ? list
         : item;
 
-    ___SL_PLOT_STACK_FRAME(create_item, "create-done");
+    ___sl_plot("create-done");
     return item;
 }
 
@@ -38,7 +38,7 @@ static sll_item_t** insert_item(sll_item_t **plist)
 
 static void destroy_cyclic_sll(sll_item_t **plist)
 {
-    ___sl_plot_by_ptr(plist, "on-destroy");
+    ___sl_plot("on-destroy");
     sll_item_t *list = *plist;
     if (list) {
         sll_item_t *item = list->next;

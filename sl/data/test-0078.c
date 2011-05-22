@@ -42,7 +42,7 @@ struct list_head {
  */
 static inline int list_empty(const struct list_head *head)
 {
-    //___SL_PLOT_FNC(list_empty);
+    //___sl_plot(NULL);
 	return head->next == head;
 }
 

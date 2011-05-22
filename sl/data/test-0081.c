@@ -62,13 +62,13 @@ void traverse(struct list_head *head)
             );
 
     while (&now->link != (head)) {
-        ___sl_plot_by_ptr(&now, "01");
+        ___sl_plot("01");
         now = (struct my_item *)(
             (char *)now->link.next - __builtin_offsetof (struct my_item, link)
             );
     }
 
-    ___sl_plot_by_ptr(&now, "02");
+    ___sl_plot("02");
 }
 
 int main()

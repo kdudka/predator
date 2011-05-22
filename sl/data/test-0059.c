@@ -63,32 +63,32 @@ void fast_forward(struct item **pDll)
 
 void destroy_from_beg(struct item *dll)
 {
-    ___SL_PLOT_STACK_FRAME(destroy_from_beg, "f00");
+    ___sl_plot("f00");
     while (dll) {
-        ___SL_PLOT_STACK_FRAME(destroy_from_beg, "f01");
+        ___sl_plot("f01");
         struct item *next = dll->next;
-        ___SL_PLOT_STACK_FRAME(destroy_from_beg, "f02");
+        ___sl_plot("f02");
         free(dll);
-        ___SL_PLOT_STACK_FRAME(destroy_from_beg, "f03");
+        ___sl_plot("f03");
         dll = next;
-        ___SL_PLOT_STACK_FRAME(destroy_from_beg, "f04");
+        ___sl_plot("f04");
     }
-    ___SL_PLOT_STACK_FRAME(destroy_from_beg, "f05");
+    ___sl_plot("f05");
 }
 
 void destroy_from_end(struct item *dll)
 {
-    ___SL_PLOT_STACK_FRAME(destroy_from_end, "r00");
+    ___sl_plot("r00");
     while (dll) {
-        ___SL_PLOT_STACK_FRAME(destroy_from_end, "r01");
+        ___sl_plot("r01");
         struct item *prev = dll->prev;
-        ___SL_PLOT_STACK_FRAME(destroy_from_end, "r02");
+        ___sl_plot("r02");
         free(dll);
-        ___SL_PLOT_STACK_FRAME(destroy_from_end, "r03");
+        ___sl_plot("r03");
         dll = prev;
-        ___SL_PLOT_STACK_FRAME(destroy_from_end, "r04");
+        ___sl_plot("r04");
     }
-    ___SL_PLOT_STACK_FRAME(destroy_from_end, "r05");
+    ___sl_plot("r05");
 }
 
 int main()

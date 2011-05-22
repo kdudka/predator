@@ -58,18 +58,18 @@ static void destroy_cyclic_dll(dll_item_t *list)
 int main()
 {
     dll_item_t *list = create_base();
-    ___sl_plot_by_ptr(&list, "01-cyclic-dll-base");
+    ___sl_plot("01-cyclic-dll-base");
 
     insert_item(list);
-    ___sl_plot_by_ptr(&list, "02-cyclic-dll-inserted-one");
+    ___sl_plot("02-cyclic-dll-inserted-one");
 
     int i;
     for (i = 1; i; ++i)
         insert_item(list);
-    ___sl_plot_by_ptr(&list, "03-cyclic-dll-inserted-many");
+    ___sl_plot("03-cyclic-dll-inserted-many");
 
     destroy_cyclic_dll(list);
-    ___sl_plot_by_ptr(&list, "04-cyclic-dll-destroyed");
+    ___sl_plot("04-cyclic-dll-destroyed");
 
     return 0;
 }

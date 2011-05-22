@@ -90,7 +90,7 @@ void chk_offval_handling()
 int main()
 {
     struct outer *data = create();
-    ___sl_plot_by_ptr(&data, NULL);
+    ___sl_plot(NULL);
 
     // ==
     CHK_EQ(data,        &data->m0);

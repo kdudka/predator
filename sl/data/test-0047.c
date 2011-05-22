@@ -33,7 +33,7 @@ int main()
     int i;
     for(i = 1; i; ++i) {
         insert_item(&list);
-        ___sl_plot_by_ptr(list, "snapshot-01");
+        ___sl_plot("snapshot-01");
     }
 
     return 0;

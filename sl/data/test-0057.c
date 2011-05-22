@@ -61,7 +61,7 @@ int main()
 {
     struct item *dll = create_dll();
     fast_forward(&dll);
-    ___sl_plot_by_ptr(dll, "03-ff-done");
+    ___sl_plot("03-ff-done");
 
     return 0;
 }

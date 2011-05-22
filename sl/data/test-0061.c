@@ -48,32 +48,32 @@ struct item* create_sll(void)
 
 void sll_to_dll(struct item *dll)
 {
-    ___SL_PLOT_STACK_FRAME(sll_to_dll, "b00");
+    ___sl_plot("b00");
     while (dll && dll->next) {
-        ___SL_PLOT_STACK_FRAME(sll_to_dll, "b01");
+        ___sl_plot("b01");
         struct item *prev = dll;
-        ___SL_PLOT_STACK_FRAME(sll_to_dll, "b02");
+        ___sl_plot("b02");
         dll = dll->next;
-        ___SL_PLOT_STACK_FRAME(sll_to_dll, "b03");
+        ___sl_plot("b03");
         dll->prev = prev;
-        ___SL_PLOT_STACK_FRAME(sll_to_dll, "b04");
+        ___sl_plot("b04");
     }
-    ___SL_PLOT_STACK_FRAME(sll_to_dll, "b05");
+    ___sl_plot("b05");
 }
 
 struct item* dll_to_sll(struct item *dll)
 {
-    ___SL_PLOT_STACK_FRAME(dll_to_sll, "n00");
+    ___sl_plot("n00");
     while (dll && dll->next) {
-        ___SL_PLOT_STACK_FRAME(dll_to_sll, "n01");
+        ___sl_plot("n01");
         struct item *next = dll->next;
-        ___SL_PLOT_STACK_FRAME(dll_to_sll, "n02");
+        ___sl_plot("n02");
         dll->next = NULL;
-        ___SL_PLOT_STACK_FRAME(dll_to_sll, "n03");
+        ___sl_plot("n03");
         dll = next;
-        ___SL_PLOT_STACK_FRAME(dll_to_sll, "n04");
+        ___sl_plot("n04");
     }
-    ___SL_PLOT_STACK_FRAME(dll_to_sll, "n05");
+    ___sl_plot("n05");
     return dll;
 }
 
@@ -81,15 +81,15 @@ int main()
 {
     // create a SLL
     struct item *dll = create_sll();
-    ___sl_plot_by_ptr(&dll, "01-sll-ready");
+    ___sl_plot("01-sll-ready");
 
     // convert the SLL to DLL by completing the 'prev' field
     sll_to_dll(dll);
-    ___sl_plot_by_ptr(&dll, "02-dll-got-from-sll");
+    ___sl_plot("02-dll-got-from-sll");
 
     // convert the DLL to SLL by zeroing the 'next' field
     dll = dll_to_sll(dll);
-    ___sl_plot_by_ptr(&dll, "03-sll-got-from-dll");
+    ___sl_plot("03-sll-got-from-dll");
 
     // finally just destroy the list to silence our garbage collector
     while (dll) {

@@ -24,18 +24,10 @@
 extern "C" {
 #endif
 
-#define ___SL_PLOT_STACK_FRAME(fnc, name) \
-    ___sl_plot_stack_frame((void (*)()) fnc, name)
-
-#define ___SL_PLOT_FNC(fnc) \
-    ___SL_PLOT_STACK_FRAME(fnc, #fnc)
-
 #ifdef PREDATOR
 // declare built-ins
 void ___sl_break(void);
-void ___sl_plot(const char *name);
-void ___sl_plot_stack_frame(void (*fnc)(), const char *name);
-void ___sl_plot_by_ptr(const void *ptr, const char *name);
+void ___sl_plot(const char *name, ...);
 int ___sl_get_nondet_int(void);
 
 #else
@@ -46,19 +38,8 @@ static inline void ___sl_break(void)
 {
 }
 
-static inline void ___sl_plot(const char *name)
+static inline void ___sl_plot(const char *name, ...)
 {
-    (void) name;
-}
-
-static inline void ___sl_plot_stack_frame(void (*fnc)(), const char *name)
-{
-    (void) fnc;
-    (void) name;
-}
-
-static inline void ___sl_plot_by_ptr(const void *ptr, const char *name) {
-    (void) ptr;
     (void) name;
 }
 

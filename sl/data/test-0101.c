@@ -61,7 +61,7 @@ struct sub_list {
 
 void destroy_sub(struct list_head_s *head)
 {
-    ___sl_plot_by_ptr(&head, NULL);
+    ___sl_plot(NULL);
 
     struct sub_list *now = (struct sub_list *)(
             (char *)head->next - __builtin_offsetof (struct sub_list, link)

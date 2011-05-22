@@ -36,6 +36,6 @@ int main(void)
 {
     struct item *sll = create_longer_sll();
     free(sll->head);
-    ___sl_plot_by_ptr(&sll, NULL);
+    ___sl_plot(NULL);
     return 0;
 }

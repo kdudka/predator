@@ -1,5 +1,5 @@
 #!/bin/sh
-TIMEOUT="timeout 30"
+TIMEOUT="timeout 10"
 
 LC_ALL=C
 export LC_ALL

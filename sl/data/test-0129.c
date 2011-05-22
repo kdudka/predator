@@ -80,7 +80,7 @@ struct node_top* create_sll(void)
 int main()
 {
     struct node_top *sll = create_sll();
-    ___sl_plot_by_ptr(&sll, NULL);
+    ___sl_plot(NULL);
 
     return 0;
 }

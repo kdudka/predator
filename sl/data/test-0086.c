@@ -73,15 +73,15 @@ void destroy(struct list_head *head)
             (char *)head->next - __builtin_offsetof (struct my_item, link)
             );
 
-    ___SL_PLOT_STACK_FRAME(&destroy, "00");
+    ___sl_plot("00");
     while (&now->link != (head)) {
         struct my_item *next = (struct my_item *)(
                 (char *)now->link.next - __builtin_offsetof (struct my_item, link)
                 );
 
-        ___SL_PLOT_STACK_FRAME(&destroy, "01");
+        ___sl_plot("01");
         free(now);
-        ___SL_PLOT_STACK_FRAME(&destroy, "02");
+        ___sl_plot("02");
         now = next;
     }
 }
@@ -103,7 +103,7 @@ int main()
     traverse(&my_list);
 
     destroy(&my_list);
-    ___SL_PLOT_FNC(main);
+    ___sl_plot(NULL);
 
     return 0;
 }

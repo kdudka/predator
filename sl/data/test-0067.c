@@ -60,7 +60,7 @@ struct item* create_dll(void)
     for (i = 1; i; ++i)
         dll = create_dll_item(dll);
 
-    //___SL_PLOT_FNC(create_dll);
+    //___sl_plot(NULL);
     return dll;
 }
 
@@ -112,12 +112,12 @@ void destroy_master(struct master_item *master) {
 int main()
 {
     struct master_item *sll = create_sll_of_dll(NULL);
-    ___sl_plot_by_ptr(&sll, "sll-of-dll");
+    ___sl_plot("sll-of-dll");
 
     destory_nested_lists(sll);
-    ___sl_plot_by_ptr(&sll, "sll-only");
+    ___sl_plot("sll-only");
 
     destroy_master(sll);
-    ___SL_PLOT_FNC(main);
+    ___sl_plot(NULL);
     return 0;
 }

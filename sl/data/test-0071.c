@@ -81,7 +81,7 @@ struct master_item* create_shape(void)
         item = create_master_item(item, shared_sls);
 
     // the return will trigger further abstraction (stack frame destruction)
-    ___SL_PLOT_FNC(create_shape);
+    ___sl_plot(NULL);
     return item;
 }
 
@@ -90,7 +90,7 @@ struct master_item* create_sane_shape(void)
     struct master_item *list = create_shape();
     struct master_item *shape = list->next;
     free(list);
-    ___SL_PLOT_FNC(create_sane_shape);
+    ___sl_plot(NULL);
     return shape;
 }
 
@@ -108,7 +108,7 @@ void destroy(struct master_item *item)
     while (item) {
         struct master_item *next = item->next;
         struct item *slave = item->slave;
-        ___SL_PLOT_FNC(destroy);
+        ___sl_plot(NULL);
         destroy_slave(item->slave);
         free(item);
         item = next;
@@ -122,6 +122,6 @@ int main()
     // trigger a memory leak
     destroy(shape);
 
-    ___SL_PLOT_FNC(main);
+    ___sl_plot(NULL);
     return 0;
 }
