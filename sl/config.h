@@ -129,10 +129,10 @@
  * if 1, support partial tracking of non-pointer values, which may result into
  * significant state explosion in some cases
  */
-#define SE_TRACK_NON_POINTER_VALUES         1
+#define SE_TRACK_NON_POINTER_VALUES         0
 
 /**
- * if 1, skip plotting of "neq" edges (makes the result less readable by humans
+ * if 1, skip plotting of "neq" edges (makes the result more readable by humans
  * in certain cases)
  */
 #define SYMPLOT_OMIT_NEQ_EDGES              1

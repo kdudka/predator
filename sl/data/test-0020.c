@@ -1,12 +1,5 @@
-#include <stdbool.h>
+#include "../sl.h"
 #include <stdlib.h>
-
-// return VAL_UNKNOWN of type CL_TYPE_BOOL while running symbolic execution
-bool synthesize_unknown_bool_value(void)
-{
-    int a = 1, b = 2;
-    return (a < b);
-}
 
 // reaching this function indicates we are on a wrong way
 void trigger_null_dereference(void)
@@ -16,8 +9,10 @@ void trigger_null_dereference(void)
 }
 
 void test__cond_reasoning__with_zero_lookback_level() {
-    // obtain unknown value
-    const bool who_knows = synthesize_unknown_bool_value();
+    // obtain an unknown value
+    void *who_knows = &who_knows;
+    if (___sl_get_nondet_int())
+        who_knows = NULL;
 
     // who_knows is UNKNOWN at this point
     if (who_knows) {
