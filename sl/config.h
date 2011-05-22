@@ -118,7 +118,7 @@
 /**
  * if 1, abstraction path length is penalized by complexity of prototype join
  */
-#define SE_PREFER_LOSSLESS_PROTOTYPES       1
+#define SE_PREFER_LOSSLESS_PROTOTYPES       0
 
 /**
  * maximal call depth
