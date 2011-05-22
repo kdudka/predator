@@ -110,11 +110,13 @@ std::string PlotEnumerator::decorate(std::string name) {
 // implementation of plotHeap()
 struct PlotData {
     typedef std::map<TValId, bool /* isRoot */>             TValues;
+    typedef std::map<TValId, TObjList>                      TLiveObjs;
 
     SymHeap                             &sh;
     std::ostream                        &out;
-    TValues                             values;
     int                                 last;
+    TValues                             values;
+    TLiveObjs                           liveObjs;
 
     PlotData(const SymHeap &sh_, std::ostream &out_):
         sh(const_cast<SymHeap &>(sh_)),
@@ -358,6 +360,12 @@ void plotAtomicObj(PlotData &plot, const AtomicObject ao, const bool lonely)
     const TObjId obj = ao.obj;
     CL_BREAK_IF(obj <= 0);
 
+    // store address mapping for the live object (FIXME: this may trigger
+    // unnecessary assignment of a fresh address, which is inappropriate
+    // as long as we take a _const_ reference to SymHeap)
+    const TValId at = plot.sh.placedAt(obj);
+    plot.liveObjs[at].push_back(obj);
+
     const char *color = "black";
     const char *props = ", penwidth=3.0, style=dashed";
 
@@ -413,8 +421,9 @@ void plotInnerObjects(PlotData &plot, const TValId at, const TObjList &liveObjs)
     }
 
     // sort objects by offset
-    typedef std::map<TOffset, AtomicObject> TObjByOff;
-    TObjByOff objByOff;
+    typedef std::vector<AtomicObject>           TAtomList;
+    typedef std::map<TOffset, TAtomList>        TAtomByOff;
+    TAtomByOff objByOff;
     BOOST_FOREACH(const TObjId obj, liveObjs) {
         EObjectClass code;
         if (obj == next)
@@ -428,18 +437,19 @@ void plotInnerObjects(PlotData &plot, const TValId at, const TObjList &liveObjs)
 
         const TOffset off = sh.valOffset(sh.placedAt(obj));
         AtomicObject ao(obj, code);
-        objByOff[off] = ao;
+        objByOff[off].push_back(ao);
     }
 
     // plot all atomic objects inside
-    BOOST_FOREACH(TObjByOff::const_reference item, objByOff) {
-        // plot a single object
-        const AtomicObject &ao = item.second;
-        plotAtomicObj(plot, ao, /* lonely */ false);
-
-        // connect the inner object with the root by an offset edge
+    BOOST_FOREACH(TAtomByOff::const_reference item, objByOff) {
         const TOffset off = item.first;
-        plotOffset(plot, off, at, ao.obj);
+        BOOST_FOREACH(const AtomicObject &ao, /* TAtomList */ item.second) {
+            // plot a single object
+            plotAtomicObj(plot, ao, /* lonely */ false);
+
+            // connect the inner object with the root by an offset edge
+            plotOffset(plot, off, at, ao.obj);
+        }
     }
 }
 
@@ -594,9 +604,102 @@ void plotRootObjects(PlotData &plot) {
     }
 }
 
+#define GEN_labelByCode(cst) case cst: return #cst
+
+const char* labelByOrigin(const EValueOrigin code) {
+    switch (code) {
+        GEN_labelByCode(VO_INVALID);
+        GEN_labelByCode(VO_ASSIGNED);
+        GEN_labelByCode(VO_UNKNOWN);
+        GEN_labelByCode(VO_REINTERPRET);
+        GEN_labelByCode(VO_DEREF_FAILED);
+        GEN_labelByCode(VO_STATIC);
+        GEN_labelByCode(VO_STACK);
+        GEN_labelByCode(VO_HEAP);
+    }
+
+    CL_BREAK_IF("invalid call of labelByOrigin()");
+    return "";
+}
+
+const char* labelByTarget(const EValueTarget code) {
+    switch (code) {
+        GEN_labelByCode(VT_INVALID);
+        GEN_labelByCode(VT_UNKNOWN);
+        GEN_labelByCode(VT_COMPOSITE);
+        GEN_labelByCode(VT_CUSTOM);
+        GEN_labelByCode(VT_STATIC);
+        GEN_labelByCode(VT_ON_STACK);
+        GEN_labelByCode(VT_ON_HEAP);
+        GEN_labelByCode(VT_LOST);
+        GEN_labelByCode(VT_DELETED);
+        GEN_labelByCode(VT_ABSTRACT);
+    }
+
+    CL_BREAK_IF("invalid call of labelByTarget()");
+    return "";
+}
+
+void plotValue(PlotData &plot, const TValId val, const EValueTarget code)
+{
+    SymHeap &sh = plot.sh;
+
+    const char *color = "green";
+    // TODO
+    (void) code;
+
+    const float pw = static_cast<float>(1U + sh.usedByCount(val));
+    plot.out << "\t" << SL_QUOTE(val)
+        << " [shape=ellipse, penwidth=" << pw
+        << ", fontcolor=" << color
+        << ", label=\"#" << val
+        << "\"];\n";
+}
+
+void plotPointsTo(PlotData &plot, const TValId val, const TObjId target) {
+    plot.out << "\t" << SL_QUOTE(val)
+        << " -> " << SL_QUOTE(target)
+        << " [color=green, fontcolor=green, label=\"pointsTo\"];\n";
+}
+
+void plotNonRootValues(PlotData &plot) {
+    SymHeap &sh = plot.sh;
+
+    // go through non-roots
+    BOOST_FOREACH(PlotData::TValues::const_reference item, plot.values) {
+        if (/* isRoot */ item.second)
+            continue;
+
+        // plot a value node
+        const TValId val = item.first;
+        const EValueTarget code = sh.valTarget(val);
+        plotValue(plot, val, code);
+
+        if (!isPossibleToDeref(code))
+            // no valid target
+            continue;
+
+        // assume an off-value
+        PlotData::TLiveObjs::const_iterator it = plot.liveObjs.find(val);
+        if ((plot.liveObjs.end() != it) && (1 == it->second.size())) {
+            // exactly one target
+            const TObjId target = it->second.front();
+            plotPointsTo(plot, val, target);
+            continue;
+        }
+
+        // an off-value with either no target, or too many targets
+        const TValId root = sh.valRoot(val);
+        const TOffset off = sh.valOffset(val);
+        CL_BREAK_IF(!off);
+        plotOffset(plot, off, root, val);
+    }
+}
+
 void plotEverything(PlotData &plot) {
     CL_WARN("plotEverything() is not implemented yet");
     plotRootObjects(plot);
+    plotNonRootValues(plot);
 }
 
 bool plotHeap(
