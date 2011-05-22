@@ -24,10 +24,9 @@
 #include <cl/storage.hh>
 #include <cl/clutil.hh>
 
-#include "symbt.hh"
 #include "symheap.hh"
+#include "symneq.hh"
 #include "symseg.hh"
-#include "symutil.hh"
 #include "util.hh"
 #include "worklist.hh"
 
@@ -35,20 +34,9 @@
 #include <iomanip>
 #include <map>
 #include <set>
-#include <sstream>
-#include <stack>
 #include <string>
 
 #include <boost/foreach.hpp>
-#include <boost/tuple/tuple.hpp>
-
-#ifndef DEBUG_SYMPLOT
-#   define DEBUG_SYMPLOT 0
-#endif
-
-#ifndef SYMPLOT_STOP_AFTER_N_STATES
-#   define SYMPLOT_STOP_AFTER_N_STATES 0
-#endif
 
 // singleton
 class PlotEnumerator {
@@ -725,13 +713,34 @@ void plotNonRootValues(PlotData &plot) {
     }
 }
 
+const char* valNullLabel(const SymHeap &sh, const TObjId obj) {
+    const TObjType clt = sh.objType(obj);
+    if (!clt)
+        return "[type-free] 0";
+
+    const enum cl_type_e code = clt->code;
+    switch (code) {
+        case CL_TYPE_INT:
+            return "[int] 0";
+
+        case CL_TYPE_PTR:
+            return "NULL";
+
+        case CL_TYPE_BOOL:
+            return "FALSE";
+
+        default:
+            return "[?] 0";
+    }
+}
+
 void plotAuxValue(PlotData &plot, const TObjId obj, const TValId val) {
     const char *color = "blue";
     const char *label = "XXX";
 
     switch (val) {
         case VAL_NULL:
-            label = "NULL";
+            label = valNullLabel(plot.sh, obj);
             break;
 
         case VAL_TRUE:
@@ -778,15 +787,70 @@ void plotHasValue(PlotData &plot, const TObjId obj) {
         << " [color=blue, fontcolor=blue];\n";
 }
 
+class NeqPlotter: public NeqDb {
+    private:
+        void plotNeq(PlotData &plot, const TItem &item) {
+            const TValId v1 = item.first;
+            const TValId v2 = item.second;
+
+            if (VAL_NULL == v1) {
+                const int id = ++plot.last;
+                plot.out << "\t" << SL_QUOTE("lonely" << id)
+                    << " [shape=plaintext, fontcolor=red, label=\"!=0\"];\n";
+
+                plot.out << "\t" << SL_QUOTE(v2)
+                    << " -> " << SL_QUOTE("lonely" << id)
+                    << " [color=gold];\n";
+
+            }
+            else {
+                plot.out << "\t" << SL_QUOTE(v1)
+                    << " -> " << SL_QUOTE(v2)
+                    << " [color=gold, fontcolor=red"
+                    ", label=\"Neq\", arrowhead=none];\n";
+            }
+        }
+
+    public:
+        void plotNeqEdges(PlotData &plot) {
+            BOOST_FOREACH(const TItem &item, cont_)
+                this->plotNeq(plot, item);
+        }
+};
+
 void plotEverything(PlotData &plot) {
+    SymHeap &sh = plot.sh;
+
     plotRootObjects(plot);
     plotNonRootValues(plot);
 
+    // plot "hasValue" edges
     BOOST_FOREACH(PlotData::TLiveObjs::const_reference item, plot.liveObjs)
         BOOST_FOREACH(const TObjId obj, /* TObjList */ item.second)
             plotHasValue(plot, obj);
 
-    CL_WARN("plotEverything() is not implemented yet");
+#if SYMPLOT_OMIT_NEQ_EDGES
+    return;
+#endif
+    // gather relevant "neq" edges
+    NeqPlotter np;
+    BOOST_FOREACH(PlotData::TValues::const_reference item, plot.values) {
+        const TValId val = item.first;
+        const EValueTarget code = sh.valTarget(val);
+        if (isKnownObject(code))
+            // even if there was a non-equivalence, it would be the implicit one
+            continue;
+
+        // go through related values
+        TValList relatedVals;
+        sh.gatherRelatedValues(relatedVals, val);
+        BOOST_FOREACH(const TValId rel, relatedVals)
+            if (VAL_NULL == rel || hasKey(plot.values, rel))
+                np.add(val, rel);
+    }
+
+    // plot "neq" edges
+    np.plotNeqEdges(plot);
 }
 
 bool plotHeap(
@@ -840,122 +904,3 @@ bool plotHeap(
     sh.gatherRootObjects(roots);
     return plotHeap(sh, name, roots);
 }
-
-// TODO: port the following functionality to the new plotting engine
-#if 0
-namespace {
-    const char* prefixByCode(enum cl_type_e code) {
-        switch (code) {
-            case CL_TYPE_VOID:      return "void";
-            case CL_TYPE_UNKNOWN:   return "?";
-            case CL_TYPE_PTR:       return "*";
-            case CL_TYPE_FNC:       return "fnc*";
-            case CL_TYPE_STRUCT:    return "struct";
-            case CL_TYPE_UNION:     return "union";
-            case CL_TYPE_ARRAY:     return "array";
-            case CL_TYPE_STRING:    return "string";
-            case CL_TYPE_CHAR:      return "char";
-            case CL_TYPE_BOOL:      return "bool";
-            case CL_TYPE_INT:       return "int";
-            case CL_TYPE_ENUM:      return "enum";
-            default:                return "XXX";
-        }
-    }
-
-    const char* colorByCode(enum cl_type_e code) {
-        switch (code) {
-            case CL_TYPE_VOID:      return "red";
-            case CL_TYPE_UNKNOWN:   return "gray";
-            case CL_TYPE_PTR:       return "blue";
-            case CL_TYPE_FNC:       return "green";
-            case CL_TYPE_STRUCT:    return "black";
-            case CL_TYPE_UNION:     return "red";
-            case CL_TYPE_ARRAY:     return "gray";
-            case CL_TYPE_STRING:    return "gray";
-            case CL_TYPE_CHAR:      return "gray";
-            case CL_TYPE_BOOL:      return "gold";
-            case CL_TYPE_INT:       return "gray";
-            case CL_TYPE_ENUM:      return "gray";
-            default:                return "black";
-        }
-    }
-}
-
-void SymPlot::Private::emitPendingEdges() {
-    std::set<TEdgeNeq> neqDone;
-    BOOST_FOREACH(const TEdgeNeq &edge, this->neqSet) {
-        const TValId v1 = edge.first;
-        const TValId v2 = edge.second;
-        if (!insertOnce(neqDone, TEdgeNeq(v1, v2)))
-            continue;
-
-        this->dotStream << "\t" << SL_QUOTE(v1) << " -> " << SL_QUOTE(v2)
-            << " [color=gold, fontcolor=red, label=\"Neq\", arrowhead=none];"
-            << std::endl;
-    }
-}
-
-// traverse all Neq predicates
-void SymPlot::Private::traverseNeqs(TValId ref) {
-    TValList relatedVals;
-    this->sh->gatherRelatedValues(relatedVals, ref);
-    BOOST_FOREACH(TValId val, relatedVals) {
-        CL_BREAK_IF(val < 0);
-        CL_BREAK_IF(!this->sh->SymHeapCore::proveNeq(ref, val));
-        if (VAL_NULL == val) {
-            // 'value' is said to be non-zero
-            this->plotNeqZero(ref);
-            continue;
-        }
-
-        // regular Neq predicate
-        this->workList.schedule(val);
-        this->gobbleEdgeNeq(ref, val);
-    }
-}
-
-void SymPlot::Private::plotZeroValue(TObjId obj) {
-    const struct cl_type *clt = this->sh->objType(obj);
-    CL_BREAK_IF(!clt);
-
-    const enum cl_type_e code = clt->code;
-    switch (code) {
-        case CL_TYPE_INT:
-            this->plotNodeAux(obj, code, "[int] 0");
-            break;
-
-        case CL_TYPE_PTR:
-            this->plotNodeAux(obj, code, "NULL");
-            break;
-
-        case CL_TYPE_BOOL:
-            this->plotNodeAux(obj, code, "FALSE");
-            break;
-
-        default:
-            this->plotNodeAux(obj, CL_TYPE_UNKNOWN, "[unknown type] 0");
-    }
-}
-
-bool SymPlot::Private::handleCustomValue(TValId value) {
-    using namespace CodeStorage;
-
-    if (VT_CUSTOM != this->sh->valTarget(value))
-        return false;
-
-    const int cVal = this->sh->valGetCustom(value);
-    const CodeStorage::FncDb &fncs = this->stor->fncs;
-    const Fnc *fnc = fncs[cVal];
-    CL_BREAK_IF(!fnc);
-
-    const char *fncName = nameOf(*fnc);
-    CL_BREAK_IF(!fncName);
-
-    std::string name(fncName);
-    name += "()";
-
-    this->plotNodeValue(value, CL_TYPE_FNC, 0);
-    this->plotNodeAux(value, CL_TYPE_FNC, name.c_str());
-    return true;
-}
-#endif
