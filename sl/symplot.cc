@@ -162,15 +162,19 @@ void digValues(PlotData &plot, const TValList &startingPoints) {
     }
 }
 
-void plotValue(PlotData &plot, const TValId val) {
+void plotRootValue(PlotData &plot, const TValId val, const char *color) {
+    SymHeap &sh = plot.sh;
+    const unsigned size = sh.valSizeOfTarget(val);
+
     // visualize the count of references as pen width
-    const float pw = static_cast<float>(plot.sh.usedByCount(val));
+    const float pw = static_cast<float>(sh.usedByCount(val));
     plot.out << "\t" << SL_QUOTE(val)
         << " [shape=ellipse, penwidth=" << pw
-        << ", color=" << /* TODO */ "black"
-        << ", fontcolor=" << /* TODO */ "black"
-        << ", label=\"[" << /* TODO */ ""
-        << "] #" << val << "\"];\n";
+        << ", color=" << color
+        << ", fontcolor=" << color
+        << ", label=\"#" << val
+        << " [size = " << size
+        << " B]\"];\n";
 }
 
 void plotOffset(PlotData &plot, const TOffset off, const int from, const int to)
@@ -192,21 +196,123 @@ void plotOffset(PlotData &plot, const TOffset off, const int from, const int to)
         << "]\"];\n";
 }
 
-void plotTypeFreeObj(PlotData &plot, const TValId at) {
-    SymHeap &sh = plot.sh;
+enum EObjectClass {
+    OC_VOID = 0,
+    OC_PTR,
+    OC_NEXT,
+    OC_PREV,
+    OC_DATA
+};
 
-    const unsigned size = sh.valSizeOfTarget(at);
-    CL_BREAK_IF(!size);
+struct AtomicObject {
+    TObjId          obj;
+    EObjectClass    code;
+
+    AtomicObject():
+        obj(OBJ_INVALID),
+        code(OC_VOID)
+    {
+    }
+
+    AtomicObject(TObjId obj_, EObjectClass code_):
+        obj(obj_),
+        code(code_)
+    {
+    }
+
+    AtomicObject(TObjId obj_, SymHeap &sh):
+        obj(obj_),
+        code(isDataPtr(sh.objType(obj))
+            ? OC_PTR
+            : OC_DATA)
+    {
+    }
+};
+
+void plotAtomicObj(PlotData &plot, const AtomicObject ao) {
+    const TObjId obj = ao.obj;
+    CL_BREAK_IF(obj <= 0);
+
+    const char *color = "black";
+    const char *props = ", penwidth=3.0, style=dashed";
+
+    const EObjectClass code = ao.code;
+    switch (code) {
+        case OC_VOID:
+            CL_BREAK_IF("plotAtomicObj() got an object of class OC_VOID");
+            return;
+
+        case OC_PTR:
+            props = "";
+            break;
+
+        case OC_NEXT:
+            color = "red";
+            break;
+
+        case OC_PREV:
+            color = "gold";
+            break;
+
+        case OC_DATA:
+            color = "gray";
+            props = ", style=dotted";
+    }
+
+    plot.out << "\t" << SL_QUOTE(obj)
+        << " [shape=box, color=" << color << props
+        << ", label=\"#" << obj << "\"];\n";
 }
 
-void plotAtomicObj(PlotData &plot, const TObjId obj) {
-    CL_BREAK_IF(obj <= 0);
+void plotInnerObjects(PlotData &plot, const TValId at, const TObjList &liveObjs)
+{
     SymHeap &sh = plot.sh;
 
-    // TODO
-    const TObjType clt = sh.objType(obj);
-    plot.out << "\t" << SL_QUOTE(obj)
-        << " [shape=box, label=\"#" << obj << "\"];\n";
+    TObjId next = OBJ_INVALID;
+    TObjId prev = OBJ_INVALID;
+    const EObjKind kind = sh.valTargetKind(at);
+    switch (kind) {
+        case OK_CONCRETE:
+            break;
+
+        case OK_DLS:
+            prev = prevPtrFromSeg(sh, at);
+            // fall through!
+
+        case OK_MAY_EXIST:
+        case OK_SLS:
+            next = nextPtrFromSeg(sh, at);
+    }
+
+    // sort objects by offset
+    typedef std::map<TOffset, AtomicObject> TObjByOff;
+    TObjByOff objByOff;
+    BOOST_FOREACH(const TObjId obj, liveObjs) {
+        EObjectClass code;
+        if (obj == next)
+            code = OC_NEXT;
+        else if (obj == prev)
+            code = OC_PREV;
+        else if (isDataPtr(sh.objType(obj)))
+            code = OC_PTR;
+        else
+            code = OC_DATA;
+
+        const TOffset off = sh.valOffset(sh.placedAt(obj));
+        AtomicObject ao(obj, code);
+        objByOff[off] = ao;
+    }
+
+    // plot all atomic objects inside
+    BOOST_FOREACH(TObjByOff::const_reference item, objByOff) {
+        // plot a single object
+        const AtomicObject &ao = item.second;
+        plotAtomicObj(plot, ao);
+
+        // connect the inner object with the root by an offset edge
+        const TOffset off = item.first;
+        plotOffset(plot, off, at, ao.obj);
+    }
 }
 
 void plotCompositeObj(PlotData &plot, const TValId at, const TObjList &liveObjs)
@@ -217,19 +323,36 @@ void plotCompositeObj(PlotData &plot, const TValId at, const TObjList &liveObjs)
     if (sh.valTargetIsProto(at))
         label = "[prototype] ";
 
-    const char *color = "";
-    const char *pw = "";
+    const char *color = "black";
+    const char *pw = "1.0";
+
+    const EValueTarget code = sh.valTarget(at);
+    switch (code) {
+        case VT_STATIC:
+            color = "green";
+            break;
+
+        case VT_ON_STACK:
+            color = "blue";
+            break;
+
+        case VT_ON_HEAP:
+        case VT_ABSTRACT:
+            break;
+
+        default:
+            CL_BREAK_IF("plotCompositeObj() got invalid root object");
+            return;
+    }
 
     const EObjKind kind = sh.valTargetKind(at);
     switch (kind) {
         case OK_CONCRETE:
-            color = "black";
-            pw = "1.0";
             break;
 
         case OK_MAY_EXIST:
             label += "MAY_EXIST";
-            color = "blue";
+            color = "green";
             pw = "3.0";
             break;
 
@@ -256,26 +379,10 @@ void plotCompositeObj(PlotData &plot, const TValId at, const TObjList &liveObjs)
         << ";\n";
 
     // plot the root value
-    plotValue(plot, at);
-
-    // sort objects by offset
-    typedef std::map<TOffset, TObjId> TObjByOff;
-    TObjByOff objByOff;
-    BOOST_FOREACH(const TObjId obj, liveObjs) {
-        const TOffset off = sh.valOffset(sh.placedAt(obj));
-        objByOff[off] = obj;
-    }
+    plotRootValue(plot, at, color);
 
     // plot all atomic objects inside
-    BOOST_FOREACH(TObjByOff::const_reference item, objByOff) {
-        // plot a single object
-        const TObjId obj = item.second;
-        plotAtomicObj(plot, obj);
-
-        // connect the inner object with the root by an offset edge
-        const TOffset off = item.first;
-        plotOffset(plot, off, at, obj);
-    }
+    plotInnerObjects(plot, at, liveObjs);
 
     // close cluster
     plot.out << "}\n";
@@ -323,10 +430,6 @@ void plotRootObjects(PlotData &plot) {
         // gather live objects
         TObjList liveObjs;
         sh.gatherLiveObjects(liveObjs, root);
-        if (liveObjs.empty()) {
-            plotTypeFreeObj(plot, root);
-            continue;
-        }
 
         const EObjKind kind = sh.valTargetKind(root);
         switch (kind) {
@@ -339,9 +442,17 @@ void plotRootObjects(PlotData &plot) {
                 if (1 == liveObjs.size()) {
                     const TObjId obj = liveObjs.front();
                     if (sh.valOffset(sh.placedAt(obj)))
+                        // offset detected
                         break;
 
-                    plotAtomicObj(plot, obj);
+                    const TObjType clt = sh.objType(obj);
+                    CL_BREAK_IF(!clt);
+                    if (clt->size != sh.valSizeOfTarget(root))
+                        // size mismatch detected
+                        break;
+
+                    const AtomicObject ao(obj, sh);
+                    plotAtomicObj(plot, ao);
                     continue;
                 }
                 // fall through!
