@@ -40,8 +40,9 @@ fi
     -I../cl -I../cl/gcc -I../include -I../include/gcc \
     -fplugin="$SL_PLUG" \
     -fplugin-arg-libsl-verbose="$SL_VERBOSE" \
-    $SL_OPTS \
-    || exit $?
+    $SL_OPTS
+
+RV=$?
 
 if test x1 = "x$SL_PLOT"; then
     # visualize graphs
@@ -51,3 +52,5 @@ if test x1 = "x$SL_PLOT"; then
     printf "done\n"
     "$SVG_VIEWER" *.svg
 fi
+
+exit $RV

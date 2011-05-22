@@ -655,14 +655,50 @@ void plotValue(PlotData &plot, const TValId val)
 {
     SymHeap &sh = plot.sh;
 
-    const char *color = "green";
-    // TODO
+    const char *color = "black";
+    const char *suffix = 0;
+
+    const EValueTarget code = sh.valTarget(val);
+    switch (code) {
+        case VT_INVALID:
+        case VT_COMPOSITE:
+        case VT_CUSTOM:
+        case VT_LOST:
+        case VT_DELETED:
+            color = "red";
+            break;
+
+        case VT_STATIC:
+            color = "green";
+            break;
+
+        case VT_ON_STACK:
+            color = "blue";
+            break;
+
+        case VT_UNKNOWN:
+            suffix = labelByOrigin(sh.valOrigin(val));
+            // fall through!
+
+        case VT_ABSTRACT:
+            color = "gold";
+            // fall through!
+
+        case VT_ON_HEAP:
+            goto preserve_suffix;
+    }
+
+    suffix = labelByTarget(code);
+preserve_suffix:
 
     const float pw = static_cast<float>(1U + sh.usedByCount(val));
     plot.out << "\t" << SL_QUOTE(val)
         << " [shape=ellipse, penwidth=" << pw
         << ", fontcolor=" << color
         << ", label=\"#" << val;
+
+    if (suffix)
+        plot.out << " " << suffix;
 
     const TOffset off = sh.valOffset(val);
     if (off) {
