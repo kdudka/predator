@@ -162,21 +162,6 @@ void digValues(PlotData &plot, const TValList &startingPoints) {
     }
 }
 
-void plotRootValue(PlotData &plot, const TValId val, const char *color) {
-    SymHeap &sh = plot.sh;
-    const unsigned size = sh.valSizeOfTarget(val);
-
-    // visualize the count of references as pen width
-    const float pw = static_cast<float>(sh.usedByCount(val));
-    plot.out << "\t" << SL_QUOTE(val)
-        << " [shape=ellipse, penwidth=" << pw
-        << ", color=" << color
-        << ", fontcolor=" << color
-        << ", label=\"#" << val
-        << " [size = " << size
-        << " B]\"];\n";
-}
-
 void plotOffset(PlotData &plot, const TOffset off, const int from, const int to)
 {
     const bool isAboveRoot = (off < 0);
@@ -194,6 +179,145 @@ void plotOffset(PlotData &plot, const TOffset off, const int from, const int to)
         << ", fontcolor=" << color
         << ", label=\"[" << prefix << off
         << "]\"];\n";
+}
+
+// FIXME: this is partially copy-pasted from symheap.cc
+class CltFinder {
+    private:
+        const TObjType          cltRoot_;
+        const TObjType          cltToSeek_;
+        const TOffset           offToSeek_;
+        TFieldIdxChain          icFound_;
+
+    public:
+        CltFinder(TObjType cltRoot, TObjType cltToSeek, TOffset offToSeek):
+            cltRoot_(cltRoot),
+            cltToSeek_(cltToSeek),
+            offToSeek_(offToSeek)
+        {
+        }
+
+        const TFieldIdxChain& icFound() const { return icFound_; }
+
+        bool operator()(const TFieldIdxChain &ic, const struct cl_type_item *it)
+        {
+            const TObjType clt = it->type;
+            if (clt != cltToSeek_)
+                return /* continue */ true;
+
+            const TOffset off = offsetByIdxChain(cltRoot_, ic);
+            if (offToSeek_ != off)
+                return /* continue */ true;
+
+            // matched!
+            icFound_ = ic;
+            return false;
+        }
+};
+
+bool digIcByOffset(
+        TFieldIdxChain                  *pDst,
+        const TObjType                  cltRoot,
+        const TObjType                  cltField,
+        const TOffset                   offRoot)
+{
+    CL_BREAK_IF(!cltRoot || !cltField);
+    if (!offRoot && (*cltRoot == *cltField))
+        // the root matches --> no fields on the way
+        return false;
+
+    CltFinder visitor(cltRoot, cltField, offRoot);
+    if (traverseTypeIc(cltRoot, visitor, /* digOnlyComposite */ true))
+        // not found
+        return false;
+
+    *pDst = visitor.icFound();
+    return true;
+}
+
+void describeVar(PlotData &plot, const TValId rootAt) {
+    SymHeap &sh = plot.sh;
+    TStorRef stor = sh.stor();
+
+    // var lookup
+    CVar cv = sh.cVarByRoot(rootAt);
+
+    // write identity of the var
+    plot.out << "CL" << varTostring(stor, cv.uid);
+    if (1 < cv.inst)
+        plot.out << " [inst = " << cv.inst << "]";
+}
+
+void describeFieldPlacement(PlotData &plot, const TObjId obj, TObjType clt) {
+    SymHeap &sh = plot.sh;
+
+    const TObjType cltField = sh.objType(obj);
+    if (!cltField || *cltField == *clt)
+        // nothing interesting here
+        return;
+
+    // read field offset
+    const TValId at = sh.placedAt(obj);
+    const TOffset off = sh.valOffset(at);
+
+    TFieldIdxChain ic;
+    if (!digIcByOffset(&ic, clt, cltField, off))
+        // type of the field not found in clt
+        return;
+
+    // chain of indexes found!
+    BOOST_FOREACH(const int idx, ic) {
+        CL_BREAK_IF(clt->item_cnt <= idx);
+        const cl_type_item *item = clt->items + idx;
+
+        // read field name
+        const char *name = item->name;
+        if (!name)
+            name = "<anon>";
+
+        // write to stream and move to the next one
+        plot.out << "." << name;
+        clt = item->type;
+    }
+}
+
+void describeObject(PlotData &plot, const TObjId obj, const bool lonely) {
+    SymHeap &sh = plot.sh;
+
+    // check root
+    const TValId at = sh.placedAt(obj);
+    const TValId root = sh.valRoot(at);
+
+    const EValueTarget code = sh.valTarget(at);
+    if (lonely && isProgramVar(code))
+        describeVar(plot, root);
+    else
+        plot.out << "#" << obj;
+
+    const TObjType cltRoot = sh.valLastKnownTypeOfTarget(root);
+    if (cltRoot)
+        describeFieldPlacement(plot, obj, cltRoot);
+}
+
+void plotRootValue(PlotData &plot, const TValId val, const char *color) {
+    SymHeap &sh = plot.sh;
+    const unsigned size = sh.valSizeOfTarget(val);
+
+    // visualize the count of references as pen width
+    const float pw = static_cast<float>(1U + sh.usedByCount(val));
+    plot.out << "\t" << SL_QUOTE(val)
+        << " [shape=ellipse, penwidth=" << pw
+        << ", color=" << color
+        << ", fontcolor=" << color
+        << ", label=\"";
+
+    const EValueTarget code = sh.valTarget(val);
+    if (isProgramVar(code))
+        describeVar(plot, val);
+    else
+        plot.out << "#" << val;
+
+    plot.out << " [size = " << size << " B]\"];\n";
 }
 
 enum EObjectClass {
@@ -229,7 +353,8 @@ struct AtomicObject {
     }
 };
 
-void plotAtomicObj(PlotData &plot, const AtomicObject ao) {
+void plotAtomicObj(PlotData &plot, const AtomicObject ao, const bool lonely)
+{
     const TObjId obj = ao.obj;
     CL_BREAK_IF(obj <= 0);
 
@@ -261,7 +386,10 @@ void plotAtomicObj(PlotData &plot, const AtomicObject ao) {
 
     plot.out << "\t" << SL_QUOTE(obj)
         << " [shape=box, color=" << color << props
-        << ", label=\"#" << obj << "\"];\n";
+        << ", label=\"";
+
+    describeObject(plot, obj, lonely);
+    plot.out << "\"];\n";
 }
 
 void plotInnerObjects(PlotData &plot, const TValId at, const TObjList &liveObjs)
@@ -307,7 +435,7 @@ void plotInnerObjects(PlotData &plot, const TValId at, const TObjList &liveObjs)
     BOOST_FOREACH(TObjByOff::const_reference item, objByOff) {
         // plot a single object
         const AtomicObject &ao = item.second;
-        plotAtomicObj(plot, ao);
+        plotAtomicObj(plot, ao, /* lonely */ false);
 
         // connect the inner object with the root by an offset edge
         const TOffset off = item.first;
@@ -452,7 +580,7 @@ void plotRootObjects(PlotData &plot) {
                         break;
 
                     const AtomicObject ao(obj, sh);
-                    plotAtomicObj(plot, ao);
+                    plotAtomicObj(plot, ao, /* lonely */ true);
                     continue;
                 }
                 // fall through!
