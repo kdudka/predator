@@ -287,14 +287,6 @@ void prune(const SymHeap &src, SymHeap &dst,
     deepCopy(dc);
 }
 
-namespace {
-    void plotHeap(const SymHeap &sh, const char *name)
-    {
-        SymPlot plotter(sh);
-        plotter.plot(name);
-    }
-}
-
 void splitHeapByCVars(
         SymHeap                     *srcDst,
         const TCVarList             &cut,

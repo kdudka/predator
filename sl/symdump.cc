@@ -351,11 +351,8 @@ void dump_plot_core(const SymHeapCore *core, const char *name) {
         return;
     }
 
-    // create an instance of SymPlot
-    SymPlot plotter(*sh);
-
     // attempt to plot heap
-    if (!plotter.plot(name))
+    if (!plotHeap(*sh, name))
         cout << "dump_plot: warning: call of SymPlot::plot() has failed\n";
 }
 

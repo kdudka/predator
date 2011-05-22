@@ -41,28 +41,4 @@ bool plotHeap(
         const std::string               &name,
         const TValList                  &startingPoints);
 
-// TODO: remove this
-namespace CodeStorage {
-    struct Fnc;
-}
-
-// TODO: remove this
-class SymBackTrace;
-
-/// this plotting interface is @b deprecated, it will go away
-class SymPlot {
-    public:
-        SymPlot(const SymHeap &sh);
-        ~SymPlot();
-        bool plot(const std::string &name);
-        bool plotHeapValue(const std::string &name, TValId value);
-        bool plotStackFrame(const std::string           &name,
-                            const CodeStorage::Fnc      &fnc,
-                            const SymBackTrace          *bt);
-    private:
-        struct Private;
-        Private *d;
-        friend class ObjectDigger;
-};
-
 #endif /* H_GUARD_SYM_PLOT_H */
