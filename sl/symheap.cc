@@ -606,49 +606,34 @@ TValId SymHeapCore::Private::objDup(TValId rootAt) {
     CL_DEBUG("SymHeapCore::Private::objDup() is taking place...");
     const RootValue *rootDataSrc = this->rootData(rootAt);
 
-    // duplicate the root object
-    const TObjId image = this->objCreate();
-
-    // duplicate type-info of the root object
-    const TObjType cltRoot = rootDataSrc->lastKnownClt;
-    HeapObject *objDataDst = this->objData(image);
-    objDataDst->clt = cltRoot;
-
     // assign an address to the clone
     const EValueTarget code = rootDataSrc->code;
     const TValId imageAt = this->valCreate(code, VO_ASSIGNED);
     RootValue *rootDataDst = this->rootData(imageAt);
     rootDataDst->addr = imageAt;
-    objDataDst->root = imageAt;
 
     // duplicate root metadata
-    rootDataDst->grid[/* off */0][cltRoot] = image;
     rootDataDst->cVar    = rootDataSrc->cVar;
     rootDataDst->isProto = rootDataSrc->isProto;
     rootDataDst->cbSize  = rootDataSrc->cbSize;
     rootDataDst->lastKnownClt = rootDataSrc->lastKnownClt;
 
-    rootDataDst->allObjs.push_back(image);
-
     this->liveRoots.insert(imageAt);
 
-    BOOST_FOREACH(const TObjId src, rootDataSrc->allObjs) {
-        const HeapObject *objDataSrc = this->objData(src);
+    BOOST_FOREACH(TLiveObjs::const_reference item, rootDataSrc->liveObjs) {
+        const HeapObject *objDataSrc = this->objData(/* src */ item.first);
 
         // duplicate a single object
         const TObjId dst = this->objCreate();
         this->setValueOf(dst, objDataSrc->value);
 
         // copy the metadata
-        objDataDst = this->objData(dst);
+        HeapObject *objDataDst = this->objData(dst);
         objDataDst->off = objDataSrc->off;
         objDataDst->clt = objDataSrc->clt;
 
         // prevserve live ptr/data object
-        const TLiveObjs &liveSrc = rootDataSrc->liveObjs;
-        TLiveObjs::const_iterator it = liveSrc.find(src);
-        if (liveSrc.end() != it)
-            rootDataDst->liveObjs[dst] = /* isPtr */ it->second;
+        rootDataDst->liveObjs[dst] = /* isPtr */ item.second;
 
         // recover root
         objDataDst->root = imageAt;
