@@ -269,6 +269,13 @@ typedef STD_VECTOR(struct cl_operand) TOperandList;
  */
 typedef STD_VECTOR(const Block *) TTargetList;
 
+/// enumeration of kill status assigned to program variables per instruction
+enum EKillStatus {
+    KS_NEVER_KILL,
+    KS_ALWAYS_KILL,
+    KS_KILL_IF_NOT_POINTED
+};
+
 /**
  * high-level representation of an intermediate code instruction
  */
@@ -333,13 +340,13 @@ struct Insn {
     TOperandList                operands;
 
     /**
-     * a bitset of size operands.size() -- one bit per each operand -- if the
-     * bit N is true, you can safely kill the variable referred by N-th operand.
-     * Note that computation of this data by CodeStorage is optional.  If the
-     * feature is not used, all bits are initialized to zero, which should be a
-     * safe over-approximation.
+     * a vector of size operands.size() -- one item per each operand -- if the
+     * bit N is KS_ALWAYS_KILL, you can safely kill the variable referred by
+     * N-th operand.  Note that computation of this data by CodeStorage is
+     * optional.  If the feature is not used, all items are initialized to
+     * KS_NEVER_KILL, which should be a safe over-approximation.
      */
-    std::vector<bool>           opsToKill;
+    std::vector<EKillStatus>    opsToKill;
 
     /**
      * List of all target blocks - useful only for @b terminal @b instructions.

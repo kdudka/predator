@@ -114,7 +114,7 @@ class SymProc {
         bool checkForInvalidDeref(TValId val, TObjType cltTarget);
         TValId heapValFromObj(const struct cl_operand &op);
         TValId heapValFromCst(const struct cl_operand &op);
-        void killVar(const struct cl_operand &op);
+        void killVar(const struct cl_operand &op, bool onlyIfNotPointed);
 
     protected:
         SymHeap                     &sh_;

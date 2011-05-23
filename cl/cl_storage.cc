@@ -487,7 +487,7 @@ void ClStorageBuilder::Private::closeInsn() {
         this->digOperand(&op);
     }
 
-    insn->opsToKill.resize(operands.size(), false);
+    insn->opsToKill.resize(operands.size(), KS_NEVER_KILL);
 
     // let it honestly crash if callback sequence is incorrect since this should
     // have already been caught by ClfCbSeqChk cl filter

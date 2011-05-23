@@ -22,6 +22,7 @@
 
 #include <cl/cl_msg.hh>
 #include <cl/clutil.hh>
+#include <cl/storage.hh>
 
 #include "symabstract.hh"
 #include "symbin.hh"
@@ -533,7 +534,7 @@ void SymProc::valDestroyTarget(TValId addr) {
         bt_->printBackTrace();
 }
 
-void SymProc::killVar(const struct cl_operand &op) {
+void SymProc::killVar(const struct cl_operand &op, bool onlyIfNotPointed) {
 #if DEBUG_SE_STACK_FRAME
     const int uid = varIdFromOperand(&op);
     const CodeStorage::Storage &stor = sh_.stor();
@@ -541,18 +542,36 @@ void SymProc::killVar(const struct cl_operand &op) {
     CL_DEBUG_MSG(lw_, "FFF SymProc::killVar() destroys var " << varString);
 #endif
     const TValId addr = this->varAt(op);
+
+    if (onlyIfNotPointed) {
+        TObjList refs;
+        sh_.pointedBy(refs, addr);
+        if (!refs.empty())
+            // somebody points at the var, please wait with its destruction
+            return;
+    }
+
     this->valDestroyTarget(addr);
 }
 
 void SymProc::killInsn(const CodeStorage::Insn &insn) {
+    using namespace CodeStorage;
 #if !SE_EARLY_VARS_DESTRUCTION
     return;
 #endif
     // kill variables
-    const CodeStorage::TOperandList &ops = insn.operands;
+    const TOperandList &ops = insn.operands;
     for (unsigned i = 0; i < ops.size(); ++i) {
-        if (insn.opsToKill[i])
-            this->killVar(ops[i]);
+        const EKillStatus code = insn.opsToKill[i];
+        switch (code) {
+            case KS_NEVER_KILL:
+                // var alive
+                continue;
+
+            case KS_ALWAYS_KILL:
+            case KS_KILL_IF_NOT_POINTED:
+                this->killVar(ops[i], (KS_KILL_IF_NOT_POINTED == code));
+        }
     }
 }
 
