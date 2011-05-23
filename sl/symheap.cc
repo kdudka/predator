@@ -241,7 +241,6 @@ struct RootValue: public BaseValue {
     TObjType                        lastKnownClt;
     unsigned                        cbSize;
     CVar                            cVar;
-    TObjList          /* XXX */     allObjs;
     TLiveObjs                       liveObjs;
     bool                            isProto;
     TUsedBy                         usedByGl;
@@ -637,7 +636,6 @@ TValId SymHeapCore::Private::objDup(TValId rootAt) {
 
         // recover root
         objDataDst->root = imageAt;
-        rootDataDst->allObjs.push_back(dst);
 
         // recover grid
         const TOffset off = objDataDst->off;
@@ -1093,9 +1091,6 @@ bool SymHeapCore::Private::lazyCreatePtr(
     objData->root = root;
     objData->off  = off;
     objData->clt  = clt;
-
-    // XXX
-    rootData->allObjs.push_back(obj);
     if (!cltRoot)
         rootData->lastKnownClt = clt;
 
@@ -1186,9 +1181,6 @@ TObjId SymHeapCore::objAt(TValId at, TObjCode code) {
     objData->clt  = clt;
 
     row->operator[](clt) = obj;
-
-    // XXX
-    rootData->allObjs.push_back(obj);
     return obj;
 }
 
@@ -1249,10 +1241,6 @@ TObjId SymHeapCore::objAt(TValId at, TObjType clt) {
     objData->clt  = clt;
 
     row->operator[](clt) = obj;
-
-    // XXX
-    rootData->allObjs.push_back(obj);
-
     return obj;
 }
 
@@ -1347,8 +1335,11 @@ bool SymHeapCore::valDestroyTarget(TValId val) {
 
 int SymHeapCore::valSizeOfTarget(TValId val) const {
     const BaseValue *valData = d->valData(val);
-    CL_BREAK_IF(!isPossibleToDeref(valData->code));
+    const EValueTarget code = valData->code;
+    if (isGone(code))
+        return 0;
 
+    CL_BREAK_IF(!isPossibleToDeref(valData->code));
     const TValId root = d->valRoot(val, valData);
     const RootValue *rootData = d->rootData(root);
 
@@ -1395,7 +1386,8 @@ void SymHeapCore::Private::objDestroy(TValId root) {
     this->liveRoots.erase(root);
 
     // go through objects
-    BOOST_FOREACH(const TObjId obj, rootData->allObjs) {
+    BOOST_FOREACH(TLiveObjs::const_reference item, rootData->liveObjs) {
+        const TObjId obj = item.first;
         HeapObject *objData = this->objData(obj);
         objData->clt = 0;
 
@@ -1407,7 +1399,6 @@ void SymHeapCore::Private::objDestroy(TValId root) {
 
     // wipe rootData
     rootData->lastKnownClt = 0;
-    rootData->allObjs.clear();
     rootData->liveObjs.clear();
     rootData->grid.clear();
     rootData->code   = code;
