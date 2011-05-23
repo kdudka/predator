@@ -543,13 +543,9 @@ void SymProc::killVar(const struct cl_operand &op, bool onlyIfNotPointed) {
 #endif
     const TValId addr = this->varAt(op);
 
-    if (onlyIfNotPointed) {
-        TObjList refs;
-        sh_.pointedBy(refs, addr);
-        if (!refs.empty())
-            // somebody points at the var, please wait with its destruction
-            return;
-    }
+    if (onlyIfNotPointed && sh_.pointedByCount(addr))
+        // somebody points at the var, please wait with its destruction
+        return;
 
     this->valDestroyTarget(addr);
 }

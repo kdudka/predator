@@ -210,11 +210,14 @@ class SymHeapCore {
          */
         void usedBy(TObjList &dst, TValId val) const;
 
+        /// return how many objects use the value
+        unsigned usedByCount(TValId val) const;
+
         /// return all objects that point at/inside the given object
         void pointedBy(TObjList &dst, TValId root) const;
 
-        /// return how many objects use the value
-        unsigned usedByCount(TValId val) const;
+        /// return how many objects point at/inside the given object
+        unsigned pointedByCount(TValId root) const;
 
         /**
          * @b set @b value of the given object, which has to be @b valid and may
@@ -341,7 +344,6 @@ class SymHeapCore {
         virtual void valMerge(TValId v1, TValId v2);
 
         void gatherRootObjects(TValList &dst, bool (*)(EValueTarget) = 0) const;
-        void gatherLiveOffsets(TOffList &dst, TValId atAddr) const;
         void gatherLiveObjects(TObjList &dst, TValId atAddr) const;
         void gatherLivePointers(TObjList &dst, TValId atAddr) const;
 

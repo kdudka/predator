@@ -564,6 +564,13 @@ void SymHeapCore::pointedBy(TObjList &dst, TValId root) const {
     std::copy(usedBy.begin(), usedBy.end(), std::back_inserter(dst));
 }
 
+unsigned SymHeapCore::pointedByCount(TValId root) const {
+    const RootValue *rootData = d->rootData(root);
+    CL_BREAK_IF(rootData->offRoot);
+    CL_BREAK_IF(!isPossibleToDeref(rootData->code));
+    return rootData->usedBy.size();
+}
+
 unsigned SymHeapCore::lastId() const {
     return d->lastId<unsigned>();
 }
