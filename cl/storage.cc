@@ -195,10 +195,12 @@ struct TypeDb::Private {
 
     int codePtrSizeof;
     int dataPtrSizeof;
+    const struct cl_type *genericDataPtr;
 
     Private():
         codePtrSizeof(-1),
-        dataPtrSizeof(-1)
+        dataPtrSizeof(-1),
+        genericDataPtr(0)
     {
     }
 
@@ -227,9 +229,16 @@ void TypeDb::Private::digPtrSizeof(const struct cl_type *clt) {
 
     CL_BREAK_IF(1 != clt->item_cnt);
     const struct cl_type *next = clt->items[0].type;
-    this->updatePtrSizeof(clt->size, (CL_TYPE_FNC == next->code)
+    const bool isCodePtr = (CL_TYPE_FNC == next->code);
+    this->updatePtrSizeof(clt->size, (isCodePtr)
             ? &this->codePtrSizeof
             : &this->dataPtrSizeof);
+
+    if (isCodePtr)
+        return;
+
+    if (!this->genericDataPtr || CL_TYPE_VOID == clt->code)
+        this->genericDataPtr = clt;
 }
 
 bool TypeDb::insert(const struct cl_type *clt) {
@@ -259,6 +268,10 @@ int TypeDb::codePtrSizeof() const {
 
 int TypeDb::dataPtrSizeof() const {
     return d->dataPtrSizeof;
+}
+
+const struct cl_type* TypeDb::genericDataPtr() const {
+    return d->genericDataPtr;
 }
 
 void readTypeTree(TypeDb &db, const struct cl_type *clt) {

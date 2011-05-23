@@ -303,7 +303,7 @@ struct SymHeapCore::Private {
     void subsCreate(TValId root);
 
     bool gridLookup(TObjByType **pRow, const TValId);
-    bool lazyCreatePtr(TObjId *pObj, TObjType *pClt, TValId at);
+    bool lazyCreatePtr(TObjId *pObj, TObjType *pClt, TStorRef stor, TValId at);
 
     void neqOpWrap(SymHeap::ENeqOp, TValId, TValId);
 
@@ -1133,6 +1133,7 @@ TObjType guideCltFinder(
 bool SymHeapCore::Private::lazyCreatePtr(
         TObjId                  *pObj,
         TObjType                *pClt,
+        TStorRef                 stor,
         TValId                   at)
 {
     // check offset
@@ -1145,9 +1146,10 @@ bool SymHeapCore::Private::lazyCreatePtr(
 
     // check root type-info
     const TObjType cltRoot = rootData->lastKnownClt;
-    CL_BREAK_IF(!cltRoot);
+    const TObjType clt = (cltRoot)
+        ? guideCltFinder(cltRoot, off, isDataPtr)
+        : stor.types.genericDataPtr();
 
-    const TObjType clt = guideCltFinder(cltRoot, off, isDataPtr);
     if (!clt)
         // not found
         return false;
@@ -1161,6 +1163,8 @@ bool SymHeapCore::Private::lazyCreatePtr(
 
     // XXX
     rootData->allObjs.push_back(obj);
+    if (!cltRoot)
+        rootData->lastKnownClt = clt;
 
     // lazy creation successful
     *pObj = obj;
@@ -1187,7 +1191,7 @@ TObjId SymHeapCore::ptrAt(TValId at) {
 
     TObjId obj;
     TObjType clt;
-    if (!d->lazyCreatePtr(&obj, &clt, at))
+    if (!d->lazyCreatePtr(&obj, &clt, stor_, at))
         // TODO: refine the error codes coming from here
         return OBJ_UNKNOWN;
 

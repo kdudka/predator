@@ -213,6 +213,9 @@ class TypeDb {
          */
         int dataPtrSizeof() const;
 
+        /// a (void *) type if available; if not, any data pointer; 0 otherwise
+        const struct cl_type* genericDataPtr() const;
+
     private:
         /// @b not allowed to be copied
         TypeDb(const TypeDb &);
