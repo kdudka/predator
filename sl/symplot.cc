@@ -386,9 +386,6 @@ void plotAtomicObj(PlotData &plot, const AtomicObject ao, const bool lonely)
         const EValueTarget code = sh.valTarget(at);
         switch (code) {
             case VT_STATIC:
-                color = "green";
-                break;
-
             case VT_ON_STACK:
                 color = "blue";
                 break;
@@ -474,9 +471,6 @@ void plotCompositeObj(PlotData &plot, const TValId at, const TObjList &liveObjs)
     const EValueTarget code = sh.valTarget(at);
     switch (code) {
         case VT_STATIC:
-            color = "green";
-            break;
-
         case VT_ON_STACK:
             color = "blue";
             break;
@@ -669,9 +663,6 @@ void plotValue(PlotData &plot, const TValId val)
             break;
 
         case VT_STATIC:
-            color = "green";
-            break;
-
         case VT_ON_STACK:
             color = "blue";
             break;
@@ -681,7 +672,7 @@ void plotValue(PlotData &plot, const TValId val)
             // fall through!
 
         case VT_ABSTRACT:
-            color = "gold";
+            color = "green";
             // fall through!
 
         case VT_ON_HEAP:
@@ -823,34 +814,36 @@ void plotHasValue(PlotData &plot, const TObjId obj) {
         << " [color=blue, fontcolor=blue];\n";
 }
 
+void plotNeqZero(PlotData &plot, const TValId val) {
+    const int id = ++plot.last;
+    plot.out << "\t" << SL_QUOTE("lonely" << id)
+        << " [shape=plaintext, fontcolor=blue, label=NULL];\n";
+
+    plot.out << "\t" << SL_QUOTE(val)
+        << " -> " << SL_QUOTE("lonely" << id)
+        << " [color=red, fontcolor=gold, label=neq style=dashed"
+        ", penwidth=2.0];\n";
+}
+
+void plotNeq(std::ostream &out, const TValId v1, const TValId v2) {
+    out << "\t" << SL_QUOTE(v1)
+        << " -> " << SL_QUOTE(v2)
+        << " [color=red, style=dashed, penwidth=2.0, arrowhead=none"
+        ", label=neq, fontcolor=gold, constraint=false];\n";
+}
+
 class NeqPlotter: public NeqDb {
-    private:
-        void plotNeq(PlotData &plot, const TItem &item) {
-            const TValId v1 = item.first;
-            const TValId v2 = item.second;
-
-            if (VAL_NULL == v1) {
-                const int id = ++plot.last;
-                plot.out << "\t" << SL_QUOTE("lonely" << id)
-                    << " [shape=plaintext, fontcolor=red, label=\"!=0\"];\n";
-
-                plot.out << "\t" << SL_QUOTE(v2)
-                    << " -> " << SL_QUOTE("lonely" << id)
-                    << " [color=gold];\n";
-
-            }
-            else {
-                plot.out << "\t" << SL_QUOTE(v1)
-                    << " -> " << SL_QUOTE(v2)
-                    << " [color=gold, fontcolor=red"
-                    ", label=\"Neq\", arrowhead=none];\n";
-            }
-        }
-
     public:
         void plotNeqEdges(PlotData &plot) {
-            BOOST_FOREACH(const TItem &item, cont_)
-                this->plotNeq(plot, item);
+            BOOST_FOREACH(const TItem &item, cont_) {
+                const TValId v1 = item.first;
+                const TValId v2 = item.second;
+
+                if (VAL_NULL == v1)
+                    plotNeqZero(plot, v2);
+                else
+                    plotNeq(plot.out, v1, v2);
+            }
         }
 };
 

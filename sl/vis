@@ -6,7 +6,6 @@ topdir="`dirname "$self"`/.."
 test -z "$SVG_VIEWER" && SVG_VIEWER=chromium
 
 # visualize graphs
-sed -i 's/"pointsTo"/""/g' *.dot
 printf "graph visualization in progress ... "
 make $MAKEOPTS -s -f "$topdir/sl/data/Makefile.in" TIMEOUT="timeout 2" \
     || exit $?
