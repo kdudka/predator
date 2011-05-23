@@ -325,6 +325,10 @@ inline bool SymHeapCore::Private::objOutOfRange(TObjId obj) {
 inline HeapObject* SymHeapCore::Private::objData(const TObjId obj) {
     CL_BREAK_IF(objOutOfRange(obj));
     IHeapEntity *ent = this->ents[obj];
+
+    // check the base pointer first, chances are the object was already deleted
+    CL_BREAK_IF(!ent);
+
     return DCAST<HeapObject *>(ent);
 }
 
@@ -1391,10 +1395,13 @@ void SymHeapCore::Private::objDestroy(TValId root) {
         HeapObject *objData = this->objData(obj);
         objData->clt = 0;
 
-        // release a single object
-        TValId &val = objData->value;
+        // release value of the object
+        const TValId val = objData->value;
         this->releaseValueOf(obj, val);
-        val = VAL_INVALID;
+
+        // release the corresponding HeapObject instance
+        delete objData;
+        this->ents[obj] = 0;
     }
 
     // wipe rootData
