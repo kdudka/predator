@@ -1143,22 +1143,21 @@ bool segmentCloneCore(
         const EJoinStatus           action,
         const BindingOff            *off)
 {
-    const TValId addrGt = shGt.valRoot(valGt);
-    const TObjId objGt = shGt.objAt(addrGt);
-    if (objGt < 0)
-        // nothing to clone here
+    if (!isPossibleToDeref(shGt.valTarget(valGt)))
+        // not valid target
         return false;
 
+    const TValId addrGt = shGt.valRoot(valGt);
     if (hasKey(valMapGt[0], addrGt))
         // mapping already available for objGt
         return true;
 
-    const struct cl_type *clt = shGt.objType(objGt);
+    const TObjType clt = shGt.valLastKnownTypeOfTarget(addrGt);
     if (!clt)
         // TODO: clone anonymous prototypes?
         return true;
 
-    SJ_DEBUG("+i+ insertSegmentClone: cloning object #" << objGt <<
+    SJ_DEBUG("+i+ insertSegmentClone: cloning object at #" << addrGt <<
              ", clt = " << *clt <<
              ", action = " << action);
 
