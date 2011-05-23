@@ -35,7 +35,6 @@
 #include <algorithm>
 #include <map>
 #include <set>
-#include <stack>
 
 #include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
@@ -299,8 +298,6 @@ struct SymHeapCore::Private {
 
     void releaseValueOf(TObjId obj, TValId val);
     void setValueOf(TObjId of, TValId val);
-
-    void subsCreate(TValId root);
 
     bool gridLookup(TObjByType **pRow, const TValId);
     bool lazyCreatePtr(TObjId *pObj, TObjType *pClt, TStorRef stor, TValId at);
@@ -603,55 +600,6 @@ bool valMapLookup(const TValMap &valMap, TValId *pVal) {
     // match
     *pVal = iter->second;
     return true;
-}
-
-void SymHeapCore::Private::subsCreate(TValId rootAt) {
-    // initialize root clt
-    RootValue *rootData = this->rootData(rootAt);
-    TObjType clt = rootData->lastKnownClt;
-    rootData->cbSize = clt->size;
-
-    typedef std::pair<TObjId, TObjType> TPair;
-    typedef std::stack<TPair> TStack;
-    TStack todo;
-
-    CL_BREAK_IF(rootData->allObjs.size() != 1);
-    TObjId obj = rootData->allObjs.front();
-    TGrid &grid = rootData->grid;
-    grid[/* off */ 0][clt] = obj;
-
-    // we use explicit stack to avoid recursion
-    push(todo, obj, clt);
-    while (!todo.empty()) {
-        boost::tie(obj, clt) = todo.top();
-        todo.pop();
-        CL_BREAK_IF(!clt);
-
-        if (!isComposite(clt))
-            continue;
-
-        const TOffset offRoot = this->objData(obj)->off;
-
-        const int cnt = clt->item_cnt;
-        for (int i = 0; i < cnt; ++i) {
-            const struct cl_type_item *item = clt->items + i;
-            TObjType subClt = item->type;
-
-            const TObjId subObj = this->objCreate();
-            HeapObject *subData = this->objData(subObj);
-            subData->clt  = subClt;
-            subData->root = rootAt;
-
-            const TOffset offTotal = offRoot + item->offset;
-            subData->off = offTotal;
-            grid[offTotal][subClt] = subObj;
-
-            // XXX
-            rootData->allObjs.push_back(subObj);
-
-            push(todo, subObj, subClt);
-        }
-    }
 }
 
 TValId SymHeapCore::Private::objDup(TValId rootAt) {
@@ -1449,9 +1397,11 @@ void SymHeapCore::valSetLastKnownTypeOfTarget(TValId root, TObjType clt) {
     // delayed object's type definition
     rootData->allObjs.push_back(obj);
     rootData->lastKnownClt = clt;
+    rootData->cbSize = clt->size;
     d->liveRoots.insert(root);
 
-    d->subsCreate(root);
+    // TODO: remove this
+    rootData->grid[/* off */ 0][clt] = obj;
 }
 
 TObjType SymHeapCore::valLastKnownTypeOfTarget(TValId root) const {
