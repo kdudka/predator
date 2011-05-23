@@ -1497,10 +1497,13 @@ bool mayExistFallback(
 
     SymHeap &sh = (use1) ? ctx.sh1 : ctx.sh2;
     const TValId val = (use1) ? v1 : v2;
+    if (!isPossibleToDeref(sh.valTarget(val)))
+        // no valid target
+        return false;
+
     const TValId valRoot = sh.valRoot(val);
-    const TObjId target = sh.objAt(valRoot);
-    if (target <= 0 || !isComposite(sh.objType(target)))
-        // non-starter
+    if (!isComposite(sh.valLastKnownTypeOfTarget(valRoot)))
+        // target is not a composite type (TODO: relax our requirements?)
         return false;
 
     if (OK_CONCRETE != sh.valTargetKind(valRoot))
@@ -1508,15 +1511,13 @@ bool mayExistFallback(
         return false;
 
     const TValId ref = (use2) ? v1 : v2;
-    const TValId targetAt = sh.placedAt(target);
-    CL_BREAK_IF(sh.valOffset(targetAt));
-    MayExistVisitor visitor(ctx, action, ref, /* root */ targetAt);
-    if (traverseLivePtrs(sh, targetAt, visitor))
+    MayExistVisitor visitor(ctx, action, ref, /* root */ valRoot);
+    if (traverseLivePtrs(sh, valRoot, visitor))
         // no match
         return false;
 
     // dig head
-    if (sh.valRoot(val) != sh.placedAt(target)) {
+    if (sh.valRoot(val) != valRoot) {
         CL_BREAK_IF("MayExistVisitor malfunction");
         return false;
     }
