@@ -1360,33 +1360,18 @@ int SymHeapCore::valSizeOfTarget(TValId val) const {
 void SymHeapCore::valSetLastKnownTypeOfTarget(TValId root, TObjType clt) {
     RootValue *rootData = d->rootData(root);
 
-    // TODO: remove this
-    TObjId obj; 
-
     if (VAL_ADDR_OF_RET == root) {
         // destroy any stale target of VAL_ADDR_OF_RET
         d->objDestroy(root);
 
-        // allocate a new target of VAL_ADDR_OF_RET
-        obj = d->objCreate();
+        // allocate a new root value at VAL_ADDR_OF_RET
         rootData->code = VT_ON_STACK;
     }
-    else
-        // TODO: remove this
-        obj = d->objCreate();
 
-    HeapObject *objData = d->objData(obj);
-    objData->root = root;
-    objData->clt = clt;
-
-    // delayed object's type definition
-    rootData->allObjs.push_back(obj);
+    // convert a type-free object into a type-aware object
     rootData->lastKnownClt = clt;
     rootData->cbSize = clt->size;
     d->liveRoots.insert(root);
-
-    // TODO: remove this
-    rootData->grid[/* off */ 0][clt] = obj;
 }
 
 TObjType SymHeapCore::valLastKnownTypeOfTarget(TValId root) const {
