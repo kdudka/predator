@@ -168,7 +168,7 @@ bool /* complete */ traverseTypeIc(const struct cl_type *clt, TVisitor &visitor,
     return true;
 }
 
-std::string varTostring(
+std::string varToString(
         const CodeStorage::Storage      &stor,
         const int                       uid,
         const struct cl_loc             **pLoc = 0);

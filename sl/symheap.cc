@@ -1271,7 +1271,7 @@ TValId SymHeapCore::addrOfVar(CVar cv) {
     CL_BREAK_IF(!clt || clt->code == CL_TYPE_VOID);
 #if DEBUG_SE_STACK_FRAME
     const struct cl_loc *loc = 0;
-    std::string varString = varTostring(stor_, cv.uid, &loc);
+    std::string varString = varToString(stor_, cv.uid, &loc);
     CL_DEBUG_MSG(loc, "FFF SymHeapCore::objByCVar() creates var " << varString);
 #endif
 

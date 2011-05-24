@@ -233,7 +233,7 @@ void describeVar(PlotData &plot, const TValId rootAt) {
     CVar cv = sh.cVarByRoot(rootAt);
 
     // write identity of the var
-    plot.out << "CL" << varTostring(stor, cv.uid);
+    plot.out << "CL" << varToString(stor, cv.uid);
     if (1 < cv.inst)
         plot.out << " [inst = " << cv.inst << "]";
 }

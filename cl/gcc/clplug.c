@@ -289,25 +289,18 @@ static void free_initial_tree(const struct cl_initializer *initial)
         // nothing to free here
         return;
 
-    const struct cl_type *clt = initial->type;
-    const enum cl_type_e code = clt->code;
-    switch (code) {
-        case CL_TYPE_STRUCT:
-        case CL_TYPE_UNION:
-        case CL_TYPE_ARRAY:
-            break;
-
-        default:
-            // free value of a scalar initializer
-            free(initial->data.value);
-            return;
+    if (!initial->nested_cnt) {
+        // free value of a scalar initializer
+        free(initial->data.value);
+        return;
     }
 
     // destroy nested initalizers
     struct cl_initializer **nested_initials = initial->data.nested_initials;
+    const int cnt = initial->nested_cnt;
 
     int i;
-    for (i = 0; i < clt->item_cnt; ++i) {
+    for (i = 0; i < cnt; ++i) {
         // recursion
         struct cl_initializer *ni = nested_initials[i];
         free_initial_tree(ni);
@@ -704,10 +697,6 @@ static void read_initial(struct cl_initializer **pinit, tree ctor)
 
     // dig target type
     struct cl_type *clt = add_type_if_needed(ctor);
-    if (CL_TYPE_ARRAY == clt->code) {
-        CL_WARN_UNHANDLED_EXPR(ctor, "array initializer");
-        return;
-    }
 
     // allocate an initializer node
     struct cl_initializer *initial = CL_ZNEW(struct cl_initializer);
@@ -729,7 +718,11 @@ static void read_initial(struct cl_initializer **pinit, tree ctor)
     }
 
     // allocate array of nested initializers
-    const int cnt = clt->item_cnt;
+    const bool isArray = (CL_TYPE_ARRAY == clt->code);
+    const int cnt = (isArray)
+        ? clt->array_size
+        : clt->item_cnt;
+
     CL_BREAK_IF(cnt <= 0);
     struct cl_initializer **vec = CL_ZNEW_ARRAY(struct cl_initializer *, cnt);
     initial->data.nested_initials = vec;
@@ -737,14 +730,18 @@ static void read_initial(struct cl_initializer **pinit, tree ctor)
     unsigned idx;
     tree field, val;
     FOR_EACH_CONSTRUCTOR_ELT(CONSTRUCTOR_ELTS(ctor), idx, field, val) {
-        CL_BREAK_IF(cnt <= (int)idx);
+        int nth = idx;
+        CL_BREAK_IF(cnt <= nth);
 
         // field lookup
-        const int nth = field_lookup(ctor, field);
-        CL_BREAK_IF(clt->items[nth].type != add_type_if_needed(field));
+        if (CL_TYPE_ARRAY != clt->code) {
+            nth = field_lookup(ctor, field);
+            CL_BREAK_IF(clt->items[nth].type != add_type_if_needed(field));
+        }
 
         // FIXME: unguarded recursion
         read_initial(vec + nth, val);
+        ++(initial->nested_cnt);
     }
 }
 

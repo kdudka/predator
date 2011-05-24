@@ -21,6 +21,7 @@
 #include "symutil.hh"
 
 #include <cl/cl_msg.hh>
+#include <cl/clutil.hh>
 #include <cl/storage.hh>
 
 #include "symbt.hh"
@@ -167,13 +168,23 @@ void initVariable(
     const TValId at = sh.addrOfVar(cv);
     const TObjType clt = var.type;
 
+    const struct cl_initializer *initial = var.initial;
+    if (CL_TYPE_ARRAY == clt->code && initial) {
+        const struct cl_loc *loc;
+        std::string varString = varToString(sh.stor(), var.uid, &loc);
+        CL_WARN_MSG(&loc, "unhandled array initializer of " << varString);
+
+        // TODO
+        return;
+    }
+
     if (isComposite(clt)) {
-        const InitVarLegacyWrapper visitor(sh, at, clt, var.initial);
+        const InitVarLegacyWrapper visitor(sh, at, clt, initial);
         traverseTypeIc(var.type, visitor, /* digOnlyComposite */ true);
     }
     else {
         const TObjId obj = sh.objAt(at, clt);
-        initSingleVariable(sh, obj, var.initial);
+        initSingleVariable(sh, obj, initial);
     }
 }
 

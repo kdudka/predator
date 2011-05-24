@@ -327,21 +327,15 @@ void ClStorageBuilder::Private::digInitial(const struct cl_initializer *initial)
     if (!initial)
         return;
 
-    const struct cl_type *clt = initial->type;
-    const enum cl_type_e code = clt->code;
-    switch (code) {
-        case CL_TYPE_STRUCT:
-        case CL_TYPE_UNION:
-            for (int i = 0; i < clt->item_cnt; ++i) {
-                // FIXME: avoid recursion
-                this->digInitial(initial->data.nested_initials[i]);
-            }
-            break;
-
-        default:
-            // FIXME: avoid recursion
-            this->digOperand(initial->data.value);
+    const int cnt = initial->nested_cnt;
+    if (!cnt) {
+        this->digOperand(initial->data.value);
+        return;
     }
+
+    for (int i = 0; i < cnt; ++i)
+        // FIXME: avoid recursion
+        this->digInitial(initial->data.nested_initials[i]);
 }
 
 void ClStorageBuilder::Private::digOperandVar(const struct cl_operand *op) {

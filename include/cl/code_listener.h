@@ -344,6 +344,11 @@ struct cl_initializer {
      */
     struct cl_type                      *type;
 
+    /**
+     * if >0, the initializer contains nested initializers; a value otherwise
+     */
+    int                                 nested_cnt;
+
     union {
         /**
          * value of a scalar initializer
@@ -351,7 +356,7 @@ struct cl_initializer {
         struct cl_operand               *value;
 
         /**
-         * array of nested initializers. Its size is exactly type->item_cnt.
+         * array of nested initializers. Its size is exactly nested_cnt.
          */
         struct cl_initializer           **nested_initials;
     } data;

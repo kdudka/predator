@@ -143,7 +143,7 @@ int varIdFromOperand(const struct cl_operand *op, const char **pName) {
     return op->data.var->uid;
 }
 
-std::string varTostring(
+std::string varToString(
         const CodeStorage::Storage      &stor,
         const int                       uid,
         const struct cl_loc             **pLoc)
