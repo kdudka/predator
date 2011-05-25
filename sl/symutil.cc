@@ -172,7 +172,7 @@ void initVariable(
     if (CL_TYPE_ARRAY == clt->code && initial) {
         const struct cl_loc *loc;
         std::string varString = varToString(sh.stor(), var.uid, &loc);
-        CL_WARN_MSG(&loc, "unhandled array initializer of " << varString);
+        CL_WARN_MSG(loc, "unhandled array initializer of " << varString);
 
         // TODO
         return;
