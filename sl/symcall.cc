@@ -334,12 +334,12 @@ void SymCallCache::Private::createStackFrame(TCVarList &cVars) {
 
 #endif // SE_LAZY_VARS_CREATION
 
-        if (var.initial) {
+        if (!var.initials.empty()) {
             CL_DEBUG_MSG(lw, "--- initializing stack variable: #" << var.uid
                     << " (" << var.name << ")" );
 
             // reflect the given initializer
-            initVariable(*this->heap, var, this->nestLevel);
+            initVariable(*this->heap, *this->bt, var);
         }
     }
 }

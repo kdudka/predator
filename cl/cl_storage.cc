@@ -31,9 +31,7 @@
 #include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
 
-using namespace CodeStorage;
-
-namespace {
+namespace CodeStorage {
     /**
      * @param str dst/src to call strdup(3) for
      */
@@ -283,6 +281,8 @@ namespace {
     }
 }
 
+using namespace CodeStorage;
+
 struct ClStorageBuilder::Private {
     Storage     stor;
     const char  *file;
@@ -300,7 +300,7 @@ struct ClStorageBuilder::Private {
     {
     }
 
-    void digInitial(const struct cl_initializer *initial);
+    void digInitials(Var &, const struct cl_initializer *initial);
     void digOperandVar(const struct cl_operand *);
     void digOperandCst(const struct cl_operand *);
     void digOperand(const struct cl_operand *);
@@ -322,30 +322,25 @@ void ClStorageBuilder::acknowledge() {
     this->run(d->stor);
 }
 
-void ClStorageBuilder::Private::digInitial(const struct cl_initializer *initial)
+void ClStorageBuilder::Private::digInitials(
+        Var                             &var,
+        const struct cl_initializer     *initial)
 {
-    if (!initial)
-        return;
-
-    const int cnt = initial->nested_cnt;
-    if (!cnt) {
-        this->digOperand(initial->data.value);
-        return;
+    for (; initial; initial = initial->next) {
+        ControlFlow *cfg = /* XXX */ 0;
+        Insn *insn = createInsn(&initial->insn, /* XXX */ *cfg);
+        insn->opsToKill.resize(insn->operands.size(), KS_NEVER_KILL);
+        var.initials.push_back(insn);
     }
-
-    for (int i = 0; i < cnt; ++i)
-        // FIXME: avoid recursion
-        this->digInitial(initial->data.nested_initials[i]);
 }
 
 void ClStorageBuilder::Private::digOperandVar(const struct cl_operand *op) {
-    const int id = op->data.var->uid;
+    const struct cl_var *clv = op->data.var;
+    const int id = clv->uid;
 
     // do process each variable only once
-    if (hasKey(this->varsDone, id))
+    if (!insertOnce(this->varsDone, id))
         return;
-    else
-        this->varsDone.insert(id);
 
     // mark as used in the current function
     this->fnc->vars.insert(id);
@@ -386,10 +381,10 @@ void ClStorageBuilder::Private::digOperandVar(const struct cl_operand *op) {
         }
 
         case CL_SCOPE_BB:
-            CL_TRAP;
+            CL_BREAK_IF("digOperandVar() got an invalid scope");
     }
 
-    this->digInitial(op->data.var->initial);
+    this->digInitials(stor.vars[id], clv->initial);
 }
 
 void ClStorageBuilder::Private::digOperandCst(const struct cl_operand *op) {
@@ -455,7 +450,7 @@ void ClStorageBuilder::Private::digOperand(const struct cl_operand *op) {
             break;
 
         case CL_OPERAND_VOID:
-            CL_TRAP;
+            CL_BREAK_IF("invalid call of digOperand()");
     }
 }
 

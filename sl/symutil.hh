@@ -37,7 +37,7 @@
 
 #include <boost/foreach.hpp>
 
-class LocationWriter;
+class SymBackTrace;
 
 namespace CodeStorage {
     struct Var;
@@ -71,8 +71,8 @@ inline TValId nextRootObj(SymHeap &sh, TValId root, TOffset offNext) {
 
 void initVariable(
         SymHeap                     &sh,
-        const CodeStorage::Var      &var,
-        const int                   nestLevel);
+        SymBackTrace                &bt,
+        const CodeStorage::Var      &var);
 
 /// take the given visitor through all live pointers
 template <class THeap, class TVisitor, typename TMethod>

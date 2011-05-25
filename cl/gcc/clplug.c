@@ -283,38 +283,63 @@ static void type_db_free (void *p)
     free(p);
 }
 
-static void free_initial_tree(const struct cl_initializer *initial)
+static void free_cl_operand(const struct cl_operand *ptr);
+
+static void free_cl_accessor(struct cl_accessor *ac)
 {
-    if (!initial)
-        // nothing to free here
-        return;
+    while (ac) {
+        struct cl_accessor *next = ac->next;
 
-    if (!initial->nested_cnt) {
-        // free value of a scalar initializer
-        free(initial->data.value);
-        return;
+        if (CL_ACCESSOR_DEREF_ARRAY == ac->code)
+            // FIXME: unguarded recursion
+            free_cl_operand(ac->data.array.index);
+
+        free((void *) ac);
+        ac = next;
     }
+}
 
-    // destroy nested initalizers
-    struct cl_initializer **nested_initials = initial->data.nested_initials;
-    const int cnt = initial->nested_cnt;
+// TODO: join this with free_cl_operand_data
+static void free_cl_operand(const struct cl_operand *ptr)
+{
+    struct cl_operand *op = (struct cl_operand *) ptr;
+    free_cl_accessor(op->accessor);
+    free(op);
+}
 
-    int i;
-    for (i = 0; i < cnt; ++i) {
-        // recursion
-        struct cl_initializer *ni = nested_initials[i];
-        free_initial_tree(ni);
-        free(ni);
+static void free_initials(struct cl_initializer *initial)
+{
+    while (initial) {
+        struct cl_insn *cli = &initial->insn;
+
+        const enum cl_insn_e code = cli->code;
+        switch (code) {
+            case CL_INSN_UNOP:
+                free_cl_operand(cli->data.insn_unop.dst);
+                free_cl_operand(cli->data.insn_unop.src);
+                break;
+
+            case CL_INSN_BINOP:
+                free_cl_operand(cli->data.insn_binop.dst);
+                free_cl_operand(cli->data.insn_binop.src1);
+                free_cl_operand(cli->data.insn_binop.src2);
+                break;
+
+            default:
+                CL_BREAK_IF("free_initials() hit an invalid initializer");
+                return;
+        }
+
+        struct cl_initializer *next = initial->next;
+        free(initial);
+        initial = next;
     }
-
-    // free the array itself
-    free(nested_initials);
 }
 
 static void var_db_free (void *p)
 {
     const struct cl_var *var = (const struct cl_var *) p;
-    free_initial_tree(var->initial);
+    free_initials(var->initial);
     free(p);
 }
 
@@ -687,62 +712,208 @@ static int bitfield_lookup(tree op)
 
 static void handle_operand(struct cl_operand *op, tree t);
 
-static void read_initial(struct cl_initializer **pinit, tree ctor)
-{
-    if (NULL_TREE == ctor) {
-        // no constructor in here
-        *pinit = NULL;
-        return;
+static bool translate_unop_code(enum cl_unop_e *pDst, enum tree_code code) {
+    switch (code) {
+        case CONVERT_EXPR:
+        case NOP_EXPR:
+        case VAR_DECL:
+        case FIX_TRUNC_EXPR:
+            *pDst = CL_UNOP_ASSIGN;
+            return true;
+
+        case TRUTH_NOT_EXPR:
+            *pDst = CL_UNOP_TRUTH_NOT;
+            return true;
+
+        case BIT_NOT_EXPR:
+            *pDst = CL_UNOP_BIT_NOT;
+            return true;
+
+        case NEGATE_EXPR:
+            *pDst = CL_UNOP_MINUS;
+            return true;
+
+        case ABS_EXPR:
+            *pDst = CL_UNOP_ABS;
+            return true;
+
+        case FLOAT_EXPR:
+            *pDst = CL_UNOP_FLOAT;
+            return true;
+
+        default:
+            return false;
+    }
+}
+
+static bool translate_binop_code(enum cl_binop_e *pDst, enum tree_code code) {
+    switch (code) {
+        case EQ_EXPR:               *pDst = CL_BINOP_EQ;               break;
+        case NE_EXPR:               *pDst = CL_BINOP_NE;               break;
+        case LT_EXPR:               *pDst = CL_BINOP_LT;               break;
+        case GT_EXPR:               *pDst = CL_BINOP_GT;               break;
+        case LE_EXPR:               *pDst = CL_BINOP_LE;               break;
+        case GE_EXPR:               *pDst = CL_BINOP_GE;               break;
+        case PLUS_EXPR:             *pDst = CL_BINOP_PLUS;             break;
+        case MINUS_EXPR:            *pDst = CL_BINOP_MINUS;            break;
+        case MULT_EXPR:             *pDst = CL_BINOP_MULT;             break;
+        case EXACT_DIV_EXPR:        *pDst = CL_BINOP_EXACT_DIV;        break;
+        case TRUNC_DIV_EXPR:        *pDst = CL_BINOP_TRUNC_DIV;        break;
+        case TRUNC_MOD_EXPR:        *pDst = CL_BINOP_TRUNC_MOD;        break;
+        case RDIV_EXPR:             *pDst = CL_BINOP_RDIV;             break;
+        case MIN_EXPR:              *pDst = CL_BINOP_MIN;              break;
+        case MAX_EXPR:              *pDst = CL_BINOP_MAX;              break;
+        case TRUTH_AND_EXPR:        *pDst = CL_BINOP_TRUTH_AND;        break;
+        case TRUTH_OR_EXPR:         *pDst = CL_BINOP_TRUTH_OR;         break;
+        case TRUTH_XOR_EXPR:        *pDst = CL_BINOP_TRUTH_XOR;        break;
+        case BIT_AND_EXPR:          *pDst = CL_BINOP_BIT_AND;          break;
+        case BIT_IOR_EXPR:          *pDst = CL_BINOP_BIT_IOR;          break;
+        case BIT_XOR_EXPR:          *pDst = CL_BINOP_BIT_XOR;          break;
+        case POINTER_PLUS_EXPR:     *pDst = CL_BINOP_POINTER_PLUS;     break;
+        case LSHIFT_EXPR:           *pDst = CL_BINOP_LSHIFT;           break;
+        case RSHIFT_EXPR:           *pDst = CL_BINOP_RSHIFT;           break;
+        case LROTATE_EXPR:          *pDst = CL_BINOP_LROTATE;          break;
+        case RROTATE_EXPR:          *pDst = CL_BINOP_RROTATE;          break;
+
+        default:
+            return false;
     }
 
+    return true;
+}
+
+struct cl_accessor* dup_ac(const struct cl_accessor *tpl)
+{
+    struct cl_accessor *dup = CL_ZNEW(struct cl_accessor);
+    memcpy(dup, tpl, sizeof *dup);
+
+    const enum cl_accessor_e code = tpl->code;
+    if (CL_ACCESSOR_DEREF_ARRAY != code)
+        return dup;
+
+    struct cl_operand *idx = CL_ZNEW(struct cl_operand);
+    memcpy(idx, tpl->data.array.index, sizeof *idx);
+    dup->data.array.index = idx;
+    return dup;
+}
+
+void dup_ac_chain(struct cl_accessor **ac_first, struct cl_accessor ***ac_last)
+{
+    *ac_last = ac_first;
+    struct cl_accessor *ac = *ac_first;
+    if (!ac)
+        // empty chain
+        return;
+
+    struct cl_accessor *dup = dup_ac(ac);
+    *ac_first = dup;
+    *ac_last = &dup->next;
+
+    for (ac = ac->next ; ac; ac = ac->next) {
+        CL_BREAK_IF("not yet tested, but the count of stars promises fun ;-)");
+        dup = dup_ac(ac);
+        **ac_last = dup;
+        *ac_last = &dup->next;
+    }
+}
+
+static void read_initials(struct cl_var *var, struct cl_initializer **pinit,
+                          tree ctor, struct cl_accessor *ac)
+{
     // dig target type
     struct cl_type *clt = add_type_if_needed(ctor);
 
-    // allocate an initializer node
-    struct cl_initializer *initial = CL_ZNEW(struct cl_initializer);
-    initial->type = clt;
-    *pinit = initial;
-
     const enum tree_code code = TREE_CODE(ctor);
     if (CONSTRUCTOR != code) {
-        // allocate a scalar initializer
-        initial->data.value = CL_ZNEW(struct cl_operand);
+        // allocate an initializer node
+        struct cl_initializer *initial = CL_ZNEW(struct cl_initializer);
+        initial->insn.loc.line = -1;
+        *pinit = initial;
 
-        if (NOP_EXPR == code)
-            // skip NOP_EXPR
-            // TODO: consider also CONVERT_EXPR, VAR_DECL and FIX_TRUNC_EXPR
-            ctor = TREE_OPERAND(ctor, 0);
+        struct cl_operand *dst = CL_ZNEW(struct cl_operand);
+        dst->code = CL_OPERAND_VAR;
+        dst->loc.line = -1;
+        dst->type = clt;
+        dst->accessor = ac;
+        dst->data.var = var;
+        // TODO: scope
 
-        handle_operand(initial->data.value, ctor);
+        enum cl_binop_e binop;
+        if (translate_binop_code(&binop, code)) {
+            struct cl_operand *src1 = CL_ZNEW(struct cl_operand);
+            struct cl_operand *src2 = CL_ZNEW(struct cl_operand);
+
+            tree op0 = TREE_OPERAND(ctor, 0);
+            if (NOP_EXPR == TREE_CODE(op0))
+                op0 = TREE_OPERAND(op0, 0);
+
+            handle_operand(src1, op0);
+            handle_operand(src2, TREE_OPERAND(ctor, 1));
+
+            initial->insn.code                      = CL_INSN_BINOP;
+            initial->insn.data.insn_binop.code      = binop;
+            initial->insn.data.insn_binop.dst       = dst;
+            initial->insn.data.insn_binop.src1      = src1;
+            initial->insn.data.insn_binop.src2      = src2;
+            return;
+        }
+
+        struct cl_operand *src = CL_ZNEW(struct cl_operand);
+        enum cl_unop_e unop = CL_UNOP_ASSIGN;
+        const bool is_unop = translate_unop_code(&unop, code);
+        handle_operand(src, (is_unop)
+                ? TREE_OPERAND(ctor, 0)
+                : ctor);
+
+        initial->insn.code                      = CL_INSN_UNOP;
+        initial->insn.data.insn_unop.code       = unop;
+        initial->insn.data.insn_unop.dst        = dst;
+        initial->insn.data.insn_unop.src        = src;
         return;
     }
 
     // allocate array of nested initializers
     const bool isArray = (CL_TYPE_ARRAY == clt->code);
-    const int cnt = (isArray)
-        ? clt->array_size
-        : clt->item_cnt;
-
-    CL_BREAK_IF(cnt <= 0);
-    struct cl_initializer **vec = CL_ZNEW_ARRAY(struct cl_initializer *, cnt);
-    initial->data.nested_initials = vec;
 
     unsigned idx;
-    tree field, val;
-    FOR_EACH_CONSTRUCTOR_ELT(CONSTRUCTOR_ELTS(ctor), idx, field, val) {
-        int nth = idx;
-        CL_BREAK_IF(cnt <= nth);
+    tree field, value;
+    FOR_EACH_CONSTRUCTOR_ELT(CONSTRUCTOR_ELTS(ctor), idx, field, value) {
+        struct cl_accessor *ac_first = ac;
+        struct cl_accessor **ac_last;
+        dup_ac_chain(&ac_first, &ac_last);
+        *ac_last = CL_ZNEW(struct cl_accessor);
+        (*ac_last)->type = (struct cl_type *) clt;
 
-        // field lookup
-        if (CL_TYPE_ARRAY != clt->code) {
-            nth = field_lookup(ctor, field);
+        if (isArray) {
+            // initalize an item of an array
+            (*ac_last)->code = CL_ACCESSOR_DEREF_ARRAY;
+
+            struct cl_operand *op_idx = CL_ZNEW(struct cl_operand);
+            op_idx->code = CL_OPERAND_CST;
+            op_idx->data.cst.code = CL_TYPE_INT;
+            op_idx->data.cst.data.cst_int.value = idx;
+            (*ac_last)->data.array.index = op_idx;
+
+            // FIXME: unguarded recursion
+            read_initials(var, pinit, value, ac_first);
+        }
+        else {
+            // initalize a field of a composite type
+            const int nth = field_lookup(ctor, field);
             CL_BREAK_IF(clt->items[nth].type != add_type_if_needed(field));
+
+            (*ac_last)->code = CL_ACCESSOR_ITEM;
+            (*ac_last)->data.item.id = nth;
+
+            read_initials(var, pinit, value, ac_first);
         }
 
-        // FIXME: unguarded recursion
-        read_initial(vec + nth, val);
-        ++(initial->nested_cnt);
+        while (*pinit)
+            pinit = &(*pinit)->next;
     }
+
+    // free the cl_accessor prefix
+    free_cl_accessor(ac);
 }
 
 static struct cl_var* add_var_if_needed(tree t)
@@ -761,8 +932,11 @@ static struct cl_var* add_var_if_needed(tree t)
 
     // read name and initializer
     var->name = get_decl_name(t);
-    if (VAR_DECL == TREE_CODE(t))
-        read_initial(&var->initial, DECL_INITIAL(t));
+    if (VAR_DECL == TREE_CODE(t)) {
+        tree ctor = DECL_INITIAL(t);
+        if (ctor)
+            read_initials(var, &var->initial, ctor, /* ac */ 0);
+    }
 
     var->artificial = DECL_ARTIFICIAL(t);
     return var;
@@ -822,7 +996,7 @@ static void read_raw_operand(struct cl_operand *op, tree t)
     }
 }
 
-static void chain_accessor(struct cl_accessor **ac, enum cl_type_e code)
+static void chain_accessor(struct cl_accessor **ac, enum cl_accessor_e code)
 {
     // create and initialize new item
     struct cl_accessor *ac_new = CL_ZNEW(struct cl_accessor);
@@ -978,9 +1152,9 @@ static void handle_stmt_unop(gimple stmt, enum tree_code code,
 {
     if (CONSTRUCTOR == TREE_CODE(src_tree)) {
         CL_BREAK_IF(dst->code != CL_OPERAND_VAR);
-        struct cl_initializer **pinit = &dst->data.var->initial;
-        if (!*pinit)
-            read_initial(pinit, src_tree);
+        struct cl_var *var = dst->data.var;
+        if (!var->initial)
+            read_initials(var, &var->initial, src_tree, /* ac */ 0);
 
         return;
     }
@@ -995,26 +1169,12 @@ static void handle_stmt_unop(gimple stmt, enum tree_code code,
     cli.data.insn_unop.src      = &src;
     read_gimple_location(&cli.loc, stmt);
 
-    enum cl_unop_e *ptype = &cli.data.insn_unop.code;
-
     // TODO: check validity/usefulness of the following condition
-    if (code != TREE_CODE(src_tree)) {
-        switch (code) {
-            case CONVERT_EXPR:
-            case NOP_EXPR:
-            case VAR_DECL:
-            case FIX_TRUNC_EXPR:
-                break;
-
-            case TRUTH_NOT_EXPR:        *ptype = CL_UNOP_TRUTH_NOT;     break;
-            case BIT_NOT_EXPR:          *ptype = CL_UNOP_BIT_NOT;       break;
-            case NEGATE_EXPR:           *ptype = CL_UNOP_MINUS;         break;
-            case ABS_EXPR:              *ptype = CL_UNOP_ABS;           break;
-            case FLOAT_EXPR:            *ptype = CL_UNOP_FLOAT;         break;
-
-            default:
-                CL_TRAP;
-        }
+    if (code != TREE_CODE(src_tree)
+            && !translate_unop_code(&cli.data.insn_unop.code, code))
+    {
+        CL_ERROR("unhandled unary operator");
+        CL_TRAP;
     }
 
     if (CL_INSN_NOP != cli.code)
@@ -1039,38 +1199,9 @@ static void handle_stmt_binop(gimple stmt, enum tree_code code,
     cli.data.insn_binop.src2    = &src2;
     read_gimple_location(&cli.loc, stmt);
 
-    enum cl_binop_e *ptype = &cli.data.insn_binop.code;
-
-    switch (code) {
-        case EQ_EXPR:               *ptype = CL_BINOP_EQ;               break;
-        case NE_EXPR:               *ptype = CL_BINOP_NE;               break;
-        case LT_EXPR:               *ptype = CL_BINOP_LT;               break;
-        case GT_EXPR:               *ptype = CL_BINOP_GT;               break;
-        case LE_EXPR:               *ptype = CL_BINOP_LE;               break;
-        case GE_EXPR:               *ptype = CL_BINOP_GE;               break;
-        case PLUS_EXPR:             *ptype = CL_BINOP_PLUS;             break;
-        case MINUS_EXPR:            *ptype = CL_BINOP_MINUS;            break;
-        case MULT_EXPR:             *ptype = CL_BINOP_MULT;             break;
-        case EXACT_DIV_EXPR:        *ptype = CL_BINOP_EXACT_DIV;        break;
-        case TRUNC_DIV_EXPR:        *ptype = CL_BINOP_TRUNC_DIV;        break;
-        case TRUNC_MOD_EXPR:        *ptype = CL_BINOP_TRUNC_MOD;        break;
-        case RDIV_EXPR:             *ptype = CL_BINOP_RDIV;             break;
-        case MIN_EXPR:              *ptype = CL_BINOP_MIN;              break;
-        case MAX_EXPR:              *ptype = CL_BINOP_MAX;              break;
-        case TRUTH_AND_EXPR:        *ptype = CL_BINOP_TRUTH_AND;        break;
-        case TRUTH_OR_EXPR:         *ptype = CL_BINOP_TRUTH_OR;         break;
-        case TRUTH_XOR_EXPR:        *ptype = CL_BINOP_TRUTH_XOR;        break;
-        case BIT_AND_EXPR:          *ptype = CL_BINOP_BIT_AND;          break;
-        case BIT_IOR_EXPR:          *ptype = CL_BINOP_BIT_IOR;          break;
-        case BIT_XOR_EXPR:          *ptype = CL_BINOP_BIT_XOR;          break;
-        case POINTER_PLUS_EXPR:     *ptype = CL_BINOP_POINTER_PLUS;     break;
-        case LSHIFT_EXPR:           *ptype = CL_BINOP_LSHIFT;           break;
-        case RSHIFT_EXPR:           *ptype = CL_BINOP_RSHIFT;           break;
-        case LROTATE_EXPR:          *ptype = CL_BINOP_LROTATE;          break;
-        case RROTATE_EXPR:          *ptype = CL_BINOP_RROTATE;          break;
-
-        default:
-            CL_TRAP;
+    if (!translate_binop_code(&cli.data.insn_binop.code, code)) {
+        CL_ERROR("unhandled binary operator");
+        CL_TRAP;
     }
 
     if (CL_INSN_NOP != cli.code)

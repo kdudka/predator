@@ -21,12 +21,14 @@
 #include "symutil.hh"
 
 #include <cl/cl_msg.hh>
+#include <cl/cldebug.hh>
 #include <cl/clutil.hh>
 #include <cl/storage.hh>
 
 #include "symbt.hh"
 #include "symheap.hh"
 #include "symproc.hh"
+#include "symstate.hh"
 #include "util.hh"
 
 #include <stack>
@@ -65,8 +67,7 @@ void getPtrValues(TValList &dst, const SymHeap &sh, TValId at) {
 
 bool initSingleVariable(
         SymHeap                         &sh,
-        const TObjId                     obj,
-        const struct cl_initializer     *initial = 0)
+        const TObjId                     obj)
 {
     const struct cl_type *clt = sh.objType(obj);
     CL_BREAK_IF(!clt);
@@ -85,27 +86,8 @@ bool initSingleVariable(
             break;
     }
 
-    if (!initial) {
-        // no initializer given, nullify the variable
-        sh.objSetValue(obj, /* also equal to VAL_FALSE */ VAL_NULL);
-        return /* continue */ true;
-    }
-
-    // FIXME: we're asking for troubles this way
-    SymBackTrace dummyBt(sh.stor());
-    SymProc proc(sh, &dummyBt);
-
-    // resolve initial value
-    const struct cl_operand *op = initial->data.value;
-    const TValId val = proc.valFromOperand(*op);
-    CL_DEBUG("using explicit initializer: obj #"
-            << static_cast<int>(obj) << " <-- val #"
-            << static_cast<int>(val));
-
-    // set the initial value
-    CL_BREAK_IF(VAL_INVALID == val);
-    sh.objSetValue(obj, val);
-
+    // no initializer given, nullify the variable
+    sh.objSetValue(obj, /* also equal to VAL_FALSE */ VAL_NULL);
     return /* continue */ true;
 }
 
@@ -142,49 +124,46 @@ class InitVarLegacyWrapper {
             const TObjId obj = sh_.objAt(at, clt);
             CL_BREAK_IF(obj <= 0);
 
-            const struct cl_initializer *in = initial_;
-            if (!in) {
-                initSingleVariable(sh_, obj);
-                return /* continue */ true;
-            }
-
-            BOOST_FOREACH(int idx, ic) {
-                CL_BREAK_IF(!isComposite(in->type));
-                in = in->data.nested_initials[idx];
-            }
-
-            CL_BREAK_IF(in->type != item->type);
-            initSingleVariable(sh_, obj, in);
+            CL_BREAK_IF(initial_);
+            initSingleVariable(sh_, obj);
             return /* continue */ true;
         }
 };
 
 void initVariable(
         SymHeap                     &sh,
-        const CodeStorage::Var      &var,
-        const int                   nestLevel)
+        SymBackTrace                &bt,
+        const CodeStorage::Var      &var)
 {
-    const CVar cv(var.uid, nestLevel);
-    const TValId at = sh.addrOfVar(cv);
-    const TObjType clt = var.type;
+    if (!isOnStack(var)) {
+        // nullify a gl variable
+        const CVar cv(var.uid, /* gl variable */ 0);
+        const TValId at = sh.addrOfVar(cv);
+        const TObjType clt = var.type;
 
-    const struct cl_initializer *initial = var.initial;
-    if (CL_TYPE_ARRAY == clt->code && initial) {
-        const struct cl_loc *loc;
-        std::string varString = varToString(sh.stor(), var.uid, &loc);
-        CL_WARN_MSG(loc, "unhandled array initializer of " << varString);
-
-        // TODO
-        return;
+        if (isComposite(clt)) {
+            const InitVarLegacyWrapper visitor(sh, at, clt, /* nullify */ 0);
+            traverseTypeIc(var.type, visitor, /* digOnlyComposite */ true);
+        }
+        else {
+            const TObjId obj = sh.objAt(at, clt);
+            initSingleVariable(sh, obj);
+        }
     }
 
-    if (isComposite(clt)) {
-        const InitVarLegacyWrapper visitor(sh, at, clt, initial);
-        traverseTypeIc(var.type, visitor, /* digOnlyComposite */ true);
-    }
-    else {
-        const TObjId obj = sh.objAt(at, clt);
-        initSingleVariable(sh, obj, initial);
+    SymExecCore core(sh, &bt, SymExecCoreParams());
+    core.setLocation(&var.loc);
+    BOOST_FOREACH(const CodeStorage::Insn *insn, var.initials) {
+        CL_DEBUG_MSG(&var.loc,
+                "(I) executing an explicit var initializer: " << *insn);
+        SymHeapList dst;
+
+        if (!core.exec(dst, *insn))
+            CL_BREAK_IF("initVariable() malfunction");
+
+        CL_BREAK_IF(1 != dst.size());
+        SymHeap &result = const_cast<SymHeap &>(dst[/* the only result */ 0]);
+        sh.swap(result);
     }
 }
 

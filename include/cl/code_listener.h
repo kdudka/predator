@@ -336,33 +336,6 @@ struct cl_accessor {
 };
 
 /**
- * initializer, used mainly for global/static variables
- */
-struct cl_initializer {
-    /**
-     * reference to type which the initializer is used for
-     */
-    struct cl_type                      *type;
-
-    /**
-     * if >0, the initializer contains nested initializers; a value otherwise
-     */
-    int                                 nested_cnt;
-
-    union {
-        /**
-         * value of a scalar initializer
-         */
-        struct cl_operand               *value;
-
-        /**
-         * array of nested initializers. Its size is exactly nested_cnt.
-         */
-        struct cl_initializer           **nested_initials;
-    } data;
-};
-
-/**
  * constant, in the C language terminology: literal
  */
 struct cl_cst {
@@ -426,16 +399,16 @@ struct cl_var {
     const char                          *name;
 
     /**
-     * initializer, used only for global/static variables; NULL if not present
-     */
-    struct cl_initializer               *initial;
-
-    /**
      * true for auxiliary variables introduced by the compiler
      */
     bool                                artificial;
 
     /* TODO: is_extern? */
+
+    /**
+     * (possibly empty) chain of initializers, used only for global/static vars
+     */
+    struct cl_initializer               *initial;
 };
 
 /**
@@ -689,6 +662,14 @@ struct cl_insn {
         } insn_binop; /**< valid only for @b CL_INSN_BINOP */
 
     } data;
+};
+
+/**
+ * initializer, used mainly for global/static variables
+ */
+struct cl_initializer {
+    struct cl_insn                      insn;
+    struct cl_initializer               *next;
 };
 
 /**

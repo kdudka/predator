@@ -43,6 +43,8 @@
  */
 namespace CodeStorage {
 
+struct Insn;
+
 /**
  * high-level variable (operand) classification
  */
@@ -80,7 +82,7 @@ struct Var {
     /**
      * initializer (optional)
      */
-    const struct cl_initializer *initial;
+    std::vector<const Insn *>   initials;
 
     /**
      * dummy constructor
@@ -113,8 +115,6 @@ class VarDb {
     public:
         VarDb();
         ~VarDb();
-        VarDb(const VarDb &);               ///< shallow copy
-        VarDb& operator=(const VarDb &);    ///< shallow copy
 
         /**
          * look for a Var object by ID, add one if not found
@@ -146,6 +146,13 @@ class VarDb {
          * return count of variables stored in the container
          */
         size_t size()          const { return vars_.size();  }
+
+    private:
+        /// @b not allowed to be copied
+        VarDb(const VarDb &);
+
+        /// @b not allowed to be copied
+        VarDb& operator=(const VarDb &);
 
     private:
         TList vars_;

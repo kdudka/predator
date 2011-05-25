@@ -78,7 +78,11 @@ bool installSignalHandlers(void) {
         && SignalCatcher::install(SIGTERM);
 }
 
-void createGlVars(SymHeap &sh, const CodeStorage::Storage &stor) {
+void createGlVars(
+        SymHeap                         &sh,
+        SymBackTrace                    &bt,
+        const CodeStorage::Storage      &stor)
+{
     using namespace CodeStorage;
 
     // now is the time to safely perform the initialization
@@ -90,7 +94,7 @@ void createGlVars(SymHeap &sh, const CodeStorage::Storage &stor) {
                 << " (" << var.name << ")");
 
         // initialize a global/static variable
-        initVariable(sh, var, /* gl variable */ 0);
+        initVariable(sh, bt, var);
     }
 }
 
@@ -805,7 +809,7 @@ SymExec::SymExec(const CodeStorage::Storage &stor, const SymExecParams &params):
 
     // create the initial state, consisting of global/static variables
     SymHeap init(stor);
-    createGlVars(init, stor);
+    createGlVars(init, d->bt, stor);
     d->stateZero.insertFast(init);
 }
 

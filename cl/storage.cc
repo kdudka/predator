@@ -22,11 +22,13 @@
 #include <cl/storage.hh>
 #include <cl/cl_msg.hh>
 
+#include "cl_storage.hh"
 #include "util.hh"
 
 #include <map>
 #include <stack>
 
+#include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
 
 namespace CodeStorage {
@@ -92,14 +94,12 @@ Var::Var():
 }
 
 Var::~Var() {
-    // nothing to cleanup for now
 }
 
 Var::Var(EVar code_, const struct cl_operand *op):
     code(code_),
     loc(op->loc),
-    uid(op->data.var->uid),
-    initial(op->data.var->initial)
+    uid(op->data.var->uid)
 {
     CL_BREAK_IF(CL_OPERAND_VAR != op->code);
     if (op->data.var->name)
@@ -161,21 +161,12 @@ VarDb::VarDb():
 {
 }
 
-VarDb::VarDb(const VarDb &ref):
-    vars_(ref.vars_),
-    d(new Private(*ref.d))
-{
-}
-
 VarDb::~VarDb() {
-    delete d;
-}
+    BOOST_FOREACH(const Var &var, vars_)
+        BOOST_FOREACH(const Insn *insn, var.initials)
+            destroyInsn(const_cast<Insn *>(insn));
 
-VarDb& VarDb::operator=(const VarDb &ref) {
-    vars_ = ref.vars_;
     delete d;
-    d = new Private(*ref.d);
-    return *this;
 }
 
 Var& VarDb::operator[](int uid) {

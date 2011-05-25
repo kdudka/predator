@@ -12,7 +12,7 @@ SL_DIR="$topdir/sl"
 SL_BUILD="$topdir/sl_build"
 SL_PLUG="$SL_BUILD/libsl.so"
 CC1="../gcc-install/libexec/gcc/`ls ../gcc-install/lib/gcc/`/4.[56]*/cc1"
-MOPTS="-s -j3 'CMAKE=cmake -D SL_DEBUG=ON -D USE_INT3_AS_BRK=ON'"
+MOPTS="-s -j3 'CMAKE=cmake -D CL_DEBUG=ON -D SL_DEBUG=ON -D USE_INT3_AS_BRK=ON'"
 
 # attempt to make
 eval make -C "$SL_DIR" "$MOPTS" || exit 1

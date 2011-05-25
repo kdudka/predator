@@ -29,6 +29,9 @@
 
 namespace CodeStorage {
     struct Storage;
+    struct Insn;
+
+    void destroyInsn(Insn *insn);
 }
 
 /**
