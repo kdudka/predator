@@ -245,6 +245,22 @@ const char* fieldName(const struct cl_accessor *ac) {
         : "<anon_item>";
 }
 
+void arrayIdxToStream(std::ostream &str, const struct cl_operand *idx) {
+    if (CL_OPERAND_CST != idx->code) {
+        str << "[...]";
+        return;
+    }
+
+    const struct cl_cst &cst = idx->data.cst;
+    const enum cl_type_e code = cst.code;
+    if (CL_TYPE_INT != code) {
+        str << "[...]";
+        return;
+    }
+
+    str << "[" << cst.data.cst_int.value << "]";
+}
+
 void operandToStreamAcs(std::ostream &str, const struct cl_accessor *ac) {
     if (!ac)
         return;
@@ -262,7 +278,7 @@ void operandToStreamAcs(std::ostream &str, const struct cl_accessor *ac) {
         enum cl_accessor_e code = ac->code;
         switch (code) {
             case CL_ACCESSOR_DEREF_ARRAY:
-                str << " [...]";
+                arrayIdxToStream(str, ac->data.array.index);
                 break;
 
             case CL_ACCESSOR_ITEM:

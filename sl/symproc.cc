@@ -42,8 +42,10 @@
 // /////////////////////////////////////////////////////////////////////////////
 // SymProc implementation
 TValId SymProc::heapValFromCst(const struct cl_operand &op) {
+    const TObjType clt = op.type;
+
     bool isBool = false;
-    enum cl_type_e code = op.type->code;
+    enum cl_type_e code = clt->code;
     switch (code) {
         case CL_TYPE_BOOL:
             isBool = true;
@@ -54,8 +56,19 @@ TValId SymProc::heapValFromCst(const struct cl_operand &op) {
         case CL_TYPE_PTR:
             break;
 
+        case CL_TYPE_ARRAY: {
+            const TObjType cltTarget = targetTypeOfArray(clt);
+            if (CL_TYPE_INT == cltTarget->code
+                    && STREQ(cltTarget->name, "char"))
+            {
+                CL_DEBUG_MSG(&op.loc, "treating char[] as unknown value");
+                return sh_.valCreate(VT_UNKNOWN, VO_ASSIGNED);
+            }
+        }
+
         default:
-            CL_TRAP;
+            CL_BREAK_IF("heapValFromCst() got something special");
+            return sh_.valCreate(VT_UNKNOWN, VO_ASSIGNED);
     }
 
     const struct cl_cst &cst = op.data.cst;
@@ -194,9 +207,6 @@ TOffset offDerefArray(const struct cl_accessor *ac) {
 
     // compute the offset
     const TOffset off = idx * clt->size;
-    if (off)
-        CL_BREAK_IF("not tested yet");
-
     return off;
 }
 

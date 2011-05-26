@@ -1,6 +1,3 @@
-test-0014.c:149:5: warning: unhandled array initializer of #2603:__PRETTY_FUNCTION__
-test-0014.c:135:5: warning: unhandled array initializer of #2598:__PRETTY_FUNCTION__
-test-0014.c:53:9: warning: unhandled array initializer of #2557:__FUNCTION__
 test-0014.c:237:12: warning: CL_TYPE_STRING not supported by SymProc
 test-0014.c:242:12: warning: CL_TYPE_STRING not supported by SymProc
 test-0014.c:246:12: warning: CL_TYPE_STRING not supported by SymProc
