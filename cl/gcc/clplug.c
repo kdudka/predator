@@ -827,7 +827,7 @@ static void read_initials(struct cl_var *var, struct cl_initializer **pinit,
     if (CONSTRUCTOR != code) {
         // allocate an initializer node
         struct cl_initializer *initial = CL_ZNEW(struct cl_initializer);
-        initial->insn.loc.line = -1;
+        initial->insn.loc = var->loc;
         *pinit = initial;
 
         struct cl_operand *dst = CL_ZNEW(struct cl_operand);
@@ -930,6 +930,10 @@ static struct cl_var* add_var_if_needed(tree t)
     var->uid = uid;
     var_db_insert(var_db, var);
 
+    // read meta-data
+    read_gcc_location(&var->loc, DECL_SOURCE_LOCATION(t));
+    var->artificial = DECL_ARTIFICIAL(t);
+
     // read name and initializer
     var->name = get_decl_name(t);
     if (VAR_DECL == TREE_CODE(t)) {
@@ -938,7 +942,6 @@ static struct cl_var* add_var_if_needed(tree t)
             read_initials(var, &var->initial, ctor, /* ac */ 0);
     }
 
-    var->artificial = DECL_ARTIFICIAL(t);
     return var;
 }
 

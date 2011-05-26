@@ -405,6 +405,8 @@ struct cl_var {
 
     /* TODO: is_extern? */
 
+    struct cl_loc                       loc;
+
     /**
      * (possibly empty) chain of initializers, used only for global/static vars
      */
