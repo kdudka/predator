@@ -156,8 +156,9 @@ void ClPrettyPrint::file_close()
 void ClPrettyPrint::fnc_open(
             const struct cl_operand *fnc)
 {
-    fnc_ = fnc->data.cst.data.cst_fnc.name;
-    loc_ = fnc->loc;
+    const struct cl_cst &cst = fnc->data.cst;
+    fnc_ = cst.data.cst_fnc.name;
+    loc_ = cst.data.cst_fnc.loc;
     switch (fnc->scope) {
         case CL_SCOPE_GLOBAL:
             break;
@@ -167,8 +168,7 @@ void ClPrettyPrint::fnc_open(
             break;
 
         default:
-            CL_ERROR_MSG(&fnc->loc,
-                         "invalid scope for function: " << fnc->scope);
+            CL_ERROR_MSG(&loc_, "invalid scope for function: " << fnc->scope);
     }
     this->printVarType(fnc);
     SSD_COLORIZE(out_, C_LIGHT_BLUE) << fnc_;

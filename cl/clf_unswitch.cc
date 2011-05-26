@@ -161,6 +161,7 @@ struct cl_var* ClfUnfoldSwitch::acquireClVar() {
     struct cl_var *clv = new struct cl_var;
     memset(clv, 0, sizeof *clv);
     clv->uid = /* XXX */ 0x400000 + switchCnt_;
+    clv->loc.line = -1;
 
     ptrs_.push_back(clv);
     return clv;
@@ -180,8 +181,6 @@ void ClfUnfoldSwitch::emitCase(int cst, struct cl_type *type, const char *label)
     struct cl_operand reg;
     NULLIFY(reg);
     reg.code                        = CL_OPERAND_VAR;
-    reg.loc.file                    = 0;
-    reg.loc.line                    = -1;
     reg.scope                       = CL_SCOPE_FUNCTION;
     reg.type                        = &btype;
     reg.data.var                    = this->acquireClVar();
@@ -189,7 +188,6 @@ void ClfUnfoldSwitch::emitCase(int cst, struct cl_type *type, const char *label)
     struct cl_operand val;
     NULLIFY(val);
     val.code                        = CL_OPERAND_CST;
-    val.loc                         = loc_;
     val.scope                       = CL_SCOPE_BB;
     val.type                        = type;
     val.data.cst.code               = CL_TYPE_INT;

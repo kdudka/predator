@@ -226,7 +226,7 @@ void SymExecEngine::initEngine(const SymHeap &init)
     // look for fnc name
     const CodeStorage::Fnc *fnc = bt_.topFnc();
     fncName_ = nameOf(*fnc);
-    lw_ = &fnc->def.loc;
+    lw_ = &fnc->def.data.cst.data.cst_fnc.loc;
     CL_DEBUG_MSG(lw_, ">>> entering " << fncName_ << "()");
 
     // look for the entry block
@@ -674,7 +674,7 @@ bool /* complete */ SymExecEngine::run() {
             return false;
     }
 
-    const struct cl_loc *loc = &fnc->def.loc;
+    const struct cl_loc *loc = &fnc->def.data.cst.data.cst_fnc.loc;
     if (!endReached_) {
         CL_WARN_MSG(loc, "end of function "
                 << nameOf(*fnc) << "() has not been reached");
@@ -1000,13 +1000,13 @@ void SymExec::exec(const CodeStorage::Fnc &fnc, SymState &results) {
         CL_BREAK_IF(d->bt.size());
 
         // initialize backtrace
-        d->bt.pushCall(uidOf(fnc), &fnc.def.loc);
+        d->bt.pushCall(uidOf(fnc), &fnc.def.data.cst.data.cst_fnc.loc);
 
         // XXX: synthesize CL_INSN_CALL
         CodeStorage::Insn insn;
         insn.stor = fnc.stor;
         insn.code = CL_INSN_CALL;
-        insn.loc  = fnc.def.loc;
+        insn.loc  = fnc.def.data.cst.data.cst_fnc.loc;
         insn.operands.resize(2);
         insn.operands[1] = fnc.def;
         insn.opsToKill.resize(2, CodeStorage::KS_NEVER_KILL);

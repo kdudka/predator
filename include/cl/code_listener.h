@@ -351,6 +351,11 @@ struct cl_cst {
         /* CL_TYPE_FNC */
         struct {
             /**
+             * unique ID of function's declaration
+             */
+            int                         uid;
+
+            /**
              * name of the function
              */
             const char                  *name;
@@ -360,10 +365,8 @@ struct cl_cst {
              */
             bool                        is_extern;
 
-            /**
-             * unique ID of function's declaration
-             */
-            int                         uid;
+            struct cl_loc               loc;
+
         } cst_fnc; /**< valid only for @b CL_TYPE_FNC */
 
         /* CL_TYPE_INT */
@@ -446,11 +449,6 @@ struct cl_operand {
      * kind of operand (enumeration)
      */
     enum cl_operand_e                   code;
-
-    /**
-     * location of the operand's occurrence
-     */
-    struct cl_loc                       loc;
 
     /**
      * scope of the operand's validity

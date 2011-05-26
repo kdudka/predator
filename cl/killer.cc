@@ -230,7 +230,7 @@ void computeFixPoint(Data &data) {
 }
 
 void analyseFnc(Data &data, Fnc &fnc) {
-    TLoc loc = &fnc.def.loc;
+    TLoc loc = &fnc.def.data.cst.data.cst_fnc.loc;
     VK_DEBUG_MSG(2, loc, ">>> entering " << nameOf(fnc) << "()");
     CL_BREAK_IF(!data.todo.empty());
 

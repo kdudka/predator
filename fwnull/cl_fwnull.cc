@@ -642,7 +642,7 @@ void clEasyRun(const CodeStorage::Storage &stor, const char *) {
         if (!isDefined(fnc))
             continue;
 
-        CL_DEBUG_MSG(&fnc.def.loc, "analyzing function "
+        CL_DEBUG_MSG(&fnc.def.data.cst.data.cst_fnc.loc, "analyzing function "
                 << nameOf(fnc) << "()...");
 
         handleFnc(fnc);

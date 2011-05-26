@@ -56,7 +56,7 @@ class ClfCbSeqChk: public ClFilterBase {
         virtual void fnc_open(
             const struct cl_operand *fnc)
         {
-            loc_ = fnc->loc;
+            loc_ = fnc->data.cst.data.cst_fnc.loc;
             this->setState(S_FNC_DECL);
             ClFilterBase::fnc_open(fnc);
         }
@@ -228,7 +228,7 @@ class ClfLabelChk: public ClFilterBase {
         virtual void fnc_open(
             const struct cl_operand *fnc)
         {
-            loc_ = fnc->loc;
+            loc_ = fnc->data.cst.data.cst_fnc.loc;
             this->reset();
             ClFilterBase::fnc_open(fnc);
         }

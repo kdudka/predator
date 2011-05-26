@@ -504,12 +504,10 @@ void ClStorageBuilder::fnc_open(const struct cl_operand *op) {
     if (CL_TYPE_FNC != cst.code)
         CL_TRAP;
 
-    if (!op->loc.file)
-        // orphans not implemented yet
-        CL_TRAP;
-
-    // store file for fnc
-    d->file = op->loc.file;
+    // store file where the fnc originates from
+    const char *file = op->data.cst.data.cst_fnc.loc.file;
+    CL_BREAK_IF(!file);
+    d->file = file;
 
     // set current fnc
     int uid = cst.data.cst_fnc.uid;

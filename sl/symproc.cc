@@ -61,7 +61,8 @@ TValId SymProc::heapValFromCst(const struct cl_operand &op) {
             if (CL_TYPE_INT == cltTarget->code
                     && STREQ(cltTarget->name, "char"))
             {
-                CL_DEBUG_MSG(&op.loc, "treating char[] as unknown value");
+                CL_DEBUG_MSG(&op.data.cst.data.cst_fnc.loc,
+                        "treating char[] as unknown value");
                 return sh_.valCreate(VT_UNKNOWN, VO_ASSIGNED);
             }
         }

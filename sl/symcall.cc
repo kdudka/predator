@@ -110,7 +110,7 @@ void SymCallCtx::Private::assignReturnValue(SymHeap &sh) {
     SymBackTrace callerSiteBt(*this->bt);
     callerSiteBt.popCall();
     SymProc proc(sh, &callerSiteBt);
-    proc.setLocation(&op.loc);
+    proc.setLocation(&op.data.var->loc);
 
     const TObjId obj = proc.objByOperand(op);
     CL_BREAK_IF(OBJ_INVALID == obj);
@@ -146,8 +146,8 @@ void SymCallCtx::Private::destroyStackFrame(SymHeap &sh) {
             liveLocals.push_back(cv);
     }
 
-    CL_DEBUG_MSG(&ref.def.loc, "<<< destroying stack frame of "
-            << nameOf(ref) << "()"
+    CL_DEBUG_MSG(&ref.def.data.cst.data.cst_fnc.loc,
+            "<<< destroying stack frame of " << nameOf(ref) << "()"
             << ", nestLevel = " << this->nestLevel
             << ", varsTotal = " << ref.vars.size()
             << ", varsAlive = " << liveLocals.size());
@@ -352,7 +352,7 @@ void SymCallCache::Private::setCallArgs(const CodeStorage::TOperandList &opList)
         CL_DEBUG_MSG(this->lw,
                 "too many arguments given (vararg fnc involved?)");
 
-        const struct cl_loc *lwDecl = &this->fnc->def.loc;
+        const struct cl_loc *lwDecl = &this->fnc->def.data.cst.data.cst_fnc.loc;
         CL_DEBUG_MSG(lwDecl, "note: fnc was declared here");
     }
 

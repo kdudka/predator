@@ -39,8 +39,9 @@ class ClLocator: public ICodeListener {
         }
 
         virtual void fnc_open(const struct cl_operand *fnc) {
-            this->printLocation(&fnc->loc);
-            lastLoc_ = fnc->loc;
+            const struct cl_loc &loc = fnc->data.cst.data.cst_fnc.loc;
+            this->printLocation(&loc);
+            lastLoc_ = loc;
         }
 
         virtual void fnc_arg_decl(int, const struct cl_operand *) { }

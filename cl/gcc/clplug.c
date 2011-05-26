@@ -832,7 +832,6 @@ static void read_initials(struct cl_var *var, struct cl_initializer **pinit,
 
         struct cl_operand *dst = CL_ZNEW(struct cl_operand);
         dst->code = CL_OPERAND_VAR;
-        dst->loc.line = -1;
         dst->type = clt;
         dst->accessor = ac;
         dst->data.var = var;
@@ -954,20 +953,20 @@ static void read_raw_operand(struct cl_operand *op, tree t)
         case VAR_DECL:
         case PARM_DECL:
         case RESULT_DECL:
-            read_gcc_location(&op->loc, DECL_SOURCE_LOCATION(t));
             op->code                            = CL_OPERAND_VAR;
             op->scope                           = get_decl_scope(t);
             op->data.var                        = add_var_if_needed(t);
             break;
 
         case FUNCTION_DECL:
-            read_gcc_location(&op->loc, DECL_SOURCE_LOCATION(t));
             op->code                            = CL_OPERAND_CST;
             op->scope                           = get_decl_scope(t);
             op->data.cst.code                   = CL_TYPE_FNC;
             op->data.cst.data.cst_fnc.name      = get_decl_name(t);
             op->data.cst.data.cst_fnc.is_extern = DECL_EXTERNAL(t);
             op->data.cst.data.cst_fnc.uid       = DECL_UID(t);
+            read_gcc_location(&op->data.cst.data.cst_fnc.loc,
+                              DECL_SOURCE_LOCATION(t));
             break;
 
         case INTEGER_CST:
@@ -1134,7 +1133,6 @@ static void free_cl_operand_data(struct cl_operand *op)
 static void handle_operand(struct cl_operand *op, tree t)
 {
     memset(op, 0, sizeof *op);
-    op->loc.line = -1;
 
     if (!t)
         return;
@@ -1333,7 +1331,6 @@ static void handle_stmt_cond_br(gimple stmt, const char *then_label,
 
     struct cl_operand dst;
     memset(&dst, 0, sizeof dst);
-    read_gimple_location(&dst.loc, stmt);
 
     dst.code            = CL_OPERAND_VAR;
     dst.scope           = CL_SCOPE_FUNCTION;

@@ -461,8 +461,9 @@ void ClDotGenerator::file_close()
 
 void ClDotGenerator::fnc_open(const struct cl_operand *fnc)
 {
-    loc_ = fnc->loc;
-    fnc_ = fnc->data.cst.data.cst_fnc.name;
+    const struct cl_cst &cst = fnc->data.cst;
+    loc_ = cst.data.cst_fnc.loc;
+    fnc_ = cst.data.cst_fnc.name;
 
     ClDotGenerator::createDotFile(perFncOut_,
                                   string(loc_.file) + "-" + fnc_,
