@@ -91,12 +91,12 @@
 #define SE_LAZY_VARS_CREATION               1
 
 /**
- * if 1, do not use DLS (Doubly-linked List Segment) abstracion
+ * if 1, do not use DLS (Doubly-linked List Segment) abstraction
  */
 #define SE_DISABLE_DLS                      0
 
 /**
- * if 1, do not use SLS (Signly-linked List Segment) abstracion
+ * if 1, do not use SLS (Singly-linked List Segment) abstraction
  */
 #define SE_DISABLE_SLS                      0
 
