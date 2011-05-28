@@ -21,6 +21,7 @@
 
 #include <cl/easy.hh>
 #include <cl/cl_msg.hh>
+#include <cl/clutil.hh>
 #include <cl/storage.hh>
 
 #include "symbt.hh"
@@ -76,22 +77,27 @@ void parseConfigString(SymExecParams &sep, std::string cnf) {
     CL_BREAK_IF("unhandled config string");
 }
 
-void digGlJunk(const CodeStorage::Storage &stor, SymHeap &heap) {
+void digGlJunk(SymHeap &sh) {
     using namespace CodeStorage;
+    TStorRef stor = sh.stor();
     SymBackTrace bt(stor);
-    SymProc proc(heap, &bt);
+    SymProc proc(sh, &bt);
 
-    // FIXME: this unnecessarily creates all not yet created gl variables
-    BOOST_FOREACH(const Var &var, stor.vars) {
-        if (VAR_GL == var.code) {
-            const struct cl_loc *lw = &var.loc;
-            CL_DEBUG_MSG(lw, "(g) destroying gl variable: #"
-                    << var.uid << " (" << var.name << ")" );
+    TValList glVars;
+    sh.gatherRootObjects(glVars, isProgramVar);
+    BOOST_FOREACH(const TValId root, glVars) {
+        // ensure we are dealing with a gl variable
+        const CVar cv(sh.cVarByRoot(root));
+        CL_BREAK_IF(cv.inst);
 
-            const CVar cVar(var.uid, /* gl variable */ 0);
-            proc.setLocation(lw);
-            proc.valDestroyTarget(heap.addrOfVar(cVar));
-        }
+        // dig var identity and location info
+        const struct cl_loc *loc = 0;
+        std::string varString = varToString(stor, cv.uid, &loc);
+        CL_DEBUG_MSG(loc, "(g) destroying gl variable: " << varString);
+
+        // destroy the junk if needed
+        proc.setLocation(loc);
+        proc.valDestroyTarget(root);
     }
 }
 
@@ -118,7 +124,7 @@ void execFnc(const CodeStorage::Fnc &fnc, const SymExecParams &ep,
                     << (++hCnt));
         }
 
-        digGlJunk(stor, heap);
+        digGlJunk(heap);
     }
 }
 
