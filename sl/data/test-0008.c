@@ -1,3 +1,4 @@
+#include "../sl.h"
 #include <stdlib.h>
 
 typedef void *TItem;
@@ -11,6 +12,7 @@ static void dispose_list_using_while(TItem *list) {
 }
 
 static void dispose_list_recursively(TItem *list) {
+    ___sl_plot(NULL);
     if (list) {
         dispose_list_recursively((TItem *) *list);
         free(list);

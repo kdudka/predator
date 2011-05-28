@@ -287,16 +287,6 @@ bool areEqual(
     CL_BREAK_IF(srcToDst && !srcToDst->empty());
     CL_BREAK_IF(dstToSrc && !dstToSrc->empty());
 
-    // DFS stack
-    TWorkList wl;
-
-    // TODO: remove this
-    TCVarList cVars1, cVars2;
-    sh1.gatherCVars(cVars1);
-    sh2.gatherCVars(cVars2);
-    if (cVars1 != cVars2)
-        return false;
-
     SymHeap &sh1Writable = const_cast<SymHeap &>(sh1);
     SymHeap &sh2Writable = const_cast<SymHeap &>(sh2);
 
@@ -306,14 +296,13 @@ bool areEqual(
     };
 
     // start with program variables
+    TWorkList wl;
     VarScheduleVisitor visitor(wl);
     if (!traverseProgramVarsGeneric<2>(heaps, visitor))
         return false;
 
-    // value substitution (isomorphism)
+    // check isomorphism
     TValMapBidir vMap;
-
-    // run DFS
     if (!dfsCmp(wl, vMap, sh1Writable, sh2Writable))
         return false;
 

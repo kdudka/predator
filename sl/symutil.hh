@@ -32,6 +32,7 @@
 #include <cl/clutil.hh>
 
 #include "symheap.hh"
+#include "util.hh"
 
 #include <set>
 
@@ -227,14 +228,34 @@ bool /* complete */ traverseProgramVarsGeneric(
         THeap                *const heaps[N],
         TVisitor                    &visitor)
 {
-    // collect all live program variables from everywhere
+    // start with all program variables of heaps[0]
     TCVarSet all;
-    for (unsigned i = 0; i < N; ++i) {
+    gatherProgramVars(all, *heaps[0]);
+
+    // try to match variables from the other heaps if possible
+    /* FIXME: for ( */ { unsigned i = 1; /* FIXME: i < N; ++i) { */
         const SymHeap &sh = *heaps[i];
-        gatherProgramVars(all, sh);
+
+        TValList live;
+        sh.gatherRootObjects(live, isProgramVar);
+        BOOST_FOREACH(const TValId root, live) {
+            if (VAL_ADDR_OF_RET == root)
+                continue;
+
+            const CVar cv(sh.cVarByRoot(root));
+            if (!insertOnce(all, cv))
+                // matches seamlessly
+                continue;
+
+            const EValueTarget code = sh.valTarget(root);
+            if (VT_ON_STACK == code)
+                // local variable mismatch, giving up
+                // FIXME: this behavior should be better documented
+                return false;
+        }
     }
 
-    // go through all live objects
+    // go through all program variables
     BOOST_FOREACH(const CVar &cv, all) {
         TValId roots[N];
         for (unsigned i = 0; i < N; ++i) {
