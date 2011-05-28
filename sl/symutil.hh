@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2010 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2009-2011 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -37,12 +37,6 @@
 
 #include <boost/foreach.hpp>
 
-class SymBackTrace;
-
-namespace CodeStorage {
-    struct Var;
-}
-
 inline TValId boolToVal(const bool b) {
     return (b)
         ? VAL_TRUE
@@ -68,11 +62,6 @@ inline TValId nextRootObj(SymHeap &sh, TValId root, TOffset offNext) {
     const TObjId nextPtr = sh.ptrAt(sh.valByOffset(root, offNext));
     return sh.valRoot(sh.valueOf(nextPtr));
 }
-
-void initVariable(
-        SymHeap                     &sh,
-        const SymBackTrace          *bt,
-        const TValId                 at);
 
 /// take the given visitor through all live pointers
 template <class THeap, class TVisitor, typename TMethod>

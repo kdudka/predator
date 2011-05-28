@@ -20,18 +20,9 @@
 #include "config.h"
 #include "symutil.hh"
 
-#include <cl/cl_msg.hh>
-#include <cl/cldebug.hh>
-#include <cl/clutil.hh>
-#include <cl/storage.hh>
-
-#include "symbt.hh"
 #include "symheap.hh"
-#include "symproc.hh"
 #include "symstate.hh"
 #include "util.hh"
-
-#include <stack>
 
 #include <boost/foreach.hpp>
 
@@ -61,113 +52,7 @@ void getPtrValues(TValList &dst, const SymHeap &sh, TValId at) {
     BOOST_FOREACH(const TObjId obj, ptrs) {
         const TValId val = sh.valueOf(obj);
         if (0 < val)
-            dst.push_back(sh.valueOf(obj));
-    }
-}
-
-bool initSingleVariable(
-        SymHeap                         &sh,
-        const TObjId                     obj)
-{
-    const struct cl_type *clt = sh.objType(obj);
-    CL_BREAK_IF(!clt);
-
-    const enum cl_type_e code = clt->code;
-    switch (code) {
-        case CL_TYPE_ARRAY:
-            CL_DEBUG("CL_TYPE_ARRAY is not supported by VarInitializer");
-            return /* continue */ true;
-
-        case CL_TYPE_UNION:
-        case CL_TYPE_STRUCT:
-            CL_TRAP;
-
-        default:
-            break;
-    }
-
-    // no initializer given, nullify the variable
-    sh.objSetValue(obj, /* also equal to VAL_FALSE */ VAL_NULL);
-    return /* continue */ true;
-}
-
-class InitVarLegacyWrapper {
-    private:
-        SymHeap                                 &sh_;
-        const TValId                            root_;
-        const TObjType                          rootClt_;
-        const struct cl_initializer            *initial_;
-
-    public:
-        InitVarLegacyWrapper(
-                SymHeap                         &sh,
-                const TValId                    root,
-                const TObjType                  clt,
-                const struct cl_initializer    *initial):
-            sh_(sh),
-            root_(root),
-            rootClt_(clt),
-            initial_(initial)
-        {
-            CL_BREAK_IF(sh.valOffset(root));
-        }
-
-        bool operator()(TFieldIdxChain ic, const struct cl_type_item *item)
-            const
-        {
-            const TObjType clt = item->type;
-            if (isComposite(clt))
-                return /* continue */ true;
-
-            const TOffset off = offsetByIdxChain(rootClt_, ic);
-            const TValId at = sh_.valByOffset(root_, off);
-            const TObjId obj = sh_.objAt(at, clt);
-            CL_BREAK_IF(obj <= 0);
-
-            CL_BREAK_IF(initial_);
-            initSingleVariable(sh_, obj);
-            return /* continue */ true;
-        }
-};
-
-void initVariable(
-        SymHeap                     &sh,
-        const SymBackTrace          *bt,
-        const TValId                 at)
-{
-    const CVar cv = sh.cVarByRoot(at);
-    const CodeStorage::Storage &stor = sh.stor();
-    const CodeStorage::Var &var = stor.vars[cv.uid];
-#if SE_ASSUME_FRESH_STATIC_DATA
-    if (!isOnStack(var)) {
-        // nullify a gl variable
-        const TObjType clt = var.type;
-
-        if (isComposite(clt)) {
-            const InitVarLegacyWrapper visitor(sh, at, clt, /* nullify */ 0);
-            traverseTypeIc(var.type, visitor, /* digOnlyComposite */ true);
-        }
-        else {
-            const TObjId obj = sh.objAt(at, clt);
-            initSingleVariable(sh, obj);
-        }
-    }
-#endif
-    SymExecCoreParams ep;
-    ep.skipVarInit = /* avoid an infinite recursion */ true;
-    SymExecCore core(sh, bt, ep);
-    core.setLocation(&var.loc);
-    BOOST_FOREACH(const CodeStorage::Insn *insn, var.initials) {
-        CL_DEBUG_MSG(&var.loc,
-                "(I) executing an explicit var initializer: " << *insn);
-        SymHeapList dst;
-
-        if (!core.exec(dst, *insn))
-            CL_BREAK_IF("initVariable() malfunction");
-
-        CL_BREAK_IF(1 != dst.size());
-        SymHeap &result = const_cast<SymHeap &>(dst[/* the only result */ 0]);
-        sh.swap(result);
+            dst.push_back(val);
     }
 }
 

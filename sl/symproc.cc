@@ -21,6 +21,7 @@
 #include "symproc.hh"
 
 #include <cl/cl_msg.hh>
+#include <cl/cldebug.hh>
 #include <cl/clutil.hh>
 #include <cl/storage.hh>
 
@@ -192,7 +193,26 @@ bool SymProc::checkForInvalidDeref(TValId val, TObjType cltTarget) {
 }
 
 void SymProc::varInit(TValId at) {
-    initVariable(sh_, bt_, at);
+    const CVar cv = sh_.cVarByRoot(at);
+    const CodeStorage::Storage &stor = sh_.stor();
+    const CodeStorage::Var &var = stor.vars[cv.uid];
+
+    SymExecCoreParams ep;
+    ep.skipVarInit = /* avoid an infinite recursion */ true;
+    SymExecCore core(sh_, bt_, ep);
+    BOOST_FOREACH(const CodeStorage::Insn *insn, var.initials) {
+        core.setLocation(&insn->loc);
+        CL_DEBUG_MSG(&insn->loc,
+                "(I) executing an explicit var initializer: " << *insn);
+        SymHeapList dst;
+
+        if (!core.exec(dst, *insn))
+            CL_BREAK_IF("initVariable() malfunction");
+
+        CL_BREAK_IF(1 != dst.size());
+        SymHeap &result = const_cast<SymHeap &>(dst[/* the only result */ 0]);
+        sh_.swap(result);
+    }
 }
 
 TValId SymProc::varAt(const struct cl_operand &op) {
@@ -209,9 +229,7 @@ TValId SymProc::varAt(const struct cl_operand &op) {
     const CodeStorage::Storage &stor = sh_.stor();
     const CodeStorage::Var &var = stor.vars[uid];
     bool needInit = !var.initials.empty();
-#if SE_ASSUME_FRESH_STATIC_DATA
-    needInit |= !isOnStack(var);
-#else
+#if !SE_ASSUME_FRESH_STATIC_DATA
     needInit &= isOnStack(var);
 #endif
     if (!needInit)

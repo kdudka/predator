@@ -529,8 +529,15 @@ TValId SymHeapCore::valueOf(TObjId obj) const {
     else {
         // deleayed creation of an uninitialized value
         const BaseValue *rootData = d->rootData(objData->root);
-        const EValueOrigin vo = originByCode(rootData->code);
-        val = d->valCreate(VT_UNKNOWN, vo);
+        const EValueTarget code = rootData->code;
+#if SE_ASSUME_FRESH_STATIC_DATA
+        if (VT_STATIC == code) {
+            val = VAL_NULL;
+            return val;
+        }
+#endif
+        const EValueOrigin origin = originByCode(code);
+        val = d->valCreate(VT_UNKNOWN, origin);
     }
 
     // store backward reference
