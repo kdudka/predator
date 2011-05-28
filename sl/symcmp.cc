@@ -262,6 +262,22 @@ bool dfsCmp(
     return true;
 }
 
+class VarScheduleVisitor {
+    private:
+        TWorkList &wl_;
+
+    public:
+        VarScheduleVisitor(TWorkList &wl):
+            wl_(wl)
+        {
+        }
+
+        bool operator()(const TValId roots[2]) {
+            wl_.schedule(roots[0], roots[1]);
+            return /* continue */ true;
+        }
+};
+
 bool areEqual(
         const SymHeap           &sh1,
         const SymHeap           &sh2,
@@ -272,28 +288,30 @@ bool areEqual(
     CL_BREAK_IF(dstToSrc && !dstToSrc->empty());
 
     // DFS stack
-    WorkList<TValPair> wl;
+    TWorkList wl;
 
-    // value substitution (isomorphism)
-    TValMapBidir vMap;
-
-    // FIXME: suboptimal interface of SymHeap::gatherCVars()
+    // TODO: remove this
     TCVarList cVars1, cVars2;
     sh1.gatherCVars(cVars1);
     sh2.gatherCVars(cVars2);
     if (cVars1 != cVars2)
-        // different program variables
         return false;
 
     SymHeap &sh1Writable = const_cast<SymHeap &>(sh1);
     SymHeap &sh2Writable = const_cast<SymHeap &>(sh2);
 
+    SymHeap *const heaps[] = {
+        &sh1Writable,
+        &sh2Writable
+    };
+
     // start with program variables
-    BOOST_FOREACH(CVar cv, cVars1) {
-        const TValId v1 = sh1Writable.addrOfVar(cv);
-        const TValId v2 = sh2Writable.addrOfVar(cv);
-        wl.schedule(v1, v2);
-    }
+    VarScheduleVisitor visitor(wl);
+    if (!traverseProgramVarsGeneric<2>(heaps, visitor))
+        return false;
+
+    // value substitution (isomorphism)
+    TValMapBidir vMap;
 
     // run DFS
     if (!dfsCmp(wl, vMap, sh1Writable, sh2Writable))

@@ -71,7 +71,8 @@ void gatherProgramVarsCore(TDst &dst, const SymHeap &sh, TInserter ins) {
     sh.gatherRootObjects(live, isProgramVar);
 
     BOOST_FOREACH(const TValId root, live)
-        (dst.*ins)(sh.cVarByRoot(root));
+        if (VAL_ADDR_OF_RET != root)
+            (dst.*ins)(sh.cVarByRoot(root));
 }
 
 inline void gatherProgramVars(TCVarList &dst, const SymHeap &sh) {
@@ -219,5 +220,35 @@ void redirectRefs(
         const TValId            pointingFrom,
         const TValId            pointingTo,
         const TValId            redirectTo);
+
+/// take the given visitor through all live program variables in all heaps
+template <unsigned N, class THeap, class TVisitor>
+bool /* complete */ traverseProgramVarsGeneric(
+        THeap                *const heaps[N],
+        TVisitor                    &visitor)
+{
+    // collect all live program variables from everywhere
+    TCVarSet all;
+    for (unsigned i = 0; i < N; ++i) {
+        const SymHeap &sh = *heaps[i];
+        gatherProgramVars(all, sh);
+    }
+
+    // go through all live objects
+    BOOST_FOREACH(const CVar &cv, all) {
+        TValId roots[N];
+        for (unsigned i = 0; i < N; ++i) {
+            SymHeap &sh = *heaps[i];
+            roots[i] = sh.addrOfVar(cv);
+        }
+
+        if (!visitor(roots))
+            // traversal cancelled by visitor
+            return false;
+    }
+
+    // done
+    return true;
+}
 
 #endif /* H_GUARD_SYMUTIL_H */

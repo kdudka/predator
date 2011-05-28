@@ -509,9 +509,9 @@ struct SegMatchVisitor {
 
 bool traverseSubObjs(
         SymJoinCtx              &ctx,
+        const TValId            addrDst,
         const TValId            addr1,
         const TValId            addr2,
-        const TValId            addrDst,
         const BindingOff        *offBlackList = 0)
 {
     if (!defineValueMapping(ctx, addr1, addr2, addrDst))
@@ -834,7 +834,7 @@ bool createObject(
         ctx.segLengths[rootDst] = std::min(len1, len2);
     }
 
-    return traverseSubObjs(ctx, root1, root2, rootDst);
+    return traverseSubObjs(ctx, rootDst, root1, root2);
 }
 
 bool createAnonObject(
@@ -1657,8 +1657,26 @@ bool joinPendingValues(SymJoinCtx &ctx) {
     return true;
 }
 
+class JoinVarVisitor {
+    private:
+        SymJoinCtx &ctx_;
+
+    public:
+        JoinVarVisitor(SymJoinCtx &ctx):
+            ctx_(ctx)
+        {
+        }
+
+        bool operator()(const TValId roots[3]) {
+            return /* continue */ traverseSubObjs(ctx_,
+                    roots[0],
+                    roots[1],
+                    roots[2]);
+        }
+};
+
 bool joinCVars(SymJoinCtx &ctx) {
-    // gather program variables
+    // TODO: remove this
     TCVarList cVars1, cVars2;
     ctx.sh1.gatherCVars(cVars1);
     ctx.sh2.gatherCVars(cVars2);
@@ -1667,21 +1685,15 @@ bool joinCVars(SymJoinCtx &ctx) {
         return false;
     }
 
+    SymHeap *const heaps[] = {
+        &ctx.dst,
+        &ctx.sh1,
+        &ctx.sh2
+    };
+
     // go through all program variables
-    BOOST_FOREACH(const CVar &cv, cVars1) {
-        const TValId addr1 = ctx.sh1.addrOfVar(cv);
-        const TValId addr2 = ctx.sh2.addrOfVar(cv);
-
-        // create a corresponding program variable in the resulting heap
-        const TValId rootDst = ctx.dst.addrOfVar(cv);
-
-        // look at the values inside
-        if (!traverseSubObjs(ctx, addr1, addr2, rootDst))
-            return false;
-    }
-
-    // all OK
-    return true;
+    JoinVarVisitor visitor(ctx);
+    return traverseProgramVarsGeneric<3>(heaps,visitor);
 }
 
 TValId joinDstValue(
@@ -2125,7 +2137,7 @@ bool joinDataCore(
     if (clt)
         ctx.dst.valSetLastKnownTypeOfTarget(rootDstAt, clt);
 
-    if (!traverseSubObjs(ctx, addr1, addr2, rootDstAt, &off))
+    if (!traverseSubObjs(ctx, rootDstAt, addr1, addr2, &off))
         return false;
 
     ctx.sset1.insert(addr1);
