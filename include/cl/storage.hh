@@ -568,6 +568,11 @@ struct Fnc {
 const char* nameOf(const Fnc &);
 
 /**
+ * return the location info associated with the given Fnc object (if any)
+ */
+const struct cl_loc* locationOf(const Fnc &);
+
+/**
  * return the uid of given Fnc object
  */
 int uidOf(const Fnc &);

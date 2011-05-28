@@ -134,7 +134,7 @@ void SymCallCtx::Private::destroyStackFrame(SymHeap &sh) {
             liveLocals.push_back(cv);
     }
 
-    CL_DEBUG_MSG(&ref.def.data.cst.data.cst_fnc.loc,
+    CL_DEBUG_MSG(locationOf(ref),
             "<<< destroying stack frame of " << nameOf(ref) << "()"
             << ", nestLevel = " << this->nestLevel
             << ", varsTotal = " << ref.vars.size()
@@ -320,7 +320,7 @@ void SymCallCache::Private::setCallArgs(const CodeStorage::TOperandList &opList)
         CL_DEBUG_MSG(this->lw,
                 "too many arguments given (vararg fnc involved?)");
 
-        const struct cl_loc *lwDecl = &this->fnc->def.data.cst.data.cst_fnc.loc;
+        const struct cl_loc *lwDecl = locationOf(*this->fnc);
         CL_DEBUG_MSG(lwDecl, "note: fnc was declared here");
     }
 

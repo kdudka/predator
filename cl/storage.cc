@@ -400,6 +400,11 @@ const char* nameOf(const Fnc &fnc) {
     return cst.data.cst_fnc.name;
 }
 
+const struct cl_loc* locationOf(const Fnc &fnc) {
+    const struct cl_cst &cst = cstFromFnc(fnc);
+    return &cst.data.cst_fnc.loc;
+}
+
 int uidOf(const Fnc &fnc) {
     const struct cl_cst &cst = cstFromFnc(fnc);
     return cst.data.cst_fnc.uid;

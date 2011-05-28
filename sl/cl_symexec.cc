@@ -105,7 +105,7 @@ void execFnc(const CodeStorage::Fnc &fnc, const SymExecParams &ep,
              bool lookForGlJunk = false)
 {
     const CodeStorage::Storage &stor = *fnc.stor;
-    const struct cl_loc *lw = &fnc.def.data.cst.data.cst_fnc.loc;
+    const struct cl_loc *lw = locationOf(fnc);
     CL_DEBUG_MSG(lw, "creating fresh initial state for "
             << nameOf(fnc) << "()...");
     SymExec se(stor, ep);
@@ -173,7 +173,7 @@ void execVirtualRoots(const CodeStorage::FncDb &fncs, const SymExecParams &ep) {
         if (!isDefined(fnc) || hasKey(callees, uidOf(fnc)))
             continue;
 
-        const struct cl_loc *lw = &fnc.def.data.cst.data.cst_fnc.loc;
+        const struct cl_loc *lw = locationOf(fnc);
         CL_DEBUG_MSG(lw, nameOf(fnc)
                 << "() is defined, but not called from anywhere");
 

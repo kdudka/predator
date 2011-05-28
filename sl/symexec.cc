@@ -199,13 +199,13 @@ class SymExecEngine: public IStatsProvider {
 void SymExecEngine::initEngine(const SymHeap &init)
 {
     // look for fnc name
-    const CodeStorage::Fnc *fnc = bt_.topFnc();
-    fncName_ = nameOf(*fnc);
-    lw_ = &fnc->def.data.cst.data.cst_fnc.loc;
+    const CodeStorage::Fnc &fnc = *bt_.topFnc();
+    fncName_ = nameOf(fnc);
+    lw_ = locationOf(fnc);
     CL_DEBUG_MSG(lw_, ">>> entering " << fncName_ << "()");
 
     // look for the entry block
-    const CodeStorage::Block *entry = fnc->cfg.entry();
+    const CodeStorage::Block *entry = fnc.cfg.entry();
     if (!entry) {
         CL_ERROR_MSG(lw_, fncName_ << ": " << "entry block not found");
         return;
@@ -593,7 +593,7 @@ void joinNewResults(
 }
 
 bool /* complete */ SymExecEngine::run() {
-    const CodeStorage::Fnc *fnc = bt_.topFnc();
+    const CodeStorage::Fnc fnc = *bt_.topFnc();
 
     if (waiting_) {
         // pick up results of the pending call
@@ -637,15 +637,15 @@ bool /* complete */ SymExecEngine::run() {
             return false;
     }
 
-    const struct cl_loc *loc = &fnc->def.data.cst.data.cst_fnc.loc;
+    const struct cl_loc *loc = locationOf(fnc);
     if (!endReached_) {
         CL_WARN_MSG(loc, "end of function "
-                << nameOf(*fnc) << "() has not been reached");
+                << nameOf(fnc) << "() has not been reached");
         bt_.printBackTrace();
     }
 
     // we are done with this function
-    CL_DEBUG_MSG(loc, "<<< leaving " << nameOf(*fnc) << "()");
+    CL_DEBUG_MSG(loc, "<<< leaving " << nameOf(fnc) << "()");
     waiting_ = false;
     return true;
 }
@@ -962,13 +962,13 @@ void SymExec::exec(const CodeStorage::Fnc &fnc, SymState &results) {
         CL_BREAK_IF(d->bt.size());
 
         // initialize backtrace
-        d->bt.pushCall(uidOf(fnc), &fnc.def.data.cst.data.cst_fnc.loc);
+        d->bt.pushCall(uidOf(fnc), locationOf(fnc));
 
         // XXX: synthesize CL_INSN_CALL
         CodeStorage::Insn insn;
         insn.stor = fnc.stor;
         insn.code = CL_INSN_CALL;
-        insn.loc  = fnc.def.data.cst.data.cst_fnc.loc;
+        insn.loc  = *locationOf(fnc);
         insn.operands.resize(2);
         insn.operands[1] = fnc.def;
         insn.opsToKill.resize(2, CodeStorage::KS_NEVER_KILL);
