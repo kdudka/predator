@@ -255,9 +255,7 @@ struct SymCallCache::Private {
     const CodeStorage::Fnc      *fnc;
     int                         nestLevel;
 
-    TCVarList                   glVars;
-
-    void createStackFrame(TCVarList &vars);
+    void resolveHeapCut(TCVarList &dst);
     void setCallArgs(const CodeStorage::TOperandList &opList);
     SymCallCtx* getCallCtx(int uid, const SymHeap &sh);
 };
@@ -265,47 +263,26 @@ struct SymCallCache::Private {
 SymCallCache::SymCallCache(SymBackTrace *bt):
     d(new Private)
 {
-    using namespace CodeStorage;
     d->bt = bt;
-
-    // gather all gl variables
-    const Storage &stor = bt->stor();
-    BOOST_FOREACH(const Var &var, stor.vars) {
-        if (VAR_GL == var.code) {
-            const CVar cVar(var.uid, /* gl variable */ 0);
-            d->glVars.push_back(cVar);
-        }
-    }
-
-    // count gl variables
-    const unsigned found = d->glVars.size();
-    if (found)
-        CL_DEBUG("(g) SymCallCache found " << found << " gl variable(s)");
 }
 
 SymCallCache::~SymCallCache() {
     delete d;
 }
 
-void SymCallCache::Private::createStackFrame(TCVarList &cVars) {
-    using namespace CodeStorage;
-    const Fnc &ref = *this->fnc;
+void SymCallCache::Private::resolveHeapCut(TCVarList &cut) {
+    TValList live;
+    this->sh->gatherRootObjects(live, isProgramVar);
+    BOOST_FOREACH(const TValId root, live) {
+        CVar cv(this->sh->cVarByRoot(root));
 
-#if DEBUG_SE_STACK_FRAME
-    CL_DEBUG_MSG(this->lw,
-            ">>> creating stack frame for " << nameOf(ref) << "()"
-            << ", nestLevel = " << this->nestLevel);
-#endif
-
-    // go through all variables that are visible from the function
-    BOOST_FOREACH(const int uid, ref.vars) {
-        const Var &var = ref.stor->vars[uid];
-        if (!isOnStack(var))
+        const EValueTarget code = this->sh->valTarget(root);
+        if (VT_ON_STACK == code && (!hasKey(this->fnc->vars, cv.uid)
+                    || cv.inst != this->nestLevel))
+            // a local variable that is not here-local
             continue;
 
-        // gather local variables so that we can prune the heap afterwards
-        const CVar cv(var.uid, this->nestLevel);
-        cVars.push_back(cv);
+        cut.push_back(cv);
     }
 }
 
@@ -428,15 +405,13 @@ SymCallCtx* SymCallCache::getCallCtx(SymHeap                    sh,
         CL_NOTE_MSG(d->lw, "nestLevel is " << d->nestLevel);
     }
 
-    // start with gl variables as the cut
-    TCVarList cut(d->glVars);
-
     // initialize local variables of the called fnc
-    d->createStackFrame(cut);
     d->setCallArgs(opList);
     d->proc->killInsn(insn);
 
     // prune heap
+    TCVarList cut;
+    d->resolveHeapCut(cut);
     SymHeap surround(sh.stor());
     splitHeapByCVars(&sh, cut, &surround);
     surround.valDestroyTarget(VAL_ADDR_OF_RET);
