@@ -112,7 +112,6 @@ struct SymJoinCtx {
     std::set<TValId>            sset1;
     std::set<TValId>            sset2;
 
-    typedef std::map<TObjId /* src */, TObjId /* dst */>        TObjMap;
     std::vector<TObjId>         liveList1;
     std::vector<TObjId>         liveList2;
 
@@ -851,46 +850,46 @@ bool createAnonObject(
     return defineValueMapping(ctx, v1, v2, anon);
 }
 
-bool followObjPairCore(
+bool followRootValuesCore(
         SymJoinCtx              &ctx,
-        const TValId            addr1,
-        const TValId            addr2,
+        const TValId            root1,
+        const TValId            root2,
         const EJoinStatus       action,
         const bool              readOnly)
 {
-    if (hasKey(ctx.valMap1[0], addr1)) {
-        const TValId rootDstAt = ctx.valMap1[0][addr1];
-        TValMap::const_iterator i2 = ctx.valMap2[0].find(addr2);
+    if (hasKey(ctx.valMap1[0], root1)) {
+        const TValId rootDstAt = ctx.valMap1[0][root1];
+        TValMap::const_iterator i2 = ctx.valMap2[0].find(root2);
         if (ctx.valMap2[0].end() == i2 || i2->second != rootDstAt) {
-            SJ_DEBUG("<-- object root mismatch " << SJ_VALP(addr1, addr2));
+            SJ_DEBUG("<-- object root mismatch " << SJ_VALP(root1, root2));
             return false;
         }
 
         // join mapping of object's address
-        return defineValueMapping(ctx, addr1, addr2, rootDstAt);
+        return defineValueMapping(ctx, root1, root2, rootDstAt);
     }
 
     TObjType clt;
-    const TObjType clt1 = ctx.sh1.valLastKnownTypeOfTarget(addr1);
-    const TObjType clt2 = ctx.sh2.valLastKnownTypeOfTarget(addr2);
+    const TObjType clt1 = ctx.sh1.valLastKnownTypeOfTarget(root1);
+    const TObjType clt2 = ctx.sh2.valLastKnownTypeOfTarget(root2);
     if (!joinClt(&clt, clt1, clt2))
         return false;
 
     if (!clt) {
         // anonymous object of known size
         return !readOnly
-            && createAnonObject(ctx, addr1, addr2);
+            && createAnonObject(ctx, root1, root2);
     }
 
     if (readOnly)
         // do not create any object, just check if it was possible
-        return segMatchLookAhead(ctx, addr1, addr2);
+        return segMatchLookAhead(ctx, root1, root2);
 
-    if (ctx.joiningDataReadWrite() && addr1 == addr2)
+    if (ctx.joiningDataReadWrite() && root1 == root2)
         // we are on the way from joinData() and hit shared data
-        return traverseSubObjs(ctx, addr1, addr1, addr1);
+        return traverseSubObjs(ctx, root1, root1, root1);
 
-    return createObject(ctx, clt, addr1, addr2, action);
+    return createObject(ctx, clt, root1, root2, action);
 }
 
 bool dlSegHandleShared(
@@ -908,7 +907,7 @@ bool dlSegHandleShared(
 
     const TValId peer1 = dlSegPeer(ctx.sh1, v1);
     const TValId peer2 = dlSegPeer(ctx.sh2, v2);
-    if (!followObjPairCore(ctx, peer1, peer2, action, readOnly))
+    if (!followRootValuesCore(ctx, peer1, peer2, action, readOnly))
         return false;
 
     if (readOnly)
@@ -949,42 +948,38 @@ bool joinReturnAddrs(SymJoinCtx &ctx) {
             VAL_ADDR_OF_RET);
 }
 
-bool followObjPair(
+bool followRootValues(
         SymJoinCtx              &ctx,
-        const TValId            v1,
-        const TValId            v2,
+        const TValId            root1,
+        const TValId            root2,
         const EJoinStatus       action,
         const bool              readOnly = false)
 {
-    // TODO: remove this
-    const TValId addr1 = ctx.sh1.valRoot(v1);
-    const TValId addr2 = ctx.sh2.valRoot(v2);
-
-    if (!followObjPairCore(ctx, addr1, addr2, action, readOnly))
+    if (!followRootValuesCore(ctx, root1, root2, action, readOnly))
         return false;
 
     if (!ctx.joiningData())
         // we are on the way from joinSymHeaps()
         return true;
 
-    if (addr1 == addr2)
+    if (root1 == root2)
         // shared data
-        return dlSegHandleShared(ctx, addr1, addr2, action, readOnly);
+        return dlSegHandleShared(ctx, root1, root2, action, readOnly);
 
     if (readOnly)
         // postpone it till the read-write attempt
         return true;
 
-    const bool isDls1 = (OK_DLS == ctx.sh1.valTargetKind(addr1));
-    const bool isDls2 = (OK_DLS == ctx.sh2.valTargetKind(addr2));
+    const bool isDls1 = (OK_DLS == ctx.sh1.valTargetKind(root1));
+    const bool isDls2 = (OK_DLS == ctx.sh2.valTargetKind(root2));
     if (isDls1 == isDls2)
         return true;
 
     CL_BREAK_IF(isDls1 && JS_USE_SH1 != action);
     CL_BREAK_IF(isDls2 && JS_USE_SH2 != action);
 
-    const TValId peer1 = (isDls1) ? dlSegPeer(ctx.sh1, addr1) : VAL_INVALID;
-    const TValId peer2 = (isDls2) ? dlSegPeer(ctx.sh2, addr2) : VAL_INVALID;
+    const TValId peer1 = (isDls1) ? dlSegPeer(ctx.sh1, root1) : VAL_INVALID;
+    const TValId peer2 = (isDls2) ? dlSegPeer(ctx.sh2, root2) : VAL_INVALID;
 
     const TValMapBidir &vm = (isDls1) ? ctx.valMap1 : ctx.valMap2;
     if (hasKey(vm[0], (isDls1) ? peer1 : peer2))
@@ -1007,6 +1002,15 @@ bool followValuePair(
         const TValId            v2,
         const bool              readOnly)
 {
+    if (readOnly)
+        // shallow scan only!
+        return checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ true);
+
+    if (ctx.sh1.valOffset(v1) != ctx.sh2.valOffset(v2)) {
+        SJ_DEBUG("<-- value offset mismatch: " << SJ_VALP(v1, v2));
+        return false;
+    }
+
     const bool isCustom1 = (VT_CUSTOM == ctx.sh1.valTarget(v1));
     const bool isCustom2 = (VT_CUSTOM == ctx.sh2.valTarget(v2));
     if (isCustom1 || isCustom2) {
@@ -1022,26 +1026,14 @@ bool followValuePair(
             return false;
         }
 
-        // matching pair of custom values
-        if (readOnly) {
-            return checkValueMapping(ctx, v1, v2,
-                                     /* allowUnknownMapping */ true);
-        }
-
         const TValId vDst = ctx.dst.valCreateCustom(cVal1);
         return defineValueMapping(ctx, v1, v2, vDst);
     }
 
-    if (ctx.sh1.valOffset(v1) != ctx.sh2.valOffset(v2)) {
-        SJ_DEBUG("<-- value offset mismatch: " << SJ_VALP(v1, v2));
-        return false;
-    }
-
-    if (readOnly)
-        // shallow scan only!
-        return checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ true);
-
-    return followObjPair(ctx, v1, v2, JS_USE_ANY);
+    // follow the roots
+    const TValId root1 = ctx.sh1.valRoot(v1);
+    const TValId root2 = ctx.sh2.valRoot(v2);
+    return followRootValues(ctx, root1, root2, JS_USE_ANY);
 }
 
 void considerValSchedule(
@@ -1074,24 +1066,24 @@ bool joinSegmentWithAny(
     SJ_DEBUG(">>> joinSegmentWithAny" << SJ_OBJP(root1, root2));
     const bool isDls1 = (OK_DLS == ctx.sh1.valTargetKind(root1));
     const bool isDls2 = (OK_DLS == ctx.sh2.valTargetKind(root2));
-    if (followObjPair(ctx, root1, root2, action, /* read-only */ true))
+    if (followRootValues(ctx, root1, root2, action, /* read-only */ true))
         goto read_only_ok;
 
     if (isDls1) {
         root1 = dlSegPeer(ctx.sh1, root1);
-        if (followObjPair(ctx, root1, root2, action, /* read-only */ true))
+        if (followRootValues(ctx, root1, root2, action, /* read-only */ true))
             goto read_only_ok;
     }
 
     if (isDls2) {
         root2 = dlSegPeer(ctx.sh2, root2);
-        if (followObjPair(ctx, root1, root2, action, /* read-only */ true))
+        if (followRootValues(ctx, root1, root2, action, /* read-only */ true))
             goto read_only_ok;
     }
 
     if (isDls1 && isDls2) {
         root1 = dlSegPeer(ctx.sh1, root1);
-        if (followObjPair(ctx, root1, root2, action, /* read-only */ true))
+        if (followRootValues(ctx, root1, root2, action, /* read-only */ true))
             goto read_only_ok;
     }
 
@@ -1126,7 +1118,7 @@ read_only_ok:
     }
 
     // go ahead, try it read-write!
-    *pResult = followObjPair(ctx, root1, root2, action);
+    *pResult = followRootValues(ctx, root1, root2, action);
     if (!*pResult)
         return true;
 
@@ -1793,7 +1785,6 @@ bool setDstValuesCore(
 }
 
 bool setDstValues(SymJoinCtx &ctx, const std::set<TObjId> *blackList = 0) {
-    typedef SymJoinCtx::TObjMap TObjMap;
     typedef std::map<TObjId /* objDst */, TObjPair> TMap;
     TMap rMap;
 
