@@ -370,10 +370,12 @@ void SymCallCache::Private::setCallArgs(const CodeStorage::TOperandList &opList)
 
 SymCallCtx* SymCallCache::Private::getCallCtx(int uid, const SymHeap &heap) {
     TFncSeq seq;
+#if 0
     if (this->bt->hasRecursiveCall())
         // FIXME: this seems to be a silly limitation -- we require the call
         // sequence to match as long as there is any recursion involved
         seq = this->bt->getFncSequence();
+#endif
 
     // 1st level cache lookup
     TCacheRow &row = this->cache[seq];
@@ -400,17 +402,19 @@ SymCallCtx* SymCallCache::Private::getCallCtx(int uid, const SymHeap &heap) {
         return ctx;
     }
 
+    const struct cl_loc *loc = locationOf(*this->fnc);
+
     // cache hit, perform some sanity checks
     if (!ctx->d->computed) {
         // oops, we are not ready for this!
-        CL_ERROR("SymCallCache: cache entry found, but result not computed yet"
-                 ", perhaps a recursive function call?");
+        CL_ERROR_MSG(loc, "call cache entry found, but result not "
+                "computed yet; perhaps a recursive function call?");
         return 0;
     }
     if (!ctx->d->flushed) {
         // oops, we are not ready for this!
-        CL_ERROR("SymCallCache: cache entry found, but result not flushed yet"
-                 ", perhaps a recursive function call?");
+        CL_ERROR_MSG(loc, "call cache entry found, but result not "
+                "flushed yet; perhaps a recursive function call?");
         return 0;
     }
 
@@ -418,7 +422,7 @@ SymCallCtx* SymCallCache::Private::getCallCtx(int uid, const SymHeap &heap) {
     return ctx;
 }
 
-SymCallCtx& SymCallCache::getCallCtx(SymHeap                    heap,
+SymCallCtx* SymCallCache::getCallCtx(SymHeap                    heap,
                                      const CodeStorage::Fnc     &fnc,
                                      const CodeStorage::Insn    &insn)
 {
@@ -463,7 +467,7 @@ SymCallCtx& SymCallCache::getCallCtx(SymHeap                    heap,
     // get either an existing ctx, or create a new one
     SymCallCtx *ctx = d->getCallCtx(uid, heap);
     if (!ctx)
-        CL_TRAP;
+        return 0;
 
     // not flushed yet
     ctx->d->flushed     = false;
@@ -472,5 +476,5 @@ SymCallCtx& SymCallCache::getCallCtx(SymHeap                    heap,
     ctx->d->dst         = &opList[/* dst */ 0];
     ctx->d->nestLevel   = d->nestLevel;
     ctx->d->surround    = surround;
-    return *ctx;
+    return ctx;
 }

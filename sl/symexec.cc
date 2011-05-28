@@ -760,7 +760,7 @@ struct SymExec::Private {
                                             const CodeStorage::Insn     &insn,
                                             SymState                    &dst);
 
-    SymExecEngine* createEngine(SymCallCtx &ctx);
+    SymExecEngine* createEngine(SymCallCtx *ctx);
 
     void execLoop(const StackItem &item);
 };
@@ -848,12 +848,12 @@ fail:
     return 0;
 }
 
-SymExecEngine* SymExec::Private::createEngine(SymCallCtx &ctx) {
+SymExecEngine* SymExec::Private::createEngine(SymCallCtx *ctx) {
     return new SymExecEngine(
             this->se,
             this->bt,
-            ctx.entry(),
-            ctx.rawResults());
+            ctx->entry(),
+            ctx->rawResults());
 }
 
 struct StackItem {
@@ -908,22 +908,26 @@ void SymExec::Private::execLoop(const StackItem &item) {
         const CodeStorage::Insn &insn = *engine->callInsn();
         SymState &results = *engine->callResults();
         const Fnc *fnc = this->resolveCallInsn(entry, insn, results);
-        if (!fnc)
+
+        // call cache lookup
+        SymCallCtx *ctx = 0;
+        if (fnc)
+            ctx = this->callCache.getCallCtx(entry, *fnc, insn);
+
+        if (!ctx)
             // the error message should have been already emitted, but there
             // are probably some unknown values in the result; now wake up
             // the caller
             continue;
 
-        // call cache lookup
-        SymCallCtx &ctx = this->callCache.getCallCtx(entry, *fnc, insn);
-        if (!ctx.needExec()) {
+        if (!ctx->needExec()) {
             // call cache hit
             const struct cl_loc *lw = this->bt.topCallLoc();
             CL_DEBUG_MSG(lw, "(x) call of function optimized out: "
                     << nameOf(*fnc) << "()");
 
             // use the cached result
-            ctx.flushCallResults(*engine->callResults());
+            ctx->flushCallResults(*engine->callResults());
 
             // leave backtrace
             this->bt.popCall();
@@ -936,7 +940,7 @@ void SymExec::Private::execLoop(const StackItem &item) {
 
         // prepare a new run-time stack item for the call
         StackItem next;
-        next.ctx = &ctx;
+        next.ctx = ctx;
         next.eng = this->createEngine(ctx);
         printMemUsage("SymExec::createEngine");
 
@@ -974,20 +978,22 @@ void SymExec::exec(const CodeStorage::Fnc &fnc, SymState &results) {
         insn.opsToKill.resize(2, CodeStorage::KS_NEVER_KILL);
 
         // get call context for the root function
-        SymCallCtx &ctx = d->callCache.getCallCtx(heap, fnc, insn);
-        if (!ctx.needExec()) {
+        SymCallCtx *ctx = d->callCache.getCallCtx(heap, fnc, insn);
+        CL_BREAK_IF(!ctx);
+
+        if (!ctx->needExec()) {
             // not likely to happen in the way that SymExec is currently used
             CL_WARN_MSG(d->bt.topCallLoc(), "(x) root call optimized out: "
                     << nameOf(fnc) << "()");
 
-            ctx.flushCallResults(results);
+            ctx->flushCallResults(results);
             d->bt.popCall();
             continue;
         }
 
         // root stack item
         StackItem si;
-        si.ctx = &ctx;
+        si.ctx = ctx;
         si.eng = d->createEngine(ctx);
         si.dst = &results;
 

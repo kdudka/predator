@@ -118,9 +118,10 @@ class SymCallCache {
          * @param fnc a function which is about to be called
          * @param insn a call instruction which is about to be executed
          * @note parameters fnc and insn have to match with each other!
-         * @return reference to the corresponding SymCallCtx object
+         * @return an instance of the corresponding SymCallCtx object, zero if
+         * an unrecoverable error occurs
          */
-        SymCallCtx& getCallCtx(SymHeap                      heap,
+        SymCallCtx* getCallCtx(SymHeap                      heap,
                                const CodeStorage::Fnc       &fnc,
                                const CodeStorage::Insn      &insn);
 
