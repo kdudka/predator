@@ -101,9 +101,6 @@ TValId SymProc::heapValFromCst(const struct cl_operand &op) {
         }
 
         case CL_TYPE_STRING:
-            CL_WARN_MSG(lw_, "CL_TYPE_STRING not supported by SymProc");
-            // fall through!
-
         default:
             return sh_.valCreate(VT_UNKNOWN, VO_ASSIGNED);
     }

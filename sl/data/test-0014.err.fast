@@ -1,15 +1,1 @@
-test-0014.c:237:12: warning: CL_TYPE_STRING not supported by SymProc
-test-0014.c:242:12: warning: CL_TYPE_STRING not supported by SymProc
-test-0014.c:246:12: warning: CL_TYPE_STRING not supported by SymProc
-test-0014.c:250:12: warning: CL_TYPE_STRING not supported by SymProc
-test-0014.c:254:12: warning: CL_TYPE_STRING not supported by SymProc
-test-0014.c:258:12: warning: CL_TYPE_STRING not supported by SymProc
-test-0014.c:262:12: warning: CL_TYPE_STRING not supported by SymProc
-test-0014.c:266:12: warning: CL_TYPE_STRING not supported by SymProc
-test-0014.c:270:12: warning: CL_TYPE_STRING not supported by SymProc
-test-0014.c:274:12: warning: CL_TYPE_STRING not supported by SymProc
-test-0014.c:278:12: warning: CL_TYPE_STRING not supported by SymProc
-test-0014.c:283:12: warning: CL_TYPE_STRING not supported by SymProc
-test-0014.c:288:12: warning: CL_TYPE_STRING not supported by SymProc
-test-0014.c:293:12: warning: CL_TYPE_STRING not supported by SymProc
 test-0014.c:238:11: warning: killing junk
