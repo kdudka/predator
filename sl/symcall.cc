@@ -44,7 +44,7 @@
 struct SymCallCtx::Private {
     SymBackTrace                *bt;
     const CodeStorage::Fnc      *fnc;
-    SymHeap                     heap;
+    SymHeap                     sh;
     SymHeap                     surround;
     const struct cl_operand     *dst;
     SymStateWithJoin            rawResults;
@@ -56,7 +56,7 @@ struct SymCallCtx::Private {
     void destroyStackFrame(SymHeap &sh);
 
     Private(TStorRef stor):
-        heap(stor),
+        sh(stor),
         surround(stor)
     {
     }
@@ -78,7 +78,7 @@ bool SymCallCtx::needExec() const {
 }
 
 const SymHeap& SymCallCtx::entry() const {
-    return d->heap;
+    return d->sh;
 }
 
 SymState& SymCallCtx::rawResults() {
@@ -218,11 +218,11 @@ class PerFncCache {
          * look for the given heap; return the corresponding call ctx if found,
          * 0 otherwise
          */
-        SymCallCtx* lookup(const SymHeap &heap) {
+        SymCallCtx* lookup(const SymHeap &sh) {
 #if SE_DISABLE_CALL_CACHE
             return 0;
 #endif
-            int idx = huni_.lookup(heap);
+            int idx = huni_.lookup(sh);
             if (-1 == idx)
                 return 0;
 
@@ -232,11 +232,11 @@ class PerFncCache {
         /**
          * store the given heap with its corresponding call ctx into the cache
          */
-        void insert(const SymHeap &heap, SymCallCtx *ctx) {
+        void insert(const SymHeap &sh, SymCallCtx *ctx) {
 #if SE_DISABLE_CALL_CACHE
             return;
 #endif
-            huni_.insertNew(heap);
+            huni_.insertNew(sh);
             ctxMap_.push_back(ctx);
             CL_BREAK_IF(huni_.size() != ctxMap_.size());
         }
@@ -250,7 +250,7 @@ struct SymCallCache::Private {
     TCache                      cache;
     SymBackTrace                *bt;
     const struct cl_loc         *lw;
-    SymHeap                     *heap;
+    SymHeap                     *sh;
     SymProc                     *proc;
     const CodeStorage::Fnc      *fnc;
     int                         nestLevel;
@@ -259,7 +259,7 @@ struct SymCallCache::Private {
 
     void createStackFrame(TCVarList &vars);
     void setCallArgs(const CodeStorage::TOperandList &opList);
-    SymCallCtx* getCallCtx(int uid, const SymHeap &heap);
+    SymCallCtx* getCallCtx(int uid, const SymHeap &sh);
 };
 
 SymCallCache::SymCallCache(SymBackTrace *bt):
@@ -327,7 +327,7 @@ void SymCallCache::Private::setCallArgs(const CodeStorage::TOperandList &opList)
     // that we can get the source backtrace by removing it from there locally.
     SymBackTrace callerSiteBt(*this->bt);
     callerSiteBt.popCall();
-    SymProc srcProc(*this->heap, &callerSiteBt);
+    SymProc srcProc(*this->sh, &callerSiteBt);
 
     // initialize location info
     srcProc.setLocation(this->lw);
@@ -339,12 +339,12 @@ void SymCallCache::Private::setCallArgs(const CodeStorage::TOperandList &opList)
 
         // cVar lookup
         const CVar cVar(arg, this->nestLevel);
-        const TValId argAddr = this->heap->addrOfVar(cVar);
+        const TValId argAddr = this->sh->addrOfVar(cVar);
 
         // object instantiation
         TStorRef stor = *this->fnc->stor;
         const TObjType clt = stor.vars[arg].type;
-        const TObjId argObj = this->heap->objAt(argAddr, clt);
+        const TObjId argObj = this->sh->objAt(argAddr, clt);
         CL_BREAK_IF(argObj <= 0);
 
         if (opList.size() <= pos) {
@@ -365,17 +365,17 @@ void SymCallCache::Private::setCallArgs(const CodeStorage::TOperandList &opList)
     }
 }
 
-SymCallCtx* SymCallCache::Private::getCallCtx(int uid, const SymHeap &heap) {
+SymCallCtx* SymCallCache::Private::getCallCtx(int uid, const SymHeap &sh) {
     // cache lookup
     PerFncCache &pfc = this->cache[uid];
-    SymCallCtx *ctx = pfc.lookup(heap);
+    SymCallCtx *ctx = pfc.lookup(sh);
     if (!ctx) {
         // cache miss
-        ctx = new SymCallCtx(heap.stor());
+        ctx = new SymCallCtx(sh.stor());
         ctx->d->bt      = this->bt;
         ctx->d->fnc     = this->fnc;
-        ctx->d->heap    = heap;
-        pfc.insert(heap, ctx);
+        ctx->d->sh      = sh;
+        pfc.insert(sh, ctx);
         return ctx;
     }
 
@@ -399,7 +399,7 @@ SymCallCtx* SymCallCache::Private::getCallCtx(int uid, const SymHeap &heap) {
     return ctx;
 }
 
-SymCallCtx* SymCallCache::getCallCtx(SymHeap                    heap,
+SymCallCtx* SymCallCache::getCallCtx(SymHeap                    sh,
                                      const CodeStorage::Fnc     &fnc,
                                      const CodeStorage::Insn    &insn)
 {
@@ -410,9 +410,9 @@ SymCallCtx* SymCallCache::getCallCtx(SymHeap                    heap,
     CL_BREAK_IF(CL_INSN_CALL != insn.code || opList.size() < 2);
 
     // create SymProc and update the location info
-    SymProc proc(heap, d->bt);
+    SymProc proc(sh, d->bt);
     proc.setLocation((d->lw = &insn.loc));
-    d->heap = &heap;
+    d->sh = &sh;
     d->proc = &proc;
 
     // store Fnc ought to be called
@@ -437,12 +437,12 @@ SymCallCtx* SymCallCache::getCallCtx(SymHeap                    heap,
     d->proc->killInsn(insn);
 
     // prune heap
-    SymHeap surround(heap.stor());
-    splitHeapByCVars(&heap, cut, &surround);
+    SymHeap surround(sh.stor());
+    splitHeapByCVars(&sh, cut, &surround);
     surround.valDestroyTarget(VAL_ADDR_OF_RET);
     
     // get either an existing ctx, or create a new one
-    SymCallCtx *ctx = d->getCallCtx(uid, heap);
+    SymCallCtx *ctx = d->getCallCtx(uid, sh);
     if (!ctx)
         return 0;
 
