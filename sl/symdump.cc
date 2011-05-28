@@ -294,19 +294,6 @@ void dump_cvar(SymHeap &heap, int uid, int inst) {
     dump_cvar(heap, cv);
 }
 
-void dump_heap(const SymHeap &heap) {
-    cout << "dump_heap(SymHeap object at "
-        << static_cast<const void *>(&heap)
-        << ")\n";
-
-    TCVarList cVars;
-    heap.gatherCVars(cVars);
-    BOOST_FOREACH(const CVar cv, cVars) {
-        dump_cvar(const_cast<SymHeap &>(heap), cv);
-        cout << "\n";
-    }
-}
-
 void dump_id(const SymHeapCore *core, int id) {
     if (!core) {
         cout << "dump_plot: error: got a NULL pointer\n";

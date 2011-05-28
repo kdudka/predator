@@ -32,8 +32,8 @@
 
 #include <cl/code_listener.h>
 
-#include <list>
-#include <map>              // for SymHeapCore::TValMap
+#include <map>              // for TValMap
+#include <set>              // for TCVarSet
 #include <vector>
 
 enum EValueOrigin {
@@ -141,6 +141,9 @@ inline bool operator!=(const CVar &a, const CVar &b) {
 
 /// a list of _program_ variables
 typedef std::vector<CVar>                               TCVarList;
+
+/// a set of _program_ variables
+typedef std::set<CVar>                                  TCVarSet;
 
 /**
  * lexicographical comparison of CVar objects
@@ -354,15 +357,6 @@ class SymHeapCore {
          */
         CVar cVarByRoot(TValId root) const;
 
-        /**
-         * collect all static/automatic variables (see CodeStorage) which have
-         * any equivalent in the symbolic heap
-         * @param dst reference to a container to store the result to
-         * @note The operation may return from 0 to n results.
-         */
-        void gatherCVars(TCVarList &dst) const;
-
-    public:
         TObjId valGetComposite(TValId val) const;
 
     public:

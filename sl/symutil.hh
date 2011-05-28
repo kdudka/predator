@@ -38,8 +38,6 @@
 
 #include <boost/foreach.hpp>
 
-typedef std::set<CVar> TCVarSet;
-
 inline TValId boolToVal(const bool b) {
     return (b)
         ? VAL_TRUE

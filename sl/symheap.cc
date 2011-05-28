@@ -81,23 +81,16 @@ class CVarMap {
 
     public:
         void insert(CVar cVar, TValId val) {
-#ifndef NDEBUG
-            const unsigned last = cont_.size();
-#endif
-            cont_[cVar] = val;
-
             // check for mapping redefinition
-            CL_BREAK_IF(last == cont_.size());
+            CL_BREAK_IF(hasKey(cont_, cVar));
+
+            // define mapping
+            cont_[cVar] = val;
         }
 
         void remove(CVar cVar) {
-#ifndef NDEBUG
             if (1 != cont_.erase(cVar))
-                // *** offset detected ***
-                CL_TRAP;
-#else
-            cont_.erase(cVar);
-#endif
+                CL_BREAK_IF("offset detected in CVarMap::remove()");
         }
 
         TValId find(const CVar &cVar) {
@@ -128,13 +121,6 @@ class CVarMap {
                 return iter->second;
             else /* if (foundGl) */
                 return iterGl->second;
-        }
-
-        template <class TDst>
-        void getAll(TDst &dst) {
-            BOOST_FOREACH(const TCont::value_type &item, cont_) {
-                dst.push_back(item.first);
-            }
         }
 };
 
@@ -1299,10 +1285,6 @@ TValId SymHeapCore::addrOfVar(CVar cv) {
     // store the address for next wheel
     d->cVarMap.insert(cv, addr);
     return addr;
-}
-
-void SymHeapCore::gatherCVars(TCVarList &dst) const {
-    d->cVarMap.getAll(dst);
 }
 
 static bool dummyFilter(EValueTarget) {

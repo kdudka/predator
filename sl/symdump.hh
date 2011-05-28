@@ -75,9 +75,6 @@ void dump_cvar(SymHeap &heap, CVar cv);
 /// dump a static/automatic @b variable, see CodeStorage
 void dump_cvar(SymHeap &heap, int uid, int inst);
 
-/// dump a @b all static/automatic @b variables of the given symbolic heap
-void dump_heap(const SymHeap &heap);
-
 /// dump any @b existing @b positive ID as either heap object or a heap value
 void dump_id(const SymHeapCore *heap, int id);
 
