@@ -40,14 +40,6 @@
 #include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
 
-#ifndef SE_DISABLE_SYMCUT
-#   define SE_DISABLE_SYMCUT 0
-#endif
-
-#ifndef DEBUG_SYMCUT
-#   define DEBUG_SYMCUT 0
-#endif
-
 template <class TSet, class TList>
 void fillSet(TSet &dst, const TList &src)
 {
@@ -306,9 +298,7 @@ void splitHeapByCVars(
     // make an intersection with the cut
     DeepCopyData::TCut cset;
     BOOST_FOREACH(const CVar &cv, cut) {
-#if SE_LAZY_VARS_CREATION
         if (hasKey(live, cv))
-#endif
             cset.insert(cv);
     }
 

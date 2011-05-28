@@ -333,16 +333,6 @@ fallback:
     this->updateState(sh, ofBlock);
 }
 
-// TODO: move this to <cl/clutil.hh>?
-inline bool isCodePtr(const struct cl_type *clt) {
-    if (!clt || clt->code != CL_TYPE_PTR)
-        return false;
-
-    clt = targetTypeOfPtr(clt);
-    assert(clt);
-    return (CL_TYPE_FNC == clt->code);
-}
-
 bool SymExecEngine::bypassNonPointers(
         SymProc                                     &proc,
         const CodeStorage::Insn                     &insnCmp,
@@ -351,9 +341,7 @@ bool SymExecEngine::bypassNonPointers(
     const TObjType clt1 = insnCmp.operands[/* src1 */ 1].type;
     const TObjType clt2 = insnCmp.operands[/* src2 */ 2].type;
 
-#if SE_TRACK_NON_POINTER_VALUES
-    if (!isCodePtr(clt1) && !isCodePtr(clt2))
-#else
+#if !SE_TRACK_NON_POINTER_VALUES
     if (isDataPtr(clt1) || isDataPtr(clt2))
 #endif
         return false;

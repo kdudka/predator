@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2010 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2009-2011 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -21,6 +21,9 @@
  * @file config.h
  * various compile-time options
  */
+
+#ifndef H_GUARD_CONFIG_H
+#define H_GUARD_CONFIG_H
 
 #define GIT_SHA1 sl_git_sha1
 #include "trap.h"
@@ -51,11 +54,6 @@
 #define DEBUG_SYMCUT                        0
 
 /**
- * if 1, SymPlot prints some extra debugging info
- */
-#define DEBUG_SYMPLOT                       0
-
-/**
  * if 1, symjoin prints some extra debugging info
  */
 #define DEBUG_SYMJOIN                       0
@@ -71,24 +69,14 @@
 #define DEBUG_SYMSTATE_INSERT               0
 
 /**
- * if 1, call cache is not used at all
- */
-#define SE_DISABLE_CALL_CACHE               0
-
-/**
  * if 1, perform abstraction after each just completed call on @b caller's side
  */
 #define SE_ABSTRACT_ON_CALL_DONE            1
 
 /**
- * if 1, local variables are destroyed as soon as they become dead
+ * if 1, call cache is not used at all
  */
-#define SE_EARLY_VARS_DESTRUCTION           1
-
-/**
- * if 1, program variables are created as needed; before a fnc call otherwise
- */
-#define SE_LAZY_VARS_CREATION               1
+#define SE_DISABLE_CALL_CACHE               0
 
 /**
  * if 1, do not use DLS (Doubly-linked List Segment) abstraction
@@ -114,6 +102,11 @@
  * if 1, do not allow three-way join
  */
 #define SE_DISABLE_THREE_WAY_JOIN           0
+
+/**
+ * if 1, local variables are destroyed as soon as they become dead
+ */
+#define SE_EARLY_VARS_DESTRUCTION           1
 
 /**
  * if 1, abstraction path length is penalized by complexity of prototype join
@@ -147,3 +140,5 @@
 #define SYMPLOT_STOP_CONDITION(name) \
     (!(name).compare("symabstract-0003-DLS-0001-0000"))
 #endif
+
+#endif /* H_GUARD_CONFIG_H */

@@ -35,18 +35,6 @@
 
 #include <boost/foreach.hpp>
 
-#ifndef DEBUG_SE_STACK_FRAME
-#   define DEBUG_SE_STACK_FRAME 0
-#endif
-
-#ifndef SE_ABSTRACT_ON_CALL_DONE
-#   define ABSTRACT_ON_CALL_DONE 0
-#endif
-
-#ifndef SE_DISABLE_CALL_CACHE
-#   define SE_DISABLE_CALL_CACHE 0
-#endif
-
 #if SE_ABSTRACT_ON_CALL_DONE
 #   include "symabstract.hh"
 #endif
@@ -321,18 +309,6 @@ void SymCallCache::Private::createStackFrame(TCVarList &cVars) {
         // gather local variables so that we can prune the heap afterwards
         const CVar cv(var.uid, this->nestLevel);
         cVars.push_back(cv);
-
-#if !SE_LAZY_VARS_CREATION
-
-#   if DEBUG_SE_STACK_FRAME
-        const struct cl_loc *lw = &var.loc;
-        CL_DEBUG_MSG(lw, ">>> creating stack variable: #" << var.uid
-                << " (" << var.name << ")" );
-#   endif
-        // now create the SymHeap object
-        (void) this->heap->addrOfVar(cv);
-
-#endif // SE_LAZY_VARS_CREATION
 
         if (!var.initials.empty()) {
             CL_DEBUG_MSG(lw, "--- initializing stack variable: #" << var.uid
