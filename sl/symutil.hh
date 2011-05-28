@@ -33,9 +33,11 @@
 
 #include "symheap.hh"
 
-#include <stack>
+#include <set>
 
 #include <boost/foreach.hpp>
+
+typedef std::set<CVar> TCVarSet;
 
 inline TValId boolToVal(const bool b) {
     return (b)
@@ -61,6 +63,26 @@ inline TValId nextRootObj(SymHeap &sh, TValId root, TOffset offNext) {
     CL_BREAK_IF(sh.valOffset(root));
     const TObjId nextPtr = sh.ptrAt(sh.valByOffset(root, offNext));
     return sh.valRoot(sh.valueOf(nextPtr));
+}
+
+template <class TDst, typename TInserter>
+void gatherProgramVarsCore(TDst &dst, const SymHeap &sh, TInserter ins) {
+    TValList live;
+    sh.gatherRootObjects(live, isProgramVar);
+
+    BOOST_FOREACH(const TValId root, live)
+        (dst.*ins)(sh.cVarByRoot(root));
+}
+
+inline void gatherProgramVars(TCVarList &dst, const SymHeap &sh) {
+    void (TCVarList::*ins)(const CVar &) = &TCVarList::push_back;
+    gatherProgramVarsCore(dst, sh, ins);
+}
+
+inline void gatherProgramVars(TCVarSet &dst, const SymHeap &sh) {
+    typedef std::pair<TCVarSet::iterator, bool> TRet;
+    TRet (TCVarSet::*ins)(const CVar &) = &TCVarSet::insert;
+    gatherProgramVarsCore(dst, sh, ins);
 }
 
 /// take the given visitor through all live pointers

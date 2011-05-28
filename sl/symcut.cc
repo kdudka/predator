@@ -30,21 +30,12 @@
 #include "symutil.hh"
 #include "worklist.hh"
 
-#include <algorithm>            // for std::copy, std::set_difference
 #include <iomanip>
 #include <map>
 #include <set>
-#include <stack>
-#include <vector>
 
 #include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
-
-template <class TSet, class TList>
-void fillSet(TSet &dst, const TList &src)
-{
-    std::copy(src.begin(), src.end(), std::inserter(dst, dst.begin()));
-}
 
 struct DeepCopyData {
     typedef std::map<TValId   /* src */, TValId   /* dst */>    TValMap;
@@ -290,10 +281,8 @@ void splitHeapByCVars(
     CL_DEBUG("splitHeapByCVars() started: cut by " << cut.size() << " variable(s)");
 
     // get the set of live program variables
-    TCVarList liveList;
-    srcDst->gatherCVars(liveList);
     DeepCopyData::TCut live;
-    fillSet(live, liveList);
+    gatherProgramVars(live, *srcDst);
 
     // make an intersection with the cut
     DeepCopyData::TCut cset;
@@ -317,12 +306,14 @@ void splitHeapByCVars(
 #endif
     // get the complete list of program variables
     TCVarList all;
-    srcDst->gatherCVars(all);
+    gatherProgramVars(all, *srcDst);
 
-    // compute set difference
+    // compute set difference (we cannot use std::set_difference since 'all' is
+    // not sorted, which would break the algorithm badly)
     DeepCopyData::TCut complement;
-    std::set_difference(all.begin(), all.end(), cset.begin(), cset.end(),
-            std::inserter(complement, complement.begin()));
+    BOOST_FOREACH(const CVar &cv, all)
+        if (!hasKey(cset, cv))
+            complement.insert(cv);
 
     // compute the surrounding part of heap
     prune(*srcDst, *saveSurroundTo, complement);
@@ -363,12 +354,8 @@ void joinHeapsByCVars(
     return;
 #endif
     // gather _all_ program variables of *src2
-    TCVarList all;
-    src2->gatherCVars(all);
-
-    // std::vector -> std::set
     DeepCopyData::TCut cset;
-    fillSet(cset, all);
+    gatherProgramVars(cset, *src2);
     
     // forward-only merge of *src2 into *srcDst
     prune(*src2, *srcDst, cset, /* optimization */ true);
