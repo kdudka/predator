@@ -226,6 +226,11 @@ bool digIcByOffset(
 }
 
 void describeVar(PlotData &plot, const TValId rootAt) {
+    if (VAL_ADDR_OF_RET == rootAt) {
+        plot.out << "OBJ_RETURN";
+        return;
+    }
+
     SymHeap &sh = plot.sh;
     TStorRef stor = sh.stor();
 

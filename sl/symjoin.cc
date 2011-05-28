@@ -1301,6 +1301,12 @@ bool handleUnknownValues(
         const TValId            v2,
         const TValId            vDst)
 {
+    const bool isNull1 = (VAL_NULL == v1);
+    const bool isNull2 = (VAL_NULL == v2);
+    if (isNull1 != isNull2)
+        return false;
+
+    CL_BREAK_IF(isNull1 && isNull2);
     if (defineValueMapping(ctx, v1, v2, vDst))
         // no inconsistency here
         return true;
