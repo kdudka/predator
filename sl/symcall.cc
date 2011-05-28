@@ -245,10 +245,7 @@ class PerFncCache {
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of SymCallCache
 struct SymCallCache::Private {
-    typedef SymBackTrace::TFncSeq                       TFncSeq;
-    typedef std::map<int /* uid */, PerFncCache>        TCacheCol;
-    typedef std::map<TCVarList, TCacheCol>              TCacheRow;
-    typedef std::map<TFncSeq, TCacheRow>                TCache;
+    typedef std::map<int /* uid */, PerFncCache>        TCache;
 
     TCache                      cache;
     SymBackTrace                *bt;
@@ -369,28 +366,8 @@ void SymCallCache::Private::setCallArgs(const CodeStorage::TOperandList &opList)
 }
 
 SymCallCtx* SymCallCache::Private::getCallCtx(int uid, const SymHeap &heap) {
-    TFncSeq seq;
-#if 0
-    if (this->bt->hasRecursiveCall())
-        // FIXME: this seems to be a silly limitation -- we require the call
-        // sequence to match as long as there is any recursion involved
-        seq = this->bt->getFncSequence();
-#endif
-
-    // 1st level cache lookup
-    TCacheRow &row = this->cache[seq];
-
-    // 2nd level cache lookup
-    // FIXME: We rely on the assumption that gatherCVars() returns the variables
-    //        always in the same order, however SymHeap API does not
-    //        guarantee anything like that.  Luckily it should cause nothing
-    //        evil in the analysis, only some unnecessary bloat of cache...
-    TCVarList cVars;
-    heap.gatherCVars(cVars);
-    TCacheCol &col = row[cVars];
-
-    // 3rd level cache lookup
-    PerFncCache &pfc = col[uid];
+    // cache lookup
+    PerFncCache &pfc = this->cache[uid];
     SymCallCtx *ctx = pfc.lookup(heap);
     if (!ctx) {
         // cache miss

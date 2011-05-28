@@ -52,7 +52,6 @@ struct SymBackTrace::Private {
     TStackPP                        ppStack;
     TStack                          btStack;
     TMap                            nestMap;
-    TFncSeq                         fncSeq;
 
     Private(const CodeStorage::Storage &stor_):
         stor(stor_)
@@ -93,7 +92,6 @@ void SymBackTrace::Private::pushFnc(const CodeStorage::Fnc *fnc,
 {
     const BtStackItem item(fnc, loc);
     this->btStack.push(item);
-    this->fncSeq.push_back(uidOf(*fnc));
 
     int &ref = this->nestMap[fnc];
 
@@ -107,7 +105,6 @@ void SymBackTrace::Private::pushFnc(const CodeStorage::Fnc *fnc,
 void SymBackTrace::Private::popFnc() {
     const CodeStorage::Fnc *fnc = this->fncOnTop();
     this->btStack.pop();
-    this->fncSeq.pop_back();
 
     // decrement instance counter
     int &ref = this->nestMap[fnc];
@@ -218,24 +215,6 @@ const struct cl_loc* SymBackTrace::topCallLoc() const {
     CL_BREAK_IF(d->btStack.empty());
     const Private::BtStackItem &top = d->btStack.top();
     return top.loc;
-}
-
-bool SymBackTrace::hasRecursiveCall() const {
-    BOOST_FOREACH(const Private::TMap::value_type &item, d->nestMap) {
-        const int cnt = item.second;
-        CL_BREAK_IF(cnt <= 0);
-
-        if (1 < cnt)
-            // a recursive call has been found
-            return true;
-    }
-
-    // found nothing interesting, looks like a regular bt
-    return false;
-}
-
-SymBackTrace::TFncSeq& SymBackTrace::getFncSequence() const {
-    return d->fncSeq;
 }
 
 void SymBackTrace::pushPathTracer(const IPathTracer *pp) {

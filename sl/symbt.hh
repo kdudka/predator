@@ -109,15 +109,6 @@ class SymBackTrace {
         /// return location of call of the topmost function in the backtrace
         const struct cl_loc* topCallLoc() const;
 
-        /// return true, if there is @b any recursive call in the backtrace
-        bool hasRecursiveCall() const;
-
-        /// ordered sequence of function IDs
-        typedef std::vector<int /* uid */> TFncSeq;
-
-        /// return full sequence of all function calls, ordered chronologically
-        TFncSeq &getFncSequence() const;
-
         /// register a path tracer associated with the topmost function call
         void pushPathTracer(const IPathTracer *);
 
