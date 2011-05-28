@@ -543,7 +543,7 @@ class ControlFlow {
 };
 
 typedef std::vector<int>        TArgByPos;
-typedef std::set<int>           TVarList;
+typedef std::set<int>           TVarSet;
 
 /**
  * function definition
@@ -551,7 +551,7 @@ typedef std::set<int>           TVarList;
 struct Fnc {
     struct cl_operand           def;    ///< definition as low-level operand
     Storage                     *stor;  ///< owning Storage object
-    TVarList                    vars;   ///< uids of variables used by the fnc
+    TVarSet                     vars;   ///< uids of variables used by the fnc
     TArgByPos                   args;   ///< args uid addressed by arg position
     ControlFlow                 cfg;    ///< fnc code as control flow graph
 

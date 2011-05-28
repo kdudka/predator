@@ -76,7 +76,7 @@ struct SymCtx {
 
 		size_t offset = ABP_SIZE + IP_SIZE;
 
-		for (CodeStorage::TVarList::const_iterator i = fnc.vars.begin(); i != fnc.vars.end(); ++i) {
+		for (CodeStorage::TVarSet::const_iterator i = fnc.vars.begin(); i != fnc.vars.end(); ++i) {
 
 			const CodeStorage::Var& var = fnc.stor->vars[*i];
 
@@ -250,7 +250,7 @@ struct SymCtx {
 			for (std::vector<Data::item_info>::const_iterator i = data.d_struct->begin(); i != data.d_struct->end(); ++i)
 				tmp.insert(make_pair(i->first, i->second));
 
-			for (CodeStorage::TVarList::const_iterator i = cd.ctx.fnc.vars.begin(); i != cd.ctx.fnc.vars.end(); ++i) {
+			for (CodeStorage::TVarSet::const_iterator i = cd.ctx.fnc.vars.begin(); i != cd.ctx.fnc.vars.end(); ++i) {
 
 				const CodeStorage::Var& var = cd.ctx.fnc.stor->vars[*i];
 
