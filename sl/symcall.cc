@@ -44,7 +44,7 @@
 struct SymCallCtx::Private {
     SymBackTrace                *bt;
     const CodeStorage::Fnc      *fnc;
-    SymHeap                     sh;
+    SymHeap                     entry;
     SymHeap                     surround;
     const struct cl_operand     *dst;
     SymStateWithJoin            rawResults;
@@ -56,7 +56,7 @@ struct SymCallCtx::Private {
     void destroyStackFrame(SymHeap &sh);
 
     Private(TStorRef stor):
-        sh(stor),
+        entry(stor),
         surround(stor)
     {
     }
@@ -78,7 +78,7 @@ bool SymCallCtx::needExec() const {
 }
 
 const SymHeap& SymCallCtx::entry() const {
-    return d->sh;
+    return d->entry;
 }
 
 SymState& SymCallCtx::rawResults() {
@@ -111,50 +111,36 @@ void SymCallCtx::Private::assignReturnValue(SymHeap &sh) {
 }
 
 void SymCallCtx::Private::destroyStackFrame(SymHeap &sh) {
-    using namespace CodeStorage;
-    const Fnc &ref = *this->fnc;
     SymProc proc(sh, this->bt);
-
-    // gather live variables
-    TCVarList liveVars;
-    sh.gatherCVars(liveVars);
-
-    // filter local variables
-    TCVarList liveLocals;
-    BOOST_FOREACH(const CVar &cv, liveVars) {
-        if (!isOnStack(ref.stor->vars[cv.uid]))
-            // not a local variable
-            continue;
-
-        if (cv.inst != this->nestLevel)
-            // not a local variable in this context
-            continue;
-
-        if (hasKey(ref.vars, cv.uid))
-            liveLocals.push_back(cv);
-    }
-
-    CL_DEBUG_MSG(locationOf(ref),
-            "<<< destroying stack frame of " << nameOf(ref) << "()"
-            << ", nestLevel = " << this->nestLevel
-            << ", varsTotal = " << ref.vars.size()
-            << ", varsAlive = " << liveLocals.size());
-
-    BOOST_FOREACH(const CVar &cv, liveLocals) {
-        const Var &var = ref.stor->vars[cv.uid];
-        const struct cl_loc *lw = &var.loc;
-#if DEBUG_SE_STACK_FRAME
-        CL_DEBUG_MSG(lw, "<<< destroying stack variable: #"
-                << var.uid << " (" << var.name << ")" );
-#endif
-        proc.setLocation(lw);
-        proc.valDestroyTarget(sh.addrOfVar(cv));
-    }
 
     // We need to look for junk since there can be a function returning an
     // allocated object.  Then ignoring the return value on the caller's
     // side can trigger a memory leak.  See data/test-0090.c for a use case.
     proc.valDestroyTarget(VAL_ADDR_OF_RET);
+
+    TValList live;
+    sh.gatherRootObjects(live, isProgramVar);
+    BOOST_FOREACH(const TValId root, live) {
+        const EValueTarget code = sh.valTarget(root);
+        if (VT_ON_STACK != code)
+            // not a local variable
+            continue;
+
+        CVar cv(sh.cVarByRoot(root));
+        if (!hasKey(this->fnc->vars, cv.uid) || cv.inst != this->nestLevel)
+            // a local variable that is not here-local
+            continue;
+
+        const struct cl_loc *loc = 0;
+        std::string varString = varToString(sh.stor(), cv.uid, &loc);
+#if DEBUG_SE_STACK_FRAME
+        CL_DEBUG_MSG(loc, "FFF destroying stack variable: " << varString);
+#else
+        (void) varString;
+#endif
+        proc.setLocation(loc);
+        proc.valDestroyTarget(root);
+    }
 }
 
 void SymCallCtx::flushCallResults(SymState &dst) {
@@ -342,17 +328,17 @@ void SymCallCache::Private::setCallArgs(const CodeStorage::TOperandList &opList)
     }
 }
 
-SymCallCtx* SymCallCache::Private::getCallCtx(int uid, const SymHeap &sh) {
+SymCallCtx* SymCallCache::Private::getCallCtx(int uid, const SymHeap &entry) {
     // cache lookup
     PerFncCache &pfc = this->cache[uid];
-    SymCallCtx *ctx = pfc.lookup(sh);
+    SymCallCtx *ctx = pfc.lookup(entry);
     if (!ctx) {
         // cache miss
-        ctx = new SymCallCtx(sh.stor());
+        ctx = new SymCallCtx(entry.stor());
         ctx->d->bt      = this->bt;
         ctx->d->fnc     = this->fnc;
-        ctx->d->sh      = sh;
-        pfc.insert(sh, ctx);
+        ctx->d->entry   = entry;
+        pfc.insert(entry, ctx);
         return ctx;
     }
 
