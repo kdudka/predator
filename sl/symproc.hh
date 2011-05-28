@@ -106,6 +106,7 @@ class SymProc {
     protected:
         TValId varAt(const struct cl_operand &op);
         TValId targetAt(const struct cl_operand &op);
+        virtual void varInit(TValId at);
 
     private:
         void heapSetSingleVal(TObjId lhs, TValId rhs);
@@ -134,11 +135,13 @@ struct SymExecCoreParams {
     bool fastMode;          ///< enable/disable OOM state simulation
     bool invCompatMode;     ///< Invader compatibility mode
     bool skipPlot;          ///< simply ignore all ___sl_plot* calls
+    bool skipVarInit;       ///< used internally
 
     SymExecCoreParams():
         fastMode(false),
         invCompatMode(false),
-        skipPlot(false)
+        skipPlot(false),
+        skipVarInit(false)
     {
     }
 };
@@ -195,6 +198,9 @@ class SymExecCore: public SymProc {
 
         bool concretizeIfNeeded(SymState &dst, const CodeStorage::Insn &insn);
         bool execCore(SymState &dst, const CodeStorage::Insn &insn, const bool);
+
+    protected:
+        virtual void varInit(TValId at);
 
     private:
         const SymExecCoreParams ep_;

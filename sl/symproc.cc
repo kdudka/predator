@@ -191,6 +191,10 @@ bool SymProc::checkForInvalidDeref(TValId val, TObjType cltTarget) {
         return this->checkForInvalidDeref(sh_.objAt(val, cltTarget));
 }
 
+void SymProc::varInit(TValId at) {
+    initVariable(sh_, bt_, at);
+}
+
 TValId SymProc::varAt(const struct cl_operand &op) {
     // resolve CVar
     const int uid = varIdFromOperand(&op);
@@ -221,7 +225,7 @@ TValId SymProc::varAt(const struct cl_operand &op) {
         return at;
 
     // delayed initialization
-    initVariable(sh_, bt_, at);
+    this->varInit(at);
     return at;
 }
 
@@ -628,6 +632,14 @@ TValId SymExecCore::valFromOperand(const struct cl_operand &op) {
 
 no_nasty_assumptions:
     return SymProc::valFromOperand(op);
+}
+
+void SymExecCore::varInit(TValId at) {
+    if (ep_.skipVarInit)
+        // we are explicitly asked to not initialize any vars
+        return;
+
+    SymProc::varInit(at);
 }
 
 bool SymExecCore::lhsFromOperand(TObjId *pObj, const struct cl_operand &op) {

@@ -153,7 +153,9 @@ void initVariable(
         }
     }
 #endif
-    SymExecCore core(sh, bt, SymExecCoreParams());
+    SymExecCoreParams ep;
+    ep.skipVarInit = /* avoid an infinite recursion */ true;
+    SymExecCore core(sh, bt, ep);
     core.setLocation(&var.loc);
     BOOST_FOREACH(const CodeStorage::Insn *insn, var.initials) {
         CL_DEBUG_MSG(&var.loc,
