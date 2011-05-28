@@ -132,13 +132,15 @@ class InitVarLegacyWrapper {
 
 void initVariable(
         SymHeap                     &sh,
-        SymBackTrace                &bt,
-        const CodeStorage::Var      &var)
+        const SymBackTrace          *bt,
+        const TValId                 at)
 {
+    const CVar cv = sh.cVarByRoot(at);
+    const CodeStorage::Storage &stor = sh.stor();
+    const CodeStorage::Var &var = stor.vars[cv.uid];
+#if SE_ASSUME_FRESH_STATIC_DATA
     if (!isOnStack(var)) {
         // nullify a gl variable
-        const CVar cv(var.uid, /* gl variable */ 0);
-        const TValId at = sh.addrOfVar(cv);
         const TObjType clt = var.type;
 
         if (isComposite(clt)) {
@@ -150,8 +152,8 @@ void initVariable(
             initSingleVariable(sh, obj);
         }
     }
-
-    SymExecCore core(sh, &bt, SymExecCoreParams());
+#endif
+    SymExecCore core(sh, bt, SymExecCoreParams());
     core.setLocation(&var.loc);
     BOOST_FOREACH(const CodeStorage::Insn *insn, var.initials) {
         CL_DEBUG_MSG(&var.loc,

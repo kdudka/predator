@@ -74,6 +74,11 @@
 #define SE_ABSTRACT_ON_CALL_DONE            1
 
 /**
+ * if 1, assume that the contents of static data is initialized on first access
+ */
+#define SE_ASSUME_FRESH_STATIC_DATA         1
+
+/**
  * if 1, call cache is not used at all
  */
 #define SE_DISABLE_CALL_CACHE               0

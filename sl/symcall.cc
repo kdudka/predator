@@ -309,14 +309,6 @@ void SymCallCache::Private::createStackFrame(TCVarList &cVars) {
         // gather local variables so that we can prune the heap afterwards
         const CVar cv(var.uid, this->nestLevel);
         cVars.push_back(cv);
-
-        if (!var.initials.empty()) {
-            CL_DEBUG_MSG(lw, "--- initializing stack variable: #" << var.uid
-                    << " (" << var.name << ")" );
-
-            // reflect the given initializer
-            initVariable(*this->heap, *this->bt, var);
-        }
     }
 }
 

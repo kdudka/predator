@@ -68,37 +68,12 @@ void printMemUsage(const char *fnc) {
 void printMemUsage(const char *) { }
 #endif
 
-// utilities
-namespace {
-
 bool installSignalHandlers(void) {
     // will be processed in SymExecEngine::processPendingSignals() eventually
     return SignalCatcher::install(SIGINT)
         && SignalCatcher::install(SIGUSR1)
         && SignalCatcher::install(SIGTERM);
 }
-
-void createGlVars(
-        SymHeap                         &sh,
-        SymBackTrace                    &bt,
-        const CodeStorage::Storage      &stor)
-{
-    using namespace CodeStorage;
-
-    // now is the time to safely perform the initialization
-    BOOST_FOREACH(const Var &var, stor.vars) {
-        if (VAR_GL != var.code)
-            continue;
-
-        CL_DEBUG_MSG(&var.loc, "(g) initializing global variable: #" << var.uid
-                << " (" << var.name << ")");
-
-        // initialize a global/static variable
-        initVariable(sh, bt, var);
-    }
-}
-
-} // namespace
 
 /// we want BBs to be taken from the scheduler somehow deterministically
 struct BlockPtr {
@@ -795,9 +770,8 @@ SymExec::SymExec(const CodeStorage::Storage &stor, const SymExecParams &params):
 {
     d->params = params;
 
-    // create the initial state, consisting of global/static variables
+    // create the initial state (empty heap)
     SymHeap init(stor);
-    createGlVars(init, d->bt, stor);
     d->stateZero.insertFast(init);
 }
 

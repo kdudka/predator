@@ -71,8 +71,8 @@ inline TValId nextRootObj(SymHeap &sh, TValId root, TOffset offNext) {
 
 void initVariable(
         SymHeap                     &sh,
-        SymBackTrace                &bt,
-        const CodeStorage::Var      &var);
+        const SymBackTrace          *bt,
+        const TValId                 at);
 
 /// take the given visitor through all live pointers
 template <class THeap, class TVisitor, typename TMethod>

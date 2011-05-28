@@ -1267,6 +1267,9 @@ TValId SymHeapCore::addrOfVar(CVar cv) {
 
     // lazy creation of a program variable
     const CodeStorage::Var &var = stor_.vars[cv.uid];
+    if (!isOnStack(var))
+        cv.inst = /* gl var */ 0;
+
     TObjType clt = var.type;
     CL_BREAK_IF(!clt || clt->code == CL_TYPE_VOID);
 #if DEBUG_SE_STACK_FRAME

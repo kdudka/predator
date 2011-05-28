@@ -192,12 +192,36 @@ bool SymProc::checkForInvalidDeref(TValId val, TObjType cltTarget) {
 }
 
 TValId SymProc::varAt(const struct cl_operand &op) {
+    // resolve CVar
     const int uid = varIdFromOperand(&op);
     const int nestLevel = bt_->countOccurrencesOfTopFnc();
     const CVar cVar(uid, nestLevel);
 
+    // get the address (SymHeapCore is responsible for lazy creation)
     const TValId at = sh_.addrOfVar(cVar);
     CL_BREAK_IF(at <= 0);
+
+    // resolve Var
+    const CodeStorage::Storage &stor = sh_.stor();
+    const CodeStorage::Var &var = stor.vars[uid];
+    bool needInit = !var.initials.empty();
+#if SE_ASSUME_FRESH_STATIC_DATA
+    needInit |= !isOnStack(var);
+#else
+    needInit &= isOnStack(var);
+#endif
+    if (!needInit)
+        // in this case, we do not care if the var is initialized or not
+        return at;
+
+    TObjList liveObjs;
+    sh_.gatherLiveObjects(liveObjs, at);
+    if (!liveObjs.empty())
+        // not a fresh variable --> preserve its contents
+        return at;
+
+    // delayed initialization
+    initVariable(sh_, bt_, at);
     return at;
 }
 
