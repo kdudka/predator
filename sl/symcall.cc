@@ -110,6 +110,24 @@ void SymCallCtx::Private::assignReturnValue(SymHeap &sh) {
     proc.objSetValue(obj, val);
 }
 
+void removeGlVarIfSafe(SymHeap &sh, const TValId root) {
+#if SE_ASSUME_FRESH_STATIC_DATA
+    if (sh.pointedByCount(root))
+        // someone points at the variable
+#endif
+        return;
+
+    TObjList live;
+    sh.gatherLiveObjects(live, root);
+    BOOST_FOREACH(const TObjId obj, live)
+        if (VAL_NULL != sh.valueOf(obj))
+            // non-null value inside
+            return;
+
+    // should be safe to remove (we can re-create it later if needed)
+    sh.valDestroyTarget(root);
+}
+
 void SymCallCtx::Private::destroyStackFrame(SymHeap &sh) {
     SymProc proc(sh, this->bt);
 
@@ -122,9 +140,11 @@ void SymCallCtx::Private::destroyStackFrame(SymHeap &sh) {
     sh.gatherRootObjects(live, isProgramVar);
     BOOST_FOREACH(const TValId root, live) {
         const EValueTarget code = sh.valTarget(root);
-        if (VT_ON_STACK != code)
+        if (VT_ON_STACK != code) {
             // not a local variable
+            removeGlVarIfSafe(sh, root);
             continue;
+        }
 
         CVar cv(sh.cVarByRoot(root));
         if (!hasKey(this->fnc->vars, cv.uid) || cv.inst != this->nestLevel)
