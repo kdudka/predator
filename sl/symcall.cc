@@ -350,21 +350,19 @@ void SymCallCache::Private::setCallArgs(const CodeStorage::TOperandList &opList)
 
         // cVar lookup
         const CVar cVar(arg, this->nestLevel);
-        const TObjId lhs = this->heap->objAt(this->heap->addrOfVar(cVar));
-        CL_BREAK_IF(OBJ_INVALID == lhs);
+        const TValId argAddr = this->heap->addrOfVar(cVar);
+
+        // object instantiation
+        TStorRef stor = *this->fnc->stor;
+        const TObjType clt = stor.vars[arg].type;
+        const TObjId argObj = this->heap->objAt(argAddr, clt);
+        CL_BREAK_IF(argObj <= 0);
 
         if (opList.size() <= pos) {
             // no value given for this arg
-            CL_DEBUG_MSG(this->lw,
-                    "missing argument being treated as unknown value");
-
-            // read the UV_UNINITIALIZED of lhs
-            TValId val = this->heap->valueOf(lhs);
-            CL_BREAK_IF(VT_UNKNOWN != this->heap->valTarget(val));
-
-            // change UV_UNINITIALIZED to UV_UNKNOWN in lhs
-            val = this->heap->valCreate(VT_UNKNOWN, VO_UNKNOWN);
-            this->proc->objSetValue(lhs, val);
+            const struct cl_loc *loc = 0;
+            std::string varString = varToString(stor, arg, &loc);
+            CL_DEBUG_MSG(loc, "no fnc arg given for " << varString);
             continue;
         }
 
@@ -374,7 +372,7 @@ void SymCallCache::Private::setCallArgs(const CodeStorage::TOperandList &opList)
         CL_BREAK_IF(VAL_INVALID == val);
 
         // set the value of lhs accordingly
-        this->proc->objSetValue(lhs, val);
+        this->proc->objSetValue(argObj, val);
     }
 }
 
