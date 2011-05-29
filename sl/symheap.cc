@@ -617,10 +617,11 @@ TValId SymHeapCore::Private::dupRoot(TValId rootAt) {
     rootDataDst->addr = imageAt;
 
     // duplicate root metadata
-    rootDataDst->cVar    = rootDataSrc->cVar;
-    rootDataDst->isProto = rootDataSrc->isProto;
-    rootDataDst->cbSize  = rootDataSrc->cbSize;
-    rootDataDst->lastKnownClt = rootDataSrc->lastKnownClt;
+    rootDataDst->cVar               = rootDataSrc->cVar;
+    rootDataDst->isProto            = rootDataSrc->isProto;
+    rootDataDst->initializedToZero  = rootDataSrc->initializedToZero;
+    rootDataDst->cbSize             = rootDataSrc->cbSize;
+    rootDataDst->lastKnownClt       = rootDataSrc->lastKnownClt;
 
     this->liveRoots.insert(imageAt);
 

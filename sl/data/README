@@ -61,6 +61,8 @@ SLS abstraction
                 - run with -fplugin-arg-libsl-symexec-args=fast
                 - plots self-explaining heap graphs with DEBUG_SYMABSTRACT == 1
 
+    test-0149.c - alternation of test-0052, which uses calloc instead of malloc
+
 
 DLS abstraction
 ===============
