@@ -277,11 +277,11 @@ struct SymHeapCore::Private {
     inline TValId valRoot(const TValId);
 
     TValId valCreate(EValueTarget code, EValueOrigin origin);
-
     TValId valDup(TValId);
+
     TObjId objCreate();
-    TValId objDup(TValId root);
-    void objDestroy(TValId obj);
+    TValId dupRoot(TValId root);
+    void destroyRoot(TValId obj);
 
     void releaseValueOf(TObjId obj, TValId val);
     void setValueOf(TObjId of, TValId val);
@@ -578,7 +578,7 @@ TValId SymHeapCore::valClone(TValId val) {
 
     // duplicate a root object
     const TValId root = d->valRoot(val, valData);
-    const TValId dupAt = d->objDup(root);
+    const TValId dupAt = d->dupRoot(root);
 
     // take the offset into consideration
     return this->valByOffset(dupAt, valData->offRoot);
@@ -606,8 +606,8 @@ bool valMapLookup(const TValMap &valMap, TValId *pVal) {
     return true;
 }
 
-TValId SymHeapCore::Private::objDup(TValId rootAt) {
-    CL_DEBUG("SymHeapCore::Private::objDup() is taking place...");
+TValId SymHeapCore::Private::dupRoot(TValId rootAt) {
+    CL_DEBUG("SymHeapCore::Private::dupRoot() is taking place...");
     const RootValue *rootDataSrc = this->rootData(rootAt);
 
     // assign an address to the clone
@@ -1343,7 +1343,7 @@ bool SymHeapCore::valDestroyTarget(TValId val) {
         // such a target is not supposed to be destroyed
         return false;
 
-    d->objDestroy(val);
+    d->destroyRoot(val);
     return true;
 }
 
@@ -1367,7 +1367,7 @@ void SymHeapCore::valSetLastKnownTypeOfTarget(TValId root, TObjType clt) {
 
     if (VAL_ADDR_OF_RET == root) {
         // destroy any stale target of VAL_ADDR_OF_RET
-        d->objDestroy(root);
+        d->destroyRoot(root);
 
         // allocate a new root value at VAL_ADDR_OF_RET
         rootData->code = VT_ON_STACK;
@@ -1385,7 +1385,7 @@ TObjType SymHeapCore::valLastKnownTypeOfTarget(TValId root) const {
     return rootData->lastKnownClt;
 }
 
-void SymHeapCore::Private::objDestroy(TValId root) {
+void SymHeapCore::Private::destroyRoot(TValId root) {
     RootValue *rootData = this->rootData(root);
 
     EValueTarget code = VT_DELETED;
