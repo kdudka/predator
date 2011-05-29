@@ -57,30 +57,6 @@ void dump_cl_insn(const struct CodeStorage::Insn &insn);
 /// dump a code listener @b instruction
 void dump_cl_insn(const struct CodeStorage::Insn *insn);
 
-/// dump @b kind of the given object
-void dump_kind(const SymHeap &heap, TObjId obj);
-
-/// dump a symbolic heap @b object
-void dump_obj(const SymHeap &heap, TObjId obj);
-
-/// dump a symbolic heap @b value
-void dump_value(const SymHeap &heap, TValId value);
-
-/// dump a symbolic heap value, including all (directly) @b referred @b objects
-void dump_value_refs(const SymHeap &heap, TValId value);
-
-/// dump a static/automatic @b variable, see CodeStorage
-void dump_cvar(SymHeap &heap, CVar cv);
-
-/// dump a static/automatic @b variable, see CodeStorage
-void dump_cvar(SymHeap &heap, int uid, int inst);
-
-/// dump any @b existing @b positive ID as either heap object or a heap value
-void dump_id(const SymHeapCore *heap, int id);
-
-/// dump any @b existing @b positive ID as either heap object or a heap value
-void dump_id(const SymHeapCore &heap, int id);
-
 /// plot the given heap to file "symdump-NNNN.dot"
 void dump_plot(const SymHeapCore *sh);
 
