@@ -45,6 +45,8 @@ inline TValId boolToVal(const bool b) {
         : VAL_FALSE;
 }
 
+bool numFromVal(long *pDst, const SymHeap &, const TValId);
+
 void moveKnownValueToLeft(const SymHeapCore &sh, TValId &valA, TValId &valB);
 
 inline TValId valOfPtrAt(SymHeap &sh, TValId at) {

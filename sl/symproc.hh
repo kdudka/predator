@@ -187,6 +187,7 @@ class SymExecCore: public SymProc {
         template <int ARITY>
         void execOp(const CodeStorage::Insn &insn);
 
+        bool resolveCallocSize(unsigned *pDst, const CodeStorage::TOperandList &);
         void execHeapAlloc(SymState &dst, const CodeStorage::Insn &,
                            const unsigned size, const bool nullified);
 

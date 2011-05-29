@@ -26,6 +26,32 @@
 
 #include <boost/foreach.hpp>
 
+bool numFromVal(long *pDst, const SymHeap &sh, const TValId val) {
+    switch (val) {
+        case VAL_NULL:
+            *pDst = 0L;
+            return true;
+
+        case VAL_TRUE:
+            *pDst = 1L;
+            return true;
+
+        default:
+            if (VT_CUSTOM == sh.valTarget(val))
+                break;
+
+            // not a custom value, which integral constants are supposed to be
+            return false;
+    }
+
+    CustomValue cv = sh.valUnwrapCustom(val);
+    if (CV_INT != cv.code)
+        return false;
+
+    *pDst = cv.data.num;
+    return true;
+}
+
 void moveKnownValueToLeft(
         const SymHeapCore           &sh,
         TValId                      &valA,

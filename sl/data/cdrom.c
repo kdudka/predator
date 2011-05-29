@@ -4,7 +4,10 @@ void *malloc(int);
 void *calloc(int, int);
 void free(void *);
 
-#define mallocnull(size) calloc(1, size)
+static void *mallocnull(unsigned size)
+{
+    return calloc(1, size);
+}
 
 void *get_nondet_ptr(void)
 {

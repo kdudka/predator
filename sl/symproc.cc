@@ -749,30 +749,29 @@ void SymExecCore::execHeapAlloc(
     dst.insert(sh_);
 }
 
-bool resolveCallocSize(
+bool SymExecCore::resolveCallocSize(
         unsigned                            *pDst,
-        const CodeStorage::TOperandList     &opList,
-        const struct cl_loc                 *loc)
+        const CodeStorage::TOperandList     &opList)
 {
     if (4 != opList.size()) {
-        CL_ERROR_MSG(loc, "unrecognized protoype of calloc()");
+        CL_ERROR_MSG(lw_, "unrecognized protoype of calloc()");
         return false;
     }
 
-    const struct cl_operand &opNelem = opList[/* nelem */ 2];
-    if (CL_OPERAND_CST != opNelem.code) {
-        CL_ERROR_MSG(loc, "'nelem' arg of calloc() not known at compile-time");
+    const TValId valNelem = this->valFromOperand(opList[/* nelem */ 2]);
+    long nelem;
+    if (!numFromVal(&nelem, sh_, valNelem)) {
+        CL_ERROR_MSG(lw_, "'nelem' arg of calloc() is not a known integer");
         return false;
     }
 
-    const struct cl_operand &opElsize = opList[/* elsize */ 3];
-    if (CL_OPERAND_CST != opElsize.code) {
-        CL_ERROR_MSG(loc, "'elsize' arg of calloc() not known at compile-time");
+    const TValId valElsize = this->valFromOperand(opList[/* elsize */ 3]);
+    long elsize;
+    if (!numFromVal(&elsize, sh_, valElsize)) {
+        CL_ERROR_MSG(lw_, "'elsize' arg of calloc() is not a known integer");
         return false;
     }
 
-    const unsigned nelem  = intCstFromOperand(&opNelem);
-    const unsigned elsize = intCstFromOperand(&opElsize);
     *pDst = nelem * elsize;
     return true;
 }
@@ -801,14 +800,14 @@ bool SymExecCore::execCall(SymState &dst, const CodeStorage::Insn &insn) {
             return false;
         }
 
-        // amount of allocated memory must be a constant
-        const struct cl_operand &opSize = opList[/* size */ 2];
-        if (CL_OPERAND_CST != opSize.code) {
-            CL_ERROR_MSG(lw_, "size arg of malloc() not known at compile-time");
+        // amount of allocated memory must be known (TODO: relax this?)
+        const TValId valSize = this->valFromOperand(opList[/* size */ 2]);
+        long size;
+        if (!numFromVal(&size, sh_, valSize)) {
+            CL_ERROR_MSG(lw_, "size arg of malloc() is not a known integer");
             return false;
         }
 
-        const int size = intCstFromOperand(&opSize);
         CL_DEBUG_MSG(lw_, "executing malloc(" << size << ")");
         this->execHeapAlloc(dst, insn, size, /* nullified */ false);
         return true;
@@ -816,7 +815,7 @@ bool SymExecCore::execCall(SymState &dst, const CodeStorage::Insn &insn) {
 
     if (STREQ(fncName, "calloc")) {
         unsigned size;
-        if (!resolveCallocSize(&size, insn.operands, lw_))
+        if (!resolveCallocSize(&size, insn.operands))
             return false;
 
         CL_DEBUG_MSG(lw_, "executing calloc(/* total size */ " << size << ")");
