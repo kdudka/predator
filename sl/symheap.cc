@@ -550,7 +550,8 @@ TValId SymHeapCore::valueOf(TObjId obj) const {
         // the object has a value
         return val;
 
-    if (isComposite(objData->clt)) {
+    const TObjType clt = objData->clt;
+    if (isComposite(clt)) {
         // deleayed creation of a composite value
         val = d->valCreate(VT_COMPOSITE, VO_INVALID);
         CompValue *valData = DCAST<CompValue *>(d->ents[val]);
@@ -558,15 +559,19 @@ TValId SymHeapCore::valueOf(TObjId obj) const {
     }
     else {
         // deleayed creation of an uninitialized value
-        const RootValue *rootData = d->rootData(objData->root);
+        RootValue *rootData = d->rootData(objData->root);
         if (rootData->initializedToZero) {
             val = VAL_NULL;
             return val;
         }
 
+        // assign a fresh unknown value
         const EValueTarget code = rootData->code;
         const EValueOrigin origin = originByCode(code);
         val = d->valCreate(VT_UNKNOWN, origin);
+
+        // mark the object as live
+        rootData->liveObjs[obj] = /* isPtr */ isDataPtr(clt);
     }
 
     // store backward reference

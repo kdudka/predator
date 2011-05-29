@@ -20,8 +20,8 @@ int max(int **ppa, int **ppb) {
 int main()
 {
     int a = 0;
-    int b = 1;
-    int c = 2;
+    int b;
+    int c;
 
     int *pa = &a;
     int *pb = &b;
@@ -31,7 +31,7 @@ int main()
     int **ppb = &pb;
     int **ppc = &pc;
 
-    // this should be OK as long as Neq predicates work for non-zero ints
+    // this should trigger an invalid dereference ('b' and 'c' not initialized)
     const int x = max(ppa, ppb);
 
     // this should trigger an invalid dereference as long as symstate handles
