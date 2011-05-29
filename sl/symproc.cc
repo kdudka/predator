@@ -748,38 +748,61 @@ void SymExecCore::execFree(const CodeStorage::TOperandList &opList) {
     this->execFreeCore(val);
 }
 
-void SymExecCore::execMalloc(SymState                           &state,
-                             const CodeStorage::Insn            &insn)
+void SymExecCore::execHeapAlloc(
+        SymState                        &dst,
+        const CodeStorage::Insn         &insn,
+        const unsigned                  size,
+        const bool                      nullified)
 {
-    const CodeStorage::TOperandList &opList = insn.operands;
-    CL_BREAK_IF(/* dst + fnc + size */ 3 != opList.size());
-
     // resolve lhs
     TObjId lhs = OBJ_INVALID;
-    if (!this->lhsFromOperand(&lhs, opList[/* dst */ 0]))
+    if (!this->lhsFromOperand(&lhs, insn.operands[/* dst */ 0]))
         // error alredy emitted
         return;
 
-    // amount of allocated memory must be a constant
-    const struct cl_operand &amount = opList[2];
-    const int cbAmount = intCstFromOperand(&amount);
-    CL_DEBUG_MSG(lw_, "executing malloc(" << cbAmount << ")");
-
     // now create a heap object
-    const TValId val = sh_.heapAlloc(cbAmount, /* nullify */ false);
+    const TValId val = sh_.heapAlloc(size, nullified);
     CL_BREAK_IF(val <= 0);
 
     if (!ep_.fastMode) {
         // OOM state simulation
         this->objSetValue(lhs, VAL_NULL);
         this->killInsn(insn);
-        state.insert(sh_);
+        dst.insert(sh_);
     }
 
     // store the result of malloc
     this->objSetValue(lhs, val);
     this->killInsn(insn);
-    state.insert(sh_);
+    dst.insert(sh_);
+}
+
+bool resolveCallocSize(
+        unsigned                            *pDst,
+        const CodeStorage::TOperandList     &opList,
+        const struct cl_loc                 *loc)
+{
+    if (4 != opList.size()) {
+        CL_ERROR_MSG(loc, "unrecognized protoype of calloc()");
+        return false;
+    }
+
+    const struct cl_operand &opNelem = opList[/* nelem */ 2];
+    if (CL_OPERAND_CST != opNelem.code) {
+        CL_ERROR_MSG(loc, "'nelem' arg of calloc() not known at compile-time");
+        return false;
+    }
+
+    const struct cl_operand &opElsize = opList[/* elsize */ 3];
+    if (CL_OPERAND_CST != opElsize.code) {
+        CL_ERROR_MSG(loc, "'elsize' arg of calloc() not known at compile-time");
+        return false;
+    }
+
+    const unsigned nelem  = intCstFromOperand(&opNelem);
+    const unsigned elsize = intCstFromOperand(&opElsize);
+    *pDst = nelem * elsize;
+    return true;
 }
 
 bool SymExecCore::execCall(SymState &dst, const CodeStorage::Insn &insn) {
@@ -800,7 +823,32 @@ bool SymExecCore::execCall(SymState &dst, const CodeStorage::Insn &insn) {
         return false;
 
     if (STREQ(fncName, "malloc")) {
-        this->execMalloc(dst, insn);
+        const CodeStorage::TOperandList &opList = insn.operands;
+        if (3 != opList.size()) {
+            CL_ERROR_MSG(lw_, "unrecognized protoype of malloc()");
+            return false;
+        }
+
+        // amount of allocated memory must be a constant
+        const struct cl_operand &opSize = opList[/* size */ 2];
+        if (CL_OPERAND_CST != opSize.code) {
+            CL_ERROR_MSG(lw_, "size arg of malloc() not known at compile-time");
+            return false;
+        }
+
+        const int size = intCstFromOperand(&opSize);
+        CL_DEBUG_MSG(lw_, "executing malloc(" << size << ")");
+        this->execHeapAlloc(dst, insn, size, /* nullified */ false);
+        return true;
+    }
+
+    if (STREQ(fncName, "calloc")) {
+        unsigned size;
+        if (!resolveCallocSize(&size, insn.operands, lw_))
+            return false;
+
+        CL_DEBUG_MSG(lw_, "executing calloc(/* total size */ " << size << ")");
+        this->execHeapAlloc(dst, insn, size, /* nullified */ true);
         return true;
     }
 
