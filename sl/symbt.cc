@@ -23,9 +23,11 @@
 #include <cl/cl_msg.hh>
 #include <cl/storage.hh>
 
+#include "symheap.hh"
 #include "util.hh"
 
 #include <map>
+#include <queue>
 #include <stack>
 #include <utility>
 
@@ -34,18 +36,23 @@
 
 struct SymBackTrace::Private {
     struct BtStackItem {
-        const CodeStorage::Fnc      &fnc;
-        const struct cl_loc         *loc;
+        const CodeStorage::Fnc              &fnc;
+        const struct cl_loc                 *loc;
+        const SymHeap                       parent;
 
-        BtStackItem(const CodeStorage::Fnc *fnc_, const struct cl_loc *loc_):
+        BtStackItem(
+                const CodeStorage::Fnc      *fnc_,
+                const struct cl_loc         *loc_,
+                const SymHeap               &parent_):
             fnc(*fnc_),
-            loc(loc_)
+            loc(loc_),
+            parent(parent_)
         {
         }
     };
 
     typedef std::stack<const IPathTracer *>                         TStackPP;
-    typedef std::stack<BtStackItem>                                 TStack;
+    typedef std::deque<BtStackItem>                                 TStack;
     typedef std::map<const CodeStorage::Fnc *, int /* cnt */>       TMap;
 
     const CodeStorage::Storage      &stor;
@@ -60,7 +67,12 @@ struct SymBackTrace::Private {
 
     const CodeStorage::Fnc* fncOnTop() const;
     const CodeStorage::Fnc* fncById(int id) const;
-    void pushFnc(const CodeStorage::Fnc *, const struct cl_loc *);
+
+    void pushFnc(
+            const CodeStorage::Fnc          *fnc,
+            const struct cl_loc             *loc,
+            const SymHeap                   &parent);
+
     void popFnc();
 };
 
@@ -69,7 +81,7 @@ const CodeStorage::Fnc* SymBackTrace::Private::fncOnTop() const {
         // empty stack, so there is no top
         return 0;
 
-    const BtStackItem &top = this->btStack.top();
+    const BtStackItem &top = this->btStack.front();
     const CodeStorage::Fnc *fnc = &top.fnc;
 
     // check bt integrity
@@ -87,11 +99,13 @@ const CodeStorage::Fnc* SymBackTrace::Private::fncById(int id) const {
     return fnc;
 }
 
-void SymBackTrace::Private::pushFnc(const CodeStorage::Fnc *fnc,
-                                    const struct cl_loc    *loc)
+void SymBackTrace::Private::pushFnc(
+        const CodeStorage::Fnc          *fnc,
+        const struct cl_loc             *loc,
+        const SymHeap                   &parent)
 {
-    const BtStackItem item(fnc, loc);
-    this->btStack.push(item);
+    const BtStackItem item(fnc, loc, parent);
+    this->btStack.push_front(item);
 
     int &ref = this->nestMap[fnc];
 
@@ -104,7 +118,7 @@ void SymBackTrace::Private::pushFnc(const CodeStorage::Fnc *fnc,
 
 void SymBackTrace::Private::popFnc() {
     const CodeStorage::Fnc *fnc = this->fncOnTop();
-    this->btStack.pop();
+    this->btStack.pop_front();
 
     // decrement instance counter
     int &ref = this->nestMap[fnc];
@@ -154,11 +168,7 @@ void SymBackTrace::printBackTrace() const {
     if (!ptrace && ref.size() < 2)
         return;
 
-    Private::TStack bt(ref);
-    while (!bt.empty()) {
-        const Private::BtStackItem item = bt.top();
-        bt.pop();
-
+    BOOST_FOREACH(const Private::BtStackItem &item, ref) {
         if (ptrace) {
             // perform path tracing at the current level
             CL_BREAK_IF(ppStack.empty());
@@ -174,9 +184,13 @@ void SymBackTrace::printBackTrace() const {
     }
 }
 
-void SymBackTrace::pushCall(int fncId, const struct cl_loc *loc) {
+void SymBackTrace::pushCall(
+        const int                       fncId,
+        const struct cl_loc             *loc,
+        const SymHeap                   &parent)
+{
     const CodeStorage::Fnc *fnc = d->fncById(fncId);
-    d->pushFnc(fnc, loc);
+    d->pushFnc(fnc, loc, parent);
 }
 
 const CodeStorage::Fnc* SymBackTrace::popCall() {
@@ -213,7 +227,7 @@ const CodeStorage::Fnc* SymBackTrace::topFnc() const {
 
 const struct cl_loc* SymBackTrace::topCallLoc() const {
     CL_BREAK_IF(d->btStack.empty());
-    const Private::BtStackItem &top = d->btStack.top();
+    const Private::BtStackItem &top = d->btStack.front();
     return top.loc;
 }
 

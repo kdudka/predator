@@ -828,7 +828,7 @@ const CodeStorage::Fnc* SymExec::Private::resolveCallInsn(
     }
 
     // enter backtrace
-    this->bt.pushCall(uid, lw);
+    this->bt.pushCall(uid, lw, heap);
     return fnc;
 
 fail:
@@ -966,7 +966,7 @@ void SymExec::exec(const CodeStorage::Fnc &fnc, SymState &results) {
         CL_BREAK_IF(d->bt.size());
 
         // initialize backtrace
-        d->bt.pushCall(uidOf(fnc), locationOf(fnc));
+        d->bt.pushCall(uidOf(fnc), locationOf(fnc), heap);
 
         // XXX: synthesize CL_INSN_CALL
         CodeStorage::Insn insn;

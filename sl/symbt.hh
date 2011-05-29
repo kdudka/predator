@@ -25,9 +25,7 @@
  * SymBackTrace - backtrace management
  */
 
-#include <vector>
-
-struct LocationWriter;
+class SymHeap;
 
 namespace CodeStorage {
     struct Fnc;
@@ -74,8 +72,12 @@ class SymBackTrace {
          * @param fncId ID of function, which is being called
          * @param lw location of the call related to the caller (definitely @b
          * not location of the called function)
+         * @param parent caller's heap corresponding to the location of the call
          */
-        void pushCall(int fncId, const struct cl_loc *lw);
+        void pushCall(
+                const int               fncId,
+                const struct cl_loc     *loc,
+                const SymHeap           &parent);
 
         /**
          * leave the call of function on top of the backtrace
