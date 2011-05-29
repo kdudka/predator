@@ -115,6 +115,7 @@ class SymProc {
         bool checkForInvalidDeref(TValId val, TObjType cltTarget);
         TValId heapValFromObj(const struct cl_operand &op);
         TValId heapValFromCst(const struct cl_operand &op);
+        TValId handlePointerPlus(TValId at, TValId off);
         void killVar(const struct cl_operand &op, bool onlyIfNotPointed);
 
     protected:
@@ -182,7 +183,6 @@ class SymExecCore: public SymProc {
 
     private:
         bool lhsFromOperand(TObjId *pObj, const struct cl_operand &op);
-        TValId handlePointerPlus(const TValId at, const struct cl_operand &off);
 
         template <int ARITY>
         void execOp(const CodeStorage::Insn &insn);

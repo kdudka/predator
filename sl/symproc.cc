@@ -918,21 +918,14 @@ TValId compareValues(
     return sh.valCreate(VT_UNKNOWN, vo);
 }
 
-TValId SymExecCore::handlePointerPlus(
-        const TValId                at,
-        const struct cl_operand     &op)
-{
-    if (CL_OPERAND_CST != op.code) {
-        CL_ERROR_MSG(lw_, "pointer plus offset not known in compile-time");
+TValId SymProc::handlePointerPlus(TValId at, TValId off) {
+    long num;
+    if (!numFromVal(&num, sh_, off)) {
+        CL_ERROR_MSG(lw_, "pointer plus offset not a known integer");
         return sh_.valCreate(VT_UNKNOWN, VO_UNKNOWN);
     }
 
-    if (VAL_NULL == at) {
-        CL_DEBUG_MSG(lw_, "pointer plus with NULL treated as unknown value");
-        return sh_.valCreate(VT_UNKNOWN, VO_UNKNOWN);
-    }
-
-    const TOffset offRequested = intCstFromOperand(&op);
+    const TOffset offRequested = static_cast<TOffset>(num);
     CL_DEBUG("handlePointerPlus(): " << offRequested << "b offset requested");
     return sh_.valByOffset(at, offRequested);
 }
@@ -996,6 +989,9 @@ struct OpHandler</* binary */ 2> {
                 CL_BREAK_IF(clt[/* src1 */ 0]->code != clt[/* src2 */ 1]->code);
                 return compareValues(sh, code, clt[0], rhs[0], rhs[1]);
 
+            case CL_BINOP_POINTER_PLUS:
+                return proc.handlePointerPlus(rhs[0], rhs[1]);
+
             default:
                 return sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
         }
@@ -1032,16 +1028,8 @@ void SymExecCore::execOp(const CodeStorage::Insn &insn) {
         rhs[i] = val;
     }
 
-    TValId valResult = VAL_INVALID;
-    if (2 == ARITY && CL_BINOP_POINTER_PLUS
-            == static_cast<enum cl_binop_e>(insn.subCode))
-    {
-        // handle pointer plus
-        valResult = this->handlePointerPlus(rhs[0], opList[/* offset */ 2]);
-    }
-    else
-        // handle generic operator
-        valResult = OpHandler<ARITY>::handleOp(*this, insn.subCode, rhs, clt);
+    const TValId valResult =
+        OpHandler<ARITY>::handleOp(*this, insn.subCode, rhs, clt);
 
 #if !SE_TRACK_NON_POINTER_VALUES
     // avoid creation of live object in case we are not interested in its value
