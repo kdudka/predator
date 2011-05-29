@@ -836,20 +836,6 @@ bool createObject(
     return traverseSubObjs(ctx, rootDst, root1, root2);
 }
 
-bool createAnonObject(
-        SymJoinCtx              &ctx,
-        const TValId            v1,
-        const TValId            v2)
-{
-    int size;
-    if (!joinObjSize(&size, ctx, v1, v2))
-        return false;
-
-    // create the join object
-    const TValId anon = ctx.dst.heapAlloc(size);
-    return defineValueMapping(ctx, v1, v2, anon);
-}
-
 bool followRootValuesCore(
         SymJoinCtx              &ctx,
         const TValId            root1,
@@ -874,12 +860,6 @@ bool followRootValuesCore(
     const TObjType clt2 = ctx.sh2.valLastKnownTypeOfTarget(root2);
     if (!joinClt(&clt, clt1, clt2))
         return false;
-
-    if (!clt) {
-        // anonymous object of known size
-        return !readOnly
-            && createAnonObject(ctx, root1, root2);
-    }
 
     if (readOnly)
         // do not create any object, just check if it was possible
