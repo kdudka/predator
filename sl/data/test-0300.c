@@ -8,6 +8,10 @@
     (type *) ptr;                       \
 });
 
+#ifdef PREDATOR
+#   define printf(...)
+#endif
+
 struct cdrom_device_info {
     struct cdrom_device_ops *ops;
     struct cdrom_device_info *next;

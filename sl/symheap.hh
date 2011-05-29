@@ -365,7 +365,9 @@ class SymHeapCore {
          * @param cbSize size of the object in @b bytes
          * @return value ID of the acquired address
          */
-        TValId heapAlloc(int cbSize);
+        TValId heapAlloc(int cbSize, bool nullify);
+
+        bool untouchedContentsIsNullified(TValId root) const;
 
         /**
          * destroy target of the given value (root has to be at zero offset)

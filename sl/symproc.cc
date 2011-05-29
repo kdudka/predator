@@ -766,7 +766,7 @@ void SymExecCore::execMalloc(SymState                           &state,
     CL_DEBUG_MSG(lw_, "executing malloc(" << cbAmount << ")");
 
     // now create a heap object
-    const TValId val = sh_.heapAlloc(cbAmount);
+    const TValId val = sh_.heapAlloc(cbAmount, /* nullify */ false);
     CL_BREAK_IF(val <= 0);
 
     if (!ep_.fastMode) {

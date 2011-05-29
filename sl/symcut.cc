@@ -122,8 +122,12 @@ void addObjectIfNeeded(DeepCopyData &dc, TValId rootSrcAt) {
     }
 
     // create the object in 'dst'
+    const unsigned size = src.valSizeOfTarget(rootSrcAt);
+    const bool isNullified = src.untouchedContentsIsNullified(rootSrcAt);
+    TValId rootDstAt = dst.heapAlloc(size, isNullified);
+
+    // preserve type-info if known
     const TObjType clt = src.valLastKnownTypeOfTarget(rootSrcAt);
-    TValId rootDstAt = dst.heapAlloc(src.valSizeOfTarget(rootSrcAt));
     if (clt)
         dst.valSetLastKnownTypeOfTarget(rootDstAt, clt);
 

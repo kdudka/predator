@@ -227,8 +227,9 @@ struct RootValue: public BaseValue {
     TObjType                        lastKnownClt;
     unsigned                        cbSize;
     CVar                            cVar;
-    TLiveObjs                       liveObjs;
+    bool                            initializedToZero;
     bool                            isProto;
+    TLiveObjs                       liveObjs;
     TUsedBy                         usedByGl;
     TGrid                           grid;
 
@@ -237,6 +238,7 @@ struct RootValue: public BaseValue {
         addr(VAL_NULL),
         lastKnownClt(0),
         cbSize(0),
+        initializedToZero(false),
         isProto(false)
     {
     }
@@ -514,14 +516,13 @@ TValId SymHeapCore::valueOf(TObjId obj) const {
     }
     else {
         // deleayed creation of an uninitialized value
-        const BaseValue *rootData = d->rootData(objData->root);
-        const EValueTarget code = rootData->code;
-#if SE_ASSUME_FRESH_STATIC_DATA
-        if (VT_STATIC == code) {
+        const RootValue *rootData = d->rootData(objData->root);
+        if (rootData->initializedToZero) {
             val = VAL_NULL;
             return val;
         }
-#endif
+
+        const EValueTarget code = rootData->code;
         const EValueOrigin origin = originByCode(code);
         val = d->valCreate(VT_UNKNOWN, origin);
     }
@@ -1281,6 +1282,10 @@ TValId SymHeapCore::addrOfVar(CVar cv) {
     rootData->addr = addr;
     rootData->lastKnownClt = clt;
     rootData->cbSize = clt->size;
+#if SE_ASSUME_FRESH_STATIC_DATA
+    if (VT_STATIC == code)
+        rootData->initializedToZero = true;
+#endif
 
     // store the address for next wheel
     d->cVarMap.insert(cv, addr);
@@ -1310,7 +1315,7 @@ TObjId SymHeapCore::valGetComposite(TValId val) const {
     return compData->compObj;
 }
 
-TValId SymHeapCore::heapAlloc(int cbSize) {
+TValId SymHeapCore::heapAlloc(int cbSize, bool nullify) {
     // assign an address
     const TValId addr = d->valCreate(VT_ON_HEAP, VO_ASSIGNED);
 
@@ -1318,8 +1323,14 @@ TValId SymHeapCore::heapAlloc(int cbSize) {
     RootValue *rootData = d->rootData(addr);
     rootData->addr = addr;
     rootData->cbSize = cbSize;
+    rootData->initializedToZero = nullify;
 
     return addr;
+}
+
+bool SymHeapCore::untouchedContentsIsNullified(TValId root) const {
+    const RootValue *rootData = d->rootData(root);
+    return rootData->initializedToZero;
 }
 
 bool SymHeapCore::valDestroyTarget(TValId val) {
