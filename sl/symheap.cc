@@ -1474,6 +1474,22 @@ TValId SymHeapCore::valCreate(EValueTarget code, EValueOrigin origin) {
 }
 
 TValId SymHeapCore::valWrapCustom(const CustomValue &cVal) {
+    const ECustomValue code = cVal.code;
+    if (CV_INT == code) {
+        // short-circuit for special integral values
+        const long num = cVal.data.num;
+        switch (num) {
+            case 0:
+                return VAL_NULL;
+
+            case 1:
+                return VAL_TRUE;
+
+            default:
+                break;
+        }
+    }
+
     TValId &val = d->cValueMap.lookup(cVal);
     if (VAL_INVALID != val)
         // custom value already wrapped, we have to reuse it
@@ -1728,7 +1744,7 @@ bool SymHeapCore::proveNeq(TValId valA, TValId valB) const {
     // we presume (0 <= valA) and (0 < valB) at this point
     CL_BREAK_IF(d->valOutOfRange(valB));
     const EValueTarget code = this->valTarget(valB);
-    if (isKnownObject(code))
+    if (VT_CUSTOM == code || isKnownObject(code))
         // NOTE: we know (valA != valB) at this point, look above
         return true;
 

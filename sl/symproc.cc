@@ -43,68 +43,37 @@
 // /////////////////////////////////////////////////////////////////////////////
 // SymProc implementation
 TValId SymProc::heapValFromCst(const struct cl_operand &op) {
-    const TObjType clt = op.type;
+    const struct cl_cst &cst = op.data.cst;
 
-    bool isBool = false;
-    enum cl_type_e code = clt->code;
+    CustomValue cv(CV_INVALID);
+
+    const cl_type_e code = cst.code;
     switch (code) {
-        case CL_TYPE_BOOL:
-            isBool = true;
-            break;
-
         case CL_TYPE_ENUM:
         case CL_TYPE_INT:
-        case CL_TYPE_PTR:
+            // integral value
+            cv.code = CV_INT;
+            cv.data.num = cst.data.cst_int.value;
             break;
 
-        case CL_TYPE_ARRAY: {
-            const TObjType cltTarget = targetTypeOfArray(clt);
-            if (CL_TYPE_INT == cltTarget->code
-                    && STREQ(cltTarget->name, "char"))
-            {
-                CL_DEBUG_MSG(&op.data.cst.data.cst_fnc.loc,
-                        "treating char[] as unknown value");
-                return sh_.valCreate(VT_UNKNOWN, VO_ASSIGNED);
-            }
-        }
+        case CL_TYPE_FNC:
+            // code pointer
+            cv.code = CV_FNC;
+            cv.data.uid = cst.data.cst_fnc.uid;
+            break;
+
+        case CL_TYPE_STRING:
+            // string literal
+            cv.code = CV_STRING;
+            cv.data.str = cst.data.cst_string.value;
+            break;
 
         default:
             CL_BREAK_IF("heapValFromCst() got something special");
-            return sh_.valCreate(VT_UNKNOWN, VO_ASSIGNED);
+            break;
     }
 
-    const struct cl_cst &cst = op.data.cst;
-    code = cst.code;
-    switch (code) {
-        case CL_TYPE_ENUM:
-            // we don't have any handling for enums, let's treat it as int...
-
-        case CL_TYPE_INT:
-            if (isBool) {
-                return (cst.data.cst_int.value)
-                    ? VAL_TRUE
-                    : VAL_FALSE;
-            } else {
-                if (!cst.data.cst_int.value)
-                    return VAL_NULL;
-
-                // create a new unknown non-NULL value
-                TValId val = sh_.valCreate(VT_UNKNOWN, VO_ASSIGNED);
-                sh_.neqOp(SymHeap::NEQ_ADD, val, VAL_NULL);
-                return val;
-            }
-
-        case CL_TYPE_FNC: {
-            // wrap fnc uid as SymHeap value
-            CustomValue cv(CV_FNC);
-            cv.data.uid = cst.data.cst_fnc.uid;
-            return sh_.valWrapCustom(cv);
-        }
-
-        case CL_TYPE_STRING:
-        default:
-            return sh_.valCreate(VT_UNKNOWN, VO_ASSIGNED);
-    }
+    return sh_.valWrapCustom(cv);
 }
 
 bool SymProc::checkForInvalidDeref(TObjId obj) {
