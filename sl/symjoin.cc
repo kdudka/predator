@@ -1036,14 +1036,14 @@ bool followValuePair(
             return false;
         }
 
-        const int cVal1 = ctx.sh1.valGetCustom(v1);
-        const int cVal2 = ctx.sh2.valGetCustom(v2);
+        const CustomValue cVal1 = ctx.sh1.valUnwrapCustom(v1);
+        const CustomValue cVal2 = ctx.sh2.valUnwrapCustom(v2);
         if (cVal1 != cVal2) {
             SJ_DEBUG("<-- custom values mismatch " << SJ_VALP(v1, v2));
             return false;
         }
 
-        const TValId vDst = ctx.dst.valCreateCustom(cVal1);
+        const TValId vDst = ctx.dst.valWrapCustom(cVal1);
         return defineValueMapping(ctx, v1, v2, vDst);
     }
 

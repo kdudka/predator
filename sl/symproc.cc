@@ -96,8 +96,9 @@ TValId SymProc::heapValFromCst(const struct cl_operand &op) {
 
         case CL_TYPE_FNC: {
             // wrap fnc uid as SymHeap value
-            const int uid = cst.data.cst_fnc.uid;
-            return sh_.valCreateCustom(uid);
+            CustomValue cv(CV_FNC);
+            cv.data.uid = cst.data.cst_fnc.uid;
+            return sh_.valWrapCustom(cv);
         }
 
         case CL_TYPE_STRING:
@@ -385,7 +386,9 @@ int /* uid */ SymProc::fncFromOperand(const struct cl_operand &op) {
     } else {
         // indirect call
         const TValId val = this->valFromOperand(op);
-        return sh_.valGetCustom(val);
+        CustomValue cv = sh_.valUnwrapCustom(val);
+        CL_BREAK_IF(CV_FNC != cv.code);
+        return cv.data.uid;
     }
 }
 

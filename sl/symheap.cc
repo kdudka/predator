@@ -46,6 +46,18 @@
 #   define DCAST dynamic_cast
 #endif
 
+template <class TCont> typename TCont::value_type::second_type&
+assignInvalidIfNotFound(
+        TCont                                           &cont,
+        const typename TCont::value_type::first_type    &item)
+{
+    if (!hasKey(cont, item))
+        // -1 means "invalid", e.g. VAL_INVALID in case [T = map<???, TValId>]
+        cont[item] = static_cast<typename TCont::value_type::second_type>(-1);
+
+    return cont[item];
+}
+
 // /////////////////////////////////////////////////////////////////////////////
 // Neq predicates store
 class FriendlyNeqDb: public NeqDb {
@@ -189,16 +201,16 @@ struct CompValue: public BaseValue {
     }
 };
 
-struct CustomValue: public BaseValue {
-    int                             customData;
+struct InternalCustomValue: public BaseValue {
+    CustomValue                     customData;
 
-    CustomValue(EValueTarget code_, EValueOrigin origin_):
+    InternalCustomValue(EValueTarget code_, EValueOrigin origin_):
         BaseValue(code_, origin_)
     {
     }
 
     virtual BaseValue* clone() const {
-        return new CustomValue(*this);
+        return new InternalCustomValue(*this);
     }
 };
 
@@ -248,6 +260,36 @@ struct RootValue: public BaseValue {
     }
 };
 
+struct CustomValueMapper {
+    private:
+        typedef std::map<int, TValId>                           TCustomByInt;
+        typedef std::map<long, TValId>                          TCustomByLong;
+        typedef std::map<std::string, TValId>                   TCustomByString;
+
+        TCustomByInt        fncMap;
+        TCustomByLong       numMap;
+        TCustomByString     strMap;
+
+    public:
+        TValId& lookup(const CustomValue &item) {
+            const ECustomValue code = item.code;
+            switch (code) {
+                case CV_INVALID:
+                default:
+                    CL_BREAK_IF("invalid call of CustomValueMapper::lookup()");
+
+                case CV_FNC:
+                    return assignInvalidIfNotFound(fncMap, item.data.uid);
+
+                case CV_INT:
+                    return assignInvalidIfNotFound(numMap, item.data.num);
+
+                case CV_STRING:
+                    return assignInvalidIfNotFound(strMap, item.data.str);
+            }
+        }
+};
+
 struct SymHeapCore::Private {
     // allocate a placeholder for VAL_NULL
     Private();
@@ -259,7 +301,7 @@ struct SymHeapCore::Private {
     ~Private();
 
     CVarMap                         cVarMap;
-    TCValueMap                      cValueMap;
+    CustomValueMapper               cValueMap;
     std::vector<IHeapEntity *>      ents;
     std::set<TValId>                liveRoots;
     FriendlyNeqDb                   neqDb;
@@ -413,7 +455,7 @@ TValId SymHeapCore::Private::valCreate(
             break;
 
         case VT_CUSTOM:
-            this->ents.push_back(new CustomValue(code, origin));
+            this->ents.push_back(new InternalCustomValue(code, origin));
             break;
 
         case VT_ABSTRACT:
@@ -1426,31 +1468,28 @@ TValId SymHeapCore::valCreate(EValueTarget code, EValueOrigin origin) {
     return d->valCreate(code, origin);
 }
 
-TValId SymHeapCore::valCreateCustom(int cVal) {
-    TCValueMap::iterator iter = d->cValueMap.find(cVal);
-    if (d->cValueMap.end() != iter)
+TValId SymHeapCore::valWrapCustom(const CustomValue &cVal) {
+    TValId &val = d->cValueMap.lookup(cVal);
+    if (VAL_INVALID != val)
         // custom value already wrapped, we have to reuse it
-        return iter->second;
+        return val;
 
-    // cVal not found, create a new wrapper for it
-    const TValId val = d->valCreate(VT_CUSTOM, VO_ASSIGNED);
-
-    // initialize the custom value
-    CustomValue *valData = DCAST<CustomValue *>(d->ents[val]);
-    valData->customData  = cVal;
-
-    // store cVal --> val mapping
-    d->cValueMap[cVal] = val;
+    // cVal not found, wrap it as a new heap value
+    val = d->valCreate(VT_CUSTOM, VO_ASSIGNED);
+    InternalCustomValue *valData = DCAST<InternalCustomValue *>(d->ents[val]);
+    valData->customData = cVal;
     return val;
 }
 
-int SymHeapCore::valGetCustom(TValId val) const
+const CustomValue& SymHeapCore::valUnwrapCustom(TValId val) const
 {
-    const BaseValue *valData = d->valData(val);
-    CL_BREAK_IF(VT_CUSTOM != valData->code);
+    const InternalCustomValue *valData =
+        DCAST<InternalCustomValue *>(d->ents[val]);
 
-    const CustomValue *cstData = DCAST<const CustomValue *>(valData);
-    return cstData->customData;
+    // check the consistency of backward mapping
+    CL_BREAK_IF(val != d->cValueMap.lookup(valData->customData));
+
+    return valData->customData;
 }
 
 bool SymHeapCore::valTargetIsProto(TValId val) const {

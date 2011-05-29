@@ -201,8 +201,8 @@ TValId handleValue(DeepCopyData &dc, TValId valSrc) {
     const EValueTarget code = src.valTarget(valSrc);
     if (VT_CUSTOM == code) {
         // custom value, e.g. fnc pointer
-        const int custom = src.valGetCustom(valSrc);
-        const TValId valDst = dst.valCreateCustom(custom);
+        const CustomValue custom = src.valUnwrapCustom(valSrc);
+        const TValId valDst = dst.valWrapCustom(custom);
         valMap[valSrc] = valDst;
         return valDst;
     }

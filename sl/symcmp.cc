@@ -124,8 +124,8 @@ bool matchValues(
 
     if (VT_CUSTOM == code1) {
         // match pair of custom values
-        const int cVal1 = sh1.valGetCustom(v1);
-        const int cVal2 = sh2.valGetCustom(v2);
+        const CustomValue cVal1 = sh1.valUnwrapCustom(v1);
+        const CustomValue cVal2 = sh2.valUnwrapCustom(v2);
         return (cVal1 == cVal2);
     }
 

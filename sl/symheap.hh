@@ -28,7 +28,9 @@
  */
 
 #include "config.h"
+
 #include "symid.hh"
+#include "util.hh"
 
 #include <cl/code_listener.h>
 
@@ -68,6 +70,57 @@ bool isGone(EValueTarget);
 bool isOnHeap(EValueTarget);
 bool isProgramVar(EValueTarget);
 bool isPossibleToDeref(EValueTarget);
+
+enum ECustomValue {
+    CV_INVALID,             ///< reserved for signalling error states
+    CV_FNC,                 ///< code pointer
+    CV_INT,                 ///< constant integral number
+    CV_STRING               ///< string literal
+};
+
+/// @attention SymHeap is not responsible for any deep copies of strings
+union CustomValueData {
+    int         uid;        ///< unique ID as assigned by code-listener
+    long        num;        ///< integral number
+    const char *str;        ///< zero-terminated string
+};
+
+struct CustomValue {
+    ECustomValue    code;   ///< custom value classification
+    CustomValueData data;   ///< custom data
+
+    CustomValue() { }
+
+    CustomValue(ECustomValue code_):
+        code(code_)
+    {
+    }
+};
+
+inline bool operator==(const CustomValue &a, const CustomValue &b) {
+    const ECustomValue code = a.code;
+    if (b.code != code)
+        return false;
+
+    switch (code) {
+        case CV_FNC:
+            return (a.data.uid == b.data.uid);
+
+        case CV_INT:
+            return (a.data.num == b.data.num);
+
+        case CV_STRING:
+            return STREQ(a.data.str, b.data.str);
+
+        case CV_INVALID:
+        default:
+            return false;
+    }
+}
+
+inline bool operator!=(const CustomValue &a, const CustomValue &b) {
+    return !operator==(a, b);
+}
 
 namespace CodeStorage {
     struct Storage;
@@ -382,23 +435,11 @@ class SymHeapCore {
     public:
         TValId valCreate(EValueTarget code, EValueOrigin origin);
 
-        /**
-         * @b wrap a foreign (integral) value into a symbolic heap value
-         * @note this approach is currently used to deal with @b function @b
-         * pointers among others
-         * @param cVal any integral value you need to wrap
-         * @return ID of the just created value
-         */
-        TValId valCreateCustom(int cVal);
+        TValId valWrapCustom(const CustomValue &data);
 
-        /**
-         * retrieve a foreign value, previously @b wrapped by valCreateCustom(),
-         * from the given heap value
-         * @param val ID of the value to look into
-         * @note this can be called only if (VT_CUSTOM == valTarget(val))
-         */
-        int valGetCustom(TValId val) const;
+        const CustomValue& valUnwrapCustom(TValId) const;
 
+    public:
         /**
          * true, if the target object should be cloned on concretization of the
          * owning object
