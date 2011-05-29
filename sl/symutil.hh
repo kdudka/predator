@@ -37,6 +37,7 @@
 #include <set>
 
 #include <boost/foreach.hpp>
+#include <boost/static_assert.hpp>
 
 inline TValId boolToVal(const bool b) {
     return (b)
@@ -221,17 +222,20 @@ void redirectRefs(
         const TValId            redirectTo);
 
 /// take the given visitor through all live program variables in all heaps
-template <unsigned N, class THeap, class TVisitor>
+template <unsigned N_DST, unsigned N_SRC, class THeap, class TVisitor>
 bool /* complete */ traverseProgramVarsGeneric(
-        THeap                *const heaps[N],
+        THeap                *const heaps[N_DST + N_SRC],
         TVisitor                    &visitor)
 {
-    // start with all program variables of heaps[0]
+    const unsigned N_TOTAL = N_DST + N_SRC;
+    BOOST_STATIC_ASSERT(N_DST < N_TOTAL);
+
+    // start with all program variables of the first SRC heap
     TCVarSet all;
-    gatherProgramVars(all, *heaps[0]);
+    gatherProgramVars(all, *heaps[/* src0 */ N_DST]);
 
     // try to match variables from the other heaps if possible
-    /* FIXME: for ( */ { unsigned i = 1; /* FIXME: i < N; ++i) { */
+    for (unsigned i = /* src1 */ 1 + N_DST; i < N_TOTAL; ++i) {
         const SymHeap &sh = *heaps[i];
 
         TValList live;
@@ -255,8 +259,8 @@ bool /* complete */ traverseProgramVarsGeneric(
 
     // go through all program variables
     BOOST_FOREACH(const CVar &cv, all) {
-        TValId roots[N];
-        for (unsigned i = 0; i < N; ++i) {
+        TValId roots[N_TOTAL];
+        for (unsigned i = 0; i < N_TOTAL; ++i) {
             SymHeap &sh = *heaps[i];
             roots[i] = sh.addrOfVar(cv);
         }

@@ -1667,22 +1667,25 @@ class JoinVarVisitor {
 
         bool operator()(const TValId roots[3]) {
             return /* continue */ traverseSubObjs(ctx_,
-                    roots[/* dst */ 2],
-                    roots[/* sh1 */ 0],
-                    roots[/* sh2 */ 1]);
+                    roots[/* dst */ 0],
+                    roots[/* sh1 */ 1],
+                    roots[/* sh2 */ 2]);
         }
 };
 
 bool joinCVars(SymJoinCtx &ctx) {
     SymHeap *const heaps[] = {
+        &ctx.dst,
         &ctx.sh1,
-        &ctx.sh2,
-        &ctx.dst
+        &ctx.sh2
     };
 
     // go through all program variables
     JoinVarVisitor visitor(ctx);
-    return traverseProgramVarsGeneric<3>(heaps,visitor);
+    return traverseProgramVarsGeneric<
+        /* N_DST */ 1,
+        /* N_SRC */ 2>
+            (heaps,visitor);
 }
 
 TValId joinDstValue(

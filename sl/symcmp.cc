@@ -298,7 +298,7 @@ bool areEqual(
     // start with program variables
     TWorkList wl;
     VarScheduleVisitor visitor(wl);
-    if (!traverseProgramVarsGeneric<2>(heaps, visitor))
+    if (!traverseProgramVarsGeneric<0, /* N_SRC */ 2>(heaps, visitor))
         return false;
 
     // check isomorphism
