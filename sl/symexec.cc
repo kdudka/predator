@@ -743,7 +743,6 @@ struct SymExec::Private {
     const CodeStorage::Storage              &stor;
     SymExecParams                           params;
     SymStateWithJoin                        stateZero;
-    SymBackTrace                            bt;
     SymCallCache                            callCache;
     typedef std::stack<IStatsProvider *>    TStatsStack;
     TStatsStack                             statsStack;
@@ -751,8 +750,7 @@ struct SymExec::Private {
     Private(SymExec &se_, const CodeStorage::Storage &stor_):
         se(se_),
         stor(stor_),
-        bt(stor_),
-        callCache(&bt)
+        callCache(stor_)
     {
     }
 
@@ -798,7 +796,8 @@ const CodeStorage::Fnc* SymExec::Private::resolveCallInsn(
     CL_BREAK_IF(CL_INSN_CALL != insn.code || opList.size() < 2);
 
     // look for Fnc ought to be called
-    SymProc proc(heap, &this->bt);
+    SymBackTrace &bt = this->callCache.bt();
+    SymProc proc(heap, &bt);
     const struct cl_loc *lw = &insn.loc;
     proc.setLocation(lw);
 
@@ -810,7 +809,7 @@ const CodeStorage::Fnc* SymExec::Private::resolveCallInsn(
         goto fail;
     }
 
-    if (SE_MAX_CALL_DEPTH < this->bt.size()) {
+    if (SE_MAX_CALL_DEPTH < bt.size()) {
         CL_ERROR_MSG(lw, "call depth exceeds SE_MAX_CALL_DEPTH"
                 << " (" << SE_MAX_CALL_DEPTH << ")");
         goto fail;
@@ -828,12 +827,12 @@ const CodeStorage::Fnc* SymExec::Private::resolveCallInsn(
     }
 
     // enter backtrace
-    this->bt.pushCall(uid, lw, heap);
+    bt.pushCall(uid, lw, heap);
     return fnc;
 
 fail:
     // something wrong happened, print the backtrace
-    this->bt.printBackTrace();
+    bt.printBackTrace();
 
     const struct cl_operand dst = opList[/* dst */ 0];
     if (CL_OPERAND_VOID != dst.code) {
@@ -851,7 +850,7 @@ fail:
 SymExecEngine* SymExec::Private::createEngine(SymCallCtx *ctx) {
     return new SymExecEngine(
             this->se,
-            this->bt,
+            this->callCache.bt(),
             ctx->entry(),
             ctx->rawResults());
 }
@@ -864,6 +863,8 @@ struct StackItem {
 
 void SymExec::Private::execLoop(const StackItem &item) {
     using CodeStorage::Fnc;
+
+    SymBackTrace &bt = this->callCache.bt();
 
     // register statistics provider
     CL_BREAK_IF(!this->statsStack.empty());
@@ -886,7 +887,7 @@ void SymExec::Private::execLoop(const StackItem &item) {
             // call done at this level
             item.ctx->flushCallResults(*item.dst);
             item.ctx->invalidate();
-            this->bt.popCall();
+            bt.popCall();
             printMemUsage("SymCallCtx::flushCallResults");
 
             // unregister statistics provider
@@ -922,7 +923,7 @@ void SymExec::Private::execLoop(const StackItem &item) {
 
         if (!ctx->needExec()) {
             // call cache hit
-            const struct cl_loc *lw = this->bt.topCallLoc();
+            const struct cl_loc *lw = bt.topCallLoc();
             CL_DEBUG_MSG(lw, "(x) call of function optimized out: "
                     << nameOf(*fnc) << "()");
 
@@ -930,7 +931,7 @@ void SymExec::Private::execLoop(const StackItem &item) {
             ctx->flushCallResults(*engine->callResults());
 
             // leave backtrace
-            this->bt.popCall();
+            bt.popCall();
 
             // wake up the caller
             continue;
@@ -959,14 +960,16 @@ void SymExec::exec(const CodeStorage::Fnc &fnc, SymState &results) {
     if (!installSignalHandlers())
         CL_WARN("unable to install signal handlers");
 
+    SymBackTrace &bt = d->callCache.bt();
+
     // go through all symbolic heaps of the initial state, merging the results
     // all together
     BOOST_FOREACH(const SymHeap &heap, d->stateZero) {
         // check for bt offset
-        CL_BREAK_IF(d->bt.size());
+        CL_BREAK_IF(bt.size());
 
         // initialize backtrace
-        d->bt.pushCall(uidOf(fnc), locationOf(fnc), heap);
+        bt.pushCall(uidOf(fnc), locationOf(fnc), heap);
 
         // XXX: synthesize CL_INSN_CALL
         CodeStorage::Insn insn;
@@ -983,11 +986,11 @@ void SymExec::exec(const CodeStorage::Fnc &fnc, SymState &results) {
 
         if (!ctx->needExec()) {
             // not likely to happen in the way that SymExec is currently used
-            CL_WARN_MSG(d->bt.topCallLoc(), "(x) root call optimized out: "
+            CL_WARN_MSG(bt.topCallLoc(), "(x) root call optimized out: "
                     << nameOf(fnc) << "()");
 
             ctx->flushCallResults(results);
-            d->bt.popCall();
+            bt.popCall();
             continue;
         }
 

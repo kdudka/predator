@@ -264,25 +264,33 @@ struct SymCallCache::Private {
     typedef std::map<int /* uid */, PerFncCache>        TCache;
 
     TCache                      cache;
-    SymBackTrace                *bt;
+    SymBackTrace                bt;
 
     bool rediscoverGlVar(SymHeap &sh, const CVar &cv);
     void resolveHeapCut(TCVarList &cut, SymHeap &sh, const TFncVarSet &fncVars);
     SymCallCtx* getCallCtx(const SymHeap &entry, TFncRef fnc);
+
+    Private(TStorRef stor):
+        bt(stor)
+    {
+    }
 };
 
-SymCallCache::SymCallCache(SymBackTrace *bt):
-    d(new Private)
+SymCallCache::SymCallCache(TStorRef stor):
+    d(new Private(stor))
 {
-    d->bt = bt;
 }
 
 SymCallCache::~SymCallCache() {
     delete d;
 }
 
+SymBackTrace& SymCallCache::bt() {
+    return d->bt;
+}
+
 bool SymCallCache::Private::rediscoverGlVar(SymHeap &sh, const CVar &cv) {
-    const SymHeap *parent = this->bt->seekLastOccurrenceOfVar(cv);
+    const SymHeap *parent = bt.seekLastOccurrenceOfVar(cv);
     if (!parent)
         // found nowhere
         return false;
@@ -309,7 +317,7 @@ void SymCallCache::Private::resolveHeapCut(
         const TFncVarSet                &fncVars)
 {
     TStorRef stor = sh.stor();
-    const int nestLevel = this->bt->countOccurrencesOfTopFnc();
+    const int nestLevel = bt.countOccurrencesOfTopFnc();
 
     // start with all gl variables that are accessible from this function
     BOOST_FOREACH(const int uid, fncVars) {
@@ -407,7 +415,7 @@ SymCallCtx* SymCallCache::Private::getCallCtx(const SymHeap &entry, TFncRef fnc)
     if (!ctx) {
         // cache miss
         ctx = new SymCallCtx(entry.stor());
-        ctx->d->bt      = this->bt;
+        ctx->d->bt      = &bt;
         ctx->d->fnc     = &fnc;
         ctx->d->entry   = entry;
         pfc.insert(entry, ctx);
@@ -443,12 +451,12 @@ SymCallCtx* SymCallCache::getCallCtx(
     CL_DEBUG_MSG(loc, "SymCallCache is looking for " << nameOf(fnc) << "()...");
 
     // create SymProc and update the location info
-    SymProc proc(entry, d->bt);
+    SymProc proc(entry, &d->bt);
     proc.setLocation(loc);
 
     // check recursion depth (if any)
     const int uid = uidOf(fnc);
-    const int nestLevel = d->bt->countOccurrencesOfFnc(uid);
+    const int nestLevel = d->bt.countOccurrencesOfFnc(uid);
     if (1 != nestLevel) {
         CL_WARN_MSG(loc, "support of call recursion is not stable yet");
         CL_NOTE_MSG(loc, "nestLevel is " << nestLevel);

@@ -102,14 +102,11 @@ class SymCallCtx {
 /// persistent cache for results of fncs called during the symbolic execution
 class SymCallCache {
     public:
-        /**
-         * create long term cache, this should happen once per SymExec lifetime
-         * @param bt an instance of symbolic backtrace used to distinguish among
-         * instances of automatic variables and to print backtraces when
-         * necessary/suitable
-         */
-        SymCallCache(SymBackTrace *bt);
+        /// create long term cache, this should happen once per SymExec lifetime
+        SymCallCache(TStorRef stor);
         ~SymCallCache();
+
+        SymBackTrace& bt();
 
         /**
          * cache entry point.  This returns either existing, or a newly created
