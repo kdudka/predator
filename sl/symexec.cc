@@ -846,6 +846,21 @@ fail:
     return 0;
 }
 
+std::string varSetToString(TStorRef stor, const TCVarSet varSet) {
+    using namespace CodeStorage;
+    std::ostringstream str;
+
+    unsigned i = 0;
+    BOOST_FOREACH(const CVar &cv, varSet) {
+        if (i++)
+            str << ", ";
+
+        str << varToString(stor, cv.uid);
+    }
+
+    return str.str();
+}
+
 SymExecEngine* SymExec::Private::createEngine(SymCallCtx *ctx) {
     return new SymExecEngine(
             this->se,
@@ -885,7 +900,6 @@ void SymExec::Private::execLoop(const StackItem &item) {
 
             // call done at this level
             item.ctx->flushCallResults(*item.dst);
-            item.ctx->invalidate();
             printMemUsage("SymCallCtx::flushCallResults");
 
             // unregister statistics provider
@@ -896,8 +910,17 @@ void SymExec::Private::execLoop(const StackItem &item) {
             delete engine;
             rtStack.pop();
 
+            const TCVarSet &needReexecFor = item.ctx->needReexecFor();
+            if (!needReexecFor.empty()) {
+                CL_DEBUG(">G< symcall suggests re-execution, reason: "
+                        << varSetToString(stor, needReexecFor));
+
+                CL_BREAK_IF("willing to implement?");
+            }
+
             // wake up the caller (if any)
             printMemUsage("SymExecEngine::~SymExecEngine");
+            item.ctx->invalidate();
             continue;
         }
 

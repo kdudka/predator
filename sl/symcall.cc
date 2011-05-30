@@ -133,6 +133,7 @@ struct SymCallCtx::Private {
     int                         nestLevel;
     bool                        computed;
     bool                        flushed;
+    TCVarSet                    needReexecFor;
 
     void assignReturnValue(SymHeap &sh);
     void destroyStackFrame(SymHeap &sh);
@@ -166,6 +167,10 @@ const SymHeap& SymCallCtx::entry() const {
 
 SymState& SymCallCtx::rawResults() {
     return d->rawResults;
+}
+
+const TCVarSet& SymCallCtx::needReexecFor() const {
+    return d->needReexecFor;
 }
 
 void SymCallCtx::Private::assignReturnValue(SymHeap &sh) {
@@ -344,9 +349,14 @@ bool SymCallCache::Private::rediscoverGlVar(SymHeap &entry, const CVar &cv) {
     // seek the gl var going through the ctx stack backward
     int idx;
     for (idx = cnt - 1; 0 <= idx; --idx) {
-        SymHeap &sh = this->ctxStack[idx]->d->surround;
-        if (isVarAlive(sh, cv))
+        SymCallCtx *ctx = this->ctxStack[idx];
+        SymHeap &sh = ctx->d->surround;
+
+        if (isVarAlive(sh, cv)) {
+            // the origin has to be re-executed with updated specification
+            ctx->d->needReexecFor.insert(cv);
             break;
+        }
     }
 
     if (idx < 0) {
@@ -360,8 +370,14 @@ bool SymCallCache::Private::rediscoverGlVar(SymHeap &entry, const CVar &cv) {
 
     const SymHeap &origin = this->ctxStack[idx]->d->surround;
     for (++idx; idx < cnt; ++idx) {
+        CL_BREAK_IF("not tested");
+
+        // the origin has to be re-executed with updated specification
+        SymCallCtx *ctx = this->ctxStack[idx];
+        ctx->d->needReexecFor.insert(cv);
+
         // rediscover gl variable at the current level
-        const SymHeap &src = this->ctxStack[idx]->d->entry;
+        const SymHeap &src = ctx->d->entry;
         SymHeap dst(src);
         transferGlVar(dst, origin, cv);
 
