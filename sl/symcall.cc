@@ -89,8 +89,10 @@ struct SymCallCache::Private {
     typedef const CodeStorage::Fnc                     &TFncRef;
     typedef CodeStorage::TVarSet                        TFncVarSet;
     typedef std::map<int /* uid */, PerFncCache>        TCache;
+    typedef std::vector<SymCallCtx *>                   TCtxStack;
 
     TCache                      cache;
+    TCtxStack                   ctxStack;
     SymBackTrace                bt;
 
     bool rediscoverGlVar(SymHeap &sh, const CVar &cv);
@@ -106,7 +108,7 @@ struct SymCallCache::Private {
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of SymCallCtx
 struct SymCallCtx::Private {
-    SymBackTrace                *bt;
+    SymCallCache::Private       *cd;
     const CodeStorage::Fnc      *fnc;
     SymHeap                     entry;
     SymHeap                     surround;
@@ -120,6 +122,7 @@ struct SymCallCtx::Private {
     void destroyStackFrame(SymHeap &sh);
 
     Private(SymCallCache::Private *cd_):
+        cd(cd_),
         entry(cd_->bt.stor()),
         surround(cd_->bt.stor())
     {
@@ -159,7 +162,7 @@ void SymCallCtx::Private::assignReturnValue(SymHeap &sh) {
     // backtrace instance for source operands and another one for destination
     // operands.  The called function already appears on the given backtrace, so
     // that we can get the source backtrace by removing it from there locally.
-    SymBackTrace callerSiteBt(*this->bt);
+    SymBackTrace callerSiteBt(this->cd->bt);
     callerSiteBt.popCall();
     SymProc proc(sh, &callerSiteBt);
     proc.setLocation(&op.data.var->loc);
@@ -175,7 +178,7 @@ void SymCallCtx::Private::assignReturnValue(SymHeap &sh) {
 }
 
 void SymCallCtx::Private::destroyStackFrame(SymHeap &sh) {
-    SymProc proc(sh, this->bt);
+    SymProc proc(sh, &this->cd->bt);
 
     // We need to look for junk since there can be a function returning an
     // allocated object.  Then ignoring the return value on the caller's
@@ -238,6 +241,10 @@ void SymCallCtx::flushCallResults(SymState &dst) {
     d->computed = true;
     d->flushed = true;
 
+    // leave ctx stack
+    CL_BREAK_IF(this != d->cd->ctxStack.back());
+    d->cd->ctxStack.pop_back();
+
     // go through the results and make them of the form that the caller likes
     const unsigned cnt = d->rawResults.size();
     for (unsigned i = 0; i < cnt; ++i) {
@@ -269,7 +276,7 @@ void SymCallCtx::flushCallResults(SymState &dst) {
     }
 
     // leave backtrace
-    d->bt->popCall();
+    d->cd->bt.popCall();
 }
 
 void SymCallCtx::invalidate() {
@@ -294,10 +301,23 @@ SymBackTrace& SymCallCache::bt() {
 }
 
 bool SymCallCache::Private::rediscoverGlVar(SymHeap &sh, const CVar &cv) {
-    const SymHeap *parent = bt.seekLastOccurrenceOfVar(cv);
-    if (!parent)
+    const SymHeap *parent = 0;
+
+    BOOST_REVERSE_FOREACH(const SymCallCtx *ctx, this->ctxStack) {
+        SymHeap &sh = ctx->d->surround;
+        if (isVarAlive(sh, cv)) {
+            parent = &sh;
+            break;
+        }
+    }
+
+    if (!parent) {
         // found nowhere
+        CL_BREAK_IF(this->bt.seekLastOccurrenceOfVar(cv));
         return false;
+    }
+
+    CL_BREAK_IF(!this->bt.seekLastOccurrenceOfVar(cv));
 
     // cut out what we need from the ancestor
     CL_DEBUG("rediscoverGlVar() is taking place...");
@@ -426,10 +446,12 @@ SymCallCtx* SymCallCache::Private::getCallCtx(const SymHeap &entry, TFncRef fnc)
     if (!ctx) {
         // cache miss
         ctx = new SymCallCtx(this);
-        ctx->d->bt      = &bt;
         ctx->d->fnc     = &fnc;
         ctx->d->entry   = entry;
         pfc.insert(entry, ctx);
+
+        // enter ctx stack
+        this->ctxStack.push_back(ctx);
         return ctx;
     }
 
@@ -448,6 +470,9 @@ SymCallCtx* SymCallCache::Private::getCallCtx(const SymHeap &entry, TFncRef fnc)
                 "flushed yet; perhaps a recursive function call?");
         return 0;
     }
+
+    // enter ctx stack
+    this->ctxStack.push_back(ctx);
 
     // all OK, return the cached ctx
     return ctx;
