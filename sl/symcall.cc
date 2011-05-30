@@ -25,6 +25,7 @@
 
 #include "symabstract.hh"
 #include "symbt.hh"
+#include "symcmp.hh"
 #include "symcut.hh"
 #include "symdebug.hh"
 #include "symheap.hh"
@@ -53,6 +54,21 @@ class PerFncCache {
             BOOST_FOREACH(SymCallCtx *ctx, ctxMap_) {
                 delete ctx;
             }
+        }
+
+        void updateCacheEntry(const SymHeap &of, SymHeap /* NON-const! */ &by) {
+#if SE_DISABLE_CALL_CACHE
+            CL_BREAK_IF("invalid call of PerFncCache::updateCacheEntry()");
+            return;
+#endif
+            int idx = huni_.lookup(of);
+            if (-1 == idx) {
+                CL_BREAK_IF("PerFncCache::updateCacheEntry() has failed");
+                return;
+            }
+
+            CL_BREAK_IF(!areEqual(of, huni_[idx]));
+            huni_.heaps_[idx].swap(by);
         }
 
         /**
@@ -211,6 +227,7 @@ void SymCallCtx::Private::destroyStackFrame(SymHeap &sh) {
     }
 }
 
+// TODO: optimize this
 void joinHeapsWithCare(SymHeap &sh, SymHeap surround) {
     LDP_INIT(symcall, "join");
     LDP_PLOT(symcall, sh);
@@ -255,7 +272,11 @@ void SymCallCtx::flushCallResults(SymState &dst) {
 
         // first join the heap with its original surround
         SymHeap sh(d->rawResults[i]);
+#if SE_DISABLE_CALL_CACHE
+        joinHeapsByCVars(&sh, &d->surround);
+#else
         joinHeapsWithCare(sh, d->surround);
+#endif
 
         LDP_INIT(symcall, "post-processing");
         LDP_PLOT(symcall, sh);
@@ -300,38 +321,57 @@ SymBackTrace& SymCallCache::bt() {
     return d->bt;
 }
 
-bool SymCallCache::Private::rediscoverGlVar(SymHeap &sh, const CVar &cv) {
-    const SymHeap *parent = 0;
+// TODO: optimize this
+void transferGlVar(SymHeap &dst, SymHeap src, const CVar &cv) {
+    CL_BREAK_IF(cv.inst);
 
-    BOOST_REVERSE_FOREACH(const SymCallCtx *ctx, this->ctxStack) {
-        SymHeap &sh = ctx->d->surround;
-        if (isVarAlive(sh, cv)) {
-            parent = &sh;
+    // cut out what we need from the ancestor
+    const TCVarList cut(1, cv);
+    splitHeapByCVars(&src, cut);
+
+    // remove the stub, we are going to replace by something useful
+    const TValId at = dst.addrOfVar(cv);
+    CL_BREAK_IF(isVarAlive(dst, cv));
+    dst.valDestroyTarget(at);
+
+    // now put it all together
+    joinHeapsByCVars(&dst, &src);
+}
+
+bool SymCallCache::Private::rediscoverGlVar(SymHeap &entry, const CVar &cv) {
+    const int cnt = this->ctxStack.size();
+
+    // seek the gl var going through the ctx stack backward
+    int idx;
+    for (idx = cnt - 1; 0 <= idx; --idx) {
+        SymHeap &sh = this->ctxStack[idx]->d->surround;
+        if (isVarAlive(sh, cv))
             break;
-        }
     }
 
-    if (!parent) {
+    if (idx < 0) {
         // found nowhere
         CL_BREAK_IF(this->bt.seekLastOccurrenceOfVar(cv));
         return false;
     }
 
+    CL_DEBUG("rediscoverGlVar() is taking place...");
     CL_BREAK_IF(!this->bt.seekLastOccurrenceOfVar(cv));
 
-    // cut out what we need from the ancestor
-    CL_DEBUG("rediscoverGlVar() is taking place...");
-    SymHeap arena(*parent);
-    const TCVarList cut(1, cv);
-    splitHeapByCVars(&arena, cut);
+    const SymHeap &origin = this->ctxStack[idx]->d->surround;
+    for (++idx; idx < cnt; ++idx) {
+        // rediscover gl variable at the current level
+        const SymHeap &src = this->ctxStack[idx]->d->entry;
+        SymHeap dst(src);
+        transferGlVar(dst, origin, cv);
 
-    // remove the stub, we are going to replace by something useful
-    const TValId at = sh.addrOfVar(cv);
-    CL_BREAK_IF(isVarAlive(sh, cv));
-    sh.valDestroyTarget(at);
+        // update the corresponding cache entry
+        const int uid = uidOf(*this->bt.topFnc());
+        PerFncCache &pfc = this->cache[uid];
+        pfc.updateCacheEntry(src, dst);
+    }
 
-    // now put it all together
-    joinHeapsByCVars(&sh, &arena);
+    transferGlVar(entry, origin, cv);
     return true;
 }
 
