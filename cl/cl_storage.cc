@@ -338,12 +338,12 @@ void ClStorageBuilder::Private::digOperandVar(const struct cl_operand *op) {
     const struct cl_var *clv = op->data.var;
     const int id = clv->uid;
 
+    // mark as used in the current function
+    this->fnc->vars.insert(id);
+
     // do process each variable only once
     if (!insertOnce(this->varsDone, id))
         return;
-
-    // mark as used in the current function
-    this->fnc->vars.insert(id);
 
     enum cl_scope_e scope = op->scope;
     switch (scope) {
