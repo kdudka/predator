@@ -826,8 +826,7 @@ const CodeStorage::Fnc* SymExec::Private::resolveCallInsn(
         goto fail;
     }
 
-    // enter backtrace
-    bt.pushCall(uid, lw, heap);
+    // all OK
     return fnc;
 
 fail:
@@ -887,7 +886,6 @@ void SymExec::Private::execLoop(const StackItem &item) {
             // call done at this level
             item.ctx->flushCallResults(*item.dst);
             item.ctx->invalidate();
-            bt.popCall();
             printMemUsage("SymCallCtx::flushCallResults");
 
             // unregister statistics provider
@@ -930,9 +928,6 @@ void SymExec::Private::execLoop(const StackItem &item) {
             // use the cached result
             ctx->flushCallResults(*engine->callResults());
 
-            // leave backtrace
-            bt.popCall();
-
             // wake up the caller
             continue;
         }
@@ -968,9 +963,6 @@ void SymExec::exec(const CodeStorage::Fnc &fnc, SymState &results) {
         // check for bt offset
         CL_BREAK_IF(bt.size());
 
-        // initialize backtrace
-        bt.pushCall(uidOf(fnc), locationOf(fnc), heap);
-
         // XXX: synthesize CL_INSN_CALL
         CodeStorage::Insn insn;
         insn.stor = fnc.stor;
@@ -990,7 +982,6 @@ void SymExec::exec(const CodeStorage::Fnc &fnc, SymState &results) {
                     << nameOf(fnc) << "()");
 
             ctx->flushCallResults(results);
-            bt.popCall();
             continue;
         }
 

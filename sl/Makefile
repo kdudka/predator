@@ -18,7 +18,7 @@
 CMAKE           ?= cmake
 CTEST           ?= ctest
 
-.PHONY: all clean configure distclean distcheck install \
+.PHONY: all clean configure distclean distcheck fast install \
 	version.h
 
 all: version.h ../cl_build/libcl.so configure
@@ -27,6 +27,9 @@ all: version.h ../cl_build/libcl.so configure
 	mkdir -p ../sl_build
 	cd ../sl_build && $(CMAKE) ../sl
 	$(MAKE) -C ../sl_build
+
+fast:
+	$(MAKE) -sC ../sl_build
 
 check: all
 	cd ../sl_build && $(CTEST) --output-on-failure

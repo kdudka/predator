@@ -167,9 +167,8 @@ void joinHeapsWithCare(SymHeap &sh, SymHeap surround) {
 }
 
 void SymCallCtx::flushCallResults(SymState &dst) {
-    if (d->flushed)
-        // are we really ready for this?
-        CL_TRAP;
+    // are we really ready for this?
+    CL_BREAK_IF(d->flushed);
 
     // mark as done
     d->computed = true;
@@ -204,6 +203,9 @@ void SymCallCtx::flushCallResults(SymState &dst) {
         // flush the result
         dst.insert(sh);
     }
+
+    // leave backtrace
+    d->bt->popCall();
 }
 
 void SymCallCtx::invalidate() {
@@ -450,12 +452,15 @@ SymCallCtx* SymCallCache::getCallCtx(
     const struct cl_loc *loc = &insn.loc;
     CL_DEBUG_MSG(loc, "SymCallCache is looking for " << nameOf(fnc) << "()...");
 
+    // enlarge the backtrace
+    const int uid = uidOf(fnc);
+    d->bt.pushCall(uid, loc, entry);
+
     // create SymProc and update the location info
     SymProc proc(entry, &d->bt);
     proc.setLocation(loc);
 
     // check recursion depth (if any)
-    const int uid = uidOf(fnc);
     const int nestLevel = d->bt.countOccurrencesOfFnc(uid);
     if (1 != nestLevel) {
         CL_WARN_MSG(loc, "support of call recursion is not stable yet");
