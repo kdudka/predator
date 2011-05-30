@@ -40,6 +40,70 @@
 LOCAL_DEBUG_PLOTTER(symcall, DEBUG_SYMCALL)
 
 // /////////////////////////////////////////////////////////////////////////////
+// call context cache per one fnc
+class PerFncCache {
+    private:
+        typedef std::vector<SymCallCtx *> TCtxMap;
+
+        SymHeapUnion    huni_;
+        TCtxMap         ctxMap_;
+
+    public:
+        ~PerFncCache() {
+            BOOST_FOREACH(SymCallCtx *ctx, ctxMap_) {
+                delete ctx;
+            }
+        }
+
+        /**
+         * look for the given heap; return the corresponding call ctx if found,
+         * 0 otherwise
+         */
+        SymCallCtx* lookup(const SymHeap &sh) {
+#if SE_DISABLE_CALL_CACHE
+            return 0;
+#endif
+            int idx = huni_.lookup(sh);
+            if (-1 == idx)
+                return 0;
+
+            return ctxMap_.at(idx);
+        }
+
+        /**
+         * store the given heap with its corresponding call ctx into the cache
+         */
+        void insert(const SymHeap &sh, SymCallCtx *ctx) {
+#if SE_DISABLE_CALL_CACHE
+            return;
+#endif
+            huni_.insertNew(sh);
+            ctxMap_.push_back(ctx);
+            CL_BREAK_IF(huni_.size() != ctxMap_.size());
+        }
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+// SymCallCache internal data
+struct SymCallCache::Private {
+    typedef const CodeStorage::Fnc                     &TFncRef;
+    typedef CodeStorage::TVarSet                        TFncVarSet;
+    typedef std::map<int /* uid */, PerFncCache>        TCache;
+
+    TCache                      cache;
+    SymBackTrace                bt;
+
+    bool rediscoverGlVar(SymHeap &sh, const CVar &cv);
+    void resolveHeapCut(TCVarList &cut, SymHeap &sh, const TFncVarSet &fncVars);
+    SymCallCtx* getCallCtx(const SymHeap &entry, TFncRef fnc);
+
+    Private(TStorRef stor):
+        bt(stor)
+    {
+    }
+};
+
+// /////////////////////////////////////////////////////////////////////////////
 // implementation of SymCallCtx
 struct SymCallCtx::Private {
     SymBackTrace                *bt;
@@ -55,15 +119,15 @@ struct SymCallCtx::Private {
     void assignReturnValue(SymHeap &sh);
     void destroyStackFrame(SymHeap &sh);
 
-    Private(TStorRef stor):
-        entry(stor),
-        surround(stor)
+    Private(SymCallCache::Private *cd_):
+        entry(cd_->bt.stor()),
+        surround(cd_->bt.stor())
     {
     }
 };
 
-SymCallCtx::SymCallCtx(TStorRef stor):
-    d(new Private(stor))
+SymCallCtx::SymCallCtx(SymCallCache::Private *cd):
+    d(new Private(cd))
 {
     d->computed = false;
     d->flushed = false;
@@ -215,69 +279,7 @@ void SymCallCtx::invalidate() {
 }
 
 // /////////////////////////////////////////////////////////////////////////////
-// call context cache per one fnc
-class PerFncCache {
-    private:
-        typedef std::vector<SymCallCtx *> TCtxMap;
-
-        SymHeapUnion    huni_;
-        TCtxMap         ctxMap_;
-
-    public:
-        ~PerFncCache() {
-            BOOST_FOREACH(SymCallCtx *ctx, ctxMap_) {
-                delete ctx;
-            }
-        }
-
-        /**
-         * look for the given heap; return the corresponding call ctx if found,
-         * 0 otherwise
-         */
-        SymCallCtx* lookup(const SymHeap &sh) {
-#if SE_DISABLE_CALL_CACHE
-            return 0;
-#endif
-            int idx = huni_.lookup(sh);
-            if (-1 == idx)
-                return 0;
-
-            return ctxMap_.at(idx);
-        }
-
-        /**
-         * store the given heap with its corresponding call ctx into the cache
-         */
-        void insert(const SymHeap &sh, SymCallCtx *ctx) {
-#if SE_DISABLE_CALL_CACHE
-            return;
-#endif
-            huni_.insertNew(sh);
-            ctxMap_.push_back(ctx);
-            CL_BREAK_IF(huni_.size() != ctxMap_.size());
-        }
-};
-
-// /////////////////////////////////////////////////////////////////////////////
 // implementation of SymCallCache
-struct SymCallCache::Private {
-    typedef const CodeStorage::Fnc                     &TFncRef;
-    typedef CodeStorage::TVarSet                        TFncVarSet;
-    typedef std::map<int /* uid */, PerFncCache>        TCache;
-
-    TCache                      cache;
-    SymBackTrace                bt;
-
-    bool rediscoverGlVar(SymHeap &sh, const CVar &cv);
-    void resolveHeapCut(TCVarList &cut, SymHeap &sh, const TFncVarSet &fncVars);
-    SymCallCtx* getCallCtx(const SymHeap &entry, TFncRef fnc);
-
-    Private(TStorRef stor):
-        bt(stor)
-    {
-    }
-};
-
 SymCallCache::SymCallCache(TStorRef stor):
     d(new Private(stor))
 {
@@ -423,7 +425,7 @@ SymCallCtx* SymCallCache::Private::getCallCtx(const SymHeap &entry, TFncRef fnc)
     SymCallCtx *ctx = pfc.lookup(entry);
     if (!ctx) {
         // cache miss
-        ctx = new SymCallCtx(entry.stor());
+        ctx = new SymCallCtx(this);
         ctx->d->bt      = &bt;
         ctx->d->fnc     = &fnc;
         ctx->d->entry   = entry;

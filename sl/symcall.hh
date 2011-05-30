@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2010-2011 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -30,11 +30,49 @@
 
 class SymBackTrace;
 class SymState;
+class SymCallCtx;
 
 namespace CodeStorage {
     struct Fnc;
     struct Insn;
 }
+
+/// persistent cache for results of fncs called during the symbolic execution
+class SymCallCache {
+    public:
+        /// create long term cache, this should happen once per SymExec lifetime
+        SymCallCache(TStorRef stor);
+        ~SymCallCache();
+
+        SymBackTrace& bt();
+
+        /**
+         * cache entry point.  This returns either existing, or a newly created
+         * call context.
+         * @param heap a symbolic heap valid for call entry
+         * @param fnc a function which is about to be called
+         * @param insn a call instruction which is about to be executed
+         * @note parameters fnc and insn have to match with each other!
+         * @return an instance of the corresponding SymCallCtx object, zero if
+         * an unrecoverable error occurs
+         */
+        SymCallCtx* getCallCtx(SymHeap                      heap,
+                               const CodeStorage::Fnc       &fnc,
+                               const CodeStorage::Insn      &insn);
+
+    private:
+        /// object copying is @b not allowed
+        SymCallCache(const SymCallCache &);
+
+        /// object copying is @b not allowed
+        SymCallCache& operator=(const SymCallCache &);
+
+    private:
+        struct Private;
+        Private *d;
+
+        friend class SymCallCtx;
+};
 
 /**
  * function call context, which represents a cache entry of SymCallCache
@@ -79,7 +117,7 @@ class SymCallCtx {
 
     private:
         /// @note these objects can't be created/destroyed out of SymCallCache
-        SymCallCtx(TStorRef);
+        SymCallCtx(SymCallCache::Private *);
 
         /// @note these objects can't be created/destroyed out of SymCallCache
         ~SymCallCtx();
@@ -93,41 +131,6 @@ class SymCallCtx {
 
         /// object copying is @b not allowed
         SymCallCtx& operator=(const SymCallCtx &);
-
-    private:
-        struct Private;
-        Private *d;
-};
-
-/// persistent cache for results of fncs called during the symbolic execution
-class SymCallCache {
-    public:
-        /// create long term cache, this should happen once per SymExec lifetime
-        SymCallCache(TStorRef stor);
-        ~SymCallCache();
-
-        SymBackTrace& bt();
-
-        /**
-         * cache entry point.  This returns either existing, or a newly created
-         * call context.
-         * @param heap a symbolic heap valid for call entry
-         * @param fnc a function which is about to be called
-         * @param insn a call instruction which is about to be executed
-         * @note parameters fnc and insn have to match with each other!
-         * @return an instance of the corresponding SymCallCtx object, zero if
-         * an unrecoverable error occurs
-         */
-        SymCallCtx* getCallCtx(SymHeap                      heap,
-                               const CodeStorage::Fnc       &fnc,
-                               const CodeStorage::Insn      &insn);
-
-    private:
-        /// object copying is @b not allowed
-        SymCallCache(const SymCallCache &);
-
-        /// object copying is @b not allowed
-        SymCallCache& operator=(const SymCallCache &);
 
     private:
         struct Private;
