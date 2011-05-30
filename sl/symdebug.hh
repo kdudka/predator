@@ -21,7 +21,8 @@
 #ifndef H_GUARD_SYM_DEBUG_H
 #define H_GUARD_SYM_DEBUG_H
 
-#include "symdump.hh"
+#include "symplot.hh"
+
 #include <iomanip>
 #include <string>
 #include <sstream>
@@ -58,7 +59,7 @@
             << "-" << std::setfill('0') << std::setw(4)                        \
             << (::__ldp_cnt_steps_##name++);                                   \
                                                                                \
-       dump_plot(sh, str.str().c_str());                                       \
+       plotHeap(sh, str.str().c_str());                                        \
     }                                                                          \
 
 #define LDP_INIT(plotter, plot_name) __ldp_init_##plotter(plot_name)

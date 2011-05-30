@@ -23,8 +23,10 @@
 #include <cl/cl_msg.hh>
 #include <cl/storage.hh>
 
+#include "symabstract.hh"
 #include "symbt.hh"
 #include "symcut.hh"
+#include "symdebug.hh"
 #include "symheap.hh"
 #include "symproc.hh"
 #include "symstate.hh"
@@ -35,9 +37,7 @@
 
 #include <boost/foreach.hpp>
 
-#if SE_ABSTRACT_ON_CALL_DONE
-#   include "symabstract.hh"
-#endif
+LOCAL_DEBUG_PLOTTER(symcall, DEBUG_SYMCALL)
 
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of SymCallCtx
@@ -145,12 +145,19 @@ void SymCallCtx::Private::destroyStackFrame(SymHeap &sh) {
 }
 
 void joinHeapsWithCare(SymHeap &sh, SymHeap surround) {
+    LDP_INIT(symcall, "join");
+    LDP_PLOT(symcall, sh);
+    LDP_PLOT(symcall, surround);
+
     TCVarList live;
     gatherProgramVars(live, sh);
 
     SymHeap safeSurround(sh.stor());
     splitHeapByCVars(&surround, live, &safeSurround);
     joinHeapsByCVars(&sh, &safeSurround);
+
+    LDP_PLOT(symcall, sh);
+
 #ifndef NDEBUG
     live.clear();
     gatherProgramVars(live, surround);
@@ -180,14 +187,19 @@ void SymCallCtx::flushCallResults(SymState &dst) {
         SymHeap sh(d->rawResults[i]);
         joinHeapsWithCare(sh, d->surround);
 
+        LDP_INIT(symcall, "post-processing");
+        LDP_PLOT(symcall, sh);
+
         // perform all necessary action wrt. our function call convention
         d->assignReturnValue(sh);
         d->destroyStackFrame(sh);
+        LDP_PLOT(symcall, sh);
 
 #if SE_ABSTRACT_ON_CALL_DONE
         // after the final merge and cleanup, chances are that the abstraction
         // may be useful
         abstractIfNeeded(sh);
+        LDP_PLOT(symcall, sh);
 #endif
         // flush the result
         dst.insert(sh);
@@ -443,15 +455,25 @@ SymCallCtx* SymCallCache::getCallCtx(
     }
 
     // initialize local variables of the called fnc
+    LDP_INIT(symcall, "pre-processing");
+    LDP_PLOT(symcall, entry);
     d->setCallArgs(opList);
     d->proc->killInsn(insn);
+    LDP_PLOT(symcall, entry);
 
-    // prune heap
+    // resolve heap cut
     TCVarList cut;
     d->resolveHeapCut(cut);
+    LDP_PLOT(symcall, entry);
+
+    // prune heap
+    LDP_INIT(symcall, "split");
+    LDP_PLOT(symcall, entry);
     SymHeap surround(entry.stor());
     splitHeapByCVars(&entry, cut, &surround);
     surround.valDestroyTarget(VAL_ADDR_OF_RET);
+    LDP_PLOT(symcall, entry);
+    LDP_PLOT(symcall, surround);
     
     // get either an existing ctx, or create a new one
     SymCallCtx *ctx = d->getCallCtx(uid, entry);

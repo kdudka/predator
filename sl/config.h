@@ -49,6 +49,11 @@
 #define DEBUG_SYMABSTRACT                   0
 
 /**
+ * if 1, plot some interesting operations as being performed by symcall
+ */
+#define DEBUG_SYMCALL                       0
+
+/**
  * if 1, the symcut module prints some extra debugging info
  */
 #define DEBUG_SYMCUT                        0
