@@ -64,7 +64,8 @@ inline bool isVarAlive(SymHeap &sh, const CVar &cv) {
 
     TObjList live;
     sh.gatherLiveObjects(live, at);
-    return !live.empty();
+    return !live.empty()
+        || sh.pointedByCount(at);
 }
 
 void getPtrValues(TValList &dst, const SymHeap &heap, TValId at);
