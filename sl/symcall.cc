@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2010-2011 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -259,20 +259,16 @@ class PerFncCache {
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of SymCallCache
 struct SymCallCache::Private {
+    typedef const CodeStorage::Fnc                     &TFncRef;
+    typedef CodeStorage::TVarSet                        TFncVarSet;
     typedef std::map<int /* uid */, PerFncCache>        TCache;
 
     TCache                      cache;
     SymBackTrace                *bt;
-    const struct cl_loc         *lw;
-    SymHeap                     *sh;
-    SymProc                     *proc;
-    const CodeStorage::Fnc      *fnc;
-    int                         nestLevel;
 
-    bool rediscoverGlVar(const CVar &cv);
-    void resolveHeapCut(TCVarList &dst);
-    void setCallArgs(const CodeStorage::TOperandList &opList);
-    SymCallCtx* getCallCtx(int uid, const SymHeap &sh);
+    bool rediscoverGlVar(SymHeap &sh, const CVar &cv);
+    void resolveHeapCut(TCVarList &cut, SymHeap &sh, const TFncVarSet &fncVars);
+    SymCallCtx* getCallCtx(const SymHeap &entry, TFncRef fnc);
 };
 
 SymCallCache::SymCallCache(SymBackTrace *bt):
@@ -285,7 +281,7 @@ SymCallCache::~SymCallCache() {
     delete d;
 }
 
-bool SymCallCache::Private::rediscoverGlVar(const CVar &cv) {
+bool SymCallCache::Private::rediscoverGlVar(SymHeap &sh, const CVar &cv) {
     const SymHeap *parent = this->bt->seekLastOccurrenceOfVar(cv);
     if (!parent)
         // found nowhere
@@ -298,83 +294,96 @@ bool SymCallCache::Private::rediscoverGlVar(const CVar &cv) {
     splitHeapByCVars(&arena, cut);
 
     // remove the stub, we are going to replace by something useful
-    const TValId at = this->sh->addrOfVar(cv);
-    CL_BREAK_IF(isVarAlive(*this->sh, cv));
-    this->sh->valDestroyTarget(at);
+    const TValId at = sh.addrOfVar(cv);
+    CL_BREAK_IF(isVarAlive(sh, cv));
+    sh.valDestroyTarget(at);
 
     // now put it all together
-    joinHeapsByCVars(this->sh, &arena);
+    joinHeapsByCVars(&sh, &arena);
     return true;
 }
 
-void SymCallCache::Private::resolveHeapCut(TCVarList &cut) {
-    TStorRef stor = *this->fnc->stor;
+void SymCallCache::Private::resolveHeapCut(
+        TCVarList                       &cut,
+        SymHeap                         &sh,
+        const TFncVarSet                &fncVars)
+{
+    TStorRef stor = sh.stor();
+    const int nestLevel = this->bt->countOccurrencesOfTopFnc();
 
     // start with all gl variables that are accessible from this function
-    BOOST_FOREACH(const int uid, this->fnc->vars) {
+    BOOST_FOREACH(const int uid, fncVars) {
         const CodeStorage::Var &var = stor.vars[uid];
         if (isOnStack(var))
             continue;
 
         CVar cv(uid, /* gl var */ 0);
-        if (isVarAlive(*this->sh, cv) || this->rediscoverGlVar(cv))
+        if (isVarAlive(sh, cv) || this->rediscoverGlVar(sh, cv))
             cut.push_back(cv);
     }
 
     TValList live;
-    this->sh->gatherRootObjects(live, isProgramVar);
+    sh.gatherRootObjects(live, isProgramVar);
     BOOST_FOREACH(const TValId root, live) {
-        const EValueTarget code = this->sh->valTarget(root);
+        const EValueTarget code = sh.valTarget(root);
         if (VT_STATIC == code)
             continue;
 
-        CVar cv(this->sh->cVarByRoot(root));
-        if (hasKey(this->fnc->vars, cv.uid) && cv.inst == this->nestLevel)
+        CVar cv(sh.cVarByRoot(root));
+        if (hasKey(fncVars, cv.uid) && cv.inst == nestLevel)
             cut.push_back(cv);
     }
 }
 
-void SymCallCache::Private::setCallArgs(const CodeStorage::TOperandList &opList)
+void setCallArgs(
+        SymProc                         &proc,
+        const CodeStorage::Fnc          &fnc,
+        const CodeStorage::Insn         &insn)
 {
+    // check insn validity
+    using namespace CodeStorage;
+    const TOperandList &opList = insn.operands;
+    CL_BREAK_IF(CL_INSN_CALL != insn.code || opList.size() < 2);
+
     // get called fnc's args
-    const CodeStorage::TArgByPos &args = this->fnc->args;
+    const TArgByPos &args = fnc.args;
     if (args.size() + 2 < opList.size()) {
-        CL_DEBUG_MSG(this->lw,
+        CL_DEBUG_MSG(&insn.loc,
                 "too many arguments given (vararg fnc involved?)");
 
-        const struct cl_loc *lwDecl = locationOf(*this->fnc);
-        CL_DEBUG_MSG(lwDecl, "note: fnc was declared here");
+        CL_DEBUG_MSG(locationOf(fnc), "note: fnc was declared here");
     }
 
     // wait, we're crossing stack frame boundaries here!  We need to use one
     // backtrace instance for source operands and another one for destination
     // operands.  The called function already appears on the given backtrace, so
     // that we can get the source backtrace by removing it from there locally.
-    SymBackTrace callerSiteBt(*this->bt);
+    const SymBackTrace &bt = *proc.bt();
+    SymBackTrace callerSiteBt(bt);
     callerSiteBt.popCall();
-    SymProc srcProc(*this->sh, &callerSiteBt);
 
-    // initialize location info
-    srcProc.setLocation(this->lw);
-    this->proc->setLocation(this->lw);
+    SymHeap &sh = proc.sh();
+    SymProc srcProc(sh, &callerSiteBt);
+    srcProc.setLocation(&insn.loc);
 
     // set args' values
     unsigned pos = /* dst + fnc */ 2;
     BOOST_FOREACH(int arg, args) {
 
         // cVar lookup
-        const CVar cVar(arg, this->nestLevel);
-        const TValId argAddr = this->sh->addrOfVar(cVar);
+        const int nestLevel = bt.countOccurrencesOfFnc(uidOf(fnc));
+        const CVar cVar(arg, nestLevel);
+        const TValId argAddr = sh.addrOfVar(cVar);
 
         // object instantiation
-        TStorRef stor = *this->fnc->stor;
+        TStorRef stor = *fnc.stor;
         const TObjType clt = stor.vars[arg].type;
-        const TObjId argObj = this->sh->objAt(argAddr, clt);
+        const TObjId argObj = sh.objAt(argAddr, clt);
         CL_BREAK_IF(argObj <= 0);
 
         if (opList.size() <= pos) {
             // no value given for this arg
-            const struct cl_loc *loc = 0;
+            const struct cl_loc *loc;
             std::string varString = varToString(stor, arg, &loc);
             CL_DEBUG_MSG(loc, "no fnc arg given for " << varString);
             continue;
@@ -386,25 +395,26 @@ void SymCallCache::Private::setCallArgs(const CodeStorage::TOperandList &opList)
         CL_BREAK_IF(VAL_INVALID == val);
 
         // set the value of lhs accordingly
-        this->proc->objSetValue(argObj, val);
+        proc.objSetValue(argObj, val);
     }
 }
 
-SymCallCtx* SymCallCache::Private::getCallCtx(int uid, const SymHeap &entry) {
+SymCallCtx* SymCallCache::Private::getCallCtx(const SymHeap &entry, TFncRef fnc) {
     // cache lookup
+    const int uid = uidOf(fnc);
     PerFncCache &pfc = this->cache[uid];
     SymCallCtx *ctx = pfc.lookup(entry);
     if (!ctx) {
         // cache miss
         ctx = new SymCallCtx(entry.stor());
         ctx->d->bt      = this->bt;
-        ctx->d->fnc     = this->fnc;
+        ctx->d->fnc     = &fnc;
         ctx->d->entry   = entry;
         pfc.insert(entry, ctx);
         return ctx;
     }
 
-    const struct cl_loc *loc = locationOf(*this->fnc);
+    const struct cl_loc *loc = locationOf(fnc);
 
     // cache hit, perform some sanity checks
     if (!ctx->d->computed) {
@@ -429,41 +439,31 @@ SymCallCtx* SymCallCache::getCallCtx(
         const CodeStorage::Fnc          &fnc,
         const CodeStorage::Insn         &insn)
 {
-    using namespace CodeStorage;
-
-    // check insn validity
-    const TOperandList &opList = insn.operands;
-    CL_BREAK_IF(CL_INSN_CALL != insn.code || opList.size() < 2);
+    const struct cl_loc *loc = &insn.loc;
+    CL_DEBUG_MSG(loc, "SymCallCache is looking for " << nameOf(fnc) << "()...");
 
     // create SymProc and update the location info
     SymProc proc(entry, d->bt);
-    proc.setLocation((d->lw = &insn.loc));
-    d->sh = &entry;
-    d->proc = &proc;
-
-    // store Fnc ought to be called
-    d->fnc = &fnc;
-    CL_DEBUG_MSG(d->lw, "SymCallCache is looking for "
-            << nameOf(fnc) << "()...");
+    proc.setLocation(loc);
 
     // check recursion depth (if any)
     const int uid = uidOf(fnc);
-    d->nestLevel = d->bt->countOccurrencesOfFnc(uid);
-    if (1 != d->nestLevel) {
-        CL_WARN_MSG(d->lw, "support of call recursion is not stable yet");
-        CL_NOTE_MSG(d->lw, "nestLevel is " << d->nestLevel);
+    const int nestLevel = d->bt->countOccurrencesOfFnc(uid);
+    if (1 != nestLevel) {
+        CL_WARN_MSG(loc, "support of call recursion is not stable yet");
+        CL_NOTE_MSG(loc, "nestLevel is " << nestLevel);
     }
 
     // initialize local variables of the called fnc
     LDP_INIT(symcall, "pre-processing");
     LDP_PLOT(symcall, entry);
-    d->setCallArgs(opList);
-    d->proc->killInsn(insn);
+    setCallArgs(proc, fnc, insn);
+    proc.killInsn(insn);
     LDP_PLOT(symcall, entry);
 
     // resolve heap cut
     TCVarList cut;
-    d->resolveHeapCut(cut);
+    d->resolveHeapCut(cut, entry, fnc.vars);
     LDP_PLOT(symcall, entry);
 
     // prune heap
@@ -476,7 +476,7 @@ SymCallCtx* SymCallCache::getCallCtx(
     LDP_PLOT(symcall, surround);
     
     // get either an existing ctx, or create a new one
-    SymCallCtx *ctx = d->getCallCtx(uid, entry);
+    SymCallCtx *ctx = d->getCallCtx(entry, fnc);
     if (!ctx)
         return 0;
 
@@ -484,8 +484,8 @@ SymCallCtx* SymCallCache::getCallCtx(
     ctx->d->flushed     = false;
 
     // keep some properties later required to process the results
-    ctx->d->dst         = &opList[/* dst */ 0];
-    ctx->d->nestLevel   = d->nestLevel;
+    ctx->d->dst         = &insn.operands[/* dst */ 0];
+    ctx->d->nestLevel   = nestLevel;
     ctx->d->surround    = surround;
     return ctx;
 }
