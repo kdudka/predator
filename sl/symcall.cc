@@ -318,8 +318,9 @@ void SymCallCache::Private::resolveHeapCut(
         SymHeap                         &sh,
         const TFncVarSet                &fncVars)
 {
-    TStorRef stor = sh.stor();
     const int nestLevel = bt.countOccurrencesOfTopFnc();
+#if !SE_DISABLE_CALL_CACHE
+    TStorRef stor = sh.stor();
 
     // start with all gl variables that are accessible from this function
     BOOST_FOREACH(const int uid, fncVars) {
@@ -331,15 +332,21 @@ void SymCallCache::Private::resolveHeapCut(
         if (isVarAlive(sh, cv) || this->rediscoverGlVar(sh, cv))
             cut.push_back(cv);
     }
+#endif
 
     TValList live;
     sh.gatherRootObjects(live, isProgramVar);
     BOOST_FOREACH(const TValId root, live) {
-        const EValueTarget code = sh.valTarget(root);
-        if (VT_STATIC == code)
-            continue;
+        const CVar cv(sh.cVarByRoot(root));
 
-        CVar cv(sh.cVarByRoot(root));
+        const EValueTarget code = sh.valTarget(root);
+        if (VT_STATIC == code) {
+#if SE_DISABLE_CALL_CACHE
+            cut.push_back(cv);
+#endif
+            continue;
+        }
+
         if (hasKey(fncVars, cv.uid) && cv.inst == nestLevel)
             cut.push_back(cv);
     }
