@@ -25,6 +25,7 @@
  * SymBackTrace - backtrace management
  */
 
+struct CVar;
 class SymHeap;
 
 namespace CodeStorage {
@@ -116,6 +117,9 @@ class SymBackTrace {
 
         /// unregister the path tracer associated with the topmost function call
         void popPathTracer(const IPathTracer *);
+
+        /// return the topmost symbolic heap that sees the given var alive
+        const SymHeap* seekLastOccurrenceOfVar(const CVar &cv) const;
 
     private:
         struct Private;

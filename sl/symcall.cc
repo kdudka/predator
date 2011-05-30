@@ -110,24 +110,6 @@ void SymCallCtx::Private::assignReturnValue(SymHeap &sh) {
     proc.objSetValue(obj, val);
 }
 
-void removeGlVarIfSafe(SymHeap &sh, const TValId root) {
-#if SE_ASSUME_FRESH_STATIC_DATA
-    if (sh.pointedByCount(root))
-        // someone points at the variable
-#endif
-        return;
-
-    TObjList live;
-    sh.gatherLiveObjects(live, root);
-    BOOST_FOREACH(const TObjId obj, live)
-        if (VAL_NULL != sh.valueOf(obj))
-            // non-null value inside
-            return;
-
-    // should be safe to remove (we can re-create it later if needed)
-    sh.valDestroyTarget(root);
-}
-
 void SymCallCtx::Private::destroyStackFrame(SymHeap &sh) {
     SymProc proc(sh, this->bt);
 
@@ -142,7 +124,6 @@ void SymCallCtx::Private::destroyStackFrame(SymHeap &sh) {
         const EValueTarget code = sh.valTarget(root);
         if (VT_ON_STACK != code) {
             // not a local variable
-            removeGlVarIfSafe(sh, root);
             continue;
         }
 
@@ -161,6 +142,21 @@ void SymCallCtx::Private::destroyStackFrame(SymHeap &sh) {
         proc.setLocation(loc);
         proc.valDestroyTarget(root);
     }
+}
+
+void joinHeapsWithCare(SymHeap &sh, SymHeap surround) {
+    TCVarList live;
+    gatherProgramVars(live, sh);
+
+    SymHeap safeSurround(sh.stor());
+    splitHeapByCVars(&surround, live, &safeSurround);
+    joinHeapsByCVars(&sh, &safeSurround);
+#ifndef NDEBUG
+    live.clear();
+    gatherProgramVars(live, surround);
+    if (!live.empty())
+        CL_DEBUG("joinHeapsWithCare() did something useful");
+#endif
 }
 
 void SymCallCtx::flushCallResults(SymState &dst) {
@@ -182,7 +178,7 @@ void SymCallCtx::flushCallResults(SymState &dst) {
 
         // first join the heap with its original surround
         SymHeap sh(d->rawResults[i]);
-        joinHeapsByCVars(&sh, &d->surround);
+        joinHeapsWithCare(sh, d->surround);
 
         // perform all necessary action wrt. our function call convention
         d->assignReturnValue(sh);
@@ -261,6 +257,7 @@ struct SymCallCache::Private {
     const CodeStorage::Fnc      *fnc;
     int                         nestLevel;
 
+    bool rediscoverGlVar(const CVar &cv);
     void resolveHeapCut(TCVarList &dst);
     void setCallArgs(const CodeStorage::TOperandList &opList);
     SymCallCtx* getCallCtx(int uid, const SymHeap &sh);
@@ -276,19 +273,52 @@ SymCallCache::~SymCallCache() {
     delete d;
 }
 
+bool SymCallCache::Private::rediscoverGlVar(const CVar &cv) {
+    const SymHeap *parent = this->bt->seekLastOccurrenceOfVar(cv);
+    if (!parent)
+        // found nowhere
+        return false;
+
+    // cut out what we need from the ancestor
+    CL_DEBUG("rediscoverGlVar() is taking place...");
+    SymHeap arena(*parent);
+    const TCVarList cut(1, cv);
+    splitHeapByCVars(&arena, cut);
+
+    // remove the stub, we are going to replace by something useful
+    const TValId at = this->sh->addrOfVar(cv);
+    CL_BREAK_IF(isVarAlive(*this->sh, cv));
+    this->sh->valDestroyTarget(at);
+
+    // now put it all together
+    joinHeapsByCVars(this->sh, &arena);
+    return true;
+}
+
 void SymCallCache::Private::resolveHeapCut(TCVarList &cut) {
+    TStorRef stor = *this->fnc->stor;
+
+    // start with all gl variables that are accessible from this function
+    BOOST_FOREACH(const int uid, this->fnc->vars) {
+        const CodeStorage::Var &var = stor.vars[uid];
+        if (isOnStack(var))
+            continue;
+
+        CVar cv(uid, /* gl var */ 0);
+        if (isVarAlive(*this->sh, cv) || this->rediscoverGlVar(cv))
+            cut.push_back(cv);
+    }
+
     TValList live;
     this->sh->gatherRootObjects(live, isProgramVar);
     BOOST_FOREACH(const TValId root, live) {
-        CVar cv(this->sh->cVarByRoot(root));
-
         const EValueTarget code = this->sh->valTarget(root);
-        if (VT_ON_STACK == code && (!hasKey(this->fnc->vars, cv.uid)
-                    || cv.inst != this->nestLevel))
-            // a local variable that is not here-local
+        if (VT_STATIC == code)
             continue;
 
-        cut.push_back(cv);
+        CVar cv(this->sh->cVarByRoot(root));
+        if (hasKey(this->fnc->vars, cv.uid) && cv.inst == this->nestLevel)
+            cut.push_back(cv);
     }
 }
 
@@ -382,9 +412,10 @@ SymCallCtx* SymCallCache::Private::getCallCtx(int uid, const SymHeap &entry) {
     return ctx;
 }
 
-SymCallCtx* SymCallCache::getCallCtx(SymHeap                    sh,
-                                     const CodeStorage::Fnc     &fnc,
-                                     const CodeStorage::Insn    &insn)
+SymCallCtx* SymCallCache::getCallCtx(
+        SymHeap                         entry,
+        const CodeStorage::Fnc          &fnc,
+        const CodeStorage::Insn         &insn)
 {
     using namespace CodeStorage;
 
@@ -393,9 +424,9 @@ SymCallCtx* SymCallCache::getCallCtx(SymHeap                    sh,
     CL_BREAK_IF(CL_INSN_CALL != insn.code || opList.size() < 2);
 
     // create SymProc and update the location info
-    SymProc proc(sh, d->bt);
+    SymProc proc(entry, d->bt);
     proc.setLocation((d->lw = &insn.loc));
-    d->sh = &sh;
+    d->sh = &entry;
     d->proc = &proc;
 
     // store Fnc ought to be called
@@ -418,12 +449,12 @@ SymCallCtx* SymCallCache::getCallCtx(SymHeap                    sh,
     // prune heap
     TCVarList cut;
     d->resolveHeapCut(cut);
-    SymHeap surround(sh.stor());
-    splitHeapByCVars(&sh, cut, &surround);
+    SymHeap surround(entry.stor());
+    splitHeapByCVars(&entry, cut, &surround);
     surround.valDestroyTarget(VAL_ADDR_OF_RET);
     
     // get either an existing ctx, or create a new one
-    SymCallCtx *ctx = d->getCallCtx(uid, sh);
+    SymCallCtx *ctx = d->getCallCtx(uid, entry);
     if (!ctx)
         return 0;
 

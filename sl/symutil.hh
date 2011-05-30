@@ -59,6 +59,14 @@ inline TValId valOfPtrAt(SymHeap &sh, TValId at, TOffset off) {
     return valOfPtrAt(sh, ptrAt);
 }
 
+inline bool isVarAlive(SymHeap &sh, const CVar &cv) {
+    const TValId at = sh.addrOfVar(cv);
+
+    TObjList live;
+    sh.gatherLiveObjects(live, at);
+    return !live.empty();
+}
+
 void getPtrValues(TValList &dst, const SymHeap &heap, TValId at);
 
 inline TValId nextRootObj(SymHeap &sh, TValId root, TOffset offNext) {

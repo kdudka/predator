@@ -24,6 +24,7 @@
 #include <cl/storage.hh>
 
 #include "symheap.hh"
+#include "symutil.hh"
 #include "util.hh"
 
 #include <map>
@@ -182,6 +183,16 @@ void SymBackTrace::printBackTrace() const {
 
         CL_NOTE_MSG(item.loc, "from call of " << nameOf(item.fnc) << "()");
     }
+}
+
+const SymHeap* SymBackTrace::seekLastOccurrenceOfVar(const CVar &cv) const {
+    BOOST_FOREACH(const Private::BtStackItem &item, d->btStack) {
+        SymHeap &sh = /* XXX */ const_cast<SymHeap &>(item.parent);
+        if (isVarAlive(sh, cv))
+            return &sh;
+    }
+
+    return /* not found */ 0;
 }
 
 void SymBackTrace::pushCall(
