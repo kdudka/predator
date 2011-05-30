@@ -57,9 +57,11 @@ class SymCallCache {
          * @return an instance of the corresponding SymCallCtx object, zero if
          * an unrecoverable error occurs
          */
-        SymCallCtx* getCallCtx(SymHeap                      heap,
-                               const CodeStorage::Fnc       &fnc,
-                               const CodeStorage::Insn      &insn);
+        SymCallCtx* getCallCtx(
+                SymHeap                      heap,
+                const CodeStorage::Fnc       &fnc,
+                const CodeStorage::Insn      &insn,
+                TCVarSet                     &needReexecFor);
 
     private:
         /// object copying is @b not allowed
@@ -116,7 +118,7 @@ class SymCallCtx {
          */
         void invalidate();
 
-        const TCVarSet& needReexecFor() const;
+        TCVarSet& needReexecFor();
 
     private:
         /// @note these objects can't be created/destroyed out of SymCallCache

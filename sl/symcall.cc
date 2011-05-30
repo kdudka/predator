@@ -112,7 +112,13 @@ struct SymCallCache::Private {
     SymBackTrace                bt;
 
     bool rediscoverGlVar(SymHeap &sh, const CVar &cv);
-    void resolveHeapCut(TCVarList &cut, SymHeap &sh, const TFncVarSet &fncVars);
+
+    void resolveHeapCut(
+            TCVarList           &cut,
+            SymHeap             &sh,
+            const TFncVarSet    &fncVars,
+            TCVarSet            &needReexecFor);
+
     SymCallCtx* getCallCtx(const SymHeap &entry, TFncRef fnc);
 
     Private(TStorRef stor):
@@ -169,7 +175,7 @@ SymState& SymCallCtx::rawResults() {
     return d->rawResults;
 }
 
-const TCVarSet& SymCallCtx::needReexecFor() const {
+TCVarSet& SymCallCtx::needReexecFor() {
     return d->needReexecFor;
 }
 
@@ -394,11 +400,25 @@ bool SymCallCache::Private::rediscoverGlVar(SymHeap &entry, const CVar &cv) {
 void SymCallCache::Private::resolveHeapCut(
         TCVarList                       &cut,
         SymHeap                         &sh,
-        const TFncVarSet                &fncVars)
+        const TFncVarSet                &fncVars,
+        TCVarSet                        &needReexecFor)
 {
     const int nestLevel = bt.countOccurrencesOfTopFnc();
 #if !SE_DISABLE_CALL_CACHE
     TStorRef stor = sh.stor();
+
+    TCVarSet snap(needReexecFor);
+
+    BOOST_FOREACH(const CVar &cv, needReexecFor) {
+        const struct cl_loc *loc = 0;
+        std::string varString = varToString(stor, cv.uid, &loc);
+        CL_DEBUG_MSG(loc, "<G> forced by needReexecFor: " << varString);
+        CL_BREAK_IF("this needs some debugging");
+        cut.push_back(cv);
+    }
+
+    // FIXME: this deserves a huge comment in the dox
+    needReexecFor.clear();
 
     // start with all gl variables that are accessible from this function
     BOOST_FOREACH(const int uid, fncVars) {
@@ -406,7 +426,11 @@ void SymCallCache::Private::resolveHeapCut(
         if (isOnStack(var))
             continue;
 
-        CVar cv(uid, /* gl var */ 0);
+        const CVar cv(uid, /* gl var */ 0);
+        if (hasKey(snap, cv))
+            // already in
+            continue;
+
         if (isVarAlive(sh, cv) || this->rediscoverGlVar(sh, cv))
             cut.push_back(cv);
     }
@@ -540,7 +564,8 @@ SymCallCtx* SymCallCache::Private::getCallCtx(const SymHeap &entry, TFncRef fnc)
 SymCallCtx* SymCallCache::getCallCtx(
         SymHeap                         entry,
         const CodeStorage::Fnc          &fnc,
-        const CodeStorage::Insn         &insn)
+        const CodeStorage::Insn         &insn,
+        TCVarSet                        &needReexecFor)
 {
     const struct cl_loc *loc = &insn.loc;
     CL_DEBUG_MSG(loc, "SymCallCache is looking for " << nameOf(fnc) << "()...");
@@ -569,7 +594,7 @@ SymCallCtx* SymCallCache::getCallCtx(
 
     // resolve heap cut
     TCVarList cut;
-    d->resolveHeapCut(cut, entry, fnc.vars);
+    d->resolveHeapCut(cut, entry, fnc.vars, needReexecFor);
     LDP_PLOT(symcall, entry);
 
     // prune heap
