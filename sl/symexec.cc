@@ -921,6 +921,8 @@ void SymExec::Private::execLoop(const StackItem &item) {
         else {
             CL_DEBUG(">G< symcall suggests re-execution [reason: "
                     << varSetToString(stor, needReexecFor) << "]");
+
+            needReexecFor.clear();
         }
 
         // function call requested
@@ -933,7 +935,7 @@ void SymExec::Private::execLoop(const StackItem &item) {
         // call cache lookup
         SymCallCtx *ctx = 0;
         if (fnc)
-            ctx = this->callCache.getCallCtx(entry, *fnc, insn, needReexecFor);
+            ctx = this->callCache.getCallCtx(entry, *fnc, insn);
 
         if (!ctx)
             // the error message should have been already emitted, but there
@@ -995,8 +997,7 @@ void SymExec::exec(const CodeStorage::Fnc &fnc, SymState &results) {
         insn.opsToKill.resize(2, CodeStorage::KS_NEVER_KILL);
 
         // get call context for the root function
-        TCVarSet placeHolder;
-        SymCallCtx *ctx = d->callCache.getCallCtx(heap, fnc, insn, placeHolder);
+        SymCallCtx *ctx = d->callCache.getCallCtx(heap, fnc, insn);
         CL_BREAK_IF(!ctx);
 
         if (!ctx->needExec()) {

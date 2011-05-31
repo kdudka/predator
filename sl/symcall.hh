@@ -60,8 +60,7 @@ class SymCallCache {
         SymCallCtx* getCallCtx(
                 SymHeap                      heap,
                 const CodeStorage::Fnc       &fnc,
-                const CodeStorage::Insn      &insn,
-                TCVarSet                     &needReexecFor);
+                const CodeStorage::Insn      &insn);
 
     private:
         /// object copying is @b not allowed

@@ -111,14 +111,8 @@ struct SymCallCache::Private {
     TCtxStack                   ctxStack;
     SymBackTrace                bt;
 
-    bool rediscoverGlVar(SymHeap &sh, const CVar &cv);
-
-    void resolveHeapCut(
-            TCVarList           &cut,
-            SymHeap             &sh,
-            const TFncVarSet    &fncVars,
-            TCVarSet            &needReexecFor);
-
+    bool importGlVar(SymHeap &sh, const CVar &cv);
+    void resolveHeapCut(TCVarList &cut, SymHeap &sh, TFncRef &fnc);
     SymCallCtx* getCallCtx(const SymHeap &entry, TFncRef fnc);
 
     Private(TStorRef stor):
@@ -130,6 +124,8 @@ struct SymCallCache::Private {
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of SymCallCtx
 struct SymCallCtx::Private {
+    typedef std::map<int /* uid */, TCVarSet>               TCutHints;
+
     SymCallCache::Private       *cd;
     const CodeStorage::Fnc      *fnc;
     SymHeap                     entry;
@@ -140,6 +136,7 @@ struct SymCallCtx::Private {
     bool                        computed;
     bool                        flushed;
     TCVarSet                    needReexecFor;
+    TCutHints                   hints;
 
     void assignReturnValue(SymHeap &sh);
     void destroyStackFrame(SymHeap &sh);
@@ -349,7 +346,7 @@ void transferGlVar(SymHeap &dst, SymHeap src, const CVar &cv) {
     joinHeapsByCVars(&dst, &src);
 }
 
-bool SymCallCache::Private::rediscoverGlVar(SymHeap &entry, const CVar &cv) {
+bool SymCallCache::Private::importGlVar(SymHeap &entry, const CVar &cv) {
     const int cnt = this->ctxStack.size();
 
     // seek the gl var going through the ctx stack backward
@@ -358,11 +355,8 @@ bool SymCallCache::Private::rediscoverGlVar(SymHeap &entry, const CVar &cv) {
         SymCallCtx *ctx = this->ctxStack[idx];
         SymHeap &sh = ctx->d->surround;
 
-        if (isVarAlive(sh, cv)) {
-            // the origin has to be re-executed with updated specification
-            ctx->d->needReexecFor.insert(cv);
+        if (isVarAlive(sh, cv))
             break;
-        }
     }
 
     if (idx < 0) {
@@ -371,24 +365,34 @@ bool SymCallCache::Private::rediscoverGlVar(SymHeap &entry, const CVar &cv) {
         return false;
     }
 
-    CL_DEBUG("rediscoverGlVar() is taking place...");
+    CL_DEBUG("importGlVar() is taking place...");
     CL_BREAK_IF(!this->bt.seekLastOccurrenceOfVar(cv));
+
+    if (0 < idx) {
+        // the origin has to be re-executed with updated specification
+        SymCallCtx *ctxBase = this->ctxStack[idx - 1];
+        ctxBase->d->needReexecFor.insert(cv);
+
+        const int uid = uidOf(*this->ctxStack[idx]->d->fnc);
+        SymCallCtx::Private::TCutHints &hints = ctxBase->d->hints;
+        hints[uid].insert(cv);
+    }
 
     const SymHeap &origin = this->ctxStack[idx]->d->surround;
     for (++idx; idx < cnt; ++idx) {
-        CL_BREAK_IF("not tested");
+        CL_BREAK_IF("not tested and apparently broken");
 
         // the origin has to be re-executed with updated specification
         SymCallCtx *ctx = this->ctxStack[idx];
         ctx->d->needReexecFor.insert(cv);
 
-        // rediscover gl variable at the current level
+        // import gl variable at the current level
         const SymHeap &src = ctx->d->entry;
         SymHeap dst(src);
         transferGlVar(dst, origin, cv);
 
         // update the corresponding cache entry
-        const int uid = uidOf(*this->bt.topFnc());
+        const int uid = /* FIXME: completely wrong */ uidOf(*this->bt.topFnc());
         PerFncCache &pfc = this->cache[uid];
         pfc.updateCacheEntry(src, dst);
     }
@@ -400,25 +404,27 @@ bool SymCallCache::Private::rediscoverGlVar(SymHeap &entry, const CVar &cv) {
 void SymCallCache::Private::resolveHeapCut(
         TCVarList                       &cut,
         SymHeap                         &sh,
-        const TFncVarSet                &fncVars,
-        TCVarSet                        &needReexecFor)
+        TFncRef                         &fnc)
 {
+    const TFncVarSet &fncVars = fnc.vars;
     const int nestLevel = bt.countOccurrencesOfTopFnc();
 #if !SE_DISABLE_CALL_CACHE
     TStorRef stor = sh.stor();
 
-    TCVarSet snap(needReexecFor);
+    TCVarSet snap;
+    if (!this->ctxStack.empty()) {
+        // we will cut the heap better this time
+        SymCallCtx *ctxBase = this->ctxStack.back();
+        /* const */ SymCallCtx::Private::TCutHints &hints = ctxBase->d->hints;
+        snap = hints[uidOf(fnc)];
+    }
 
-    BOOST_FOREACH(const CVar &cv, needReexecFor) {
+    BOOST_FOREACH(const CVar &cv, snap) {
         const struct cl_loc *loc = 0;
         std::string varString = varToString(stor, cv.uid, &loc);
         CL_DEBUG_MSG(loc, "<G> forced by needReexecFor: " << varString);
-        CL_BREAK_IF("this needs some debugging");
         cut.push_back(cv);
     }
-
-    // FIXME: this deserves a huge comment in the dox
-    needReexecFor.clear();
 
     // start with all gl variables that are accessible from this function
     BOOST_FOREACH(const int uid, fncVars) {
@@ -431,7 +437,7 @@ void SymCallCache::Private::resolveHeapCut(
             // already in
             continue;
 
-        if (isVarAlive(sh, cv) || this->rediscoverGlVar(sh, cv))
+        if (isVarAlive(sh, cv) || this->importGlVar(sh, cv))
             cut.push_back(cv);
     }
 #endif
@@ -564,8 +570,7 @@ SymCallCtx* SymCallCache::Private::getCallCtx(const SymHeap &entry, TFncRef fnc)
 SymCallCtx* SymCallCache::getCallCtx(
         SymHeap                         entry,
         const CodeStorage::Fnc          &fnc,
-        const CodeStorage::Insn         &insn,
-        TCVarSet                        &needReexecFor)
+        const CodeStorage::Insn         &insn)
 {
     const struct cl_loc *loc = &insn.loc;
     CL_DEBUG_MSG(loc, "SymCallCache is looking for " << nameOf(fnc) << "()...");
@@ -594,7 +599,7 @@ SymCallCtx* SymCallCache::getCallCtx(
 
     // resolve heap cut
     TCVarList cut;
-    d->resolveHeapCut(cut, entry, fnc.vars, needReexecFor);
+    d->resolveHeapCut(cut, entry, fnc);
     LDP_PLOT(symcall, entry);
 
     // prune heap
