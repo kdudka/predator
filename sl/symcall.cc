@@ -359,15 +359,11 @@ bool SymCallCache::Private::importGlVar(SymHeap &entry, const CVar &cv) {
             break;
     }
 
-    if (idx < 0) {
+    if (idx < 0)
         // found nowhere
-        CL_BREAK_IF(this->bt.seekLastOccurrenceOfVar(cv));
         return false;
-    }
 
     CL_DEBUG("importGlVar() is taking place...");
-    CL_BREAK_IF(!this->bt.seekLastOccurrenceOfVar(cv));
-
     if (0 < idx) {
         // the origin has to be re-executed with updated specification
         SymCallCtx *ctxBase = this->ctxStack[idx - 1];
@@ -577,7 +573,7 @@ SymCallCtx* SymCallCache::getCallCtx(
 
     // enlarge the backtrace
     const int uid = uidOf(fnc);
-    d->bt.pushCall(uid, loc, entry);
+    d->bt.pushCall(uid, loc);
 
     // create SymProc and update the location info
     SymProc proc(entry, &d->bt);

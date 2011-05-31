@@ -73,12 +73,10 @@ class SymBackTrace {
          * @param fncId ID of function, which is being called
          * @param lw location of the call related to the caller (definitely @b
          * not location of the called function)
-         * @param parent caller's heap corresponding to the location of the call
          */
         void pushCall(
                 const int               fncId,
-                const struct cl_loc     *loc,
-                const SymHeap           &parent);
+                const struct cl_loc     *loc);
 
         /**
          * leave the call of function on top of the backtrace
@@ -117,9 +115,6 @@ class SymBackTrace {
 
         /// unregister the path tracer associated with the topmost function call
         void popPathTracer(const IPathTracer *);
-
-        /// return the topmost symbolic heap that sees the given var alive
-        const SymHeap* seekLastOccurrenceOfVar(const CVar &cv) const;
 
     private:
         struct Private;

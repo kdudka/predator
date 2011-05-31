@@ -39,15 +39,12 @@ struct SymBackTrace::Private {
     struct BtStackItem {
         const CodeStorage::Fnc              &fnc;
         const struct cl_loc                 *loc;
-        const SymHeap                       parent;
 
         BtStackItem(
                 const CodeStorage::Fnc      *fnc_,
-                const struct cl_loc         *loc_,
-                const SymHeap               &parent_):
+                const struct cl_loc         *loc_):
             fnc(*fnc_),
-            loc(loc_),
-            parent(parent_)
+            loc(loc_)
         {
         }
     };
@@ -71,8 +68,7 @@ struct SymBackTrace::Private {
 
     void pushFnc(
             const CodeStorage::Fnc          *fnc,
-            const struct cl_loc             *loc,
-            const SymHeap                   &parent);
+            const struct cl_loc             *loc);
 
     void popFnc();
 };
@@ -102,10 +98,9 @@ const CodeStorage::Fnc* SymBackTrace::Private::fncById(int id) const {
 
 void SymBackTrace::Private::pushFnc(
         const CodeStorage::Fnc          *fnc,
-        const struct cl_loc             *loc,
-        const SymHeap                   &parent)
+        const struct cl_loc             *loc)
 {
-    const BtStackItem item(fnc, loc, parent);
+    const BtStackItem item(fnc, loc);
     this->btStack.push_front(item);
 
     int &ref = this->nestMap[fnc];
@@ -185,23 +180,12 @@ void SymBackTrace::printBackTrace() const {
     }
 }
 
-const SymHeap* SymBackTrace::seekLastOccurrenceOfVar(const CVar &cv) const {
-    BOOST_FOREACH(const Private::BtStackItem &item, d->btStack) {
-        SymHeap &sh = /* XXX */ const_cast<SymHeap &>(item.parent);
-        if (isVarAlive(sh, cv))
-            return &sh;
-    }
-
-    return /* not found */ 0;
-}
-
 void SymBackTrace::pushCall(
         const int                       fncId,
-        const struct cl_loc             *loc,
-        const SymHeap                   &parent)
+        const struct cl_loc             *loc)
 {
     const CodeStorage::Fnc *fnc = d->fncById(fncId);
-    d->pushFnc(fnc, loc, parent);
+    d->pushFnc(fnc, loc);
 }
 
 const CodeStorage::Fnc* SymBackTrace::popCall() {
