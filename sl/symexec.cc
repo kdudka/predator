@@ -114,37 +114,65 @@ class IStatsProvider {
 };
 
 // /////////////////////////////////////////////////////////////////////////////
+// StackItem
+class SymExecEngine;
+
+struct StackItem {
+    SymCallCtx      *ctx;
+    SymExecEngine   *eng;
+    SymState        *dst;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
 // SymExec
 class SymExec: public IStatsProvider {
     public:
-        SymExec(const CodeStorage::Storage &stor, const SymExecParams &params);
-        ~SymExec();
+        SymExec(const CodeStorage::Storage &stor, const SymExecParams &ep):
+            stor_(stor),
+            params_(ep),
+            callCache_(stor)
+        {
+        }
 
-        const CodeStorage::Storage& stor() const;
-        const SymExecParams& params() const;
+        const CodeStorage::Fnc* resolveCallInsn(
+                SymState                    &results,
+                SymHeap                     entry,
+                const CodeStorage::Insn     &insn);
 
-        SymState& stateZero();
+        SymExecEngine* createEngine(SymCallCtx *ctx);
 
-        void exec(const CodeStorage::Fnc &fnc, SymState &results);
+        void execLoop(const StackItem &item);
+
+        void execFnc(
+                SymState                    &results,
+                SymHeap                     entry,
+                const CodeStorage::Fnc      &fnc);
 
         virtual void printStats() const;
 
     private:
-        struct Private;
-        Private *d;
+        const CodeStorage::Storage              &stor_;
+        SymExecParams                           params_;
+        SymCallCache                            callCache_;
+        typedef std::stack<IStatsProvider *>    TStatsStack;
+        TStatsStack                             statsStack_;
 };
 
 // /////////////////////////////////////////////////////////////////////////////
 // SymExecEngine
 class SymExecEngine: public IStatsProvider {
     public:
-        SymExecEngine(const SymExec &se, SymBackTrace &bt,
-                      const SymHeap &src, SymState &dst):
-            stor_(se.stor()),
-            params_(se.params()),
+        SymExecEngine(
+                SymState                &results,
+                const SymHeap           &entry,
+                const IStatsProvider    &stats,
+                const SymExecParams     &ep,
+                SymBackTrace            &bt):
+            stor_(entry.stor()),
+            params_(ep),
             bt_(bt),
-            dst_(dst),
-            stats_(se),
+            dst_(results),
+            stats_(stats),
             ptracer_(stateMap_),
             block_(0),
             insnIdx_(0),
@@ -152,7 +180,7 @@ class SymExecEngine: public IStatsProvider {
             waiting_(false),
             endReached_(false)
         {
-            this->initEngine(src);
+            this->initEngine(entry);
             if (params_.ptrace)
                 // register path printer
                 bt_.pushPathTracer(&ptracer_);
@@ -766,67 +794,18 @@ void SymExecEngine::processPendingSignals() {
 
 // /////////////////////////////////////////////////////////////////////////////
 // SymExec implementation
-struct StackItem;
-struct SymExec::Private {
-    SymExec                                 &se;
-    const CodeStorage::Storage              &stor;
-    SymExecParams                           params;
-    SymStateWithJoin                        stateZero;
-    SymCallCache                            callCache;
-    typedef std::stack<IStatsProvider *>    TStatsStack;
-    TStatsStack                             statsStack;
-
-    Private(SymExec &se_, const CodeStorage::Storage &stor_):
-        se(se_),
-        stor(stor_),
-        callCache(stor_)
-    {
-    }
-
-    const CodeStorage::Fnc* resolveCallInsn(SymHeap                     entry,
-                                            const CodeStorage::Insn     &insn,
-                                            SymState                    &dst);
-
-    SymExecEngine* createEngine(SymCallCtx *ctx);
-
-    void execLoop(const StackItem &item);
-};
-
-SymExec::SymExec(const CodeStorage::Storage &stor, const SymExecParams &params):
-    d(new Private(*this, stor))
-{
-    d->params = params;
-
-    // create the initial state (empty heap)
-    SymHeap init(stor);
-    d->stateZero.insertFast(init);
-}
-
-SymExec::~SymExec() {
-    delete d;
-    printMemUsage("SymExec::~SymExec");
-}
-
-const CodeStorage::Storage& SymExec::stor() const {
-    return d->stor;
-}
-
-const SymExecParams& SymExec::params() const {
-    return d->params;
-}
-
-const CodeStorage::Fnc* SymExec::Private::resolveCallInsn(
-        SymHeap                     heap,
-        const CodeStorage::Insn     &insn,
-        SymState                    &results)
+const CodeStorage::Fnc* SymExec::resolveCallInsn(
+        SymState                    &results,
+        SymHeap                     entry,
+        const CodeStorage::Insn     &insn)
 {
     const CodeStorage::Fnc *fnc;
     const CodeStorage::TOperandList &opList = insn.operands;
     CL_BREAK_IF(CL_INSN_CALL != insn.code || opList.size() < 2);
 
     // look for Fnc ought to be called
-    SymBackTrace &bt = this->callCache.bt();
-    SymProc proc(heap, &bt);
+    SymBackTrace &bt = callCache_.bt();
+    SymProc proc(entry, &bt);
     const struct cl_loc *lw = &insn.loc;
     proc.setLocation(lw);
 
@@ -844,7 +823,7 @@ const CodeStorage::Fnc* SymExec::Private::resolveCallInsn(
         goto fail;
     }
 
-    fnc = this->stor.fncs[uid];
+    fnc = stor_.fncs[uid];
     if (!isDefined(*fnc)) {
         const struct cl_cst &cst = opFnc.data.cst;
         const char *name = cst.data.cst_fnc.name;
@@ -865,13 +844,13 @@ fail:
     const struct cl_operand dst = opList[/* dst */ 0];
     if (CL_OPERAND_VOID != dst.code) {
         // set return value to unknown
-        const TValId val = heap.valCreate(VT_UNKNOWN, VO_UNKNOWN);
+        const TValId val = entry.valCreate(VT_UNKNOWN, VO_UNKNOWN);
         const TObjId obj = proc.objByOperand(dst);
         proc.objSetValue(obj, val);
     }
 
     // call failed, so that we have exactly one resulting heap
-    results.insertFast(heap);
+    results.insertFast(entry);
     return 0;
 }
 
@@ -890,28 +869,23 @@ std::string varSetToString(TStorRef stor, const TCVarSet varSet) {
     return str.str();
 }
 
-SymExecEngine* SymExec::Private::createEngine(SymCallCtx *ctx) {
+SymExecEngine* SymExec::createEngine(SymCallCtx *ctx) {
     return new SymExecEngine(
-            this->se,
-            this->callCache.bt(),
+            ctx->rawResults(),
             ctx->entry(),
-            ctx->rawResults());
+            /* IStatsProvider */ *this,
+            params_,
+            callCache_.bt());
 }
 
-struct StackItem {
-    SymCallCtx      *ctx;
-    SymExecEngine   *eng;
-    SymState        *dst;
-};
-
-void SymExec::Private::execLoop(const StackItem &item) {
+void SymExec::execLoop(const StackItem &item) {
     using CodeStorage::Fnc;
 
-    SymBackTrace &bt = this->callCache.bt();
+    SymBackTrace &bt = callCache_.bt();
 
     // register statistics provider
-    CL_BREAK_IF(!this->statsStack.empty());
-    this->statsStack.push(item.eng);
+    CL_BREAK_IF(!statsStack_.empty());
+    statsStack_.push(item.eng);
 
     // run-time stack
     typedef std::stack<StackItem> TStack;
@@ -935,8 +909,8 @@ void SymExec::Private::execLoop(const StackItem &item) {
                 printMemUsage("SymCallCtx::flushCallResults");
 
                 // unregister statistics provider
-                CL_BREAK_IF(this->statsStack.empty());
-                this->statsStack.pop();
+                CL_BREAK_IF(statsStack_.empty());
+                statsStack_.pop();
 
                 // remove top of the stack
                 delete engine;
@@ -949,7 +923,7 @@ void SymExec::Private::execLoop(const StackItem &item) {
         }
         else {
             CL_DEBUG(">G< symcall suggests re-execution [reason: "
-                    << varSetToString(stor, needReexecFor) << "]");
+                    << varSetToString(stor_, needReexecFor) << "]");
 
             needReexecFor.clear();
         }
@@ -959,12 +933,12 @@ void SymExec::Private::execLoop(const StackItem &item) {
         const SymHeap &entry = *engine->callEntry();
         const CodeStorage::Insn &insn = *engine->callInsn();
         SymState &results = *engine->callResults();
-        const Fnc *fnc = this->resolveCallInsn(entry, insn, results);
+        const Fnc *fnc = this->resolveCallInsn(results, entry, insn);
 
         // call cache lookup
         SymCallCtx *ctx = 0;
         if (fnc)
-            ctx = this->callCache.getCallCtx(entry, *fnc, insn);
+            ctx = callCache_.getCallCtx(entry, *fnc, insn);
 
         if (!ctx)
             // the error message should have been already emitted, but there
@@ -997,67 +971,49 @@ void SymExec::Private::execLoop(const StackItem &item) {
         next.dst = item.eng->callResults();
 
         // register statistics provider
-        this->statsStack.push(next.eng);
+        statsStack_.push(next.eng);
 
         // perform the call now!
         rtStack.push(next);
     }
 }
 
-void SymExec::exec(const CodeStorage::Fnc &fnc, SymState &results) {
-    if (!installSignalHandlers())
-        CL_WARN("unable to install signal handlers");
+void SymExec::execFnc(
+                SymState                    &results,
+                SymHeap                     entry,
+                const CodeStorage::Fnc      &fnc)
+{
+    // check bt offset
+    CL_BREAK_IF(callCache_.bt().size());
 
-    SymBackTrace &bt = d->callCache.bt();
+    // XXX: synthesize CL_INSN_CALL
+    CodeStorage::Insn insn;
+    insn.stor = fnc.stor;
+    insn.code = CL_INSN_CALL;
+    insn.loc  = *locationOf(fnc);
+    insn.operands.resize(2);
+    insn.operands[1] = fnc.def;
+    insn.opsToKill.resize(2, CodeStorage::KS_NEVER_KILL);
 
-    // go through all symbolic heaps of the initial state, merging the results
-    // all together
-    BOOST_FOREACH(const SymHeap &heap, d->stateZero) {
-        // check for bt offset
-        CL_BREAK_IF(bt.size());
+    // get call context for the root function
+    SymCallCtx *ctx = callCache_.getCallCtx(entry, fnc, insn);
+    CL_BREAK_IF(!ctx || !ctx->needExec());
 
-        // XXX: synthesize CL_INSN_CALL
-        CodeStorage::Insn insn;
-        insn.stor = fnc.stor;
-        insn.code = CL_INSN_CALL;
-        insn.loc  = *locationOf(fnc);
-        insn.operands.resize(2);
-        insn.operands[1] = fnc.def;
-        insn.opsToKill.resize(2, CodeStorage::KS_NEVER_KILL);
+    // root stack item
+    StackItem si;
+    si.ctx = ctx;
+    si.eng = this->createEngine(ctx);
+    si.dst = &results;
 
-        // get call context for the root function
-        SymCallCtx *ctx = d->callCache.getCallCtx(heap, fnc, insn);
-        CL_BREAK_IF(!ctx);
-
-        if (!ctx->needExec()) {
-            // not likely to happen in the way that SymExec is currently used
-            CL_WARN_MSG(bt.topCallLoc(), "(x) root call optimized out: "
-                    << nameOf(fnc) << "()");
-
-            ctx->flushCallResults(results);
-            continue;
-        }
-
-        // root stack item
-        StackItem si;
-        si.ctx = ctx;
-        si.eng = d->createEngine(ctx);
-        si.dst = &results;
-
-        // root call
-        d->execLoop(si);
-    }
-
-    // uninstall signal handlers
-    if (!SignalCatcher::cleanup())
-        CL_WARN("unable to restore previous signal handlers");
+    // root call
+    this->execLoop(si);
 }
 
 void SymExec::printStats() const {
     // TODO: print SymCallCache stats here as soon as we have implemented some
 
-    typedef Private::TStatsStack TStack;
-    for (TStack tmpStack(d->statsStack); !tmpStack.empty(); tmpStack.pop()) {
+    typedef TStatsStack TStack;
+    for (TStack tmpStack(statsStack_); !tmpStack.empty(); tmpStack.pop()) {
         const IStatsProvider *provider = tmpStack.top();
         provider->printStats();
     }
@@ -1069,6 +1025,18 @@ void execute(
         const CodeStorage::Fnc          &fnc,
         const SymExecParams             &ep)
 {
-    SymExec se(entry.stor(), ep);
-    se.exec(fnc, results);
+    if (!installSignalHandlers())
+        CL_WARN("unable to install signal handlers");
+
+    // allocated on heap in order to be able to easily report memory consumption
+    // NOTE: this should be changed to automatic allocation in case we allow
+    //       some exceptions to fall out of SymExec
+    SymExec *se = new SymExec(entry.stor(), ep);
+    se->execFnc(results, entry, fnc);
+    delete se;
+    printMemUsage("SymExec::~SymExec");
+
+    // uninstall signal handlers
+    if (!SignalCatcher::cleanup())
+        CL_WARN("unable to restore previous signal handlers");
 }
