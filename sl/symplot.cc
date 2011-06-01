@@ -657,6 +657,53 @@ const char* labelByTarget(const EValueTarget code) {
     return "";
 }
 
+void describeInt(PlotData &plot, const long num) {
+    plot.out << ", fontcolor=red, label=\"[int] " << num << "\"";
+}
+
+void describeFnc(PlotData &plot, const int uid) {
+    TStorRef stor = plot.sh.stor();
+    const CodeStorage::Fnc *fnc = stor.fncs[uid];
+    CL_BREAK_IF(!fnc);
+
+    const std::string name = nameOf(*fnc);
+    plot.out << ", fontcolor=green, label=\"" << name << "()\"";
+}
+
+void describeStr(PlotData &plot, const char *str) {
+    // we need to escape twice, once for the C compiler and once for graphviz
+    plot.out << ", fontcolor=blue, label=\"\\\"" << str << "\\\"\"";
+}
+
+void plotCustomValue(PlotData &plot, const TValId val) {
+    SymHeap &sh = plot.sh;
+    const CustomValue cVal = sh.valUnwrapCustom(val);
+    const CustomValueData &data = cVal.data;
+
+    plot.out << "\t" << SL_QUOTE(val) << " [shape=plaintext";
+
+    const ECustomValue code = cVal.code;
+    switch (code) {
+        case CV_INVALID:
+            plot.out << ", fontcolor=red, label=CV_INVALID";
+            break;
+
+        case CV_INT:
+            describeInt(plot, data.num);
+            break;
+
+        case CV_FNC:
+            describeFnc(plot, data.uid);
+            break;
+
+        case CV_STRING:
+            describeStr(plot, data.str);
+            break;
+    }
+
+    plot.out << "];\n";
+}
+
 void plotValue(PlotData &plot, const TValId val)
 {
     SymHeap &sh = plot.sh;
@@ -666,9 +713,12 @@ void plotValue(PlotData &plot, const TValId val)
 
     const EValueTarget code = sh.valTarget(val);
     switch (code) {
+        case VT_CUSTOM:
+            plotCustomValue(plot, val);
+            return;
+
         case VT_INVALID:
         case VT_COMPOSITE:
-        case VT_CUSTOM:
         case VT_LOST:
         case VT_DELETED:
             color = "red";
