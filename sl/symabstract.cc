@@ -82,7 +82,8 @@ struct UnknownValuesDuplicator {
         if (valOld <= 0)
             return /* continue */ true;
 
-        if (isPossibleToDeref(sh.valTarget(valOld)))
+        const EValueTarget code = sh.valTarget(valOld);
+        if (isPossibleToDeref(code) || (VT_CUSTOM == code))
             return /* continue */ true;
 
         // duplicate unknown value

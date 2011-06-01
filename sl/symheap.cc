@@ -619,6 +619,11 @@ unsigned SymHeapCore::lastId() const {
 TValId SymHeapCore::valClone(TValId val) {
     const BaseValue *valData = d->valData(val);
     const EValueTarget code = valData->code;
+    if (VT_CUSTOM == code) {
+        CL_BREAK_IF("custom values are not supposed to be cloned");
+        return val;
+    }
+
     if (!isPossibleToDeref(code))
         // duplicate an unknown value
         return d->valDup(val);
