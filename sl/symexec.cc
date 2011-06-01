@@ -36,12 +36,11 @@
 #include "symutil.hh"
 #include "util.hh"
 
+#include <queue>
 #include <set>
 #include <sstream>
-#include <stack>
 
 #include <boost/foreach.hpp>
-#include <boost/tuple/tuple.hpp>
 
 LOCAL_DEBUG_PLOTTER(nondetCond, DEBUG_SE_NONDET_COND)
 
@@ -114,14 +113,16 @@ class IStatsProvider {
 };
 
 // /////////////////////////////////////////////////////////////////////////////
-// StackItem
+// ExecStack
 class SymExecEngine;
 
-struct StackItem {
+struct ExecStackItem {
     SymCallCtx      *ctx;
     SymExecEngine   *eng;
     SymState        *dst;
 };
+
+typedef std::deque<ExecStackItem> TExecStack;
 
 // /////////////////////////////////////////////////////////////////////////////
 // SymExec
@@ -139,13 +140,12 @@ class SymExec: public IStatsProvider {
                 SymHeap                     entry,
                 const CodeStorage::Insn     &insn);
 
-        SymExecEngine* createEngine(SymCallCtx *ctx);
-
-        void execLoop(const StackItem &item);
+        void pushCall(SymCallCtx *ctx, SymState &results);
 
         void execFnc(
                 SymState                    &results,
                 SymHeap                     entry,
+                const CodeStorage::Insn     &insn,
                 const CodeStorage::Fnc      &fnc);
 
         virtual void printStats() const;
@@ -154,8 +154,7 @@ class SymExec: public IStatsProvider {
         const CodeStorage::Storage              &stor_;
         SymExecParams                           params_;
         SymCallCache                            callCache_;
-        typedef std::stack<IStatsProvider *>    TStatsStack;
-        TStatsStack                             statsStack_;
+        TExecStack                              execStack_;
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -198,9 +197,9 @@ class SymExecEngine: public IStatsProvider {
         virtual void printStats() const;
 
         // TODO: describe the interface briefly
-        const SymHeap*              callEntry() const;
-        const CodeStorage::Insn*    callInsn() const;
-        SymState*                   callResults();
+        const SymHeap*                  callEntry() const;
+        const CodeStorage::Insn*        callInsn() const;
+        SymState&                       callResults();
 
     private:
         typedef std::set<BlockPtr>      TBlockSet;
@@ -765,8 +764,8 @@ const CodeStorage::Insn* SymExecEngine::callInsn() const {
     return insn;
 }
 
-SymState* SymExecEngine::callResults() {
-    return &callResults_;
+SymState& SymExecEngine::callResults() {
+    return callResults_;
 }
 
 void SymExecEngine::processPendingSignals() {
@@ -869,32 +868,41 @@ std::string varSetToString(TStorRef stor, const TCVarSet varSet) {
     return str.str();
 }
 
-SymExecEngine* SymExec::createEngine(SymCallCtx *ctx) {
-    return new SymExecEngine(
+void SymExec::pushCall(SymCallCtx *ctx, SymState &results) {
+    // create engine
+    SymExecEngine *eng = new SymExecEngine(
             ctx->rawResults(),
             ctx->entry(),
             /* IStatsProvider */ *this,
             params_,
             callCache_.bt());
+
+    // initialize a stack item
+    ExecStackItem item;
+    item.ctx = ctx;
+    item.eng = eng;
+    item.dst = &results;
+
+    // push the item to the exec-stack
+    execStack_.push_front(item);
 }
 
-void SymExec::execLoop(const StackItem &item) {
-    using CodeStorage::Fnc;
+void SymExec::execFnc(
+        SymState                        &results,
+        SymHeap                         entry,
+        const CodeStorage::Insn         &insn,
+        const CodeStorage::Fnc          &fnc)
+{
+    // get call context for the root function
+    SymCallCtx *ctx = callCache_.getCallCtx(entry, fnc, insn);
+    CL_BREAK_IF(!ctx || !ctx->needExec());
 
-    SymBackTrace &bt = callCache_.bt();
-
-    // register statistics provider
-    CL_BREAK_IF(!statsStack_.empty());
-    statsStack_.push(item.eng);
-
-    // run-time stack
-    typedef std::stack<StackItem> TStack;
-    TStack rtStack;
-    rtStack.push(item);
+    // root call
+    this->pushCall(ctx, results);
 
     // main loop
-    while (!rtStack.empty()) {
-        const StackItem &item = rtStack.top();
+    while (!execStack_.empty()) {
+        const ExecStackItem &item = execStack_.front();
         SymExecEngine *engine = item.eng;
 
         TCVarSet &needReexecFor = item.ctx->needReexecFor();
@@ -908,14 +916,10 @@ void SymExec::execLoop(const StackItem &item) {
                 item.ctx->invalidate();
                 printMemUsage("SymCallCtx::flushCallResults");
 
-                // unregister statistics provider
-                CL_BREAK_IF(statsStack_.empty());
-                statsStack_.pop();
-
                 // remove top of the stack
                 delete engine;
                 printMemUsage("SymExecEngine::~SymExecEngine");
-                rtStack.pop();
+                execStack_.pop_front();
 
                 // wake are done with this call, now wake up the caller!
                 continue;
@@ -932,8 +936,8 @@ void SymExec::execLoop(const StackItem &item) {
         // --> we need to nest unless the computed result is already available
         const SymHeap &entry = *engine->callEntry();
         const CodeStorage::Insn &insn = *engine->callInsn();
-        SymState &results = *engine->callResults();
-        const Fnc *fnc = this->resolveCallInsn(results, entry, insn);
+        SymState &results = engine->callResults();
+        const CodeStorage::Fnc *fnc = this->resolveCallInsn(results, entry, insn);
 
         // call cache lookup
         SymCallCtx *ctx = 0;
@@ -948,73 +952,29 @@ void SymExec::execLoop(const StackItem &item) {
 
         if (!ctx->needExec()) {
             // call cache hit
-            const struct cl_loc *lw = bt.topCallLoc();
+            const struct cl_loc *lw = callCache_.bt().topCallLoc();
             CL_DEBUG_MSG(lw, "(x) call of function optimized out: "
                     << nameOf(*fnc) << "()");
 
             // use the cached result
-            ctx->flushCallResults(*engine->callResults());
+            ctx->flushCallResults(engine->callResults());
 
             // wake up the caller
             continue;
         }
 
-        printMemUsage("SymCall::getCallCtx");
-
-        // prepare a new run-time stack item for the call
-        StackItem next;
-        next.ctx = ctx;
-        next.eng = this->createEngine(ctx);
-        printMemUsage("SymExec::createEngine");
-
-        // pass the result back to the caller as soon as we have one
-        next.dst = item.eng->callResults();
-
-        // register statistics provider
-        statsStack_.push(next.eng);
-
         // perform the call now!
-        rtStack.push(next);
+        printMemUsage("SymCall::getCallCtx");
+        this->pushCall(ctx, item.eng->callResults());
+        printMemUsage("SymExec::createEngine");
     }
-}
-
-void SymExec::execFnc(
-                SymState                    &results,
-                SymHeap                     entry,
-                const CodeStorage::Fnc      &fnc)
-{
-    // check bt offset
-    CL_BREAK_IF(callCache_.bt().size());
-
-    // XXX: synthesize CL_INSN_CALL
-    CodeStorage::Insn insn;
-    insn.stor = fnc.stor;
-    insn.code = CL_INSN_CALL;
-    insn.loc  = *locationOf(fnc);
-    insn.operands.resize(2);
-    insn.operands[1] = fnc.def;
-    insn.opsToKill.resize(2, CodeStorage::KS_NEVER_KILL);
-
-    // get call context for the root function
-    SymCallCtx *ctx = callCache_.getCallCtx(entry, fnc, insn);
-    CL_BREAK_IF(!ctx || !ctx->needExec());
-
-    // root stack item
-    StackItem si;
-    si.ctx = ctx;
-    si.eng = this->createEngine(ctx);
-    si.dst = &results;
-
-    // root call
-    this->execLoop(si);
 }
 
 void SymExec::printStats() const {
     // TODO: print SymCallCache stats here as soon as we have implemented some
 
-    typedef TStatsStack TStack;
-    for (TStack tmpStack(statsStack_); !tmpStack.empty(); tmpStack.pop()) {
-        const IStatsProvider *provider = tmpStack.top();
+    BOOST_FOREACH(const ExecStackItem &item, execStack_) {
+        const IStatsProvider *provider = item.eng;
         provider->printStats();
     }
 }
@@ -1032,7 +992,18 @@ void execute(
     // NOTE: this should be changed to automatic allocation in case we allow
     //       some exceptions to fall out of SymExec
     SymExec *se = new SymExec(entry.stor(), ep);
-    se->execFnc(results, entry, fnc);
+
+    // XXX: synthesize CL_INSN_CALL
+    CodeStorage::Insn insn;
+    insn.stor = fnc.stor;
+    insn.code = CL_INSN_CALL;
+    insn.loc  = *locationOf(fnc);
+    insn.operands.resize(2);
+    insn.operands[1] = fnc.def;
+    insn.opsToKill.resize(2, CodeStorage::KS_NEVER_KILL);
+
+    // run the symbolic execution
+    se->execFnc(results, entry, insn, fnc);
     delete se;
     printMemUsage("SymExec::~SymExec");
 
