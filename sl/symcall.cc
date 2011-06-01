@@ -242,7 +242,7 @@ void joinHeapsWithCare(SymHeap &sh, SymHeap surround) {
     LDP_PLOT(symcall, surround);
 
     TCVarList live;
-    gatherProgramVars(live, sh);
+    gatherProgramVars(live, sh, /* liveOnly */ true);
 
     SymHeap safeSurround(sh.stor());
     splitHeapByCVars(&surround, live, &safeSurround);
@@ -252,7 +252,7 @@ void joinHeapsWithCare(SymHeap &sh, SymHeap surround) {
 
 #ifndef NDEBUG
     live.clear();
-    gatherProgramVars(live, surround);
+    gatherProgramVars(live, surround, /* liveOnly */ true);
     if (!live.empty())
         CL_DEBUG("joinHeapsWithCare() did something useful");
 #endif

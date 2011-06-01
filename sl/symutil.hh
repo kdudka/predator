@@ -59,13 +59,16 @@ inline TValId valOfPtrAt(SymHeap &sh, TValId at, TOffset off) {
     return valOfPtrAt(sh, ptrAt);
 }
 
-inline bool isVarAlive(SymHeap &sh, const CVar &cv) {
-    const TValId at = sh.addrOfVar(cv);
-
+inline bool isVarAlive(const SymHeap &sh, const TValId at) {
     TObjList live;
     sh.gatherLiveObjects(live, at);
     return !live.empty()
         || sh.pointedByCount(at);
+}
+
+inline bool isVarAlive(SymHeap &sh, const CVar &cv) {
+    const TValId at = sh.addrOfVar(cv);
+    return isVarAlive(sh, at);
 }
 
 void getPtrValues(TValList &dst, const SymHeap &heap, TValId at);
@@ -77,24 +80,41 @@ inline TValId nextRootObj(SymHeap &sh, TValId root, TOffset offNext) {
 }
 
 template <class TDst, typename TInserter>
-void gatherProgramVarsCore(TDst &dst, const SymHeap &sh, TInserter ins) {
+void gatherProgramVarsCore(
+        TDst                    &dst,
+        const SymHeap           &sh,
+        const bool              liveOnly,
+        TInserter               ins)
+{
     TValList live;
     sh.gatherRootObjects(live, isProgramVar);
 
-    BOOST_FOREACH(const TValId root, live)
-        if (VAL_ADDR_OF_RET != root)
+    BOOST_FOREACH(const TValId root, live) {
+        if (VAL_ADDR_OF_RET == root)
+            continue;
+
+        if (!liveOnly || isVarAlive(sh, root))
             (dst.*ins)(sh.cVarByRoot(root));
+    }
 }
 
-inline void gatherProgramVars(TCVarList &dst, const SymHeap &sh) {
+inline void gatherProgramVars(
+        TCVarList               &dst,
+        const SymHeap           &sh,
+        const bool              liveOnly = false)
+{
     void (TCVarList::*ins)(const CVar &) = &TCVarList::push_back;
-    gatherProgramVarsCore(dst, sh, ins);
+    gatherProgramVarsCore(dst, sh, liveOnly, ins);
 }
 
-inline void gatherProgramVars(TCVarSet &dst, const SymHeap &sh) {
+inline void gatherProgramVars(
+        TCVarSet                &dst,
+        const SymHeap           &sh,
+        const bool              liveOnly = false)
+{
     typedef std::pair<TCVarSet::iterator, bool> TRet;
     TRet (TCVarSet::*ins)(const CVar &) = &TCVarSet::insert;
-    gatherProgramVarsCore(dst, sh, ins);
+    gatherProgramVarsCore(dst, sh, liveOnly, ins);
 }
 
 /// take the given visitor through all live pointers
