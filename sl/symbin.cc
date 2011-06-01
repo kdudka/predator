@@ -23,6 +23,7 @@
 #include <cl/cl_msg.hh>
 #include <cl/storage.hh>
 
+#include "symbt.hh"
 #include "symplot.hh"
 #include "symproc.hh"
 #include "symstate.hh"
@@ -246,10 +247,44 @@ bool handlePlot(
     return true;
 }
 
+bool handleError(
+        SymState                                    & /* dst */,
+        SymExecCore                                 &core,
+        const CodeStorage::Insn                     &insn,
+        const char                                  *name)
+{
+    const struct cl_loc *loc = &insn.loc;
+
+    const CodeStorage::TOperandList &opList = insn.operands;
+    if (opList.size() != 3 || opList[0].code != CL_OPERAND_VOID) {
+        emitPrototypeError(loc, name);
+        return false;
+    }
+
+    // print the error message
+    CL_ERROR_MSG(loc, name
+            << "() reached, analysis of this code path will not continue");
+
+    // print the user message if available
+    const SymHeap &sh = core.sh();
+    const TValId valDesc = core.valFromOperand(opList[/* desc */ 2]);
+    if (VT_CUSTOM == sh.valTarget(valDesc)) {
+        CustomValue cVal = sh.valUnwrapCustom(valDesc);
+        if (CV_STRING == cVal.code)
+            CL_NOTE_MSG(loc, "user message: " << cVal.data.str);
+    }
+
+    // print the backtrace
+    const SymBackTrace *bt = core.bt();
+    bt->printBackTrace();
+    return true;
+}
+
 // register built-ins
 BuiltInTable::BuiltInTable() {
     tbl_["abort"]                       = handleAbort;
     tbl_["___sl_break"]                 = handleBreak;
+    tbl_["___sl_error"]                 = handleError;
     tbl_["___sl_get_nondet_int"]        = handleNondetInt;
     tbl_["___sl_plot"]                  = handlePlot;
 }

@@ -29,24 +29,30 @@ extern "C" {
 void ___sl_break(void);
 void ___sl_plot(const char *name, ...);
 int ___sl_get_nondet_int(void);
+void ___sl_error(const char *msg);
 
 #else
 // dummy implementations of our built-ins, useful to run our test-cases on bare
 // metal, other analyzers without (compatible) plotting interface, etc.
 
-static inline void ___sl_break(void)
+static /* inline */  void ___sl_break(void)
 {
 }
 
-static inline void ___sl_plot(const char *name, ...)
+static /* inline */ void ___sl_plot(const char *name, ...)
 {
     (void) name;
 }
 
-static inline int ___sl_get_nondet_int(void)
+static /* inline */ int ___sl_get_nondet_int(void)
 {
     int i;
     return i;
+}
+
+static /* inline */ void ___sl_error(const char *msg)
+{
+    (void) msg;
 }
 #endif
 
