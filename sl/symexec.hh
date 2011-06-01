@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2009-2011 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -25,6 +25,7 @@
  * SymExec - top level algorithm of the @b symbolic @b execution
  */
 
+class SymHeap;
 class SymState;
 
 namespace CodeStorage {
@@ -47,61 +48,10 @@ struct SymExecParams {
     }
 };
 
-class IStatsProvider {
-    public:
-        virtual ~IStatsProvider() { }
-        virtual void printStats() const = 0;
-};
-
-/**
- * top level algorithm of the @b symbolic @b execution
- *
- * for now, @b fast @b mode means that OOM analysis is omitted
- */
-class SymExec: public IStatsProvider {
-    public:
-        /**
-         * load the static info about the analyzed code
-         * @param stor all-in-one static info about the analyzed code, see
-         * @param params initialization parameters of the symbolic execution
-         */
-        SymExec(const CodeStorage::Storage &stor, const SymExecParams &params);
-        ~SymExec();
-
-        const CodeStorage::Storage& stor() const;
-        const SymExecParams& params() const;
-
-        /**
-         * initial state.  By default, there is only one symbolic heap in that
-         * state.  SymExec takes care of creation and initialization of
-         * global/static variables in it.  You can change the symbolic heap
-         * and/or add another one.  But be sure that all the disjuncts contain
-         * all global/static variables.
-         * @attention The state can't be changed during the symbolic execution.
-         * In particular, call of SymExec::exec(fnc, stateZero()) is really bad
-         * idea.  You need to use a temporary SymState object in that case.
-         */
-        SymState& stateZero();
-
-        /**
-         * symbolically @b execute a function, starting from stateZero()
-         * @param fnc a function requested to be executed
-         * @param results a container for results of the symbolic execution
-         */
-        void exec(const CodeStorage::Fnc &fnc, SymState &results);
-
-        virtual void printStats() const;
-
-    private:
-        /// object copying is @b not allowed
-        SymExec(const SymExec &);
-
-        /// object copying is @b not allowed
-        SymExec& operator=(const SymExec &);
-
-    private:
-        struct Private;
-        Private *d;
-};
+void execute(
+        SymState                        &results,
+        const SymHeap                   &entry,
+        const CodeStorage::Fnc          &fnc,
+        const SymExecParams             &ep);
 
 #endif /* H_GUARD_SYM_EXEC_H */

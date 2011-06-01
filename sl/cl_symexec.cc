@@ -108,11 +108,10 @@ void execFnc(const CodeStorage::Fnc &fnc, const SymExecParams &ep,
     const struct cl_loc *lw = locationOf(fnc);
     CL_DEBUG_MSG(lw, "creating fresh initial state for "
             << nameOf(fnc) << "()...");
-    SymExec se(stor, ep);
 
     // run the symbolic execution
     SymStateWithJoin results;
-    se.exec(fnc, results);
+    execute(results, SymHeap(stor), fnc, ep);
     if (!lookForGlJunk)
         return;
 

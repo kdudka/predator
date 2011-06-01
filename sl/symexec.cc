@@ -106,6 +106,35 @@ bool operator<(const BlockPtr &a, const BlockPtr &b) {
 }
 
 // /////////////////////////////////////////////////////////////////////////////
+// IStatsProvider
+class IStatsProvider {
+    public:
+        virtual ~IStatsProvider() { }
+        virtual void printStats() const = 0;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+// SymExec
+class SymExec: public IStatsProvider {
+    public:
+        SymExec(const CodeStorage::Storage &stor, const SymExecParams &params);
+        ~SymExec();
+
+        const CodeStorage::Storage& stor() const;
+        const SymExecParams& params() const;
+
+        SymState& stateZero();
+
+        void exec(const CodeStorage::Fnc &fnc, SymState &results);
+
+        virtual void printStats() const;
+
+    private:
+        struct Private;
+        Private *d;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
 // SymExecEngine
 class SymExecEngine: public IStatsProvider {
     public:
@@ -1032,4 +1061,14 @@ void SymExec::printStats() const {
         const IStatsProvider *provider = tmpStack.top();
         provider->printStats();
     }
+}
+
+void execute(
+        SymState                        &results,
+        const SymHeap                   &entry,
+        const CodeStorage::Fnc          &fnc,
+        const SymExecParams             &ep)
+{
+    SymExec se(entry.stor(), ep);
+    se.exec(fnc, results);
 }
