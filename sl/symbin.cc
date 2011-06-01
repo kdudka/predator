@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2010 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2009-2011 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -30,6 +30,7 @@
 
 #include <cstring>
 #include <libgen.h>
+#include <map>
 
 template <int NTH, class TOpList>
 bool readPlotName(std::string *dst, const TOpList opList,
@@ -86,13 +87,17 @@ bool callPlot(const CodeStorage::Insn &insn, SymProc &proc) {
     const struct cl_loc *lw = &insn.loc;
 
     const int cntArgs = opList.size() - /* dst + fnc */ 2;
-    if (cntArgs < 1)
+    if (cntArgs < 1) {
+        emitPrototypeError(lw, "___sl_plot");
         // insufficient count of arguments
         return false;
+    }
 
-    if (CL_OPERAND_VOID != opList[/* dst */ 0].code)
+    if (CL_OPERAND_VOID != opList[/* dst */ 0].code) {
         // not a function returning void
+        emitPrototypeError(lw, "___sl_plot");
         return false;
+    }
 
     std::string plotName;
     if (!readPlotName<0>(&plotName, opList, proc.lw())) {
@@ -125,9 +130,135 @@ bool callPlot(const CodeStorage::Insn &insn, SymProc &proc) {
     return true;
 }
 
-bool handleBuiltIn(SymState                     &dst,
-                   SymExecCore                  &core,
-                   const CodeStorage::Insn      &insn)
+// singleton
+class BuiltInTable {
+    public:
+        static BuiltInTable* inst() {
+            return (inst_)
+                ? (inst_)
+                : (inst_ = new BuiltInTable);
+        }
+
+        bool handleBuiltIn(
+                SymState                            &dst,
+                SymExecCore                         &core,
+                const CodeStorage::Insn             &insn)
+            const;
+
+    private:
+        BuiltInTable();
+
+        static BuiltInTable* inst_;
+
+        typedef bool (*THandler)(
+                SymState                            &dst,
+                SymExecCore                         &core,
+                const CodeStorage::Insn             &insn,
+                const char                          *name);
+
+        typedef std::map<std::string, THandler>     TMap;
+        TMap                                        tbl_;
+};
+
+BuiltInTable *BuiltInTable::inst_;
+
+bool handleAbort(
+        SymState                                    &dst,
+        SymExecCore                                 &core,
+        const CodeStorage::Insn                     &insn,
+        const char                                  *name)
+{
+    const CodeStorage::TOperandList &opList = insn.operands;
+    if (opList.size() != 2 || opList[0].code != CL_OPERAND_VOID) {
+        emitPrototypeError(&insn.loc, name);
+        return false;
+    }
+
+    // do nothing for abort()
+    const SymHeap &sh = core.sh();
+    dst.insert(sh);
+    return true;
+}
+
+bool handleBreak(
+        SymState                                    &dst,
+        SymExecCore                                 &core,
+        const CodeStorage::Insn                     &insn,
+        const char                                  *name)
+{
+    const CodeStorage::TOperandList &opList = insn.operands;
+    if (opList.size() != 2 || opList[0].code != CL_OPERAND_VOID) {
+        emitPrototypeError(&insn.loc, name);
+        return false;
+    }
+
+    // trap to debugger
+    CL_WARN_MSG(&insn.loc, name << "() reached, stopping per user's request");
+    CL_TRAP;
+
+    const SymHeap &sh = core.sh();
+    dst.insert(sh);
+    return true;
+}
+
+bool handleNondetInt(
+        SymState                                    &dst,
+        SymExecCore                                 &core,
+        const CodeStorage::Insn                     &insn,
+        const char                                  *name)
+{
+    const CodeStorage::TOperandList &opList = insn.operands;
+    if (2 != opList.size()) {
+        emitPrototypeError(&insn.loc, name);
+        return false;
+    }
+
+    SymHeap &sh = core.sh();
+    CL_DEBUG_MSG(&insn.loc, "executing " << name << "()");
+
+    // set the returned value to a new unknown value
+    const struct cl_operand &opDst = opList[0];
+    const TObjId objDst = core.objByOperand(opDst);
+    const TValId val = sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
+    core.objSetValue(objDst, val);
+
+    // insert the resulting heap
+    dst.insert(sh);
+    return true;
+}
+
+bool handlePlot(
+        SymState                                    &dst,
+        SymExecCore                                 &core,
+        const CodeStorage::Insn                     &insn,
+        const char                                  *name)
+{
+    const SymExecCoreParams &ep = core.params();
+    if (ep.skipPlot)
+        CL_DEBUG_MSG(&insn.loc, name << "() skipped per user's request");
+
+    else if (!(callPlot(insn, core)))
+        return false;
+
+    const SymHeap &sh = core.sh();
+    core.killInsn(insn);
+    dst.insert(sh);
+    return true;
+}
+
+// register built-ins
+BuiltInTable::BuiltInTable() {
+    tbl_["abort"]                       = handleAbort;
+    tbl_["___sl_break"]                 = handleBreak;
+    tbl_["___sl_get_nondet_int"]        = handleNondetInt;
+    tbl_["___sl_plot"]                  = handlePlot;
+}
+
+bool BuiltInTable::handleBuiltIn(
+        SymState                                    &dst,
+        SymExecCore                                 &core,
+        const CodeStorage::Insn                     &insn)
+    const
 {
     const CodeStorage::TOperandList &opList = insn.operands;
     const struct cl_operand &fnc = opList[1];
@@ -140,56 +271,20 @@ bool handleBuiltIn(SymState                     &dst,
     const char *fncName = cst.data.cst_fnc.name;
     CL_BREAK_IF(!fncName);
 
-    SymHeap                     &sh = core.sh();
-    const struct cl_loc         *lw = core.lw();
-    const SymExecCoreParams     &ep = core.params();
+    TMap::const_iterator it = tbl_.find(fncName);
+    if (tbl_.end() == it)
+        // no fnc name matched as built-in
+        return false;
 
-    if (STREQ(fncName, "abort")) {
-        CL_BREAK_IF(opList.size() != 2 || opList[0].code != CL_OPERAND_VOID);
+    const THandler hdl = it->second;
+    return hdl(dst, core, insn, fncName);
+}
 
-        // do nothing for abort()
-        dst.insert(sh);
-        return true;
-    }
-
-    if (STREQ(fncName, "___sl_break")) {
-        CL_WARN_MSG(lw, "___sl_break() reached, stopping per user's request");
-        dst.insert(sh);
-
-        CL_TRAP;
-        return true;
-    }
-
-    if (STREQ(fncName, "___sl_get_nondet_int")) {
-        if (2 != opList.size()) {
-            emitPrototypeError(lw, fncName);
-            return false;
-        }
-
-        // set the returned value to a new unknown value
-        CL_DEBUG_MSG(lw, "executing ___sl_get_nondet_int()");
-        const struct cl_operand &opDst = opList[0];
-        const TObjId objDst = core.objByOperand(opDst);
-        const TValId val = sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
-        core.objSetValue(objDst, val);
-
-        // insert the resulting heap
-        dst.insert(sh);
-        return true;
-    }
-
-    if (STREQ(fncName, "___sl_plot")) {
-        if (ep.skipPlot)
-            CL_DEBUG_MSG(lw, "___sl_plot() skipped per user's request");
-
-        else if (!(callPlot(insn, core)))
-            return false;
-
-        core.killInsn(insn);
-        dst.insert(sh);
-        return true;
-    }
-
-    // no built-in has been matched
-    return false;
+bool handleBuiltIn(
+        SymState                                    &dst,
+        SymExecCore                                 &core,
+        const CodeStorage::Insn                     &insn)
+{
+    const BuiltInTable *tbl = BuiltInTable::inst();
+    return tbl->handleBuiltIn(dst, core, insn);
 }
