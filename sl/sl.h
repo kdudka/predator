@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2010-2011 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -20,23 +20,51 @@
 #ifndef H_GUARD_SL_H
 #define H_GUARD_SL_H
 
+#define ___SL_ASSERT(cond) do {                                             \
+    if (!cond)                                                              \
+        ___sl_error("assertion failed: " #cond)                             \
+} while (0)
+
+#define ___SL_BREAK_IF(cond) do {                                           \
+    if (cond)                                                               \
+        ___sl_break("conditional breakpoint fired: " #cond)                 \
+} while (0)
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 #ifdef PREDATOR
-// declare built-ins
-void ___sl_break(void);
+/* declare built-ins */
+void ___sl_break(const char *msg);
+void ___sl_error(const char *msg);
 void ___sl_plot(const char *name, ...);
 int ___sl_get_nondet_int(void);
-void ___sl_error(const char *msg);
 
 #else
-// dummy implementations of our built-ins, useful to run our test-cases on bare
-// metal, other analyzers without (compatible) plotting interface, etc.
+/*
+ * dummy implementations of our built-ins
+ *
+ * NOTE: the use of 'inline' is tricky -- if used, it breaks some C parsers that
+ * are not C99 compliant; if not used, gcc give us the following list of errors:
+ *
+ * sl.h: In function ‘int ___sl_get_nondet_int()’:
+ * sl.h:66:12: error: ‘i’ is used uninitialized in this function
+ * sl.h: At global scope:
+ * sl.h:47:27: error: ‘void ___sl_break(const char*)’ defined but not used
+ * sl.h:52:26: error: ‘void ___sl_error(const char*)’ defined but not used
+ * sl.h:57:26: error: ‘void ___sl_plot(const char*, ...)’ defined but not used
+ * sl.h:62:25: error: ‘int ___sl_get_nondet_int()’ defined but not used
+ */
 
-static /* inline */  void ___sl_break(void)
+static /* inline */  void ___sl_break(const char *msg)
 {
+    (void) msg;
+}
+
+static /* inline */ void ___sl_error(const char *msg)
+{
+    (void) msg;
 }
 
 static /* inline */ void ___sl_plot(const char *name, ...)
@@ -47,12 +75,9 @@ static /* inline */ void ___sl_plot(const char *name, ...)
 static /* inline */ int ___sl_get_nondet_int(void)
 {
     int i;
-    return i;
-}
 
-static /* inline */ void ___sl_error(const char *msg)
-{
-    (void) msg;
+    /* tools like valgrind will report a use of such value as a program error */
+    return i;
 }
 #endif
 

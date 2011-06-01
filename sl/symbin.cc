@@ -131,6 +131,25 @@ bool callPlot(const CodeStorage::Insn &insn, SymProc &proc) {
     return true;
 }
 
+void printUserMessage(SymProc &proc, const struct cl_operand &opMsg)
+{
+    const SymHeap &sh = proc.sh();
+
+    const TValId valDesc = proc.valFromOperand(opMsg);
+    const EValueTarget code = sh.valTarget(valDesc);
+    if (VT_CUSTOM != code)
+        // not a custom value
+        return;
+
+    const CustomValue cVal = sh.valUnwrapCustom(valDesc);
+    if (CV_STRING != cVal.code)
+        // not a string custom value
+        return;
+
+    const struct cl_loc *loc = proc.lw();
+    CL_NOTE_MSG(loc, "user message: " << cVal.data.str);
+}
+
 // singleton
 class BuiltInTable {
     public:
@@ -188,15 +207,20 @@ bool handleBreak(
         const char                                  *name)
 {
     const CodeStorage::TOperandList &opList = insn.operands;
-    if (opList.size() != 2 || opList[0].code != CL_OPERAND_VOID) {
+    if (opList.size() != 3 || opList[0].code != CL_OPERAND_VOID) {
         emitPrototypeError(&insn.loc, name);
         return false;
     }
 
-    // trap to debugger
+    // print what happened
     CL_WARN_MSG(&insn.loc, name << "() reached, stopping per user's request");
+    printUserMessage(core, opList[/* msg */ 2]);
+    printBackTrace(core);
+
+    // trap to debugger
     CL_TRAP;
 
+    // continue with the given heap as the result
     const SymHeap &sh = core.sh();
     dst.insert(sh);
     return true;
@@ -265,18 +289,9 @@ bool handleError(
     CL_ERROR_MSG(loc, name
             << "() reached, analysis of this code path will not continue");
 
-    // print the user message if available
-    const SymHeap &sh = core.sh();
-    const TValId valDesc = core.valFromOperand(opList[/* desc */ 2]);
-    if (VT_CUSTOM == sh.valTarget(valDesc)) {
-        CustomValue cVal = sh.valUnwrapCustom(valDesc);
-        if (CV_STRING == cVal.code)
-            CL_NOTE_MSG(loc, "user message: " << cVal.data.str);
-    }
-
-    // print the backtrace
-    const SymBackTrace *bt = core.bt();
-    bt->printBackTrace();
+    // print the user message and backtrace
+    printUserMessage(core, opList[/* msg */ 2]);
+    printBackTrace(core);
     return true;
 }
 

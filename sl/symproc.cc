@@ -930,6 +930,11 @@ TValId SymProc::handlePointerPlus(TValId at, TValId off) {
     return sh_.valByOffset(at, offRequested);
 }
 
+void printBackTrace(SymProc &proc) {
+    const SymBackTrace *bt = proc.bt();
+    bt->printBackTrace();
+}
+
 // template for generic (unary, binary, ...) operator handlers
 template <int ARITY>
 struct OpHandler {

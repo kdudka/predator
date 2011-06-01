@@ -26,4 +26,4 @@ CXXFLAGS += -std=c++0x -pedantic -Wall -W -Werror -I../include
 # check whether each header is self-compilable
 check: $(HEADERS)
 $(HEADERS):
-	$(CXX) $(CXXFLAGS) -o $(SINK) -c $@
+	$(CXX) $(CXXFLAGS) -o $(SINK) -c $@ -DPREDATOR

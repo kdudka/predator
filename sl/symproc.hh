@@ -132,6 +132,8 @@ class SymProc {
         friend class UnionInvalidator;
 };
 
+void printBackTrace(SymProc &);
+
 struct SymExecCoreParams {
     bool fastMode;          ///< enable/disable OOM state simulation
     bool invCompatMode;     ///< Invader compatibility mode
