@@ -98,7 +98,6 @@ static void create_list_far(unsigned no, unsigned level)
     // NOTE: we do not support integer arithmetic for now
     switch (level) {
         case 0:
-            ___sl_plot("create_list_far");
             create_list_no(no);
             return;
 
@@ -123,8 +122,6 @@ int main()
 {
     create_list_far(0, 0);
     create_list_far(1, 1);
-    ___sl_break(NULL);
-
     create_list_far(2, 2);
     create_list_far(3, 3);
     ___sl_plot(NULL);

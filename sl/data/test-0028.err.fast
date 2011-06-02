@@ -2,8 +2,6 @@ test-0028.c:24:13: error: amount of allocated memory not accurate
 test-0028.c:24:13: note: allocated: 4 bytes
 test-0028.c:24:13: note:  expected: 8 bytes
 test-0028.c:25:15: warning: killing junk
-test-0028.c:25:15: note: from call of chain_item()
-test-0028.c:22:5: note: from call of main()
 test-0028.c:16:17: error: dereference of non-existing non-heap object
 test-0028.c:26:14: note: from call of free_list()
 test-0028.c:22:5: note: from call of main()

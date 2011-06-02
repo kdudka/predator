@@ -526,6 +526,8 @@ void setCallArgs(
         // set the value of lhs accordingly
         proc.objSetValue(argObj, val);
     }
+
+    srcProc.killInsn(insn);
 }
 
 SymCallCtx* SymCallCache::Private::getCallCtx(const SymHeap &entry, TFncRef fnc) {
@@ -595,7 +597,6 @@ SymCallCtx* SymCallCache::getCallCtx(
     LDP_INIT(symcall, "pre-processing");
     LDP_PLOT(symcall, entry);
     setCallArgs(proc, fnc, insn);
-    proc.killInsn(insn);
     LDP_PLOT(symcall, entry);
 
     // resolve heap cut
