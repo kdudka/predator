@@ -364,23 +364,25 @@ bool SymCallCache::Private::importGlVar(SymHeap &entry, const CVar &cv) {
         return false;
 
     CL_DEBUG("importGlVar() is taking place...");
-    if (0 < idx) {
-        // the origin has to be re-executed with updated specification
-        SymCallCtx *ctxBase = this->ctxStack[idx - 1];
-        ctxBase->d->needReexecFor.insert(cv);
+    const int idxOrigin = idx;
+    if (!idx)
+        ++idx;
 
-        const int uid = uidOf(*this->ctxStack[idx]->d->fnc);
-        SymCallCtx::Private::TCutHints &hints = ctxBase->d->hints;
-        hints[uid].insert(cv);
-    }
-
-    const SymHeap &origin = this->ctxStack[idx]->d->surround;
-    for (++idx; idx < cnt; ++idx) {
-        CL_BREAK_IF("not tested and apparently broken");
-
-        // the origin has to be re-executed with updated specification
+    const SymHeap &origin = this->ctxStack[idxOrigin]->d->surround;
+    for (; idx < cnt; ++idx) {
         SymCallCtx *ctx = this->ctxStack[idx];
-        ctx->d->needReexecFor.insert(cv);
+        const int uid = uidOf(*ctx->d->fnc);
+
+        // teach the caller to always include 'cv' into the cut for this fnc
+        SymCallCtx *ctxCaller = this->ctxStack[idx - 1];
+        SymCallCtx::Private::TCutHints &hints = ctxCaller->d->hints;
+        hints[uid].insert(cv);
+
+        if (idxOrigin == idx) {
+            // the caller has to be re-executed with updated specification
+            ctxCaller->d->needReexecFor.insert(cv);
+            continue;
+        }
 
         // import gl variable at the current level
         const SymHeap &src = ctx->d->entry;
@@ -388,7 +390,6 @@ bool SymCallCache::Private::importGlVar(SymHeap &entry, const CVar &cv) {
         transferGlVar(dst, origin, cv);
 
         // update the corresponding cache entry
-        const int uid = /* FIXME: completely wrong */ uidOf(*this->bt.topFnc());
         PerFncCache &pfc = this->cache[uid];
         pfc.updateCacheEntry(src, dst);
     }
