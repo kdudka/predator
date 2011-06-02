@@ -905,31 +905,22 @@ void SymExec::execFnc(
         const ExecStackItem &item = execStack_.front();
         SymExecEngine *engine = item.eng;
 
-        TCVarSet &needReexecFor = item.ctx->needReexecFor();
-        if (needReexecFor.empty()) {
-            // do as much as we can at the current call level
-            if (engine->run()) {
-                printMemUsage("SymExecEngine::run");
+        // do as much as we can at the current call level
+        if (engine->run()) {
+            printMemUsage("SymExecEngine::run");
 
-                // call done at this level
-                item.ctx->flushCallResults(*item.dst);
-                item.ctx->invalidate();
-                printMemUsage("SymCallCtx::flushCallResults");
+            // call done at this level
+            item.ctx->flushCallResults(*item.dst);
+            item.ctx->invalidate();
+            printMemUsage("SymCallCtx::flushCallResults");
 
-                // remove top of the stack
-                delete engine;
-                printMemUsage("SymExecEngine::~SymExecEngine");
-                execStack_.pop_front();
+            // remove top of the stack
+            delete engine;
+            printMemUsage("SymExecEngine::~SymExecEngine");
+            execStack_.pop_front();
 
-                // wake are done with this call, now wake up the caller!
-                continue;
-            }
-        }
-        else {
-            CL_DEBUG(">G< symcall suggests re-execution [reason: "
-                    << varSetToString(stor_, needReexecFor) << "]");
-
-            needReexecFor.clear();
+            // wake are done with this call, now wake up the caller!
+            continue;
         }
 
         // function call requested

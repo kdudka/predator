@@ -27,7 +27,6 @@
  */
 
 #include "symheap.hh"
-#include "symutil.hh"
 
 class SymBackTrace;
 class SymState;
@@ -116,8 +115,6 @@ class SymCallCtx {
          * consequently destruction of the SymCallCtx object itself
          */
         void invalidate();
-
-        TCVarSet& needReexecFor();
 
     private:
         /// @note these objects can't be created/destroyed out of SymCallCache

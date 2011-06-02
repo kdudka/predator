@@ -135,7 +135,6 @@ struct SymCallCtx::Private {
     int                         nestLevel;
     bool                        computed;
     bool                        flushed;
-    TCVarSet                    needReexecFor;
     TCutHints                   hints;
 
     void assignReturnValue(SymHeap &sh);
@@ -170,10 +169,6 @@ const SymHeap& SymCallCtx::entry() const {
 
 SymState& SymCallCtx::rawResults() {
     return d->rawResults;
-}
-
-TCVarSet& SymCallCtx::needReexecFor() {
-    return d->needReexecFor;
 }
 
 void SymCallCtx::Private::assignReturnValue(SymHeap &sh) {
@@ -363,9 +358,10 @@ bool SymCallCache::Private::importGlVar(SymHeap &entry, const CVar &cv) {
         // found nowhere
         return false;
 
+    TStorRef stor = entry.stor();
     const struct cl_loc *loc = 0;
-    std::string varString = varToString(entry.stor(), cv.uid, &loc);
-    CL_DEBUG_MSG(loc, "<G> importGlVar() called for: " << varString);
+    std::string varString = varToString(stor, cv.uid, &loc);
+    CL_DEBUG_MSG(loc, "<G> importGlVar() imports " << varString);
     const int idxOrigin = idx;
     if (!idx)
         ++idx;
@@ -383,19 +379,10 @@ bool SymCallCache::Private::importGlVar(SymHeap &entry, const CVar &cv) {
         SymCallCtx::Private::TCutHints &hints = ctxCaller->d->hints;
         hints[uid].insert(cv);
 
-        switch (i) {
-            case 0:
-                // the origin has now updated cut hints for the fnc 'uid' and
-                // that is all that needed to be changed at that level
-                continue;
-
-            case 1:
-                // the call directly above the origin has to be re-executed
-                ctxCaller->d->needReexecFor.insert(cv);
-
-            default:
-                break;
-        }
+        if (!i)
+            // the origin has now updated cut hints for the fnc 'uid' and that
+            // is all that needed to be changed at that level
+            continue;
 
         // import gl variable at the current level
         const SymHeap &src = ctx->d->entry;
@@ -405,6 +392,8 @@ bool SymCallCache::Private::importGlVar(SymHeap &entry, const CVar &cv) {
         // update the corresponding cache entry
         PerFncCache &pfc = this->cache[uid];
         pfc.updateCacheEntry(src, dst);
+        CL_DEBUG_MSG(loc, "<G> importGlVar() updates a call cache entry for "
+                << nameOf(*stor.fncs[uid]) << "()");
     }
 
     // finally import the gl var to the current call level
@@ -433,7 +422,7 @@ void SymCallCache::Private::resolveHeapCut(
     BOOST_FOREACH(const CVar &cv, snap) {
         const struct cl_loc *loc = 0;
         std::string varString = varToString(stor, cv.uid, &loc);
-        CL_DEBUG_MSG(loc, "<G> forced by needReexecFor: " << varString);
+        CL_DEBUG_MSG(loc, "<G> importGlVar() recently suggested " << varString);
         cut.push_back(cv);
     }
 
