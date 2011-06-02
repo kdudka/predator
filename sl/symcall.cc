@@ -446,9 +446,6 @@ void SymCallCache::Private::resolveHeapCut(
     sh.gatherRootObjects(live, isProgramVar);
     BOOST_FOREACH(const TValId root, live) {
         const CVar cv(sh.cVarByRoot(root));
-        if (!isVarAlive(sh, cv))
-            // var inactive
-            continue;
 
         const EValueTarget code = sh.valTarget(root);
         if (VT_STATIC == code) {
@@ -457,6 +454,10 @@ void SymCallCache::Private::resolveHeapCut(
 #endif
             continue;
         }
+
+        if (!isVarAlive(sh, cv))
+            // var inactive
+            continue;
 
         if (hasKey(fncVars, cv.uid) && cv.inst == nestLevel)
             cut.push_back(cv);
