@@ -197,8 +197,8 @@ class SymExecEngine: public IStatsProvider {
         virtual void printStats() const;
 
         // TODO: describe the interface briefly
-        const SymHeap*                  callEntry() const;
-        const CodeStorage::Insn*        callInsn() const;
+        const SymHeap&                  callEntry() const;
+        const CodeStorage::Insn&        callInsn() const;
         SymState&                       callResults();
 
     private:
@@ -750,18 +750,18 @@ void SymExecEngine::printStats() const {
     }
 }
 
-const SymHeap* SymExecEngine::callEntry() const {
+const SymHeap& SymExecEngine::callEntry() const {
     CL_BREAK_IF(heapIdx_ < 1);
-    return &localState_[heapIdx_ - /* already incremented for next wheel */ 1];
+    return localState_[heapIdx_ - /* already incremented for next wheel */ 1];
 }
 
-const CodeStorage::Insn* SymExecEngine::callInsn() const {
+const CodeStorage::Insn& SymExecEngine::callInsn() const {
     const CodeStorage::Insn *insn = block_->operator[](insnIdx_);
 
     // check for possible protocol error
     CL_BREAK_IF(CL_INSN_CALL != insn->code);
 
-    return insn;
+    return *insn;
 }
 
 SymState& SymExecEngine::callResults() {
@@ -919,20 +919,20 @@ void SymExec::execFnc(
             printMemUsage("SymExecEngine::~SymExecEngine");
             execStack_.pop_front();
 
-            // wake are done with this call, now wake up the caller!
+            // we are done with this call, now wake up the caller!
             continue;
         }
 
         // function call requested
         // --> we need to nest unless the computed result is already available
-        const SymHeap &entry = *engine->callEntry();
-        const CodeStorage::Insn &insn = *engine->callInsn();
         SymState &results = engine->callResults();
+        const SymHeap &entry = engine->callEntry();
+        const CodeStorage::Insn &insn = engine->callInsn();
         const CodeStorage::Fnc *fnc = this->resolveCallInsn(results, entry, insn);
 
-        // call cache lookup
         SymCallCtx *ctx = 0;
         if (fnc)
+            // call cache lookup
             ctx = callCache_.getCallCtx(entry, *fnc, insn);
 
         if (!ctx)
@@ -943,9 +943,10 @@ void SymExec::execFnc(
 
         if (!ctx->needExec()) {
             // call cache hit
-            const struct cl_loc *lw = callCache_.bt().topCallLoc();
-            CL_DEBUG_MSG(lw, "(x) call of function optimized out: "
-                    << nameOf(*fnc) << "()");
+            const struct cl_loc *loc = &insn.loc;
+            const std::string name = nameOf(*fnc);
+            CL_DEBUG_MSG(loc,
+                    "(x) call of function optimized out: " << name << "()");
 
             // use the cached result
             ctx->flushCallResults(engine->callResults());
@@ -954,7 +955,7 @@ void SymExec::execFnc(
             continue;
         }
 
-        // perform the call now!
+        // create a new engine and push it to the exec stack
         printMemUsage("SymCall::getCallCtx");
         this->pushCall(ctx, item.eng->callResults());
         printMemUsage("SymExec::createEngine");
