@@ -363,13 +363,18 @@ bool SymCallCache::Private::importGlVar(SymHeap &entry, const CVar &cv) {
         // found nowhere
         return false;
 
-    CL_DEBUG("importGlVar() is taking place...");
+    const struct cl_loc *loc = 0;
+    std::string varString = varToString(entry.stor(), cv.uid, &loc);
+    CL_DEBUG_MSG(loc, "<G> importGlVar() called for: " << varString);
     const int idxOrigin = idx;
     if (!idx)
         ++idx;
 
+    // 'origin' is the heap that we are importing the gl var from
     const SymHeap &origin = this->ctxStack[idxOrigin]->d->surround;
-    for (; idx < cnt; ++idx) {
+
+    // go through all heaps above the 'origin' up to the current call level
+    for (unsigned i = 0; idx < cnt; ++idx, ++i) {
         SymCallCtx *ctx = this->ctxStack[idx];
         const int uid = uidOf(*ctx->d->fnc);
 
@@ -378,10 +383,18 @@ bool SymCallCache::Private::importGlVar(SymHeap &entry, const CVar &cv) {
         SymCallCtx::Private::TCutHints &hints = ctxCaller->d->hints;
         hints[uid].insert(cv);
 
-        if (idxOrigin == idx) {
-            // the caller has to be re-executed with updated specification
-            ctxCaller->d->needReexecFor.insert(cv);
-            continue;
+        switch (i) {
+            case 0:
+                // the origin has now updated cut hints for the fnc 'uid' and
+                // that is all that needed to be changed at that level
+                continue;
+
+            case 1:
+                // the call directly above the origin has to be re-executed
+                ctxCaller->d->needReexecFor.insert(cv);
+
+            default:
+                break;
         }
 
         // import gl variable at the current level
@@ -394,6 +407,7 @@ bool SymCallCache::Private::importGlVar(SymHeap &entry, const CVar &cv) {
         pfc.updateCacheEntry(src, dst);
     }
 
+    // finally import the gl var to the current call level
     transferGlVar(entry, origin, cv);
     return true;
 }

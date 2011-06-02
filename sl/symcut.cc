@@ -290,8 +290,10 @@ void splitHeapByCVars(
 #if SE_DISABLE_SYMCUT
     return;
 #endif
-    CL_DEBUG("splitHeapByCVars() started: cut by " << cut.size() << " variable(s)");
 
+#if DEBUG_SYMCUT
+    CL_DEBUG("splitHeapByCVars() started: cut by " << cut.size() << " variable(s)");
+#endif
     // get the set of live program variables
     DeepCopyData::TCut live;
     gatherProgramVars(live, *srcDst);
@@ -304,7 +306,9 @@ void splitHeapByCVars(
     }
 
     // cut the first part
+#if DEBUG_SYMCUT || !defined NDEBUG
     const unsigned cntOrig = cset.size();
+#endif
     SymHeap dst(srcDst->stor());
     prune(*srcDst, dst, cset);
 
@@ -331,9 +335,13 @@ void splitHeapByCVars(
     prune(*srcDst, *saveSurroundTo, complement);
 
     // print some statistics
+#if DEBUG_SYMCUT || !defined NDEBUG
     const unsigned cntA = cset.size();
     const unsigned cntB = complement.size();
     const unsigned cntTotal = all.size();
+#endif
+
+#if DEBUG_SYMCUT
     CL_DEBUG("splitHeapByCVars() finished: "
             << cntOrig << " -> " << cntA << " |" << cntB
             << " (" << cntTotal << " program variables in total)");
@@ -341,6 +349,7 @@ void splitHeapByCVars(
     const float ratio = 100.0 * dst.lastId() / srcDst->lastId();
     CL_DEBUG("splitHeapByCVars() resulting heap size: " << std::fixed
             << std::setprecision(2) << std::setw(5) << ratio << "%");
+#endif
 
 #ifndef NDEBUG
     // basic sanity check
