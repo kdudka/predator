@@ -1,0 +1,12 @@
+test-0151.c:105:28: warning: support of call recursion is not stable yet
+test-0151.c:105:28: note: nestLevel is 2
+test-0151.c:109:28: warning: support of call recursion is not stable yet
+test-0151.c:109:28: note: nestLevel is 2
+test-0151.c:105:28: warning: support of call recursion is not stable yet
+test-0151.c:105:28: note: nestLevel is 3
+test-0151.c:113:28: warning: support of call recursion is not stable yet
+test-0151.c:113:28: note: nestLevel is 2
+test-0151.c:109:28: warning: support of call recursion is not stable yet
+test-0151.c:109:28: note: nestLevel is 3
+test-0151.c:105:28: warning: support of call recursion is not stable yet
+test-0151.c:105:28: note: nestLevel is 4

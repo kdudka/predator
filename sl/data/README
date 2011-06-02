@@ -293,7 +293,10 @@ Linux lists
                 - spurious memory leak caused by the destructor which expects
                   exactly two nodes
 
-    test-0150.c - regression test for gl variables and integral constants
+    test-0150.c - regression test focused on gl variables and integral constants
+
+    test-0151.c - regression test focused on gl variables, integral constants,
+                  and recursive function calls
 
 
 Show-case

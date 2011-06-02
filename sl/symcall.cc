@@ -56,7 +56,7 @@ class PerFncCache {
             }
         }
 
-        void updateCacheEntry(const SymHeap &of, SymHeap /* NON-const! */ &by) {
+        void updateCacheEntry(const SymHeap &of, const SymHeap &by) {
 #if SE_DISABLE_CALL_CACHE
             CL_BREAK_IF("invalid call of PerFncCache::updateCacheEntry()");
             return;
@@ -68,7 +68,7 @@ class PerFncCache {
             }
 
             CL_BREAK_IF(!areEqual(of, huni_[idx]));
-            huni_.heaps_[idx].swap(by);
+            huni_.heaps_[idx] = by;
         }
 
         /**
@@ -385,8 +385,8 @@ bool SymCallCache::Private::importGlVar(SymHeap &entry, const CVar &cv) {
             continue;
 
         // import gl variable at the current level
-        const SymHeap &src = ctx->d->entry;
-        SymHeap dst(src);
+        const SymHeap src = ctx->d->entry;
+        SymHeap &dst = ctx->d->entry;
         transferGlVar(dst, origin, cv);
 
         // update the corresponding cache entry
