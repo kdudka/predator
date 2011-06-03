@@ -385,7 +385,7 @@ bool SymCallCache::Private::importGlVar(SymHeap &entry, const CVar &cv) {
             continue;
 
         // import gl variable at the current level
-        const SymHeap src = ctx->d->entry;
+        const SymHeap src(ctx->d->entry);
         SymHeap &dst = ctx->d->entry;
         transferGlVar(dst, origin, cv);
 
@@ -589,8 +589,8 @@ SymCallCtx* SymCallCache::getCallCtx(
     // check recursion depth (if any)
     const int nestLevel = d->bt.countOccurrencesOfFnc(uid);
     if (1 != nestLevel) {
-        CL_WARN_MSG(loc, "support of call recursion is not stable yet");
-        CL_NOTE_MSG(loc, "nestLevel is " << nestLevel);
+        CL_WARN_MSG(loc, "recursive function call, depth = " << nestLevel);
+        d->bt.printBackTrace();
     }
 
     // initialize local variables of the called fnc
