@@ -214,14 +214,20 @@ TValId SymProc::varAt(const struct cl_operand &op) {
     return at;
 }
 
-TOffset offDerefArray(const struct cl_accessor *ac) {
-    // resolve index and type
-    const int idx = intCstFromOperand(ac->data.array.index);
-    const TObjType clt = targetTypeOfArray(ac->type);
+bool SymProc::addOffDerefArray(TOffset &off, const struct cl_accessor *ac) {
+    // read value of the operand that is used as an array index
+    const struct cl_operand *opIdx = ac->data.array.index;
+    const TValId valIdx = this->valFromOperand(*opIdx);
 
-    // compute the offset
-    const TOffset off = idx * clt->size;
-    return off;
+    // unwrap the integral value inside the heap value (if available)
+    long idx;
+    if (!numFromVal(&idx, sh_, valIdx))
+        return false;
+
+    // compute the resulting offset
+    const TObjType clt = targetTypeOfArray(ac->type);
+    off += idx * clt->size;
+    return true;
 }
 
 TOffset offItem(const struct cl_accessor *ac) {
@@ -264,12 +270,15 @@ TValId SymProc::targetAt(const struct cl_operand &op) {
                 continue;
 
             case CL_ACCESSOR_DEREF_ARRAY:
-                off += offDerefArray(ac);
-                break;
+                if (this->addOffDerefArray(off, ac))
+                    continue;
+                else
+                    // no clue how to compute the resulting offset
+                    return sh_.valCreate(VT_UNKNOWN, VO_UNKNOWN);
 
             case CL_ACCESSOR_ITEM:
                 off += offItem(ac);
-                break;
+                continue;
         }
     }
 
@@ -296,6 +305,13 @@ TObjId SymProc::objByOperand(const struct cl_operand &op) {
     const TValId at = this->targetAt(op);
     if (VAL_DEREF_FAILED == at)
         return OBJ_DEREF_FAILED;
+
+    const EValueTarget code = sh_.valTarget(at);
+    if (!isPossibleToDeref(code)) {
+        CL_ERROR_MSG(lw_, "dereference of unknown value");
+        bt_->printBackTrace();
+        return OBJ_DEREF_FAILED;
+    }
 
     const TObjId obj = sh_.objAt(at, op.type);
     switch (obj) {
@@ -921,7 +937,7 @@ TValId compareValues(
 TValId SymProc::handlePointerPlus(TValId at, TValId off) {
     long num;
     if (!numFromVal(&num, sh_, off)) {
-        CL_ERROR_MSG(lw_, "pointer plus offset not a known integer");
+        CL_DEBUG_MSG(lw_, "pointer plus offset not a known integer");
         return sh_.valCreate(VT_UNKNOWN, VO_UNKNOWN);
     }
 
