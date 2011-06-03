@@ -1137,9 +1137,17 @@ bool SymHeapCore::Private::lazyCreatePtr(
 
     // check root type-info
     const TObjType cltRoot = rootData->lastKnownClt;
-    const TObjType clt = (cltRoot)
-        ? guideCltFinder(cltRoot, off, isDataPtr)
-        : stor.types.genericDataPtr();
+
+    TObjType clt = 0;
+    if (cltRoot)
+        // try the best match of type-info for the pointer
+        clt = guideCltFinder(cltRoot, off, isDataPtr);
+
+    if (!clt) {
+        // try to use a generic data pointer
+        clt = stor.types.genericDataPtr();
+        CL_WARN("check for overlapping objects not implemented yet!");
+    }
 
     if (!clt)
         // not found
@@ -1292,7 +1300,7 @@ TObjId SymHeapCore::objAt(TValId at, TObjType clt) {
     // FIXME: we need this shim to work around the legacy code in symdiscover
     const TypeEqual pred(clt);
     if (!guideCltFinder(cltRoot, off, pred))
-        return OBJ_UNKNOWN;
+        CL_WARN("check for overlapping objects not implemented yet!");
 
     const TObjId obj = d->objCreate();
     HeapObject *objData = d->objData(obj);

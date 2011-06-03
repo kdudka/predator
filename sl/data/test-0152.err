@@ -1,0 +1,28 @@
+test-0152.c:70:28: warning: recursive function call, depth = 2
+test-0152.c:70:28: note: from call of create_list_far()
+test-0152.c:89:20: note: from call of create_list_far()
+test-0152.c:86:5: note: from call of main()
+test-0152.c:74:28: warning: recursive function call, depth = 2
+test-0152.c:74:28: note: from call of create_list_far()
+test-0152.c:90:20: note: from call of create_list_far()
+test-0152.c:86:5: note: from call of main()
+test-0152.c:70:28: warning: recursive function call, depth = 3
+test-0152.c:70:28: note: from call of create_list_far()
+test-0152.c:74:28: note: from call of create_list_far()
+test-0152.c:90:20: note: from call of create_list_far()
+test-0152.c:86:5: note: from call of main()
+test-0152.c:78:28: warning: recursive function call, depth = 2
+test-0152.c:78:28: note: from call of create_list_far()
+test-0152.c:91:20: note: from call of create_list_far()
+test-0152.c:86:5: note: from call of main()
+test-0152.c:74:28: warning: recursive function call, depth = 3
+test-0152.c:74:28: note: from call of create_list_far()
+test-0152.c:78:28: note: from call of create_list_far()
+test-0152.c:91:20: note: from call of create_list_far()
+test-0152.c:86:5: note: from call of main()
+test-0152.c:70:28: warning: recursive function call, depth = 4
+test-0152.c:70:28: note: from call of create_list_far()
+test-0152.c:74:28: note: from call of create_list_far()
+test-0152.c:78:28: note: from call of create_list_far()
+test-0152.c:91:20: note: from call of create_list_far()
+test-0152.c:86:5: note: from call of main()
