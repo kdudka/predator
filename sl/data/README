@@ -300,6 +300,8 @@ Linux lists
 
     test-0152.c - same as test-0151, but uses a static array of list heads
 
+    test-0153.c - out-of-range access to array (otherwise equal to test-0152.c)
+
 
 Show-case
 =========
