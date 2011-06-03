@@ -298,6 +298,8 @@ Linux lists
     test-0151.c - regression test focused on gl variables, integral constants,
                   and recursive function calls
 
+    test-0152.c - same as test-0151, but uses a static array of list heads
+
 
 Show-case
 =========

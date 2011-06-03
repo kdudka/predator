@@ -983,6 +983,8 @@ struct OpHandler</* binary */ 2> {
         CL_BREAK_IF(!clt[0] || !clt[1] || !clt[2]);
         SymHeap &sh = proc.sh_;
 
+        long num1, num2;
+
         const enum cl_binop_e code = static_cast<enum cl_binop_e>(iCode);
         switch (code) {
             case CL_BINOP_EQ:
@@ -996,6 +998,19 @@ struct OpHandler</* binary */ 2> {
 
             case CL_BINOP_POINTER_PLUS:
                 return proc.handlePointerPlus(rhs[0], rhs[1]);
+
+            case CL_BINOP_MULT:
+                if (numFromVal(&num1, sh, rhs[0])
+                        && numFromVal(&num2, sh, rhs[1]))
+                {
+                    CL_DEBUG_MSG(proc.lw(), "executing of CL_BINOP_MULT");
+
+                    // FIXME: this will likely break the fix-point in some cases
+                    CustomValue cVal(CV_INT);
+                    cVal.data.num = num1 * num2;
+                    return sh.valWrapCustom(cVal);
+                }
+                // fall through!
 
             default:
                 return sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
