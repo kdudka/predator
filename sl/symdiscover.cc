@@ -218,19 +218,20 @@ TValId jumpToNextObj(
         haveSeen.insert(at);
     }
 
-    const struct cl_type *clt = sh.objType(sh.objAt(at));
+    const TObjType clt = sh.valLastKnownTypeOfTarget(at);
     const TValId nextHead = valOfPtrAt(sh, at, off.next);
     if (nextHead <= 0 || off.head != sh.valOffset(nextHead))
         // no valid head pointed by nextPtr
         return VAL_INVALID;
 
     const TValId next = sh.valRoot(nextHead);
-    if (sh.objAt(next, clt) < 0)
-        // type mismatch
+    if (!isOnHeap(sh.valTarget(next)))
+        // only objects on heap can be abstracted out
         return VAL_INVALID;
 
-    if (!isOnHeap(sh.valTarget(next)))
-        // objects on stack should NOT be abstracted out
+    const TObjType cltNext = sh.valLastKnownTypeOfTarget(next);
+    if (!clt || !cltNext || *clt != *cltNext)
+        // type mismatch
         return VAL_INVALID;
 
     if (!matchSegBinding(sh, next, off))
@@ -329,15 +330,13 @@ void dlSegAvoidSelfCycle(
         return;
 
     const TValId prev = nextRootObj(sh, entry, off.prev);
-    if (prev <= 0)
+    if (!isPossibleToDeref(sh.valTarget(prev)))
         // no valid previous object
         return;
 
-    // XXX
-    const struct cl_type *const cltEntry = sh.objType(sh.objAt(entry));
-    const struct cl_type *const cltPrev = sh.objType(sh.objAt(prev));
-    CL_BREAK_IF(!cltEntry);
-    if (!cltPrev || *cltPrev != *cltEntry)
+    const TObjType cltEntry = sh.valLastKnownTypeOfTarget(entry);
+    const TObjType cltPrev = sh.valLastKnownTypeOfTarget(prev);
+    if (!cltEntry || !cltPrev || *cltPrev != *cltEntry)
         // type mismatch
         return;
 
@@ -485,7 +484,7 @@ class ProbeEntryVisitor {
     private:
         TBindingCandidateList   &dst_;
         const TValId            root_;
-        const struct cl_type    *clt_;
+        const TObjType          clt_;
 
     public:
         ProbeEntryVisitor(
@@ -494,7 +493,7 @@ class ProbeEntryVisitor {
                 const TValId                  root):
             dst_(dst),
             root_(root),
-            clt_(sh.objType(sh.objAt(root, CL_TYPE_STRUCT)))
+            clt_(sh.valLastKnownTypeOfTarget(root))
         {
             CL_BREAK_IF(!clt_);
         }
@@ -502,11 +501,12 @@ class ProbeEntryVisitor {
         bool operator()(SymHeap &sh, TObjId sub) const
         {
             const TValId val = sh.valueOf(sub);
-            if (val <= 0)
+            if (!isPossibleToDeref(sh.valTarget(val)))
                 return /* continue */ true;
 
             const TValId next = sh.valRoot(val);
-            if (sh.objAt(next, clt_) < 0)
+            const TObjType cltNext = sh.valLastKnownTypeOfTarget(next);
+            if (!cltNext || *cltNext !=  *clt_)
                 return /* continue */ true;
 
             BindingOff off;
@@ -595,7 +595,8 @@ unsigned /* len */ discoverBestAbstraction(
     TValList addrs;
     sh.gatherRootObjects(addrs, isOnHeap);
     BOOST_FOREACH(const TValId at, addrs) {
-        if (sh.objAt(at, CL_TYPE_STRUCT) < 0)
+        const TObjType clt = sh.valLastKnownTypeOfTarget(at);
+        if (!clt || clt->code != CL_TYPE_STRUCT)
             // we do not support generic objects atm, this will change soonish!
             continue;
 
