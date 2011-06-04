@@ -846,14 +846,7 @@ EValueTarget SymHeapCore::valTarget(TValId val) const {
         // this value ended up above the root
         return VT_UNKNOWN;
 
-    const EValueTarget code = valData->code;
-    if (!isPossibleToDeref(code) || !off)
-        // we are done for unknown values and root values
-        return code;
-
-    // off-value --> check the root, chances are it has already been deleted
-    const TValId valRoot = d->valRoot(val, valData);
-    return d->valData(valRoot)->code;
+    return valData->code;
 }
 
 bool isUninitialized(EValueOrigin code) {
@@ -1459,6 +1452,18 @@ void SymHeapCore::Private::destroyRoot(TValId root) {
         code = VT_LOST;
     }
 
+    // mark the root value as deleted/lost
+    rootData->code = code;
+
+    // mark all associated off-values as deleted/lost
+    BOOST_FOREACH(TOffMap::const_reference item, rootData->offMap) {
+        const TValId val = item.second;
+        BaseValue *valData = this->valData(val);
+        CL_BREAK_IF(!dynamic_cast<OffValue *>(valData));
+
+        valData->code = code;
+    }
+
     // release the root
     this->liveRoots.erase(root);
 
@@ -1481,7 +1486,6 @@ void SymHeapCore::Private::destroyRoot(TValId root) {
     rootData->lastKnownClt = 0;
     rootData->liveObjs.clear();
     rootData->grid.clear();
-    rootData->code   = code;
 }
 
 TValId SymHeapCore::valCreate(EValueTarget code, EValueOrigin origin) {
