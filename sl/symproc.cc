@@ -282,11 +282,6 @@ TValId SymProc::targetAt(const struct cl_operand &op) {
         }
     }
 
-    // resolve type of the target
-    const TObjType cltTarget = (isRef)
-        ? /* FIXME: too strict in some cases */ targetTypeOfPtr(op.type)
-        : op.type;
-
     if (isDeref)
         // read the value inside the pointer
         addr = sh_.valueOf(sh_.ptrAt(addr));
@@ -294,9 +289,16 @@ TValId SymProc::targetAt(const struct cl_operand &op) {
     // apply the offset
     addr = sh_.valByOffset(addr, off);
 
-    if (isDeref && this->checkForInvalidDeref(addr, cltTarget))
+    if (isRef || !isDeref)
+        // no dereferences here, let it go
+        return addr;
+
+    // check for invalid dereferences
+    const TObjType cltTarget = op.type;
+    if (this->checkForInvalidDeref(addr, cltTarget))
         return VAL_DEREF_FAILED;
 
+    // dereference OK!
     return addr;
 }
 
