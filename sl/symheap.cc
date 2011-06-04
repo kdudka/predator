@@ -1330,7 +1330,7 @@ TValId SymHeapCore::addrOfVar(CVar cv) {
 #if DEBUG_SE_STACK_FRAME
     const struct cl_loc *loc = 0;
     std::string varString = varToString(stor_, cv.uid, &loc);
-    CL_DEBUG_MSG(loc, "FFF SymHeapCore::objByCVar() creates var " << varString);
+    CL_DEBUG_MSG(loc, "FFF SymHeapCore::addrOfVar() creates var " << varString);
 #endif
 
     // assign an address

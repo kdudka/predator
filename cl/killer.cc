@@ -105,22 +105,38 @@ void scanRefs(TSet &pointed, const cl_operand &op) {
 }
 
 void scanOperand(Data &data, TBlock bb, const cl_operand &op, bool dst) {
+    BlockData &bData = data.blocks[bb];
+    VK_DEBUG(4, "scanOperand: " << op << ((dst) ? " [dst]" : " [src]"));
+
+    const cl_accessor *ac = op.accessor;
+    if (ac) {
+        CL_BREAK_IF(dst && seekRefAccessor(ac));
+
+        const enum cl_accessor_e code = ac->code;
+        switch (code) {
+            case CL_ACCESSOR_DEREF_ARRAY:
+                // FIXME: unguarded recursion
+                scanOperand(data, bb, *(ac->data.array.index), /* dst */ false);
+                break;
+
+            case CL_ACCESSOR_DEREF:
+                // see whatever operand with CL_ACCESSOR_DEREF as [src]
+                dst = false;
+                break;
+
+            default:
+                break;
+        }
+    }
+
     if (!isLcVar(op))
         // not a local variable
         return;
 
-    BlockData &bData = data.blocks[bb];
-    VK_DEBUG(4, "scanOperand: " << op << ((dst) ? " [dst]" : " [src]"));
     const int uid = varIdFromOperand(&op);
     if (hasKey(bData.kill, uid))
         // already killed
         return;
-
-    const cl_accessor *ac = op.accessor;
-    CL_BREAK_IF(dst && seekRefAccessor(ac));
-    if (dst && ac && ac->code == CL_ACCESSOR_DEREF)
-        // we should see whatever operand with CL_ACCESSOR_DEREF as [src]
-        dst = false;
 
     if (dst) {
         VK_DEBUG(3, "kill(" << bb->name() << ") |= #" << uid);
@@ -245,6 +261,24 @@ void analyseFnc(Data &data, Fnc &fnc) {
     computeFixPoint(data);
 }
 
+template <class TList>
+int seekArrayIndex(const TList &opList, const TVar byUid) {
+    for (unsigned i = 0; i < opList.size(); ++i) {
+        const struct cl_accessor *const ac = opList[i].accessor;
+        if (!ac || ac->code != CL_ACCESSOR_DEREF_ARRAY)
+            // no index here
+            continue;
+
+        const cl_operand *const opIdx = ac->data.array.index;
+        const TVar uid = varIdFromOperand(opIdx);
+        if (uid == byUid)
+            return i;
+    }
+
+    // not found
+    return -1;
+}
+
 void killOperand(Insn &insn, TVar byUid, bool isPointed) {
     int idx = -1;
 
@@ -273,15 +307,27 @@ void killOperand(Insn &insn, TVar byUid, bool isPointed) {
         return;
     }
 
-    // kill a single variable at a single location
-    CL_BREAK_IF(idx < 0);
-
-    EKillStatus code = KS_ALWAYS_KILL;
+    EKillStatus code = KS_KILL_VAR;
     const char *suffix = "";
     if (isPointed) {
-        code = KS_KILL_IF_NOT_POINTED;
-        suffix = " [KS_KILL_IF_NOT_POINTED]";
+        code = KS_KILL_VAR_IF_NOT_POINTED;
+        suffix = " [KS_KILL_VAR_IF_NOT_POINTED]";
     }
+
+    if (-1 == idx) {
+        idx = seekArrayIndex(opList, byUid);
+        if (isPointed) {
+            code = KS_KILL_ARRAY_INDEX_IF_NOT_POINTED;
+            suffix = " [KS_KILL_ARRAY_INDEX_IF_NOT_POINTED]";
+        }
+        else {
+            code = KS_KILL_ARRAY_INDEX;
+            suffix = " [KS_KILL_ARRAY_INDEX";
+        }
+    }
+
+    // kill a single variable at a single location
+    CL_BREAK_IF(idx < 0);
 
     insn.opsToKill[idx] = code;
     VK_DEBUG_MSG(1, &insn.loc, "killing variable #" << byUid << " by " << insn

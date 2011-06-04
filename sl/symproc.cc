@@ -582,7 +582,7 @@ void SymProc::killVar(const struct cl_operand &op, bool onlyIfNotPointed) {
 #if DEBUG_SE_STACK_FRAME
     const int uid = varIdFromOperand(&op);
     const CodeStorage::Storage &stor = sh_.stor();
-    const std::string varString = varTostring(stor, uid);
+    const std::string varString = varToString(stor, uid);
     CL_DEBUG_MSG(lw_, "FFF SymProc::killVar() destroys var " << varString);
 #endif
     const TValId addr = this->varAt(op);
@@ -600,18 +600,33 @@ void SymProc::killInsn(const CodeStorage::Insn &insn) {
     return;
 #endif
     // kill variables
-    const TOperandList &ops = insn.operands;
-    for (unsigned i = 0; i < ops.size(); ++i) {
+    const TOperandList &opList = insn.operands;
+    for (unsigned i = 0; i < opList.size(); ++i) {
+        const struct cl_operand *op = &opList[i];
+        bool onlyIfNotPointed = false;
+
         const EKillStatus code = insn.opsToKill[i];
         switch (code) {
-            case KS_NEVER_KILL:
+            case KS_KILL_NOTHING:
                 // var alive
                 continue;
 
-            case KS_ALWAYS_KILL:
-            case KS_KILL_IF_NOT_POINTED:
-                this->killVar(ops[i], (KS_KILL_IF_NOT_POINTED == code));
+            case KS_KILL_VAR_IF_NOT_POINTED:
+                onlyIfNotPointed = true;
+                // fall through!
+            case KS_KILL_VAR:
+                break;
+
+            case KS_KILL_ARRAY_INDEX_IF_NOT_POINTED:
+                onlyIfNotPointed = true;
+                // fall through!
+            case KS_KILL_ARRAY_INDEX:
+                CL_BREAK_IF(!op->accessor);
+                CL_BREAK_IF(CL_ACCESSOR_DEREF_ARRAY != op->accessor->code);
+                op = op->accessor->data.array.index;
         }
+
+        this->killVar(*op, onlyIfNotPointed);
     }
 }
 

@@ -278,9 +278,11 @@ typedef STD_VECTOR(const Block *) TTargetList;
 
 /// enumeration of kill status assigned to program variables per instruction
 enum EKillStatus {
-    KS_NEVER_KILL,
-    KS_ALWAYS_KILL,
-    KS_KILL_IF_NOT_POINTED
+    KS_KILL_NOTHING,
+    KS_KILL_VAR,
+    KS_KILL_VAR_IF_NOT_POINTED,
+    KS_KILL_ARRAY_INDEX,
+    KS_KILL_ARRAY_INDEX_IF_NOT_POINTED
 };
 
 /**

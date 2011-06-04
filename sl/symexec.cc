@@ -992,7 +992,7 @@ void execute(
     insn.loc  = *locationOf(fnc);
     insn.operands.resize(2);
     insn.operands[1] = fnc.def;
-    insn.opsToKill.resize(2, CodeStorage::KS_NEVER_KILL);
+    insn.opsToKill.resize(2, CodeStorage::KS_KILL_NOTHING);
 
     // run the symbolic execution
     se->execFnc(results, entry, insn, fnc);
