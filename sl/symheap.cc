@@ -568,7 +568,12 @@ TValId SymHeapCore::valueOf(TObjId obj) const {
         // assign a fresh unknown value
         const EValueTarget code = rootData->code;
         const EValueOrigin origin = originByCode(code);
-        val = d->valCreate(VT_UNKNOWN, origin);
+        const TValId uVal = d->valCreate(VT_UNKNOWN, origin);
+#if SE_TRACK_UNINITIALIZED
+        val = uVal;
+#else
+        return uVal;
+#endif
 
         // mark the object as live
         rootData->liveObjs[obj] = /* isPtr */ isDataPtr(clt);

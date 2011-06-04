@@ -135,6 +135,12 @@
 #define SE_TRACK_NON_POINTER_VALUES         0
 
 /**
+ * if 1, track uninitialized values, which may result into significant state
+ * explosion in some cases
+ */
+#define SE_TRACK_UNINITIALIZED              1
+
+/**
  * if 1, skip plotting of "neq" edges (makes the result more readable by humans
  * in certain cases)
  */
