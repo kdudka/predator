@@ -1148,6 +1148,10 @@ bool checkForDeref(const struct cl_operand &op, const CodeStorage::Insn &insn) {
         // we expect the dereference only as the first accessor
         return false;
 
+    if (seekRefAccessor(ac))
+        // not a dereference as long as only an address is being computed
+        return false;
+
 #ifndef NDEBUG
     const enum cl_unop_e code = static_cast<enum cl_unop_e>(insn.subCode);
     CL_BREAK_IF(CL_INSN_UNOP != insn.code || CL_UNOP_ASSIGN != code);
