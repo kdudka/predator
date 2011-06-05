@@ -173,6 +173,24 @@ bool haveDlSegAt(const SymHeap &sh, TValId atAddr, TValId peerAddr) {
     return (segHeadAt(sh, peer) == peerAddr);
 }
 
+bool haveMayExistAt(SymHeap &sh, TValId at, TValId pointingTo) {
+    const EObjKind kind = sh.valTargetKind(at);
+    if (OK_MAY_EXIST != kind)
+        return false;
+
+    // jump to the root of OK_MAY_EXIST and read binding offsets
+    const TValId seg = sh.valRoot(at);
+    const BindingOff bf = sh.segBinding(seg);
+
+    // compute the resulting offset and shift 'pointingTo' accordingly
+    const TOffset off = sh.valOffset(at) - bf.head;
+    pointingTo = sh.valByOffset(pointingTo, off);
+
+    // finally compare the 'next' value
+    const TValId valNext = valOfPtrAt(sh, seg, bf.next);
+    return (valNext == pointingTo);
+}
+
 void segHandleNeq(SymHeap &sh, TValId seg, TValId peer, SymHeap::ENeqOp op) {
     const TObjId next = nextPtrFromSeg(sh, peer);
     const TValId valNext = sh.valueOf(next);

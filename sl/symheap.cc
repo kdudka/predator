@@ -1724,6 +1724,18 @@ void SymHeap::dlSegCrossNeqOp(ENeqOp op, TValId seg1) {
 }
 
 void SymHeap::neqOp(ENeqOp op, TValId valA, TValId valB) {
+    if (haveMayExistAt(*this, valA, valB)) {
+        // replace OK_MAY_EXIST at valA by OK_CONCRETE
+        this->valTargetSetConcrete(valA);
+        return;
+    }
+
+    if (haveMayExistAt(*this, valB, valA)) {
+        // replace OK_MAY_EXIST at valB by OK_CONCRETE
+        this->valTargetSetConcrete(valB);
+        return;
+    }
+
     if (NEQ_ADD == op && haveDlSegAt(*this, valA, valB)) {
         // adding the 2+ flag implies adding of the 1+ flag
         this->dlSegCrossNeqOp(op, valA);
