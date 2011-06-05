@@ -84,6 +84,12 @@
 #define SE_ASSUME_FRESH_STATIC_DATA         1
 
 /**
+ * if non-zero, penalize length of SLS abstraction path by the given number in
+ * case the path consists of concrete objects only
+ */
+#define SE_DEFER_SLS_INTRO                  0
+
+/**
  * if 1, call cache is not used at all
  */
 #define SE_DISABLE_CALL_CACHE               0

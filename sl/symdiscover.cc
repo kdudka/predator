@@ -319,6 +319,26 @@ bool slSegAvoidSelfCycle(
     return haveSeg(sh, next2, seg1, OK_SLS);
 }
 
+bool slSegOnPath(
+        SymHeap                     &sh,
+        const BindingOff            &off,
+        const TValId                entry,
+        TValList                    path)
+{
+    if (!isDlsBinding(off))
+        // not a SLS
+        return false;
+
+    path.push_back(entry);
+    BOOST_FOREACH(const TValId root, path)
+        if (isAbstract(sh.valTarget(root)))
+            // abstract object
+            return true;
+
+    // not found
+    return false;
+}
+
 void dlSegAvoidSelfCycle(
         SymHeap                     &sh,
         const BindingOff            &off,
@@ -433,6 +453,10 @@ unsigned /* len */ segDiscover(
         // avoid creating self-cycle of two SLS segments
         --len;
 
+#if SE_DEFER_SLS_INTRO
+    if (!slSegOnPath(sh, off, entry, path))
+        len -= (SE_DEFER_SLS_INTRO);
+#endif
     return std::max(0, len - maxThreshold);
 }
 
