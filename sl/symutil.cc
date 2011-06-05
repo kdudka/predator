@@ -58,14 +58,25 @@ void moveKnownValueToLeft(
         TValId                      &valB)
 {
     sortValues(valA, valB);
-    if (valA <= 0 || VAL_TRUE == valA)
+    if (valA <= 0)
         return;
 
     const EValueTarget code = sh.valTarget(valA);
-    if (VT_ON_HEAP == code || isProgramVar(code)
-            || /* FIXME */ VT_CUSTOM == code
-            || /* FIXME */ isGone(code))
-        return;
+    switch (code) {
+        case VT_STATIC:
+        case VT_ON_STACK:
+        case VT_ON_HEAP:
+        case VT_CUSTOM:
+        case VT_COMPOSITE:
+        case VT_LOST:
+        case VT_DELETED:
+            return;
+
+        case VT_ABSTRACT:
+        case VT_INVALID:
+        case VT_UNKNOWN:
+            break;
+    }
 
     const TValId tmp = valA;
     valA = valB;

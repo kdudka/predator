@@ -641,12 +641,6 @@ TValId SymHeapCore::valClone(TValId val) {
     return this->valByOffset(dupAt, valData->offRoot);
 }
 
-void SymHeapCore::valMerge(TValId val, TValId replaceBy) {
-    CL_BREAK_IF(this->proveNeq(val, replaceBy));
-    moveKnownValueToLeft(*this, replaceBy, val);
-    this->valReplace(val, replaceBy);
-}
-
 template <class TValMap>
 bool valMapLookup(const TValMap &valMap, TValId *pVal) {
     if (*pVal <= VAL_NULL)
@@ -1696,7 +1690,7 @@ void SymHeap::valMerge(TValId v1, TValId v2) {
 
     if (VT_ABSTRACT != code1 && VT_ABSTRACT != code2) {
         // no abstract objects involved
-        SymHeapCore::valMerge(v1, v2);
+        SymHeapCore::valReplace(v2, v1);
         return;
     }
 
@@ -1806,9 +1800,26 @@ bool SymHeap::proveNeq(TValId ref, TValId val) const {
 
     // having the values always in the same order leads to simpler code
     moveKnownValueToLeft(*this, ref, val);
+    if (this->hasAbstractTarget(ref) && this->hasAbstractTarget(val)) {
+        const TValId seg = this->valRoot(val);
+        if (objMinLength(*this, seg))
+            // move the non-empty one to left
+            swapValues(ref, val);
+    }
+
     const EValueTarget code = this->valTarget(ref);
-    if (isAbstract(code))
-        return false;
+    if (isAbstract(code)) {
+        // both values are abstract
+        const TValId root1 = this->valRoot(ref);
+        const TValId root2 = this->valRoot(val);
+        if (root2 == segPeer(*this, root1))
+            // we already know this is not a DLS 2+
+            return false;
+
+        if (!objMinLength(*this, root1))
+            // both targets are possibly empty, giving up
+            return false;
+    }
 
     std::set<TValId> haveSeen;
 

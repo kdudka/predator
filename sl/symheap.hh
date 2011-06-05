@@ -391,14 +391,6 @@ class SymHeapCore {
         /// replace all occurrences of val by replaceBy
         virtual void valReplace(TValId val, TValId replaceBy);
 
-        /**
-         * assume that v1 and v2 are equal.  Useful when e.g. traversing a
-         * non-deterministic condition.  This implies that one of them may be
-         * dropped.  You can utilize SymHeapCore::usedByCount() to check which
-         * one (if any).
-         */
-        virtual void valMerge(TValId v1, TValId v2);
-
         void gatherRootObjects(TValList &dst, bool (*)(EValueTarget) = 0) const;
         void gatherLiveObjects(TObjList &dst, TValId atAddr) const;
         void gatherLivePointers(TObjList &dst, TValId atAddr) const;
@@ -548,10 +540,12 @@ class SymHeap: public SymHeapCore {
         virtual bool proveNeq(TValId valA, TValId valB) const;
 
         /**
-         * @copydoc SymHeapCore::valMerge
-         * @note overridden in order to splice-out SLS/DLS
+         * assume that v1 and v2 are equal.  Useful when e.g. traversing a
+         * non-deterministic condition.  This implies that one of them may be
+         * dropped.  You can utilize SymHeapCore::usedByCount() to check which
+         * one (if any).
          */
-        virtual void valMerge(TValId v1, TValId v2);
+        void valMerge(TValId v1, TValId v2);
 
         virtual bool valDestroyTarget(TValId);
 

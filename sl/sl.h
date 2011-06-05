@@ -22,12 +22,12 @@
 
 #define ___SL_ASSERT(cond) do {                                             \
     if (!cond)                                                              \
-        ___sl_error("assertion failed: " #cond)                             \
+        ___sl_error("assertion failed: " #cond);                            \
 } while (0)
 
 #define ___SL_BREAK_IF(cond) do {                                           \
     if (cond)                                                               \
-        ___sl_break("conditional breakpoint fired: " #cond)                 \
+        ___sl_break("conditional breakpoint fired: " #cond);                \
 } while (0)
 
 #ifdef __cplusplus
