@@ -649,9 +649,7 @@ void segReplaceRefs(SymHeap &sh, TValId seg, TValId valNext) {
             continue;
         }
             
-        const TValId targetAt = sh.valueOf(obj);
-        const TObjId target = sh.objAt(targetAt);
-        if (target < 0 || !isNextValid) {
+        if (!isNextValid) {
             CL_DEBUG("WARNING: suboptimal implementation of segReplaceRefs()");
             const TValId val = sh.valClone(valNext);
             sh.objSetValue(obj, val);
@@ -659,6 +657,7 @@ void segReplaceRefs(SymHeap &sh, TValId seg, TValId valNext) {
         }
 
         // redirect!
+        const TValId targetAt = sh.valueOf(obj);
         const TOffset off = sh.valOffset(targetAt) - offHead;
         const TValId val = sh.valByOffset(valNext, off);
         sh.objSetValue(obj, val);

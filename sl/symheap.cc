@@ -629,6 +629,11 @@ TValId SymHeapCore::valClone(TValId val) {
         return val;
     }
 
+    if (isProgramVar(code)) {
+        CL_BREAK_IF("program variables are not supposed to be cloned");
+        return val;
+    }
+
     if (!isPossibleToDeref(code))
         // duplicate an unknown value
         return d->valDup(val);
