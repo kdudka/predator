@@ -1103,47 +1103,31 @@ bool joinSegmentWithAny(
     SJ_DEBUG(">>> joinSegmentWithAny" << SJ_OBJP(root1, root2));
     const bool isDls1 = (OK_DLS == ctx.sh1.valTargetKind(root1));
     const bool isDls2 = (OK_DLS == ctx.sh2.valTargetKind(root2));
-    if (followRootValues(ctx, root1, root2, action, /* read-only */ true))
-        goto read_only_ok;
-
-    if (isDls1) {
-        root1 = dlSegPeer(ctx.sh1, root1);
-        if (followRootValues(ctx, root1, root2, action, /* read-only */ true))
-            goto read_only_ok;
-    }
-
-    if (isDls2) {
-        root2 = dlSegPeer(ctx.sh2, root2);
-        if (followRootValues(ctx, root1, root2, action, /* read-only */ true))
-            goto read_only_ok;
-    }
-
-    if (isDls1 && isDls2) {
-        root1 = dlSegPeer(ctx.sh1, root1);
-        if (followRootValues(ctx, root1, root2, action, /* read-only */ true))
-            goto read_only_ok;
-    }
-
-    SJ_DEBUG("<<< joinSegmentWithAny" << SJ_OBJP(root1, root2));
-    return false;
-
-read_only_ok:
-    // BindingOff is assumed to be already matching at this point
-    BindingOff off = (JS_USE_SH1 == action)
-        ? ctx.sh1.segBinding(root1)
-        : ctx.sh2.segBinding(root2);
 
     TValId peer1 = root1;
-    if (OK_DLS == ctx.sh1.valTargetKind(root1)) {
+    if (isDls1)
         peer1 = dlSegPeer(ctx.sh1, root1);
-        off = ctx.sh1.segBinding(peer1);
-    }
 
     TValId peer2 = root2;
-    if (OK_DLS == ctx.sh2.valTargetKind(root2)) {
+    if (isDls2)
         peer2 = dlSegPeer(ctx.sh2, root2);
-        off = ctx.sh2.segBinding(peer2);
+
+    if (!followRootValues(ctx, root1, root2, action, /* read-only */ true)) {
+        SJ_DEBUG("<<< joinSegmentWithAny" << SJ_OBJP(root1, root2));
+        return false;
     }
+
+    const bool haveDls = (isDls1 || isDls2);
+    if (haveDls && !followRootValues(ctx, peer1, peer2, action, /* ro */ true))
+    {
+        SJ_DEBUG("<<< joinSegmentWithAny" << SJ_OBJP(peer1, peer2));
+        return false;
+    }
+
+    // BindingOff is assumed to be already matching at this point
+    BindingOff off = (JS_USE_SH1 == action)
+        ? ctx.sh1.segBinding(peer1)
+        : ctx.sh2.segBinding(peer2);
 
     const TValId valNext1 = valOfPtrAt(ctx.sh1, peer1, off.next);
     const TValId valNext2 = valOfPtrAt(ctx.sh2, peer2, off.next);
@@ -1159,7 +1143,10 @@ read_only_ok:
     if (!*pResult)
         return true;
 
-    considerValSchedule(ctx, valNext1, valNext2, peer1, peer2);
+    if (!haveDls)
+        return true;
+
+    *pResult = followRootValues(ctx, peer1, peer2, action);
     return true;
 }
 
