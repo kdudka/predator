@@ -475,7 +475,9 @@ struct ObjJoinVisitor {
             return false;
 
         // check black-list
-        if (noFollow || hasKey(blackList1, obj1) || hasKey(blackList2, obj2))
+        if (noFollow
+                || hasKey(blackList1, obj1)
+                || hasKey(blackList2, obj2))
             return /* continue */ true;
 
         return /* continue */ joinFreshObjTripple(ctx, obj1, obj2, objDst);
@@ -900,17 +902,11 @@ bool followRootValuesCore(
         const EJoinStatus       action,
         const bool              readOnly)
 {
-    if (hasKey(ctx.valMap1[0], root1)) {
-        const TValId rootDstAt = ctx.valMap1[0][root1];
-        TValMap::const_iterator i2 = ctx.valMap2[0].find(root2);
-        if (ctx.valMap2[0].end() == i2 || i2->second != rootDstAt) {
-            SJ_DEBUG("<-- object root mismatch " << SJ_VALP(root1, root2));
-            return false;
-        }
+    if (!checkValueMapping(ctx, root1, root2, /* allowUnknownMapping */ true))
+        return false;
 
-        // join mapping of object's address
-        return defineValueMapping(ctx, root1, root2, rootDstAt);
-    }
+    if (hasKey(ctx.valMap1[0], root1) && hasKey(ctx.valMap2[0], root2))
+        return true;
 
     TObjType clt;
     const TObjType clt1 = ctx.sh1.valLastKnownTypeOfTarget(root1);
@@ -2436,7 +2432,6 @@ bool joinData(
         const TValId            src,
         const bool              bidir)
 {
-    // TODO: remove this
     SJ_DEBUG("--> joinData" << SJ_VALP(dst, src));
     ++cntJoinOps;
 
@@ -2452,10 +2447,10 @@ bool joinData(
 
     // go through the commont part of joinData()/joinDataReadOnly()
     SymJoinCtx ctx(sh);
-    if (!joinDataCore(ctx, off, dst, src))
-        // TODO: collect the already created dangling objects and return
-        //       the heap in a more consistent shape!
+    if (!joinDataCore(ctx, off, dst, src)) {
+        CL_BREAK_IF("joinData() has failed, did joinDataReadOnly() succeed?");
         return false;
+    }
 
     // ghost is a transiently existing object representing the join of dst/src
     const TValId ghost = roMapLookup(ctx.valMap1[0], dst);
