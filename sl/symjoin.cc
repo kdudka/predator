@@ -482,6 +482,16 @@ struct ObjJoinVisitor {
     }
 };
 
+template <class TDst>
+void dlSegBlackListPrevPtr(TDst &dst, SymHeap &sh, TValId root) {
+    const EObjKind kind = sh.valTargetKind(root);
+    if (OK_DLS != kind)
+        return;
+
+    const TObjId prevPtr = prevPtrFromSeg(sh, root);
+    dst.insert(prevPtr);
+}
+
 struct SegMatchVisitor {
     SymJoinCtx              &ctx;
     std::set<TObjId>        blackList1;
@@ -535,11 +545,20 @@ bool traverseSubObjs(
 
     // initialize visitor
     ObjJoinVisitor objVisitor(ctx);
+
+    // FIXME: this leads to a wrongly connected DLS
+#if 0
+    // black-list 'prev' pointer on the way from insertSegmentClone()
+    if (VAL_INVALID == addr2)
+        dlSegBlackListPrevPtr(objVisitor.blackList1, ctx.sh1, addr1);
+    if (VAL_INVALID == addr1)
+        dlSegBlackListPrevPtr(objVisitor.blackList2, ctx.sh2, addr2);
+#endif
+
     if (offBlackList) {
         buildIgnoreList(objVisitor.blackList1, ctx.sh1, addr1, *offBlackList);
         buildIgnoreList(objVisitor.blackList2, ctx.sh2, addr2, *offBlackList);
     }
-
     else if (ctx.joiningData()) {
         if (addr1 == addr2)
             // do not follow shared data
@@ -562,15 +581,8 @@ bool segMatchLookAhead(
     TValId roots[] = { root1, root2 };
     SegMatchVisitor visitor(ctx);
 
-    if (OK_DLS == ctx.sh1.valTargetKind(root1)) {
-        const TObjId peerPtr1 = prevPtrFromSeg(ctx.sh1, root1);
-        visitor.blackList1.insert(peerPtr1);
-    }
-
-    if (OK_DLS == ctx.sh2.valTargetKind(root2)) {
-        const TObjId peerPtr2 = prevPtrFromSeg(ctx.sh2, root2);
-        visitor.blackList2.insert(peerPtr2);
-    }
+    dlSegBlackListPrevPtr(visitor.blackList1, ctx.sh1, root1);
+    dlSegBlackListPrevPtr(visitor.blackList2, ctx.sh2, root2);
 
     // FIXME: this will break as soon as we switch to delayed objects creation
     return traverseLiveObjsGeneric<2>(heaps, roots, visitor);

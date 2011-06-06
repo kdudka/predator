@@ -66,7 +66,21 @@ int main() {
 
     while (___sl_get_nondet_int()) {
         add_item(&my_list);
-        ___sl_plot(NULL);
+    }
+
+    ___sl_plot(NULL);
+
+    while (my_list) {
+        struct list_head *head = my_list->nested.next;
+        while (&my_list->nested != head) {
+            struct list_head *next = head->next;
+            free(/* FIXME: should use list_entry() */ head);
+            head = next;
+        }
+
+        struct my_list *next = my_list->next;
+        free(my_list);
+        my_list = next;
     }
 
     return 0;
