@@ -1673,6 +1673,10 @@ void SymHeap::valTargetSetAbstract(
     Private::AbstractObject &aoData = d->data[valRoot];
     aoData.kind     = kind;
     aoData.off      = off;
+
+    if (OK_MAY_EXIST == kind)
+        // there is no 'prev' offset in OK_MAY_EXIST
+        aoData.off.prev = off.next;
 }
 
 void SymHeap::valTargetSetConcrete(TValId at) {

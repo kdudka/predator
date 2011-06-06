@@ -302,6 +302,8 @@ Linux lists
 
     test-0153.c - out-of-range access to array (otherwise equal to test-0152.c)
 
+    test-0156.c - alternation of test-0121
+
 
 Show-case
 =========

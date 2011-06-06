@@ -670,9 +670,17 @@ bool joinSegBinding(
         return true;
 
     if (isSeg1 && isSeg2) {
-        const BindingOff off = ctx.sh1.segBinding(v1);
-        if (off == ctx.sh2.segBinding(v2)) {
-            *pOff = off;
+        BindingOff off1 = ctx.sh1.segBinding(v1);
+        BindingOff off2 = ctx.sh2.segBinding(v2);
+
+        // there is no 'prev' pointer in OK_MAY_EXIST, ignore its offset
+        if (OK_MAY_EXIST == ctx.sh1.valTargetKind(v1))
+            off1.prev = off2.prev;
+        if (OK_MAY_EXIST == ctx.sh2.valTargetKind(v2))
+            off2.prev = off1.prev;
+
+        if (off1 == off2) {
+            *pOff = off2;
             return true;
         }
 
@@ -1413,6 +1421,30 @@ bool insertSegmentClone(
     return true;
 }
 
+void resolveMayExist(
+        SymJoinCtx              &ctx,
+        bool                    *isAbs1,
+        bool                    *isAbs2,
+        const TValId            v1,
+        const TValId            v2)
+{
+    if (!*isAbs1 || !*isAbs2)
+        // at most one abstract object
+        return;
+
+    const EObjKind kind1 = ctx.sh1.valTargetKind(v1);
+    const EObjKind kind2 = ctx.sh2.valTargetKind(v2);
+    if (kind1 == kind2)
+        // kind of abstract object matches in both cases
+        return;
+
+    if (OK_MAY_EXIST == kind1)
+        *isAbs1 = false;
+
+    if (OK_MAY_EXIST == kind2)
+        *isAbs2 = false;
+}
+
 bool joinAbstractValues(
         bool                    *pResult,
         SymJoinCtx              &ctx,
@@ -1426,6 +1458,7 @@ bool joinAbstractValues(
 
     bool isAbs1 = (VT_ABSTRACT == code1);
     bool isAbs2 = (VT_ABSTRACT == code2);
+    resolveMayExist(ctx, &isAbs1, &isAbs2, v1, v2);
 
     const EJoinStatus subStatus = (isAbs1)
         ? JS_USE_SH1
