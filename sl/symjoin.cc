@@ -102,6 +102,28 @@ typename TMap::mapped_type roMapLookup(
         : iter->second;
 }
 
+TValId roMapLookup(
+        const TValMap                       &vMap,
+        const SymHeap                       &src,
+        SymHeap                             &dst,
+        TValId                               val)
+{
+    if (val <= 0)
+        return val;
+
+    const TOffset off = src.valOffset(val);
+    if (off)
+        val = src.valRoot(val);
+
+    TValMap::const_iterator iter = vMap.find(val);
+    if (vMap.end() == iter)
+        // not found
+        return VAL_INVALID;
+
+    const TValId rootDst = iter->second;
+    return dst.valByOffset(rootDst, off);
+}
+
 /// current state, common for joinSymHeaps(), joinDataReadOnly() and joinData()
 struct SymJoinCtx {
     SymHeap                     &dst;
@@ -356,11 +378,17 @@ bool checkValueMapping(
     if (!checkNonPosValues(v1, v2))
         return false;
 
+    const TOffset off1 = ctx.sh1.valOffset(v1);
+    const TOffset off2 = ctx.sh2.valOffset(v2);
+    if (off1 != off2)
+        // FIXME: not always correct
+        return false;
+
     // read-only value lookup
     const TValMap &vMap1 = ctx.valMap1[/* ltr */ 0];
     const TValMap &vMap2 = ctx.valMap2[/* ltr */ 0];
-    TValMap::const_iterator i1 = vMap1.find(v1);
-    TValMap::const_iterator i2 = vMap2.find(v2);
+    TValMap::const_iterator i1 = vMap1.find(ctx.sh1.valRoot(v1));
+    TValMap::const_iterator i2 = vMap2.find(ctx.sh2.valRoot(v2));
 
     const bool hasMapping1 = (vMap1.end() != i1);
     const bool hasMapping2 = (vMap2.end() != i2);
@@ -409,14 +437,16 @@ bool joinFreshObjTripple(
         // the join has been already successful
         return true;
 
-    if (VAL_NULL == v1 && (v2 < 0 || hasKey(ctx.valMap2[/* lrt */ 0], v2)
+    if (VAL_NULL == v1
+            && (v2 < 0 || hasKey(ctx.valMap2[/* lrt */ 0], ctx.sh2.valRoot(v2))
             || (!ctx.joiningData()
                 // FIXME: should we exclude VT_ABSTRACT at this point?
                 && isPossibleToDeref(ctx.sh2.valTarget(v2)))))
         // mapping already inconsistent
         return false;
 
-    if (VAL_NULL == v2 && (v1 < 0 || hasKey(ctx.valMap1[/* lrt */ 0], v1)
+    if (VAL_NULL == v2
+            && (v1 < 0 || hasKey(ctx.valMap1[/* lrt */ 0], ctx.sh1.valRoot(v1))
             || (!ctx.joiningData()
                 // FIXME: should we exclude VT_ABSTRACT at this point?
                 && isPossibleToDeref(ctx.sh1.valTarget(v1)))))
@@ -426,7 +456,9 @@ bool joinFreshObjTripple(
     if (segClone) {
         const bool isGt1 = (OBJ_INVALID == obj2);
         const TValMapBidir &vm = (isGt1) ? ctx.valMap1 : ctx.valMap2;
-        const TValId val = (isGt1) ? v1 : v2;
+        const TValId val = (isGt1)
+            ? ctx.sh1.valRoot(v1)
+            : ctx.sh2.valRoot(v2);
         return (val <= 0 || hasKey(vm[/* lrt */ 0], val));
     }
 
@@ -949,11 +981,11 @@ bool dlSegHandleShared(
     // we might have just joined a DLS pair as shared data, which would lead to
     // unconnected DLS pair in ctx.dst and later cause some problems;  the best
     // thing to do at this point, is to recover the binding of DLS in ctx.dst
-    const TValId seg = roMapLookup(ctx.valMap1[0], v1);
-    CL_BREAK_IF(VAL_INVALID == seg || seg != roMapLookup(ctx.valMap2[0], v2));
+    const TValId seg = roMapLookup(ctx.valMap1[0], ctx.sh1, ctx.dst, v1);
+    CL_BREAK_IF(seg != roMapLookup(ctx.valMap2[0], ctx.sh2, ctx.dst, v2));
 
-    const TValId peer = roMapLookup(ctx.valMap1[0], peer2);
-    CL_BREAK_IF(VAL_INVALID == peer || peer != roMapLookup(ctx.valMap2[0], peer2));
+    const TValId peer = roMapLookup(ctx.valMap1[0], ctx.sh1, ctx.dst, peer1);
+    CL_BREAK_IF(peer != roMapLookup(ctx.valMap2[0], ctx.sh2, ctx.dst, peer2));
 
     SymHeap &sh = ctx.dst;
     sh.objSetValue(prevPtrFromSeg(sh,  seg), segHeadAt(sh, peer));
@@ -1241,20 +1273,21 @@ bool disjoinUnknownValues(
     const bool isGt2 = (JS_USE_SH2 == action);
     CL_BREAK_IF(!isGt2 && (JS_USE_SH1 != action));
 
-    // forget all up to now value mapping of 'val'
-    TValMapBidir &vm = (isGt2) ? ctx.valMap1 : ctx.valMap2;
-    const TValId old = vmRemoveMappingOf(vm, val);
-
     // gather all objects that hold 'val' inside
     TObjList refs;
     const SymHeap &sh = (isGt2) ? ctx.sh1 : ctx.sh2;
     sh.usedBy(refs, val);
 
+    // forget all up to now value mapping of 'val'
+    TValMapBidir &vm = (isGt2) ? ctx.valMap1 : ctx.valMap2;
+    const TValId old = vmRemoveMappingOf(vm, val);
+
     // go through all referrers that have their image in ctx.dst
     const TValMap &valMap = (isGt2) ? ctx.valMap1[0] : ctx.valMap2[0];
     BOOST_FOREACH(const TObjId objSrc, refs) {
         const TObjType clt = sh.objType(objSrc);
-        const TValId atDst = roMapLookup(valMap, sh.placedAt(objSrc));
+        const TValId atSrc = sh.placedAt(objSrc);
+        const TValId atDst = roMapLookup(valMap, sh, ctx.dst, atSrc);
         const TObjId objDst = ctx.dst.objAt(atDst, clt);
         if (OBJ_INVALID == objDst)
             // no image in ctx.dst yet
@@ -1265,8 +1298,6 @@ bool disjoinUnknownValues(
                  ", old = " << old <<
                  ", new = " << valDst <<
                  ", action = " << action);
-
-        ctx.dst.objSetValue(objDst, valDst);
     }
 
     if (refs.size() <= 1)
@@ -1531,8 +1562,8 @@ bool mayExistFallback(
     const bool use2 = (JS_USE_SH2 == action);
     CL_BREAK_IF(use1 == use2);
 
-    const bool hasMapping1 = hasKey(ctx.valMap1[/* ltr */ 0], v1);
-    const bool hasMapping2 = hasKey(ctx.valMap2[/* ltr */ 0], v2);
+    const bool hasMapping1 = hasKey(ctx.valMap1[0], ctx.sh1.valRoot(v1));
+    const bool hasMapping2 = hasKey(ctx.valMap2[0], ctx.sh2.valRoot(v2));
     if ((hasMapping1 != hasMapping2) && (hasMapping1 == use1))
         // try it the other way around
         return false;
@@ -1756,8 +1787,10 @@ TValId joinDstValue(
     if (off2)
         v2 = ctx.sh2.valRoot(v2);
 
-    const TValId valRootDstBy1 = roMapLookup(ctx.valMap1[/* ltr */ 0], v1);
-    const TValId valRootDstBy2 = roMapLookup(ctx.valMap2[/* ltr */ 0], v2);
+    const TValId valRootDstBy1 =
+        roMapLookup(ctx.valMap1[/* ltr */ 0], ctx.sh1, ctx.dst, v1);
+    const TValId valRootDstBy2 =
+        roMapLookup(ctx.valMap2[/* ltr */ 0], ctx.sh2, ctx.dst, v2);
 
     const TValId vDstBy1 = ctx.dst.valByOffset(valRootDstBy1, off1);
     const TValId vDstBy2 = ctx.dst.valByOffset(valRootDstBy2, off2);
@@ -1856,7 +1889,8 @@ bool setDstValues(SymJoinCtx &ctx, const std::set<TObjId> *blackList = 0) {
     const TValMap &vMap1 = ctx.valMap1[0];
     BOOST_FOREACH(const TObjId objSrc, ctx.liveList1) {
         const TObjType clt = ctx.sh1.objType(objSrc);
-        const TValId atDst = roMapLookup(vMap1, ctx.sh1.placedAt(objSrc));
+        const TValId atSrc = ctx.sh1.placedAt(objSrc);
+        const TValId atDst = roMapLookup(vMap1, ctx.sh1, ctx.dst, atSrc);
         const TObjId objDst = ctx.dst.objAt(atDst, clt);
         if (!hasKey(rMap, objDst))
             rMap[objDst].second = OBJ_INVALID;
@@ -1869,7 +1903,8 @@ bool setDstValues(SymJoinCtx &ctx, const std::set<TObjId> *blackList = 0) {
     const TValMap &vMap2 = ctx.valMap2[0];
     BOOST_FOREACH(const TObjId objSrc, ctx.liveList2) {
         const TObjType clt = ctx.sh2.objType(objSrc);
-        const TValId atDst = roMapLookup(vMap2, ctx.sh2.placedAt(objSrc));
+        const TValId atSrc = ctx.sh2.placedAt(objSrc);
+        const TValId atDst = roMapLookup(vMap2, ctx.sh2, ctx.dst, atSrc);
         const TObjId objDst = ctx.dst.objAt(atDst, clt);
         if (!hasKey(rMap, objDst))
             rMap[objDst].first = OBJ_INVALID;
@@ -1940,8 +1975,10 @@ void handleDstPreds(SymJoinCtx &ctx) {
     // TODO: match gneric Neq predicates also in prototypes;  for now we
     // consider only minimal segment lengths
     BOOST_FOREACH(const TValId protoDst, ctx.protoRoots) {
-        const TValId proto1 = roMapLookup(ctx.valMap1[/* rtl */ 1], protoDst);
-        const TValId proto2 = roMapLookup(ctx.valMap2[/* rtl */ 1], protoDst);
+        const TValId proto1 =
+            roMapLookup(ctx.valMap1[/* rtl */ 1], ctx.dst, ctx.sh1, protoDst);
+        const TValId proto2 =
+            roMapLookup(ctx.valMap2[/* rtl */ 1], ctx.dst, ctx.sh2, protoDst);
 
         const unsigned len1 = objMinLength(ctx.sh1, proto1);
         const unsigned len2 = objMinLength(ctx.sh2, proto2);
@@ -2097,11 +2134,13 @@ bool joinSymHeaps(
 class GhostMapper {
     private:
         const SymHeap           &sh_;
+        SymHeap                 &shDst_;
         TValMap                 &vMap_;
 
     public:
-        GhostMapper(const SymHeap &sh, TValMap &vMap):
+        GhostMapper(const SymHeap &sh, SymHeap &shDst, TValMap &vMap):
             sh_(sh),
+            shDst_(shDst),
             vMap_(vMap)
         {
         }
@@ -2114,7 +2153,7 @@ class GhostMapper {
             CL_BREAK_IF(addrReal == addrGhost);
 
             // wait, first we need to translate the address into ctx.dst world
-            const TValId image = roMapLookup(vMap_, addrReal);
+            const TValId image = roMapLookup(vMap_, sh_, shDst_, addrReal);
             CL_BREAK_IF(image <= 0);
 
             // introduce ghost mapping
@@ -2138,7 +2177,7 @@ void mapGhostAddressSpace(
         ? ctx.valMap1
         : ctx.valMap2;
 
-    GhostMapper visitor(ctx.sh1, vMap[/* ltr */ 0]);
+    GhostMapper visitor(ctx.sh1, ctx.dst, vMap[/* ltr */ 0]);
     const TValId roots[] = { addrReal, addrGhost };
 
     // FIXME: this will break as soon as we switch to delayed objects creation
@@ -2256,8 +2295,10 @@ bool joinDataReadOnly(
 
     // go through prototypes
     BOOST_FOREACH(const TValId protoDst, ctx.protoRoots) {
-        const TValId proto1 = roMapLookup(ctx.valMap1[/* rtl */ 1], protoDst);
-        const TValId proto2 = roMapLookup(ctx.valMap2[/* rtl */ 1], protoDst);
+        const TValId proto1 =
+            roMapLookup(ctx.valMap1[/* rtl */ 1], ctx.dst, ctx.sh1, protoDst);
+        const TValId proto2 =
+            roMapLookup(ctx.valMap2[/* rtl */ 1], ctx.dst, ctx.sh2, protoDst);
 
         if (VAL_INVALID != proto1) {
             ++cntProto1;
@@ -2292,8 +2333,10 @@ struct JoinValueVisitor {
     }
 
     TValId joinValues(const TValId oldDst, const TValId oldSrc) const {
-        const TValId newDst = roMapLookup(ctx.valMap1[/* ltr */ 0], oldDst);
-        const TValId newSrc = roMapLookup(ctx.valMap2[/* ltr */ 0], oldSrc);
+        const TValId newDst =
+            roMapLookup(ctx.valMap1[/* ltr */ 0], ctx.sh1, ctx.dst, oldDst);
+        const TValId newSrc =
+            roMapLookup(ctx.valMap2[/* ltr */ 0], ctx.sh2, ctx.dst, oldSrc);
         if (newDst == newSrc)
             // values are equal --> pick any
             return newDst;
@@ -2382,8 +2425,10 @@ void recoverPrototypes(
 
     // go through prototypes
     BOOST_FOREACH(const TValId protoGhost, ctx.protoRoots) {
-        const TValId proto1 = roMapLookup(ctx.valMap1[/* rtl */ 1], protoGhost);
-        const TValId proto2 = roMapLookup(ctx.valMap2[/* rtl */ 1], protoGhost);
+        const TValId proto1 =
+            roMapLookup(ctx.valMap1[/* rtl */ 1], ctx.dst, ctx.sh1, protoGhost);
+        const TValId proto2 =
+            roMapLookup(ctx.valMap2[/* rtl */ 1], ctx.dst, ctx.sh2, protoGhost);
 
         if (isAbstract(sh.valTarget(proto1)))
             // remove Neq predicates, their targets are going to vanish soon
@@ -2453,8 +2498,8 @@ bool joinData(
     }
 
     // ghost is a transiently existing object representing the join of dst/src
-    const TValId ghost = roMapLookup(ctx.valMap1[0], dst);
-    CL_BREAK_IF(ghost != roMapLookup(ctx.valMap2[0], src));
+    const TValId ghost = roMapLookup(ctx.valMap1[0], ctx.sh1, ctx.dst, dst);
+    CL_BREAK_IF(ghost != roMapLookup(ctx.valMap2[0], ctx.sh2, ctx.dst, src));
 
     // assign values within dst (and also in src if bidir == true)
     JoinValueVisitor visitor(ctx, bidir);
