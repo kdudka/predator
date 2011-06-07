@@ -49,6 +49,12 @@ bool numFromVal(long *pDst, const SymHeap &, const TValId);
 
 void moveKnownValueToLeft(const SymHeapCore &sh, TValId &valA, TValId &valB);
 
+TObjId translateObjId(
+        SymHeap                 &dst,
+        const SymHeap           &src,
+        const TValId            dstRootAt,
+        const TObjId            srcObj);
+
 inline TValId valOfPtrAt(SymHeap &sh, TValId at) {
     const TObjId ptr = sh.ptrAt(at);
     return sh.valueOf(ptr);

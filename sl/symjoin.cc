@@ -87,6 +87,21 @@ class WorkListWithUndo: public WorkList<T> {
         }
 };
 
+/// known to work only with TObjId/TValId
+template <class TMap>
+typename TMap::mapped_type roMapLookup(
+        const TMap                          &roMap,
+        const typename TMap::key_type       id)
+{
+    if (id <= 0)
+        return id;
+
+    typename TMap::const_iterator iter = roMap.find(id);
+    return (roMap.end() == iter)
+        ? static_cast<typename TMap::mapped_type>(-1)
+        : iter->second;
+}
+
 TValId roMapLookup(
         const TValMap                       &vMap,
         const SymHeap                       &src,
@@ -1757,16 +1772,19 @@ bool setDstValuesCore(
 }
 
 bool setDstValues(SymJoinCtx &ctx, const std::set<TObjId> *blackList = 0) {
+    SymHeap &dst = ctx.dst;
+    SymHeap &sh1 = ctx.sh1;
+    SymHeap &sh2 = ctx.sh2;
+
     typedef std::map<TObjId /* objDst */, TObjPair> TMap;
     TMap rMap;
 
     // reverse mapping for ctx.liveList1
     const TValMap &vMap1 = ctx.valMap1[0];
     BOOST_FOREACH(const TObjId objSrc, ctx.liveList1) {
-        const TObjType clt = ctx.sh1.objType(objSrc);
-        const TValId atSrc = ctx.sh1.placedAt(objSrc);
-        const TValId atDst = roMapLookup(vMap1, ctx.sh1, ctx.dst, atSrc);
-        const TObjId objDst = ctx.dst.objAt(atDst, clt);
+        const TValId rootSrcAt = sh1.valRoot(sh1.placedAt(objSrc));
+        const TValId rootDstAt = roMapLookup(vMap1, rootSrcAt);
+        const TObjId objDst = translateObjId(dst, sh1, rootDstAt, objSrc);
         if (!hasKey(rMap, objDst))
             rMap[objDst].second = OBJ_INVALID;
 
@@ -1777,10 +1795,9 @@ bool setDstValues(SymJoinCtx &ctx, const std::set<TObjId> *blackList = 0) {
     // reverse mapping for ctx.liveList2
     const TValMap &vMap2 = ctx.valMap2[0];
     BOOST_FOREACH(const TObjId objSrc, ctx.liveList2) {
-        const TObjType clt = ctx.sh2.objType(objSrc);
-        const TValId atSrc = ctx.sh2.placedAt(objSrc);
-        const TValId atDst = roMapLookup(vMap2, ctx.sh2, ctx.dst, atSrc);
-        const TObjId objDst = ctx.dst.objAt(atDst, clt);
+        const TValId rootSrcAt = sh2.valRoot(sh2.placedAt(objSrc));
+        const TValId rootDstAt = roMapLookup(vMap2, rootSrcAt);
+        const TObjId objDst = translateObjId(dst, sh2, rootDstAt, objSrc);
         if (!hasKey(rMap, objDst))
             rMap[objDst].first = OBJ_INVALID;
 

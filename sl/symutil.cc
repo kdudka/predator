@@ -83,6 +83,22 @@ void moveKnownValueToLeft(
     valB = tmp;
 }
 
+TObjId translateObjId(
+        SymHeap                 &dst,
+        const SymHeap           &src,
+        const TValId            dstRootAt,
+        const TObjId            srcObj)
+{
+    // gather properties of the object in 'src'
+    const TValId objAt = src.placedAt(srcObj);
+    const TOffset  off = src.valOffset(objAt);
+    const TObjType clt = src.objType(srcObj);
+
+    // use them to obtain the corresponding object in 'dst'
+    const TValId dstAt = dst.valByOffset(dstRootAt, off);
+    return dst.objAt(dstAt, clt);
+}
+
 void getPtrValues(TValList &dst, const SymHeap &sh, TValId at) {
     TObjList ptrs;
     sh.gatherLivePointers(ptrs, at);
