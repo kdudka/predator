@@ -340,19 +340,6 @@ bool defineValueMapping(
     return true;
 }
 
-/// define address mapping for the given object triple (obj1, obj2, objDst)
-bool defineAddressMapping(
-        SymJoinCtx              &ctx,
-        const TObjId            obj1,
-        const TObjId            obj2,
-        const TObjId            objDst)
-{
-    const TValId addr1 = ctx.sh1.placedAt(obj1);
-    const TValId addr2 = ctx.sh2.placedAt(obj2);
-    const TValId dstAt = ctx.dst.placedAt(objDst);
-    return defineValueMapping(ctx, addr1, addr2, dstAt);
-}
-
 /// read-only (in)consistency check among value pair (v1, v2)
 bool checkValueMapping(
         const SymJoinCtx        &ctx,
@@ -487,14 +474,8 @@ struct ObjJoinVisitor {
         const TObjId obj2   = item[1];
         const TObjId objDst = item[2];
 
-        // TODO: remove this?
-        if (!defineAddressMapping(ctx, obj1, obj2, objDst))
-            return false;
-
         // check black-list
-        if (noFollow
-                || hasKey(blackList1, obj1)
-                || hasKey(blackList2, obj2))
+        if (hasKey(blackList1, obj1) || hasKey(blackList2, obj2))
             return /* continue */ true;
 
         return /* continue */ joinFreshObjTripple(ctx, obj1, obj2, objDst);
@@ -581,7 +562,7 @@ bool traverseSubObjs(
     else if (ctx.joiningData()) {
         if (addr1 == addr2)
             // do not follow shared data
-            objVisitor.noFollow = true;
+            return true;
         else
             ctx.protoRoots.insert(addrDst);
     }
