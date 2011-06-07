@@ -1242,102 +1242,6 @@ void scheduleSegAddr(
     wl.schedule(vpPeer);
 }
 
-TValId /* old */ vmRemoveMappingOf(TValMapBidir &vm, const TValId val) {
-    if (val <= 0)
-        // do not remove special values
-        return val;
-
-    TValMap &ltr = vm[/* ltr */ 0];
-    TValMap &rtl = vm[/* rtl */ 1];
-
-    TValMap::iterator it = ltr.find(val);
-    CL_BREAK_IF(ltr.end() == it);
-
-    const TValId old = it->second;
-    CL_BREAK_IF(!hasKey(rtl, old));
-
-    ltr.erase(it);
-    rtl.erase(old);
-    return old;
-}
-
-bool disjoinUnknownValues(
-        SymJoinCtx              &ctx,
-        const TValId            val,
-        const TValId            tpl,
-        const EJoinStatus       action)
-{
-    if (val <= 0)
-        return updateJoinStatus(ctx, action);
-
-    const bool isGt2 = (JS_USE_SH2 == action);
-    CL_BREAK_IF(!isGt2 && (JS_USE_SH1 != action));
-
-    // gather all objects that hold 'val' inside
-    TObjList refs;
-    const SymHeap &sh = (isGt2) ? ctx.sh1 : ctx.sh2;
-    sh.usedBy(refs, val);
-
-    // forget all up to now value mapping of 'val'
-    TValMapBidir &vm = (isGt2) ? ctx.valMap1 : ctx.valMap2;
-    const TValId old = vmRemoveMappingOf(vm, val);
-
-    // go through all referrers that have their image in ctx.dst
-    const TValMap &valMap = (isGt2) ? ctx.valMap1[0] : ctx.valMap2[0];
-    BOOST_FOREACH(const TObjId objSrc, refs) {
-        const TObjType clt = sh.objType(objSrc);
-        const TValId atSrc = sh.placedAt(objSrc);
-        const TValId atDst = roMapLookup(valMap, sh, ctx.dst, atSrc);
-        const TObjId objDst = ctx.dst.objAt(atDst, clt);
-        if (OBJ_INVALID == objDst)
-            // no image in ctx.dst yet
-            continue;
-
-        const TValId valDst = ctx.dst.valClone(tpl);
-        SJ_DEBUG("-u- disjoinUnknownValues() rewrites mapping" <<
-                 ", old = " << old <<
-                 ", new = " << valDst <<
-                 ", action = " << action);
-    }
-
-    if (refs.size() <= 1)
-        // no visible changes at this point
-        return true;
-
-    return updateJoinStatus(ctx, action);
-}
-
-bool unknownValueFallBack(
-        SymJoinCtx              &ctx,
-        const TValId            v1,
-        const TValId            v2,
-        const TValId            vDst)
-{
-    const bool hasMapping1 = hasKey(ctx.valMap1[/* ltr */ 0], v1);
-    const bool hasMapping2 = hasKey(ctx.valMap2[/* ltr */ 0], v2);
-    CL_BREAK_IF(!hasMapping1 && !hasMapping2);
-
-    if (hasMapping1) {
-        if (!disjoinUnknownValues(ctx, v1, vDst, JS_USE_SH2))
-            return false;
-    }
-    else {
-        if (!defineValueMapping(ctx, v1, VAL_INVALID, vDst))
-            return false;
-    }
-
-    if (hasMapping2) {
-        if (!disjoinUnknownValues(ctx, v2, vDst, JS_USE_SH1))
-            return false;
-    }
-    else {
-        if (!defineValueMapping(ctx, VAL_INVALID, v2, vDst))
-            return false;
-    }
-
-    return true;
-}
-
 bool handleUnknownValues(
         SymJoinCtx              &ctx,
         const TValId            v1,
@@ -1350,11 +1254,7 @@ bool handleUnknownValues(
         return false;
 
     CL_BREAK_IF(isNull1 && isNull2);
-    if (defineValueMapping(ctx, v1, v2, vDst))
-        // no inconsistency here
-        return true;
-
-    return unknownValueFallBack(ctx, v1, v2, vDst);
+    return defineValueMapping(ctx, v1, v2, vDst);
 }
 
 /// (NULL != off) means 'introduce OK_MAY_EXIST'
