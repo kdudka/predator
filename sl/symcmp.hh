@@ -36,9 +36,7 @@ typedef TValMap                                             TValMapBidir[2];
 /// @todo some dox
 bool areEqual(
         const SymHeap           &sh1,
-        const SymHeap           &sh2,
-        TValMap                 *srcToDst = 0,
-        TValMap                 *dstToSrc = 0);
+        const SymHeap           &sh2);
 
 inline bool checkNonPosValues(int a, int b) {
     if (0 < a && 0 < b)
@@ -54,7 +52,6 @@ bool matchPlainValues(
         const SymHeap           &sh1,
         const SymHeap           &sh2,
         const TValId            v1,
-        const TValId            v2,
-        const bool              symHeapNG = false);
+        const TValId            v2);
 
 #endif /* H_GUARD_SYM_CMP_H */

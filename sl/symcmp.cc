@@ -63,8 +63,7 @@ bool matchPlainValues(
         const SymHeap           &sh1,
         const SymHeap           &sh2,
         const TValId            v1,
-        const TValId            v2,
-        const bool              symHeapNG)
+        const TValId            v2)
 {
     if (!checkNonPosValues(v1, v2))
         // null vs. non-null, etc.
@@ -80,15 +79,10 @@ bool matchPlainValues(
         // offset mismatch
         return false;
 
+    // check the mapping of roots
     const TValId root1 = sh1.valRoot(v1);
     const TValId root2 = sh2.valRoot(v2);
-    if (!matchPlainValuesCore(valMapping, root1, root2))
-        // root mismatch
-        return false;
-
-    // TODO: throw this away as soon as symcmp/symjoin is ported to symheap-ng
-    return symHeapNG
-        || matchPlainValuesCore(valMapping, v1, v2);
+    return matchPlainValuesCore(valMapping, root1, root2);
 }
 
 // FIXME: this needs some cleanup and refactoring
@@ -99,7 +93,7 @@ bool matchValues(
         const TValId            v1,
         const TValId            v2)
 {
-    if (!matchPlainValues(vMap, sh1, sh2, v1, v2, /* symHeapNG */ true))
+    if (!matchPlainValues(vMap, sh1, sh2, v1, v2))
         return false;
 
     // check for special values
@@ -274,13 +268,8 @@ class VarScheduleVisitor {
 
 bool areEqual(
         const SymHeap           &sh1,
-        const SymHeap           &sh2,
-        TValMap                 *srcToDst,
-        TValMap                 *dstToSrc)
+        const SymHeap           &sh2)
 {
-    CL_BREAK_IF(srcToDst && !srcToDst->empty());
-    CL_BREAK_IF(dstToSrc && !dstToSrc->empty());
-
     SymHeap &sh1Writable = const_cast<SymHeap &>(sh1);
     SymHeap &sh2Writable = const_cast<SymHeap &>(sh2);
 
@@ -301,15 +290,6 @@ bool areEqual(
         return false;
 
     // finally match heap predicates
-    if (!sh1.matchPreds(sh2, vMap[0]) || !sh2.matchPreds(sh1, vMap[1]))
-        return false;
-
-    if (srcToDst)
-        *srcToDst = vMap[/* ltr */ 0];
-
-    if (dstToSrc)
-        *dstToSrc = vMap[/* rtl */ 1];
-
-    // full match!
-    return true;
+    return sh1.matchPreds(sh2, vMap[0])
+        && sh2.matchPreds(sh1, vMap[1]);
 }
