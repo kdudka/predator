@@ -1993,39 +1993,6 @@ bool joinSymHeaps(
     return true;
 }
 
-class GhostMapper {
-    private:
-        const SymHeap           &sh_;
-        SymHeap                 &shDst_;
-        TValMap                 &vMap_;
-
-    public:
-        GhostMapper(const SymHeap &sh, SymHeap &shDst, TValMap &vMap):
-            sh_(sh),
-            shDst_(shDst),
-            vMap_(vMap)
-        {
-        }
-
-        bool operator()(const TObjId item[2]) {
-            // obtain addresses
-            const TValId addrReal  = sh_.placedAt(item[0]);
-            const TValId addrGhost = sh_.placedAt(item[1]);
-            CL_BREAK_IF(addrReal < 0 || addrGhost < 0);
-            CL_BREAK_IF(addrReal == addrGhost);
-
-            // wait, first we need to translate the address into ctx.dst world
-            const TValId image = roMapLookup(vMap_, sh_, shDst_, addrReal);
-            CL_BREAK_IF(image <= 0);
-
-            // introduce ghost mapping
-            CL_BREAK_IF(hasKey(vMap_, addrGhost) && vMap_[addrGhost] != image);
-            vMap_[addrGhost] = image;
-
-            return /* continue */ true;
-        }
-};
-
 void mapGhostAddressSpace(
         SymJoinCtx              &ctx,
         const TValId            addrReal,
@@ -2035,15 +2002,15 @@ void mapGhostAddressSpace(
     CL_BREAK_IF(!ctx.joiningData());
     CL_BREAK_IF(addrReal < 0 || addrGhost < 0);
 
-    TValMapBidir &vMap = (JS_USE_SH1 == action)
-        ? ctx.valMap1
-        : ctx.valMap2;
+    TValMap &vMap = (JS_USE_SH1 == action)
+        ? ctx.valMap1[/* ltr */ 0]
+        : ctx.valMap2[/* ltr */ 0];
 
-    GhostMapper visitor(ctx.sh1, ctx.dst, vMap[/* ltr */ 0]);
-    const TValId roots[] = { addrReal, addrGhost };
+    CL_BREAK_IF(!hasKey(vMap, addrReal));
+    const TValId image = vMap[addrReal];
 
-    // FIXME: this will break as soon as we switch to delayed objects creation
-    traverseLiveObjs<2>(ctx.sh1, roots, visitor);
+    CL_BREAK_IF(hasKey(vMap, addrGhost) && vMap[addrGhost] != image);
+    vMap[addrGhost] = image;
 }
 
 /// this runs only in debug build
