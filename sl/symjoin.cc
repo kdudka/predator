@@ -1664,24 +1664,20 @@ bool joinCVars(SymJoinCtx &ctx) {
 
 TValId joinDstValue(
         const SymJoinCtx        &ctx,
-        TValId                  v1,
-        TValId                  v2,
+        const TValId            v1,
+        const TValId            v2,
         const bool              validObj1,
         const bool              validObj2)
 {
+    // translate the roots into 'dst'
+    const TValId root1 = ctx.sh1.valRoot(v1);
+    const TValId root2 = ctx.sh2.valRoot(v2);
+    const TValId valRootDstBy1 = roMapLookup(ctx.valMap1[/* ltr */ 0], root1);
+    const TValId valRootDstBy2 = roMapLookup(ctx.valMap2[/* ltr */ 0], root2);
+
+    // translate the offsets into 'dst'
     const TOffset off1 = ctx.sh1.valOffset(v1);
-    if (off1)
-        v1 = ctx.sh1.valRoot(v1);
-
     const TOffset off2 = ctx.sh2.valOffset(v2);
-    if (off2)
-        v2 = ctx.sh2.valRoot(v2);
-
-    const TValId valRootDstBy1 =
-        roMapLookup(ctx.valMap1[/* ltr */ 0], ctx.sh1, ctx.dst, v1);
-    const TValId valRootDstBy2 =
-        roMapLookup(ctx.valMap2[/* ltr */ 0], ctx.sh2, ctx.dst, v2);
-
     const TValId vDstBy1 = ctx.dst.valByOffset(valRootDstBy1, off1);
     const TValId vDstBy2 = ctx.dst.valByOffset(valRootDstBy2, off2);
     if (vDstBy1 == vDstBy2)
@@ -1695,8 +1691,8 @@ TValId joinDstValue(
         return vDstBy2;
 
     // tie breaking
-    const TValPair tb1(v1, VAL_INVALID);
-    const TValPair tb2(VAL_INVALID, v2);
+    const TValPair tb1(root1, VAL_INVALID);
+    const TValPair tb2(VAL_INVALID, root2);
 
     const bool use1 = hasKey(ctx.tieBreaking, tb1);
     const bool use2 = hasKey(ctx.tieBreaking, tb2);
