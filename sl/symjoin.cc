@@ -102,28 +102,6 @@ typename TMap::mapped_type roMapLookup(
         : iter->second;
 }
 
-TValId roMapLookup(
-        const TValMap                       &vMap,
-        const SymHeap                       &src,
-        SymHeap                             &dst,
-        TValId                               val)
-{
-    if (val <= 0)
-        return val;
-
-    const TOffset off = src.valOffset(val);
-    if (off)
-        val = src.valRoot(val);
-
-    TValMap::const_iterator iter = vMap.find(val);
-    if (vMap.end() == iter)
-        // not found
-        return VAL_INVALID;
-
-    const TValId rootDst = iter->second;
-    return dst.valByOffset(rootDst, off);
-}
-
 /// current state, common for joinSymHeaps(), joinDataReadOnly() and joinData()
 struct SymJoinCtx {
     SymHeap                     &dst;
@@ -2184,28 +2162,36 @@ struct JoinValueVisitor {
     }
 
     TValId joinValues(const TValId oldDst, const TValId oldSrc) const {
-        const TValId newDst =
-            roMapLookup(ctx.valMap1[/* ltr */ 0], ctx.sh1, ctx.dst, oldDst);
-        const TValId newSrc =
-            roMapLookup(ctx.valMap2[/* ltr */ 0], ctx.sh2, ctx.dst, oldSrc);
+        // translate the roots into 'dst'
+        const TValId rootDst = ctx.sh1.valRoot(oldDst);
+        const TValId rootSrc = ctx.sh2.valRoot(oldSrc);
+        const TValId newRootDst = roMapLookup(ctx.valMap1[/* ltr */0], rootDst);
+        const TValId newRootSrc = roMapLookup(ctx.valMap2[/* ltr */0], rootSrc);
+
+        // translate the offsets into 'dst'
+        const TOffset offDst = ctx.sh1.valOffset(oldDst);
+        const TOffset offSrc = ctx.sh2.valOffset(oldSrc);
+        const TValId newDst = ctx.dst.valByOffset(newRootDst, offDst);
+        const TValId newSrc = ctx.dst.valByOffset(newRootSrc, offSrc);
+
         if (newDst == newSrc)
             // values are equal --> pick any
             return newDst;
 
-        if (hasKey(ctx.protoRoots, ctx.dst.valRoot(newDst)))
+        if (hasKey(ctx.protoRoots, newRootDst))
             // asymmetric prototype match (src < dst)
             return newDst;
 
-        if (hasKey(ctx.protoRoots, ctx.dst.valRoot(newSrc)))
+        if (hasKey(ctx.protoRoots, newRootSrc))
             // asymmetric prototype match (dst < src)
             return newSrc;
-
+#if 0
         if (VAL_NULL == newSrc && VT_UNKNOWN == ctx.dst.valTarget(newDst))
             return newDst;
 
         if (VAL_NULL == newDst && VT_UNKNOWN == ctx.dst.valTarget(newSrc))
             return newSrc;
-
+#endif
         CL_ERROR("JoinValueVisitor failed to join values");
         CL_BREAK_IF("JoinValueVisitor is not yet fully implemented");
         return VAL_INVALID;
@@ -2347,8 +2333,8 @@ bool joinData(
     }
 
     // ghost is a transiently existing object representing the join of dst/src
-    const TValId ghost = roMapLookup(ctx.valMap1[0], ctx.sh1, ctx.dst, dst);
-    CL_BREAK_IF(ghost != roMapLookup(ctx.valMap2[0], ctx.sh2, ctx.dst, src));
+    const TValId ghost = roMapLookup(ctx.valMap1[0], dst);
+    CL_BREAK_IF(ghost != roMapLookup(ctx.valMap2[0], src));
 
     // assign values within dst (and also in src if bidir == true)
     JoinValueVisitor visitor(ctx, bidir);
