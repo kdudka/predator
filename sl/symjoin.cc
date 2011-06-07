@@ -925,33 +925,46 @@ bool followRootValuesCore(
 
 bool dlSegHandleShared(
         SymJoinCtx              &ctx,
-        const TValId            v1,
-        const TValId            v2,
+        const TValId            root1,
+        const TValId            root2,
         const EJoinStatus       action,
         const bool              readOnly)
 {
-    const bool isDls = (OK_DLS == ctx.sh1.valTargetKind(v1));
-    CL_BREAK_IF(isDls != (OK_DLS == ctx.sh2.valTargetKind(v2)));
+    CL_BREAK_IF(ctx.sh1.valOffset(root1) || ctx.sh2.valOffset(root2));
+
+    const bool isDls = (OK_DLS == ctx.sh1.valTargetKind(root1));
+    CL_BREAK_IF(isDls != (OK_DLS == ctx.sh2.valTargetKind(root2)));
     if (!isDls)
         // not a DLS
         return true;
 
-    const TValId peer1 = dlSegPeer(ctx.sh1, v1);
-    const TValId peer2 = dlSegPeer(ctx.sh2, v2);
+    // this should follow the 'next' pointer as long as we have a consistent DLS
+    const TValId peer1 = dlSegPeer(ctx.sh1, root1);
+    const TValId peer2 = dlSegPeer(ctx.sh2, root2);
     if (!followRootValuesCore(ctx, peer1, peer2, action, readOnly))
         return false;
 
     if (readOnly)
+        // we are done
         return true;
+
+    // check the mapping
+    TValMap &vMap1 = ctx.valMap1[/* ltr */ 0];
+#ifndef NDEBUG
+    TValMap &vMap2 = ctx.valMap2[/* ltr */ 0];
+    CL_BREAK_IF(!hasKey(vMap1, root1));
+    CL_BREAK_IF(!hasKey(vMap2, root2));
+    CL_BREAK_IF(!hasKey(vMap1, peer1));
+    CL_BREAK_IF(!hasKey(vMap2, peer2));
+#endif
 
     // we might have just joined a DLS pair as shared data, which would lead to
     // unconnected DLS pair in ctx.dst and later cause some problems;  the best
     // thing to do at this point, is to recover the binding of DLS in ctx.dst
-    const TValId seg = roMapLookup(ctx.valMap1[0], ctx.sh1, ctx.dst, v1);
-    CL_BREAK_IF(seg != roMapLookup(ctx.valMap2[0], ctx.sh2, ctx.dst, v2));
-
-    const TValId peer = roMapLookup(ctx.valMap1[0], ctx.sh1, ctx.dst, peer1);
-    CL_BREAK_IF(peer != roMapLookup(ctx.valMap2[0], ctx.sh2, ctx.dst, peer2));
+    const TValId seg  = vMap1[root1];
+    const TValId peer = vMap1[peer1];
+    CL_BREAK_IF(seg  != vMap2[root2]);
+    CL_BREAK_IF(peer != vMap2[peer2]);
 
     SymHeap &sh = ctx.dst;
     sh.objSetValue(prevPtrFromSeg(sh,  seg), segHeadAt(sh, peer));
