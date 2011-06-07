@@ -445,8 +445,6 @@ TValId SymHeapCore::Private::valCreate(
     switch (code) {
         case VT_INVALID:
         case VT_UNKNOWN:
-        case VT_DELETED:
-        case VT_LOST:
             this->ents.push_back(new BaseValue(code, origin));
             break;
 
@@ -465,6 +463,8 @@ TValId SymHeapCore::Private::valCreate(
         case VT_ON_HEAP:
         case VT_ON_STACK:
         case VT_STATIC:
+        case VT_DELETED:
+        case VT_LOST:
             this->ents.push_back(new RootValue(code, origin));
             break;
     }
@@ -794,7 +794,7 @@ TValId SymHeapCore::valByOffset(TValId at, TOffset off) {
         return valRoot;
 
     const EValueTarget code = valData->code;
-    if (VT_UNKNOWN == code || isGone(code))
+    if (VT_UNKNOWN == code)
         // do not track off-value for invalid targets
         return d->valDup(at);
 
@@ -843,7 +843,6 @@ EValueTarget SymHeapCore::valTarget(TValId val) const {
         return VT_ABSTRACT;
 
     const BaseValue *valData = d->valData(val);
-    const TOffset off = valData->offRoot;
     return valData->code;
 }
 

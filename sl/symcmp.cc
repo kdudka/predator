@@ -74,12 +74,6 @@ bool matchPlainValues(
         // no need to save mapping of special values, they're fixed anyway
         return true;
 
-    const bool isValidPtr1 = isPossibleToDeref(sh1.valTarget(v1));
-    const bool isValidPtr2 = isPossibleToDeref(sh2.valTarget(v2));
-    if (!isValidPtr1 || !isValidPtr2)
-        // we need to be careful with magic values
-        return matchPlainValuesCore(valMapping, v1, v2);
-
     const TOffset off1 = sh1.valOffset(v1);
     const TOffset off2 = sh2.valOffset(v2);
     if (off1 != off2)

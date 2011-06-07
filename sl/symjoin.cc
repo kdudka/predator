@@ -87,21 +87,6 @@ class WorkListWithUndo: public WorkList<T> {
         }
 };
 
-/// known to work only with TObjId/TValId
-template <class TMap>
-typename TMap::mapped_type roMapLookup(
-        const TMap                          &roMap,
-        const typename TMap::key_type       id)
-{
-    if (id <= 0)
-        return id;
-
-    typename TMap::const_iterator iter = roMap.find(id);
-    return (roMap.end() == iter)
-        ? static_cast<typename TMap::mapped_type>(-1)
-        : iter->second;
-}
-
 TValId roMapLookup(
         const TValMap                       &vMap,
         const SymHeap                       &src,
@@ -1539,8 +1524,12 @@ bool joinValuesByCode(
     const bool gone1 = isGone(code1);
     const bool gone2 = isGone(code2);
     if (gone1 || gone2) {
-        if (gone1 && gone2) {
-            const TValId vDst = ctx.dst.valCreate(VT_UNKNOWN, VO_ASSIGNED);
+        const TOffset off1 = ctx.sh1.valOffset(v1);
+        const TOffset off2 = ctx.sh2.valOffset(v2);
+
+        if (code1 == code2 && off1 == off2) {
+            const TValId vDstRoot = ctx.dst.valCreate(code1, VO_ASSIGNED);
+            const TValId vDst = ctx.dst.valByOffset(vDstRoot, off1);
             *pResult = handleUnknownValues(ctx, v1, v2, vDst);
         }
         else
@@ -1671,14 +1660,6 @@ TValId joinDstValue(
         const bool              validObj1,
         const bool              validObj2)
 {
-    {
-        // FIXME: disjoinUnknownValues() does not support off-values
-        const TValId vDstBy1 = roMapLookup(ctx.valMap1[/* ltr */ 0], v1);
-        const TValId vDstBy2 = roMapLookup(ctx.valMap2[/* ltr */ 0], v2);
-        if (vDstBy1 == vDstBy2 && VAL_INVALID != vDstBy1)
-            return vDstBy1;
-    }
-
     const TOffset off1 = ctx.sh1.valOffset(v1);
     if (off1)
         v1 = ctx.sh1.valRoot(v1);
