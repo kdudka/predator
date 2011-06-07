@@ -120,7 +120,11 @@ bool SymProc::checkForInvalidDeref(TValId val, TObjType cltTarget) {
         return true;
     }
 
-    const EValueTarget code = sh_.valTarget(val);
+    EValueTarget code = sh_.valTarget(val);
+    if (sh_.valOffset(val) < 0)
+        // TODO: refine the error messages
+        code = VT_UNKNOWN;
+
     switch (code) {
         case VT_LOST:
             CL_ERROR_MSG(lw_, "dereference of non-existing non-heap object");
@@ -135,7 +139,7 @@ bool SymProc::checkForInvalidDeref(TValId val, TObjType cltTarget) {
         case VT_ABSTRACT:
         case VT_CUSTOM:
             CL_BREAK_IF("attempt to dereference VT_ABSTRACT or VT_CUSTOM");
-            // fall through
+            // fall through!
 
         case VT_UNKNOWN:
             CL_ERROR_MSG(lw_, "dereference of unknown value");
@@ -680,7 +684,11 @@ bool SymExecCore::lhsFromOperand(TObjId *pObj, const struct cl_operand &op) {
 }
 
 void SymExecCore::execFreeCore(const TValId val) {
-    const EValueTarget code = sh_.valTarget(val);
+    EValueTarget code = sh_.valTarget(val);
+    if (sh_.valOffset(val) < 0)
+        // TODO: refine the error messages
+        code = VT_UNKNOWN;
+
     switch (code) {
         case VT_DELETED:
             CL_ERROR_MSG(lw_, "double free() detected");
@@ -700,7 +708,19 @@ void SymExecCore::execFreeCore(const TValId val) {
             bt_->printBackTrace();
             return;
 
-        default:
+        case VT_INVALID:
+        case VT_ABSTRACT:
+            CL_BREAK_IF("invalid call of SymExecCore::execFreeCore()");
+            // fall through!
+
+        case VT_UNKNOWN:
+        case VT_CUSTOM:
+        case VT_COMPOSITE:
+            CL_ERROR_MSG(lw_, "free() called on unknown value");
+            bt_->printBackTrace();
+            return;
+
+        case VT_ON_HEAP:
             if (sh_.valOffset(val)) {
                 CL_ERROR_MSG(lw_, "attempt to free a non-root object");
                 bt_->printBackTrace();
@@ -738,13 +758,6 @@ void SymExecCore::execFree(const CodeStorage::TOperandList &opList) {
 
     if (isUninitialized(sh_.valOrigin(val))) {
         CL_ERROR_MSG(lw_, "free() called on uninitialized value");
-        bt_->printBackTrace();
-        return;
-    }
-
-    const EValueTarget code = sh_.valTarget(val);
-    if (!isPossibleToDeref(code) && !isGone(code)) {
-        CL_ERROR_MSG(lw_, "free() called on unknown value");
         bt_->printBackTrace();
         return;
     }

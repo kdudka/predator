@@ -844,12 +844,6 @@ EValueTarget SymHeapCore::valTarget(TValId val) const {
 
     const BaseValue *valData = d->valData(val);
     const TOffset off = valData->offRoot;
-
-    // FIXME: this condition should go away as soon as the lagacy code is ported
-    if (off < 0)
-        // this value ended up above the root
-        return VT_UNKNOWN;
-
     return valData->code;
 }
 
