@@ -533,18 +533,18 @@ struct SegMatchVisitor {
 
 bool traverseSubObjs(
         SymJoinCtx              &ctx,
-        const TValId            addrDst,
-        const TValId            addr1,
-        const TValId            addr2,
+        const TValId            rootDst,
+        const TValId            root1,
+        const TValId            root2,
         const BindingOff        *offBlackList = 0)
 {
-    if (!defineValueMapping(ctx, addr1, addr2, addrDst))
+    if (!defineValueMapping(ctx, root1, root2, rootDst))
         return false;
 
     TValId roots[] = {
-        addr1,
-        addr2,
-        addrDst
+        root1,
+        root2,
+        rootDst
     };
 
     SymHeap *const heaps[] = {
@@ -553,10 +553,10 @@ bool traverseSubObjs(
         &ctx.dst
     };
 
-    if (isPossibleToDeref(ctx.sh1.valTarget(addr1)))
-        ctx.sh1.gatherLiveObjects(ctx.liveList1, addr1);
-    if (isPossibleToDeref(ctx.sh2.valTarget(addr2)))
-        ctx.sh2.gatherLiveObjects(ctx.liveList2, addr2);
+    if (isPossibleToDeref(ctx.sh1.valTarget(root1)))
+        ctx.sh1.gatherLiveObjects(ctx.liveList1, root1);
+    if (isPossibleToDeref(ctx.sh2.valTarget(root2)))
+        ctx.sh2.gatherLiveObjects(ctx.liveList2, root2);
 
     // initialize visitor
     ObjJoinVisitor objVisitor(ctx);
@@ -564,22 +564,22 @@ bool traverseSubObjs(
     // FIXME: this leads to a wrongly connected DLS
 #if 0
     // black-list 'prev' pointer on the way from insertSegmentClone()
-    if (VAL_INVALID == addr2)
-        dlSegBlackListPrevPtr(objVisitor.blackList1, ctx.sh1, addr1);
-    if (VAL_INVALID == addr1)
-        dlSegBlackListPrevPtr(objVisitor.blackList2, ctx.sh2, addr2);
+    if (VAL_INVALID == root2)
+        dlSegBlackListPrevPtr(objVisitor.blackList1, ctx.sh1, root1);
+    if (VAL_INVALID == root1)
+        dlSegBlackListPrevPtr(objVisitor.blackList2, ctx.sh2, root2);
 #endif
 
     if (offBlackList) {
-        buildIgnoreList(objVisitor.blackList1, ctx.sh1, addr1, *offBlackList);
-        buildIgnoreList(objVisitor.blackList2, ctx.sh2, addr2, *offBlackList);
+        buildIgnoreList(objVisitor.blackList1, ctx.sh1, root1, *offBlackList);
+        buildIgnoreList(objVisitor.blackList2, ctx.sh2, root2, *offBlackList);
     }
     else if (ctx.joiningData()) {
-        if (addr1 == addr2)
+        if (root1 == root2)
             // do not follow shared data
             return true;
         else
-            ctx.protoRoots.insert(addrDst);
+            ctx.protoRoots.insert(rootDst);
     }
 
     // guide the visitors through them
@@ -1867,10 +1867,8 @@ void handleDstPreds(SymJoinCtx &ctx) {
     // TODO: match gneric Neq predicates also in prototypes;  for now we
     // consider only minimal segment lengths
     BOOST_FOREACH(const TValId protoDst, ctx.protoRoots) {
-        const TValId proto1 =
-            roMapLookup(ctx.valMap1[/* rtl */ 1], ctx.dst, ctx.sh1, protoDst);
-        const TValId proto2 =
-            roMapLookup(ctx.valMap2[/* rtl */ 1], ctx.dst, ctx.sh2, protoDst);
+        const TValId proto1 = roMapLookup(ctx.valMap1[/* rtl */ 1], protoDst);
+        const TValId proto2 = roMapLookup(ctx.valMap2[/* rtl */ 1], protoDst);
 
         const unsigned len1 = objMinLength(ctx.sh1, proto1);
         const unsigned len2 = objMinLength(ctx.sh2, proto2);
@@ -2154,10 +2152,8 @@ bool joinDataReadOnly(
 
     // go through prototypes
     BOOST_FOREACH(const TValId protoDst, ctx.protoRoots) {
-        const TValId proto1 =
-            roMapLookup(ctx.valMap1[/* rtl */ 1], ctx.dst, ctx.sh1, protoDst);
-        const TValId proto2 =
-            roMapLookup(ctx.valMap2[/* rtl */ 1], ctx.dst, ctx.sh2, protoDst);
+        const TValId proto1 = roMapLookup(ctx.valMap1[/* rtl */ 1], protoDst);
+        const TValId proto2 = roMapLookup(ctx.valMap2[/* rtl */ 1], protoDst);
 
         if (VAL_INVALID != proto1) {
             ++cntProto1;
@@ -2284,10 +2280,8 @@ void recoverPrototypes(
 
     // go through prototypes
     BOOST_FOREACH(const TValId protoGhost, ctx.protoRoots) {
-        const TValId proto1 =
-            roMapLookup(ctx.valMap1[/* rtl */ 1], ctx.dst, ctx.sh1, protoGhost);
-        const TValId proto2 =
-            roMapLookup(ctx.valMap2[/* rtl */ 1], ctx.dst, ctx.sh2, protoGhost);
+        const TValId proto1 = roMapLookup(ctx.valMap1[/* rtl */ 1], protoGhost);
+        const TValId proto2 = roMapLookup(ctx.valMap2[/* rtl */ 1], protoGhost);
 
         if (isAbstract(sh.valTarget(proto1)))
             // remove Neq predicates, their targets are going to vanish soon
