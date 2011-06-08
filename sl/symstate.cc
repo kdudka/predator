@@ -24,8 +24,8 @@
 #include <cl/code_listener.h>
 
 #include "symcmp.hh"
-#include "symdump.hh"
 #include "symjoin.hh"
+#include "symplot.hh"
 #include "symutil.hh"
 #include "util.hh"
 #include "worklist.hh"
@@ -59,7 +59,7 @@ namespace {
             << FIXW(6) << ::cntLookups << "-" << name << "-"
             << FIXW(4) << idx;
 
-        dump_plot(sh, str.str().c_str());
+        plotHeap(sh, str.str().c_str());
     }
 }
 

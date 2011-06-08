@@ -25,8 +25,8 @@
 #include <cl/clutil.hh>
 
 #include "symcmp.hh"
-#include "symdump.hh"
 #include "symgc.hh"
+#include "symplot.hh"
 #include "symseg.hh"
 #include "symstate.hh"
 #include "symutil.hh"
@@ -70,7 +70,7 @@ namespace {
             << FIXW(3) << src << "-"
             << suffix;
 
-        dump_plot(sh, str.str().c_str());
+        plotHeap(sh, str.str().c_str());
     }
 }
 
@@ -189,14 +189,14 @@ void dump_ctx(const SymJoinCtx &ctx) {
     // plot heaps
     if (!ctx.joiningDataReadWrite()) {
         cout << "    plotting ctx.sh1...\n";
-        dump_plot(ctx.sh1);
+        plotHeap(ctx.sh1, "dump_ctx");
     }
     if (!ctx.joiningData()) {
         cout << "    plotting ctx.sh2...\n";
-        dump_plot(ctx.sh2);
+        plotHeap(ctx.sh2, "dump_ctx");
     }
     cout << "    plotting ctx.dst...\n";
-    dump_plot(ctx.dst);
+    plotHeap(ctx.dst, "dump_ctx");
 
     // print entry-point
     cout << "\ndump_ctx: ";
@@ -531,9 +531,9 @@ bool traverseSubObjs(
         &ctx.dst
     };
 
-    if (isPossibleToDeref(ctx.sh1.valTarget(root1)))
+    if (VAL_INVALID != root1)
         ctx.sh1.gatherLiveObjects(ctx.liveList1, root1);
-    if (isPossibleToDeref(ctx.sh2.valTarget(root2)))
+    if (VAL_INVALID != root2)
         ctx.sh2.gatherLiveObjects(ctx.liveList2, root2);
 
     // initialize visitor
@@ -1684,16 +1684,6 @@ TValId joinDstValue(
         return VAL_INVALID;
 }
 
-bool seenUnknown(const SymHeap &sh, const TValId val) {
-    if (val <= 0)
-        return false;
-
-    if (VT_UNKNOWN == sh.valTarget(val))
-        return true;
-
-    return (sh.valOffset(val) < 0);
-}
-
 template <class TItem, class TBlackList>
 bool setDstValuesCore(
         SymJoinCtx              &ctx,
@@ -1737,8 +1727,7 @@ bool setDstValuesCore(
     const bool validObj2 = (OBJ_INVALID != obj2);
     const TValId vDst = joinDstValue(ctx, v1, v2, validObj1, validObj2);
     if (VAL_INVALID == vDst)
-        return seenUnknown(ctx.sh1, v1)
-            || seenUnknown(ctx.sh2, v2);
+        return false;
 
     // set the value
     ctx.dst.objSetValue(objDst, vDst);
