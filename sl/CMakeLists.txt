@@ -69,6 +69,9 @@ set(clplug_incs ${clplug_incs} "-I${sl_SOURCE_DIR}/../include/gcc")
 
 option(TEST_ONLY_FAST "Set to OFF to boost test coverage" ON)
 
+set(GCC_EXEC_PREFIX "timeout 8"
+    CACHE STRING "Set to empty string if not sure")
+
 set(examples
     0001 0002 0003 0004 0005 0006 0007 0008 0009 0010
     0011 0012 0013 0014 0015 0016 0017 0018 0019 0020
@@ -116,7 +119,7 @@ endif()
 # FIXME: define this macro more generically, in particular the count of args
 macro(test_sym_exec_regre name_suff ext arg1)
     foreach (num ${examples})
-        set(cmd "LC_ALL=C ${GCC_HOST}")
+        set(cmd "LC_ALL=C ${GCC_EXEC_PREFIX} ${GCC_HOST}")
 
         # needed for test-0000
         foreach (inc ${clplug_incs})
