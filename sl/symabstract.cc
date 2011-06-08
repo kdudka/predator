@@ -328,6 +328,10 @@ void abstractNonMatchingValues(
     if (!joinData(sh, dstAt, srcAt, bidir))
         CL_BREAK_IF("joinData() failed, failure of segDiscover()?");
 
+    if (bidir)
+        // already done as side-effect of joinData()
+        return;
+
     if (OK_DLS == sh.valTargetKind(dstAt))
         dlSegSyncPeerData(sh, dstAt);
 
@@ -425,8 +429,6 @@ void dlSegCreate(SymHeap &sh, TValId a1, TValId a2, BindingOff off) {
 
     // just created DLS is said to be 2+ as long as no OK_MAY_EXIST are involved
     dlSegSetMinLength(sh, a1, len);
-
-    dlSegSyncPeerData(sh, a1);
 }
 
 void dlSegGobble(SymHeap &sh, TValId dls, TValId var, bool backward) {

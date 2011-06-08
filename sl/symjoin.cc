@@ -2144,83 +2144,6 @@ bool joinDataReadOnly(
     return true;
 }
 
-struct JoinValueVisitor {
-    SymJoinCtx                  &ctx;
-    std::set<TObjId>            ignoreList;
-    const bool                  bidir;
-
-    JoinValueVisitor(SymJoinCtx &ctx_, bool bidir_):
-        ctx(ctx_),
-        bidir(bidir_)
-    {
-    }
-
-    TValId joinValues(const TValId oldDst, const TValId oldSrc) const {
-        // translate the roots into 'dst'
-        const TValId rootDst = ctx.sh1.valRoot(oldDst);
-        const TValId rootSrc = ctx.sh2.valRoot(oldSrc);
-        const TValId newRootDst = roMapLookup(ctx.valMap1[/* ltr */0], rootDst);
-        const TValId newRootSrc = roMapLookup(ctx.valMap2[/* ltr */0], rootSrc);
-
-        // translate the offsets into 'dst'
-        const TOffset offDst = ctx.sh1.valOffset(oldDst);
-        const TOffset offSrc = ctx.sh2.valOffset(oldSrc);
-        const TValId newDst = ctx.dst.valByOffset(newRootDst, offDst);
-        const TValId newSrc = ctx.dst.valByOffset(newRootSrc, offSrc);
-
-        if (newDst == newSrc)
-            // values are equal --> pick any
-            return newDst;
-
-        if (hasKey(ctx.protoRoots, newRootDst))
-            // asymmetric prototype match (src < dst)
-            return newDst;
-
-        if (hasKey(ctx.protoRoots, newRootSrc))
-            // asymmetric prototype match (dst < src)
-            return newSrc;
-#if 0
-        if (VAL_NULL == newSrc && VT_UNKNOWN == ctx.dst.valTarget(newDst))
-            return newDst;
-
-        if (VAL_NULL == newDst && VT_UNKNOWN == ctx.dst.valTarget(newSrc))
-            return newSrc;
-#endif
-        CL_ERROR("JoinValueVisitor failed to join values");
-        CL_BREAK_IF("JoinValueVisitor is not yet fully implemented");
-        return VAL_INVALID;
-    }
-
-    bool operator()(TObjId item[2]) const {
-        SymHeap &sh = ctx.dst;
-        const TObjId dst = item[0];
-        const TObjId src = item[1];
-        if (hasKey(this->ignoreList, dst))
-            return /* continue */ true;
-
-        const TValId oldDst = sh.valueOf(dst);
-        const TValId oldSrc = sh.valueOf(src);
-
-        const TValId valNew = this->joinValues(oldDst, oldSrc);
-        if (VAL_INVALID == valNew)
-            return /* continue */ true;
-
-        sh.objSetValue(dst, valNew);
-
-        if (collectJunk(sh, oldDst))
-            CL_DEBUG("    JoinValueVisitor drops a sub-heap (oldDst)");
-
-        if (!this->bidir)
-            return /* continue */ true;
-
-        sh.objSetValue(src, valNew);
-        if (collectJunk(sh, oldSrc))
-            CL_DEBUG("    JoinValueVisitor drops a sub-heap (oldSrc)");
-
-        return /* continue */ true;
-    }
-};
-
 void recoverPointersToSelf(
         SymHeap                 &sh,
         const TValId            dst,
@@ -2299,6 +2222,27 @@ void restorePrototypeLengths(SymJoinCtx &ctx) {
     }
 }
 
+void transferContentsOfGhost(
+        SymHeap                 &sh,
+        const TValId            dst,
+        const TValId            ghost)
+{
+    std::set<TObjId> ignoreList;
+    buildIgnoreList(ignoreList, sh, dst);
+
+    TObjList live;
+    sh.gatherLiveObjects(live, ghost);
+    BOOST_FOREACH(const TObjId objGhost, live) {
+        const TObjId objDst = translateObjId(sh, sh, dst, objGhost);
+        if (hasKey(ignoreList, objDst))
+            // preserve binding pointers
+            continue;
+
+        const TValId val = sh.valueOf(objGhost);
+        sh.objSetValue(objDst, val);
+    }
+}
+
 /// replacement of matchData() from symdiscover
 bool joinData(
         SymHeap                 &sh,
@@ -2331,12 +2275,9 @@ bool joinData(
     CL_BREAK_IF(ghost != roMapLookup(ctx.valMap2[0], src));
 
     // assign values within dst (and also in src if bidir == true)
-    JoinValueVisitor visitor(ctx, bidir);
-    buildIgnoreList(visitor.ignoreList, sh, dst);
-
-    // FIXME: this will break as soon as we switch to delayed objects creation
-    const TValId roots[] = { dst, src};
-    traverseLiveObjs<2>(sh, roots, visitor);
+    transferContentsOfGhost(ctx.dst, dst, ghost);
+    if (bidir)
+        transferContentsOfGhost(ctx.dst, src, ghost);
 
     // redirect some edges if necessary
     recoverPrototypes(ctx, dst, ghost, bidir);
