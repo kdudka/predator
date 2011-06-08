@@ -538,15 +538,8 @@ bool traverseSubObjs(
 
     // initialize visitor
     ObjJoinVisitor objVisitor(ctx);
-
-    // FIXME: this leads to a wrongly connected DLS
-#if 0
-    // black-list 'prev' pointer on the way from insertSegmentClone()
-    if (VAL_INVALID == root2)
-        dlSegBlackListPrevPtr(objVisitor.blackList1, ctx.sh1, root1);
-    if (VAL_INVALID == root1)
-        dlSegBlackListPrevPtr(objVisitor.blackList2, ctx.sh2, root2);
-#endif
+    dlSegBlackListPrevPtr(objVisitor.blackList1, ctx.sh1, root1);
+    dlSegBlackListPrevPtr(objVisitor.blackList2, ctx.sh2, root2);
 
     if (offBlackList) {
         buildIgnoreList(objVisitor.blackList1, ctx.sh1, root1, *offBlackList);
@@ -1138,11 +1131,9 @@ bool joinSegmentWithAny(
         return false;
     }
 
-    TValId valPrev1 /* needed to silence gcc with -O2 */ = VAL_INVALID;
-    TValId valPrev2 /* needed to silence gcc with -O2 */ = VAL_INVALID;
     if (haveDls) {
-        valPrev1 = valOfPtrAt(ctx.sh1, root1, off.prev);
-        valPrev2 = valOfPtrAt(ctx.sh2, root2, off.prev);
+        const TValId valPrev1 = valOfPtrAt(ctx.sh1, root1, off.prev);
+        const TValId valPrev2 = valOfPtrAt(ctx.sh2, root2, off.prev);
         if (!checkValueMapping(ctx, valPrev1, valPrev2,
                                /* allowUnknownMapping */ true))
         {
@@ -1157,7 +1148,7 @@ bool joinSegmentWithAny(
         return true;
 
     if (haveDls)
-        considerValSchedule(ctx, valPrev1, valPrev2, root1, root2);
+        *pResult = followRootValues(ctx, peer1, peer2, action);
 
     return true;
 }

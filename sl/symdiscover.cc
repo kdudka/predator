@@ -290,6 +290,9 @@ bool matchData(
             thr = 3;
             break;
     }
+#else
+    if (JS_THREE_WAY == status)
+        thr = 1;
 #endif
 
     if (pThreshold)
