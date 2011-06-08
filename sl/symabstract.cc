@@ -582,16 +582,77 @@ void segAbstractionStep(
     slSegAbstractionStep(sh, pCursor, off);
 }
 
+void adjustAbstractionThreshold(
+        AbstractionThreshold        *pThr,
+        SymHeap                     &sh,
+        const BindingOff            &off,
+        const TValId                entry,
+        const unsigned              lenTotal)
+{
+    TValId cursor = entry;
+
+    unsigned validPrefix = 0;
+    unsigned validSuffix = 0;
+    bool seenAbstract = false;
+
+    for (unsigned pos = 0; pos < lenTotal; ++pos) {
+        if (VT_ABSTRACT == sh.valTarget(cursor)) {
+            seenAbstract = true;
+            validSuffix = 0;
+        }
+        else
+            ++validSuffix;
+
+        if (!seenAbstract)
+            ++validPrefix;
+
+        if (OK_DLS == sh.valTargetKind(cursor))
+            cursor = dlSegPeer(sh, cursor);
+
+        cursor = nextRootObj(sh, cursor, off.next);
+    }
+
+    if (validPrefix < pThr->sparePrefix) {
+        CL_DEBUG("    adjustAbstractionThreshold() changes sparePrefix: "
+                << pThr->sparePrefix << " -> " << validPrefix);
+
+        pThr->sparePrefix = validPrefix;
+    }
+
+    if (seenAbstract && 1 < pThr->innerSegLen) {
+        CL_DEBUG("    adjustAbstractionThreshold() changes innerSegLen: "
+                << pThr->innerSegLen << " -> 1");
+
+        pThr->innerSegLen = 1;
+    }
+
+    if (validSuffix < pThr->spareSuffix) {
+        CL_DEBUG("    adjustAbstractionThreshold() changes spareSuffix: "
+                << pThr->spareSuffix << " -> " << validSuffix);
+
+        pThr->spareSuffix = validSuffix;
+    }
+}
+
 bool considerAbstraction(
         SymHeap                     &sh,
         const BindingOff            &off,
         const TValId                entry,
         const unsigned              lenTotal)
 {
-    const bool isSls = !isDlsBinding(off);
-    const AbstractionThreshold &thr = (isSls)
-        ? slsThreshold
-        : dlsThreshold;
+    AbstractionThreshold thr;
+    const char *name;
+
+    if (isDlsBinding(off)) {
+        thr = dlsThreshold;
+        name = "DLS";
+    }
+    else {
+        thr = slsThreshold;
+        name = "SLS";
+    }
+
+    adjustAbstractionThreshold(&thr, sh, off, entry, lenTotal);
 
     // check whether the threshold is satisfied or not
     const unsigned threshold = thr.innerSegLen
@@ -616,9 +677,6 @@ bool considerAbstraction(
     for (unsigned i = 0; i < thr.sparePrefix; ++i)
         cursor = nextRootObj(sh, cursor, off.next);
 
-    const char *name = (isSls)
-        ? "SLS"
-        : "DLS";
     CL_DEBUG("    AAA initiating " << name
              << " abstraction of length " << len);
 
