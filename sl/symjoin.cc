@@ -1086,6 +1086,30 @@ void considerValSchedule(
     SJ_DEBUG("+++ " << SJ_VALP(v1, v2) << " <- " << SJ_VALP(byVal1, byVal2));
 }
 
+bool segAlreadyJoined(
+        SymJoinCtx              &ctx,
+        const TValId            seg1,
+        const TValId            seg2,
+        const EJoinStatus       action)
+{
+    TValPair vp;
+
+    switch (action) {
+        case JS_USE_SH1:
+            vp = TValPair(seg1, VAL_INVALID);
+            break;
+
+        case JS_USE_SH2:
+            vp = TValPair(VAL_INVALID, seg2);
+            break;
+
+        default:
+            return false;
+    }
+
+    return hasKey(ctx.tieBreaking, vp);
+}
+
 bool joinSegmentWithAny(
         bool                    *pResult,
         SymJoinCtx              &ctx,
@@ -1093,7 +1117,13 @@ bool joinSegmentWithAny(
         TValId                  root2,
         const EJoinStatus       action)
 {
-    SJ_DEBUG(">>> joinSegmentWithAny" << SJ_OBJP(root1, root2));
+    if (segAlreadyJoined(ctx, root1, root2, action)) {
+        // already joined
+        *pResult = true;
+        return true;
+    }
+
+    SJ_DEBUG(">>> joinSegmentWithAny" << SJ_VALP(root1, root2));
     const bool isDls1 = (OK_DLS == ctx.sh1.valTargetKind(root1));
     const bool isDls2 = (OK_DLS == ctx.sh2.valTargetKind(root2));
 
@@ -1106,14 +1136,14 @@ bool joinSegmentWithAny(
         peer2 = dlSegPeer(ctx.sh2, root2);
 
     if (!followRootValues(ctx, root1, root2, action, /* read-only */ true)) {
-        SJ_DEBUG("<<< joinSegmentWithAny" << SJ_OBJP(root1, root2));
+        SJ_DEBUG("<<< joinSegmentWithAny" << SJ_VALP(root1, root2));
         return false;
     }
 
     const bool haveDls = (isDls1 || isDls2);
     if (haveDls && !followRootValues(ctx, peer1, peer2, action, /* ro */ true))
     {
-        SJ_DEBUG("<<< joinSegmentWithAny" << SJ_OBJP(peer1, peer2));
+        SJ_DEBUG("<<< joinSegmentWithAny" << SJ_VALP(peer1, peer2));
         return false;
     }
 
@@ -1127,7 +1157,7 @@ bool joinSegmentWithAny(
     if (!checkValueMapping(ctx, valNext1, valNext2,
                            /* allowUnknownMapping */ true))
     {
-        SJ_DEBUG("<<< joinSegmentWithAny" << SJ_OBJP(root1, root2));
+        SJ_DEBUG("<<< joinSegmentWithAny" << SJ_VALP(root1, root2));
         return false;
     }
 
@@ -1137,17 +1167,17 @@ bool joinSegmentWithAny(
         if (!checkValueMapping(ctx, valPrev1, valPrev2,
                                /* allowUnknownMapping */ true))
         {
-            SJ_DEBUG("<<< joinSegmentWithAny" << SJ_OBJP(root1, root2));
+            SJ_DEBUG("<<< joinSegmentWithAny" << SJ_VALP(root1, root2));
             return false;
         }
     }
 
     // go ahead, try it read-write!
     *pResult = followRootValues(ctx, root1, root2, action);
-    if (!*pResult)
+    if (!haveDls || !*pResult)
         return true;
 
-    if (haveDls)
+    if (!segAlreadyJoined(ctx, peer1, peer2, action))
         *pResult = followRootValues(ctx, peer1, peer2, action);
 
     return true;
