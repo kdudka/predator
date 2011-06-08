@@ -1138,15 +1138,27 @@ bool joinSegmentWithAny(
         return false;
     }
 
+    TValId valPrev1 /* needed to silence gcc with -O2 */ = VAL_INVALID;
+    TValId valPrev2 /* needed to silence gcc with -O2 */ = VAL_INVALID;
+    if (haveDls) {
+        valPrev1 = valOfPtrAt(ctx.sh1, root1, off.prev);
+        valPrev2 = valOfPtrAt(ctx.sh2, root2, off.prev);
+        if (!checkValueMapping(ctx, valPrev1, valPrev2,
+                               /* allowUnknownMapping */ true))
+        {
+            SJ_DEBUG("<<< joinSegmentWithAny" << SJ_OBJP(root1, root2));
+            return false;
+        }
+    }
+
     // go ahead, try it read-write!
     *pResult = followRootValues(ctx, root1, root2, action);
     if (!*pResult)
         return true;
 
-    if (!haveDls)
-        return true;
+    if (haveDls)
+        considerValSchedule(ctx, valPrev1, valPrev2, root1, root2);
 
-    *pResult = followRootValues(ctx, peer1, peer2, action);
     return true;
 }
 
@@ -1251,8 +1263,11 @@ bool insertSegmentClone(
     // resolve the existing segment in shGt
     SymHeap &shGt = ((isGt1) ? ctx.sh1 : ctx.sh2);
     const TValId seg = shGt.valRoot((isGt1) ? v1 : v2);
+    const bool isDls = (OK_DLS == shGt.valTargetKind(seg));
+    CL_BREAK_IF(off && isDls);
+
     TValId peer = seg;
-    if (OK_DLS == shGt.valTargetKind(seg))
+    if (isDls)
         peer = dlSegPeer(shGt, seg);
 
     // resolve the 'next' pointer and check its validity
@@ -1272,7 +1287,9 @@ bool insertSegmentClone(
         return false;
     }
 
-    const TValMapBidir &valMapGt = (isGt1) ? ctx.valMap1 : ctx.valMap2;
+    const TValMapBidir &valMapGt = (isGt1)
+        ? ctx.valMap1
+        : ctx.valMap2;
 
     TValPair vp;
     scheduleSegAddr(ctx.wl, seg, peer, action);
@@ -1311,7 +1328,7 @@ bool insertSegmentClone(
         return true;
     }
 
-    // schedule the next object in the row
+    // schedule the next object in the row (TODO: check if really necessary)
     const TValId valNext1 = (isGt1) ? nextGt : nextLt;
     const TValId valNext2 = (isGt2) ? nextGt : nextLt;
     considerValSchedule(ctx, valNext1, valNext2, VAL_INVALID, VAL_INVALID);
@@ -1434,8 +1451,11 @@ bool mayExistFallback(
     const bool use2 = (JS_USE_SH2 == action);
     CL_BREAK_IF(use1 == use2);
 
-    const bool hasMapping1 = hasKey(ctx.valMap1[0], ctx.sh1.valRoot(v1));
-    const bool hasMapping2 = hasKey(ctx.valMap2[0], ctx.sh2.valRoot(v2));
+    const TValId root1 = ctx.sh1.valRoot(v1);
+    const TValId root2 = ctx.sh2.valRoot(v2);
+
+    const bool hasMapping1 = hasKey(ctx.valMap1[0], root1);
+    const bool hasMapping2 = hasKey(ctx.valMap2[0], root2);
     if ((hasMapping1 != hasMapping2) && (hasMapping1 == use1))
         // try it the other way around
         return false;
@@ -1446,7 +1466,7 @@ bool mayExistFallback(
         // no valid target
         return false;
 
-    const TValId valRoot = sh.valRoot(val);
+    const TValId valRoot = (use1) ? root1 : root2;
     if (!isComposite(sh.valLastKnownTypeOfTarget(valRoot)))
         // target is not a composite type (TODO: relax our requirements?)
         return false;
@@ -1460,12 +1480,6 @@ bool mayExistFallback(
     if (traverseLivePtrs(sh, valRoot, visitor))
         // no match
         return false;
-
-    // dig head
-    if (sh.valRoot(val) != valRoot) {
-        CL_BREAK_IF("MayExistVisitor malfunction");
-        return false;
-    }
 
     // mayExistFallback() always implies JS_THREE_WAY
     if (!updateJoinStatus(ctx, JS_THREE_WAY))
