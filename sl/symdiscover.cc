@@ -322,21 +322,6 @@ bool slSegAvoidSelfCycle(
     return haveSeg(sh, next2, seg1, OK_SLS);
 }
 
-bool segOnPath(
-        SymHeap                     &sh,
-        const TValId                entry,
-        TValList                    path)
-{
-    path.push_back(entry);
-    BOOST_FOREACH(const TValId root, path)
-        if (isAbstract(sh.valTarget(root)))
-            // abstract object
-            return true;
-
-    // not found
-    return false;
-}
-
 void dlSegAvoidSelfCycle(
         SymHeap                     &sh,
         const BindingOff            &off,
@@ -457,10 +442,6 @@ unsigned /* len */ segDiscover(
 #endif
 
 #if !SE_PREFER_LOSSLESS_PROTOTYPES
-    if (segOnPath(sh, entry, path))
-        // an abstract object already appears on the path
-        maxThreshold = 0;
-
     if (/* XXX */ 1 < len)
         // path already too long
         maxThreshold = 0;
