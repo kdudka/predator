@@ -1647,6 +1647,10 @@ bool joinValuesByCode(
 }
 
 bool joinValuePair(SymJoinCtx &ctx, const TValId v1, const TValId v2) {
+    if (checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ false))
+        // already joined
+        return true;
+
     bool result;
     if (joinValuesByCode(&result, ctx, v1, v2))
         return result;
