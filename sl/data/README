@@ -170,6 +170,8 @@ Higher level SLS/DLS abstraction, etc.
 
     test-0130.c - alternation of test-0128 with DLLs instead of SLLs
 
+    test-0157.c - alternation of test-0124, all functions are manually unfolded
+                - contributed by Tomas Vojnar
 
 Linux lists
 ===========
