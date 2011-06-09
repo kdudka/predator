@@ -1573,31 +1573,30 @@ bool mayExistFallback(
     return result;
 }
 
+EValueOrigin joinOrigin(const EValueOrigin vo1, const EValueOrigin vo2) {
+    if (vo1 == vo2)
+        // use any
+        return vo2;
+
+    if (VO_DEREF_FAILED == vo1 || VO_DEREF_FAILED == vo2)
+        // keep the error recovery as cheap as possible
+        return VO_DEREF_FAILED;
+
+    // safe over-approximation
+    return VO_UNKNOWN;
+}
+
 bool joinValuesByCode(
         bool                   *pResult,
         SymJoinCtx             &ctx,
         const TValId            v1,
         const TValId            v2)
 {
-    CL_BREAK_IF(VAL_NULL == v1 && VAL_NULL == v2);
-    const bool haveNull = (VAL_NULL == v1 || VAL_NULL == v2);
-
-    // classify their origin
-    const EValueOrigin vo1 = ctx.sh1.valOrigin(v1);
-    const EValueOrigin vo2 = ctx.sh2.valOrigin(v2);
-
-    const bool err1 = (VO_DEREF_FAILED == vo1);
-    const bool err2 = (VO_DEREF_FAILED == vo2);
-    if (err1 || err2) {
-        *pResult = (err1 && err2);
-        return true;
-    }
-
-    // classify their targets
+    // classify the targets
     const EValueTarget code1 = ctx.sh1.valTarget(v1);
     const EValueTarget code2 = ctx.sh2.valTarget(v2);
-    const bool haveUnknown = (VT_UNKNOWN == code1 || VT_UNKNOWN == code2);
 
+    // check for VT_DELETED/VT_LOST
     const bool gone1 = isGone(code1);
     const bool gone2 = isGone(code2);
     if (gone1 || gone2) {
@@ -1615,41 +1614,29 @@ bool joinValuesByCode(
         return true;
     }
 
-    // check for uninitialized values
-    const bool isUninit1 = isUninitialized(vo1);
-    const bool isUninit2 = isUninitialized(vo2);
-    if (isUninit1 && isUninit2) {
-        // we cannot be too much precise, but we should still be deterministic
-        const EValueOrigin vo = std::min(vo1, vo2);
-        const TValId vDst = ctx.dst.valCreate(VT_UNKNOWN, vo);
-        *pResult = handleUnknownValues(ctx, v1, v2, vDst);
-        return true;
-    }
-
-    if ((isUninit1 || isUninit2) && (haveNull || !haveUnknown
-            || isPossibleToDeref(code1)
-            || isPossibleToDeref(code2)))
-    {
-        // an uninitialized value vs. something incompatible
-        *pResult = false;
-        return true;
-    }
-
-    if (!haveUnknown)
+    // check for VT_UNKNOWN
+    const bool isUnknown1 = (VT_UNKNOWN == code1);
+    const bool isUnknown2 = (VT_UNKNOWN == code2);
+    if (!isUnknown1 && !isUnknown2)
         // nothing to join here
         return false;
 
+    // join the origin
+    const EValueOrigin vo1 = ctx.sh1.valOrigin(v1);
+    const EValueOrigin vo2 = ctx.sh2.valOrigin(v2);
+    const EValueOrigin origin = joinOrigin(vo1, vo2);
+
     // create a new unknown value in ctx.dst
-    const EValueOrigin vo = (vo1 == vo2) ? vo1 : VO_UNKNOWN;
-    const TValId vDst = ctx.dst.valCreate(VT_UNKNOWN, vo);
+    const TValId vDst = ctx.dst.valCreate(VT_UNKNOWN, origin);
     *pResult = handleUnknownValues(ctx, v1, v2, vDst);
 
     // we have to use the heap where the unknown value occurs
-    if (VT_UNKNOWN != code2)
+    if (!isUnknown2)
         return updateJoinStatus(ctx, JS_USE_SH1);
-    else if (VT_UNKNOWN != code1)
+    else if (!isUnknown1)
         return updateJoinStatus(ctx, JS_USE_SH2);
     else
+        // use any
         return true;
 }
 
