@@ -655,6 +655,63 @@ bool joinObjKind(
     }
 }
 
+bool joinSegBindingOfMayExist(
+        bool                    *pResult,
+        BindingOff              *pOff,
+        const SymJoinCtx        &ctx,
+        const TValId            seg1,
+        const TValId            seg2)
+{
+    const bool isMayExist1 = (OK_MAY_EXIST == ctx.sh1.valTargetKind(seg1));
+    const bool isMayExist2 = (OK_MAY_EXIST == ctx.sh2.valTargetKind(seg2));
+    if (!isMayExist1 && !isMayExist2)
+        // no OK_MAY_EXIST involved
+        return false;
+
+    const BindingOff off1 = ctx.sh1.segBinding(seg1);
+    const BindingOff off2 = ctx.sh2.segBinding(seg2);
+    if (off1.head != off2.head) {
+        // head mismatch
+        *pResult = false;
+        return true;
+    }
+
+    *pOff = (isMayExist2) ? off1 : off2;
+
+    const TOffset offNext1 = off1.next;
+    const TOffset offNext2 = off2.next;
+    if (offNext1 == offNext2) {
+        // the 'next' offset matches trivially
+        *pResult = true;
+        return true;
+    }
+
+    // NOTE: test-0129 utilizes this code path
+
+    if (isMayExist1) {
+        const TValId valNextBy1 = valOfPtrAt(ctx.sh1, seg1, offNext1);
+        const TValId valNextBy2 = valOfPtrAt(ctx.sh1, seg1, offNext2);
+        if (valNextBy1 == valNextBy2)
+            goto match;
+    }
+
+    if (isMayExist2) {
+        const TValId valNextBy1 = valOfPtrAt(ctx.sh2, seg2, offNext1);
+        const TValId valNextBy2 = valOfPtrAt(ctx.sh2, seg2, offNext2);
+        if (valNextBy1 == valNextBy2)
+            goto match;
+    }
+
+    // giving up
+    *pResult = false;
+    return true;
+
+match:
+    SJ_DEBUG("non-trivial match of 'next' offset of OK_MAY_EXIST");
+    *pResult = true;
+    return true;
+}
+
 bool joinSegBinding(
         BindingOff              *pOff,
         const SymJoinCtx        &ctx,
@@ -668,19 +725,17 @@ bool joinSegBinding(
         return true;
 
     if (isSeg1 && isSeg2) {
-        BindingOff off1 = ctx.sh1.segBinding(v1);
-        BindingOff off2 = ctx.sh2.segBinding(v2);
-
-        // there is no 'prev' pointer in OK_MAY_EXIST, ignore its offset
-        if (OK_MAY_EXIST == ctx.sh1.valTargetKind(v1))
-            off1.prev = off2.prev;
-        if (OK_MAY_EXIST == ctx.sh2.valTargetKind(v2))
-            off2.prev = off1.prev;
-
-        if (off1 == off2) {
-            *pOff = off2;
-            return true;
+        bool result;
+        if (!joinSegBindingOfMayExist(&result, pOff, ctx, v1, v2)) {
+            // just compare the binding offsets
+            const BindingOff off1 = ctx.sh1.segBinding(v1);
+            const BindingOff off2 = ctx.sh2.segBinding(v2);
+            if ((result = (off1 == off2)))
+                *pOff = off1;
         }
+
+        if (result)
+            return true;
 
         SJ_DEBUG("<-- segment binding mismatch " << SJ_VALP(v1, v2));
         return false;
