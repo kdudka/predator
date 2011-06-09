@@ -460,6 +460,10 @@ unsigned /* len */ segDiscover(
     if (segOnPath(sh, entry, path))
         // an abstract object already appears on the path
         maxThreshold = 0;
+
+    if (/* XXX */ 1 < len)
+        // path already too long
+        maxThreshold = 0;
 #endif
 
     return std::max(0, len - maxThreshold);
