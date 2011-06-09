@@ -1272,10 +1272,6 @@ bool insertSegmentClone(
         const BindingOff        *off = 0)
 {
     SJ_DEBUG(">>> insertSegmentClone" << SJ_VALP(v1, v2));
-    if (!ctx.joiningData())
-        // on the way from joinSymHeaps(), insertSegmentClone() based three way
-        // joins are destructive
-        ctx.allowThreeWay = false;
 
     const bool isGt1 = (JS_USE_SH1 == action);
     const bool isGt2 = (JS_USE_SH2 == action);
@@ -1307,6 +1303,10 @@ bool insertSegmentClone(
                  "(nextLt = #" << nextLt << ", nextGt = #" << nextGt << ")");
         return false;
     }
+
+    if (off && !ctx.joiningData())
+        // on the way from joinSymHeaps(), some three way joins are destructive
+        ctx.allowThreeWay = false;
 
     const TValMapBidir &valMapGt = (isGt1)
         ? ctx.valMap1
