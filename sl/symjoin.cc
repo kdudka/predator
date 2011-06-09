@@ -2268,8 +2268,12 @@ void transferContentsOfGhost(
             // preserve binding pointers
             continue;
 
-        const TValId val = sh.valueOf(objGhost);
-        sh.objSetValue(objDst, val);
+        const TValId valOld = sh.valueOf(objDst);
+        const TValId valNew = sh.valueOf(objGhost);
+        sh.objSetValue(objDst, valNew);
+
+        if (collectJunk(sh, valOld))
+            CL_DEBUG("    transferContentsOfGhost() drops a sub-heap (valOld)");
     }
 }
 
