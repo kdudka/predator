@@ -1643,7 +1643,14 @@ bool joinValuesByCode(
     const EValueOrigin vo = (vo1 == vo2) ? vo1 : VO_UNKNOWN;
     const TValId vDst = ctx.dst.valCreate(VT_UNKNOWN, vo);
     *pResult = handleUnknownValues(ctx, v1, v2, vDst);
-    return true;
+
+    // we have to use the heap where the unknown value occurs
+    if (VT_UNKNOWN != code2)
+        return updateJoinStatus(ctx, JS_USE_SH1);
+    else if (VT_UNKNOWN != code1)
+        return updateJoinStatus(ctx, JS_USE_SH2);
+    else
+        return true;
 }
 
 bool joinValuePair(SymJoinCtx &ctx, const TValId v1, const TValId v2) {
