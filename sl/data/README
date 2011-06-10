@@ -391,6 +391,11 @@ Tests taken from Forester
     test-0505.c - reversion of a NULL-terminated DLL
                 - originally taken from fa/data/dll-rev.c
 
+    test-0506.c - NULL-terminated SLL of length equal to 2n
+                - not supported by Predator since it breaks the SLS abstraction
+                - luckily, this one is kinda theoretical
+                - originally taken from fa/data/listeven.c
+
 
 "Hello world!" like examples
 ============================
