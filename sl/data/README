@@ -424,7 +424,6 @@ Tests taken from Forester
                 - originally taken from fa/data/sll-mergesort.c
 
     test-0514.c - tiny simplification of test-0513 for Predator
-                - this one used to work prior to commit 4b5db4b
 
     test-0515.c - reversion of a NULL-terminated SLL
                 - originally taken from fa/data/sll-rev.c

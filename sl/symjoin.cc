@@ -1626,6 +1626,16 @@ bool joinValuesByCode(
     const EValueOrigin vo2 = ctx.sh2.valOrigin(v2);
     const EValueOrigin origin = joinOrigin(vo1, vo2);
 
+    // do not join VT_UNKNOWN with a valid pointer
+    if (VO_DEREF_FAILED != origin) {
+        const bool haveTarget1 = isPossibleToDeref(code1);
+        const bool haveTarget2 = isPossibleToDeref(code2);
+        if (haveTarget1 || haveTarget2) {
+            *pResult = false;
+            return true;
+        }
+    }
+
     // create a new unknown value in ctx.dst
     const TValId vDst = ctx.dst.valCreate(VT_UNKNOWN, origin);
     *pResult = handleUnknownValues(ctx, v1, v2, vDst);
