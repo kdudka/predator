@@ -438,6 +438,9 @@ Tests taken from Forester
     test-0518.c - test-0098 once simplified for Forester
                 - originally taken from fa/data/test-0098.c
 
+    test-0519.c - test-0113 once simplified for Forester
+                - originally taken from fa/data/test-0113.c
+
 
 "Hello world!" like examples
 ============================
