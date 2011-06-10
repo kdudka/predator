@@ -469,13 +469,54 @@ void plotInnerObjects(PlotData &plot, const TValId at, const TObjList &liveObjs)
     }
 }
 
+std::string labelOfCompObj(const SymHeap &sh, const TValId root) {
+    std::string label;
+    if (sh.valTargetIsProto(root))
+        label = "[prototype] ";
+
+    const EObjKind kind = sh.valTargetKind(root);
+    switch (kind) {
+        case OK_CONCRETE:
+            return label;
+
+        case OK_MAY_EXIST:
+            label += "0..1";
+            return label;
+
+        case OK_SLS:
+            label += "SLS";
+            break;
+
+        case OK_DLS:
+            label += "DLS";
+            break;
+    }
+
+    const unsigned len = segMinLength(sh, root);
+    switch (len) {
+        case 0:
+            label += " 0+";
+            break;
+
+        case 1:
+            label += " 1+";
+            break;
+
+        case 2:
+            CL_BREAK_IF(OK_DLS != kind);
+            label += " 2+";
+            break;
+
+        default:
+            CL_BREAK_IF("segMinLength() returned something special");
+    }
+
+    return label;
+}
+
 void plotCompositeObj(PlotData &plot, const TValId at, const TObjList &liveObjs)
 {
     SymHeap &sh = plot.sh;
-
-    std::string label;
-    if (sh.valTargetIsProto(at))
-        label = "[prototype] ";
 
     const char *color = "black";
     const char *pw = "1.0";
@@ -502,23 +543,22 @@ void plotCompositeObj(PlotData &plot, const TValId at, const TObjList &liveObjs)
             break;
 
         case OK_MAY_EXIST:
-            label += "MAY_EXIST";
             color = "green";
             pw = "3.0";
             break;
 
         case OK_SLS:
-            label += "SLS";
             color = "red";
             pw = "3.0";
             break;
 
         case OK_DLS:
-            label += "DLS/2";
             color = "gold";
             pw = "3.0";
             break;
     }
+
+    const std::string label = labelOfCompObj(sh, at);
 
     // open cluster
     plot.out
@@ -541,9 +581,8 @@ void plotCompositeObj(PlotData &plot, const TValId at, const TObjList &liveObjs)
 
 void plotDlSeg(PlotData &plot, const TValId seg, const TObjList &liveObjs) {
     SymHeap &sh = plot.sh;
-    const char *label = (sh.valTargetIsProto(seg))
-        ? "[prototype] DLS"
-        : "DLS";
+
+    const std::string label = labelOfCompObj(sh, seg);
 
     // open a cluster for the DLS pair
     plot.out
