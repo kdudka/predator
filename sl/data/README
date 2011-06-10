@@ -412,6 +412,9 @@ Tests taken from Forester
                 - each node of the SLL contains a pointer to head
                 - originally taken from fa/data/sll-headptr.c
 
+    test-0511.c - Insert-Sort operating on NULL-terminated SLL
+                - originally taken from fa/data/sll-insertsort.c
+
 
 "Hello world!" like examples
 ============================
