@@ -151,16 +151,16 @@ struct IHeapEntity {
 };
 
 struct HeapObject: public IHeapEntity {
-    TValId                      value;
     TValId                      root;
     TOffset                     off;
     TObjType                    clt;
+    TValId                      value;
 
-    HeapObject():
-        value(VAL_INVALID),
-        root(VAL_INVALID),
-        off(0),
-        clt(0)
+    HeapObject(TValId root_, TOffset off_, TObjType clt_):
+        root(root_),
+        off(off_),
+        clt(clt_),
+        value(VAL_INVALID)
     {
     }
 
@@ -321,7 +321,7 @@ struct SymHeapCore::Private {
     TValId valCreate(EValueTarget code, EValueOrigin origin);
     TValId valDup(TValId);
 
-    TObjId objCreate();
+    TObjId objCreate(TValId root, TOffset off, TObjType clt);
     TValId dupRoot(TValId root);
     void destroyRoot(TValId obj);
 
@@ -432,9 +432,10 @@ void SymHeapCore::Private::setValueOf(TObjId obj, TValId val) {
     rootData->usedByGl.insert(obj);
 }
 
-TObjId SymHeapCore::Private::objCreate() {
+TObjId SymHeapCore::Private::objCreate(TValId root, TOffset off, TObjType clt) {
     // acquire object ID
-    this->ents.push_back(new HeapObject);
+    HeapObject *objData = new HeapObject(root, off, clt);
+    this->ents.push_back(objData);
     return this->lastId<TObjId>();
 }
 
@@ -685,23 +686,15 @@ TValId SymHeapCore::Private::dupRoot(TValId rootAt) {
         const HeapObject *objDataSrc = this->objData(/* src */ item.first);
 
         // duplicate a single object
-        const TObjId dst = this->objCreate();
+        const TOffset off = objDataSrc->off;
+        const TObjType clt = objDataSrc->clt;
+        const TObjId dst = this->objCreate(imageAt, off, clt);
         this->setValueOf(dst, objDataSrc->value);
-
-        // copy the metadata
-        HeapObject *objDataDst = this->objData(dst);
-        objDataDst->off = objDataSrc->off;
-        objDataDst->clt = objDataSrc->clt;
 
         // prevserve live ptr/data object
         rootDataDst->liveObjs[dst] = /* isPtr */ item.second;
 
-        // recover root
-        objDataDst->root = imageAt;
-
         // recover grid
-        const TOffset off = objDataDst->off;
-        const TObjType clt = objDataDst->clt;
         TGrid &grid = rootDataDst->grid;
         grid[off][clt] = dst;
     }
@@ -1144,11 +1137,7 @@ bool SymHeapCore::Private::lazyCreatePtr(
         return false;
 
     // create a new pointer
-    const TObjId obj = this->objCreate();
-    HeapObject *objData = this->objData(obj);
-    objData->root = root;
-    objData->off  = off;
-    objData->clt  = clt;
+    const TObjId obj = this->objCreate(root, off, clt);
     if (!cltRoot)
         rootData->lastKnownClt = clt;
 
@@ -1233,11 +1222,7 @@ TObjId SymHeapCore::objAt(TValId at, TObjCode code) {
         // TODO
         return OBJ_UNKNOWN;
 
-    const TObjId obj = d->objCreate();
-    HeapObject *objData = d->objData(obj);
-    objData->root = root;
-    objData->clt  = clt;
-
+    const TObjId obj = d->objCreate(root, off, clt);
     row->operator[](clt) = obj;
     return obj;
 }
@@ -1292,12 +1277,7 @@ TObjId SymHeapCore::objAt(TValId at, TObjType clt) {
     if (!guideCltFinder(cltRoot, off, pred))
         CL_WARN("check for overlapping objects not implemented yet!");
 
-    const TObjId obj = d->objCreate();
-    HeapObject *objData = d->objData(obj);
-    objData->root = root;
-    objData->off  = off;
-    objData->clt  = clt;
-
+    const TObjId obj = d->objCreate(root, off, clt);
     row->operator[](clt) = obj;
     return obj;
 }
