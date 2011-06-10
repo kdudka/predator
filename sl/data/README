@@ -388,6 +388,9 @@ Tests taken from Forester
                 - each node contains a nested (possibly empty) cyclic DLL
                 - originally taken from fa/data/dll-listofclists.c
 
+    test-0505.c - reversion of a NULL-terminated DLL
+                - originally taken from fa/data/dll-rev.c
+
 
 "Hello world!" like examples
 ============================
