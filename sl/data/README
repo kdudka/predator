@@ -378,6 +378,9 @@ Tests taken from Forester
     test-0501.c - random node insertion into a NULL-terminated DLL
                 - originally taken from fa/data/dll-insert.c
 
+    test-0502.c - Insert-Sort operating on NULL-terminated DLL
+                - originally taken from fa/data/dll-insertsort.c
+
 
 "Hello world!" like examples
 ============================
