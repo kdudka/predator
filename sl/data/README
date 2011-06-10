@@ -415,6 +415,10 @@ Tests taken from Forester
     test-0511.c - Insert-Sort operating on NULL-terminated SLL
                 - originally taken from fa/data/sll-insertsort.c
 
+    test-0512.c - NULL-terminated SLL at the top level
+                - each node contains a nested (possibly empty) cyclic SLL
+                - originally taken from fa/data/sll-listofclists.c
+
 
 "Hello world!" like examples
 ============================
