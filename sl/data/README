@@ -405,6 +405,9 @@ Tests taken from Forester
                 - works fine with SE_EARLY_VARS_DESTRUCTION == 0
                 - originally taken from fa/data/sll-bubblesort.c
 
+    test-0509.c - random node deletion from a NULL-terminated SLL
+                - originally taken from fa/data/sll-delete.c
+
 
 "Hello world!" like examples
 ============================
