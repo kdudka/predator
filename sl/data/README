@@ -400,6 +400,11 @@ Tests taken from Forester
                 - Predator reports junk unless compiled with SE_DEFER_SLS_INTRO
                 - originally taken from fa/data/listref.c
 
+    test-0508.c - Bubble-Sort operating on NULL-terminated SLL
+                - Predator reports an artificial NULL dereference
+                - works fine with SE_EARLY_VARS_DESTRUCTION == 0
+                - originally taken from fa/data/sll-bubblesort.c
+
 
 "Hello world!" like examples
 ============================
