@@ -173,6 +173,7 @@ Higher level SLS/DLS abstraction, etc.
     test-0157.c - alternation of test-0124, all functions are manually unfolded
                 - contributed by Tomas Vojnar
 
+
 Linux lists
 ===========
     test-0073.c - playing with some macros from <linux/list.h>
@@ -367,6 +368,14 @@ Call cache
                 - with symcut enabled, we have even more cache hits!
 
 
+Tests taken from Forester
+=========================
+- originally written by Jiri Simacek
+
+    test-0500.c - cyclic DLL containing no useful data
+                - originally taken from fa/data/cdll.c
+
+
 "Hello world!" like examples
 ============================
     test-0002.c - invalid dereference
@@ -546,6 +555,7 @@ Call cache
     test-0147.c - test-0090.c reduced to a minimal example while debugging a bug
 
     test-0154.c - error-free variant of test-0033 
+
 
 Tiny DLL library written on scratch
 ===================================
