@@ -1,0 +1,11 @@
+test-0520.c:19:15: error: dereference of NULL value
+test-0520.c:20:15: error: dereference of NULL value
+test-0520.c:27:19: error: dereference of NULL value
+test-0520.c:27:19: warning: killing junk
+test-0520.c:47:19: error: dereference of NULL value
+test-0520.c:47:19: warning: killing junk
+test-0520.c:48:13: error: dereference of NULL value
+test-0520.c:47:19: error: dereference of NULL value
+test-0520.c:47:19: warning: killing junk
+test-0520.c:48:13: error: dereference of NULL value
+test-0520.c:47:19: warning: killing junk
