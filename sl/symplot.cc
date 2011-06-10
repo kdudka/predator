@@ -142,7 +142,7 @@ void digValues(PlotData &plot, const TValList &startingPoints) {
 
         // traverse the root
         TObjList liveObjs;
-        sh.gatherLiveObjects(liveObjs, val);
+        sh.gatherLiveObjects(liveObjs, root);
         BOOST_FOREACH(const TObjId obj, liveObjs) {
             const TValId valInside = sh.valueOf(obj);
             if (0 < valInside)
