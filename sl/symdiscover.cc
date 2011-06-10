@@ -436,15 +436,15 @@ unsigned /* len */ segDiscover(
         // avoid creating self-cycle of two SLS segments
         --len;
 
-#if SE_DEFER_SLS_INTRO
-    if (!isDlsBinding(off))
-        maxThreshold += (SE_DEFER_SLS_INTRO);
-#endif
-
 #if !SE_PREFER_LOSSLESS_PROTOTYPES
     if (/* XXX */ 1 < len)
         // path already too long
         maxThreshold = 0;
+#endif
+
+#if SE_DEFER_SLS_INTRO
+    if (!isDlsBinding(off))
+        maxThreshold += (SE_DEFER_SLS_INTRO);
 #endif
 
     return std::max(0, len - maxThreshold);

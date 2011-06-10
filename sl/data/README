@@ -402,7 +402,7 @@ Tests taken from Forester
 
     test-0508.c - Bubble-Sort operating on NULL-terminated SLL
                 - Predator reports an artificial NULL dereference
-                - works fine with SE_EARLY_VARS_DESTRUCTION == 0
+                - works if Predator is compiled with with SE_DEFER_SLS_INTRO
                 - originally taken from fa/data/sll-bubblesort.c
 
     test-0509.c - random node deletion from a NULL-terminated SLL
@@ -421,6 +421,7 @@ Tests taken from Forester
 
     test-0513.c - Merge-Sort operating on two-level SLL
                 - Predator reports artificial errors in default configuration
+                - works if Predator is compiled with with SE_DEFER_SLS_INTRO
                 - originally taken from fa/data/sll-mergesort.c
 
     test-0514.c - tiny simplification of test-0513 for Predator
