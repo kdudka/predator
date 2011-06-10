@@ -36,6 +36,7 @@
 #include <map>
 #include <set>
 
+#include <boost/icl/interval_map.hpp>
 #include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
 
@@ -45,6 +46,8 @@
 #else
 #   define DCAST dynamic_cast
 #endif
+
+namespace icl = boost::icl;
 
 template <class TCont> typename TCont::value_type::second_type&
 assignInvalidIfNotFound(
@@ -142,6 +145,7 @@ typedef std::set<TObjId>                                TUsedBy;
 typedef std::map<TOffset, TValId>                       TOffMap;
 typedef std::map<TObjType, TObjId>                      TObjByType;
 typedef std::map<TOffset, TObjByType>                   TGrid;
+typedef icl::interval_map<unsigned, TObjId>             TArena;
 typedef std::map<TObjId, bool /* isPtr */>              TLiveObjs;
 typedef std::map<int, TValId>                           TCValueMap;
 
@@ -244,6 +248,7 @@ struct RootValue: public BaseValue {
     TLiveObjs                       liveObjs;
     TUsedBy                         usedByGl;
     TGrid                           grid;
+    TArena                          arena;
 
     RootValue(EValueTarget code_, EValueOrigin origin_):
         BaseValue(code_, origin_),
@@ -1463,6 +1468,7 @@ void SymHeapCore::Private::destroyRoot(TValId root) {
     rootData->lastKnownClt = 0;
     rootData->liveObjs.clear();
     rootData->grid.clear();
+    rootData->arena.clear();
 }
 
 TValId SymHeapCore::valCreate(EValueTarget code, EValueOrigin origin) {

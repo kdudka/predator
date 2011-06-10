@@ -132,7 +132,7 @@ build_gcc: $(GCC_SRC)
 		fi
 	cd $(GCC_BUILD) && $(MAKE)
 	cd $(GCC_BUILD) && $(MAKE) -j1 install
-	$(MAKE) include/gcc
+	$(MAKE) include/gcc/
 
 # updated SVN working directory of gcc
 update_gcc_src_only:
@@ -158,7 +158,7 @@ build_gcc_svn:
 	$(SVN) co svn://gcc.gnu.org/svn/gcc/trunk $(GCC_SRC)
 	$(MAKE) build_gcc
 
-include/gcc: gcc-install/lib/gcc
+include/gcc/: gcc-install/lib/gcc
 	cd include && ln -fsvT ../gcc-install/lib/gcc/`ls ../gcc-install/lib/gcc/`/4.[56]*/plugin/include gcc
 
 ChangeLog:
