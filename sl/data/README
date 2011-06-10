@@ -444,6 +444,9 @@ Tests taken from Forester
     test-0520.c - test-0128 once simplified for Forester
                 - originally taken from fa/data/test-0128.c
 
+    test-0521.c - test-0157 once simplified for Forester
+                - originally taken from fa/data/test-0124.inline.c
+
 
 "Hello world!" like examples
 ============================
