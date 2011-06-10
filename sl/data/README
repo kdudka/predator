@@ -375,6 +375,9 @@ Tests taken from Forester
     test-0500.c - cyclic DLL containing no useful data
                 - originally taken from fa/data/cdll.c
 
+    test-0501.c - random node insertion into a NULL-terminated DLL
+                - originally taken from fa/data/dll-insert.c
+
 
 "Hello world!" like examples
 ============================
