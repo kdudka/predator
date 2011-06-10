@@ -396,6 +396,10 @@ Tests taken from Forester
                 - luckily, this one is kinda theoretical
                 - originally taken from fa/data/listeven.c
 
+    test-0507.c - NULL-terminated SLL of length equal to 2
+                - Predator reports junk unless compiled with SE_DEFER_SLS_INTRO
+                - originally taken from fa/data/listref.c
+
 
 "Hello world!" like examples
 ============================
