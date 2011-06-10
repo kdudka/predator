@@ -419,6 +419,10 @@ Tests taken from Forester
                 - each node contains a nested (possibly empty) cyclic SLL
                 - originally taken from fa/data/sll-listofclists.c
 
+    test-0513.c - Merge-Sort operating on two-level SLL
+                - Predator reports artificial errors in default configuration
+                - originally taken from fa/data/sll-mergesort.c
+
 
 "Hello world!" like examples
 ============================
