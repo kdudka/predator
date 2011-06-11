@@ -628,6 +628,8 @@ Tests taken from Forester
 
     test-0154.c - error-free variant of test-0033 
 
+    test-0158.c - memory leak induced by data reinterpretation
+
 
 Tiny DLL library written on scratch
 ===================================

@@ -431,15 +431,18 @@ void SymProc::heapSetSingleVal(TObjId lhs, TValId rhs) {
         return;
     }
 
-    // save the old value, which is going to be overwritten
-    const TValId oldValue = sh_.valueOf(lhs);
-    CL_BREAK_IF(VAL_INVALID == oldValue);
-
     // update type-info
     this->heapObjDefineType(lhs, rhs);
 
-    sh_.objSetValue(lhs, rhs);
-    if (collectJunk(sh_, oldValue, lw_))
+    TValSet killedPtrs;
+    sh_.objSetValue(lhs, rhs, &killedPtrs);
+
+    bool leaking = false;
+    BOOST_FOREACH(const TValId oldValue, killedPtrs)
+        if (collectJunk(sh_, oldValue, lw_))
+            leaking = true;
+
+    if (leaking)
         bt_->printBackTrace();
 }
 

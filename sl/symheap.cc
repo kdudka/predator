@@ -374,8 +374,8 @@ struct SymHeapCore::Private {
 
     bool /* wasPtr */ releaseValueOf(TObjId obj, TValId val);
     void registerValueOf(TObjId obj, TValId val);
-    void reinterpretObjData(TObjId old, TObjId obj);
-    void setValueOf(TObjId of, TValId val);
+    void reinterpretObjData(TObjId old, TObjId obj, TValSet *killedPtrs = 0);
+    void setValueOf(TObjId of, TValId val, TValSet *killedPtrs = 0);
 
     bool gridLookup(TObjByType **pRow, const TValId);
     TObjId lazyCreatePtr(TStorRef stor, TValId at);
@@ -477,7 +477,11 @@ void SymHeapCore::Private::registerValueOf(TObjId obj, TValId val) {
     rootData->usedByGl.insert(obj);
 }
 
-void SymHeapCore::Private::reinterpretObjData(TObjId old, TObjId obj) {
+void SymHeapCore::Private::reinterpretObjData(
+        TObjId                      old,
+        TObjId                      obj,
+        TValSet                    *killedPtrs)
+{
     HeapObject *oldData = this->objData(old);
     if (isComposite(oldData->clt))
         // do not invalidate those place-holding values of composite objects
@@ -488,9 +492,9 @@ void SymHeapCore::Private::reinterpretObjData(TObjId old, TObjId obj) {
     // TODO: hook various reinterpretation drivers here
     (void) objData;
 
-    if (/* wasPtr */ this->releaseValueOf(old, oldData->value))
-        // FIXME: this needs to be somehow solved at a higher-level
-        CL_WARN("reinterpretObjData() ignores possible memory leakage");
+    const TValId valOld = oldData->value;
+    if (/* wasPtr */ this->releaseValueOf(old, valOld) && killedPtrs)
+        killedPtrs->insert(valOld);
 
     // assign a fresh VO_REINTERPRET value
     const TValId val = this->valCreate(VT_UNKNOWN, VO_REINTERPRET);
@@ -504,10 +508,16 @@ void SymHeapCore::Private::reinterpretObjData(TObjId old, TObjId obj) {
         CL_DEBUG("reinterpretObjData() kills a live object");
 }
 
-void SymHeapCore::Private::setValueOf(TObjId obj, TValId val) {
+void SymHeapCore::Private::setValueOf(
+        TObjId                      obj,
+        TValId                      val,
+        TValSet                    *killedPtrs)
+{
     // release old value
     HeapObject *objData = DCAST<HeapObject *>(this->ents[obj]);
-    this->releaseValueOf(obj, objData->value);
+    const TValId valOld = objData->value;
+    if (/* wasPtr */ this->releaseValueOf(obj, valOld) && killedPtrs)
+        killedPtrs->insert(valOld);
 
     // store new value
     objData->value = val;
@@ -524,7 +534,7 @@ void SymHeapCore::Private::setValueOf(TObjId obj, TValId val) {
     TObjSet overlaps;
     if (arenaLookup(&overlaps, arena, off, clt, obj)) {
         BOOST_FOREACH(const TObjId old, overlaps)
-            this->reinterpretObjData(old, obj);
+            this->reinterpretObjData(old, obj, killedPtrs);
     }
 }
 
@@ -884,7 +894,7 @@ void SymHeapCore::swap(SymHeapCore &ref) {
     swapValues(this->d, ref.d);
 }
 
-void SymHeapCore::objSetValue(TObjId obj, TValId val) {
+void SymHeapCore::objSetValue(TObjId obj, TValId val, TValSet *killedPtrs) {
     // we allow to set values of atomic types only
     const HeapObject *objData = d->objData(obj);
     const TObjType clt = objData->clt;
@@ -896,7 +906,7 @@ void SymHeapCore::objSetValue(TObjId obj, TValId val) {
     rootData->liveObjs[obj] = /* isPtr */ isDataPtr(clt);
 
     // now set the value
-    d->setValueOf(obj, val);
+    d->setValueOf(obj, val, killedPtrs);
 }
 
 TObjType SymHeapCore::objType(TObjId obj) const {

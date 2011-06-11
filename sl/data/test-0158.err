@@ -1,0 +1,2 @@
+test-0158.c:26:19: warning: killing junk
+test-0158.c:29:9: error: free() called on unknown value

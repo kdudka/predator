@@ -138,6 +138,9 @@ typedef std::vector<TObjId>                             TObjList;
 /// container used to store value IDs to
 typedef std::vector<TValId>                             TValList;
 
+/// container used to store value IDs to
+typedef std::set<TValId>                                TValSet;
+
 /// a type used for (injective) value IDs mapping
 typedef std::map<TValId, TValId>                        TValMap;
 
@@ -280,12 +283,13 @@ class SymHeapCore {
          * @b not be a composite object
          * @param obj ID of the object to set value of
          * @param val ID requested to be stored into the object
+         * @param killedPtrs if not NULL, insert killed pointer values there
          * @note This is really @b low-level @b implementation.  It does not
          * check for junk, delayed type-info definition, etc.  If you are
          * interested in such abilities, you are looking for
          * SymProc::objSetValue().
          */
-        void objSetValue(TObjId obj, TValId val);
+        void objSetValue(TObjId obj, TValId val, TValSet *killedPtrs = 0);
 
     protected:
         virtual bool hasAbstractTarget(TValId) const {
