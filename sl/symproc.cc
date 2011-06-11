@@ -98,23 +98,24 @@ bool SymProc::checkForInvalidDeref(TObjId obj) {
 }
 
 bool SymProc::checkForInvalidDeref(TValId val, TObjType cltTarget) {
+    const EValueOrigin origin = sh_.valOrigin(val);
+    if (VO_DEREF_FAILED == origin)
+        return true;
+
     switch (val) {
         case VAL_NULL:
             CL_ERROR_MSG(lw_, "dereference of NULL value");
             bt_->printBackTrace();
-            // fall through!
-
-        case VAL_DEREF_FAILED:
             return true;
 
         case VAL_INVALID:
-            CL_TRAP;
+            CL_BREAK_IF("SymProc::checkForInvalidDeref() got VAL_INVALID");
 
         default:
             break;
     }
 
-    if (isUninitialized(sh_.valOrigin(val))) {
+    if (isUninitialized(origin)) {
         CL_ERROR_MSG(lw_, "dereference of uninitialized value");
         bt_->printBackTrace();
         return true;
@@ -300,7 +301,7 @@ TValId SymProc::targetAt(const struct cl_operand &op) {
     // check for invalid dereferences
     const TObjType cltTarget = op.type;
     if (this->checkForInvalidDeref(addr, cltTarget))
-        return VAL_DEREF_FAILED;
+        return sh_.valCreate(VT_UNKNOWN, VO_DEREF_FAILED);
 
     // dereference OK!
     return addr;
@@ -309,11 +310,12 @@ TValId SymProc::targetAt(const struct cl_operand &op) {
 TObjId SymProc::objByOperand(const struct cl_operand &op) {
     CL_BREAK_IF(seekRefAccessor(op.accessor));
     const TValId at = this->targetAt(op);
-    if (VAL_DEREF_FAILED == at)
-        return OBJ_DEREF_FAILED;
 
     const EValueTarget code = sh_.valTarget(at);
     if (!isPossibleToDeref(code)) {
+        if (VO_DEREF_FAILED == sh_.valOrigin(at))
+            return OBJ_DEREF_FAILED;
+
         CL_ERROR_MSG(lw_, "dereference of unknown value");
         bt_->printBackTrace();
         return OBJ_DEREF_FAILED;
@@ -342,7 +344,7 @@ TValId SymProc::heapValFromObj(const struct cl_operand &op) {
             return sh_.valCreate(VT_UNKNOWN, VO_REINTERPRET);
 
         case OBJ_DEREF_FAILED:
-            return VAL_DEREF_FAILED;
+            return sh_.valCreate(VT_UNKNOWN, VO_DEREF_FAILED);
 
         default:
             if (obj < 0)
@@ -435,70 +437,24 @@ void SymProc::heapSetSingleVal(TObjId lhs, TValId rhs) {
         bt_->printBackTrace();
 }
 
-class ValueWriter {
-    private:
-        SymProc             &proc_;
-        const TValId        valToWrite_;
-
-    public:
-        ValueWriter(SymProc *proc, TValId valToWrite):
-            proc_(*proc),
-            valToWrite_(valToWrite)
-        {
-        }
-
-        bool operator()(SymHeap &, TObjId sub) {
-            proc_.heapSetSingleVal(sub, valToWrite_);
-            return /* continue */ true;
-        }
-};
-
-// TODO: implement this functionality directly in SymHeap
-#if 0
-class UnionInvalidator {
+class DerefFailedWriter {
     private:
         SymProc             &proc_;
         SymHeap             &sh_;
-        const TValId        root_;
-        const TObjType      rootClt_;
-        const TObjId        preserverSubtree_;
 
     public:
-        UnionInvalidator(SymProc *proc, TObjId root, TObjId preserverSubtree):
+        DerefFailedWriter(SymProc *proc):
             proc_(*proc),
-            sh_(proc->sh_),
-            root_(sh_.placedAt(root)),
-            rootClt_(sh_.objType(root)),
-            preserverSubtree_(preserverSubtree)
+            sh_(proc->sh())
         {
-            CL_BREAK_IF(!rootClt_ || rootClt_->code != CL_TYPE_UNION);
         }
 
-        bool operator()(const TFieldIdxChain &ic, const struct cl_type_item *it)
-        {
-            SymHeap &sh = proc_.sh_;
-            const TObjType clt = it->type;
-            if (isComposite(clt))
-                return /* continue */ true;
-
-            const TOffset off = offsetByIdxChain(rootClt_, ic);
-            const TValId at = sh.valByOffset(root_, off);
-            const TObjId sub = sh.objAt(at, clt);
-
-            // first ensure we don't overwrite something we don't want to
-            TObjId obj = sub;
-            do {
-                if (preserverSubtree_ == obj)
-                    return /* continue */ true;
-            }
-            while (OBJ_INVALID != (obj = /* XXX */ sh.objParent(obj)));
-
-            const TValId val = sh.valCreate(VT_UNKNOWN, VO_REINTERPRET);
-            proc_.heapSetSingleVal(sub, val);
+        bool operator()(SymHeap &, TObjId obj) {
+            const TValId val = sh_.valCreate(VT_UNKNOWN, VO_UNKNOWN);
+            proc_.heapSetSingleVal(obj, val);
             return /* continue */ true;
         }
 };
-#endif
 
 class ValueMirror {
     private:
@@ -517,32 +473,16 @@ class ValueMirror {
 };
 
 void SymProc::objSetValue(TObjId lhs, TValId rhs) {
-    // TODO: implement this functionality directly in SymHeap
-#if 0
-    // seek all surrounding unions on the way to root (if any)
-    TObjId parent, obj = lhs;
-    for (; OBJ_INVALID != (parent = sh_.objParent(obj)); obj = parent) {
-        const TObjType clt = sh_.objType(parent);
-        if (!clt || clt->code != CL_TYPE_UNION)
-            continue;
-
-        // invalidate all siblings within the surrounding union
-        UnionInvalidator visitor(this, parent, obj);
-        traverseTypeIc(clt, visitor, /* digOnlyStructs */ true);
-    }
-#endif
-
-    // FIXME: handle some other special values also this way?
-    if (VAL_DEREF_FAILED == rhs) {
+    if (VO_DEREF_FAILED == sh_.valOrigin(rhs)) {
         // we're already on an error path
         const TObjType clt = sh_.objType(lhs);
         if (!clt || clt->code != CL_TYPE_STRUCT) {
-            sh_.objSetValue(lhs, rhs);
+            const TValId vFail = sh_.valCreate(VT_UNKNOWN, VO_DEREF_FAILED);
+            sh_.objSetValue(lhs, vFail);
             return;
         }
 
-        // fill values of all sub-objects by 'rhs'
-        ValueWriter writer(this, rhs);
+        DerefFailedWriter writer(this);
         traverseLiveObjs(sh_, sh_.placedAt(lhs), writer);
         return;
     }
@@ -748,15 +688,17 @@ void SymExecCore::execFree(const CodeStorage::TOperandList &opList) {
             CL_DEBUG_MSG(lw_, "ignoring free() called with NULL value");
             return;
 
-        case VAL_DEREF_FAILED:
-            CL_DEBUG_MSG(lw_, "ignoring free() called on VAL_DEREF_FAILED");
-            return;
-
         default:
             break;
     }
 
-    if (isUninitialized(sh_.valOrigin(val))) {
+    const EValueOrigin origin = sh_.valOrigin(val);
+    if (VO_DEREF_FAILED == origin) {
+        CL_DEBUG_MSG(lw_, "ignoring free() called on VO_DEREF_FAILED");
+        return;
+    }
+
+    if (isUninitialized(origin)) {
         CL_ERROR_MSG(lw_, "free() called on uninitialized value");
         bt_->printBackTrace();
         return;
@@ -922,8 +864,10 @@ TValId compareValues(
         const TValId                v1,
         const TValId                v2)
 {
-    if (VAL_DEREF_FAILED == v1 || VAL_DEREF_FAILED == v2)
-        return VAL_DEREF_FAILED;
+    const EValueOrigin vo1 = sh.valOrigin(v1);
+    const EValueOrigin vo2 = sh.valOrigin(v2);
+    if (VO_DEREF_FAILED == vo1 || VO_DEREF_FAILED == vo2)
+        return sh.valCreate(VT_UNKNOWN, VO_DEREF_FAILED);
 
     // resolve binary operator
     bool neg, preserveEq, preserveNeq;
@@ -947,9 +891,6 @@ TValId compareValues(
     }
 
     // propagate UV_UNINITIALIZED
-    const EValueOrigin vo1 = sh.valOrigin(v1);
-    const EValueOrigin vo2 = sh.valOrigin(v2);
-
     const bool isUninit1 = isUninitialized(vo1);
     const bool isUninit2 = isUninitialized(vo2);
 
@@ -1085,9 +1026,10 @@ void SymExecCore::execOp(const CodeStorage::Insn &insn) {
 
         const TValId val = this->valFromOperand(op);
         CL_BREAK_IF(VAL_INVALID == val);
-        if (VAL_DEREF_FAILED == val) {
+        if (VO_DEREF_FAILED == sh_.valOrigin(val)) {
             // we're already on an error path
-            this->objSetValue(varLhs, VAL_DEREF_FAILED);
+            const TValId vFail = sh_.valCreate(VT_UNKNOWN, VO_DEREF_FAILED);
+            this->objSetValue(varLhs, vFail);
             return;
         }
 

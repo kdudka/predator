@@ -128,9 +128,8 @@ class SymProc {
         template <int N> friend struct OpHandler;
 
         // internal helpers of SymProc::objSetValue()
-        friend class ValueWriter;
+        friend class DerefFailedWriter;
         friend class ValueMirror;
-        friend class UnionInvalidator;
 };
 
 void printBackTrace(SymProc &);

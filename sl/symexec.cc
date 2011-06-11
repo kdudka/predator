@@ -430,11 +430,6 @@ void SymExecEngine::execCondInsn() {
 
     // inconsistency check
     switch (val) {
-        case VAL_DEREF_FAILED:
-            // error should have been already emitted
-            CL_DEBUG_MSG(lw_, "ignored VAL_DEREF_FAILED");
-            return;
-
         case VAL_TRUE:
             CL_DEBUG_MSG(lw_, ".T. CL_INSN_COND got VAL_TRUE");
             proc.killInsn(*insnCmp);
@@ -452,12 +447,18 @@ void SymExecEngine::execCondInsn() {
             break;
     }
 
+    const EValueOrigin origin = sh.valOrigin(val);
+    if (VO_DEREF_FAILED == origin) {
+        // error should have been already emitted
+        CL_DEBUG_MSG(lw_, "ignored VO_DEREF_FAILED");
+        return;
+    }
+
     if (this->bypassNonPointers(proc, *insnCmp, insnCnd->targets))
         // do not track relations over data we are not interested in
         return;
 
-    const EValueOrigin vo = sh.valOrigin(val);
-    if (isUninitialized(vo)) {
+    if (isUninitialized(origin)) {
         // TODO: make the warning messages more precise
         CL_WARN_MSG(lw_, "conditional jump depends on uninitialized value");
         bt_.printBackTrace();

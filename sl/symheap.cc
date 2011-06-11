@@ -544,7 +544,7 @@ TValId SymHeapCore::valueOf(TObjId obj) const {
             return VAL_INVALID;
 
         case OBJ_DEREF_FAILED:
-            return VAL_DEREF_FAILED;
+            return d->valCreate(VT_UNKNOWN, VO_DEREF_FAILED);
 
         default:
             break;
@@ -816,9 +816,6 @@ EValueOrigin SymHeapCore::valOrigin(TValId val) const {
     switch (val) {
         case VAL_INVALID:
             return VO_INVALID;
-
-        case VAL_DEREF_FAILED:
-            return VO_DEREF_FAILED;
 
         case VAL_NULL /* = VAL_FALSE */:
         case VAL_TRUE:

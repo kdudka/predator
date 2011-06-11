@@ -878,11 +878,6 @@ void plotAuxValue(PlotData &plot, const TObjId obj, const TValId val) {
             label = "TRUE";
             break;
 
-        case VAL_DEREF_FAILED:
-            color = "red";
-            label = "DEREF_FAILED";
-            break;
-
         case VAL_ADDR_OF_RET:
             label = "ADDR_OF_RET";
             break;
