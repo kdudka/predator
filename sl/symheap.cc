@@ -344,6 +344,8 @@ struct SymHeapCore::Private {
     void destroyRoot(TValId obj);
 
     void releaseValueOf(TObjId obj, TValId val);
+    void registerValueOf(TObjId obj, TValId val);
+    void reinterpretObjData(TObjId old, TObjId obj);
     void setValueOf(TObjId of, TValId val);
 
     bool gridLookup(TObjByType **pRow, const TValId);
@@ -428,13 +430,7 @@ void SymHeapCore::Private::releaseValueOf(TObjId obj, TValId val) {
         CL_BREAK_IF("SymHeapCore::Private::releaseValueOf(): offset detected");
 }
 
-void SymHeapCore::Private::setValueOf(TObjId obj, TValId val) {
-    // release old value
-    HeapObject *objData = DCAST<HeapObject *>(this->ents[obj]);
-    this->releaseValueOf(obj, objData->value);
-
-    // store new value
-    objData->value = val;
+void SymHeapCore::Private::registerValueOf(TObjId obj, TValId val) {
     if (val <= 0)
         return;
 
@@ -448,6 +444,49 @@ void SymHeapCore::Private::setValueOf(TObjId obj, TValId val) {
     const TValId root = this->valRoot(val, valData);
     RootValue *rootData = this->rootData(root);
     rootData->usedByGl.insert(obj);
+}
+
+void SymHeapCore::Private::reinterpretObjData(TObjId old, TObjId obj) {
+    HeapObject *oldData = this->objData(old);
+    if (isComposite(oldData->clt))
+        // do not invalidate those place-holding values of composite objects
+        return;
+
+    HeapObject *objData = this->objData(obj);
+    CL_WARN("data reinterpretation not implemented yet!");
+    CL_BREAK_IF("please implement");
+    (void) objData;
+}
+
+void SymHeapCore::Private::setValueOf(TObjId obj, TValId val) {
+    // release old value
+    HeapObject *objData = DCAST<HeapObject *>(this->ents[obj]);
+    this->releaseValueOf(obj, objData->value);
+
+    // store new value
+    objData->value = val;
+    this->registerValueOf(obj, val);
+
+    // resolve root
+    const TValId root = objData->root;
+    RootValue *rootData = this->rootData(root);
+
+    // resolve chunk
+    const TOffset off = objData->off;
+    const TObjType clt = objData->clt;
+    const unsigned end = off + clt->size;
+    const TChunk chunk = TChunk::right_open(off, end);
+    const TArena &arena = rootData->arena;
+    TArena::const_iterator it = arena.find(chunk);
+    if (arena.end() == it) {
+        CL_BREAK_IF("setValueOf() sees an unregistered object");
+        return;
+    }
+
+    // invalidate contents of the objects we are overwriting
+    BOOST_FOREACH(const TObjId old, it->second)
+        if (old != obj)
+            this->reinterpretObjData(old, obj);
 }
 
 TObjId SymHeapCore::Private::objCreate(TValId root, TOffset off, TObjType clt) {
@@ -1140,11 +1179,9 @@ TObjId SymHeapCore::Private::lazyCreatePtr(TStorRef stor, TValId at) {
         // try the best match of type-info for the pointer
         clt = guideCltFinder(cltRoot, off, isDataPtr);
 
-    if (!clt) {
+    if (!clt)
         // try to use a generic data pointer
         clt = stor.types.genericDataPtr();
-        CL_WARN("check for overlapping objects not implemented yet!");
-    }
 
     if (!clt) {
         CL_BREAK_IF("critical lack of type-info");
@@ -1229,17 +1266,6 @@ TObjId SymHeapCore::objAt(TValId at, TObjCode code) {
     return d->objCreate(root, off, clt);
 }
 
-class TypeEqual {
-    private:
-        const TObjType ref_;
-
-    public:
-        TypeEqual(TObjType ref): ref_(ref) { }
-        bool operator()(const TObjType clt) const {
-            return (clt == ref_);
-        }
-};
-
 TObjId SymHeapCore::objAt(TValId at, TObjType clt) {
     CL_BREAK_IF(!clt);
     if (isDataPtr(clt))
@@ -1267,18 +1293,10 @@ TObjId SymHeapCore::objAt(TValId at, TObjType clt) {
         // TODO: return a more specific error code (out of range)
         return OBJ_UNKNOWN;
 
+    // create the object
     const BaseValue *valData = d->valData(at);
     const TValId root = d->valRoot(at, valData);
     const TOffset off = valData->offRoot;
-
-    RootValue *rootData = d->rootData(root);
-    const TObjType cltRoot = rootData->lastKnownClt;
-
-    // FIXME: we need this shim to work around the legacy code in symdiscover
-    const TypeEqual pred(clt);
-    if (!guideCltFinder(cltRoot, off, pred))
-        CL_WARN("check for overlapping objects not implemented yet!");
-
     return d->objCreate(root, off, clt);
 }
 
