@@ -347,7 +347,7 @@ struct SymHeapCore::Private {
     void setValueOf(TObjId of, TValId val);
 
     bool gridLookup(TObjByType **pRow, const TValId);
-    bool lazyCreatePtr(TObjId *pObj, TObjType *pClt, TStorRef stor, TValId at);
+    TObjId lazyCreatePtr(TStorRef stor, TValId at);
 
     void neqOpWrap(SymHeap::ENeqOp, TValId, TValId);
 
@@ -454,7 +454,16 @@ TObjId SymHeapCore::Private::objCreate(TValId root, TOffset off, TObjType clt) {
     // acquire object ID
     HeapObject *objData = new HeapObject(root, off, clt);
     this->ents.push_back(objData);
-    return this->lastId<TObjId>();
+    const TObjId obj = this->lastId<TObjId>();
+
+    // register the object by the owning root value
+    RootValue *rootData = this->rootData(root);
+    TObjByType &row = rootData->grid[off];
+    CL_BREAK_IF(hasKey(row, clt));
+    row[clt] = obj;
+    hookObject(rootData->arena, off, clt->size, obj);
+
+    return obj;
 }
 
 TValId SymHeapCore::Private::valCreate(
@@ -711,11 +720,6 @@ TValId SymHeapCore::Private::dupRoot(TValId rootAt) {
 
         // prevserve live ptr/data object
         rootDataDst->liveObjs[dst] = /* isPtr */ item.second;
-
-        // put the object in the destination grid and hook it in the arena
-        TGrid &grid = rootDataDst->grid;
-        grid[off][clt] = dst;
-        hookObject(rootDataDst->arena, off, clt->size, dst);
     }
 
     return imageAt;
@@ -1119,13 +1123,7 @@ TObjType guideCltFinder(
     return 0;
 }
 
-
-bool SymHeapCore::Private::lazyCreatePtr(
-        TObjId                  *pObj,
-        TObjType                *pClt,
-        TStorRef                 stor,
-        TValId                   at)
-{
+TObjId SymHeapCore::Private::lazyCreatePtr(TStorRef stor, TValId at) {
     // check offset
     const BaseValue *valData = this->valData(at);
     const TOffset off = valData->offRoot;
@@ -1148,19 +1146,16 @@ bool SymHeapCore::Private::lazyCreatePtr(
         CL_WARN("check for overlapping objects not implemented yet!");
     }
 
-    if (!clt)
-        // not found
-        return false;
+    if (!clt) {
+        CL_BREAK_IF("critical lack of type-info");
+        return OBJ_INVALID;
+    }
 
-    // create a new pointer
-    const TObjId obj = this->objCreate(root, off, clt);
-    if (!cltRoot)
+    if (!cltRoot && !off)
         rootData->lastKnownClt = clt;
 
-    // lazy creation successful
-    *pObj = obj;
-    *pClt = clt;
-    return true;
+    // create a new pointer
+    return this->objCreate(root, off, clt);
 }
 
 TObjId SymHeapCore::ptrAt(TValId at) {
@@ -1180,14 +1175,7 @@ TObjId SymHeapCore::ptrAt(TValId at) {
         // TODO: return a more specific error code (out of range)
         return OBJ_UNKNOWN;
 
-    TObjId obj;
-    TObjType clt;
-    if (!d->lazyCreatePtr(&obj, &clt, stor_, at))
-        // TODO: refine the error codes coming from here
-        return OBJ_UNKNOWN;
-
-    row->operator[](clt) = obj;
-    return obj;
+    return d->lazyCreatePtr(stor_, at);
 }
 
 TObjId SymHeapCore::objAt(TValId at, TObjCode code) {
@@ -1238,9 +1226,7 @@ TObjId SymHeapCore::objAt(TValId at, TObjCode code) {
         // TODO
         return OBJ_UNKNOWN;
 
-    const TObjId obj = d->objCreate(root, off, clt);
-    row->operator[](clt) = obj;
-    return obj;
+    return d->objCreate(root, off, clt);
 }
 
 class TypeEqual {
@@ -1293,9 +1279,7 @@ TObjId SymHeapCore::objAt(TValId at, TObjType clt) {
     if (!guideCltFinder(cltRoot, off, pred))
         CL_WARN("check for overlapping objects not implemented yet!");
 
-    const TObjId obj = d->objCreate(root, off, clt);
-    row->operator[](clt) = obj;
-    return obj;
+    return d->objCreate(root, off, clt);
 }
 
 CVar SymHeapCore::cVarByRoot(TValId valRoot) const {
