@@ -141,13 +141,26 @@ class CVarMap {
 
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of SymHeapCore
-typedef std::set<TObjId>                                TUsedBy;
+typedef std::set<TObjId>                                TObjSet;
 typedef std::map<TOffset, TValId>                       TOffMap;
 typedef std::map<TObjType, TObjId>                      TObjByType;
 typedef std::map<TOffset, TObjByType>                   TGrid;
-typedef icl::interval_map<unsigned, TObjId>             TArena;
+typedef icl::interval<unsigned>::interval_type          TChunk;
+typedef icl::interval_map<unsigned, TObjSet>            TArena;
 typedef std::map<TObjId, bool /* isPtr */>              TLiveObjs;
-typedef std::map<int, TValId>                           TCValueMap;
+
+inline void hookObject(TArena &arena, TOffset off, unsigned size, TObjId obj) {
+    // key
+    const unsigned end = off + size;
+    const TChunk chunk = TChunk::right_open(off, end);
+
+    // set
+    TObjSet single;
+    single.insert(obj);
+
+    // hook the chunk
+    arena += std::make_pair(chunk, single);
+}
 
 struct IHeapEntity {
     virtual ~IHeapEntity() { }
@@ -178,7 +191,7 @@ struct BaseValue: public IHeapEntity {
     EValueTarget                    code;
     EValueOrigin                    origin;
     TOffset                         offRoot;
-    TUsedBy                         usedBy;
+    TObjSet                         usedBy;
 
     BaseValue(EValueTarget code_, EValueOrigin origin_):
         code(code_),
@@ -246,7 +259,7 @@ struct RootValue: public BaseValue {
     bool                            initializedToZero;
     bool                            isProto;
     TLiveObjs                       liveObjs;
-    TUsedBy                         usedByGl;
+    TObjSet                         usedByGl;
     TGrid                           grid;
     TArena                          arena;
 
@@ -595,7 +608,7 @@ void SymHeapCore::usedBy(TObjList &dst, TValId val) const {
         return;
 
     const BaseValue *valData = d->valData(val);
-    const TUsedBy &usedBy = valData->usedBy;
+    const TObjSet &usedBy = valData->usedBy;
     std::copy(usedBy.begin(), usedBy.end(), std::back_inserter(dst));
 }
 
@@ -612,7 +625,7 @@ void SymHeapCore::pointedBy(TObjList &dst, TValId root) const {
     CL_BREAK_IF(rootData->offRoot);
     CL_BREAK_IF(!isPossibleToDeref(rootData->code));
 
-    const TUsedBy &usedBy = rootData->usedByGl;
+    const TObjSet &usedBy = rootData->usedByGl;
     std::copy(usedBy.begin(), usedBy.end(), std::back_inserter(dst));
 }
 
@@ -699,9 +712,10 @@ TValId SymHeapCore::Private::dupRoot(TValId rootAt) {
         // prevserve live ptr/data object
         rootDataDst->liveObjs[dst] = /* isPtr */ item.second;
 
-        // recover grid
+        // put the object in the destination grid and hook it in the arena
         TGrid &grid = rootDataDst->grid;
         grid[off][clt] = dst;
+        hookObject(rootDataDst->arena, off, clt->size, dst);
     }
 
     return imageAt;
@@ -927,7 +941,7 @@ void SymHeapCore::valReplace(TValId val, TValId replaceBy) {
     const BaseValue *valData = d->valData(val);
 
     // we intentionally do not use a reference here (tight loop otherwise)
-    TUsedBy usedBy = valData->usedBy;
+    TObjSet usedBy = valData->usedBy;
     BOOST_FOREACH(const TObjId obj, usedBy)
         this->objSetValue(obj, replaceBy);
 
