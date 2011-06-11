@@ -1,3 +1,4 @@
+#include "../sl.h"
 #include <stdlib.h>
 
 static void *ptrs[8] = {
@@ -8,5 +9,6 @@ static void *ptrs[8] = {
 };
 
 int main() {
+    ___sl_plot(NULL, ptrs);
     return !!ptrs[2];
 }

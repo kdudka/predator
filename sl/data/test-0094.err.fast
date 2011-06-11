@@ -1,5 +1,9 @@
 test-0094.c:89:20: error: dereference of unknown value
-test-0094.c:78:17: warning: support of call recursion is not stable yet
-test-0094.c:78:17: note: nestLevel is 2
-test-0094.c:79:17: warning: support of call recursion is not stable yet
-test-0094.c:79:17: note: nestLevel is 2
+test-0094.c:78:17: warning: recursive function call, depth = 2
+test-0094.c:78:17: note: from call of destroy_tree()
+test-0094.c:92:17: note: from call of destroy_tree()
+test-0094.c:83:5: note: from call of main()
+test-0094.c:79:17: warning: recursive function call, depth = 2
+test-0094.c:79:17: note: from call of destroy_tree()
+test-0094.c:92:17: note: from call of destroy_tree()
+test-0094.c:83:5: note: from call of main()
