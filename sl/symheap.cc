@@ -145,21 +145,45 @@ typedef std::set<TObjId>                                TObjSet;
 typedef std::map<TOffset, TValId>                       TOffMap;
 typedef std::map<TObjType, TObjId>                      TObjByType;
 typedef std::map<TOffset, TObjByType>                   TGrid;
-typedef icl::interval<unsigned>::interval_type          TChunk;
 typedef icl::interval_map<unsigned, TObjSet>            TArena;
+typedef TArena::key_type                                TMemChunk;
+typedef TArena::value_type                              TMemItem;
 typedef std::map<TObjId, bool /* isPtr */>              TLiveObjs;
 
-inline void hookObject(TArena &arena, TOffset off, unsigned size, TObjId obj) {
-    // key
-    const unsigned end = off + size;
-    const TChunk chunk = TChunk::right_open(off, end);
+inline TMemChunk createChunk(const TOffset off, const TObjType clt) {
+    CL_BREAK_IF(!clt || clt->code == CL_TYPE_VOID);
+    return TMemChunk(off, off + clt->size);
+}
 
-    // set
+inline TObjSet createObjSet(const TObjId obj) {
     TObjSet single;
     single.insert(obj);
+    return single;
+}
 
-    // hook the chunk
-    arena += std::make_pair(chunk, single);
+inline TMemItem createArenaItem(
+        const TOffset               off,
+        const TObjType              clt,
+        const TObjId                obj)
+{
+    return TMemItem(
+            createChunk(off, clt),
+            createObjSet(obj));
+}
+
+inline bool arenaLookup(
+        TObjSet                     *dst,
+        const TArena                &arena,
+        const TOffset               off,
+        const TObjType              clt)
+{
+    TArena::const_iterator it = arena.find(createChunk(off, clt));
+    if (arena.end() == it)
+        // not found
+        return false;
+
+    *dst = it->second;
+    return true;
 }
 
 struct IHeapEntity {
@@ -186,7 +210,6 @@ struct HeapObject: public IHeapEntity {
     }
 };
 
-// FIXME: really good idea to define this as a value type?
 struct BaseValue: public IHeapEntity {
     EValueTarget                    code;
     EValueOrigin                    origin;
@@ -340,6 +363,7 @@ struct SymHeapCore::Private {
     TValId valDup(TValId);
 
     TObjId objCreate(TValId root, TOffset off, TObjType clt);
+    TValId objInit(TObjId obj);
     TValId dupRoot(TValId root);
     void destroyRoot(TValId obj);
 
@@ -483,19 +507,17 @@ void SymHeapCore::Private::setValueOf(TObjId obj, TValId val) {
     RootValue *rootData = this->rootData(root);
 
     // resolve chunk
+    const TArena &arena = rootData->arena;
     const TOffset off = objData->off;
     const TObjType clt = objData->clt;
-    const unsigned end = off + clt->size;
-    const TChunk chunk = TChunk::right_open(off, end);
-    const TArena &arena = rootData->arena;
-    TArena::const_iterator it = arena.find(chunk);
-    if (arena.end() == it) {
+    TObjSet overlaps;
+    if (!arenaLookup(&overlaps, arena, off, clt)) {
         CL_BREAK_IF("setValueOf() sees an unregistered object");
         return;
     }
 
     // invalidate contents of the objects we are overwriting
-    BOOST_FOREACH(const TObjId old, it->second)
+    BOOST_FOREACH(const TObjId old, overlaps)
         if (old != obj)
             this->reinterpretObjData(old, obj);
 }
@@ -511,8 +533,9 @@ TObjId SymHeapCore::Private::objCreate(TValId root, TOffset off, TObjType clt) {
     TObjByType &row = rootData->grid[off];
     CL_BREAK_IF(hasKey(row, clt));
     row[clt] = obj;
-    hookObject(rootData->arena, off, clt->size, obj);
 
+    // map the region occupied by the object
+    rootData->arena += createArenaItem(off, clt, obj);
     return obj;
 }
 
@@ -606,6 +629,35 @@ EValueOrigin originByCode(const EValueTarget code) {
     }
 }
 
+TValId SymHeapCore::Private::objInit(TObjId obj) {
+    HeapObject *objData = this->objData(obj);
+
+    // deleayed creation of an uninitialized value
+    RootValue *rootData = this->rootData(objData->root);
+    if (rootData->initializedToZero) {
+        objData->value = VAL_NULL;
+        return VAL_NULL;
+    }
+
+    // assign a fresh unknown value
+    const EValueTarget code = rootData->code;
+    const EValueOrigin origin = originByCode(code);
+    const TValId val = this->valCreate(VT_UNKNOWN, origin);
+#if SE_TRACK_UNINITIALIZED
+    objData->value = val;
+#else
+    return val;
+#endif
+
+    // mark the object as live
+    const TObjType clt = objData->clt;
+    rootData->liveObjs[obj] = /* isPtr */ isDataPtr(clt);
+
+    // store backward reference
+    this->valData(val)->usedBy.insert(obj);
+    return val;
+}
+
 // FIXME: should this be declared non-const?
 TValId SymHeapCore::valueOf(TObjId obj) const {
     // handle special cases first
@@ -634,32 +686,14 @@ TValId SymHeapCore::valueOf(TObjId obj) const {
         val = d->valCreate(VT_COMPOSITE, VO_INVALID);
         CompValue *valData = DCAST<CompValue *>(d->ents[val]);
         valData->compObj = obj;
-    }
-    else {
-        // deleayed creation of an uninitialized value
-        RootValue *rootData = d->rootData(objData->root);
-        if (rootData->initializedToZero) {
-            val = VAL_NULL;
-            return val;
-        }
 
-        // assign a fresh unknown value
-        const EValueTarget code = rootData->code;
-        const EValueOrigin origin = originByCode(code);
-        const TValId uVal = d->valCreate(VT_UNKNOWN, origin);
-#if SE_TRACK_UNINITIALIZED
-        val = uVal;
-#else
-        return uVal;
-#endif
-
-        // mark the object as live
-        rootData->liveObjs[obj] = /* isPtr */ isDataPtr(clt);
+        // store backward reference
+        d->valData(val)->usedBy.insert(obj);
+        return val;
     }
 
-    // store backward reference
-    d->valData(val)->usedBy.insert(obj);
-    return val;
+    // deleayed object initialization
+    return d->objInit(obj);
 }
 
 void SymHeapCore::usedBy(TObjList &dst, TValId val) const {
