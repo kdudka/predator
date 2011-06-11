@@ -175,15 +175,20 @@ inline bool arenaLookup(
         TObjSet                     *dst,
         const TArena                &arena,
         const TOffset               off,
-        const TObjType              clt)
+        const TObjType              clt,
+        const TObjId                obj)
 {
     TArena::const_iterator it = arena.find(createChunk(off, clt));
     if (arena.end() == it)
         // not found
         return false;
 
+    // remove the reference object itself
     *dst = it->second;
-    return true;
+    dst->erase(obj);
+
+    // finally check if there was anything else
+    return !dst->empty();
 }
 
 struct IHeapEntity {
@@ -489,8 +494,14 @@ void SymHeapCore::Private::reinterpretObjData(TObjId old, TObjId obj) {
 
     // assign a fresh VO_REINTERPRET value
     const TValId val = this->valCreate(VT_UNKNOWN, VO_REINTERPRET);
-    objData->value = val;
-    this->registerValueOf(obj, val);
+    oldData->value = val;
+    this->registerValueOf(old, val);
+
+    // mark the object as dead
+    const TValId root = oldData->root;
+    RootValue *rootData = this->rootData(root);
+    if (rootData->liveObjs.erase(old))
+        CL_DEBUG("reinterpretObjData() kills a live object");
 }
 
 void SymHeapCore::Private::setValueOf(TObjId obj, TValId val) {
@@ -505,21 +516,16 @@ void SymHeapCore::Private::setValueOf(TObjId obj, TValId val) {
     // resolve root
     const TValId root = objData->root;
     RootValue *rootData = this->rootData(root);
-
-    // resolve chunk
     const TArena &arena = rootData->arena;
     const TOffset off = objData->off;
     const TObjType clt = objData->clt;
-    TObjSet overlaps;
-    if (!arenaLookup(&overlaps, arena, off, clt)) {
-        CL_BREAK_IF("setValueOf() sees an unregistered object");
-        return;
-    }
 
     // invalidate contents of the objects we are overwriting
-    BOOST_FOREACH(const TObjId old, overlaps)
-        if (old != obj)
+    TObjSet overlaps;
+    if (arenaLookup(&overlaps, arena, off, clt, obj)) {
+        BOOST_FOREACH(const TObjId old, overlaps)
             this->reinterpretObjData(old, obj);
+    }
 }
 
 TObjId SymHeapCore::Private::objCreate(TValId root, TOffset off, TObjType clt) {
@@ -632,8 +638,28 @@ EValueOrigin originByCode(const EValueTarget code) {
 TValId SymHeapCore::Private::objInit(TObjId obj) {
     HeapObject *objData = this->objData(obj);
 
+    // resolve root
+    const TValId root = objData->root;
+    RootValue *rootData = this->rootData(root);
+    const TArena &arena = rootData->arena;
+    const TOffset off = objData->off;
+    const TObjType clt = objData->clt;
+
+    // first check for data reinterpretation
+    TObjSet overlaps;
+    if (arenaLookup(&overlaps, arena, off, clt, obj)) {
+        BOOST_FOREACH(const TObjId other, overlaps) {
+            if (!hasKey(rootData->liveObjs, other))
+                // the other object is already dead anyway
+                continue;
+
+            // reinterpret _self_ by another live object
+            this->reinterpretObjData(/* old */ obj, other);
+            return objData->value;
+        }
+    }
+
     // deleayed creation of an uninitialized value
-    RootValue *rootData = this->rootData(objData->root);
     if (rootData->initializedToZero) {
         objData->value = VAL_NULL;
         return VAL_NULL;
@@ -650,7 +676,6 @@ TValId SymHeapCore::Private::objInit(TObjId obj) {
 #endif
 
     // mark the object as live
-    const TObjType clt = objData->clt;
     rootData->liveObjs[obj] = /* isPtr */ isDataPtr(clt);
 
     // store backward reference
