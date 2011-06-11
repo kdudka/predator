@@ -425,6 +425,12 @@ void SymProc::heapObjDefineType(TObjId lhs, TValId rhs) {
 }
 
 void SymProc::heapSetSingleVal(TObjId lhs, TValId rhs) {
+    if (lhs < 0) {
+        CL_ERROR_MSG(lw_, "invalid L-value");
+        bt_->printBackTrace();
+        return;
+    }
+
     // save the old value, which is going to be overwritten
     const TValId oldValue = sh_.valueOf(lhs);
     CL_BREAK_IF(VAL_INVALID == oldValue);
@@ -450,7 +456,7 @@ class DerefFailedWriter {
         }
 
         bool operator()(SymHeap &, TObjId obj) {
-            const TValId val = sh_.valCreate(VT_UNKNOWN, VO_UNKNOWN);
+            const TValId val = sh_.valCreate(VT_UNKNOWN, VO_DEREF_FAILED);
             proc_.heapSetSingleVal(obj, val);
             return /* continue */ true;
         }
@@ -458,15 +464,33 @@ class DerefFailedWriter {
 
 class ValueMirror {
     private:
-        SymProc &proc_;
+        SymProc             &proc_;
+        SymHeap             &sh_;
+        int                 end_;
 
     public:
-        ValueMirror(SymProc *proc): proc_(*proc) { }
+        ValueMirror(SymProc *proc, const TObjId rObj):
+            proc_(*proc),
+            sh_(proc->sh())
+        {
+            const TOffset off = sh_.valOffset(sh_.placedAt(rObj));
+            const TObjType clt = sh_.objType(rObj);
+            end_ = off + clt->size;
+        }
 
         bool operator()(const TObjId item[2]) const {
             const TObjId lhs = item[0];
-            const TValId rhs = proc_.sh_.valueOf(item[1]);
-            proc_.heapSetSingleVal(lhs, rhs);
+            const TObjId rhs = item[1];
+            if (0 < rhs) {
+                const TValId rhsAt = sh_.placedAt(rhs);
+                const TOffset off = sh_.valOffset(rhsAt);
+                if (end_ <= off)
+                    // we are above the end_ of rhs
+                    return /* continue */ true;
+            }
+
+            const TValId val = sh_.valueOf(rhs);
+            proc_.heapSetSingleVal(lhs, val);
 
             return /* continue */ true;
         }
@@ -487,16 +511,22 @@ void SymProc::objSetValue(TObjId lhs, TValId rhs) {
         return;
     }
 
-    if (VT_COMPOSITE == sh_.valTarget(rhs)) {
-        // DFS for composite types
-        const ValueMirror mirror(this);
-        const TObjId rObj = sh_.valGetComposite(rhs);
-        const TValId roots[] = { sh_.placedAt(lhs), sh_.placedAt(rObj) };
-        traverseLiveObjs<2>(sh_, roots, mirror);
+    if (VT_COMPOSITE != sh_.valTarget(rhs)) {
+        this->heapSetSingleVal(lhs, rhs);
         return;
     }
 
-    this->heapSetSingleVal(lhs, rhs);
+    // object-wise copy of a composite type
+    const TObjId rObj = sh_.valGetComposite(rhs);
+    CL_BREAK_IF(rObj < 0);
+
+    const TValId roots[] = {
+        sh_.placedAt(lhs),
+        sh_.placedAt(rObj)
+    };
+
+    const ValueMirror mirror(this, rObj);
+    traverseLiveObjs<2>(sh_, roots, mirror);
 }
 
 void SymProc::valDestroyTarget(TValId addr) {
