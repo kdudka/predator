@@ -343,7 +343,7 @@ struct SymHeapCore::Private {
     TValId dupRoot(TValId root);
     void destroyRoot(TValId obj);
 
-    void releaseValueOf(TObjId obj, TValId val);
+    bool /* wasPtr */ releaseValueOf(TObjId obj, TValId val);
     void registerValueOf(TObjId obj, TValId val);
     void reinterpretObjData(TObjId old, TObjId obj);
     void setValueOf(TObjId of, TValId val);
@@ -411,10 +411,10 @@ inline TValId SymHeapCore::Private::valRoot(const TValId val) {
     return this->valRoot(val, this->valData(val));
 }
 
-void SymHeapCore::Private::releaseValueOf(TObjId obj, TValId val) {
+bool /* wasPtr */ SymHeapCore::Private::releaseValueOf(TObjId obj, TValId val) {
     if (val <= 0)
         // we do not track uses of special values
-        return;
+        return /* wasPtr */ false;
 
     BaseValue *valData = this->valData(val);
     if (1 != valData->usedBy.erase(obj))
@@ -423,11 +423,13 @@ void SymHeapCore::Private::releaseValueOf(TObjId obj, TValId val) {
     const TValId root = this->valRoot(val, valData);
     valData = this->valData(root);
     if (!isPossibleToDeref(valData->code))
-        return;
+        return /* wasPtr */ false;
 
     RootValue *rootData = DCAST<RootValue *>(valData);
     if (1 != rootData->usedByGl.erase(obj))
         CL_BREAK_IF("SymHeapCore::Private::releaseValueOf(): offset detected");
+
+    return /* wasPtr */ true;
 }
 
 void SymHeapCore::Private::registerValueOf(TObjId obj, TValId val) {
@@ -452,10 +454,19 @@ void SymHeapCore::Private::reinterpretObjData(TObjId old, TObjId obj) {
         // do not invalidate those place-holding values of composite objects
         return;
 
+    CL_DEBUG("reinterpretObjData() is taking place...");
     HeapObject *objData = this->objData(obj);
-    CL_WARN("data reinterpretation not implemented yet!");
-    CL_BREAK_IF("please implement");
+    // TODO: hook various reinterpretation drivers here
     (void) objData;
+
+    if (/* wasPtr */ this->releaseValueOf(old, oldData->value))
+        // FIXME: this needs to be somehow solved at a higher-level
+        CL_WARN("reinterpretObjData() ignores possible memory leakage");
+
+    // assign a fresh VO_REINTERPRET value
+    const TValId val = this->valCreate(VT_UNKNOWN, VO_REINTERPRET);
+    objData->value = val;
+    this->registerValueOf(obj, val);
 }
 
 void SymHeapCore::Private::setValueOf(TObjId obj, TValId val) {
