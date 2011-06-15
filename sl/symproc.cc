@@ -76,92 +76,65 @@ TValId SymProc::heapValFromCst(const struct cl_operand &op) {
     return sh_.valWrapCustom(cv);
 }
 
-bool SymProc::checkForInvalidDeref(TObjId obj) {
-    switch (obj) {
-        case OBJ_UNKNOWN:
-            CL_ERROR_MSG(lw_,
-                    "type of the pointer being dereferenced does not match "
-                    "type of the target object");
-            break;
-
-        case OBJ_INVALID:
-            CL_BREAK_IF("SymProc::checkForInvalidDeref() got invalid object");
-
-        default:
-            // valid object
-            return false;
-    }
-
-    // an invalid dereference has been detected
-    bt_->printBackTrace();
-    return true;
-}
-
 bool SymProc::checkForInvalidDeref(TValId val, TObjType cltTarget) {
-    const EValueOrigin origin = sh_.valOrigin(val);
-    if (VO_DEREF_FAILED == origin)
+    if (VAL_NULL == val) {
+        CL_ERROR_MSG(lw_, "dereference of NULL value");
         return true;
-
-    switch (val) {
-        case VAL_NULL:
-            CL_ERROR_MSG(lw_, "dereference of NULL value");
-            bt_->printBackTrace();
-            return true;
-
-        case VAL_INVALID:
-            CL_BREAK_IF("SymProc::checkForInvalidDeref() got VAL_INVALID");
-
-        default:
-            break;
     }
 
+    const EValueOrigin origin = sh_.valOrigin(val);
     if (isUninitialized(origin)) {
         CL_ERROR_MSG(lw_, "dereference of uninitialized value");
-        bt_->printBackTrace();
         return true;
     }
 
-    EValueTarget code = sh_.valTarget(val);
-    if (sh_.valOffset(val) < 0)
-        // TODO: refine the error messages
-        code = VT_UNKNOWN;
-
+    const EValueTarget code = sh_.valTarget(val);
     switch (code) {
+        case VT_INVALID:
+        case VT_COMPOSITE:
+        case VT_CUSTOM:
+        case VT_ABSTRACT:
+            CL_BREAK_IF("attempt to dereference something special");
+            // fall through!
+
+        case VT_UNKNOWN:
+            // TODO: refine the error messages
+            CL_ERROR_MSG(lw_, "dereference of unknown value");
+            return true;
+
         case VT_LOST:
             CL_ERROR_MSG(lw_, "dereference of non-existing non-heap object");
-            bt_->printBackTrace();
             return true;
 
         case VT_DELETED:
             CL_ERROR_MSG(lw_, "dereference of already deleted heap object");
-            bt_->printBackTrace();
             return true;
 
-        case VT_ABSTRACT:
-        case VT_CUSTOM:
-            CL_BREAK_IF("attempt to dereference VT_ABSTRACT or VT_CUSTOM");
-            // fall through!
-
-        case VT_UNKNOWN:
-            CL_ERROR_MSG(lw_, "dereference of unknown value");
-            bt_->printBackTrace();
-            return true;
-
-        default:
-            CL_BREAK_IF(!isPossibleToDeref(code));
+        case VT_STATIC:
+        case VT_ON_STACK:
+        case VT_ON_HEAP:
+            break;
     }
 
-    if (!cltTarget)
-        // no type-info, check that there is at least _some_ target
-        return this->checkForInvalidDeref(sh_.objAt(val));
+    if (sh_.valOffset(val) < 0) {
+        // TODO: refine the error messages
+        CL_ERROR_MSG(lw_, "dereference of unknown value");
+        return true;
+    }
 
-    else if (isDataPtr(cltTarget))
-        // check if there is _any_ data pointer at that address
-        return this->checkForInvalidDeref(sh_.ptrAt(val));
+    const int sizeOfTarget = cltTarget->size;
+    CL_BREAK_IF(sizeOfTarget <= 0);
+    if (sh_.valSizeOfTarget(val) < sizeOfTarget) {
+        // FIXME: misleading error message
+        CL_ERROR_MSG(lw_,
+                "type of the pointer being dereferenced does not match "
+                "type of the target object");
 
-    else
-        // mach the type of target object
-        return this->checkForInvalidDeref(sh_.objAt(val, cltTarget));
+        return true;
+    }
+
+    // all OK
+    return false;
 }
 
 void SymProc::varInit(TValId at) {
@@ -298,11 +271,17 @@ TObjId SymProc::objByOperand(const struct cl_operand &op) {
 
     // resolve address of the target object
     const TValId at = this->targetAt(op);
+    const EValueOrigin origin = sh_.valOrigin(at);
+    if (VO_DEREF_FAILED == origin)
+        // we are already on the error path
+        return OBJ_DEREF_FAILED;
 
     // check for invalid dereference
     const TObjType cltTarget = op.type;
-    if (this->checkForInvalidDeref(at, cltTarget))
+    if (this->checkForInvalidDeref(at, cltTarget)) {
+        bt_->printBackTrace();
         return OBJ_DEREF_FAILED;
+    }
 
     // resolve the target object
     const TObjId obj = sh_.objAt(at, op.type);
