@@ -432,23 +432,7 @@ void SymProc::heapObjDefineType(TObjId lhs, TValId rhs) {
         // type info known to match already
         return;
 
-    // anonymous objects of zero size are not allowed
-    const int cbGot = sh_.valSizeOfTarget(rhs);
-    CL_BREAK_IF(!cbGot);
-
-    const int cbNeed = cltTarget->size;
-    if (cbGot != cbNeed) {
-        static const char szMsg[] =
-            "amount of allocated memory not accurate";
-        if (cbGot < cbNeed)
-            CL_ERROR_MSG(lw_, szMsg);
-        else
-            CL_WARN_MSG(lw_, szMsg);
-
-        CL_NOTE_MSG(lw_, "allocated: " << cbGot  << " bytes");
-        CL_NOTE_MSG(lw_, " expected: " << cbNeed << " bytes");
-    }
-
+    // update the last known type-info of the root
     sh_.valSetLastKnownTypeOfTarget(rhs, cltTarget);
 }
 

@@ -102,11 +102,11 @@ void misuse_of_union(void)
     gl_stack.data.p1 = &gl_stack.data.p0;
     ___sl_plot(NULL);
 
-    // ugly, but we should be silent for now
+    // ugly, but we should be silent
     gl_stack.data.p0 = gl_stack.head;
     ___sl_plot(NULL);
 
-    // although this works, we should give it no go!
+    // ugly, but we should be silent
     gl_stack.data.p0 = malloc(80);
     free(gl_stack.head);
     ___sl_plot(NULL);

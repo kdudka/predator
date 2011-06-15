@@ -1,6 +1,3 @@
-test-0028.c:24:13: error: amount of allocated memory not accurate
-test-0028.c:24:13: note: allocated: 4 bytes
-test-0028.c:24:13: note:  expected: 8 bytes
 test-0028.c:25:15: error: dereferencing object of size 8B out of bounds
 test-0028.c:25:15: note: the target object ends 4B beyond a heap object
 test-0028.c:25:15: warning: killing junk

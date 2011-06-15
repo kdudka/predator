@@ -1,3 +1,0 @@
-test-0093.c:111:18: warning: amount of allocated memory not accurate
-test-0093.c:111:18: note: allocated: 80 bytes
-test-0093.c:111:18: note:  expected: 12 bytes
