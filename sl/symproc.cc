@@ -76,15 +76,52 @@ TValId SymProc::heapValFromCst(const struct cl_operand &op) {
     return sh_.valWrapCustom(cv);
 }
 
+void reportDerefOfUnknownVal(SymProc &proc, const TValId val) {
+    const struct cl_loc *loc = proc.lw();
+    SymHeap &sh = proc.sh();
+
+    const char *what = "unknown value";
+
+    const EValueOrigin code = sh.valOrigin(val);
+    switch (code) {
+        case VO_STACK:
+        case VO_HEAP:
+            what = "uninitialized value";
+
+        default:
+            break;
+    }
+
+    // TODO: refine the error messages
+    CL_ERROR_MSG(loc, "dereference of " << what);
+}
+
+void reportDerefOutOfBounds(
+        SymProc                         &proc,
+        const TValId                    val,
+        const TObjType                  cltTarget)
+{
+    const struct cl_loc *loc = proc.lw();
+    SymHeap &sh = proc.sh();
+
+    if (sh.valOffset(val) < 0) {
+        // TODO: refine the error messages
+        CL_ERROR_MSG(loc, "dereference of unknown value");
+    }
+
+    const int sizeOfTarget = cltTarget->size;
+    CL_BREAK_IF(sizeOfTarget <= 0);
+    if (sh.valSizeOfTarget(val) < sizeOfTarget) {
+        // FIXME: misleading error message
+        CL_ERROR_MSG(loc,
+                "type of the pointer being dereferenced does not match "
+                "type of the target object");
+    }
+}
+
 bool SymProc::checkForInvalidDeref(TValId val, TObjType cltTarget) {
     if (VAL_NULL == val) {
         CL_ERROR_MSG(lw_, "dereference of NULL value");
-        return true;
-    }
-
-    const EValueOrigin origin = sh_.valOrigin(val);
-    if (isUninitialized(origin)) {
-        CL_ERROR_MSG(lw_, "dereference of uninitialized value");
         return true;
     }
 
@@ -98,8 +135,7 @@ bool SymProc::checkForInvalidDeref(TValId val, TObjType cltTarget) {
             // fall through!
 
         case VT_UNKNOWN:
-            // TODO: refine the error messages
-            CL_ERROR_MSG(lw_, "dereference of unknown value");
+            reportDerefOfUnknownVal(*this, val);
             return true;
 
         case VT_LOST:
@@ -116,20 +152,9 @@ bool SymProc::checkForInvalidDeref(TValId val, TObjType cltTarget) {
             break;
     }
 
-    if (sh_.valOffset(val) < 0) {
-        // TODO: refine the error messages
-        CL_ERROR_MSG(lw_, "dereference of unknown value");
-        return true;
-    }
-
-    const int sizeOfTarget = cltTarget->size;
-    CL_BREAK_IF(sizeOfTarget <= 0);
-    if (sh_.valSizeOfTarget(val) < sizeOfTarget) {
-        // FIXME: misleading error message
-        CL_ERROR_MSG(lw_,
-                "type of the pointer being dereferenced does not match "
-                "type of the target object");
-
+    if (sh_.valOffset(val) < 0 || sh_.valSizeOfTarget(val) < cltTarget->size) {
+        // out of bounds
+        reportDerefOutOfBounds(*this, val, cltTarget);
         return true;
     }
 
