@@ -183,8 +183,6 @@ class SymExecCore: public SymProc {
         virtual TValId valFromOperand(const struct cl_operand &op);
 
     private:
-        bool lhsFromOperand(TObjId *pObj, const struct cl_operand &op);
-
         template <int ARITY>
         void execOp(const CodeStorage::Insn &insn);
 

@@ -651,23 +651,6 @@ void SymExecCore::varInit(TValId at) {
     SymProc::varInit(at);
 }
 
-bool SymExecCore::lhsFromOperand(TObjId *pObj, const struct cl_operand &op) {
-    *pObj = this->objByOperand(op);
-    switch (*pObj) {
-        case OBJ_UNKNOWN:
-            CL_ERROR_MSG(lw_, "attempt to use an unknown value as l-value");
-            bt_->printBackTrace();
-            // fall through!
-
-        case OBJ_DEREF_FAILED:
-            return false;
-
-        default:
-            CL_BREAK_IF(*pObj <= 0);
-            return true;
-    }
-}
-
 void SymExecCore::execFree(const CodeStorage::TOperandList &opList) {
     CL_BREAK_IF(/* dst + fnc + ptr */ 3 != opList.size());
 
@@ -741,8 +724,8 @@ void SymExecCore::execHeapAlloc(
         const bool                      nullified)
 {
     // resolve lhs
-    TObjId lhs = OBJ_INVALID;
-    if (!this->lhsFromOperand(&lhs, insn.operands[/* dst */ 0]))
+    const TObjId lhs = this->objByOperand(insn.operands[/* dst */ 0]);
+    if (OBJ_DEREF_FAILED == lhs)
         // error alredy emitted
         return;
 
@@ -1034,9 +1017,10 @@ struct OpHandler</* binary */ 2> {
 template <int ARITY>
 void SymExecCore::execOp(const CodeStorage::Insn &insn) {
     // resolve lhs
-    TObjId varLhs = OBJ_INVALID;
     const struct cl_operand &dst = insn.operands[/* dst */ 0];
-    if (!this->lhsFromOperand(&varLhs, dst))
+    const TObjId varLhs = this->objByOperand(dst);
+    if (OBJ_DEREF_FAILED == varLhs)
+        // error alredy emitted
         return;
 
     // store type of dst operand
