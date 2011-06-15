@@ -261,13 +261,11 @@ TValId SymProc::targetAt(const struct cl_operand &op) {
 
     // go through the chain of accessors
     TOffset off = 0;
-    bool isRef = false;
     for (; ac; ac = ac->next) {
         const enum cl_accessor_e code = ac->code;
         switch (code) {
             case CL_ACCESSOR_REF:
-                CL_BREAK_IF(isRef || ac->next);
-                isRef = true;
+                CL_BREAK_IF(ac->next);
                 continue;
 
             case CL_ACCESSOR_DEREF:
@@ -292,46 +290,27 @@ TValId SymProc::targetAt(const struct cl_operand &op) {
         addr = sh_.valueOf(sh_.ptrAt(addr));
 
     // apply the offset
-    addr = sh_.valByOffset(addr, off);
-
-    if (isRef || !isDeref)
-        // no dereferences here, let it go
-        return addr;
-
-    // check for invalid dereferences
-    const TObjType cltTarget = op.type;
-    if (this->checkForInvalidDeref(addr, cltTarget))
-        return sh_.valCreate(VT_UNKNOWN, VO_DEREF_FAILED);
-
-    // dereference OK!
-    return addr;
+    return sh_.valByOffset(addr, off);
 }
 
 TObjId SymProc::objByOperand(const struct cl_operand &op) {
     CL_BREAK_IF(seekRefAccessor(op.accessor));
+
+    // resolve address of the target object
     const TValId at = this->targetAt(op);
 
-    const EValueTarget code = sh_.valTarget(at);
-    if (!isPossibleToDeref(code)) {
-        if (VO_DEREF_FAILED == sh_.valOrigin(at))
-            return OBJ_DEREF_FAILED;
-
-        CL_ERROR_MSG(lw_, "dereference of unknown value");
-        bt_->printBackTrace();
+    // check for invalid dereference
+    const TObjType cltTarget = op.type;
+    if (this->checkForInvalidDeref(at, cltTarget))
         return OBJ_DEREF_FAILED;
-    }
 
+    // resolve the target object
     const TObjId obj = sh_.objAt(at, op.type);
-    switch (obj) {
-        case OBJ_INVALID:
-            CL_BREAK_IF("SymProc::objByOperand() failed to resolve an object");
-            return OBJ_INVALID;
+    if (obj <= 0)
+        CL_BREAK_IF("SymProc::objByOperand() failed to resolve an object");
 
-        case OBJ_UNKNOWN:
-        case OBJ_DEREF_FAILED:
-        default:
-            return obj;
-    }
+    // all OK
+    return obj;
 }
 
 TValId SymProc::heapValFromObj(const struct cl_operand &op) {
