@@ -125,18 +125,42 @@ void reportDerefOutOfBounds(
     const struct cl_loc *loc = proc.lw();
     SymHeap &sh = proc.sh();
 
-    if (sh.valOffset(val) < 0) {
-        // TODO: refine the error messages
-        CL_ERROR_MSG(loc, "dereference of unknown value");
-    }
-
     const int sizeOfTarget = cltTarget->size;
     CL_BREAK_IF(sizeOfTarget <= 0);
-    if (sh.valSizeOfTarget(val) < sizeOfTarget) {
-        // FIXME: misleading error message
-        CL_ERROR_MSG(loc,
-                "type of the pointer being dereferenced does not match "
-                "type of the target object");
+    CL_ERROR_MSG(loc, "dereferencing object of size " << sizeOfTarget
+            << "B out of bounds");
+
+    const char *what = 0;
+
+    const EValueTarget code = sh.valTarget(val);
+    switch (code) {
+        case VT_STATIC:
+            what = "a static variable";
+            break;
+
+        case VT_ON_STACK:
+            what = "a variable on stack";
+            break;
+
+        case VT_ON_HEAP:
+            what = "a heap object";
+            break;
+
+        default:
+            CL_BREAK_IF("invalid call of reportDerefOutOfBounds()");
+            return;
+    }
+
+    const TOffset off = sh.valOffset(val);
+    if (off < 0) {
+        CL_NOTE_MSG(loc, "the pointer being dereferenced points "
+                << (-off) << "B above " << what);
+    }
+
+    const int beyond = sizeOfTarget - sh.valSizeOfTarget(val);
+    if (0 < beyond) {
+        CL_NOTE_MSG(loc, "the target object ends "
+                << beyond << "B beyond " << what);
     }
 }
 
