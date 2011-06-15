@@ -3,7 +3,8 @@ test-0106.c:34:19: note: from call of seek_lmost()
 test-0106.c:54:15: note: from call of insert()
 test-0106.c:74:11: note: from call of create_pseudo_tree()
 test-0106.c:72:5: note: from call of main()
-test-0106.c:13:15: error: dereference of uninitialized value
+test-0106.c:12:12: error: invalid dereference
+test-0106.c:12:12: note: the value being dereferenced is an untouched contents of stack
 test-0106.c:34:19: note: from call of seek_lmost()
 test-0106.c:54:15: note: from call of insert()
 test-0106.c:74:11: note: from call of create_pseudo_tree()
@@ -13,12 +14,20 @@ test-0106.c:36:19: note: from call of seek_rmost()
 test-0106.c:54:15: note: from call of insert()
 test-0106.c:74:11: note: from call of create_pseudo_tree()
 test-0106.c:72:5: note: from call of main()
-test-0106.c:19:15: error: dereference of uninitialized value
+test-0106.c:18:12: error: invalid dereference
+test-0106.c:18:12: note: the value being dereferenced is an untouched contents of stack
 test-0106.c:36:19: note: from call of seek_rmost()
 test-0106.c:54:15: note: from call of insert()
 test-0106.c:74:11: note: from call of create_pseudo_tree()
 test-0106.c:72:5: note: from call of main()
+test-0106.c:38:9: warning: killing junk
+test-0106.c:54:15: note: from call of insert()
+test-0106.c:74:11: note: from call of create_pseudo_tree()
+test-0106.c:72:5: note: from call of main()
 test-0106.c:61:8: warning: conditional jump depends on uninitialized value
+test-0106.c:77:12: note: from call of destroy()
+test-0106.c:72:5: note: from call of main()
+test-0106.c:61:8: warning: killing junk
 test-0106.c:77:12: note: from call of destroy()
 test-0106.c:72:5: note: from call of main()
 test-0106.c:61:8: warning: killing junk

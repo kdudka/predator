@@ -1,0 +1,13 @@
+test-0113.c:40:9: warning: killing junk
+test-0113.c:48:15: note: from call of insert()
+test-0113.c:75:11: note: from call of create_pseudo_tree()
+test-0113.c:73:5: note: from call of main()
+test-0113.c:66:13: warning: killing junk
+test-0113.c:78:12: note: from call of destroy()
+test-0113.c:73:5: note: from call of main()
+test-0113.c:70:9: warning: killing junk
+test-0113.c:78:12: note: from call of destroy()
+test-0113.c:73:5: note: from call of main()
+test-0113.c:60:13: warning: killing junk
+test-0113.c:78:12: note: from call of destroy()
+test-0113.c:73:5: note: from call of main()

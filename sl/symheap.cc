@@ -1502,11 +1502,11 @@ void SymHeapCore::valSetLastKnownTypeOfTarget(TValId root, TObjType clt) {
 
         // allocate a new root value at VAL_ADDR_OF_RET
         rootData->code = VT_ON_STACK;
+        rootData->cbSize = clt->size;
     }
 
     // convert a type-free object into a type-aware object
     rootData->lastKnownClt = clt;
-    rootData->cbSize = clt->size;
     d->liveRoots.insert(root);
 }
 

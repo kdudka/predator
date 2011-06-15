@@ -1,5 +1,5 @@
+#include "../sl.h"
 #include <stdlib.h>
-
 int main()
 {
     void *mem = malloc(sizeof(mem));
@@ -10,6 +10,9 @@ int main()
 
     mem = malloc(sizeof(char));
     void **err = mem;
+
+    ___sl_plot(NULL);
+    *err = NULL;
 
     return 0;
 }
