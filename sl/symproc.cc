@@ -80,20 +80,41 @@ void reportDerefOfUnknownVal(SymProc &proc, const TValId val) {
     const struct cl_loc *loc = proc.lw();
     SymHeap &sh = proc.sh();
 
-    const char *what = "unknown value";
+    CL_ERROR_MSG(loc, "invalid dereference");
+    const char *what = 0;
 
     const EValueOrigin code = sh.valOrigin(val);
     switch (code) {
-        case VO_STACK:
-        case VO_HEAP:
-            what = "uninitialized value";
+        case VO_DEREF_FAILED:
+            CL_BREAK_IF("invalid call of reportDerefOfUnknownVal()");
+            // fall through!
 
-        default:
+        case VO_INVALID:
+        case VO_ASSIGNED:
+        case VO_UNKNOWN:
+            return;
+
+        case VO_REINTERPRET:
+            what = "a result of an unsupported data reinterpretation";
+            break;
+
+        case VO_STATIC:
+            what = "an untouched contents of static data";
+            break;
+
+        case VO_STACK:
+            what = "an untouched contents of stack";
+            break;
+
+        case VO_HEAP:
+            what = "an untouched contents of heap";
             break;
     }
 
-    // TODO: refine the error messages
-    CL_ERROR_MSG(loc, "dereference of " << what);
+    if (what)
+        CL_NOTE_MSG(loc, "the value being dereferenced is " << what);
+    else
+        CL_BREAK_IF("valOrigin out of range?");
 }
 
 void reportDerefOutOfBounds(

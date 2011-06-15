@@ -1,4 +1,5 @@
-test-0094.c:89:20: error: dereference of unknown value
+test-0094.c:89:20: error: invalid dereference
+test-0094.c:89:20: note: the value being dereferenced is a result of an unsupported data reinterpretation
 test-0094.c:78:17: warning: recursive function call, depth = 2
 test-0094.c:78:17: note: from call of destroy_tree()
 test-0094.c:92:17: note: from call of destroy_tree()
