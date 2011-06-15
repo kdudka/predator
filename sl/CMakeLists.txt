@@ -21,6 +21,9 @@ project(sl C CXX)
 add_definitions("-I../include")
 enable_testing()
 
+# we need ot use boost 1.46+ because of boost::icl
+find_package(Boost 1.46 REQUIRED)
+
 include("../CMakeLists.common")
 
 option(SL_DEBUG "Set to ON to enable debugging support" OFF)
