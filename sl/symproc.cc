@@ -684,22 +684,28 @@ bool SymExecCore::lhsFromOperand(TObjId *pObj, const struct cl_operand &op) {
     }
 }
 
-void SymExecCore::execFreeCore(const TValId val) {
-    EValueTarget code = sh_.valTarget(val);
-    if (sh_.valOffset(val) < 0)
-        // TODO: refine the error messages
-        code = VT_UNKNOWN;
+void SymExecCore::execFree(const CodeStorage::TOperandList &opList) {
+    CL_BREAK_IF(/* dst + fnc + ptr */ 3 != opList.size());
 
+    // free() does not usually return a value
+    CL_BREAK_IF(CL_OPERAND_VOID != opList[0].code);
+
+    // resolve value to be freed
+    TValId val = valFromOperand(opList[/* ptr given to free() */2]);
+    if (VAL_NULL == val) {
+        CL_DEBUG_MSG(lw_, "ignoring free() called with NULL value");
+        return;
+    }
+
+    const EValueTarget code = sh_.valTarget(val);
     switch (code) {
         case VT_DELETED:
-            CL_ERROR_MSG(lw_, "double free() detected");
+            CL_ERROR_MSG(lw_, "double free()");
             bt_->printBackTrace();
             return;
 
         case VT_LOST:
-            // this is a double error in the analyzed program :-)
-            CL_ERROR_MSG(lw_, "attempt to free a non-heap object"
-                              ", which does not exist anyhow");
+            CL_ERROR_MSG(lw_, "attempt to free a non-existing non-heap object");
             bt_->printBackTrace();
             return;
 
@@ -709,64 +715,39 @@ void SymExecCore::execFreeCore(const TValId val) {
             bt_->printBackTrace();
             return;
 
+        case VT_CUSTOM:
+            CL_ERROR_MSG(lw_, "free() called on non-pointer value");
+            bt_->printBackTrace();
+            return;
+
         case VT_INVALID:
         case VT_ABSTRACT:
+        case VT_COMPOSITE:
             CL_BREAK_IF("invalid call of SymExecCore::execFreeCore()");
             // fall through!
 
         case VT_UNKNOWN:
-        case VT_CUSTOM:
-        case VT_COMPOSITE:
-            CL_ERROR_MSG(lw_, "free() called on unknown value");
+            if (VO_DEREF_FAILED == sh_.valOrigin(val))
+                return;
+
+            // TODO: refine the error messages coming from here
+            CL_ERROR_MSG(lw_, "invalid free()");
             bt_->printBackTrace();
             return;
 
         case VT_ON_HEAP:
-            if (sh_.valOffset(val)) {
-                CL_ERROR_MSG(lw_, "attempt to free a non-root object");
-                bt_->printBackTrace();
-                return;
-            }
-    }
-
-    this->valDestroyTarget(val);
-}
-
-void SymExecCore::execFree(const CodeStorage::TOperandList &opList) {
-    CL_BREAK_IF(/* dst + fnc + ptr */ 3 != opList.size());
-
-    // free() does not usually return a value
-    CL_BREAK_IF(CL_OPERAND_VOID != opList[0].code);
-
-    // resolve value to be freed
-    TValId val = valFromOperand(opList[/* ptr given to free() */2]);
-    switch (val) {
-        case VAL_INVALID:
-            CL_BREAK_IF("SymExecCore::execFree() got invalid value");
-            return;
-
-        case VAL_NULL:
-            CL_DEBUG_MSG(lw_, "ignoring free() called with NULL value");
-            return;
-
-        default:
             break;
     }
 
-    const EValueOrigin origin = sh_.valOrigin(val);
-    if (VO_DEREF_FAILED == origin) {
-        CL_DEBUG_MSG(lw_, "ignoring free() called on VO_DEREF_FAILED");
-        return;
-    }
-
-    if (isUninitialized(origin)) {
-        CL_ERROR_MSG(lw_, "free() called on uninitialized value");
+    const TOffset off = sh_.valOffset(val);
+    if (off) {
+        CL_ERROR_MSG(lw_, "free() called with offset " << off << "B");
         bt_->printBackTrace();
         return;
     }
 
     CL_DEBUG_MSG(lw_, "executing free()");
-    this->execFreeCore(val);
+    this->valDestroyTarget(val);
 }
 
 void SymExecCore::execHeapAlloc(

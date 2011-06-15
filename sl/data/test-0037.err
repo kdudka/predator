@@ -5,5 +5,5 @@ test-0037.c:27:11: warning: killing junk
 test-0037.c:27:11: error: dereference of NULL value
 test-0037.c:28:8: warning: conditional jump depends on uninitialized value
 test-0037.c:29:13: warning: killing junk
-test-0037.c:31:13: error: double free() detected
+test-0037.c:31:13: error: double free()
 test-0037.c:18:20: warning: killing junk

@@ -1,12 +1,12 @@
-test-0089.c:116:5: error: attempt to free a non-root object
+test-0089.c:116:5: error: free() called with offset 16B
 test-0089.c:116:5: warning: killing junk
-test-0089.c:117:5: error: attempt to free a non-root object
+test-0089.c:117:5: error: free() called with offset 8B
 test-0089.c:117:5: warning: killing junk
-test-0089.c:118:5: error: attempt to free a non-root object
+test-0089.c:118:5: error: free() called with offset 4B
 test-0089.c:118:5: warning: killing junk
-test-0089.c:81:9: error: free() called on unknown value
+test-0089.c:81:9: error: free() called with offset -16B
 test-0089.c:121:24: note: from call of chk_offval_handling()
 test-0089.c:90:5: note: from call of main()
-test-0089.c:87:9: error: double free() detected
+test-0089.c:87:9: error: double free()
 test-0089.c:121:24: note: from call of chk_offval_handling()
 test-0089.c:90:5: note: from call of main()

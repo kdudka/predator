@@ -192,7 +192,6 @@ class SymExecCore: public SymProc {
         void execHeapAlloc(SymState &dst, const CodeStorage::Insn &,
                            const unsigned size, const bool nullified);
 
-        void execFreeCore(TValId val);
         void execFree(const CodeStorage::TOperandList &opList);
         bool execCall(SymState &dst, const CodeStorage::Insn &insn);
 
