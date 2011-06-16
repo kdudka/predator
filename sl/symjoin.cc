@@ -601,6 +601,28 @@ bool joinClt(
     return true;
 }
 
+TObjType joinClt(
+        SymJoinCtx              &ctx,
+        const TObjType          clt1,
+        const TObjType          clt2)
+{
+    TObjType clt;
+    if (joinClt(&clt, clt1, clt2))
+        // symmetric join of type-info
+        return clt;
+
+    if (clt2)
+        updateJoinStatus(ctx, JS_USE_SH1);
+    else if (clt1)
+        updateJoinStatus(ctx, JS_USE_SH2);
+    else
+        // not reachable
+        CL_BREAK_IF("joinClt() malfunction");
+
+    // type-info is going to be abstracted out
+    return 0;
+}
+
 bool joinObjKind(
         EObjKind                *pDst,
         const SymJoinCtx        &ctx,
@@ -947,11 +969,9 @@ bool followRootValuesCore(
     if (hasKey(ctx.valMap1[0], root1) && hasKey(ctx.valMap2[0], root2))
         return true;
 
-    TObjType clt;
     const TObjType clt1 = ctx.sh1.valLastKnownTypeOfTarget(root1);
     const TObjType clt2 = ctx.sh2.valLastKnownTypeOfTarget(root2);
-    if (!joinClt(&clt, clt1, clt2))
-        return false;
+    const TObjType clt = joinClt(ctx, clt1, clt2);
 
     if (readOnly)
         // do not create any object, just check if it was possible
@@ -1257,12 +1277,7 @@ bool segmentCloneCore(
         return true;
 
     const TObjType clt = shGt.valLastKnownTypeOfTarget(addrGt);
-    if (!clt)
-        // TODO: clone anonymous prototypes?
-        return true;
-
     SJ_DEBUG("+i+ insertSegmentClone: cloning object at #" << addrGt <<
-             ", clt = " << *clt <<
              ", action = " << action);
 
     const TValId root1 = (JS_USE_SH1 == action) ? addrGt : VAL_INVALID;
@@ -1543,10 +1558,6 @@ bool mayExistFallback(
         return false;
 
     const TValId valRoot = (use1) ? root1 : root2;
-    if (!isComposite(sh.valLastKnownTypeOfTarget(valRoot)))
-        // target is not a composite type (TODO: relax our requirements?)
-        return false;
-
     if (OK_CONCRETE != sh.valTargetKind(valRoot))
         // only concrete objects/prototypes are candidates for OK_MAY_EXIST
         return false;
@@ -2128,13 +2139,9 @@ bool joinDataCore(
     CL_BREAK_IF(!ctx.joiningData());
     SymHeap &sh = ctx.sh1;
 
-    TObjType clt;
     const TObjType clt1 = ctx.sh1.valLastKnownTypeOfTarget(addr1);
     const TObjType clt2 = ctx.sh2.valLastKnownTypeOfTarget(addr2);
-    if (!joinClt(&clt, clt1, clt2)) {
-        CL_BREAK_IF("joinDataCore() called on objects with incompatible clt");
-        return false;
-    }
+    const TObjType clt = joinClt(ctx, clt1, clt2);
 
     int size;
     if (!joinObjSize(&size, ctx, addr1, addr2))
