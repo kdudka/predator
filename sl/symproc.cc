@@ -155,16 +155,28 @@ void reportDerefOutOfBounds(
     }
 
     const TValId root = sh.valRoot(val);
-    const unsigned rootSize = sh.valSizeOfTarget(root);
+    const int rootSize = sh.valSizeOfTarget(root);
+    CL_BREAK_IF(rootSize <= 0);
 
     const TOffset off = sh.valOffset(val);
     if (off < 0) {
         CL_NOTE_MSG(loc, "the pointer being dereferenced points "
                 << (-off) << "B above " << what
                 << " of size " << rootSize << "B");
+
+        return;
     }
 
-    const int beyond = sizeOfTarget - sh.valSizeOfTarget(val);
+    int beyond = off - rootSize;
+    if (0 <= beyond) {
+        CL_NOTE_MSG(loc, "the pointer being dereferenced points "
+                << beyond << "B beyond " << what
+                << " of size " << rootSize << "B");
+
+        return;
+    }
+
+    beyond = sizeOfTarget - sh.valSizeOfTarget(val);
     if (0 < beyond) {
         CL_NOTE_MSG(loc, "the target object ends "
                 << beyond << "B beyond " << what
