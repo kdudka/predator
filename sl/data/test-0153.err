@@ -27,7 +27,7 @@ test-0153.c:78:28: note: from call of create_list_far()
 test-0153.c:91:20: note: from call of create_list_far()
 test-0153.c:86:5: note: from call of main()
 test-0153.c:31:5: error: dereferencing object of size 4B out of bounds
-test-0153.c:31:5: note: the target object ends 4B beyond a static variable
+test-0153.c:31:5: note: the target object ends 4B beyond a static variable of size 24B
 test-0153.c:53:26: note: from call of create_list_of_length()
 test-0153.c:66:27: note: from call of create_list_no()
 test-0153.c:70:28: note: from call of create_list_far()
@@ -36,7 +36,7 @@ test-0153.c:78:28: note: from call of create_list_far()
 test-0153.c:91:20: note: from call of create_list_far()
 test-0153.c:86:5: note: from call of main()
 test-0153.c:31:5: error: dereferencing object of size 4B out of bounds
-test-0153.c:31:5: note: the target object ends 8B beyond a static variable
+test-0153.c:31:5: note: the target object ends 8B beyond a static variable of size 24B
 test-0153.c:53:26: note: from call of create_list_of_length()
 test-0153.c:66:27: note: from call of create_list_no()
 test-0153.c:70:28: note: from call of create_list_far()
@@ -45,7 +45,7 @@ test-0153.c:78:28: note: from call of create_list_far()
 test-0153.c:91:20: note: from call of create_list_far()
 test-0153.c:86:5: note: from call of main()
 list.h:61:12: error: dereferencing object of size 4B out of bounds
-list.h:61:12: note: the target object ends 4B beyond a static variable
+list.h:61:12: note: the target object ends 4B beyond a static variable of size 24B
 test-0153.c:25:13: note: from call of list_add()
 test-0153.c:32:16: note: from call of insert_node()
 test-0153.c:53:26: note: from call of create_list_of_length()
@@ -56,7 +56,7 @@ test-0153.c:78:28: note: from call of create_list_far()
 test-0153.c:91:20: note: from call of create_list_far()
 test-0153.c:86:5: note: from call of main()
 list.h:48:13: error: dereferencing object of size 4B out of bounds
-list.h:48:13: note: the target object ends 4B beyond a static variable
+list.h:48:13: note: the target object ends 4B beyond a static variable of size 24B
 list.h:61:12: note: from call of __list_add()
 test-0153.c:25:13: note: from call of list_add()
 test-0153.c:32:16: note: from call of insert_node()
@@ -79,7 +79,7 @@ test-0153.c:78:28: note: from call of create_list_far()
 test-0153.c:91:20: note: from call of create_list_far()
 test-0153.c:86:5: note: from call of main()
 test-0153.c:42:26: error: dereferencing object of size 4B out of bounds
-test-0153.c:42:26: note: the target object ends 4B beyond a static variable
+test-0153.c:42:26: note: the target object ends 4B beyond a static variable of size 24B
 test-0153.c:58:17: note: from call of destroy_list()
 test-0153.c:94:20: note: from call of destroy_list_no()
 test-0153.c:86:5: note: from call of main()
