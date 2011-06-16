@@ -1,2 +1,5 @@
 test-0158.c:26:19: warning: killing junk
 test-0158.c:29:9: error: invalid free()
+test-0158.c:29:9: note: the value being freed is a result of an unsupported data reinterpretation
+test-0158.c:29:9: error: invalid free()
+test-0158.c:29:9: note: the value being freed is a result of an unsupported data reinterpretation

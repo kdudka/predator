@@ -76,11 +76,14 @@ TValId SymProc::heapValFromCst(const struct cl_operand &op) {
     return sh_.valWrapCustom(cv);
 }
 
-void reportDerefOfUnknownVal(SymProc &proc, const TValId val) {
+void describeUnknownVal(
+        SymProc                         &proc,
+        const TValId                     val,
+        const char                      *action)
+{
     const struct cl_loc *loc = proc.lw();
     SymHeap &sh = proc.sh();
 
-    CL_ERROR_MSG(loc, "invalid dereference");
     const char *what = 0;
 
     const EValueOrigin code = sh.valOrigin(val);
@@ -112,7 +115,7 @@ void reportDerefOfUnknownVal(SymProc &proc, const TValId val) {
     }
 
     if (what)
-        CL_NOTE_MSG(loc, "the value being dereferenced is " << what);
+        CL_NOTE_MSG(loc, "the value being " << action << "d is " << what);
     else
         CL_BREAK_IF("valOrigin out of range?");
 }
@@ -180,7 +183,8 @@ bool SymProc::checkForInvalidDeref(TValId val, TObjType cltTarget) {
             // fall through!
 
         case VT_UNKNOWN:
-            reportDerefOfUnknownVal(*this, val);
+            CL_ERROR_MSG(lw_, "invalid dereference");
+            describeUnknownVal(*this, val, "dereference");
             return true;
 
         case VT_LOST:
@@ -697,8 +701,8 @@ void SymExecCore::execFree(const CodeStorage::TOperandList &opList) {
             if (VO_DEREF_FAILED == sh_.valOrigin(val))
                 return;
 
-            // TODO: refine the error messages coming from here
             CL_ERROR_MSG(lw_, "invalid free()");
+            describeUnknownVal(*this, val, "free");
             bt_->printBackTrace();
             return;
 
