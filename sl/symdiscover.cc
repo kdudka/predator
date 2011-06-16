@@ -218,7 +218,6 @@ TValId jumpToNextObj(
         haveSeen.insert(at);
     }
 
-    const TObjType clt = sh.valLastKnownTypeOfTarget(at);
     const TValId nextHead = valOfPtrAt(sh, at, off.next);
     if (nextHead <= 0 || off.head != sh.valOffset(nextHead))
         // no valid head pointed by nextPtr
@@ -227,11 +226,6 @@ TValId jumpToNextObj(
     const TValId next = sh.valRoot(nextHead);
     if (!isOnHeap(sh.valTarget(next)))
         // only objects on heap can be abstracted out
-        return VAL_INVALID;
-
-    const TObjType cltNext = sh.valLastKnownTypeOfTarget(next);
-    if (!clt || !cltNext || *clt != *cltNext)
-        // type mismatch
         return VAL_INVALID;
 
     if (!matchSegBinding(sh, next, off))
@@ -594,11 +588,6 @@ unsigned /* len */ discoverBestAbstraction(
     TValList addrs;
     sh.gatherRootObjects(addrs, isOnHeap);
     BOOST_FOREACH(const TValId at, addrs) {
-        const TObjType clt = sh.valLastKnownTypeOfTarget(at);
-        if (!clt || clt->code != CL_TYPE_STRUCT)
-            // we do not support generic objects atm, this will change soonish!
-            continue;
-
         // use ProbeEntryVisitor visitor to validate the potential segment entry
         SegCandidate segc;
         const ProbeEntryVisitor visitor(segc.offList, sh, at);

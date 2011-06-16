@@ -432,8 +432,9 @@ void SymProc::heapObjDefineType(TObjId lhs, TValId rhs) {
         return;
 
     const TObjType cltLast = sh_.valLastKnownTypeOfTarget(rhs);
-    if (cltLast /* TODO: && (*cltLast == *cltTarget) */)
-        // type info known to match already
+    if (isComposite(cltLast) && !isComposite(cltTarget))
+        // we are accessing a field that is placed at zero offset of a composite
+        // type, but it yet does not mean that we are chaning the root type-info
         return;
 
     // update the last known type-info of the root

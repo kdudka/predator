@@ -284,16 +284,14 @@ void describeObject(PlotData &plot, const TObjId obj, const bool lonely) {
     const TValId root = sh.valRoot(at);
 
     const EValueTarget code = sh.valTarget(at);
-    const bool looksLikeVar = (lonely && isProgramVar(code));
-    if (looksLikeVar)
+    if (lonely && isProgramVar(code))
         describeVar(plot, root);
 
     const TObjType cltRoot = sh.valLastKnownTypeOfTarget(root);
     if (cltRoot)
         describeFieldPlacement(plot, obj, cltRoot);
 
-    if (!looksLikeVar)
-        plot.out << " #" << obj;
+    plot.out << " #" << obj;
 }
 
 void plotRootValue(PlotData &plot, const TValId val, const char *color) {
