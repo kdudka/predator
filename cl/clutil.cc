@@ -97,9 +97,12 @@ bool operator==(const struct cl_type &a, const struct cl_type &b) {
 }
 
 const struct cl_type* targetTypeOfPtr(const struct cl_type *clt) {
-    CL_BREAK_IF(!clt || clt->code != CL_TYPE_PTR || clt->item_cnt != 1);
+    if (!clt || clt->code != CL_TYPE_PTR)
+        return /* not a pointer */ 0;
 
+    CL_BREAK_IF(clt->item_cnt != 1);
     clt = clt->items[/* target */ 0].type;
+
     CL_BREAK_IF(!clt);
     return clt;
 }
