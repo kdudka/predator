@@ -301,52 +301,38 @@ bool matchData(
     return true;
 }
 
-bool slSegAvoidSelfCycle(
+bool segAvoidSelfCycle(
         SymHeap                     &sh,
         const BindingOff            &off,
-        const TValId                seg1,
-        const TValId                seg2)
+        const TValId                beg,
+        const TValId                end)
 {
-    if (isDlsBinding(off))
-        // not a SLS
-        return false;
+    if (!isDlsBinding(off)) {
+        // TODO: move this hack to the right place and document accordingly
+        const TValId valNext = valOfPtrAt(sh, end, off.next);
+        if (VAL_NULL != valNext
+                && !isPossibleToDeref(sh.valTarget(valNext))
+                && sh.usedByCount(valNext) < 2)
+            return true;
 
-    // TODO: move this hack to the right place and document accordingly
-    const TValId valNext = valOfPtrAt(sh, seg2, off.next);
-    if (VAL_NULL != valNext
-            && !isPossibleToDeref(sh.valTarget(valNext))
-            && sh.usedByCount(valNext) < 2)
+        const TValId next = nextRootObj(sh, end, off.next);
+        return haveSeg(sh, next, beg, OK_SLS);
+    }
+
+    TValId seg = end;
+    if (OK_DLS == sh.valTargetKind(end))
+        seg = dlSegPeer(sh, end);
+
+    const TValId prev = nextRootObj(sh, beg, off.prev);
+    if (prev == seg)
         return true;
 
-    const TValId next2 = nextRootObj(sh, seg2, off.next);
-    return haveSeg(sh, next2, seg1, OK_SLS);
-}
+    const TValId next = nextRootObj(sh, seg, off.next);
+    if (next == beg)
+        return true;
 
-void dlSegAvoidSelfCycle(
-        SymHeap                     &sh,
-        const BindingOff            &off,
-        const TValId                entry,
-        std::set<TValId>            &haveSeen)
-{
-    if (!isDlsBinding(off))
-        // not a DLS
-        return;
-
-    const TValId prev = nextRootObj(sh, entry, off.prev);
-    if (!isPossibleToDeref(sh.valTarget(prev)))
-        // no valid previous object
-        return;
-
-    const TObjType cltEntry = sh.valLastKnownTypeOfTarget(entry);
-    const TObjType cltPrev = sh.valLastKnownTypeOfTarget(prev);
-    if (!cltEntry || !cltPrev || *cltPrev != *cltEntry)
-        // type mismatch
-        return;
-
-    // note we have seen the previous object (and its peer in case of DLS)
-    haveSeen.insert(prev);
-    if (OK_DLS == sh.valTargetKind(prev))
-        haveSeen.insert(dlSegPeer(sh, prev));
+    return haveSeg(sh, prev, seg, OK_DLS)
+        || haveSeg(sh, next, beg, OK_DLS);
 }
 
 unsigned /* len */ segDiscover(
@@ -359,7 +345,6 @@ unsigned /* len */ segDiscover(
     haveSeen.insert(entry);
     TValId prev = entry;
 
-    dlSegAvoidSelfCycle(sh, off, entry, haveSeen);
     TValId at = jumpToNextObj(sh, off, haveSeen, entry);
     if (!insertOnce(haveSeen, at))
         // loop detected
@@ -432,8 +417,8 @@ unsigned /* len */ segDiscover(
         return 0;
 
     int len = path.size();
-    if (slSegAvoidSelfCycle(sh, off, entry, path.back()))
-        // avoid creating self-cycle of two SLS segments
+    if (segAvoidSelfCycle(sh, off, entry, path.back()))
+        // avoid creating self-cycle of two segments
         --len;
 
 #if !SE_PREFER_LOSSLESS_PROTOTYPES
