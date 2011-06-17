@@ -464,12 +464,21 @@ void SymProc::heapObjDefineType(TObjId lhs, TValId rhs) {
     sh_.valSetLastKnownTypeOfTarget(rhs, cltTarget);
 }
 
+void SymProc::reportMemLeak(const EValueTarget code, const char *reason) {
+    CL_WARN_MSG(lw_, "killing junk");
+    bt_->printBackTrace();
+}
+
 void SymProc::heapSetSingleVal(TObjId lhs, TValId rhs) {
     if (lhs < 0) {
         CL_ERROR_MSG(lw_, "invalid L-value");
         bt_->printBackTrace();
         return;
     }
+
+    const TValId lhsAt = sh_.placedAt(lhs);
+    const EValueTarget code = sh_.valTarget(lhsAt);
+    CL_BREAK_IF(!isPossibleToDeref(code));
 
     // update type-info
     this->heapObjDefineType(lhs, rhs);
@@ -482,10 +491,8 @@ void SymProc::heapSetSingleVal(TObjId lhs, TValId rhs) {
         if (collectJunk(sh_, oldValue))
             leaking = true;
 
-    if (leaking) {
-        CL_WARN_MSG(lw_, "killing junk");
-        bt_->printBackTrace();
-    }
+    if (leaking)
+        this->reportMemLeak(code, "assign");
 }
 
 class DerefFailedWriter {
@@ -575,28 +582,30 @@ void SymProc::objSetValue(TObjId lhs, TValId rhs) {
 }
 
 void SymProc::valDestroyTarget(TValId addr) {
+    const EValueTarget code = sh_.valTarget(addr);
+    if (VAL_ADDR_OF_RET == addr && isGone(code))
+        return;
+
+    // check the validity of this call
+    CL_BREAK_IF(!isPossibleToDeref(code));
+    CL_BREAK_IF(sh_.valOffset(addr));
+
     // gather potentialy destroyed pointer sub-values
     std::vector<TValId> ptrs;
     getPtrValues(ptrs, sh_, addr);
 
-    // destroy object recursively
-    if (0 < addr)
-        sh_.valDestroyTarget(addr);
-    else
-        CL_BREAK_IF("attempt to destroy an invalid object");
+    // destroy the target
+    sh_.valDestroyTarget(addr);
 
-    // now check for JUNK
-    bool junk = false;
+    // now check for memory leakage
+    bool leaking = false;
     BOOST_FOREACH(TValId val, ptrs) {
         if (collectJunk(sh_, val))
-            junk = true;
+            leaking = true;
     }
 
-    if (junk) {
-        // print backtrace at most once per one call of objDestroy()
-        CL_WARN_MSG(lw_, "killing junk");
-        bt_->printBackTrace();
-    }
+    if (leaking)
+        this->reportMemLeak(code, "destroy");
 }
 
 void SymProc::killVar(const struct cl_operand &op, bool onlyIfNotPointed) {

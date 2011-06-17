@@ -110,6 +110,7 @@ class SymProc {
 
     private:
         bool addOffDerefArray(TOffset &off, const struct cl_accessor *ac);
+        void reportMemLeak(const EValueTarget code, const char *reason);
         void heapSetSingleVal(TObjId lhs, TValId rhs);
         void heapObjDefineType(TObjId lhs, TValId rhs);
         bool checkForInvalidDeref(TValId val, TObjType cltTarget);
