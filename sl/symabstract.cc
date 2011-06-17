@@ -339,21 +339,21 @@ void abstractNonMatchingValues(
         dlSegSyncPeerData(sh, srcAt);
 }
 
-void clonePrototypes(SymHeap &sh, TValId objAt, TValId dupAt) {
-    CL_BREAK_IF(sh.valOffset(objAt) || sh.valOffset(dupAt));
-    duplicateUnknownValues(sh, objAt);
+void clonePrototypes(SymHeap &sh, TValId addr, TValId dup) {
+    CL_BREAK_IF(sh.valOffset(addr) || sh.valOffset(dup));
+    duplicateUnknownValues(sh, addr);
 
     ProtoCloner visitor;
-    visitor.rootDst = objAt;
-    visitor.rootSrc = dupAt;
-    buildIgnoreList(visitor.ignoreList, sh, objAt);
+    visitor.rootDst = addr;
+    visitor.rootSrc = dup;
+    buildIgnoreList(visitor.ignoreList, sh, addr);
 
     // traverse all live sub-objects
-    traverseLivePtrs(sh, objAt, visitor);
+    traverseLivePtrs(sh, addr, visitor);
 
     // if there was "a pointer to self", it should remain "a pointer to self";
     // however "self" has been changed, so that a redirection is necessary
-    redirectRefs(sh, dupAt, objAt, dupAt);
+    redirectRefs(sh, dup, addr, dup);
 }
 
 void slSegAbstractionStep(SymHeap &sh, TValId *pCursor, const BindingOff &off)

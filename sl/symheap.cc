@@ -1295,57 +1295,6 @@ TObjId SymHeapCore::ptrAt(TValId at) {
     return d->lazyCreatePtr(stor_, at);
 }
 
-TObjId SymHeapCore::objAt(TValId at, TObjCode code) {
-    TObjByType *row;
-    if (!d->gridLookup(&row, at))
-        return OBJ_INVALID;
-
-    // seek the bigest object at the given row
-    int maxSize = 0;
-    TObjId max = OBJ_UNKNOWN;
-    BOOST_FOREACH(const TObjByType::const_reference item, *row) {
-        const TObjType cltItem = item.first;
-        CL_BREAK_IF(!cltItem);
-
-        const TObjId obj = item.second;
-        CL_BREAK_IF(d->objOutOfRange(obj));
-
-        if (CL_TYPE_VOID != code && (cltItem->code != code))
-            // not the type we are looking for
-            continue;
-
-        const int size = cltItem->size;
-        if (size < maxSize)
-            continue;
-
-        if ((size == maxSize) && !isComposite(cltItem))
-            // if two types have the same size, prefer the composite one
-            continue;
-
-        // update the maximum
-        maxSize = size;
-        max = obj;
-    }
-
-    if (OBJ_UNKNOWN != max)
-        return max;
-
-    const BaseValue *valData = d->valData(at);
-    const TValId root = d->valRoot(at, valData);
-    const TOffset off = valData->offRoot;
-    if (off)
-        // TODO
-        return OBJ_UNKNOWN;
-
-    RootValue *rootData = d->rootData(root);
-    const TObjType clt = rootData->lastKnownClt;
-    if (CL_TYPE_VOID != code && code != clt->code)
-        // TODO
-        return OBJ_UNKNOWN;
-
-    return d->objCreate(root, off, clt);
-}
-
 TObjId SymHeapCore::objAt(TValId at, TObjType clt) {
     CL_BREAK_IF(!clt);
     if (isDataPtr(clt))

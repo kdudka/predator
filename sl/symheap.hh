@@ -383,9 +383,6 @@ class SymHeapCore {
         /// return an object of the given type at the given address
         TObjId objAt(TValId at, TObjType clt);
 
-        /// return the biggest object of the given type at the given address
-        TObjId objAt(TValId at, TObjCode code = /* do not care */ CL_TYPE_VOID);
-
         /// return address of the given program variable (create it if needed)
         TValId addrOfVar(CVar);
 

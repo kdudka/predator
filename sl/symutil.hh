@@ -132,7 +132,7 @@ bool /* complete */ traverseCore(
         TMethod                     method)
 {
     // check that we got a valid root object
-    CL_BREAK_IF(const_cast<SymHeap &>(sh).objAt(at) <= 0);
+    CL_BREAK_IF(!isPossibleToDeref(sh.valTarget(at)));
     const TValId rootAt = sh.valRoot(at);
     const TOffset offRoot = sh.valOffset(at);
 
@@ -203,8 +203,8 @@ bool /* complete */ traverseLiveObjsGeneric(
         TObjList objs;
         sh.gatherLiveObjects(objs, root);
         BOOST_FOREACH(const TObjId obj, objs) {
-            const TValId objAt = sh.placedAt(obj);
-            const TOffset off = sh.valOffset(objAt) - offs[i];
+            const TValId addr = sh.placedAt(obj);
+            const TOffset off = sh.valOffset(addr) - offs[i];
             if (off < 0)
                 // do not go above the starting point
                 continue;

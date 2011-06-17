@@ -143,15 +143,8 @@ void addObjectIfNeeded(DeepCopyData &dc, TValId rootSrcAt) {
     // store mapping of values
     dc.valMap[rootSrcAt] = rootDstAt;
 
-    if (clt) {
-        // look inside
-        digSubObjs(dc, rootSrcAt, rootDstAt);
-        if (dc.wl.schedule(dc.src.objAt(rootSrcAt), dc.dst.objAt(rootDstAt))) {
-#if DEBUG_SYMCUT
-            CL_DEBUG("symcut: schedules a root object that was not alive");
-#endif
-        }
-    }
+    // look inside
+    digSubObjs(dc, rootSrcAt, rootDstAt);
 }
 
 // TODO: optimize out all the unnecessary dc.valMap lookups

@@ -90,8 +90,8 @@ TObjId translateObjId(
         const TObjId            srcObj)
 {
     // gather properties of the object in 'src'
-    const TValId objAt = src.placedAt(srcObj);
-    const TOffset  off = src.valOffset(objAt);
+    const TValId srcAt = src.placedAt(srcObj);
+    const TOffset  off = src.valOffset(srcAt);
     const TObjType clt = src.objType(srcObj);
 
     // use them to obtain the corresponding object in 'dst'
