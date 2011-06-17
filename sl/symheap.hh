@@ -247,7 +247,7 @@ class SymHeapCore {
          * depending on kind of the queried object.
          * @note It may acquire a new value ID in case the value is not known.
          */
-        TValId valueOf(TObjId obj) /* FIXME */ const;
+        TValId valueOf(TObjId obj);
 
         /**
          * return a value corresponding to @b symbolic @b address of the given
@@ -259,7 +259,7 @@ class SymHeapCore {
          * not.
          * @note The operation has always a unique result.
          */
-        TValId placedAt(TObjId obj) /* FIXME */ const;
+        TValId placedAt(TObjId obj);
 
         /**
          * collect all objects having the given value

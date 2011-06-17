@@ -85,7 +85,7 @@ void moveKnownValueToLeft(
 
 TObjId translateObjId(
         SymHeap                 &dst,
-        const SymHeap           &src,
+        SymHeap                 &src,
         const TValId            dstRootAt,
         const TObjId            srcObj)
 {
@@ -99,7 +99,7 @@ TObjId translateObjId(
     return dst.objAt(dstAt, clt);
 }
 
-void getPtrValues(TValList &dst, const SymHeap &sh, TValId at) {
+void getPtrValues(TValList &dst, SymHeap &sh, TValId at) {
     TObjList ptrs;
     sh.gatherLivePointers(ptrs, at);
     BOOST_FOREACH(const TObjId obj, ptrs) {
@@ -108,30 +108,6 @@ void getPtrValues(TValList &dst, const SymHeap &sh, TValId at) {
             dst.push_back(val);
     }
 }
-
-class PointingObjectsFinder {
-    public:
-        // we have to use std::set, a vector is not sufficient in all cases
-        typedef std::set<TObjId> TResults;
-
-    private:
-        TResults results_;
-
-    public:
-        const TResults& results() const { return results_; }
-
-        bool operator()(const SymHeap &sh, TObjId obj) {
-            const TValId addr = sh.placedAt(obj);
-            CL_BREAK_IF(addr <= 0);
-
-            TObjList refs;
-            sh.usedBy(refs, addr);
-            std::copy(refs.begin(), refs.end(),
-                      std::inserter(results_, results_.begin()));
-
-            return /* continue */ true;
-        }
-};
 
 void redirectRefs(
         SymHeap                 &sh,

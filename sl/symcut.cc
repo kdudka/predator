@@ -221,8 +221,8 @@ TValId handleValue(DeepCopyData &dc, TValId valSrc) {
 }
 
 void deepCopy(DeepCopyData &dc) {
-    const SymHeap   &src = dc.src;
-    SymHeap         &dst = dc.dst;
+    SymHeap &src = dc.src;
+    SymHeap &dst = dc.dst;
 
     DeepCopyData::TItem item;
     while (dc.wl.next(item)) {

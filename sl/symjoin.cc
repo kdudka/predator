@@ -794,7 +794,7 @@ bool considerImplicitPrototype(
     CL_BREAK_IF(isProto1 == isProto2);
     (void) isProto1;
 
-    const SymHeap &sh = (isProto2) ? ctx.sh1 : ctx.sh2;
+    SymHeap &sh = (isProto2) ? ctx.sh1 : ctx.sh2;
     const TValId root = (isProto2) ? root1 : root2;
 
     TObjList refs;
@@ -1523,10 +1523,7 @@ class MayExistVisitor {
             return offNext_;
         }
 
-        bool operator()(
-                const SymHeap   &sh,
-                const TObjId    sub)
-        {
+        bool operator()(SymHeap &sh, const TObjId sub) {
             const TValId val = sh.valueOf(sub);
             const TValId v1 = (JS_USE_SH1 == action_) ? val : valRef_;
             const TValId v2 = (JS_USE_SH2 == action_) ? val : valRef_;

@@ -54,7 +54,7 @@ void digPointingObjects(TWL &wl, const SymHeap &sh, TValId val) {
     }
 }
 
-bool digJunk(const SymHeap &heap, TValId *ptrVal) {
+bool digJunk(SymHeap &heap, TValId *ptrVal) {
     if (*ptrVal <= 0)
         return false;
 

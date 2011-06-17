@@ -51,7 +51,7 @@ void moveKnownValueToLeft(const SymHeapCore &sh, TValId &valA, TValId &valB);
 
 TObjId translateObjId(
         SymHeap                 &dst,
-        const SymHeap           &src,
+        SymHeap                 &src,
         const TValId            dstRootAt,
         const TObjId            srcObj);
 
@@ -77,7 +77,7 @@ inline bool isVarAlive(SymHeap &sh, const CVar &cv) {
     return isVarAlive(sh, at);
 }
 
-void getPtrValues(TValList &dst, const SymHeap &heap, TValId at);
+void getPtrValues(TValList &dst, SymHeap &heap, TValId at);
 
 inline TValId nextRootObj(SymHeap &sh, TValId root, TOffset offNext) {
     CL_BREAK_IF(sh.valOffset(root));

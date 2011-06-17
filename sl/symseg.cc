@@ -38,8 +38,8 @@ unsigned dlSegMinLength(const SymHeap &sh, TValId dls) {
     const TObjId next2 = nextPtrFromSeg(sh, peer);
 
     // red the values (addresses of the surround)
-    const TValId val1 = sh.valueOf(next1);
-    const TValId val2 = sh.valueOf(next2);
+    const TValId val1 = const_cast<SymHeap &>(sh).valueOf(next1);
+    const TValId val2 = const_cast<SymHeap &>(sh).valueOf(next2);
 
     // attempt to prove both
     const bool ne1 = sh.SymHeapCore::proveNeq(val1, segHeadAt(sh, peer));
@@ -78,9 +78,10 @@ unsigned segMinLength(const SymHeap &sh, TValId seg) {
             return dlSegMinLength(sh, seg);
     }
 
-    const TObjId next = nextPtrFromSeg(/* XXX */const_cast<SymHeap &>(sh), seg);
-    const TValId nextVal = sh.valueOf(next);
-    const TValId headAddr = segHeadAt(/* XXX */const_cast<SymHeap &>(sh), seg);
+    SymHeap &writable = const_cast<SymHeap &>(sh);
+    const TObjId next = nextPtrFromSeg(writable, seg);
+    const TValId nextVal = writable.valueOf(next);
+    const TValId headAddr = segHeadAt(writable, seg);
     return static_cast<unsigned>(sh.SymHeapCore::proveNeq(headAddr, nextVal));
 }
 
@@ -145,7 +146,7 @@ bool haveSeg(const SymHeap &sh, TValId atAddr, TValId pointingTo,
 
     // compare the end-points
     const TObjId nextPtr = nextPtrFromSeg(sh, seg);
-    const TValId valNext = sh.valueOf(nextPtr);
+    const TValId valNext = const_cast<SymHeap &>(sh).valueOf(nextPtr);
     return (valNext == pointingTo);
 }
 

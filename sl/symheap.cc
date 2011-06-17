@@ -692,8 +692,7 @@ TValId SymHeapCore::Private::objInit(TObjId obj) {
     return val;
 }
 
-// FIXME: should this be declared non-const?
-TValId SymHeapCore::valueOf(TObjId obj) const {
+TValId SymHeapCore::valueOf(TObjId obj) {
     // handle special cases first
     switch (obj) {
         case OBJ_UNKNOWN:
@@ -1147,20 +1146,17 @@ bool SymHeapCore::matchPreds(const SymHeapCore &ref, const TValMap &valMap)
     return true;
 }
 
-// FIXME: should this be declared non-const?
-TValId SymHeapCore::placedAt(TObjId obj) const {
+TValId SymHeapCore::placedAt(TObjId obj) {
     if (obj < 0)
         return VAL_INVALID;
 
     // jump to root
     const HeapObject *objData = d->objData(obj);
     const RootValue *rootData = d->rootData(objData->root);
-    const TValId addr = rootData->addr;
-    CL_BREAK_IF(addr <= 0);
+    const TValId root = rootData->addr;
 
     // then subtract the offset
-    SymHeapCore &writable = /* FIXME */ const_cast<SymHeapCore &>(*this);
-    return writable.valByOffset(addr, objData->off);
+    return this->valByOffset(root, objData->off);
 }
 
 bool SymHeapCore::Private::gridLookup(TObjByType **pRow, const TValId val) {
@@ -1820,7 +1816,7 @@ bool SymHeap::proveNeq(TValId ref, TValId val) const {
             // no valid object here
             return false;
 
-        const TValId valNext = this->valueOf(nextPtrFromSeg(writable, seg));
+        const TValId valNext = writable.valueOf(nextPtrFromSeg(writable, seg));
         if (SymHeapCore::proveNeq(val, valNext))
             // non-empty abstract object reached --> prove done
             return true;

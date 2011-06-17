@@ -132,12 +132,6 @@ inline unsigned objMinLength(const SymHeap &sh, TValId at) {
 
 void segSetMinLength(SymHeap &sh, TValId seg, unsigned len);
 
-inline const BindingOff& segBinding(const SymHeap &sh, TObjId obj) {
-    const TValId addr = sh.placedAt(obj);
-    CL_BREAK_IF(addr <= 0);
-    return sh.segBinding(addr);
-}
-
 /// same as SymHeap::objSetProto(), but takes care of DLS peers
 void segSetProto(SymHeap &sh, TValId seg, bool isProto);
 
