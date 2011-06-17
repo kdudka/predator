@@ -32,14 +32,11 @@ class SymHeap;
 /**
  * check if a sub-heap reachable from the given value is also reachable from
  * somewhere else.  If not, such a sub-heap is considered as garbage and
- * removed.  Some warnings may be issued during the garbage collecting, but no
- * backtrace is printed.  The caller is responsible for printing of backtraces
- * (if ever motivated to do so).
+ * removed.
  * @param sh instance of the symbolic heap to search in
  * @param val ID of the heap value to check for junk
- * @param lw pass some location info in, if you want to emit some warnings
  * @return true if any junk has been detected/collected
  */
-bool collectJunk(SymHeap &sh, TValId val, const struct cl_loc *lw = 0); 
+bool collectJunk(SymHeap &sh, TValId val); 
 
 #endif /* H_GUARD_SYMGC_H */

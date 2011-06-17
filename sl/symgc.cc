@@ -82,7 +82,7 @@ bool digJunk(SymHeap &heap, TValId *ptrVal) {
     return true;
 }
 
-bool collectJunk(SymHeap &sh, TValId val, const struct cl_loc *lw) {
+bool collectJunk(SymHeap &sh, TValId val) {
     bool detected = false;
 
     std::stack<TValId> todo;
@@ -100,8 +100,6 @@ bool collectJunk(SymHeap &sh, TValId val, const struct cl_loc *lw) {
             getPtrValues(ptrs, sh, root);
 
             // destroy junk
-            if (lw)
-                CL_WARN_MSG(lw, "killing junk");
             if (!sh.valDestroyTarget(root))
                 CL_BREAK_IF("failed to kill junk");
 

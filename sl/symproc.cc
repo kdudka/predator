@@ -479,11 +479,13 @@ void SymProc::heapSetSingleVal(TObjId lhs, TValId rhs) {
 
     bool leaking = false;
     BOOST_FOREACH(const TValId oldValue, killedPtrs)
-        if (collectJunk(sh_, oldValue, lw_))
+        if (collectJunk(sh_, oldValue))
             leaking = true;
 
-    if (leaking)
+    if (leaking) {
+        CL_WARN_MSG(lw_, "killing junk");
         bt_->printBackTrace();
+    }
 }
 
 class DerefFailedWriter {
@@ -586,13 +588,15 @@ void SymProc::valDestroyTarget(TValId addr) {
     // now check for JUNK
     bool junk = false;
     BOOST_FOREACH(TValId val, ptrs) {
-        if (collectJunk(sh_, val, lw_))
+        if (collectJunk(sh_, val))
             junk = true;
     }
 
-    if (junk)
+    if (junk) {
         // print backtrace at most once per one call of objDestroy()
+        CL_WARN_MSG(lw_, "killing junk");
         bt_->printBackTrace();
+    }
 }
 
 void SymProc::killVar(const struct cl_operand &op, bool onlyIfNotPointed) {
