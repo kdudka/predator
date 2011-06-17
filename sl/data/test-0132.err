@@ -54,7 +54,7 @@ list.h:47:12: error: dereference of NULL value
 list.h:61:12: note: from call of __list_add()
 test-0132.c:50:11: note: from call of list_add()
 test-0132.c:23:5: note: from call of main()
-list.h:48:13: warning: killing junk
+list.h:48:13: warning: memory leak detected while assigning a variable on stack
 list.h:61:12: note: from call of __list_add()
 test-0132.c:50:11: note: from call of list_add()
 test-0132.c:23:5: note: from call of main()
@@ -98,7 +98,7 @@ list.h:47:12: error: dereference of NULL value
 list.h:61:12: note: from call of __list_add()
 test-0132.c:50:11: note: from call of list_add()
 test-0132.c:23:5: note: from call of main()
-list.h:48:13: warning: killing junk
+list.h:48:13: warning: memory leak detected while assigning a variable on stack
 list.h:61:12: note: from call of __list_add()
 test-0132.c:50:11: note: from call of list_add()
 test-0132.c:23:5: note: from call of main()
@@ -110,7 +110,7 @@ list.h:47:12: error: dereference of NULL value
 list.h:61:12: note: from call of __list_add()
 test-0132.c:50:11: note: from call of list_add()
 test-0132.c:23:5: note: from call of main()
-list.h:48:13: warning: killing junk
+list.h:48:13: warning: memory leak detected while assigning a variable on stack
 list.h:61:12: note: from call of __list_add()
 test-0132.c:50:11: note: from call of list_add()
 test-0132.c:23:5: note: from call of main()
@@ -122,7 +122,7 @@ list.h:47:12: error: dereference of NULL value
 list.h:61:12: note: from call of __list_add()
 test-0132.c:50:11: note: from call of list_add()
 test-0132.c:23:5: note: from call of main()
-list.h:48:13: warning: killing junk
+list.h:48:13: warning: memory leak detected while assigning a variable on stack
 list.h:61:12: note: from call of __list_add()
 test-0132.c:50:11: note: from call of list_add()
 test-0132.c:23:5: note: from call of main()
@@ -134,7 +134,7 @@ list.h:47:12: error: dereference of NULL value
 list.h:61:12: note: from call of __list_add()
 test-0132.c:50:11: note: from call of list_add()
 test-0132.c:23:5: note: from call of main()
-list.h:48:13: warning: killing junk
+list.h:48:13: warning: memory leak detected while assigning a variable on stack
 list.h:61:12: note: from call of __list_add()
 test-0132.c:50:11: note: from call of list_add()
 test-0132.c:23:5: note: from call of main()
@@ -146,7 +146,7 @@ list.h:47:12: error: dereference of NULL value
 list.h:61:12: note: from call of __list_add()
 test-0132.c:50:11: note: from call of list_add()
 test-0132.c:23:5: note: from call of main()
-list.h:48:13: warning: killing junk
+list.h:48:13: warning: memory leak detected while assigning a variable on stack
 list.h:61:12: note: from call of __list_add()
 test-0132.c:50:11: note: from call of list_add()
 test-0132.c:23:5: note: from call of main()

@@ -67,7 +67,7 @@ test-0153.c:74:28: note: from call of create_list_far()
 test-0153.c:78:28: note: from call of create_list_far()
 test-0153.c:91:20: note: from call of create_list_far()
 test-0153.c:86:5: note: from call of main()
-list.h:48:13: warning: killing junk
+list.h:48:13: warning: memory leak detected while destroying a variable on stack
 list.h:61:12: note: from call of __list_add()
 test-0153.c:25:13: note: from call of list_add()
 test-0153.c:32:16: note: from call of insert_node()

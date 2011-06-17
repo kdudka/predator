@@ -12,4 +12,4 @@ test-0138.c:105:5: note: from call of main()
 test-0138.c:65:13: error: free() called with offset 4B
 test-0138.c:115:15: note: from call of gl_destroy()
 test-0138.c:105:5: note: from call of main()
-test-0138.c:29:1: warning: killing junk
+test-0138.c:29:1: warning: memory leak detected while destroying a static variable

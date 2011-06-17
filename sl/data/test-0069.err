@@ -1,2 +1,2 @@
-test-0069.c:59:9: warning: killing junk
-test-0069.c:64:13: warning: killing junk
+test-0069.c:59:9: warning: memory leak detected while destroying a heap object
+test-0069.c:64:13: warning: memory leak detected while destroying a heap object

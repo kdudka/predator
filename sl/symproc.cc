@@ -120,6 +120,23 @@ void describeUnknownVal(
         CL_BREAK_IF("valOrigin out of range?");
 }
 
+const char* describeRootObj(const EValueTarget code) {
+    switch (code) {
+        case VT_STATIC:
+            return "a static variable";
+
+        case VT_ON_STACK:
+            return "a variable on stack";
+
+        case VT_ON_HEAP:
+            return "a heap object";
+
+        default:
+            CL_BREAK_IF("invalid call of describeRootObj()");
+            return "a nonsense";
+    }
+}
+
 void reportDerefOutOfBounds(
         SymProc                         &proc,
         const TValId                    val,
@@ -133,26 +150,9 @@ void reportDerefOutOfBounds(
     CL_ERROR_MSG(loc, "dereferencing object of size " << sizeOfTarget
             << "B out of bounds");
 
-    const char *what = 0;
-
+    // what is the root actually?
     const EValueTarget code = sh.valTarget(val);
-    switch (code) {
-        case VT_STATIC:
-            what = "a static variable";
-            break;
-
-        case VT_ON_STACK:
-            what = "a variable on stack";
-            break;
-
-        case VT_ON_HEAP:
-            what = "a heap object";
-            break;
-
-        default:
-            CL_BREAK_IF("invalid call of reportDerefOutOfBounds()");
-            return;
-    }
+    const char *const what = describeRootObj(code);
 
     const TValId root = sh.valRoot(val);
     const int rootSize = sh.valSizeOfTarget(root);
@@ -465,7 +465,8 @@ void SymProc::heapObjDefineType(TObjId lhs, TValId rhs) {
 }
 
 void SymProc::reportMemLeak(const EValueTarget code, const char *reason) {
-    CL_WARN_MSG(lw_, "killing junk");
+    const char *const what = describeRootObj(code);
+    CL_WARN_MSG(lw_, "memory leak detected while " << reason << "ing " << what);
     bt_->printBackTrace();
 }
 

@@ -1,1 +1,1 @@
-test-0057.c:62:18: warning: killing junk
+test-0057.c:62:18: warning: memory leak detected while destroying a variable on stack
