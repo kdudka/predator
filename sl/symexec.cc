@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2010 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2009-2011 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -369,10 +369,9 @@ bool SymExecEngine::bypassNonPointers(
         const CodeStorage::Insn                     &insnCmp,
         const CodeStorage::TTargetList              &tlist)
 {
+#if !SE_TRACK_NON_POINTER_VALUES
     const TObjType clt1 = insnCmp.operands[/* src1 */ 1].type;
     const TObjType clt2 = insnCmp.operands[/* src2 */ 2].type;
-
-#if !SE_TRACK_NON_POINTER_VALUES
     if (isDataPtr(clt1) || isDataPtr(clt2))
 #endif
         return false;
@@ -854,21 +853,6 @@ fail:
     return 0;
 }
 
-std::string varSetToString(TStorRef stor, const TCVarSet varSet) {
-    using namespace CodeStorage;
-    std::ostringstream str;
-
-    unsigned i = 0;
-    BOOST_FOREACH(const CVar &cv, varSet) {
-        if (i++)
-            str << ", ";
-
-        str << varToString(stor, cv.uid);
-    }
-
-    return str.str();
-}
-
 void SymExec::pushCall(SymCallCtx *ctx, SymState &results) {
     // create engine
     SymExecEngine *eng = new SymExecEngine(
@@ -972,6 +956,19 @@ void SymExec::printStats() const {
     }
 }
 
+void execTopCall(
+        SymState                        &results,
+        const SymHeap                   &entry,
+        const CodeStorage::Insn         &insn,
+        const CodeStorage::Fnc          &fnc,
+        const SymExecParams             &ep)
+{
+    SymExec se(entry.stor(), ep);
+    se.execFnc(results, entry, insn, fnc);
+
+    // SymExec::~SymExec() is going to be executed as leaving this function
+}
+
 void execute(
         SymState                        &results,
         const SymHeap                   &entry,
@@ -980,11 +977,6 @@ void execute(
 {
     if (!installSignalHandlers())
         CL_WARN("unable to install signal handlers");
-
-    // allocated on heap in order to be able to easily report memory consumption
-    // NOTE: this should be changed to automatic allocation in case we allow
-    //       some exceptions to fall out of SymExec
-    SymExec *se = new SymExec(entry.stor(), ep);
 
     // XXX: synthesize CL_INSN_CALL
     CodeStorage::Insn insn;
@@ -996,8 +988,7 @@ void execute(
     insn.opsToKill.resize(2, CodeStorage::KS_KILL_NOTHING);
 
     // run the symbolic execution
-    se->execFnc(results, entry, insn, fnc);
-    delete se;
+    execTopCall(results, entry, insn, fnc, ep);
     printMemUsage("SymExec::~SymExec");
 
     // uninstall signal handlers
