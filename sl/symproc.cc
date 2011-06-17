@@ -451,7 +451,13 @@ void SymProc::heapObjDefineType(TObjId lhs, TValId rhs) {
     const TObjType cltLast = sh_.valLastKnownTypeOfTarget(rhs);
     if (isComposite(cltLast) && !isComposite(cltTarget))
         // we are accessing a field that is placed at zero offset of a composite
-        // type, but it yet does not mean that we are chaning the root type-info
+        // type but it yet does not mean that we are changing the root type-info
+        return;
+
+    const int rootSize = sh_.valSizeOfTarget(rhs);
+    CL_BREAK_IF(rootSize <= 0);
+    if (cltLast && cltLast->size == rootSize && cltTarget->size != rootSize)
+        // basically the same rule as above but now we check the size of target
         return;
 
     // update the last known type-info of the root

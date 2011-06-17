@@ -562,6 +562,12 @@ bool segMatchLookAhead(
         const TValId            root1,
         const TValId            root2)
 {
+    const int size1 = ctx.sh1.valSizeOfTarget(root1);
+    const int size2 = ctx.sh2.valSizeOfTarget(root2);
+    if (size1 != size2)
+        // size mismatch
+        return false;
+
     // set up a visitor
     SymHeap *const heaps[] = { &ctx.sh1, &ctx.sh2 };
     TValId roots[] = { root1, root2 };

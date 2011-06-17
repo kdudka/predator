@@ -171,7 +171,6 @@ void plotOffset(PlotData &plot, const TOffset off, const int from, const int to)
         << "]\"];\n";
 }
 
-// FIXME: this is partially copy-pasted from symheap.cc
 class CltFinder {
     private:
         const TObjType          cltRoot_;

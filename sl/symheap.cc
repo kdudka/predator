@@ -378,7 +378,6 @@ struct SymHeapCore::Private {
     void setValueOf(TObjId of, TValId val, TValSet *killedPtrs = 0);
 
     bool gridLookup(TObjByType **pRow, const TValId);
-    TObjId lazyCreatePtr(TStorRef stor, TValId at);
 
     void neqOpWrap(SymHeap::ENeqOp, TValId, TValId);
 
@@ -1184,123 +1183,38 @@ bool SymHeapCore::Private::gridLookup(TObjByType **pRow, const TValId val) {
     return true;
 }
 
-template <class TPred>
-class CltFinder {
-    private:
-        const TObjType          cltRoot_;
-        const TOffset           offToSeek_;
-        TObjType                cltFound_;
-        TPred                  &pred_;
-
-    public:
-        CltFinder(TObjType cltRoot, TOffset offToSeek, TPred &pred):
-            cltRoot_(cltRoot),
-            offToSeek_(offToSeek),
-            cltFound_(/* just to silence GCC with -O2 */ 0),
-            pred_(pred)
-        {
-        }
-
-        TObjType cltFound() const { return cltFound_; }
-
-        bool operator()(const TFieldIdxChain &ic, const struct cl_type_item *it)
-        {
-            const TObjType clt = it->type;
-            if (!pred_(clt))
-                return /* continue */ true;
-
-            const TOffset off = offsetByIdxChain(cltRoot_, ic);
-            if (offToSeek_ != off)
-                return /* continue */ true;
-
-            // matched!
-            cltFound_ = clt;
-            return false;
-        }
-};
-
-template <class TPred>
-TObjType guideCltFinder(
-        const TObjType          cltRoot,
-        const TOffset           off,
-        TPred                  &pred)
-{
-    CltFinder<TPred> visitor(cltRoot, off, pred);
-
-    // first check the root itself
-    const TFieldIdxChain ic;
-    struct cl_type_item item;
-    item.type = cltRoot;
-    if (!visitor(ic, &item))
-        return visitor.cltFound();
-
-    // traverse the type-info
-    if (!traverseTypeIc(cltRoot, visitor, /* digOnlyComposite */ true))
-        return visitor.cltFound();
-
-    // not found
-    return 0;
-}
-
-TObjId SymHeapCore::Private::lazyCreatePtr(TStorRef stor, TValId at) {
-    // check offset
-    const BaseValue *valData = this->valData(at);
-    const TOffset off = valData->offRoot;
-
-    // jump to root
-    const TValId root = this->valRoot(at, valData);
-    /* const */ RootValue *rootData = this->rootData(root);
-
-    // check root type-info
-    const TObjType cltRoot = rootData->lastKnownClt;
-
-    TObjType clt = 0;
-    if (cltRoot)
-        // try the best match of type-info for the pointer
-        clt = guideCltFinder(cltRoot, off, isDataPtr);
-
-    if (!clt)
-        // try to use a generic data pointer
-        clt = stor.types.genericDataPtr();
-
-    if (!clt) {
-        CL_BREAK_IF("critical lack of type-info");
-        return OBJ_INVALID;
-    }
-
-    if (!cltRoot && !off)
-        rootData->lastKnownClt = clt;
-
-    // create a new pointer
-    return this->objCreate(root, off, clt);
-}
-
 TObjId SymHeapCore::ptrAt(TValId at) {
     TObjByType *row;
     if (!d->gridLookup(&row, at))
         return OBJ_INVALID;
 
     // seek a _data_ pointer at the given row
-    BOOST_FOREACH(const TObjByType::const_reference item, *row) {
-        const TObjType clt = item.first;
-        if (isDataPtr(clt))
-            // matched
+    BOOST_FOREACH(const TObjByType::const_reference item, *row)
+        if (isDataPtr(/* clt */ item.first))
             return item.second;
+
+    // generic pointer, (void *) if available
+    const TObjType clt = stor_.types.genericDataPtr();
+    CL_BREAK_IF(!clt || clt->code != CL_TYPE_PTR);
+
+    // resolve root
+    const BaseValue *valData = d->valData(at);
+    const TValId root = d->valRoot(at, valData);
+
+    // check whether we have enough space allocated for the pointer
+    const RootValue *rootData = d->rootData(root);
+    const int rootSize = rootData->cbSize;
+    if (rootSize < clt->size) {
+        CL_BREAK_IF("ptrAt() called out of bounds");
+        return OBJ_UNKNOWN;
     }
 
-    if (this->valSizeOfTarget(at) < stor_.types.dataPtrSizeof())
-        // TODO: return a more specific error code (out of range)
-        return OBJ_UNKNOWN;
-
-    return d->lazyCreatePtr(stor_, at);
+    // create the pointer
+    const TOffset off = valData->offRoot;
+    return d->objCreate(root, off, clt);
 }
 
 TObjId SymHeapCore::objAt(TValId at, TObjType clt) {
-    CL_BREAK_IF(!clt);
-    if (isDataPtr(clt))
-        // look for a pointer to data
-        return this->ptrAt(at);
-
     TObjByType *row;
     if (!d->gridLookup(&row, at))
         return OBJ_INVALID;
@@ -1318,8 +1232,15 @@ TObjId SymHeapCore::objAt(TValId at, TObjType clt) {
             return item.second;
     }
 
+    if (isDataPtr(clt)) {
+        // seek a _data_ pointer at the given row
+        BOOST_FOREACH(const TObjByType::const_reference item, *row)
+            if (isDataPtr(/* clt */ item.first))
+                return item.second;
+    }
+
     if (this->valSizeOfTarget(at) < clt->size)
-        // TODO: return a more specific error code (out of range)
+        // out of bounds
         return OBJ_UNKNOWN;
 
     // create the object
