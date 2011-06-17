@@ -159,7 +159,7 @@ build_gcc_svn:
 	$(MAKE) build_gcc
 
 include/gcc/: gcc-install/lib/gcc
-	cd include && ln -fsvT ../gcc-install/lib/gcc/`ls ../gcc-install/lib/gcc/`/4.[56]*/plugin/include gcc
+	cd include && ln -fsvT `ls -td ../gcc-install/lib/gcc/*/4.[56]*/plugin/include|head -1` gcc
 
 ChangeLog:
 	git log --pretty="format:%ad  %an%n%n%w(80,8,8)%B%n" --date=short -- $(CHLOG_WATCH) > $@
