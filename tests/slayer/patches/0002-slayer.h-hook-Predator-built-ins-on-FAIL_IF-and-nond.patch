@@ -1,0 +1,75 @@
+From 14572b3aa37e8e4c5014115abdbf516c4232c70c Mon Sep 17 00:00:00 2001
+From: Kamil Dudka <kdudka@redhat.com>
+Date: Sat, 18 Jun 2011 17:32:24 +0200
+Subject: [PATCH 2/3] slayer.h: hook Predator built-ins on FAIL_IF and
+ nondet()
+
+---
+ tests/slayer/call.c              |  2 ++
+ tests/slayer/reachable_globals.c |  1 -
+ tests/slayer/slayer.h            | 16 +++++++++++++++-
+ 3 files changed, 17 insertions(+), 2 deletions(-)
+
+diff --git a/tests/slayer/call.c b/tests/slayer/call.c
+index 2a94c9a..15206dd 100644
+--- a/tests/slayer/call.c
++++ b/tests/slayer/call.c
+@@ -2,6 +2,8 @@
+    Unique ids over fun calls.
+  **/
+ 
++#include "slayer.h"
++
+ void f() {
+   int x = 1;
+   return;
+diff --git a/tests/slayer/reachable_globals.c b/tests/slayer/reachable_globals.c
+index 48ae12c..dd0c326 100644
+--- a/tests/slayer/reachable_globals.c
++++ b/tests/slayer/reachable_globals.c
+@@ -1,5 +1,4 @@
+ #include "slayer.h"
+-#define NULL 0
+ 
+ struct list
+ {
+diff --git a/tests/slayer/slayer.h b/tests/slayer/slayer.h
+index d57325f..d934247 100644
+--- a/tests/slayer/slayer.h
++++ b/tests/slayer/slayer.h
+@@ -9,6 +9,11 @@
+ #ifdef SLAyer
+ int nondet() { int x; return x; }
+ void TerminationIgnore(void) {}
++#else
++
++int ___sl_get_nondet_int(void);
++#define nondet ___sl_get_nondet_int
++
+ #endif
+ 
+ #ifdef SLAyer
+@@ -19,10 +24,19 @@ void TerminationIgnore(void) {}
+     {						\
+       *(int *) &nondet = 0;			\
+     }
++#else
++
++void ___sl_error(const char *);
++
++#define FAIL					\
++{						\
++    ___sl_error("SLAyer-style failure");	\
++}
+ 
+-#define FAIL_IF(p) if (p) FAIL
+ #endif
+ 
++#define FAIL_IF(p) if (p) FAIL
++
+ #ifdef SLAyer
+ /* Replacement CONTAINING_RECORD. This has the same semantics as */
+ /* the original wdf.h one, but uses +P-(P->f) to get around the fact that */
+-- 
+1.7.12.4
+
