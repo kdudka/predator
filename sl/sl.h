@@ -21,7 +21,7 @@
 #define H_GUARD_SL_H
 
 #define ___SL_ASSERT(cond) do {                                             \
-    if (!cond)                                                              \
+    if (!(cond))                                                            \
         ___sl_error("assertion failed: " #cond);                            \
 } while (0)
 

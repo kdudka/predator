@@ -757,9 +757,7 @@ void SymHeapCore::pointedBy(TObjList &dst, TValId root) const {
 
 unsigned SymHeapCore::pointedByCount(TValId root) const {
     const RootValue *rootData = d->rootData(root);
-    CL_BREAK_IF(rootData->offRoot);
-    CL_BREAK_IF(!isPossibleToDeref(rootData->code));
-    return rootData->usedBy.size();
+    return rootData->usedByGl.size();
 }
 
 unsigned SymHeapCore::lastId() const {
@@ -1739,10 +1737,8 @@ bool SymHeapCore::proveNeq(TValId valA, TValId valB) const {
 
     const TValId root1 = d->valRoot(valA);
     const TValId root2 = d->valRoot(valB);
-    if (root1 == root2) {
-        CL_BREAK_IF("not tested");
+    if (root1 == root2)
         return true;
-    }
 
     const TOffset off = this->valOffset(valA);
     if (!off)
