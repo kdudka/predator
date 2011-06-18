@@ -731,11 +731,15 @@ void dlSegReplaceByConcrete(SymHeap &sh, TValId seg, TValId peer) {
 
     // first kill any related Neq predicates, we're going to concretize anyway
     dlSegSetMinLength(sh, seg, /* DLS 0+ */ 0);
+    CL_BREAK_IF(!dlSegCheckConsistency(sh));
 
     // take the value of 'next' pointer from peer
     const TObjId peerPtr = prevPtrFromSeg(sh, seg);
     const TValId valNext = sh.valueOf(nextPtrFromSeg(sh, peer));
     sh.objSetValue(peerPtr, valNext);
+
+    // this step is necessary to prevent disaster when handling DLS lengths
+    sh.valReplace(peer, seg);
 
     // redirect all references originally pointing to peer to the current object
     redirectRefs(sh,

@@ -293,17 +293,9 @@ bool dlSegCheckConsistency(const SymHeap &sh) {
     TValList addrs;
     sh.gatherRootObjects(addrs, isAbstract);
     BOOST_FOREACH(const TValId at, addrs) {
-        const EObjKind kind = sh.valTargetKind(at);
-        switch (kind) {
-            case OK_SLS:
-            case OK_CONCRETE:
-            case OK_MAY_EXIST:
-                // we are interested in OK_DLS here
-                continue;
-
-            case OK_DLS:
-                break;
-        }
+        if (OK_DLS != sh.valTargetKind(at))
+            // we are interested in OK_DLS here
+            continue;
 
         if (at <= 0) {
             CL_ERROR("OK_DLS with invalid address detected");
@@ -320,6 +312,9 @@ bool dlSegCheckConsistency(const SymHeap &sh) {
             CL_ERROR("DLS peer not a DLS");
             return false;
         }
+
+        // check the consistency of Neq predicates
+        dlSegMinLength(sh, at, /* allowIncosistency */ false);
     }
 
     // all OK
