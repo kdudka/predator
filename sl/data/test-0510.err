@@ -1,5 +1,5 @@
 test-0510.c:15:16: error: dereference of NULL value
-test-0510.c:16:16: error: dereference of NULL value
+test-0510.c:16:16: error: dereference of NULL value with offset 4B
 test-0510.c:21:17: error: dereference of NULL value
 test-0510.c:21:17: warning: memory leak detected while destroying a variable on stack
 test-0510.c:22:15: error: dereference of NULL value

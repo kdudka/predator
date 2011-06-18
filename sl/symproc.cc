@@ -190,6 +190,14 @@ bool SymProc::checkForInvalidDeref(TValId val, TObjType cltTarget) {
         return true;
     }
 
+    if (VAL_NULL == sh_.valRoot(val)) {
+        const TOffset off = sh_.valOffset(val);
+        CL_ERROR_MSG(lw_, "dereference of NULL value with offset "
+                << off << "B");
+
+        return true;
+    }
+
     const EValueTarget code = sh_.valTarget(val);
     switch (code) {
         case VT_INVALID:

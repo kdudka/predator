@@ -337,7 +337,7 @@ struct CustomValueMapper {
 };
 
 struct SymHeapCore::Private {
-    // allocate a placeholder for VAL_NULL
+    // allocate a root-value for VAL_NULL
     Private();
 
     // clone heap entities, they are now allocated separately
@@ -391,7 +391,7 @@ template <typename T> T SymHeapCore::Private::lastId() const {
 }
 
 inline bool SymHeapCore::Private::valOutOfRange(TValId val) {
-    return (val <= 0)
+    return (val < 0)
         || (this->lastId<TValId>() < val);
 }
 
@@ -602,8 +602,8 @@ TValId SymHeapCore::Private::valDup(TValId val) {
 }
 
 SymHeapCore::Private::Private() {
-    // allocate a placeholder for VAL_NULL
-    this->ents.push_back(static_cast<IHeapEntity *>(0));
+    // allocate a root-value for VAL_NULL
+    this->ents.push_back(new RootValue(VT_INVALID, VO_INVALID));
 }
 
 SymHeapCore::Private::Private(const SymHeapCore::Private &ref):
@@ -777,12 +777,17 @@ TValId SymHeapCore::valClone(TValId val) {
         return val;
     }
 
-    if (!isPossibleToDeref(code))
+    const TValId root = d->valRoot(val, valData);
+    if (VAL_NULL == root) {
+        CL_BREAK_IF("VAL_NULL is not supposed to be cloned");
+        return val;
+    }
+
+    if (!isPossibleToDeref(code) && !isGone(code))
         // duplicate an unknown value
         return d->valDup(val);
 
     // duplicate a root object
-    const TValId root = d->valRoot(val, valData);
     const TValId dupAt = d->dupRoot(root);
 
     // take the offset into consideration
@@ -914,7 +919,7 @@ TObjType SymHeapCore::objType(TObjId obj) const {
 }
 
 TValId SymHeapCore::valByOffset(TValId at, TOffset off) {
-    if (!off || at <= 0)
+    if (!off || at < 0)
         return at;
 
     // subtract the root

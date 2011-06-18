@@ -1,0 +1,4 @@
+test-0160.c:15:10: error: dereference of NULL value
+test-0160.c:18:11: error: dereference of NULL value with offset 7B
+test-0160.c:21:11: error: dereference of NULL value with offset 19B
+test-0160.c:24:11: error: dereference of NULL value with offset 7B

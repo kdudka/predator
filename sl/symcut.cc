@@ -93,7 +93,7 @@ void digSubObjs(DeepCopyData &dc, TValId addrSrc, TValId addrDst)
 }
 
 void addObjectIfNeeded(DeepCopyData &dc, TValId rootSrcAt) {
-    if (hasKey(dc.valMap, rootSrcAt))
+    if (VAL_NULL == rootSrcAt || hasKey(dc.valMap, rootSrcAt))
         // mapping already known
         return;
 
@@ -170,6 +170,10 @@ void trackUses(DeepCopyData &dc, TValId valSrc) {
     TObjList uses;
 
     const TValId rootSrcAt = sh.valRoot(valSrc);
+    if (VAL_NULL == rootSrcAt)
+        // nothing to track actually
+        return;
+
     const EValueTarget code = sh.valTarget(rootSrcAt);
     if (isPossibleToDeref(code))
         sh.pointedBy(uses, rootSrcAt);
@@ -199,7 +203,7 @@ TValId handleValue(DeepCopyData &dc, TValId valSrc) {
 
     trackUses(dc, valSrc);
 
-    const EValueTarget code = src.valTarget(src.valRoot(valSrc));
+    const EValueTarget code = src.valTarget(valSrc);
     if (VT_CUSTOM == code) {
         // custom value, e.g. fnc pointer
         const CustomValue custom = src.valUnwrapCustom(valSrc);
@@ -208,7 +212,7 @@ TValId handleValue(DeepCopyData &dc, TValId valSrc) {
         return valDst;
     }
 
-    if (!isPossibleToDeref(code)) {
+    if (!isPossibleToDeref(code) && VAL_NULL != src.valRoot(valSrc)) {
         // an unkonwn value
         const EValueOrigin vo = src.valOrigin(valSrc);
         const TValId valDst = dst.valCreate(code, vo);

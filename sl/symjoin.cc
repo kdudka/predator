@@ -1606,17 +1606,20 @@ bool joinValuesByCode(
         const TValId            v1,
         const TValId            v2)
 {
+    const TOffset off1 = ctx.sh1.valOffset(v1);
+    const TOffset off2 = ctx.sh2.valOffset(v2);
+
     // classify the targets
     const EValueTarget code1 = ctx.sh1.valTarget(v1);
     const EValueTarget code2 = ctx.sh2.valTarget(v2);
 
     // check for VT_DELETED/VT_LOST
-    const bool gone1 = isGone(code1);
-    const bool gone2 = isGone(code2);
-    if (gone1 || gone2) {
-        const TOffset off1 = ctx.sh1.valOffset(v1);
-        const TOffset off2 = ctx.sh2.valOffset(v2);
+    const bool gone1 = isGone(code1)
+        || /* FIXME: misleading */ (off1 && VAL_NULL == ctx.sh1.valRoot(v1));
+    const bool gone2 = isGone(code2)
+        || /* FIXME: misleading */ (off2 && VAL_NULL == ctx.sh2.valRoot(v2));
 
+    if (gone1 || gone2) {
         if (code1 == code2 && off1 == off2) {
             const TValId vDstRoot = ctx.dst.valCreate(code1, VO_ASSIGNED);
             const TValId vDst = ctx.dst.valByOffset(vDstRoot, off1);

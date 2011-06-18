@@ -697,25 +697,9 @@ void segReplaceRefs(SymHeap &sh, TValId seg, TValId valNext) {
     const TOffset offHead = sh.valOffset(headAt);
     sh.valReplace(headAt, valNext);
 
-    const bool isNextValid = isPossibleToDeref(sh.valTarget(valNext));
-
-    // TODO: check types in debug build
     TObjList refs;
     sh.pointedBy(refs, seg);
     BOOST_FOREACH(const TObjId obj, refs) {
-        if (VAL_NULL == valNext) {
-            // FIXME: not correct in all cases
-            sh.objSetValue(obj, VAL_NULL);
-            continue;
-        }
-            
-        if (!isNextValid) {
-            CL_DEBUG("WARNING: suboptimal implementation of segReplaceRefs()");
-            const TValId val = sh.valClone(valNext);
-            sh.objSetValue(obj, val);
-            continue;
-        }
-
         // redirect!
         const TValId targetAt = sh.valueOf(obj);
         const TOffset off = sh.valOffset(targetAt) - offHead;

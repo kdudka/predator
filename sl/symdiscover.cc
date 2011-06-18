@@ -189,9 +189,12 @@ bool validateSegEntry(
         const TValId                next,
         const TValList              &protoRoots)
 {
-    if (isDlsBinding(off) && (valOfPtrAt(sh, entry, off.prev) < 0))
-        // valPrev has to be at least VAL_NULL, withdraw it
-        return false;
+    if (isDlsBinding(off)) {
+        const TValId valPrev = valOfPtrAt(sh, entry, off.prev);
+        if (VAL_NULL != valPrev && !isPossibleToDeref(sh.valTarget(valPrev)))
+            // valPrev has to be at least VAL_NULL, withdraw it
+            return false;
+    }
 
     // first validate 'root' itself
     if (!validatePointingObjects(sh, off, entry, prev, next, protoRoots,
