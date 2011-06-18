@@ -22,3 +22,12 @@
 /test-0506.err*
 /test-0507.err*
 /test-0519.err*
+/test-07??.c
+/test-08??.c
+/SLAyer_malloc.h
+/common.h
+/harness.h
+/heap.h
+/slayer.h
+/slayer_specifications.h
+/sll.h
