@@ -186,14 +186,16 @@ void SymCallCtx::Private::assignReturnValue(SymHeap &sh) {
     SymProc proc(sh, &callerSiteBt);
     proc.setLocation(&op.data.var->loc);
 
-    const TObjId obj = proc.objByOperand(op);
-    CL_BREAK_IF(OBJ_INVALID == obj);
+    const TObjId objDst = proc.objByOperand(op);
+    CL_BREAK_IF(OBJ_INVALID == objDst);
 
-    const TValId val = sh.valueOf(sh.objAt(VAL_ADDR_OF_RET, op.type));
-    CL_BREAK_IF(VAL_INVALID == val);
+    const TObjId objSrc = sh.objAt(VAL_ADDR_OF_RET, op.type);
+    const TValId val = (0 < objSrc)
+        ? sh.valueOf(objSrc)
+        : sh.valCreate(VT_UNKNOWN, VO_STACK);
 
     // assign the return value in the current symbolic heap
-    proc.objSetValue(obj, val);
+    proc.objSetValue(objDst, val);
 }
 
 void SymCallCtx::Private::destroyStackFrame(SymHeap &sh) {

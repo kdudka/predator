@@ -603,6 +603,10 @@ unsigned /* len */ discoverBestAbstraction(
     TValList addrs;
     sh.gatherRootObjects(addrs, isOnHeap);
     BOOST_FOREACH(const TValId at, addrs) {
+        if (!sh.valLastKnownTypeOfTarget(at))
+            // no root type-info, better to skip this one
+            continue;
+
         // use ProbeEntryVisitor visitor to validate the potential segment entry
         SegCandidate segc;
         const ProbeEntryVisitor visitor(segc.offList, sh, at);
