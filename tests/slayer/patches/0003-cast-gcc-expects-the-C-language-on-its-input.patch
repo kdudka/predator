@@ -1,0 +1,26 @@
+From 498861cbe48cfe2907627900a742137e9d6fbf14 Mon Sep 17 00:00:00 2001
+From: Kamil Dudka <kdudka@redhat.com>
+Date: Sat, 18 Jun 2011 21:39:19 +0200
+Subject: [PATCH 3/3] cast: gcc expects the C language on its input
+
+Really no idea what was the idea behing this example though...
+---
+ tests/slayer/cast.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/tests/slayer/cast.c b/tests/slayer/cast.c
+index 0717efc..d15f388 100644
+--- a/tests/slayer/cast.c
++++ b/tests/slayer/cast.c
+@@ -3,7 +3,7 @@
+ **/
+ void main() {
+   int x;
+-  (int*)x = &x;
++  *((int**)&x) = &x;
+   return;
+ }
+ 
+-- 
+1.7.12.4
+
