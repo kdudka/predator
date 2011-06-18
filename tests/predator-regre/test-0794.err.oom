@@ -1,0 +1,6 @@
+test-0794.c:9:14: error: dereference of NULL value with offset 4B
+test-0794.c:19:5: note: from call of create()
+test-0794.c:16:6: note: from call of main()
+test-0794.c:11:9: warning: ignoring call of undefined function: __builtin_puts()
+test-0794.c:19:5: note: from call of create()
+test-0794.c:16:6: note: from call of main()

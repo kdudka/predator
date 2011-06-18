@@ -1,0 +1,9 @@
+sll.h:19:11: error: dereference of NULL value
+test-0813.c:28:5: note: from call of cons()
+test-0813.c:26:6: note: from call of main()
+sll.h:19:11: error: dereference of NULL value
+test-0813.c:29:5: note: from call of cons()
+test-0813.c:26:6: note: from call of main()
+sll.h:19:11: error: dereference of NULL value
+test-0813.c:30:5: note: from call of cons()
+test-0813.c:26:6: note: from call of main()

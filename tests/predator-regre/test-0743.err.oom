@@ -1,0 +1,1 @@
+test-0743.c:4:5: error: dereference of NULL value

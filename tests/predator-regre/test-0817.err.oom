@@ -1,0 +1,42 @@
+sll.h:44:16: error: dereference of NULL value with offset 4B
+test-0817.c:24:20: note: from call of SLL_create()
+test-0817.c:21:6: note: from call of main()
+sll.h:44:16: error: dereference of NULL value with offset 4B
+test-0817.c:24:20: note: from call of SLL_create()
+test-0817.c:21:6: note: from call of main()
+sll.h:44:16: error: dereference of NULL value with offset 4B
+test-0817.c:24:20: note: from call of SLL_create()
+test-0817.c:21:6: note: from call of main()
+sll.h:44:16: error: dereference of NULL value with offset 4B
+test-0817.c:24:20: note: from call of SLL_create()
+test-0817.c:21:6: note: from call of main()
+sll.h:44:16: error: dereference of NULL value with offset 4B
+test-0817.c:24:20: note: from call of SLL_create()
+test-0817.c:21:6: note: from call of main()
+sll.h:44:16: error: dereference of NULL value with offset 4B
+test-0817.c:24:20: note: from call of SLL_create()
+test-0817.c:21:6: note: from call of main()
+sll.h:44:16: error: dereference of NULL value with offset 4B
+test-0817.c:24:20: note: from call of SLL_create()
+test-0817.c:21:6: note: from call of main()
+sll.h:44:16: error: dereference of NULL value with offset 4B
+test-0817.c:24:20: note: from call of SLL_create()
+test-0817.c:21:6: note: from call of main()
+sll.h:44:16: error: dereference of NULL value with offset 4B
+test-0817.c:24:20: note: from call of SLL_create()
+test-0817.c:21:6: note: from call of main()
+sll.h:44:16: error: dereference of NULL value with offset 4B
+test-0817.c:24:20: note: from call of SLL_create()
+test-0817.c:21:6: note: from call of main()
+sll.h:44:16: error: dereference of NULL value with offset 4B
+test-0817.c:24:20: note: from call of SLL_create()
+test-0817.c:21:6: note: from call of main()
+sll.h:44:16: error: dereference of NULL value with offset 4B
+test-0817.c:24:20: note: from call of SLL_create()
+test-0817.c:21:6: note: from call of main()
+test-0817.c:15:14: warning: memory leak detected while assigning a heap object
+test-0817.c:26:10: note: from call of reverse()
+test-0817.c:21:6: note: from call of main()
+test-0817.c:10:6: warning: end of function reverse() has not been reached
+test-0817.c:26:10: note: from call of reverse()
+test-0817.c:21:6: note: from call of main()

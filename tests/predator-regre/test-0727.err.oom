@@ -1,0 +1,4 @@
+test-0727.c:27:9: error: dereference of NULL value
+test-0727.c:16:9: error: dereference of NULL value
+test-0727.c:30:7: note: from call of init()
+test-0727.c:22:6: note: from call of main()

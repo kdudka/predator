@@ -1,0 +1,11 @@
+test-0809.c:16:10: warning: conditional jump depends on uninitialized value
+test-0809.c:16:10: note: the value being used is an untouched contents of heap
+test-0809.c:9:9: warning: memory leak detected while destroying a variable on stack
+test-0809.c:16:10: warning: conditional jump depends on uninitialized value
+test-0809.c:16:10: note: the value being used is an untouched contents of heap
+test-0809.c:16:10: warning: conditional jump depends on uninitialized value
+test-0809.c:16:10: note: the value being used is an untouched contents of heap
+test-0809.c:16:10: warning: conditional jump depends on uninitialized value
+test-0809.c:16:10: note: the value being used is an untouched contents of heap
+test-0809.c:16:10: warning: conditional jump depends on uninitialized value
+test-0809.c:16:10: note: the value being used is an untouched contents of heap

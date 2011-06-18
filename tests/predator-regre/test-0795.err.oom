@@ -1,0 +1,37 @@
+sll.h:44:16: error: dereference of NULL value with offset 4B
+test-0795.c:11:8: note: from call of SLL_create()
+test-0795.c:8:6: note: from call of main()
+sll.h:44:16: error: dereference of NULL value with offset 4B
+test-0795.c:11:8: note: from call of SLL_create()
+test-0795.c:8:6: note: from call of main()
+sll.h:44:16: error: dereference of NULL value with offset 4B
+test-0795.c:11:8: note: from call of SLL_create()
+test-0795.c:8:6: note: from call of main()
+sll.h:44:16: error: dereference of NULL value with offset 4B
+test-0795.c:11:8: note: from call of SLL_create()
+test-0795.c:8:6: note: from call of main()
+sll.h:44:16: error: dereference of NULL value with offset 4B
+test-0795.c:11:8: note: from call of SLL_create()
+test-0795.c:8:6: note: from call of main()
+sll.h:44:16: error: dereference of NULL value with offset 4B
+test-0795.c:11:8: note: from call of SLL_create()
+test-0795.c:8:6: note: from call of main()
+sll.h:44:16: error: dereference of NULL value with offset 4B
+test-0795.c:11:8: note: from call of SLL_create()
+test-0795.c:8:6: note: from call of main()
+sll.h:44:16: error: dereference of NULL value with offset 4B
+test-0795.c:11:8: note: from call of SLL_create()
+test-0795.c:8:6: note: from call of main()
+sll.h:44:16: error: dereference of NULL value with offset 4B
+test-0795.c:11:8: note: from call of SLL_create()
+test-0795.c:8:6: note: from call of main()
+sll.h:44:16: error: dereference of NULL value with offset 4B
+test-0795.c:11:8: note: from call of SLL_create()
+test-0795.c:8:6: note: from call of main()
+sll.h:44:16: error: dereference of NULL value with offset 4B
+test-0795.c:11:8: note: from call of SLL_create()
+test-0795.c:8:6: note: from call of main()
+sll.h:44:16: error: dereference of NULL value with offset 4B
+test-0795.c:11:8: note: from call of SLL_create()
+test-0795.c:8:6: note: from call of main()
+test-0795.c:9:14: warning: memory leak detected while destroying a variable on stack

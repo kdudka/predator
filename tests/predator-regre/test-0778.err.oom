@@ -1,0 +1,2 @@
+test-0778.c:13:6: error: dereference of NULL value
+test-0778.c:23:12: error: dereference of NULL value

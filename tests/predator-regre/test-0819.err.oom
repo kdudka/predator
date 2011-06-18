@@ -1,0 +1,69 @@
+sll.h:44:16: error: dereference of NULL value with offset 4B
+test-0819.c:27:20: note: from call of SLL_create()
+test-0819.c:24:6: note: from call of main()
+sll.h:44:16: error: dereference of NULL value with offset 4B
+test-0819.c:27:20: note: from call of SLL_create()
+test-0819.c:24:6: note: from call of main()
+sll.h:44:16: error: dereference of NULL value with offset 4B
+test-0819.c:27:20: note: from call of SLL_create()
+test-0819.c:24:6: note: from call of main()
+sll.h:44:16: error: dereference of NULL value with offset 4B
+test-0819.c:27:20: note: from call of SLL_create()
+test-0819.c:24:6: note: from call of main()
+sll.h:44:16: error: dereference of NULL value with offset 4B
+test-0819.c:27:20: note: from call of SLL_create()
+test-0819.c:24:6: note: from call of main()
+sll.h:44:16: error: dereference of NULL value with offset 4B
+test-0819.c:27:20: note: from call of SLL_create()
+test-0819.c:24:6: note: from call of main()
+sll.h:44:16: error: dereference of NULL value with offset 4B
+test-0819.c:27:20: note: from call of SLL_create()
+test-0819.c:24:6: note: from call of main()
+sll.h:44:16: error: dereference of NULL value with offset 4B
+test-0819.c:27:20: note: from call of SLL_create()
+test-0819.c:24:6: note: from call of main()
+sll.h:44:16: error: dereference of NULL value with offset 4B
+test-0819.c:27:20: note: from call of SLL_create()
+test-0819.c:24:6: note: from call of main()
+sll.h:44:16: error: dereference of NULL value with offset 4B
+test-0819.c:27:20: note: from call of SLL_create()
+test-0819.c:24:6: note: from call of main()
+sll.h:44:16: error: dereference of NULL value with offset 4B
+test-0819.c:27:20: note: from call of SLL_create()
+test-0819.c:24:6: note: from call of main()
+sll.h:44:16: error: dereference of NULL value with offset 4B
+test-0819.c:27:20: note: from call of SLL_create()
+test-0819.c:24:6: note: from call of main()
+test-0819.c:21:6: warning: memory leak detected while assigning a variable on stack
+test-0819.c:29:10: note: from call of reverse()
+test-0819.c:24:6: note: from call of main()
+test-0819.c:21:6: warning: memory leak detected while assigning a variable on stack
+test-0819.c:29:10: note: from call of reverse()
+test-0819.c:24:6: note: from call of main()
+test-0819.c:21:6: warning: memory leak detected while assigning a variable on stack
+test-0819.c:29:10: note: from call of reverse()
+test-0819.c:24:6: note: from call of main()
+test-0819.c:16:8: warning: memory leak detected while destroying a variable on stack
+test-0819.c:29:10: note: from call of reverse()
+test-0819.c:24:6: note: from call of main()
+test-0819.c:16:8: warning: memory leak detected while destroying a variable on stack
+test-0819.c:29:10: note: from call of reverse()
+test-0819.c:24:6: note: from call of main()
+test-0819.c:21:6: warning: memory leak detected while assigning a variable on stack
+test-0819.c:29:10: note: from call of reverse()
+test-0819.c:24:6: note: from call of main()
+test-0819.c:16:8: warning: memory leak detected while destroying a variable on stack
+test-0819.c:29:10: note: from call of reverse()
+test-0819.c:24:6: note: from call of main()
+test-0819.c:16:8: warning: memory leak detected while destroying a variable on stack
+test-0819.c:29:10: note: from call of reverse()
+test-0819.c:24:6: note: from call of main()
+test-0819.c:21:6: warning: memory leak detected while assigning a variable on stack
+test-0819.c:29:10: note: from call of reverse()
+test-0819.c:24:6: note: from call of main()
+test-0819.c:16:8: warning: memory leak detected while destroying a variable on stack
+test-0819.c:29:10: note: from call of reverse()
+test-0819.c:24:6: note: from call of main()
+test-0819.c:16:8: warning: memory leak detected while destroying a variable on stack
+test-0819.c:29:10: note: from call of reverse()
+test-0819.c:24:6: note: from call of main()

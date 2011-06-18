@@ -1,0 +1,10 @@
+test-0713.c:59:18: error: dereference of NULL value with offset 12B
+test-0713.c:63:18: error: dereference of NULL value with offset 12B
+test-0713.c:67:18: error: dereference of NULL value with offset 12B
+harness.h:239:37: error: dereference of NULL value with offset 52B
+test-0713.c:73:21: note: from call of InitializeListHead()
+test-0713.c:48:1: note: from call of main()
+harness.h:239:37: error: dereferencing object of size 4B out of bounds
+harness.h:239:37: note: the pointer being dereferenced points 48B beyond a heap object of size 4B
+test-0713.c:73:21: note: from call of InitializeListHead()
+test-0713.c:48:1: note: from call of main()

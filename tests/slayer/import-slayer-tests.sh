@@ -97,3 +97,6 @@ for file in "$TEST_DIR"/slayer/patches/00??-*.patch; do
     patch -p1 -d "$TEST_DIR/.." < "$file"
     eprintf "\n"
 done
+
+eprintf ">>> enable using SLAyer tests on 'make check'...\n"
+make -C "$TEST_DIR/../sl" CMAKE="cmake -D TEST_INCLUDE_SLAYER=ON"

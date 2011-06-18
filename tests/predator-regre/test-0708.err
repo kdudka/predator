@@ -1,0 +1,4 @@
+harness.h:239:37: error: dereferencing object of size 4B out of bounds
+harness.h:239:37: note: the pointer being dereferenced points 48B beyond a heap object of size 4B
+test-0708.c:17:21: note: from call of InitializeListHead()
+test-0708.c:11:1: note: from call of main()

@@ -1,0 +1,2 @@
+test-0769.c:11:10: error: dereference of NULL value
+test-0769.c:12:10: warning: memory leak detected while destroying a variable on stack

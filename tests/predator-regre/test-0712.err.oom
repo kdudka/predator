@@ -1,0 +1,2 @@
+test-0712.c:53:26: error: dereference of NULL value with offset 8B
+harness.h:2471:1: warning: memory leak detected while destroying a static variable

@@ -1,0 +1,2 @@
+test-0737.c:27:10: error: dereferencing object of size 4B out of bounds
+test-0737.c:27:10: note: the pointer being dereferenced points 0B beyond a heap object of size 4B

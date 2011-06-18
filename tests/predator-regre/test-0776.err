@@ -1,0 +1,2 @@
+test-0776.c:7:3: error: ___sl_error() reached, analysis of this code path will not continue
+test-0776.c:7:3: note: user message: SLAyer-style failure

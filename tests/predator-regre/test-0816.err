@@ -1,0 +1,12 @@
+test-0816.c:20:9: error: dereference of NULL value with offset 4B
+test-0816.c:34:14: note: from call of reverse_div()
+test-0816.c:29:6: note: from call of main()
+test-0816.c:20:9: error: dereference of NULL value with offset 4B
+test-0816.c:34:14: note: from call of reverse_div()
+test-0816.c:29:6: note: from call of main()
+test-0816.c:20:9: error: dereference of NULL value with offset 4B
+test-0816.c:34:14: note: from call of reverse_div()
+test-0816.c:29:6: note: from call of main()
+test-0816.c:20:9: error: dereference of NULL value with offset 4B
+test-0816.c:34:14: note: from call of reverse_div()
+test-0816.c:29:6: note: from call of main()

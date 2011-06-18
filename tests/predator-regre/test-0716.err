@@ -1,0 +1,1 @@
+test-0716.c:100:41: warning: ignoring call of undefined function: WdfDeviceInitSetPnpPowerEventCallbacks()

@@ -1,0 +1,6 @@
+sll.h:114:9: warning: ignoring call of undefined function: __builtin_putchar()
+test-0812.c:9:13: note: from call of print_list()
+test-0812.c:3:6: note: from call of main()
+sll.h:124:9: warning: ignoring call of undefined function: __builtin_putchar()
+test-0812.c:9:13: note: from call of print_list()
+test-0812.c:3:6: note: from call of main()

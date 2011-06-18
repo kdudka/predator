@@ -1,0 +1,39 @@
+sll.h:30:16: error: dereference of NULL value with offset 4B
+test-0832.c:19:8: note: from call of SLL_create_seg()
+test-0832.c:16:6: note: from call of main()
+sll.h:30:16: error: dereference of NULL value with offset 4B
+test-0832.c:19:8: note: from call of SLL_create_seg()
+test-0832.c:16:6: note: from call of main()
+sll.h:30:16: error: dereference of NULL value with offset 4B
+test-0832.c:19:8: note: from call of SLL_create_seg()
+test-0832.c:16:6: note: from call of main()
+sll.h:30:16: error: dereference of NULL value with offset 4B
+test-0832.c:19:8: note: from call of SLL_create_seg()
+test-0832.c:16:6: note: from call of main()
+sll.h:30:16: error: dereference of NULL value with offset 4B
+test-0832.c:19:8: note: from call of SLL_create_seg()
+test-0832.c:16:6: note: from call of main()
+sll.h:30:16: error: dereference of NULL value with offset 4B
+test-0832.c:19:8: note: from call of SLL_create_seg()
+test-0832.c:16:6: note: from call of main()
+sll.h:30:16: error: dereference of NULL value with offset 4B
+test-0832.c:19:8: note: from call of SLL_create_seg()
+test-0832.c:16:6: note: from call of main()
+sll.h:30:16: error: dereference of NULL value with offset 4B
+test-0832.c:19:8: note: from call of SLL_create_seg()
+test-0832.c:16:6: note: from call of main()
+sll.h:30:16: error: dereference of NULL value with offset 4B
+test-0832.c:19:8: note: from call of SLL_create_seg()
+test-0832.c:16:6: note: from call of main()
+sll.h:30:16: error: dereference of NULL value with offset 4B
+test-0832.c:19:8: note: from call of SLL_create_seg()
+test-0832.c:16:6: note: from call of main()
+sll.h:30:16: error: dereference of NULL value with offset 4B
+test-0832.c:19:8: note: from call of SLL_create_seg()
+test-0832.c:16:6: note: from call of main()
+sll.h:30:16: error: dereference of NULL value with offset 4B
+test-0832.c:19:8: note: from call of SLL_create_seg()
+test-0832.c:16:6: note: from call of main()
+sll.h:62:8: warning: memory leak detected while destroying a variable on stack
+test-0832.c:23:18: note: from call of SLL_destroy_seg()
+test-0832.c:16:6: note: from call of main()
