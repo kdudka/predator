@@ -1657,17 +1657,21 @@ void SymHeap::dlSegCrossNeqOp(ENeqOp op, TValId seg1) {
     seg1 = this->valRoot(seg1);
     TValId seg2 = dlSegPeer(*this, seg1);
 
+    // resolve heads
+    const TValId head1 = segHeadAt(*this, seg1);
+    const TValId head2 = segHeadAt(*this, seg2);
+
     // read the values (addresses of the surround)
     const TValId val1 = this->valueOf(nextPtrFromSeg(*this, seg1));
     const TValId val2 = this->valueOf(nextPtrFromSeg(*this, seg2));
 
     // add/del Neq predicates
-    SymHeapCore::neqOp(op, val1, segHeadAt(*this, seg2));
-    SymHeapCore::neqOp(op, val2, segHeadAt(*this, seg1));
+    SymHeapCore::neqOp(op, val1, head2);
+    SymHeapCore::neqOp(op, val2, head1);
 
     if (NEQ_DEL == op)
         // removing the 1+ flag implies removal of the 2+ flag
-        SymHeapCore::neqOp(NEQ_DEL, seg1, seg2);
+        SymHeapCore::neqOp(NEQ_DEL, head1, head2);
 }
 
 void SymHeap::neqOp(ENeqOp op, TValId valA, TValId valB) {

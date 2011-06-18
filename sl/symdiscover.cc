@@ -295,6 +295,29 @@ bool matchData(
     return true;
 }
 
+bool dlSegHaveChain(
+        SymHeap                     &sh,
+        const TValId                beg,
+        const TValId                end,
+        const TOffset               offNext)
+{
+    TValSet seen;
+
+    for (TValId cursor = beg;
+            0 < cursor && insertOnce(seen, cursor);
+            cursor = nextRootObj(sh, cursor, offNext))
+    {
+        const TValId next = nextRootObj(sh, cursor, offNext);
+        if (next == end)
+            return true;
+
+        if (OK_DLS != sh.valTargetKind(next))
+            return false;
+    }
+
+    return false;
+}
+
 bool segAvoidSelfCycle(
         SymHeap                     &sh,
         const BindingOff            &off,
@@ -317,16 +340,8 @@ bool segAvoidSelfCycle(
     if (OK_DLS == sh.valTargetKind(end))
         seg = dlSegPeer(sh, end);
 
-    const TValId prev = nextRootObj(sh, beg, off.prev);
-    if (prev == seg)
-        return true;
-
-    const TValId next = nextRootObj(sh, seg, off.next);
-    if (next == beg)
-        return true;
-
-    return haveSeg(sh, prev, seg, OK_DLS)
-        || haveSeg(sh, next, beg, OK_DLS);
+    return dlSegHaveChain(sh, beg, seg, off.prev)
+        || dlSegHaveChain(sh, seg, beg, off.next);
 }
 
 unsigned /* len */ segDiscover(
