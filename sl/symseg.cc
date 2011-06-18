@@ -27,7 +27,11 @@
 
 #include <boost/foreach.hpp>
 
-unsigned dlSegMinLength(const SymHeap &sh, TValId dls) {
+unsigned dlSegMinLength(
+        const SymHeap           &sh,
+        const TValId            dls,
+        const bool              allowIncosistency)
+{
     // validate call of dlSegNotEmpty()
     CL_BREAK_IF(OK_DLS != sh.valTargetKind(dls));
 
@@ -46,21 +50,36 @@ unsigned dlSegMinLength(const SymHeap &sh, TValId dls) {
     const bool ne2 = sh.SymHeapCore::proveNeq(val2, segHeadAt(sh, dls));
 
     // DLS cross Neq predicates have to be fully symmetric
-    CL_BREAK_IF(ne1 != ne2);
     const bool ne = (ne1 && ne2);
+    if (ne1 != ne2) {
+        if (allowIncosistency)
+            CL_WARN("seen OK_DLS empty in one direction but not vice versa");
+        else
+            CL_BREAK_IF("OK_DLS empty in one direction but not vice versa");
+    }
 
     // if DLS heads are two distinct objects, we have at least two objects
     const TValId head1 = segHeadAt(sh, dls);
     const TValId head2 = segHeadAt(sh, peer);
     if (sh.SymHeapCore::proveNeq(head1, head2)) {
-        CL_BREAK_IF(!ne);
+        if (!ne) {
+            if (allowIncosistency)
+                CL_WARN("seen OK_DLS 2+ that was not explicitly declared 1+");
+            else
+                CL_BREAK_IF("OK_DLS 2+ is not explicitly declared 1+");
+        }
+
         return /* DLS 2+ */ 2;
     }
 
     return static_cast<unsigned>(ne);
 }
 
-unsigned segMinLength(const SymHeap &sh, TValId seg) {
+unsigned segMinLength(
+        const SymHeap           &sh,
+        const TValId            seg,
+        const bool              allowIncosistency)
+{
     CL_BREAK_IF(sh.valOffset(seg));
 
     const EObjKind kind = sh.valTargetKind(seg);
@@ -75,7 +94,7 @@ unsigned segMinLength(const SymHeap &sh, TValId seg) {
             break;
 
         case OK_DLS:
-            return dlSegMinLength(sh, seg);
+            return dlSegMinLength(sh, seg, allowIncosistency);
     }
 
     SymHeap &writable = const_cast<SymHeap &>(sh);

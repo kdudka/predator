@@ -184,11 +184,12 @@ void operandToStreamCstInt(std::ostream &str, const struct cl_operand &op) {
             break;
 
         case CL_TYPE_PTR:
-            if (!val) {
+            if (val)
+                str << "0x" << std::hex << val;
+            else
                 str << "NULL";
-                break;
-            }
-            // fall through!
+
+            break;
 
         default:
 #ifndef NDEBUG

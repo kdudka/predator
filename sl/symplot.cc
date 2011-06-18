@@ -489,7 +489,7 @@ std::string labelOfCompObj(const SymHeap &sh, const TValId root) {
             break;
     }
 
-    const unsigned len = segMinLength(sh, root);
+    const unsigned len = segMinLength(sh, root, /* allowIncosistency */ true);
     switch (len) {
         case 0:
             label += " 0+";
