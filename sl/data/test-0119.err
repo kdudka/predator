@@ -131,16 +131,10 @@ test-0119.c:35:5: note: from call of main()
 test-0119.c:29:29: error: dereference of NULL value
 test-0119.c:37:18: note: from call of create_longer_sll()
 test-0119.c:35:5: note: from call of main()
-test-0119.c:29:29: error: dereference of NULL value
-test-0119.c:37:18: note: from call of create_longer_sll()
-test-0119.c:35:5: note: from call of main()
 test-0119.c:30:9: error: dereference of NULL value with offset 4B
 test-0119.c:37:18: note: from call of create_longer_sll()
 test-0119.c:35:5: note: from call of main()
 test-0119.c:30:9: error: dereference of NULL value with offset 4B
-test-0119.c:37:18: note: from call of create_longer_sll()
-test-0119.c:35:5: note: from call of main()
-test-0119.c:30:29: error: dereference of NULL value with offset 4B
 test-0119.c:37:18: note: from call of create_longer_sll()
 test-0119.c:35:5: note: from call of main()
 test-0119.c:30:29: error: dereference of NULL value with offset 4B
@@ -153,9 +147,6 @@ test-0119.c:31:5: error: dereference of NULL value with offset 4B
 test-0119.c:37:18: note: from call of create_longer_sll()
 test-0119.c:35:5: note: from call of main()
 test-0119.c:31:5: error: dereference of NULL value with offset 4B
-test-0119.c:37:18: note: from call of create_longer_sll()
-test-0119.c:35:5: note: from call of main()
-test-0119.c:31:5: warning: memory leak detected while destroying a variable on stack
 test-0119.c:37:18: note: from call of create_longer_sll()
 test-0119.c:35:5: note: from call of main()
 test-0119.c:31:5: warning: memory leak detected while destroying a variable on stack

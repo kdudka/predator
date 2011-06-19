@@ -420,9 +420,9 @@ bool checkNullConsistency(
         : ctx.sh2.valTarget(v2);
 
     switch (code) {
+#if 0
         case VT_ABSTRACT:
-            // TODO: relax this?
-
+#endif
         case VT_STATIC:
         case VT_ON_STACK:
         case VT_ON_HEAP:
@@ -466,6 +466,8 @@ bool joinFreshObjTripple(
             // mapping already inconsistent
             return false;
     }
+    else if (readOnly)
+        return checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ true);
 
     if (segClone) {
         const bool isGt1 = (OBJ_INVALID == obj2);
@@ -486,9 +488,6 @@ bool joinFreshObjTripple(
         return false;
     }
 
-    if (readOnly)
-        return checkValueMapping(ctx, v1, v2,
-                                 /* allowUnknownMapping */ true);
 
     if (checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ false))
         return true;
