@@ -291,7 +291,7 @@ bool matchData(
     }
 #else
     if (JS_THREE_WAY == status)
-        thr = 1;
+        thr = 2;
 #endif
 
     if (pThreshold)
@@ -436,7 +436,7 @@ unsigned /* len */ segDiscover(
         --len;
 
 #if !SE_PREFER_LOSSLESS_PROTOTYPES
-    if (/* XXX */ 1 < len)
+    if (/* XXX */ 2 < len)
         // path already too long
         maxThreshold = 0;
 #endif
