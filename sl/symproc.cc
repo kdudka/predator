@@ -901,13 +901,13 @@ bool describeCmpOp(
             return true;
 
         case CL_BINOP_NE:
-            *pNegative = true;
             *pPreserveEq = true;
-            *pPreserveNeq = true;
             // fall through!
 
         case CL_BINOP_LT:
         case CL_BINOP_GT:
+            *pNegative = true;
+            *pPreserveNeq = true;
             return true;
 
         default:

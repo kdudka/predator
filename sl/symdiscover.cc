@@ -533,7 +533,7 @@ class ProbeEntryVisitor {
 
 #if SE_DISABLE_SLS
             // allow only DLS abstraction
-            if (!isDlsBinding(off));
+            if (!isDlsBinding(off))
                 return /* continue */ true;
 #endif
             // append a candidate
