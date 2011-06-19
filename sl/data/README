@@ -48,10 +48,12 @@ SLS abstraction
                 - no flaws reported with -fplugin-arg-libsl-symexec-args=fast
 
     test-0106.c - pseudo tree consisting of two SLLs
+                - known to work with SE_PREFER_LOSSLESS_PROTOTYPES == 2
 
     test-0112.c - hello-world, once used as the most trivial example for symjoin
 
     test-0113.c - error-free variant of test-0106
+                - known to work with SE_PREFER_LOSSLESS_PROTOTYPES == 2
 
     test-0118.c - abstraction of SLL, each node contains a pointer to head
                 - improved variant of test-0049
@@ -166,7 +168,7 @@ Higher level SLS/DLS abstraction, etc.
     test-0128.c - SLL, each item contains zero or one nested item
 
     test-0129.c - alternation of test-0127 with DLLs instead of SLLs
-                - currently does not work with SE_PREFER_LOSSLESS_PROTOTYPES
+                - terminates instantly with SE_PREFER_LOSSLESS_PROTOTYPES == -1
 
     test-0130.c - alternation of test-0128 with DLLs instead of SLLs
 
@@ -259,8 +261,7 @@ Linux lists
     test-0109.c - Linux DLS with nested Linux DLLs consisting of _two_ items
 
     test-0115.c - non-deterministic variant of test-0123
-                - terminates instantly with SE_PREFER_LOSSLESS_PROTOTYPES == 0
-                - otherwise runs horribly long, but the result is still correct
+                - terminates instantly with SE_PREFER_LOSSLESS_PROTOTYPES == -1
 
     test-0120.c - Linux "list" of length one, based on hlist_head/hlist_node
 
@@ -276,6 +277,7 @@ Linux lists
     test-0123.c - Linux DLS with zero or one nested items in each node
 
     test-0125.c - a more generic variant of test-0115
+                - terminates instantly with SE_PREFER_LOSSLESS_PROTOTYPES == -1
 
     test-0132.c - example of creating, adding, deleting, and traversing the list
                 - contributed by Kulesh Shanmugasundaram
@@ -387,6 +389,7 @@ Tests taken from Forester
     test-0504.c - NULL-terminated DLL at the top level
                 - each node contains a nested (possibly empty) cyclic DLL
                 - originally taken from fa/data/dll-listofclists.c
+                - terminates instantly with SE_PREFER_LOSSLESS_PROTOTYPES == -1
 
     test-0505.c - reversion of a NULL-terminated DLL
                 - originally taken from fa/data/dll-rev.c
@@ -440,6 +443,7 @@ Tests taken from Forester
 
     test-0519.c - test-0113 once simplified for Forester
                 - originally taken from fa/data/test-0113.c
+                - known to work with SE_PREFER_LOSSLESS_PROTOTYPES == 2
 
     test-0520.c - test-0128 once simplified for Forester
                 - originally taken from fa/data/test-0128.c

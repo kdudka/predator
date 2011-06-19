@@ -125,9 +125,10 @@
 #define SE_EARLY_VARS_DESTRUCTION           1
 
 /**
- * if 1, abstraction path length is penalized by complexity of prototype join
+ * an integer expressing how much we should prefer/force lossless prototypes;
+ * values from the interval -1..3 make sense
  */
-#define SE_PREFER_LOSSLESS_PROTOTYPES       0
+#define SE_PREFER_LOSSLESS_PROTOTYPES       1
 
 /**
  * maximal call depth

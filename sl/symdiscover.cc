@@ -275,24 +275,19 @@ bool matchData(
         return false;
 
     int thr = 0;
-#if SE_PREFER_LOSSLESS_PROTOTYPES
     switch (status) {
         case JS_USE_ANY:
             break;
 
         case JS_USE_SH1:
         case JS_USE_SH2:
-            thr = 2;
+            thr = 0 + (SE_PREFER_LOSSLESS_PROTOTYPES);
             break;
 
         case JS_THREE_WAY:
-            thr = 3;
+            thr = 1 + (SE_PREFER_LOSSLESS_PROTOTYPES);
             break;
     }
-#else
-    if (JS_THREE_WAY == status)
-        thr = 2;
-#endif
 
     if (pThreshold)
         *pThreshold = thr;
@@ -435,11 +430,9 @@ unsigned /* len */ segDiscover(
         // avoid creating self-cycle of two segments
         --len;
 
-#if !SE_PREFER_LOSSLESS_PROTOTYPES
-    if (/* XXX */ 2 < len)
+    if (1 + (SE_PREFER_LOSSLESS_PROTOTYPES) < len)
         // path already too long
         maxThreshold = 0;
-#endif
 
 #if SE_DEFER_SLS_INTRO
     if (!isDlsBinding(off))
