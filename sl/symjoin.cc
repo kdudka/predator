@@ -1244,7 +1244,8 @@ bool joinSegmentWithAny(
         SymJoinCtx              &ctx,
         TValId                  root1,
         TValId                  root2,
-        const EJoinStatus       action)
+        const EJoinStatus       action,
+        bool                    firstTryReadOnly = true)
 {
     if (segAlreadyJoined(ctx, root1, root2, action)) {
         // already joined
@@ -1264,13 +1265,18 @@ bool joinSegmentWithAny(
     if (isDls2)
         peer2 = dlSegPeer(ctx.sh2, root2);
 
-    if (!followRootValues(ctx, root1, root2, action, /* read-only */ true)) {
+    if (firstTryReadOnly && !followRootValues(ctx, root1, root2, action,
+                /* read-only */ true))
+    {
         SJ_DEBUG("<<< joinSegmentWithAny" << SJ_VALP(root1, root2));
         return false;
     }
 
     const bool haveDls = (isDls1 || isDls2);
-    if (haveDls && !followRootValues(ctx, peer1, peer2, action, /* ro */ true))
+    if (firstTryReadOnly
+            && haveDls
+            && !followRootValues(ctx, peer1, peer2, action,
+                /* read-only */ true))
     {
         SJ_DEBUG("<<< joinSegmentWithAny" << SJ_VALP(peer1, peer2));
         return false;
@@ -1283,14 +1289,14 @@ bool joinSegmentWithAny(
 
     const TValId valNext1 = valOfPtrAt(ctx.sh1, peer1, off.next);
     const TValId valNext2 = valOfPtrAt(ctx.sh2, peer2, off.next);
-    if (!checkValueMapping(ctx, valNext1, valNext2,
+    if (firstTryReadOnly && !checkValueMapping(ctx, valNext1, valNext2,
                            /* allowUnknownMapping */ true))
     {
         SJ_DEBUG("<<< joinSegmentWithAny" << SJ_VALP(root1, root2));
         return false;
     }
 
-    if (haveDls) {
+    if (firstTryReadOnly && haveDls) {
         const TValId valPrev1 = valOfPtrAt(ctx.sh1, root1, off.prev);
         const TValId valPrev2 = valOfPtrAt(ctx.sh2, root2, off.prev);
         if (!checkValueMapping(ctx, valPrev1, valPrev2,
@@ -1538,8 +1544,17 @@ bool joinAbstractValues(
             return true;
     }
 
-    if (!insertSegmentClone(pResult, ctx, v1, v2, subStatus))
+    if (!insertSegmentClone(pResult, ctx, v1, v2, subStatus)) {
+        if (ctx.joiningDataReadWrite()) {
+            // FIXME: this is just a hack, it would be better to simply skip all
+            // the remaining abstraction steps and run segDiscover() once again
+            CL_WARN("joinData() called incompetently, trying to recover...");
+            return joinSegmentWithAny(pResult, ctx, root1, root2, subStatus,
+                        /* firstTryReadOnly */ false);
+        }
+
         *pResult = false;
+    }
 
     return true;
 }

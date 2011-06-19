@@ -1,3 +1,4 @@
+#include "../sl.h"
 #include <stdlib.h>
 
 struct lowLevel {
@@ -14,16 +15,17 @@ int main()
 {
     struct topLevel *t, *tt;
     struct lowLevel *l;
-    int i;
 
     t = malloc(sizeof(struct topLevel));
     t->next = 0;
     t->low = 0;
-    for (i=0; i<10; i++) {
 
-        int j;
-        for (j=0; j<10; j++) {
+    while (___sl_get_nondet_int()) {
+        do {
             l = malloc(sizeof(struct lowLevel));
+            if (!l)
+                abort();
+
             if (t->low == 0) {
                 l->head = l;
                 l->next = 0;
@@ -35,14 +37,13 @@ int main()
                 t->low->next = l;
             }
         }
+        while (___sl_get_nondet_int());
+
         tt = malloc(sizeof(struct topLevel));
         tt->next = t;
         tt->low = 0;
         t = tt;
     }
-
-    tt = t->next;
-    l = tt->low;
 
     return 0;
 }

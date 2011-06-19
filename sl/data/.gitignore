@@ -1,10 +1,6 @@
 *.dot
 *.svg
 *.pp.html
-test-0039.err
-test-0039.err.fast
-test-0040.err
-test-0040.err.fast
 Makefile
 test-0000.err
 test-0000.err.fast
