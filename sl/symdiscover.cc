@@ -113,9 +113,11 @@ bool validatePointingObjects(
     // please do not validate the binding pointers as data pointers;  otherwise
     // we might mistakenly abstract SLL with head-pointers of length 2 as DLS!!
     std::set<TValId> blackList;
-    blackList.insert(sh.valByOffset(root, off.next));
-    if (isDls)
-        blackList.insert(sh.valByOffset(root, off.prev));
+    if (VAL_INVALID != prev || VAL_INVALID != next) {
+        blackList.insert(sh.valByOffset(root, off.next));
+        if (isDls)
+            blackList.insert(sh.valByOffset(root, off.prev));
+    }
 
     const TValId headAddr = sh.valByOffset(root, off.head);
     const bool rootIsProto = sh.valTargetIsProto(root);

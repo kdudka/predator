@@ -1,0 +1,1 @@
+test-0161.c:60:15: warning: memory leak detected while destroying a variable on stack
