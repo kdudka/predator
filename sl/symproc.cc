@@ -617,14 +617,17 @@ void SymProc::valDestroyTarget(TValId addr) {
         this->reportMemLeak(code, "destroy");
 }
 
-void SymProc::killVar(const struct cl_operand &op, bool onlyIfNotPointed) {
+void SymProc::killVar(const int uid, bool onlyIfNotPointed) {
 #if DEBUG_SE_STACK_FRAME
-    const int uid = varIdFromOperand(&op);
     const CodeStorage::Storage &stor = sh_.stor();
     const std::string varString = varToString(stor, uid);
     CL_DEBUG_MSG(lw_, "FFF SymProc::killVar() destroys var " << varString);
 #endif
-    const TValId addr = this->varAt(op);
+
+    // get the address (SymHeapCore is responsible for lazy creation)
+    const int nestLevel = bt_->countOccurrencesOfTopFnc();
+    const CVar cVar(uid, nestLevel);
+    const TValId addr = sh_.addrOfVar(cVar);
 
     if (onlyIfNotPointed && sh_.pointedByCount(addr))
         // somebody points at the var, please wait with its destruction
@@ -665,7 +668,23 @@ void SymProc::killInsn(const CodeStorage::Insn &insn) {
                 op = op->accessor->data.array.index;
         }
 
-        this->killVar(*op, onlyIfNotPointed);
+        const int uid = varIdFromOperand(op);
+        this->killVar(uid, onlyIfNotPointed);
+    }
+}
+
+void SymProc::killPerTarget(const CodeStorage::Insn &insn, unsigned target) {
+    using namespace CodeStorage;
+#if SE_EARLY_VARS_DESTRUCTION < 2
+    return;
+#endif
+
+    // WARNING: highly experimental, not tested
+    const TKillVarList &kList = insn.killPerTarget[target];
+    BOOST_FOREACH(const TKillVar &item, kList) {
+        const int uid = item.first;
+        const EKillStatus status = item.second;
+        this->killVar(uid, KS_KILL_VAR_IF_NOT_POINTED == status);
     }
 }
 

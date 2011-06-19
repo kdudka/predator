@@ -103,6 +103,8 @@ class SymProc {
         /// invalidate all variables that are killed by the given instruction
         void killInsn(const CodeStorage::Insn &);
 
+        void killPerTarget(const CodeStorage::Insn &, unsigned target);
+
     protected:
         TValId varAt(const struct cl_operand &op);
         TValId targetAt(const struct cl_operand &op);
@@ -117,7 +119,7 @@ class SymProc {
         TValId heapValFromObj(const struct cl_operand &op);
         TValId heapValFromCst(const struct cl_operand &op);
         TValId handlePointerPlus(TValId at, TValId off);
-        void killVar(const struct cl_operand &op, bool onlyIfNotPointed);
+        void killVar(const int uid, bool onlyIfNotPointed);
 
     protected:
         SymHeap                     &sh_;

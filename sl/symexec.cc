@@ -234,12 +234,14 @@ class SymExecEngine: public IStatsProvider {
                 const CodeStorage::Block            *ofBlock,
                 const bool                          branch,
                 const CodeStorage::Insn             &insnCmp,
+                const CodeStorage::Insn             &insnCnd,
                 const TValId                        v1,
                 const TValId                        v2);
 
         bool bypassNonPointers(
                 SymProc                             &proc,
                 const CodeStorage::Insn             &insnCmp,
+                const CodeStorage::Insn             &insnCnd,
                 const CodeStorage::TTargetList      &tlist);
 
         void execCondInsn();
@@ -332,6 +334,7 @@ void SymExecEngine::updateStateInBranch(
         const CodeStorage::Block   *ofBlock,
         const bool                  branch,
         const CodeStorage::Insn    &insnCmp,
+        const CodeStorage::Insn    &insnCnd,
         const TValId                v1,
         const TValId                v2)
 {
@@ -361,12 +364,14 @@ void SymExecEngine::updateStateInBranch(
 
 fallback:
     proc.killInsn(insnCmp);
+    proc.killPerTarget(insnCnd, /* target */ !branch);
     this->updateState(sh, ofBlock);
 }
 
 bool SymExecEngine::bypassNonPointers(
         SymProc                                     &proc,
         const CodeStorage::Insn                     &insnCmp,
+        const CodeStorage::Insn                     &insnCnd,
         const CodeStorage::TTargetList              &tlist)
 {
 #if !SE_TRACK_NON_POINTER_VALUES
@@ -380,11 +385,19 @@ bool SymExecEngine::bypassNonPointers(
     proc.killInsn(insnCmp);
 
     SymHeap sh1(sh);
+    SymProc proc1(sh1, proc.bt());
+    proc1.setLocation(proc.lw());
+
     CL_DEBUG_MSG(lw_, "-T- CL_INSN_COND updates TRUE branch");
+    proc1.killPerTarget(insnCnd, /* then label */ 0);
     this->updateState(sh1, tlist[/* then label */ 0]);
 
     SymHeap sh2(sh);
+    SymProc proc2(sh2, proc.bt());
+    proc2.setLocation(proc.lw());
+
     CL_DEBUG_MSG(lw_, "-F- CL_INSN_COND updates FALSE branch");
+    proc2.killPerTarget(insnCnd, /* else label */ 1);
     this->updateState(sh2, tlist[/* else label */ 1]);
 
     return true;
@@ -432,12 +445,14 @@ void SymExecEngine::execCondInsn() {
         case VAL_TRUE:
             CL_DEBUG_MSG(lw_, ".T. CL_INSN_COND got VAL_TRUE");
             proc.killInsn(*insnCmp);
+            proc.killPerTarget(*insnCnd, /* then label */ 0);
             this->updateState(sh, targetThen);
             return;
 
         case VAL_FALSE:
             CL_DEBUG_MSG(lw_, ".F. CL_INSN_COND got VAL_FALSE");
             proc.killInsn(*insnCmp);
+            proc.killPerTarget(*insnCnd, /* else label */ 1);
             this->updateState(sh, targetElse);
             return;
 
@@ -453,7 +468,7 @@ void SymExecEngine::execCondInsn() {
         return;
     }
 
-    if (this->bypassNonPointers(proc, *insnCmp, insnCnd->targets))
+    if (this->bypassNonPointers(proc, *insnCmp, *insnCnd, insnCnd->targets))
         // do not track relations over data we are not interested in
         return;
 
@@ -469,10 +484,12 @@ void SymExecEngine::execCondInsn() {
     LDP_PLOT(nondetCond, sh);
 
     CL_DEBUG_MSG(lw_, "?T? CL_INSN_COND updates TRUE branch");
-    this->updateStateInBranch(proc, targetThen, true,  *insnCmp, v1, v2);
+    this->updateStateInBranch(proc, targetThen, true,
+            *insnCmp, *insnCnd, v1, v2);
 
     CL_DEBUG_MSG(lw_, "?F? CL_INSN_COND updates FALSE branch");
-    this->updateStateInBranch(proc, targetElse, false, *insnCmp, v1, v2);
+    this->updateStateInBranch(proc, targetElse, false,
+            *insnCmp, *insnCnd, v1, v2);
 }
 
 void SymExecEngine::execTermInsn() {
