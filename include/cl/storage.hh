@@ -281,9 +281,16 @@ enum EKillStatus {
     KS_KILL_NOTHING,
     KS_KILL_VAR,
     KS_KILL_VAR_IF_NOT_POINTED,
+
+    // FIXME: we need a better API for killing of variables
     KS_KILL_ARRAY_INDEX,
     KS_KILL_ARRAY_INDEX_IF_NOT_POINTED
 };
+
+// FIXME: we need a better API for killing of variables
+typedef std::pair<int /* uid */, EKillStatus>       TKillVar;
+typedef std::vector<TKillVar>                       TKillVarList;
+typedef std::vector<TKillVarList>                   TKillPerTarget;
 
 /**
  * high-level representation of an intermediate code instruction
@@ -356,6 +363,9 @@ struct Insn {
      * KS_NEVER_KILL, which should be a safe over-approximation.
      */
     std::vector<EKillStatus>    opsToKill;
+
+    // FIXME: we need a better API for killing of variables
+    TKillPerTarget              killPerTarget;
 
     /**
      * List of all target blocks - useful only for @b terminal @b instructions.
