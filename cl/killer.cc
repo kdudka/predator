@@ -378,27 +378,23 @@ void commitBlock(Data &data, TBlock bb, const TSet &pointed) {
                 killOperand(const_cast<Insn &>(*insn), vg, isPointed);
                 continue;
             }
+        }
 
-            if (!multipleTargets)
-                continue;
+        if (!multipleTargets)
+            continue;
 
+        BOOST_FOREACH(TVar vg, data.blocks[bb].gen) {
             for (unsigned i = 0; i < cntTargets; ++i) {
-                if (insertOnce(livePerTarget[i], vg)) {
+                if (!hasKey(livePerTarget[i], vg)) {
                     if (insertOnce(killPerTarget[i], vg)) {
                         VK_DEBUG_MSG(1, &insn->loc, "killing variable "
                                 << varToString(*insn->stor, vg)
                                 << " per target " << targets[i]->name()
                                 << " by " << insn);
                     }
-                    else {
-                        CL_BREAK_IF("killPerTarget seems inconsistent");
-                    }
                 }
             }
         }
-
-        if (!multipleTargets)
-            continue;
 
         Insn *term = const_cast<Insn *>(bb->back());
         TKillPerTarget &dst = term->killPerTarget;
