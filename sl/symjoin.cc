@@ -354,7 +354,6 @@ bool checkValueMapping(
     const TOffset off1 = ctx.sh1.valOffset(v1);
     const TOffset off2 = ctx.sh2.valOffset(v2);
     if (off1 != off2)
-        // FIXME: not always correct
         return false;
 
     // read-only value lookup
@@ -384,6 +383,58 @@ bool checkValueMapping(
     return false;
 }
 
+bool checkNullConsistency(
+        SymJoinCtx              &ctx,
+        const TValId            v1,
+        const TValId            v2)
+{
+    const bool isNull1 = (VAL_NULL == v1);
+    const bool isNull2 = (VAL_NULL == v2);
+    CL_BREAK_IF(isNull1 == isNull2);
+
+    if (v1 < 0 || v2 < 0)
+        // VAL_NULL vs. something special
+        return false;
+
+    const TValId root1 = ctx.sh1.valRoot(v1);
+    const TValId root2 = ctx.sh2.valRoot(v2);
+
+    // special quirk for off-values related to VAL_NULL
+    if (isNull1 && VAL_NULL == root2)
+        return false;
+    if (isNull2 && VAL_NULL == root1)
+        return false;
+
+    // check for inconsistency with the up to now mapping of values
+    if (isNull1 && hasKey(ctx.valMap2[/* lrt */ 0], root2))
+        return false;
+    if (isNull2 && hasKey(ctx.valMap1[/* lrt */ 0], root1))
+        return false;
+
+    if (ctx.joiningData())
+        // TODO: explain exactly why we need it to digest test-0116.c
+        return true;
+
+    const EValueTarget code = (isNull2)
+        ? ctx.sh1.valTarget(v1)
+        : ctx.sh2.valTarget(v2);
+
+    switch (code) {
+        case VT_ABSTRACT:
+            // TODO: relax this?
+
+        case VT_STATIC:
+        case VT_ON_STACK:
+        case VT_ON_HEAP:
+            // implies inconsistency
+            return false;
+
+        default:
+            // OK
+            return true;
+    }
+}
+
 /// (OBJ_INVALID == objDst) means read-only!!!
 bool joinFreshObjTripple(
         SymJoinCtx              &ctx,
@@ -402,29 +453,19 @@ bool joinFreshObjTripple(
         // both values are VAL_NULL, nothing more to join here
         return true;
 
-    if (segClone && (VAL_NULL == v1 || VAL_NULL == v2))
-        // same as above, but now only one value of v1 and v2 is valid
-        return true;
-
     if (hasKey(ctx.alreadyJoined, TValPair(v1, v2)))
         // the join has been already successful
         return true;
 
-    if (VAL_NULL == v1
-            && (v2 < 0 || hasKey(ctx.valMap2[/* lrt */ 0], ctx.sh2.valRoot(v2))
-            || (!ctx.joiningData()
-                // FIXME: should we exclude VT_ABSTRACT at this point?
-                && isPossibleToDeref(ctx.sh2.valTarget(v2)))))
-        // mapping already inconsistent
-        return false;
+    if (VAL_NULL == v1 || VAL_NULL == v2) {
+        if (segClone)
+            // we got only one value and the value is VAL_NULL
+            return true;
 
-    if (VAL_NULL == v2
-            && (v1 < 0 || hasKey(ctx.valMap1[/* lrt */ 0], ctx.sh1.valRoot(v1))
-            || (!ctx.joiningData()
-                // FIXME: should we exclude VT_ABSTRACT at this point?
-                && isPossibleToDeref(ctx.sh1.valTarget(v1)))))
-        // mapping already inconsistent
-        return false;
+        if (!checkNullConsistency(ctx, v1, v2))
+            // mapping already inconsistent
+            return false;
+    }
 
     if (segClone) {
         const bool isGt1 = (OBJ_INVALID == obj2);
