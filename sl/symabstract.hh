@@ -71,4 +71,7 @@ void abstractIfNeeded(SymHeap &sh);
  */
 bool spliceOutListSegment(SymHeap &sh, TValId atAddr, TValId pointingTo);
 
+/// enable/disable debugging of symabstract
+void debugSymAbstract(const bool enable);
+
 #endif /* H_GUARD_SYMABSTRACT_H */

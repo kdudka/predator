@@ -42,6 +42,14 @@
 
 LOCAL_DEBUG_PLOTTER(symabstract, DEBUG_SYMABSTRACT)
 
+void debugSymAbstract(const bool enable) {
+    if (enable == __ldp_enabled_symabstract)
+        return;
+
+    CL_DEBUG("symabstract: debugSymAbstract(" << enable << ") takes effect");
+    __ldp_enabled_symabstract = enable;
+}
+
 #define REQUIRE_GC_ACTIVITY(sh, val, fnc) do {                                 \
     if (collectJunk(sh, val))                                                  \
         break;                                                                 \

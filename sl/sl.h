@@ -39,6 +39,7 @@ extern "C" {
 void ___sl_break(const char *msg);
 void ___sl_error(const char *msg);
 void ___sl_plot(const char *name, ...);
+void ___sl_enable_debugging_of_symabstract(int enable);
 int ___sl_get_nondet_int(void);
 
 #else
@@ -72,6 +73,11 @@ static /* inline */ void ___sl_plot(const char *name, ...)
     (void) name;
 }
 
+static /* inline */ void ___sl_enable_debugging_of_symabstract(int enable)
+{
+    (void) enable;
+}
+
 static /* inline */ int ___sl_get_nondet_int(void)
 {
     int i;
@@ -79,6 +85,7 @@ static /* inline */ int ___sl_get_nondet_int(void)
     /* tools like valgrind will report a use of such value as a program error */
     return i;
 }
+
 #endif
 
 #ifdef __cplusplus

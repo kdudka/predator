@@ -23,6 +23,7 @@
 #include <cl/cl_msg.hh>
 #include <cl/storage.hh>
 
+#include "symabstract.hh"
 #include "symbt.hh"
 #include "symplot.hh"
 #include "symproc.hh"
@@ -72,7 +73,6 @@ bool readPlotName(std::string *dst, const TOpList opList,
     return true;
 }
 
-namespace {
 void emitPrototypeError(const struct cl_loc *lw, const std::string &fnc) {
     CL_WARN_MSG(lw, "incorrectly called "
             << fnc << "() not recognized as built-in");
@@ -81,7 +81,14 @@ void emitPrototypeError(const struct cl_loc *lw, const std::string &fnc) {
 void emitPlotError(const struct cl_loc *lw, const std::string &plotName) {
     CL_WARN_MSG(lw, "error while plotting '" << plotName << "'");
 }
-} // namespace
+
+void insertCoreHeap(SymState &dst, SymProc &core, const CodeStorage::Insn &insn)
+{
+    core.killInsn(insn);
+
+    const SymHeap &sh = core.sh();
+    dst.insert(sh);
+}
 
 bool callPlot(const CodeStorage::Insn &insn, SymProc &proc) {
     const CodeStorage::TOperandList &opList = insn.operands;
@@ -193,8 +200,7 @@ bool handleAbort(
     }
 
     // do nothing for abort()
-    const SymHeap &sh = core.sh();
-    dst.insert(sh);
+    insertCoreHeap(dst, core, insn);
     return true;
 }
 
@@ -219,8 +225,7 @@ bool handleBreak(
     CL_TRAP;
 
     // continue with the given heap as the result
-    const SymHeap &sh = core.sh();
-    dst.insert(sh);
+    insertCoreHeap(dst, core, insn);
     return true;
 }
 
@@ -263,9 +268,30 @@ bool handlePlot(
     else if (!(callPlot(insn, core)))
         return false;
 
+    insertCoreHeap(dst, core, insn);
+    return true;
+}
+
+bool handleDebugSymAbstract(
+        SymState                                    &dst,
+        SymExecCore                                 &core,
+        const CodeStorage::Insn                     &insn,
+        const char                                  *name)
+{
+    const CodeStorage::TOperandList &opList = insn.operands;
+    const struct cl_loc *lw = &insn.loc;
+
+    if (/* dst + fnc + arg */ 3 != opList.size()) {
+        emitPrototypeError(lw, name);
+        return false;
+    }
+
     const SymHeap &sh = core.sh();
-    core.killInsn(insn);
-    dst.insert(sh);
+    const TValId val = core.valFromOperand(opList[/* enable */ 2]);
+    const bool enable = sh.proveNeq(VAL_FALSE, val);
+    debugSymAbstract(enable);
+
+    insertCoreHeap(dst, core, insn);
     return true;
 }
 
@@ -295,11 +321,12 @@ bool handleError(
 
 // register built-ins
 BuiltInTable::BuiltInTable() {
-    tbl_["abort"]                       = handleAbort;
-    tbl_["___sl_break"]                 = handleBreak;
-    tbl_["___sl_error"]                 = handleError;
-    tbl_["___sl_get_nondet_int"]        = handleNondetInt;
-    tbl_["___sl_plot"]                  = handlePlot;
+    tbl_["abort"]                                   = handleAbort;
+    tbl_["___sl_break"]                             = handleBreak;
+    tbl_["___sl_error"]                             = handleError;
+    tbl_["___sl_get_nondet_int"]                    = handleNondetInt;
+    tbl_["___sl_plot"]                              = handlePlot;
+    tbl_["___sl_enable_debugging_of_symabstract"]   = handleDebugSymAbstract;
 }
 
 bool BuiltInTable::handleBuiltIn(
