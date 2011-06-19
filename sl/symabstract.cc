@@ -375,7 +375,7 @@ void slSegAbstractionStep(SymHeap &sh, TValId *pCursor, const BindingOff &off)
 {
     // jump to the next object
     const TValId at = *pCursor;
-    const TValId nextAt = sh.valRoot(valOfPtrAt(sh, at, off.next));
+    const TValId nextAt = nextRootObj(sh, at, off.next);
     CL_BREAK_IF(nextAt <= 0);
 
     // read minimal length of 'obj' and set it temporarily to zero
@@ -580,7 +580,7 @@ void dlSegAbstractionStep(SymHeap &sh, TValId *pCursor, const BindingOff &off)
 #endif
 }
 
-void segAbstractionStep(
+bool segAbstractionStep(
         SymHeap                     &sh,
         const BindingOff            &off,
         TValId                      *pCursor)
@@ -590,11 +590,21 @@ void segAbstractionStep(
         CL_BREAK_IF(!dlSegCheckConsistency(sh));
         dlSegAbstractionStep(sh, pCursor, off);
         CL_BREAK_IF(!dlSegCheckConsistency(sh));
-        return;
+        return true;
     }
 
     // SLS
+    const TValId at = *pCursor;
+    const TValId next = nextRootObj(sh, at, off.next);
+
+    // check wheter he upcoming abstraction step is still doable
+    EJoinStatus status;
+    if (!joinDataReadOnly(&status, sh, off, at, next, 0))
+        return false;
+
+    // perform an SLS abstraction step
     slSegAbstractionStep(sh, pCursor, off);
+    return true;
 }
 
 void adjustAbstractionThreshold(
@@ -699,7 +709,17 @@ bool considerAbstraction(
     LDP_PLOT(symabstract, sh);
 
     for (int i = 0; i < len; ++i) {
-        segAbstractionStep(sh, off, &cursor);
+        if (!segAbstractionStep(sh, off, &cursor)) {
+            CL_DEBUG("<-- WARNING: ending prematurely, skipping "
+                    << (len - i - 1) << " abstraction steps");
+
+            if (i)
+                return true;
+
+            CL_BREAK_IF("segAbstractionStep() failed, nothing has been done");
+            return false;
+        }
+
         LDP_PLOT(symabstract, sh);
     }
 

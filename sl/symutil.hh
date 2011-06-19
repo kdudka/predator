@@ -81,8 +81,8 @@ void getPtrValues(TValList &dst, SymHeap &heap, TValId at);
 
 inline TValId nextRootObj(SymHeap &sh, TValId root, TOffset offNext) {
     CL_BREAK_IF(sh.valOffset(root));
-    const TObjId nextPtr = sh.ptrAt(sh.valByOffset(root, offNext));
-    return sh.valRoot(sh.valueOf(nextPtr));
+    const TValId valNext = valOfPtrAt(sh, root, offNext);
+    return sh.valRoot(valNext);
 }
 
 template <class TDst, typename TInserter>
