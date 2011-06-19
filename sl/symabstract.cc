@@ -135,17 +135,24 @@ void detachClonedPrototype(
 }
 
 TValId protoClone(SymHeap &sh, const TValId proto) {
+    TValId clone;
+
     if (isAbstract(sh.valTarget(proto))) {
         // clone segment prototype
-        const TValId clone = segClone(sh, proto);
+        clone = segClone(sh, proto);
         segSetProto(sh, clone, false);
-        return clone;
+    }
+    else {
+        // clone bare prototype
+        clone = sh.valClone(proto);
+        sh.valTargetSetProto(clone, false);
+        duplicateUnknownValues(sh, clone);
     }
 
-    // clone bare prototype
-    const TValId clone = sh.valClone(proto);
-    sh.valTargetSetProto(clone, false);
-    duplicateUnknownValues(sh, clone);
+    // if there was "a pointer to self", it should remain "a pointer to self";
+    // however "self" has been changed, so that a redirection is necessary
+    redirectRefs(sh, clone, proto, clone);
+
     return clone;
 }
 
