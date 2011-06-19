@@ -40,12 +40,20 @@
 #include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
 
-static bool debugSymJoin = static_cast<bool>(DEBUG_SYMJOIN);
+static bool debuggingSymJoin = static_cast<bool>(DEBUG_SYMJOIN);
 
 #define SJ_DEBUG(...) do {                                                  \
-    if (::debugSymJoin)                                                     \
+    if (::debuggingSymJoin)                                                 \
         CL_DEBUG("SymJoin: " << __VA_ARGS__);                               \
 } while (0)
+
+void debugSymJoin(const bool enable) {
+    if (enable == ::debuggingSymJoin)
+        return;
+
+    CL_DEBUG("symjoin: debugSymJoin(" << enable << ") takes effect");
+    ::debuggingSymJoin = enable;
+}
 
 #define SJ_VALP(v1, v2) "(v1 = #" << v1 << ", v2 = #" << v2 << ")"
 #define SJ_OBJP(o1, o2) "(o1 = #" << o1 << ", o2 = #" << o2 << ")"
@@ -60,7 +68,7 @@ namespace {
             const int           src,
             const char          *suffix)
     {
-        if (!::debugSymJoin)
+        if (!::debuggingSymJoin)
             return;
 
         std::ostringstream str;
@@ -2081,7 +2089,7 @@ bool joinSymHeaps(
     // go through shared Neq predicates and set minimal segment lengths
     handleDstPreds(ctx);
 
-    if (debugSymJoin) {
+    if (debuggingSymJoin) {
         // catch possible regression at this point
         CL_BREAK_IF((JS_USE_ANY == ctx.status) != areEqual(sh1, sh2));
         CL_BREAK_IF((JS_THREE_WAY == ctx.status) && areEqual(sh1, ctx.dst));
@@ -2366,7 +2374,7 @@ bool joinData(
     // dst is expected to be a segment
     CL_BREAK_IF(!isAbstract(sh.valTarget(dst)));
     const BindingOff off(sh.segBinding(dst));
-    if (debugSymJoin) {
+    if (debuggingSymJoin) {
         EJoinStatus status = JS_USE_ANY;
         joinDataReadOnly(&status, sh, off, dst, src, 0);
         if (JS_USE_ANY != status)

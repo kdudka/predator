@@ -23,11 +23,18 @@
 #include <cl/cl_msg.hh>
 #include <cl/storage.hh>
 
+// we are mainly interested in the declaration of enum ___sl_module_id
+#define PREDATOR
+#include "sl.h"
+#undef PREDATOR
+
 #include "symabstract.hh"
 #include "symbt.hh"
+#include "symjoin.hh"
 #include "symplot.hh"
 #include "symproc.hh"
 #include "symstate.hh"
+#include "symutil.hh"
 #include "util.hh"
 
 #include <cstring>
@@ -272,7 +279,7 @@ bool handlePlot(
     return true;
 }
 
-bool handleDebugSymAbstract(
+bool handleDebuggingOf(
         SymState                                    &dst,
         SymExecCore                                 &core,
         const CodeStorage::Insn                     &insn,
@@ -281,15 +288,34 @@ bool handleDebugSymAbstract(
     const CodeStorage::TOperandList &opList = insn.operands;
     const struct cl_loc *lw = &insn.loc;
 
-    if (/* dst + fnc + arg */ 3 != opList.size()) {
+    if (/* dst + fnc + module + enable */ 4 != opList.size()) {
         emitPrototypeError(lw, name);
         return false;
     }
 
+    long module;
     const SymHeap &sh = core.sh();
-    const TValId val = core.valFromOperand(opList[/* enable */ 2]);
-    const bool enable = sh.proveNeq(VAL_FALSE, val);
-    debugSymAbstract(enable);
+    const TValId valModule = core.valFromOperand(opList[/* module */ 2]);
+    if (!numFromVal(&module, sh, valModule))
+        module = 0L;
+
+    const TValId valEnable = core.valFromOperand(opList[/* enable */ 3]);
+    const bool enable = sh.proveNeq(VAL_FALSE, valEnable);
+
+    switch (module) {
+        case ___SL_SYMABSTRACT:
+            debugSymAbstract(enable);
+            break;
+
+        case ___SL_SYMJOIN:
+            debugSymJoin(enable);
+            break;
+
+        case ___SL_EVERYTHING:
+        default:
+            debugSymAbstract(enable);
+            debugSymJoin(enable);
+    }
 
     insertCoreHeap(dst, core, insn);
     return true;
@@ -326,7 +352,7 @@ BuiltInTable::BuiltInTable() {
     tbl_["___sl_error"]                             = handleError;
     tbl_["___sl_get_nondet_int"]                    = handleNondetInt;
     tbl_["___sl_plot"]                              = handlePlot;
-    tbl_["___sl_enable_debugging_of_symabstract"]   = handleDebugSymAbstract;
+    tbl_["___sl_enable_debugging_of"]               = handleDebuggingOf;
 }
 
 bool BuiltInTable::handleBuiltIn(

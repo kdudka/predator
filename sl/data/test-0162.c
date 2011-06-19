@@ -89,11 +89,11 @@ int main()
     struct topLevel *top = create_top();
     ___sl_plot(NULL);
 
-    //___sl_enable_debugging_of_symabstract(1);
+    //___sl_enable_debugging_of(___SL_SYMABSTRACT, 1);
     prune(top);
     ___sl_plot(NULL);
 
-    ___sl_enable_debugging_of_symabstract(0);
+    ___sl_enable_debugging_of(___SL_SYMABSTRACT, 0);
     inspect(top);
 
     ___sl_plot(NULL);

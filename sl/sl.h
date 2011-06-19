@@ -30,6 +30,12 @@
         ___sl_break("conditional breakpoint fired: " #cond);                \
 } while (0)
 
+enum ___sl_module_id {
+    ___SL_EVERYTHING,
+    ___SL_SYMABSTRACT,
+    ___SL_SYMJOIN
+};
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -39,7 +45,7 @@ extern "C" {
 void ___sl_break(const char *msg);
 void ___sl_error(const char *msg);
 void ___sl_plot(const char *name, ...);
-void ___sl_enable_debugging_of_symabstract(int enable);
+void ___sl_enable_debugging_of(enum ___sl_module_id module, int enable);
 int ___sl_get_nondet_int(void);
 
 #else
@@ -73,8 +79,10 @@ static /* inline */ void ___sl_plot(const char *name, ...)
     (void) name;
 }
 
-static /* inline */ void ___sl_enable_debugging_of_symabstract(int enable)
+static /* inline */ void
+___sl_enable_debugging_of(enum ___sl_module_id module, int enable)
 {
+    (void) module;
     (void) enable;
 }
 

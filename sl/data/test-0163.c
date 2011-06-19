@@ -77,13 +77,13 @@ void prune(struct topLevel *t) {
 
             //___sl_plot(NULL);
             cursor = next;
-            //___sl_enable_debugging_of_symabstract(1);
+            //___sl_enable_debugging_of(___SL_SYMABSTRACT, 1);
         }
 
-        //___sl_enable_debugging_of_symabstract(0);
+        //___sl_enable_debugging_of(___SL_SYMABSTRACT, 0);
         ___SL_BREAK_IF(t->low->next);
     }
-    //___sl_enable_debugging_of_symabstract(0);
+    //___sl_enable_debugging_of(___SL_SYMABSTRACT, 0);
 }
 
 int main()

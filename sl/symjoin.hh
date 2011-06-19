@@ -71,4 +71,7 @@ bool joinSymHeaps(
         const SymHeap           &sh1,
         const SymHeap           &sh2);
 
+/// enable/disable debugging of symjoin
+void debugSymJoin(const bool enable);
+
 #endif /* H_GUARD_SYM_JOIN_H */
