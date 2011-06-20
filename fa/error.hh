@@ -60,6 +60,4 @@ public:
 
 };
 
-
-
 #endif

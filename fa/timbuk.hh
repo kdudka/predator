@@ -340,10 +340,10 @@ protected:
 
 public:
 
-	map<string, pair<size_t, size_t> > labels; // index, arity
-	vector<string> labelNames;
-	map<string, size_t> states; // index
-	vector<string> stateNames;
+	std::map<std::string, std::pair<size_t, size_t> > labels; // index, arity
+	std::vector<std::string> labelNames;
+	std::map<std::string, size_t> states; // index
+	std::vector<std::string> stateNames;
 
 protected:
 
@@ -352,7 +352,7 @@ protected:
 	virtual void newState(const string& name, size_t id) = 0;
 	virtual void newFinalState(size_t id) = 0;
 	virtual void endDeclaration() = 0;
-	virtual void newTransition(const vector<size_t>& lhs, size_t label, size_t rhs) = 0;
+	virtual void newTransition(const std::vector<size_t>& lhs, size_t label, size_t rhs) = 0;
 	virtual void endModel() = 0;
 
 public:
@@ -369,14 +369,14 @@ public:
 		this->labels.clear();
 	}
 
-	const std::pair<size_t, size_t>& getLabel(const string& name) const {
+	const std::pair<size_t, size_t>& getLabel(const std::string& name) const {
 		map<string, pair<size_t, size_t> >::const_iterator i = this->labels.find(name);
 		if (i == this->labels.end())
 			Error::general(this->scanner.getName(), this->scanner.getLine(), "unknown label");
 		return i->second;
 	}
 
-	int addLabel(const string& name, size_t arity) {
+	int addLabel(const std::string& name, size_t arity) {
 		pair<map<string, pair<size_t, size_t> >::iterator, bool> p = this->labels.insert(
 			make_pair(name, make_pair(this->labels.size(), arity))
 		);
@@ -395,15 +395,15 @@ public:
 		this->states.clear();
 	}
 
-	size_t getState(const string& name) const {
-		map<string, size_t>::const_iterator i = this->states.find(name);
+	size_t getState(const std::string& name) const {
+		std::map<string, size_t>::const_iterator i = this->states.find(name);
 		if (i == this->states.end())
 			Error::general(this->scanner.getName(), this->scanner.getLine(), "unknown state");
 		return i->second;
 	}
 
-	size_t addState(const string& name) {
-		pair<map<string, size_t>::iterator, bool> p = this->states.insert(make_pair(name, this->states.size()));
+	size_t addState(const std::string& name) {
+		std::pair<std::map<std::string, size_t>::iterator, bool> p = this->states.insert(std::make_pair(name, this->states.size()));
 		if (p.second)
 			this->stateNames.push_back(name);
 		return p.first->second;

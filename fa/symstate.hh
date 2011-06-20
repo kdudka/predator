@@ -37,6 +37,16 @@
 #include "builtintable.hh"
 #include "utils.hh"
 
+//#define RECORD_INCLUSION
+
+#ifdef RECORD_INCLUSION
+#include <fstream>
+#include <sstream>
+
+#include "tatimint.hh"
+
+#endif
+
 struct SymState {
 
 	// configuration obtained in forward run
@@ -61,9 +71,13 @@ struct SymState {
 
 	size_t absHeight;
 
+#ifdef RECORD_INCLUSION
+	size_t _inclCount;
+#endif
+
 	SymState(TA<label_type>::Backend& fwdBackend, TA<label_type>::Backend& fixpointBackend, BoxMan& boxMan)
 		: fwdConf(fixpointBackend), fwdConfWrapper(this->fwdConf, boxMan)
-		/*, fixpoint(fixpointBackend), fixpointWrapper(this->fixpoint, labMan)*/, absHeight(1) {}
+		/*, fixpoint(fixpointBackend), fixpointWrapper(this->fixpoint, labMan)*/, absHeight(2) {}
 
 	~SymState() {
 //		utils::eraseMapFirst(this->confMap);
@@ -245,6 +259,37 @@ struct SymState {
 
 //			CL_CDEBUG("challenge" << std::endl << ta);
 //			CL_CDEBUG("response" << std::endl << this->fwdConf);
+
+#ifdef RECORD_INCLUSION
+			std::ostringstream os;
+			
+			os << (size_t)(this) << "_" << this->_inclCount++;
+
+			std::ofstream fA("auts/A" + os.str()), fB("auts/B" + os.str());
+
+			TA<std::string>::Backend strBackend;
+			TA<std::string> tmp(strBackend);
+
+			tmp.addFinalStates(ta.getFinalStates());
+			for (TA<label_type>::iterator i = ta.begin(); i != ta.end(); ++i) {
+				std::ostringstream os2;
+				os2 << "l" << (size_t)(i->label()._obj);
+				tmp.addTransition(i->lhs(), os2.str(), i->rhs());
+			}
+
+			TAWriter<std::string>(fA).writeOne(tmp);
+
+			tmp.clear();
+
+			tmp.addFinalStates(this->fwdConf.getFinalStates());
+			for (TA<label_type>::iterator i = this->fwdConf.begin(); i != this->fwdConf.end(); ++i) {
+				std::ostringstream os2;
+				os2 << "l" << (size_t)(i->label()._obj);
+				tmp.addTransition(i->lhs(), os2.str(), i->rhs());
+			}
+
+			TAWriter<std::string>(fB).writeOne(tmp);
+#endif
 
 			if (TA<label_type>::subseteq(ta, this->fwdConf))
 				return true;

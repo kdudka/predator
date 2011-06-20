@@ -91,8 +91,8 @@ class TAMultiReader : public TimbukReader {
 
 public:
 
-	vector<TA<string> > automata;
-	vector<string> names;
+	std::vector<TA<std::string> > automata;
+	std::vector<std::string> names;
 
 protected:
 
@@ -171,18 +171,18 @@ public:
 
 	template <class F>
 	void writeOne(const TA<T>& aut, F f, const string& name = "TreeAutomaton") {
-		map<string, size_t> labels;
-		set<size_t> states;
+		std::map<string, size_t> labels;
+		std::set<size_t> states;
 		for (typename TA<T>::iterator i = aut.begin(); i != aut.end(); ++i) {
 			std::ostringstream ss;
 			ss << i->label();
-			labels.insert(make_pair(ss.str(), i->lhs().size()));
+			labels.insert(std::make_pair(ss.str(), i->lhs().size()));
 			states.insert(i->rhs());
 			for (size_t j = 0; j < i->lhs().size(); ++j)
 				states.insert(i->lhs()[j]);
 		}
 		this->startAlphabet();
-		for (map<string, size_t>::iterator i = labels.begin(); i != labels.end(); ++i)
+		for (std::map<std::string, size_t>::iterator i = labels.begin(); i != labels.end(); ++i)
 			this->writeLabel(i->first, i->second);
 		this->endl();
 		this->newModel(name);
@@ -201,28 +201,28 @@ public:
 	}
 	
 	void writeOne(const TA<T>& aut, const string& name = "TreeAutomaton") {
-		map<string, size_t> labels;
-		set<size_t> states;
+		std::map<string, size_t> labels;
+		std::set<size_t> states;
 		for (typename TA<T>::iterator i = aut.begin(); i != aut.end(); ++i) {
 			std::ostringstream ss;
 			ss << i->label();
-			labels.insert(make_pair(ss.str(), i->lhs().size()));
+			labels.insert(std::make_pair(ss.str(), i->lhs().size()));
 			states.insert(i->rhs());
 			for (size_t j = 0; j < i->lhs().size(); ++j)
 				states.insert(i->lhs()[j]);
 		}
 		this->startAlphabet();
-		for (map<string, size_t>::iterator i = labels.begin(); i != labels.end(); ++i)
+		for (std::map<string, size_t>::iterator i = labels.begin(); i != labels.end(); ++i)
 			this->writeLabel(i->first, i->second);
 		this->endl();
 		this->newModel(name);
 		this->endl();
 		this->startStates();
-		for (set<size_t>::iterator i = states.begin(); i != states.end(); ++i)
+		for (std::set<size_t>::iterator i = states.begin(); i != states.end(); ++i)
 			this->writeState(*i);
 		this->endl();
 		this->startFinalStates();
-		for (set<size_t>::iterator i = aut.getFinalStates().begin(); i != aut.getFinalStates().end(); ++i)
+		for (std::set<size_t>::iterator i = aut.getFinalStates().begin(); i != aut.getFinalStates().end(); ++i)
 			this->writeState(*i);
 		this->endl();
 		this->startTransitions();

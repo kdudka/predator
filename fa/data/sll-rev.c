@@ -10,7 +10,7 @@ int main() {
     struct T* y = NULL;
 
     while (__nondet()) {
-        y = malloc(sizeof(*y));
+        y = malloc(sizeof(struct T));
         y->next = x;
         x = y;
     }
@@ -23,13 +23,13 @@ int main() {
         y->next = z;
         z = y;
     }
-
+/*
     while (y != NULL) {
         x = y;
         y = y->next;
         free(x);
     }
-
+*/
     return 0;
 
 }
