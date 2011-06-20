@@ -340,6 +340,11 @@ void SymExecEngine::updateStateInBranch(
 {
     const enum cl_binop_e code = static_cast<enum cl_binop_e>(insnCmp.subCode);
 
+    // if we introduce a new 'neq' predicate, skip killing of variables consumed
+    // by the CL_INSN_BINOP; otherwise, we would likely throw our reasoning away
+    // as we leave this fnc
+    bool preserveOps = false;
+
     // resolve binary operator
     bool neg, preserveEq, preserveNeq;
     if (describeCmpOp(code, &neg, &preserveEq, &preserveNeq)) {
@@ -349,6 +354,7 @@ void SymExecEngine::updateStateInBranch(
 
             // introduce a Neq predicate over v1 and v2
             sh.neqOp(SymHeap::NEQ_ADD, v1, v2);
+            preserveOps = true;
         }
         else {
             if (!preserveEq)
@@ -365,7 +371,9 @@ fallback:
     SymProc proc(sh, &bt_);
     proc.setLocation(lw_);
 
-    proc.killInsn(insnCmp);
+    if (!preserveOps)
+        proc.killInsn(insnCmp);
+
     proc.killPerTarget(insnCnd, /* target */ !branch);
     this->updateState(sh, ofBlock);
 }
