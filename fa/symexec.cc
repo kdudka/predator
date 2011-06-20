@@ -41,6 +41,12 @@
 #include "loopanalyser.hh"
 #include "builtintable.hh"
 
+#include "normalization.hh"
+#include "folding.hh"
+#include "virtualmachine.hh"
+#include "abstraction.hh"
+#include "reverserun.hh"
+
 #include "symexec.hh"
 
 using std::vector;
@@ -68,7 +74,7 @@ struct SymOp {
 
 };
 */
-#define STATE_FROM_FAE(fae) ((SymState*)(assert((fae).varGet(IP_INDEX).isNativePtr()), (fae).varGet(IP_INDEX).d_native_ptr))
+#define STATE_FROM_FAE(fae) ((SymState*)(assert(VirtualMachine(fae).varGet(IP_INDEX).isNativePtr()), VirtualMachine(fae).varGet(IP_INDEX).d_native_ptr))
 
 typedef enum { itDenormalize, itReverse }  tr_item_type;
 
@@ -80,10 +86,10 @@ struct TraceRecorder {
 		tr_item_type itemType;
 		const FAE* fae;
 		std::list<const FAE*>::iterator queueTag;
-		FAE::NormInfo normInfo;
+		NormInfo normInfo;
 		set<Item*> children;
 
-		Item(Item* parent, const FAE* fae, std::list<const FAE*>::iterator queueTag, const FAE::NormInfo& normInfo)
+		Item(Item* parent, const FAE* fae, std::list<const FAE*>::iterator queueTag, const NormInfo& normInfo)
 			: parent(parent), itemType(tr_item_type::itDenormalize), fae(fae), queueTag(queueTag), normInfo(normInfo) {
 			if (parent)
 				parent->children.insert(this);
@@ -121,7 +127,7 @@ struct TraceRecorder {
 
 	void init(const FAE* fae, std::list<const FAE*>::iterator i) {
 		this->clear();
-		Item* item = new Item(NULL, fae, i, FAE::NormInfo());
+		Item* item = new Item(NULL, fae, i, NormInfo());
 		this->confMap.insert(make_pair(fae, item));
 	}
 
@@ -131,7 +137,7 @@ struct TraceRecorder {
 		return i->second;
 	}
 
-	void add(const FAE* parent, const FAE* fae, std::list<const FAE*>::iterator i, const FAE::NormInfo& normInfo) {
+	void add(const FAE* parent, const FAE* fae, std::list<const FAE*>::iterator i, const NormInfo& normInfo) {
 		this->confMap.insert(
 			make_pair(fae, new Item(this->find(parent), fae, i, normInfo))
 		);
@@ -369,7 +375,7 @@ protected:
 		for (size_t i = 1; i < fae.getRootCount(); ++i) {
 			for (std::vector<const Box*>::const_iterator j = this->boxes.begin(); j != this->boxes.end(); ++j) {
 				CL_CDEBUG("trying " << *(const AbstractBox*)*j << " at " << i);
-				if (fae.foldBox(i, *j)) {
+				if (Folding(fae).foldBox(i, *j)) {
 					matched = true;
 					CL_CDEBUG("match");
 				}
@@ -378,9 +384,10 @@ protected:
 
 		if (matched) {
 			std::set<size_t> tmp;
-			fae.getNearbyReferences(fae.varGet(ABP_INDEX).d_ref.root, tmp);
-			FAE::NormInfo normInfo;
-			fae.normalize(normInfo, tmp);
+			VirtualMachine vm(fae);
+			vm.getNearbyReferences(vm.varGet(ABP_INDEX).d_ref.root, tmp);
+			NormInfo normInfo;
+			Normalization(fae).normalize(normInfo, tmp);
 		}
 
 	}
@@ -391,7 +398,7 @@ protected:
 
 		CL_CDEBUG("abstracting ... " << target->absHeight);
 		for (size_t i = 1; i < fae.getRootCount(); ++i)
-			fae.heightAbstraction(i, target->absHeight, SmartTMatchF());
+			Abstraction(fae).heightAbstraction(i, target->absHeight, SmartTMatchF());
 
 	}
 
@@ -415,15 +422,17 @@ protected:
 
 		Guard<FAE> g(fae);
 
-		fae->varSet(IP_INDEX, Data::createNativePtr((void*)target));
+		VirtualMachine vm(*fae);
+
+		vm.varSet(IP_INDEX, Data::createNativePtr((void*)target));
 
 		std::set<size_t> tmp;
-		FAE::NormInfo normInfo;
-		fae->getNearbyReferences(fae->varGet(ABP_INDEX).d_ref.root, tmp);
+		NormInfo normInfo;
+		vm.getNearbyReferences(vm.varGet(ABP_INDEX).d_ref.root, tmp);
 
 //		CL_CDEBUG("before normalization: " << std::endl << *fae); 
 
-		fae->normalize(normInfo, tmp);
+		Normalization(*fae).normalize(normInfo, tmp);
 
 //		CL_CDEBUG("after normalization: " << std::endl << *fae); 
 
@@ -492,7 +501,7 @@ protected:
 			}
 			dst.writeData(
 				*fae,
-				Data::createRef(fae->nodeCreate(sels, this->boxMan.getTypeInfo(typeName))),
+				Data::createRef(VirtualMachine(*fae).nodeCreate(sels, this->boxMan.getTypeInfo(typeName))),
 				rev
 			);
 		} else {
@@ -734,7 +743,7 @@ protected:
 			throw ProgramError("releasing a pointer which points inside the block");
 		FAE* fae = new FAE(*parent);
 		Guard<FAE> g(fae);
-		fae->nodeDelete(data.d_ref.root);
+		VirtualMachine(*fae).nodeDelete(data.d_ref.root);
 		g.release();
 		this->enqueueNextInsn(state, parent, fae);
 		
@@ -790,7 +799,7 @@ protected:
 		bool b = state->ctx->destroyStackFrame(fae);
 		assert(!b);
 
-		fae.check();
+		Normalization(fae).check();
 		
 	}
 
@@ -1125,7 +1134,7 @@ protected:
 					CL_CDEBUG("denormalizing " << std::endl << tmp << "with" << std::endl << *item->fae);
 					CL_CDEBUG(item->normInfo);
 
-					if (!tmp.denormalize(*item->fae, item->normInfo)) {
+					if (!Normalization(tmp).denormalize(*item->fae, item->normInfo)) {
 						CL_CDEBUG("spurious counter example (denormalization)!" << std::endl << *item->fae);
 						return item;
 					}
@@ -1138,16 +1147,18 @@ protected:
 
 					CL_CDEBUG("reversing " << std::endl << tmp << "with" << std::endl << *item->parent->fae);
 
-					if (!tmp.reverse(*item->parent->fae)) {
+					if (!ReverseRun(tmp).reverse(*item->parent->fae)) {
 						CL_CDEBUG("spurious counter example (reversal)!" << std::endl << *item->parent->fae);
 						return item;
 					}
 
-					FAE::NormInfo normInfo;
+					NormInfo normInfo;
+
+					VirtualMachine vm(tmp);
 
 					std::set<size_t> s;
-					tmp.getNearbyReferences(fae.varGet(ABP_INDEX).d_ref.root, s);
-					tmp.normalize(normInfo, s);
+					vm.getNearbyReferences(vm.varGet(ABP_INDEX).d_ref.root, s);
+					Normalization(tmp).normalize(normInfo, s);
 
 					break;
 

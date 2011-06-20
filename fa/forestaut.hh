@@ -70,7 +70,7 @@ public:
 
 	typedef boost::unordered_map<size_t, std::vector<std::pair<size_t, bool> > > o_map_type;
 
-protected:
+public:
 
 	mutable TA<label_type>::Manager* taMan;
 

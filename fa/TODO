@@ -10,3 +10,4 @@ medium
 low
 * cache o mapping and compute only on demand
 * make AbstractBox::getArity() non-virtual
+* implement upwards traversal

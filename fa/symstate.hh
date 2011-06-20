@@ -37,6 +37,9 @@
 #include "builtintable.hh"
 #include "utils.hh"
 
+#include "splitting.hh"
+#include "virtualmachine.hh"
+
 //#define RECORD_INCLUSION
 
 #ifdef RECORD_INCLUSION
@@ -151,7 +154,7 @@ struct SymState {
 			if (oi.flag == o_flag_e::ref) {
 				for (size_t j = 0; j < offs.size(); ++j)
 					offs2[j] = offs[j] + oi.data.d_ref.displ;
-				(*i)->isolateSet(dst, oi.data.d_ref.root, offs2);
+				Splitting(**i).isolateSet(dst, oi.data.d_ref.root, offs2);
 				assert(dst.size());
 			} else
 				dst.push_back(new FAE(**i));
@@ -193,7 +196,7 @@ struct SymState {
 				dst.push_back(new FAE(**i));
 			} else {
 				const TypeBox* typeBox = fae.getType(data.d_ref.root);
-				fae.isolateSet(dst, data.d_ref.root, typeBox->getSelectors());
+				Splitting(fae).isolateSet(dst, data.d_ref.root, typeBox->getSelectors());
 			}
 		}
 	}
@@ -244,7 +247,7 @@ struct SymState {
 //				continue;
 			size_t id;
 			if (this->ctx->isReg(&*i, id))
-				fae.varSet(id, Data::createUndef());
+				VirtualMachine(fae).varSet(id, Data::createUndef());
 		}
 	}
 

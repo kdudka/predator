@@ -114,11 +114,14 @@ struct SymCtx {
 	};
 */
 	static void init(FAE& fae) {
-		assert(fae.varCount() == 0);
+
+		VirtualMachine vm(fae);
+
+		assert(vm.varCount() == 0);
 		// create ABP and RET registers
-		fae.varPopulate(FIXED_REG_COUNT);
-		fae.varSet(ABP_INDEX, Data::createInt(0));
-		fae.varSet(IP_INDEX, Data::createUndef());
+		vm.varPopulate(FIXED_REG_COUNT);
+		vm.varSet(ABP_INDEX, Data::createInt(0));
+		vm.varSet(IP_INDEX, Data::createUndef());
 	}
 /*
 	struct StackFrameCreateF {
@@ -154,43 +157,47 @@ struct SymCtx {
 */
 	void createStackFrame(FAE& fae, struct SymState* target) const {
 
+		VirtualMachine vm(fae);
+
 		std::vector<pair<SelData, Data> > stackInfo;
 
 		for (std::vector<SelData>::const_iterator i = this->sfLayout.begin(); i != this->sfLayout.end(); ++i)
 			stackInfo.push_back(make_pair(*i, Data::createUndef()));
 
-		stackInfo[0].second = fae.varGet(ABP_INDEX);
-		stackInfo[1].second = fae.varGet(IP_INDEX);
+		stackInfo[0].second = vm.varGet(ABP_INDEX);
+		stackInfo[1].second = vm.varGet(IP_INDEX);
 
-		fae.varSet(ABP_INDEX, Data::createRef(fae.nodeCreate(stackInfo)));
-		fae.varSet(IP_INDEX, Data::createNativePtr((void*)target));
-		fae.varPopulate(this->regCount);
+		vm.varSet(ABP_INDEX, Data::createRef(vm.nodeCreate(stackInfo)));
+		vm.varSet(IP_INDEX, Data::createNativePtr((void*)target));
+		vm.varPopulate(this->regCount);
 
 	}
 	
 	// if true then do fae.isolateAtRoot(dst, <ABP>.d_ref.root, FAE::IsolateAllF()) in the next step
 	bool destroyStackFrame(FAE& fae) const {
 
-		const Data& abp = fae.varGet(ABP_INDEX);
+		VirtualMachine vm(fae);
+
+		const Data& abp = vm.varGet(ABP_INDEX);
 
 		assert(abp.isRef());
 		assert(abp.d_ref.displ == 0);
 		
 		Data data;
 
-		fae.varRemove(this->regCount);
-		fae.nodeLookup(abp.d_ref.root, ABP_OFFSET, data);
-		fae.unsafeNodeDelete(abp.d_ref.root);
-		fae.varSet(ABP_INDEX, data);
+		vm.varRemove(this->regCount);
+		vm.nodeLookup(abp.d_ref.root, ABP_OFFSET, data);
+		vm.unsafeNodeDelete(abp.d_ref.root);
+		vm.varSet(ABP_INDEX, data);
 
 		if (!abp.isRef()) {
-			fae.varSet(IP_INDEX, Data::createUndef());
+			vm.varSet(IP_INDEX, Data::createUndef());
 			return false;
 		}
 
-		fae.nodeLookup(abp.d_ref.root, IP_OFFSET, data);
+		vm.nodeLookup(abp.d_ref.root, IP_OFFSET, data);
 		assert(data.isNativePtr());
-		fae.varSet(IP_INDEX, data);
+		vm.varSet(IP_INDEX, data);
 
 		return true;
 		
@@ -237,6 +244,8 @@ struct SymCtx {
 		
 		friend std::ostream& operator<<(std::ostream& os, const Dump& cd) {
 
+			VirtualMachine vm(cd.fae);
+
 			std::vector<size_t> offs;
 
 			for (std::vector<SelData>::const_iterator i = cd.ctx.sfLayout.begin(); i != cd.ctx.sfLayout.end(); ++i)
@@ -244,7 +253,7 @@ struct SymCtx {
 
 			Data data;
 
-			cd.fae.nodeLookupMultiple(cd.fae.varGet(ABP_INDEX).d_ref.root, 0, offs, data);
+			vm.nodeLookupMultiple(vm.varGet(ABP_INDEX).d_ref.root, 0, offs, data);
 
 			boost::unordered_map<size_t, Data> tmp;
 			for (std::vector<Data::item_info>::const_iterator i = data.d_struct->begin(); i != data.d_struct->end(); ++i)

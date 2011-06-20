@@ -30,6 +30,7 @@
 #include "forestautext.hh"
 #include "nodebuilder.hh"
 #include "programerror.hh"
+#include "virtualmachine.hh"
 
 typedef enum { r_none, r_ref, r_reg } r_flag_e;
 
@@ -142,7 +143,9 @@ struct OperandInfo {
 
 	void parseVar(const FAE& fae, const cl_operand* op, size_t offset) {
 
-		this->data = Data::createRef(fae.varGet(ABP_INDEX).d_ref.root, (int)offset);
+		VirtualMachine vm(fae);
+
+		this->data = Data::createRef(vm.varGet(ABP_INDEX).d_ref.root, (int)offset);
 		this->flag = o_flag_e::safe_ref;
 		this->type = op->type;
 
@@ -150,7 +153,8 @@ struct OperandInfo {
 
 		if (acc && (acc->code == CL_ACCESSOR_DEREF)) {
 			
-			fae.nodeLookup(this->data.d_ref.root, this->data.d_ref.displ, this->data);
+			vm.nodeLookup(this->data.d_ref.root, this->data.d_ref.displ, this->data);
+			
 			if (!this->data.isRef()) {
 				std::stringstream ss;
 				ss << "dereferenced value is not a valid reference [" << data << ']';
@@ -171,6 +175,8 @@ struct OperandInfo {
 
 	void parseReg(const FAE& fae, const cl_operand* op, size_t index) {
 
+		VirtualMachine vm(fae);
+
 		// HACK: this is a bit ugly
 		this->data = Data::createRef(index);
 		this->type = op->type;
@@ -179,7 +185,7 @@ struct OperandInfo {
 
 		if (acc && (acc->code == CL_ACCESSOR_DEREF)) {
 
-			this->data = fae.varGet(this->data.d_ref.root);
+			this->data = vm.varGet(this->data.d_ref.root);
 			if (!this->data.isRef()) {
 				std::stringstream ss;
 				ss << "dereferenced value is not a valid reference [" << data << ']';
@@ -248,20 +254,24 @@ struct OperandInfo {
 	}
 
 	Data readData(const FAE& fae, const vector<size_t>& offs) {
+
+		VirtualMachine vm(fae);
+
 		Data data;
+
 		switch (this->flag) {
 			case o_flag_e::ref:
 			case o_flag_e::safe_ref:
 				if (offs.size() > 1)
-					fae.nodeLookupMultiple(this->data.d_ref.root, this->data.d_ref.displ, offs, data);
+					vm.nodeLookupMultiple(this->data.d_ref.root, this->data.d_ref.displ, offs, data);
 				else
-					fae.nodeLookup(this->data.d_ref.root, this->data.d_ref.displ, data);
+					vm.nodeLookup(this->data.d_ref.root, this->data.d_ref.displ, data);
 				break;
 			case o_flag_e::reg:
 				if (offs.size() > 1)
-					data = OperandInfo::extractNestedStruct(fae.varGet(this->data.d_ref.root), this->data.d_ref.displ, offs);
+					data = OperandInfo::extractNestedStruct(vm.varGet(this->data.d_ref.root), this->data.d_ref.displ, offs);
 				else
-					data = fae.varGet(this->data.d_ref.root);
+					data = vm.varGet(this->data.d_ref.root);
 				break;
 			case o_flag_e::val:
 				data = this->data;
@@ -269,31 +279,39 @@ struct OperandInfo {
 			default:
 				assert(false);
 		}
+
 		CL_CDEBUG("read: " << *this << " -> " << data);
+
 		return data;
+
 	}
 
 	void writeData(FAE& fae, const Data& in, RevInfo& info) {
+
+		VirtualMachine vm(fae);
+
 		CL_CDEBUG("write: " << in << " -> " << *this);
+
 		info.dest = this->data;
+
 		switch (this->flag) {
 			case o_flag_e::ref:
 			case o_flag_e::safe_ref:
 				info.flag = r_flag_e::r_ref;
 				if (in.isStruct())
-					fae.nodeModifyMultiple(this->data.d_ref.root, this->data.d_ref.displ, in, info.data);
+					vm.nodeModifyMultiple(this->data.d_ref.root, this->data.d_ref.displ, in, info.data);
 				else
-					fae.nodeModify(this->data.d_ref.root, this->data.d_ref.displ, in, info.data);
+					vm.nodeModify(this->data.d_ref.root, this->data.d_ref.displ, in, info.data);
 				break;
 			case o_flag_e::reg:
 				info.flag = r_flag_e::r_reg;
-				info.data = fae.varGet(this->data.d_ref.root);
+				info.data = vm.varGet(this->data.d_ref.root);
 				if (in.isStruct()) {
 					Data tmp = info.data;
 					OperandInfo::modifyNestedStruct(tmp, this->data.d_ref.displ, in);
-					fae.varSet(this->data.d_ref.root, tmp);
+					vm.varSet(this->data.d_ref.root, tmp);
 				} else {
-					fae.varSet(this->data.d_ref.root, in);
+					vm.varSet(this->data.d_ref.root, in);
 				}
 				break;
 			default:
