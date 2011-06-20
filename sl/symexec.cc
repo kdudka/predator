@@ -398,9 +398,6 @@ void SymExecEngine::updateStateInBranch(
 
             // we have deduced that v1 and v2 is actually the same value
             sh.valMerge(v1, v2);
-#if 1 < SE_EARLY_VARS_DESTRUCTION
-            preserveOps = true;
-#endif
         }
     }
 
@@ -410,7 +407,7 @@ fallback:
     SymProc proc(sh, &bt_);
     proc.setLocation(lw_);
 
-#if SE_EARLY_VARS_DESTRUCTION < 3
+#if SE_EARLY_VARS_DESTRUCTION < 2
     if (!preserveOps)
 #endif
         proc.killInsn(insnCmp);
