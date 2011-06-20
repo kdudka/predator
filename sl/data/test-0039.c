@@ -13,10 +13,10 @@ struct topLevel {
 
 int main()
 {
-    struct topLevel *t, *tt;
+    struct topLevel *t, *tt, *entry;
     struct lowLevel *l;
 
-    t = malloc(sizeof(struct topLevel));
+    t = entry = malloc(sizeof(struct topLevel));
     t->next = 0;
     t->low = 0;
 
@@ -44,6 +44,8 @@ int main()
         tt->low = 0;
         t = tt;
     }
+
+    ___sl_plot(NULL, &entry);
 
     return 0;
 }
