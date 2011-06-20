@@ -119,7 +119,7 @@ class SymProc {
         TValId heapValFromObj(const struct cl_operand &op);
         TValId heapValFromCst(const struct cl_operand &op);
         TValId handlePointerPlus(TValId at, TValId off);
-        void killVar(const int uid, bool onlyIfNotPointed);
+        void killVar(const CodeStorage::KillVar &kv);
 
     protected:
         SymHeap                     &sh_;

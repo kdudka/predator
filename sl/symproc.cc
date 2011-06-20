@@ -617,7 +617,8 @@ void SymProc::valDestroyTarget(TValId addr) {
         this->reportMemLeak(code, "destroy");
 }
 
-void SymProc::killVar(const int uid, bool onlyIfNotPointed) {
+void SymProc::killVar(const CodeStorage::KillVar &kv) {
+    const int uid = kv.uid;
 #if DEBUG_SE_STACK_FRAME
     const CodeStorage::Storage &stor = sh_.stor();
     const std::string varString = varToString(stor, uid);
@@ -629,7 +630,7 @@ void SymProc::killVar(const int uid, bool onlyIfNotPointed) {
     const CVar cVar(uid, nestLevel);
     const TValId addr = sh_.addrOfVar(cVar);
 
-    if (onlyIfNotPointed && sh_.pointedByCount(addr))
+    if (kv.onlyIfNotPointed && sh_.pointedByCount(addr))
         // somebody points at the var, please wait with its destruction
         return;
 
@@ -643,7 +644,7 @@ void SymProc::killInsn(const CodeStorage::Insn &insn) {
 #endif
     // kill variables
     BOOST_FOREACH(const KillVar &kv, insn.varsToKill)
-        this->killVar(kv.uid, kv.onlyIfNotPointed);
+        this->killVar(kv);
 }
 
 void SymProc::killPerTarget(const CodeStorage::Insn &insn, unsigned target) {
@@ -655,7 +656,7 @@ void SymProc::killPerTarget(const CodeStorage::Insn &insn, unsigned target) {
     // WARNING: highly experimental, not tested
     const TKillVarList &kList = insn.killPerTarget[target];
     BOOST_FOREACH(const KillVar &kv, kList)
-        this->killVar(kv.uid, kv.onlyIfNotPointed);
+        this->killVar(kv);
 }
 
 // /////////////////////////////////////////////////////////////////////////////
