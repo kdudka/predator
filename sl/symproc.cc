@@ -667,7 +667,7 @@ void SymProc::killInsn(const CodeStorage::Insn &insn) {
 
 void SymProc::killPerTarget(const CodeStorage::Insn &insn, unsigned target) {
     using namespace CodeStorage;
-#if SE_EARLY_VARS_DESTRUCTION < 2
+#if !SE_EARLY_VARS_DESTRUCTION
     return;
 #endif
     if (isExitBlock(insn.targets[target]))
