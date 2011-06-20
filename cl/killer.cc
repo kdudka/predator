@@ -306,6 +306,13 @@ void commitBlock(Data &data, TBlock bb, const TSet &pointed) {
                 insn.varsToKill.push_back(kv);
                 VK_DEBUG_MSG(1, &insn.loc, "killing variable #" << vg
                         << " by " << insn);
+
+                if (multipleTargets) {
+                    // mark "live" in all targets to avoid a double-kill
+                    for (unsigned i = 0; i < cntTargets; ++i)
+                        livePerTarget[i].insert(vg);
+                }
+
                 continue;
             }
         }
@@ -313,22 +320,22 @@ void commitBlock(Data &data, TBlock bb, const TSet &pointed) {
         if (!multipleTargets)
             continue;
 
+        Insn &term = *const_cast<Insn *>(bb->back());
+        TKillPerTarget &dst = term.killPerTarget;
+        CL_BREAK_IF(cntTargets != dst.size());
+
         BOOST_FOREACH(TVar vg, data.blocks[bb].gen) {
             for (unsigned i = 0; i < cntTargets; ++i) {
                 if (!hasKey(livePerTarget[i], vg)) {
                     if (insertOnce(killPerTarget[i], vg)) {
-                        VK_DEBUG_MSG(1, &insn.loc, "killing variable "
-                                << varToString(*insn.stor, vg)
+                        VK_DEBUG_MSG(1, &term.loc, "killing variable "
+                                << varToString(*term.stor, vg)
                                 << " per target " << targets[i]->name()
-                                << " by " << insn);
+                                << " by " << term);
                     }
                 }
             }
         }
-
-        Insn *term = const_cast<Insn *>(bb->back());
-        TKillPerTarget &dst = term->killPerTarget;
-        CL_BREAK_IF(cntTargets != dst.size());
 
         for (unsigned i = 0; i < cntTargets; ++i) {
             TKillVarList &kList = dst[i];
