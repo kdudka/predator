@@ -230,7 +230,7 @@ class SymExecEngine: public IStatsProvider {
         void execReturn();
         void updateState(SymHeap &sh, const CodeStorage::Block *ofBlock);
         void updateStateInBranch(
-                SymProc                             &proc,
+                SymHeap                             sh,
                 const CodeStorage::Block            *ofBlock,
                 const bool                          branch,
                 const CodeStorage::Insn             &insnCmp,
@@ -330,7 +330,7 @@ void SymExecEngine::updateState(SymHeap &sh, const CodeStorage::Block *ofBlock) 
 }
 
 void SymExecEngine::updateStateInBranch(
-        SymProc                    &proc,
+        SymHeap                     sh,
         const CodeStorage::Block   *ofBlock,
         const bool                  branch,
         const CodeStorage::Insn    &insnCmp,
@@ -338,7 +338,6 @@ void SymExecEngine::updateStateInBranch(
         const TValId                v1,
         const TValId                v2)
 {
-    SymHeap sh = proc.sh();
     const enum cl_binop_e code = static_cast<enum cl_binop_e>(insnCmp.subCode);
 
     // resolve binary operator
@@ -363,6 +362,9 @@ void SymExecEngine::updateStateInBranch(
     LDP_PLOT(nondetCond, sh);
 
 fallback:
+    SymProc proc(sh, &bt_);
+    proc.setLocation(lw_);
+
     proc.killInsn(insnCmp);
     proc.killPerTarget(insnCnd, /* target */ !branch);
     this->updateState(sh, ofBlock);
@@ -484,11 +486,11 @@ void SymExecEngine::execCondInsn() {
     LDP_PLOT(nondetCond, sh);
 
     CL_DEBUG_MSG(lw_, "?T? CL_INSN_COND updates TRUE branch");
-    this->updateStateInBranch(proc, targetThen, true,
+    this->updateStateInBranch(sh, targetThen, true,
             *insnCmp, *insnCnd, v1, v2);
 
     CL_DEBUG_MSG(lw_, "?F? CL_INSN_COND updates FALSE branch");
-    this->updateStateInBranch(proc, targetElse, false,
+    this->updateStateInBranch(sh, targetElse, false,
             *insnCmp, *insnCnd, v1, v2);
 }
 
