@@ -276,20 +276,18 @@ typedef STD_VECTOR(struct cl_operand) TOperandList;
  */
 typedef STD_VECTOR(const Block *) TTargetList;
 
-/// enumeration of kill status assigned to program variables per instruction
-enum EKillStatus {
-    KS_KILL_NOTHING,
-    KS_KILL_VAR,
-    KS_KILL_VAR_IF_NOT_POINTED,
+struct KillVar {
+    int             uid;
+    bool            onlyIfNotPointed;
 
-    // FIXME: we need a better API for killing of variables
-    KS_KILL_ARRAY_INDEX,
-    KS_KILL_ARRAY_INDEX_IF_NOT_POINTED
+    KillVar(int uid_, bool onlyIfNotPointed_):
+        uid(uid_),
+        onlyIfNotPointed(onlyIfNotPointed_)
+    {
+    }
 };
 
-// FIXME: we need a better API for killing of variables
-typedef std::pair<int /* uid */, EKillStatus>       TKillVar;
-typedef std::vector<TKillVar>                       TKillVarList;
+typedef std::vector<KillVar>                        TKillVarList;
 typedef std::vector<TKillVarList>                   TKillPerTarget;
 
 /**
@@ -355,16 +353,10 @@ struct Insn {
      */
     TOperandList                operands;
 
-    /**
-     * a vector of size operands.size() -- one item per each operand -- if the
-     * bit N is KS_ALWAYS_KILL, you can safely kill the variable referred by
-     * N-th operand.  Note that computation of this data by CodeStorage is
-     * optional.  If the feature is not used, all items are initialized to
-     * KS_NEVER_KILL, which should be a safe over-approximation.
-     */
-    std::vector<EKillStatus>    opsToKill;
+    /// @todo some dox
+    TKillVarList                varsToKill;
 
-    // FIXME: we need a better API for killing of variables
+    /// @todo some dox
     TKillPerTarget              killPerTarget;
 
     /**

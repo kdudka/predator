@@ -329,7 +329,6 @@ void ClStorageBuilder::Private::digInitials(
     for (; initial; initial = initial->next) {
         ControlFlow *cfg = /* XXX */ 0;
         Insn *insn = createInsn(&initial->insn, /* XXX */ *cfg);
-        insn->opsToKill.resize(insn->operands.size(), KS_KILL_NOTHING);
         var.initials.push_back(insn);
     }
 }
@@ -476,7 +475,6 @@ void ClStorageBuilder::Private::closeInsn() {
         this->digOperand(&op);
     }
 
-    insn->opsToKill.resize(operands.size(), KS_KILL_NOTHING);
     insn->killPerTarget.resize(insn->targets.size());
 
     // let it honestly crash if callback sequence is incorrect since this should

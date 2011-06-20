@@ -307,31 +307,9 @@ void killOperand(Insn &insn, TVar byUid, bool isPointed) {
         return;
     }
 
-    EKillStatus code = KS_KILL_VAR;
-    const char *suffix = "";
-    if (isPointed) {
-        code = KS_KILL_VAR_IF_NOT_POINTED;
-        suffix = " [KS_KILL_VAR_IF_NOT_POINTED]";
-    }
-
-    if (-1 == idx) {
-        idx = seekArrayIndex(opList, byUid);
-        if (isPointed) {
-            code = KS_KILL_ARRAY_INDEX_IF_NOT_POINTED;
-            suffix = " [KS_KILL_ARRAY_INDEX_IF_NOT_POINTED]";
-        }
-        else {
-            code = KS_KILL_ARRAY_INDEX;
-            suffix = " [KS_KILL_ARRAY_INDEX";
-        }
-    }
-
-    // kill a single variable at a single location
-    CL_BREAK_IF(idx < 0);
-
-    insn.opsToKill[idx] = code;
-    VK_DEBUG_MSG(1, &insn.loc, "killing variable #" << byUid << " by " << insn
-            << suffix);
+    const KillVar kv(byUid, isPointed);
+    insn.varsToKill.push_back(kv);
+    VK_DEBUG_MSG(1, &insn.loc, "killing variable #" << byUid << " by " << insn);
 }
 
 // TODO: some cleanup and refactoring would be nice
@@ -404,12 +382,8 @@ void commitBlock(Data &data, TBlock bb, const TSet &pointed) {
 
             BOOST_FOREACH(const TVar vKill, killPerTarget[i]) {
                 const bool isPointed = hasKey(pointed, vKill);
-                const EKillStatus status = (isPointed)
-                    ? KS_KILL_VAR_IF_NOT_POINTED
-                    : KS_KILL_VAR;
-
-                const TKillVar kp(vKill, status);
-                kList.push_back(kp);
+                const KillVar kv(vKill, isPointed);
+                kList.push_back(kv);
             }
         }
     }

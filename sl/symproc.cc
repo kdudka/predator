@@ -642,35 +642,8 @@ void SymProc::killInsn(const CodeStorage::Insn &insn) {
     return;
 #endif
     // kill variables
-    const TOperandList &opList = insn.operands;
-    for (unsigned i = 0; i < opList.size(); ++i) {
-        const struct cl_operand *op = &opList[i];
-        bool onlyIfNotPointed = false;
-
-        const EKillStatus code = insn.opsToKill[i];
-        switch (code) {
-            case KS_KILL_NOTHING:
-                // var alive
-                continue;
-
-            case KS_KILL_VAR_IF_NOT_POINTED:
-                onlyIfNotPointed = true;
-                // fall through!
-            case KS_KILL_VAR:
-                break;
-
-            case KS_KILL_ARRAY_INDEX_IF_NOT_POINTED:
-                onlyIfNotPointed = true;
-                // fall through!
-            case KS_KILL_ARRAY_INDEX:
-                CL_BREAK_IF(!op->accessor);
-                CL_BREAK_IF(CL_ACCESSOR_DEREF_ARRAY != op->accessor->code);
-                op = op->accessor->data.array.index;
-        }
-
-        const int uid = varIdFromOperand(op);
-        this->killVar(uid, onlyIfNotPointed);
-    }
+    BOOST_FOREACH(const KillVar &kv, insn.varsToKill)
+        this->killVar(kv.uid, kv.onlyIfNotPointed);
 }
 
 void SymProc::killPerTarget(const CodeStorage::Insn &insn, unsigned target) {
@@ -681,11 +654,8 @@ void SymProc::killPerTarget(const CodeStorage::Insn &insn, unsigned target) {
 
     // WARNING: highly experimental, not tested
     const TKillVarList &kList = insn.killPerTarget[target];
-    BOOST_FOREACH(const TKillVar &item, kList) {
-        const int uid = item.first;
-        const EKillStatus status = item.second;
-        this->killVar(uid, KS_KILL_VAR_IF_NOT_POINTED == status);
-    }
+    BOOST_FOREACH(const KillVar &kv, kList)
+        this->killVar(kv.uid, kv.onlyIfNotPointed);
 }
 
 // /////////////////////////////////////////////////////////////////////////////
