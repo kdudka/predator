@@ -129,18 +129,25 @@ class BlockScheduler: public IStatsProvider {
         }
 
         bool schedule(const TBlock bb) {
-            return insertOnce(todo_, bb);
+            if (!insertOnce(todo_, bb))
+                // already in the queue
+                return false;
+
+            fifo_.push(bb);
+            return true;
         }
 
         bool getNext(TBlock *dst) {
             if (todo_.empty())
                 return false;
 
-            // FIXME: take BBs in some reasonable order instead
-            TBlockSet::iterator i = todo_.begin();
-            const TBlock bb = i->bb;
+            // take the first block in the queue
+            const TBlock bb = fifo_.front();
+            fifo_.pop();
+            if (1 != todo_.erase(bb))
+                CL_BREAK_IF("BlockScheduler malfunction");
+
             *dst = bb;
-            todo_.erase(i);
             done_[bb]++;
             return true;
         }
@@ -172,9 +179,11 @@ class BlockScheduler: public IStatsProvider {
         }
 
     private:
+        typedef std::queue<TBlock>                              TFifo;
         typedef std::map<TBlock, unsigned /* cnt */>            TDone;
 
         TBlockSet           todo_;
+        TFifo               fifo_;
         TDone               done_;
 };
 
