@@ -113,6 +113,45 @@ class IStatsProvider {
 };
 
 // /////////////////////////////////////////////////////////////////////////////
+// BlockScheduler
+class BlockScheduler: public IStatsProvider {
+    public:
+        typedef const CodeStorage::Block       *TBlock;
+        typedef std::set<BlockPtr>              TBlockSet;
+
+    public:
+        const TBlockSet& todo() const {
+            return todo_;
+        }
+
+        unsigned cntWaiting() const {
+            return todo_.size();
+        }
+
+        bool schedule(const TBlock bb) {
+            return insertOnce(todo_, bb);
+        }
+
+        bool getNext(TBlock *dst) {
+            if (todo_.empty())
+                return false;
+
+            // FIXME: take BBs in some reasonable order instead
+            TBlockSet::iterator i = todo_.begin();
+            *dst = i->bb;
+            todo_.erase(i);
+            return true;
+        }
+
+        virtual void printStats() const {
+            // TODO
+        }
+
+    private:
+        TBlockSet todo_;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
 // ExecStack
 class SymExecEngine;
 
@@ -202,8 +241,6 @@ class SymExecEngine: public IStatsProvider {
         SymState&                       callResults();
 
     private:
-        typedef std::set<BlockPtr>      TBlockSet;
-
         const CodeStorage::Storage      &stor_;
         SymExecParams                   params_;
         SymBackTrace                    &bt_;
@@ -213,7 +250,7 @@ class SymExecEngine: public IStatsProvider {
 
         SymStateMap                     stateMap_;
         PathTracer                      ptracer_;
-        TBlockSet                       todo_;
+        BlockScheduler                  sched_;
         const CodeStorage::Block        *block_;
         unsigned                        insnIdx_;
         unsigned                        heapIdx_;
@@ -271,7 +308,7 @@ void SymExecEngine::initEngine(const SymHeap &init)
     stateMap_.insert(entry, /* no inbound edge here */ 0, init);
 
     // schedule the entry block for processing
-    todo_.insert(entry);
+    sched_.schedule(entry);
 }
 
 void SymExecEngine::execReturn() {
@@ -312,12 +349,8 @@ void SymExecEngine::updateState(SymHeap &sh, const CodeStorage::Block *ofBlock) 
                      << stateMap_[ofBlock].size() << ")");
     }
     else {
-        const size_t last = todo_.size();
-
         // schedule for next wheel (if not already)
-        todo_.insert(ofBlock);
-
-        const bool already = (todo_.size() == last);
+        const bool already = !sched_.schedule(ofBlock);
         CL_DEBUG_MSG(lw_, ((already) ? "-+-" : "+++")
                 << " block " << name
                 << ((already)
@@ -630,7 +663,8 @@ bool /* complete */ SymExecEngine::execBlock() {
         CL_DEBUG_MSG(lw_, "___ we are back in " << name
                 << ", insn #" << insnIdx_
                 << ", heap #" << (heapIdx_ - 1)
-                << ", " << todo_.size() << " basic block(s) in the queue");
+                << ", " << sched_.cntWaiting()
+                << " basic block(s) in the queue");
     }
 
     if (!insnIdx_)
@@ -658,7 +692,8 @@ bool /* complete */ SymExecEngine::execBlock() {
 
     // the whole block is processed now
     CL_DEBUG_MSG(lw_, "___ completed batch for " << name
-                 << ", " << todo_.size() << " basic block(s) in the queue");
+                 << ", " << sched_.cntWaiting()
+                 << " basic block(s) in the queue");
     insnIdx_ = 0;
     return true;
 }
@@ -690,16 +725,11 @@ bool /* complete */ SymExecEngine::run() {
         waiting_ = true;
 
         // check for possible protocol error
-        CL_BREAK_IF(1 != todo_.size());
+        CL_BREAK_IF(1 != sched_.cntWaiting());
     }
 
     // main loop of SymExecEngine
-    while (!todo_.empty()) {
-        // FIXME: take BBs in some reasonable order instead
-        TBlockSet::iterator i = todo_.begin();
-        block_ = i->bb;
-        todo_.erase(i);
-
+    while (sched_.getNext(&block_)) {
         // update location info and ptracer
         const CodeStorage::Insn *first = block_->front();
         lw_ = &first->loc;
@@ -708,7 +738,8 @@ bool /* complete */ SymExecEngine::run() {
         // enter the basic block
         const std::string &name = block_->name();
         CL_DEBUG_MSG(lw_, "___ entering " << name
-                     << ", " << todo_.size() << " basic block(s) in the queue");
+                     << ", " << sched_.cntWaiting()
+                     << " basic block(s) in the queue");
         insnIdx_ = 0;
         heapIdx_ = 0;
 
@@ -732,7 +763,7 @@ bool /* complete */ SymExecEngine::run() {
 }
 
 void SymExecEngine::printStats() const {
-    TBlockSet bset(todo_);
+    BlockScheduler::TBlockSet bset(sched_.todo());
     if (block_)
         // include the basic block just being computed into the statistics
         bset.insert(block_);
@@ -773,6 +804,9 @@ void SymExecEngine::printStats() const {
                 ", " << total << " heap(s) total"
                 ", " << waiting << " heap(s) pending");
     }
+
+    // finally print the statistics provided by BlockScheduler
+    sched_.printStats();
 }
 
 const SymHeap& SymExecEngine::callEntry() const {
