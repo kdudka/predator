@@ -138,17 +138,44 @@ class BlockScheduler: public IStatsProvider {
 
             // FIXME: take BBs in some reasonable order instead
             TBlockSet::iterator i = todo_.begin();
-            *dst = i->bb;
+            const TBlock bb = i->bb;
+            *dst = bb;
             todo_.erase(i);
+            done_[bb]++;
             return true;
         }
 
         virtual void printStats() const {
-            // TODO
+            typedef std::map<unsigned /* cnt */, TBlock> TRMap;
+
+            // sort todo_ by cnt
+            TRMap rMap;
+            BOOST_FOREACH(TDone::const_reference item, done_) {
+                rMap[/* cnt */ item.second] = /* bb */ item.first;
+            }
+
+            BOOST_FOREACH(TRMap::const_reference item, rMap) {
+                const unsigned cnt = item.first;
+                const CodeStorage::Block *bb = item.second;
+                const CodeStorage::Insn *first = bb->front();
+                const std::string &name = bb->name();
+
+                const char *suffix = "";
+                if (hasKey(todo_, bb))
+                    suffix = " [still in the queue]";
+
+                CL_NOTE_MSG(&first->loc,
+                        "___ block " << name
+                        << " executed " << cnt
+                        << " time(s)" << suffix);
+            }
         }
 
     private:
-        TBlockSet todo_;
+        typedef std::map<TBlock, unsigned /* cnt */>            TDone;
+
+        TBlockSet           todo_;
+        TDone               done_;
 };
 
 // /////////////////////////////////////////////////////////////////////////////
