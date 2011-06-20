@@ -74,36 +74,6 @@ bool installSignalHandlers(void) {
         && SignalCatcher::install(SIGTERM);
 }
 
-/// we want BBs to be taken from the scheduler somehow deterministically
-struct BlockPtr {
-    const CodeStorage::Block *bb;
-
-    BlockPtr(const CodeStorage::Block *bb_):
-        bb(bb_)
-    {
-    }
-};
-bool operator<(const BlockPtr &a, const BlockPtr &b) {
-    if (a.bb == b.bb)
-        // identical blocks, we're done
-        return false;
-
-    // first try to compare the names of blocks, as they're said to be more
-    // consistent among runs than the addresses of CodeStorage::Block objects
-    // NOTE: They're however _not_ guaranteed to be consistent among two
-    //       different gcc builds anyway, and I am not yet talking about
-    //       gcc versions...
-    const std::string &aName = a.bb->name();
-    const std::string &bName = b.bb->name();
-    const int cmp = aName.compare(bName);
-    if (cmp)
-        return (cmp < 0);
-
-    else
-        // names are equal, just compare the pointers to keep std::set working
-        return (a.bb < b.bb);
-}
-
 // /////////////////////////////////////////////////////////////////////////////
 // IStatsProvider
 class IStatsProvider {
@@ -117,7 +87,7 @@ class IStatsProvider {
 class BlockScheduler: public IStatsProvider {
     public:
         typedef const CodeStorage::Block       *TBlock;
-        typedef std::set<BlockPtr>              TBlockSet;
+        typedef std::set<TBlock>                TBlockSet;
 
     public:
         const TBlockSet& todo() const {
@@ -815,8 +785,7 @@ void SymExecEngine::printStats() const {
             ", heap #" << heapIdx_);
 
     // go through scheduled basic blocks
-    BOOST_FOREACH(const BlockPtr &ptr, bset) {
-        const CodeStorage::Block *bb = ptr.bb;
+    BOOST_FOREACH(const BlockScheduler::TBlock bb, bset) {
         const std::string &name = bb->name();
 
         // query total count of heaps
