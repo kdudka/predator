@@ -404,8 +404,6 @@ Tests taken from Forester
                 - originally taken from fa/data/listref.c
 
     test-0508.c - Bubble-Sort operating on NULL-terminated SLL
-                - Predator reports an artificial NULL dereference
-                - works if Predator is compiled with with SE_DEFER_SLS_INTRO
                 - originally taken from fa/data/sll-bubblesort.c
 
     test-0509.c - random node deletion from a NULL-terminated SLL

@@ -144,7 +144,7 @@
 /**
  * upper bound of SLS minimal length (zero means unlimited)
  */
-#define SE_RESTRICT_SLS_MINLEN              1
+#define SE_RESTRICT_SLS_MINLEN              2
 
 /**
  * if 1, support partial tracking of non-pointer values, which may result into
