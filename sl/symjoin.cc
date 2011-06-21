@@ -890,6 +890,34 @@ bool joinProtoFlag(
     return false;
 }
 
+unsigned joinMinLength(
+        SymJoinCtx              &ctx,
+        const TValId            root1,
+        const TValId            root2)
+{
+    if (VAL_INVALID == root1 || VAL_INVALID == root2) {
+        // the status should have been already updated
+        CL_BREAK_IF(JS_USE_ANY == ctx.status);
+        return 0;
+    }
+
+    const int len1 = objMinLength(ctx.sh1, root1);
+    const int len2 = objMinLength(ctx.sh2, root2);
+    if (len1 < len2) {
+        updateJoinStatus(ctx, JS_USE_SH1);
+        return len1;
+    }
+
+    if (len2 < len1) {
+        updateJoinStatus(ctx, JS_USE_SH2);
+        return len2;
+    }
+
+    // the lengths are equal, pick any
+    CL_BREAK_IF(len1 != len2);
+    return len1;
+}
+
 bool joinObjSize(
         int                     *pDst,
         SymJoinCtx              &ctx,
@@ -1002,9 +1030,7 @@ bool createObject(
         ctx.dst.valTargetSetAbstract(rootDst, kind, off);
 
         // compute minimal length of the resulting segment
-        const unsigned len1 = objMinLength(ctx.sh1, root1);
-        const unsigned len2 = objMinLength(ctx.sh2, root2);
-        ctx.segLengths[rootDst] = std::min(len1, len2);
+        ctx.segLengths[rootDst] = joinMinLength(ctx, root1, root2);
     }
 
     return traverseSubObjs(ctx, rootDst, root1, root2);
