@@ -746,6 +746,9 @@ bool /* complete */ SymExecEngine::run() {
     if (!endReached_) {
         CL_WARN_MSG(loc, "end of function "
                 << nameOf(fnc) << "() has not been reached");
+#if DEBUG_SE_END_NOT_REACHED
+        sched_.printStats();
+#endif
         bt_.printBackTrace();
     }
 

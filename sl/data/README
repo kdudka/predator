@@ -636,6 +636,8 @@ Tests taken from Forester
 
     test-0160.c - off-values using NULL as the reference and some reasoning
 
+    test-0166.c - error-free variant of test-0038
+
 
 Tiny DLL library written on scratch
 ===================================

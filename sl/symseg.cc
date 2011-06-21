@@ -27,6 +27,13 @@
 
 #include <boost/foreach.hpp>
 
+#define SS_BREAK_IF(cond, allowIncosistency) do {           \
+    if (!(allowIncosistency))                               \
+        CL_BREAK_IF(cond);                                  \
+    else if (cond)                                          \
+        CL_WARN("symseg: inconsistency detected: " #cond);  \
+} while (0)
+
 unsigned dlSegMinLength(
         const SymHeap           &sh,
         const TValId            dls,
@@ -51,27 +58,18 @@ unsigned dlSegMinLength(
 
     // DLS cross Neq predicates have to be fully symmetric
     const bool ne = (ne1 && ne2);
-    if (ne1 != ne2) {
-        if (allowIncosistency)
-            CL_WARN("seen OK_DLS empty in one direction but not vice versa");
-        else
-            CL_BREAK_IF("OK_DLS empty in one direction but not vice versa");
-    }
+    SS_BREAK_IF((ne1 != ne2), allowIncosistency);
 
     // if DLS heads are two distinct objects, we have at least two objects
     const TValId head1 = segHeadAt(sh, dls);
     const TValId head2 = segHeadAt(sh, peer);
     if (sh.SymHeapCore::proveNeq(head1, head2)) {
-        if (!ne) {
-            if (allowIncosistency)
-                CL_WARN("seen OK_DLS 2+ that was not explicitly declared 1+");
-            else
-                CL_BREAK_IF("OK_DLS 2+ is not explicitly declared 1+");
-        }
+        SS_BREAK_IF(!ne, allowIncosistency);
 
         const unsigned len = sh.segEffectiveMinLength(dls);
-        CL_BREAK_IF(len != sh.segEffectiveMinLength(peer));
-        CL_BREAK_IF(len < /* DLS 2+ */ 2);
+        SS_BREAK_IF(len != sh.segEffectiveMinLength(peer), allowIncosistency);
+        SS_BREAK_IF(len < /* DLS 2+ */ 2, allowIncosistency);
+
         return len;
     }
 
@@ -108,7 +106,7 @@ unsigned segMinLength(
         return 0;
 
     const unsigned len = sh.segEffectiveMinLength(seg);
-    CL_BREAK_IF(!len);
+    SS_BREAK_IF(!len, allowIncosistency);
     return len;
 }
 

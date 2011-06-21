@@ -34,6 +34,11 @@
 #define DEBUG_MEM_USAGE                     1
 
 /**
+ * if 1, print block scheduler statistics whenever end of a fnc is not reached
+ */
+#define DEBUG_SE_END_NOT_REACHED            0
+
+/**
  * if 1, plot heap graphs of branching by non-deterministic conditions
  */
 #define DEBUG_SE_NONDET_COND                0

@@ -325,13 +325,6 @@ bool segAvoidSelfCycle(
         const TValId                end)
 {
     if (!isDlsBinding(off)) {
-        // TODO: move this hack to the right place and document accordingly
-        const TValId valNext = valOfPtrAt(sh, end, off.next);
-        if (VAL_NULL != valNext
-                && !isPossibleToDeref(sh.valTarget(valNext))
-                && sh.usedByCount(valNext) < 2)
-            return true;
-
         const TValId next = nextRootObj(sh, end, off.next);
         return haveSeg(sh, next, beg, OK_SLS);
     }
