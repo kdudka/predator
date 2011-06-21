@@ -1846,9 +1846,9 @@ bool SymHeap::proveNeq(TValId ref, TValId val) const {
             return false;
 
         const TValId valNext = writable.valueOf(nextPtrFromSeg(writable, seg));
-        if (VAL_NULL == ref && SymHeapCore::proveNeq(val, valNext))
-            // non-empty abstract object reached --> prove done
-            return true;
+        if (SymHeapCore::proveNeq(val, valNext))
+            // non-empty abstract object reached
+            return (VAL_NULL == ref);
 
         // jump to next value
         val = valNext;
