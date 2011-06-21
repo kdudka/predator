@@ -48,8 +48,6 @@ bool haveSeg(const SymHeap &sh, TValId atAddr, TValId pointingTo,
  */
 bool haveDlSegAt(const SymHeap &sh, TValId atAddr, TValId peerAddr);
 
-bool haveMayExistAt(SymHeap &sh, TValId at, TValId pointingTo);
-
 /// return 'next' pointer in the given segment (given by root)
 inline TObjId nextPtrFromSeg(const SymHeap &sh, TValId seg) {
     CL_BREAK_IF(sh.valOffset(seg));

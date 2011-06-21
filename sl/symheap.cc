@@ -1677,36 +1677,47 @@ void SymHeap::dlSegCrossNeqOp(ENeqOp op, TValId seg1) {
         SymHeapCore::neqOp(NEQ_DEL, head1, head2);
 }
 
-void SymHeap::neqOp(ENeqOp op, TValId valA, TValId valB) {
-    if (haveMayExistAt(*this, valA, valB)) {
-        // replace OK_MAY_EXIST at valA by OK_CONCRETE
-        this->valTargetSetConcrete(valA);
+bool haveSegBidir(
+        TValId                      *pDst,
+        const SymHeap               *sh,
+        const EObjKind              kind,
+        const TValId                v1,
+        const TValId                v2)
+{
+    if (haveSeg(*sh, v1, v2, kind)) {
+        *pDst = sh->valRoot(v1);
+        return true;
+    }
+
+    if (haveSeg(*sh, v2, v1, kind)) {
+        *pDst = sh->valRoot(v2);
+        return true;
+    }
+
+    // found nothing
+    return false;
+}
+
+void SymHeap::neqOp(ENeqOp op, TValId v1, TValId v2) {
+    TValId seg;
+    if (haveSegBidir(&seg, this, OK_MAY_EXIST, v1, v2)) {
+        // replace OK_MAY_EXIST by OK_CONCRETE
+        this->valTargetSetConcrete(seg);
         return;
     }
 
-    if (haveMayExistAt(*this, valB, valA)) {
-        // replace OK_MAY_EXIST at valB by OK_CONCRETE
-        this->valTargetSetConcrete(valB);
+    if (haveSegBidir(&seg, this, OK_DLS, v1, v2)) {
+        this->dlSegCrossNeqOp(op, seg);
         return;
     }
 
-    if (NEQ_ADD == op && haveDlSegAt(*this, valA, valB)) {
+    if (NEQ_ADD == op && haveDlSegAt(*this, v1, v2)) {
         // adding the 2+ flag implies adding of the 1+ flag
-        this->dlSegCrossNeqOp(op, valA);
-    }
-    else {
-        if (haveSeg(*this, valA, valB, OK_DLS)) {
-            this->dlSegCrossNeqOp(op, valA);
-            return;
-        }
-
-        if (haveSeg(*this, valB, valA, OK_DLS)) {
-            this->dlSegCrossNeqOp(op, valB);
-            return;
-        }
+        this->dlSegCrossNeqOp(op, v1);
     }
 
-    SymHeapCore::neqOp(op, valA, valB);
+    // finally call the base implementation
+    SymHeapCore::neqOp(op, v1, v2);
 }
 
 bool SymHeapCore::proveNeq(TValId valA, TValId valB) const {
