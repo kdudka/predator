@@ -88,10 +88,19 @@ class BlockScheduler: public IStatsProvider {
     public:
         typedef const CodeStorage::Block       *TBlock;
         typedef std::set<TBlock>                TBlockSet;
+        typedef std::vector<TBlock>             TBlockList;
 
     public:
         const TBlockSet& todo() const {
             return todo_;
+        }
+
+        TBlockList done() const {
+            TBlockList dst;
+            BOOST_FOREACH(TDone::const_reference item, done_)
+                dst.push_back(/* bb */ item.first);
+
+            return dst;
         }
 
         unsigned cntWaiting() const {
@@ -123,28 +132,29 @@ class BlockScheduler: public IStatsProvider {
         }
 
         virtual void printStats() const {
-            typedef std::map<unsigned /* cnt */, TBlock> TRMap;
+            typedef std::map<unsigned /* cnt */, TBlockList> TRMap;
 
             // sort todo_ by cnt
             TRMap rMap;
             BOOST_FOREACH(TDone::const_reference item, done_) {
-                rMap[/* cnt */ item.second] = /* bb */ item.first;
+                rMap[/* cnt */ item.second].push_back(/* bb */ item.first);
             }
 
             BOOST_FOREACH(TRMap::const_reference item, rMap) {
                 const unsigned cnt = item.first;
-                const CodeStorage::Block *bb = item.second;
-                const CodeStorage::Insn *first = bb->front();
-                const std::string &name = bb->name();
+                BOOST_FOREACH(const TBlock bb, /* TBlockList */ item.second) {
+                    const CodeStorage::Insn *first = bb->front();
+                    const std::string &name = bb->name();
 
-                const char *suffix = "";
-                if (hasKey(todo_, bb))
-                    suffix = " [still in the queue]";
+                    const char *suffix = "";
+                    if (hasKey(todo_, bb))
+                        suffix = " [still in the queue]";
 
-                CL_NOTE_MSG(&first->loc,
-                        "___ block " << name
-                        << " executed " << cnt
-                        << " time(s)" << suffix);
+                    CL_NOTE_MSG(&first->loc,
+                            "___ block " << name
+                            << " examined " << cnt
+                            << " times" << suffix);
+                }
             }
         }
 
@@ -240,6 +250,7 @@ class SymExecEngine: public IStatsProvider {
         bool /* complete */ run();
 
         virtual void printStats() const;
+        void dumpStateMap();
 
         // TODO: describe the interface briefly
         const SymHeap&                  callEntry() const;
@@ -748,6 +759,7 @@ bool /* complete */ SymExecEngine::run() {
                 << nameOf(fnc) << "() has not been reached");
 #if DEBUG_SE_END_NOT_REACHED
         sched_.printStats();
+        this->dumpStateMap();
 #endif
         bt_.printBackTrace();
     }
@@ -802,6 +814,17 @@ void SymExecEngine::printStats() const {
 
     // finally print the statistics provided by BlockScheduler
     sched_.printStats();
+}
+
+void SymExecEngine::dumpStateMap() {
+    const BlockScheduler::TBlockList bbs(sched_.done());
+    BOOST_FOREACH(const BlockScheduler::TBlock block, bbs) {
+        const std::string name = block->name();
+
+        const SymState &state = stateMap_[block];
+        BOOST_FOREACH(const SymHeap &sh, state)
+            plotHeap(sh, name);
+    }
 }
 
 const SymHeap& SymExecEngine::callEntry() const {
