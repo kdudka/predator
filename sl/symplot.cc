@@ -489,24 +489,11 @@ std::string labelOfCompObj(const SymHeap &sh, const TValId root) {
             break;
     }
 
+    // append minimal segment length
     const unsigned len = segMinLength(sh, root, /* allowIncosistency */ true);
-    switch (len) {
-        case 0:
-            label += " 0+";
-            break;
-
-        case 1:
-            label += " 1+";
-            break;
-
-        case 2:
-            CL_BREAK_IF(OK_DLS != kind);
-            label += " 2+";
-            break;
-
-        default:
-            CL_BREAK_IF("segMinLength() returned something special");
-    }
+    std::ostringstream str;
+    str << " " << len << "+";
+    label += str.str();
 
     return label;
 }

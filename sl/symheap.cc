@@ -1505,9 +1505,11 @@ struct SymHeap::Private {
     struct AbstractObject {
         EObjKind            kind;
         BindingOff          off;
+        unsigned            minLength;
 
         AbstractObject():
-            kind(OK_CONCRETE)
+            kind(OK_CONCRETE),
+            minLength(0)
         {
         }
     };
@@ -1699,12 +1701,17 @@ bool haveSegBidir(
 }
 
 void SymHeap::neqOp(ENeqOp op, TValId v1, TValId v2) {
+    CL_BREAK_IF(NEQ_ADD != op && NEQ_DEL != op);
+
     TValId seg;
     if (haveSegBidir(&seg, this, OK_MAY_EXIST, v1, v2)) {
         // replace OK_MAY_EXIST by OK_CONCRETE
         this->valTargetSetConcrete(seg);
         return;
     }
+
+    if (haveSegBidir(&seg, this, OK_SLS, v1, v2))
+        this->segSetEffectiveMinLength(seg, (NEQ_ADD == op));
 
     if (haveSegBidir(&seg, this, OK_DLS, v1, v2)) {
         this->dlSegCrossNeqOp(op, seg);
@@ -1714,6 +1721,12 @@ void SymHeap::neqOp(ENeqOp op, TValId v1, TValId v2) {
     if (NEQ_ADD == op && haveDlSegAt(*this, v1, v2)) {
         // adding the 2+ flag implies adding of the 1+ flag
         this->dlSegCrossNeqOp(op, v1);
+
+        const TValId root1 = this->valRoot(v1);
+        const TValId root2 = this->valRoot(v2);
+
+        this->segSetEffectiveMinLength(root1, /* DLS 2+ */ 2);
+        this->segSetEffectiveMinLength(root2, /* DLS 2+ */ 2);
     }
 
     // finally call the base implementation
@@ -1854,4 +1867,54 @@ bool SymHeap::valDestroyTarget(TValId val) {
         CL_DEBUG("SymHeap::valDestroyTarget() destroys an abstract object");
 
     return true;
+}
+
+unsigned SymHeap::segEffectiveMinLength(TValId seg) const {
+    CL_BREAK_IF(this->valOffset(seg));
+    CL_BREAK_IF(!hasKey(d->data, seg));
+
+    const Private::AbstractObject &aoData = d->data[seg];
+
+    const EObjKind kind = aoData.kind;
+    switch (kind) {
+        case OK_SLS:
+        case OK_DLS:
+            break;
+
+        default:
+            CL_BREAK_IF("invalid call of SymHeap::segEffectiveMinLength()");
+            return 0;
+    }
+
+    return aoData.minLength;
+}
+
+void SymHeap::segSetEffectiveMinLength(TValId seg, unsigned len) {
+    CL_BREAK_IF(this->valOffset(seg));
+    CL_BREAK_IF(!hasKey(d->data, seg));
+
+    Private::AbstractObject &aoData = d->data[seg];
+
+    const EObjKind kind = aoData.kind;
+    switch (kind) {
+        case OK_SLS:
+#if SE_RESTRICT_SLS_MINLEN
+            if ((SE_RESTRICT_SLS_MINLEN) < len)
+                len = (SE_RESTRICT_SLS_MINLEN);
+#endif
+            break;
+
+        case OK_DLS:
+#if SE_RESTRICT_DLS_MINLEN
+            if ((SE_RESTRICT_DLS_MINLEN) < len)
+                len = (SE_RESTRICT_DLS_MINLEN);
+#endif
+            break;
+
+        default:
+            CL_BREAK_IF("invalid call of SymHeap::segEffectiveMinLength()");
+            return;
+    }
+
+    aoData.minLength = len;
 }

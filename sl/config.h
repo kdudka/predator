@@ -137,6 +137,16 @@
 #define SE_MAX_CALL_DEPTH                   0x40
 
 /**
+ * upper bound of DLS minimal length (zero means unlimited)
+ */
+#define SE_RESTRICT_DLS_MINLEN              2
+
+/**
+ * upper bound of SLS minimal length (zero means unlimited)
+ */
+#define SE_RESTRICT_SLS_MINLEN              1
+
+/**
  * if 1, support partial tracking of non-pointer values, which may result into
  * significant state explosion in some cases
  */

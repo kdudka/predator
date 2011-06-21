@@ -552,6 +552,11 @@ class SymHeap: public SymHeapCore {
 
         virtual TValId valClone(TValId);
 
+    public:
+        // FIXME: these should not be public
+        unsigned segEffectiveMinLength(TValId seg) const;
+        void segSetEffectiveMinLength(TValId seg, unsigned len);
+
     private:
         void dlSegCrossNeqOp(ENeqOp op, TValId seg);
 

@@ -69,7 +69,10 @@ unsigned dlSegMinLength(
                 CL_BREAK_IF("OK_DLS 2+ is not explicitly declared 1+");
         }
 
-        return /* DLS 2+ */ 2;
+        const unsigned len = sh.segEffectiveMinLength(dls);
+        CL_BREAK_IF(len != sh.segEffectiveMinLength(peer));
+        CL_BREAK_IF(len < /* DLS 2+ */ 2);
+        return len;
     }
 
     return static_cast<unsigned>(ne);
@@ -101,7 +104,12 @@ unsigned segMinLength(
     const TObjId next = nextPtrFromSeg(writable, seg);
     const TValId nextVal = writable.valueOf(next);
     const TValId headAddr = segHeadAt(writable, seg);
-    return static_cast<unsigned>(sh.SymHeapCore::proveNeq(headAddr, nextVal));
+    if (!sh.SymHeapCore::proveNeq(headAddr, nextVal))
+        return 0;
+
+    const unsigned len = sh.segEffectiveMinLength(seg);
+    CL_BREAK_IF(!len);
+    return len;
 }
 
 void segSetProto(SymHeap &sh, TValId seg, bool isProto) {
@@ -203,24 +211,24 @@ void segHandleNeq(SymHeap &sh, TValId seg, TValId peer, SymHeap::ENeqOp op) {
 
 void dlSegSetMinLength(SymHeap &sh, TValId dls, unsigned len) {
     const TValId peer = dlSegPeer(sh, dls);
+
     switch (len) {
         case 0:
             segHandleNeq(sh, dls, peer, SymHeap::NEQ_DEL);
-            return;
+            break;
 
         case 1:
             segHandleNeq(sh, dls, peer, SymHeap::NEQ_ADD);
-            return;
+            break;
 
         case 2:
         default:
+            sh.neqOp(SymHeap::NEQ_ADD, segHeadAt(sh, dls), segHeadAt(sh, peer));
             break;
     }
 
-    // let it be DLS 2+
-    const TValId a1 = segHeadAt(sh, dls);
-    const TValId a2 = segHeadAt(sh, peer);
-    sh.neqOp(SymHeap::NEQ_ADD, a1, a2);
+    sh.segSetEffectiveMinLength(dls, len);
+    sh.segSetEffectiveMinLength(peer, len);
 }
 
 void segSetMinLength(SymHeap &sh, TValId seg, unsigned len) {
@@ -230,6 +238,8 @@ void segSetMinLength(SymHeap &sh, TValId seg, unsigned len) {
             segHandleNeq(sh, seg, seg, (len)
                     ? SymHeap::NEQ_ADD
                     : SymHeap::NEQ_DEL);
+
+            sh.segSetEffectiveMinLength(seg, len);
             break;
 
         case OK_DLS:
@@ -296,7 +306,12 @@ bool dlSegCheckConsistency(const SymHeap &sh) {
         }
 
         // check the consistency of Neq predicates
-        dlSegMinLength(sh, at, /* allowIncosistency */ false);
+        const unsigned len1 = dlSegMinLength(sh, at);
+        const unsigned len2 = dlSegMinLength(sh, peer);
+        if (len1 != len2) {
+            CL_ERROR("peer of a DLS " << len1 << "+ is a DLS" << len2 << "+");
+            return false;
+        }
     }
 
     // all OK

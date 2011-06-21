@@ -120,7 +120,13 @@ bool matchRoots(
     if (bf1 != bf2)
         return false;
 
-    // follow all other values
+    const unsigned len1 = segMinLength(sh1, root1);
+    const unsigned len2 = segMinLength(sh2, root2);
+    if (len1 != len2)
+        // minimal length mismatch
+        return false;
+
+    // abstract objects are equal
     return true;
 }
 
