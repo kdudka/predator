@@ -120,13 +120,14 @@
 #define SE_DISABLE_THREE_WAY_JOIN           0
 
 /**
- * if 1, local variables are destroyed as soon as they become dead
+ * - 0 ... kill local variables only on stack frame destruction
+ * - 2 ... kill local variables as soon as they become dead
  */
 #define SE_EARLY_VARS_DESTRUCTION           1
 
 /**
  * an integer expressing how much we should prefer/force lossless prototypes;
- * values from the interval -1..3 make sense
+ * values from the interval 0..3 make sense
  */
 #define SE_PREFER_LOSSLESS_PROTOTYPES       1
 

@@ -669,13 +669,14 @@ void SymProc::killPerTarget(const CodeStorage::Insn &insn, unsigned target) {
     using namespace CodeStorage;
 #if !SE_EARLY_VARS_DESTRUCTION
     return;
-#endif
+#elif 1 == SE_EARLY_VARS_DESTRUCTION
     if (isExitBlock(insn.targets[target]))
         // There is no point in killing local variables if we heading to exiting
         // of a function (or the whole program) anyway.  It can only cause
         // unnecessary reporting of memleak on the way to abort(), which is
         // common in the trivial OOM handling code.
         return;
+#endif
 
     const TKillVarList &kList = insn.killPerTarget[target];
     BOOST_FOREACH(const KillVar &kv, kList)

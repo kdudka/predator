@@ -281,11 +281,11 @@ bool matchData(
 
         case JS_USE_SH1:
         case JS_USE_SH2:
-            thr = 0 + (SE_PREFER_LOSSLESS_PROTOTYPES);
+            thr = (SE_PREFER_LOSSLESS_PROTOTYPES) - 1;
             break;
 
         case JS_THREE_WAY:
-            thr = 1 + (SE_PREFER_LOSSLESS_PROTOTYPES);
+            thr = (SE_PREFER_LOSSLESS_PROTOTYPES);
             break;
     }
 
@@ -430,7 +430,7 @@ unsigned /* len */ segDiscover(
         // avoid creating self-cycle of two segments
         --len;
 
-    if (1 + (SE_PREFER_LOSSLESS_PROTOTYPES) < len)
+    if ((SE_PREFER_LOSSLESS_PROTOTYPES) < len)
         // path already too long
         maxThreshold = 0;
 
