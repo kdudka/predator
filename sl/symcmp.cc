@@ -85,67 +85,40 @@ bool matchPlainValues(
     return matchPlainValuesCore(valMapping, root1, root2);
 }
 
-// FIXME: this needs some cleanup and refactoring
-bool matchValues(
-        TValMapBidir            &vMap,
+bool matchRoots(
         const SymHeap           &sh1,
         const SymHeap           &sh2,
-        const TValId            v1,
-        const TValId            v2)
+        const TValId            root1,
+        const TValId            root2,
+        const EValueTarget      code)
 {
-    if (!matchPlainValues(vMap, sh1, sh2, v1, v2))
+    const int size1 = sh1.valSizeOfTarget(root1);
+    const int size2 = sh2.valSizeOfTarget(root2);
+    if (size1 != size2)
+        // target size mismatch
         return false;
 
-    // check for special values
-    const bool isSpecial = (v1 <= 0);
-    CL_BREAK_IF(isSpecial && 0 < v2);
-    if (isSpecial)
-        // already checked by matchPlainValues()/checkNonPosValues()
-        return true;
-
-    // check for unknown values
-    const EValueTarget code1 = sh1.valTarget(v1);
-    const EValueTarget code2 = sh2.valTarget(v2);
-    if (code1 != code2)
-        // mismatch in kind of values
-        return false;
-
-    if (VT_CUSTOM == code1) {
-        // match pair of custom values
-        const CustomValue cVal1 = sh1.valUnwrapCustom(v1);
-        const CustomValue cVal2 = sh2.valUnwrapCustom(v2);
-        return (cVal1 == cVal2);
-    }
-
-    if (!isPossibleToDeref(code1))
-        // do not follow unknown values
-        return true;
-
-    const bool isProto1 = sh1.valTargetIsProto(v1);
-    const bool isProto2 = sh2.valTargetIsProto(v2);
+    const bool isProto1 = sh1.valTargetIsProto(root1);
+    const bool isProto2 = sh2.valTargetIsProto(root2);
     if (isProto1 != isProto2)
         // prototype vs. shared object while called from areEqual()
         return false;
 
-    const TOffset off1 = sh1.valOffset(v1);
-    const TOffset off2 = sh2.valOffset(v2);
-    if (off1 != off2)
-        // value offset mismatch
-        return false;
+    if (!isAbstract(code))
+        // not an abstract object
+        return true;
 
-    const EObjKind kind1 = sh1.valTargetKind(v1);
-    const EObjKind kind2 = sh2.valTargetKind(v2);
+    const EObjKind kind1 = sh1.valTargetKind(root1);
+    const EObjKind kind2 = sh2.valTargetKind(root2);
     if (kind1 != kind2)
         // kind of object mismatch
         return false;
 
-    if (OK_CONCRETE != kind1) {
-        // compare binding fields
-        const BindingOff &bf1 = sh1.segBinding(v1);
-        const BindingOff &bf2 = sh2.segBinding(v2);
-        if (bf1 != bf2)
-            return false;
-    }
+    // compare binding fields
+    const BindingOff &bf1 = sh1.segBinding(root1);
+    const BindingOff &bf2 = sh2.segBinding(root2);
+    if (bf1 != bf2)
+        return false;
 
     // follow all other values
     return true;
@@ -159,18 +132,45 @@ bool cmpValues(
         const TValId            v1,
         const TValId            v2)
 {
-    const EValueTarget code1 = sh1.valTarget(v1);
-    const EValueTarget code2 = sh2.valTarget(v2);
-    if (code1 != code2)
+    if (!matchPlainValues(vMap, sh1, sh2, v1, v2))
+        return false;
+
+    // check for special values
+    const bool isSpecial = (v1 <= 0);
+    CL_BREAK_IF(isSpecial && 0 < v2);
+    if (isSpecial) {
+        // already checked by matchPlainValues()/checkNonPosValues()
+        *pNeedFollow = false;
+        return true;
+    }
+
+    const TOffset off1 = sh1.valOffset(v1);
+    const TOffset off2 = sh2.valOffset(v2);
+    if (off1 != off2)
+        // value offset mismatch
+        return false;
+
+    const EValueTarget code = sh1.valTarget(v1);
+    if (code != sh2.valTarget(v2))
         // target kind mismatch
         return false;
 
-    if (!matchValues(vMap, sh1, sh2, v1, v2))
-        // value mismatch
-        return false;
+    if (VT_CUSTOM == code) {
+        // match pair of custom values
+        const CustomValue cVal1 = sh1.valUnwrapCustom(v1);
+        const CustomValue cVal2 = sh2.valUnwrapCustom(v2);
+        return (cVal1 == cVal2);
+    }
 
-    *pNeedFollow = isPossibleToDeref(code1);
-    return true;
+    *pNeedFollow = isPossibleToDeref(code);
+    if (!*pNeedFollow)
+        // no valid target
+        return true;
+
+    // match roots
+    const TValId root1 = sh1.valRoot(v1);
+    const TValId root2 = sh2.valRoot(v2);
+    return matchRoots(sh1, sh2, root1, root2, code);
 }
 
 typedef WorkList<TValPair> TWorkList;
