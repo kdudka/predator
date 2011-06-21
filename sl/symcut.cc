@@ -38,6 +38,7 @@
 #include <boost/tuple/tuple.hpp>
 
 struct DeepCopyData {
+    typedef std::map<TValId /* seg */, unsigned /* len */>      TSegLengths;
     typedef std::map<TValId   /* src */, TValId   /* dst */>    TValMap;
     typedef std::pair<TObjId  /* src */, TObjId   /* dst */>    TItem;
     typedef std::set<CVar>                                      TCut;
@@ -47,6 +48,7 @@ struct DeepCopyData {
     TCut                &cut;
     const bool          digBackward;
 
+    TSegLengths         segLengths;
     TValMap             valMap;
 
     WorkList<TItem>     wl;
@@ -138,6 +140,11 @@ void addObjectIfNeeded(DeepCopyData &dc, TValId rootSrcAt) {
         const EObjKind kind = src.valTargetKind(rootSrcAt);
         const BindingOff &off = src.segBinding(rootSrcAt);
         dst.valTargetSetAbstract(rootDstAt, kind, off);
+
+#if SE_SYMCUT_PRESERVES_MIN_LENGTHS
+        const unsigned minLength = objMinLength(src, rootSrcAt);
+        dc.segLengths[rootDstAt] = minLength;
+#endif
     }
 
     // store mapping of values
@@ -255,6 +262,13 @@ void deepCopy(DeepCopyData &dc) {
 
     // finally copy all relevant Neq predicates
     src.copyRelevantPreds(dst, dc.valMap);
+
+    typedef DeepCopyData::TSegLengths TSegLengths;
+    BOOST_FOREACH(TSegLengths::const_reference item, dc.segLengths) {
+        const TValId seg = item.first;
+        const unsigned minLength = item.second;
+        segSetMinLength(dst, seg, minLength);
+    }
 }
 
 void prune(const SymHeap &src, SymHeap &dst,

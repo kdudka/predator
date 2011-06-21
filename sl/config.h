@@ -59,6 +59,13 @@
 #define DEBUG_SYMCUT                        0
 
 /**
+ * if 1, the symcut module allows generic minimal lengths to survive a function
+ * call/return.  @b Not recommended unless SymCallCache has been rewritten to
+ * use symjoin to maintain cache entries.
+ */
+#define SE_SYMCUT_PRESERVES_MIN_LENGTHS     0
+
+/**
  * if 1, symjoin prints some extra debugging info
  */
 #define DEBUG_SYMJOIN                       0
