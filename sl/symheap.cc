@@ -1831,7 +1831,7 @@ bool SymHeap::proveNeq(TValId ref, TValId val) const {
                 return false;
         }
 
-        if (SymHeapCore::proveNeq(ref, val))
+        if (VAL_NULL == ref && SymHeapCore::proveNeq(VAL_NULL, val))
             // prove done
             return true;
 
@@ -1846,7 +1846,7 @@ bool SymHeap::proveNeq(TValId ref, TValId val) const {
             return false;
 
         const TValId valNext = writable.valueOf(nextPtrFromSeg(writable, seg));
-        if (SymHeapCore::proveNeq(val, valNext))
+        if (VAL_NULL == ref && SymHeapCore::proveNeq(val, valNext))
             // non-empty abstract object reached --> prove done
             return true;
 
