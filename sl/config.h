@@ -139,12 +139,12 @@
 /**
  * upper bound of DLS minimal length (zero means unlimited)
  */
-#define SE_RESTRICT_DLS_MINLEN              2
+#define SE_RESTRICT_DLS_MINLEN              0
 
 /**
  * upper bound of SLS minimal length (zero means unlimited)
  */
-#define SE_RESTRICT_SLS_MINLEN              2
+#define SE_RESTRICT_SLS_MINLEN              0
 
 /**
  * if 1, support partial tracking of non-pointer values, which may result into
