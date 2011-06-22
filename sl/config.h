@@ -133,7 +133,7 @@
 
 /**
  * - 0 ... kill local variables only on stack frame destruction
- * - 2 ... kill local variables as soon as they become dead
+ * - 1 ... kill local variables as soon as they become dead
  */
 #define SE_EARLY_VARS_DESTRUCTION           1
 

@@ -637,22 +637,10 @@ void SymProc::killVar(const CodeStorage::KillVar &kv) {
     this->valDestroyTarget(addr);
 }
 
-bool isExitBlock(const CodeStorage::Block *bb) {
+bool headingToAbort(const CodeStorage::Block *bb) {
     const CodeStorage::Insn *term = bb->back();
     const cl_insn_e code = term->code;
-    switch (code) {
-        case CL_INSN_JMP:
-        case CL_INSN_COND:
-            return false;
-
-        case CL_INSN_RET:
-        case CL_INSN_ABORT:
-            return true;
-
-        default:
-            CL_BREAK_IF("invalid call of isExitBlock()");
-            return false;
-    }
+    return (CL_INSN_ABORT == code);
 }
 
 void SymProc::killInsn(const CodeStorage::Insn &insn) {
@@ -667,16 +655,13 @@ void SymProc::killInsn(const CodeStorage::Insn &insn) {
 
 void SymProc::killPerTarget(const CodeStorage::Insn &insn, unsigned target) {
     using namespace CodeStorage;
-#if !SE_EARLY_VARS_DESTRUCTION
-    return;
-#elif 1 == SE_EARLY_VARS_DESTRUCTION
-    if (isExitBlock(insn.targets[target]))
-        // There is no point in killing local variables if we heading to exiting
-        // of a function (or the whole program) anyway.  It can only cause
-        // unnecessary reporting of memleak on the way to abort(), which is
-        // common in the trivial OOM handling code.
-        return;
+#if SE_EARLY_VARS_DESTRUCTION
+    if (headingToAbort(insn.targets[target]))
 #endif
+        // There is no point in killing local variables if we are heading to
+        // CL_INSN_ABORT.  It can only cause unnecessary reporting of memleak
+        // in the OOM handling abort branch.
+        return;
 
     const TKillVarList &kList = insn.killPerTarget[target];
     BOOST_FOREACH(const KillVar &kv, kList)
