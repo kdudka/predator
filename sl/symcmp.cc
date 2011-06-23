@@ -138,17 +138,16 @@ bool cmpValues(
         const TValId            v1,
         const TValId            v2)
 {
+    *pNeedFollow = false;
     if (!matchPlainValues(vMap, sh1, sh2, v1, v2))
         return false;
 
     // check for special values
     const bool isSpecial = (v1 <= 0);
     CL_BREAK_IF(isSpecial && 0 < v2);
-    if (isSpecial) {
+    if (isSpecial)
         // already checked by matchPlainValues()/checkNonPosValues()
-        *pNeedFollow = false;
         return true;
-    }
 
     const TOffset off1 = sh1.valOffset(v1);
     const TOffset off2 = sh2.valOffset(v2);
@@ -168,8 +167,9 @@ bool cmpValues(
         return (cVal1 == cVal2);
     }
 
-    *pNeedFollow = isPossibleToDeref(code);
-    if (!*pNeedFollow)
+    if (isPossibleToDeref(code))
+        *pNeedFollow = true;
+    else
         // no valid target
         return true;
 
