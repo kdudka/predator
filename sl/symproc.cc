@@ -778,6 +778,16 @@ void SymExecCore::execHeapAlloc(
         // error alredy emitted
         return;
 
+    if (!size) {
+        CL_WARN_MSG(lw_, "POSIX says that, given zero size, the behavior of \
+malloc/calloc is implementation-defined");
+        CL_NOTE_MSG(lw_, "assuming NULL as the result");
+        this->objSetValue(lhs, VAL_NULL);
+        this->killInsn(insn);
+        dst.insert(sh_);
+        return;
+    }
+
     // now create a heap object
     const TValId val = sh_.heapAlloc(size, nullified);
     CL_BREAK_IF(val <= 0);
