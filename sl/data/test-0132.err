@@ -154,41 +154,23 @@ list.h:61:12: note: from call of __list_add()
 test-0132.c:50:11: note: from call of list_add()
 test-0132.c:23:5: note: from call of main()
 test-0132.c:69:2: error: dereference of NULL value with offset 4B
-test-0132.c:98:2: error: dereference of NULL value with offset 4B
-list.h:86:13: error: dereference of NULL value with offset 8B
-list.h:97:12: note: from call of __list_del()
-test-0132.c:112:12: note: from call of list_del()
-test-0132.c:23:5: note: from call of main()
-test-0132.c:109:2: error: dereference of NULL value with offset 4B
-test-0132.c:69:2: error: dereference of NULL value with offset 4B
-test-0132.c:98:2: error: dereference of NULL value with offset 4B
-list.h:86:13: error: dereference of NULL value with offset 8B
-list.h:97:12: note: from call of __list_del()
-test-0132.c:112:12: note: from call of list_del()
-test-0132.c:23:5: note: from call of main()
 list.h:86:13: warning: memory leak detected while assigning a variable on stack
 list.h:97:12: note: from call of __list_del()
 test-0132.c:112:12: note: from call of list_del()
 test-0132.c:23:5: note: from call of main()
-list.h:97:12: error: dereference of NULL value with offset 4B
-test-0132.c:112:12: note: from call of list_del()
-test-0132.c:23:5: note: from call of main()
-list.h:97:12: error: dereference of NULL value with offset 8B
-test-0132.c:112:12: note: from call of list_del()
-test-0132.c:23:5: note: from call of main()
-list.h:98:14: error: dereference of NULL value with offset 4B
-test-0132.c:112:12: note: from call of list_del()
-test-0132.c:23:5: note: from call of main()
-list.h:99:14: error: dereference of NULL value with offset 8B
-test-0132.c:112:12: note: from call of list_del()
-test-0132.c:23:5: note: from call of main()
-test-0132.c:109:2: error: dereference of NULL value with offset 4B
 test-0132.c:69:2: error: dereference of NULL value with offset 4B
 test-0132.c:98:2: error: dereference of NULL value with offset 4B
 list.h:86:13: warning: memory leak detected while assigning a variable on stack
 list.h:97:12: note: from call of __list_del()
 test-0132.c:112:12: note: from call of list_del()
 test-0132.c:23:5: note: from call of main()
+test-0132.c:98:2: error: dereference of NULL value with offset 4B
+list.h:86:13: error: dereference of NULL value with offset 8B
+list.h:97:12: note: from call of __list_del()
+test-0132.c:112:12: note: from call of list_del()
+test-0132.c:23:5: note: from call of main()
+test-0132.c:109:2: error: dereference of NULL value with offset 4B
+test-0132.c:98:2: error: dereference of NULL value with offset 4B
 list.h:86:13: error: dereference of NULL value with offset 8B
 list.h:97:12: note: from call of __list_del()
 test-0132.c:112:12: note: from call of list_del()
@@ -206,8 +188,11 @@ list.h:99:14: error: dereference of NULL value with offset 8B
 test-0132.c:112:12: note: from call of list_del()
 test-0132.c:23:5: note: from call of main()
 test-0132.c:109:2: error: dereference of NULL value with offset 4B
-test-0132.c:69:2: error: dereference of NULL value with offset 4B
 test-0132.c:98:2: error: dereference of NULL value with offset 4B
+list.h:86:13: error: dereference of NULL value with offset 8B
+list.h:97:12: note: from call of __list_del()
+test-0132.c:112:12: note: from call of list_del()
+test-0132.c:23:5: note: from call of main()
 list.h:97:12: error: dereference of NULL value with offset 4B
 test-0132.c:112:12: note: from call of list_del()
 test-0132.c:23:5: note: from call of main()
@@ -220,4 +205,5 @@ test-0132.c:23:5: note: from call of main()
 list.h:99:14: error: dereference of NULL value with offset 8B
 test-0132.c:112:12: note: from call of list_del()
 test-0132.c:23:5: note: from call of main()
+test-0132.c:109:2: error: dereference of NULL value with offset 4B
 test-0132.c:29:19: warning: memory leak detected while destroying a variable on stack

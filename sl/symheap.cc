@@ -1795,8 +1795,8 @@ bool SymHeap::proveNeq(TValId ref, TValId val) const {
             swapValues(ref, val);
     }
 
-    const EValueTarget code = this->valTarget(ref);
-    if (isAbstract(code)) {
+    const EValueTarget refCode = this->valTarget(ref);
+    if (isAbstract(refCode)) {
         // both values are abstract
         const TValId root1 = this->valRoot(ref);
         const TValId root2 = this->valRoot(val);
@@ -1848,7 +1848,8 @@ bool SymHeap::proveNeq(TValId ref, TValId val) const {
         const TValId valNext = writable.valueOf(nextPtrFromSeg(writable, seg));
         if (SymHeapCore::proveNeq(val, valNext))
             // non-empty abstract object reached
-            return (VAL_NULL == ref);
+            return (VAL_NULL == ref)
+                || isKnownObject(refCode);
 
         // jump to next value
         val = valNext;
