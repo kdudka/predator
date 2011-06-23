@@ -782,6 +782,7 @@ void SymExecCore::execHeapAlloc(
         CL_WARN_MSG(lw_, "POSIX says that, given zero size, the behavior of \
 malloc/calloc is implementation-defined");
         CL_NOTE_MSG(lw_, "assuming NULL as the result");
+        bt_->printBackTrace();
         this->objSetValue(lhs, VAL_NULL);
         this->killInsn(insn);
         dst.insert(sh_);
