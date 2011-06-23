@@ -1460,7 +1460,7 @@ bool insertSegmentClone(
         return false;
     }
 
-    if (off && !ctx.joiningData())
+    if (!ctx.joiningData())
         // on the way from joinSymHeaps(), some three way joins are destructive
         ctx.allowThreeWay = false;
 

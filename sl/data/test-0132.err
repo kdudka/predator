@@ -34,22 +34,6 @@ list.h:46:12: error: dereference of NULL value with offset 4B
 list.h:61:12: note: from call of __list_add()
 test-0132.c:50:11: note: from call of list_add()
 test-0132.c:23:5: note: from call of main()
-list.h:46:12: error: dereference of NULL value with offset 4B
-list.h:61:12: note: from call of __list_add()
-test-0132.c:50:11: note: from call of list_add()
-test-0132.c:23:5: note: from call of main()
-list.h:47:12: error: dereference of NULL value with offset 8B
-list.h:61:12: note: from call of __list_add()
-test-0132.c:50:11: note: from call of list_add()
-test-0132.c:23:5: note: from call of main()
-list.h:47:12: error: dereference of NULL value with offset 8B
-list.h:61:12: note: from call of __list_add()
-test-0132.c:50:11: note: from call of list_add()
-test-0132.c:23:5: note: from call of main()
-list.h:46:12: error: dereference of NULL value with offset 4B
-list.h:61:12: note: from call of __list_add()
-test-0132.c:50:11: note: from call of list_add()
-test-0132.c:23:5: note: from call of main()
 list.h:47:12: error: dereference of NULL value with offset 8B
 list.h:61:12: note: from call of __list_add()
 test-0132.c:50:11: note: from call of list_add()
@@ -71,26 +55,18 @@ list.h:61:12: note: from call of __list_add()
 test-0132.c:50:11: note: from call of list_add()
 test-0132.c:23:5: note: from call of main()
 list.h:45:13: error: dereference of NULL value with offset 8B
+list.h:61:12: note: from call of __list_add()
+test-0132.c:50:11: note: from call of list_add()
+test-0132.c:23:5: note: from call of main()
+list.h:46:12: error: dereference of NULL value with offset 4B
+list.h:61:12: note: from call of __list_add()
+test-0132.c:50:11: note: from call of list_add()
+test-0132.c:23:5: note: from call of main()
+list.h:47:12: error: dereference of NULL value with offset 8B
 list.h:61:12: note: from call of __list_add()
 test-0132.c:50:11: note: from call of list_add()
 test-0132.c:23:5: note: from call of main()
 test-0132.c:69:2: error: dereference of NULL value with offset 4B
-list.h:45:13: error: dereference of NULL value with offset 8B
-list.h:61:12: note: from call of __list_add()
-test-0132.c:50:11: note: from call of list_add()
-test-0132.c:23:5: note: from call of main()
-list.h:46:12: error: dereference of NULL value with offset 4B
-list.h:61:12: note: from call of __list_add()
-test-0132.c:50:11: note: from call of list_add()
-test-0132.c:23:5: note: from call of main()
-list.h:47:12: error: dereference of NULL value with offset 8B
-list.h:61:12: note: from call of __list_add()
-test-0132.c:50:11: note: from call of list_add()
-test-0132.c:23:5: note: from call of main()
-list.h:45:13: error: dereference of NULL value with offset 8B
-list.h:61:12: note: from call of __list_add()
-test-0132.c:50:11: note: from call of list_add()
-test-0132.c:23:5: note: from call of main()
 list.h:46:12: error: dereference of NULL value with offset 4B
 list.h:61:12: note: from call of __list_add()
 test-0132.c:50:11: note: from call of list_add()
@@ -112,6 +88,22 @@ list.h:61:12: note: from call of __list_add()
 test-0132.c:50:11: note: from call of list_add()
 test-0132.c:23:5: note: from call of main()
 list.h:48:13: warning: memory leak detected while assigning a variable on stack
+list.h:61:12: note: from call of __list_add()
+test-0132.c:50:11: note: from call of list_add()
+test-0132.c:23:5: note: from call of main()
+list.h:45:13: error: dereference of NULL value with offset 8B
+list.h:61:12: note: from call of __list_add()
+test-0132.c:50:11: note: from call of list_add()
+test-0132.c:23:5: note: from call of main()
+list.h:46:12: error: dereference of NULL value with offset 4B
+list.h:61:12: note: from call of __list_add()
+test-0132.c:50:11: note: from call of list_add()
+test-0132.c:23:5: note: from call of main()
+list.h:47:12: error: dereference of NULL value with offset 8B
+list.h:61:12: note: from call of __list_add()
+test-0132.c:50:11: note: from call of list_add()
+test-0132.c:23:5: note: from call of main()
+list.h:45:13: error: dereference of NULL value with offset 8B
 list.h:61:12: note: from call of __list_add()
 test-0132.c:50:11: note: from call of list_add()
 test-0132.c:23:5: note: from call of main()
