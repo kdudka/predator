@@ -27,6 +27,7 @@
 
 #include "cl_storage.hh"
 #include "killer.hh"
+#include "loopscan.hh"
 #include "stopwatch.hh"
 
 #include <string>
@@ -49,6 +50,9 @@ class ClEasy: public ClStorageBuilder {
 
     protected:
         virtual void run(CodeStorage::Storage &stor) {
+            CL_DEBUG("scanning CFG for loop-closing edges...");
+            findLoopClosingEdges(stor);
+
             CL_DEBUG("killing local variables...");
             killLocalVariables(stor);
 

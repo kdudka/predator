@@ -31,6 +31,14 @@
 #define CL_DEBUG_CLF                    0
 
 /**
+ * debug level of the CFG loop scanner
+ * - 0 ... print only time elapsed
+ * - 1 ... print edges marked as loop-closing
+ * - 2 ... print some basic progress info
+ */
+#define CL_DEBUG_LOOP_SCAN              1
+
+/**
  * debug level of the verbose output when killing variables
  * - 0 ... print only time elapsed
  * - 1 ... print variables being killed and variables black-listed for killing

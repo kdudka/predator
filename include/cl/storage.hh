@@ -380,6 +380,9 @@ struct Insn {
      *      - [@b 1..@b n] - where to jump in corresponding cases
      */
     TTargetList                 targets;
+
+    /// @todo some dox
+    std::vector<unsigned>       loopClosingTargets;
 };
 
 /**
