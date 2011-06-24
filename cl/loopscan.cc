@@ -112,12 +112,21 @@ void analyseFnc(Fnc &fnc) {
             // already handled
             continue;
 
-        // a new loop-edge detected
-        const TLoc loc = &bb->back()->loc;
-        LS_DEBUG_MSG(1, loc, "loop-closing edge detected: "
+        // pick up the location of the _last_ insn with valid location
+        TLoc edgeLoc = 0;
+        BOOST_REVERSE_FOREACH(const CodeStorage::Insn *insn, *bb) {
+            const TLoc loc = &insn->loc;
+            if (loc->file) {
+                edgeLoc = loc;
+                break;
+            }
+        }
+
+        LS_DEBUG_MSG(1, edgeLoc, "loop-closing edge detected: "
                 << bb->name() << " -> " << bbNext->name()
                 << " (target #" << target << ")");
 
+        // append a new loop-edge
         Insn *term = const_cast<Insn *>(bb->back());
         term->loopClosingTargets.push_back(target);
     }
