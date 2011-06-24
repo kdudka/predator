@@ -552,10 +552,24 @@ class SymHeap: public SymHeapCore {
 
         virtual TValId valClone(TValId);
 
-    public:
-        // FIXME: these should not be public
+    protected:
+        // used only by the symseg module (via friend)
         unsigned segEffectiveMinLength(TValId seg) const;
         void segSetEffectiveMinLength(TValId seg, unsigned len);
+
+        friend unsigned dlSegMinLength(
+                const SymHeap               &sh,
+                const TValId                dls,
+                const bool                  allowIncosistency);
+
+        friend unsigned segMinLength(
+                const SymHeap               &sh,
+                const TValId                seg,
+                const bool                  allowIncosistency);
+
+        friend void dlSegSetMinLength(SymHeap &sh, TValId dls, unsigned len);
+
+        friend void segSetMinLength(SymHeap &sh, TValId seg, unsigned len);
 
     private:
         void dlSegCrossNeqOp(ENeqOp op, TValId seg);
