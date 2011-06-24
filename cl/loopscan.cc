@@ -75,7 +75,8 @@ void analyseFnc(Fnc &fnc) {
     TBlockSet pathSet, done;
 
     const TBlock entry = fnc.cfg.entry();
-    CL_BREAK_IF(!entry->inbound().empty());
+    if (!entry->inbound().empty())
+        pathSet.insert(entry);
 
     const DfsItem item(entry);
     TDfsStack dfsStack;
