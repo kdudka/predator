@@ -88,7 +88,7 @@
 /**
  * if 1, do not perform abstraction on each end of BB, but only when looping
  */
-#define SE_ABSTRACT_ON_LOOP_EDGES_ONLY      0
+#define SE_ABSTRACT_ON_LOOP_EDGES_ONLY      1
 
 /**
  * if 1, perform abstraction after each just completed call on @b caller's side
