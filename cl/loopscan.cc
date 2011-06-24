@@ -72,10 +72,10 @@ void analyseFnc(Fnc &fnc) {
     LS_DEBUG_MSG(2, loc, ">>> entering " << nameOf(fnc) << "()");
 
     TEdgeSet loopClosingEdges;
+    TBlockSet pathSet, done;
 
     const TBlock entry = fnc.cfg.entry();
-    TBlockSet pathSet;
-    pathSet.insert(entry);
+    CL_BREAK_IF(!entry->inbound().empty());
 
     const DfsItem item(entry);
     TDfsStack dfsStack;
@@ -88,22 +88,27 @@ void analyseFnc(Fnc &fnc) {
         const TTargetList &tlist = top.bb->targets();
         if (tlist.size() <= top.target) {
             // done at this level
-            if (1 != pathSet.erase(bb))
+            if (!insertOnce(done, bb))
                 CL_BREAK_IF("LoopScan::analyseFnc() malfunction");
 
+            pathSet.erase(bb);
             dfsStack.pop();
             continue;
         }
 
         const unsigned target = top.target++;
         const TBlock bbNext = tlist[target];
+        if (hasKey(done, bbNext))
+            // already traversed
+            continue;
+
         if (!hasKey(pathSet, bbNext)) {
-#if 1 < CL_DEBUG_LOOP_SCAN
             // nest
             const DfsItem next(tlist[target]);
             dfsStack.push(next);
-            pathSet.insert(bbNext);
-#endif
+            if (1 < bbNext->inbound().size())
+                pathSet.insert(bbNext);
+
             continue;
         }
 
