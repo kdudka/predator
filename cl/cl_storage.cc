@@ -475,6 +475,11 @@ void ClStorageBuilder::Private::closeInsn() {
         this->digOperand(&op);
     }
 
+    TTargetList &tlist = insn->targets;
+    BOOST_FOREACH(const Block *target, tlist) {
+        const_cast<Block *>(target)->appendPredecessor(this->bb);
+    }
+
     insn->killPerTarget.resize(insn->targets.size());
 
     // let it honestly crash if callback sequence is incorrect since this should

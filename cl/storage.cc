@@ -316,6 +316,10 @@ void Block::append(const Insn *insn) {
     insns_.push_back(insn);
 }
 
+void Block::appendPredecessor(Block *pred) {
+    inbound_.push_back(pred);
+}
+
 const Insn* Block::front() const {
     CL_BREAK_IF(insns_.empty());
     return insns_.front();

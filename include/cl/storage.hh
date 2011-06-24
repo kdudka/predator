@@ -431,16 +431,23 @@ class Block {
         }
 
         /**
-         * append a given instruction to and of the block
+         * append a given instruction to end of the block
          * @param insn Instruction to append.
          * @note Given objects are not cloned nor destroyed!
          */
         void append(const Insn *insn);
 
+        void appendPredecessor(Block *);
+
         /**
-         * return list of all directly successor basic blocks
+         * return list of all direct successors
          */
         const TTargetList& targets() const;
+
+        /**
+         * return list of all direct predecessors
+         */
+        const TTargetList& inbound()         const { return inbound_; }
 
         /**
          * return STL-like iterator to go through all the instructions inside
@@ -483,6 +490,7 @@ class Block {
 
     private:
         TList insns_;
+        TTargetList inbound_;
         ControlFlow *cfg_;
         std::string name_;
 };
