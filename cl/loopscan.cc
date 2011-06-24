@@ -27,6 +27,7 @@
 #include "stopwatch.hh"
 
 #include <set>
+#include <stack>
 
 #include <boost/foreach.hpp>
 
@@ -50,9 +51,76 @@ typedef const struct cl_loc                *TLoc;
 typedef const Block                        *TBlock;
 typedef std::set<TBlock>                    TBlockSet;
 
+struct DfsItem {
+    TBlock                      bb;
+    unsigned                    target;
+
+    DfsItem(TBlock bb_):
+        bb(bb_),
+        target(0)
+    {
+    }
+};
+
+typedef std::stack<DfsItem>                 TDfsStack;
+
+typedef std::pair<TBlock, TBlock>           TCfgEdge;
+typedef std::set<TCfgEdge>                  TEdgeSet;
+
 void analyseFnc(Fnc &fnc) {
     const TLoc loc = &fnc.def.data.cst.data.cst_fnc.loc;
     LS_DEBUG_MSG(2, loc, ">>> entering " << nameOf(fnc) << "()");
+
+    TEdgeSet loopClosingEdges;
+
+    const TBlock entry = fnc.cfg.entry();
+    TBlockSet pathSet;
+    pathSet.insert(entry);
+
+    const DfsItem item(entry);
+    TDfsStack dfsStack;
+    dfsStack.push(item);
+
+    while (!dfsStack.empty()) {
+        DfsItem &top = dfsStack.top();
+        const TBlock bb = top.bb;
+
+        const TTargetList &tlist = top.bb->targets();
+        if (tlist.size() <= top.target) {
+            // done at this level
+            if (1 != pathSet.erase(bb))
+                CL_BREAK_IF("LoopScan::analyseFnc() malfunction");
+
+            dfsStack.pop();
+            continue;
+        }
+
+        const unsigned target = top.target++;
+        const TBlock bbNext = tlist[target];
+        if (!hasKey(pathSet, bbNext)) {
+#if 1 < CL_DEBUG_LOOP_SCAN
+            // nest
+            const DfsItem next(tlist[target]);
+            dfsStack.push(next);
+            pathSet.insert(bbNext);
+#endif
+            continue;
+        }
+
+        const TCfgEdge edge(bb, bbNext);
+        if (!insertOnce(loopClosingEdges, edge))
+            // already handled
+            continue;
+
+        // a new loop-edge detected
+        const TLoc loc = &bb->back()->loc;
+        LS_DEBUG_MSG(1, loc, "loop-closing edge detected: "
+                << bb->name() << " -> " << bbNext->name()
+                << " (target #" << target << ")");
+
+        Insn *term = const_cast<Insn *>(bb->back());
+        term->loopClosingTargets.push_back(target);
+    }
 }
 
 } // namespace LoopScan

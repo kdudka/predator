@@ -357,7 +357,17 @@ void SymExecEngine::updateState(SymHeap &sh, const CodeStorage::Block *ofBlock) 
     const std::string &name = ofBlock->name();
 
     // time to consider abstraction
+#if SE_ABSTRACT_ON_LOOP_EDGES_ONLY
+    const CodeStorage::Insn *term = block_->back();
+    BOOST_FOREACH(const unsigned idxTarget, term->loopClosingTargets) {
+        if (term->targets[idxTarget] == ofBlock) {
+            abstractIfNeeded(sh);
+            break;
+        }
+    }
+#else
     abstractIfNeeded(sh);
+#endif
 
     // update _target_ state and check if anything has changed
     if (!stateMap_.insertFast(ofBlock, block_, sh)) {
