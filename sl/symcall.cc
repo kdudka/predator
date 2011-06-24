@@ -232,27 +232,33 @@ void SymCallCtx::Private::destroyStackFrame(SymHeap &sh) {
     }
 }
 
-// TODO: optimize this
+bool isGlVar(EValueTarget code) {
+    return (VT_STATIC == code);
+}
+
 void joinHeapsWithCare(SymHeap &sh, SymHeap surround) {
     LDP_INIT(symcall, "join");
     LDP_PLOT(symcall, sh);
     LDP_PLOT(symcall, surround);
 
-    TCVarList live;
-    gatherProgramVars(live, sh, /* liveOnly */ true);
+    TValList liveGlVars;
+    sh.gatherRootObjects(liveGlVars, isGlVar);
+    BOOST_FOREACH(const TValId root, liveGlVars) {
+        if (!isVarAlive(sh, root))
+            // not a live variable
+            continue;
 
-    SymHeap safeSurround(sh.stor());
-    splitHeapByCVars(&surround, live, &safeSurround);
-    joinHeapsByCVars(&sh, &safeSurround);
+        const CVar cv = sh.cVarByRoot(root);
+        if (cv.inst)
+            // not a gl variable
+            continue;
 
+        const TValId addr = surround.addrOfVar(cv);
+        surround.valDestroyTarget(addr);
+    }
+
+    joinHeapsByCVars(&sh, &surround);
     LDP_PLOT(symcall, sh);
-
-#ifndef NDEBUG
-    live.clear();
-    gatherProgramVars(live, surround, /* liveOnly */ true);
-    if (!live.empty())
-        CL_DEBUG("joinHeapsWithCare() did something useful");
-#endif
 }
 
 void SymCallCtx::flushCallResults(SymState &dst) {
@@ -277,11 +283,7 @@ void SymCallCtx::flushCallResults(SymState &dst) {
 
         // first join the heap with its original surround
         SymHeap sh(d->rawResults[i]);
-#if SE_DISABLE_CALL_CACHE
-        joinHeapsByCVars(&sh, &d->surround);
-#else
         joinHeapsWithCare(sh, d->surround);
-#endif
 
         LDP_INIT(symcall, "post-processing");
         LDP_PLOT(symcall, sh);
@@ -326,7 +328,6 @@ SymBackTrace& SymCallCache::bt() {
     return d->bt;
 }
 
-// TODO: optimize this
 void transferGlVar(SymHeap &dst, SymHeap src, const CVar &cv) {
     CL_BREAK_IF(cv.inst);
 
