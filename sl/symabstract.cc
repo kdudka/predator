@@ -585,25 +585,32 @@ bool segAbstractionStep(
         const BindingOff            &off,
         TValId                      *pCursor)
 {
-    if (isDlsBinding(off)) {
-        // DLS
-        CL_BREAK_IF(!dlSegCheckConsistency(sh));
-        dlSegAbstractionStep(sh, pCursor, off);
-        CL_BREAK_IF(!dlSegCheckConsistency(sh));
-        return true;
-    }
-
-    // SLS
     const TValId at = *pCursor;
-    const TValId next = nextRootObj(sh, at, off.next);
+
+    // jump to peer in case of DLS
+    TValId peer = at;
+    if (OK_DLS == sh.valTargetKind(at))
+        peer = dlSegPeer(sh, at);
+
+    // jump to the next object (as we know such an object exists)
+    const TValId next = nextRootObj(sh, peer, off.next);
 
     // check wheter he upcoming abstraction step is still doable
     EJoinStatus status;
     if (!joinDataReadOnly(&status, sh, off, at, next, 0))
         return false;
 
-    // perform an SLS abstraction step
-    slSegAbstractionStep(sh, pCursor, off);
+    if (isDlsBinding(off)) {
+        // DLS
+        CL_BREAK_IF(!dlSegCheckConsistency(sh));
+        dlSegAbstractionStep(sh, pCursor, off);
+        CL_BREAK_IF(!dlSegCheckConsistency(sh));
+    }
+    else {
+        // SLS
+        slSegAbstractionStep(sh, pCursor, off);
+    }
+
     return true;
 }
 
