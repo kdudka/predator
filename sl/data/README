@@ -177,6 +177,9 @@ Higher level SLS/DLS abstraction, etc.
 
     test-0167.c - state explosion minimal example taken from test-0124
 
+    test-0168.c - yet another modification of test-0124
+
+
 Linux lists
 ===========
     test-0073.c - playing with some macros from <linux/list.h>
