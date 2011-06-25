@@ -411,9 +411,14 @@ struct cl_var {
     struct cl_loc                       loc;
 
     /**
-     * (possibly empty) chain of initializers, used only for global/static vars
+     * (possibly empty) chain of initializers
      */
     struct cl_initializer               *initial;
+
+    /**
+     * true if the variable is initialized (does not imply NULL != initial)
+     */
+    bool                                initialized;
 };
 
 /**

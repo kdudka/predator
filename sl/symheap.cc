@@ -1282,6 +1282,7 @@ TValId SymHeapCore::addrOfVar(CVar cv) {
     rootData->addr = addr;
     rootData->lastKnownClt = clt;
     rootData->cbSize = clt->size;
+    rootData->initializedToZero = var.initialized;
 #if SE_ASSUME_FRESH_STATIC_DATA
     if (VT_STATIC == code)
         rootData->initializedToZero = true;

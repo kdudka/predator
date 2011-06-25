@@ -85,6 +85,15 @@ struct Var {
     std::vector<const Insn *>   initials;
 
     /**
+     * if true, the variable is initialized; in particular it means that whole
+     * contents of the variable is nullified unless said otherwise (and yes,
+     * even if initials is an empty list)
+     *
+     * @todo a better API for initializers?
+     */
+    bool                        initialized;
+
+    /**
      * dummy constructor
      * @note known to be useful for internal purposes only
      */

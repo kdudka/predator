@@ -820,6 +820,8 @@ void dup_ac_chain(struct cl_accessor **ac_first, struct cl_accessor ***ac_last)
 static void read_initials(struct cl_var *var, struct cl_initializer **pinit,
                           tree ctor, struct cl_accessor *ac)
 {
+    var->initialized = true;
+
     // dig target type
     struct cl_type *clt = add_type_if_needed(ctor);
 

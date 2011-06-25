@@ -300,7 +300,7 @@ struct ClStorageBuilder::Private {
     {
     }
 
-    void digInitials(Var &, const struct cl_initializer *initial);
+    void digInitials(Var &, const struct cl_var *);
     void digOperandVar(const struct cl_operand *);
     void digOperandCst(const struct cl_operand *);
     void digOperand(const struct cl_operand *);
@@ -324,9 +324,12 @@ void ClStorageBuilder::acknowledge() {
 
 void ClStorageBuilder::Private::digInitials(
         Var                             &var,
-        const struct cl_initializer     *initial)
+        const struct cl_var             *clv)
 {
-    for (; initial; initial = initial->next) {
+    var.initialized = clv->initialized;
+
+    const struct cl_initializer *initial;
+    for (initial = clv->initial; initial; initial = initial->next) {
         ControlFlow *cfg = /* XXX */ 0;
         Insn *insn = createInsn(&initial->insn, /* XXX */ *cfg);
         var.initials.push_back(insn);
@@ -383,7 +386,7 @@ void ClStorageBuilder::Private::digOperandVar(const struct cl_operand *op) {
             CL_BREAK_IF("digOperandVar() got an invalid scope");
     }
 
-    this->digInitials(stor.vars[id], clv->initial);
+    this->digInitials(stor.vars[id], clv);
 }
 
 void ClStorageBuilder::Private::digOperandCst(const struct cl_operand *op) {
