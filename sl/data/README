@@ -175,6 +175,7 @@ Higher level SLS/DLS abstraction, etc.
     test-0157.c - alternation of test-0124, all functions are manually unfolded
                 - contributed by Tomas Vojnar
 
+    test-0167.c - state explosion minimal example taken from test-0124
 
 Linux lists
 ===========
@@ -421,11 +422,10 @@ Tests taken from Forester
                 - originally taken from fa/data/sll-listofclists.c
 
     test-0513.c - Merge-Sort operating on two-level SLL
-                - Predator reports artificial errors in default configuration
-                - works if Predator is compiled with with SE_DEFER_SLS_INTRO
                 - originally taken from fa/data/sll-mergesort.c
 
     test-0514.c - tiny simplification of test-0513 for Predator
+                - not needed with SE_ABSTRACT_ON_LOOP_EDGES_ONLY [now default]
 
     test-0515.c - reversion of a NULL-terminated SLL
                 - originally taken from fa/data/sll-rev.c
