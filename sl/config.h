@@ -64,13 +64,6 @@
 #define DEBUG_SYMCUT                        0
 
 /**
- * if 1, the symcut module allows generic minimal lengths to survive a function
- * call/return.  @b Not recommended unless SymCallCache has been rewritten to
- * use symjoin to maintain cache entries.
- */
-#define SE_SYMCUT_PRESERVES_MIN_LENGTHS     0
-
-/**
  * if 1, symjoin prints some extra debugging info
  */
 #define DEBUG_SYMJOIN                       0
@@ -86,14 +79,14 @@
 #define DEBUG_SYMSTATE_INSERT               0
 
 /**
- * if 1, do not perform abstraction on each end of BB, but only when looping
- */
-#define SE_ABSTRACT_ON_LOOP_EDGES_ONLY      1
-
-/**
  * if 1, perform abstraction after each just completed call on @b caller's side
  */
 #define SE_ABSTRACT_ON_CALL_DONE            1
+
+/**
+ * if 1, do not perform abstraction on each end of BB, but only when looping
+ */
+#define SE_ABSTRACT_ON_LOOP_EDGES_ONLY      1
 
 /**
  * if 1, assume that the contents of static data is initialized on first access
@@ -143,15 +136,15 @@
 #define SE_EARLY_VARS_DESTRUCTION           1
 
 /**
+ * maximal call depth
+ */
+#define SE_MAX_CALL_DEPTH                   0x40
+
+/**
  * an integer expressing how much we should prefer/force lossless prototypes;
  * values from the interval 0..3 make sense
  */
 #define SE_PREFER_LOSSLESS_PROTOTYPES       1
-
-/**
- * maximal call depth
- */
-#define SE_MAX_CALL_DEPTH                   0x40
 
 /**
  * upper bound of DLS minimal length (zero means unlimited)
@@ -162,6 +155,13 @@
  * upper bound of SLS minimal length (zero means unlimited)
  */
 #define SE_RESTRICT_SLS_MINLEN              0
+
+/**
+ * if 1, the symcut module allows generic minimal lengths to survive a function
+ * call/return.  @b Not recommended unless SymCallCache has been rewritten to
+ * use symjoin to maintain cache entries.
+ */
+#define SE_SYMCUT_PRESERVES_MIN_LENGTHS     0
 
 /**
  * if 1, support partial tracking of non-pointer values, which may result into
