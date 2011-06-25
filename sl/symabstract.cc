@@ -371,13 +371,12 @@ void clonePrototypes(SymHeap &sh, TValId addr, TValId dup) {
     redirectRefs(sh, dup, addr, dup);
 }
 
-void slSegAbstractionStep(SymHeap &sh, TValId *pCursor, const BindingOff &off)
+void slSegAbstractionStep(
+        SymHeap                     &sh,
+        const TValId                at,
+        const TValId                nextAt,
+        const BindingOff            &off)
 {
-    // jump to the next object
-    const TValId at = *pCursor;
-    const TValId nextAt = nextRootObj(sh, at, off.next);
-    CL_BREAK_IF(nextAt <= 0);
-
     // read minimal length of 'obj' and set it temporarily to zero
     unsigned len = objMinLength(sh, at);
     if (isAbstract(sh.valTarget(at)))
@@ -405,9 +404,6 @@ void slSegAbstractionStep(SymHeap &sh, TValId *pCursor, const BindingOff &off)
     if (len)
         // declare resulting segment's minimal length
         segSetMinLength(sh, nextAt, len);
-
-    // move to the next object
-    *pCursor = nextAt;
 }
 
 void enlargeMayExist(SymHeap &sh, const TValId at) {
@@ -526,58 +522,36 @@ void dlSegMerge(SymHeap &sh, TValId seg1, TValId seg2) {
     dlSegSyncPeerData(sh, seg2);
 }
 
-void dlSegAbstractionStep(SymHeap &sh, TValId *pCursor, const BindingOff &off)
+bool /* jump next */ dlSegAbstractionStep(
+        SymHeap                     &sh,
+        const TValId                at,
+        const TValId                next,
+        const BindingOff            &off)
 {
-    // the first object is clear
-    const TValId a1 = *pCursor;
+    const EObjKind kind = sh.valTargetKind(at);
+    const EObjKind kindNext = sh.valTargetKind(next);
+    CL_BREAK_IF(OK_SLS == kind || OK_SLS == kindNext);
 
-    // we'll find the next one later on
-    TValId a2 = a1;
-
-    const EObjKind kind = sh.valTargetKind(a1);
-    switch (kind) {
-        case OK_SLS:
-            // *** segDiscover() failure detected ***
-            CL_TRAP;
-
-        case OK_DLS:
-            // jump to peer
-            a2 = dlSegPeer(sh, a2);
-
-            // jump to the next object (as we know such an object exists)
-            a2 = nextRootObj(sh, a2, sh.segBinding(a2).next);
-            if (OK_DLS != sh.valTargetKind(a2)) {
-                // DLS + VAR
-                dlSegGobble(sh, a1, a2, /* backward */ false);
-                return;
-            }
-
+    if (OK_DLS == kindNext) {
+        if (OK_DLS == kind)
             // DLS + DLS
-            dlSegMerge(sh, a1, a2);
-            break;
+            dlSegMerge(sh, at, next);
+        else
+            // CONCRETE + DLS
+            dlSegGobble(sh, next, at, /* backward */ true);
 
-        case OK_MAY_EXIST:
-        case OK_CONCRETE:
-            // jump to the next object (as we know such an object exists)
-            a2 = nextRootObj(sh, a2, off.next);
-            if (OK_DLS != sh.valTargetKind(a2)) {
-                // VAR + VAR
-                dlSegCreate(sh, a1, a2, off);
-                return;
-            }
-
-            // VAR + DLS
-            dlSegGobble(sh, a2, a1, /* backward */ true);
-            break;
+        return /* jump next */ true;
     }
+    else {
+        if (OK_DLS == kind)
+            // DLS + CONCRETE
+            dlSegGobble(sh, at, next, /* backward */ false);
+        else
+            // CONCRETE + CONCRETE
+            dlSegCreate(sh, at, next, off);
 
-    // the current object has been just consumed, move to the next one
-    *pCursor = a2;
-
-#ifndef NDEBUG
-    // just check if the Neq predicates work well so far
-    dlSegMinLength(sh, a2);
-#endif
+        return /* nobody moves */ false;
+    }
 }
 
 bool segAbstractionStep(
@@ -603,14 +577,19 @@ bool segAbstractionStep(
     if (isDlsBinding(off)) {
         // DLS
         CL_BREAK_IF(!dlSegCheckConsistency(sh));
-        dlSegAbstractionStep(sh, pCursor, off);
+        const bool jumpNext = dlSegAbstractionStep(sh, at, next, off);
         CL_BREAK_IF(!dlSegCheckConsistency(sh));
+        if (!jumpNext)
+            // stay in place
+            return true;
     }
     else {
         // SLS
-        slSegAbstractionStep(sh, pCursor, off);
+        slSegAbstractionStep(sh, at, next, off);
     }
 
+    // move the cursor one step forward
+    *pCursor = next;
     return true;
 }
 
