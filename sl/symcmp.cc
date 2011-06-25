@@ -284,8 +284,11 @@ bool areEqual(
         &sh2Writable
     };
 
-    // start with program variables
+    // schedule return values
     TWorkList wl;
+    wl.schedule(VAL_ADDR_OF_RET, VAL_ADDR_OF_RET);
+
+    // start with program variables
     VarScheduleVisitor visitor(wl);
     if (!traverseProgramVarsGeneric<0, /* N_SRC */ 2>(heaps, visitor))
         return false;
