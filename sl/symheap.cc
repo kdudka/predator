@@ -668,7 +668,7 @@ TValId SymHeapCore::Private::objInit(TObjId obj) {
         }
     }
 
-    // deleayed creation of an uninitialized value
+    // delayed creation of an uninitialized value
     if (rootData->initializedToZero) {
         objData->value = VAL_NULL;
         return VAL_NULL;
@@ -678,11 +678,15 @@ TValId SymHeapCore::Private::objInit(TObjId obj) {
     const EValueTarget code = rootData->code;
     const EValueOrigin origin = originByCode(code);
     const TValId val = this->valCreate(VT_UNKNOWN, origin);
-#if SE_TRACK_UNINITIALIZED
-    objData->value = val;
-#else
+#if !SE_TRACK_UNINITIALIZED
     return val;
+#elif !SE_TRACK_NON_POINTER_VALUES
+    if (!isDataPtr(objData->clt))
+        return val;
 #endif
+
+    // delayed initialization
+    objData->value = val;
 
     // mark the object as live
     rootData->liveObjs[obj] = /* isPtr */ isDataPtr(clt);
