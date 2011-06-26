@@ -91,8 +91,8 @@ class SymProc {
         /// obtain a heap value corresponding to the given operand
         virtual TValId valFromOperand(const struct cl_operand &op);
 
-        /// resolve Fnc uid from the given opreand, -1 if there is no such Fnc
-        int /* uid */ fncFromOperand(const struct cl_operand &op);
+        /// resolve Fnc uid from the given operand, return true on success
+        bool fncFromOperand(int *pUid, const struct cl_operand &op);
 
         /// high-level interface to SymHeap::objSetValue()
         void objSetValue(TObjId lhs, TValId rhs);

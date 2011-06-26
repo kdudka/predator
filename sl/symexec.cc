@@ -896,8 +896,9 @@ const CodeStorage::Fnc* SymExec::resolveCallInsn(
     proc.setLocation(lw);
 
     const struct cl_operand &opFnc = opList[/* fnc */ 1];
-    const int uid = proc.fncFromOperand(opFnc);
-    if (-1 == uid) {
+
+    int uid;
+    if (!proc.fncFromOperand(&uid, opFnc)) {
         CL_BREAK_IF(CL_OPERAND_CST == opFnc.code);
         CL_ERROR_MSG(lw, "failed to resolve indirect function call");
         goto fail;

@@ -426,20 +426,30 @@ TValId SymProc::valFromOperand(const struct cl_operand &op) {
     }
 }
 
-int /* uid */ SymProc::fncFromOperand(const struct cl_operand &op) {
+bool SymProc::fncFromOperand(int *pUid, const struct cl_operand &op) {
     if (CL_OPERAND_CST == op.code) {
         // direct call
         const struct cl_cst &cst = op.data.cst;
-        CL_BREAK_IF(CL_TYPE_FNC != cst.code);
-        return cst.data.cst_fnc.uid;
+        if (CL_TYPE_FNC != cst.code)
+            return false;
 
-    } else {
-        // indirect call
-        const TValId val = this->valFromOperand(op);
-        CustomValue cv = sh_.valUnwrapCustom(val);
-        CL_BREAK_IF(CV_FNC != cv.code);
-        return cv.data.uid;
+        *pUid = cst.data.cst_fnc.uid;
+        return true;
     }
+
+    // assume indirect call
+    const TValId val = this->valFromOperand(op);
+    if (VT_CUSTOM != sh_.valTarget(val))
+        // not a custom value
+        return false;
+
+    CustomValue cv = sh_.valUnwrapCustom(val);
+    if (CV_FNC != cv.code)
+        // not a pointer to function
+        return false;
+
+    *pUid = cv.data.uid;
+    return true;
 }
 
 void SymProc::heapObjDefineType(TObjId lhs, TValId rhs) {
