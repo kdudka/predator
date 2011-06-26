@@ -261,30 +261,28 @@ bool matchData(
         const TValId                at1,
         const TValId                at2,
         TProtoRoots                 *protoRoots,
-        int                         *pThreshold)
+        int                         *pCost)
 {
     EJoinStatus status;
     if (!joinDataReadOnly(&status, sh, off, at1, at2, protoRoots))
         return false;
 
-    int thr = 0;
+    int cost = 0;
     switch (status) {
         case JS_USE_ANY:
             break;
 
         case JS_USE_SH1:
         case JS_USE_SH2:
-            thr = (SE_PREFER_LOSSLESS_PROTOTYPES) - 1;
+            cost = (SE_PREFER_LOSSLESS_PROTOTYPES) - 1;
             break;
 
         case JS_THREE_WAY:
-            thr = (SE_PREFER_LOSSLESS_PROTOTYPES);
+            cost = (SE_PREFER_LOSSLESS_PROTOTYPES);
             break;
     }
 
-    if (pThreshold)
-        *pThreshold = thr;
-
+    *pCost = cost;
     return true;
 }
 
@@ -330,7 +328,9 @@ bool segAvoidSelfCycle(
         || dlSegHaveChain(sh, seg, beg, off.next);
 }
 
-unsigned /* len */ segDiscover(
+bool segDiscover(
+        int                         *pLen,
+        int                         *pCost,
         SymHeap                     &sh,
         const BindingOff            &off,
         const TValId                entry)
@@ -343,22 +343,22 @@ unsigned /* len */ segDiscover(
     TValId at = jumpToNextObj(sh, off, haveSeen, entry);
     if (!insertOnce(haveSeen, at))
         // loop detected
-        return 0;
+        return false;
 
-    // [experimental] we need a way to prefer lossless prototypes
-    int maxThreshold = 0;
+    // we need a way to prefer lossless prototypes
+    *pCost = 0;
 
     // main loop of segDiscover()
     std::vector<TValId> path;
     while (VAL_INVALID != at) {
         // compare the data
         TProtoRoots protoRoots;
-        int threshold = 0;
+        int cost = 0;
 
         // TODO: optimize such that matchData() is not called at all when any
         // _program_ variable points at/inside;  call of matchData() in such
         // cases is significant waste for us!
-        if (!matchData(sh, off, prev, at, &protoRoots, &threshold)) {
+        if (!matchData(sh, off, prev, at, &protoRoots, &cost)) {
             CL_DEBUG("    DataMatchVisitor refuses to create a segment!");
             break;
         }
@@ -390,8 +390,8 @@ unsigned /* len */ segDiscover(
             if (allowReferredEnd) {
                 // we allow others to point at DLS end-point's _head_
                 path.push_back(at);
-                if (maxThreshold < threshold)
-                    maxThreshold = threshold;
+                if (*pCost < cost)
+                    *pCost = cost;
             }
 
             break;
@@ -399,8 +399,8 @@ unsigned /* len */ segDiscover(
 
         // enlarge the path by one
         path.push_back(at);
-        if (maxThreshold < threshold)
-            maxThreshold = threshold;
+        if (*pCost < cost)
+            *pCost = cost;
 
         // jump to the next object on the path
         prev = at;
@@ -409,23 +409,15 @@ unsigned /* len */ segDiscover(
 
     if (path.empty())
         // found nothing
-        return 0;
+        return false;
 
     int len = path.size();
     if (segAvoidSelfCycle(sh, off, entry, path.back()))
         // avoid creating self-cycle of two segments
         --len;
 
-    if ((SE_PREFER_LOSSLESS_PROTOTYPES) < len)
-        // path already too long
-        maxThreshold = 0;
-
-#if SE_DEFER_SLS_INTRO
-    if (!isDlsBinding(off))
-        maxThreshold += (SE_DEFER_SLS_INTRO);
-#endif
-
-    return std::max(0, len - maxThreshold);
+    *pLen = len;
+    return (0 < len);
 }
 
 class PtrFinder {
@@ -545,7 +537,7 @@ unsigned /* len */ selectBestAbstraction(
             << cnt << " entry candidate(s) given");
 
     // go through entry candidates
-    unsigned            bestLen = 0;
+    int                 bestLen = 0;
     unsigned            bestIdx = 0;
     BindingOff          bestBinding;
 
@@ -554,7 +546,20 @@ unsigned /* len */ selectBestAbstraction(
         // go through binding candidates
         const SegCandidate &segc = candidates[idx];
         BOOST_FOREACH(const BindingOff &off, segc.offList) {
-            const unsigned len = segDiscover(sh, off, segc.entry);
+            int len, cost;
+            if (!segDiscover(&len, &cost, sh, off, segc.entry))
+                continue;
+
+            if ((SE_PREFER_LOSSLESS_PROTOTYPES) < len)
+                // path already too long
+                cost = 0;
+
+#if SE_DEFER_SLS_INTRO
+            if (!isDlsBinding(off))
+                cost += (SE_DEFER_SLS_INTRO);
+#endif
+
+            len -= cost;
             if (len <= bestLen)
                 continue;
 
