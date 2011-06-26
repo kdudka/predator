@@ -153,7 +153,7 @@ struct SymJoinCtx {
         sh1(/* XXX */ const_cast<SymHeap &>(sh1_)),
         sh2(/* XXX */ const_cast<SymHeap &>(sh2_)),
         status(JS_USE_ANY),
-        allowThreeWay(true)
+        allowThreeWay(1 < (SE_ALLOW_THREE_WAY_JOIN))
     {
         initValMaps();
     }
@@ -164,7 +164,7 @@ struct SymJoinCtx {
         sh1(/* XXX */ const_cast<SymHeap &>(sh_)),
         sh2(/* XXX */ const_cast<SymHeap &>(sh_)),
         status(JS_USE_ANY),
-        allowThreeWay(true)
+        allowThreeWay(0 < (SE_ALLOW_THREE_WAY_JOIN))
     {
         initValMaps();
     }
@@ -175,7 +175,7 @@ struct SymJoinCtx {
         sh1(sh_),
         sh2(sh_),
         status(JS_USE_ANY),
-        allowThreeWay(true)
+        allowThreeWay(0 < (SE_ALLOW_THREE_WAY_JOIN))
     {
         initValMaps();
     }
@@ -2106,25 +2106,19 @@ bool segDetectSelfLoop(SymHeap &sh) {
 bool validateStatus(const SymJoinCtx &ctx) {
     if (segDetectSelfLoop(ctx.dst)) {
         // purely segmental loops cause us problems
-        CL_DEBUG(">J< segment cycle detected, cancelling join...");
+        CL_DEBUG(">J< segment cycle detected, cancelling join");
         return false;
     }
 
+#if SE_ALLOW_THREE_WAY_JOIN < 3
     if (JS_THREE_WAY != ctx.status)
+#endif
         return true;
 
-    if (!ctx.allowThreeWay) {
-        CL_DEBUG(">J< destructive information lost detected"
-                 ", cancelling three-way join...");
-        return false;
-    }
+    if (ctx.allowThreeWay)
+        return true;
 
-#if !SE_DISABLE_THREE_WAY_JOIN
-    return true;
-#endif
-
-    CL_WARN("three-way join disabled by configuration, recompile "
-            "with SE_DISABLE_THREE_WAY_JOIN == 0 to enable it");
+    CL_DEBUG(">J< cancelling three-way join");
     return false;
 }
 

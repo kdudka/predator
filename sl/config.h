@@ -89,6 +89,15 @@
 #define SE_ABSTRACT_ON_LOOP_EDGES_ONLY      1
 
 /**
+ * how much do we allow to use three-way join
+ * - 0 ... never ever
+ * - 1 ... only when joining prototypes
+ * - 2 ... also when joining states if the three-way join is considered useful
+ * - 3 ... do not restrict the usage of three-way join at the level of symjoin
+ */
+#define SE_ALLOW_THREE_WAY_JOIN             2
+
+/**
  * if 1, assume that the contents of static data is initialized on first access
  */
 #define SE_ASSUME_FRESH_STATIC_DATA         1
@@ -123,11 +132,6 @@
  * if 1, do not use the @b symjoin module for symbolic state management
  */
 #define SE_DISABLE_SYMJOIN_IN_SYMSTATE      0
-
-/**
- * if 1, do not allow three-way join
- */
-#define SE_DISABLE_THREE_WAY_JOIN           0
 
 /**
  * - 0 ... kill local variables only on stack frame destruction
