@@ -537,8 +537,9 @@ unsigned /* len */ selectBestAbstraction(
             << cnt << " entry candidate(s) given");
 
     // go through entry candidates
-    int                 bestLen = 0;
-    unsigned            bestIdx = 0;
+    int                 bestLen     = 0;
+    int                 bestCost    = INT_MAX;
+    unsigned            bestIdx     = 0;
     BindingOff          bestBinding;
 
     for (unsigned idx = 0; idx < cnt; ++idx) {
@@ -549,18 +550,21 @@ unsigned /* len */ selectBestAbstraction(
             int len, cost;
             if (!segDiscover(&len, &cost, sh, off, segc.entry))
                 continue;
-
-            if ((SE_PREFER_LOSSLESS_PROTOTYPES) < len)
-                // path already too long
-                cost = 0;
-
 #if SE_DEFER_SLS_INTRO
             if (!isDlsBinding(off))
                 cost += (SE_DEFER_SLS_INTRO);
 #endif
+            if (bestCost < cost)
+                // we already got something cheaper
+                continue;
 
-            len -= cost;
+            bestCost = cost;
             if (len <= bestLen)
+                // we already got something longer
+                continue;
+
+            if (len <= cost)
+                // too expensive
                 continue;
 
             // update best candidate
