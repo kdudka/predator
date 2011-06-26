@@ -57,26 +57,11 @@ void debugSymAbstract(const bool enable) {
     CL_BREAK_IF("REQUIRE_GC_ACTIVITY has not been successful");                \
 } while (0)
 
-/// common configuration template for abstraction triggering
-struct AbstractionThreshold {
-    unsigned sparePrefix;
-    unsigned innerSegLen;
-    unsigned spareSuffix;
-};
-
 /// abstraction trigger threshold for SLS
-static struct AbstractionThreshold slsThreshold = {
-    /* sparePrefix */ 0,
-    /* innerSegLen */ 1,
-    /* spareSuffix */ 0
-};
+static const unsigned slsThreshold = 1;
 
 /// abstraction trigger threshold for DLS
-static struct AbstractionThreshold dlsThreshold = {
-    /* sparePrefix */ 0,
-    /* innerSegLen */ 1,
-    /* spareSuffix */ 0
-};
+static const unsigned dlsThreshold = 1;
 
 // visitor
 struct UnknownValuesDuplicator {
@@ -594,54 +579,33 @@ bool segAbstractionStep(
 }
 
 void adjustAbstractionThreshold(
-        AbstractionThreshold        *pThr,
+        unsigned                    *pThr,
         SymHeap                     &sh,
         const BindingOff            &off,
         const TValId                entry,
         const unsigned              lenTotal)
 {
-    TValId cursor = entry;
+    const unsigned thrOrig = *pThr;
+    CL_BREAK_IF(!thrOrig);
+    if (1 == thrOrig)
+        // we are already at the lowest possible threshold
+        return;
 
-    unsigned validPrefix = 0;
-    unsigned validSuffix = 0;
-    bool seenAbstract = false;
+    TValId cursor = entry;
 
     for (unsigned pos = 0; pos <= lenTotal; ++pos) {
         if (VT_ABSTRACT == sh.valTarget(cursor)) {
-            seenAbstract = true;
-            validSuffix = 0;
-        }
-        else
-            ++validSuffix;
+            CL_DEBUG("    adjustAbstractionThreshold() changes innerSegLen: "
+                    << thrOrig << " -> 1");
 
-        if (!seenAbstract)
-            ++validPrefix;
+            *pThr = 1;
+            return;
+        }
 
         if (OK_DLS == sh.valTargetKind(cursor))
             cursor = dlSegPeer(sh, cursor);
 
         cursor = nextRootObj(sh, cursor, off.next);
-    }
-
-    if (validPrefix < pThr->sparePrefix) {
-        CL_DEBUG("    adjustAbstractionThreshold() changes sparePrefix: "
-                << pThr->sparePrefix << " -> " << validPrefix);
-
-        pThr->sparePrefix = validPrefix;
-    }
-
-    if (seenAbstract && 1 < pThr->innerSegLen) {
-        CL_DEBUG("    adjustAbstractionThreshold() changes innerSegLen: "
-                << pThr->innerSegLen << " -> 1");
-
-        pThr->innerSegLen = 1;
-    }
-
-    if (validSuffix < pThr->spareSuffix) {
-        CL_DEBUG("    adjustAbstractionThreshold() changes spareSuffix: "
-                << pThr->spareSuffix << " -> " << validSuffix);
-
-        pThr->spareSuffix = validSuffix;
     }
 }
 
@@ -651,7 +615,7 @@ bool considerAbstraction(
         const TValId                entry,
         const unsigned              lenTotal)
 {
-    AbstractionThreshold thr;
+    unsigned thr;
     const char *name;
 
     if (isDlsBinding(off)) {
@@ -666,38 +630,29 @@ bool considerAbstraction(
     adjustAbstractionThreshold(&thr, sh, off, entry, lenTotal);
 
     // check whether the threshold is satisfied or not
-    const unsigned threshold = thr.innerSegLen
-        + thr.sparePrefix
-        + thr.spareSuffix;
-    if (lenTotal < threshold) {
+    if (lenTotal < thr) {
         CL_DEBUG("<-- length (" << lenTotal
                 << ") of the longest segment is under the threshold ("
-                << threshold << ")");
+                << thr << ")");
         return false;
     }
 
-    CL_DEBUG("    --- length of the longest segment is " << lenTotal
-            << ", prefix=" << thr.sparePrefix
-            << ", suffix=" << thr.spareSuffix);
+    CL_DEBUG("    --- length of the longest segment is " << lenTotal);
 
     // cursor
     TValId cursor = entry;
 
     // handle sparePrefix/spareSuffix
-    int len = lenTotal - thr.sparePrefix - thr.spareSuffix;
-    for (unsigned i = 0; i < thr.sparePrefix; ++i)
-        cursor = nextRootObj(sh, cursor, off.next);
-
     CL_DEBUG("    AAA initiating " << name
-             << " abstraction of length " << len);
+             << " abstraction of length " << lenTotal);
 
     LDP_INIT(symabstract, name);
     LDP_PLOT(symabstract, sh);
 
-    for (int i = 0; i < len; ++i) {
+    for (unsigned i = 0; i < lenTotal; ++i) {
         if (!segAbstractionStep(sh, off, &cursor)) {
-            CL_DEBUG("<-- WARNING: ending prematurely, skipping "
-                    << (len - i - 1) << " abstraction steps");
+            CL_DEBUG("<-- validity of next " << (lenTotal - i - 1)
+                    << " abstraction step(s) broken, forcing re-discovery...");
 
             if (i)
                 return true;
