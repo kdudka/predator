@@ -1588,6 +1588,7 @@ class MayExistVisitor {
         const EJoinStatus       action_;
         const TValId            valRef_;
         const TValId            root_;
+        bool                    lookThrough_;
         TOffset                 offNext_;
 
     public:
@@ -1600,6 +1601,7 @@ class MayExistVisitor {
             action_(action),
             valRef_(valRef),
             root_(root),
+            lookThrough_(false),
             offNext_(0)
         {
             CL_BREAK_IF(JS_USE_SH1 != action && JS_USE_SH2 != action);
@@ -1609,12 +1611,32 @@ class MayExistVisitor {
             return offNext_;
         }
 
+        void enableLookThroughMode(bool enable = true) {
+            lookThrough_ = enable;
+        }
+
         bool operator()(SymHeap &sh, const TObjId sub) {
-            const TValId val = sh.valueOf(sub);
-            const TValId v1 = (JS_USE_SH1 == action_) ? val : valRef_;
-            const TValId v2 = (JS_USE_SH2 == action_) ? val : valRef_;
-            if (!followValuePair(ctx_, v1, v2, /* read-only */ true))
-                return /* continue */ true;
+            TValId val = sh.valueOf(sub);
+
+            for (;;) {
+                const TValId v1 = (JS_USE_SH1 == action_) ? val : valRef_;
+                const TValId v2 = (JS_USE_SH2 == action_) ? val : valRef_;
+                if (followValuePair(ctx_, v1, v2, /* read-only */ true))
+                    // looks like we have a candidate
+                    break;
+
+                if (!lookThrough_ || !isAbstract(sh.valTarget(val)))
+                    return /* continue */ true;
+
+                TValId seg = sh.valRoot(val);
+                if (segMinLength(sh, seg) || segHeadAt(sh, seg) != val)
+                    return /* continue */ true;
+
+                if (OK_DLS == sh.valTargetKind(seg))
+                    seg = dlSegPeer(sh, seg);
+
+                val = sh.valueOf(nextPtrFromSeg(sh, seg));
+            }
 
             offNext_ = sh.valOffset(sh.placedAt(sub));
             return /* continue */ false;
@@ -1653,9 +1675,13 @@ bool mayExistFallback(
 
     const TValId ref = (use2) ? v1 : v2;
     MayExistVisitor visitor(ctx, action, ref, /* root */ valRoot);
-    if (traverseLivePtrs(sh, valRoot, visitor))
-        // no match
-        return false;
+    if (traverseLivePtrs(sh, valRoot, visitor)) {
+        // reference value not matched directly, try to look through
+        visitor.enableLookThroughMode();
+        if (traverseLivePtrs(sh, valRoot, visitor))
+            // no match
+            return false;
+    }
 
     // mayExistFallback() always implies JS_THREE_WAY
     if (!updateJoinStatus(ctx, JS_THREE_WAY))
@@ -1664,11 +1690,10 @@ bool mayExistFallback(
     BindingOff off;
     off.head = sh.valOffset(val);
     off.next = visitor.offNext();
-    bool result = false;
 
-    const bool ok = insertSegmentClone(&result, ctx, v1, v2, action, &off);
-    CL_BREAK_IF(!ok);
-    (void) ok;
+    bool result;
+    if (!insertSegmentClone(&result, ctx, v1, v2, action, &off))
+        result = false;
 
     return result;
 }
