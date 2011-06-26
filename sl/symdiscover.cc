@@ -563,7 +563,7 @@ unsigned /* len */ selectBestAbstraction(
                 // we already got something longer
                 continue;
 
-            if (len <= (cost >> 1))
+            if (len <= (cost >> 2))
                 // too expensive
                 continue;
 

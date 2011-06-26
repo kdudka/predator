@@ -48,12 +48,12 @@ SLS abstraction
                 - no flaws reported with -fplugin-arg-libsl-symexec-args=fast
 
     test-0106.c - pseudo tree consisting of two SLLs
-                - known to work with SE_PROTO_COST_ASYM == 4
+                - known to work with SE_PROTO_COST_ASYM == 8
 
     test-0112.c - hello-world, once used as the most trivial example for symjoin
 
     test-0113.c - error-free variant of test-0106
-                - known to work with SE_PROTO_COST_ASYM == 4
+                - known to work with SE_PROTO_COST_ASYM == 8
 
     test-0118.c - abstraction of SLL, each node contains a pointer to head
                 - improved variant of test-0049
