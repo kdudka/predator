@@ -141,9 +141,7 @@ macro(test_sym_exec_regre name_suff ext arg1)
         set(cmd "${cmd} -fplugin-arg-libsl-preserve-ec")
         set(cmd "${cmd} 2>&1")
 
-        # FIXME: the following line significantly decreases coverage of the test
-        # suite; we should perhaps use awk or whatever to trim only the location
-        # part from messages with internal location
+        # filter out messages with internal location
         set(cmd "${cmd} | grep -v '\\\\[internal location\\\\]\$'")
 
         # FIXME: the doubly-nested triply-escaped sed magic might look a bit

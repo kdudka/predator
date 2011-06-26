@@ -1,4 +1,0 @@
-#!/bin/sh
-self="`readlink -f "$0"`"
-self_dir="`dirname "$self"`"
-SL_OPTS=-fplugin-arg-libsl-args=inv_compat "$self_dir/slgcc" "$@"

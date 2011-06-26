@@ -1,11 +1,10 @@
-.PHONY: all chkinv clean distclean *.c *.dot
+.PHONY: all clean *.dot
 
 BASENAME ?= basename
 DOT      ?= dot
 FORMAT   ?= svg
 SED      ?= sed
-TIMEOUT  ?= timeout 30
-CILLY    ?= ../../invader-1_1/sources/cil/bin/cilly
+TIMEOUT  ?= timeout 8
 
 all: *.dot
 *.dot:
@@ -14,38 +13,5 @@ all: *.dot
 		| $(SED) -e 's/"green"/"#00FF00"/g' -e 's/scale(1 1)/scale(.5 .5)/g' \
 		> `$(BASENAME) $@ .dot`.$(FORMAT) 
 
-chkinv: *.c
-inv-bug-??.c: $(CILLY)
-	gcc -std=c99 -g -pedantic -Wall -Wextra -Werror -o test-`$(BASENAME) $@ .c` $@
-	./runtest.sh `$(BASENAME) $@ .c`
-	$(CILLY) > /dev/null
-	if $(CILLY) $@; then \
-		exit 1; else \
-		exit 0; fi
-
-inv-ign-??.c: $(CILLY)
-	gcc -std=c99 -g -pedantic -Wall -Wextra -Werror -o test-`$(BASENAME) $@ .c` $@
-	$(CILLY) > /dev/null
-	if ./runtest.sh `$(BASENAME) $@ .c`; then \
-		exit 1; else \
-		exit 0; fi
-
-invpphtml: ../../ssd/util/eschtml ../../ssd/util/tty2html $(CILLY)
-	for i in $(DATASET); do \
-		echo "--- $$i"; \
-		$(TIMEOUT) \
-			$(CILLY) "$$i" 2>&1 \
-			| ../ssd/util/eschtml \
-			| ../ssd/util/tty2html \
-			> $$i-inv.pp.html; \
-	done
-
 clean:
-	rm -fv *.$(FORMAT) test-inv-???-??
-
-distclean: clean
-	rm -fv *.dot *.pp.html
-
-$(CILLY):
-	$(MAKE) -C ../.. build_inv
-
+	rm -fv *.dot *.$(FORMAT)

@@ -1,6 +1,5 @@
 #!/bin/sh
 SL_OPTS="-fplugin-arg-libsl-verbose=1 $SL_OPTS"
-SL_OPTS="-fplugin-arg-libsl-args=inv_compat $SL_OPTS"
 SL_OPTS="-fplugin-arg-libsl-dump-pp $SL_OPTS"
 #SL_OPTS="-fplugin-arg-libsl-dump-types $SL_OPTS"
 export SL_OPTS

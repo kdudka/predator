@@ -53,7 +53,6 @@ configure:
 
 distclean: clean
 	rm -rf ../sl_build
-	$(MAKE) distclean -C data -f Makefile.in
 
 distcheck: distclean
 	$(MAKE) check CMAKE='cmake -D TEST_ONLY_FAST=OFF'
