@@ -515,6 +515,24 @@ class ProbeEntryVisitor {
         }
 };
 
+bool slSegOnPath(
+        SymHeap                     &sh,
+        const BindingOff            &off,
+        const TValId                entry,
+        const unsigned              len)
+{
+    TValId cursor = entry;
+
+    for (unsigned pos = 0; pos <= len; ++pos) {
+        if (VT_ABSTRACT == sh.valTarget(cursor))
+            return true;
+
+        cursor = nextRootObj(sh, cursor, off.next);
+    }
+
+    return false;
+}
+
 struct SegCandidate {
     TValId                      entry;
     TBindingCandidateList       offList;
@@ -550,10 +568,16 @@ unsigned /* len */ selectBestAbstraction(
             int len, cost;
             if (!segDiscover(&len, &cost, sh, off, segc.entry))
                 continue;
+
 #if SE_DEFER_SLS_INTRO
-            if (!isDlsBinding(off))
-                cost += (SE_DEFER_SLS_INTRO);
+            if (!cost 
+                    && !isDlsBinding(off)
+                    && !slSegOnPath(sh, off, segc.entry, len))
+            {
+                cost = (SE_DEFER_SLS_INTRO);
+            }
 #endif
+
             if (bestCost < cost)
                 // we already got something cheaper
                 continue;

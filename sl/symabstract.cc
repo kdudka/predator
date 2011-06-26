@@ -606,7 +606,7 @@ void adjustAbstractionThreshold(
     unsigned validSuffix = 0;
     bool seenAbstract = false;
 
-    for (unsigned pos = 0; pos < lenTotal; ++pos) {
+    for (unsigned pos = 0; pos <= lenTotal; ++pos) {
         if (VT_ABSTRACT == sh.valTarget(cursor)) {
             seenAbstract = true;
             validSuffix = 0;
