@@ -274,11 +274,11 @@ bool matchData(
 
         case JS_USE_SH1:
         case JS_USE_SH2:
-            cost = (SE_PREFER_LOSSLESS_PROTOTYPES) - 1;
+            cost = (SE_PROTO_COST_ASYM);
             break;
 
         case JS_THREE_WAY:
-            cost = (SE_PREFER_LOSSLESS_PROTOTYPES);
+            cost = (SE_PROTO_COST_THREEWAY);
             break;
     }
 

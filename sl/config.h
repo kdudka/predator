@@ -141,10 +141,15 @@
 #define SE_MAX_CALL_DEPTH                   0x40
 
 /**
- * an integer expressing how much we should prefer/force lossless prototypes;
- * values from the interval 0..3 make sense
+ * cost of merged prototype where one case was more generic than the other case
  */
-#define SE_PREFER_LOSSLESS_PROTOTYPES       1
+#define SE_PROTO_COST_ASYM                  0
+
+/**
+ * cost of merged prototype that is generalisation of both input prototypes
+ * @note only values >= SE_PROTO_COST_ASYM make sense
+ */
+#define SE_PROTO_COST_THREEWAY              1
 
 /**
  * upper bound of DLS minimal length (zero means unlimited)
