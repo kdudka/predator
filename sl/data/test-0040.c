@@ -1,6 +1,8 @@
 #include "../sl.h"
 #include <stdlib.h>
 
+#define BREAK_PREDATOR 0
+
 struct lowLevel {
     struct lowLevel *head;
     struct lowLevel *next;
@@ -22,13 +24,15 @@ int main()
 
     while (___sl_get_nondet_int()) {
         do {
-            l = malloc(sizeof(struct lowLevel));
+            struct lowLevel *l = calloc(1, sizeof *l);
             if (!l)
                 abort();
 
             if (t->low == 0) {
                 l->head = l;
+#if BREAK_PREDATOR
                 l->next = 0;
+#endif
                 t->low = l;
             }
             else {
