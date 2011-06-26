@@ -143,13 +143,13 @@
 /**
  * cost of merged prototype where one case was more generic than the other case
  */
-#define SE_PROTO_COST_ASYM                  0
+#define SE_PROTO_COST_ASYM                  1
 
 /**
  * cost of merged prototype that is generalisation of both input prototypes
  * @note only values >= SE_PROTO_COST_ASYM make sense
  */
-#define SE_PROTO_COST_THREEWAY              1
+#define SE_PROTO_COST_THREEWAY              2
 
 /**
  * upper bound of DLS minimal length (zero means unlimited)
