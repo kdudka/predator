@@ -18,10 +18,9 @@
 CMAKE           ?= cmake
 CTEST           ?= ctest
 
-.PHONY: all clean configure distclean distcheck fast install \
-	version.h
+.PHONY: all clean configure distclean distcheck fast version.h
 
-all: version.h ../cl_build/libcl.so configure
+all: version.h configure
 	# make sure the libcl.so is up2date
 	$(MAKE) -C ../cl_build
 	mkdir -p ../sl_build
@@ -57,9 +56,3 @@ distclean: clean
 distcheck: distclean
 	$(MAKE) check CMAKE='cmake -D TEST_ONLY_FAST=OFF'
 	$(MAKE) all CMAKE='cmake -D TEST_ONLY_FAST=ON'
-
-install: all
-	$(MAKE) -C ../sl_build install
-
-../cl_build/libcl.so:
-	$(MAKE) -C ../cl

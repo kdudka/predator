@@ -21,7 +21,7 @@ CTEST ?= ctest
 .PHONY: all clean distclean \
 	distcheck
 
-all: ../cl_build/libcl.so
+all:
 	$(MAKE) -C ../cl_build # make sure the libcl.so is up2date
 	mkdir -p ../fa_build
 	cd ../fa_build && $(CMAKE) ../fa
@@ -40,6 +40,3 @@ distclean: clean
 
 distcheck: distclean
 	$(MAKE) check
-
-../cl_build/libcl.so:
-	$(MAKE) -C ../cl

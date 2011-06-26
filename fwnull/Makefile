@@ -18,10 +18,9 @@
 CMAKE           ?= cmake
 CTEST           ?= ctest
 
-.PHONY: all clean distclean distcheck install \
-	version.h
+.PHONY: all clean distclean distcheck version.h
 
-all: version.h ../cl_build/libcl.so
+all: version.h
 	$(MAKE) -C ../cl_build # make sure the libcl.so is up2date
 	mkdir -p ../fwnull_build
 	cd ../fwnull_build && $(CMAKE) ../fwnull
@@ -50,9 +49,3 @@ distclean: clean
 
 distcheck: distclean
 	$(MAKE) check
-
-install: all
-	$(MAKE) -C ../fwnull_build install
-
-../cl_build/libcl.so:
-	$(MAKE) -C ../cl

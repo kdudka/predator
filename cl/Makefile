@@ -18,8 +18,7 @@
 CMAKE           ?= cmake
 CTEST           ?= ctest
 
-.PHONY: all clean distclean distcheck install \
-	version_cl.h
+.PHONY: all clean distclean distcheck version_cl.h
 
 all: version_cl.h
 	mkdir -p ../cl_build
@@ -47,6 +46,3 @@ distclean: clean
 
 distcheck: distclean
 	$(MAKE) check
-
-install: all
-	$(MAKE) -C ../cl_build install

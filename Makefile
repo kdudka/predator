@@ -61,9 +61,6 @@ distclean:
 distcheck: include/gcc/
 	$(foreach dir, $(DIRS_BUILD), $(MAKE) -C $(dir) $@ &&) true
 
-install: include/gcc/
-	$(foreach dir, $(DIRS_INSTALL), $(MAKE) -C $(dir) $@ &&) true
-
 cl/api:
 	$(MAKE) -C cl/api clean
 	$(MAKE) -C cl/api
