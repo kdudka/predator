@@ -1571,10 +1571,7 @@ bool joinAbstractValues(
     }
 
     if (!insertSegmentClone(pResult, ctx, v1, v2, subStatus)) {
-        if (ctx.joiningDataReadWrite()) {
-            // FIXME: this is just a hack, it would be better to simply skip all
-            // the remaining abstraction steps and run segDiscover() once again
-            CL_WARN("joinData() called incompetently, trying to recover...");
+        if (ctx.joiningData()) {
             return joinSegmentWithAny(pResult, ctx, root1, root2, subStatus,
                         /* firstTryReadOnly */ false);
         }
@@ -2106,19 +2103,19 @@ bool segDetectSelfLoop(SymHeap &sh) {
     return false;
 }
 
-bool validateThreeWayStatus(const SymJoinCtx &ctx) {
+bool validateStatus(const SymJoinCtx &ctx) {
+    if (segDetectSelfLoop(ctx.dst)) {
+        // purely segmental loops cause us problems
+        CL_DEBUG(">J< segment cycle detected, cancelling join...");
+        return false;
+    }
+
     if (JS_THREE_WAY != ctx.status)
         return true;
 
     if (!ctx.allowThreeWay) {
         CL_DEBUG(">J< destructive information lost detected"
                  ", cancelling three-way join...");
-        return false;
-    }
-
-    if (segDetectSelfLoop(ctx.dst)) {
-        // purely segmental loops cause us problems
-        CL_DEBUG(">J< segment cycle detected, cancelling three-way join...");
         return false;
     }
 
@@ -2178,7 +2175,7 @@ bool joinSymHeaps(
     }
 
     // if the result is three-way join, check if it is a good idea
-    if (!validateThreeWayStatus(ctx))
+    if (!validateStatus(ctx))
         return false;
 
     // all OK
@@ -2290,7 +2287,7 @@ bool joinDataCore(
     handleDstPreds(ctx);
 
     // if the result is three-way join, check if it is a good idea
-    return validateThreeWayStatus(ctx);
+    return validateStatus(ctx);
 }
 
 bool joinDataReadOnly(
