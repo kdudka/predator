@@ -85,11 +85,13 @@ void prune(struct topLevel *t) {
 int main()
 {
     struct topLevel *top = create_top();
+    ___sl_plot(NULL);
 
     prune(top);
+    ___sl_plot(NULL);
+
     inspect(top);
 
-    ___sl_plot(NULL);
     while (top) {
         struct topLevel *next = top->next;
         free(top->low);
@@ -98,6 +100,5 @@ int main()
         top = next;
     }
 
-    ___sl_plot(NULL);
     return !!top;
 }

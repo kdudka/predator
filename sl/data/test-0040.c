@@ -1,7 +1,7 @@
 #include "../sl.h"
 #include <stdlib.h>
 
-#define BREAK_PREDATOR 0
+#define BREAK_IMMATURE_VERSION_OF_PREDATOR 1
 
 struct lowLevel {
     struct lowLevel *head;
@@ -15,10 +15,10 @@ struct topLevel {
 
 int main()
 {
-    struct topLevel *t, *tt, *entry;
+    struct topLevel *t, *tt;
     struct lowLevel *l;
 
-    t = entry = malloc(sizeof(struct topLevel));
+    t = malloc(sizeof(struct topLevel));
     t->next = 0;
     t->low = 0;
 
@@ -30,7 +30,7 @@ int main()
 
             if (t->low == 0) {
                 l->head = l;
-#if BREAK_PREDATOR
+#if BREAK_IMMATURE_VERSION_OF_PREDATOR
                 l->next = 0;
 #endif
                 t->low = l;
@@ -49,7 +49,7 @@ int main()
         t = tt;
     }
 
-    ___sl_plot(NULL, &entry, &t);
+    ___sl_plot(NULL, &t);
     tt = t->next;
     l = tt->low;
 

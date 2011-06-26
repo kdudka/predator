@@ -43,6 +43,11 @@ unsigned dlSegMinLength(
     CL_BREAK_IF(OK_DLS != sh.valTargetKind(dls));
 
     const TValId peer = dlSegPeer(sh, dls);
+    if (allowIncosistency && OK_DLS != sh.valTargetKind(peer)) {
+        // we need to plot inconsistent DLS objects breaklessly when debugging
+        CL_WARN("DLS peer not a DLS");
+        return 0;
+    }
 
     // dig pointer-to-next objects
     const TObjId next1 = nextPtrFromSeg(sh, dls);

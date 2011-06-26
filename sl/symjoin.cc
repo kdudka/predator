@@ -475,22 +475,27 @@ bool joinFreshObjTripple(
         const TValId val = (isGt1)
             ? ctx.sh1.valRoot(v1)
             : ctx.sh2.valRoot(v2);
-        return (val <= 0 || hasKey(vm[/* lrt */ 0], val));
-    }
 
-    // special values have to match (NULL not treated as special here)
-    // TODO: should we consider also join of VAL_TRUE/VAL_FALSE?
-    if (v1 < 0 || v2 < 0) {
-        if (v1 == v2)
+        if (val <= 0 || hasKey(vm[/* lrt */ 0], val))
             return true;
 
-        SJ_DEBUG("<-- special value mismatch " << SJ_VALP(v1, v2));
-        return false;
+        // XXX
+        if (!ctx.joiningData())
+            return false;
     }
+    else {
+        // special values have to match (NULL not treated as special here)
+        if (v1 < 0 || v2 < 0) {
+            if (v1 == v2)
+                return true;
 
+            SJ_DEBUG("<-- special value mismatch " << SJ_VALP(v1, v2));
+            return false;
+        }
 
-    if (checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ false))
-        return true;
+        if (checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ false))
+            return true;
+    }
 
     if (ctx.wl.schedule(TValPair(v1, v2)))
         SJ_DEBUG("+++ " << SJ_VALP(v1, v2) << " <- " << SJ_OBJP(obj1, obj2));
@@ -1392,7 +1397,9 @@ void scheduleSegAddr(
     const TValPair vpSeg(
             (JS_USE_SH1 == action) ? seg : VAL_INVALID,
             (JS_USE_SH2 == action) ? seg : VAL_INVALID);
-    wl.schedule(vpSeg);
+    if (!wl.schedule(vpSeg))
+        // XXX
+        wl.undo(vpSeg);
 
     if (seg == peer)
         return;
@@ -1400,7 +1407,9 @@ void scheduleSegAddr(
     const TValPair vpPeer(
             (JS_USE_SH1 == action) ? peer : VAL_INVALID,
             (JS_USE_SH2 == action) ? peer : VAL_INVALID);
-    wl.schedule(vpPeer);
+    if (!wl.schedule(vpPeer))
+        // XXX
+        wl.undo(vpPeer);
 }
 
 bool handleUnknownValues(
@@ -1450,7 +1459,7 @@ bool insertSegmentClone(
 
     const TValId nextGt = shGt.valueOf(nextPtr);
     const TValId nextLt = (isGt2) ? v1 : v2;
-    if (!checkValueMapping(ctx, 
+    if (!off && !checkValueMapping(ctx, 
                 (isGt1) ? nextGt : nextLt,
                 (isGt2) ? nextGt : nextLt,
                 /* allowUnknownMapping */ true))
