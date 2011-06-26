@@ -1708,6 +1708,22 @@ bool haveSegBidir(
 void SymHeap::neqOp(ENeqOp op, TValId v1, TValId v2) {
     CL_BREAK_IF(NEQ_ADD != op && NEQ_DEL != op);
 
+    if (VAL_NULL == v1 && this->hasAbstractTarget(v2) && !this->valOffset(v2)) {
+        TValId seg2 = v2;
+        if (OK_DLS == this->valTargetKind(v2))
+            seg2 = dlSegPeer(*this, v2);
+
+        v1 = this->valueOf(nextPtrFromSeg(*this, seg2));
+    }
+
+    if (VAL_NULL == v2 && this->hasAbstractTarget(v1) && !this->valOffset(v1)) {
+        TValId seg1 = v1;
+        if (OK_DLS == this->valTargetKind(v1))
+            seg1 = dlSegPeer(*this, v1);
+
+        v2 = this->valueOf(nextPtrFromSeg(*this, seg1));
+    }
+
     TValId seg;
     if (haveSegBidir(&seg, this, OK_MAY_EXIST, v1, v2)) {
         // replace OK_MAY_EXIST by OK_CONCRETE
