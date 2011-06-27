@@ -846,22 +846,34 @@ void concretizeObj(SymHeap &sh, TValId addr, TSymHeapList &todo) {
 
 bool spliceOutChain(
         SymHeap                 &sh,
-        const TValId            seg,
+        TValId                  seg,
         const TValId            endPoint,
         const bool              readOnlyMode)
 {
-    // TODO: implement the chain traversal!
-    const TValId peer = segPeer(sh, seg);
-    const TValId valNext = sh.valueOf(nextPtrFromSeg(sh, peer));
-    if (endPoint != valNext) {
-        CL_BREAK_IF(!readOnlyMode);
-        return false;
+    // NOTE: If there is a cycle consisting of empty list segments only, we will
+    // loop indefinitely.  However, the basic list segment axiom guarantees that
+    // there is no such cycle.
+
+    while (!objMinLength(sh, seg)) {
+        const TValId peer = segPeer(sh, seg);
+        const TValId valNext = sh.valueOf(nextPtrFromSeg(sh, peer));
+        if (!readOnlyMode)
+            spliceOutListSegmentCore(sh, seg, peer);
+
+        if (valNext == endPoint)
+            // well done
+            return true;
+
+        const EValueTarget code = sh.valTarget(valNext);
+        if (VT_ABSTRACT != code)
+            // we are on a wrong way already...
+            break;
+
+        seg = sh.valRoot(valNext);
     }
 
-    if (!readOnlyMode)
-        spliceOutListSegmentCore(sh, seg, peer);
-
-    return true;
+    CL_BREAK_IF(!readOnlyMode);
+    return false;
 }
 
 bool spliceOutListSegment(SymHeap &sh, TValId atAddr, TValId pointingTo) {
