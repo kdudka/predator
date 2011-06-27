@@ -844,6 +844,26 @@ void concretizeObj(SymHeap &sh, TValId addr, TSymHeapList &todo) {
     LDP_PLOT(symabstract, sh);
 }
 
+bool spliceOutChain(
+        SymHeap                 &sh,
+        const TValId            seg,
+        const TValId            endPoint,
+        const bool              readOnlyMode)
+{
+    // TODO: implement the chain traversal!
+    const TValId peer = segPeer(sh, seg);
+    const TValId valNext = sh.valueOf(nextPtrFromSeg(sh, peer));
+    if (endPoint != valNext) {
+        CL_BREAK_IF(!readOnlyMode);
+        return false;
+    }
+
+    if (!readOnlyMode)
+        spliceOutListSegmentCore(sh, seg, peer);
+
+    return true;
+}
+
 bool spliceOutListSegment(SymHeap &sh, TValId atAddr, TValId pointingTo) {
     const TValId seg = sh.valRoot(atAddr);
     const TValId peer = segPeer(sh, seg);
@@ -854,13 +874,16 @@ bool spliceOutListSegment(SymHeap &sh, TValId atAddr, TValId pointingTo) {
         return true;
     }
 
-    const TValId valNext = sh.valueOf(nextPtrFromSeg(sh, peer));
-    if (pointingTo == valNext) {
-        // assume empty segment
-        spliceOutListSegmentCore(sh, seg, peer);
-        return true;
-    }
+    // if atAddr is above/bellow head, we need to shift pointingTo accordingly
+    const TOffset off = sh.valOffset(atAddr) - sh.segBinding(seg).head;
+    const TValId endPoint = sh.valByOffset(pointingTo, off);
 
-    // giving up
-    return false;
+    if (!spliceOutChain(sh, seg, endPoint, /* readOnlyMode */ true))
+        // giving up
+        return false;
+
+    if (!spliceOutChain(sh, seg, endPoint, /* readOnlyMode */ false))
+        CL_BREAK_IF("spliceOutListSegmentCore() completely broken");
+
+    return true;
 }
