@@ -700,12 +700,13 @@ void describeStr(PlotData &plot, const char *str) {
     plot.out << ", fontcolor=blue, label=\"\\\"" << str << "\\\"\"";
 }
 
-void plotCustomValue(PlotData &plot, const TValId val) {
+void plotCustomValue(PlotData &plot, const TObjId obj, const TValId val) {
     SymHeap &sh = plot.sh;
     const CustomValue cVal = sh.valUnwrapCustom(val);
     const CustomValueData &data = cVal.data;
 
-    plot.out << "\t" << SL_QUOTE(val) << " [shape=plaintext";
+    const int id = ++plot.last;
+    plot.out << "\t" << SL_QUOTE("lonely" << id) << " [shape=plaintext";
 
     const ECustomValue code = cVal.code;
     switch (code) {
@@ -726,7 +727,9 @@ void plotCustomValue(PlotData &plot, const TValId val) {
             break;
     }
 
-    plot.out << "];\n";
+    plot.out << "];\n\t" << SL_QUOTE(obj)
+        << " -> " << SL_QUOTE("lonely" << id)
+        << " [color=blue];\n";
 }
 
 void plotValue(PlotData &plot, const TValId val)
@@ -739,7 +742,7 @@ void plotValue(PlotData &plot, const TValId val)
     const EValueTarget code = sh.valTarget(val);
     switch (code) {
         case VT_CUSTOM:
-            plotCustomValue(plot, val);
+            // skipt it, custom values are now handled in plotHasValue()
             return;
 
         case VT_INVALID:
@@ -888,6 +891,12 @@ void plotHasValue(PlotData &plot, const TObjId obj) {
     const TValId val = sh.valueOf(obj);
     if (val <= 0) {
         plotAuxValue(plot, obj, val);
+        return;
+    }
+
+    const EValueTarget code = sh.valTarget(val);
+    if (VT_CUSTOM == code) {
+        plotCustomValue(plot, obj, val);
         return;
     }
 
