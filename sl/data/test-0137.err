@@ -1,5 +1,3 @@
-test-0137.c: In function 'gl_seek_max':
-test-0137.c:87:13: warning: unhandled GIMPLE_PREDICT
 test-0137.c:68:5: error: dereferencing object of size 4B out of bounds
 test-0137.c:68:5: note: the pointer being dereferenced points 4B above a static variable of size 8B
 test-0137.c:85:19: note: from call of val_from_node()

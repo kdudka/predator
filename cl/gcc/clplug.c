@@ -1527,7 +1527,12 @@ static tree cb_walk_gimple_stmt (gimple_stmt_iterator *iter,
             break;
 
         case GIMPLE_PREDICT:
+            // Although I am too lazy to find out what these nodes are useful
+            // for, I have been observing the following warnings for years
+            // without noticing any negative impact of them on the analysis.
+#if 0
             CL_WARN_UNHANDLED_GIMPLE(stmt, "GIMPLE_PREDICT");
+#endif
             break;
 
         default:
