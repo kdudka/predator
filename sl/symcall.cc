@@ -209,21 +209,28 @@ void SymCallCtx::Private::destroyStackFrame(SymHeap &sh) {
     TValList live;
     sh.gatherRootObjects(live, isProgramVar);
     BOOST_FOREACH(const TValId root, live) {
-        const EValueTarget code = sh.valTarget(root);
-        if (VT_ON_STACK != code) {
-            // not a local variable
-            continue;
-        }
+        const CVar cv(sh.cVarByRoot(root));
 
-        CVar cv(sh.cVarByRoot(root));
-        if (!hasKey(this->fnc->vars, cv.uid) || cv.inst != this->nestLevel)
-            // a local variable that is not here-local
-            continue;
+        const EValueTarget code = sh.valTarget(root);
+        if (VT_ON_STACK == code) {
+            // local variable
+            if (!hasKey(this->fnc->vars, cv.uid) || cv.inst != this->nestLevel)
+                // a local variable that is not here-local
+                continue;
+        }
+        else {
+            // gl variable
+            CL_BREAK_IF(cv.inst);
+
+            if (isVarAlive(sh, root) || hasKey(this->hints, cv.uid))
+                // preserve live gl variable
+                continue;
+        }
 
         const struct cl_loc *loc = 0;
         std::string varString = varToString(sh.stor(), cv.uid, &loc);
 #if DEBUG_SE_STACK_FRAME
-        CL_DEBUG_MSG(loc, "FFF destroying stack variable: " << varString);
+        CL_DEBUG_MSG(loc, "FFF destroying variable: " << varString);
 #else
         (void) varString;
 #endif
