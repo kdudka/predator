@@ -51,11 +51,14 @@ const struct cl_type* targetTypeOfPtr(const struct cl_type *clt);
 /// return type of the @b target object that the array type can point to
 const struct cl_type* targetTypeOfArray(const struct cl_type *clt);
 
-inline bool isComposite(const struct cl_type *clt) {
+inline bool isComposite(const struct cl_type *clt, bool includingArray = true) {
     if (!clt)
         return false;
 
     switch (clt->code) {
+        case CL_TYPE_ARRAY:
+            return includingArray;
+
         case CL_TYPE_STRUCT:
         case CL_TYPE_UNION:
             return true;
