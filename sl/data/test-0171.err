@@ -1,0 +1,3 @@
+test-0171.c:35:9: error: double free()
+test-0171.c:76:18: note: from call of DLDisposeList()
+test-0171.c:65:5: note: from call of main()

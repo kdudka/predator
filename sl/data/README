@@ -104,6 +104,12 @@ DLS abstraction
 
                 - works better with -fplugin-arg-libsl-symexec-args=fast
 
+    test-0170.c - a NULL-terminated DLL with pointers to begin, end, and cursor
+                - in order to not report artificial junk, needs to splice-out a
+                  chain of DLS
+
+    test-0171.c - a modification of test-0170 that revealed a nasty bug
+
 
 Higher level SLS/DLS abstraction, etc.
 ======================================

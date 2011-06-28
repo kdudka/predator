@@ -718,16 +718,18 @@ void dlSegReplaceByConcrete(SymHeap &sh, TValId seg, TValId peer) {
     CL_BREAK_IF(!dlSegCheckConsistency(sh));
 }
 
-void spliceOutListSegmentCore(SymHeap &sh, TValId seg, TValId peer) {
+void spliceOutListSegmentCore(
+        SymHeap                 &sh,
+        const TValId            seg,
+        const TValId            peer,
+        const TValId            valNext)
+{
     LDP_INIT(symabstract, "spliceOutListSegmentCore");
     LDP_PLOT(symabstract, sh);
 
-    // read valNext now as we may overwrite it during unlink of peer
-    const TObjId next = nextPtrFromSeg(sh, peer);
-    const TValId valNext = sh.valueOf(next);
-
-    if (seg != peer) {
+    if (OK_DLS == sh.valTargetKind(seg)) {
         // OK_DLS --> unlink peer
+        CL_BREAK_IF(seg == peer);
         const TObjId prevPtr = nextPtrFromSeg(sh, seg);
         const TValId valPrev = sh.valueOf(prevPtr);
         segReplaceRefs(sh, peer, valPrev);
@@ -767,7 +769,8 @@ unsigned /* len */ spliceOutSegmentIfNeeded(
 
     // possibly empty LS
     SymHeap sh0(sh);
-    spliceOutListSegmentCore(sh0, seg, peer);
+    const TValId valNext = sh0.valueOf(nextPtrFromSeg(sh0, peer));
+    spliceOutListSegmentCore(sh0, seg, peer, valNext);
     todo.push_back(sh0);
     return /* LS 0+ */ 0;
 }
@@ -846,7 +849,7 @@ void concretizeObj(SymHeap &sh, TValId addr, TSymHeapList &todo) {
 
 bool spliceOutChain(
         SymHeap                 &sh,
-        TValId                  seg,
+        const TValId            beg,
         const TValId            endPoint,
         const bool              readOnlyMode)
 {
@@ -854,26 +857,37 @@ bool spliceOutChain(
     // loop indefinitely.  However, the basic list segment axiom guarantees that
     // there is no such cycle.
 
-    while (!objMinLength(sh, seg)) {
-        const TValId peer = segPeer(sh, seg);
-        const TValId valNext = sh.valueOf(nextPtrFromSeg(sh, peer));
-        if (!readOnlyMode)
-            spliceOutListSegmentCore(sh, seg, peer);
+    TValId seg = beg;
+    TValId peer, valNext;
+
+    for (;;) {
+        const EValueTarget code = sh.valTarget(seg);
+        if (VT_ABSTRACT != code || objMinLength(sh, seg)) {
+            // we are on a wrong way already...
+            CL_BREAK_IF(!readOnlyMode);
+            return false;
+        }
+
+        peer = segPeer(sh, seg);
+        valNext = sh.valueOf(nextPtrFromSeg(sh, peer));
+
+        if (!readOnlyMode && beg != seg)
+            destroyRootAndCollectJunk(sh, seg);
 
         if (valNext == endPoint)
-            // well done
-            return true;
-
-        const EValueTarget code = sh.valTarget(valNext);
-        if (VT_ABSTRACT != code)
-            // we are on a wrong way already...
+            // we have the chain we are looking for
             break;
+
+        if (!readOnlyMode && seg != peer)
+            destroyRootAndCollectJunk(sh, peer);
 
         seg = sh.valRoot(valNext);
     }
 
-    CL_BREAK_IF(!readOnlyMode);
-    return false;
+    if (!readOnlyMode)
+        spliceOutListSegmentCore(sh, beg, peer, valNext);
+
+    return true;
 }
 
 bool spliceOutListSegment(SymHeap &sh, TValId atAddr, TValId pointingTo) {
