@@ -605,25 +605,7 @@ void SymProc::valDestroyTarget(TValId addr) {
     if (VAL_ADDR_OF_RET == addr && isGone(code))
         return;
 
-    // check the validity of this call
-    CL_BREAK_IF(!isPossibleToDeref(code));
-    CL_BREAK_IF(sh_.valOffset(addr));
-
-    // gather potentialy destroyed pointer sub-values
-    std::vector<TValId> ptrs;
-    getPtrValues(ptrs, sh_, addr);
-
-    // destroy the target
-    sh_.valDestroyTarget(addr);
-
-    // now check for memory leakage
-    bool leaking = false;
-    BOOST_FOREACH(TValId val, ptrs) {
-        if (collectJunk(sh_, val))
-            leaking = true;
-    }
-
-    if (leaking)
+    if (destroyRootAndCollectJunk(sh_, addr))
         this->reportMemLeak(code, "destroy");
 }
 

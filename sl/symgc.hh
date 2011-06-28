@@ -39,4 +39,6 @@ class SymHeap;
  */
 bool collectJunk(SymHeap &sh, TValId val); 
 
+bool destroyRootAndCollectJunk(SymHeap &sh, const TValId root);
+
 #endif /* H_GUARD_SYMGC_H */

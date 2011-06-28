@@ -112,3 +112,24 @@ bool collectJunk(SymHeap &sh, TValId val) {
 
     return detected;
 }
+
+bool destroyRootAndCollectJunk(SymHeap &sh, const TValId root) {
+    CL_BREAK_IF(sh.valOffset(root));
+    CL_BREAK_IF(!isPossibleToDeref(sh.valTarget(root)));
+
+    // gather potentialy destroyed pointer sub-values
+    std::vector<TValId> ptrs;
+    getPtrValues(ptrs, sh, root);
+
+    // destroy the target
+    sh.valDestroyTarget(root);
+
+    // now check for memory leakage
+    bool leaking = false;
+    BOOST_FOREACH(TValId val, ptrs) {
+        if (collectJunk(sh, val))
+            leaking = true;
+    }
+
+    return leaking;
+}
