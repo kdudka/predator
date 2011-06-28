@@ -718,13 +718,13 @@ void dlSegReplaceByConcrete(SymHeap &sh, TValId seg, TValId peer) {
     CL_BREAK_IF(!dlSegCheckConsistency(sh));
 }
 
-void spliceOutListSegmentCore(
+void spliceOutListSegment(
         SymHeap                 &sh,
         const TValId            seg,
         const TValId            peer,
         const TValId            valNext)
 {
-    LDP_INIT(symabstract, "spliceOutListSegmentCore");
+    LDP_INIT(symabstract, "spliceOutListSegment");
     LDP_PLOT(symabstract, sh);
 
     if (OK_DLS == sh.valTargetKind(seg)) {
@@ -770,7 +770,7 @@ unsigned /* len */ spliceOutSegmentIfNeeded(
     // possibly empty LS
     SymHeap sh0(sh);
     const TValId valNext = sh0.valueOf(nextPtrFromSeg(sh0, peer));
-    spliceOutListSegmentCore(sh0, seg, peer, valNext);
+    spliceOutListSegment(sh0, seg, peer, valNext);
     todo.push_back(sh0);
     return /* LS 0+ */ 0;
 }
@@ -847,7 +847,7 @@ void concretizeObj(SymHeap &sh, TValId addr, TSymHeapList &todo) {
     LDP_PLOT(symabstract, sh);
 }
 
-bool spliceOutChain(
+bool spliceOutAbstractPathCore(
         SymHeap                 &sh,
         const TValId            beg,
         const TValId            endPoint,
@@ -885,12 +885,12 @@ bool spliceOutChain(
     }
 
     if (!readOnlyMode)
-        spliceOutListSegmentCore(sh, beg, peer, valNext);
+        spliceOutListSegment(sh, beg, peer, valNext);
 
     return true;
 }
 
-bool spliceOutListSegment(SymHeap &sh, TValId atAddr, TValId pointingTo) {
+bool spliceOutAbstractPath(SymHeap &sh, TValId atAddr, TValId pointingTo) {
     const TValId seg = sh.valRoot(atAddr);
     const TValId peer = segPeer(sh, seg);
 
@@ -904,12 +904,12 @@ bool spliceOutListSegment(SymHeap &sh, TValId atAddr, TValId pointingTo) {
     const TOffset off = sh.valOffset(atAddr) - sh.segBinding(seg).head;
     const TValId endPoint = sh.valByOffset(pointingTo, off);
 
-    if (!spliceOutChain(sh, seg, endPoint, /* readOnlyMode */ true))
+    if (!spliceOutAbstractPathCore(sh, seg, endPoint, /* readOnlyMode */ true))
         // giving up
         return false;
 
-    if (!spliceOutChain(sh, seg, endPoint, /* readOnlyMode */ false))
-        CL_BREAK_IF("spliceOutListSegmentCore() completely broken");
+    if (!spliceOutAbstractPathCore(sh, seg, endPoint, /* readOnlyMode */ false))
+        CL_BREAK_IF("spliceOutListSegment() completely broken");
 
     return true;
 }

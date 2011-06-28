@@ -58,8 +58,8 @@ void concretizeObj(SymHeap &srcDst, TValId atAddr, TSymHeapList &dst);
 void abstractIfNeeded(SymHeap &sh);
 
 /**
- * attempt to splice out a (possibly empty) empty list segment, as caller has
- * some explicit info that there is in fact no list segment
+ * attempt to splice out a chain of (possibly empty) empty list segments when
+ * the caller has some explicit info that there are in fact no list segments
  * @note The operation may fail under some circumstances, caller should be
  * probably ready for both variants.
  * @note This operation may be used on traversing of a non-deterministic
@@ -69,7 +69,7 @@ void abstractIfNeeded(SymHeap &sh);
  * @param pointingTo target point of the segment, it will be equal with atAddr
  * as long as the operation succeeds
  */
-bool spliceOutListSegment(SymHeap &sh, TValId atAddr, TValId pointingTo);
+bool spliceOutAbstractPath(SymHeap &sh, TValId atAddr, TValId pointingTo);
 
 /// enable/disable debugging of symabstract
 void debugSymAbstract(const bool enable);

@@ -1651,11 +1651,11 @@ void SymHeap::valMerge(TValId v1, TValId v2) {
         return;
     }
 
-    if (VT_ABSTRACT == code1 && spliceOutListSegment(*this, v1, v2))
+    if (VT_ABSTRACT == code1 && spliceOutAbstractPath(*this, v1, v2))
         // splice-out succeeded ... ls(v1, v2)
         return;
 
-    if (VT_ABSTRACT == code2 && spliceOutListSegment(*this, v2, v1))
+    if (VT_ABSTRACT == code2 && spliceOutAbstractPath(*this, v2, v1))
         // splice-out succeeded ... ls(v2, v1)
         return;
 
