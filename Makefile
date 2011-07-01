@@ -1,4 +1,4 @@
-# Copyright (C) 2009-2010 Kamil Dudka <kdudka@redhat.com>
+# Copyright (C) 2009-2011 Kamil Dudka <kdudka@redhat.com>
 #
 # This file is part of predator.
 #
@@ -40,7 +40,6 @@ GIT             ?= git#                     # use this to override git(1)
 SVN             ?= svn#                     # use this to override svn(1)
 
 DIRS_BUILD      ?= cl fwnull sl fa
-DIRS_INSTALL    ?= cl fwnull sl
 
 .PHONY: all check clean distcheck distclean api cl/api sl/api ChangeLog \
 	build_gcc build_gcc_svn update_gcc update_gcc_src_only \
@@ -71,7 +70,7 @@ sl/api:
 
 api: cl/api sl/api
 
-# unpack released gcc 4.5
+# unpack the release of gcc
 $(GCC_STABLE): $(GCC_STABLE_TGZ)
 	test -d $(GCC_STABLE) || tar xf $(GCC_STABLE_TGZ)
 
@@ -145,7 +144,7 @@ update_gcc: update_gcc_src_only
 $(INVADER):
 	$(CURL) -o $@ 'http://www.eastlondonmassive.org/invader-1_1.zip'
 
-# fetch released gcc 4.5
+# fetch a stable release of gcc
 $(GCC_STABLE_TGZ):
 	$(CURL) -o $@ '$(GCC_STABLE_URL)'
 
@@ -156,15 +155,17 @@ build_gcc_svn:
 	$(MAKE) build_gcc
 
 include/gcc/: gcc-install/lib/gcc
-	cd include && ln -fsvT `ls -td ../gcc-install/lib/gcc/*/4.[56]*/plugin/include|head -1` gcc
+	cd include && ln -fsvT \
+		`ls -td ../gcc-install/lib/gcc/*/4.[56]*/plugin/include|head -1` gcc
 
 ChangeLog:
-	git log --pretty="format:%ad  %an%n%n%w(80,8,8)%B%n" --date=short -- $(CHLOG_WATCH) > $@
+	git log --pretty="format:%ad  %an%n%n%w(80,8,8)%B%n" --date=short -- \
+		$(CHLOG_WATCH) > $@
 
 gcc-install/lib/gcc:
 	@echo "*** 'gcc-install/lib/gcc' does not exist.  If you want to proceed"
 	@echo "*** with standalone build of gcc, try 'make build_gcc' first.  If"
-	@echo "*** it does not help, consult ./FAQ.  If anything goes wrong,"
+	@echo "*** it does not help, consult ./README.  If anything goes wrong,"
 	@echo "*** please submit a bug report to <idudka@fit.vutbr.cz>."
 	@echo
 	@false

@@ -1,32 +1,125 @@
-Files maintained by the git repository
-======================================
-COPYING             GPLv3 license text
-FAQ                 Frequently Asked Questions (and corresponding answers)
-Makefile            root Makefile, among others useful to build gcc
-cl/                 source codes of Code Listener and its gcc front-end
-cl/README           more specific README for the source codes of cl
-fa/                 Jiri Simacek's pet project
-invader-extras/     downstream patches for Invader
-ocaml/mltags        script generating tags for ocaml sources
-seplog/             original implementation of symbolic heap by Petr Peringer
-sl/                 source codes of Separation Logic based analysis
-sl/README           more specific README for the source codes of sl
+Predator
+========
+Predator is a practical tool for checking manipulation of dynamic data
+structures using *separation logic*.  It can be loaded directly into *GCC* as a
+*plug-in*.  This way you can easily analyse C code sources, using the existing
+build system, without any manual preprocessing of them etc.  The analysis itself
+is, however, not yet ready for complex projects yet.  The plug-in is based on
+code-listener infrastructure (included).  Although Predator is intended to be as
+portable as GCC is, we support only Linux for now.  You can find the latest news
+on the following project page:
+
+    http://www.fit.vutbr.cz/research/groups/verifit/tools/predator
+
+Predator and code-listener are licensed as GPLv3+, see COPYING for details.
 
 
-Files maintained locally only
-=============================
-cl_build/           working directory for build of libcl.so
-gcc                 symlink to gcc internal headers (feel free to override)
-gcc-build/          working directory for build of gcc
-gcc-install/        location of the installed gcc after a successful build
-gcc-src/            symlink to (or SVN working copy of) gcc sources
-sl_build/           working directory for build of libsl.so
+Building from sources against a local build of gcc (recommended for end users)
+==============================================================================
+
+(1) Install all dependences of GCC
+----------------------------------
+   * GMP library (including the -devel stuff)
+     - available at http://gmplib.org/
+     - package is usually called 'gmp'
+     - on binary distros you may need also the 'gmp-devel' sub-package
+
+   * MPC library (including the -devel stuff)
+     - available at http://www.multiprecision.org/
+     - package is usually called 'mpc' or 'libmpc'
+     - on binary distros you may need also the 'libmpc-devel' sub-package
+
+   * MPFR library (including the -devel stuff)
+     - available at http://www.mpfr.org/
+     - package is usually called 'mpfr'
+     - on binary distros you may need also the 'mpfr-devel' sub-package
+
+(2) Install all dependences of Predator
+---------------------------------------
+   * CMake 2.8+
+     - available at http://www.cmake.org
+     - the executable is called 'cmake'
+     - usually provided by a package called 'cmake'
+     - though minimal required version of CMake is 2.6, known to work is 2.8+,
+       please report any issues with other CMake versions
+
+   * Boost libraries 1.46+
+     - available at http://www.boost.org/
+     - package is usually called 'boost'
+     - on binary distros you may need also the 'boost-devel' sub-package
+
+   * 32bit system headers, especially in case of 64bit OS
+     - on Ubuntu/Debian provided by a package called 'libc6-dev-i386'
+     - you can try to check their presence
+       by 'gcc -m32 -o /dev/null /usr/include/stdlib.h'
+
+(3) Build the GCC compiler from sources
+---------------------------------------
+The following command downloads the sources of a stable gcc release, builds them
+in a minimalistic way and install them into a local directory:
+
+    make build_gcc
+
+The above step is the most time-consuming step, which can take from 5 minutes to
+several hours, depending on your network bandwidth, machine performance and the
+current load of the machine.  The download step can be accelerated by selecting
+a closer mirror to download GCC from.  The build step can be accelerated by
+giving the option '-jN' to 'make', where N is the number of CPU cores plus one
+(a commonly used heuristic, there exist several others).  But first make sure
+that your machine has enough resources for building GCC in parallel.
+
+(4) Build code-listener and Predator from sources
+-------------------------------------------------
+The following command builds code-listener and Predator from sources:
+
+    make
+
+Again, the build can be accelerated using the '-j' option of 'make', as stated
+above.  After a successful build of Predator, it is suggested (but not required)
+to run the test-suite shipped with Predator to ensure the plug-in works as the
+authors intended to.  The test-suite consists of nearly 200 regression tests
+that can be run using the following command:
+
+    make check
+
+As well as the build, the test-suite can run in parallel in order to boost the
+performance.  Now the '-jN' parameter needs to go to 'ctest' instead of make:
+
+    make check CTEST="ctest -j9"
 
 
-Useful targets of the root Makefile
-===================================
-all                 run 'make' in cl, sl and fwnull (default)
-check               run 'make check' in cl, sl and fwnull
-distcheck           run 'make distcheck' in cl, sl and fwnull
-build_gcc           build gcc from the released tarball
-build_gcc_svn       build gcc from SVN sources (NOTE: this may take some time)
+Running Predator
+================
+To employ the Predator plug-in in a build of an arbitrary project fully
+transparently, it is recommended to set certain environment variables:
+
+    PATH="`readlink -f gcc-install/bin`:$PATH"
+    LD_LIBRARY_PATH="`readlink -f sl_build`:$LD_LIBRARY_PATH"
+    export PATH LD_LIBRARY_PATH
+
+Then you can simply use the GCC options '-fplugin' and '-fplugin-arg' as
+documented in the gcc(1) man page:
+
+    gcc -fplugin=libsl.so -o /dev/null -c cl/version.c -fplugin-arg-libsl-help
+    gcc -fplugin=libsl.so ...
+
+
+Building from sources against a system GCC (only for experts)
+=============================================================
+This method is intended for people that already have experience with building
+GCC plug-ins.  It requires plug-in enabled GCC 4.5+ installed on your system,
+including the headers that are necessary to build GCC plug-ins.  The currently
+supported version of gcc is 4.6.0 and the test-suite is guaranteed to fully
+succeed only against this version of GCC.  However, the Predator plug-in itself
+is known to work with GCC 4.5.x equally well.
+
+The first step is to create a symlink to gcc plug-in headers.  Assuming you have
+Gentoo Linux using gcc-4.5.2 as a system compiler, you need to do this:
+
+    ln -sfT /usr/lib64/gcc/x86_64-pc-linux-gnu/4.5.2/plugin/include include/gcc
+
+Then you can build Predator without building GCC locally.  If you want to run
+the test-suite, you need to tell CMake which GCC should be used to load the
+plug-in to:
+
+    make check CMAKE="cmake -D GCC_HOST=gcc-4.5.2"
