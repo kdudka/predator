@@ -80,7 +80,7 @@ enum ECustomValue {
 
 /// @attention SymHeap is not responsible for any deep copies of strings
 union CustomValueData {
-    int         uid;        ///< unique ID as assigned by code-listener
+    int         uid;        ///< unique ID as assigned by Code Listener
     long        num;        ///< integral number
     const char *str;        ///< zero-terminated string
 };
@@ -409,6 +409,7 @@ class SymHeapCore {
         /**
          * create a new heap object of known size
          * @param cbSize size of the object in @b bytes
+         * @param nullify if true the untouched contents is implicitly nullified
          * @return value ID of the acquired address
          */
         TValId heapAlloc(int cbSize, bool nullify);

@@ -71,7 +71,7 @@ class SymBackTrace {
         /**
          * enter a call of function, thus enlarge the backtrace by one
          * @param fncId ID of function, which is being called
-         * @param lw location of the call related to the caller (definitely @b
+         * @param loc location of the call related to the caller (definitely @b
          * not location of the called function)
          */
         void pushCall(
