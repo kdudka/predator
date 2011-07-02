@@ -84,23 +84,14 @@ make version.h -C sl        || die "failed to create sl/version.h"
 make ChangeLog "CHLOG_WATCH=$chlog_watch" \
     || die "failed to generate ChangeLog"
 
-# sync FAQ and Makefile
-# TODO: sync README
+# adapt Makefile
 case "$PROJECT" in
     code-listener)
-        sed -i \
-            -e 's/\<sl\>/fwnull/' \
-            -e 's/\<SL_/FWNULL_/' \
-            FAQ || die "failed to adapt FAQ"
         sed -i 's/cl fwnull.*/cl fwnull/' Makefile \
             || die "failed to adapt Makefile"
         ;;
 
     forester)
-        sed -i \
-            -e 's/\<sl\>/fa/' \
-            -e 's/\<SL_/FA_/' \
-            FAQ || die "failed to adapt FAQ"
         sed -i 's/cl fwnull sl/cl fwnull/' Makefile \
             || die "failed to adapt Makefile"
         ;;
