@@ -14,7 +14,7 @@ on the following project page:
 Predator and Code Listener are licensed as GPLv3+, see COPYING for details.
 
 
-Building from sources against a local build of gcc (recommended for end users)
+Building from sources against a local build of GCC (recommended for end users)
 ==============================================================================
 
 (1) Install all dependences of GCC
@@ -55,7 +55,7 @@ Building from sources against a local build of gcc (recommended for end users)
 
 (3) Build the GCC compiler from sources
 ---------------------------------------
-The following command downloads the sources of a stable gcc release, builds them
+The following command downloads the sources of a stable GCC release, builds them
 in a minimalistic way and install them into a local directory:
 
     make build_gcc
@@ -109,11 +109,11 @@ Building from sources against a system GCC (only for experts)
 This method is intended for people that already have experience with building
 GCC plug-ins.  It requires plug-in enabled GCC 4.5+ installed on your system,
 including the headers that are necessary to build GCC plug-ins.  The currently
-supported version of gcc is 4.6.0 and the test-suite is guaranteed to fully
+supported version of GCC is 4.6.0 and the test-suite is guaranteed to fully
 succeed only against this version of GCC.  However, the Predator plug-in itself
 is known to work with GCC 4.5.x equally well.
 
-The first step is to create a symlink to gcc plug-in headers.  Assuming you have
+The first step is to create a symlink to GCC plug-in headers.  Assuming you have
 Gentoo Linux using gcc-4.5.2 as a system compiler, you need to do this:
 
     ln -sfT /usr/lib64/gcc/x86_64-pc-linux-gnu/4.5.2/plugin/include include/gcc

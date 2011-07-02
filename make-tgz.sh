@@ -14,11 +14,12 @@ usage(){
 }
 
 PRUNE_ALWAYS="dev-util invader-extras make-tgz.sh ocaml seplog .git \
-    sl/linux-drivers"
+    sl/linux-drivers cl/cl-readme.patch"
 
 chlog_watch=
 drop_fa=no
 drop_sl=no
+readme_cl=no
 
 PROJECT="$1"
 case "$PROJECT" in
@@ -26,6 +27,7 @@ case "$PROJECT" in
         chlog_watch="cl fwnull"
         drop_fa=yes
         drop_sl=yes
+        readme_cl=yes
         ;;
 
     forester)
@@ -83,6 +85,11 @@ make version.h -C sl        || die "failed to create sl/version.h"
 # generate ChangeLog
 make ChangeLog "CHLOG_WATCH=$chlog_watch" \
     || die "failed to generate ChangeLog"
+
+# adapt README
+if test xyes = "x$readme_cl"; then
+    patch README < "cl/cl-readme.patch"
+fi
 
 # adapt Makefile
 case "$PROJECT" in
