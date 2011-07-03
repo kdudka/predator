@@ -9,7 +9,7 @@
  * @mainpage
  * @author Kamil Dudka <kdudka@redhat.com>
  * @version @include version_cl.h
- * @note The @b up2date @b sources are available (among other ways) through
+ * @note The @b up2date @b sources are available (among other ways) via
  * <A HREF="http://github.com/kdudka/predator"><B>github</B></A>.
  *
  * @remark
@@ -56,7 +56,7 @@
  *      - varIdFromOperand()
  *      - traverseTypeIc()
  *
- * - internals: cl.hh, cl_decorator.hh, cl_factory.hh
+ * - internals: cl.hh, cl_filter.hh, cl_factory.hh
  *      - ICodeListener
  *      - ClFilterBase
  *      - ClFactory

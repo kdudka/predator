@@ -9,28 +9,36 @@
  * @mainpage
  * @author Kamil Dudka <kdudka@redhat.com>
  * @version @include version.h
- * @note The @b up2date @b sources are available (among other ways) through
+ * @note The @b up2date @b sources are available (among other ways) via
  * <A HREF="http://github.com/kdudka/predator"><B>github</B></A>.
  *
  * @remark
  *
- * - symbolic heap: symid.hh, SymHeapCore, SymHeapTyped, SymHeap
+ * - symbolic heap: symid.hh, SymHeapCore, SymHeap
  *
- * - symbolic heap framework: SymBackTrace, SymProc, collectJunk()
+ * - garbage collector: collectJunk(), destroyRootAndCollectJunk()
  *
- * - symbolic state: SymState, SymStateMap
+ * - generic join algorithm: joinSymHeaps(), joinDataReadOnly(), joinData()
  *
- * - symbolic execution: SymExec, SymExecCore, handleBuiltIn(), PathTracer
+ * - list segment discovery: discoverBestAbstraction()
  *
- * - list segment abstraction: symabstract.hh, symseg.hh
+ * - list segment abstraction: abstractIfNeeded()
  *
- * - function call optimization: SymCallCache, SymCallCtx, symcut.hh
+ * - list segment concretization: concretizeObj(), spliceOutAbstractPath()
  *
- * - symbolic heap plotter: SymPlot
+ * - symbolic state: SymState, SymHeapUnion, SymStateWithJoin
  *
- * - debugging helpers: symdump.hh
+ * - function call management: SymBackTrace, symcut.hh, SymCallCache, SymCallCtx
  *
- * - other helpers: util.hh, clutil.hh, symutil.hh, worklist.hh
+ * - symbolic execution: SymProc, SymExecCore, execute()
+ *
+ * - symbolic heap plotter: symplot.hh, symdebug.hh
+ *
+ * - utilities: symutil.hh, symseg.hh
+ *
+ * - built-in dispatcher: handleBuiltIn()
+ *
+ * - built-in header: sl.h
  *
  * - configuration: config.h
  */
