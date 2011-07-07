@@ -284,9 +284,13 @@ bool areEqual(
         &sh2Writable
     };
 
-    // schedule return values
     TWorkList wl;
-    wl.schedule(VAL_ADDR_OF_RET, VAL_ADDR_OF_RET);
+    if (sh1.valLastKnownTypeOfTarget(VAL_ADDR_OF_RET)
+            || sh2.valLastKnownTypeOfTarget(VAL_ADDR_OF_RET))
+    {
+        // schedule return values
+        wl.schedule(VAL_ADDR_OF_RET, VAL_ADDR_OF_RET);
+    }
 
     // start with program variables
     VarScheduleVisitor visitor(wl);
