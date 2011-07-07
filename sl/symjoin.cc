@@ -903,6 +903,11 @@ unsigned joinMinLength(
     if (VAL_INVALID == root1 || VAL_INVALID == root2) {
         // the status should have been already updated
         CL_BREAK_IF(JS_USE_ANY == ctx.status);
+
+        if (objMinLength(ctx.sh1, root1) || objMinLength(ctx.sh2, root2))
+            // insertion of non-empty object does not cover both variants
+            updateJoinStatus(ctx, JS_THREE_WAY);
+
         return 0;
     }
 
