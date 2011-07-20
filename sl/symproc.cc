@@ -30,6 +30,7 @@
 #include "symbt.hh"
 #include "symgc.hh"
 #include "symheap.hh"
+#include "symplot.hh"
 #include "symstate.hh"
 #include "symutil.hh"
 #include "util.hh"
@@ -39,6 +40,16 @@
 
 #include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
+
+static bool debuggingGarbageCollector = static_cast<bool>(DEBUG_SYMGC);
+
+void debugGarbageCollector(const bool enable) {
+    if (enable == ::debuggingGarbageCollector)
+        return;
+
+    CL_DEBUG("symjoin: debugGarbageCollector(" << enable << ") takes effect");
+    ::debuggingGarbageCollector = enable;
+}
 
 // /////////////////////////////////////////////////////////////////////////////
 // SymProc implementation
@@ -502,16 +513,25 @@ void SymProc::heapSetSingleVal(TObjId lhs, TValId rhs) {
     // update type-info
     this->heapObjDefineType(lhs, rhs);
 
+    SymHeap snap(sh_.stor());
+    if (::debuggingGarbageCollector)
+        snap = sh_;
+
     TValSet killedPtrs;
     sh_.objSetValue(lhs, rhs, &killedPtrs);
 
-    bool leaking = false;
+    TValList leakList;
     BOOST_FOREACH(const TValId oldValue, killedPtrs)
-        if (collectJunk(sh_, oldValue))
-            leaking = true;
+        collectJunk(sh_, oldValue, &leakList);
 
-    if (leaking)
-        this->reportMemLeak(code, "assign");
+    if (leakList.empty())
+        // no memory leakage here
+        return;
+
+    this->reportMemLeak(code, "assign");
+
+    if (::debuggingGarbageCollector)
+        plotHeap(snap, "memleak", leakList, /* digForward */ false);
 }
 
 class DerefFailedWriter {
@@ -605,8 +625,19 @@ void SymProc::valDestroyTarget(TValId addr) {
     if (VAL_ADDR_OF_RET == addr && isGone(code))
         return;
 
-    if (destroyRootAndCollectJunk(sh_, addr))
-        this->reportMemLeak(code, "destroy");
+    SymHeap snap(sh_.stor());
+    if (::debuggingGarbageCollector)
+        snap = sh_;
+
+    TValList leakList;
+    if (!destroyRootAndCollectJunk(sh_, addr, &leakList))
+        // no memory leakage here
+        return;
+
+    this->reportMemLeak(code, "destroy");
+
+    if (::debuggingGarbageCollector)
+        plotHeap(snap, "memleak", leakList, /* digForward */ false);
 }
 
 void SymProc::killVar(const CodeStorage::KillVar &kv) {

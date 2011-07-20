@@ -25,9 +25,7 @@
  * collectJunk - implementation of a garbage collector for the symbolic heap
  */
 
-#include "symid.hh"
-
-class SymHeap;
+#include "symheap.hh"
 
 /**
  * check if a sub-heap reachable from the given value is also reachable from
@@ -35,10 +33,14 @@ class SymHeap;
  * removed.
  * @param sh instance of the symbolic heap to search in
  * @param val ID of the heap value to check for junk
+ * @param leakList if not null, push all destroyed root objects to the list
  * @return true if any junk has been detected/collected
  */
-bool collectJunk(SymHeap &sh, TValId val); 
+bool collectJunk(SymHeap &sh, TValId val, TValList *leakList = 0);
 
-bool destroyRootAndCollectJunk(SymHeap &sh, const TValId root);
+bool destroyRootAndCollectJunk(
+        SymHeap                 &sh,
+        const TValId             root,
+        TValList                *leakList = 0);
 
 #endif /* H_GUARD_SYMGC_H */

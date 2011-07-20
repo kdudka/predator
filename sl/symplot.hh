@@ -39,6 +39,7 @@ bool plotHeap(
 bool plotHeap(
         const SymHeap                   &sh,
         const std::string               &name,
-        const TValList                  &startingPoints);
+        const TValList                  &startingPoints,
+        const bool                      digForward = true);
 
 #endif /* H_GUARD_SYM_PLOT_H */

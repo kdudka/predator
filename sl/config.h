@@ -64,6 +64,11 @@
 #define DEBUG_SYMCUT                        0
 
 /**
+ * if 1, plot shape of the data structures being leaked
+ */
+#define DEBUG_SYMGC                         0
+
+/**
  * if 1, symjoin prints some extra debugging info
  */
 #define DEBUG_SYMJOIN                       0

@@ -82,7 +82,7 @@ bool digJunk(SymHeap &heap, TValId *ptrVal) {
     return true;
 }
 
-bool collectJunk(SymHeap &sh, TValId val) {
+bool collectJunk(SymHeap &sh, TValId val, TValList *leakList) {
     bool detected = false;
 
     std::stack<TValId> todo;
@@ -99,6 +99,9 @@ bool collectJunk(SymHeap &sh, TValId val) {
             std::vector<TValId> ptrs;
             getPtrValues(ptrs, sh, root);
 
+            if (leakList)
+                leakList->push_back(root);
+
             // destroy junk
             if (!sh.valDestroyTarget(root))
                 CL_BREAK_IF("failed to kill junk");
@@ -113,7 +116,11 @@ bool collectJunk(SymHeap &sh, TValId val) {
     return detected;
 }
 
-bool destroyRootAndCollectJunk(SymHeap &sh, const TValId root) {
+bool destroyRootAndCollectJunk(
+        SymHeap                 &sh,
+        const TValId             root,
+        TValList                *leakList)
+{
     CL_BREAK_IF(sh.valOffset(root));
     CL_BREAK_IF(!isPossibleToDeref(sh.valTarget(root)));
 
@@ -127,7 +134,7 @@ bool destroyRootAndCollectJunk(SymHeap &sh, const TValId root) {
     // now check for memory leakage
     bool leaking = false;
     BOOST_FOREACH(TValId val, ptrs) {
-        if (collectJunk(sh, val))
+        if (collectJunk(sh, val, leakList))
             leaking = true;
     }
 

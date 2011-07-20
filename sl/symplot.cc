@@ -116,7 +116,8 @@ struct PlotData {
 
 #define SL_QUOTE(what) "\"" << what << "\""
 
-void digValues(PlotData &plot, const TValList &startingPoints) {
+void digValues(PlotData &plot, const TValList &startingPoints, bool digForward)
+{
     SymHeap &sh = plot.sh;
 
     WorkList<TValId> todo;
@@ -138,6 +139,9 @@ void digValues(PlotData &plot, const TValList &startingPoints) {
         plot.values[root] = /* isRoot */ true;
         if (root != val && todo.seen(root))
             // this root was already traversed
+            continue;
+
+        if (!digForward)
             continue;
 
         // traverse the root
@@ -976,7 +980,8 @@ void plotEverything(PlotData &plot) {
 bool plotHeap(
         const SymHeap                   &sh,
         const std::string               &name,
-        const TValList                  &startingPoints)
+        const TValList                  &startingPoints,
+        const bool                      digForward)
 {
     PlotEnumerator *pe = PlotEnumerator::instance();
     std::string plotName(pe->decorate(name));
@@ -1006,7 +1011,7 @@ bool plotHeap(
     PlotData plot(sh, out);
 
     // do our stuff
-    digValues(plot, startingPoints);
+    digValues(plot, startingPoints, digForward);
     plotEverything(plot);
 
     // close graph

@@ -311,10 +311,15 @@ bool handleDebuggingOf(
             debugSymJoin(enable);
             break;
 
+        case ___SL_GARBAGE_COLLECTOR:
+            debugGarbageCollector(enable);
+            break;
+
         case ___SL_EVERYTHING:
         default:
             debugSymAbstract(enable);
             debugSymJoin(enable);
+            debugGarbageCollector(enable);
     }
 
     insertCoreHeap(dst, core, insn);

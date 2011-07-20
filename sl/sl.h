@@ -33,7 +33,8 @@
 enum ___sl_module_id {
     ___SL_EVERYTHING,
     ___SL_SYMABSTRACT,
-    ___SL_SYMJOIN
+    ___SL_SYMJOIN,
+    ___SL_GARBAGE_COLLECTOR
 };
 
 #ifdef __cplusplus
