@@ -40,8 +40,8 @@ static inline void list_add_tail(struct list_head *new, struct list_head *head)
 }
 
 struct top_list {
-    struct list_head    link;
     struct list_head    sub;
+    struct list_head    link;
 };
 
 struct sub_list {
