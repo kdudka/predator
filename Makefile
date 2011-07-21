@@ -15,10 +15,15 @@
 # You should have received a copy of the GNU General Public License
 # along with predator.  If not, see <http://www.gnu.org/licenses/>.
 
+MIRROR          ?= http://ftp.fi.muni.cz/pub/linux/gentoo
+
+BOOST_STABLE    ?= boost_1_46_1#            # released Boost
+BOOST_STABLE_TGZ?= $(BOOST_STABLE).tar.bz2# # tarball of released Boost
+BOOST_STABLE_URL?= $(MIRROR)/distfiles/$(BOOST_STABLE_TGZ)
+
 GCC_STABLE      ?= gcc-4.6.0#               # released gcc
 GCC_STABLE_TGZ  ?= $(GCC_STABLE).tar.bz2#   # tarball of released gcc
-GCC_STABLE_URL  ?= \
-	ftp://ftp.lip6.fr/pub/gcc/releases/$(GCC_STABLE)/$(GCC_STABLE_TGZ)
+GCC_STABLE_URL  ?= $(MIRROR)/distfiles/$(GCC_STABLE_TGZ)
 
 GCC_SRC         ?= gcc-src#                 # SVN working copy for gcc src
 GCC_BUILD       ?= gcc-build#               # working directory gcc build
@@ -42,6 +47,7 @@ SVN             ?= svn#                     # use this to override svn(1)
 DIRS_BUILD      ?= cl fwnull sl fa
 
 .PHONY: all check clean distcheck distclean api cl/api sl/api ChangeLog \
+	build_boost \
 	build_gcc build_gcc_svn update_gcc update_gcc_src_only \
 	build_inv
 
@@ -69,6 +75,10 @@ sl/api:
 	$(MAKE) -C sl/api
 
 api: cl/api sl/api
+
+# unpack the release of Boost
+$(BOOST_STABLE): $(BOOST_STABLE_TGZ)
+	test -d $(BOOST_STABLE) || tar xf $(BOOST_STABLE_TGZ)
 
 # unpack the release of gcc
 $(GCC_STABLE): $(GCC_STABLE_TGZ)
@@ -103,6 +113,10 @@ $(GCC_SRC):
 			&& ln -fsvT $(GCC_STABLE) $(GCC_SRC) \
 			&& readlink -e $(GCC_SRC); \
 		fi
+
+# prepare a local instance of Boost libraries
+build_boost: $(BOOST_STABLE)
+	cd include && ln -fsvT ../$(BOOST_STABLE)/boost boost
 
 # build gcc from sources
 build_gcc: $(GCC_SRC)
@@ -143,6 +157,10 @@ update_gcc: update_gcc_src_only
 # fetch Invader tarball
 $(INVADER):
 	$(CURL) -o $@ 'http://www.eastlondonmassive.org/invader-1_1.zip'
+
+# fetch a stable release of Boost
+$(BOOST_STABLE_TGZ):
+	$(CURL) -Lo $@ '$(BOOST_STABLE_URL)'
 
 # fetch a stable release of gcc
 $(GCC_STABLE_TGZ):

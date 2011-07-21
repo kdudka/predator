@@ -47,6 +47,8 @@ Building from sources against a local build of GCC (recommended for end users)
      - available at http://www.boost.org/
      - package is usually called 'boost'
      - on binary distros you may need also the 'boost-devel' sub-package
+     - if you are not able to install a new enough version of Boost on your
+       system, try to unpack a local instance of it by typing 'make build_boost'
 
    * 32bit system headers, especially in case of 64bit OS
      - on Ubuntu/Debian provided by a package called 'libc6-dev-i386'

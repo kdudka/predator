@@ -22,7 +22,7 @@ add_definitions("-I../include")
 enable_testing()
 
 # we need ot use boost 1.46+ because of boost::icl
-find_package(Boost 1.46 REQUIRED)
+find_package(Boost 1.46)
 
 include("../CMakeLists.common")
 
