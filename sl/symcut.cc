@@ -38,7 +38,7 @@
 #include <boost/tuple/tuple.hpp>
 
 struct DeepCopyData {
-    typedef std::map<TValId /* seg */, unsigned /* len */>      TSegLengths;
+    typedef std::map<TValId   /* seg */, unsigned /* len */>    TSegLengths;
     typedef std::map<TValId   /* src */, TValId   /* dst */>    TValMap;
     typedef std::pair<TObjId  /* src */, TObjId   /* dst */>    TItem;
     typedef std::set<CVar>                                      TCut;

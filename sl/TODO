@@ -1,0 +1,33 @@
+- do not explicitly maintain Neq predicates expressing segment minimal lengths
+  (it would be better to improve the prover to deduce them on the fly)
+
+- do not allow to introduce generic Neq predicates unless we know we can work
+  with them with no issues (especially make sure that valReplace() works fine)
+
+- ensure we do not deduce invalid Neq for values above/beyond a safely allocated
+  chunk of memory
+
+- invalidate external object IDs as soon as the objects become externally unused
+
+- represent uninitialized chunks of memory explicitly by intervals, so that we
+  can safely distinguish them from information thrown away during abstraction
+
+- represent nullified chunks of memory explicitly by intervals, allow to split
+  them to more intervals of smaller size when necessary
+
+- check size of integers when accessing them by pointers, warn if a signed int
+  is accessed as unsigned and vice versa
+
+- allow to convert nullified integers, pointers, and strings as long as the
+  sizeof allows to perform the conversion safely; shout otherwise
+
+- allow to represent (possibly unterminated) strings of fixed length at the
+  level of memory chunks (intervals)
+
+- allow to represent array of fixed lengths in the same way as list segments are
+  represented (it would allow to create hash tables of fixed length)
+
+- add support for execution of memset(), memmove()
+
+- add support for memcpy(), issue an error if memcpy() is mistakenly used
+  instead of memmove()
