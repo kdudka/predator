@@ -4,8 +4,8 @@ Predator is a practical tool for checking manipulation of dynamic data
 structures using *separation logic*.  It can be loaded directly into *GCC* as a
 *plug-in*.  This way you can easily analyse C code sources, using the existing
 build system, without any manual preprocessing of them etc.  The analysis itself
-is, however, not yet ready for complex projects yet.  The plug-in is based on
-Code Listener infrastructure (included).  Although Predator is intended to be as
+is, however, not ready for complex projects yet.  The plug-in is based on Code
+Listener infrastructure (included).  Although Predator is intended to be as
 portable as GCC is, we support only Linux for now.  You can find the latest news
 on the following project page:
 

@@ -152,6 +152,9 @@ typedef std::map<TObjId, bool /* isPtr */>              TLiveObjs;
 
 inline TMemChunk createChunk(const TOffset off, const TObjType clt) {
     CL_BREAK_IF(!clt || clt->code == CL_TYPE_VOID);
+
+    // I believe a right-open interval is going to be used by default, see
+    // boost_1_46_1/libs/icl/doc/html/boost_icl/interface.html for details
     return TMemChunk(off, off + clt->size);
 }
 
