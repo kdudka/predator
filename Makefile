@@ -21,7 +21,7 @@ BOOST_STABLE    ?= boost_1_46_1#            # released Boost
 BOOST_STABLE_TGZ?= $(BOOST_STABLE).tar.bz2# # tarball of released Boost
 BOOST_STABLE_URL?= $(MIRROR)/distfiles/$(BOOST_STABLE_TGZ)
 
-GCC_STABLE      ?= gcc-4.6.0#               # released gcc
+GCC_STABLE      ?= gcc-4.6.1#               # released gcc
 GCC_STABLE_TGZ  ?= $(GCC_STABLE).tar.bz2#   # tarball of released gcc
 GCC_STABLE_URL  ?= $(MIRROR)/distfiles/$(GCC_STABLE_TGZ)
 
@@ -174,7 +174,7 @@ build_gcc_svn:
 
 include/gcc/: gcc-install/lib/gcc
 	cd include && ln -fsvT \
-		`ls -td ../gcc-install/lib/gcc/*/4.[56]*/plugin/include|head -1` gcc
+		`ls -td ../gcc-install/lib/gcc/*/4.[5-7]*/plugin/include|head -1` gcc
 
 ChangeLog:
 	git log --pretty="format:%ad  %an%n%n%w(80,8,8)%B%n" --date=short -- \

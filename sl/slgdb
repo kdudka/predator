@@ -11,7 +11,7 @@ topdir="`dirname "$self"`/.."
 SL_DIR="$topdir/sl"
 SL_BUILD="$topdir/sl_build"
 SL_PLUG="$SL_BUILD/libsl.so"
-CC1="../gcc-install/libexec/gcc/`ls ../gcc-install/lib/gcc/`/4.[56]*/cc1"
+CC1="../gcc-install/libexec/gcc/`ls ../gcc-install/lib/gcc/`/4.[5-7]*/cc1"
 MOPTS="-s -j3 'CMAKE=cmake -D CL_DEBUG=ON -D SL_DEBUG=ON -D USE_INT3_AS_BRK=ON'"
 
 # attempt to make
