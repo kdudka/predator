@@ -51,10 +51,10 @@ DIRS_BUILD      ?= cl fwnull sl fa
 	build_gcc build_gcc_svn update_gcc update_gcc_src_only \
 	build_inv
 
-all: include/gcc/
+all: include/gcc
 	$(foreach dir, $(DIRS_BUILD), $(MAKE) -C $(dir) $@ &&) true
 
-check: include/gcc/
+check: include/gcc
 	$(foreach dir, $(DIRS_BUILD), $(MAKE) -C $(dir) $@ &&) true
 
 clean:
@@ -63,7 +63,7 @@ clean:
 distclean:
 	$(foreach dir, $(DIRS_BUILD), $(MAKE) -C $(dir) $@ &&) true
 
-distcheck: include/gcc/
+distcheck: include/gcc
 	$(foreach dir, $(DIRS_BUILD), $(MAKE) -C $(dir) $@ &&) true
 
 cl/api:
@@ -142,7 +142,7 @@ build_gcc: $(GCC_SRC)
 		fi
 	cd $(GCC_BUILD) && $(MAKE)
 	cd $(GCC_BUILD) && $(MAKE) -j1 install
-	$(MAKE) include/gcc/
+	$(MAKE) include/gcc
 
 # updated SVN working directory of gcc
 update_gcc_src_only:
@@ -172,7 +172,7 @@ build_gcc_svn:
 	$(SVN) co svn://gcc.gnu.org/svn/gcc/trunk $(GCC_SRC)
 	$(MAKE) build_gcc
 
-include/gcc/: gcc-install/lib/gcc
+include/gcc: gcc-install/lib/gcc
 	cd include && ln -fsvT \
 		`ls -td ../gcc-install/lib/gcc/*/4.[5-7]*/plugin/include|head -1` gcc
 
