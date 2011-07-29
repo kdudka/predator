@@ -5,7 +5,7 @@ by.  Any suggestions from real Ubuntu users on how to improve this howto are
 welcome.  Please replace XXXXXX by the latest release of Predator (for example
 predator-2011-07-07-216f2b8).
 
-    sudo apt-get-install cmake curl         \
+    sudo apt-get install cmake curl         \
         libgmp3-dev libmpc-dev libmpfr-dev  \
         gcc-multilib
 
