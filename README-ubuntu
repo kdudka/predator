@@ -9,7 +9,7 @@ predator-2011-07-07-216f2b8).
         libgmp3-dev libmpc-dev libmpfr-dev  \
         gcc-multilib
 
-    curl http://www.fit.vutbr.cz/~idudka/download/XXXXXX.tar.gz
+    curl http://www.fit.vutbr.cz/~idudka/download/XXXXXX.tar.gz \
         | gzip -cd \
         | tar x
 
