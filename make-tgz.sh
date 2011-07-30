@@ -14,12 +14,13 @@ usage(){
 }
 
 PRUNE_ALWAYS="dev-util invader-extras make-tgz.sh ocaml seplog .git \
-    sl/linux-drivers cl/cl-readme.patch"
+    sl/linux-drivers cl/cl-readme.patch sl/README-ubuntu.patch"
 
 chlog_watch=
 drop_fa=no
 drop_sl=no
 readme_cl=no
+readme_sl=no
 
 PROJECT="$1"
 case "$PROJECT" in
@@ -38,6 +39,7 @@ case "$PROJECT" in
     predator)
         chlog_watch="sl"
         drop_fa=yes
+        readme_sl=yes
         ;;
 
     *)
@@ -89,6 +91,11 @@ make ChangeLog "CHLOG_WATCH=$chlog_watch" \
 # adapt README
 if test xyes = "x$readme_cl"; then
     patch README < "cl/cl-readme.patch"
+fi
+
+# adapt README-ubuntu
+if test xyes = "x$readme_sl"; then
+    patch README-ubuntu < "sl/README-ubuntu.patch"
 fi
 
 # adapt Makefile
