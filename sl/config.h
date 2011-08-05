@@ -163,19 +163,19 @@
 /**
  * upper bound of DLS minimal length (zero means unlimited)
  */
-#define SE_RESTRICT_DLS_MINLEN              0
+#define SE_RESTRICT_DLS_MINLEN              2
 
 /**
  * upper bound of SLS minimal length (zero means unlimited)
  */
-#define SE_RESTRICT_SLS_MINLEN              0
+#define SE_RESTRICT_SLS_MINLEN              2
 
 /**
  * if 1, the symcut module allows generic minimal lengths to survive a function
  * call/return.  @b Not recommended unless SymCallCache has been rewritten to
  * use symjoin to maintain cache entries.
  */
-#define SE_SYMCUT_PRESERVES_MIN_LENGTHS     0
+#define SE_SYMCUT_PRESERVES_MIN_LENGTHS     1
 
 /**
  * if 1, support partial tracking of non-pointer values, which may result into

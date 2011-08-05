@@ -1,6 +1,12 @@
 test-0103.c:149:9: warning: memory leak detected while destroying a heap object
 test-0103.c:157:15: note: from call of create_top()
 test-0103.c:153:5: note: from call of main()
+test-0103.c:149:9: warning: memory leak detected while destroying a heap object
+test-0103.c:157:15: note: from call of create_top()
+test-0103.c:153:5: note: from call of main()
+test-0103.c:150:9: warning: memory leak detected while destroying a heap object
+test-0103.c:157:15: note: from call of create_top()
+test-0103.c:153:5: note: from call of main()
 test-0103.c:150:9: warning: memory leak detected while destroying a heap object
 test-0103.c:157:15: note: from call of create_top()
 test-0103.c:153:5: note: from call of main()
