@@ -1682,9 +1682,28 @@ void SymHeap::dlSegCrossNeqOp(ENeqOp op, TValId seg1) {
     SymHeapCore::neqOp(op, val1, head2);
     SymHeapCore::neqOp(op, val2, head1);
 
-    if (NEQ_DEL == op)
-        // removing the 1+ flag implies removal of the 2+ flag
-        SymHeapCore::neqOp(NEQ_DEL, head1, head2);
+    switch (op) {
+        case NEQ_ADD:
+            if (this->segEffectiveMinLength(seg1))
+                break;
+
+            // segment becomes non-empty
+            this->segSetEffectiveMinLength(seg1, /* DLS 1+ */ 1);
+            this->segSetEffectiveMinLength(seg2, /* DLS 1+ */ 1);
+            break;
+
+        case NEQ_DEL:
+            // segment becomes empty
+            this->segSetEffectiveMinLength(seg1, /* DLS 0+ */ 0);
+            this->segSetEffectiveMinLength(seg2, /* DLS 0+ */ 0);
+
+            // removing the 1+ flag implies removal of the 2+ flag
+            SymHeapCore::neqOp(NEQ_DEL, head1, head2);
+            break;
+
+        default:
+            CL_BREAK_IF("invalid call of SymHeapCore::dlSegCrossNeqOp()");
+    }
 }
 
 bool haveSegBidir(
@@ -1734,8 +1753,12 @@ void SymHeap::neqOp(ENeqOp op, TValId v1, TValId v2) {
         return;
     }
 
-    if (haveSegBidir(&seg, this, OK_SLS, v1, v2))
-        this->segSetEffectiveMinLength(seg, (NEQ_ADD == op));
+    if (haveSegBidir(&seg, this, OK_SLS, v1, v2)) {
+        if (NEQ_DEL == op)
+            this->segSetEffectiveMinLength(seg, /* DLS 0+ */ 0);
+        else if (!this->segEffectiveMinLength(seg))
+            this->segSetEffectiveMinLength(seg, /* DLS 1+ */ 1);
+    }
 
     if (haveSegBidir(&seg, this, OK_DLS, v1, v2)) {
         this->dlSegCrossNeqOp(op, seg);
@@ -1902,16 +1925,17 @@ unsigned SymHeap::segEffectiveMinLength(TValId seg) const {
 
     const EObjKind kind = aoData.kind;
     switch (kind) {
+        case OK_MAY_EXIST:
+            return 0;
+
         case OK_SLS:
         case OK_DLS:
-            break;
+            return aoData.minLength;
 
         default:
             CL_BREAK_IF("invalid call of SymHeap::segEffectiveMinLength()");
             return 0;
     }
-
-    return aoData.minLength;
 }
 
 void SymHeap::segSetEffectiveMinLength(TValId seg, unsigned len) {
@@ -1922,6 +1946,11 @@ void SymHeap::segSetEffectiveMinLength(TValId seg, unsigned len) {
 
     const EObjKind kind = aoData.kind;
     switch (kind) {
+        case OK_MAY_EXIST:
+            if (len)
+                CL_BREAK_IF("OK_MAY_EXIST is supposed to have zero minLength");
+            return;
+
         case OK_SLS:
 #if SE_RESTRICT_SLS_MINLEN
             if ((SE_RESTRICT_SLS_MINLEN) < len)

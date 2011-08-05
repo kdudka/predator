@@ -27,13 +27,6 @@
 
 #include <boost/foreach.hpp>
 
-#define SS_BREAK_IF(cond, allowIncosistency) do {           \
-    if (!(allowIncosistency))                               \
-        CL_BREAK_IF(cond);                                  \
-    else if (cond)                                          \
-        CL_WARN("symseg: inconsistency detected: " #cond);  \
-} while (0)
-
 unsigned dlSegMinLength(
         const SymHeap           &sh,
         const TValId            dls,
@@ -49,36 +42,9 @@ unsigned dlSegMinLength(
         return 0;
     }
 
-    // dig pointer-to-next objects
-    const TObjId next1 = nextPtrFromSeg(sh, dls);
-    const TObjId next2 = nextPtrFromSeg(sh, peer);
-
-    // red the values (addresses of the surround)
-    const TValId val1 = const_cast<SymHeap &>(sh).valueOf(next1);
-    const TValId val2 = const_cast<SymHeap &>(sh).valueOf(next2);
-
-    // attempt to prove both
-    const bool ne1 = sh.SymHeapCore::proveNeq(val1, segHeadAt(sh, peer));
-    const bool ne2 = sh.SymHeapCore::proveNeq(val2, segHeadAt(sh, dls));
-
-    // DLS cross Neq predicates have to be fully symmetric
-    const bool ne = (ne1 && ne2);
-    SS_BREAK_IF((ne1 != ne2), allowIncosistency);
-
-    // if DLS heads are two distinct objects, we have at least two objects
-    const TValId head1 = segHeadAt(sh, dls);
-    const TValId head2 = segHeadAt(sh, peer);
-    if (sh.SymHeapCore::proveNeq(head1, head2)) {
-        SS_BREAK_IF(!ne, allowIncosistency);
-
-        const unsigned len = sh.segEffectiveMinLength(dls);
-        SS_BREAK_IF(len != sh.segEffectiveMinLength(peer), allowIncosistency);
-        SS_BREAK_IF(len < /* DLS 2+ */ 2, allowIncosistency);
-
-        return len;
-    }
-
-    return static_cast<unsigned>(ne);
+    const unsigned len = sh.segEffectiveMinLength(dls);
+    CL_BREAK_IF(!allowIncosistency && len != sh.segEffectiveMinLength(peer));
+    return len;
 }
 
 unsigned segMinLength(
@@ -91,28 +57,18 @@ unsigned segMinLength(
     const EObjKind kind = sh.valTargetKind(seg);
     switch (kind) {
         case OK_CONCRETE:
-            CL_TRAP;
+            CL_BREAK_IF("invalid call of segMinLength()");
+            // fall through!
 
         case OK_MAY_EXIST:
             return 0;
 
         case OK_SLS:
-            break;
+            return sh.segEffectiveMinLength(seg);
 
         case OK_DLS:
             return dlSegMinLength(sh, seg, allowIncosistency);
     }
-
-    SymHeap &writable = const_cast<SymHeap &>(sh);
-    const TObjId next = nextPtrFromSeg(writable, seg);
-    const TValId nextVal = writable.valueOf(next);
-    const TValId headAddr = segHeadAt(writable, seg);
-    if (!sh.SymHeapCore::proveNeq(headAddr, nextVal))
-        return 0;
-
-    const unsigned len = sh.segEffectiveMinLength(seg);
-    SS_BREAK_IF(!len, allowIncosistency);
-    return len;
 }
 
 void segSetProto(SymHeap &sh, TValId seg, bool isProto) {
