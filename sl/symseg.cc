@@ -32,7 +32,6 @@ unsigned dlSegMinLength(
         const TValId            dls,
         const bool              allowIncosistency)
 {
-    // validate call of dlSegNotEmpty()
     CL_BREAK_IF(OK_DLS != sh.valTargetKind(dls));
 
     const TValId peer = dlSegPeer(sh, dls);
@@ -160,32 +159,8 @@ bool haveDlSegAt(const SymHeap &sh, TValId atAddr, TValId peerAddr) {
     return (segHeadAt(sh, peer) == peerAddr);
 }
 
-void segHandleNeq(SymHeap &sh, TValId seg, TValId peer, SymHeap::ENeqOp op) {
-    const TObjId next = nextPtrFromSeg(sh, peer);
-    const TValId valNext = sh.valueOf(next);
-
-    const TValId headAddr = segHeadAt(sh, seg);
-    sh.neqOp(op, headAddr, valNext);
-}
-
 void dlSegSetMinLength(SymHeap &sh, TValId dls, unsigned len) {
     const TValId peer = dlSegPeer(sh, dls);
-
-    switch (len) {
-        case 0:
-            segHandleNeq(sh, dls, peer, SymHeap::NEQ_DEL);
-            break;
-
-        case 1:
-            segHandleNeq(sh, dls, peer, SymHeap::NEQ_ADD);
-            break;
-
-        case 2:
-        default:
-            sh.neqOp(SymHeap::NEQ_ADD, segHeadAt(sh, dls), segHeadAt(sh, peer));
-            break;
-    }
-
     sh.segSetEffectiveMinLength(dls, len);
     sh.segSetEffectiveMinLength(peer, len);
 }
@@ -194,10 +169,6 @@ void segSetMinLength(SymHeap &sh, TValId seg, unsigned len) {
     const EObjKind kind = sh.valTargetKind(seg);
     switch (kind) {
         case OK_SLS:
-            segHandleNeq(sh, seg, seg, (len)
-                    ? SymHeap::NEQ_ADD
-                    : SymHeap::NEQ_DEL);
-
             sh.segSetEffectiveMinLength(seg, len);
             break;
 

@@ -119,11 +119,13 @@ unsigned segMinLength(
         const TValId            seg,
         const bool              allowIncosistency = false);
 
-inline unsigned objMinLength(const SymHeap &sh, TValId at) {
-    const EValueTarget code = sh.valTarget(at);
+inline unsigned objMinLength(const SymHeap &sh, TValId root) {
+    CL_BREAK_IF(sh.valOffset(root));
+
+    const EValueTarget code = sh.valTarget(root);
     if (isAbstract(code))
         // abstract target
-        return segMinLength(sh, at);
+        return segMinLength(sh, root);
 
     else if (isPossibleToDeref(code))
         // concrete target

@@ -1670,18 +1670,6 @@ void SymHeap::dlSegCrossNeqOp(ENeqOp op, TValId seg1) {
     seg1 = this->valRoot(seg1);
     TValId seg2 = dlSegPeer(*this, seg1);
 
-    // resolve heads
-    const TValId head1 = segHeadAt(*this, seg1);
-    const TValId head2 = segHeadAt(*this, seg2);
-
-    // read the values (addresses of the surround)
-    const TValId val1 = this->valueOf(nextPtrFromSeg(*this, seg1));
-    const TValId val2 = this->valueOf(nextPtrFromSeg(*this, seg2));
-
-    // add/del Neq predicates
-    SymHeapCore::neqOp(op, val1, head2);
-    SymHeapCore::neqOp(op, val2, head1);
-
     switch (op) {
         case NEQ_ADD:
             if (this->segEffectiveMinLength(seg1))
@@ -1696,9 +1684,6 @@ void SymHeap::dlSegCrossNeqOp(ENeqOp op, TValId seg1) {
             // segment becomes empty
             this->segSetEffectiveMinLength(seg1, /* DLS 0+ */ 0);
             this->segSetEffectiveMinLength(seg2, /* DLS 0+ */ 0);
-
-            // removing the 1+ flag implies removal of the 2+ flag
-            SymHeapCore::neqOp(NEQ_DEL, head1, head2);
             break;
 
         default:
@@ -1758,6 +1743,8 @@ void SymHeap::neqOp(ENeqOp op, TValId v1, TValId v2) {
             this->segSetEffectiveMinLength(seg, /* DLS 0+ */ 0);
         else if (!this->segEffectiveMinLength(seg))
             this->segSetEffectiveMinLength(seg, /* DLS 1+ */ 1);
+
+        return;
     }
 
     if (haveSegBidir(&seg, this, OK_DLS, v1, v2)) {
@@ -1774,6 +1761,7 @@ void SymHeap::neqOp(ENeqOp op, TValId v1, TValId v2) {
 
         this->segSetEffectiveMinLength(root1, /* DLS 2+ */ 2);
         this->segSetEffectiveMinLength(root2, /* DLS 2+ */ 2);
+        return;
     }
 
     // finally call the base implementation
@@ -1847,9 +1835,13 @@ bool SymHeap::proveNeq(TValId ref, TValId val) const {
         // both values are abstract
         const TValId root1 = this->valRoot(ref);
         const TValId root2 = this->valRoot(val);
-        if (root2 == segPeer(*this, root1))
-            // we already know this is not a DLS 2+
-            return false;
+        if (root2 == segPeer(*this, root1)) {
+            // one value points at segment and the other points at its peer
+            const TOffset off1 = this->valOffset(ref);
+            const TOffset off2 = this->valOffset(val);
+            return (off1 == off2)
+                && (1 < this->segEffectiveMinLength(root1));
+        }
 
         if (!objMinLength(*this, root1))
             // both targets are possibly empty, giving up
@@ -1878,10 +1870,6 @@ bool SymHeap::proveNeq(TValId ref, TValId val) const {
                 return false;
         }
 
-        if (VAL_NULL == ref && SymHeapCore::proveNeq(VAL_NULL, val))
-            // prove done
-            return true;
-
         SymHeap &writable = *const_cast<SymHeap *>(this);
 
         TValId seg = this->valRoot(val);
@@ -1893,7 +1881,7 @@ bool SymHeap::proveNeq(TValId ref, TValId val) const {
             return false;
 
         const TValId valNext = writable.valueOf(nextPtrFromSeg(writable, seg));
-        if (SymHeapCore::proveNeq(val, valNext))
+        if (this->segEffectiveMinLength(seg))
             // non-empty abstract object reached
             return (VAL_NULL == ref)
                 || isKnownObject(refCode);
