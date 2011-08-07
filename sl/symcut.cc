@@ -267,7 +267,7 @@ void deepCopy(DeepCopyData &dc) {
     BOOST_FOREACH(TSegLengths::const_reference item, dc.segLengths) {
         const TValId seg = item.first;
         const unsigned minLength = item.second;
-        segSetMinLength(dst, seg, minLength);
+        dst.segSetMinLength(seg, minLength);
     }
 }
 

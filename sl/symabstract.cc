@@ -214,8 +214,8 @@ void cloneGenericPrototype(
     for (unsigned i = 0; i < cnt; ++i) {
         const TValId proto = protoList[i];
         if (isAbstract(sh.valTarget(proto))) {
-            lengthList[i] = segMinLength(sh, proto);
-            segSetMinLength(sh, proto, /* LS 0+ */ 0);
+            lengthList[i] = sh.segMinLength(proto);
+            sh.segSetMinLength(proto, /* LS 0+ */ 0);
         }
         else
             lengthList[i] = -1;
@@ -248,8 +248,8 @@ void cloneGenericPrototype(
             // -1 means "not a segment"
             continue;
 
-        segSetMinLength(sh, proto, len);
-        segSetMinLength(sh, clone, len);
+        sh.segSetMinLength(proto, len);
+        sh.segSetMinLength(clone, len);
     }
 }
 
@@ -365,11 +365,11 @@ void slSegAbstractionStep(
     // read minimal length of 'obj' and set it temporarily to zero
     unsigned len = objMinLength(sh, at);
     if (isAbstract(sh.valTarget(at)))
-        segSetMinLength(sh, at, /* SLS 0+ */ 0);
+        sh.segSetMinLength(at, /* SLS 0+ */ 0);
 
     len += objMinLength(sh, nextAt);
     if (OK_SLS == sh.valTargetKind(nextAt))
-        segSetMinLength(sh, nextAt, /* SLS 0+ */ 0);
+        sh.segSetMinLength(nextAt, /* SLS 0+ */ 0);
     else
         // abstract the _next_ object
         sh.valTargetSetAbstract(nextAt, OK_SLS, off);
@@ -388,7 +388,7 @@ void slSegAbstractionStep(
 
     if (len)
         // declare resulting segment's minimal length
-        segSetMinLength(sh, nextAt, len);
+        sh.segSetMinLength(nextAt, len);
 }
 
 void enlargeMayExist(SymHeap &sh, const TValId at) {
@@ -424,15 +424,15 @@ void dlSegCreate(SymHeap &sh, TValId a1, TValId a2, BindingOff off) {
     abstractNonMatchingValues(sh, a1, a2, /* bidir */ true);
 
     // just created DLS is said to be 2+ as long as no OK_MAY_EXIST are involved
-    segSetMinLength(sh, a1, len);
+    sh.segSetMinLength(a1, len);
 }
 
 void dlSegGobble(SymHeap &sh, TValId dls, TValId var, bool backward) {
     CL_BREAK_IF(OK_DLS != sh.valTargetKind(dls));
 
     // handle DLS Neq predicates and OK_MAY_EXIST
-    const unsigned len = segMinLength(sh, dls) + objMinLength(sh, var);
-    segSetMinLength(sh, dls, /* DLS 0+ */ 0);
+    const unsigned len = sh.segMinLength(dls) + objMinLength(sh, var);
+    sh.segSetMinLength(dls, /* DLS 0+ */ 0);
     enlargeMayExist(sh, var);
 
     if (!backward)
@@ -454,16 +454,16 @@ void dlSegGobble(SymHeap &sh, TValId dls, TValId var, bool backward) {
     REQUIRE_GC_ACTIVITY(sh, headAt, dlSegGobble);
 
     // handle DLS Neq predicates
-    segSetMinLength(sh, dls, len);
+    sh.segSetMinLength(dls, len);
 
     dlSegSyncPeerData(sh, dls);
 }
 
 void dlSegMerge(SymHeap &sh, TValId seg1, TValId seg2) {
     // handle DLS Neq predicates
-    const unsigned len = segMinLength(sh, seg1) + segMinLength(sh, seg2);
-    segSetMinLength(sh, seg1, /* DLS 0+ */ 0);
-    segSetMinLength(sh, seg2, /* DLS 0+ */ 0);
+    const unsigned len = sh.segMinLength(seg1) + sh.segMinLength(seg2);
+    sh.segSetMinLength(seg1, /* DLS 0+ */ 0);
+    sh.segSetMinLength(seg2, /* DLS 0+ */ 0);
 
     // check for a failure of segDiscover()
     CL_BREAK_IF(sh.segBinding(seg1) != sh.segBinding(seg2));
@@ -502,7 +502,7 @@ void dlSegMerge(SymHeap &sh, TValId seg1, TValId seg2) {
 
     if (len)
         // handle DLS Neq predicates
-        segSetMinLength(sh, seg2, len);
+        sh.segSetMinLength(seg2, len);
 
     dlSegSyncPeerData(sh, seg2);
 }
@@ -690,7 +690,7 @@ void dlSegReplaceByConcrete(SymHeap &sh, TValId seg, TValId peer) {
     CL_BREAK_IF(!dlSegCheckConsistency(sh));
 
     // first kill any related Neq predicates, we're going to concretize anyway
-    segSetMinLength(sh, seg, /* DLS 0+ */ 0);
+    sh.segSetMinLength(seg, /* DLS 0+ */ 0);
     CL_BREAK_IF(!dlSegCheckConsistency(sh));
 
     // take the value of 'next' pointer from peer
@@ -755,13 +755,13 @@ unsigned /* len */ spliceOutSegmentIfNeeded(
         const TValId            peer,
         TSymHeapList            &todo)
 {
-    const unsigned len = segMinLength(sh, seg);
+    const unsigned len = sh.segMinLength(seg);
     if (len) {
         LDP_INIT(symabstract, "spliceOutSegmentIfNeeded");
         LDP_PLOT(symabstract, sh);
 
         // drop any existing Neq predicates
-        segSetMinLength(sh, seg, 0);
+        sh.segSetMinLength(seg, 0);
 
         LDP_PLOT(symabstract, sh);
         return len - 1;
@@ -842,7 +842,7 @@ void concretizeObj(SymHeap &sh, TValId addr, TSymHeapList &todo) {
         CL_BREAK_IF(!dlSegCheckConsistency(sh));
     }
 
-    segSetMinLength(sh, dup, lenRemains);
+    sh.segSetMinLength(dup, lenRemains);
 
     LDP_PLOT(symabstract, sh);
 }

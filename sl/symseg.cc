@@ -27,29 +27,6 @@
 
 #include <boost/foreach.hpp>
 
-unsigned segMinLength(
-        const SymHeap           &sh,
-        const TValId            seg,
-        const bool              allowIncosistency)
-{
-    CL_BREAK_IF(sh.valOffset(seg));
-    (void) allowIncosistency;
-
-    const EObjKind kind = sh.valTargetKind(seg);
-    switch (kind) {
-        case OK_CONCRETE:
-            CL_BREAK_IF("invalid call of segMinLength()");
-            // fall through!
-
-        case OK_MAY_EXIST:
-            return 0;
-
-        case OK_SLS:
-        case OK_DLS:
-            return sh.segEffectiveMinLength(seg);
-    }
-}
-
 void segSetProto(SymHeap &sh, TValId seg, bool isProto) {
     CL_BREAK_IF(sh.valOffset(seg));
 
@@ -139,25 +116,6 @@ bool haveDlSegAt(const SymHeap &sh, TValId atAddr, TValId peerAddr) {
     return (segHeadAt(sh, peer) == peerAddr);
 }
 
-void segSetMinLength(SymHeap &sh, TValId seg, unsigned len) {
-    const EObjKind kind = sh.valTargetKind(seg);
-    switch (kind) {
-        case OK_SLS:
-        case OK_DLS:
-            sh.segSetEffectiveMinLength(seg, len);
-            break;
-
-        case OK_MAY_EXIST:
-            if (!len)
-                break;
-            // fall through!
-
-        default:
-            CL_BREAK_IF("ivalid call of segSetMinLength()");
-            break;
-    }
-}
-
 TValId segClone(SymHeap &sh, const TValId seg) {
     const TValId dup = sh.valClone(seg);
 
@@ -207,8 +165,8 @@ bool dlSegCheckConsistency(const SymHeap &sh) {
         }
 
         // check the consistency of Neq predicates
-        const unsigned len1 = segMinLength(sh, at);
-        const unsigned len2 = segMinLength(sh, peer);
+        const unsigned len1 = sh.segMinLength(at);
+        const unsigned len2 = sh.segMinLength(peer);
         if (len1 != len2) {
             CL_ERROR("peer of a DLS " << len1 << "+ is a DLS" << len2 << "+");
             return false;

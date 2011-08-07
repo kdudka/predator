@@ -553,17 +553,8 @@ class SymHeap: public SymHeapCore {
 
         virtual TValId valClone(TValId);
 
-    protected:
-        // used only by the symseg module (via friend)
-        unsigned segEffectiveMinLength(TValId seg) const;
-        void segSetEffectiveMinLength(TValId seg, unsigned len);
-
-        friend unsigned segMinLength(
-                const SymHeap               &sh,
-                const TValId                seg,
-                const bool                  allowIncosistency);
-
-        friend void segSetMinLength(SymHeap &sh, TValId seg, unsigned len);
+        unsigned segMinLength(TValId seg) const;
+        void segSetMinLength(TValId seg, unsigned len);
 
     private:
         void segMinLengthOp(ENeqOp op, TValId at, unsigned len);

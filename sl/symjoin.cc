@@ -1643,7 +1643,7 @@ class MayExistVisitor {
                     return /* continue */ true;
 
                 TValId seg = sh.valRoot(val);
-                if (segMinLength(sh, seg) || segHeadAt(sh, seg) != val)
+                if (sh.segMinLength(seg) || segHeadAt(sh, seg) != val)
                     return /* continue */ true;
 
                 if (OK_DLS == sh.valTargetKind(seg))
@@ -2039,7 +2039,7 @@ void handleDstPreds(SymJoinCtx &ctx) {
     {
         const TValId    seg = ref.first;
         const unsigned  len = ref.second;
-        segSetMinLength(ctx.dst, seg, len);
+        ctx.dst.segSetMinLength(seg, len);
     }
 
     // go through shared Neq predicates
@@ -2409,15 +2409,15 @@ void recoverPrototypes(
 
         if (isAbstract(sh.valTarget(proto1)))
             // remove Neq predicates, their targets are going to vanish soon
-            segSetMinLength(sh, proto1, 0);
+            sh.segSetMinLength(proto1, 0);
 
         if (bidir && isAbstract(sh.valTarget(proto2)))
             // remove Neq predicates, their targets are going to vanish soon
-            segSetMinLength(sh, proto2, 0);
+            sh.segSetMinLength(proto2, 0);
 
         if (isAbstract(sh.valTarget(protoGhost)))
             // temporarily remove Neq predicates
-            segSetMinLength(sh, protoGhost, 0);
+            sh.segSetMinLength(protoGhost, 0);
 
         redirectRefs(sh,
                 /* pointingFrom */  protoGhost,
@@ -2443,7 +2443,7 @@ void restorePrototypeLengths(SymJoinCtx &ctx) {
 
         const unsigned len = it->second;
         if (len)
-            segSetMinLength(sh, protoDst, len);
+            sh.segSetMinLength(protoDst, len);
     }
 }
 

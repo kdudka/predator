@@ -117,19 +117,13 @@ inline TValId segNextRootObj(SymHeap &sh, TValId root) {
     return segNextRootObj(sh, root, offNext);
 }
 
-/// return lower estimation of segment length
-unsigned segMinLength(
-        const SymHeap           &sh,
-        const TValId            seg,
-        const bool              allowIncosistency = false);
-
 inline unsigned objMinLength(const SymHeap &sh, TValId root) {
     CL_BREAK_IF(sh.valOffset(root));
 
     const EValueTarget code = sh.valTarget(root);
     if (isAbstract(code))
         // abstract target
-        return segMinLength(sh, root);
+        return sh.segMinLength(root);
 
     else if (isPossibleToDeref(code))
         // concrete target
@@ -139,8 +133,6 @@ inline unsigned objMinLength(const SymHeap &sh, TValId root) {
         // no target here
         return 0;
 }
-
-void segSetMinLength(SymHeap &sh, TValId seg, unsigned len);
 
 /// same as SymHeap::objSetProto(), but takes care of DLS peers
 void segSetProto(SymHeap &sh, TValId seg, bool isProto);

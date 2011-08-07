@@ -1669,16 +1669,16 @@ void SymHeap::segMinLengthOp(ENeqOp op, TValId at, unsigned len) {
     CL_BREAK_IF(!len);
 
     if (NEQ_DEL == op) {
-        this->segSetEffectiveMinLength(at, len - 1);
+        this->segSetMinLength(at, len - 1);
         return;
     }
 
     CL_BREAK_IF(NEQ_ADD != op);
-    const unsigned current = this->segEffectiveMinLength(at);
+    const unsigned current = this->segMinLength(at);
     if (len <= current)
         return;
 
-    this->segSetEffectiveMinLength(at, len);
+    this->segSetMinLength(at, len);
 }
 
 bool haveSegBidir(
@@ -1815,7 +1815,7 @@ bool SymHeap::proveNeq(TValId ref, TValId val) const {
             const TOffset off1 = this->valOffset(ref);
             const TOffset off2 = this->valOffset(val);
             return (off1 == off2)
-                && (1 < this->segEffectiveMinLength(root1));
+                && (1 < this->segMinLength(root1));
         }
 
         if (!objMinLength(*this, root1))
@@ -1856,7 +1856,7 @@ bool SymHeap::proveNeq(TValId ref, TValId val) const {
             return false;
 
         const TValId valNext = writable.valueOf(nextPtrFromSeg(writable, seg));
-        if (this->segEffectiveMinLength(seg))
+        if (this->segMinLength(seg))
             // non-empty abstract object reached
             return (VAL_NULL == ref)
                 || isKnownObject(refCode);
@@ -1880,7 +1880,7 @@ bool SymHeap::valDestroyTarget(TValId val) {
     return true;
 }
 
-unsigned SymHeap::segEffectiveMinLength(TValId at) const {
+unsigned SymHeap::segMinLength(TValId at) const {
     const TValId seg = this->valRoot(at);
     CL_BREAK_IF(!hasKey(d->data, seg));
 
@@ -1896,12 +1896,12 @@ unsigned SymHeap::segEffectiveMinLength(TValId at) const {
             return aoData.minLength;
 
         default:
-            CL_BREAK_IF("invalid call of SymHeap::segEffectiveMinLength()");
+            CL_BREAK_IF("invalid call of SymHeap::segMinLength()");
             return 0;
     }
 }
 
-void SymHeap::segSetEffectiveMinLength(TValId at, unsigned len) {
+void SymHeap::segSetMinLength(TValId at, unsigned len) {
     const TValId seg = this->valRoot(at);
     CL_BREAK_IF(!hasKey(d->data, seg));
 
@@ -1929,7 +1929,7 @@ void SymHeap::segSetEffectiveMinLength(TValId at, unsigned len) {
             break;
 
         default:
-            CL_BREAK_IF("invalid call of SymHeap::segEffectiveMinLength()");
+            CL_BREAK_IF("invalid call of SymHeap::segMinLength()");
             return;
     }
 
