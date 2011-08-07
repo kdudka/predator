@@ -1,6 +1,3 @@
-- ensure we do not deduce invalid Neq for values above/beyond a safely allocated
-  chunk of memory
-
 - invalidate external object IDs as soon as the objects become externally unused
 
 - represent uninitialized chunks of memory explicitly by intervals, so that we

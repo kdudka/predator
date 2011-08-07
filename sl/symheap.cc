@@ -1360,6 +1360,10 @@ bool SymHeapCore::valDestroyTarget(TValId val) {
 
 int SymHeapCore::valSizeOfTarget(TValId val) const {
     const BaseValue *valData = d->valData(val);
+    if (valData->offRoot < 0)
+        // we are above the root, so we cannot safely write anything
+        return 0;
+
     const EValueTarget code = valData->code;
     if (isGone(code))
         return 0;
@@ -1764,8 +1768,7 @@ bool SymHeapCore::proveNeq(TValId valA, TValId valB) const {
 
     // we presume (0 <= valA) and (0 < valB) at this point
     CL_BREAK_IF(d->valOutOfRange(valB));
-    const EValueTarget code = this->valTarget(valB);
-    if (VT_CUSTOM == code || isKnownObject(code))
+    if (valInsideSafeRange(*this, valA) && valInsideSafeRange(*this, valB))
         // NOTE: we know (valA != valB) at this point, look above
         return true;
 
@@ -1779,20 +1782,23 @@ bool SymHeapCore::proveNeq(TValId valA, TValId valB) const {
 
     const TValId root1 = d->valRoot(valA);
     const TValId root2 = d->valRoot(valB);
-    if (root1 == root2)
+    if (root1 == root2) {
+        // same root, different offsets
+        CL_BREAK_IF(this->valOffset(valA) == this->valOffset(valB));
         return true;
+    }
 
-    const TOffset off = this->valOffset(valA);
-    if (!off)
-        // roots differ
-        return false;
+    const TOffset offA = this->valOffset(valA);
+    const TOffset offB = this->valOffset(valB);
 
-    if (off != this->valOffset(valB))
-        // offsets differ
-        return false;
+    const TOffset diff = offB - offA;
+    if (!diff)
+        // check for Neq between the roots
+        return d->neqDb.areNeq(root1, root2);
 
-    // check for Neq between the roots
-    return d->neqDb.areNeq(root1, root2);
+    SymHeapCore &writable = /* XXX */ *const_cast<SymHeapCore *>(this);
+    return d->neqDb.areNeq(root1, writable.valByOffset(root2,  diff))
+        && d->neqDb.areNeq(root2, writable.valByOffset(root1, -diff));
 }
 
 bool SymHeap::proveNeq(TValId ref, TValId val) const {

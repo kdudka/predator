@@ -49,6 +49,8 @@ bool numFromVal(long *pDst, const SymHeap &, const TValId);
 
 void moveKnownValueToLeft(const SymHeapCore &sh, TValId &valA, TValId &valB);
 
+bool valInsideSafeRange(const SymHeapCore &sh, TValId val);
+
 TObjId translateObjId(
         SymHeap                 &dst,
         SymHeap                 &src,

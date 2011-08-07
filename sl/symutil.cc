@@ -83,6 +83,11 @@ void moveKnownValueToLeft(
     valB = tmp;
 }
 
+bool valInsideSafeRange(const SymHeapCore &sh, TValId val) {
+    return isKnownObject(sh.valTarget(val))
+        && (0 < sh.valSizeOfTarget(val));
+}
+
 TObjId translateObjId(
         SymHeap                 &dst,
         SymHeap                 &src,
