@@ -573,7 +573,7 @@ class SymHeap: public SymHeapCore {
         friend void segSetMinLength(SymHeap &sh, TValId seg, unsigned len);
 
     private:
-        void dlSegCrossNeqOp(ENeqOp op, TValId seg);
+        void segMinLengthOp(ENeqOp op, TValId at, unsigned len);
 
     private:
         struct Private;

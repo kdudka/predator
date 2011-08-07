@@ -105,6 +105,18 @@ inline TValId segNextRootObj(SymHeap &sh, TValId at, TOffset offNext) {
     return nextRootObj(sh, at, offNext);
 }
 
+/// we DO require the root to be a segment
+inline TValId segNextRootObj(SymHeap &sh, TValId root) {
+    CL_BREAK_IF(sh.valOffset(root));
+
+    const BindingOff off = sh.segBinding(root);
+    const TOffset offNext = (OK_DLS == sh.valTargetKind(root))
+        ? off.prev
+        : off.next;
+
+    return segNextRootObj(sh, root, offNext);
+}
+
 /// return lower estimation of DLS length
 unsigned dlSegMinLength(
         const SymHeap           &sh,

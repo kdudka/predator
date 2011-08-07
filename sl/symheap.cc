@@ -1665,30 +1665,20 @@ void SymHeap::valMerge(TValId v1, TValId v2) {
     CL_DEBUG("failed to splice-out list segment, has to over-approximate");
 }
 
-void SymHeap::dlSegCrossNeqOp(ENeqOp op, TValId seg1) {
-    // seek roots
-    seg1 = this->valRoot(seg1);
-    TValId seg2 = dlSegPeer(*this, seg1);
+void SymHeap::segMinLengthOp(ENeqOp op, TValId at, unsigned len) {
+    CL_BREAK_IF(!len);
 
-    switch (op) {
-        case NEQ_ADD:
-            if (this->segEffectiveMinLength(seg1))
-                break;
-
-            // segment becomes non-empty
-            this->segSetEffectiveMinLength(seg1, /* DLS 1+ */ 1);
-            this->segSetEffectiveMinLength(seg2, /* DLS 1+ */ 1);
-            break;
-
-        case NEQ_DEL:
-            // segment becomes empty
-            this->segSetEffectiveMinLength(seg1, /* DLS 0+ */ 0);
-            this->segSetEffectiveMinLength(seg2, /* DLS 0+ */ 0);
-            break;
-
-        default:
-            CL_BREAK_IF("invalid call of SymHeapCore::dlSegCrossNeqOp()");
+    if (NEQ_DEL == op) {
+        this->segSetEffectiveMinLength(at, len - 1);
+        return;
     }
+
+    CL_BREAK_IF(NEQ_ADD != op);
+    const unsigned current = this->segEffectiveMinLength(at);
+    if (len <= current)
+        return;
+
+    this->segSetEffectiveMinLength(at, len);
 }
 
 bool haveSegBidir(
@@ -1699,12 +1689,12 @@ bool haveSegBidir(
         const TValId                v2)
 {
     if (haveSeg(*sh, v1, v2, kind)) {
-        *pDst = sh->valRoot(v1);
+        *pDst = v1;
         return true;
     }
 
     if (haveSeg(*sh, v2, v1, kind)) {
-        *pDst = sh->valRoot(v2);
+        *pDst = v2;
         return true;
     }
 
@@ -1714,22 +1704,18 @@ bool haveSegBidir(
 
 void SymHeap::neqOp(ENeqOp op, TValId v1, TValId v2) {
     CL_BREAK_IF(NEQ_ADD != op && NEQ_DEL != op);
+    CL_BREAK_IF(v1 <= 0 && v2 <= 0);
 
-    if (VAL_NULL == v1 && this->hasAbstractTarget(v2) && !this->valOffset(v2)) {
-        TValId seg2 = v2;
-        if (OK_DLS == this->valTargetKind(v2))
-            seg2 = dlSegPeer(*this, v2);
-
-        v1 = this->valueOf(nextPtrFromSeg(*this, seg2));
+    if (!this->hasAbstractTarget(v1) && !this->hasAbstractTarget(v2)) {
+        // fallback to the base implementation
+        SymHeapCore::neqOp(op, v1, v2);
+        return;
     }
 
-    if (VAL_NULL == v2 && this->hasAbstractTarget(v1) && !this->valOffset(v1)) {
-        TValId seg1 = v1;
-        if (OK_DLS == this->valTargetKind(v1))
-            seg1 = dlSegPeer(*this, v1);
-
-        v2 = this->valueOf(nextPtrFromSeg(*this, seg1));
-    }
+    if (VAL_NULL == v1 && !this->valOffset(v2))
+        v1 = segNextRootObj(*this, v2);
+    if (VAL_NULL == v2 && !this->valOffset(v1))
+        v2 = segNextRootObj(*this, v1);
 
     TValId seg;
     if (haveSegBidir(&seg, this, OK_MAY_EXIST, v1, v2)) {
@@ -1739,33 +1725,22 @@ void SymHeap::neqOp(ENeqOp op, TValId v1, TValId v2) {
     }
 
     if (haveSegBidir(&seg, this, OK_SLS, v1, v2)) {
-        if (NEQ_DEL == op)
-            this->segSetEffectiveMinLength(seg, /* DLS 0+ */ 0);
-        else if (!this->segEffectiveMinLength(seg))
-            this->segSetEffectiveMinLength(seg, /* DLS 1+ */ 1);
-
+        this->segMinLengthOp(op, seg, /* SLS 1+ */ 1);
         return;
     }
 
     if (haveSegBidir(&seg, this, OK_DLS, v1, v2)) {
-        this->dlSegCrossNeqOp(op, seg);
+        this->segMinLengthOp(op, seg, /* DLS 1+ */ 1);
         return;
     }
 
-    if (NEQ_ADD == op && haveDlSegAt(*this, v1, v2)) {
-        // adding the 2+ flag implies adding of the 1+ flag
-        this->dlSegCrossNeqOp(op, v1);
-
-        const TValId root1 = this->valRoot(v1);
-        const TValId root2 = this->valRoot(v2);
-
-        this->segSetEffectiveMinLength(root1, /* DLS 2+ */ 2);
-        this->segSetEffectiveMinLength(root2, /* DLS 2+ */ 2);
+    if (haveDlSegAt(*this, v1, v2)) {
+        this->segMinLengthOp(op, v1, /* DLS 2+ */ 2);
         return;
     }
 
-    // finally call the base implementation
-    SymHeapCore::neqOp(op, v1, v2);
+    CL_BREAK_IF(NEQ_ADD != op);
+    CL_DEBUG("SymHeap::neqOp() refuses to add an extraordinary Neq predicate");
 }
 
 bool SymHeapCore::proveNeq(TValId valA, TValId valB) const {
@@ -1905,8 +1880,8 @@ bool SymHeap::valDestroyTarget(TValId val) {
     return true;
 }
 
-unsigned SymHeap::segEffectiveMinLength(TValId seg) const {
-    CL_BREAK_IF(this->valOffset(seg));
+unsigned SymHeap::segEffectiveMinLength(TValId at) const {
+    const TValId seg = this->valRoot(at);
     CL_BREAK_IF(!hasKey(d->data, seg));
 
     const Private::AbstractObject &aoData = d->data[seg];
@@ -1926,8 +1901,8 @@ unsigned SymHeap::segEffectiveMinLength(TValId seg) const {
     }
 }
 
-void SymHeap::segSetEffectiveMinLength(TValId seg, unsigned len) {
-    CL_BREAK_IF(this->valOffset(seg));
+void SymHeap::segSetEffectiveMinLength(TValId at, unsigned len) {
+    const TValId seg = this->valRoot(at);
     CL_BREAK_IF(!hasKey(d->data, seg));
 
     Private::AbstractObject &aoData = d->data[seg];
@@ -1959,4 +1934,10 @@ void SymHeap::segSetEffectiveMinLength(TValId seg, unsigned len) {
     }
 
     aoData.minLength = len;
+    if (OK_DLS != kind)
+        return;
+
+    const TValId peer = dlSegPeer(*this, seg);
+    CL_BREAK_IF(peer == seg);
+    d->data[peer].minLength = len;
 }
