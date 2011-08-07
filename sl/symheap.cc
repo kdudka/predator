@@ -1071,21 +1071,18 @@ TOffset SymHeapCore::valOffset(TValId val) const {
 void SymHeapCore::valReplace(TValId val, TValId replaceBy) {
     const BaseValue *valData = d->valData(val);
 
+    // kill all related Neq predicates
+    TValList neqs;
+    d->neqDb.gatherRelatedValues(neqs, val);
+    BOOST_FOREACH(const TValId valNeq, neqs) {
+        CL_BREAK_IF(valNeq == replaceBy);
+        SymHeapCore::neqOp(NEQ_DEL, valNeq, val);
+    }
+
     // we intentionally do not use a reference here (tight loop otherwise)
     TObjSet usedBy = valData->usedBy;
     BOOST_FOREACH(const TObjId obj, usedBy)
         this->objSetValue(obj, replaceBy);
-
-    // kill Neq predicate among the pair of values (if any)
-    SymHeapCore::neqOp(NEQ_DEL, val, replaceBy);
-
-    // reflect the change in NeqDb
-    TValList neqs;
-    d->neqDb.gatherRelatedValues(neqs, val);
-    BOOST_FOREACH(const TValId valNeq, neqs) {
-        SymHeapCore::neqOp(NEQ_DEL, valNeq, val);
-        SymHeapCore::neqOp(NEQ_ADD, valNeq, replaceBy);
-    }
 }
 
 void SymHeapCore::Private::neqOpWrap(ENeqOp op, TValId valA, TValId valB) {
@@ -1103,17 +1100,23 @@ void SymHeapCore::Private::neqOpWrap(ENeqOp op, TValId valA, TValId valB) {
     }
 }
 
-void SymHeapCore::neqOp(ENeqOp op, TValId valA, TValId valB) {
-    d->neqOpWrap(op, valA, valB);
+void SymHeapCore::neqOp(ENeqOp op, TValId v1, TValId v2) {
+    const TOffset off1 = this->valOffset(v1);
+    const TOffset off2 = this->valOffset(v2);
 
-    const TOffset off = this->valOffset(valA);
-    if (!off || off != this->valOffset(valB))
+    const TValId root1 = this->valRoot(v1);
+    const TValId root2 = this->valRoot(v2);
+
+    const TOffset diff = off2 - off1;
+    if (!diff) {
+        // if both values have the same offset, connect the roots
+        d->neqOpWrap(op, root1, root2);
         return;
+    }
 
-    // if both values have the same non-zero offset, connect also the roots
-    valA = this->valRoot(valA);
-    valB = this->valRoot(valB);
-    d->neqOpWrap(op, valA, valB);
+    // if the values have different offsets, associate both roots
+    d->neqOpWrap(op, root1, this->valByOffset(root2,  diff));
+    d->neqOpWrap(op, root2, this->valByOffset(root1, -diff));
 }
 
 void SymHeapCore::gatherRelatedValues(TValList &dst, TValId val) const {

@@ -1,6 +1,3 @@
-- do not allow to introduce generic Neq predicates unless we know we can work
-  with them with no issues (especially make sure that valReplace() works fine)
-
 - ensure we do not deduce invalid Neq for values above/beyond a safely allocated
   chunk of memory
 
