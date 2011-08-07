@@ -27,31 +27,13 @@
 
 #include <boost/foreach.hpp>
 
-unsigned dlSegMinLength(
-        const SymHeap           &sh,
-        const TValId            dls,
-        const bool              allowIncosistency)
-{
-    CL_BREAK_IF(OK_DLS != sh.valTargetKind(dls));
-
-    const TValId peer = dlSegPeer(sh, dls);
-    if (allowIncosistency && OK_DLS != sh.valTargetKind(peer)) {
-        // we need to plot inconsistent DLS objects breaklessly when debugging
-        CL_WARN("DLS peer not a DLS");
-        return 0;
-    }
-
-    const unsigned len = sh.segEffectiveMinLength(dls);
-    CL_BREAK_IF(!allowIncosistency && len != sh.segEffectiveMinLength(peer));
-    return len;
-}
-
 unsigned segMinLength(
         const SymHeap           &sh,
         const TValId            seg,
         const bool              allowIncosistency)
 {
     CL_BREAK_IF(sh.valOffset(seg));
+    (void) allowIncosistency;
 
     const EObjKind kind = sh.valTargetKind(seg);
     switch (kind) {
@@ -63,10 +45,8 @@ unsigned segMinLength(
             return 0;
 
         case OK_SLS:
-            return sh.segEffectiveMinLength(seg);
-
         case OK_DLS:
-            return dlSegMinLength(sh, seg, allowIncosistency);
+            return sh.segEffectiveMinLength(seg);
     }
 }
 
@@ -159,21 +139,12 @@ bool haveDlSegAt(const SymHeap &sh, TValId atAddr, TValId peerAddr) {
     return (segHeadAt(sh, peer) == peerAddr);
 }
 
-void dlSegSetMinLength(SymHeap &sh, TValId dls, unsigned len) {
-    const TValId peer = dlSegPeer(sh, dls);
-    sh.segSetEffectiveMinLength(dls, len);
-    sh.segSetEffectiveMinLength(peer, len);
-}
-
 void segSetMinLength(SymHeap &sh, TValId seg, unsigned len) {
     const EObjKind kind = sh.valTargetKind(seg);
     switch (kind) {
         case OK_SLS:
-            sh.segSetEffectiveMinLength(seg, len);
-            break;
-
         case OK_DLS:
-            dlSegSetMinLength(sh, seg, len);
+            sh.segSetEffectiveMinLength(seg, len);
             break;
 
         case OK_MAY_EXIST:
@@ -236,8 +207,8 @@ bool dlSegCheckConsistency(const SymHeap &sh) {
         }
 
         // check the consistency of Neq predicates
-        const unsigned len1 = dlSegMinLength(sh, at);
-        const unsigned len2 = dlSegMinLength(sh, peer);
+        const unsigned len1 = segMinLength(sh, at);
+        const unsigned len2 = segMinLength(sh, peer);
         if (len1 != len2) {
             CL_ERROR("peer of a DLS " << len1 << "+ is a DLS" << len2 << "+");
             return false;

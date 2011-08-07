@@ -424,15 +424,15 @@ void dlSegCreate(SymHeap &sh, TValId a1, TValId a2, BindingOff off) {
     abstractNonMatchingValues(sh, a1, a2, /* bidir */ true);
 
     // just created DLS is said to be 2+ as long as no OK_MAY_EXIST are involved
-    dlSegSetMinLength(sh, a1, len);
+    segSetMinLength(sh, a1, len);
 }
 
 void dlSegGobble(SymHeap &sh, TValId dls, TValId var, bool backward) {
     CL_BREAK_IF(OK_DLS != sh.valTargetKind(dls));
 
     // handle DLS Neq predicates and OK_MAY_EXIST
-    const unsigned len = dlSegMinLength(sh, dls) + objMinLength(sh, var);
-    dlSegSetMinLength(sh, dls, /* DLS 0+ */ 0);
+    const unsigned len = segMinLength(sh, dls) + objMinLength(sh, var);
+    segSetMinLength(sh, dls, /* DLS 0+ */ 0);
     enlargeMayExist(sh, var);
 
     if (!backward)
@@ -454,16 +454,16 @@ void dlSegGobble(SymHeap &sh, TValId dls, TValId var, bool backward) {
     REQUIRE_GC_ACTIVITY(sh, headAt, dlSegGobble);
 
     // handle DLS Neq predicates
-    dlSegSetMinLength(sh, dls, len);
+    segSetMinLength(sh, dls, len);
 
     dlSegSyncPeerData(sh, dls);
 }
 
 void dlSegMerge(SymHeap &sh, TValId seg1, TValId seg2) {
     // handle DLS Neq predicates
-    const unsigned len = dlSegMinLength(sh, seg1) + dlSegMinLength(sh, seg2);
-    dlSegSetMinLength(sh, seg1, /* DLS 0+ */ 0);
-    dlSegSetMinLength(sh, seg2, /* DLS 0+ */ 0);
+    const unsigned len = segMinLength(sh, seg1) + segMinLength(sh, seg2);
+    segSetMinLength(sh, seg1, /* DLS 0+ */ 0);
+    segSetMinLength(sh, seg2, /* DLS 0+ */ 0);
 
     // check for a failure of segDiscover()
     CL_BREAK_IF(sh.segBinding(seg1) != sh.segBinding(seg2));
@@ -502,7 +502,7 @@ void dlSegMerge(SymHeap &sh, TValId seg1, TValId seg2) {
 
     if (len)
         // handle DLS Neq predicates
-        dlSegSetMinLength(sh, seg2, len);
+        segSetMinLength(sh, seg2, len);
 
     dlSegSyncPeerData(sh, seg2);
 }
@@ -690,7 +690,7 @@ void dlSegReplaceByConcrete(SymHeap &sh, TValId seg, TValId peer) {
     CL_BREAK_IF(!dlSegCheckConsistency(sh));
 
     // first kill any related Neq predicates, we're going to concretize anyway
-    dlSegSetMinLength(sh, seg, /* DLS 0+ */ 0);
+    segSetMinLength(sh, seg, /* DLS 0+ */ 0);
     CL_BREAK_IF(!dlSegCheckConsistency(sh));
 
     // take the value of 'next' pointer from peer

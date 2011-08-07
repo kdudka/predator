@@ -117,14 +117,6 @@ inline TValId segNextRootObj(SymHeap &sh, TValId root) {
     return segNextRootObj(sh, root, offNext);
 }
 
-/// return lower estimation of DLS length
-unsigned dlSegMinLength(
-        const SymHeap           &sh,
-        const TValId            dls,
-        const bool              allowIncosistency = false);
-
-void dlSegSetMinLength(SymHeap &sh, TValId dls, unsigned len);
-
 /// return lower estimation of segment length
 unsigned segMinLength(
         const SymHeap           &sh,
