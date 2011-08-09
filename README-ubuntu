@@ -1,9 +1,9 @@
 Building Predator on Ubuntu
 ===========================
-Note I do not use Ubuntu myself, so this howto may become outdated as time pass
-by.  Any suggestions from real Ubuntu users on how to improve this howto are
-welcome.  Please replace XXXXXX by the latest release of Predator (for example
-predator-2011-07-29-d38c348).
+Note I do not use Ubuntu myself, so this howto may become outdated as time
+passes by.  Any suggestions from real Ubuntu users on how to improve this howto
+are welcome.  Please replace XXXXXX by the latest release of Predator (for
+example predator-2011-07-29-d38c348).
 
     sudo apt-get install cmake curl         \
         libgmp3-dev libmpc-dev libmpfr-dev  \
