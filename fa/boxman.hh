@@ -97,7 +97,10 @@ public:
 				}
 				case box_type_e::bTypeInfo:
 					this->label.addMapItem((size_t)(-1), aBox, index, (size_t)(-1));
-					break;	
+					break;
+				default:
+					assert(false);
+					break;
 			}
 			return true;
 		}

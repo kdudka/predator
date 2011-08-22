@@ -173,12 +173,12 @@ public:
 			}
 		}
 	}
-*/
+
 	template <class F>
 	static bool intersection(IntersectInfo& info, FAE& dst, const FAE& src1, const FAE& src2, F f) {
 		
 	}
-
+*/
 public:
 
 	ReverseRun(FAE& fae) : fae(fae) {}

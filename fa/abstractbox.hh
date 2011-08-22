@@ -22,7 +22,7 @@
 
 #include <ostream>
 
-typedef enum { bBox, bTypeInfo, bSel } box_type_e;
+typedef enum { bBox, bHead, bTypeInfo, bSel } box_type_e;
 
 class AbstractBox {
 

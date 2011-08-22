@@ -23,13 +23,13 @@ int main() {
         y->next = z;
         z = y;
     }
-/*
+
     while (y != NULL) {
         x = y;
         y = y->next;
         free(x);
     }
-*/
+
     return 0;
 
 }

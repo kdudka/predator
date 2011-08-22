@@ -155,7 +155,7 @@ struct SymCtx {
 
 	};
 */
-	void createStackFrame(FAE& fae, struct SymState* target) const {
+	void createStackFrame(FAE& fae, struct CfgState* target) const {
 
 		VirtualMachine vm(fae);
 

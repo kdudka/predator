@@ -31,6 +31,25 @@
 #include "abstractbox.hh"
 //#include "databox.hh"
 
+class NodeHead : public AbstractBox {
+
+	size_t size;
+
+public:
+
+	NodeHead(size_t size)
+		: AbstractBox(box_type_e::bHead), size(size) {}
+
+	size_t getSize() const {
+		return this->size;
+	}
+
+	virtual void toStream(std::ostream& os) const {
+		os << "Node[" << this->getSize() << ']';
+	}
+
+};
+
 class TypeBox : public AbstractBox {
 	
 	std::string name;

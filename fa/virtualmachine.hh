@@ -235,12 +235,16 @@ public:
 		// make all references to this rootpoint dangling
 		size_t i = 0;
 		for (; i < root; ++i) {
+			if (!this->fae.roots[i])
+				continue;
 			this->fae.updateRoot(this->fae.roots[i], this->fae.invalidateReference(this->fae.roots[i], root));
 			FAE::invalidateReference(this->fae.rootMap[i], root);
 		}
 		// skip 'root'
 		++i;
 		for (; i < this->fae.roots.size(); ++i) {
+			if (!this->fae.roots[i])
+				continue;
 			this->fae.updateRoot(this->fae.roots[i], this->fae.invalidateReference(this->fae.roots[i], root));
 			FAE::invalidateReference(this->fae.rootMap[i], root);
 		}
