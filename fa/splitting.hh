@@ -26,6 +26,7 @@
 #include "forestautext.hh"
 #include "utils.hh"
 #include "folding.hh"
+#include "utils.hh"
 
 struct RootEnumF {
 
@@ -404,6 +405,48 @@ public:
 		g.release();
 		f.release();
 
+	}
+
+	void restrictedSplit(Index<size_t>& index, size_t root, size_t state) {
+		TA<label_type> ta(this->fae.taMan->getBackend());
+		this->fae.roots[root]->copyTransitions(ta);
+		ta.addFinalState(state);
+		TA<label_type> ta2(this->fae.taMan->getBackend());
+		this->fae.roots[root]->copyTransitions(ta2);
+		index.set(state, this->fae.addData(ta2, Data::createRef(this->fae.roots.size())));
+		size_t base = this->fae.nextState();
+		bool changed = true;
+		while (changed) {
+			changed = false;
+			for (TA<label_type>::iterator i = ta2.begin(); i != ta2.end(); ++i) {
+				std::vector<size_t> lhs = i->lhs();
+				for (size_t j = 0; j < lhs.size(); ++j) {
+					std::pair<size_t, bool> p = index.find(lhs[j]);
+					if (p.second) {
+						lhs[j] = p.first;
+						ta2.addTransition(lhs, i->label(), index.get(i->rhs(), base));
+						lhs[j] = i->lhs()[j];
+					}
+				}
+			}
+		}
+		this->fae.incrementStateOffset(index.size());
+		const std::set<size_t>& s = this->fae.roots[root]->getFinalStates();
+		for (std::set<size_t>::const_iterator i = s.begin(); i != s.end(); ++i) {
+			std::pair<size_t, bool> p = index.find(*i);
+			if (p.second)
+				ta2.addFinalState(p.first);			
+		}
+		// update FAE
+		TA<label_type>* tmp = this->fae.taMan->alloc();
+		ta.unreachableFree(*tmp);
+		this->fae.roots.push_back(tmp);
+		this->fae.rootMap.push_back(std::vector<std::pair<size_t, bool> >());
+		this->fae.updateRootMap(this->fae.roots.size() - 1);
+		tmp = this->fae.taMan->alloc();
+		ta2.unreachableFree(*tmp);
+		this->fae.updateRoot(this->fae.roots[root], tmp);
+		this->fae.updateRootMap(root);
 	}
 
 public:

@@ -34,7 +34,7 @@ struct NodeLabel {
 
 	node_type type;
 
-	struct NodeItem{
+	struct NodeItem {
 		const AbstractBox* aBox;
 		size_t index;
 		size_t offset;

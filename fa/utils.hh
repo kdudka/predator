@@ -53,9 +53,9 @@ struct Index {
 	typedef typename boost::unordered_map<T, size_t> map_type;
 	
 	map_type map;
-	
+
 	typedef typename map_type::const_iterator iterator;
-	
+
 	typename Index<T>::iterator begin() const {
 		return this->map.begin();
 	}
@@ -68,18 +68,30 @@ struct Index {
 		this->map.clear();
 	}
 
-	size_t get(const T& x) {
-		return this->map.insert(make_pair(x, this->map.size())).first->second;
+	void set(const T& x, size_t v) {
+		if (!this->map.insert(make_pair(x, v)).second)
+			throw std::runtime_error("Index::set() : value already exists");
 	}
 
-	bool add(const T& x) {
-		return this->map.insert(make_pair(x, this->map.size())).second;
+	size_t get(const T& x, size_t offset = 0) {
+		return this->map.insert(make_pair(x, this->map.size() + offset)).first->second;
+	}
+
+	bool add(const T& x, size_t offset = 0) {
+		return this->map.insert(make_pair(x, this->map.size() + offset)).second;
 	}
 	
 	size_t size() const {
 		return this->map.size();
 	}
 	
+	std::pair<size_t, bool> find(const T& x) const {
+		typename map_type::const_iterator i = this->map.find(x);
+		if (i == this->map.end())
+			return std::make_pair(0, false);
+		return std::make_pair(i->second, true);
+	}
+
 	size_t translate(const T& x) const {
 		typename map_type::const_iterator i = this->map.find(x);
 		if (i == this->map.end())

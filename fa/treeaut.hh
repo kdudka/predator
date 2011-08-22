@@ -131,7 +131,7 @@ class TT : public TTBase<T> {
 
 private:
 
-	mutable typename TTBase<T>::lhs_cache_type& lhsCache;
+	typename TTBase<T>::lhs_cache_type& lhsCache;
 
 public:
 
@@ -214,7 +214,7 @@ public:
 
 	};
 
-	mutable Backend* backend;
+	Backend* backend;
 	
 	struct CmpF {
 		bool operator()(typename trans_cache_type::value_type* lhs, typename trans_cache_type::value_type* rhs) const {
@@ -1187,7 +1187,7 @@ public:
 */
 	class Manager : Cache<TA<T>*>::Listener {
 	
-		mutable typename TA<T>::Backend& backend;
+		typename TA<T>::Backend& backend;
 	
 		Cache<TA<T>*> taCache;
 		std::vector<TA<T>*> taPool;

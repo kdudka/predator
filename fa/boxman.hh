@@ -37,7 +37,7 @@
 
 class BoxMan {
 
-	mutable TA<label_type>::Manager& taMan;
+	TA<label_type>::Manager& taMan;
 
 	TA<std::string>::Backend sBackend;
 

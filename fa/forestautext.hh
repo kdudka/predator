@@ -52,7 +52,7 @@ class FAE : public FA {
 	friend class Splitting;
 	friend class VirtualMachine;
 
-	mutable BoxMan* boxMan;
+	BoxMan* boxMan;
 //	mutable LabMan* labMan;
 
 	size_t stateOffset;

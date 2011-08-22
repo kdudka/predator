@@ -35,7 +35,7 @@ class UFAE {
 	
 	size_t stateOffset;
 	
-	mutable BoxMan& boxMan;
+	BoxMan& boxMan;
 	
 public:
 
