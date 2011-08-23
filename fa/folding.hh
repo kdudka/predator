@@ -124,8 +124,8 @@ struct RootSentry {
 			return;
 		if (this->expectedRoots == this->fae->roots.size())
 			return;
-		for (size_t i = this->expectedRoots; i < this->fae->roots.size(); ++i)
-			this->fae->taMan->release(this->fae->roots[i]);
+/*		for (size_t i = this->expectedRoots; i < this->fae->roots.size(); ++i)
+			this->fae->taMan->release(this->fae->roots[i]);*/
 		this->fae->roots.resize(this->expectedRoots);
 		this->fae->rootMap.resize(this->expectedRoots);
 		this->fae->setStateOffset(this->stateOffset);
@@ -172,7 +172,7 @@ struct IsomRootF {
 		if (this->index[ref2] != (size_t)(-1))
 			return match_result_e::mFail;
 		this->index[ref2] = this->fae.roots.size();
-		this->fae.roots.push_back(this->fae.taMan->alloc());
+		this->fae.appendRoot(this->fae.allocTA());
 		Index<size_t> stateIndex;
 		size_t offset = this->fae.nextState();
 		this->fae.unique(*this->fae.roots.back(), *this->fae.roots[this->root], stateIndex, false);
@@ -228,7 +228,7 @@ class Folding {
 protected:
 
 	void boxMerge(TA<label_type>& dst, const TA<label_type>& src, const TA<label_type>& boxRoot, const Box* box, const std::vector<size_t>& rootIndex) {
-		TA<label_type> tmp(this->fae.taMan->getBackend()), tmp2(this->fae.taMan->getBackend());
+		TA<label_type> tmp(*this->fae.backend), tmp2(*this->fae.backend);
 //		this->fae.boxMan->adjustLeaves(tmp2, boxRoot);
 		this->fae.relabelReferences(tmp, boxRoot, rootIndex);
 		this->fae.unique(tmp2, tmp);
@@ -343,17 +343,17 @@ public:
 			assert(bSig[i] < index.size());
 			index[bSig[i]] = sig[i];
 		}
-		TA<label_type> ta(this->fae.taMan->getBackend());
+		TA<label_type> ta(*this->fae.backend);
 //		TA<label_type>* ta = this->fae.taMan->alloc();
 		this->boxMerge(ta, *this->fae.roots[root], *box->getRoot(0), box, index);
-		this->fae.updateRoot(this->fae.roots[root], &ta.unreachableFree(*this->fae.taMan->alloc()));
+		this->fae.roots[root] = std::shared_ptr<TA<label_type>>(&ta.unreachableFree(*this->fae.allocTA()));
 		this->fae.updateRootMap(root);
 		for (size_t i = 0; i < box->getArity(); ++i) {
-			TA<label_type> tmp(this->fae.taMan->getBackend());
+			TA<label_type> tmp(*this->fae.backend);
 			this->fae.roots[index[i + 1]]->unfoldAtRoot(tmp, this->fae.freshState());
 			ta.clear();
 			this->boxMerge(ta, tmp, *box->getRoot(i + 1), NULL, index);
-			this->fae.updateRoot(this->fae.roots[index[i + 1]], &ta.unreachableFree(*this->fae.taMan->alloc()));
+			this->fae.roots[index[i + 1]] = std::shared_ptr<TA<label_type>>(&ta.unreachableFree(*this->fae.allocTA()));
 			this->fae.updateRootMap(index[i + 1]);
 		}
 	}
@@ -363,7 +363,7 @@ public:
 		assert(this->fae.roots[root]);
 		assert(box);
 
-		TA<label_type> tmp(this->fae.taMan->getBackend()), cTmp(this->fae.taMan->getBackend());
+		TA<label_type> tmp(*this->fae.backend), cTmp(*this->fae.backend);
 		if (!this->boxCut(tmp, cTmp, *this->fae.roots[root], box->getTrigger(0)))
 			return false;
 
@@ -388,13 +388,13 @@ public:
 		FA::o_map_type o;
 
 		// match inputs
-		std::vector<std::pair<TA<label_type>, TA<label_type> > > iTmp;
+		std::vector<std::pair<std::shared_ptr<TA<label_type>>, TA<label_type> > > iTmp;
 		for (size_t i = 0; i < cSig.size(); ++i) {
-			iTmp.push_back(std::make_pair(TA<label_type>(this->fae.taMan->getBackend()), TA<label_type>(this->fae.taMan->getBackend())));
+			iTmp.push_back(std::make_pair(this->fae.allocTA(), TA<label_type>(*this->fae.backend)));
 			if (cSig[i] == root)
 				continue;
 			assert(this->fae.roots[cSig[i]]);
-			if (!this->boxCut(iTmp.back().first, iTmp.back().second, *this->fae.roots[cSig[i]], box->getTrigger(sig[i])))
+			if (!this->boxCut(*iTmp.back().first, iTmp.back().second, *this->fae.roots[cSig[i]], box->getTrigger(sig[i])))
 				return false;
 			o.clear();
 			FA::computeDownwardO(iTmp.back().second, o);
@@ -418,7 +418,7 @@ public:
 		rs.release();
 
 		// append box
-		TA<label_type>* ta = this->fae.taMan->alloc();
+		TA<label_type>* ta = this->fae.allocTA();
 
 		size_t state = tmp.getFinalState();
 
@@ -439,17 +439,17 @@ public:
 		}
 
 		// replace
-		this->fae.updateRoot(this->fae.roots[root], ta);
+		this->fae.roots[root] = std::shared_ptr<TA<label_type>>(ta);
 		this->fae.updateRootMap(root);
 		
 		for (size_t i = 0; i < cSig.size(); ++i) {
 			if (cSig[i] == root) {
 				if (sig[i] == 0)
 					continue;
-				bool b = this->boxCut(iTmp[i].first, iTmp[i].second, *this->fae.roots[cSig[i]], box->getTrigger(sig[i]));
+				bool b = this->boxCut(*iTmp[i].first, iTmp[i].second, *this->fae.roots[cSig[i]], box->getTrigger(sig[i]));
 				assert(b);
 			}
-			this->fae.updateRoot(this->fae.roots[cSig[i]], this->fae.taMan->clone(&iTmp[i].first));
+			this->fae.roots[cSig[i]] = iTmp[i].first;
 			this->fae.updateRootMap(cSig[i]);
 		}
 

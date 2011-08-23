@@ -237,7 +237,7 @@ class SymExec::Engine {
 
 	TA<label_type>::Backend taBackend;
 	TA<label_type>::Backend fixpointBackend;
-	TA<label_type>::Manager taMan;
+//	TA<label_type>::Manager taMan;
 	BoxMan boxMan;
 
 	typedef unordered_map<const CodeStorage::Fnc*, SymCtx*> ctx_store_type;
@@ -292,7 +292,7 @@ protected:
 		CfgState* s;
 		
 		if (this->loopAnalyser.isEntryPoint(*insn)) {
-			s = new CfgStateExt(this->taBackend, this->fixpointBackend, this->boxMan);
+			s = new CfgStateExt(/*this->taBackend, */this->fixpointBackend, this->boxMan);
 		} else {
 			s = new CfgState();
 		}
@@ -396,7 +396,7 @@ protected:
 	void mergeFixpoint(CfgStateExt* target, FAE& fae) {
 		std::vector<FAE*> tmp;
 		ContainerGuard<std::vector<FAE*> > g(tmp);
-		FAE::loadCompatibleFAs(tmp, target->fwdConf, this->taMan, this->boxMan, &fae, 0, CompareVariablesF());
+		FAE::loadCompatibleFAs(tmp, target->fwdConf, this->taBackend, this->boxMan, &fae, 0, CompareVariablesF());
 //		for (size_t i = 0; i < tmp.size(); ++i)
 //			CL_CDEBUG("accelerator " << std::endl << *tmp[i]);
 		fae.fuse(tmp, FuseNonZeroF());
@@ -1263,7 +1263,7 @@ protected:
 public:
 
 	Engine(const CodeStorage::Storage& stor)
-		: stor(stor), taMan(this->taBackend), boxMan(this->taMan), dbgFlag(false) {
+		: stor(stor), boxMan(this->taBackend), dbgFlag(false) {
 		this->loadTypes();
 	}
 
@@ -1301,7 +1301,7 @@ public:
 
 	    CL_CDEBUG("creating empty heap ...");
 		// create empty heap with no local variables
-		FAE fae(this->taMan, this->boxMan);
+		FAE fae(this->taBackend, this->boxMan);
 
 	    CL_CDEBUG("allocating global registers ...");
 		// add global registers

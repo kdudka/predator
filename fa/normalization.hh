@@ -103,15 +103,15 @@ struct NormInfo {
 			os << i->first << ':' << i->second << std::endl;
 		return os;
 	}
-/*
+
 	void check() const {
 		size_t i = 0;
 		for (std::map<size_t, RootInfo>::const_iterator j = this->data.begin(); j != this->data.end(); ++j)
 			i += j->second.mergedRoots.size() + 1;
 		assert(i == this->rootCount);			
 	}
-*/	
-/*};*/
+	
+};*/
 
 struct IntersectAndRelabelF {
 
@@ -190,7 +190,7 @@ protected:
 
 	TA<label_type>* mergeRoot(TA<label_type>& dst, size_t ref, TA<label_type>& src, std::vector<size_t>& joinStates) {
 		assert(ref < this->fae.roots.size());
-		TA<label_type> ta(this->fae.taMan->getBackend());
+		TA<label_type> ta(*this->fae.backend);
 		ta.addFinalStates(dst.getFinalStates());
 		size_t refState = _MSB_ADD(this->fae.boxMan->getDataId(Data::createRef(ref)));
 		boost::unordered_map<size_t, size_t> joinStatesMap;
@@ -214,7 +214,7 @@ protected:
 		assert(hit);
 		// avoid screwing up things
 		src.unfoldAtRoot(ta, joinStatesMap, false);
-		TA<label_type>* ta2 = this->fae.taMan->alloc();
+		TA<label_type>* ta2 = this->fae.allocTA();
 		ta.unreachableFree(*ta2);
 		return ta2;
 	}
@@ -307,8 +307,8 @@ public:
 //				std::cerr << "merging " << *i << '(' << this->fae.roots[*i] << ')' << " into " << root << '(' << this->fae.roots[root] << ')' << std::endl;
 				std::vector<size_t> refStates;
 				TA<label_type>* ta = this->mergeRoot(*this->fae.roots[root], i->first, *this->fae.roots[i->first], refStates);
-				this->fae.updateRoot(this->fae.roots[root], ta);
-				this->fae.updateRoot(this->fae.roots[i->first], NULL);
+				this->fae.roots[root] = std::shared_ptr<TA<label_type>>(ta);
+				this->fae.roots[i->first] = NULL;
 				FAE::updateMap(this->fae.rootMap[root], i->first, this->fae.rootMap[i->first]);
 //				normInfo.mergeRoots(root, i->first, refStates);
 			}
@@ -329,7 +329,7 @@ public:
 		// reindex roots
 		std::vector<size_t> index(this->fae.roots.size(), (size_t)(-1));
 		std::vector<bool> normalized(this->fae.roots.size(), false);
-		std::vector<TA<label_type>*> newRoots;
+		std::vector<std::shared_ptr<TA<label_type>>> newRoots;
 		std::vector<std::vector<std::pair<size_t, bool> > > newRootMap;
 		size_t offset = 0;
 		for (std::vector<size_t>::iterator i = order.begin(); i < order.end(); ++i) {
@@ -348,7 +348,7 @@ public:
 		this->fae.roots = newRoots;
 		this->fae.rootMap = newRootMap;
 		for (size_t i = 0; i < this->fae.roots.size(); ++i) {
-			this->fae.updateRoot(this->fae.roots[i], this->fae.relabelReferences(this->fae.roots[i], index));
+			this->fae.roots[i] = std::shared_ptr<TA<label_type>>(this->fae.relabelReferences(this->fae.roots[i].get(), index));
 			FAE::renameVector(this->fae.rootMap[i], index);
 		}
 		// update variables

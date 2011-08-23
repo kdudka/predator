@@ -140,8 +140,8 @@ class Box : public FA, public StructuralBox {
 
 protected:
 
-	Box(TA<label_type>::Manager& taMan, const std::string& name)
-		: FA(taMan), StructuralBox(box_type_e::bBox), name(name), composed(false), initialized(false) {}
+	Box(TA<label_type>::Backend& backend, const std::string& name)
+		: FA(backend), StructuralBox(box_type_e::bBox), name(name), composed(false), initialized(false) {}
 
 	struct LeafEnumF {
 
@@ -248,9 +248,9 @@ public:
 	}
 
 	void computeCoverage() {
-		for (std::vector<TA<label_type>*>::iterator i = this->roots.begin(); i != this->roots.end(); ++i) {
+		for (auto root : this->roots) {
 			std::vector<size_t> v;
-			Box::getDownwardCoverage(**i, v);
+			Box::getDownwardCoverage(*root, v);
 			std::set<size_t> s(v.begin(), v.end());
 			if (v.empty())
 				throw std::runtime_error("Box::computeCoverage(): No outgoing selectors found!");
@@ -304,13 +304,13 @@ public:
 		this->initialized = true;
 		this->arity = this->roots.size() - 1;
 		
-		for (std::vector<TA<label_type>*>::iterator i = this->roots.begin(); i != this->roots.end(); ++i) {
+		for (auto root : this->roots) {
 			o_map_type o;
-			FA::computeDownwardO(**i, o);
-			this->rootMap.push_back(o[(*i)->getFinalState()]);
+			FA::computeDownwardO(*root, o);
+			this->rootMap.push_back(o[root->getFinalState()]);
 			std::vector<size_t> v;
-			for (std::vector<std::pair<size_t, bool> >::iterator j = o[(*i)->getFinalState()].begin(); j != o[(*i)->getFinalState()].end(); ++j)
-				v.push_back(j->first);
+			for (auto i : o[root->getFinalState()])
+				v.push_back(i.first);
 			this->rootSig.push_back(v);
 		}
 

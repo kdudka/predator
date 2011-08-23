@@ -88,27 +88,25 @@ public:
 		this->fae.variables = fae.variables;
 		this->fae.rootMap = fae.rootMap;
 
-		if (this->fae.roots.size() > fae.roots.size()) {
-			this->fae.updateRoot(this->fae.roots.back(), NULL);
+		if (this->fae.roots.size() > fae.roots.size())
 			this->fae.roots.pop_back();
-		}
 
 		assert(this->fae.roots.size() == fae.roots.size());
 
 		FAE tmp(this->fae);
-		for (std::vector<TA<label_type>*>::iterator i = this->fae.roots.begin(); i != this->fae.roots.end(); ++i)
-			this->fae.updateRoot(*i, NULL);
+//		for (std::vector<TA<label_type>*>::iterator i = this->fae.roots.begin(); i != this->fae.roots.end(); ++i)
+//			this->fae.updateRoot(*i, NULL);
 
 		for (size_t i = 0; i < this->fae.roots.size(); ++i) {
 			if (!tmp.roots[i]) {
-				this->fae.roots[i] = this->fae.taMan->addRef(fae.roots[i]);
+				this->fae.roots[i] = fae.roots[i];
 				continue;
 			}
 			TA<label_type>::lt_cache_type cache1, cache2;
 			tmp.buildLTCacheExt(*tmp.roots[i], cache1);
 			tmp.buildLTCacheExt(*fae.roots[i], cache2);
 
-			this->fae.roots[i] = this->fae.taMan->alloc();
+			this->fae.roots[i] = std::shared_ptr<TA<label_type>>(this->fae.allocTA());
 			
 			size_t stateCount = TA<label_type>::buProduct(
 				cache1,
@@ -122,7 +120,7 @@ public:
 			if (this->fae.roots[i]->getFinalStates().empty())
 				return false;
 
-			this->fae.updateRoot(this->fae.roots[i], &this->fae.roots[i]->unreachableFree(*this->fae.taMan->alloc()));
+			this->fae.roots[i] = std::shared_ptr<TA<label_type>>(&this->fae.roots[i]->unreachableFree(*this->fae.allocTA()));
 
 		}
 

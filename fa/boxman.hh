@@ -37,7 +37,8 @@
 
 class BoxMan {
 
-	TA<label_type>::Manager& taMan;
+//	TA<label_type>::Manager& taMan;
+	TA<label_type>::Backend& backend;
 
 	TA<std::string>::Backend sBackend;
 
@@ -244,7 +245,7 @@ public:
 		if (j == database.end())
 			throw std::runtime_error("Source for box '" + name + "' not found!");
 
-		Box* box = new Box(this->taMan, name);
+		Box* box = new Box(this->backend, name);
 
 		p.first->second = box;
 
@@ -261,18 +262,18 @@ public:
 
 		reader.readFirst(sta, autName);
 
-		TA<label_type> tmp(this->taMan.getBackend());
+		TA<label_type> tmp(this->backend);
 
 		bool composed = false;
 
 //		box.variables.push_back(Data::createRef(box.roots.size(), 0));
 		this->translateRoot(tmp, composed, sta, database);
-		box->roots.push_back(&this->adjustLeaves(*this->taMan.alloc(), tmp));
+		box->appendRoot(&this->adjustLeaves(*(new TA<label_type>(this->backend)), tmp));
 
 		while (reader.readNext(sta, autName)) {
 			tmp.clear();
 			this->translateRoot(tmp, composed, sta, database);
-			box->roots.push_back(&this->adjustLeaves(*this->taMan.alloc(), tmp));
+			box->appendRoot(&this->adjustLeaves(*(new TA<label_type>(this->backend)), tmp));
 //			if (memcmp(autName.c_str(), "in", 2) == 0)
 //				box.variables.push_back(Data::createRef(box.roots.size(), 0));
 		}
@@ -286,8 +287,8 @@ public:
 
 public:
 
-	BoxMan(TA<label_type>::Manager& taMan)
-		: taMan(taMan) {}
+	BoxMan(TA<label_type>::Backend& backend)
+		: backend(backend) {}
 
 	~BoxMan() {
 		utils::eraseMap(this->dataStore);

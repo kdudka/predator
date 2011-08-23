@@ -26,6 +26,7 @@
 #include <ostream>
 #include <sstream>
 #include <algorithm>
+#include <memory>
 
 #include <boost/unordered_map.hpp>
 
@@ -72,10 +73,13 @@ public:
 
 public:
 
-	mutable TA<label_type>::Manager* taMan;
+//	mutable TA<label_type>::Manager* taMan;
+
+	TA<label_type>::Backend* backend;
 
 	std::vector<Data> variables;
-	std::vector<TA<label_type>*> roots;
+//	std::vector<TA<label_type>*> roots;
+	std::vector<std::shared_ptr<TA<label_type> > > roots;
 	std::vector<std::vector<std::pair<size_t, bool> > > rootMap;
 /*
 	template <class F>
@@ -177,13 +181,13 @@ public:
 			}
 		}
 	}
-
+/*
 	void updateRoot(TA<label_type>*& root, TA<label_type>* newRoot) {
 		if (root)
 			this->taMan->release(root);
 		root = newRoot;
 	}
-
+*/
 	void updateRootMap(size_t root) {
 		assert(root < this->roots.size());
 		o_map_type o;
@@ -201,10 +205,15 @@ public:
 		}
 		return false;
 	}
-
+/*
 	void releaseRoots() {
 		for (std::vector<TA<label_type>*>::iterator i = this->roots.begin(); i != this->roots.end(); ++i)
 			this->updateRoot(*i, NULL);
+	}
+*/
+
+	TA<label_type>* allocTA() {
+		return new TA<label_type>(*this->backend);
 	}
 
 public:
@@ -226,32 +235,30 @@ public:
 
 	};
 
-	FA(TA<label_type>::Manager& taMan) : taMan(&taMan) {}
+//	FA(TA<label_type>::Manager& taMan) : taMan(&taMan) {}
+	FA(TA<label_type>::Backend& backend) : backend(&backend) {}
 	
-	FA(const FA& src) : taMan(src.taMan), variables(src.variables), roots(src.roots), rootMap(src.rootMap) {
-		for (std::vector<TA<label_type>*>::iterator i = this->roots.begin(); i != this->roots.end(); ++i) {
+	FA(const FA& src) : backend(src.backend), variables(src.variables), roots(src.roots), rootMap(src.rootMap) {
+/*		for (std::vector<TA<label_type>*>::iterator i = this->roots.begin(); i != this->roots.end(); ++i) {
 			if (*i)
 				this->taMan->addRef(*i);
-		}
+		}*/
 	}
 
-	~FA() { this->clear(); }
-	
 	FA& operator=(const FA& x) {
-		this->clear();
-		this->taMan = x.taMan;
+		this->backend = x.backend;
 		this->variables = x.variables;
 		this->roots = x.roots;
 		this->rootMap = x.rootMap;
-		for (std::vector<TA<label_type>*>::iterator i = this->roots.begin(); i != this->roots.end(); ++i) {
+/*		for (std::vector<TA<label_type>*>::iterator i = this->roots.begin(); i != this->roots.end(); ++i) {
 			if (*i)
 				this->taMan->addRef(*i);
-		}
+		}*/
 		return *this;		
 	}
 	
 	void clear() {
-		this->releaseRoots();
+//		this->releaseRoots();
 		this->roots.clear();
 		this->rootMap.clear();
 		this->variables.clear();
@@ -263,7 +270,11 @@ public:
 
 	const TA<label_type>* getRoot(size_t i) const {
 		assert(i < this->roots.size());
-		return this->roots[i];
+		return this->roots[i].get();
+	}
+
+	void appendRoot(TA<label_type>* ta) {
+		this->roots.push_back(std::shared_ptr<TA<label_type>>(ta));
 	}
 	
 };

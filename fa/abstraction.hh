@@ -50,9 +50,9 @@ public:
 			}
 		}
 //		utils::relPrint(std::cerr, rel);
-		TA<label_type> ta(this->fae.taMan->getBackend());
+		TA<label_type> ta(*this->fae.backend);
 		this->fae.roots[root]->collapsed(ta, rel, stateIndex);
-		this->fae.updateRoot(this->fae.roots[root], &ta.uselessAndUnreachableFree(*this->fae.taMan->alloc()));
+		this->fae.roots[root] = std::shared_ptr<TA<label_type>>(&ta.uselessAndUnreachableFree(*this->fae.allocTA()));
 	}
 
 public:

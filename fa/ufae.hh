@@ -88,10 +88,10 @@ public:
 	TA<label_type>& fae2ta(TA<label_type>& dst, Index<size_t>& index, const FAE& src) const {
 		dst.addFinalState(0);
 		std::vector<Cursor<std::set<size_t>::const_iterator> > tmp;
-		for (std::vector<TA<label_type>*>::const_iterator i = src.roots.begin(); i != src.roots.end(); ++i) {
-			TA<label_type>::rename(dst, **i, FAE::RenameNonleafF(index, this->stateOffset), false);
-			assert((*i)->getFinalStates().size());
-			tmp.push_back(Cursor<std::set<size_t>::const_iterator>((*i)->getFinalStates().begin(), (*i)->getFinalStates().end()));
+		for (auto root : src.roots) {
+			TA<label_type>::rename(dst, *root, FAE::RenameNonleafF(index, this->stateOffset), false);
+			assert(root->getFinalStates().size());
+			tmp.push_back(Cursor<std::set<size_t>::const_iterator>(root->getFinalStates().begin(), root->getFinalStates().end()));
 		}
 		std::vector<size_t> lhs(tmp.size());
 		label_type label = this->boxMan.lookupLabel(tmp.size(), src.variables);
@@ -119,13 +119,13 @@ public:
 		this->stateOffset += index.size();
 	}
 
-	void ta2fae(vector<FAE*>& dst, TA<label_type>::Manager& taMan, BoxMan& boxMan) const {
+	void ta2fae(vector<FAE*>& dst, TA<label_type>::Backend& backend, BoxMan& boxMan) const {
 		TA<label_type>::td_cache_type cache;
 		this->backend.buildTDCache(cache);
 		vector<const TT<label_type>*>& v = cache.insert(make_pair(0, vector<const TT<label_type>*>())).first->second;
 		// iterate over all "synthetic" transitions and constuct new FAE for each
 		for (vector<const TT<label_type>*>::iterator i = v.begin(); i != v.end(); ++i) {
-			FAE* fae = new FAE(taMan, boxMan);
+			FAE* fae = new FAE(backend, boxMan);
 			dst.push_back(fae);
 			fae->loadTA(this->backend, cache, *i, this->stateOffset);
 		}

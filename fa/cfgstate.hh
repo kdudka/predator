@@ -168,7 +168,7 @@ struct CfgStateExt : public CfgState {
 
 	size_t absHeight;
 
-	CfgStateExt(TA<label_type>::Backend& fwdBackend, TA<label_type>::Backend& fixpointBackend, BoxMan& boxMan)
+	CfgStateExt(/*TA<label_type>::Backend& fwdBackend, */TA<label_type>::Backend& fixpointBackend, BoxMan& boxMan)
 		: CfgState(true), fwdConf(fixpointBackend), fwdConfWrapper(this->fwdConf, boxMan), absHeight(1) {}
 
 	virtual ~CfgStateExt() {

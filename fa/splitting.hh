@@ -170,7 +170,7 @@ public:
 
 		std::vector<std::pair<const TT<label_type>*, const Box*> > v;
 
-		TA<label_type> ta(this->fae.taMan->getBackend());
+		TA<label_type> ta(*this->fae.backend);
 
 		const Box* matched;
 		for (TA<label_type>::iterator i = this->fae.roots[root]->begin(); i != this->fae.roots[root]->end(); ++i) {
@@ -192,13 +192,13 @@ public:
 		for (std::vector<std::pair<const TT<label_type>*, const Box*> >::iterator i = v.begin(); i != v.end(); ++i) {
 			FAE fae(this->fae);
 			Splitting splitting(fae);
-			TA<label_type> ta2(fae.taMan->getBackend());
+			TA<label_type> ta2(*fae.backend);
 			if (this->fae.roots[root]->isFinalState(i->first->rhs())) {
 				ta.copyTransitions(ta2);
 				size_t state = fae.freshState();
 				ta2.addFinalState(state);
 				const TT<label_type>& t = ta2.addTransition(i->first->lhs(), i->first->label(), state)->first;
-				fae.updateRoot(fae.roots[root], &ta2.uselessAndUnreachableFree(*fae.taMan->alloc()));
+				fae.roots[root] = std::shared_ptr<TA<label_type>>(&ta2.uselessAndUnreachableFree(*fae.allocTA()));
 				fae.updateRootMap(root);
 				std::set<const Box*> boxes;
 				splitting.isolateAtRoot(root, t, IsolateBoxF(i->second), boxes);
@@ -218,14 +218,14 @@ public:
 					}
 				}
 			}
-			fae.updateRoot(fae.roots[root], &ta2.uselessAndUnreachableFree(*fae.taMan->alloc()));
+			fae.roots[root] = std::shared_ptr<TA<label_type>>(&ta2.uselessAndUnreachableFree(*fae.allocTA()));
 			fae.updateRootMap(root);
 			ta2.clear();
 			size_t state = fae.freshState();
 			ta2.addFinalState(state);
 			const TT<label_type>& t = ta2.addTransition(i->first->lhs(), i->first->label(), state)->first;
 			ta.copyTransitions(ta2);
-			fae.roots.push_back(&ta2.uselessAndUnreachableFree(*fae.taMan->alloc()));
+			fae.appendRoot(&ta2.uselessAndUnreachableFree(*fae.allocTA()));
 			fae.rootMap.push_back(std::vector<std::pair<size_t, bool> >());
 			std::set<const Box*> boxes;
 			splitting.isolateAtRoot(fae.roots.size() - 1, t, IsolateBoxF(i->second), boxes);
@@ -267,10 +267,10 @@ public:
 				// prepare new root
 				TA<label_type> tmp(*this->fae.roots[root], false);
 				tmp.addFinalState(t.lhs()[lhsOffset]);
-				TA<label_type>* tmp2 = this->fae.taMan->alloc();
+				TA<label_type>* tmp2 = this->fae.allocTA();
 				tmp.unreachableFree(*tmp2);
 				// update 'o'
-				this->fae.roots.push_back(tmp2);
+				this->fae.appendRoot(tmp2);
 				this->fae.rootMap.push_back(std::vector<std::pair<size_t, bool> >());
 				this->fae.updateRootMap(this->fae.roots.size() - 1);
 			}
@@ -278,10 +278,10 @@ public:
 				boxes.insert((const Box*)*j);
 		}
 		ta.addTransition(lhs, t.label(), newState);
-		TA<label_type>* tmp = this->fae.taMan->alloc();
+		TA<label_type>* tmp = this->fae.allocTA();
 		ta.unreachableFree(*tmp);
 		// exchange the original automaton with the new one
-		this->fae.updateRoot(this->fae.roots[root], tmp);
+		this->fae.roots[root] = std::shared_ptr<TA<label_type>>(tmp);
 		this->fae.updateRootMap(root);
 	}
 
@@ -408,10 +408,10 @@ public:
 	}
 
 	void restrictedSplit(Index<size_t>& index, size_t root, size_t state) {
-		TA<label_type> ta(this->fae.taMan->getBackend());
+		TA<label_type> ta(*this->fae.backend);
 		this->fae.roots[root]->copyTransitions(ta);
 		ta.addFinalState(state);
-		TA<label_type> ta2(this->fae.taMan->getBackend());
+		TA<label_type> ta2(*this->fae.backend);
 		this->fae.roots[root]->copyTransitions(ta2);
 		index.set(state, this->fae.addData(ta2, Data::createRef(this->fae.roots.size())));
 		size_t base = this->fae.nextState();
@@ -438,14 +438,14 @@ public:
 				ta2.addFinalState(p.first);			
 		}
 		// update FAE
-		TA<label_type>* tmp = this->fae.taMan->alloc();
+		TA<label_type>* tmp = this->fae.allocTA();
 		ta.unreachableFree(*tmp);
-		this->fae.roots.push_back(tmp);
+		this->fae.appendRoot(tmp);
 		this->fae.rootMap.push_back(std::vector<std::pair<size_t, bool> >());
 		this->fae.updateRootMap(this->fae.roots.size() - 1);
-		tmp = this->fae.taMan->alloc();
+		tmp = this->fae.allocTA();
 		ta2.unreachableFree(*tmp);
-		this->fae.updateRoot(this->fae.roots[root], tmp);
+		this->fae.roots[root] = std::shared_ptr<TA<label_type>>(tmp);
 		this->fae.updateRootMap(root);
 	}
 

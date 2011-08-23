@@ -173,7 +173,7 @@ public:
 
 	size_t nodeCreate(const std::vector<std::pair<SelData, Data> >& nodeInfo, const TypeBox* typeInfo = NULL) {
 		size_t root = this->fae.roots.size();
-		TA<label_type>* ta = this->fae.taMan->alloc();
+		TA<label_type>* ta = this->fae.allocTA();
 		size_t f = this->fae.freshState();
 		ta->addFinalState(f);
 		std::vector<const AbstractBox*> label;
@@ -195,14 +195,14 @@ public:
 		}
 		FAE::reorderBoxes(label, lhs);
 		ta->addTransition(lhs, this->fae.boxMan->lookupLabel(label), f);
-		this->fae.roots.push_back(ta);
+		this->fae.appendRoot(ta);
 		this->fae.rootMap.push_back(o);
 		return root;
 	}
 
 	size_t nodeCreate(const std::vector<SelData>& nodeInfo, const TypeBox* typeInfo = NULL) {
 		size_t root = this->fae.roots.size();
-		TA<label_type>* ta = this->fae.taMan->alloc();
+		TA<label_type>* ta = this->fae.allocTA();
 		size_t f = this->fae.freshState();
 		ta->addFinalState(f);
 		// build label
@@ -217,7 +217,7 @@ public:
 		FAE::reorderBoxes(label, lhs);
 		// fill the rest
 		ta->addTransition(lhs, this->fae.boxMan->lookupLabel(label), f);
-		this->fae.roots.push_back(ta);
+		this->fae.appendRoot(ta);
 		this->fae.rootMap.push_back(std::vector<std::pair<size_t, bool> >());
 		return root;
 	}
@@ -231,13 +231,13 @@ public:
 				*i = Data::createUndef();
 		}
 		// erase node
-		this->fae.updateRoot(this->fae.roots[root], NULL);
+		this->fae.roots[root] = NULL;
 		// make all references to this rootpoint dangling
 		size_t i = 0;
 		for (; i < root; ++i) {
 			if (!this->fae.roots[i])
 				continue;
-			this->fae.updateRoot(this->fae.roots[i], this->fae.invalidateReference(this->fae.roots[i], root));
+			this->fae.roots[i] = std::shared_ptr<TA<label_type>>(this->fae.invalidateReference(this->fae.roots[i].get(), root));
 			FAE::invalidateReference(this->fae.rootMap[i], root);
 		}
 		// skip 'root'
@@ -245,7 +245,7 @@ public:
 		for (; i < this->fae.roots.size(); ++i) {
 			if (!this->fae.roots[i])
 				continue;
-			this->fae.updateRoot(this->fae.roots[i], this->fae.invalidateReference(this->fae.roots[i], root));
+			this->fae.roots[i] = std::shared_ptr<TA<label_type>>(this->fae.invalidateReference(this->fae.roots[i].get(), root));
 			FAE::invalidateReference(this->fae.rootMap[i], root);
 		}
 		
@@ -255,7 +255,7 @@ public:
 		assert(root < this->fae.roots.size());
 		assert(this->fae.roots[root]);
 		// erase node
-		this->fae.updateRoot(this->fae.roots[root], NULL);
+		this->fae.roots[root] = NULL;
 	}
 
 	void nodeLookup(size_t root, size_t offset, Data& data) const {
@@ -279,12 +279,12 @@ public:
 	void nodeModify(size_t root, size_t offset, const Data& in, Data& out) {
 		assert(root < this->fae.roots.size());
 		assert(this->fae.roots[root]);
-		TA<label_type> ta(this->fae.taMan->getBackend());
+		TA<label_type> ta(*this->fae.backend);
 		this->transitionModify(ta, this->fae.roots[root]->getAcceptingTransition(), offset, in, out);
 		this->fae.roots[root]->copyTransitions(ta);
-		TA<label_type>* tmp = this->fae.taMan->alloc();
+		TA<label_type>* tmp = this->fae.allocTA();
 		ta.unreachableFree(*tmp);
-		this->fae.updateRoot(this->fae.roots[root], tmp);
+		this->fae.roots[root] = std::shared_ptr<TA<label_type>>(tmp);
 		FA::o_map_type o;
 		FAE::computeDownwardO(*tmp, o);
 		this->fae.rootMap[root] = o[tmp->getFinalState()];
@@ -294,12 +294,12 @@ public:
 		assert(root < this->fae.roots.size());
 		assert(this->fae.roots[root]);
 		assert(in.isStruct());
-		TA<label_type> ta(this->fae.taMan->getBackend());
+		TA<label_type> ta(*this->fae.backend);
 		this->transitionModify(ta, this->fae.roots[root]->getAcceptingTransition(), offset, *in.d_struct, out);
 		this->fae.roots[root]->copyTransitions(ta);
-		TA<label_type>* tmp = this->fae.taMan->alloc();
+		TA<label_type>* tmp = this->fae.allocTA();
 		ta.unreachableFree(*tmp);
-		this->fae.updateRoot(this->fae.roots[root], tmp);
+		this->fae.roots[root] = std::shared_ptr<TA<label_type>>(tmp);
 		FA::o_map_type o;
 		FAE::computeDownwardO(*tmp, o);
 		this->fae.rootMap[root] = o[tmp->getFinalState()];

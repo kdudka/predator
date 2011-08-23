@@ -98,8 +98,8 @@ public:
 		this->variables = top->label()->getVData();
 		this->stateOffset = stateOffset;
 		for (vector<size_t>::const_iterator i = top->lhs().begin(); i != top->lhs().end(); ++i) {
-			TA<label_type>* ta = this->taMan->alloc();
-			this->roots.push_back(ta);
+			TA<label_type>* ta = this->allocTA();//this->taMan->alloc();
+			this->appendRoot(ta);
 			// add reachable transitions
 			for (TA<label_type>::td_iterator j = src.tdStart(cache, itov(*i)); j.isValid(); j.next())
 				ta->addTransition(*j);
@@ -114,7 +114,7 @@ public:
 	}
 
 	template <class F>
-	static void loadCompatibleFAs(std::vector<FAE*>& dst, const TA<label_type>& src, TA<label_type>::Manager& taMan, BoxMan& boxMan, const FAE* fae, size_t stateOffset, F f) {
+	static void loadCompatibleFAs(std::vector<FAE*>& dst, const TA<label_type>& src, TA<label_type>::Backend& backend, BoxMan& boxMan, const FAE* fae, size_t stateOffset, F f) {
 //		std::cerr << "source" << std::endl << src;
 		TA<label_type>::td_cache_type cache;
 		src.buildTDCache(cache);
@@ -127,14 +127,14 @@ public:
 				continue;
 			if ((*i)->label()->getVData() != fae->variables)
 				continue;
-			std::vector<TA<label_type>*> roots;
+			std::vector<std::shared_ptr<TA<label_type>>> roots;
 			size_t j;
 //			std::vector<size_t>::const_iterator j;
 			for (j = 0; j != (*i)->lhs().size(); ++j) {
 //			for (j = (*i)->lhs().begin(); j != (*i)->lhs().end(); ++j) {
 //				std::cerr << "computing td reachability\n";
-				TA<label_type>* ta = taMan.alloc();
-				roots.push_back(ta);
+				TA<label_type>* ta = new TA<label_type>(backend);//taMan.alloc();
+				roots.push_back(std::shared_ptr<TA<label_type>>(ta));
 				// add reachable transitions
 				for (TA<label_type>::td_iterator k = src.tdStart(cache, itov((*i)->lhs()[j])); k.isValid(); k.next()) {
 //					std::cerr << *k << std::endl;
@@ -157,11 +157,11 @@ public:
 			}
 			if (j < (*i)->lhs().size()) {
 //			if (j != (*i)->lhs().end()) {
-				for (std::vector<TA<label_type>*>::iterator k = roots.begin(); k != roots.end(); ++k)
-					taMan.release(*k);
+//				for (std::vector<TA<label_type>*>::iterator k = roots.begin(); k != roots.end(); ++k)
+//					taMan.release(*k);
 				continue;
 			}
-			FAE* tmp = new FAE(taMan, boxMan);
+			FAE* tmp = new FAE(backend, boxMan);
 			dst.push_back(tmp);
 			tmp->variables = fae->variables;
 			tmp->roots = roots;
@@ -191,7 +191,7 @@ public:
 	template <class F>
 	void fuse(const TA<label_type>& src, F f) {
 		Index<size_t> index;
-		TA<label_type> tmp(this->taMan->getBackend());
+		TA<label_type> tmp(*this->backend);
 		TA<label_type>::rename(tmp, src, RenameNonleafF(index, this->nextState()), false);
 		this->incrementStateOffset(index.size());
 		for (size_t i = 0; i < this->roots.size(); ++i) {
@@ -203,12 +203,12 @@ public:
 
 	void minimizeRoots() {
 		for (size_t i = 0; i < this->roots.size(); ++i)
-			this->updateRoot(this->roots[i], &this->roots[i]->minimized(*this->taMan->alloc()));
+			this->roots[i] = std::shared_ptr<TA<label_type>>(&this->roots[i]->minimized(*this->allocTA()));
 	}
 
 	void minimizeRootsCombo() {
 		for (size_t i = 0; i < this->roots.size(); ++i)
-			this->updateRoot(this->roots[i], &this->roots[i]->minimizedCombo(*this->taMan->alloc()));
+			this->roots[i] = std::shared_ptr<TA<label_type>>(&this->roots[i]->minimizedCombo(*this->allocTA()));
 	}
 
 public:
@@ -335,7 +335,7 @@ public:
 	}
 
 	TA<label_type>* relabelReferences(TA<label_type>* src, const vector<size_t>& index) {
-		return &this->relabelReferences(*this->taMan->alloc(), *src, index);
+		return &this->relabelReferences(*this->allocTA(), *src, index);
 	}
 
 	TA<label_type>& invalidateReference(TA<label_type>& dst, const TA<label_type>& src, size_t root) {
@@ -357,7 +357,7 @@ public:
 	}
 
 	TA<label_type>* invalidateReference(TA<label_type>* src, size_t root) {
-		return &this->invalidateReference(*this->taMan->alloc(), *src, root);
+		return &this->invalidateReference(*this->allocTA(), *src, root);
 	}
 
 	static void invalidateReference(std::vector<std::pair<size_t, bool> >& dst, size_t root) {
@@ -394,19 +394,19 @@ public:
 			*this->roots[target]->getFinalStates().begin()
 		)->label()->boxLookup((size_t)(-1)).aBox;
 	}
-
+/*
 public:
 
 	void selfCheck() const {
 		for (size_t i = 0; i < this->roots.size(); ++i)
 			assert(this->taMan->isAlive(this->roots[i]));
 	}
-
+*/
 public:
 
 	// state 0 should never be allocated by FAE (?)
-	FAE(TA<label_type>::Manager& taMan, BoxMan& boxMan)
-	 : FA(taMan), boxMan(&boxMan), stateOffset(1) {}
+	FAE(TA<label_type>::Backend& backend, BoxMan& boxMan)
+	 : FA(backend), boxMan(&boxMan), stateOffset(1) {}
 
 	FAE(const FAE& x)
 		: FA(x), boxMan(x.boxMan), stateOffset(x.stateOffset)/*,
@@ -416,7 +416,7 @@ public:
 	~FAE() { this->clear(); }
 	
 	FAE& operator=(const FAE& x) {
-		((FA*)this)->operator=(x);
+		FA::operator=(x);
 		this->boxMan = x.boxMan;
 		this->stateOffset = x.stateOffset;
 //		this->selectorMap = x.selectorMap;
@@ -424,7 +424,7 @@ public:
 	}
 
 	void clear() {
-		((FA*)this)->clear();
+//		FA::clear();
 		this->stateOffset = 1;
 //		this->selectorMap.clear();
 	}
