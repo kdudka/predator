@@ -423,8 +423,8 @@ protected:
 			std::set<size_t> tmp;
 			VirtualMachine vm(fae);
 			vm.getNearbyReferences(vm.varGet(ABP_INDEX).d_ref.root, tmp);
-			NormInfo normInfo;
-			Normalization(fae).normalize(normInfo, tmp);
+//			NormInfo normInfo;
+			Normalization(fae).normalize(/*normInfo,*/ tmp);
 		}
 
 	}
@@ -472,21 +472,23 @@ protected:
 
 	void enqueue(ExecInfo& info) {
 
-		Guard<FAE> g(info.fae);
-
 		VirtualMachine vm(*info.fae);
 
 		vm.varSet(IP_INDEX, Data::createNativePtr((void*)info.cfg));
 
-		if (info.cfg->hasExt) {
+		if (!info.cfg->hasExt) {
+			
+			Normalization(*info.fae).check();
+
+		} else {
 
 			std::set<size_t> tmp;
-			NormInfo normInfo;
+//			NormInfo normInfo;
 			vm.getNearbyReferences(vm.varGet(ABP_INDEX).d_ref.root, tmp);
 	
 //			CL_CDEBUG("before normalization: " << std::endl << *fae); 
 	
-			Normalization(*info.fae).normalize(normInfo, tmp);
+			Normalization(*info.fae).normalize(/*normInfo,*/ tmp);
 	
 //			CL_CDEBUG("after normalization: " << std::endl << *fae); 
 	
@@ -503,8 +505,6 @@ protected:
 				fae->minimizeRootsCombo();*/
 
 		}
-
-		g.release();
 
 		SymState* state = new SymState(info.parent, info.fae, this->queue.end(), (void*)1);
 
@@ -659,8 +659,14 @@ protected:
 		for (vector<Data>::iterator j = res.begin(); j != res.end(); ++j) {
 
 			ExecInfo newInfo(info.parent, info.cfg, new FAE(*info.fae));
+
+			Guard<FAE> g2(newInfo.fae);
+
 			dst.writeData(*newInfo.fae, *j, rev);
+
 			this->enqueueNextInsn(newInfo);
+
+			g2.release();
 
 		}
 

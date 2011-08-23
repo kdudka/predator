@@ -29,7 +29,7 @@
 #include "forestautext.hh"
 #include "abstractbox.hh"
 #include "utils.hh"
-
+/*
 struct NormInfo {
 
 	struct RootInfo {
@@ -111,7 +111,7 @@ struct NormInfo {
 		assert(i == this->rootCount);			
 	}
 */	
-};
+/*};*/
 
 struct IntersectAndRelabelF {
 
@@ -151,7 +151,7 @@ struct IntersectAndRelabelSpecialF {
 	const TA<label_type>& src1;
 	const TA<label_type>& src2;
 	boost::unordered_map<size_t, size_t> rootMap;
-	
+/*	
 	IntersectAndRelabelSpecialF(FAE& fae, TA<label_type>& dst, std::set<std::pair<size_t, size_t> >& splitPoints, const std::vector<size_t>& index, const TA<label_type>& src1, const TA<label_type>& src2, const NormInfo::RootInfo& rootInfo)
 		: fae(fae), dst(dst), index(index), splitPoints(splitPoints), src1(src1), src2(src2) {
 		for (std::vector<std::pair<size_t, std::vector<size_t> > >::const_iterator i = rootInfo.mergedRoots.begin(); i != rootInfo.mergedRoots.end(); ++i) {
@@ -161,7 +161,7 @@ struct IntersectAndRelabelSpecialF {
 			}
 		}
 	}
-
+*/
 	void operator()(const TT<label_type>* t1, const TT<label_type>* t2, const std::vector<size_t>& lhs, size_t& rhs) {
 		const Data* data;
 		if (this->fae.isData(t1->rhs(), data)) {
@@ -295,14 +295,14 @@ public:
 		this->checkGarbage(visited);
 	}
 
-	void normalizeRoot(NormInfo& normInfo, std::vector<bool>& normalized, size_t root, const std::vector<bool>& marked) {
+	void normalizeRoot(/*NormInfo& normInfo, */std::vector<bool>& normalized, size_t root, const std::vector<bool>& marked) {
 		if (normalized[root])
 			return;
 		normalized[root] = true;
 		std::vector<std::pair<size_t, bool> > tmp = this->fae.rootMap[root];
-		normInfo.addRoot(root);
+//		normInfo.addRoot(root);
 		for (std::vector<std::pair<size_t, bool> >::iterator i = tmp.begin(); i != tmp.end(); ++i) {
-			this->normalizeRoot(normInfo, normalized, i->first, marked);
+			this->normalizeRoot(/*normInfo, */normalized, i->first, marked);
 			if (!marked[i->first]) {
 //				std::cerr << "merging " << *i << '(' << this->fae.roots[*i] << ')' << " into " << root << '(' << this->fae.roots[root] << ')' << std::endl;
 				std::vector<size_t> refStates;
@@ -310,13 +310,13 @@ public:
 				this->fae.updateRoot(this->fae.roots[root], ta);
 				this->fae.updateRoot(this->fae.roots[i->first], NULL);
 				FAE::updateMap(this->fae.rootMap[root], i->first, this->fae.rootMap[i->first]);
-				normInfo.mergeRoots(root, i->first, refStates);
+//				normInfo.mergeRoots(root, i->first, refStates);
 			}
 		}
 	}
 
 	// normalize representation
-	void normalize(NormInfo& normInfo, const std::set<size_t>& forbidden = std::set<size_t>()) {
+	void normalize(/*NormInfo& normInfo, */const std::set<size_t>& forbidden = std::set<size_t>()) {
 		// compute canonical root ordering
 		std::vector<size_t> order;
 		std::vector<bool> visited(this->fae.roots.size(), false), marked(this->fae.roots.size(), false);
@@ -333,7 +333,7 @@ public:
 		std::vector<std::vector<std::pair<size_t, bool> > > newRootMap;
 		size_t offset = 0;
 		for (std::vector<size_t>::iterator i = order.begin(); i < order.end(); ++i) {
-			this->normalizeRoot(normInfo, normalized, *i, marked);
+			this->normalizeRoot(/*normInfo, */normalized, *i, marked);
 //			assert(marked[*i] || (this->fae.roots[*i] == NULL));
 			if (!marked[*i])
 				continue;
@@ -342,8 +342,8 @@ public:
 			index[*i] = offset++;
 //			normInfo.addRoot(*i);
 		}
-		normInfo.rootCount = this->fae.roots.size();
-		normInfo.reindex(index);
+//		normInfo.rootCount = this->fae.roots.size();
+//		normInfo.reindex(index);
 		// update representation
 		this->fae.roots = newRoots;
 		this->fae.rootMap = newRootMap;
@@ -417,7 +417,7 @@ public:
 
 		this->fae.incrementStateOffset(stateIndex.size());
 	}
-
+/*
 	bool denormalize(const FAE& fae, const NormInfo& normInfo) {
 		assert(fae.roots.size() == normInfo.data.size());
 		assert(this->fae.roots.size() == fae.roots.size());
@@ -485,7 +485,7 @@ public:
 		return true;
 
 	}
-
+*/
 public:
 
 	Normalization(FAE& fae) : fae(fae) {}
