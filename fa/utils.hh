@@ -182,8 +182,10 @@ public:
 	ContainerGuard(T& cont) : _cont(&cont) {}
 	~ContainerGuard() {
 		if (this->_cont) {
-			for (typename T::iterator i = this->_cont->begin(); i != this->_cont->end(); ++i)
-				delete *i;
+			for (typename T::iterator i = this->_cont->begin(); i != this->_cont->end(); ++i) {
+				if (*i)
+					delete *i;
+			}
 			this->_cont->clear();
 		}
 	}

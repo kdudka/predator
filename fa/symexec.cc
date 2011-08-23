@@ -655,23 +655,21 @@ protected:
 		Engine::dataCmp(res, data1, data2, f);
 		RevInfo rev;
 
-		Guard<FAE> g(info.fae);
-
 		for (vector<Data>::iterator j = res.begin(); j != res.end(); ++j) {
 
 			ExecInfo newInfo(info.parent, info.cfg, new FAE(*info.fae));
 
-			Guard<FAE> g2(newInfo.fae);
+			Guard<FAE> g(newInfo.fae);
 
 			dst.writeData(*newInfo.fae, *j, rev);
 
 			this->enqueueNextInsn(newInfo);
 
-			g2.release();
+			g.release();
 
 		}
 
-//		g.release();
+		delete info.fae;
 
 	}
 /*

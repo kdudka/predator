@@ -166,13 +166,13 @@ public:
 
 			const std::pair<bool, size_t>& varInfo = this->ctx->getVarInfo(var.uid);
 			
-			if (varInfo.first) {
+			if (!varInfo.first) {
+				CL_CDEBUG("killing register " << varInfo.second);
+				vm.varSet(varInfo.second, Data::createUndef());
+			} else {
 				CL_CDEBUG("killing [ABP+" << varInfo.second << ']');
 				Data data;
 				vm.nodeModify(vm.varGet(ABP_INDEX).d_ref.root, varInfo.second, Data::createUndef(), data);
-			} else {
-				CL_CDEBUG("killing register " << varInfo.second);
-				vm.varSet(varInfo.second, Data::createUndef());
 			}
 
 		}
