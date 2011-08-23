@@ -772,8 +772,32 @@ protected:
 		Data data = src.readData(*info.fae, itov((size_t)0));
 		assert(data.isInt());
 		RevInfo rev;
-		
-		dst.writeData(*info.fae, Data::createVoidPtr(data.d_int), rev);
+
+		if (
+			dst.type->code == cl_type_e::CL_TYPE_PTR &&
+			dst.type->items[0].type->code != cl_type_e::CL_TYPE_VOID
+		) {
+			if (dst.type->items[0].type->size != (int)data.d_int)
+				throw ProgramError("allocated block's size mismatch");
+			vector<SelData> sels;
+			NodeBuilder::buildNode(sels, dst.type->items[0].type);
+			std::string typeName;
+			if (dst.type->items[0].type->name)
+				typeName = std::string(dst.type->items[0].type->name);
+			else {
+				std::ostringstream ss;
+				ss << dst.type->items[0].type->uid;
+				typeName = ss.str();
+			}
+			dst.writeData(
+				*info.fae,
+				Data::createRef(VirtualMachine(*info.fae).nodeCreate(sels, this->boxMan.getTypeInfo(typeName))),
+				rev
+			);
+
+		} else {
+			dst.writeData(*info.fae, Data::createVoidPtr(data.d_int), rev);
+		}
 		
 		this->enqueueNextInsn(info);
 	

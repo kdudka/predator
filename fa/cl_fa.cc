@@ -108,7 +108,7 @@ void clEasyRun(const CodeStorage::Storage& stor, const char* configString) {
     const NameDb::TNameMap &glNames = stor.fncNames.glNames;
     const NameDb::TNameMap::const_iterator iter = glNames.find("main");
     if (glNames.end() == iter) {
-        CL_WARN("main() not found at global scope");
+        CL_ERROR("main() not found at global scope");
         return;
     }
 
@@ -119,7 +119,7 @@ void clEasyRun(const CodeStorage::Storage& stor, const char* configString) {
     const FncDb &fncs = stor.fncs;
     const Fnc *main = fncs[iter->second];
     if (!main || !isDefined(*main)) {
-        CL_WARN("main() not defined");
+        CL_ERROR("main() not defined");
         return;
     }
 

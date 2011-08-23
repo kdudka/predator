@@ -8,7 +8,8 @@ fi
 set -x
 FA_BUILD=../fa_build
 FA_PLUG="$FA_BUILD/libfa.so"
-CC1="../gcc-install/libexec/gcc/`ls ../gcc-install/lib/gcc/`/4.[56]*/cc1"
+#CC1="../gcc-install/libexec/gcc/`ls ../gcc-install/lib/gcc/`/4.[56]*/cc1"
+CC1=" /usr/lib/x86_64-linux-gnu/gcc/x86_64-linux-gnu/4.6/cc1"
 
 # initial checks
 eval test -x "$CC1"             || exit 1
@@ -26,7 +27,7 @@ test -z "$GDB" && GDB=gdb
 test -z "$FA_VERBOSE" && FA_VERBOSE=1
 
 # use pp code listener by default
-test -z "$FA_OPTS" && FA_OPTS="-fplugin-arg-libfa-dump-pp"
+test -z "$FA_OPTS" && FA_OPTS="-fplugin-arg-libfa-dump-pp -fplugin-arg-libfa-dump-types"
 
 BOXDB=""
 if [ "$2" != "" ]; then
@@ -34,7 +35,7 @@ if [ "$2" != "" ]; then
 fi
 
 # run the debugger
-eval "$GDB" --quiet --args "$CC1" "$1" \
+eval LD_PRELOAD=/lib/x86_64-linux-gnu/libpthread.so.0 "$GDB" --quiet --args "$CC1" "$1" \
     -DFORESTER \
     -dumpbase test.c -quiet -o /dev/null \
     -m32 -O0 -Wall -Wextra \
