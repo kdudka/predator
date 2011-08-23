@@ -120,6 +120,11 @@ Gentoo Linux using gcc-4.5.2 as a system compiler, you need to do this:
 
     ln -sfT /usr/lib64/gcc/x86_64-pc-linux-gnu/4.5.2/plugin/include include/gcc
 
+If you are on a Debian system you need to install gcc-4.5-plugin-dev package and
+then:
+
+    ln -sfT /usr/lib/x86_64-linux-gnu/gcc/x86_64-linux-gnu/4.5.2/plugin/include include/gcc
+
 Then you can build Predator without building GCC locally.  If you want to run
 the test-suite, you need to tell CMake which GCC should be used to load the
 plug-in to:
