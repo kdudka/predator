@@ -23,8 +23,10 @@ GCC=gcc
 # use verbose level 0 by default
 test -z "$FA_VERBOSE" && FA_VERBOSE=0
 
-# use pp code listener by default
-#test -z "$FA_OPTS" && FA_OPTS="-fplugin-arg-libfa-dump-pp"
+if [ "$FA_VERBOSE" == "1" ]; then
+  # use pp code listener by default
+  test -z "$FA_OPTS" && FA_OPTS="-fplugin-arg-libfa-dump-pp -fplugin-arg-libfa-dump-types"
+fi;
 
 # use chromium as default SVG_VIEWER
 #test -z "$SVG_VIEWER" && SVG_VIEWER=chromium

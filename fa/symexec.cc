@@ -516,7 +516,8 @@ protected:
 
 	void enqueueNextInsn(ExecInfo& info) {
 
-		info.cfg->finalizeOperands(*info.fae);
+//		info.cfg->finalizeOperands(*info.fae);
+		info.cfg->killDeadVariables(*info.fae, (*info.cfg->insn)->varsToKill);
 
 		ExecInfo next(info.parent, this->getCfgState(info.cfg->insn + 1, info.cfg->ctx), info.fae);
 
@@ -851,7 +852,9 @@ protected:
 		if (!data.isBool())
 			throw runtime_error("Engine::execCond(): non boolean condition argument!");
 
-		info.cfg->finalizeOperands(*info.fae);
+//		info.cfg->finalizeOperands(*info.fae);
+		info.cfg->killDeadVariables(*info.fae, (*info.cfg->insn)->varsToKill);
+		info.cfg->killDeadVariables(*info.fae, (*info.cfg->insn)->killPerTarget[((data.d_bool))?(0):(1)]);
 
 		ExecInfo newInfo(info.parent, this->getCfgState(info.insn()->targets[((data.d_bool))?(0):(1)]->begin(), info.cfg->ctx), info.fae);
 

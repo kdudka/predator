@@ -235,6 +235,12 @@ struct SymCtx {
 		return true;
 	}
 
+	const std::pair<bool, size_t>& getVarInfo(size_t id) const {
+		var_map_type::const_iterator i = this->varMap.find(id);
+		assert(i != this->varMap.end());
+		return i->second;
+	}
+
 	struct Dump {
 
 		const SymCtx& ctx;

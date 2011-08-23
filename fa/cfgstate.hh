@@ -136,7 +136,7 @@ public:
 			}
 		}
 	}
-
+/*
 	// careful
 	void finalizeOperands(FAE& fae) {
 //		OperandInfo oi;
@@ -153,6 +153,30 @@ public:
 			if (this->ctx->isReg(&*i, id))
 				VirtualMachine(fae).varSet(id, Data::createUndef());
 		}
+	}
+*/
+	void killDeadVariables(FAE& fae, const CodeStorage::TKillVarList& vars) {
+
+		VirtualMachine vm(fae);
+
+		for (auto var : vars) {
+
+			if (var.onlyIfNotPointed)
+				continue;
+
+			const std::pair<bool, size_t>& varInfo = this->ctx->getVarInfo(var.uid);
+			
+			if (varInfo.first) {
+				CL_CDEBUG("killing [ABP+" << varInfo.second << ']');
+				Data data;
+				vm.nodeModify(vm.varGet(ABP_INDEX).d_ref.root, varInfo.second, Data::createUndef(), data);
+			} else {
+				CL_CDEBUG("killing register " << varInfo.second);
+				vm.varSet(varInfo.second, Data::createUndef());
+			}
+
+		}
+
 	}
 
 };
