@@ -516,6 +516,9 @@ class Block {
          */
         const ControlFlow* cfg() const             { return cfg_;           }
 
+        /// return true, if a loop at the level of CFG starts with this block
+        bool isLoopEntry() const;
+
     private:
         TList insns_;
         TTargetList inbound_;

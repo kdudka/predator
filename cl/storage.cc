@@ -338,6 +338,21 @@ const TTargetList& Block::targets() const {
     return last->targets;
 }
 
+bool Block::isLoopEntry() const {
+    BOOST_FOREACH(const Block *ref, inbound_) {
+        const Insn *term = ref->back();
+        const TTargetList &tList = ref->targets();
+
+        // go through loop closing edges and check their target
+        BOOST_FOREACH(const unsigned idx, term->loopClosingTargets)
+            if (tList[idx] == this)
+                return true;
+    }
+
+    // no loop entry found
+    return false;
+}
+
 // /////////////////////////////////////////////////////////////////////////////
 // ControlFlow implementation
 struct ControlFlow::Private {
