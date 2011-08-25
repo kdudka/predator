@@ -67,7 +67,7 @@ typedef std::stack<DfsItem>                 TDfsStack;
 typedef std::pair<TBlock, TBlock>           TCfgEdge;
 typedef std::set<TCfgEdge>                  TEdgeSet;
 
-void analyseFnc(Fnc &fnc) {
+void analyzeFnc(Fnc &fnc) {
     const TLoc loc = &fnc.def.data.cst.data.cst_fnc.loc;
     LS_DEBUG_MSG(2, loc, ">>> entering " << nameOf(fnc) << "()");
 
@@ -90,7 +90,7 @@ void analyseFnc(Fnc &fnc) {
         if (tlist.size() <= top.target) {
             // done at this level
             if (!insertOnce(done, bb))
-                CL_BREAK_IF("LoopScan::analyseFnc() malfunction");
+                CL_BREAK_IF("LoopScan::analyzeFnc() malfunction");
 
             pathSet.erase(bb);
             dfsStack.pop();
@@ -143,17 +143,17 @@ void analyseFnc(Fnc &fnc) {
 void findLoopClosingEdges(Storage &stor) {
     StopWatch watch;
 
-    // first go through all _defined_ functions and compute the fixed-point
+    // go through all _defined_ functions
     BOOST_FOREACH(Fnc *pFnc, stor.fncs) {
         Fnc &fnc = *pFnc;
         if (!isDefined(fnc))
             continue;
 
-        // analyse a single function
-        LoopScan::analyseFnc(fnc);
+        // analyze a single function
+        LoopScan::analyzeFnc(fnc);
     }
 
-    // commit the results in batch mode (we needed to build Data::pointed first)
+    // print time elapsed
     CL_DEBUG("findLoopClosingEdges() took " << watch);
 }
 

@@ -57,7 +57,6 @@ typedef std::set<TBlock>                    TBlockSet;
 
 /// per-block data
 struct BlockData {
-    TBlockSet                               refs;
     TSet                                    gen;
     TSet                                    kill;
 };
@@ -183,19 +182,6 @@ void scanInsn(Data &data, TBlock bb, const Insn &insn) {
     }
 }
 
-void scanBlock(Data &data, TBlock bb) {
-    // go through instructions in forward direction
-    BOOST_FOREACH(const Insn *insn, *bb)
-        scanInsn(data, bb, *insn);
-
-    // dig backward references
-    // FIXME: should they already be provided by CodeStorage?
-    BOOST_FOREACH(TBlock target, bb->targets()) {
-        BlockData &bTarget = data.blocks[target];
-        bTarget.refs.insert(bb);
-    }
-}
-
 bool /* changed */ updateBlockBy(BlockData &bData, TVar uid) {
     if (hasKey(bData.kill, uid))
         // we are killing the variable
@@ -224,7 +210,7 @@ void updateBlock(Data &data, TBlock bb) {
         return;
 
     // schedule all predecessors
-    BOOST_FOREACH(TBlock bbDst, bData.refs)
+    BOOST_FOREACH(TBlock bbDst, bb->inbound())
         data.todo.insert(bbDst);
 }
 
@@ -252,7 +238,10 @@ void analyseFnc(Data &data, Fnc &fnc) {
 
     // go through basic blocks
     BOOST_FOREACH(TBlock bb, fnc.cfg) {
-        scanBlock(data, bb);
+        // go through instructions in forward direction
+        BOOST_FOREACH(const Insn *insn, *bb)
+            scanInsn(data, bb, *insn);
+
         data.todo.insert(bb);
     }
 
