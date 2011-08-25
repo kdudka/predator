@@ -305,7 +305,7 @@ const struct cl_type* TypeDb::operator[](int uid) const {
 
 // /////////////////////////////////////////////////////////////////////////////
 // Block implementation
-void Block::append(const Insn *insn) {
+void Block::append(Insn *insn) {
 #ifndef NDEBUG
     if (!insns_.empty()) {
         // check insn sequence
@@ -313,6 +313,7 @@ void Block::append(const Insn *insn) {
         CL_BREAK_IF(cl_is_term_insn(last->code));
     }
 #endif
+    insn->bb = this;
     insns_.push_back(insn);
 }
 

@@ -318,6 +318,11 @@ struct Insn {
     Storage                     *stor;
 
     /**
+     * reference to a basic block that owns the Insn object
+     */
+    Block                       *bb;
+
+    /**
      * kind of instruction, see #cl_insn_e documentation
      * @note now there can be also CL_INSN_CALL and CL_INSN_SWITCH
      */
@@ -458,7 +463,7 @@ class Block {
          * @param insn Instruction to append.
          * @note Given objects are not cloned nor destroyed!
          */
-        void append(const Insn *insn);
+        void append(Insn *insn);
 
         void appendPredecessor(Block *);
 
