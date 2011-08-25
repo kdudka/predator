@@ -285,8 +285,14 @@ typedef STD_VECTOR(struct cl_operand) TOperandList;
  */
 typedef STD_VECTOR(const Block *) TTargetList;
 
+/**
+ * value type describing a single 'kill variable' hint
+ */
 struct KillVar {
+    /// CodeStorage uid of the variable to kill
     int             uid;
+
+    /// if true, killing the variable is safe only if nobody points at/inside it
     bool            onlyIfNotPointed;
 
     KillVar(int uid_, bool onlyIfNotPointed_):
@@ -296,7 +302,10 @@ struct KillVar {
     }
 };
 
+/// list of variables to kill (a @b kill @b list)
 typedef std::vector<KillVar>                        TKillVarList;
+
+/// list of kill lists (one per each target of a terminal instruction)
 typedef std::vector<TKillVarList>                   TKillPerTarget;
 
 /**
@@ -362,10 +371,15 @@ struct Insn {
      */
     TOperandList                operands;
 
-    /// @todo some dox
+    /// list of variables you can safely kill @b after execution of the insn
     TKillVarList                varsToKill;
 
-    /// @todo some dox
+    /**
+     * similar to varsToKill, but refined for @b terminal instructions with more
+     * than one target.  List of kill lists, one kill list per each target of
+     * the terminal instruction.  If a variable is already killed by varsToKill,
+     * it does not appear in killPerTarget again.
+     */
     TKillPerTarget              killPerTarget;
 
     /**
@@ -390,7 +404,7 @@ struct Insn {
      */
     TTargetList                 targets;
 
-    /// @todo some dox
+    /// list of indexes of targets that are closing a loop at the CFG level
     std::vector<unsigned>       loopClosingTargets;
 };
 
