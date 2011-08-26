@@ -36,8 +36,9 @@
 
 #include <map>              // for TValMap
 #include <set>              // for TCVarSet
-#include <vector>
+#include <vector>           // for many types
 
+/// classification of kind of origins a value may come from
 enum EValueOrigin {
     VO_INVALID,             ///< reserved for signalling error states
     VO_ASSIGNED,            ///< known result of an operation
@@ -49,8 +50,10 @@ enum EValueOrigin {
     VO_HEAP                 ///< untouched contents of heap
 };
 
+/// true for VO_HEAP, VO_STACK, and maybe VO_STATIC
 bool isUninitialized(EValueOrigin);
 
+/// classification of kind of objects a value may point to
 enum EValueTarget {
     VT_INVALID,             ///< completely invalid target
     VT_UNKNOWN,             ///< arbitrary target
@@ -64,13 +67,25 @@ enum EValueTarget {
     VT_ABSTRACT             ///< abstract object (segment)
 };
 
+/// true for VT_ABSTRACT
 bool isAbstract(EValueTarget);
+
+/// true for VT_STATIC, VT_ON_HEAP, and VT_ON_STACK
 bool isKnownObject(EValueTarget);
+
+/// true for VT_DELETED and VT_LOST
 bool isGone(EValueTarget);
+
+/// true for VT_ON_HEAP and VT_ABSTRACT
 bool isOnHeap(EValueTarget);
+
+/// true for VT_STATIC and VT_ON_STACK
 bool isProgramVar(EValueTarget);
+
+/// true for VT_STATIC, VT_ON_STACK, VT_ON_STACK, and VT_ABSTRACT
 bool isPossibleToDeref(EValueTarget);
 
+/// enumeration of custom values, such as integer literals, or code pointers
 enum ECustomValue {
     CV_INVALID,             ///< reserved for signalling error states
     CV_FNC,                 ///< code pointer
@@ -85,6 +100,7 @@ union CustomValueData {
     const char *str;        ///< zero-terminated string
 };
 
+/// representation of a custom value, such as integer literal, or code pointer
 struct CustomValue {
     ECustomValue    code;   ///< custom value classification
     CustomValueData data;   ///< custom data
@@ -215,9 +231,7 @@ inline bool operator<(const CVar &a, const CVar &b) {
         return a.inst < b.inst;
 }
 
-/**
- * @b symbolic @b heap representation, the core part of "symexec" project
- */
+/// base of @b symbolic @b heap representation (one disjunct of symbolic state)
 class SymHeapCore {
     public:
         /// create an empty symbolic heap
@@ -232,10 +246,13 @@ class SymHeapCore {
         /// @note there is no such thing like COW implemented for now
         SymHeapCore& operator=(const SymHeapCore &);
 
+        /// exchange the contents with the other heap (works in constant time)
         virtual void swap(SymHeapCore &);
 
+        /// each symbolic heap is associated with a CodeStorage model of code
         TStorRef stor() const { return stor_; }
 
+        /// the last assigned ID of a heap entity (not necessarily still valid)
         unsigned lastId() const;
 
     public:
@@ -255,27 +272,24 @@ class SymHeapCore {
          * @param obj ID of the object to look for
          * @return A valid value ID when a valid object ID is given, VAL_INVALID
          * otherwise.
-         * @note It can be also abused to check if an object ID is valid, or
-         * not.
-         * @note The operation has always a unique result.
          */
         TValId placedAt(TObjId obj);
 
         /**
-         * collect all objects having the given value
+         * collect all objects having the given value inside
          * @param dst reference to a container to store the result to
          * @param val ID of the value to look for
-         * @note The operation may return from 0 to n results.
+         * @note The operation may return from 0 to n objects.
          */
         void usedBy(TObjList &dst, TValId val) const;
 
-        /// return how many objects use the value
+        /// return how many objects have the value inside
         unsigned usedByCount(TValId val) const;
 
-        /// return all objects that point at/inside the given object
+        /// return all objects that point at/inside the given root entity
         void pointedBy(TObjList &dst, TValId root) const;
 
-        /// return how many objects point at/inside the given object
+        /// return how many objects point at/inside the given root entity
         unsigned pointedByCount(TValId root) const;
 
         /**
@@ -291,22 +305,16 @@ class SymHeapCore {
          */
         void objSetValue(TObjId obj, TValId val, TValSet *killedPtrs = 0);
 
-    protected:
-        virtual bool hasAbstractTarget(TValId) const {
-            // no abstract objects at this level
-            return false;
-        }
-
     public:
+        /// enumeration of Neq predicate operations
         enum ENeqOp {
-            NEQ_NOP = 0,
-            NEQ_ADD,
-            NEQ_DEL
+            NEQ_NOP = 0,    ///< used only internally
+            NEQ_ADD,        ///< define a Neq predicate (if not already present)
+            NEQ_DEL         ///< remove a Neq predicate (if defined)
         };
 
         /**
-         * introduce a new @b Neq @b predicate (if not present already), or
-         * remove an existing one
+         * add or remove a Neq predicate (fully symmetric)
          * @param op requested operation - NEQ_ADD or NEQ_DEL
          * @param valA one side of the inequality
          * @param valB one side of the inequality
@@ -316,10 +324,9 @@ class SymHeapCore {
         /// return true if the given pair of values is proven to be non-equal
         virtual bool proveNeq(TValId valA, TValId valB) const;
 
-    public:
         /**
-         * return the list of values that are connected to the given value by a
-         * Neq predicate
+         * return the list of values that are connected to the given value by an
+         * explicit Neq predicate
          * @param dst a container to place the result in
          * @param val the reference value, used to search the predicates and
          * then all the related values accordingly
@@ -327,30 +334,29 @@ class SymHeapCore {
         void gatherRelatedValues(TValList &dst, TValId val) const;
 
         /**
-         * copy all @b relevant predicates from the symbolic heap to another
-         * symbolic heap, using the given (injective) value IDs mapping.  Here
-         * @b relevant means that there exists a suitable mapping for all the
-         * values which are connected by the predicate
+         * copy all @b relevant explicit Neq predicates from the symbolic heap
+         * to another symbolic heap, using the given (injective) value IDs
+         * mapping.  Here @b relevant means that there exists a suitable mapping
+         * for all the values which are connected by the predicate
          * @param dst destination heap, there will be added the relevant
          * predicates
          * @param valMap an (injective) value mapping, used for translation
-         * of value IDs among heaps
+         * of value IDs between heaps
          */
         void copyRelevantPreds(SymHeapCore &dst, const TValMap &valMap) const;
 
         /**
-         * pick up all heap predicates that can be fully mapped by valMap into
-         * ref and check if they have their own reflection in ref
+         * pick up all explicit Neq predicates that can be fully mapped by
+         * valMap into ref and check if they have their own image in ref
          * @param ref instance of another symbolic heap
          * @param valMap an (injective) mapping of values from this symbolic
          * heap into the symbolic heap that is given by ref
-         * @return return true if all such predicates have their reflection in
-         * ref, false otherwise
+         * @return return true if all such predicates have their image in ref,
+         * false otherwise
          */
         bool matchPreds(const SymHeapCore &ref, const TValMap &valMap) const;
 
     public:
-
         /**
          * look for static type-info of the given object
          * @param obj ID of the object to look for
@@ -362,10 +368,10 @@ class SymHeapCore {
         /// translate the given address by the given offset
         TValId valByOffset(TValId, TOffset offset);
 
-        /// classify the object we point to
+        /// classify the object the given value points to
         EValueTarget valTarget(TValId) const;
 
-        /// classify where the value originates from
+        /// classify where the given value originates from
         EValueOrigin valOrigin(TValId) const;
 
         /// return the address of the root which the given value is binded to
@@ -377,7 +383,7 @@ class SymHeapCore {
         /// return size (in bytes) that we can safely write at the given addr
         int valSizeOfTarget(TValId) const;
 
-        /// return a _data_ pointer placed at the given address
+        /// return a @b data pointer placed at the given address
         TObjId ptrAt(TValId at);
 
         /// return an object of the given type at the given address
@@ -389,20 +395,26 @@ class SymHeapCore {
         /// clone of the given value (deep copy)
         virtual TValId valClone(TValId);
 
+    public:
         /// replace all occurrences of val by replaceBy
         virtual void valReplace(TValId val, TValId replaceBy);
 
+        /// list of root heap entities satisfying the given filtering predicate
         void gatherRootObjects(TValList &dst, bool (*)(EValueTarget) = 0) const;
-        void gatherLiveObjects(TObjList &dst, TValId atAddr) const;
-        void gatherLivePointers(TObjList &dst, TValId atAddr) const;
 
-    public:
+        /// list of live objects (including ptrs) owned by the given root entity
+        void gatherLiveObjects(TObjList &dst, TValId root) const;
+
+        /// list of live pointers owned by the given root entity
+        void gatherLivePointers(TObjList &dst, TValId root) const;
+
         /**
          * return the corresponding program variable of the given @b root
          * address pointing to VT_STATIC/VT_ON_STACK
          */
         CVar cVarByRoot(TValId root) const;
 
+        /// composite object given by val (applicable only on VT_COMPOSITE vals)
         TObjId valGetComposite(TValId val) const;
 
     public:
@@ -414,23 +426,28 @@ class SymHeapCore {
          */
         TValId heapAlloc(int cbSize, bool nullify);
 
+        /// @todo remove this method from the public API of SymHeap
         bool untouchedContentsIsNullified(TValId root) const;
 
         /**
-         * destroy target of the given value (root has to be at zero offset)
+         * destroy target of the given root value
          * @return true, if the operation succeeds
          */
-        virtual bool valDestroyTarget(TValId);
+        virtual bool valDestroyTarget(TValId root);
 
+        /// initialize (estimated) type-info of the given root entity
         void valSetLastKnownTypeOfTarget(TValId root, TObjType clt);
 
+        /// read the (estimated) type-info of the given root entity
         TObjType valLastKnownTypeOfTarget(TValId root) const;
 
-    public:
+        /// create a @b generic value (heapAlloc() or addrOfVar() otherwise)
         TValId valCreate(EValueTarget code, EValueOrigin origin);
 
+        /// wrap a custom value, such as integer literal, or code pointer
         TValId valWrapCustom(const CustomValue &data);
 
+        /// unwrap a custom value, such as integer literal, or code pointer
         const CustomValue& valUnwrapCustom(TValId) const;
 
     public:
@@ -450,24 +467,26 @@ class SymHeapCore {
     protected:
         TStorRef stor_;
 
+        /// return true if the given value points to/inside an abstract object
+        virtual bool hasAbstractTarget(TValId) const {
+            // no abstract objects at this level
+            return false;
+        }
+
     private:
         struct Private;
         Private *d;
 };
 
-/**
- * object kind enumeration
- * @attention Please do not change the integral values, they're fixed in order
- * to simplify the code of ProbeVisitor.  Simply speaking, the integral values
- * stand for the count of binding pointers.
- */
+/// enumeration of abstract object (although OK_CONCRETE is not abstract)
 enum EObjKind {
-    OK_CONCRETE     = 0,    ///< concrete object (not a segment)
-    OK_SLS          = 1,    ///< singly-linked list segment
-    OK_DLS          = 2,    ///< doubly-linked list segment
+    OK_CONCRETE = 0,        ///< concrete object (not a segment)
+    OK_SLS,                 ///< singly-linked list segment
+    OK_DLS,                 ///< doubly-linked list segment
     OK_MAY_EXIST
 };
 
+/// tuple of binding offsets assigned to abstract objects
 struct BindingOff {
     TOffset head;           ///< target offset
     TOffset next;           ///< offset of the 'next' or 'r' pointer
@@ -481,6 +500,7 @@ struct BindingOff {
     }
 };
 
+/// point-wise comparison of BindingOff
 inline bool operator==(const BindingOff &off1, const BindingOff &off2)
 {
     return off1.head == off2.head
@@ -488,11 +508,13 @@ inline bool operator==(const BindingOff &off1, const BindingOff &off2)
         && off1.prev == off2.prev;
 }
 
+/// point-wise comparison of BindingOff
 inline bool operator!=(const BindingOff &off1, const BindingOff &off2)
 {
     return !operator==(off1, off2);
 }
 
+/// extension of SymHeapCore dealing with abstract objects (list segments etc.)
 class SymHeap: public SymHeapCore {
     public:
         /// create an empty symbolic heap
@@ -509,59 +531,55 @@ class SymHeap: public SymHeapCore {
 
         virtual void swap(SymHeapCore &);
 
-    protected:
-        virtual bool hasAbstractTarget(TValId val) const;
-
     public:
         /**
          * return @b kind of the target. Here @b kind means concrete object,
          * SLS, DLS, and the like.
          */
         EObjKind valTargetKind(TValId) const;
+
+        /// tuple of binding offsets (next, prev, ...)
         const BindingOff& segBinding(TValId at) const;
 
-    public:
+        /// set properties of an abstract object, set abstract if not already
         void valTargetSetAbstract(
                 TValId                      val,
                 EObjKind                    kind,
                 const BindingOff            &off);
 
+        /// set the given abstract object to be a concrete object (drops props)
         void valTargetSetConcrete(TValId val);
-
-    public:
-        /**
-         * @copydoc SymHeapCore::neqOp
-         * @note overridden in order to complement DLS Neq
-         */
-        virtual void neqOp(ENeqOp op, TValId valA, TValId valB);
-
-        /**
-         * @copydoc SymHeapCore::proveNeq
-         * @note overridden in order to see through SLS/DLS
-         */
-        virtual bool proveNeq(TValId valA, TValId valB) const;
 
         /**
          * assume that v1 and v2 are equal.  Useful when e.g. traversing a
          * non-deterministic condition.  This implies that one of them may be
          * dropped.  You can utilize SymHeapCore::usedByCount() to check which
-         * one (if any).
+         * one (if any).  But usually, you do not need to check anything.
          */
         void valMerge(TValId v1, TValId v2);
 
-        virtual bool valDestroyTarget(TValId);
 
-        virtual TValId valClone(TValId);
-
+        /// read the minimal segment length of the given abstract object
         unsigned segMinLength(TValId seg) const;
+
+        /// re-initialize the minimal segment length of the given list segment
         void segSetMinLength(TValId seg, unsigned len);
 
-    private:
-        void segMinLengthOp(ENeqOp op, TValId at, unsigned len);
+    public:
+        // just overrides (inherits the dox)
+        virtual void neqOp(ENeqOp op, TValId valA, TValId valB);
+        virtual bool proveNeq(TValId valA, TValId valB) const;
+        virtual bool valDestroyTarget(TValId);
+        virtual TValId valClone(TValId);
+
+    protected:
+        virtual bool hasAbstractTarget(TValId val) const;
 
     private:
         struct Private;
         Private *d;
+
+        void segMinLengthOp(ENeqOp op, TValId at, unsigned len);
 };
 
 #endif /* H_GUARD_SYM_HEAP_H */
