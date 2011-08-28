@@ -34,6 +34,7 @@
 
 #include <algorithm>
 #include <map>
+#include <queue>
 #include <set>
 
 #include <boost/icl/interval_map.hpp>
@@ -356,6 +357,9 @@ struct SymHeapCore::Private {
     std::vector<IHeapEntity *>      ents;
     std::set<TValId>                liveRoots;
     FriendlyNeqDb                   neqDb;
+#if SE_RECYCLE_HEAP_IDS
+    std::queue<unsigned>            freeIds;
+#endif
 
     template <typename T> T lastId() const;
     template <typename T> T assignId(IHeapEntity *);
@@ -399,11 +403,24 @@ template <typename T> T SymHeapCore::Private::lastId() const {
 }
 
 template <typename T> T SymHeapCore::Private::assignId(IHeapEntity *ptr) {
+#if SE_RECYCLE_HEAP_IDS
+    if (!this->freeIds.empty()) {
+        const T id = static_cast<T>(this->freeIds.front());
+        this->freeIds.pop();
+        this->ents[id] = ptr;
+        CL_DEBUG("reusing heap ID #" << id 
+                << " (heap size is " << this->ents.size() << ")");
+        return id;
+    }
+#endif
     this->ents.push_back(ptr);
     return this->lastId<T>();
 }
 
 template <typename T> void SymHeapCore::Private::releaseId(const T id) {
+#if SE_RECYCLE_HEAP_IDS
+    this->freeIds.push(id);
+#endif
     this->ents[id] = 0;
 }
 

@@ -161,6 +161,11 @@
 #define SE_PROTO_COST_THREEWAY              4
 
 /**
+ * if 1, allow to assign unreachable heap IDs to newly created heap entities
+ */
+#define SE_RECYCLE_HEAP_IDS                 1
+
+/**
  * upper bound of DLS minimal length (zero means unlimited)
  */
 #define SE_RESTRICT_DLS_MINLEN              2
