@@ -358,6 +358,8 @@ struct SymHeapCore::Private {
     FriendlyNeqDb                   neqDb;
 
     template <typename T> T lastId() const;
+    template <typename T> T assignId(IHeapEntity *);
+    template <typename T> void releaseId(const T id);
 
     inline bool valOutOfRange(TValId);
     inline bool objOutOfRange(TObjId);
@@ -394,6 +396,15 @@ struct SymHeapCore::Private {
 
 template <typename T> T SymHeapCore::Private::lastId() const {
     return static_cast<T>(this->ents.size() - 1);
+}
+
+template <typename T> T SymHeapCore::Private::assignId(IHeapEntity *ptr) {
+    this->ents.push_back(ptr);
+    return this->lastId<T>();
+}
+
+template <typename T> void SymHeapCore::Private::releaseId(const T id) {
+    this->ents[id] = 0;
 }
 
 inline bool SymHeapCore::Private::valOutOfRange(TValId val) {
@@ -519,7 +530,7 @@ void SymHeapCore::Private::setValueOf(
         TValSet                    *killedPtrs)
 {
     // release old value
-    HeapObject *objData = DCAST<HeapObject *>(this->ents[obj]);
+    HeapObject *objData = this->objData(obj);
     const TValId valOld = objData->value;
     if (/* wasPtr */ this->releaseValueOf(obj, valOld) && killedPtrs)
         killedPtrs->insert(valOld);
@@ -551,8 +562,7 @@ TObjId SymHeapCore::Private::objCreate(
 {
     // acquire object ID
     HeapObject *objData = new HeapObject(root, off, clt, hasExtRef);
-    this->ents.push_back(objData);
-    const TObjId obj = this->lastId<TObjId>();
+    const TObjId obj = this->assignId<TObjId>(objData);
 
     // register the object by the owning root value
     RootValue *rootData = this->rootData(root);
@@ -578,18 +588,20 @@ TValId SymHeapCore::Private::valCreate(
         EValueTarget                code,
         EValueOrigin                origin)
 {
+    TValId val = VAL_INVALID;
+
     switch (code) {
         case VT_INVALID:
         case VT_UNKNOWN:
-            this->ents.push_back(new BaseValue(code, origin));
+            val = this->assignId<TValId>(new BaseValue(code, origin));
             break;
 
         case VT_COMPOSITE:
-            this->ents.push_back(new CompValue(code, origin));
+            val = this->assignId<TValId>(new CompValue(code, origin));
             break;
 
         case VT_CUSTOM:
-            this->ents.push_back(new InternalCustomValue(code, origin));
+            val = this->assignId<TValId>(new InternalCustomValue(code, origin));
             break;
 
         case VT_ABSTRACT:
@@ -601,21 +613,21 @@ TValId SymHeapCore::Private::valCreate(
         case VT_STATIC:
         case VT_DELETED:
         case VT_LOST:
-            this->ents.push_back(new RootValue(code, origin));
+            val = this->assignId<TValId>(new RootValue(code, origin));
             break;
     }
 
-    return this->lastId<TValId>();
+    return val;
 }
 
 TValId SymHeapCore::Private::valDup(TValId val) {
     // deep copy the value
     const BaseValue *tpl = this->valData(val);
-    this->ents.push_back(/* FIXME: subtle */ tpl->clone());
+    BaseValue *dupData = /* FIXME: subtle */ tpl->clone();
+
+    const TValId dup = this->assignId<TValId>(dupData);
 
     // wipe BaseValue::usedBy
-    const TValId dup = this->lastId<TValId>();
-    BaseValue *dupData = this->valData(dup);
     dupData->usedBy.clear();
 
     return dup;
@@ -966,8 +978,8 @@ TValId SymHeapCore::valByOffset(TValId at, TOffset off) {
         return it->second;
 
     // create a new off-value
-    d->ents.push_back(new OffValue(code, valData->origin, valRoot, off));
-    const TValId val = d->lastId<TValId>();
+    OffValue *offVal = new OffValue(code, valData->origin, valRoot, off);
+    const TValId val = d->assignId<TValId>(offVal);
 
     // store the mapping for next wheel
     offMap[off] = val;
@@ -1463,7 +1475,7 @@ void SymHeapCore::Private::destroyRoot(TValId root) {
 
         // release the corresponding HeapObject instance
         delete objData;
-        this->ents[obj] = 0;
+        this->releaseId(obj);
     }
 
     // wipe rootData
@@ -1474,6 +1486,7 @@ void SymHeapCore::Private::destroyRoot(TValId root) {
 }
 
 TValId SymHeapCore::valCreate(EValueTarget code, EValueOrigin origin) {
+    CL_BREAK_IF(isPossibleToDeref(code));
     return d->valCreate(code, origin);
 }
 
