@@ -368,15 +368,20 @@ TValId SymProc::targetAt(const struct cl_operand &op) {
         }
     }
 
-    if (isDeref)
+    if (isDeref) {
         // read the value inside the pointer
-        addr = sh_.valueOf(sh_.ptrAt(addr));
+        bool exclusive;
+        const TObjId ptr = sh_.ptrAt(addr, &exclusive);
+        addr = sh_.valueOf(ptr);
+        if (exclusive)
+            sh_.objReleaseId(ptr);
+    }
 
     // apply the offset
     return sh_.valByOffset(addr, off);
 }
 
-TObjId SymProc::objByOperand(const struct cl_operand &op) {
+TObjId SymProc::objByOperand(const struct cl_operand &op, bool *exclusive) {
     CL_BREAK_IF(seekRefAccessor(op.accessor));
 
     // resolve address of the target object
@@ -394,7 +399,7 @@ TObjId SymProc::objByOperand(const struct cl_operand &op) {
     }
 
     // resolve the target object
-    const TObjId obj = sh_.objAt(at, op.type);
+    const TObjId obj = sh_.objAt(at, op.type, exclusive);
     if (obj <= 0)
         CL_BREAK_IF("SymProc::objByOperand() failed to resolve an object");
 
@@ -406,7 +411,8 @@ TValId SymProc::heapValFromObj(const struct cl_operand &op) {
     if (seekRefAccessor(op.accessor))
         return this->targetAt(op);
 
-    const TObjId obj = this->objByOperand(op);
+    bool exclusive;
+    const TObjId obj = this->objByOperand(op, &exclusive);
     switch (obj) {
         case OBJ_UNKNOWN:
             return sh_.valCreate(VT_UNKNOWN, VO_REINTERPRET);
@@ -419,7 +425,11 @@ TValId SymProc::heapValFromObj(const struct cl_operand &op) {
                 return VAL_INVALID;
     }
 
-    return sh_.valueOf(obj);
+    const TValId val = sh_.valueOf(obj);
+    if (exclusive)
+        sh_.objReleaseId(obj);
+
+    return val;
 }
 
 TValId SymProc::valFromOperand(const struct cl_operand &op) {
@@ -808,6 +818,7 @@ malloc/calloc is implementation-defined");
         bt_->printBackTrace();
         this->objSetValue(lhs, VAL_NULL);
         this->killInsn(insn);
+        sh_.objReleaseId(lhs);
         dst.insert(sh_);
         return;
     }
@@ -820,12 +831,15 @@ malloc/calloc is implementation-defined");
         // OOM state simulation
         this->objSetValue(lhs, VAL_NULL);
         this->killInsn(insn);
+
+        // FIXME: Ooops, sh_.objReleaseId(lhs) would affect both results
         dst.insert(sh_);
     }
 
     // store the result of malloc
     this->objSetValue(lhs, val);
     this->killInsn(insn);
+    sh_.objReleaseId(lhs);
     dst.insert(sh_);
 }
 
@@ -1123,6 +1137,7 @@ void SymExecCore::execOp(const CodeStorage::Insn &insn) {
             // we're already on an error path
             const TValId vFail = sh_.valCreate(VT_UNKNOWN, VO_DEREF_FAILED);
             this->objSetValue(varLhs, vFail);
+            sh_.objReleaseId(varLhs);
             return;
         }
 
@@ -1143,12 +1158,14 @@ void SymExecCore::execOp(const CodeStorage::Insn &insn) {
             if (obj == varLhs)
                 goto already_alive;
 
+        sh_.objReleaseId(varLhs);
         return;
     }
 already_alive:
 #endif
     // store the result
     this->objSetValue(varLhs, valResult);
+    sh_.objReleaseId(varLhs);
 }
 
 template <class TOpList, class TDerefs>

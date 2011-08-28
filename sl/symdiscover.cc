@@ -233,9 +233,9 @@ TValId jumpToNextObj(
     const bool isDls = isDlsBinding(off);
     if (isDls) {
         // check DLS back-link
-        const TObjId prevPtr = sh.ptrAt(sh.valByOffset(next, off.prev));
         const TValId headAt = sh.valByOffset(at, off.head);
-        if (headAt != sh.valueOf(prevPtr))
+        const TValId valPrev = valOfPtrAt(sh, next, off.prev);
+        if (headAt != valPrev)
             // DLS back-link mismatch
             return VAL_INVALID;
     }

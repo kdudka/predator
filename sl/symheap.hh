@@ -384,10 +384,13 @@ class SymHeapCore {
         int valSizeOfTarget(TValId) const;
 
         /// return a @b data pointer placed at the given address
-        TObjId ptrAt(TValId at);
+        TObjId ptrAt(TValId at, /* TODO: document this */ bool *exclusive = 0);
 
         /// return an object of the given type at the given address
-        TObjId objAt(TValId at, TObjType clt);
+        TObjId objAt(TValId at, TObjType clt, bool *exclusive = 0);
+
+        /// mark the object ID externally unused (still NOP if used internally)
+        void objReleaseId(TObjId);
 
         /// return address of the given program variable (create it if needed)
         TValId addrOfVar(CVar);

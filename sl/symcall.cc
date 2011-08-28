@@ -196,6 +196,8 @@ void SymCallCtx::Private::assignReturnValue(SymHeap &sh) {
 
     // assign the return value in the current symbolic heap
     proc.objSetValue(objDst, val);
+    sh.objReleaseId(objDst);
+    sh.objReleaseId(objSrc);
 }
 
 void SymCallCtx::Private::destroyStackFrame(SymHeap &sh) {
@@ -517,8 +519,6 @@ void setCallArgs(
         // object instantiation
         TStorRef stor = *fnc.stor;
         const TObjType clt = stor.vars[arg].type;
-        const TObjId argObj = sh.objAt(argAddr, clt);
-        CL_BREAK_IF(argObj <= 0);
 
         if (opList.size() <= pos) {
             // no value given for this arg
@@ -534,7 +534,9 @@ void setCallArgs(
         CL_BREAK_IF(VAL_INVALID == val);
 
         // set the value of lhs accordingly
+        const TObjId argObj = sh.objAt(argAddr, clt);
         proc.objSetValue(argObj, val);
+        sh.objReleaseId(argObj);
     }
 
     srcProc.killInsn(insn);

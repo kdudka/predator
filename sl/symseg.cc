@@ -87,8 +87,8 @@ bool haveSeg(const SymHeap &sh, TValId atAddr, TValId pointingTo,
     }
 
     // compare the end-points
-    const TObjId nextPtr = nextPtrFromSeg(sh, seg);
-    const TValId valNext = const_cast<SymHeap &>(sh).valueOf(nextPtr);
+    SymHeap &writable = const_cast<SymHeap &>(sh);
+    const TValId valNext = nextValFromSeg(writable, seg);
     return (valNext == pointingTo);
 }
 
@@ -135,6 +135,10 @@ TValId segClone(SymHeap &sh, const TValId seg) {
         // now cross the 'peer' pointers
         sh.objSetValue(ppSeg, segHeadAt(sh, dupPeer));
         sh.objSetValue(ppPeer, segHeadAt(sh, dup));
+
+        // release object IDs
+        sh.objReleaseId(ppSeg);
+        sh.objReleaseId(ppPeer);
     }
 
     return dup;

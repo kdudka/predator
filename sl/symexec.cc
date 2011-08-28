@@ -346,6 +346,7 @@ void SymExecEngine::execReturn() {
         heap.valSetLastKnownTypeOfTarget(VAL_ADDR_OF_RET, src.type);
         const TObjId ret = heap.objAt(VAL_ADDR_OF_RET, src.type);
         proc.objSetValue(ret, val);
+        heap.objReleaseId(ret);
     }
 
     // commit one of the function results
@@ -934,6 +935,7 @@ fail:
         const TValId val = entry.valCreate(VT_UNKNOWN, VO_UNKNOWN);
         const TObjId obj = proc.objByOperand(dst);
         proc.objSetValue(obj, val);
+        entry.objReleaseId(obj);
     }
 
     // call failed, so that we have exactly one resulting heap

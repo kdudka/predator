@@ -1118,8 +1118,15 @@ bool dlSegHandleShared(
     CL_BREAK_IF(peer != vMap2[peer2]);
 
     SymHeap &sh = ctx.dst;
-    sh.objSetValue(prevPtrFromSeg(sh,  seg), segHeadAt(sh, peer));
-    sh.objSetValue(prevPtrFromSeg(sh, peer), segHeadAt(sh,  seg));
+    const TObjId prev1 = prevPtrFromSeg(sh,  seg);
+    const TObjId prev2 = prevPtrFromSeg(sh, peer);
+
+    sh.objSetValue(prev1, segHeadAt(sh, peer));
+    sh.objSetValue(prev2, segHeadAt(sh,  seg));
+
+    sh.objReleaseId(prev1);
+    sh.objReleaseId(prev2);
+
     CL_BREAK_IF(!dlSegCheckConsistency(ctx.dst));
     return true;
 }
@@ -1463,6 +1470,8 @@ bool insertSegmentClone(
         : nextPtrFromSeg(shGt, peer);
 
     const TValId nextGt = shGt.valueOf(nextPtr);
+    shGt.objReleaseId(nextPtr);
+
     const TValId nextLt = (isGt2) ? v1 : v2;
     if (!off && !checkValueMapping(ctx, 
                 (isGt1) ? nextGt : nextLt,
@@ -1649,7 +1658,7 @@ class MayExistVisitor {
                 if (OK_DLS == sh.valTargetKind(seg))
                     seg = dlSegPeer(sh, seg);
 
-                val = sh.valueOf(nextPtrFromSeg(sh, seg));
+                val = nextValFromSeg(sh, seg);
             }
 
             offNext_ = sh.valOffset(sh.placedAt(sub));
@@ -2104,7 +2113,7 @@ bool segDetectSelfLoopHelper(
                 break;
         }
 
-        const TValId valNext = sh.valueOf(nextPtrFromSeg(sh, peer));
+        const TValId valNext = nextValFromSeg(sh, peer);
         if (!isAbstract(sh.valTarget(valNext)))
             // no next segment --> no loop
             return false;

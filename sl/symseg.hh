@@ -68,6 +68,14 @@ inline TObjId prevPtrFromSeg(const SymHeap &sh, TValId seg) {
     return const_cast<SymHeap &>(sh).ptrAt(addr);
 }
 
+/// return the value of 'next' in the given segment (given by root)
+inline TValId nextValFromSeg(SymHeap &sh, TValId seg) {
+    const TObjId ptrNext = nextPtrFromSeg(sh, seg);
+    const TValId valNext = sh.valueOf(ptrNext);
+    sh.objReleaseId(ptrNext);
+    return valNext;
+}
+
 /// return DLS peer object of the given DLS
 inline TValId dlSegPeer(const SymHeap &sh, TValId dls) {
     CL_BREAK_IF(sh.valOffset(dls));

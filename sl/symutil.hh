@@ -58,8 +58,14 @@ TObjId translateObjId(
         const TObjId            srcObj);
 
 inline TValId valOfPtrAt(SymHeap &sh, TValId at) {
-    const TObjId ptr = sh.ptrAt(at);
-    return sh.valueOf(ptr);
+    bool exclusive;
+    const TObjId ptr = sh.ptrAt(at, &exclusive);
+    const TValId val = sh.valueOf(ptr);
+
+    if (exclusive && 0 < ptr)
+        sh.objReleaseId(ptr);
+
+    return val;
 }
 
 inline TValId valOfPtrAt(SymHeap &sh, TValId at, TOffset off) {

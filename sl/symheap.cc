@@ -204,12 +204,14 @@ struct HeapObject: public IHeapEntity {
     TOffset                     off;
     TObjType                    clt;
     TValId                      value;
+    bool                        hasExtRef;
 
-    HeapObject(TValId root_, TOffset off_, TObjType clt_):
+    HeapObject(TValId root_, TOffset off_, TObjType clt_, bool hasExtRef_):
         root(root_),
         off(off_),
         clt(clt_),
-        value(VAL_INVALID)
+        value(VAL_INVALID),
+        hasExtRef(hasExtRef_)
     {
     }
 
@@ -370,7 +372,8 @@ struct SymHeapCore::Private {
     TValId valCreate(EValueTarget code, EValueOrigin origin);
     TValId valDup(TValId);
 
-    TObjId objCreate(TValId root, TOffset off, TObjType clt);
+    TObjId objCreate(TValId root, TOffset off, TObjType clt, bool hasExtRef);
+    TObjId objExport(TObjId obj, bool *pExcl = 0);
     TValId objInit(TObjId obj);
     TValId dupRoot(TValId root);
     void destroyRoot(TValId obj);
@@ -540,9 +543,14 @@ void SymHeapCore::Private::setValueOf(
     }
 }
 
-TObjId SymHeapCore::Private::objCreate(TValId root, TOffset off, TObjType clt) {
+TObjId SymHeapCore::Private::objCreate(
+        TValId                      root,
+        TOffset                     off,
+        TObjType                    clt,
+        bool                        hasExtRef)
+{
     // acquire object ID
-    HeapObject *objData = new HeapObject(root, off, clt);
+    HeapObject *objData = new HeapObject(root, off, clt, hasExtRef);
     this->ents.push_back(objData);
     const TObjId obj = this->lastId<TObjId>();
 
@@ -554,6 +562,15 @@ TObjId SymHeapCore::Private::objCreate(TValId root, TOffset off, TObjType clt) {
 
     // map the region occupied by the object
     rootData->arena += createArenaItem(off, clt, obj);
+    return obj;
+}
+
+TObjId SymHeapCore::Private::objExport(TObjId obj, bool *pExcl) {
+    HeapObject *data = this->objData(obj);
+    if (pExcl)
+        *pExcl = !data->hasExtRef;
+
+    data->hasExtRef = true;
     return obj;
 }
 
@@ -842,7 +859,7 @@ TValId SymHeapCore::Private::dupRoot(TValId rootAt) {
         // duplicate a single object
         const TOffset off = objDataSrc->off;
         const TObjType clt = objDataSrc->clt;
-        const TObjId dst = this->objCreate(imageAt, off, clt);
+        const TObjId dst = this->objCreate(imageAt, off, clt, /* ext */ false);
         this->setValueOf(dst, objDataSrc->value);
 
         // prevserve live ptr/data object
@@ -856,14 +873,14 @@ void SymHeapCore::gatherLivePointers(TObjList &dst, TValId root) const {
     const RootValue *rootData = d->rootData(root);
     BOOST_FOREACH(TLiveObjs::const_reference item, rootData->liveObjs) {
         if (/* isPtr */ item.second)
-            dst.push_back(/* obj */ item.first);
+            dst.push_back(/* obj */ d->objExport(item.first));
     }
 }
 
 void SymHeapCore::gatherLiveObjects(TObjList &dst, TValId root) const {
     const RootValue *rootData = d->rootData(root);
     BOOST_FOREACH(TLiveObjs::const_reference item, rootData->liveObjs)
-        dst.push_back(/* obj */ item.first);
+        dst.push_back(/* obj */ d->objExport(item.first));
 }
 
 SymHeapCore::SymHeapCore(TStorRef stor):
@@ -906,7 +923,7 @@ void SymHeapCore::objSetValue(TObjId obj, TValId val, TValSet *killedPtrs) {
     // we allow to set values of atomic types only
     const HeapObject *objData = d->objData(obj);
     const TObjType clt = objData->clt;
-    CL_BREAK_IF(isComposite(clt));
+    CL_BREAK_IF(isComposite(clt, /* includingArray */ false));
 
     // mark the destination object as live
     const TValId root = objData->root;
@@ -1192,7 +1209,7 @@ bool SymHeapCore::Private::gridLookup(TObjByType **pRow, const TValId val) {
     return true;
 }
 
-TObjId SymHeapCore::ptrAt(TValId at) {
+TObjId SymHeapCore::ptrAt(TValId at, bool *pExcl) {
     TObjByType *row;
     if (!d->gridLookup(&row, at))
         return OBJ_INVALID;
@@ -1200,7 +1217,7 @@ TObjId SymHeapCore::ptrAt(TValId at) {
     // seek a _data_ pointer at the given row
     BOOST_FOREACH(const TObjByType::const_reference item, *row)
         if (isDataPtr(/* clt */ item.first))
-            return item.second;
+            return d->objExport(item.second, pExcl);
 
     // generic pointer, (void *) if available
     const TObjType clt = stor_.types.genericDataPtr();
@@ -1220,10 +1237,10 @@ TObjId SymHeapCore::ptrAt(TValId at) {
 
     // create the pointer
     const TOffset off = valData->offRoot;
-    return d->objCreate(root, off, clt);
+    return d->objCreate(root, off, clt, /* hasExtRef */ true);
 }
 
-TObjId SymHeapCore::objAt(TValId at, TObjType clt) {
+TObjId SymHeapCore::objAt(TValId at, TObjType clt, bool *pExcl) {
     TObjByType *row;
     if (!d->gridLookup(&row, at))
         return OBJ_INVALID;
@@ -1231,21 +1248,21 @@ TObjId SymHeapCore::objAt(TValId at, TObjType clt) {
     TObjByType::const_iterator it = row->find(clt);
     if (row->end() != it)
         // exact match
-        return it->second;
+        return d->objExport(it->second, pExcl);
 
     // try semantic match
     BOOST_FOREACH(const TObjByType::const_reference item, *row) {
         const TObjType cltItem = item.first;
         CL_BREAK_IF(!cltItem);
         if (*cltItem == *clt)
-            return item.second;
+            return d->objExport(item.second, pExcl);
     }
 
     if (isDataPtr(clt)) {
         // seek a _data_ pointer at the given row
         BOOST_FOREACH(const TObjByType::const_reference item, *row)
             if (isDataPtr(/* clt */ item.first))
-                return item.second;
+                return d->objExport(item.second, pExcl);
     }
 
     if (this->valSizeOfTarget(at) < clt->size)
@@ -1256,7 +1273,15 @@ TObjId SymHeapCore::objAt(TValId at, TObjType clt) {
     const BaseValue *valData = d->valData(at);
     const TValId root = d->valRoot(at, valData);
     const TOffset off = valData->offRoot;
-    return d->objCreate(root, off, clt);
+    return d->objCreate(root, off, clt, /* hasExtRef */ true);
+}
+
+void SymHeapCore::objReleaseId(TObjId obj) {
+    HeapObject *objData = d->objData(obj);
+    CL_BREAK_IF(!objData->hasExtRef);
+    objData->hasExtRef = false;
+
+    // TODO: pack the representation if possible
 }
 
 CVar SymHeapCore::cVarByRoot(TValId valRoot) const {
@@ -1323,7 +1348,7 @@ TObjId SymHeapCore::valGetComposite(TValId val) const {
     CL_BREAK_IF(VT_COMPOSITE != valData->code);
 
     const CompValue *compData = DCAST<const CompValue *>(valData);
-    return compData->compObj;
+    return d->objExport(compData->compObj);
 }
 
 TValId SymHeapCore::heapAlloc(int cbSize, bool nullify) {
@@ -1864,7 +1889,7 @@ bool SymHeap::proveNeq(TValId ref, TValId val) const {
             // no valid object here
             return false;
 
-        const TValId valNext = writable.valueOf(nextPtrFromSeg(writable, seg));
+        const TValId valNext = nextValFromSeg(writable, seg);
         if (this->segMinLength(seg))
             // non-empty abstract object reached
             return (VAL_NULL == ref)

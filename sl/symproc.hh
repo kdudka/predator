@@ -86,7 +86,8 @@ class SymProc {
 
     public:
         /// obtain a heap object corresponding to the given operand
-        TObjId objByOperand(const struct cl_operand &op);
+        TObjId objByOperand(const struct cl_operand &op,
+                /* TODO: document this */ bool *exclusive = 0);
 
         /// obtain a heap value corresponding to the given operand
         virtual TValId valFromOperand(const struct cl_operand &op);

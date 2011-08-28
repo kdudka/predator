@@ -447,6 +447,7 @@ void dlSegGobble(SymHeap &sh, TValId dls, TValId var, bool backward) {
     const TObjId nextPtr = sh.ptrAt(sh.valByOffset(dls, off.next));
     const TValId valNext = valOfPtrAt(sh, var, off.next);
     sh.objSetValue(nextPtr, valNext);
+    sh.objReleaseId(nextPtr);
 
     // replace VAR by DLS
     const TValId headAt = sh.valByOffset(var, off.head);
@@ -465,24 +466,22 @@ void dlSegMerge(SymHeap &sh, TValId seg1, TValId seg2) {
     sh.segSetMinLength(seg1, /* DLS 0+ */ 0);
     sh.segSetMinLength(seg2, /* DLS 0+ */ 0);
 
+    // dig peers
+    const TValId peer1 = dlSegPeer(sh, seg1);
+    const TValId peer2 = dlSegPeer(sh, seg2);
+
     // check for a failure of segDiscover()
     CL_BREAK_IF(sh.segBinding(seg1) != sh.segBinding(seg2));
-
-    const TValId peer1 = dlSegPeer(sh, seg1);
-#ifndef NDEBUG
-    const TObjId nextPtr = nextPtrFromSeg(sh, peer1);
-    const TValId valNext = sh.valueOf(nextPtr);
-    CL_BREAK_IF(valNext != segHeadAt(sh, seg2));
-#endif
-
-    const TValId peer2 = dlSegPeer(sh, seg2);
+    CL_BREAK_IF(nextValFromSeg(sh, peer1) != segHeadAt(sh, seg2));
 
     // introduce some UV_UNKNOWN values if necessary
     abstractNonMatchingValues(sh, seg1, seg2, /* bidir */ true);
 
     // preserve backLink
-    const TValId valNext2 = sh.valueOf(nextPtrFromSeg(sh, seg1));
-    sh.objSetValue(nextPtrFromSeg(sh, seg2), valNext2);
+    const TValId valNext1 = nextValFromSeg(sh, seg1);
+    const TObjId ptrNext2 = nextPtrFromSeg(sh, seg2);
+    sh.objSetValue(ptrNext2, valNext1);
+    sh.objReleaseId(ptrNext2);
 
     // replace both parts point-wise
     const TValId headAt = segHeadAt(sh,  seg1);
@@ -695,8 +694,9 @@ void dlSegReplaceByConcrete(SymHeap &sh, TValId seg, TValId peer) {
 
     // take the value of 'next' pointer from peer
     const TObjId peerPtr = prevPtrFromSeg(sh, seg);
-    const TValId valNext = sh.valueOf(nextPtrFromSeg(sh, peer));
+    const TValId valNext = nextValFromSeg(sh, peer);
     sh.objSetValue(peerPtr, valNext);
+    sh.objReleaseId(peerPtr);
 
     // this step is necessary to prevent disaster when handling DLS lengths
     sh.valReplace(peer, seg);
@@ -730,8 +730,7 @@ void spliceOutListSegment(
     if (OK_DLS == sh.valTargetKind(seg)) {
         // OK_DLS --> unlink peer
         CL_BREAK_IF(seg == peer);
-        const TObjId prevPtr = nextPtrFromSeg(sh, seg);
-        const TValId valPrev = sh.valueOf(prevPtr);
+        const TValId valPrev = nextValFromSeg(sh, seg);
         segReplaceRefs(sh, peer, valPrev);
     }
 
@@ -769,7 +768,7 @@ unsigned /* len */ spliceOutSegmentIfNeeded(
 
     // possibly empty LS
     SymHeap sh0(sh);
-    const TValId valNext = sh0.valueOf(nextPtrFromSeg(sh0, peer));
+    const TValId valNext = nextValFromSeg(sh0, peer);
     spliceOutListSegment(sh0, seg, peer, valNext);
     todo.push_back(sh0);
     return /* LS 0+ */ 0;
@@ -818,6 +817,7 @@ void concretizeObj(SymHeap &sh, TValId addr, TSymHeapList &todo) {
         // DLS relink
         const TObjId ptr = prevPtrFromSeg(sh, peer);
         sh.objSetValue(ptr, dupHead);
+        sh.objReleaseId(ptr);
     }
 
     // duplicate all unknown values, to keep the prover working
@@ -833,12 +833,14 @@ void concretizeObj(SymHeap &sh, TValId addr, TSymHeapList &todo) {
     sh.valTargetSetConcrete(seg);
     const TObjId nextPtr = sh.ptrAt(sh.valByOffset(seg, offNext));
     sh.objSetValue(nextPtr, dupHead);
+    sh.objReleaseId(nextPtr);
 
     if (OK_DLS == kind) {
         // update DLS back-link
         const TObjId backLink = sh.ptrAt(sh.valByOffset(dup, off.next));
         const TValId headAddr = sh.valByOffset(seg, off.head);
         sh.objSetValue(backLink, headAddr);
+        sh.objReleaseId(backLink);
         CL_BREAK_IF(!dlSegCheckConsistency(sh));
     }
 
@@ -869,7 +871,7 @@ bool spliceOutAbstractPathCore(
         }
 
         peer = segPeer(sh, seg);
-        valNext = sh.valueOf(nextPtrFromSeg(sh, peer));
+        valNext = nextValFromSeg(sh, peer);
 
         if (!readOnlyMode && beg != seg)
             destroyRootAndCollectJunk(sh, seg);
