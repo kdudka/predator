@@ -105,7 +105,7 @@ void analyzeFnc(Fnc &fnc) {
 
         if (!hasKey(pathSet, bbNext)) {
             // nest
-            const DfsItem next(tlist[target]);
+            const DfsItem next(bbNext);
             dfsStack.push(next);
             if (1 < bbNext->inbound().size())
                 pathSet.insert(bbNext);
@@ -118,6 +118,7 @@ void analyzeFnc(Fnc &fnc) {
             // already handled
             continue;
 
+#if CL_DEBUG_LOOP_SCAN
         // pick up the location of the _last_ insn with valid location
         TLoc edgeLoc = 0;
         BOOST_REVERSE_FOREACH(const CodeStorage::Insn *insn, *bb) {
@@ -131,6 +132,7 @@ void analyzeFnc(Fnc &fnc) {
         LS_DEBUG_MSG(1, edgeLoc, "loop-closing edge detected: "
                 << bb->name() << " -> " << bbNext->name()
                 << " (target #" << target << ")");
+#endif
 
         // append a new loop-edge
         Insn *term = const_cast<Insn *>(bb->back());

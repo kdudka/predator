@@ -49,10 +49,10 @@ namespace CodeStorage {
 
 namespace VarKiller {
 
-typedef const struct cl_loc                 *TLoc;
+typedef const struct cl_loc                *TLoc;
 typedef int                                 TVar;
 typedef std::set<TVar>                      TSet;
-typedef const Block                         *TBlock;
+typedef const Block                        *TBlock;
 typedef std::set<TBlock>                    TBlockSet;
 
 /// per-block data

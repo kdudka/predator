@@ -886,7 +886,7 @@ static void read_initials(struct cl_var *var, struct cl_initializer **pinit,
         (*ac_last)->type = (struct cl_type *) clt;
 
         if (isArray) {
-            // initalize an item of an array
+            // initialize an item of an array
             (*ac_last)->code = CL_ACCESSOR_DEREF_ARRAY;
 
             struct cl_operand *op_idx = CL_ZNEW(struct cl_operand);
@@ -899,7 +899,7 @@ static void read_initials(struct cl_var *var, struct cl_initializer **pinit,
             read_initials(var, pinit, value, ac_first);
         }
         else {
-            // initalize a field of a composite type
+            // initialize a field of a composite type
             const int nth = field_lookup(ctor, field);
             CL_BREAK_IF(clt->items[nth].type != add_type_if_needed(field));
 

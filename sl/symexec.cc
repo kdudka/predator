@@ -681,8 +681,7 @@ bool /* complete */ SymExecEngine::execBlock() {
                 << ", " << sched_.cntWaiting()
                 << " basic block(s) in the queue");
     }
-
-    if (!insnIdx_)
+    else
         // fresh run, let's initialize the local state by the BB entry
         localState_ = stateMap_[block_];
 
