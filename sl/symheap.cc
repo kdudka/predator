@@ -200,16 +200,37 @@ struct IHeapEntity {
     virtual IHeapEntity* clone() const = 0;
 };
 
-struct HeapObject: public IHeapEntity {
+enum EBlockKind {
+    BK_INVALID,
+    BK_OBJECT,
+    BK_UNINIT,
+    BK_NULLIFIED
+};
+
+struct HeapBlock: public IHeapEntity {
+    EBlockKind                  code;
     TValId                      root;
     TOffset                     off;
+
+    HeapBlock(EBlockKind code_, TValId root_, TOffset off_):
+        code(code_),
+        root(root_),
+        off(off_)
+    {
+    }
+
+    virtual IHeapEntity* clone() const {
+        return new HeapBlock(*this);
+    }
+};
+
+struct HeapObject: public HeapBlock {
     TObjType                    clt;
     TValId                      value;
     bool                        hasExtRef;
 
     HeapObject(TValId root_, TOffset off_, TObjType clt_, bool hasExtRef_):
-        root(root_),
-        off(off_),
+        HeapBlock(BK_OBJECT, root_, off_),
         clt(clt_),
         value(VAL_INVALID),
         hasExtRef(hasExtRef_)
