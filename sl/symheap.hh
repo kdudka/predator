@@ -217,6 +217,16 @@ typedef std::vector<CVar>                               TCVarList;
 /// a set of _program_ variables
 typedef std::set<CVar>                                  TCVarSet;
 
+/// only uninitialized or nullified blocks; generic arrays and strings need more
+struct UniformBlock {
+    TOffset     off;        ///< relative placement of the block wrt. the root
+    unsigned    size;       ///< size of the block in bytes
+    TValId      tplValue;   ///< value you need to clone on object instantiation
+};
+
+/// a container used to return list of uniform blocks
+typedef std::vector<UniformBlock>                       TUniBlockList;
+
 /**
  * lexicographical comparison of CVar objects
  * @note we need it in order to place the objects into ordered containers
@@ -304,6 +314,19 @@ class SymHeapCore {
          * SymProc::objSetValue().
          */
         void objSetValue(TObjId obj, TValId val, TValSet *killedPtrs = 0);
+
+        /// write an uninitialized or nullified block of memory
+        void writeUniformBlock(
+                const TValId                root,
+                const UniformBlock          &block,
+                TValSet                     *killedPtrs = 0);
+
+        /// copy 'size' bytes of raw memory from 'src' to 'dst'
+        void copyBlockOfRawMemory(
+                const TValId                dst,
+                const TValId                src,
+                const unsigned              size,
+                TValSet                     *killedPtrs = 0);
 
     public:
         /// enumeration of Neq predicate operations
@@ -410,6 +433,9 @@ class SymHeapCore {
 
         /// list of live pointers owned by the given root entity
         void gatherLivePointers(TObjList &dst, TValId root) const;
+
+        /// list of uninitialized and nullified uniform blocks
+        void gatherUniformBlocks(TUniBlockList &dst, TValId root) const;
 
         /**
          * return the corresponding program variable of the given @b root

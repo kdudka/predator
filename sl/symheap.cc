@@ -984,6 +984,32 @@ void SymHeapCore::objSetValue(TObjId obj, TValId val, TValSet *killedPtrs) {
     d->setValueOf(obj, val, killedPtrs);
 }
 
+void SymHeapCore::writeUniformBlock(
+        const TValId                root,
+        const UniformBlock          &block,
+        TValSet                     *killedPtrs)
+{
+    CL_BREAK_IF("please implement");
+    // TODO
+    (void) root;
+    (void) block;
+    (void) killedPtrs;
+}
+
+void SymHeapCore::copyBlockOfRawMemory(
+        const TValId                dst,
+        const TValId                src,
+        const unsigned              size,
+        TValSet                     *killedPtrs)
+{
+    CL_BREAK_IF("please implement");
+    // TODO
+    (void) dst;
+    (void) src;
+    (void) size;
+    (void) killedPtrs;
+}
+
 TObjType SymHeapCore::objType(TObjId obj) const {
     if (obj < 0)
         return 0;
@@ -1389,6 +1415,13 @@ void SymHeapCore::gatherRootObjects(TValList &dst, bool (*filter)(EValueTarget))
     BOOST_FOREACH(const TValId at, d->liveRoots)
         if (filter(this->valTarget(at)))
             dst.push_back(at);
+}
+
+void SymHeapCore::gatherUniformBlocks(TUniBlockList &dst, TValId root) const {
+    CL_BREAK_IF("please implement");
+    // TODO
+    (void) dst;
+    (void) root;
 }
 
 TObjId SymHeapCore::valGetComposite(TValId val) const {
