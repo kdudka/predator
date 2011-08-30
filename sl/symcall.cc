@@ -190,14 +190,17 @@ void SymCallCtx::Private::assignReturnValue(SymHeap &sh) {
     CL_BREAK_IF(OBJ_INVALID == objDst);
 
     const TObjId objSrc = sh.objAt(VAL_ADDR_OF_RET, op.type);
-    const TValId val = (0 < objSrc)
-        ? sh.valueOf(objSrc)
-        : sh.valCreate(VT_UNKNOWN, VO_STACK);
+    TValId val;
+    if (0 < objSrc) {
+        val = sh.valueOf(objSrc);
+        sh.objReleaseId(objSrc);
+    }
+    else
+        val = sh.valCreate(VT_UNKNOWN, VO_STACK);
 
     // assign the return value in the current symbolic heap
     proc.objSetValue(objDst, val);
     sh.objReleaseId(objDst);
-    sh.objReleaseId(objSrc);
 }
 
 void SymCallCtx::Private::destroyStackFrame(SymHeap &sh) {
