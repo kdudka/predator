@@ -1273,20 +1273,18 @@ TObjId SymHeapCore::ptrAt(TValId at, bool *pExcl) {
     const TObjType clt = stor_.types.genericDataPtr();
     CL_BREAK_IF(!clt || clt->code != CL_TYPE_PTR);
 
-    // resolve root
-    const BaseValue *valData = d->valData(at);
-    const TValId root = d->valRoot(at, valData);
-
     // check whether we have enough space allocated for the pointer
-    const RootValue *rootData = d->rootData(root);
-    const int rootSize = rootData->cbSize;
-    if (rootSize < clt->size) {
+    if (this->valSizeOfTarget(at) < clt->size) {
         CL_BREAK_IF("ptrAt() called out of bounds");
         return OBJ_UNKNOWN;
     }
 
-    // create the pointer
+    // resolve root
+    const BaseValue *valData = d->valData(at);
+    const TValId root = d->valRoot(at, valData);
     const TOffset off = valData->offRoot;
+
+    // create the pointer
     return d->objCreate(root, off, clt, /* hasExtRef */ true);
 }
 
