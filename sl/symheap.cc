@@ -1310,6 +1310,10 @@ TObjId SymHeapCore::ptrAt(TValId at, bool *pExcl) {
     const TValId root = d->valRoot(at, valData);
     const TOffset off = valData->offRoot;
 
+    if (pExcl)
+        // a newly created object cannot be already externally referenced
+        *pExcl = true;
+
     // create the pointer
     return d->objCreate(root, off, clt, /* hasExtRef */ true);
 }
@@ -1342,6 +1346,10 @@ TObjId SymHeapCore::objAt(TValId at, TObjType clt, bool *pExcl) {
     if (this->valSizeOfTarget(at) < clt->size)
         // out of bounds
         return OBJ_UNKNOWN;
+
+    if (pExcl)
+        // a newly created object cannot be already externally referenced
+        *pExcl = true;
 
     // create the object
     const BaseValue *valData = d->valData(at);
