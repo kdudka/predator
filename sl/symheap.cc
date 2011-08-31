@@ -402,6 +402,8 @@ struct SymHeapCore::Private {
     TObjId objCreate(TValId root, TOffset off, TObjType clt, bool hasExtRef);
     TObjId objExport(TObjId obj, bool *pExcl = 0);
     TValId objInit(TObjId obj);
+    void objDestroy(TObjId, bool removeVal, bool detach);
+
     TValId dupRoot(TValId root);
     void destroyRoot(TValId obj);
 
@@ -550,16 +552,24 @@ void SymHeapCore::Private::reinterpretObjData(
     if (/* wasPtr */ this->releaseValueOf(old, valOld) && killedPtrs)
         killedPtrs->insert(valOld);
 
-    // assign a fresh VO_REINTERPRET value
-    const TValId val = this->valCreate(VT_UNKNOWN, VO_REINTERPRET);
-    oldData->value = val;
-    this->registerValueOf(old, val);
-
     // mark the object as dead
     const TValId root = oldData->root;
     RootValue *rootData = this->rootData(root);
     if (rootData->liveObjs.erase(old))
         CL_DEBUG("reinterpretObjData() kills a live object");
+
+    if (!oldData->hasExtRef) {
+        CL_DEBUG("reinterpretObjData() destroys a dead object");
+        this->objDestroy(old, /* removeVal */ false, /* detach */ true);
+        return;
+    }
+
+    CL_DEBUG("an object being invalidated is still referenced from outside");
+
+    // assign a fresh VO_REINTERPRET value
+    const TValId val = this->valCreate(VT_UNKNOWN, VO_REINTERPRET);
+    oldData->value = val;
+    this->registerValueOf(old, val);
 }
 
 void SymHeapCore::Private::setValueOf(
@@ -611,6 +621,32 @@ TObjId SymHeapCore::Private::objCreate(
     // map the region occupied by the object
     rootData->arena += createArenaItem(off, clt, obj);
     return obj;
+}
+
+void SymHeapCore::Private::objDestroy(TObjId obj, bool removeVal, bool detach) {
+    HeapObject *objData = this->objData(obj);
+
+    if (removeVal) {
+        // release value of the object
+        const TValId val = objData->value;
+        this->releaseValueOf(obj, val);
+    }
+
+    if (detach) {
+        // properly remove the object from grid and arena
+        const TOffset off = objData->off;
+        const TObjType clt = objData->clt;
+        RootValue *rootData = this->rootData(objData->root);
+        if (!rootData->grid[off].erase(clt))
+            CL_BREAK_IF("internal object double-free");
+
+        // remove the object from arena unless we are destroying everything
+        rootData->arena -= createArenaItem(off, clt, obj);
+    }
+
+    // release the corresponding HeapObject instance
+    delete objData;
+    this->releaseId(obj);
 }
 
 TObjId SymHeapCore::Private::objExport(TObjId obj, bool *pExcl) {
@@ -716,6 +752,7 @@ EValueOrigin originByCode(const EValueTarget code) {
 
 TValId SymHeapCore::Private::objInit(TObjId obj) {
     HeapObject *objData = this->objData(obj);
+    CL_BREAK_IF(!objData->hasExtRef);
 
     // resolve root
     const TValId root = objData->root;
@@ -1363,6 +1400,20 @@ void SymHeapCore::objReleaseId(TObjId obj) {
     CL_BREAK_IF(!objData->hasExtRef);
     objData->hasExtRef = false;
 
+    if (isComposite(objData->clt, /* includingArray */ false)
+            && VAL_INVALID != objData->value)
+    {
+        CL_DEBUG("SymHeapCore::objReleaseId() preserves a composite object");
+        return;
+    }
+
+    const TValId root = objData->root;
+    const RootValue *rootData = d->rootData(root);
+    if (!hasKey(rootData->liveObjs, obj)) {
+        CL_DEBUG("SymHeapCore::objReleaseId() destroys a dead object");
+        d->objDestroy(obj, /* removeVal */ true, /* detach */ true);
+    }
+
     // TODO: pack the representation if possible
 }
 
@@ -1540,20 +1591,12 @@ void SymHeapCore::Private::destroyRoot(TValId root) {
     // release the root
     this->liveRoots.erase(root);
 
-    // go through objects
-    BOOST_FOREACH(TLiveObjs::const_reference item, rootData->liveObjs) {
-        const TObjId obj = item.first;
-        HeapObject *objData = this->objData(obj);
-        objData->clt = 0;
-
-        // release value of the object
-        const TValId val = objData->value;
-        this->releaseValueOf(obj, val);
-
-        // release the corresponding HeapObject instance
-        delete objData;
-        this->releaseId(obj);
-    }
+    // destroy all objects inside
+    BOOST_FOREACH(TLiveObjs::const_reference item, rootData->liveObjs)
+        this->objDestroy(
+                /* obj          */ item.first,
+                /* removeVal    */ true,
+                /* detach       */ false);
 
     // wipe rootData
     rootData->lastKnownClt = 0;
