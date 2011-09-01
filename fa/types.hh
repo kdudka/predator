@@ -84,7 +84,7 @@ struct Data {
 		size_t	d_void_ptr;
 		struct {
 			size_t	root;
-			int		displ;			
+			int		displ;
 		}		d_ref;
 		int		d_int;
 		bool	d_bool;

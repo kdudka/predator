@@ -49,7 +49,7 @@ add_test(
 )
 
 # libfa.so
-add_library(fa SHARED treeaut.cc timbuk.cc forestaut.cc symexec.cc symctx.cc builtintable.cc cl_fa.cc)
+add_library(fa SHARED treeaut.cc timbuk.cc forestaut.cc compiler.cc symexec.cc symctx.cc cl_fa.cc)
 set_target_properties(fa PROPERTIES LINK_FLAGS -lrt)
 
 # link with code_listener

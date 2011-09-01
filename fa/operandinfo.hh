@@ -90,6 +90,7 @@ struct OperandInfo {
 
 	o_flag_e flag;
 	Data data;
+	
 	const cl_type* type;
 
 	friend std::ostream& operator<<(std::ostream& os, const OperandInfo& oi) {

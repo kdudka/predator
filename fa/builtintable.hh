@@ -44,8 +44,4 @@ public:
 
 };
 
-struct BuiltinTableStatic {
-	static BuiltinTable data;
-};
-
 #endif

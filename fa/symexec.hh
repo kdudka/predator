@@ -22,6 +22,8 @@
 
 #include <boost/unordered_map.hpp>
 
+#include "compiler.hh"
+
 namespace CodeStorage {
     struct Fnc;
     struct Storage;
@@ -31,10 +33,11 @@ class SymExec {
 
 public:
 
-	SymExec(const CodeStorage::Storage &stor);
+	SymExec();
 	~SymExec();
 
 	void loadBoxes(const boost::unordered_map<std::string, std::string>& db);
+	void compile(const CodeStorage::Storage &stor);
 	void run(const CodeStorage::Fnc& main);
 	void setDbgFlag();
 

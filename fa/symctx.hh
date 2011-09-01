@@ -66,7 +66,7 @@ struct SymCtx {
 
 	size_t regCount;
 
-	SymCtx(const CodeStorage::Fnc& fnc) : fnc(fnc), regCount(0) {
+	SymCtx(const CodeStorage::Fnc& fnc) : fnc(fnc), regCount(2) {
 
 		// pointer to previous stack frame
 		this->sfLayout.push_back(SelData(ABP_OFFSET, ABP_SIZE, 0));
@@ -82,16 +82,14 @@ struct SymCtx {
 
 			switch (var.code) {
 				case CodeStorage::EVar::VAR_LC:
-					if (var.name.empty()) {
-						this->varMap.insert(
-							std::make_pair(
-								var.uid, std::make_pair(false, FIXED_REG_COUNT + this->regCount++)
-							)
-						);
-					} else {
+					if (SymCtx::isStacked(var)) {
 						NodeBuilder::buildNode(this->sfLayout, var.type, offset);
 						this->varMap.insert(std::make_pair(var.uid, make_pair(true, offset)));
 						offset += var.type->size;
+					} else {
+						this->varMap.insert(
+							std::make_pair(var.uid, std::make_pair(false, this->regCount++))
+						);
 					}
 					break;
 				default:
@@ -119,10 +117,20 @@ struct SymCtx {
 
 		assert(vm.varCount() == 0);
 		// create ABP and RET registers
-		vm.varPopulate(FIXED_REG_COUNT);
+		vm.varPopulate(1);
 		vm.varSet(ABP_INDEX, Data::createInt(0));
-		vm.varSet(IP_INDEX, Data::createUndef());
+//		vm.varSet(IP_INDEX, Data::createUndef());
 	}
+
+	static bool isStacked(const CodeStorage::Var& var) {
+		switch (var.code) {
+			case CodeStorage::EVar::VAR_FNC_ARG: return true;
+			case CodeStorage::EVar::VAR_LC: return !var.name.empty();
+			case CodeStorage::EVar::VAR_GL: return false;
+			default: return false;			
+		}
+	}
+	
 /*
 	struct StackFrameCreateF {
 		
@@ -155,6 +163,7 @@ struct SymCtx {
 
 	};
 */
+/*
 	void createStackFrame(FAE& fae, struct CfgState* target) const {
 
 		VirtualMachine vm(fae);
@@ -172,7 +181,25 @@ struct SymCtx {
 		vm.varPopulate(this->regCount);
 
 	}
-	
+*/	
+	void createStackFrame(FAE& fae) const {
+
+		VirtualMachine vm(fae);
+
+		std::vector<std::pair<SelData, Data> > stackInfo;
+
+		for (std::vector<SelData>::const_iterator i = this->sfLayout.begin(); i != this->sfLayout.end(); ++i)
+			stackInfo.push_back(std::make_pair(*i, Data::createUndef()));
+
+		stackInfo[0].second = vm.varGet(ABP_INDEX);
+		stackInfo[1].second = Data::createNativePtr(NULL);
+
+		vm.varSet(ABP_INDEX, Data::createRef(vm.nodeCreate(stackInfo)));
+//		vm.varSet(IP_INDEX, Data::createNativePtr((void*)target));
+//		vm.varPopulate(this->regCount);
+
+	}
+
 	// if true then do fae.isolateAtRoot(dst, <ABP>.d_ref.root, FAE::IsolateAllF()) in the next step
 	bool destroyStackFrame(FAE& fae) const {
 
@@ -274,12 +301,12 @@ struct SymCtx {
 
 				switch (var.code) {
 					case CodeStorage::EVar::VAR_LC:
-						if (var.name.empty()) {
-//							os << '#' << var.uid << " = " << fae.varGet(j->second.second) << std::endl;
-						} else {
+						if (SymCtx::isStacked(var)) {
 							boost::unordered_map<size_t, Data>::iterator k = tmp.find(j->second.second);
 							assert(k != tmp.end());
 							os << '#' << var.uid << ':' << var.name << " = " << k->second << std::endl;
+						} else {
+//							os << '#' << var.uid << " = " << fae.varGet(j->second.second) << std::endl;
 						}
 						break;
 					default:

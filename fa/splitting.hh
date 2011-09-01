@@ -339,7 +339,7 @@ public:
 
 	}
 
-	void isolateSet(std::vector<FAE*>& dst, size_t target, const std::vector<size_t>& offsets) const {
+	void isolateSet(std::vector<FAE*>& dst, size_t target, int base, const std::vector<size_t>& offsets) const {
 
 		assert(target < this->fae.roots.size());
 		assert(this->fae.roots[target]);
@@ -350,10 +350,10 @@ public:
 		this->enumerateSelectorsAtRoot(tmpS, target);
 
 		for (std::vector<size_t>::const_iterator i = offsets.begin(); i != offsets.end(); ++i) {
-			if (tmpS.count(*i))
-				offsD.push_back(*i);
+			if (tmpS.count(base + *i))
+				offsD.push_back(base + *i);
 			else
-				offsU.insert(*i);
+				offsU.insert(base + *i);
 		}
 
 		if (offsU.empty()) {

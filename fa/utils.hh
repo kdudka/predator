@@ -354,14 +354,14 @@ public:
 
 	template <class T>
 	static std::ostream& printCont(std::ostream& os, const T& container) {
-		os << '[';
+		os << '{';
 		typename T::const_iterator i = container.begin();
 		if (i != container.end()) {
 			os << *i;
 			for (++i; i != container.end(); ++i)
 				os << ',' << *i;
 		}
-		return os << ']';
+		return os << '}';
 	}
 
 	template <class T, class F>

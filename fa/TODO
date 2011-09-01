@@ -1,13 +1,19 @@
 critical
-* overhaul of execution tree (increase granularity)
-* adapt NormInfo for multiple accepting states
+* tracking of destructive updates
+* reverse run
+* function calls
 
 medium
+* predicate abstraction
+* box learning
 * improve Data handling
 * develop better register allocation
 * reserve stack space for function arguments
+* recursion ?
+* recompilation to microops
 
 low
+* garbage collector
 * cache o mapping and compute only on demand
 * make AbstractBox::getArity() non-virtual
 * implement upwards traversal

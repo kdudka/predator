@@ -136,25 +136,7 @@ public:
 			}
 		}
 	}
-/*
-	// careful
-	void finalizeOperands(FAE& fae) {
-//		OperandInfo oi;
-		for (std::vector<cl_operand>::const_iterator i = (*this->insn)->operands.begin(); i != (*this->insn)->operands.end(); ++i) {
-			if (
-				(i == (*this->insn)->operands.begin()) &&
-				(!i->accessor || (i->accessor->code != CL_ACCESSOR_DEREF)) &&
-				((*this->insn)->code != cl_insn_e::CL_INSN_COND)
-			)
-				continue;
-//			if (i->code != cl_operand_e::CL_OPERAND_VAR)
-//				continue;
-			size_t id;
-			if (this->ctx->isReg(&*i, id))
-				VirtualMachine(fae).varSet(id, Data::createUndef());
-		}
-	}
-*/
+
 	void killDeadVariables(FAE& fae, const CodeStorage::TKillVarList& vars) {
 
 		VirtualMachine vm(fae);
@@ -170,7 +152,7 @@ public:
 				CL_CDEBUG("killing register " << varInfo.second);
 				vm.varSet(varInfo.second, Data::createUndef());
 			} else {
-				CL_CDEBUG("killing [ABP+" << varInfo.second << ']');
+				CL_CDEBUG("killing [ABP + " << varInfo.second << ']');
 				Data data;
 				vm.nodeModify(vm.varGet(ABP_INDEX).d_ref.root, varInfo.second, Data::createUndef(), data);
 			}

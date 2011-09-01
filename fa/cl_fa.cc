@@ -37,11 +37,10 @@
 #include "symctx.hh"
 #include "symexec.hh"
 
-SymExec* pse = NULL;
+SymExec se;
 
 void setDbgFlag(int) {
-	if (pse)
-		pse->setDbgFlag();
+	se.setDbgFlag();
 }
 
 // required by the gcc plug-in API
@@ -123,30 +122,22 @@ void clEasyRun(const CodeStorage::Storage& stor, const char* configString) {
         return;
     }
 
-	timespec start_tp, end_tp;
-	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start_tp);
-
     CL_CDEBUG("starting verification stuff ...");
     try {
-		SymExec se(stor);
-		pse = &se;
 		signal(SIGUSR1, setDbgFlag);
 		Config c(configString);
 		if (!c.dbRoot.empty()){
 			BoxDb db(c.dbRoot, "index");
 			se.loadBoxes(db.store);
 		}
-		se.run(*main);
+		se.compile(stor);
+//		se.run(*main);
 		CL_NOTE("the program is safe ...");
-		clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end_tp);
-		CL_NOTE("analysis took " << (end_tp.tv_sec - start_tp.tv_sec) + 1e-9*(end_tp.tv_nsec - start_tp.tv_nsec) << "s of processor time");
 	} catch (const ProgramError& e) {
 		if (e.location())
 			CL_ERROR_MSG(e.location(), e.what());
 		else
 			CL_ERROR(e.what());
-		clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end_tp);
-		CL_NOTE("analysis took " << (end_tp.tv_sec - start_tp.tv_sec) + 1e-9*(end_tp.tv_nsec - start_tp.tv_nsec) << "s of processor time");
 	} catch (const std::exception& e) {
 		CL_ERROR(e.what());
 	}
