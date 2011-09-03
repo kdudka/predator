@@ -1001,7 +1001,7 @@ bool joinUniBlocks(
         if (areUniBlocksEqual(ctx.sh1, ctx.sh2, bl1, bl2)) {
             // exact match
             UniformBlock blDst(bl1);
-            translateValProto(&blDst.tplValue, ctx.sh1, ctx.dst);
+            translateValProto(&blDst.tplValue, ctx.dst, /* src */ ctx.sh1);
             ctx.dst.writeUniformBlock(rootDst, blDst);
             ++i1;
             ++i2;

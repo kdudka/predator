@@ -108,9 +108,12 @@ class DCopyObjVisitor {
 
 void digSubObjs(DeepCopyData &dc, TValId addrSrc, TValId addrDst)
 {
-    // copy uniform blocks
-    UniBlockWriter blVisitor(dc.dst, addrDst);
-    traverseUniformBlocks(dc.src, addrSrc, blVisitor);
+    const EValueTarget code = dc.src.valTarget(addrSrc);
+    if (isPossibleToDeref(code)) {
+        // copy uniform blocks
+        UniBlockWriter blVisitor(dc.dst, addrDst);
+        traverseUniformBlocks(dc.src, addrSrc, blVisitor);
+    }
 
     SymHeap *const heaps[] = { &dc.src, &dc.dst };
     const TValId roots[] = { addrSrc, addrDst };

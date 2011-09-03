@@ -1012,23 +1012,16 @@ TValId SymHeapCore::Private::objInit(TObjId obj) {
     }
 
     // assign a fresh unknown value
-    const EValueTarget code = rootData->code;
-    const EValueOrigin origin = originByCode(code);
-    const TValId val = this->valCreate(VT_UNKNOWN, origin);
-#if !SE_TRACK_UNINITIALIZED
-    return val;
-#elif !SE_TRACK_NON_POINTER_VALUES
-    if (!isDataPtr(objData->clt))
-        return val;
-#endif
-
-    // delayed initialization
+    const TValId val = this->valCreate(VT_UNKNOWN, VO_UNKNOWN);
     objData->value = val;
 
     // mark the object as live
-    rootData->liveObjs[obj] = isDataPtr(clt)
-        ? LO_DATA_PTR
-        : LO_DATA;
+    if (isDataPtr(clt))
+        rootData->liveObjs[obj] = LO_DATA_PTR;
+#if SE_TRACK_NON_POINTER_VALUES
+    else
+        rootData->liveObjs[obj] = LO_DATA;
+#endif
 
     // store backward reference
     this->valData(val)->usedBy.insert(obj);
@@ -1705,12 +1698,14 @@ void SymHeapCore::objReleaseId(TObjId obj) {
         return;
     }
 
+#if !SE_TRACK_UNINITIALIZED
     const TValId root = objData->root;
     const RootValue *rootData = d->rootData(root);
     if (!hasKey(rootData->liveObjs, obj)) {
         CL_DEBUG("SymHeapCore::objReleaseId() destroys a dead object");
         d->objDestroy(obj, /* removeVal */ true, /* detach */ true);
     }
+#endif
 
     // TODO: pack the representation if possible
 }
@@ -1755,14 +1750,22 @@ TValId SymHeapCore::addrOfVar(CVar cv) {
     nullify |= (VT_STATIC == code);
 #endif
 
+    UniformBlock block;
+    block.off = 0;
+    block.size = clt->size;
+
     if (nullify) {
         // initialize to zero
-        UniformBlock block;
-        block.off = 0;
-        block.size = clt->size;
         block.tplValue = VAL_NULL;
         this->writeUniformBlock(addr, block);
     }
+#if SE_TRACK_UNINITIALIZED
+    else if (VT_ON_STACK == code) {
+        // uninitialized stack variable
+        block.tplValue = this->valCreate(VT_UNKNOWN, VO_STACK);
+        this->writeUniformBlock(addr, block);
+    }
+#endif
 
     // store the address for next wheel
     d->cVarMap.insert(cv, addr);
@@ -1800,6 +1803,15 @@ TValId SymHeapCore::heapAlloc(int cbSize) {
     RootValue *rootData = d->rootData(addr);
     rootData->addr = addr;
     rootData->cbSize = cbSize;
+
+#if SE_TRACK_UNINITIALIZED
+    // uninitialized heap block
+    UniformBlock block;
+    block.off = 0;
+    block.size = cbSize;
+    block.tplValue = this->valCreate(VT_UNKNOWN, VO_HEAP);
+    this->writeUniformBlock(addr, block);
+#endif
 
     return addr;
 }
