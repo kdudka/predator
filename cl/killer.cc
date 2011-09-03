@@ -182,14 +182,6 @@ void scanInsn(Data &data, TBlock bb, const Insn &insn) {
     }
 }
 
-bool /* changed */ updateBlockBy(BlockData &bData, TVar uid) {
-    if (hasKey(bData.kill, uid))
-        // we are killing the variable
-        return false;
-
-    return insertOnce(bData.gen, uid);
-}
-
 void updateBlock(Data &data, TBlock bb) {
     VK_DEBUG_MSG(2, &bb->front()->loc, "updateBlock: " << bb->name());
     BlockData &bData = data.blocks[bb];
@@ -200,9 +192,14 @@ void updateBlock(Data &data, TBlock bb) {
         BlockData &bDataSrc = data.blocks[bbSrc];
 
         // update self
-        BOOST_FOREACH(TVar uid, bDataSrc.gen)
-            if (updateBlockBy(bData, uid))
+        BOOST_FOREACH(TVar uid, bDataSrc.gen) {
+            if (hasKey(bData.kill, uid))
+                // we are killing the variable
+                continue;
+
+            if (insertOnce(bData.gen, uid))
                 anyChange = true;
+        }
     }
 
     if (!anyChange)

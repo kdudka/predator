@@ -175,6 +175,16 @@ inline TMemItem createArenaItem(
             createObjSet(obj));
 }
 
+inline TMemItem createArenaItem(
+        const TOffset               off,
+        const unsigned              size,
+        const TObjId                obj)
+{
+    return TMemItem(
+            TMemChunk(off, off + size),
+            createObjSet(obj));
+}
+
 inline bool arenaLookup(
         TObjSet                     *dst,
         const TArena                &arena,
@@ -203,8 +213,8 @@ struct IHeapEntity {
 enum EBlockKind {
     BK_INVALID,
     BK_OBJECT,
-    BK_UNINIT,
-    BK_NULLIFIED
+    BK_COMPOSITE,
+    BK_UNIFORM
 };
 
 struct HeapBlock: public IHeapEntity {
@@ -224,13 +234,32 @@ struct HeapBlock: public IHeapEntity {
     }
 };
 
+struct InternalUniformBlock: public HeapBlock {
+    unsigned                    size;
+    TValId                      tplValue;
+
+    InternalUniformBlock(TValId root_, const UniformBlock &block):
+        HeapBlock(BK_UNIFORM, root_, block.off),
+        size(block.size),
+        tplValue(block.tplValue)
+    {
+    }
+
+    virtual InternalUniformBlock* clone() const {
+        return new InternalUniformBlock(*this);
+    }
+};
+
 struct HeapObject: public HeapBlock {
     TObjType                    clt;
     TValId                      value;
     bool                        hasExtRef;
 
     HeapObject(TValId root_, TOffset off_, TObjType clt_, bool hasExtRef_):
-        HeapBlock(BK_OBJECT, root_, off_),
+        HeapBlock(isComposite(clt_)
+                ? BK_COMPOSITE
+                : BK_OBJECT,
+                root_, off_),
         clt(clt_),
         value(VAL_INVALID),
         hasExtRef(hasExtRef_)
@@ -398,6 +427,7 @@ struct SymHeapCore::Private {
 
     TValId valCreate(EValueTarget code, EValueOrigin origin);
     TValId valDup(TValId);
+    bool valsEqual(TValId, TValId);
 
     TObjId objCreate(TValId root, TOffset off, TObjType clt, bool hasExtRef);
     TObjId objExport(TObjId obj, bool *pExcl = 0);
@@ -409,6 +439,7 @@ struct SymHeapCore::Private {
 
     bool /* wasPtr */ releaseValueOf(TObjId obj, TValId val);
     void registerValueOf(TObjId obj, TValId val);
+    void splitBlockByObject(TObjId block, TObjId obj);
     void reinterpretObjData(TObjId old, TObjId obj, TValSet *killedPtrs = 0);
     void setValueOf(TObjId of, TValId val, TValSet *killedPtrs = 0);
 
@@ -533,21 +564,94 @@ void SymHeapCore::Private::registerValueOf(TObjId obj, TValId val) {
     rootData->usedByGl.insert(obj);
 }
 
+void SymHeapCore::Private::splitBlockByObject(
+        TObjId                      block,
+        TObjId                      obj)
+{
+    InternalUniformBlock *blData = DCAST<InternalUniformBlock *>
+        (this->ents[block]);
+
+    const HeapObject *objData = this->objData(obj);
+    if (this->valsEqual(blData->tplValue, objData->value))
+        // preserve non-conflicting uniform blocks
+        return;
+
+    CL_DEBUG("splitBlockByObject() is taking place...");
+
+    // dig root
+    const TValId root = blData->root;
+    CL_BREAK_IF(root != objData->root);
+    RootValue *rootData = this->rootData(root);
+
+    // dig offsets and sizes
+    const TOffset blOff = blData->off;
+    const TOffset objOff = objData->off;
+    const unsigned blSize = blData->size;
+    const unsigned objSize = objData->clt->size;
+
+    // check overlapping
+    const TOffset blBegToObjBeg = objOff - blOff;
+    const TOffset objEndToBlEnd = blSize - objSize - blBegToObjBeg;
+
+    if (blBegToObjBeg <= 0 && objEndToBlEnd <= 0) {
+        // block completely overlapped by the object, throw it away
+        rootData->arena -= createArenaItem(blOff, blSize, block);
+        delete blData;
+        this->releaseId(block);
+        return;
+    }
+
+    if (0 < blBegToObjBeg && 0 < objEndToBlEnd) {
+        // the object is strictly in the middle of the block (needs split)
+        CL_BREAK_IF("please implement");
+        return;
+    }
+
+    // check direction
+    const TOffset diff = blOff - objOff;
+    const bool shiftBeg = (diff <= 0);
+    const TOffset beg = (shiftBeg)
+        ? /* shift begin of the block */ blOff
+        : /* trim end of the block    */ objOff;
+
+    // throw away the overlapping part of the block
+    const TOffset trim = diff + blSize;
+    CL_BREAK_IF(trim <= 0);
+    blData->size -= trim;
+    if (shiftBeg)
+        blData->off += trim;
+
+    // unmap the overlapping part
+    rootData->arena -= createArenaItem(beg, trim, block);
+}
+
 void SymHeapCore::Private::reinterpretObjData(
         TObjId                      old,
         TObjId                      obj,
         TValSet                    *killedPtrs)
 {
-    HeapObject *oldData = this->objData(old);
-    if (isComposite(oldData->clt))
-        // do not invalidate those place-holding values of composite objects
-        return;
+    HeapBlock *blData = DCAST<HeapBlock *>(this->ents[old]);
+    EBlockKind code = blData->code;
+    switch (code) {
+        case BK_OBJECT:
+            break;
+
+        case BK_COMPOSITE:
+            // do not invalidate those place-holding values of composite objects
+            return;
+
+        case BK_UNIFORM:
+            this->splitBlockByObject(/* block */ old, obj);
+            return;
+
+        case BK_INVALID:
+        default:
+            CL_BREAK_IF("invalid call of reinterpretObjData()");
+            return;
+    }
 
     CL_DEBUG("reinterpretObjData() is taking place...");
-    HeapObject *objData = this->objData(obj);
-    // TODO: hook various reinterpretation drivers here
-    (void) objData;
-
+    HeapObject *oldData = DCAST<HeapObject *>(blData);
     const TValId valOld = oldData->value;
     if (/* wasPtr */ this->releaseValueOf(old, valOld) && killedPtrs)
         killedPtrs->insert(valOld);
@@ -564,10 +668,30 @@ void SymHeapCore::Private::reinterpretObjData(
         return;
     }
 
-    CL_DEBUG("an object being invalidated is still referenced from outside");
+    CL_DEBUG("an object being reinterpreted is still referenced from outside");
+    blData = DCAST<HeapBlock *>(this->ents[obj]);
+    code = blData->code;
 
-    // assign a fresh VO_REINTERPRET value
-    const TValId val = this->valCreate(VT_UNKNOWN, VO_REINTERPRET);
+    TValId val;
+
+    switch (code) {
+        case BK_OBJECT:
+            // TODO: hook various reinterpretation drivers here
+            val = this->valCreate(VT_UNKNOWN, VO_REINTERPRET);
+            break;
+
+        case BK_UNIFORM:
+            val = this->valDup(DCAST<InternalUniformBlock *>(blData)->tplValue);
+            break;
+
+        case BK_COMPOSITE:
+        case BK_INVALID:
+        default:
+            CL_BREAK_IF("invalid call of reinterpretObjData()");
+            return;
+    }
+
+    // assign the value to the _old_ object
     oldData->value = val;
     this->registerValueOf(old, val);
 }
@@ -695,6 +819,10 @@ TValId SymHeapCore::Private::valCreate(
 }
 
 TValId SymHeapCore::Private::valDup(TValId val) {
+    if (val <= 0)
+        // do not clone special values
+        return val;
+
     // deep copy the value
     const BaseValue *tpl = this->valData(val);
     BaseValue *dupData = /* FIXME: subtle */ tpl->clone();
@@ -705,6 +833,27 @@ TValId SymHeapCore::Private::valDup(TValId val) {
     dupData->usedBy.clear();
 
     return dup;
+}
+
+bool SymHeapCore::Private::valsEqual(TValId v1, TValId v2) {
+    if (v1 == v2)
+        // matches trivially
+        return true;
+
+    const BaseValue *valData1 = this->valData(v1);
+    const BaseValue *valData2 = this->valData(v2);
+
+    const EValueTarget code1 = valData1->code;
+    const EValueTarget code2 = valData2->code;
+
+    if (VT_UNKNOWN != code1 || VT_UNKNOWN != code2)
+        // for now, we handle only unknown values here
+        return false;
+
+    CL_BREAK_IF(valData1->offRoot || valData2->offRoot);
+
+    // just compare kinds of unknown values
+    return (valData1->origin == valData2->origin);
 }
 
 SymHeapCore::Private::Private() {
@@ -765,11 +914,12 @@ TValId SymHeapCore::Private::objInit(TObjId obj) {
     TObjSet overlaps;
     if (arenaLookup(&overlaps, arena, off, clt, obj)) {
         BOOST_FOREACH(const TObjId other, overlaps) {
-            if (!hasKey(rootData->liveObjs, other))
-                // the other object is already dead anyway
+            HeapBlock *blockData = DCAST<HeapBlock *>(this->ents[other]);
+            const EBlockKind code = blockData->code;
+            if (BK_UNIFORM != code && !hasKey(rootData->liveObjs, other))
                 continue;
 
-            // reinterpret _self_ by another live object
+            // reinterpret _self_ by another live object or uniform block
             this->reinterpretObjData(/* old */ obj, other);
             return objData->value;
         }
@@ -1026,10 +1176,15 @@ void SymHeapCore::writeUniformBlock(
         const UniformBlock          &block,
         TValSet                     *killedPtrs)
 {
-    CL_BREAK_IF("please implement");
+    // acquire object ID
+    InternalUniformBlock *blockData = new InternalUniformBlock(root, block);
+    const TObjId obj = d->assignId<TObjId>(blockData);
+
+    RootValue *rootData = d->rootData(root);
+    rootData->arena += createArenaItem(block.off, block.size, obj);
+
     // TODO
-    (void) root;
-    (void) block;
+    CL_WARN("writeUniformBlock() should wipe existing data, please implement");
     (void) killedPtrs;
 }
 
@@ -1499,7 +1654,20 @@ TValId SymHeapCore::heapAlloc(int cbSize, bool nullify) {
     RootValue *rootData = d->rootData(addr);
     rootData->addr = addr;
     rootData->cbSize = cbSize;
+
+    // TODO: remove this once we get the block reinterpretation working
     rootData->initializedToZero = nullify;
+
+#if 0
+    if (nullify) {
+        // TODO: move this code out of symheap!
+        UniformBlock block;
+        block.off = 0;
+        block.size = cbSize;
+        block.tplValue = VAL_NULL;
+        this->writeUniformBlock(addr, block);
+    }
+#endif
 
     return addr;
 }
