@@ -37,6 +37,36 @@
 #include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
 
+class UniBlockWriter {
+    private:
+        SymHeap         &dst_;
+        const TValId    rootDst_;
+
+    public:
+        UniBlockWriter(SymHeap &dst, const TValId rootDst):
+            dst_(dst),
+            rootDst_(rootDst)
+        {
+        }
+
+        bool operator()(const SymHeap &src, UniformBlock bl) {
+            // read the value template
+            const TValId valSrc = bl.tplValue;
+            if (0 < valSrc) {
+                // create an equivalent unknown value in dst
+                const EValueTarget code = src.valTarget(valSrc);
+                const EValueOrigin origin = src.valOrigin(valSrc);
+
+                CL_BREAK_IF(VT_UNKNOWN != code);
+                bl.tplValue = dst_.valCreate(code, origin);
+            }
+
+            dst_.writeUniformBlock(rootDst_, bl);
+
+            return /* continue */ true;
+        }
+};
+
 struct DeepCopyData {
     typedef std::map<TValId   /* seg */, unsigned /* len */>    TSegLengths;
     typedef std::map<TValId   /* src */, TValId   /* dst */>    TValMap;
@@ -87,6 +117,10 @@ class DCopyObjVisitor {
 
 void digSubObjs(DeepCopyData &dc, TValId addrSrc, TValId addrDst)
 {
+    // copy uniform blocks
+    UniBlockWriter blVisitor(dc.dst, addrDst);
+    traverseUniformBlocks(dc.src, addrSrc, blVisitor);
+
     SymHeap *const heaps[] = { &dc.src, &dc.dst };
     const TValId roots[] = { addrSrc, addrDst };
 

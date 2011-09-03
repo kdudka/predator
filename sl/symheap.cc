@@ -238,11 +238,13 @@ struct HeapBlock: public IHeapEntity {
     EBlockKind                  code;
     TValId                      root;
     TOffset                     off;
+    TValId                      value;
 
-    HeapBlock(EBlockKind code_, TValId root_, TOffset off_):
+    HeapBlock(EBlockKind code_, TValId root_, TOffset off_, TValId val_):
         code(code_),
         root(root_),
-        off(off_)
+        off(off_),
+        value(val_)
     {
     }
 
@@ -253,12 +255,10 @@ struct HeapBlock: public IHeapEntity {
 
 struct InternalUniformBlock: public HeapBlock {
     unsigned                    size;
-    TValId                      tplValue;
 
     InternalUniformBlock(TValId root_, const UniformBlock &block):
-        HeapBlock(BK_UNIFORM, root_, block.off),
-        size(block.size),
-        tplValue(block.tplValue)
+        HeapBlock(BK_UNIFORM, root_, block.off, block.tplValue),
+        size(block.size)
     {
     }
 
@@ -269,16 +269,14 @@ struct InternalUniformBlock: public HeapBlock {
 
 struct HeapObject: public HeapBlock {
     TObjType                    clt;
-    TValId                      value;
     bool                        hasExtRef;
 
     HeapObject(TValId root_, TOffset off_, TObjType clt_, bool hasExtRef_):
         HeapBlock(isComposite(clt_)
                 ? BK_COMPOSITE
                 : BK_OBJECT,
-                root_, off_),
+                root_, off_, VAL_INVALID),
         clt(clt_),
-        value(VAL_INVALID),
         hasExtRef(hasExtRef_)
     {
     }
@@ -597,14 +595,15 @@ void SymHeapCore::Private::splitBlockByObject(
         TObjId                      obj)
 {
     InternalUniformBlock *blData = this->blData(block);
-    const HeapObject *objData = this->objData(obj);
-    if (this->valsEqual(blData->tplValue, objData->value))
+    const HeapBlock *hbData = DCAST<const HeapBlock *>(this->ents[obj]);
+    if (this->valsEqual(blData->value, hbData->value))
         // preserve non-conflicting uniform blocks
         return;
 
     CL_DEBUG("splitBlockByObject() is taking place...");
 
     // dig root
+    const HeapObject *objData = DCAST<const HeapObject *>(hbData);
     const TValId root = blData->root;
     CL_BREAK_IF(root != objData->root);
     RootValue *rootData = this->rootData(root);
@@ -748,7 +747,7 @@ void SymHeapCore::Private::reinterpretObjData(
             uniData = DCAST<InternalUniformBlock *>(blData);
             if (isCoveredByBlock(oldData, uniData)) {
                 // object fully covered by the overlapping uniform block
-                val = this->valDup(uniData->tplValue);
+                val = this->valDup(uniData->value);
                 break;
             }
             // fall through!
@@ -913,6 +912,10 @@ bool SymHeapCore::Private::valsEqual(TValId v1, TValId v2) {
     if (v1 == v2)
         // matches trivially
         return true;
+
+    if (v1 <= 0 || v2 <= 0)
+        // special values have to match
+        return false;
 
     const BaseValue *valData1 = this->valData(v1);
     const BaseValue *valData2 = this->valData(v2);
@@ -1221,7 +1224,7 @@ void SymHeapCore::gatherUniformBlocks(TUniBlockList &dst, TValId root) const {
         UniformBlock block;
         block.off       = blData->off;
         block.size      = blData->size;
-        block.tplValue  = blData->tplValue;
+        block.tplValue  = blData->value;
 
         dst.push_back(block);
     }

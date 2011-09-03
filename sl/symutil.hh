@@ -181,6 +181,28 @@ bool /* complete */ traverseLiveObjs(
     return traverseCore(sh, rootAt, visitor, &SymHeap::gatherLiveObjects);
 }
 
+/// take the given visitor through all uniform blocks
+template <class THeap, class TVisitor>
+bool /* complete */ traverseUniformBlocks(
+        THeap                       &sh,
+        const TValId                root,
+        TVisitor                    &visitor)
+{
+    // check that we got a valid root object
+    CL_BREAK_IF(sh.valOffset(root) || !isPossibleToDeref(sh.valTarget(root)));
+
+    TUniBlockList bList;
+    sh.gatherUniformBlocks(bList, root);
+    BOOST_FOREACH(const UniformBlock &bl, bList) {
+        if (!visitor(sh, bl))
+            // traversal cancelled by visitor
+            return false;
+    }
+
+    // done
+    return true;
+}
+
 /// take the given visitor through all live objects object-wise
 template <unsigned N, class THeap, class TVisitor>
 bool /* complete */ traverseLiveObjsGeneric(
