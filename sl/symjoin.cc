@@ -1026,39 +1026,6 @@ bool joinUniBlocks(
     return true;
 }
 
-bool joinNullifiedFlag(
-        bool                    *pDst,
-        SymJoinCtx              &ctx,
-        const TValId            root1,
-        const TValId            root2)
-{
-    bool &dst = *pDst;
-
-    if (VAL_INVALID == root2) {
-        dst = ctx.sh1.untouchedContentsIsNullified(root1);
-        return true;
-    }
-
-    if (VAL_INVALID == root1) {
-        dst = ctx.sh2.untouchedContentsIsNullified(root2);
-        return true;
-    }
-
-    const bool isNullified1 = ctx.sh1.untouchedContentsIsNullified(root1);
-    const bool isNullified2 = ctx.sh2.untouchedContentsIsNullified(root2);
-    if (isNullified1 == isNullified2) {
-        // symmetric match --> pick any
-        dst = isNullified1;
-        return true;
-    }
-
-    // asymmetric match (false should a safe over-approximation)
-    dst = false;
-    return updateJoinStatus(ctx, (isNullified2)
-            ? JS_USE_SH1
-            : JS_USE_SH2);
-}
-
 /// (NULL != offMayExist) means 'create OK_MAY_EXIST'
 bool createObject(
         SymJoinCtx              &ctx,
@@ -1091,15 +1058,11 @@ bool createObject(
     if (!joinObjSize(&size, ctx, root1, root2))
         return false;
 
-    bool nullified;
-    if (!joinNullifiedFlag(&nullified, ctx, root1, root2))
-        return false;
-
     if (!updateJoinStatus(ctx, action))
         return false;
 
     // create an image in ctx.dst
-    const TValId rootDst = ctx.dst.heapAlloc(size, nullified);
+    const TValId rootDst = ctx.dst.heapAlloc(size);
 
     if (!joinUniBlocks(ctx, rootDst, root1, root2))
         // failed to complement uniform blocks
@@ -2367,13 +2330,9 @@ bool joinDataCore(
     if (!joinObjSize(&size, ctx, addr1, addr2))
         return false;
 
-    bool nullified;
-    if (!joinNullifiedFlag(&nullified, ctx, addr1, addr2))
-        return false;
-
     // start with the given pair of objects and create a ghost object for them
     // create an image in ctx.dst
-    const TValId rootDstAt = ctx.dst.heapAlloc(size, nullified);
+    const TValId rootDstAt = ctx.dst.heapAlloc(size);
 
     if (!joinUniBlocks(ctx, rootDstAt, addr1, addr2))
         // failed to complement uniform blocks

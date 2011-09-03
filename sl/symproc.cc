@@ -823,10 +823,6 @@ malloc/calloc is implementation-defined");
         return;
     }
 
-    // now create a heap object
-    const TValId val = sh_.heapAlloc(size, nullified);
-    CL_BREAK_IF(val <= 0);
-
     if (!ep_.fastMode) {
         // OOM state simulation
         this->objSetValue(lhs, VAL_NULL);
@@ -834,6 +830,17 @@ malloc/calloc is implementation-defined");
 
         // FIXME: Ooops, sh_.objReleaseId(lhs) would affect both results
         dst.insert(sh_);
+    }
+
+    // now create a heap object
+    const TValId val = sh_.heapAlloc(size);
+    if (nullified) {
+        // initilize to zero as we are doing calloc()
+        UniformBlock block;
+        block.off = 0;
+        block.size = size;
+        block.tplValue = VAL_NULL;
+        sh_.writeUniformBlock(val, block);
     }
 
     // store the result of malloc

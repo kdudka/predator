@@ -361,7 +361,6 @@ struct RootValue: public BaseValue {
     TObjType                        lastKnownClt;
     unsigned                        cbSize;
     CVar                            cVar;
-    bool                            initializedToZero;
     bool                            isProto;
     TLiveObjs                       liveObjs;
     TObjSet                         usedByGl;
@@ -373,7 +372,6 @@ struct RootValue: public BaseValue {
         addr(VAL_NULL),
         lastKnownClt(0),
         cbSize(0),
-        initializedToZero(false),
         isProto(false)
     {
     }
@@ -1013,12 +1011,6 @@ TValId SymHeapCore::Private::objInit(TObjId obj) {
         }
     }
 
-    // delayed creation of an uninitialized value
-    if (rootData->initializedToZero) {
-        objData->value = VAL_NULL;
-        return VAL_NULL;
-    }
-
     // assign a fresh unknown value
     const EValueTarget code = rootData->code;
     const EValueOrigin origin = originByCode(code);
@@ -1174,7 +1166,6 @@ TValId SymHeapCore::Private::dupRoot(TValId rootAt) {
     // duplicate root metadata
     rootDataDst->cVar               = rootDataSrc->cVar;
     rootDataDst->isProto            = rootDataSrc->isProto;
-    rootDataDst->initializedToZero  = rootDataSrc->initializedToZero;
     rootDataDst->cbSize             = rootDataSrc->cbSize;
     rootDataDst->lastKnownClt       = rootDataSrc->lastKnownClt;
 
@@ -1757,11 +1748,21 @@ TValId SymHeapCore::addrOfVar(CVar cv) {
     rootData->addr = addr;
     rootData->lastKnownClt = clt;
     rootData->cbSize = clt->size;
-    rootData->initializedToZero = var.initialized;
+
+    // initialize to zero?
+    bool nullify = var.initialized;
 #if SE_ASSUME_FRESH_STATIC_DATA
-    if (VT_STATIC == code)
-        rootData->initializedToZero = true;
+    nullify |= (VT_STATIC == code);
 #endif
+
+    if (nullify) {
+        // initialize to zero
+        UniformBlock block;
+        block.off = 0;
+        block.size = clt->size;
+        block.tplValue = VAL_NULL;
+        this->writeUniformBlock(addr, block);
+    }
 
     // store the address for next wheel
     d->cVarMap.insert(cv, addr);
@@ -1791,7 +1792,7 @@ TObjId SymHeapCore::valGetComposite(TValId val) const {
     return d->objExport(compData->compObj);
 }
 
-TValId SymHeapCore::heapAlloc(int cbSize, bool nullify) {
+TValId SymHeapCore::heapAlloc(int cbSize) {
     // assign an address
     const TValId addr = d->valCreate(VT_ON_HEAP, VO_ASSIGNED);
 
@@ -1800,24 +1801,7 @@ TValId SymHeapCore::heapAlloc(int cbSize, bool nullify) {
     rootData->addr = addr;
     rootData->cbSize = cbSize;
 
-    // TODO: remove this once we get the block reinterpretation working
-    rootData->initializedToZero = nullify;
-
-    if (nullify) {
-        // TODO: move this code out of symheap!
-        UniformBlock block;
-        block.off = 0;
-        block.size = cbSize;
-        block.tplValue = VAL_NULL;
-        this->writeUniformBlock(addr, block);
-    }
-
     return addr;
-}
-
-bool SymHeapCore::untouchedContentsIsNullified(TValId root) const {
-    const RootValue *rootData = d->rootData(root);
-    return rootData->initializedToZero;
 }
 
 bool SymHeapCore::valDestroyTarget(TValId val) {

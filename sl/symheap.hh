@@ -450,13 +450,9 @@ class SymHeapCore {
         /**
          * create a new heap object of known size
          * @param cbSize size of the object in @b bytes
-         * @param nullify if true the untouched contents is implicitly nullified
          * @return value ID of the acquired address
          */
-        TValId heapAlloc(int cbSize, bool nullify);
-
-        /// @todo remove this method from the public API of SymHeap
-        bool untouchedContentsIsNullified(TValId root) const;
+        TValId heapAlloc(int cbSize);
 
         /**
          * destroy target of the given root value

@@ -318,12 +318,7 @@ void plotRootValue(PlotData &plot, const TValId val, const char *color) {
     else
         plot.out << "#" << val;
 
-    plot.out << " [size = " << size << " B";
-
-    if (sh.untouchedContentsIsNullified(val))
-        plot.out << ", NULLIFIED";
-
-    plot.out << "]\"];\n";
+    plot.out << " [size = " << size << " B]\"];\n";
 }
 
 enum EObjectClass {
