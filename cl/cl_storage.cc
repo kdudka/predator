@@ -326,8 +326,6 @@ void ClStorageBuilder::Private::digInitials(
         Var                             &var,
         const struct cl_var             *clv)
 {
-    var.initialized = clv->initialized;
-
     const struct cl_initializer *initial;
     for (initial = clv->initial; initial; initial = initial->next) {
         ControlFlow *cfg = /* XXX */ 0;
