@@ -93,6 +93,53 @@ inline TValId nextRootObj(SymHeap &sh, TValId root, TOffset offNext) {
     return sh.valRoot(valNext);
 }
 
+inline bool areValProtosEqual(
+        const SymHeap           &sh1,
+        const SymHeap           &sh2,
+        const TValId            v1,
+        const TValId            v2)
+{
+    if (v1 == v2)
+        // matches trivially
+        return true;
+
+    if (v1 <= 0 || v2 <= 0)
+        // special values have to match
+        return false;
+
+    const EValueTarget code1 = sh1.valTarget(v1);
+    const EValueTarget code2 = sh2.valTarget(v2);
+
+    if (VT_UNKNOWN != code1 || VT_UNKNOWN != code2)
+        // for now, we handle only unknown values here
+        return false;
+
+    CL_BREAK_IF(sh1.valOffset(v1) || sh2.valOffset(v2));
+
+    // just compare kinds of unknown values
+    const EValueOrigin origin1 = sh1.valOrigin(v1);
+    const EValueOrigin origin2 = sh2.valOrigin(v2);
+    return (origin1 == origin2);
+}
+
+inline bool areUniBlocksEqual(
+        const SymHeap           &sh1,
+        const SymHeap           &sh2,
+        const UniformBlock      &bl1,
+        const UniformBlock      &bl2)
+{
+    if (bl1.off != bl2.off)
+        // offset mismatch
+        return false;
+
+    if (bl1.size != bl2.size)
+        // size mismatch
+        return false;
+
+    // compare value prototypes
+    return areValProtosEqual(sh1, sh2, bl1.tplValue, bl2.tplValue);
+}
+
 template <class TDst, typename TInserter>
 void gatherProgramVarsCore(
         TDst                    &dst,

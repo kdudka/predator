@@ -85,6 +85,38 @@ bool matchPlainValues(
     return matchPlainValuesCore(valMapping, root1, root2);
 }
 
+bool matchUniBlocks(
+        const SymHeap           &sh1,
+        const SymHeap           &sh2,
+        const TValId            root1,
+        const TValId            root2)
+{
+    TUniBlockMap bMap1, bMap2;
+    sh1.gatherUniformBlocks(bMap1, root1);
+    sh2.gatherUniformBlocks(bMap2, root2);
+
+    if (bMap1.size() != bMap2.size())
+        // count of blocks does not match
+        return false;
+
+    TUniBlockMap::const_iterator i1 = bMap1.begin();
+    TUniBlockMap::const_iterator i2 = bMap2.begin();
+    const TUniBlockMap::const_iterator t1 = bMap1.end();
+
+    for (; i1 != t1; ++i1, ++i2) {
+        CL_BREAK_IF(i2 == bMap2.end());
+        const UniformBlock &bl1 = i1->second;
+        const UniformBlock &bl2 = i2->second;
+        if (!areUniBlocksEqual(sh1, sh2, bl1, bl2))
+            return false;
+
+        CL_BREAK_IF(i1->first != i2->first);
+    }
+
+    // full match!
+    return true;
+}
+
 bool matchRoots(
         const SymHeap           &sh1,
         const SymHeap           &sh2,
@@ -102,6 +134,10 @@ bool matchRoots(
     const bool isProto2 = sh2.valTargetIsProto(root2);
     if (isProto1 != isProto2)
         // prototype vs. shared object while called from areEqual()
+        return false;
+
+    if (!matchUniBlocks(sh1, sh2, root1, root2))
+        // root canvas mismatch
         return false;
 
     if (!isAbstract(code))

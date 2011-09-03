@@ -914,6 +914,7 @@ TValId SymHeapCore::Private::valDup(TValId val) {
     return dup;
 }
 
+// FIXME: copy/pasted in symutil.hh
 bool SymHeapCore::Private::valsEqual(TValId v1, TValId v2) {
     if (v1 == v2)
         // matches trivially
