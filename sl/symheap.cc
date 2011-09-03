@@ -435,6 +435,7 @@ struct SymHeapCore::Private {
     inline bool valOutOfRange(TValId);
     inline bool objOutOfRange(TObjId);
 
+    InternalUniformBlock* blData(const TObjId);
     HeapObject* objData(const TObjId);
     BaseValue* valData(const TValId);
     RootValue* rootData(const TValId);
@@ -503,6 +504,16 @@ inline bool SymHeapCore::Private::valOutOfRange(TValId val) {
 inline bool SymHeapCore::Private::objOutOfRange(TObjId obj) {
     return (obj < 0)
         || (this->lastId<TObjId>() < obj);
+}
+
+inline InternalUniformBlock* SymHeapCore::Private::blData(const TObjId obj) {
+    CL_BREAK_IF(objOutOfRange(obj));
+    IHeapEntity *ent = this->ents[obj];
+
+    // check the base pointer first, chances are the object was already deleted
+    CL_BREAK_IF(!ent);
+
+    return DCAST<InternalUniformBlock *>(ent);
 }
 
 inline HeapObject* SymHeapCore::Private::objData(const TObjId obj) {
@@ -585,9 +596,7 @@ void SymHeapCore::Private::splitBlockByObject(
         TObjId                      block,
         TObjId                      obj)
 {
-    InternalUniformBlock *blData = DCAST<InternalUniformBlock *>
-        (this->ents[block]);
-
+    InternalUniformBlock *blData = this->blData(block);
     const HeapObject *objData = this->objData(obj);
     if (this->valsEqual(blData->tplValue, objData->value))
         // preserve non-conflicting uniform blocks
@@ -725,6 +734,7 @@ void SymHeapCore::Private::reinterpretObjData(
             break;
 
         case BK_UNIFORM:
+            // FIXME: incorrect unless we check that whole object is covered!!!
             val = this->valDup(DCAST<InternalUniformBlock *>(blData)->tplValue);
             break;
 
@@ -1143,9 +1153,7 @@ TValId SymHeapCore::Private::dupRoot(TValId rootAt) {
 
         if (LO_BLOCK == code) {
             // duplicate a uniform block
-            InternalUniformBlock *blSrc = DCAST<InternalUniformBlock *>
-                (this->ents[src]);
-
+            InternalUniformBlock *blSrc = this->blData(src);
             InternalUniformBlock *blDst = blSrc->clone();
             dst = this->assignId<TObjId>(blDst);
             blDst->root = imageAt;
@@ -1177,6 +1185,25 @@ void SymHeapCore::gatherLivePointers(TObjList &dst, TValId root) const {
         const ELiveObj code = item.second;
         if (LO_DATA_PTR == code)
             dst.push_back(d->objExport(/* obj */ item.first));
+    }
+}
+
+void SymHeapCore::gatherUniformBlocks(TUniBlockList &dst, TValId root) const {
+    const RootValue *rootData = d->rootData(root);
+    BOOST_FOREACH(TLiveObjs::const_reference item, rootData->liveObjs) {
+        const ELiveObj code = item.second;
+        if (LO_BLOCK != code)
+            continue;
+
+        const InternalUniformBlock *blData = d->blData(/* obj */ item.first);
+
+        // export uniform block
+        UniformBlock block;
+        block.off       = blData->off;
+        block.size      = blData->size;
+        block.tplValue  = blData->tplValue;
+
+        dst.push_back(block);
     }
 }
 
@@ -1720,13 +1747,6 @@ void SymHeapCore::gatherRootObjects(TValList &dst, bool (*filter)(EValueTarget))
     BOOST_FOREACH(const TValId at, d->liveRoots)
         if (filter(this->valTarget(at)))
             dst.push_back(at);
-}
-
-void SymHeapCore::gatherUniformBlocks(TUniBlockList &dst, TValId root) const {
-    CL_BREAK_IF("please implement");
-    // TODO
-    (void) dst;
-    (void) root;
 }
 
 TObjId SymHeapCore::valGetComposite(TValId val) const {

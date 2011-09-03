@@ -99,12 +99,15 @@ std::string PlotEnumerator::decorate(std::string name) {
 struct PlotData {
     typedef std::map<TValId, bool /* isRoot */>             TValues;
     typedef std::map<TValId, TObjList>                      TLiveObjs;
+    typedef std::pair<int /* ID */, TValId>                 TDangVal;
+    typedef std::vector<TDangVal>                           TDangValues;
 
     SymHeap                             &sh;
     std::ostream                        &out;
     int                                 last;
     TValues                             values;
     TLiveObjs                           liveObjs;
+    TDangValues                         dangVals;
 
     PlotData(const SymHeap &sh_, std::ostream &out_):
         sh(const_cast<SymHeap &>(sh_)),
@@ -417,6 +420,45 @@ void plotAtomicObj(PlotData &plot, const AtomicObject ao, const bool lonely)
     plot.out << "\"];\n";
 }
 
+void plotUniformBlocks(PlotData &plot, const TValId root) {
+    SymHeap &sh = plot.sh;
+
+    // get all uniform blocks inside the given root
+    TUniBlockList bList;
+    sh.gatherUniformBlocks(bList, root);
+
+    // sort uniform blocks by offset
+    typedef std::map<TOffset, unsigned /* idx */> TUniByOff;
+    TUniByOff uniByOff;
+    for (unsigned idx = 0; idx < bList.size(); ++idx) {
+        const TOffset off = bList[idx].off;
+        uniByOff[off] = idx;
+    }
+
+    // plot all uniform blocks
+    BOOST_FOREACH(TUniByOff::const_reference item, uniByOff) {
+        const UniformBlock &bl = bList[/* idx */ item.second];
+
+        // plot block node
+        const int id = ++plot.last;
+        plot.out << "\t" << SL_QUOTE("lonely" << id)
+            << " [shape=box, color=blue, fontcolor=blue, label=\"UNI_BLOCK "
+            << bl.size << "B\"];\n";
+
+        // plot offset edge
+        const TOffset off = bl.off;
+        CL_BREAK_IF(off < 0);
+        plot.out << "\t" << SL_QUOTE(root)
+            << " -> " << SL_QUOTE("lonely" << id)
+            << " [color=black, fontcolor=black, label=\"["
+            << off << "]\"];\n";
+
+        // schedule hasValue edge
+        const PlotData::TDangVal dv(id, bl.tplValue);
+        plot.dangVals.push_back(dv);
+    }
+}
+
 void plotInnerObjects(PlotData &plot, const TValId at, const TObjList &liveObjs)
 {
     SymHeap &sh = plot.sh;
@@ -559,6 +601,9 @@ void plotCompositeObj(PlotData &plot, const TValId at, const TObjList &liveObjs)
 
     // plot the root value
     plotRootValue(plot, at, color);
+
+    // plot all uniform blocks
+    plotUniformBlocks(plot, at);
 
     // plot all atomic objects inside
     plotInnerObjects(plot, at, liveObjs);
@@ -832,6 +877,17 @@ void plotNonRootValues(PlotData &plot) {
         CL_BREAK_IF(!off);
         plotOffset(plot, off, root, val);
     }
+
+    // go through value prototypes used in uniform blocks
+    BOOST_FOREACH(PlotData::TDangValues::const_reference item, plot.dangVals) {
+        const TValId val = item.second;
+        if (val <= 0)
+            continue;
+
+        // plot a value node
+        CL_BREAK_IF(isPossibleToDeref(sh.valTarget(val)));
+        plotValue(plot, val);
+    }
 }
 
 const char* valNullLabel(const SymHeap &sh, const TObjId obj) {
@@ -855,13 +911,15 @@ const char* valNullLabel(const SymHeap &sh, const TObjId obj) {
     }
 }
 
-void plotAuxValue(PlotData &plot, const TObjId obj, const TValId val) {
+void plotAuxValue(PlotData &plot, const int node, const TValId val, bool isObj)
+{
     const char *color = "blue";
-    const char *label = "XXX";
+    const char *label = "NULL";
 
     switch (val) {
         case VAL_NULL:
-            label = valNullLabel(plot.sh, obj);
+            if (isObj)
+                label = valNullLabel(plot.sh, static_cast<TObjId>(node));
             break;
 
         case VAL_TRUE:
@@ -884,7 +942,11 @@ void plotAuxValue(PlotData &plot, const TObjId obj, const TValId val) {
         << " [shape=plaintext, fontcolor=" << color
         << ", label=" << SL_QUOTE(label) << "];\n";
 
-    plot.out << "\t" << SL_QUOTE(obj)
+    const char *prefix = (isObj)
+        ? ""
+        : "lonely";
+
+    plot.out << "\t" << SL_QUOTE(prefix << node)
         << " -> " << SL_QUOTE("lonely" << id)
         << " [color=blue];\n";
 }
@@ -894,7 +956,7 @@ void plotHasValue(PlotData &plot, const TObjId obj) {
 
     const TValId val = sh.valueOf(obj);
     if (val <= 0) {
-        plotAuxValue(plot, obj, val);
+        plotAuxValue(plot, obj, val, /* isObj */ true);
         return;
     }
 
@@ -952,6 +1014,21 @@ void plotEverything(PlotData &plot) {
     BOOST_FOREACH(PlotData::TLiveObjs::const_reference item, plot.liveObjs)
         BOOST_FOREACH(const TObjId obj, /* TObjList */ item.second)
             plotHasValue(plot, obj);
+
+    // plot "hasValue" edges for uniform block prototypes
+    BOOST_FOREACH(PlotData::TDangValues::const_reference item, plot.dangVals) {
+        const int id = item.first;
+        const TValId val = item.second;
+
+        if (val <= 0) {
+            plotAuxValue(plot, id, val, /* isObj */ false);
+            continue;
+        }
+
+        plot.out << "\t" << SL_QUOTE("lonely" << id)
+            << " -> " << SL_QUOTE(val)
+            << " [color=blue, fontcolor=blue];\n";
+    }
 
 #if SYMPLOT_OMIT_NEQ_EDGES
     return;
