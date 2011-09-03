@@ -678,6 +678,21 @@ void SymHeapCore::Private::splitBlockByObject(
     rootData->arena -= createArenaItem(beg, trim, block);
 }
 
+bool isCoveredByBlock(
+        const HeapObject           *objData,
+        const InternalUniformBlock *blData)
+{
+    const TOffset beg1 = objData->off;
+    const TOffset beg2 = blData->off;
+    if (beg1 < beg2)
+        // the object starts above the block
+        return false;
+
+    const TOffset end1 = beg1 + objData->clt->size;
+    const TOffset end2 = beg2 + blData->size;
+    return (end1 <= end2);
+}
+
 void SymHeapCore::Private::reinterpretObjData(
         TObjId                      old,
         TObjId                      obj,
@@ -725,17 +740,22 @@ void SymHeapCore::Private::reinterpretObjData(
     blData = DCAST<HeapBlock *>(this->ents[obj]);
     code = blData->code;
 
+    InternalUniformBlock *uniData;
     TValId val;
 
     switch (code) {
+        case BK_UNIFORM:
+            uniData = DCAST<InternalUniformBlock *>(blData);
+            if (isCoveredByBlock(oldData, uniData)) {
+                // object fully covered by the overlapping uniform block
+                val = this->valDup(uniData->tplValue);
+                break;
+            }
+            // fall through!
+
         case BK_OBJECT:
             // TODO: hook various reinterpretation drivers here
             val = this->valCreate(VT_UNKNOWN, VO_REINTERPRET);
-            break;
-
-        case BK_UNIFORM:
-            // FIXME: incorrect unless we check that whole object is covered!!!
-            val = this->valDup(DCAST<InternalUniformBlock *>(blData)->tplValue);
             break;
 
         case BK_COMPOSITE:
