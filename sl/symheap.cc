@@ -248,9 +248,7 @@ struct HeapBlock: public IHeapEntity {
     {
     }
 
-    virtual IHeapEntity* clone() const {
-        return new HeapBlock(*this);
-    }
+    virtual int getSize() const = 0;
 };
 
 struct InternalUniformBlock: public HeapBlock {
@@ -264,6 +262,10 @@ struct InternalUniformBlock: public HeapBlock {
 
     virtual InternalUniformBlock* clone() const {
         return new InternalUniformBlock(*this);
+    }
+
+    virtual int getSize() const {
+        return size;
     }
 };
 
@@ -283,6 +285,10 @@ struct HeapObject: public HeapBlock {
 
     virtual IHeapEntity* clone() const {
         return new HeapObject(*this);
+    }
+
+    virtual int getSize() const {
+        return clt->size;
     }
 };
 
@@ -596,23 +602,23 @@ void SymHeapCore::Private::splitBlockByObject(
 {
     InternalUniformBlock *blData = this->blData(block);
     const HeapBlock *hbData = DCAST<const HeapBlock *>(this->ents[obj]);
-    if (this->valsEqual(blData->value, hbData->value))
+    const EBlockKind code = hbData->code;
+    if (BK_OBJECT == code && this->valsEqual(blData->value, hbData->value))
         // preserve non-conflicting uniform blocks
         return;
 
     CL_DEBUG("splitBlockByObject() is taking place...");
 
     // dig root
-    const HeapObject *objData = DCAST<const HeapObject *>(hbData);
     const TValId root = blData->root;
-    CL_BREAK_IF(root != objData->root);
+    CL_BREAK_IF(root != hbData->root);
     RootValue *rootData = this->rootData(root);
 
     // dig offsets and sizes
     const TOffset blOff = blData->off;
-    const TOffset objOff = objData->off;
+    const TOffset objOff = hbData->off;
     const unsigned blSize = blData->size;
-    const unsigned objSize = objData->clt->size;
+    const unsigned objSize = hbData->getSize();
 
     // check overlapping
     const TOffset blBegToObjBeg = objOff - blOff;
