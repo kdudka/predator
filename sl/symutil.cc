@@ -104,6 +104,24 @@ TObjId translateObjId(
     return dst.objAt(dstAt, clt);
 }
 
+void translateValProto(
+        TValId                  *pValProto,
+        SymHeap                 &dst,
+        const SymHeap           &src)
+{
+    if (*pValProto <= 0)
+        // do not translate special values
+        return;
+
+    // read properties from src
+    const EValueTarget code = src.valTarget(*pValProto);
+    const EValueOrigin origin = src.valOrigin(*pValProto);
+
+    // create an equivalent unknown value in dst
+    CL_BREAK_IF(VT_UNKNOWN != code);
+    *pValProto = dst.valCreate(code, origin);
+}
+
 void getPtrValues(TValList &dst, SymHeap &sh, TValId at) {
     TObjList ptrs;
     sh.gatherLivePointers(ptrs, at);

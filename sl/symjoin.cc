@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2010-2011 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -955,6 +955,77 @@ bool joinObjSize(
     return true;
 }
 
+bool joinUniBlocks(
+        SymJoinCtx              &ctx,
+        const TValId            rootDst,
+        const TValId            root1,
+        const TValId            root2)
+{
+    TUniBlockMap bMap1;
+    if (VAL_INVALID != root1)
+        ctx.sh1.gatherUniformBlocks(bMap1, root1);
+
+    TUniBlockMap bMap2;
+    if (VAL_INVALID != root2)
+        ctx.sh2.gatherUniformBlocks(bMap2, root2);
+
+    TUniBlockMap::const_iterator i1 = bMap1.begin();
+    TUniBlockMap::const_iterator i2 = bMap2.begin();
+
+    const TUniBlockMap::const_iterator t1 = bMap1.end();
+    const TUniBlockMap::const_iterator t2 = bMap2.end();
+
+    bool hasExtraBlock1 = false;
+    bool hasExtraBlock2 = false;
+
+    while (i1 != t1 && i2 != t2) {
+        const TOffset off1 = i1->first;
+        const TOffset off2 = i2->first;
+
+        if (off1 < off2) {
+            // skip one block in ctx.sh1
+            hasExtraBlock1 = true;
+            ++i1;
+            continue;
+        }
+
+        if (off2 < off1) {
+            // skip one block in ctx.sh2
+            hasExtraBlock2 = true;
+            ++i2;
+            continue;
+        }
+
+        const UniformBlock &bl1 = i1->second;
+        const UniformBlock &bl2 = i2->second;
+        if (areUniBlocksEqual(ctx.sh1, ctx.sh2, bl1, bl2)) {
+            // exact match
+            UniformBlock blDst(bl1);
+            translateValProto(&blDst.tplValue, ctx.sh1, ctx.dst);
+            ctx.dst.writeUniformBlock(rootDst, blDst);
+            ++i1;
+            ++i2;
+            continue;
+        }
+
+        CL_DEBUG("joinUniBlocks() could be improved to scale better");
+        hasExtraBlock1 = true;
+        hasExtraBlock2 = true;
+        ++i1;
+        ++i2;
+    }
+
+    hasExtraBlock1 |= (i1 != t1);
+    hasExtraBlock2 |= (i2 != t2);
+
+    if (hasExtraBlock1 && !updateJoinStatus(ctx, JS_USE_SH2))
+        return false;
+    if (hasExtraBlock2 && !updateJoinStatus(ctx, JS_USE_SH1))
+        return false;
+
+    return true;
+}
+
 bool joinNullifiedFlag(
         bool                    *pDst,
         SymJoinCtx              &ctx,
@@ -1029,7 +1100,13 @@ bool createObject(
 
     // create an image in ctx.dst
     const TValId rootDst = ctx.dst.heapAlloc(size, nullified);
+
+    if (!joinUniBlocks(ctx, rootDst, root1, root2))
+        // failed to complement uniform blocks
+        return false;
+
     if (clt)
+        // preserve estimated type-info of the root
         ctx.dst.valSetLastKnownTypeOfTarget(rootDst, clt);
 
     // preserve 'prototype' flag
@@ -1867,6 +1944,15 @@ class JoinVarVisitor {
         }
 
         bool operator()(const TValId roots[3]) {
+            if (!joinUniBlocks(ctx_,
+                        roots[/* dst */ 0],
+                        roots[/* sh1 */ 1],
+                        roots[/* sh2 */ 2]))
+            {
+                // failed to complement uniform blocks
+                return false;
+            }
+
             return /* continue */ traverseSubObjs(ctx_,
                     roots[/* dst */ 0],
                     roots[/* sh1 */ 1],
@@ -2288,7 +2374,13 @@ bool joinDataCore(
     // start with the given pair of objects and create a ghost object for them
     // create an image in ctx.dst
     const TValId rootDstAt = ctx.dst.heapAlloc(size, nullified);
+
+    if (!joinUniBlocks(ctx, rootDstAt, addr1, addr2))
+        // failed to complement uniform blocks
+        return false;
+
     if (clt)
+        // preserve estimated type-info of the root
         ctx.dst.valSetLastKnownTypeOfTarget(rootDstAt, clt);
 
     if (!traverseSubObjs(ctx, rootDstAt, addr1, addr2, &off))

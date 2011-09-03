@@ -602,10 +602,14 @@ void SymHeapCore::Private::splitBlockByObject(
 {
     InternalUniformBlock *blData = this->blData(block);
     const HeapBlock *hbData = DCAST<const HeapBlock *>(this->ents[obj]);
+
+    // FIXME: This optimization is known to cause problems to joinUniBlocks()
+#if 0
     const EBlockKind code = hbData->code;
     if (BK_OBJECT == code && this->valsEqual(blData->value, hbData->value))
         // preserve non-conflicting uniform blocks
         return;
+#endif
 
     CL_DEBUG("splitBlockByObject() is taking place...");
 

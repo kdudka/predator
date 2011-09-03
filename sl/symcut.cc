@@ -50,16 +50,7 @@ class UniBlockWriter {
         }
 
         bool operator()(const SymHeap &src, UniformBlock bl) {
-            // read the value template
-            const TValId valSrc = bl.tplValue;
-            if (0 < valSrc) {
-                // create an equivalent unknown value in dst
-                const EValueTarget code = src.valTarget(valSrc);
-                const EValueOrigin origin = src.valOrigin(valSrc);
-
-                CL_BREAK_IF(VT_UNKNOWN != code);
-                bl.tplValue = dst_.valCreate(code, origin);
-            }
+            translateValProto(&bl.tplValue, dst_, src);
 
             dst_.writeUniformBlock(rootDst_, bl);
 

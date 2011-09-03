@@ -57,6 +57,11 @@ TObjId translateObjId(
         const TValId            dstRootAt,
         const TObjId            srcObj);
 
+void translateValProto(
+        TValId                  *pValProto,
+        SymHeap                 &dst,
+        const SymHeap           &src);
+
 inline TValId valOfPtrAt(SymHeap &sh, TValId at) {
     bool exclusive;
     const TObjId ptr = sh.ptrAt(at, &exclusive);
