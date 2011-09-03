@@ -191,10 +191,10 @@ bool /* complete */ traverseUniformBlocks(
     // check that we got a valid root object
     CL_BREAK_IF(sh.valOffset(root) || !isPossibleToDeref(sh.valTarget(root)));
 
-    TUniBlockList bList;
-    sh.gatherUniformBlocks(bList, root);
-    BOOST_FOREACH(const UniformBlock &bl, bList) {
-        if (!visitor(sh, bl))
+    TUniBlockMap bMap;
+    sh.gatherUniformBlocks(bMap, root);
+    BOOST_FOREACH(TUniBlockMap::const_reference bItem, bMap) {
+        if (!visitor(sh, /* UniformBlock */ bItem.second))
             // traversal cancelled by visitor
             return false;
     }

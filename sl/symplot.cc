@@ -424,20 +424,12 @@ void plotUniformBlocks(PlotData &plot, const TValId root) {
     SymHeap &sh = plot.sh;
 
     // get all uniform blocks inside the given root
-    TUniBlockList bList;
-    sh.gatherUniformBlocks(bList, root);
-
-    // sort uniform blocks by offset
-    typedef std::map<TOffset, unsigned /* idx */> TUniByOff;
-    TUniByOff uniByOff;
-    for (unsigned idx = 0; idx < bList.size(); ++idx) {
-        const TOffset off = bList[idx].off;
-        uniByOff[off] = idx;
-    }
+    TUniBlockMap bMap;
+    sh.gatherUniformBlocks(bMap, root);
 
     // plot all uniform blocks
-    BOOST_FOREACH(TUniByOff::const_reference item, uniByOff) {
-        const UniformBlock &bl = bList[/* idx */ item.second];
+    BOOST_FOREACH(TUniBlockMap::const_reference item, bMap) {
+        const UniformBlock &bl = item.second;
 
         // plot block node
         const int id = ++plot.last;

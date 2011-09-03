@@ -1217,7 +1217,7 @@ void SymHeapCore::gatherLivePointers(TObjList &dst, TValId root) const {
     }
 }
 
-void SymHeapCore::gatherUniformBlocks(TUniBlockList &dst, TValId root) const {
+void SymHeapCore::gatherUniformBlocks(TUniBlockMap &dst, TValId root) const {
     const RootValue *rootData = d->rootData(root);
     BOOST_FOREACH(TLiveObjs::const_reference item, rootData->liveObjs) {
         const ELiveObj code = item.second;
@@ -1225,14 +1225,14 @@ void SymHeapCore::gatherUniformBlocks(TUniBlockList &dst, TValId root) const {
             continue;
 
         const InternalUniformBlock *blData = d->blData(/* obj */ item.first);
+        const TOffset off = blData->off;
+        CL_BREAK_IF(hasKey(dst, off));
+        UniformBlock &block = dst[off];
 
         // export uniform block
-        UniformBlock block;
-        block.off       = blData->off;
+        block.off       = off;
         block.size      = blData->size;
         block.tplValue  = blData->value;
-
-        dst.push_back(block);
     }
 }
 

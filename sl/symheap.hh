@@ -225,7 +225,7 @@ struct UniformBlock {
 };
 
 /// a container used to return list of uniform blocks
-typedef std::vector<UniformBlock>                       TUniBlockList;
+typedef std::map<TOffset, UniformBlock>                 TUniBlockMap;
 
 /**
  * lexicographical comparison of CVar objects
@@ -435,7 +435,7 @@ class SymHeapCore {
         void gatherLivePointers(TObjList &dst, TValId root) const;
 
         /// list of uninitialized and nullified uniform blocks
-        void gatherUniformBlocks(TUniBlockList &dst, TValId root) const;
+        void gatherUniformBlocks(TUniBlockMap &dst, TValId root) const;
 
         /**
          * return the corresponding program variable of the given @b root
