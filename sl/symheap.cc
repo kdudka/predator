@@ -149,7 +149,15 @@ typedef std::map<TOffset, TObjByType>                   TGrid;
 typedef icl::interval_map<unsigned, TObjSet>            TArena;
 typedef TArena::key_type                                TMemChunk;
 typedef TArena::value_type                              TMemItem;
-typedef std::map<TObjId, bool /* isPtr */>              TLiveObjs;
+
+enum ELiveObj {
+    LO_INVALID,
+    LO_BLOCK,
+    LO_DATA_PTR,
+    LO_DATA
+};
+
+typedef std::map<TObjId, ELiveObj>                      TLiveObjs;
 
 inline TMemChunk createChunk(const TOffset off, const TObjType clt) {
     CL_BREAK_IF(!clt || clt->code == CL_TYPE_VOID);
@@ -188,11 +196,10 @@ inline TMemItem createArenaItem(
 inline bool arenaLookup(
         TObjSet                     *dst,
         const TArena                &arena,
-        const TOffset               off,
-        const TObjType              clt,
+        const TMemChunk             &chunk,
         const TObjId                obj)
 {
-    TArena::const_iterator it = arena.find(createChunk(off, clt));
+    TArena::const_iterator it = arena.find(chunk);
     if (arena.end() == it)
         // not found
         return false;
@@ -203,6 +210,16 @@ inline bool arenaLookup(
 
     // finally check if there was anything else
     return !dst->empty();
+}
+
+inline bool arenaLookup(
+        TObjSet                     *dst,
+        const TArena                &arena,
+        const TOffset               off,
+        const TObjType              clt,
+        const TObjId                obj)
+{
+    return arenaLookup(dst, arena, createChunk(off, clt), obj);
 }
 
 struct IHeapEntity {
@@ -595,6 +612,9 @@ void SymHeapCore::Private::splitBlockByObject(
 
     if (blBegToObjBeg <= 0 && objEndToBlEnd <= 0) {
         // block completely overlapped by the object, throw it away
+        if (!rootData->liveObjs.erase(block))
+            CL_BREAK_IF("attempt to kill an already dead uniform block");
+
         rootData->arena -= createArenaItem(blOff, blSize, block);
         delete blData;
         this->releaseId(block);
@@ -603,25 +623,49 @@ void SymHeapCore::Private::splitBlockByObject(
 
     if (0 < blBegToObjBeg && 0 < objEndToBlEnd) {
         // the object is strictly in the middle of the block (needs split)
-        CL_BREAK_IF("please implement");
+        InternalUniformBlock *blDataOther = blData->clone();
+        const TObjId blOther = this->assignId<TObjId>(blDataOther);
+
+        // update metadata
+        blData->size = blBegToObjBeg;
+        blDataOther->size = objEndToBlEnd;
+        blDataOther->off = objOff + objSize;
+
+        // unmap part of the original block
+        rootData->arena -= createArenaItem(
+                blOff + blBegToObjBeg,
+                objSize + objEndToBlEnd,
+                block);
+
+        // map the new block
+        rootData->arena += createArenaItem(
+                objOff + objSize,
+                objEndToBlEnd,
+                blOther);
+
+        rootData->liveObjs[blOther] = LO_BLOCK;
         return;
     }
 
     // check direction
     const TOffset diff = blOff - objOff;
-    const bool shiftBeg = (diff <= 0);
+    const bool shiftBeg = (0 <= diff);
     const TOffset beg = (shiftBeg)
         ? /* shift begin of the block */ blOff
         : /* trim end of the block    */ objOff;
 
+    // compute size of the overlapping region
+    const TOffset trim = (shiftBeg)
+        ? (objSize - diff)
+        : (blSize + /* negative */ diff);
+
     // throw away the overlapping part of the block
-    const TOffset trim = diff + blSize;
-    CL_BREAK_IF(trim <= 0);
     blData->size -= trim;
     if (shiftBeg)
         blData->off += trim;
 
     // unmap the overlapping part
+    CL_BREAK_IF(trim <= 0 || !blData->size);
     rootData->arena -= createArenaItem(beg, trim, block);
 }
 
@@ -946,7 +990,9 @@ TValId SymHeapCore::Private::objInit(TObjId obj) {
     objData->value = val;
 
     // mark the object as live
-    rootData->liveObjs[obj] = /* isPtr */ isDataPtr(clt);
+    rootData->liveObjs[obj] = isDataPtr(clt)
+        ? LO_DATA_PTR
+        : LO_DATA;
 
     // store backward reference
     this->valData(val)->usedBy.insert(obj);
@@ -1091,16 +1137,35 @@ TValId SymHeapCore::Private::dupRoot(TValId rootAt) {
     this->liveRoots.insert(imageAt);
 
     BOOST_FOREACH(TLiveObjs::const_reference item, rootDataSrc->liveObjs) {
-        const HeapObject *objDataSrc = this->objData(/* src */ item.first);
+        const TObjId src = item.first;
+        const ELiveObj code = item.second;
+        TObjId dst;
 
-        // duplicate a single object
-        const TOffset off = objDataSrc->off;
-        const TObjType clt = objDataSrc->clt;
-        const TObjId dst = this->objCreate(imageAt, off, clt, /* ext */ false);
-        this->setValueOf(dst, objDataSrc->value);
+        if (LO_BLOCK == code) {
+            // duplicate a uniform block
+            InternalUniformBlock *blSrc = DCAST<InternalUniformBlock *>
+                (this->ents[src]);
 
-        // prevserve live ptr/data object
-        rootDataDst->liveObjs[dst] = /* isPtr */ item.second;
+            InternalUniformBlock *blDst = blSrc->clone();
+            dst = this->assignId<TObjId>(blDst);
+            blDst->root = imageAt;
+
+            // map the cloned block
+            rootDataDst->arena += createArenaItem(blDst->off, blDst->size, dst);
+        }
+        else {
+            // duplicate a regular object
+            CL_BREAK_IF(LO_DATA_PTR != code && LO_DATA != code);
+
+            const HeapObject *objDataSrc = this->objData(src);
+            const TOffset off = objDataSrc->off;
+            const TObjType clt = objDataSrc->clt;
+            dst = this->objCreate(imageAt, off, clt, /* hasExtRef */ false);
+            this->setValueOf(dst, objDataSrc->value);
+        }
+
+        // prevserve live object code
+        rootDataDst->liveObjs[dst] = code;
     }
 
     return imageAt;
@@ -1109,15 +1174,31 @@ TValId SymHeapCore::Private::dupRoot(TValId rootAt) {
 void SymHeapCore::gatherLivePointers(TObjList &dst, TValId root) const {
     const RootValue *rootData = d->rootData(root);
     BOOST_FOREACH(TLiveObjs::const_reference item, rootData->liveObjs) {
-        if (/* isPtr */ item.second)
-            dst.push_back(/* obj */ d->objExport(item.first));
+        const ELiveObj code = item.second;
+        if (LO_DATA_PTR == code)
+            dst.push_back(d->objExport(/* obj */ item.first));
     }
 }
 
 void SymHeapCore::gatherLiveObjects(TObjList &dst, TValId root) const {
     const RootValue *rootData = d->rootData(root);
-    BOOST_FOREACH(TLiveObjs::const_reference item, rootData->liveObjs)
-        dst.push_back(/* obj */ d->objExport(item.first));
+    BOOST_FOREACH(TLiveObjs::const_reference item, rootData->liveObjs) {
+        const ELiveObj code = item.second;
+
+        switch (code) {
+            case LO_BLOCK:
+                continue;
+
+            case LO_DATA:
+            case LO_DATA_PTR:
+                dst.push_back(d->objExport(/* obj */ item.first));
+                continue;
+
+            case LO_INVALID:
+            default:
+                CL_BREAK_IF("gatherLiveObjects sees something special");
+        }
+    }
 }
 
 SymHeapCore::SymHeapCore(TStorRef stor):
@@ -1165,7 +1246,9 @@ void SymHeapCore::objSetValue(TObjId obj, TValId val, TValSet *killedPtrs) {
     // mark the destination object as live
     const TValId root = objData->root;
     RootValue *rootData = d->rootData(root);
-    rootData->liveObjs[obj] = /* isPtr */ isDataPtr(clt);
+    rootData->liveObjs[obj] = isDataPtr(clt)
+        ? LO_DATA_PTR
+        : LO_DATA;
 
     // now set the value
     d->setValueOf(obj, val, killedPtrs);
@@ -1181,11 +1264,19 @@ void SymHeapCore::writeUniformBlock(
     const TObjId obj = d->assignId<TObjId>(blockData);
 
     RootValue *rootData = d->rootData(root);
-    rootData->arena += createArenaItem(block.off, block.size, obj);
+    rootData->liveObjs[obj] = LO_BLOCK;
 
-    // TODO
-    CL_WARN("writeUniformBlock() should wipe existing data, please implement");
-    (void) killedPtrs;
+    TArena &arena = rootData->arena;
+    arena += createArenaItem(block.off, block.size, obj);
+    const TOffset off = block.off;
+    const TMemChunk chunk(off, off + block.size);
+
+    // invalidate contents of the objects we are overwriting
+    TObjSet overlaps;
+    if (arenaLookup(&overlaps, arena, chunk, obj)) {
+        BOOST_FOREACH(const TObjId old, overlaps)
+            d->reinterpretObjData(old, obj, killedPtrs);
+    }
 }
 
 void SymHeapCore::copyBlockOfRawMemory(
@@ -1658,7 +1749,6 @@ TValId SymHeapCore::heapAlloc(int cbSize, bool nullify) {
     // TODO: remove this once we get the block reinterpretation working
     rootData->initializedToZero = nullify;
 
-#if 0
     if (nullify) {
         // TODO: move this code out of symheap!
         UniformBlock block;
@@ -1667,7 +1757,6 @@ TValId SymHeapCore::heapAlloc(int cbSize, bool nullify) {
         block.tplValue = VAL_NULL;
         this->writeUniformBlock(addr, block);
     }
-#endif
 
     return addr;
 }
@@ -1760,11 +1849,19 @@ void SymHeapCore::Private::destroyRoot(TValId root) {
     this->liveRoots.erase(root);
 
     // destroy all objects inside
-    BOOST_FOREACH(TLiveObjs::const_reference item, rootData->liveObjs)
-        this->objDestroy(
-                /* obj          */ item.first,
-                /* removeVal    */ true,
-                /* detach       */ false);
+    BOOST_FOREACH(TLiveObjs::const_reference item, rootData->liveObjs) {
+        const TObjId obj = item.first;
+        const ELiveObj code = item.second;
+
+        if (LO_BLOCK == code) {
+            // uniform block
+            delete this->ents[obj];
+            this->releaseId(obj);
+            continue;
+        }
+
+        this->objDestroy(obj, /* removeVal */ true, /* detach */ false);
+    }
 
     // wipe rootData
     rootData->lastKnownClt = 0;
