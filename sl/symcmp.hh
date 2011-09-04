@@ -54,4 +54,10 @@ bool matchPlainValues(
         const TValId            v1,
         const TValId            v2);
 
+bool matchUniBlocks(
+        const SymHeap           &sh1,
+        const SymHeap           &sh2,
+        const TValId            root1,
+        const TValId            root2);
+
 #endif /* H_GUARD_SYM_CMP_H */

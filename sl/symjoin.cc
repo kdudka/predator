@@ -955,73 +955,118 @@ bool joinObjSize(
     return true;
 }
 
+void importBlockMap(
+        TUniBlockMap            *pMap,
+        SymHeap                 &dst,
+        const SymHeap           &src)
+{
+    BOOST_FOREACH(TUniBlockMap::reference item, *pMap) {
+        UniformBlock &bl = item.second;
+        translateValProto(&bl.tplValue, dst, src);
+    }
+}
+
+void joinUniBlocksCore(
+        TUniBlockMap            *pMap,
+        bool                    *pExtra1,
+        bool                    *pExtra2,
+        SymJoinCtx              &ctx,
+        const TValId            root1,
+        const TValId            root2)
+{
+    const SymHeap sh1 = ctx.sh1;
+    const SymHeap sh2 = ctx.sh2;
+
+    TUniBlockMap bMap1, bMap2;
+    sh1.gatherUniformBlocks(bMap1, root1);
+    sh2.gatherUniformBlocks(bMap2, root2);
+    CL_BREAK_IF(bMap1.empty() && bMap2.empty());
+
+    if (bMap2.empty()) {
+        *pExtra1 = true;
+        return;
+    }
+    if (bMap1.empty()) {
+        *pExtra2 = true;
+        return;
+    }
+
+    BOOST_FOREACH(TUniBlockMap::const_reference item, bMap1) {
+        const TOffset off = item.first;
+        const UniformBlock &bl1 = item.second;
+        UniformBlock bl2;
+        if (!sh2.findCoveringUniBlock(&bl2, root2, off, bl1.size)
+                || !areValProtosEqual(sh1, sh2, bl1.tplValue, bl2.tplValue))
+        {
+            *pExtra1 = true;
+            continue;
+        }
+
+        UniformBlock blDst(bl1);
+        translateValProto(&blDst.tplValue, ctx.dst, /* src */ sh1);
+        (*pMap)[off] = blDst;
+    }
+
+    BOOST_FOREACH(TUniBlockMap::const_reference item, bMap2) {
+        const TOffset off = item.first;
+        const UniformBlock &bl2 = item.second;
+        UniformBlock bl1;
+        if (!sh1.findCoveringUniBlock(&bl1, root1, off, bl2.size)
+                || !areValProtosEqual(sh1, sh2, bl1.tplValue, bl2.tplValue))
+        {
+            *pExtra2 = true;
+            continue;
+        }
+
+        if (hasKey(*pMap, off)) {
+            // symmetric match (should have been already handled)
+            CL_BREAK_IF(!areUniBlocksEqual(ctx.dst, sh2, (*pMap)[off], bl2));
+            continue;
+        }
+
+        UniformBlock blDst(bl2);
+        translateValProto(&blDst.tplValue, ctx.dst, /* src */ sh2);
+        (*pMap)[off] = blDst;
+    }
+}
+
 bool joinUniBlocks(
         SymJoinCtx              &ctx,
         const TValId            rootDst,
         const TValId            root1,
         const TValId            root2)
 {
-    TUniBlockMap bMap1;
-    if (VAL_INVALID != root1)
-        ctx.sh1.gatherUniformBlocks(bMap1, root1);
+    TUniBlockMap bMapDst;
+    bool hasExtra1 = false;
+    bool hasExtra2 = false;
 
-    TUniBlockMap bMap2;
-    if (VAL_INVALID != root2)
-        ctx.sh2.gatherUniformBlocks(bMap2, root2);
-
-    TUniBlockMap::const_iterator i1 = bMap1.begin();
-    TUniBlockMap::const_iterator i2 = bMap2.begin();
-
-    const TUniBlockMap::const_iterator t1 = bMap1.end();
-    const TUniBlockMap::const_iterator t2 = bMap2.end();
-
-    bool hasExtraBlock1 = false;
-    bool hasExtraBlock2 = false;
-
-    while (i1 != t1 && i2 != t2) {
-        const TOffset off1 = i1->first;
-        const TOffset off2 = i2->first;
-
-        if (off1 < off2) {
-            // skip one block in ctx.sh1
-            hasExtraBlock1 = true;
-            ++i1;
-            continue;
-        }
-
-        if (off2 < off1) {
-            // skip one block in ctx.sh2
-            hasExtraBlock2 = true;
-            ++i2;
-            continue;
-        }
-
-        const UniformBlock &bl1 = i1->second;
-        const UniformBlock &bl2 = i2->second;
-        if (areUniBlocksEqual(ctx.sh1, ctx.sh2, bl1, bl2)) {
-            // exact match
-            UniformBlock blDst(bl1);
-            translateValProto(&blDst.tplValue, ctx.dst, /* src */ ctx.sh1);
-            ctx.dst.writeUniformBlock(rootDst, blDst);
-            ++i1;
-            ++i2;
-            continue;
-        }
-
-        CL_DEBUG("joinUniBlocks() could be improved to scale better");
-        hasExtraBlock1 = true;
-        hasExtraBlock2 = true;
-        ++i1;
-        ++i2;
+    if (VAL_INVALID == root2) {
+        hasExtra1 = true;
+        ctx.sh1.gatherUniformBlocks(bMapDst, root1);
+        importBlockMap(&bMapDst, ctx.dst, /* src */ ctx.sh1);
     }
+    else if (VAL_INVALID == root1) {
+        hasExtra2 = true;
+        ctx.sh2.gatherUniformBlocks(bMapDst, root2);
+        importBlockMap(&bMapDst, ctx.dst, /* src */ ctx.sh2);
+    }
+    else if (matchUniBlocks(ctx.sh1, ctx.sh2, root1, root2)) {
+        // block maps are 100% equal, pick any
+        ctx.sh1.gatherUniformBlocks(bMapDst, root1);
+        importBlockMap(&bMapDst, ctx.dst, /* src */ ctx.sh1);
+        goto write_them;
+    }
+    else
+        joinUniBlocksCore(&bMapDst, &hasExtra1, &hasExtra2, ctx, root1, root2);
 
-    hasExtraBlock1 |= (i1 != t1);
-    hasExtraBlock2 |= (i2 != t2);
+    if (hasExtra1 && !updateJoinStatus(ctx, JS_USE_SH2))
+        return false;
+    if (hasExtra2 && !updateJoinStatus(ctx, JS_USE_SH1))
+        return false;
 
-    if (hasExtraBlock1 && !updateJoinStatus(ctx, JS_USE_SH2))
-        return false;
-    if (hasExtraBlock2 && !updateJoinStatus(ctx, JS_USE_SH1))
-        return false;
+write_them:
+    BOOST_FOREACH(TUniBlockMap::const_reference item, bMapDst)
+        ctx.dst.writeUniformBlock(rootDst, /* UniformBlock */ item.second);
 
     return true;
 }

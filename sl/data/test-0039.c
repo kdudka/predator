@@ -1,7 +1,7 @@
 #include "../sl.h"
 #include <stdlib.h>
 
-#define BREAK_IMMATURE_VERSION_OF_PREDATOR 1
+#define BREAK_IMMATURE_VERSION_OF_PREDATOR 0
 
 struct lowLevel {
     struct lowLevel *head;

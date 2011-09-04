@@ -437,6 +437,14 @@ class SymHeapCore {
         /// list of uninitialized and nullified uniform blocks
         void gatherUniformBlocks(TUniBlockMap &dst, TValId root) const;
 
+        /// experimental optimization of joinUniBlocksCore()
+        bool findCoveringUniBlock(
+                UniformBlock               *pDst,
+                const TValId                root,
+                const TOffset               off,
+                unsigned                    size)
+            const;
+
         /**
          * return the corresponding program variable of the given @b root
          * address pointing to VT_STATIC/VT_ON_STACK

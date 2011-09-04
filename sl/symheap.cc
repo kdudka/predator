@@ -1246,6 +1246,55 @@ void SymHeapCore::gatherLiveObjects(TObjList &dst, TValId root) const {
     }
 }
 
+bool SymHeapCore::findCoveringUniBlock(
+        UniformBlock                *pDst,
+        const TValId                root,
+        const TOffset               beg,
+        unsigned                    size)
+    const
+{
+    const RootValue *rootData = d->rootData(root);
+    const TArena &arena = rootData->arena;
+    const TOffset end = beg + size;
+    const TMemChunk chunk(beg, end);
+
+    TArena::const_iterator it = arena.find(chunk);
+    if (arena.end() == it)
+        // not found
+        return false;
+
+    const TObjSet &overlaps = it->second;
+    BOOST_FOREACH(const TObjId id, overlaps) {
+        const HeapBlock *data = DCAST<const HeapBlock *>(d->ents[id]);
+        const EBlockKind code = data->code;
+        if (BK_UNIFORM != code)
+            continue;
+
+        const InternalUniformBlock *blData =
+            DCAST<const InternalUniformBlock *>(data);
+
+        const TOffset blBeg = blData->off;
+        if (beg < blBeg)
+            // the template starts above this block
+            continue;
+
+        const TOffset size = blData->size;
+        const TOffset blEnd = blBeg + size;
+        if (blEnd < end)
+            // the template ends beyond this block
+            continue;
+
+        // covering uniform block matched!
+        pDst->off       = blBeg;
+        pDst->size      = size;
+        pDst->tplValue  = blData->value;
+        return true;
+    }
+
+    // not found
+    return false;
+}
+
 SymHeapCore::SymHeapCore(TStorRef stor):
     stor_(stor),
     d(new Private)
