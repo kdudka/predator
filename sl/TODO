@@ -1,11 +1,3 @@
-- invalidate external object IDs as soon as the objects become externally unused
-
-- represent uninitialized chunks of memory explicitly by intervals, so that we
-  can safely distinguish them from information thrown away during abstraction
-
-- represent nullified chunks of memory explicitly by intervals, allow to split
-  them to more intervals of smaller size when necessary
-
 - check size of integers when accessing them by pointers, warn if a signed int
   is accessed as unsigned and vice versa
 

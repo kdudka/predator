@@ -531,8 +531,8 @@ void SymExecEngine::execCondInsn() {
         return;
 
     if (isUninitialized(origin)) {
-        // TODO: make the warning messages more precise
         CL_WARN_MSG(lw_, "conditional jump depends on uninitialized value");
+        describeUnknownVal(proc, val, "use");
         bt_.printBackTrace();
     }
 

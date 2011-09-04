@@ -1,1 +1,2 @@
 test-0126.c:10:8: warning: conditional jump depends on uninitialized value
+test-0126.c:10:8: note: the value being used is an untouched contents of stack

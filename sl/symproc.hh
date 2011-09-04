@@ -137,6 +137,12 @@ class SymProc {
 
 void printBackTrace(SymProc &);
 
+/// @todo make the API more generic and better documented
+void describeUnknownVal(
+        SymProc                     &proc,
+        const TValId                 val,
+        const char                  *action);
+
 struct SymExecCoreParams {
     bool fastMode;          ///< enable/disable OOM state simulation
     bool invCompatMode;     ///< Invader compatibility mode
