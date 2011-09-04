@@ -104,7 +104,11 @@ class SymProc {
         /// invalidate all variables that are killed by the given instruction
         void killInsn(const CodeStorage::Insn &);
 
+        /// invalidate all variables killed by the given instruction per target
         void killPerTarget(const CodeStorage::Insn &, unsigned target);
+
+        /// check whether we can safely access sizeOfTarget at the given address
+        bool checkForInvalidDeref(TValId val, const TOffset sizeOfTarget);
 
     protected:
         TValId varAt(const struct cl_operand &op);
@@ -116,7 +120,6 @@ class SymProc {
         void reportMemLeak(const EValueTarget code, const char *reason);
         void heapSetSingleVal(TObjId lhs, TValId rhs);
         void heapObjDefineType(TObjId lhs, TValId rhs);
-        bool checkForInvalidDeref(TValId val, TObjType cltTarget);
         TValId heapValFromObj(const struct cl_operand &op);
         TValId heapValFromCst(const struct cl_operand &op);
         TValId handlePointerPlus(TValId at, TValId off);

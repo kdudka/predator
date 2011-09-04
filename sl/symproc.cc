@@ -140,12 +140,11 @@ const char* describeRootObj(const EValueTarget code) {
 void reportDerefOutOfBounds(
         SymProc                         &proc,
         const TValId                    val,
-        const TObjType                  cltTarget)
+        const TOffset                   sizeOfTarget)
 {
     const struct cl_loc *loc = proc.lw();
     SymHeap &sh = proc.sh();
 
-    const int sizeOfTarget = cltTarget->size;
     CL_BREAK_IF(sizeOfTarget <= 0);
     CL_ERROR_MSG(loc, "dereferencing object of size " << sizeOfTarget
             << "B out of bounds");
@@ -184,7 +183,7 @@ void reportDerefOutOfBounds(
     }
 }
 
-bool SymProc::checkForInvalidDeref(TValId val, TObjType cltTarget) {
+bool SymProc::checkForInvalidDeref(TValId val, const TOffset sizeOfTarget) {
     if (VAL_NULL == val) {
         CL_ERROR_MSG(lw_, "dereference of NULL value");
         return true;
@@ -226,9 +225,9 @@ bool SymProc::checkForInvalidDeref(TValId val, TObjType cltTarget) {
             break;
     }
 
-    if (sh_.valOffset(val) < 0 || sh_.valSizeOfTarget(val) < cltTarget->size) {
+    if (sh_.valOffset(val) < 0 || sh_.valSizeOfTarget(val) < sizeOfTarget) {
         // out of bounds
-        reportDerefOutOfBounds(*this, val, cltTarget);
+        reportDerefOutOfBounds(*this, val, sizeOfTarget);
         return true;
     }
 
@@ -382,7 +381,7 @@ TObjId SymProc::objByOperand(const struct cl_operand &op, bool *exclusive) {
 
     // check for invalid dereference
     const TObjType cltTarget = op.type;
-    if (this->checkForInvalidDeref(at, cltTarget)) {
+    if (this->checkForInvalidDeref(at, cltTarget->size)) {
         bt_->printBackTrace();
         return OBJ_DEREF_FAILED;
     }
