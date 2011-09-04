@@ -24,6 +24,7 @@
 #include <cl/storage.hh>
 
 #include "symheap.hh"
+#include "symplot.hh"
 #include "symutil.hh"
 #include "worklist.hh"
 
@@ -116,27 +117,61 @@ bool collectJunk(SymHeap &sh, TValId val, TValList *leakList) {
     return detected;
 }
 
+void destroyRootAndCollectPtrs(
+        SymHeap                 &sh,
+        const TValId             root,
+        TValList                *killedPtrs)
+{
+    CL_BREAK_IF(sh.valOffset(root));
+    CL_BREAK_IF(!isPossibleToDeref(sh.valTarget(root)));
+
+    if (killedPtrs)
+        // gather potentialy destroyed pointer values
+        getPtrValues(*killedPtrs, sh, root);
+
+    // destroy the target
+    sh.valDestroyTarget(root);
+}
+
 bool destroyRootAndCollectJunk(
         SymHeap                 &sh,
         const TValId             root,
         TValList                *leakList)
 {
-    CL_BREAK_IF(sh.valOffset(root));
-    CL_BREAK_IF(!isPossibleToDeref(sh.valTarget(root)));
-
-    // gather potentialy destroyed pointer sub-values
-    std::vector<TValId> ptrs;
-    getPtrValues(ptrs, sh, root);
-
-    // destroy the target
-    sh.valDestroyTarget(root);
+    TValList killedPtrs;
+    destroyRootAndCollectPtrs(sh, root, &killedPtrs);
 
     // now check for memory leakage
     bool leaking = false;
-    BOOST_FOREACH(TValId val, ptrs) {
+    BOOST_FOREACH(TValId val, killedPtrs) {
         if (collectJunk(sh, val, leakList))
             leaking = true;
     }
 
     return leaking;
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+// implementation of LeakMonitor
+static bool debuggingGarbageCollector = static_cast<bool>(DEBUG_SYMGC);
+
+void debugGarbageCollector(const bool enable) {
+    if (enable == ::debuggingGarbageCollector)
+        return;
+
+    CL_DEBUG("symgc: debugGarbageCollector(" << enable << ") takes effect");
+    ::debuggingGarbageCollector = enable;
+}
+
+void LeakMonitor::enter() {
+    if (::debuggingGarbageCollector)
+        snap_ = sh_;
+}
+
+void LeakMonitor::leave() {
+    if (leakList_.empty())
+        return;
+
+    if (::debuggingGarbageCollector)
+        plotHeap(snap_, "memleak", leakList_, /* digForward */ false);
 }

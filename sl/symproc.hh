@@ -210,7 +210,4 @@ class SymExecCore: public SymProc {
         const SymExecCoreParams ep_;
 };
 
-/// enable/disable debugging of the garbage collector
-void debugGarbageCollector(const bool enable);
-
 #endif /* H_GUARD_SYM_PROC_H */

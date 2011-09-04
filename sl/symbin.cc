@@ -30,6 +30,7 @@
 
 #include "symabstract.hh"
 #include "symbt.hh"
+#include "symgc.hh"
 #include "symjoin.hh"
 #include "symplot.hh"
 #include "symproc.hh"

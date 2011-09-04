@@ -27,6 +27,13 @@
 
 #include "symheap.hh"
 
+#include <boost/foreach.hpp>
+
+void destroyRootAndCollectPtrs(
+        SymHeap                 &sh,
+        const TValId             root,
+        TValList                *killedPtrs = 0);
+
 /**
  * check if a sub-heap reachable from the given value is also reachable from
  * somewhere else.  If not, such a sub-heap is considered as garbage and
@@ -42,5 +49,42 @@ bool destroyRootAndCollectJunk(
         SymHeap                 &sh,
         const TValId             root,
         TValList                *leakList = 0);
+
+/// @todo some dox
+class LeakMonitor {
+    public:
+        LeakMonitor(SymHeap &sh):
+            sh_(sh),
+            snap_(sh.stor())
+        {
+        }
+
+        void enter();
+        void leave();
+
+        template <class TCont>
+        bool collectJunkFrom(const TCont &killedPtrs) {
+            bool leaking = false;
+            BOOST_FOREACH(TValId val, killedPtrs) {
+                if (collectJunk(sh_, val, &leakList_))
+                    leaking = true;
+            }
+
+            return leaking;
+        }
+
+        const TValList& leakList() const {
+            return leakList_;
+        }
+
+
+    private:
+        SymHeap     &sh_;
+        SymHeap     snap_;
+        TValList    leakList_;
+};
+
+/// enable/disable debugging of the garbage collector
+void debugGarbageCollector(const bool enable);
 
 #endif /* H_GUARD_SYMGC_H */
