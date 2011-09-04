@@ -254,9 +254,13 @@ struct HeapBlock: public IHeapEntity {
 struct InternalUniformBlock: public HeapBlock {
     unsigned                    size;
 
-    InternalUniformBlock(TValId root_, const UniformBlock &block):
-        HeapBlock(BK_UNIFORM, root_, block.off, block.tplValue),
-        size(block.size)
+    InternalUniformBlock(
+            const TValId            root_,
+            const TOffset           off_,
+            const TValId            tplValue_,
+            const unsigned          size_):
+        HeapBlock(BK_UNIFORM, root_, off_, tplValue_),
+        size(size_)
     {
     }
 
@@ -1343,23 +1347,27 @@ void SymHeapCore::objSetValue(TObjId obj, TValId val, TValSet *killedPtrs) {
 }
 
 void SymHeapCore::writeUniformBlock(
-        const TValId                root,
-        const UniformBlock          &block,
+        const TValId                addr,
+        const TValId                tplValue,
+        const unsigned              size,
         TValSet                     *killedPtrs)
 {
-    const TOffset beg = block.off;
-    const TOffset end = beg + block.size;
-    CL_BREAK_IF(static_cast<TOffset>(this->valSizeOfTarget(root)) < end);
+    CL_BREAK_IF(this->valSizeOfTarget(addr) < static_cast<int>(size));
+    const BaseValue *valData = d->valData(addr);
+    const TValId root = d->valRoot(addr, valData);
+    const TOffset beg = valData->offRoot;
+    const TOffset end = beg + size;
 
     // acquire object ID
-    InternalUniformBlock *blockData = new InternalUniformBlock(root, block);
+    InternalUniformBlock *blockData =
+        new InternalUniformBlock(root, beg, tplValue, size);
     const TObjId obj = d->assignId<TObjId>(blockData);
 
     RootValue *rootData = d->rootData(root);
     rootData->liveObjs[obj] = LO_BLOCK;
 
     TArena &arena = rootData->arena;
-    arena += createArenaItem(beg, block.size, obj);
+    arena += createArenaItem(beg, size, obj);
     const TMemChunk chunk(beg, end);
 
     // invalidate contents of the objects we are overwriting
@@ -1788,7 +1796,10 @@ TValId SymHeapCore::addrOfVar(CVar cv) {
     rootData->cVar = cv;
     rootData->addr = addr;
     rootData->lastKnownClt = clt;
-    rootData->cbSize = clt->size;
+
+    // read size from the type-info
+    const unsigned size = clt->size;
+    rootData->cbSize = size;
 
     // initialize to zero?
     bool nullify = var.initialized;
@@ -1796,20 +1807,15 @@ TValId SymHeapCore::addrOfVar(CVar cv) {
     nullify |= (VT_STATIC == code);
 #endif
 
-    UniformBlock block;
-    block.off = 0;
-    block.size = clt->size;
-
     if (nullify) {
         // initialize to zero
-        block.tplValue = VAL_NULL;
-        this->writeUniformBlock(addr, block);
+        this->writeUniformBlock(addr, VAL_NULL, size);
     }
 #if SE_TRACK_UNINITIALIZED
     else if (VT_ON_STACK == code) {
         // uninitialized stack variable
-        block.tplValue = this->valCreate(VT_UNKNOWN, VO_STACK);
-        this->writeUniformBlock(addr, block);
+        const TValId tpl = this->valCreate(VT_UNKNOWN, VO_STACK);
+        this->writeUniformBlock(addr, tpl, size);
     }
 #endif
 
@@ -1852,11 +1858,8 @@ TValId SymHeapCore::heapAlloc(int cbSize) {
 
 #if SE_TRACK_UNINITIALIZED
     // uninitialized heap block
-    UniformBlock block;
-    block.off = 0;
-    block.size = cbSize;
-    block.tplValue = this->valCreate(VT_UNKNOWN, VO_HEAP);
-    this->writeUniformBlock(addr, block);
+    const TValId tplValue = this->valCreate(VT_UNKNOWN, VO_HEAP);
+    this->writeUniformBlock(addr, tplValue, cbSize);
 #endif
 
     return addr;

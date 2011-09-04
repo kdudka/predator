@@ -356,14 +356,14 @@ bool handleMemset(
     }
 
     // what are we going to write?
-    if (VAL_NULL != core.valFromOperand(opList[/* char */ 4])) {
+    if (VAL_NULL != core.valFromOperand(opList[/* char */ 3])) {
         CL_ERROR_MSG(lw, "our memset() model works only for c == 0");
         insertCoreHeap(dst, core, insn, /* printBt */ true);
         return true;
     }
 
     // how much we are going to write?
-    const TValId valSize = core.valFromOperand(opList[/* size */ 5]);
+    const TValId valSize = core.valFromOperand(opList[/* size */ 4]);
     long size;
     if (!numFromVal(&size, sh, valSize)) {
         CL_ERROR_MSG(lw, "size arg of memset() is not a known integer");
@@ -377,7 +377,7 @@ bool handleMemset(
     }
 
     // check the pointer - is it valid? do we have enough allocated memory?
-    const TValId addr = core.valFromOperand(opList[/* addr */ 3]);
+    const TValId addr = core.valFromOperand(opList[/* addr */ 2]);
     if (core.checkForInvalidDeref(addr, size)) {
         // error message already printed out
         insertCoreHeap(dst, core, insn, /* printBt */ true);
@@ -388,19 +388,10 @@ bool handleMemset(
     LeakMonitor lm(sh);
     lm.enter();
 
-    // FIXME: suboptimal interface of SymHeapCore::writeUniformBlock()
-    const TValId root = sh.valRoot(addr);
-
-    // summarize the block we are going to write
-    UniformBlock bl;
-    bl.off      = sh.valOffset(addr);
-    bl.size     = size;
-    bl.tplValue = VAL_NULL;
-
     // write the block!
     TValSet killedPtrs;
     CL_DEBUG_MSG(lw, "executing memset() as a built-in function");
-    sh.writeUniformBlock(root, bl, &killedPtrs);
+    sh.writeUniformBlock(addr, VAL_NULL, size, &killedPtrs);
 
     // check for memory leaks
     if (lm.collectJunkFrom(killedPtrs)) {

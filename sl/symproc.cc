@@ -564,14 +564,9 @@ void SymProc::objSetValue(TObjId lhs, TValId rhs) {
     if (VO_DEREF_FAILED == sh_.valOrigin(rhs)) {
         // we're already on an error path
         const TValId lhsAt = sh_.placedAt(lhs);
-
-        UniformBlock bl;
-        bl.off = sh_.valOffset(lhsAt);
-        bl.size = sh_.objType(lhs)->size;
-        bl.tplValue = sh_.valCreate(VT_UNKNOWN, VO_DEREF_FAILED);
-
-        const TValId rootAt = sh_.valRoot(lhsAt);
-        sh_.writeUniformBlock(rootAt, bl);
+        const TValId tplValue = sh_.valCreate(VT_UNKNOWN, VO_DEREF_FAILED);
+        const unsigned size = sh_.objType(lhs)->size;
+        sh_.writeUniformBlock(lhsAt, tplValue, size);
         return;
     }
 
@@ -765,14 +760,9 @@ malloc/calloc is implementation-defined");
 
     // now create a heap object
     const TValId val = sh_.heapAlloc(size);
-    if (nullified) {
+    if (nullified)
         // initilize to zero as we are doing calloc()
-        UniformBlock block;
-        block.off = 0;
-        block.size = size;
-        block.tplValue = VAL_NULL;
-        sh_.writeUniformBlock(val, block);
-    }
+        sh_.writeUniformBlock(val, VAL_NULL, size);
 
     // store the result of malloc
     this->objSetValue(lhs, val);

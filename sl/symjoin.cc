@@ -1065,8 +1065,11 @@ bool joinUniBlocks(
         return false;
 
 write_them:
-    BOOST_FOREACH(TUniBlockMap::const_reference item, bMapDst)
-        ctx.dst.writeUniformBlock(rootDst, /* UniformBlock */ item.second);
+    BOOST_FOREACH(TUniBlockMap::const_reference item, bMapDst) {
+        const UniformBlock &bl = item.second;
+        const TValId addrDst = ctx.dst.valByOffset(rootDst, bl.off);
+        ctx.dst.writeUniformBlock(addrDst, bl.tplValue, bl.size);
+    }
 
     return true;
 }

@@ -317,8 +317,9 @@ class SymHeapCore {
 
         /// write an uninitialized or nullified block of memory
         void writeUniformBlock(
-                const TValId                root,
-                const UniformBlock          &block,
+                const TValId                addr,
+                const TValId                tplValue,
+                const unsigned              size,
                 TValSet                     *killedPtrs = 0);
 
         /// copy 'size' bytes of raw memory from 'src' to 'dst'
