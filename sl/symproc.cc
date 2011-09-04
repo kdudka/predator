@@ -703,28 +703,6 @@ void SymProc::killPerTarget(const CodeStorage::Insn &insn, unsigned target) {
 
 // /////////////////////////////////////////////////////////////////////////////
 // SymExecCore implementation
-TValId SymExecCore::valFromOperand(const struct cl_operand &op) {
-    const char *name;
-    if (!ep_.invCompatMode)
-        goto no_nasty_assumptions;
-
-    if (CL_OPERAND_VAR != op.code || !(name = op.data.var->name))
-        goto no_nasty_assumptions;
-    
-    if (STREQ(name, "nondet") || STREQ(name, "__nondet")) {
-        CL_WARN_MSG(lw_, "value of '" << name << "' treated as unknown, "
-                         "using a nasty assumption!");
-
-        // &nondet and __nodet should pass this check (ugly)
-        CL_BREAK_IF(op.accessor && op.accessor->code != CL_ACCESSOR_REF);
-
-        return sh_.valCreate(VT_UNKNOWN, VO_ASSIGNED);
-    }
-
-no_nasty_assumptions:
-    return SymProc::valFromOperand(op);
-}
-
 void SymExecCore::varInit(TValId at) {
     if (ep_.skipVarInit)
         // we are explicitly asked to not initialize any vars

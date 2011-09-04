@@ -53,12 +53,6 @@ void parseConfigString(SymExecParams &sep, std::string cnf) {
         return;
     }
 
-    if (string("inv_compat") == cnf) {
-        CL_DEBUG("SymExec \"inv_compat mode\" requested");
-        sep.invCompatMode = true;
-        return;
-    }
-
     // TODO: make it possible to handle both parameters together (comma
     // separated list or whatever)
     // TODO: document all the parameters somewhere

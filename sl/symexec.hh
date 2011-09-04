@@ -35,13 +35,11 @@ namespace CodeStorage {
 
 struct SymExecParams {
     bool fastMode;          ///< enable/disable the @b fast @b mode
-    bool invCompatMode;     ///< Invader compatibility mode
     bool skipPlot;          ///< simply ignore all ___sl_plot* calls
     bool ptrace;            ///< enable path tracing (a bit chatty)
 
     SymExecParams():
         fastMode(false),
-        invCompatMode(false),
         skipPlot(false),
         ptrace(false)
     {

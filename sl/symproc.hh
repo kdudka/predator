@@ -90,7 +90,7 @@ class SymProc {
                 /* TODO: document this */ bool *exclusive = 0);
 
         /// obtain a heap value corresponding to the given operand
-        virtual TValId valFromOperand(const struct cl_operand &op);
+        TValId valFromOperand(const struct cl_operand &op);
 
         /// resolve Fnc uid from the given operand, return true on success
         bool fncFromOperand(int *pUid, const struct cl_operand &op);
@@ -145,13 +145,11 @@ void describeUnknownVal(
 
 struct SymExecCoreParams {
     bool fastMode;          ///< enable/disable OOM state simulation
-    bool invCompatMode;     ///< Invader compatibility mode
     bool skipPlot;          ///< simply ignore all ___sl_plot* calls
     bool skipVarInit;       ///< used internally
 
     SymExecCoreParams():
         fastMode(false),
-        invCompatMode(false),
         skipPlot(false),
         skipVarInit(false)
     {
@@ -188,9 +186,6 @@ class SymExecCore: public SymProc {
          * CL_INSN_CALL)
          */
         bool exec(SymState &dst, const CodeStorage::Insn &insn);
-
-        /// overridden in order to handle SymExecCoreParams::invCompatMode
-        virtual TValId valFromOperand(const struct cl_operand &op);
 
         void execHeapAlloc(SymState &dst, const CodeStorage::Insn &,
                            const unsigned size, const bool nullified);
