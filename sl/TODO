@@ -10,10 +10,14 @@
 - allow to represent arrays of fixed lengths in the same way as list segments
   are represented (it would allow to create hash tables of fixed length)
 
-- add support for execution of memset(), memmove()
+- add support for execution of memmove()
 
 - add support for memcpy(), issue an error if memcpy() is mistakenly used
   instead of memmove()
+
+- improve the interaction between concretizeIfNeeded() and BuiltInTable (now we
+  have hard-wired concretization for free() and memset() in symproc; a bitfield
+  somewhere in symbin would be much saner)
 
 - get test-0707 from slayer working more efficient (we need to improve the join)
 

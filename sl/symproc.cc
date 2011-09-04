@@ -1077,9 +1077,15 @@ bool SymExecCore::concretizeIfNeeded(SymState                   &results,
                                      const CodeStorage::Insn    &insn)
 {
     const size_t opCnt = insn.operands.size();
-    if (opCnt != /* deref */ 2 && opCnt != /* free() */ 3)
-        // neither dereference, nor free()
-        return false;
+    switch (opCnt) {
+        case /* deref       */ 2:
+        case /* free()      */ 3:
+        case /* memset()    */ 5:
+            break;
+
+        default:
+            return false;
+    }
 
     // first look for dereferences
     std::vector<unsigned /* idx */> derefs;
@@ -1100,13 +1106,19 @@ bool SymExecCore::concretizeIfNeeded(SymState                   &results,
         return false;
 
     const struct cl_cst &cst = src.data.cst;
-    if (CL_TYPE_FNC != cst.code || !STREQ(cst.data.cst_fnc.name, "free"))
+    if (CL_TYPE_FNC != cst.code)
         return false;
 
-    // assume call of free()
-    derefs.push_back(/* addr */ 2);
-    this->concretizeLoop(results, insn, opList, derefs);
-    return true;
+    const char *fncName = cst.data.cst_fnc.name;
+    if (STREQ(fncName, "free") || STREQ(fncName, "memset")) {
+        // call of free() or memset()
+        derefs.push_back(/* addr */ 2);
+        this->concretizeLoop(results, insn, opList, derefs);
+        return true;
+    }
+
+    // no match
+    return false;
 }
 
 bool SymExecCore::execCore(
