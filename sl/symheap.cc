@@ -1347,6 +1347,10 @@ void SymHeapCore::writeUniformBlock(
         const UniformBlock          &block,
         TValSet                     *killedPtrs)
 {
+    const TOffset beg = block.off;
+    const TOffset end = beg + block.size;
+    CL_BREAK_IF(static_cast<TOffset>(this->valSizeOfTarget(root)) < end);
+
     // acquire object ID
     InternalUniformBlock *blockData = new InternalUniformBlock(root, block);
     const TObjId obj = d->assignId<TObjId>(blockData);
@@ -1355,9 +1359,8 @@ void SymHeapCore::writeUniformBlock(
     rootData->liveObjs[obj] = LO_BLOCK;
 
     TArena &arena = rootData->arena;
-    arena += createArenaItem(block.off, block.size, obj);
-    const TOffset off = block.off;
-    const TMemChunk chunk(off, off + block.size);
+    arena += createArenaItem(beg, block.size, obj);
+    const TMemChunk chunk(beg, end);
 
     // invalidate contents of the objects we are overwriting
     TObjSet overlaps;

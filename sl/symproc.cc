@@ -544,25 +544,6 @@ void SymProc::heapSetSingleVal(TObjId lhs, TValId rhs) {
         plotHeap(snap, "memleak", leakList, /* digForward */ false);
 }
 
-class DerefFailedWriter {
-    private:
-        SymProc             &proc_;
-        SymHeap             &sh_;
-
-    public:
-        DerefFailedWriter(SymProc *proc):
-            proc_(*proc),
-            sh_(proc->sh())
-        {
-        }
-
-        bool operator()(SymHeap &, TObjId obj) {
-            const TValId val = sh_.valCreate(VT_UNKNOWN, VO_DEREF_FAILED);
-            proc_.heapSetSingleVal(obj, val);
-            return /* continue */ true;
-        }
-};
-
 class ValueMirror {
     private:
         SymProc             &proc_;
@@ -598,17 +579,20 @@ class ValueMirror {
 };
 
 void SymProc::objSetValue(TObjId lhs, TValId rhs) {
+    CL_BREAK_IF(!isPossibleToDeref(sh_.valTarget(sh_.placedAt(lhs))));
+    CL_BREAK_IF(!sh_.objType(lhs));
+
     if (VO_DEREF_FAILED == sh_.valOrigin(rhs)) {
         // we're already on an error path
-        const TObjType clt = sh_.objType(lhs);
-        if (!clt || clt->code != CL_TYPE_STRUCT) {
-            const TValId vFail = sh_.valCreate(VT_UNKNOWN, VO_DEREF_FAILED);
-            sh_.objSetValue(lhs, vFail);
-            return;
-        }
+        const TValId lhsAt = sh_.placedAt(lhs);
 
-        DerefFailedWriter writer(this);
-        traverseLiveObjs(sh_, sh_.placedAt(lhs), writer);
+        UniformBlock bl;
+        bl.off = sh_.valOffset(lhsAt);
+        bl.size = sh_.objType(lhs)->size;
+        bl.tplValue = sh_.valCreate(VT_UNKNOWN, VO_DEREF_FAILED);
+
+        const TValId rootAt = sh_.valRoot(lhsAt);
+        sh_.writeUniformBlock(rootAt, bl);
         return;
     }
 

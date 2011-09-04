@@ -55,6 +55,18 @@ test-0153.c:74:28: note: from call of create_list_far()
 test-0153.c:78:28: note: from call of create_list_far()
 test-0153.c:91:20: note: from call of create_list_far()
 test-0153.c:86:5: note: from call of main()
+list.h:45:13: error: invalid dereference
+list.h:45:13: note: the value being dereferenced is an untouched contents of stack
+list.h:61:12: note: from call of __list_add()
+test-0153.c:25:13: note: from call of list_add()
+test-0153.c:32:16: note: from call of insert_node()
+test-0153.c:53:26: note: from call of create_list_of_length()
+test-0153.c:66:27: note: from call of create_list_no()
+test-0153.c:70:28: note: from call of create_list_far()
+test-0153.c:74:28: note: from call of create_list_far()
+test-0153.c:78:28: note: from call of create_list_far()
+test-0153.c:91:20: note: from call of create_list_far()
+test-0153.c:86:5: note: from call of main()
 list.h:48:13: error: dereferencing object of size 4B out of bounds
 list.h:48:13: note: the pointer being dereferenced points 0B beyond a static variable of size 24B
 list.h:61:12: note: from call of __list_add()
