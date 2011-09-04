@@ -143,6 +143,32 @@ bool callPlot(const CodeStorage::Insn &insn, SymProc &proc) {
     return true;
 }
 
+bool resolveCallocSize(
+        unsigned                                    *pDst,
+        SymExecCore                                 &core,
+        const CodeStorage::TOperandList             &opList)
+{
+    SymHeap &sh = core.sh();
+    const struct cl_loc *lw = core.lw();
+
+    const TValId valNelem = core.valFromOperand(opList[/* nelem */ 2]);
+    long nelem;
+    if (!numFromVal(&nelem, sh, valNelem)) {
+        CL_ERROR_MSG(lw, "'nelem' arg of calloc() is not a known integer");
+        return false;
+    }
+
+    const TValId valElsize = core.valFromOperand(opList[/* elsize */ 3]);
+    long elsize;
+    if (!numFromVal(&elsize, sh, valElsize)) {
+        CL_ERROR_MSG(lw, "'elsize' arg of calloc() is not a known integer");
+        return false;
+    }
+
+    *pDst = nelem * elsize;
+    return true;
+}
+
 void printUserMessage(SymProc &proc, const struct cl_operand &opMsg)
 {
     const SymHeap &sh = proc.sh();
@@ -233,6 +259,77 @@ bool handleBreak(
 
     // continue with the given heap as the result
     insertCoreHeap(dst, core, insn);
+    return true;
+}
+
+bool handleCalloc(
+        SymState                                    &dst,
+        SymExecCore                                 &core,
+        const CodeStorage::Insn                     &insn,
+        const char                                  *name)
+{
+    const CodeStorage::TOperandList &opList = insn.operands;
+    if (4 != opList.size()) {
+        emitPrototypeError(&insn.loc, name);
+        return false;
+    }
+
+    unsigned size;
+    if (!resolveCallocSize(&size, core, opList))
+        return false;
+
+    const struct cl_loc *lw = &insn.loc;
+    CL_DEBUG_MSG(lw, "executing calloc(/* total size */ " << size << ")");
+    core.execHeapAlloc(dst, insn, size, /* nullified */ true);
+    return true;
+}
+
+bool handleFree(
+        SymState                                    &dst,
+        SymExecCore                                 &core,
+        const CodeStorage::Insn                     &insn,
+        const char                                  *name)
+{
+    const CodeStorage::TOperandList &opList = insn.operands;
+    if (/* dst + fnc + ptr */ 3 != opList.size()
+        || CL_OPERAND_VOID != opList[0].code)
+    {
+        emitPrototypeError(&insn.loc, name);
+        return false;
+    }
+
+    // resolve value to be freed
+    TValId val = core.valFromOperand(opList[/* ptr given to free() */2]);
+    core.execFree(val);
+    core.killInsn(insn);
+
+    dst.insert(core.sh());
+    return true;
+}
+
+bool handleMalloc(
+        SymState                                    &dst,
+        SymExecCore                                 &core,
+        const CodeStorage::Insn                     &insn,
+        const char                                  *name)
+{
+    const struct cl_loc *lw = &insn.loc;
+    const CodeStorage::TOperandList &opList = insn.operands;
+    if (3 != opList.size()) {
+        emitPrototypeError(lw, name);
+        return false;
+    }
+
+    // amount of allocated memory must be known (TODO: relax this?)
+    const TValId valSize = core.valFromOperand(opList[/* size */ 2]);
+    long size;
+    if (!numFromVal(&size, core.sh(), valSize)) {
+        CL_ERROR_MSG(lw, "size arg of malloc() is not a known integer");
+        return false;
+    }
+
+    CL_DEBUG_MSG(lw, "executing malloc(" << size << ")");
+    core.execHeapAlloc(dst, insn, size, /* nullified */ false);
     return true;
 }
 
@@ -354,6 +451,9 @@ bool handleError(
 // register built-ins
 BuiltInTable::BuiltInTable() {
     tbl_["abort"]                                   = handleAbort;
+    tbl_["calloc"]                                  = handleCalloc;
+    tbl_["free"]                                    = handleFree;
+    tbl_["malloc"]                                  = handleMalloc;
     tbl_["___sl_break"]                             = handleBreak;
     tbl_["___sl_error"]                             = handleError;
     tbl_["___sl_get_nondet_int"]                    = handleNondetInt;
@@ -369,14 +469,19 @@ bool BuiltInTable::handleBuiltIn(
 {
     const CodeStorage::TOperandList &opList = insn.operands;
     const struct cl_operand &fnc = opList[1];
-    CL_BREAK_IF(CL_OPERAND_CST != fnc.code);
+    if (CL_OPERAND_CST != fnc.code)
+        return false;
 
     const struct cl_cst &cst = fnc.data.cst;
-    CL_BREAK_IF(CL_TYPE_FNC != cst.code);
-    CL_BREAK_IF(CL_SCOPE_GLOBAL != fnc.scope || !cst.data.cst_fnc.is_extern);
+    if (CL_TYPE_FNC != cst.code)
+        return false;
+
+    if (CL_SCOPE_GLOBAL != fnc.scope || !cst.data.cst_fnc.is_extern)
+        return false;
 
     const char *fncName = cst.data.cst_fnc.name;
-    CL_BREAK_IF(!fncName);
+    if (!fncName)
+        return false;
 
     TMap::const_iterator it = tbl_.find(fncName);
     if (tbl_.end() == it)

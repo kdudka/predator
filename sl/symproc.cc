@@ -733,14 +733,7 @@ void SymExecCore::varInit(TValId at) {
     SymProc::varInit(at);
 }
 
-void SymExecCore::execFree(const CodeStorage::TOperandList &opList) {
-    CL_BREAK_IF(/* dst + fnc + ptr */ 3 != opList.size());
-
-    // free() does not usually return a value
-    CL_BREAK_IF(CL_OPERAND_VOID != opList[0].code);
-
-    // resolve value to be freed
-    TValId val = valFromOperand(opList[/* ptr given to free() */2]);
+void SymExecCore::execFree(TValId val) {
     if (VAL_NULL == val) {
         CL_DEBUG_MSG(lw_, "ignoring free() called with NULL value");
         return;
@@ -848,90 +841,6 @@ malloc/calloc is implementation-defined");
     this->killInsn(insn);
     sh_.objReleaseId(lhs);
     dst.insert(sh_);
-}
-
-bool SymExecCore::resolveCallocSize(
-        unsigned                            *pDst,
-        const CodeStorage::TOperandList     &opList)
-{
-    if (4 != opList.size()) {
-        CL_ERROR_MSG(lw_, "unrecognized protoype of calloc()");
-        return false;
-    }
-
-    const TValId valNelem = this->valFromOperand(opList[/* nelem */ 2]);
-    long nelem;
-    if (!numFromVal(&nelem, sh_, valNelem)) {
-        CL_ERROR_MSG(lw_, "'nelem' arg of calloc() is not a known integer");
-        return false;
-    }
-
-    const TValId valElsize = this->valFromOperand(opList[/* elsize */ 3]);
-    long elsize;
-    if (!numFromVal(&elsize, sh_, valElsize)) {
-        CL_ERROR_MSG(lw_, "'elsize' arg of calloc() is not a known integer");
-        return false;
-    }
-
-    *pDst = nelem * elsize;
-    return true;
-}
-
-bool SymExecCore::execCall(SymState &dst, const CodeStorage::Insn &insn) {
-    const CodeStorage::TOperandList &opList = insn.operands;
-    const struct cl_operand &fnc = opList[1];
-    if (CL_OPERAND_CST != fnc.code)
-        return false;
-
-    const struct cl_cst &cst = fnc.data.cst;
-    if (CL_TYPE_FNC != cst.code)
-        return false;
-
-    if (CL_SCOPE_GLOBAL != fnc.scope || !cst.data.cst_fnc.is_extern)
-        return false;
-
-    const char *fncName = cst.data.cst_fnc.name;
-    if (!fncName)
-        return false;
-
-    if (STREQ(fncName, "malloc")) {
-        const CodeStorage::TOperandList &opList = insn.operands;
-        if (3 != opList.size()) {
-            CL_ERROR_MSG(lw_, "unrecognized protoype of malloc()");
-            return false;
-        }
-
-        // amount of allocated memory must be known (TODO: relax this?)
-        const TValId valSize = this->valFromOperand(opList[/* size */ 2]);
-        long size;
-        if (!numFromVal(&size, sh_, valSize)) {
-            CL_ERROR_MSG(lw_, "size arg of malloc() is not a known integer");
-            return false;
-        }
-
-        CL_DEBUG_MSG(lw_, "executing malloc(" << size << ")");
-        this->execHeapAlloc(dst, insn, size, /* nullified */ false);
-        return true;
-    }
-
-    if (STREQ(fncName, "calloc")) {
-        unsigned size;
-        if (!resolveCallocSize(&size, insn.operands))
-            return false;
-
-        CL_DEBUG_MSG(lw_, "executing calloc(/* total size */ " << size << ")");
-        this->execHeapAlloc(dst, insn, size, /* nullified */ true);
-        return true;
-    }
-
-    if (STREQ(fncName, "free")) {
-        this->execFree(opList);
-        this->killInsn(insn);
-        dst.insert(sh_);
-        return true;
-    }
-
-    return handleBuiltIn(dst, *this, insn);
 }
 
 bool describeCmpOp(
@@ -1288,7 +1197,8 @@ bool SymExecCore::execCore(
             break;
 
         case CL_INSN_CALL:
-            return this->execCall(dst, insn);
+            // the symbin module is now fully responsible for handling built-ins
+            return handleBuiltIn(dst, *this, insn);
 
         default:
             CL_TRAP;

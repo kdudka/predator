@@ -192,16 +192,14 @@ class SymExecCore: public SymProc {
         /// overridden in order to handle SymExecCoreParams::invCompatMode
         virtual TValId valFromOperand(const struct cl_operand &op);
 
-    private:
-        template <int ARITY>
-        void execOp(const CodeStorage::Insn &insn);
-
-        bool resolveCallocSize(unsigned *pDst, const CodeStorage::TOperandList &);
         void execHeapAlloc(SymState &dst, const CodeStorage::Insn &,
                            const unsigned size, const bool nullified);
 
-        void execFree(const CodeStorage::TOperandList &opList);
-        bool execCall(SymState &dst, const CodeStorage::Insn &insn);
+        void execFree(TValId val);
+
+    private:
+        template <int ARITY>
+        void execOp(const CodeStorage::Insn &insn);
 
         template <class TOpList, class TDerefs>
         bool concretizeLoop(SymState &dst, const CodeStorage::Insn &insn,
