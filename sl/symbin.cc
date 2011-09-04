@@ -90,8 +90,15 @@ void emitPlotError(const struct cl_loc *lw, const std::string &plotName) {
     CL_WARN_MSG(lw, "error while plotting '" << plotName << "'");
 }
 
-void insertCoreHeap(SymState &dst, SymProc &core, const CodeStorage::Insn &insn)
+void insertCoreHeap(
+        SymState                                    &dst,
+        SymProc                                     &core,
+        const CodeStorage::Insn                     &insn,
+        const bool                                  printBt = false)
 {
+    if (printBt)
+        printBackTrace(core);
+
     core.killInsn(insn);
 
     const SymHeap &sh = core.sh();
@@ -334,6 +341,79 @@ bool handleMalloc(
     return true;
 }
 
+bool handleMemset(
+        SymState                                    &dst,
+        SymExecCore                                 &core,
+        const CodeStorage::Insn                     &insn,
+        const char                                  *name)
+{
+    SymHeap &sh = core.sh();
+    const struct cl_loc *lw = &insn.loc;
+    const CodeStorage::TOperandList &opList = insn.operands;
+    if (5 != opList.size() || opList[0].code != CL_OPERAND_VOID) {
+        emitPrototypeError(lw, name);
+        return false;
+    }
+
+    // what are we going to write?
+    if (VAL_NULL != core.valFromOperand(opList[/* char */ 4])) {
+        CL_ERROR_MSG(lw, "our memset() model works only for c == 0");
+        insertCoreHeap(dst, core, insn, /* printBt */ true);
+        return true;
+    }
+
+    // how much we are going to write?
+    const TValId valSize = core.valFromOperand(opList[/* size */ 5]);
+    long size;
+    if (!numFromVal(&size, sh, valSize)) {
+        CL_ERROR_MSG(lw, "size arg of memset() is not a known integer");
+        insertCoreHeap(dst, core, insn, /* printBt */ true);
+        return true;
+    }
+    if (!size) {
+        CL_WARN_MSG(lw, "ignoring call of memset() with size == 0");
+        insertCoreHeap(dst, core, insn, /* printBt */ true);
+        return true;
+    }
+
+    // check the pointer - is it valid? do we have enough allocated memory?
+    const TValId addr = core.valFromOperand(opList[/* addr */ 3]);
+    if (core.checkForInvalidDeref(addr, size)) {
+        // error message already printed out
+        insertCoreHeap(dst, core, insn, /* printBt */ true);
+        return true;
+    }
+
+    // enter leak monitor
+    LeakMonitor lm(sh);
+    lm.enter();
+
+    // FIXME: suboptimal interface of SymHeapCore::writeUniformBlock()
+    const TValId root = sh.valRoot(addr);
+
+    // summarize the block we are going to write
+    UniformBlock bl;
+    bl.off      = sh.valOffset(addr);
+    bl.size     = size;
+    bl.tplValue = VAL_NULL;
+
+    // write the block!
+    TValSet killedPtrs;
+    CL_DEBUG_MSG(lw, "executing memset() as a built-in function");
+    sh.writeUniformBlock(root, bl, &killedPtrs);
+
+    // check for memory leaks
+    if (lm.collectJunkFrom(killedPtrs)) {
+        CL_WARN_MSG(lw, "memory leak detected while executing memset()");
+        printBackTrace(core);
+    }
+
+    // leave monitor and write the result
+    lm.leave();
+    insertCoreHeap(dst, core, insn);
+    return true;
+}
+
 bool handleNondetInt(
         SymState                                    &dst,
         SymExecCore                                 &core,
@@ -455,6 +535,7 @@ BuiltInTable::BuiltInTable() {
     tbl_["calloc"]                                  = handleCalloc;
     tbl_["free"]                                    = handleFree;
     tbl_["malloc"]                                  = handleMalloc;
+    tbl_["memset"]                                  = handleMemset;
     tbl_["___sl_break"]                             = handleBreak;
     tbl_["___sl_error"]                             = handleError;
     tbl_["___sl_get_nondet_int"]                    = handleNondetInt;
