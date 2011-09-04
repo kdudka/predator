@@ -355,13 +355,6 @@ bool handleMemset(
         return false;
     }
 
-    // what are we going to write?
-    if (VAL_NULL != core.valFromOperand(opList[/* char */ 3])) {
-        CL_ERROR_MSG(lw, "our memset() model works only for c == 0");
-        insertCoreHeap(dst, core, insn, /* printBt */ true);
-        return true;
-    }
-
     // how much we are going to write?
     const TValId valSize = core.valFromOperand(opList[/* size */ 4]);
     long size;
@@ -382,6 +375,13 @@ bool handleMemset(
         // error message already printed out
         insertCoreHeap(dst, core, insn, /* printBt */ true);
         return true;
+    }
+
+    // what are we going to write?
+    TValId tplValue = core.valFromOperand(opList[/* char */ 3]);
+    if (VAL_NULL != tplValue) {
+        CL_DEBUG_MSG(lw, "memset() writing nonzero value writes unknown value");
+        tplValue = sh.valCreate(VT_UNKNOWN, VO_ASSIGNED);
     }
 
     // enter leak monitor

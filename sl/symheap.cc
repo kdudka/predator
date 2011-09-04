@@ -1416,6 +1416,11 @@ TValId SymHeapCore::valByOffset(TValId at, TOffset off) {
         // do not track off-value for invalid targets
         return d->valDup(at);
 
+    if (VT_CUSTOM == code) {
+        CL_BREAK_IF("valByOffset() is NOT supposed to be applied on VT_CUSTOM");
+        return at;
+    }
+
     // off-value lookup
     RootValue *rootData = d->rootData(valRoot);
     TOffMap &offMap = rootData->offMap;
