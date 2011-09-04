@@ -26,12 +26,26 @@
 #include <memory>
 #include <cassert>
 
+#include <cl/cl_msg.hh>
+
 #include "recycler.hh"
 #include "types.hh"
 #include "forestautext.hh"
 #include "abstractinstruction.hh"
 
 struct SymState {
+
+	friend std::ostream& operator<<(std::ostream& os, const AbstractInstruction::StateType& state) {
+
+		os << "registers:";
+
+		for (auto reg : *state.first)
+			os << ' ' << reg;
+
+		os << ", heap:" << std::endl << *state.second->fae;
+		return os << "instruction: " << *state.second->instr;		
+		
+	}
 
 	typedef std::list<AbstractInstruction::StateType> QueueType;
 

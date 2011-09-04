@@ -147,6 +147,7 @@ struct IsomRootF {
 	IsomRootF(FAE& fae, size_t root, std::vector<size_t>& index)
 		: fae(fae), root(root), index(index) {
 		assert(root < this->fae.roots.size());
+		assert(this->fae.roots[root]);
 	}
 
 	match_result_e matchStates(size_t s1, size_t s2) {
@@ -319,6 +320,7 @@ public:
 		assert(root < this->fae.roots.size());
 		assert(this->fae.roots[root]);
 		assert(box);
+		CL_CDEBUG("efore unfolding box " << *(AbstractBox*)box << " at " << root << ":" << std::endl << this->fae.roots[root]);
 		const TT<label_type>& t = this->fae.roots[root]->getAcceptingTransition();
 		size_t lhsOffset = 0;
 		std::vector<size_t> bSig = box->getSig(0);
@@ -388,13 +390,13 @@ public:
 		FA::o_map_type o;
 
 		// match inputs
-		std::vector<std::pair<std::shared_ptr<TA<label_type>>, TA<label_type> > > iTmp;
+		std::vector<std::pair<TA<label_type>, TA<label_type> > > iTmp;
 		for (size_t i = 0; i < cSig.size(); ++i) {
-			iTmp.push_back(std::make_pair(this->fae.allocTA(), TA<label_type>(*this->fae.backend)));
+			iTmp.push_back(std::make_pair(TA<label_type>(*this->fae.backend), TA<label_type>(*this->fae.backend)));
 			if (cSig[i] == root)
 				continue;
 			assert(this->fae.roots[cSig[i]]);
-			if (!this->boxCut(*iTmp.back().first, iTmp.back().second, *this->fae.roots[cSig[i]], box->getTrigger(sig[i])))
+			if (!this->boxCut(iTmp.back().first, iTmp.back().second, *this->fae.roots[cSig[i]], box->getTrigger(sig[i])))
 				return false;
 			o.clear();
 			FA::computeDownwardO(iTmp.back().second, o);
@@ -418,38 +420,39 @@ public:
 		rs.release();
 
 		// append box
-		TA<label_type>* ta = this->fae.allocTA();
-
+		TA<label_type> ta(*this->fae.backend);
 		size_t state = tmp.getFinalState();
 
-		ta->addFinalState(state);
+		ta.addFinalState(state);
 
 		for (TA<label_type>::Iterator i = tmp.begin(); i != tmp.end(); ++i) {
 			if (i->rhs() != state) {
-				ta->addTransition(*i);
+				ta.addTransition(*i);
 				continue;
 			}
 			std::vector<const AbstractBox*> label(i->label()->getNode());
 			std::vector<size_t> lhs(i->lhs());
 			label.push_back(box);
 			for (size_t j = 0; j < cSig.size(); ++j)
-				lhs.push_back(this->fae.addData(*ta, Data::createRef(cSig[j])));
+				lhs.push_back(this->fae.addData(ta, Data::createRef(cSig[j])));
 			FAE::reorderBoxes(label, lhs);
-			ta->addTransition(lhs, this->fae.boxMan->lookupLabel(label), state);
+			ta.addTransition(lhs, this->fae.boxMan->lookupLabel(label), state);
 		}
 
 		// replace
-		this->fae.roots[root] = std::shared_ptr<TA<label_type>>(ta);
+		this->fae.roots[root] = std::shared_ptr<TA<label_type>>(this->fae.allocTA());
+		ta.unreachableFree(*this->fae.roots[root]);
 		this->fae.updateRootMap(root);
 		
 		for (size_t i = 0; i < cSig.size(); ++i) {
 			if (cSig[i] == root) {
 				if (sig[i] == 0)
 					continue;
-				bool b = this->boxCut(*iTmp[i].first, iTmp[i].second, *this->fae.roots[cSig[i]], box->getTrigger(sig[i]));
+				bool b = this->boxCut(iTmp[i].first, iTmp[i].second, *this->fae.roots[cSig[i]], box->getTrigger(sig[i]));
 				assert(b);
 			}
-			this->fae.roots[cSig[i]] = iTmp[i].first;
+			this->fae.roots[cSig[i]] = std::shared_ptr<TA<label_type>>(this->fae.allocTA());
+			iTmp[i].first.unreachableFree(*this->fae.roots[cSig[i]]);
 			this->fae.updateRootMap(cSig[i]);
 		}
 

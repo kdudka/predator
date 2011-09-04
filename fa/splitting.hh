@@ -136,7 +136,6 @@ struct IsolateAllF {
 	}
 };
 
-
 class Splitting {
 
 	FAE& fae;
@@ -161,6 +160,147 @@ public:
 			if (i->label()->isNode())
 				i->label()->iterate(LeafEnumF(this->fae, *i, target, selectors));
 		}
+	}
+
+	// enumerates upwards selectors
+	void enumerateSelectorsAtLeaf(std::set<size_t>& selectors, size_t target) const {
+		for (size_t root = 0; root < this->fae.roots.size(); ++root) {
+			if (!this->fae.roots[root])
+				continue;
+			for (TA<label_type>::iterator i = this->fae.roots[root]->begin(); i != this->fae.roots[root]->end(); ++i) {
+				if (i->label()->isNode())
+					i->label()->iterate(LeafEnumF(this->fae, *i, target, selectors));
+			}
+		}
+	}
+
+
+	void enumerateSelectors(std::set<size_t>& selectors, size_t target) const {
+		assert(target < this->fae.roots.size());
+		assert(this->fae.roots[target]);
+		this->enumerateSelectorsAtRoot(selectors, target);
+		this->enumerateSelectorsAtLeaf(selectors, target);
+	}
+	
+	struct CheckIntegrityF {
+
+		const Splitting& split;
+		const TA<label_type>& ta;
+		const TT<label_type>& t;
+		std::set<size_t>& required;
+		std::vector<bool>& bitmap;
+		std::map<std::pair<const TA<label_type>*, size_t>, std::set<size_t>>& states;
+	
+		CheckIntegrityF(const Splitting& split, const TA<label_type>& ta, const TT<label_type>& t,
+			std::set<size_t>& required, std::vector<bool>& bitmap, std::map<std::pair<const TA<label_type>*, size_t>, std::set<size_t>>& states)
+			: split(split), ta(ta), t(t), required(required), bitmap(bitmap), states(states) {
+		}
+	
+		bool operator()(const AbstractBox* aBox, size_t, size_t offset) {
+			switch (aBox->getType()){
+				case bBox: {
+					const Box* tmp = (const Box*)aBox;
+					for (size_t i = 0; i < tmp->getArity(); ++i)
+						this->split.checkState(this->ta, this->t.lhs()[offset + i], tmp->inputCoverage(i), this->bitmap, states);
+					break;
+				}
+				case bSel:
+					this->split.checkState(this->ta, this->t.lhs()[offset], std::set<size_t>(), this->bitmap, states);
+					break;
+				default:
+					break;
+			}
+
+			if (aBox->isStructural()) {
+				for (auto s : ((const StructuralBox*)aBox)->outputCoverage()) {
+					auto c = this->required.erase(s);
+					assert(c == 1);
+				}
+			}
+
+			return true;
+			
+		}
+	
+	};
+
+	void checkState(const TA<label_type>& ta, size_t state, const std::set<size_t>& defined,
+		std::vector<bool>& bitmap, std::map<std::pair<const TA<label_type>*, size_t>, std::set<size_t>>& states) const {
+
+		auto p = states.insert(std::make_pair(std::make_pair(&ta, state), defined));
+
+		if (!p.second) {
+			assert(defined == p.first->second);
+			return;
+		}
+
+		const Data* data;
+
+		if (this->fae.isData(state, data)) {
+
+			if (data->isRef())
+				this->checkRoot(data->d_ref.root, bitmap, states);
+
+			return;
+
+		}
+
+		for (TA<label_type>::iterator i = ta.begin(state); i != ta.end(state); ++i) {
+
+			const std::vector<size_t>& sels = ((TypeBox*)i->label()->boxLookup((size_t)(-1)).aBox)->getSelectors();
+	
+			std::set<size_t> tmp(sels.begin(), sels.end());
+	
+			for (auto s : defined) {
+				
+				auto c = tmp.erase(s);
+	
+				assert(c == 1);
+	
+			}
+			
+			i->label()->iterate(CheckIntegrityF(*this, ta, *i, tmp, bitmap, states));
+	
+			assert(tmp.empty());
+	
+		}
+		
+	}
+
+	void checkRoot(size_t root, std::vector<bool>& bitmap, std::map<std::pair<const TA<label_type>*, size_t>, std::set<size_t>>& states) const {
+
+		assert(this->fae.roots[root]);
+		
+		if (bitmap[root])
+			return;
+
+		bitmap[root] = true;
+
+		std::set<size_t> tmp;
+
+		this->enumerateSelectorsAtLeaf(tmp, root);
+
+		for (auto s : this->fae.roots[root]->getFinalStates())
+			this->checkState(*this->fae.roots[root], s, tmp, bitmap, states);
+
+	}
+
+	void checkIntegrity() const {
+
+		std::vector<bool> bitmap(this->fae.roots.size(), false);
+		std::map<std::pair<const TA<label_type>*, size_t>, std::set<size_t>> states;
+
+		bitmap[0] = true;
+
+		for (size_t i = 1; i < this->fae.roots.size(); ++i) {
+
+			if (!this->fae.roots[i])
+				continue;
+
+			this->checkRoot(i, bitmap, states);
+
+		}
+
 	}
 
 	// adds redundant root points to allow further manipulation
@@ -202,6 +342,7 @@ public:
 				fae.updateRootMap(root);
 				std::set<const Box*> boxes;
 				splitting.isolateAtRoot(root, t, IsolateBoxF(i->second), boxes);
+				assert(boxes.count(i->second));
 				Folding(fae).unfoldBox(root, i->second);
 				splitting.isolateOne(dst, root, selector);
 				continue;
@@ -229,6 +370,7 @@ public:
 			fae.rootMap.push_back(std::vector<std::pair<size_t, bool> >());
 			std::set<const Box*> boxes;
 			splitting.isolateAtRoot(fae.roots.size() - 1, t, IsolateBoxF(i->second), boxes);
+			assert(boxes.count(i->second));
 			Folding(fae).unfoldBox(fae.roots.size() - 1, i->second);
 			splitting.isolateOne(dst, root, selector);
 		}
@@ -380,7 +522,7 @@ public:
 				else {
 					bool found = false;
 					for (size_t k = 0; k < (*j)->roots.size(); ++k) {
-						if (!(*j)->hasReference(k, target))
+						if (!(*j)->roots[k] || !(*j)->hasReference(k, target))
 							continue;
 						tmpS.clear();
 						splitting.enumerateSelectorsAtLeaf(tmpS, k, target);

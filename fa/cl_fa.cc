@@ -131,7 +131,7 @@ void clEasyRun(const CodeStorage::Storage& stor, const char* configString) {
 			se.loadBoxes(db.store);
 		}
 		se.compile(stor);
-//		se.run(*main);
+		se.run(*main);
 		CL_NOTE("the program is safe ...");
 	} catch (const ProgramError& e) {
 		if (e.location())

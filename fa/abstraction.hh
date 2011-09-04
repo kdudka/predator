@@ -52,7 +52,8 @@ public:
 //		utils::relPrint(std::cerr, rel);
 		TA<label_type> ta(*this->fae.backend);
 		this->fae.roots[root]->collapsed(ta, rel, stateIndex);
-		this->fae.roots[root] = std::shared_ptr<TA<label_type>>(&ta.uselessAndUnreachableFree(*this->fae.allocTA()));
+		this->fae.roots[root] = std::shared_ptr<TA<label_type>>(this->fae.allocTA());
+		ta.uselessAndUnreachableFree(*this->fae.roots[root]);
 	}
 
 public:

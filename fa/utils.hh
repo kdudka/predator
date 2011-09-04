@@ -194,6 +194,24 @@ public:
 	}
 };
 
+template <class T>
+struct ContWrapper {
+
+	const T& cont_;
+	ContWrapper(const T& c) : cont_(c) {}
+
+	friend std::ostream& operator<<(std::ostream& os, const ContWrapper& w) {
+		os << '{';
+		auto i = w.cont_.begin();
+		if (i != w.cont_.end()) {
+			os << *i;
+			for (++i; i != w.cont_.end(); ++i)
+				os << ',' << *i;
+		}
+		return os << '}';
+	}
+};
+
 class utils {
 	
 public:
@@ -389,6 +407,11 @@ public:
 		for (typename T::iterator i = x.begin(); i != x.end(); ++i)
 			delete i->second;
 		x.clear();
+	}
+
+	template <class T>
+	static ContWrapper<T> wrap(T& x) {
+		return ContWrapper<T>(x);
 	}
 
 };

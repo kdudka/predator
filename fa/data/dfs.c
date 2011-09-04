@@ -47,7 +47,7 @@ int main() {
 		z->data = 0;
 		n->right = z;
 	}
-	z = NULL;
+//	z = NULL;
     }
 
     n = root;
@@ -64,7 +64,7 @@ int main() {
 		n = n->parent;
 	    }
 	}
-	z = NULL;
+//	z = NULL;
     }
 //    struct TreeNode* pred;
 /*

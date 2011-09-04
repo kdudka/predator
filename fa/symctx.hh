@@ -24,15 +24,18 @@
 
 #include <boost/unordered_map.hpp>
 
-#include <cl/code_listener.h>
-#include <cl/cldebug.hh>
+//#include <cl/code_listener.h>
+//#include <cl/cldebug.hh>
 #include <cl/storage.hh>
 #include <cl/clutil.hh>
 #include <cl/cl_msg.hh>
 
+#include "forestautext.hh"
 #include "regdef.hh"
 #include "types.hh"
-#include "operandinfo.hh"
+//#include "operandinfo.hh"
+#include "nodebuilder.hh"
+#include "virtualmachine.hh"
 
 #define ABP_OFFSET		0
 #define ABP_SIZE		SymCtx::size_of_data
@@ -229,7 +232,7 @@ struct SymCtx {
 		return true;
 		
 	}
-
+/*
 	void parseOperand(OperandInfo& operandInfo, const FAE& fae, const cl_operand* op) const {
 
 		switch (op->code) {
@@ -250,7 +253,7 @@ struct SymCtx {
 		}
 
 	}
-
+*/
 	bool isReg(const cl_operand* op, size_t& id) const {
 		if (op->code != cl_operand_e::CL_OPERAND_VAR)
 			return false;

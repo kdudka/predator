@@ -275,7 +275,7 @@ protected:
 		}
 	}
 
-	void checkGarbage(const std::vector<bool>& visited) {
+	void checkGarbage(const std::vector<bool>& visited) const {
 		for (size_t i = 0; i < this->fae.roots.size(); ++i) {
 			if (!visited[i] && (this->fae.roots[i] != NULL)) {
 //				std::cerr << "the root " << i << " is not referenced anymore ... " << std::endl;
@@ -286,8 +286,8 @@ protected:
 
 public:
 
-	// check consistency
-	void check() {
+	// check garbage
+	void check() const {
 		// compute reachable roots
 		std::vector<bool> visited(this->fae.roots.size(), false);
 		this->traverse(visited);
@@ -317,12 +317,30 @@ public:
 
 	// normalize representation
 	void normalize(/*NormInfo& normInfo, */const std::set<size_t>& forbidden = std::set<size_t>()) {
+
 		// compute canonical root ordering
 		std::vector<size_t> order;
 		std::vector<bool> visited(this->fae.roots.size(), false), marked(this->fae.roots.size(), false);
+
 		this->traverse(visited, order, marked);
+
 		// check garbage
-		this->checkGarbage(visited);
+//		this->checkGarbage(visited);
+
+		bool normalizationNeeded = false;
+		for (size_t i = 0; i < order.size(); ++i) {
+			if (marked[i] && (order[i] == i))
+				continue;
+			normalizationNeeded = true;
+			break;
+		}
+
+		if (!normalizationNeeded) {
+			this->fae.roots.resize(order.size());
+			this->fae.rootMap.resize(order.size());
+			return;
+		}
+
 		// prevent merging of forbidden roots
 		for (std::set<size_t>::const_iterator i = forbidden.begin(); i != forbidden.end(); ++i)
 			marked[*i] = true;

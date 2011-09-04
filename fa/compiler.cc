@@ -17,27 +17,19 @@
  * along with predator.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <list>
 #include <sstream>
 #include <cstdlib>
 
+#include <list>
+#include <unordered_set>
+
 #include <cl/cldebug.hh>
 
-#include "ufae.hh"
-
-#include "symstate.hh"
-#include "executionmanager.hh"
-#include "splitting.hh"
-#include "virtualmachine.hh"
 #include "programerror.hh"
-#include "loopanalyser.hh"
-#include "abstraction.hh"
-#include "normalization.hh"
-#include "folding.hh"
+//#include "loopanalyser.hh"
 #include "symctx.hh"
-#include "operandinfo.hh"
 #include "nodebuilder.hh"
-#include "builtintable.hh"
+#include "microcode.hh"
 
 #include "compiler.hh"
 
@@ -67,1302 +59,74 @@ struct OpWrapper {
 	
 };
 
+struct LoopAnalyser {
 
-class FI_jmp : public AbstractInstruction {
-
-	const CodeStorage::Block* target_;
-	AbstractInstruction* next_;
-
-public:
-
-	FI_jmp(const CodeStorage::Block* target, const CodeStorage::Insn* insn = NULL)
-		: AbstractInstruction(insn, false, true), target_(target) {}
-
-	virtual void execute(ExecutionManager&, const AbstractInstruction::StateType&) {
-
-		assert(false);
-
-	}
-
-	static AbstractInstruction* getTarget(
-		const std::unordered_map<const CodeStorage::Block*, AbstractInstruction*>& codeIndex,
-		const CodeStorage::Block* target
-	) {
-		auto tmp = codeIndex.find(target);
-		assert(tmp != codeIndex.end());
-		return tmp->second;
-	}
-
-	AbstractInstruction* getTarget(
-		const std::unordered_map<const CodeStorage::Block*, AbstractInstruction*>& codeIndex
-	) {
-		return getTarget(codeIndex, this->target_);
-	}
-
-	virtual void finalize(
-		const std::unordered_map<const CodeStorage::Block*, AbstractInstruction*>& codeIndex,
-		std::vector<AbstractInstruction*>::const_iterator
-	) {
-		this->next_ = this->getTarget(codeIndex);
-	}
-
-	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "jmp\t" << this->next_;
-	}
-
-};
-
-class FI_ret : public AbstractInstruction {
-
-public:
-
-	FI_ret(const CodeStorage::Insn* insn = NULL) : AbstractInstruction(insn) {}
-
-	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
-
-		std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.second->fae));
-
-		VirtualMachine vm(*fae);
-
-		const Data& abp = vm.varGet(ABP_INDEX);
-
-		assert(abp.isRef());
-		assert(abp.d_ref.displ == 0);
+	struct BlockListItem {
 		
-		Data data;
+		BlockListItem* prev;
+		const CodeStorage::Block* block;
 
-		vm.nodeLookup(abp.d_ref.root, IP_OFFSET, data);
+		BlockListItem(BlockListItem* prev, const CodeStorage::Block* block)
+			: prev(prev), block(block) {}
 
-		assert(data.isNativePtr());
-
-		AbstractInstruction* next = (AbstractInstruction*)data.d_native_ptr;
-
-		vm.nodeLookup(abp.d_ref.root, ABP_OFFSET, data);
-		vm.unsafeNodeDelete(abp.d_ref.root);
-		vm.varSet(ABP_INDEX, data);
-
-		Normalization(*fae).check();
-
-		if (next)
-			execMan.enqueue(state.second, state.first, fae, next);
-
-	}
-
-	virtual void finalize(
-		const std::unordered_map<const CodeStorage::Block*, AbstractInstruction*>&,
-		std::vector<AbstractInstruction*>::const_iterator
-	) {}
-
-	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "ret";
-	}
-
-};
-
-class FI_cond : public AbstractInstruction {
-
-	size_t src_;
-
-	AbstractInstruction* next_[2];
-
-public:
-
-	FI_cond(size_t src, AbstractInstruction* next[2], const CodeStorage::Insn* insn = NULL)
-		: AbstractInstruction(insn), src_(src), next_({ next[0], next[1] }) {}
-
-	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
-
-		assert((*state.first)[this->src_].isBool());
-
-		execMan.enqueue(state, this->next_[((*state.first)[this->src_].d_bool)?(0):(1)]);
-
-	}
-
-	virtual void finalize(
-		const std::unordered_map<const CodeStorage::Block*, AbstractInstruction*>& codeIndex,
-		std::vector<AbstractInstruction*>::const_iterator
-	) {
-
-		for (auto i : { 0, 1 }) {
-
-			if (this->next_[i]->isJump())
-				this->next_[i] = ((FI_jmp*)this->next_[i])->getTarget(codeIndex);
-
-		}
-		
-	}
-
-	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "cjmp\tr" << this->src_ << ", " << this->next_[0] << ", " << this->next_[1];
-	}
-
-};
-
-class SequentialInstruction : public AbstractInstruction {
-
-protected:
-
-	AbstractInstruction* next_;
-
-public:
-
-	SequentialInstruction(const CodeStorage::Insn* insn, bool computesFixpoint = false)
-		: AbstractInstruction(insn, computesFixpoint) {}
-
-	virtual void finalize(
-		const std::unordered_map<const CodeStorage::Block*, AbstractInstruction*>& codeIndex,
-		std::vector<AbstractInstruction*>::const_iterator cur
-	) {
-
-		this->next_ = *(cur + 1);
-
-		// shorcut jump instruction
-		if (this->next_->isJump())
-			this->next_ = ((FI_jmp*)this->next_)->getTarget(codeIndex);
-		
-	}
-	
-};
-
-class FixpointInstruction : public SequentialInstruction {
-
-public:
-
-	FixpointInstruction() : SequentialInstruction(NULL, true) {}
-
-	virtual void extendFixpoint(const std::shared_ptr<const FAE>& fae) = 0;
-
-};
-
-class FI_fix : public FixpointInstruction {
-
-	// configuration obtained in forward run
-	TA<label_type> fwdConf;
-
-	UFAE fwdConfWrapper;
-
-	std::vector<std::shared_ptr<const FAE>> fixpoint;
-
-	TA<label_type>::Backend& taBackend;
-
-	BoxMan& boxMan;
-	
-	const std::vector<const Box*>& boxes;
-
-public:
-
-	struct ExactTMatchF {
-		bool operator()(const TT<label_type>& t1, const TT<label_type>& t2) {
-			return t1.label() == t2.label();
-		}
-	};
-
-	struct SmartTMatchF {
-		bool operator()(const TT<label_type>& t1, const TT<label_type>& t2) {
-			if (t1.label()->isNode() && t2.label()->isNode())
-				return t1.label()->getTag() == t2.label()->getTag();
-			return t1.label() == t2.label();
-		}
-	};
-
-	struct SmarterTMatchF {
-		bool operator()(const TT<label_type>& t1, const TT<label_type>& t2) {
-			if (t1.label()->isNode() && t2.label()->isNode()) {
-				if (t1.label()->getTag() != t2.label()->getTag())
-					return false;
-				std::vector<size_t> tmp;
-				for (std::vector<size_t>::const_iterator i = t1.lhs().begin(); i != t1.lhs().end(); ++i) {
-					if (FA::isData(*i))
-						tmp.push_back(*i);
-				}
-				size_t i = 0;
-				for (std::vector<size_t>::const_iterator j = t2.lhs().begin(); j != t2.lhs().end(); ++j) {
-					if (FA::isData(*j)) {
-						if ((i >= tmp.size()) || (*j != tmp[i++]))
-							return false;
-					}
-				}
-				return (i == tmp.size());
-			}
-			return t1.label() == t2.label();
-		}
-	};
-
-	struct CompareVariablesF {
-		bool operator()(size_t i, const TA<label_type>& ta1, const TA<label_type>& ta2) {
-			if (i)
+		static bool lookup(const BlockListItem* item, const CodeStorage::Block* block) {
+			if (!item)
+				return false;
+			if (item->block == block)
 				return true;
-			const TT<label_type>& t1 = ta1.getAcceptingTransition();
-			const TT<label_type>& t2 = ta2.getAcceptingTransition();
-			return (t1.label() == t2.label()) && (t1.lhs() == t2.lhs());
-		}
-	};
-
-	struct FuseNonZeroF {
-		bool operator()(size_t root, const FAE*) {
-			return root != 0;
-		}
-	};
-
-	struct DestroySimpleF {
-
-		DestroySimpleF() {}
-
-		void operator()(SymState* state) {
-
-			AbstractInstruction* instr = state->instr;
-			if (instr->computesFixpoint())
-				((FixpointInstruction*)instr)->extendFixpoint(state->fae);
-//			else
-//				CFG_FROM_FAE(*node->fae)->invalidate(node->fae);			
-
+			return BlockListItem::lookup(item->prev, block);
 		}
 
 	};
 
-public:
+	std::unordered_set<const CodeStorage::Insn*> entryPoints;
 
-	virtual void extendFixpoint(const std::shared_ptr<const FAE>& fae) {
-		this->fixpoint.push_back(fae);
-	}
+	void visit(const CodeStorage::Block* block, std::unordered_set<const CodeStorage::Block*>& visited, BlockListItem* prev) {
 
-	void recompute() {
-		this->fwdConfWrapper.clear();
-		this->fwdConf.clear();
-		TA<label_type> ta(*this->fwdConf.backend);
-		Index<size_t> index;
+		BlockListItem item(prev, block);
 
-		for (auto fae : this->fixpoint)
-			this->fwdConfWrapper.fae2ta(ta, index, *fae);
-
-		if (!ta.getTransitions().empty()) {
-			this->fwdConfWrapper.adjust(index);
-			ta.minimized(this->fwdConf);
-		}		
-//		this->fwdConfWrapper.setStateOffset(this->fixpointWrapper.getStateOffset());
-//		this->fwdConf = this->fixpoint;
-	}
-
-	bool testInclusion(FAE& fae) {
-
-		TA<label_type> ta(*this->fwdConf.backend);
-		Index<size_t> index;
-
-		this->fwdConfWrapper.fae2ta(ta, index, fae);
-
-//		CL_CDEBUG("challenge" << std::endl << ta);
-//		CL_CDEBUG("response" << std::endl << this->fwdConf);
-
-		if (TA<label_type>::subseteq(ta, this->fwdConf))
-			return true;
-
-//		CL_CDEBUG("extending fixpoint with:" << std::endl << fae);
-
-		this->fwdConfWrapper.join(ta, index);
-		ta.clear();
-		this->fwdConf.minimized(ta);
-		this->fwdConf = ta;
-
-		return false;
-
-	}
-
-	void mergeFixpoint(FAE& fae) {
-		std::vector<FAE*> tmp;
-		ContainerGuard<std::vector<FAE*> > g(tmp);
-		FAE::loadCompatibleFAs(tmp, this->fwdConf, this->taBackend, this->boxMan, &fae, 0, CompareVariablesF());
-//		for (size_t i = 0; i < tmp.size(); ++i)
-//			CL_CDEBUG("accelerator " << std::endl << *tmp[i]);
-		fae.fuse(tmp, FuseNonZeroF());
-//		fae.fuse(target->fwdConf, FuseNonZeroF());
-		CL_CDEBUG("fused " << std::endl << fae);
-	}
-
-	bool fold(FAE& fae) {
-
-		bool matched = false;
-
-		// do not fold at 0
-		for (size_t i = 1; i < fae.getRootCount(); ++i) {
-			for (std::vector<const Box*>::const_iterator j = this->boxes.begin(); j != this->boxes.end(); ++j) {
-				CL_CDEBUG("trying " << *(const AbstractBox*)*j << " at " << i);
-				if (Folding(fae).foldBox(i, *j)) {
-					matched = true;
-					CL_CDEBUG("match");
-				}
-			}
-		}
-
-		return matched;
-
-	}
-
-	void abstract(FAE& fae) {
-
-		CL_CDEBUG("abstracting ... " << 1);
-		for (size_t i = 1; i < fae.getRootCount(); ++i)
-			Abstraction(fae).heightAbstraction(i, 1, SmartTMatchF());
-
-	}
-
-public:
-
-	FI_fix(TA<label_type>::Backend& fixpointBackend, TA<label_type>::Backend& taBackend,
-		BoxMan& boxMan, const std::vector<const Box*>& boxes)
-		: FixpointInstruction(), fwdConf(fixpointBackend), fwdConfWrapper(this->fwdConf, boxMan),
-		taBackend(taBackend), boxMan(boxMan), boxes(boxes) {}
-
-	virtual ~FI_fix() {}
-
-	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
-
-		std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.second->fae));
-
-		VirtualMachine vm(*fae);
-		Normalization norm(*fae);
-
-		std::set<size_t> tmp;
-
-		vm.getNearbyReferences(vm.varGet(ABP_INDEX).d_ref.root, tmp);
-	
-		norm.normalize(tmp);
-		if (this->fold(*fae))
-			norm.normalize(tmp);
-
-		if (this->testInclusion(*fae)) {
-			CL_CDEBUG("hit");
-			execMan.traceFinished(state.second, DestroySimpleF());
+		if (!visited.insert(block).second) {
+			if (BlockListItem::lookup(prev, block))
+				this->entryPoints.insert(*block->begin());
 			return;
 		}
 
-		this->mergeFixpoint(*fae);
-		this->abstract(*fae);
-
-		execMan.enqueue(state.second, state.first, fae, this->next_);
-
-	}
-
-	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "fix";
-	}
-
-};
-
-class FI_check : public SequentialInstruction {
-
-public:
-
-	FI_check() : SequentialInstruction(NULL) {}
-
-	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
-
-		Normalization((FAE&)*state.second->fae).check();
-
-		execMan.enqueue(state, this->next_);
-
-	}
-
-	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "check";
-	}
-
-};
-
-class FI_acc_sel : public SequentialInstruction {
-
-	size_t dst_;
-	size_t offset_;
-
-public:
-
-	FI_acc_sel(size_t dst, size_t offset)
-		: SequentialInstruction(NULL), dst_(dst), offset_(offset) {}
-
-	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
-
-		auto data = (*state.first)[this->dst_];
-
-		if (data == VirtualMachine(*state.second->fae).varGet(ABP_INDEX)) {
-			execMan.enqueue(state, this->next_);
-			return;
-		}		
-
-		if (!data.isRef()) {
-
-			std::stringstream ss;
-			ss << "dereferenced value is not a valid reference [" << data << ']';
-			throw ProgramError(ss.str());
-
-		}
-
-		std::vector<FAE*> dst;
-
-		Splitting(*state.second->fae).isolateOne(dst, data.d_ref.root, data.d_ref.displ + this->offset_);
-
-		for (auto fae : dst)
-			execMan.enqueue(state.second, execMan.allocRegisters(*state.first), std::shared_ptr<const FAE>(fae), this->next_);
-
-	}
-
-	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "acc\t[r" << this->dst_ << " + " << this->offset_ << "]";
-	}
-
-};
-
-class FI_acc_set : public SequentialInstruction {
-
-	size_t dst_;
-	int base_;
-	std::vector<size_t> offsets_;
-
-public:
-
-	FI_acc_set(size_t dst, int base, const std::vector<size_t>& offsets)
-		: SequentialInstruction(NULL), dst_(dst), base_(base), offsets_(offsets) {}
-
-	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
-
-		auto data = (*state.first)[this->dst_];
-
-		if (data == VirtualMachine(*state.second->fae).varGet(ABP_INDEX)) {
-			execMan.enqueue(state, this->next_);
-			return;
-		}		
-
-		if (!data.isRef()) {
-
-			std::stringstream ss;
-			ss << "dereferenced value is not a valid reference [" << data << ']';
-			throw ProgramError(ss.str());
-
-		}
-
-		std::vector<FAE*> dst;
-
-		Splitting(*state.second->fae).isolateSet(
-			dst, data.d_ref.root, data.d_ref.displ + this->base_, this->offsets_
-		);
-
-		for (auto fae : dst)
-			execMan.enqueue(state.second, execMan.allocRegisters(*state.first), std::shared_ptr<const FAE>(fae), this->next_);
-
-	}
-
-	virtual std::ostream& toStream(std::ostream& os) const {
-		return utils::printCont(os << "acc\t[r" << this->dst_ << " + " << this->base_ << " + ", this->offsets_) << ']';
-	}
-
-};
-
-class FI_acc_all : public SequentialInstruction {
-
-	size_t dst_;
-
-public:
-
-	FI_acc_all(size_t dst)
-		: SequentialInstruction(NULL), dst_(dst) {}
-
-	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
-
-		auto data = (*state.first)[this->dst_];
-
-		if (data == VirtualMachine(*state.second->fae).varGet(ABP_INDEX)) {
-			execMan.enqueue(state, this->next_);
-			return;
-		}		
-
-		if (!data.isRef()) {
-
-			std::stringstream ss;
-			ss << "dereferenced value is not a valid reference [" << data << ']';
-			throw ProgramError(ss.str());
-
-		}
-
-		std::vector<FAE*> dst;
-
-		Splitting(*state.second->fae).isolateSet(
-			dst, data.d_ref.root, 0, state.second->fae->getType(data.d_ref.root)->getSelectors()
-		);
-
-		for (auto fae : dst)
-			execMan.enqueue(state.second, execMan.allocRegisters(*state.first), std::shared_ptr<const FAE>(fae), this->next_);
-
-	}
-
-	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "acca\t[r" << this->dst_ << ']';
-	}
-
-};
-
-class FI_load_cst : public SequentialInstruction {
-
-	size_t dst_;
-	Data data_;
-
-public:
-
-	FI_load_cst(size_t dst, const Data& data)
-		: SequentialInstruction(NULL), dst_(dst), data_(data) {}
-
-	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
-
-		(*state.first)[this->dst_] = this->data_;
-
-		execMan.enqueue(state, this->next_);
-
-	}
-
-	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "mov\tr" << this->dst_ << ", " << this->data_;
-	}
-
-};
-
-class FI_move_reg : public SequentialInstruction {
-
-	size_t dst_;
-	size_t src_;
-
-public:
-
-	FI_move_reg(size_t dst, size_t src)
-		: SequentialInstruction(NULL), dst_(dst), src_(src) {}
-
-	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
-
-		(*state.first)[this->dst_] = (*state.first)[this->src_];
-
-		execMan.enqueue(state, this->next_);
-
-	}
-
-	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "mov\tr" << this->dst_ << ", r" << this->src_;
-	}
-
-};
-
-class FI_bnot : public SequentialInstruction {
-
-	size_t dst_;
-
-public:
-
-	FI_bnot(size_t dst) : SequentialInstruction(NULL), dst_(dst) {}
-
-	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
-
-		assert((*state.first)[this->dst_].isBool());
-
-		(*state.first)[this->dst_] = Data::createBool(!(*state.first)[this->dst_].d_bool);
-
-		execMan.enqueue(state, this->next_);
-
-	}
-
-	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "not\tr" << this->dst_;
-	}
-
-};
-
-class FI_inot : public SequentialInstruction {
-
-	size_t dst_;
-
-public:
-
-	FI_inot(size_t dst) : SequentialInstruction(NULL), dst_(dst) {}
-
-	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
-
-		assert((*state.first)[this->dst_].isInt());
-
-		(*state.first)[this->dst_] = Data::createBool(!(*state.first)[this->dst_].d_int);
-
-		execMan.enqueue(state, this->next_);
-
-	}
-
-	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "not\tr" << this->dst_;
-	}
-
-};
-
-class FI_move_reg_offs : public SequentialInstruction {
-
-	size_t dst_;
-	size_t src_;
-	int offset_;
-
-public:
-
-	FI_move_reg_offs(size_t dst, size_t src, int offset)
-		: SequentialInstruction(NULL), dst_(dst), src_(src), offset_(offset) {}
-
-	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
-
-		auto data = (*state.first)[this->src_];
-
-		if (!data.isRef()) {
-
-			std::stringstream ss;
-			ss << "dereferenced value is not a valid reference [" << data << ']';
-			throw ProgramError(ss.str());
-
-		}
-
-		(*state.first)[this->dst_] = data;
-		(*state.first)[this->dst_].d_ref.displ += this->offset_;
-
-		execMan.enqueue(state, this->next_);
-
-	}
-
-	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "mov\tr" << this->dst_ << ", r" << this->src_ << " + " << this->offset_;
-	}
-
-};
-
-class FI_move_reg_inc : public SequentialInstruction {
-
-	size_t dst_;
-	size_t src1_;
-	size_t src2_;
-
-public:
-
-	FI_move_reg_inc(size_t dst, size_t src1, size_t src2)
-		: SequentialInstruction(NULL), dst_(dst), src1_(src1), src2_(src2) {}
-
-	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
-
-		auto data = (*state.first)[this->src1_];
-
-		if (!data.isRef()) {
-
-			std::stringstream ss;
-			ss << "dereferenced value is not a valid reference [" << data << ']';
-			throw ProgramError(ss.str());
-
-		}
-
-		(*state.first)[this->dst_] = data;
-		(*state.first)[this->dst_].d_ref.displ += (*state.first)[this->src2_].d_int;
-
-		execMan.enqueue(state, this->next_);
-
-	}
-
-	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "mov\tr" << this->dst_ << ", r" << this->src1_ << " + r" << this->src2_;
-	}
-
-};
-
-class FI_move_sreg : public SequentialInstruction {
-
-	size_t dst_;
-	size_t src_;
-
-public:
-
-	FI_move_sreg(size_t dst, size_t src)
-		: SequentialInstruction(NULL), dst_(dst), src_(src) {}
-
-	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
-
-		(*state.first)[this->dst_] = VirtualMachine(*state.second->fae).varGet(this->src_);
-
-		execMan.enqueue(state, this->next_);
-
-	}
-
-	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "mov\tr" << this->dst_ << ", sr" << this->src_;
-	}
-
-};
-
-class FI_move_ABP : public SequentialInstruction {
-
-	size_t dst_;
-	int offset_;
-
-public:
-
-	FI_move_ABP(size_t dst, int offset)
-		: SequentialInstruction(NULL), dst_(dst), offset_(offset) {}
-
-	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
-
-		(*state.first)[this->dst_] = VirtualMachine(*state.second->fae).varGet(ABP_INDEX);
-		(*state.first)[this->dst_].d_ref.displ += this->offset_;
-
-		execMan.enqueue(state, this->next_);
-
-	}
-
-	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "mov\tr" << this->dst_ << ", ABP + " << this->offset_;
-	}
-
-};
-
-class FI_is_type : public SequentialInstruction {
-
-	size_t dst_;
-	data_type_e type_;
-
-public:
-
-	FI_is_type(size_t dst, data_type_e type)
-		: SequentialInstruction(NULL), dst_(dst), type_(type) {}
-
-	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
-
-		if (!(*state.first)[this->dst_].type != this->type_) {
-
-			std::stringstream ss;
-			ss << "unexpected data type: " << (*state.first)[this->dst_];
-			throw ProgramError(ss.str());
-
-		}
-
-		execMan.enqueue(state, this->next_);
-
-	}
-
-	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "istype\tr" << this->dst_ << ", " << this->type_;
-	}
-
-};
-
-class FI_is_ref : public SequentialInstruction {
-
-	size_t dst_;
-
-public:
-
-	FI_is_ref(size_t dst)
-		: SequentialInstruction(NULL), dst_(dst) {}
-
-	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
-
-		if (!(*state.first)[this->dst_].isRef()) {
-
-			std::stringstream ss;
-			ss << "dereferenced value is not a valid reference [" << (*state.first)[this->dst_] << ']';
-			throw ProgramError(ss.str());
-
-		}
-
-		execMan.enqueue(state, this->next_);
-
-	}
-
-	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "isref\tr" << this->dst_;
-	}
-
-};
-/*
-class FI_inc_off : public SequentialInstruction {
-
-	size_t dst_;
-	size_t src_;
-	int offset_;
-
-public:
-
-	FI_inc_off(size_t dst, size_t src, int offset)
-		: SequentialInstruction(NULL), dst_(dst), src_(src), offset_(offset) {}
-
-	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
-
-		assert((*state.first)[this->src_].isRef());
-
-		(*state.first)[this->dst_] = Data::createRef(
-			(*state.first)[this->src_].d_ref.root,
-			(*state.first)[this->src_].d_ref.offset + this->offset_
-		);
-
-		execMan.enqueue(state, this->next_);
-
-	}
-
-	virtual std::ostream& toStream(std::ostream& os) {
-		return os << "inc\tr" << this->dst_ << ", " << this->offset_;
-	}
-
-};
-*/
-class FI_load : public SequentialInstruction {
-
-	size_t dst_;
-	int offset_;
-
-public:
-
-	FI_load(size_t dst, int offset)
-		: SequentialInstruction(NULL), dst_(dst), offset_(offset) {}
-
-	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
-
-		assert((*state.first)[this->dst_].isRef());
-
-		const Data& data = (*state.first)[this->dst_];
-
-		VirtualMachine(*state.second->fae).nodeLookup(
-			data.d_ref.root, data.d_ref.displ + this->offset_, (*state.first)[this->dst_]
-		);
-
-		execMan.enqueue(state, this->next_);
-
-	}
-
-	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "mov\tr" << this->dst_ << ", [r" << this->dst_ << " + " << this->offset_ << ']';
-	}
-
-};
-
-class FI_load_ABP : public SequentialInstruction {
-
-	size_t dst_;
-	int offset_;
-
-public:
-
-	FI_load_ABP(size_t dst, int offset)
-		: SequentialInstruction(NULL), dst_(dst), offset_(offset) {}
-
-	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
-
-		VirtualMachine vm(*state.second->fae);
-
-		const Data& data = vm.varGet(ABP_INDEX);
-
-		vm.nodeLookup(data.d_ref.root, (size_t)this->offset_, (*state.first)[this->dst_]);
-
-		execMan.enqueue(state, this->next_);
-
-	}
-
-	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "mov\tr" << this->dst_ << ", [ABP + " << this->offset_ << ']';
-	}
-
-};
-
-class FI_store : public SequentialInstruction {
-
-	size_t dst_;
-	size_t src_;
-	int offset_;
-
-public:
-
-	FI_store(size_t dst, size_t src, int offset)
-		: SequentialInstruction(NULL), dst_(dst), src_(src), offset_(offset) {}
-
-	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
-
-		assert((*state.first)[this->dst_].isRef());
-
-		std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.second->fae));
-
-		const Data& dst = (*state.first)[this->dst_];
-		const Data& src = (*state.first)[this->src_];
-
-		Data out;
-
-		VirtualMachine(*fae).nodeModify(
-			dst.d_ref.root, dst.d_ref.displ + this->offset_, src, out
-		);
-
-		execMan.enqueue(state.second, state.first, fae, this->next_);
-
-	}
-
-	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "mov\t[r" << this->dst_ << " + " << this->offset_ << "], r" << this->src_;
-	}
-
-};
-
-class FI_store_ABP : public SequentialInstruction {
-
-	size_t src_;
-	int offset_;
-
-public:
-
-	FI_store_ABP(size_t src, int offset)
-		: SequentialInstruction(NULL), src_(src), offset_(offset) {}
-
-	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
-
-		std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.second->fae));
-
-		VirtualMachine vm(*fae);
-
-		const Data& data = vm.varGet(ABP_INDEX);
-
-		Data out;
-
-		vm.nodeModify(data.d_ref.root, this->offset_, (*state.first)[this->src_], out);
-
-		execMan.enqueue(state.second, state.first, fae, this->next_);
-
-	}
-
-	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "mov\t[ABP + " << this->offset_ << "], r" << this->src_;
-	}
-
-};
-
-class FI_loads : public SequentialInstruction {
-
-	size_t dst_;
-	int base_;
-	std::vector<size_t> offsets_;
-
-public:
-
-	FI_loads(size_t dst, int base, const std::vector<size_t>& offsets)
-		: SequentialInstruction(NULL), dst_(dst), base_(base), offsets_(offsets) {}
-
-	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
-
-		assert((*state.first)[this->dst_].isRef());
-
-		const Data& data = (*state.first)[this->dst_];
-
-		VirtualMachine(*state.second->fae).nodeLookupMultiple(
-			data.d_ref.root, data.d_ref.displ + this->base_, this->offsets_, (*state.first)[this->dst_]
-		);
-
-		execMan.enqueue(state, this->next_);
-
-	}
-
-	virtual std::ostream& toStream(std::ostream& os) const {
-		return utils::printCont(os << "mov\tr" << this->dst_ << ", [r" << this->dst_ << " + " << this->base_ << " + ", this->offsets_) << ']';
-	}
-
-};
-
-class FI_stores : public SequentialInstruction {
-
-	size_t dst_;
-	size_t src_;
-	int base_;
-	std::vector<size_t> offsets_;
-
-public:
-
-	FI_stores(size_t dst, size_t src, int base, const std::vector<size_t>& offsets)
-		: SequentialInstruction(NULL), dst_(dst), src_(src), base_(base), offsets_(offsets) {}
-
-	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
-
-		assert((*state.first)[this->dst_].isRef());
-
-		std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.second->fae));
-
-		const Data& dst = (*state.first)[this->dst_];
-		const Data& src = (*state.first)[this->src_];
-
-		Data out;
-
-		VirtualMachine(*fae).nodeModifyMultiple(
-			dst.d_ref.root, dst.d_ref.displ + this->base_, src, out
-		);
-
-		execMan.enqueue(state.second, state.first, fae, this->next_);
-
-	}
-
-	virtual std::ostream& toStream(std::ostream& os) const {
-		return utils::printCont(os << "mov\t[r" << this->dst_ << " + " << this->base_ << " + ", this->offsets_) << "], r" << this->src_;
-	}
-
-};
-
-class FI_alloc : public SequentialInstruction {
-
-	size_t dst_;
-	size_t src_;
-
-public:
-
-	FI_alloc(size_t dst, size_t src)
-		: SequentialInstruction(NULL), dst_(dst), src_(src) {}
-
-	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
-
-		assert((*state.first)[this->src_].isInt());
-
-		(*state.first)[this->dst_] =
-			Data::createVoidPtr((*state.first)[this->src_].d_int);
+		for (auto target : block->targets())
+			this->visit(target, visited, &item);
 		
-		execMan.enqueue(state, this->next_);
+	}
+	
+	void init(const CodeStorage::Block* block) {
+
+		std::unordered_set<const CodeStorage::Block*> visited;
+		this->entryPoints.clear();
+		this->visit(block, visited, NULL);
 
 	}
 
-	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "alloc\tr" << this->dst_ << ", r" << this->src_;
+	bool isEntryPoint(const CodeStorage::Insn* insn) const {
+		return this->entryPoints.find(insn) != this->entryPoints.end();
 	}
-
+	
 };
 
-class FI_node_create : public SequentialInstruction {
+typedef enum { biNone, biMalloc, biFree, biNondet } builtin_e;
 
-	BoxMan& boxMan_;
-	size_t dst_;
-	size_t src_;
-	const cl_type* type_;
+struct BuiltinTable {
+
+	boost::unordered_map<std::string, builtin_e> _table;
 
 public:
 
-	FI_node_create(BoxMan& boxMan, size_t dst, size_t src, const cl_type* type)
-		: SequentialInstruction(NULL), boxMan_(boxMan), dst_(dst), src_(src), type_(type) {}
-
-	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
-
-		assert((*state.first)[this->src_].isVoidPtr());
-
-		if ((int)(*state.first)[this->src_].d_void_ptr != this->type_->size)
-			throw ProgramError("allocated block size mismatch");
-
-		std::vector<SelData> sels;
-		NodeBuilder::buildNode(sels, this->type_);
-
-		std::string typeName;
-		if (this->type_->name)
-			typeName = std::string(this->type_->name);
-		else {
-			std::ostringstream ss;
-			ss << this->type_->uid;
-			typeName = ss.str();
-		}
-
-		std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.second->fae));
-
-		(*state.first)[this->dst_] = Data::createRef(
-			VirtualMachine(*fae).nodeCreate(sels, this->boxMan_.getTypeInfo(typeName))
-		);
-
-		execMan.enqueue(state.second, state.first, fae, this->next_);
-
+	BuiltinTable() {
+		this->_table["malloc"] = builtin_e::biMalloc;
+		this->_table["free"] = builtin_e::biFree;
+		this->_table["__nondet"] = builtin_e::biNondet;
 	}
 
-	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "node\tr" << this->dst_ << ", r" << this->src_;
-	}
-
-};
-
-class FI_node_alloc : public SequentialInstruction {
-
-	BoxMan& boxMan_;
-	size_t dst_;
-	size_t src_;
-	const cl_type* type_;
-
-public:
-
-	FI_node_alloc(BoxMan& boxMan, size_t dst, size_t src, const cl_type* type)
-		: SequentialInstruction(NULL), boxMan_(boxMan), dst_(dst), src_(src), type_(type) {}
-
-	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
-
-		assert((*state.first)[this->src_].isInt());
-
-		if ((*state.first)[this->src_].d_int != this->type_->size)
-			throw ProgramError("allocated block size mismatch");
-
-		std::vector<SelData> sels;
-		NodeBuilder::buildNode(sels, this->type_);
-
-		std::string typeName;
-		if (this->type_->name)
-			typeName = std::string(this->type_->name);
-		else {
-			std::ostringstream ss;
-			ss << this->type_->uid;
-			typeName = ss.str();
-		}
-
-		std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.second->fae));
-
-		(*state.first)[this->dst_] = Data::createRef(
-			VirtualMachine(*fae).nodeCreate(sels, this->boxMan_.getTypeInfo(typeName))
-		);
-
-		execMan.enqueue(state.second, state.first, fae, this->next_);
-
-	}
-
-	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "alloc\tr" << this->dst_ << ", r" << this->src_;
-	}
-
-};
-
-class FI_node_free : public SequentialInstruction {
-
-	size_t dst_;
-
-public:
-
-	FI_node_free(size_t dst)
-		: SequentialInstruction(NULL), dst_(dst) {}
-
-	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
-
-		assert((*state.first)[this->dst_].isRef());
-
-		std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.second->fae));
-
-		const Data& data = (*state.first)[this->dst_];
-
-		if (data.d_ref.displ != 0)
-			throw ProgramError("releasing a pointer which points inside an allocated block");
-
-		VirtualMachine(*fae).nodeDelete(data.d_ref.root);
-
-		execMan.enqueue(state.second, state.first, fae, this->next_);
-
-	}
-
-	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "free\tr" << this->dst_;
-	}
-
-};
-
-struct Eq {
-	bool operator()(const Data& x, const Data& y) const {
-		return x == y;
-	}
-	const char* name() const {
-		return "eq";
-	}
-};
-
-struct Neq {
-	bool operator()(const Data& x, const Data& y) const {
-		return x != y;
-	}
-	const char* name() const {
-		return "neq";
-	}
-};
-
-struct Lt {
-	bool operator()(const Data& x, const Data& y) const {
-		if (x.isInt() && y.isInt())
-			return x.d_int < y.d_int;
-		if (x.isBool() && y.isBool())
-			return x.d_bool < y.d_bool;
-		throw std::runtime_error("SymExec::Engine::CmpLt(): comparison of the corresponding types not supported");
-	}
-	const char* name() const {
-		return "lt";
-	}
-};
-
-template <class F>
-class FI_cmp : public SequentialInstruction {
-
-	size_t dst_;
-	size_t src1_;
-	size_t src2_;
-
-	static void dataCmp(std::vector<bool>& res, const Data& x, const Data& y) {
-
-		if ((x.isUnknw() || x.isUndef()) || (y.isUnknw() || y.isUndef())) {
-
-			if ((float)random()/RAND_MAX < 0.5) {
-				res.push_back(false);
-				res.push_back(true);
-			} else {
-				res.push_back(true);
-				res.push_back(false);
-			}
-
-		} else {
-
-			res.push_back(F()(x, y));
-
-		}
-
-	}
-
-public:
-
-	FI_cmp(size_t dst, size_t src1, size_t src2)
-		: SequentialInstruction(NULL), dst_(dst), src1_(src1), src2_(src2) {}
-
-	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
-
-		std::vector<bool> res;
-
-		FI_cmp::dataCmp(res, (*state.first)[this->src1_], (*state.first)[this->src2_]);
-
-		for (auto v : res) {
-
-			std::shared_ptr<std::vector<Data>> regs = execMan.allocRegisters(*state.first);
-
-			(*regs)[this->dst_] = Data::createBool(v);
-			
-			execMan.enqueue(state.second, regs, state.second->fae, this->next_);
-
-		}
-
-	}
-
-	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << F().name() << "\tr" << this->dst_ << ", r" << this->src1_ << ", r" << this->src2_;
-	}
-
-};
-
-class FI_iadd : public SequentialInstruction {
-
-	size_t dst_;
-	size_t src1_;
-	size_t src2_;
-
-public:
-
-	FI_iadd(size_t dst, size_t src1, size_t src2)
-		: SequentialInstruction(NULL), dst_(dst), src1_(src1), src2_(src2) {}
-
-	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
-
-		assert((*state.first)[this->src1_].isInt() && (*state.first)[this->src2_].isInt());
-
-		(*state.first)[this->dst_] = Data::createInt(
-			((*state.first)[this->src1_].d_int + (*state.first)[this->src2_].d_int > 0)?(1):(0)
-		);
-
-		execMan.enqueue(state, this->next_);
-
-	}
-
-	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "iadd\tr" << this->dst_ << ", r" << this->src1_ << ", r" << this->src2_;
+	builtin_e operator[](const std::string& key) {
+		boost::unordered_map<std::string, builtin_e>::iterator i = this->_table.find(key);
+		return (i == this->_table.end())?(builtin_e::biNone):(i->second);
 	}
 
 };
@@ -1413,13 +177,13 @@ protected:
 		}
 
 	}
-
+/*
 	void cLoadVar(size_t dst, size_t offset) {
 
 		this->append(new FI_load_ABP(dst, (int)offset));
 
 	}
-
+*/
 	void cMoveReg(size_t dst, size_t src, int offset) {
 
 		if (offset > 0) {
@@ -1517,7 +281,7 @@ protected:
 				NodeBuilder::buildNode(offs, op.type);
 
 				this->append(new FI_acc_set(tmp, offset, offs));
-				this->append(new FI_stores(tmp, src, offset, offs));
+				this->append(new FI_stores(tmp, src, offset));
 
 			} else {
 
@@ -1553,16 +317,73 @@ protected:
 				if (varInfo.first) {
 
 					// stack variable
-					this->cLoadVar(dst, varInfo.second);
+
+					const cl_accessor* acc = op.accessor;
+			
+					int offset = 0;
+			
+					if (acc && (acc->code == CL_ACCESSOR_DEREF)) {
+			
+						this->append(new FI_load_ABP(dst, (int)varInfo.second));
+
+						acc = Core::computeOffset(offset, acc->next);
+
+						if (acc && (acc->code == CL_ACCESSOR_REF)) {
+			
+							assert(op.type->code == cl_type_e::CL_TYPE_PTR);
+
+							assert(acc->next == NULL);
+							this->append(new FI_move_reg_offs(dst, dst, offset));
+							break;
+			
+						}
+			
+						assert(acc == NULL);
+
+						if (op.type->code == cl_type_e::CL_TYPE_STRUCT) {
+			
+							std::vector<size_t> offs;
+							NodeBuilder::buildNode(offs, op.type);
+			
+							this->append(new FI_acc_set(dst, offset, offs));
+							this->append(new FI_loads(dst, offset, offs));
+			
+						} else {
+			
+							this->append(new FI_acc_sel(dst, offset));
+							this->append(new FI_load(dst, offset));
+			
+						}
+			
+					} else {
+			
+						acc = Core::computeOffset(offset, acc);
+			
+						if (acc && (acc->code == CL_ACCESSOR_REF)) {
+							
+							assert(acc->next == NULL);
+							this->append(new FI_move_ABP(dst, offset));
+							break;
+
+						}
+					
+						assert(acc == NULL);
+						assert(offset == 0);
+			
+						this->append(new FI_load_ABP(dst, (int)varInfo.second));
+//						this->cMoveReg(dst, src, offset);
+			
+					}
+
 
 				} else {
 					
 					// register
 					dst = varInfo.second;
+					this->cLoadReg(dst, dst, op);
 
 				}
 
-				this->cLoadReg(dst, dst, op);
 				break;
 				
 			}
@@ -1659,7 +480,7 @@ protected:
 			
 						if (needsAcc)
 							this->append(new FI_acc_set(tmp, offset, offs));
-						this->append(new FI_stores(tmp, src, offset, offs));
+						this->append(new FI_stores(tmp, src, offset));
 			
 					} else {
 			
@@ -1710,13 +531,24 @@ protected:
 		if (offs.empty())
 			return NULL;
 
-		AbstractInstruction* result = new FI_load_cst(0, Data::createUndef());
+//		AbstractInstruction* result = new FI_load_cst(0, Data::createUndef());
+		AbstractInstruction* result = new FI_move_ABP(0, 0);
 
 		this->append(result);
 
+		std::vector<Data::item_info> tmp;
+		
+		for (auto offset : offs)
+			tmp.push_back(Data::item_info(offset, Data::createUndef()));
+
+		this->append(new FI_load_cst(1, Data::createStruct(tmp)));
+		this->append(new FI_stores(0, 1, 0));
+//		for (auto offset : offs)
+//			this->append(new FI_assert(offset, Data::createUndef()));
+/*
 		for (auto offset : offs)
 			this->append(new FI_store_ABP(0, offset));
-
+*/
 		this->append(new FI_check());
 
 		return result;
@@ -1785,14 +617,16 @@ protected:
 		const cl_operand& src = insn.operands[2];
 
 		assert(src.type->code == cl_type_e::CL_TYPE_INT);
+		assert(dst.type->code == cl_type_e::CL_TYPE_PTR);
 
 		size_t dstReg = this->lookupStoreReg(dst, 0);
 		size_t srcReg = this->cLoadOperand(dstReg, src);
 
-		if (
-			dst.type->code == cl_type_e::CL_TYPE_PTR &&
-			dst.type->items[0].type->code != cl_type_e::CL_TYPE_VOID
-		) {
+		if (dst.type->items[0].type->code == cl_type_e::CL_TYPE_VOID) {
+
+			this->append(new FI_alloc(srcReg, srcReg));
+
+		} else {
 
 			this->append(new FI_node_alloc(this->boxMan, srcReg, srcReg, dst.type->items[0].type));
 
@@ -1828,7 +662,7 @@ protected:
 		size_t src1Reg = this->cLoadOperand(0, src1);
 		size_t src2Reg = this->cLoadOperand(1, src2);
 
-		this->append(new FI_cmp<F>(dstReg, src1Reg, src2Reg));
+		this->append(new F(dstReg, src1Reg, src2Reg));
 		this->cStoreOperand(dst, dstReg, 1); 
 		this->cKillDeadVariables(insn.varsToKill);
 
@@ -1876,13 +710,13 @@ protected:
 
 	void compileJmp(const CodeStorage::Insn& insn) {
 
-		this->append(new FI_jmp(insn.targets[0], &insn));
+		this->append(new FI_jmp(insn.targets[0]));
 
 	}
 
 	void compileRet(const CodeStorage::Insn& insn) {
 
-		this->append(new FI_ret(&insn));
+		this->append(new FI_ret());
 
 	}
 
@@ -1948,13 +782,13 @@ protected:
 			case cl_insn_e::CL_INSN_BINOP:
 				switch (insn.subCode) {
 					case cl_binop_e::CL_BINOP_EQ:
-						this->compileCmp<Eq>(insn);
+						this->compileCmp<FI_eq>(insn);
 						break;
 					case cl_binop_e::CL_BINOP_NE:
-						this->compileCmp<Neq>(insn);
+						this->compileCmp<FI_neq>(insn);
 						break;
 					case cl_binop_e::CL_BINOP_LT:
-						this->compileCmp<Lt>(insn);
+						this->compileCmp<FI_lt>(insn);
 						break;
 					case cl_binop_e::CL_BINOP_PLUS:
 						this->compilePlus(insn);

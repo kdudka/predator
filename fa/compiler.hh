@@ -67,8 +67,16 @@ public:
 
 		friend std::ostream& operator<<(std::ostream& os, const Assembly& as) {
 
-			for (auto instr : as.code_)
-				os << instr << ":\t" << *instr << std::endl;
+			for (auto instr : as.code_) {
+
+				if (instr->isTarget())
+					os << instr << ':';
+				else
+					os << "   \t";
+
+				os << "\t" << *instr << std::endl;
+
+			}
 
 			return os;
 

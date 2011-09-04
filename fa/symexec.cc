@@ -30,25 +30,10 @@
 #include <cl/clutil.hh>
 #include <cl/storage.hh>
 
-//#include "treeaut.hh"
-//#include "forestaut.hh"
 #include "forestautext.hh"
-//#include "ufae.hh"
-//#include "nodebuilder.hh"
-//#include "operandinfo.hh"
 #include "symctx.hh"
-#include "symstate.hh"
-//#include "tracerecorder.hh"
-//#include "cfgstate.hh"
-//#include "loopanalyser.hh"
-//#include "builtintable.hh"
-
-//#include "normalization.hh"
-//#include "folding.hh"
-//#include "virtualmachine.hh"
-//#include "abstraction.hh"
-//#include "reverserun.hh"
 #include "executionmanager.hh"
+#include "fixpointinstruction.hh"
 
 #include "symexec.hh"
 
@@ -1122,12 +1107,7 @@ public:
 	Engine() : boxMan(this->taBackend),
 		compiler_(this->fixpointBackend, this->taBackend, this->boxMan, this->boxes),
 		dbgFlag(false) {}
-/*
-	~Engine() {
-		utils::eraseMap(this->stateStore);
-		utils::eraseMap(this->ctxStore);
-	}
-*/
+
 	void loadBoxes(const boost::unordered_map<std::string, std::string>& db) {
 
 	    CL_DEBUG("loading boxes ...");
@@ -1143,11 +1123,11 @@ public:
 
 	void compile(const CodeStorage::Storage& stor) {
 
-		CL_CDEBUG("compiling ...");
+		CL_DEBUG("compiling ...");
 
 		this->compiler_.compile(this->assembly_, stor);
 
-		CL_CDEBUG("assembly:" << std::endl << this->assembly_);		
+		CL_DEBUG("assembly:" << std::endl << this->assembly_);		
 
 		this->loadTypes(stor);
 
@@ -1158,21 +1138,11 @@ public:
 		assert(this->assembly_.code_.size());
 
 		this->execMan.clear();
-/*
-	    CL_CDEBUG("calculating loop entry points ...");
-		// compute loop entry points
-		this->loopAnalyser.init(main.cfg.entry());
-*/		
+
 	    CL_CDEBUG("creating main context ...");
 		// create main context
 		SymCtx mainCtx(main);
-/*
-		SymCtx* mainCtx = this->getCtx(&main);
 
-	    CL_CDEBUG("creating initial state ...");
-		// create an initial state
-		CfgState* init = this->getCfgState(main.cfg.entry()->begin(), mainCtx);
-*/
 	    CL_CDEBUG("creating empty heap ...");
 		// create empty heap with no local variables
 		std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(this->taBackend, this->boxMan));
@@ -1185,52 +1155,35 @@ public:
 		// enter main stack frame
 		mainCtx.createStackFrame(*fae);
 
-//		SymState* state = new SymState(NULL, new FAE(fae), this->queue.end(), (void*)1);
-
 	    CL_CDEBUG("sheduling initial state ...");
 		// schedule initial state for processing
 		this->execMan.init(
 			std::vector<Data>(this->assembly_.regFileSize_, Data::createUndef()), fae, this->assembly_.getEntry(&main)
 		);
-/*
-		this->queue.push_back(state);
 
-		state->queueTag = this->queue.begin();
-
-		this->traceRecorder.init(state);
-
-		this->statesEvaluated = 0;
-		this->tracesEvaluated = 0;
-*/
 		try {
 
 			AbstractInstruction::StateType state;
 
-			while (this->execMan.dequeueBFS(state)) {
+			while (this->execMan.dequeueDFS(state)) {
+
+				CL_CDEBUG(state);
 
 				this->execMan.execute(state);
 
 			}
 
-/*
-			for (state_store_type::iterator i = this->stateStore.begin(); i != this->stateStore.end(); ++i) {
-				if (!i->second->hasExt)
-					continue;
-				CL_DEBUG("fixpoint at " << (*i->second->insn)->loc);
-				CL_DEBUG(std::endl << ((CfgStateExt*)i->second)->fwdConf);
-//				Index<size_t> index;
-//				i->second->fwdConf.buildStateIndex(index);
-//				std::cerr << index << std::endl;
-//				vector<vector<bool> > rel;
-//				i->second->fwdConf.downwardSimulation(rel, index);
-//				utils::relPrint(std::cerr, rel);
-//				TA<label_type> ta(this->taBackend);
-//				i->second->fwdConf.minimized(ta);
-//				std::cerr << ta;
-			}				
+			for (auto instr : this->assembly_.code_) {
 
-			CL_DEBUG("evaluated states: " << this->statesEvaluated << ", evaluated traces: " << this->tracesEvaluated);
-*/
+				if (!instr->computesFixpoint())
+					continue;
+
+				CL_DEBUG("fixpoint at " << instr << ":" << std::endl << ((FixpointInstruction*)instr)->getFixPoint());
+
+			}
+
+			CL_DEBUG("states: " << this->execMan.statesEvaluated() << ", traces: " << this->execMan.tracesEvaluated());
+
 		} catch (std::exception& e) {
 			CL_CDEBUG(e.what());
 			throw;

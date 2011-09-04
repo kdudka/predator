@@ -25,8 +25,10 @@
 #include "types.hh"
 #include "recycler.hh"
 #include "abstractinstruction.hh"
+#include "fixpointinstruction.hh"
 #include "symstate.hh"
-#include "regdef.hh"
+//#include "regdef.hh"
+#include "splitting.hh"
 
 class ExecutionManager {
 
@@ -54,31 +56,35 @@ class ExecutionManager {
 		}
 
 	};
+/*
+public:
 
+	struct DestroySimpleF {
+	
+		DestroySimpleF() {}
+	
+		void operator()(SymState* state) {
+	
+			AbstractInstruction* instr = state->instr;
+			if (instr->computesFixpoint())
+				((FixpointInstruction*)instr)->extendFixpoint(state->fae);
+	//			else
+	//				CFG_FROM_FAE(*node->fae)->invalidate(node->fae);			
+	
+		}
+	
+	};
+*/
 public:
 
 	ExecutionManager() : root_(NULL) {}
 
 	~ExecutionManager() { this->clear(); }
-/*
-	template <class F>
-	static void recApply(SymState* state, F f) {
-		f(state);
-		for (SymState* child : state->children)
-			ExecutionManager::recApply(child, f);
-	}
-*/
-/*
-	struct SymStateAllocF {
 
-		SymState& parent;
+	size_t statesEvaluated() const { return statesExecuted_; }
 
-		SymStateAllocF(SymState& parent) : parent(parent) {}
+	size_t tracesEvaluated() const { return tracesEvaluated_; }
 
-		SymState* operator()() { return new SymState(this->parent.registers.size()); }
-
-	};
-*/
 	void clear() {
 
 		if (this->root_) {
@@ -183,17 +189,17 @@ public:
 		
 	}
 
-	template <class F>
-	void traceFinished(SymState* state, F f) {
+//	template <class F>
+	void traceFinished(SymState* state) {
 
 		++this->tracesEvaluated_;
 
-		this->destroyBranch(state, f);		
+		this->destroyBranch(state);		
 
 	}
 
-	template <class F>
-	void destroyBranch(SymState* state, F f) {
+//	template <class F>
+	void destroyBranch(SymState* state/*, F f*/) {
 
 		assert(state);
 
@@ -201,7 +207,9 @@ public:
 
 			assert(state->parent->children.size());
 
-			f(state);
+			if (state->instr->computesFixpoint())
+				((FixpointInstruction*)state->instr)->extendFixpoint(state->fae);
+//			f(state);
 
 			if (state->parent->children.size() > 1) {
 				state->recycle(this->stateRecycler_);

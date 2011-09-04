@@ -20,7 +20,7 @@
 #ifndef LOOP_ANALYSER_H
 #define LOOP_ANALYSER_H
 
-#include <boost/unordered_map.hpp>
+#include <unordered_set>
 
 #include <cl/storage.hh>
 
@@ -44,9 +44,9 @@ struct LoopAnalyser {
 
 	};
 
-	boost::unordered_set<const CodeStorage::Insn*> entryPoints;
+	std::unordered_set<const CodeStorage::Insn*> entryPoints;
 
-	void visit(const CodeStorage::Block* block, boost::unordered_set<const CodeStorage::Block*>& visited, BlockListItem* prev) {
+	void visit(const CodeStorage::Block* block, std::unordered_set<const CodeStorage::Block*>& visited, BlockListItem* prev) {
 
 		BlockListItem item(prev, block);
 
@@ -56,14 +56,14 @@ struct LoopAnalyser {
 			return;
 		}
 
-		for (std::vector<const CodeStorage::Block*>::const_iterator i = block->targets().begin(); i != block->targets().end(); ++i)
-			this->visit(*i, visited, &item);
+		for (auto target : block->targets())
+			this->visit(target, visited, &item);
 		
 	}
 	
 	void init(const CodeStorage::Block* block) {
 
-		boost::unordered_set<const CodeStorage::Block*> visited;
+		std::unordered_set<const CodeStorage::Block*> visited;
 		this->entryPoints.clear();
 		this->visit(block, visited, NULL);
 

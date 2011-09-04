@@ -190,6 +190,7 @@ public:
 */
 	void updateRootMap(size_t root) {
 		assert(root < this->roots.size());
+		assert(this->roots[root]);
 		o_map_type o;
 		FA::computeDownwardO(*this->roots[root], o);
 		std::set<size_t>::const_iterator i = this->roots[root]->getFinalStates().begin();
@@ -199,6 +200,7 @@ public:
 	}
 
 	bool hasReference(size_t root, size_t target) const {
+		assert(this->roots[root]);
 		for (std::vector<std::pair<size_t, bool> >::const_iterator i = this->rootMap[root].begin(); i != this->rootMap[root].end(); ++i) {
 			if (i->first == target)
 				return true;

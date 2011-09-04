@@ -25,12 +25,16 @@
 #include <memory>
 #include <unordered_map>
 
+#include "types.hh"
+
 namespace CodeStorage {
     struct Fnc;
     struct Storage;
     struct Block;
     struct Insn;
 }
+
+class ExecutionManager;
 
 class AbstractInstruction {
 
@@ -48,19 +52,20 @@ private:
 
 public:
 
-	AbstractInstruction(const CodeStorage::Insn* insn, bool computesFixpoint = false, bool isJump = false)
-		: insn_(insn), computesFixpoint_(computesFixpoint), isJump_(isJump), isTarget_(false) {}
+	AbstractInstruction(bool computesFixpoint = false, bool isJump = false)
+		: computesFixpoint_(computesFixpoint), isJump_(isJump), isTarget_(false) {}
 
 	virtual ~AbstractInstruction() {}
 	virtual void finalize(
 		const std::unordered_map<const CodeStorage::Block*, AbstractInstruction*>& codeIndex,
 		std::vector<AbstractInstruction*>::const_iterator cur
 	) = 0;
-	virtual void execute(class ExecutionManager& execMan, const StateType& state) = 0;
+	virtual void execute(ExecutionManager& execMan, const StateType& state) = 0;
 
 	virtual std::ostream& toStream(std::ostream&) const = 0;
 
 	const CodeStorage::Insn* insn() const { return this->insn_; }
+	void insn(const CodeStorage::Insn* insn) { this->insn_ = insn; }
 
 	bool computesFixpoint() const { return this->computesFixpoint_; }
 
@@ -68,7 +73,7 @@ public:
 
 	bool isTarget() const { return this->isTarget_; }
 
-	bool setTarget() { this->isTarget_ = true; }
+	void setTarget() { this->isTarget_ = true; }
 
 	friend std::ostream& operator<<(std::ostream& os, const AbstractInstruction& instr) {
 

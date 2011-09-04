@@ -202,13 +202,19 @@ public:
 	}
 
 	void minimizeRoots() {
-		for (size_t i = 0; i < this->roots.size(); ++i)
+		for (size_t i = 0; i < this->roots.size(); ++i) {
+			if (!this->roots[i])
+				continue;
 			this->roots[i] = std::shared_ptr<TA<label_type>>(&this->roots[i]->minimized(*this->allocTA()));
+		}
 	}
 
 	void minimizeRootsCombo() {
-		for (size_t i = 0; i < this->roots.size(); ++i)
+		for (size_t i = 0; i < this->roots.size(); ++i) {
+			if (!this->roots[i])
+				continue;
 			this->roots[i] = std::shared_ptr<TA<label_type>>(&this->roots[i]->minimizedCombo(*this->allocTA()));
+		}
 	}
 
 public:
