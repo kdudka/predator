@@ -275,7 +275,8 @@ void commitInsn(
         const bool isPointed = hasKey(pointed, vg);
         const KillVar kv(vg, isPointed);
         insn.varsToKill.push_back(kv);
-        VK_DEBUG_MSG(1, &insn.loc, "killing variable #" << vg
+        VK_DEBUG_MSG(1, &insn.loc, "killing variable "
+                << varToString(*insn.stor, vg)
                 << " by " << insn);
 
         if (!multipleTargets)
