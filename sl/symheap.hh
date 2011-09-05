@@ -463,11 +463,8 @@ class SymHeapCore {
          */
         TValId heapAlloc(int cbSize);
 
-        /**
-         * destroy target of the given root value
-         * @return true, if the operation succeeds
-         */
-        virtual bool valDestroyTarget(TValId root);
+        /// destroy target of the given root value
+        virtual void valDestroyTarget(TValId root);
 
         /// initialize (estimated) type-info of the given root entity
         void valSetLastKnownTypeOfTarget(TValId root, TObjType clt);
@@ -603,7 +600,7 @@ class SymHeap: public SymHeapCore {
         // just overrides (inherits the dox)
         virtual void neqOp(ENeqOp op, TValId valA, TValId valB);
         virtual bool proveNeq(TValId valA, TValId valB) const;
-        virtual bool valDestroyTarget(TValId);
+        virtual void valDestroyTarget(TValId);
         virtual TValId valClone(TValId);
 
     protected:

@@ -56,14 +56,12 @@ void segDestroy(SymHeap &sh, TObjId seg) {
             CL_TRAP;
 
         case OK_DLS:
-            if (!sh.valDestroyTarget(dlSegPeer(sh, segAt)))
-                CL_BREAK_IF("failed to destroy DLS peer");
+            sh.valDestroyTarget(dlSegPeer(sh, segAt));
             // fall through!
 
         case OK_MAY_EXIST:
         case OK_SLS:
-            if (!sh.valDestroyTarget(segAt))
-                CL_BREAK_IF("failed to destroy segment");
+            sh.valDestroyTarget(segAt);
     }
 }
 

@@ -104,8 +104,7 @@ bool collectJunk(SymHeap &sh, TValId val, TValList *leakList) {
                 leakList->push_back(root);
 
             // destroy junk
-            if (!sh.valDestroyTarget(root))
-                CL_BREAK_IF("failed to kill junk");
+            sh.valDestroyTarget(root);
 
             // schedule just created junk candidates for next wheel
             BOOST_FOREACH(TValId ptrVal, ptrs) {

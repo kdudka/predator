@@ -1941,18 +1941,19 @@ TValId SymHeapCore::heapAlloc(int cbSize) {
     return addr;
 }
 
-bool SymHeapCore::valDestroyTarget(TValId val) {
-    if (VAL_NULL == val)
-        // VAL_NULL has no target
-        return false;
+void SymHeapCore::valDestroyTarget(TValId val) {
+    if (VAL_NULL == val) {
+        CL_BREAK_IF("SymHeapCore::valDestroyTarget() got VAL_NULL");
+        return;
+    }
 
     const BaseValue *valData = d->valData(val);
-    if (valData->offRoot || !isPossibleToDeref(valData->code))
-        // such a target is not supposed to be destroyed
-        return false;
+    if (valData->offRoot || !isPossibleToDeref(valData->code)) {
+        CL_BREAK_IF("invalid call of SymHeapCore::valDestroyTarget()");
+        return;
+    }
 
     d->destroyRoot(val);
-    return true;
 }
 
 int SymHeapCore::valSizeOfTarget(TValId val) const {
@@ -2475,16 +2476,13 @@ bool SymHeap::proveNeq(TValId ref, TValId val) const {
     return false;
 }
 
-bool SymHeap::valDestroyTarget(TValId val) {
+void SymHeap::valDestroyTarget(TValId val) {
     const TValId valRoot = this->valRoot(val);
-    if (!SymHeapCore::valDestroyTarget(val))
-        return false;
+    SymHeapCore::valDestroyTarget(val);
 
     CL_BREAK_IF(valRoot <= 0);
     if (d->data.erase(valRoot))
         CL_DEBUG("SymHeap::valDestroyTarget() destroys an abstract object");
-
-    return true;
 }
 
 unsigned SymHeap::segMinLength(TValId at) const {
