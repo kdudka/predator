@@ -122,6 +122,22 @@
 #define CL_NOTE_MSG(loc, what) \
     CL_MSG_STREAM(cl_note, *(loc) << "note: " << what)
 
+/// same as CL_DEBUG, but compares the current debug level with the given one
+#define CL_DEBUG_AT(level, what) do {               \
+    if (cl_debug_level() < (level))                 \
+        break;                                      \
+                                                    \
+    CL_DEBUG(what);                                 \
+} while (0)
+
+/// same as CL_DEBUG_MSG, but compares current debug level with the given one
+#define CL_DEBUG_MSG_AT(level, loc, what) do {      \
+    if (cl_debug_level() < (level))                 \
+        break;                                      \
+                                                    \
+    CL_DEBUG_MSG(loc, what);                        \
+} while (0)
+
 inline std::ostream& operator<<(std::ostream &str, const struct cl_loc &loc) {
     if (!&loc || !loc.file) {
         str << "<unknown location>: ";
@@ -158,5 +174,8 @@ void cl_note(const char *msg);
 
 /// emit raw fatal error and ask cl peer to shoot down the process
 void cl_die(const char *msg);
+
+/// current debugging level
+int cl_debug_level(void);
 
 #endif /* H_GUARD_CL_MSG_H */

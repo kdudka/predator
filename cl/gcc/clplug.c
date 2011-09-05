@@ -94,7 +94,7 @@ extern void print_gimple_stmt (FILE *, gimple, int, int);
 #define CL_WARN(...)    CL_PRINT("warning", __VA_ARGS__)
 
 #define CL_DEBUG(...) do {                                                  \
-    if (CL_VERBOSE_PLUG & verbose)                                          \
+    if (verbose)                                                            \
         CL_PRINT("debug", __VA_ARGS__);                                     \
 } while (0)
 
@@ -120,10 +120,15 @@ extern void print_gimple_stmt (FILE *, gimple, int, int);
 #define CL_WARN_UNHANDLED_GIMPLE(stmt, what) \
     CL_WARN_UNHANDLED_WITH_LOC((stmt)->gsbase.location, "unhandled " what)
 
+#if CL_DEBUG_GCC_TREE
+#   define CL_DEBUG_TREE(expr) debug_tree(expr)
+#else
+#   define CL_DEBUG_TREE(expr)
+#endif
+
 #define CL_WARN_UNHANDLED_EXPR(expr, what) do { \
     CL_WARN_UNHANDLED_WITH_LOC(EXPR_LOCATION(expr), "unhandled " what); \
-    if (CL_VERBOSE_UNHANDLED_EXPR & verbose) \
-        debug_tree(expr); \
+    CL_DEBUG_TREE(expr); \
 } while (0)
 
 // name of the plug-in given by gcc during initialization
@@ -132,10 +137,6 @@ static const char *plugin_name_alloc;
 
 // verbose bitmask
 static int verbose = 0;
-#define CL_VERBOSE_PLUG             (1 << 0)
-#define CL_VERBOSE_LOCATION         (1 << 1)
-#define CL_VERBOSE_GIMPLE           (1 << 2)
-#define CL_VERBOSE_UNHANDLED_EXPR   (1 << 3)
 
 // plug-in meta-data according to gcc plug-in API
 static struct plugin_info cl_info = {
@@ -154,13 +155,7 @@ static struct plugin_info cl_info = {
 "    -fplugin-arg-%s-gen-dot[=GLOBAL_CG_FILE]       generate CFGs\n"
 "    -fplugin-arg-%s-preserve-ec                    do not affect exit code\n"
 "    -fplugin-arg-%s-type-dot=TYPE_GRAPH_FILE       generate type graphs\n"
-"    -fplugin-arg-%s-verbose[=VERBOSE_BITMASK]      turn on verbose mode\n"
-"\n"
-"VERBOSE_BITMASK:\n"
-"    1          debug code listener and its peer\n"
-"    2          print location info using \"locator\" code listener\n"
-"    4          print each gimple statement before its processing\n"
-"    8          dump gcc tree of unhandled expressions\n"
+"    -fplugin-arg-%s-verbose[=VERBOSITY_LEVEL]      turn on verbose mode\n"
 };
 
 static void init_plugin_name(const struct plugin_name_args *info)
@@ -1484,17 +1479,13 @@ static tree cb_walk_gimple_stmt (gimple_stmt_iterator *iter,
                                  struct walk_stmt_info *info)
 {
     gimple stmt = gsi_stmt (*iter);
-    bool show_gimple = CL_VERBOSE_GIMPLE & verbose;
-
     (void) subtree_done;
     (void) info;
 
-    if (show_gimple) {
-        printf("\n\t\t");
-        print_gimple_stmt(stdout, stmt,
-                          /* indentation */ 0,
-                          TDF_LINENO);
-    }
+#if CL_DEBUG_GCC_GIMPLE
+    printf("\n\t\t");
+    print_gimple_stmt(stdout, stmt, /* indentation */ 0, TDF_LINENO);
+#endif
 
     enum gimple_code code = stmt->gsbase.code;
     switch (code) {
@@ -1539,8 +1530,9 @@ static tree cb_walk_gimple_stmt (gimple_stmt_iterator *iter,
             CL_TRAP;
     }
 
-    if (show_gimple)
-        printf("\n");
+#if CL_DEBUG_GCC_GIMPLE
+    printf("\n");
+#endif
 
     return NULL;
 }
@@ -1814,7 +1806,7 @@ static int clplug_init(const struct plugin_name_args *info,
         if (STREQ(key, "verbose")) {
             verbose = (value)
                 ? atoi(value)
-                : ~0;
+                : 1;
 
         } else if (STREQ(key, "version")) {
             // do not use info->version yet
@@ -1915,10 +1907,10 @@ create_cl_chain(const struct cl_plug_options *opt)
         // error message already emitted
         return NULL;
 
-    if (CL_VERBOSE_LOCATION & verbose) {
-        if (!cl_append_listener(chain, "listener=\"locator\""))
-            return NULL;
-    }
+#if CL_DEBUG_LOCATION
+    if (!cl_append_listener(chain, "listener=\"locator\""))
+        return NULL;
+#endif
 
     if (opt->use_pp) {
         const char *use_listener = (opt->dump_types)
@@ -1983,14 +1975,14 @@ int plugin_init (struct plugin_name_args *plugin_info,
 
     // initialize code listener
     static struct cl_init_data init = {
-        .debug = dummy_printer,
-        .warn  = cl_warn,
-        .error = cl_error,
-        .note  = trivial_printer,
-        .die   = trivial_printer
+        .debug          = dummy_printer,
+        .warn           = cl_warn,
+        .error          = cl_error,
+        .note           = trivial_printer,
+        .die            = trivial_printer
     };
 
-    if (verbose & CL_VERBOSE_PLUG)
+    if ((init.debug_level = verbose))
         init.debug = trivial_printer;
 
     cl_global_init(&init);

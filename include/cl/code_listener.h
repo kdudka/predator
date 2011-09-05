@@ -110,6 +110,11 @@ struct cl_init_data {
      * @attention This function should never return (TODO: attribute?).
      */
     cl_print_fnc_t die;
+
+    /**
+     * debugging level, the greater number the more output, 0 means no debugging
+     */
+    int debug_level;
 };
 
 /**
@@ -123,12 +128,13 @@ void cl_global_init(struct cl_init_data *init_data);
  * global initialization - it sets built-in functions to print messages
  * @param app_name - name of the application which appears in all messages. If
  * NULL is given, no application name will be printed.
- * @param verbose - if true debug messages are printed as well
+ * @param verbose - debugging level, the greater number the more output, 0
+ * means no debugging
  * @note You should call cl_global_cleanup() to free resources before exit.
  */
 void cl_global_init_defaults(
         const char                      *app_name,
-        bool                            verbose);
+        int                             debug_level);
 
 /**
  * free resources allocated by cl_global_init() or cl_global_init_defaults()

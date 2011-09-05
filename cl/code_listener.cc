@@ -86,7 +86,8 @@ static struct cl_init_data init_data = {
     cl_def_msg,            // .warn
     cl_def_msg,            // .error
     cl_def_msg,            // .error
-    cl_def_die             // .die
+    cl_def_die,            // .die
+    0                      // .debug_level
 };
 
 void cl_debug(const char *msg)
@@ -119,12 +120,17 @@ void cl_die(const char *msg)
     abort();
 }
 
+int cl_debug_level(void)
+{
+    return init_data.debug_level;
+}
+
 void cl_global_init(struct cl_init_data *data)
 {
     init_data = *data;
 }
 
-void cl_global_init_defaults(const char *name, bool verbose)
+void cl_global_init_defaults(const char *name, int debug_level)
 {
     if (app_name_allocated)
         free((char *) app_name);
@@ -141,15 +147,16 @@ void cl_global_init_defaults(const char *name, bool verbose)
         app_name = NULL;
     }
 
-    if (verbose)
+    if (debug_level)
         init_data.debug = cl_def_msg;
     else
         init_data.debug = cl_no_msg;
 
-    init_data.warn   = cl_def_msg;
-    init_data.error  = cl_def_msg;
-    init_data.note   = cl_def_msg;
-    init_data.die    = cl_def_die;
+    init_data.warn          = cl_def_msg;
+    init_data.error         = cl_def_msg;
+    init_data.note          = cl_def_msg;
+    init_data.die           = cl_def_die;
+    init_data.debug_level   = debug_level;
 }
 
 void cl_global_cleanup(void)

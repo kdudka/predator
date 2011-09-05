@@ -31,6 +31,21 @@
 #define CL_DEBUG_CLF                    0
 
 /**
+ * print each gimple statement before its processing
+ */
+#define CL_DEBUG_GCC_GIMPLE             0
+
+/**
+ * dump gcc tree of unhandled expressions
+ */
+#define CL_DEBUG_GCC_TREE               0
+
+/**
+ * print location info using the cl_locator code listener
+ */
+#define CL_DEBUG_LOCATION               0
+
+/**
  * debug level of the CFG loop scanner
  * - 0 ... print only time elapsed
  * - 1 ... print edges marked as loop-closing
