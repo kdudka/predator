@@ -21,8 +21,13 @@ project(sl C CXX)
 add_definitions("-I../include")
 enable_testing()
 
-# we need ot use boost 1.46+ because of boost::icl
-find_package(Boost 1.46)
+option(SL_USE_BOOST_ICL "Set to ON to use the boost::icl library" ON)
+if(SL_USE_BOOST_ICL)
+    add_definitions("-DUSE_BOOST_ICL")
+
+    # we need ot use boost 1.46+ because of boost::icl
+    find_package(Boost 1.46)
+endif()
 
 include("../CMakeLists.common")
 
@@ -31,11 +36,6 @@ if(SL_DEBUG)
     add_definitions("-O0 -g")
 else()
     add_definitions("-O3 -DNDEBUG")
-endif()
-
-option(SL_USE_BOOST_ICL "Set to ON to use the boost::icl library" ON)
-if(SL_USE_BOOST_ICL)
-    add_definitions("-DUSE_BOOST_ICL")
 endif()
 
 # libsl.so

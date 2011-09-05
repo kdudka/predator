@@ -615,6 +615,10 @@ void SymHeapCore::Private::registerValueOf(TObjId obj, TValId val) {
 // runs only in debug build
 bool SymHeapCore::Private::chkArenaConsistency(const RootValue *rootData) {
     TLiveObjs all(rootData->liveObjs);
+    if (isGone(rootData->code)) {
+        // we can check nothing for VT_DELETED/VT_LOST, we do not know the size
+        return true;
+    }
 
     const TArena &arena = rootData->arena;
     const TMemChunk chunk(0, rootData->cbSize);
