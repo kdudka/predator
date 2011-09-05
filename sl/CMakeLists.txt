@@ -72,7 +72,7 @@ set(clplug_incs ${clplug_incs} "-I${sl_SOURCE_DIR}/../include/gcc")
 
 option(TEST_ONLY_FAST "Set to OFF to boost test coverage" ON)
 
-set(GCC_EXEC_PREFIX "timeout 36"
+set(GCC_EXEC_PREFIX "timeout 64"
     CACHE STRING "Set to empty string if not sure")
 
 set(examples
@@ -93,7 +93,7 @@ set(examples
     0140 0141 0142 0143 0144 0145 0146 0147 0148 0149
     0150 0151 0152 0153 0154 0155 0156      0158 0159
     0160 0161 0162 0163 0164      0166      0168
-    0170 0171 0172 0173
+    0170 0171 0172 0173 0174
     0300      0302
     0500 0501 0502 0503      0505           0508 0509
     0510 0511 0512 0513 0514 0515 0516 0517 0518

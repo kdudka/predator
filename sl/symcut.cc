@@ -219,6 +219,10 @@ void trackUses(DeepCopyData &dc, TValId valSrc) {
     // go from the value backward
     BOOST_FOREACH(TObjId objSrc, uses) {
         const TValId srcAt = sh.placedAt(objSrc);
+        const EValueTarget code = sh.valTarget(srcAt);
+        if (!isPossibleToDeref(code))
+            continue;
+
         handleValueCore(dc, srcAt);
     }
 }

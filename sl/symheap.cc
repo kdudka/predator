@@ -204,8 +204,15 @@ inline bool arenaLookup(
         // not found
         return false;
 
+    // FIXME: Doing this is ultimately stupid.  Are we using icl in a wrong way?
+    TArena tmp(arena);
+    tmp &= chunk;
+    for (it = tmp.begin(); tmp.end() != it; ++it) {
+        const TObjSet &objs = it->second;
+        std::copy(objs.begin(), objs.end(), std::inserter(*dst, dst->begin()));
+    }
+
     // remove the reference object itself
-    *dst = it->second;
     dst->erase(obj);
 
     // finally check if there was anything else
@@ -471,6 +478,9 @@ struct SymHeapCore::Private {
 
     void neqOpWrap(SymHeap::ENeqOp, TValId, TValId);
 
+    // runs only in debug build
+    bool chkArenaConsistency(const RootValue *);
+
     private:
         // intentionally not implemented
         Private& operator=(const Private &);
@@ -598,6 +608,26 @@ void SymHeapCore::Private::registerValueOf(TObjId obj, TValId val) {
     rootData->usedByGl.insert(obj);
 }
 
+// runs only in debug build
+bool SymHeapCore::Private::chkArenaConsistency(const RootValue *rootData) {
+    TLiveObjs all(rootData->liveObjs);
+
+    const TArena &arena = rootData->arena;
+    const TMemChunk chunk(0, rootData->cbSize);
+
+    TObjSet overlaps;
+    if (arenaLookup(&overlaps, arena, chunk, OBJ_INVALID)) {
+        BOOST_FOREACH(const TObjId obj, overlaps)
+            all.erase(obj);
+    }
+
+    if (all.empty())
+        return true;
+
+    CL_WARN("live object not mapped in arena: #" << all.begin()->first);
+    return false;
+}
+
 void SymHeapCore::Private::splitBlockByObject(
         TObjId                      block,
         TObjId                      obj)
@@ -612,7 +642,10 @@ void SymHeapCore::Private::splitBlockByObject(
     // dig root
     const TValId root = blData->root;
     CL_BREAK_IF(root != hbData->root);
+
+    // check up to now arean consistency
     RootValue *rootData = this->rootData(root);
+    CL_BREAK_IF(!this->chkArenaConsistency(rootData));
 
     // dig offsets and sizes
     const TOffset blOff = blData->off;
@@ -729,9 +762,12 @@ void SymHeapCore::Private::reinterpretObjData(
     if (/* wasPtr */ this->releaseValueOf(old, valOld) && killedPtrs)
         killedPtrs->insert(valOld);
 
-    // mark the object as dead
+    // dig root
     const TValId root = oldData->root;
     RootValue *rootData = this->rootData(root);
+    CL_BREAK_IF(!this->chkArenaConsistency(rootData));
+
+    // mark the object as dead
     if (rootData->liveObjs.erase(old))
         CL_DEBUG("reinterpretObjData() kills a live object");
 
@@ -793,9 +829,12 @@ void SymHeapCore::Private::setValueOf(
     // resolve root
     const TValId root = objData->root;
     RootValue *rootData = this->rootData(root);
-    const TArena &arena = rootData->arena;
+
+    // (re)insert self into the arena if not there
+    TArena &arena = rootData->arena;
     const TOffset off = objData->off;
     const TObjType clt = objData->clt;
+    arena += createArenaItem(off, clt, obj);
 
     // invalidate contents of the objects we are overwriting
     TObjSet overlaps;
@@ -803,6 +842,8 @@ void SymHeapCore::Private::setValueOf(
         BOOST_FOREACH(const TObjId old, overlaps)
             this->reinterpretObjData(old, obj, killedPtrs);
     }
+
+    CL_BREAK_IF(!this->chkArenaConsistency(rootData));
 }
 
 TObjId SymHeapCore::Private::objCreate(
@@ -823,6 +864,7 @@ TObjId SymHeapCore::Private::objCreate(
 
     // map the region occupied by the object
     rootData->arena += createArenaItem(off, clt, obj);
+    CL_BREAK_IF(!this->chkArenaConsistency(rootData));
     return obj;
 }
 
@@ -840,11 +882,16 @@ void SymHeapCore::Private::objDestroy(TObjId obj, bool removeVal, bool detach) {
         const TOffset off = objData->off;
         const TObjType clt = objData->clt;
         RootValue *rootData = this->rootData(objData->root);
+        CL_BREAK_IF(!this->chkArenaConsistency(rootData));
+
         if (!rootData->grid[off].erase(clt))
             CL_BREAK_IF("internal object double-free");
 
         // remove the object from arena unless we are destroying everything
         rootData->arena -= createArenaItem(off, clt, obj);
+
+        CL_BREAK_IF(hasKey(rootData->liveObjs, obj));
+        CL_BREAK_IF(!this->chkArenaConsistency(rootData));
     }
 
     // release the corresponding HeapObject instance
@@ -990,6 +1037,8 @@ TValId SymHeapCore::Private::objInit(TObjId obj) {
     // resolve root
     const TValId root = objData->root;
     RootValue *rootData = this->rootData(root);
+    CL_BREAK_IF(!this->chkArenaConsistency(rootData));
+
     const TArena &arena = rootData->arena;
     const TOffset off = objData->off;
     const TObjType clt = objData->clt;
@@ -1005,6 +1054,7 @@ TValId SymHeapCore::Private::objInit(TObjId obj) {
 
             // reinterpret _self_ by another live object or uniform block
             this->reinterpretObjData(/* old */ obj, other);
+            CL_BREAK_IF(!this->chkArenaConsistency(rootData));
             return objData->value;
         }
     }
@@ -1020,6 +1070,8 @@ TValId SymHeapCore::Private::objInit(TObjId obj) {
     else
         rootData->liveObjs[obj] = LO_DATA;
 #endif
+
+    CL_BREAK_IF(!this->chkArenaConsistency(rootData));
 
     // store backward reference
     this->valData(val)->usedBy.insert(obj);
@@ -1147,6 +1199,7 @@ bool valMapLookup(const TValMap &valMap, TValId *pVal) {
 TValId SymHeapCore::Private::dupRoot(TValId rootAt) {
     CL_DEBUG("SymHeapCore::Private::dupRoot() is taking place...");
     const RootValue *rootDataSrc = this->rootData(rootAt);
+    CL_BREAK_IF(!this->chkArenaConsistency(rootDataSrc));
 
     // assign an address to the clone
     const EValueTarget code = rootDataSrc->code;
@@ -1192,6 +1245,7 @@ TValId SymHeapCore::Private::dupRoot(TValId rootAt) {
         rootDataDst->liveObjs[dst] = code;
     }
 
+    CL_BREAK_IF(!this->chkArenaConsistency(rootDataDst));
     return imageAt;
 }
 
@@ -1252,6 +1306,8 @@ bool SymHeapCore::findCoveringUniBlock(
     const
 {
     const RootValue *rootData = d->rootData(root);
+    CL_BREAK_IF(!d->chkArenaConsistency(rootData));
+
     const TArena &arena = rootData->arena;
     const TOffset end = beg + size;
     const TMemChunk chunk(beg, end);
@@ -1363,7 +1419,11 @@ void SymHeapCore::writeUniformBlock(
         new InternalUniformBlock(root, beg, tplValue, size);
     const TObjId obj = d->assignId<TObjId>(blockData);
 
+    // check up to now arean consistency
     RootValue *rootData = d->rootData(root);
+    CL_BREAK_IF(!d->chkArenaConsistency(rootData));
+
+    // mark the block as live
     rootData->liveObjs[obj] = LO_BLOCK;
 
     TArena &arena = rootData->arena;
@@ -1376,6 +1436,8 @@ void SymHeapCore::writeUniformBlock(
         BOOST_FOREACH(const TObjId old, overlaps)
             d->reinterpretObjData(old, obj, killedPtrs);
     }
+
+    CL_BREAK_IF(!d->chkArenaConsistency(rootData));
 }
 
 void SymHeapCore::copyBlockOfRawMemory(
@@ -1853,6 +1915,8 @@ TObjId SymHeapCore::valGetComposite(TValId val) const {
 }
 
 TValId SymHeapCore::heapAlloc(int cbSize) {
+    CL_BREAK_IF(cbSize <= 0);
+
     // assign an address
     const TValId addr = d->valCreate(VT_ON_HEAP, VO_ASSIGNED);
 

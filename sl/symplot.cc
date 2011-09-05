@@ -437,7 +437,7 @@ void plotUniformBlocks(PlotData &plot, const TValId root) {
         CL_BREAK_IF(off < 0);
         plot.out << "\t" << SL_QUOTE(root)
             << " -> " << SL_QUOTE("lonely" << id)
-            << " [color=black, fontcolor=black, label=\"["
+            << " [color=black, fontcolor=black, label=\"[+"
             << off << "]\"];\n";
 
         // schedule hasValue edge

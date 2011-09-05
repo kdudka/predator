@@ -647,6 +647,8 @@ Tests taken from Forester
 
     test-0166.c - error-free variant of test-0038
 
+    test-0174.c - modification of test-0014 using calloc() and memset()
+
 
 Tiny DLL library written on scratch
 ===================================
