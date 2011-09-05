@@ -30,7 +30,7 @@ class FixpointInstruction : public SequentialInstruction {
 
 public:
 
-	FixpointInstruction() : SequentialInstruction(true) {}
+	FixpointInstruction() : SequentialInstruction(e_fi_type::fiFix) {}
 
 	virtual void extendFixpoint(const std::shared_ptr<const class FAE>& fae) = 0;
 

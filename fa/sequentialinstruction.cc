@@ -29,11 +29,11 @@ void SequentialInstruction::finalize(
 	this->next_ = *(cur + 1);
 
 	// shorcut jump instruction
-	if (this->next_->isJump()) {
+	if (this->next_->getType() == e_fi_type::fiJump) {
 
 		do {
 			this->next_ = ((FI_jmp*)this->next_)->getTarget(codeIndex);
-		} while (this->next_->isJump());
+		} while (this->next_->getType() == e_fi_type::fiJump);
 
 	}
 	

@@ -94,10 +94,10 @@ void FI_cond::finalize(
 
 	for (auto i : { 0, 1 }) {
 
-		if (this->next_[i]->isJump()) {
+		if (this->next_[i]->getType() == e_fi_type::fiJump) {
 			do {
 				this->next_[i] = ((FI_jmp*)this->next_[i])->getTarget(codeIndex);
-			} while (this->next_[i]->isJump());
+			} while (this->next_[i]->getType() == e_fi_type::fiJump);
 		}
 		this->next_[i]->setTarget();
 

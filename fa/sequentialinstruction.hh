@@ -33,8 +33,8 @@ protected:
 
 public:
 
-	SequentialInstruction(bool computesFixpoint = false)
-		: AbstractInstruction(computesFixpoint) {}
+	SequentialInstruction(e_fi_type fiType = e_fi_type::fiUnspec)
+		: AbstractInstruction(fiType) {}
 
 	virtual void finalize(
 		const std::unordered_map<const CodeStorage::Block*, AbstractInstruction*>& codeIndex,

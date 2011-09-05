@@ -67,7 +67,27 @@ public:
 
 		friend std::ostream& operator<<(std::ostream& os, const Assembly& as) {
 
+			AbstractInstruction* prev = NULL;
+
+			size_t c = 0;
+
 			for (auto instr : as.code_) {
+
+				if ((instr->getType() == e_fi_type::fiJump) && prev) {
+					switch (prev->getType()) {
+						case e_fi_type::fiBranch:
+						case e_fi_type::fiJump:
+							prev = instr;
+							continue;
+						default:
+							break;
+					}
+				}
+
+				prev = instr;
+
+				if (instr->insn())
+					os << instr->insn()->loc << ' ' << *instr->insn() << std::endl;
 
 				if (instr->isTarget())
 					os << instr << ':';
@@ -76,9 +96,11 @@ public:
 
 				os << "\t" << *instr << std::endl;
 
+				++c;
+
 			}
 
-			return os;
+			return os << "code size: " << c << " instructions" << std::endl;
 
 		}
 

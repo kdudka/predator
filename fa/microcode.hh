@@ -58,7 +58,7 @@ class FI_cond : public AbstractInstruction {
 public:
 
 	FI_cond(size_t src, AbstractInstruction* next[2])
-		: AbstractInstruction(), src_(src), next_({ next[0], next[1] }) {}
+		: AbstractInstruction(e_fi_type::fiBranch), src_(src), next_({ next[0], next[1] }) {}
 
 	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
 

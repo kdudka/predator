@@ -190,8 +190,8 @@ protected:
 
 	TA<label_type>* mergeRoot(TA<label_type>& dst, size_t ref, TA<label_type>& src, std::vector<size_t>& joinStates) {
 		assert(ref < this->fae.roots.size());
-		TA<label_type> ta(*this->fae.backend);
-		ta.addFinalStates(dst.getFinalStates());
+		TA<label_type>* ta = this->fae.allocTA();
+		ta->addFinalStates(dst.getFinalStates());
 		size_t refState = _MSB_ADD(this->fae.boxMan->getDataId(Data::createRef(ref)));
 		boost::unordered_map<size_t, size_t> joinStatesMap;
 		for (std::set<size_t>::const_iterator i = src.getFinalStates().begin(); i != src.getFinalStates().end(); ++i) {
@@ -205,18 +205,16 @@ protected:
 			if (j != tmp.end()) {
 				for (std::vector<size_t>::iterator k = joinStates.begin(); k != joinStates.end(); ++k) {
 					*j = *k;
-					ta.addTransition(tmp, i->label(), i->rhs());
+					ta->addTransition(tmp, i->label(), i->rhs());
 				}
 				hit = true;
-			} else ta.addTransition(*i);
+			} else ta->addTransition(*i);
 		}
 //		std::cerr << joinState << std::endl;
 		assert(hit);
 		// avoid screwing up things
-		src.unfoldAtRoot(ta, joinStatesMap, false);
-		TA<label_type>* ta2 = this->fae.allocTA();
-		ta.unreachableFree(*ta2);
-		return ta2;
+		src.unfoldAtRoot(*ta, joinStatesMap, false);
+		return ta;
 	}
 
 	void visitDown(size_t c, std::vector<bool>& visited, std::vector<size_t>& order, std::vector<bool>& marked) const {
@@ -327,6 +325,10 @@ public:
 		// check garbage
 //		this->checkGarbage(visited);
 
+		// prevent merging of forbidden roots
+		for (std::set<size_t>::const_iterator i = forbidden.begin(); i != forbidden.end(); ++i)
+			marked[*i] = true;
+
 		bool normalizationNeeded = false;
 		for (size_t i = 0; i < order.size(); ++i) {
 			if (marked[i] && (order[i] == i))
@@ -341,9 +343,6 @@ public:
 			return;
 		}
 
-		// prevent merging of forbidden roots
-		for (std::set<size_t>::const_iterator i = forbidden.begin(); i != forbidden.end(); ++i)
-			marked[*i] = true;
 		// reindex roots
 		std::vector<size_t> index(this->fae.roots.size(), (size_t)(-1));
 		std::vector<bool> normalized(this->fae.roots.size(), false);

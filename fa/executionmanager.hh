@@ -207,7 +207,7 @@ public:
 
 			assert(state->parent->children.size());
 
-			if (state->instr->computesFixpoint())
+			if (state->instr->getType() == e_fi_type::fiFix)
 				((FixpointInstruction*)state->instr)->extendFixpoint(state->fae);
 //			f(state);
 

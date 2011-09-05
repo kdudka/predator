@@ -138,6 +138,8 @@ void FI_fix::execute(ExecutionManager& execMan, const AbstractInstruction::State
 
 	}
 
+	fae->unreachableFree();
+
 	// merge fixpoint
 	std::vector<FAE*> tmp2;
 

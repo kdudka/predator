@@ -30,7 +30,7 @@ void FI_jmp::finalize(
 	std::vector<AbstractInstruction*>::const_iterator
 ) {
 	this->next_ = this;
-	while (this->next_->isJump())
+	while (this->next_->getType() == e_fi_type::fiJump)
 		this->next_ = ((FI_jmp*)this->next_)->getTarget(codeIndex);
 	this->next_->setTarget();
 }

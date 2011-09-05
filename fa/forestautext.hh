@@ -217,6 +217,14 @@ public:
 		}
 	}
 
+	void unreachableFree() {
+		for (auto& ta : this->roots) {
+			auto tmp = ta;
+			ta = std::shared_ptr<TA<label_type>>(this->allocTA());
+			tmp->unreachableFree(*ta);
+		}
+	}
+
 public:
 
 	void newState() {

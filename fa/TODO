@@ -1,5 +1,4 @@
 critical
-* tracking of destructive updates
 * reverse run
 * function calls
 
@@ -7,10 +6,8 @@ medium
 * predicate abstraction
 * box learning
 * improve Data handling
-* develop better register allocation
 * reserve stack space for function arguments
 * recursion ?
-* recompilation to microops
 
 low
 * garbage collector

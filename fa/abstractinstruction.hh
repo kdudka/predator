@@ -36,6 +36,8 @@ namespace CodeStorage {
 
 class ExecutionManager;
 
+typedef enum { fiBranch, fiFix, fiJump, fiUnspec } e_fi_type;
+
 class AbstractInstruction {
 
 public:
@@ -44,16 +46,15 @@ public:
 
 private:
 
-	const CodeStorage::Insn* insn_;
-
-	bool computesFixpoint_;
-	bool isJump_;
+	e_fi_type fiType_;
 	bool isTarget_;
+
+	const CodeStorage::Insn* insn_;
 
 public:
 
-	AbstractInstruction(bool computesFixpoint = false, bool isJump = false)
-		: computesFixpoint_(computesFixpoint), isJump_(isJump), isTarget_(false) {}
+	AbstractInstruction(e_fi_type fiType = e_fi_type::fiUnspec)
+		: fiType_(fiType), isTarget_(false), insn_(NULL) {}
 
 	virtual ~AbstractInstruction() {}
 	virtual void finalize(
@@ -67,9 +68,7 @@ public:
 	const CodeStorage::Insn* insn() const { return this->insn_; }
 	void insn(const CodeStorage::Insn* insn) { this->insn_ = insn; }
 
-	bool computesFixpoint() const { return this->computesFixpoint_; }
-
-	bool isJump() const { return this->isJump_; }
+	e_fi_type getType() const { return this->fiType_; }
 
 	bool isTarget() const { return this->isTarget_; }
 
