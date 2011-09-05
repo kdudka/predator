@@ -48,8 +48,6 @@
 #   define DCAST dynamic_cast
 #endif
 
-namespace icl = boost::icl;
-
 template <class TCont> typename TCont::value_type::second_type&
 assignInvalidIfNotFound(
         TCont                                           &cont,
@@ -146,51 +144,23 @@ typedef std::set<TObjId>                                TObjSet;
 typedef std::map<TOffset, TValId>                       TOffMap;
 typedef std::map<TObjType, TObjId>                      TObjByType;
 typedef std::map<TOffset, TObjByType>                   TGrid;
+
+namespace icl = boost::icl;
+
 typedef icl::interval_map<unsigned, TObjSet>            TArena;
 typedef TArena::key_type                                TMemChunk;
 typedef TArena::value_type                              TMemItem;
-
-enum ELiveObj {
-    LO_INVALID,
-    LO_BLOCK,
-    LO_DATA_PTR,
-    LO_DATA
-};
-
-typedef std::map<TObjId, ELiveObj>                      TLiveObjs;
-
-inline TMemChunk createChunk(const TOffset off, const TObjType clt) {
-    CL_BREAK_IF(!clt || clt->code == CL_TYPE_VOID);
-
-    // I believe a right-open interval is going to be used by default, see
-    // boost_1_46_1/libs/icl/doc/html/boost_icl/interface.html for details
-    return TMemChunk(off, off + clt->size);
-}
-
-inline TObjSet createObjSet(const TObjId obj) {
-    TObjSet single;
-    single.insert(obj);
-    return single;
-}
-
-inline TMemItem createArenaItem(
-        const TOffset               off,
-        const TObjType              clt,
-        const TObjId                obj)
-{
-    return TMemItem(
-            createChunk(off, clt),
-            createObjSet(obj));
-}
 
 inline TMemItem createArenaItem(
         const TOffset               off,
         const unsigned              size,
         const TObjId                obj)
 {
-    return TMemItem(
-            TMemChunk(off, off + size),
-            createObjSet(obj));
+    const TMemChunk chunk(off, off + size);
+    TObjSet singleObj;
+    singleObj.insert(obj);
+
+    return TMemItem(chunk, singleObj);
 }
 
 inline bool arenaLookup(
@@ -219,15 +189,22 @@ inline bool arenaLookup(
     return !dst->empty();
 }
 
-inline bool arenaLookup(
-        TObjSet                     *dst,
-        const TArena                &arena,
-        const TOffset               off,
-        const TObjType              clt,
-        const TObjId                obj)
-{
-    return arenaLookup(dst, arena, createChunk(off, clt), obj);
+inline TMemChunk createChunk(const TOffset off, const TObjType clt) {
+    CL_BREAK_IF(!clt || clt->code == CL_TYPE_VOID);
+
+    // I believe a right-open interval is going to be used by default, see
+    // boost_1_46_1/libs/icl/doc/html/boost_icl/interface.html for details
+    return TMemChunk(off, off + clt->size);
 }
+
+enum ELiveObj {
+    LO_INVALID,
+    LO_BLOCK,
+    LO_DATA_PTR,
+    LO_DATA
+};
+
+typedef std::map<TObjId, ELiveObj>                      TLiveObjs;
 
 struct IHeapEntity {
     virtual ~IHeapEntity() { }
@@ -834,11 +811,11 @@ void SymHeapCore::Private::setValueOf(
     TArena &arena = rootData->arena;
     const TOffset off = objData->off;
     const TObjType clt = objData->clt;
-    arena += createArenaItem(off, clt, obj);
+    arena += createArenaItem(off, clt->size, obj);
 
     // invalidate contents of the objects we are overwriting
     TObjSet overlaps;
-    if (arenaLookup(&overlaps, arena, off, clt, obj)) {
+    if (arenaLookup(&overlaps, arena, createChunk(off, clt), obj)) {
         BOOST_FOREACH(const TObjId old, overlaps)
             this->reinterpretObjData(old, obj, killedPtrs);
     }
@@ -863,7 +840,7 @@ TObjId SymHeapCore::Private::objCreate(
     row[clt] = obj;
 
     // map the region occupied by the object
-    rootData->arena += createArenaItem(off, clt, obj);
+    rootData->arena += createArenaItem(off, clt->size, obj);
     CL_BREAK_IF(!this->chkArenaConsistency(rootData));
     return obj;
 }
@@ -888,7 +865,7 @@ void SymHeapCore::Private::objDestroy(TObjId obj, bool removeVal, bool detach) {
             CL_BREAK_IF("internal object double-free");
 
         // remove the object from arena unless we are destroying everything
-        rootData->arena -= createArenaItem(off, clt, obj);
+        rootData->arena -= createArenaItem(off, clt->size, obj);
 
         CL_BREAK_IF(hasKey(rootData->liveObjs, obj));
         CL_BREAK_IF(!this->chkArenaConsistency(rootData));
@@ -1045,7 +1022,7 @@ TValId SymHeapCore::Private::objInit(TObjId obj) {
 
     // first check for data reinterpretation
     TObjSet overlaps;
-    if (arenaLookup(&overlaps, arena, off, clt, obj)) {
+    if (arenaLookup(&overlaps, arena, createChunk(off, clt), obj)) {
         BOOST_FOREACH(const TObjId other, overlaps) {
             HeapBlock *blockData = DCAST<HeapBlock *>(this->ents[other]);
             const EBlockKind code = blockData->code;
@@ -1312,12 +1289,11 @@ bool SymHeapCore::findCoveringUniBlock(
     const TOffset end = beg + size;
     const TMemChunk chunk(beg, end);
 
-    TArena::const_iterator it = arena.find(chunk);
-    if (arena.end() == it)
+    TObjSet overlaps;
+    if (!arenaLookup(&overlaps, arena, chunk, OBJ_INVALID))
         // not found
         return false;
 
-    const TObjSet &overlaps = it->second;
     BOOST_FOREACH(const TObjId id, overlaps) {
         const HeapBlock *data = DCAST<const HeapBlock *>(d->ents[id]);
         const EBlockKind code = data->code;
