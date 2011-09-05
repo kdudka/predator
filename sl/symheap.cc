@@ -616,6 +616,9 @@ void SymHeapCore::Private::registerValueOf(TObjId obj, TValId val) {
 bool SymHeapCore::Private::chkArenaConsistency(const RootValue *rootData) {
     TLiveObjs all(rootData->liveObjs);
     if (isGone(rootData->code)) {
+        CL_BREAK_IF(rootData->cbSize);
+        CL_BREAK_IF(!rootData->liveObjs.empty());
+
         // we can check nothing for VT_DELETED/VT_LOST, we do not know the size
         return true;
     }
@@ -1042,6 +1045,9 @@ TValId SymHeapCore::Private::objInit(TObjId obj) {
     HeapObject *objData = this->objData(obj);
     CL_BREAK_IF(!objData->hasExtRef);
 
+    // check whether the root entity that owns this object ID is still valid
+    CL_BREAK_IF(!isPossibleToDeref(this->valData(objData->root)->code));
+
     // resolve root
     const TValId root = objData->root;
     RootValue *rootData = this->rootData(root);
@@ -1177,7 +1183,7 @@ TValId SymHeapCore::valClone(TValId val) {
         return val;
     }
 
-    if (!isPossibleToDeref(code) && !isGone(code))
+    if (!isPossibleToDeref(code))
         // duplicate an unknown value
         return d->valDup(val);
 
@@ -1397,6 +1403,9 @@ void SymHeapCore::objSetValue(TObjId obj, TValId val, TValSet *killedPtrs) {
     const HeapObject *objData = d->objData(obj);
     const TObjType clt = objData->clt;
     CL_BREAK_IF(isComposite(clt, /* includingArray */ false));
+
+    // check whether the root entity that owns this object ID is still valid
+    CL_BREAK_IF(!isPossibleToDeref(this->valTarget(objData->root)));
 
     // mark the destination object as live
     const TValId root = objData->root;
@@ -1630,8 +1639,16 @@ void SymHeapCore::valReplace(TValId val, TValId replaceBy) {
 
     // we intentionally do not use a reference here (tight loop otherwise)
     TObjSet usedBy = valData->usedBy;
-    BOOST_FOREACH(const TObjId obj, usedBy)
+    BOOST_FOREACH(const TObjId obj, usedBy) {
+#ifndef NDEBUG
+        if (isGone(this->valTarget(this->placedAt(obj)))) {
+            // FIXME: exactly this happens with test-0037 running in OOM mode
+            CL_BREAK_IF("valReplace: value in use by deleted object, why?");
+            continue;
+        }
+#endif
         this->objSetValue(obj, replaceBy);
+    }
 }
 
 void SymHeapCore::Private::neqOpWrap(ENeqOp op, TValId valA, TValId valB) {
