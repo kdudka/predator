@@ -33,8 +33,8 @@ else()
     add_definitions("-O3 -DNDEBUG")
 endif()
 
-option(USE_BOOST_ICL "Set to ON to use the boost::icl library" ON)
-if(USE_BOOST_ICL)
+option(SL_USE_BOOST_ICL "Set to ON to use the boost::icl library" ON)
+if(SL_USE_BOOST_ICL)
     add_definitions("-DUSE_BOOST_ICL")
 endif()
 

@@ -206,8 +206,7 @@ inline bool arenaLookup(
         std::copy(objs.begin(), objs.end(), std::inserter(*dst, dst->begin()));
     }
 #else
-    if (!arena.intersects(*dst, chunk))
-        return false;
+    arena.intersects(*dst, chunk);
 #endif
 
     // remove the reference object itself

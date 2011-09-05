@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2009-2011 Kamil Dudka <kdudka@redhat.com>
- * Copyright (C) 2010 Petr Peringer, FIT
+ * Copyright (C) 2011 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -25,20 +24,30 @@
 
 #include <map>
 #include <set>
+#include <vector>
 
+#include <boost/foreach.hpp>
+
+/// ad-hoc implementaiton;  wastes memory, performance, and human resources
 template <typename TInt, typename TObj>
 class IntervalArena {
     public:
-        typedef std::set<TObj>                  TSet;
+        typedef std::set<TObj>                      TSet;
 
         // for compatibility with STL
-        typedef std::pair<TInt, TInt>           key_type;
-        typedef std::pair<key_type, TObj>       value_type;
+        typedef std::pair<TInt, TInt>               key_type;
+        typedef std::pair<key_type, TObj>           value_type;
+
+    private:
+        typedef std::set<TObj>                      TLeaf;
+        typedef std::map</* beg */ TInt, TLeaf>     TLine;
+        typedef std::map</* end */ TInt, TLine>     TCont;
+        TCont                                       cont_;
 
     public:
         void add(const key_type &, const TObj);
         void sub(const key_type &, const TObj);
-        bool intersects(TSet &dst, const key_type &key) const;
+        void intersects(TSet &dst, const key_type &key) const;
 
         void clear() {
             cont_.clear();
@@ -53,28 +62,113 @@ class IntervalArena {
             this->sub(item.first, item.second);
             return *this;
         }
-
-    private:
-        typedef std::map<TInt, value_type>      TCont;
-        TCont                                   cont_;
 };
 
 template <typename TInt, typename TObj>
 void IntervalArena<TInt, TObj>::add(const key_type &key, const TObj obj)
 {
-    CL_BREAK_IF("please implement");
+    const TInt beg = key.first;
+    const TInt end = key.second;
+
+    cont_[end][beg].insert(obj);
 }
 
 template <typename TInt, typename TObj>
 void IntervalArena<TInt, TObj>::sub(const key_type &key, const TObj obj)
 {
-    CL_BREAK_IF("please implement");
+    const TInt winBeg = key.first;
+    const TInt winEnd = key.second;
+
+    std::vector<value_type> recoverList;
+
+    typename TCont::iterator it =
+        cont_.lower_bound(winBeg + /* right-open interval given as key */ 1);
+
+    for (; cont_.end() != it; ++it) {
+        TLine &line = it->second;
+        const TInt begFirst = line.begin()->first;
+        if (winEnd <= begFirst)
+            // we are beyond the window already
+            break;
+
+        const TInt end = it->first;
+
+        BOOST_FOREACH(typename TLine::reference ref, line) {
+            const TInt beg = ref.first;
+            if (winEnd <= beg)
+                // we are done with this line
+                break;
+
+            // make sure the basic window axioms hold
+            CL_BREAK_IF(winEnd <= beg);
+            CL_BREAK_IF(end <= winBeg);
+
+            // remove the object from the current leaf (if found)
+            TLeaf &os = ref.second;
+            if (!os.erase(obj))
+                continue;
+
+            if (beg < winBeg) {
+                // schedule "the part above" for re-insertion
+                const key_type key(beg, winBeg);
+                const value_type item(key, obj);
+                recoverList.push_back(item);
+            }
+
+            if (winEnd < end) {
+                // schedule "the part beyond" for re-insertion
+                const key_type key(winEnd, end);
+                const value_type item(key, obj);
+                recoverList.push_back(item);
+            }
+        }
+
+        // FIXME: Removal of empty sub-containers would be nice.  I am just not
+        // sure if the STL containers can safely remove elements during such a
+        // traversal.
+    }
+
+    // go through the recoverList and re-insert the missing parts
+    BOOST_FOREACH(const value_type &rItem, recoverList) {
+        const key_type &key = rItem.first;
+        const TObj obj = rItem.second;
+        const TInt beg = key.first;
+        const TInt end = key.second;
+
+        cont_[end][beg].insert(obj);
+    }
 }
 
 template <typename TInt, typename TObj>
-bool IntervalArena<TInt, TObj>::intersects(TSet &dst, const key_type &key) const
+void IntervalArena<TInt, TObj>::intersects(TSet &dst, const key_type &key) const
 {
-    CL_BREAK_IF("please implement");
+    const TInt winBeg = key.first;
+    const TInt winEnd = key.second;
+
+    typename TCont::const_iterator it =
+        cont_.lower_bound(winBeg + /* right-open interval given as key */ 1);
+
+    for (; cont_.end() != it; ++it) {
+        const TLine &line = it->second;
+        const TInt begFirst = line.begin()->first;
+        if (winEnd <= begFirst)
+            // we are beyond the window already
+            break;
+
+        BOOST_FOREACH(typename TLine::const_reference ref, line) {
+            const TInt beg = ref.first;
+            if (winEnd <= beg)
+                // we are done with this line
+                break;
+
+            // make sure the basic window axioms hold
+            CL_BREAK_IF(winEnd <= beg);
+            CL_BREAK_IF(/* end */ it->first <= winBeg);
+
+            const TLeaf &os = ref.second;
+            std::copy(os.begin(), os.end(), std::inserter(dst, dst.begin()));
+        }
+    }
 }
 
 #endif /* H_GUARD_INTARENA_H */
