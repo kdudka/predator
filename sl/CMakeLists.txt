@@ -33,6 +33,11 @@ else()
     add_definitions("-O3 -DNDEBUG")
 endif()
 
+option(USE_BOOST_ICL "Set to ON to use the boost::icl library" ON)
+if(USE_BOOST_ICL)
+    add_definitions("-DUSE_BOOST_ICL")
+endif()
+
 # libsl.so
 add_library(sl SHARED
     cl_symexec.cc

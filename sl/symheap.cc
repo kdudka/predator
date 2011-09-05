@@ -25,6 +25,9 @@
 #include <cl/clutil.hh>
 #include <cl/storage.hh>
 
+#ifndef USE_BOOST_ICL
+#   include "intarena.hh"
+#endif
 #include "symabstract.hh"
 #include "symneq.hh"
 #include "symseg.hh"
@@ -37,7 +40,9 @@
 #include <queue>
 #include <set>
 
-#include <boost/icl/interval_map.hpp>
+#ifdef USE_BOOST_ICL
+#   include <boost/icl/interval_map.hpp>
+#endif
 #include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
 
@@ -145,6 +150,7 @@ typedef std::map<TOffset, TValId>                       TOffMap;
 typedef std::map<TObjType, TObjId>                      TObjByType;
 typedef std::map<TOffset, TObjByType>                   TGrid;
 
+#ifdef USE_BOOST_ICL
 namespace icl = boost::icl;
 
 typedef icl::interval_map<unsigned, TObjSet>            TArena;
@@ -163,12 +169,30 @@ inline TMemItem createArenaItem(
     return TMemItem(chunk, singleObj);
 }
 
+#else // USE_BOOST_ICL
+
+typedef IntervalArena<int, TObjId>                      TArena;
+typedef TArena::key_type                                TMemChunk;
+typedef TArena::value_type                              TMemItem;
+
+inline TMemItem createArenaItem(
+        const TOffset               off,
+        const unsigned              size,
+        const TObjId                obj)
+{
+    const TMemChunk chunk(off, off + size);
+    return TMemItem(chunk, obj);
+}
+
+#endif // USE_BOOST_ICL
+
 inline bool arenaLookup(
         TObjSet                     *dst,
         const TArena                &arena,
         const TMemChunk             &chunk,
         const TObjId                obj)
 {
+#if USE_BOOST_ICL
     TArena::const_iterator it = arena.find(chunk);
     if (arena.end() == it)
         // not found
@@ -181,6 +205,10 @@ inline bool arenaLookup(
         const TObjSet &objs = it->second;
         std::copy(objs.begin(), objs.end(), std::inserter(*dst, dst->begin()));
     }
+#else
+    if (!arena.intersects(*dst, chunk))
+        return false;
+#endif
 
     // remove the reference object itself
     dst->erase(obj);
