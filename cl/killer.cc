@@ -123,14 +123,20 @@ void scanOperand(Data &data, TBlock bb, const cl_operand &op, bool dst) {
             case CL_ACCESSOR_DEREF_ARRAY:
                 // FIXME: unguarded recursion
                 scanOperand(data, bb, *(ac->data.array.index), /* dst */ false);
-                break;
+                // fall through!
 
             case CL_ACCESSOR_DEREF:
                 // see whatever operand with CL_ACCESSOR_DEREF as [src]
                 dst = false;
                 break;
 
-            default:
+            case CL_ACCESSOR_ITEM:
+                if (dst)
+                    // if we are writing to a field of a composite type, it yet
+                    // does not mean we are killing the whole composite variable
+                    return;
+
+            case CL_ACCESSOR_REF:
                 break;
         }
     }
