@@ -25,7 +25,7 @@ option(SL_USE_BOOST_ICL "Set to ON to use the boost::icl library" ON)
 if(SL_USE_BOOST_ICL)
     add_definitions("-DUSE_BOOST_ICL")
 
-    # we need ot use boost 1.46+ because of boost::icl
+    # we need to use boost 1.46+ because of boost::icl
     find_package(Boost 1.46)
 endif()
 

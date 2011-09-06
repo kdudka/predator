@@ -91,8 +91,14 @@ void IntervalArena<TInt, TObj>::sub(const key_type &key, const TObj obj)
 
     while (itEnd != it) {
         TLine &line = it->second;
-        const TInt begFirst = line.begin()->first;
-        if (winEnd <= begFirst)
+#if !IA_AGGRESSIVE_OPTIMIZATION
+        if (line.empty())
+            // skip orphans
+            continue;
+#endif
+        typename TLine::iterator lineIt = line.begin();
+        TInt beg = lineIt->first;
+        if (winEnd <= beg)
             // we are beyond the window already
             break;
 
@@ -100,14 +106,7 @@ void IntervalArena<TInt, TObj>::sub(const key_type &key, const TObj obj)
         bool anyHit = false;
 
         const typename TLine::iterator lineItEnd = line.end();
-        typename TLine::iterator lineIt = line.begin();
-
-        while (lineItEnd != lineIt) {
-            const TInt beg = lineIt->first;
-            if (winEnd <= beg)
-                // we are done with this line
-                break;
-
+        for (;;) {
             // make sure the basic window axioms hold
             CL_BREAK_IF(winEnd <= beg);
             CL_BREAK_IF(end <= winBeg);
@@ -126,13 +125,21 @@ void IntervalArena<TInt, TObj>::sub(const key_type &key, const TObj obj)
             }
 
 #if IA_AGGRESSIVE_OPTIMIZATION
-            if (os.empty()) {
+            if (os.empty())
                 // FIXME: Can we remove items from std::map during traversal??
                 line.erase(lineIt++);
-                continue;
-            }
+            else
 #endif
             ++lineIt;
+
+            if (lineItEnd == lineIt)
+                // end of line
+                break;
+
+            beg = lineIt->first;
+            if (winEnd <= beg)
+                // we are done with this line
+                break;
         }
 
         if (anyHit) {
@@ -178,23 +185,35 @@ void IntervalArena<TInt, TObj>::intersects(TSet &dst, const key_type &key) const
 
     for (; cont_.end() != it; ++it) {
         const TLine &line = it->second;
-        const TInt begFirst = line.begin()->first;
-        if (winEnd <= begFirst)
+#if !IA_AGGRESSIVE_OPTIMIZATION
+        if (line.empty())
+            // skip orphans
+            continue;
+#endif
+        typename TLine::const_iterator lineIt = line.begin();
+        TInt beg = lineIt->first;
+        if (winEnd <= beg)
             // we are beyond the window already
             break;
 
-        BOOST_FOREACH(typename TLine::const_reference ref, line) {
-            const TInt beg = ref.first;
-            if (winEnd <= beg)
-                // we are done with this line
-                break;
-
+        const typename TLine::const_iterator lineItEnd = line.end();
+        for (;;) {
             // make sure the basic window axioms hold
             CL_BREAK_IF(winEnd <= beg);
             CL_BREAK_IF(/* end */ it->first <= winBeg);
 
-            const TLeaf &os = ref.second;
+            const TLeaf &os = lineIt->second;
             std::copy(os.begin(), os.end(), std::inserter(dst, dst.begin()));
+
+            // increment for next wheel
+            if (lineItEnd == ++lineIt)
+                // end of line
+                break;
+
+            beg = lineIt->first;
+            if (winEnd <= beg)
+                // we are done with this line
+                break;
         }
     }
 }
