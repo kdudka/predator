@@ -308,7 +308,7 @@ void commitInsn(
 
     Insn &term = *const_cast<Insn *>(bb->back());
 
-    BOOST_FOREACH(TVar vKill, data.blocks[bb].gen) {
+    BOOST_FOREACH(TVar vKill, now.gen) {
         for (unsigned i = 0; i < cntTargets; ++i) {
             if (!insertOnce(livePerTarget[i], vKill))
                 continue;

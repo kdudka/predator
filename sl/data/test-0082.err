@@ -59,9 +59,6 @@ test-0082.c:76:5: note: from call of main()
 test-0082.c:47:10: warning: ignoring call of undefined function: printf()
 test-0082.c:81:14: note: from call of new_list()
 test-0082.c:76:5: note: from call of main()
-test-0082.c:28:8: warning: memory leak detected while destroying a variable on stack
-test-0082.c:81:14: note: from call of new_list()
-test-0082.c:76:5: note: from call of main()
 test-0082.c:40:16: error: dereference of NULL value
 test-0082.c:81:14: note: from call of new_list()
 test-0082.c:76:5: note: from call of main()
@@ -89,15 +86,6 @@ test-0082.c:76:5: note: from call of main()
 test-0082.c:47:10: warning: ignoring call of undefined function: printf()
 test-0082.c:81:14: note: from call of new_list()
 test-0082.c:76:5: note: from call of main()
-test-0082.c:28:8: warning: memory leak detected while destroying a variable on stack
-test-0082.c:81:14: note: from call of new_list()
-test-0082.c:76:5: note: from call of main()
-test-0082.c:28:8: warning: memory leak detected while destroying a variable on stack
-test-0082.c:81:14: note: from call of new_list()
-test-0082.c:76:5: note: from call of main()
-test-0082.c:28:8: warning: memory leak detected while destroying a variable on stack
-test-0082.c:81:14: note: from call of new_list()
-test-0082.c:76:5: note: from call of main()
 test-0082.c:41:20: error: dereference of NULL value with offset 4B
 test-0082.c:81:14: note: from call of new_list()
 test-0082.c:76:5: note: from call of main()
@@ -116,18 +104,6 @@ test-0082.c:76:5: note: from call of main()
 test-0082.c:47:10: warning: ignoring call of undefined function: printf()
 test-0082.c:81:14: note: from call of new_list()
 test-0082.c:76:5: note: from call of main()
-test-0082.c:28:8: warning: memory leak detected while destroying a variable on stack
-test-0082.c:81:14: note: from call of new_list()
-test-0082.c:76:5: note: from call of main()
-test-0082.c:28:8: warning: memory leak detected while destroying a variable on stack
-test-0082.c:81:14: note: from call of new_list()
-test-0082.c:76:5: note: from call of main()
-test-0082.c:28:8: warning: memory leak detected while destroying a variable on stack
-test-0082.c:81:14: note: from call of new_list()
-test-0082.c:76:5: note: from call of main()
-test-0082.c:28:8: warning: memory leak detected while destroying a variable on stack
-test-0082.c:81:14: note: from call of new_list()
-test-0082.c:76:5: note: from call of main()
 test-0082.c:41:20: error: dereference of NULL value with offset 4B
 test-0082.c:81:14: note: from call of new_list()
 test-0082.c:76:5: note: from call of main()
@@ -135,6 +111,18 @@ test-0082.c:42:10: warning: memory leak detected while assigning a variable on s
 test-0082.c:81:14: note: from call of new_list()
 test-0082.c:76:5: note: from call of main()
 test-0082.c:47:10: warning: ignoring call of undefined function: printf()
+test-0082.c:81:14: note: from call of new_list()
+test-0082.c:76:5: note: from call of main()
+test-0082.c:26:15: warning: memory leak detected while destroying a variable on stack
+test-0082.c:81:14: note: from call of new_list()
+test-0082.c:76:5: note: from call of main()
+test-0082.c:26:15: warning: memory leak detected while destroying a variable on stack
+test-0082.c:81:14: note: from call of new_list()
+test-0082.c:76:5: note: from call of main()
+test-0082.c:26:15: warning: memory leak detected while destroying a variable on stack
+test-0082.c:81:14: note: from call of new_list()
+test-0082.c:76:5: note: from call of main()
+test-0082.c:26:15: warning: memory leak detected while destroying a variable on stack
 test-0082.c:81:14: note: from call of new_list()
 test-0082.c:76:5: note: from call of main()
 test-0082.c:59:7: warning: ignoring call of undefined function: puts()
