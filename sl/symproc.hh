@@ -203,7 +203,6 @@ class SymExecCore: public SymProc {
         bool concretizeLoop(SymState &dst, const CodeStorage::Insn &insn,
                             const TDerefs &derefs);
 
-        bool concretizeIfNeeded(SymState &dst, const CodeStorage::Insn &insn);
         bool execCore(SymState &dst, const CodeStorage::Insn &insn, const bool);
 
     protected:

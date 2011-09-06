@@ -1012,85 +1012,10 @@ already_alive:
     sh_.objReleaseId(varLhs);
 }
 
-template <class TDerefs>
-bool SymExecCore::concretizeLoop(SymState                       &dst,
-                                 const CodeStorage::Insn        &insn,
-                                 const TDerefs                  &derefs)
-{
-    bool hit = false;
-
-    TSymHeapList todo;
-    todo.push_back(sh_);
-    while (!todo.empty()) {
-        SymHeap &sh = todo.front();
-        SymExecCore core(sh, bt_, ep_);
-        core.setLocation(lw_);
-
-        // TODO: implement full version of the alg (complexity m*n)
-        bool hitLocal = false;
-        BOOST_FOREACH(unsigned idx, derefs) {
-            const struct cl_operand &op = insn.operands.at(idx);
-
-            // we expect a pointer at this point
-            const TValId val = valOfPtrAt(sh, core.varAt(op));
-            if (VT_ABSTRACT == sh.valTarget(val)) {
-                CL_BREAK_IF(hitLocal);
-                hit = true;
-                hitLocal = true;
-                concretizeObj(sh, val, todo);
-            }
-        }
-
-        // process the current heap and move to the next one (if any)
-        core.execCore(dst, insn, /* aggressive optimization */1 == todo.size());
-        todo.pop_front();
-    }
-
-    return hit;
-}
-
-bool SymExecCore::concretizeIfNeeded(
-        SymState                    &results,
-        const CodeStorage::Insn     &insn)
-{
-    TOpIdxList derefs;
-
-    const cl_insn_e code = insn.code;
-    if (CL_INSN_CALL == code)
-        derefs = opsWithDerefSemanticsInCallInsn(insn);
-    else {
-        const CodeStorage::TOperandList &opList = insn.operands;
-
-        // look for dereferences
-        for (unsigned idx = 0; idx < opList.size(); ++idx) {
-            const struct cl_accessor *ac = opList[idx].accessor;
-
-            if (!ac || CL_ACCESSOR_DEREF != ac->code)
-                // we expect the dereference only as the first accessor
-                continue;
-
-            if (seekRefAccessor(ac))
-                // not a dereference, only an address is being computed
-                continue;
-
-            CL_BREAK_IF(CL_INSN_UNOP != insn.code);
-            CL_BREAK_IF(CL_UNOP_ASSIGN != static_cast<cl_unop_e>(insn.subCode));
-            derefs.push_back(idx);
-        }
-    }
-
-    if (derefs.empty())
-        return false;
-
-    // handle dereferences
-    this->concretizeLoop(results, insn, derefs);
-    return true;
-}
-
 bool SymExecCore::execCore(
-        SymState                &dst,
-        const CodeStorage::Insn &insn,
-        const bool              feelFreeToOverwrite)
+        SymState                    &dst,
+        const CodeStorage::Insn     &insn,
+        const bool                  feelFreeToOverwrite)
 {
     const enum cl_insn_e code = insn.code;
     switch (code) {
@@ -1123,11 +1048,75 @@ bool SymExecCore::execCore(
     return true;
 }
 
-bool SymExecCore::exec(SymState &dst, const CodeStorage::Insn &insn) {
-    lw_ = &insn.loc;
-    if (this->concretizeIfNeeded(dst, insn))
-        // concretization loop done
-        return true;
+template <class TDerefs>
+bool SymExecCore::concretizeLoop(
+        SymState                    &dst,
+        const CodeStorage::Insn     &insn,
+        const TDerefs               &derefs)
+{
+    bool hit = false;
 
-    return this->execCore(dst, insn, /* aggressive optimization */ true);
+    TSymHeapList todo;
+    todo.push_back(sh_);
+    while (!todo.empty()) {
+        SymHeap &sh = todo.front();
+        SymExecCore slave(sh, bt_, ep_);
+        slave.setLocation(lw_);
+
+        // TODO: implement full version of the alg (complexity m*n)
+        bool hitLocal = false;
+        BOOST_FOREACH(unsigned idx, derefs) {
+            const struct cl_operand &op = insn.operands.at(idx);
+
+            // we expect a pointer at this point
+            const TValId val = valOfPtrAt(sh, slave.varAt(op));
+            if (VT_ABSTRACT == sh.valTarget(val)) {
+                CL_BREAK_IF(hitLocal);
+                hit = true;
+                hitLocal = true;
+                concretizeObj(sh, val, todo);
+            }
+        }
+
+        // process the current heap and move to the next one (if any)
+        slave.execCore(dst, insn, /* aggressive optimization */1 == todo.size());
+        todo.pop_front();
+    }
+
+    return hit;
+}
+
+bool SymExecCore::exec(SymState &dst, const CodeStorage::Insn &insn) {
+    TOpIdxList derefs;
+
+    const cl_insn_e code = insn.code;
+    if (CL_INSN_CALL == code)
+        derefs = opsWithDerefSemanticsInCallInsn(insn);
+    else {
+        const CodeStorage::TOperandList &opList = insn.operands;
+
+        // look for dereferences
+        for (unsigned idx = 0; idx < opList.size(); ++idx) {
+            const struct cl_accessor *ac = opList[idx].accessor;
+
+            if (!ac || CL_ACCESSOR_DEREF != ac->code)
+                // we expect the dereference only as the first accessor
+                continue;
+
+            if (seekRefAccessor(ac))
+                // not a dereference, only an address is being computed
+                continue;
+
+            CL_BREAK_IF(CL_INSN_UNOP != insn.code);
+            CL_BREAK_IF(CL_UNOP_ASSIGN != static_cast<cl_unop_e>(insn.subCode));
+            derefs.push_back(idx);
+        }
+    }
+
+    if (derefs.empty())
+        return this->execCore(dst, insn, /* aggressive optimization */ true);
+
+    // handle dereferences
+    this->concretizeLoop(dst, insn, derefs);
+    return true;
 }
