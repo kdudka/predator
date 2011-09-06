@@ -25,12 +25,20 @@
  * implementation of built-in functions
  */
 
+#include <vector>
+
 class SymExecCore;
 class SymState;
 
 namespace CodeStorage {
     struct Insn;
 }
+
+/// list of indexes of operands in an instruction
+typedef std::vector<unsigned /* idx */>         TOpIdxList;
+
+/// list of operands which have dereference semantics for a detected built-in
+const TOpIdxList& opsWithDerefSemanticsInCallInsn(const CodeStorage::Insn &);
 
 /**
  * analyze the given @b call instruction and handle any recognized built-in

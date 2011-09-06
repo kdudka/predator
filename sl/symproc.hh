@@ -199,9 +199,9 @@ class SymExecCore: public SymProc {
         template <int ARITY>
         void execOp(const CodeStorage::Insn &insn);
 
-        template <class TOpList, class TDerefs>
+        template <class TDerefs>
         bool concretizeLoop(SymState &dst, const CodeStorage::Insn &insn,
-                            const TOpList &opList, const TDerefs &derefs);
+                            const TDerefs &derefs);
 
         bool concretizeIfNeeded(SymState &dst, const CodeStorage::Insn &insn);
         bool execCore(SymState &dst, const CodeStorage::Insn &insn, const bool);

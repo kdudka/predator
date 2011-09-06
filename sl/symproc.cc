@@ -1012,10 +1012,9 @@ already_alive:
     sh_.objReleaseId(varLhs);
 }
 
-template <class TOpList, class TDerefs>
+template <class TDerefs>
 bool SymExecCore::concretizeLoop(SymState                       &dst,
                                  const CodeStorage::Insn        &insn,
-                                 const TOpList                  &opList,
                                  const TDerefs                  &derefs)
 {
     bool hit = false;
@@ -1030,7 +1029,7 @@ bool SymExecCore::concretizeLoop(SymState                       &dst,
         // TODO: implement full version of the alg (complexity m*n)
         bool hitLocal = false;
         BOOST_FOREACH(unsigned idx, derefs) {
-            const struct cl_operand &op = opList.at(idx);
+            const struct cl_operand &op = insn.operands.at(idx);
 
             // we expect a pointer at this point
             const TValId val = valOfPtrAt(sh, core.varAt(op));
@@ -1050,75 +1049,42 @@ bool SymExecCore::concretizeLoop(SymState                       &dst,
     return hit;
 }
 
-namespace {
-bool checkForDeref(const struct cl_operand &op, const CodeStorage::Insn &insn) {
-    const struct cl_accessor *ac = op.accessor;
-    if (!ac || CL_ACCESSOR_DEREF != ac->code)
-        // we expect the dereference only as the first accessor
-        return false;
-
-    if (seekRefAccessor(ac))
-        // not a dereference as long as only an address is being computed
-        return false;
-
-#ifndef NDEBUG
-    const enum cl_unop_e code = static_cast<enum cl_unop_e>(insn.subCode);
-    CL_BREAK_IF(CL_INSN_UNOP != insn.code || CL_UNOP_ASSIGN != code);
-#else
-    (void) insn;
-#endif
-
-    // we should go through concretization
-    return true;
-}
-} // namespace
-
-bool SymExecCore::concretizeIfNeeded(SymState                   &results,
-                                     const CodeStorage::Insn    &insn)
+bool SymExecCore::concretizeIfNeeded(
+        SymState                    &results,
+        const CodeStorage::Insn     &insn)
 {
-    const size_t opCnt = insn.operands.size();
-    switch (opCnt) {
-        case /* deref       */ 2:
-        case /* free()      */ 3:
-        case /* memset()    */ 5:
-            break;
+    TOpIdxList derefs;
 
-        default:
-            return false;
-    }
+    const cl_insn_e code = insn.code;
+    if (CL_INSN_CALL == code)
+        derefs = opsWithDerefSemanticsInCallInsn(insn);
+    else {
+        const CodeStorage::TOperandList &opList = insn.operands;
 
-    // first look for dereferences
-    std::vector<unsigned /* idx */> derefs;
-    const CodeStorage::TOperandList &opList = insn.operands;
-    for (unsigned idx = 0; idx < opList.size(); ++idx)
-        if (checkForDeref(opList[idx], insn))
+        // look for dereferences
+        for (unsigned idx = 0; idx < opList.size(); ++idx) {
+            const struct cl_accessor *ac = opList[idx].accessor;
+
+            if (!ac || CL_ACCESSOR_DEREF != ac->code)
+                // we expect the dereference only as the first accessor
+                continue;
+
+            if (seekRefAccessor(ac))
+                // not a dereference, only an address is being computed
+                continue;
+
+            CL_BREAK_IF(CL_INSN_UNOP != insn.code);
+            CL_BREAK_IF(CL_UNOP_ASSIGN != static_cast<cl_unop_e>(insn.subCode));
             derefs.push_back(idx);
-
-    if (!derefs.empty()) {
-        // handle dereferences
-        this->concretizeLoop(results, insn, opList, derefs);
-        return true;
+        }
     }
 
-    const enum cl_insn_e code = insn.code;
-    const struct cl_operand &src = insn.operands[/* src */ 1];
-    if (CL_INSN_CALL != code || CL_OPERAND_CST != src.code)
+    if (derefs.empty())
         return false;
 
-    const struct cl_cst &cst = src.data.cst;
-    if (CL_TYPE_FNC != cst.code)
-        return false;
-
-    const char *fncName = cst.data.cst_fnc.name;
-    if (STREQ(fncName, "free") || STREQ(fncName, "memset")) {
-        // call of free() or memset()
-        derefs.push_back(/* addr */ 2);
-        this->concretizeLoop(results, insn, opList, derefs);
-        return true;
-    }
-
-    // no match
-    return false;
+    // handle dereferences
+    this->concretizeLoop(results, insn, derefs);
+    return true;
 }
 
 bool SymExecCore::execCore(

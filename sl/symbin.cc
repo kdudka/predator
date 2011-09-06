@@ -196,38 +196,6 @@ void printUserMessage(SymProc &proc, const struct cl_operand &opMsg)
     CL_NOTE_MSG(loc, "user message: " << cVal.data.str);
 }
 
-// singleton
-class BuiltInTable {
-    public:
-        static BuiltInTable* inst() {
-            return (inst_)
-                ? (inst_)
-                : (inst_ = new BuiltInTable);
-        }
-
-        bool handleBuiltIn(
-                SymState                            &dst,
-                SymExecCore                         &core,
-                const CodeStorage::Insn             &insn)
-            const;
-
-    private:
-        BuiltInTable();
-
-        static BuiltInTable* inst_;
-
-        typedef bool (*THandler)(
-                SymState                            &dst,
-                SymExecCore                         &core,
-                const CodeStorage::Insn             &insn,
-                const char                          *name);
-
-        typedef std::map<std::string, THandler>     TMap;
-        TMap                                        tbl_;
-};
-
-BuiltInTable *BuiltInTable::inst_;
-
 bool handleAbort(
         SymState                                    &dst,
         SymExecCore                                 &core,
@@ -520,8 +488,50 @@ bool handleError(
     return true;
 }
 
-// register built-ins
+// singleton
+class BuiltInTable {
+    public:
+        typedef const CodeStorage::Insn             &TInsn;
+
+    public:
+        static BuiltInTable* inst() {
+            return (inst_)
+                ? (inst_)
+                : (inst_ = new BuiltInTable);
+        }
+
+        bool handleBuiltIn(
+                SymState                            &dst,
+                SymExecCore                         &core,
+                TInsn                                insn,
+                const char                          *name)
+            const;
+
+        const TOpIdxList& lookForDerefs(TInsn) const;
+
+    private:
+        BuiltInTable();
+
+        static BuiltInTable* inst_;
+
+        typedef bool (*THandler)(
+                SymState                            &dst,
+                SymExecCore                         &core,
+                const CodeStorage::Insn             &insn,
+                const char                          *name);
+
+        typedef std::map<std::string, THandler>     TMap;
+        TMap                                        tbl_;
+
+        typedef std::map<std::string, TOpIdxList>   TDerefMap;
+        TDerefMap                                   der_;
+        const TOpIdxList                            emp_;
+};
+
+BuiltInTable *BuiltInTable::inst_;
+
 BuiltInTable::BuiltInTable() {
+    // register built-ins
     tbl_["abort"]                                   = handleAbort;
     tbl_["calloc"]                                  = handleCalloc;
     tbl_["free"]                                    = handleFree;
@@ -532,25 +542,39 @@ BuiltInTable::BuiltInTable() {
     tbl_["___sl_get_nondet_int"]                    = handleNondetInt;
     tbl_["___sl_plot"]                              = handlePlot;
     tbl_["___sl_enable_debugging_of"]               = handleDebuggingOf;
+
+    // initialize lookForDerefs() look-up table
+    der_["free"]        .push_back(/* addr */ 2);
+    der_["memset"]      .push_back(/* addr */ 2);
 }
 
 bool BuiltInTable::handleBuiltIn(
         SymState                                    &dst,
         SymExecCore                                 &core,
-        const CodeStorage::Insn                     &insn)
+        const CodeStorage::Insn                     &insn,
+        const char                                  *name)
     const
 {
-    const char *fncName;
-    if (!fncNameFromCst(&fncName, &insn.operands[/* fnc */ 1]))
-        return false;
-
-    TMap::const_iterator it = tbl_.find(fncName);
+    TMap::const_iterator it = tbl_.find(name);
     if (tbl_.end() == it)
         // no fnc name matched as built-in
         return false;
 
     const THandler hdl = it->second;
-    return hdl(dst, core, insn, fncName);
+    return hdl(dst, core, insn, name);
+}
+
+const TOpIdxList& BuiltInTable::lookForDerefs(TInsn insn) const {
+    const char *name;
+    if (!fncNameFromCst(&name, &insn.operands[/* fnc */ 1]))
+        return emp_;
+
+    TDerefMap::const_iterator it = der_.find(name);
+    if (der_.end() == it)
+        // no fnc name matched as built-in
+        return emp_;
+
+    return it->second;
 }
 
 bool handleBuiltIn(
@@ -558,6 +582,16 @@ bool handleBuiltIn(
         SymExecCore                                 &core,
         const CodeStorage::Insn                     &insn)
 {
+    const char *name;
+    if (!fncNameFromCst(&name, &insn.operands[/* fnc */ 1]))
+        return false;
+
     const BuiltInTable *tbl = BuiltInTable::inst();
-    return tbl->handleBuiltIn(dst, core, insn);
+    return tbl->handleBuiltIn(dst, core, insn, name);
+}
+
+const TOpIdxList& opsWithDerefSemanticsInCallInsn(const CodeStorage::Insn &insn)
+{
+    const BuiltInTable *tbl = BuiltInTable::inst();
+    return tbl->lookForDerefs(insn);
 }
