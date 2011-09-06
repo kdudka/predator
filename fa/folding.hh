@@ -320,7 +320,6 @@ public:
 		assert(root < this->fae.roots.size());
 		assert(this->fae.roots[root]);
 		assert(box);
-		CL_CDEBUG("efore unfolding box " << *(AbstractBox*)box << " at " << root << ":" << std::endl << this->fae.roots[root]);
 		const TT<label_type>& t = this->fae.roots[root]->getAcceptingTransition();
 		size_t lhsOffset = 0;
 		std::vector<size_t> bSig = box->getSig(0);

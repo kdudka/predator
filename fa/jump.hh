@@ -58,7 +58,7 @@ public:
 	);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "jmp\t" << this->next_;
+		return os << "jmp   \t" << this->next_;
 	}
 
 };

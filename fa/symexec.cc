@@ -42,7 +42,7 @@ using std::list;
 using std::set;
 using boost::unordered_set;
 using boost::unordered_map;
-
+/*
 void dumpOperandTypes(std::ostream& os, const cl_operand* op) {
 	os << "operand:" << std::endl;
 	cltToStream(os, op->type, false);
@@ -53,7 +53,7 @@ void dumpOperandTypes(std::ostream& os, const cl_operand* op) {
 		acc = acc->next;
 	}
 }
-
+*/
 class SymExec::Engine {
 
 	TA<label_type>::Backend taBackend;
@@ -242,40 +242,6 @@ protected:
 	}
 */
 /*
-	void printTrace(SymState* state) {
-
-		vector<pair<SymState*, const CodeStorage::Insn*> > trace;
-
-		while (state) {
-
-			trace.push_back(make_pair(state, *CFG_FROM_FAE(*state->fae)->insn));
-			state = state->parent;
-
-		}
-
-//		trace.push_back(make_pair(item->fae, *state->insn));
-
-		CL_DEBUG("trace:");
-
-		for (auto i = trace.rbegin(); i != trace.rend(); ++i) {
-			if (i->first->payload) {
-				CfgState* state = CFG_FROM_FAE(*i->first->fae);
-				CL_DEBUG(std::endl << SymCtx::Dump(*state->ctx, *i->first->fae));
-				CL_DEBUG(std::endl << *i->first->fae);
-				CL_NOTE_MSG(&i->second->loc, *(i->second));
-			}
-//			STATE_FROM_FAE(*i->first)->ctx->dumpContext(*i->first);
-//			CL_CDEBUG(std::endl << *(i->first));
-		}
-
-//		state = STATE_FROM_FAE(fae);
-//		CL_CDEBUG(std::endl << SymCtx::Dump(*state->ctx, fae));
-//		CL_CDEBUG(std::endl << fae);
-//		CL_NOTE_MSG(this->currentInsn->loc, *this->currentInsn);
-
-	}
-*/
-/*
 	TraceRecorder::Item* revRun(const FAE& fae) {
 
 		CL_CDEBUG("reconstructing abstract trace ...");
@@ -362,9 +328,61 @@ protected:
 
 	}
 */
+/*
+	void printQueue() const {
+		for (SymState* state : this->queue)
+			std::cerr << *state->fae;
+	}
+*/
+
+	static void printTrace(const AbstractInstruction::StateType& state) {
+
+		SymState* s = state.second;
+
+		std::vector<SymState*> trace;
+
+		for ( ; s; s = s->parent)
+			trace.push_back(s);
+
+		CL_DEBUG("trace:");
+
+		for (auto i = trace.rbegin(); i != trace.rend(); ++i) {
+			CL_DEBUG(*(*i)->instr);
+			if (!(*i)->instr->insn())
+				continue;
+//			CL_DEBUG(std::endl << *s->fae);
+			CL_NOTE_MSG(&(*i)->instr->insn()->loc, *(*i)->instr->insn());
+		}
+
+	}
+
+	void mainLoop() {
+
+		AbstractInstruction::StateType state;
+
+		try {
+
+			while (this->execMan.dequeueDFS(state)) {
+	
+				CL_CDEBUG(3, state);
+	
+				this->execMan.execute(state);
+	
+			}
+
+		} catch (ProgramError& e) {
+
+			Engine::printTrace(state);
+
+			throw;
+
+		}
+
+	}
+
 	void loadTypes(const CodeStorage::Storage& stor) {
 
-	    CL_CDEBUG("loading types ...");
+	    CL_CDEBUG(2, "loading types ...");
 
 		for (auto type : stor.types) {
 			if (type->code != cl_type_e::CL_TYPE_STRUCT)
@@ -384,12 +402,7 @@ protected:
 		}
 
 	}
-/*
-	void printQueue() const {
-		for (SymState* state : this->queue)
-			std::cerr << *state->fae;
-	}
-*/
+
 public:
 
 	Engine() : boxMan(this->taBackend),
@@ -398,7 +411,7 @@ public:
 
 	void loadBoxes(const boost::unordered_map<std::string, std::string>& db) {
 
-	    CL_DEBUG("loading boxes ...");
+	    CL_DEBUG_AT(2, "loading boxes ...");
 
 		for (boost::unordered_map<std::string, std::string>::const_iterator i = db.begin(); i != db.end(); ++i) {
 			this->boxes.push_back((const Box*)this->boxMan.loadBox(i->first, db));
@@ -411,76 +424,73 @@ public:
 
 	void compile(const CodeStorage::Storage& stor) {
 
-		CL_DEBUG("compiling ...");
+		this->loadTypes(stor);
+
+		CL_DEBUG_AT(2, "compiling ...");
 
 		this->compiler_.compile(this->assembly_, stor);
 
-		CL_DEBUG("assembly:" << std::endl << this->assembly_);		
-
-		this->loadTypes(stor);
+		CL_DEBUG_AT(2, "assembly:" << std::endl << this->assembly_);		
 
 	}
 
-	void run(const CodeStorage::Fnc& main) {
+	void run(const CodeStorage::Fnc& entry) {
 
 		assert(this->assembly_.code_.size());
 
 		this->execMan.clear();
 
-	    CL_CDEBUG("creating main context ...");
+	    CL_CDEBUG(2, "creating main context ...");
 		// create main context
-		SymCtx mainCtx(main);
+		SymCtx entryCtx(entry);
 
-	    CL_CDEBUG("creating empty heap ...");
+	    CL_CDEBUG(2, "creating empty heap ...");
 		// create empty heap with no local variables
 		std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(this->taBackend, this->boxMan));
 
-	    CL_CDEBUG("allocating global registers ...");
+	    CL_CDEBUG(2, "allocating global registers ...");
 		// add global registers
 		SymCtx::init(*fae);
 
-	    CL_CDEBUG("entering main stack frame ...");
+	    CL_CDEBUG(2, "entering main stack frame ...");
 		// enter main stack frame
-		mainCtx.createStackFrame(*fae);
+		entryCtx.createStackFrame(*fae);
 
-	    CL_CDEBUG("sheduling initial state ...");
+	    CL_CDEBUG(2, "sheduling initial state ...");
 		// schedule initial state for processing
 		this->execMan.init(
-			std::vector<Data>(this->assembly_.regFileSize_, Data::createUndef()), fae, this->assembly_.getEntry(&main)
+			std::vector<Data>(this->assembly_.regFileSize_, Data::createUndef()), fae, this->assembly_.getEntry(&entry)
 		);
 
 		try {
 
-			AbstractInstruction::StateType state;
-
-			while (this->execMan.dequeueDFS(state)) {
-
-				CL_CDEBUG(state);
-
-				this->execMan.execute(state);
-
-			}
+			this->mainLoop();
 
 			for (auto instr : this->assembly_.code_) {
 
 				if (instr->getType() != e_fi_type::fiFix)
 					continue;
 
-				CL_DEBUG("fixpoint at " << instr->insn()->loc << ":" << std::endl << ((FixpointInstruction*)instr)->getFixPoint());
+				CL_DEBUG_AT(1, "fixpoint at " << instr->insn()->loc << std::endl << ((FixpointInstruction*)instr)->getFixPoint());
 
 			}
 
-			CL_DEBUG("states: " << this->execMan.statesEvaluated() << ", traces: " << this->execMan.tracesEvaluated());
+			CL_DEBUG_AT(1, "forester has evaluated " << this->execMan.statesEvaluated() << " state(s) in " << this->execMan.tracesEvaluated() << " trace(s)");
 
 		} catch (std::exception& e) {
-			CL_CDEBUG(e.what());
+	
+			CL_DEBUG(e.what());
+
 			throw;
+
 		}
 		
 	}
 
 	void setDbgFlag() {
+
 		this->dbgFlag = 1;
+
 	}	
 
 };

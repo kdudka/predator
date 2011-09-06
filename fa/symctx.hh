@@ -24,8 +24,6 @@
 
 #include <boost/unordered_map.hpp>
 
-//#include <cl/code_listener.h>
-//#include <cl/cldebug.hh>
 #include <cl/storage.hh>
 #include <cl/clutil.hh>
 #include <cl/cl_msg.hh>
@@ -33,7 +31,6 @@
 #include "forestautext.hh"
 #include "regdef.hh"
 #include "types.hh"
-//#include "operandinfo.hh"
 #include "nodebuilder.hh"
 #include "virtualmachine.hh"
 
@@ -85,15 +82,17 @@ struct SymCtx {
 
 			switch (var.code) {
 				case CodeStorage::EVar::VAR_LC:
-					if (SymCtx::isStacked(var)) {
-						NodeBuilder::buildNode(this->sfLayout, var.type, offset);
-						this->varMap.insert(std::make_pair(var.uid, make_pair(true, offset)));
-						offset += var.type->size;
-					} else {
+					if (!SymCtx::isStacked(var)) {
 						this->varMap.insert(
 							std::make_pair(var.uid, std::make_pair(false, this->regCount++))
 						);
+						break;
 					}
+					// no break
+				case CodeStorage::EVar::VAR_FNC_ARG:
+					NodeBuilder::buildNode(this->sfLayout, var.type, offset);
+					this->varMap.insert(std::make_pair(var.uid, make_pair(true, offset)));
+					offset += var.type->size;
 					break;
 				default:
 					break;
@@ -189,10 +188,10 @@ struct SymCtx {
 
 		VirtualMachine vm(fae);
 
-		std::vector<std::pair<SelData, Data> > stackInfo;
-
-		for (std::vector<SelData>::const_iterator i = this->sfLayout.begin(); i != this->sfLayout.end(); ++i)
-			stackInfo.push_back(std::make_pair(*i, Data::createUndef()));
+		std::vector<std::pair<SelData, Data>> stackInfo;
+		
+		for (auto sel : this->sfLayout)
+			stackInfo.push_back(std::make_pair(sel, Data::createUndef()));
 
 		stackInfo[0].second = vm.varGet(ABP_INDEX);
 		stackInfo[1].second = Data::createNativePtr(NULL);

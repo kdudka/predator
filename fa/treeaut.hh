@@ -27,6 +27,7 @@
 #include <cassert>
 #include <stdexcept>
 
+#include <boost/unordered_set.hpp>
 #include <boost/unordered_map.hpp>
 
 #include "cache.hh"

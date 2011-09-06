@@ -26,29 +26,6 @@
 #include "abstractinstruction.hh"
 #include "sequentialinstruction.hh"
 
-#include "jump.hh"
-#include "comparison.hh"
-#include "fixpoint.hh"
-
-class FI_ret : public AbstractInstruction {
-
-public:
-
-	FI_ret() : AbstractInstruction() {}
-
-	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
-	
-	virtual void finalize(
-		const std::unordered_map<const CodeStorage::Block*, AbstractInstruction*>&,
-		std::vector<AbstractInstruction*>::const_iterator
-	);
-
-	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "ret";
-	}
-
-};
-
 class FI_cond : public AbstractInstruction {
 
 	size_t src_;
@@ -68,7 +45,7 @@ public:
 	);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "cjmp\tr" << this->src_ << ", " << this->next_[0] << ", " << this->next_[1];
+		return os << "cjmp  \tr" << this->src_ << ", " << this->next_[0] << ", " << this->next_[1];
 	}
 
 };
@@ -86,7 +63,7 @@ public:
 	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "acc\t[r" << this->dst_ << " + " << this->offset_ << "]";
+		return os << "acc   \t[r" << this->dst_ << " + " << this->offset_ << "]";
 	}
 
 };
@@ -105,7 +82,7 @@ public:
 	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "acc\t[r" << this->dst_ << " + " << this->base_ << " + " << utils::wrap(this->offsets_) << ']';
+		return os << "acc   \t[r" << this->dst_ << " + " << this->base_ << " + " << utils::wrap(this->offsets_) << ']';
 	}
 
 };
@@ -122,7 +99,7 @@ public:
 	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "acca\t[r" << this->dst_ << ']';
+		return os << "acca  \t[r" << this->dst_ << ']';
 	}
 
 };
@@ -140,7 +117,7 @@ public:
 	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "mov\tr" << this->dst_ << ", " << this->data_;
+		return os << "mov   \tr" << this->dst_ << ", " << this->data_;
 	}
 
 };
@@ -158,7 +135,7 @@ public:
 	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "mov\tr" << this->dst_ << ", r" << this->src_;
+		return os << "mov   \tr" << this->dst_ << ", r" << this->src_;
 	}
 
 };
@@ -174,7 +151,7 @@ public:
 	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "not\tr" << this->dst_;
+		return os << "not   \tr" << this->dst_;
 	}
 
 };
@@ -190,7 +167,7 @@ public:
 	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "not\tr" << this->dst_;
+		return os << "not   \tr" << this->dst_;
 	}
 
 };
@@ -209,7 +186,7 @@ public:
 	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "mov\tr" << this->dst_ << ", r" << this->src_ << " + " << this->offset_;
+		return os << "mov   \tr" << this->dst_ << ", r" << this->src_ << " + " << this->offset_;
 	}
 
 };
@@ -228,25 +205,43 @@ public:
 	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "mov\tr" << this->dst_ << ", r" << this->src1_ << " + r" << this->src2_;
+		return os << "mov   \tr" << this->dst_ << ", r" << this->src1_ << " + r" << this->src2_;
 	}
 
 };
 
-class FI_move_sreg : public SequentialInstruction {
+class FI_get_greg : public SequentialInstruction {
 
 	size_t dst_;
 	size_t src_;
 
 public:
 
-	FI_move_sreg(size_t dst, size_t src)
+	FI_get_greg(size_t dst, size_t src)
 		: SequentialInstruction(), dst_(dst), src_(src) {}
 
 	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "mov\tr" << this->dst_ << ", sr" << this->src_;
+		return os << "mov   \tr" << this->dst_ << ", gr" << this->src_;
+	}
+
+};
+
+class FI_set_greg : public SequentialInstruction {
+
+	size_t dst_;
+	size_t src_;
+
+public:
+
+	FI_set_greg(size_t dst, size_t src)
+		: SequentialInstruction(), dst_(dst), src_(src) {}
+
+	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
+
+	virtual std::ostream& toStream(std::ostream& os) const {
+		return os << "mov   \tgr" << this->dst_ << ", r" << this->src_;
 	}
 
 };
@@ -264,7 +259,7 @@ public:
 	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "mov\tr" << this->dst_ << ", ABP + " << this->offset_;
+		return os << "mov   \tr" << this->dst_ << ", ABP + " << this->offset_;
 	}
 
 };
@@ -372,7 +367,7 @@ public:
 	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "mov\tr" << this->dst_ << ", [r" << this->dst_ << " + " << this->offset_ << ']';
+		return os << "mov   \tr" << this->dst_ << ", [r" << this->dst_ << " + " << this->offset_ << ']';
 	}
 
 };
@@ -390,7 +385,7 @@ public:
 	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "mov\tr" << this->dst_ << ", [ABP + " << this->offset_ << ']';
+		return os << "mov   \tr" << this->dst_ << ", [ABP + " << this->offset_ << ']';
 	}
 
 };
@@ -409,7 +404,7 @@ public:
 	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "mov\t[r" << this->dst_ << " + " << this->offset_ << "], r" << this->src_;
+		return os << "mov   \t[r" << this->dst_ << " + " << this->offset_ << "], r" << this->src_;
 	}
 
 };
@@ -446,7 +441,7 @@ public:
 	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "mov\tr" << this->dst_ << ", [r" << this->dst_ << " + " << this->base_ << " + " << utils::wrap(this->offsets_) << ']';
+		return os << "mov   \tr" << this->dst_ << ", [r" << this->dst_ << " + " << this->base_ << " + " << utils::wrap(this->offsets_) << ']';
 	}
 
 };
@@ -466,7 +461,7 @@ public:
 	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "mov\t[r" << this->dst_ << " + " << this->base_ << "], r" << this->src_;
+		return os << "mov   \t[r" << this->dst_ << " + " << this->base_ << "], r" << this->src_;
 	}
 
 };
@@ -484,31 +479,32 @@ public:
 	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "alloc\tr" << this->dst_ << ", r" << this->src_;
+		return os << "alloc \tr" << this->dst_ << ", r" << this->src_;
 	}
 
 };
 
 class FI_node_create : public SequentialInstruction {
 
-	BoxMan& boxMan_;
 	size_t dst_;
 	size_t src_;
-	const cl_type* type_;
+	size_t size_;
+	const TypeBox* typeInfo_;
+	std::vector<SelData> sels_;
 
 public:
 
-	FI_node_create(BoxMan& boxMan, size_t dst, size_t src, const cl_type* type)
-		: SequentialInstruction(), boxMan_(boxMan), dst_(dst), src_(src), type_(type) {}
+	FI_node_create(size_t dst, size_t src, size_t size, const TypeBox* typeInfo, const std::vector<SelData>& sels)
+		: SequentialInstruction(), dst_(dst), src_(src), size_(size), typeInfo_(typeInfo), sels_(sels) {}
 
 	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "node\tr" << this->dst_ << ", r" << this->src_;
+		return os << "node  \tr" << this->dst_ << ", r" << this->src_;
 	}
 
 };
-
+/*
 class FI_node_alloc : public SequentialInstruction {
 
 	BoxMan& boxMan_;
@@ -524,11 +520,11 @@ public:
 	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "alloc\tr" << this->dst_ << ", r" << this->src_;
+		return os << "alloc \tr" << this->dst_ << ", r" << this->src_;
 	}
 
 };
-
+*/
 class FI_node_free : public SequentialInstruction {
 
 	size_t dst_;
@@ -541,7 +537,7 @@ public:
 	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "free\tr" << this->dst_;
+		return os << "free  \tr" << this->dst_;
 	}
 
 };
@@ -560,7 +556,7 @@ public:
 	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "iadd\tr" << this->dst_ << ", r" << this->src1_ << ", r" << this->src2_;
+		return os << "iadd  \tr" << this->dst_ << ", r" << this->src1_ << ", r" << this->src2_;
 	}
 
 };
@@ -574,7 +570,7 @@ public:
 	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "check";
+		return os << "check ";
 	}
 
 };

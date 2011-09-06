@@ -70,7 +70,7 @@ public:
 	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "eq\tr" << this->dst_ << ", r" << this->src1_ << ", r" << this->src2_;
+		return os << "eq    \tr" << this->dst_ << ", r" << this->src1_ << ", r" << this->src2_;
 	}
 
 };
@@ -84,7 +84,7 @@ public:
 	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "neq\tr" << this->dst_ << ", r" << this->src1_ << ", r" << this->src2_;
+		return os << "neq   \tr" << this->dst_ << ", r" << this->src1_ << ", r" << this->src2_;
 	}
 
 };
@@ -98,7 +98,7 @@ public:
 	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "lt\tr" << this->dst_ << ", r" << this->src1_ << ", r" << this->src2_;
+		return os << "lt    \tr" << this->dst_ << ", r" << this->src1_ << ", r" << this->src2_;
 	}
 
 };

@@ -26,9 +26,12 @@
 #include <cl/cldebug.hh>
 
 #include "programerror.hh"
-//#include "loopanalyser.hh"
 #include "symctx.hh"
 #include "nodebuilder.hh"
+#include "call.hh"
+#include "jump.hh"
+#include "comparison.hh"
+#include "fixpoint.hh"
 #include "microcode.hh"
 
 #include "compiler.hh"
@@ -110,7 +113,7 @@ struct LoopAnalyser {
 	
 };
 
-typedef enum { biNone, biMalloc, biFree, biNondet } builtin_e;
+typedef enum { biNone, biMalloc, biFree, biNondet, biFix } builtin_e;
 
 struct BuiltinTable {
 
@@ -122,6 +125,7 @@ public:
 		this->_table["malloc"] = builtin_e::biMalloc;
 		this->_table["free"] = builtin_e::biFree;
 		this->_table["__nondet"] = builtin_e::biNondet;
+		this->_table["__fix"] = builtin_e::biFix;
 	}
 
 	builtin_e operator[](const std::string& key) {
@@ -171,6 +175,18 @@ protected:
 
 		return instr;
 
+	}
+
+	void cAbstraction() {
+		this->append(
+			new FI_abs(this->fixpointBackend, this->taBackend, this->boxMan, this->boxes)
+		);
+	}
+
+	void cFixpoint() {
+		this->append(
+			new FI_fix(this->fixpointBackend, this->taBackend, this->boxMan, this->boxes)
+		);
 	}
 
 	void cLoadCst(size_t dst, const cl_operand& op) {
@@ -330,7 +346,6 @@ protected:
 				if (varInfo.first) {
 
 					// stack variable
-
 					const cl_accessor* acc = op.accessor;
 			
 					int offset = 0;
@@ -542,6 +557,8 @@ protected:
 			if (!varInfo.first)
 				continue;
 
+			CL_DEBUG_AT(2, "killing variable [ABP + " << varInfo.second << ']');
+
 			offs.insert(varInfo.second);
 
 		}
@@ -555,12 +572,14 @@ protected:
 		if (offs.size() > 1) {
 
 			for (auto offset : offs)
-				tmp.push_back(Data::item_info(offset, Data::createInt(0)/*Data::createUndef()*/));
+//				tmp.push_back(Data::item_info(offset, Data::createInt(0)));
+				tmp.push_back(Data::item_info(offset, Data::createUndef()));
 
 		}
 
 		AbstractInstruction* result = this->append(
-			new FI_load_cst(0, (offs.size() > 1)?(Data::createStruct(tmp)):(Data::createInt(0)))
+//			new FI_load_cst(0, (offs.size() > 1)?(Data::createStruct(tmp)):(Data::createInt(0)))
+			new FI_load_cst(0, (offs.size() > 1)?(Data::createStruct(tmp)):(Data::createUndef()))
 		);
 		this->append(new FI_move_ABP(1, 0));
 		this->append(
@@ -594,8 +613,27 @@ protected:
 			dst.type->items[0].type->code != cl_type_e::CL_TYPE_VOID
 		) {
 
-//			this->append(new FI_is_type(srcReg, data_type_e::t_void_ptr));
-			this->append(new FI_node_create(this->boxMan, srcReg, srcReg, dst.type->items[0].type));
+			std::vector<SelData> sels;
+			NodeBuilder::buildNode(sels, dst.type->items[0].type);
+		
+			std::string typeName;
+			if (dst.type->items[0].type->name)
+				typeName = std::string(dst.type->items[0].type->name);
+			else {
+				std::ostringstream ss;
+				ss << dst.type->items[0].type->uid;
+				typeName = ss.str();
+			}
+
+			this->append(
+				new FI_node_create(
+					srcReg,
+					srcReg,
+					dst.type->items[0].type->size,
+					this->boxMan.getTypeInfo(typeName),
+					sels
+				)
+			);
 			
 		}
 
@@ -643,13 +681,31 @@ protected:
 		size_t dstReg = this->lookupStoreReg(dst, 0);
 		size_t srcReg = this->cLoadOperand(dstReg, src);
 
-		if (dst.type->items[0].type->code == cl_type_e::CL_TYPE_VOID) {
+		this->append(new FI_alloc(srcReg, srcReg));
 
-			this->append(new FI_alloc(srcReg, srcReg));
+		if (dst.type->items[0].type->code != cl_type_e::CL_TYPE_VOID) {
 
-		} else {
+			std::vector<SelData> sels;
+			NodeBuilder::buildNode(sels, dst.type->items[0].type);
+		
+			std::string typeName;
+			if (dst.type->items[0].type->name)
+				typeName = std::string(dst.type->items[0].type->name);
+			else {
+				std::ostringstream ss;
+				ss << dst.type->items[0].type->uid;
+				typeName = ss.str();
+			}
 
-			this->append(new FI_node_alloc(this->boxMan, srcReg, srcReg, dst.type->items[0].type));
+			this->append(
+				new FI_node_create(
+					srcReg,
+					srcReg,
+					dst.type->items[0].type->size,
+					this->boxMan.getTypeInfo(typeName),
+					sels
+				)
+			);
 
 		}
 
@@ -731,6 +787,19 @@ protected:
 
 	}
 
+	void compileCall(const CodeStorage::Insn& insn) {
+
+		const CodeStorage::Fnc* fnc = insn.stor->fncs[insn.operands[1].data.cst.data.cst_fnc.uid];
+
+		std::vector<std::pair<SelData, Data>> stackFrame;
+
+		this->append(new FI_load_cst(0, Data::createVoidPtr(1)));
+		this->append(new FI_node_create(0, 0, 1, NULL, SymCtx(*fnc).sfLayout));
+
+		throw std::runtime_error("feature not implemented");
+
+	}
+
 	void compileRet(const CodeStorage::Insn& insn) {
 
 		this->append(new FI_ret());
@@ -779,7 +848,7 @@ protected:
 
 	void compileInstruction(const CodeStorage::Insn& insn) {
 
-//		CL_CDEBUG(insn.loc << ' ' << insn);
+		CL_DEBUG_AT(2, insn.loc << ' ' << insn);
 		
 		switch (insn.code) {
 
@@ -834,8 +903,18 @@ protected:
 					case builtin_e::biNondet:
 						this->compileNondet(insn);
 						break;
-					default:
-						throw std::runtime_error("feature not implemented");
+					case builtin_e::biFix:
+						this->cFixpoint();
+						break;
+					default: {
+						const CodeStorage::Fnc* fnc = insn.stor->fncs[insn.operands[1].data.cst.data.cst_fnc.uid];
+						if (!isDefined(*fnc)) {
+							CL_NOTE_MSG(&insn.loc, "ignoring call to undefined function '" << insn.operands[1].data.cst.data.cst_fnc.name << '\'');
+							break;
+						}
+						this->compileCall(insn);
+						break;
+					}
 				}
 				break;
 
@@ -862,11 +941,10 @@ protected:
 
 		size_t head = this->assembly->code_.size();
 
-		if (this->loopAnalyser.isEntryPoint(*block->begin())) {
-			this->append(
-				new FI_fix(this->fixpointBackend, this->taBackend, this->boxMan, this->boxes)
-			);
-		}
+		if (this->loopAnalyser.isEntryPoint(*block->begin()))
+			this->cAbstraction();
+/*		else
+			this->cFixpoint();*/
 
 		for (auto insn : *block) {
 

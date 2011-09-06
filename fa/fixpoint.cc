@@ -19,6 +19,7 @@
 
 #include <ostream>
 
+#include <cl/storage.hh>
 #include <cl/cl_msg.hh>
 
 #include "treeaut.hh"
@@ -89,7 +90,7 @@ struct FuseNonZeroF {
 };
 
 // FI_fix
-void FI_fix::execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
+void FI_abs::execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
 
 	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.second->fae));
 
@@ -117,12 +118,12 @@ void FI_fix::execute(ExecutionManager& execMan, const AbstractInstruction::State
 		// we are normalized so we don't have to check whether root is not null
 		for (auto box : this->boxes) {
 
-			CL_CDEBUG("trying " << *(const AbstractBox*)box << " at " << i);
+			CL_CDEBUG(3, "trying " << *(const AbstractBox*)box << " at " << i);
 
 			if (folding.foldBox(i, box)) {
 
 				matched = true;
-				CL_CDEBUG("match");
+				CL_CDEBUG(3, "match");
 
 			}
 
@@ -162,6 +163,8 @@ void FI_fix::execute(ExecutionManager& execMan, const AbstractInstruction::State
 		abstraction.heightAbstraction(i, 1, SmartTMatchF());
 
 	// test inclusion
+	fae->unreachableFree();
+
 	TA<label_type> ta(*this->fwdConf.backend);
 	Index<size_t> index;
 
@@ -172,7 +175,7 @@ void FI_fix::execute(ExecutionManager& execMan, const AbstractInstruction::State
 
 	if (TA<label_type>::subseteq(ta, this->fwdConf)) {
 
-		CL_CDEBUG("hit");
+		CL_CDEBUG(3, "hit");
 		execMan.traceFinished(state.second);
 		return;
 
@@ -184,6 +187,113 @@ void FI_fix::execute(ExecutionManager& execMan, const AbstractInstruction::State
 	ta.clear();
 	this->fwdConf.minimized(ta);
 	this->fwdConf = ta;
+
+	CL_DEBUG_AT(2, "fixpoint at " << this->insn()->loc << std::endl << ta);
+
+	execMan.enqueue(state.second, state.first, fae, this->next_);
+
+}
+
+// FI_fix
+void FI_fix::execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
+
+	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.second->fae));
+
+	// normalize
+	std::set<size_t> tmp;
+
+	VirtualMachine vm(*fae);
+
+	const Data& abp = vm.varGet(ABP_INDEX);
+
+	vm.getNearbyReferences(abp.d_ref.root, tmp);
+
+	Normalization norm(*fae);
+
+	norm.normalize(tmp);
+/*
+	bool matched = false;
+
+	// fold
+	Folding folding(*fae);
+
+	// do not fold at 0
+	for (size_t i = 1; i < fae->getRootCount(); ++i) {
+
+		// we are normalized so we don't have to check whether root is not null
+		for (auto box : this->boxes) {
+
+			CL_CDEBUG(3, "trying " << *(const AbstractBox*)box << " at " << i);
+
+			if (folding.foldBox(i, box)) {
+
+				matched = true;
+				CL_CDEBUG(3, "match");
+
+			}
+
+		}
+
+	}
+
+	if (matched) {
+
+		tmp.clear();
+		vm.getNearbyReferences(abp.d_ref.root, tmp);
+		norm.normalize(tmp);
+
+	}
+
+	fae->unreachableFree();
+
+	// merge fixpoint
+	std::vector<FAE*> tmp2;
+
+	ContainerGuard<std::vector<FAE*> > g(tmp2);
+
+	FAE::loadCompatibleFAs(tmp2, this->fwdConf, this->taBackend, this->boxMan, fae.get(), 0, CompareVariablesF());
+
+//	for (size_t i = 0; i < tmp.size(); ++i)
+//		CL_CDEBUG("accelerator " << std::endl << *tmp[i]);
+	fae->fuse(tmp2, FuseNonZeroF());
+//	fae.fuse(target->fwdConf, FuseNonZeroF());
+
+//	CL_CDEBUG("fused " << std::endl << *fae);
+
+	// abstract
+	Abstraction abstraction(*fae);
+
+//	CL_CDEBUG("abstracting ... " << 1);
+	for (size_t i = 1; i < fae->getRootCount(); ++i)
+		abstraction.heightAbstraction(i, 1, SmartTMatchF());
+*/
+	// test inclusion
+	fae->unreachableFree();
+
+	TA<label_type> ta(*this->fwdConf.backend);
+	Index<size_t> index;
+
+	this->fwdConfWrapper.fae2ta(ta, index, *fae);
+
+//	CL_CDEBUG("challenge" << std::endl << ta);
+//	CL_CDEBUG("response" << std::endl << this->fwdConf);
+
+	if (TA<label_type>::subseteq(ta, this->fwdConf)) {
+
+		CL_CDEBUG(3, "hit");
+		execMan.traceFinished(state.second);
+		return;
+
+	}
+
+//	CL_CDEBUG("extending fixpoint with:" << std::endl << fae);
+
+	this->fwdConfWrapper.join(ta, index);
+	ta.clear();
+	this->fwdConf.minimized(ta);
+	this->fwdConf = ta;
+
+	CL_DEBUG_AT(2, "fixpoint at " << this->insn()->loc << std::endl << ta);
 
 	execMan.enqueue(state.second, state.first, fae, this->next_);
 

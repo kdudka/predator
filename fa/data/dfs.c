@@ -53,13 +53,15 @@ int main() {
     n = root;
     while (n) {
 	z = n->left;
-	if (z && (z->data == 0))
+	if (z &&
+	 (z->data == 0)) {
 	    n = z;
-	else {
+	} else {
 	    z = n->right;
-	    if (z && (z->data == 0)) 
+	    if (z &&
+		 (z->data == 0)) {
 		n = z;
-	    else {
+	    } else {
 		n->data = 1;
 		n = n->parent;
 	    }

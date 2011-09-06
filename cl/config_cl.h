@@ -43,7 +43,7 @@
 /**
  * print location info using the cl_locator code listener
  */
-#define CL_DEBUG_LOCATION               0
+#define CL_DEBUG_LOCATION               1
 
 /**
  * debug level of the CFG loop scanner

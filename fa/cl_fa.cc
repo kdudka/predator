@@ -100,10 +100,10 @@ void clEasyRun(const CodeStorage::Storage& stor, const char* configString) {
 
     using namespace CodeStorage;
 
-	CL_CDEBUG("config: " << configString);
+	CL_CDEBUG(1, "config: " << configString);
 
     // look for main() by name
-    CL_CDEBUG("looking for 'main()' at gl scope...");
+    CL_CDEBUG(2, "looking for 'main()' at gl scope...");
     const NameDb::TNameMap &glNames = stor.fncNames.glNames;
     const NameDb::TNameMap::const_iterator iter = glNames.find("main");
     if (glNames.end() == iter) {
@@ -122,7 +122,7 @@ void clEasyRun(const CodeStorage::Storage& stor, const char* configString) {
         return;
     }
 
-    CL_CDEBUG("starting verification stuff ...");
+    CL_CDEBUG(2, "starting verification stuff ...");
     try {
 		signal(SIGUSR1, setDbgFlag);
 		Config c(configString);

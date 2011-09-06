@@ -187,12 +187,12 @@ public:
 		const Splitting& split;
 		const TA<label_type>& ta;
 		const TT<label_type>& t;
-		std::set<size_t>& required;
+		std::set<size_t>* required;
 		std::vector<bool>& bitmap;
 		std::map<std::pair<const TA<label_type>*, size_t>, std::set<size_t>>& states;
 	
 		CheckIntegrityF(const Splitting& split, const TA<label_type>& ta, const TT<label_type>& t,
-			std::set<size_t>& required, std::vector<bool>& bitmap, std::map<std::pair<const TA<label_type>*, size_t>, std::set<size_t>>& states)
+			std::set<size_t>* required, std::vector<bool>& bitmap, std::map<std::pair<const TA<label_type>*, size_t>, std::set<size_t>>& states)
 			: split(split), ta(ta), t(t), required(required), bitmap(bitmap), states(states) {
 		}
 	
@@ -211,9 +211,9 @@ public:
 					break;
 			}
 
-			if (aBox->isStructural()) {
+			if (this->required && aBox->isStructural()) {
 				for (auto s : ((const StructuralBox*)aBox)->outputCoverage()) {
-					auto c = this->required.erase(s);
+					auto c = this->required->erase(s);
 					assert(c == 1);
 				}
 			}
@@ -247,7 +247,17 @@ public:
 
 		for (TA<label_type>::iterator i = ta.begin(state); i != ta.end(state); ++i) {
 
-			const std::vector<size_t>& sels = ((TypeBox*)i->label()->boxLookup((size_t)(-1)).aBox)->getSelectors();
+			TypeBox* typeBox = (TypeBox*)i->label()->boxLookup((size_t)(-1), NULL);
+
+			if (!typeBox) {
+				
+				i->label()->iterate(CheckIntegrityF(*this, ta, *i, NULL, bitmap, states));
+
+				continue;
+
+			}
+
+			const std::vector<size_t>& sels = typeBox->getSelectors();
 	
 			std::set<size_t> tmp(sels.begin(), sels.end());
 	
@@ -259,7 +269,7 @@ public:
 	
 			}
 			
-			i->label()->iterate(CheckIntegrityF(*this, ta, *i, tmp, bitmap, states));
+			i->label()->iterate(CheckIntegrityF(*this, ta, *i, &tmp, bitmap, states));
 	
 			assert(tmp.empty());
 	
@@ -290,9 +300,7 @@ public:
 		std::vector<bool> bitmap(this->fae.roots.size(), false);
 		std::map<std::pair<const TA<label_type>*, size_t>, std::set<size_t>> states;
 
-		bitmap[0] = true;
-
-		for (size_t i = 1; i < this->fae.roots.size(); ++i) {
+		for (size_t i = 0; i < this->fae.roots.size(); ++i) {
 
 			if (!this->fae.roots[i])
 				continue;

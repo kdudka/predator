@@ -22,61 +22,16 @@
 
 #include <cl/cldebug.hh>
 
-//#include "ufae.hh"
-
-//#include "symstate.hh"
 #include "executionmanager.hh"
 #include "splitting.hh"
 #include "virtualmachine.hh"
 #include "programerror.hh"
-//#include "loopanalyser.hh"
-//#include "abstraction.hh"
 #include "normalization.hh"
-//#include "folding.hh"
 #include "regdef.hh"
 #include "symctx.hh"
-//#include "operandinfo.hh"
-//#include "nodebuilder.hh"
+#include "jump.hh"
 
 #include "microcode.hh"
-
-// FI_ret
-void FI_ret::execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
-
-	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.second->fae));
-
-	VirtualMachine vm(*fae);
-
-	const Data& abp = vm.varGet(ABP_INDEX);
-
-	assert(abp.isRef());
-	assert(abp.d_ref.displ == 0);
-	
-	Data data;
-
-	vm.nodeLookup(abp.d_ref.root, IP_OFFSET, data);
-
-	assert(data.isNativePtr());
-
-	AbstractInstruction* next = (AbstractInstruction*)data.d_native_ptr;
-
-	vm.nodeLookup(abp.d_ref.root, ABP_OFFSET, data);
-	vm.unsafeNodeDelete(abp.d_ref.root);
-	vm.varSet(ABP_INDEX, data);
-
-	Normalization(*fae).check();
-
-	if (next)
-		execMan.enqueue(state.second, state.first, fae, next);
-	else
-		execMan.traceFinished(state.second);
-
-}
-
-void FI_ret::finalize(
-	const std::unordered_map<const CodeStorage::Block*, AbstractInstruction*>&,
-	std::vector<AbstractInstruction*>::const_iterator
-) {}
 
 // FI_cond
 void FI_cond::execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
@@ -270,10 +225,19 @@ void FI_move_reg_inc::execute(ExecutionManager& execMan, const AbstractInstructi
 
 }
 
-// FI_move_sreg
-void FI_move_sreg::execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
+// FI_get_sreg
+void FI_get_greg::execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
 
 	(*state.first)[this->dst_] = VirtualMachine(*state.second->fae).varGet(this->src_);
+
+	execMan.enqueue(state, this->next_);
+
+}
+
+// FI_set_sreg
+void FI_set_greg::execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
+
+	VirtualMachine(*state.second->fae).varSet(this->dst_, (*state.first)[this->src_]);
 
 	execMan.enqueue(state, this->next_);
 
@@ -406,31 +370,19 @@ void FI_node_create::execute(ExecutionManager& execMan, const AbstractInstructio
 
 	assert((*state.first)[this->src_].isVoidPtr());
 
-	if ((int)(*state.first)[this->src_].d_void_ptr != this->type_->size)
+	if ((int)(*state.first)[this->src_].d_void_ptr != this->size_)
 		throw ProgramError("allocated block size mismatch");
-
-	std::vector<SelData> sels;
-	NodeBuilder::buildNode(sels, this->type_);
-
-	std::string typeName;
-	if (this->type_->name)
-		typeName = std::string(this->type_->name);
-	else {
-		std::ostringstream ss;
-		ss << this->type_->uid;
-		typeName = ss.str();
-	}
 
 	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.second->fae));
 
 	(*state.first)[this->dst_] = Data::createRef(
-		VirtualMachine(*fae).nodeCreate(sels, this->boxMan_.getTypeInfo(typeName))
+		VirtualMachine(*fae).nodeCreate(this->sels_, this->typeInfo_)
 	);
 
 	execMan.enqueue(state.second, state.first, fae, this->next_);
 
 }
-
+/*
 // FI_node_alloc
 void FI_node_alloc::execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
 
@@ -460,7 +412,7 @@ void FI_node_alloc::execute(ExecutionManager& execMan, const AbstractInstruction
 	execMan.enqueue(state.second, state.first, fae, this->next_);
 
 }
-
+*/
 // FI_node_free
 void FI_node_free::execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
 

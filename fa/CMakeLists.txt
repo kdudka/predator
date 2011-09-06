@@ -55,6 +55,7 @@ add_library(fa SHARED
 	forestaut.cc
 	sequentialinstruction.cc
 	jump.cc
+	call.cc
 	comparison.cc
 	fixpoint.cc
 	microcode.cc

@@ -23,7 +23,7 @@
 #include <vector>
 #include <stdexcept>
 
-#include <boost/unordered_map.hpp>
+#include <unordered_map>
 
 #include "types.hh"
 #include "abstractbox.hh"
@@ -49,7 +49,7 @@ struct NodeLabel {
 		} data;
 		struct {
 			const std::vector<const AbstractBox*>* v;
-			boost::unordered_map<size_t, NodeItem>* m;
+			std::unordered_map<size_t, NodeItem>* m;
 			void* tag;
 		} node;
 		const std::vector<Data>* vData;
@@ -63,7 +63,7 @@ struct NodeLabel {
 	NodeLabel(const std::vector<const AbstractBox*>* v)
 		: type(node_type::n_node) {
 		this->node.v = v;
-		this->node.m = new boost::unordered_map<size_t, NodeItem>();
+		this->node.m = new std::unordered_map<size_t, NodeItem>();
 	}
 	NodeLabel(const std::vector<Data>* vData) : type(node_type::n_vData), vData(vData) {}
 
@@ -100,7 +100,7 @@ struct NodeLabel {
 
 	const AbstractBox* boxLookup(size_t offset, const AbstractBox* def) const {
 		assert(this->type == node_type::n_node);
-		boost::unordered_map<size_t, NodeItem>::const_iterator i = this->node.m->find(offset);
+		auto i = this->node.m->find(offset);
 		if (i == this->node.m->end())
 			return def;
 		return i->second.aBox;
@@ -108,7 +108,7 @@ struct NodeLabel {
 
 	const NodeItem& boxLookup(size_t offset) const {
 		assert(this->type == node_type::n_node);
-		boost::unordered_map<size_t, NodeItem>::const_iterator i = this->node.m->find(offset);
+		auto i = this->node.m->find(offset);
 //		assert(i != this->node.m->end());
 		if (i == this->node.m->end())
 			throw std::runtime_error("NodeLabel::boxLookup(): required box not found!");
@@ -236,5 +236,25 @@ struct label_type {
 	}
 	
 };
+
+namespace std {
+
+	template <>
+	struct hash<NodeLabel> {
+		size_t operator()(const NodeLabel& label) const {
+			size_t h = boost::hash_value(label.type);
+			boost::hash_combine(h, label.data.data);
+			return h;
+		}
+	};
+
+	template <>
+	struct hash<label_type> {
+		size_t operator()(const label_type& label) const {
+			return boost::hash_value(label._obj);
+		}
+	};
+
+}
 
 #endif

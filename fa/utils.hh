@@ -22,22 +22,17 @@
 
 #include <vector>
 #include <set>
-#include <map>
-#include <sstream>
 #include <ostream>
-#include <iostream>
 
-#include <boost/unordered_set.hpp>
-#include <boost/unordered_map.hpp>
+#include <unordered_set>
+#include <unordered_map>
 
 #ifndef NDEBUG
-//#define DEBUG_MSG(x) do { std::cerr << x << std::endl; } while (0)
-#define CL_CDEBUG(x) CL_DEBUG(x)
-#define CL_CDEBUG_MSG(x) CL_DEBUG_MSG(x)
+#define CL_CDEBUG(l, x) CL_DEBUG_AT(l, x)
+#define CL_CDEBUG_MSG(l, x) CL_DEBUG_MSG_AT(l, x)
 #else
-#define CL_CDEBUG(x)
-#define CL_CDEBUG_MSG(x)
-//#define DEBUG_MSG(x)
+#define CL_CDEBUG(l, x)
+#define CL_CDEBUG_MSG(l, x)
 #endif
 
 template <class T>
@@ -50,7 +45,7 @@ std::vector<T> itov(const T &item) {
 template <class T>
 struct Index {
 
-	typedef typename boost::unordered_map<T, size_t> map_type;
+	typedef typename std::unordered_map<T, size_t> map_type;
 	
 	map_type map;
 
@@ -300,13 +295,13 @@ public:
 	
 	template <class T>
 	static void setIntersection(std::vector<T>& dst, const std::vector<std::vector<T> >& src) {
-		boost::unordered_map<T, size_t> m;
+		std::unordered_map<T, size_t> m;
 		for (typename std::vector<std::vector<T> >::const_iterator i = src.begin(); i != src.end(); ++i) {
 			for (typename std::vector<T>::const_iterator j = i->begin(); j != i->end(); ++j)
 				++m.insert(make_pair(*j, 0)).first->second;
 		}
 		dst.clear();
-		for (typename boost::unordered_map<T, size_t>::iterator i = m.begin(); i != m.end(); ++i) {
+		for (typename std::unordered_map<T, size_t>::iterator i = m.begin(); i != m.end(); ++i) {
 			if (i->second == src.size())
 				dst.push_back(i->first);
 		}
@@ -327,7 +322,7 @@ public:
 	// union
 	template <class T>
 	static void setUnion(std::vector<T>& dst, const std::vector<std::vector<T> >& src) {
-		boost::unordered_set<T> m;
+		std::unordered_set<T> m;
 		for (typename std::vector<std::vector<T> >::const_iterator i = src.begin(); i != src.end(); ++i) {
 			for (typename std::vector<T>::const_iterator j = i->begin(); j != i->end(); ++j)
 				m.insert(*j);
@@ -338,7 +333,7 @@ public:
 	// duplicates removal
 	template <class T>
 	static void unique(std::vector<T>& dst, const std::vector<T>& src) {
-		boost::unordered_set<T> s;
+		std::unordered_set<T> s;
 		dst.clear();
 		for (typename std::vector<T>::const_iterator i = src.begin(); i != src.end(); ++i) {
 			if (s.insert(*i).second)
