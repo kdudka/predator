@@ -25,8 +25,8 @@
 
 #include <cl/code_listener.h>
 
-#include "config_cl.h"
-#include "version_cl.h"
+#include "../config_cl.h"
+#include "../version_cl.h"
 
 // avoid the following warnings with -Wundef:
 //      ../include/gcc/obstack.h:299:23: warning: "__NeXT__" is not defined

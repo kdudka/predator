@@ -49,6 +49,7 @@ namespace CodeStorage {
 
 namespace VarKiller {
 
+typedef CodeStorage::Storage               &TStorRef;
 typedef const struct cl_loc                *TLoc;
 typedef int                                 TVar;
 typedef std::set<TVar>                      TSet;
@@ -65,9 +66,15 @@ typedef std::map<TBlock, BlockData>         TMap;
 
 /// shared data
 struct Data {
+    TStorRef                                stor;
     TBlockSet                               todo;
     TMap                                    blocks;
     TSet                                    pointed;
+
+    Data(TStorRef stor_):
+        stor(stor_)
+    {
+    }
 };
 
 inline bool isLcVar(const cl_operand &op) {
@@ -87,7 +94,7 @@ inline bool isLcVar(const cl_operand &op) {
     }
 }
 
-void scanRefs(TSet &pointed, const cl_operand &op) {
+void scanRefs(TStorRef stor, TSet &pointed, const cl_operand &op) {
     if (!isLcVar(op))
         // not a local variable
         return;
@@ -100,7 +107,7 @@ void scanRefs(TSet &pointed, const cl_operand &op) {
     // black-list a variable that we take a reference to
     const int uid = varIdFromOperand(&op);
     if (insertOnce(pointed, uid))
-        VK_DEBUG(1, "pointed |= #" << uid);
+        VK_DEBUG(1, "pointed |= " << varToString(stor, uid));
 }
 
 void scanOperand(Data &data, TBlock bb, const cl_operand &op, bool dst) {
@@ -137,15 +144,17 @@ void scanOperand(Data &data, TBlock bb, const cl_operand &op, bool dst) {
         // already killed
         return;
 
+    const TStorRef stor = data.stor;
+
     if (dst) {
-        VK_DEBUG(3, "kill(" << bb->name() << ") |= #" << uid);
+        VK_DEBUG(3, "kill(" << bb->name() << ") |= " << varToString(stor, uid));
         bData.kill.insert(uid);
         return;
     }
 
     // we see the operand as [src]
     if (insertOnce(bData.gen, uid))
-        VK_DEBUG(3, "gen(" << bb->name() << ") |= #" << uid);
+        VK_DEBUG(3, "gen(" << bb->name() << ") |= " << varToString(stor, uid));
 }
 
 void scanInsn(Data &data, TBlock bb, const Insn &insn) {
@@ -154,7 +163,7 @@ void scanInsn(Data &data, TBlock bb, const Insn &insn) {
     // black-list all variables that we take a reference to by this instruction
     TOperandList opList = insn.operands;
     BOOST_FOREACH(const cl_operand &op, opList)
-        scanRefs(data.pointed, op);
+        scanRefs(data.stor, data.pointed, op);
 
     const enum cl_insn_e code = insn.code;
     switch (code) {
@@ -253,6 +262,7 @@ void commitInsn(
         TSet                    &live,
         std::vector<TSet>       &livePerTarget)
 {
+    const TStorRef stor = data.stor;
     const TSet &pointed = data.pointed;
     const TBlock bb = insn.bb;
 
@@ -261,7 +271,7 @@ void commitInsn(
     const bool multipleTargets = (1 < cntTargets);
 
     // FIXME: performance waste
-    Data arena;
+    Data arena(data.stor);
     arena.pointed = /* only suppress duplicated verbose messages */ pointed;
     scanInsn(arena, bb, insn);
     const BlockData &now = arena.blocks[bb];
@@ -276,7 +286,7 @@ void commitInsn(
         const KillVar kv(vg, isPointed);
         insn.varsToKill.push_back(kv);
         VK_DEBUG_MSG(1, &insn.loc, "killing variable "
-                << varToString(*insn.stor, vg)
+                << varToString(stor, vg)
                 << " by " << insn);
 
         if (!multipleTargets)
@@ -298,7 +308,7 @@ void commitInsn(
                 continue;
 
             VK_DEBUG_MSG(1, &term.loc, "killing variable "
-                    << varToString(*term.stor, vKill)
+                    << varToString(stor, vKill)
                     << " per target " << targets[i]->name()
                     << " by " << term);
 
@@ -353,7 +363,7 @@ void killLocalVariables(Storage &stor) {
     StopWatch watch;
 
     // shared state info
-    VarKiller::Data data;
+    VarKiller::Data data(stor);
 
     // first go through all _defined_ functions and compute the fixed-point
     BOOST_FOREACH(Fnc *pFnc, stor.fncs) {
