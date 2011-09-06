@@ -146,6 +146,22 @@ int varIdFromOperand(const struct cl_operand *op, const char **pName) {
     return op->data.var->uid;
 }
 
+bool fncNameFromCst(const char **pName, const struct cl_operand *op) {
+    if (CL_OPERAND_CST != op->code)
+        return false;
+
+    const struct cl_cst &cst = op->data.cst;
+    if (CL_TYPE_FNC != cst.code)
+        return false;
+
+    if (CL_SCOPE_GLOBAL != op->scope || !cst.data.cst_fnc.is_extern)
+        return false;
+
+    const char *fncName = cst.data.cst_fnc.name;
+    *pName = fncName;
+    return !!fncName;
+}
+
 std::string varToString(
         const CodeStorage::Storage      &stor,
         const int                       uid,

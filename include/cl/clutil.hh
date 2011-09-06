@@ -90,6 +90,9 @@ int intCstFromOperand(const struct cl_operand *op);
 /// return unique ID of the variable/register given as operand
 int varIdFromOperand(const struct cl_operand *op, const char **pName = 0);
 
+/// get name of an @b external function given as CL_OPERAND_CST, true on success
+bool fncNameFromCst(const char **pName, const struct cl_operand *op);
+
 typedef std::vector<int /* nth */> TFieldIdxChain;
 
 int offsetByIdxChain(const struct cl_type *, const TFieldIdxChain &);

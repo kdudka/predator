@@ -540,20 +540,8 @@ bool BuiltInTable::handleBuiltIn(
         const CodeStorage::Insn                     &insn)
     const
 {
-    const CodeStorage::TOperandList &opList = insn.operands;
-    const struct cl_operand &fnc = opList[1];
-    if (CL_OPERAND_CST != fnc.code)
-        return false;
-
-    const struct cl_cst &cst = fnc.data.cst;
-    if (CL_TYPE_FNC != cst.code)
-        return false;
-
-    if (CL_SCOPE_GLOBAL != fnc.scope || !cst.data.cst_fnc.is_extern)
-        return false;
-
-    const char *fncName = cst.data.cst_fnc.name;
-    if (!fncName)
+    const char *fncName;
+    if (!fncNameFromCst(&fncName, &insn.operands[/* fnc */ 1]))
         return false;
 
     TMap::const_iterator it = tbl_.find(fncName);

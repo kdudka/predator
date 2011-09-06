@@ -106,7 +106,7 @@ void IntervalArena<TInt, TObj>::sub(const key_type &key, const TObj obj)
         bool anyHit = false;
 
         const typename TLine::iterator lineItEnd = line.end();
-        for (;;) {
+        do {
             // make sure the basic window axioms hold
             CL_BREAK_IF(winEnd <= beg);
             CL_BREAK_IF(end <= winBeg);
@@ -137,10 +137,8 @@ void IntervalArena<TInt, TObj>::sub(const key_type &key, const TObj obj)
                 break;
 
             beg = lineIt->first;
-            if (winEnd <= beg)
-                // we are done with this line
-                break;
         }
+        while (beg < winEnd);
 
         if (anyHit) {
             if (winEnd < end) {
@@ -197,7 +195,7 @@ void IntervalArena<TInt, TObj>::intersects(TSet &dst, const key_type &key) const
             break;
 
         const typename TLine::const_iterator lineItEnd = line.end();
-        for (;;) {
+        do {
             // make sure the basic window axioms hold
             CL_BREAK_IF(winEnd <= beg);
             CL_BREAK_IF(/* end */ it->first <= winBeg);
@@ -211,10 +209,8 @@ void IntervalArena<TInt, TObj>::intersects(TSet &dst, const key_type &key) const
                 break;
 
             beg = lineIt->first;
-            if (winEnd <= beg)
-                // we are done with this line
-                break;
         }
+        while (beg < winEnd);
     }
 }
 
