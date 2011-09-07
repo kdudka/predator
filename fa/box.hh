@@ -69,7 +69,10 @@ public:
 	}
 
 	virtual void toStream(std::ostream& os) const {
-		os << this->name << '{';
+		os << this->name;
+		if (this->selectors.empty())
+			return;
+		os << '{';
 		for (std::vector<size_t>::const_iterator i = this->selectors.begin(); i != this->selectors.end(); ++i)
 			os << *i << ';';
 		os << '}';

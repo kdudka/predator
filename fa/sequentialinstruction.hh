@@ -33,7 +33,7 @@ protected:
 
 public:
 
-	SequentialInstruction(e_fi_type fiType = e_fi_type::fiUnspec)
+	SequentialInstruction(fi_type_e fiType = fi_type_e::fiUnspec)
 		: AbstractInstruction(fiType) {}
 
 	virtual void finalize(

@@ -1,6 +1,5 @@
 critical
 * reverse run
-* function calls
 
 medium
 * predicate abstraction

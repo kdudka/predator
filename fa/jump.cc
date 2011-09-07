@@ -29,8 +29,12 @@ void FI_jmp::finalize(
 	const std::unordered_map<const CodeStorage::Block*, AbstractInstruction*>& codeIndex,
 	std::vector<AbstractInstruction*>::const_iterator
 ) {
+
 	this->next_ = this;
-	while (this->next_->getType() == e_fi_type::fiJump)
+
+	while (this->next_->getType() == fi_type_e::fiJump)
 		this->next_ = ((FI_jmp*)this->next_)->getTarget(codeIndex);
+
 	this->next_->setTarget();
+
 }

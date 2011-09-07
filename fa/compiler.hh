@@ -73,10 +73,10 @@ public:
 
 			for (auto instr : as.code_) {
 
-				if ((instr->getType() == e_fi_type::fiJump) && prev) {
+				if ((instr->getType() == fi_type_e::fiJump) && prev) {
 					switch (prev->getType()) {
-						case e_fi_type::fiBranch:
-						case e_fi_type::fiJump:
+						case fi_type_e::fiBranch:
+						case fi_type_e::fiJump:
 							prev = instr;
 							continue;
 						default:

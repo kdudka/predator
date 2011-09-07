@@ -49,11 +49,16 @@ void FI_cond::finalize(
 
 	for (auto i : { 0, 1 }) {
 
-		if (this->next_[i]->getType() == e_fi_type::fiJump) {
+		if (this->next_[i]->getType() == fi_type_e::fiJump) {
+
 			do {
+
 				this->next_[i] = ((FI_jmp*)this->next_[i])->getTarget(codeIndex);
-			} while (this->next_[i]->getType() == e_fi_type::fiJump);
+
+			} while (this->next_[i]->getType() == fi_type_e::fiJump);
+
 		}
+
 		this->next_[i]->setTarget();
 
 	}
@@ -462,7 +467,7 @@ void FI_build_struct::execute(ExecutionManager& execMan, const AbstractInstructi
 
 	std::vector<Data::item_info> items;
 
-	for (auto i = 0; i < this->offsets_.size(); ++i)
+	for (size_t i = 0; i < this->offsets_.size(); ++i)
 		items.push_back(std::make_pair(this->offsets_[i], (*state.first)[this->start_ + i]));
 
 	(*state.first)[this->dst_] = Data::createStruct(items);

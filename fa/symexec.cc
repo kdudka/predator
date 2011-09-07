@@ -385,20 +385,38 @@ protected:
 	    CL_CDEBUG(2, "loading types ...");
 
 		for (auto type : stor.types) {
-			if (type->code != cl_type_e::CL_TYPE_STRUCT)
-				continue;
-			std::string name;
-			if (type->name)
-				name = std::string(type->name);
-			else {
-				std::ostringstream ss;
-				ss << type->uid;
-				name = ss.str();
-			}
-				
+
 			std::vector<size_t> v;
-			NodeBuilder::buildNode(v, type);
-			this->boxMan.createTypeInfo(type->name, v);
+
+			switch (type->code) {
+
+				case cl_type_e::CL_TYPE_STRUCT:
+					NodeBuilder::buildNode(v, type);
+					// no break
+
+				case cl_type_e::CL_TYPE_FNC: {
+				
+					std::string name;
+					if (type->name)
+						name = std::string(type->name);
+					else {
+						std::ostringstream ss;
+						ss << type->uid;
+						name = ss.str();
+					}
+
+					CL_CDEBUG(2, name);
+					
+					this->boxMan.createTypeInfo(name, v);
+					// no break
+
+				}
+
+				default:
+					break;
+
+			}
+
 		}
 
 	}
@@ -462,7 +480,7 @@ public:
 
 			for (auto instr : this->assembly_.code_) {
 
-				if (instr->getType() != e_fi_type::fiFix)
+				if (instr->getType() != fi_type_e::fiFix)
 					continue;
 
 				CL_DEBUG_AT(1, "fixpoint at " << instr->insn()->loc << std::endl << ((FixpointInstruction*)instr)->getFixPoint());

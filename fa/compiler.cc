@@ -1020,7 +1020,7 @@ protected:
 
 		std::pair<SymCtx, CodeStorage::Block>& fncInfo = this->getFncInfo(&fnc);
 
-		// build context
+		// get context
 		this->curCtx = &fncInfo.first;
 
 		if (this->assembly->regFileSize_ < this->curCtx->regCount)
@@ -1050,8 +1050,20 @@ protected:
 		// move void ptr of size 1 into r1
 		this->append(new FI_load_cst(1, Data::createVoidPtr(1)));
 
-		// allocate stack frame to r1 (using NULL type info)
-		this->append(new FI_node_create(1, 1, 1, NULL, this->curCtx->sfLayout));
+		// get function name
+		std::string typeName;
+		if (fnc.def.type->name)
+			typeName = std::string(fnc.def.type->name);
+		else {
+			std::ostringstream ss;
+			ss << fnc.def.type->uid;
+			typeName = ss.str();
+		}
+
+		// allocate stack frame to r1
+		this->append(
+			new FI_node_create(1, 1, 1, this->boxMan.getTypeInfo(typeName), this->curCtx->sfLayout)
+		);
 
 		// store arguments to the new frame (r1)
 		this->append(new FI_stores(1, 0, 0));
