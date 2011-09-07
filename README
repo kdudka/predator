@@ -125,7 +125,8 @@ then:
 
     ln -sfT /usr/lib/x86_64-linux-gnu/gcc/x86_64-linux-gnu/4.5.2/plugin/include include/gcc
 
-For Fedora, the package name is gcc-plugin-devel, and the symlink needs to follow this path (note that the path is /usr/lib even on x86_64):
+For Fedora, the package name is gcc-plugin-devel, and the symlink needs to
+follow this path (note that the path is /usr/lib even on x86_64):
 
     ln -sfT /usr/lib/gcc/x86_64-redhat-linux/4.6.0/plugin/include include/gcc
 

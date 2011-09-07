@@ -30,7 +30,7 @@
 
 #define IA_AGGRESSIVE_OPTIMIZATION          0
 
-/// ad-hoc implementaiton;  wastes memory, performance, and human resources
+/// ad-hoc implementation;  wastes memory, performance, and human resources
 template <typename TInt, typename TObj>
 class IntervalArena {
     public:

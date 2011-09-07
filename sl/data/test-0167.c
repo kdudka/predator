@@ -12,11 +12,6 @@ struct list {
     struct list     *next;
 };
 
-struct iterator {
-    struct list     *list;
-    struct node     *node;
-};
-
 static void merge_single_node(struct node ***dst,
                               struct node **data)
 {
