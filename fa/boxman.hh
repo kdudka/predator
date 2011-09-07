@@ -291,8 +291,14 @@ public:
 		: backend(backend) {}
 
 	~BoxMan() {
+		this->clear();
+	}
+
+	void clear() {
 		utils::eraseMap(this->dataStore);
+		this->dataIndex.clear();
 		utils::eraseMap(this->nodeStore);
+		this->tagStore.clear();
 		utils::eraseMap(this->vDataStore);
 		utils::eraseMap(this->selIndex);
 		utils::eraseMap(this->typeIndex);

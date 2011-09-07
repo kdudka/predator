@@ -397,9 +397,17 @@ protected:
 
 	}
 
+public:
+
+	Engine() : boxMan(this->taBackend),
+		compiler_(this->fixpointBackend, this->taBackend, this->boxMan, this->boxes),
+		dbgFlag(false) {}
+
 	void loadTypes(const CodeStorage::Storage& stor) {
 
 	    CL_DEBUG_AT(3, "loading types ...");
+
+	    this->boxMan.clear();
 
 		for (auto type : stor.types) {
 
@@ -450,12 +458,6 @@ protected:
 
 	}
 
-public:
-
-	Engine() : boxMan(this->taBackend),
-		compiler_(this->fixpointBackend, this->taBackend, this->boxMan, this->boxes),
-		dbgFlag(false) {}
-
 	void loadBoxes(const boost::unordered_map<std::string, std::string>& db) {
 
 	    CL_DEBUG_AT(2, "loading boxes ...");
@@ -470,8 +472,6 @@ public:
 	}
 
 	void compile(const CodeStorage::Storage& stor, const CodeStorage::Fnc& entry) {
-
-		this->loadTypes(stor);
 
 		CL_DEBUG_AT(2, "compiling ...");
 
@@ -540,6 +540,10 @@ SymExec::SymExec() : engine(new Engine()) {}
 
 SymExec::~SymExec() {
 	delete this->engine;
+}
+
+void SymExec::loadTypes(const CodeStorage::Storage& stor) {
+	this->engine->loadTypes(stor);
 }
 
 void SymExec::loadBoxes(const boost::unordered_map<std::string, std::string>& db) {

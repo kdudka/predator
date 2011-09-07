@@ -36,6 +36,7 @@ public:
 	SymExec();
 	~SymExec();
 
+	void loadTypes(const CodeStorage::Storage& stor);
 	void loadBoxes(const boost::unordered_map<std::string, std::string>& db);
 	void compile(const CodeStorage::Storage &stor, const CodeStorage::Fnc& entry);
 	void run();

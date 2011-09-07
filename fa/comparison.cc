@@ -48,7 +48,7 @@ inline void dataCmp(std::vector<bool>& res, const Data& x, const Data& y, F f) {
 
 	if ((x.isUnknw() || x.isUndef()) || (y.isUnknw() || y.isUndef())) {
 
-		if ((float)random()/RAND_MAX < 0) {
+		if ((float)random()/RAND_MAX < 0.5) {
 			res.push_back(false);
 			res.push_back(true);
 		} else {

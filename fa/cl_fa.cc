@@ -128,6 +128,7 @@ void clEasyRun(const CodeStorage::Storage& stor, const char* configString) {
     CL_CDEBUG(2, "starting verification stuff ...");
     try {
 		signal(SIGUSR1, setDbgFlag);
+		se.loadTypes(stor);
 		Config c(configString);
 		if (!c.dbRoot.empty()){
 			BoxDb db(c.dbRoot, "index");
