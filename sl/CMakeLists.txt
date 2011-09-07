@@ -23,10 +23,21 @@ enable_testing()
 
 option(SL_USE_BOOST_ICL "Set to ON to use the boost::icl library" ON)
 if(SL_USE_BOOST_ICL)
-    add_definitions("-DUSE_BOOST_ICL")
+    set_source_files_properties(symheap.cc COMPILE_FLAGS "-DUSE_BOOST_ICL")
 
     # we need to use boost 1.46+ because of boost::icl
     find_package(Boost 1.46)
+
+    # did we find it?
+    if(Boost_FOUND)
+        message (STATUS "Support for boost::icl enabled...")
+    else()
+        message (WARNING "Boost 1.46+ not found, if the build fails, try it "
+            "again with SL_USE_BOOST_ICL disabled.  A local replacement for "
+            "boost:icl will be used.")
+    endif()
+else()
+    message (STATUS "Support for boost::icl disabled...")
 endif()
 
 include("../CMakeLists.common")
@@ -34,6 +45,7 @@ include("../CMakeLists.common")
 option(SL_DEBUG "Set to ON to enable debugging support" OFF)
 if(SL_DEBUG)
     add_definitions("-O0 -g")
+    message (STATUS "Debugging support enabled...")
 else()
     add_definitions("-O3 -DNDEBUG")
 endif()
@@ -178,6 +190,7 @@ else()
 endif()
 
 if(TEST_WITH_VALGRIND)
+    message (STATUS "valgrind enabled for testing...")
     test_sym_exec("valgrind-test" valgrind
         --trace-children=yes
         --error-exitcode=7

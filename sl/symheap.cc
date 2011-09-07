@@ -25,9 +25,6 @@
 #include <cl/clutil.hh>
 #include <cl/storage.hh>
 
-#ifndef USE_BOOST_ICL
-#   include "intarena.hh"
-#endif
 #include "symabstract.hh"
 #include "symneq.hh"
 #include "symseg.hh"
@@ -40,11 +37,14 @@
 #include <queue>
 #include <set>
 
-#ifdef USE_BOOST_ICL
-#   include <boost/icl/interval_map.hpp>
-#endif
 #include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
+
+#ifdef USE_BOOST_ICL
+#   include <boost/icl/interval_map.hpp>
+#else
+#   include "intarena.hh"
+#endif
 
 #ifdef NDEBUG
     // aggressive optimization
@@ -151,9 +151,11 @@ typedef std::map<TObjType, TObjId>                      TObjByType;
 typedef std::map<TOffset, TObjByType>                   TGrid;
 
 #ifdef USE_BOOST_ICL
-namespace icl = boost::icl;
+typedef boost::icl::interval_map<unsigned, TObjSet>     TArena;
+#else
+typedef IntervalArena<int, TObjId>                      TArena;
+#endif
 
-typedef icl::interval_map<unsigned, TObjSet>            TArena;
 typedef TArena::key_type                                TMemChunk;
 typedef TArena::value_type                              TMemItem;
 
@@ -163,28 +165,14 @@ inline TMemItem createArenaItem(
         const TObjId                obj)
 {
     const TMemChunk chunk(off, off + size);
+#ifdef USE_BOOST_ICL
     TObjSet singleObj;
     singleObj.insert(obj);
-
     return TMemItem(chunk, singleObj);
-}
-
-#else // USE_BOOST_ICL
-
-typedef IntervalArena<int, TObjId>                      TArena;
-typedef TArena::key_type                                TMemChunk;
-typedef TArena::value_type                              TMemItem;
-
-inline TMemItem createArenaItem(
-        const TOffset               off,
-        const unsigned              size,
-        const TObjId                obj)
-{
-    const TMemChunk chunk(off, off + size);
+#else
     return TMemItem(chunk, obj);
+#endif
 }
-
-#endif // USE_BOOST_ICL
 
 inline bool arenaLookup(
         TObjSet                     *dst,
