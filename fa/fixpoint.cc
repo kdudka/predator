@@ -144,7 +144,7 @@ void FI_abs::execute(ExecutionManager& execMan, const AbstractInstruction::State
 
 	fae->unreachableFree();
 
-	CL_CDEBUG(2, SSD_INLINE_COLOR(C_LIGHT_GREEN, "after normalization:" ) << std::endl << *fae);
+//	CL_CDEBUG(2, SSD_INLINE_COLOR(C_LIGHT_GREEN, "after normalization:" ) << std::endl << *fae);
 
 	// merge fixpoint
 	std::vector<FAE*> tmp2;

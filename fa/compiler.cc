@@ -369,6 +369,8 @@ protected:
 			
 					if (acc && (acc->code == CL_ACCESSOR_DEREF)) {
 
+						this->append(new FI_load_ABP(dst, (int)varInfo.second));
+
 						acc = Core::computeOffset(offset, acc->next);
 
 						if (acc && (acc->code == CL_ACCESSOR_REF)) {
@@ -376,14 +378,11 @@ protected:
 							assert(op.type->code == cl_type_e::CL_TYPE_PTR);
 
 							assert(acc->next == NULL);
-							this->append(new FI_load_ABP(dst, offset + (int)varInfo.second));
-//							this->append(new FI_move_reg_offs(dst, dst, offset));
+							this->append(new FI_move_reg_offs(dst, dst, offset));
 							break;
 			
 						}
 
-						this->append(new FI_load_ABP(dst, (int)varInfo.second));
-			
 						assert(acc == NULL);
 
 						if (op.type->code == cl_type_e::CL_TYPE_STRUCT) {

@@ -623,7 +623,10 @@ public:
 	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "struct\tr" << this->dst_ << ", r" << this->start_ << "..., " << utils::wrap(this->offsets_);
+		os << "mov   \tr" << this->dst_ << ", [";
+		for (size_t i = 0; i < this->offsets_.size(); ++i)
+			os << " +" << this->offsets_[i] << ":r" << this->start_ + i;
+		return os << " ]";
 	}
 
 };
