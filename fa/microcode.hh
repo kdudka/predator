@@ -609,4 +609,23 @@ public:
 
 };
 
+class FI_build_struct : public SequentialInstruction {
+
+	size_t dst_;
+	size_t start_;
+	std::vector<size_t> offsets_;
+
+public:
+
+	FI_build_struct(size_t dst, size_t start, const std::vector<size_t>& offsets)
+		: SequentialInstruction(), dst_(dst), start_(start), offsets_(offsets) {}
+
+	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
+
+	virtual std::ostream& toStream(std::ostream& os) const {
+		return os << "struct\tr" << this->dst_ << ", r" << this->start_ << " ... , " << utils::wrap(this->offsets_);
+	}
+
+};
+
 #endif

@@ -456,3 +456,17 @@ void FI_abort::execute(ExecutionManager& execMan, const AbstractInstruction::Sta
 	execMan.traceFinished(state.second);
 
 }
+
+// FI_build_struct
+void FI_build_struct::execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
+
+	std::vector<Data::item_info> items;
+
+	for (auto i = 0; i < this->offsets_.size(); ++i)
+		items.push_back(std::make_pair(this->offsets_[i], (*state.first)[this->start_ + i]));
+
+	(*state.first)[this->dst_] = Data::createStruct(items);
+
+	execMan.enqueue(state, this->next_);
+
+}

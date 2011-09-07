@@ -809,8 +809,8 @@ protected:
 		// set target flag
 		instr->setTarget();
 
-		// store return address into r0
-		this->append(new FI_load_cst(0, Data::createNativePtr(instr)));
+		// store return address into r1
+		this->append(new FI_load_cst(1, Data::createNativePtr(instr)));
 
 		// call
 		this->append(new FI_jmp(fnc.cfg.entry()));
@@ -1030,29 +1030,31 @@ protected:
 		if (this->assembly->regFileSize_ < (this->curCtx->argCount + 2))
 			this->assembly->regFileSize_ = this->curCtx->argCount + 2;
 
+		// move ABP into r0
+		this->append(new FI_get_ABP(0, 0));
+
+		// store entry point
+		this->codeIndex.insert(std::make_pair(&fncInfo.second, this->assembly->code_.back()));
+		
+		// gather arguments
+		std::vector<size_t> offsets = { ABP_OFFSET, IP_OFFSET };
+
+		for (auto arg : fnc.args)
+			offsets.push_back(this->curCtx->getVarInfo(arg).second);
+
+		// build structure in r0
+		this->append(new FI_build_struct(0, 0, offsets));
+
 		// build stack frame
 
 		// move void ptr of size 1 into r1
 		this->append(new FI_load_cst(1, Data::createVoidPtr(1)));
 
-		// store entry point
-		this->codeIndex.insert(std::make_pair(&fncInfo.second, this->assembly->code_.back()));
-
 		// allocate stack frame to r1 (using NULL type info)
 		this->append(new FI_node_create(1, 1, 1, NULL, this->curCtx->sfLayout));
 
-		// store return address to the new frame (r0)
-		this->append(new FI_store(1, 0, IP_OFFSET));
-
-		// store arguments to the new frame (r2 ... rn)
-		for (size_t i = 0; i < fnc.args.size(); ++i)
-			this->append(new FI_store(1, i + 2, this->curCtx->getVarInfo(fnc.args[i]).second));
-
-		// store old ABP into r0
-		this->append(new FI_get_ABP(0, 0));
-
-		// store r0 to the new frame (r1)
-		this->append(new FI_store(1, 0, ABP_OFFSET));
+		// store arguments to the new frame (r1)
+		this->append(new FI_stores(1, 0, 0));
 
 		// set new ABP (r1)
 		this->append(new FI_set_greg(ABP_INDEX, 1));
@@ -1127,8 +1129,8 @@ public:
 		// set target flag
 		instr->setTarget();
 
-		// store return address into r0
-		this->append(new FI_load_cst(0, Data::createNativePtr(instr)));
+		// store return address into r1
+		this->append(new FI_load_cst(1, Data::createNativePtr(instr)));
 
 		// call
 		this->append(new FI_jmp(&this->getFncInfo(&entry).second));
