@@ -65,8 +65,9 @@ struct SymCtx {
 	var_map_type varMap;
 
 	size_t regCount;
+	size_t argCount;
 
-	SymCtx(const CodeStorage::Fnc& fnc) : fnc(fnc), regCount(2) {
+	SymCtx(const CodeStorage::Fnc& fnc) : fnc(fnc), regCount(3), argCount(0) {
 
 		// pointer to previous stack frame
 		this->sfLayout.push_back(SelData(ABP_OFFSET, ABP_SIZE, 0));
@@ -93,6 +94,8 @@ struct SymCtx {
 					NodeBuilder::buildNode(this->sfLayout, var.type, offset);
 					this->varMap.insert(std::make_pair(var.uid, make_pair(true, offset)));
 					offset += var.type->size;
+					if (var.code == CodeStorage::EVar::VAR_FNC_ARG)
+						++this->argCount;
 					break;
 				default:
 					break;
@@ -118,10 +121,10 @@ struct SymCtx {
 		VirtualMachine vm(fae);
 
 		assert(vm.varCount() == 0);
-		// create ABP and RET registers
-		vm.varPopulate(1);
+		// create ABP register
+		vm.varPopulate(FIXED_REG_COUNT);
 		vm.varSet(ABP_INDEX, Data::createInt(0));
-//		vm.varSet(IP_INDEX, Data::createUndef());
+//		vm.varSet(AAX_INDEX, Data::createUndef());
 	}
 
 	static bool isStacked(const CodeStorage::Var& var) {
@@ -133,57 +136,6 @@ struct SymCtx {
 		}
 	}
 	
-/*
-	struct StackFrameCreateF {
-		
-		const SymCtx* ctx;
-
-		StackFrameCreateF(const SymCtx* ctx) : ctx(ctx) {}
-
-		void operator()(vector<FAE*>& dst, const FAE& fae) {
-
-			std::vector<std::pair<SelData, Data> > stackInfo;
-
-			for (vector<SelData>::const_iterator i = this->ctx->sfLayout.begin(); i != this->ctx->sfLayout.end(); ++i)
-				stackInfo.push_back(std::make_pair(*i, Data::createUndef()));
-
-			FAE* tmp = new FAE(fae);
-
-			stackInfo[0].second = tmp->varGet(ABP_INDEX);
-			stackInfo[1].second = Data::createNativePtr(NULL);
-
-			tmp->varSet(ABP_INDEX, Data::createRef(tmp->nodeCreate(stackInfo)));
-			// TODO: ...
-
-			tmp->varSet(RET_INDEX, Data::createNativePtr(NULL));
-			tmp->varSet(AAX_INDEX, Data::createInt(0));
-			tmp->varPopulate(this->regCount);
-
-			dst.push_back(tmp);
-
-		}
-
-	};
-*/
-/*
-	void createStackFrame(FAE& fae, struct CfgState* target) const {
-
-		VirtualMachine vm(fae);
-
-		std::vector<pair<SelData, Data> > stackInfo;
-
-		for (std::vector<SelData>::const_iterator i = this->sfLayout.begin(); i != this->sfLayout.end(); ++i)
-			stackInfo.push_back(make_pair(*i, Data::createUndef()));
-
-		stackInfo[0].second = vm.varGet(ABP_INDEX);
-		stackInfo[1].second = vm.varGet(IP_INDEX);
-
-		vm.varSet(ABP_INDEX, Data::createRef(vm.nodeCreate(stackInfo)));
-		vm.varSet(IP_INDEX, Data::createNativePtr((void*)target));
-		vm.varPopulate(this->regCount);
-
-	}
-*/	
 	void createStackFrame(FAE& fae) const {
 
 		VirtualMachine vm(fae);
@@ -201,7 +153,7 @@ struct SymCtx {
 //		vm.varPopulate(this->regCount);
 
 	}
-
+/*
 	// if true then do fae.isolateAtRoot(dst, <ABP>.d_ref.root, FAE::IsolateAllF()) in the next step
 	bool destroyStackFrame(FAE& fae) const {
 
@@ -231,27 +183,6 @@ struct SymCtx {
 		return true;
 		
 	}
-/*
-	void parseOperand(OperandInfo& operandInfo, const FAE& fae, const cl_operand* op) const {
-
-		switch (op->code) {
-			case cl_operand_e::CL_OPERAND_VAR: {
-				var_map_type::const_iterator i = this->varMap.find(varIdFromOperand(op));
-				assert(i != this->varMap.end());
-				switch (i->second.first) {
-					case true: operandInfo.parseVar(fae, op, i->second.second); break;
-					case false: operandInfo.parseReg(fae, op, i->second.second); break;
-				}
-				break;
-			}
-			case cl_operand_e::CL_OPERAND_CST:
-				operandInfo.parseCst(op);
-				break;
-			default:
-				assert(false);
-		}
-
-	}
 */
 	bool isReg(const cl_operand* op, size_t& id) const {
 		if (op->code != cl_operand_e::CL_OPERAND_VAR)
@@ -269,7 +200,7 @@ struct SymCtx {
 		assert(i != this->varMap.end());
 		return i->second;
 	}
-
+/*
 	struct Dump {
 
 		const SymCtx& ctx;
@@ -322,6 +253,7 @@ struct SymCtx {
 		}
 
 	};
+*/
 /*
 	static SymCtx* extractCtx(const FAE& fae) {
 

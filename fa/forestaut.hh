@@ -34,9 +34,7 @@
 #include "treeaut.hh"
 #include "tatimint.hh"
 #include "label.hh"
-//#include "labman.hh"
 #include "abstractbox.hh"
-//#include "databox.hh"
 
 #define _MSBM			((~(size_t)0) >> 1)
 #define _MSB			(~_MSBM)
@@ -51,6 +49,10 @@ class FA {
 public:
 
 	friend std::ostream& operator<<(std::ostream& os, const FA& fa) {
+		os << '[';
+		for (auto var : fa.variables)
+			os << ' ' << var;
+		os << " ]" << std::endl;
 		for (size_t i = 0; i < fa.roots.size(); ++i) {
 			if (!fa.roots[i])
 				continue;

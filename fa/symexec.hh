@@ -37,8 +37,8 @@ public:
 	~SymExec();
 
 	void loadBoxes(const boost::unordered_map<std::string, std::string>& db);
-	void compile(const CodeStorage::Storage &stor);
-	void run(const CodeStorage::Fnc& main);
+	void compile(const CodeStorage::Storage &stor, const CodeStorage::Fnc& entry);
+	void run();
 	void setDbgFlag();
 
 private:

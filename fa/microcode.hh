@@ -246,14 +246,14 @@ public:
 
 };
 
-class FI_move_ABP : public SequentialInstruction {
+class FI_get_ABP : public SequentialInstruction {
 
 	size_t dst_;
 	int offset_;
 
 public:
 
-	FI_move_ABP(size_t dst, int offset)
+	FI_get_ABP(size_t dst, int offset)
 		: SequentialInstruction(), dst_(dst), offset_(offset) {}
 
 	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
@@ -357,17 +357,18 @@ public:
 class FI_load : public SequentialInstruction {
 
 	size_t dst_;
+	size_t src_;
 	int offset_;
 
 public:
 
-	FI_load(size_t dst, int offset)
-		: SequentialInstruction(), dst_(dst), offset_(offset) {}
+	FI_load(size_t dst, size_t src, int offset)
+		: SequentialInstruction(), dst_(dst), src_(src), offset_(offset) {}
 
 	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "mov   \tr" << this->dst_ << ", [r" << this->dst_ << " + " << this->offset_ << ']';
+		return os << "mov   \tr" << this->dst_ << ", [r" << this->src_ << " + " << this->offset_ << ']';
 	}
 
 };
@@ -430,18 +431,19 @@ public:
 class FI_loads : public SequentialInstruction {
 
 	size_t dst_;
+	size_t src_;
 	int base_;
 	std::vector<size_t> offsets_;
 
 public:
 
-	FI_loads(size_t dst, int base, const std::vector<size_t>& offsets)
-		: SequentialInstruction(), dst_(dst), base_(base), offsets_(offsets) {}
+	FI_loads(size_t dst, size_t src, int base, const std::vector<size_t>& offsets)
+		: SequentialInstruction(), dst_(dst), src_(src), base_(base), offsets_(offsets) {}
 
 	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "mov   \tr" << this->dst_ << ", [r" << this->dst_ << " + " << this->base_ << " + " << utils::wrap(this->offsets_) << ']';
+		return os << "mov   \tr" << this->dst_ << ", [r" << this->src_ << " + " << this->base_ << " + " << utils::wrap(this->offsets_) << ']';
 	}
 
 };
@@ -577,18 +579,32 @@ public:
 
 class FI_assert : public SequentialInstruction {
 
-	size_t offset_;
+	size_t dst_;
 	Data cst_;
 
 public:
 
-	FI_assert(size_t offset, const Data& cst)
-		: SequentialInstruction(), offset_(offset), cst_(cst) {}
+	FI_assert(size_t dst, const Data& cst)
+		: SequentialInstruction(), dst_(dst), cst_(cst) {}
 
 	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "assert\t[ABP + " << this->offset_ << "], " << this->cst_;
+		return os << "assert\tr" << this->dst_ << ", " << this->cst_;
+	}
+
+};
+
+class FI_abort : public SequentialInstruction {
+
+public:
+
+	FI_abort() : SequentialInstruction() {}
+
+	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
+
+	virtual std::ostream& toStream(std::ostream& os) const {
+		return os << "abort ";
 	}
 
 };

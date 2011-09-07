@@ -188,7 +188,7 @@ void FI_abs::execute(ExecutionManager& execMan, const AbstractInstruction::State
 	this->fwdConf.minimized(ta);
 	this->fwdConf = ta;
 
-	CL_DEBUG_AT(2, "fixpoint at " << this->insn()->loc << std::endl << ta);
+//	CL_DEBUG_AT(2, "fixpoint at " << this->insn()->loc << std::endl << ta);
 
 	execMan.enqueue(state.second, state.first, fae, this->next_);
 
@@ -293,7 +293,7 @@ void FI_fix::execute(ExecutionManager& execMan, const AbstractInstruction::State
 	this->fwdConf.minimized(ta);
 	this->fwdConf = ta;
 
-	CL_DEBUG_AT(2, "fixpoint at " << this->insn()->loc << std::endl << ta);
+//	CL_DEBUG_AT(2, "fixpoint at " << this->insn()->loc << std::endl << ta);
 
 	execMan.enqueue(state.second, state.first, fae, this->next_);
 

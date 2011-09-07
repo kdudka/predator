@@ -65,11 +65,6 @@ void FI_acc_sel::execute(ExecutionManager& execMan, const AbstractInstruction::S
 
 	auto data = (*state.first)[this->dst_];
 
-	if (data == VirtualMachine(*state.second->fae).varGet(ABP_INDEX)) {
-		execMan.enqueue(state, this->next_);
-		return;
-	}		
-
 	if (!data.isRef()) {
 
 		std::stringstream ss;
@@ -91,11 +86,6 @@ void FI_acc_sel::execute(ExecutionManager& execMan, const AbstractInstruction::S
 void FI_acc_set::execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
 
 	auto data = (*state.first)[this->dst_];
-
-	if (data == VirtualMachine(*state.second->fae).varGet(ABP_INDEX)) {
-		execMan.enqueue(state, this->next_);
-		return;
-	}		
 
 	if (!data.isRef()) {
 
@@ -120,11 +110,6 @@ void FI_acc_set::execute(ExecutionManager& execMan, const AbstractInstruction::S
 void FI_acc_all::execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
 
 	auto data = (*state.first)[this->dst_];
-
-	if (data == VirtualMachine(*state.second->fae).varGet(ABP_INDEX)) {
-		execMan.enqueue(state, this->next_);
-		return;
-	}		
 
 	if (!data.isRef()) {
 
@@ -244,7 +229,7 @@ void FI_set_greg::execute(ExecutionManager& execMan, const AbstractInstruction::
 }
 
 // FI_move_ABP
-void FI_move_ABP::execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
+void FI_get_ABP::execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
 
 	(*state.first)[this->dst_] = VirtualMachine(*state.second->fae).varGet(ABP_INDEX);
 	(*state.first)[this->dst_].d_ref.displ += this->offset_;
@@ -256,9 +241,9 @@ void FI_move_ABP::execute(ExecutionManager& execMan, const AbstractInstruction::
 // FI_load
 void FI_load::execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
 
-	assert((*state.first)[this->dst_].isRef());
+	assert((*state.first)[this->src_].isRef());
 
-	const Data& data = (*state.first)[this->dst_];
+	const Data& data = (*state.first)[this->src_];
 
 	VirtualMachine(*state.second->fae).nodeLookup(
 		data.d_ref.root, data.d_ref.displ + this->offset_, (*state.first)[this->dst_]
@@ -321,9 +306,9 @@ void FI_store_ABP::execute(ExecutionManager& execMan, const AbstractInstruction:
 // FI_loads
 void FI_loads::execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
 
-	assert((*state.first)[this->dst_].isRef());
+	assert((*state.first)[this->src_].isRef());
 
-	const Data& data = (*state.first)[this->dst_];
+	const Data& data = (*state.first)[this->src_];
 
 	VirtualMachine(*state.second->fae).nodeLookupMultiple(
 		data.d_ref.root, data.d_ref.displ + this->base_, this->offsets_, (*state.first)[this->dst_]
@@ -370,7 +355,7 @@ void FI_node_create::execute(ExecutionManager& execMan, const AbstractInstructio
 
 	assert((*state.first)[this->src_].isVoidPtr());
 
-	if ((int)(*state.first)[this->src_].d_void_ptr != this->size_)
+	if ((*state.first)[this->src_].d_void_ptr != this->size_)
 		throw ProgramError("allocated block size mismatch");
 
 	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.second->fae));
@@ -456,22 +441,18 @@ void FI_check::execute(ExecutionManager& execMan, const AbstractInstruction::Sta
 // FI_assert
 void FI_assert::execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
 
-	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.second->fae));
-
-	VirtualMachine vm(*state.second->fae);
-
-	const Data& abp = vm.varGet(ABP_INDEX);
-
-	assert(abp.isRef());
-	assert(abp.d_ref.displ == 0);
-	
-	Data data;
-
-	vm.nodeLookup(abp.d_ref.root, this->offset_, data);
-
-	if (data != this->cst_)
+	if ((*state.first)[this->dst_] != this->cst_) {
+		CL_CDEBUG(1, "registers: " << utils::wrap(*state.first) << ", heap:" << std::endl << *state.second->fae);
 		throw std::runtime_error("assertion failed");
+	}
 
 	execMan.enqueue(state, this->next_);
+
+}
+
+// FI_abort
+void FI_abort::execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
+
+	execMan.traceFinished(state.second);
 
 }

@@ -130,8 +130,8 @@ void clEasyRun(const CodeStorage::Storage& stor, const char* configString) {
 			BoxDb db(c.dbRoot, "index");
 			se.loadBoxes(db.store);
 		}
-		se.compile(stor);
-		se.run(*main);
+		se.compile(stor, *main);
+		se.run();
 		CL_NOTE("the program is safe ...");
 	} catch (const ProgramError& e) {
 		if (e.location())

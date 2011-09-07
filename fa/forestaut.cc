@@ -21,6 +21,11 @@
 #include "tatimint.hh"
 
 std::ostream& operator<<(std::ostream& os, const TA<label_type>& ta) {
-	TAWriter<label_type>(os).writeOne(ta, FA::WriteStateF());
+	TAWriter<label_type> writer(os);
+	os << '[';
+	for (std::set<size_t>::iterator j = ta.getFinalStates().begin(); j != ta.getFinalStates().end(); ++j)
+		writer.writeState(*j);
+	os << " ]" << std::endl;;
+	writer.writeTransitions(ta, FA::WriteStateF());
 	return os;
 }

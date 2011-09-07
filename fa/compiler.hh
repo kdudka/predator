@@ -112,7 +112,7 @@ public:
 		BoxMan& boxMan, const std::vector<const Box*>& boxes);
 	~Compiler();
 
-	void compile(Assembly& assembly, const CodeStorage::Storage &stor);
+	void compile(Assembly& assembly, const CodeStorage::Storage &stor, const CodeStorage::Fnc& entry);
 
 private:
 

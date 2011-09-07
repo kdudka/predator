@@ -422,27 +422,23 @@ public:
 		
 	}
 
-	void compile(const CodeStorage::Storage& stor) {
+	void compile(const CodeStorage::Storage& stor, const CodeStorage::Fnc& entry) {
 
 		this->loadTypes(stor);
 
 		CL_DEBUG_AT(2, "compiling ...");
 
-		this->compiler_.compile(this->assembly_, stor);
+		this->compiler_.compile(this->assembly_, stor, entry);
 
 		CL_DEBUG_AT(2, "assembly:" << std::endl << this->assembly_);		
 
 	}
 
-	void run(const CodeStorage::Fnc& entry) {
+	void run() {
 
 		assert(this->assembly_.code_.size());
 
 		this->execMan.clear();
-
-	    CL_CDEBUG(2, "creating main context ...");
-		// create main context
-		SymCtx entryCtx(entry);
 
 	    CL_CDEBUG(2, "creating empty heap ...");
 		// create empty heap with no local variables
@@ -452,14 +448,12 @@ public:
 		// add global registers
 		SymCtx::init(*fae);
 
-	    CL_CDEBUG(2, "entering main stack frame ...");
-		// enter main stack frame
-		entryCtx.createStackFrame(*fae);
-
 	    CL_CDEBUG(2, "sheduling initial state ...");
 		// schedule initial state for processing
 		this->execMan.init(
-			std::vector<Data>(this->assembly_.regFileSize_, Data::createUndef()), fae, this->assembly_.getEntry(&entry)
+			std::vector<Data>(this->assembly_.regFileSize_, Data::createUndef()),
+			fae,
+			this->assembly_.code_.front()
 		);
 
 		try {
@@ -505,12 +499,12 @@ void SymExec::loadBoxes(const boost::unordered_map<std::string, std::string>& db
 	this->engine->loadBoxes(db);
 }
 
-void SymExec::compile(const CodeStorage::Storage& stor) {
-	this->engine->compile(stor);
+void SymExec::compile(const CodeStorage::Storage& stor, const CodeStorage::Fnc& main) {
+	this->engine->compile(stor, main);
 }
 
-void SymExec::run(const CodeStorage::Fnc& main) {
-	this->engine->run(main);
+void SymExec::run() {
+	this->engine->run();
 }
 
 void SymExec::setDbgFlag() {

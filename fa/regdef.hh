@@ -23,8 +23,8 @@
 // abstract base pointer
 #define ABP_INDEX		0
 // 'return address'
-#define IP_INDEX		1
+//#define AAX_INDEX		1
 
-#define FIXED_REG_COUNT	2
+#define FIXED_REG_COUNT	1
 
 #endif
