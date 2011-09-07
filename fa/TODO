@@ -5,7 +5,6 @@ medium
 * predicate abstraction
 * box learning
 * improve Data handling
-* reserve stack space for function arguments
 * recursion ?
 
 low

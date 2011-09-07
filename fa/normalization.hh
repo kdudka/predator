@@ -323,7 +323,7 @@ public:
 		this->traverse(visited, order, marked);
 
 		// check garbage
-//		this->checkGarbage(visited);
+		this->checkGarbage(visited);
 
 		// prevent merging of forbidden roots
 		for (std::set<size_t>::const_iterator i = forbidden.begin(); i != forbidden.end(); ++i)

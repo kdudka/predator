@@ -344,10 +344,10 @@ protected:
 		for ( ; s; s = s->parent)
 			trace.push_back(s);
 
-		CL_DEBUG("trace:");
+		CL_NOTE("trace:");
 
 		for (auto i = trace.rbegin(); i != trace.rend(); ++i) {
-			CL_DEBUG(*(*i)->instr);
+			CL_DEBUG_AT(2, *(*i)->instr);
 			if (!(*i)->instr->insn())
 				continue;
 //			CL_DEBUG(std::endl << *s->fae);
@@ -382,21 +382,19 @@ protected:
 
 	void loadTypes(const CodeStorage::Storage& stor) {
 
-	    CL_CDEBUG(2, "loading types ...");
+	    CL_DEBUG_AT(3, "loading types ...");
 
 		for (auto type : stor.types) {
 
 			std::vector<size_t> v;
+			std::string name;
 
 			switch (type->code) {
 
 				case cl_type_e::CL_TYPE_STRUCT:
-					NodeBuilder::buildNode(v, type);
-					// no break
 
-				case cl_type_e::CL_TYPE_FNC: {
-				
-					std::string name;
+					NodeBuilder::buildNode(v, type);
+
 					if (type->name)
 						name = std::string(type->name);
 					else {
@@ -405,17 +403,26 @@ protected:
 						name = ss.str();
 					}
 
-					CL_CDEBUG(2, name);
+					CL_DEBUG_AT(3, name);
 					
 					this->boxMan.createTypeInfo(name, v);
-					// no break
-
-				}
+					break;
 
 				default:
 					break;
 
 			}
+
+		}
+
+		for (auto fnc : stor.fncs) {
+
+			std::ostringstream ss;
+			ss << nameOf(*fnc) << ':' << uidOf(*fnc);
+
+			CL_DEBUG_AT(3, ss.str());
+					
+			this->boxMan.createTypeInfo(ss.str(), std::vector<size_t>());
 
 		}
 

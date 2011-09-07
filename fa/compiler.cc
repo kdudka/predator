@@ -289,6 +289,8 @@ protected:
 
 			}
 
+			this->append(new FI_check());
+
 		} else {
 
 			acc = Core::computeOffset(offset, acc);
@@ -329,6 +331,9 @@ protected:
 				this->append(new FI_store(tmp, src, offset));
 
 			}
+
+			this->append(new FI_check());
+			
 			return true;
 
 		} else {
@@ -347,7 +352,7 @@ protected:
 
 	}
 
-	size_t cLoadOperand(size_t dst, const cl_operand& op) {
+	size_t cLoadOperand(size_t dst, const cl_operand& op, bool canOverride = true) {
 
 		switch (op.code) {
 
@@ -419,8 +424,12 @@ protected:
 				} else {
 					
 					// register
-					dst = varInfo.second;
-					this->cLoadReg(dst, dst, op);
+					if (canOverride) {
+						dst = varInfo.second;
+						this->cLoadReg(dst, dst, op);
+					} else {
+						this->cLoadReg(dst, varInfo.second, op);
+					}
 
 				}
 
@@ -534,6 +543,8 @@ protected:
 			
 					}
 
+					this->append(new FI_check());
+
 					return true;
 			
 				} else {
@@ -555,7 +566,7 @@ protected:
 
 	}
 
-	AbstractInstruction* cKillDeadVariables(const CodeStorage::TKillVarList& vars, bool needsCheck = false, bool checkProhibited = false) {
+	AbstractInstruction* cKillDeadVariables(const CodeStorage::TKillVarList& vars) {
 
 		std::set<size_t> offs;
 
@@ -574,7 +585,7 @@ protected:
 		}
 
 		if (offs.empty())
-			return (needsCheck && !checkProhibited)?(this->append(new FI_check())):(NULL);
+			return NULL;
 
 		std::vector<Data::item_info> tmp;
 
@@ -595,9 +606,6 @@ protected:
 				?((AbstractInstruction*)new FI_stores(1, 0, 0))
 				:((AbstractInstruction*)new FI_store(1, 0, *offs.begin()))
 		);
-
-		if (!checkProhibited)
-			this->append(new FI_check());
 
 		return result;
 
@@ -643,7 +651,8 @@ protected:
 			
 		}
 
-		this->cKillDeadVariables(insn.varsToKill, this->cStoreOperand(dst, srcReg, 1));
+		this->cStoreOperand(dst, srcReg, 1);
+		this->cKillDeadVariables(insn.varsToKill);
 
 	}
 
@@ -671,8 +680,9 @@ protected:
 				assert(false);
 
 		}
-	
-		this->cKillDeadVariables(insn.varsToKill, this->cStoreOperand(dst, srcReg, 1));
+
+		this->cStoreOperand(dst, srcReg, 1);
+		this->cKillDeadVariables(insn.varsToKill);
 		
 	}
 
@@ -715,7 +725,8 @@ protected:
 
 		}
 
-		this->cKillDeadVariables(insn.varsToKill, this->cStoreOperand(dst, srcReg, 1));
+		this->cStoreOperand(dst, srcReg, 1);
+		this->cKillDeadVariables(insn.varsToKill);
 
 	}
 
@@ -727,7 +738,8 @@ protected:
 
 		this->append(new FI_acc_all(srcReg));
 		this->append(new FI_node_free(srcReg));
-		this->cKillDeadVariables(insn.varsToKill, true);
+		this->append(new FI_check());
+		this->cKillDeadVariables(insn.varsToKill);
 
 	}
 
@@ -745,7 +757,8 @@ protected:
 		size_t src2Reg = this->cLoadOperand(1, src2);
 
 		this->append(new F(dstReg, src1Reg, src2Reg));
-		this->cKillDeadVariables(insn.varsToKill, this->cStoreOperand(dst, dstReg, 1));
+		this->cStoreOperand(dst, dstReg, 1);
+		this->cKillDeadVariables(insn.varsToKill);
 
 	}
 
@@ -764,7 +777,8 @@ protected:
 		size_t src2Reg = this->cLoadOperand(1, src2);
 
 		this->append(new FI_iadd(dstReg, src1Reg, src2Reg));
-		this->cKillDeadVariables(insn.varsToKill, this->cStoreOperand(dst, dstReg, 1));
+		this->cStoreOperand(dst, dstReg, 1);
+		this->cKillDeadVariables(insn.varsToKill);
 		
 	}
 
@@ -783,7 +797,8 @@ protected:
 		size_t src2Reg = this->cLoadOperand(1, src2);
 
 		this->append(new FI_move_reg_inc(dstReg, src1Reg, src2Reg));
-		this->cKillDeadVariables(insn.varsToKill, this->cStoreOperand(dst, dstReg, 1));
+		this->cStoreOperand(dst, dstReg, 1);
+		this->cKillDeadVariables(insn.varsToKill);
 		
 	}
 
@@ -797,35 +812,37 @@ protected:
 
 		assert(fnc.args.size() + 2 == insn.operands.size());
 
-		// feed registers with arguments
-		for (size_t i = 0; i < fnc.args.size(); ++i)
-			this->cLoadOperand(i + 2, insn.operands[i + 2]);
+		// feed registers with arguments (r2 ... )
+		for (size_t i = fnc.args.size() + 1; i > 1; --i)
+			this->cLoadOperand(i, insn.operands[i]);
 
 		// kill dead variables
-		this->cKillDeadVariables(insn.varsToKill, false, true);
+		this->cKillDeadVariables(insn.varsToKill);
 
-		AbstractInstruction* instr = new FI_check();
+		size_t head = this->assembly->code_.size();
 
-		// set target flag
-		instr->setTarget();
-
-		// store return address into r1
-		this->append(new FI_load_cst(1, Data::createNativePtr(instr)));
+		// put placeholder for loading return address into r1
+		this->append(NULL);
 
 		// call
-		this->append(new FI_jmp(fnc.cfg.entry()));
+		this->append(new FI_jmp(&this->getFncInfo(&fnc).second));
+
+		// load ABP into r1
+		this->append(new FI_get_ABP(1, 0));
+
+		// isolate adjacent nodes (current ABP)
+		this->append(new FI_acc_all(1));		
 
 		// collect result from r0
 		if (insn.operands[0].code != CL_OPERAND_VOID)
 			this->cStoreOperand(insn.operands[0], 0, 1);
 
-		this->append(instr);
+		// construct instruction for loading return address
+		this->assembly->code_[head] =
+			new FI_load_cst(1, Data::createNativePtr(this->assembly->code_[head + 2]));
 
-		// load ABP into r0
-		this->append(new FI_get_ABP(0, 0));
-
-		// isolate adjacent nodes (current ABP)
-		this->append(new FI_acc_all(0));		
+		// set target flag
+		this->assembly->code_[head + 2]->setTarget();
 
 	}
 
@@ -833,7 +850,7 @@ protected:
 
 		// move return value into r0
 		if (insn.operands[0].code != CL_OPERAND_VOID)
-			this->cLoadOperand(0, insn.operands[0]);
+			this->cLoadOperand(0, insn.operands[0], false);
 
 		// load previous ABP into r1
 		this->append(new FI_load_ABP(1, ABP_OFFSET));
@@ -891,7 +908,8 @@ protected:
 		size_t dstReg = this->lookupStoreReg(dst, 0);
 
 		this->append(new FI_load_cst(dstReg, Data::createUnknw()));
-		this->cKillDeadVariables(insn.varsToKill, this->cStoreOperand(dst, dstReg, 1));
+		this->cStoreOperand(dst, dstReg, 1);
+		this->cKillDeadVariables(insn.varsToKill);
 
 	}
 
@@ -927,7 +945,7 @@ protected:
 
 	void compileInstruction(const CodeStorage::Insn& insn) {
 
-		CL_DEBUG_AT(2, insn.loc << ' ' << insn);
+		CL_DEBUG_AT(3, insn.loc << ' ' << insn);
 		
 		switch (insn.code) {
 
@@ -1031,7 +1049,7 @@ protected:
 			this->assembly->regFileSize_ = this->curCtx->argCount + 2;
 
 		// move ABP into r0
-		this->append(new FI_get_ABP(0, 0));
+		this->append(new FI_get_ABP(0, 0))->setTarget();
 
 		// store entry point
 		this->codeIndex.insert(std::make_pair(&fncInfo.second, this->assembly->code_.back()));
@@ -1051,18 +1069,12 @@ protected:
 		this->append(new FI_load_cst(1, Data::createVoidPtr(1)));
 
 		// get function name
-		std::string typeName;
-		if (fnc.def.type->name)
-			typeName = std::string(fnc.def.type->name);
-		else {
-			std::ostringstream ss;
-			ss << fnc.def.type->uid;
-			typeName = ss.str();
-		}
+		std::ostringstream ss;
+		ss << nameOf(fnc) << ':' << uidOf(fnc);
 
 		// allocate stack frame to r1
 		this->append(
-			new FI_node_create(1, 1, 1, this->boxMan.getTypeInfo(typeName), this->curCtx->sfLayout)
+			new FI_node_create(1, 1, 1, this->boxMan.getTypeInfo(ss.str()), this->curCtx->sfLayout)
 		);
 
 		// store arguments to the new frame (r1)
@@ -1133,8 +1145,8 @@ public:
 		// compile entry call
 
 		// feed registers with arguments
-		for (size_t i = 0; i < entry.args.size(); ++i)
-			this->append(new FI_load_cst(i + 2, Data::createUndef()));
+		for (size_t i = entry.args.size() + 1; i > 1; --i)
+			this->append(new FI_load_cst(i, Data::createUndef()));
 
 		AbstractInstruction* instr = new FI_check();
 

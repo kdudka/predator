@@ -567,7 +567,7 @@ class FI_check : public SequentialInstruction {
 
 public:
 
-	FI_check() : SequentialInstruction() {}
+	FI_check() : SequentialInstruction(fi_type_e::fiCheck) {}
 
 	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
 
@@ -623,7 +623,7 @@ public:
 	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "struct\tr" << this->dst_ << ", r" << this->start_ << " ... , " << utils::wrap(this->offsets_);
+		return os << "struct\tr" << this->dst_ << ", r" << this->start_ << "..., " << utils::wrap(this->offsets_);
 	}
 
 };
