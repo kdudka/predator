@@ -27,6 +27,7 @@
 
 #include "types.hh"
 #include "abstractbox.hh"
+#include "programerror.hh"
 
 struct NodeLabel {
 
@@ -111,7 +112,7 @@ struct NodeLabel {
 		auto i = this->node.m->find(offset);
 //		assert(i != this->node.m->end());
 		if (i == this->node.m->end())
-			throw std::runtime_error("NodeLabel::boxLookup(): required box not found!");
+			throw ProgramError("boxLookup(): required box not found!");
 		return i->second;
 	}
 

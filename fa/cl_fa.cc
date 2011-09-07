@@ -33,6 +33,7 @@
 #include <cl/storage.hh>
 #include <cl/cldebug.hh>
 #include <cl/clutil.hh>
+#include "../cl/ssd.h"
 
 #include "symctx.hh"
 #include "symexec.hh"
@@ -94,6 +95,8 @@ struct BoxDb {
 };
 
 void clEasyRun(const CodeStorage::Storage& stor, const char* configString) {
+
+	ssd::ColorConsole::enableForTerm(STDERR_FILENO);
 
 	// initialize random numbers
 	srandom(time(NULL));

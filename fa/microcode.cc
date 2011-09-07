@@ -475,3 +475,25 @@ void FI_build_struct::execute(ExecutionManager& execMan, const AbstractInstructi
 	execMan.enqueue(state, this->next_);
 
 }
+
+// FI_push_greg
+void FI_push_greg::execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
+
+	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.second->fae));
+
+	VirtualMachine(*fae).varPush((*state.first)[this->src_]);
+
+	execMan.enqueue(state.second, state.first, fae, this->next_);
+
+}
+
+// FI_pop_greg
+void FI_pop_greg::execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
+
+	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.second->fae));
+
+	VirtualMachine(*fae).varPop((*state.first)[this->dst_]);
+
+	execMan.enqueue(state.second, state.first, fae, this->next_);
+
+}

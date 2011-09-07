@@ -43,7 +43,7 @@ struct SymState {
 			os << ' ' << reg;
 
 		os << ", heap:" << std::endl << *state.second->fae;
-		return os << "instruction: " << *state.second->instr;		
+		return os << "instruction (" << state.second->instr << "): " << *state.second->instr;		
 		
 	}
 

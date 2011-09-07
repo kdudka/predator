@@ -24,11 +24,14 @@
 #include <boost/unordered_set.hpp>
 #include <boost/unordered_map.hpp>
 
+#include <algorithm>
+
 #include <cl/code_listener.h>
 #include <cl/cl_msg.hh>
 #include <cl/cldebug.hh>
 #include <cl/clutil.hh>
 #include <cl/storage.hh>
+#include "../cl/ssd.h"
 
 #include "forestautext.hh"
 #include "symctx.hh"
@@ -37,6 +40,7 @@
 
 #include "symexec.hh"
 
+using namespace ssd;
 using std::vector;
 using std::list;
 using std::set;
@@ -344,14 +348,18 @@ protected:
 		for ( ; s; s = s->parent)
 			trace.push_back(s);
 
+		std::reverse(trace.begin(), trace.end());
+
 		CL_NOTE("trace:");
 
-		for (auto i = trace.rbegin(); i != trace.rend(); ++i) {
-			CL_DEBUG_AT(2, *(*i)->instr);
-			if (!(*i)->instr->insn())
-				continue;
+		for (auto s : trace) {
+			
+			if (s->instr->insn())
+				CL_NOTE_MSG(&s->instr->insn()->loc, SSD_INLINE_COLOR(C_LIGHT_RED, *s->instr->insn()));
+
+			CL_DEBUG_AT(2, *s->instr);
 //			CL_DEBUG(std::endl << *s->fae);
-			CL_NOTE_MSG(&(*i)->instr->insn()->loc, *(*i)->instr->insn());
+
 		}
 
 	}
@@ -364,7 +372,16 @@ protected:
 
 			while (this->execMan.dequeueDFS(state)) {
 	
-				CL_CDEBUG(3, state);
+				if (state.second->instr->insn()) {
+
+					CL_CDEBUG(2, SSD_INLINE_COLOR(C_LIGHT_RED, state.second->instr->insn()->loc << *state.second->instr->insn()));
+					CL_CDEBUG(2, state);
+
+				} else {
+
+					CL_CDEBUG(3, state);
+
+				}
 	
 				this->execMan.execute(state);
 	
@@ -417,12 +434,17 @@ protected:
 
 		for (auto fnc : stor.fncs) {
 
+			std::vector<size_t> v;
+
+			for (auto sel : SymCtx(*fnc).sfLayout)
+				v.push_back(sel.offset);
+
 			std::ostringstream ss;
 			ss << nameOf(*fnc) << ':' << uidOf(*fnc);
 
 			CL_DEBUG_AT(3, ss.str());
 					
-			this->boxMan.createTypeInfo(ss.str(), std::vector<size_t>());
+			this->boxMan.createTypeInfo(ss.str(), v);
 
 		}
 

@@ -21,6 +21,7 @@
 
 #include <cl/storage.hh>
 #include <cl/cl_msg.hh>
+#include "../cl/ssd.h"
 
 #include "treeaut.hh"
 #include "forestautext.hh"
@@ -35,6 +36,8 @@
 #include "regdef.hh"
 
 #include "fixpoint.hh"
+
+using namespace ssd;
 
 struct ExactTMatchF {
 	bool operator()(const TT<label_type>& t1, const TT<label_type>& t2) {
@@ -140,6 +143,8 @@ void FI_abs::execute(ExecutionManager& execMan, const AbstractInstruction::State
 	}
 
 	fae->unreachableFree();
+
+	CL_CDEBUG(2, SSD_INLINE_COLOR(C_LIGHT_GREEN, "after normalization:" ) << std::endl << *fae);
 
 	// merge fixpoint
 	std::vector<FAE*> tmp2;

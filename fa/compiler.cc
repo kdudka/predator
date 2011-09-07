@@ -368,8 +368,6 @@ protected:
 					int offset = 0;
 			
 					if (acc && (acc->code == CL_ACCESSOR_DEREF)) {
-			
-						this->append(new FI_load_ABP(dst, (int)varInfo.second));
 
 						acc = Core::computeOffset(offset, acc->next);
 
@@ -378,10 +376,13 @@ protected:
 							assert(op.type->code == cl_type_e::CL_TYPE_PTR);
 
 							assert(acc->next == NULL);
-							this->append(new FI_move_reg_offs(dst, dst, offset));
+							this->append(new FI_load_ABP(dst, offset + (int)varInfo.second));
+//							this->append(new FI_move_reg_offs(dst, dst, offset));
 							break;
 			
 						}
+
+						this->append(new FI_load_ABP(dst, (int)varInfo.second));
 			
 						assert(acc == NULL);
 
@@ -497,11 +498,11 @@ protected:
 				if (varInfo.first) {
 
 					// stack variable
-					this->append(new FI_get_ABP(tmp, varInfo.second));
+					this->append(new FI_get_ABP(tmp, 0));
 
 					const cl_accessor* acc = op.accessor;
 			
-					int offset = 0;
+					int offset = (int)varInfo.second;
 
 					bool needsAcc = false;
 
@@ -517,6 +518,8 @@ protected:
 							needsAcc = true;
 
 							acc = acc->next;
+
+							offset = 0;
 
 						}
 
@@ -814,7 +817,7 @@ protected:
 
 		// feed registers with arguments (r2 ... )
 		for (size_t i = fnc.args.size() + 1; i > 1; --i)
-			this->cLoadOperand(i, insn.operands[i]);
+			this->cLoadOperand(i, insn.operands[i], false);
 
 		// kill dead variables
 		this->cKillDeadVariables(insn.varsToKill);
@@ -832,6 +835,16 @@ protected:
 
 		// isolate adjacent nodes (current ABP)
 		this->append(new FI_acc_all(1));		
+
+		size_t head2 = this->assembly->code_.size();
+
+		// abstract
+		this->cFixpoint();
+
+		this->assembly->code_[head2]->insn(&insn);
+
+		// pop return value into r0
+		this->append(new FI_pop_greg(0));
 
 		// collect result from r0
 		if (insn.operands[0].code != CL_OPERAND_VOID)
@@ -852,23 +865,26 @@ protected:
 		if (insn.operands[0].code != CL_OPERAND_VOID)
 			this->cLoadOperand(0, insn.operands[0], false);
 
-		// load previous ABP into r1
-		this->append(new FI_load_ABP(1, ABP_OFFSET));
+		// push r0 to gr1
+		this->append(new FI_push_greg(0));
 
-		// store current ABP into r2
-		this->append(new FI_get_ABP(2, 0));
+		// load previous ABP into r0
+		this->append(new FI_load_ABP(0, ABP_OFFSET));
 
-		// restore previous ABP (r1)
-		this->append(new FI_set_greg(ABP_INDEX, 1));
+		// store current ABP into r1
+		this->append(new FI_get_ABP(1, 0));
 
-		// move return address into r1
-		this->append(new FI_load(1, 2, IP_OFFSET));
+		// restore previous ABP (r0)
+		this->append(new FI_set_greg(ABP_INDEX, 0));
+
+		// move return address into r0
+		this->append(new FI_load(0, 1, IP_OFFSET));
 		
-		// delete stack frame (r2)
-		this->append(new FI_node_free(2));
+		// delete stack frame (r1)
+		this->append(new FI_node_free(1));
 
 		// return to r1
-		this->append(new FI_ret(1));
+		this->append(new FI_ret(0));
 
 	}
 
@@ -936,10 +952,15 @@ protected:
 
 		const CodeStorage::Fnc* fnc = insn.stor->fncs[insn.operands[1].data.cst.data.cst_fnc.uid];
 
-		if (!isDefined(*fnc))
+		if (!isDefined(*fnc)) {
 			CL_NOTE_MSG(&insn.loc, "ignoring call to undefined function '" << insn.operands[1].data.cst.data.cst_fnc.name << '\'');
-		else
+			if (insn.operands[0].code != CL_OPERAND_VOID) {
+				this->append(new FI_load_cst(0, Data::createUnknw()));
+				this->cStoreOperand(insn.operands[0], 0, 1);
+			}
+		} else {
 			this->compileCallInternal(insn, *fnc);
+		}
 
 	}
 
@@ -1160,6 +1181,9 @@ public:
 		this->append(new FI_jmp(&this->getFncInfo(&entry).second));
 
 		this->append(instr);
+
+		// pop return value into r0
+		this->append(new FI_pop_greg(0));
 
 		// load ABP into r1
 		this->append(new FI_get_greg(1, ABP_INDEX));

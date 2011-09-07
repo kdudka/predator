@@ -29,6 +29,15 @@ else()
     add_definitions("-O3 -DNDEBUG")
 endif()
 
+# Check for isatty(3)
+include(CheckFunctionExists)
+check_function_exists("isatty" HAVE_ISATTY)
+if (HAVE_ISATTY)
+    add_definitions("-DHAVE_ISATTY=1")
+else()
+    add_definitions("-DHAVE_ISATTY=0")
+endif()
+
 add_test(
 	"sll_reversal" ../gcc-install/bin/gcc -c ../fa/data/sll-rev.c -o /dev/null -O0 -m32
     -DFORESTER

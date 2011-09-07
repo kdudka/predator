@@ -628,4 +628,36 @@ public:
 
 };
 
+class FI_push_greg : public SequentialInstruction {
+
+	size_t src_;
+
+public:
+
+	FI_push_greg(size_t src) : SequentialInstruction(), src_(src) {}
+
+	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
+
+	virtual std::ostream& toStream(std::ostream& os) const {
+		return os << "gpush \tr" << this->src_;
+	}
+
+};
+
+class FI_pop_greg : public SequentialInstruction {
+
+	size_t dst_;
+
+public:
+
+	FI_pop_greg(size_t dst) : SequentialInstruction(), dst_(dst) {}
+
+	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
+
+	virtual std::ostream& toStream(std::ostream& os) const {
+		return os << "gpop  ";
+	}
+
+};
+
 #endif

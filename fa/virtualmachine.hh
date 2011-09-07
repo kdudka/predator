@@ -25,6 +25,7 @@
 
 #include "types.hh"
 #include "forestautext.hh"
+#include "programerror.hh"
 
 class VirtualMachine {
 
@@ -63,7 +64,7 @@ protected:
 		assert(VirtualMachine::isSelector(ni.aBox, offset));
 		const Data* tmp;
 		if (!this->fae.isData(transition.lhs()[ni.offset], tmp))
-			throw std::runtime_error("FAE::transitionLookup(): destination is not a leaf!");
+			throw ProgramError("transitionLookup(): destination is not a leaf!");
 		data = *tmp;
 		VirtualMachine::displToData(VirtualMachine::readSelector(ni.aBox), data);
 	}
@@ -75,7 +76,7 @@ protected:
 			assert(VirtualMachine::isSelector(ni.aBox, *i));
 			const Data* tmp;
 			if (!this->fae.isData(transition.lhs()[ni.offset], tmp))
-				throw std::runtime_error("FAE::transitionLookup(): destination is not a leaf!");
+				throw ProgramError("transitionLookup(): destination is not a leaf!");
 			data.d_struct->push_back(Data::item_info(*i - base, *tmp));
 			VirtualMachine::displToData(VirtualMachine::readSelector(ni.aBox), data.d_struct->back().second);
 		}
@@ -87,7 +88,7 @@ protected:
 			assert(VirtualMachine::isSelector(*i));
 			const Data* tmp;
 			if (!this->fae.isData(transition.lhs()[lhsOffset], tmp))
-				throw std::runtime_error("FAE::transitionLookup(): destination is not a leaf!");
+				throw ProgramError("transitionLookup(): destination is not a leaf!");
 			nodeInfo.push_back(std::make_pair(VirtualMachine::readSelector(*i), *tmp));
 			VirtualMachine::displToData(nodeInfo.back().first, nodeInfo.back().second);
 			lhsOffset += (*i)->getArity();
@@ -103,7 +104,7 @@ protected:
 		assert(VirtualMachine::isSelector(ni.aBox, offset));
 		const Data* tmp;
 		if (!this->fae.isData(transition.lhs()[ni.offset], tmp))
-			throw std::runtime_error("FAE::transitionLookup(): destination is not a leaf!");
+			throw ProgramError("transitionModify(): destination is not a leaf!");
 		out = *tmp;
 		SelData s = VirtualMachine::readSelector(ni.aBox);
 		VirtualMachine::displToData(s, out);
@@ -126,7 +127,7 @@ protected:
 			assert(VirtualMachine::isSelector(ni.aBox, i->first));
 			const Data* tmp;
 			if (!this->fae.isData(transition.lhs()[ni.offset], tmp))
-				throw runtime_error("FAE::transitionModify(): destination is not a leaf!");
+				throw ProgramError("transitionModify(): destination is not a leaf!");
 			out.d_struct->push_back(Data::item_info(i->first - base, *tmp));
 			SelData s = VirtualMachine::readSelector(ni.aBox);
 			VirtualMachine::displToData(s, out.d_struct->back().second);
@@ -146,10 +147,15 @@ public:
 		return this->fae.variables.size();
 	}
 
-	size_t varAdd(const Data& data) {
+	size_t varPush(const Data& data) {
 		size_t id = this->fae.variables.size();
 		this->fae.variables.push_back(data);
 		return id;
+	}
+
+	void varPop(Data& data) {
+		data = this->fae.variables.back();
+		this->fae.variables.pop_back();
 	}
 
 	void varPopulate(size_t count) {

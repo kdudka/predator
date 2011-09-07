@@ -67,7 +67,7 @@ struct SymCtx {
 	size_t regCount;
 	size_t argCount;
 
-	SymCtx(const CodeStorage::Fnc& fnc) : fnc(fnc), regCount(3), argCount(0) {
+	SymCtx(const CodeStorage::Fnc& fnc) : fnc(fnc), regCount(2), argCount(0) {
 
 		// pointer to previous stack frame
 		this->sfLayout.push_back(SelData(ABP_OFFSET, ABP_SIZE, 0));
