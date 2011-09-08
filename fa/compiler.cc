@@ -404,6 +404,8 @@ protected:
 						}
 			
 					} else {
+
+						offset = (int)varInfo.second;
 			
 						acc = Core::computeOffset(offset, acc);
 			
@@ -416,9 +418,8 @@ protected:
 						}
 					
 						assert(acc == NULL);
-						assert(offset == 0);
 			
-						this->append(new FI_load_ABP(dst, (int)varInfo.second));
+						this->append(new FI_load_ABP(dst, offset));
 //						this->cMoveReg(dst, src, offset);
 			
 					}
