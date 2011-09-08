@@ -38,25 +38,6 @@ else()
     add_definitions("-DHAVE_ISATTY=0")
 endif()
 
-add_test(
-	"sll_reversal" ../gcc-install/bin/gcc -c ../fa/data/sll-rev.c -o /dev/null -O0 -m32
-    -DFORESTER
-    -fplugin=../fa_build/libfa.so
-    -fplugin-arg-libfa-verbose=0
-)
-add_test(
-	"sll_mergesort" ../gcc-install/bin/gcc -c ../fa/data/sll-mergesort.c -o /dev/null -O0 -m32
-    -DFORESTER
-    -fplugin=../fa_build/libfa.so
-    -fplugin-arg-libfa-verbose=0
-)
-add_test(
-	"dsw" ../gcc-install/bin/gcc -c ../fa/data/dsw.c -o /dev/null -O0 -m32
-    -DFORESTER
-    -fplugin=../fa_build/libfa.so
-    -fplugin-arg-libfa-verbose=0
-)
-
 # libfa.so
 add_library(fa SHARED
 	treeaut.cc
@@ -78,3 +59,94 @@ set_target_properties(fa PROPERTIES LINK_FLAGS -lrt)
 # link with code_listener
 find_library(CL_LIB cl ../cl_build)
 target_link_libraries(fa ${CL_LIB})
+
+add_test(
+	"sll_delete" ${GCC_HOST} -o /dev/null -m32 -DFORESTER -fplugin=../fa_build/libfa.so
+	-c ../fa/data/sll-delete.c
+)
+add_test(
+	"sll_reversal" ${GCC_HOST} -o /dev/null -m32 -DFORESTER -fplugin=../fa_build/libfa.so
+	-c ../fa/data/sll-rev.c
+)
+add_test(
+	"sll_bubblesort" ${GCC_HOST} -o /dev/null -m32 -DFORESTER -fplugin=../fa_build/libfa.so
+	-c ../fa/data/sll-bubblesort.c
+)
+add_test(
+	"sll_mergesort" ${GCC_HOST} -o /dev/null -m32 -DFORESTER -fplugin=../fa_build/libfa.so
+	-c ../fa/data/sll-mergesort.c
+)
+add_test(
+	"sll_listofclists" ${GCC_HOST} -o /dev/null -m32 -DFORESTER -fplugin=../fa_build/libfa.so
+	-c ../fa/data/sll-listofclists.c
+	-fplugin-arg-libfa-args=db-root:../fa/data/listofclists.sll.boxes
+)
+add_test(
+	"recursion" ${GCC_HOST} -o /dev/null -m32 -DFORESTER -fplugin=../fa_build/libfa.so
+	-c ../fa/data/recursion.c
+)
+add_test(
+	"cdll" ${GCC_HOST} -o /dev/null -m32 -DFORESTER -fplugin=../fa_build/libfa.so
+	-c ../fa/data/cdll.c
+	-fplugin-arg-libfa-args=db-root:../fa/data/genericdll.boxes
+)
+add_test(
+	"dll_insert" ${GCC_HOST} -o /dev/null -m32 -DFORESTER -fplugin=../fa_build/libfa.so
+	-c ../fa/data/dll-insert.c
+	-fplugin-arg-libfa-args=db-root:../fa/data/listofclists.dll.boxes
+)
+add_test(
+	"dll_rev" ${GCC_HOST} -o /dev/null -m32 -DFORESTER -fplugin=../fa_build/libfa.so
+	-c ../fa/data/dll-rev.c
+	-fplugin-arg-libfa-args=db-root:../fa/data/genericdll.boxes
+)
+add_test(
+	"dll_listofclists" ${GCC_HOST} -o /dev/null -m32 -DFORESTER -fplugin=../fa_build/libfa.so
+	-c ../fa/data/dll-listofclists.c
+	-fplugin-arg-libfa-args=db-root:../fa/data/listofclists.dll.boxes
+)
+add_test(
+	"dll_insertsort" ${GCC_HOST} -o /dev/null -m32 -DFORESTER -fplugin=../fa_build/libfa.so
+	-c ../fa/data/dll-insertsort.c
+	-fplugin-arg-libfa-args=db-root:../fa/data/genericdll.boxes
+)
+add_test(
+	"dll_insertsort_v2" ${GCC_HOST} -o /dev/null -m32 -DFORESTER -fplugin=../fa_build/libfa.so
+	-c ../fa/data/dll-insertsort_v2.c
+	-fplugin-arg-libfa-args=db-root:../fa/data/genericdll.boxes
+)
+add_test(
+	"test_0061" ${GCC_HOST} -o /dev/null -m32 -DFORESTER -fplugin=../fa_build/libfa.so
+	-c ../fa/data/test-0080.c
+	-fplugin-arg-libfa-args=db-root:../fa/data/genericdll.boxes
+)
+add_test(
+	"test_0080" ${GCC_HOST} -o /dev/null -m32 -DFORESTER -fplugin=../fa_build/libfa.so
+	-c ../fa/data/test-0080.c
+)
+add_test(
+	"test_0098" ${GCC_HOST} -o /dev/null -m32 -DFORESTER -fplugin=../fa_build/libfa.so
+	-c ../fa/data/test-0098.c
+	-fplugin-arg-libfa-args=db-root:../fa/data/test-0098.boxes
+)
+add_test(
+	"test_0128" ${GCC_HOST} -o /dev/null -m32 -DFORESTER -fplugin=../fa_build/libfa.so
+	-c ../fa/data/test-0128.c
+)
+add_test(
+	"treecons" ${GCC_HOST} -o /dev/null -m32 -DFORESTER -fplugin=../fa_build/libfa.so
+	-c ../fa/data/treecons.c
+)
+add_test(
+	"test_stack" ${GCC_HOST} -o /dev/null -m32 -DFORESTER -fplugin=../fa_build/libfa.so
+	-c ../fa/data/tree_stack.c
+)
+add_test(
+	"tree_traversal" ${GCC_HOST} -o /dev/null -m32 -DFORESTER -fplugin=../fa_build/libfa.so
+	-c ../fa/data/treetraversal.c
+	-fplugin-arg-libfa-args=db-root:../fa/data/treewpp.boxes
+)
+add_test(
+	"dsw" ${GCC_HOST} -o /dev/null -m32 -DFORESTER -fplugin=../fa_build/libfa.so
+	-c ../fa/data/dsw.c
+)
