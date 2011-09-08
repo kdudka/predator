@@ -276,10 +276,10 @@ struct Data {
 			case data_type_e::t_int: os << "(int)" << x.d_int; break;
 			case data_type_e::t_bool: os << "(bool)" << x.d_bool; break;
 			case data_type_e::t_struct:
-				os << "(struct)[ ";
+				os << "{ ";
 				for (std::vector<item_info>::iterator i = x.d_struct->begin(); i != x.d_struct->end(); ++i)
-					os << '+' << i->first << ": " << i->second << ' ';
-				os << "]";
+					os << '+' << i->first << ':' << i->second << ' ';
+				os << "}";
 				break;
 			default: os << "(other)"; break;
 		}

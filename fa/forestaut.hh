@@ -191,14 +191,21 @@ public:
 	}
 */
 	void updateRootMap(size_t root) {
+
 		assert(root < this->roots.size());
 		assert(this->roots[root]);
+		assert(this->roots[root]->getFinalStates().size());
+
 		o_map_type o;
 		FA::computeDownwardO(*this->roots[root], o);
+
 		std::set<size_t>::const_iterator i = this->roots[root]->getFinalStates().begin();
+
 		this->rootMap[root] = o[*i];
+
 		for (++i; i != this->roots[root]->getFinalStates().end(); ++i)
 			assert(this->rootMap[root] == o[*i]);
+
 	}
 
 	bool hasReference(size_t root, size_t target) const {

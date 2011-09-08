@@ -27,8 +27,6 @@
 #include "abstractinstruction.hh"
 #include "fixpointinstruction.hh"
 #include "symstate.hh"
-//#include "regdef.hh"
-#include "splitting.hh"
 
 class ExecutionManager {
 

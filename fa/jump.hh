@@ -20,9 +20,6 @@
 #ifndef JUMP_H
 #define JUMP_H
 
-#include <vector>
-#include <unordered_map>
-
 #include "abstractinstruction.hh"
 
 class FI_jmp : public AbstractInstruction {

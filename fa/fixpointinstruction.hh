@@ -20,9 +20,10 @@
 #ifndef FIXPOINT_INSTRUCTION_H
 #define FIXPOINT_INSTRUCTION_H
 
+#include <memory>
+
 #include "label.hh"
 #include "treeaut.hh"
-//#include "forestautext.hh"
 
 #include "sequentialinstruction.hh"
 

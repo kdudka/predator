@@ -20,9 +20,6 @@
 #ifndef SEQUENTIAL_INSTRUCTION_H
 #define SEQUENTIAL_INSTRUCTION_H
 
-#include <vector>
-#include <unordered_map>
-
 #include "abstractinstruction.hh"
 
 class SequentialInstruction : public AbstractInstruction {

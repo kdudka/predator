@@ -20,34 +20,8 @@
 #ifndef CALL_H
 #define CALL_H
 
-#include <vector>
-#include <unordered_map>
-
 #include "abstractinstruction.hh"
-/*
-class FI_call : public AbstractInstruction {
 
-	const CodeStorage::Fnc& fnc_;
-
-	AbstractInstruction* target_;
-
-public:
-
-	FI_call(const CodeStorage::Fnc& fnc) : AbstractInstruction(), fnc_(fnc), target_(NULL) {}
-
-	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
-	
-	virtual void finalize(
-		const std::unordered_map<const CodeStorage::Block*, AbstractInstruction*>&,
-		std::vector<AbstractInstruction*>::const_iterator
-	);
-
-	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "call  \t" << this->target_;
-	}
-
-};
-*/
 class FI_ret : public AbstractInstruction {
 
 	size_t dst_;

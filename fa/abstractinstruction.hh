@@ -22,8 +22,8 @@
 
 #include <ostream>
 #include <vector>
-#include <memory>
 #include <unordered_map>
+#include <memory>
 
 #include "types.hh"
 

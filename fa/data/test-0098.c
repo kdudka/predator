@@ -90,16 +90,17 @@ struct master_item {
     struct list_head        nested2;
 };
 
+
 #define create_dll(dll)\
 {\
     (dll)->prev = dll;\
     (dll)->next = dll;\
-\
     append_one(dll);\
     append_one(dll);\
     append_one(dll);\
     while (__nondet())\
         append_one(dll);\
+\
 }
 
 

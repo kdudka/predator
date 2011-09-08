@@ -354,11 +354,12 @@ protected:
 
 		for (auto s : trace) {
 			
-			if (s->instr->insn())
+			if (s->instr->insn()) {
 				CL_NOTE_MSG(&s->instr->insn()->loc, SSD_INLINE_COLOR(C_LIGHT_RED, *s->instr->insn()));
+				CL_DEBUG_AT(2, std::endl << *s->fae);
+			}
 
 			CL_DEBUG_AT(2, *s->instr);
-//			CL_DEBUG(std::endl << *s->fae);
 
 		}
 
@@ -371,7 +372,7 @@ protected:
 		try {
 
 			while (this->execMan.dequeueDFS(state)) {
-	
+
 				if (state.second->instr->insn()) {
 
 					CL_CDEBUG(2, SSD_INLINE_COLOR(C_LIGHT_RED, state.second->instr->insn()->loc << *state.second->instr->insn()));
@@ -380,6 +381,7 @@ protected:
 				} else {
 
 					CL_CDEBUG(3, state);
+//					Splitting(*state.second->fae).checkIntegrity();
 
 				}
 	

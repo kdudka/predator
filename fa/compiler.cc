@@ -378,7 +378,10 @@ protected:
 							assert(op.type->code == cl_type_e::CL_TYPE_PTR);
 
 							assert(acc->next == NULL);
-							this->append(new FI_move_reg_offs(dst, dst, offset));
+
+							if (offset)
+								this->append(new FI_move_reg_offs(dst, dst, offset));
+
 							break;
 			
 						}
@@ -1164,9 +1167,9 @@ public:
 
 		// compile entry call
 
-		// feed registers with arguments
+		// feed registers with arguments (unknown values)
 		for (size_t i = entry.args.size() + 1; i > 1; --i)
-			this->append(new FI_load_cst(i, Data::createUndef()));
+			this->append(new FI_load_cst(i, Data::createUnknw()));
 
 		AbstractInstruction* instr = new FI_check();
 

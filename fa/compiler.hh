@@ -90,11 +90,9 @@ public:
 					os << instr->insn()->loc << ' ' << *instr->insn() << std::endl;
 
 				if (instr->isTarget())
-					os << instr << ':';
-				else
-					os << "   \t";
+					os << instr << ':' << std::endl;
 
-				os << "\t" << *instr << std::endl;
+				os << "\t\t" << *instr << std::endl;
 
 				++c;
 

@@ -26,6 +26,7 @@
 #include "forestautext.hh"
 #include "utils.hh"
 #include "folding.hh"
+#include "programerror.hh"
 #include "utils.hh"
 
 struct RootEnumF {
@@ -227,13 +228,6 @@ public:
 	void checkState(const TA<label_type>& ta, size_t state, const std::set<size_t>& defined,
 		std::vector<bool>& bitmap, std::map<std::pair<const TA<label_type>*, size_t>, std::set<size_t>>& states) const {
 
-		auto p = states.insert(std::make_pair(std::make_pair(&ta, state), defined));
-
-		if (!p.second) {
-			assert(defined == p.first->second);
-			return;
-		}
-
 		const Data* data;
 
 		if (this->fae.isData(state, data)) {
@@ -245,10 +239,17 @@ public:
 
 		}
 
+		auto p = states.insert(std::make_pair(std::make_pair(&ta, state), defined));
+
+		if (!p.second) {
+			assert(defined == p.first->second);
+			return;
+		}
+
 		for (TA<label_type>::iterator i = ta.begin(state); i != ta.end(state); ++i) {
 
 			TypeBox* typeBox = (TypeBox*)i->label()->boxLookup((size_t)(-1), NULL);
-
+/*
 			if (!typeBox) {
 				
 				i->label()->iterate(CheckIntegrityF(*this, ta, *i, NULL, bitmap, states));
@@ -256,7 +257,7 @@ public:
 				continue;
 
 			}
-
+*/
 			const std::vector<size_t>& sels = typeBox->getSelectors();
 	
 			std::set<size_t> tmp(sels.begin(), sels.end());
@@ -313,8 +314,14 @@ public:
 
 	// adds redundant root points to allow further manipulation
 	void isolateAtLeaf(std::vector<FAE*>& dst, size_t root, size_t target, size_t selector) const {
+
+//		CL_CDEBUG(3, std::endl << this->fae);
+//		CL_CDEBUG(3, "isolateAtLeaf: (" << root << ", " << selector << ':' << target << ')');
+
 		assert(root < this->fae.roots.size());
 		assert(this->fae.roots[root]);
+
+		this->fae.unreachableFree(this->fae.roots[root]);
 
 		std::vector<std::pair<const TT<label_type>*, const Box*> > v;
 
@@ -367,6 +374,7 @@ public:
 					}
 				}
 			}
+			CL_CDEBUG(3, std::endl << ta2);
 			fae.roots[root] = std::shared_ptr<TA<label_type>>(&ta2.uselessAndUnreachableFree(*fae.allocTA()));
 			fae.updateRootMap(root);
 			ta2.clear();
@@ -438,6 +446,9 @@ public:
 	// adds redundant root points to allow further manipulation
 	template <class F>
 	void isolateAtRoot(std::vector<FAE*>& dst, size_t root, F f) const {
+
+//		CL_CDEBUG(3, "isolateAtRoot: " << root);
+
 		assert(root < this->fae.roots.size());
 		assert(this->fae.roots[root]);
 		for (std::set<size_t>::const_iterator j = this->fae.roots[root]->getFinalStates().begin(); j != this->fae.roots[root]->getFinalStates().end(); ++j) {
@@ -456,9 +467,13 @@ public:
 			}
 		}
 		}
+
 	}
 
 	void isolateOne(std::vector<FAE*>& dst, size_t target, size_t offset) const {
+
+//		CL_CDEBUG(3, "isolateOne: " << target << ':' << offset);
+
 		assert(target < this->fae.roots.size());
 		assert(this->fae.roots[target]);
 
@@ -485,7 +500,7 @@ public:
 			}
 		}
 
-		throw std::runtime_error("FAE::isolateOne(): selector lookup failed!");
+		throw ProgramError("isolateOne(): selector lookup failed!");
 
 	}
 
@@ -493,6 +508,8 @@ public:
 
 		assert(target < this->fae.roots.size());
 		assert(this->fae.roots[target]);
+
+//		CL_CDEBUG(3, "isolateSet: " << target << ", " << base << " + " << utils::wrap(offsets));
 
 		std::vector<size_t> offsD;
 		std::set<size_t> tmpS, offsU;
@@ -505,6 +522,9 @@ public:
 			else
 				offsU.insert(base + *i);
 		}
+
+//		CL_CDEBUG(3, "offsD: " << utils::wrap(offsD));
+//		CL_CDEBUG(3, "offsU: " << utils::wrap(offsU));
 
 		if (offsU.empty()) {
 			this->isolateAtRoot(dst, target, IsolateSetF(offsD));
@@ -541,7 +561,7 @@ public:
 						}						
 					}
 					if (!found)
-						throw std::runtime_error("FAE::isolateSet(): selector lookup failed!");
+						throw ProgramError("isolateSet(): selector lookup failed!");
 				}
 			}
 			utils::erase(tmp);

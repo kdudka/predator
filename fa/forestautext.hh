@@ -25,14 +25,12 @@
 #include <map>
 #include <stdexcept>
 #include <algorithm>
-//#include <sstream>
 
 #include <boost/unordered_map.hpp>
 #include <boost/unordered_set.hpp>
 
 #include "forestaut.hh"
 #include "boxman.hh"
-//#include "labman.hh"
 #include "tatimint.hh"
 #include "utils.hh"
 #include "programerror.hh"
@@ -217,12 +215,15 @@ public:
 		}
 	}
 
+	void unreachableFree(std::shared_ptr<TA<label_type>>& ta) {
+		auto tmp = ta;
+		ta = std::shared_ptr<TA<label_type>>(this->allocTA());
+		tmp->unreachableFree(*ta);
+	}
+
 	void unreachableFree() {
-		for (auto& ta : this->roots) {
-			auto tmp = ta;
-			ta = std::shared_ptr<TA<label_type>>(this->allocTA());
-			tmp->unreachableFree(*ta);
-		}
+		for (auto& ta : this->roots)
+			this->unreachableFree(ta);
 	}
 
 public:
