@@ -1048,10 +1048,34 @@ static void handle_accessor_array_ref(struct cl_accessor **ac, tree t)
     (*ac)->data.array.index = index;
 }
 
-static void handle_accessor_indirect_ref(struct cl_accessor **ac, tree t)
+static void handle_accessor_indirect_ref(struct cl_accessor **ac, tree *pt)
 {
+    tree t = *pt;
+    tree op0 = TREE_OPERAND(t, 0);
+
+    if (ADDR_EXPR == TREE_CODE(op0)) {
+        // EXPERIMENTAL: needed with gcc 4.7.x in order to keep Predator going
+        const tree type = TREE_TYPE(TREE_OPERAND(op0, 0));
+        const enum tree_code code = TREE_CODE(type);
+        switch (code) {
+            case ARRAY_TYPE:
+                handle_accessor_array_ref(ac, *pt);
+                (*ac)->type = add_bare_type_if_needed(type);
+                *pt = op0;
+                return;
+
+            case RECORD_TYPE:
+                // TODO: write a gcc 4.7.x adapter for legacy analyzers
+
+            default:
+                CL_WARN_UNHANDLED_EXPR(t, "node sequence added in gcc 4.7.x");
+                CL_BREAK_IF("this will need some additional debugging");
+                return;
+        }
+    }
+
     chain_accessor(ac, CL_ACCESSOR_DEREF);
-    (*ac)->type = operand_type_lookup(t);
+    (*ac)->type = add_type_if_needed(op0);
 }
 
 static void handle_accessor_component_ref(struct cl_accessor **ac, tree t)
@@ -1092,7 +1116,7 @@ static bool handle_accessor(struct cl_accessor **ac, tree *pt)
             // MEM_REF appeared after 4.5.0 (should be equal to INDIRECT_REF)
 #endif
         case INDIRECT_REF:
-            handle_accessor_indirect_ref(ac, t);
+            handle_accessor_indirect_ref(ac, &t);
             break;
 
         case COMPONENT_REF:

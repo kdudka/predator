@@ -293,10 +293,7 @@ void operandToStreamAcs(std::ostream &str, const struct cl_accessor *ac) {
                 // fall through!
 
             default:
-#ifndef NDEBUG
-                CL_TRAP;
-#endif
-                break;
+                CL_BREAK_IF("operandToStreamAcs() got invalid accessor");
         }
     }
 }
