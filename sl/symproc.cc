@@ -523,40 +523,6 @@ void SymProc::heapSetSingleVal(TObjId lhs, TValId rhs) {
     lm.leave();
 }
 
-class ValueMirror {
-    private:
-        SymProc             &proc_;
-        SymHeap             &sh_;
-        int                 end_;
-
-    public:
-        ValueMirror(SymProc *proc, const TObjId rObj):
-            proc_(*proc),
-            sh_(proc->sh())
-        {
-            const TOffset off = sh_.valOffset(sh_.placedAt(rObj));
-            const TObjType clt = sh_.objType(rObj);
-            end_ = off + clt->size;
-        }
-
-        bool operator()(const TObjId item[2]) const {
-            const TObjId lhs = item[0];
-            const TObjId rhs = item[1];
-            if (0 < rhs) {
-                const TValId rhsAt = sh_.placedAt(rhs);
-                const TOffset off = sh_.valOffset(rhsAt);
-                if (end_ <= off)
-                    // we are above the end_ of rhs
-                    return /* continue */ true;
-            }
-
-            const TValId val = sh_.valueOf(rhs);
-            proc_.heapSetSingleVal(lhs, val);
-
-            return /* continue */ true;
-        }
-};
-
 void SymProc::objSetValue(TObjId lhs, TValId rhs) {
     CL_BREAK_IF(!isPossibleToDeref(sh_.valTarget(sh_.placedAt(lhs))));
     CL_BREAK_IF(!sh_.objType(lhs));
@@ -577,15 +543,25 @@ void SymProc::objSetValue(TObjId lhs, TValId rhs) {
 
     // object-wise copy of a composite type
     const TObjId rObj = sh_.valGetComposite(rhs);
-    CL_BREAK_IF(rObj < 0);
+    const TObjType clt = sh_.objType(rObj);
+    CL_BREAK_IF(!clt || !clt->size);
 
-    const TValId roots[] = {
-        sh_.placedAt(lhs),
-        sh_.placedAt(rObj)
-    };
+    // FIXME: Should we check for overlapping?  What does the C standard say??
+    const TValId lhsAt = sh_.placedAt(lhs);
+    const TValId rhsAt = sh_.placedAt(rObj);
 
-    const ValueMirror mirror(this, rObj);
-    traverseLiveObjs<2>(sh_, roots, mirror);
+    LeakMonitor lm(sh_);
+    lm.enter();
+
+    TValSet killedPtrs;
+    sh_.copyBlockOfRawMemory(lhsAt, rhsAt, clt->size, &killedPtrs);
+
+    if (lm.collectJunkFrom(killedPtrs)) {
+        const EValueTarget code = sh_.valTarget(lhsAt);
+        this->reportMemLeak(code, "assign");
+    }
+
+    lm.leave();
 }
 
 void SymProc::valDestroyTarget(TValId addr) {
