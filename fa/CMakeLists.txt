@@ -130,6 +130,10 @@ add_test(
 	-fplugin-arg-libfa-args=db-root:../fa/data/test-0098.boxes
 )
 add_test(
+	"test_0124_inline" ${GCC_HOST} -o /dev/null -m32 -DFORESTER -fplugin=../fa_build/libfa.so
+	-c ../fa/data/test-0124.inline.c
+)
+add_test(
 	"test_0128" ${GCC_HOST} -o /dev/null -m32 -DFORESTER -fplugin=../fa_build/libfa.so
 	-c ../fa/data/test-0128.c
 )
