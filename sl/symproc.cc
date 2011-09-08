@@ -896,6 +896,13 @@ struct OpHandler</* unary */ 1> {
 
         const enum cl_unop_e code = static_cast<enum cl_unop_e>(iCode);
         switch (code) {
+            case CL_UNOP_BIT_NOT:
+                if (!clt[0] || CL_TYPE_BOOL != clt[0]->code
+                        || !clt[1] || CL_TYPE_BOOL != clt[1]->code)
+                    goto unknown_result;
+                // gcc 4.7.x uses CL_UNOP_BIT_NOT for bools with truth semantics
+                // fall through!
+
             case CL_UNOP_TRUTH_NOT:
                 return compareValues(sh, CL_BINOP_EQ, clt[0], VAL_FALSE, val);
 
@@ -903,8 +910,12 @@ struct OpHandler</* unary */ 1> {
                 return val;
 
             default:
-                return sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
+                // over-approximate anything else
+                goto unknown_result;
         }
+
+unknown_result:
+        return sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
     }
 };
 
