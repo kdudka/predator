@@ -459,6 +459,13 @@ struct SymHeapCore::Private {
     TValId objInit(TObjId obj);
     void objDestroy(TObjId, bool removeVal, bool detach);
 
+    TObjId copySingleLiveBlock(
+            const TValId            rootDst,
+            RootValue              *rootDataDst,
+            const TObjId            objSrc,
+            const ELiveObj          code,
+            const TOffset           shift = 0);
+
     TValId dupRoot(TValId root);
     void destroyRoot(TValId obj);
 
@@ -1215,6 +1222,44 @@ bool valMapLookup(const TValMap &valMap, TValId *pVal) {
     return true;
 }
 
+TObjId SymHeapCore::Private::copySingleLiveBlock(
+        const TValId                rootDst,
+        RootValue                  *rootDataDst,
+        const TObjId                objSrc,
+        const ELiveObj              code,
+        const TOffset               shift)
+{
+    TObjId dst;
+
+    if (LO_BLOCK == code) {
+        // duplicate a uniform block
+        InternalUniformBlock *blSrc = this->blData(objSrc);
+        InternalUniformBlock *blDst = blSrc->clone();
+        dst = this->assignId<TObjId>(blDst);
+        blDst->root = rootDst;
+
+        // shift the block if asked to do so
+        blDst->off += shift;
+
+        // map the cloned block
+        rootDataDst->arena += createArenaItem(blDst->off, blDst->size, dst);
+    }
+    else {
+        // duplicate a regular object
+        CL_BREAK_IF(LO_DATA_PTR != code && LO_DATA != code);
+
+        const HeapObject *objDataSrc = this->objData(objSrc);
+        const TOffset off = objDataSrc->off + shift;
+        const TObjType clt = objDataSrc->clt;
+        dst = this->objCreate(rootDst, off, clt, /* hasExtRef */ false);
+        this->setValueOf(dst, objDataSrc->value);
+    }
+
+    // prevserve live object code
+    rootDataDst->liveObjs[dst] = code;
+    return dst;
+}
+
 TValId SymHeapCore::Private::dupRoot(TValId rootAt) {
     CL_DEBUG("SymHeapCore::Private::dupRoot() is taking place...");
     const RootValue *rootDataSrc = this->rootData(rootAt);
@@ -1234,35 +1279,10 @@ TValId SymHeapCore::Private::dupRoot(TValId rootAt) {
 
     this->liveRoots.insert(imageAt);
 
-    BOOST_FOREACH(TLiveObjs::const_reference item, rootDataSrc->liveObjs) {
-        const TObjId src = item.first;
-        const ELiveObj code = item.second;
-        TObjId dst;
-
-        if (LO_BLOCK == code) {
-            // duplicate a uniform block
-            InternalUniformBlock *blSrc = this->blData(src);
-            InternalUniformBlock *blDst = blSrc->clone();
-            dst = this->assignId<TObjId>(blDst);
-            blDst->root = imageAt;
-
-            // map the cloned block
-            rootDataDst->arena += createArenaItem(blDst->off, blDst->size, dst);
-        }
-        else {
-            // duplicate a regular object
-            CL_BREAK_IF(LO_DATA_PTR != code && LO_DATA != code);
-
-            const HeapObject *objDataSrc = this->objData(src);
-            const TOffset off = objDataSrc->off;
-            const TObjType clt = objDataSrc->clt;
-            dst = this->objCreate(imageAt, off, clt, /* hasExtRef */ false);
-            this->setValueOf(dst, objDataSrc->value);
-        }
-
-        // prevserve live object code
-        rootDataDst->liveObjs[dst] = code;
-    }
+    BOOST_FOREACH(TLiveObjs::const_reference item, rootDataSrc->liveObjs)
+        this->copySingleLiveBlock(imageAt, rootDataDst,
+                /* src  */ item.first,
+                /* code */ item.second);
 
     CL_BREAK_IF(!this->chkArenaConsistency(rootDataDst));
     return imageAt;
