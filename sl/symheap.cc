@@ -482,6 +482,25 @@ struct SymHeapCore::Private {
     // runs only in debug build
     bool chkArenaConsistency(const RootValue *);
 
+    void shiftBlockAt(
+            const TValId            dstRoot,
+            const TOffset           off,
+            const TOffset           size,
+            const TValSet          *killedPtrs);
+
+    void transferBlock(
+            const TValId            dstRoot,
+            const TValId            srcRoot, 
+            const TOffset           dstOff,
+            const TOffset           srcOff,
+            const TOffset           size);
+
+    TObjId writeUniformBlock(
+            const TValId            addr,
+            const TValId            tplValue,
+            const unsigned          size,
+            TValSet                 *killedPtrs);
+
     private:
         // intentionally not implemented
         Private& operator=(const Private &);
@@ -1010,6 +1029,65 @@ bool SymHeapCore::Private::valsEqual(TValId v1, TValId v2) {
     return (valData1->origin == valData2->origin);
 }
 
+void SymHeapCore::Private::shiftBlockAt(
+        const TValId                dstRoot,
+        const TOffset               off,
+        const TOffset               size,
+        const TValSet              *killedPtrs)
+{
+    CL_BREAK_IF("please implement");
+    (void) dstRoot;
+    (void) off;
+    (void) size;
+    (void) killedPtrs;
+}
+
+void SymHeapCore::Private::transferBlock(
+        const TValId                dstRoot,
+        const TValId                srcRoot, 
+        const TOffset               dstOff,
+        const TOffset               winBeg,
+        const TOffset               winSize)
+{
+    const RootValue *rootDataSrc = this->rootData(srcRoot);
+    const TArena &arena = rootDataSrc->arena;
+    const TOffset winEnd = winBeg + winSize;
+    const TMemChunk chunk (winBeg, winBeg + winSize);
+
+    TObjSet overlaps;
+    if (!arenaLookup(&overlaps, arena, chunk, OBJ_INVALID))
+        // no data to copy in here
+        return;
+
+    RootValue *rootDataDst = this->rootData(dstRoot);
+    const TOffset shift = dstOff - winBeg;
+
+    // go through overlaps and copy the live ones
+    BOOST_FOREACH(const TObjId objSrc, overlaps) {
+        const HeapBlock *hbDataSrc = this->hbData(objSrc);
+        const TOffset beg = hbDataSrc->off;
+        if (beg < winBeg)
+            // the object starts above the window, do not copy this one
+            continue;
+
+        const TOffset end = beg + hbDataSrc->getSize();
+        if (winEnd < end)
+            // the object ends beyond the window, do not copy this one
+            continue;
+
+        const TLiveObjs &liveSrc = rootDataSrc->liveObjs;
+        const TLiveObjs::const_iterator it = liveSrc.find(objSrc);
+        if (liveSrc.end() == it)
+            // dead object anyway
+            continue;
+
+        // copy a single live block
+        const ELiveObj code = it->second;
+        this->copySingleLiveBlock(dstRoot, rootDataDst, objSrc, code, shift);
+    }
+}
+
+
 SymHeapCore::Private::Private() {
     // allocate a root-value for VAL_NULL
     this->ents.push_back(new RootValue(VT_INVALID, VO_INVALID));
@@ -1443,26 +1521,25 @@ void SymHeapCore::objSetValue(TObjId obj, TValId val, TValSet *killedPtrs) {
     d->setValueOf(obj, val, killedPtrs);
 }
 
-void SymHeapCore::writeUniformBlock(
+TObjId SymHeapCore::Private::writeUniformBlock(
         const TValId                addr,
         const TValId                tplValue,
         const unsigned              size,
         TValSet                     *killedPtrs)
 {
-    CL_BREAK_IF(this->valSizeOfTarget(addr) < static_cast<int>(size));
-    const BaseValue *valData = d->valData(addr);
-    const TValId root = d->valRoot(addr, valData);
+    const BaseValue *valData = this->valData(addr);
+    const TValId root = this->valRoot(addr, valData);
     const TOffset beg = valData->offRoot;
     const TOffset end = beg + size;
 
     // acquire object ID
     InternalUniformBlock *blockData =
         new InternalUniformBlock(root, beg, tplValue, size);
-    const TObjId obj = d->assignId<TObjId>(blockData);
+    const TObjId obj = this->assignId<TObjId>(blockData);
 
-    // check up to now arean consistency
-    RootValue *rootData = d->rootData(root);
-    CL_BREAK_IF(!d->chkArenaConsistency(rootData));
+    // check up to now arena consistency
+    RootValue *rootData = this->rootData(root);
+    CL_BREAK_IF(!this->chkArenaConsistency(rootData));
 
     // mark the block as live
     rootData->liveObjs[obj] = LO_BLOCK;
@@ -1475,10 +1552,22 @@ void SymHeapCore::writeUniformBlock(
     TObjSet overlaps;
     if (arenaLookup(&overlaps, arena, chunk, obj)) {
         BOOST_FOREACH(const TObjId old, overlaps)
-            d->reinterpretObjData(old, obj, killedPtrs);
+            this->reinterpretObjData(old, obj, killedPtrs);
     }
 
-    CL_BREAK_IF(!d->chkArenaConsistency(rootData));
+    CL_BREAK_IF(!this->chkArenaConsistency(rootData));
+    return obj;
+}
+
+/// just a trivial wrapper to hide the return value
+void SymHeapCore::writeUniformBlock(
+        const TValId                addr,
+        const TValId                tplValue,
+        const unsigned              size,
+        TValSet                     *killedPtrs)
+{
+    CL_BREAK_IF(this->valSizeOfTarget(addr) < static_cast<int>(size));
+    d->writeUniformBlock(addr, tplValue, size, killedPtrs);
 }
 
 void SymHeapCore::copyBlockOfRawMemory(
@@ -1487,12 +1576,42 @@ void SymHeapCore::copyBlockOfRawMemory(
         const unsigned              size,
         TValSet                     *killedPtrs)
 {
-    CL_BREAK_IF("please implement");
-    // TODO
-    (void) dst;
-    (void) src;
-    (void) size;
-    (void) killedPtrs;
+    // this should have been checked by the caller
+    CL_BREAK_IF(this->valSizeOfTarget(dst) < static_cast<int>(size));
+    CL_BREAK_IF(this->valSizeOfTarget(src) < static_cast<int>(size));
+
+    const BaseValue *dstData = d->valData(dst);
+    const BaseValue *srcData = d->valData(src);
+
+    CL_BREAK_IF(!isPossibleToDeref(dstData->code));
+    CL_BREAK_IF(!isPossibleToDeref(srcData->code));
+    CL_BREAK_IF(!size);
+
+    const TOffset dstOff = dstData->offRoot;
+    const TOffset srcOff = srcData->offRoot;
+    const TValId dstRoot = d->valRoot(dst, dstData);
+    const TValId srcRoot = d->valRoot(src, srcData);
+
+    if (dstRoot == srcRoot) {
+        // movement within a single root entity
+        const TOffset diff = dstOff - srcOff;
+        d->shiftBlockAt(dstRoot, diff, size, killedPtrs);
+        return;
+    }
+
+    // nuke the content we are going to overwrite
+    const TObjId blKiller = d->writeUniformBlock(dst, /* misleading */ VAL_NULL,
+                                                 size, killedPtrs);
+
+    // remove the dummy block we used just to trigger the data reinterpretation
+    RootValue *rootDataDst = d->rootData(dstRoot);
+    rootDataDst->liveObjs.erase(blKiller);
+    rootDataDst->arena -= createArenaItem(dstOff, size, blKiller);
+    delete d->blData(blKiller);
+    d->releaseId(blKiller);
+
+    // now we need to transfer data between two distinct root entities
+    d->transferBlock(dstRoot, srcRoot, dstOff, srcOff, size);
 }
 
 TObjType SymHeapCore::objType(TObjId obj) const {
