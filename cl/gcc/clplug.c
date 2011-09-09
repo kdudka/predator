@@ -1054,12 +1054,12 @@ static void handle_accessor_indirect_ref(struct cl_accessor **ac, tree *pt)
     tree op0 = TREE_OPERAND(t, 0);
 
     if (ADDR_EXPR == TREE_CODE(op0)) {
-        // EXPERIMENTAL: needed with gcc 4.7.x in order to keep Predator going
+        // EXPERIMENTAL: needed for gcc 4.7.x to keep Predator going
         const tree type = TREE_TYPE(TREE_OPERAND(op0, 0));
         const enum tree_code code = TREE_CODE(type);
         switch (code) {
             case ARRAY_TYPE:
-                handle_accessor_array_ref(ac, *pt);
+                handle_accessor_array_ref(ac, t);
                 (*ac)->type = add_bare_type_if_needed(type);
                 *pt = op0;
                 return;

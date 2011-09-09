@@ -19,17 +19,17 @@ Building from sources against a local build of GCC (recommended for end users)
 
 (1) Install all dependences of GCC
 ----------------------------------
-   * GMP library (including the -devel stuff)
+   * GMP library
      - available at http://gmplib.org/
      - package is usually called 'gmp'
      - on binary distros you may need also the 'gmp-devel' sub-package
 
-   * MPC library (including the -devel stuff)
+   * MPC library
      - available at http://www.multiprecision.org/
      - package is usually called 'mpc' or 'libmpc'
      - on binary distros you may need also the 'libmpc-devel' sub-package
 
-   * MPFR library (including the -devel stuff)
+   * MPFR library
      - available at http://www.mpfr.org/
      - package is usually called 'mpfr'
      - on binary distros you may need also the 'mpfr-devel' sub-package

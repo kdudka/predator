@@ -197,8 +197,9 @@ inline bool arenaLookup(
     arena.intersects(*dst, chunk);
 #endif
 
-    // remove the reference object itself
-    dst->erase(obj);
+    if (OBJ_INVALID != obj)
+        // remove the reference object itself
+        dst->erase(obj);
 
     // finally check if there was anything else
     return !dst->empty();
@@ -441,6 +442,7 @@ struct SymHeapCore::Private {
     inline bool objOutOfRange(TObjId);
 
     InternalUniformBlock* blData(const TObjId);
+    HeapBlock* hbData(const TObjId);
     HeapObject* objData(const TObjId);
     BaseValue* valData(const TValId);
     RootValue* rootData(const TValId);
@@ -522,6 +524,16 @@ inline InternalUniformBlock* SymHeapCore::Private::blData(const TObjId obj) {
     CL_BREAK_IF(!ent);
 
     return DCAST<InternalUniformBlock *>(ent);
+}
+
+inline HeapBlock* SymHeapCore::Private::hbData(const TObjId obj) {
+    CL_BREAK_IF(objOutOfRange(obj));
+    IHeapEntity *ent = this->ents[obj];
+
+    // check the base pointer first, chances are the object was already deleted
+    CL_BREAK_IF(!ent);
+
+    return DCAST<HeapBlock *>(ent);
 }
 
 inline HeapObject* SymHeapCore::Private::objData(const TObjId obj) {
@@ -632,7 +644,7 @@ void SymHeapCore::Private::splitBlockByObject(
         TObjId                      obj)
 {
     InternalUniformBlock *blData = this->blData(block);
-    const HeapBlock *hbData = DCAST<const HeapBlock *>(this->ents[obj]);
+    const HeapBlock *hbData = this->hbData(obj);
     const EBlockKind code = hbData->code;
     if (BK_OBJECT == code && this->valsEqual(blData->value, hbData->value))
         // preserve non-conflicting uniform blocks
@@ -735,7 +747,7 @@ void SymHeapCore::Private::reinterpretObjData(
         TObjId                      obj,
         TValSet                    *killedPtrs)
 {
-    HeapBlock *blData = DCAST<HeapBlock *>(this->ents[old]);
+    HeapBlock *blData = this->hbData(old);
     EBlockKind code = blData->code;
     switch (code) {
         case BK_OBJECT:
@@ -777,7 +789,7 @@ void SymHeapCore::Private::reinterpretObjData(
     }
 
     CL_DEBUG("an object being reinterpreted is still referenced from outside");
-    blData = DCAST<HeapBlock *>(this->ents[obj]);
+    blData = this->hbData(obj);
     code = blData->code;
 
     InternalUniformBlock *uniData;
@@ -858,8 +870,13 @@ TObjId SymHeapCore::Private::objCreate(
     // register the object by the owning root value
     RootValue *rootData = this->rootData(root);
     TObjByType &row = rootData->grid[off];
-    CL_BREAK_IF(hasKey(row, clt));
-    row[clt] = obj;
+    TObjByType::iterator it = row.find(clt);
+    if (row.end() == it)
+        row[clt] = obj;
+    else {
+        CL_DEBUG("objCreate() rewrites an object that is still referenced");
+        it->second = obj;
+    }
 
     // map the region occupied by the object
     rootData->arena += createArenaItem(off, clt->size, obj);
@@ -1049,7 +1066,7 @@ TValId SymHeapCore::Private::objInit(TObjId obj) {
     TObjSet overlaps;
     if (arenaLookup(&overlaps, arena, createChunk(off, clt), obj)) {
         BOOST_FOREACH(const TObjId other, overlaps) {
-            HeapBlock *blockData = DCAST<HeapBlock *>(this->ents[other]);
+            HeapBlock *blockData = this->hbData(other);
             const EBlockKind code = blockData->code;
             if (BK_UNIFORM != code && !hasKey(rootData->liveObjs, other))
                 continue;
@@ -1320,7 +1337,7 @@ bool SymHeapCore::findCoveringUniBlock(
         return false;
 
     BOOST_FOREACH(const TObjId id, overlaps) {
-        const HeapBlock *data = DCAST<const HeapBlock *>(d->ents[id]);
+        const HeapBlock *data = d->hbData(id);
         const EBlockKind code = data->code;
         if (BK_UNIFORM != code)
             continue;

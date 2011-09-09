@@ -429,7 +429,7 @@ void plotUniformBlocks(PlotData &plot, const TValId root) {
         // plot block node
         const int id = ++plot.last;
         plot.out << "\t" << SL_QUOTE("lonely" << id)
-            << " [shape=box, color=blue, fontcolor=blue, label=\"UNI_BLOCK "
+            << " [shape=box, color=blue, fontcolor=blue, label=\"UNIFORM_BLOCK "
             << bl.size << "B\"];\n";
 
         // plot offset edge
