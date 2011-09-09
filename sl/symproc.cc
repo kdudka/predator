@@ -524,23 +524,30 @@ void SymProc::heapSetSingleVal(TObjId lhs, TValId rhs) {
 }
 
 void SymProc::objSetValue(TObjId lhs, TValId rhs) {
-    if (VT_COMPOSITE != sh_.valTarget(rhs)) {
-        // not a composite object
-        this->heapSetSingleVal(lhs, rhs);
-        return;
-    }
-
     const TValId lhsAt = sh_.placedAt(lhs);
     const EValueTarget code = sh_.valTarget(lhsAt);
     CL_BREAK_IF(!isPossibleToDeref(code));
 
-    const unsigned size = sh_.objType(lhs)->size;
+    const TObjType clt = sh_.objType(lhs);
+    const bool isComp = isComposite(clt, /* includingArray */ false);
+    const unsigned size = clt->size;
     CL_BREAK_IF(!size);
 
     if (VO_DEREF_FAILED == sh_.valOrigin(rhs)) {
         // we're already on an error path
         const TValId tplValue = sh_.valCreate(VT_UNKNOWN, VO_DEREF_FAILED);
-        sh_.writeUniformBlock(lhsAt, tplValue, size);
+        if (isComp)
+            sh_.writeUniformBlock(lhsAt, tplValue, size);
+        else
+            sh_.objSetValue(lhs, tplValue);
+
+        return;
+    }
+
+    CL_BREAK_IF(isComp != (VT_COMPOSITE == sh_.valTarget(rhs)));
+    if (!isComp) {
+        // not a composite object
+        this->heapSetSingleVal(lhs, rhs);
         return;
     }
 
