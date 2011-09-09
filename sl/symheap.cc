@@ -1052,7 +1052,7 @@ void SymHeapCore::Private::transferBlock(
     const RootValue *rootDataSrc = this->rootData(srcRoot);
     const TArena &arena = rootDataSrc->arena;
     const TOffset winEnd = winBeg + winSize;
-    const TMemChunk chunk (winBeg, winBeg + winSize);
+    const TMemChunk chunk (winBeg, winEnd);
 
     TObjSet overlaps;
     if (!arenaLookup(&overlaps, arena, chunk, OBJ_INVALID))
@@ -1109,26 +1109,6 @@ SymHeapCore::Private::Private(const SymHeapCore::Private &ref):
 SymHeapCore::Private::~Private() {
     BOOST_FOREACH(const IHeapEntity *ent, this->ents)
         delete ent;
-}
-
-EValueOrigin originByCode(const EValueTarget code) {
-    switch (code) {
-        case VT_INVALID:
-            return VO_INVALID;
-
-        case VT_ON_HEAP:
-            return VO_HEAP;
-
-        case VT_ON_STACK:
-            return VO_STACK;
-
-        case VT_STATIC:
-            return VO_STATIC;
-
-        default:
-            CL_BREAK_IF("invalid call of originByCode");
-            return VO_INVALID;
-    }
 }
 
 TValId SymHeapCore::Private::objInit(TObjId obj) {

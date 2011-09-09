@@ -35,7 +35,7 @@ int main()
     struct list_head *lh  = &li.lhead;
 
     struct litem *pli = ROOT(struct litem, lhead, lh);
-    struct gitem *pgi = ROOT(struct gitem, li, &li);
+    struct gitem *pgi = ROOT(struct gitem, li, pli);
     ___sl_plot("01");
 
     if (pli != &li)
