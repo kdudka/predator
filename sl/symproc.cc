@@ -524,42 +524,37 @@ void SymProc::heapSetSingleVal(TObjId lhs, TValId rhs) {
 }
 
 void SymProc::objSetValue(TObjId lhs, TValId rhs) {
-    CL_BREAK_IF(!isPossibleToDeref(sh_.valTarget(sh_.placedAt(lhs))));
-    CL_BREAK_IF(!sh_.objType(lhs));
-
-    if (VO_DEREF_FAILED == sh_.valOrigin(rhs)) {
-        // we're already on an error path
-        const TValId lhsAt = sh_.placedAt(lhs);
-        const TValId tplValue = sh_.valCreate(VT_UNKNOWN, VO_DEREF_FAILED);
-        const unsigned size = sh_.objType(lhs)->size;
-        sh_.writeUniformBlock(lhsAt, tplValue, size);
-        return;
-    }
-
     if (VT_COMPOSITE != sh_.valTarget(rhs)) {
+        // not a composite object
         this->heapSetSingleVal(lhs, rhs);
         return;
     }
 
-    // object-wise copy of a composite type
-    const TObjId rObj = sh_.valGetComposite(rhs);
-    const TObjType clt = sh_.objType(rObj);
-    CL_BREAK_IF(!clt || !clt->size);
+    const TValId lhsAt = sh_.placedAt(lhs);
+    const EValueTarget code = sh_.valTarget(lhsAt);
+    CL_BREAK_IF(!isPossibleToDeref(code));
+
+    const unsigned size = sh_.objType(lhs)->size;
+    CL_BREAK_IF(!size);
+
+    if (VO_DEREF_FAILED == sh_.valOrigin(rhs)) {
+        // we're already on an error path
+        const TValId tplValue = sh_.valCreate(VT_UNKNOWN, VO_DEREF_FAILED);
+        sh_.writeUniformBlock(lhsAt, tplValue, size);
+        return;
+    }
 
     // FIXME: Should we check for overlapping?  What does the C standard say??
-    const TValId lhsAt = sh_.placedAt(lhs);
-    const TValId rhsAt = sh_.placedAt(rObj);
+    const TValId rhsAt = sh_.placedAt(sh_.valGetComposite(rhs));
 
     LeakMonitor lm(sh_);
     lm.enter();
 
     TValSet killedPtrs;
-    sh_.copyBlockOfRawMemory(lhsAt, rhsAt, clt->size, &killedPtrs);
+    sh_.copyBlockOfRawMemory(lhsAt, rhsAt, size, &killedPtrs);
 
-    if (lm.collectJunkFrom(killedPtrs)) {
-        const EValueTarget code = sh_.valTarget(lhsAt);
+    if (lm.collectJunkFrom(killedPtrs))
         this->reportMemLeak(code, "assign");
-    }
 
     lm.leave();
 }
