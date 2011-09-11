@@ -26,6 +26,7 @@
 #include <cl/storage.hh>
 
 #include "symabstract.hh"
+#include "syments.hh"
 #include "symneq.hh"
 #include "symseg.hh"
 #include "symutil.hh"
@@ -34,7 +35,6 @@
 
 #include <algorithm>
 #include <map>
-#include <queue>
 #include <set>
 
 #include <boost/foreach.hpp>
@@ -221,11 +221,6 @@ enum ELiveObj {
 };
 
 typedef std::map<TObjId, ELiveObj>                      TLiveObjs;
-
-struct IHeapEntity {
-    virtual ~IHeapEntity() { }
-    virtual IHeapEntity* clone() const = 0;
-};
 
 enum EBlockKind {
     BK_INVALID,
@@ -422,30 +417,25 @@ struct SymHeapCore::Private {
     // clone heap entities, they are now allocated separately
     Private(const Private &);
 
-    // delete heap entities, they are now allocated separately
-    ~Private();
-
     CVarMap                         cVarMap;
     CustomValueMapper               cValueMap;
-    std::vector<IHeapEntity *>      ents;
+    EntStore                        ents;
     std::set<TValId>                liveRoots;
     FriendlyNeqDb                   neqDb;
-#if SE_RECYCLE_HEAP_IDS
-    std::queue<unsigned>            freeIds;
-#endif
-
-    template <typename T> T lastId() const;
-    template <typename T> T assignId(IHeapEntity *);
-    template <typename T> void releaseId(const T id);
-
-    inline bool valOutOfRange(TValId);
-    inline bool objOutOfRange(TObjId);
 
     InternalUniformBlock* blData(const TObjId);
     HeapBlock* hbData(const TObjId);
     HeapObject* objData(const TObjId);
     BaseValue* valData(const TValId);
     RootValue* rootData(const TValId);
+
+    TValId assignId(BaseValue *e) {
+        return this->ents.assignId<TValId>(e);
+    }
+
+    TObjId assignId(HeapBlock *e) {
+        return this->ents.assignId<TObjId>(e);
+    }
 
     inline TValId valRoot(const TValId, const IHeapEntity *);
     inline TValId valRoot(const TValId);
@@ -506,44 +496,8 @@ struct SymHeapCore::Private {
         Private& operator=(const Private &);
 };
 
-template <typename T> T SymHeapCore::Private::lastId() const {
-    return static_cast<T>(this->ents.size() - 1);
-}
-
-template <typename T> T SymHeapCore::Private::assignId(IHeapEntity *ptr) {
-#if SE_RECYCLE_HEAP_IDS
-    if (!this->freeIds.empty()) {
-        const T id = static_cast<T>(this->freeIds.front());
-        this->freeIds.pop();
-        this->ents[id] = ptr;
-        CL_DEBUG("reusing heap ID #" << id 
-                << " (heap size is " << this->ents.size() << ")");
-        return id;
-    }
-#endif
-    this->ents.push_back(ptr);
-    return this->lastId<T>();
-}
-
-template <typename T> void SymHeapCore::Private::releaseId(const T id) {
-#if SE_RECYCLE_HEAP_IDS
-    this->freeIds.push(id);
-#endif
-    this->ents[id] = 0;
-}
-
-inline bool SymHeapCore::Private::valOutOfRange(TValId val) {
-    return (val < 0)
-        || (this->lastId<TValId>() < val);
-}
-
-inline bool SymHeapCore::Private::objOutOfRange(TObjId obj) {
-    return (obj < 0)
-        || (this->lastId<TObjId>() < obj);
-}
-
 inline InternalUniformBlock* SymHeapCore::Private::blData(const TObjId obj) {
-    CL_BREAK_IF(objOutOfRange(obj));
+    CL_BREAK_IF(this->ents.outOfRange(obj));
     IHeapEntity *ent = this->ents[obj];
 
     // check the base pointer first, chances are the object was already deleted
@@ -553,7 +507,7 @@ inline InternalUniformBlock* SymHeapCore::Private::blData(const TObjId obj) {
 }
 
 inline HeapBlock* SymHeapCore::Private::hbData(const TObjId obj) {
-    CL_BREAK_IF(objOutOfRange(obj));
+    CL_BREAK_IF(this->ents.outOfRange(obj));
     IHeapEntity *ent = this->ents[obj];
 
     // check the base pointer first, chances are the object was already deleted
@@ -563,7 +517,7 @@ inline HeapBlock* SymHeapCore::Private::hbData(const TObjId obj) {
 }
 
 inline HeapObject* SymHeapCore::Private::objData(const TObjId obj) {
-    CL_BREAK_IF(objOutOfRange(obj));
+    CL_BREAK_IF(this->ents.outOfRange(obj));
     IHeapEntity *ent = this->ents[obj];
 
     // check the base pointer first, chances are the object was already deleted
@@ -573,13 +527,13 @@ inline HeapObject* SymHeapCore::Private::objData(const TObjId obj) {
 }
 
 inline BaseValue* SymHeapCore::Private::valData(const TValId val) {
-    CL_BREAK_IF(valOutOfRange(val));
+    CL_BREAK_IF(this->ents.outOfRange(val));
     IHeapEntity *ent = this->ents[val];
     return DCAST<BaseValue *>(ent);
 }
 
 inline RootValue* SymHeapCore::Private::rootData(const TValId val) {
-    CL_BREAK_IF(valOutOfRange(val));
+    CL_BREAK_IF(this->ents.outOfRange(val));
     IHeapEntity *ent = this->ents[val];
     return DCAST<RootValue *>(ent);
 }
@@ -593,7 +547,7 @@ inline TValId SymHeapCore::Private::valRoot(
         return val;
 
     const TValId valRoot = DCAST<const OffValue *>(valData)->root;
-    CL_BREAK_IF(valOutOfRange(valRoot));
+    CL_BREAK_IF(this->ents.outOfRange(valRoot));
     return valRoot;
 }
 
@@ -700,15 +654,14 @@ void SymHeapCore::Private::splitBlockByObject(
             CL_BREAK_IF("attempt to kill an already dead uniform block");
 
         rootData->arena -= createArenaItem(blOff, blSize, block);
-        delete blData;
-        this->releaseId(block);
+        this->ents.releaseEnt(block);
         return;
     }
 
     if (0 < blBegToObjBeg && 0 < objEndToBlEnd) {
         // the object is strictly in the middle of the block (needs split)
         InternalUniformBlock *blDataOther = blData->clone();
-        const TObjId blOther = this->assignId<TObjId>(blDataOther);
+        const TObjId blOther = this->assignId(blDataOther);
 
         // update metadata
         blData->size = blBegToObjBeg;
@@ -891,7 +844,7 @@ TObjId SymHeapCore::Private::objCreate(
 {
     // acquire object ID
     HeapObject *objData = new HeapObject(root, off, clt, hasExtRef);
-    const TObjId obj = this->assignId<TObjId>(objData);
+    const TObjId obj = this->assignId(objData);
 
     // register the object by the owning root value
     RootValue *rootData = this->rootData(root);
@@ -937,8 +890,7 @@ void SymHeapCore::Private::objDestroy(TObjId obj, bool removeVal, bool detach) {
     }
 
     // release the corresponding HeapObject instance
-    delete objData;
-    this->releaseId(obj);
+    this->ents.releaseEnt(obj);
 }
 
 TObjId SymHeapCore::Private::objExport(TObjId obj, bool *pExcl) {
@@ -959,15 +911,15 @@ TValId SymHeapCore::Private::valCreate(
     switch (code) {
         case VT_INVALID:
         case VT_UNKNOWN:
-            val = this->assignId<TValId>(new BaseValue(code, origin));
+            val = this->assignId(new BaseValue(code, origin));
             break;
 
         case VT_COMPOSITE:
-            val = this->assignId<TValId>(new CompValue(code, origin));
+            val = this->assignId(new CompValue(code, origin));
             break;
 
         case VT_CUSTOM:
-            val = this->assignId<TValId>(new InternalCustomValue(code, origin));
+            val = this->assignId(new InternalCustomValue(code, origin));
             break;
 
         case VT_ABSTRACT:
@@ -979,7 +931,7 @@ TValId SymHeapCore::Private::valCreate(
         case VT_STATIC:
         case VT_DELETED:
         case VT_LOST:
-            val = this->assignId<TValId>(new RootValue(code, origin));
+            val = this->assignId(new RootValue(code, origin));
             break;
     }
 
@@ -995,7 +947,7 @@ TValId SymHeapCore::Private::valDup(TValId val) {
     const BaseValue *tpl = this->valData(val);
     BaseValue *dupData = /* FIXME: subtle */ tpl->clone();
 
-    const TValId dup = this->assignId<TValId>(dupData);
+    const TValId dup = this->assignId(dupData);
 
     // wipe BaseValue::usedBy
     dupData->usedBy.clear();
@@ -1090,7 +1042,7 @@ void SymHeapCore::Private::transferBlock(
 
 SymHeapCore::Private::Private() {
     // allocate a root-value for VAL_NULL
-    this->ents.push_back(new RootValue(VT_INVALID, VO_INVALID));
+    this->assignId(new RootValue(VT_INVALID, VO_INVALID));
 }
 
 SymHeapCore::Private::Private(const SymHeapCore::Private &ref):
@@ -1100,15 +1052,6 @@ SymHeapCore::Private::Private(const SymHeapCore::Private &ref):
     liveRoots   (ref.liveRoots),
     neqDb       (ref.neqDb)
 {
-    // deep copy of all heap entities
-    BOOST_FOREACH(IHeapEntity *&ent, this->ents)
-        if (ent)
-            ent = ent->clone();
-}
-
-SymHeapCore::Private::~Private() {
-    BOOST_FOREACH(const IHeapEntity *ent, this->ents)
-        delete ent;
 }
 
 TValId SymHeapCore::Private::objInit(TObjId obj) {
@@ -1231,7 +1174,7 @@ unsigned SymHeapCore::pointedByCount(TValId root) const {
 }
 
 unsigned SymHeapCore::lastId() const {
-    return d->lastId<unsigned>();
+    return d->ents.lastId<unsigned>();
 }
 
 TValId SymHeapCore::valClone(TValId val) {
@@ -1293,7 +1236,7 @@ TObjId SymHeapCore::Private::copySingleLiveBlock(
         // duplicate a uniform block
         InternalUniformBlock *blSrc = this->blData(objSrc);
         InternalUniformBlock *blDst = blSrc->clone();
-        dst = this->assignId<TObjId>(blDst);
+        dst = this->assignId(blDst);
         blDst->root = rootDst;
 
         // shift the block if asked to do so
@@ -1516,7 +1459,7 @@ TObjId SymHeapCore::Private::writeUniformBlock(
     // acquire object ID
     InternalUniformBlock *blockData =
         new InternalUniformBlock(root, beg, tplValue, size);
-    const TObjId obj = this->assignId<TObjId>(blockData);
+    const TObjId obj = this->assignId(blockData);
 
     // check up to now arena consistency
     RootValue *rootData = this->rootData(root);
@@ -1588,8 +1531,7 @@ void SymHeapCore::copyBlockOfRawMemory(
     RootValue *rootDataDst = d->rootData(dstRoot);
     rootDataDst->liveObjs.erase(blKiller);
     rootDataDst->arena -= createArenaItem(dstOff, size, blKiller);
-    delete d->blData(blKiller);
-    d->releaseId(blKiller);
+    d->ents.releaseEnt(blKiller);
 
     // now we need to transfer data between two distinct root entities
     d->transferBlock(dstRoot, srcRoot, dstOff, srcOff, size);
@@ -1633,7 +1575,7 @@ TValId SymHeapCore::valByOffset(TValId at, TOffset off) {
 
     // create a new off-value
     OffValue *offVal = new OffValue(code, valData->origin, valRoot, off);
-    const TValId val = d->assignId<TValId>(offVal);
+    const TValId val = d->assignId(offVal);
 
     // store the mapping for next wheel
     offMap[off] = val;
@@ -2174,8 +2116,7 @@ void SymHeapCore::Private::destroyRoot(TValId root) {
 
         if (LO_BLOCK == code) {
             // uniform block
-            delete this->ents[obj];
-            this->releaseId(obj);
+            this->ents.releaseEnt(obj);
             continue;
         }
 
@@ -2509,7 +2450,7 @@ bool SymHeapCore::proveNeq(TValId valA, TValId valB) const {
         return (VAL_FALSE == valB);
 
     // we presume (0 <= valA) and (0 < valB) at this point
-    CL_BREAK_IF(d->valOutOfRange(valB));
+    CL_BREAK_IF(d->ents.outOfRange(valB));
     if (valInsideSafeRange(*this, valA) && valInsideSafeRange(*this, valB))
         // NOTE: we know (valA != valB) at this point, look above
         return true;
