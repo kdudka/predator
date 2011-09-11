@@ -120,6 +120,10 @@ AbstractHeapEntity::~AbstractHeapEntity() {
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of EntStore
 template <typename T> T EntStore::assignId(AbstractHeapEntity *ptr) {
+#if SH_COPY_ON_WRITE
+    CL_BREAK_IF(1 != ptr->refCnt_);
+#endif
+
 #if SE_RECYCLE_HEAP_IDS
     if (!this->freeIds_.empty()) {
         const T id = static_cast<T>(this->freeIds_.front());
@@ -159,9 +163,18 @@ EntStore::EntStore(const EntStore &ref):
     ents_(ref.ents_)
 {
     // deep copy of all heap entities
-    BOOST_FOREACH(AbstractHeapEntity *&ent, ents_)
-        if (ent)
-            ent = ent->clone();
+    BOOST_FOREACH(AbstractHeapEntity *&ent, ents_) {
+        if (!ent)
+            continue;
+
+#if SH_COPY_ON_WRITE
+        AbstractHeapEntity::TRefCnt &cnt = ent->refCnt_;
+        CL_BREAK_IF(cnt < 1);
+        ++cnt;
+#else
+        ent = ent->clone();
+#endif
+    }
 }
 
 EntStore::~EntStore() {
@@ -185,6 +198,10 @@ inline void EntStore::getEntRO(const TEnt **pEnt, const TId id) {
     const TEnt *ent = DCAST<const TEnt *>(ptr);
     CL_BREAK_IF(!ent);
 
+#if SH_COPY_ON_WRITE
+    CL_BREAK_IF(ent->refCnt_ < 1);
+#endif
+
     // all OK!
     *pEnt = ent;
 }
@@ -195,6 +212,18 @@ inline void EntStore::getEntRW(TEnt **pEnt, const TId id) {
     this->getEntRO(&entRO, id);
 
     TEnt *entRW = const_cast<TEnt *>(entRO);
+#if SH_COPY_ON_WRITE
+    AbstractHeapEntity::TRefCnt &cnt = entRW->refCnt_;
+    if (1 < cnt) {
+        --cnt;
+        entRW = DCAST<TEnt *>(entRO->clone());
+        ents_[id] = entRW;
+    }
+
+    CL_BREAK_IF(cnt < 1);
+    CL_BREAK_IF(1 != entRW->refCnt_);
+#endif
+
     *pEnt = entRW;
 }
 
