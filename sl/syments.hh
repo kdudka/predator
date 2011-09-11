@@ -29,6 +29,13 @@
 
 #include <boost/foreach.hpp>
 
+#ifdef NDEBUG
+    // aggressive optimization
+#   define DCAST static_cast
+#else
+#   define DCAST dynamic_cast
+#endif
+
 struct IHeapEntity {
     virtual ~IHeapEntity() { }
     virtual IHeapEntity* clone() const = 0;
@@ -51,8 +58,11 @@ class EntStore {
             return (this->lastId<T>() < id) || (id < 0);
         }
 
-        /// @todo remove this
-        IHeapEntity* operator[](unsigned idx) { return ents_[idx]; }
+        template <class TEnt, typename TId>
+        inline void getEntRO(const TEnt **, const TId id);
+
+        template <class TEnt, typename TId>
+        inline void getEntRW(TEnt **, const TId id);
 
     private:
         // intentionally not implemented
@@ -101,6 +111,32 @@ EntStore::EntStore(const EntStore &ref):
 EntStore::~EntStore() {
     BOOST_FOREACH(const IHeapEntity *ent, ents_)
         delete ent;
+}
+
+template <class TEnt, typename TId>
+inline void EntStore::getEntRO(const TEnt **pEnt, const TId id) {
+    // if this fails, the ID has never been valid
+    CL_BREAK_IF(this->outOfRange(id));
+
+    // if this fails, the ID is no longer valid
+    const IHeapEntity *ptr = ents_[id];
+    CL_BREAK_IF(!ptr);
+
+    // if this fails, the entity has type that is incompatible with your request
+    const TEnt *ent = DCAST<const TEnt *>(ptr);
+    CL_BREAK_IF(!ent);
+
+    // all OK!
+    *pEnt = ent;
+}
+
+template <class TEnt, typename TId>
+inline void EntStore::getEntRW(TEnt **pEnt, const TId id) {
+    const TEnt *entRO;
+    this->getEntRO(&entRO, id);
+
+    TEnt *entRW = const_cast<TEnt *>(entRO);
+    *pEnt = entRW;
 }
 
 #endif /* H_GUARD_SYM_ENTS_H */

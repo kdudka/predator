@@ -46,13 +46,6 @@
 #   include "intarena.hh"
 #endif
 
-#ifdef NDEBUG
-    // aggressive optimization
-#   define DCAST static_cast
-#else
-#   define DCAST dynamic_cast
-#endif
-
 template <class TCont> typename TCont::value_type::second_type&
 assignInvalidIfNotFound(
         TCont                                           &cont,
@@ -423,12 +416,6 @@ struct SymHeapCore::Private {
     std::set<TValId>                liveRoots;
     FriendlyNeqDb                   neqDb;
 
-    InternalUniformBlock* blData(const TObjId);
-    HeapBlock* hbData(const TObjId);
-    HeapObject* objData(const TObjId);
-    BaseValue* valData(const TValId);
-    RootValue* rootData(const TValId);
-
     TValId assignId(BaseValue *e) {
         return this->ents.assignId<TValId>(e);
     }
@@ -496,48 +483,6 @@ struct SymHeapCore::Private {
         Private& operator=(const Private &);
 };
 
-inline InternalUniformBlock* SymHeapCore::Private::blData(const TObjId obj) {
-    CL_BREAK_IF(this->ents.outOfRange(obj));
-    IHeapEntity *ent = this->ents[obj];
-
-    // check the base pointer first, chances are the object was already deleted
-    CL_BREAK_IF(!ent);
-
-    return DCAST<InternalUniformBlock *>(ent);
-}
-
-inline HeapBlock* SymHeapCore::Private::hbData(const TObjId obj) {
-    CL_BREAK_IF(this->ents.outOfRange(obj));
-    IHeapEntity *ent = this->ents[obj];
-
-    // check the base pointer first, chances are the object was already deleted
-    CL_BREAK_IF(!ent);
-
-    return DCAST<HeapBlock *>(ent);
-}
-
-inline HeapObject* SymHeapCore::Private::objData(const TObjId obj) {
-    CL_BREAK_IF(this->ents.outOfRange(obj));
-    IHeapEntity *ent = this->ents[obj];
-
-    // check the base pointer first, chances are the object was already deleted
-    CL_BREAK_IF(!ent);
-
-    return DCAST<HeapObject *>(ent);
-}
-
-inline BaseValue* SymHeapCore::Private::valData(const TValId val) {
-    CL_BREAK_IF(this->ents.outOfRange(val));
-    IHeapEntity *ent = this->ents[val];
-    return DCAST<BaseValue *>(ent);
-}
-
-inline RootValue* SymHeapCore::Private::rootData(const TValId val) {
-    CL_BREAK_IF(this->ents.outOfRange(val));
-    IHeapEntity *ent = this->ents[val];
-    return DCAST<RootValue *>(ent);
-}
-
 inline TValId SymHeapCore::Private::valRoot(
         const TValId                val,
         const IHeapEntity          *ent)
@@ -552,7 +497,9 @@ inline TValId SymHeapCore::Private::valRoot(
 }
 
 inline TValId SymHeapCore::Private::valRoot(const TValId val) {
-    return this->valRoot(val, this->valData(val));
+    const BaseValue *valData;
+    this->ents.getEntRO(&valData, val);
+    return this->valRoot(val, valData);
 }
 
 bool /* wasPtr */ SymHeapCore::Private::releaseValueOf(TObjId obj, TValId val) {
@@ -560,12 +507,13 @@ bool /* wasPtr */ SymHeapCore::Private::releaseValueOf(TObjId obj, TValId val) {
         // we do not track uses of special values
         return /* wasPtr */ false;
 
-    BaseValue *valData = this->valData(val);
+    BaseValue *valData;
+    this->ents.getEntRW(&valData, val);
     if (1 != valData->usedBy.erase(obj))
         CL_BREAK_IF("SymHeapCore::Private::releaseValueOf(): offset detected");
 
     const TValId root = this->valRoot(val, valData);
-    valData = this->valData(root);
+    this->ents.getEntRW(&valData, root);
     if (!isPossibleToDeref(valData->code))
         return /* wasPtr */ false;
 
@@ -581,14 +529,16 @@ void SymHeapCore::Private::registerValueOf(TObjId obj, TValId val) {
         return;
 
     // update usedBy
-    BaseValue *valData = this->valData(val);
+    BaseValue *valData;
+    this->ents.getEntRW(&valData, val);
     valData->usedBy.insert(obj);
     if (!isPossibleToDeref(valData->code))
         return;
 
     // update usedByGl
     const TValId root = this->valRoot(val, valData);
-    RootValue *rootData = this->rootData(root);
+    RootValue *rootData;
+    this->ents.getEntRW(&rootData, root);
     rootData->usedByGl.insert(obj);
 }
 
@@ -623,8 +573,12 @@ void SymHeapCore::Private::splitBlockByObject(
         TObjId                      block,
         TObjId                      obj)
 {
-    InternalUniformBlock *blData = this->blData(block);
-    const HeapBlock *hbData = this->hbData(obj);
+    InternalUniformBlock *blData;
+    this->ents.getEntRW(&blData, block);
+
+    const HeapBlock *hbData;
+    this->ents.getEntRO(&hbData, obj);
+
     const EBlockKind code = hbData->code;
     if (BK_OBJECT == code && this->valsEqual(blData->value, hbData->value))
         // preserve non-conflicting uniform blocks
@@ -635,7 +589,8 @@ void SymHeapCore::Private::splitBlockByObject(
     CL_BREAK_IF(root != hbData->root);
 
     // check up to now arean consistency
-    RootValue *rootData = this->rootData(root);
+    RootValue *rootData;
+    this->ents.getEntRW(&rootData, root);
     CL_BREAK_IF(!this->chkArenaConsistency(rootData));
 
     // dig offsets and sizes
@@ -726,7 +681,9 @@ void SymHeapCore::Private::reinterpretObjData(
         TObjId                      obj,
         TValSet                    *killedPtrs)
 {
-    HeapBlock *blData = this->hbData(old);
+    HeapBlock *blData;
+    this->ents.getEntRW(&blData, old);
+
     EBlockKind code = blData->code;
     switch (code) {
         case BK_OBJECT:
@@ -754,7 +711,8 @@ void SymHeapCore::Private::reinterpretObjData(
 
     // dig root
     const TValId root = oldData->root;
-    RootValue *rootData = this->rootData(root);
+    RootValue *rootData;
+    this->ents.getEntRW(&rootData, root);
     CL_BREAK_IF(!this->chkArenaConsistency(rootData));
 
     // mark the object as dead
@@ -768,7 +726,7 @@ void SymHeapCore::Private::reinterpretObjData(
     }
 
     CL_DEBUG("an object being reinterpreted is still referenced from outside");
-    blData = this->hbData(obj);
+    this->ents.getEntRW(&blData, obj);
     code = blData->code;
 
     InternalUniformBlock *uniData;
@@ -807,7 +765,9 @@ void SymHeapCore::Private::setValueOf(
         TValSet                    *killedPtrs)
 {
     // release old value
-    HeapObject *objData = this->objData(obj);
+    HeapObject *objData;
+    this->ents.getEntRW(&objData, obj);
+
     const TValId valOld = objData->value;
     if (/* wasPtr */ this->releaseValueOf(obj, valOld) && killedPtrs)
         killedPtrs->insert(valOld);
@@ -818,7 +778,8 @@ void SymHeapCore::Private::setValueOf(
 
     // resolve root
     const TValId root = objData->root;
-    RootValue *rootData = this->rootData(root);
+    RootValue *rootData;
+    this->ents.getEntRW(&rootData, root);
 
     // (re)insert self into the arena if not there
     TArena &arena = rootData->arena;
@@ -847,7 +808,8 @@ TObjId SymHeapCore::Private::objCreate(
     const TObjId obj = this->assignId(objData);
 
     // register the object by the owning root value
-    RootValue *rootData = this->rootData(root);
+    RootValue *rootData;
+    this->ents.getEntRW(&rootData, root);
     TObjByType &row = rootData->grid[off];
     TObjByType::iterator it = row.find(clt);
     if (row.end() == it)
@@ -864,7 +826,8 @@ TObjId SymHeapCore::Private::objCreate(
 }
 
 void SymHeapCore::Private::objDestroy(TObjId obj, bool removeVal, bool detach) {
-    HeapObject *objData = this->objData(obj);
+    HeapObject *objData;
+    this->ents.getEntRW(&objData, obj);
 
     if (removeVal) {
         // release value of the object
@@ -876,7 +839,8 @@ void SymHeapCore::Private::objDestroy(TObjId obj, bool removeVal, bool detach) {
         // properly remove the object from grid and arena
         const TOffset off = objData->off;
         const TObjType clt = objData->clt;
-        RootValue *rootData = this->rootData(objData->root);
+        RootValue *rootData;
+        this->ents.getEntRW(&rootData, objData->root);
         CL_BREAK_IF(!this->chkArenaConsistency(rootData));
 
         if (!rootData->grid[off].erase(clt))
@@ -894,7 +858,8 @@ void SymHeapCore::Private::objDestroy(TObjId obj, bool removeVal, bool detach) {
 }
 
 TObjId SymHeapCore::Private::objExport(TObjId obj, bool *pExcl) {
-    HeapObject *data = this->objData(obj);
+    HeapObject *data;
+    this->ents.getEntRW(&data, obj);
     if (pExcl)
         *pExcl = !data->hasExtRef;
 
@@ -944,7 +909,8 @@ TValId SymHeapCore::Private::valDup(TValId val) {
         return val;
 
     // deep copy the value
-    const BaseValue *tpl = this->valData(val);
+    const BaseValue *tpl;
+    this->ents.getEntRO(&tpl, val);
     BaseValue *dupData = /* FIXME: subtle */ tpl->clone();
 
     const TValId dup = this->assignId(dupData);
@@ -965,8 +931,11 @@ bool SymHeapCore::Private::valsEqual(TValId v1, TValId v2) {
         // special values have to match
         return false;
 
-    const BaseValue *valData1 = this->valData(v1);
-    const BaseValue *valData2 = this->valData(v2);
+    const BaseValue *valData1;
+    const BaseValue *valData2;
+
+    this->ents.getEntRO(&valData1, v1);
+    this->ents.getEntRO(&valData2, v2);
 
     const EValueTarget code1 = valData1->code;
     const EValueTarget code2 = valData2->code;
@@ -1001,7 +970,8 @@ void SymHeapCore::Private::transferBlock(
         const TOffset               winBeg,
         const TOffset               winSize)
 {
-    const RootValue *rootDataSrc = this->rootData(srcRoot);
+    const RootValue *rootDataSrc;
+    this->ents.getEntRO(&rootDataSrc, srcRoot);
     const TArena &arena = rootDataSrc->arena;
     const TOffset winEnd = winBeg + winSize;
     const TMemChunk chunk (winBeg, winEnd);
@@ -1011,12 +981,15 @@ void SymHeapCore::Private::transferBlock(
         // no data to copy in here
         return;
 
-    RootValue *rootDataDst = this->rootData(dstRoot);
+    RootValue *rootDataDst;
+    this->ents.getEntRW(&rootDataDst, dstRoot);
     const TOffset shift = dstOff - winBeg;
 
     // go through overlaps and copy the live ones
     BOOST_FOREACH(const TObjId objSrc, overlaps) {
-        const HeapBlock *hbDataSrc = this->hbData(objSrc);
+        const HeapBlock *hbDataSrc;
+        this->ents.getEntRO(&hbDataSrc, objSrc);
+
         const TOffset beg = hbDataSrc->off;
         if (beg < winBeg)
             // the object starts above the window, do not copy this one
@@ -1055,15 +1028,14 @@ SymHeapCore::Private::Private(const SymHeapCore::Private &ref):
 }
 
 TValId SymHeapCore::Private::objInit(TObjId obj) {
-    HeapObject *objData = this->objData(obj);
+    HeapObject *objData;
+    this->ents.getEntRW(&objData, obj);
     CL_BREAK_IF(!objData->hasExtRef);
-
-    // check whether the root entity that owns this object ID is still valid
-    CL_BREAK_IF(!isPossibleToDeref(this->valData(objData->root)->code));
 
     // resolve root
     const TValId root = objData->root;
-    RootValue *rootData = this->rootData(root);
+    RootValue *rootData;
+    this->ents.getEntRW(&rootData, root);
     CL_BREAK_IF(!this->chkArenaConsistency(rootData));
 
     const TArena &arena = rootData->arena;
@@ -1074,7 +1046,9 @@ TValId SymHeapCore::Private::objInit(TObjId obj) {
     TObjSet overlaps;
     if (arenaLookup(&overlaps, arena, createChunk(off, clt), obj)) {
         BOOST_FOREACH(const TObjId other, overlaps) {
-            HeapBlock *blockData = this->hbData(other);
+            HeapBlock *blockData;
+            this->ents.getEntRW(&blockData, other);
+
             const EBlockKind code = blockData->code;
             if (BK_UNIFORM != code && !hasKey(rootData->liveObjs, other))
                 continue;
@@ -1101,7 +1075,9 @@ TValId SymHeapCore::Private::objInit(TObjId obj) {
     CL_BREAK_IF(!this->chkArenaConsistency(rootData));
 
     // store backward reference
-    this->valData(val)->usedBy.insert(obj);
+    BaseValue *valData;
+    this->ents.getEntRW(&valData, val);
+    valData->usedBy.insert(obj);
     return val;
 }
 
@@ -1120,7 +1096,9 @@ TValId SymHeapCore::valueOf(TObjId obj) {
             break;
     }
 
-    HeapObject *objData = d->objData(obj);
+    HeapObject *objData;
+    d->ents.getEntRW(&objData, obj);
+
     TValId &val = objData->value;
     if (VAL_INVALID != val)
         // the object has a value
@@ -1130,11 +1108,14 @@ TValId SymHeapCore::valueOf(TObjId obj) {
     if (isComposite(clt)) {
         // deleayed creation of a composite value
         val = d->valCreate(VT_COMPOSITE, VO_INVALID);
-        CompValue *valData = DCAST<CompValue *>(d->ents[val]);
-        valData->compObj = obj;
+        CompValue *compData;
+        d->ents.getEntRW(&compData, val);
+        compData->compObj = obj;
 
         // store backward reference
-        d->valData(val)->usedBy.insert(obj);
+        BaseValue *valData;
+        d->ents.getEntRW(&valData, val);
+        valData->usedBy.insert(obj);
         return val;
     }
 
@@ -1146,7 +1127,8 @@ void SymHeapCore::usedBy(TObjList &dst, TValId val) const {
     if (VAL_NULL == val)
         return;
 
-    const BaseValue *valData = d->valData(val);
+    const BaseValue *valData;
+    d->ents.getEntRO(&valData, val);
     const TObjSet &usedBy = valData->usedBy;
     std::copy(usedBy.begin(), usedBy.end(), std::back_inserter(dst));
 }
@@ -1155,12 +1137,14 @@ unsigned SymHeapCore::usedByCount(TValId val) const {
     if (VAL_NULL == val)
         return 0;
 
-    const BaseValue *valData = d->valData(val);
+    const BaseValue *valData;
+    d->ents.getEntRO(&valData, val);
     return valData->usedBy.size();
 }
 
 void SymHeapCore::pointedBy(TObjList &dst, TValId root) const {
-    const RootValue *rootData = d->rootData(root);
+    const RootValue *rootData;
+    d->ents.getEntRO(&rootData, root);
     CL_BREAK_IF(rootData->offRoot);
     CL_BREAK_IF(!isPossibleToDeref(rootData->code));
 
@@ -1169,7 +1153,8 @@ void SymHeapCore::pointedBy(TObjList &dst, TValId root) const {
 }
 
 unsigned SymHeapCore::pointedByCount(TValId root) const {
-    const RootValue *rootData = d->rootData(root);
+    const RootValue *rootData;
+    d->ents.getEntRO(&rootData, root);
     return rootData->usedByGl.size();
 }
 
@@ -1178,7 +1163,8 @@ unsigned SymHeapCore::lastId() const {
 }
 
 TValId SymHeapCore::valClone(TValId val) {
-    const BaseValue *valData = d->valData(val);
+    const BaseValue *valData;
+    d->ents.getEntRO(&valData, val);
     const EValueTarget code = valData->code;
     if (VT_CUSTOM == code) {
         CL_BREAK_IF("custom values are not supposed to be cloned");
@@ -1234,7 +1220,8 @@ TObjId SymHeapCore::Private::copySingleLiveBlock(
 
     if (LO_BLOCK == code) {
         // duplicate a uniform block
-        InternalUniformBlock *blSrc = this->blData(objSrc);
+        InternalUniformBlock *blSrc;
+        this->ents.getEntRW(&blSrc, objSrc);
         InternalUniformBlock *blDst = blSrc->clone();
         dst = this->assignId(blDst);
         blDst->root = rootDst;
@@ -1249,7 +1236,9 @@ TObjId SymHeapCore::Private::copySingleLiveBlock(
         // duplicate a regular object
         CL_BREAK_IF(LO_DATA_PTR != code && LO_DATA != code);
 
-        const HeapObject *objDataSrc = this->objData(objSrc);
+        const HeapObject *objDataSrc;
+        this->ents.getEntRO(&objDataSrc, objSrc);
+
         const TOffset off = objDataSrc->off + shift;
         const TObjType clt = objDataSrc->clt;
         dst = this->objCreate(rootDst, off, clt, /* hasExtRef */ false);
@@ -1263,13 +1252,15 @@ TObjId SymHeapCore::Private::copySingleLiveBlock(
 
 TValId SymHeapCore::Private::dupRoot(TValId rootAt) {
     CL_DEBUG("SymHeapCore::Private::dupRoot() is taking place...");
-    const RootValue *rootDataSrc = this->rootData(rootAt);
+    const RootValue *rootDataSrc;
+    this->ents.getEntRO(&rootDataSrc, rootAt);
     CL_BREAK_IF(!this->chkArenaConsistency(rootDataSrc));
 
     // assign an address to the clone
     const EValueTarget code = rootDataSrc->code;
     const TValId imageAt = this->valCreate(code, VO_ASSIGNED);
-    RootValue *rootDataDst = this->rootData(imageAt);
+    RootValue *rootDataDst;
+    this->ents.getEntRW(&rootDataDst, imageAt);
     rootDataDst->addr = imageAt;
 
     // duplicate root metadata
@@ -1290,7 +1281,8 @@ TValId SymHeapCore::Private::dupRoot(TValId rootAt) {
 }
 
 void SymHeapCore::gatherLivePointers(TObjList &dst, TValId root) const {
-    const RootValue *rootData = d->rootData(root);
+    const RootValue *rootData;
+    d->ents.getEntRO(&rootData, root);
     BOOST_FOREACH(TLiveObjs::const_reference item, rootData->liveObjs) {
         const ELiveObj code = item.second;
         if (LO_DATA_PTR == code)
@@ -1299,13 +1291,15 @@ void SymHeapCore::gatherLivePointers(TObjList &dst, TValId root) const {
 }
 
 void SymHeapCore::gatherUniformBlocks(TUniBlockMap &dst, TValId root) const {
-    const RootValue *rootData = d->rootData(root);
+    const RootValue *rootData;
+    d->ents.getEntRO(&rootData, root);
     BOOST_FOREACH(TLiveObjs::const_reference item, rootData->liveObjs) {
         const ELiveObj code = item.second;
         if (LO_BLOCK != code)
             continue;
 
-        const InternalUniformBlock *blData = d->blData(/* obj */ item.first);
+        const InternalUniformBlock *blData;
+        d->ents.getEntRO(&blData, /* obj */ item.first);
         const TOffset off = blData->off;
         CL_BREAK_IF(hasKey(dst, off));
         UniformBlock &block = dst[off];
@@ -1318,7 +1312,8 @@ void SymHeapCore::gatherUniformBlocks(TUniBlockMap &dst, TValId root) const {
 }
 
 void SymHeapCore::gatherLiveObjects(TObjList &dst, TValId root) const {
-    const RootValue *rootData = d->rootData(root);
+    const RootValue *rootData;
+    d->ents.getEntRO(&rootData, root);
     BOOST_FOREACH(TLiveObjs::const_reference item, rootData->liveObjs) {
         const ELiveObj code = item.second;
 
@@ -1345,7 +1340,8 @@ bool SymHeapCore::findCoveringUniBlock(
         unsigned                    size)
     const
 {
-    const RootValue *rootData = d->rootData(root);
+    const RootValue *rootData;
+    d->ents.getEntRO(&rootData, root);
     CL_BREAK_IF(!d->chkArenaConsistency(rootData));
 
     const TArena &arena = rootData->arena;
@@ -1358,7 +1354,9 @@ bool SymHeapCore::findCoveringUniBlock(
         return false;
 
     BOOST_FOREACH(const TObjId id, overlaps) {
-        const HeapBlock *data = d->hbData(id);
+        const HeapBlock *data;
+        d->ents.getEntRO(&data, id);
+
         const EBlockKind code = data->code;
         if (BK_UNIFORM != code)
             continue;
@@ -1397,7 +1395,9 @@ SymHeapCore::SymHeapCore(TStorRef stor):
     // initialize VAL_ADDR_OF_RET
     const TValId addrRet = d->valCreate(VT_ON_STACK, VO_ASSIGNED);
     CL_BREAK_IF(VAL_ADDR_OF_RET != addrRet);
-    d->rootData(addrRet)->addr = addrRet;
+    RootValue *rootData;
+    d->ents.getEntRW(&rootData, addrRet);
+    rootData->addr = addrRet;
 }
 
 SymHeapCore::SymHeapCore(const SymHeapCore &ref):
@@ -1426,7 +1426,9 @@ void SymHeapCore::swap(SymHeapCore &ref) {
 
 void SymHeapCore::objSetValue(TObjId obj, TValId val, TValSet *killedPtrs) {
     // we allow to set values of atomic types only
-    const HeapObject *objData = d->objData(obj);
+    const HeapObject *objData;
+    d->ents.getEntRO(&objData, obj);
+
     const TObjType clt = objData->clt;
     CL_BREAK_IF(isComposite(clt, /* includingArray */ false));
     CL_BREAK_IF(isComposite(clt) && objData->off);
@@ -1436,7 +1438,8 @@ void SymHeapCore::objSetValue(TObjId obj, TValId val, TValSet *killedPtrs) {
 
     // mark the destination object as live
     const TValId root = objData->root;
-    RootValue *rootData = d->rootData(root);
+    RootValue *rootData;
+    d->ents.getEntRW(&rootData, root);
     rootData->liveObjs[obj] = isDataPtr(clt)
         ? LO_DATA_PTR
         : LO_DATA;
@@ -1451,7 +1454,9 @@ TObjId SymHeapCore::Private::writeUniformBlock(
         const unsigned              size,
         TValSet                     *killedPtrs)
 {
-    const BaseValue *valData = this->valData(addr);
+    const BaseValue *valData;
+    this->ents.getEntRO(&valData, addr);
+
     const TValId root = this->valRoot(addr, valData);
     const TOffset beg = valData->offRoot;
     const TOffset end = beg + size;
@@ -1462,7 +1467,8 @@ TObjId SymHeapCore::Private::writeUniformBlock(
     const TObjId obj = this->assignId(blockData);
 
     // check up to now arena consistency
-    RootValue *rootData = this->rootData(root);
+    RootValue *rootData;
+    this->ents.getEntRW(&rootData, root);
     CL_BREAK_IF(!this->chkArenaConsistency(rootData));
 
     // mark the block as live
@@ -1504,8 +1510,11 @@ void SymHeapCore::copyBlockOfRawMemory(
     CL_BREAK_IF(this->valSizeOfTarget(dst) < static_cast<int>(size));
     CL_BREAK_IF(this->valSizeOfTarget(src) < static_cast<int>(size));
 
-    const BaseValue *dstData = d->valData(dst);
-    const BaseValue *srcData = d->valData(src);
+    const BaseValue *dstData;
+    const BaseValue *srcData;
+
+    d->ents.getEntRO(&dstData, dst);
+    d->ents.getEntRO(&srcData, src);
 
     CL_BREAK_IF(!isPossibleToDeref(dstData->code));
     CL_BREAK_IF(!isPossibleToDeref(srcData->code));
@@ -1528,7 +1537,8 @@ void SymHeapCore::copyBlockOfRawMemory(
                                                  size, killedPtrs);
 
     // remove the dummy block we used just to trigger the data reinterpretation
-    RootValue *rootDataDst = d->rootData(dstRoot);
+    RootValue *rootDataDst;
+    d->ents.getEntRW(&rootDataDst, dstRoot);
     rootDataDst->liveObjs.erase(blKiller);
     rootDataDst->arena -= createArenaItem(dstOff, size, blKiller);
     d->ents.releaseEnt(blKiller);
@@ -1541,7 +1551,8 @@ TObjType SymHeapCore::objType(TObjId obj) const {
     if (obj < 0)
         return 0;
 
-    const HeapObject *objData = d->objData(obj);
+    const HeapObject *objData;
+    d->ents.getEntRO(&objData, obj);
     return objData->clt;
 }
 
@@ -1549,8 +1560,10 @@ TValId SymHeapCore::valByOffset(TValId at, TOffset off) {
     if (!off || at < 0)
         return at;
 
+    const BaseValue *valData;
+    d->ents.getEntRO(&valData, at);
+
     // subtract the root
-    const BaseValue *valData = d->valData(at);
     const TValId valRoot = d->valRoot(at, valData);
     off += valData->offRoot;
     if (!off)
@@ -1567,7 +1580,8 @@ TValId SymHeapCore::valByOffset(TValId at, TOffset off) {
     }
 
     // off-value lookup
-    RootValue *rootData = d->rootData(valRoot);
+    RootValue *rootData;
+    d->ents.getEntRW(&rootData, valRoot);
     TOffMap &offMap = rootData->offMap;
     TOffMap::const_iterator it = offMap.find(off);
     if (offMap.end() != it)
@@ -1595,7 +1609,8 @@ EValueOrigin SymHeapCore::valOrigin(TValId val) const {
             break;
     }
 
-    const BaseValue *valData = d->valData(val);
+    const BaseValue *valData;
+    d->ents.getEntRO(&valData, val);
     return valData->origin;
 }
 
@@ -1607,7 +1622,8 @@ EValueTarget SymHeapCore::valTarget(TValId val) const {
         // the overridden implementation claims the target is abstract
         return VT_ABSTRACT;
 
-    const BaseValue *valData = d->valData(val);
+    const BaseValue *valData;
+    d->ents.getEntRO(&valData, val);
     return valData->code;
 }
 
@@ -1689,12 +1705,14 @@ TOffset SymHeapCore::valOffset(TValId val) const {
     if (val <= 0)
         return 0;
 
-    const BaseValue *valData = d->valData(val);
+    const BaseValue *valData;
+    d->ents.getEntRO(&valData, val);
     return valData->offRoot;
 }
 
 void SymHeapCore::valReplace(TValId val, TValId replaceBy) {
-    const BaseValue *valData = d->valData(val);
+    const BaseValue *valData;
+    d->ents.getEntRO(&valData, val);
 
     // kill all related Neq predicates
     TValList neqs;
@@ -1798,8 +1816,11 @@ TValId SymHeapCore::placedAt(TObjId obj) {
         return VAL_INVALID;
 
     // jump to root
-    const HeapObject *objData = d->objData(obj);
-    const RootValue *rootData = d->rootData(objData->root);
+    const HeapObject *objData;
+    d->ents.getEntRO(&objData, obj);
+
+    const RootValue *rootData;
+    d->ents.getEntRO(&rootData, objData->root);
     const TValId root = rootData->addr;
 
     // then subtract the offset
@@ -1810,14 +1831,17 @@ bool SymHeapCore::Private::gridLookup(TObjByType **pRow, const TValId val) {
     if (val <= 0)
         return false;
 
-    const BaseValue *valData = this->valData(val);
+    const BaseValue *valData;
+    this->ents.getEntRO(&valData, val);
+
     const EValueTarget code = valData->code;
     if (!isPossibleToDeref(code))
         return false;
 
     // jump to root
     const TValId valRoot = this->valRoot(val, valData);
-    RootValue *rootData = this->rootData(valRoot);
+    RootValue *rootData;
+    this->ents.getEntRW(&rootData, valRoot);
 
     // grid lookup
     TGrid &grid = rootData->grid;
@@ -1847,7 +1871,8 @@ TObjId SymHeapCore::ptrAt(TValId at, bool *pExcl) {
     }
 
     // resolve root
-    const BaseValue *valData = d->valData(at);
+    const BaseValue *valData;
+    d->ents.getEntRO(&valData, at);
     const TValId root = d->valRoot(at, valData);
     const TOffset off = valData->offRoot;
 
@@ -1892,15 +1917,18 @@ TObjId SymHeapCore::objAt(TValId at, TObjType clt, bool *pExcl) {
         // a newly created object cannot be already externally referenced
         *pExcl = true;
 
+    const BaseValue *valData;
+    d->ents.getEntRO(&valData, at);
+
     // create the object
-    const BaseValue *valData = d->valData(at);
     const TValId root = d->valRoot(at, valData);
     const TOffset off = valData->offRoot;
     return d->objCreate(root, off, clt, /* hasExtRef */ true);
 }
 
 void SymHeapCore::objReleaseId(TObjId obj) {
-    HeapObject *objData = d->objData(obj);
+    HeapObject *objData;
+    d->ents.getEntRW(&objData, obj);
     CL_BREAK_IF(!objData->hasExtRef);
     objData->hasExtRef = false;
 
@@ -1924,7 +1952,8 @@ void SymHeapCore::objReleaseId(TObjId obj) {
 }
 
 CVar SymHeapCore::cVarByRoot(TValId valRoot) const {
-    const RootValue *rootData = d->rootData(valRoot);
+    const RootValue *rootData;
+    d->ents.getEntRO(&rootData, valRoot);
     return rootData->cVar;
 }
 
@@ -1951,7 +1980,8 @@ TValId SymHeapCore::addrOfVar(CVar cv) {
     addr = d->valCreate(code, VO_ASSIGNED);
     d->liveRoots.insert(addr);
 
-    RootValue *rootData = d->rootData(addr);
+    RootValue *rootData;
+    d->ents.getEntRW(&rootData, addr);
     rootData->cVar = cv;
     rootData->addr = addr;
     rootData->lastKnownClt = clt;
@@ -1999,7 +2029,8 @@ void SymHeapCore::gatherRootObjects(TValList &dst, bool (*filter)(EValueTarget))
 }
 
 TObjId SymHeapCore::valGetComposite(TValId val) const {
-    const BaseValue *valData = d->valData(val);
+    const BaseValue *valData;
+    d->ents.getEntRO(&valData, val);
     CL_BREAK_IF(VT_COMPOSITE != valData->code);
 
     const CompValue *compData = DCAST<const CompValue *>(valData);
@@ -2013,7 +2044,8 @@ TValId SymHeapCore::heapAlloc(int cbSize) {
     const TValId addr = d->valCreate(VT_ON_HEAP, VO_ASSIGNED);
 
     // initialize meta-data
-    RootValue *rootData = d->rootData(addr);
+    RootValue *rootData;
+    d->ents.getEntRW(&rootData, addr);
     rootData->addr = addr;
     rootData->cbSize = cbSize;
 
@@ -2032,7 +2064,8 @@ void SymHeapCore::valDestroyTarget(TValId val) {
         return;
     }
 
-    const BaseValue *valData = d->valData(val);
+    const BaseValue *valData;
+    d->ents.getEntRO(&valData, val);
     if (valData->offRoot || !isPossibleToDeref(valData->code)) {
         CL_BREAK_IF("invalid call of SymHeapCore::valDestroyTarget()");
         return;
@@ -2042,7 +2075,8 @@ void SymHeapCore::valDestroyTarget(TValId val) {
 }
 
 int SymHeapCore::valSizeOfTarget(TValId val) const {
-    const BaseValue *valData = d->valData(val);
+    const BaseValue *valData;
+    d->ents.getEntRO(&valData, val);
     if (valData->offRoot < 0)
         // we are above the root, so we cannot safely write anything
         return 0;
@@ -2053,7 +2087,8 @@ int SymHeapCore::valSizeOfTarget(TValId val) const {
 
     CL_BREAK_IF(!isPossibleToDeref(valData->code));
     const TValId root = d->valRoot(val, valData);
-    const RootValue *rootData = d->rootData(root);
+    const RootValue *rootData;
+    d->ents.getEntRO(&rootData, root);
 
     const int rootSize = rootData->cbSize;
     const TOffset off = valData->offRoot;
@@ -2061,7 +2096,8 @@ int SymHeapCore::valSizeOfTarget(TValId val) const {
 }
 
 void SymHeapCore::valSetLastKnownTypeOfTarget(TValId root, TObjType clt) {
-    RootValue *rootData = d->rootData(root);
+    RootValue *rootData;
+    d->ents.getEntRW(&rootData, root);
 
     if (VAL_ADDR_OF_RET == root) {
         // destroy any stale target of VAL_ADDR_OF_RET
@@ -2078,13 +2114,15 @@ void SymHeapCore::valSetLastKnownTypeOfTarget(TValId root, TObjType clt) {
 }
 
 TObjType SymHeapCore::valLastKnownTypeOfTarget(TValId root) const {
-    CL_BREAK_IF(d->valData(root)->offRoot);
-    const RootValue *rootData = d->rootData(root);
+    CL_BREAK_IF(this->valOffset(root));
+    const RootValue *rootData;
+    d->ents.getEntRO(&rootData, root);
     return rootData->lastKnownClt;
 }
 
 void SymHeapCore::Private::destroyRoot(TValId root) {
-    RootValue *rootData = this->rootData(root);
+    RootValue *rootData;
+    this->ents.getEntRW(&rootData, root);
 
     EValueTarget code = VT_DELETED;
     const CVar cv = rootData->cVar;
@@ -2100,7 +2138,8 @@ void SymHeapCore::Private::destroyRoot(TValId root) {
     // mark all associated off-values as deleted/lost
     BOOST_FOREACH(TOffMap::const_reference item, rootData->offMap) {
         const TValId val = item.second;
-        BaseValue *valData = this->valData(val);
+        BaseValue *valData;
+        this->ents.getEntRW(&valData, val);
         CL_BREAK_IF(!dynamic_cast<OffValue *>(valData));
 
         valData->code = code;
@@ -2159,15 +2198,16 @@ TValId SymHeapCore::valWrapCustom(const CustomValue &cVal) {
 
     // cVal not found, wrap it as a new heap value
     val = d->valCreate(VT_CUSTOM, VO_ASSIGNED);
-    InternalCustomValue *valData = DCAST<InternalCustomValue *>(d->ents[val]);
+    InternalCustomValue *valData;
+    d->ents.getEntRW(&valData, val);
     valData->customData = cVal;
     return val;
 }
 
 const CustomValue& SymHeapCore::valUnwrapCustom(TValId val) const
 {
-    const InternalCustomValue *valData =
-        DCAST<InternalCustomValue *>(d->ents[val]);
+    const InternalCustomValue *valData;
+    d->ents.getEntRO(&valData, val);
 
     // check the consistency of backward mapping
     CL_BREAK_IF(val != d->cValueMap.lookup(valData->customData));
@@ -2180,20 +2220,23 @@ bool SymHeapCore::valTargetIsProto(TValId val) const {
         // not a prototype for sure
         return false;
 
-    const BaseValue *valData = d->valData(val);
+    const BaseValue *valData;
+    d->ents.getEntRO(&valData, val);
     if (!isPossibleToDeref(valData->code))
         // not a prototype for sure
         return false;
 
     // seek root
     const TValId root = d->valRoot(val, valData);
-    const RootValue *rootData = d->rootData(root);
+    const RootValue *rootData;
+    d->ents.getEntRO(&rootData, root);
     return rootData->isProto;
 }
 
 void SymHeapCore::valTargetSetProto(TValId val, bool isProto) {
     const TValId root = d->valRoot(val);
-    RootValue *rootData = d->rootData(root);
+    RootValue *rootData;
+    d->ents.getEntRW(&rootData, root);
     rootData->isProto = isProto;
 }
 
