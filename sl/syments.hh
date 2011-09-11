@@ -36,9 +36,26 @@
 #   define DCAST dynamic_cast
 #endif
 
-struct IHeapEntity {
-    virtual ~IHeapEntity() { }
-    virtual IHeapEntity* clone() const = 0;
+class AbstractHeapEntity {
+    private:
+#if SH_COPY_ON_WRITE
+        typedef int TRefCnt;
+        TRefCnt refCnt_;
+#endif
+
+    public:
+        inline AbstractHeapEntity();
+        inline AbstractHeapEntity(const AbstractHeapEntity &);
+        virtual AbstractHeapEntity* clone() const = 0;
+
+
+    protected:
+        virtual ~AbstractHeapEntity();
+        friend class EntStore;
+
+    private:
+        // intentionally not implemented
+        AbstractHeapEntity& operator=(const AbstractHeapEntity &);
 };
 
 class EntStore {
@@ -47,7 +64,7 @@ class EntStore {
         inline EntStore(const EntStore &);
         inline ~EntStore();
 
-        template <typename T> inline T assignId(IHeapEntity *);
+        template <typename T> inline T assignId(AbstractHeapEntity *);
         template <typename T> inline void releaseEnt(const T id);
 
         template <typename T> T lastId() const {
@@ -68,14 +85,41 @@ class EntStore {
         // intentionally not implemented
         EntStore& operator=(const EntStore &);
 
-        std::vector<IHeapEntity *>      ents_;
+        inline bool releaseEntCore(AbstractHeapEntity *ent);
+
+        std::vector<AbstractHeapEntity *>       ents_;
 
 #if SE_RECYCLE_HEAP_IDS
-        std::queue<unsigned>            freeIds_;
+        std::queue<unsigned>                    freeIds_;
 #endif
 };
 
-template <typename T> T EntStore::assignId(IHeapEntity *ptr) {
+// /////////////////////////////////////////////////////////////////////////////
+// implementation of AbstractHeapEntity
+AbstractHeapEntity::AbstractHeapEntity()
+#if SH_COPY_ON_WRITE
+    : refCnt_(1)
+#endif
+{
+}
+
+AbstractHeapEntity::AbstractHeapEntity(const AbstractHeapEntity &)
+#if SH_COPY_ON_WRITE
+    : refCnt_(1)
+#endif
+{
+}
+
+AbstractHeapEntity::~AbstractHeapEntity() {
+#if SH_COPY_ON_WRITE
+    CL_BREAK_IF(refCnt_);
+#endif
+}
+
+
+// /////////////////////////////////////////////////////////////////////////////
+// implementation of EntStore
+template <typename T> T EntStore::assignId(AbstractHeapEntity *ptr) {
 #if SE_RECYCLE_HEAP_IDS
     if (!this->freeIds_.empty()) {
         const T id = static_cast<T>(this->freeIds_.front());
@@ -90,12 +134,24 @@ template <typename T> T EntStore::assignId(IHeapEntity *ptr) {
     return this->lastId<T>();
 }
 
+inline bool EntStore::releaseEntCore(AbstractHeapEntity *ent) {
+#if SH_COPY_ON_WRITE
+        AbstractHeapEntity::TRefCnt &cnt = ent->refCnt_;
+        if (--cnt)
+            // still in use, please wait!
+            return false;
+#endif
+        delete ent;
+        return true;
+}
+
 template <typename T> void EntStore::releaseEnt(const T id) {
 #if SE_RECYCLE_HEAP_IDS
     freeIds_.push(id);
 #endif
-    IHeapEntity *&e = ents_[id];
-    delete e;
+    AbstractHeapEntity *&e = ents_[id];
+    CL_BREAK_IF(!e);
+    this->releaseEntCore(e);
     e = 0;
 }
 
@@ -103,14 +159,17 @@ EntStore::EntStore(const EntStore &ref):
     ents_(ref.ents_)
 {
     // deep copy of all heap entities
-    BOOST_FOREACH(IHeapEntity *&ent, ents_)
+    BOOST_FOREACH(AbstractHeapEntity *&ent, ents_)
         if (ent)
             ent = ent->clone();
 }
 
 EntStore::~EntStore() {
-    BOOST_FOREACH(const IHeapEntity *ent, ents_)
-        delete ent;
+    BOOST_FOREACH(AbstractHeapEntity *ent, ents_)
+#if SH_COPY_ON_WRITE
+        if (ent)
+#endif
+            this->releaseEntCore(ent);
 }
 
 template <class TEnt, typename TId>
@@ -119,7 +178,7 @@ inline void EntStore::getEntRO(const TEnt **pEnt, const TId id) {
     CL_BREAK_IF(this->outOfRange(id));
 
     // if this fails, the ID is no longer valid
-    const IHeapEntity *ptr = ents_[id];
+    const AbstractHeapEntity *ptr = ents_[id];
     CL_BREAK_IF(!ptr);
 
     // if this fails, the entity has type that is incompatible with your request

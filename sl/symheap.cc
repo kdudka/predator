@@ -222,7 +222,7 @@ enum EBlockKind {
     BK_UNIFORM
 };
 
-struct HeapBlock: public IHeapEntity {
+struct HeapBlock: public AbstractHeapEntity {
     EBlockKind                  code;
     TValId                      root;
     TOffset                     off;
@@ -275,7 +275,7 @@ struct HeapObject: public HeapBlock {
     {
     }
 
-    virtual IHeapEntity* clone() const {
+    virtual HeapObject* clone() const {
         return new HeapObject(*this);
     }
 
@@ -284,7 +284,7 @@ struct HeapObject: public HeapBlock {
     }
 };
 
-struct BaseValue: public IHeapEntity {
+struct BaseValue: public AbstractHeapEntity {
     EValueTarget                    code;
     EValueOrigin                    origin;
     TOffset                         offRoot;
@@ -424,7 +424,7 @@ struct SymHeapCore::Private {
         return this->ents.assignId<TObjId>(e);
     }
 
-    inline TValId valRoot(const TValId, const IHeapEntity *);
+    inline TValId valRoot(const TValId, const AbstractHeapEntity *);
     inline TValId valRoot(const TValId);
 
     TValId valCreate(EValueTarget code, EValueOrigin origin);
@@ -485,7 +485,7 @@ struct SymHeapCore::Private {
 
 inline TValId SymHeapCore::Private::valRoot(
         const TValId                val,
-        const IHeapEntity          *ent)
+        const AbstractHeapEntity   *ent)
 {
     const BaseValue *valData = DCAST<const BaseValue *>(ent);
     if (!valData->offRoot)
