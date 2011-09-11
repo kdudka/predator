@@ -197,7 +197,7 @@
 /**
  * if 1, do not make deep copy on copy of SymHeap [experimental]
  */
-#define SH_COPY_ON_WRITE                    0
+#define SH_COPY_ON_WRITE                    1
 
 /**
  * if 1, skip plotting of "neq" edges (makes the result more readable by humans

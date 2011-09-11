@@ -21,7 +21,7 @@ project(sl C CXX)
 add_definitions("-I../include")
 enable_testing()
 
-option(SL_USE_BOOST_ICL "Set to ON to use the boost::icl library" ON)
+option(SL_USE_BOOST_ICL "Set to ON to use the boost::icl library" OFF)
 if(SL_USE_BOOST_ICL)
     set_source_files_properties(symheap.cc COMPILE_FLAGS "-DUSE_BOOST_ICL")
 
