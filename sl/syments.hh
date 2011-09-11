@@ -24,10 +24,13 @@
 
 #include "symid.hh"
 
-#include <queue>
 #include <vector>
 
 #include <boost/foreach.hpp>
+
+#if SH_REUSE_FREE_IDS
+#   include <queue>
+#endif
 
 #ifdef NDEBUG
     // aggressive optimization
@@ -47,7 +50,6 @@ class AbstractHeapEntity {
         inline AbstractHeapEntity();
         inline AbstractHeapEntity(const AbstractHeapEntity &);
         virtual AbstractHeapEntity* clone() const = 0;
-
 
     protected:
         virtual ~AbstractHeapEntity();
@@ -89,7 +91,7 @@ class EntStore {
 
         std::vector<AbstractHeapEntity *>       ents_;
 
-#if SE_RECYCLE_HEAP_IDS
+#if SH_REUSE_FREE_IDS
         std::queue<unsigned>                    freeIds_;
 #endif
 };
@@ -124,7 +126,7 @@ template <typename T> T EntStore::assignId(AbstractHeapEntity *ptr) {
     CL_BREAK_IF(1 != ptr->refCnt_);
 #endif
 
-#if SE_RECYCLE_HEAP_IDS
+#if SH_REUSE_FREE_IDS
     if (!this->freeIds_.empty()) {
         const T id = static_cast<T>(this->freeIds_.front());
         this->freeIds_.pop();
@@ -150,7 +152,7 @@ inline bool EntStore::releaseEntCore(AbstractHeapEntity *ent) {
 }
 
 template <typename T> void EntStore::releaseEnt(const T id) {
-#if SE_RECYCLE_HEAP_IDS
+#if SH_REUSE_FREE_IDS
     freeIds_.push(id);
 #endif
     AbstractHeapEntity *&e = ents_[id];

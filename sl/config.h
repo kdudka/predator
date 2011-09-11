@@ -161,11 +161,6 @@
 #define SE_PROTO_COST_THREEWAY              4
 
 /**
- * if 1, allow to assign unreachable heap IDs to newly created heap entities
- */
-#define SE_RECYCLE_HEAP_IDS                 1
-
-/**
  * upper bound of DLS minimal length (zero means unlimited)
  */
 #define SE_RESTRICT_DLS_MINLEN              2
@@ -198,6 +193,11 @@
  * if 1, do not make deep copy on copy of SymHeap [experimental]
  */
 #define SH_COPY_ON_WRITE                    1
+
+/**
+ * if 1, allow to assign unused heap IDs to newly created heap entities
+ */
+#define SH_REUSE_FREE_IDS                   1
 
 /**
  * if 1, skip plotting of "neq" edges (makes the result more readable by humans
