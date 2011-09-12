@@ -140,8 +140,6 @@ class CVarMap {
 // implementation of SymHeapCore
 typedef std::set<TObjId>                                TObjSet;
 typedef std::map<TOffset, TValId>                       TOffMap;
-typedef std::map<TObjType, TObjId>                      TObjByType;
-typedef std::map<TOffset, TObjByType>                   TGrid;
 
 #ifdef USE_BOOST_ICL
 typedef boost::icl::interval_map<unsigned, TObjSet>     TArena;
@@ -378,7 +376,6 @@ struct RootValue: public BaseValue {
     bool                            isProto;
     TLiveObjs                       liveObjs;
     TObjSet                         usedByGl;
-    TGrid                           grid;
     TArena                          arena;
 
     RootValue(EValueTarget code_, EValueOrigin origin_):
@@ -830,14 +827,6 @@ TObjId SymHeapCore::Private::objCreate(
     // register the object by the owning root value
     RootValue *rootData;
     this->ents.getEntRW(&rootData, root);
-    TObjByType &row = rootData->grid[off];
-    TObjByType::iterator it = row.find(clt);
-    if (row.end() == it)
-        row[clt] = obj;
-    else {
-        CL_DEBUG("objCreate() rewrites an object that is still referenced");
-        it->second = obj;
-    }
 
     // map the region occupied by the object
     rootData->arena += createArenaItem(off, clt->size, obj);
@@ -857,16 +846,13 @@ void SymHeapCore::Private::objDestroy(TObjId obj, bool removeVal, bool detach) {
 
     if (detach) {
         // properly remove the object from grid and arena
-        const TOffset off = objData->off;
-        const TObjType clt = objData->clt;
         RootValue *rootData;
         this->ents.getEntRW(&rootData, objData->root);
         CL_BREAK_IF(!this->chkArenaConsistency(rootData));
 
-        if (!rootData->grid[off].erase(clt))
-            CL_BREAK_IF("internal object double-free");
-
         // remove the object from arena unless we are destroying everything
+        const TOffset off = objData->off;
+        const TObjType clt = objData->clt;
         rootData->arena -= createArenaItem(off, clt->size, obj);
 
         CL_BREAK_IF(hasKey(rootData->liveObjs, obj));
@@ -2244,7 +2230,6 @@ void SymHeapCore::Private::destroyRoot(TValId root) {
     // wipe rootData
     rootData->lastKnownClt = 0;
     rootData->liveObjs.clear();
-    rootData->grid.clear();
     rootData->arena.clear();
 }
 
