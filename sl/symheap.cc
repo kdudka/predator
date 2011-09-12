@@ -486,7 +486,7 @@ struct SymHeapCore::Private {
     void reinterpretObjData(TObjId old, TObjId obj, TValSet *killedPtrs = 0);
     void setValueOf(TObjId of, TValId val, TValSet *killedPtrs = 0);
 
-    void neqOpWrap(SymHeap::ENeqOp, TValId, TValId);
+    void neqOpWrap(SymHeapCore::ENeqOp, TValId, TValId);
 
     // runs only in debug build
     bool chkArenaConsistency(const RootValue *);
@@ -2319,6 +2319,58 @@ void SymHeapCore::valTargetSetProto(TValId val, bool isProto) {
     rootData->isProto = isProto;
 }
 
+bool SymHeapCore::proveNeq(TValId valA, TValId valB) const {
+    // check for invalid values
+    if (VAL_INVALID == valA || VAL_INVALID == valB)
+        return false;
+
+    // check for identical values
+    if (valA == valB)
+        return false;
+
+    // having the values always in the same order leads to simpler code
+    moveKnownValueToLeft(*this, valA, valB);
+
+    // check for known bool values
+    if (VAL_TRUE == valA)
+        return (VAL_FALSE == valB);
+
+    // we presume (0 <= valA) and (0 < valB) at this point
+    CL_BREAK_IF(d->ents.outOfRange(valB));
+    if (valInsideSafeRange(*this, valA) && valInsideSafeRange(*this, valB))
+        // NOTE: we know (valA != valB) at this point, look above
+        return true;
+
+    // check for a Neq predicate
+    if (d->neqDb.areNeq(valA, valB))
+        return true;
+
+    if (valA <= 0 || valB <= 0)
+        // no handling of special values here
+        return false;
+
+    const TValId root1 = d->valRoot(valA);
+    const TValId root2 = d->valRoot(valB);
+    if (root1 == root2) {
+        // same root, different offsets
+        CL_BREAK_IF(this->valOffset(valA) == this->valOffset(valB));
+        return true;
+    }
+
+    const TOffset offA = this->valOffset(valA);
+    const TOffset offB = this->valOffset(valB);
+
+    const TOffset diff = offB - offA;
+    if (!diff)
+        // check for Neq between the roots
+        return d->neqDb.areNeq(root1, root2);
+
+    SymHeapCore &writable = /* XXX */ *const_cast<SymHeapCore *>(this);
+    return d->neqDb.areNeq(root1, writable.valByOffset(root2,  diff))
+        && d->neqDb.areNeq(root2, writable.valByOffset(root1, -diff));
+}
+
+
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of SymHeap
 struct SymHeap::Private {
@@ -2404,23 +2456,25 @@ bool SymHeap::hasAbstractTarget(TValId val) const {
     return (OK_CONCRETE != this->valTargetKind(val));
 }
 
-const BindingOff& SymHeap::segBinding(TValId at) const {
-    const TValId valRoot = this->valRoot(at);
+const BindingOff& SymHeap::segBinding(TValId root) const {
+    CL_BREAK_IF(this->valOffset(root));
+    CL_BREAK_IF(!this->hasAbstractTarget(root));
 
-    Private::TData::iterator iter = d->data.find(valRoot);
+    Private::TData::iterator iter = d->data.find(root);
     CL_BREAK_IF(d->data.end() == iter);
 
     return iter->second.off;
 }
 
 void SymHeap::valTargetSetAbstract(
-        TValId                      at,
+        TValId                      root,
         EObjKind                    kind,
         const BindingOff            &off)
 {
-    const TValId valRoot = this->valRoot(at);
+    CL_BREAK_IF(!isPossibleToDeref(this->valTarget(root)));
+    CL_BREAK_IF(this->valOffset(root));
 
-    Private::TData::iterator iter = d->data.find(valRoot);
+    Private::TData::iterator iter = d->data.find(root);
     if (d->data.end() != iter && OK_SLS == kind) {
         Private::AbstractObject &aoData = iter->second;
         CL_BREAK_IF(OK_MAY_EXIST != aoData.kind || off != aoData.off);
@@ -2430,10 +2484,10 @@ void SymHeap::valTargetSetAbstract(
         return;
     }
 
-    CL_BREAK_IF(OK_CONCRETE == kind || hasKey(d->data, valRoot));
+    CL_BREAK_IF(OK_CONCRETE == kind || hasKey(d->data, root));
 
     // initialize abstract object
-    Private::AbstractObject &aoData = d->data[valRoot];
+    Private::AbstractObject &aoData = d->data[root];
     aoData.kind     = kind;
     aoData.off      = off;
 
@@ -2442,11 +2496,12 @@ void SymHeap::valTargetSetAbstract(
         aoData.off.prev = off.next;
 }
 
-void SymHeap::valTargetSetConcrete(TValId at) {
-    const TValId valRoot = this->valRoot(at);
+void SymHeap::valTargetSetConcrete(TValId root) {
+    CL_BREAK_IF(!isPossibleToDeref(this->valTarget(root)));
+    CL_BREAK_IF(this->valOffset(root));
 
     CL_DEBUG("SymHeap::objSetConcrete() is taking place...");
-    Private::TData::iterator iter = d->data.find(valRoot);
+    Private::TData::iterator iter = d->data.find(root);
     CL_BREAK_IF(d->data.end() == iter);
 
     // just remove the object ID from the map
@@ -2501,12 +2556,12 @@ bool haveSegBidir(
         const TValId                v2)
 {
     if (haveSeg(*sh, v1, v2, kind)) {
-        *pDst = v1;
+        *pDst = sh->valRoot(v1);
         return true;
     }
 
     if (haveSeg(*sh, v2, v1, kind)) {
-        *pDst = v2;
+        *pDst = sh->valRoot(v2);
         return true;
     }
 
@@ -2553,57 +2608,6 @@ void SymHeap::neqOp(ENeqOp op, TValId v1, TValId v2) {
 
     CL_BREAK_IF(NEQ_ADD != op);
     CL_DEBUG("SymHeap::neqOp() refuses to add an extraordinary Neq predicate");
-}
-
-bool SymHeapCore::proveNeq(TValId valA, TValId valB) const {
-    // check for invalid values
-    if (VAL_INVALID == valA || VAL_INVALID == valB)
-        return false;
-
-    // check for identical values
-    if (valA == valB)
-        return false;
-
-    // having the values always in the same order leads to simpler code
-    moveKnownValueToLeft(*this, valA, valB);
-
-    // check for known bool values
-    if (VAL_TRUE == valA)
-        return (VAL_FALSE == valB);
-
-    // we presume (0 <= valA) and (0 < valB) at this point
-    CL_BREAK_IF(d->ents.outOfRange(valB));
-    if (valInsideSafeRange(*this, valA) && valInsideSafeRange(*this, valB))
-        // NOTE: we know (valA != valB) at this point, look above
-        return true;
-
-    // check for a Neq predicate
-    if (d->neqDb.areNeq(valA, valB))
-        return true;
-
-    if (valA <= 0 || valB <= 0)
-        // no handling of special values here
-        return false;
-
-    const TValId root1 = d->valRoot(valA);
-    const TValId root2 = d->valRoot(valB);
-    if (root1 == root2) {
-        // same root, different offsets
-        CL_BREAK_IF(this->valOffset(valA) == this->valOffset(valB));
-        return true;
-    }
-
-    const TOffset offA = this->valOffset(valA);
-    const TOffset offB = this->valOffset(valB);
-
-    const TOffset diff = offB - offA;
-    if (!diff)
-        // check for Neq between the roots
-        return d->neqDb.areNeq(root1, root2);
-
-    SymHeapCore &writable = /* XXX */ *const_cast<SymHeapCore *>(this);
-    return d->neqDb.areNeq(root1, writable.valByOffset(root2,  diff))
-        && d->neqDb.areNeq(root2, writable.valByOffset(root1, -diff));
 }
 
 bool SymHeap::proveNeq(TValId ref, TValId val) const {
@@ -2691,8 +2695,8 @@ void SymHeap::valDestroyTarget(TValId val) {
         CL_DEBUG("SymHeap::valDestroyTarget() destroys an abstract object");
 }
 
-unsigned SymHeap::segMinLength(TValId at) const {
-    const TValId seg = this->valRoot(at);
+unsigned SymHeap::segMinLength(TValId seg) const {
+    CL_BREAK_IF(this->valOffset(seg));
     CL_BREAK_IF(!hasKey(d->data, seg));
 
     const Private::AbstractObject &aoData = d->data[seg];
@@ -2712,8 +2716,8 @@ unsigned SymHeap::segMinLength(TValId at) const {
     }
 }
 
-void SymHeap::segSetMinLength(TValId at, unsigned len) {
-    const TValId seg = this->valRoot(at);
+void SymHeap::segSetMinLength(TValId seg, unsigned len) {
+    CL_BREAK_IF(this->valOffset(seg));
     CL_BREAK_IF(!hasKey(d->data, seg));
 
     Private::AbstractObject &aoData = d->data[seg];

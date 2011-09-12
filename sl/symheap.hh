@@ -570,16 +570,16 @@ class SymHeap: public SymHeapCore {
         EObjKind valTargetKind(TValId) const;
 
         /// tuple of binding offsets (next, prev, ...)
-        const BindingOff& segBinding(TValId at) const;
+        const BindingOff& segBinding(TValId seg) const;
 
         /// set properties of an abstract object, set abstract if not already
         void valTargetSetAbstract(
-                TValId                      val,
+                TValId                      root,
                 EObjKind                    kind,
                 const BindingOff            &off);
 
         /// set the given abstract object to be a concrete object (drops props)
-        void valTargetSetConcrete(TValId val);
+        void valTargetSetConcrete(TValId root);
 
         /**
          * assume that v1 and v2 are equal.  Useful when e.g. traversing a
