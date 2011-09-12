@@ -33,6 +33,8 @@
 #include <set>
 #include <sstream>
 
+#include <boost/algorithm/string/replace.hpp>
+
 class ClDotGenerator: public ICodeListener {
     public:
         ClDotGenerator(const char *glDotFile);
@@ -213,6 +215,9 @@ const char *ClDotGenerator::EtColors[ClDotGenerator::CNT_ET] = {
 void ClDotGenerator::createDotFile(std::ofstream &str, std::string fileName,
                                    bool appendSuffix)
 {
+    // do not create dot files in /usr/include and the like
+    boost::algorithm::replace_all(fileName, "/", "-");
+
     if (appendSuffix)
         fileName += ".dot";
 
