@@ -125,7 +125,9 @@ class EntStore {
         inline ~EntStore();
 
         template <typename TId> inline TId assignId(TBaseEnt *);
+        template <typename TId> inline void assignId(const TId id, TBaseEnt *);
         template <typename TId> inline void releaseEnt(const TId id);
+        template <typename TId> inline bool isValidEnt(const TId id) const;
 
         template <typename TId> TId lastId() const {
             return static_cast<TId>(this->ents_.size() - 1);
@@ -180,6 +182,23 @@ TId EntStore<TBaseEnt>::assignId(TBaseEnt *ptr) {
 }
 
 template <class TBaseEnt>
+template <typename TId>
+void EntStore<TBaseEnt>::assignId(const TId id, TBaseEnt *ptr) {
+    CL_BREAK_IF(ptr->refCnt.isShared());
+
+    if (this->lastId<TId>() < id)
+        // make sure we have enough space allocated
+        ents_.resize(id + 1, 0);
+
+    TBaseEnt *&ref = ents_[id];
+
+    // if this fails, you wanted to overwrite pointer to a valid entity
+    CL_BREAK_IF(ref);
+
+    ref = ptr;
+}
+
+template <class TBaseEnt>
 inline void EntStore<TBaseEnt>::releaseEntCore(TBaseEnt *ent) {
     if (/* wasLast */ ent->refCnt.leave())
         delete ent;
@@ -195,6 +214,15 @@ void EntStore<TBaseEnt>::releaseEnt(const TId id) {
     CL_BREAK_IF(!e);
     this->releaseEntCore(e);
     e = 0;
+}
+
+template <class TBaseEnt>
+template <typename TId>
+bool EntStore<TBaseEnt>::isValidEnt(const TId id) const {
+    if (this->outOfRange(id))
+        return false;
+
+    return !!ents_[id];
 }
 
 template <class TBaseEnt>
