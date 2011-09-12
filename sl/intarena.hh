@@ -50,6 +50,7 @@ class IntervalArena {
         void add(const key_type &, const TObj);
         void sub(const key_type &, const TObj);
         void intersects(TSet &dst, const key_type &key) const;
+        void exactMatch(TSet &dst, const key_type &key) const;
 
         void clear() {
             cont_.clear();
@@ -212,6 +213,25 @@ void IntervalArena<TInt, TObj>::intersects(TSet &dst, const key_type &key) const
         }
         while (beg < winEnd);
     }
+}
+
+template <typename TInt, typename TObj>
+void IntervalArena<TInt, TObj>::exactMatch(TSet &dst, const key_type &key) const
+{
+    typedef typename TCont::const_iterator TEndIt;
+    const TEndIt itEnd = cont_.find(/* end */ key.second);
+    if (cont_.end() == itEnd)
+        // upper bound not found
+        return;
+
+    const TLine &line = itEnd->second;
+    const typename TLine::const_iterator itBeg = line.find(/* beg */ key.first);
+    if (line.end() == itBeg)
+        // lower bound not found
+        return;
+
+    const TLeaf &leaf = itBeg->second;
+    std::copy(leaf.begin(), leaf.end(), std::inserter(dst, dst.begin()));
 }
 
 #endif /* H_GUARD_INTARENA_H */

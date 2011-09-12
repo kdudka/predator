@@ -198,6 +198,28 @@ inline bool arenaLookup(
     return !dst->empty();
 }
 
+inline void arenaLookForExactMatch(
+        TObjSet                     *dst,
+        const TArena                &arena,
+        const TMemChunk             &chunk)
+{
+#if USE_BOOST_ICL
+    // FIXME: Doing this is ultimately stupid.  Are we using icl in a wrong way?
+    TArena tmp(arena);
+    tmp &= chunk;
+    BOOST_FOREACH(TArena::const_reference ref, tmp) {
+        const TMemChunk now(ref.first);
+        if (now != chunk)
+            continue;
+
+        const TObjSet &objs = ref.second;
+        std::copy(objs.begin(), objs.end(), std::inserter(*dst, dst->begin()));
+    }
+#else
+    arena.exactMatch(*dst, chunk);
+#endif
+}
+
 inline TMemChunk createChunk(const TOffset off, const TObjType clt) {
     CL_BREAK_IF(!clt || clt->code == CL_TYPE_VOID);
 
@@ -1851,18 +1873,46 @@ bool SymHeapCore::Private::gridLookup(TObjByType **pRow, const TValId val) {
 }
 
 TObjId SymHeapCore::ptrAt(TValId at, bool *pExcl) {
-    TObjByType *row;
-    if (!d->gridLookup(&row, at))
+    if (at <= 0)
         return OBJ_INVALID;
 
-    // seek a _data_ pointer at the given row
-    BOOST_FOREACH(const TObjByType::const_reference item, *row)
-        if (isDataPtr(/* clt */ item.first))
-            return d->objExport(item.second, pExcl);
+    const BaseValue *valData;
+    d->ents.getEntRO(&valData, at);
+
+    const EValueTarget code = valData->code;
+    if (!isPossibleToDeref(code))
+        return OBJ_INVALID;
+
+    // jump to root
+    const TValId valRoot = d->valRoot(at, valData);
+    const RootValue *rootData;
+    d->ents.getEntRO(&rootData, valRoot);
 
     // generic pointer, (void *) if available
     const TObjType clt = stor_.types.genericDataPtr();
     CL_BREAK_IF(!clt || clt->code != CL_TYPE_PTR);
+    const TOffset size = clt->size;
+    CL_BREAK_IF(size <= 0);
+
+    // arena lookup
+    TObjSet candidates;
+    const TArena &arena = rootData->arena;
+    const TOffset off = valData->offRoot;
+    const TMemChunk chunk(off, off + size);
+    arenaLookForExactMatch(&candidates, arena, chunk);
+
+    // seek a _data_ pointer in the given interval
+    BOOST_FOREACH(const TObjId obj, candidates) {
+        const HeapBlock *blData;
+        d->ents.getEntRO(&blData, obj);
+        if (BK_OBJECT != blData->code)
+            continue;
+
+        const HeapObject *objData = DCAST<const HeapObject *>(blData);
+        const TObjType clt = objData->clt;
+        if (isDataPtr(clt))
+            return d->objExport(obj, pExcl);
+    }
 
     // check whether we have enough space allocated for the pointer
     if (this->valSizeOfTarget(at) < clt->size) {
@@ -1871,10 +1921,7 @@ TObjId SymHeapCore::ptrAt(TValId at, bool *pExcl) {
     }
 
     // resolve root
-    const BaseValue *valData;
-    d->ents.getEntRO(&valData, at);
     const TValId root = d->valRoot(at, valData);
-    const TOffset off = valData->offRoot;
 
     if (pExcl)
         // a newly created object cannot be already externally referenced
