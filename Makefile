@@ -48,7 +48,7 @@ DIRS_BUILD      ?= cl fwnull sl fa
 
 .PHONY: all check clean distcheck distclean api cl/api sl/api ChangeLog \
 	build_boost \
-	build_gcc build_gcc_svn update_gcc update_gcc_src_only \
+	build_gcc build_gcc_svn update_gcc update_gcc_src_only lnk_gcc_headers \
 	build_inv
 
 all: include/gcc
@@ -172,7 +172,11 @@ build_gcc_svn:
 	$(SVN) co svn://gcc.gnu.org/svn/gcc/trunk $(GCC_SRC)
 	$(MAKE) build_gcc
 
-include/gcc: gcc-install/lib/gcc
+# fallback for buggy configurations
+include/gcc:
+	@test -r include/gcc/gcc-plugin.h || $(MAKE) lnk_gcc_headers
+
+lnk_gcc_headers: gcc-install/lib/gcc
 	cd include && ln -fsvT \
 		`ls -td ../gcc-install/lib/gcc/*/4.[5-7]*/plugin/include|head -1` gcc
 
