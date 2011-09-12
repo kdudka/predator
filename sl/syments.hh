@@ -39,23 +39,95 @@
 #   define DCAST dynamic_cast
 #endif
 
-class AbstractHeapEntity {
-    private:
 #if SH_COPY_ON_WRITE
-        typedef int TRefCnt;
-        TRefCnt refCnt_;
-#endif
+class RefCounter {
+    private:
+        typedef int TCnt;
+        TCnt cnt_;
 
     public:
-        inline AbstractHeapEntity();
-        inline AbstractHeapEntity(const AbstractHeapEntity &);
+        /// initialize to 1
+        RefCounter():
+            cnt_(1)
+        {
+        }
+
+        /// initialize to 1, even if the source has another value
+        RefCounter(const RefCounter &):
+            cnt_(1)
+        {
+        }
+
+        /// initialize to 1, even if the source has another value
+        RefCounter& operator=(const RefCounter &) {
+            cnt_ = 1;
+            return *this;
+        }
+
+        /// the destruction is only allowed with reference count equal to zero
+        ~RefCounter() {
+            CL_BREAK_IF(cnt_);
+        }
+
+        bool isShared() const {
+            CL_BREAK_IF(cnt_ < 1);
+            return (1 < cnt_);
+        }
+
+        bool /* needCloning */ enter() {
+            CL_BREAK_IF(cnt_ < 1);
+            ++cnt_;
+            return false;
+        }
+
+        bool /* needCloning */ requireExclusivity() {
+            if (!this->isShared())
+                return false;
+
+            --cnt_;
+            return true;
+        }
+
+        bool /* wasLast */ leave() {
+            return !(--cnt_);
+        }
+
+}; // class RefCounter
+
+#else // SH_COPY_ON_WRITE
+
+// dummy implementation, no data inside
+class RefCounter {
+    public:
+        bool isShared() const {
+            return false;
+        }
+
+        bool /* needCloning */ enter() {
+            return true;
+        }
+
+        bool /* needCloning */ requireExclusivity() {
+            return false;
+        }
+
+        bool /* wasLast */ leave() {
+            return true;
+        }
+};
+#endif // SH_COPY_ON_WRITE
+
+class AbstractHeapEntity {
+    public:
         virtual AbstractHeapEntity* clone() const = 0;
 
     protected:
-        virtual ~AbstractHeapEntity();
+        virtual ~AbstractHeapEntity() { }
         friend class EntStore;
 
     private:
+        RefCounter refCnt_;
+
         // intentionally not implemented
         AbstractHeapEntity& operator=(const AbstractHeapEntity &);
 };
@@ -87,7 +159,7 @@ class EntStore {
         // intentionally not implemented
         EntStore& operator=(const EntStore &);
 
-        inline bool releaseEntCore(AbstractHeapEntity *ent);
+        inline void releaseEntCore(AbstractHeapEntity *ent);
 
         std::vector<AbstractHeapEntity *>       ents_;
 
@@ -96,35 +168,11 @@ class EntStore {
 #endif
 };
 
-// /////////////////////////////////////////////////////////////////////////////
-// implementation of AbstractHeapEntity
-AbstractHeapEntity::AbstractHeapEntity()
-#if SH_COPY_ON_WRITE
-    : refCnt_(1)
-#endif
-{
-}
-
-AbstractHeapEntity::AbstractHeapEntity(const AbstractHeapEntity &)
-#if SH_COPY_ON_WRITE
-    : refCnt_(1)
-#endif
-{
-}
-
-AbstractHeapEntity::~AbstractHeapEntity() {
-#if SH_COPY_ON_WRITE
-    CL_BREAK_IF(refCnt_);
-#endif
-}
-
 
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of EntStore
 template <typename T> T EntStore::assignId(AbstractHeapEntity *ptr) {
-#if SH_COPY_ON_WRITE
-    CL_BREAK_IF(1 != ptr->refCnt_);
-#endif
+    CL_BREAK_IF(ptr->refCnt_.isShared());
 
 #if SH_REUSE_FREE_IDS
     if (!this->freeIds_.empty()) {
@@ -140,15 +188,9 @@ template <typename T> T EntStore::assignId(AbstractHeapEntity *ptr) {
     return this->lastId<T>();
 }
 
-inline bool EntStore::releaseEntCore(AbstractHeapEntity *ent) {
-#if SH_COPY_ON_WRITE
-        AbstractHeapEntity::TRefCnt &cnt = ent->refCnt_;
-        if (--cnt)
-            // still in use, please wait!
-            return false;
-#endif
+inline void EntStore::releaseEntCore(AbstractHeapEntity *ent) {
+    if (/* wasLast */ ent->refCnt_.leave())
         delete ent;
-        return true;
 }
 
 template <typename T> void EntStore::releaseEnt(const T id) {
@@ -169,23 +211,14 @@ EntStore::EntStore(const EntStore &ref):
         if (!ent)
             continue;
 
-#if SH_COPY_ON_WRITE
-        // only increment the reference counter
-        AbstractHeapEntity::TRefCnt &cnt = ent->refCnt_;
-        CL_BREAK_IF(cnt < 1);
-        ++cnt;
-#else
-        // deep copy
-        ent = ent->clone();
-#endif
+        if (/* needCloning */ ent->refCnt_.enter())
+            ent = ent->clone();
     }
 }
 
 EntStore::~EntStore() {
     BOOST_FOREACH(AbstractHeapEntity *ent, ents_)
-#if SH_COPY_ON_WRITE
         if (ent)
-#endif
             this->releaseEntCore(ent);
 }
 
@@ -202,10 +235,6 @@ inline void EntStore::getEntRO(const TEnt **pEnt, const TId id) {
     const TEnt *ent = DCAST<const TEnt *>(ptr);
     CL_BREAK_IF(!ent);
 
-#if SH_COPY_ON_WRITE
-    CL_BREAK_IF(ent->refCnt_ < 1);
-#endif
-
     // all OK!
     *pEnt = ent;
 }
@@ -216,17 +245,10 @@ inline void EntStore::getEntRW(TEnt **pEnt, const TId id) {
     this->getEntRO(&entRO, id);
 
     TEnt *entRW = const_cast<TEnt *>(entRO);
-#if SH_COPY_ON_WRITE
-    AbstractHeapEntity::TRefCnt &cnt = entRW->refCnt_;
-    if (1 < cnt) {
-        --cnt;
+    if (/* needCloning */ entRW->refCnt_.requireExclusivity()) {
         entRW = DCAST<TEnt *>(entRO->clone());
         ents_[id] = entRW;
     }
-
-    CL_BREAK_IF(cnt < 1);
-    CL_BREAK_IF(1 != entRW->refCnt_);
-#endif
 
     *pEnt = entRW;
 }
