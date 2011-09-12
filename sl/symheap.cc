@@ -242,6 +242,21 @@ enum EBlockKind {
     BK_UNIFORM
 };
 
+class AbstractHeapEntity {
+    public:
+        virtual AbstractHeapEntity* clone() const = 0;
+
+    protected:
+        virtual ~AbstractHeapEntity() { }
+        friend class EntStore<AbstractHeapEntity>;
+
+    private:
+        RefCounter refCnt;
+
+        // intentionally not implemented
+        AbstractHeapEntity& operator=(const AbstractHeapEntity &);
+};
+
 struct HeapBlock: public AbstractHeapEntity {
     EBlockKind                  code;
     TValId                      root;
@@ -431,7 +446,7 @@ struct SymHeapCore::Private {
 
     CVarMap                         cVarMap;
     CustomValueMapper               cValueMap;
-    EntStore                        ents;
+    EntStore<AbstractHeapEntity>    ents;
     std::set<TValId>                liveRoots;
     FriendlyNeqDb                   neqDb;
 
