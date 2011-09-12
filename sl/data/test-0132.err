@@ -150,7 +150,6 @@ list.h:86:13: warning: memory leak detected while assigning a variable on stack
 list.h:97:12: note: from call of __list_del()
 test-0132.c:112:12: note: from call of list_del()
 test-0132.c:23:5: note: from call of main()
-test-0132.c:69:2: error: dereference of NULL value with offset 4B
 test-0132.c:98:2: error: dereference of NULL value with offset 4B
 list.h:86:13: warning: memory leak detected while assigning a variable on stack
 list.h:97:12: note: from call of __list_del()

@@ -164,16 +164,18 @@ template <typename T> void EntStore::releaseEnt(const T id) {
 EntStore::EntStore(const EntStore &ref):
     ents_(ref.ents_)
 {
-    // deep copy of all heap entities
+    // go through all heap entities
     BOOST_FOREACH(AbstractHeapEntity *&ent, ents_) {
         if (!ent)
             continue;
 
 #if SH_COPY_ON_WRITE
+        // only increment the reference counter
         AbstractHeapEntity::TRefCnt &cnt = ent->refCnt_;
         CL_BREAK_IF(cnt < 1);
         ++cnt;
 #else
+        // deep copy
         ent = ent->clone();
 #endif
     }

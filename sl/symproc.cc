@@ -1053,16 +1053,20 @@ bool SymExecCore::concretizeLoop(
         slave.setLocation(lw_);
 
         // TODO: implement full version of the alg (complexity m*n)
+#ifndef NDEBUG
         bool hitLocal = false;
+#endif
         BOOST_FOREACH(unsigned idx, derefs) {
             const struct cl_operand &op = insn.operands.at(idx);
 
             // we expect a pointer at this point
             const TValId val = valOfPtrAt(sh, slave.varAt(op));
             if (VT_ABSTRACT == sh.valTarget(val)) {
+#ifndef NDEBUG
                 CL_BREAK_IF(hitLocal);
-                hit = true;
                 hitLocal = true;
+#endif
+                hit = true;
                 concretizeObj(sh, val, todo);
             }
         }

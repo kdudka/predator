@@ -1,9 +1,9 @@
 test-0513.c:37:25: error: dereference of NULL value
 test-0513.c:40:21: error: dereference of NULL value with offset 4B
-test-0513.c:40:21: warning: memory leak detected while destroying a variable on stack
+test-0513.c:42:14: warning: memory leak detected while assigning a variable on stack
 test-0513.c:34:25: error: dereference of NULL value
 test-0513.c:40:21: error: dereference of NULL value with offset 4B
-test-0513.c:40:21: warning: memory leak detected while destroying a variable on stack
+test-0513.c:42:14: warning: memory leak detected while assigning a variable on stack
 test-0513.c:34:25: error: dereference of NULL value
 test-0513.c:35:24: warning: memory leak detected while assigning a heap object
 test-0513.c:55:15: error: dereference of NULL value with offset 4B

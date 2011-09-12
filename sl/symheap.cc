@@ -1941,7 +1941,8 @@ void SymHeapCore::objReleaseId(TObjId obj) {
 
 #if !SE_TRACK_UNINITIALIZED
     const TValId root = objData->root;
-    const RootValue *rootData = d->rootData(root);
+    const RootValue *rootData;
+    d->ents.getEntRO(&rootData, root);
     if (!hasKey(rootData->liveObjs, obj)) {
         CL_DEBUG("SymHeapCore::objReleaseId() destroys a dead object");
         d->objDestroy(obj, /* removeVal */ true, /* detach */ true);
