@@ -197,7 +197,7 @@
 /**
  * if 1, allow to assign unused heap IDs to newly created heap entities
  */
-#define SH_REUSE_FREE_IDS                   1
+#define SH_REUSE_FREE_IDS                   0
 
 /**
  * if 1, skip plotting of "neq" edges (makes the result more readable by humans

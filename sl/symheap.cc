@@ -474,8 +474,6 @@ struct SymHeapCore::Private {
     void reinterpretObjData(TObjId old, TObjId obj, TValSet *killedPtrs = 0);
     void setValueOf(TObjId of, TValId val, TValSet *killedPtrs = 0);
 
-    bool gridLookup(TObjByType **pRow, const TValId);
-
     void neqOpWrap(SymHeap::ENeqOp, TValId, TValId);
 
     // runs only in debug build
@@ -1849,29 +1847,6 @@ TValId SymHeapCore::placedAt(TObjId obj) {
     return this->valByOffset(root, objData->off);
 }
 
-bool SymHeapCore::Private::gridLookup(TObjByType **pRow, const TValId val) {
-    if (val <= 0)
-        return false;
-
-    const BaseValue *valData;
-    this->ents.getEntRO(&valData, val);
-
-    const EValueTarget code = valData->code;
-    if (!isPossibleToDeref(code))
-        return false;
-
-    // jump to root
-    const TValId valRoot = this->valRoot(val, valData);
-    RootValue *rootData;
-    this->ents.getEntRW(&rootData, valRoot);
-
-    // grid lookup
-    TGrid &grid = rootData->grid;
-    const TOffset off = valData->offRoot;
-    *pRow = &grid[off];
-    return true;
-}
-
 TObjId SymHeapCore::ptrAt(TValId at, bool *pExcl) {
     if (at <= 0)
         return OBJ_INVALID;
@@ -1931,30 +1906,90 @@ TObjId SymHeapCore::ptrAt(TValId at, bool *pExcl) {
     return d->objCreate(root, off, clt, /* hasExtRef */ true);
 }
 
+// TODO: simplify the code
 TObjId SymHeapCore::objAt(TValId at, TObjType clt, bool *pExcl) {
-    TObjByType *row;
-    if (!d->gridLookup(&row, at))
+    if (at <= 0)
         return OBJ_INVALID;
 
-    TObjByType::const_iterator it = row->find(clt);
-    if (row->end() != it)
-        // exact match
-        return d->objExport(it->second, pExcl);
+    const BaseValue *valData;
+    d->ents.getEntRO(&valData, at);
 
-    // try semantic match
-    BOOST_FOREACH(const TObjByType::const_reference item, *row) {
-        const TObjType cltItem = item.first;
-        CL_BREAK_IF(!cltItem);
-        if (*cltItem == *clt)
-            return d->objExport(item.second, pExcl);
+    const EValueTarget code = valData->code;
+    if (!isPossibleToDeref(code))
+        return OBJ_INVALID;
+
+    CL_BREAK_IF(!clt || !clt->size);
+    const TOffset size = clt->size;
+
+    // jump to root
+    const TValId valRoot = d->valRoot(at, valData);
+    const RootValue *rootData;
+    d->ents.getEntRO(&rootData, valRoot);
+
+    // arena lookup
+    TObjSet candidates;
+    const TArena &arena = rootData->arena;
+    const TOffset off = valData->offRoot;
+    const TMemChunk chunk(off, off + size);
+    arenaLookForExactMatch(&candidates, arena, chunk);
+
+    TObjId bestMatch = OBJ_INVALID;
+    bool liveObjFound = false;
+    bool cltExactMatch = false;
+    bool cltClassMatch = false;
+
+    // go through the objects in the given interval
+    BOOST_FOREACH(const TObjId obj, candidates) {
+        const HeapBlock *blData;
+        d->ents.getEntRO(&blData, obj);
+        const EBlockKind code = blData->code;
+        switch (code) {
+            case BK_OBJECT:
+            case BK_COMPOSITE:
+                break;
+
+            default:
+                continue;
+        }
+
+        const bool isLive = hasKey(rootData->liveObjs, obj);
+        if (liveObjFound && !isLive)
+            continue;
+
+        const HeapObject *objData = DCAST<const HeapObject *>(blData);
+        const TObjType cltNow = objData->clt;
+        if (cltNow == clt) {
+            // exact match
+            if (isLive)
+                return d->objExport(obj, pExcl);
+
+            CL_BREAK_IF(cltExactMatch);
+            cltExactMatch = true;
+            goto update_best;
+        }
+
+        if (cltExactMatch)
+            continue;
+
+        if (*cltNow == *clt) {
+            cltClassMatch = true;
+            goto update_best;
+        }
+
+        if (cltClassMatch)
+            continue;
+
+        if (!isDataPtr(cltNow) || !isDataPtr(clt))
+            continue;
+        // at least both are _data_ pointers at this point, update best match
+
+update_best:
+        liveObjFound = isLive;
+        bestMatch = obj;
     }
 
-    if (isDataPtr(clt)) {
-        // seek a _data_ pointer at the given row
-        BOOST_FOREACH(const TObjByType::const_reference item, *row)
-            if (isDataPtr(/* clt */ item.first))
-                return d->objExport(item.second, pExcl);
-    }
+    if (OBJ_INVALID != bestMatch)
+        return d->objExport(bestMatch, pExcl);
 
     if (this->valSizeOfTarget(at) < clt->size)
         // out of bounds
@@ -1964,12 +1999,8 @@ TObjId SymHeapCore::objAt(TValId at, TObjType clt, bool *pExcl) {
         // a newly created object cannot be already externally referenced
         *pExcl = true;
 
-    const BaseValue *valData;
-    d->ents.getEntRO(&valData, at);
-
     // create the object
     const TValId root = d->valRoot(at, valData);
-    const TOffset off = valData->offRoot;
     return d->objCreate(root, off, clt, /* hasExtRef */ true);
 }
 
