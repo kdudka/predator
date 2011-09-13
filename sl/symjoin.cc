@@ -974,8 +974,8 @@ void joinUniBlocksCore(
         const TValId            root1,
         const TValId            root2)
 {
-    const SymHeap sh1 = ctx.sh1;
-    const SymHeap sh2 = ctx.sh2;
+    const SymHeap &sh1 = ctx.sh1;
+    const SymHeap &sh2 = ctx.sh2;
 
     TUniBlockMap bMap1, bMap2;
     sh1.gatherUniformBlocks(bMap1, root1);
@@ -1059,6 +1059,7 @@ bool joinUniBlocks(
     else
         joinUniBlocksCore(&bMapDst, &hasExtra1, &hasExtra2, ctx, root1, root2);
 
+    // FIXME: updating the status now may trigger an unnecessary JS_THREE_WAY
     if (hasExtra1 && !updateJoinStatus(ctx, JS_USE_SH2))
         return false;
     if (hasExtra2 && !updateJoinStatus(ctx, JS_USE_SH1))
@@ -1385,6 +1386,12 @@ bool joinSegmentWithAny(
     }
 
     SJ_DEBUG(">>> joinSegmentWithAny" << SJ_VALP(root1, root2));
+    if (root1 <= 0 || root2 <= 0) {
+        CL_BREAK_IF(firstTryReadOnly);
+        *pResult = false;
+        return true;
+    }
+
     const bool isDls1 = (OK_DLS == ctx.sh1.valTargetKind(root1));
     const bool isDls2 = (OK_DLS == ctx.sh2.valTargetKind(root2));
 
