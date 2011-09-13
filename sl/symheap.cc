@@ -82,6 +82,9 @@ class FriendlyNeqDb: public NeqDb {
 // /////////////////////////////////////////////////////////////////////////////
 // CVar lookup container
 class CVarMap {
+    public:
+        RefCounter refCnt;
+
     private:
         typedef std::map<CVar, TValId>              TCont;
         TCont                                       cont_;
@@ -374,16 +377,14 @@ struct CustomValueMapper {
 };
 
 struct SymHeapCore::Private {
-    // allocate a root-value for VAL_NULL
     Private();
-
-    // clone heap entities, they are now allocated separately
     Private(const Private &);
+    ~Private();
 
-    CVarMap                         cVarMap;
-    CustomValueMapper               cValueMap;
     EntStore<AbstractHeapEntity>    ents;
     std::set<TValId>                liveRoots;
+    CVarMap                        *cVarMap;
+    CustomValueMapper               cValueMap;
     FriendlyNeqDb                   neqDb;
 
     inline TObjId assignId(HeapBlock *);
@@ -953,18 +954,25 @@ void SymHeapCore::Private::transferBlock(
 }
 
 
-SymHeapCore::Private::Private() {
+SymHeapCore::Private::Private():
+    cVarMap     (new CVarMap)
+{
     // allocate a root-value for VAL_NULL
     this->assignId(new RootValue(VT_INVALID, VO_INVALID));
 }
 
 SymHeapCore::Private::Private(const SymHeapCore::Private &ref):
-    cVarMap     (ref.cVarMap),
-    cValueMap   (ref.cValueMap),
     ents        (ref.ents),
     liveRoots   (ref.liveRoots),
+    cVarMap     (ref.cVarMap),
+    cValueMap   (ref.cValueMap),
     neqDb       (ref.neqDb)
 {
+    RefCntLib<RCO_NON_VIRT>::enter(this->cVarMap);
+}
+
+SymHeapCore::Private::~Private() {
+    RefCntLib<RCO_NON_VIRT>::leave(this->cVarMap);
 }
 
 TValId SymHeapCore::Private::objInit(TObjId obj) {
@@ -1963,7 +1971,7 @@ CVar SymHeapCore::cVarByRoot(TValId valRoot) const {
 }
 
 TValId SymHeapCore::addrOfVar(CVar cv) {
-    TValId addr = d->cVarMap.find(cv);
+    TValId addr = d->cVarMap->find(cv);
     if (0 < addr)
         return addr;
 
@@ -2014,7 +2022,8 @@ TValId SymHeapCore::addrOfVar(CVar cv) {
 #endif
 
     // store the address for next wheel
-    d->cVarMap.insert(cv, addr);
+    RefCntLib<RCO_NON_VIRT>::requireExclusivity(d->cVarMap);
+    d->cVarMap->insert(cv, addr);
     return addr;
 }
 
@@ -2133,7 +2142,8 @@ void SymHeapCore::Private::destroyRoot(TValId root) {
     const CVar cv = rootData->cVar;
     if (cv.uid != /* heap object */ -1) {
         // remove the corresponding program variable
-        this->cVarMap.remove(cv);
+        RefCntLib<RCO_NON_VIRT>::requireExclusivity(this->cVarMap);
+        this->cVarMap->remove(cv);
         code = VT_LOST;
     }
 
