@@ -535,7 +535,7 @@ void SymHeapCore::Private::splitBlockByObject(
     const TValId root = blData->root;
     CL_BREAK_IF(root != hbData->root);
 
-    // check up to now arean consistency
+    // check up to now arena consistency
     RootValue *rootData;
     this->ents.getEntRW(&rootData, root);
     CL_BREAK_IF(!this->chkArenaConsistency(rootData));
@@ -1024,6 +1024,12 @@ TValId SymHeapCore::Private::objInit(TObjId obj) {
         rootData->liveObjs[obj] = LO_DATA;
 #endif
 
+    // mark the owning root entity as live (if not already)
+    if (!hasKey(this->liveRoots, root)) {
+        RefCntLib<RCO_NON_VIRT>::requireExclusivity(this->liveRoots);
+        this->liveRoots->insert(root);
+    }
+
     CL_BREAK_IF(!this->chkArenaConsistency(rootData));
 
     // store backward reference
@@ -1392,6 +1398,12 @@ void SymHeapCore::objSetValue(TObjId obj, TValId val, TValSet *killedPtrs) {
     rootData->liveObjs[obj] = isDataPtr(clt)
         ? LO_DATA_PTR
         : LO_DATA;
+
+    // mark the owning root entity as live (if not already)
+    if (!hasKey(d->liveRoots, root)) {
+        RefCntLib<RCO_NON_VIRT>::requireExclusivity(d->liveRoots);
+        d->liveRoots->insert(root);
+    }
 
     // now set the value
     d->setValueOf(obj, val, killedPtrs);
@@ -2124,10 +2136,6 @@ void SymHeapCore::valSetLastKnownTypeOfTarget(TValId root, TObjType clt) {
 
     // convert a type-free object into a type-aware object
     rootData->lastKnownClt = clt;
-
-    // FIXME: I really do not think this is the right place to mark root as live
-    RefCntLib<RCO_NON_VIRT>::requireExclusivity(d->liveRoots);
-    d->liveRoots->insert(root);
 }
 
 TObjType SymHeapCore::valLastKnownTypeOfTarget(TValId root) const {
