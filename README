@@ -43,7 +43,7 @@ Building from sources against a local build of GCC (recommended for end users)
      - though minimal required version of CMake is 2.6, known to work is 2.8+,
        please report any issues with other CMake versions
 
-   * Boost libraries 1.46+
+   * Boost libraries 1.37+
      - available at http://www.boost.org/
      - package is usually called 'boost'
      - on binary distros you may need also the 'boost-devel' sub-package

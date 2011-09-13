@@ -25,6 +25,7 @@
 #include <cl/clutil.hh>
 #include <cl/storage.hh>
 
+#include "intarena.hh"
 #include "symabstract.hh"
 #include "syments.hh"
 #include "symneq.hh"
@@ -39,12 +40,6 @@
 
 #include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
-
-#ifdef USE_BOOST_ICL
-#   include <boost/icl/interval_map.hpp>
-#else
-#   include "intarena.hh"
-#endif
 
 template <class TCont> typename TCont::value_type::second_type&
 assignInvalidIfNotFound(
@@ -140,13 +135,7 @@ class CVarMap {
 // implementation of SymHeapCore
 typedef std::set<TObjId>                                TObjSet;
 typedef std::map<TOffset, TValId>                       TOffMap;
-
-#ifdef USE_BOOST_ICL
-typedef boost::icl::interval_map<unsigned, TObjSet>     TArena;
-#else
-typedef IntervalArena<int, TObjId>                      TArena;
-#endif
-
+typedef IntervalArena<TOffset, TObjId>                  TArena;
 typedef TArena::key_type                                TMemChunk;
 typedef TArena::value_type                              TMemItem;
 
@@ -156,13 +145,7 @@ inline TMemItem createArenaItem(
         const TObjId                obj)
 {
     const TMemChunk chunk(off, off + size);
-#ifdef USE_BOOST_ICL
-    TObjSet singleObj;
-    singleObj.insert(obj);
-    return TMemItem(chunk, singleObj);
-#else
     return TMemItem(chunk, obj);
-#endif
 }
 
 inline bool arenaLookup(
@@ -171,22 +154,7 @@ inline bool arenaLookup(
         const TMemChunk             &chunk,
         const TObjId                obj)
 {
-#if USE_BOOST_ICL
-    TArena::const_iterator it = arena.find(chunk);
-    if (arena.end() == it)
-        // not found
-        return false;
-
-    // FIXME: Doing this is ultimately stupid.  Are we using icl in a wrong way?
-    TArena tmp(arena);
-    tmp &= chunk;
-    for (it = tmp.begin(); tmp.end() != it; ++it) {
-        const TObjSet &objs = it->second;
-        std::copy(objs.begin(), objs.end(), std::inserter(*dst, dst->begin()));
-    }
-#else
     arena.intersects(*dst, chunk);
-#endif
 
     if (OBJ_INVALID != obj)
         // remove the reference object itself
@@ -201,28 +169,12 @@ inline void arenaLookForExactMatch(
         const TArena                &arena,
         const TMemChunk             &chunk)
 {
-#if USE_BOOST_ICL
-    // FIXME: Doing this is ultimately stupid.  Are we using icl in a wrong way?
-    TArena tmp(arena);
-    tmp &= chunk;
-    BOOST_FOREACH(TArena::const_reference ref, tmp) {
-        const TMemChunk now(ref.first);
-        if (now != chunk)
-            continue;
-
-        const TObjSet &objs = ref.second;
-        std::copy(objs.begin(), objs.end(), std::inserter(*dst, dst->begin()));
-    }
-#else
     arena.exactMatch(*dst, chunk);
-#endif
 }
 
+// create a right-open interval
 inline TMemChunk createChunk(const TOffset off, const TObjType clt) {
     CL_BREAK_IF(!clt || clt->code == CL_TYPE_VOID);
-
-    // I believe a right-open interval is going to be used by default, see
-    // boost_1_46_1/libs/icl/doc/html/boost_icl/interface.html for details
     return TMemChunk(off, off + clt->size);
 }
 
