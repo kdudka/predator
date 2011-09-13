@@ -382,13 +382,18 @@ class CustomValueMapper {
         }
 };
 
+// FIXME: std::set is not a good candidate for base class
+struct TValSetWrapper: public TValSet {
+    RefCounter refCnt;
+};
+
 struct SymHeapCore::Private {
     Private();
     Private(const Private &);
     ~Private();
 
     EntStore<AbstractHeapEntity>    ents;
-    std::set<TValId>                liveRoots;
+    TValSetWrapper                 *liveRoots;
     CVarMap                        *cVarMap;
     CustomValueMapper              *cValueMap;
     FriendlyNeqDb                  *neqDb;
@@ -961,6 +966,7 @@ void SymHeapCore::Private::transferBlock(
 
 
 SymHeapCore::Private::Private():
+    liveRoots   (new TValSetWrapper),
     cVarMap     (new CVarMap),
     cValueMap   (new CustomValueMapper),
     neqDb       (new FriendlyNeqDb)
@@ -976,12 +982,14 @@ SymHeapCore::Private::Private(const SymHeapCore::Private &ref):
     cValueMap   (ref.cValueMap),
     neqDb       (ref.neqDb)
 {
+    RefCntLib<RCO_NON_VIRT>::enter(this->liveRoots);
     RefCntLib<RCO_NON_VIRT>::enter(this->cVarMap);
     RefCntLib<RCO_NON_VIRT>::enter(this->cValueMap);
     RefCntLib<RCO_NON_VIRT>::enter(this->neqDb);
 }
 
 SymHeapCore::Private::~Private() {
+    RefCntLib<RCO_NON_VIRT>::leave(this->liveRoots);
     RefCntLib<RCO_NON_VIRT>::leave(this->cVarMap);
     RefCntLib<RCO_NON_VIRT>::leave(this->cValueMap);
     RefCntLib<RCO_NON_VIRT>::leave(this->neqDb);
@@ -1229,7 +1237,8 @@ TValId SymHeapCore::Private::dupRoot(TValId rootAt) {
     rootDataDst->cbSize             = rootDataSrc->cbSize;
     rootDataDst->lastKnownClt       = rootDataSrc->lastKnownClt;
 
-    this->liveRoots.insert(imageAt);
+    RefCntLib<RCO_NON_VIRT>::requireExclusivity(this->liveRoots);
+    this->liveRoots->insert(imageAt);
 
     BOOST_FOREACH(TLiveObjs::const_reference item, rootDataSrc->liveObjs)
         this->copySingleLiveBlock(imageAt, rootDataDst,
@@ -2006,7 +2015,8 @@ TValId SymHeapCore::addrOfVar(CVar cv) {
     // assign an address
     const EValueTarget code = isOnStack(var) ? VT_ON_STACK : VT_STATIC;
     addr = d->valCreate(code, VO_ASSIGNED);
-    d->liveRoots.insert(addr);
+    RefCntLib<RCO_NON_VIRT>::requireExclusivity(d->liveRoots);
+    d->liveRoots->insert(addr);
 
     RootValue *rootData;
     d->ents.getEntRW(&rootData, addr);
@@ -2052,7 +2062,8 @@ void SymHeapCore::gatherRootObjects(TValList &dst, bool (*filter)(EValueTarget))
     if (!filter)
         filter = dummyFilter;
 
-    BOOST_FOREACH(const TValId at, d->liveRoots)
+    const TValSetWrapper &roots = *d->liveRoots;
+    BOOST_FOREACH(const TValId at, roots)
         if (filter(this->valTarget(at)))
             dst.push_back(at);
 }
@@ -2139,7 +2150,10 @@ void SymHeapCore::valSetLastKnownTypeOfTarget(TValId root, TObjType clt) {
 
     // convert a type-free object into a type-aware object
     rootData->lastKnownClt = clt;
-    d->liveRoots.insert(root);
+
+    // FIXME: I really do not think this is the right place to mark root as live
+    RefCntLib<RCO_NON_VIRT>::requireExclusivity(d->liveRoots);
+    d->liveRoots->insert(root);
 }
 
 TObjType SymHeapCore::valLastKnownTypeOfTarget(TValId root) const {
@@ -2174,7 +2188,8 @@ void SymHeapCore::Private::destroyRoot(TValId root) {
     }
 
     // release the root
-    this->liveRoots.erase(root);
+    RefCntLib<RCO_NON_VIRT>::requireExclusivity(this->liveRoots);
+    this->liveRoots->erase(root);
 
     // destroy all objects inside
     BOOST_FOREACH(TLiveObjs::const_reference item, rootData->liveObjs) {
