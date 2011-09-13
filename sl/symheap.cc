@@ -346,7 +346,7 @@ struct RootValue: public BaseValue {
     }
 };
 
-struct CustomValueMapper {
+class CustomValueMapper {
     private:
         typedef std::map<int, TValId>                           TCustomByInt;
         typedef std::map<long, TValId>                          TCustomByLong;
@@ -355,6 +355,9 @@ struct CustomValueMapper {
         TCustomByInt        fncMap;
         TCustomByLong       numMap;
         TCustomByString     strMap;
+
+    public:
+        RefCounter          refCnt;
 
     public:
         TValId& lookup(const CustomValue &item) {
@@ -384,7 +387,7 @@ struct SymHeapCore::Private {
     EntStore<AbstractHeapEntity>    ents;
     std::set<TValId>                liveRoots;
     CVarMap                        *cVarMap;
-    CustomValueMapper               cValueMap;
+    CustomValueMapper              *cValueMap;
     FriendlyNeqDb                   neqDb;
 
     inline TObjId assignId(HeapBlock *);
@@ -955,7 +958,8 @@ void SymHeapCore::Private::transferBlock(
 
 
 SymHeapCore::Private::Private():
-    cVarMap     (new CVarMap)
+    cVarMap     (new CVarMap),
+    cValueMap   (new CustomValueMapper)
 {
     // allocate a root-value for VAL_NULL
     this->assignId(new RootValue(VT_INVALID, VO_INVALID));
@@ -969,10 +973,12 @@ SymHeapCore::Private::Private(const SymHeapCore::Private &ref):
     neqDb       (ref.neqDb)
 {
     RefCntLib<RCO_NON_VIRT>::enter(this->cVarMap);
+    RefCntLib<RCO_NON_VIRT>::enter(this->cValueMap);
 }
 
 SymHeapCore::Private::~Private() {
     RefCntLib<RCO_NON_VIRT>::leave(this->cVarMap);
+    RefCntLib<RCO_NON_VIRT>::leave(this->cValueMap);
 }
 
 TValId SymHeapCore::Private::objInit(TObjId obj) {
@@ -2203,7 +2209,8 @@ TValId SymHeapCore::valWrapCustom(const CustomValue &cVal) {
         }
     }
 
-    TValId &val = d->cValueMap.lookup(cVal);
+    RefCntLib<RCO_NON_VIRT>::requireExclusivity(d->cValueMap);
+    TValId &val = d->cValueMap->lookup(cVal);
     if (VAL_INVALID != val)
         // custom value already wrapped, we have to reuse it
         return val;
@@ -2222,7 +2229,7 @@ const CustomValue& SymHeapCore::valUnwrapCustom(TValId val) const
     d->ents.getEntRO(&valData, val);
 
     // check the consistency of backward mapping
-    CL_BREAK_IF(val != d->cValueMap.lookup(valData->customData));
+    CL_BREAK_IF(val != d->cValueMap->lookup(valData->customData));
 
     return valData->customData;
 }
