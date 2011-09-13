@@ -201,6 +201,8 @@ class AbstractHeapEntity {
     protected:
         virtual ~AbstractHeapEntity() { }
         friend class EntStore<AbstractHeapEntity>;
+        friend class RefCntLibBase;
+        friend class RefCntLib<RCO_VIRTUAL>;
 
     private:
         RefCounter refCnt;
@@ -2318,10 +2320,6 @@ struct AbstractRoot {
 struct SymHeap::Private {
     RefCounter                      refCnt;
     EntStore<AbstractRoot>          absRoots;
-
-    Private* clone() const {
-        return new Private(*this);
-    }
 };
 
 SymHeap::SymHeap(TStorRef stor):
@@ -2334,24 +2332,20 @@ SymHeap::SymHeap(const SymHeap &ref):
     SymHeapCore(ref),
     d(ref.d)
 {
-    if (/* needCloning */ d->refCnt.enter())
-        d = d->clone();
+    RefCntLib<RCO_NON_VIRT>::enter(d);
 }
 
 SymHeap::~SymHeap() {
-    if (/* wasLast */ d->refCnt.leave())
-        delete d;
+    RefCntLib<RCO_NON_VIRT>::leave(d);
 }
 
 SymHeap& SymHeap::operator=(const SymHeap &ref) {
     SymHeapCore::operator=(ref);
 
-    if (/* wasLast */ d->refCnt.leave())
-        delete d;
+    RefCntLib<RCO_NON_VIRT>::leave(d);
 
     d = ref.d;
-    if (/* needCloning */ d->refCnt.enter())
-        d = d->clone();
+    RefCntLib<RCO_NON_VIRT>::enter(d);
 
     return *this;
 }
@@ -2374,8 +2368,7 @@ TValId SymHeap::valClone(TValId val) {
     if (!d->absRoots.isValidEnt(valRoot))
         return dup;
 
-    if (/* needCloning */ d->refCnt.requireExclusivity())
-        d = d->clone();
+    RefCntLib<RCO_NON_VIRT>::requireExclusivity(d);
 
     // clone the data
     const AbstractRoot *tplData = d->absRoots.getEntRO(valRoot);
@@ -2420,8 +2413,7 @@ void SymHeap::valTargetSetAbstract(
     CL_BREAK_IF(this->valOffset(root));
     CL_BREAK_IF(OK_CONCRETE == kind);
 
-    if (/* needCloning */ d->refCnt.requireExclusivity())
-        d = d->clone();
+    RefCntLib<RCO_NON_VIRT>::requireExclusivity(d);
 
     // clone the data
     if (d->absRoots.isValidEnt(root)) {
@@ -2450,8 +2442,7 @@ void SymHeap::valTargetSetConcrete(TValId root) {
     CL_BREAK_IF(this->valOffset(root));
     CL_BREAK_IF(!d->absRoots.isValidEnt(root));
 
-    if (/* needCloning */ d->refCnt.requireExclusivity())
-        d = d->clone();
+    RefCntLib<RCO_NON_VIRT>::requireExclusivity(d);
 
     // unregister an abstract object
     // FIXME: suboptimal code of EntStore::releaseEnt() with SH_REUSE_FREE_IDS
@@ -2643,8 +2634,7 @@ void SymHeap::valDestroyTarget(TValId root) {
 
     CL_DEBUG("SymHeap::valDestroyTarget() destroys an abstract object");
 
-    if (/* needCloning */ d->refCnt.requireExclusivity())
-        d = d->clone();
+    RefCntLib<RCO_NON_VIRT>::requireExclusivity(d);
 
     // unregister an abstract object
     // FIXME: suboptimal code of EntStore::releaseEnt() with SH_REUSE_FREE_IDS
@@ -2676,8 +2666,7 @@ void SymHeap::segSetMinLength(TValId seg, unsigned len) {
     CL_BREAK_IF(this->valOffset(seg));
     CL_BREAK_IF(!d->absRoots.isValidEnt(seg));
 
-    if (/* needCloning */ d->refCnt.requireExclusivity())
-        d = d->clone();
+    RefCntLib<RCO_NON_VIRT>::requireExclusivity(d);
 
     AbstractRoot *aData = d->absRoots.getEntRW(seg);
 

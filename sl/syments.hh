@@ -117,6 +117,55 @@ class RefCounter {
 };
 #endif // SH_COPY_ON_WRITE
 
+
+struct RefCntLibBase {
+    template <class T> static void leave(T *&ptr) {
+        if (/* wasLast */ ptr->refCnt.leave())
+            delete ptr;
+
+        // mark the pointer accordingly (we have left, right?)
+        ptr = 0;
+    }
+
+    protected:
+        // library classes only, no instances can be created
+        RefCntLibBase();
+};
+
+enum ERefCntObjKind {
+    RCO_VIRTUAL,
+    RCO_NON_VIRT
+};
+
+template <enum ERefCntObjKind TKind> struct RefCntLib;
+
+template <>
+struct RefCntLib<RCO_VIRTUAL>: public RefCntLibBase {
+    template <class T> static void enter(T *&ptr) {
+        if (/* needCloning */ ptr->refCnt.enter())
+            ptr = ptr->clone();
+    }
+
+    template <class T> static void requireExclusivity(T *&ptr) {
+        if (/* needCloning */ ptr->refCnt.requireExclusivity())
+            ptr = ptr->clone();
+    }
+};
+
+template <>
+struct RefCntLib<RCO_NON_VIRT>: public RefCntLibBase {
+    template <class T> static void enter(T *&ptr) {
+        if (/* needCloning */ ptr->refCnt.enter())
+            ptr = new T(*ptr);
+    }
+
+    template <class T> static void requireExclusivity(T *&ptr) {
+        if (/* needCloning */ ptr->refCnt.requireExclusivity())
+            ptr = new T(*ptr);
+    }
+};
+
+
 template <class TBaseEnt>
 class EntStore {
     public:
@@ -149,8 +198,6 @@ class EntStore {
     private:
         // intentionally not implemented
         EntStore& operator=(const EntStore &);
-
-        inline void releaseEntCore(TBaseEnt *ent);
 
         std::vector<TBaseEnt *>                 ents_;
 
@@ -186,8 +233,8 @@ template <typename TId>
 void EntStore<TBaseEnt>::assignId(const TId id, TBaseEnt *ptr) {
     CL_BREAK_IF(ptr->refCnt.isShared());
 
+    // make sure we have enough space allocated
     if (this->lastId<TId>() < id)
-        // make sure we have enough space allocated
         ents_.resize(id + 1, 0);
 
     TBaseEnt *&ref = ents_[id];
@@ -199,21 +246,12 @@ void EntStore<TBaseEnt>::assignId(const TId id, TBaseEnt *ptr) {
 }
 
 template <class TBaseEnt>
-inline void EntStore<TBaseEnt>::releaseEntCore(TBaseEnt *ent) {
-    if (/* wasLast */ ent->refCnt.leave())
-        delete ent;
-}
-
-template <class TBaseEnt>
 template <typename TId>
 void EntStore<TBaseEnt>::releaseEnt(const TId id) {
 #if SH_REUSE_FREE_IDS
     freeIds_.push(id);
 #endif
-    TBaseEnt *&e = ents_[id];
-    CL_BREAK_IF(!e);
-    this->releaseEntCore(e);
-    e = 0;
+    RefCntLib<RCO_VIRTUAL>::leave(ents_[id]);
 }
 
 template <class TBaseEnt>
@@ -234,8 +272,7 @@ EntStore<TBaseEnt>::EntStore(const EntStore &ref):
         if (!ent)
             continue;
 
-        if (/* needCloning */ ent->refCnt.enter())
-            ent = ent->clone();
+        RefCntLib<RCO_VIRTUAL>::enter(ent);
     }
 }
 
@@ -243,7 +280,7 @@ template <class TBaseEnt>
 EntStore<TBaseEnt>::~EntStore() {
     BOOST_FOREACH(TBaseEnt *ent, ents_)
         if (ent)
-            this->releaseEntCore(ent);
+            RefCntLib<RCO_VIRTUAL>::leave(ent);
 }
 
 template <class TBaseEnt>
@@ -263,14 +300,11 @@ template <class TBaseEnt>
 template <typename TId>
 inline TBaseEnt* EntStore<TBaseEnt>::getEntRW(const TId id)
 {
-    const TBaseEnt *entRO = this->getEntRO(id);
-
-    TBaseEnt *entRW = const_cast<TBaseEnt *>(entRO);
-    if (/* needCloning */ entRW->refCnt.requireExclusivity()) {
-        entRW = entRO->clone();
-        ents_[id] = entRW;
-    }
-
+#ifndef NDEBUG
+    this->getEntRO(id);
+#endif
+    TBaseEnt *&entRW = ents_[id];
+    RefCntLib<RCO_VIRTUAL>::requireExclusivity(entRW);
     return entRW;
 }
 
