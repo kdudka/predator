@@ -493,7 +493,7 @@ class SymHeapCore {
          * concretization of the owning object.  By default, all nested objects
          * are shared.
          */
-        void valTargetSetProto(TValId, bool isProto);
+        void valTargetSetProto(TValId root, bool isProto);
 
     protected:
         TStorRef stor_;

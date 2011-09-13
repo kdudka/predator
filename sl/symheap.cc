@@ -274,6 +274,7 @@ struct HeapObject: public HeapBlock {
 struct BaseValue: public AbstractHeapEntity {
     EValueTarget                    code;
     EValueOrigin                    origin;
+    TValId                          valRoot;
     TOffset                         offRoot;
     TObjSet                         usedBy;
 
@@ -312,25 +313,6 @@ struct InternalCustomValue: public BaseValue {
 
     virtual BaseValue* clone() const {
         return new InternalCustomValue(*this);
-    }
-};
-
-struct OffValue: public BaseValue {
-    TValId                          root;
-
-    OffValue(
-            EValueTarget            code_,
-            EValueOrigin            origin_,
-            TValId                  root_,
-            TOffset                 offRoot_):
-        BaseValue(code_, origin_),
-        root(root_)
-    {
-        offRoot = offRoot_;
-    }
-
-    virtual BaseValue* clone() const {
-        return new OffValue(*this);
     }
 };
 
@@ -402,16 +384,8 @@ struct SymHeapCore::Private {
     std::set<TValId>                liveRoots;
     FriendlyNeqDb                   neqDb;
 
-    TValId assignId(BaseValue *e) {
-        return this->ents.assignId<TValId>(e);
-    }
-
-    TObjId assignId(HeapBlock *e) {
-        return this->ents.assignId<TObjId>(e);
-    }
-
-    inline TValId valRoot(const TValId, const AbstractHeapEntity *);
-    inline TValId valRoot(const TValId);
+    inline TObjId assignId(HeapBlock *);
+    inline TValId assignId(BaseValue *);
 
     TValId valCreate(EValueTarget code, EValueOrigin origin);
     TValId valDup(TValId);
@@ -467,23 +441,14 @@ struct SymHeapCore::Private {
         Private& operator=(const Private &);
 };
 
-inline TValId SymHeapCore::Private::valRoot(
-        const TValId                val,
-        const AbstractHeapEntity   *ent)
-{
-    const BaseValue *valData = DCAST<const BaseValue *>(ent);
-    if (!valData->offRoot)
-        return val;
-
-    const TValId valRoot = DCAST<const OffValue *>(valData)->root;
-    CL_BREAK_IF(this->ents.outOfRange(valRoot));
-    return valRoot;
+inline TValId SymHeapCore::Private::assignId(BaseValue *valData) {
+    const TValId val = this->ents.assignId<TValId>(valData);
+    valData->valRoot = val;
+    return val;
 }
 
-inline TValId SymHeapCore::Private::valRoot(const TValId val) {
-    const BaseValue *valData;
-    this->ents.getEntRO(&valData, val);
-    return this->valRoot(val, valData);
+inline TObjId SymHeapCore::Private::assignId(HeapBlock *hbData) {
+    return this->ents.assignId<TObjId>(hbData);
 }
 
 bool /* wasPtr */ SymHeapCore::Private::releaseValueOf(TObjId obj, TValId val) {
@@ -496,7 +461,7 @@ bool /* wasPtr */ SymHeapCore::Private::releaseValueOf(TObjId obj, TValId val) {
     if (1 != valData->usedBy.erase(obj))
         CL_BREAK_IF("SymHeapCore::Private::releaseValueOf(): offset detected");
 
-    const TValId root = this->valRoot(val, valData);
+    const TValId root = valData->valRoot;
     this->ents.getEntRW(&valData, root);
     if (!isPossibleToDeref(valData->code))
         return /* wasPtr */ false;
@@ -520,7 +485,7 @@ void SymHeapCore::Private::registerValueOf(TObjId obj, TValId val) {
         return;
 
     // update usedByGl
-    const TValId root = this->valRoot(val, valData);
+    const TValId root = valData->valRoot;
     RootValue *rootData;
     this->ents.getEntRW(&rootData, root);
     rootData->usedByGl.insert(obj);
@@ -1149,7 +1114,7 @@ TValId SymHeapCore::valClone(TValId val) {
         return val;
     }
 
-    const TValId root = d->valRoot(val, valData);
+    const TValId root = valData->valRoot;
     if (VAL_NULL == root) {
         CL_BREAK_IF("VAL_NULL is not supposed to be cloned");
         return val;
@@ -1430,7 +1395,7 @@ TObjId SymHeapCore::Private::writeUniformBlock(
     const BaseValue *valData;
     this->ents.getEntRO(&valData, addr);
 
-    const TValId root = this->valRoot(addr, valData);
+    const TValId root = valData->valRoot;
     const TOffset beg = valData->offRoot;
     const TOffset end = beg + size;
 
@@ -1495,8 +1460,8 @@ void SymHeapCore::copyBlockOfRawMemory(
 
     const TOffset dstOff = dstData->offRoot;
     const TOffset srcOff = srcData->offRoot;
-    const TValId dstRoot = d->valRoot(dst, dstData);
-    const TValId srcRoot = d->valRoot(src, srcData);
+    const TValId dstRoot = dstData->valRoot;
+    const TValId srcRoot = srcData->valRoot;
 
     if (dstRoot == srcRoot) {
         // movement within a single root entity
@@ -1537,7 +1502,7 @@ TValId SymHeapCore::valByOffset(TValId at, TOffset off) {
     d->ents.getEntRO(&valData, at);
 
     // subtract the root
-    const TValId valRoot = d->valRoot(at, valData);
+    const TValId valRoot = valData->valRoot;
     off += valData->offRoot;
     if (!off)
         return valRoot;
@@ -1561,8 +1526,12 @@ TValId SymHeapCore::valByOffset(TValId at, TOffset off) {
         return it->second;
 
     // create a new off-value
-    OffValue *offVal = new OffValue(code, valData->origin, valRoot, off);
+    BaseValue *offVal = new BaseValue(code, valData->origin);
     const TValId val = d->assignId(offVal);
+
+    // offVal->valRoot needs to be set after the call of Private::assignId()
+    offVal->valRoot = valRoot;
+    offVal->offRoot = off;
 
     // store the mapping for next wheel
     offMap[off] = val;
@@ -1671,7 +1640,9 @@ TValId SymHeapCore::valRoot(TValId val) const {
     if (val <= 0)
         return val;
 
-    return d->valRoot(val);
+    const BaseValue *valData;
+    d->ents.getEntRO(&valData, val);
+    return valData->valRoot;
 }
 
 TOffset SymHeapCore::valOffset(TValId val) const {
@@ -1812,7 +1783,7 @@ TObjId SymHeapCore::ptrAt(TValId at, bool *pExcl) {
         return OBJ_INVALID;
 
     // jump to root
-    const TValId valRoot = d->valRoot(at, valData);
+    const TValId valRoot = valData->valRoot;
     const RootValue *rootData;
     d->ents.getEntRO(&rootData, valRoot);
 
@@ -1849,7 +1820,7 @@ TObjId SymHeapCore::ptrAt(TValId at, bool *pExcl) {
     }
 
     // resolve root
-    const TValId root = d->valRoot(at, valData);
+    const TValId root = valData->valRoot;
 
     if (pExcl)
         // a newly created object cannot be already externally referenced
@@ -1875,7 +1846,7 @@ TObjId SymHeapCore::objAt(TValId at, TObjType clt, bool *pExcl) {
     const TOffset size = clt->size;
 
     // jump to root
-    const TValId valRoot = d->valRoot(at, valData);
+    const TValId valRoot = valData->valRoot;
     const RootValue *rootData;
     d->ents.getEntRO(&rootData, valRoot);
 
@@ -1953,7 +1924,7 @@ update_best:
         *pExcl = true;
 
     // create the object
-    const TValId root = d->valRoot(at, valData);
+    const TValId root = valData->valRoot;
     return d->objCreate(root, off, clt, /* hasExtRef */ true);
 }
 
@@ -2118,7 +2089,7 @@ int SymHeapCore::valSizeOfTarget(TValId val) const {
         return 0;
 
     CL_BREAK_IF(!isPossibleToDeref(valData->code));
-    const TValId root = d->valRoot(val, valData);
+    const TValId root = valData->valRoot;
     const RootValue *rootData;
     d->ents.getEntRO(&rootData, root);
 
@@ -2172,8 +2143,6 @@ void SymHeapCore::Private::destroyRoot(TValId root) {
         const TValId val = item.second;
         BaseValue *valData;
         this->ents.getEntRW(&valData, val);
-        CL_BREAK_IF(!dynamic_cast<OffValue *>(valData));
-
         valData->code = code;
     }
 
@@ -2258,14 +2227,16 @@ bool SymHeapCore::valTargetIsProto(TValId val) const {
         return false;
 
     // seek root
-    const TValId root = d->valRoot(val, valData);
+    const TValId root = valData->valRoot;
     const RootValue *rootData;
     d->ents.getEntRO(&rootData, root);
     return rootData->isProto;
 }
 
-void SymHeapCore::valTargetSetProto(TValId val, bool isProto) {
-    const TValId root = d->valRoot(val);
+void SymHeapCore::valTargetSetProto(TValId root, bool isProto) {
+    CL_BREAK_IF(!isPossibleToDeref(this->valTarget(root)));
+    CL_BREAK_IF(this->valOffset(root));
+
     RootValue *rootData;
     d->ents.getEntRW(&rootData, root);
     rootData->isProto = isProto;
@@ -2301,8 +2272,8 @@ bool SymHeapCore::proveNeq(TValId valA, TValId valB) const {
         // no handling of special values here
         return false;
 
-    const TValId root1 = d->valRoot(valA);
-    const TValId root2 = d->valRoot(valB);
+    const TValId root1 = this->valRoot(valA);
+    const TValId root2 = this->valRoot(valB);
     if (root1 == root2) {
         // same root, different offsets
         CL_BREAK_IF(this->valOffset(valA) == this->valOffset(valB));
