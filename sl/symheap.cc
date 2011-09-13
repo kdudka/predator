@@ -325,21 +325,19 @@ struct InternalCustomValue: public BaseValue {
 };
 
 struct RootValue: public BaseValue {
-    TOffMap                         offMap;
-    TValId                          addr;
-    TObjType                        lastKnownClt;
-    unsigned                        cbSize;
     CVar                            cVar;
-    bool                            isProto;
+    TOffset                         size;
+    TOffMap                         offMap;
     TLiveObjs                       liveObjs;
     TObjSet                         usedByGl;
     TArena                          arena;
+    TObjType                        lastKnownClt;
+    bool                            isProto;
 
     RootValue(EValueTarget code_, EValueOrigin origin_):
         BaseValue(code_, origin_),
-        addr(VAL_NULL),
+        size(0),
         lastKnownClt(0),
-        cbSize(0),
         isProto(false)
     {
     }
@@ -509,7 +507,7 @@ void SymHeapCore::Private::registerValueOf(TObjId obj, TValId val) {
 bool SymHeapCore::Private::chkArenaConsistency(const RootValue *rootData) {
     TLiveObjs all(rootData->liveObjs);
     if (isGone(rootData->code)) {
-        CL_BREAK_IF(rootData->cbSize);
+        CL_BREAK_IF(rootData->size);
         CL_BREAK_IF(!rootData->liveObjs.empty());
 
         // we can check nothing for VT_DELETED/VT_LOST, we do not know the size
@@ -517,7 +515,7 @@ bool SymHeapCore::Private::chkArenaConsistency(const RootValue *rootData) {
     }
 
     const TArena &arena = rootData->arena;
-    const TMemChunk chunk(0, rootData->cbSize);
+    const TMemChunk chunk(0, rootData->size);
 
     TObjSet overlaps;
     if (arenaLookup(&overlaps, arena, chunk, OBJ_INVALID)) {
@@ -1229,13 +1227,12 @@ TValId SymHeapCore::Private::dupRoot(TValId rootAt) {
     const TValId imageAt = this->valCreate(code, VO_ASSIGNED);
     RootValue *rootDataDst;
     this->ents.getEntRW(&rootDataDst, imageAt);
-    rootDataDst->addr = imageAt;
 
     // duplicate root metadata
     rootDataDst->cVar               = rootDataSrc->cVar;
-    rootDataDst->isProto            = rootDataSrc->isProto;
-    rootDataDst->cbSize             = rootDataSrc->cbSize;
+    rootDataDst->size               = rootDataSrc->size;
     rootDataDst->lastKnownClt       = rootDataSrc->lastKnownClt;
+    rootDataDst->isProto            = rootDataSrc->isProto;
 
     RefCntLib<RCO_NON_VIRT>::requireExclusivity(this->liveRoots);
     this->liveRoots->insert(imageAt);
@@ -1364,9 +1361,7 @@ SymHeapCore::SymHeapCore(TStorRef stor):
     // initialize VAL_ADDR_OF_RET
     const TValId addrRet = d->valCreate(VT_ON_STACK, VO_ASSIGNED);
     CL_BREAK_IF(VAL_ADDR_OF_RET != addrRet);
-    RootValue *rootData;
-    d->ents.getEntRW(&rootData, addrRet);
-    rootData->addr = addrRet;
+    (void) addrRet;
 }
 
 SymHeapCore::SymHeapCore(const SymHeapCore &ref):
@@ -1796,10 +1791,7 @@ TValId SymHeapCore::placedAt(TObjId obj) {
     // jump to root
     const HeapObject *objData;
     d->ents.getEntRO(&objData, obj);
-
-    const RootValue *rootData;
-    d->ents.getEntRO(&rootData, objData->root);
-    const TValId root = rootData->addr;
+    const TValId root = objData->root;
 
     // then subtract the offset
     return this->valByOffset(root, objData->off);
@@ -2021,12 +2013,11 @@ TValId SymHeapCore::addrOfVar(CVar cv) {
     RootValue *rootData;
     d->ents.getEntRW(&rootData, addr);
     rootData->cVar = cv;
-    rootData->addr = addr;
     rootData->lastKnownClt = clt;
 
     // read size from the type-info
     const unsigned size = clt->size;
-    rootData->cbSize = size;
+    rootData->size = size;
 
     // initialize to zero?
     bool nullify = var.initialized;
@@ -2086,8 +2077,7 @@ TValId SymHeapCore::heapAlloc(int cbSize) {
     // initialize meta-data
     RootValue *rootData;
     d->ents.getEntRW(&rootData, addr);
-    rootData->addr = addr;
-    rootData->cbSize = cbSize;
+    rootData->size = cbSize;
 
 #if SE_TRACK_UNINITIALIZED
     // uninitialized heap block
@@ -2130,7 +2120,7 @@ int SymHeapCore::valSizeOfTarget(TValId val) const {
     const RootValue *rootData;
     d->ents.getEntRO(&rootData, root);
 
-    const int rootSize = rootData->cbSize;
+    const int rootSize = rootData->size;
     const TOffset off = valData->offRoot;
     return rootSize - off;
 }
@@ -2145,7 +2135,7 @@ void SymHeapCore::valSetLastKnownTypeOfTarget(TValId root, TObjType clt) {
 
         // allocate a new root value at VAL_ADDR_OF_RET
         rootData->code = VT_ON_STACK;
-        rootData->cbSize = clt->size;
+        rootData->size = clt->size;
     }
 
     // convert a type-free object into a type-aware object
