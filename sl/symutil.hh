@@ -51,6 +51,8 @@ void moveKnownValueToLeft(const SymHeapCore &sh, TValId &valA, TValId &valB);
 
 bool valInsideSafeRange(const SymHeapCore &sh, TValId val);
 
+bool canWriteDataPtrAt(const SymHeapCore &sh, TValId val);
+
 TObjId translateObjId(
         SymHeap                 &dst,
         SymHeap                 &src,
@@ -63,6 +65,9 @@ void translateValProto(
         const SymHeap           &src);
 
 inline TValId valOfPtrAt(SymHeap &sh, TValId at) {
+    if (!canWriteDataPtrAt(sh, at))
+        return VAL_INVALID;
+
     bool exclusive;
     const TObjId ptr = sh.ptrAt(at, &exclusive);
     const TValId val = sh.valueOf(ptr);

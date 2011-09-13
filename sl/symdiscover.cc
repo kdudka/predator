@@ -230,6 +230,18 @@ TValId jumpToNextObj(
         // binding mismatch
         return VAL_INVALID;
 
+    if (sh.valSizeOfTarget(at) != sh.valSizeOfTarget(next))
+        // mismatch in size of targets
+        return VAL_INVALID;
+
+    const TObjType clt = sh.valLastKnownTypeOfTarget(at);
+    if (clt) {
+        const TObjType cltNext = sh.valLastKnownTypeOfTarget(next);
+        if (cltNext && *cltNext != *clt)
+            // both roots are (kind of) type-aware, but the types differ
+            return VAL_INVALID;
+    }
+
     const bool isDls = isDlsBinding(off);
     if (isDls) {
         // check DLS back-link
@@ -449,17 +461,24 @@ class PtrFinder {
     }
 };
 
-void digBackLink(
-        BindingOff                  &off,
+bool digBackLink(
+        BindingOff                 *pOff,
         SymHeap                     &sh,
-        const TValId                nextAt,
-        const TValId                rootAt)
+        const TValId                root,
+        const TValId                next)
 {
-    const TValId lookFor = sh.valByOffset(rootAt, off.head);
+    // set up a visitor
+    const TValId lookFor = sh.valByOffset(root, pOff->head);
     PtrFinder visitor(lookFor);
-    off.prev = (/* found nothing */ traverseLivePtrs(sh, nextAt, visitor))
-        ? off.next
-        : visitor.offFound();
+
+    // guide it through the next root entity
+    const TValId lookAt = sh.valRoot(next);
+    if (/* found nothing */ traverseLivePtrs(sh, lookAt, visitor))
+        return false;
+
+    // got a back-link!
+    pOff->prev = visitor.offFound();
+    return true;
 }
 
 typedef std::vector<BindingOff> TBindingCandidateList;
@@ -468,40 +487,31 @@ class ProbeEntryVisitor {
     private:
         TBindingCandidateList   &dst_;
         const TValId            root_;
-        const TObjType          clt_;
 
     public:
         ProbeEntryVisitor(
                 TBindingCandidateList         &dst,
-                SymHeap                       &sh,
                 const TValId                  root):
             dst_(dst),
-            root_(root),
-            clt_(sh.valLastKnownTypeOfTarget(root))
+            root_(root)
         {
-            CL_BREAK_IF(!clt_);
         }
 
         bool operator()(SymHeap &sh, TObjId sub) const
         {
-            const TValId val = sh.valueOf(sub);
-            if (!isPossibleToDeref(sh.valTarget(val)))
+            const TValId next = sh.valueOf(sub);
+            if (!canWriteDataPtrAt(sh, next))
                 return /* continue */ true;
 
-            const TValId next = sh.valRoot(val);
-            const TObjType cltNext = sh.valLastKnownTypeOfTarget(next);
-            if (!cltNext || *cltNext !=  *clt_)
-                return /* continue */ true;
-
+            // read head offset
             BindingOff off;
-            off.head = sh.valOffset(val);
+            off.head = sh.valOffset(next);
 
             // entry candidate found, check the back-link in case of DLL
             off.next = sh.valOffset(sh.placedAt(sub));
-#if SE_DISABLE_DLS
             off.prev = off.next;
-#else
-            digBackLink(off, sh, next, root_);
+#if !SE_DISABLE_DLS
+            digBackLink(&off, sh, root_, next);
 #endif
 
 #if SE_DISABLE_SLS
@@ -620,13 +630,9 @@ unsigned /* len */ discoverBestAbstraction(
     TValList addrs;
     sh.gatherRootObjects(addrs, isOnHeap);
     BOOST_FOREACH(const TValId at, addrs) {
-        if (!sh.valLastKnownTypeOfTarget(at))
-            // no root type-info, better to skip this one
-            continue;
-
         // use ProbeEntryVisitor visitor to validate the potential segment entry
         SegCandidate segc;
-        const ProbeEntryVisitor visitor(segc.offList, sh, at);
+        const ProbeEntryVisitor visitor(segc.offList, at);
         traverseLivePtrs(sh, at, visitor);
         if (segc.offList.empty())
             // found nothing

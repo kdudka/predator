@@ -20,6 +20,8 @@
 #include "config.h"
 #include "symutil.hh"
 
+#include <cl/storage.hh>
+
 #include "symheap.hh"
 #include "symstate.hh"
 #include "util.hh"
@@ -86,6 +88,17 @@ void moveKnownValueToLeft(
 bool valInsideSafeRange(const SymHeapCore &sh, TValId val) {
     return isKnownObject(sh.valTarget(val))
         && (0 < sh.valSizeOfTarget(val));
+}
+
+bool canWriteDataPtrAt(const SymHeapCore &sh, TValId val) {
+    if (!isPossibleToDeref(sh.valTarget(val)))
+        return false;
+
+    static TOffset ptrSize;
+    if (!ptrSize)
+        ptrSize = sh.stor().types.dataPtrSizeof();
+
+    return (ptrSize <= sh.valSizeOfTarget(val));
 }
 
 TObjId translateObjId(
