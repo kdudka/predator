@@ -200,6 +200,12 @@ enum EBlockKind {
     BK_UNIFORM
 };
 
+inline EBlockKind bkFromClt(const TObjType clt) {
+    return isComposite(clt)
+        ? BK_COMPOSITE
+        : BK_OBJECT;
+}
+
 class AbstractHeapEntity {
     public:
         virtual AbstractHeapEntity* clone() const = 0;
@@ -217,54 +223,38 @@ class AbstractHeapEntity {
         AbstractHeapEntity& operator=(const AbstractHeapEntity &);
 };
 
-struct HeapBlock: public AbstractHeapEntity {
+struct BlockEntity: public AbstractHeapEntity {
     EBlockKind                  code;
     TValId                      root;
     TOffset                     off;
+    TOffset                     size;
     TValId                      value;
 
-    HeapBlock(EBlockKind code_, TValId root_, TOffset off_, TValId val_):
+    BlockEntity(
+            const EBlockKind        code_,
+            const TValId            root_,
+            const TOffset           off_,
+            const TOffset           size_,
+            const TValId            value_):
         code(code_),
         root(root_),
         off(off_),
-        value(val_)
+        size(size_),
+        value(value_)
     {
     }
 
-    virtual int getSize() const = 0;
-};
-
-struct InternalUniformBlock: public HeapBlock {
-    unsigned                    size;
-
-    InternalUniformBlock(
-            const TValId            root_,
-            const TOffset           off_,
-            const TValId            tplValue_,
-            const unsigned          size_):
-        HeapBlock(BK_UNIFORM, root_, off_, tplValue_),
-        size(size_)
-    {
-    }
-
-    virtual InternalUniformBlock* clone() const {
-        return new InternalUniformBlock(*this);
-    }
-
-    virtual int getSize() const {
-        return size;
+    virtual BlockEntity* clone() const {
+        return new BlockEntity(*this);
     }
 };
 
-struct HeapObject: public HeapBlock {
+struct HeapObject: public BlockEntity {
     TObjType                    clt;
     bool                        hasExtRef;
 
     HeapObject(TValId root_, TOffset off_, TObjType clt_, bool hasExtRef_):
-        HeapBlock(isComposite(clt_)
-                ? BK_COMPOSITE
-                : BK_OBJECT,
-                root_, off_, VAL_INVALID),
+        BlockEntity(bkFromClt(clt_), root_, off_, clt_->size, VAL_INVALID),
         clt(clt_),
         hasExtRef(hasExtRef_)
     {
@@ -272,10 +262,6 @@ struct HeapObject: public HeapBlock {
 
     virtual HeapObject* clone() const {
         return new HeapObject(*this);
-    }
-
-    virtual int getSize() const {
-        return clt->size;
     }
 };
 
@@ -396,7 +382,7 @@ struct SymHeapCore::Private {
     CustomValueMapper              *cValueMap;
     FriendlyNeqDb                  *neqDb;
 
-    inline TObjId assignId(HeapBlock *);
+    inline TObjId assignId(BlockEntity *);
     inline TValId assignId(BaseValue *);
 
     TValId valCreate(EValueTarget code, EValueOrigin origin);
@@ -459,7 +445,7 @@ inline TValId SymHeapCore::Private::assignId(BaseValue *valData) {
     return val;
 }
 
-inline TObjId SymHeapCore::Private::assignId(HeapBlock *hbData) {
+inline TObjId SymHeapCore::Private::assignId(BlockEntity *hbData) {
     return this->ents.assignId<TObjId>(hbData);
 }
 
@@ -534,10 +520,10 @@ void SymHeapCore::Private::splitBlockByObject(
         TObjId                      block,
         TObjId                      obj)
 {
-    InternalUniformBlock *blData;
+    BlockEntity *blData;
     this->ents.getEntRW(&blData, block);
 
-    const HeapBlock *hbData;
+    const BlockEntity *hbData;
     this->ents.getEntRO(&hbData, obj);
 
     const EBlockKind code = hbData->code;
@@ -558,7 +544,7 @@ void SymHeapCore::Private::splitBlockByObject(
     const TOffset blOff = blData->off;
     const TOffset objOff = hbData->off;
     const unsigned blSize = blData->size;
-    const unsigned objSize = hbData->getSize();
+    const unsigned objSize = hbData->size;
 
     // check overlapping
     const TOffset blBegToObjBeg = objOff - blOff;
@@ -576,7 +562,7 @@ void SymHeapCore::Private::splitBlockByObject(
 
     if (0 < blBegToObjBeg && 0 < objEndToBlEnd) {
         // the object is strictly in the middle of the block (needs split)
-        InternalUniformBlock *blDataOther = blData->clone();
+        BlockEntity *blDataOther = blData->clone();
         const TObjId blOther = this->assignId(blDataOther);
 
         // update metadata
@@ -624,7 +610,7 @@ void SymHeapCore::Private::splitBlockByObject(
 
 bool isCoveredByBlock(
         const HeapObject           *objData,
-        const InternalUniformBlock *blData)
+        const BlockEntity          *blData)
 {
     const TOffset beg1 = objData->off;
     const TOffset beg2 = blData->off;
@@ -642,7 +628,7 @@ void SymHeapCore::Private::reinterpretObjData(
         TObjId                      obj,
         TValSet                    *killedPtrs)
 {
-    HeapBlock *blData;
+    BlockEntity *blData;
     this->ents.getEntRW(&blData, old);
 
     EBlockKind code = blData->code;
@@ -690,12 +676,12 @@ void SymHeapCore::Private::reinterpretObjData(
     this->ents.getEntRW(&blData, obj);
     code = blData->code;
 
-    InternalUniformBlock *uniData;
+    BlockEntity *uniData;
     TValId val;
 
     switch (code) {
         case BK_UNIFORM:
-            uniData = DCAST<InternalUniformBlock *>(blData);
+            uniData = DCAST<BlockEntity *>(blData);
             if (isCoveredByBlock(oldData, uniData)) {
                 // object fully covered by the overlapping uniform block
                 val = this->valDup(uniData->value);
@@ -937,7 +923,7 @@ void SymHeapCore::Private::transferBlock(
 
     // go through overlaps and copy the live ones
     BOOST_FOREACH(const TObjId objSrc, overlaps) {
-        const HeapBlock *hbDataSrc;
+        const BlockEntity *hbDataSrc;
         this->ents.getEntRO(&hbDataSrc, objSrc);
 
         const TOffset beg = hbDataSrc->off;
@@ -945,7 +931,7 @@ void SymHeapCore::Private::transferBlock(
             // the object starts above the window, do not copy this one
             continue;
 
-        const TOffset end = beg + hbDataSrc->getSize();
+        const TOffset end = beg + hbDataSrc->size;
         if (winEnd < end)
             // the object ends beyond the window, do not copy this one
             continue;
@@ -1012,7 +998,7 @@ TValId SymHeapCore::Private::objInit(TObjId obj) {
     TObjSet overlaps;
     if (arenaLookup(&overlaps, arena, createChunk(off, clt), obj)) {
         BOOST_FOREACH(const TObjId other, overlaps) {
-            HeapBlock *blockData;
+            BlockEntity *blockData;
             this->ents.getEntRW(&blockData, other);
 
             const EBlockKind code = blockData->code;
@@ -1186,9 +1172,9 @@ TObjId SymHeapCore::Private::copySingleLiveBlock(
 
     if (LO_BLOCK == code) {
         // duplicate a uniform block
-        InternalUniformBlock *blSrc;
+        BlockEntity *blSrc;
         this->ents.getEntRW(&blSrc, objSrc);
-        InternalUniformBlock *blDst = blSrc->clone();
+        BlockEntity *blDst = blSrc->clone();
         dst = this->assignId(blDst);
         blDst->root = rootDst;
 
@@ -1264,7 +1250,7 @@ void SymHeapCore::gatherUniformBlocks(TUniBlockMap &dst, TValId root) const {
         if (LO_BLOCK != code)
             continue;
 
-        const InternalUniformBlock *blData;
+        const BlockEntity *blData;
         d->ents.getEntRO(&blData, /* obj */ item.first);
         const TOffset off = blData->off;
         CL_BREAK_IF(hasKey(dst, off));
@@ -1320,15 +1306,14 @@ bool SymHeapCore::findCoveringUniBlock(
         return false;
 
     BOOST_FOREACH(const TObjId id, overlaps) {
-        const HeapBlock *data;
+        const BlockEntity *data;
         d->ents.getEntRO(&data, id);
 
         const EBlockKind code = data->code;
         if (BK_UNIFORM != code)
             continue;
 
-        const InternalUniformBlock *blData =
-            DCAST<const InternalUniformBlock *>(data);
+        const BlockEntity *blData = DCAST<const BlockEntity *>(data);
 
         const TOffset blBeg = blData->off;
         if (beg < blBeg)
@@ -1414,7 +1399,7 @@ void SymHeapCore::objSetValue(TObjId obj, TValId val, TValSet *killedPtrs) {
 
 TObjId SymHeapCore::Private::writeUniformBlock(
         const TValId                addr,
-        const TValId                tplValue,
+        const TValId                tplVal,
         const unsigned              size,
         TValSet                     *killedPtrs)
 {
@@ -1426,9 +1411,8 @@ TObjId SymHeapCore::Private::writeUniformBlock(
     const TOffset end = beg + size;
 
     // acquire object ID
-    InternalUniformBlock *blockData =
-        new InternalUniformBlock(root, beg, tplValue, size);
-    const TObjId obj = this->assignId(blockData);
+    BlockEntity *blData = new BlockEntity(BK_UNIFORM, root, beg, size, tplVal);
+    const TObjId obj = this->assignId(blData);
 
     // check up to now arena consistency
     RootValue *rootData;
@@ -1828,7 +1812,7 @@ TObjId SymHeapCore::ptrAt(TValId at, bool *pExcl) {
 
     // seek a _data_ pointer in the given interval
     BOOST_FOREACH(const TObjId obj, candidates) {
-        const HeapBlock *blData;
+        const BlockEntity *blData;
         d->ents.getEntRO(&blData, obj);
         if (BK_OBJECT != blData->code)
             continue;
@@ -1890,7 +1874,7 @@ TObjId SymHeapCore::objAt(TValId at, TObjType clt, bool *pExcl) {
 
     // go through the objects in the given interval
     BOOST_FOREACH(const TObjId obj, candidates) {
-        const HeapBlock *blData;
+        const BlockEntity *blData;
         d->ents.getEntRO(&blData, obj);
         const EBlockKind code = blData->code;
         switch (code) {
