@@ -124,10 +124,15 @@ void digSubObjs(DeepCopyData &dc, TValId addrSrc, TValId addrDst)
     traverseLiveObjsGeneric<2>(heaps, roots, objVisitor);
 }
 
-void addObjectIfNeeded(DeepCopyData &dc, TValId rootSrcAt) {
-    if (VAL_NULL == rootSrcAt || hasKey(dc.valMap, rootSrcAt))
-        // mapping already known
-        return;
+TValId /* rootDstAt */ addObjectIfNeeded(DeepCopyData &dc, TValId rootSrcAt) {
+    if (VAL_NULL == rootSrcAt)
+        return VAL_NULL;
+
+    DeepCopyData::TValMap &valMap = dc.valMap;
+    DeepCopyData::TValMap::iterator itRootSrc = valMap.find(rootSrcAt);
+    if (valMap.end() != itRootSrc)
+        // good luck, we have already handled the value before
+        return itRootSrc->second;
 
     CL_BREAK_IF(VAL_ADDR_OF_RET == rootSrcAt);
     SymHeap &src = dc.src;
@@ -150,7 +155,7 @@ void addObjectIfNeeded(DeepCopyData &dc, TValId rootSrcAt) {
         const TValId rootDstAt = dst.addrOfVar(cv);
         dc.valMap[rootSrcAt] = rootDstAt;
         digSubObjs(dc, rootSrcAt, rootDstAt);
-        return;
+        return rootDstAt;
     }
 
     // create the object in 'dst'
@@ -181,20 +186,26 @@ void addObjectIfNeeded(DeepCopyData &dc, TValId rootSrcAt) {
 
     // look inside
     digSubObjs(dc, rootSrcAt, rootDstAt);
+    return rootDstAt;
 }
 
-// TODO: optimize out all the unnecessary dc.valMap lookups
 TValId handleValueCore(DeepCopyData &dc, TValId srcAt) {
-    SymHeap &src = dc.src;
-    if (!hasKey(dc.valMap, srcAt)) {
-        const TValId rootSrcAt = src.valRoot(srcAt);
-        const TOffset off = src.valOffset(srcAt);
-        addObjectIfNeeded(dc, rootSrcAt);
-        if (off)
-            dc.valMap[srcAt] = dc.dst.valByOffset(dc.valMap[rootSrcAt], off);
-    }
+    DeepCopyData::TValMap &valMap = dc.valMap;
+    DeepCopyData::TValMap::iterator iterValSrc = valMap.find(srcAt);
+    if (valMap.end() != iterValSrc)
+        // good luck, we have already handled the value before
+        return iterValSrc->second;
 
-    return dc.valMap[srcAt];
+    const TValId rootSrcAt = dc.src.valRoot(srcAt);
+    const TValId rootDstAt = addObjectIfNeeded(dc, rootSrcAt);
+
+    const TOffset off = dc.src.valOffset(srcAt);
+    if (!off)
+        return rootDstAt;
+
+    const TValId dstAt = dc.dst.valByOffset(rootDstAt, off);
+    dc.valMap[srcAt] = dstAt;
+    return dstAt;
 }
 
 void trackUses(DeepCopyData &dc, TValId valSrc) {
