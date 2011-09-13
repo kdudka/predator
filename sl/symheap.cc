@@ -57,6 +57,9 @@ assignInvalidIfNotFound(
 // Neq predicates store
 class FriendlyNeqDb: public NeqDb {
     public:
+        RefCounter refCnt;
+
+    public:
         template <class TDst>
         void gatherRelatedValues(TDst &dst, TValId val) const {
             // FIXME: suboptimal due to performance
@@ -388,7 +391,7 @@ struct SymHeapCore::Private {
     std::set<TValId>                liveRoots;
     CVarMap                        *cVarMap;
     CustomValueMapper              *cValueMap;
-    FriendlyNeqDb                   neqDb;
+    FriendlyNeqDb                  *neqDb;
 
     inline TObjId assignId(HeapBlock *);
     inline TValId assignId(BaseValue *);
@@ -959,7 +962,8 @@ void SymHeapCore::Private::transferBlock(
 
 SymHeapCore::Private::Private():
     cVarMap     (new CVarMap),
-    cValueMap   (new CustomValueMapper)
+    cValueMap   (new CustomValueMapper),
+    neqDb       (new FriendlyNeqDb)
 {
     // allocate a root-value for VAL_NULL
     this->assignId(new RootValue(VT_INVALID, VO_INVALID));
@@ -974,11 +978,13 @@ SymHeapCore::Private::Private(const SymHeapCore::Private &ref):
 {
     RefCntLib<RCO_NON_VIRT>::enter(this->cVarMap);
     RefCntLib<RCO_NON_VIRT>::enter(this->cValueMap);
+    RefCntLib<RCO_NON_VIRT>::enter(this->neqDb);
 }
 
 SymHeapCore::Private::~Private() {
     RefCntLib<RCO_NON_VIRT>::leave(this->cVarMap);
     RefCntLib<RCO_NON_VIRT>::leave(this->cValueMap);
+    RefCntLib<RCO_NON_VIRT>::leave(this->neqDb);
 }
 
 TValId SymHeapCore::Private::objInit(TObjId obj) {
@@ -1676,7 +1682,7 @@ void SymHeapCore::valReplace(TValId val, TValId replaceBy) {
 
     // kill all related Neq predicates
     TValList neqs;
-    d->neqDb.gatherRelatedValues(neqs, val);
+    d->neqDb->gatherRelatedValues(neqs, val);
     BOOST_FOREACH(const TValId valNeq, neqs) {
         CL_BREAK_IF(valNeq == replaceBy);
         SymHeapCore::neqOp(NEQ_DEL, valNeq, val);
@@ -1698,16 +1704,19 @@ void SymHeapCore::valReplace(TValId val, TValId replaceBy) {
 }
 
 void SymHeapCore::Private::neqOpWrap(ENeqOp op, TValId valA, TValId valB) {
+    RefCntLib<RCO_NON_VIRT>::requireExclusivity(this->neqDb);
+
     switch (op) {
         case NEQ_NOP:
+            CL_BREAK_IF("invalid call of SymHeapCore::Private::neqOpWrap()");
             return;
 
         case NEQ_ADD:
-            this->neqDb.add(valA, valB);
+            this->neqDb->add(valA, valB);
             return;
 
         case NEQ_DEL:
-            this->neqDb.del(valA, valB);
+            this->neqDb->del(valA, valB);
             return;
     }
 }
@@ -1732,14 +1741,14 @@ void SymHeapCore::neqOp(ENeqOp op, TValId v1, TValId v2) {
 }
 
 void SymHeapCore::gatherRelatedValues(TValList &dst, TValId val) const {
-    d->neqDb.gatherRelatedValues(dst, val);
+    d->neqDb->gatherRelatedValues(dst, val);
 }
 
 void SymHeapCore::copyRelevantPreds(SymHeapCore &dst, const TValMap &valMap)
     const
 {
     // go through NeqDb
-    BOOST_FOREACH(const NeqDb::TItem &item, d->neqDb.cont_) {
+    BOOST_FOREACH(const NeqDb::TItem &item, d->neqDb->cont_) {
         TValId valLt = item.first;
         TValId valGt = item.second;
 
@@ -1756,14 +1765,14 @@ bool SymHeapCore::matchPreds(const SymHeapCore &ref, const TValMap &valMap)
     const
 {
     // go through NeqDb
-    BOOST_FOREACH(const NeqDb::TItem &item, d->neqDb.cont_) {
+    BOOST_FOREACH(const NeqDb::TItem &item, d->neqDb->cont_) {
         TValId valLt = item.first;
         TValId valGt = item.second;
         if (!valMapLookup(valMap, &valLt) || !valMapLookup(valMap, &valGt))
             // seems like a dangling predicate, which we are not interested in
             continue;
 
-        if (!ref.d->neqDb.areNeq(valLt, valGt))
+        if (!ref.d->neqDb->areNeq(valLt, valGt))
             // Neq predicate not matched
             return false;
     }
@@ -2284,7 +2293,7 @@ bool SymHeapCore::proveNeq(TValId valA, TValId valB) const {
         return true;
 
     // check for a Neq predicate
-    if (d->neqDb.areNeq(valA, valB))
+    if (d->neqDb->areNeq(valA, valB))
         return true;
 
     if (valA <= 0 || valB <= 0)
@@ -2305,11 +2314,11 @@ bool SymHeapCore::proveNeq(TValId valA, TValId valB) const {
     const TOffset diff = offB - offA;
     if (!diff)
         // check for Neq between the roots
-        return d->neqDb.areNeq(root1, root2);
+        return d->neqDb->areNeq(root1, root2);
 
     SymHeapCore &writable = /* XXX */ *const_cast<SymHeapCore *>(this);
-    return d->neqDb.areNeq(root1, writable.valByOffset(root2,  diff))
-        && d->neqDb.areNeq(root2, writable.valByOffset(root1, -diff));
+    return d->neqDb->areNeq(root1, writable.valByOffset(root2,  diff))
+        && d->neqDb->areNeq(root2, writable.valByOffset(root1, -diff));
 }
 
 
