@@ -38,8 +38,6 @@
 // required by the gcc plug-in API
 extern "C" { int plugin_is_GPL_compatible; }
 
-namespace {
-
 // FIXME: the implementation is amusing
 void parseConfigString(SymExecParams &sep, std::string cnf) {
     using std::string;
@@ -48,7 +46,7 @@ void parseConfigString(SymExecParams &sep, std::string cnf) {
         return;
 
     if (string("oom") == cnf) {
-        CL_DEBUG("SymExec \"fast mode\" requested");
+        CL_DEBUG("parseConfigString: \"OOM simulation\" mode requested");
         sep.fastMode = false;
         return;
     }
@@ -57,18 +55,29 @@ void parseConfigString(SymExecParams &sep, std::string cnf) {
     // separated list or whatever)
     // TODO: document all the parameters somewhere
     if (string("noplot") == cnf) {
-        CL_DEBUG("SymExec \"noplot mode\" requested");
+        CL_DEBUG("parseConfigString: \"noplot\" mode requested");
         sep.skipPlot = true;
         return;
     }
 
     if (string("ptrace") == cnf) {
-        CL_DEBUG("SymExec \"ptrace mode\" requested");
+        CL_DEBUG("parseConfigString: \"ptrace\" mode requested");
         sep.ptrace = true;
         return;
     }
 
-    CL_BREAK_IF("unhandled config string");
+    const char *cstr = cnf.c_str();
+    const char *elPrefix = "error_label:";
+    const size_t elPrefixLen = strlen(elPrefix);
+    if (!strncmp(cstr, elPrefix, elPrefixLen)) {
+        cstr += elPrefixLen;
+        CL_DEBUG("parseConfigString: error label is \"" << cstr << "\"");
+        sep.errLabel = cstr;
+        sep.ptrace = true;
+        return;
+    }
+
+    CL_WARN("unhandled config string: \"" << cnf << "\"");
 }
 
 void digGlJunk(SymHeap &sh) {
@@ -174,8 +183,6 @@ void execVirtualRoots(const CodeStorage::FncDb &fncs, const SymExecParams &ep) {
         execFnc(fnc, ep);
     }
 }
-
-} // namespace
 
 // /////////////////////////////////////////////////////////////////////////////
 // see easy.hh for details

@@ -150,6 +150,7 @@ struct SymExecCoreParams {
     bool fastMode;          ///< enable/disable OOM state simulation
     bool skipPlot;          ///< simply ignore all ___sl_plot* calls
     bool skipVarInit;       ///< used internally
+    std::string errLabel;   ///< if not empty, treat reaching the label as error
 
     SymExecCoreParams():
         fastMode(false),
@@ -202,6 +203,8 @@ class SymExecCore: public SymProc {
         template <class TDerefs>
         bool concretizeLoop(SymState &dst, const CodeStorage::Insn &insn,
                             const TDerefs &derefs);
+
+        bool /* bail out */ handleLabel(const CodeStorage::Insn &);
 
         bool execCore(SymState &dst, const CodeStorage::Insn &insn, const bool);
 

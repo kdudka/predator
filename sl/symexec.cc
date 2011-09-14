@@ -587,6 +587,7 @@ bool /* handled */ SymExecEngine::execNontermInsn() {
     SymExecCoreParams ep;
     ep.fastMode         = params_.fastMode;
     ep.skipPlot         = params_.skipPlot;
+    ep.errLabel         = params_.errLabel;
 
     // working area for non-terminal instructions
     SymHeap workingHeap(localState_[heapIdx_]);

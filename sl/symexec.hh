@@ -20,6 +20,8 @@
 #ifndef H_GUARD_SYM_EXEC_H
 #define H_GUARD_SYM_EXEC_H
 
+#include <string>
+
 /**
  * @file symexec.hh
  * SymExec - top level algorithm of the @b symbolic @b execution
@@ -37,6 +39,7 @@ struct SymExecParams {
     bool fastMode;          ///< enable/disable the @b fast @b mode
     bool skipPlot;          ///< simply ignore all ___sl_plot* calls
     bool ptrace;            ///< enable path tracing (a bit chatty)
+    std::string errLabel;   ///< if not empty, treat reaching the label as error
 
     SymExecParams():
         fastMode(false),

@@ -1001,6 +1001,30 @@ already_alive:
     sh_.objReleaseId(varLhs);
 }
 
+bool /* bail out */ SymExecCore::handleLabel(const CodeStorage::Insn &insn) {
+    const struct cl_operand &op = insn.operands[/* name */ 0];
+    if (CL_OPERAND_VOID == op.code)
+        // anonymous label
+        return false;
+
+    // resolve name
+    CL_BREAK_IF(CL_OPERAND_CST != op.code);
+    const struct cl_cst &cst = op.data.cst;
+    CL_BREAK_IF(CL_TYPE_STRING != cst.code);
+    const char *name = cst.data.cst_string.value;
+    CL_BREAK_IF(!name);
+
+    if (ep_.errLabel.compare(name))
+        // not an error label
+        return false;
+
+    CL_ERROR_MSG(lw_, "error label \"" << name << "\" has been reached");
+
+    // print the backtrace and leave
+    bt_->printBackTrace();
+    return true;
+}
+
 bool SymExecCore::execCore(
         SymState                    &dst,
         const CodeStorage::Insn     &insn,
@@ -1017,7 +1041,8 @@ bool SymExecCore::execCore(
             break;
 
         case CL_INSN_LABEL:
-            CL_DEBUG_MSG(lw_, "unhandled CL_INSN_LABEL");
+            if (/* bail out */ this->handleLabel(insn))
+                return true;
             break;
 
         case CL_INSN_CALL:

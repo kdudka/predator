@@ -198,7 +198,7 @@ ICodeListener* cl_obtain_from_wrap(struct cl_code_listener *wrap)
         listener->fnc(); \
     } \
     catch (...) { \
-        CL_DIE("uncaught exception in CL_WRAP"); \
+        CL_DIE("uncaught exception in " #fnc "()"); \
     } \
 } while (0)
 
@@ -209,7 +209,7 @@ ICodeListener* cl_obtain_from_wrap(struct cl_code_listener *wrap)
         listener->fnc(__VA_ARGS__); \
     } \
     catch (...) { \
-        CL_DIE("uncaught exception in CL_WRAP"); \
+        CL_DIE("uncaught exception in " #fnc "()"); \
     } \
 } while (0)
 

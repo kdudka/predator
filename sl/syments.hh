@@ -267,13 +267,9 @@ template <class TBaseEnt>
 EntStore<TBaseEnt>::EntStore(const EntStore &ref):
     ents_(ref.ents_)
 {
-    // go through all heap entities
-    BOOST_FOREACH(TBaseEnt *&ent, ents_) {
-        if (!ent)
-            continue;
-
-        RefCntLib<RCO_VIRTUAL>::enter(ent);
-    }
+    BOOST_FOREACH(TBaseEnt *&ent, ents_)
+        if (ent)
+            RefCntLib<RCO_VIRTUAL>::enter(ent);
 }
 
 template <class TBaseEnt>
