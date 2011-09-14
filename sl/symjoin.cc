@@ -1578,9 +1578,11 @@ bool insertSegmentClone(
         return false;
     }
 
+#if SE_ALLOW_THREE_WAY_JOIN < 3
     if (!ctx.joiningData())
         // on the way from joinSymHeaps(), some three way joins are destructive
         ctx.allowThreeWay = false;
+#endif
 
     const TValMapBidir &valMapGt = (isGt1)
         ? ctx.valMap1
@@ -2262,12 +2264,7 @@ bool validateStatus(const SymJoinCtx &ctx) {
         return false;
     }
 
-#if SE_ALLOW_THREE_WAY_JOIN < 3
-    if (JS_THREE_WAY != ctx.status)
-#endif
-        return true;
-
-    if (ctx.allowThreeWay)
+    if (ctx.allowThreeWay || (JS_THREE_WAY != ctx.status))
         return true;
 
     CL_DEBUG(">J< cancelling three-way join");

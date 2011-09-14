@@ -65,6 +65,8 @@ SLS abstraction
 
     test-0149.c - alternation of test-0052, which uses calloc instead of malloc
 
+    test-0176.c - a possibly infinite SLL where nodes are just void pointers
+
 
 DLS abstraction
 ===============
