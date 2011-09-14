@@ -116,8 +116,16 @@ class ClfCbSeqChk: public ClFilterBase {
                     break;
 
                 case CL_INSN_CALL:
+                    CL_BREAK_IF("ClfCbSeqChk::insn() got CL_INSN_CALL, why?");
+                    break;
+
                 case CL_INSN_SWITCH:
-                    CL_TRAP;
+                    CL_BREAK_IF("ClfCbSeqChk::insn() got CL_INSN_SWITCH, why?");
+                    break;
+
+                case CL_INSN_LABEL:
+                    this->chkInsnLabel();
+                    break;
             }
 
             ClFilterBase::insn(cli);
@@ -212,6 +220,7 @@ class ClfCbSeqChk: public ClFilterBase {
         void setCallClose();
         void chkInsnSwitchCase();
         void setSwitchClose();
+        void chkInsnLabel();
 };
 
 class ClfLabelChk: public ClFilterBase {
@@ -531,6 +540,11 @@ void ClfCbSeqChk::chkInsnUnop() {
 void ClfCbSeqChk::chkInsnBinop() {
     if (S_BLOCK_LEVEL != state_)
         this->emitUnexpected("CL_INSN_BINOP");
+}
+
+void ClfCbSeqChk::chkInsnLabel() {
+    if (S_BLOCK_LEVEL != state_)
+        this->emitUnexpected("CL_INSN_LABEL");
 }
 
 void ClfCbSeqChk::chkInsnCallArg() {

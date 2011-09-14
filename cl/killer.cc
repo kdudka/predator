@@ -192,6 +192,7 @@ void scanInsn(Data &data, TBlock bb, const Insn &insn) {
         case CL_INSN_JMP:
         case CL_INSN_NOP:
         case CL_INSN_ABORT:
+        case CL_INSN_LABEL:
             // no operand
             return;
     }

@@ -108,6 +108,7 @@ class ClPrettyPrint: public ICodeListener {
         void printInsnAbort     (const struct cl_insn *);
         void printInsnUnop      (const struct cl_insn *);
         void printInsnBinop     (const struct cl_insn *);
+        void printInsnLabel     (const struct cl_insn *);
 };
 
 using namespace ssd;
@@ -802,6 +803,16 @@ void ClPrettyPrint::printInsnBinop(const struct cl_insn *cli) {
     out_ << SSD_INLINE_COLOR(C_LIGHT_RED, ")") << std::endl;
 }
 
+void ClPrettyPrint::printInsnLabel(const struct cl_insn *cli) {
+    const char *name = cli->data.insn_label.name;
+    if (!name)
+        return;
+
+    out_ << "\t"
+        << SSD_INLINE_COLOR(C_LIGHT_GREEN, name)
+        << SSD_INLINE_COLOR(C_LIGHT_RED, ":") << std::endl;
+}
+
 void ClPrettyPrint::insn(
             const struct cl_insn    *cli)
 {
@@ -836,8 +847,16 @@ void ClPrettyPrint::insn(
             break;
 
         case CL_INSN_CALL:
+            CL_BREAK_IF("ClPrettyPrint::insn() got CL_INSN_CALL, why?");
+            break;
+
         case CL_INSN_SWITCH:
-            CL_TRAP;
+            CL_BREAK_IF("ClPrettyPrint::insn() got CL_INSN_SWITCH, why?");
+            break;
+
+        case CL_INSN_LABEL:
+            this->printInsnLabel(cli);
+            break;
     }
 }
 

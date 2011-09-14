@@ -519,6 +519,7 @@ void ClDotGenerator::bb_open(const char *bb_name) {
 void ClDotGenerator::insn(const struct cl_insn *cli) {
     switch (cli->code) {
         case CL_INSN_NOP:
+        case CL_INSN_LABEL:
             // ignore
             return;
 

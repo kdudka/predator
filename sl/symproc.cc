@@ -1016,12 +1016,16 @@ bool SymExecCore::execCore(
             this->execOp<2>(insn);
             break;
 
+        case CL_INSN_LABEL:
+            CL_DEBUG_MSG(lw_, "unhandled CL_INSN_LABEL");
+            break;
+
         case CL_INSN_CALL:
             // the symbin module is now fully responsible for handling built-ins
             return handleBuiltIn(dst, *this, insn);
 
         default:
-            CL_TRAP;
+            CL_BREAK_IF("SymExecCore::execCore() got an unexpected insn");
             return false;
     }
 

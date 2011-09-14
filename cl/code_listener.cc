@@ -178,9 +178,12 @@ bool cl_is_term_insn(enum cl_insn_e code) {
         case CL_INSN_UNOP:
         case CL_INSN_BINOP:
         case CL_INSN_CALL:
-        default:
+        case CL_INSN_LABEL:
             return false;
     }
+
+    CL_BREAK_IF("cl_is_term_insn() got something special");
+    return false;
 }
 
 ICodeListener* cl_obtain_from_wrap(struct cl_code_listener *wrap)

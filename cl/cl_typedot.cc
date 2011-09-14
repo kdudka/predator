@@ -63,6 +63,7 @@ class ClTypeDotGenerator: public ICodeListener {
                 case CL_INSN_NOP:
                 case CL_INSN_JMP:
                 case CL_INSN_ABORT:
+                case CL_INSN_LABEL:
                     // no operand
                     break;
 

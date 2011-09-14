@@ -1497,6 +1497,16 @@ static void handle_stmt_switch(gimple stmt)
     cl->insn_switch_close(cl);
 }
 
+static void handle_stmt_label(gimple stmt)
+{
+    tree label = gimple_label_label(stmt);
+    struct cl_insn cli;
+    cli.code = CL_INSN_LABEL;
+    cli.data.insn_label.name = get_decl_name(label);
+    read_gcc_location(&cli.loc, DECL_SOURCE_LOCATION(label));
+    cl->insn(cl, &cli);
+}
+
 // callback of walk_gimple_seq declared in <gimple.h>
 static tree cb_walk_gimple_stmt (gimple_stmt_iterator *iter,
                                  bool *subtree_done,
@@ -1534,7 +1544,7 @@ static tree cb_walk_gimple_stmt (gimple_stmt_iterator *iter,
             break;
 
         case GIMPLE_LABEL:
-            // should be already handled by handle_stmt_switch
+            handle_stmt_label(stmt);
             break;
 
         case GIMPLE_ASM:

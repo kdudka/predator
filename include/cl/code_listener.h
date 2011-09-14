@@ -539,7 +539,12 @@ enum cl_insn_e {
     /**
      * this code is never emitted by cl_insn callback
      */
-    CL_INSN_SWITCH
+    CL_INSN_SWITCH,
+
+    /**
+     * label 
+     */
+    CL_INSN_LABEL
 };
 
 /**
@@ -671,6 +676,11 @@ struct cl_insn {
             const struct cl_operand     *src1;
             const struct cl_operand     *src2;
         } insn_binop; /**< valid only for @b CL_INSN_BINOP */
+
+        /* CL_INSN_LABEL */
+        struct {
+            const char                  *name;
+        } insn_label; /**< valid only for @b CL_INSN_LABEL */
 
     } data;
 };

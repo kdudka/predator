@@ -373,6 +373,9 @@ struct Insn {
      * - (@b 1+ operands) @b CL_INSN_SWITCH:
      *      - [@b 0] - value to switch by
      *      - [@b 1..@b n] - case values
+     *
+     * - (@b 1 operand) @b CL_INSN_LABEL:
+     *      - [@b 0] - name of the label
      */
     TOperandList                operands;
 

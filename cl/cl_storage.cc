@@ -145,6 +145,10 @@ namespace CodeStorage {
             boost::tie(cDst, cSrc) = opStack.top();
             opStack.pop();
 
+            if (CL_OPERAND_VOID == cSrc->code)
+                // no operand here
+                continue;
+
             // clone list of cl_accessor objects
             // and schedule all array indexes for the next wheel eventually
             cloneAccessor(&cDst->accessor, cSrc->accessor, opStack);
@@ -192,6 +196,23 @@ namespace CodeStorage {
         ref.accessor = 0;
     }
 
+    void storeLabel(struct cl_operand &op, const struct cl_insn *cli) {
+        const char *name = cli->data.insn_label.name;
+        struct cl_operand tpl;
+        tpl.code = CL_OPERAND_VOID;
+        tpl.scope                               = CL_SCOPE_FUNCTION;
+        tpl.type                                = /* FIXME */ 0;
+        tpl.accessor                            = 0;
+
+        if (name) {
+            tpl.code                            = CL_OPERAND_CST;
+            tpl.data.cst.code                   = CL_TYPE_STRING;
+            tpl.data.cst.data.cst_string.value  = name;
+        }
+
+        storeOperand(op, &tpl);
+    }
+
     Insn* createInsn(const struct cl_insn *cli, ControlFlow &cfg) {
         enum cl_insn_e code = cli->code;
 
@@ -204,7 +225,7 @@ namespace CodeStorage {
 
         switch (code) {
             case CL_INSN_NOP:
-                CL_TRAP;
+                CL_BREAK_IF("createInsn() got CL_INSN_NOP, why?");
                 break;
 
             case CL_INSN_JMP:
@@ -244,9 +265,17 @@ namespace CodeStorage {
                 break;
 
             case CL_INSN_CALL:
+                CL_BREAK_IF("createInsn() got CL_INSN_CALL, why?");
+                break;
+
             case CL_INSN_SWITCH:
-                // wrong constructor used
-                CL_TRAP;
+                CL_BREAK_IF("createInsn() got CL_INSN_SWITCH, why?");
+                break;
+
+            case CL_INSN_LABEL:
+                operands.resize(1);
+                storeLabel(operands[0], cli);
+                break;
         }
 
         return insn;

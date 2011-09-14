@@ -488,10 +488,20 @@ void insnToStream(std::ostream &str, const CodeStorage::Insn &insn) {
             str << "abort";
             break;
 
-        default:
-#ifndef NDEBUG
-            CL_TRAP;
-#endif
+        case CL_INSN_NOP:
+            str << "nop";
+            break;
+
+        case CL_INSN_SWITCH:
+            str << "switch";
+            break;
+
+        case CL_INSN_LABEL:
+            if (CL_OPERAND_VOID == opList[0].code)
+                break;
+
+            CL_BREAK_IF(CL_TYPE_STRING != opList[0].data.cst.code);
+            str << opList[/* name */ 0].data.cst.data.cst_string.value << ":";
             break;
     }
 }
