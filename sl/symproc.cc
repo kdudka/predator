@@ -508,6 +508,19 @@ void SymProc::heapSetSingleVal(TObjId lhs, TValId rhs) {
     const EValueTarget code = sh_.valTarget(lhsAt);
     CL_BREAK_IF(!isPossibleToDeref(code));
 
+    if (isPossibleToDeref(sh_.valTarget(rhs))) {
+        // we are going to write a pointer, check if we have enough space for it
+        const TOffset dstSize = sh_.valSizeOfTarget(lhsAt);
+        const TOffset ptrSize = sh_.stor().types.dataPtrSizeof();
+        if (dstSize < ptrSize) {
+            CL_ERROR_MSG(lw_, "not enough space to store value of a pointer");
+            CL_NOTE_MSG(lw_, "dstSize: " << dstSize << " B");
+            CL_NOTE_MSG(lw_, "ptrSize: " << ptrSize << " B");
+            bt_->printBackTrace();
+            rhs = sh_.valCreate(VT_UNKNOWN, VO_REINTERPRET);
+        }
+    }
+
     // update type-info
     this->heapObjDefineType(lhs, rhs);
 
@@ -1005,6 +1018,11 @@ bool /* bail out */ SymExecCore::handleLabel(const CodeStorage::Insn &insn) {
     const struct cl_operand &op = insn.operands[/* name */ 0];
     if (CL_OPERAND_VOID == op.code)
         // anonymous label
+        return false;
+
+    const std::string &errLabel = ep_.errLabel;
+    if (errLabel.empty())
+        // we are not looking for error labels, keep going...
         return false;
 
     // resolve name
