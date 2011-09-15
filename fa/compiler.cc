@@ -207,6 +207,7 @@ protected:
 		switch (op.type->code) {
 
 			case cl_type_e::CL_TYPE_INT:
+			case cl_type_e::CL_TYPE_ENUM:
 			case cl_type_e::CL_TYPE_PTR:
 				this->append(
 					new FI_load_cst(dst, Data::createInt(intCstFromOperand(&op)))
@@ -269,7 +270,7 @@ protected:
 
 		if (acc && (acc->code == CL_ACCESSOR_DEREF)) {
 
-			assert(op.type->code == cl_type_e::CL_TYPE_PTR);
+			assert(acc->type->code == cl_type_e::CL_TYPE_PTR);
 
 			acc = Core::computeOffset(offset, acc->next);
 
@@ -377,6 +378,8 @@ protected:
 					int offset = 0;
 			
 					if (acc && (acc->code == CL_ACCESSOR_DEREF)) {
+
+						assert(acc->type->code == cl_type_e::CL_TYPE_PTR);
 
 						this->append(new FI_load_ABP(dst, (int)varInfo.second));
 
