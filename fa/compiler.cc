@@ -832,21 +832,18 @@ protected:
 
 		CodeStorage::TKillVarList varsToKill = insn.varsToKill;
 
-		// kill also the destination variable if needed
+		// kill also the destination variable if possible
 
 		if (insn.operands[0].code == cl_operand_e::CL_OPERAND_VAR) {
 
-			auto varInfo = this->curCtx->getVarInfo(varIdFromOperand(&insn.operands[0]));
+			auto varId = varIdFromOperand(&insn.operands[0]);
 
-			if (varInfo.first) {
+			if (this->curCtx->getVarInfo(varId).first) {
 
 				auto acc = insn.operands[0].accessor;
 
 				if (!acc || (acc->code != CL_ACCESSOR_DEREF))
-
-					varsToKill.push_back(
-						CodeStorage::KillVar(varIdFromOperand(&insn.operands[0]), false)
-					);
+					varsToKill.push_back(CodeStorage::KillVar(varId, false));
 
 			}
 
@@ -916,7 +913,7 @@ protected:
 		// delete stack frame (r1)
 		this->append(new FI_node_free(1));
 
-		// return to r1
+		// return to r0
 		this->append(new FI_ret(0));
 
 	}
