@@ -37,7 +37,6 @@
 #include "symctx.hh"
 #include "executionmanager.hh"
 #include "fixpointinstruction.hh"
-#include "splitting.hh"
 
 #include "symexec.hh"
 
@@ -462,13 +461,16 @@ public:
 
 	}
 
-	void loadBoxes(const boost::unordered_map<std::string, std::string>& db) {
+	void loadBoxes(const std::unordered_map<std::string, std::string>& db) {
 
 	    CL_DEBUG_AT(2, "loading boxes ...");
 
-		for (boost::unordered_map<std::string, std::string>::const_iterator i = db.begin(); i != db.end(); ++i) {
-			this->boxes.push_back((const Box*)this->boxMan.loadBox(i->first, db));
-			CL_DEBUG(i->first << ':' << std::endl << *(const FA*)this->boxes.back());
+		for (auto p : db) {
+
+			this->boxes.push_back((const Box*)this->boxMan.loadBox(p.first, db));
+
+			CL_DEBUG(p.first << ':' << std::endl << *(const FA*)this->boxes.back());
+
 		}
 
 		this->boxMan.buildBoxHierarchy(this->hierarchy, this->basicBoxes);
@@ -492,12 +494,8 @@ public:
 		this->execMan.clear();
 
 	    CL_CDEBUG(2, "creating empty heap ...");
-		// create empty heap with no local variables
+		// create empty heap
 		std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(this->taBackend, this->boxMan));
-
-	    CL_CDEBUG(2, "allocating global registers ...");
-		// add global registers
-		SymCtx::init(*fae);
 
 	    CL_CDEBUG(2, "sheduling initial state ...");
 		// schedule initial state for processing
@@ -550,7 +548,7 @@ void SymExec::loadTypes(const CodeStorage::Storage& stor) {
 	this->engine->loadTypes(stor);
 }
 
-void SymExec::loadBoxes(const boost::unordered_map<std::string, std::string>& db) {
+void SymExec::loadBoxes(const std::unordered_map<std::string, std::string>& db) {
 	this->engine->loadBoxes(db);
 }
 

@@ -21,23 +21,19 @@
 #define SYM_CTX_H
 
 #include <vector>
-
-#include <boost/unordered_map.hpp>
+#include <unordered_map>
 
 #include <cl/storage.hh>
 #include <cl/clutil.hh>
 #include <cl/cl_msg.hh>
 
-#include "forestautext.hh"
-#include "regdef.hh"
 #include "types.hh"
 #include "nodebuilder.hh"
-#include "virtualmachine.hh"
 
 #define ABP_OFFSET		0
 #define ABP_SIZE		SymCtx::size_of_data
-#define IP_OFFSET		(ABP_OFFSET + ABP_SIZE)
-#define IP_SIZE			SymCtx::size_of_data
+#define RET_OFFSET		(ABP_OFFSET + ABP_SIZE)
+#define RET_SIZE		SymCtx::size_of_code
 
 struct SymCtx {
 
@@ -60,7 +56,7 @@ struct SymCtx {
 	std::vector<SelData> sfLayout;
 
 	// uid -> stack x offset/index
-	typedef boost::unordered_map<int, std::pair<bool, size_t> > var_map_type;
+	typedef std::unordered_map<int, std::pair<bool, size_t> > var_map_type;
 
 	var_map_type varMap;
 
@@ -73,9 +69,9 @@ struct SymCtx {
 		this->sfLayout.push_back(SelData(ABP_OFFSET, ABP_SIZE, 0));
 
 		// pointer to context info
-		this->sfLayout.push_back(SelData(IP_OFFSET, IP_SIZE, 0));
+		this->sfLayout.push_back(SelData(RET_OFFSET, RET_SIZE, 0));
 
-		size_t offset = ABP_SIZE + IP_SIZE;
+		size_t offset = ABP_SIZE + RET_SIZE;
 
 		for (CodeStorage::TVarSet::const_iterator i = fnc.vars.begin(); i != fnc.vars.end(); ++i) {
 
@@ -92,7 +88,7 @@ struct SymCtx {
 					// no break
 				case CodeStorage::EVar::VAR_FNC_ARG:
 					NodeBuilder::buildNode(this->sfLayout, var.type, offset);
-					this->varMap.insert(std::make_pair(var.uid, make_pair(true, offset)));
+					this->varMap.insert(std::make_pair(var.uid, std::make_pair(true, offset)));
 					offset += var.type->size;
 					if (var.code == CodeStorage::EVar::VAR_FNC_ARG)
 						++this->argCount;
@@ -104,28 +100,6 @@ struct SymCtx {
 		}
 
 	}
-/*
-	struct InitF {
-		void operator()(FAE& fae) {
-			assert(fae.varCount() == 0);
-			// create ABP, RET, IAX registers
-			fae.varPopulate(FIXED_REG_COUNT);
-			fae.varSet(ABP_INDEX, Data::createInt(0));
-			fae.varSet(RET_INDEX, Data::createUndef());
-			fae.varSet(AAX_INDEX, Data::createUndef());
-		}
-	};
-*/
-	static void init(FAE& fae) {
-
-		VirtualMachine vm(fae);
-
-		assert(vm.varCount() == 0);
-		// create ABP register
-		vm.varPopulate(FIXED_REG_COUNT);
-		vm.varSet(ABP_INDEX, Data::createInt(0));
-//		vm.varSet(AAX_INDEX, Data::createUndef());
-	}
 
 	static bool isStacked(const CodeStorage::Var& var) {
 		switch (var.code) {
@@ -135,55 +109,7 @@ struct SymCtx {
 			default: return false;			
 		}
 	}
-	
-	void createStackFrame(FAE& fae) const {
 
-		VirtualMachine vm(fae);
-
-		std::vector<std::pair<SelData, Data>> stackInfo;
-		
-		for (auto sel : this->sfLayout)
-			stackInfo.push_back(std::make_pair(sel, Data::createUndef()));
-
-		stackInfo[0].second = vm.varGet(ABP_INDEX);
-		stackInfo[1].second = Data::createNativePtr(NULL);
-
-		vm.varSet(ABP_INDEX, Data::createRef(vm.nodeCreate(stackInfo)));
-//		vm.varSet(IP_INDEX, Data::createNativePtr((void*)target));
-//		vm.varPopulate(this->regCount);
-
-	}
-/*
-	// if true then do fae.isolateAtRoot(dst, <ABP>.d_ref.root, FAE::IsolateAllF()) in the next step
-	bool destroyStackFrame(FAE& fae) const {
-
-		VirtualMachine vm(fae);
-
-		const Data& abp = vm.varGet(ABP_INDEX);
-
-		assert(abp.isRef());
-		assert(abp.d_ref.displ == 0);
-		
-		Data data;
-
-		vm.varRemove(this->regCount);
-		vm.nodeLookup(abp.d_ref.root, ABP_OFFSET, data);
-		vm.unsafeNodeDelete(abp.d_ref.root);
-		vm.varSet(ABP_INDEX, data);
-
-		if (!abp.isRef()) {
-			vm.varSet(IP_INDEX, Data::createUndef());
-			return false;
-		}
-
-		vm.nodeLookup(abp.d_ref.root, IP_OFFSET, data);
-		assert(data.isNativePtr());
-		vm.varSet(IP_INDEX, data);
-
-		return true;
-		
-	}
-*/
 	bool isReg(const cl_operand* op, size_t& id) const {
 		if (op->code != cl_operand_e::CL_OPERAND_VAR)
 			return false;
@@ -253,19 +179,6 @@ struct SymCtx {
 		}
 
 	};
-*/
-/*
-	static SymCtx* extractCtx(const FAE& fae) {
-
-		var_map_type::iterator i = this->varMap.find(varIdFromOperand(op));
-
-		const Data& abp = fae.varGet(CTX_INDEX);
-
-		assert(abp.isNativePtr());
-
-		return (SymCtx*)abp.d_native_ptr;
-		
-	}
 */
 };
 

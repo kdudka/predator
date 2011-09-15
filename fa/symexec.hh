@@ -20,7 +20,7 @@
 #ifndef SYM_EXEC_H
 #define SYM_EXEC_H
 
-#include <boost/unordered_map.hpp>
+#include <unordered_map>
 
 #include "compiler.hh"
 
@@ -37,7 +37,7 @@ public:
 	~SymExec();
 
 	void loadTypes(const CodeStorage::Storage& stor);
-	void loadBoxes(const boost::unordered_map<std::string, std::string>& db);
+	void loadBoxes(const std::unordered_map<std::string, std::string>& db);
 	void compile(const CodeStorage::Storage &stor, const CodeStorage::Fnc& entry);
 	void run();
 	void setDbgFlag();

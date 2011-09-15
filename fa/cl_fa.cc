@@ -18,15 +18,15 @@
  */
 
 #include <vector>
+#include <unordered_map>
 #include <fstream>
 #include <iostream>
 #include <stdexcept>
 #include <ctime>
 #include <cstdlib>
-
-#include <boost/unordered_map.hpp>
-
 #include <signal.h>
+
+#include <boost/algorithm/string.hpp>
 
 #include <cl/easy.hh>
 #include <cl/cl_msg.hh>
@@ -37,6 +37,7 @@
 
 #include "symctx.hh"
 #include "symexec.hh"
+#include "programerror.hh"
 
 SymExec se;
 
@@ -73,7 +74,7 @@ struct Config {
 
 struct BoxDb {
 
-	boost::unordered_map<std::string, std::string> store;
+	std::unordered_map<std::string, std::string> store;
 
 	BoxDb(const std::string& root, const std::string& fileName) {
 		std::ifstream input((root + "/" + fileName).c_str());

@@ -21,6 +21,7 @@
 #define BOX_MANAGER_H
 
 #include <vector>
+#include <unordered_map>
 #include <string>
 #include <fstream>
 
@@ -30,7 +31,6 @@
 #include "treeaut.hh"
 #include "tatimint.hh"
 #include "label.hh"
-//#include "labman.hh"
 #include "types.hh"
 #include "box.hh"
 #include "utils.hh"
@@ -166,7 +166,7 @@ public:
 
 protected:
 
-	void translateLabel(TA<label_type>& dst, const TT<std::string>& t, bool& composed, const boost::unordered_map<std::string, std::string>& database) {
+	void translateLabel(TA<label_type>& dst, const TT<std::string>& t, bool& composed, const std::unordered_map<std::string, std::string>& database) {
 		std::vector<std::string> strs;
 		boost::split(strs, t.label(), boost::is_from_range(',', ','));
 		std::vector<const AbstractBox*> label;
@@ -189,7 +189,7 @@ protected:
 		dst.addTransition(lhs, this->lookupLabel(label), t.rhs());
 	}
 
-	TA<label_type>& translateRoot(TA<label_type>& dst, bool& composed, const TA<std::string>& src, const boost::unordered_map<std::string, std::string>& database) {
+	TA<label_type>& translateRoot(TA<label_type>& dst, bool& composed, const TA<std::string>& src, const std::unordered_map<std::string, std::string>& database) {
 		dst.clear();
 		for (TA<std::string>::iterator i = src.begin(); i != src.end(); ++i)
 			this->translateLabel(dst, *i, composed, database);
@@ -225,7 +225,7 @@ public:
 		return dst;
 	}
 
-	const AbstractBox* loadBox(const std::string& name, const boost::unordered_map<std::string, std::string>& database) {
+	const AbstractBox* loadBox(const std::string& name, const std::unordered_map<std::string, std::string>& database) {
 
 		if (boost::starts_with(name, "type_"))
 			return this->getTypeInfo(name.substr(5));
@@ -241,7 +241,7 @@ public:
 		if (!p.second)
 			return p.first->second;
 
-		boost::unordered_map<std::string, std::string>::const_iterator j = database.find(name);
+		auto j = database.find(name);
 		if (j == database.end())
 			throw std::runtime_error("Source for box '" + name + "' not found!");
 

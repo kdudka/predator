@@ -25,8 +25,8 @@
 #include <unordered_map>
 
 #include "abstractinstruction.hh"
-
-#include "utils.hh"
+#include "treeaut.hh"
+#include "label.hh"
 
 namespace CodeStorage {
     struct Fnc;
@@ -107,7 +107,8 @@ public:
 public:
 
 	Compiler(TA<label_type>::Backend& fixpointBackend, TA<label_type>::Backend& taBackend,
-		BoxMan& boxMan, const std::vector<const Box*>& boxes);
+		class BoxMan& boxMan, const std::vector<const class Box*>& boxes);
+
 	~Compiler();
 
 	void compile(Assembly& assembly, const CodeStorage::Storage &stor, const CodeStorage::Fnc& entry);

@@ -24,7 +24,6 @@
 #include <set>
 
 #include "forestautext.hh"
-#include "utils.hh"
 #include "folding.hh"
 #include "programerror.hh"
 #include "utils.hh"

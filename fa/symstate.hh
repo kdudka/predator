@@ -51,24 +51,16 @@ struct SymState {
 
 	SymState* parent;
 	AbstractInstruction* instr;
-//	std::vector<Data>* registers;
 	std::shared_ptr<const FAE> fae;
 	std::set<SymState*> children;
 	QueueType::iterator queueTag;
 	void* payload;
 
 	SymState() {}
-//	SymState(size_t regFileSize) : registers(regFileSize) {}
-/*
-	SymState(SymState* parent, const FAE* fae, std::list<SymState*>::iterator queueTag) {
-		this->init(parent, fae, queueTag);
-	}
-*/
+
 	~SymState() {
 		assert(this->fae == NULL);
 		assert(this->children.empty());
-//		delete this->fae;
-//		this->releaseChildren();
 	}
 
 	void addChild(SymState* child) {
@@ -91,13 +83,6 @@ struct SymState {
 			this->parent->addChild(this);
 
 	}
-/*
-	struct RecycleF {
-		void operator()(Recycler<SymState>& recycler, SymState* obj) {
-			obj->recycle(recycler);
-		}
-	};
-*/
 
 	void recycle(Recycler<SymState>& recycler) {
 
@@ -124,13 +109,6 @@ struct SymState {
 
 	}
 
-/*
-	void releaseChildren() {
-		for (SymState* child : this->children)
-			delete child;
-		this->children.clear();
-	}
-*/
 };
 
 #endif

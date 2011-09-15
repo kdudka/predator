@@ -33,6 +33,7 @@
 #include "comparison.hh"
 #include "fixpoint.hh"
 #include "microcode.hh"
+#include "regdef.hh"
 
 #include "compiler.hh"
 
@@ -868,7 +869,7 @@ protected:
 
 		size_t head2 = this->assembly->code_.size();
 
-		// abstract
+		// fixpoint
 		this->cFixpoint();
 
 		this->assembly->code_[head2]->insn(&insn);
@@ -908,7 +909,7 @@ protected:
 		this->append(new FI_set_greg(ABP_INDEX, 0));
 
 		// move return address into r0
-		this->append(new FI_load(0, 1, IP_OFFSET));
+		this->append(new FI_load(0, 1, RET_OFFSET));
 		
 		// delete stack frame (r1)
 		this->append(new FI_node_free(1));
@@ -1109,7 +1110,7 @@ protected:
 		this->codeIndex.insert(std::make_pair(&fncInfo.second, this->assembly->code_.back()));
 		
 		// gather arguments
-		std::vector<size_t> offsets = { ABP_OFFSET, IP_OFFSET };
+		std::vector<size_t> offsets = { ABP_OFFSET, RET_OFFSET };
 
 		for (auto arg : fnc.args)
 			offsets.push_back(this->curCtx->getVarInfo(arg).second);
@@ -1198,6 +1199,12 @@ public:
 
 		// compile entry call
 
+		// load NULL into r0
+		this->append(new FI_load_cst(0, Data::createInt(0)));
+
+		// push r0 as ABP
+		this->append(new FI_push_greg(0));
+
 		// feed registers with arguments (unknown values)
 		for (size_t i = entry.args.size() + 1; i > 1; --i)
 			this->append(new FI_load_cst(i, Data::createUnknw()));
@@ -1218,8 +1225,8 @@ public:
 		// pop return value into r0
 		this->append(new FI_pop_greg(0));
 
-		// load ABP into r1
-		this->append(new FI_get_greg(1, ABP_INDEX));
+		// pop ABP into r1
+		this->append(new FI_pop_greg(1));
 
 		// check stack frame
 		this->append(new FI_assert(1, Data::createInt(0)));
