@@ -94,6 +94,12 @@ struct Var {
     bool                        initialized;
 
     /**
+     * true if there is at least one instruction in the program that takes an
+     * address of the variable (or some part of it)
+     */
+    bool                        mayBePointed;
+
+    /**
      * dummy constructor
      * @note known to be useful for internal purposes only
      */

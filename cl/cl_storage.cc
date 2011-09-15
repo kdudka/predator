@@ -484,6 +484,11 @@ void ClStorageBuilder::Private::digOperand(const struct cl_operand *op) {
 
     Var &var = this->digOperandVar(op, /* isArgDecl */ false);
     digInitials(var, op->data.var);
+
+    ac = op->accessor;
+    if (ac && ac->code != CL_ACCESSOR_DEREF && seekRefAccessor(ac))
+        // we are taking a reference to the variable by this operand!
+        var.mayBePointed = true;
 }
 
 void ClStorageBuilder::Private::openInsn(Insn *newInsn) {

@@ -100,7 +100,8 @@ Var::Var(EVar code_, const struct cl_operand *op):
     code(code_),
     loc(op->data.var->loc),
     uid(op->data.var->uid),
-    initialized(op->data.var->initialized)
+    initialized(op->data.var->initialized),
+    mayBePointed(false)
 {
     CL_BREAK_IF(CL_OPERAND_VAR != op->code);
     if (op->data.var->name)
