@@ -592,8 +592,7 @@ public:
 	const TT<T>& getAcceptingTransition() const {
 		TA<T>::Iterator i = this->accBegin();
 		const TT<T>* t = &*i;
-		if (++i != this->end())
-			assert(i->rhs() != t->rhs());
+		assert(++i == this->accEnd());
 		return *t;
 	}
 

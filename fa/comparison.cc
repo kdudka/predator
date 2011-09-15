@@ -43,6 +43,16 @@ struct Lt {
 	}
 };
 
+struct Gt {
+	bool operator()(const Data& x, const Data& y) const {
+		if (x.isInt() && y.isInt())
+			return x.d_int < y.d_int;
+		if (x.isBool() && y.isBool())
+			return x.d_bool < y.d_bool;
+		throw std::runtime_error("Gt()(): comparison of the corresponding types not supported");
+	}
+};
+
 template <class F>
 inline void dataCmp(std::vector<bool>& res, const Data& x, const Data& y, F f) {
 
@@ -84,62 +94,25 @@ inline void executeGeneric(const FI_cmp_base& cmp, ExecutionManager& execMan, co
 }
 
 void FI_eq::execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
-/*
-	std::vector<bool> res;
 
-	FI_cmp_base::dataCmp(res, (*state.first)[this->src1_], (*state.first)[this->src2_], Eq());
-
-	for (auto v : res) {
-
-		std::shared_ptr<std::vector<Data>> regs = execMan.allocRegisters(*state.first);
-
-		(*regs)[this->dst_] = Data::createBool(v);
-		
-		execMan.enqueue(state.second, regs, state.second->fae, this->next_);
-
-	}
-*/
 	executeGeneric(*this, execMan, state, Eq());
 
 }
 
 void FI_neq::execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
-/*
-	std::vector<bool> res;
 
-	FI_cmp_base::dataCmp(res, (*state.first)[this->src1_], (*state.first)[this->src2_], Neq());
-
-	for (auto v : res) {
-
-		std::shared_ptr<std::vector<Data>> regs = execMan.allocRegisters(*state.first);
-
-		(*regs)[this->dst_] = Data::createBool(v);
-		
-		execMan.enqueue(state.second, regs, state.second->fae, this->next_);
-
-	}
-*/
 	executeGeneric(*this, execMan, state, Neq());
 
 }
 
 void FI_lt::execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
-/*
-	std::vector<bool> res;
 
-	FI_cmp_base::dataCmp(res, (*state.first)[this->src1_], (*state.first)[this->src2_], Lt());
-
-	for (auto v : res) {
-
-		std::shared_ptr<std::vector<Data>> regs = execMan.allocRegisters(*state.first);
-
-		(*regs)[this->dst_] = Data::createBool(v);
-		
-		execMan.enqueue(state.second, regs, state.second->fae, this->next_);
-
-	}
-*/
 	executeGeneric(*this, execMan, state, Lt());
 
 }
 
+void FI_gt::execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
+
+	executeGeneric(*this, execMan, state, Gt());
+
+}

@@ -37,6 +37,7 @@
 #include "symctx.hh"
 #include "executionmanager.hh"
 #include "fixpointinstruction.hh"
+#include "splitting.hh"
 
 #include "symexec.hh"
 
@@ -373,6 +374,8 @@ protected:
 
 			while (this->execMan.dequeueDFS(state)) {
 
+//				assert(Splitting(*state.second->fae).checkIntegrity());
+
 				if (state.second->instr->insn()) {
 
 					CL_CDEBUG(2, SSD_INLINE_COLOR(C_LIGHT_RED, state.second->instr->insn()->loc << *state.second->instr->insn()));
@@ -381,7 +384,6 @@ protected:
 				} else {
 
 					CL_CDEBUG(3, state);
-//					Splitting(*state.second->fae).checkIntegrity();
 
 				}
 	

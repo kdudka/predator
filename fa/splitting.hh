@@ -296,7 +296,7 @@ public:
 
 	}
 
-	void checkIntegrity() const {
+	bool checkIntegrity() const {
 
 		std::vector<bool> bitmap(this->fae.roots.size(), false);
 		std::map<std::pair<const TA<label_type>*, size_t>, std::set<size_t>> states;
@@ -309,6 +309,8 @@ public:
 			this->checkRoot(i, bitmap, states);
 
 		}
+
+		return true;;
 
 	}
 
@@ -359,7 +361,7 @@ public:
 				splitting.isolateAtRoot(root, t, IsolateBoxF(i->second), boxes);
 				assert(boxes.count(i->second));
 				Folding(fae).unfoldBox(root, i->second);
-				splitting.isolateOne(dst, root, selector);
+				splitting.isolateOne(dst, target, selector);
 				continue;
 			}
 			ta2.addFinalStates(this->fae.roots[root]->getFinalStates());
@@ -374,7 +376,6 @@ public:
 					}
 				}
 			}
-			CL_CDEBUG(3, std::endl << ta2);
 			fae.roots[root] = std::shared_ptr<TA<label_type>>(&ta2.uselessAndUnreachableFree(*fae.allocTA()));
 			fae.updateRootMap(root);
 			ta2.clear();
@@ -388,7 +389,7 @@ public:
 			splitting.isolateAtRoot(fae.roots.size() - 1, t, IsolateBoxF(i->second), boxes);
 			assert(boxes.count(i->second));
 			Folding(fae).unfoldBox(fae.roots.size() - 1, i->second);
-			splitting.isolateOne(dst, root, selector);
+			splitting.isolateOne(dst, target, selector);
 		}
 
 	}
@@ -447,10 +448,11 @@ public:
 	template <class F>
 	void isolateAtRoot(std::vector<FAE*>& dst, size_t root, F f) const {
 
-//		CL_CDEBUG(3, "isolateAtRoot: " << root);
-
 		assert(root < this->fae.roots.size());
 		assert(this->fae.roots[root]);
+
+		CL_CDEBUG(3, "isolateAtRoot: " << root << std::endl << this->fae);
+
 		for (std::set<size_t>::const_iterator j = this->fae.roots[root]->getFinalStates().begin(); j != this->fae.roots[root]->getFinalStates().end(); ++j) {
 		for (TA<label_type>::iterator i = this->fae.roots[root]->begin(*j), end = this->fae.roots[root]->end(*j, i); i != end ; ++i) {
 			FAE fae(this->fae);
@@ -472,7 +474,7 @@ public:
 
 	void isolateOne(std::vector<FAE*>& dst, size_t target, size_t offset) const {
 
-//		CL_CDEBUG(3, "isolateOne: " << target << ':' << offset);
+//		CL_CDEBUG(3, "isolateOne: " << target << ':' << offset << std::endl << this->fae);
 
 		assert(target < this->fae.roots.size());
 		assert(this->fae.roots[target]);

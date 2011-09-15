@@ -103,4 +103,17 @@ public:
 
 };
 
+class FI_gt : public FI_cmp_base {
+
+public:
+
+	FI_gt(size_t dst, size_t src1, size_t src2) : FI_cmp_base(dst, src1, src2) {}
+
+	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
+
+	virtual std::ostream& toStream(std::ostream& os) const {
+		return os << "gt    \tr" << this->dst_ << ", r" << this->src1_ << ", r" << this->src2_;
+	}
+
+};
 #endif

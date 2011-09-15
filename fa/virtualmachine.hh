@@ -285,6 +285,7 @@ public:
 	void nodeModify(size_t root, size_t offset, const Data& in, Data& out) {
 		assert(root < this->fae.roots.size());
 		assert(this->fae.roots[root]);
+		CL_CDEBUG(2, std::endl << *this->fae.roots[root]);
 		TA<label_type> ta(*this->fae.backend);
 		this->transitionModify(ta, this->fae.roots[root]->getAcceptingTransition(), offset, in, out);
 		this->fae.roots[root]->copyTransitions(ta);

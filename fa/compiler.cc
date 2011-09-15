@@ -203,16 +203,24 @@ protected:
 
 	void cLoadCst(size_t dst, const cl_operand& op) {
 		
-		switch (op.data.cst.code) {
+		switch (op.type->code) {
 
 			case cl_type_e::CL_TYPE_INT:
+			case cl_type_e::CL_TYPE_PTR:
 				this->append(
-					new FI_load_cst(dst, Data::createInt(op.data.cst.data.cst_int.value))
+					new FI_load_cst(dst, Data::createInt(intCstFromOperand(&op)))
+				);
+				break;
+
+			case cl_type_e::CL_TYPE_BOOL:
+				this->append(
+					new FI_load_cst(dst, Data::createBool(intCstFromOperand(&op)))
 				);
 				break;
 
 			default:
 				assert(false);
+				break;
 
 		}
 
@@ -794,8 +802,8 @@ protected:
 		const cl_operand& src1 = insn.operands[1];
 		const cl_operand& src2 = insn.operands[2];
 
-		assert(dst.type->code == cl_type_e::CL_TYPE_INT);
-		assert(src1.type->code == cl_type_e::CL_TYPE_INT);
+		assert(dst.type->code == cl_type_e::CL_TYPE_PTR);
+		assert(src1.type->code == cl_type_e::CL_TYPE_PTR);
 		assert(src2.type->code == cl_type_e::CL_TYPE_INT);
 
 		size_t dstReg = this->lookupStoreReg(dst, 0);
@@ -822,8 +830,30 @@ protected:
 		for (size_t i = fnc.args.size() + 1; i > 1; --i)
 			this->cLoadOperand(i, insn.operands[i], false);
 
+		CodeStorage::TKillVarList varsToKill = insn.varsToKill;
+
+		// kill also the destination variable if needed
+
+		if (insn.operands[0].code == cl_operand_e::CL_OPERAND_VAR) {
+
+			auto varInfo = this->curCtx->getVarInfo(varIdFromOperand(&insn.operands[0]));
+
+			if (varInfo.first) {
+
+				auto acc = insn.operands[0].accessor;
+
+				if (!acc || (acc->code != CL_ACCESSOR_DEREF))
+
+					varsToKill.push_back(
+						CodeStorage::KillVar(varIdFromOperand(&insn.operands[0]), false)
+					);
+
+			}
+
+		}
+	
 		// kill dead variables
-		this->cKillDeadVariables(insn.varsToKill);
+		this->cKillDeadVariables(varsToKill);
 
 		size_t head = this->assembly->code_.size();
 
@@ -996,6 +1026,9 @@ protected:
 						break;
 					case cl_binop_e::CL_BINOP_LT:
 						this->compileCmp<FI_lt>(insn);
+						break;
+					case cl_binop_e::CL_BINOP_GT:
+						this->compileCmp<FI_gt>(insn);
 						break;
 					case cl_binop_e::CL_BINOP_PLUS:
 						this->compilePlus(insn);
