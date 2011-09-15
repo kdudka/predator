@@ -921,6 +921,7 @@ struct OpHandler</* binary */ 2> {
     {
         CL_BREAK_IF(!clt[0] || !clt[1] || !clt[2]);
         SymHeap &sh = proc.sh_;
+        const struct cl_loc *lw = proc.lw();
 
         long num1, num2;
 
@@ -935,6 +936,17 @@ struct OpHandler</* binary */ 2> {
                 CL_BREAK_IF(clt[/* src1 */ 0]->code != clt[/* src2 */ 1]->code);
                 return compareValues(sh, code, clt[0], rhs[0], rhs[1]);
 
+            case CL_BINOP_PLUS:
+                if (!isPossibleToDeref(sh.valTarget(rhs[0])))
+                    goto unknown_result;
+
+                if (VAL_NULL != rhs[1] && VAL_TRUE != rhs[1]
+                        && VT_CUSTOM != sh.valTarget(rhs[1]))
+                    goto unknown_result;
+
+                CL_DEBUG_MSG(lw, "Using CIL code obfuscator? No problem...");
+                // fall through!
+
             case CL_BINOP_POINTER_PLUS:
                 return proc.handlePointerPlus(rhs[0], rhs[1]);
 
@@ -942,7 +954,7 @@ struct OpHandler</* binary */ 2> {
                 if (numFromVal(&num1, sh, rhs[0])
                         && numFromVal(&num2, sh, rhs[1]))
                 {
-                    CL_DEBUG_MSG(proc.lw(), "executing of CL_BINOP_MULT");
+                    CL_DEBUG_MSG(lw, "executing CL_BINOP_MULT");
 
                     // FIXME: this will likely break the fix-point in some cases
                     CustomValue cVal(CV_INT);
@@ -952,8 +964,12 @@ struct OpHandler</* binary */ 2> {
                 // fall through!
 
             default:
-                return sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
+                // over-approximate anything else
+                goto unknown_result;
         }
+
+unknown_result:
+        return sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
     }
 };
 
