@@ -20,6 +20,7 @@
 #include "config_cl.h"
 #include "cl_storage.hh"
 
+#include <cl/clutil.hh>
 #include <cl/storage.hh>
 
 #include "util.hh"
@@ -319,8 +320,6 @@ struct ClStorageBuilder::Private {
     Block       *bb;
     Insn        *insn;
 
-    std::set<int /* uid */>     varsDone;
-
     Private():
         file(0),
         fnc(0),
@@ -329,8 +328,9 @@ struct ClStorageBuilder::Private {
     {
     }
 
-    void digInitials(Var &, const struct cl_var *);
-    void digOperandVar(const struct cl_operand *);
+    typedef struct cl_operand TOp;
+
+    Var& digOperandVar(const TOp *, bool isArgDecl);
     void digOperandCst(const struct cl_operand *);
     void digOperand(const struct cl_operand *);
     void openInsn(Insn *);
@@ -351,10 +351,7 @@ void ClStorageBuilder::acknowledge() {
     this->run(d->stor);
 }
 
-void ClStorageBuilder::Private::digInitials(
-        Var                             &var,
-        const struct cl_var             *clv)
-{
+void digInitials(Var &var, const struct cl_var *clv) {
     const struct cl_initializer *initial;
     for (initial = clv->initial; initial; initial = initial->next) {
         ControlFlow *cfg = /* XXX */ 0;
@@ -363,57 +360,59 @@ void ClStorageBuilder::Private::digInitials(
     }
 }
 
-void ClStorageBuilder::Private::digOperandVar(const struct cl_operand *op) {
-    const struct cl_var *clv = op->data.var;
-    const int id = clv->uid;
+EVar varCodeByScope(const enum cl_scope_e scope, const bool isArgDecl) {
+    switch (scope) {
+        case CL_SCOPE_GLOBAL:
+        case CL_SCOPE_STATIC:
+            return VAR_GL;
+
+        case CL_SCOPE_FUNCTION:
+            return (isArgDecl)
+                ? VAR_FNC_ARG
+                : VAR_LC;
+
+        case CL_SCOPE_BB:
+        default:
+            CL_BREAK_IF("varCodeByScope() got an invalid scope code");
+            return VAR_VOID;
+    }
+}
+
+Var& ClStorageBuilder::Private::digOperandVar(const TOp *op, bool isArgDecl) {
+    const int id = varIdFromOperand(op);
 
     // mark as used in the current function
     this->fnc->vars.insert(id);
 
-    // do process each variable only once
-    if (!insertOnce(this->varsDone, id))
-        return;
+    // lookup by var ID
+    Var &var = stor.vars[id];
+    if (VAR_VOID != var.code)
+        // already processed
+        return var;
 
-    enum cl_scope_e scope = op->scope;
+    const enum cl_scope_e scope = op->scope;
+    const EVar code = varCodeByScope(scope, isArgDecl);
+    var = Var(code, op);
+
+    const std::string &varName = var.name;
+    const char *fileName = var.loc.file;
+
     switch (scope) {
-        case CL_SCOPE_GLOBAL: {
-            Var &ref = stor.vars[id] = Var(VAR_GL, op);
-            if (!ref.name.empty())
-                stor.varNames.glNames[ref.name] = id;
+        case CL_SCOPE_GLOBAL:
+            if (!varName.empty())
+                stor.varNames.glNames[varName] = id;
             break;
-        }
 
-        case CL_SCOPE_STATIC: {
-            Var &ref = stor.vars[id] = Var(VAR_GL, op);
-            const char *file = ref.loc.file;
-            if (file && !ref.name.empty())
-                stor.varNames.lcNames[file][ref.name] = id;
+        case CL_SCOPE_STATIC:
+            if (fileName && !varName.empty())
+                stor.varNames.lcNames[fileName][varName] = id;
             break;
-        }
 
-        case CL_SCOPE_FUNCTION: {
-            Var &var = stor.vars[id];
-
-            EVar code = var.code;
-            switch (code) {
-                case VAR_VOID:
-                    var = Var(VAR_LC, op);
-                case VAR_FNC_ARG:
-                    break;
-                case VAR_LC:
-                    if (id == var.uid)
-                        break;
-                case VAR_GL:
-                    CL_TRAP;
-            }
+        default:
             break;
-        }
-
-        case CL_SCOPE_BB:
-            CL_BREAK_IF("digOperandVar() got an invalid scope");
     }
 
-    this->digInitials(stor.vars[id], clv);
+    return var;
 }
 
 void ClStorageBuilder::Private::digOperandCst(const struct cl_operand *op) {
@@ -471,16 +470,20 @@ void ClStorageBuilder::Private::digOperand(const struct cl_operand *op) {
     switch (code) {
         case CL_OPERAND_VAR:
             // store variable's metadata
-            this->digOperandVar(op);
             break;
 
         case CL_OPERAND_CST:
             this->digOperandCst(op);
-            break;
+            return;
 
         case CL_OPERAND_VOID:
+        default:
             CL_BREAK_IF("invalid call of digOperand()");
+            return;
     }
+
+    Var &var = this->digOperandVar(op, /* isArgDecl */ false);
+    digInitials(var, op->data.var);
 }
 
 void ClStorageBuilder::Private::openInsn(Insn *newInsn) {
@@ -563,19 +566,13 @@ void ClStorageBuilder::fnc_arg_decl(int pos, const struct cl_operand *op) {
     if (CL_OPERAND_VAR != op->code)
         CL_TRAP;
 
-    const int uid = op->data.var->uid;
-    Fnc &fnc = *(d->fnc);
-    Var &var = d->stor.vars[uid];
-    d->fnc->vars.insert(uid);
-    var = Var(VAR_FNC_ARG, op);
+    d->digOperandVar(op, /* isArgDecl */ true);
 
-    const int argCnt = fnc.args.size();
-    if (argCnt + /* FIXME: start with zero instead? */ 1 != pos)
-        // argument list not sorted
-        CL_TRAP;
-
-    else
-        fnc.args.push_back(uid);
+    TArgByPos &args = d->fnc->args;
+    const int uid = varIdFromOperand(op);
+    args.push_back(uid);
+    CL_BREAK_IF(static_cast<int>(args.size()) != pos);
+    (void) pos;
 }
 
 void ClStorageBuilder::fnc_close() {
