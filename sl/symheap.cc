@@ -184,26 +184,23 @@ inline TMemChunk createChunk(const TOffset off, const TObjType clt) {
     return TMemChunk(off, off + clt->size);
 }
 
-enum ELiveObj {
-    LO_INVALID,
-    LO_BLOCK,
-    LO_DATA_PTR,
-    LO_DATA
-};
-
-typedef std::map<TObjId, ELiveObj>                      TLiveObjs;
-
 enum EBlockKind {
     BK_INVALID,
-    BK_OBJECT,
+    BK_DATA_PTR,
+    BK_DATA_OBJ,
     BK_COMPOSITE,
     BK_UNIFORM
 };
 
+typedef std::map<TObjId, EBlockKind>                    TLiveObjs;
+
 inline EBlockKind bkFromClt(const TObjType clt) {
-    return isComposite(clt)
-        ? BK_COMPOSITE
-        : BK_OBJECT;
+    if (isComposite(clt))
+        return BK_COMPOSITE;
+
+    return (isDataPtr(clt))
+        ? BK_DATA_PTR
+        : BK_DATA_OBJ;
 }
 
 class AbstractHeapEntity {
@@ -398,7 +395,7 @@ struct SymHeapCore::Private {
             const TValId            rootDst,
             RootValue              *rootDataDst,
             const TObjId            objSrc,
-            const ELiveObj          code,
+            const EBlockKind        code,
             const TOffset           shift = 0);
 
     TValId dupRoot(TValId root);
@@ -527,9 +524,16 @@ void SymHeapCore::Private::splitBlockByObject(
     this->ents.getEntRO(&hbData, obj);
 
     const EBlockKind code = hbData->code;
-    if (BK_OBJECT == code && this->valsEqual(blData->value, hbData->value))
-        // preserve non-conflicting uniform blocks
-        return;
+    switch (code) {
+        case BK_DATA_PTR:
+        case BK_DATA_OBJ:
+            if (this->valsEqual(blData->value, hbData->value))
+                // preserve non-conflicting uniform blocks
+                return;
+
+        default:
+            break;
+    }
 
     // dig root
     const TValId root = blData->root;
@@ -582,7 +586,7 @@ void SymHeapCore::Private::splitBlockByObject(
                 objEndToBlEnd,
                 blOther);
 
-        rootData->liveObjs[blOther] = LO_BLOCK;
+        rootData->liveObjs[blOther] = BK_UNIFORM;
         return;
     }
 
@@ -633,7 +637,8 @@ void SymHeapCore::Private::reinterpretObjData(
 
     EBlockKind code = blData->code;
     switch (code) {
-        case BK_OBJECT:
+        case BK_DATA_PTR:
+        case BK_DATA_OBJ:
             break;
 
         case BK_COMPOSITE:
@@ -689,7 +694,8 @@ void SymHeapCore::Private::reinterpretObjData(
             }
             // fall through!
 
-        case BK_OBJECT:
+        case BK_DATA_PTR:
+        case BK_DATA_OBJ:
             // TODO: hook various reinterpretation drivers here
             val = this->valCreate(VT_UNKNOWN, VO_REINTERPRET);
             break;
@@ -943,7 +949,7 @@ void SymHeapCore::Private::transferBlock(
             continue;
 
         // copy a single live block
-        const ELiveObj code = it->second;
+        const EBlockKind code = it->second;
         this->copySingleLiveBlock(dstRoot, rootDataDst, objSrc, code, shift);
     }
 }
@@ -1018,10 +1024,10 @@ TValId SymHeapCore::Private::objInit(TObjId obj) {
 
     // mark the object as live
     if (isDataPtr(clt))
-        rootData->liveObjs[obj] = LO_DATA_PTR;
+        rootData->liveObjs[obj] = BK_DATA_PTR;
 #if SE_TRACK_NON_POINTER_VALUES
     else
-        rootData->liveObjs[obj] = LO_DATA;
+        rootData->liveObjs[obj] = BK_DATA_OBJ;
 #endif
 
     // mark the owning root entity as live (if not already)
@@ -1171,12 +1177,12 @@ TObjId SymHeapCore::Private::copySingleLiveBlock(
         const TValId                rootDst,
         RootValue                  *rootDataDst,
         const TObjId                objSrc,
-        const ELiveObj              code,
+        const EBlockKind            code,
         const TOffset               shift)
 {
     TObjId dst;
 
-    if (LO_BLOCK == code) {
+    if (BK_UNIFORM == code) {
         // duplicate a uniform block
         BlockEntity *blSrc;
         this->ents.getEntRW(&blSrc, objSrc);
@@ -1192,7 +1198,7 @@ TObjId SymHeapCore::Private::copySingleLiveBlock(
     }
     else {
         // duplicate a regular object
-        CL_BREAK_IF(LO_DATA_PTR != code && LO_DATA != code);
+        CL_BREAK_IF(BK_DATA_PTR != code && BK_DATA_OBJ != code);
 
         const HeapObject *objDataSrc;
         this->ents.getEntRO(&objDataSrc, objSrc);
@@ -1242,8 +1248,8 @@ void SymHeapCore::gatherLivePointers(TObjList &dst, TValId root) const {
     const RootValue *rootData;
     d->ents.getEntRO(&rootData, root);
     BOOST_FOREACH(TLiveObjs::const_reference item, rootData->liveObjs) {
-        const ELiveObj code = item.second;
-        if (LO_DATA_PTR == code)
+        const EBlockKind code = item.second;
+        if (BK_DATA_PTR == code)
             dst.push_back(d->objExport(/* obj */ item.first));
     }
 }
@@ -1252,8 +1258,8 @@ void SymHeapCore::gatherUniformBlocks(TUniBlockMap &dst, TValId root) const {
     const RootValue *rootData;
     d->ents.getEntRO(&rootData, root);
     BOOST_FOREACH(TLiveObjs::const_reference item, rootData->liveObjs) {
-        const ELiveObj code = item.second;
-        if (LO_BLOCK != code)
+        const EBlockKind code = item.second;
+        if (BK_UNIFORM != code)
             continue;
 
         const BlockEntity *blData;
@@ -1273,18 +1279,18 @@ void SymHeapCore::gatherLiveObjects(TObjList &dst, TValId root) const {
     const RootValue *rootData;
     d->ents.getEntRO(&rootData, root);
     BOOST_FOREACH(TLiveObjs::const_reference item, rootData->liveObjs) {
-        const ELiveObj code = item.second;
+        const EBlockKind code = item.second;
 
         switch (code) {
-            case LO_BLOCK:
+            case BK_UNIFORM:
                 continue;
 
-            case LO_DATA:
-            case LO_DATA_PTR:
+            case BK_DATA_PTR:
+            case BK_DATA_OBJ:
                 dst.push_back(d->objExport(/* obj */ item.first));
                 continue;
 
-            case LO_INVALID:
+            case BK_INVALID:
             default:
                 CL_BREAK_IF("gatherLiveObjects sees something special");
         }
@@ -1395,9 +1401,7 @@ void SymHeapCore::objSetValue(TObjId obj, TValId val, TValSet *killedPtrs) {
     const TValId root = objData->root;
     RootValue *rootData;
     d->ents.getEntRW(&rootData, root);
-    rootData->liveObjs[obj] = isDataPtr(clt)
-        ? LO_DATA_PTR
-        : LO_DATA;
+    rootData->liveObjs[obj] = bkFromClt(clt);
 
     // mark the owning root entity as live (if not already)
     if (!hasKey(d->liveRoots, root)) {
@@ -1432,7 +1436,7 @@ TObjId SymHeapCore::Private::writeUniformBlock(
     CL_BREAK_IF(!this->chkArenaConsistency(rootData));
 
     // mark the block as live
-    rootData->liveObjs[obj] = LO_BLOCK;
+    rootData->liveObjs[obj] = BK_UNIFORM;
 
     TArena &arena = rootData->arena;
     arena += createArenaItem(beg, size, obj);
@@ -1826,7 +1830,8 @@ TObjId SymHeapCore::ptrAt(TValId at, bool *pExcl) {
     BOOST_FOREACH(const TObjId obj, candidates) {
         const BlockEntity *blData;
         d->ents.getEntRO(&blData, obj);
-        if (BK_OBJECT != blData->code)
+        const EBlockKind code = blData->code;
+        if (BK_DATA_PTR != code && BK_DATA_OBJ != code)
             continue;
 
         const HeapObject *objData = DCAST<const HeapObject *>(blData);
@@ -1890,7 +1895,8 @@ TObjId SymHeapCore::objAt(TValId at, TObjType clt, bool *pExcl) {
         d->ents.getEntRO(&blData, obj);
         const EBlockKind code = blData->code;
         switch (code) {
-            case BK_OBJECT:
+            case BK_DATA_PTR:
+            case BK_DATA_OBJ:
             case BK_COMPOSITE:
                 break;
 
@@ -2176,9 +2182,9 @@ void SymHeapCore::Private::destroyRoot(TValId root) {
     // destroy all objects inside
     BOOST_FOREACH(TLiveObjs::const_reference item, rootData->liveObjs) {
         const TObjId obj = item.first;
-        const ELiveObj code = item.second;
+        const EBlockKind code = item.second;
 
-        if (LO_BLOCK == code) {
+        if (BK_UNIFORM == code) {
             // uniform block
             this->ents.releaseEnt(obj);
             continue;
