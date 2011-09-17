@@ -225,7 +225,7 @@ void trackUses(DeepCopyData &dc, TValId valSrc) {
     if (isPossibleToDeref(code))
         sh.pointedBy(uses, rootSrcAt);
     else
-        sh.usedBy(uses, valSrc);
+        sh.usedBy(uses, valSrc, /* liveOnly */ true);
 
     // go from the value backward
     BOOST_FOREACH(TObjId objSrc, uses) {

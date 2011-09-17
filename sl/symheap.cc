@@ -1083,18 +1083,38 @@ TValId SymHeapCore::valueOf(TObjId obj) {
         return val;
     }
 
-    // deleayed object initialization
+    // delayed object initialization
     return d->objInit(obj);
 }
 
-void SymHeapCore::usedBy(TObjList &dst, TValId val) const {
+void SymHeapCore::usedBy(TObjList &dst, TValId val, bool liveOnly) const {
     if (VAL_NULL == val)
+        // we do not track uses of special values
         return;
 
     const BaseValue *valData;
     d->ents.getEntRO(&valData, val);
     const TObjSet &usedBy = valData->usedBy;
-    std::copy(usedBy.begin(), usedBy.end(), std::back_inserter(dst));
+    if (!liveOnly) {
+        // dump everything
+        std::copy(usedBy.begin(), usedBy.end(), std::back_inserter(dst));
+        return;
+    }
+
+    BOOST_FOREACH(const TObjId obj, usedBy) {
+        // get object data
+        const HeapObject *objData;
+        d->ents.getEntRO(&objData, obj);
+
+        // get root data
+        const TValId root = objData->root;
+        const RootValue *rootData;
+        d->ents.getEntRO(&rootData, root);
+
+        // check if the object is alive
+        if (hasKey(rootData->liveObjs, obj))
+            dst.push_back(obj);
+    }
 }
 
 unsigned SymHeapCore::usedByCount(TValId val) const {

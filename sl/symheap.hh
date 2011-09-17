@@ -291,7 +291,7 @@ class SymHeapCore {
          * @param val ID of the value to look for
          * @note The operation may return from 0 to n objects.
          */
-        void usedBy(TObjList &dst, TValId val) const;
+        void usedBy(TObjList &dst, TValId val, bool liveOnly = false) const;
 
         /// return how many objects have the value inside
         unsigned usedByCount(TValId val) const;
