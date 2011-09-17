@@ -846,6 +846,38 @@ TValId compareValues(
     return sh.valCreate(VT_UNKNOWN, vo);
 }
 
+TValId SymProc::handleIntegralOp(TValId v1, TValId v2, enum cl_binop_e code) {
+    // check whether we both values are integral constant
+    long num1, num2;
+    if (!numFromVal(&num1, sh_, v1) || !numFromVal(&num2, sh_, v2))
+        return sh_.valCreate(VT_UNKNOWN, VO_UNKNOWN);
+
+    // compute the result of an integral binary operation
+    long result;
+    switch (code) {
+#if SE_ALLOW_CST_INT_PLUS_MINUS
+        case CL_BINOP_PLUS:
+            result = num1 + num2;
+            break;
+
+        case CL_BINOP_MINUS:
+            result = num1 - num2;
+            break;
+#endif
+        case CL_BINOP_MULT:
+            result = num1 * num2;
+            break;
+
+        default:
+            return sh_.valCreate(VT_UNKNOWN, VO_UNKNOWN);
+    }
+
+    // wrap the result as a heap value expressing a constant integer
+    CustomValue cv(CV_INT);
+    cv.data.num = result;
+    return sh_.valWrapCustom(cv);
+}
+
 TValId SymProc::handlePointerPlus(TValId at, TValId off, bool negOffset) {
     long num;
     if (!numFromVal(&num, sh_, off)) {
@@ -926,8 +958,6 @@ struct OpHandler</* binary */ 2> {
         SymHeap &sh = proc.sh_;
         const struct cl_loc *lw = proc.lw();
 
-        long num1, num2;
-
         const enum cl_binop_e code = static_cast<enum cl_binop_e>(iCode);
         switch (code) {
             case CL_BINOP_EQ:
@@ -939,14 +969,17 @@ struct OpHandler</* binary */ 2> {
                 CL_BREAK_IF(clt[/* src1 */ 0]->code != clt[/* src2 */ 1]->code);
                 return compareValues(sh, code, clt[0], rhs[0], rhs[1]);
 
+            case CL_BINOP_MULT:
+                goto handle_int;
+
             case CL_BINOP_PLUS:
             case CL_BINOP_MINUS:
                 if (!isPossibleToDeref(sh.valTarget(rhs[0])))
-                    goto unknown_result;
+                    goto handle_int;
 
                 if (VAL_NULL != rhs[1] && VAL_TRUE != rhs[1]
                         && VT_CUSTOM != sh.valTarget(rhs[1]))
-                    goto unknown_result;
+                    goto handle_int;
 
                 CL_DEBUG_MSG(lw, "Using CIL code obfuscator? No problem...");
                 // fall through!
@@ -955,26 +988,13 @@ struct OpHandler</* binary */ 2> {
                 return proc.handlePointerPlus(rhs[0], rhs[1],
                         /* negOffset */ (CL_BINOP_MINUS == code));
 
-            case CL_BINOP_MULT:
-                if (numFromVal(&num1, sh, rhs[0])
-                        && numFromVal(&num2, sh, rhs[1]))
-                {
-                    CL_DEBUG_MSG(lw, "executing CL_BINOP_MULT");
-
-                    // FIXME: this will likely break the fix-point in some cases
-                    CustomValue cVal(CV_INT);
-                    cVal.data.num = num1 * num2;
-                    return sh.valWrapCustom(cVal);
-                }
-                // fall through!
-
             default:
                 // over-approximate anything else
-                goto unknown_result;
+                return sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
         }
 
-unknown_result:
-        return sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
+handle_int:
+        return proc.handleIntegralOp(rhs[0], rhs[1], code);
     }
 };
 

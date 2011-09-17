@@ -94,6 +94,11 @@
 #define SE_ABSTRACT_ON_LOOP_EDGES_ONLY      1
 
 /**
+ * if 1, allow exact execution of addition and subtraction of constant integers
+ */
+#define SE_ALLOW_CST_INT_PLUS_MINUS         0
+
+/**
  * how much do we allow to use three-way join
  * - 0 ... never ever
  * - 1 ... only when joining prototypes

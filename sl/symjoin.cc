@@ -1312,12 +1312,20 @@ bool followValuePair(
 
         const CustomValue cVal1 = ctx.sh1.valUnwrapCustom(v1);
         const CustomValue cVal2 = ctx.sh2.valUnwrapCustom(v2);
-        if (cVal1 != cVal2) {
+        TValId vDst;
+        if (cVal1 == cVal2) {
+            vDst = ctx.dst.valWrapCustom(cVal1);
+        }
+        else {
+#if SE_ALLOW_CST_INT_PLUS_MINUS
+            vDst = ctx.dst.valCreate(VT_UNKNOWN, VO_UNKNOWN);
+            updateJoinStatus(ctx, JS_THREE_WAY);
+#else
             SJ_DEBUG("<-- custom values mismatch " << SJ_VALP(v1, v2));
             return false;
+#endif
         }
 
-        const TValId vDst = ctx.dst.valWrapCustom(cVal1);
         return defineValueMapping(ctx, v1, v2, vDst);
     }
 
