@@ -846,14 +846,17 @@ TValId compareValues(
     return sh.valCreate(VT_UNKNOWN, vo);
 }
 
-TValId SymProc::handlePointerPlus(TValId at, TValId off) {
+TValId SymProc::handlePointerPlus(TValId at, TValId off, bool negOffset) {
     long num;
     if (!numFromVal(&num, sh_, off)) {
         CL_DEBUG_MSG(lw_, "pointer plus offset not a known integer");
         return sh_.valCreate(VT_UNKNOWN, VO_UNKNOWN);
     }
 
-    const TOffset offRequested = static_cast<TOffset>(num);
+    TOffset offRequested = static_cast<TOffset>(num);
+    if (negOffset)
+        offRequested = -offRequested;
+
     CL_DEBUG("handlePointerPlus(): " << offRequested << "b offset requested");
     return sh_.valByOffset(at, offRequested);
 }
@@ -937,6 +940,7 @@ struct OpHandler</* binary */ 2> {
                 return compareValues(sh, code, clt[0], rhs[0], rhs[1]);
 
             case CL_BINOP_PLUS:
+            case CL_BINOP_MINUS:
                 if (!isPossibleToDeref(sh.valTarget(rhs[0])))
                     goto unknown_result;
 
@@ -948,7 +952,8 @@ struct OpHandler</* binary */ 2> {
                 // fall through!
 
             case CL_BINOP_POINTER_PLUS:
-                return proc.handlePointerPlus(rhs[0], rhs[1]);
+                return proc.handlePointerPlus(rhs[0], rhs[1],
+                        /* negOffset */ (CL_BINOP_MINUS == code));
 
             case CL_BINOP_MULT:
                 if (numFromVal(&num1, sh, rhs[0])

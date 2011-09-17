@@ -294,7 +294,9 @@ class SymExecEngine: public IStatsProvider {
         bool bypassNonPointers(
                 SymProc                             &proc,
                 const CodeStorage::Insn             &insnCmp,
-                const CodeStorage::Insn             &insnCnd);
+                const CodeStorage::Insn             &insnCnd,
+                const TValId                        v1,
+                const TValId                        v2);
 
         void execCondInsn();
         void execTermInsn();
@@ -434,7 +436,9 @@ fallback:
 bool SymExecEngine::bypassNonPointers(
         SymProc                                     &proc,
         const CodeStorage::Insn                     &insnCmp,
-        const CodeStorage::Insn                     &insnCnd)
+        const CodeStorage::Insn                     &insnCnd,
+        const TValId                                v1,
+        const TValId                                v2)
 {
 #if !SE_TRACK_NON_POINTER_VALUES
     const TObjType clt1 = insnCmp.operands[/* src1 */ 1].type;
@@ -443,7 +447,13 @@ bool SymExecEngine::bypassNonPointers(
 #endif
         return false;
 
+    // chances are that somebody stored pointers into unsigned long (CIL code
+    // does it by default), this check helps to handle that case gracefully
     SymHeap &sh = proc.sh();
+    if (isPossibleToDeref(sh.valTarget(v1))
+            || isPossibleToDeref(sh.valTarget(v2)))
+        return false;
+
     proc.killInsn(insnCmp);
 
     SymHeap sh1(sh);
@@ -526,7 +536,7 @@ void SymExecEngine::execCondInsn() {
         return;
     }
 
-    if (this->bypassNonPointers(proc, *insnCmp, *insnCnd))
+    if (this->bypassNonPointers(proc, *insnCmp, *insnCnd, v1, v2))
         // do not track relations over data we are not interested in
         return;
 

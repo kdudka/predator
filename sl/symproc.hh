@@ -122,7 +122,7 @@ class SymProc {
         void heapObjDefineType(TObjId lhs, TValId rhs);
         TValId heapValFromObj(const struct cl_operand &op);
         TValId heapValFromCst(const struct cl_operand &op);
-        TValId handlePointerPlus(TValId at, TValId off);
+        TValId handlePointerPlus(TValId at, TValId off, bool negOffset);
         void killVar(const CodeStorage::KillVar &kv);
 
     protected:
