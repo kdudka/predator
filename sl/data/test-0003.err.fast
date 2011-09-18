@@ -1,4 +1,3 @@
 test-0003.c:8:9: error: invalid free()
-test-0003.c:8:9: note: the value being freed is an untouched contents of stack
 test-0003.c:10:9: error: attempt to free a non-heap object
 test-0003.c:14:9: error: double free()

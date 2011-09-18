@@ -96,7 +96,7 @@
 /**
  * if 1, allow exact execution of addition and subtraction of constant integers
  */
-#define SE_ALLOW_CST_INT_PLUS_MINUS         0
+#define SE_ALLOW_CST_INT_PLUS_MINUS         1
 
 /**
  * how much do we allow to use three-way join
@@ -192,7 +192,7 @@
  * if 1, track uninitialized values, which may result into significant state
  * explosion in some cases
  */
-#define SE_TRACK_UNINITIALIZED              1
+#define SE_TRACK_UNINITIALIZED              0
 
 /**
  * if 1, do not make deep copy on copy of SymHeap [experimental]
