@@ -932,6 +932,9 @@ struct OpHandler</* unary */ 1> {
             case CL_UNOP_TRUTH_NOT:
                 return compareValues(sh, CL_BINOP_EQ, clt[0], VAL_FALSE, val);
 
+            case CL_UNOP_MINUS:
+                return proc.handleIntegralOp(VAL_NULL, rhs[0], CL_BINOP_MINUS);
+
             case CL_UNOP_ASSIGN:
                 return val;
 
