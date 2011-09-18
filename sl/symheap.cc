@@ -681,15 +681,13 @@ void SymHeapCore::Private::reinterpretObjData(
     this->ents.getEntRW(&blData, obj);
     code = blData->code;
 
-    BlockEntity *uniData;
     TValId val;
 
     switch (code) {
         case BK_UNIFORM:
-            uniData = DCAST<BlockEntity *>(blData);
-            if (isCoveredByBlock(oldData, uniData)) {
+            if (isCoveredByBlock(oldData, blData)) {
                 // object fully covered by the overlapping uniform block
-                val = this->valDup(uniData->value);
+                val = this->valDup(blData->value);
                 break;
             }
             // fall through!
@@ -2633,6 +2631,8 @@ bool SymHeap::proveNeq(TValId ref, TValId val) const {
 
     std::set<TValId> haveSeen;
 
+    const TOffset off = this->valOffset(val);
+
     while (0 < val && insertOnce(haveSeen, val)) {
         const EValueTarget code = this->valTarget(val);
         switch (code) {
@@ -2663,14 +2663,15 @@ bool SymHeap::proveNeq(TValId ref, TValId val) const {
             // no valid object here
             return false;
 
-        const TValId valNext = nextValFromSeg(writable, seg);
         if (this->segMinLength(seg))
             // non-empty abstract object reached
             return (VAL_NULL == ref)
                 || isKnownObject(refCode);
 
-        // jump to next value
-        val = valNext;
+        // jump to next value while taking the 'head' offset into consideration
+        const BindingOff &bOff = this->segBinding(seg);
+        const TValId valNext = nextValFromSeg(writable, seg);
+        val = writable.valByOffset(valNext, off - bOff.head);
     }
 
     return false;
