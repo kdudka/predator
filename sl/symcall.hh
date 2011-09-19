@@ -41,7 +41,7 @@ namespace CodeStorage {
 class SymCallCache {
     public:
         /// create long term cache, this should happen once per SymExec lifetime
-        SymCallCache(TStorRef stor);
+        SymCallCache(TStorRef stor, bool ptrace);
         ~SymCallCache();
 
         SymBackTrace& bt();

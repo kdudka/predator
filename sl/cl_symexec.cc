@@ -73,7 +73,6 @@ void parseConfigString(SymExecParams &sep, std::string cnf) {
         cstr += elPrefixLen;
         CL_DEBUG("parseConfigString: error label is \"" << cstr << "\"");
         sep.errLabel = cstr;
-        sep.ptrace = true;
         return;
     }
 

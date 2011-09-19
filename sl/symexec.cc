@@ -186,7 +186,7 @@ class SymExec: public IStatsProvider {
         SymExec(const CodeStorage::Storage &stor, const SymExecParams &ep):
             stor_(stor),
             params_(ep),
-            callCache_(stor)
+            callCache_(stor, ep.ptrace)
         {
         }
 
@@ -235,15 +235,14 @@ class SymExecEngine: public IStatsProvider {
             endReached_(false)
         {
             this->initEngine(entry);
-            if (params_.ptrace)
-                // register path printer
-                bt_.pushPathTracer(&ptracer_);
+
+            // register path printer
+            bt_.pushPathTracer(&ptracer_);
         }
 
         ~SymExecEngine() {
-            if (params_.ptrace)
-                // unregister path printer
-                bt_.popPathTracer(&ptracer_);
+            // unregister path printer
+            bt_.popPathTracer(&ptracer_);
         }
 
     public:

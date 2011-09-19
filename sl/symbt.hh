@@ -49,7 +49,7 @@ class SymBackTrace {
          * @param stor reference to storage object, later used for resolving fnc
          * IDs
          */
-        SymBackTrace(const CodeStorage::Storage &stor);
+        SymBackTrace(const CodeStorage::Storage &stor, bool ptrace = false);
         ~SymBackTrace();
 
         SymBackTrace(const SymBackTrace &);
@@ -66,7 +66,7 @@ class SymBackTrace {
          * stream out the backtrace, using CL_NOTE_MSG; or do nothing if the
          * backtrace is trivial
          */
-        void printBackTrace() const;
+        void printBackTrace(bool forcePtrace = false) const;
 
         /**
          * enter a call of function, thus enlarge the backtrace by one

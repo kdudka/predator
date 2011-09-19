@@ -1083,7 +1083,7 @@ bool /* bail out */ SymExecCore::handleLabel(const CodeStorage::Insn &insn) {
     CL_ERROR_MSG(lw_, "error label \"" << name << "\" has been reached");
 
     // print the backtrace and leave
-    bt_->printBackTrace();
+    bt_->printBackTrace(/* forcePtrace */ true);
     return true;
 }
 
