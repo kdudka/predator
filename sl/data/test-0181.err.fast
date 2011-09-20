@@ -1,0 +1,7 @@
+test-0181.c:74:5: warning: recursive function call, depth = 2
+test-0181.c:74:5: note: from call of dll_create_generic()
+test-0181.c:119:35: note: from call of dll_create_slave()
+test-0181.c:63:15: note: from call of dll_insert_master()
+test-0181.c:125:5: note: from call of dll_create_generic()
+test-0181.c:177:25: note: from call of dll_create_master()
+test-0181.c:175:5: note: from call of main()
