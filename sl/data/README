@@ -195,6 +195,10 @@ Higher level SLS/DLS abstraction, etc.
 
     test-0182.c - test-0181 with an injected programming mistake
 
+    test-0183.c - test-0061 extended by explicit checks of certain shape props
+
+    test-0184.c - test-0183 with an injected programming mistake
+
 
 Linux lists
 ===========

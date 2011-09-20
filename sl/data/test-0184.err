@@ -1,0 +1,13 @@
+test-0184.c:5:13: warning: end of function fail() has not been reached
+test-0184.c:97:9: note: from call of fail()
+test-0184.c:114:19: note: from call of check_seq_next()
+test-0184.c:108:5: note: from call of main()
+test-0184.c:92:6: warning: end of function check_seq_next() has not been reached
+test-0184.c:120:19: note: from call of check_seq_next()
+test-0184.c:108:5: note: from call of main()
+test-0184.c:92:6: warning: end of function check_seq_next() has not been reached
+test-0184.c:120:19: note: from call of check_seq_next()
+test-0184.c:108:5: note: from call of main()
+test-0184.c:100:6: warning: end of function check_seq_prev() has not been reached
+test-0184.c:125:19: note: from call of check_seq_prev()
+test-0184.c:108:5: note: from call of main()
