@@ -432,6 +432,18 @@ fallback:
     this->updateState(sh, target);
 }
 
+bool isTrackableValue(const SymHeap &sh, const TValId val) {
+    const EValueTarget code = sh.valTarget(val);
+    if (isPossibleToDeref(code))
+        return true;
+
+    if (VT_UNKNOWN == code && VO_ASSIGNED == sh.valOrigin(val))
+        // this allows to track results of undefined functions returning int
+        return true;
+
+    return false;
+}
+
 bool SymExecEngine::bypassNonPointers(
         SymProc                                     &proc,
         const CodeStorage::Insn                     &insnCmp,
@@ -446,11 +458,9 @@ bool SymExecEngine::bypassNonPointers(
 #endif
         return false;
 
-    // chances are that somebody stored pointers into unsigned long (CIL code
-    // does it by default), this check helps to handle that case gracefully
+    // white-list some values that are worth tracking
     SymHeap &sh = proc.sh();
-    if (isPossibleToDeref(sh.valTarget(v1))
-            || isPossibleToDeref(sh.valTarget(v2)))
+    if (isTrackableValue(sh, v1) || isTrackableValue(sh, v2))
         return false;
 
     proc.killInsn(insnCmp);
@@ -940,7 +950,12 @@ fail:
     const struct cl_operand dst = opList[/* dst */ 0];
     if (CL_OPERAND_VOID != dst.code) {
         // set return value to unknown
-        const TValId val = entry.valCreate(VT_UNKNOWN, VO_UNKNOWN);
+        const TObjType clt = dst.type;
+        const EValueOrigin origin = (CL_TYPE_INT == clt->code)
+            ? /* track the unknown integral result */ VO_ASSIGNED
+            : VO_UNKNOWN;
+
+        const TValId val = entry.valCreate(VT_UNKNOWN, origin);
         const TObjId obj = proc.objByOperand(dst);
         proc.objSetValue(obj, val);
         entry.objReleaseId(obj);
