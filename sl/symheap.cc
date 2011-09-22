@@ -195,7 +195,7 @@ enum EBlockKind {
 typedef std::map<TObjId, EBlockKind>                    TLiveObjs;
 
 inline EBlockKind bkFromClt(const TObjType clt) {
-    if (isComposite(clt))
+    if (isComposite(clt, /* includingArray */ false))
         return BK_COMPOSITE;
 
     return (isDataPtr(clt))
