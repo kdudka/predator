@@ -22,8 +22,6 @@
 
 #include "config.h"
 
-#include "symid.hh"
-
 #include <vector>
 
 #include <boost/foreach.hpp>

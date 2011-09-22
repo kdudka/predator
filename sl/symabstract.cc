@@ -693,8 +693,6 @@ void dlSegReplaceByConcrete(SymHeap &sh, TValId seg, TValId peer) {
 
     // concretize self
     sh.valTargetSetConcrete(seg);
-
-    // this can't fail (at least I hope so...)
     LDP_PLOT(symabstract, sh);
     CL_BREAK_IF(!dlSegCheckConsistency(sh));
 }
@@ -731,11 +729,11 @@ void spliceOutListSegment(
 
     // destroy peer in case of DLS
     if (peer != seg && collectJunk(sh, peer))
-        CL_DEBUG("spliceOutSegmentIfNeeded() drops a sub-heap (peer)");
+        CL_DEBUG("spliceOutSegment() drops a sub-heap (peer)");
 
     // destroy self, including all nested prototypes
     if (collectJunk(sh, seg))
-        CL_DEBUG("spliceOutSegmentIfNeeded() drops a sub-heap (seg)");
+        CL_DEBUG("spliceOutSegment() drops a sub-heap (seg)");
 
     LDP_PLOT(symabstract, sh);
 }
@@ -747,23 +745,25 @@ unsigned /* len */ spliceOutSegmentIfNeeded(
         TSymHeapList            &todo)
 {
     const unsigned len = sh.segMinLength(seg);
-    if (len) {
-        LDP_INIT(symabstract, "spliceOutSegmentIfNeeded");
-        LDP_PLOT(symabstract, sh);
-
-        // drop any existing Neq predicates
-        sh.segSetMinLength(seg, 0);
-
-        LDP_PLOT(symabstract, sh);
-        return len - 1;
+    if (!len) {
+        // possibly empty LS
+        SymHeap sh0(sh);
+        const TValId valNext = nextValFromSeg(sh0, peer);
+        spliceOutListSegment(sh0, seg, peer, valNext);
+        todo.push_back(sh0);
     }
 
-    // possibly empty LS
-    SymHeap sh0(sh);
-    const TValId valNext = nextValFromSeg(sh0, peer);
-    spliceOutListSegment(sh0, seg, peer, valNext);
-    todo.push_back(sh0);
-    return /* LS 0+ */ 0;
+    LDP_INIT(symabstract, "concretizeObj");
+    LDP_PLOT(symabstract, sh);
+
+    if (!len)
+        return /* LS 0+ */ 0;
+
+    // forget the current minimal length for a while
+    sh.segSetMinLength(seg, 0);
+
+    // we are going to detach one node
+    return len - 1;
 }
 
 void abstractIfNeeded(SymHeap &sh) {
@@ -790,9 +790,6 @@ void concretizeObj(SymHeap &sh, TValId addr, TSymHeapList &todo) {
 
     // handle the possibly empty variant (if exists)
     const unsigned lenRemains = spliceOutSegmentIfNeeded(sh, seg, peer, todo);
-
-    LDP_INIT(symabstract, "concretizeObj");
-    LDP_PLOT(symabstract, sh);
 
     const EObjKind kind = sh.valTargetKind(seg);
     if (OK_MAY_EXIST == kind) {
