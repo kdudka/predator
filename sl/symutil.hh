@@ -342,7 +342,8 @@ void redirectRefs(
         SymHeap                 &sh,
         const TValId            pointingFrom,
         const TValId            pointingTo,
-        const TValId            redirectTo);
+        const TValId            redirectTo,
+        const TOffset           offHead = 0);
 
 /// take the given visitor through all live program variables in all heaps
 template <unsigned N_DST, unsigned N_SRC, class THeap, class TVisitor>

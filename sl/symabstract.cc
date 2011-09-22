@@ -667,22 +667,6 @@ bool considerAbstraction(
     return true;
 }
 
-void segReplaceRefs(SymHeap &sh, TValId seg, TValId valNext) {
-    const TValId headAt = segHeadAt(sh, seg);
-    const TOffset offHead = sh.valOffset(headAt);
-    sh.valReplace(headAt, valNext);
-
-    TObjList refs;
-    sh.pointedBy(refs, seg);
-    BOOST_FOREACH(const TObjId obj, refs) {
-        // redirect!
-        const TValId targetAt = sh.valueOf(obj);
-        const TOffset off = sh.valOffset(targetAt) - offHead;
-        const TValId val = sh.valByOffset(valNext, off);
-        sh.objSetValue(obj, val);
-    }
-}
-
 void dlSegReplaceByConcrete(SymHeap &sh, TValId seg, TValId peer) {
     LDP_INIT(symabstract, "dlSegReplaceByConcrete");
     LDP_PLOT(symabstract, sh);
@@ -697,9 +681,6 @@ void dlSegReplaceByConcrete(SymHeap &sh, TValId seg, TValId peer) {
     const TValId valNext = nextValFromSeg(sh, peer);
     sh.objSetValue(peerPtr, valNext);
     sh.objReleaseId(peerPtr);
-
-    // this step is necessary to prevent disaster when handling DLS lengths
-    sh.valReplace(peer, seg);
 
     // redirect all references originally pointing to peer to the current object
     redirectRefs(sh,
@@ -727,15 +708,26 @@ void spliceOutListSegment(
     LDP_INIT(symabstract, "spliceOutListSegment");
     LDP_PLOT(symabstract, sh);
 
+    const TOffset offHead = sh.segBinding(seg).head;
+
     if (OK_DLS == sh.valTargetKind(seg)) {
         // OK_DLS --> unlink peer
         CL_BREAK_IF(seg == peer);
+        CL_BREAK_IF(offHead != sh.segBinding(peer).head);
         const TValId valPrev = nextValFromSeg(sh, seg);
-        segReplaceRefs(sh, peer, valPrev);
+        redirectRefs(sh,
+                /* pointingFrom */ VAL_INVALID,
+                /* pointingTo   */ peer,
+                /* redirectTo   */ valPrev,
+                /* offHead      */ offHead);
     }
 
     // unlink self
-    segReplaceRefs(sh, seg, valNext);
+    redirectRefs(sh,
+            /* pointingFrom */ VAL_INVALID,
+            /* pointingTo   */ seg,
+            /* redirectTo   */ valNext,
+            /* offHead      */ offHead);
 
     // destroy peer in case of DLS
     if (peer != seg && collectJunk(sh, peer))
@@ -911,7 +903,7 @@ bool spliceOutAbstractPath(SymHeap &sh, TValId atAddr, TValId pointingTo) {
         return false;
 
     if (!spliceOutAbstractPathCore(sh, seg, endPoint, /* readOnlyMode */ false))
-        CL_BREAK_IF("spliceOutListSegment() completely broken");
+        CL_BREAK_IF("spliceOutAbstractPathCore() completely broken");
 
     return true;
 }

@@ -149,24 +149,26 @@ void redirectRefs(
         SymHeap                 &sh,
         const TValId            pointingFrom,
         const TValId            pointingTo,
-        const TValId            redirectTo)
+        const TValId            redirectTo,
+        const TOffset           offHead)
 {
     // go through all objects pointing at/inside pointingTo
     TObjList refs;
     sh.pointedBy(refs, pointingTo);
     BOOST_FOREACH(const TObjId obj, refs) {
-        const TValId referrerAt = sh.valRoot(sh.placedAt(obj));
-        if (VAL_INVALID != pointingFrom && pointingFrom != referrerAt)
-            // pointed from elsewhere, keep going
-            continue;
+        if (VAL_INVALID != pointingFrom) {
+            const TValId referrerAt = sh.valRoot(sh.placedAt(obj));
+            if (pointingFrom != referrerAt)
+                // pointed from elsewhere, keep going
+                continue;
+        }
 
         // check the current link
         const TValId nowAt = sh.valueOf(obj);
         const TOffset offToRoot = sh.valOffset(nowAt);
-        CL_BREAK_IF(sh.valOffset(redirectTo));
 
         // redirect accordingly
-        const TValId result = sh.valByOffset(redirectTo, offToRoot);
+        const TValId result = sh.valByOffset(redirectTo, offToRoot - offHead);
         sh.objSetValue(obj, result);
     }
 }

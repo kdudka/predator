@@ -216,7 +216,7 @@ TId EntStore<TBaseEnt>::assignId(TBaseEnt *ptr) {
 
 #if SH_REUSE_FREE_IDS
     if (!this->freeIds_.empty()) {
-        const T id = static_cast<T>(this->freeIds_.front());
+        const TId id = static_cast<TId>(this->freeIds_.front());
         this->freeIds_.pop();
         this->ents_[id] = ptr;
         CL_DEBUG("reusing heap ID #" << id 

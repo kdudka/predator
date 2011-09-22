@@ -28,7 +28,7 @@
 #include "config.h"
 #include "symheap.hh"
 
-/// @todo some dox
+/// return true if the given binding is a DLS binding
 inline bool isDlsBinding(const BindingOff &off) {
     return (off.next != off.prev);
 }
@@ -41,12 +41,11 @@ inline bool isDlsBinding(const BindingOff &off) {
  * corresponding starting point of the abstraction.
  *
  * In case of success (non-zero return value), you can determine the type of the
- * detected abstraction by *bf.  If bf->peer is empty, it means a SLS
- * abstraction;  DLS otherwise.  If bf->head is empty, it means a regular list
- * segment abstraction;  Linux list segment otherwise.
+ * detected abstraction by *bf.  If bf->peer is equal to bf->next, it means a
+ * SLS abstraction;  DLS otherwise.  If bf->head is zero, it means a regular
+ * list segment abstraction;  Linux list segment otherwise.
  *
- * In case of failure (zero return value), *bf and *entry are not touched at
- * all.
+ * In case of failure (zero return value), *bf and *entry are undefined.
  */
 unsigned /* len */ discoverBestAbstraction(
         SymHeap                 &sh,
