@@ -1058,10 +1058,10 @@ TValId SymHeapCore::valueOf(TObjId obj) {
             break;
     }
 
-    HeapObject *objData;
-    d->ents.getEntRW(&objData, obj);
+    const HeapObject *objData;
+    d->ents.getEntRO(&objData, obj);
 
-    TValId &val = objData->value;
+    TValId val = objData->value;
     if (VAL_INVALID != val)
         // the object has a value
         return val;
@@ -1074,10 +1074,13 @@ TValId SymHeapCore::valueOf(TObjId obj) {
         d->ents.getEntRW(&compData, val);
         compData->compObj = obj;
 
+        // store the value
+        HeapObject *objDataRW;
+        d->ents.getEntRW(&objDataRW, obj);
+        objDataRW->value = val;
+
         // store backward reference
-        BaseValue *valData;
-        d->ents.getEntRW(&valData, val);
-        valData->usedBy.insert(obj);
+        compData->usedBy.insert(obj);
         return val;
     }
 
@@ -1202,8 +1205,8 @@ TObjId SymHeapCore::Private::copySingleLiveBlock(
 
     if (BK_UNIFORM == code) {
         // duplicate a uniform block
-        BlockEntity *blSrc;
-        this->ents.getEntRW(&blSrc, objSrc);
+        const BlockEntity *blSrc;
+        this->ents.getEntRO(&blSrc, objSrc);
         BlockEntity *blDst = blSrc->clone();
         dst = this->assignId(blDst);
         blDst->root = rootDst;
@@ -1562,9 +1565,9 @@ TValId SymHeapCore::valByOffset(TValId at, TOffset off) {
     }
 
     // off-value lookup
-    RootValue *rootData;
-    d->ents.getEntRW(&rootData, valRoot);
-    TOffMap &offMap = rootData->offMap;
+    const RootValue *rootData;
+    d->ents.getEntRO(&rootData, valRoot);
+    const TOffMap &offMap = rootData->offMap;
     TOffMap::const_iterator it = offMap.find(off);
     if (offMap.end() != it)
         return it->second;
@@ -1578,7 +1581,9 @@ TValId SymHeapCore::valByOffset(TValId at, TOffset off) {
     offVal->offRoot = off;
 
     // store the mapping for next wheel
-    offMap[off] = val;
+    RootValue *rootDataRW;
+    d->ents.getEntRW(&rootDataRW, valRoot);
+    rootDataRW->offMap[off] = val;
     return val;
 }
 
