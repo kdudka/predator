@@ -734,19 +734,23 @@ malloc/calloc is implementation-defined");
         CL_NOTE_MSG(lw_, "assuming NULL as the result");
         bt_->printBackTrace();
         this->objSetValue(lhs, VAL_NULL);
-        this->killInsn(insn);
         sh_.objReleaseId(lhs);
+        this->killInsn(insn);
         dst.insert(sh_);
         return;
     }
 
     if (!ep_.fastMode) {
-        // OOM state simulation
-        this->objSetValue(lhs, VAL_NULL);
-        this->killInsn(insn);
+        // clone the heap and core
+        SymHeap oomHeap(sh_);
+        SymExecCore oomCore(oomHeap, bt_, ep_);
+        oomCore.setLocation(lw_);
 
-        // FIXME: Ooops, sh_.objReleaseId(lhs) would affect both results
-        dst.insert(sh_);
+        // OOM state simulation
+        oomCore.objSetValue(lhs, VAL_NULL);
+        oomHeap.objReleaseId(lhs);
+        oomCore.killInsn(insn);
+        dst.insert(oomHeap);
     }
 
     // now create a heap object
@@ -757,8 +761,8 @@ malloc/calloc is implementation-defined");
 
     // store the result of malloc
     this->objSetValue(lhs, val);
-    this->killInsn(insn);
     sh_.objReleaseId(lhs);
+    this->killInsn(insn);
     dst.insert(sh_);
 }
 

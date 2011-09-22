@@ -667,6 +667,8 @@ Tests taken from Forester
 
     test-0174.c - modification of test-0014 using calloc() and memset()
 
+    test-0185.c - a regression test focused on a fixed SIGSEGV bug in SymProc
+
 
 Tiny DLL library written on scratch
 ===================================
