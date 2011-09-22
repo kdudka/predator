@@ -769,25 +769,25 @@ TObjId SymHeapCore::Private::objCreate(
 }
 
 void SymHeapCore::Private::objDestroy(TObjId obj, bool removeVal, bool detach) {
-    HeapObject *objData;
-    this->ents.getEntRW(&objData, obj);
+    BlockEntity *blData;
+    this->ents.getEntRW(&blData, obj);
 
-    if (removeVal) {
+    if (removeVal && BK_UNIFORM != blData->code) {
         // release value of the object
-        const TValId val = objData->value;
+        const TValId val = blData->value;
         this->releaseValueOf(obj, val);
     }
 
     if (detach) {
         // properly remove the object from grid and arena
         RootValue *rootData;
-        this->ents.getEntRW(&rootData, objData->root);
+        this->ents.getEntRW(&rootData, blData->root);
         CL_BREAK_IF(!this->chkArenaConsistency(rootData));
 
         // remove the object from arena unless we are destroying everything
-        const TOffset off = objData->off;
-        const TObjType clt = objData->clt;
-        rootData->arena -= createArenaItem(off, clt->size, obj);
+        const TOffset off = blData->off;
+        const TOffset size = blData->size;
+        rootData->arena -= createArenaItem(off, size, obj);
 
         CL_BREAK_IF(hasKey(rootData->liveObjs, obj));
         CL_BREAK_IF(!this->chkArenaConsistency(rootData));
@@ -1718,14 +1718,9 @@ void SymHeapCore::valReplace(TValId val, TValId replaceBy) {
     // we intentionally do not use a reference here (tight loop otherwise)
     TObjSet usedBy = valData->usedBy;
     BOOST_FOREACH(const TObjId obj, usedBy) {
-#ifndef NDEBUG
-        if (isGone(this->valTarget(this->placedAt(obj)))) {
-            // FIXME: exactly this happens with test-0037 running in OOM mode
-            CL_BREAK_IF("valReplace: value in use by deleted object, why?");
-            d->releaseValueOf(obj, val);
-            continue;
-        }
-#endif
+        // this used to happen with with test-0037 running in OOM mode [fixed]
+        CL_BREAK_IF(isGone(this->valTarget(this->placedAt(obj))));
+
         this->objSetValue(obj, replaceBy);
     }
 }
@@ -2202,21 +2197,23 @@ void SymHeapCore::Private::destroyRoot(TValId root) {
     RefCntLib<RCO_NON_VIRT>::requireExclusivity(this->liveRoots);
     this->liveRoots->erase(root);
 
-    // destroy all objects inside
-    BOOST_FOREACH(TLiveObjs::const_reference item, rootData->liveObjs) {
-        const TObjId obj = item.first;
-        const EBlockKind code = item.second;
-
-        if (BK_UNIFORM == code) {
-            // uniform block
-            this->ents.releaseEnt(obj);
-            continue;
+    const TOffset size = rootData->size;
+    if (size) {
+        // look for inner objects
+        const TMemChunk chunk(0, size);
+        TObjSet allObjs;
+        if (arenaLookup(&allObjs, rootData->arena, chunk, OBJ_INVALID)) {
+            // destroy all inner objects
+            BOOST_FOREACH(const TObjId obj, allObjs)
+                this->objDestroy(obj, /* removeVal */ true, /* detach */ false);
         }
-
-        this->objDestroy(obj, /* removeVal */ true, /* detach */ false);
     }
+    else
+        // inactive VAL_ADDR_OF_RET stash
+        CL_BREAK_IF(VAL_ADDR_OF_RET != root);
 
     // wipe rootData
+    rootData->size = 0;
     rootData->lastKnownClt = 0;
     rootData->liveObjs.clear();
     rootData->arena.clear();
