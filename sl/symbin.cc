@@ -391,7 +391,7 @@ bool handleNondetInt(
     // set the returned value to a new unknown value
     const struct cl_operand &opDst = opList[0];
     const TObjId objDst = core.objByOperand(opDst);
-    const TValId val = sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
+    const TValId val = sh.valCreate(VT_UNKNOWN, VO_ASSIGNED);
     core.objSetValue(objDst, val);
     sh.objReleaseId(objDst);
 
