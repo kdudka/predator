@@ -562,7 +562,7 @@ struct SegMatchVisitor {
         }
 };
 
-bool traverseSubObjs(
+bool traverseRoots(
         SymJoinCtx              &ctx,
         const TValId            rootDst,
         const TValId            root1,
@@ -1132,7 +1132,7 @@ bool createObject(
         ctx.segLengths[rootDst] = joinMinLength(ctx, root1, root2);
     }
 
-    return traverseSubObjs(ctx, rootDst, root1, root2);
+    return traverseRoots(ctx, rootDst, root1, root2);
 }
 
 bool followRootValuesCore(
@@ -1158,7 +1158,7 @@ bool followRootValuesCore(
 
     if (ctx.joiningDataReadWrite() && root1 == root2)
         // we are on the way from joinData() and hit shared data
-        return traverseSubObjs(ctx, root1, root1, root1);
+        return traverseRoots(ctx, root1, root1, root1);
 
     return createObject(ctx, clt, root1, root2, action);
 }
@@ -1233,7 +1233,7 @@ bool joinReturnAddrs(SymJoinCtx &ctx) {
         return true;
 
     ctx.dst.valSetLastKnownTypeOfTarget(VAL_ADDR_OF_RET, clt);
-    return traverseSubObjs(ctx,
+    return traverseRoots(ctx,
             VAL_ADDR_OF_RET,
             VAL_ADDR_OF_RET,
             VAL_ADDR_OF_RET);
@@ -1972,19 +1972,12 @@ class JoinVarVisitor {
         }
 
         bool operator()(const TValId roots[3]) {
-            if (!joinUniBlocks(ctx_,
-                        roots[/* dst */ 0],
-                        roots[/* sh1 */ 1],
-                        roots[/* sh2 */ 2]))
-            {
-                // failed to complement uniform blocks
-                return false;
-            }
+            const TValId rootDst   = roots[/* dst */ 0];
+            const TValId root1     = roots[/* sh1 */ 1];
+            const TValId root2     = roots[/* sh2 */ 2];
 
-            return /* continue */ traverseSubObjs(ctx_,
-                    roots[/* dst */ 0],
-                    roots[/* sh1 */ 1],
-                    roots[/* sh2 */ 2]);
+            return joinUniBlocks(ctx_, rootDst, root1, root2)
+                && traverseRoots(ctx_, rootDst, root1, root2);
         }
 };
 
@@ -2156,7 +2149,7 @@ bool matchPreds(
         && sh2.matchPreds(sh1, vMap[/* rtl */ 1]);
 }
 
-void handleDstPreds(SymJoinCtx &ctx) {
+bool handleDstPreds(SymJoinCtx &ctx) {
     // go through all segments and initialize minLength
     BOOST_FOREACH(SymJoinCtx::TSegLengths::const_reference ref, ctx.segLengths)
     {
@@ -2183,11 +2176,14 @@ void handleDstPreds(SymJoinCtx &ctx) {
 
     if (!ctx.joiningData()) {
         // cross-over check of Neq predicates
-        if (!matchPreds(ctx.sh1, ctx.dst, ctx.valMap1))
-            updateJoinStatus(ctx, JS_USE_SH2);
-        if (!matchPreds(ctx.sh2, ctx.dst, ctx.valMap2))
-            updateJoinStatus(ctx, JS_USE_SH1);
-        return;
+
+        if (!matchPreds(ctx.sh1, ctx.dst, ctx.valMap1)
+                && !updateJoinStatus(ctx, JS_USE_SH2))
+            return false;
+
+        if (!matchPreds(ctx.sh2, ctx.dst, ctx.valMap2)
+                && !updateJoinStatus(ctx, JS_USE_SH1))
+            return false;
     }
 
     // TODO: match gneric Neq predicates also in prototypes;  for now we
@@ -2200,12 +2196,15 @@ void handleDstPreds(SymJoinCtx &ctx) {
         const unsigned len2 = objMinLength(ctx.sh2, proto2);
         const unsigned lenDst = objMinLength(ctx.dst, protoDst);
 
-        if (lenDst < len1)
-            updateJoinStatus(ctx, JS_USE_SH2);
+        if ((lenDst < len1) && !updateJoinStatus(ctx, JS_USE_SH2))
+            return false;
 
-        if (lenDst < len2)
-            updateJoinStatus(ctx, JS_USE_SH1);
+        if ((lenDst < len2) && !updateJoinStatus(ctx, JS_USE_SH1))
+            return false;
     }
+
+    // all OK
+    return true;
 }
 
 bool segDetectSelfLoopHelper(
@@ -2295,28 +2294,27 @@ bool joinSymHeaps(
 
     // first try to join return addresses (if in use)
     if (!joinReturnAddrs(ctx))
-        return false;
+        goto fail;
 
     // start with program variables
-    if (!joinCVars(ctx)) {
-        CL_BREAK_IF(areEqual(sh1, sh2));
-        return false;
-    }
+    if (!joinCVars(ctx))
+        goto fail;
 
     // go through all values in them
-    if (!joinPendingValues(ctx)) {
-        CL_BREAK_IF(areEqual(sh1, sh2));
-        return false;
-    }
+    if (!joinPendingValues(ctx))
+        goto fail;
 
     // time to preserve all 'hasValue' edges
-    if (!setDstValues(ctx)) {
-        CL_BREAK_IF(areEqual(sh1, sh2));
-        return false;
-    }
+    if (!setDstValues(ctx))
+        goto fail;
 
     // go through shared Neq predicates and set minimal segment lengths
-    handleDstPreds(ctx);
+    if (!handleDstPreds(ctx))
+        goto fail;
+
+    // if the result is three-way join, check if it is a good idea
+    if (!validateStatus(ctx))
+        goto fail;
 
     if (debuggingSymJoin) {
         // catch possible regression at this point
@@ -2325,15 +2323,16 @@ bool joinSymHeaps(
         CL_BREAK_IF((JS_THREE_WAY == ctx.status) && areEqual(sh2, ctx.dst));
     }
 
-    // if the result is three-way join, check if it is a good idea
-    if (!validateStatus(ctx))
-        return false;
-
     // all OK
     *pStatus = ctx.status;
     SJ_DEBUG("<-- joinSymHeaps() says " << ctx.status);
     CL_BREAK_IF(!dlSegCheckConsistency(ctx.dst));
     return true;
+
+fail:
+    // if the join failed on heaps that were isomorphic, something went wrong
+    CL_BREAK_IF(areEqual(sh1, sh2));
+    return false;
 }
 
 void mapGhostAddressSpace(
@@ -2360,7 +2359,7 @@ void mapGhostAddressSpace(
 bool dlSegCheckProtoConsistency(const SymJoinCtx &ctx) {
     BOOST_FOREACH(const TValId proto, ctx.protoRoots) {
         if (OK_DLS != ctx.dst.valTargetKind(proto))
-            // we are intersted only DLSs here
+            // we are interested only DLSs here
             continue;
 
         const TValId peer = dlSegPeer(ctx.dst, proto);
@@ -2402,7 +2401,7 @@ bool joinDataCore(
         // preserve estimated type-info of the root
         ctx.dst.valSetLastKnownTypeOfTarget(rootDstAt, clt);
 
-    if (!traverseSubObjs(ctx, rootDstAt, addr1, addr2, &off))
+    if (!traverseRoots(ctx, rootDstAt, addr1, addr2, &off))
         return false;
 
     ctx.sset1.insert(addr1);
