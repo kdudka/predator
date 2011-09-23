@@ -29,6 +29,7 @@
 #include "symcut.hh"
 #include "symdebug.hh"
 #include "symheap.hh"
+#include "symjoin.hh"
 #include "symproc.hh"
 #include "symstate.hh"
 #include "symutil.hh"
@@ -91,9 +92,53 @@ class PerFncCache {
 };
 
 int PerFncCache::lookupCore(const SymHeap &sh) {
+#if 1 < SE_ENABLE_CALL_CACHE
+    EJoinStatus     status;
+    SymHeap         result(sh.stor());
+    const int       cnt = huni_.size();
+    int             idx;
+
+    // try join
+    for(idx = 0; idx < cnt; ++idx) {
+        const SymHeap &shIn = huni_[idx];
+        if (!joinSymHeaps(&status, &result, shIn, sh))
+            // join failed with this heap, try the next one
+            continue;
+
+        switch (status) {
+            case JS_USE_ANY:
+            case JS_USE_SH1:
+                // already covered by the cached ctx --> cache hit!
+                return idx;
+
+            case JS_USE_SH2:
+            case JS_THREE_WAY:
+                // not covered, yet still possible to join with the cache entry
+                break;
+        }
+
+        SymCallCtx *&ctx = ctxMap_[idx];
+        if (ctx->inUse())
+            // context in use by the current backtrace, keep going...
+            continue;
+
+        // destroy the current context
+        delete ctx;
+        ctx = 0;
+
+        // update the cache entry
+        huni_.heaps_[idx] = (JS_USE_SH2 == status)
+            ? /* JS_USE_SH2   */ sh
+            : /* JS_THREE_WAY */ result;
+
+        return idx;
+    }
+
+#else // 1 == SE_ENABLE_CALL_CACHE means "graph isomorphism only"
     int idx = huni_.lookup(sh);
     if (-1 != idx)
         return idx;
+#endif
 
     // cache miss
     idx = ctxMap_.size();
@@ -168,6 +213,14 @@ SymCallCtx::~SymCallCtx() {
 
 bool SymCallCtx::needExec() const {
     return !d->computed;
+}
+
+bool SymCallCtx::inUse() const {
+    if (!d->flushed)
+        return true;
+
+    CL_BREAK_IF(!d->computed);
+    return false;
 }
 
 const SymHeap& SymCallCtx::entry() const {

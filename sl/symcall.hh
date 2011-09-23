@@ -89,6 +89,9 @@ class SymCallCtx {
          */
         bool needExec() const;
 
+        /// return true if the context is being used by the current backtrace
+        bool inUse() const;
+
         /**
          * a pre-computed symbolic heap valid for the entry of the eventual
          * function call.  Do not use this method if needExec() has returned @b
