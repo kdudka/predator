@@ -543,6 +543,9 @@ BuiltInTable::BuiltInTable() {
     tbl_["___sl_plot"]                              = handlePlot;
     tbl_["___sl_enable_debugging_of"]               = handleDebuggingOf;
 
+    // used in Competition on Software Verification held at TACAS 2012
+    tbl_["__VERIFIER_nondet_int"]                   = handleNondetInt;
+
     // initialize lookForDerefs() look-up table
     der_["free"]        .push_back(/* addr */ 2);
     der_["memset"]      .push_back(/* addr */ 2);
