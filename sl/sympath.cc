@@ -31,13 +31,16 @@
 
 #include <boost/foreach.hpp>
 
+typedef const CodeStorage::Insn                        *TInsn;
+typedef const CodeStorage::Block                       *TBlock;
+typedef std::set<TBlock>                                TBlockSet;
+
 /// get location of the first (or last) insn with valid location info
-template <class TBlock>
-const struct cl_loc* digBlockLocation(TBlock bb, bool backward)
+const struct cl_loc* digBlockLocationCore(TBlock bb, bool backward)
 {
     if (backward) {
         // pick up the location of the _last_ insn with valid location
-        BOOST_REVERSE_FOREACH(const CodeStorage::Insn *insn, *bb) {
+        BOOST_REVERSE_FOREACH(const TInsn insn, *bb) {
             const struct cl_loc *loc = &insn->loc;
             if (loc->file)
                 return loc;
@@ -45,7 +48,7 @@ const struct cl_loc* digBlockLocation(TBlock bb, bool backward)
     }
     else {
         // pick up the location of the _first_ insn with valid location
-        BOOST_FOREACH(const CodeStorage::Insn *insn, *bb) {
+        BOOST_FOREACH(const TInsn insn, *bb) {
             const struct cl_loc *loc = &insn->loc;
             if (loc->file)
                 return loc;
@@ -54,6 +57,44 @@ const struct cl_loc* digBlockLocation(TBlock bb, bool backward)
 
     // not found
     return 0;
+}
+
+const struct cl_loc* digBlockLocation(TBlock bb, bool backward) {
+    const struct cl_loc *loc = digBlockLocationCore(bb, backward);
+    if (loc)
+        return loc;
+
+    // we use std::set to avoid infinite loop
+    TBlockSet seen;
+    seen.insert(bb);
+
+    // there is absolutely no location-info in the current BB, poke neighbors
+    for (;;) {
+        if (backward) {
+            const CodeStorage::TTargetList &tlist = bb->inbound();
+            if (1 != tlist.size())
+                // giving up
+                return 0;
+
+            bb = tlist.back();
+        }
+        else {
+            const TInsn term = bb->back();
+            if (CL_INSN_JMP != term->code)
+                // giving up
+                return 0;
+
+            bb = term->targets.back();
+        }
+
+        if (!insertOnce(seen, bb))
+            return 0;
+
+        // check a unique successor/predecessor BB
+        const struct cl_loc *loc = digBlockLocationCore(bb, backward);
+        if (loc)
+            return loc;
+    }
 }
 
 /// print one item of the path trace
