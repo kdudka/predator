@@ -119,11 +119,6 @@
 #define SE_DEFER_SLS_INTRO                  0
 
 /**
- * if 1, call cache is not used at all
- */
-#define SE_DISABLE_CALL_CACHE               0
-
-/**
  * if 1, do not use DLS (Doubly-linked List Segment) abstraction
  */
 #define SE_DISABLE_DLS                      0
@@ -148,6 +143,12 @@
  * - 1 ... kill local variables as soon as they become dead
  */
 #define SE_EARLY_VARS_DESTRUCTION           1
+
+/**
+ * - 0 ... call cache completely disabled (saves a lot of memory)
+ * - 1 ... call cache enabled, use graph isomorphism for lookup
+ */
+#define SE_ENABLE_CALL_CACHE                1
 
 /**
  * maximal call depth

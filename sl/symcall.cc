@@ -48,6 +48,11 @@ class PerFncCache {
 
         SymHeapUnion    huni_;
         TCtxMap         ctxMap_;
+#if !SE_ENABLE_CALL_CACHE
+        SymCallCtx     *null_;
+#endif
+
+        int lookupCore(const SymHeap &sh);
 
     public:
         ~PerFncCache() {
@@ -57,7 +62,7 @@ class PerFncCache {
         }
 
         void updateCacheEntry(const SymHeap &of, const SymHeap &by) {
-#if SE_DISABLE_CALL_CACHE
+#if !SE_ENABLE_CALL_CACHE
             CL_BREAK_IF("invalid call of PerFncCache::updateCacheEntry()");
             return;
 #endif
@@ -75,29 +80,30 @@ class PerFncCache {
          * look for the given heap; return the corresponding call ctx if found,
          * 0 otherwise
          */
-        SymCallCtx* lookup(const SymHeap &sh) {
-#if SE_DISABLE_CALL_CACHE
-            return 0;
+        SymCallCtx*& lookup(const SymHeap &sh) {
+#if SE_ENABLE_CALL_CACHE
+            return ctxMap_[this->lookupCore(sh)];
+#else
+            (void) sh;
+            return null_ = 0;
 #endif
-            int idx = huni_.lookup(sh);
-            if (-1 == idx)
-                return 0;
-
-            return ctxMap_.at(idx);
-        }
-
-        /**
-         * store the given heap with its corresponding call ctx into the cache
-         */
-        void insert(const SymHeap &sh, SymCallCtx *ctx) {
-#if SE_DISABLE_CALL_CACHE
-            return;
-#endif
-            huni_.insertNew(sh);
-            ctxMap_.push_back(ctx);
-            CL_BREAK_IF(huni_.size() != ctxMap_.size());
         }
 };
+
+int PerFncCache::lookupCore(const SymHeap &sh) {
+    int idx = huni_.lookup(sh);
+    if (-1 != idx)
+        return idx;
+
+    // cache miss
+    idx = ctxMap_.size();
+    huni_.insertNew(sh);
+    ctxMap_.push_back(0);
+    CL_BREAK_IF(huni_.size() != ctxMap_.size());
+
+    return idx;
+}
+
 
 // /////////////////////////////////////////////////////////////////////////////
 // SymCallCache internal data
@@ -142,8 +148,11 @@ struct SymCallCtx::Private {
 
     Private(SymCallCache::Private *cd_):
         cd(cd_),
+        fnc(0),
         entry(cd_->bt.stor()),
-        surround(cd_->bt.stor())
+        surround(cd_->bt.stor()),
+        computed(false),
+        flushed(false)
     {
     }
 };
@@ -151,8 +160,6 @@ struct SymCallCtx::Private {
 SymCallCtx::SymCallCtx(SymCallCache::Private *cd):
     d(new Private(cd))
 {
-    d->computed = false;
-    d->flushed = false;
 }
 
 SymCallCtx::~SymCallCtx() {
@@ -320,7 +327,7 @@ void SymCallCtx::flushCallResults(SymState &dst) {
 }
 
 void SymCallCtx::invalidate() {
-#if SE_DISABLE_CALL_CACHE
+#if !SE_ENABLE_CALL_CACHE
     delete this;
 #endif
 }
@@ -423,7 +430,7 @@ void SymCallCache::Private::resolveHeapCut(
 {
     const TFncVarSet &fncVars = fnc.vars;
     const int nestLevel = bt.countOccurrencesOfTopFnc();
-#if !SE_DISABLE_CALL_CACHE
+#if SE_ENABLE_CALL_CACHE
     TStorRef stor = sh.stor();
 
     TCVarSet snap;
@@ -464,7 +471,7 @@ void SymCallCache::Private::resolveHeapCut(
 
         const EValueTarget code = sh.valTarget(root);
         if (VT_STATIC == code) {
-#if SE_DISABLE_CALL_CACHE
+#if !SE_ENABLE_CALL_CACHE
             cut.push_back(cv);
 #endif
             continue;
@@ -549,13 +556,12 @@ SymCallCtx* SymCallCache::Private::getCallCtx(const SymHeap &entry, TFncRef fnc)
     // cache lookup
     const int uid = uidOf(fnc);
     PerFncCache &pfc = this->cache[uid];
-    SymCallCtx *ctx = pfc.lookup(entry);
+    SymCallCtx *&ctx = pfc.lookup(entry);
     if (!ctx) {
         // cache miss
         ctx = new SymCallCtx(this);
         ctx->d->fnc     = &fnc;
         ctx->d->entry   = entry;
-        pfc.insert(entry, ctx);
 
         // enter ctx stack
         this->ctxStack.push_back(ctx);
