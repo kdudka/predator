@@ -24,7 +24,6 @@
 #include <cl/storage.hh>
 
 #include "symstate.hh"
-#include "worklist.hh"
 
 #include <set>
 #include <stack>
