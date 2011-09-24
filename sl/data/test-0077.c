@@ -43,10 +43,14 @@ int main()
     ___sl_plot("01");
 
     // this should be out of range --> stack smashing
-    pgi->h0.next = NULL;
-    ___sl_plot("02");
-    pgi->h1.prev = NULL;
-    ___sl_plot("02");
+    if (___sl_get_nondet_int()) {
+        pgi->h0.next = NULL;
+        ___sl_plot("02");
+    }
+    else {
+        pgi->h1.prev = NULL;
+        ___sl_plot("02");
+    }
 
     // surprisingly i==0 at this point (because of the stack smashing)
     // ----------

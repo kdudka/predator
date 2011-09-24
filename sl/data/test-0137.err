@@ -4,13 +4,6 @@ test-0137.c:85:19: note: from call of val_from_node()
 test-0137.c:104:11: note: from call of gl_seek_max()
 test-0137.c:119:12: note: from call of gl_sort()
 test-0137.c:113:5: note: from call of main()
-test-0137.c:71:26: warning: end of function gl_seek_max() has not been reached
-test-0137.c:104:11: note: from call of gl_seek_max()
-test-0137.c:119:12: note: from call of gl_sort()
-test-0137.c:113:5: note: from call of main()
-test-0137.c:96:13: warning: end of function gl_sort() has not been reached
-test-0137.c:119:12: note: from call of gl_sort()
-test-0137.c:113:5: note: from call of main()
 test-0137.c:68:5: error: dereferencing object of size 4B out of bounds
 test-0137.c:68:5: note: the pointer being dereferenced points 4B above a static variable of size 8B
 test-0137.c:85:19: note: from call of val_from_node()

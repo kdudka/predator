@@ -42,6 +42,9 @@ static struct outer* create(void)
     (type *) ((char *)addr - offsetof(type, field))
 
 #define CHK_CORE(neg, e1, e2) do {                      \
+    if (___sl_get_nondet_int())                         \
+        break;                                          \
+                                                        \
     struct outer *_data = create();                     \
     free(_data);                                        \
     const bool eq = ((void *)(e1) == (void *)(e2));     \
@@ -54,6 +57,9 @@ static struct outer* create(void)
 #define CHK_NEQ(e1, e2) CHK_CORE(true, e1, e2)
 
 #define TRY_FREE_BY(item) do {                          \
+    if (___sl_get_nondet_int())                         \
+        break;                                          \
+                                                        \
     struct outer *_data = create();                     \
     void *_ptr = &_data->item;                          \
     free(_ptr);                                         \

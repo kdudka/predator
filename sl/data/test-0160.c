@@ -11,17 +11,27 @@ int main() {
     ___SL_ASSERT(pos1 != pos2);
     ___SL_ASSERT(pos1 == pos3);
 
-    // NULL dereference
-    *buf = '\0';
+    switch (___sl_get_nondet_int()) {
+        case 0:
+            // NULL dereference
+            *buf = '\0';
+            break;
 
-    // invalid dereference
-    *pos1 = '\0';
+        case 1:
+            // invalid dereference
+            *pos1 = '\0';
+            break;
 
-    // invalid dereference
-    *pos2 = '\0';
+        case 2:
+            // invalid dereference
+            *pos2 = '\0';
+            break;
 
-    // invalid dereference
-    *pos3 = '\0';
+        default:
+            // invalid dereference
+            *pos3 = '\0';
+            break;
+    }
 
     ___sl_plot(NULL);
     return !!buf;

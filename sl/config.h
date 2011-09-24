@@ -156,7 +156,7 @@
  * - 1 low-cost error recovery (stop analyzing paths with errors already caught)
  * - 2 full error recovery (keep analyzing until a non-recoverable error occurs)
  */
-#define SE_ERROR_RECOVERY_MODE              2
+#define SE_ERROR_RECOVERY_MODE              1
 
 /**
  * maximal call depth

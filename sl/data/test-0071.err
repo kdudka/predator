@@ -2,11 +2,3 @@ test-0071.c:100:22: error: dereference of already deleted heap object
 test-0071.c:112:22: note: from call of destroy_slave()
 test-0071.c:123:12: note: from call of destroy()
 test-0071.c:118:5: note: from call of main()
-test-0071.c:101:13: error: double free()
-test-0071.c:112:22: note: from call of destroy_slave()
-test-0071.c:123:12: note: from call of destroy()
-test-0071.c:118:5: note: from call of main()
-test-0071.c:97:6: warning: end of function destroy_slave() has not been reached
-test-0071.c:112:22: note: from call of destroy_slave()
-test-0071.c:123:12: note: from call of destroy()
-test-0071.c:118:5: note: from call of main()

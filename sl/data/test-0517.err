@@ -1,18 +1,6 @@
 test-0517.c:21:15: error: dereference of NULL value
-test-0517.c:22:20: error: dereference of NULL value with offset 4B
 test-0517.c:26:15: error: dereference of NULL value
-test-0517.c:27:20: error: dereference of NULL value with offset 4B
-test-0517.c:28:18: warning: memory leak detected while assigning a variable on stack
 test-0517.c:31:15: error: dereference of NULL value
-test-0517.c:32:20: error: dereference of NULL value with offset 4B
-test-0517.c:33:18: warning: memory leak detected while assigning a variable on stack
 test-0517.c:36:15: error: dereference of NULL value
-test-0517.c:37:20: error: dereference of NULL value with offset 4B
-test-0517.c:38:18: warning: memory leak detected while assigning a variable on stack
 test-0517.c:41:15: error: dereference of NULL value
-test-0517.c:42:20: error: dereference of NULL value with offset 4B
-test-0517.c:43:18: warning: memory leak detected while assigning a variable on stack
 test-0517.c:46:15: error: dereference of NULL value
-test-0517.c:47:20: error: dereference of NULL value with offset 4B
-test-0517.c:48:18: warning: memory leak detected while assigning a variable on stack
-test-0517.c:67:34: error: dereference of NULL value with offset 4B

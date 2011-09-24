@@ -1,3 +1,4 @@
+#include "../sl.h"
 #include <stdlib.h>
 
 int main()
@@ -36,8 +37,9 @@ int main()
         // something went wrong, yell
         null->next = pd;
 
-    // this is always bad idea
-    free(i1);
+    if (___sl_get_nondet_int())
+        // this is always bad idea
+        free(i1);
 
     // this is ugly, but it works :-)
     free(i0);

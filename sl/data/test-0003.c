@@ -1,3 +1,4 @@
+#include "../sl.h"
 #include <stdlib.h>
 
 int main() {
@@ -5,9 +6,22 @@ int main() {
     void *val = NULL;
     void *ptr = &val;
 
-    free(undef);
-    free(val);
-    free(ptr);
+    switch (___sl_get_nondet_int()) {
+        case 0:
+            free(undef);
+            return;
+
+        case 1:
+            free(val);
+            return;
+
+        case 2:
+            free(ptr);
+            return;
+
+        default:
+            break;
+    }
 
     void *item = malloc(sizeof(void *));
     free(item);

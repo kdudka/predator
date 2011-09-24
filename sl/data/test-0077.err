@@ -1,4 +1,4 @@
-test-0077.c:46:18: error: dereferencing object of size 4B out of bounds
-test-0077.c:46:18: note: the pointer being dereferenced points 8B above a variable on stack of size 12B
-test-0077.c:48:18: error: dereferencing object of size 4B out of bounds
-test-0077.c:48:18: note: the pointer being dereferenced points 4B beyond a variable on stack of size 12B
+test-0077.c:47:22: error: dereferencing object of size 4B out of bounds
+test-0077.c:47:22: note: the pointer being dereferenced points 8B above a variable on stack of size 12B
+test-0077.c:51:22: error: dereferencing object of size 4B out of bounds
+test-0077.c:51:22: note: the pointer being dereferenced points 4B beyond a variable on stack of size 12B

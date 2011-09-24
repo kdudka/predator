@@ -1,3 +1,4 @@
+#include "../sl.h"
 #include <stdlib.h>
 
 void* fnc(void) {
@@ -9,7 +10,8 @@ void* fnc(void) {
 int main()
 {
     void *ptr = fnc();
-    free(ptr);
+    if (___sl_get_nondet_int())
+        free(ptr);
 
     struct { void *v1; void *v2; } *s = malloc(sizeof(*s));
     if (s) {
