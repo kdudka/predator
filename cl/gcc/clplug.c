@@ -132,6 +132,7 @@ extern void print_gimple_stmt (FILE *, gimple, int, int);
 } while (0)
 
 // name of the plug-in given by gcc during initialization
+static const char *plugin_base_name = "???";
 static const char *plugin_name = "[uninitialized]";
 static const char *plugin_name_alloc;
 
@@ -175,7 +176,7 @@ static void init_plugin_name(const struct plugin_name_args *info)
         plugin_name = plugin_name_alloc;
 
     // read plug-in base name
-    const char *name = info->base_name;
+    const char *name = plugin_base_name = info->base_name;
     char *msg;
 
     // substitute name in 'version' string
@@ -221,7 +222,7 @@ static void dummy_printer(const char *msg)
 
 static void trivial_printer(const char *msg)
 {
-    fprintf(stderr, "%s\n", msg);
+    fprintf(stderr, "%s [-fplugin-%s]\n", msg, plugin_base_name);
 }
 
 static void cl_warn(const char *msg)

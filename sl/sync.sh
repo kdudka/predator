@@ -32,8 +32,9 @@ gen(){
         -fplugin=../sl_build/libsl.so $1 \
         -fplugin-arg-libsl-preserve-ec \
         2>&1 \
-        | grep -v '\[internal location\]$' \
-        | sed 's/ \[enabled by default\]$//' \
+        | grep '\[-fplugin-libsl\]$' \
+        | grep -v 'note: .*\[internal location\]' \
+        | sed 's| \[-fplugin-libsl\]$||' \
         | sed 's|data/||' \
         > data/`basename $i .c`.err$2
       printf "\n"
