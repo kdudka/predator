@@ -64,11 +64,12 @@ run_gcc() {
         -I../cl -I../cl/gcc -I../include -I../include/gcc           \
         -fplugin="$SL_PLUG"                                         \
         -fplugin-arg-libsl-verbose="$SL_VERBOSE" $SL_OPTS -c "$@"   \
-        2>&1 | grep ' \[-fplugin-libsl\]$'
+        2>&1 | stdbuf --output=L grep -E                            \
+        ' \[-fplugin-libsl\]$|CL_BREAK_IF|INT3|SIGTRAP|internal compiler error'
 }
 
 # colorize the output
-run_gcc "$@" | sed -re 's| \[-fplugin-libsl\]$||'                              \
+run_gcc "$@" | stdbuf --output=L sed -re 's| \[-fplugin-libsl\]$||'            \
         -e 's|(^.*) \[internal location\]$|\o033[1;30m\1\o033[0m|'             \
         -e 's|(: error:) (.*)$|\1 \o033[1;31m\2\o033[0m|'                      \
         -e 's|(: warning:) (.*)$|\1 \o033[1;33m\2\o033[0m|'                    \
@@ -76,8 +77,11 @@ run_gcc "$@" | sed -re 's| \[-fplugin-libsl\]$||'                              \
         -e 's|(current memory usage:) ([0-9]+ MB)|\1 \o033[1;34m\2\o033[0m|'   \
         -e 's|(!!! executing insn #[0-9]+ ...) (.*)$|\1 \o033[1;32m\2\o033[0m|'\
         -e 's|took ([0-9.]+ s)|took \o033[1;34m\1\o033[0m|'                    \
+        -e 's|(internal compiler error:) (.*)$|\1 \o033[1;31m\2\o033[0m|'      \
+        -e 's/(CL_BREAK_IF|INT3|SIGTRAP)/\o033[1;31m\1\o033[0m/'               \
         -e 's/(: debug: *) ([<>]J[<>]|AAA)/\1 \o033[1;31m\2\o033[0m/'          \
         -e 's/(: debug: SymHeap::)(objSetConcrete)/\1\o033[1;33m\2\o033[0m/'   \
+        -e 's/(: debug:) \(x\) (.*)$/\1 \o033[1;33m(x)\o033[0m \2/'            \
         -e 's/(: debug:) (spliceOutListSegment)/\1 \o033[1;34m\2\o033[0m/'     \
         -e 's/(: debug:) (<<<|>>>)/\1 \o033[1;34m\2\o033[0m/'                  \
         -e 's/(: debug:) ___ (entering|we are)/\1 \o033[1;32m___\o033[0m \2/'  \
