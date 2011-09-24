@@ -42,6 +42,26 @@
 
 // /////////////////////////////////////////////////////////////////////////////
 // SymProc implementation
+void SymProc::failWithBackTrace() {
+    bt_->printBackTrace();
+#if DEBUG_MEM_USAGE
+    printMemUsage("SymBackTrace::printBackTrace");
+#endif
+
+#if SE_ERROR_RECOVERY_MODE
+    errorDetected_ = true;
+#endif
+}
+
+bool SymProc::hasFatalError() const {
+#if 1 < SE_ERROR_RECOVERY_MODE
+    // full error recovery mode
+    return false;
+#else
+    return errorDetected_;
+#endif
+}
+
 TValId SymProc::heapValFromCst(const struct cl_operand &op) {
     const struct cl_cst &cst = op.data.cst;
 
@@ -382,7 +402,7 @@ TObjId SymProc::objByOperand(const struct cl_operand &op, bool *exclusive) {
     // check for invalid dereference
     const TObjType cltTarget = op.type;
     if (this->checkForInvalidDeref(at, cltTarget->size)) {
-        bt_->printBackTrace();
+        this->failWithBackTrace();
         return OBJ_DEREF_FAILED;
     }
 
@@ -500,7 +520,7 @@ void SymProc::reportMemLeak(const EValueTarget code, const char *reason) {
 void SymProc::heapSetSingleVal(TObjId lhs, TValId rhs) {
     if (lhs < 0) {
         CL_ERROR_MSG(lw_, "invalid L-value");
-        bt_->printBackTrace();
+        this->failWithBackTrace();
         return;
     }
 
@@ -516,7 +536,7 @@ void SymProc::heapSetSingleVal(TObjId lhs, TValId rhs) {
             CL_ERROR_MSG(lw_, "not enough space to store value of a pointer");
             CL_NOTE_MSG(lw_, "dstSize: " << dstSize << " B");
             CL_NOTE_MSG(lw_, "ptrSize: " << ptrSize << " B");
-            bt_->printBackTrace();
+            this->failWithBackTrace();
             rhs = sh_.valCreate(VT_UNKNOWN, VO_REINTERPRET);
         }
     }
@@ -667,23 +687,23 @@ void SymExecCore::execFree(TValId val) {
     switch (code) {
         case VT_DELETED:
             CL_ERROR_MSG(lw_, "double free()");
-            bt_->printBackTrace();
+            this->failWithBackTrace();
             return;
 
         case VT_LOST:
             CL_ERROR_MSG(lw_, "attempt to free a non-existing non-heap object");
-            bt_->printBackTrace();
+            this->failWithBackTrace();
             return;
 
         case VT_STATIC:
         case VT_ON_STACK:
             CL_ERROR_MSG(lw_, "attempt to free a non-heap object");
-            bt_->printBackTrace();
+            this->failWithBackTrace();
             return;
 
         case VT_CUSTOM:
             CL_ERROR_MSG(lw_, "free() called on non-pointer value");
-            bt_->printBackTrace();
+            this->failWithBackTrace();
             return;
 
         case VT_INVALID:
@@ -698,7 +718,7 @@ void SymExecCore::execFree(TValId val) {
 
             CL_ERROR_MSG(lw_, "invalid free()");
             describeUnknownVal(*this, val, "free");
-            bt_->printBackTrace();
+            this->failWithBackTrace();
             return;
 
         case VT_ON_HEAP:
@@ -708,7 +728,7 @@ void SymExecCore::execFree(TValId val) {
     const TOffset off = sh_.valOffset(val);
     if (off) {
         CL_ERROR_MSG(lw_, "free() called with offset " << off << "B");
-        bt_->printBackTrace();
+        this->failWithBackTrace();
         return;
     }
 
@@ -1062,16 +1082,16 @@ already_alive:
     sh_.objReleaseId(varLhs);
 }
 
-bool /* bail out */ SymExecCore::handleLabel(const CodeStorage::Insn &insn) {
+void SymExecCore::handleLabel(const CodeStorage::Insn &insn) {
     const struct cl_operand &op = insn.operands[/* name */ 0];
     if (CL_OPERAND_VOID == op.code)
         // anonymous label
-        return false;
+        return;
 
     const std::string &errLabel = ep_.errLabel;
     if (errLabel.empty())
         // we are not looking for error labels, keep going...
-        return false;
+        return;
 
     // resolve name
     CL_BREAK_IF(CL_OPERAND_CST != op.code);
@@ -1082,13 +1102,13 @@ bool /* bail out */ SymExecCore::handleLabel(const CodeStorage::Insn &insn) {
 
     if (ep_.errLabel.compare(name))
         // not an error label
-        return false;
+        return;
 
     CL_ERROR_MSG(lw_, "error label \"" << name << "\" has been reached");
 
     // print the backtrace and leave
     bt_->printBackTrace(/* forcePtrace */ true);
-    return true;
+    errorDetected_ = true;
 }
 
 bool SymExecCore::execCore(
@@ -1107,8 +1127,7 @@ bool SymExecCore::execCore(
             break;
 
         case CL_INSN_LABEL:
-            if (/* bail out */ this->handleLabel(insn))
-                return true;
+            this->handleLabel(insn);
             break;
 
         case CL_INSN_CALL:
@@ -1119,6 +1138,10 @@ bool SymExecCore::execCore(
             CL_BREAK_IF("SymExecCore::execCore() got an unexpected insn");
             return false;
     }
+
+    if (this->hasFatalError())
+        // do not insert anything into dst
+        return true;
 
     // kill variables
     this->killInsn(insn);
@@ -1168,6 +1191,11 @@ bool SymExecCore::concretizeLoop(
 
         // process the current heap and move to the next one (if any)
         slave.execCore(dst, insn, /* aggressive optimization */1 == todo.size());
+
+        if (slave.errorDetected_)
+            // propagate the 'error detected' flag
+            errorDetected_ = true;
+
         todo.pop_front();
     }
 

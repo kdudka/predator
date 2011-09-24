@@ -251,8 +251,10 @@ bool handleCalloc(
     }
 
     unsigned size;
-    if (!resolveCallocSize(&size, core, opList))
-        return false;
+    if (!resolveCallocSize(&size, core, opList)) {
+        core.failWithBackTrace();
+        return true;
+    }
 
     const struct cl_loc *lw = &insn.loc;
     CL_DEBUG_MSG(lw, "executing calloc(/* total size */ " << size << ")");
@@ -279,7 +281,9 @@ bool handleFree(
     core.execFree(val);
     core.killInsn(insn);
 
-    dst.insert(core.sh());
+    if (!core.hasFatalError())
+        dst.insert(core.sh());
+
     return true;
 }
 
@@ -301,7 +305,8 @@ bool handleMalloc(
     long size;
     if (!numFromVal(&size, core.sh(), valSize)) {
         CL_ERROR_MSG(lw, "size arg of malloc() is not a known integer");
-        return false;
+        core.failWithBackTrace();
+        return true;
     }
 
     CL_DEBUG_MSG(lw, "executing malloc(" << size << ")");
@@ -328,7 +333,10 @@ bool handleMemset(
     long size;
     if (!numFromVal(&size, sh, valSize)) {
         CL_ERROR_MSG(lw, "size arg of memset() is not a known integer");
-        insertCoreHeap(dst, core, insn, /* printBt */ true);
+        core.failWithBackTrace();
+        if (!core.hasFatalError())
+            insertCoreHeap(dst, core, insn);
+
         return true;
     }
     if (!size) {
@@ -341,7 +349,10 @@ bool handleMemset(
     const TValId addr = core.valFromOperand(opList[/* addr */ 2]);
     if (core.checkForInvalidDeref(addr, size)) {
         // error message already printed out
-        insertCoreHeap(dst, core, insn, /* printBt */ true);
+        core.failWithBackTrace();
+        if (!core.hasFatalError())
+            insertCoreHeap(dst, core, insn);
+
         return true;
     }
 

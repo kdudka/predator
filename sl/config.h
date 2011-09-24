@@ -152,6 +152,13 @@
 #define SE_ENABLE_CALL_CACHE                1
 
 /**
+ * - 0 no error recovery, stop the analysis on first error [not implemented yet]
+ * - 1 low-cost error recovery (stop analyzing paths with errors already caught)
+ * - 2 full error recovery (keep analyzing until a non-recoverable error occurs)
+ */
+#define SE_ERROR_RECOVERY_MODE              2
+
+/**
  * maximal call depth
  */
 #define SE_MAX_CALL_DEPTH                   0x40

@@ -255,6 +255,8 @@ class SymExecEngine: public IStatsProvider {
         const SymHeap&                  callEntry() const;
         const CodeStorage::Insn&        callInsn() const;
         SymState&                       callResults();
+        bool                            endReached() const;
+        void                            forceEndReached();
 
     private:
         const CodeStorage::Storage      &stor_;
@@ -614,7 +616,17 @@ bool /* handled */ SymExecEngine::execNontermInsn() {
     core.setLocation(lw_);
 
     // execute the instruction
-    return core.exec(nextLocalState_, *insn);
+    if (!core.exec(nextLocalState_, *insn)) {
+        CL_BREAK_IF(CL_INSN_CALL != insn->code);
+        return false;
+    }
+
+    if (core.hasFatalError())
+        // suppress the annoying warnings 'end of foo() not reached' since we
+        // have already told user that there was something more serious going on
+        endReached_ = true;
+
+    return /* insn handled */ true;
 }
 
 bool /* complete */ SymExecEngine::execInsn() {
@@ -874,6 +886,14 @@ SymState& SymExecEngine::callResults() {
     return callResults_;
 }
 
+bool SymExecEngine::endReached() const {
+    return endReached_;
+}
+
+void SymExecEngine::forceEndReached() {
+    endReached_ = true;
+}
+
 void SymExecEngine::processPendingSignals() {
     int signum;
     if (!SignalCatcher::caught(&signum))
@@ -1013,10 +1033,18 @@ void SymExec::execFnc(
             item.ctx->invalidate();
             printMemUsage("SymCallCtx::flushCallResults");
 
+            // noisy warnings elimination
+            const bool forceEndReached = !item.dst->size()
+                                      && engine->endReached();
+
             // remove top of the stack
             delete engine;
             printMemUsage("SymExecEngine::~SymExecEngine");
             execStack_.pop_front();
+
+            if (!execStack_.empty() && forceEndReached)
+                // well, we got no results, but the callee suggests to be silent
+                execStack_.front().eng->forceEndReached();
 
             // we are done with this call, now wake up the caller!
             continue;

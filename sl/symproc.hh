@@ -26,6 +26,8 @@
  * operations
  */
 
+#include "config.h"
+
 #include <cl/storage.hh>
 
 #include "symid.hh"
@@ -63,7 +65,8 @@ class SymProc {
         SymProc(SymHeap &heap, const SymBackTrace *bt):
             sh_(heap),
             bt_(bt),
-            lw_(0)
+            lw_(0),
+            errorDetected_(false)
         {
         }
 
@@ -110,6 +113,12 @@ class SymProc {
         /// check whether we can safely access sizeOfTarget at the given address
         bool checkForInvalidDeref(TValId val, const TOffset sizeOfTarget);
 
+        /// print backtrace and remember that an error happened
+        void failWithBackTrace();
+
+        /// if true, the current state is not going to be inserted into dst
+        bool hasFatalError() const;
+
     protected:
         TValId varAt(const struct cl_operand &op);
         TValId targetAt(const struct cl_operand &op);
@@ -130,6 +139,7 @@ class SymProc {
         SymHeap                     &sh_;
         const SymBackTrace          *bt_;
         const struct cl_loc         *lw_;
+        bool                        errorDetected_;
 
         // internal helper of SymExecCore::execOp()
         template <int N> friend struct OpHandler;
@@ -205,7 +215,7 @@ class SymExecCore: public SymProc {
         bool concretizeLoop(SymState &dst, const CodeStorage::Insn &insn,
                             const TDerefs &derefs);
 
-        bool /* bail out */ handleLabel(const CodeStorage::Insn &);
+        void handleLabel(const CodeStorage::Insn &);
 
         bool execCore(SymState &dst, const CodeStorage::Insn &insn, const bool);
 
@@ -215,5 +225,10 @@ class SymExecCore: public SymProc {
     private:
         const SymExecCoreParams ep_;
 };
+
+#if DEBUG_MEM_USAGE
+// TODO: move the implementation of printMemUsage() to symproc?
+void printMemUsage(const char *fnc);
+#endif
 
 #endif /* H_GUARD_SYM_PROC_H */
