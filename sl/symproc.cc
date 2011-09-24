@@ -35,6 +35,7 @@
 #include "util.hh"
 
 #include <stack>
+#include <stdexcept>
 #include <vector>
 
 #include <boost/foreach.hpp>
@@ -50,6 +51,8 @@ void SymProc::failWithBackTrace() {
 
 #if SE_ERROR_RECOVERY_MODE
     errorDetected_ = true;
+#else
+    throw std::runtime_error("support for error recovery not compiled in");
 #endif
 }
 

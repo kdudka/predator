@@ -39,6 +39,7 @@
 #include <queue>
 #include <set>
 #include <sstream>
+#include <stdexcept>
 
 #include <boost/foreach.hpp>
 
@@ -189,6 +190,9 @@ class SymExec: public IStatsProvider {
             callCache_(stor, ep.ptrace)
         {
         }
+
+        /// just to avoid memory leakage in case an exception falls through
+        ~SymExec();
 
         const CodeStorage::Fnc* resolveCallInsn(
                 SymState                    &results,
@@ -919,6 +923,18 @@ void SymExecEngine::processPendingSignals() {
 
 // /////////////////////////////////////////////////////////////////////////////
 // SymExec implementation
+SymExec::~SymExec() {
+    // NOTE this is actually the right direction (from top of the backtrace)
+    BOOST_FOREACH(const ExecStackItem &item, execStack_) {
+
+        // invalidate call ctx
+        item.ctx->invalidate();
+
+        // delete engine
+        delete item.eng;
+    }
+}
+
 const CodeStorage::Fnc* SymExec::resolveCallInsn(
         SymState                    &results,
         SymHeap                     entry,
@@ -1105,10 +1121,16 @@ void execTopCall(
         const CodeStorage::Fnc          &fnc,
         const SymExecParams             &ep)
 {
-    SymExec se(entry.stor(), ep);
-    se.execFnc(results, entry, insn, fnc);
-
-    // SymExec::~SymExec() is going to be executed as leaving this function
+    try {
+        SymExec se(entry.stor(), ep);
+        se.execFnc(results, entry, insn, fnc);
+        // SymExec::~SymExec() is going to be executed as leaving this block
+    }
+    catch (const std::runtime_error &e) {
+        const struct cl_loc *loc = locationOf(fnc);
+        CL_WARN_MSG(loc, "symbolic execution terminates prematurely");
+        CL_NOTE_MSG(loc, e.what());
+    }
 }
 
 void execute(

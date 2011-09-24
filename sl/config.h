@@ -152,7 +152,7 @@
 #define SE_ENABLE_CALL_CACHE                1
 
 /**
- * - 0 no error recovery, stop the analysis on first error [not implemented yet]
+ * - 0 no error recovery, stop the analysis as soon as an error is detected
  * - 1 low-cost error recovery (stop analyzing paths with errors already caught)
  * - 2 full error recovery (keep analyzing until a non-recoverable error occurs)
  */
