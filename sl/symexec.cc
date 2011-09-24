@@ -912,12 +912,8 @@ void SymExecEngine::processPendingSignals() {
             break;
 
         default:
-            // remove all handlers and forward the signal to the original
-            // handler, which will most likely kill the process by SIGINT
-            // or SIGTERM
-            SignalCatcher::cleanup();
-            CL_BREAK_IF(SIGINT != signum && SIGTERM != signum);
-            raise(signum);
+            // time to finish...
+            throw std::runtime_error("signalled to die");
     }
 }
 

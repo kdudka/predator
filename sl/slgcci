@@ -14,7 +14,7 @@ anal(){
 # filter '>>> entering' and '<<< leaving' with forced line buffering
 filter(){
     stdbuf --output=L \
-        grep ': debug: [<>]* .*()$'
+        grep -E ': debug: .*(>>>|<<<).* .*()$'
 }
 
 # monitor the current backtrace, extended by time-stamps

@@ -729,11 +729,11 @@ void spliceOutListSegment(
 
     // destroy peer in case of DLS
     if (peer != seg && collectJunk(sh, peer))
-        CL_DEBUG("spliceOutSegment() drops a sub-heap (peer)");
+        CL_DEBUG("spliceOutListSegment() drops a sub-heap (peer)");
 
     // destroy self, including all nested prototypes
     if (collectJunk(sh, seg))
-        CL_DEBUG("spliceOutSegment() drops a sub-heap (seg)");
+        CL_DEBUG("spliceOutListSegment() drops a sub-heap (seg)");
 
     LDP_PLOT(symabstract, sh);
 }
