@@ -752,6 +752,10 @@ bool /* complete */ SymExecEngine::execBlock() {
             return false;
         }
 
+        if (!nextLocalState_.size())
+            // we ended up with an empty state already, jump to the end of bb
+            break;
+
         // swap states in order to be ready for next insn
         localState_.swap(nextLocalState_);
     }

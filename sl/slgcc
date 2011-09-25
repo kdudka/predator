@@ -95,7 +95,7 @@ run_gcc "$@" | stdbuf --output=L sed -re 's| \[-fplugin-libsl\]$||'            \
         -e 's|(per target) (L[0-9]+)|\1 \o033[1;32m\2\o033[0m|'                \
         -e 's|(initial size of state was) ([0-9]+)|\1 \o033[1;37m\2\o033[0m|'  \
         -e 's|(#[0-9]+)|\o033[1;37m\1\o033[0m|'                                \
-        -e 's|(block) (L[0-9]+) (in progress)|\1 \o033[1;33m\2\o033[1;32m \3|' \
+        -e 's|(block L[0-9]+) (in progress)|\1 \o033[1;33m\2\o033[1;32m|'      \
         -e 's|(... while executing) (.*\(\))|\1 \o033[1;33m\2\o033[0m|'        \
         -e 's|took ([0-9.]+ s)|took \o033[1;34m\1\o033[0m|'                    \
         -e 's|(internal compiler error:) (.*)$|\1 \o033[1;31m\2\o033[0m|'      \
