@@ -269,7 +269,9 @@ const struct cl_type* TypeDb::genericDataPtr() const {
 
 void readTypeTree(TypeDb &db, const struct cl_type *clt) {
     if (!clt) {
+#if 0
         CL_DEBUG("readTypeTree() got a NULL pointer");
+#endif
         return;
     }
 

@@ -51,7 +51,7 @@
  * - 1 ... print edges marked as loop-closing
  * - 2 ... print some basic progress info
  */
-#define CL_DEBUG_LOOP_SCAN              1
+#define CL_DEBUG_LOOP_SCAN              0
 
 /**
  * debug level of the verbose output when killing variables
@@ -61,7 +61,7 @@
  * - 3 ... debug the algorithm at the level of instructions
  * - 4 ... debug the algorithm at the level of operands
  */
-#define CL_DEBUG_VAR_KILLER             1
+#define CL_DEBUG_VAR_KILLER             0
 
 /**
  * if 1, show the amount of time taken by the analysis even without verbose mode
