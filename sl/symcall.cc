@@ -162,7 +162,7 @@ struct SymCallCache::Private {
     TCtxStack                   ctxStack;
     SymBackTrace                bt;
 
-    bool importGlVar(SymHeap &sh, const CVar &cv);
+    void importGlVar(SymHeap &sh, const CVar &cv);
     void resolveHeapCut(TCVarList &cut, SymHeap &sh, TFncRef &fnc);
     SymCallCtx* getCallCtx(const SymHeap &entry, TFncRef fnc);
 
@@ -393,28 +393,28 @@ SymBackTrace& SymCallCache::bt() {
     return d->bt;
 }
 
-void transferGlVar(SymHeap &dst, SymHeap src, const CVar &cv) {
+void pullGlVar(SymHeap &result, SymHeap &origin, const CVar &cv) {
+    // do not try to combine things, it causes problems
+    CL_BREAK_IF(!areEqual(result, SymHeap(origin.stor())));
+
+    // cut by one gl var
     CL_BREAK_IF(cv.inst);
-
-    // cut out what we need from the ancestor
     const TCVarList cut(1, cv);
-    splitHeapByCVars(&src, cut);
 
-    // remove the stub, we are going to replace by something useful
-    const TValId at = dst.addrOfVar(cv);
-    CL_BREAK_IF(isVarAlive(dst, cv));
-    dst.valDestroyTarget(at);
-
-    // now put it all together
-    joinHeapsByCVars(&dst, &src);
+    // perform the cut
+    result.swap(origin);
+    splitHeapByCVars(&result, cut, &origin);
 }
 
-bool SymCallCache::Private::importGlVar(SymHeap &entry, const CVar &cv) {
+void SymCallCache::Private::importGlVar(SymHeap &entry, const CVar &cv) {
     const int cnt = this->ctxStack.size();
+    if (!cnt)
+        // empty ctx stack --> no heap to import the var from
+        return;
 
     // seek the gl var going through the ctx stack backward
     int idx;
-    for (idx = cnt - 1; 0 <= idx; --idx) {
+    for (idx = cnt - 1; 0 < idx; --idx) {
         SymCallCtx *ctx = this->ctxStack[idx];
         SymHeap &sh = ctx->d->surround;
 
@@ -422,40 +422,35 @@ bool SymCallCache::Private::importGlVar(SymHeap &entry, const CVar &cv) {
             break;
     }
 
-    if (idx < 0)
-        // found nowhere
-        return false;
-
     TStorRef stor = entry.stor();
     const struct cl_loc *loc = 0;
     std::string varString = varToString(stor, cv.uid, &loc);
     CL_DEBUG_MSG(loc, "<G> importGlVar() imports variable " << varString);
     const int idxOrigin = idx;
-    if (!idx)
-        ++idx;
 
     // 'origin' is the heap that we are importing the gl var from
-    const SymHeap &origin = this->ctxStack[idxOrigin]->d->surround;
+    SymHeap &origin = this->ctxStack[idxOrigin]->d->surround;
+
+    // pull the designated gl var from 'origin'
+    SymHeap glSubHeap(stor);
+    pullGlVar(glSubHeap, origin, cv);
 
     // go through all heaps above the 'origin' up to the current call level
     for (unsigned i = 0; idx < cnt; ++idx, ++i) {
         SymCallCtx *ctx = this->ctxStack[idx];
         const int uid = uidOf(*ctx->d->fnc);
 
-        // teach the caller to always include 'cv' into the cut for this fnc
-        SymCallCtx *ctxCaller = this->ctxStack[idx - 1];
-        SymCallCtx::Private::TCutHints &hints = ctxCaller->d->hints;
-        hints[uid].insert(cv);
-
-        if (!i)
-            // the origin has now updated cut hints for the fnc 'uid' and that
-            // is all that needed to be changed at that level
-            continue;
+        if (idx) {
+            // teach the caller to always include 'cv' into the cut for this fnc
+            SymCallCtx *ctxCaller = this->ctxStack[idx - 1];
+            SymCallCtx::Private::TCutHints &hints = ctxCaller->d->hints;
+            hints[uid].insert(cv);
+        }
 
         // import gl variable at the current level
         const SymHeap src(ctx->d->entry);
         SymHeap &dst = ctx->d->entry;
-        transferGlVar(dst, origin, cv);
+        joinHeapsByCVars(&dst, &glSubHeap);
 
         // update the corresponding cache entry
         PerFncCache &pfc = this->cache[uid];
@@ -465,8 +460,7 @@ bool SymCallCache::Private::importGlVar(SymHeap &entry, const CVar &cv) {
     }
 
     // finally import the gl var to the current call level
-    transferGlVar(entry, origin, cv);
-    return true;
+    joinHeapsByCVars(&entry, &glSubHeap);
 }
 
 void SymCallCache::Private::resolveHeapCut(
@@ -506,8 +500,12 @@ void SymCallCache::Private::resolveHeapCut(
             // already in
             continue;
 
-        if (isVarAlive(sh, cv) || this->importGlVar(sh, cv))
-            cut.push_back(cv);
+        if (!isVarAlive(sh, cv))
+            // the var we need does not exist at this level yet --> lazy import
+            this->importGlVar(sh, cv);
+
+        // no matter if importGlVar succeeded, we need the variable here and now
+        cut.push_back(cv);
     }
 #endif
 
