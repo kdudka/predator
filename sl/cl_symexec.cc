@@ -127,8 +127,6 @@ void execFnc(const CodeStorage::Fnc &fnc, const SymExecParams &ep,
 
         digGlJunk(heap);
     }
-
-    printMemUsage("execFnc");
 }
 
 template <class TDst>
@@ -182,6 +180,7 @@ void execVirtualRoots(const CodeStorage::FncDb &fncs, const SymExecParams &ep) {
 
         // perform symbolic execution for a virtual root
         execFnc(fnc, ep);
+        printMemUsage("execFnc");
     }
 }
 
@@ -215,4 +214,5 @@ void clEasyRun(const CodeStorage::Storage &stor, const char *configString) {
 
     // just execute the main() function
     execFnc(*main, ep, /* lookForGlJunk */ true);
+    printMemUsage("execFnc");
 }

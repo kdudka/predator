@@ -45,9 +45,7 @@
 // SymProc implementation
 void SymProc::failWithBackTrace() {
     bt_->printBackTrace();
-#if DEBUG_MEM_USAGE
     printMemUsage("SymBackTrace::printBackTrace");
-#endif
 
 #if SE_ERROR_RECOVERY_MODE
     errorDetected_ = true;

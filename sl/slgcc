@@ -1,5 +1,8 @@
 #!/bin/bash
-SELF="$0"
+export SELF="$0"
+
+# this makes 7x speedup in case 'grep' was compiled with multi-byte support
+export LC_ALL=C
 
 die() {
     printf "%s: %s\n" "$SELF" "$*"
@@ -86,7 +89,7 @@ run_gcc "$@" | stdbuf --output=L sed -re 's| \[-fplugin-libsl\]$||'            \
         -e 's|(: error:) (.*)$|\1 \o033[1;31m\2\o033[0m|'                      \
         -e 's|(: warning:) (.*)$|\1 \o033[1;33m\2\o033[0m|'                    \
         -e 's|(: note:) (.*)$|\1 \o033[1;32m\2\o033[0m|'                       \
-        -e 's|(current memory usage:) ([0-9]+ MB)|\1 \o033[1;34m\2\o033[0m|'   \
+        -e 's|(current memory usage: *) ([0-9.]+ MB)|\1 \o033[1;34m\2\o033[0m|'\
         -e 's|(!!! executing insn #[0-9]+ ...) (.*)$|\1 \o033[1;32m\2\o033[0m|'\
         -e 's|(variable #[0-9]+:)([a-zA-Z0-9_.]+)|\1\o033[1;32m\2\o033[0m|'    \
         -e 's|(per target) (L[0-9]+)|\1 \o033[1;32m\2\o033[0m|'                \

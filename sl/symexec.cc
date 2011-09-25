@@ -47,6 +47,15 @@ LOCAL_DEBUG_PLOTTER(nondetCond, DEBUG_SE_NONDET_COND)
 
 #if DEBUG_MEM_USAGE
 #   include <malloc.h>
+static unsigned memDrift;
+void initMemDrif() {
+    struct mallinfo info = mallinfo();
+    ::memDrift = info.uordblks >> /* KiB */ 10;
+    if ((2048U << /* KiB */ 10) <= ::memDrift)
+        // apparently already overflown
+        ::memDrift = 0U;
+}
+
 void printMemUsage(const char *fnc) {
     static bool overflowDetected;
     if (overflowDetected)
@@ -54,17 +63,23 @@ void printMemUsage(const char *fnc) {
         return;
 
     struct mallinfo info = mallinfo();
-    const unsigned cnt = info.uordblks >> /* MiB */ 20;
-    if (2048U <= cnt) {
+    unsigned cnt = info.uordblks >> /* KiB */ 10;
+    if ((2048U << /* KiB */ 10) <= cnt) {
         // mallinfo() is broken by design <https://bugzilla.redhat.com/173813>
         overflowDetected = true;
         return;
     }
 
-    CL_DEBUG("current memory usage: " << cnt << " MB"
-             << " (just completed " << fnc << "())");
+    // do not include the memory allocated by Code Listener into our statistics
+    cnt -= ::memDrift;
+
+    const float amount = /* MiB */ static_cast<float>(cnt) / 1024.0;
+    CL_DEBUG("current memory usage: "
+             << std::fixed << std::setw(7) << std::setprecision(2)
+             << amount << " MB" << " (just completed " << fnc << "())");
 }
 #else
+void initMemDrif() { }
 void printMemUsage(const char *) { }
 #endif
 
@@ -742,8 +757,8 @@ bool /* complete */ SymExecEngine::execBlock() {
     }
 
     // the whole block is processed now
-    CL_DEBUG_MSG(lw_, "___ completed batch for " << name
-                 << ", " << sched_.cntWaiting()
+    CL_DEBUG_MSG(lw_, "___ completed batch for " << name << ", " << fncName_
+                 << "(), " << sched_.cntWaiting()
                  << " basic block(s) in the queue");
     insnIdx_ = 0;
     return true;
@@ -788,8 +803,8 @@ bool /* complete */ SymExecEngine::run() {
 
         // enter the basic block
         const std::string &name = block_->name();
-        CL_DEBUG_MSG(lw_, "___ entering " << name
-                     << ", " << sched_.cntWaiting()
+        CL_DEBUG_MSG(lw_, "___ entering " << name << ", " << fncName_
+                     << "(), " << sched_.cntWaiting()
                      << " basic block(s) in the queue");
         insnIdx_ = 0;
         heapIdx_ = 0;
@@ -1129,6 +1144,9 @@ void execTopCall(
         const CodeStorage::Fnc          &fnc,
         const SymExecParams             &ep)
 {
+    // do not include the memory allocated by Code Listener into our statistics
+    initMemDrif();
+
     try {
         SymExec se(entry.stor(), ep);
         se.execFnc(results, entry, insn, fnc);
