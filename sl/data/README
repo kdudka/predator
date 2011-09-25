@@ -397,6 +397,8 @@ Call cache
                 - the comments inside are valid only with SE_DISABLE_SYMCUT
                 - with symcut enabled, we have even more cache hits!
 
+    test-0186.c - regression test focused on a fixed bug in gl vars optimization
+
 
 Tests taken from Forester
 =========================

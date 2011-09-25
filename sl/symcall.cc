@@ -436,7 +436,7 @@ bool SymCallCache::Private::importGlVar(SymHeap &entry, const CVar &cv) {
     TStorRef stor = entry.stor();
     const struct cl_loc *loc = 0;
     std::string varString = varToString(stor, cv.uid, &loc);
-    CL_DEBUG_MSG(loc, "<G> importGlVar() imports " << varString);
+    CL_DEBUG_MSG(loc, "<G> importGlVar() imports variable " << varString);
     const int idxOrigin = idx;
     if (!idx)
         ++idx;
@@ -497,7 +497,8 @@ void SymCallCache::Private::resolveHeapCut(
     BOOST_FOREACH(const CVar &cv, snap) {
         const struct cl_loc *loc = 0;
         std::string varString = varToString(stor, cv.uid, &loc);
-        CL_DEBUG_MSG(loc, "<G> importGlVar() recently suggested " << varString);
+        CL_DEBUG_MSG(loc, "<G> importGlVar() recently suggested variable "
+                << varString);
         cut.push_back(cv);
     }
 
