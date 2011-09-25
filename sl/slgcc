@@ -91,7 +91,7 @@ run_gcc "$@" | stdbuf --output=L sed -re 's| \[-fplugin-libsl\]$||'            \
         -e 's|(: note:) (.*)$|\1 \o033[1;32m\2\o033[0m|'                       \
         -e 's|(current memory usage: *) ([0-9.]+ MB)|\1 \o033[1;34m\2\o033[0m|'\
         -e 's|(!!! executing insn #[0-9]+ ...) (.*)$|\1 \o033[1;32m\2\o033[0m|'\
-        -e 's|(variable #[0-9]+:)([a-zA-Z0-9_.]+)|\1\o033[1;32m\2\o033[0m|'    \
+        -e 's|(variable[:]? #[0-9]+:)([a-zA-Z0-9_.]+)|\1\o033[1;32m\2\o033[0m|'\
         -e 's|(per target) (L[0-9]+)|\1 \o033[1;32m\2\o033[0m|'                \
         -e 's|(initial size of state was) ([0-9]+)|\1 \o033[1;37m\2\o033[0m|'  \
         -e 's|(#[0-9]+)|\o033[1;37m\1\o033[0m|'                                \

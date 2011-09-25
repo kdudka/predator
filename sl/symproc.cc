@@ -1109,7 +1109,8 @@ void SymExecCore::handleLabel(const CodeStorage::Insn &insn) {
 
     // print the backtrace and leave
     bt_->printBackTrace(/* forcePtrace */ true);
-    errorDetected_ = true;
+    printMemUsage("SymBackTrace::printBackTrace");
+    throw std::runtime_error("an error label has been reached");
 }
 
 bool SymExecCore::execCore(
