@@ -127,6 +127,8 @@ void execFnc(const CodeStorage::Fnc &fnc, const SymExecParams &ep,
 
         digGlJunk(heap);
     }
+
+    printMemUsage("execFnc");
 }
 
 template <class TDst>

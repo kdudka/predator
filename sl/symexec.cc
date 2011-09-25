@@ -199,7 +199,7 @@ class SymExec: public IStatsProvider {
                 SymHeap                     entry,
                 const CodeStorage::Insn     &insn);
 
-        void pushCall(SymCallCtx *ctx, SymState &results);
+        void enterCall(SymCallCtx *ctx, SymState &results);
 
         void execFnc(
                 SymState                    &results,
@@ -1000,7 +1000,7 @@ fail:
     return 0;
 }
 
-void SymExec::pushCall(SymCallCtx *ctx, SymState &results) {
+void SymExec::enterCall(SymCallCtx *ctx, SymState &results) {
     // create engine
     SymExecEngine *eng = new SymExecEngine(
             ctx->rawResults(),
@@ -1017,6 +1017,7 @@ void SymExec::pushCall(SymCallCtx *ctx, SymState &results) {
 
     // push the item to the exec-stack
     execStack_.push_front(item);
+    printMemUsage("SymExec::enterCall");
 }
 
 void SymExec::execFnc(
@@ -1030,7 +1031,7 @@ void SymExec::execFnc(
     CL_BREAK_IF(!ctx || !ctx->needExec());
 
     // root call
-    this->pushCall(ctx, results);
+    this->enterCall(ctx, results);
 
     // main loop
     while (!execStack_.empty()) {
@@ -1044,7 +1045,6 @@ void SymExec::execFnc(
             // call done at this level
             item.ctx->flushCallResults(*item.dst);
             item.ctx->invalidate();
-            printMemUsage("SymCallCtx::flushCallResults");
 
             // noisy warnings elimination
             const bool forceEndReached = !item.dst->size()
@@ -1096,9 +1096,7 @@ void SymExec::execFnc(
         }
 
         // create a new engine and push it to the exec stack
-        printMemUsage("SymCall::getCallCtx");
-        this->pushCall(ctx, item.eng->callResults());
-        printMemUsage("SymExec::createEngine");
+        this->enterCall(ctx, item.eng->callResults());
     }
 }
 
